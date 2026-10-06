@@ -10369,6 +10369,76 @@ i powiązane spec-e — wyniki w PR.
 **Wersje.** `docpro_state_persist.js` 5 → 6 (docpro), precache (append-only), `SW_VERSION` 1.1.117 → 1.1.119 (+ pin;
 1.1.117 wydał P-POWLOKA-ID, #491, a 1.1.118 bierze P-SESJA-OBCA, #492), fixture wersji.
 
+## Odtwarzanie stanu kart DocPro nie zawiesza strony: karta GH/IGF-1 na zakładce „Monitorowanie” po F5 (P-DOCPRO-PETLA, SW 1.1.173, `docpro_state_persist.js` 8, 2026-10-06)
+
+**Zgłoszenie.** Znalezione przy teście F5 edycji punktu GH (osobny PR, gałąź `claude/determined-hawking-po9f5j`).
+Zmierzone na `audyt` `c730011` (Chromium headless, świeży sejf, dane fikcyjne, bez punktów terapii GH): DocPro →
+karta GH/IGF-1 otwarta przyciskiem `#toggleIgfTests` → zakładka „Monitorowanie” → F5 (albo Start i z powrotem).
+Strona nie dochodzi do `load`, `page.evaluate` wisi, po ok. 60 s cel jest zamykany. To samo, gdy przed F5 zamknąć
+kartę (z „Monitorowanie” jako aktywną zakładką). Karta otwarta na domyślnych „Zaleceniach” — bez zawieszenia.
+Zgłaszający zmierzył błąd na każdym badanym stanie od `39d1109` (SW 1.1.91, najstarszy w płytkim klonie).
+
+**Przyczyna (sonda kliknięć i stos z `Debugger.pause`).**
+- `docpro_state_persist.js` przy starcie strony odtwarza stan przebiegami: z timerów (0–1500 ms) i z
+  `MutationObserver` na `body` (`childList`, `subtree`), który przy każdej mutacji ponawia przebieg (`O`, `z`, `M`,
+  `k`). Obserwator miał się rozłączyć po 4 s timerem.
+- `O()` oceniało „karta otwarta” przez `d()`: własny `display` elementu **i** obliczone `visibility`. Do
+  DOMContentLoaded reguła `body.js-loading .main-content { visibility: hidden }` (`style.css`) ukrywa całą treść, więc
+  otwarta karta wyglądała na zamkniętą. Przyciski kart są **przełącznikami**: każde kliknięcie odwracało stan karty,
+  a otwarcie karty wraca na „Zalecenia” (`ghActivateTab("rec")`), więc w tym samym przebiegu klikany był też
+  „Monitorowanie”.
+- „Monitorowanie” odświeża monitor (`refreshGHTherapyMonitor` → … → `calculateGrowthAdvanced`), czyli mutacje
+  `childList` → obserwator → kolejny przebieg w mikrozadaniu. Sonda: 60 kliknięć w ok. 60 ms, karta na przemian
+  `block`/`none`, `visibility: hidden` przez cały czas; po sztucznym przerwaniu pętli karta zostawała **zamknięta**.
+- Pierwszy przebieg obserwatora rusza w trakcie DOMContentLoaded (słuchacze `vildaOnReady`), przed słuchaczem
+  z `inline_docpro_06.js`, który zdejmuje `js-loading`. Pętla mikrozadań nie oddaje sterowania, więc ten słuchacz,
+  zdarzenie `load` i timer rozłączenia nigdy nie ruszają.
+- Przy karcie na „Zaleceniach” żadne kliknięcie nie odświeża monitora, więc łańcuch mutacji się urywa, a przebiegi
+  z timerów (już po DOMContentLoaded) widzą prawdziwy stan.
+
+**Zmiana (`docpro_state_persist.js`).**
+- Odtwarzanie (`O`) ocenia otwarcie karty i panelu zakładki po **własnym `display`** elementu (`Td`), nie po
+  widoczności dziedziczonej ze strony. Przełącznik jest klikany tylko wtedy, gdy stan naprawdę się różni. Dotyczy
+  wszystkich kart z `O` (wszystkie przełączają `style.display`); sprawdzenia testów GH/OGTT/ACTH (klasa `active`) bez
+  zmian. Ta sama pułapka dotyczyłaby strony ukrytej przez `html.vilda-auth-locked` (blokada sejfu).
+- Obserwator sprawdza termin 4 s także we własnym wywołaniu (`Date.now()`), więc zatrzyma się sam, nawet gdy timer
+  rozłączenia nie może ruszyć.
+- Bez zmian: zapis stanu (`j`, nadal przez `d()`), format i treść `wagaiwzrost:docproUi:v2`, stan modułów, punkty GH.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (niezawodność interfejsu), nie kliniczna: bez zmian wzorów,
+progów, jednostek, dawek, danych referencyjnych i zapisu. Usuwa zawieszenie strony DocPro po F5 lub powrocie ze Start,
+które odcinało lekarza od wszystkich modułów DocPro. Źródło medyczne: nie dotyczy (bez zmiany wiedzy klinicznej).
+
+**Przypadki (e2e, świeży sejf, dane fikcyjne, bez punktów terapii).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie `c730011` |
+|---|---|---|
+| karta GH otwarta → „Monitorowanie” → F5 | `load` w 20 s, `page.evaluate` odpowiada; karta otwarta na „Monitorowanie” i tak zostaje; odtwarzanie klika przełącznik i zakładkę po razie | pada (`page.reload`: brak `load` w 20 s) |
+| to samo → Start → DocPro | jak wyżej | nie dochodzi (pada wcześniej, przy F5) |
+| karta zamknięta przy aktywnym „Monitorowanie” → F5 | `load`, strona odpowiada; karta wraca otwarta na „Monitorowanie” (reguła sprzed zmiany, niżej) i tak zostaje | pada (jak wyżej) |
+| karta na „Zaleceniach” → F5 | karta otwarta na „Zaleceniach”; przełącznik kliknięty raz, „Monitorowanie” ani razu | nie dochodzi (ten sam test, po scenariuszu wyżej) |
+
+Mutant: sam termin w obserwatorze, bez zmiany oceny otwarcia karty — strona dochodzi do `load` po ok. 4 s, ale
+odtwarzanie klika przełącznik i zakładkę po 817 razy (w pomiarze), więc test A pada na liczniku kliknięć. Naprawą
+jest ocena stanu; termin jest siatką bezpieczeństwa.
+
+**Czego to nie naprawia (do decyzji właściciela).**
+- Karta zamknięta przy aktywnym „Monitorowanie” wraca po F5 **otwarta**. Zapis notuje `ghMonitorOpen` po `display`
+  samego panelu (bez względu na kartę), a odtwarzanie otwiera kartę, gdy był otwarty monitor
+  (`igfTherapyOpen || ghMonitorOpen`). To zachowanie sprzed zmiany, utrwalone w teście B; jego zmiana zmienia zapis
+  albo regułę odtwarzania.
+- Zapis stanu (`j`) nadal ocenia karty przez `d()` z `visibility`; zapis wykonany, gdy strona jest ukryta (np. przy
+  blokadzie sejfu), notuje otwarte karty jako zamknięte. Bez zmian (zmiana zapisu).
+
+**Walidacja.** `tests/e2e/docpro-gh-monitorowanie-f5.spec.mjs` (2 testy, prawdziwa strona `docpro.html`, przycisk karty
+i zakładki klikane jak przez lekarza). Wyniki w PR.
+
+**Wersje.** `docpro_state_persist.js` 7 → 8 (`docpro.html`), precache (append-only), `SW_VERSION` 1.1.172 → 1.1.173
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`), `tests/fixtures/wersje-zasobow.json`.
+
+**Co pozostaje decyzją właściciela.** Reguła dla karty zamkniętej przy aktywnym „Monitorowanie” (wyżej), scalenie
+i wdrożenie.
+
 ## Spóźniona odpowiedź sejfu w korekcie nazwiska nie cofa zmian formularza (P-NAME-FIX-WYSCIG, SW 1.1.124, `vilda_name_fix.js` 3, 2026-09-30)
 
 **Zgłoszenie.** CI PR #493 (commit `fa578176`, odłamek e2e 3/3, run 36695159393): kontrola
