@@ -7971,6 +7971,8 @@ ESLint o jeden wpis mniejsza (`gh_igf_therapy.js`, `no-useless-assignment` 4 →
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy limit i podział mają trafić także do zaleceń dla
 pacjenta i do liczby „iniekcji” w tabeli zapotrzebowania; czy dawkę Genotropin ponad 4,5 mg/d dzielić; czy usunąć
 „(… mg/d)” dla Ngenla także z historii tworzonej z punktów w sejfie; scalenie i wdrożenie.
+Rozstrzygnięte później: limit i podział w zaleceniach i tabeli — P-GH-INIEKCJE-ZALECENIA; dawki Genotropin ponad
+4,5 mg/d nie dzielimy (decyzja właściciela 2026-10-06).
 
 ## Increlex: dawka na podanie 2× na dobę, dawka początkowa 0,04 mg/kg, krok 0,1 mg, nie więcej niż 0,12 mg/kg na podanie (P-GH-INCRELEX-PODANIE, SW 1.1.162, `gh_igf_therapy.js` 30, `gh_therapy_monitor.js` 49, `gh_therapy_segments.js` 5, `vilda_gh_dawka_dane.js` i `vilda_gh_dawka.js` 2, 2026-10-05)
 
@@ -8291,7 +8293,7 @@ podziału (równe części w krokach) — decyzja właściciela z P-GH-DAWKA-POD
 podania dawki Ngenla) i liczba iniekcji w tabeli, którą lekarz może przekazać pacjentowi albo aptece. Dawki, kroki,
 limity, liczba wstrzykiwaczy i ampułek (P-GH-WAZNOSC), daty kontroli i zapis punktów bez zmian. Populacja: dzieci
 i młodzież leczeni somatrogonem i somatropiną w programach z listy karty. Ograniczenia: Ngenla — reguła podziału
-jak w karcie; Genotropin — bez podziału, tylko ostrzeżenie (czy dzielić taką dawkę — osobna decyzja właściciela);
+jak w karcie; Genotropin — bez podziału, tylko ostrzeżenie (decyzja właściciela 2026-10-06: nie dzielić);
 Omnitrope i Increlex — źródła nie podają limitu jednego wstrzyknięcia, bez zmian.
 
 **Liczba wstrzykiwaczy Ngenla przy podziale (bez zmian, sprawdzone).** P-GH-WAZNOSC liczy najwyżej 5 użyć jednego
@@ -8327,9 +8329,11 @@ pacjenta, wpis do Terminarza. Tabela dawek dobowych nadal bez liczby iniekcji.
 `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
 względem `audyt` `db8f26c`.
 
-**Co pozostaje decyzją właściciela.** Akceptacja kliniczna treści linii o podziale; czy przy dawce Genotropin poza
-zakresem jednego wstrzyknięcia kopiowanie ma zostać z ostrzeżeniem, czy być zablokowane; czy dawkę Genotropin ponad
-4,5 mg/d dzielić (wtedy ta sama reguła obejmie zalecenia i tabelę); scalenie i wdrożenie.
+**Decyzje właściciela (2026-10-06, po scaleniu).** Genotropin poza zakresem jednego wstrzyknięcia — kopiowanie zostaje
+z ostrzeżeniem w dymku, bez blokady. Dawki Genotropin ponad 4,5 mg/d nie dzielimy — karta zostaje przy „Sprawdź dawkę”,
+zalecenia i tabela bez podziału. Oba rozstrzygnięcia potwierdzają działanie wdrożone w tym wpisie; kod bez zmian.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna treści linii o podziale dawki Ngenla.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
