@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI) | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -8196,6 +8196,44 @@ wszystko z `npm run podbij-wersje` względem `audyt` `6651cfb`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; tytuł wpisów Increlex („Leczenie rhGH”); scalenie i
 wdrożenie.
+
+## Tytuł wpisów Increlex: „Leczenie IGF-1 (mekasermina)” zamiast „Leczenie rhGH” (P-GH-INCRELEX-TYTUL, SW 1.1.166, `gh_igf_therapy.js` 31, `vilda_vault.js` 197, 2026-10-05)
+
+**Skąd.** Polecenie właściciela z 2026-10-05 („zmień tytuł wpisów Increlex na właściwy dla IGF-1”). Mekasermina (Increlex)
+to rekombinowany IGF-1, nie hormon wzrostu, a wpisy jej leczenia miały tytuł „Leczenie rhGH”.
+
+**Zmierzone przed zmianą (`audyt` `8bd056d`, te same kroki co w testach).** Wpis do Terminarza z karty terapii dla
+Increlex: tytuł „Leczenie rhGH”; wpisy Historii z punktów Increlex (program IGF-1): „Leczenie rhGH” ×2.
+
+**Reguła.** Wpis leczenia z preparatem „Increlex…” albo programem IGF-1 ma tytuł „Leczenie IGF-1 (mekasermina)” — tak
+jak nagłówek „Leczony IGF-1 (mekasermina)” w Karcie pacjenta. Pozostałe wpisy GH zostają „Leczenie rhGH”. Dotyczy:
+- nowych wpisów do Terminarza z karty terapii (`gh_igf_therapy.js`, zapis wizyty kontrolnej);
+- wpisów Historii budowanych z punktów terapii przy odczycie (`vilda_vault.js`, `listPatientTimelineEvents`).
+Tytuł jest tekstem dla lekarza — nic w kodzie go nie dopasowuje (por. H6 w `karta-pacjenta-historia-automat`).
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana nazewnictwa (etykieta wpisu leczenia), bez zmiany dawek, wyników i zapisu
+punktów. Populacja: dzieci leczone mekaserminą.
+
+**Przypadki `wejście → oczekiwany wynik`.**
+- wizyta kontrolna z karty, Increlex → tytuł „Leczenie IGF-1 (mekasermina)”; Ngenla → „Leczenie rhGH”;
+- punkty: Increlex 40 mg / IGF-1 i punkt z samym programem IGF-1 → oba „Leczenie IGF-1 (mekasermina)”; Omnitrope →
+  „Leczenie rhGH”.
+
+**Strażnicy.** `tests/unit/karta-pacjenta-historia-automat.test.mjs` (H6, prawdziwy `vilda_vault.js`: punkty Increlex i
+IGF-1 → nowy tytuł; GH bez zmian); `tests/e2e/gh-dawka-podawana.spec.mjs` (J — tytuł wpisu Increlex do Terminarza, H —
+Ngenla „Leczenie rhGH”); `tests/e2e/karta-gh-increlex-widoki.spec.mjs` (Historia z punktów Increlex). Na `8bd056d` nowe
+asercje czerwone („Leczenie rhGH”).
+
+**Czego to nie zmienia.** Wpisy Terminarza Increlex zapisane wcześniej zachowują tytuł „Leczenie rhGH” — to dane w sejfie;
+bez osobnej decyzji ich nie przepisujemy. Treść wpisu („Kontrola leczenia hormonem wzrostu / IGF-1.”) bez zmian.
+
+**Wersje.** `gh_igf_therapy.js` 30 → 31, `vilda_vault.js` 196 → 197, `vilda_chrome.js` 104 → 105 i `vilda_session_bridge.js`
+28 → 29 (wstrzykują pliki z nowym `?v=`); precache (append-only); `SW_VERSION` 1.1.165 → 1.1.166 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `audyt` `e0ee9e8` (po scaleniu P-SWIEZE-WCZYTANIE, które wydało SW 1.1.165 i `vilda_chrome.js` 104).
+
+**Co pozostaje decyzją właściciela.** Akceptacja; czy i jak zmienić tytuł wpisów Increlex zapisanych wcześniej (migracja
+danych w sejfie z kopią albo zamiana tylko przy wyświetlaniu); scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
