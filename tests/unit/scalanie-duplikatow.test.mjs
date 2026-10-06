@@ -171,3 +171,85 @@ describe('mergePatients — scalanie duplikatów z bazy', () => {
     expect(przed.advanced.data.measurements.find((m) => m.ageMonths === 106)).toMatchObject({ height: 131, weight: 28 });
   });
 });
+
+// P-GH-PUNKTY-TESTY (PR-0, przed wspólnym API punktów GH): jak scalanie w sejfie łączy punkty
+// terapii GH. Do listy celu dochodzi każdy punkt źródła, którego pełny JSON.stringify (razem
+// z kolejnością kluczy) różni się od wszystkich punktów celu; o id nikt nie pyta. Przypadki
+// opisują stan obecny — także ten, który właściciel może zmienić (pytanie 19: dedup po id).
+
+/* Punkt w kształcie zapisu monitora GH: 15 kluczy, id na początku, doseAbs na końcu. */
+function punktGh(id, zmiany) {
+  return Object.assign({
+    id, type: 'continue', ageYears: 9, ageMonths: 2, weight: 28, height: 131, boneAge: null,
+    dose: 0.033, doseUnit: 'mg/kg/d', drug: 'Omnitrope 10 mg', program: 'SNP',
+    igf1: null, igf1Unit: 'ng/mL', igf1DaysSinceDose: null, doseAbs: 0.924,
+  }, zmiany || {});
+}
+
+/* Dwa osobne rekordy tego samego fikcyjnego dziecka, każdy z jedną wersją i własną listą punktów. */
+async function rekordyZPunktami(v, punktyZrodla, punktyCelu) {
+  const zrodlo = await v.savePatient({
+    name: 'Fikcyjny Adam', user: { lastName: 'Fikcyjny', firstName: 'Adam', sex: 'M', age: 9, ageMonths: 2, height: 131, weight: 28 },
+    ghTherapyPoints: punktyZrodla,
+  }, { dedup: false });
+  const cel = await v.savePatient({
+    name: 'Fikcyjny Adam', user: { lastName: 'Fikcyjny', firstName: 'Adam', sex: 'M', dobISO: '2017-06-14', age: 9, ageMonths: 3, height: 131.5, weight: 28.2 },
+    ghTherapyPoints: punktyCelu,
+  }, { dedup: false, forceNew: true });
+  expect(cel.patientId).not.toBe(zrodlo.patientId);
+  return { zrodlo: zrodlo.patientId, cel: cel.patientId };
+}
+
+describe('mergePatients — punkty terapii GH (P-GH-PUNKTY-TESTY)', () => {
+  it('punkt GH o tym samym id i innej treści: po scaleniu są oba — stan obecny — do decyzji (pytanie 19)', async () => {
+    const v = await konto();
+    const wCelu = punktGh('gh-7', { dose: 0.033, doseAbs: 0.924 });
+    const wZrodle = punktGh('gh-7', { dose: 0.035, doseAbs: 0.98 });
+    const { zrodlo, cel } = await rekordyZPunktami(v, [wZrodle], [wCelu]);
+
+    const wynik = await v.mergePatients(zrodlo, cel);
+    expect(wynik.pointsAdded, 'inny JSON = nowy punkt, mimo równego id').toBe(1);
+
+    const punkty = (await v.getPatient(cel)).snapshots[0].payload.ghTherapyPoints;
+    expect(punkty.map((p) => p.id)).toEqual(['gh-7', 'gh-7']);
+    // Najpierw lista celu bez zmian, potem punkt źródła — oba z pełną treścią i kolejnością kluczy.
+    expect(JSON.stringify(punkty[0])).toBe(JSON.stringify(wCelu));
+    expect(JSON.stringify(punkty[1])).toBe(JSON.stringify(wZrodle));
+  });
+
+  it('punkt GH identyczny w obu rekordach zostaje raz; dochodzą tylko punkty, których cel nie ma', async () => {
+    const v = await konto();
+    const wlaczenie = punktGh('gh-1', { type: 'start', ageYears: 8, ageMonths: 4, weight: 25, height: 126, doseAbs: 0.825 });
+    const kontrolaCelu = punktGh('gh-2');
+    const kontrolaZrodla = punktGh('gh-3', { ageYears: 9, ageMonths: 8, weight: 29.5, height: 134, doseAbs: 0.974 });
+    const { zrodlo, cel } = await rekordyZPunktami(v, [wlaczenie, kontrolaZrodla], [wlaczenie, kontrolaCelu]);
+
+    const wynik = await v.mergePatients(zrodlo, cel);
+    expect(wynik.pointsAdded).toBe(1);
+
+    const punkty = (await v.getPatient(cel)).snapshots[0].payload.ghTherapyPoints;
+    expect(punkty.map((p) => p.id)).toEqual(['gh-1', 'gh-2', 'gh-3']);
+    expect(punkty.filter((p) => p.id === 'gh-1')).toHaveLength(1);
+    expect(punkty[0]).toEqual(wlaczenie);
+    expect(punkty[2]).toEqual(kontrolaZrodla);
+  });
+
+  it('ta sama treść w innej kolejności kluczy to dla scalania inny punkt — stan obecny — do decyzji (pytanie 19)', async () => {
+    const v = await konto();
+    const wCelu = punktGh('gh-5');
+    const { doseAbs, ...reszta } = wCelu;
+    const wZrodle = { doseAbs, ...reszta }; // te same pola i wartości, doseAbs na początku
+    expect(wZrodle).toEqual(wCelu);
+    expect(JSON.stringify(wZrodle)).not.toBe(JSON.stringify(wCelu));
+    const { zrodlo, cel } = await rekordyZPunktami(v, [wZrodle], [wCelu]);
+
+    const wynik = await v.mergePatients(zrodlo, cel);
+    expect(wynik.pointsAdded).toBe(1);
+
+    const punkty = (await v.getPatient(cel)).snapshots[0].payload.ghTherapyPoints;
+    expect(punkty).toHaveLength(2);
+    expect(punkty[0]).toEqual(punkty[1]);
+    expect(Object.keys(punkty[0])[0]).toBe('id');
+    expect(Object.keys(punkty[1])[0], 'kolejność kluczy źródła przechodzi bez zmian').toBe('doseAbs');
+  });
+});
