@@ -8569,6 +8569,86 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Usunięcie pacjenta i scalanie duplikatów pod blokadą pacjenta (P-BLOKADA-USUWANIE, SW 1.1.173, `vilda_vault.js` 199, `vilda_auth_ui.js` 479, 2026-10-06)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych
+(decyzja właściciela 2026-10-06: „zajmuj się punktem 4, zwykły PR do audyt” — punkt 4 przeglądu „co dalej po #518”,
+część 1: A1, A2, A11, A13; import karty i kopii konta — A3, A5, A6, A9 — w następnym PR).
+
+**Co było** (zmierzone na `audyt` `c730011`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). `removePatient`
+i `mergePatients` zmieniały rekord pacjenta bez blokady, którą od P-ZAPISY-DWIE-KARTY biorą zapis, kosz, poprawki
+i scalanie synchronizacji (P-SCALANIE-BLOKADA). Każda z tych operacji to „odczytaj → zdecyduj → zapisz”:
+1. **Usunięcie w trakcie zapisu tej karty w innej karcie** (A1). Zapis zapisał nową wersję i stał przed zapisem rekordu;
+   usunięcie kasowało rekord i wszystkie wersje i stawiało nagrobek; zapis kończył się i zdejmował nagrobek. Wynik:
+   **pusta karta** (rekord z licznikiem 3, zero wersji), bez nagrobka, a zapis zgłaszał sukces. Przy otwartym pytaniu
+   bramy karta przeżywała z jedną wersją — historia i notatki skasowane.
+2. **Usunięcie w trakcie scalania synchronizacji** (A1). Scalanie decyduje o nagrobkach na starcie; karta usunięta
+   po starcie wracała z ładunku sprzed usunięcia, obok własnego nagrobka (do następnej synchronizacji; zapisana
+   w tym czasie — na stałe).
+3. **Ponowne usunięcie w trakcie scalania** (A11). Koniec scalania zdejmował lokalne nagrobki, które przegrały decyzję
+   ze startu — bez blokady i po samym id pacjenta, więc zdejmował też nagrobek nowego usunięcia.
+4. **Scalanie duplikatów** (A2). Wersja zapisana w źródle w trakcie scalania była kasowana razem ze źródłem — na
+   wszystkich urządzeniach, bo nagrobek źródła wygrywa wszędzie. Poprawka pomiaru w karcie docelowej zrobiona w trakcie
+   znikała pod nową bieżącą wersją, zbudowaną z odczytu sprzed poprawki.
+5. **Zapis z jawnym id pacjenta, którego karta doszła w tym czasie** (A13; synchronizacja, import, inna karta). Zapis
+   uznawał pacjenta za nowego na liście sprzed blokady i nadpisywał licznik wersji (1 zamiast 4) i datę założenia karty.
+
+**Reguła po zmianie.**
+- `removePatient` idzie pod blokadą pacjenta (`vilda-save-pat:<id>`). `mergePatients` — pod blokadami obu kart, branymi
+  zawsze w tej samej kolejności (rosnące id), więc dwa odwrotne scalenia się nie zakleszczą. W środku świeże odczyty
+  obu kart. Wolna blokada — rusza od razu; zajęta — sygnał `onLockWait` i czekanie najwyżej `lockTimeoutMs` (domyślnie
+  30 s); po limicie błąd `vildaSaveBusy` i **nic nie zostaje zmienione**. Nowy, opcjonalny ostatni argument
+  `{ onLockWait, lockTimeoutMs }` (te same nazwy co w `savePatient`); `mergeExternalIntoPatient` usuwa źródło przez
+  `removePatient`, więc też czeka.
+- Kto już trzyma blokadę (usunięcie ostatniej wersji przez `deleteSnapshot`, scalanie duplikatów), woła rdzenie bez
+  blokady — Web Locks nie są wielobieżne.
+- Scalanie synchronizacji czyta nagrobek karty świeżo, pod jej blokadą, i stosuje regułę ze startu: nagrobek wygrywa,
+  gdy usunięcie nie jest wcześniejsze niż ostatni zapis (lokalny albo z ładunku) — wtedy nic nie wpisuje (karta nie
+  liczy się jako zaktualizowana). Przegrany nagrobek znika tu, pod blokadą, a nie dopiero na końcu scalania.
+- Koniec scalania zdejmuje lokalny nagrobek tylko pod blokadą pacjenta i tylko wtedy, gdy to ten sam nagrobek (ta sama
+  chwila usunięcia) co na starcie.
+- `savePatient` pod blokadą czyta rekord świeżo: karta, która doszła po odczycie listy, jest traktowana jak istniejąca
+  (licznik, data założenia i numer kolejny wersji liczone od niej, `isNew: false`).
+- Ekran edycji pacjenta: „Usuń pacjenta” przy zajętej blokadzie pokazuje „Czekam — ten pacjent jest zapisywany w innej
+  karcie” (jak „Zapisz zmiany”), a po limicie: „Nie usunięto — ten pacjent jest nadal zapisywany w innej karcie. Dokończ
+  tam zapis i usuń pacjenta ponownie.” Scalanie duplikatów przy zajętej blokadzie kończy się istniejącym oknem „Nie udało
+  się scalić: …” z treścią błędu sejfu.
+
+**Bez zmian (decyzja właściciela, A13).** Zapis z jawnym id karty, której już nie ma (usuniętej albo scalonej — także
+gdy usunięcie przeszło w trakcie czekania zapisu na blokadę), odtwarza kartę z jedną wersją i zdejmuje nagrobek — jak
+dotąd. Tak samo zostaje decyzja z okna „Czy to ten sam pacjent?”, podjęta przed blokadą. Wariant „odmów zapisu, zostaw
+formularz” zmienia zachowanie aplikacji i czeka na decyzję.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/blokada-usuwania-scalania.test.mjs` (prawdziwy
+`vilda_vault.js`; dwie karty na wspólnym magazynie i atrapie Web Locks oraz jedna karta z kolejką strony):
+- zapis karty stoi przed zapisem rekordu, druga karta usuwa pacjenta → usunięcie czeka; potem brak rekordu, zero
+  wersji, nagrobek;
+- scalanie stoi przy pierwszej karcie, druga karta usuwa drugą → usunięta karta nie wraca, nagrobek zostaje;
+- scalanie przywróciło kartę (zapis z innego urządzenia nowszy niż usunięcie), druga karta usuwa ją ponownie → nagrobek
+  ponownego usunięcia zostaje;
+- scalanie duplikatów przepina wersje, druga karta zapisuje źródło → zapis czeka; cel ma 5 wersji, zgłoszona wersja
+  zapisu jest w magazynie;
+- scalanie duplikatów, druga karta poprawia pomiar celu (66 mies., wzrost 150) → poprawka czeka i jest w bieżącej wersji;
+- scalanie wpisuje kartę nową dla urządzenia (3 wersje), druga karta zapisuje ją z jawnym id → `isNew: false`, 4 wersje,
+  licznik 4, data założenia z synchronizacji;
+- zajęta blokada, limit 60 ms: usunięcie i scalanie duplikatów → jeden sygnał czekania, błąd `vildaSaveBusy`, karty
+  bez zmian.
+Na `c730011` wszystkie 14 czerwone. Mutacje (po jednej poprawce cofniętej): usunięcie bez blokady — 3 czerwone; bez
+świeżego nagrobka w scalaniu — 2; zdejmowanie nagrobka bez warunku — 2; scalanie duplikatów bez blokad — 5; bez
+świeżego odczytu rekordu w zapisie — 2.
+`tests/e2e/blokada-usuwania.spec.mjs` (prawdziwe Web Locks, dwie karty przeglądarki): „Usuń pacjenta” przy pytaniu bramy
+w drugiej karcie — „Czekam…”, potem karta znika w całości (wersje, notatka) z nagrobkiem; ten sam przycisk przy blokadzie
+trzymanej do końca — po 30 s „Nie usunięto…”, karta zostaje; scalanie duplikatów czeka na zapis źródła, a pomiar 74
+z tego zapisu jest w bieżącej wersji celu. Na `c730011` wszystkie 3 czerwone.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, jednostkach i wynikach. Usunięcie i scalanie nie gubią po cichu
+zapisu, poprawki ani nagrobka; przy zajętej blokadzie czekają do 30 s albo kończą się błędem, a dane zostają bez zmian.
+
+**Czego zmiana nie robi.** Nie obejmuje importu karty z pliku (`importPatientFromEnvelope`), kopii konta
+(`mergeVaultBackup`, `restoreVaultBackup`) ani migracji nazwisk (`migratePatientNamesSplit`) — następny PR. Nie zmienia
+reguł scalania, formatu ładunku ani notatek. Bez Web Locks (sama kolejka strony) blokady chronią tylko w obrębie jednej
+strony — jak dotąd.
+
 ## Karta przywrócona z pliku po usunięciu pacjenta przeżywa nagrobek z chmury (P-IMPORT-NAGROBEK, SW 1.1.171, `vilda_vault.js` 198, 2026-10-06)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg ani interpretacja. **Zmiana reguły synchronizacji** (decyzja właściciela
@@ -8761,6 +8841,8 @@ przy zajętej blokadzie synchronizacja czeka albo jest wstrzymana do następnej 
 **Ograniczenia.**
 - `removePatient` (usunięcie karty) i import kopii (`importPatientFromEnvelope`, `restoreVaultBackup`) nadal bez blokady
   pacjenta. Ich wyścigi ze scalaniem świeży odczyt zawęża, ale nie wyklucza.
+  *(Aktualizacja 2026-10-06, P-BLOKADA-USUWANIE: `removePatient` i `mergePatients` pod blokadą pacjenta, a scalanie
+  czyta nagrobek karty świeżo. Import i kopie konta — następny PR.)*
 - Pytanie bramy otwarte długo w innej karcie: każda automatyczna synchronizacja czeka 30 s i kończy się `MERGE_BUSY`;
   wysyłka z tego urządzenia czeka do odpowiedzi albo zamknięcia tamtej karty. Błąd idzie tą samą drogą co inne błędy
   pobrania. *(Korekta 2026-10-05, P-SYNC-STRAZNIK: wysyłka nie czekała — po 5 próbach rezygnowała do następnej zmiany
