@@ -1935,6 +1935,8 @@ Otwarte (poza planem): precyzja mediany OLAF BMI do 0,1 kg/m² (audyt, znalezisk
 
 **Strażnicy.** `tests/e2e/odtworzenie-na-zywo-powloka.spec.mjs` (powłoka: DocPro w tle dostaje datę i blokadę, Start przez 6 s trzyma wagę i wzrost), `tests/e2e/lustro-formularza-pusta-paczka.spec.mjs` (pusta paczka nie kasuje, `clear` kasuje, ping pola kasuje, brak echa w trakcie odtwarzania), `tests/unit/odtworzenie-na-zywo.test.mjs` (zdarzenie w restore-all, nasłuchy modułów, lustro na atrapie okna).
 
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: wiadomość lustra niesie pacjenta karty nadawcy; odbiorca przyjmuje ją tylko dla tego samego pacjenta i tylko jako dokument aktualny, a wpis z lustra nie uruchamia natychmiastowego autozapisu odbiorcy. Odtworzenie „na żywo” (`vildaPersistRestoreAll`) w panelu z danymi innego pacjenta nie zachodzi — panel przeładowuje się przy pokazaniu.)*
+
 ### P-PANEL-ZWINIETY / P-MPH-KOLOR — panel pokwitaniowy domyślnie zwinięty, wiersz wieku na docpro jak na index, kolor kafelka MPH wg reguły wzrostu (SW 1.0.958, 2026-09-16, decyzje właściciela)
 
 **Trzy zlecenia właściciela.** (1) Sekcja „Dane pokwitaniowe" w formularzu głównym (index i docpro) ma być domyślnie zwinięta, także gdy pola niosą wartości — w tym po wczytaniu pacjenta obiema drogami („Nowy pomiar" i „Odtwórz zapisany stan"). (2) Na docpro pola „Wiek (lata)" i „Wiek (miesiące)" stały w dwóch wierszach, na index w jednym — ma być jak na index. (3) Kafelek MPH w Karcie pacjenta (sekcja „Wzrastanie i genetyka rodzinna") ma podlegać tej samej regule kolorów, co kafelek wzrostu: bardzo niscy rodzice i MPH między 3. a 10. centylem, poniżej 3. albo powyżej 97. centyla → kolor jak przy wzroście.
@@ -9806,6 +9808,10 @@ SW 1.1.87 → **1.1.88**; `vilda_data_import_export.js?v=85→86`, `vilda_shell.
 **Co pozostaje decyzją właściciela.** Akceptacja pełnego odtworzenia panelu docelowego po zmianie sesji (skutek uboczny wyżej)
 i scalenie.
 
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: pełne odtworzenie panelu docelowego (`Gp_p`) nie dotyczy panelu, w którym
+inna ramka wczytała innego pacjenta — taki panel powłoka przeładowuje przy pokazaniu, a odświeżanie w tle (`It`) go
+pomija. Wymuszony zapis panelu źródłowego (`Gp_f`) z dokumentu nieaktualnego odrzuca adapter.)*
+
 ## Wiek i masa niezapisanego pacjenta nie przechodzą do rekordu wczytanego pacjenta (P-SESJA-OBCA, SW 1.1.121, `vilda_data_import_export.js` 91, 2026-09-30)
 
 **Zgłoszenie.** Znalezisko recenzji poprawki „Cel własny” (2026-09-30): na `docpro.html` niezapisana Celina (35 lat, 66 kg),
@@ -10062,6 +10068,11 @@ obu — zapis ląduje w A (stan `21046aa`). Wersje na stronach, precache (append
 
 *(Uzupełnienie 2026-10-06, P-ZRODLA-PRZEJECIE: przejęcie pacjenta nie powiadamiało źródeł rozpoznania DS i danych
 okołoporodowych, bo nie wysyła `vilda:patient-loaded` — wpis niżej.)*
+
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: przejęcie pacjenta z sesji karty dotyczy już tylko panelu pustego
+(albo tego samego nowego dziecka po nadaniu identyfikatora). Panel z danymi INNEGO pacjenta jest nieaktualny: nie
+przejmuje identyfikatora, nie zapisuje stanu karty i przeładowuje się przy pokazaniu; zapis do sejfu i notatka z niego
+celują w jego własnego pacjenta — wpis P-POWLOKA-OBCY.)*
 ## Źródła DS i danych okołoporodowych nadążają za pacjentem przejętym z sesji karty (P-ZRODLA-PRZEJECIE, SW 1.1.168, `vilda_ds_source.js` 4, `vilda_perinatal_source.js` 3, 2026-10-06)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, siatka, populacja ani interpretacja. Zmienia się to, **którego pacjenta**
@@ -10110,6 +10121,11 @@ weryfikacji (opis w PR). *(Uzupełnienie 2026-10-06: zweryfikowane i poprawione 
   „BRAK DANYCH”, dojrzewanie C. Na `db8f26c` czerwony (DocPro w tle zostaje przy `'DS'` i 34+2 tc).
 
 SW 1.1.167 → **1.1.168**; `vilda_ds_source.js?v=3→4`, `vilda_perinatal_source.js?v=2→3`.
+
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: DocPro z danymi A w tle nie przejmuje już C przez `vildaPersistRestoreAll` —
+jest nieaktualny i przy pokazaniu („Wstecz”) przeładowuje się przez `location.reload()`, bez wpisu w historii; świeży
+dokument czyta źródła DS i danych okołoporodowych dla C. W `powloka-zrodla-wstecz.spec.mjs` krok „DocPro w tle przejmuje
+C” zastąpiony krokiem „DocPro w tle zostaje przy A, nieaktualny”; asercje stanu po „Wstecz” bez zmian.)*
 
 ## Moduły paneli powłoki nadążają za pacjentem przejętym z sesji karty (P-PRZEJECIE-MODULY, SW 1.1.170, 2026-10-06)
 
@@ -10166,6 +10182,138 @@ wywraca odpowiedni test.
 
 **Wersje.** `clcr_ui_workflow.js` 5, `vilda_epicrisis_ui.js` 28, `obesity_therapy.js` 11, `obesity_therapy_monitor.js` 27,
 `bisphos_therapy_monitor.js` 6, `vilda_name_fix.js` 4, `vilda_save_status_indicator.js` 27; SW 1.1.169 → **1.1.170**.
+
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: przejęcie pacjenta przez `vildaPersistRestoreAll` zostaje dla panelu pustego
+i dla tego samego nowego dziecka po nadaniu identyfikatora. Panel z danymi INNEGO pacjenta (np. DocPro albo Klirens z A
+po wczytaniu C na Start) jest nieaktualny: w tle nie zapisuje stanu karty, a przy pokazaniu przeładowuje się i jego
+moduły startują od pacjenta karty — wpis niżej.)*
+
+## Panel powłoki nie przejmuje po cichu innego pacjenta: dokument z poprzednim pacjentem jest bezczynny i przeładowuje się przy pokazaniu (P-POWLOKA-OBCY, SW 1.1.172, `vilda_panel_pacjent.js` 1, 2026-10-06)
+
+**Zmiana kliniczna: NIE w sensie wzorów** — żaden wzór, próg, siatka, populacja, jednostka ani interpretacja się nie
+zmienia. Zmienia się, **czyje dane** trafiają do formularza i do rekordu po przejściu między panelami powłoki, więc wynik
+może się zmienić tam, gdzie dotąd był liczony z danych innego pacjenta (wzrost rodziców → wzrost docelowy, wiek kostny →
+predykcja wzrostu, punkty leczenia, historia pomiarów, pokarmy i spożycie). Zlecenie właściciela 2026-10-06: „napraw
+powłokę — propozycja 5” (raport z badania odtworzenia sesji przekazany właścicielowi osobno). Wymaga akceptacji
+właściciela (AGENTS §3).
+
+**Co było.** Panele Start, DocPro i Klirens to osobne dokumenty w ramkach powłoki `app.html`. Każdy trzyma w pamięci
+własny formularz, a migawka sesji (`vildaMainSessionV1`), stan wspólny (`sharedUserData`), magazyn punktów terapii
+i identyfikator pacjenta (`vildaCurrentPatientId`) są wspólne dla karty przeglądarki. Gdy jeden panel wczytywał innego
+pacjenta (np. skok „↗ Siatki / punkt GH” z Terminarza do DocPro), drugi — ukryty — dalej trzymał poprzedniego:
+- lustro formularza (`custom-fixes.js`) wpisywało mu nazwisko i płeć nowego pacjenta, a autozapis utrwalał
+  migawkę-hybrydę: nazwisko Y, a punkty GH, punkty leczenia otyłości, wzrost rodziców i historia pomiarów X;
+- przy powrocie (i w odświeżaniu paneli w tle po każdym wczytaniu) powłoka przejmowała w panelu sam identyfikator
+  (P-POWLOKA-ID) i nakładała hybrydę, więc „Zapisz” dopisywało do rekordu Y dane kliniczne X;
+- odwrotnie: DocPro z X w tle po wczytaniu Y na Start przejmował identyfikator Y, zachowując punkty otyłości i rodziców X;
+- niezależnie od wyścigu wzrost rodziców i wiek kostny X wracały do pustych pól Y ze stanu wspólnego (rekord bez sekcji
+  `advanced` niczego w korzeniu nie nadpisywał, a wymuszony zapis `x()` w `vilda_persist_runtime.js` oddawał kopię
+  zakolejkowaną przed wczytaniem);
+- pokarmy, spożycie, kcal i kontekst wieku kostnego X (globals stanu wspólnego) przeżywały wczytanie Y w DocPro, który
+  tych sekcji nie ma — świeży Start odtwarzał je przy Y;
+- odtworzenie sesji (F5, panel otwierany od nowa) pomijało punkty leczenia otyłości i bisfosfonianów: panel miał pustą
+  listę, a „Zapisz” na Start kasowało punkty pacjenta.
+
+**Co jest.**
+1. **`vilda_panel_pacjent.js` (nowy, czytelny moduł; index, docpro, kalkulator-klirens, zaraz po adapterze).** Dokument
+   pamięta pacjenta, którego zna (start, własne `vilda:patient-loaded`, własne „Wyczyść”). Ocena jest leniwa: przy każdym
+   zapisie, wiadomości lustra, pokazaniu panelu i zapisie do sejfu porównuje bieżący identyfikator karty ze znanym, więc
+   nie zależy od kolejności zdarzeń między ramkami. Reguły:
+   - ten sam pacjent → dokument aktualny;
+   - inny pacjent, formularz pusty → panel przyjmuje pacjenta karty (bez zmian: P-ODTWORZ-ZYWO, P-POWLOKA-ID,
+     P-ZRODLA-PRZEJECIE); „pusty” uwzględnia też wczytany rekord, datę urodzenia, punkty terapii i pomiary zaawansowane;
+   - identyfikator nadany nowemu dziecku (zapis w innej ramce), a formularz ma te same nazwisko i datę urodzenia co
+     migawka sesji karty → panel przyjmuje nowy identyfikator, bez przeładowania;
+   - identyfikator usunięty (blokada sejfu, usunięcie pacjenta, „Wyczyść” — to ostatnie `vilda_chrome.js` powtarza
+     w każdej ramce) → bez zmian, to nie jest wczytanie innego pacjenta;
+   - inny pacjent, formularz z danymi → dokument **nieaktualny**. Kończy to własne wczytanie (już na jego początku),
+     własne „Wyczyść” albo powrót karty do pacjenta dokumentu (X → Y → X).
+   Moduł działa tylko w powłoce, która deklaruje protokół (`VildaShell.protokolPanelu`); ramka w starszej powłoce po
+   aktualizacji i strona samodzielna zachowują się jak dotąd.
+2. **Adapter trwałości (`vilda_persistence_adapter.js`).** Nieaktualny dokument nie zapisuje stanu karty: migawki sesji,
+   stanu wspólnego (także z `force`), sesji Klirensu i sterydów, stanu kart DocPro ani punktów terapii (klucze
+   `patient-scoped`). Zamyka to drogi hybrydy z ukrytego panelu: autozapis po lustrze, `pagehide`, `visibilitychange`,
+   wymuszony zapis powłoki przed przełączeniem.
+3. **Powłoka (`vilda_shell.js`).** Nieaktualny panel jest w tle **bezczynny**: odświeżanie paneli po wczytaniu w innej
+   ramce (`It`) go pomija — nie przejmuje identyfikatora i nie dostaje stanu wspólnego innego pacjenta. Przy **pokazaniu**
+   (`Gp_p`) powłoka przeładowuje ramkę przez `location.reload()`: bez wpisu w historii („Wstecz” działa jak dotąd), bez
+   anulowania żądań trasy („Pacjenci”, „Karta pacjenta”), z nakładką „Ładowanie…”; niedoręczony cel trasy (np. skok do
+   punktu GH) trafia do świeżego dokumentu po `load`. Świeży dokument startuje ze stanu karty jak panel otwierany pierwszy
+   raz (P-POWLOKA-PANELE). Przed przeładowaniem dokument jest utrwalany jako nieaktualny (`utrwal()`), więc jego
+   `pagehide` nic nie zapisze. Ciepła ramka tego samego pacjenta nie jest przeładowywana.
+4. **Lustro formularza (`custom-fixes.js`).** Wiadomość niesie pacjenta karty z chwili wysyłki; odbiorca przyjmuje ją
+   tylko dla tego samego bieżącego pacjenta i tylko jako dokument aktualny. Nieaktualny dokument nie nadaje; pingi
+   pojedynczych pól w trakcie `applyLoadedData` nie wychodzą. Wpis z lustra nie uruchamia natychmiastowego autozapisu
+   odbiorcy (`__vildaLustroWpis`, sprawdzane w adapterze i w `Be`); zapis zaplanowany wcześniej w panelu aktualnym tego
+   samego pacjenta działa jak dotąd. Wiadomość bez pola pacjenta (stary format) — jak dotąd.
+5. **Zapis do sejfu i notatka do wizyty.** W dokumencie nieaktualnym cel zapisu (`BdupId`) i notatki to pacjent, którego
+   dane dokument trzyma (dla nowego, niezapisanego dziecka — nowy rekord), a nie pacjent karty.
+6. **Mini-podsumowanie na pasku powłoki** (rysuje je Start): gdy Start jest nieaktualny, wartości pochodzą ze stanu
+   wspólnego karty; przelicza się też od razu po zmianie pacjenta karty, a nie dopiero przy przełączeniu panelu.
+7. **Strażnik niezapisanych zmian (`vilda_unsaved_guard.js`).** W dokumencie nieaktualnym nie pokazuje natywnego okna
+   „Opuścić stronę?” — zatrzymałoby przeładowanie i zostawiło panel na „Ładowanie…”.
+8. **Stan wspólny i odtworzenie sesji (`vilda_data_import_export.js`, `vilda_persist_runtime.js`).**
+   - Wczytanie rekordu zawsze nadpisuje w korzeniu stanu wspólnego wzrost rodziców, wiek kostny, objętość jąder,
+     opóźnione dojrzewanie w rodzinie i wykluczenia (brak w rekordzie, także brak sekcji `advanced` → `""`).
+   - Wymuszony zapis stanu wspólnego z kopii zakolejkowanej bierze te sześć kluczy ze świeżego korzenia, gdy ten zgadza
+     się z polem formularza, a kopia nie.
+   - Wczytanie (poza odtworzeniem sesji) czyści w stanie wspólnym globals pacjenta: pokarmy, spożycie i kcal, pomiary
+     podstawowe i zaawansowane, punkty GH, wczytany rekord porównania, kontekst wieku kostnego. Panel wczytujący
+     uzupełnia te, które ma; reszta przychodzi z migawki wczytanego pacjenta. Ustawienia niebędące danymi pacjenta
+     (np. kreator wykresów) zostają.
+   - Odtworzenie sesji przywraca punkty leczenia otyłości i bisfosfonianów z migawki, gdy ta je niesie.
+
+**Decyzje dla właściciela.**
+- Niezapisane zmiany poprzedniego pacjenta w nieaktualnym panelu przepadają przy jego przeładowaniu, bez pytania
+  (dotąd trafiały do hybrydy w rekordzie Y). Okno w aplikacji („Ten panel ma niezapisane zmiany X: wróć do X / odrzuć”)
+  wymaga makiety desktop/mobile (AGENTS §5). Otwarty edytor notatki do wizyty nadal pyta natywnym oknem.
+- Panel widoczny w chwili, gdy inna ramka zmieni pacjenta (rzadkie: np. skok GH dokończony w tle po powrocie), zostaje
+  nieaktualny do następnego pokazania — nie przeładowuje się pod ręką lekarza; jego zapis do sejfu celuje w jego
+  pacjenta.
+
+**Czego zmiana nie robi.** Nie zmienia formatu sesji, rekordu ani synchronizacji. Nie chroni stron samodzielnych (poza
+powłoką; m.in. powrót z bfcache) ani paneli bez formularza pacjenta (Lab, HOMA, Cukrzyca, Steroidy). Nie obejmuje drugiej
+karty przeglądarki z kopią sesji ani zaległego zamiaru wczytania (`vilda:pendingPatientLoad`). Nie naprawia zapisów
+pomylonych wcześniej. Poza zakresem, do osobnego zadania: po „Wyczyść” na Start DocPro zostawia w pamięci punkty
+leczenia otyłości poprzedniego pacjenta i odkłada je z powrotem do magazynu karty (zmierzone także na kodzie bazowym).
+
+**Testy.**
+- `tests/e2e/powloka-panel-obcy-pacjent.spec.mjs` — prawdziwa powłoka i interfejs (lista pacjentów, Terminarz, skok do
+  punktu GH, „Zapisz” w panelu bocznym), fikcyjni X (GH, otyłość, rodzice 158/171, pomiar 112 cm, dane okołoporodowe,
+  pokarm) i Y:
+  - S2 ×2: Start z X („Nowy pomiar” / „Odtwórz zapis”) → skok GH do Y w DocPro → powrót → „Zapisz”: migawka karty nigdy
+    nie łączy nazwiska Y z danymi X; Start w tle nie jest przeładowywany i nie przejmuje Y; mini-podsumowanie przy DocPro
+    nie pokazuje pomiarów X; po powrocie Start jest świeżym dokumentem, bez dodatkowego wpisu w historii i bez danych X; najnowszy
+    zapis Y bez danych X i z własnym punktem otyłości Y; X bez nowego zapisu; bez okien natywnych;
+  - kierunek odwrotny: DocPro z X w tle nie jest przeładowywany przy wczytaniu Y na Start; przy pokazaniu — świeży
+    dokument, zapis z DocPro bez danych X;
+  - rodzice X nie wracają do pustych pól Y po wczytaniu Y w tym samym panelu;
+  - nowe dziecko zapisane na Start: ciepły DocPro z tym samym dzieckiem nie jest przeładowywany;
+  - skok GH do nieaktualnego DocPro: przeładowanie przy pokazaniu, Y bez danych X, zamiar skoku skonsumowany;
+  - kontrola: ten sam pacjent w obu panelach — ciepła ramka DocPro nie jest przeładowywana.
+  Wynik: 7/7. Na kodzie bazowym `57bbff45` (pierwsza wersja testu) czerwone S2 ×2 (migawka-hybryda) i kierunek
+  odwrotny (DocPro z Y: punkt otyłości X, rodzice 158/171). Ablacje kodu produkcyjnego, każda czerwieni test: bez
+  przeładowania w `Gp_p`; bez czyszczenia globals (pokarm X — 7 porcji — w Start z Y); bez nadania identyfikatora
+  (DocPro przeładowany); przeładowanie przez `src` (dodatkowy wpis w historii); bez odświeżenia mini-podsumowania
+  (pomiary X przy DocPro z Y); bez pominięcia w `It` (DocPro w tle przejmuje Y).
+  Od P-PRZEJECIE-MODULY (#553) wskaźnik zapisu panelu, który odtworzył albo przejął pacjenta karty, bywa „dirty” bez
+  zmiany i strażnik pyta „Zapisać zmiany przed wczytaniem?” (zmierzone sondą: przed #553 0/4, na `audyt` `d3c0935` 4/4;
+  zgłoszone osobno). Test odpowiada wtedy jak lekarz bez zmian — „Odrzuć zmiany i wczytaj” — i zostawia adnotację.
+- `tests/unit/powloka-panel-obcy.test.mjs` — prawdziwe moduły na atrapach: reguły modułu (leniwa ocena, nadanie
+  identyfikatora, „dane” poza polami, usunięcie identyfikatora, powrót X→Y→X, „Wyczyść” na window, `utrwal`, `cel`,
+  brak protokołu), strażnik adaptera i flaga lustra, lustro, powłoka (pominięcie w `It`, przeładowanie w `Gp_p` bez
+  nowego `src`, doręczenie celu trasy, „Pacjenci” przy nieaktualnym Starcie), `applyLoadedData` (globals, wiek kostny,
+  zgłoszenie początku wczytania), `BdupId`, strażnik niezapisanych zmian. Wynik: 31/31; 12 ablacji kodu produkcyjnego (bramka protokołu, przeładowanie w `Gp_p`, pominięcie w
+  `It`, globals, wiek kostny, cel `BdupId`, strażnik, nadanie identyfikatora, zgłoszenie wczytania, `utrwal`,
+  przeładowanie przez `src`, „dane” poza polami) — każda czerwieni co najmniej jeden test.
+- `tests/e2e/powloka-zrodla-wstecz.spec.mjs` — krok „DocPro w tle przejmuje C” zastąpiony krokiem „DocPro w tle zostaje
+  przy A, nieaktualny; po „Wstecz” świeży dokument z C” (zamierzona zmiana z części (c)); asercje stanu po „Wstecz” bez
+  zmian.
+
+SW 1.1.171 → **1.1.172**; `custom-fixes.js?v=72→73`, `vilda_data_import_export.js?v=97→98`,
+`vilda_persist_runtime.js?v=19→20`, `vilda_persistence_adapter.js?v=29→30`, `vilda_shell.js?v=59→60`,
+`vilda_unsaved_guard.js?v=5→6`; nowy `vilda_panel_pacjent.js?v=1` (index, docpro, kalkulator-klirens; precache).
+
 
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 
@@ -14192,6 +14340,10 @@ Bez zmian: odświeżenie strony bez nowego wczytania (P-ODSWIEZENIE) nadal przyw
 - Kontrole negatywne na kodzie produkcyjnym: bez poprawki testy 1 i 2 są czerwone (w formularzu nazwisko poprzedniego pacjenta). Sama zmiana w `vilda_data_import_export.js` zostawia czerwony test 2, a sama zmiana w `vilda_chrome.js` — test 1.
 
 SW 1.1.164 → **1.1.165**; `vilda_chrome.js?v=103→104`, `vilda_data_import_export.js?v=96→97`.
+
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: odtworzenie sesji przywraca też punkty leczenia otyłości i bisfosfonianów
+z migawki, gdy ta je niesie; początek wczytania (poza odtworzeniem) kończy stan „nieaktualny” dokumentu i czyści
+globals pacjenta w stanie wspólnym — wpis P-POWLOKA-OBCY.)*
 
 ## Zasady aktualizacji rejestru
 
