@@ -13,6 +13,10 @@
  * Increlex (P-GH-INCRELEX-PODANIE): dawka na podanie 2× na dobę, krok 0,1 mg; po zaokrągleniu nie więcej niż
  * 0,12 mg/kg na podanie — nadmiar zaokrąglamy w dół do kroku (dawkaNaPodanie, komunikatObnizenia).
  *
+ * Zalecenia dla pacjenta i tabela zapotrzebowania (P-GH-INIEKCJE-ZALECENIA): iniekcji = dawki × wstrzyknięcia na
+ * dawkę (iniekcje), linia o podziale dawki w kopiowanych zaleceniach (liniaPodzialu) i ostrzeżenie dla lekarza
+ * po skopiowaniu, gdy dawki nie poda jedno wstrzyknięcie, a preparat nie ma reguły podziału (ostrzezenieZalecen).
+ *
  * Teksty komunikatów powstają tutaj, z danych, żeby karta i monitor mówiły to samo. Nieznany preparat →
  * { znany: false } i karta liczy jak dotąd. Rejestr: docs/clinical/ALGORITHMS.md, P-GH-DAWKA-PODAWANA.
  */
@@ -255,6 +259,65 @@
     return t;
   }
 
+  function odmiana(n, jeden, kilka, wiele) {
+    var r10 = n % 10;
+    var r100 = n % 100;
+    if (n === 1) return jeden;
+    return r10 >= 2 && r10 <= 4 && (r100 < 12 || r100 > 14) ? kilka : wiele;
+  }
+
+  /* P-GH-INIEKCJE-ZALECENIA: ile wstrzyknięć na jedną dawkę. Dzielimy tylko preparat, dla którego źródło mówi
+     o dawce w kilku wstrzyknięciach (uwagaPodzialu — Ngenla); pozostałe: 1, także Genotropin ponad limit
+     jednego wstrzyknięcia (czy taką dawkę dzielić — osobna decyzja właściciela). */
+  function wstrzyknienNaDawke(lek, wartosc) {
+    var p = preparat(lek);
+    if (!p || !p.uwagaPodzialu || !liczbaDodatnia(wartosc)) return 1;
+    return podzial(lek, wartosc).wstrzykniec || 1;
+  }
+
+  /* Liczba iniekcji w tabeli zapotrzebowania: dawki × wstrzyknięcia na dawkę.
+     { dawek, naDawke, razem, tekst: '13 iniekcji' albo '39 iniekcji (3 na dawkę)' }. */
+  function iniekcje(lek, wartosc, dawek) {
+    var d = typeof dawek === 'number' && isFinite(dawek) && dawek > 0 ? Math.round(dawek) : 0;
+    var n = wstrzyknienNaDawke(lek, wartosc);
+    var razem = d * n;
+    var tekst = razem + ' ' + odmiana(razem, 'iniekcja', 'iniekcje', 'iniekcji');
+    return { dawek: d, naDawke: n, razem: razem, tekst: n > 1 && razem > 0 ? tekst + ' (' + n + ' na dawkę)' : tekst };
+  }
+
+  /* Linia zaleceń dla pacjenta, gdy dawka wymaga kilku wstrzyknięć (równe części w krokach, jak w komunikacie karty):
+     „Dawkę 26,4 mg podaje się w 3 wstrzyknięciach po 8,8 mg, każde w inne miejsce, aby zapobiec lipoatrofii.”
+     Pusty tekst, gdy wystarczy jedno wstrzyknięcie albo preparat nie ma reguły podziału. */
+  function liniaPodzialu(lek, wartosc) {
+    var p = preparat(lek);
+    if (!p || !p.uwagaPodzialu || !liczbaDodatnia(wartosc)) return '';
+    var czesci = podzial(lek, wartosc).czesci;
+    if (czesci.length < 2) return '';
+    var rowne = czesci.every(function (c) { return Math.abs(c - czesci[0]) < EPS; });
+    return 'Dawkę ' + mg(wartosc) + ' podaje się w ' + czesci.length + ' wstrzyknięciach'
+      + (rowne ? ' po ' + mg(czesci[0]) : ': ' + lista(czesci.map(mg))) + ', ' + p.uwagaPodzialu + '.';
+  }
+
+  /* Ostrzeżenie dla lekarza po skopiowaniu zaleceń, gdy dawki nie poda jedno wstrzyknięcie, a preparat nie ma reguły
+     podziału (Genotropin ponad limit) albo dawka jest mniejsza niż najmniejsze wstrzyknięcie. Tekst zaleceń się
+     nie zmienia; pusty tekst — bez ostrzeżenia. */
+  function ostrzezenieZalecen(lek, wartosc) {
+    var o = ocen(lek, wartosc);
+    if (!o.znany || !liczbaDodatnia(wartosc)) return '';
+    var p = preparat(lek);
+    var zr = o.zrodlo ? ' (' + o.zrodlo.krotko + ')' : '';
+    var koniec = ' Sprawdź dawkę, zanim przekażesz zalecenia pacjentowi.';
+    if (o.powyzejMaks && !p.uwagaPodzialu) {
+      return 'Skopiowano zalecenia, ale ' + mg(wartosc) + ' to więcej niż ' + mg(o.maksMg)
+        + ' — tyle najwięcej podaje jedno wstrzyknięcie wstrzykiwacza ' + lek + zr + '.' + koniec;
+    }
+    if (o.ponizejMin) {
+      return 'Skopiowano zalecenia, ale ' + mg(wartosc) + ' to mniej niż ' + mg(o.minMg)
+        + ' — tyle najmniej podaje wstrzykiwacz ' + lek + zr + '.' + koniec;
+    }
+    return '';
+  }
+
   /* P-GH-INCRELEX-PODANIE: dawka na podanie zaokrąglona do kroku; gdy po zaokrągleniu przekracza największą
      dawkę na kg (Increlex: 0,12 mg/kg na podanie, ChPL 4.2), zaokrąglamy w dół do kroku (decyzja właściciela). */
   function dawkaNaPodanie(lek, wartosc, waga) {
@@ -363,6 +426,9 @@
     komunikatZmianySchematu: komunikatZmianySchematu,
     dawkaNaPodanie: dawkaNaPodanie,
     komunikatObnizenia: komunikatObnizenia,
+    iniekcje: iniekcje,
+    liniaPodzialu: liniaPodzialu,
+    ostrzezenieZalecen: ostrzezenieZalecen,
     wstrzykniecia: wstrzykniecia,
     fmt: fmt
   });
