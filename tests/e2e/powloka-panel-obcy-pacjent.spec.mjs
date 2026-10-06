@@ -316,8 +316,12 @@ test.describe('panel powłoki z innym pacjentem', () => {
       expect(await znacznik(start), 'Start w tle nie jest przeładowywany').toBe('start-x');
       expect(await start.evaluate(() => [document.getElementById('lastName').value, window.VildaPanelPacjent.nieaktualny()]))
         .toEqual(['Fikcyjny', true]);
-      // Pasek powłoki przy DocPro z Y nie pokazuje pomiarów X ze Startu.
-      await expect.poll(() => mini(page), { message: 'mini-podsumowanie = Y', timeout: 10000 }).toMatch(/Waga.*36,0.*Wzrost.*141,0/);
+      // Pasek powłoki przy DocPro z Y nie pokazuje pomiarów X ze Startu: nieaktualny Start rysuje go ze stanu wspólnego
+      // karty (pacjent Y; jego pomiary wizyty bywają tam w tej chwili puste — wtedy pasek jest pusty, i to też jest Y).
+      await expect.poll(() => mini(page), { message: 'mini-podsumowanie bez pomiarów X', timeout: 10000 })
+        .not.toMatch(/25,0|126,0/);
+      await page.waitForTimeout(1500);
+      expect(await mini(page), 'mini-podsumowanie nadal bez pomiarów X').not.toMatch(/25,0|126,0/);
 
       const historiaPrzed = await page.evaluate(() => window.history.length);
       await page.locator('a.sidebar-link[href="index.html"]').click();

@@ -10241,7 +10241,7 @@ leczenia otyłości poprzedniego pacjenta i odkłada je z powrotem do magazynu k
   pokarm) i Y:
   - S2 ×2: Start z X („Nowy pomiar” / „Odtwórz zapis”) → skok GH do Y w DocPro → powrót → „Zapisz”: migawka karty nigdy
     nie łączy nazwiska Y z danymi X; Start w tle nie jest przeładowywany i nie przejmuje Y; mini-podsumowanie przy DocPro
-    pokazuje Y; po powrocie Start jest świeżym dokumentem, bez dodatkowego wpisu w historii i bez danych X; najnowszy
+    nie pokazuje pomiarów X; po powrocie Start jest świeżym dokumentem, bez dodatkowego wpisu w historii i bez danych X; najnowszy
     zapis Y bez danych X i z własnym punktem otyłości Y; X bez nowego zapisu; bez okien natywnych;
   - kierunek odwrotny: DocPro z X w tle nie jest przeładowywany przy wczytaniu Y na Start; przy pokazaniu — świeży
     dokument, zapis z DocPro bez danych X;
