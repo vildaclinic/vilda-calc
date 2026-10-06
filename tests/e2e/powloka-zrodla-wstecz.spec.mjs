@@ -126,8 +126,8 @@ test('powłoka: DocPro z A → Start, wczytanie C → „Wstecz” — populacja
     && Boolean(window.VildaPubertySource) && typeof window.VildaPopulacjaPacjenta === 'function');
   await expect.poll(() => zrodla(docpro), { timeout: 15000 })
     .toEqual({ populacja: 'DS', urodzenie: '34+2 tc, 1650 g', urodzenieDlaKonsumentow: true, dojrzewanie: 11 });
-  // Karta SGA (pierwszeństwo przed rekordem) bywa wypełniona bez dni ciąży — kontrola sprawdza tylko „34 tc” A.
-  expect(await b64Kryterium1(docpro)).toMatch(/SPEŁNIONE \| .*; 34(\+\d)? tc;/);
+  // Karta SGA (pierwszeństwo przed rekordem) wypełniona z „Danych okołoporodowych” razem z dniami ciąży (P-SGA-DNI).
+  expect(await b64Kryterium1(docpro)).toMatch(/SPEŁNIONE \| .*; 34\+2 tc;/);
 
   await page.evaluate(() => window.VildaShell.navigate('start'));
   start = await ramka(page, 'Start');

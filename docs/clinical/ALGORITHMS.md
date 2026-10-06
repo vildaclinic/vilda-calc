@@ -8523,6 +8523,50 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
+## Karta SGA wypełniana z „Danych okołoporodowych” bierze także dni ciąży (P-SGA-DNI, SW 1.1.169, `sga_birth_module.js` 11, 2026-10-06)
+
+**Zmiana kliniczna: TAK — zmiana danych wejściowych, nie wzoru.** Normy (Niklasson / Albertsson-Wikland i pozostałe
+źródła karty SGA), progi, interpolacja i reguły zaokrąglania bez zmian. Zmienia się wiek ciążowy, z którym karta SGA liczy
+SDS, gdy karta jest wypełniana automatycznie z sekcji „Dane okołoporodowe” Karty Pacjenta. Zlecenie właściciela
+2026-10-06 (znalezisko z P-ZRODLA-PRZEJECIE). Wymaga akceptacji klinicznej właściciela.
+
+**Co było.** Pole dni (`#sgaBirthDays`, `docpro.html`) to lista 0–6, która przy starcie strony i po każdym czyszczeniu karty
+stoi na „0”. Wypełnianie karty z Karty Pacjenta (`sga_birth_module.js`, prefill przy wczytaniu pacjenta) wpisuje wartość
+tylko do pustego pola, więc dni z rekordu nie trafiały do karty nigdy — wiek ciążowy był ucinany do pełnych tygodni.
+Zmierzone na `audyt` `5a81f59` (fikcyjny chłopiec, „Dane okołoporodowe” 34+2 tc, 1650 g, 41 cm, 29 cm, bez sekcji `birth`):
+- karta SGA: 34+0 tc; SDS masy −2,94, długości −3,27, obwodu głowy −2,14 (Niklasson);
+- ściąga B.64, kryterium 1: „masa −2,94 SD; długość −3,27 SD; 34 tc”;
+- moduł rozbieżności (P-URODZENIOWE-ROZBIEZNOSC) ostrzegał, że karta i Karta Pacjenta różnią się wiekiem ciążowym
+  (34+0 wobec 34+2 tc), i prosił o poprawienie dokumentacji — choć różnicę zrobiła sama aplikacja.
+
+**Reguła po zmianie.** Gdy karta nie ma jeszcze tygodni ciąży, a wypełnianie wpisuje je z rekordu, razem z nimi idą dni
+z rekordu (liczba całkowita 0–6). Bez dni w rekordzie zostaje „0” (tygodnie bez dni to pełny tydzień, jak w module
+rozbieżności). Wiek ciążowy już obecny w karcie — wpisany przez lekarza albo odtworzony z sekcji `birth` rekordu — zostaje
+nietknięty; różnicę z Kartą Pacjenta pokazuje wtedy ostrzeżenie o rozbieżności, jak dotąd. Pierwszeństwo źródeł danych
+urodzeniowych (karta SGA → `birth` → „Dane okołoporodowe”) bez zmian.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/e2e/sga-dni-ciazy.spec.mjs`, prawdziwy `docpro.html`
+z produkcyjnym silnikiem karty SGA i prawdziwym przyciskiem ściągi B.64:
+- „Dane okołoporodowe” 34+2 tc, 1650 g, 41 cm, 29 cm, chłopiec, bez `birth` → karta 34+2 tc; B.64 kryterium 1:
+  „SPEŁNIONE | masa −3,13 SD; długość −3,48 SD; 34+2 tc; wg Niklasson / Albertsson-Wikland”; bez ostrzeżenia
+  o rozbieżności (dla porównania ten sam silnik przy 34+0: −2,94 / −3,27);
+- kontrola: `birth` 34+0 (karta lekarza) i „Dane okołoporodowe” 34+2 → karta zostaje 34+0, ostrzeżenie o rozbieżności
+  wieku ciążowego (34+2 tc w Karcie Pacjenta);
+- kontrola: „Dane okołoporodowe” 39 tc bez dni → karta 39+0.
+Na `5a81f59` pierwszy przypadek czerwony (karta 34+0), kontrole zielone.
+
+**Wpływ kliniczny.** Dotyczy pacjentów z dniami ciąży 1–6 w „Danych okołoporodowych”, u których kartę SGA wypełniła
+aplikacja. SDS masy, długości i obwodu głowy liczą się dla prawdziwego wieku ciążowego — zwykle niższe (bardziej ujemne)
+niż dotąd, bo norma dla starszego wieku ciążowego jest wyższa. Przy wartościach blisko −2 SD może to zmienić klasyfikację
+SGA i kryterium 1 ściągi B.64 (oraz opis pacjenta i Blum ISS, które liczą z karty). Znika fałszywe ostrzeżenie
+o rozbieżności wieku ciążowego.
+
+**Ograniczenia.** Karty już zapisane w rekordzie (sekcja `birth`) z obciętymi dniami nie są poprawiane automatycznie —
+zmiana danych zapisanych przez lekarza nie jest decyzją aplikacji; takie przypadki pokazuje ostrzeżenie o rozbieżności,
+a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest wpisywana (karta zostaje przy „0”).
+
+**Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
+
 ## Wysyłka nie nadpisuje chmury bez scalenia; delty i wysyłka po MERGE_BUSY (P-SYNC-STRAZNIK, SW 1.1.160, `vilda_sync.js` 33, `vilda_sync_integration.js` 46, 2026-10-05)
 
 **Decyzja właściciela (2026-10-05).** „Zaczynaj od punktu 1, zwykły PR do audyt” — punkt 1 przeglądu „co dalej po
