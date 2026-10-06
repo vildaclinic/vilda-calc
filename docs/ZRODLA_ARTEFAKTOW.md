@@ -240,6 +240,12 @@ if (x == null || String(x) !== String(stan.currentEditingId)) return true;   // 
 const NIE_ZAPISANO = 'Nie zapisano zmian: edytowany punkt nie należy do bieżącej listy punktów. Otwórz edycję ponownie.';
 ```
 
+Uzupełnienie P-GH-EDYCJA-PACJENT (`gh_therapy_monitor.js` 50 → 51): w nasłuchu `storage` monitora, zaraz po obsłudze `vilda:gh-jump`:
+
+```js
+if (klucz === 'vildaCurrentPatientId') { edycjaAktualna() || koniecEdycji(); return; }   // (Gea / Gek)
+```
+
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
 Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.
