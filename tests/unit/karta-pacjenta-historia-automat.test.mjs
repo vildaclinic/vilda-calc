@@ -264,6 +264,30 @@ describe('H6 — wpisy leczenia mają jednolite tytuły', () => {
     expect(tytuly).toEqual(['Leczenie otyłości', 'Leczenie rhGH']);
   });
 
+  it('P-GH-INCRELEX-TYTUL: wpis z punktu Increlex (program IGF-1) ma tytuł „Leczenie IGF-1 (mekasermina)”', async () => {
+    // Dotąd każdy punkt GH/IGF-1 dawał „Leczenie rhGH” — także mekasermina (Increlex), która nie jest
+    // hormonem wzrostu. Tytuł idzie za preparatem albo programem punktu; GH bez zmian (test wyżej).
+    const v = await sejf();
+    const wynik = await v.savePatient({
+      name: 'Testowy Igor',
+      user: { lastName: 'Testowy', firstName: 'Igor', sex: 'M', age: 8, ageMonths: 0, height: 112, weight: 20 },
+      advanced: { data: { measurements: [
+        { ageMonths: 90, ageYears: 7, height: 108, weight: 19 },
+        { ageMonths: 96, ageYears: 8, height: 112, weight: 20 },
+      ] } },
+      ghTherapyPoints: [
+        { id: 'i1', type: 'start', ageYears: 7, ageMonths: 6, dose: 0.08, doseAbs: 1.52, doseUnit: 'mg/kg/d', weight: 19, drug: 'Increlex 40 mg', program: 'IGF-1' },
+        // Program IGF-1 bez nazwy preparatu (stary punkt) — ten sam tytuł.
+        { id: 'i2', type: 'continue', ageYears: 8, ageMonths: 0, dose: 0.24, doseAbs: 4.8, doseUnit: 'mg/kg/d', weight: 20, program: 'IGF-1' },
+      ],
+    }, { dedup: false });
+
+    const tytuly = (await v.listPatientTimelineEvents(wynik.patientId))
+      .filter((z) => z.type === 'note')
+      .map((z) => z.title);
+    expect(tytuly).toEqual(['Leczenie IGF-1 (mekasermina)', 'Leczenie IGF-1 (mekasermina)']);
+  });
+
   it('wpisy leczenia nadal nie mają identyfikatora notatki', async () => {
     // To nie jest usterka, tylko fakt, na którym opiera się poprawka H7: te wpisy są
     // syntetyzowane z punktów terapii, więc nie ma czego wskazywać w zakładce Notatki.

@@ -108,6 +108,9 @@ test('Increlex z punktów: tabela trendu i Historia w dawce na podanie; wykres w
   expect(h).toContain('Dawka: 2 × 2,4 mg na dobę (0,12 mg/kg na podanie)');
   expect(h).toContain('Dawka: 2 × 0,8 mg na dobę (0,042 mg/kg na podanie)');
   expect(h.join(' ')).not.toContain('mg/kg/d');
+  // P-GH-INCRELEX-TYTUL: wpisy z punktów Increlex mają tytuł właściwy dla IGF-1.
+  await expect(sekcjaHistorii(page).getByText('Leczenie IGF-1 (mekasermina)').first()).toBeVisible();
+  await expect(sekcjaHistorii(page).getByText('Leczenie rhGH')).toHaveCount(0);
 });
 
 test('zmiana Genotropin → Increlex: segment Increlex w mg/kg na podanie, Genotropin bez zmian', async ({ page }) => {
