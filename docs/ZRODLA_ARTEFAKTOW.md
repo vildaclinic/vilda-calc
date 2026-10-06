@@ -240,6 +240,22 @@ if (x == null || String(x) !== String(stan.currentEditingId)) return true;   // 
 const NIE_ZAPISANO = 'Nie zapisano zmian: edytowany punkt nie należy do bieżącej listy punktów. Otwórz edycję ponownie.';
 ```
 
+## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
+
+Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.
+
+```js
+// P-GH-SESJA-LISTA: na stronie bez #intakePal listę punktów GH w sesji wyznacza pamięć modułu, gdy klucz istnieje
+try {
+  const doc = window.document;
+  const tabelaSpozycia = doc && doc.getElementById && doc.getElementById('intakePal');
+  if (!tabelaSpozycia && typeof persistence.readModuleJSON === 'function') {
+    const zModulu = persistence.readModuleJSON('GH_THERAPY_POINTS', null);
+    if (Array.isArray(zModulu)) sesja.ghTherapyPoints = zModulu;   // także []
+  }
+} catch (e) { logBledu('vilda_data_import_export:saveMainSessionNow:gh-module', e); }
+```
+
 ## Jak odtworzyć
 
 ```bash
