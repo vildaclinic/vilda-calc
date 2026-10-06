@@ -8485,7 +8485,20 @@ wskaźnika zapisu ani mostka; nie dotyka `ghTherapyDB` ani resetu monitora.
 zasób PWA. Wzory, progi, dawki, jednostki i zapis punktów bez zmian; reguły odtworzone z czytelnej kopii monitora i wpisów
 wyżej, nie zgadywane. Zgodność z monitorem pilnuje test różnicowy na żywym monitorze.
 
-**Strażnicy.** (w przygotowaniu — testy dochodzą w kolejnym commicie tego PR)
+**Strażnicy.**
+- `tests/unit/gh-punkty-api.test.mjs` (123): przypadki `wejście → wynik` na prawdziwym module (z `vilda_gh_dawka.js`),
+  strażnik czystości funkcji czystych, brak skutków przy ładowaniu, zamrożenie.
+- `tests/unit/gh-punkty-api-zapis.test.mjs` (53): kontrakt `zapisz`/`wczytaj`/`gotowe` (kolejność moduł → zdarzenie →
+  kanał, `tabId` dokładnie jak `Y()` monitora — wyjątek albo brak magazynu daje komunikat bez pola `tabId`, brak każdej
+  zależności bez wyjątku), także różnicowo z prawdziwym `L()`.
+- `tests/unit/gh-punkty-api-roznicowy.test.mjs` (16): te same wejścia przez żywy monitor (punkt wsteczny, edycja) i przez
+  API, porównanie ścisłe (kolejność kluczy, `Object.is`), komunikaty odmów; przypadki własne i ze złotej siatki, oba
+  warianty modułu dawki, kontrole negatywne. Cała siatka Z2+Z4 (6035 przypadków) sprawdzona raz poza testem: 0 różnic.
+- `tests/e2e/gh-punkty-api-start.spec.mjs` (3): zapis przez API na Start (moduł, jedno zdarzenie, komunikat z `tabId`,
+  wiersz mostka), punkt widoczny w monitorze DocPro w powłoce, brak błędów konsoli.
+
+Uwaga: własny kanał API powstaje leniwie przy pierwszym zapisie (monitor tworzy swój przy ładowaniu); po
+`pagehide`/`beforeunload` zamyka się tak samo. Monitor w kolejnej racie użyje własnego nadawcy (`opcje.nadaj`).
 
 **Wersje.** Nowy `vilda_gh_punkty.js` 1 (`index.html`, `docpro.html`, po `vilda_gh_dawka.js`); wpis precache ręcznie
 (append-only); `SW_VERSION` 1.1.176 → 1.1.177 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
