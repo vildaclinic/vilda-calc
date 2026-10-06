@@ -639,6 +639,10 @@
   "v": 1,
   "sha256": "4c418390b2b18ad1721a26ef9b23175d327d2ee98a8aa5bfc64134f62b945f12"
  },
+ "vilda_gh_punkty.js": {
+  "v": 1,
+  "sha256": "07054995fc808d98e451da18330dc641da0b9abf66be89d89ba60452255fc689"
+ },
  "vilda_gh_response_b64.js": {
   "v": 2,
   "sha256": "7c0c3219853e1fba70d40b9866b163a4f226acc79ca8f86352a1648d9e28dab5"

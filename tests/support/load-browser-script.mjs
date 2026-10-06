@@ -39,6 +39,9 @@ const ZALEZNOSCI = {
   // ChPL. Bez nich kazdy punkt jest „neutralny”, R6 milknie i zmiana leku w cyklu przechodzi
   // bez odmowy — test czytalby sie jak brak regresji, a bylby brakiem wsadu.
   'vilda_cykle_leczenia.js': ['obesity_response_criteria.js'],
+  // P-GH-PUNKTY-API: bez modułu dawki Increlex liczy się bez × 2 (dawka na podanie) — cicho, z flagą
+  // bezModuluDawki, więc test bez niego sprawdzałby inną regułę niż produkcja.
+  'vilda_gh_punkty.js': ['vilda_gh_dawka_dane.js', 'vilda_gh_dawka.js'],
 };
 
 // Zaleznosci sa PRZECHODNIE i wykonywane RAZ na dane okno.

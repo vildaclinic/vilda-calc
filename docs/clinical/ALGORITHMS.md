@@ -7560,6 +7560,7 @@ po obu stronach).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
 przez monitor i skasowanie bazy.
+*(Dalej: odczyt i zapis listy punktów GH odtwarza też wspólne API `VildaGhPunkty` — P-GH-PUNKTY-API rata 1.)*
 
 ## Ukryta karta zaawansowana na DocPro nie zmienia punktów terapii GH ani wierszy ręcznych; monitor bez kopii w IndexedDB (P-GH-DOCPRO, SW 1.1.131, `gh_therapy_monitor.js` 46, `docpro_state_persist.js` 7, 2026-09-30)
 
@@ -7622,6 +7623,8 @@ wierszu) oraz wiersz-duch po usunięciu ostatniego punktu. Rekordów zmienionych
   Odczytu nikt nie woła; „Wyczyść wszystkie pola” może utworzyć pustą bazę (bez punktów), którą skasuje najbliższy
   start monitora. Ich usunięcie razem z inwentarzem — osobna zmiana porządkowa.
 - Wiersze punktów w ukrytej karcie zostają (moduły DocPro czytają `advancedGrowthData`).
+- Reguły zapisu punktu z monitora odtwarza czytelne API `VildaGhPunkty` (P-GH-PUNKTY-API rata 1); monitor przejdzie
+  na nie w kolejnej racie.
 
 **Wersje.** `gh_therapy_monitor.js` 45 → 46, `docpro_state_persist.js` 6 → 7 (`docpro.html`); precache (append-only);
 `SW_VERSION` 1.1.130 → 1.1.131 (po #504; + pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
@@ -8439,6 +8442,58 @@ i sprawdza ją przed i po zmianie pacjenta, nowy test e2e w powłoce. Wersje z `
 `e05d253`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
+
+## Wspólne API punktów terapii GH, rata 1: moduł `VildaGhPunkty` ładowany na Start i DocPro, jeszcze nieużywany (P-GH-PUNKTY-API rata 1, SW 1.1.177, nowy `vilda_gh_punkty.js` 1, 2026-10-06)
+
+**Skąd.** Projekt „Wspólne API punktów GH” (`docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 2), PR-3 planu, po testach
+charakteryzujących (P-GH-PUNKTY-TESTY) i poprawkach integralności (P-GH-EDYCJA-LISTA, P-GH-SESJA-LISTA,
+P-GH-EDYCJA-PACJENT). Decyzja właściciela D4 z 2026-10-06: nazwa `VildaGhPunkty`, plik `vilda_gh_punkty.js`, ładowanie na
+Start (`index.html`) i w DocPro (`docpro.html`); Kalkulator klirensu — nie (punktów nie tworzy).
+
+**Co to jest.** Czytelny moduł (jak `vilda_gh_dawka.js`), który odtwarza 1:1 reguły punktu terapii GH z monitora
+(`gh_therapy_monitor.js`): edycji punktu, punktu wstecznego i zapisu listy. W tej racie **nikt go nie woła** — monitor
+działa jak dotąd. Kolejne raty przeniosą monitor na API (z zapasową ścieżką) i pozwolą dodać punkt z innych stron.
+
+**API** (`window.VildaGhPunkty`, `wersja: 1`, obiekt zamrożony):
+- dane: `KLUCZE` (15 kluczy rekordu w kolejności zapisu: `id, type, ageYears, ageMonths, weight, height, boneAge, dose,
+  doseUnit, drug, program, igf1, igf1Unit, igf1DaysSinceDose, doseAbs`), `RODZAJE`, `KOMUNIKATY` (5 tekstów odmów
+  dosłownie z monitora);
+- funkcje czyste (bez DOM, magazynu i zdarzeń; `VildaGhDawka` tylko do odczytu): `normalizujWiek` (10 l. 14 mies. →
+  11 l. 2 mies.), `wiekLacznieMies`, `sprawdzRodzaj` (najwyżej jedno Włączenie i jedno Zakończenie; `pomin` jak edycja),
+  `dostepneRodzaje` (formularz wsteczny), `sprawdzWartosci` (warunki i kolejność odmów jak w monitorze, formularz
+  „karta” albo „wsteczny”), `jednostkaDawki`, `dniIgf`, `polaZPodawanej`, `noweId`, `punkt`, `zmienWMiejscu`;
+- funkcje z efektami: `wczytaj` (pamięć modułu `GH_THERAPY_POINTS`), `zapisz` (= `L()` monitora: `window.ghTherapyPoints`
+  → zapis modułu `{force:true}` → zdarzenie `vilda:therapy-points-changed` → `{type:'update', tabId}` na kanale
+  `gh-therapy-sync`, przez nadawcę wołającego albo własny leniwy kanał; każdy krok osobno, bez wyjątku), `gotowe`.
+
+**Reguły dawki (bez zmian — te same co w monitorze, P-GH-DAWKA-PODAWANA, P-GH-INCRELEX-PODANIE).** `polaZPodawanej`:
+dawka dobowa = podawana (Increlex: 2 × dawka na podanie, schemat `naPodanie` z `VildaGhDawka`); `dose` = dobowa / masa
+(Ngenla: tygodniowa / masa, `mg/kg/tydz`); `doseAbs` = mg/d (Ngenla: tygodniowa / 7). Bez zaokrąglania — punkt
+historyczny zapisuje się tak, jak go wpisano. Bez `VildaGhDawka` wynik jak w monitorze bez tego modułu (Increlex bez × 2)
+i flaga `bezModuluDawki: true`. Dawka nowego punktu z karty (wynik karty, pola zapasowe) zostaje w monitorze.
+
+**Niezmienniki.** Przy ładowaniu moduł niczego nie czyta i nie zapisuje (magazyn, kanał, słuchacze); nie normalizuje list
+z rekordu ani z sejfu; `zmienWMiejscu` nigdy nie dopisuje punktu (odmowa `brak-punktu`); `zapisz` nie odświeża tabeli,
+wskaźnika zapisu ani mostka; nie dotyka `ghTherapyDB` ani resetu monitora.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne, `polaZPodawanej`, formularz wsteczny): Omnitrope 10 mg, 1,1 mg/d,
+32 kg → `dose` 0,034375 mg/kg/d, `doseAbs` 1,1 mg/d; Ngenla 60 mg, 14 mg/tydz, 33 kg → `dose` 0,4242… mg/kg/tydz,
+`doseAbs` 2 mg/d; Increlex 40 mg, 0,5 mg na podanie, 30 kg → `dose` 0,0333… mg/kg/d, `doseAbs` 1,0 mg/d (bez
+`VildaGhDawka`: 0,0167… i 0,5, `bezModuluDawki: true`).
+
+**Klasyfikacja.** Nie jest zmianą kliniczną ani funkcjonalną: nowy, niewołany moduł (refaktoryzacja przygotowawcza) i nowy
+zasób PWA. Wzory, progi, dawki, jednostki i zapis punktów bez zmian; reguły odtworzone z czytelnej kopii monitora i wpisów
+wyżej, nie zgadywane. Zgodność z monitorem pilnuje test różnicowy na żywym monitorze.
+
+**Strażnicy.** (w przygotowaniu — testy dochodzą w kolejnym commicie tego PR)
+
+**Wersje.** Nowy `vilda_gh_punkty.js` 1 (`index.html`, `docpro.html`, po `vilda_gh_dawka.js`); wpis precache ręcznie
+(append-only); `SW_VERSION` 1.1.176 → 1.1.177 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
+— `npm run podbij-wersje` względem `audyt` `5b72b5e`. Testy ładują moduł z `vilda_gh_dawka.js` (`ZALEZNOSCI` w
+`tests/support/load-browser-script.mjs`).
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Następna rata (PR-4): monitor korzysta z API bez
+zmiany zachowania, z zapasową ścieżką.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
