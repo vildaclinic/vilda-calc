@@ -8402,27 +8402,41 @@ względem `audyt` `c730011`.
 **Skąd.** Uwaga recenzji Codex do #561 (P-GH-EDYCJA-LISTA), przyjęta przez właściciela 2026-10-06 („zrób mały PR z poprawką
 Codex”). P-GH-EDYCJA-LISTA kończy edycję punktu, gdy pacjent sesji karty jest inny niż przy jej otwarciu, ale sprawdzało to
 dopiero najbliższe wczytanie listy (`D()`), zapis, usunięcie albo utrwalenie stanu. Zmianę `vildaCurrentPatientId` w innej
-ramce tej samej karty monitor dostaje jako zdarzenie `storage`, a jego nasłuch ten klucz pomijał. Gdy lista punktów nowego
-pacjenta była identyczna (zapis tej samej wartości nie wysyła zdarzenia listy), formularz edycji poprzedniego pacjenta
-zostawał widoczny do kolejnego wczytania listy. Zapis i tak kończył się odmową (P-GH-EDYCJA-LISTA), więc dane były bezpieczne.
+ramce tej samej karty monitor dostaje jako zdarzenie `storage`, a jego nasłuch ten klucz pomijał. Kartę GH chowa przy tym
+P-TOZSAMOSC-RAMEK (`docpro_state_persist.js`, własny nasłuch tego klucza), ale nie kończy edycji monitora. **Zmierzone w powłoce
+`app.html`** (`audyt` `2f90dba`, Chromium, dane fikcyjne): edycja punktu otwarta w DocPro przy `fikc-pacjent-1`, inna ramka
+ustawia `fikc-pacjent-2` → karta GH schowana, ale nakładka „Edytujesz punkt leczenia” (w `body`, poza kartą) zostaje otwarta
+nad DocPro nowego pacjenta, a stan edycji w pamięci trwa do najbliższego wczytania listy. Zapis i tak kończył się odmową
+(P-GH-EDYCJA-LISTA), a stan edycji nie był utrwalany, więc dane były bezpieczne.
 
 **Zmiana.** Nasłuch `storage` monitora (`gh_therapy_monitor.js`, komentarz `P-GH-EDYCJA-PACJENT`) dla klucza
 `vildaCurrentPatientId` od razu sprawdza edycję tą samą regułą co P-GH-EDYCJA-LISTA (oba znaczniki niepuste i różne → koniec
-edycji bez zmiany danych). Bez wczytania listy, zdarzenia, zapisu modułu i komunikatu na kanale. Inne klucze — jak dotąd.
+edycji bez zmiany danych: stan edycji pusty, formularz schowany, nakładka „Edytujesz punkt leczenia” zamknięta). Bez wczytania
+listy, zdarzenia, zapisu modułu i komunikatu na kanale. Inne klucze — jak dotąd.
 
 **Klasyfikacja.** Zmiana funkcjonalna (spójność formularza edycji z pacjentem sesji karty), nie kliniczna. Wzory, dawki,
 jednostki, zapis punktów i reguły P-GH-EDYCJA-LISTA bez zmian.
 
-**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne): edycja otwarta przy `fikc-pacjent-1`, inna ramka ustawia
-`fikc-pacjent-2` → formularz schowany, stan edycji pusty, lista i moduł bez zmian, żadnego zdarzenia ani zapisu; ten sam
-pacjent albo pusty znacznik przy otwarciu lub teraz → edycja trwa.
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne): edycja z otwartą nakładką przy `fikc-pacjent-1`, inna ramka
+ustawia `fikc-pacjent-2` → nakładka zamknięta, formularz schowany, stan edycji pusty, lista i moduł bez zmian, żadnego zdarzenia
+ani zapisu; ten sam pacjent albo pusty znacznik przy otwarciu lub teraz → edycja i nakładka zostają.
 
-**Strażnik.** `tests/unit/gh-edycja-biezaca-lista.test.mjs`, blok „zmiana pacjenta sesji karty w innej ramce kończy edycję od
-razu” (2, prawdziwy monitor na atrapie): na `audyt` `2f90dba` czerwony 1 z 2, przypadek kontrolny zielony po obu stronach.
+**Strażnicy.**
+- `tests/unit/gh-edycja-biezaca-lista.test.mjs`, blok „zmiana pacjenta sesji karty w innej ramce kończy edycję od razu”
+  (2, prawdziwy monitor na atrapie): na `audyt` `2f90dba` czerwony 1 z 2, przypadek kontrolny zielony po obu stronach.
+- `tests/e2e/gh-edycja-zmiana-pacjenta.spec.mjs` (1, powłoka `app.html`): nakładka edycji w DocPro zamyka się po zmianie
+  pacjenta w ramce Start; na `2f90dba` czerwony.
 
 **Wersje.** `gh_therapy_monitor.js` 50 → 51 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.174 → 1.1.175 (+ pin
 w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje` względem
 `audyt` `2f90dba`.
+
+**Uzupełnienie po przeglądzie (SW 1.1.176, `gh_therapy_monitor.js` 52, 2026-10-06).** Przegląd adwersaryjny (#563 scalony
+przed jego końcem) potwierdził dwie rzeczy: asercja o nakładce w teście jednostkowym była pusta (pomocnik atrapy sam ją
+zamykał), a opis przeceniał objaw (kartę GH chowa P-TOZSAMOSC-RAMEK; zostawała nakładka). Poprawione: opis „Skąd” powyżej
+(pomiar w powłoce), komentarz w artefakcie (tylko komentarz — działanie bez zmian), test jednostkowy otwiera edycję z nakładką
+i sprawdza ją przed i po zmianie pacjenta, nowy test e2e w powłoce. Wersje z `npm run podbij-wersje` względem `audyt`
+`e05d253`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
 
