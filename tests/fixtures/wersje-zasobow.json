@@ -76,8 +76,8 @@
   "sha256": "4aba850313fe73ba4c08cbd18cda0288c6314e0b92641bcec421eb986c0b8eae"
  },
  "gh_igf_therapy.js": {
-  "v": 31,
-  "sha256": "0c6f0db96a781c0885711eec362148f10fcebd1e013b1e743c9fa61ba61c111d"
+  "v": 32,
+  "sha256": "71b425aa71804cb0463418d6abb2cfe11c1204d11c862daace55e4a9bc47bffb"
  },
  "gh_therapy_monitor.js": {
   "v": 49,
@@ -624,8 +624,8 @@
   "sha256": "c944a5eadc91aa3a4e4628edb8b693d06633527b9cb4a7380f39ae61a64ad14e"
  },
  "vilda_gh_dawka.js": {
-  "v": 2,
-  "sha256": "ea001a244a0aa21654da9e84584bd62fbbeb04c527b7e029633be2c588daac30"
+  "v": 3,
+  "sha256": "e74deaae11774811ea819f7e7cdce5e22f04d7f2daecf09f2489fb2ae5e6310d"
  },
  "vilda_gh_dawka_dane.js": {
   "v": 2,
