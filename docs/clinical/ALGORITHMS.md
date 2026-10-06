@@ -10561,7 +10561,7 @@ i powiązane spec-e — wyniki w PR.
 **Wersje.** `docpro_state_persist.js` 5 → 6 (docpro), precache (append-only), `SW_VERSION` 1.1.117 → 1.1.119 (+ pin;
 1.1.117 wydał P-POWLOKA-ID, #491, a 1.1.118 bierze P-SESJA-OBCA, #492), fixture wersji.
 
-## Odtwarzanie stanu kart DocPro nie zawiesza strony: karta GH/IGF-1 na zakładce „Monitorowanie” po F5 (P-DOCPRO-PETLA, SW 1.1.174, `docpro_state_persist.js` 8, 2026-10-06)
+## Odtwarzanie stanu kart DocPro nie zawiesza strony: karta GH/IGF-1 na zakładce „Monitorowanie” po F5 (P-DOCPRO-PETLA, SW 1.1.175, `docpro_state_persist.js` 8, 2026-10-06)
 
 **Zgłoszenie.** Znalezione przy teście F5 edycji punktu GH (osobny PR, gałąź `claude/determined-hawking-po9f5j`).
 Zmierzone na `audyt` `c730011` (Chromium headless, świeży sejf, dane fikcyjne, bez punktów terapii GH): DocPro →
@@ -10625,8 +10625,9 @@ jest ocena stanu; termin jest siatką bezpieczeństwa.
 **Walidacja.** `tests/e2e/docpro-gh-monitorowanie-f5.spec.mjs` (2 testy, prawdziwa strona `docpro.html`, przycisk karty
 i zakładki klikane jak przez lekarza). Wyniki w PR.
 
-**Wersje.** `docpro_state_persist.js` 7 → 8 (`docpro.html`), precache (append-only), `SW_VERSION` 1.1.173 → 1.1.174
-(+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.173 wydał P-GH-EDYCJA-LISTA, #561), `tests/fixtures/wersje-zasobow.json`.
+**Wersje.** `docpro_state_persist.js` 7 → 8 (`docpro.html`), precache (append-only), `SW_VERSION` 1.1.174 → 1.1.175
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.173 wydały P-GH-EDYCJA-LISTA #561 i P-BLOKADA-USUWANIE #560,
+1.1.174 — P-GH-SESJA-LISTA #562), `tests/fixtures/wersje-zasobow.json`.
 
 **Co pozostaje decyzją właściciela.** Reguła dla karty zamkniętej przy aktywnym „Monitorowanie” (wyżej), scalenie
 i wdrożenie.
