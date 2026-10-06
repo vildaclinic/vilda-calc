@@ -196,18 +196,25 @@ describe('odtworzenie stanu nie wpisuje pól punktu spoza listy', () => {
 });
 
 // P-GH-EDYCJA-PACJENT (uwaga recenzji Codex do #561): zmianę pacjenta sesji karty w innej ramce monitor dostaje jako
-// zdarzenie `storage` z kluczem vildaCurrentPatientId. Edycja otwarta przy innym pacjencie kończy się od razu, także gdy
-// lista punktów nowego pacjenta jest identyczna (wtedy nie przychodzi zdarzenie listy) — bez wczytania listy i bez zapisu.
+// zdarzenie `storage` z kluczem vildaCurrentPatientId. Edycja otwarta przy innym pacjencie kończy się od razu — także
+// otwarta nakładka „Edytujesz punkt leczenia” — bez wczytania listy i bez zapisu, również gdy lista punktów nowego
+// pacjenta jest identyczna (wtedy nie przychodzi zdarzenie listy).
 describe('zmiana pacjenta sesji karty w innej ramce kończy edycję od razu', () => {
   const zmianaPacjenta = (atrapa, id) => {
     ustawPacjenta(atrapa, id);
     return atrapa.zdarzenieOkna('storage', { key: 'vildaCurrentPatientId', newValue: id });
   };
+  // „Edytuj” w wierszu tabeli bez „Rozumiem”: nakładka „Edytujesz punkt leczenia” zostaje otwarta.
+  const otworzEdycjeZNakladka = (atrapa, id) => {
+    const przycisk = atrapa.pole('ghTherapyTbody').querySelectorAll('.edit-gh-pt-btn').find((b) => b.getAttribute('data-id') === id);
+    atrapa.kliknij(przycisk);
+  };
 
-  it('inny pacjent: formularz schowany, stan edycji pusty, bez zdarzeń, zapisu modułu i kanału; lista bez zmian', () => {
+  it('inny pacjent: nakładka edycji zamknięta, formularz schowany, stan edycji pusty, bez zdarzeń, zapisu modułu i kanału; lista bez zmian', () => {
     const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
     ustawPacjenta(atrapa, 'fikc-pacjent-1');
-    atrapa.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
+    otworzEdycjeZNakladka(atrapa, KONTYNUACJA.id);
+    expect(atrapa.pole('ghEditOverlay')).not.toBeNull();
     expect(atrapa.stan().edycjaWidoczna).toBe(true);
 
     const wpisy = zmianaPacjenta(atrapa, 'fikc-pacjent-2');
@@ -222,15 +229,16 @@ describe('zmiana pacjenta sesji karty w innej ramce kończy edycję od razu', ()
     expect(api(atrapa).captureState()).toBeNull();
   });
 
-  it('kontrola: ten sam pacjent albo pusty znacznik przy otwarciu lub teraz — edycja trwa', () => {
+  it('kontrola: ten sam pacjent albo pusty znacznik przy otwarciu lub teraz — edycja i nakładka zostają', () => {
     for (const [przyOtwarciu, teraz] of [['fikc-pacjent-1', 'fikc-pacjent-1'], [null, 'fikc-pacjent-1'], ['fikc-pacjent-1', null]]) {
       const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
       ustawPacjenta(atrapa, przyOtwarciu);
-      atrapa.edytuj(KONTYNUACJA.id);
+      otworzEdycjeZNakladka(atrapa, KONTYNUACJA.id);
 
       const wpisy = zmianaPacjenta(atrapa, teraz);
 
       expect(wpisy, `${przyOtwarciu} → ${teraz}`).toEqual([]);
+      expect(atrapa.pole('ghEditOverlay'), `${przyOtwarciu} → ${teraz}`).not.toBeNull();
       expect(atrapa.stan().edycjaWidoczna, `${przyOtwarciu} → ${teraz}`).toBe(true);
       expect(api(atrapa).captureState(), `${przyOtwarciu} → ${teraz}`).toMatchObject({ currentEditingId: KONTYNUACJA.id });
     }
