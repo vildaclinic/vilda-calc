@@ -362,6 +362,15 @@ async function Bkz_lista() {
 
 // restoreTrashedSnapshot(patientId, snapshotId) — wersja wraca na swoje miejsce (savedAtISO bez zmian), z nowa chwila
 // zmiany: dzieki niej wygrywa z nagrobkiem na innych urzadzeniach. Przypiecie wraca razem z trescia.
+//
+// P-KOSZ-PRZYWROC-NOWSZA (zlecenie wlasciciela 2026-10-07; przeglad A10, krok 1). Zapis bywa jednoczesnie w karcie
+// i w koszu: tak zostawia go „Przywroc” w trakcie konca scalania synchronizacji (koniec scalania zapisuje liste
+// nagrobkow juz po zwolnieniu blokad i dokladal zdjety wpis) albo starsza wersja aplikacji w innej karcie. Drugie
+// „Przywroc” zapisywalo wtedy tresc z chwili usuniecia z rewizja usuniecia + 1 — poprawka pomiaru albo przypiecie
+// zrobione po pierwszym przywroceniu znikaly po cichu. Teraz: gdy wersja jest w karcie i zmieniono ja po usunieciu
+// (chwila zmiany pozniejsza niz usuniecie ALBO rewizja wyzsza niz w chwili usuniecia — rewizja nie zalezy od zegarow
+// urzadzen), tresci z kosza nie zapisujemy: zdejmujemy tylko ten nieaktualny wpis kosza (nie pozniejsze usuniecie)
+// i zwracamy { alreadyInCard: true }. W pozostalych przypadkach jak dotad, z rewizja wyzsza od obu.
 async function Bkz_przywroc(patientId, snapshotId) {
   if (!T()) throw Bkz_blad('Zaloguj się, by przywrócić zapis.', 'zablokowany');
   return Ap('pat:' + patientId, async function () {
@@ -369,12 +378,21 @@ async function Bkz_przywroc(patientId, snapshotId) {
     if (!e || !e.payloadCipher) throw Bkz_blad('Tego zapisu nie ma już w koszu.', 'brak');
     const rekord = await I().getPatientForUser(b, patientId);
     if (!rekord) throw Bkz_blad('Karta tego zapisu została usunięta.', 'brak-karty');
+    const revUsuniecia = typeof e.rev === 'number' && isFinite(e.rev) ? Math.floor(e.rev) : 0;
+    const obecna = (await I().listSnapshotsForUser(b, patientId)).find(function (x) { return x.snapshotId === snapshotId; });
+    if (obecna) {
+      const zmianaObecnej = (typeof obecna.updatedAtISO === 'string' && obecna.updatedAtISO) || obecna.savedAtISO || '';
+      if (e.deletedAtISO < zmianaObecnej || mt(obecna) > revUsuniecia) {
+        await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: e.deletedAtISO }]);
+        return { patientId: patientId, snapshotId: snapshotId, alreadyInCard: true };
+      }
+    }
     const teraz = new Date().toISOString();
     await I().putSnapshotForUser(b, Object.assign(Bm1(e), {
       snapshotId: snapshotId,
       patientId: patientId,
       savedAtISO: e.savedAtISO || teraz,
-      rev: (typeof e.rev === 'number' && isFinite(e.rev) ? Math.floor(e.rev) : 0) + 1,
+      rev: Math.max(revUsuniecia, obecna ? mt(obecna) : 0) + 1,
       updatedAtISO: teraz,
       payloadCipher: e.payloadCipher,
     }));

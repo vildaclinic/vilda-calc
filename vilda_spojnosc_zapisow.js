@@ -734,9 +734,12 @@
     var cofnij = przycisk('', 'Cofnij', function () {
       cofnij.disabled = true;
       blad.hidden = true;
-      w.VildaKoszZapisow.przywroc(wynik.patientId, wynik.snapshotId).then(function () {
-        h.textContent = 'Karta: ' + karta.wzorzec.nazwa + ' — zapis przywrócony';
-        teksty.lastChild.textContent = 'Zapis wrócił na swoje miejsce w historii karty. Sprawdź zapisy ponownie, by zobaczyć aktualny stan.';
+      w.VildaKoszZapisow.przywroc(wynik.patientId, wynik.snapshotId).then(function (przywrocenie) {
+        // P-KOSZ-PRZYWROC-NOWSZA: zapis był już w karcie w nowszej postaci — sejf zdjął tylko wpis kosza.
+        var juzWKarcie = !!(przywrocenie && przywrocenie.alreadyInCard);
+        h.textContent = 'Karta: ' + karta.wzorzec.nazwa + (juzWKarcie ? ' — zapis jest w karcie' : ' — zapis przywrócony');
+        teksty.lastChild.textContent = (juzWKarcie ? w.VildaKoszZapisow.TEKST_JUZ_W_KARCIE : 'Zapis wrócił na swoje miejsce w historii karty.') +
+          ' Sprawdź zapisy ponownie, by zobaczyć aktualny stan.';
         nowy.classList.add('settings-spojnosc-karta--cofnieta');
         cofnij.hidden = true;
       }).catch(function (e) {

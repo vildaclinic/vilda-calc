@@ -9043,6 +9043,53 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## „Przywróć” nie nadpisuje zapisu, który jest już w karcie w nowszej postaci (P-KOSZ-PRZYWROC-NOWSZA, SW 1.1.188, `vilda_vault.js` 201, `vilda_kosz_zapisow.js` 3, `vilda_spojnosc_zapisow.js` 3, 2026-10-07)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych (decyzja
+właściciela 2026-10-07: „zrób to” — rekomendacja do punktu A10 przeglądu „co dalej po #518”, krok 1). Krok 2 — koniec
+scalania synchronizacji nie dokłada do kosza zapisu przywróconego w tym czasie — idzie po punkcie A12, bo zmienia tę samą
+funkcję zapisu listy kosza.
+
+**Co było** (zmierzone na `audyt` `1c2773f`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). Zapis bywa jednocześnie
+w karcie i w koszu. Tak zostawia go „Przywróć” kliknięte w trakcie końca scalania synchronizacji: koniec scalania zapisuje
+listę nagrobków już po zwolnieniu blokad pacjentów i dokładał wpis, który „Przywróć” właśnie zdjął (A10). Tak samo starsza
+wersja aplikacji w innej karcie. Kolejne „Przywróć” zapisywało wtedy do karty treść z chwili usunięcia, z rewizją usunięcia
++ 1: poprawka pomiaru (wzrost 150 → 123) i przypięcie zrobione po pierwszym przywróceniu znikały po cichu, a komunikat mówił
+„Przywrócono zapis z kosza”. Przy rozjeździe zegarów (usunięcie na urządzeniu ze śpieszącym się zegarem) poprawka znikała
+tak samo, bo jej chwila zmiany była wcześniejsza niż zapisane usunięcie.
+
+**Reguła po zmianie.**
+- Gdy zapis jest w karcie i zmieniono go po usunięciu — chwila zmiany (`updatedAtISO`, bez niej `savedAtISO`) późniejsza
+  niż usunięcie **albo** rewizja wyższa niż w chwili usunięcia (rewizja nie zależy od zegarów urządzeń) — „Przywróć” nie
+  zapisuje treści z kosza. Zdejmuje tylko ten nieaktualny wpis kosza (nie późniejsze usunięcie tego zapisu) i zwraca
+  `{ alreadyInCard: true }`. Karta, nagłówek i powiadomienie o zapisie bez zmian.
+- W pozostałych przypadkach jak dotąd; rewizja przywróconej wersji jest wyższa od obu (z kosza i z karty, jeśli tam jest).
+- Historia wersji karty i „Cofnij” w sprawdzeniu spójności mówią wtedy: „Ten zapis jest już w karcie w nowszej postaci —
+  usunięto go z kosza.”. Kosz w Ustawieniach — jak przy zwykłym przywróceniu: wpis znika z listy.
+- Dziennik dostępu: „Przywrócenie zapisu z kosza” ze znacznikiem `juzWKarcie: true`.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kosz-przywroc-nowsza.test.mjs` (prawdziwy
+`vilda_vault.js`; stan „w karcie i w koszu” odtworzony wprost — po zwykłym przywróceniu wpis kosza wraca do metadanych
+konta, dokładnie jak w końcowym zapisie scalania z A10):
+- poprawka wzrostu (66 mies.: 150) i przypięcie po pierwszym przywróceniu → drugie „Przywróć”: `alreadyInCard`, wzrost 150,
+  przypięty, rewizja bez zmian, zapis nie jest już w koszu;
+- usunięcie z zegarem 10 min do przodu, poprawka (chwila zmiany wcześniejsza niż usunięcie) → `alreadyInCard`, wzrost 150;
+- drugie „Przywróć” bez zmian w karcie → `alreadyInCard`, rewizja bez zmian, treść ta sama;
+- kontrola: zwykłe przywrócenie (zapisu nie ma w karcie) → wynik bez `alreadyInCard`, rewizja usunięcia + 1, zapis na swoim
+  miejscu w historii.
+Na `1c2773f` trzy pierwsze czerwone (bez sprawdzania wyniku: wzrost 123 zamiast 150), kontrola zielona. Mutacje: bez warunku
+rewizji — czerwony przypadek z zegarem; bez całej gałęzi — trzy czerwone.
+`tests/e2e/kosz-zapisow.spec.mjs` (nowy przypadek): historia wersji karty, zapis przypięty po pierwszym przywróceniu i znów
+w koszu → „Przywróć ten zapis”: komunikat „Ten zapis jest już w karcie w nowszej postaci — usunięto go z kosza.”, kosz
+karty pusty, przypięcie zostaje. Na `1c2773f` czerwony („Przywrócono zapis z kosza.”).
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, jednostkach i wynikach. Poprawiony pomiar albo przypięcie nie wracają
+po cichu do stanu z chwili usunięcia.
+
+**Czego zmiana nie robi.** Nie zamyka samego wyścigu z końcem scalania (krok 2, po A12) — zapis może nadal na chwilę wrócić
+na listę kosza; następna synchronizacja albo „Przywróć” go zdejmuje, już bez szkody. Nie zmienia reguł konfliktu kosza
+w synchronizacji ani skutków rozjazdu zegarów w samym scalaniu.
+
 ## Import karty, kopie konta i migracja nazwisk pod blokadą pacjenta (P-BLOKADA-IMPORT, SW 1.1.179, `vilda_vault.js` 200, 2026-10-07)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych
@@ -9786,7 +9833,9 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
   (`userMeta.snapshotTombstones`, jak nagrobki kluczy dostępu); każda zmiana listy pod blokadą, na świeżym odczycie.
   Przez 30 dni niesie zaszyfrowaną treść wersji (kosz), potem treść znika, a sam nagrobek żyje 365 dni (jak nagrobek pacjenta).
 - `listTrashedSnapshots()`, `restoreTrashedSnapshot(patientId, snapshotId)` — wersja wraca na swoje miejsce (`savedAtISO`
-  bez zmian), z nową chwilą zmiany i `rev + 1`; przypięcie wraca razem z treścią; nagłówek karty z najnowszej wersji.
+  bez zmian), z nową chwilą zmiany i `rev + 1`; przypięcie wraca razem z treścią; nagłówek karty z najnowszej wersji. *(Aktualizacja
+  2026-10-07, P-KOSZ-PRZYWROC-NOWSZA: zapis, który jest już w karcie w nowszej postaci, nie jest nadpisywany — „Przywróć”
+  zdejmuje wtedy tylko wpis kosza.)*
 - Synchronizacja: `exportSyncPayload` niesie `snapshotTombstones` (treść jawna wewnątrz ładunku szyfrowanego kluczem sync);
   `mergeSyncPayload` pomija wersje z ładunku, które przegrywają z nagrobkiem, usuwa je lokalnie, przebudowuje nagłówki
   dotkniętych kart i zwraca `trashedSnapshotCount`.

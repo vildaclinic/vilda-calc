@@ -368,8 +368,8 @@ describe('strażniki źródła', () => {
   it('Ustawienia ładują moduł po historii wersji i kosz przed nim; karta w sekcji kopii zapasowych', () => {
     const html = plik('ustawienia.html');
     const i = html.indexOf('vilda_version_history_ui.js?v=');
-    const k = html.indexOf('<script defer src="vilda_kosz_zapisow.js?v=2"></script>');
-    const j = html.indexOf('<script defer src="vilda_spojnosc_zapisow.js?v=2"></script>');
+    const k = html.indexOf('<script defer src="vilda_kosz_zapisow.js?v=3"></script>');
+    const j = html.indexOf('<script defer src="vilda_spojnosc_zapisow.js?v=3"></script>');
     expect(i).toBeGreaterThan(0);
     expect(k, 'P-KOSZ-ZAPISOW: kosz po historii wersji').toBeGreaterThan(i);
     expect(j, 'sprawdzenie po module kosza').toBeGreaterThan(k);
