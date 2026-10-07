@@ -222,6 +222,53 @@ describe('P-SYNC-MOST: gzip przed szyfrowaniem pełnej wysyłki', () => {
     expect(json(jawne)).toEqual(dane);
   });
 
+  it('ucięty gzip z przeglądarki (Safari/iOS 16.4–16.5, błąd flush w WebKit): wysyłka jawna zamiast ucinka', async () => {
+    // P-SYNC-MOST-STOPKA. Atrapa CompressionStream oddaje prawdziwy gzip bez ostatnich 20 bajtów — tak jak
+    // WebKit przed poprawką z Safari 16.6, gdy ostatni blok ze stopką przekracza 16 KiB. Ucinek w chmurze
+    // zablokowałby pobieranie na pozostałych urządzeniach (DECOMPRESS_FAILED), więc zapis go nie przyjmuje.
+    const PrawdziwyCS = globalThis.CompressionStream;
+    class UcietyCS {
+      constructor(format) {
+        const porcje = [];
+        const ts = new TransformStream({
+          transform(porcja) { porcje.push(porcja); },
+          async flush(ster) {
+            const gz = new Uint8Array(await new Response(new Blob(porcje).stream().pipeThrough(new PrawdziwyCS(format))).arrayBuffer());
+            ster.enqueue(gz.slice(0, gz.length - 20));
+          },
+        });
+        this.writable = ts.writable;
+        this.readable = ts.readable;
+      }
+    }
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'U');
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    vi.stubGlobal('CompressionStream', UcietyCS);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+
+    await a.sync.syncPush();
+    const jawne = await odszyfruj(srv.puty[0].body, klucz);
+    expect(jawne[0], 'ucinek odrzucony — wysyłka jawna').toBe(0x7b);
+    expect(json(jawne)).toEqual(dane);
+  });
+
+  it('stopka gzip (ISIZE) zgodna z długością wejścia — kompletny gzip przyjęty', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'Z');
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+
+    await a.sync.syncPush();
+    const jawne = await odszyfruj(srv.puty[0].body, klucz);
+    const surowe = new TextEncoder().encode(JSON.stringify(dane));
+    const n = jawne.length;
+    expect([jawne[0], jawne[1]]).toEqual([0x1f, 0x8b]);
+    expect((jawne[n - 4] | jawne[n - 3] << 8 | jawne[n - 2] << 16 | jawne[n - 1] << 24) >>> 0).toBe(surowe.length >>> 0);
+  });
+
   it('rotacja tożsamości (revokeAllDevices): rejestracja nowego slotu niesie gzip, gdy ładunek przekracza próg', async () => {
     const klucz = await kluczSync();
     const dane = ladunek(PROG + 32 * 1024);
@@ -246,6 +293,8 @@ describe('P-SYNC-MOST: czytelnik po odszyfrowaniu', () => {
     vi.stubGlobal('fetch', srv.fetch);
     const a = urzadzenie({ klucz, eksport: () => dane });
     await a.sync.syncPush();
+    const wChmurze = await odszyfruj(srv.blob, klucz);
+    expect([wChmurze[0], wChmurze[1]], 'A wysłał gzip').toEqual([0x1f, 0x8b]);
 
     const b = urzadzenie({ klucz, eksport: () => ({ patients: [] }), etag: 'E0' });
     const wynik = await b.sync.syncPull();
@@ -318,6 +367,24 @@ describe('P-SYNC-MOST: limit czasu żądania z ciałem bloba zależny od rozmiar
     expect(blad.message).toContain(`(${oczekiwany} ms, ${(bajty / 1048576).toFixed(1)} MB)`);
   });
 
+  it('małe ciało: rozmiar w komunikacie TIMEOUT w kB, nie „0.0 MB”', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(20 * 1024, 'K');
+    const srv = atrapaSerwera();
+    srv.putWisi = true;
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+    let blad = null;
+    const obietnica = a.sync.syncPush().catch((e) => { blad = e; });
+    await czekajNaPut(srv);
+    const bajty = srv.puty[0].body.byteLength;
+    await vi.advanceTimersByTimeAsync(30000 + Math.ceil(bajty / 100) + 10);
+    await obietnica;
+    expect(blad).toMatchObject({ code: 'TIMEOUT', bytes: bajty });
+    expect(blad.message).toContain(`, ${Math.ceil(bajty / 1024)} kB).`);
+    expect(blad.message).not.toContain('0.0 MB');
+  });
+
   it('sufit 180 s dla bardzo dużego ciała (bez kompresji)', async () => {
     const klucz = await kluczSync();
     const dane = ladunek(15.5 * 1024 * 1024, 'X');
@@ -375,5 +442,199 @@ describe('P-SYNC-MOST: limit czasu żądania z ciałem bloba zależny od rozmiar
     expect(blad).toMatchObject({ code: 'TIMEOUT' });
     expect(blad.message).toContain('(30000 ms).');
     expect(blad.bytes).toBeUndefined();
+  });
+});
+
+// Przegląd adwersarza po #573: bez tych przypadków usunięcie gzipa z ponowienia po 412 albo z gałęzi bez ETagu,
+// albo limitu czasu z rejestracji, nie dawało żadnego czerwonego testu (mutacje zmierzone).
+describe('P-SYNC-MOST: pokrycie wszystkich ścieżek pełnej wysyłki', () => {
+  it('ponowienie po 412: drugi PUT też niesie gzip', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'P');
+    const srv = atrapaSerwera(await zaszyfruj(new TextEncoder().encode(JSON.stringify({ patients: [] })), klucz));
+    const bazowy = srv.fetch;
+    let pierwszy = true;
+    srv.fetch = async (url, init = {}) => {
+      if (/\/blob$/.test(new URL(url).pathname) && init.method === 'PUT' && pierwszy) {
+        pierwszy = false; srv.puty.push({ body: init.body, s412: true });
+        return { status: 412, ok: false, json: async () => ({}), headers: { get: () => null } };
+      }
+      return bazowy(url, init);
+    };
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+    const wynik = await a.sync.syncPush();
+    expect(wynik.action).toBe('uploaded');
+    expect(srv.puty).toHaveLength(2);
+    for (const p of srv.puty) {
+      const j = await odszyfruj(p.body, klucz);
+      expect([j[0], j[1]], p.s412 ? 'PUT przed 412' : 'PUT po 412').toEqual([0x1f, 0x8b]);
+    }
+  });
+
+  it('gałąź bez ETagu (registered bez localEtag): PUT niesie gzip', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'Q');
+    const srv = atrapaSerwera(await zaszyfruj(new TextEncoder().encode(JSON.stringify({ patients: [] })), klucz));
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane, etag: null });
+    const wynik = await a.sync.syncPush();
+    expect(wynik.action).toBe('uploaded');
+    const j = await odszyfruj(srv.puty[srv.puty.length - 1].body, klucz);
+    expect([j[0], j[1]]).toEqual([0x1f, 0x8b]);
+  });
+
+  describe('limit czasu rejestracji', () => {
+    beforeEach(() => { vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); });
+    it('POST /register w syncPush ~1,5 MB: nie przerywa po 30 s', async () => {
+      const klucz = await kluczSync();
+      const dane = ladunek(1500 * 1024, 'R');
+      const wywolania = [];
+      vi.stubGlobal('fetch', (url, init) => new Promise((_, odrzuc) => {
+        wywolania.push(url);
+        init.signal.addEventListener('abort', () => { const e = new Error('aborted'); e.name = 'AbortError'; odrzuc(e); });
+      }));
+      const a = urzadzenie({ klucz, eksport: () => dane });
+      a.win.localStorage.setItem(KLUCZ_STANU(SLOT), JSON.stringify({ registered: false, localEtag: null }));
+      let blad = null;
+      const ob = a.sync.syncPush().catch((e) => { blad = e; });
+      const koniec = performance.now() + 5000;
+      while (wywolania.length === 0 && performance.now() < koniec) await new Promise((r) => { setImmediate(r); });
+      expect(wywolania[0]).toMatch(/\/register$/);
+      await vi.advanceTimersByTimeAsync(30010);
+      expect(blad, 'rejestracja z ciałem bloba nie powinna padać po 30 s').toBeNull();
+      await vi.advanceTimersByTimeAsync(200000);
+      await ob;
+      expect(blad).toMatchObject({ code: 'TIMEOUT' });
+    });
+  });
+});
+
+// Uwaga Codex P1 do #573 i krytyk kompletności: po kompresji /status.size to rozmiar bloba po gzip, a WIPE_GUARD
+// porównywał z nim surowe bajty JSON. Strażnik przepuszczał wtedy „pusty” stan z kilkuset kB notatek, który przed
+// kompresją by zatrzymał. Urządzenie pamięta surowy rozmiar bloba (rawSize/rawEtag) z ostatniego scalenia albo
+// wysyłki i — przy tym samym ETagu — porównuje surowe z surowym.
+describe('P-SYNC-MOST-STOPKA: WIPE_GUARD w jednostkach surowych po kompresji', () => {
+  const notatki = (kB) => ({ patients: [], notes: [{ id: 'N-fikcyjna', text: 'notatka '.repeat(Math.ceil((kB * 1024) / 8)) }] });
+
+  it('chmura: gzip dużego sejfu; lokalnie 0 pacjentów i ~200 KB notatek → WIPE_GUARD, brak PUT', async () => {
+    const klucz = await kluczSync();
+    const pelny = ladunek(PROG + 512 * 1024, 'W');
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => pelny });
+    await a.sync.syncPush();
+    const gz = srv.blob.byteLength;
+    expect(gz * 4, 'blob w chmurze to gzip, kilkukrotnie mniejszy').toBeLessThan(PROG);
+
+    let tryb = 'pelny';
+    const b = urzadzenie({ klucz, eksport: () => (tryb === 'pusty' ? notatki(200) : pelny), etag: 'E0' });
+    expect((await b.sync.syncPull()).action).toBe('merged');
+    tryb = 'pusty';
+    const putyPrzed = srv.puty.length;
+    const lokalnie = new TextEncoder().encode(JSON.stringify(notatki(200))).length;
+    expect(lokalnie, 'bez poprawki: surowe ~200 KB ≥ ¼ gzipa, strażnik by przepuścił').toBeGreaterThanOrEqual(gz / 4);
+
+    await expect(b.sync.syncPush()).rejects.toMatchObject({ code: 'WIPE_GUARD' });
+    expect(srv.puty.length, 'chmura nienadpisana').toBe(putyPrzed);
+  });
+
+  it('mały sejf bez kompresji, tylko notatki po obu stronach → bez fałszywej blokady', async () => {
+    const klucz = await kluczSync();
+    const stan = notatki(300);
+    const srv = atrapaSerwera(await zaszyfruj(new TextEncoder().encode(JSON.stringify(stan)), klucz));
+    vi.stubGlobal('fetch', srv.fetch);
+    const b = urzadzenie({ klucz, eksport: () => stan, etag: 'E0' });
+    expect((await b.sync.syncPull()).action).toBe('merged');
+    expect((await b.sync.syncPush()).action).toBe('uploaded');
+  });
+
+  it('własna wysyłka zapamiętuje surowy rozmiar: kolejna próba „pustego” stanu przy tym samym ETagu jest zatrzymana', async () => {
+    const klucz = await kluczSync();
+    const pelny = ladunek(PROG + 256 * 1024, 'V');
+    let tryb = 'pelny';
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => (tryb === 'pusty' ? notatki(200) : pelny) });
+    await a.sync.syncPush();
+    tryb = 'pusty';
+    await expect(a.sync.syncPush()).rejects.toMatchObject({ code: 'WIPE_GUARD' });
+    expect(srv.puty).toHaveLength(1);
+  });
+});
+
+// Przegląd adwersarza (soczewka czas, potwierdzone symulacją): z limitem do 180 s planowane wysyłki integracji
+// nakładały się na trwającą i dzieliły łącze, aż wszystkie kończyły się TIMEOUT. Naraz trwa najwyżej jedna pełna
+// wysyłka; wywołania w jej trakcie scalają się w jedną kolejną, która eksportuje najświeższy stan.
+describe('P-SYNC-MOST-STOPKA: jedna pełna wysyłka naraz', () => {
+  async function czekaj(warunek) {
+    const koniec = performance.now() + 10000;
+    while (!warunek() && performance.now() < koniec) await new Promise((r) => { setImmediate(r); });
+    expect(warunek()).toBe(true);
+  }
+  function serwerZWstrzymaniem(srv, { pierwszyBlad = false } = {}) {
+    const bazowy = srv.fetch;
+    const stan = { wiszace: [], wLocie: 0, maks: 0, puty: 0 };
+    srv.fetch = async (url, init = {}) => {
+      if (/\/blob$/.test(new URL(url).pathname) && init.method === 'PUT') {
+        stan.puty += 1;
+        const nr = stan.puty;
+        stan.wLocie += 1; stan.maks = Math.max(stan.maks, stan.wLocie);
+        await new Promise((r) => { stan.wiszace.push(r); });
+        try {
+          if (pierwszyBlad && nr === 1) return { status: 500, ok: false, json: async () => ({}), headers: { get: () => null } };
+          return await bazowy(url, init);
+        } finally { stan.wLocie -= 1; }
+      }
+      return bazowy(url, init);
+    };
+    return stan;
+  }
+
+  it('dwa wywołania w trakcie wysyłki → jedna kolejna wysyłka po zakończeniu bieżącej, nigdy dwie naraz', async () => {
+    const klucz = await kluczSync();
+    let wersja = 1;
+    const srv = atrapaSerwera();
+    const st = serwerZWstrzymaniem(srv);
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => ({ patients: [{ patientId: 'FIKCYJNY-J', wersja }] }) });
+
+    const p1 = a.sync.syncPush();
+    await czekaj(() => st.wiszace.length === 1);
+    wersja = 2;
+    const p2 = a.sync.syncPush();
+    const p3 = a.sync.syncPush();
+    for (let i = 0; i < 50; i += 1) await new Promise((r) => { setImmediate(r); });
+    expect(st.puty, 'w trakcie wysyłki nie rusza druga').toBe(1);
+
+    st.wiszace.shift()();
+    expect((await p1).action).toBe('uploaded');
+    await czekaj(() => st.wiszace.length === 1);
+    st.wiszace.shift()();
+    const [r2, r3] = await Promise.all([p2, p3]);
+    expect(r2.action).toBe('uploaded');
+    expect(r3).toEqual(r2);
+    expect(st.puty, 'dokładnie jedna kolejna wysyłka').toBe(2);
+    expect(st.maks, 'nigdy dwie naraz').toBe(1);
+    const jawne = await odszyfruj(srv.blob, klucz);
+    expect(json(jawne).patients[0].wersja, 'kolejna wysyłka eksportuje najświeższy stan').toBe(2);
+  });
+
+  it('kolejna wysyłka rusza także po błędzie bieżącej', async () => {
+    const klucz = await kluczSync();
+    const srv = atrapaSerwera();
+    const st = serwerZWstrzymaniem(srv, { pierwszyBlad: true });
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => ({ patients: [{ patientId: 'FIKCYJNY-E' }] }) });
+
+    const p1 = a.sync.syncPush();
+    await czekaj(() => st.wiszace.length === 1);
+    const p2 = a.sync.syncPush();
+    st.wiszace.shift()();
+    await expect(p1).rejects.toMatchObject({ code: 'UPLOAD_FAILED', httpStatus: 500 });
+    await czekaj(() => st.wiszace.length === 1);
+    st.wiszace.shift()();
+    expect((await p2).action).toBe('uploaded');
+    expect(st.maks).toBe(1);
   });
 });
