@@ -562,3 +562,79 @@ describe('P-SYNC-MOST-STOPKA: WIPE_GUARD w jednostkach surowych po kompresji', (
     expect(srv.puty).toHaveLength(1);
   });
 });
+
+// Przegląd adwersarza (soczewka czas, potwierdzone symulacją): z limitem do 180 s planowane wysyłki integracji
+// nakładały się na trwającą i dzieliły łącze, aż wszystkie kończyły się TIMEOUT. Naraz trwa najwyżej jedna pełna
+// wysyłka; wywołania w jej trakcie scalają się w jedną kolejną, która eksportuje najświeższy stan.
+describe('P-SYNC-MOST-STOPKA: jedna pełna wysyłka naraz', () => {
+  async function czekaj(warunek) {
+    const koniec = performance.now() + 10000;
+    while (!warunek() && performance.now() < koniec) await new Promise((r) => { setImmediate(r); });
+    expect(warunek()).toBe(true);
+  }
+  function serwerZWstrzymaniem(srv, { pierwszyBlad = false } = {}) {
+    const bazowy = srv.fetch;
+    const stan = { wiszace: [], wLocie: 0, maks: 0, puty: 0 };
+    srv.fetch = async (url, init = {}) => {
+      if (/\/blob$/.test(new URL(url).pathname) && init.method === 'PUT') {
+        stan.puty += 1;
+        const nr = stan.puty;
+        stan.wLocie += 1; stan.maks = Math.max(stan.maks, stan.wLocie);
+        await new Promise((r) => { stan.wiszace.push(r); });
+        try {
+          if (pierwszyBlad && nr === 1) return { status: 500, ok: false, json: async () => ({}), headers: { get: () => null } };
+          return await bazowy(url, init);
+        } finally { stan.wLocie -= 1; }
+      }
+      return bazowy(url, init);
+    };
+    return stan;
+  }
+
+  it('dwa wywołania w trakcie wysyłki → jedna kolejna wysyłka po zakończeniu bieżącej, nigdy dwie naraz', async () => {
+    const klucz = await kluczSync();
+    let wersja = 1;
+    const srv = atrapaSerwera();
+    const st = serwerZWstrzymaniem(srv);
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => ({ patients: [{ patientId: 'FIKCYJNY-J', wersja }] }) });
+
+    const p1 = a.sync.syncPush();
+    await czekaj(() => st.wiszace.length === 1);
+    wersja = 2;
+    const p2 = a.sync.syncPush();
+    const p3 = a.sync.syncPush();
+    for (let i = 0; i < 50; i += 1) await new Promise((r) => { setImmediate(r); });
+    expect(st.puty, 'w trakcie wysyłki nie rusza druga').toBe(1);
+
+    st.wiszace.shift()();
+    expect((await p1).action).toBe('uploaded');
+    await czekaj(() => st.wiszace.length === 1);
+    st.wiszace.shift()();
+    const [r2, r3] = await Promise.all([p2, p3]);
+    expect(r2.action).toBe('uploaded');
+    expect(r3).toEqual(r2);
+    expect(st.puty, 'dokładnie jedna kolejna wysyłka').toBe(2);
+    expect(st.maks, 'nigdy dwie naraz').toBe(1);
+    const jawne = await odszyfruj(srv.blob, klucz);
+    expect(json(jawne).patients[0].wersja, 'kolejna wysyłka eksportuje najświeższy stan').toBe(2);
+  });
+
+  it('kolejna wysyłka rusza także po błędzie bieżącej', async () => {
+    const klucz = await kluczSync();
+    const srv = atrapaSerwera();
+    const st = serwerZWstrzymaniem(srv, { pierwszyBlad: true });
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => ({ patients: [{ patientId: 'FIKCYJNY-E' }] }) });
+
+    const p1 = a.sync.syncPush();
+    await czekaj(() => st.wiszace.length === 1);
+    const p2 = a.sync.syncPush();
+    st.wiszace.shift()();
+    await expect(p1).rejects.toMatchObject({ code: 'UPLOAD_FAILED', httpStatus: 500 });
+    await czekaj(() => st.wiszace.length === 1);
+    st.wiszace.shift()();
+    expect((await p2).action).toBe('uploaded');
+    expect(st.maks).toBe(1);
+  });
+});
