@@ -2,7 +2,7 @@ import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect as select, configureProfile } from '../support/lab-puberty-quick.mjs';
 
 // Production UI -> engine -> saved snapshot. Every patient below is fictional;
-// only the pin/history scenario creates an isolated test vault.
+// historical explicit-context records use the same production engine and snapshot API.
 test.use({ serviceWorkers: 'block' });
 
 async function open(page) {
@@ -57,14 +57,17 @@ async function prepareMinimalResult(page, { withStage = true, withProfile = true
   await choose(page);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('2');
   await expect(page.locator('#labPubertyAgeMonths')).toHaveValue('9');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext, #labPubertyContextSummary')).toHaveCount(0);
+  await expect(page.locator('#labPubertyScope')).toBeVisible();
+  await expect(page.locator('#labPubertyScope')).toContainText(/wyłącznie.*bazaln/);
+  await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
   if (withStage) {
     await expect(page.locator('#labPubertyStage')).toHaveValue('3');
     await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
     await select(page, 'Kind', 'G');
   }
   if (withProfile) await configureProfile(page);
-  // In this path the clinician never opens or answers Context.
+  // Method and a typed stage are sufficient; there is no context selector.
   for (const id of ['labPubertyDetails', 'labPubertyMethodSettings']) {
     const details = page.locator(`#${id}`);
     if (await details.getAttribute('open') !== null) await details.locator(':scope > summary').click();
@@ -107,14 +110,17 @@ function expectUnknownInputAndStrictComparison(saved) {
     byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
 }
 
-test('M2y9 G3 LH2 gives an explicitly conditional numeric comparison without answering context', async ({ page }) => {
+test('M2y9 G3 LH2 gives conditional numeric comparisons with a visible basal-only scope and no context selector', async ({ page }) => {
   await open(page);
   await seedGuest(page);
   const sharedBefore = await page.evaluate(() => window.VildaPersistence.readShared());
   await prepareMinimalResult(page);
   await expectConditionalResult(assessment(page));
   await expect(page.locator('#labPubertyDetails')).not.toHaveAttribute('open');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext, #labPubertyContextSummary')).toHaveCount(0);
+  await expect(page.locator('#labPubertyScope')).toBeVisible();
+  await expect(page.locator('#labPubertyScope')).toContainText(/wyłącznie.*bazaln/);
+  await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
   const saved = await snapshot(page);
   expectUnknownInputAndStrictComparison(saved);
   expect(saved.evaluation.input.age).toMatchObject({ years: 2, months: 9, precision: 'month' });
@@ -136,43 +142,91 @@ test('age alone gives the conditional age comparison without inventing a Tanner 
   expect(saved.evaluation.referencePreview).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'unavailable' } });
 });
 
-test('an explicit basal untreated answer replaces the conditional preview with the applicable comparison', async ({ page }) => {
+// Older clients could record an explicit protocol and treatment answer. Build
+// these fictional records with the real engine and snapshot APIs, then read
+// them through the actual vault/history path after removing the current field.
+async function recordExplicitContext(page, patientId, context) {
+  return page.evaluate(async ({ id, choice }) => {
+    const input = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    const treatment = choice === 'basal-untreated'
+      ? { context: 'none', gnrha: 'no', sexSteroids: 'no' }
+      : { context: choice === 'hormonal' ? 'hormonal' : 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' };
+    const evaluation = window.VildaLabPuberty.evaluate({
+      ...input, value: '2', unit: 'IU/L', treatment,
+      measurementKind: choice === 'basal-untreated' ? 'basal' : choice === 'stimulated' ? 'stimulated' : 'unknown',
+    }, window.VildaLabPubertyData);
+    const lab = { test: 'LH', testKey: 'lh', value: '2', valueNum: 2, unit: 'IU/L', clinicalDateISO: '2026-10-04' };
+    const savedAssessment = window.VildaLabSnapshot.create(evaluation, lab);
+    if (savedAssessment.status !== 'recorded') throw new Error('Production snapshot rejected historical context fixture');
+    const note = await window.VildaVault.savePatientNote({
+      patientId: id, title: 'Fikcyjny wcześniejszy kontekst: ' + choice, body: 'Syntetyczny zapis zgodny ze starszym kontraktem',
+      category: 'wynik-badania', clinicalDateISO: lab.clinicalDateISO, labResult: { ...lab, assessment: savedAssessment },
+    });
+    return { note, assessment: savedAssessment };
+  }, { id: patientId, choice: context });
+}
+async function openTimeline(page, patientId) {
+  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+}
+const historicalAssessment = (page, id) => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
+
+test('a recorded explicit basal untreated context remains applicable while the new form keeps unknown input', async ({ page }) => {
   await open(page);
-  await seedGuest(page);
+  const patientId = await createPatient(page);
   await prepareMinimalResult(page);
   await expectConditionalResult(assessment(page));
-  await select(page, 'Context', 'basal-untreated');
-  await expect(conditions(assessment(page))).toHaveCount(0);
-  await expect(comparison(assessment(page), 'age')).toHaveAttribute('data-status', 'above');
-  await expect(comparison(assessment(page), 'stage')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(assessment(page), 'age')).not.toHaveAttribute('data-applicability', 'conditional');
-  await expect(comparison(assessment(page), 'stage')).not.toHaveAttribute('data-applicability', 'conditional');
-  const saved = await snapshot(page);
-  expect(saved.evaluation).not.toHaveProperty('referencePreview');
-  expect(saved.evaluation.input.measurementKind).toBe('basal');
-  expect(saved.evaluation.input.treatment).toEqual({ context: 'none', gnrha: 'no', sexSteroids: 'no' });
-  expect(saved.evaluation.biochemical).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'within' } });
-  await select(page, 'Context', 'unknown');
-  await expectConditionalResult(assessment(page));
+  const saved = await recordExplicitContext(page, patientId, 'basal-untreated');
+  expect(saved.assessment.evaluation).not.toHaveProperty('referencePreview');
+  expect(saved.assessment.evaluation.input.measurementKind).toBe('basal');
+  expect(saved.assessment.evaluation.input.treatment).toEqual({ context: 'none', gnrha: 'no', sexSteroids: 'no' });
+  expect(saved.assessment.evaluation.biochemical).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'within' } });
   expectUnknownInputAndStrictComparison(await snapshot(page));
+  await expectConditionalResult(assessment(page));
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
+  const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.note.id);
+  expect(reread.labResult.assessment).toEqual(saved.assessment);
+  await openTimeline(page, patientId);
+  const recorded = historicalAssessment(page, saved.note.id);
+  await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
+  await expect(conditions(recorded)).toHaveCount(0);
+  await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'above');
+  await expect(comparison(recorded, 'stage')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(recorded, 'age')).not.toHaveAttribute('data-applicability', 'conditional');
+  await expect(comparison(recorded, 'stage')).not.toHaveAttribute('data-applicability', 'conditional');
+  await expect(recorded.locator('[data-clinical-code="early_development"]')).toBeVisible();
 });
 
-test('known hormonal treatment or stimulation blocks the conditional catalog preview', async ({ page }) => {
+test('recorded hormonal treatment and stimulation keep catalog comparisons blocked after selector removal', async ({ page }) => {
   await open(page);
-  await seedGuest(page);
+  const patientId = await createPatient(page);
   await prepareMinimalResult(page);
   await expectConditionalResult(assessment(page));
+  const saved = [];
   for (const context of ['hormonal', 'stimulated']) {
-    await select(page, 'Context', context);
-    await expect(conditions(assessment(page))).toHaveCount(0);
-    await expect(comparison(assessment(page), 'age')).toHaveAttribute('data-status', 'unavailable');
-    await expect(comparison(assessment(page), 'stage')).toHaveAttribute('data-status', 'unavailable');
-    const saved = await snapshot(page);
-    expect(saved.evaluation).not.toHaveProperty('referencePreview');
-    expect(saved.evaluation.biochemical.primary).toBeNull();
-    expect(saved.evaluation.input.treatment.context).toBe(context === 'hormonal' ? 'hormonal' : 'unknown');
-    expect(saved.evaluation.input.measurementKind).toBe(context === 'stimulated' ? 'stimulated' : 'unknown');
-    await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toBeVisible();
+    const entry = await recordExplicitContext(page, patientId, context);
+    expect(entry.assessment.evaluation).not.toHaveProperty('referencePreview');
+    expect(entry.assessment.evaluation.biochemical.primary).toBeNull();
+    expect(entry.assessment.evaluation.input.treatment.context).toBe(context === 'hormonal' ? 'hormonal' : 'unknown');
+    expect(entry.assessment.evaluation.input.measurementKind).toBe(context === 'stimulated' ? 'stimulated' : 'unknown');
+    saved.push(entry);
+  }
+  expectUnknownInputAndStrictComparison(await snapshot(page));
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
+  await openTimeline(page, patientId);
+  for (const entry of saved) {
+    const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), entry.note.id);
+    expect(reread.labResult.assessment).toEqual(entry.assessment);
+    const recorded = historicalAssessment(page, entry.note.id);
+    await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
+    await expect(conditions(recorded)).toHaveCount(0);
+    await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'unavailable');
+    await expect(comparison(recorded, 'stage')).toHaveAttribute('data-status', 'unavailable');
+    await expect(recorded.locator('.vilda-lab-axis')).toHaveCount(0);
+    await expect(recorded.locator('.vilda-lab-severity-summary')).toHaveCount(0);
+    await expect(recorded.locator('[data-clinical-code="early_development"]')).toBeVisible();
   }
 });
 
@@ -194,7 +248,7 @@ test('an absent or unknown method cannot activate the preview', async ({ page })
   expect(saved.evaluation.input.assay.confirmation).toBe('unknown');
 });
 
-test('pin and history preserve the conditional preview and its unknown input after a later explicit answer', async ({ page }) => {
+test('pin and history preserve the conditional preview and its unknown input after a later method change', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await prepareMinimalResult(page);
@@ -208,7 +262,7 @@ test('pin and history preserve the conditional preview and its unknown input aft
   const notes = await page.evaluate((id) => window.VildaVault.listPatientNotesForPatient(id), patientId);
   expect(notes).toHaveLength(1);
   expect(notes[0].labResult.assessment.evaluation).toEqual(before.evaluation);
-  await select(page, 'Context', 'basal-untreated');
+  await page.locator('#labPubertyUnknownMethod').check();
   await expect(conditions(assessment(page))).toHaveCount(0);
   expect((await snapshot(page)).evaluation).not.toHaveProperty('referencePreview');
   await page.reload({ waitUntil: 'load' });

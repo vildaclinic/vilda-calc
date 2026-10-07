@@ -67,14 +67,14 @@ async function expectNoVolume(page) {
 }
 
 async function expectReadableSummaries(page) {
-  for (const id of ['labPubertyMethodSummary', 'labPubertyContextSummary']) {
+  for (const id of ['labPubertyMethodSummary', 'labPubertyScope']) {
     const metrics = await page.locator(`#${id}`).evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return { width: rect.width, height: rect.height, lineHeight: parseFloat(getComputedStyle(element).lineHeight) };
     });
     // A global mobile button width once collapsed these spans to one letter per
     // line. No horizontal overflow alone would detect that unusable layout.
-    expect(metrics.width, `${id} retains space beside its action`).toBeGreaterThanOrEqual(100);
+    expect(metrics.width, `${id} retains readable line width`).toBeGreaterThanOrEqual(100);
     expect(metrics.height, `${id} stays readable in at most four lines`).toBeLessThanOrEqual(metrics.lineHeight * 4 + 1);
   }
 }

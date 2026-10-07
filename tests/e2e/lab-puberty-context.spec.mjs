@@ -114,9 +114,10 @@ const contextSummary = (page) => page.locator('#labPubertyPatientContext');
 
 test('B completing before A keeps only B in the source, automatic controls and recorded assessment', async ({ page }) => {
   await open(page);
+  await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext')).toHaveCount(0);
   await load(page, A);
   await load(page, B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await complete(page, B);
   expect(await source(page, B)).toMatchObject({ patientId: B, status: 'ready', puberty: { gnrhaStatus: 'w-trakcie' } });
   await complete(page, A);
@@ -124,7 +125,7 @@ test('B completing before A keeps only B in the source, automatic controls and r
   expect((await source(page, A)).status).toBe('unavailable');
   await expect(contextSummary(page)).toContainText(/GnRHa.*w trakcie/);
   await expect(contextSummary(page)).not.toContainText('brak GnRHa');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
@@ -144,28 +145,27 @@ test('loading and rejected reads suspend automatic data without blocking explici
   await open(page);
   await ready(page, A);
   // No GnRHa in the record is not a statement about all hormone treatment.
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await load(page, B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await fill(page, 'AgeYears', '9');
   // The pending record has no usable sex; explicitly provide it before G.
   await select(page, 'Sex', 'M');
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
-  await select(page, 'Context', 'basal-untreated');
   await sample(page);
   await complete(page, B, true);
   expect(await source(page, B)).toMatchObject({ patientId: B, status: 'unavailable' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   await expect(page.locator('#labValue')).toHaveValue('2');
   const saved = await snapshot(page);
   expect(saved.status).toBe('recorded');
   expect(saved.evaluation.input.age.years).toBe(9);
   expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 3 });
-  expect(saved.evaluation.input.treatment.gnrha).toBe('no');
+  expect(saved.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
+  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'within' } });
 });
 
 test('logout and session reset cannot be reversed by a late patient response', async ({ page }) => {
@@ -182,7 +182,7 @@ test('logout and session reset cannot be reversed by a late patient response', a
   expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
   expect((await source(page, A)).status).toBe('unavailable');
   expect(await page.evaluate(() => window.VildaPubertySource.biezace())).toBeNull();
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
   await expect(page.locator('#labValue')).toHaveValue('');
@@ -193,11 +193,11 @@ test('a current-patient update suspends copied context and automatically applies
   await open(page);
   await ready(page);
   await sample(page);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await page.evaluate((id) => window.__lhContext.refresh(id, { age: 15, tannerStage: '5' }, { gnrhaStatus: 'brak' }), B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
   const pending = await snapshot(page);
@@ -205,7 +205,7 @@ test('a current-patient update suspends copied context and automatically applies
   expect(pending.evaluation.input.puberty.stage).toBeNull();
   expect(pending.evaluation.ageAtSample.status).toBe('unknown');
   await complete(page, B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
   await expect(page.locator('#labPubertyStage')).toHaveValue('5');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
@@ -220,29 +220,29 @@ test('a current-patient update suspends copied context and automatically applies
   expect(reviewed.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: 5 });
 });
 
-test('manual sample overrides survive a source refresh and reset returns to the current card', async ({ page }) => {
+test('manual age and stage corrections survive a refresh without overriding known GnRHa treatment', async ({ page }) => {
   await open(page);
   await ready(page);
   await fill(page, 'AgeYears', '9');
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
-  await select(page, 'Context', 'basal-untreated');
   await sample(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, { age: 15, tannerStage: '5' }, { gnrhaStatus: 'w-trakcie' }), B);
   await complete(page, B);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyKind')).toHaveValue('G');
   await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   const manual = await snapshot(page);
   expect(manual.evaluation.input.age.years).toBe(9);
   expect(manual.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 3 });
-  expect(manual.evaluation.input.treatment.gnrha).toBe('no');
+  expect(manual.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
+  expect(manual.evaluation.biochemical.reasonCodes).toContain('treatment_requires_separate_profile');
+  expect(manual.evaluation).not.toHaveProperty('referencePreview');
   await restart(page);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('5');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await page.locator('#labValue').fill('2');
   const imported = await snapshot(page);
   expect(imported.evaluation.input.age.years).toBe(15);
@@ -268,7 +268,7 @@ test('the app frame uses current session identity B when its old window global s
   await complete(frame, B);
   expect(await frame.evaluate(() => ({ globalId: window._vildaCurrentPatientId, sessionId: sessionStorage.getItem('vildaCurrentPatientId') })))
     .toEqual({ globalId: A, sessionId: B });
-  await expect(frame.locator('#labPubertyContext')).toHaveValue('hormonal');
+  expect((await snapshot(frame)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(frame.locator('#labPubertyAgeYears')).toHaveValue('14');
   await sample(frame);
   const saved = await snapshot(frame);
@@ -285,39 +285,38 @@ test('an unchanged refresh suspends imported data and restores the current sampl
   await sample(page);
   const before = await snapshot(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   const pending = await snapshot(page);
   expect(pending.evaluation.input.treatment.gnrha).toBe('unknown');
   expect(pending.evaluation.biochemical.primary).toBeNull();
   await complete(page, B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   expect((await snapshot(page)).evaluation.input).toEqual(before.evaluation.input);
 });
 
-test('manual corrections during an unchanged refresh survive without replacing the configured assay', async ({ page }) => {
+test('manual age correction during a refresh survives while known treatment and configured assay are restored', async ({ page }) => {
   await open(page);
   await ready(page);
   await sample(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
-  await select(page, 'Context', 'basal-untreated');
   await fill(page, 'AgeYears', '9');
   await complete(page, B);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   const corrected = await snapshot(page);
-  expect(corrected.evaluation.input.treatment.gnrha).toBe('no');
+  expect(corrected.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
+  expect(corrected.evaluation).not.toHaveProperty('referencePreview');
   expect(corrected.evaluation.input.age.years).toBe(9);
   // Unspecified legacy Tanner remains ineligible even after choosing a method.
   expect(corrected.evaluation.biochemical.byStage.status).toBe('unavailable');
   await restart(page);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
 });

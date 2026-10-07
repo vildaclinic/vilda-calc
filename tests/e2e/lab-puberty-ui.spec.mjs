@@ -41,7 +41,6 @@ async function sampleContext(ctx, { sex = 'M', birthDate = '2020-06-17', kind = 
   await select(ctx, 'Sex', sex);
   await select(ctx, 'Kind', kind);
   await select(ctx, 'Stage', stage);
-  await select(ctx, 'Context', 'basal-untreated');
 }
 
 const assessment = (ctx) => ctx.locator('#labPubertyAssessment .vilda-lab-assessment');
@@ -105,9 +104,9 @@ test('unknown context has no adult fallback and an unsaved method cannot suppres
 
   await page.locator('#labPubertySaveProfile').click();
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
-  await expect(comparison(page, 'age').getByRole('img')).toHaveAccessibleName(/Powyżej wskazanego zakresu/);
+  await expect(comparison(page, 'age').getByRole('img')).toHaveAccessibleName(/Liczbowo powyżej zakresu.*warunkowo/);
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'stage').getByRole('img')).toHaveAccessibleName(/W obrębie wskazanego zakresu/);
+  await expect(comparison(page, 'stage').getByRole('img')).toHaveAccessibleName(/Liczbowo w zakresie.*warunkowo/);
   await expectEarlyDevelopment(page);
   await expect(assessment(page)).toContainText('G4');
   await expectOriginalLayout(page);
@@ -135,10 +134,10 @@ test('a current G4 examination cannot become the stage of an earlier sample', as
   await fill(page, 'SampleDate', '2026-06-16');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
-  // Date edits also invalidate this sample's context, while the saved assay
-  // preference remains a device setting. Re-establish only the sample context.
-  await select(page, 'Context', 'basal-untreated');
+  // Date edits invalidate the observed stage; age keeps a conditional range
+  // comparison without inventing a basal protocol or absence of treatment.
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
 });
 
 test('switching analytes, resetting and loading another patient isolate sample data and preserve configured methods', async ({ page }) => {
