@@ -9074,7 +9074,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## Trwały ślad błędu synchronizacji i ostatniej udanej wysyłki (P-SYNC-SLAD, SW 1.1.181, `vilda_sync_integration.js` 47, `inline_ustawienia_04.js` 16, 2026-10-07)
+## Trwały ślad błędu synchronizacji i ostatniej udanej wysyłki (P-SYNC-SLAD, SW 1.1.182, `vilda_sync_integration.js` 47, `inline_ustawienia_04.js` 16, 2026-10-07)
 
 **Zgłoszenie właściciela (2026-10-07).** Druga wizyta pacjenta wprowadzona na iPhonie (zapisy 3 i 4) nie dotarła
 na komputery; „Synchronizuj teraz” na iPhonie, „Pobierz z serwera” na komputerze, ponowne wczytanie i zapis pacjenta
@@ -9125,7 +9125,7 @@ przyczyna leży po stronie pobrania/scalania na komputerze — i tam należy pat
 logiki** — wyłącznie zapis śladu w `localStorage` (bez treści pacjenta) i w zaszyfrowanym dzienniku dostępu.
 **Bez zmian:** `vilda_sync.js`, `vilda_vault.js`, scalanie, delty, format ładunku, HTML.
 
-**Wersje.** `vilda_sync_integration.js` 46 → 47 i `inline_ustawienia_04.js` 15 → 16 (8 stron), precache (append-only), `SW_VERSION` 1.1.180 → 1.1.181 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`7c861b4`). „Do decyzji”: brak.
+**Wersje.** `vilda_sync_integration.js` 46 → 47 i `inline_ustawienia_04.js` 15 → 16 (8 stron), precache (append-only), `SW_VERSION` 1.1.180 → 1.1.182 (+ pin; 1.1.181 wydał równolegle #569 na `audyt`, więc po scaleniu bazy skrypt podbił do 1.1.182), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`b10d33a`). „Do decyzji”: brak.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; po wdrożeniu odczyt linii „Ostatnia udana wysyłka” i „Ostatni błąd synchronizacji” na iPhonie i na komputerze rozstrzyga, która warstwa blokuje wysyłkę; naprawy luk synchronizacji z raportu diagnostycznego.
 
