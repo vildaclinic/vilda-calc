@@ -8401,6 +8401,10 @@ edycji w sytuacji, w której wcześniej zapis szedł bez sygnału. Punktów zapi
 - `tests/e2e/gh-edycja-biezaca-lista.spec.mjs` (2, prawdziwe DocPro): A — odświeżenie listy kanałem z tej samej
   karty w trakcie edycji, zapis w miejscu (kontrola, zielony po obu stronach); B — punkt znika z listy w trakcie edycji,
   zapis kończy się komunikatem (na `c730011` czerwony).
+- `tests/e2e/gh-edycja-inny-pacjent.spec.mjs` (1, prawdziwe DocPro) — test regresyjny dodany 2026-10-07 po wdrożeniu
+  poprawki na produkcję (decyzja właściciela D3): edycja punktu otwarta u pacjenta A, wczytanie pacjenta B w tej samej
+  stronie (`applyLoadedData`), „Kontynuacja leczenia” → edycja zakończona przy wczytaniu, lista B bez punktu A. Na
+  `c730011` czerwony: edycja przeżywała wczytanie B, a zapis dopisywał do listy B punkt A z wartościami A.
 
 **Poza zakresem.**
 - Odświeżenie strony (F5) w trakcie edycji nie ma testu e2e. Odświeżenie DocPro z otwartą zakładką „Monitorowanie”
@@ -10802,12 +10806,28 @@ monitora i „Wyczyść” klucz usuwają.
   scalenia z D2, zielone po obu stronach: A punkt dodany w DocPro przeżywa przejścia Start ↔ DocPro bez „Zapisz”;
   B wizyta w Kalkulatorze klirensu (panel bez monitora) nie kasuje listy; C punkt dodany przy wstrzymanym mostku
   na Start przeżywa przejścia.
+- `tests/e2e/powloka-punkty-gh-usuniecie.spec.mjs` (2, powłoka `app.html`, pacjent z sejfu po „Odtwórz zapis”, prawdziwe
+  usunięcie przyciskiem monitora) — testy regresyjne dodane 2026-10-07 po wdrożeniu poprawki na produkcję (decyzja
+  właściciela D3): S5 — punkt usunięty w DocPro przy wstrzymanym mostku na Start nie wraca po przejściach Start ↔ DocPro;
+  S7 — powłoka otwarta od razu na DocPro i tam wczytany pacjent, mostek na Start (ramka doładowana przez powłokę w tle)
+  wstrzymany w chwili usunięcia, przejście do Start i z powrotem: lista pusta we wszystkich kopiach obu ramek. Działający
+  mostek na Start sam poprawia sesję, więc bez poprawki punkt wracał tylko przy wstrzymanym mostku albo zanim powłoka
+  doładowała Start. Na `audyt` `57f485a` (przed poprawką) oba czerwone: po usunięciu sesja główna
+  DocPro dalej trzyma usunięty punkt, z którego Start odtwarzał go we wszystkich kopiach.
 
 **Wersje.** `vilda_data_import_export.js` 98 → 99 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
 (append-only); `SW_VERSION` 1.1.173 → 1.1.174 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
 — wszystko z `npm run podbij-wersje` względem `audyt` `f51d1f2`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja zmiany, scalenie i wdrożenie.
+
+**Domknięcie pokrewnych dróg (D7, 2026-10-07).** Plan przewidywał warunkowy krok „część 2” (ta sama reguła we flushu
+kopii wspólnej i w zapisie zwrotnym mostka), jeśli pomiar pokaże kolejne drogi powrotu usuniętego punktu. Pomiar
+siedmiu scenariuszy przełączania paneli (dodanie i usunięcie punktu; pacjent z sejfu i bez; mostek na Start czynny,
+wstrzymany i bez pacjenta; usunięcie przyciskiem monitora w S5, w pozostałych emulacja zapisu monitora, a S5 i S7
+z prawdziwym przyciskiem także w testach regresyjnych wyżej) na poprawce: dodane punkty zostają, usunięte nie wracają
+w żadnym scenariuszu.
+Decyzja właściciela D7 z 2026-10-07: bez kroku „część 2”; zmian w kodzie nie ma.
 
 ## Karta porównania po „Odtwórz zapis”: spóźniony odczyt z sejfu nie przywraca porównania na Start ani w DocPro (P-POWLOKA-WYSCIG, SW 1.1.112, `vilda_summary_cards.js` 50, 2026-09-30)
 
