@@ -893,6 +893,7 @@ const CORE_SHELL_URLS = [
   '/vilda_version_history_ui.js?v=12',
   '/vilda_version_history_ui.js?v=13',
   '/vilda_version_history_ui.js?v=14',
+  '/vilda_version_history_ui.js?v=15',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
