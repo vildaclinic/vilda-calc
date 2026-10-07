@@ -8592,7 +8592,7 @@ w obu trybach identyczny co do kolejności kluczy i bitu każdej liczby.
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Dalej: PR-5 (D5 — koniec zapasu), naprawa stanu
 przy pustym wpisie (osobny PR funkcjonalny), PR-6 (D6, kliniczny).
 
-## Wspólne API punktów terapii GH, rata 3: monitor GH wymaga `VildaGhPunkty`, stary kod reguł usunięty (P-GH-PUNKTY-API rata 3, D5, SW 1.1.182, `gh_therapy_monitor.js` 54, `vilda_gh_punkty.js` 3, 2026-10-07)
+## Wspólne API punktów terapii GH, rata 3: monitor GH wymaga `VildaGhPunkty`, stary kod reguł usunięty (P-GH-PUNKTY-API rata 3, D5, SW 1.1.183, `gh_therapy_monitor.js` 54, `vilda_gh_punkty.js` 3, 2026-10-07)
 
 **Skąd.** PR-5 planu „Wspólne API punktów GH”, decyzja D5 w wariancie (a): po jednym wydaniu z zapasem (rata 2, SW 1.1.181)
 monitor wymaga modułu. Reguły punktu mają odtąd jedną kopię — w `vilda_gh_punkty.js`.
@@ -8651,8 +8651,8 @@ odmowy nic nie jest zapisywane. Brzmienie komunikatu odmowy jest decyzją właś
   błędów strony.
 
 **Wersje.** `gh_therapy_monitor.js` 53 → 54 i `vilda_gh_punkty.js` 2 → 3 (`docpro.html`; `vilda_gh_punkty.js` też
-`index.html`), precache (append-only), `SW_VERSION` 1.1.181 → 1.1.182 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
-`tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `b10d33a`.
+`index.html`), precache (append-only), `SW_VERSION` 1.1.182 → 1.1.183 (+ pin w `tests/unit/klirens-ui-model.test.mjs`;
+1.1.182 wydał P-SYNC-SLAD #570), `tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `1c56829`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja (w tym brzmienie komunikatu odmowy), scalenie i wdrożenie. Poza zakresem:
 `zapisz` przy nieudanym zapisie modułu (`modul: false`) nadal tylko zapisuje błąd w dzienniku diagnostycznym, bez komunikatu
