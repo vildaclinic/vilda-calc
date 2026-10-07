@@ -24,7 +24,8 @@
  * Czego moduł nie robi: przy ładowaniu niczego nie czyta i nie zapisuje (żadnego magazynu, kanału ani słuchacza);
  * nie normalizuje list z rekordu ani z sejfu; nie dopisuje punktu przy edycji (zmienWMiejscu); nie liczy dawki
  * nowego punktu z karty (zostaje w monitorze); nie dotyka mostka, IndexedDB ghTherapyDB ani resetu monitora.
- * Bez VildaGhDawka liczy jak monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true.
+ * Bez VildaGhDawka liczy jak dawny monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true; monitor od
+ * D6 (P-GH-DAWKA-BEZ-MODULU) w tym stanie nie zapisuje punktu, tylko prosi o odświeżenie strony.
  * Pusty wpis (null) na liście: sprawdzRodzaj i zmienWMiejscu rzucają wyjątek tam, gdzie monitor (rata 2, decyzja
  * właściciela 2026-10-07: ściśle jak monitor); dostepneRodzaje go pomija, jak formularz wsteczny monitora.
  * Uszkodzony wpis listy (P-GH-PUNKTY-USZKODZONE, rata 4): wpis, który nie jest obiektem (null, brak wartości,

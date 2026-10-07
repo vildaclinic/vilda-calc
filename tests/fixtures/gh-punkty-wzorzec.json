@@ -55,6 +55,18 @@
     "Z2-odmowy": {"przypadki":139,"zapisy":0,"bezZapisu":139,"sha256":"7195585b4ff8cadb9ea48f5c149ed8af68e8ea26a44a02515f35f21811acbf83"},
     "Z4-odmowy": {"przypadki":336,"zapisy":0,"bezZapisu":336,"sha256":"6296b84b053985a1c6ebf8415e58898a33003d2568dc691497762436306ec51c"}
   },
+  "kategorieZModulemDawki": {
+    "Z1-modul": {"przypadki":1944,"zapisy":1944,"bezZapisu":0,"sha256":"ce515f91ab49f239929ef4880dc9e787eb78427584c8972ba538cdf033fd5c7e"},
+    "Z1-bez-modulu": {"przypadki":0,"zapisy":0,"bezZapisu":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "Z2-modul": {"przypadki":1160,"zapisy":1160,"bezZapisu":0,"sha256":"e9d4a60119d46e7e9e546d160b397e242783599f5df9fecdafb1fb7bc7334185"},
+    "Z2-bez-modulu": {"przypadki":0,"zapisy":0,"bezZapisu":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "Z4-modul": {"przypadki":1620,"zapisy":1620,"bezZapisu":0,"sha256":"600076e453576fcd4b47fcfb04774b719bcaaf4f009775e66ca93583b0913e69"},
+    "Z4-bez-modulu": {"przypadki":0,"zapisy":0,"bezZapisu":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "Z5": {"przypadki":28,"zapisy":14,"bezZapisu":14,"sha256":"2048544d772f877d39cf5adb453eaeb4fd9089433468ee1264f3ade005a69d24"},
+    "Z1-odmowy": {"przypadki":138,"zapisy":0,"bezZapisu":138,"sha256":"23806843f91932268f4c590c29e33bb2dee38bb262ef3e201da6aade98e294b6"},
+    "Z2-odmowy": {"przypadki":70,"zapisy":0,"bezZapisu":70,"sha256":"a9f270f8a7d66beb96b0a7fcf7f513f751b4d1c1f64e4f8e754bcbeb142707bf"},
+    "Z4-odmowy": {"przypadki":168,"zapisy":0,"bezZapisu":168,"sha256":"faa7d8f9202c4c0cbd656449c53142bfd2ffdf200e851e5438426dbc9a065525"}
+  },
   "przypadki": [
     {
       "wejscie": {"id":"Z1-modul-00040","kategoria":"Z1-modul","sciezka":"Z1","modulDawki":true,"lista":"W","typ":"continue","karta":{"drug":"Omnitrope 5 mg","weight":32,"perDayMg":0.4321,"perWeekMg":3.0246999999999997},"pola":{"age":"7","ageMonths":"2.6","weight":"32","height":"141","advBoneAge":"","therDrug":"Omnitrope 5 mg","therDailyDose":"0.66","therDailyDoseAbs":""}},

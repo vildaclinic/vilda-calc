@@ -374,7 +374,7 @@ describe('Gmcalc — dawka nowego punktu z wyniku karty i gałąź zapasowa', ()
     }
   });
 
-  it('Increlex bez VildaGhDawka: wsteczny zapisuje wpis bez ×2 (etykieta „mg/dobę”), a punkt z karty bierze doseAbs z pola dawki na podanie mimo zgodnego wyniku karty — stan obecny — do decyzji (pytanie 27)', () => {
+  it('Increlex bez VildaGhDawka: od D6 (P-GH-DAWKA-BEZ-MODULU) brak zapisu i prośba o odświeżenie strony — wsteczny i punkt z karty; z modułem × 2', () => {
     const increlex = {
       ...WSTECZNY, ghRetroProg: 'IGF-1', ghRetroDrug: 'Increlex 40 mg', ghRetroWeight: '25', ghRetroDose: '1',
     };
@@ -384,21 +384,27 @@ describe('Gmcalc — dawka nowego punktu z wyniku karty i gałąź zapasowa', ()
     expect(zModulem.pole('ghRetroDoseLabel').textContent).toBe('Dawka na podanie, 2× na dobę (mg)');
     expect(zModulem.stan().okno[0]).toMatchObject({ dose: 0.08, doseUnit: 'mg/kg/d', doseAbs: 2 });
 
-    // Bez modułu: ten sam wpis jest dawką dobową — połowa dawki z modułem.
+    // Bez modułu (D6, decyzja właściciela 2026-10-07): odmowa, bez zapisu. Dawniej ten sam wpis zapisywał się jako dawka
+    // dobowa — połowa dawki z modułem (dose 0,04, doseAbs 1).
+    const odswiez = 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.';
     const bezModulu = utworzAtrapeMonitoraGh({ modulDawki: false });
     expect(bezModulu.win.VildaGhDawka).toBeUndefined();
-    expect(rodzaje(bezModulu.dodajWsteczny(increlex))).toEqual(['E', 'E', 'M', 'E', 'BC']);
+    expect(rodzaje(bezModulu.dodajWsteczny(increlex))).toEqual(['E', 'E', 'K']);
     expect(bezModulu.pole('ghRetroDoseLabel').textContent).toBe('Dawka podawana (mg/dobę)');
-    expect(bezModulu.stan().okno[0]).toMatchObject({ dose: 0.04, doseUnit: 'mg/kg/d', doseAbs: 1 });
+    expect(bezModulu.stan().komunikat).toBe(odswiez);
+    expect(bezModulu.stan().okno).toEqual([]);
+    expect(bezModulu.stan().modul).toBeUndefined(); // do pamięci modułu nic nie trafiło
 
-    // Karta bez modułu: Gmcalc nie działa, doseAbs = #therDailyDoseAbs (pole „Dawka na podanie” karty Increlex).
+    // Karta bez modułu: dawniej Gmcalc nie działał i doseAbs brał #therDailyDoseAbs (pole „Dawka na podanie” karty
+    // Increlex); od D6 odmowa i brak zapisu.
     const karta = utworzAtrapeMonitoraGh({
       modulDawki: false, ghTherapyCalc: { drug: 'Increlex 40 mg', weight: 25, perDayMg: 2, perWeekMg: 14 },
     });
-    karta.dodajZKarty('start', {
+    expect(rodzaje(karta.dodajZKarty('start', {
       weight: '25', therProg: 'IGF-1', therDrug: 'Increlex 40 mg', therDailyDose: '0.08', therDailyDoseAbs: '1',
-    });
-    expect(karta.stan().okno[0]).toMatchObject({ dose: 0.08, doseUnit: 'mg/kg/d', doseAbs: 1 });
+    })).filter((r) => r === 'M' || r === 'BC')).toEqual([]);
+    expect(karta.stan().komunikat).toBe(odswiez);
+    expect(karta.stan().okno).toEqual([]);
   });
 });
 

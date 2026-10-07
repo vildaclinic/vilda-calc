@@ -43,11 +43,12 @@ async function zaloguj(page) {
 }
 
 // wariant: 'teraz' (docpro.html bez zmian), 'przedApi' (monitor sprzed API zamiast gh_therapy_monitor.js),
-// 'bezModulu' (vilda_gh_punkty.js nie dochodzi).
+// 'bezModulu' (vilda_gh_punkty.js nie dochodzi), 'bezModuluDawki' (vilda_gh_dawka.js nie dochodzi; D6).
 async function otworzDocPro(page, wariant) {
   // Serwer synchronizacji odcięty: wynik nie zależy od sieci środowiska testu.
   await page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
   if (wariant === 'bezModulu') await page.route(/\/vilda_gh_punkty\.js(\?|$)/, (route) => route.abort());
+  if (wariant === 'bezModuluDawki') await page.route(/\/vilda_gh_dawka\.js(\?|$)/, (route) => route.abort());
   if (wariant === 'przedApi') {
     await page.route(/\/gh_therapy_monitor\.js(\?|$)/, (route) => route.fulfill({
       status: 200, contentType: 'application/javascript; charset=utf-8', body: MONITOR_PRZED_API,
@@ -59,6 +60,7 @@ async function otworzDocPro(page, wariant) {
     && Boolean(window.vildaGhIgfPersistApi) && Boolean(window.vildaGhTherapyMonitorPersistApi), null, { timeout: 60000 });
   await page.waitForTimeout(2500); // odtworzenie stanu DocPro biegnie do ~1,5 s po starcie strony
   expect(await page.evaluate(() => Boolean(window.VildaGhPunkty))).toBe(wariant !== 'bezModulu');
+  expect(await page.evaluate(() => Boolean(window.VildaGhDawka))).toBe(wariant !== 'bezModuluDawki');
   await page.evaluate(() => {
     window.vildaGhIgfPersistApi.ensureMounted();
     const k = document.getElementById('ghIgfTherapyCard');
@@ -200,11 +202,11 @@ test('ten sam ciąg czynności lekarza daje ten sam wynik na dzisiejszym monitor
   expect(b.flatMap((k) => k.api)).toEqual([]);
 });
 
-test('bez vilda_gh_punkty.js monitor odmawia każdego zapisu i usunięcia z prośbą o odświeżenie strony; lista bez zmian', async ({ page }) => {
+for (const [plik, wariant] of [['vilda_gh_punkty.js', 'bezModulu'], ['vilda_gh_dawka.js (D6)', 'bezModuluDawki']]) test(`bez ${plik} monitor odmawia każdego zapisu i usunięcia z prośbą o odświeżenie strony; lista bez zmian`, async ({ page }) => {
   test.setTimeout(180_000);
   const bledy = [];
   page.on('pageerror', (e) => bledy.push(String(e && e.message)));
-  await otworzDocPro(page, 'bezModulu');
+  await otworzDocPro(page, wariant);
   const poczatek = await stan(page);
   expect(JSON.parse(poczatek.modul).map((p) => p.id)).toEqual([P1.id, P2.id]);
   const odmowa = async (opis) => {

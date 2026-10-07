@@ -478,7 +478,7 @@ describe('polaZPodawanej — dawka na kg i dawka dobowa z dawki podawanej', () =
       { dawka: w.VildaGhDawka })).toEqual(wynik);
   });
 
-  it('Increlex z opcje { dawka: null } → bez × 2: dose 0,5/30, doseAbs 0,5, bezModuluDawki: true — stan obecny (PR-6 do decyzji)', () => {
+  it('Increlex z opcje { dawka: null } → bez × 2: dose 0,5/30, doseAbs 0,5, bezModuluDawki: true — API liczy dalej, monitor od D6 w tym stanie nie zapisuje (P-GH-DAWKA-BEZ-MODULU)', () => {
     const wynik = A.polaZPodawanej(liczbowe({ preparat: 'Increlex 40 mg', program: 'IGF-1', podawana: 0.5, masa: 30 }), 'wsteczny',
       { dawka: null });
 
