@@ -64,8 +64,8 @@
   "sha256": "ab8d9f183cc103630bf84482a9cfbafac5bb1747eecca2e37d12e061434e820b"
  },
  "docpro_state_persist.js": {
-  "v": 7,
-  "sha256": "3511575dec7845d56a95c4a1f0e4cedac87c2666cf647b4400f0d116dfa7c75a"
+  "v": 8,
+  "sha256": "ab4f097abed589d9bf4abc3e741dfbff0aefca7cf157e7384b3ffd5f29808ea6"
  },
  "ds_lms.js": {
   "v": 4,

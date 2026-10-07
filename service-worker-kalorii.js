@@ -1803,6 +1803,7 @@ const OPTIONAL_ASSETS = [
   '/docpro_state_persist.js?v=5',
   '/docpro_state_persist.js?v=6',
   '/docpro_state_persist.js?v=7',
+  '/docpro_state_persist.js?v=8',
   '/lab_units_data.js',
   '/lab_units_data.js?v=1',
   '/lab_units_data.js?v=35',
