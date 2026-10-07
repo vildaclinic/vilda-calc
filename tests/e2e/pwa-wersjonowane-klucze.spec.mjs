@@ -22,6 +22,12 @@ async function zarejestruj(page, wersja) {
 
 const tresc = (page, u) => page.evaluate(async (adres) => (await fetch(adres)).text(), u);
 const licznik = async (request, u) => (await (await request.get(`/__test-licznik?u=${encodeURIComponent(u)}`)).json()).n;
+// Wpis w Cache Storage czytany bez fetch: odczyt przez fetch dla adresu bez ?v= uruchamia kolejne
+// odświeżenie w tle (i podbija licznik), a ten odczyt niczego nie uruchamia.
+const wpis = (page, u) => page.evaluate(async (adres) => {
+  const r = await caches.match(adres);
+  return r ? r.text() : null;
+}, u);
 
 test('adres z ?v= jest niezmienny w shell i runtime cache; bez ?v= odświeża się w tle', async ({ page, request }) => {
   await zarejestruj(page);
@@ -47,6 +53,11 @@ test('adres z ?v= jest niezmienny w shell i runtime cache; bez ?v= odświeża si
     expect(await tresc(page, bezWersji), sciezka).toBe('// licznik 1\n');
     expect(await tresc(page, bezWersji), sciezka).toBe('// licznik 1\n');
     await expect.poll(() => licznik(request, bezWersji), { message: `${sciezka}: odświeżenie w tle` }).toBeGreaterThanOrEqual(2);
+    // Licznik 2 znaczy tylko, że serwer oddał odpowiedź odświeżenia. SW zapisuje ją do pamięci
+    // asynchronicznie (cache.put), więc przy pełnym obciążeniu odczyt zaraz po tym bywał jeszcze
+    // starym wpisem „licznik 1”. Czekamy na sam zapis — bez fetch, który podbiłby licznik do 3.
+    await expect.poll(() => wpis(page, bezWersji), { message: `${sciezka}: zapis odświeżenia w pamięci` }).toBe('// licznik 2\n');
+    expect(await licznik(request, bezWersji), `${sciezka}: jedno odświeżenie w tle`).toBe(2);
     expect(await tresc(page, bezWersji), sciezka).toBe('// licznik 2\n');
   }
 });
