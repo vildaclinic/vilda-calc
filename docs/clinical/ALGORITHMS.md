@@ -8822,6 +8822,88 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Import karty, kopie konta i migracja nazwisk pod blokadą pacjenta (P-BLOKADA-IMPORT, SW 1.1.179, `vilda_vault.js` 200, 2026-10-07)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych
+(decyzja właściciela 2026-10-07: „zajmij się drugą częścią punktu 4, zwykły PR do audyt” — punkt 4 przeglądu „co dalej
+po #518”, część 2: A3, A5, A6, A9; część 1 to P-BLOKADA-USUWANIE).
+
+**Co było** (zmierzone na `audyt` `7ea4b54`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). Import karty z pliku
+(`importPatientFromEnvelope`), scalanie kopii konta (`mergeVaultBackup`), odtworzenie kopii konta (`restoreVaultBackup`)
+i migracja nazwisk (`migratePatientNamesSplit`) zmieniały rekord pacjenta bez blokady, którą biorą zapis, kosz, poprawki,
+usunięcie i scalanie synchronizacji:
+1. **Import do istniejącej karty i zapis w innej karcie** (A3). Licznik wersji liczony z odczytu sprzed zapisu: 3 przy
+   4 wersjach; „ostatni zapis” cofnięty.
+2. **Import wersji leżącej w koszu i scalanie synchronizacji w tym czasie** (A3; tak samo w scalaniu kopii konta, A5).
+   Scalanie usuwało świeżo wpisaną wersję (nagrobek kosza nowszy niż jej data z pliku), a import zdejmował potem nagrobek:
+   wersji nie było ani w karcie, ani w koszu, a import zgłaszał jej dodanie.
+3. **Import przy otwartym pytaniu bramy w karcie innego pacjenta** (A3, A5). Wewnętrzne scalanie notatek kończyło się
+   etapem kosza, który brał po kolei blokady wszystkich pacjentów z wpisami w koszu: import stał 30 s, a notatki
+   z pliku przepadały po cichu (`MERGE_BUSY` połykany).
+4. **Scalanie kopii konta i karta dochodząca w tym czasie z synchronizacji** (A5). Rekord nadpisywany licznikiem z kopii:
+   2 przy 3 wersjach.
+5. **Odtworzenie kopii konta** (A6). Słuchacze odblokowania (start synchronizacji po 600 ms, kanał zmian) ruszali, zanim
+   kopia była zapisana: w chwili ich wywołania magazyn miał 0 kart z 2.
+6. **Migracja nazwisk** (A9). Zapis rekordu z listy na starcie cofał kartę zapisaną w trakcie: licznik 1 przy 2 wersjach,
+   „ostatni zapis” sprzed zapisu.
+
+**Reguła po zmianie.**
+- Import karty: odszyfrowanie pliku, wybór karty i szyfrowanie nagłówka poza blokadą. Pod blokadą pacjenta
+  (`vilda-save-pat:<id>`, ta sama co zapis) świeży odczyt karty i jej wersji, zapis brakujących wersji, zdjęcie ich
+  nagrobków z kosza, rekord i nagrobek pacjenta. Chwila przywrócenia (P-IMPORT-NAGROBEK) liczona pod blokadą.
+- Scalanie kopii konta: pacjent po pacjencie, każdy pod swoją blokadą, jedna blokada naraz. Wybór „nowa karta /
+  dopisanie wersji” na świeżym odczycie, a nie na liście ze startu.
+- Notatki i pozostałe dane konta z pliku (wewnętrzne scalanie) — po zwolnieniu blokady i bez etapu kosza. Ładunek importu
+  nie niesie nagrobków wersji, więc ten etap niczego nie zmieniał, a jako jedyny czekał na blokady innych pacjentów.
+  Synchronizacja tego etapu nie pomija.
+- Odtworzenie kopii konta: słuchacze odblokowania dopiero po zapisie kart i danych konta (także po błędzie).
+- Migracja nazwisk: każda karta pod swoją blokadą, na świeżym rekordzie. Gdy blokada karty jest zajęta (po limicie),
+  karta zostaje pominięta, a migracja kończy się błędem, więc interfejs nie zapisuje „zrobione” i powtarza ją przy
+  następnym odblokowaniu.
+- Zajęta blokada importowanej karty: sygnał `onLockWait` i czekanie najwyżej `lockTimeoutMs` (domyślnie 30 s); po limicie
+  błąd `vildaSaveBusy` i karta bez zmian. W oknie importu ten błąd trafia do listy błędów pliku („Ten pacjent jest nadal
+  zapisywany w innej karcie.”). Nowy, opcjonalny ostatni argument `{ onLockWait, lockTimeoutMs }` w
+  `importPatientFromEnvelope`, `mergeVaultBackup` i `migratePatientNamesSplit`.
+- Reguły importu i scalania kopii bez zmian: co się dopisuje, nagłówek z pliku, data przywrócenia karty.
+
+**Bez zmian (decyzja właściciela, A5 d).** Scalanie kopii konta z kartą usuniętą na tym urządzeniu nadal dopisuje kartę
+(„dodano 1 pacjenta”), a wewnętrzne scalanie od razu ją usuwa, bo lokalny nagrobek wygrywa. Do wyboru: zdejmować
+nagrobek jak import karty (z datą przywrócenia jak w P-IMPORT-NAGROBEK) albo pomijać taką kartę i mówić o tym w podglądzie
+i w wyniku.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/blokada-importu.test.mjs` (prawdziwy
+`vilda_vault.js`; dwie karty na wspólnym magazynie i atrapie Web Locks oraz jedna karta z kolejką strony):
+- import pliku z 2 wersjami do karty z 3 wersjami stoi przed zapisem rekordu, druga karta zapisuje → zapis czeka;
+  potem 4 wersje, licznik 4, „ostatni zapis” i bieżąca wersja z drugiej karty;
+- import wersji z kosza stoi przed zdjęciem nagrobka, druga karta scala → scalanie czeka; wersja w karcie, nie w koszu;
+- to samo przy scalaniu własnej kopii konta;
+- scalanie kopii innego konta (karta z 2 wersjami) stoi przed zapisem rekordu, druga karta scala ładunek tej karty
+  z 3 wersjami → synchronizacja czeka; 3 wersje, licznik 3;
+- migracja nazwisk stoi przed zapisem rekordu, druga karta zapisuje → zapis czeka; 2 wersje, licznik 2, „ostatni zapis”
+  z drugiej karty, nazwisko „Testowy”, imię „Legat”;
+- migracja przy zajętej blokadzie jednej karty (limit 60 ms) → błąd `vildaSaveBusy`, druga karta zmigrowana; po
+  zwolnieniu ponowienie migruje pominiętą;
+- import innego pacjenta z notatką przy otwartym pytaniu bramy (karta z wpisem w koszu) → koniec w czasie poniżej 3 s,
+  notatka „Morfologia” przywrócona;
+- import przy zajętej blokadzie tej karty (limit 60 ms) → jeden sygnał czekania, `vildaSaveBusy`, karta bez zmian;
+- odtworzenie kopii z 2 kartami → słuchacz odblokowania wywołany raz i widzi 2 karty;
+- strażnik: znacznik pominięcia etapu kosza jest prywatny i przekazują go tylko import karty i scalanie kopii konta.
+Na `7ea4b54` wszystkie 15 czerwone (strażnik kodu — bo znacznika jeszcze nie było). Mutacje (po jednej poprawce cofniętej): import bez blokady
+— 5 czerwonych; scalanie kopii bez blokady — 4; wewnętrzne scalanie z etapem kosza — 1; słuchacze przed zapisem — 1;
+migracja bez blokady — 2.
+`tests/e2e/blokada-importu.spec.mjs` (prawdziwe Web Locks, dwie karty przeglądarki): import innego pacjenta z notatką przy
+pytaniu bramy w pierwszej karcie — bez czekania, notatka przywrócona; import tego samego pacjenta czeka na odpowiedź,
+potem licznik wersji zgadza się z wersjami. Na `7ea4b54` oba czerwone (import innego pacjenta trwał 30 s).
+Kotwica w `tests/unit/scalanie-blokada.test.mjs` zaktualizowana do nowego wywołania końca scalania kosza.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, jednostkach i wynikach. Import i kopie konta nie gubią po cichu
+wersji ani notatek i nie rozjeżdżają licznika wersji.
+
+**Czego zmiana nie robi.** Nie zmienia zapisów metadanych konta poza blokadą kosza (A12: zmiana hasła i listy oczekujących
+mogą nadpisać kosz) ani porządku końcowego zapisu listy nagrobków w scalaniu (A10) — osobne punkty przeglądu. Import nie
+wysyła zmian od razu (jak dotąd: z najbliższą wysyłką). Bez Web Locks (sama kolejka strony) blokady chronią tylko w obrębie
+jednej strony — jak dotąd.
+
 ## Usunięcie pacjenta i scalanie duplikatów pod blokadą pacjenta (P-BLOKADA-USUWANIE, SW 1.1.173, `vilda_vault.js` 199, `vilda_auth_ui.js` 479, 2026-10-06)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych
@@ -8898,7 +8980,8 @@ z tego zapisu jest w bieżącej wersji celu. Na `c730011` wszystkie 3 czerwone.
 zapisu, poprawki ani nagrobka; przy zajętej blokadzie czekają do 30 s albo kończą się błędem, a dane zostają bez zmian.
 
 **Czego zmiana nie robi.** Nie obejmuje importu karty z pliku (`importPatientFromEnvelope`), kopii konta
-(`mergeVaultBackup`, `restoreVaultBackup`) ani migracji nazwisk (`migratePatientNamesSplit`) — następny PR. Nie zmienia
+(`mergeVaultBackup`, `restoreVaultBackup`) ani migracji nazwisk (`migratePatientNamesSplit`) — następny PR. *(Aktualizacja
+2026-10-07: zrobione w P-BLOKADA-IMPORT.)* Nie zmienia
 reguł scalania, formatu ładunku ani notatek. Bez Web Locks (sama kolejka strony) blokady chronią tylko w obrębie jednej
 strony — jak dotąd.
 
@@ -8942,7 +9025,8 @@ daty notatek karta zostaje, ale notatka znika (dwa przypadki).
 
 **Czego zmiana nie robi.** Nie obejmuje importu blokadą pacjenta (punkt A3/4 przeglądu: przeploty importu z zapisem
 i scalaniem w innej karcie) ani pełnej kopii konta (`mergeVaultBackup`, `restoreVaultBackup` — tych ścieżek ta zmiana
-nie sprawdzała). Nie zmienia formatu pliku, ładunku ani reguł scalania.
+nie sprawdzała). Nie zmienia formatu pliku, ładunku ani reguł scalania. *(Aktualizacja 2026-10-07, P-BLOKADA-IMPORT: import
+karty i scalanie kopii konta pod blokadą pacjenta; odtworzenie kopii startuje synchronizację po zapisie.)*
 
 ## Wysyłka nie nadpisuje chmury bez scalenia; delty i wysyłka po MERGE_BUSY (P-SYNC-STRAZNIK, SW 1.1.160, `vilda_sync.js` 33, `vilda_sync_integration.js` 46, 2026-10-05)
 
@@ -9095,7 +9179,7 @@ przy zajętej blokadzie synchronizacja czeka albo jest wstrzymana do następnej 
 - `removePatient` (usunięcie karty) i import kopii (`importPatientFromEnvelope`, `restoreVaultBackup`) nadal bez blokady
   pacjenta. Ich wyścigi ze scalaniem świeży odczyt zawęża, ale nie wyklucza.
   *(Aktualizacja 2026-10-06, P-BLOKADA-USUWANIE: `removePatient` i `mergePatients` pod blokadą pacjenta, a scalanie
-  czyta nagrobek karty świeżo. Import i kopie konta — następny PR.)*
+  czyta nagrobek karty świeżo. Import i kopie konta — następny PR. Aktualizacja 2026-10-07: zrobione w P-BLOKADA-IMPORT.)*
 - Pytanie bramy otwarte długo w innej karcie: każda automatyczna synchronizacja czeka 30 s i kończy się `MERGE_BUSY`;
   wysyłka z tego urządzenia czeka do odpowiedzi albo zamknięcia tamtej karty. Błąd idzie tą samą drogą co inne błędy
   pobrania. *(Korekta 2026-10-05, P-SYNC-STRAZNIK: wysyłka nie czekała — po 5 próbach rezygnowała do następnej zmiany
