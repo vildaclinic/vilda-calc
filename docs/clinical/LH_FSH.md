@@ -1,6 +1,38 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 4 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`.
+Stan dokumentu: 7 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+
+## Zakres bazalny bez selektora kontekstu — 7.10.2026
+
+Formularz `1.6.0` usuwa podsumowanie rodzaju oznaczenia, przycisk jego zmiany, zakładkę „Kontekst oznaczenia” i selektor protokołu/leczenia. Zastępuje je stała informacja: porównania dotyczą **oznaczeń bazalnych bez leczenia hormonalnego**. Moduł nie interpretuje odpowiedzi LH/FSH w testach stymulacyjnych GnRH/LHRH ani stężeń podczas leczenia hormonalnego. Nie dobiera norm dla leku, dawki, odstępu od podania lub protokołu stymulacji i nie ocenia skuteczności GnRHa.
+
+**Informacja o zakresie modułu nie jest potwierdzeniem danych pacjenta.** Nowe wejście z formularza nadal ma `measurementKind='unknown'`, a bez dodatniej informacji z właściwej karty również `treatment.context='unknown'`. Nie wpisuje automatycznie oznaczenia bazalnego ani braku leczenia. Dostępne pozostaje istniejące `referencePreview` — warunkowe porównanie liczbowe z tabelą bazalną dla osoby bez leczenia, z warunkami widocznymi przy wyniku. Wymaga właściwej metody, wieku, płci i spełnienia pozostałych ograniczeń; typowane stadium dodaje oddzielne porównanie. `biochemical.primary` pozostaje `null`, jeżeli zastosowanie zakresu nie zostało potwierdzone.
+
+**Znane leczenie z formularza głównego:** dla gotowego, aktualnego kontekstu `current-patient` status GnRHa „w trakcie” pozostaje dodatnią informacją i wyłącza porównanie z zakresami bazalnymi, również podgląd warunkowy. „Zakończone” i brak informacji pozostają `unknown`; nie ustalamy okresu wypłukiwania ani braku wpływu ostatniej dawki. Status „brak” ustala wyłącznie brak zgłoszonego GnRHa, a nie brak wszystkich leków hormonalnych. Po wpisaniu daty wcześniejszej próbki dzisiejsze leczenie nie przechodzi do `contextBasis='sample'`. Podczas odczytu `loading/unavailable` nie wykorzystujemy poprzedniego kontekstu leczenia.
+
+**Wpływ kliniczny i ograniczenie zakresu:** z nowego formularza znika możliwość jawnego potwierdzenia „Bazalne, bez leczenia hormonalnego”, więc dotychczasowa droga od porównania warunkowego do potwierdzonego RI nie jest w nim dostępna. Nie ma też ręcznego zgłoszenia stymulacji lub innego leczenia. Jeżeli takich danych nie ma we właściwym źródle, aplikacja ich nie rozpozna; sama stała informacja nie jest automatyczną kwalifikacją próbki. Wyniku po stymulacji lub podczas leczenia nie należy oceniać za pomocą dostępnego podglądu bazalnego. To jawne ograniczenie uproszczonego formularza, nie rozszerzenie jego zdolności interpretacyjnych. Osobne komunikaty rozwoju i ograniczenia wynikające z wywiadu zachowują znaczenie; nie są oceną skuteczności leczenia ani odpowiedzi stymulowanej. Opcjonalny zakres z wydruku nadal daje wyłącznie porównanie liczbowe, bez potwierdzenia zastosowania klinicznego.
+
+Brak potwierdzenia leczenia wpływa także na dostępność niektórych komunikatów rozwoju w nowym formularzu: G1 od 14 lat lub Th1 od 13 lat, bez odpowiedniego wcześniejszego początku i przy nieznanym leczeniu, pozostaje ograniczoną oceną „Brak cech wymaga uwzględnienia wywiadu” (`treatment_context`), zamiast przejść przez dawny jawny wybór do `absent_onset`. Przy pozostałych danych pozwalających na ocenę czasu, ale bez potwierdzonego braku leczenia, nie powstaje również `no_timing_alert`; pozostaje ograniczenie leczenia. Nie jest to nowy algorytm ani automatyczne rozpoznanie opóźnienia. Dotychczasowa ścieżka minimalnych danych działa tak samo; znika droga ręcznego potwierdzenia, która umożliwiała te dalsze wnioski. Ostrzeżenia o zbyt wczesnych cechach lub początku w wywiadzie nadal mogą być widoczne.
+
+Silnik `1.3.0`, dane `2026-10-04.1`, kryteria i jednostki pozostają bez zmian. Publiczny adapter `buildInput`, silnik i kontrakt zapisu nadal przyjmują jawne konteksty starszych klientów; znane leczenie lub stymulacja nadal blokują nieadekwatny profil. Zapisane oceny w wizytach, przypięciach i historii zachowują własne dane, warunkowość i tekst. Nie są migrowane, ponownie przeliczane ani zamieniane na kontekst nieznany.
+
+**Źródła i populacja:** stosujemy istniejące katalogi Mayo R1 (LH pediatryczne LHPED 62999, AnshLite CLIA) i R2 (FSH 602753, Roche Elecsys ECLIA), odczytane 2–3.10.2026, dla surowicy, IU/L i równoważnych mIU/mL, w granicach wieku, płci i stadium każdego profilu. Model kliniczny pozostaje pediatryczny 0–18 lat, z odrębnymi ograniczeniami niemowlęcymi i wcześniactwa. Rozdzielenie oznaczenia bazalnego, stymulacji i leczenia opiera się na dotychczasowych K1 (Latronico i wsp., Endocrine Society 2026, DOI 10.1210/clinem/dgag168), K3 (Howard 2021, DOI 10.1111/cen.14578) i K4 (Bangalore Krishna i Garibaldi 2025, DOI 10.3389/fped.2024.1504874). Pełne cytowania i rzeczywisty zakres wcześniejszego odczytu są w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Usunięcie kontrolki nie ustanawia nowych zakresów referencyjnych ani progów diagnostycznych.
+
+Syntetyczne przypadki regresyjne dotyczą rzeczywistego formularza, adaptera, silnika i odczytu zapisu:
+
+| Wejście lub działanie | Oczekiwane zachowanie |
+|---|---|
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, brak danych leczenia | Bez selektora kontekstu; wejście z nieznanym protokołem/leczeniem, warunkowo `above` dla wieku (`≤0,5`) i `within` dla G3 (`0,09–4,2`), nadal `early_development`. |
+| Właściwa bieżąca karta ze statusem GnRHa „w trakcie” | Dodatni kontekst leczenia; brak bazalnego RI i `referencePreview`, bez przypisania innego zakresu. |
+| GnRHa „zakończone” albo brak danych | Nie staje się potwierdzonym brakiem leczenia; dostępność podglądu nadal zależy od wszystkich pozostałych ograniczeń. |
+| GnRHa „brak” | Brak zgłoszonego GnRHa nie potwierdza braku steroidów płciowych ani całego leczenia hormonalnego. |
+| Dzisiejsza karta z GnRHa „w trakcie” → wpisanie wcześniejszej daty pobrania | Brak przeniesienia dzisiejszej terapii; kontekst leczenia próbki pozostaje nieznany. |
+| M14/G1 lub F13/Th1, nieznane leczenie, brak odpowiedniego wcześniejszego początku | `limited` / `treatment_context`, bez automatycznego `absent_onset`. |
+| M16/G3 z początkiem G w wieku 12 lat, nieznane leczenie | Ograniczona ocena zależna od leczenia; brak `no_timing_alert` przez domniemanie braku terapii. |
+| Starszy klient jawnie przekazuje `stimulated` lub leczenie hormonalne | Produkcyjny silnik nadal blokuje bazalne porównanie i podgląd; UI nie dodaje profilu po stymulacji lub podczas leczenia. |
+| Odczyt wcześniejszej oceny z potwierdzonym bazalnym kontekstem lub ograniczeniem leczenia/stymulacji | Zachowana oryginalna ocena i jej kontekst, bez przeliczenia lub dopisywania dzisiejszych założeń. |
+
+Akceptacja kliniczna pozostaje wymagana, ponieważ zmienia się sposób ustalania kontekstu nowej oceny. Syntetyczne regresje i zielone testy nie stanowią walidacji klinicznej.
 
 ## Dobór pól dojrzewania do płci — 4.10.2026
 
@@ -68,11 +100,11 @@ Formularz i renderer mają wersję `1.4.0`; silnik pozostaje `1.3.0`, a snapshot
 
 ## Minimalne dane i porównanie warunkowe — 4.10.2026
 
-Silnik, formularz i renderer `1.3.0`, helper snapshotu `1.2.0`. W poprzednim szybkim formularzu nieustalony kontekst oznaczenia blokował oba porównania, mimo że pole opisano jako opcjonalne. Obecnie wynik, jednostka, płeć, wiarygodny wiek oraz zgodna metoda wystarczają do **warunkowego porównania liczbowego** z dostępnym zakresem wieku. Typowane stadium dodaje osobne porównanie stadium; nie jest wymagane dla zakresu wieku.
+Opis wersji z 4.10.2026: silnik, formularz i renderer `1.3.0`, helper snapshotu `1.2.0`. W poprzednim szybkim formularzu nieustalony kontekst oznaczenia blokował oba porównania, mimo że pole opisano jako opcjonalne. Od tej wersji wynik, jednostka, płeć, wiarygodny wiek oraz zgodna metoda wystarczają do **warunkowego porównania liczbowego** z dostępnym zakresem wieku. Typowane stadium dodaje osobne porównanie stadium; nie jest wymagane dla zakresu wieku.
 
 Nie ustalamy domyślnie bazalnego protokołu ani braku leczenia. Przy ich nieznanym statusie wejście nadal zawiera `unknown`. Osobne, opcjonalne `evaluation.referencePreview` zawiera `kind='conditional-basal-untreated'`, przyczyny niepewności oraz `byAge`/`byStage` z pełnym pochodzeniem tabeli. Dotychczasowe `biochemical` zachowuje znaczenie porównania o potwierdzonym zastosowaniu; podgląd nie staje się jego `primary`. Wynik pokazuje warunki zastosowania przy liczbach, poza zwijanymi ograniczeniami. Etykieta „Liczbowo w zakresie” nie jest potwierdzeniem prawidłowości wyniku ani rozwoju.
 
-Jawna stymulacja, leczenie hormonalne/GnRHa/steroidami, nieznana lub niezgodna metoda, nieaktywny/stary profil, niewłaściwy materiał, błędny wiek/płeć i ograniczenia niemowlęce nadal blokują niedopasowane porównanie. Nie zmieniają się tabele `2026-10-04.1`, profile, progi, jednostki ani zasady cenzorowania. Potwierdzenie istniejącym wyborem „Bazalne, bez leczenia hormonalnego” usuwa warunkowość. Dodatnie informacje z karty nie są pomijane przez podgląd.
+Jawna stymulacja, leczenie hormonalne/GnRHa/steroidami, nieznana lub niezgodna metoda, nieaktywny/stary profil, niewłaściwy materiał, błędny wiek/płeć i ograniczenia niemowlęce nadal blokują niedopasowane porównanie. Nie zmieniają się tabele `2026-10-04.1`, profile, progi, jednostki ani zasady cenzorowania. W formularzu tej wersji wybór „Bazalne, bez leczenia hormonalnego” usuwał warunkowość; od wersji `1.6.0` ten selektor jest usunięty zgodnie z opisem powyżej. Dodatnie informacje z karty nie są pomijane przez podgląd.
 
 Populacje i metody pozostają przypisane do konkretnych katalogów Mayo: LH pediatryczne AnshLite CLIA oraz FSH Roche Elecsys ECLIA, surowica, IU/L i równoważne mIU/mL. Zakresy i ich ograniczenia są opisane niżej [R1,R2]; kryteria rozwoju i rozróżnienie oznaczenia bazalnego, stymulacji oraz leczenia pozostają zgodne z K1,K3,K4. **Jest to zmiana sposobu udostępniania porównania, wymagająca oceny klinicznej właściciela, a nie nowe kryterium diagnostyczne ani dowód zastosowania normy do nieustalonego protokołu.**
 
@@ -82,7 +114,7 @@ Schemat snapshotu pozostaje `1`: rozszerzenie jest opcjonalne, a historia odtwar
 
 ## Szybkie sprawdzenie — 4.10.2026
 
-Silnik `1.2.0`, formularz `1.2.0`, renderer `1.2.0` i helper snapshotu `1.1.0` upraszczają obsługę po akceptacji makiety przez właściciela. Dane `2026-10-04.1`, cztery profile RI i kryteria liczbowe pozostają bez zmian. To zamierzona zmiana doboru kontekstu i sposobu porównania, nie nowa walidacja metod oznaczeń [R1,R2,K1–K4].
+Opis historycznej wersji: silnik `1.2.0`, formularz `1.2.0`, renderer `1.2.0` i helper snapshotu `1.1.0` upraszczały obsługę po akceptacji makiety przez właściciela. Dane `2026-10-04.1`, cztery profile RI i kryteria liczbowe pozostały bez zmian. To zamierzona zmiana doboru kontekstu i sposobu porównania, nie nowa walidacja metod oznaczeń [R1,R2,K1–K4]. Poniższy wybór kontekstu dotyczy tej historycznej wersji; usunięcie go w `1.6.0` opisano na początku dokumentu.
 
 **Profil oznaczenia.** Jeden wybór pełnej metody z materiałem zastępuje oddzielne pola materiału, profilu, metody i checkbox potwierdzenia. Użytkownik zapisuje ustawienie osobno dla LH i FSH na danym urządzeniu. Preferencja zawiera wyłącznie identyfikator i wersję profilu, metodę oraz materiał; nie przechowuje pacjenta, wieku ani odpowiedzi o leczeniu. Nie ma domyślnie aktywnej metody. Przy odczycie wymagana jest dokładna zgodność z aktywnym profilem danych. Zmiana wersji, metody lub materiału wymaga ponownego wyboru. `assay.confirmation='configured'` oznacza zapisaną konfigurację, a nie sprawdzenie konkretnego wyniku (`reported`). Wynik i historia jawnie pokazują to pochodzenie. „Inna/nieznana metoda dla tego wyniku” wyłącza ustawienie dla pojedynczego oznaczenia bez kasowania preferencji.
 

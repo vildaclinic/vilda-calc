@@ -65,7 +65,17 @@ jobs:
       - name: Zainstaluj zależności
         run: npm ci
       - name: Zainstaluj Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          # HTTP Azure potrafi wyczerpać limit joba podczas pobierania pakietów.
+          # https://github.com/actions/runner-images/issues/14594
+          # Użyj istniejących oficjalnych fallbacków HTTPS tylko w znanej konfiguracji.
+          apt_mirror_list=/etc/apt/apt-mirrors.txt
+          if [ -f "$apt_mirror_list" ] &&
+             grep -Eq '^https://archive\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list" &&
+             grep -Eq '^https://security\.ubuntu\.com/ubuntu/([[:space:]]|$)' "$apt_mirror_list"; then
+            sudo sed -i -E '\@^http://azure\.archive\.ubuntu\.com/ubuntu/([[:space:]]|$)@d' "$apt_mirror_list"
+          fi
+          npx playwright install --with-deps chromium
       - name: Uruchom testy Playwright
         run: npm run test:e2e -- --shard=${{ matrix.shard }}/3
       - name: Zachowaj raport po niepowodzeniu

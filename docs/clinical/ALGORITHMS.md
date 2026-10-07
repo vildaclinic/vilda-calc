@@ -120,6 +120,20 @@ Syntetyczne regresje rzeczywistego adaptera/formularza i silnika: F/Th3→M usuw
 
 **Walidacja.** Po poprawce `--repeat-each=20`: **20/20** przy 2 workerach i **20/20** przy 4 workerach (większe obciążenie CPU). Cały plik: **8/8**. Kontrola negatywna: ten sam test bez poprawki w tych samych warunkach — **5/20**.
 
+#### LAB-PUBERTY — zakres bazalny bez selektora kontekstu, 2026-10-07
+
+Formularz `1.6.0` usuwa podsumowanie, przycisk, zakładkę i selektor „Kontekst oznaczenia”. Stała informacja określa zakres modułu: oznaczenia bazalne bez leczenia hormonalnego; bez interpretacji stężeń podczas leczenia oraz odpowiedzi na stymulację GnRH/LHRH. Nie powstają profile terapeutyczne ani stymulacyjne. Silnik `1.3.0`, dane `2026-10-04.1`, tabele, progi i jednostki pozostają bez zmian.
+
+**Wpływ kliniczny:** opis zakresu modułu nie potwierdza protokołu ani braku leczenia u konkretnego pacjenta. Nowe wejście zachowuje nieznany protokół i nieznany kontekst leczenia, poza znaną informacją z właściwej bieżącej karty. Minimalne dane nadal pozwalają na jawnie warunkowe `referencePreview`, z zachowaniem ograniczeń metody i populacji. Usunięcie dawnego wyboru „Bazalne, bez leczenia hormonalnego” usuwa możliwość potwierdzenia tego kontekstu w formularzu. Brak ręcznego zgłoszenia stymulacji lub innego leczenia oznacza, że aplikacja nie rozpozna takiego wyniku, jeżeli nie ma odpowiednich danych w źródle; stała informacja nie jest automatyczną kwalifikacją próbki. Podglądu bazalnego nie stosuje się do tych sytuacji.
+
+Gotowy, aktualny kontekst GnRHa „w trakcie” nadal blokuje bazalne porównanie i podgląd. „Zakończone” lub nieznany status nie stają się brakiem leczenia; „brak” GnRHa nie wyklucza steroidów płciowych. Dzisiejszego leczenia nie przypisuje się wcześniejszej datowanej próbce ani nie wykorzystuje podczas niedostępności odczytu źródła. Publiczny `buildInput`, silnik, snapshoty i odczyt historii zachowują obsługę dawnych jawnych kontekstów; brak migracji i ponownego obliczania utrwalonych ocen.
+
+Nieznane leczenie ogranicza też dostępność wniosków o rozwoju: M od 14 lat/G1 lub F od 13 lat/Th1 pozostaje `limited` / `treatment_context`, zamiast przejść przez usunięty wybór do `absent_onset`; w typowym czasie rozwoju nie ma dawnej drogi potwierdzenia pozwalającej uzyskać `no_timing_alert`. Obowiązują pozostałe warunki i pierwszeństwo ostrzeżeń silnika. To skutek utrzymania nieznanego kontekstu, nie nowe progi ani automatyczne rozpoznanie opóźnienia.
+
+Źródła i populacja pozostają dotychczasowe: Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999), LH AnshLite CLIA, oraz [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), Roche Elecsys ECLIA, odczyt 2–3.10.2026; surowica, IU/L i równoważne mIU/mL, zakres wieku/płci/stadium poszczególnego profilu. Model kliniczny obejmuje 0–18 lat z istniejącymi ograniczeniami niemowlęcymi. Rozdzielenie kontekstów: Latronico i wsp., Endocrine Society 2026, [DOI 10.1210/clinem/dgag168](https://doi.org/10.1210/clinem/dgag168); Howard 2021, [DOI 10.1111/cen.14578](https://doi.org/10.1111/cen.14578); Bangalore Krishna i Garibaldi 2025, [DOI 10.3389/fped.2024.1504874](https://doi.org/10.3389/fped.2024.1504874). Pełne cytowania, zakres wcześniejszego odczytu oraz ograniczenia: [LH_FSH.md](LH_FSH.md#zakres-bazalny-bez-selektora-kontekstu--7102026).
+
+Syntetyczne regresje rzeczywistego formularza, adaptera, silnika i odczytu: M2 lata 9 miesięcy/G3/LH2 IU/L, zgodna metoda i nieznany kontekst → `referencePreview` z wiekiem `above` i stadium `within`, nadal `early_development`; aktualne GnRHa „w trakcie” → brak bazalnego podglądu; GnRHa „zakończone” → nieznany kontekst; wcześniejsza próbka → bez dzisiejszej terapii; zapisany dawniej jawny kontekst → ta sama historyczna ocena. Akceptacja kliniczna pozostaje decyzją właściciela; testy nie potwierdzają walidacji klinicznej.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

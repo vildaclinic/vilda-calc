@@ -45,11 +45,10 @@ async function choose(page, analyte = 'lh', value = '2') {
   await page.locator('#labValue').fill(value);
 }
 
-async function prepare(page, { analyte = 'lh', value = '2', configured = true, basal = false } = {}) {
+async function prepare(page, { analyte = 'lh', value = '2', configured = true } = {}) {
   await choose(page, analyte, value);
   await select(page, 'Kind', 'G');
   if (configured) await configureProfile(page, analyte);
-  if (basal) await select(page, 'Context', 'basal-untreated');
   for (const id of ['labPubertyDetails', 'labPubertyMethodSettings']) {
     const details = page.locator(`#${id}`);
     if (await details.getAttribute('open') !== null) await details.locator(':scope > summary').click();
@@ -120,14 +119,14 @@ test('age and stage use aligned axes while only the severe age deviation activat
 
 test('severe thresholds are strict and each axis owns its high or low state', async ({ page }) => {
   await open(page);
-  await prepare(page, { value: '1', basal: true });
+  await prepare(page, { value: '1' });
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-above');
   await expectNoSevereMotion(page);
   await page.locator('#labValue').fill('1,001');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-normal');
   await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
-  await expect(severity(page)).not.toContainText('warunkowo');
+  await expect(severity(page)).toContainText('warunkowo');
   await page.locator('#labValue').fill('8,4');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-above');
   await page.locator('#labValue').fill('8,401');
@@ -135,11 +134,10 @@ test('severe thresholds are strict and each axis owns its high or low state', as
 
   await fill(page, 'AgeYears', '16');
   await fill(page, 'AgeMonths', '0');
-  await select(page, 'Context', 'basal-untreated');
   await page.locator('#labValue').fill('15');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-above');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
-  await expect(severity(page).locator('.vilda-lab-severity-summary-scope')).toHaveText('Względem stadium G3');
+  await expect(severity(page).locator('.vilda-lab-severity-summary-scope')).toHaveText('Względem stadium G3 · warunkowo');
   await page.locator('#labValue').fill('0,4');
   await expect(axis(page, 'age')).toHaveAttribute('data-range-lower', '0.8');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-below');
@@ -174,7 +172,7 @@ test('censored results keep reference bands without inventing patient markers or
   }
 });
 
-test('an unknown method, treatment or stimulation removes axes and severe effects without hiding the clinical warning', async ({ page }) => {
+test('an unknown method or known current GnRHa treatment removes axes and severe effects without hiding the clinical warning', async ({ page }) => {
   await open(page);
   await prepare(page, { configured: false });
   await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
@@ -185,12 +183,17 @@ test('an unknown method, treatment or stimulation removes axes and severe effect
   await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
   await expectNoSevereMotion(page);
   await page.locator('#labPubertyUnknownMethod').uncheck();
-  for (const context of ['hormonal', 'stimulated']) {
-    await select(page, 'Context', context);
-    await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
-    await expectNoSevereMotion(page);
-    await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toBeVisible();
-  }
+  await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
+  await page.evaluate((user) => {
+    if (!window.VildaPersistence.writeShared({ ...user, puberty: { gnrhaStatus: 'w-trakcie' } }, { force: true })) throw new Error('Cannot seed fictional treatment');
+    window.dispatchEvent(new Event('focus'));
+  }, patient());
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+  await expectNoSevereMotion(page);
+  await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toBeVisible();
+  const treated = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
+  expect(treated.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
+  expect(treated.evaluation).not.toHaveProperty('referencePreview');
 });
 
 test('pause, reduced motion and print stop movement while preserving the significant-deviation meaning', async ({ page }) => {
@@ -295,7 +298,6 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   expect(notes).toHaveLength(1);
   const saved = notes[0];
   await page.locator('#labValue').fill('0,2');
-  await select(page, 'Context', 'basal-untreated');
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   expect(await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.id)).toMatchObject({ labResult: { assessment: saved.labResult.assessment } });
