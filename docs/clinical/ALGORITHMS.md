@@ -9074,6 +9074,64 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Trwały ślad błędu synchronizacji i ostatniej udanej wysyłki (P-SYNC-SLAD, SW 1.1.182, `vilda_sync_integration.js` 47, `inline_ustawienia_04.js` 16, 2026-10-07)
+
+**Zgłoszenie właściciela (2026-10-07).** Druga wizyta pacjenta wprowadzona na iPhonie (zapisy 3 i 4) nie dotarła
+na komputery; „Synchronizuj teraz” na iPhonie, „Pobierz z serwera” na komputerze, ponowne wczytanie i zapis pacjenta
+nic nie zmieniły. Wcześniejsze śledztwo ustaliło, że szybka delta pacjenta jest pomijana bez śladu powyżej 60 000 znaków
+base64 (próg wypada między 2. a 3. zapisem tej karty), a siatką bezpieczeństwa jest pełna wysyłka sejfu (PUT /blob).
+
+**Co było.** Właściciel nie miał jak zobaczyć, czy pełna wysyłka z iPhone'a dociera: po „Synchronizuj teraz” nota
+w Ustawieniach zawsze brzmiała „✓ Synchronizacja zakończona.”, komunikat błędu znikał po ~300 ms (listener
+`vilda:sync-status-changed` woła `q()`, które nadpisuje `syncStatusNote`), ikona synchronizacji tylko zmieniała kolor,
+a dziennik dostępu (`VildaAuditLog`) zapisywał wyłącznie `patient.view`, `note.*`, `export.all`, `snapshot.*`, `unlock`
+— nic o synchronizacji. Udana i nieudana wysyłka wyglądały identycznie; po zamknięciu aplikacji nie zostawał żaden ślad.
+
+**Co jest** (wyłącznie zapis śladu; logika synchronizacji, scalania, danych i zapisu bez zmian):
+- `vilda_sync_integration.js`: w `onSyncError` każdy błąd zapisuje do `localStorage` klucz `vilda-sync-last-error-v1:<userId>`
+  (sufiks z identyfikatora bieżącego konta — na współdzielonym komputerze błąd konta A nie pokazuje się po zalogowaniu
+  konta B ani nie zostaje „rozwiązany” udaną wysyłką B; uwaga Codex P2 do #570)
+  = `{ts, operation, code, httpStatus, message (≤300 znaków)}` i, przy odblokowanym sejfie, wpis dziennika `sync.error`
+  `{code, httpStatus, operation}` (bez treści pacjenta). W `onSyncComplete` udany push/full zapisuje
+  `vilda-sync-last-push-ok-v1:<userId>` (ISO) i — zamiast kasować błąd — dopisuje do niego `resolvedAt`; dla operacji `push`
+  wpis dziennika `sync.push.ok` `{action, bytes}` (`bytes` = `null`, dopóki `vilda_sync.js` nie zwraca rozmiaru bloba).
+  Zdarzenia `operation:"full"` są przy błędzie pomijane: `syncFull` emituje błąd wewnętrznego pull/push drugi raz.
+  Wszystko w `try/catch`, zero wyjątków na zewnątrz.
+- `inline_ustawienia_04.js`: pod `#syncStatusNote` dwa dynamiczne akapity (bez zmian w HTML), odświeżane przez `q()`,
+  ale nie nadpisywane: „Ostatnia udana wysyłka z tego urządzenia: <czas względny (czas lokalny)>” / „brak zapisu” oraz
+  „Ostatni błąd synchronizacji: <czas> — <code> <httpStatus> (<operacja>) — <message>” z dopiskiem „(potem udana
+  wysyłka)”, gdy jest `resolvedAt`. Dziennik dostępu ma etykiety „Błąd synchronizacji” i „Udana wysyłka do chmury”,
+  a wpis pokazuje kod, status HTTP i operację.
+
+**Jak właściciel ma z tego korzystać.** Na iPhonie: Ustawienia → Synchronizacja. Jeżeli pod notą stoi
+„Ostatnia udana wysyłka z tego urządzenia: brak zapisu” albo czas sprzed drugiej wizyty, a linia błędu pokazuje np.
+`UPLOAD_FAILED 413` / `TIMEOUT` / `RATE_LIMITED` / `AUTH_FAILED` / `MERGE_BUSY`, to pełna wysyłka z telefonu nie dociera
+i kod wskazuje warstwę (serwer odrzuca blob, 30-sekundowy limit `fetch`, limit 20/min, uwierzytelnienie, blokada
+scalania). Jeżeli wysyłka jest „przed chwilą” bez błędu, a komputer po „Pobierz z serwera” nadal nie ma migawek,
+przyczyna leży po stronie pobrania/scalania na komputerze — i tam należy patrzeć na jego własną linię błędu.
+
+**Przypadki syntetyczne** (`tests/unit/sync-ostatni-blad.test.mjs`, prawdziwe `vilda_sync.js` i
+`vilda_sync_integration.js`, atrapa serwera; dane fikcyjne; 10/10 zmierzone czerwone na kodzie sprzed zmiany):
+
+| Sytuacja | Wynik |
+|---|---|
+| PUT /blob → 413 | klucz błędu `{operation:"push", code:"UPLOAD_FAILED", httpStatus:413, message:"VildaSync: upload nieudany (413): …"}`, bez `resolvedAt`; brak klucza udanej wysyłki |
+| potem PUT → 200 | klucz udanej wysyłki = czas; błąd zostaje z `resolvedAt` |
+| PUT → 401 | `code:"AUTH_FAILED"`, `httpStatus:null`; dziennik: jeden wpis `sync.error {code, httpStatus:null, operation:"push"}` |
+| `syncFull` z błędem w PUT | błąd zgłoszony raz, jako `push` (nie `full`); po udanym `syncFull` dokładnie jeden wpis `sync.push.ok {action:"uploaded", bytes:null}` |
+| udane pobranie po błędzie wysyłki | nie ustawia klucza udanej wysyłki, nie dopisuje `resolvedAt` |
+| błąd konta A, potem udana wysyłka konta B na tym samym urządzeniu | błąd A bez `resolvedAt`, A bez klucza udanej wysyłki; B ma własny klucz wysyłki; brak klucza globalnego |
+| wysyłka bez błędu | brak klucza błędu; klucz udanej wysyłki i wpis `sync.push.ok` |
+| Ustawienia (Qy0 wycięte z pliku) | bez kluczy → „brak zapisu”, brak linii błędu; 2 min / 5 min temu z 413 i `resolvedAt` → obie linie z „(potem udana wysyłka)”; AUTH_FAILED bez `httpStatus` → bez dopisku; uszkodzony JSON → bez linii błędu |
+
+**Wpływ kliniczny: brak** — żadnego wzoru, progu, jednostki ani interpretacji. **Wpływ na synchronizację: brak zmian
+logiki** — wyłącznie zapis śladu w `localStorage` (bez treści pacjenta) i w zaszyfrowanym dzienniku dostępu.
+**Bez zmian:** `vilda_sync.js`, `vilda_vault.js`, scalanie, delty, format ładunku, HTML.
+
+**Wersje.** `vilda_sync_integration.js` 46 → 47 i `inline_ustawienia_04.js` 15 → 16 (8 stron), precache (append-only), `SW_VERSION` 1.1.180 → 1.1.182 (+ pin; 1.1.181 wydał równolegle #569 na `audyt`, więc po scaleniu bazy skrypt podbił do 1.1.182), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`b10d33a`). „Do decyzji”: brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; po wdrożeniu odczyt linii „Ostatnia udana wysyłka” i „Ostatni błąd synchronizacji” na iPhonie i na komputerze rozstrzyga, która warstwa blokuje wysyłkę; naprawy luk synchronizacji z raportu diagnostycznego.
+
 ## Wysyłka nie nadpisuje chmury bez scalenia; delty i wysyłka po MERGE_BUSY (P-SYNC-STRAZNIK, SW 1.1.160, `vilda_sync.js` 33, `vilda_sync_integration.js` 46, 2026-10-05)
 
 **Decyzja właściciela (2026-10-05).** „Zaczynaj od punktu 1, zwykły PR do audyt” — punkt 1 przeglądu „co dalej po
