@@ -464,7 +464,8 @@ describe('strażniki źródła', () => {
     }
     expect(le).toContain('const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);');
     expect(le).toContain('w+=await Bsl_usunPacjenta(j,m[j],e)');
-    expect(le).toContain('Bkz_n=await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&Bkz_e.vildaMergeBusy)throw Bkz_e;');
+    // P-BLOKADA-IMPORT: wewnętrzne scalanie importu (Bpb_IMPORT) pomija koniec scalania kosza; synchronizacja nie.
+    expect(le).toContain('Bkz_n=e===Bpb_IMPORT?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){if(Bkz_e&&Bkz_e.vildaMergeBusy)throw Bkz_e;');
     for (const f of ['Bsl_scalPacjenta', 'Bsl_usunPacjenta']) {
       const cialo = src.slice(src.indexOf(`async function ${f}(`));
       expect(cialo.slice(0, 200), f).toMatch(/return Bsl_podBlokada\(/);
