@@ -8448,7 +8448,7 @@ i sprawdza ją przed i po zmianie pacjenta, nowy test e2e w powłoce. Wersje z `
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
 
-## Edycja punktu terapii GH przy nieznanym pacjencie sesji karty trwa tylko przy niezmienionym punkcie (P-GH-EDYCJA-ODCISK, SW 1.1.190, `gh_therapy_monitor.js` 57, 2026-10-07)
+## Edycja punktu terapii GH przy nieznanym pacjencie sesji karty trwa tylko przy niezmienionym punkcie (P-GH-EDYCJA-ODCISK, SW 1.1.191, `gh_therapy_monitor.js` 57, 2026-10-07)
 
 **Skąd.** Uzupełnienie P-GH-EDYCJA-LISTA po przeglądzie testów regresyjnych (2026-10-07), polecenie właściciela z
 2026-10-07. Druga warstwa P-GH-EDYCJA-LISTA porównuje pacjenta sesji karty przy otwarciu edycji i przy wczytaniu listy
@@ -8487,9 +8487,9 @@ a pacjent sesji karty nie jest znany. Źródło medyczne: nie dotyczy. Wymaga ak
 - `tests/e2e/gh-edycja-przejscia-paneli.spec.mjs` (kontrola, powłoka `app.html`): pacjent bez sejfu, edycja punktu
   w DocPro, dwa przejścia Start ↔ DocPro — edycja trwa, punkt bez zmian, zapis w miejscu.
 
-**Wersje.** `gh_therapy_monitor.js` 56 → 57 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.189 → 1.1.190
+**Wersje.** `gh_therapy_monitor.js` 56 → 57 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.190 → 1.1.191
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje`
-względem `audyt` `d8da7c0` (P-META-KONTA też nadał 1.1.189).
+względem `audyt` `ce085da` (P-META-KONTA i P-KOSZ-SCALANIE-PRZYWROC nadały wcześniej 1.1.189 i 1.1.190).
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
 
