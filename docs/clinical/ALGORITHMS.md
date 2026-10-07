@@ -9217,6 +9217,21 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Wysyłka przyjmuje tylko kompletny gzip (P-SYNC-MOST-STOPKA, SW 1.1.186, `vilda_sync.js` 35, 2026-10-07)
+
+**Ustalenie przeglądu adwersarza po scaleniu P-SYNC-MOST (#573).** Safari, iOS i iPadOS 16.4–16.5 mają `CompressionStream`, ale WebKit przed poprawką z Safari 16.6 („Fixed compression streams to handle large outputs during the flush stage”) wykonuje przy zamknięciu strumienia jedno `deflate(Z_FINISH)` do bufora 16 KiB. Gdy ostatni blok razem ze stopką jest większy, wynik jest ucięty: brakuje końca danych, CRC i ISIZE. P-SYNC-MOST sprawdzał tylko, czy wynik jest krótszy od wejścia, więc takie urządzenie wysłałoby ucinek do chmury. Pozostałe urządzenia konta dostałyby przy pobraniu `DECOMPRESS_FAILED` i nie mogłyby ani scalić, ani wysłać (wysyłka wymaga udanego pobrania w sesji); dane lokalne zostają nietknięte, ale konto staje.
+
+**Co jest.** `Bgz_pakuj` przyjmuje wynik kompresji tylko wtedy, gdy zaczyna się od `1F 8B`, a ostatnie 4 bajty (ISIZE, little-endian, RFC 1952) są równe długości wejścia mod 2³². W każdym innym przypadku wysyła bajty jawne, jak przed P-SYNC-MOST. Ucięty strumień kończy się dowolnymi bajtami danych skompresowanych, więc trafienie w ISIZE jest praktycznie niemożliwe (≈ 2⁻³²). Czytelnik bez zmian.
+
+**Przypadki syntetyczne** (`tests/unit/sync-kompresja-most.test.mjs`, prawdziwe `vilda_sync.js`):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| ładunek ≥ 4 MiB, `CompressionStream` oddaje prawdziwy gzip bez ostatnich 20 bajtów (atrapa błędu WebKit) | PUT niesie jawny JSON (`7B`), ten sam ładunek; czerwony na kodzie #573 |
+| ładunek ≥ 4 MiB, poprawny gzip | PUT niesie gzip, ISIZE = długość JSON |
+
+**Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js` 34 → 35 (8 stron), precache (append-only), `SW_VERSION` 1.1.185 → 1.1.186 (+ pin), fixture wersji — `npm run podbij-wersje` względem `origin/audyt` (`7373a3c`).
+
 ## Most przed synchronizacją przyrostową: gzip pełnej wysyłki i limit czasu od rozmiaru (P-SYNC-MOST, SW 1.1.185, `vilda_sync.js` 34, 2026-10-07)
 
 **Decyzja właściciela (2026-10-07).** „Najpierw rozwiązania tymczasowe, żebym mógł pracować normalnie z pacjentami, a następnie plan trwałej przebudowy” — etap 0 z `docs/SYNC_PRZYROSTOWA_PLAN.md` w zakresie klienta. Po stronie serwera właściciel podnosi `MAX_PAYLOAD_BYTES` workera (osobna zmiana w prywatnym repozytorium usługi).
@@ -9230,7 +9245,9 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 - *Ślad.* Wynik udanej wysyłki niesie `bytes` = rozmiar wysłanego bloba, więc wpis dziennika dostępu `sync.push.ok` (P-SYNC-SLAD) ma teraz rozmiar zamiast `null`.
 - *WIPE_GUARD* nadal porównuje surowe bajty JSON z rozmiarem na serwerze. Gdy blob w chmurze jest skompresowany, rozmiar serwera jest kilkanaście razy mniejszy, więc strażnik działa ostrożniej (zatrzymuje stan bez pacjentów, gdy jego surowy JSON jest mniejszy niż 1/4 skompresowanego bloba). Dla realnej awarii — świeże urządzenie z kilkoma kB — nadal zatrzymuje. Porównanie „spakowane z spakowanym” odrzuciłem, bo fałszywie blokowałoby małe sejfy bez pacjentów, ale z notatkami.
 
-**Wycofanie.** Czytelnika gzip nie wolno wycofywać, gdy w chmurze może już leżeć blob gzip: konto stałoby się nieczytelne dla wszystkich urządzeń. Awaryjnie wyłącza się wyłącznie zapis — `localStorage['vilda-sync-gzip-v1'] = '0'` na urządzeniu albo próg w kolejnym wydaniu.
+**Wycofanie.** Czytelnika gzip nie wolno wycofywać, gdy w chmurze może już leżeć blob gzip: konto stałoby się nieczytelne dla wszystkich urządzeń. Awaryjnie wyłącza się wyłącznie zapis — `localStorage['vilda-sync-gzip-v1'] = '0'` na urządzeniu albo próg w kolejnym wydaniu. *(Uzupełnienie 2026-10-07, P-SYNC-MOST-STOPKA: w PWA na iPhonie `localStorage` da się zmienić tylko przez Web Inspector z Maca, więc realnym trybem awaryjnym jest wydanie z bardzo wysokim `Bgz_PROG`.)*
+
+**Pomiar** (fikcyjny sejf 623 karty, 1142 zapisy, prawdziwe `exportSyncPayload`, Node 22 i Chromium 141): JSON 29,07 MB → gzip 1,64 MB (17,7×; wariant lżejszy 21,89 → 1,45 MB, 15,1×); `CompressionStream` = gzip poziomu 6, bajt w bajt jak `zlib`; kompresja ~0,2 s, dekompresja ~0,08 s w Chromium; szczyt pamięci ścieżki wysyłki +94 MiB wobec +86 MiB bez kompresji. Upload 1,64 MB przy 1 Mbit/s trwa około 13 s (limit 46 s); bez kompresji 29 MB — 233 s. Współczynnik na danych prawdziwych może być niższy; nawet przy 3× blob ma poniżej 10 MB.
 
 **Zgodność.** Klient sprzed tej zmiany, który pobierze blob gzip, kończy pobranie błędem `PARSE_FAILED`: nic nie scala i nie nadpisuje chmury (strażnik pobrania w sesji i If-Match), aż PWA wczyta nową wersję. Dotyczy wyłącznie kont, których ładunek przekracza 4 MiB — mniejsze sejfy nie zmieniają formatu. Stary blob bez kompresji nowy klient czyta bez zmian. Na urządzeniu niezaktualizowanym Ustawienia pokazują „PARSE_FAILED (pull) — uszkodzone dane sync”: to oczekiwany objaw starej wersji, a lekiem jest ponowne otwarcie aplikacji (nowa wersja wczytuje się zwykle przy drugim uruchomieniu; w powłoce `app.html` od razu po instalacji nowego SW). Stara karta lub ramka obok nowej na tym samym urządzeniu może jeszcze wysłać blob bez kompresji — danych nie ubywa, tylko format chwilowo wraca do jawnego; dlatego po wdrożeniu warto przeładować wszystkie karty i PWA. `CompressionStream` / `DecompressionStream`: Safari i iOS od 16.4, Chrome od 80, Firefox od 113; urządzenie bez `DecompressionStream` nie odczyta chmury skompresowanej przez inne urządzenie tego konta (`GZIP_UNSUPPORTED`).
 

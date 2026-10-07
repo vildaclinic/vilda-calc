@@ -222,6 +222,53 @@ describe('P-SYNC-MOST: gzip przed szyfrowaniem pełnej wysyłki', () => {
     expect(json(jawne)).toEqual(dane);
   });
 
+  it('ucięty gzip z przeglądarki (Safari/iOS 16.4–16.5, błąd flush w WebKit): wysyłka jawna zamiast ucinka', async () => {
+    // P-SYNC-MOST-STOPKA. Atrapa CompressionStream oddaje prawdziwy gzip bez ostatnich 20 bajtów — tak jak
+    // WebKit przed poprawką z Safari 16.6, gdy ostatni blok ze stopką przekracza 16 KiB. Ucinek w chmurze
+    // zablokowałby pobieranie na pozostałych urządzeniach (DECOMPRESS_FAILED), więc zapis go nie przyjmuje.
+    const PrawdziwyCS = globalThis.CompressionStream;
+    class UcietyCS {
+      constructor(format) {
+        const porcje = [];
+        const ts = new TransformStream({
+          transform(porcja) { porcje.push(porcja); },
+          async flush(ster) {
+            const gz = new Uint8Array(await new Response(new Blob(porcje).stream().pipeThrough(new PrawdziwyCS(format))).arrayBuffer());
+            ster.enqueue(gz.slice(0, gz.length - 20));
+          },
+        });
+        this.writable = ts.writable;
+        this.readable = ts.readable;
+      }
+    }
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'U');
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    vi.stubGlobal('CompressionStream', UcietyCS);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+
+    await a.sync.syncPush();
+    const jawne = await odszyfruj(srv.puty[0].body, klucz);
+    expect(jawne[0], 'ucinek odrzucony — wysyłka jawna').toBe(0x7b);
+    expect(json(jawne)).toEqual(dane);
+  });
+
+  it('stopka gzip (ISIZE) zgodna z długością wejścia — kompletny gzip przyjęty', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'Z');
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+
+    await a.sync.syncPush();
+    const jawne = await odszyfruj(srv.puty[0].body, klucz);
+    const surowe = new TextEncoder().encode(JSON.stringify(dane));
+    const n = jawne.length;
+    expect([jawne[0], jawne[1]]).toEqual([0x1f, 0x8b]);
+    expect((jawne[n - 4] | jawne[n - 3] << 8 | jawne[n - 2] << 16 | jawne[n - 1] << 24) >>> 0).toBe(surowe.length >>> 0);
+  });
+
   it('rotacja tożsamości (revokeAllDevices): rejestracja nowego slotu niesie gzip, gdy ładunek przekracza próg', async () => {
     const klucz = await kluczSync();
     const dane = ladunek(PROG + 32 * 1024);
