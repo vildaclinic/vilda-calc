@@ -9092,6 +9092,93 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Metadane konta zapisywane po kolei, na świeżym odczycie (P-META-KONTA, SW 1.1.189, `vilda_vault.js` 202, 2026-10-07)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych konta
+(decyzja właściciela 2026-10-07: „tak, działaj dalej” — punkt A12 przeglądu „co dalej po #518”, „3a”: wszystkie zapisy
+ustawień konta po kolei, pod jedną blokadą).
+
+**Co było** (zmierzone na `audyt` `74c5803`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). Metadane konta to jeden
+rekord: koperta hasła, klucz odzyskiwania, tożsamość synchronizacji, klucze biometrii, preferencje (w tym terminy i listy
+oczekujących), znacznik ostatniego scalenia i kosz zapisów. Adapter zapisuje go w całości. Siedemnaście miejsc robiło
+„odczytaj → PBKDF2 / WebAuthn / szyfrowanie → zapisz kopię z odczytu”; pod blokadą był tylko kosz. Skutki:
+- zmiana hasła, nowy klucz odzyskiwania, nowa tożsamość synchronizacji („Wyloguj wszystkie urządzenia”), rejestracja
+  i usunięcie biometrii, zapis preferencji, odblokowanie konta bez tożsamości synchronizacji oraz scalanie synchronizacji
+  (preferencje, klucze biometrii, hasło z innego urządzenia, znacznik scalenia) kasowały wpis kosza i nagrobek wersji
+  zapisany w tym czasie w drugiej karcie;
+- „Usuń do kosza” w trakcie zmiany hasła: zmiana hasła zgłaszała sukces, a dalej działało stare hasło; tak samo nowy klucz
+  odzyskiwania — wyświetlony klucz nie działał;
+- dwie zmiany hasła naraz (także zmiana i reset po kluczu odzyskiwania): obie „udane”, działało jedno hasło; dwa nowe
+  klucze odzyskiwania naraz: pierwszy wyświetlony nie działał;
+- termin listy oczekujących ustawiony w drugiej karcie znikał;
+- aktywacja biometrii w trakcie jej usuwania w drugiej karcie przywracała usunięty klucz.
+
+**Reguła po zmianie.**
+- Każdy zapis metadanych istniejącego konta idzie przez jedną funkcję: pod jedną blokadą (Web Locks między kartami
+  i ramkami, bez nich kolejka strony), na świeżym odczycie; zmiana to synchroniczne „świeży rekord → nowy rekord”, więc
+  pod blokadą jest tylko odczyt i zapis. PBKDF2, WebAuthn i szyfrowanie zostają przed blokadą.
+- Blokada ma tę samą nazwę co dotychczasowa blokada kosza (`vilda-note-kosz-zapisow`) — karta ze starszą wersją aplikacji
+  też na nią czeka. Kolejność blokad: pacjent → metadane konta; pod blokadą metadanych nic nie bierze innej blokady.
+- Zmiana hasła i reset hasła sprawdzają pod blokadą, że koperta hasła jest ta sama co przed PBKDF2; nowy klucz
+  odzyskiwania — że klucz odzyskiwania; nowa tożsamość synchronizacji — że tożsamość i klucz odzyskiwania. Inaczej
+  odmowa i nic nie zapisano: „W tym czasie hasło zmieniono w innej karcie albo na innym urządzeniu. Tutaj nic nie
+  zmieniono — obowiązuje hasło ustawione tam.” (`PASSWORD_CHANGED_ELSEWHERE`; reset: „… — spróbuj ponownie.”;
+  `RECOVERY_CHANGED_ELSEWHERE`, `SYNC_IDENTITY_CHANGED_ELSEWHERE` — „… — spróbuj ponownie.”).
+- Operacje użytkownika (hasło, klucz odzyskiwania, tożsamość synchronizacji, biometria) czekają na blokadę najwyżej 30 s;
+  potem „Ustawienia konta zapisuje teraz inna karta. Nic nie zmieniono — spróbuj ponownie za chwilę.” (`META_BUSY`).
+  Gdy w trakcie czekania zablokowano sejf albo przełączono konto — odmowa `SESSION_CHANGED`, nic nie zapisano.
+- Aktywacja zsynchronizowanej biometrii szuka klucza ponownie pod blokadą; usunięty w tym czasie → odmowa
+  `PASSKEY_NOT_FOUND` („Ten klucz biometryczny usunięto w międzyczasie …”), klucz nie wraca.
+- Terminy i listy oczekujących: zapis niesie tylko zmieniony wpis i scala go ze świeżym odczytem per wpis (nowsza chwila
+  zmiany wygrywa — jak w scalaniu synchronizacji).
+- Odblokowanie konta bez tożsamości synchronizacji: gdy w tym czasie inna karta zapisała tożsamość, odblokowanie ją
+  przyjmuje i nie nadpisuje.
+- Scalanie synchronizacji: preferencje z chmury trafiają do VildaPersistence dopiero po zapisie metadanych.
+- Zapisy w tle (kosz, preferencje, scalanie, znacznik scalenia) czekają do skutku. Zapis nowego konta (`createUser`,
+  odtworzenie kopii konta, kod synchronizacji, QR, odblokowanie passkeyem z utrwaleniem) zostaje bezpośredni — nowy
+  identyfikator, rekordu nikt jeszcze nie pisze.
+- Komunikaty pokazują istniejące miejsca w Ustawieniach i ekranie logowania (z przedrostkiem „Nie udało się zmienić hasła:”,
+  „Nie udało się wygenerować klucza:”, „Błąd:”). Bez zmian w interfejsie.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/meta-konta-blokada.test.mjs` (prawdziwy
+`vilda_vault.js` na magazynie w pamięci z „pułapkami”: wybrane wywołanie magazynu czeka, aż test je zwolni; dwa tryby —
+dwie karty na wspólnej atrapie Web Locks oraz jedna karta z kolejką strony):
+- zmiana hasła stoi przed zapisem, druga karta: „Usuń do kosza” → kosz czeka; wpis kosza zostaje, nowe hasło otwiera sejf,
+  stare nie (E1);
+- „Usuń do kosza” stoi przed zapisem, druga karta: zmiana hasła → hasło zmienione naprawdę, kosz zostaje (E5); tak samo nowy
+  klucz odzyskiwania — klucz otwiera sejf (E6) i nowa tożsamość synchronizacji — nowy klucz odzyskiwania działa;
+- dwie zmiany hasła naraz → druga `PASSWORD_CHANGED_ELSEWHERE`, obowiązuje pierwsza (E7); zmiana i reset hasła → reset
+  odmawia; dwa nowe klucze odzyskiwania → drugi `RECOVERY_CHANGED_ELSEWHERE`, pierwszy wyświetlony otwiera sejf;
+- terminy „Biopsja jelita” i „Test Synacthen” ustawiane w dwóch kartach naraz → oba zostają (E9);
+- zapis preferencji, scalanie (preferencja z chmury, klucz biometrii z chmury, hasło z innego urządzenia, znacznik scalenia),
+  rejestracja i usunięcie biometrii w trakcie „Usuń do kosza” → kosz i zmiana zostają;
+- aktywacja biometrii w trakcie jej usunięcia w drugiej karcie → `PASSKEY_NOT_FOUND`, klucz nie wraca;
+- tylko dwie karty: odblokowanie konta bez tożsamości synchronizacji w trakcie „Usuń do kosza” → kosz zostaje, obie karty
+  mają tę samą tożsamość; tożsamość zapisana gdzie indziej w czasie odblokowania → przyjęta, nienadpisana; sejf
+  zablokowany w czasie czekania na zmianę hasła → `SESSION_CHANGED`, hasło bez zmian; blokada zajęta, limit 60 ms →
+  `META_BUSY`, sygnał czekania, hasło bez zmian;
+- strażnik źródła: bezpośredni zapis metadanych tylko w funkcji zapisu pod blokadą i przy zakładaniu nowego konta.
+Na `74c5803` wszystkie 37 czerwonych. Mutacje: bez blokady — 24 czerwone; bez porównania koperty hasła, klucza
+odzyskiwania, bez świeżego odczytu list oczekujących, bez ponownego szukania klucza biometrii — po 2; nadpisanie tożsamości
+przy odblokowaniu, bez sprawdzenia sesji, bez limitu czekania — po 1.
+`tests/e2e/meta-konta-blokada.spec.mjs` (prawdziwe Web Locks, dwie karty przeglądarki): karta A trzyma blokadę metadanych;
+w karcie B zmiana hasła z limitem 1,5 s → `META_BUSY`, „Nic nie zmieniono”, po zwolnieniu zmiana przechodzi, a karta A
+otwiera sejf tylko nowym hasłem (na `74c5803` czerwony); „Usuń do kosza” w karcie B czeka i kończy się po zwolnieniu
+(kontrola zgodności nazwy blokady ze starszą wersją — zielona także przed zmianą).
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, jednostkach i wynikach. Wpis kosza, termin listy oczekujących,
+preferencje i zmiana hasła nie znikają po cichu; zmiana hasła i nowy klucz odzyskiwania nie zgłaszają sukcesu, gdy
+obowiązuje coś innego.
+
+**Czego zmiana nie robi.** Nie zmienia końca scalania listy kosza (A10, krok 2 — następna zmiana: koniec synchronizacji nie
+dokłada zapisu przywróconego w tym czasie). Nie zmienia formatu metadanych, ładunku synchronizacji ani reguł scalania.
+Bez Web Locks (sama kolejka strony) blokada chroni tylko w obrębie jednej strony — jak dotąd. Interfejs nie pokazuje
+komunikatu „Czekam” przy zmianie hasła (blokada trwa tyle co odczyt i zapis rekordu).
+
+**Wersje.** `vilda_vault.js` 201 → 202 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (109 → 110)
+i `vilda_session_bridge.js` (33 → 34); nowe adresy w precache (append-only); `SW_VERSION` 1.1.188 → 1.1.189 (+ pin
+w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
 ## „Przywróć” nie nadpisuje zapisu, który jest już w karcie w nowszej postaci (P-KOSZ-PRZYWROC-NOWSZA, SW 1.1.188, `vilda_vault.js` 201, `vilda_kosz_zapisow.js` 3, `vilda_spojnosc_zapisow.js` 3, 2026-10-07)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych (decyzja
@@ -9217,7 +9304,8 @@ Kotwica w `tests/unit/scalanie-blokada.test.mjs` zaktualizowana do nowego wywoł
 wersji ani notatek i nie rozjeżdżają licznika wersji.
 
 **Czego zmiana nie robi.** Nie zmienia zapisów metadanych konta poza blokadą kosza (A12: zmiana hasła i listy oczekujących
-mogą nadpisać kosz) ani porządku końcowego zapisu listy nagrobków w scalaniu (A10) — osobne punkty przeglądu. Import nie
+mogą nadpisać kosz) ani porządku końcowego zapisu listy nagrobków w scalaniu (A10) — osobne punkty przeglądu. *(Aktualizacja
+2026-10-07: A12 zrobione w P-META-KONTA.)* Import nie
 wysyła zmian od razu (jak dotąd: z najbliższą wysyłką). Bez Web Locks (sama kolejka strony) blokady chronią tylko w obrębie
 jednej strony — jak dotąd.
 
@@ -9941,7 +10029,8 @@ nagłówka → pada test B; usuwanie ostatniej wersji → pada test „ostatni z
 **Ograniczenia.** Urządzenie ze starszą wersją aplikacji wyśle chmurze sejf bez nagrobków; zaktualizowane urządzenie usunie
 zapis ponownie przy kolejnym scaleniu (znika po aktualizacji PWA). Urządzenie offline dłużej niż rok może wskrzesić zapis
 (ważność nagrobka jak u pacjentów). Zmiana listy nagrobków i zapisy innych pól metadanych konta nie są jedną transakcją —
-stąd zapis kosza przed usunięciem i sprawdzenie po nim. Kopia konta (`exportVaultBackup`) nie niesie kosza.
+stąd zapis kosza przed usunięciem i sprawdzenie po nim. *(Aktualizacja 2026-10-07, P-META-KONTA: wszystkie zapisy
+metadanych konta idą pod tą samą blokadą, na świeżym odczycie; sprawdzenie po usunięciu zostaje.)* Kopia konta (`exportVaultBackup`) nie niesie kosza.
 
 **Wpływ kliniczny.** Brak zmian we wzorach, progach i wynikach. Zmiana dotyczy danych: pozwala usunąć (do kosza) wersję karty
 z danymi innej osoby — tylko po potwierdzeniu, tylko gdy pomiary tej osoby są w jej karcie, z możliwością cofnięcia przez 30 dni.
