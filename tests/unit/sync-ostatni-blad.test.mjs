@@ -20,8 +20,11 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SLOT = 'b'.repeat(64);
 const KLUCZ_STANU = `vilda-sync-state-v1:${SLOT}`;
-const KLUCZ_BLEDU = 'vilda-sync-last-error-v1';
-const KLUCZ_OK = 'vilda-sync-last-push-ok-v1';
+// Klucze są per konto (sufiks z userId): na współdzielonym komputerze błąd konta A nie może pokazać się
+// po zalogowaniu konta B ani zostać „rozwiązany” udaną wysyłką B (uwaga Codex P2 do #570).
+const UZYTKOWNIK = 'u-fikcyjny-a';
+const KLUCZ_BLEDU = 'vilda-sync-last-error-v1:' + UZYTKOWNIK;
+const KLUCZ_OK = 'vilda-sync-last-push-ok-v1:' + UZYTKOWNIK;
 const TERAZ = '2026-10-07T06:35:00.000Z';
 
 function magazyn(seed) {
@@ -75,6 +78,8 @@ async function urzadzenie() {
   const klucz = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   const sejf = {
     isUnlocked: () => true,
+    getCurrentUser: () => ({ userId: sejf.userId }),
+    userId: UZYTKOWNIK,
     isCloudOnlyMode: () => false,
     isEphemeralMode: () => false,
     onUnlock() {},
@@ -108,7 +113,7 @@ async function urzadzenie() {
   if (!win.VildaSyncIntegration || !win.VildaSyncIntegration.__vildaSyncIntegration) throw new Error('integracja nie wstała');
   const blad = () => JSON.parse(win.localStorage.getItem(KLUCZ_BLEDU) || 'null');
   const ok = () => win.localStorage.getItem(KLUCZ_OK);
-  return { sync: win.VildaSync, win, dziennik, blad, ok };
+  return { sync: win.VildaSync, win, dziennik, blad, ok, sejf };
 }
 
 const PUT_413 = { status: 413, cialo: { error: { message: 'Payload Too Large' } } };
@@ -209,6 +214,38 @@ function wytnij(plik, od, doTekstu) {
   const nazwa = /function\s+([A-Za-z0-9_$]+)/.exec(od)[1];
   return new Function(`${src.slice(start, end)}\nreturn ${nazwa};`)();
 }
+
+describe('Klucze per konto (uwaga Codex P2 do #570)', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(TERAZ)); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('błąd konta A nie jest „rozwiązany” udaną wysyłką konta B na tym samym urządzeniu; B ma własny klucz wysyłki', async () => {
+    const d = await urzadzenie();
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    srv.odpowiedzPut = PUT_413;
+    await expect(d.sync.syncPush()).rejects.toMatchObject({ code: 'UPLOAD_FAILED' });
+    expect(d.blad()).toMatchObject({ code: 'UPLOAD_FAILED', httpStatus: 413 });
+
+    // Na tym samym urządzeniu loguje się konto B (ta sama instancja integracji, inny użytkownik sejfu).
+    d.sejf.userId = 'u-fikcyjny-b';
+    srv.odpowiedzPut = null;
+    expect((await d.sync.syncPush()).action).toBe('uploaded');
+
+    expect(d.blad().resolvedAt, 'błąd A nie dostaje resolvedAt od B').toBeUndefined();
+    expect(d.ok(), 'A nie ma udanej wysyłki').toBeNull();
+    expect(d.win.localStorage.getItem('vilda-sync-last-push-ok-v1:u-fikcyjny-b')).toBe(TERAZ);
+    expect(d.win.localStorage.getItem('vilda-sync-last-error-v1:u-fikcyjny-b')).toBeNull();
+    expect(d.win.localStorage.getItem('vilda-sync-last-error-v1'), 'brak klucza globalnego').toBeNull();
+  });
+
+  it('Ustawienia czytają klucze bieżącego konta: funkcja Qy1 w pliku produkcyjnym buduje sufiks z userId', () => {
+    const src = readFileSync(path.join(repoRoot, 'inline_ustawienia_04.js'), 'utf8');
+    expect(src).toContain('localStorage.getItem("vilda-sync-last-push-ok-v1"+k)');
+    expect(src).toContain('localStorage.getItem("vilda-sync-last-error-v1"+k)');
+    expect(src).toContain('window.VildaVault.getCurrentUser()');
+  });
+});
 
 describe('Ustawienia: linia ostatniej wysyłki i ostatniego błędu (inline_ustawienia_04.js)', () => {
   const linie = () => wytnij('inline_ustawienia_04.js', 'function Qy0(a,s,c){', 'function Qy1(){');

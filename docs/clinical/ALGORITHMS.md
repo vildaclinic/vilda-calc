@@ -9088,10 +9088,12 @@ a dziennik dostępu (`VildaAuditLog`) zapisywał wyłącznie `patient.view`, `no
 — nic o synchronizacji. Udana i nieudana wysyłka wyglądały identycznie; po zamknięciu aplikacji nie zostawał żaden ślad.
 
 **Co jest** (wyłącznie zapis śladu; logika synchronizacji, scalania, danych i zapisu bez zmian):
-- `vilda_sync_integration.js`: w `onSyncError` każdy błąd zapisuje do `localStorage` klucz `vilda-sync-last-error-v1`
+- `vilda_sync_integration.js`: w `onSyncError` każdy błąd zapisuje do `localStorage` klucz `vilda-sync-last-error-v1:<userId>`
+  (sufiks z identyfikatora bieżącego konta — na współdzielonym komputerze błąd konta A nie pokazuje się po zalogowaniu
+  konta B ani nie zostaje „rozwiązany” udaną wysyłką B; uwaga Codex P2 do #570)
   = `{ts, operation, code, httpStatus, message (≤300 znaków)}` i, przy odblokowanym sejfie, wpis dziennika `sync.error`
   `{code, httpStatus, operation}` (bez treści pacjenta). W `onSyncComplete` udany push/full zapisuje
-  `vilda-sync-last-push-ok-v1` (ISO) i — zamiast kasować błąd — dopisuje do niego `resolvedAt`; dla operacji `push`
+  `vilda-sync-last-push-ok-v1:<userId>` (ISO) i — zamiast kasować błąd — dopisuje do niego `resolvedAt`; dla operacji `push`
   wpis dziennika `sync.push.ok` `{action, bytes}` (`bytes` = `null`, dopóki `vilda_sync.js` nie zwraca rozmiaru bloba).
   Zdarzenia `operation:"full"` są przy błędzie pomijane: `syncFull` emituje błąd wewnętrznego pull/push drugi raz.
   Wszystko w `try/catch`, zero wyjątków na zewnątrz.
@@ -9118,6 +9120,7 @@ przyczyna leży po stronie pobrania/scalania na komputerze — i tam należy pat
 | PUT → 401 | `code:"AUTH_FAILED"`, `httpStatus:null`; dziennik: jeden wpis `sync.error {code, httpStatus:null, operation:"push"}` |
 | `syncFull` z błędem w PUT | błąd zgłoszony raz, jako `push` (nie `full`); po udanym `syncFull` dokładnie jeden wpis `sync.push.ok {action:"uploaded", bytes:null}` |
 | udane pobranie po błędzie wysyłki | nie ustawia klucza udanej wysyłki, nie dopisuje `resolvedAt` |
+| błąd konta A, potem udana wysyłka konta B na tym samym urządzeniu | błąd A bez `resolvedAt`, A bez klucza udanej wysyłki; B ma własny klucz wysyłki; brak klucza globalnego |
 | wysyłka bez błędu | brak klucza błędu; klucz udanej wysyłki i wpis `sync.push.ok` |
 | Ustawienia (Qy0 wycięte z pliku) | bez kluczy → „brak zapisu”, brak linii błędu; 2 min / 5 min temu z 413 i `resolvedAt` → obie linie z „(potem udana wysyłka)”; AUTH_FAILED bez `httpStatus` → bez dopisku; uszkodzony JSON → bez linii błędu |
 
