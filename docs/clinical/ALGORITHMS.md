@@ -8735,7 +8735,7 @@ precache (append-only), `SW_VERSION` 1.1.183 → 1.1.184 (+ pin w `tests/unit/kl
 (np. mostek na Start) przy uszkodzonym wpisie — po naprawie w monitorze dostają listę bez niego; sprawdzanie listy punktów przy
 wczytywaniu danych (osobna decyzja).
 
-## Punkt terapii GH bez modułu dawki: odmowa zapisu dla każdego preparatu zamiast połowy dawki Increlex i dawki tygodniowej Ngenla jako dobowej (P-GH-DAWKA-BEZ-MODULU, D6, zmiana kliniczna, SW 1.1.186, `gh_therapy_monitor.js` 56, `vilda_gh_punkty.js` 5, 2026-10-07)
+## Punkt terapii GH bez modułu dawki: odmowa zapisu dla każdego preparatu zamiast połowy dawki Increlex i dawki tygodniowej Ngenla jako dobowej (P-GH-DAWKA-BEZ-MODULU, D6, zmiana kliniczna, SW 1.1.187, `gh_therapy_monitor.js` 56, `vilda_gh_punkty.js` 5, 2026-10-07)
 
 **Skąd.** PR-6 planu „Wspólne API punktów GH”, pytania 27 i 28 z mapy punktów. Decyzja właściciela D6 z 2026-10-07:
 wariant **(b)** — bez modułu dawki (`vilda_gh_dawka.js`, `window.VildaGhDawka` z funkcją `preparat`) monitor nie zapisuje
@@ -8802,8 +8802,9 @@ właściciel (D6 wybrany 2026-10-07; zatwierdzenie zmiany w PR).
   usunięcie i edycja kończą się odmową, lista bez zmian, bez błędów strony.
 
 **Wersje.** `gh_therapy_monitor.js` 55 → 56 i `vilda_gh_punkty.js` 4 → 5 (`docpro.html`; `vilda_gh_punkty.js` też
-`index.html`), precache (append-only), `SW_VERSION` 1.1.185 → 1.1.186 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
-`tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `7373a3c`; pin `?v=` w
+`index.html`), precache (append-only), `SW_VERSION` 1.1.186 → 1.1.187 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
+`tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `2035ea2` (po P-SYNC-MOST-STOPKA, który
+też nadał 1.1.186); pin `?v=` w
 `tests/e2e/gh-punkty-api-start.spec.mjs` ręcznie.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna zmiany, scalenie i wdrożenie. Poza zakresem: gałąź zapasowa
