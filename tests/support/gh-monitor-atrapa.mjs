@@ -5,8 +5,11 @@ import { loadBrowserScript } from './load-browser-script.mjs';
 
 // P-GH-PUNKTY-TESTY. Wspólna atrapa przeglądarki dla PRAWDZIWEGO monitora punktów terapii GH
 // (gh_therapy_monitor.js) w testach jednostkowych, przed przeniesieniem reguł punktów do wspólnego API.
-// Monitor, vilda_html.js, moduł dawki i wiek kostny to pliki produkcyjne wykonane bez zmian; atrapa daje
-// tylko DOM, pamięć modułów, BroadcastChannel i zegar. Jeden dziennik zapisuje w kolejności to, co monitor
+// Monitor, vilda_html.js, moduł dawki, wspólne API punktów (vilda_gh_punkty.js) i wiek kostny to pliki produkcyjne
+// wykonane bez zmian; atrapa daje tylko DOM, pamięć modułów, BroadcastChannel i zegar.
+// Tryby monitora (P-GH-PUNKTY-API rata 2): z modułem VildaGhPunkty (domyślnie, jak docpro.html) monitor bierze reguły
+// punktu z API; z opcją modulPunktow:false wykonuje dosłownie stary kod (ścieżka zapasowa). Oba tryby mają dawać to
+// samo — pilnuje tego tests/unit/gh-punkty-monitor-tryby.test.mjs i złota siatka w obu trybach. Jeden dziennik zapisuje w kolejności to, co monitor
 // robi na zewnątrz: zapis modułu, zdarzenie dokumentu, komunikat kanału i komunikat dla lekarza.
 //
 // Co jest prawdziwe, a co atrapą:
@@ -552,6 +555,7 @@ function utworzDokument(poDolaczeniu) {
 export function utworzAtrapeMonitoraGh(opcje = {}) {
   const {
     modulDawki = true,
+    modulPunktow = true,
     modulWiekuKostnego = true,
     punkty,
     pola = {},
@@ -711,6 +715,11 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
     wykonaj('vilda_gh_opakowania_dane.js');
     wykonaj('vilda_gh_dawka_dane.js');
     wykonaj('vilda_gh_dawka.js');
+  }
+  // Bez ZALEZNOSCI z load-browser-script.mjs: wariant „bez modułu dawki” ma zostać bez VildaGhDawka.
+  if (modulPunktow) {
+    const tekst = typeof zrodla['vilda_gh_punkty.js'] === 'string' ? zrodla['vilda_gh_punkty.js'] : zrodlo('vilda_gh_punkty.js');
+    new Function('window', 'globalThis', tekst)(win, win);
   }
 
   let Data = Date;

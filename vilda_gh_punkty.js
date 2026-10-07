@@ -1,9 +1,8 @@
-/* vilda_gh_punkty.js — wspólne API punktów terapii GH (VildaGhPunkty), rata 1: moduł ładowany, jeszcze nieużywany.
+/* vilda_gh_punkty.js — wspólne API punktów terapii GH (VildaGhPunkty).
  *
- * P-GH-PUNKTY-API (2026-10-06, decyzja właściciela D4). Reguły punktu terapii GH żyją dziś w monitorze
- * (gh_therapy_monitor.js): edycja punktu (He), punkt wsteczny (ghAddRetroPoint), zapis listy (L). Ten moduł
- * odtwarza je 1:1 w czytelnej postaci, żeby kolejne raty mogły przenieść na nie monitor (PR-4, z zapasową
- * ścieżką) i dodać punkt z innych stron. W tej racie nikt go nie woła — zachowanie aplikacji się nie zmienia.
+ * P-GH-PUNKTY-API (2026-10-06, decyzja właściciela D4). Reguły punktu terapii GH: edycja punktu, punkt wsteczny,
+ * zapis listy. Rata 1 odtworzyła je 1:1 z monitora (gh_therapy_monitor.js: He, ghAddRetroPoint, L) w czytelnej
+ * postaci. Od raty 2 (2026-10-07) monitor z nich korzysta; bez tego modułu wykonuje dosłownie stary kod (zapas).
  *
  * Rekord punktu (15 kluczy, kolejność nośna dla scalania w sejfie):
  *   id, type, ageYears, ageMonths, weight, height, boneAge, dose, doseUnit, drug, program, igf1, igf1Unit,
@@ -25,8 +24,10 @@
  * nie normalizuje list z rekordu ani z sejfu; nie dopisuje punktu przy edycji (zmienWMiejscu); nie liczy dawki
  * nowego punktu z karty (zostaje w monitorze); nie dotyka mostka, IndexedDB ghTherapyDB ani resetu monitora.
  * Bez VildaGhDawka liczy jak monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true.
- * Znane odstępstwo od monitora: pusty wpis (null) na liście — sprawdzRodzaj i zmienWMiejscu go pomijają, a monitor
- * (He, ghAddRetroPoint) rzuca TypeError i nie zapisuje. Przypięte testem różnicowym; decyzja przy PR-4.
+ * Pusty wpis (null) na liście: sprawdzRodzaj i zmienWMiejscu rzucają wyjątek tam, gdzie monitor (rata 2, decyzja
+ * właściciela 2026-10-07: ściśle jak monitor); dostepneRodzaje go pomija, jak formularz wsteczny monitora.
+ * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — rata 2. Monitor korzysta tylko z wersji 2, ze starszą
+ * (np. plik z pamięci przeglądarki przy niepełnej aktualizacji) wykonuje stary kod.
  * Rejestr: docs/clinical/ALGORITHMS.md, P-GH-PUNKTY-API.
  */
 (function (w) {
@@ -89,7 +90,7 @@
     var pomija = !!opcje && Object.prototype.hasOwnProperty.call(opcje, 'pomin');
     var pomin = pomija ? String(opcje.pomin) : null;
     function jest(t) {
-      return L.some(function (c) { return c && c.type === t && (!pomija || String(c.id) !== pomin); });
+      return L.some(function (c) { return c.type === t && (!pomija || String(c.id) !== pomin); });
     }
     if (typ === 'start' && jest('start')) return { ok: false, kod: 'drugie-wlaczenie', komunikat: KOMUNIKATY.drugieWlaczenie };
     if (typ === 'end' && jest('end')) return { ok: false, kod: 'drugie-zakonczenie', komunikat: KOMUNIKATY.drugieZakonczenie };
@@ -192,17 +193,18 @@
   }
 
   // Edycja w miejscu pierwszego punktu o równym String(id): przypisania w kolejności rekordu, id, pozycja, obce pola
-  // i kolejność kluczy zostają. Gdy punktu nie ma — odmowa; NIGDY nie dopisuje do listy.
+  // i kolejność kluczy zostają. Gdy punktu nie ma — odmowa; NIGDY nie dopisuje do listy. Wpis, który nie jest
+  // obiektem (liczba, napis), zostaje bez zmian z wynikiem ok — jak przypisanie w monitorze bez trybu ścisłego.
   function zmienWMiejscu(lista, id, pola) {
     var L = Array.isArray(lista) ? lista : [];
     var p = pola || {};
     var indeks = -1;
     for (var i = 0; i < L.length; i += 1) {
-      if (L[i] && String(L[i].id) === String(id)) { indeks = i; break; }
+      if (String(L[i].id) === String(id)) { indeks = i; break; }
     }
     if (indeks < 0) return { ok: false, kod: 'brak-punktu' };
     var c = L[indeks];
-    KLUCZE.forEach(function (k) { if (k !== 'id') c[k] = p[k]; });
+    if (Object(c) === c) KLUCZE.forEach(function (k) { if (k !== 'id') c[k] = p[k]; });
     return { ok: true, indeks: indeks };
   }
 
@@ -276,15 +278,19 @@
   //   1. writeModuleJSON(GH_THERAPY_POINTS, lista, {force:true}) — synchronicznie, przed sygnałami,
   //   2. zdarzenie vilda:therapy-points-changed {source:'gh'},
   //   3. {type:'update'} z tabId: przez opcje.nadaj (monitor podaje własne Y) albo przez własny leniwy kanał.
+  // opcje.blad(e): dziennik błędu kroku 1 i 3 (monitor podaje własny, jak dotąd w L()); bez niego błąd jest cichy.
   // Nie woła odświeżenia tabeli, wskaźnika zapisu ani mostka — to zostaje u wołającego.
   function zapisz(lista, opcje) {
     var wynik = { modul: false, zdarzenie: false, kanal: false };
     var L = Array.isArray(lista) ? lista : [];
+    function zglos(e) {
+      try { if (opcje && typeof opcje.blad === 'function') opcje.blad(e); } catch (e2) { /* dziennik nie zatrzymuje zapisu */ }
+    }
     try { if (Array.isArray(lista) && w.ghTherapyPoints !== lista) w.ghTherapyPoints = lista; } catch (e) { /* okno tylko do odczytu */ }
     try {
       var P = persistence();
       if (P && typeof P.writeModuleJSON === 'function') wynik.modul = !!P.writeModuleJSON(KLUCZ_MODULU, L, { force: true });
-    } catch (e) { /* jak monitor: wynik zapisu nie zatrzymuje sygnałów */ }
+    } catch (e) { zglos(e); /* jak monitor: wynik zapisu nie zatrzymuje sygnałów */ }
     try {
       w.document.dispatchEvent(new w.CustomEvent('vilda:therapy-points-changed', { detail: { source: 'gh' } }));
       wynik.zdarzenie = true;
@@ -292,7 +298,7 @@
     try {
       var m = { type: 'update' };
       wynik.kanal = !!(opcje && typeof opcje.nadaj === 'function' ? opcje.nadaj(m) : nadajWlasnym(m));
-    } catch (e) { /* brak albo zamknięty kanał */ }
+    } catch (e) { zglos(e); /* brak albo zamknięty kanał */ }
     return wynik;
   }
 
@@ -307,7 +313,7 @@
   }
 
   w.VildaGhPunkty = Object.freeze({
-    wersja: 1,
+    wersja: 2,
     KLUCZE: KLUCZE,
     RODZAJE: RODZAJE,
     KOMUNIKATY: KOMUNIKATY,

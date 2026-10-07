@@ -19,6 +19,9 @@ import { LISTY, idReprezentatywnych, siatka } from '../scripts/gh-punkty-wzorzec
 // ŹRÓDŁEM PRAWDY JEST MONITOR. Różnica oznacza błąd API albo zmianę monitora — nie dopasowuj oczekiwań do API.
 // Kontrole negatywne na końcu pokazują, że porównanie wykrywa zmianę kolejności kluczy, -0, tekstu odmowy i dawki.
 // To nie jest test kliniczny: liczby są fikcyjne. Dane wyłącznie FIKCYJNE.
+// Od raty 2 (PR-4) monitor z modułem bierze reguły z API, a bez modułu wykonuje stary kod. Ten test porównuje API ze
+// STARYM kodem: monitor działa w trybie zapasowym (atrapa bez VildaGhPunkty, a API ładowane do okna i zaraz z niego
+// zdejmowane), inaczej porównywałby API z samym sobą. Równość obu trybów monitora: gh-punkty-monitor-tryby.test.mjs.
 
 // Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”).
 const DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
@@ -41,13 +44,14 @@ const kopia = (v) => structuredClone(v);
 
 /* ---------- Okno atrapy z monitorem i API ---------- */
 
-// Atrapa z prawdziwym monitorem; w jej okno loadBrowserScript ładuje vilda_gh_punkty.js. Z modułem dawki atrapa
+// Atrapa z prawdziwym monitorem w trybie zapasowym; w jej okno loadBrowserScript ładuje vilda_gh_punkty.js, a test
+// zabiera API z okna (monitor go nie widzi, API dalej czyta okno: moduł dawki, pamięć, dokument). Z modułem dawki atrapa
 // wczytała go już przez loadBrowserScript, więc ZALEZNOSCI nie wykonują niczego drugi raz. Bez modułu dawki
 // ZALEZNOSCI wnoszą VildaGhDawkaDane i VildaGhDawka; zdejmujemy je, żeby i monitor, i API widziały stronę bez tych
 // tagów (oba czytają VildaGhDawka dopiero przy wywołaniu, a moduł dawki niczego nie rejestruje przy ładowaniu).
 function atrapaZApi({ modulDawki = true, punkty, zrodla } = {}) {
   const atrapa = utworzAtrapeMonitoraGh({
-    modulDawki, ...(punkty === undefined ? {} : { punkty }), ...(zrodla ? { zrodla } : {}),
+    modulDawki, modulPunktow: false, ...(punkty === undefined ? {} : { punkty }), ...(zrodla ? { zrodla } : {}),
   });
   const { win } = atrapa;
   const przed = new Set(Object.keys(win));
@@ -59,6 +63,8 @@ function atrapaZApi({ modulDawki = true, punkty, zrodla } = {}) {
     throw new Error(`Okno atrapy: loadBrowserScript dodał [${dodane}], oczekiwano [${oczekiwane}]`);
   }
   if (!modulDawki) for (const k of Z_ZALEZNOSCI) delete win[k];
+  const api = win.VildaGhPunkty;
+  delete win.VildaGhPunkty;
 
   const klikniecia = [];
   atrapa.doc.addEventListener('click', (ev) => {
@@ -71,12 +77,12 @@ function atrapaZApi({ modulDawki = true, punkty, zrodla } = {}) {
       sciezka: wsteczny ? 'wsteczny' : 'edycja',
       typ: wsteczny ? pola.ghRetroType : TYP_PRZYCISKU[id],
       pola,
-      lista: win.VildaGhPunkty.wczytaj(),
+      lista: api.wczytaj(),
       modulSurowy: atrapa.stan().modulSurowy,
       od: atrapa.dziennik.length,
     });
   }, true);
-  return { atrapa, api: win.VildaGhPunkty, klikniecia };
+  return { atrapa, api, klikniecia };
 }
 
 /* ---------- Ścieżka API dla odczytanych pól ---------- */
@@ -356,12 +362,17 @@ const REPREZENTATYWNE = (() => {
 
 describe('VildaGhPunkty ↔ żywy monitor — okno atrapy', () => {
   it('loadBrowserScript ładuje API do okna monitora: z modułem dawki niczego nie wykonuje ponownie, bez niego wnosi moduł dawki, który zdejmujemy', () => {
-    const z = utworzAtrapeMonitoraGh();
+    const z = utworzAtrapeMonitoraGh({ modulPunktow: false });
+    expect(z.win.VildaGhPunkty).toBeUndefined();
     const dawka = z.win.VildaGhDawka;
     expect(typeof dawka.preparat).toBe('function');
     loadBrowserScript('vilda_gh_punkty.js', z.win);
     expect(z.win.VildaGhDawka).toBe(dawka);
-    expect(z.win.VildaGhPunkty.wersja).toBe(1);
+    expect(z.win.VildaGhPunkty.wersja).toBe(2);
+    // Monitor w atrapie z API porównuje się ze starym kodem: API nie zostaje w oknie.
+    const zApi = atrapaZApi();
+    expect(zApi.atrapa.win.VildaGhPunkty).toBeUndefined();
+    expect(zApi.api.wersja).toBe(2);
 
     const bez = atrapaZApi({ modulDawki: false });
     expect(bez.atrapa.win.VildaGhDawka).toBeUndefined();
@@ -470,16 +481,16 @@ describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', ()
     }
   });
 
-  // ZNANE ODSTĘPSTWO (nagłówek modułu, ALGORITHMS P-GH-PUNKTY-API): pusty wpis (null) w pamięci modułu, który pojawił
-  // się po starcie monitora. Test przypina OBA zachowania. Zmiana którejkolwiek strony (np. monitor przeniesiony na API
-  // w PR-4) wymaga decyzji, nie dopasowania oczekiwań.
-  it('ZNANE ODSTĘPSTWO: null na liście — monitor rzuca TypeError i nie zapisuje, API pomija null i dałoby zapis', () => {
+  // Pusty wpis (null) w pamięci modułu, który pojawił się po starcie monitora (P-GH-PUNKTY-API rata 2, decyzja
+  // właściciela 2026-10-07: API ściśle jak monitor). Wyjątek rzucają oba tam, gdzie stary kod, a tam, gdzie stary kod
+  // zapisuje, API daje tę samą listę.
+  it('null na liście: API rzuca wyjątek tam, gdzie monitor, i zapisuje tam, gdzie monitor zapisuje', () => {
     const WSTECZNY = {
       ghRetroType: 'start', ghRetroProg: 'SNP', ghRetroDrug: 'Omnitrope 10 mg', ghRetroAge: '9', ghRetroAgeMonths: '6',
       ghRetroWeight: '32', ghRetroHeight: '133', ghRetroDose: '0.96',
     };
     for (const modulDawki of [true, false]) {
-      // (a) punkt wsteczny „Włączenie” przy liście [null]
+      // (a) punkt wsteczny „Włączenie” przy liście [null]: oba TypeError, bez zapisu
       const a = atrapaZApi({ modulDawki, punkty: [] });
       a.atrapa.kliknij('btnGhRetro');
       for (const [k, v] of Object.entries(WSTECZNY)) a.atrapa.ustaw(k, v);
@@ -488,20 +499,26 @@ describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', ()
       expect(a.klikniecia).toHaveLength(1);
       expect(rodzaje(a.atrapa.dziennik.slice(a.klikniecia[0].od))).toEqual(['E']);
       expect(a.atrapa.stan().modul).toEqual([null]);
-      const wsteczny = wynikApi(a.api, a.klikniecia[0], null, 'fikc-nowy');
-      expect(wsteczny.zapis).toBe(true);
-      expect(wsteczny.lista.map((p) => p && p.id)).toEqual([null, 'fikc-nowy']);
+      expect(() => wynikApi(a.api, a.klikniecia[0], null, 'fikc-nowy')).toThrow(TypeError);
 
-      // (b) edycja Kontynuacji, gdy przed nią pojawił się null
+      // (b) edycja Kontynuacji, gdy przed nią pojawił się null: oba TypeError, bez zapisu
       const b = atrapaZApi({ modulDawki, punkty: [KONTYNUACJA] });
       b.atrapa.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
       b.atrapa.ustawModul([null, KONTYNUACJA]);
       expect(() => b.atrapa.kliknij('btnGhContinue')).toThrow(TypeError);
       expect(rodzaje(b.atrapa.dziennik.slice(b.klikniecia[0].od))).toEqual(['E']);
       expect(b.atrapa.stan().modul.map((p) => p && p.height)).toEqual([null, KONTYNUACJA.height]);
-      const edycja = wynikApi(b.api, b.klikniecia[0], KONTYNUACJA.id, null);
+      expect(() => wynikApi(b.api, b.klikniecia[0], KONTYNUACJA.id, null)).toThrow(TypeError);
+
+      // (c) edycja Kontynuacji z null ZA nią: stary kod zapisuje, a dopiero tabela (F) rzuca — API daje tę samą listę
+      const c = atrapaZApi({ modulDawki, punkty: [KONTYNUACJA] });
+      c.atrapa.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
+      c.atrapa.ustawModul([KONTYNUACJA, null]);
+      expect(() => c.atrapa.kliknij('btnGhContinue')).toThrow(TypeError);
+      expect(rodzaje(c.atrapa.dziennik.slice(c.klikniecia[0].od))).toEqual(['E', 'M', 'E', 'BC']);
+      const edycja = wynikApi(c.api, c.klikniecia[0], KONTYNUACJA.id, null);
       expect(edycja.zapis).toBe(true);
-      expect(edycja.lista.map((p) => p && p.height)).toEqual([null, 139]);
+      expect(roznice(edycja.lista, c.atrapa.stan().okno)).toEqual([]);
     }
   });
 });

@@ -71,7 +71,7 @@ function oczekujRekordu(rzeczywisty, oczekiwany, opis) {
 
 describe('Moduł i dane zamrożone', () => {
   it('ładuje się z modułem dawki jako zależnością; wersja 1', () => {
-    expect(A.wersja).toBe(1);
+    expect(A.wersja).toBe(2);
     // ZALEZNOSCI w load-browser-script.mjs: bez tego Increlex liczyłby się bez × 2.
     expect(w.VildaGhDawka.preparat('Increlex 40 mg').schemat).toBe('naPodanie');
   });
@@ -299,6 +299,16 @@ describe('sprawdzRodzaj — najwyżej jedno Włączenie i jedno Zakończenie', (
     expect(A.sprawdzRodzaj([WLACZENIE], 'start', { pomin: null })).toEqual({
       ok: false, kod: 'drugie-wlaczenie', komunikat: DRUGIE_WLACZENIE,
     });
+  });
+
+  it('pusty wpis (null) na liście: wyjątek tam, gdzie monitor (some na c.type), i tylko przy Włączeniu i Zakończeniu (P-GH-PUNKTY-API rata 2)', () => {
+    expect(() => A.sprawdzRodzaj([null], 'start')).toThrow(TypeError);
+    expect(() => A.sprawdzRodzaj([KONTYNUACJA, null], 'end', { pomin: 'fikc-kont' })).toThrow(TypeError);
+    // Kontynuacja nie przegląda listy; Włączenie stojące przed null kończy przegląd odmową, zanim dojdzie do null.
+    expect(A.sprawdzRodzaj([null], 'continue')).toEqual({ ok: true });
+    expect(A.sprawdzRodzaj([WLACZENIE, null], 'start').kod).toBe('drugie-wlaczenie');
+    // Wpis niebędący obiektem nie rzuca (jak monitor): (5).type to undefined.
+    expect(A.sprawdzRodzaj([5, 'x', true], 'start')).toEqual({ ok: true });
   });
 });
 
@@ -724,5 +734,28 @@ describe('zmienWMiejscu — edycja punktu w miejscu, nigdy dopisanie', () => {
     expect(A.zmienWMiejscu(pusta, 'fikc-start', polaEdycji())).toEqual({ ok: false, kod: 'brak-punktu' });
     expect(pusta).toEqual([]);
     expect(A.zmienWMiejscu(null, 'fikc-start', polaEdycji())).toEqual({ ok: false, kod: 'brak-punktu' });
+  });
+
+  it('pusty wpis (null) PRZED szukanym punktem: wyjątek jak findIndex monitora; ZA nim: zwykła edycja (P-GH-PUNKTY-API rata 2)', () => {
+    const przed = [null, { ...KONTYNUACJA }];
+    expect(() => A.zmienWMiejscu(przed, 'fikc-kont', polaEdycji())).toThrow(TypeError);
+    expect(przed[1]).toStrictEqual(KONTYNUACJA);
+
+    const za = [{ ...KONTYNUACJA }, null];
+    expect(A.zmienWMiejscu(za, 'fikc-kont', polaEdycji())).toEqual({ ok: true, indeks: 0 });
+    expect(za[1]).toBeNull();
+  });
+
+  it('wpis niebędący obiektem (liczba, napis, true) z pasującym String(id): ok bez zmiany wpisu — jak przypisanie w monitorze bez trybu ścisłego', () => {
+    for (const wpis of [5, 'x', true]) {
+      const lista = [wpis, { ...KONTYNUACJA }];
+      expect(A.zmienWMiejscu(lista, 'undefined', polaEdycji()), String(wpis)).toEqual({ ok: true, indeks: 0 });
+      expect(lista[0]).toBe(wpis);
+      expect(lista[1]).toStrictEqual(KONTYNUACJA);
+    }
+    // Tablica i obiekt bez id są obiektami: dostają pola jak w monitorze.
+    const bezId = {};
+    expect(A.zmienWMiejscu([bezId], 'undefined', polaEdycji())).toEqual({ ok: true, indeks: 0 });
+    expect(Object.keys(bezId)).toEqual(KLUCZE.filter((k) => k !== 'id'));
   });
 });
