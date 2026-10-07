@@ -193,8 +193,13 @@ const KONTROLE = [
     dotyczy: (p) => p.sciezka === 'Z1' },
   // Bramka raty 3: monitor bez zgodnego API odmawia każdego zapisu i usunięcia; „Anuluj” przy usuwaniu bez zmian.
   // Każdy przypadek na świeżej atrapie (atrapa użyta ponownie przyjmuje tylko edycje zakończone zapisem).
-  { nazwa: 'monitor: bramka odrzuca API (wersja 2 → 3)', plik: 'gh_therapy_monitor.js',
-    kotwica: 'A&&A.wersja===2&&', zamiana: 'A&&A.wersja===3&&', dotyczy: (p) => !p.anuluj, swieza: true },
+  { nazwa: 'monitor: bramka odrzuca API (wersja 3 → 4)', plik: 'gh_therapy_monitor.js',
+    kotwica: 'A&&A.wersja===3&&', zamiana: 'A&&A.wersja===4&&', dotyczy: (p) => !p.anuluj, swieza: true },
+  // P-GH-PUNKTY-USZKODZONE: bramka uszkodzonych wpisów stoi na drodze każdego zapisu i usunięcia (siatka ma listy bez
+  // takich wpisów, więc dziś zawsze przepuszcza; ta kopia odmawia zawsze).
+  { nazwa: 'monitor: bramka uszkodzonych wpisów zawsze odmawia', plik: 'gh_therapy_monitor.js',
+    kotwica: 'function Gpg(A){const n=A.uszkodzone(window.ghTherapyPoints).length;',
+    zamiana: 'function Gpg(A){const n=1;', dotyczy: (p) => !p.anuluj, swieza: true },
 ];
 
 describe('Złota siatka punktów GH — kontrole negatywne', () => {

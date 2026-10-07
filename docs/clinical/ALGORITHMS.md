@@ -8548,6 +8548,7 @@ bez trybu ścisłego); `zapisz` przyjmuje `opcje.blad` (dziennik błędu zapisu 
 rzuca wyjątek przed zapisem albo zapisuje, a wyjątek pada dopiero przy rysowaniu tabeli. Od raty 2 oba tryby robią to samo
 (macierz w teście trybów). Naprawa tego stanu to osobna decyzja właściciela (rekomendacja: jawna odmowa zapisu z komunikatem
 i odporna tabela, bez przepisywania danych; przed funkcją „punkt z wiersza karty zaawansowanej”).
+*(Naprawa: P-GH-PUNKTY-USZKODZONE niżej.)*
 
 **Klasyfikacja.** Refaktoryzacja bez zmiany zachowania (AGENTS § 2): wzory, dawki, jednostki, progi, komunikaty, kolejność
 odmów, zapis i sygnały bez zmian. Nie jest zmianą kliniczną. Dowód niżej; zachowanie przy `null` jest zachowaniem monitora,
@@ -8657,6 +8658,81 @@ odmowy nic nie jest zapisywane. Brzmienie komunikatu odmowy jest decyzją właś
 **Co pozostaje decyzją właściciela.** Akceptacja (w tym brzmienie komunikatu odmowy), scalenie i wdrożenie. Poza zakresem:
 `zapisz` przy nieudanym zapisie modułu (`modul: false`) nadal tylko zapisuje błąd w dzienniku diagnostycznym, bez komunikatu
 dla lekarza — jak dotąd. Dalej: naprawa stanu przy pustym wpisie (osobny PR funkcjonalny), PR-6 (D6, kliniczny).
+*(Naprawa stanu przy pustym wpisie: P-GH-PUNKTY-USZKODZONE niżej.)*
+
+## Uszkodzony wpis na liście punktów terapii GH: monitor działa, zapis wstrzymany do naprawy jednym przyciskiem (P-GH-PUNKTY-USZKODZONE, rata 4 API, SW 1.1.184, `gh_therapy_monitor.js` 55, `vilda_gh_punkty.js` 4, 2026-10-07)
+
+**Skąd.** Osobny PR funkcjonalny po racie 2 (stan przy pustym wpisie). Decyzje właściciela z 2026-10-07:
+(1) uszkodzony jest **każdy wpis listy, który nie jest obiektem** (null, liczba, napis, true/false); pusty obiekt `{}` i tablica
+nim nie są, bo monitor je obsługuje; (2) naprawa **przyciskiem w komunikacie odmowy** — dane zmienia tylko świadome kliknięcie
+lekarza; (3) makieta (desktop i telefon) zaakceptowana, z tekstami jak niżej; po naprawie lekarz klika zapis jeszcze raz.
+
+**Stan przed zmianą (opis neutralny).** Aplikacja sama takich wpisów nie tworzy; mogą pochodzić z danych spoza bieżącej wersji
+aplikacji. Przy takim wpisie monitor punktów nie działał poprawnie: zależnie od rodzaju punktu i miejsca wpisu zapis kończył
+się błędem albo przechodził, a tabela i wyniki monitorowania się nie odświeżały; po F5 monitor nie startował.
+
+**Co się zmienia.**
+- `VildaGhPunkty` (`wersja: 3`): `uszkodzone(lista)` — indeksy wpisów niebędących obiektem; `bezUszkodzonych(lista)` — nowa
+  lista bez nich (te same obiekty, ta sama kolejność); `komunikatyUszkodzonych(n)` — teksty. Pozostałe funkcje bez zmian.
+  Monitor wymaga teraz wersji 3 (bramka z PR-5: przy innej wersji prosi o odświeżenie strony).
+- Monitor (`gh_therapy_monitor.js`, łatka `P-GH-PUNKTY-USZKODZONE`, czytelnie w `docs/ZRODLA_ARTEFAKTOW.md`):
+  - tabela, licznik przy „Monitorowanie”, wyniki monitorowania (hSDS, tempo), lustro w karcie zaawansowanej i otwarcie edycji
+    pomijają uszkodzone wpisy — monitor startuje i pokazuje te same punkty co przy liście bez nich;
+  - **lista w oknie i w pamięci modułu zostaje bez zmian**: zapis stanu DocPro (`vilda_persist_runtime.js`) odtwarza pamięć
+    modułu z `window.ghTherapyPoints`, więc oczyszczona lista w oknie usunęłaby wpisy po cichu;
+  - nad tabelą ostrzeżenie (blok `.gh-uszkodzone-ostrzezenie` w `inline_docpro_00.css`, nie wiersz tabeli — na telefonie
+    tabela przewija się w bok):
+    „⚠ Lista punktów zawiera 1 uszkodzony wpis bez danych. Nie jest pokazywany w tabeli. Zapisywanie i usuwanie punktów jest
+    wstrzymane, dopóki go nie usuniesz.”;
+  - zapis z karty (W/K/Z), edycja, punkt wsteczny i usunięcie: po sprawdzeniu edycji spoza listy (P-GH-EDYCJA-LISTA) i bramce
+    modułu (PR-5), przed regułami punktu — komunikat „Uszkodzony wpis na liście punktów” / „Nie zapisano: lista punktów
+    leczenia tego pacjenta zawiera 1 uszkodzony wpis bez danych. Usuń go, aby zapisywać punkty. Pozostałe punkty się nie
+    zmienią.” z przyciskami „Anuluj” i „Usuń uszkodzony wpis” (nakładka komunikatu monitora `B()`, przycisk naprawy z klasą
+    `.gh-uszkodzone-napraw` — bez nowych stylów wpisanych w elementy, P-STYLE krok 5b); formularz zostaje otwarty z danymi. Przy kilku wpisach liczba
+    mnoga („2 uszkodzone wpisy… Usuń je…”, „5 uszkodzonych wpisów”, przycisk „Usuń uszkodzone wpisy (2)”);
+  - „Usuń uszkodzony wpis”: monitor czyta listę z pamięci modułu na nowo (punkt dopisany w innej ramce zostaje), zapisuje ją
+    bez uszkodzonych wpisów jednym `zapisz` (moduł, zdarzenie, kanał), ostrzeżenie znika; „Anuluj” niczego nie zmienia.
+
+**Klasyfikacja.** Zmiana funkcjonalna (integralność danych), nie kliniczna: żaden wzór, dawka, jednostka, próg ani
+interpretacja się nie zmienia; przy liście bez uszkodzonych wpisów zachowanie, zapis i sygnały bez zmian (złota siatka, test
+trybów). Przy uszkodzonej liście zmienia się zachowanie monitora (jak wyżej); usuwane wpisy nie niosą danych punktu.
+
+**Przypadki `wejście → oczekiwany wynik`.**
+- Lista `[Włączenie, null, Kontynuacja]` po F5 → tabela i licznik: 2 punkty; ostrzeżenie z „1 uszkodzony wpis”; pamięć modułu
+  bez zmian także po odtworzeniu stanu DocPro i drugim F5.
+- „Kontynuacja leczenia” z karty przy tej liście → komunikat odmowy, bez zapisu; „Usuń uszkodzony wpis” → w pamięci modułu
+  `[Włączenie, Kontynuacja]`; ponowne „Kontynuacja leczenia” → trzeci punkt, jak przy liście, która nigdy nie miała `null`.
+- Lista `[Włączenie, 5, "x", true, Kontynuacja]` → „3 uszkodzone wpisy”, przycisk „Usuń uszkodzone wpisy (3)”, po naprawie
+  `[Włączenie, Kontynuacja]`.
+
+**Strażnicy.**
+- `tests/unit/gh-punkty-uszkodzone.test.mjs` (20, nowy): start z pięcioma listami (tabela, licznik, znacznik, wyniki
+  monitorowania i treść tabeli jak bez uszkodzonych wpisów; ostrzeżenie; brak zapisu przy starcie); każda czynność lekarza
+  (karta W/K/Z, edycja — także punktu za uszkodzonym wpisem, wsteczny, usunięcie): odmowa, z API tylko liczba i teksty,
+  naprawa jednym zapisem, ponowny zapis jak na liście bez uszkodzonego wpisu; liczba mnoga; „Anuluj”; naprawa czyta listę na
+  nowo; naprawa w innej ramce; kolejność: edycja spoza listy, potem brak modułu.
+- `tests/unit/gh-punkty-api.test.mjs`: `uszkodzone`, `bezUszkodzonych`, `komunikatyUszkodzonych` (odmiana 1, 2, 4, 5, 12–14,
+  22, 25, 112), czystość i brak skutków.
+- `tests/unit/gh-punkty-monitor-tryby.test.mjs`: porównanie z monitorem sprzed API bez wpisów niebędących obiektem (te mają
+  własny test wyżej); licznik wywołań API z `uszkodzone` na początku każdej ścieżki; bramka w trzech miejscach; API wersji 1 i 2
+  → prośba o odświeżenie.
+- `tests/unit/gh-punkty-siatka.test.mjs`: wzorzec bez zmian; kontrole negatywne bramki modułu (wersja 3 → 4) i bramki
+  uszkodzonych wpisów (zawsze odmawia).
+- `tests/e2e/gh-punkty-uszkodzone.spec.mjs` (2, nowy): prawdziwy DocPro na desktopie i telefonie (390 px) — F5 z `null`,
+  tabela, licznik, lustro w karcie zaawansowanej, ostrzeżenie, brak cichego przepisania po odtworzeniu stanu i drugim F5,
+  odmowa z przyciskiem, naprawa, zapis; ostrzeżenie mieści się w oknie, bez poziomego przewijania. Na plikach sprzed zmiany
+  test pada (monitor nie startuje po F5).
+- Mutacje łatki i API (16): każda wykryta (lustro w karcie zaawansowanej — przez test e2e).
+
+**Wersje.** `gh_therapy_monitor.js` 54 → 55, `inline_docpro_00.css` 1 → 2 (`docpro.html`) i `vilda_gh_punkty.js` 3 → 4
+(`docpro.html` i `index.html`),
+precache (append-only), `SW_VERSION` 1.1.183 → 1.1.184 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
+`tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `d6c32b2`; pin `?v=` w
+`tests/e2e/gh-punkty-api-start.spec.mjs` ręcznie.
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Poza zakresem: inne moduły czytające listę punktów
+(np. mostek na Start) przy uszkodzonym wpisie — po naprawie w monitorze dostają listę bez niego; sprawdzanie listy punktów przy
+wczytywaniu danych (osobna decyzja).
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 

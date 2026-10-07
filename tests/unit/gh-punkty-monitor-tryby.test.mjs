@@ -12,7 +12,9 @@ import {
 // wiersze tabeli, powiadomienia wskaźnika zapisu, ostrzeżenia dziennika diagnostycznego i drugi klik. Liczby porównujemy
 // z rozróżnieniem -0 i NaN, klucze w kolejności. Złota siatka: gh-punkty-siatka.test.mjs. Dodatkowo licznik wywołań API
 // pokazuje, że monitor naprawdę deleguje, a sprawdzenie edycji spoza listy idzie przed API (decyzja właściciela
-// 2026-10-07). Odmowę bez zgodnego modułu sprawdzają testy na końcu pliku. Dane wyłącznie FIKCYJNE.
+// 2026-10-07). Odmowę bez zgodnego modułu sprawdzają testy na końcu pliku. Wpisy listy niebędące obiektem (null, liczba,
+// napis) są od P-GH-PUNKTY-USZKODZONE (rata 4) uszkodzone i świadomie obsługiwane inaczej niż przed API: sprawdza je
+// gh-punkty-uszkodzone.test.mjs, tu porównanie obejmuje tylko wpisy-obiekty. Dane wyłącznie FIKCYJNE.
 
 const punkt = (id, type, nadpisania = {}) => ({
   id, type, ageYears: 9, ageMonths: 0, weight: 32, height: 130, boneAge: null, dose: 0.025, doseUnit: 'mg/kg/d',
@@ -171,36 +173,19 @@ for (const [opisDanych, pola, typ] of [['poprawne dane', { ghEditHeight: '139' }
 Z3.push({ nazwa: 'odświeżenie listy z innej ramki w trakcie edycji (punkt został)', opcje: { punkty: [WLACZENIE, KONTYNUACJA] },
   kroki: [edytuj(KONTYNUACJA.id, { ghEditHeight: '139' }), (a) => a.zdarzenieOkna('storage', { key: 'GH_THERAPY_POINTS' }), klik('btnGhContinue')] });
 
-// Pusty wpis (null) na liście, który pojawił się po starcie monitora, oraz wpisy niebędące punktem.
-const NULL = [];
-for (const [opis, lista] of [['[null]', [null]], ['[Włączenie, null]', [WLACZENIE, null]], ['[null, Włączenie]', [null, WLACZENIE]],
-  ['[Kontynuacja, null, Zakończenie]', [KONTYNUACJA, null, ZAKONCZENIE]]]) {
-  for (const typ of ['start', 'continue', 'end']) {
-    NULL.push({ nazwa: `null ${opis}: karta ${typ} i drugi klik`, opcje: { punkty: [], ghTherapyCalc: KARTA },
-      kroki: [modul(lista), zKarty(typ), zKarty(typ)] });
-    NULL.push({ nazwa: `null ${opis}: wsteczny ${typ} i drugi klik`, opcje: { punkty: [] },
-      kroki: [(a) => a.kliknij('btnGhRetro'), modul(lista), wsteczny({ ghRetroType: typ }, { otworz: false }), klik('btnGhRetroAdd')] });
-  }
-}
-for (const [opis, lista] of [['null przed edytowanym', [null, WLACZENIE, KONTYNUACJA]], ['null za edytowanym', [WLACZENIE, KONTYNUACJA, null]]]) {
-  for (const typ of ['start', 'continue', 'end']) {
-    NULL.push({ nazwa: `${opis}: edycja ${typ}`, opcje: { punkty: [WLACZENIE, KONTYNUACJA] },
-      kroki: [edytuj(KONTYNUACJA.id, { ghEditHeight: '139' }), modul(lista), przycisk(typ), klik('btnGhContinue')] });
-  }
-}
-// (null na liście już przy starcie monitora przerywa start w F() — ta droga nie dotyka kleju i atrapa jej nie odtworzy.)
-NULL.push({ nazwa: 'null na liście: usunięcie', opcje: { punkty: [WLACZENIE, KONTYNUACJA] },
-  kroki: [modul([WLACZENIE, KONTYNUACJA, null]), (a) => a.usun(KONTYNUACJA.id)] });
+// Wpisy-obiekty nietypowe dla punktu (pusta tablica, pusty obiekt, punkt o id null). Wpisy niebędące obiektem (null,
+// liczba, napis, true) są uszkodzone (P-GH-PUNKTY-USZKODZONE): gh-punkty-uszkodzone.test.mjs.
+const OBIEKTY = [];
 // Edycja wiersza bez id: formularz dostaje pełne, poprawne pola, żeby zapis doszedł do przypisania pól wpisu.
 const PELNA_EDYCJA = { ghEditDrug: 'Omnitrope 10 mg', ghEditAge: '9', ghEditAgeMonths: '0', ghEditWeight: '32',
   ghEditHeight: '139', ghEditDose: '0.8' };
-for (const [opis, wpis] of [['liczba', 5], ['napis', 'x'], ['true', true], ['tablica', []], ['pusty obiekt', {}]]) {
-  NULL.push({ nazwa: `wpis ${opis}: karta, wsteczny, edycja wiersza bez id`, opcje: { punkty: [WLACZENIE, wpis], ghTherapyCalc: KARTA },
+for (const [opis, wpis] of [['tablica', []], ['pusty obiekt', {}]]) {
+  OBIEKTY.push({ nazwa: `wpis ${opis}: karta, wsteczny, edycja wiersza bez id`, opcje: { punkty: [WLACZENIE, wpis], ghTherapyCalc: KARTA },
     kroki: [zKarty('continue'), wsteczny({ ghRetroType: 'continue' }), edytuj('undefined', PELNA_EDYCJA, 'continue')] });
 }
 // Punkt o id null: sprawdzenie drugiego Włączenia w karcie pomija String(id) === "null" (stan obecny), a wsteczny nie.
 const WLACZENIE_BEZ_ID = punkt(null, 'start');
-NULL.push({ nazwa: 'Włączenie z id null: karta start, wsteczny start', opcje: { punkty: [WLACZENIE_BEZ_ID], ghTherapyCalc: KARTA },
+OBIEKTY.push({ nazwa: 'Włączenie z id null: karta start, wsteczny start', opcje: { punkty: [WLACZENIE_BEZ_ID], ghTherapyCalc: KARTA },
   kroki: [zKarty('start'), wsteczny({ ghRetroType: 'start' })] });
 
 // Zapis i kanał w sytuacjach brzegowych: błąd zapisu modułu, brak getTabId, wyjątek getTabId.
@@ -221,7 +206,7 @@ describe('Monitor GH: dzisiejszy monitor z modułem VildaGhPunkty i monitor sprz
   it.each([
     ['zapisy i odmowy: karta, wsteczny, edycja, usuwanie', ZWYKLE],
     ['edycja spoza bieżącej listy i zmiana pacjenta', Z3],
-    ['pusty wpis (null) i wpisy niebędące punktem', NULL],
+    ['wpisy-obiekty nietypowe dla punktu (pusta tablica, pusty obiekt, id null)', OBIEKTY],
     ['zapis i kanał w sytuacjach brzegowych', BRZEGI],
   ])('%s', (_opis, scenariusze) => {
     expect(scenariusze.length).toBeGreaterThan(0);
@@ -234,19 +219,20 @@ describe('Monitor GH z modułem: delegacja do VildaGhPunkty', () => {
 
   it('każda ścieżka zapisu woła API, a zapis listy to dokładnie jedno zapisz()', () => {
     expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('continue')] }))
-      .toEqual(['sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'zapisz']);
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny()] }))
-      .toEqual(['sprawdzRodzaj', 'polaZPodawanej', 'punkt', 'zapisz']);
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'punkt', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [edytuj(KONTYNUACJA.id, { ghEditHeight: '139' }, 'continue')] }))
-      .toEqual(['sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz']);
-    expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [(a) => a.usun(KONTYNUACJA.id)] })).toEqual(['zapisz']);
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz']);
+    expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [(a) => a.usun(KONTYNUACJA.id)] })).toEqual(['uszkodzone', 'zapisz']);
   });
 
   it('odmowy: API odmawia, monitor nie zapisuje (bez zapisz)', () => {
-    expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('start')] })).toEqual(['sprawdzRodzaj']);
-    expect(api({ opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny({ ghRetroDose: '0' })] })).toEqual(['sprawdzRodzaj', 'polaZPodawanej']);
+    expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('start')] })).toEqual(['uszkodzone', 'sprawdzRodzaj']);
+    expect(api({ opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny({ ghRetroDose: '0' })] }))
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [edytuj(KONTYNUACJA.id, { ghEditWeight: '0' }, 'continue')] }))
-      .toEqual(['sprawdzRodzaj', 'polaZPodawanej']);
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej']);
   });
 
   it('edycja spoza bieżącej listy i zmiana pacjenta: odmowa monitora PRZED jakimkolwiek wywołaniem API', () => {
@@ -275,14 +261,14 @@ const BEZ_API = [
     wywolania: [],
     przywroc: () => { new Function('window', 'globalThis', zrodlo('vilda_gh_punkty.js'))(w, w); },
   }) },
-  { nazwa: 'API innej wersji (np. rata 1 z pamięci przeglądarki)', opcje: {}, podmien: (w) => {
+  ...[1, 2].map((wersja) => ({ nazwa: `API wersji ${wersja} (plik ${wersja === 1 ? 'raty 1' : 'rat 2–3'} z pamięci przeglądarki)`, opcje: {}, podmien: (w) => {
     const api = w.VildaGhPunkty;
     const wywolania = [];
-    const stare = { wersja: 1 };
+    const stare = { wersja };
     for (const [k, f] of Object.entries(api)) if (typeof f === 'function') stare[k] = () => { wywolania.push(k); };
     w.VildaGhPunkty = stare;
     return { wywolania, przywroc: () => { w.VildaGhPunkty = api; } };
-  } },
+  } })),
   { nazwa: 'wyjątek przy odczycie VildaGhPunkty', opcje: {}, podmien: (w) => {
     const api = w.VildaGhPunkty;
     Object.defineProperty(w, 'VildaGhPunkty', { get() { throw new Error('fikcyjny błąd odczytu'); }, configurable: true });
@@ -395,8 +381,9 @@ describe('Monitor GH: łatka P-GH-PUNKTY-API rata 3 (D5) w artefakcie', () => {
       expect(przedApi.split(fragment).length - 1, fragment).toBe(1);
       expect(tekst.split(fragment).length - 1, fragment).toBe(0);
     }
-    expect(tekst.split('if(!Gpk){Gpn();return}').length - 1).toBe(2);
-    expect(tekst.split('if(!Gpa()){Gpn();return}').length - 1).toBe(1);
+    expect(tekst.split('if(!Gpk){Gpn();return}').length - 1).toBe(3);
+    // P-GH-PUNKTY-USZKODZONE: zaraz za bramką modułu (zapis W/K/Z i edycja, punkt wsteczny, usunięcie) bramka uszkodzonych wpisów.
+    expect(tekst.split('if(!Gpk){Gpn();return}/* P-GH-PUNKTY-USZKODZONE */if(Gpg(Gpk))return;').length - 1).toBe(3);
   });
 
   it('sprawdzenie edycji spoza listy stoi przed bramką modułu, a klej nie łapie wyjątków reguł API', () => {
