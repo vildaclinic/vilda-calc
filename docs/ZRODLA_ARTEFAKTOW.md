@@ -348,6 +348,46 @@ if (A) A.zapisz(window.ghTherapyPoints, { nadaj: (m) => Y(m, 'saveTherapyPoints:
 
 Bez zmian: `D()`, `F()`, `O()`, `Gmpod` (etykiety i tabela), `Gmcalc`, `Q()`, nakładki, `Ve()`/`Ue()`, nasłuch `storage`.
 
+## Łatka P-GH-PUNKTY-USZKODZONE (`gh_therapy_monitor.js` 54 → 55, 2026-10-07)
+
+Uszkodzony wpis listy punktów (nie obiekt: null, liczba, napis, true/false). Zmiana wprost w artefakcie, miejsca mają komentarz `P-GH-PUNKTY-USZKODZONE`. Bramka `apiPunktow()` (`Gpa`) wymaga teraz `wersja === 3`. Lista w oknie zostaje surowa (zapis stanu DocPro odtwarza z niej pamięć modułu); pomijają ją tylko widoki. Opis działania: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-USZKODZONE. Łatkę nakłada się na wersję 54.
+
+```js
+function punktyDoWidoku() {                     // (Gpo) to samo kryterium co VildaGhPunkty.uszkodzone
+  return Array.isArray(window.ghTherapyPoints) ? window.ghTherapyPoints.filter((c) => Object(c) === c) : [];
+}
+function wstrzymajPrzyUszkodzonych(A) {         // (Gpg) true = odmowa pokazana
+  const n = A.uszkodzone(window.ghTherapyPoints).length;
+  if (n) komunikatUszkodzonych(A, n);
+  return n > 0;
+}
+function komunikatUszkodzonych(A, n) {          // (Gpz) komunikat monitora B() z dodatkowym przyciskiem
+  const k = A.komunikatyUszkodzonych(n);       // naglowek, tresc, przycisk
+  B(k.tresc, k.naglowek);                       // #ghInfoOverlay; jego „OK” staje się „Anuluj” (bez btn-accent)
+  // + <button id="ghDamagedRemoveBtn" class="gh-uszkodzone-napraw">k.przycisk</button>: zamyka (klik „Anuluj”)
+  //   i woła naprawUszkodzone(). Style w klasach inline_docpro_00.css, bez stylów wpisanych w elementy.
+}
+function naprawUszkodzone() {                   // (Gpx)
+  const A = apiPunktow();
+  if (!A) { odmowaBezModulu(); return; }
+  D();                                          // lista z pamięci modułu na nowo (zmiany z innej ramki zostają)
+  window.ghTherapyPoints = A.bezUszkodzonych(window.ghTherapyPoints);
+  L(); F(); J('gh-damaged-entries-removed');
+}
+function ostrzezenieNadTabela(tbody) {          // (Gpu) #ghTherapyDamagedNote przed .gh-monitor-tablewrap
+  const n = (window.ghTherapyPoints || []).length - punktyDoWidoku().length;
+  // n > 0 i zgodne API: <div class="gh-uszkodzone-ostrzezenie" role="status"> z "⚠ " + A.komunikatyUszkodzonych(n).ostrzezenie;
+  // inaczej usunięty
+}
+
+// He (W/K/Z i edycja), ghAddRetroPoint, re (usunięcie) — zaraz za bramką modułu z PR-5:
+if (!A) { odmowaBezModulu(); return; }
+if (wstrzymajPrzyUszkodzonych(A)) return;
+
+// Widoki: F (licznik, ostrzeżenie, pusta lista, wiersze), ae i Pe (wyniki monitorowania), ue (lustro w karcie
+// zaawansowanej), O (otwarcie edycji) — window.ghTherapyPoints zastąpione przez punktyDoWidoku().
+```
+
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
 Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.

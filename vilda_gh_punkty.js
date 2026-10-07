@@ -13,8 +13,8 @@
  *
  * Funkcje czyste (bez DOM, magazynu i zdarzeń; jedyna zależność: VildaGhDawka do odczytu, wstrzykiwana przez
  * opcje.dawka): normalizujWiek, wiekLacznieMies, sprawdzRodzaj, dostepneRodzaje, sprawdzWartosci,
- * jednostkaDawki, dniIgf, polaZPodawanej, noweId, punkt, zmienWMiejscu. Przyjmują liczby, jak monitor po parseFloat
- * (polaZPodawanej parsuje pola sama).
+ * jednostkaDawki, dniIgf, polaZPodawanej, noweId, punkt, zmienWMiejscu, uszkodzone, bezUszkodzonych,
+ * komunikatyUszkodzonych. Przyjmują liczby, jak monitor po parseFloat (polaZPodawanej parsuje pola sama).
  * opcje.dawka (polaZPodawanej, gotowe) — jedno znaczenie: brak klucza albo true → VildaGhDawka z okna; obiekt →
  * wstrzyknięty moduł; null/false → bez modułu. Moduł liczy się tylko z funkcją preparat; to samo kryterium
  * wyznacza × 2, bezModuluDawki i brak w gotowe.
@@ -27,8 +27,13 @@
  * Bez VildaGhDawka liczy jak monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true.
  * Pusty wpis (null) na liście: sprawdzRodzaj i zmienWMiejscu rzucają wyjątek tam, gdzie monitor (rata 2, decyzja
  * właściciela 2026-10-07: ściśle jak monitor); dostepneRodzaje go pomija, jak formularz wsteczny monitora.
- * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — od raty 2 (rata 3 nie zmienia API). Monitor korzysta tylko
- * z wersji 2; przy starszej (np. plik z pamięci przeglądarki przy niepełnej aktualizacji) odmawia zapisu.
+ * Uszkodzony wpis listy (P-GH-PUNKTY-USZKODZONE, rata 4): wpis, który nie jest obiektem (null, brak wartości,
+ * liczba, napis, true/false) — nie niesie danych punktu. uszkodzone(lista) podaje ich indeksy, bezUszkodzonych(lista)
+ * — nową listę bez nich (te same obiekty, ta sama kolejność), komunikatyUszkodzonych(n) — teksty dla lekarza.
+ * Pozostałe funkcje działają przy takim wpisie bez zmian: monitor wstrzymuje zapis, zanim sięgnie po reguły.
+ * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — rata 2 i 3; 3 — rata 4 (dochodzą funkcje uszkodzonych
+ * wpisów, reszta bez zmian). Monitor korzysta tylko z wersji, którą zna; przy innej (np. plik z pamięci przeglądarki
+ * przy niepełnej aktualizacji) odmawia zapisu.
  * Rejestr: docs/clinical/ALGORITHMS.md, P-GH-PUNKTY-API.
  */
 (function (w) {
@@ -209,6 +214,49 @@
     return { ok: true, indeks: indeks };
   }
 
+  // Uszkodzony wpis: nie obiekt (null, brak wartości, liczba, napis, true/false). Pusty obiekt i tablica nim nie są —
+  // monitor je obsługuje. To samo kryterium co przypisanie pól w zmienWMiejscu.
+  function uszkodzony(c) {
+    return Object(c) !== c;
+  }
+
+  // Indeksy uszkodzonych wpisów, rosnąco; nie-tablica → [].
+  function uszkodzone(lista) {
+    var L = Array.isArray(lista) ? lista : [];
+    var wynik = [];
+    for (var i = 0; i < L.length; i += 1) if (uszkodzony(L[i])) wynik.push(i);
+    return wynik;
+  }
+
+  // Nowa lista bez uszkodzonych wpisów: te same obiekty (referencje), ta sama kolejność; nie-tablica → [].
+  function bezUszkodzonych(lista) {
+    var L = Array.isArray(lista) ? lista : [];
+    var wynik = [];
+    for (var i = 0; i < L.length; i += 1) if (!uszkodzony(L[i])) wynik.push(L[i]);
+    return wynik;
+  }
+
+  // Teksty dla lekarza przy n uszkodzonych wpisach (n ≥ 1): ostrzeżenie nad tabelą, nagłówek i treść komunikatu
+  // odmowy, napis przycisku naprawy. Odmiana: 1 wpis; 2–4 wpisy (bez 12–14); pozostałe — wpisów.
+  function komunikatyUszkodzonych(n) {
+    var k = Math.max(0, Math.floor(Number(n) || 0));
+    var jeden = k === 1;
+    var reszta10 = k % 10;
+    var reszta100 = k % 100;
+    var forma = jeden ? 'uszkodzony wpis'
+      : (reszta10 >= 2 && reszta10 <= 4 && (reszta100 < 12 || reszta100 > 14)) ? 'uszkodzone wpisy' : 'uszkodzonych wpisów';
+    var ile = k + ' ' + forma + ' bez danych';
+    return {
+      liczba: k,
+      ostrzezenie: 'Lista punktów zawiera ' + ile + '. ' + (jeden ? 'Nie jest pokazywany' : 'Nie są pokazywane')
+        + ' w tabeli. Zapisywanie i usuwanie punktów jest wstrzymane, dopóki ' + (jeden ? 'go' : 'ich') + ' nie usuniesz.',
+      naglowek: jeden ? 'Uszkodzony wpis na liście punktów' : 'Uszkodzone wpisy na liście punktów',
+      tresc: 'Nie zapisano: lista punktów leczenia tego pacjenta zawiera ' + ile + '. Usuń ' + (jeden ? 'go' : 'je')
+        + ', aby zapisywać punkty. Pozostałe punkty się nie zmienią.',
+      przycisk: jeden ? 'Usuń uszkodzony wpis' : 'Usuń uszkodzone wpisy (' + k + ')'
+    };
+  }
+
   // ---- Funkcje z efektami (zależności czytane dopiero przy wywołaniu) -------------------------------------------
 
   function persistence() {
@@ -314,7 +362,7 @@
   }
 
   w.VildaGhPunkty = Object.freeze({
-    wersja: 2,
+    wersja: 3,
     KLUCZE: KLUCZE,
     RODZAJE: RODZAJE,
     KOMUNIKATY: KOMUNIKATY,
@@ -329,6 +377,9 @@
     noweId: noweId,
     punkt: punkt,
     zmienWMiejscu: zmienWMiejscu,
+    uszkodzone: uszkodzone,
+    bezUszkodzonych: bezUszkodzonych,
+    komunikatyUszkodzonych: komunikatyUszkodzonych,
     wczytaj: wczytaj,
     zapisz: zapisz,
     gotowe: gotowe
