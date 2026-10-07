@@ -9230,7 +9230,17 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 | ładunek ≥ 4 MiB, `CompressionStream` oddaje prawdziwy gzip bez ostatnich 20 bajtów (atrapa błędu WebKit) | PUT niesie jawny JSON (`7B`), ten sam ładunek; czerwony na kodzie #573 |
 | ładunek ≥ 4 MiB, poprawny gzip | PUT niesie gzip, ISIZE = długość JSON |
 
-**Pokrycie ścieżek (uzupełnienie przeglądu).** Ten sam plik testów pilnuje teraz gzipa także w ponowieniu po 412 i w gałęzi bez ETagu oraz limitu czasu rejestracji (`POST /register` ~1,5 MB nie jest przerywane po 30 s); test „A wysyła gzip, B scala” sprawdza też, że w chmurze naprawdę leży gzip. Bez tych przypadków usunięcie kompresji z tych ścieżek nie dawało czerwonego testu (mutacje zmierzone w przeglądzie). Plik ma 17 przypadków: na kodzie sprzed P-SYNC-MOST czerwonych 12, na kodzie #573 czerwony 1 (ucięty gzip).
+**WIPE_GUARD w jednostkach surowych (uwaga Codex P1 do #573, krytyk kompletności).** Po P-SYNC-MOST `size` z `/status` to rozmiar bloba po kompresji (kilkanaście razy mniejszy), a strażnik porównywał z nim surowe bajty JSON, więc przepuszczał „pusty” stan z kilkuset kB notatek, który przed kompresją by zatrzymał. Stan synchronizacji zapamiętuje teraz surowy rozmiar bloba (`rawSize`, `rawEtag`) po scaleniu, po udanej wysyłce i po rejestracji. Gdy `/status` podaje ten sam ETag, strażnik bierze większą z wartości: surową lub serwerową. Przy innym ETagu zostaje rozmiar serwera (osłabienie szczątkowe; wysyłka i tak wymaga wcześniej udanego pobrania, które zapisze `rawSize`). Porównania „spakowane ze spakowanym” nadal nie ma, bo fałszywie blokowałoby małe sejfy bez pacjentów, ale z notatkami.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| chmura: gzip sejfu ~4,5 MiB, urządzenie scaliło go (`rawSize`), lokalnie 0 pacjentów i ~200 KB notatek | `WIPE_GUARD`, brak PUT; czerwony na kodzie #573 |
+| ta sama sytuacja po własnej wysyłce gzip (`rawSize` z wysyłki) | `WIPE_GUARD`, jeden PUT (pierwszy) |
+| chmura: jawny blob ~300 KB samych notatek, lokalnie te same notatki | wysyłka przechodzi (bez fałszywej blokady) |
+
+**Komunikat TIMEOUT** podaje rozmiar ciała poniżej 1 MiB w kB (np. „(30310 ms, 31 kB)”) zamiast „0.0 MB”.
+
+**Pokrycie ścieżek (uzupełnienie przeglądu).** Ten sam plik testów pilnuje teraz gzipa także w ponowieniu po 412 i w gałęzi bez ETagu oraz limitu czasu rejestracji (`POST /register` ~1,5 MB nie jest przerywane po 30 s); test „A wysyła gzip, B scala” sprawdza też, że w chmurze naprawdę leży gzip. Bez tych przypadków usunięcie kompresji z tych ścieżek nie dawało czerwonego testu (mutacje zmierzone w przeglądzie). Plik ma 21 przypadków: na kodzie sprzed P-SYNC-MOST czerwonych 14, na kodzie #573 czerwone 4 (ucięty gzip, dwa WIPE_GUARD, rozmiar w kB).
 
 **Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js` 34 → 35 (8 stron), precache (append-only), `SW_VERSION` 1.1.185 → 1.1.186 (+ pin), fixture wersji — `npm run podbij-wersje` względem `origin/audyt` (`7373a3c`).
 

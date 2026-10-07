@@ -367,6 +367,24 @@ describe('P-SYNC-MOST: limit czasu żądania z ciałem bloba zależny od rozmiar
     expect(blad.message).toContain(`(${oczekiwany} ms, ${(bajty / 1048576).toFixed(1)} MB)`);
   });
 
+  it('małe ciało: rozmiar w komunikacie TIMEOUT w kB, nie „0.0 MB”', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(20 * 1024, 'K');
+    const srv = atrapaSerwera();
+    srv.putWisi = true;
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+    let blad = null;
+    const obietnica = a.sync.syncPush().catch((e) => { blad = e; });
+    await czekajNaPut(srv);
+    const bajty = srv.puty[0].body.byteLength;
+    await vi.advanceTimersByTimeAsync(30000 + Math.ceil(bajty / 100) + 10);
+    await obietnica;
+    expect(blad).toMatchObject({ code: 'TIMEOUT', bytes: bajty });
+    expect(blad.message).toContain(`, ${Math.ceil(bajty / 1024)} kB).`);
+    expect(blad.message).not.toContain('0.0 MB');
+  });
+
   it('sufit 180 s dla bardzo dużego ciała (bez kompresji)', async () => {
     const klucz = await kluczSync();
     const dane = ladunek(15.5 * 1024 * 1024, 'X');
@@ -489,5 +507,58 @@ describe('P-SYNC-MOST: pokrycie wszystkich ścieżek pełnej wysyłki', () => {
       await ob;
       expect(blad).toMatchObject({ code: 'TIMEOUT' });
     });
+  });
+});
+
+// Uwaga Codex P1 do #573 i krytyk kompletności: po kompresji /status.size to rozmiar bloba po gzip, a WIPE_GUARD
+// porównywał z nim surowe bajty JSON. Strażnik przepuszczał wtedy „pusty” stan z kilkuset kB notatek, który przed
+// kompresją by zatrzymał. Urządzenie pamięta surowy rozmiar bloba (rawSize/rawEtag) z ostatniego scalenia albo
+// wysyłki i — przy tym samym ETagu — porównuje surowe z surowym.
+describe('P-SYNC-MOST-STOPKA: WIPE_GUARD w jednostkach surowych po kompresji', () => {
+  const notatki = (kB) => ({ patients: [], notes: [{ id: 'N-fikcyjna', text: 'notatka '.repeat(Math.ceil((kB * 1024) / 8)) }] });
+
+  it('chmura: gzip dużego sejfu; lokalnie 0 pacjentów i ~200 KB notatek → WIPE_GUARD, brak PUT', async () => {
+    const klucz = await kluczSync();
+    const pelny = ladunek(PROG + 512 * 1024, 'W');
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => pelny });
+    await a.sync.syncPush();
+    const gz = srv.blob.byteLength;
+    expect(gz * 4, 'blob w chmurze to gzip, kilkukrotnie mniejszy').toBeLessThan(PROG);
+
+    let tryb = 'pelny';
+    const b = urzadzenie({ klucz, eksport: () => (tryb === 'pusty' ? notatki(200) : pelny), etag: 'E0' });
+    expect((await b.sync.syncPull()).action).toBe('merged');
+    tryb = 'pusty';
+    const putyPrzed = srv.puty.length;
+    const lokalnie = new TextEncoder().encode(JSON.stringify(notatki(200))).length;
+    expect(lokalnie, 'bez poprawki: surowe ~200 KB ≥ ¼ gzipa, strażnik by przepuścił').toBeGreaterThanOrEqual(gz / 4);
+
+    await expect(b.sync.syncPush()).rejects.toMatchObject({ code: 'WIPE_GUARD' });
+    expect(srv.puty.length, 'chmura nienadpisana').toBe(putyPrzed);
+  });
+
+  it('mały sejf bez kompresji, tylko notatki po obu stronach → bez fałszywej blokady', async () => {
+    const klucz = await kluczSync();
+    const stan = notatki(300);
+    const srv = atrapaSerwera(await zaszyfruj(new TextEncoder().encode(JSON.stringify(stan)), klucz));
+    vi.stubGlobal('fetch', srv.fetch);
+    const b = urzadzenie({ klucz, eksport: () => stan, etag: 'E0' });
+    expect((await b.sync.syncPull()).action).toBe('merged');
+    expect((await b.sync.syncPush()).action).toBe('uploaded');
+  });
+
+  it('własna wysyłka zapamiętuje surowy rozmiar: kolejna próba „pustego” stanu przy tym samym ETagu jest zatrzymana', async () => {
+    const klucz = await kluczSync();
+    const pelny = ladunek(PROG + 256 * 1024, 'V');
+    let tryb = 'pelny';
+    const srv = atrapaSerwera();
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => (tryb === 'pusty' ? notatki(200) : pelny) });
+    await a.sync.syncPush();
+    tryb = 'pusty';
+    await expect(a.sync.syncPush()).rejects.toMatchObject({ code: 'WIPE_GUARD' });
+    expect(srv.puty).toHaveLength(1);
   });
 });
