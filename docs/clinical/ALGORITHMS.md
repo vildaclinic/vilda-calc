@@ -8462,6 +8462,51 @@ i sprawdza ją przed i po zmianie pacjenta, nowy test e2e w powłoce. Wersje z `
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
 
+## Edycja punktu terapii GH przy nieznanym pacjencie sesji karty trwa tylko przy niezmienionym punkcie (P-GH-EDYCJA-ODCISK, SW 1.1.192, `gh_therapy_monitor.js` 57, 2026-10-07)
+
+**Skąd.** Uzupełnienie P-GH-EDYCJA-LISTA po przeglądzie testów regresyjnych (2026-10-07), polecenie właściciela z
+2026-10-07. Druga warstwa P-GH-EDYCJA-LISTA porównuje pacjenta sesji karty przy otwarciu edycji i przy wczytaniu listy
+tylko wtedy, gdy oba znaczniki są niepuste. Gdy któregoś brakuje (np. pacjent bez sejfu), zostawała tylko pierwsza
+warstwa: obecność punktu o edytowanym id na bieżącej liście. Pełny opis ustaleń właściciel otrzymał poza repozytorium.
+
+**Reguła** (`gh_therapy_monitor.js`, komentarz `P-GH-EDYCJA-ODCISK`):
+- przy otwarciu edycji (także przy odtworzeniu stanu edycji DocPro) monitor zapamiętuje odcisk edytowanego punktu:
+  zapis JSON z kluczami posortowanymi (kolejność kluczy nie ma znaczenia);
+- oba znaczniki pacjenta niepuste — reguła jak dotąd (ten sam pacjent: edycja trwa; inny: kończy się);
+- znacznik pusty przy otwarciu albo przy wczytaniu listy — edycja trwa tylko, gdy punkt o edytowanym id jest na bieżącej
+  liście taki sam jak przy otwarciu. Punkt zmieniony poza edycją kończy ją tak samo jak punkt, którego nie ma na liście:
+  formularz schowany, stan edycji pusty, bez zapisu; zapis takiej edycji kończy się komunikatem „Nie zapisano zmian:
+  edytowany punkt nie należy do bieżącej listy punktów. Otwórz edycję ponownie.”
+
+**Co się nie zmienia.** Zwykła edycja punktu (zapis w miejscu), także po odświeżeniu tej samej listy i po przejściach
+paneli powłoki; praca z pacjentem z sejfu (oba znaczniki niepuste); dodawanie, punkt wsteczny, usuwanie; kształt rekordu,
+sygnały zapisu, wzory, dawki i jednostki.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych w rekordzie pacjenta), nie kliniczna.
+Lekarz może zobaczyć zamknięty formularz edycji i komunikat w sytuacji, w której edytowany punkt zmienił się poza edycją,
+a pacjent sesji karty nie jest znany. Źródło medyczne: nie dotyczy. Wymaga akceptacji właściciela.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne, lista [Włączenie, Kontynuacja], edycja Kontynuacji):
+- znacznik pusty przy otwarciu i teraz, Kontynuacja w pamięci modułu zmieniona (wiek, masa, preparat), klik
+  „Kontynuacja” → komunikat jak wyżej, bez zapisu, lista = lista zmieniona;
+- to samo przy znaczniku pustym tylko przy otwarciu albo tylko teraz → jak wyżej;
+- znacznik pusty, ta sama lista z odwróconą kolejnością kluczy, odświeżenie → edycja trwa, zapis w miejscu;
+- oba znaczniki `fikc-pacjent-1`, Kontynuacja zmieniona, odświeżenie → edycja trwa (reguła jak dotąd).
+
+**Strażnicy.**
+- `tests/unit/gh-edycja-biezaca-lista.test.mjs` — nowa grupa „pusty znacznik pacjenta…” (11 przypadków na prawdziwym
+  monitorze w atrapie): na `audyt` `34f2891` czerwone 7, kontrole zielone po obu stronach. Mutacje łatki: reguła w
+  `Gea` przywrócona → 7 czerwonych; odcisk bez sortowania kluczy → 3; brak odcisku przy otwarciu → 7; brak czyszczenia
+  odcisku w `Gek` — mutacja równoważna (otwarcie edycji zawsze nadpisuje odcisk, a bez edycji reguła nie działa).
+- `tests/e2e/gh-edycja-przejscia-paneli.spec.mjs` (kontrola, powłoka `app.html`): pacjent bez sejfu, edycja punktu
+  w DocPro, dwa przejścia Start ↔ DocPro — edycja trwa, punkt bez zmian, zapis w miejscu.
+
+**Wersje.** `gh_therapy_monitor.js` 56 → 57 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.191 → 1.1.192
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje`
+względem `audyt` `bc8ae93` (P-META-KONTA, P-KOSZ-SCALANIE-PRZYWROC i LH/FSH #578 nadały wcześniej 1.1.189–1.1.191).
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
+
 ## Wspólne API punktów terapii GH, rata 1: moduł `VildaGhPunkty` ładowany na Start i DocPro, jeszcze nieużywany (P-GH-PUNKTY-API rata 1, SW 1.1.178, nowy `vilda_gh_punkty.js` 1, 2026-10-06)
 
 **Skąd.** Projekt „Wspólne API punktów GH” (`docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 2), PR-3 planu, po testach

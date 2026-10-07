@@ -244,3 +244,84 @@ describe('zmiana pacjenta sesji karty w innej ramce kończy edycję od razu', ()
     }
   });
 });
+
+// P-GH-EDYCJA-ODCISK. Gdy znacznik pacjenta sesji karty jest pusty przy otwarciu edycji albo przy wczytaniu listy,
+// porównanie pacjentów z P-GH-EDYCJA-LISTA nie działa. Wtedy edycja trwa tylko, gdy punkt o edytowanym id jest na
+// bieżącej liście taki sam jak przy otwarciu edycji (kolejność kluczy bez znaczenia). Punkt zmieniony poza edycją
+// kończy ją tak samo jak punkt, którego nie ma na liście. Oba znaczniki niepuste — reguła jak dotąd.
+describe('pusty znacznik pacjenta: edycja trwa tylko przy niezmienionym punkcie', () => {
+  const ZNACZNIKI_Z_PUSTYM = [[null, null], [null, 'fikc-pacjent-1'], ['fikc-pacjent-1', null]];
+  const zmieniony = { ...KONTYNUACJA, ageYears: 11, weight: 41, height: 142, drug: 'Genotropin 5,3 mg', doseAbs: 1.1 };
+  const odwroconeKlucze = (p) => Object.fromEntries(Object.entries(p).reverse());
+
+  it.each(ZNACZNIKI_Z_PUSTYM)('znacznik %s → %s, punkt zmieniony poza edycją: zapis edycji kończy się komunikatem, bez zapisu', (przyOtwarciu, teraz) => {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA], ghTherapyCalc: KARTA });
+    ustawPacjenta(atrapa, przyOtwarciu);
+    atrapa.edytuj(KONTYNUACJA.id, { ghEditWeight: '36.4' });
+    ustawPacjenta(atrapa, teraz);
+    atrapa.ustawModul([WLACZENIE, zmieniony]);
+    const od = atrapa.stan().dziennik.length;
+
+    atrapa.kliknij('btnGhContinue');
+
+    expect(atrapa.stan().komunikat).toBe(NIE_ZAPISANO);
+    expect(zapisy(atrapa.stan().dziennik.slice(od))).toEqual([]);
+    expect(atrapa.stan().modul).toEqual([WLACZENIE, zmieniony]);
+    expect(atrapa.stan().edycjaWidoczna).toBe(false);
+    expect(api(atrapa).captureState()).toBeNull();
+  });
+
+  it.each(ZNACZNIKI_Z_PUSTYM)('znacznik %s → %s, punkt zmieniony i lista odświeżona: edycja kończy się bez zapisu', (przyOtwarciu, teraz) => {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
+    ustawPacjenta(atrapa, przyOtwarciu);
+    atrapa.edytuj(KONTYNUACJA.id);
+    ustawPacjenta(atrapa, teraz);
+    atrapa.ustawModul([WLACZENIE, zmieniony]);
+
+    expect(zapisy(odswiez(atrapa))).toEqual([]);
+    expect(atrapa.stan().edycjaWidoczna).toBe(false);
+    expect(api(atrapa).captureState()).toBeNull();
+    expect(atrapa.stan().modul).toEqual([WLACZENIE, zmieniony]);
+  });
+
+  it.each(ZNACZNIKI_Z_PUSTYM)('kontrola: znacznik %s → %s, ten sam punkt (także z inną kolejnością kluczy) — edycja trwa i zapisuje w miejscu', (przyOtwarciu, teraz) => {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA], ghTherapyCalc: KARTA });
+    ustawPacjenta(atrapa, przyOtwarciu);
+    atrapa.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
+    ustawPacjenta(atrapa, teraz);
+    atrapa.ustawModul([odwroconeKlucze(WLACZENIE), odwroconeKlucze(KONTYNUACJA)]);
+    odswiez(atrapa);
+    expect(api(atrapa).captureState()).toMatchObject({ currentEditingId: KONTYNUACJA.id });
+
+    atrapa.kliknij('btnGhContinue');
+
+    expect(atrapa.stan().komunikat).toBeNull();
+    expect(rodzaje(atrapa.stan().dziennik).slice(-3)).toEqual(['M', 'E', 'BC']);
+    const lista = atrapa.stan().modul;
+    expect(lista.map((p) => p.id)).toEqual([WLACZENIE.id, KONTYNUACJA.id]);
+    expect(lista[1]).toMatchObject({ height: 139, type: 'continue' });
+  });
+
+  it('kontrola: oba znaczniki niepuste i ten sam pacjent — punkt zmieniony poza edycją nie kończy edycji (reguła jak dotąd)', () => {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
+    ustawPacjenta(atrapa, 'fikc-pacjent-1');
+    atrapa.edytuj(KONTYNUACJA.id);
+    atrapa.ustawModul([WLACZENIE, zmieniony]);
+    odswiez(atrapa);
+    expect(atrapa.stan().edycjaWidoczna).toBe(true);
+    expect(api(atrapa).captureState()).toMatchObject({ currentEditingId: KONTYNUACJA.id });
+  });
+
+  it('odtworzenie stanu edycji przy pustym znaczniku zapamiętuje punkt z bieżącej listy: zmiana punktu potem kończy edycję', () => {
+    const zrodlo = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
+    zrodlo.edytuj(KONTYNUACJA.id, { ghEditWeight: '36.4' });
+    const stanEdycji = api(zrodlo).captureState();
+
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
+    expect(api(atrapa).restoreState(stanEdycji)).toBe(true);
+    expect(api(atrapa).captureState()).toMatchObject({ currentEditingId: KONTYNUACJA.id, fields: { weight: '36.4' } });
+    atrapa.ustawModul([WLACZENIE, zmieniony]);
+    odswiez(atrapa);
+    expect(api(atrapa).captureState()).toBeNull();
+  });
+});

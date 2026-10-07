@@ -411,6 +411,35 @@ function apiPunktow() {                         // (Gpa) bramka każdego zapisu:
 
 Bez zmian: miejsca wołające `apiPunktow()` (He, ghAddRetroPoint, re, naprawUszkodzone, L) i `odmowaBezModulu()` — bez modułu dawki dostają `null` i pokazują komunikat z PR-5.
 
+## Łatka P-GH-EDYCJA-ODCISK (`gh_therapy_monitor.js` 56 → 57, 2026-10-07)
+
+Uzupełnienie P-GH-EDYCJA-LISTA: przy pustym znaczniku pacjenta sesji karty (przy otwarciu edycji albo przy wczytaniu listy) edycja trwa tylko przy niezmienionym punkcie. Zmiana wprost w artefakcie, miejsca mają komentarz `P-GH-EDYCJA-ODCISK`. Opis działania: `docs/clinical/ALGORITHMS.md`, P-GH-EDYCJA-ODCISK. Łatkę nakłada się na wersję 56.
+
+```js
+let odciskEdycji = null;                        // (Gefp) obok znacznika pacjenta edycji (Gep)
+function odcisk(punkt) {                        // (Gpfp) JSON z kluczami posortowanymi (także w obiektach zagnieżdżonych)
+  try {
+    return punkt && typeof punkt === 'object'
+      ? JSON.stringify(punkt, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)
+        ? Object.keys(v).sort().reduce((o, K) => { o[K] = v[K]; return o; }, {}) : v))
+      : null;
+  } catch { return null; }
+}
+
+function edycjaAktualna() {                     // (Gea) wołane w D() i przy zapisie edycji
+  if (x == null) return true;
+  const lista = Array.isArray(window.ghTherapyPoints) ? window.ghTherapyPoints : [];
+  if (!lista.some((t) => t && String(t.id) === String(x))) return false;      // P-GH-EDYCJA-LISTA
+  const teraz = znacznikPacjenta();                                            // (Gpid)
+  if (Gep && teraz) return String(Gep) === String(teraz);                     // jak dotąd
+  if (odciskEdycji == null) return true;                                       // P-GH-EDYCJA-ODCISK
+  return odcisk(lista.find((t) => t && String(t.id) === String(x))) === odciskEdycji;
+}
+
+// O(id) — otwarcie edycji (także z restoreState):  x = id; Gep = znacznikPacjenta(); odciskEdycji = odcisk(punkt);
+// Gek() — koniec edycji:                           x = null; Gep = null; odciskEdycji = null;
+```
+
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
 Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.
