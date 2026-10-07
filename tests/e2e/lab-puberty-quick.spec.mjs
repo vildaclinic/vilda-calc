@@ -52,7 +52,6 @@ const snapshot = (page, analyte = 'lh') => page.evaluate((testKey) => window.Vil
 
 async function currentSample(page) {
   await select(page, 'Kind', 'G');
-  await select(page, 'Context', 'basal-untreated');
   await configureProfile(page);
   await page.locator('#labValue').fill('2');
 }
@@ -70,6 +69,10 @@ test('closed quick form keeps four basic controls and imports age and Tanner wit
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyUsePatientContext')).toHaveCount(0);
+  await expect(page.locator('#labPubertyContext, #labPubertyContextSummary, #labPubertyEditContext, #labPubertyOpenContext, #labPubertySectionContext')).toHaveCount(0);
+  await expect(page.locator('#labPubertyScope')).toBeVisible();
+  await expect(page.locator('#labPubertyScope')).toContainText('bazaln');
+  await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
   await page.locator('#labValue').fill('2');
   const saved = await snapshot(page);
   expect(saved.evaluation.input.contextBasis).toBe('current-patient');
@@ -86,7 +89,6 @@ test('an early onset from the current card retains conservative age precision an
   await choose(page);
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await select(page, 'Kind', 'Th');
-  await select(page, 'Context', 'basal-untreated');
   await configureProfile(page);
   await page.locator('#labValue').fill('2');
   const saved = await snapshot(page);
@@ -146,15 +148,15 @@ test('unknown context never becomes no treatment and a different sample method s
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
   await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
-  await select(page, 'Context', 'basal-untreated');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'age')).not.toHaveAttribute('data-applicability', 'conditional');
-  expect((await snapshot(page)).evaluation).not.toHaveProperty('referencePreview');
+  expect(unknown.evaluation.input.measurementKind).toBe('unknown');
+  await expect(page.locator('#labPubertyContext')).toHaveCount(0);
   await page.locator('#labPubertyUnknownMethod').check();
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
   expect((await snapshot(page)).evaluation.input.assay.confirmation).toBe('unknown');
   await page.locator('#labPubertyUnknownMethod').uncheck();
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  expect((await snapshot(page)).evaluation.input.treatment).toEqual(unknown.evaluation.input.treatment);
 });
 
 test('a one-field reported range uses the real engine, preserves its text and stays distinct from catalog references', async ({ page }) => {
@@ -187,14 +189,15 @@ test('a dated previous sample has its own age and does not inherit present Tanne
   await fill(page, 'SampleDate', '2020-06-17');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
   await fill(page, 'AgeYears', '8');
-  await select(page, 'Context', 'basal-untreated');
   const historical = await snapshot(page);
   expect(historical.evaluation.input.contextBasis).toBe('sample');
   expect(historical.evaluation.input.sampleDateISO).toBe('2020-06-17');
   expect(historical.evaluation.input.age.years).toBe(8);
   expect(historical.evaluation.input.puberty.stage).toBeNull();
+  expect(historical.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
+  expect(historical.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'above' } });
   expect(historical.evaluation.ageAtSample.lowerYears).toBe(8);
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
   const shared = await page.evaluate(() => window.VildaPersistence.readShared());
@@ -227,6 +230,8 @@ test('pin and history preserve the configured profile and reported range despite
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(recorded.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', 'within');
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
+  await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
+  expect(saved.labResult.assessment.evaluation.input.measurementKind).toBe('unknown');
   await expect(recorded).toContainText('0,5–3');
 });
 
@@ -244,7 +249,6 @@ test('a stale saved profile cannot silently select current reference data', asyn
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaLabPubertyRuntime));
   await choose(page);
-  await select(page, 'Context', 'basal-untreated');
   await page.locator('#labValue').fill('2');
   await expect(page.locator('#labPubertyConfiguredProfile')).toHaveValue('');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');

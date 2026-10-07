@@ -4,7 +4,7 @@ import { expect } from './test-czas.mjs';
 // user-facing actions, never by unhiding DOM nodes or calling form internals.
 const sections = {
   Sex: 'Patient', AgeYears: 'Patient', AgeMonths: 'Patient', BirthDate: 'Date', SampleDate: 'Date',
-  Kind: 'Stage', Stage: 'Stage', Context: 'Context', ReportedRange: 'Range',
+  Kind: 'Stage', Stage: 'Stage', ReportedRange: 'Range',
   CnsSymptoms: 'Extra', Regression: 'Extra', TesticularVolume: 'Extra', VolumeMethod: 'Extra', Preterm: 'Extra',
 };
 

@@ -67,16 +67,29 @@ async function expectNoVolume(page) {
 }
 
 async function expectReadableSummaries(page) {
-  for (const id of ['labPubertyMethodSummary', 'labPubertyContextSummary']) {
+  for (const id of ['labPubertyMethodSummary']) {
     const metrics = await page.locator(`#${id}`).evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return { width: rect.width, height: rect.height, lineHeight: parseFloat(getComputedStyle(element).lineHeight) };
     });
     // A global mobile button width once collapsed these spans to one letter per
     // line. No horizontal overflow alone would detect that unusable layout.
-    expect(metrics.width, `${id} retains space beside its action`).toBeGreaterThanOrEqual(100);
+    expect(metrics.width, `${id} retains readable line width`).toBeGreaterThanOrEqual(100);
     expect(metrics.height, `${id} stays readable in at most four lines`).toBeLessThanOrEqual(metrics.lineHeight * 4 + 1);
   }
+  // The scope is a full paragraph, not the former short summary beside a
+  // button. Its natural line count depends on font metrics and viewport width;
+  // it must retain readable width and display all of its wrapped text.
+  const scope = page.locator('#labPubertyScope');
+  await expect(scope).toBeVisible();
+  const scopeMetrics = await scope.evaluate((element) => ({
+    width: element.getBoundingClientRect().width,
+    clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+    clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+  }));
+  expect(scopeMetrics.width, 'scope retains readable line width').toBeGreaterThanOrEqual(100);
+  expect(scopeMetrics.scrollWidth, 'scope text is not clipped horizontally').toBeLessThanOrEqual(scopeMetrics.clientWidth + 1);
+  expect(scopeMetrics.scrollHeight, 'scope text is not clipped vertically').toBeLessThanOrEqual(scopeMetrics.clientHeight + 1);
 }
 
 async function installPendingSource(page) {

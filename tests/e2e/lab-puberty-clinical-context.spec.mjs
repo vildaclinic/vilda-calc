@@ -60,13 +60,12 @@ const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.get
   testKey: 'lh', raw: document.getElementById('labValue').value, unit: document.getElementById('labUnit').value,
 }));
 
-async function sample(page, { sex = 'M', birthDate = '2012-06-17', kind = 'G', stage = '4', gnrha = 'no', value = '2' } = {}) {
+async function sample(page, { sex = 'M', birthDate = '2012-06-17', kind = 'G', stage = '4', value = '2' } = {}) {
   await fill(page, 'SampleDate', SAMPLE_DATE);
   await fill(page, 'BirthDate', birthDate);
   await select(page, 'Sex', sex);
   await select(page, 'Kind', kind);
   await select(page, 'Stage', stage);
-  if (gnrha !== null) await select(page, 'Context', gnrha === 'no' ? 'basal-untreated' : 'hormonal');
   await configureProfile(page);
   await page.locator('#labValue').fill(value);
 }
@@ -84,7 +83,7 @@ async function expectVisibleParagraph(container, pattern) {
   return paragraph;
 }
 
-test('finished GnRHa stays unknown despite conditional ranges and a source refresh preserves an explicit answer', async ({ page }) => {
+test('finished GnRHa stays unknown, active treatment blocks current references and dated samples stay independent', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await chooseLH(page);
@@ -111,30 +110,40 @@ test('finished GnRHa stays unknown despite conditional ranges and a source refre
   };
   await refresh('zakonczone');
   await expect(page.locator('#labPubertyPatientContext')).toContainText('GnRHa: zakończone');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
-  await sample(page, { gnrha: null });
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(page.locator('#labPubertyContext')).toHaveCount(0);
+  await select(page, 'Kind', 'G');
+  await configureProfile(page);
+  await page.locator('#labValue').fill('2');
+  await expectWithinRanges(page);
   await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
   await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
   const unknown = await snapshot(page);
-  expect(unknown.evaluation.input.treatment.gnrha).toBe('unknown');
+  expect(unknown.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
   expect(unknown.evaluation.biochemical.byAge.status).toBe('unavailable');
   expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' } });
 
-  await select(page, 'Context', 'basal-untreated');
-  await expectWithinRanges(page);
-  await expect(comparison(page, 'age')).not.toHaveAttribute('data-applicability', 'conditional');
   await refresh('w-trakcie');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
-  expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('no');
+  await expect(page.locator('#labPubertyPatientContext')).toContainText('leczenie GnRHa w trakcie');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
+  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
+  const treated = await snapshot(page);
+  expect(treated.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
+  expect(treated.evaluation.biochemical.reasonCodes).toContain('treatment_requires_separate_profile');
+  expect(treated.evaluation).not.toHaveProperty('referencePreview');
+
+  await sample(page);
+  const dated = await snapshot(page);
+  expect(dated.evaluation.input.contextBasis).toBe('sample');
+  expect(dated.evaluation.input.sampleDateISO).toBe(SAMPLE_DATE);
+  expect(dated.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
+  await expectWithinRanges(page);
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  await refresh('brak');
+  expect((await snapshot(page)).evaluation.input.treatment).toEqual(dated.evaluation.input.treatment);
   await page.locator('#labClearBtn').click();
   await chooseLH(page);
-  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
   await page.locator('#labValue').fill('2');
-  expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('yes');
-  await refresh('brak');
-  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
-  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ gnrha: 'no', sexSteroids: 'unknown' });
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'no', sexSteroids: 'unknown' });
 });
 
 test('regression remains a visible clinical warning when both LH ranges are within', async ({ page }) => {
@@ -152,9 +161,30 @@ test('regression remains a visible clinical warning when both LH ranges are with
 
   for (const answer of ['no', 'unknown']) {
     await select(page, 'Regression', answer);
-    await expect(clinical(page)).toHaveAttribute('data-status', 'no_timing_alert');
+    await expect(clinical(page)).toHaveAttribute('data-status', 'limited');
+    await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'treatment_context');
+    await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
     await expectWithinRanges(page);
   }
+});
+
+test('G1 at fourteen retains the missing-history limitation without diagnosing new delayed onset', async ({ page }) => {
+  await open(page);
+  await chooseLH(page);
+  await sample(page, { stage: '1' });
+  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  // Mayo's G1 row is age-limited; it cannot be extended to a fourteen-year-old.
+  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(clinical(page)).toHaveAttribute('data-status', 'limited');
+  await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'treatment_context');
+  await expect(clinical(page)).toContainText('Brak cech wymaga uwzględnienia wywiadu');
+  await expect(clinical(page)).toContainText('Nie rozpoznajemy nowego opóźnienia');
+  const saved = await snapshot(page);
+  expect(saved.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
+  expect(saved.evaluation.clinical.reasonCodes).toContain('treatment_or_previous_onset_context');
+  expect(saved.evaluation.clinical.reasonCodes).not.toContain('absent_onset');
+  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'unavailable' } });
 });
 
 test('CNS symptoms and regression survive pinning, form changes and reading the recorded history', async ({ page }) => {
