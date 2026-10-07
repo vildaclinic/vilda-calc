@@ -1,7 +1,8 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
 
-// Medical-audit regressions use the production form, evaluator and renderer.
+// Medical-audit regressions use the current form and real historical snapshots.
+// Removed controls are exercised only through the preserved public legacy contract.
 // Patient records and vaults are fictional and isolated in each browser context.
 test.use({ serviceWorkers: 'block' });
 const SAMPLE_DATE = '2026-06-17';
@@ -60,9 +61,9 @@ const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.get
   testKey: 'lh', raw: document.getElementById('labValue').value, unit: document.getElementById('labUnit').value,
 }));
 
-async function sample(page, { sex = 'M', birthDate = '2012-06-17', kind = 'G', stage = '4', value = '2' } = {}) {
-  await fill(page, 'SampleDate', SAMPLE_DATE);
-  await fill(page, 'BirthDate', birthDate);
+async function sample(page, { sex = 'M', age = '14', months = '0', kind = 'G', stage = '4', value = '2' } = {}) {
+  await fill(page, 'AgeYears', age);
+  await fill(page, 'AgeMonths', months);
   await select(page, 'Sex', sex);
   await select(page, 'Kind', kind);
   await select(page, 'Stage', stage);
@@ -70,10 +71,38 @@ async function sample(page, { sex = 'M', birthDate = '2012-06-17', kind = 'G', s
   await page.locator('#labValue').fill(value);
 }
 
-async function expectWithinRanges(page) {
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
+async function expectWithinRanges(container) {
+  await expect(container.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
+  await expect(container.locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'within');
 }
+
+// These fictional notes represent data accepted by the previous UI. Build,
+// evaluate, snapshot, persist and display them through production APIs.
+async function recordLegacySample(page, patientId, fields = {}, value = '2') {
+  return page.evaluate(async ({ id, overrides, raw, sampleDate }) => {
+    const profile = window.VildaLabPubertyData.profiles.find((item) => item.id === 'mayo-lh-pediatric');
+    const input = window.VildaLabPubertyUI.buildInput({
+      contextBasis: 'sample', sampleDate, birthDate: '2012-06-17', sex: 'M',
+      kind: 'G', stage: '4', specimen: 'serum',
+      configuredAssay: { profileId: profile.id, profileVersion: profile.version, methodId: profile.method.id },
+      ...overrides,
+    }, { analyte: 'lh', raw, unit: 'IU/L' });
+    const evaluation = window.VildaLabPuberty.evaluate(input, window.VildaLabPubertyData);
+    const lab = { test: 'LH', testKey: 'lh', value: raw, valueNum: Number(raw), unit: 'IU/L', clinicalDateISO: sampleDate };
+    const savedAssessment = window.VildaLabSnapshot.create(evaluation, lab);
+    if (savedAssessment.status !== 'recorded') throw new Error('Production snapshot rejected historical clinical fixture');
+    const note = await window.VildaVault.savePatientNote({
+      patientId: id, title: 'Fikcyjny wcześniejszy kontekst kliniczny', body: 'Syntetyczny zapis zgodny ze starszym kontraktem',
+      category: 'wynik-badania', clinicalDateISO: sampleDate, labResult: { ...lab, assessment: savedAssessment },
+    });
+    return { note, assessment: savedAssessment };
+  }, { id: patientId, overrides: fields, raw: value, sampleDate: SAMPLE_DATE });
+}
+async function openTimeline(page, patientId) {
+  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+}
+const historicalAssessment = (page, id) => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
 
 async function expectVisibleParagraph(container, pattern) {
   const paragraph = container.locator(':scope > p').filter({ hasText: pattern });
@@ -83,7 +112,7 @@ async function expectVisibleParagraph(container, pattern) {
   return paragraph;
 }
 
-test('finished GnRHa stays unknown, active treatment blocks current references and dated samples stay independent', async ({ page }) => {
+test('finished GnRHa stays unknown, active treatment blocks current references and older saved samples stay independent', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await chooseLH(page);
@@ -114,7 +143,7 @@ test('finished GnRHa stays unknown, active treatment blocks current references a
   await select(page, 'Kind', 'G');
   await configureProfile(page);
   await page.locator('#labValue').fill('2');
-  await expectWithinRanges(page);
+  await expectWithinRanges(assessment(page));
   await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
   await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
   const unknown = await snapshot(page);
@@ -131,40 +160,55 @@ test('finished GnRHa stays unknown, active treatment blocks current references a
   expect(treated.evaluation.biochemical.reasonCodes).toContain('treatment_requires_separate_profile');
   expect(treated.evaluation).not.toHaveProperty('referencePreview');
 
-  await sample(page);
-  const dated = await snapshot(page);
-  expect(dated.evaluation.input.contextBasis).toBe('sample');
-  expect(dated.evaluation.input.sampleDateISO).toBe(SAMPLE_DATE);
-  expect(dated.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
-  await expectWithinRanges(page);
-  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  // A previously recorded sample retains its own context even while the
+  // current patient has known treatment. The new UI cannot create a dated one.
+  await expect(page.locator('#labPubertySampleDate, #labPubertyBirthDate, #labPubertyOpenDate')).toHaveCount(0);
+  const dated = await recordLegacySample(page, patientId);
+  expect(dated.assessment.evaluation.input.contextBasis).toBe('sample');
+  expect(dated.assessment.evaluation.input.sampleDateISO).toBe(SAMPLE_DATE);
+  expect(dated.assessment.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
+  expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('yes');
   await refresh('brak');
-  expect((await snapshot(page)).evaluation.input.treatment).toEqual(dated.evaluation.input.treatment);
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'no', sexSteroids: 'unknown' });
   await page.locator('#labClearBtn').click();
   await chooseLH(page);
   await page.locator('#labValue').fill('2');
   expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'no', sexSteroids: 'unknown' });
+  const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), dated.note.id);
+  expect(reread.labResult.assessment).toEqual(dated.assessment);
+  await openTimeline(page, patientId);
+  const recorded = historicalAssessment(page, dated.note.id);
+  await expectWithinRanges(recorded);
+  await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
 });
 
-test('regression remains a visible clinical warning when both LH ranges are within', async ({ page }) => {
+test('older regression answers retain their clinical meaning after removing the live question', async ({ page }) => {
   await open(page);
+  const patientId = await createPatient(page);
   await chooseLH(page);
   await sample(page);
-  await select(page, 'Regression', 'yes');
-  await expectWithinRanges(page);
-  await expect(assessment(page)).toHaveAttribute('data-summary-status', 'attention');
-  await expectVisibleParagraph(clinical(page), /regresj/i);
-  const saved = await snapshot(page);
-  expect(saved.evaluation.input.history.regression).toBe('yes');
-  expect(saved.evaluation.clinical.reasonCodes).toContain('reported_puberty_regression');
-  expect(saved.evaluation.clinical.text).toMatch(/regresj/i);
-
-  for (const answer of ['no', 'unknown']) {
-    await select(page, 'Regression', answer);
-    await expect(clinical(page)).toHaveAttribute('data-status', 'limited');
-    await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'treatment_context');
-    await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
-    await expectWithinRanges(page);
+  await expect(page.locator('#labPubertyRegression')).toHaveCount(0);
+  expect((await snapshot(page)).evaluation.input.history.regression).toBe('unknown');
+  const records = [];
+  for (const answer of ['yes', 'no', 'unknown']) {
+    records.push({ answer, ...await recordLegacySample(page, patientId, { regression: answer }) });
+  }
+  await openTimeline(page, patientId);
+  for (const saved of records) {
+    const recorded = historicalAssessment(page, saved.note.id);
+    const savedClinical = recorded.locator('.vilda-lab-clinical');
+    await expectWithinRanges(recorded);
+    expect(saved.assessment.evaluation.input.history.regression).toBe(saved.answer);
+    if (saved.answer === 'yes') {
+      await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
+      await expectVisibleParagraph(savedClinical, /regresj/i);
+      expect(saved.assessment.evaluation.clinical.reasonCodes).toContain('reported_puberty_regression');
+      expect(saved.assessment.evaluation.clinical.text).toMatch(/regresj/i);
+    } else {
+      await expect(savedClinical).toHaveAttribute('data-status', 'limited');
+      await expect(savedClinical).toHaveAttribute('data-clinical-code', 'treatment_context');
+      await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
+    }
   }
 });
 
@@ -187,100 +231,102 @@ test('G1 at fourteen retains the missing-history limitation without diagnosing n
   expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'unavailable' } });
 });
 
-test('CNS symptoms and regression survive pinning, form changes and reading the recorded history', async ({ page }) => {
+test('older CNS symptoms and regression survive current form changes, pinning and history reload', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await chooseLH(page);
   await sample(page);
-  await select(page, 'CnsSymptoms', 'yes');
-  await expectWithinRanges(page);
-  await expect(assessment(page)).toHaveAttribute('data-summary-status', 'attention');
-  await expectVisibleParagraph(clinical(page), /OUN/);
-  await select(page, 'Regression', 'yes');
-  await expectVisibleParagraph(clinical(page), /regresj/i);
-  const before = await snapshot(page);
-  expect(before.status).toBe('recorded');
+  const legacy = await recordLegacySample(page, patientId, { cnsSymptoms: 'yes', regression: 'yes' });
+  const before = legacy.assessment;
   expect(before.evaluation.input.history).toMatchObject({ cnsSymptoms: 'yes', regression: 'yes' });
+  await expect(page.locator('#labPubertyCnsSymptoms, #labPubertyRegression')).toHaveCount(0);
+  expect((await snapshot(page)).evaluation.input.history).toMatchObject({ cnsSymptoms: 'unknown', regression: 'unknown' });
+  await page.locator('#labValue').fill('20');
+  const current = await snapshot(page);
   await page.locator('#labPinResultBtn').click();
-  await expect(page.locator('#labPinDate')).toHaveValue(SAMPLE_DATE);
-  await page.locator('#labPinComment').fill('Fikcyjny wywiad zapisany z próbką');
+  await page.locator('#labPinComment').fill('Fikcyjny bieżący wynik bez dodatkowego wywiadu');
   await page.locator('#labPinSave').click();
   await expect(page.locator('#labPinOverlay')).toHaveCount(0);
   const notes = await page.evaluate((id) => window.VildaVault.listPatientNotesForPatient(id), patientId);
-  expect(notes).toHaveLength(1);
-  const saved = notes[0];
-  expect(saved.labResult.assessment.evaluation).toEqual(before.evaluation);
+  expect(notes).toHaveLength(2);
+  expect(notes.find((note) => note.id !== legacy.note.id).labResult.assessment.evaluation).toEqual(current.evaluation);
 
-  await select(page, 'Regression', 'no');
-  await select(page, 'CnsSymptoms', 'no');
-  await page.locator('#labValue').fill('20');
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
-  const after = await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.id);
-  expect(after.labResult.assessment).toEqual(saved.labResult.assessment);
+  const after = await page.evaluate((id) => window.VildaVault.getPatientNote(id), legacy.note.id);
+  expect(after.labResult.assessment).toEqual(before);
   const series = await page.evaluate((id) => window.VildaVault.listPatientLabSeries(id), patientId);
-  const point = series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === saved.id);
+  const point = series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === legacy.note.id);
   expect(point.assessment.evaluation.clinical).toEqual(before.evaluation.clinical);
-  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
-  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
+  await openTimeline(page, patientId);
+  const recorded = historicalAssessment(page, legacy.note.id);
   await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
   await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /OUN/);
   await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /regresj/i);
-  await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
-  await expect(recorded.locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'within');
+  await expectWithinRanges(recorded);
 });
 
-test('early Th2 with CNS symptoms adds specialist assessment without automatically ordering MRI', async ({ page }) => {
+test('recorded early Th2 with CNS symptoms retains specialist advice without automatically ordering MRI', async ({ page }) => {
   await open(page);
-  await chooseLH(page);
-  await sample(page, { sex: 'F', birthDate: '2019-06-17', kind: 'Th', stage: '2', value: '0.1' });
-  await select(page, 'CnsSymptoms', 'yes');
-  await expectWithinRanges(page);
-  await expect(assessment(page)).toHaveAttribute('data-summary-status', 'attention');
-  await expectVisibleParagraph(clinical(page), /^Objawy OUN:/);
-  const warning = await expectVisibleParagraph(clinical(page), /^Objawy OUN przy wczesnym/);
+  const patientId = await createPatient(page);
+  const saved = await recordLegacySample(page, patientId, { sex: 'F', birthDate: '2019-06-17', kind: 'Th', stage: '2', cnsSymptoms: 'yes' }, '0.1');
+  await openTimeline(page, patientId);
+  const recorded = historicalAssessment(page, saved.note.id);
+  const savedClinical = recorded.locator('.vilda-lab-clinical');
+  await expectWithinRanges(recorded);
+  await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
+  await expectVisibleParagraph(savedClinical, /^Objawy OUN:/);
+  const warning = await expectVisibleParagraph(savedClinical, /^Objawy OUN przy wczesnym/);
   await expect(warning).toContainText('sprawną ocenę');
   await expect(warning).toContainText(/endokrynologa dziecięcego/);
-  await expect(clinical(page)).not.toContainText(/wykonaj MRI|należy wykonać MRI|wymaga MRI|konieczne MRI/i);
-  expect((await snapshot(page)).evaluation.clinical.reasonCodes).toContain('early_thelarche_with_cns_symptoms');
+  await expect(savedClinical).not.toContainText(/wykonaj MRI|należy wykonać MRI|wymaga MRI|konieczne MRI/i);
+  expect(saved.assessment.evaluation.clinical.reasonCodes).toContain('early_thelarche_with_cns_symptoms');
 });
 
-test('infant volume is shown with its missing reference limits and never supplies a Tanner stage', async ({ page }) => {
+test('recorded infant volumes retain their reference limitation and never supply a Tanner stage', async ({ page }) => {
   await open(page);
+  const patientId = await createPatient(page);
   await chooseLH(page);
-  await sample(page, { birthDate: '2026-03-17', kind: 'unspecified', stage: '' });
-  await select(page, 'VolumeMethod', 'Prader');
+  await sample(page, { age: '0', months: '3', kind: 'unspecified', stage: '' });
+  await expect(page.locator('#labPubertyTesticularVolume, #labPubertyVolumeMethod')).toHaveCount(0);
+  const current = await snapshot(page);
+  expect(current.evaluation.input.testicularVolume.value).toBeNull();
+  expect(current.evaluation.input.puberty.stage).toBeNull();
+  const records = [];
   for (const value of ['1', '8', '15']) {
-    await fill(page, 'TesticularVolume', value);
-    const warning = await expectVisibleParagraph(clinical(page), /objętoś/i);
-    await expect(warning).toContainText(`${value} mL`);
-    await expect(warning).toContainText('nie ma zweryfikowanego zakresu referencyjnego objętości');
-    await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'infant_context');
-    await expect(page.locator('#labPubertyStage')).toHaveValue('');
-    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
-    const saved = await snapshot(page);
-    expect(saved.evaluation.input.testicularVolume.value).toBe(Number(value));
-    expect(saved.evaluation.input.puberty.stage).toBeNull();
-    expect(saved.evaluation.clinical.status).toBe('notice');
+    records.push({ value, ...await recordLegacySample(page, patientId, { birthDate: '2026-03-17', kind: 'unspecified', stage: '', testicularVolume: value, volumeMethod: 'Prader' }) });
   }
-  await select(page, 'VolumeMethod', 'ultrasound');
-  await expectVisibleParagraph(clinical(page), /objętoś/i);
-  await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'infant_context');
+  const ultrasound = await recordLegacySample(page, patientId, { birthDate: '2026-03-17', kind: 'unspecified', stage: '', testicularVolume: '15', volumeMethod: 'ultrasound' });
+  await openTimeline(page, patientId);
+  for (const saved of records) {
+    const recorded = historicalAssessment(page, saved.note.id);
+    const savedClinical = recorded.locator('.vilda-lab-clinical');
+    const warning = await expectVisibleParagraph(savedClinical, /objętoś/i);
+    await expect(warning).toContainText(`${saved.value} mL`);
+    await expect(warning).toContainText('nie ma zweryfikowanego zakresu referencyjnego objętości');
+    await expect(savedClinical).toHaveAttribute('data-clinical-code', 'infant_context');
+    await expect(recorded.locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'unavailable');
+    expect(saved.assessment.evaluation.input.testicularVolume.value).toBe(Number(saved.value));
+    expect(saved.assessment.evaluation.input.puberty.stage).toBeNull();
+    expect(saved.assessment.evaluation.clinical.status).toBe('notice');
+  }
+  const ultrasoundClinical = historicalAssessment(page, ultrasound.note.id).locator('.vilda-lab-clinical');
+  await expectVisibleParagraph(ultrasoundClinical, /objętoś/i);
+  await expect(ultrasoundClinical).toHaveAttribute('data-clinical-code', 'infant_context');
 });
 
 test.describe('320 px clinical notices', () => {
   test.use({ viewport: { width: 320, height: 780 }, isMobile: true, hasTouch: true });
-  test('both history warnings stay visible outside details without horizontal scrolling', async ({ page }) => {
+  test('both recorded history warnings stay visible outside details without horizontal scrolling', async ({ page }) => {
     await open(page);
-    await chooseLH(page);
-    await sample(page);
-    await select(page, 'CnsSymptoms', 'yes');
-    await select(page, 'Regression', 'yes');
-    await expectWithinRanges(page);
-    await expect(assessment(page)).toHaveAttribute('data-summary-status', 'attention');
-    await expectVisibleParagraph(clinical(page), /OUN/);
-    await expectVisibleParagraph(clinical(page), /regresj/i);
+    const patientId = await createPatient(page);
+    const saved = await recordLegacySample(page, patientId, { cnsSymptoms: 'yes', regression: 'yes' });
+    await openTimeline(page, patientId);
+    const recorded = historicalAssessment(page, saved.note.id);
+    await expectWithinRanges(recorded);
+    await expect(recorded).toHaveAttribute('data-summary-status', 'attention');
+    await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /OUN/);
+    await expectVisibleParagraph(recorded.locator('.vilda-lab-clinical'), /regresj/i);
     const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
     expect(size.width).toBe(320);
     expect(size.scrollWidth).toBeLessThanOrEqual(size.width + 1);

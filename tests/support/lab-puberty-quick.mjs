@@ -3,9 +3,8 @@ import { expect } from './test-czas.mjs';
 // Drive the production quick form. Optional controls are opened through their
 // user-facing actions, never by unhiding DOM nodes or calling form internals.
 const sections = {
-  Sex: 'Patient', AgeYears: 'Patient', AgeMonths: 'Patient', BirthDate: 'Date', SampleDate: 'Date',
+  Sex: 'Patient', AgeYears: 'Patient', AgeMonths: 'Patient', Preterm: 'Patient',
   Kind: 'Stage', Stage: 'Stage', ReportedRange: 'Range',
-  CnsSymptoms: 'Extra', Regression: 'Extra', TesticularVolume: 'Extra', VolumeMethod: 'Extra', Preterm: 'Extra',
 };
 
 export async function quickField(ctx, name) {

@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect as select, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { kliknij } from '../support/uklad-czekanie.mjs';
 
 // Production UI -> engine -> saved snapshot. Every patient below is fictional;
 // historical explicit-context records use the same production engine and snapshot API.
@@ -58,6 +59,7 @@ async function prepareMinimalResult(page, { withStage = true, withProfile = true
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('2');
   await expect(page.locator('#labPubertyAgeMonths')).toHaveValue('9');
   await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext, #labPubertyContextSummary')).toHaveCount(0);
+  await expect(page.locator('#labPubertyOpenDate, #labPubertySectionDate, #labPubertySampleDate, #labPubertyBirthDate, #labPubertyClearDate, #labPubertyOpenExtra, #labPubertySectionExtra, #labPubertyCnsSymptoms, #labPubertyRegression, #labPubertyTesticularVolume, #labPubertyVolumeMethod')).toHaveCount(0);
   await expect(page.locator('#labPubertyScope')).toBeVisible();
   await expect(page.locator('#labPubertyScope')).toContainText(/wyłącznie.*bazaln/);
   await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
@@ -104,6 +106,8 @@ async function expectConditionalResult(host, { withStage = true } = {}) {
 
 function expectUnknownInputAndStrictComparison(saved) {
   expect(saved.status).toBe('recorded');
+  expect(saved.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
+    history: { cnsSymptoms: 'unknown', regression: 'unknown' }, testicularVolume: { value: null, method: '' } });
   expect(saved.evaluation.input.measurementKind).toBe('unknown');
   expect(saved.evaluation.input.treatment).toEqual({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
   expect(saved.evaluation.biochemical).toMatchObject({ status: 'unavailable', primary: null,
@@ -228,6 +232,60 @@ test('recorded hormonal treatment and stimulation keep catalog comparisons block
     await expect(recorded.locator('.vilda-lab-severity-summary')).toHaveCount(0);
     await expect(recorded.locator('[data-clinical-code="early_development"]')).toBeVisible();
   }
+});
+
+test('a historical sample preserves dates, volume and interview warnings after removing their live controls', async ({ page }) => {
+  await open(page);
+  const patientId = await createPatient(page);
+  await prepareMinimalResult(page);
+  const saved = await page.evaluate(async (id) => {
+    const current = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    // The public older-client input contract remains supported independently
+    // of the simplified live form. Do not recreate deleted controls in the DOM.
+    const historical = window.VildaLabPubertyUI.buildInput({
+      contextBasis: 'sample', sex: 'M', birthDate: '2018-06-17', sampleDate: '2026-06-17',
+      specimen: 'serum', measurementKind: 'basal', configuredAssay: current.assay,
+      kind: 'G', stage: '3', observationSource: 'patient-record',
+      testicularVolume: '6', volumeMethod: 'Prader',
+      cnsSymptoms: 'yes', regression: 'yes', gnrha: 'no', sexSteroids: 'no', treatmentContext: 'none',
+    }, { analyte: 'lh', raw: '2', unit: 'IU/L' });
+    const evaluation = window.VildaLabPuberty.evaluate(historical, window.VildaLabPubertyData);
+    const lab = { test: 'LH', testKey: 'lh', value: '2', valueNum: 2, unit: 'IU/L', clinicalDateISO: '2026-06-17' };
+    const savedAssessment = window.VildaLabSnapshot.create(evaluation, lab);
+    if (savedAssessment.status !== 'recorded') throw new Error('Historical sample fixture must be a valid production snapshot');
+    const note = await window.VildaVault.savePatientNote({
+      patientId: id, title: 'Fikcyjna wcześniejsza próbka z pełnym kontekstem', body: 'Syntetyczny zapis starszego formularza',
+      category: 'wynik-badania', clinicalDateISO: lab.clinicalDateISO, labResult: { ...lab, assessment: savedAssessment },
+    });
+    return { note, assessment: savedAssessment };
+  }, patientId);
+  expect(saved.assessment.evaluation.input).toMatchObject({
+    contextBasis: 'sample', birthDateISO: '2018-06-17', sampleDateISO: '2026-06-17',
+    puberty: { kind: 'G', stage: 3, appliesToSample: true },
+    testicularVolume: { value: 6, method: 'Prader', appliesToSample: true },
+    history: { cnsSymptoms: 'yes', regression: 'yes' },
+  });
+  expect(saved.assessment.evaluation.ageAtSample).toMatchObject({ lowerYears: 8, upperYears: 8, source: 'dates' });
+  expect(saved.assessment.evaluation.biochemical).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'within' } });
+  expectUnknownInputAndStrictComparison(await snapshot(page));
+  await expectConditionalResult(assessment(page));
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
+  expect((await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.note.id)).labResult.assessment).toEqual(saved.assessment);
+  const series = await page.evaluate((id) => window.VildaVault.listPatientLabSeries(id), patientId);
+  expect(series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === saved.note.id).assessment).toEqual(saved.assessment);
+  await openTimeline(page, patientId);
+  const recorded = historicalAssessment(page, saved.note.id);
+  await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
+  await expect(recorded.locator('[data-clinical-code="early_development"]')).toBeVisible();
+  await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'above');
+  await expect(comparison(recorded, 'stage')).toHaveAttribute('data-status', 'within');
+  await kliknij(recorded.locator(':scope > details > summary'));
+  await expect(recorded).toContainText('17.06.2026');
+  await expect(recorded).toContainText('6 mL');
+  await expect(recorded).toContainText('Prader');
+  await expect(recorded).toContainText('OUN');
+  await expect(recorded).toContainText(/regresj/i);
 });
 
 test('an absent or unknown method cannot activate the preview', async ({ page }) => {

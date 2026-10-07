@@ -133,6 +133,8 @@ test('B completing before A keeps only B in the source, automatic controls and r
   await sample(page);
   const saved = await snapshot(page);
   expect(saved.status).toBe('recorded');
+  expect(saved.evaluation.input).toMatchObject({ contextBasis: 'current-patient', birthDateISO: null, sampleDateISO: null,
+    history: { cnsSymptoms: 'unknown', regression: 'unknown' }, testicularVolume: { value: null, method: '' } });
   expect(saved.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
   expect(saved.evaluation).not.toHaveProperty('referencePreview');
   expect(saved.evaluation.ageAtSample.lowerYears).toBe(14);
