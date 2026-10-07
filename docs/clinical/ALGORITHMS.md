@@ -8958,6 +8958,51 @@ i scalaniem w innej karcie) ani pełnej kopii konta (`mergeVaultBackup`, `restor
 nie sprawdzała). Nie zmienia formatu pliku, ładunku ani reguł scalania. *(Aktualizacja 2026-10-07, P-BLOKADA-IMPORT: import
 karty i scalanie kopii konta pod blokadą pacjenta; odtworzenie kopii startuje synchronizację po zapisie.)*
 
+## Historia wersji karty pokazuje czas lokalny zamiast UTC (P-HISTORIA-CZAS-LOKALNY, SW 1.1.180, `vilda_version_history_ui.js` 15, 2026-10-07)
+
+**Zgłoszenie właściciela (2026-10-07).** Zapisy zrobione około 8:10 czasu polskiego historia wersji pokazywała jako
+06:07, 06:09, 06:21, 06:35 — na telefonie i na komputerze tak samo.
+
+**Przyczyna (zmierzona na kodzie).** Sejf zapisuje chwilę wersji jako `savedAtISO = new Date().toISOString()`, czyli
+w UTC z końcówką „Z” (tak samo jedzie w synchronizacji — wszystkie urządzenia mają tę samą chwilę). Historia wersji
+wycinała godzinę i dzień regexem wprost z tego napisu (`T(\d{2}):(\d{2})` i `^(\d{4})-(\d{2})-(\d{2})`), bez
+przeliczenia na strefę urządzenia. W Polsce latem (CEST, UTC+2) godzina była o dwie za wcześnie, zimą o jedną; zapis
+po północy (np. 00:30 czasu polskiego = 22:30Z) trafiał do grupy poprzedniego dnia. Reszta aplikacji liczy lokalnie
+(kosz zapisów: `new Date(iso)` + `Intl.DateTimeFormat('pl-PL')`; karta pacjenta: `toLocaleString('pl-PL')`), więc ten
+sam zapis miał w dwóch miejscach dwie różne godziny.
+
+**Co się zmienia.** W `vilda_version_history_ui.js` trzy funkcje czasu (godzina w wierszu wersji, etykieta dnia,
+klucz grupowania po dniu) parsują ISO przez `new Date()` i czytają składowe lokalne (`getHours`, `getMinutes`,
+`getDate`, `getMonth`, `getFullYear`). Napis, którego `Date` nie rozumie (stare `payload.timestampISO` w innym
+formacie, pusty), idzie dotychczasową drogą (regex/`slice`) — bez wyjątku i bez zmiany wyglądu tych wpisów. Te same
+funkcje obsługują pytanie „Przywrócić wersję z … (HH:MM)?” i nagłówek porównania wersji, więc wszystkie trzy miejsca
+pokazują tę samą, lokalną godzinę.
+
+**Przypadki syntetyczne** (`tests/unit/historia-wersji-czas-lokalny.test.mjs`; realne funkcje wycięte z pliku
+produkcyjnego konwencją `wytnij()` z `format-sds-zero.test.mjs`; strefa ustawiana przez `process.env.TZ`):
+
+| Wejście (`savedAtISO`) | Strefa | Godzina | Etykieta dnia | Klucz dnia |
+|---|---|---|---|---|
+| `2026-10-07T06:07:12.345Z` | Europe/Warsaw | `08:07` | `7 października 2026` | `2026-10-07` |
+| `2026-10-06T22:30:00.000Z` | Europe/Warsaw | `00:30` | `7 października 2026` | `2026-10-07` |
+| `2026-10-06T22:30:00.000Z` | UTC | `22:30` | `6 października 2026` | `2026-10-06` |
+| `2026-10-07T06:07:12.345Z` | America/New_York | `02:07` | `7 października 2026` | `2026-10-07` |
+| dwie wersje `22:30Z` i `06:07Z` dnia następnego | Europe/Warsaw | — | jedna grupa dnia | — |
+| te same dwie wersje | UTC | — | dwie grupy dnia | — |
+| napis spoza ISO, pusty, `null` | dowolna | bez wyjątku, jak dotąd | | |
+
+Na kodzie sprzed zmiany test jest czerwony (godzina `06:07`, dwie grupy w Warszawie); po zmianie zielony.
+
+**Wpływ kliniczny.** Brak. Zmienia się wyłącznie prezentacja chwili zapisu w historii wersji; `savedAtISO`,
+kolejność wersji, bieżąca wersja, scalanie i synchronizacja — bez zmian. Dane w sejfie nie są przepisywane.
+
+**Nie dotyczy** zgłoszonej w tym samym czasie utraty drugiej wizyty w synchronizacji — diagnoza i luki w osobnym
+raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
+
+**Wersje.** `vilda_version_history_ui.js` 14 → 15 (8 stron), precache (append-only), `SW_VERSION` 1.1.179 → 1.1.180 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`2dbd48a`). „Do decyzji”: brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
+
 ## Wysyłka nie nadpisuje chmury bez scalenia; delty i wysyłka po MERGE_BUSY (P-SYNC-STRAZNIK, SW 1.1.160, `vilda_sync.js` 33, `vilda_sync_integration.js` 46, 2026-10-05)
 
 **Decyzja właściciela (2026-10-05).** „Zaczynaj od punktu 1, zwykły PR do audyt” — punkt 1 przeglądu „co dalej po
