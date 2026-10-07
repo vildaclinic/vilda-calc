@@ -430,10 +430,14 @@ function zbierz(atrapa, p, powiadomieniaOd) {
   }, znaneId);
 }
 
-/** Jeden przypadek na świeżej atrapie (lista w pamięci modułu przed startem monitora). */
-export function wykonajNaSwiezej(p, zrodla = {}) {
+/**
+ * Jeden przypadek na świeżej atrapie (lista w pamięci modułu przed startem monitora). opcjeAtrapy trafiają do
+ * utworzAtrapeMonitoraGh, np. { modulPunktow: false } — monitor bez VildaGhPunkty (ścieżka zapasowa, P-GH-PUNKTY-API).
+ */
+export function wykonajNaSwiezej(p, zrodla = {}, opcjeAtrapy = {}) {
   const atrapa = utworzAtrapeMonitoraGh({
-    modulDawki: p.modulDawki, punkty: kopia(LISTY[p.lista]), zrodla, ...(p.karta ? { ghTherapyCalc: { ...p.karta } } : {}),
+    ...opcjeAtrapy, modulDawki: p.modulDawki, punkty: kopia(LISTY[p.lista]), zrodla,
+    ...(p.karta ? { ghTherapyCalc: { ...p.karta } } : {}),
   });
   krok(atrapa, p);
   return zbierz(atrapa, p, 0);
@@ -445,16 +449,18 @@ export function wykonajNaSwiezej(p, zrodla = {}) {
  * wyzerowanie wieku kostnego i wyniku karty. Przypadki ze znacznikiem `swieza` idą na świeżą atrapę.
  * @returns {Map<string, object>} id przypadku → wynik w postaci JSON
  */
-export function wykonajPrzypadki(przypadki, zrodla = {}) {
+export function wykonajPrzypadki(przypadki, zrodla = {}, opcjeAtrapy = {}) {
   const atrapy = new Map();
   const wyniki = new Map();
   for (const p of przypadki) {
     if (p.swieza) {
-      wyniki.set(p.id, wykonajNaSwiezej(p, zrodla));
+      wyniki.set(p.id, wykonajNaSwiezej(p, zrodla, opcjeAtrapy));
       continue;
     }
     if (!atrapy.has(p.modulDawki)) {
-      atrapy.set(p.modulDawki, { atrapa: utworzAtrapeMonitoraGh({ modulDawki: p.modulDawki, zrodla }), powiadomienia: 0 });
+      atrapy.set(p.modulDawki, {
+        atrapa: utworzAtrapeMonitoraGh({ ...opcjeAtrapy, modulDawki: p.modulDawki, zrodla }), powiadomienia: 0,
+      });
     }
     const uzyta = atrapy.get(p.modulDawki);
     const { atrapa } = uzyta;

@@ -7560,7 +7560,7 @@ po obu stronach).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
 przez monitor i skasowanie bazy.
-*(Dalej: odczyt i zapis listy punktów GH odtwarza też wspólne API `VildaGhPunkty` — P-GH-PUNKTY-API rata 1.)*
+*(Dalej: odczyt i zapis listy punktów GH odtwarza też wspólne API `VildaGhPunkty` — P-GH-PUNKTY-API rata 1; od raty 2 monitor zapisuje listę przez to API.)*
 
 ## Ukryta karta zaawansowana na DocPro nie zmienia punktów terapii GH ani wierszy ręcznych; monitor bez kopii w IndexedDB (P-GH-DOCPRO, SW 1.1.131, `gh_therapy_monitor.js` 46, `docpro_state_persist.js` 7, 2026-09-30)
 
@@ -7623,8 +7623,8 @@ wierszu) oraz wiersz-duch po usunięciu ostatniego punktu. Rekordów zmienionych
   Odczytu nikt nie woła; „Wyczyść wszystkie pola” może utworzyć pustą bazę (bez punktów), którą skasuje najbliższy
   start monitora. Ich usunięcie razem z inwentarzem — osobna zmiana porządkowa.
 - Wiersze punktów w ukrytej karcie zostają (moduły DocPro czytają `advancedGrowthData`).
-- Reguły zapisu punktu z monitora odtwarza czytelne API `VildaGhPunkty` (P-GH-PUNKTY-API rata 1); monitor przejdzie
-  na nie w kolejnej racie.
+- Reguły zapisu punktu z monitora odtwarza czytelne API `VildaGhPunkty` (P-GH-PUNKTY-API rata 1); od raty 2 monitor z
+  niego korzysta, a bez modułu wykonuje stary kod.
 
 **Wersje.** `gh_therapy_monitor.js` 45 → 46, `docpro_state_persist.js` 6 → 7 (`docpro.html`); precache (append-only);
 `SW_VERSION` 1.1.130 → 1.1.131 (po #504; + pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
@@ -8480,6 +8480,7 @@ bez × 2 z flagą „moduł jest”; nikt tego nie wołał, w aplikacji `VildaGh
 przy otwartym DocPro): `sprawdzRodzaj` i `zmienWMiejscu` go pomijają, a monitor przy punkcie wstecznym i edycji rzuca
 `TypeError` i nie zapisuje (tabela monitora w tym stanie też się nie rysuje). Aplikacja sama `null` na listę nie wpisuje.
 Test różnicowy przypina oba zachowania; o tym, które zostaje, gdy monitor przejdzie na API (PR-4), decyduje właściciel.
+*(Rozstrzygnięte 2026-10-07 w racie 2: API ściśle jak monitor — wpis niżej; tamże dokładniejszy opis stanu przy `null`.)*
 
 **Niezmienniki.** Przy ładowaniu moduł niczego nie czyta i nie zapisuje (magazyn, kanał, słuchacze); nie normalizuje list
 z rekordu ani z sejfu; `zmienWMiejscu` nigdy nie dopisuje punktu (odmowa `brak-punktu`); `zapisz` nie odświeża tabeli,
@@ -8519,6 +8520,69 @@ P-DOCPRO-PETLA #559); `tests/fixtures/wersje-zasobow.json` — `npm run podbij-w
 zmiany zachowania, z zapasową ścieżką; tam także decyzja o odstępstwie `null` i zachowanie własnego sprawdzenia Z3 w
 monitorze przed regułami API (monitor odmawia tekstem P-GH-EDYCJA-LISTA przed sprawdzeniem rodzaju i wartości, API
 zwraca `brak-punktu` dopiero na końcu).
+
+## Wspólne API punktów terapii GH, rata 2: monitor GH korzysta z `VildaGhPunkty`, bez modułu stary kod (P-GH-PUNKTY-API rata 2, SW 1.1.179, `gh_therapy_monitor.js` 53, `vilda_gh_punkty.js` 2, 2026-10-07)
+
+**Skąd.** PR-4 planu „Wspólne API punktów GH” po racie 1 (moduł ładowany, nieużywany). Decyzje właściciela z 2026-10-07:
+(1) przy pustym wpisie (`null`) na liście punktów API ma działać ściśle jak monitor; (2) sprawdzenie edycji spoza bieżącej
+listy i zmiany pacjenta (P-GH-EDYCJA-LISTA, P-GH-EDYCJA-PACJENT) zostaje w monitorze i idzie przed regułami API.
+
+**Co się zmienia w kodzie.** Monitor (`gh_therapy_monitor.js`, łatka z komentarzem `P-GH-PUNKTY-API rata 2`, czytelnie w
+`docs/ZRODLA_ARTEFAKTOW.md`) przy każdym zapisie sprawdza `window.VildaGhPunkty` z `wersja === 1`:
+- zapis W/K/Z (`He`): pierwszy krok bez zmian — blok P-GH-EDYCJA-LISTA; potem `sprawdzRodzaj` (z kluczem `pomin` jak
+  dotąd), a przy edycji `polaZPodawanej('karta')` i `zmienWMiejscu`; wynik `brak-punktu` prowadzi do dotychczasowej gałęzi
+  z tym samym komunikatem; nowy punkt z karty: `jednostkaDawki`, `dniIgf`, `normalizujWiek`, `sprawdzWartosci('karta')` —
+  rekord, wynik karty i dawka (Gmcalc, pola zapasowe) zostają w monitorze;
+- punkt wsteczny: `sprawdzRodzaj` → `polaZPodawanej('wsteczny')` → `punkt(id)`; id nadaje monitor jak dotąd;
+- zapis listy (`L`): `zapisz(lista, {nadaj: Y monitora, blad: dziennik monitora})`; usuwanie przez `L` bez zmian filtra.
+Bez modułu (albo przy innej wersji) każde miejsce wykonuje **dosłownie stary kod** — zapas do PR-5 (D5).
+
+`VildaGhPunkty` (wersja 2 pliku, `wersja: 1` API): `sprawdzRodzaj` i `zmienWMiejscu` bez pomijania `null` — rzucają wyjątek
+tam, gdzie monitor; `zmienWMiejscu` zostawia wpis niebędący obiektem bez zmian z wynikiem ok (jak przypisanie w monitorze
+bez trybu ścisłego); `zapisz` przyjmuje `opcje.blad` (dziennik błędu zapisu modułu i kanału, jak dotąd w `L()`).
+
+**Stan przy pustym wpisie (`null`), poprawiony względem raty 1.** Zależnie od rodzaju punktu i miejsca wpisu na liście monitor
+rzuca wyjątek przed zapisem albo zapisuje, a wyjątek pada dopiero przy rysowaniu tabeli. Od raty 2 oba tryby robią to samo
+(macierz w teście trybów). Naprawa tego stanu to osobna decyzja właściciela (rekomendacja: jawna odmowa zapisu z komunikatem
+i odporna tabela, bez przepisywania danych; przed funkcją „punkt z wiersza karty zaawansowanej”).
+
+**Klasyfikacja.** Refaktoryzacja bez zmiany zachowania (AGENTS § 2): wzory, dawki, jednostki, progi, komunikaty, kolejność
+odmów, zapis i sygnały bez zmian. Nie jest zmianą kliniczną. Dowód niżej; zachowanie przy `null` jest zachowaniem monitora,
+nie nową regułą.
+
+**Przypadki `wejście → oczekiwany wynik`** — jak w racie 1 (te same funkcje, te same liczby); dla monitora: punkt wsteczny
+Omnitrope 10 mg 0,96 mg/d przy 32 kg, wiek 9 l. 6 mies. → rekord 15 kluczy z `dose` 0,03 mg/kg/d i `doseAbs` 0,96 mg/d,
+w obu trybach identyczny co do kolejności kluczy i bitu każdej liczby.
+
+**Strażnicy.**
+- `tests/unit/gh-punkty-monitor-tryby.test.mjs` (9): te same scenariusze na prawdziwym monitorze z modułem i bez niego,
+  porównanie całego wyniku (wyjątek, dziennik zapisu, zdarzeń, kanału i komunikatów, lista w oknie i w pamięci modułu,
+  formularze, wiersze tabeli, powiadomienia, ostrzeżenia diagnostyczne, drugi klik): zapisy i odmowy z karty, wsteczne,
+  edycje i usuwanie; edycja spoza bieżącej listy i zmiana pacjenta z różnymi danymi formularza; pusty wpis i wpisy
+  niebędące punktem; błąd zapisu i warianty `tabId`. Licznik wywołań API: każdy zapis to jedno `zapisz`, a odmowa edycji
+  spoza listy i po zmianie pacjenta zapada przed jakimkolwiek wywołaniem API. Bramka: inna wersja albo wyjątek przy odczycie
+  modułu → stary kod. Wrażliwość sprawdzona mutacjami (tolerancja `null`, blok P-GH-EDYCJA-LISTA za bramką, id z zegara
+  API, pominięty `Gsch`, `L` bez nadawcy monitora, brak dziennika błędu, `pomin` tylko przy edycji, przypisanie do
+  wpisu niebędącego obiektem): każda czerwona.
+- `tests/unit/gh-punkty-siatka.test.mjs` (37): złota siatka (ok. 10 tys. przypadków) w OBU trybach daje ten sam wzorzec
+  (skróty SHA-256 kategorii); kontrole negatywne psują kod, który w danym trybie działa (stary kod monitora bez modułu, API
+  i wspólne części monitora z modułem).
+- `tests/unit/gh-punkty-api-roznicowy.test.mjs` (17), `gh-punkty-api-zapis.test.mjs` (55): API porównywane ze STARYM kodem
+  (monitor w trybie zapasowym, inaczej porównanie API z samym sobą); `null`: wyjątek tam, gdzie stary kod, i ta sama lista
+  tam, gdzie stary kod zapisuje. `gh-punkty-api.test.mjs` (127): przypadki `null` i wpisów niebędących obiektem, `opcje.blad`.
+- `tests/unit/gh-punkty-charakterystyka-monitor.test.mjs` (20), `gh-edycja-biezaca-lista.test.mjs` (11): bez zmiany asercji,
+  teraz na monitorze z modułem (atrapa ładuje `vilda_gh_punkty.js` jak `docpro.html`; `modulPunktow: false` — zapas).
+- `tests/e2e/gh-punkty-monitor-api.spec.mjs` (1): prawdziwy DocPro, ten sam ciąg czynności lekarza (punkt wsteczny, edycja,
+  nowy punkt z karty, odmowa drugiego Włączenia, usunięcie) z modułem i z zablokowanym `vilda_gh_punkty.js`: ta sama lista,
+  komunikat i tabela; z modułem licznik wywołań API, bez modułu zero wywołań.
+
+**Wersje.** `gh_therapy_monitor.js` 52 → 53 i `vilda_gh_punkty.js` 1 → 2 (`docpro.html`; `vilda_gh_punkty.js` też
+`index.html`), precache (append-only), `SW_VERSION` 1.1.178 → 1.1.179 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
+`tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `7ea4b54`; pin `?v=` w
+`tests/e2e/gh-punkty-api-start.spec.mjs` ręcznie.
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Dalej: PR-5 (D5 — koniec zapasu), naprawa stanu
+przy pustym wpisie (osobny PR funkcjonalny), PR-6 (D6, kliniczny).
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 

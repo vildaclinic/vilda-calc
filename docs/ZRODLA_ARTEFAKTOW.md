@@ -246,6 +246,68 @@ Uzupełnienie P-GH-EDYCJA-PACJENT (`gh_therapy_monitor.js` 50 → 51): w nasłuc
 if (klucz === 'vildaCurrentPatientId') { edycjaAktualna() || koniecEdycji(); return; }   // (Gea / Gek)
 ```
 
+## Łatka P-GH-PUNKTY-API rata 2 (`gh_therapy_monitor.js`, 2026-10-07)
+
+Klej monitora do czytelnego modułu `vilda_gh_punkty.js` (`window.VildaGhPunkty`). Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła; miejsca mają komentarz `P-GH-PUNKTY-API rata 2`. Nazwy z artefaktu jak wyżej, a ponadto: `L()` — zapis listy, `Y()` — komunikat kanału `gh-therapy-sync` z `tabId`, `J()` — wskaźnik zapisu, `p()` — dziennik diagnostyczny, `Gsch()` — schowanie formularza edycji. Bez modułu (albo przy `wersja !== 1`) każde miejsce wykonuje **dosłownie stary kod**. Opis działania i dowód braku zmiany: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-API rata 2. Skrypt nałożenia łatki z kotwicami występującymi raz trzymamy poza repozytorium; łatkę nakłada się na wersję 52.
+
+```js
+function apiPunktow() {                         // (Gpa) bramka przy każdym zapisie
+  try { const A = window.VildaGhPunkty; return A && A.wersja === 1 ? A : null; } catch { return null; }
+}
+function wartosc(id, zapas) {                   // (Gpv)
+  const el = document.getElementById(id); return el ? el.value : zapas;
+}
+
+// He(typ) — zapis W/K/Z. Pierwszy krok bez zmian: blok P-GH-EDYCJA-LISTA (D(), edycja zakończona → F(), komunikat).
+const A = apiPunktow();
+if (A) {
+  const r = A.sprawdzRodzaj(window.ghTherapyPoints, typ, { pomin: x });   // klucz pomin zawsze, także przy x == null
+  if (!r.ok) { B(r.komunikat); return; }
+  if (x) { edycjaPrzezApi(typ, A); return; }
+} else { /* dotychczasowe dwa sprawdzenia some(...) */ }
+// ... nowy punkt z karty: odczyty pól, wynik karty i Gmcalc bez zmian, a z modułem:
+s = A ? A.jednostkaDawki(lek) : (dotychczasowe /^Ngenla/);
+if (A) {
+  dni = A.dniIgf(igf1, dni, s);
+  ({ lata, miesiace } = A.normalizujWiek(lata, miesiace));
+  const w = A.sprawdzWartosci({ lata, miesiace, masa, wzrost, dawka, preparat, program }, 'karta');
+  if (!w.ok) { B(w.komunikat); return; }
+} else { /* dotychczasowa normalizacja wieku i oba sprawdzenia */ }
+
+function edycjaPrzezApi(typ, A) {               // (Gph) pola formularza edycji czytane jak w starym kodzie
+  const w = A.polaZPodawanej({ typ, lata: wartosc('ghEditAge'), miesiace: wartosc('ghEditAgeMonths'),
+    masa: wartosc('ghEditWeight'), wzrost: wartosc('ghEditHeight'), wiekKostny: wartosc('ghEditBoneAge', ''),
+    podawana: wartosc('ghEditDose'), preparat: wartosc('ghEditDrug', null), program: wartosc('therProg', null),
+    igf1: wartosc('ghEditIgf1'), dniIgf: wartosc('ghEditIgfDays') }, 'karta');
+  if (!w.ok) { B(w.komunikat); return; }
+  if (!A.zmienWMiejscu(window.ghTherapyPoints, x, w.pola).ok) {   // = dotychczasowa gałąź else
+    koniecEdycji(); F(); B(NIE_ZAPISANO); return;
+  }
+  x = null; q(); Gsch(); L(); F(); J('gh-point-saved');
+}
+
+// ghAddRetroPoint — po D() i odczycie rodzaju z #ghRetroType:
+const A = apiPunktow();
+if (A) {
+  const r = A.sprawdzRodzaj(window.ghTherapyPoints, rodzaj);       // bez klucza pomin, jak dotąd
+  if (!r.ok) { B(r.komunikat); return; }
+  const w = A.polaZPodawanej({ typ: rodzaj, /* pola #ghRetro* jak w starym kodzie, lek i program „|| null” */ }, 'wsteczny');
+  if (!w.ok) { B(w.komunikat); return; }
+  window.ghTherapyPoints.push(A.punkt(String(Date.now() + Math.random()), w.pola));   // id nadaje monitor, jak dotąd
+  L(); F(); J('gh-retro-point-added'); window.ghCancelRetroForm();
+  return;
+}
+
+// L() — zapis listy:
+const A = apiPunktow();
+if (A) {
+  A.zapisz(window.ghTherapyPoints, { nadaj: (m) => Y(m, 'saveTherapyPoints:update'), blad: (e) => p(OSTRZEZENIE, e) });
+  return;
+}
+```
+
+Bez zmian: `D()`, `F()`, `O()`, `re()` (filtr bez zmian, zapis przez `L()`), `Q()`, nakładki, `Ve()`/`Ue()`, nasłuch `storage`.
+
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
 Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.
