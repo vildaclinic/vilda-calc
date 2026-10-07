@@ -13,11 +13,17 @@ import {
 // Wzorzec policzył generator tests/scripts/gh-punkty-wzorzec.mjs z dzisiejszego artefaktu; to punkt odniesienia dla
 // przeniesienia reguł punktów do wspólnego API. Różnica = zmiana zachowania: najpierw `--roznice`, nigdy `--zapisz` dla
 // zielonego wyniku. Opisuje stan obecny, także ten czekający na decyzję właściciela. Dane wyłącznie FIKCYJNE.
+// P-GH-PUNKTY-API rata 2: monitor bierze reguły punktu z VildaGhPunkty, a bez modułu wykonuje stary kod. Siatka idzie
+// w OBU trybach i w obu musi dać ten sam wzorzec; kontrole negatywne psują kod, który w danym trybie naprawdę działa.
 
 const wzorzec = JSON.parse(fs.readFileSync(path.join(korzen, PLIK_WZORCA), 'utf8'));
 const przypadki = siatka();
 const wedlugId = new Map(przypadki.map((p) => [p.id, p]));
 const reprezentatywne = wzorzec.przypadki;
+const TRYBY = [
+  { nazwa: 'z modułem VildaGhPunkty', opcje: {} },
+  { nazwa: 'bez modułu VildaGhPunkty (ścieżka zapasowa)', opcje: { modulPunktow: false } },
+];
 const PODPOWIEDZ = 'Lista różnic: node tests/scripts/gh-punkty-wzorzec.mjs --roznice';
 
 // Kategorie siatki i to, co przypinają. Odmowy są osobną, mniejszą podsiatką.
@@ -112,11 +118,11 @@ describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
   });
 });
 
-describe('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca', () => {
+describe.each(TRYBY)('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca ($nazwa)', ({ opcje }) => {
   for (const kategoria of KATEGORIE) {
     it(OPISY[kategoria], () => {
       const czesc = przypadki.filter((p) => p.kategoria === kategoria);
-      const wyniki = wykonajPrzypadki(czesc);
+      const wyniki = wykonajPrzypadki(czesc, {}, opcje);
 
       // Pełny wynik przypadków reprezentatywnych: najpierw czytelna różnica, potem kolejność kluczy i bity liczb.
       for (const r of reprezentatywne.filter((x) => x.wejscie.kategoria === kategoria)) {
@@ -133,25 +139,42 @@ describe('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca', ()
   }
 });
 
-describe('Złota siatka punktów GH — atrapa użyta ponownie nie przenosi stanu między przypadkami', () => {
+describe.each(TRYBY)('Złota siatka punktów GH — atrapa użyta ponownie nie przenosi stanu między przypadkami ($nazwa)', ({ opcje }) => {
   it('każdy przypadek reprezentatywny na świeżej atrapie (lista w module przed startem monitora) daje wynik wzorca', () => {
     for (const r of reprezentatywne) {
-      const w = wykonajNaSwiezej(wedlugId.get(r.wejscie.id));
+      const w = wykonajNaSwiezej(wedlugId.get(r.wejscie.id), {}, opcje);
       expect(pierwszaRoznica(r.wynik, w), r.wejscie.id).toBeNull();
     }
   }, 60_000);
 });
 
-// Kontrole negatywne: kopia źródła monitora zmieniona przez replace z kotwicą występującą dokładnie raz. Każda zmiana
-// musi wywrócić porównanie przypadków reprezentatywnych ze wzorcem, i to tylko na ścieżkach, których dotyczy.
-const POCZATEK_L = 'function L(){';
+// Kontrole negatywne: kopia źródła monitora albo API zmieniona przez replace z kotwicą występującą dokładnie raz.
+// Każda zmiana musi wywrócić porównanie przypadków reprezentatywnych ze wzorcem, i to tylko na ścieżkach, których
+// dotyczy. Kod starego monitora psujemy w trybie zapasowym (bez modułu), a API i części monitora wspólne dla obu
+// ścieżek (kanał z tabId, rekord nowego punktu z karty) — w trybie z modułem.
 const ZAPIS_L = 'try{ve(window.ghTherapyPoints||[])}';
 const ZDARZENIE_L = 'try{document.dispatchEvent(new CustomEvent("vilda:therapy-points-changed",{detail:{source:"gh"}}))}catch{}';
-// „M po E”: blok zapisu modułu w L() (z obsługą błędu) przeniesiony za rozgłoszenie zdarzenia.
+// „M po E”: blok zapisu modułu w zapasowym L() (z obsługą błędu) przeniesiony za rozgłoszenie zdarzenia. Zapis
+// ve(…||[]) jest tylko w L().
 function kontrolaMPoE(tekst) {
-  const i = tekst.indexOf(POCZATEK_L + ZAPIS_L);
-  const blokZapisu = tekst.slice(i + POCZATEK_L.length, tekst.indexOf(ZDARZENIE_L, i));
-  return [POCZATEK_L + blokZapisu + ZDARZENIE_L, POCZATEK_L + ZDARZENIE_L + blokZapisu];
+  const i = tekst.indexOf(ZAPIS_L);
+  const blokZapisu = tekst.slice(i, tekst.indexOf(ZDARZENIE_L, i));
+  return [blokZapisu + ZDARZENIE_L, ZDARZENIE_L + blokZapisu];
+}
+// To samo w VildaGhPunkty.zapisz: krok 1 (zapis modułu) za krokiem 2 (zdarzenie).
+const ZAPIS_API = `    try {
+      var P = persistence();`;
+const ZDARZENIE_API = `    try {
+      w.document.dispatchEvent(`;
+const KONIEC_ZDARZENIA_API = `    } catch (e) { /* brak document albo CustomEvent */ }
+`;
+function kontrolaMPoEApi(tekst) {
+  const i = tekst.indexOf(ZAPIS_API);
+  const j = tekst.indexOf(ZDARZENIE_API, i);
+  const k = tekst.indexOf(KONIEC_ZDARZENIA_API, j) + KONIEC_ZDARZENIA_API.length;
+  const blokZapisu = tekst.slice(i, j);
+  const blokZdarzenia = tekst.slice(j, k);
+  return [blokZapisu + blokZdarzenia, blokZdarzenia + blokZapisu];
 }
 const KONTROLE = [
   { nazwa: 'Increlex ×3 zamiast ×2 w Gmt', kotwica: 'return Gmpod(d)?o*2:o', zamiana: 'return Gmpod(d)?o*3:o',
@@ -170,18 +193,44 @@ const KONTROLE = [
     dotyczy: (p) => p.sciezka === 'Z2' },
 ];
 
-describe('Złota siatka punktów GH — kontrole negatywne (kopia źródła monitora po replace)', () => {
-  const zrodloMonitora = zrodlo('gh_therapy_monitor.js');
+// Tryb z modułem: API (vilda_gh_punkty.js) i części monitora, którymi idą obie ścieżki.
+const KONTROLE_Z_MODULEM = [
+  { nazwa: 'API: Increlex ×3 zamiast ×2', plik: 'vilda_gh_punkty.js',
+    kotwica: 'return naPodanie(preparat, opcje) ? podawana * 2 : podawana;',
+    zamiana: 'return naPodanie(preparat, opcje) ? podawana * 3 : podawana;',
+    dotyczy: (p) => p.modulDawki && (p.sciezka === 'Z2' || p.sciezka === 'Z4') },
+  { nazwa: 'API: doseAbs Ngenla /7 → /6', plik: 'vilda_gh_punkty.js',
+    kotwica: 'doseAbs: /tydz/.test(jednostka) ? podawana / 7 : dobowa',
+    zamiana: 'doseAbs: /tydz/.test(jednostka) ? podawana / 6 : dobowa',
+    dotyczy: (p) => p.sciezka === 'Z2' || p.sciezka === 'Z4' },
+  { nazwa: 'API: zapis modułu (M) po zdarzeniu (E) w zapisz()', plik: 'vilda_gh_punkty.js', kotwicaZe: kontrolaMPoEApi,
+    dotyczy: () => true },
+  { nazwa: 'API: /^Ngenla/ → /^Ngenla/i w jednostce dawki', plik: 'vilda_gh_punkty.js',
+    kotwica: 'preparat && /^Ngenla/.test(preparat)', zamiana: 'preparat && /^Ngenla/i.test(preparat)',
+    dotyczy: (p) => p.sciezka === 'Z1' || p.sciezka === 'Z2' || p.sciezka === 'Z4' },
+  { nazwa: 'monitor (obie ścieżki): brak tabId w komunikacie kanału', plik: 'gh_therapy_monitor.js',
+    kotwica: 'e.tabId=t.getTabId()', zamiana: 'void 0', dotyczy: () => true },
+  { nazwa: 'monitor (obie ścieżki): kolejność kluczy weight i height w rekordzie nowego punktu', plik: 'gh_therapy_monitor.js',
+    kotwica: 'weight:r,height:i,boneAge:isFinite(a)?a:null,dose:o,', zamiana: 'height:i,weight:r,boneAge:isFinite(a)?a:null,dose:o,',
+    dotyczy: (p) => p.sciezka === 'Z1' },
+];
+
+describe.each([
+  { nazwa: 'bez modułu: kod zapasowy monitora', kontrole: KONTROLE.map((k) => ({ ...k, plik: 'gh_therapy_monitor.js' })),
+    opcje: { modulPunktow: false } },
+  { nazwa: 'z modułem: API i wspólne części monitora', kontrole: KONTROLE_Z_MODULEM, opcje: {} },
+])('Złota siatka punktów GH — kontrole negatywne ($nazwa)', ({ kontrole, opcje }) => {
   const wejscia = reprezentatywne.map((r) => wedlugId.get(r.wejscie.id));
 
-  for (const k of KONTROLE) {
+  for (const k of kontrole) {
     it(`${k.nazwa}: wzorzec wykrywa zmianę`, () => {
-      const [kotwica, zamiana] = k.kotwicaZe ? k.kotwicaZe(zrodloMonitora) : [k.kotwica, k.zamiana];
-      expect(zrodloMonitora.split(kotwica).length - 1).toBe(1);
-      const zmienione = zrodloMonitora.replace(kotwica, () => zamiana);
-      expect(zmienione).not.toBe(zrodloMonitora);
+      const zrodloPliku = zrodlo(k.plik);
+      const [kotwica, zamiana] = k.kotwicaZe ? k.kotwicaZe(zrodloPliku) : [k.kotwica, k.zamiana];
+      expect(zrodloPliku.split(kotwica).length - 1).toBe(1);
+      const zmienione = zrodloPliku.replace(kotwica, () => zamiana);
+      expect(zmienione).not.toBe(zrodloPliku);
 
-      const wyniki = wykonajPrzypadki(wejscia, { 'gh_therapy_monitor.js': zmienione });
+      const wyniki = wykonajPrzypadki(wejscia, { [k.plik]: zmienione }, opcje);
       const rozne = reprezentatywne.filter((r) => kanon(wyniki.get(r.wejscie.id)) !== kanon(r.wynik)).map((r) => r.wejscie);
       expect(rozne.length).toBeGreaterThan(0);
       expect(rozne.filter((p) => !k.dotyczy(p)).map((p) => p.id)).toEqual([]);

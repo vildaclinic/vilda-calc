@@ -1,8 +1,8 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-GH-PUNKTY-API rata 1: moduł VildaGhPunkty (vilda_gh_punkty.js) na prawdziwych stronach. W tej racie nikt go
-// nie woła — test wywołuje go sam, jak zrobi to przyszła ścieżka na Start, i sprawdza, że zapis przez API daje te
-// same skutki co zapis listy L() monitora GH:
+// P-GH-PUNKTY-API rata 1: moduł VildaGhPunkty (vilda_gh_punkty.js) na prawdziwych stronach. Na Start nikt go nie woła
+// (od raty 2 korzysta z niego monitor GH w DocPro) — test wywołuje go sam, jak zrobi to przyszła ścieżka na Start,
+// i sprawdza, że zapis przez API daje te same skutki co zapis listy L() monitora GH:
 // A — index.html (Start, bez monitora GH): pamięć modułu GH_THERAPY_POINTS, dokładnie jedno zdarzenie
 //     vilda:therapy-points-changed, jeden komunikat {type:'update', tabId} na kanale gh-therapy-sync; echo
 //     odbiera odbiornik app.js w tym samym dokumencie (filtr tabId) i woła mostek karty zaawansowanej, który
@@ -164,7 +164,7 @@ test('A: Start bez monitora — zapis przez API: moduł, 1 zdarzenie, 1 komunika
     monitor: typeof window.refreshGHTherapyMonitor,
     dodajPunkt: typeof window.ghAddTherapyPoint,
   }))).toEqual({
-    wersja: 1, zamrozony: true, gotowe: { ok: true, braki: [], kanal: true, tabId: true },
+    wersja: 2, zamrozony: true, gotowe: { ok: true, braki: [], kanal: true, tabId: true },
     monitor: 'undefined', dodajPunkt: 'undefined',
   });
   const tab = await page.evaluate(() => window.VildaPersistence.getTabId());
@@ -305,13 +305,13 @@ test('C: index.html i docpro.html z załadowanym VildaGhPunkty — bez błędów
     skrypt: Array.from(document.scripts).map((s) => s.getAttribute('src')).filter((s) => /vilda_gh_punkty\.js/.test(String(s))),
     gotowe: window.VildaGhPunkty.gotowe({ dawka: true }).ok,
   }));
-  expect(await zaladowany(page)).toEqual({ wersja: 1, skrypt: ['vilda_gh_punkty.js?v=1'], gotowe: true });
+  expect(await zaladowany(page)).toEqual({ wersja: 2, skrypt: ['vilda_gh_punkty.js?v=2'], gotowe: true });
 
   await page.goto('/docpro.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.refreshGHTherapyMonitor === 'function' && Boolean(window.VildaGhPunkty),
     null, { timeout: 60000 });
   await page.waitForTimeout(2500); // odtworzenie stanu DocPro biegnie do ~1,5 s po starcie strony
-  expect(await zaladowany(page)).toEqual({ wersja: 1, skrypt: ['vilda_gh_punkty.js?v=1'], gotowe: true });
+  expect(await zaladowany(page)).toEqual({ wersja: 2, skrypt: ['vilda_gh_punkty.js?v=2'], gotowe: true });
 
   expect(bledy, `błędy stron:\n${bledy.join('\n')}`).toEqual([]);
   expect(oModule, `komunikaty konsoli o module:\n${oModule.join('\n')}`).toEqual([]);

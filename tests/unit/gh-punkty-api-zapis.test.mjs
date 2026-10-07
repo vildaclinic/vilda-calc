@@ -155,11 +155,12 @@ function utworzOkno({ getTabId = TAB_ID, sesjaTabId = null, modul } = {}) {
 }
 
 // Para atrap PRAWDZIWEGO monitora z tymi samymi opcjami: w jednej usuwa punkt monitor (re() → L()), w drugiej tę samą
-// listę zapisuje API (bez nadaj, czyli własnym kanałem). `przed` dostaje okno atrapy przed akcją.
+// listę zapisuje API (bez nadaj, czyli własnym kanałem). `przed` dostaje okno atrapy przed akcją. Monitor działa w
+// trybie zapasowym (bez VildaGhPunkty, P-GH-PUNKTY-API rata 2): porównanie dotyczy starego L(), nie samego API.
 function monitorIApi(opcje = {}, przed = () => {}) {
   const punkty = [WLACZENIE, KONTYNUACJA];
-  const monitor = utworzAtrapeMonitoraGh({ punkty, ...opcje });
-  const api = utworzAtrapeMonitoraGh({ punkty, ...opcje });
+  const monitor = utworzAtrapeMonitoraGh({ punkty, ...opcje, modulPunktow: false });
+  const api = utworzAtrapeMonitoraGh({ punkty, ...opcje, modulPunktow: false });
   loadBrowserScript('vilda_gh_punkty.js', api.win);
   przed(monitor.win);
   przed(api.win);
@@ -399,6 +400,30 @@ describe('VildaGhPunkty.zapisz — window.ghTherapyPoints', () => {
 });
 
 /* ---------- zapisz: brak zależności ---------- */
+
+describe('VildaGhPunkty.zapisz — opcje.blad: dziennik błędów wołającego (monitor podaje własny, P-GH-PUNKTY-API rata 2)', () => {
+  it('błąd zapisu modułu i błąd nadawcy trafiają do opcje.blad (raz każdy), a kolejne kroki idą dalej', () => {
+    const o = utworzOkno();
+    o.win.VildaPersistence.writeModuleJSON = () => { throw new Error('fikcyjny błąd zapisu'); };
+    const bledy = [];
+    const wynik = o.A.zapisz([WLACZENIE], { nadaj: () => { throw new Error('fikcyjny błąd kanału'); }, blad: (e) => bledy.push(e.message) });
+    expect(wynik).toEqual({ modul: false, zdarzenie: true, kanal: false });
+    expect(bledy).toEqual(['fikcyjny błąd zapisu', 'fikcyjny błąd kanału']);
+  });
+
+  it('bez błędów opcje.blad nie jest wołane; dziennik, który sam rzuca, nie zatrzymuje zapisu', () => {
+    const o = utworzOkno();
+    const bledy = [];
+    expect(o.A.zapisz([WLACZENIE], { nadaj: () => true, blad: (e) => bledy.push(e) })).toEqual({ modul: true, zdarzenie: true, kanal: true });
+    expect(bledy).toEqual([]);
+
+    const p = utworzOkno();
+    p.win.VildaPersistence.writeModuleJSON = () => { throw new Error('fikcyjny błąd zapisu'); };
+    let wynik;
+    expect(() => { wynik = p.A.zapisz([WLACZENIE], { nadaj: () => true, blad: () => { throw new Error('dziennik'); } }); }).not.toThrow();
+    expect(wynik).toEqual({ modul: false, zdarzenie: true, kanal: true });
+  });
+});
 
 describe('VildaGhPunkty.zapisz — brak każdej zależności osobno: bez wyjątku, pozostałe kroki działają (jak L())', () => {
   const rzuca = (tekst) => () => { throw new Error(tekst); };
