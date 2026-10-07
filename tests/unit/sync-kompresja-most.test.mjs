@@ -293,6 +293,8 @@ describe('P-SYNC-MOST: czytelnik po odszyfrowaniu', () => {
     vi.stubGlobal('fetch', srv.fetch);
     const a = urzadzenie({ klucz, eksport: () => dane });
     await a.sync.syncPush();
+    const wChmurze = await odszyfruj(srv.blob, klucz);
+    expect([wChmurze[0], wChmurze[1]], 'A wysłał gzip').toEqual([0x1f, 0x8b]);
 
     const b = urzadzenie({ klucz, eksport: () => ({ patients: [] }), etag: 'E0' });
     const wynik = await b.sync.syncPull();
@@ -422,5 +424,70 @@ describe('P-SYNC-MOST: limit czasu żądania z ciałem bloba zależny od rozmiar
     expect(blad).toMatchObject({ code: 'TIMEOUT' });
     expect(blad.message).toContain('(30000 ms).');
     expect(blad.bytes).toBeUndefined();
+  });
+});
+
+// Przegląd adwersarza po #573: bez tych przypadków usunięcie gzipa z ponowienia po 412 albo z gałęzi bez ETagu,
+// albo limitu czasu z rejestracji, nie dawało żadnego czerwonego testu (mutacje zmierzone).
+describe('P-SYNC-MOST: pokrycie wszystkich ścieżek pełnej wysyłki', () => {
+  it('ponowienie po 412: drugi PUT też niesie gzip', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'P');
+    const srv = atrapaSerwera(await zaszyfruj(new TextEncoder().encode(JSON.stringify({ patients: [] })), klucz));
+    const bazowy = srv.fetch;
+    let pierwszy = true;
+    srv.fetch = async (url, init = {}) => {
+      if (/\/blob$/.test(new URL(url).pathname) && init.method === 'PUT' && pierwszy) {
+        pierwszy = false; srv.puty.push({ body: init.body, s412: true });
+        return { status: 412, ok: false, json: async () => ({}), headers: { get: () => null } };
+      }
+      return bazowy(url, init);
+    };
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane });
+    const wynik = await a.sync.syncPush();
+    expect(wynik.action).toBe('uploaded');
+    expect(srv.puty).toHaveLength(2);
+    for (const p of srv.puty) {
+      const j = await odszyfruj(p.body, klucz);
+      expect([j[0], j[1]], p.s412 ? 'PUT przed 412' : 'PUT po 412').toEqual([0x1f, 0x8b]);
+    }
+  });
+
+  it('gałąź bez ETagu (registered bez localEtag): PUT niesie gzip', async () => {
+    const klucz = await kluczSync();
+    const dane = ladunek(PROG + 64 * 1024, 'Q');
+    const srv = atrapaSerwera(await zaszyfruj(new TextEncoder().encode(JSON.stringify({ patients: [] })), klucz));
+    vi.stubGlobal('fetch', srv.fetch);
+    const a = urzadzenie({ klucz, eksport: () => dane, etag: null });
+    const wynik = await a.sync.syncPush();
+    expect(wynik.action).toBe('uploaded');
+    const j = await odszyfruj(srv.puty[srv.puty.length - 1].body, klucz);
+    expect([j[0], j[1]]).toEqual([0x1f, 0x8b]);
+  });
+
+  describe('limit czasu rejestracji', () => {
+    beforeEach(() => { vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); });
+    it('POST /register w syncPush ~1,5 MB: nie przerywa po 30 s', async () => {
+      const klucz = await kluczSync();
+      const dane = ladunek(1500 * 1024, 'R');
+      const wywolania = [];
+      vi.stubGlobal('fetch', (url, init) => new Promise((_, odrzuc) => {
+        wywolania.push(url);
+        init.signal.addEventListener('abort', () => { const e = new Error('aborted'); e.name = 'AbortError'; odrzuc(e); });
+      }));
+      const a = urzadzenie({ klucz, eksport: () => dane });
+      a.win.localStorage.setItem(KLUCZ_STANU(SLOT), JSON.stringify({ registered: false, localEtag: null }));
+      let blad = null;
+      const ob = a.sync.syncPush().catch((e) => { blad = e; });
+      const koniec = performance.now() + 5000;
+      while (wywolania.length === 0 && performance.now() < koniec) await new Promise((r) => { setImmediate(r); });
+      expect(wywolania[0]).toMatch(/\/register$/);
+      await vi.advanceTimersByTimeAsync(30010);
+      expect(blad, 'rejestracja z ciałem bloba nie powinna padać po 30 s').toBeNull();
+      await vi.advanceTimersByTimeAsync(200000);
+      await ob;
+      expect(blad).toMatchObject({ code: 'TIMEOUT' });
+    });
   });
 });
