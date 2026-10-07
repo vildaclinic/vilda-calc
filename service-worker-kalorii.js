@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.183';
+const SW_VERSION = '1.1.184';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1563,6 +1563,7 @@ const CORE_SHELL_URLS = [
   '/vilda_gh_punkty.js?v=1',
   '/vilda_gh_punkty.js?v=2',
   '/vilda_gh_punkty.js?v=3',
+  '/vilda_gh_punkty.js?v=4',
   '/antibiotic_therapy.js',
   '/antibiotic_therapy.js?v=10',
   '/antibiotic_therapy.js?v=11',
@@ -2652,6 +2653,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=52',
   '/gh_therapy_monitor.js?v=53',
   '/gh_therapy_monitor.js?v=54',
+  '/gh_therapy_monitor.js?v=55',
   '/gh_therapy_segments.js?v=4',
   '/gh_therapy_segments.js?v=5',
   '/vilda_gh_response_b64.js?v=2',
@@ -2910,6 +2912,7 @@ const OPTIONAL_ASSETS = [
   // to wspólny blok powłoki osadzonej z 10 stron).
   '/inline_cukrzyca_00.css?v=1',
   '/inline_docpro_00.css?v=1',
+  '/inline_docpro_00.css?v=2',
   '/inline_docpro_01.css?v=1',
   '/inline_docpro_01.css?v=2',
   '/inline_docpro_01.css?v=3',

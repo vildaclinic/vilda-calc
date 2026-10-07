@@ -996,3 +996,23 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     flex-basis: 100%;
   }
 }
+/* P-GH-PUNKTY-USZKODZONE: ostrzeżenie nad tabelą punktów GH i przycisk naprawy w komunikacie odmowy (gh_therapy_monitor.js). */
+.gh-uszkodzone-ostrzezenie {
+  margin: 0 0 var(--space-0-6);
+  padding: var(--space-0-6) var(--space-0-75);
+  border: var(--border-hairline) solid #f5c2bc;
+  border-radius: var(--radius-8);
+  background: #fdecea;
+  color: #8e1b12;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+}
+.gh-uszkodzone-napraw {
+  margin-left: var(--space-0-5);
+}
+@media (max-width: 520px) {
+  .gh-uszkodzone-napraw {
+    margin-left: 0;
+  }
+}

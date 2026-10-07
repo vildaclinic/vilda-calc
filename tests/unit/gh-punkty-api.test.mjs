@@ -70,8 +70,8 @@ function oczekujRekordu(rzeczywisty, oczekiwany, opis) {
 }
 
 describe('Moduł i dane zamrożone', () => {
-  it('ładuje się z modułem dawki jako zależnością; wersja 1', () => {
-    expect(A.wersja).toBe(2);
+  it('ładuje się z modułem dawki jako zależnością; wersja 3 (P-GH-PUNKTY-USZKODZONE)', () => {
+    expect(A.wersja).toBe(3);
     // ZALEZNOSCI w load-browser-script.mjs: bez tego Increlex liczyłby się bez × 2.
     expect(w.VildaGhDawka.preparat('Increlex 40 mg').schemat).toBe('naPodanie');
   });
@@ -183,6 +183,9 @@ describe('Brak skutków przy ładowaniu', () => {
     const wynik = P.polaZPodawanej({ ...POLA_FORMULARZA, preparat: 'Increlex 40 mg', program: 'IGF-1' }, 'wsteczny');
     P.punkt(P.noweId(), wynik.pola);
     P.zmienWMiejscu(lista, 'fikc-kont', wynik.pola);
+    P.uszkodzone([null, ...lista, 5]);
+    P.bezUszkodzonych([null, ...lista, 5]);
+    P.komunikatyUszkodzonych(2);
 
     expect(wynik.pola.doseAbs).toBe(1.92);
     expect(uzycia).toEqual([]);
@@ -207,7 +210,8 @@ describe('Brak skutków przy ładowaniu', () => {
 describe('Strażnik czystości (fn.toString())', () => {
   // Funkcje czyste z nagłówka modułu; noweId dopisane, bo też nie może sięgać do magazynu ani DOM.
   const CZYSTE = ['normalizujWiek', 'wiekLacznieMies', 'sprawdzRodzaj', 'dostepneRodzaje', 'sprawdzWartosci',
-    'jednostkaDawki', 'dniIgf', 'polaZPodawanej', 'punkt', 'zmienWMiejscu', 'noweId'];
+    'jednostkaDawki', 'dniIgf', 'polaZPodawanej', 'punkt', 'zmienWMiejscu', 'noweId', 'uszkodzone', 'bezUszkodzonych',
+    'komunikatyUszkodzonych'];
   const ZAKAZANE = ['document', 'sessionStorage', 'localStorage', 'VildaPersistence'];
 
   it.each(CZYSTE)('%s: źródło bez document, sessionStorage, localStorage i VildaPersistence', (nazwa) => {
@@ -761,5 +765,67 @@ describe('zmienWMiejscu — edycja punktu w miejscu, nigdy dopisanie', () => {
     const bezId = {};
     expect(A.zmienWMiejscu([bezId], 'undefined', polaEdycji())).toEqual({ ok: true, indeks: 0 });
     expect(Object.keys(bezId)).toEqual(KLUCZE.filter((k) => k !== 'id'));
+  });
+});
+
+// P-GH-PUNKTY-USZKODZONE (rata 4, wersja 3): uszkodzony wpis listy = wpis, który nie jest obiektem. Decyzja właściciela
+// 2026-10-07: każdy taki wpis (null, liczba, napis, true/false), pusty obiekt i tablica zostają.
+describe('uszkodzone, bezUszkodzonych i komunikatyUszkodzonych — uszkodzone wpisy listy punktów', () => {
+  const LISTA = [WLACZENIE, null, KONTYNUACJA, 5, 'x', true, false, 0, '', undefined, {}, [], ZAKONCZENIE];
+
+  it('uszkodzone: indeksy wpisów niebędących obiektem, rosnąco; pusty obiekt i tablica nie są uszkodzone', () => {
+    expect(A.uszkodzone(LISTA)).toEqual([1, 3, 4, 5, 6, 7, 8, 9]);
+    expect(A.uszkodzone([WLACZENIE, KONTYNUACJA])).toEqual([]);
+    expect(A.uszkodzone([])).toEqual([]);
+    for (const nieLista of [null, undefined, {}, 'x', 5]) expect(A.uszkodzone(nieLista), String(nieLista)).toEqual([]);
+  });
+
+  it('bezUszkodzonych: nowa lista, te same obiekty w tej samej kolejności; wejście bez zmian', () => {
+    const wejscie = LISTA.slice();
+    const wynik = A.bezUszkodzonych(wejscie);
+    expect(wynik).toHaveLength(5);
+    expect(wynik[0]).toBe(WLACZENIE);
+    expect(wynik[1]).toBe(KONTYNUACJA);
+    expect(wynik[2]).toEqual({});
+    expect(wynik[3]).toEqual([]);
+    expect(wynik[4]).toBe(ZAKONCZENIE);
+    expect(wynik).not.toBe(wejscie);
+    expect(wejscie).toEqual(LISTA);
+    // Czysta lista: kopia z tymi samymi elementami.
+    const czysta = [WLACZENIE, KONTYNUACJA];
+    expect(A.bezUszkodzonych(czysta)).toEqual(czysta);
+    expect(A.bezUszkodzonych(czysta)).not.toBe(czysta);
+    expect(A.bezUszkodzonych(null)).toEqual([]);
+  });
+
+  it('komunikatyUszkodzonych(1): teksty z makiety zaakceptowanej przez właściciela 2026-10-07', () => {
+    expect(A.komunikatyUszkodzonych(1)).toEqual({
+      liczba: 1,
+      ostrzezenie: 'Lista punktów zawiera 1 uszkodzony wpis bez danych. Nie jest pokazywany w tabeli. Zapisywanie i usuwanie '
+        + 'punktów jest wstrzymane, dopóki go nie usuniesz.',
+      naglowek: 'Uszkodzony wpis na liście punktów',
+      tresc: 'Nie zapisano: lista punktów leczenia tego pacjenta zawiera 1 uszkodzony wpis bez danych. Usuń go, aby zapisywać '
+        + 'punkty. Pozostałe punkty się nie zmienią.',
+      przycisk: 'Usuń uszkodzony wpis',
+    });
+  });
+
+  it('komunikatyUszkodzonych: liczba mnoga — 2–4 wpisy (bez 12–14), pozostałe wpisów; przycisk z liczbą', () => {
+    const forma = (n) => A.komunikatyUszkodzonych(n).ostrzezenie.match(/zawiera (.+?) bez danych/)[1];
+    expect(forma(2)).toBe('2 uszkodzone wpisy');
+    expect(forma(4)).toBe('4 uszkodzone wpisy');
+    expect(forma(5)).toBe('5 uszkodzonych wpisów');
+    expect(forma(12)).toBe('12 uszkodzonych wpisów');
+    expect(forma(14)).toBe('14 uszkodzonych wpisów');
+    expect(forma(22)).toBe('22 uszkodzone wpisy');
+    expect(forma(25)).toBe('25 uszkodzonych wpisów');
+    expect(forma(112)).toBe('112 uszkodzonych wpisów');
+    const dwa = A.komunikatyUszkodzonych(2);
+    expect(dwa.naglowek).toBe('Uszkodzone wpisy na liście punktów');
+    expect(dwa.przycisk).toBe('Usuń uszkodzone wpisy (2)');
+    expect(dwa.ostrzezenie).toBe('Lista punktów zawiera 2 uszkodzone wpisy bez danych. Nie są pokazywane w tabeli. '
+      + 'Zapisywanie i usuwanie punktów jest wstrzymane, dopóki ich nie usuniesz.');
+    expect(dwa.tresc).toBe('Nie zapisano: lista punktów leczenia tego pacjenta zawiera 2 uszkodzone wpisy bez danych. '
+      + 'Usuń je, aby zapisywać punkty. Pozostałe punkty się nie zmienią.');
   });
 });
