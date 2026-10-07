@@ -368,11 +368,11 @@ describe('VildaGhPunkty ↔ żywy monitor — okno atrapy', () => {
     expect(typeof dawka.preparat).toBe('function');
     loadBrowserScript('vilda_gh_punkty.js', z.win);
     expect(z.win.VildaGhDawka).toBe(dawka);
-    expect(z.win.VildaGhPunkty.wersja).toBe(1);
+    expect(z.win.VildaGhPunkty.wersja).toBe(2);
     // Monitor w atrapie z API porównuje się ze starym kodem: API nie zostaje w oknie.
     const zApi = atrapaZApi();
     expect(zApi.atrapa.win.VildaGhPunkty).toBeUndefined();
-    expect(zApi.api.wersja).toBe(1);
+    expect(zApi.api.wersja).toBe(2);
 
     const bez = atrapaZApi({ modulDawki: false });
     expect(bez.atrapa.win.VildaGhDawka).toBeUndefined();

@@ -71,7 +71,7 @@ function oczekujRekordu(rzeczywisty, oczekiwany, opis) {
 
 describe('Moduł i dane zamrożone', () => {
   it('ładuje się z modułem dawki jako zależnością; wersja 1', () => {
-    expect(A.wersja).toBe(1);
+    expect(A.wersja).toBe(2);
     // ZALEZNOSCI w load-browser-script.mjs: bez tego Increlex liczyłby się bez × 2.
     expect(w.VildaGhDawka.preparat('Increlex 40 mg').schemat).toBe('naPodanie');
   });

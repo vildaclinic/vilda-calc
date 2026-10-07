@@ -26,6 +26,8 @@
  * Bez VildaGhDawka liczy jak monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true.
  * Pusty wpis (null) na liście: sprawdzRodzaj i zmienWMiejscu rzucają wyjątek tam, gdzie monitor (rata 2, decyzja
  * właściciela 2026-10-07: ściśle jak monitor); dostepneRodzaje go pomija, jak formularz wsteczny monitora.
+ * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — rata 2. Monitor korzysta tylko z wersji 2, ze starszą
+ * (np. plik z pamięci przeglądarki przy niepełnej aktualizacji) wykonuje stary kod.
  * Rejestr: docs/clinical/ALGORITHMS.md, P-GH-PUNKTY-API.
  */
 (function (w) {
@@ -311,7 +313,7 @@
   }
 
   w.VildaGhPunkty = Object.freeze({
-    wersja: 1,
+    wersja: 2,
     KLUCZE: KLUCZE,
     RODZAJE: RODZAJE,
     KOMUNIKATY: KOMUNIKATY,

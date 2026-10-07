@@ -8528,16 +8528,18 @@ zwraca `brak-punktu` dopiero na końcu).
 listy i zmiany pacjenta (P-GH-EDYCJA-LISTA, P-GH-EDYCJA-PACJENT) zostaje w monitorze i idzie przed regułami API.
 
 **Co się zmienia w kodzie.** Monitor (`gh_therapy_monitor.js`, łatka z komentarzem `P-GH-PUNKTY-API rata 2`, czytelnie w
-`docs/ZRODLA_ARTEFAKTOW.md`) przy każdym zapisie sprawdza `window.VildaGhPunkty` z `wersja === 1`:
+`docs/ZRODLA_ARTEFAKTOW.md`) przy każdym zapisie sprawdza `window.VildaGhPunkty` z `wersja === 2` (i moduł dawki, jeśli jest,
+z funkcją `preparat`):
 - zapis W/K/Z (`He`): pierwszy krok bez zmian — blok P-GH-EDYCJA-LISTA; potem `sprawdzRodzaj` (z kluczem `pomin` jak
   dotąd), a przy edycji `polaZPodawanej('karta')` i `zmienWMiejscu`; wynik `brak-punktu` prowadzi do dotychczasowej gałęzi
   z tym samym komunikatem; nowy punkt z karty: `jednostkaDawki`, `dniIgf`, `normalizujWiek`, `sprawdzWartosci('karta')` —
   rekord, wynik karty i dawka (Gmcalc, pola zapasowe) zostają w monitorze;
 - punkt wsteczny: `sprawdzRodzaj` → `polaZPodawanej('wsteczny')` → `punkt(id)`; id nadaje monitor jak dotąd;
 - zapis listy (`L`): `zapisz(lista, {nadaj: Y monitora, blad: dziennik monitora})`; usuwanie przez `L` bez zmian filtra.
-Bez modułu (albo przy innej wersji) każde miejsce wykonuje **dosłownie stary kod** — zapas do PR-5 (D5).
+Bez modułu, przy innej wersji API (np. plik raty 1 z pamięci przeglądarki przy niepełnej aktualizacji — hosting ignoruje
+`?v=`) albo przy module dawki bez `preparat` każde miejsce wykonuje **dosłownie stary kod** — zapas do PR-5 (D5).
 
-`VildaGhPunkty` (wersja 2 pliku, `wersja: 1` API): `sprawdzRodzaj` i `zmienWMiejscu` bez pomijania `null` — rzucają wyjątek
+`VildaGhPunkty` (wersja 2 pliku, `wersja: 2` API — zmiana kontraktu względem raty 1): `sprawdzRodzaj` i `zmienWMiejscu` bez pomijania `null` — rzucają wyjątek
 tam, gdzie monitor; `zmienWMiejscu` zostawia wpis niebędący obiektem bez zmian z wynikiem ok (jak przypisanie w monitorze
 bez trybu ścisłego); `zapisz` przyjmuje `opcje.blad` (dziennik błędu zapisu modułu i kanału, jak dotąd w `L()`).
 
@@ -8548,7 +8550,11 @@ i odporna tabela, bez przepisywania danych; przed funkcją „punkt z wiersza ka
 
 **Klasyfikacja.** Refaktoryzacja bez zmiany zachowania (AGENTS § 2): wzory, dawki, jednostki, progi, komunikaty, kolejność
 odmów, zapis i sygnały bez zmian. Nie jest zmianą kliniczną. Dowód niżej; zachowanie przy `null` jest zachowaniem monitora,
-nie nową regułą.
+nie nową regułą. Niezależny przegląd (ok. 2,2 tys. scenariuszy w obu trybach, w tym 1945 brzegowych wartości pól) nie
+znalazł różnicy w stanach, które aplikacja wytwarza. Różnią się tylko stany, których aplikacja nie wytwarza: wyjątek z
+`VildaGhDawka.preparat` przy edycji (stary kod zostawia w oknie częściowo zmieniony punkt, API — nie), wpis listy nie do
+zmiany (zamrożony; lista pochodzi zawsze ze świeżego `JSON.parse`) i lista w oknie podmieniona na nie-tablicę przez obcego
+słuchacza. W każdym z nich tryb z modułem nie zapisuje niczego, czego nie zapisałby stary kod.
 
 **Przypadki `wejście → oczekiwany wynik`** — jak w racie 1 (te same funkcje, te same liczby); dla monitora: punkt wsteczny
 Omnitrope 10 mg 0,96 mg/d przy 32 kg, wiek 9 l. 6 mies. → rekord 15 kluczy z `dose` 0,03 mg/kg/d i `doseAbs` 0,96 mg/d,
@@ -8560,8 +8566,8 @@ w obu trybach identyczny co do kolejności kluczy i bitu każdej liczby.
   formularze, wiersze tabeli, powiadomienia, ostrzeżenia diagnostyczne, drugi klik): zapisy i odmowy z karty, wsteczne,
   edycje i usuwanie; edycja spoza bieżącej listy i zmiana pacjenta z różnymi danymi formularza; pusty wpis i wpisy
   niebędące punktem; błąd zapisu i warianty `tabId`. Licznik wywołań API: każdy zapis to jedno `zapisz`, a odmowa edycji
-  spoza listy i po zmianie pacjenta zapada przed jakimkolwiek wywołaniem API. Bramka: inna wersja albo wyjątek przy odczycie
-  modułu → stary kod. Wrażliwość sprawdzona mutacjami (tolerancja `null`, blok P-GH-EDYCJA-LISTA za bramką, id z zegara
+  spoza listy i po zmianie pacjenta zapada przed jakimkolwiek wywołaniem API. Bramka: API innej wersji (rata 1), wyjątek
+  przy odczycie modułu albo moduł dawki bez `preparat` → stary kod. Wrażliwość sprawdzona mutacjami (tolerancja `null`, blok P-GH-EDYCJA-LISTA za bramką, id z zegara
   API, pominięty `Gsch`, `L` bez nadawcy monitora, brak dziennika błędu, `pomin` tylko przy edycji, przypisanie do
   wpisu niebędącego obiektem): każda czerwona.
 - `tests/unit/gh-punkty-siatka.test.mjs` (37): złota siatka (ok. 10 tys. przypadków) w OBU trybach daje ten sam wzorzec

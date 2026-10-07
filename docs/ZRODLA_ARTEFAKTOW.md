@@ -248,11 +248,14 @@ if (klucz === 'vildaCurrentPatientId') { edycjaAktualna() || koniecEdycji(); ret
 
 ## Łatka P-GH-PUNKTY-API rata 2 (`gh_therapy_monitor.js`, 2026-10-07)
 
-Klej monitora do czytelnego modułu `vilda_gh_punkty.js` (`window.VildaGhPunkty`). Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła; miejsca mają komentarz `P-GH-PUNKTY-API rata 2`. Nazwy z artefaktu jak wyżej, a ponadto: `L()` — zapis listy, `Y()` — komunikat kanału `gh-therapy-sync` z `tabId`, `J()` — wskaźnik zapisu, `p()` — dziennik diagnostyczny, `Gsch()` — schowanie formularza edycji. Bez modułu (albo przy `wersja !== 1`) każde miejsce wykonuje **dosłownie stary kod**. Opis działania i dowód braku zmiany: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-API rata 2. Skrypt nałożenia łatki z kotwicami występującymi raz trzymamy poza repozytorium; łatkę nakłada się na wersję 52.
+Klej monitora do czytelnego modułu `vilda_gh_punkty.js` (`window.VildaGhPunkty`). Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła; miejsca mają komentarz `P-GH-PUNKTY-API rata 2`. Nazwy z artefaktu jak wyżej, a ponadto: `L()` — zapis listy, `Y()` — komunikat kanału `gh-therapy-sync` z `tabId`, `J()` — wskaźnik zapisu, `p()` — dziennik diagnostyczny, `Gsch()` — schowanie formularza edycji. Bez modułu, przy innej wersji API niż 2 (np. plik raty 1 z pamięci przeglądarki) albo przy module dawki bez funkcji `preparat` każde miejsce wykonuje **dosłownie stary kod**. Opis działania i dowód braku zmiany: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-API rata 2. Skrypt nałożenia łatki z kotwicami występującymi raz trzymamy poza repozytorium; łatkę nakłada się na wersję 52.
 
 ```js
 function apiPunktow() {                         // (Gpa) bramka przy każdym zapisie
-  try { const A = window.VildaGhPunkty; return A && A.wersja === 1 ? A : null; } catch { return null; }
+  try {
+    const A = window.VildaGhPunkty, E = window.VildaGhDawka;
+    return A && A.wersja === 2 && !(E && typeof E.preparat !== 'function') ? A : null;
+  } catch { return null; }
 }
 function wartosc(id, zapas) {                   // (Gpv)
   const el = document.getElementById(id); return el ? el.value : zapas;

@@ -208,6 +208,11 @@ const BRZEGI = [
     kroki: [wsteczny()] },
   { nazwa: 'reset monitora po zapisie', opcje: { punkty: [WLACZENIE] },
     kroki: [wsteczny(), (a) => a.zdarzenieOkna('vilda:user-state-cleared')] },
+  // Moduł dawki bez funkcji preparat (w aplikacji go nie ma): z modułem punktów bramka wybiera stary kod, więc Increlex
+  // nie zapisze się bez × 2 tam, gdzie stary kod rzuca wyjątek.
+  { nazwa: 'moduł dawki bez preparat: edycja i wsteczny Increlex', opcje: { punkty: [WLACZENIE, KONTYNUACJA] },
+    kroki: [(a) => { a.win.VildaGhDawka = {}; }, edytuj(KONTYNUACJA.id, { ghEditDrug: 'Increlex 40 mg', ghEditDose: '0.5' }, 'continue'),
+      wsteczny({ ghRetroProg: 'IGF-1', ghRetroDrug: 'Increlex 40 mg', ghRetroDose: '0.5' })] },
 ];
 
 describe('Monitor GH: z modułem VildaGhPunkty i bez niego (ścieżka zapasowa) — ten sam wynik', () => {
@@ -254,11 +259,11 @@ describe('Monitor GH z modułem: delegacja do VildaGhPunkty', () => {
     expect(pacjent.dziennik.filter((w) => w.rodzaj === 'M')).toEqual([]);
   });
 
-  it('bramka: inna wersja API albo wyjątek przy odczycie VildaGhPunkty — monitor wykonuje stary kod', () => {
+  it('bramka: API innej wersji (np. rata 1 z pamięci przeglądarki), wyjątek przy odczycie VildaGhPunkty albo moduł dawki bez preparat — monitor wykonuje stary kod', () => {
     const s = { opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny()] };
     const { api: _bezApi, ...odniesienie } = przebieg(s, TRYB_ZAPAS).zrzuty[0];
     for (const podmien of [
-      (w) => { const wywolania = []; w.VildaGhPunkty = { wersja: 2, zapisz: () => wywolania.push('zapisz') }; return wywolania; },
+      (w) => { const wywolania = []; w.VildaGhPunkty = { wersja: 1, zapisz: () => wywolania.push('zapisz') }; return wywolania; },
       (w) => { Object.defineProperty(w, 'VildaGhPunkty', { get() { throw new Error('fikc'); }, configurable: true }); return []; },
     ]) {
       const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE] });
@@ -267,6 +272,11 @@ describe('Monitor GH z modułem: delegacja do VildaGhPunkty', () => {
       expect(wywolania).toEqual([]);
       expect(kanon(zrzut(atrapa, null))).toBe(kanon(odniesienie));
     }
+    // Moduł dawki bez preparat: zero wywołań API (wynik obu trybów porównuje scenariusz w „sytuacjach brzegowych”).
+    const bezPreparatu = przebieg({ opcje: { punkty: [WLACZENIE] }, kroki: [(a) => { a.win.VildaGhDawka = {}; }, wsteczny()] },
+      TRYB_MODUL, { zlicz: true }).zrzuty[1];
+    expect(bezPreparatu.api).toEqual([]);
+    expect(bezPreparatu.wyjatek).toMatchObject({ blad: 'TypeError' });
   });
 });
 
