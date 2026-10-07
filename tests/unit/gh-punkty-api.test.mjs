@@ -84,7 +84,7 @@ describe('Moduł i dane zamrożone', () => {
     expect(A.RODZAJE).toEqual(['start', 'continue', 'end']);
   });
 
-  it('KOMUNIKATY: 5 tekstów dosłownie jak w monitorze', () => {
+  it('KOMUNIKATY: 5 tekstów dosłownie jak w monitorze sprzed API', () => {
     expect(A.KOMUNIKATY).toEqual({
       drugieWlaczenie: DRUGIE_WLACZENIE,
       drugieZakonczenie: DRUGIE_ZAKONCZENIE,
@@ -92,11 +92,15 @@ describe('Moduł i dane zamrożone', () => {
       programKarta: PROGRAM_KARTA,
       programWsteczny: PROGRAM_WSTECZNY,
     });
-    // Dwie kopie tekstów do PR-4: każdy tekst z tego testu występuje w źródle monitora (po rozwinięciu \uXXXX).
-    const monitor = fs.readFileSync(path.join(korzen, 'gh_therapy_monitor.js'), 'utf8')
+    // Wzorem jest monitor sprzed API (tests/fixtures/gh-monitor-przed-api.js.txt): każdy tekst występuje w jego źródle
+    // (po rozwinięciu \uXXXX). Od raty 3 (D5) dzisiejszy monitor nie ma już własnej kopii — teksty są tylko w API.
+    const rozwin = (plik) => fs.readFileSync(path.join(korzen, plik), 'utf8')
       .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+    const przedApi = rozwin('tests/fixtures/gh-monitor-przed-api.js.txt');
+    const monitor = rozwin('gh_therapy_monitor.js');
     for (const tekst of [DRUGIE_WLACZENIE, DRUGIE_ZAKONCZENIE, DANE, PROGRAM_KARTA, PROGRAM_WSTECZNY]) {
-      expect(monitor, tekst).toContain(tekst);
+      expect(przedApi, tekst).toContain(tekst);
+      expect(monitor, tekst).not.toContain(tekst);
     }
   });
 

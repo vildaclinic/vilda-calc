@@ -57,6 +57,9 @@ function environment(withGh = false) {
   loadBrowserScript('vilda_bone_age.js', win);
   loadBrowserScript('vilda_data_import_export.js', win);
   if (withGh) {
+    // Jak docpro.html: wspólne API punktów GH (z modułem dawki) przed monitorem; bez niego monitor nie zapisuje punktu
+    // (P-GH-PUNKTY-API rata 3).
+    loadBrowserScript('vilda_gh_punkty.js', win);
     const source = fs.readFileSync(new URL('../../gh_therapy_monitor.js', import.meta.url), 'utf8');
     new Function('window', 'globalThis', 'document', 'sessionStorage', 'localStorage', 'setTimeout', 'location', 'CustomEvent', source)(win, win, doc, win.sessionStorage, win.localStorage, win.setTimeout, win.location, win.CustomEvent);
   }

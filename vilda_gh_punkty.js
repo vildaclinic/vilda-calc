@@ -2,7 +2,8 @@
  *
  * P-GH-PUNKTY-API (2026-10-06, decyzja właściciela D4). Reguły punktu terapii GH: edycja punktu, punkt wsteczny,
  * zapis listy. Rata 1 odtworzyła je 1:1 z monitora (gh_therapy_monitor.js: He, ghAddRetroPoint, L) w czytelnej
- * postaci. Od raty 2 (2026-10-07) monitor z nich korzysta; bez tego modułu wykonuje dosłownie stary kod (zapas).
+ * postaci. Od raty 2 (2026-10-07) monitor z nich korzysta. Od raty 3 (D5) to jedyna kopia reguł: stary kod monitora
+ * jest usunięty, a bez tego modułu monitor nie zapisuje punktu i prosi o odświeżenie strony.
  *
  * Rekord punktu (15 kluczy, kolejność nośna dla scalania w sejfie):
  *   id, type, ageYears, ageMonths, weight, height, boneAge, dose, doseUnit, drug, program, igf1, igf1Unit,
@@ -26,8 +27,8 @@
  * Bez VildaGhDawka liczy jak monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true.
  * Pusty wpis (null) na liście: sprawdzRodzaj i zmienWMiejscu rzucają wyjątek tam, gdzie monitor (rata 2, decyzja
  * właściciela 2026-10-07: ściśle jak monitor); dostepneRodzaje go pomija, jak formularz wsteczny monitora.
- * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — rata 2. Monitor korzysta tylko z wersji 2, ze starszą
- * (np. plik z pamięci przeglądarki przy niepełnej aktualizacji) wykonuje stary kod.
+ * wersja: 1 — rata 1 (null pomijany, bez opcje.blad); 2 — od raty 2 (rata 3 nie zmienia API). Monitor korzysta tylko
+ * z wersji 2; przy starszej (np. plik z pamięci przeglądarki przy niepełnej aktualizacji) odmawia zapisu.
  * Rejestr: docs/clinical/ALGORITHMS.md, P-GH-PUNKTY-API.
  */
 (function (w) {
@@ -39,7 +40,7 @@
   var KLUCZE = Object.freeze(['id', 'type', 'ageYears', 'ageMonths', 'weight', 'height', 'boneAge', 'dose', 'doseUnit',
     'drug', 'program', 'igf1', 'igf1Unit', 'igf1DaysSinceDose', 'doseAbs']);
   var RODZAJE = Object.freeze(['start', 'continue', 'end']);
-  // Teksty dosłownie z monitora (nakładka #ghInfoOverlay, nagłówek „Informacja”).
+  // Teksty dosłownie z monitora sprzed API (nakładka #ghInfoOverlay, nagłówek „Informacja”); od raty 3 jedyna kopia.
   var KOMUNIKATY = Object.freeze({
     drugieWlaczenie: 'Punkt „Włączenie leczenia” został już dodany.',
     drugieZakonczenie: 'Punkt „Zakończenie leczenia” został już dodany.',
@@ -57,7 +58,7 @@
     return E && typeof E.preparat === 'function' ? E : null;
   }
 
-  // Increlex: dawka na podanie, 2 podania na dobę (= Gmpod/Gmt monitora).
+  // Increlex: dawka na podanie, 2 podania na dobę (= Gmpod i dawne Gmt monitora).
   function naPodanie(preparat, opcje) {
     var E = modulDawki(opcje);
     var P = E && preparat ? E.preparat(preparat) : null;

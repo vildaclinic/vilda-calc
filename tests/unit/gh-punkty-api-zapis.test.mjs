@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { KLUCZ_MODULU, TAB_ID_DOMYSLNY, rodzaje, utworzAtrapeMonitoraGh } from '../support/gh-monitor-atrapa.mjs';
+import { KLUCZ_MODULU, TAB_ID_DOMYSLNY, opcjePrzedApi, rodzaje, utworzAtrapeMonitoraGh } from '../support/gh-monitor-atrapa.mjs';
 
 // P-GH-PUNKTY-API rata 1. Funkcje z efektami wspólnego API punktów terapii GH (vilda_gh_punkty.js →
 // window.VildaGhPunkty): zapisz, wczytaj, gotowe — na atrapach okna, bez prawdziwej przeglądarki. Test woła
 // PRAWDZIWY moduł (loadBrowserScript, osobne okno na każdy przypadek, więc leniwy kanał modułu startuje od zera).
 //
-// Wzorcem jest L() monitora (gh_therapy_monitor.js): ve() → writeModuleJSON('GH_THERAPY_POINTS', lista, {force:true}),
+// Wzorcem jest L() monitora sprzed API (gh_therapy_monitor.js 52, MONITOR_PRZED_API w atrapie): ve() → writeModuleJSON('GH_THERAPY_POINTS', lista, {force:true}),
 // potem document 'vilda:therapy-points-changed' {source:'gh'}, potem Y({type:'update'}) na kanale gh-therapy-sync
 // z tabId: VildaPersistence.getTabId(), bez niej sessionStorage.vildaTabIdV1 (pusty → ''), a wyjątek przy odczycie
 // tabId zostawia wiadomość bez pola tabId. Każdy krok L() ma własny try, więc brak modułu nie zatrzymuje sygnałów.
 // be() monitora: readModuleJSON('GH_THERAPY_POINTS', []), nie-tablica albo wyjątek → [].
-// Przypadki „różnicowo z monitorem” porównują wynik API z PRAWDZIWYM monitorem w atrapie
+// Przypadki „różnicowo z monitorem” porównują wynik API z PRAWDZIWYM monitorem sprzed API w atrapie
 // tests/support/gh-monitor-atrapa.mjs (usunięcie punktu z tabeli kończy się samym L(): M → E → BC).
 //
 // Atrapa okna tego pliku (utworzOkno) zapisuje w jednym dzienniku, w kolejności:
@@ -155,11 +155,12 @@ function utworzOkno({ getTabId = TAB_ID, sesjaTabId = null, modul } = {}) {
 }
 
 // Para atrap PRAWDZIWEGO monitora z tymi samymi opcjami: w jednej usuwa punkt monitor (re() → L()), w drugiej tę samą
-// listę zapisuje API (bez nadaj, czyli własnym kanałem). `przed` dostaje okno atrapy przed akcją. Monitor działa w
-// trybie zapasowym (bez VildaGhPunkty, P-GH-PUNKTY-API rata 2): porównanie dotyczy starego L(), nie samego API.
+// listę zapisuje API (bez nadaj, czyli własnym kanałem). `przed` dostaje okno atrapy przed akcją. Usuwa monitor sprzed
+// API (MONITOR_PRZED_API, bez VildaGhPunkty; od raty 3 dzisiejszy monitor nie ma już starego L()): porównanie dotyczy
+// starego L(), nie samego API.
 function monitorIApi(opcje = {}, przed = () => {}) {
   const punkty = [WLACZENIE, KONTYNUACJA];
-  const monitor = utworzAtrapeMonitoraGh({ punkty, ...opcje, modulPunktow: false });
+  const monitor = utworzAtrapeMonitoraGh(opcjePrzedApi({ punkty, ...opcje }));
   const api = utworzAtrapeMonitoraGh({ punkty, ...opcje, modulPunktow: false });
   loadBrowserScript('vilda_gh_punkty.js', api.win);
   przed(monitor.win);

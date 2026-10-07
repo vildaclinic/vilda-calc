@@ -248,7 +248,7 @@ if (klucz === 'vildaCurrentPatientId') { edycjaAktualna() || koniecEdycji(); ret
 
 ## Łatka P-GH-PUNKTY-API rata 2 (`gh_therapy_monitor.js`, 2026-10-07)
 
-Klej monitora do czytelnego modułu `vilda_gh_punkty.js` (`window.VildaGhPunkty`). Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła; miejsca mają komentarz `P-GH-PUNKTY-API rata 2`. Nazwy z artefaktu jak wyżej, a ponadto: `L()` — zapis listy, `Y()` — komunikat kanału `gh-therapy-sync` z `tabId`, `J()` — wskaźnik zapisu, `p()` — dziennik diagnostyczny, `Gsch()` — schowanie formularza edycji. Bez modułu, przy innej wersji API niż 2 (np. plik raty 1 z pamięci przeglądarki) albo przy module dawki bez funkcji `preparat` każde miejsce wykonuje **dosłownie stary kod**. Opis działania i dowód braku zmiany: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-API rata 2. Skrypt nałożenia łatki z kotwicami występującymi raz trzymamy poza repozytorium; łatkę nakłada się na wersję 52.
+Klej monitora do czytelnego modułu `vilda_gh_punkty.js` (`window.VildaGhPunkty`). Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła; miejsca mają komentarz `P-GH-PUNKTY-API rata 2`. Nazwy z artefaktu jak wyżej, a ponadto: `L()` — zapis listy, `Y()` — komunikat kanału `gh-therapy-sync` z `tabId`, `J()` — wskaźnik zapisu, `p()` — dziennik diagnostyczny, `Gsch()` — schowanie formularza edycji. Bez modułu, przy innej wersji API niż 2 (np. plik raty 1 z pamięci przeglądarki) albo przy module dawki bez funkcji `preparat` każde miejsce wykonuje **dosłownie stary kod**. Opis działania i dowód braku zmiany: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-API rata 2. Skrypt nałożenia łatki z kotwicami występującymi raz trzymamy poza repozytorium; łatkę nakłada się na wersję 52. *(Od raty 3 zapasu nie ma — sekcja niżej.)*
 
 ```js
 function apiPunktow() {                         // (Gpa) bramka przy każdym zapisie
@@ -310,6 +310,43 @@ if (A) {
 ```
 
 Bez zmian: `D()`, `F()`, `O()`, `re()` (filtr bez zmian, zapis przez `L()`), `Q()`, nakładki, `Ve()`/`Ue()`, nasłuch `storage`.
+
+## Łatka P-GH-PUNKTY-API rata 3, D5 (`gh_therapy_monitor.js` 53 → 54, 2026-10-07)
+
+Koniec zapasu z raty 2: stary kod reguł punktu usunięty, a bez zgodnego modułu monitor odmawia zapisu. Zmiana wprost w artefakcie, miejsca mają komentarz `P-GH-PUNKTY-API rata 3 (D5)`. Bramka `apiPunktow()` (`Gpa`), `wartosc()` (`Gpv`) i `edycjaPrzezApi()` (`Gph`) bez zmian względem raty 2. Usunięte: gałęzie `else` z raty 2 (stary kod zapisu W/K/Z i edycji w `He`, punktu wstecznego i `L()`) oraz funkcje `Gmt` (dawka dobowa z podawanej; zastępuje ją `polaZPodawanej` w API) i `ve` (zapis do pamięci modułu; zastępuje go `zapisz`). Monitor sprzed API (wersja 52) zostaje w repozytorium jako wyrocznia testów: `tests/fixtures/gh-monitor-przed-api.js.txt`. Opis działania: `docs/clinical/ALGORITHMS.md`, P-GH-PUNKTY-API rata 3. Łatkę nakłada się na wersję 53.
+
+```js
+function odmowaBezModulu() {                    // (Gpn)
+  B('Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.');
+}
+
+// He(typ) — zapis W/K/Z. Pierwszy krok bez zmian: blok P-GH-EDYCJA-LISTA (także bez modułu).
+const A = apiPunktow();
+if (!A) { odmowaBezModulu(); return; }
+const r = A.sprawdzRodzaj(window.ghTherapyPoints, typ, { pomin: x });
+if (!r.ok) { B(r.komunikat); return; }
+if (x) { edycjaPrzezApi(typ, A); return; }
+// ... nowy punkt z karty: odczyty pól, wynik karty i Gmcalc bez zmian; reguły wyłącznie z API:
+s = A.jednostkaDawki(lek);
+dni = A.dniIgf(igf1, dni, s);
+({ lata, miesiace } = A.normalizujWiek(lata, miesiace));
+const w = A.sprawdzWartosci({ lata, miesiace, masa, wzrost, dawka, preparat, program }, 'karta');
+if (!w.ok) { B(w.komunikat); return; }
+
+// ghAddRetroPoint — po D() i odczycie rodzaju z #ghRetroType:
+const A = apiPunktow();
+if (!A) { odmowaBezModulu(); return; }
+// ... dalej jak w racie 2 (sprawdzRodzaj → polaZPodawanej('wsteczny') → punkt(id) → L(), F(), J, ghCancelRetroForm)
+
+// re(id) — usunięcie, przed filtrem listy:
+if (!apiPunktow()) { odmowaBezModulu(); return; }
+
+// L() — zapis listy wyłącznie przez API (każde miejsce, które woła L(), sprawdziło bramkę wcześniej):
+const A = apiPunktow();
+if (A) A.zapisz(window.ghTherapyPoints, { nadaj: (m) => Y(m, 'saveTherapyPoints:update'), blad: (e) => p(OSTRZEZENIE, e) });
+```
+
+Bez zmian: `D()`, `F()`, `O()`, `Gmpod` (etykiety i tabela), `Gmcalc`, `Q()`, nakładki, `Ve()`/`Ue()`, nasłuch `storage`.
 
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
