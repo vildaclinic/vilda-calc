@@ -182,7 +182,8 @@ test('logout and session reset cannot be reversed by a late patient response', a
   expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
   expect((await source(page, A)).status).toBe('unavailable');
   expect(await page.evaluate(() => window.VildaPubertySource.biezace())).toBeNull();
-  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
+  // Session reset also clears the selected analyte, so no assessment exists.
+  expect(await snapshot(page)).toBeUndefined();
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
   await expect(page.locator('#labValue')).toHaveValue('');
