@@ -80,8 +80,8 @@
   "sha256": "71b425aa71804cb0463418d6abb2cfe11c1204d11c862daace55e4a9bc47bffb"
  },
  "gh_therapy_monitor.js": {
-  "v": 53,
-  "sha256": "c73ba35e00b7a22d60c23bc28df4def65f49a7253379b481167a76d5f9cb14aa"
+  "v": 54,
+  "sha256": "a48acb45fe107cb7d58f0a08822173c03d60bae77e54e674345e559eea497f3e"
  },
  "gh_therapy_segments.js": {
   "v": 5,
@@ -640,8 +640,8 @@
   "sha256": "4c418390b2b18ad1721a26ef9b23175d327d2ee98a8aa5bfc64134f62b945f12"
  },
  "vilda_gh_punkty.js": {
-  "v": 2,
-  "sha256": "b65181448398557e8815042cb260d96b26c6ca28ede19db5f8dd63d6b732cf65"
+  "v": 3,
+  "sha256": "3a014bc67ec9f215799b1c89e85168264a087ea249c2adb43dbc527e02485cbe"
  },
  "vilda_gh_response_b64.js": {
   "v": 2,

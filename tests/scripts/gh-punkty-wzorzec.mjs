@@ -432,7 +432,7 @@ function zbierz(atrapa, p, powiadomieniaOd) {
 
 /**
  * Jeden przypadek na świeżej atrapie (lista w pamięci modułu przed startem monitora). opcjeAtrapy trafiają do
- * utworzAtrapeMonitoraGh, np. { modulPunktow: false } — monitor bez VildaGhPunkty (ścieżka zapasowa, P-GH-PUNKTY-API).
+ * utworzAtrapeMonitoraGh, np. { modulPunktow: false } dla monitora sprzed API podanego w `zrodla` (opcjePrzedApi w atrapie).
  */
 export function wykonajNaSwiezej(p, zrodla = {}, opcjeAtrapy = {}) {
   const atrapa = utworzAtrapeMonitoraGh({

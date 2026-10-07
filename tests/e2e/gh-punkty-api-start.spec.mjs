@@ -305,13 +305,13 @@ test('C: index.html i docpro.html z załadowanym VildaGhPunkty — bez błędów
     skrypt: Array.from(document.scripts).map((s) => s.getAttribute('src')).filter((s) => /vilda_gh_punkty\.js/.test(String(s))),
     gotowe: window.VildaGhPunkty.gotowe({ dawka: true }).ok,
   }));
-  expect(await zaladowany(page)).toEqual({ wersja: 2, skrypt: ['vilda_gh_punkty.js?v=2'], gotowe: true });
+  expect(await zaladowany(page)).toEqual({ wersja: 2, skrypt: ['vilda_gh_punkty.js?v=3'], gotowe: true });
 
   await page.goto('/docpro.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.refreshGHTherapyMonitor === 'function' && Boolean(window.VildaGhPunkty),
     null, { timeout: 60000 });
   await page.waitForTimeout(2500); // odtworzenie stanu DocPro biegnie do ~1,5 s po starcie strony
-  expect(await zaladowany(page)).toEqual({ wersja: 2, skrypt: ['vilda_gh_punkty.js?v=2'], gotowe: true });
+  expect(await zaladowany(page)).toEqual({ wersja: 2, skrypt: ['vilda_gh_punkty.js?v=3'], gotowe: true });
 
   expect(bledy, `błędy stron:\n${bledy.join('\n')}`).toEqual([]);
   expect(oModule, `komunikaty konsoli o module:\n${oModule.join('\n')}`).toEqual([]);

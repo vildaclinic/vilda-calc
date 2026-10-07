@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { idDeterministyczne, rodzaje, utworzAtrapeMonitoraGh, zrodlo } from '../support/gh-monitor-atrapa.mjs';
+import {
+  MONITOR_PRZED_API, idDeterministyczne, opcjePrzedApi, rodzaje, utworzAtrapeMonitoraGh, zrodlo,
+} from '../support/gh-monitor-atrapa.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { LISTY, idReprezentatywnych, siatka } from '../scripts/gh-punkty-wzorzec.mjs';
 
@@ -19,9 +21,10 @@ import { LISTY, idReprezentatywnych, siatka } from '../scripts/gh-punkty-wzorzec
 // ŹRÓDŁEM PRAWDY JEST MONITOR. Różnica oznacza błąd API albo zmianę monitora — nie dopasowuj oczekiwań do API.
 // Kontrole negatywne na końcu pokazują, że porównanie wykrywa zmianę kolejności kluczy, -0, tekstu odmowy i dawki.
 // To nie jest test kliniczny: liczby są fikcyjne. Dane wyłącznie FIKCYJNE.
-// Od raty 2 (PR-4) monitor z modułem bierze reguły z API, a bez modułu wykonuje stary kod. Ten test porównuje API ze
-// STARYM kodem: monitor działa w trybie zapasowym (atrapa bez VildaGhPunkty, a API ładowane do okna i zaraz z niego
-// zdejmowane), inaczej porównywałby API z samym sobą. Równość obu trybów monitora: gh-punkty-monitor-tryby.test.mjs.
+// Od raty 2 (PR-4) monitor bierze reguły z API, a od raty 3 (PR-5, D5) stary kod reguł jest z niego usunięty. Ten test
+// porównuje więc API z zamrożonym monitorem sprzed API (MONITOR_PRZED_API, gh_therapy_monitor.js 52; atrapa bez
+// VildaGhPunkty, a API ładowane do okna i zaraz z niego zdejmowane), inaczej porównywałby API z samym sobą. Równość
+// dzisiejszego monitora z monitorem sprzed API: gh-punkty-monitor-tryby.test.mjs.
 
 // Komunikaty monitora dosłownie (nakładka #ghInfoOverlay, nagłówek „Informacja”).
 const DRUGIE_WLACZENIE = 'Punkt „Włączenie leczenia” został już dodany.';
@@ -44,15 +47,15 @@ const kopia = (v) => structuredClone(v);
 
 /* ---------- Okno atrapy z monitorem i API ---------- */
 
-// Atrapa z prawdziwym monitorem w trybie zapasowym; w jej okno loadBrowserScript ładuje vilda_gh_punkty.js, a test
+// Atrapa z prawdziwym monitorem sprzed API; w jej okno loadBrowserScript ładuje vilda_gh_punkty.js, a test
 // zabiera API z okna (monitor go nie widzi, API dalej czyta okno: moduł dawki, pamięć, dokument). Z modułem dawki atrapa
 // wczytała go już przez loadBrowserScript, więc ZALEZNOSCI nie wykonują niczego drugi raz. Bez modułu dawki
 // ZALEZNOSCI wnoszą VildaGhDawkaDane i VildaGhDawka; zdejmujemy je, żeby i monitor, i API widziały stronę bez tych
 // tagów (oba czytają VildaGhDawka dopiero przy wywołaniu, a moduł dawki niczego nie rejestruje przy ładowaniu).
 function atrapaZApi({ modulDawki = true, punkty, zrodla } = {}) {
-  const atrapa = utworzAtrapeMonitoraGh({
-    modulDawki, modulPunktow: false, ...(punkty === undefined ? {} : { punkty }), ...(zrodla ? { zrodla } : {}),
-  });
+  const atrapa = utworzAtrapeMonitoraGh(opcjePrzedApi({
+    modulDawki, ...(punkty === undefined ? {} : { punkty }), ...(zrodla ? { zrodla } : {}),
+  }));
   const { win } = atrapa;
   const przed = new Set(Object.keys(win));
   const dawka = win.VildaGhDawka;
@@ -369,7 +372,7 @@ describe('VildaGhPunkty ↔ żywy monitor — okno atrapy', () => {
     loadBrowserScript('vilda_gh_punkty.js', z.win);
     expect(z.win.VildaGhDawka).toBe(dawka);
     expect(z.win.VildaGhPunkty.wersja).toBe(2);
-    // Monitor w atrapie z API porównuje się ze starym kodem: API nie zostaje w oknie.
+    // Monitor sprzed API w atrapie z API: API nie zostaje w oknie (dawny monitor i tak go nie zna).
     const zApi = atrapaZApi();
     expect(zApi.atrapa.win.VildaGhPunkty).toBeUndefined();
     expect(zApi.api.wersja).toBe(2);
@@ -525,7 +528,7 @@ describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', ()
 
 /* ---------- Kontrole negatywne ---------- */
 
-// Kopia źródła monitora zmieniona przez replace z kotwicą występującą dokładnie raz. Porównanie z API musi wykryć
+// Kopia źródła monitora sprzed API zmieniona przez replace z kotwicą występującą dokładnie raz. Porównanie z API musi wykryć
 // różnicę dokładnie w przypadkach, których zmiana dotyczy — także tam, gdzie toEqual by jej nie zauważył
 // (kolejność kluczy, -0).
 const lekKliku = (w) => w.klik.pola.ghRetroDrug ?? w.klik.pola.ghEditDrug;
@@ -569,7 +572,7 @@ const KONTROLE = [
 ];
 
 describe('VildaGhPunkty ↔ żywy monitor — kontrole negatywne (kopia źródła monitora po replace)', () => {
-  const zrodloMonitora = zrodlo('gh_therapy_monitor.js');
+  const zrodloMonitora = zrodlo(MONITOR_PRZED_API);
   const przypadki = [...przypadkiWsteczne(true), ...przypadkiWsteczne(false), ...przypadkiEdycji(true),
     ...przypadkiEdycji(false), ...REPREZENTATYWNE];
 

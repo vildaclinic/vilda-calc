@@ -1,12 +1,18 @@
+import fs from 'node:fs';
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-GH-PUNKTY-API rata 2: monitor punktów terapii GH na prawdziwym DocPro bierze reguły punktu z VildaGhPunkty
-// (vilda_gh_punkty.js), a bez tego pliku wykonuje dosłownie stary kod. Ten sam ciąg czynności lekarza — punkt wsteczny,
-// edycja punktu, nowy punkt z karty, odmowa drugiego Włączenia, usunięcie — w dwóch kontekstach przeglądarki:
-// z modułem (licznik wywołań API pokazuje delegację) i z zablokowanym vilda_gh_punkty.js (ścieżka zapasowa).
-// Lista w oknie i w pamięci modułu, komunikat odmowy i wiersze tabeli muszą wyjść takie same.
+// P-GH-PUNKTY-API rata 2 i rata 3 (D5): monitor punktów terapii GH na prawdziwym DocPro bierze reguły punktu
+// z VildaGhPunkty (vilda_gh_punkty.js); od raty 3 stary kod reguł jest usunięty, a bez tego pliku monitor nie zapisuje
+// i prosi o odświeżenie strony. Ten sam ciąg czynności lekarza — punkt wsteczny, edycja punktu, nowy punkt z karty,
+// odmowa drugiego Włączenia, usunięcie — w dwóch kontekstach przeglądarki: dzisiejszy monitor z modułem (licznik
+// wywołań API pokazuje delegację) i monitor sprzed API (gh_therapy_monitor.js 52 z tests/fixtures, podstawiony przez
+// route). Lista w oknie i w pamięci modułu, komunikat odmowy i wiersze tabeli muszą wyjść takie same. Trzeci kontekst:
+// zablokowany vilda_gh_punkty.js — każda czynność kończy się odmową, a lista i tabela zostają bez zmian.
 // Dane wyłącznie FIKCYJNE; własne konto sejfu w efemerycznym profilu.
 test.use({ serviceWorkers: 'block' });
+
+const MONITOR_PRZED_API = fs.readFileSync(new URL('../fixtures/gh-monitor-przed-api.js.txt', import.meta.url), 'utf8');
+const ODSWIEZ = 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.';
 
 const HASLO = 'E2e#GhPunktyMonitorApi!26';
 const P1 = {
@@ -36,16 +42,23 @@ async function zaloguj(page) {
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
 }
 
-async function otworzDocPro(page, { zModulem }) {
+// wariant: 'teraz' (docpro.html bez zmian), 'przedApi' (monitor sprzed API zamiast gh_therapy_monitor.js),
+// 'bezModulu' (vilda_gh_punkty.js nie dochodzi).
+async function otworzDocPro(page, wariant) {
   // Serwer synchronizacji odcięty: wynik nie zależy od sieci środowiska testu.
   await page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
-  if (!zModulem) await page.route(/\/vilda_gh_punkty\.js(\?|$)/, (route) => route.abort());
+  if (wariant === 'bezModulu') await page.route(/\/vilda_gh_punkty\.js(\?|$)/, (route) => route.abort());
+  if (wariant === 'przedApi') {
+    await page.route(/\/gh_therapy_monitor\.js(\?|$)/, (route) => route.fulfill({
+      status: 200, contentType: 'application/javascript; charset=utf-8', body: MONITOR_PRZED_API,
+    }));
+  }
   await zaloguj(page);
   await page.goto('/docpro.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.refreshGHTherapyMonitor === 'function'
     && Boolean(window.vildaGhIgfPersistApi) && Boolean(window.vildaGhTherapyMonitorPersistApi), null, { timeout: 60000 });
   await page.waitForTimeout(2500); // odtworzenie stanu DocPro biegnie do ~1,5 s po starcie strony
-  expect(await page.evaluate(() => Boolean(window.VildaGhPunkty))).toBe(zModulem);
+  expect(await page.evaluate(() => Boolean(window.VildaGhPunkty))).toBe(wariant !== 'bezModulu');
   await page.evaluate(() => {
     window.vildaGhIgfPersistApi.ensureMounted();
     const k = document.getElementById('ghIgfTherapyCard');
@@ -71,8 +84,8 @@ async function otworzDocPro(page, { zModulem }) {
     window.refreshGHTherapyMonitor();
   }, [P1, P2]);
   await expect(page.locator('#ghTherapyTbody .edit-gh-pt-btn')).toHaveCount(2);
-  if (zModulem) {
-    // Licznik wywołań: monitor czyta window.VildaGhPunkty przy każdym zapisie.
+  if (wariant !== 'bezModulu') {
+    // Licznik wywołań: dzisiejszy monitor czyta window.VildaGhPunkty przy każdym zapisie, monitor sprzed API wcale.
     await page.evaluate(() => {
       const api = window.VildaGhPunkty;
       const licznik = { wersja: api.wersja };
@@ -148,22 +161,28 @@ async function czynnosciLekarza(page) {
   return kroki;
 }
 
-test('ten sam ciąg czynności lekarza daje ten sam wynik z modułem VildaGhPunkty i bez niego; z modułem monitor deleguje', async ({ browser }) => {
+test('ten sam ciąg czynności lekarza daje ten sam wynik na dzisiejszym monitorze z modułem VildaGhPunkty i na monitorze sprzed API; dzisiejszy deleguje', async ({ browser }) => {
   test.setTimeout(240_000);
   const wyniki = {};
-  for (const zModulem of [true, false]) {
+  for (const wariant of ['teraz', 'przedApi']) {
     const kontekst = await browser.newContext();
     const page = await kontekst.newPage();
     const bledy = [];
     page.on('pageerror', (e) => bledy.push(String(e && e.message)));
-    await otworzDocPro(page, { zModulem });
-    wyniki[zModulem] = await czynnosciLekarza(page);
-    expect(bledy, `pageerror (${zModulem ? 'z modułem' : 'bez modułu'})`).toEqual([]);
+    await otworzDocPro(page, wariant);
+    // Podstawienie zadziałało: tylko dzisiejszy monitor zna odmowę bez modułu.
+    const tekstMonitora = await page.evaluate(async () => {
+      const s = Array.from(document.scripts).find((x) => /gh_therapy_monitor\.js/.test(x.src));
+      return (await fetch(s.src)).text();
+    });
+    expect(tekstMonitora.includes('Gpn()'), wariant).toBe(wariant === 'teraz');
+    wyniki[wariant] = await czynnosciLekarza(page);
+    expect(bledy, `pageerror (${wariant})`).toEqual([]);
     await kontekst.close();
   }
 
-  const z = wyniki.true;
-  const b = wyniki.false;
+  const z = wyniki.teraz;
+  const b = wyniki.przedApi;
   expect(z.map((k) => k.stan)).toEqual(b.map((k) => k.stan));
   // Sens kroków: wsteczny dopisał punkt, edycja nie zmieniła długości, karta dopisała, odmowa bez zmian, usunięcie.
   expect(z.map((k) => JSON.parse(k.stan.modul).length)).toEqual([3, 3, 4, 4, 3]);
@@ -178,4 +197,63 @@ test('ten sam ciąg czynności lekarza daje ten sam wynik z modułem VildaGhPunk
     ['zapisz'],
   ]);
   expect(b.flatMap((k) => k.api)).toEqual([]);
+});
+
+test('bez vilda_gh_punkty.js monitor odmawia każdego zapisu i usunięcia z prośbą o odświeżenie strony; lista bez zmian', async ({ page }) => {
+  test.setTimeout(180_000);
+  const bledy = [];
+  page.on('pageerror', (e) => bledy.push(String(e && e.message)));
+  await otworzDocPro(page, 'bezModulu');
+  const poczatek = await stan(page);
+  expect(JSON.parse(poczatek.modul).map((p) => p.id)).toEqual([P1.id, P2.id]);
+  const odmowa = async (opis) => {
+    await expect(page.locator('#ghInfoOverlay'), opis).toContainText(ODSWIEZ);
+    const s = await stan(page);
+    expect({ ...s, komunikat: null }, opis).toEqual({ ...poczatek, komunikat: null });
+    await zamknijKomunikat(page);
+  };
+
+  // 1. Nowy punkt z karty (Kontynuacja i drugie Włączenie: bez modułu monitor nie ocenia danych).
+  await page.click('#btnGhContinue');
+  await odmowa('karta: Kontynuacja');
+  await page.click('#btnGhStart');
+  await odmowa('karta: Włączenie');
+  // 2. Punkt wsteczny: odmowa, formularz zostaje otwarty z danymi.
+  await page.click('#btnGhRetro');
+  await page.selectOption('#ghRetroType', 'continue');
+  await page.selectOption('#ghRetroProg', 'SNP');
+  await page.selectOption('#ghRetroDrug', 'Omnitrope 10 mg');
+  await page.fill('#ghRetroAge', '8');
+  await page.fill('#ghRetroAgeMonths', '3');
+  await page.fill('#ghRetroWeight', '26');
+  await page.fill('#ghRetroHeight', '124');
+  await page.fill('#ghRetroDose', '0.75');
+  await page.click('#btnGhRetroAdd');
+  await odmowa('punkt wsteczny');
+  await expect(page.locator('#ghTherapyRetroContainer')).toBeVisible();
+  await expect(page.locator('#ghRetroDose')).toHaveValue('0.75');
+  await page.click('#btnGhRetroCancel');
+  // 3. Usunięcie z potwierdzeniem: punkt zostaje.
+  await page.click(`.delete-gh-pt-btn[data-id="${P1.id}"]`);
+  await page.evaluate(() => {
+    const o = document.getElementById('ghDeleteOverlay');
+    const b = o && Array.from(o.querySelectorAll('button')).find((x) => x.textContent === 'Usuń');
+    if (b) b.click();
+  });
+  await odmowa('usunięcie');
+  await expect(page.locator(`.delete-gh-pt-btn[data-id="${P1.id}"]`)).toHaveCount(1);
+  // 4. Edycja: odmowa, formularz edycji zostaje otwarty z danymi.
+  await page.click(`.edit-gh-pt-btn[data-id="${P2.id}"]`);
+  await page.evaluate(() => {
+    const o = document.getElementById('ghEditOverlay');
+    const b = o && Array.from(o.querySelectorAll('button')).find((x) => x.textContent === 'Rozumiem');
+    if (b) b.click();
+  });
+  await page.fill('#ghEditWeight', '27.6');
+  await page.click('#btnGhContinue');
+  await odmowa('edycja');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeVisible();
+  await expect(page.locator('#ghEditWeight')).toHaveValue('27.6');
+
+  expect(bledy).toEqual([]);
 });

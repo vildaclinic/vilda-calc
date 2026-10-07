@@ -7,10 +7,12 @@ import { loadBrowserScript } from './load-browser-script.mjs';
 // (gh_therapy_monitor.js) w testach jednostkowych, przed przeniesieniem reguł punktów do wspólnego API.
 // Monitor, vilda_html.js, moduł dawki, wspólne API punktów (vilda_gh_punkty.js) i wiek kostny to pliki produkcyjne
 // wykonane bez zmian; atrapa daje tylko DOM, pamięć modułów, BroadcastChannel i zegar.
-// Tryby monitora (P-GH-PUNKTY-API rata 2): z modułem VildaGhPunkty (domyślnie, jak docpro.html) monitor bierze reguły
-// punktu z API; z opcją modulPunktow:false wykonuje dosłownie stary kod (ścieżka zapasowa). Oba tryby mają dawać to
-// samo — pilnuje tego tests/unit/gh-punkty-monitor-tryby.test.mjs i złota siatka w obu trybach. Jeden dziennik zapisuje w kolejności to, co monitor
-// robi na zewnątrz: zapis modułu, zdarzenie dokumentu, komunikat kanału i komunikat dla lekarza.
+// Moduł VildaGhPunkty (P-GH-PUNKTY-API): domyślnie atrapa go ładuje, jak docpro.html, a monitor bierze z niego reguły
+// punktu. Od raty 3 (D5) monitor bez modułu (modulPunktow:false) nie zapisuje i prosi o odświeżenie strony. Dawny kod
+// reguł żyje już tylko w zamrożonym monitorze sprzed API (MONITOR_PRZED_API, opcje z opcjePrzedApi()): to wyrocznia
+// testów równoważności (tests/unit/gh-punkty-monitor-tryby.test.mjs i testy różnicowe API). Jeden dziennik zapisuje
+// w kolejności to, co monitor robi na zewnątrz: zapis modułu, zdarzenie dokumentu, komunikat kanału i komunikat dla
+// lekarza.
 //
 // Co jest prawdziwe, a co atrapą:
 // - Karta monitora (formularz edycji, formularz wstecznego punktu, przyciski, tabela) powstaje z
@@ -55,6 +57,19 @@ export const idDeterministyczne = (k) => String(ZEGAR_START + ZEGAR_KROK * k + L
 
 export const rodzaje = (wpisy) => wpisy.map((w) => w.rodzaj);
 export const zrodlo = (plik) => fs.readFileSync(path.join(korzen, plik), 'utf8');
+
+// Monitor sprzed API: gh_therapy_monitor.js 52 bajt w bajt (audyt 7c861b4, ostatni stan przed #569, P-GH-PUNKTY-API
+// rata 2). Zamrożony jako wyrocznia; rozszerzenie .txt trzyma go z dala od eslint i sprawdzenia składni artefaktów.
+// Nie poprawiać: zmiana pliku albo skrótu to zmiana punktu odniesienia testów równoważności.
+export const MONITOR_PRZED_API = 'tests/fixtures/gh-monitor-przed-api.js.txt';
+export const MONITOR_PRZED_API_SHA256 = '3fb200708e20b55d0393cbf3c10df8d64bbf5b29b9a36a931b15d180b09af722';
+// Opcje atrapy z monitorem sprzed API i bez VildaGhPunkty (dawny monitor modułu nie zna). Monitor z `opcje.zrodla`
+// (np. kopia wyroczni po replace w kontroli negatywnej) ma pierwszeństwo.
+export const opcjePrzedApi = (opcje = {}) => ({
+  ...opcje,
+  modulPunktow: false,
+  zrodla: { 'gh_therapy_monitor.js': zrodlo(MONITOR_PRZED_API), ...(opcje.zrodla || {}) },
+});
 
 const kopiuj = (v) => {
   if (v === undefined) return undefined;
