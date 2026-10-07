@@ -1,6 +1,6 @@
 # Synchronizacja przyrostowa: plan dla właściciela i specyfikacja wdrożenia
 
-Stan dokumentu: projekt do decyzji właściciela, 2026-10-07. Nic z tego planu nie jest wdrożone ani scalone.
+Stan dokumentu: projekt do decyzji właściciela, 2026-10-07. Decyzja właściciela z tego samego dnia: najpierw rozwiązania tymczasowe, potem przebudowa według tego planu. Część etapu 0 weszła jako P-SYNC-MOST (gzip pełnej wysyłki przed szyfrowaniem, limit czasu od rozmiaru; opis i zakres niżej, w „Etap 0”). Pozostałe etapy nie są wdrożone.
 
 Baza kodu: `origin/audyt` po #571 (`d6c32b2`), SW 1.1.183, `vilda_vault.js?v=200`, `vilda_sync.js?v=33`, `vilda_sync_integration.js?v=47`, `vilda_realtime.js?v=7`. Worker: `vilda-source@origin/agent/canonical-vilda-sync-source:vilda-sync-worker/` (wdrożona „v36”, silnie skorelowana z tą gałęzią, bez dowodu byte-for-byte).
 
@@ -502,6 +502,8 @@ Cztery ataki na D1 dały 3 wyniki krytyczne i 1 poważny. Tabela pokazuje każde
 Każdy etap to osobny PR do `audyt` z gałęzi `agent/sync-…`, draft, bez scalania przez agenta. Każdy PR: `npm ci`, `npm test`, `npx playwright install chromium`, `npm run test:e2e`, scenariusz offline PWA, desktop i widok mobilny, `npm run podbij-wersje` na końcu, zielone CI dla aktualnego SHA. Etap 1 to PR w `vilda-source` i wdrożenie przez właściciela.
 
 ### Etap 0: most doraźny, bez zmian serwera
+
+**Wykonane jako P-SYNC-MOST (2026-10-07):** czytelnik gzip ze sniffem po odszyfrowaniu bloba, zapis gzip pełnej wysyłki od progu 4 MiB z wyłącznikiem `vilda-sync-gzip-v1=0` (bez flagi włączającej i bez dwóch wydań: mniejsze sejfy nie zmieniają formatu, a stary czytelnik na blobie gzip zatrzymuje się na `PARSE_FAILED` bez scalenia i bez wysyłki), limit czasu 30 s + 1 s/100 kB do 180 s dla żądań z ciałem bloba, rozmiar w komunikacie TIMEOUT i w wyniku wysyłki. Po stronie serwera właściciel podnosi `MAX_PAYLOAD_BYTES`. **Jeszcze nie:** kompresja delt, eksport strumieniowy, poprawka kursora `/changes`, odstęp w pętli 412, przyciski w Ustawieniach, skrypt pomiaru.
 
 | Pozycja | Treść |
 |---|---|

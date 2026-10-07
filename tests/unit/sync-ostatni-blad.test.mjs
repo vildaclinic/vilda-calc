@@ -117,6 +117,8 @@ async function urzadzenie() {
 }
 
 const PUT_413 = { status: 413, cialo: { error: { message: 'Payload Too Large' } } };
+// P-SYNC-MOST: wynik wysyłki niesie rozmiar wysłanego bloba = JSON ładunku atrapy (poniżej progu kompresji) + IV(12) + znacznik GCM(16).
+const BAJTY_BLOBA = new TextEncoder().encode(JSON.stringify({ patients: [{ patientId: 'FIKCYJNY-1' }] })).length + 28;
 
 // Delty idą w tle po pobraniu: atrapę serwera zdejmujemy dopiero na końcu pliku, żeby spóźnione żądanie
 // nie wyszło do prawdziwej sieci. Zegar wirtualny: stały czas w kluczach i żadnych opóźnionych sond integracji.
@@ -174,7 +176,7 @@ describe('Trwały ślad błędu i udanej wysyłki (vilda_sync_integration.js)', 
     expect(wynik.push.action).toBe('uploaded');
     expect(d.ok()).toBe(TERAZ);
     expect(d.blad().resolvedAt).toBe(TERAZ);
-    expect(d.dziennik.mock.calls.filter((c) => c[0] === 'sync.push.ok')).toEqual([['sync.push.ok', { action: 'uploaded', bytes: null }]]);
+    expect(d.dziennik.mock.calls.filter((c) => c[0] === 'sync.push.ok')).toEqual([['sync.push.ok', { action: 'uploaded', bytes: BAJTY_BLOBA }]]);
   });
 
   it('kontrola: udane pobranie (pull) nie oznacza błędu wysyłki jako rozwiązanego ani nie udaje wysyłki', async () => {
@@ -198,7 +200,7 @@ describe('Trwały ślad błędu i udanej wysyłki (vilda_sync_integration.js)', 
     expect((await d.sync.syncPush()).action).toBe('uploaded');
     expect(d.win.localStorage.getItem(KLUCZ_BLEDU)).toBeNull();
     expect(d.ok()).toBe(TERAZ);
-    expect(d.dziennik).toHaveBeenCalledWith('sync.push.ok', { action: 'uploaded', bytes: null });
+    expect(d.dziennik).toHaveBeenCalledWith('sync.push.ok', { action: 'uploaded', bytes: BAJTY_BLOBA });
     expect(d.dziennik).toHaveBeenCalledTimes(1);
   });
 });
