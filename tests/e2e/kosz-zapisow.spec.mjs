@@ -273,6 +273,45 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     expect(await wersje(page, id.a)).toContain(id.zly);
   });
 
+  // P-KOSZ-PRZYWROC-NOWSZA: zapis jednocześnie w karcie i w koszu (stan, który zostawia „Przywróć” w trakcie końca
+  // scalania synchronizacji — A10), przypięty po pierwszym przywróceniu. Drugie „Przywróć” nie nadpisuje go treścią
+  // z kosza: zdejmuje tylko wpis kosza i mówi to wprost. Stan odtwarzamy w IndexedDB sejfu (lista kosza w meta konta).
+  test('kosz w historii wersji: zapis jest już w karcie w nowszej postaci — „Przywróć” go nie nadpisuje', async ({ page }) => {
+    await otworzZKontem(page);
+    const id = await zasiej(page, 'jest');
+    await page.evaluate(async ({ a, zly }) => {
+      const v = window.VildaVault;
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open('vilda_user_' + v.getCurrentUser().userId);
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      });
+      const czytaj = () => new Promise((res, rej) => {
+        const q = db.transaction('meta', 'readonly').objectStore('meta').get('singleton');
+        q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+      });
+      const zapisz = (m) => new Promise((res, rej) => {
+        const t = db.transaction('meta', 'readwrite'); t.objectStore('meta').put(m);
+        t.oncomplete = () => res(); t.onerror = () => rej(t.error);
+      });
+      await v.moveSnapshotToTrash(a, zly);
+      const zKoszem = (await czytaj()).snapshotTombstones;
+      await v.restoreTrashedSnapshot(a, zly);
+      await zapisz(Object.assign({}, await czytaj(), { snapshotTombstones: zKoszem }));
+      db.close();
+      await new Promise((r) => { setTimeout(r, 5); });
+      await v.setSnapshotPinned(a, zly, true); // zmiana po pierwszym przywróceniu
+    }, id);
+    await page.evaluate(({ a }) => window.VildaVersionHistory.open(a, { patientName: 'Innyrecz Adam' }), id);
+    const kosz = page.locator('.vvh-kosz');
+    await expect(kosz.locator('.vvh-day'), 'kontrola: zapis jest też w koszu').toHaveText('Kosz tej karty · 1 zapis');
+    await kosz.getByRole('button', { name: '↺ Przywróć ten zapis' }).click();
+    await expect(page.locator('.vvh-flash')).toHaveText('Ten zapis jest już w karcie w nowszej postaci — usunięto go z kosza.');
+    await expect(page.locator('.vvh-kosz .vvh-day')).toHaveCount(0);
+    const zapis = await page.evaluate(async ({ a, zly }) => (await window.VildaVault.getPatient(a)).snapshots
+      .find((x) => x.snapshotId === zly), id);
+    expect(zapis && zapis.pinned, 'przypięcie zrobione po pierwszym przywróceniu zostaje').toBe(true);
+  });
+
   test('telefon: okno jako panel od dołu, przyciski na całą szerokość, bez poziomego przewijania', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await otworzZKontem(page);

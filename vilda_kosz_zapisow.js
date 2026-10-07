@@ -195,10 +195,18 @@
     return wynik;
   }
 
+  // P-KOSZ-PRZYWROC-NOWSZA: zapis bywa jednoczesnie w karcie (zmieniony po usunieciu) i w koszu — sejf go wtedy nie
+  // nadpisuje, tylko zdejmuje nieaktualny wpis kosza ({ alreadyInCard: true }). Dziennik dostaje znacznik, a widoki
+  // mowia to wprost zamiast „Przywrócono zapis z kosza”.
+  var TEKST_JUZ_W_KARCIE = 'Ten zapis jest już w karcie w nowszej postaci — usunięto go z kosza.';
+
   async function przywroc(patientId, snapshotId) {
     var wynik = await sejf().restoreTrashedSnapshot(patientId, snapshotId);
-    dziennik('snapshot.restore', { patientId: patientId, snapshotId: snapshotId });
-    oglosZmiane({ akcja: 'przywroc', patientId: patientId, snapshotId: snapshotId });
+    var juzWKarcie = !!(wynik && wynik.alreadyInCard);
+    var dane = { patientId: patientId, snapshotId: snapshotId };
+    if (juzWKarcie) dane.juzWKarcie = true;
+    dziennik('snapshot.restore', dane);
+    oglosZmiane({ akcja: 'przywroc', patientId: patientId, snapshotId: snapshotId, juzWKarcie: juzWKarcie });
     return wynik;
   }
 
@@ -728,8 +736,9 @@
         b.type = 'button';
         b.addEventListener('click', function () {
           b.disabled = true;
-          przywroc(e.patientId, e.snapshotId).then(function () {
-            if (typeof ctx.reload === 'function') ctx.reload(e.snapshotId, { kind: 'ok', text: 'Przywrócono zapis z kosza.' });
+          przywroc(e.patientId, e.snapshotId).then(function (wynik) {
+            var tekst = wynik && wynik.alreadyInCard ? TEKST_JUZ_W_KARCIE : 'Przywrócono zapis z kosza.';
+            if (typeof ctx.reload === 'function') ctx.reload(e.snapshotId, { kind: 'ok', text: tekst });
           }).catch(function (er) {
             b.disabled = false;
             b.textContent = 'Nie udało się przywrócić' + (er && er.message ? ': ' + er.message : '');
@@ -744,6 +753,7 @@
     __init: true,
     VERSION: VERSION,
     ZDARZENIE: ZDARZENIE,
+    TEKST_JUZ_W_KARCIE: TEKST_JUZ_W_KARCIE,
     pomiaryZapisu: pomiaryZapisu,
     pokrycie: pokrycie,
     otworzUsuwanie: otworzUsuwanie,
