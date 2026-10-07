@@ -312,8 +312,8 @@
   "sha256": "0c3565a2481e018c00de2ffd9e3ed3c1866f692b88d434058447feae4c55a292"
  },
  "inline_ustawienia_04.js": {
-  "v": 15,
-  "sha256": "6646b8e736f2f272fb37a30761c7c74d03b0e637aecbe404c9cd3ca7a5add426"
+  "v": 16,
+  "sha256": "4ba7e2b483007ebab080d3017330d8faf6454378b455b1840cf8ce6eea808d04"
  },
  "inline_ustawienia_05.js": {
   "v": 2,
@@ -920,8 +920,8 @@
   "sha256": "851a158b7d3ab13dd49ad0fe8cdd434c69c77bd90cb60ff45e9d59e8349fd079"
  },
  "vilda_sync_integration.js": {
-  "v": 46,
-  "sha256": "107e3b3a3f49aeb04454a736ebb3f59590e941f060e1210bb837e70d0bae249d"
+  "v": 47,
+  "sha256": "b3cbe37e9133ac71f7d04db94d8382d1c97e49e7305681a87584c4cd392c88b4"
  },
  "vilda_tab_guard.js": {
   "v": 5,
