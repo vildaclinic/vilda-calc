@@ -331,14 +331,24 @@ async function Bkz_czytaj() {
 
 // Jedyny zapis listy: przez Bmk_zmien (P-META-KONTA — blokada metadanych konta, swiezy odczyt), zeby rownolegla
 // operacja nie zgubila cudzego nagrobka. dodaj — nagrobki do dolaczenia, usun — identyfikatory wersji.
-async function Bkz_zmienListe(dodaj, usun) {
+// opcje.naStarcie (koniec scalania) — mapa snapshotId -> deletedAtISO nagrobkow z kosza na starcie scalania.
+async function Bkz_zmienListe(dodaj, usun, opcje) {
+  const naStarcie = opcje && opcje.naStarcie instanceof Map ? opcje.naStarcie : null;
   let lista = null;
   await Bmk_zmien(b, function (meta) {
     if (!meta) throw Bkz_blad('Brak metadanych konta.', 'brak-meta');
     const mapa = new Map();
     Bkz_czysc(Array.isArray(meta.snapshotTombstones) ? meta.snapshotTombstones : [], Date.now()).lista
       .forEach(function (e) { Bkz_dolacz(mapa, e); });
-    (dodaj || []).forEach(function (e) { if (e && e.snapshotId) Bkz_dolacz(mapa, e); });
+    (dodaj || []).forEach(function (e) {
+      if (!e || !e.snapshotId) return;
+      // P-KOSZ-SCALANIE-PRZYWROC (A10, krok 2): nagrobek, ktory byl w koszu na starcie scalania, a teraz go nie ma,
+      // zdjeto w trakcie scalania („Przywroc”, import, scalanie w innej karcie, wygasniecie). Mapa scalania niesie
+      // jego stara kopie — nie dokladamy jej. Pozniejsze usuniecie (z ladunku) zostaje.
+      const start = naStarcie && naStarcie.get(e.snapshotId);
+      if (start && !mapa.has(e.snapshotId) && e.deletedAtISO <= start) return;
+      Bkz_dolacz(mapa, e);
+    });
     // Identyfikator — zdejmujemy nagrobek tej wersji. { snapshotId, doISO } (scalanie, P-SCALANIE-BLOKADA) — tylko
     // nagrobek nie pozniejszy niz ten, ktory przegral w scalaniu: pozniejsze usuniecie (np. kosz w innej karcie juz
     // po scaleniu tej karty) zostaje.
@@ -470,7 +480,8 @@ async function Bkz_lista() {
 //
 // P-KOSZ-PRZYWROC-NOWSZA (zlecenie wlasciciela 2026-10-07; przeglad A10, krok 1). Zapis bywa jednoczesnie w karcie
 // i w koszu: tak zostawia go „Przywroc” w trakcie konca scalania synchronizacji (koniec scalania zapisuje liste
-// nagrobkow juz po zwolnieniu blokad i dokladal zdjety wpis) albo starsza wersja aplikacji w innej karcie. Drugie
+// nagrobkow juz po zwolnieniu blokad i dokladal zdjety wpis; do P-KOSZ-SCALANIE-PRZYWROC) albo starsza wersja aplikacji
+// w innej karcie. Drugie
 // „Przywroc” zapisywalo wtedy tresc z chwili usuniecia z rewizja usuniecia + 1 — poprawka pomiaru albo przypiecie
 // zrobione po pierwszym przywroceniu znikaly po cichu. Teraz: gdy wersja jest w karcie i zmieniono ja po usunieciu
 // (chwila zmiany pozniejsza niz usuniecie ALBO rewizja wyzsza niz w chwili usuniecia — rewizja nie zalezy od zegarow
@@ -535,9 +546,13 @@ async function Bkz_eksport() {
 
 // Scalanie, krok 1: nagrobki lokalne + z ladunku (tresc z ladunku szyfrujemy lokalnym kluczem).
 async function Bkz_scalStart(t) {
-  const ctx = { mapa: new Map(), nadpisane: new Set(), przegraneDo: new Map(), dotknieci: new Set() };
+  const ctx = { mapa: new Map(), nadpisane: new Set(), przegraneDo: new Map(), dotknieci: new Set(), naStarcie: new Map() };
   try {
-    (await Bkz_czytaj()).forEach(function (e) { Bkz_dolacz(ctx.mapa, e); });
+    (await Bkz_czytaj()).forEach(function (e) {
+      Bkz_dolacz(ctx.mapa, e);
+      const byl = ctx.naStarcie.get(e.snapshotId);
+      if (!byl || e.deletedAtISO > byl) ctx.naStarcie.set(e.snapshotId, e.deletedAtISO);
+    });
     const zdalne = Bkz_czysc(t && Array.isArray(t.snapshotTombstones) ? t.snapshotTombstones : [], Date.now()).lista;
     for (let i = 0; i < zdalne.length; i += 1) {
       const z = zdalne[i];
@@ -645,7 +660,7 @@ async function Bkz_scalKoniec(ctx, opcje) {
     return { snapshotId: id, doISO: ctx.przegraneDo.get(id) || null };
   });
   try {
-    await Bkz_zmienListe(Array.from(ctx.mapa.values()), przegrane);
+    await Bkz_zmienListe(Array.from(ctx.mapa.values()), przegrane, { naStarcie: ctx.naStarcie });
   } catch (er) {
     if (!przerwane) throw er;
   }
