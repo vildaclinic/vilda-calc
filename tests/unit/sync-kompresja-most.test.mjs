@@ -47,7 +47,7 @@ function ladunek(docelowoBajtow, znacznik = 'A') {
 
 /* Atrapa serwera: przechowuje ostatnie ciało PUT jako blob; GET oddaje blob z ETagiem. */
 function atrapaSerwera(start) {
-  const srv = { etag: 'E1', licznik: 1, blob: start || null, puty: [], rejestracje: [], putWisi: false, kasowania: 0 };
+  const srv = { etag: 'E1', licznik: 1, blob: start || null, puty: [], rejestracje: [], putWisi: false, getWisi: false, gety: 0, kasowania: 0 };
   const odp = (status, cialo, naglowki = {}) => ({
     status,
     ok: status >= 200 && status < 300,
@@ -70,6 +70,16 @@ function atrapaSerwera(start) {
     if (sciezka === 'blob' && metoda === 'GET') {
       if (!srv.blob) return odp(404, {});
       if (nagl['If-None-Match'] === `"${srv.etag}"`) return odp(304, {});
+      srv.gety += 1;
+      if (srv.getWisi) {
+        return new Promise((_, odrzuc) => {
+          init.signal.addEventListener('abort', () => {
+            const e = new Error('The operation was aborted.');
+            e.name = 'AbortError';
+            odrzuc(e);
+          });
+        });
+      }
       return odp(200, srv.blob, { etag: `"${srv.etag}"` });
     }
     if (sciezka === 'blob' && metoda === 'PUT') {
@@ -327,6 +337,27 @@ describe('P-SYNC-MOST: limit czasu żądania z ciałem bloba zależny od rozmiar
     await obietnica;
     expect(blad).toMatchObject({ code: 'TIMEOUT' });
     expect(blad.message).toContain('(180000 ms, ');
+  });
+
+  it('GET /blob: limit od rozmiaru z /status (zapas; licznik i tak kończy się na nagłówkach odpowiedzi)', async () => {
+    const klucz = await kluczSync();
+    const srv = atrapaSerwera(new Uint8Array(1500 * 1024).buffer);
+    srv.getWisi = true;
+    vi.stubGlobal('fetch', srv.fetch);
+    const b = urzadzenie({ klucz, eksport: () => ({ patients: [] }), etag: 'E0' });
+    const oczekiwany = 30000 + Math.ceil((1500 * 1024) / 100);
+
+    let blad = null;
+    const obietnica = b.sync.syncPull().catch((e) => { blad = e; });
+    const koniec = performance.now() + 20000;
+    while (srv.gety === 0 && performance.now() < koniec) await new Promise((r) => { setImmediate(r); });
+    expect(srv.gety).toBe(1);
+    await vi.advanceTimersByTimeAsync(oczekiwany - 10);
+    expect(blad, 'po 30 s pobranie nadal trwa').toBeNull();
+    await vi.advanceTimersByTimeAsync(20);
+    await obietnica;
+    expect(blad).toMatchObject({ code: 'TIMEOUT' });
+    expect(blad.message).toContain(`(${oczekiwany} ms).`);
   });
 
   it('żądania bez ciała (GET /status) zostają przy 30 s i komunikacie bez rozmiaru', async () => {
