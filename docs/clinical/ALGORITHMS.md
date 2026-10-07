@@ -8443,7 +8443,7 @@ i sprawdza ją przed i po zmianie pacjenta, nowy test e2e w powłoce. Wersje z `
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
 
-## Wspólne API punktów terapii GH, rata 1: moduł `VildaGhPunkty` ładowany na Start i DocPro, jeszcze nieużywany (P-GH-PUNKTY-API rata 1, SW 1.1.177, nowy `vilda_gh_punkty.js` 1, 2026-10-06)
+## Wspólne API punktów terapii GH, rata 1: moduł `VildaGhPunkty` ładowany na Start i DocPro, jeszcze nieużywany (P-GH-PUNKTY-API rata 1, SW 1.1.178, nowy `vilda_gh_punkty.js` 1, 2026-10-06)
 
 **Skąd.** Projekt „Wspólne API punktów GH” (`docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 2), PR-3 planu, po testach
 charakteryzujących (P-GH-PUNKTY-TESTY) i poprawkach integralności (P-GH-EDYCJA-LISTA, P-GH-SESJA-LISTA,
@@ -8511,8 +8511,8 @@ Uwaga: własny kanał API powstaje leniwie przy pierwszym zapisie (monitor tworz
 `pagehide`/`beforeunload` zamyka się tak samo. Monitor w kolejnej racie użyje własnego nadawcy (`opcje.nadaj`).
 
 **Wersje.** Nowy `vilda_gh_punkty.js` 1 (`index.html`, `docpro.html`, po `vilda_gh_dawka.js`); wpis precache ręcznie
-(append-only); `SW_VERSION` 1.1.176 → 1.1.177 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
-— `npm run podbij-wersje` względem `audyt` `5b72b5e`. Testy ładują moduł z `vilda_gh_dawka.js` (`ZALEZNOSCI` w
+(append-only); `SW_VERSION` 1.1.177 → 1.1.178 (+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.177 wydał
+P-DOCPRO-PETLA #559); `tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `96d3c48`. Testy ładują moduł z `vilda_gh_dawka.js` (`ZALEZNOSCI` w
 `tests/support/load-browser-script.mjs`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Następna rata (PR-4): monitor korzysta z API bez
