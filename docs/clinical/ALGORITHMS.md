@@ -9092,6 +9092,50 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Koniec scalania nie dokłada do kosza zapisu przywróconego w trakcie (P-KOSZ-SCALANIE-PRZYWROC, SW 1.1.190, `vilda_vault.js` 203, 2026-10-07)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych (decyzja
+właściciela 2026-10-07: „zrób to” — rekomendacja do punktu A10 przeglądu „co dalej po #518”, krok 2, po punkcie 3a =
+P-META-KONTA; krok 1 to P-KOSZ-PRZYWROC-NOWSZA).
+
+**Co było** (zmierzone na `audyt` `d8da7c0`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). Koniec scalania
+synchronizacji przegląda nagrobki zapisów karta po karcie, każdą pod jej blokadą, a listę nagrobków (kosz) zapisuje na końcu
+— z mapy zebranej na starcie scalania. „Przywróć” kliknięte w tym oknie (karta zapisu już przejrzana, lista jeszcze
+niezapisana) oddawało zapis do karty i zdejmowało go z kosza, a końcowy zapis listy dokładał ten wpis z powrotem. Zapis był
+jednocześnie w karcie i w koszu — także gdy ładunek z chmury niósł ten sam nagrobek (inne urządzenie nie wiedziało jeszcze
+o przywróceniu). Od P-KOSZ-PRZYWROC-NOWSZA bez utraty danych (kolejne „Przywróć” albo synchronizacja zdejmowały wpis), ale
+lista kosza pokazywała zapis, który jest w karcie.
+
+**Reguła po zmianie.** Scalanie zapamiętuje na starcie, jakie nagrobki były w koszu (identyfikator zapisu → chwila
+usunięcia). Końcowy zapis listy (pod blokadą metadanych konta, na świeżym odczycie) nie dokłada nagrobka, który był w koszu
+na starcie scalania, a w chwili zapisu już go nie ma — zdjęto go w trakcie: „Przywróć”, import, scalanie w innej karcie,
+wygaśnięcie. Nagrobek, którego usunięcie z ładunku jest późniejsze niż to ze startu, zostaje. Nagrobek obecny i na starcie,
+i przy zapisie scala się jak dotąd (np. dostaje treść kosza z ładunku).
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kosz-scalanie-przywroc.test.mjs` (prawdziwy
+`vilda_vault.js`; dwie karty z zapisem w koszu — Jan i Ola; scalanie staje na przeglądzie karty Oli, karta Jana już
+przejrzana; dwa tryby: dwie karty na atrapie Web Locks oraz jedna karta z kolejką strony):
+- „Przywróć” zapisu Jana w tym oknie, pusty ładunek → zapis Jana w karcie i nie w koszu; zapis Oli dalej w koszu i nie
+  w karcie;
+- to samo, ładunek z chmury niesie ten sam nagrobek Jana → zapis Jana nie wraca do kosza;
+- kontrola: kolejne scalanie z tym samym starym ładunkiem → przywrócony zapis zostaje w karcie (zielona także przed zmianą);
+- kontrola: nagrobek bez treści na urządzeniu, ładunek z treścią tej samej wersji → po scaleniu zapis jest w koszu
+  (zielona także przed zmianą; pilnuje, że reguła pomija tylko nagrobki zdjęte w trakcie).
+Na `d8da7c0` 4 czerwone (zapis wracał do kosza), 4 kontrolne zielone. Mutacje: bez reguły albo z ostrą nierównością — 4
+czerwone; bez warunku „w chwili zapisu go nie ma” — 2 czerwone (kontrola treści z ładunku).
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, jednostkach i wynikach. Zapis przywrócony z kosza w trakcie
+synchronizacji nie pokazuje się jednocześnie w koszu.
+
+**Czego zmiana nie robi.** Gdy w tym samym oknie ładunek niesie PÓŹNIEJSZE usunięcie tego samego zapisu z innego urządzenia,
+nagrobek wraca do kosza na chwilę (koniec scalania nie zna chwili przywrócenia); następne scalanie rozstrzyga go jak dotąd
+po chwili zmiany zapisu, a „Przywróć” zdejmuje go bez szkody (P-KOSZ-PRZYWROC-NOWSZA). Nie zmienia reguł konfliktu kosza,
+formatu ładunku ani kolejności blokad.
+
+**Wersje.** `vilda_vault.js` 202 → 203 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (110 → 111)
+i `vilda_session_bridge.js` (34 → 35); nowe adresy w precache (append-only); `SW_VERSION` 1.1.189 → 1.1.190 (+ pin
+w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
 ## Metadane konta zapisywane po kolei, na świeżym odczycie (P-META-KONTA, SW 1.1.189, `vilda_vault.js` 202, 2026-10-07)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych konta
@@ -9171,7 +9215,7 @@ preferencje i zmiana hasła nie znikają po cichu; zmiana hasła i nowy klucz od
 obowiązuje coś innego.
 
 **Czego zmiana nie robi.** Nie zmienia końca scalania listy kosza (A10, krok 2 — następna zmiana: koniec synchronizacji nie
-dokłada zapisu przywróconego w tym czasie). Nie zmienia formatu metadanych, ładunku synchronizacji ani reguł scalania.
+dokłada zapisu przywróconego w tym czasie). *(Aktualizacja 2026-10-07: zrobione w P-KOSZ-SCALANIE-PRZYWROC.)* Nie zmienia formatu metadanych, ładunku synchronizacji ani reguł scalania.
 Bez Web Locks (sama kolejka strony) blokada chroni tylko w obrębie jednej strony — jak dotąd. Interfejs nie pokazuje
 komunikatu „Czekam” przy zmianie hasła (blokada trwa tyle co odczyt i zapis rekordu).
 
@@ -9223,7 +9267,8 @@ karty pusty, przypięcie zostaje. Na `1c2773f` czerwony („Przywrócono zapis z
 po cichu do stanu z chwili usunięcia.
 
 **Czego zmiana nie robi.** Nie zamyka samego wyścigu z końcem scalania (krok 2, po A12) — zapis może nadal na chwilę wrócić
-na listę kosza; następna synchronizacja albo „Przywróć” go zdejmuje, już bez szkody. Nie zmienia reguł konfliktu kosza
+na listę kosza; następna synchronizacja albo „Przywróć” go zdejmuje, już bez szkody. *(Aktualizacja 2026-10-07: krok 2 zrobiony w
+P-KOSZ-SCALANIE-PRZYWROC.)* Nie zmienia reguł konfliktu kosza
 w synchronizacji ani skutków rozjazdu zegarów w samym scalaniu.
 
 ## Import karty, kopie konta i migracja nazwisk pod blokadą pacjenta (P-BLOKADA-IMPORT, SW 1.1.179, `vilda_vault.js` 200, 2026-10-07)
@@ -9305,7 +9350,7 @@ wersji ani notatek i nie rozjeżdżają licznika wersji.
 
 **Czego zmiana nie robi.** Nie zmienia zapisów metadanych konta poza blokadą kosza (A12: zmiana hasła i listy oczekujących
 mogą nadpisać kosz) ani porządku końcowego zapisu listy nagrobków w scalaniu (A10) — osobne punkty przeglądu. *(Aktualizacja
-2026-10-07: A12 zrobione w P-META-KONTA.)* Import nie
+2026-10-07: A12 zrobione w P-META-KONTA, A10 w P-KOSZ-PRZYWROC-NOWSZA i P-KOSZ-SCALANIE-PRZYWROC.)* Import nie
 wysyła zmian od razu (jak dotąd: z najbliższą wysyłką). Bez Web Locks (sama kolejka strony) blokady chronią tylko w obrębie
 jednej strony — jak dotąd.
 
