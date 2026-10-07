@@ -10,6 +10,10 @@
 //   node tests/scripts/gh-punkty-wzorzec.mjs            → sprawdza, że wzorzec = wynik monitora z commitu BAZA
 //   node tests/scripts/gh-punkty-wzorzec.mjs --zapisz   → zapisuje wzorzec od nowa (tylko z uzasadnieniem w PR)
 //   node tests/scripts/gh-punkty-wzorzec.mjs --roznice  → wypisuje przypadki, w których drzewo robocze różni się od BAZA
+// P-GH-DAWKA-BEZ-MODULU (D6, decyzja właściciela 2026-10-07): bez modułu dawki monitor nie zapisuje (prosi o odświeżenie
+// strony), więc przypadki z modulDawki: false opisują we wzorcu zachowanie sprzed D6. Pole kategorieZModulemDawki to
+// skróty tych samych kategorii policzone tylko z przypadków z modułem dawki (ten sam przebieg monitora z BAZA); test
+// porównuje z nim drzewo robocze, a przypadki bez modułu sprawdza jako odmowy. `--roznice` pokazuje też te odmowy.
 // Siatkę, wykonanie przypadku i postać kanoniczną wyniku eksportuje ten plik. Test używa tych samych funkcji, ale na
 // plikach z drzewa roboczego. Dane wyłącznie FIKCYJNE.
 import { createHash } from 'node:crypto';
@@ -553,6 +557,7 @@ export function zbudujWzorzec(zrodla = zrodlaBazy()) {
     pliki: PLIKI,
     listy: LISTY,
     kategorie: podsumowanieKategorii(przypadki, wyniki),
+    kategorieZModulemDawki: podsumowanieKategorii(przypadki.filter((p) => p.modulDawki), wyniki),
     przypadki: przypadki.filter((p) => reprezentatywne.has(p.id)).map((p) => ({ wejscie: p, wynik: wyniki.get(p.id) })),
   };
 }
@@ -574,9 +579,10 @@ export function zapiszTekst(wzorzec) {
     return `    {\n      "wejscie": ${j(wejscie)},\n      "wynik": {\n${pola.join(',\n')}\n      }\n    }`;
   };
   const kategorie = Object.entries(wzorzec.kategorie).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
+  const zModulem = Object.entries(wzorzec.kategorieZModulemDawki).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
   const listy = Object.entries(wzorzec.listy).map(([k, v]) => `    ${j(k)}: ${lista(v, '    ')}`).join(',\n');
   return `{\n  "opis": ${lista(wzorzec.opis, '  ')},\n  "baza": ${j(wzorzec.baza)},\n  "pliki": ${j(wzorzec.pliki)},\n`
-    + `  "listy": {\n${listy}\n  },\n  "kategorie": {\n${kategorie}\n  },\n`
+    + `  "listy": {\n${listy}\n  },\n  "kategorie": {\n${kategorie}\n  },\n  "kategorieZModulemDawki": {\n${zModulem}\n  },\n`
     + `  "przypadki": [\n${wzorzec.przypadki.map(przypadek).join(',\n')}\n  ]\n}\n`;
 }
 

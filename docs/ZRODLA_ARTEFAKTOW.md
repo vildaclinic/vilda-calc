@@ -388,6 +388,29 @@ if (wstrzymajPrzyUszkodzonych(A)) return;
 // zaawansowanej), O (otwarcie edycji) — window.ghTherapyPoints zastąpione przez punktyDoWidoku().
 ```
 
+## Łatka P-GH-DAWKA-BEZ-MODULU, D6 (`gh_therapy_monitor.js` 55 → 56, 2026-10-07)
+
+Zmiana kliniczna: bez modułu dawki (`window.VildaGhDawka` z funkcją `preparat`) monitor nie zapisuje żadnego punktu i prosi o odświeżenie strony. Dotąd brak modułu przepuszczał zapis (Increlex z połową dawki, nowy punkt Ngenla z karty z dawką tygodniową jako dobową). Zmiana wprost w artefakcie, miejsce ma komentarz `P-GH-DAWKA-BEZ-MODULU`. Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, P-GH-DAWKA-BEZ-MODULU. Łatkę nakłada się na wersję 55.
+
+```js
+function apiPunktowBezWarunkuDawki() {          // (Gpb) dawna bramka Gpa; korzysta z niej tylko ostrzeżenie Gpu
+  try {
+    const A = window.VildaGhPunkty, E = window.VildaGhDawka;
+    return A && A.wersja === 3 && !(E && typeof E.preparat !== 'function') ? A : null;
+  } catch { return null; }
+}
+function apiPunktow() {                         // (Gpa) bramka każdego zapisu: dochodzi warunek modułu dawki
+  try {
+    const A = apiPunktowBezWarunkuDawki(), E = window.VildaGhDawka;
+    return A && E && typeof E.preparat === 'function' ? A : null;
+  } catch { return null; }
+}
+
+// ostrzezenieNadTabela (Gpu): apiPunktow() → apiPunktowBezWarunkuDawki() (ostrzeżenie niczego nie zapisuje).
+```
+
+Bez zmian: miejsca wołające `apiPunktow()` (He, ghAddRetroPoint, re, naprawUszkodzone, L) i `odmowaBezModulu()` — bez modułu dawki dostają `null` i pokazują komunikat z PR-5.
+
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
 Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.

@@ -7922,6 +7922,7 @@ fikcyjne, te same kroki co w teście e2e).**
 - Silnik: `vilda_gh_dawka.js` (`window.VildaGhDawka`: `zaokraglij`, `podzial`, `ocen`, `komunikat`, `opisKroku`,
   `opisZaokraglenia`, `opisPola`, `komunikatZmianySchematu`) — bezpaństwowy, wynik niesie źródło, teksty powstają z
   danych. Nieznany preparat (Increlex) albo brak modułu → karta i monitor liczą jak dotąd.
+  *(Monitor od D6: brak modułu dawki → odmowa zapisu punktu, P-GH-DAWKA-BEZ-MODULU.)*
 - Karta `gh_igf_therapy.js` i monitor `gh_therapy_monitor.js` — wpięcia opisane komentarzem `P-GH-DAWKA-PODAWANA`;
   nowe style w klasach arkuszy komponentów (bez nowych stylów na elementach).
 - Rekord punktu terapii: te same pola (`dose`, `doseUnit`, `doseAbs`). Dla nowych i edytowanych punktów `doseAbs` jest
@@ -8733,6 +8734,81 @@ precache (append-only), `SW_VERSION` 1.1.183 → 1.1.184 (+ pin w `tests/unit/kl
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Poza zakresem: inne moduły czytające listę punktów
 (np. mostek na Start) przy uszkodzonym wpisie — po naprawie w monitorze dostają listę bez niego; sprawdzanie listy punktów przy
 wczytywaniu danych (osobna decyzja).
+
+## Punkt terapii GH bez modułu dawki: odmowa zapisu dla każdego preparatu zamiast połowy dawki Increlex i dawki tygodniowej Ngenla jako dobowej (P-GH-DAWKA-BEZ-MODULU, D6, zmiana kliniczna, SW 1.1.186, `gh_therapy_monitor.js` 56, `vilda_gh_punkty.js` 5, 2026-10-07)
+
+**Skąd.** PR-6 planu „Wspólne API punktów GH”, pytania 27 i 28 z mapy punktów. Decyzja właściciela D6 z 2026-10-07:
+wariant **(b)** — bez modułu dawki (`vilda_gh_dawka.js`, `window.VildaGhDawka` z funkcją `preparat`) monitor nie zapisuje
+żadnego punktu. Odrzucone: (a) odmowa tylko dla Increlex i Ngenla z karty — bez pliku danych modułu monitor nie wie, który
+preparat podaje się „na podanie”, więc trzeba by wpisać nazwy preparatów w regułach (drugie źródło danych o lekach obok
+`vilda_gh_dawka_dane.js`); (c) bez zmian.
+
+**Stan przed zmianą (zmierzony na prawdziwym monitorze w atrapie, dane fikcyjne, 30 kg).** Bez modułu dawki monitor
+zapisywał:
+- Increlex 40 mg, punkt wsteczny i edycja, 0,5 mg na podanie → `dose` 0,0167 mg/kg/d i `doseAbs` 0,5 mg/d, czyli połowa
+  dawki dobowej (z modułem: 0,0333 mg/kg/d i 1 mg/d, 2 podania na dobę);
+- Ngenla 60 mg, nowy punkt z karty (gałąź zapasowa: `#therDailyDoseAbs`), 20 mg/tydz → `doseAbs` 20 mg/d, czyli dawka
+  tygodniowa zapisana jako dobowa, 7 razy za dużo (z modułem: 2,857 mg/d = 20 / 7);
+- Increlex z karty: `doseAbs` z pola dawki na podanie (połowa dawki dobowej);
+- preparaty dobowe (Omnitrope, Genotropin) oraz Ngenla w edycji i punkcie wstecznym — tak samo jak z modułem.
+
+**Co się zmienia.** Bramka monitora (`gh_therapy_monitor.js`, łatka `P-GH-DAWKA-BEZ-MODULU`) wymaga, oprócz
+`VildaGhPunkty` w wersji 3, modułu dawki z funkcją `preparat` (dotąd odrzucała tylko moduł bez tej funkcji, a brak modułu
+przepuszczała). Bez niego zapis z karty (W/K/Z), edycja, punkt wsteczny i usunięcie kończą się komunikatem z PR-5: „Nie
+zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.” Lista punktów, pamięć modułu, kanał
+i wskaźnik zapisu bez zmian; formularz zostaje otwarty z danymi. Sprawdzenie edycji spoza listy (P-GH-EDYCJA-LISTA)
+nadal idzie pierwsze. Ostrzeżenie o uszkodzonych wpisach nad tabelą (P-GH-PUNKTY-USZKODZONE) niczego nie zapisuje, więc
+zostaje jak dotąd: korzysta z bramki sprzed D6 (`Gpb`), a bramka zapisu (`Gpa`) dokłada warunek modułu dawki. `VildaGhPunkty` bez zmian (`wersja: 3`): `polaZPodawanej` bez modułu dalej liczy jak dawny monitor
+i zwraca `bezModuluDawki: true` — tylko monitor nie dochodzi już do tej ścieżki (`vilda_gh_punkty.js` 5: komentarz).
+Z modułem dawki (zwykła praca: `docpro.html` ładuje `vilda_gh_dawka.js` przed monitorem) nic się nie zmienia.
+
+**Źródło medyczne.** Bez nowych reguł dawkowania; zmiana nie dopuszcza zapisu, gdy reguł z tych źródeł nie da się
+zastosować:
+- Increlex 10 mg/ml — informacja o produkcie EMA, wersja angielska, PDF z 26.03.2026, pkt 4.2: dawka na kg masy ciała
+  „twice daily” (P-GH-INCRELEX-PODANIE): dawka dobowa = 2 × dawka na podanie;
+- Ngenla 24 i 60 mg — informacja o produkcie EMA, wersja angielska, PDF z 16.01.2026, pkt 4.2: dawkowanie raz w tygodniu;
+  w rekordzie `doseAbs` = dawka tygodniowa / 7 (P-GH-DAWKA-PODAWANA).
+
+**Populacja, jednostki, ograniczenia.** Dzieci leczone GH (Omnitrope, Genotropin, Ngenla) i IGF-1 (Increlex) w monitorze
+punktów terapii na DocPro. Rekord punktu bez zmian: `dose` w mg/kg/d (Ngenla mg/kg/tydz), `doseAbs` w mg/d. Dotyczy
+wyłącznie stanu, w którym plik modułu dawki nie doszedł (sieć, blokada, niepełna aktualizacja); karta leczenia
+(`gh_igf_therapy.js`) i Karta pacjenta bez zmian.
+
+**Klasyfikacja.** Zmiana kliniczna (AGENTS § 3: wynik zapisu dawki i ostrzeżenie) w stanie bez modułu dawki: zamiast
+zapisu błędnej dawki — brak zapisu i prośba o odświeżenie. Także preparaty dobowe, które zapisałyby się poprawnie, dostają
+odmowę (świadomy koszt wariantu b). Z modułem dawki wyniki, jednostki i progi bez zmian. Akceptacja kliniczna:
+właściciel (D6 wybrany 2026-10-07; zatwierdzenie zmiany w PR).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne):
+- bez modułu dawki, punkt wsteczny Increlex 40 mg, 1 mg na podanie, 25 kg → brak zapisu, komunikat odmowy, formularz
+  otwarty (dawniej `dose` 0,04 mg/kg/d i `doseAbs` 1 mg/d); z modułem → `dose` 0,08 mg/kg/d, `doseAbs` 2 mg/d;
+- bez modułu dawki, nowy punkt z karty Ngenla 60 mg, `#therDailyDoseAbs` 20 → brak zapisu (dawniej `doseAbs` 20 mg/d);
+  z modułem → `doseAbs` 2,857 mg/d;
+- bez modułu dawki, punkt wsteczny Omnitrope 10 mg, 0,9 mg/d → brak zapisu (dawniej i z modułem `doseAbs` 0,9 mg/d).
+
+**Strażnicy.**
+- `tests/unit/gh-punkty-siatka.test.mjs`: przypadki z modułem dawki porównane ze skrótami `kategorieZModulemDawki` —
+  nowe pole wzorca, policzone z tego samego przebiegu monitora z BAZA (`3855858`), dotychczasowe pola wzorca bez zmian;
+  każdy przypadek bez modułu dawki (ok. 5 tys., każdy na świeżej atrapie) kończy się odmową bez zapisu, z otwartym
+  formularzem; kategorie Z1/Z2/Z4 „bez VildaGhDawka” opisane jako D6.
+- `tests/unit/gh-punkty-monitor-tryby.test.mjs`: wariant odmowy „brak modułu dawki” × 6 czynności (karta W/K/Z, edycja,
+  wsteczny, usunięcie), po przywróceniu modułu ten sam zapis co z modułem od początku; porównanie z monitorem sprzed API
+  tylko ze scenariuszami z modułem dawki.
+- `tests/unit/gh-punkty-charakterystyka-monitor.test.mjs`: Increlex bez modułu — odmowa w punkcie wstecznym i z karty
+  (zamiast dawnego zapisu połowy dawki), z modułem × 2 bez zmian.
+- `tests/unit/gh-punkty-uszkodzone.test.mjs`: bez modułu dawki ostrzeżenie o uszkodzonym wpisie zostaje, zapis prosi
+  o odświeżenie strony (bez przycisku naprawy).
+- `tests/e2e/gh-punkty-monitor-api.spec.mjs`: prawdziwy DocPro z zablokowanym `vilda_gh_dawka.js` — karta, wsteczny,
+  usunięcie i edycja kończą się odmową, lista bez zmian, bez błędów strony.
+
+**Wersje.** `gh_therapy_monitor.js` 55 → 56 i `vilda_gh_punkty.js` 4 → 5 (`docpro.html`; `vilda_gh_punkty.js` też
+`index.html`), precache (append-only), `SW_VERSION` 1.1.185 → 1.1.186 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
+`tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt` `7373a3c`; pin `?v=` w
+`tests/e2e/gh-punkty-api-start.spec.mjs` ręcznie.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna zmiany, scalenie i wdrożenie. Poza zakresem: gałąź zapasowa
+nowego punktu z modułem dawki (pytanie 28: preparat dobowy przy masie niezgodnej z wynikiem karty bierze
+`#therDailyDoseAbs` albo dawkę × masę) — osobna decyzja kliniczna.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 

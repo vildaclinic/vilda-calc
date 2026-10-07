@@ -237,6 +237,18 @@ describe('P-GH-PUNKTY-USZKODZONE: kolejność odmów', () => {
     expect(a.pole('ghDamagedRemoveBtn') === null).toBe(true);
   });
 
+  it('bez modułu dawki VildaGhDawka (D6, P-GH-DAWKA-BEZ-MODULU): ostrzeżenie zostaje jak dotąd, zapis prosi o odświeżenie strony', () => {
+    const lista = [WLACZENIE, null, KONTYNUACJA];
+    const a = utworzAtrapeMonitoraGh({ punkty: lista, modulDawki: false, ghTherapyCalc: KARTA });
+    expect(a.idWierszy()).toEqual([WLACZENIE.id, KONTYNUACJA.id]);
+    expect(a.pole('ghTherapyDamagedNote').textContent).toBe(OSTRZEZENIE[1]);
+    a.dodajZKarty('continue');
+    expect(a.stan().komunikat).toBe(ODSWIEZ);
+    expect(a.pole('ghDamagedRemoveBtn') === null).toBe(true);
+    expect(zapisy(a.stan().dziennik)).toEqual([]);
+    expect(a.stan().modulSurowy).toBe(JSON.stringify(lista));
+  });
+
   it('API zmienione między odmową a kliknięciem naprawy: naprawa też prosi o odświeżenie i niczego nie zapisuje', () => {
     const a = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, null, KONTYNUACJA], ghTherapyCalc: KARTA });
     a.dodajZKarty('continue');

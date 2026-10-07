@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import {
   MONITOR_PRZED_API, MONITOR_PRZED_API_SHA256, opcjePrzedApi, rodzaje, utworzAtrapeMonitoraGh, zrodlo,
 } from '../support/gh-monitor-atrapa.mjs';
@@ -14,7 +15,9 @@ import {
 // pokazuje, że monitor naprawdę deleguje, a sprawdzenie edycji spoza listy idzie przed API (decyzja właściciela
 // 2026-10-07). Odmowę bez zgodnego modułu sprawdzają testy na końcu pliku. Wpisy listy niebędące obiektem (null, liczba,
 // napis) są od P-GH-PUNKTY-USZKODZONE (rata 4) uszkodzone i świadomie obsługiwane inaczej niż przed API: sprawdza je
-// gh-punkty-uszkodzone.test.mjs, tu porównanie obejmuje tylko wpisy-obiekty. Dane wyłącznie FIKCYJNE.
+// gh-punkty-uszkodzone.test.mjs, tu porównanie obejmuje tylko wpisy-obiekty. Bez modułu dawki monitor od D6
+// (P-GH-DAWKA-BEZ-MODULU, zmiana kliniczna) nie zapisuje — to sprawdza wariant odmowy niżej, a porównanie z monitorem
+// sprzed API obejmuje scenariusze z modułem dawki. Dane wyłącznie FIKCYJNE.
 
 const punkt = (id, type, nadpisania = {}) => ({
   id, type, ageYears: 9, ageMonths: 0, weight: 32, height: 130, boneAge: null, dose: 0.025, doseUnit: 'mg/kg/d',
@@ -130,17 +133,14 @@ for (const [opis, pola] of [['wiek 0', { age: '0', ageMonths: '0' }], ['masa 0',
   ['pusty preparat', { therDrug: '' }], ['wiek 10 l. 14 mies.', { age: '10', ageMonths: '14' }], ['Ngenla', { therProg: 'SNP', therDrug: 'Ngenla 60 mg' }],
   ['Increlex', { therProg: 'IGF-1', therDrug: 'Increlex 40 mg' }], ['dawka pusta bez placeholdera', { therDailyDose: '' }]]) {
   ZWYKLE.push({ nazwa: `karta continue, ${opis}`, opcje: { punkty: [WLACZENIE] }, kroki: [zKarty('continue', pola)] });
-  ZWYKLE.push({ nazwa: `karta continue, ${opis}, bez modułu dawki`, opcje: { punkty: [WLACZENIE], modulDawki: false },
-    kroki: [zKarty('continue', pola)] });
 }
 for (const [opis, pola] of [['wiek 0', { ghRetroAge: '0', ghRetroAgeMonths: '0' }], ['dawka x', { ghRetroDose: 'x' }],
   ['pusty program', { ghRetroProg: '' }], ['Ngenla z IGF-1 bez dni', { ghRetroDrug: 'Ngenla 60 mg', ghRetroDose: '14', ghRetroIgf1: '250' }],
   ['Increlex 0,5', { ghRetroProg: 'IGF-1', ghRetroDrug: 'Increlex 40 mg', ghRetroDose: '0.5' }], ['wiek kostny -0', { ghRetroBoneAge: '-0' }]]) {
-  for (const modulDawki of [true, false]) {
-    ZWYKLE.push({ nazwa: `wsteczny, ${opis}${modulDawki ? '' : ', bez modułu dawki'}`, opcje: { punkty: [WLACZENIE], modulDawki },
-      kroki: [wsteczny(pola)] });
-  }
+  ZWYKLE.push({ nazwa: `wsteczny, ${opis}`, opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny(pola)] });
 }
+// (Bez modułu dawki — P-GH-DAWKA-BEZ-MODULU, D6 — monitor sprzed API zapisywał Increlex bez × 2 i Ngenla z karty z dawką
+// tygodniową jako dobową; dziś odmawia. Sprawdza to wariant „brak modułu dawki” w teście odmowy niżej.)
 for (const typ of ['start', 'continue', 'end']) {
   for (const [opis, punkty, cel, pola] of [
     ['Kontynuacja, wzrost', [WLACZENIE, KONTYNUACJA, ZAKONCZENIE], KONTYNUACJA.id, { ghEditHeight: '139' }],
@@ -260,6 +260,13 @@ const BEZ_API = [
   { nazwa: 'brak modułu VildaGhPunkty (plik nie doszedł)', opcje: { modulPunktow: false }, podmien: (w) => ({
     wywolania: [],
     przywroc: () => { new Function('window', 'globalThis', zrodlo('vilda_gh_punkty.js'))(w, w); },
+  }) },
+  // P-GH-DAWKA-BEZ-MODULU (D6): bez modułu dawki odmowa dla każdego preparatu.
+  { nazwa: 'brak modułu dawki VildaGhDawka (vilda_gh_dawka.js nie doszedł; D6)', opcje: { modulDawki: false }, podmien: (w) => ({
+    wywolania: [],
+    przywroc: () => {
+      for (const plik of ['vilda_gh_opakowania_dane.js', 'vilda_gh_dawka_dane.js', 'vilda_gh_dawka.js']) loadBrowserScript(plik, w);
+    },
   }) },
   ...[1, 2].map((wersja) => ({ nazwa: `API wersji ${wersja} (plik ${wersja === 1 ? 'raty 1' : 'rat 2–3'} z pamięci przeglądarki)`, opcje: {}, podmien: (w) => {
     const api = w.VildaGhPunkty;

@@ -16,6 +16,10 @@ import {
 // P-GH-PUNKTY-API: od raty 2 monitor bierze reguły punktu z VildaGhPunkty, a od raty 3 (D5) bez modułu nie zapisuje
 // (stary kod reguł usunięty). Siatka idzie więc na monitorze z modułem; kontrole negatywne psują API i części monitora,
 // którymi idzie zapis. Zamrożony monitor sprzed API (wyrocznia testów równoważności) też musi dać wynik wzorca.
+// P-GH-DAWKA-BEZ-MODULU (D6, zmiana kliniczna, wariant b wybrany przez właściciela 2026-10-07): bez modułu dawki
+// (modulDawki: false) monitor nie zapisuje i prosi o odświeżenie strony. Przypadki z modułem dawki porównujemy ze skrótami
+// wzorca policzonymi tylko z nich (kategorieZModulemDawki, ten sam monitor z BAZA), a przypadki bez modułu — każdy na
+// świeżej atrapie — muszą skończyć się odmową bez zapisu. Wzorzec dla nich dalej opisuje zachowanie sprzed D6.
 
 const wzorzec = JSON.parse(fs.readFileSync(path.join(korzen, PLIK_WZORCA), 'utf8'));
 const przypadki = siatka();
@@ -27,15 +31,16 @@ const PODPOWIEDZ = 'Lista różnic: node tests/scripts/gh-punkty-wzorzec.mjs --r
 const OPISY = {
   'Z1-modul': 'Z1 nowy punkt z karty z VildaGhDawka: wynik karty przy zgodnej masie; gałąź zapasowa Gmcalc przy masie '
     + 'niezgodnej, bez wyniku karty i dla preparatu nieznanego; „ngenla 60 mg” jako dobowy — stan obecny — do decyzji (pytania 28, 30)',
-  'Z1-bez-modulu': 'Z1 nowy punkt z karty bez VildaGhDawka: zawsze gałąź zapasowa (#therDailyDoseAbs albo G()), także '
-    + 'dla Increlex — stan obecny — do decyzji (pytania 27, 28, 30)',
+  'Z1-bez-modulu': 'Z1 nowy punkt z karty bez VildaGhDawka: od D6 odmowa z prośbą o odświeżenie strony, bez zapisu '
+    + '(dawniej gałąź zapasowa: Increlex bez ×2, Ngenla z dawką tygodniową jako dobową; pytania 27, 28)',
   'Z2-modul': 'Z2 edycja punktu z listy z VildaGhDawka: dose = dawka podawana (Increlex × 2)/masa, type z przycisku, program z #therProg '
     + '(punktu Włączenia), id, pozycja i obce pole zostają — stan obecny — do decyzji (pytania 17, 30)',
-  'Z2-bez-modulu': 'Z2 edycja punktu z listy bez VildaGhDawka: Increlex bez ×2, program z #therProg — stan obecny — do '
-    + 'decyzji (pytania 17, 27, 30)',
+  'Z2-bez-modulu': 'Z2 edycja punktu z listy bez VildaGhDawka: od D6 odmowa z prośbą o odświeżenie strony, bez zapisu, '
+    + 'formularz edycji otwarty (dawniej Increlex bez ×2; pytanie 27)',
   'Z4-modul': 'Z4 punkt wsteczny z VildaGhDawka: dose = dawka podawana (Increlex × 2)/masa, Ngenla doseAbs = dawka/7 i 4 dni przy IGF bez '
     + 'dni; „ngenla 60 mg” jako dobowy — stan obecny — do decyzji (pytanie 30)',
-  'Z4-bez-modulu': 'Z4 punkt wsteczny bez VildaGhDawka: Increlex bez ×2 — stan obecny — do decyzji (pytania 27, 30)',
+  'Z4-bez-modulu': 'Z4 punkt wsteczny bez VildaGhDawka: od D6 odmowa z prośbą o odświeżenie strony, bez zapisu, '
+    + 'formularz wsteczny otwarty (dawniej Increlex bez ×2; pytanie 27)',
   Z5: 'Z5 usuwanie przyciskiem i nakładką potwierdzenia: znikają wszystkie punkty o tym samym String(id), także wszystkie '
     + 'bez id; „Anuluj” niczego nie zapisuje — stan obecny — do decyzji (pytanie 18)',
   'Z1-odmowy': 'odmowy Z1: zajęty typ, zła masa, wiek lub wzrost, pusty preparat lub program — bez zapisu, dokładny tekst nakładki',
@@ -80,6 +85,24 @@ function naruszenie(p, w) {
   return null;
 }
 
+// D6: bez modułu dawki każdy zapis i usunięcie kończy się komunikatem odmowy (wpis K ostatni), bez zapisu modułu, kanału
+// i wskaźnika zapisu; lista w oknie = lista w pamięci modułu; formularz, z którego lekarz zapisywał, zostaje otwarty.
+// „Anuluj” przy usuwaniu nie zostawia żadnego wpisu.
+const ODSWIEZ = 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.';
+function naruszenieBezModuluDawki(p, w) {
+  const r = rodzaje(w.dziennik);
+  if (p.anuluj) return r.length === 0 ? null : `„Anuluj” z wpisami: ${r.join(',')}`;
+  if (r.some((x) => x !== 'E' && x !== 'K')) return `bez modułu dawki zapis albo kanał: ${r.join(',')}`;
+  if (r.at(-1) !== 'K' || w.komunikat !== ODSWIEZ) return `bez modułu dawki komunikat ${w.komunikat}`;
+  if (w.powiadomienia.length) return `powiadomienia ${w.powiadomienia.join(',')}`;
+  if (kanon(w.lista) !== kanon(w.modul)) return 'lista w oknie ≠ lista w pamięci modułu';
+  if (p.sciezka === 'Z2' && !w.edycjaWidoczna) return 'formularz edycji zamknięty po odmowie';
+  if (p.sciezka === 'Z4' && !w.wstecznyWidoczny) return 'formularz wsteczny zamknięty po odmowie';
+  return null;
+}
+const zModulemDawki = (lista) => lista.filter((p) => p.modulDawki);
+const bezModuluDawki = (lista) => lista.filter((p) => !p.modulDawki).map((p) => ({ ...p, swieza: true }));
+
 describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
   it('10–20 tys. przypadków; co najmniej połowa to zapisy, a odmowy są osobną, mniejszą podsiatką', () => {
     expect(przypadki.length).toBeGreaterThanOrEqual(10_000);
@@ -90,6 +113,7 @@ describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
     // Liczności wzorca zgadzają się z siatką; zapisy i odmowy sprawdza wynik monitora w kategoriach niżej (skrót).
     for (const k of KATEGORIE) {
       expect(wzorzec.kategorie[k].przypadki, k).toBe(przypadki.filter((p) => p.kategoria === k).length);
+      expect(wzorzec.kategorieZModulemDawki[k].przypadki, k).toBe(przypadki.filter((p) => p.kategoria === k && p.modulDawki).length);
     }
     const zapisy = KATEGORIE.reduce((s, k) => s + wzorzec.kategorie[k].zapisy, 0);
     const odmowy = KATEGORIE_ODMOW.reduce((s, k) => s + wzorzec.kategorie[k].przypadki, 0);
@@ -119,28 +143,39 @@ describe('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca', ()
   for (const kategoria of KATEGORIE) {
     it(OPISY[kategoria], () => {
       const czesc = przypadki.filter((p) => p.kategoria === kategoria);
-      const wyniki = wykonajPrzypadki(czesc);
+      const zModulem = zModulemDawki(czesc);
+      const wyniki = wykonajPrzypadki(zModulem);
 
       // Pełny wynik przypadków reprezentatywnych: najpierw czytelna różnica, potem kolejność kluczy i bity liczb.
-      for (const r of reprezentatywne.filter((x) => x.wejscie.kategoria === kategoria)) {
+      for (const r of reprezentatywne.filter((x) => x.wejscie.kategoria === kategoria && x.wejscie.modulDawki)) {
         const w = wyniki.get(r.wejscie.id);
         expect(w, r.wejscie.id).toEqual(r.wynik);
         expect(pierwszaRoznica(r.wynik, w), r.wejscie.id).toBeNull();
       }
-      // Niezmienniki czytelne bez wzorca, dla każdego przypadku kategorii.
-      const naruszenia = czesc.map((p) => [p.id, naruszenie(p, wyniki.get(p.id))]).filter(([, n]) => n);
+      // Niezmienniki czytelne bez wzorca, dla każdego przypadku kategorii z modułem dawki.
+      const naruszenia = zModulem.map((p) => [p.id, naruszenie(p, wyniki.get(p.id))]).filter(([, n]) => n);
       expect(naruszenia).toEqual([]);
-      // Całość kategorii: skrót SHA-256 po id, wejściu i wyniku kanonicznym każdego przypadku.
-      expect(podsumowanieKategorii(czesc, wyniki)[kategoria], PODPOWIEDZ).toEqual(wzorzec.kategorie[kategoria]);
-    }, 60_000);
+      // Całość części z modułem dawki: skrót SHA-256 po id, wejściu i wyniku kanonicznym każdego przypadku.
+      expect(podsumowanieKategorii(zModulem, wyniki)[kategoria], PODPOWIEDZ).toEqual(wzorzec.kategorieZModulemDawki[kategoria]);
+
+      // D6: każdy przypadek bez modułu dawki — odmowa bez zapisu.
+      const bez = bezModuluDawki(czesc);
+      const wynikiBez = wykonajPrzypadki(bez);
+      const naruszeniaBez = bez.map((p) => [p.id, naruszenieBezModuluDawki(p, wynikiBez.get(p.id))]).filter(([, n]) => n);
+      expect(naruszeniaBez).toEqual([]);
+      expect(bez.length + zModulem.length).toBe(czesc.length);
+    }, 120_000);
   }
 });
 
 describe('Złota siatka punktów GH — atrapa użyta ponownie nie przenosi stanu między przypadkami', () => {
   it('każdy przypadek reprezentatywny na świeżej atrapie (lista w module przed startem monitora) daje wynik wzorca', () => {
     for (const r of reprezentatywne) {
-      const w = wykonajNaSwiezej(wedlugId.get(r.wejscie.id));
-      expect(pierwszaRoznica(r.wynik, w), r.wejscie.id).toBeNull();
+      const p = wedlugId.get(r.wejscie.id);
+      const w = wykonajNaSwiezej(p);
+      // D6: bez modułu dawki odmowa zamiast wyniku wzorca.
+      if (!p.modulDawki) expect(naruszenieBezModuluDawki(p, w), r.wejscie.id).toBeNull();
+      else expect(pierwszaRoznica(r.wynik, w), r.wejscie.id).toBeNull();
     }
   }, 60_000);
 });
@@ -203,7 +238,9 @@ const KONTROLE = [
 ];
 
 describe('Złota siatka punktów GH — kontrole negatywne', () => {
-  const wejscia = reprezentatywne.map((r) => wedlugId.get(r.wejscie.id));
+  // Przypadki reprezentatywne z modułem dawki (bez modułu monitor od D6 odmawia, zanim sięgnie po API).
+  const zModulemRepr = reprezentatywne.filter((r) => r.wejscie.modulDawki);
+  const wejscia = zModulemRepr.map((r) => wedlugId.get(r.wejscie.id));
 
   for (const k of KONTROLE) {
     it(`${k.nazwa}: wzorzec wykrywa zmianę`, () => {
@@ -214,7 +251,7 @@ describe('Złota siatka punktów GH — kontrole negatywne', () => {
       expect(zmienione).not.toBe(zrodloPliku);
 
       const wyniki = wykonajPrzypadki(k.swieza ? wejscia.map((p) => ({ ...p, swieza: true })) : wejscia, { [k.plik]: zmienione });
-      const rozne = reprezentatywne.filter((r) => kanon(wyniki.get(r.wejscie.id)) !== kanon(r.wynik)).map((r) => r.wejscie);
+      const rozne = zModulemRepr.filter((r) => kanon(wyniki.get(r.wejscie.id)) !== kanon(r.wynik)).map((r) => r.wejscie);
       expect(rozne.length).toBeGreaterThan(0);
       expect(rozne.filter((p) => !k.dotyczy(p)).map((p) => p.id)).toEqual([]);
     }, 60_000);
