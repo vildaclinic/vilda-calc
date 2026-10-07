@@ -8521,7 +8521,7 @@ zmiany zachowania, z zapasową ścieżką; tam także decyzja o odstępstwie `nu
 monitorze przed regułami API (monitor odmawia tekstem P-GH-EDYCJA-LISTA przed sprawdzeniem rodzaju i wartości, API
 zwraca `brak-punktu` dopiero na końcu).
 
-## Wspólne API punktów terapii GH, rata 2: monitor GH korzysta z `VildaGhPunkty`, bez modułu stary kod (P-GH-PUNKTY-API rata 2, SW 1.1.180, `gh_therapy_monitor.js` 53, `vilda_gh_punkty.js` 2, 2026-10-07)
+## Wspólne API punktów terapii GH, rata 2: monitor GH korzysta z `VildaGhPunkty`, bez modułu stary kod (P-GH-PUNKTY-API rata 2, SW 1.1.181, `gh_therapy_monitor.js` 53, `vilda_gh_punkty.js` 2, 2026-10-07)
 
 **Skąd.** PR-4 planu „Wspólne API punktów GH” po racie 1 (moduł ładowany, nieużywany). Decyzje właściciela z 2026-10-07:
 (1) przy pustym wpisie (`null`) na liście punktów API ma działać ściśle jak monitor; (2) sprawdzenie edycji spoza bieżącej
@@ -8583,9 +8583,9 @@ w obu trybach identyczny co do kolejności kluczy i bitu każdej liczby.
   komunikat i tabela; z modułem licznik wywołań API, bez modułu zero wywołań.
 
 **Wersje.** `gh_therapy_monitor.js` 52 → 53 i `vilda_gh_punkty.js` 1 → 2 (`docpro.html`; `vilda_gh_punkty.js` też
-`index.html`), precache (append-only), `SW_VERSION` 1.1.179 → 1.1.180 (+ pin w `tests/unit/klirens-ui-model.test.mjs`;
-1.1.179 wydał P-BLOKADA-IMPORT #567), `tests/fixtures/wersje-zasobow.json` — `npm run podbij-wersje` względem `audyt`
-`2dbd48a`; pin `?v=` w
+`index.html`), precache (append-only), `SW_VERSION` 1.1.180 → 1.1.181 (+ pin w `tests/unit/klirens-ui-model.test.mjs`;
+1.1.179 wydał P-BLOKADA-IMPORT #567, 1.1.180 — P-HISTORIA-CZAS-LOKALNY #568), `tests/fixtures/wersje-zasobow.json` —
+`npm run podbij-wersje` względem `audyt` `7c861b4`; pin `?v=` w
 `tests/e2e/gh-punkty-api-start.spec.mjs` ręcznie.
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Dalej: PR-5 (D5 — koniec zapasu), naprawa stanu
