@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.184';
+const SW_VERSION = '1.1.185';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2859,6 +2859,7 @@ const OPTIONAL_ASSETS = [
   // nie miały wstępnego pobrania — bez nich DocPro nie startował offline.
   '/vilda_sync.js?v=32',
   '/vilda_sync.js?v=33',
+  '/vilda_sync.js?v=34',
   '/vilda_sync_integration.js?v=45',
   '/vilda_sync_integration.js?v=46',
   '/vilda_sync_integration.js?v=47',

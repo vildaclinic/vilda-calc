@@ -9217,6 +9217,47 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Most przed synchronizacją przyrostową: gzip pełnej wysyłki i limit czasu od rozmiaru (P-SYNC-MOST, SW 1.1.185, `vilda_sync.js` 34, 2026-10-07)
+
+**Decyzja właściciela (2026-10-07).** „Najpierw rozwiązania tymczasowe, żebym mógł pracować normalnie z pacjentami, a następnie plan trwałej przebudowy” — etap 0 z `docs/SYNC_PRZYROSTOWA_PLAN.md` w zakresie klienta. Po stronie serwera właściciel podnosi `MAX_PAYLOAD_BYTES` workera (osobna zmiana w prywatnym repozytorium usługi).
+
+**Co było.** Pełna wysyłka sejfu (`PUT /v1/slots/<slot>/blob`) to jeden plik: `JSON.stringify(exportSyncPayload())` zaszyfrowany AES-GCM kluczem synchronizacji, bez kompresji. U właściciela (623 karty, ponad 1142 zapisy; eksport z wcięciami 29 MB) to około 21–24 MB. Każde żądanie miało sztywny limit 30 s (`Mt`), który przy PUT obejmuje cały upload. Ślad P-SYNC-SLAD pokazał: iPhone `TIMEOUT (push)` po 30 s, komputer `? (push) — Failed to fetch` (brak odpowiedzi czytelnej dla przeglądarki). Chmura stała na stanie sprzed drugiej wizyty, a szybka delta pacjenta (powyżej 60 000 znaków pomijana) nie dowoziła zapisów 3 i 4.
+
+**Co jest** (`vilda_sync.js`; scalanie, delty, nagrobki, strażnicy P-SYNC-STRAZNIK bez zmian):
+- *Zapis.* Bajty JSON ładunku od progu **4 MiB** są kompresowane gzipem (`CompressionStream('gzip')`) **przed** szyfrowaniem — w każdej ścieżce pełnej wysyłki: pierwsza wysyłka i rejestracja, gałąź 409 (slot istnieje), gałąź bez ETagu, ponowienie po 412 i rotacja tożsamości (`revokeAllDevices`). Format na drucie bez zmian: `IV(12) ‖ AES-GCM(syncEncKey)`; serwer nie widzi różnicy poza rozmiarem. Bez kompresji, jak dotąd: ładunek poniżej progu, brak `CompressionStream` w przeglądarce, wyłącznik `localStorage['vilda-sync-gzip-v1'] = '0'` (wycofanie na jednym urządzeniu bez wydania), błąd kompresji albo wynik nie mniejszy od wejścia.
+- *Odczyt.* Po odszyfrowaniu bloba czytelnik sprawdza dwa pierwsze bajty: `1F 8B` → rozpakowanie `DecompressionStream('gzip')`; wszystko inne (JSON zaczyna się od `7B` „{”) → jak dotąd. Brak `DecompressionStream` przy blobie gzip → błąd `GZIP_UNSUPPORTED` z prośbą o aktualizację systemu lub przeglądarki; uszkodzony gzip → `DECOMPRESS_FAILED`. W obu przypadkach nic nie jest scalane, ETag się nie przesuwa, a wysyłka z tego urządzenia zostaje zablokowana dotychczasowymi strażnikami (pobranie w tej sesji, If-Match).
+- *Limit czasu.* Żądanie z ciałem bloba (rejestracja i PUT w `syncPush`, `uploadToSlot`) ma limit **30 s + 1 s na każde 100 kB** ciała (łącze 0,8 Mb/s), najwyżej **180 s**. Pobranie bloba dostaje ten sam limit liczony od `size` z `/status` (zapas: licznik `f()` kończy się na nagłówkach odpowiedzi, a treść i tak pobiera się bez limitu). Pozostałe żądania (status, delty) zostają przy 30 s. Komunikat `TIMEOUT` podaje limit i rozmiar ciała, np. „(45371 ms, 1.5 MB)”, a błąd ma pole `bytes`.
+- *Ślad.* Wynik udanej wysyłki niesie `bytes` = rozmiar wysłanego bloba, więc wpis dziennika dostępu `sync.push.ok` (P-SYNC-SLAD) ma teraz rozmiar zamiast `null`.
+- *WIPE_GUARD* nadal porównuje surowe bajty JSON z rozmiarem na serwerze. Gdy blob w chmurze jest skompresowany, rozmiar serwera jest kilkanaście razy mniejszy, więc strażnik działa ostrożniej (zatrzymuje stan bez pacjentów, gdy jego surowy JSON jest mniejszy niż 1/4 skompresowanego bloba). Dla realnej awarii — świeże urządzenie z kilkoma kB — nadal zatrzymuje. Porównanie „spakowane z spakowanym” odrzuciłem, bo fałszywie blokowałoby małe sejfy bez pacjentów, ale z notatkami.
+
+**Wycofanie.** Czytelnika gzip nie wolno wycofywać, gdy w chmurze może już leżeć blob gzip: konto stałoby się nieczytelne dla wszystkich urządzeń. Awaryjnie wyłącza się wyłącznie zapis — `localStorage['vilda-sync-gzip-v1'] = '0'` na urządzeniu albo próg w kolejnym wydaniu.
+
+**Zgodność.** Klient sprzed tej zmiany, który pobierze blob gzip, kończy pobranie błędem `PARSE_FAILED`: nic nie scala i nie nadpisuje chmury (strażnik pobrania w sesji i If-Match), aż PWA wczyta nową wersję. Dotyczy wyłącznie kont, których ładunek przekracza 4 MiB — mniejsze sejfy nie zmieniają formatu. Stary blob bez kompresji nowy klient czyta bez zmian. Na urządzeniu niezaktualizowanym Ustawienia pokazują „PARSE_FAILED (pull) — uszkodzone dane sync”: to oczekiwany objaw starej wersji, a lekiem jest ponowne otwarcie aplikacji (nowa wersja wczytuje się zwykle przy drugim uruchomieniu; w powłoce `app.html` od razu po instalacji nowego SW). Stara karta lub ramka obok nowej na tym samym urządzeniu może jeszcze wysłać blob bez kompresji — danych nie ubywa, tylko format chwilowo wraca do jawnego; dlatego po wdrożeniu warto przeładować wszystkie karty i PWA. `CompressionStream` / `DecompressionStream`: Safari i iOS od 16.4, Chrome od 80, Firefox od 113; urządzenie bez `DecompressionStream` nie odczyta chmury skompresowanej przez inne urządzenie tego konta (`GZIP_UNSUPPORTED`).
+
+**Przypadki syntetyczne** (`tests/unit/sync-kompresja-most.test.mjs`, prawdziwe `vilda_sync.js`, atrapy serwera i sejfu, dane fikcyjne; 7/12 zmierzone czerwone na kodzie sprzed zmiany, 5 to strażnicy niezmienionego zachowania; `tests/e2e/sync-kompresja-most.spec.mjs` — prawdziwy sejf w Chromium, czerwony na kodzie sprzed zmiany z `PARSE_FAILED`):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| ładunek JSON ≥ 4 MiB, `syncPush` | PUT niesie `IV ‖ AES-GCM(gzip(JSON))`, odszyfrowane bajty zaczynają się `1F 8B 08`, ≥ 4× mniejsze; po rozpakowaniu ten sam JSON; `wynik.bytes` = rozmiar ciała PUT |
+| ładunek 300 KB | PUT bez kompresji, odszyfrowane bajty zaczynają się `7B` |
+| ≥ 4 MiB z wyłącznikiem `vilda-sync-gzip-v1=0` albo bez `CompressionStream` | bez kompresji, ten sam JSON |
+| `revokeAllDevices` z ładunkiem ≥ 4 MiB | rejestracja nowego slotu niesie gzip |
+| urządzenie A wysyła gzip, B `syncPull` | B scala dokładnie ładunek A |
+| blob bez kompresji | scalony jak dotąd |
+| blob gzip, brak `DecompressionStream` | `GZIP_UNSUPPORTED`, nic nie scalone, ETag bez zmian |
+| uszkodzony gzip pod poprawnym AES-GCM | `DECOMPRESS_FAILED`, nic nie scalone |
+| PUT ~1,5 MB wiszący | po 30 s nadal trwa; przerwany po `30 000 + ⌈bajty/100⌉` ms; komunikat „(… ms, 1.5 MB)”, `bytes` w błędzie |
+| PUT > 15 MB bez kompresji wiszący | przerwany po 180 000 ms |
+| GET /blob wiszący, `size` z `/status` = 1,5 MB | po 30 s nadal trwa; przerwany po `30 000 + ⌈size/100⌉` ms |
+| GET /status wiszący | przerwany po 30 000 ms, komunikat bez rozmiaru |
+| e2e: blob gzip z pacjentką z innego urządzenia, karta bez stanu slotu, `syncPush` (próg 0 B) | pacjentka scalona lokalnie; PUT z ETagiem scalonej treści niesie gzip z obiema kartami |
+
+**Wpływ kliniczny: brak** — żaden wzór, próg, jednostka ani interpretacja; treść ładunku po rozpakowaniu jest identyczna. **Wpływ na synchronizację:** zmienia się rozmiar i limit czasu pełnej wysyłki; reguły scalania bez zmian.
+
+**Wersje.** `vilda_sync.js` 33 → 34 (8 stron), precache (append-only), `SW_VERSION` 1.1.184 → 1.1.185 (+ pin w `tests/unit/klirens-ui-model.test.mjs`), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`90388c4`). „Do decyzji”: brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; podniesienie `MAX_PAYLOAD_BYTES` workera; kolejne etapy planu `docs/SYNC_PRZYROSTOWA_PLAN.md`. Po wdrożeniu: na każdym urządzeniu otworzyć aplikację (wczytanie nowej wersji), potem „Synchronizuj teraz” najpierw na iPhonie, następnie na komputerach, i sprawdzić w Ustawieniach linię „Ostatnia udana wysyłka z tego urządzenia”.
+
 ## Trwały ślad błędu synchronizacji i ostatniej udanej wysyłki (P-SYNC-SLAD, SW 1.1.182, `vilda_sync_integration.js` 47, `inline_ustawienia_04.js` 16, 2026-10-07)
 
 **Zgłoszenie właściciela (2026-10-07).** Druga wizyta pacjenta wprowadzona na iPhonie (zapisy 3 i 4) nie dotarła
@@ -9261,7 +9302,7 @@ przyczyna leży po stronie pobrania/scalania na komputerze — i tam należy pat
 | PUT /blob → 413 | klucz błędu `{operation:"push", code:"UPLOAD_FAILED", httpStatus:413, message:"VildaSync: upload nieudany (413): …"}`, bez `resolvedAt`; brak klucza udanej wysyłki |
 | potem PUT → 200 | klucz udanej wysyłki = czas; błąd zostaje z `resolvedAt` |
 | PUT → 401 | `code:"AUTH_FAILED"`, `httpStatus:null`; dziennik: jeden wpis `sync.error {code, httpStatus:null, operation:"push"}` |
-| `syncFull` z błędem w PUT | błąd zgłoszony raz, jako `push` (nie `full`); po udanym `syncFull` dokładnie jeden wpis `sync.push.ok {action:"uploaded", bytes:null}` |
+| `syncFull` z błędem w PUT | błąd zgłoszony raz, jako `push` (nie `full`); po udanym `syncFull` dokładnie jeden wpis `sync.push.ok {action:"uploaded", bytes:null}` *(Korekta 2026-10-07, P-SYNC-MOST: `bytes` = rozmiar wysłanego bloba, odkąd `vilda_sync.js` zwraca go w wyniku wysyłki.)* |
 | udane pobranie po błędzie wysyłki | nie ustawia klucza udanej wysyłki, nie dopisuje `resolvedAt` |
 | błąd konta A, potem udana wysyłka konta B na tym samym urządzeniu | błąd A bez `resolvedAt`, A bez klucza udanej wysyłki; B ma własny klucz wysyłki; brak klucza globalnego |
 | wysyłka bez błędu | brak klucza błędu; klucz udanej wysyłki i wpis `sync.push.ok` |

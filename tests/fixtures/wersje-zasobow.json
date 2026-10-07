@@ -916,8 +916,8 @@
   "sha256": "03cbae2cc9d070ce8b2d2b7bf3f3db93d5250720f7a966834363cab483eeed78"
  },
  "vilda_sync.js": {
-  "v": 33,
-  "sha256": "851a158b7d3ab13dd49ad0fe8cdd434c69c77bd90cb60ff45e9d59e8349fd079"
+  "v": 34,
+  "sha256": "f90f81e7bf5238cddbfed7e155d5376fc4e1ac97d3af0da84ebf18a9bdab9668"
  },
  "vilda_sync_integration.js": {
   "v": 47,

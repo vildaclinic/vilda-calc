@@ -99,6 +99,8 @@ Zmiana synchronizacji wymaga sprawdzenia co najmniej:
 - kompatybilności ze starszym klientem;
 - eksportu i odtworzenia kopii.
 
+Projekt synchronizacji przyrostowej (urządzenie wysyła tylko własne zmiany jako zdarzenia, punkt kontrolny w częściach, dziennik zdarzeń w usłudze) czeka na decyzje właściciela: `docs/SYNC_PRZYROSTOWA_PLAN.md` (2026-10-07). Do czasu decyzji nic z niego nie jest wdrożone.
+
 ### 6. PWA i cache
 
 `manifest.json` opisuje instalowaną aplikację i ikony. `service-worker-kalorii.js` kontroluje cache, aktualizację oraz obsługę offline.
