@@ -12,9 +12,15 @@
  * Decyzje właściciela 2026-10-07: przycisk tylko wtedy, gdy na liście jest już punkt Włączenia leczenia; wiersze
  * punktów GH dostają etykietę „Punkt leczenia GH · rodzaj · poprawki w DocPro”; pole dawki jest puste.
  *
- * Funkcje czyste (eksport dla testów): pomiarWiersza, stanPrzycisku, ostatniPunkt, domyslne, preparatyProgramu,
- * schematPreparatu, poleDawki, etykietaWierszaGh, przygotujPunkt. Warstwa DOM: init (wołana raz po załadowaniu
- * strony). Moduł nie zmienia wzorów ani jednostek, nie pisze do ghTherapyDB i nie dotyka monitora DocPro.
+ * Poprawki po recenzji (P-GH-PUNKT-Z-WIERSZA-ZGODNOSC, 2026-10-08, wariant wybrany przez właściciela): panel pokazuje
+ * BIEŻĄCY pomiar wiersza — podsumowanie, podpowiedź mg/kg i stan przycisku „Zapisz” odświeżają się przy każdej zmianie
+ * wiersza, a zapis odmawia, gdy wiersz różni się od pokazanego (wtedy odświeża panel). Zmiana pacjenta (wczytanie,
+ * odtworzenie stanu, „Wyczyść”, inny znacznik pacjenta) zamyka panel i usuwa komunikat „Zapisano…”; „Zapisz dane”
+ * bieżącego pacjenta (vilda:patient-loaded, source 'save') zmianą pacjenta nie jest.
+ *
+ * Funkcje czyste (eksport dla testów): pomiarWiersza, tekstPomiaru, stanPrzycisku, ostatniPunkt, domyslne,
+ * preparatyProgramu, schematPreparatu, poleDawki, etykietaWierszaGh, przygotujPunkt. Warstwa DOM: init (wołana raz
+ * po załadowaniu strony). Moduł nie zmienia wzorów ani jednostek, nie pisze do ghTherapyDB i nie dotyka monitora DocPro.
  * Style: klasy w vilda_gh_punkt_z_wiersza.css (bez stylów wpisanych w elementy).
  */
 (function (w) {
@@ -40,6 +46,7 @@
     zapisz: 'Zapisz punkt leczenia',
     odswiez: 'Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.',
     bladZapisu: 'Nie zapisano punktu leczenia: przeglądarka nie zapisała listy punktów. Spróbuj ponownie.',
+    pomiarZmieniony: 'Pomiar w wierszu się zmienił. Sprawdź dane w panelu i zapisz ponownie.',
     naprawa: ' Naprawa: DocPro → Monitorowanie leczenia GH.'
   });
 
@@ -83,6 +90,20 @@
       pusty: lata == null && mies == null && wzrost == null && masa == null,
       surowe: { lata: x.lata, miesiace: x.miesiace, wzrost: x.wzrost, masa: x.masa, wiekKostny: x.wiekKostny }
     };
+  }
+
+  // Podsumowanie pomiaru w panelu; brakujące pole jako „—” (niekompletny wiersz blokuje zapis, ale panel go pokazuje).
+  function tekstPomiaru(pm) {
+    var x = pm || {};
+    return 'Wiek ' + (x.lata != null ? wiekTekst(x.lata, x.miesiace) : '—')
+      + ' · wzrost ' + (x.wzrost != null ? fmt(x.wzrost) + ' cm' : '—')
+      + ' · masa ' + (x.masa != null ? fmt(x.masa) + ' kg' : '—')
+      + ' · wiek kostny ' + (x.wiekKostny != null ? fmt(x.wiekKostny) + ' l.' : '—');
+  }
+
+  // Ten sam pomiar = te same napisy w polach wiersza (to one idą do zapisu przez polaZPodawanej).
+  function kluczPomiaru(pm) {
+    return JSON.stringify(pm && pm.surowe ? pm.surowe : null);
   }
 
   function obiekty(lista) {
@@ -240,6 +261,23 @@
     if (stan.powod) b.title = stan.powod; else b.removeAttribute('title');
   }
 
+  // Znacznik pacjenta karty (jak w monitorze GH): pamięć okna, potem sesja karty. Pusty bez pacjenta z sejfu.
+  function znacznikPacjenta() {
+    try { if (typeof w._vildaCurrentPatientId === 'string' && w._vildaCurrentPatientId) return w._vildaCurrentPatientId; } catch (e) { /* brak */ }
+    try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; } catch (e) { return null; }
+  }
+  function wDokumencie(n) {
+    return !!(n && (typeof n.isConnected === 'boolean' ? n.isConnected : d.documentElement.contains(n)));
+  }
+
+  // Jedyny otwarty panel: {r, p, pacjent, odswiezPomiar(L), pokazany()}; otworz() zamyka poprzedni.
+  var otwarty = null;
+  function zamknijPanel() {
+    if (otwarty && otwarty.p.parentNode) otwarty.p.parentNode.removeChild(otwarty.p);
+    otwarty = null;
+  }
+  var statusPacjent = null;
+
   var planowane = false;
   function odswiez() {
     planowane = false;
@@ -247,6 +285,10 @@
     if (!c) return;
     var L = lista();
     var ok = gotowe();
+    // Inny pacjent niż przy otwarciu panelu albo przy komunikacie „Zapisano…” (zmiana w innej ramce bez zdarzenia).
+    var pacjent = znacznikPacjenta();
+    if (d.getElementById('ghZWierszaStatus') && pacjent !== statusPacjent) usunStatus();
+    if (otwarty && (pacjent !== otwarty.pacjent || !wDokumencie(otwarty.r) || !wDokumencie(otwarty.p) || panelWiersza(otwarty.r) !== otwarty.p)) zamknijPanel();
     Array.prototype.forEach.call(c.querySelectorAll('.measure-row'), function (r) {
       if (wierszGh(r)) {
         etykieta(r, L);
@@ -264,6 +306,8 @@
       var r = p.previousElementSibling;
       if (!r || !r.classList.contains('measure-row') || wierszGh(r)) p.parentNode.removeChild(p);
     });
+    if (otwarty && !wDokumencie(otwarty.p)) otwarty = null;
+    if (otwarty) otwarty.odswiezPomiar(L);
   }
   function zaplanuj() {
     if (planowane) return;
@@ -282,6 +326,7 @@
       c.parentNode.insertBefore(s, c);
     }
     s.textContent = tekst;
+    statusPacjent = znacznikPacjenta();
   }
   function usunStatus() {
     var s = d.getElementById('ghZWierszaStatus');
@@ -309,6 +354,7 @@
     var D = dane();
     if (!A || !D || !gotowe()) { status(TEKSTY.odswiez); return; }
     usunStatus();
+    zamknijPanel();
     Array.prototype.forEach.call(d.querySelectorAll('.gh-z-wiersza-panel'), function (p) { p.parentNode.removeChild(p); });
     var L = lista();
     var pomiar = pomiarWiersza(wartosciWiersza(r));
@@ -323,8 +369,10 @@
     var h = el('h4', 'gh-z-wiersza-naglowek', TEKSTY.naglowek);
     h.id = 'ghZWierszaNaglowek';
     p.appendChild(h);
-    p.appendChild(el('p', 'gh-z-wiersza-pomiar', 'Wiek ' + wiekTekst(pomiar.lata, pomiar.miesiace) + ' · wzrost ' + fmt(pomiar.wzrost)
-      + ' cm · masa ' + fmt(pomiar.masa) + ' kg · wiek kostny ' + (pomiar.wiekKostny != null ? fmt(pomiar.wiekKostny) + ' l.' : '—')));
+    var pomiarEl = el('p', 'gh-z-wiersza-pomiar', tekstPomiaru(pomiar));
+    pomiarEl.id = 'ghZWierszaPomiar';
+    pomiarEl.setAttribute('aria-live', 'polite');
+    p.appendChild(pomiarEl);
 
     var fs = el('div', 'gh-z-wiersza-rodzaje');
     fs.setAttribute('role', 'radiogroup');
@@ -399,7 +447,8 @@
     var schemat = schematPreparatu(E, lek.value);
     function opisDawki() {
       var v = liczba(dawka.value);
-      var o = E && v != null && v > 0 ? E.opisPola(lek.value, v, pomiar.masa, schemat === 'tygodniowy' ? 'tygodniowy' : 'dobowy') : null;
+      var masa = pomiar.masa != null && pomiar.masa > 0 ? pomiar.masa : null;
+      var o = E && v != null && v > 0 && masa ? E.opisPola(lek.value, v, masa, schemat === 'tygodniowy' ? 'tygodniowy' : 'dobowy') : null;
       dawkaInfo.textContent = o ? (o.ostrzezenie ? o.naKg + ' — ' + o.ostrzezenie : o.naKg) : '';
       dawkaInfo.classList.toggle('gh-z-wiersza-podpowiedz--uwaga', !!(o && o.ostrzezenie));
     }
@@ -437,6 +486,12 @@
     blad.hidden = true;
     p.appendChild(blad);
 
+    var powod = el('p', 'gh-z-wiersza-podpowiedz gh-z-wiersza-podpowiedz--uwaga');
+    powod.id = 'ghZWierszaPowod';
+    powod.setAttribute('aria-live', 'polite');
+    powod.hidden = true;
+    p.appendChild(powod);
+
     var akcje = el('div', 'gh-z-wiersza-akcje');
     var anuluj = el('button', 'gh-z-wiersza-anuluj', TEKSTY.anuluj);
     anuluj.type = 'button';
@@ -449,7 +504,8 @@
     p.appendChild(akcje);
 
     anuluj.addEventListener('click', function () {
-      if (p.parentNode) p.parentNode.removeChild(p);
+      if (otwarty && otwarty.p === p) zamknijPanel();
+      else if (p.parentNode) p.parentNode.removeChild(p);
       zaplanuj();
     });
     zapisz.addEventListener('click', function () {
@@ -460,8 +516,30 @@
       });
     });
 
+    // Bieżący pomiar wiersza w panelu: podsumowanie, podpowiedź mg/kg (gdy zmieniła się masa) i stan „Zapisz”.
+    // Wołane z odswiez() po każdej zmianie w karcie; panel bez punktu Włączenia na liście się zamyka.
+    function odswiezPomiar(Lb) {
+      if (!obiekty(Lb).some(function (x) { return x.type === 'start'; })) { zamknijPanel(); zaplanuj(); return; }
+      var pm = pomiarWiersza(wartosciWiersza(r));
+      if (kluczPomiaru(pm) !== kluczPomiaru(pomiar)) {
+        var innaMasa = pm.masa !== pomiar.masa;
+        pomiar = pm;
+        pomiarEl.textContent = tekstPomiaru(pm);
+        if (innaMasa && liczba(dawka.value) != null) opisDawki();
+      }
+      var stan = stanPrzycisku(Lb, pm, true);
+      var tekst = stan.aktywny ? '' : (stan.powod || TEKSTY.niekompletny);
+      zapisz.disabled = !stan.aktywny;
+      // Tylko przy zmianie: panel leży w #advMeasurements, a każdy zapis tekstu to mutacja dla obserwatora karty,
+      // który znów woła odswiez() — bez tego warunku nieaktywny „Zapisz” odświeżałby panel w każdej klatce.
+      if (powod.textContent !== tekst) powod.textContent = tekst;
+      if (powod.hidden !== stan.aktywny) powod.hidden = stan.aktywny;
+    }
+
     r.parentNode.insertBefore(p, r.nextSibling);
     przycisk(r, { widoczny: false });
+    otwarty = { r: r, p: p, pacjent: znacznikPacjenta(), odswiezPomiar: odswiezPomiar, pokazany: function () { return pomiar; } };
+    odswiezPomiar(L);
     dawka.focus();
   }
 
@@ -488,6 +566,13 @@
     var uszk = A.uszkodzone(L).length;
     if (uszk) { pokazBlad(p, A.komunikatyUszkodzonych(uszk).tresc + TEKSTY.naprawa); return; }
     var pomiar = pomiarWiersza(wartosciWiersza(r));
+    // Zapis = pomiar pokazany w panelu. Wiersz zmieniony bez zdarzenia (albo w tej samej klatce co klik): odśwież
+    // panel i poproś o ponowny zapis, zamiast zapisać wartości, których lekarz nie widział.
+    if (otwarty && otwarty.p === p && kluczPomiaru(pomiar) !== kluczPomiaru(otwarty.pokazany())) {
+      otwarty.odswiezPomiar(L);
+      pokazBlad(p, TEKSTY.pomiarZmieniony);
+      return;
+    }
     var stan = stanPrzycisku(L, pomiar, true);
     if (!stan.aktywny) { pokazBlad(p, stan.powod || TEKSTY.niekompletny); return; }
     var wynik = przygotujPunkt(A, L, pomiar, wybor);
@@ -499,7 +584,8 @@
       pokazBlad(p, TEKSTY.bladZapisu);
       return;
     }
-    if (p.parentNode) p.parentNode.removeChild(p);
+    if (otwarty && otwarty.p === p) zamknijPanel();
+    else if (p.parentNode) p.parentNode.removeChild(p);
     if (typeof w.vildaHandleAdvancedMeasurementRowRemove === 'function') w.vildaHandleAdvancedMeasurementRowRemove(r);
     else if (r.parentNode) r.parentNode.removeChild(r);
     importDoKarty();
@@ -519,6 +605,23 @@
     c.addEventListener('input', zaplanuj);
     c.addEventListener('change', zaplanuj);
     d.addEventListener('vilda:therapy-points-changed', zaplanuj);
+    // Wczytanie pacjenta, odtworzenie stanu karty (także przez powłokę po zmianie pacjenta w innej ramce) i
+    // „Wyczyść”: panel i komunikat „Zapisano…” dotyczyły poprzedniego pacjenta.
+    var zmianaPacjenta = function () { usunStatus(); zamknijPanel(); zaplanuj(); };
+    ['vilda:state-restored', 'vilda:persist-restored'].forEach(function (n) { d.addEventListener(n, zmianaPacjenta); });
+    w.addEventListener('vilda:user-state-cleared', zmianaPacjenta);
+    d.addEventListener('vilda:patient-loaded', function (e) {
+      var det = e && e.detail;
+      if (det && det.source === 'save') {
+        // „Zapisz dane” bieżącego pacjenta (także pierwszy zapis: znacznik pusty → id) to ten sam pacjent: panel
+        // i komunikat zostają, a zapamiętany znacznik przechodzi na nowy, żeby kontrola w odswiez() go nie zamknęła.
+        var z = det.patientId ? String(det.patientId) : znacznikPacjenta();
+        if (otwarty) otwarty.pacjent = z;
+        statusPacjent = z;
+        return;
+      }
+      zmianaPacjenta();
+    });
     zaplanuj();
   }
 
@@ -526,6 +629,7 @@
     wersja: 1,
     TEKSTY: TEKSTY,
     pomiarWiersza: pomiarWiersza,
+    tekstPomiaru: tekstPomiaru,
     stanPrzycisku: stanPrzycisku,
     ostatniPunkt: ostatniPunkt,
     domyslne: domyslne,
