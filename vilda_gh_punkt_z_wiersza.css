@@ -1,0 +1,246 @@
+/* vilda_gh_punkt_z_wiersza.css — panel „punkt leczenia GH z wiersza karty zaawansowanej” na Start (P-GH-PUNKT-Z-WIERSZA, D8).
+ * Klasy dla vilda_gh_punkt_z_wiersza.js (bez stylów wpisanych w elementy). Przyciski z prefiksem .liquid-ios26
+ * i !important, bo motyw liquid glass nadpisuje `button` z !important (jak .vild-tanner-toggle). */
+
+.gh-z-wiersza-etykieta {
+  display: inline-flex;
+  align-items: center;
+  margin: var(--space-0-35) 0 var(--space-0-25);
+  padding: var(--space-0-25) var(--space-0-6);
+  border-radius: var(--radius-pill);
+  background: #e6f4f1;
+  color: #0f5f58;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.adv-history-analysis-actions:has(.gh-z-wiersza-btn) {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-0-5);
+}
+
+.gh-z-wiersza-btn,
+.liquid-ios26 .gh-z-wiersza-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  padding: var(--space-0-55) var(--space-1) !important;
+  border: var(--border-emphasis) solid var(--brand) !important;
+  border-radius: var(--radius-pill) !important;
+  background: var(--card-bg) !important;
+  color: var(--brand) !important;
+  font-family: inherit !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.gh-z-wiersza-btn:disabled,
+.liquid-ios26 .gh-z-wiersza-btn:disabled {
+  border-color: #c9d6d8 !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed !important;
+}
+
+.gh-z-wiersza-panel {
+  margin: var(--space-0-6) 0 var(--space-0-4);
+  padding: var(--space-0-9) var(--space-1);
+  border: var(--border-emphasis) solid var(--brand);
+  border-radius: var(--radius-16);
+  background: #f7fbfa;
+  text-align: left;
+}
+
+.gh-z-wiersza-naglowek {
+  margin: 0 0 var(--space-0-35);
+  color: #0f3f3b;
+  font-size: 1.02rem;
+}
+
+.gh-z-wiersza-pomiar {
+  margin: 0 0 var(--space-0-7);
+  font-size: .88rem;
+}
+
+.gh-z-wiersza-rodzaje {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-0-4);
+  margin: 0 0 var(--space-0-6);
+  padding: 0;
+  border: 0;
+}
+
+.gh-z-wiersza-rodzaje-nazwa {
+  width: 100%;
+  margin-bottom: var(--space-0-25);
+}
+
+.gh-z-wiersza-rodzaj input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.gh-z-wiersza-rodzaj:has(input:focus-visible) {
+  outline: var(--border-emphasis) solid var(--brand);
+  outline-offset: 2px;
+}
+
+.gh-z-wiersza-rodzaj {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-0-35);
+  padding: var(--space-0-4) var(--space-0-75);
+  border: var(--border-hairline) solid #c9d6d8;
+  border-radius: var(--radius-pill);
+  background: var(--card-bg);
+  font-size: .86rem;
+  cursor: pointer;
+}
+
+.gh-z-wiersza-rodzaj:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+}
+
+.gh-z-wiersza-rodzaj:has(input:disabled) {
+  background: #f1f1f1;
+  color: #8a8a8a;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.gh-z-wiersza-rzad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-0-6);
+}
+
+.gh-z-wiersza-rzad--jedna {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.gh-z-wiersza-kolumna {
+  display: flex;
+  flex-direction: column;
+}
+
+.gh-z-wiersza-pole {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-25);
+  margin: 0 0 var(--space-0-6);
+  font-size: .86rem;
+}
+
+.gh-z-wiersza-pole select,
+.gh-z-wiersza-pole input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.gh-z-wiersza-podpowiedz {
+  margin: calc(-1 * var(--space-0-25)) 0 var(--space-0-4);
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+
+.gh-z-wiersza-pole .gh-z-wiersza-podpowiedz {
+  margin: 0;
+}
+
+.gh-z-wiersza-podpowiedz--uwaga {
+  color: #8e4a00;
+}
+
+.gh-z-wiersza-info {
+  margin: var(--space-0-25) 0 var(--space-0-7);
+  padding: var(--space-0-5) var(--space-0-65);
+  border-radius: var(--radius-10);
+  background: #e6f4f1;
+  color: #0f5f58;
+  font-size: .82rem;
+}
+
+.gh-z-wiersza-blad {
+  margin: 0 0 var(--space-0-6);
+  padding: var(--space-0-5) var(--space-0-65);
+  border: var(--border-hairline) solid #f5c2bc;
+  border-radius: var(--radius-8);
+  background: #fdecea;
+  color: #8e1b12;
+  font-size: .86rem;
+  font-weight: 600;
+}
+
+.gh-z-wiersza-akcje {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-0-5);
+}
+
+.gh-z-wiersza-anuluj,
+.gh-z-wiersza-zapisz,
+.liquid-ios26 .gh-z-wiersza-anuluj,
+.liquid-ios26 .gh-z-wiersza-zapisz {
+  width: auto !important;
+  padding: var(--space-0-55) var(--space-1) !important;
+  border-radius: var(--radius-pill) !important;
+  font-family: inherit !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.gh-z-wiersza-anuluj,
+.liquid-ios26 .gh-z-wiersza-anuluj {
+  border: var(--border-hairline) solid #c9d6d8 !important;
+  background: var(--card-bg) !important;
+  color: inherit !important;
+}
+
+.gh-z-wiersza-zapisz,
+.liquid-ios26 .gh-z-wiersza-zapisz {
+  border: var(--border-hairline) solid var(--brand) !important;
+  background: var(--brand) !important;
+  color: #fff !important;
+}
+
+.gh-z-wiersza-status {
+  margin: var(--space-0-5) 0;
+  padding: var(--space-0-5) var(--space-0-75);
+  border-radius: var(--radius-10);
+  background: #e8f6ec;
+  color: #1b5e20;
+  font-size: .88rem;
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .gh-z-wiersza-rzad {
+    grid-template-columns: 1fr;
+  }
+
+  .gh-z-wiersza-btn,
+  .liquid-ios26 .gh-z-wiersza-btn {
+    flex: 1 1 100%;
+  }
+
+  .gh-z-wiersza-anuluj,
+  .gh-z-wiersza-zapisz,
+  .liquid-ios26 .gh-z-wiersza-anuluj,
+  .liquid-ios26 .gh-z-wiersza-zapisz {
+    flex: 1 1 auto;
+  }
+}

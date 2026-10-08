@@ -8890,6 +8890,74 @@ też nadał 1.1.186); pin `?v=` w
 nowego punktu z modułem dawki (pytanie 28: preparat dobowy przy masie niezgodnej z wynikiem karty bierze
 `#therDailyDoseAbs` albo dawkę × masę) — osobna decyzja kliniczna.
 
+## Punkt leczenia GH z wiersza karty zaawansowanej na Start (P-GH-PUNKT-Z-WIERSZA, D8, SW 1.1.194, nowe `vilda_gh_punkt_z_wiersza.js` 1, `vilda_gh_programy_dane.js` 1, `vilda_gh_punkt_z_wiersza.css` 1, 2026-10-07)
+
+**Skąd.** Projekt „Wspólne API punktów GH”, krok „Potem” (decyzja D8; audyt `docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 3–4,
+rekomendacja (a)). Makieta (desktop i telefon) zaakceptowana przez właściciela 2026-10-07 razem z decyzjami:
+przycisk tylko wtedy, gdy na liście jest już punkt Włączenia leczenia; wiersze punktów GH w karcie dostają etykietę;
+pole dawki jest puste na starcie panelu.
+
+**Co lekarz widzi.** Karta „Zaawansowane obliczenia wzrostowe” na Start:
+- przy wierszu ręcznym (pomiar wpisany w karcie) przycisk „＋ Zapisz jako punkt leczenia GH”. Nie ma go, gdy nie ma
+  punktu Włączenia, gdy wiersz jest pusty albo gdy brakuje modułów (`VildaGhPunkty`, `VildaGhDawka`,
+  `VildaGhProgramyDane`). Jest nieaktywny z podpowiedzią, gdy pomiar jest niekompletny (wiek, wzrost, masa) albo gdy
+  w tym miesiącu wieku jest już punkt leczenia;
+- panel pod wierszem: pomiar z wiersza (wiek, wzrost, masa, wiek kostny) tylko do odczytu; rodzaj wizyty
+  (niedostępne rodzaje przekreślone, domyślnie Kontynuacja); program i preparat domyślnie z ostatniego punktu
+  (najstarszy wiek); dawka podawana — ta sama etykieta, przykład i podpowiedź przeliczenia co w formularzu punktu
+  wstecznego monitora (`VildaGhDawka.opisPola`, zmiana schematu preparatu czyści pole z komunikatem
+  `komunikatZmianySchematu`); opcjonalnie IGF-1 i dni od dawki; „Anuluj” i „Zapisz punkt leczenia”;
+- odmowy z tymi samymi tekstami co w monitorze (`VildaGhPunkty`), np. bez dawki, drugie Włączenie albo Zakończenie;
+  przy uszkodzonym wpisie listy — tekst z P-GH-PUNKTY-USZKODZONE i wskazanie naprawy w DocPro;
+- po zapisie: wiersz ręczny znika (funkcją karty `vildaHandleAdvancedMeasurementRowRemove`, razem z lustrem w tabeli
+  spożycia), mostek pokazuje wiersz punktu GH, nad listą potwierdzenie „✓ Zapisano punkt leczenia GH: …”;
+- wiersze punktów GH: etykieta „Punkt leczenia GH · rodzaj · poprawki w DocPro”. Edycja i usuwanie punktu zostają
+  w monitorze DocPro.
+
+**Reguła zapisu.** Wyłącznie `VildaGhPunkty`, kolejno jak punkt wsteczny w monitorze (`ghAddRetroPoint`): `gotowe({dawka:
+true})` → `wczytaj` → odmowa przy uszkodzonych wpisach → `sprawdzRodzaj` → `polaZPodawanej(…, 'wsteczny')` z polami
+wiersza jako napisami (jak pola formularza wstecznego) → `punkt(noweId(), pola)` → `zapisz(lista + punkt)`. Wiersz ręczny
+znika dopiero przy `modul: true`; przy błędzie zapisu lista okna wraca do stanu sprzed zapisu, a panel pokazuje błąd.
+Import do karty po zapisie; w oknie blokady mostka (`__vildaSuppressGhAdvancedImportUntil`) — zaraz po jego końcu.
+Moduł nie pisze do IndexedDB `ghTherapyDB` i nie dotyka monitora.
+
+**Dane programów** (`vilda_gh_programy_dane.js`, `VildaGhProgramyDane`): kolejność i etykiety pola „Program” karty
+leczenia oraz preparaty programu z monitora — dane, nie reguły. Zgodność z prawdziwą kartą i monitorem pilnuje e2e
+(niżej); dane dawkowania każdego preparatu są w `VildaGhDawka` (test jednostkowy).
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna: nowa droga powstania punktu leczenia z pomiaru już wpisanego
+w karcie, bez nowych wzorów, progów i jednostek. Dawka liczy się regułami P-GH-DAWKA-PODAWANA i P-GH-INCRELEX-PODANIE
+(źródła tam: Ngenla — informacja o produkcie EMA, PDF z 16.01.2026, pkt 4.2; Increlex — PDF z 26.03.2026, pkt 4.2),
+identycznie jak punkt wsteczny w DocPro (test porównuje wynik z `polaZPodawanej` formularza wstecznego). Populacja
+i jednostki jak w monitorze: dzieci leczone GH/IGF-1; `dose` mg/kg/d (Ngenla mg/kg/tydz), `doseAbs` mg/d. Wymaga
+akceptacji właściciela.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; lista [Włączenie 8 l. 0 mies., Kontynuacja 8 l. 6 mies.],
+wiersz ręczny 9 l. 0 mies., 128,6 cm, 29,1 kg):
+- Omnitrope 10 mg, 0,9 mg/d → Kontynuacja 9 l. 0 mies., `dose` 0,9/29,1 mg/kg/d, `doseAbs` 0,9 mg/d, `boneAge` null;
+  wiersz ręczny znika, w karcie i w tabeli spożycia wiersz punktu GH 9/0;
+- Ngenla 60 mg, 20 mg/tydz, IGF-1 250 bez dni → `dose` 20/29,1 mg/kg/tydz, `doseAbs` 20/7 mg/d, 4 dni od dawki;
+- Increlex 40 mg (program IGF-1), 0,8 mg na podanie → `dose` 1,6/29,1 mg/kg/d, `doseAbs` 1,6 mg/d;
+- bez dawki → „Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.”, bez zapisu;
+- lista bez Włączenia albo pusty wiersz → bez przycisku; wiersz 8 l. 6 mies. (jest punkt) → przycisk nieaktywny.
+
+**Strażnicy.**
+- `tests/unit/gh-punkt-z-wiersza.test.mjs` (22, prawdziwe `VildaGhPunkty` i `VildaGhDawka`): stan przycisku, wartości
+  domyślne, pole dawki, etykiety, przypadki dawek i odmów, wynik = `polaZPodawanej` formularza wstecznego, dane
+  programów zamrożone i każdy preparat w `VildaGhDawka`.
+- `tests/e2e/gh-punkt-z-wiersza.spec.mjs` (6, prawdziwy Start, DocPro i powłoka): pełny przebieg na desktopie i telefonie
+  (390 px, bez poziomego przewijania); bez Włączenia brak przycisku, „Anuluj” bez zmian, wiersz niekompletny;
+  okno blokady mostka i F5; punkt w tabeli monitora w DocPro po przejściu w powłoce; `VildaGhProgramyDane` = pole
+  „Program” karty i preparaty programu w formularzu wstecznym monitora.
+
+**Wersje.** Nowe pliki z `?v=1` w `index.html` i w precache (wpisane ręcznie, jak nowy plik w AGENTS § 6);
+`SW_VERSION` 1.1.193 → 1.1.194 (+ pin w `tests/unit/klirens-ui-model.test.mjs`) i `tests/fixtures/wersje-zasobow.json` —
+`npm run podbij-wersje` względem `audyt` `aa424f0` (po scaleniu #583, które zajęło 1.1.193).
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Poza zakresem: Włączenie leczenia z wiersza
+(decyzja: dalej w DocPro), karta porównania na Start po zapisie (bez zmian), przeniesienie listy programów karty
+i monitora na `VildaGhProgramyDane` (osobna refaktoryzacja).
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
