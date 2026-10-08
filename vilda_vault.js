@@ -1158,8 +1158,9 @@ function Bdo_sekcje(zapis, baza, glowa) {
  */
 // Kto ma u nas wersje i notatki: snapshotId -> patientId (karty i nagrobki wersji: kosz i retencja), noteId ->
 // patientId, najnowszy nagrobek pacjenta. dostepna — wersje, ktorych tresc tu jest (w karcie albo w koszu istniejacej
-// karty); tylko do licznika „tylko w pliku kopii”. Tylko odczyt; budowana raz na podglad albo scalanie i dopiero, gdy
-// jest potrzebna.
+// karty); tylko do licznika „tylko w pliku kopii”. Tylko odczyt; budowana raz i dopiero, gdy jest potrzebna — w scalaniu
+// zawsze przed pierwszym zapisem wersji (straznik i karta brakujaca pytaja mape przed zapisem). Blad odczytu przerywa
+// podglad albo scalanie, zanim cokolwiek zapisze: niepelna mapa to slepy straznik.
 async function Bks_mapa() {
   const h = I(), karty = new Map(), wersja = new Map(), notatka = new Map(), nagrobek = new Map(), dostepna = new Set();
   const lista = await h.listPatientsForUser(b);
@@ -1167,8 +1168,9 @@ async function Bks_mapa() {
     const k = lista[i];
     if (!k || !k.patientId) continue;
     karty.set(k.patientId, k);
-    let wersje;
-    try { wersje = await h.listSnapshotsForUser(b, k.patientId); } catch { continue; }
+    // P-KOPIA-POMIJA-2 (Codex P1 w #591): bez wersji ktorejs karty mapa jest niepelna — straznik nie widzialby jej
+    // wersji i scalenie moglo je przeniesc pod pacjenta z kopii. Blad odczytu przerywa podglad i scalenie.
+    const wersje = await h.listSnapshotsForUser(b, k.patientId);
     (wersje || []).forEach(function (w) {
       if (w && w.snapshotId) { wersja.set(w.snapshotId, k.patientId); dostepna.add(w.snapshotId); }
     });
