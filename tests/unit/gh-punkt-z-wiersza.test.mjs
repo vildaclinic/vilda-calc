@@ -58,6 +58,27 @@ describe('pomiarWiersza i stanPrzycisku', () => {
   });
 });
 
+describe('tekstPomiaru — podsumowanie bieżącego pomiaru w panelu (P-GH-PUNKT-Z-WIERSZA-ZGODNOSC)', () => {
+  it('kompletny pomiar: ten sam tekst co przy otwarciu panelu (przecinek dziesiętny, wiek kostny „—”)', () => {
+    expect(M.tekstPomiaru(M.pomiarWiersza({ lata: '9', miesiace: '0', wzrost: '128.6', masa: '29.1', wiekKostny: '' })))
+      .toBe('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa 29,1 kg · wiek kostny —');
+    expect(M.tekstPomiaru(M.pomiarWiersza({ lata: '9', miesiace: '', wzrost: '128,6', masa: '20', wiekKostny: '9.5' })))
+      .toBe('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa 20 kg · wiek kostny 9,5 l.');
+  });
+
+  it('brakujące pole jako „—” — panel pokazuje niekompletny wiersz, którego zapis jest zablokowany', () => {
+    const pm = M.pomiarWiersza({ lata: '9', miesiace: '0', wzrost: '128.6', masa: '', wiekKostny: '' });
+    expect(M.tekstPomiaru(pm)).toBe('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa — · wiek kostny —');
+    expect(M.stanPrzycisku([{ id: 'a', type: 'start', ageYears: 8, ageMonths: 0 }], pm, true))
+      .toEqual({ widoczny: true, aktywny: false, powod: M.TEKSTY.niekompletny });
+    expect(M.tekstPomiaru(M.pomiarWiersza({}))).toBe('Wiek — · wzrost — · masa — · wiek kostny —');
+  });
+
+  it('komunikat odmowy, gdy wiersz różni się od pokazanego pomiaru', () => {
+    expect(M.TEKSTY.pomiarZmieniony).toBe('Pomiar w wierszu się zmienił. Sprawdź dane w panelu i zapisz ponownie.');
+  });
+});
+
 describe('wartości domyślne panelu i etykiety', () => {
   it('program i preparat ostatniego punktu (najstarszy wiek, nie ostatni na liście)', () => {
     const starszy = punkt('fikc-3', 'continue', { ageYears: 10, program: 'ZT', drug: 'Genotropin 12 mg' });
