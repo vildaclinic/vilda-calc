@@ -2,6 +2,33 @@
 
 Stan dokumentu: 8 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
 
+## Uproszczenie etykiet i szczegółów oceny — 8.10.2026
+
+**Zakres zmiany:** wynik zachowuje osobną ocenę rozwoju oraz osie wieku i stadium. Rozwijany blok nosi nazwę „Szczegóły i źródła”. Usunięto powtarzane opisy tego samego ograniczenia, puste wiersze kontekstu i techniczne wersje silnika, danych oraz skonfigurowanego profilu z prezentacji wyniku. Metoda, jej pochodzenie, populacja odniesienia i źródła pozostają dostępne bez powielania ich w kilku miejscach. Wersje i pozostałe metadane nadal należą do danych oceny; uproszczenie ekranu ich nie usuwa.
+
+**Brak wyniku i błąd wyniku to różne stany.** Puste pole nie otrzymuje komunikatu „Nieprawidłowy zapis wyniku lub jednostki”. Niepusty błędny zapis wymaga poprawienia, ale powód nie jest powtarzany w podsumowaniu i osobno pod każdym niedostępnym porównaniem. Niezależne, znane ostrzeżenie kliniczne pozostaje widoczne także wtedy, gdy liczba nie została jeszcze podana lub jest błędna. Brak wiarygodnego wieku nie jest przedstawiany jednocześnie jako stwierdzenie, że wiek leży poza populacją profilu.
+
+**Kontekst i ograniczenia:** wiersze z pustą lub nieznaną wartością nie tworzą audytowej listy „Nie wiadomo / Nie podano / Nie ustalono”. To reguła prezentacji, nie zamiana `unknown` na „Nie”. Jawne odpowiedzi „Tak” i „Nie”, znane daty i związek obserwacji z próbką, materiał, metoda, początek rozwoju oraz zapisane istotne szczegóły kliniczne pozostają dostępne. Powody ograniczeń są zbierane według ich kodów do jednej listy. Przy braku historycznego wejścia `localReference` nie jest pokazywana pusta sekcja „Zakres laboratorium” ani komunikat `no_local_reference`.
+
+Uproszczenie nie ukrywa znanego leczenia lub stymulacji, zastrzeżenia, że niskie LH nie wyklucza CPP, ograniczeń minipuberty i wcześniactwa ani przyczyn niejednoznaczności wyników cenzorowanych. Warunek porównania z zakresami **bazalnymi bez leczenia hormonalnego** pozostaje czytelny przy porównaniach warunkowych. Wynik `<x`, `≤x`, `>x`, `≥x`, `<LOD` lub `<LOQ` nadal zachowuje operator i nie otrzymuje wymyślonego dokładnego punktu. Zgodność stężenia ze stadium nadal nie oznacza prawidłowego czasu rozwoju ani nie ustala jego przyczyny.
+
+**Wpływ kliniczny: TAK — zmiana prezentacji ograniczeń i hierarchii informacji.** Nie zmieniają się dane wejściowe, dobór norm, granice, jednostki, statusy oceny ani reguły animowanych wyróżnień. Silnik `1.3.0`, dane i kryteria `2026-10-04.1` oraz kontrakt snapshotu pozostają niezmienione. Zapisane oceny nie są migrowane ani ponownie liczone. Ich odczyt korzysta z prostszego widoku, zachowując utrwalone istotne dane, ostrzeżenia i ograniczenia. Historyczny `reportedRange`, konflikt porównań oraz pełny `localReference` z pochodzeniem i wersjami są nadal obsługiwane. Nieznane wartości mogą zniknąć z tabeli kontekstu, ale pozostają zapisane.
+
+**Źródła, populacja i jednostki:** bez nowych założeń medycznych i bez nowego odczytu piśmiennictwa. Obowiązują dotychczasowe katalogi Mayo LH LHPED 62999 (AnshLite CLIA) [R1] i FSH 602753 (Roche Elecsys ECLIA) [R2], odczytane 2–3.10.2026: surowica, IU/L i równoważne mIU/mL, ograniczenia wieku, płci, stadium i populacji konkretnego profilu. Model kliniczny pozostaje pediatryczny 0–18 lat. Rozdzielenie stężenia i rozwoju oraz ograniczenia leczenia/stymulacji opierają się na dotychczasowych K1–K4; ograniczenia niemowlęce na M1, a definicja wcześniactwa na K6. Pełne cytowania, wersje dokumentów i rzeczywisty zakres wcześniejszego odczytu pozostają w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Decyzja o redukcji etykiet jest decyzją funkcjonalną właściciela, nie zaleceniem wynikającym z tych publikacji.
+
+Syntetyczne przypadki wymagane dla rzeczywistego silnika i renderera:
+
+| Wejście lub działanie | Oczekiwany widok |
+|---|---|
+| Pusta wartość LH, nieznany wiek, skonfigurowana metoda | Brak fałszywego błędu zapisu, powielonych list i pustego zakresu laboratorium; brak wieku nie udaje wieku poza profilem. |
+| Niepusty błędny zapis wyniku lub nieobsługiwana jednostka | Jeden właściwy komunikat poprawienia danych; brak porównania liczbowego i jego wielokrotnie powtórzonych przyczyn. |
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, leczenie nieznane | Nadal warunkowo `above` dla wieku (`≤0,5`), `within` dla G3 (`0,09–4,2`), ostrzeżenie `early_development` i dotychczasowe wyróżnienie odchylenia. |
+| Ten sam wczesny rozwój przy pustej lub błędnej wartości LH | Znane ostrzeżenie rozwoju nie znika razem z niedostępnym porównaniem stężenia. |
+| Jawne leczenie/stymulacja, niemowlę z wcześniactwem lub wynik `<LOD` | Właściwe ograniczenia pozostają, bez niedopasowanego zakresu lub dokładnego punktu wyniku cenzorowanego. |
+| Wcześniejszy snapshot z datami, OUN/regresją, jawnym „Nie”, początkiem rozwoju lub `localReference` | Utrwalone istotne dane i ich powiązania, ostrzeżenia oraz pochodzenie lokalnego zakresu pozostają; brak ponownego liczenia i zmiany zapisu. |
+
+Przypadki opisują oczekiwania regresyjne; wyniki wykonania testów są raportowane w PR. Zmiana wymaga przeglądu klinicznego właściciela ze względu na sposób odczytu ograniczeń, a testy techniczne nie stanowią walidacji klinicznej.
+
 ## Usunięcie ręcznego zakresu z bieżącego formularza — 8.10.2026
 
 **Zakres zmiany:** szybki formularz nie udostępnia już zakładki „Zakres z wydruku”, pola granic ani podpowiedzi jednostki tego pola. Pozostają sekcje „Pacjent” i „Stadium”, zgodna konfiguracja oznaczenia oraz bieżący kontekst opisany w poprzedniej wersji poniżej. Użytkownik nie musi przepisywać przedziału, który może odczytać bezpośrednio z wydruku laboratorium. To decyzja o uproszczeniu funkcji, nie nowe zalecenie medyczne.
