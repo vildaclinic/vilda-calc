@@ -199,9 +199,6 @@
     field(stage, 'kind', 'Rodzaj cechy', 'select', kindChoices);
     field(stage, 'stage', 'Stadium', 'select', [['', 'Nie podano'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]);
     var stageHint = element('p', 'lab-puberty-hint'); stageHint.id = 'labPubertyStageHint'; sections.stage.appendChild(stageHint);
-    var range = section('range', 'Zakres z wydruku', 'Proste porównanie z zakresem przepisanym z tego wyniku; nie zastępuje oceny jego zastosowania klinicznego.');
-    field(range, 'reportedRange', 'Zakres', 'text', null, { placeholder: 'np. 0,5–3,0 lub ≤3,0', maxlength: '96' });
-    var rangeUnit = element('p', 'lab-puberty-hint'); rangeUnit.id = 'labPubertyRangeUnit'; sections.range.appendChild(rangeUnit);
 
     function materialLabel(value) { return ({ serum: 'surowica', plasma: 'osocze', urine: 'mocz' }[value] || text(value)); }
     function ready() { return !!context && context.sourceStatus === 'ready'; }
@@ -319,7 +316,6 @@
       var profileName = profile && profile.profile && profile.profile.method ? profile.profile.method.name : '';
       methodSummary.textContent = profileName ? fields.unknownMethod.checked ? 'Dla tego wyniku: metoda nieznana lub inna niż ustawiona.' : 'Metoda: ' + profileName + ' · ' + materialLabel(profile.specimen) : 'Metoda laboratorium nieustawiona';
       editMethod.textContent = profileName ? 'Zmień' : 'Ustaw'; wrappers.unknownMethod.hidden = !profileName;
-      rangeUnit.textContent = 'Jednostka zakresu: ' + (lastMeasurement.unit || 'IU/L') + '.';
       updateContextLine();
     }
     function updateContextLine() {
@@ -351,7 +347,7 @@
       next = ['lh', 'fsh'].includes(next) ? next : null;
       var changedAnalyte = next !== analyte;
       if (changedAnalyte) {
-        fields.unknownMethod.checked = false; fields.reportedRange.value = ''; methodNotice.textContent = ''; evaluation = null;
+        fields.unknownMethod.checked = false; methodNotice.textContent = ''; evaluation = null;
         while (fields.configuredProfile.options.length > 1) fields.configuredProfile.remove(1);
         (data && Array.isArray(data.profiles) ? data.profiles : []).filter(function (profile) { return profile.active === true && profile.analyte === next; }).forEach(function (profile) {
           var option = element('option', '', profile.method.name + ' · ' + materialLabel(profile.material) + ' · Mayo ' + next.toUpperCase()); option.value = profile.id; fields.configuredProfile.appendChild(option);
@@ -475,7 +471,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.7.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.8.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,8 +1,32 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 7 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+Stan dokumentu: 8 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+
+## Usunięcie ręcznego zakresu z bieżącego formularza — 8.10.2026
+
+**Zakres zmiany:** szybki formularz nie udostępnia już zakładki „Zakres z wydruku”, pola granic ani podpowiedzi jednostki tego pola. Pozostają sekcje „Pacjent” i „Stadium”, zgodna konfiguracja oznaczenia oraz bieżący kontekst opisany w poprzedniej wersji poniżej. Użytkownik nie musi przepisywać przedziału, który może odczytać bezpośrednio z wydruku laboratorium. To decyzja o uproszczeniu funkcji, nie nowe zalecenie medyczne.
+
+**Wpływ kliniczny:** nowe sprawdzenie nie tworzy `input.reportedRange` ani `evaluation.reportedRange`. Nie daje dodatkowej klasyfikacji „w/powyżej/poniżej podanego zakresu” ani komunikatu `reported_range_reference_disagreement` wywołanego rozbieżnością ręcznego zakresu z katalogiem. Automatyczne porównania wieku i stadium, ich osie i wyróżnienia oraz niezależna ocena rozwoju pozostają na dotychczasowych zasadach. Minimalne wejście ze zgodną metodą nadal korzysta z warunkowego `referencePreview`; usunięcie pola nie potwierdza oznaczenia bazalnego ani braku leczenia. Przy nieznanej lub niezgodnej metodzie nadal nie ma katalogowej oceny stężenia. Dostępne pozostają konwersja i ocena rozwoju w granicach znanego kontekstu; aplikacja nie zastępuje brakującej metody zgadywaną normą.
+
+**Zgodność zapisów:** usunięto wyłącznie drogę wprowadzania ręcznego zakresu w bieżącym UI. Publiczny `buildInput` nadal przyjmuje jawny `reportedRange` starszego klienta, a produkcyjny silnik, renderer i kontrakt snapshotu zachowują jego dotychczasową obsługę. Wizyty, przypięte wyniki i historia pokazują utrwalony zakres, porównanie i ewentualny konflikt, bez migracji, filtrowania lub ponownego obliczania. Te dane nie są automatycznie przenoszone do nowego sprawdzenia. `reportedRange` pozostaje odrębny od pełnego, zweryfikowanego `localReference`.
+
+**Źródła, populacja i jednostki:** bez zmian w silniku `1.3.0`, danych i kryteriach `2026-10-04.1`, profilach, progach i przeliczeniach. Obowiązują katalogi Mayo LH LHPED 62999 (AnshLite CLIA) [R1] i FSH 602753 (Roche Elecsys ECLIA) [R2], odczytane 2–3.10.2026: surowica, IU/L i równoważne mIU/mL, ograniczenia wieku, płci, stadium i populacji konkretnego oznaczenia. Model kliniczny pozostaje pediatryczny 0–18 lat, z dotychczasowymi ograniczeniami leczenia, stymulacji i niemowlęctwa. Źródła rozdzielenia oceny stężenia i rozwoju pozostają K1–K4; pełne cytowania i rzeczywisty zakres wcześniejszego odczytu są w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Nie dodano nowych źródeł ani norm.
+
+Syntetyczne przypadki regresyjne dla rzeczywistego formularza, silnika i odczytu zapisów:
+
+| Wejście lub działanie | Oczekiwane zachowanie |
+|---|---|
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, leczenie nieznane | Bez `reportedRange`; nadal warunkowo `above` dla wieku (`≤0,5`), `within` dla G3 (`0,09–4,2`) i `early_development`. |
+| Ten sam kontekst, inna/nieznana metoda | Brak katalogowego porównania i podglądu oraz brak zastępczego ręcznego zakresu; konwersja i ostrzeżenie o zbyt wczesnym rozwoju pozostają. |
+| Zmiana LH↔FSH, pacjenta lub ponowne otwarcie szczegółów | Dwie sekcje szczegółów; usunięte pole nie wraca i nie wpływa na nowe wejście z ukrycia. |
+| Starszy klient przekazuje LH15 IU/L i `reportedRange` `0–20` przy katalogowym odchyleniu | Dotychczasowe odrębne porównanie i komunikat rozbieżności nadal obsługiwane przez publiczny adapter i silnik. |
+| Odczyt wcześniej utrwalonego snapshotu z ręcznym zakresem | Ten sam zakres, status i ewentualny konflikt w historii/przypięciu; bez przeliczenia według aktualnego formularza. |
+
+Testy sprawdzają zachowanie implementacji, nie stanowią walidacji klinicznej. Wpływ polega na zawężeniu danych nowej oceny, bez zmiany automatycznych norm i ich ograniczeń.
 
 ## Bieżący kontekst bez dodatkowego wywiadu i datowania próbki — 7.10.2026
+
+Opis formularza `1.7.0`. Ograniczenie do bieżącego kontekstu pozostaje aktualne; wspomniany niżej zakres z wydruku usunięto z późniejszego UI zgodnie z sekcją powyżej.
 
 **Decyzja właściciela:** szybki przelicznik ma oceniać wynik wyłącznie względem kontekstu widocznego w formularzu. Formularz `1.7.0` usuwa całą zakładkę „Dodatkowe informacje”, pytania o objawy OUN i regresję wcześniejszych cech, dokładną objętość jąder oraz metodę jej oceny. Usuwa również całą zakładkę „Wcześniejsze badanie”, datę pobrania i powrót do bieżących danych. Nie ma zastępczego odsyłacza „Wynik z innej daty”. Pytanie o wcześniactwo pozostaje w sekcji „Pacjent”, tylko przy znanym wieku obejmującym okres przed pierwszymi urodzinami.
 
@@ -161,7 +185,7 @@ Opis historycznej wersji: silnik `1.2.0`, formularz `1.2.0`, renderer `1.2.0` i 
 
 **Wcześniejsze badanie.** Data pobrania przełącza na `contextBasis='sample'`: wiek wynika z rzeczywistej DOB albo ręcznie podanego wieku wówczas. Dzisiejsze stadium i leczenie nie są przypisywane próbce. Jeżeli użytkownik uzupełni stadium w tej ścieżce, etykieta wskazuje wprost dzień pobrania; nie ma osobnego checkboxu ani pola źródła obserwacji. Zmiana pacjenta usuwa lokalny wynik i kontekst kliniczny; odczyt `loading/unavailable` nie wykorzystuje starych importów. Ręczne korekty tej samej osoby pozostają odrębne od automatycznego źródła.
 
-**Zakres z wydruku.** Jedno opcjonalne pole przyjmuje przedział `0,5–3,0` lub granicę `<`, `≤`, `>`, `≥`. Jednostka pochodzi z wyniku (IU/L lub równoważne mIU/mL). `reportedRange` jest porównaniem liczbowym z zakresem przepisanym przez użytkownika — nie kompletnym `localReference`, zweryfikowaną populacją ani profilem Mayo. Wykorzystuje produkcyjne porównywanie przedziałów; wyniki cenzorowane zachowują operator i możliwą niejednoznaczność. Nieprawidłowy zakres nie daje oceny. Rozbieżność z dopasowanym katalogowym RI pozostaje widoczna i wymaga uzgodnienia; zgodność z ręcznym zakresem nie usuwa ostrzeżenia rozwoju.
+**Zakres z wydruku — wcześniejszy interfejs i zachowany kontrakt.** Ówczesne opcjonalne pole przyjmowało przedział `0,5–3,0` lub granicę `<`, `≤`, `>`, `≥`; od 8.10.2026 nie ma go w bieżącym formularzu. Jednostka pochodzi z wyniku (IU/L lub równoważne mIU/mL). Obsługiwany dla zgodności `reportedRange` jest porównaniem liczbowym z zakresem przepisanym przez użytkownika — nie kompletnym `localReference`, zweryfikowaną populacją ani profilem Mayo. Wykorzystuje produkcyjne porównywanie przedziałów; wyniki cenzorowane zachowują operator i możliwą niejednoznaczność. Nieprawidłowy zakres nie daje oceny. Rozbieżność z dopasowanym katalogowym RI pozostaje widoczna i wymaga uzgodnienia; zgodność z ręcznym zakresem nie usuwa ostrzeżenia rozwoju.
 
 **Zapis.** Nowe pola są opcjonalnym rozszerzeniem schematu oceny `1`. Snapshot utrwala faktycznie użyty profil, pochodzenie konfiguracji, podstawę wieku/obserwacji oraz wpisany zakres. Historyczny odczyt nie pobiera dzisiejszych preferencji i nie przelicza oceny. Starsze oceny zachowują treść i znaczenie; zmiana komentarza nie zmienia oceny, zmiana wyniku/daty nadal wymaga jawnego unieważnienia lub przeliczenia.
 

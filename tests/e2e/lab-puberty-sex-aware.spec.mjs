@@ -386,7 +386,8 @@ for (const width of [320, 390, 600]) {
       await expectNoVolume(page);
       await expect(page.locator('#labPubertyPatientContext')).toBeVisible();
       await expectReadableSummaries(page);
-      for (const section of ['Stage', 'Range', 'Patient']) {
+      await expect(page.locator('#labPubertyOpenRange, #labPubertySectionRange')).toHaveCount(0);
+      for (const section of ['Stage', 'Patient']) {
         await page.locator(`#labPubertyOpen${section}`).click();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
       }
