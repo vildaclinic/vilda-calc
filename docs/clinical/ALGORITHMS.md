@@ -9047,9 +9047,10 @@ do 2026-10-08; obie potwierdzone w kodzie. Wariant P1 wybrał właściciel 2026-
 - **P2 — komunikat o poprzednim pacjencie.** Komunikat „✓ Zapisano punkt leczenia GH…” stoi nad kartą, poza
   `#advMeasurements`, i znikał tylko przy otwarciu kolejnego panelu. Teraz panel i komunikat znikają przy
   `vilda:patient-loaded`, `vilda:state-restored`, `vilda:persist-restored` (dokument) i `vilda:user-state-cleared`
-  („Wyczyść”, okno) oraz przy najbliższym odświeżeniu karty, gdy znacznik pacjenta karty (`window._vildaCurrentPatientId`,
-  potem `sessionStorage.vildaCurrentPatientId`, jak w monitorze GH) różni się od tego z chwili otwarcia panelu albo
-  zapisu — to łapie zmianę pacjenta w innej ramce powłoki bez zdarzenia w tej ramce. Wyjątek: `vilda:patient-loaded`
+  („Wyczyść”, okno) oraz przy najbliższym odświeżeniu karty, gdy znacznik pacjenta karty (od SW 1.1.201 najpierw
+  wspólny `sessionStorage.vildaCurrentPatientId`, potem `window._vildaCurrentPatientId` — niżej „Znacznik wspólny”)
+  różni się od tego z chwili otwarcia panelu albo zapisu — to łapie zmianę pacjenta w innej ramce powłoki bez
+  zdarzenia w tej ramce. Wyjątek: `vilda:patient-loaded`
   z `source: 'save'` („Zapisz dane” bieżącego pacjenta, także pierwszy zapis, który nadaje znacznik) to ten sam
   pacjent — panel z wpisaną dawką i komunikat zostają, a zapamiętany znacznik przechodzi na nadany id.
 
@@ -9101,6 +9102,37 @@ teraz każdy test izoluje jeden mechanizm, a zamknięcie przez zdarzenie jest sp
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Pozostałe uwagi recenzji do punktów GH
 (#575 P1 — bramka D6 a plik danych dawki, kliniczne; #581 P1, #572 P1 — monitor; #577 P2 — test S7) są osobnymi
 krokami.
+
+### Znacznik wspólny: zmiana pacjenta w innej ramce powłoki (P-GH-PUNKT-Z-WIERSZA-ZNACZNIK, SW 1.1.201, `vilda_gh_punkt_z_wiersza.js` 3, 2026-10-08)
+
+**Skąd.** Uwaga recenzji automatycznej (Codex, P2) do scalonego #590, dodana 3 minuty po scaleniu; potwierdzona
+w kodzie. Kontrola znacznika z P-GH-PUNKT-Z-WIERSZA-ZGODNOSC czytała najpierw pamięć okna
+(`window._vildaCurrentPatientId`), jak monitor GH. W powłoce wczytanie pacjenta w innej ramce zmienia tylko wspólny
+dla karty `sessionStorage.vildaCurrentPatientId`; ukryta ramka Start celowo zostawia swój znacznik w pamięci okna
+(`vilda_panel_pacjent.js`, P-POWLOKA-OBCY), więc kontrola tej zmiany nie widziała. Test (2/3) zmieniał pamięć okna,
+czyli nie odtwarzał prawdziwej drogi.
+
+**Zmiana.** `znacznikPacjenta()` czyta najpierw wspólny `sessionStorage.vildaCurrentPatientId`, potem pamięć okna
+(strona samodzielna bez sesji). Reszta reguł bez zmian (wyjątek „Zapisz dane”, zdarzenia cyklu pacjenta).
+
+**Skutek przed poprawką.** W bieżącej powłoce (protokół panelu ≥ 1) panel i komunikat i tak znikały: ramka Start
+z danymi poprzedniego pacjenta jest nieaktualna, a powłoka przeładowuje ją przy pokazaniu. Kontrola znacznika była
+jedynym zabezpieczeniem w powłoce bez tego protokołu (mieszane wersje po aktualizacji) — tam nie działała.
+
+**Wpływ kliniczny.** Brak zmiany wzorów i reguł punktu.
+
+**Strażnicy.** `tests/e2e/gh-punkt-z-wiersza.spec.mjs`: „zmiana pacjenta (2/3)” zmienia wyłącznie wspólny znacznik
+(pamięć okna zostaje przy poprzednim pacjencie) — czerwony na kodzie sprzed poprawki (panel zostaje), zielony po niej;
+„powłoka: wczytanie innego pacjenta w DocPro przy otwartym panelu na Start — po powrocie panelu nie ma” — prawdziwa
+powłoka i sejf: pacjent zapisany, wczytany w DocPro (`source: 'pick'`), powrót na Start bez panelu i bez punktu
+z panelu na liście nowego pacjenta. Ten drugi test przechodzi także przed poprawką (zamyka przeładowanie ramki
+przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
+
+**Wersje.** `vilda_gh_punkt_z_wiersza.js` `?v=2` → `?v=3`, `SW_VERSION` — `npm run podbij-wersje`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Proces: recenzja Codex uruchamia się przy
+oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
+#575, #577, #581, #582, #590).
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
