@@ -67,10 +67,17 @@
  *
  *   O trybie decyduje wybór, który aplikacja i tak trzyma w sesji (`vildaLoadChoiceV1` =
  *   'restore'): przetrwa F5 i przejście na DocPro, a nowe wczytanie pacjenta, „Nowy pomiar"
- *   i „Wyczyść" go zdejmują. Wiek pomiaru: zapisany wiek rekordu; bez niego wiek z daty
- *   urodzenia na dobę pomiaru (`user.measuredAtISO`, inaczej `timestampISO`). Dokładny wiek
- *   i tygodnie liczymy na tę dobę tylko wtedy, gdy zgadza się ona z zapisanym wiekiem —
- *   inaczej nie zgadujemy i siatki wracają do wiersza ukończonego miesiąca.
+ *   i „Wyczyść" go zdejmują. Tryb trwa, dopóki masa i wzrost w formularzu są takie jak
+ *   w rekordzie — nowe wartości to nowy pomiar i wiek na dziś. Wiek pomiaru: zapisany wiek
+ *   rekordu; bez niego wiek z daty urodzenia na dobę pomiaru (`user.measuredAtISO`, inaczej
+ *   `timestampISO`). Dokładny wiek i tygodnie liczymy na tę dobę tylko wtedy, gdy zgadza się
+ *   ona z zapisanym wiekiem — inaczej nie zgadujemy i siatki wracają do wiersza ukończonego
+ *   miesiąca.
+ *
+ *   Doba pomiaru musi przeżyć ponowny zapis: kolektor zawsze daje świeży `timestampISO`.
+ *   Dlatego `readMeasuredAtISO()` oddaje kolektorowi datę pomiaru do zapisu w rekordzie, ale
+ *   TYLKO pewną — z rekordu, dzień zapisu potwierdzony datą urodzenia albo dzisiejszą wizytę
+ *   z wiekiem liczonym z daty urodzenia. Wiek wpisany ręcznie daty nie dostaje.
  *
  * CZEGO TU NIE MA
  *   Zapisu daty do `sharedUserData` — data urodzenia jest daną identyfikującą, a wspólny
@@ -511,20 +518,31 @@
        zwykły wiek na dziś, jak przed zapisem). Przy niepewnej dobie zostaje zapisany wiek. */
     var dataRekordu = typeof uzytkownik.dobISO === 'string' ? uzytkownik.dobISO.trim() : '';
     var pewnaDoba = !!(zrodlo && (zrodlo.zMiary || doba.getTime() === dzisLokalnie(teraz || null).getTime()));
+    var obcaData = !!(zDoby && iso !== dataRekordu && (pewnaDoba || lata === null));
     var razem = null;
-    if (zDoby && iso !== dataRekordu && (pewnaDoba || lata === null)) razem = zDoby.totalMonths;
+    if (obcaData) razem = zDoby.totalMonths;
     else if (lata !== null) razem = lata * 12 + (miesiace !== null ? miesiace : 0);
     else if (zDoby) razem = zDoby.totalMonths;
     if (razem === null) return null;
 
-    var dokladny = zDoby && zDoby.totalMonths === razem
-      && (tygodnieRekordu === null || tygodnieRekordu === zDoby.weeks) ? zDoby : null;
+    /* Zapisane tygodnie sprawdzają dobę tylko wtedy, gdy wzięła się z `timestampISO` (mogła
+       przesunąć się przy ponownym zapisie starym kodem). Doba z `measuredAtISO` jest pewna,
+       a tygodnie bywają nieaktualne: „+ Nowy pomiar" w Karcie klonuje je z poprzedniej wizyty.
+       Data urodzenia spoza rekordu na pewną dobę też ma pierwszeństwo przed tygodniami
+       wpisanymi wcześniej ręcznie. Powyżej okna tygodni tygodnie nic nie znaczą. */
+    var wTygodniach = weeksApplicable(razem);
+    var dokladny = null;
+    if (zDoby && zDoby.totalMonths === razem) {
+      var zgodne = obcaData || (zrodlo && zrodlo.zMiary) || !wTygodniach
+        || tygodnieRekordu === null || tygodnieRekordu === zDoby.weeks;
+      if (zgodne) dokladny = zDoby;
+    }
 
     return {
       years: Math.floor(razem / 12),
       ageMonths: razem % 12,
       totalMonths: razem,
-      weeks: dokladny ? dokladny.weeks : tygodnieRekordu,
+      weeks: wTygodniach ? (dokladny ? dokladny.weeks : tygodnieRekordu) : null,
       measuredOn: doba,
       exact: dokladny ? { days: dokladny.days, weeks: dokladny.weeks } : null
     };
@@ -538,19 +556,38 @@
     return wiekPomiaru(rekord, iso);
   }
 
-  /* Data pomiaru do zapisu (`user.measuredAtISO`) albo null. Ponowny zapis odtworzonej wizyty
-     z PRZESZŁOŚCI dostaje od kolektora świeży `timestampISO`, więc bez tego doba pomiaru
-     przesuwałaby się na dzień zapisu: tygodnie i dokładny wiek niemowlęcia liczyłyby się na
-     inny dzień niż pomiar (przegląd P-ODTWORZ-WIEK, odtworzone na stronie). Wizyta z dziś
-     i nowy pomiar niczego tu nie dokładają. Nie zależy od daty urodzenia. */
-  function readMeasuredAtISO(teraz) {
-    if (!trybOdtworzenia()) return null;
-    var rekord = rekordWczytany();
-    if (!rekord || !pomiarNiezmieniony(rekord)) return null;
-    var doba = dobaPomiaru(rekord);
-    if (!doba || doba.getTime() >= dzisLokalnie(teraz || null).getTime()) return null;
-    return doISO(doba.getFullYear(), doba.getMonth() + 1, doba.getDate());
+  function wartoscPola(id) {
+    var el = pole(id);
+    return el ? el.value : '';
   }
+
+  /* Data pomiaru do zapisu (`user.measuredAtISO`) albo null — TYLKO gdy jest pewna:
+     • odtworzona, niezmieniona wizyta: data pomiaru z rekordu, a gdy jej nie ma, dzień zapisu
+       (`timestampISO`), jeśli data urodzenia go potwierdza (doba daje dokładnie zapisany wiek).
+       Kolektor zawsze daje świeży `timestampISO`, więc bez tego doba pomiaru przesuwałaby się na
+       dzień ponownego zapisu (przegląd P-ODTWORZ-WIEK, odtworzone na stronie). Niepotwierdzonego
+       dnia nie zamieniamy w „pewną" datę;
+     • dzisiejsza wizyta z wiekiem liczonym z daty urodzenia: dziś (wiek i dzień są wtedy zgodne
+       z konstrukcji). Wiek wpisany ręcznie daty nie dostaje — mógł opisywać inny dzień. */
+  function readMeasuredAtISO(teraz) {
+    var dzis = dzisLokalnie(teraz || null);
+    var rekord = trybOdtworzenia() ? rekordWczytany() : null;
+    if (rekord && pomiarNiezmieniony(rekord)) {
+      var zrodlo = zrodloDobyPomiaru(rekord);
+      if (!zrodlo || zrodlo.doba.getTime() > dzis.getTime()) return null;
+      var dobaISO = doISO(zrodlo.doba.getFullYear(), zrodlo.doba.getMonth() + 1, zrodlo.doba.getDate());
+      if (zrodlo.zMiary) return dobaISO;
+      var dataRekordu = parseDobInput(rekord.user && rekord.user.dobISO, teraz || null);
+      var dataUr = readISO() || (dataRekordu.status === 'ok' ? dataRekordu.iso : null);
+      var pomiar = dataUr ? wiekPomiaru(rekord, dataUr, teraz) : null;
+      return pomiar && pomiar.exact ? dobaISO : null;
+    }
+    var iso = readISO();
+    if (!iso || !ageFromDobISO(iso, dzis)) return null;
+    if (liczbaZZapisu(wartoscPola('weight')) === null && liczbaZZapisu(wartoscPola('height')) === null) return null;
+    return doISO(dzis.getFullYear(), dzis.getMonth() + 1, dzis.getDate());
+  }
+
 
   function opisDaty(data) {
     return dwuCyfry(data.getDate()) + '-' + dwuCyfry(data.getMonth() + 1) + '-' + data.getFullYear();
