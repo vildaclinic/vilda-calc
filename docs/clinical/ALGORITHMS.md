@@ -9228,6 +9228,125 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## „Scal kopię konta” pomija pacjentów usuniętych albo scalonych tutaj i mówi o tym (P-KOPIA-POMIJA, SW 1.1.200, `vilda_vault.js` 206, `vilda_auth_ui.js` 482, 2026-10-08)
+
+**Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, które
+karty i wersje trafiają do bazy po scaleniu kopii konta (niżej). Decyzja właściciela 2026-10-08: „zrób to zgodnie
+z rekomendacjami” — punkt A5d przeglądu „co dalej po #518”: pominąć taki zapis i powiedzieć o tym w podglądzie
+(rozstrzyga akapit „Bez zmian (decyzja właściciela, A5 d)” w P-BLOKADA-IMPORT).
+
+**Co było** (zmierzone na `audyt` `8c13b80`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). „Scal kopię konta”
+(`previewVaultBackupMerge`, `mergeVaultBackup`) dzieliła pacjentów z kopii tylko na „karta jest” i „karty nie ma”:
+- pacjent usunięty tu po zrobieniu kopii: podgląd obiecywał „nowego pacjenta”, scalenie zgłaszało „dodano 1 pacjenta,
+  2 zapisy”, a wewnętrzne scalanie od razu usuwało kartę (lokalny nagrobek wygrywa). Ponowny podgląd obiecywał to samo.
+  Wersja tej karty leżąca w koszu przepadała (kosz 1 → 0);
+- pacjent X scalony tu z kartą Y („Scal pacjentów”): wersje X wracały spod Y do X (ten sam `snapshotId`) i znikały
+  razem z X. Y miała 3 wersje przy liczniku 5; synchronizacja z drugim urządzeniem przywracała wersje, ale licznik
+  rozjeżdżał się do 7. Wpis kosza Y z wersją X znikał;
+- notatka X obecna tylko w kopii lądowała pod X z nagrobkiem — niewidoczna sierota;
+- Y scalony z nowym X na innym urządzeniu: X z kopii zabierał tutaj wersje Y (ten sam `snapshotId`).
+
+**Reguła po zmianie.**
+- Pacjent z kopii, którego karty tu nie ma, jest pomijany, gdy:
+  - jego wersje albo notatki leżą tu pod inną, istniejącą kartą (wersje także w koszu i w nagrobkach retencji),
+    a scalenie było tutaj: pacjent ma tu nagrobek, karta docelowa jest też w kopii albo wszystkie jego wersje leżą tu
+    pod innymi kartami — „scalony” (karta docelowa: ta, pod którą leży ich najwięcej). Nagrobek nie jest konieczny, bo
+    nagrobki znikają po 365 dniach. Gdy na innym urządzeniu scalono Y z nowym X (Y nie ma w kopii, X nie ma tu
+    nagrobka), X wchodzi jak nowy — ze swoimi wersjami, a wersje Y zostają przy Y (strażnik niżej);
+  - albo lokalny nagrobek nie jest wcześniejszy niż ostatni zapis tej karty w kopii — „usunięty” (ta sama reguła co
+    w scalaniu synchronizacji). Kopia nowsza niż usunięcie (karta edytowana na innym urządzeniu po usunięciu tutaj)
+    przywraca kartę jak dotąd.
+- Pominięty pacjent nie zapisuje karty ani wersji, a kosz zostaje bez zmian. Jego notatki, które leżą tu pod inną kartą
+  (po „Scal pacjentów” — pod kartą docelową), idą do wewnętrznego scalania pod tamtą kartą — nowsza poprawka z kopii
+  wygrywa jak dotąd. Pozostałych jego notatek nie importujemy; zostają w pliku kopii.
+- Strażnik: żadna wersja z kopii nie jest zapisywana pod kartą, gdy jej `snapshotId` należy tu do innej karty (także
+  w koszu), i nie zdejmuje wpisu kosza innej karty.
+- Podgląd klasyfikuje z mapy zbudowanej raz (karty, wersje, kosz, notatki, nagrobki; budowana tylko, gdy potrzebna).
+  Scalanie decyduje pod blokadą pacjenta, na świeżym nagrobku.
+- Nowe pola: `skippedPatients[]` (`patientId`, `name`, `reason` `'deleted'|'merged'`, `mergedIntoPatientId`,
+  `mergedIntoName`, `deletedAtISO`, `snapshotCount`, `missingSnapshotCount` — ile jego wersji z kopii nie ma tu
+  w żadnej karcie ani w koszu istniejącej karty, `missingNoteCount` — ile jego notatek z kopii nie ma tu wcale) oraz `foreignSnapshotCount` w obu wynikach; w wyniku scalania także
+  `skippedDeletedPatientCount` i `skippedMergedPatientCount`. Format kopii i nagrobków bez zmian.
+
+**Interfejs** (ekran „Scal kopię konta”):
+- podtytuł: „… bez usuwania ani nadpisywania istniejących danych. Nie przywraca pacjentów scalonych tutaj z inną kartą
+  ani usuniętych tutaj po ich ostatnim zapisie w kopii.”;
+- podgląd: sekcja „Pominięci — nie zostaną dodani (N)”: nazwisko i „scalony tutaj z kartą „Y”” albo „usunięty na tym
+  urządzeniu (3 dni temu)”, pod spodem „Tylko w pliku kopii: 2 zapisy, 1 notatka.”, gdy coś z kopii nie ma tu
+  nigdzie; na końcu sekcji „Kopia konta nie przywraca pacjentów scalonych tutaj z inną kartą ani usuniętych tutaj po ich
+  ostatnim zapisie w kopii.”;
+  podsumowanie „… · pominięci: N”, a przy braku nowych zapisów „Brak danych do dodania”;
+- wynik: „⊘ Pominięto „X” — scalony tutaj z kartą „Y”” albo „… — usunięty na tym urządzeniu (…)”, „↩ Pominięto N
+  zapisów, które należą tu do innej karty”; „Brak zmian — pozostałe dane z tej kopii już były w Twoim koncie.”, gdy
+  coś pominięto i nic nie doszło.
+- Widoczność „Scal teraz” bez zmian (nowe zapisy albo nowi pacjenci). Desktop (1440) i telefon (390): bez poziomego
+  przewijania.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-pomija.test.mjs` (prawdziwy
+`vilda_vault.js`, magazyn w pamięci):
+- karty Adam i Ewa (po 2 wersje), kopia, usunięcie Ewy → podgląd: Ewa pominięta („deleted”, 2 wersje tylko w kopii),
+  0 nowych zapisów; scalenie: 0 dodanych, magazyn bez zmian, nagrobek zostaje; ponowny podgląd — to samo;
+- jak wyżej, ale wersja Ewy w koszu przed usunięciem → kosz bez zmian; obie wersje „tylko w pliku kopii” (wpisu kosza
+  usuniętej karty nie da się przywrócić);
+- usunięcie Xawerego w innej karcie w trakcie scalania (po zbudowaniu mapy) → pominięty jako usunięty (świeży nagrobek
+  pod blokadą), karta nie wraca;
+- kopia nowsza niż usunięcie (druga karta zapisana po usunięciu tutaj) → karta wraca z 3 wersjami (kontrola);
+- X i Y „Testowy Jan” (po 2 wersje, notatki N-X, N-Y), kopia, X scalony z Y → X pominięty („merged”, cel Y, „Testowy
+  Jan”, 0 wersji tylko w kopii); Y zostaje z 5 wersjami i licznikiem 5, notatki N-X i N-Y pod Y;
+- wersja X (już pod Y) w koszu Y → Y 4/4, kosz bez zmian; nagrobek X usunięty (przycięty) → nadal „scalony”, bez daty;
+- wersje X usunięte po scaleniu, została notatka pod Y → „scalony” z Y (rozpoznanie po notatkach), 2 wersje tylko
+  w kopii;
+- poprawka notatki N-X na drugim urządzeniu, X scalony tutaj z Y → poprawiona treść pod Y (1 zaktualizowana notatka),
+  X nie wraca;
+- kopia z nowszą wersją X niż scalenie tutaj → X pominięty, 1 wersja tylko w kopii, magazyn bez zmian (także po
+  przycięciu nagrobka X — Y jest w kopii);
+- X w kopii, Y założona po kopii, X scalony z Y, nagrobek X przycięty → „scalony” (wszystkie wersje X leżą pod Y), bez
+  pustej karty X;
+- Y scalony z nowym X na drugim urządzeniu (Y nie ma w kopii) → X dodany ze swoimi wersjami, 2 wersje Y pominięte
+  strażnikiem, Y zachowuje swoje;
+- notatka X tylko w kopii (drugie urządzenie bez notatek), X scalony z Y → podgląd: 1 notatka tylko w kopii; scalenie:
+  notatka nie jest importowana (brak sieroty);
+- wersja karty Z leżąca tu pod Y (także w koszu Y) → dla Z „0 nowych”, `foreignSnapshotCount` 1, Y zachowuje wersję,
+  wpis kosza zostaje;
+- kontrole: nowy pacjent i nowa wersja istniejącej karty dochodzą jak dotąd; pusty sejf przyjmuje całą kopię.
+Na kodzie sprzed zmiany (P-ZAPIS-USUNIETEJ) 12 z 17 przypadków czerwonych w samym stanie magazynu; pozostałe 5 (trzy
+kontrole, rozpoznanie po notatkach i poprawka notatki pod Y — dotąd z tym samym skutkiem w magazynie) różnią się tylko
+nowymi polami wyniku. Mutacje (21, wszystkie wyłapane): bez pomijania — 11 czerwonych; scalanie zapisuje pominiętego —
+8; bez kosza w mapie — 1; bez strażnika w scalaniu — 2; kosz bez filtra — 1; wszystkie notatki pominiętych do
+wewnętrznego scalania — 1; żadna notatka pominiętych — 1; „tylko w kopii” liczone z nagrobków wersji — 1; „scalony” bez
+warunku „scalenie tutaj” — 1; bez warunku „wszystkie wersje pod innymi kartami” — 1; bez warunku „karta docelowa
+w kopii” — 1; scalanie bez świeżego nagrobka — 1; „usunięty” bez porównania daty — 1; „scalony” wymaga nagrobka — 3;
+podgląd bez strażnika — 2; bez liczenia notatek tylko w kopii — 1, wersji — 4; bez nazwy karty docelowej — 1;
+rozpoznanie bez notatek — 1; bez sekcji w podglądzie i bez linii w wyniku — e2e czerwony.
+`tests/e2e/kopia-konta-pomija.spec.mjs` (prawdziwa przeglądarka, droga lekarza: Importuj pacjentów → plik kopii →
+„Scal z moim kontem →”): po kopii usunięcie „Fikcyjna Ewa”, scalenie „Testowy Jan” z drugim „Testowy Jan”, wersja
+„Testowy Adam” w koszu → podgląd: „Pominięci — nie zostaną dodani (2)”, „scalony tutaj z kartą „Testowy Jan””,
+„usunięty na tym urządzeniu”, „Tylko w pliku kopii: 1 zapis.”, „Scal teraz (1 nowych zapisów)”; wynik: obie linie
+„⊘ Pominięto …”, „✓ Łącznie dodano 1 zapisów”; magazyn: Adam 2 wersje, Jan 3, bez Ewy. Na kodzie sprzed zmiany
+czerwony.
+
+**Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Pacjent usunięty albo scalony tutaj nie wraca na chwilę
+i nie zabiera wersji karcie, z którą go scalono — historia pomiarów karty docelowej zostaje cała. Dane pominiętego
+pacjenta, których tu nie ma (wersje, notatki), nie trafiają do bazy; podgląd mówi, ile ich jest, a zostają w pliku
+kopii. Poprawki jego notatek, które są już pod kartą docelową, dochodzą jak dotąd. Kopia nowsza niż usunięcie
+przywraca kartę jak dotąd. Wersje karty scalonej na innym urządzeniu nie są już zabierane tutejszej karcie.
+
+**Czego zmiana nie robi.** Pacjenta usuniętego albo scalonego tutaj nie da się przywrócić przez „Scal kopię konta”
+(dotąd też się nie dawało — karta znikała od razu); drogą pozostaje import pliku karty (P-IMPORT-NAGROBEK). X scalony
+tutaj, a w kopii są wersje X nowsze niż scalenie — X jest pomijany w całości, podgląd pokazuje liczbę zapisów tylko
+w kopii. Mapa właścicieli jest budowana raz: wersja przeniesiona w innej karcie między jej zbudowaniem a blokadą może
+być oceniona po starym przypisaniu; usunięcie albo scalenie X w tym czasie łapie świeży nagrobek (powód „usunięty”
+zamiast „scalony”). X scalony tutaj z kartą Y założoną po zrobieniu kopii, przy przyciętym nagrobku X i z własnymi
+wersjami X tylko w kopii — X wraca jako nowy z tymi wersjami (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama kradzież wersji przy nagrobku przegrywającym
+z edycją z innego urządzenia to osobna wada. Listy pacjentów z kopii wskazujące pominiętą kartę — bez zmian (jak dotąd).
+Ekran wyniku nadal nie wymienia notatek i list, a „Scal teraz” nie pojawia się, gdy kopia niesie tylko nowe notatki
+albo listy — osobne punkty.
+
+**Wersje.** `vilda_vault.js` 205 → 206, `vilda_auth_ui.js` 481 → 482 na stronach i w adresach wstrzykiwanych przez
+`vilda_chrome.js` (114 → 115) i `vilda_session_bridge.js` (38 → 39); nowe adresy w precache (append-only);
+`SW_VERSION` 1.1.199 → 1.1.200 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) —
+`npm run podbij-wersje`.
+
 ## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.199, `vilda_vault.js` 205, 2026-10-08)
 
 **Zmiana kliniczna: możliwa** — wzory, progi i jednostki bez zmian; zmienia się zawartość bieżącej wersji karty
@@ -9379,7 +9498,7 @@ rozstrzygnie jak dotąd („ostatni zapis wygrywa”, P-SCALANIE-BLOKADA). W okn
 usunięcie, formularz przestaje celować w kartę od razu (jak dotąd), więc odmowy tam nie ma — zapis idzie zwykłym
 dopasowaniem. Po odświeżeniu strony bez ponownego wczytania pacjenta sejf nie zna jego wersji i odmowa nie wskaże karty
 docelowej. Nagrobek przycięty po 365 dniach — karta jest „nieznana”. Format nagrobka, ładunek synchronizacji i reguły
-scalania bez zmian; „Scal kopię konta” — osobny punkt (A5d).
+scalania bez zmian; „Scal kopię konta” — osobny punkt (A5d). *(Aktualizacja 2026-10-08: A5d — P-KOPIA-POMIJA.)*
 
 **Wersje.** `vilda_vault.js` 203 → 204, `vilda_data_import_export.js` 99 → 100, `vilda_auth_ui.js` 479 → 480 na stronach
 i w adresach wstrzykiwanych przez `vilda_chrome.js` (111 → 112) i `vilda_session_bridge.js` (35 → 36); nowe adresy
@@ -9612,7 +9731,8 @@ usunięcie i scalanie synchronizacji:
 **Bez zmian (decyzja właściciela, A5 d).** Scalanie kopii konta z kartą usuniętą na tym urządzeniu nadal dopisuje kartę
 („dodano 1 pacjenta”), a wewnętrzne scalanie od razu ją usuwa, bo lokalny nagrobek wygrywa. Do wyboru: zdejmować
 nagrobek jak import karty (z datą przywrócenia jak w P-IMPORT-NAGROBEK) albo pomijać taką kartę i mówić o tym w podglądzie
-i w wyniku.
+i w wyniku. *(Aktualizacja 2026-10-08: rozstrzygnięte — pomijać i mówić o tym w podglądzie i w wyniku, także kartę scaloną
+tutaj z inną kartą; P-KOPIA-POMIJA.)*
 
 **Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/blokada-importu.test.mjs` (prawdziwy
 `vilda_vault.js`; dwie karty na wspólnym magazynie i atrapie Web Locks oraz jedna karta z kolejką strony):
