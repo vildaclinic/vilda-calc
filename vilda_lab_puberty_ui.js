@@ -417,7 +417,7 @@
       // Wspólny model prezentacji wyprowadza wyróżnienie z obu zapisanych
       // porównań. Formularz nie oblicza ponownie progów ani zakresów.
       var view = renderer.renderEvaluation(assessment, evaluation, {
-        compact: true, hideMeasurement: true, motionPaused: motionPaused,
+        compact: true, hideMeasurement: true, live: true, motionPaused: motionPaused,
         onMotionChange: setMotionPaused
       });
       if (big) {
@@ -438,7 +438,7 @@
             summary.appendChild(element('span', 'vilda-lab-severity-summary-scope', alert.scope + (alert.conditional ? ' · warunkowo' : '')));
             big.appendChild(summary);
           }
-        } else big.appendChild(element('span', 'lab-result-big-placeholder', lastMeasurement.raw ? 'Nieprawidłowy zapis wyniku lub jednostki' : 'Wpisz wynik. Kontekst rozwoju możesz ocenić wcześniej.'));
+        } else big.appendChild(element('span', 'lab-result-big-placeholder', lastMeasurement.raw ? 'Popraw zapis wyniku lub jednostkę.' : 'Wpisz wynik.'));
       }
       var table = byId('labResultsBody'), meta = byId('labMeta');
       if (table) {
@@ -471,7 +471,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.8.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.9.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -272,11 +272,6 @@
   text-decoration: underline;
 }
 
-.vilda-lab-assessment .vilda-lab-versions {
-  color: var(--vilda-lab-muted);
-  font-size: .75rem;
-}
-
 .vilda-lab-assessment[data-assessment-status="invalidated"],
 .vilda-lab-assessment[data-assessment-status="unavailable"] {
   padding: var(--space-12px);

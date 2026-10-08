@@ -190,8 +190,9 @@ describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
     expect(axes[0].getAttribute('data-axis-max')).toBe(axes[1].getAttribute('data-axis-max'));
     expect(axes[0].getAttribute('data-patient-value')).toBe(axes[1].getAttribute('data-patient-value'));
     expect(descendants(host, (node) => node.tagName === 'details')).toHaveLength(1);
-    expect(visibleText(host)).not.toContain('Z zapisanej konfiguracji oznaczenia:');
-    expect(host.textContent).toContain('Z zapisanej konfiguracji oznaczenia:');
+    expect(visibleText(host)).not.toContain('AnshLite LH CLIA');
+    expect(host.textContent).toContain('AnshLite LH CLIA');
+    expect(host.textContent).not.toContain('Z zapisanej konfiguracji oznaczenia:');
     expect(visibleText(host)).toContain('Rodzaju badania i leczenia nie ustalono.');
   });
 

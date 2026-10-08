@@ -114,11 +114,56 @@ test('age and stage use aligned axes while only the severe age deviation activat
   await expect(conditions).toContainText(/bez leczenia hormonalnego/);
   expect(await conditions.locator('xpath=ancestor::details').count()).toBe(0);
   await expect(assessment(page).locator(':scope > details')).toHaveCount(1);
-  await expect(assessment(page).locator(':scope > details > summary')).toHaveText('Szczegóły oceny i źródła');
+  await expect(assessment(page).locator(':scope > details > summary')).toHaveText('Szczegóły i źródła');
   const current = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
   expect(current.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
     puberty: { kind: 'G', stage: 3, appliesToSample: false, appliesToCurrentContext: true },
     history: { cnsSymptoms: 'unknown', regression: 'unknown' }, testicularVolume: { value: null, method: '' } });
+});
+
+for (const analyte of ['lh', 'fsh']) {
+  test(`${analyte.toUpperCase()}: empty and invalid input avoid a cascade of assessment errors`, async ({ page }) => {
+    await open(page, { name: 'Fikcyjny niepełny kontekst', sex: 'M' });
+    await choose(page, analyte, '');
+    await configureProfile(page, analyte);
+    await expect(page.locator('#labResultBig')).toHaveText('Wpisz wynik.');
+    await expect(assessment(page).locator('.vilda-lab-comparison')).toHaveCount(0);
+    await expect(assessment(page)).not.toContainText('Nieprawidłowy zapis');
+    await expect(assessment(page)).not.toContainText('Zapis wyniku wymaga poprawienia');
+    await expect(assessment(page)).not.toContainText('Wiek próbki nie mieści');
+    await page.locator('#labValue').fill('błąd');
+    await expect(page.locator('#labResultBig')).toHaveText('Popraw zapis wyniku lub jednostkę.');
+    await expect(assessment(page).locator('.vilda-lab-comparison')).toHaveCount(0);
+    await expect(assessment(page)).not.toContainText('Nieprawidłowy zapis');
+    await expect(assessment(page)).not.toContainText('Zapis wyniku wymaga poprawienia');
+    await page.locator('#labValue').fill('2');
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
+    await expect(assessment(page)).toContainText(/wiek/i);
+    await expect(assessment(page)).not.toContainText('Wiek próbki nie mieści');
+    await expect(assessment(page)).not.toContainText('Nie podano potwierdzonego zakresu laboratorium');
+    const context = assessment(page).locator('.vilda-lab-context');
+    await expect(context).not.toContainText('Potwierdzenie metody');
+    await expect(context).not.toContainText('Nie wiadomo');
+    await expect(context).not.toContainText('Nie ustalono');
+  });
+}
+
+test('an early-development warning remains while the hormone result is empty or invalid', async ({ page }) => {
+  await open(page);
+  await prepare(page, { value: '' });
+  const warning = assessment(page).locator('[data-clinical-code="early_development"]');
+  await expect(warning).toBeVisible();
+  expect(await warning.locator('xpath=ancestor::details').count()).toBe(0);
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+  await expect(page.locator('#labResultBig')).toHaveText('Wpisz wynik.');
+  await page.locator('#labValue').fill('błąd');
+  await expect(warning).toBeVisible();
+  await expect(page.locator('#labResultBig')).toHaveText('Popraw zapis wyniku lub jednostkę.');
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+  await page.locator('#labValue').fill('2');
+  await expect(warning).toBeVisible();
+  await expectSharedAxes(page);
+  await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
 });
 
 test('severe thresholds are strict and each axis owns its high or low state', async ({ page }) => {
