@@ -64,6 +64,12 @@ jobs:
           cache: npm
       - name: Zainstaluj zależności
         run: npm ci
+      # E2E-ODŁAMKI: pliki dzielone po zmierzonym czasie (tests/fixtures/czasy-e2e.json), a nie
+      # po liczbie testów jak `--shard` — ten dawał trzeciemu odłamkowi koniec alfabetu i cały
+      # projekt mobilny. Każdy runner liczy ten sam deterministyczny podział i bierze swoją
+      # część; skrypt sam sprawdza, że Playwright z tą listą widzi dokładnie te pliki.
+      - name: Wybierz pliki odłamka
+        run: node tests/scripts/odlamki-e2e.mjs --odlamek=${{ matrix.shard }}/3 --zapisz="$RUNNER_TEMP/odlamek-e2e.txt"
       - name: Zainstaluj Chromium
         run: |
           # HTTP Azure potrafi wyczerpać limit joba podczas pobierania pakietów.
@@ -77,7 +83,7 @@ jobs:
           fi
           npx playwright install --with-deps chromium
       - name: Uruchom testy Playwright
-        run: npm run test:e2e -- --shard=${{ matrix.shard }}/3
+        run: npm run test:e2e -- --test-list="$RUNNER_TEMP/odlamek-e2e.txt"
       - name: Zachowaj raport po niepowodzeniu
         if: failure()
         uses: actions/upload-artifact@v4
