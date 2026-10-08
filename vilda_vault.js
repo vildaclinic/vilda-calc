@@ -1068,7 +1068,9 @@ function Bdo_dopisz(lista, zapis, baza, glowa) {
 // karcie docelowej (punkty terapii, dane okoloporodowe, lekarz, plan…), a brak plci w starej karcie kasowal znana plec.
 // Zmiana lekarza to niepusta wartosc formularza, inna niz w kopii wczytanej, w polu, ktore ta kopia miala. Pole bez
 // takiej zmiany bierze niepusta wartosc karty docelowej: puste pole formularza (brak plci, wyzerowana wizyta) i sekcja,
-// ktorej stara karta nie miala (formularz wstawia sekcje domyslne), nie nadpisuja jej danych. Punkty terapii — zbiorem:
+// ktorej stara karta nie miala (formularz wstawia sekcje domyslne), nie nadpisuja jej danych. Pusta jest tez sekcja
+// domyslna formularza — obiekt albo lista bez zadnej wartosci poza null, '' i false (P-ZAPIS-USUNIETEJ-3, Codex P1 w #588:
+// niewypelniony plan karty docelowej {palFactor:null, palWybrany:false…} zastepowal wypelniony plan starej karty). Punkty terapii — zbiorem:
 // punkty karty docelowej bez usunietych przez lekarza, plus dodane przez lekarza. Wiersze pomiarow liczy Bdo_dopisz.
 // Pola wewnetrzne („_…”, np. przypiecie wersji) nie sa przenoszone z karty docelowej.
 const BDO_PUNKTY = ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints'];
@@ -1084,7 +1086,12 @@ function Bdo_sekcje(zapis, baza, glowa) {
     return o;
   };
   const tekst = function (x) { try { return JSON.stringify(uloz(x)); } catch { return null; } };
-  const pusta = function (x) { return x === undefined || x === null || x === ''; };
+  const pusta = function (x) {
+    if (x === undefined || x === null || x === '' || x === false) return true;
+    if (Array.isArray(x)) return x.every(pusta);
+    if (typeof x === 'object') return Object.keys(x).every(function (k) { return pusta(x[k]); });
+    return false;
+  };
   const kopia = function (x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); };
   const obiekt = function (x) { return !!x && typeof x === 'object' && !Array.isArray(x); };
   // Pole po polu: bez zmiany lekarza — niepusta wartosc z karty docelowej.
@@ -1139,13 +1146,15 @@ function Bdo_sekcje(zapis, baza, glowa) {
  *   - jego wersje albo notatki leza tu pod inna karta — scalony z nia (nagrobek nie jest potrzebny: znika po 365 dniach);
  *   - lokalny nagrobek nie jest wczesniejszy niz ostatni zapis w kopii — usuniety (ta sama regula co w scalaniu
  *     synchronizacji; kopia nowsza niz usuniecie przywraca karte jak dotad).
- * „Scalony” liczy sie tylko wtedy, gdy scalenie bylo tutaj: pacjent ma tu nagrobek, karta docelowa jest tez w kopii albo
- * wszystkie jego wersje leza tu pod inna karta. Gdy na innym urzadzeniu scalono Y z nowym X (Y nie ma w kopii, X nie ma
- * tu nagrobka), X wchodzi jak nowy — ze swoimi wersjami, a wersje Y zostaja przy Y.
+ * „Scalony” liczy sie tylko wtedy, gdy scalenie bylo tutaj: nagrobek pacjenta wygrywa z kopia (ta sama regula co
+ * „usuniety” — nagrobek zwyklego usuniecia starszy niz zapis w kopii nie dowodzi scalenia), karta docelowa jest tez
+ * w kopii albo wszystkie jego wersje leza tu pod inna karta. Gdy na innym urzadzeniu scalono Y z X (Y nie ma w kopii),
+ * X wchodzi jak nowy — ze swoimi wersjami, a wersje Y zostaja przy Y.
  * Zadna wersja z kopii nie jest zapisywana pod karta, gdy jej snapshotId nalezy tu do innej karty (takze w koszu), i nie
- * zdejmuje wpisu kosza innej karty. Notatki pominietego pacjenta, ktore leza tu pod inna karta, ida do niej (nowsza
- * poprawka z kopii wygrywa jak dotad); pozostalych nie importujemy — zostaja w pliku kopii. Podglad klasyfikuje z mapy,
- * scalanie — pod blokada pacjenta, na swiezym nagrobku. Format kopii i nagrobkow bez zmian.
+ * zdejmuje wpisu kosza innej karty. Tak samo notatki: notatka z kopii, ktora lezy tu pod inna istniejaca karta, idzie do
+ * niej (nowsza poprawka z kopii wygrywa jak dotad). Pozostalych notatek pominietego pacjenta nie importujemy — zostaja
+ * w pliku kopii. Nagrobek moze pochodzic z synchronizacji, wiec komunikaty nie mowia, gdzie usunieto albo scalono.
+ * Podglad klasyfikuje z mapy, scalanie — pod blokada pacjenta, na swiezym nagrobku. Format kopii i nagrobkow bez zmian.
  */
 // Kto ma u nas wersje i notatki: snapshotId -> patientId (karty i nagrobki wersji: kosz i retencja), noteId ->
 // patientId, najnowszy nagrobek pacjenta. dostepna — wersje, ktorych tresc tu jest (w karcie albo w koszu istniejacej
@@ -1216,8 +1225,8 @@ async function Bks_doZapisu(kontekst, patientId, wersjeKopii, wKarcie) {
 }
 
 // Powod pominiecia pacjenta z kopii, ktorego karty tu nie ma, albo null (nowy pacjent jak dotad). Karta docelowa
-// scalenia: ta, pod ktora lezy tu najwiecej jego wersji i notatek. Scalenie bylo tutaj, gdy pacjent ma tu nagrobek,
-// karta docelowa jest tez w kopii albo wszystkie jego wersje leza tu pod innymi kartami (nie ma czego dodac).
+// scalenia: ta, pod ktora lezy tu najwiecej jego wersji i notatek. Scalenie bylo tutaj, gdy nagrobek pacjenta wygrywa
+// z kopia, karta docelowa jest tez w kopii albo wszystkie jego wersje leza tu pod innymi kartami (nie ma czego dodac).
 function Bks_powod(mapa, pacjent, notatkiKopii, nagrobekISO, wKopii) {
   const pid = pacjent.patientId, cele = new Map(), wersje = Array.isArray(pacjent.snapshots) ? pacjent.snapshots : [];
   const obca = function (y) { return !!y && y !== pid && mapa.karty.has(y); };
@@ -1229,14 +1238,15 @@ function Bks_powod(mapa, pacjent, notatkiKopii, nagrobekISO, wKopii) {
     if (obca(y)) policz(y); else swoich += 1;
   });
   (notatkiKopii || []).forEach(function (n) { if (n && n.id && n.patientId === pid) policz(mapa.notatka.get(n.id)); });
-  let tutaj = !!nagrobekISO || swoich === 0;
+  const nagrobekWygrywa = !!nagrobekISO && (!pacjent.lastSavedAtISO || nagrobekISO >= pacjent.lastSavedAtISO);
+  let tutaj = nagrobekWygrywa || swoich === 0;
   cele.forEach(function (n, y) { if (wKopii && wKopii.has(y)) tutaj = true; });
   if (cele.size && tutaj) {
     let cel = null, ile = 0;
     cele.forEach(function (n, y) { if (n > ile) { cel = y; ile = n; } });
     return { reason: 'merged', mergedIntoPatientId: cel, deletedAtISO: nagrobekISO || null };
   }
-  if (nagrobekISO && (!pacjent.lastSavedAtISO || nagrobekISO >= pacjent.lastSavedAtISO)) {
+  if (nagrobekWygrywa) {
     return { reason: 'deleted', mergedIntoPatientId: null, deletedAtISO: nagrobekISO };
   }
   return null;
@@ -1278,16 +1288,21 @@ async function Bks_brakKarty(kontekst, pacjent, notatkiKopii, swiezyNagrobek) {
   return { pominiety: true, wersje: [] };
 }
 
-// Notatki z kopii do wewnetrznego scalania: notatka pominietego pacjenta idzie tylko wtedy, gdy lezy tu pod inna,
-// istniejaca karta (po „Scal pacjentow” — pod karta docelowa) i pod jej patientId, zeby nowsza poprawka z kopii nie
-// przepadla. Pozostale notatki pominietych zostaja w pliku kopii (dotad trafialy pod karte z nagrobkiem jako sieroty).
+// Notatki z kopii do wewnetrznego scalania. Notatka, ktora lezy tu pod inna istniejaca karta (po „Scal pacjentow” —
+// pod karta docelowa), idzie pod jej patientId: nowsza poprawka z kopii nie przepada, a notatka nie przechodzi do innej
+// karty (jak wersje — straznik Bks_obca). Pozostale notatki pominietych zostaja w pliku kopii (dotad trafialy pod karte
+// z nagrobkiem jako sieroty).
 async function Bks_notatki(kontekst, notatkiKopii) {
-  if (!kontekst.pominieteId.size) return notatkiKopii;
+  if (!notatkiKopii.length) return notatkiKopii;
   const mapa = await kontekst.mapa(), wynik = [];
   notatkiKopii.forEach(function (n) {
-    if (!n || !kontekst.pominieteId.has(n.patientId)) { wynik.push(n); return; }
-    const wlasciciel = n.id ? mapa.notatka.get(n.id) : null;
-    if (wlasciciel && wlasciciel !== n.patientId && mapa.karty.has(wlasciciel)) wynik.push(Object.assign({}, n, { patientId: wlasciciel }));
+    const wlasciciel = n && n.id ? mapa.notatka.get(n.id) : null;
+    if (wlasciciel && wlasciciel !== n.patientId && mapa.karty.has(wlasciciel)) {
+      wynik.push(Object.assign({}, n, { patientId: wlasciciel }));
+      return;
+    }
+    if (n && kontekst.pominieteId.has(n.patientId)) return;
+    wynik.push(n);
   });
   return wynik;
 }

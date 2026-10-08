@@ -9249,16 +9249,21 @@ z rekomendacjami” — punkt A5d przeglądu „co dalej po #518”: pominąć t
 **Reguła po zmianie.**
 - Pacjent z kopii, którego karty tu nie ma, jest pomijany, gdy:
   - jego wersje albo notatki leżą tu pod inną, istniejącą kartą (wersje także w koszu i w nagrobkach retencji),
-    a scalenie było tutaj: pacjent ma tu nagrobek, karta docelowa jest też w kopii albo wszystkie jego wersje leżą tu
-    pod innymi kartami — „scalony” (karta docelowa: ta, pod którą leży ich najwięcej). Nagrobek nie jest konieczny, bo
-    nagrobki znikają po 365 dniach. Gdy na innym urządzeniu scalono Y z nowym X (Y nie ma w kopii, X nie ma tu
-    nagrobka), X wchodzi jak nowy — ze swoimi wersjami, a wersje Y zostają przy Y (strażnik niżej);
+    a scalenie było tutaj: nagrobek pacjenta wygrywa z kopią (ta sama reguła co „usunięty” — nagrobek zwykłego
+    usunięcia starszy niż zapis w kopii nie dowodzi scalenia), karta docelowa jest też w kopii albo wszystkie jego
+    wersje leżą tu pod innymi kartami — „scalony” (karta docelowa: ta, pod którą leży ich najwięcej). Nagrobek nie jest
+    konieczny, bo nagrobki znikają po 365 dniach. Gdy na innym urządzeniu scalono Y z X (Y nie ma w kopii), X wchodzi
+    jak nowy — ze swoimi wersjami, a wersje Y zostają przy Y (strażnik niżej);
   - albo lokalny nagrobek nie jest wcześniejszy niż ostatni zapis tej karty w kopii — „usunięty” (ta sama reguła co
     w scalaniu synchronizacji). Kopia nowsza niż usunięcie (karta edytowana na innym urządzeniu po usunięciu tutaj)
     przywraca kartę jak dotąd.
-- Pominięty pacjent nie zapisuje karty ani wersji, a kosz zostaje bez zmian. Jego notatki, które leżą tu pod inną kartą
-  (po „Scal pacjentów” — pod kartą docelową), idą do wewnętrznego scalania pod tamtą kartą — nowsza poprawka z kopii
-  wygrywa jak dotąd. Pozostałych jego notatek nie importujemy; zostają w pliku kopii.
+- Pominięty pacjent nie zapisuje karty ani wersji, a kosz zostaje bez zmian. Pozostałych jego notatek (niżej) nie
+  importujemy; zostają w pliku kopii.
+- Notatka z kopii, która leży tu pod inną istniejącą kartą (po „Scal pacjentów” — pod kartą docelową), idzie do
+  wewnętrznego scalania pod tamtą kartą — nowsza poprawka z kopii wygrywa jak dotąd, a notatka nie przechodzi do innej
+  karty (dotąd przy scaleniu w odwrotną stronę notatki Y przechodziły do X).
+- Nagrobek pacjenta mógł przyjść z synchronizacji (usunięcie albo scalenie na innym urządzeniu) i liczy się jak lokalny,
+  więc komunikaty nie mówią, gdzie pacjenta usunięto albo scalono.
 - Strażnik: żadna wersja z kopii nie jest zapisywana pod kartą, gdy jej `snapshotId` należy tu do innej karty (także
   w koszu), i nie zdejmuje wpisu kosza innej karty.
 - Podgląd klasyfikuje z mapy zbudowanej raz (karty, wersje, kosz, notatki, nagrobki; budowana tylko, gdy potrzebna).
@@ -9269,14 +9274,14 @@ z rekomendacjami” — punkt A5d przeglądu „co dalej po #518”: pominąć t
   `skippedDeletedPatientCount` i `skippedMergedPatientCount`. Format kopii i nagrobków bez zmian.
 
 **Interfejs** (ekran „Scal kopię konta”):
-- podtytuł: „… bez usuwania ani nadpisywania istniejących danych. Nie przywraca pacjentów scalonych tutaj z inną kartą
-  ani usuniętych tutaj po ich ostatnim zapisie w kopii.”;
-- podgląd: sekcja „Pominięci — nie zostaną dodani (N)”: nazwisko i „scalony tutaj z kartą „Y”” albo „usunięty na tym
-  urządzeniu (3 dni temu)”, pod spodem „Tylko w pliku kopii: 2 zapisy, 1 notatka.”, gdy coś z kopii nie ma tu
-  nigdzie; na końcu sekcji „Kopia konta nie przywraca pacjentów scalonych tutaj z inną kartą ani usuniętych tutaj po ich
-  ostatnim zapisie w kopii.”;
+- podtytuł: „… bez usuwania ani nadpisywania istniejących danych. Nie przywraca pacjentów scalonych z inną kartą ani
+  usuniętych po ich ostatnim zapisie w kopii.”;
+- podgląd: sekcja „Pominięci — nie zostaną dodani (N)”: nazwisko i „scalony z kartą „Y”” albo „usunięty po ostatnim
+  zapisie w kopii (3 dni temu)”, pod spodem „Tylko w pliku kopii: 2 zapisy, 1 notatka.”, gdy coś z kopii nie ma tu
+  nigdzie; na końcu sekcji „Kopia konta nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim
+  zapisie w kopii.”;
   podsumowanie „… · pominięci: N”, a przy braku nowych zapisów „Brak danych do dodania”;
-- wynik: „⊘ Pominięto „X” — scalony tutaj z kartą „Y”” albo „… — usunięty na tym urządzeniu (…)”, „↩ Pominięto N
+- wynik: „⊘ Pominięto „X” — scalony z kartą „Y”” albo „… — usunięty po ostatnim zapisie w kopii (…)”, „↩ Pominięto N
   zapisów, które należą tu do innej karty”; „Brak zmian — pozostałe dane z tej kopii już były w Twoim koncie.”, gdy
   coś pominięto i nic nie doszło.
 - Widoczność „Scal teraz” bez zmian (nowe zapisy albo nowi pacjenci). Desktop (1440) i telefon (390): bez poziomego
@@ -9308,10 +9313,17 @@ z rekomendacjami” — punkt A5d przeglądu „co dalej po #518”: pominąć t
   notatka nie jest importowana (brak sieroty);
 - wersja karty Z leżąca tu pod Y (także w koszu Y) → dla Z „0 nowych”, `foreignSnapshotCount` 1, Y zachowuje wersję,
   wpis kosza zostaje;
+- zwykłe usunięcie X tutaj, a na drugim urządzeniu Y scalony z X i X zapisany później → X nie jest „scalony”, wraca ze
+  swoimi wersjami, 2 wersje Y pominięte strażnikiem, Y zachowuje swoje;
+- Y scalony z nowym X na drugim urządzeniu → notatka N-Y zostaje przy Y, N-X przy X;
+- usunięcie na drugim urządzeniu przeniesione synchronizacją → pominięty jako „usunięty” (kontrola);
 - kontrole: nowy pacjent i nowa wersja istniejącej karty dochodzą jak dotąd; pusty sejf przyjmuje całą kopię.
-Na kodzie sprzed zmiany (P-ZAPIS-USUNIETEJ) 12 z 17 przypadków czerwonych w samym stanie magazynu; pozostałe 5 (trzy
-kontrole, rozpoznanie po notatkach i poprawka notatki pod Y — dotąd z tym samym skutkiem w magazynie) różnią się tylko
-nowymi polami wyniku. Mutacje (21, wszystkie wyłapane): bez pomijania — 11 czerwonych; scalanie zapisuje pominiętego —
+Na kodzie sprzed zmiany (`audyt` `3676f0d`) 13 z 19 przypadków czerwonych w samym stanie magazynu; pozostałe 6 (kontrole,
+rozpoznanie po notatkach i poprawka notatki pod Y — dotąd z tym samym skutkiem w magazynie) różnią się tylko nowymi
+polami wyniku. Drugi przegląd (trzy niezależne kąty, weryfikacja każdej uwagi) potwierdził trzy wady pierwszej wersji —
+nagrobek zwykłego usunięcia jako dowód scalenia, komunikat „na tym urządzeniu” przy nagrobku z synchronizacji, notatki
+Y przechodzące do X — poprawione wyżej. Mutacje (24, wszystkie wyłapane): nagrobek bez porównania daty w „scalenie
+tutaj” — 1; notatki pilnowane tylko u pominiętych — 1; bez właściciela notatki — 2; bez pomijania — 11 czerwonych; scalanie zapisuje pominiętego —
 8; bez kosza w mapie — 1; bez strażnika w scalaniu — 2; kosz bez filtra — 1; wszystkie notatki pominiętych do
 wewnętrznego scalania — 1; żadna notatka pominiętych — 1; „tylko w kopii” liczone z nagrobków wersji — 1; „scalony” bez
 warunku „scalenie tutaj” — 1; bez warunku „wszystkie wersje pod innymi kartami” — 1; bez warunku „karta docelowa
@@ -9320,8 +9332,8 @@ podgląd bez strażnika — 2; bez liczenia notatek tylko w kopii — 1, wersji 
 rozpoznanie bez notatek — 1; bez sekcji w podglądzie i bez linii w wyniku — e2e czerwony.
 `tests/e2e/kopia-konta-pomija.spec.mjs` (prawdziwa przeglądarka, droga lekarza: Importuj pacjentów → plik kopii →
 „Scal z moim kontem →”): po kopii usunięcie „Fikcyjna Ewa”, scalenie „Testowy Jan” z drugim „Testowy Jan”, wersja
-„Testowy Adam” w koszu → podgląd: „Pominięci — nie zostaną dodani (2)”, „scalony tutaj z kartą „Testowy Jan””,
-„usunięty na tym urządzeniu”, „Tylko w pliku kopii: 1 zapis.”, „Scal teraz (1 nowych zapisów)”; wynik: obie linie
+„Testowy Adam” w koszu → podgląd: „Pominięci — nie zostaną dodani (2)”, „scalony z kartą „Testowy Jan””,
+„usunięty po ostatnim zapisie w kopii”, „Tylko w pliku kopii: 1 zapis.”, „Scal teraz (1 nowych zapisów)”; wynik: obie linie
 „⊘ Pominięto …”, „✓ Łącznie dodano 1 zapisów”; magazyn: Adam 2 wersje, Jan 3, bez Ewy. Na kodzie sprzed zmiany
 czerwony.
 
@@ -9333,11 +9345,12 @@ przywraca kartę jak dotąd. Wersje karty scalonej na innym urządzeniu nie są 
 
 **Czego zmiana nie robi.** Pacjenta usuniętego albo scalonego tutaj nie da się przywrócić przez „Scal kopię konta”
 (dotąd też się nie dawało — karta znikała od razu); drogą pozostaje import pliku karty (P-IMPORT-NAGROBEK). X scalony
-tutaj, a w kopii są wersje X nowsze niż scalenie — X jest pomijany w całości, podgląd pokazuje liczbę zapisów tylko
-w kopii. Mapa właścicieli jest budowana raz: wersja przeniesiona w innej karcie między jej zbudowaniem a blokadą może
+tutaj, a w kopii są wersje X nowsze niż scalenie i jest w niej karta docelowa — X jest pomijany w całości, podgląd
+pokazuje liczbę zapisów tylko w kopii. Mapa właścicieli jest budowana raz: wersja przeniesiona w innej karcie między jej zbudowaniem a blokadą może
 być oceniona po starym przypisaniu; usunięcie albo scalenie X w tym czasie łapie świeży nagrobek (powód „usunięty”
-zamiast „scalony”). X scalony tutaj z kartą Y założoną po zrobieniu kopii, przy przyciętym nagrobku X i z własnymi
-wersjami X tylko w kopii — X wraca jako nowy z tymi wersjami (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama kradzież wersji przy nagrobku przegrywającym
+zamiast „scalony”). Nagrobek nie mówi, czy pacjenta usunięto, czy scalono: X scalony tutaj z kartą Y spoza kopii
+(założoną po jej zrobieniu), gdy kopia ma zapis X nowszy niż scalenie albo nagrobek X jest przycięty, wraca jako nowy
+z wersjami, których tu nie ma (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama kradzież wersji przy nagrobku przegrywającym
 z edycją z innego urządzenia to osobna wada. Listy pacjentów z kopii wskazujące pominiętą kartę — bez zmian (jak dotąd).
 Ekran wyniku nadal nie wymienia notatek i list, a „Scal teraz” nie pojawia się, gdy kopia niesie tylko nowe notatki
 albo listy — osobne punkty.
@@ -9346,6 +9359,32 @@ albo listy — osobne punkty.
 `vilda_chrome.js` (114 → 115) i `vilda_session_bridge.js` (38 → 39); nowe adresy w precache (append-only);
 `SW_VERSION` 1.1.199 → 1.1.200 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) —
 `npm run podbij-wersje`.
+
+## Ponowienie zapisu: niewypełniona sekcja karty docelowej to sekcja pusta (P-ZAPIS-USUNIETEJ-3, SW 1.1.200, `vilda_vault.js` 206, 2026-10-08)
+
+**Zmiana kliniczna: możliwa** — wzory, progi i jednostki bez zmian; zmienia się zawartość bieżącej wersji karty
+docelowej po ponowieniu zapisu (P-ZAPIS-USUNIETEJ-2). Poprawka uwagi P1 z przeglądu Codex w #588 (scalonym 2026-10-08).
+
+**Co było** (`audyt` `3676f0d`). Reguła „puste pole karty docelowej nie kasuje wartości ze starej karty” uznawała za
+puste tylko `null`, `undefined` i `''`. Formularz zapisuje niewypełnione sekcje jako obiekty z samymi `null` i `false`
+(np. plan `{palFactor:null, palWybrany:false, dietLevel:null, dietaWybrana:false}`, `foods`, `doctor`, sekcje funkcji
+życiowych). Gdy karta docelowa Y miała taki niewypełniony plan, a stara karta X wypełniony, ponowienie zastępowało plan X
+pustym planem Y. Odwrotnie: pusta sekcja w formularzu (różna od kopii wczytanej) nadpisywała wypełnioną sekcję Y.
+
+**Reguła po zmianie.** Pusta jest też wartość złożona: obiekt albo lista bez żadnej wartości poza `null`, `''` i `false`
+(sprawdzane w głąb). Taka sekcja karty docelowej nie zastępuje sekcji ze starej karty, a taka sekcja w formularzu nie jest
+„zmianą lekarza”. Liczby i teksty są danymi. Wyczyszczenie pola w formularzu przy ponowieniu nie kasuje wartości karty
+docelowej (jak dotąd dla pól pustych).
+
+**Przypadki syntetyczne** — `tests/unit/zapis-usunietej-karty.test.mjs`:
+- X z planem {1,6; wybrany; „redukcyjna”}, Y z pustym planem formularza → po „Scal pacjentów” głowa Y ma pusty plan
+  (kontrola); po ponowieniu z formularza X plan X;
+- formularz z planem {tekst: null, dieta: ''} → plan karty docelowej „plan Y” zostaje.
+Na `3676f0d` oba czerwone. Mutacje: `false` nie jest puste — 1 czerwony; bez sprawdzania w głąb — 2.
+
+**Wpływ kliniczny.** Wypełnione sekcje (plan żywieniowy, dane lekarza, funkcje życiowe) nie giną przy ponowieniu przez
+niewypełnione sekcje drugiej karty. „Scal pacjentów” (`Bsc1`) nadal trzyma sekcję karty docelowej, jeżeli nie jest
+`null` — także niewypełnioną; to zachowanie sprzed zmiany, poza zakresem tej poprawki.
 
 ## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.199, `vilda_vault.js` 205, 2026-10-08)
 

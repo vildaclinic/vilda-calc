@@ -379,6 +379,26 @@ describe('A13 — ponowienie do karty docelowej scalenia (dolaczPoScaleniu)', ()
     expect((await d.v.getPatient(y)).snapshots[0].payload.advanced.fatherHeight).toBe(180);
   });
 
+  it('niewypełniona sekcja domyślna karty docelowej nie zastępuje wypełnionej sekcji starej karty (Codex P1 w #588)', async () => {
+    const d = await konto();
+    const planX = { palFactor: 1.6, palWybrany: true, dietLevel: 'redukcyjna', dietaWybrana: true };
+    const x = (await d.v.savePatient(Object.assign(payload([[60, 120], [66, 123]]), { plan: planX }), { dedup: false })).patientId;
+    const planPusty = { palFactor: null, palWybrany: false, dietLevel: null, dietaWybrana: false }; // jak collectUserData bez planu
+    const y = (await d.v.savePatient(Object.assign(payload([48, 54]), { plan: planPusty, foods: { snacks: [], meals: [] } }), { dedup: false })).patientId;
+    const glowaX = (await d.v.getPatient(x)).snapshots[0].payload;
+    await d.v.mergePatients(x, y);
+    expect((await d.v.getPatient(y)).snapshots[0].payload.plan, 'kontrola: scalenie trzyma pusty plan karty docelowej').toEqual(planPusty);
+    await d.v.savePatient(formularzX(glowaX), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await d.v.getPatient(y)).snapshots[0].payload.plan, 'plan ze starej karty zostaje').toEqual(planX);
+  });
+
+  it('pusta sekcja w formularzu nie kasuje wypełnionej sekcji karty docelowej', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje();
+    const f = formularzX(glowaX, (q) => { q.plan = { tekst: null, dieta: '' }; });
+    await d.v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await d.v.getPatient(y)).snapshots[0].payload.plan).toEqual({ tekst: 'plan Y' });
+  });
+
   it('bieżąca wizyta wpisana przez lekarza zostaje w polach pacjenta', async () => {
     const { d, x, y, glowaX } = await przygotujSekcje();
     const f = formularzX(glowaX, (q) => { Object.assign(q.user, { age: 6, ageMonths: 0, height: 112, weight: 20 }); });

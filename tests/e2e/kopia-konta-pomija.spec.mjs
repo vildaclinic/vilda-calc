@@ -80,16 +80,16 @@ test.describe('P-KOPIA-POMIJA — „Scal kopię konta” pomija usuniętych i s
       name: 'kopia-konta-e2e.wiw', mimeType: 'application/octet-stream', buffer: Buffer.from(kopia, 'utf8'),
     });
     await page.getByRole('button', { name: 'Scal z moim kontem →' }).click();
-    await expect(page.getByText('Nie przywraca pacjentów scalonych tutaj z inną kartą ani usuniętych tutaj po ich ostatnim zapisie w kopii.')).toBeVisible();
+    await expect(page.getByText('Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim zapisie w kopii.')).toBeVisible();
     await page.getByPlaceholder('Hasło do tej kopii konta').fill(HASLO);
     await page.getByRole('button', { name: 'Sprawdź co zostanie scalone' }).click();
 
     const ekran = page.locator('.vilda-auth-merge');
     await expect(ekran.getByText('Pominięci — nie zostaną dodani (2)')).toBeVisible();
-    await expect(ekran.getByText('scalony tutaj z kartą „Testowy Jan”')).toBeVisible();
-    await expect(ekran.getByText(/^usunięty na tym urządzeniu/)).toBeVisible();
+    await expect(ekran.getByText('scalony z kartą „Testowy Jan”')).toBeVisible();
+    await expect(ekran.getByText(/^usunięty po ostatnim zapisie w kopii/)).toBeVisible();
     await expect(ekran.getByText('Tylko w pliku kopii: 1 zapis.')).toBeVisible();
-    await expect(ekran.getByText('Kopia konta nie przywraca pacjentów scalonych tutaj z inną kartą ani usuniętych tutaj po ich ostatnim zapisie w kopii.')).toBeVisible();
+    await expect(ekran.getByText('Kopia konta nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim zapisie w kopii.')).toBeVisible();
     await expect(ekran.getByText('Nowi pacjenci do dodania')).toHaveCount(0);
     await expect(ekran.getByText('1 nowych zapisów zostanie dodanych · pominięci: 2')).toBeVisible();
     const scal = page.getByRole('button', { name: /^Scal teraz/ });
@@ -98,8 +98,8 @@ test.describe('P-KOPIA-POMIJA — „Scal kopię konta” pomija usuniętych i s
 
     await scal.click();
     await expect(ekran.getByText('✓ Łącznie dodano 1 zapisów')).toBeVisible();
-    await expect(ekran.getByText('⊘ Pominięto „Testowy Jan” — scalony tutaj z kartą „Testowy Jan”')).toBeVisible();
-    await expect(ekran.getByText(/^⊘ Pominięto „Fikcyjna Ewa” — usunięty na tym urządzeniu/)).toBeVisible();
+    await expect(ekran.getByText('⊘ Pominięto „Testowy Jan” — scalony z kartą „Testowy Jan”')).toBeVisible();
+    await expect(ekran.getByText(/^⊘ Pominięto „Fikcyjna Ewa” — usunięty po ostatnim zapisie w kopii/)).toBeVisible();
     await expect(ekran.getByText(/^➕ Dodano/)).toHaveCount(0);
     expect(await stan(page), 'usunięta nie wraca, karta Jana zachowuje wersje, Adam odzyskuje wersję').toEqual(['Testowy Adam:2', 'Testowy Jan:3']);
   });

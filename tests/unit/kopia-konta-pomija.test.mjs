@@ -337,6 +337,49 @@ describe('P-KOPIA-POMIJA — pacjent scalony tutaj z inną kartą po zrobieniu k
     expect(wynik).toMatchObject({ addedPatientCount: 1, addedSnapshotCount: wersjeXwKopii - 2, foreignSnapshotCount: 2, skippedPatients: [] });
     expect((await A.baza.listSnapshotsForUser(A.uid, y)).map((w) => w.snapshotId).sort(), 'Y zachowuje swoje wersje').toEqual(wersjeY);
     expect((await A.baza.listSnapshotsForUser(A.uid, x)).length).toBe(wersjeXwKopii - 2);
+    expect((await A.v.listPatientNotesForPatient(y)).map((n) => n.title), 'notatka Y zostaje przy Y (jak jej wersje)').toEqual(['N-Y']);
+    expect((await A.v.listPatientNotesForPatient(x)).map((n) => n.title)).toEqual(['N-X']);
+  });
+
+  it('zwykłe usunięcie tutaj, a na innym urządzeniu Y scalony z X i X zapisany później: X wraca ze swoimi wersjami, nie „scalony”', async () => {
+    const A = await sejf();
+    const B = await sejf();
+    const y = await karta(A.v, 'Testowy', 'Jan', 'N-Y');
+    const x = await karta(A.v, 'Testowy', 'Jan', 'N-X');
+    await B.v.mergeSyncPayload(await A.v.exportSyncPayload());
+    await chwila(5);
+    await A.v.removePatient(x); // zwykłe usunięcie, bez scalania
+    await chwila(5);
+    await B.v.mergePatients(y, x);
+    await B.v.savePatient(zapis('Testowy', 'Jan', [60, 66, 72]), { patientId: x, dedup: false });
+    const kopiaB = await B.v.exportVaultBackup();
+    const wersjeY = (await A.baza.listSnapshotsForUser(A.uid, y)).map((w) => w.snapshotId).sort();
+    const wersjeXwKopii = (await B.baza.listSnapshotsForUser(B.uid, x)).length;
+
+    const podglad = await A.v.previewVaultBackupMerge(kopiaB, B.haslo);
+    expect(podglad.skippedPatients, 'kopia nowsza niż usunięcie — nie „scalony”').toEqual([]);
+    expect(podglad.addPatients.map((k) => [k.patientId, k.snapshotCount])).toEqual([[x, wersjeXwKopii - 2]]);
+    const wynik = await A.v.mergeVaultBackup(kopiaB, B.haslo);
+    expect(wynik).toMatchObject({ addedPatientCount: 1, foreignSnapshotCount: 2, skippedPatients: [] });
+    expect((await A.baza.listSnapshotsForUser(A.uid, y)).map((w) => w.snapshotId).sort(), 'Y zachowuje swoje wersje').toEqual(wersjeY);
+    expect((await A.baza.listSnapshotsForUser(A.uid, x)).length).toBe(wersjeXwKopii - 2);
+  });
+
+  it('nagrobek z synchronizacji (usunięcie na innym urządzeniu) liczy się jak lokalny', async () => {
+    const A = await sejf();
+    const B = await sejf();
+    await karta(A.v, 'Testowy', 'Adam');
+    const ewa = await karta(A.v, 'Fikcyjna', 'Ewa');
+    const kopia = await A.v.exportVaultBackup();
+    await B.v.mergeSyncPayload(await A.v.exportSyncPayload());
+    await chwila(5);
+    await B.v.removePatient(ewa);
+    await A.v.mergeSyncPayload(await B.v.exportSyncPayload());
+    expect(await A.baza.getPatientForUser(A.uid, ewa), 'kontrola: synchronizacja usunęła kartę').toBeFalsy();
+
+    const wynik = await A.v.mergeVaultBackup(kopia, A.haslo);
+    expect(wynik.skippedPatients.map((k) => [k.patientId, k.reason])).toEqual([[ewa, 'deleted']]);
+    expect(await A.baza.getPatientForUser(A.uid, ewa)).toBeFalsy();
   });
 
   it('notatka X, której tu nie ma, nie jest importowana; podgląd ją liczy (przed zmianą: sierota pod X z nagrobkiem)', async () => {
