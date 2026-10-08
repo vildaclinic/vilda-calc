@@ -83,7 +83,8 @@ describe('P-ODTWORZ: po dokonanym wyborze nikt nie pokazuje przycisku „Odtwór
   it('applyLoadedData nowego wczytania kasuje zapamiętany wybór (przycisk wraca dla KOLEJNEGO pacjenta); odtworzenie sesji go nie rusza', () => {
     const zr = ZRODLO;
     // kotwica w źródle: kasowanie wyboru stoi tuż przed pokazaniem przycisku i jest bramkowane isSessionRestore
-    expect(zr).toContain('if(!a.isSessionRestore)try{r.sessionStorage&&r.sessionStorage.removeItem("vildaLoadChoiceV1")}catch{}a.isSessionRestore||(g?x("show-restore-button"');
+    // (P-ODTWORZ-WIEK-2: razem z wyborem znika znacznik wizyty zapisanej w tej karcie)
+    expect(zr).toContain('if(!a.isSessionRestore)try{r.sessionStorage&&(r.sessionStorage.removeItem("vildaLoadChoiceV1"),r.sessionStorage.removeItem("vildaDobAgeZapisV1"))}catch{}a.isSessionRestore||(g?x("show-restore-button"');
     // strażnik w showRestoreButton i w mostku
     expect(zr).toContain('if(wyborPoWczytaniu())return;s.style.display="inline-block"');
     expect(zr).toContain('!(d!=="none"&&wyborPoWczytaniu())&&(i.style.display=d)');
