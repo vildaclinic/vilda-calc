@@ -1310,7 +1310,7 @@ Notatka PACJENTA powiązana z wizytą: przycisk `addVisitNoteBtnSidebar` w menu 
 
 **D2 — notatka nie trafia do usuniętego pacjenta.** `savePatientNote` odrzuca zapis, gdy `patientId` ma wygrywający nagrobek (usunięty tu albo na innym urządzeniu); pseudopacjenci modułów (`__vilda*`) są wyłączeni z reguły. Celowo **nie** odrzucamy zapisu dla samego „braku rekordu": notatka może powstać, zanim pacjent dojedzie synchronizacją.
 
-**G3 — re-import karty `.wiw` po usunięciu.** `importPatientFromEnvelope` (`ns`) nie kasował nagrobka pacjenta, więc własne scalanie usuwało go zaraz po imporcie albo przy pierwszym pobraniu (pomiar: `isNew:true, addedSnapshots:1`, a `listPatients()` puste). Import kasuje teraz nagrobek pacjenta (jak `savePatient`) **oraz nagrobki importowanych notatek** — bez tego drugiego kroku, po naprawie G2, wracał sam pacjent, bez wyników i zaleceń (zmierzone regresem `tests/e2e/klirens-faza6.spec.mjs`).
+**G3 — re-import karty `.wiw` po usunięciu.** `importPatientFromEnvelope` (`ns`) nie kasował nagrobka pacjenta, więc własne scalanie usuwało go zaraz po imporcie albo przy pierwszym pobraniu (pomiar: `isNew:true, addedSnapshots:1`, a `listPatients()` puste). Import kasuje teraz nagrobek pacjenta (jak `savePatient`; *od P-ZAPIS-USUNIETEJ, 2026-10-08, `savePatient` z id karty usuniętej albo scalonej odmawia — nagrobek zdejmuje już tylko jawny import i synchronizacja*) **oraz nagrobki importowanych notatek** — bez tego drugiego kroku, po naprawie G2, wracał sam pacjent, bez wyników i zaleceń (zmierzone regresem `tests/e2e/klirens-faza6.spec.mjs`).
 
 **G6 — wskrzeszenie notatki nie cofa wersji (D3: nowsza treść wygrywa).** Ścieżka P5 („Zostaw notatkę") zapisywała wskrzeszoną notatkę z `rev:1`, a scalanie rozstrzyga najpierw po `rev` — dopisek z urządzenia wskrzeszającego przegrywał ze starszą edycją z innego urządzenia, bez błędu (pomiar: A `rev 3` wygrywało z wskrzeszeniem 40 ms późniejszym). Nagrobek notatki niesie teraz `rev` kasowanej wersji (**oba adaptery**, IndexedDB i pamięciowy, zapisywały dotąd tylko `{id, deletedAtISO}`), `savePatientNote` startuje przy wskrzeszeniu od tego `rev`, a scalanie przenosi najwyższy znany `rev` do nagrobka. Świadomie **nie** zmieniono reguły dla ładunku bez pola `rev` (podpunkt E7 audytu — sceptyk miał do niego zastrzeżenie; zostaje do raty 2).
 
@@ -2210,7 +2210,7 @@ Pusta komórka niesie powód **silnika**: model woła `calculateBlumIssPredictio
 1. **Wszystkie wersje źródła przechodzą pod cel bez zmiany treści i dat.** Magazyn wersji jest kluczowany po `snapshotId` (indeks `byPatient` jest pomocniczy), więc przepięcie to zmiana pola `patientId` w tym samym wpisie. Numeracja `seq` (P-KOLEJNOSC-WERSJI) jest nadawana od nowa w porządku `savedAtISO`, bez dziur i powtórzeń — historia wersji celu pokazuje potem obie linie chronologicznie.
 2. **Nowa głowa = głowa celu uzupełniona tym, czego w niej nie ma:** data urodzenia, części nazwiska, płeć, tygodnie; wiersze historii wzrastania obu trybów (suma po kluczu wiek|wzrost|masa, wiersze `ghSync` pomijane, sortowanie po wieku); wzrosty rodziców i wiek kostny, gdy cel ich nie ma; punkty terapii GH/otyłość/bisfosfoniany (suma bez duplikatów); sekcje kartoteki (okołoporodowe, pokwitanie, opiekun, lekarz, klirens, dieta) tylko gdy cel ich nie ma. **Bieżąca wizyta (wiek, masa, wzrost) zostaje z celu** — to rekord, który lekarz wskazał jako aktualny. Zapis idzie przez `savePatient` z pominięciem anti-clobbera (to świadome scalenie, nie zapis na nieaktualnej kopii); `snapshotCount` główki jest przeliczany z magazynu, bo `savePatient` nie zna przepiętych wersji.
 3. **Wpisy Terminarza** źródła dostają `patientId` celu tą samą ścieżką, co przy scalaniu osoby spoza bazy (`mergeExternalIntoPatient`); **listy pacjentów** zamieniają źródło na cel w członkach i wykluczeniach.
-4. **Źródło znika jak przy `removePatient`:** nagrobek, więc synchronizacja usunie je także na innych urządzeniach; przepięte wersje idą z deltą celu, bo `buildPatientDelta` niesie pełną listę jego wersji. Powiadomienie `onPatientSaved` odświeża otwarte widoki, a jeżeli cel jest wczytany w formularzu, `vilda_baseline_pacjenta.js` (P-ODSWIEZENIE) podciąga bazę.
+4. **Źródło znika jak przy `removePatient`:** nagrobek, więc synchronizacja usunie je także na innych urządzeniach (*od P-ZAPIS-USUNIETEJ, 2026-10-08, zapis do źródła po scaleniu jest odmawiany ze wskazaniem celu — źródło nie wraca*); przepięte wersje idą z deltą celu, bo `buildPatientDelta` niesie pełną listę jego wersji. Powiadomienie `onPatientSaved` odświeża otwarte widoki, a jeżeli cel jest wczytany w formularzu, `vilda_baseline_pacjenta.js` (P-ODSWIEZENIE) podciąga bazę.
 
 Odmowy z nazwanym powodem: ten sam rekord, brak rekordu, rekord spoza bazy (te scala dotychczasowa ścieżka).
 
@@ -2667,6 +2667,44 @@ Stąd kumulacja: pierwszy błąd tworzył warunki dla wszystkich następnych. Da
 *Strażnicy:* `tests/unit/tozsamosc-pacjenta-przy-zapisie.test.mjs` (14: niesienie id, odczyt z `sessionStorage`, odporność normalizacji na wielkość liter i ogonki, bramka nazwiska, brak wczytanego rekordu, puste nazwy, brak sejfu, sejf bez `normalizePatientName`, `sessionStorage` rzucający wyjątkiem, brak okna, okablowanie zapisu). `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` (3: odtworzenie zgłoszonego przebiegu, powtarzane zapisy, bramka przy zmianie nazwiska). `tests/e2e/data-urodzenia-wiek.spec.mjs` (+1: czyszczenie daty, tygodni i blokady wieku). **Zmierzone czerwone:** 14/14 jednostkowych oraz test czyszczenia pól.
 
 *Uwaga o teście e2e:* prawdziwa ścieżka „Wczytaj tego pacjenta" siedzi w domknięciu `vilda_auth_ui.js` i nie da się jej wywołać z testu, więc wczytanie odtwarzamy przez `applyLoadedData` + zdarzenie `vilda:patient-loaded` — czyli te same funkcje produkcyjne, których używa aplikacja. Przy takim wywołaniu pola liczbowe formularza są zerowane asynchronicznie (zachowanie sprzed tej zmiany, sprawdzone na wersji z HEAD), dlatego test czeka na to zerowanie, zanim cokolwiek wpisze.
+
+### P-ODTWORZ-WIEK — „Odtwórz zapis" liczył wiek i centyle na dziś zamiast na dzień pomiaru (SW 1.1.198, 2026-10-08, zgłoszenie właściciela)
+
+**Zgłoszenie.** Pacjent z zapisaną datą urodzenia, wczytany przez „Odtwórz zapis": pod polem daty „Z kartoteki. Wiek na dzień dzisiejszej wizyty: 16 lat 11 mies.. Zmiana daty w Karcie Pacjenta.", w polach wieku 16 lat 11 mies., choć wizyta była w wieku 16 lat 10 mies. Karta Pacjenta tego samego pacjenta poprawnie: „Dane z wieku 16 lat 10 mies. (aktualnie pacjent ma 16 lat 11 mies.)". Centyle formularza głównego nie zgadzały się z Kartą.
+
+**Mechanizm (odtworzony na prawdziwej stronie przed zmianą, dane fikcyjne).** `restoreLoadedState()` wpisuje zapisany wiek do pól i od razu przelicza wyniki. Zaraz potem `vilda_dob_age.js` dostaje `vilda:state-restored`, przelicza wiek z daty urodzenia **na dziś**, nadpisuje pola zdarzeniami `input`/`change` i wymusza drugie przeliczenie — już w dzisiejszym wieku. Ta sama ścieżka działała po F5 (`setFromSession`), na DocPro i w panelach powłoki (`vilda:persist-restored`). `readExactAge()` i `readWeeks()` też liczyły na dziś, więc strażnik `totalMonths` w `lmsNiemowleWiek` przepuszczał dzisiejszy wiek ułamkowy (pola już go niosły), a karta zespołu Downa czyta `readExactAge()` bez strażnika. Ponowny zapis po odtworzeniu utrwaliłby stary wzrost i masę pod nowym wiekiem — zmyślony punkt pomiarowy, przed którym ostrzega Rata A (P13). Żaden test tego nie widział: wszystkie zapisywały i odtwarzały tego samego dnia.
+
+**Reguła.** Ta sama, co w Karcie Pacjenta (Rata B, P3, decyzja właściciela): wzrost i masę znamy wyłącznie z chwili pomiaru, więc odtworzona wizyta ma wiek z dnia pomiaru. Data urodzenia podpowiada wiek przy **kolejnym** pomiarze („Nowy pomiar"), nie przelicza starego.
+
+**Zmiana.**
+
+1. **`vilda_dob_age.js` (7 → 8)** — tryb „odtworzony zapis": w sesji karty jest wybór `vildaLoadChoiceV1 = 'restore'` (aplikacja trzyma go od dawna; przetrwa F5 i przejście na DocPro, zdejmuje go nowe wczytanie pacjenta, „Nowy pomiar" i „Wyczyść") **i** masa oraz wzrost w formularzu są takie jak w rekordzie. Wiek pomiaru: zapisany wiek rekordu (`user.age`/`ageMonths`), a bez niego wiek z daty urodzenia na **dobę pomiaru** (`user.measuredAtISO`, inaczej `timestampISO`). Data urodzenia wpisana w formularzu, której rekord nie zna (dopisana po zapisie wizyty bez daty), liczy się na dobę pomiaru tylko wtedy, gdy ta doba jest pewna (zapisana data pomiaru albo wizyta z dziś); inaczej zostaje zapisany wiek. Pola wieku zostają tylko do odczytu. `readExactAge()` i `readWeeks()` liczą na dobę pomiaru — **tylko** gdy doba daje dokładnie zapisany wiek (dla doby wziętej z `timestampISO` u niemowlęcia także zapisane tygodnie; przy pewnej dobie tygodnie sklonowane przez Kartę albo wpisane ręcznie nie przesłaniają kalendarza); inaczej `readExactAge()` oddaje `null` i siatki biorą wiersz ukończonego miesiąca. Notka mówi wprost, z jakiej chwili są dane: „Z kartoteki. Pomiar z 17-06-2026 — wiek w dniu pomiaru: 16 lat 10 mies. (aktualnie pacjent ma 16 lat 11 mies.). Wiek na dziś liczy „Nowy pomiar”. Zmiana daty w Karcie Pacjenta." Wizyta zapisana dziś dostaje zwykłą notkę dzisiejszej wizyty. Przy okazji: koniec podwójnej kropki „mies..".
+2. **Nowa masa albo wzrost po „Odtwórz zapis" to nowy pomiar** — wiek wraca na dziś, jak przed zmianą (nasłuch na polach masy i wzrostu, czynny tylko przy wyborze „restore"). Powrót do zapisanej wartości przywraca odtworzoną wizytę.
+3. **Data pomiaru w rekordzie (`user.measuredAtISO`, kolektor `vilda_data_import_export.js` 1.25.0 → 1.26.0).** Kolektor zawsze daje świeży `timestampISO`, więc ponowny zapis odtworzonej wizyty przesuwał dobę pomiaru na dzień zapisu i tygodnie oraz dokładny wiek niemowlęcia liczyły się na inny dzień niż pomiar. Kolektor zapisuje teraz datę pomiaru, ale **tylko pewną** (`VildaDobAge.readMeasuredAtISO()`): odtworzona, niezmieniona wizyta niesie datę z rekordu albo swój dzień zapisu, jeśli data urodzenia go potwierdza (doba daje dokładnie zapisany wiek); dzisiejsza wizyta z wiekiem liczonym z daty urodzenia — dzisiejszą. Wiek wpisany ręcznie daty nie dostaje (mógł opisywać inny dzień). Strona kalkulatora klirensu (bez modułu daty urodzenia) przenosi datę z rekordu przy wyborze „Odtwórz" i niezmienionej masie i wzroście. To samo pole pisze od dawna Karta Pacjenta (pomiar z datą wsteczną); sejf podaje je w historii jako datę pomiaru, a scalanie duplikatów go nie kopiuje.
+4. **Czytniki daty pomiaru.** Karta Pacjenta „Popraw pomiar" podpowiada datę pomiaru migawki (`user.measuredAtISO`), a nie dzień jej zapisu — inaczej podpowiedź wieku z daty urodzenia na dzień ponownego zapisu przestawiała wiek pomiaru (`vilda_auth_ui.js`). Raport po wizycie podaje dzień, na który formularz liczy wiek (`vilda_patient_report.js`). Karta „Porównanie z poprzednim pomiarem" podaje dzień poprzedniego pomiaru (`vilda_summary_cards.js`).
+5. **`restoreLoadedState()`** ustawia wybór `'restore'` zaraz po pytaniu o niezapisane dane, a nie dopiero na końcu: po zamknięciu okna „Co chcesz zrobić?" Escape'em i kliknięciu samego przycisku „Odtwórz zapisany stan" synchroniczne przeliczenia szły jeszcze w wieku na dziś (zmierzone u niemowlęcia: „Waga: 97 centyl Wzrost: >99 centyl" zamiast 54/51). Anulowanie pytania niczego nie ustawia.
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, prawdziwa strona, zegar strony przesunięty między zapisem a odtworzeniem).**
+
+| Wejście | W dniu wizyty | Po „Odtwórz zapis" przed zmianą | Po „Odtwórz zapis" po zmianie |
+|---|---|---|---|
+| chłopiec ur. 20-07-2009, 172 cm / 60 kg, zapis 17-06-2026, odtworzenie 10-07-2026 | 16 l. 10 m.; masa 26. c., wzrost 21. c. | 16 l. **11** m.; masa **25.** c., wzrost **20.** c. | 16 l. 10 m.; masa 26. c., wzrost 21. c. (`calcPercentileStats` co do czwartego miejsca jak w dniu wizyty); Karta: 21./26./BMI 39. c., Cole 96,6% — te same liczby |
+| dziewczynka ur. 19-05-2026 (29. doba), 53,5 cm / 4,2 kg, zapis 17-06-2026, odtworzenie 20-07-2026 | 0 m., 4 tyg.; masa 54. c., wzrost 51. c. | **2 m., 8 tyg.**; masa **6.** c., wzrost **4.** c. | 0 m., 4 tyg.; masa 54. c., wzrost 51. c. |
+| dziewczynka ur. 01-06-2026, pomiar 11-06-2026 (10. doba), odtworzona i zapisana ponownie 26-06-2026, potem F5 i odtworzenie 20-07-2026 | 1 tydz., doba 10 | — | za każdym razem 1 tydz., doba 10, te same centyle; notka „Pomiar z 11-06-2026" |
+| chłopiec jak wyżej, zapis 17-06-2026, odtworzony i zapisany ponownie 10-07-2026 | — | — | rekord: wiek 16/10, `measuredAtISO` 2026-06-17; Karta „Popraw pomiar": data 17-06-2026, wiek 16 l. 10 m.; karta porównania: „Poprzedni pomiar: 17 czerwca 2026"; raport: pomiar 17.06.2026 |
+| chłopiec ur. 01-02-2026, pomiar 03-06-2026 (122. doba), odtworzony i zapisany ponownie w kalkulatorze klirensu 28-06, odtworzony w formularzu 20-07 | doba 122 | — | doba 122, te same centyle, notka „Pomiar z 03-06-2026" |
+| chłopiec jak wyżej, „Odtwórz zapis" 10-07-2026, potem nowy wzrost 174 cm i masa 61 kg | — | 16 l. 11 m. | 16 l. 11 m. — nowy pomiar liczy się na dziś |
+| ten sam chłopiec, „Nowy pomiar" 10-07-2026 | — | 16 l. 11 m. | 16 l. 11 m. (bez zmian) |
+
+**Wpływ kliniczny.** Zmienia się wyłącznie wiek, w którym formularz główny liczy **odtworzoną, niezmienioną** wizytę: z dzisiejszego na wiek pomiaru. Dla nastolatka to przesunięcie o 1 centyl; dla niemowlęcia odtworzonego po miesiącu przed zmianą prawidłowo rosnące dziecko wyglądało na zahamowanie wzrastania (51. → 4. centyl). Wzory, tablice, progi, interpolacja i jednostki bez zmian. Nowa wizyta („Nowy pomiar", świeży wpis, nowa masa lub wzrost wpisane po odtworzeniu) liczy się jak dotąd.
+
+**Przegląd.** Dwie rundy przeglądu adwersaryjnego (24 i 25 agentów, każde znalezisko sprawdzane przez dwóch niezależnych weryfikatorów, większość odtworzona na prawdziwej stronie). Runda 1 potwierdziła: dryf doby pomiaru przy ponownym zapisie (u niemowlęcia 54./58. → 22./17. c. i utrwalone `ageWeeks` 3 zamiast 1), wiek starej wizyty dla nowych wartości masy i wzrostu, słaby test ścieżki z Escape — stąd punkty 2, 3 i 5. Runda 2 potwierdziła: zamianę niepewnego dnia zapisu w „pewną" datę, stare `ageWeeks` klonowane przez Kartę, ręczne tygodnie przy dacie urodzenia dopisanej tego samego dnia, gubienie daty przez stronę klirensu oraz trzy czytniki daty zapisu zamiast pomiaru — stąd reguła „tylko pewna data", reguły tygodni w punkcie 1 i punkt 4. Odrzucone: zgłoszenia, których scenariusz nie zachodzi w aplikacji (np. zmiana tożsamości przy zablokowanych polach) albo które są zgodne z regułą właściciela (do decyzji niżej).
+
+**Czego ta zmiana NIE robi.** Nie poprawia rekordów zapisanych ponownie po odtworzeniu starszym kodem — tam wiek „na dziś" mógł zostać utrwalony; dla rekordów bez pewnej daty pomiaru doby nie zgadujemy (wiersz ukończonego miesiąca). Nie zmienia reguły Karty Pacjenta ani wzorów. Znane ograniczenie istniejące wcześniej: `lmsNiemowleWiek` w `app.js` dopasowuje dokładny wiek formularza tylko po ukończonych miesiącach, więc w tym samym dokumencie trafia on też do innych wierszy tego samego miesiąca (dotyczyło już bieżącej wizyty; teraz także odtworzonej) — do osobnej decyzji.
+
+*Strażnicy:* `tests/unit/odtworzenie-wiek-pomiaru.test.mjs` (30, prawdziwy `vilda_dob_age.js` na atrapie DOM i prawdziwy resolver daty raportu: doba pomiaru z `measuredAtISO`/`timestampISO` i strefy, wiek pomiaru wg reguły Karty, dokładne doby tylko przy zgodnej dobie, reguły tygodni, notka zgłoszenia co do znaku, kontrola „Nowy pomiar"/nowe wczytanie na dziś, F5, nowy pomiar po odtworzeniu, wizyta zapisana dziś, rekord zapisany ponownie, data dopisana po zapisie, tylko pewna data pomiaru do zapisu, kolejność wyboru w `restoreLoadedState`). **Zmierzone czerwone:** 28 z 30 przeciwko kodowi sprzed zmiany (zielone zostają dwaj strażnicy zachowania, które ma zostać: „wybór bez rekordu" i tygodnie z Karty). `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs` (8 na prawdziwej stronie z przesuniętym zegarem: nastolatek z F5, DocPro i kontrolą „Nowy pomiar"; niemowlę w 29. dobie; okno zamknięte Escape i sam przycisk z odczytem synchronicznym; ponowny zapis w tym samym miesiącu z F5 i kolejnym odtworzeniem; nowy pomiar po odtworzeniu; data pomiaru w Karcie, karcie porównania i raporcie; zapis z kalkulatora klirensu; powłoka Start → DocPro). **Zmierzone czerwone:** 8 z 8 przeciwko kodowi sprzed zmiany; test z Escape czerwony także po cofnięciu samej zmiany w `restoreLoadedState`. `tests/unit/odtworzenie-na-zywo.test.mjs`: pin `VERSION` 7 → 8.
+
+**Do decyzji właściciela.** (1) Akceptacja kliniczna reguły dla formularza głównego. (2) Brzmienie notki. (3) Reguła „nowa masa albo wzrost po odtworzeniu = nowy pomiar na dziś": poprawka literówki w pomiarze starej wizyty też przełączy wiek na dziś (jak przed zmianą); inne pola (obwody, talia, ciśnienie) wpisane do odtworzonej wizyty liczą się w wieku tej wizyty i dostają jej datę. (4) Poprawka daty urodzenia w Karcie zostawia zapisany wiek wizyty (reguła Karty); wiek na dziś daje „Nowy pomiar". (5) Kolektor formularza głównego zapisuje `user.measuredAtISO` (tylko pewną datę) — nowe użycie istniejącego pola rekordu.
 
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
@@ -9190,6 +9228,106 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Zapis do karty usuniętej albo scalonej: odmowa ze wskazaniem karty docelowej (P-ZAPIS-USUNIETEJ, SW 1.1.196, `vilda_vault.js` 204, `vilda_data_import_export.js` 100, `vilda_auth_ui.js` 480, 2026-10-08)
+
+**Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, do
+której karty trafia zapis i które pomiary są w bieżącej wersji karty docelowej po ponowieniu (niżej). Decyzja właściciela
+2026-10-08: „zrób to zgodnie z rekomendacjami” — punkt A13 przeglądu „co dalej po #518”: odmówić zapisu do karty
+usuniętej albo scalonej i wskazać kartę, z którą ją scalono.
+
+**Co było** (zmierzone na `audyt` `8c13b80`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne). Zapis z id karty, której
+już nie ma — usuniętej (`removePatient`) albo scalonej („Scal pacjentów”) — zakładał ją od nowa z jedną wersją i zdejmował
+nagrobek. Po scaleniu na liście wracał duplikat, po usunięciu — pacjent, a synchronizacja przenosiła to na inne
+urządzenia. Główny „Zapisz dane” w karcie przeglądarki, która trzymała pacjenta scalonego w innej karcie, mówił
+„Zapisano nowego pacjenta”. Tak samo zapis czekający na blokadę scalenia (karta była na liście przed blokadą) —
+z „Zapisano (snapshot 1)”. Korekta wersji i pomiaru takiej karty kończyła się błędem technicznym („snapshot … nie istnieje
+dla pacjenta”, „brak pacjenta”).
+
+**Reguła po zmianie.**
+- `savePatient` pod blokadą pacjenta czyta rekord świeżo (także gdy karta była na liście przed blokadą). Brak rekordu
+  i lokalny nagrobek → odmowa `code: 'PATIENT_DELETED'` przed pytaniem „Ktoś inny zmienił ten rekord” i przed pierwszym
+  zapisem; nic nie jest zapisane, nagrobek zostaje. Pola błędu: `patientId`, `deletedAtISO`, `mergedIntoPatientId`,
+  `mergedIntoName`, `mergedIntoSameIdentity`. Tak samo `updateSnapshotPayload`, `updateMeasurementRow`,
+  `deleteMeasurementRow`, `saveExternalPatient` z id i zapis z `payload.patientId`.
+- Karta docelowa scalenia: „Scal pacjentów” przepina wersje z tym samym `snapshotId`, więc to karta, pod którą leżą dziś
+  znane wersje karty odrzuconej — wczytane w tym oknie (`getPatient`), zapisane w nim albo podane przez wołającego
+  (`baseSnapshotId`, nowa opcja `znaneWersje`). Bez tego odmowa mówi „usunięto albo scalono z inną kartą”. Format nagrobka
+  bez zmian. `mergedIntoSameIdentity`: nazwisko, data urodzenia i płeć z zapisu zgadzają się z kartą docelową.
+- Wyjątki: wewnętrzny zapis „Scal pacjentów”, jawny import starego pliku JSON (`importLegacyJsonPatient` przywraca kartę
+  jak dotąd, jak import karty z P-IMPORT-NAGROBEK), synchronizacja i import karty (nie wołają `savePatient`). Karta
+  nieznana (bez nagrobka: niepobrana, z pliku, nagrobek przycięty po 365 dniach) — zapis jak dotąd.
+- Ponowienie do karty docelowej (`savePatient` z `patientId` celu, `baselinePayload` i nową opcją `dolaczPoScaleniu`):
+  wiersze głowy celu, których nie ma ani w zapisie, ani w kopii wczytanej do formularza (sprawdzane w obu sekcjach
+  pomiarów), są dopisywane. Nic nie jest zastępowane i nie ma pytania — jak „Scal pacjentów”, które trzyma oba pomiary
+  z tego samego miesiąca. Wiersz skasowany albo poprawiony przez lekarza w formularzu (jest w kopii wczytanej) nie wraca.
+
+**Interfejs.**
+- „Zapisz dane”: formularz i baza formularza zostają bez zmian, okno przestaje celować w odrzuconą kartę (klucze
+  czyszczone tylko, gdy wskazują właśnie ją), chip zapisu w stanie błędu. Komunikaty:
+  - karta docelowa znana, ta sama tożsamość: „Nie zapisano — tego pacjenta scalono z kartą „Y”. Dane w formularzu
+    zostały. Kliknij „Zapisz dane” jeszcze raz, aby dopisać je do tamtej karty.” — drugi klik zapisuje do Y z
+    dopisaniem jej wierszy;
+  - karta docelowa znana, inna tożsamość: „… scalono z kartą „Y”, która ma inne nazwisko albo datę urodzenia. Dane
+    w formularzu zostały. Otwórz tamtą kartę z listy pacjentów i wpisz w niej nowe dane.” — kolejne kliknięcia nic nie
+    zapisują (tożsamość karty Y nie jest nadpisywana danymi z formularza);
+  - karta docelowa nieznana: „Nie zapisano — tego pacjenta usunięto albo scalono z inną kartą. Dane w formularzu zostały.
+    Kliknij „Zapisz dane” jeszcze raz — aplikacja dobierze kartę tak jak przy każdym zapisie.” — drugi klik idzie bez id
+    odrzuconej karty (zwykłe dopasowanie albo okno tożsamości).
+  Pamięć odmowy jest związana z bazą formularza; wczytanie innego pacjenta ją unieważnia.
+- Edycja karty i szybki pomiar: „Nie zapisano — tego pacjenta scalono z kartą „Y”. Wpisanych zmian nie zapisano — wpisz
+  je w tamtej karcie.” albo „… usunięto albo scalono z inną kartą. Wpisanych zmian nie zapisano.”; przycisk zapisu
+  zostaje zablokowany. Pozostałe ekrany (Terminarz, przywracanie wersji, „Dodaj do bazy”) pokazują komunikat sejfu:
+  „Tego pacjenta scalono z kartą „Y” — nic nie zapisano.” albo „Tego pacjenta usunięto albo scalono z inną kartą — nic
+  nie zapisano.”.
+- Desktop (1440) i telefon (390): komunikaty się mieszczą, bez poziomego przewijania.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/zapis-usunietej-karty.test.mjs` (prawdziwy
+`vilda_vault.js` i `vilda_data_import_export.js`):
+- po `removePatient(X)` zapis z id X → `PATIENT_DELETED`, `mergedIntoPatientId: null`, 0 zapisów w magazynie, nagrobek
+  zostaje, X nie ma na liście;
+- po `mergePatients(X, Y)` w tym samym oknie → `mergedIntoPatientId: Y`, „Testowy Jan”, tożsamość zgodna; Y bez zmian,
+  bez duplikatu; druga karta przeglądarki bez wskazówki → cel nieznany, z `znaneWersje` albo `baseSnapshotId` → Y;
+- X 2020-01-01 scalony z Y 2020-02-02 → cel Y, tożsamość niezgodna;
+- odmowa przed rozstrzygaczem P14 (0 pytań); id z `payload.patientId` i osoba spoza bazy z id → ta sama odmowa;
+- korekta wersji karty scalonej → odmowa z celem Y; korekta i usunięcie pomiaru karty usuniętej → odmowa;
+- kontrole: karta nieznana z jawnym id → założona jak dotąd; nowa karta bez id nie czyta nagrobków; import starego JSON
+  z id karty usuniętej → przywrócona jak dotąd; „Scal pacjentów” bez zmian;
+- ponowienie: X {60:120, 66:123}, Y {48, 54, 66:125}; po scaleniu głowa Y {48, 54, 60:120, 66:123, 66:125}; formularz X
+  {60:120, 66:124 (poprawka), 72} z `dolaczPoScaleniu` → bez pytania, głowa Y {48, 54, 60:120, 66:124, 66:125, 72};
+  formularz bez 60 (skasowany) → 60 nie wraca; pomiar Y trzymany przez formularz w drugiej sekcji → jeden wiersz;
+  kontrola: bez opcji zapis do Y pyta jak dotąd;
+- „Zapisz dane”: scalona, ta sama tożsamość → odmowa z nazwą, baza formularza ta sama, klucze okna wyczyszczone; drugi
+  klik → zapis do Y z `dolaczPoScaleniu`, głowa Y {48, 54, 60:120, 66:123, 72}; inna data urodzenia → drugi klik nie
+  dochodzi do sejfu, liczba kart bez zmian; usunięta → drugi klik bez id, „Zapisano nowego pacjenta”, X nie wraca.
+Na `8c13b80` 12 z 17 pierwotnych przypadków czerwonych (kontrole zielone). `tests/unit/blokada-usuwania-scalania.test.mjs`
+(A2, zapis źródła w trakcie scalania) zaostrzony: odmowa `PATIENT_DELETED` bezwarunkowo, źródło bez rekordu i wersji,
+z nagrobkiem; na `8c13b80` czerwony w obu trybach. Mutacje: bez odmowy — 11 czerwonych; odczyt rekordu tylko dla karty
+spoza listy — 2 (wyścig A2); bez dopisania — 2; pytanie przy dopisaniu — 1; bez porównania daty urodzenia — 2; bez
+pamięci wersji — 5; bez wyjątku importu — 1; kopia wczytana wraca — 2; dopisanie sprawdzane w jednej sekcji — 1;
+formularz bez celu Y — 1; formularz zapisuje mimo innej tożsamości — 1.
+`tests/e2e/zapis-usunietej-karty.spec.mjs` (prawdziwa przeglądarka, dwie karty): pacjent wczytany i dopisany pomiar
+w karcie A, scalenie w karcie B → „Zapisz dane”: komunikat z nazwą karty, formularz bez zmian, X nie wraca, bez duplikatu;
+drugi klik → „Zapisano”, pomiary Y zostają, nowy pomiar w Y. Edycja karty usuniętej w karcie B → komunikat, „Zapisz
+zmiany” zablokowany. Na `8c13b80` oba czerwone („Zapisano nowego pacjenta: Testowy Jan.”).
+
+**Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Pacjent usunięty albo scalony nie wraca po cichu na listę
+i na siatki. Po ponowieniu do karty docelowej jej bieżąca wersja ma pomiary obu kart i nowe pomiary z formularza;
+pomiary z tego samego miesiąca o różnej treści zostają oba (jak po „Scal pacjentów”) — lekarz rozstrzyga je w karcie.
+Tożsamość karty docelowej (nazwisko, data urodzenia, płeć) nie jest nadpisywana: przy różnicy zapisu nie ma.
+
+**Czego zmiana nie robi.** Ochrona jest lokalna: działa na tym, co wie sejf tego okna. Okno, które nie poznało jeszcze
+usunięcia (tryb „tylko chmura” przed pobraniem, inne urządzenie bez synchronizacji), dalej zapisze kartę, a synchronizacja
+rozstrzygnie jak dotąd („ostatni zapis wygrywa”, P-SCALANIE-BLOKADA). W oknie, w którym wykonano scalenie albo
+usunięcie, formularz przestaje celować w kartę od razu (jak dotąd), więc odmowy tam nie ma — zapis idzie zwykłym
+dopasowaniem. Po odświeżeniu strony bez ponownego wczytania pacjenta sejf nie zna jego wersji i odmowa nie wskaże karty
+docelowej. Nagrobek przycięty po 365 dniach — karta jest „nieznana”. Format nagrobka, ładunek synchronizacji i reguły
+scalania bez zmian; „Scal kopię konta” — osobny punkt (A5d).
+
+**Wersje.** `vilda_vault.js` 203 → 204, `vilda_data_import_export.js` 99 → 100, `vilda_auth_ui.js` 479 → 480 na stronach
+i w adresach wstrzykiwanych przez `vilda_chrome.js` (111 → 112) i `vilda_session_bridge.js` (35 → 36); nowe adresy
+w precache (append-only); `SW_VERSION` 1.1.195 → 1.1.196 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+`tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
 ## Koniec scalania nie dokłada do kosza zapisu przywróconego w trakcie (P-KOSZ-SCALANIE-PRZYWROC, SW 1.1.190, `vilda_vault.js` 203, 2026-10-07)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmiana dotyczy integralności danych (decyzja
@@ -9500,7 +9638,9 @@ i scalanie synchronizacji (P-SCALANIE-BLOKADA). Każda z tych operacji to „odc
 **Bez zmian (decyzja właściciela, A13).** Zapis z jawnym id karty, której już nie ma (usuniętej albo scalonej — także
 gdy usunięcie przeszło w trakcie czekania zapisu na blokadę), odtwarza kartę z jedną wersją i zdejmuje nagrobek — jak
 dotąd. Tak samo zostaje decyzja z okna „Czy to ten sam pacjent?”, podjęta przed blokadą. Wariant „odmów zapisu, zostaw
-formularz” zmienia zachowanie aplikacji i czeka na decyzję.
+formularz” zmienia zachowanie aplikacji i czeka na decyzję. *(Aktualizacja 2026-10-08, decyzja właściciela: zrobione
+w P-ZAPIS-USUNIETEJ — sejf odmawia zapisu (`PATIENT_DELETED`), nic nie zapisuje, nagrobek zostaje, a odmowa wskazuje kartę
+docelową scalenia; dotyczy też karty wybranej w oknie „Czy to ten sam pacjent?” i scalonej w czasie czekania na blokadę.)*
 
 **Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/blokada-usuwania-scalania.test.mjs` (prawdziwy
 `vilda_vault.js`; dwie karty na wspólnym magazynie i atrapie Web Locks oraz jedna karta z kolejką strony):
@@ -9510,7 +9650,8 @@ formularz” zmienia zachowanie aplikacji i czeka na decyzję.
 - scalanie przywróciło kartę (zapis z innego urządzenia nowszy niż usunięcie), druga karta usuwa ją ponownie → nagrobek
   ponownego usunięcia zostaje;
 - scalanie duplikatów przepina wersje, druga karta zapisuje źródło → zapis czeka; cel ma 5 wersji, zgłoszona wersja
-  zapisu jest w magazynie;
+  zapisu jest w magazynie; *(od P-ZAPIS-USUNIETEJ: zapis źródła jest odmawiany z kodem `PATIENT_DELETED`, źródło zostaje
+  bez rekordu i wersji, z nagrobkiem; cel 5 wersji)*
 - scalanie duplikatów, druga karta poprawia pomiar celu (66 mies., wzrost 150) → poprawka czeka i jest w bieżącej wersji;
 - scalanie wpisuje kartę nową dla urządzenia (3 wersje), druga karta zapisuje ją z jawnym id → `isNew: false`, 4 wersje,
   licznik 4, data założenia z synchronizacji;
@@ -9551,6 +9692,8 @@ synchronizacji karty nie było. Tak samo przy delcie nagrobka z kanału zmian i 
 **Reguła po zmianie.**
 - Import karty, której **na tym urządzeniu nie ma** (usunięta albo nigdy nie pobrana), to jawne przywrócenie:
   `lastSavedAtISO` rekordu = chwila przywrócenia (jak `updatedAtISO` wersji w `Bkz_poImporcie`, P-KOSZ-ZAPISOW).
+  *(Aktualizacja 2026-10-08: kartę usuniętą przywraca jawny import karty, import starego pliku JSON i synchronizacja
+  z nowszym zapisem; `savePatient` z id takiej karty odmawia — P-ZAPIS-USUNIETEJ.)*
 - Notatka pacjenta z pliku, której nie ma lokalnie, dostaje przy takim przywróceniu `updatedAtISO` = chwila przywrócenia.
   Notatka obecna lokalnie zostaje przy swojej dacie — nowsza edycja lokalna nie przegrywa ze starszą kopią z pliku.
 - Import do **istniejącej** karty bez zmian (`lastSavedAtISO` = późniejsza z dat rekordu i pliku).
@@ -9620,6 +9763,38 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 **Wersje.** `vilda_version_history_ui.js` 14 → 15 (8 stron), precache (append-only), `SW_VERSION` 1.1.179 → 1.1.180 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`2dbd48a`). „Do decyzji”: brak.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
+
+## Slot obrócony w innej karcie (P-SYNC-ROTACJA-KART, SW 1.1.197, `vilda_sync.js` 37, 2026-10-08)
+
+**Skąd.** Zgłoszenie właściciela z 2026-10-08. „Wyloguj wszystkie urządzenia” (`revokeAllDevices`) obraca tożsamość synchronizacji w pamięci karty, w której to wykonano. Inna karta tego samego profilu przeglądarki, odblokowana wcześniej, trzyma poprzednią tożsamość do odświeżenia strony. Serwer i sejf bez zmian.
+
+**Co się zmienia.** Zaraz po rotacji `revokeAllDevices` zapisuje we wspólnym `localStorage` znacznik slotu poprzedniej tożsamości: `vilda-sync-revoked-v1:<slotId>` z chwilą rotacji. Znacznik powstaje przed rejestracją nowego slotu i przed kasowaniem starego, więc obowiązuje także wtedy, gdy któryś z tych kroków się nie uda. Trafia do `localStorage` także w trybie chmurowym, w którym stan slotu jest w pamięci karty.
+
+Wysyłka nie rejestruje slotu, którego tożsamość została obrócona w innej karcie, i nie wysyła na niego. To samo dotyczy pobrania, przywrócenia poprzedniej wersji, `uploadToSlot` i ponownej rotacji z tej karty. Każda z tych operacji kończy się błędem `SYNC_IDENTITY_CHANGED` z komunikatem: „ten slot synchronizacji został zastąpiony nowym (wylogowanie wszystkich urządzeń). Jeśli błąd się powtarza, odśwież stronę.” Wysyłka sprawdza znacznik przed eksportem sejfu i tuż przed każdą rejestracją i każdym PUT. Gdy znacznik pojawi się w trakcie rejestracji, wysyłka kasuje ten slot tak jak `revokeAllDevices` i kończy się tym samym błędem. Sonda nowego urządzenia nie zgłasza slotu ze znacznikiem. Odświeżenie strony wczytuje z sejfu bieżącą tożsamość, więc karta dalej synchronizuje się z nowym slotem.
+
+Integracja (`vilda_sync_integration.js`) bez zmian. Ten kod błędu nie zatrzymuje jej harmonogramu, bo w karcie, która wykonała rotację, oznacza tylko przerwaną wysyłkę, a następna idzie już na nowy slot (P-SYNC-KURSOR). Ponowienia w drugiej karcie nie wysyłają żądań do serwera.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| karta A: `revokeAllDevices`; karta B (poprzednia tożsamość): `syncPush` | `SYNC_IDENTITY_CHANGED`, bez eksportu sejfu i bez żądań na stary slot (czerwony na kodzie sprzed zmiany) |
+| jak wyżej, karta B: `syncPull`, `syncFull` | `SYNC_IDENTITY_CHANGED` zamiast `not-registered` (czerwony na kodzie sprzed zmiany) |
+| tryb chmurowy, stan slotu w pamięci karty B; dwie wysyłki z B | obie `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| kasowanie starego slotu nieudane (`oldSlotRevoked: false`); wysyłka i sonda w B | `SYNC_IDENTITY_CHANGED`, sonda `isNewDevice: false`, stary slot bez nowej wysyłki (czerwony na kodzie sprzed zmiany) |
+| rejestracja z B wysłana przed rotacją w A, przyjęta po niej | slot skasowany, `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| rotacja w A w trakcie eksportu w B (ze stanem slotu i bez niego) | `SYNC_IDENTITY_CHANGED`, bez rejestracji i PUT na stary slot (czerwony na kodzie sprzed zmiany) |
+| `revokeAllDevices` w B | `SYNC_IDENTITY_CHANGED`, sejf B bez rotacji, slot z rotacji w A zostaje (czerwony na kodzie sprzed zmiany) |
+| `restorePrevBlob` i `uploadToSlot` na stary slot w B | `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| karta A po rotacji: wysyłka i pobranie | `uploaded`, `up-to-date` na nowym slocie, jak dotąd |
+| karta B po odświeżeniu (bieżąca tożsamość) | pobranie i wysyłka na nowym slocie, jak dotąd |
+| pierwsza rejestracja nowego urządzenia | `not-registered`, potem `registered` (201), jak dotąd |
+| „Zresetuj stan synchronizacji”, potem wysyłka | rejestracja 409, pobranie, PUT, `uploaded`, jak dotąd |
+| rotacja w jednej karcie | wynik `revokeAllDevices` i żądania (rejestracja nowego slotu, kasowanie starego) jak dotąd |
+
+**Testy.** `tests/unit/sync-rotacja-kart.test.mjs` ma 14 przypadków na prawdziwym `vilda_sync.js` w dwóch oknach ze wspólnym `localStorage` i osobnym `sessionStorage`. Serwer i sejf to atrapy. Na kodzie sprzed zmiany 9 przypadków jest czerwonych, a 5 kontroli niezmienionego zachowania zielonych. Testy sprawdzono mutacjami: usunięcie każdego z 10 nowych sprawdzeń daje czerwony test. Scenariusz z dwiema kartami sprawdzono też ręcznie w Chromium na prawdziwym sejfie: druga karta po rotacji w pierwszej dostaje `SYNC_IDENTITY_CHANGED`, a po odświeżeniu synchronizuje się z nowym slotem.
+
+**Wpływ kliniczny: brak.** Nie zmieniają się dane, scalanie, format na drucie ani wyniki. **Wersje.** `vilda_sync.js` 36 → 37 (8 stron), precache (append-only), `SW_VERSION` 1.1.196 → 1.1.197 (+ pin), fixture wersji. Wszystko nadało `npm run podbij-wersje` względem `origin/audyt` (`7faecd0`, po scaleniu P-ZAPIS-USUNIETEJ). Pozycji „Do decyzji” brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
 ## Kursor dziennika zmian bez przeskoku, odstęp po 412, keepalive w kolejce wysyłki (P-SYNC-KURSOR, SW 1.1.195, `vilda_sync.js` 36, 2026-10-08)
 
