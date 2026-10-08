@@ -9190,6 +9190,62 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.197, `vilda_vault.js` 205, 2026-10-08)
+
+**Zmiana kliniczna: możliwa** — wzory, progi i jednostki bez zmian; zmienia się zawartość bieżącej wersji karty
+docelowej po ponowieniu zapisu z P-ZAPIS-USUNIETEJ. Poprawka dwóch uwag P1 z przeglądu Codex w #586 (scalonym
+2026-10-08) — moja wada w P-ZAPIS-USUNIETEJ.
+
+**Co było** (zmierzone na `audyt` `7faecd0`). Ponowienie („Zapisz dane” jeszcze raz po odmowie „scalono z kartą „Y””)
+dopisywało do formularza tylko wiersze pomiarów karty Y, a resztę zapisu brało z formularza starej karty X:
+- z bieżącej wersji Y znikały sekcje, które „Scal pacjentów” dołożyło albo zostawiło karcie Y — punkty terapii
+  (`ghTherapyPoints`, `obesityTherapyPoints`, `bisphosTherapyPoints`), dane urodzeniowe, lekarz, plan, wzrost rodziców
+  i inne (zostawały tylko w starszych wersjach);
+- brak płci w starej karcie X kasował znaną płeć karty Y w wersji i w nagłówku (płeć zasila obliczenia zależne od płci).
+
+**Reguła po zmianie** (`Bdo_sekcje`, tylko przy `dolaczPoScaleniu`). Ponowienie przejmuje kartę docelową tak jak
+„Scal pacjentów”: jej dane zostają, a z formularza idą tylko zmiany wpisane przez lekarza — pola różne od kopii wczytanej
+do formularza (`baselinePayload`):
+- zmiana lekarza to niepusta wartość formularza, inna niż w kopii wczytanej, w polu, które ta kopia miała (porównanie
+  niezależne od kolejności kluczy). Pole bez takiej zmiany bierze niepustą wartość karty docelowej: puste pole
+  formularza (brak płci, wyzerowana wizyta po „Nowy pomiar”) i sekcja, której stara karta nie miała (formularz wstawia
+  sekcje domyślne, np. pusty „lekarz”), nie nadpisują jej danych; puste pole karty docelowej nie kasuje wartości ze
+  starej karty. Pole po polu w `user`, w `advanced`/`growthBasic` (poza wierszami) i w ich `data`; pozostałe sekcje
+  w całości;
+- punkty terapii zbiorem: punkty karty docelowej bez tych, które lekarz usunął w formularzu, plus dodane przez lekarza;
+- wiersze pomiarów jak dotąd (`Bdo_dopisz`); pola wewnętrzne („`_…`”, np. przypięcie wersji) nie są przenoszone;
+- nagłówek karty (nazwisko, data urodzenia, płeć) liczony z zapisu po tym uzupełnieniu.
+Zapis bez `dolaczPoScaleniu` — bez zmian.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/zapis-usunietej-karty.test.mjs` (prawdziwy
+`vilda_vault.js`). X: wiersze 60, 66, punkt GH 60:0,025, plan „plan X”, wzrost matki 160. Y: wiersze 48, 54, punkt GH
+54:0,03, dane urodzeniowe 3200 g, lekarz, plan „plan Y”, wzrost matki 165. Po „Scal pacjentów” głowa Y ma oba punkty,
+dane urodzeniowe i wzrost matki 165. Formularz X z dopisanym wierszem 72:
+- lekarz dodał punkt 72:0,033 → punkty {54, 60, 72}, dane urodzeniowe, lekarz, „plan Y”, wzrost matki 165, wiersz 72;
+- lekarz usunął punkt 60 i wpisał „plan po wizycie” → punkty {54}, „plan po wizycie”;
+- X bez płci → płeć „M” w wersji i w nagłówku Y;
+- formularz jak prawdziwy: sekcja domyślna „lekarz” (pusta, w starej karcie jej nie było), ten sam plan z inną
+  kolejnością kluczy, wyzerowana wizyta → lekarz, „plan Y” i wizyta karty docelowej (104 cm, 17 kg) zostają;
+- wzrost ojca wyczyszczony w karcie docelowej, w starej karcie 180 → 180;
+- kontrola: bieżąca wizyta wpisana przez lekarza (6 lat 0 mies., 112 cm, 20 kg) zostaje w polach pacjenta.
+Na `7faecd0` cztery z sześciu czerwone (kontrole: wizyta lekarza i wzrost ojca — zielone). Mutacje (13): bez uzupełnienia — 4 czerwone;
+bez odświeżenia nagłówka — 1; usunięte punkty wracają — 1; zawsze wartość karty docelowej — 2; sekcja spoza starej
+karty jako zmiana — 1; puste pole formularza jako zmiana — 1; porównanie zależne od kolejności kluczy — 1; puste pole
+karty docelowej nadpisuje — 1; bez pól pacjenta — 2; bez pól `advanced` — 1; bez punktów lekarza — 1; punkty także
+w polach ogólnych — równoważna (punkty i tak liczy zbiór). Pomiar na prawdziwym formularzu (e2e, karta wczytana przez
+„Nowy pomiar”): formularz różni się od kopii wczytanej sekcjami domyślnymi, polami wyliczanymi i wyzerowaną wizytą —
+stąd reguła „zmiany lekarza”. `tests/e2e/zapis-usunietej-karty.spec.mjs` (prawdziwa przeglądarka i formularz): karta Y
+z punktem GH 54:0,03 i danymi urodzeniowymi 3200 g; po odmowie i drugim „Zapisz dane” punkt, dane urodzeniowe i płeć
+zostają w bieżącej wersji Y (na `7faecd0` czerwony).
+
+**Wpływ kliniczny.** Po ponowieniu bieżąca wersja karty docelowej ma jej punkty terapii, dane urodzeniowe, płeć i inne
+sekcje oraz zmiany wpisane przez lekarza w formularzu. Przy różnicy wartości, której lekarz nie zmieniał, wygrywa karta
+docelowa — jak w „Scal pacjentów”.
+
+**Wersje.** `vilda_vault.js` 204 → 205 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js`
+(112 → 113) i `vilda_session_bridge.js` (36 → 37); nowe adresy w precache (append-only); `SW_VERSION` 1.1.196 → 1.1.197
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
 ## Zapis do karty usuniętej albo scalonej: odmowa ze wskazaniem karty docelowej (P-ZAPIS-USUNIETEJ, SW 1.1.196, `vilda_vault.js` 204, `vilda_data_import_export.js` 100, `vilda_auth_ui.js` 480, 2026-10-08)
 
 **Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, do
@@ -9222,6 +9278,8 @@ dla pacjenta”, „brak pacjenta”).
   wiersze głowy celu, których nie ma ani w zapisie, ani w kopii wczytanej do formularza (sprawdzane w obu sekcjach
   pomiarów), są dopisywane. Nic nie jest zastępowane i nie ma pytania — jak „Scal pacjentów”, które trzyma oba pomiary
   z tego samego miesiąca. Wiersz skasowany albo poprawiony przez lekarza w formularzu (jest w kopii wczytanej) nie wraca.
+  *(Poprawka 2026-10-08, P-ZAPIS-USUNIETEJ-2: poza wierszami ponowienie zachowuje dane karty docelowej — z formularza idą
+  tylko zmiany lekarza; dotąd sekcje karty docelowej i jej płeć mogły zniknąć z bieżącej wersji.)*
 
 **Interfejs.**
 - „Zapisz dane”: formularz i baza formularza zostają bez zmian, okno przestaje celować w odrzuconą kartę (klucze

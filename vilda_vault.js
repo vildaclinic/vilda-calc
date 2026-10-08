@@ -59,7 +59,7 @@ function Bb7(t){return t&&t.ageMonths!=null?String(t.ageMonths):""}
 function Bb4(t,e){if(!t||!e)return!1;const n=function(r){return typeof r=="number"&&isFinite(r)?r:null};return n(t.height)===n(e.height)&&n(t.weight)===n(e.weight)}
 function Bb3(t){const e={};return qe(t).forEach(function(n){const r=Bb7(n);r&&(e[r]=n)}),e}
 function Bb5(t){const e=new Error(t||"Zapis anulowany.");return e.vildaSaveAborted=!0,e}
-async function Bb6(t,e,n,r,o,Bdo){const a=r&&r.payload?r.payload:null;if(!a)return null;const c={};o&&o.patientId===t&&Array.isArray(o.wiersze)&&o.wiersze.forEach(function(l){l&&l.gdzie&&(c[l.gdzie+"|"+Bb7(l.pomiar)]=!0)});const i=[],y=[];if(Bdo)Bdo_dopisz(i,e,n,a);else["advanced","growthBasic"].forEach(function(l){const d=Bb3(n?n[l]:null),p=Bb3(e?e[l]:null);qe(a[l]).forEach(function(w){const S=Bb7(w);if(!S)return;const z=d[S],F=p[S];// Wiersz, ktory lekarz JUZ raz przyjal z bazy: nie ma go w formularzu, bo formularz
+async function Bb6(t,e,n,r,o,Bdo){const a=r&&r.payload?r.payload:null;if(!a)return null;const c={};o&&o.patientId===t&&Array.isArray(o.wiersze)&&o.wiersze.forEach(function(l){l&&l.gdzie&&(c[l.gdzie+"|"+Bb7(l.pomiar)]=!0)});const i=[],y=[];if(Bdo)Bdo_dopisz(i,e,n,a),Bdo_sekcje(e,n,a);else["advanced","growthBasic"].forEach(function(l){const d=Bb3(n?n[l]:null),p=Bb3(e?e[l]:null);qe(a[l]).forEach(function(w){const S=Bb7(w);if(!S)return;const z=d[S],F=p[S];// Wiersz, ktory lekarz JUZ raz przyjal z bazy: nie ma go w formularzu, bo formularz
 // pokazuje stan sprzed przyjecia — ale to nie znaczy, ze lekarz go skasowal. Wraca
 // do zapisu po cichu, bez ponownego pytania o to samo.
 if(c[l+"|"+S]&&!F){y.push({gdzie:l,rodzaj:"dodany",pomiar:w});return}if(!z&&!F){i.push({gdzie:l,rodzaj:"dodany",pomiar:w});return}if(!F||Bb4(w,F))return;z&&Bb4(F,z)&&i.push({gdzie:l,rodzaj:"zmieniony",pomiar:w,wZapisie:F})})});if(!i.length&&!y.length)return null;let d="scal";if(i.length&&Bb9&&!Bdo)try{const l=await Bb9({patientId:t,foreign:JSON.parse(JSON.stringify(i)),headSnapshotId:r.snapshotId||null,headSavedAtISO:r.savedAtISO||null});l==="nadpisz"||l==="anuluj"||l==="scal"?d=l:d="scal"}catch{d="scal"}
@@ -89,7 +89,7 @@ function no(t,e,Ba1){
   }
   return wynik;
 }
-function BAK_legacyNo(t,e,Ba1){if(!fr(e))return{advanced:t,acted:!1,reason:"prev-empty"};if(!fr(t))return{advanced:JSON.parse(JSON.stringify(e)),acted:!0,reason:"total-wipe"};const n=t&&typeof t=="object"?t:{};let r=!1;const o=[];if(["motherHeight","fatherHeight","boneAgeYears"].forEach(function(a){!Te(n[a])&&Te(e[a])&&(n[a]=e[a],r=!0,o.push("parent:"+a))}),(Ba1&&Ba1.force===!0||eo(n))&&!(Ba1&&Ba1.noUnion===!0)&&qe(n).length<qe(e).length){const a={};(n.data&&Array.isArray(n.data.measurements)?n.data.measurements:[]).forEach(function(c){c&&c.ghSync!==!0&&(a[String(c.ageMonths)+"|"+String(c.height)]=!0)});const i=qe(e).filter(function(c){return!a[String(c.ageMonths)+"|"+String(c.height)]});if(i.length){(!n.data||typeof n.data!="object")&&(n.data={}),Array.isArray(n.data.measurements)||(n.data.measurements=[]),i.forEach(function(c){n.data.measurements.push(JSON.parse(JSON.stringify(c)))});try{n.data.measurements.sort(function(c,l){return(c.ageMonths||0)-(l.ageMonths||0)})}catch{}r=!0,o.push("meas-union:"+i.length)}}return{advanced:n,acted:r,reason:o.join(",")}}async function _e(t,e){return Bpz_zapis(t,e,!1)}async function Bpz_zapis(t,e,Bpz_bez){if(!T())throw new Error("Zaloguj si\u0119, by zapisa\u0107 pacjenta.");if(!t||typeof t!="object")throw new Error("savePatient: brak payloadu.");const n=e&&typeof e=="object"?e:{};if(t.user&&typeof t.user=="object"){const m=ut(t.user.dobISO);m?t.user.dobISO=m:"dobISO"in t.user&&delete t.user.dobISO}const r=Nn(t);if(!r.name)throw new Error("savePatient: brak imienia pacjenta w payloadzie.");const o=await I().listPatientsForUser(b),a=[];for(let m=0;m<o.length;m+=1){const E=o[m];let _=null;try{_=await G(E.headerCipher.iv,E.headerCipher.data)}catch{_=null}a.push(Object.assign({},E,{headerPlain:_}))}let s=typeof n.patientId=="string"&&n.patientId?n.patientId:Ha(t),i=!1,c=null,Bzu_nowy=!1;if(!s&&n.dedup!==!1&&!n.forceNew){const m=Wa(a,r);m.match?s=m.match.patientId:m.ambiguous&&m.candidates&&m.candidates.length&&(c={ambiguous:!0,candidates:m.candidates.map(Bz0)});if(c&&Bz1&&n.pytajOTozsamosc!==!1){let Bz3=null;try{Bz3=await Bz1({name:r.name||"",dobISO:ut(r.dobISO)||null,candidates:JSON.parse(JSON.stringify(c.candidates))})}catch{}const Bz4=Bz3&&typeof Bz3=="object"?Bz3:null;if(Bz4&&Bz4.akcja==="anuluj")throw Bb5("Zapis anulowany \u2014 nic nie zmieniono.");if(Bz4&&Bz4.akcja==="dopisz"&&typeof Bz4.patientId=="string"&&c.candidates.some(function(m2){return m2.patientId===Bz4.patientId})){s=Bz4.patientId,c={ambiguous:!0,rozstrzygniete:!0,decyzja:"dopisz",candidates:c.candidates};}else if(Bz4&&Bz4.akcja==="nowy")c={ambiguous:!0,rozstrzygniete:!0,decyzja:"nowy",candidates:c.candidates};}}s?a.some(function(m){return m.patientId===s})||(i=!0):(s=ne(),i=!0,Bzu_nowy=!0);const Bpz_sekcja=async function(){/* P-BLOKADA-USUWANIE (A13): „nowy” liczony na liscie sprzed blokady. Karta mogla dojsc w tym czasie (synchronizacja, import, inna karta) — wtedy zapis nadpisywal jej licznik wersji i date zalozenia. Pod blokada czytamy rekord swiezo; istniejacy traktujemy jak istniejacy. *//* P-ZAPIS-USUNIETEJ (A13): rekord czytany zawsze, takze gdy karta byla na liscie przed blokada (scalona albo usunieta w trakcie czekania). Brak rekordu + lokalny nagrobek = odmowa przed Bb6 i przed pierwszym zapisem. */{let Bzu_r=null,Bzu_x=!1;try{Bzu_r=await I().getPatientForUser(b,s)}catch{Bzu_x=!0}if(Bzu_r)i=!1;else if(!Bzu_x){if(!Bpz_bez&&!Bzu_nowy&&n._import!==!0){const Bzu_e=await Bzu_odmowa(s,[].concat(Array.isArray(n.znaneWersje)?n.znaneWersje:[],typeof n.baseSnapshotId=="string"&&n.baseSnapshotId?[n.baseSnapshotId]:[]),t);if(Bzu_e)throw Bzu_e}i=!0}}let Bc0=null;if(!i)try{Bc0=await hr(s)}catch{Bc0=null}let Bc1=null;if(!i&&n.baselinePayload&&typeof n.baselinePayload=="object")Bc1=await Bb6(s,t,n.baselinePayload,Bc0,n.przyjeteZBazy,!!n.dolaczPoScaleniu);if(!i&&n.skipAdvancedAntiClobber!==!0)try{const m=Bc0,E=m&&m.payload?m.payload:null,Ba2=!!(m&&typeof n.baseSnapshotId=="string"&&n.baseSnapshotId&&m.snapshotId!==n.baseSnapshotId),_=no(t.advanced,E?E.advanced:null,{force:Ba2,noUnion:!!(Bc1&&Bc1.decyzja==="nadpisz")});if(_.acted){t.advanced=_.advanced;try{typeof console<"u"&&console.warn&&console.warn("[vault] advanced anti-clobber:",_.reason)}catch{}}if(Ba2){const Ba3=no(t.growthBasic,E?E.growthBasic:null,{force:!0,noUnion:!!(Bc1&&Bc1.decyzja==="nadpisz")});if(Ba3.acted){t.growthBasic=Ba3.advanced;try{typeof console<"u"&&console.warn&&console.warn("[vault] growthBasic anti-clobber:",Ba3.reason)}catch{}}}}catch{}const l=new Date().toISOString(),y=await V(r),d=await V(t),p=ne(),Bm4=i?1:Bc0&&typeof Bc0.seq=="number"&&isFinite(Bc0.seq)?Bc0.seq+1:1,w={snapshotId:p,patientId:s,savedAtISO:l,rev:0,updatedAtISO:l,seq:Bm4,payloadCipher:d};await I().putSnapshotForUser(b,w);const h=i?null:await I().getPatientForUser(b,s),O=(h&&h.snapshotCount?h.snapshotCount:0)+1,u={patientId:s,headerCipher:y,createdAtISO:h&&h.createdAtISO?h.createdAtISO:l,lastSavedAtISO:l,snapshotCount:O};await I().putPatientForUser(b,u);try{const m=I();m&&typeof m.removeTombstoneForUser=="function"&&await m.removeTombstoneForUser(b,s)}catch{}const f={patientId:s,snapshotId:p,isNew:i,snapshotCount:O,header:r,savedAtISO:l,shortHash:cn(s),collision:c,// Ile wierszy brama przyjela z bazy. Wolajacy musi o tym wiedziec: rekord dostal cos,
+function BAK_legacyNo(t,e,Ba1){if(!fr(e))return{advanced:t,acted:!1,reason:"prev-empty"};if(!fr(t))return{advanced:JSON.parse(JSON.stringify(e)),acted:!0,reason:"total-wipe"};const n=t&&typeof t=="object"?t:{};let r=!1;const o=[];if(["motherHeight","fatherHeight","boneAgeYears"].forEach(function(a){!Te(n[a])&&Te(e[a])&&(n[a]=e[a],r=!0,o.push("parent:"+a))}),(Ba1&&Ba1.force===!0||eo(n))&&!(Ba1&&Ba1.noUnion===!0)&&qe(n).length<qe(e).length){const a={};(n.data&&Array.isArray(n.data.measurements)?n.data.measurements:[]).forEach(function(c){c&&c.ghSync!==!0&&(a[String(c.ageMonths)+"|"+String(c.height)]=!0)});const i=qe(e).filter(function(c){return!a[String(c.ageMonths)+"|"+String(c.height)]});if(i.length){(!n.data||typeof n.data!="object")&&(n.data={}),Array.isArray(n.data.measurements)||(n.data.measurements=[]),i.forEach(function(c){n.data.measurements.push(JSON.parse(JSON.stringify(c)))});try{n.data.measurements.sort(function(c,l){return(c.ageMonths||0)-(l.ageMonths||0)})}catch{}r=!0,o.push("meas-union:"+i.length)}}return{advanced:n,acted:r,reason:o.join(",")}}async function _e(t,e){return Bpz_zapis(t,e,!1)}async function Bpz_zapis(t,e,Bpz_bez){if(!T())throw new Error("Zaloguj si\u0119, by zapisa\u0107 pacjenta.");if(!t||typeof t!="object")throw new Error("savePatient: brak payloadu.");const n=e&&typeof e=="object"?e:{};if(t.user&&typeof t.user=="object"){const m=ut(t.user.dobISO);m?t.user.dobISO=m:"dobISO"in t.user&&delete t.user.dobISO}const r=Nn(t);if(!r.name)throw new Error("savePatient: brak imienia pacjenta w payloadzie.");const o=await I().listPatientsForUser(b),a=[];for(let m=0;m<o.length;m+=1){const E=o[m];let _=null;try{_=await G(E.headerCipher.iv,E.headerCipher.data)}catch{_=null}a.push(Object.assign({},E,{headerPlain:_}))}let s=typeof n.patientId=="string"&&n.patientId?n.patientId:Ha(t),i=!1,c=null,Bzu_nowy=!1;if(!s&&n.dedup!==!1&&!n.forceNew){const m=Wa(a,r);m.match?s=m.match.patientId:m.ambiguous&&m.candidates&&m.candidates.length&&(c={ambiguous:!0,candidates:m.candidates.map(Bz0)});if(c&&Bz1&&n.pytajOTozsamosc!==!1){let Bz3=null;try{Bz3=await Bz1({name:r.name||"",dobISO:ut(r.dobISO)||null,candidates:JSON.parse(JSON.stringify(c.candidates))})}catch{}const Bz4=Bz3&&typeof Bz3=="object"?Bz3:null;if(Bz4&&Bz4.akcja==="anuluj")throw Bb5("Zapis anulowany \u2014 nic nie zmieniono.");if(Bz4&&Bz4.akcja==="dopisz"&&typeof Bz4.patientId=="string"&&c.candidates.some(function(m2){return m2.patientId===Bz4.patientId})){s=Bz4.patientId,c={ambiguous:!0,rozstrzygniete:!0,decyzja:"dopisz",candidates:c.candidates};}else if(Bz4&&Bz4.akcja==="nowy")c={ambiguous:!0,rozstrzygniete:!0,decyzja:"nowy",candidates:c.candidates};}}s?a.some(function(m){return m.patientId===s})||(i=!0):(s=ne(),i=!0,Bzu_nowy=!0);const Bpz_sekcja=async function(){/* P-BLOKADA-USUWANIE (A13): „nowy” liczony na liscie sprzed blokady. Karta mogla dojsc w tym czasie (synchronizacja, import, inna karta) — wtedy zapis nadpisywal jej licznik wersji i date zalozenia. Pod blokada czytamy rekord swiezo; istniejacy traktujemy jak istniejacy. *//* P-ZAPIS-USUNIETEJ (A13): rekord czytany zawsze, takze gdy karta byla na liscie przed blokada (scalona albo usunieta w trakcie czekania). Brak rekordu + lokalny nagrobek = odmowa przed Bb6 i przed pierwszym zapisem. */{let Bzu_r=null,Bzu_x=!1;try{Bzu_r=await I().getPatientForUser(b,s)}catch{Bzu_x=!0}if(Bzu_r)i=!1;else if(!Bzu_x){if(!Bpz_bez&&!Bzu_nowy&&n._import!==!0){const Bzu_e=await Bzu_odmowa(s,[].concat(Array.isArray(n.znaneWersje)?n.znaneWersje:[],typeof n.baseSnapshotId=="string"&&n.baseSnapshotId?[n.baseSnapshotId]:[]),t);if(Bzu_e)throw Bzu_e}i=!0}}let Bc0=null;if(!i)try{Bc0=await hr(s)}catch{Bc0=null}let Bc1=null;if(!i&&n.baselinePayload&&typeof n.baselinePayload=="object")Bc1=await Bb6(s,t,n.baselinePayload,Bc0,n.przyjeteZBazy,!!n.dolaczPoScaleniu);/* P-ZAPIS-USUNIETEJ (poprawka): ponowienie uzupelnilo pola z karty docelowej (Bdo_sekcje) — naglowek z ladunku po bramie. */if(!i&&n.dolaczPoScaleniu&&n.baselinePayload&&typeof n.baselinePayload=="object")Object.assign(r,Nn(t));if(!i&&n.skipAdvancedAntiClobber!==!0)try{const m=Bc0,E=m&&m.payload?m.payload:null,Ba2=!!(m&&typeof n.baseSnapshotId=="string"&&n.baseSnapshotId&&m.snapshotId!==n.baseSnapshotId),_=no(t.advanced,E?E.advanced:null,{force:Ba2,noUnion:!!(Bc1&&Bc1.decyzja==="nadpisz")});if(_.acted){t.advanced=_.advanced;try{typeof console<"u"&&console.warn&&console.warn("[vault] advanced anti-clobber:",_.reason)}catch{}}if(Ba2){const Ba3=no(t.growthBasic,E?E.growthBasic:null,{force:!0,noUnion:!!(Bc1&&Bc1.decyzja==="nadpisz")});if(Ba3.acted){t.growthBasic=Ba3.advanced;try{typeof console<"u"&&console.warn&&console.warn("[vault] growthBasic anti-clobber:",Ba3.reason)}catch{}}}}catch{}const l=new Date().toISOString(),y=await V(r),d=await V(t),p=ne(),Bm4=i?1:Bc0&&typeof Bc0.seq=="number"&&isFinite(Bc0.seq)?Bc0.seq+1:1,w={snapshotId:p,patientId:s,savedAtISO:l,rev:0,updatedAtISO:l,seq:Bm4,payloadCipher:d};await I().putSnapshotForUser(b,w);const h=i?null:await I().getPatientForUser(b,s),O=(h&&h.snapshotCount?h.snapshotCount:0)+1,u={patientId:s,headerCipher:y,createdAtISO:h&&h.createdAtISO?h.createdAtISO:l,lastSavedAtISO:l,snapshotCount:O};await I().putPatientForUser(b,u);try{const m=I();m&&typeof m.removeTombstoneForUser=="function"&&await m.removeTombstoneForUser(b,s)}catch{}const f={patientId:s,snapshotId:p,isNew:i,snapshotCount:O,header:r,savedAtISO:l,shortHash:cn(s),collision:c,// Ile wierszy brama przyjela z bazy. Wolajacy musi o tym wiedziec: rekord dostal cos,
 // czego nie ma w formularzu, wiec formularz trzeba dociagnac do rekordu.
 scalonoZBazy:Bc1&&Bc1.decyzja==="scal"?Bc1.liczba:0,przyjeteZBazy:Bc1&&Array.isArray(Bc1.wiersze)?Bc1.wiersze:[]};return{f:f,O:O}},Bk0=Bpz_bez?await Bpz_sekcja():await Ap("pat:"+s,Bpz_sekcja,{onWait:n.onLockWait,timeoutMs:n.lockTimeoutMs});const f=Bk0.f,O=Bk0.O;Bzu_zapamietaj(f.patientId,[f.snapshotId]);Vn(f);try{n._restore||oo(s,O,i)}catch{}return f}// P-KOLEJNOSC-WERSJI (2026-09-14). `savedAtISO` ma rozdzielczosc milisekundy, a swiezo
 // utworzona wersja ma zawsze rev 0 — wiec przy dwoch zapisach tego samego pacjenta w tej
@@ -1059,6 +1059,73 @@ function Bdo_dopisz(lista, zapis, baza, glowa) {
       if (wZapisie.some(ten) || wBazie.some(ten)) return;
       lista.push({ gdzie: l, rodzaj: 'dodany', pomiar: w });
     });
+  });
+}
+
+// P-ZAPIS-USUNIETEJ, poprawka po przegladzie (Codex P1 x2 w #586): poza wierszami pomiarow ponowienie przejmuje karte
+// docelowa jak „Scal pacjentow” — jej dane zostaja, a z formularza ida tylko zmiany wpisane przez lekarza (pola rozne od
+// kopii wczytanej do formularza). Dotad zapis bral caly formularz starej karty: znikaly sekcje, ktore scalenie dolozylo
+// karcie docelowej (punkty terapii, dane okoloporodowe, lekarz, plan…), a brak plci w starej karcie kasowal znana plec.
+// Zmiana lekarza to niepusta wartosc formularza, inna niz w kopii wczytanej, w polu, ktore ta kopia miala. Pole bez
+// takiej zmiany bierze niepusta wartosc karty docelowej: puste pole formularza (brak plci, wyzerowana wizyta) i sekcja,
+// ktorej stara karta nie miala (formularz wstawia sekcje domyslne), nie nadpisuja jej danych. Punkty terapii — zbiorem:
+// punkty karty docelowej bez usunietych przez lekarza, plus dodane przez lekarza. Wiersze pomiarow liczy Bdo_dopisz.
+// Pola wewnetrzne („_…”, np. przypiecie wersji) nie sa przenoszone z karty docelowej.
+const BDO_PUNKTY = ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints'];
+function Bdo_sekcje(zapis, baza, glowa) {
+  if (!zapis || typeof zapis !== 'object' || !glowa || typeof glowa !== 'object') return;
+  const b0 = baza && typeof baza === 'object' ? baza : {};
+  // Porownanie niezalezne od kolejnosci kluczy (formularz i stara karta skladaja obiekty roznie).
+  const uloz = function (x) {
+    if (Array.isArray(x)) return x.map(uloz);
+    if (!x || typeof x !== 'object') return x === undefined ? null : x;
+    const o = {};
+    Object.keys(x).sort().forEach(function (k) { o[k] = uloz(x[k]); });
+    return o;
+  };
+  const tekst = function (x) { try { return JSON.stringify(uloz(x)); } catch { return null; } };
+  const pusta = function (x) { return x === undefined || x === null || x === ''; };
+  const kopia = function (x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); };
+  const obiekt = function (x) { return !!x && typeof x === 'object' && !Array.isArray(x); };
+  // Pole po polu: bez zmiany lekarza — niepusta wartosc z karty docelowej.
+  const pola = function (cel, wBazie, wGlowie, pomin) {
+    Object.keys(wGlowie).forEach(function (k) {
+      if (k.charAt(0) === '_' || pomin.indexOf(k) >= 0 || pusta(wGlowie[k])) return;
+      const wBazieK = wBazie ? wBazie[k] : undefined;
+      const zmiana = wBazieK !== undefined && !pusta(cel[k]) && tekst(cel[k]) !== tekst(wBazieK);
+      if (!zmiana) cel[k] = kopia(wGlowie[k]);
+    });
+  };
+  pola(zapis, b0, glowa, BDO_PUNKTY.concat(['user', 'advanced', 'growthBasic']));
+  if (obiekt(glowa.user)) {
+    if (!obiekt(zapis.user)) zapis.user = {};
+    pola(zapis.user, obiekt(b0.user) ? b0.user : null, glowa.user, []);
+  }
+  ['advanced', 'growthBasic'].forEach(function (l) {
+    if (!obiekt(glowa[l])) return;
+    if (!obiekt(zapis[l])) zapis[l] = {};
+    const wBazie = obiekt(b0[l]) ? b0[l] : null;
+    pola(zapis[l], wBazie, glowa[l], ['data']);
+    if (!obiekt(glowa[l].data)) return;
+    if (!obiekt(zapis[l].data)) zapis[l].data = {};
+    pola(zapis[l].data, wBazie && obiekt(wBazie.data) ? wBazie.data : null, glowa[l].data, ['measurements']);
+  });
+  BDO_PUNKTY.forEach(function (k) {
+    if (!Array.isArray(glowa[k]) && !Array.isArray(zapis[k])) return;
+    const wZapisie = Array.isArray(zapis[k]) ? zapis[k] : [], wBazie = Array.isArray(b0[k]) ? b0[k] : [];
+    const zBazy = new Set(wBazie.map(tekst)), zZapisu = new Set(wZapisie.map(tekst)), byly = new Set(), wynik = [];
+    const dodaj = function (p) {
+      const t = tekst(p);
+      if (t === null || byly.has(t)) return;
+      byly.add(t);
+      wynik.push(kopia(p));
+    };
+    (Array.isArray(glowa[k]) ? glowa[k] : []).forEach(function (p) {
+      const t = tekst(p);
+      if (!(zBazy.has(t) && !zZapisu.has(t))) dodaj(p);
+    });
+    wZapisie.forEach(function (p) { if (!zBazy.has(tekst(p))) dodaj(p); });
+    zapis[k] = wynik;
   });
 }
 
