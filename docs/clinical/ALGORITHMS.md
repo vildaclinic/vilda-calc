@@ -9621,6 +9621,38 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Slot obrócony w innej karcie (P-SYNC-ROTACJA-KART, SW 1.1.196, `vilda_sync.js` 37, 2026-10-08)
+
+**Skąd.** Zgłoszenie właściciela z 2026-10-08. „Wyloguj wszystkie urządzenia” (`revokeAllDevices`) obraca tożsamość synchronizacji w pamięci karty, w której to wykonano. Inna karta tego samego profilu przeglądarki, odblokowana wcześniej, trzyma poprzednią tożsamość do odświeżenia strony. Serwer i sejf bez zmian.
+
+**Co się zmienia.** Zaraz po rotacji `revokeAllDevices` zapisuje we wspólnym `localStorage` znacznik slotu poprzedniej tożsamości: `vilda-sync-revoked-v1:<slotId>` z chwilą rotacji. Znacznik powstaje przed rejestracją nowego slotu i przed kasowaniem starego, więc obowiązuje także wtedy, gdy któryś z tych kroków się nie uda. Trafia do `localStorage` także w trybie chmurowym, w którym stan slotu jest w pamięci karty.
+
+Wysyłka nie rejestruje slotu, którego tożsamość została obrócona w innej karcie, i nie wysyła na niego. To samo dotyczy pobrania, przywrócenia poprzedniej wersji, `uploadToSlot` i ponownej rotacji z tej karty. Każda z tych operacji kończy się błędem `SYNC_IDENTITY_CHANGED` z komunikatem: „ten slot synchronizacji został zastąpiony nowym (wylogowanie wszystkich urządzeń). Jeśli błąd się powtarza, odśwież stronę.” Wysyłka sprawdza znacznik przed eksportem sejfu i tuż przed każdą rejestracją i każdym PUT. Gdy znacznik pojawi się w trakcie rejestracji, wysyłka kasuje ten slot tak jak `revokeAllDevices` i kończy się tym samym błędem. Sonda nowego urządzenia nie zgłasza slotu ze znacznikiem. Odświeżenie strony wczytuje z sejfu bieżącą tożsamość, więc karta dalej synchronizuje się z nowym slotem.
+
+Integracja (`vilda_sync_integration.js`) bez zmian. Ten kod błędu nie zatrzymuje jej harmonogramu, bo w karcie, która wykonała rotację, oznacza tylko przerwaną wysyłkę, a następna idzie już na nowy slot (P-SYNC-KURSOR). Ponowienia w drugiej karcie nie wysyłają żądań do serwera.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| karta A: `revokeAllDevices`; karta B (poprzednia tożsamość): `syncPush` | `SYNC_IDENTITY_CHANGED`, bez eksportu sejfu i bez żądań na stary slot (czerwony na kodzie sprzed zmiany) |
+| jak wyżej, karta B: `syncPull`, `syncFull` | `SYNC_IDENTITY_CHANGED` zamiast `not-registered` (czerwony na kodzie sprzed zmiany) |
+| tryb chmurowy, stan slotu w pamięci karty B; dwie wysyłki z B | obie `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| kasowanie starego slotu nieudane (`oldSlotRevoked: false`); wysyłka i sonda w B | `SYNC_IDENTITY_CHANGED`, sonda `isNewDevice: false`, stary slot bez nowej wysyłki (czerwony na kodzie sprzed zmiany) |
+| rejestracja z B wysłana przed rotacją w A, przyjęta po niej | slot skasowany, `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| rotacja w A w trakcie eksportu w B (ze stanem slotu i bez niego) | `SYNC_IDENTITY_CHANGED`, bez rejestracji i PUT na stary slot (czerwony na kodzie sprzed zmiany) |
+| `revokeAllDevices` w B | `SYNC_IDENTITY_CHANGED`, sejf B bez rotacji, slot z rotacji w A zostaje (czerwony na kodzie sprzed zmiany) |
+| `restorePrevBlob` i `uploadToSlot` na stary slot w B | `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| karta A po rotacji: wysyłka i pobranie | `uploaded`, `up-to-date` na nowym slocie, jak dotąd |
+| karta B po odświeżeniu (bieżąca tożsamość) | pobranie i wysyłka na nowym slocie, jak dotąd |
+| pierwsza rejestracja nowego urządzenia | `not-registered`, potem `registered` (201), jak dotąd |
+| „Zresetuj stan synchronizacji”, potem wysyłka | rejestracja 409, pobranie, PUT, `uploaded`, jak dotąd |
+| rotacja w jednej karcie | wynik `revokeAllDevices` i żądania (rejestracja nowego slotu, kasowanie starego) jak dotąd |
+
+**Testy.** `tests/unit/sync-rotacja-kart.test.mjs` ma 14 przypadków na prawdziwym `vilda_sync.js` w dwóch oknach ze wspólnym `localStorage` i osobnym `sessionStorage`. Serwer i sejf to atrapy. Na kodzie sprzed zmiany 9 przypadków jest czerwonych, a 5 kontroli niezmienionego zachowania zielonych. Testy sprawdzono mutacjami: usunięcie każdego z 10 nowych sprawdzeń daje czerwony test. Scenariusz z dwiema kartami sprawdzono też ręcznie w Chromium na prawdziwym sejfie: druga karta po rotacji w pierwszej dostaje `SYNC_IDENTITY_CHANGED`, a po odświeżeniu synchronizuje się z nowym slotem.
+
+**Wpływ kliniczny: brak.** Nie zmieniają się dane, scalanie, format na drucie ani wyniki. **Wersje.** `vilda_sync.js` 36 → 37 (8 stron), precache (append-only), `SW_VERSION` 1.1.195 → 1.1.196 (+ pin), fixture wersji. Wszystko nadało `npm run podbij-wersje` względem `origin/audyt` (`8c13b80`). Pozycji „Do decyzji” brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Kursor dziennika zmian bez przeskoku, odstęp po 412, keepalive w kolejce wysyłki (P-SYNC-KURSOR, SW 1.1.195, `vilda_sync.js` 36, 2026-10-08)
 
 **Skąd.** Reszta etapu 0 planu `docs/SYNC_PRZYROSTOWA_PLAN.md`: poprawka kursora `/changes` i odstęp w pętli 412. Do tego uwaga Codex P2 do #574 (keepalive w kolejce) i trzy ustalenia przeglądu adwersarza tego PR (blokada sejfu w trakcie drenażu, tożsamość synchronizacji przed ponowną próbą, chwila między końcem wysyłki a startem kolejki). Decyzja właściciela z 2026-10-08. Serwer bez zmian.
