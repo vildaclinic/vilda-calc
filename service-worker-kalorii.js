@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.196';
+const SW_VERSION = '1.1.197';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2882,6 +2882,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync.js?v=34',
   '/vilda_sync.js?v=35',
   '/vilda_sync.js?v=36',
+  '/vilda_sync.js?v=37',
   '/vilda_sync_integration.js?v=45',
   '/vilda_sync_integration.js?v=46',
   '/vilda_sync_integration.js?v=47',
