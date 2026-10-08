@@ -8890,7 +8890,7 @@ też nadał 1.1.186); pin `?v=` w
 nowego punktu z modułem dawki (pytanie 28: preparat dobowy przy masie niezgodnej z wynikiem karty bierze
 `#therDailyDoseAbs` albo dawkę × masę) — osobna decyzja kliniczna.
 
-## Punkt leczenia GH z wiersza karty zaawansowanej na Start (P-GH-PUNKT-Z-WIERSZA, D8, SW 1.1.193, nowe `vilda_gh_punkt_z_wiersza.js` 1, `vilda_gh_programy_dane.js` 1, `vilda_gh_punkt_z_wiersza.css` 1, 2026-10-07)
+## Punkt leczenia GH z wiersza karty zaawansowanej na Start (P-GH-PUNKT-Z-WIERSZA, D8, SW 1.1.194, nowe `vilda_gh_punkt_z_wiersza.js` 1, `vilda_gh_programy_dane.js` 1, `vilda_gh_punkt_z_wiersza.css` 1, 2026-10-07)
 
 **Skąd.** Projekt „Wspólne API punktów GH”, krok „Potem” (decyzja D8; audyt `docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 3–4,
 rekomendacja (a)). Makieta (desktop i telefon) zaakceptowana przez właściciela 2026-10-07 razem z decyzjami:
@@ -8951,8 +8951,8 @@ wiersz ręczny 9 l. 0 mies., 128,6 cm, 29,1 kg):
   „Program” karty i preparaty programu w formularzu wstecznym monitora.
 
 **Wersje.** Nowe pliki z `?v=1` w `index.html` i w precache (wpisane ręcznie, jak nowy plik w AGENTS § 6);
-`SW_VERSION` 1.1.192 → 1.1.193 (+ pin w `tests/unit/klirens-ui-model.test.mjs`) i `tests/fixtures/wersje-zasobow.json` —
-`npm run podbij-wersje` względem `audyt` `ecc20bf`.
+`SW_VERSION` 1.1.193 → 1.1.194 (+ pin w `tests/unit/klirens-ui-model.test.mjs`) i `tests/fixtures/wersje-zasobow.json` —
+`npm run podbij-wersje` względem `audyt` `aa424f0` (po scaleniu #583, które zajęło 1.1.193).
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Poza zakresem: Włączenie leczenia z wiersza
 (decyzja: dalej w DocPro), karta porównania na Start po zapisie (bez zmian), przeniesienie listy programów karty
