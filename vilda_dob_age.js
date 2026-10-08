@@ -56,6 +56,22 @@
  *   w środku przedziału i wprowadzać własne obciążenie. Data urodzenia nie wymaga
  *   zgadywania niczego.
  *
+ * ODTWORZONY ZAPIS (P-ODTWORZ-WIEK, zgłoszenie właściciela 2026-10-08)
+ *   „Odtwórz zapis" pokazuje wizytę taką, jaka była — z wiekiem z dnia POMIARU, nie z dzisiaj.
+ *   Pacjent zapisany w wieku 16 lat 10 mies. i odtworzony miesiąc później dostawał tu wiek
+ *   16 lat 11 mies., więc centyle formularza liczyły się dla starego wzrostu i masy w nowym
+ *   wieku, a Karta Pacjenta tego samego pacjenta pokazywała co innego. Reguła jest ta sama,
+ *   co w Karcie (Rata B, P3, decyzja właściciela): wzrost i masę znamy wyłącznie z chwili
+ *   pomiaru, więc jedyny uczciwy wiek to wiek z tamtej chwili. Data urodzenia podpowiada wiek
+ *   dopiero przy KOLEJNYM pomiarze („Nowy pomiar").
+ *
+ *   O trybie decyduje wybór, który aplikacja i tak trzyma w sesji (`vildaLoadChoiceV1` =
+ *   'restore'): przetrwa F5 i przejście na DocPro, a nowe wczytanie pacjenta, „Nowy pomiar"
+ *   i „Wyczyść" go zdejmują. Wiek pomiaru: zapisany wiek rekordu; bez niego wiek z daty
+ *   urodzenia na dobę pomiaru (`user.measuredAtISO`, inaczej `timestampISO`). Dokładny wiek
+ *   i tygodnie liczymy na tę dobę tylko wtedy, gdy zgadza się ona z zapisanym wiekiem —
+ *   inaczej nie zgadujemy i siatki wracają do wiersza ukończonego miesiąca.
+ *
  * CZEGO TU NIE MA
  *   Zapisu daty do `sharedUserData` — data urodzenia jest daną identyfikującą, a wspólny
  *   stan stron leży w niezaszyfrowanym magazynie przeglądarki. Między stronami wędruje
@@ -64,7 +80,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '7';
+  var VERSION = '8';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -201,6 +217,11 @@
     if (!wiek) return '';
     var lata = wiek.years === 1 ? 'rok' : odmiana(wiek.years, 'lata', 'lat');
     return wiek.years + ' ' + lata + ' ' + wiek.ageMonths + ' mies.';
+  }
+
+  /* Opis wieku kończy się skrótem „mies.", więc druga kropka dawała „mies..". */
+  function zdanie(tekst) {
+    return /\.$/.test(tekst) ? tekst : tekst + '.';
   }
 
   function odmiana(n, mnoga, dopelniacz) {
@@ -387,6 +408,136 @@
     return wynik;
   }
 
+  /* --------------------------------------------------------- odtworzony zapis */
+
+  /* Wybór z okna „Co chcesz zrobić?", który aplikacja trzyma w sesji karty. Tylko go czytamy. */
+  var KLUCZ_WYBORU = 'vildaLoadChoiceV1';
+
+  function trybOdtworzenia() {
+    try {
+      var s = w.sessionStorage;
+      return !!(s && typeof s.getItem === 'function' && s.getItem(KLUCZ_WYBORU) === 'restore');
+    } catch (e) {
+      zgloc('tryb-odtworzenia', e);
+      return false;
+    }
+  }
+
+  function rekordWczytany() {
+    try {
+      var r = w.lastLoadedData;
+      return r && typeof r === 'object' ? r : null;
+    } catch (e) {
+      zgloc('rekord-wczytany', e);
+      return null;
+    }
+  }
+
+  function calkowitaNieujemna(v) {
+    if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return null;
+    var n = parseInt(v, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
+  /* Doba pomiaru zapisanego rekordu (lokalna północ) albo null. Najpierw `user.measuredAtISO`
+     — data pomiaru dopisanego w Karcie Pacjenta, bez godziny — potem `timestampISO`, chwila
+     zapisu z formularza głównego. Datę bez godziny czytamy wprost z zapisu: new Date('2026-06-17')
+     to północ UTC i w strefach ujemnych cofnęłaby się o dobę (DOB-AGE-1). */
+  function dobaPomiaru(rekord) {
+    var uzytkownik = rekord && rekord.user && typeof rekord.user === 'object' ? rekord.user : null;
+    var kandydaci = [uzytkownik ? uzytkownik.measuredAtISO : null, rekord ? rekord.timestampISO : null];
+    for (var i = 0; i < kandydaci.length; i++) {
+      var tekst = typeof kandydaci[i] === 'string' ? kandydaci[i].trim() : '';
+      if (!tekst) continue;
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(tekst);
+      var data = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(tekst);
+      if (isNaN(data.getTime())) continue;
+      if (m && (data.getFullYear() !== +m[1] || data.getMonth() !== +m[2] - 1 || data.getDate() !== +m[3])) continue;
+      return dzisLokalnie(data);
+    }
+    return null;
+  }
+
+  /* Wiek POMIARU zapisanego rekordu — ta sama reguła, co Karta Pacjenta (Rata B, P3): zapisany
+     wiek rekordu, a gdy go nie ma, wiek z daty urodzenia na dobę pomiaru. Nigdy dzisiejszy.
+     `exact` (dni i tygodnie z kalendarza) tylko wtedy, gdy doba pomiaru daje DOKŁADNIE zapisany
+     wiek. Rekord zapisany ponownie po odtworzeniu ma nową datę zapisu przy starym wieku — wtedy
+     doby pomiaru nie znamy i nie zgadujemy jej. `iso` to data urodzenia z formularza. */
+  function wiekPomiaru(rekord, iso) {
+    var uzytkownik = rekord && rekord.user && typeof rekord.user === 'object' ? rekord.user : null;
+    if (!uzytkownik) return null;
+
+    var lata = calkowitaNieujemna(uzytkownik.age);
+    var miesiace = calkowitaNieujemna(uzytkownik.ageMonths);
+    var doba = dobaPomiaru(rekord);
+    var zDoby = iso && doba ? ageFromDobISO(iso, doba) : null;
+
+    /* Data urodzenia, której rekord NIE zna (dopisana w formularzu po zapisie wizyty bez daty):
+       zapisany wiek wpisano wtedy ręcznie, nie z tej daty, więc o wieku pomiaru mówi ta data na
+       dobę pomiaru — przy wizycie zapisanej dziś to zwykły wiek na dziś, jak przed zapisem. */
+    var dataRekordu = typeof uzytkownik.dobISO === 'string' ? uzytkownik.dobISO.trim() : '';
+    var razem = null;
+    if (zDoby && iso !== dataRekordu) razem = zDoby.totalMonths;
+    else if (lata !== null) razem = lata * 12 + (miesiace !== null ? miesiace : 0);
+    else if (zDoby) razem = zDoby.totalMonths;
+    if (razem === null) return null;
+
+    var dokladny = zDoby && zDoby.totalMonths === razem ? zDoby : null;
+    var tygodnie = null;
+    if (dokladny) {
+      tygodnie = dokladny.weeks;
+    } else {
+      var zapisane = parseWeeksInput(uzytkownik.ageWeeks == null ? '' : uzytkownik.ageWeeks);
+      if (zapisane.status === 'ok') tygodnie = zapisane.weeks;
+    }
+
+    return {
+      years: Math.floor(razem / 12),
+      ageMonths: razem % 12,
+      totalMonths: razem,
+      weeks: tygodnie,
+      measuredOn: doba,
+      exact: dokladny ? { days: dokladny.days, weeks: dokladny.weeks } : null
+    };
+  }
+
+  /* Wiek pomiaru, gdy formularz pokazuje odtworzony zapis; inaczej null i działa wiek na dziś. */
+  function pomiarOdtworzony(iso) {
+    if (!trybOdtworzenia()) return null;
+    return wiekPomiaru(rekordWczytany(), iso);
+  }
+
+  function opisDaty(data) {
+    return dwuCyfry(data.getDate()) + '-' + dwuCyfry(data.getMonth() + 1) + '-' + data.getFullYear();
+  }
+
+  /* Notka przy zapisanym pomiarze. Pomiar z DZISIEJSZEJ doby (lekarz właśnie zapisał wizytę)
+     dostaje zwykłą notkę — to nadal dzisiejsza wizyta. Datę pomiaru podajemy tylko wtedy, gdy
+     jest pewna, czyli zgadza się z zapisanym wiekiem. */
+  function opisOdtworzenia(pomiar, dzis, zKartoteki, teraz) {
+    var doba = pomiar.exact ? pomiar.measuredOn : null;
+    var dzisiejszy = !!(doba && dzis && doba.getTime() === dzisLokalnie(teraz || null).getTime());
+    if (dzisiejszy && dzis.totalMonths === pomiar.totalMonths) {
+      return zKartoteki
+        ? zdanie('Z kartoteki. Wiek na dzień dzisiejszej wizyty: ' + opisWieku(pomiar)) + ' Zmiana daty w Karcie Pacjenta.'
+        : zdanie('Wiek liczony z daty urodzenia na dzień wizyty: ' + opisWieku(pomiar));
+    }
+
+    var tekst = (zKartoteki ? 'Z kartoteki. ' : '')
+      + (doba ? 'Pomiar z ' + opisDaty(doba) : 'Zapisany pomiar')
+      + ' — wiek w dniu pomiaru: ' + opisWieku(pomiar);
+    if (dzis && dzis.totalMonths !== pomiar.totalMonths) {
+      var plec = '';
+      var rekord = rekordWczytany();
+      if (rekord && rekord.user && rekord.user.sex) plec = String(rekord.user.sex);
+      var kto = /^[KF]/i.test(plec.trim()) ? 'pacjentka ma ' : 'pacjent ma ';
+      tekst = zdanie(tekst + ' (aktualnie ' + kto + opisWieku(dzis) + ')') + ' Wiek na dziś liczy „Nowy pomiar”.';
+    } else {
+      tekst = zdanie(tekst);
+    }
+    return zKartoteki ? tekst + ' Zmiana daty w Karcie Pacjenta.' : tekst;
+  }
+
   /* Jedyne miejsce, które decyduje o stanie pól. Wywoływane po wpisaniu daty
      lub tygodni, po wczytaniu pacjenta i przy starcie strony. Pisanie do pól
      wysyła zdarzenia `input`, na które sami nasłuchujemy — stąd zapora. */
@@ -435,6 +586,10 @@
       return { status: 'future', iso: null };
     }
 
+    /* P-ODTWORZ-WIEK: odtworzony zapis zostaje w wieku z dnia pomiaru (patrz nagłówek). */
+    var pomiar = pomiarOdtworzony(wynik.iso);
+    if (pomiar) return pokazOdtworzony(wynik.iso, pomiar, wiek, wejscie, notka, blad, czysc, ustawienia.now || null);
+
     ustawZPowiadomieniem(pole(ID.years), wiek.years);
     ustawZPowiadomieniem(pole(ID.months), wiek.ageMonths);
     zablokujWiek(true);
@@ -442,8 +597,8 @@
     pokaz(
       notka,
       zRekordu(wejscie)
-        ? 'Z kartoteki. Wiek na dzień dzisiejszej wizyty: ' + opisWieku(wiek) + '. Zmiana daty w Karcie Pacjenta.'
-        : 'Wiek liczony z daty urodzenia na dzień wizyty: ' + opisWieku(wiek) + '.'
+        ? zdanie('Z kartoteki. Wiek na dzień dzisiejszej wizyty: ' + opisWieku(wiek)) + ' Zmiana daty w Karcie Pacjenta.'
+        : zdanie('Wiek liczony z daty urodzenia na dzień wizyty: ' + opisWieku(wiek))
     );
     if (czysc) czysc.hidden = zRekordu(wejscie);
 
@@ -465,6 +620,33 @@
     }
 
     return { status: 'ok', iso: wynik.iso, age: wiek };
+  }
+
+  /* Stan pól przy odtworzonym zapisie: wiek i tygodnie z dnia pomiaru, nadal tylko do odczytu
+     (o wieku przesądza rekord), a notka mówi wprost, z jakiej chwili są dane. */
+  function pokazOdtworzony(iso, pomiar, dzis, wejscie, notka, blad, czysc, teraz) {
+    ustawZPowiadomieniem(pole(ID.years), pomiar.years);
+    ustawZPowiadomieniem(pole(ID.months), pomiar.ageMonths);
+    zablokujWiek(true);
+    pokaz(blad, '');
+    pokaz(notka, opisOdtworzenia(pomiar, dzis, zRekordu(wejscie), teraz));
+    if (czysc) czysc.hidden = zRekordu(wejscie);
+
+    var wTygodniach = weeksApplicable(pomiar.totalMonths);
+    pokazWierszTygodni(wTygodniach);
+    var pow = pole(ID.weeks);
+    if (wTygodniach) {
+      if (pow) pow.value = pomiar.weeks === null ? '' : String(pomiar.weeks);
+      zablokujTygodnie(true);
+      pokaz(pole(ID.weeksError), '');
+      pokaz(pole(ID.weeksNote), pomiar.weeks === null ? '' : opisTygodni(pomiar.weeks) + ' życia w dniu pomiaru.');
+    } else {
+      if (pow) pow.value = '';
+      pokaz(pole(ID.weeksNote), '');
+      pokaz(pole(ID.weeksError), '');
+    }
+
+    return { status: 'ok', iso: iso, age: pomiar, restored: true };
   }
 
   /* Data z wczytanego rekordu: wpisz, oznacz jako pochodzącą z kartoteki i zablokuj. */
@@ -554,6 +736,16 @@
   function readExactAge() {
     var iso = readISO();
     if (!iso) return null;
+    /* P-ODTWORZ-WIEK: przy odtworzonym zapisie dokładny wiek z doby POMIARU. Bez niej null —
+       siatki biorą wtedy wiersz ukończonego miesiąca z pól wieku. Dzisiejszy wiek trafiałby do
+       odbiorców bez strażnika `totalMonths` (karta zespołu Downa) wprost. */
+    var pomiar = pomiarOdtworzony(iso);
+    if (pomiar) {
+      if (!pomiar.exact) return null;
+      var ulamkowePomiaru = exactMonthsFromDays(pomiar.exact.days);
+      if (ulamkowePomiaru === null) return null;
+      return { totalMonths: pomiar.totalMonths, days: pomiar.exact.days, exactMonths: ulamkowePomiaru };
+    }
     var wiek = ageFromDobISO(iso, null);
     if (!wiek) return null;
     var ulamkowe = exactMonthsFromDays(wiek.days);
@@ -567,6 +759,9 @@
   function readWeeks() {
     var iso = readISO();
     if (iso) {
+      /* Odtworzony zapis zapisany ponownie niesie tygodnie z dnia pomiaru, nie dzisiejsze. */
+      var pomiar = pomiarOdtworzony(iso);
+      if (pomiar) return weeksApplicable(pomiar.totalMonths) ? pomiar.weeks : null;
       var wiek = ageFromDobISO(iso, null);
       if (!wiek) return null;
       return weeksApplicable(wiek.totalMonths) ? wiek.weeks : null;
@@ -781,6 +976,8 @@
     monthsFromWeeks: monthsFromWeeks,
     exactMonthsFromDays: exactMonthsFromDays,
     weeksApplicable: weeksApplicable,
+    measurementDay: dobaPomiaru,
+    ageAtMeasurement: wiekPomiaru,
     refresh: odswiez,
     setFromRecord: setFromRecord,
     setFromSession: setFromSession,
