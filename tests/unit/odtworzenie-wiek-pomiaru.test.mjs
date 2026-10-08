@@ -22,10 +22,14 @@ function atrapa(id) {
   return el;
 }
 
-function srodowisko({ wybor = null, rekord = null } = {}) {
+function srodowisko({ wybor = null, rekord = null, pomiar = null } = {}) {
   const pola = {};
   ['dobInput', 'dobNote', 'dobError', 'dobClear', 'age', 'ageMonths', 'ageWeeks', 'ageWeeksRow', 'ageWeeksNote', 'ageWeeksError', 'restoreStateBtn']
     .forEach((id) => { pola[id] = atrapa(id); });
+  /* Masa i wzrost w formularzu — tak, jak wpisuje je restoreLoadedState (bez zdarzeń). */
+  if (pomiar) {
+    ['weight', 'height'].forEach((id) => { pola[id] = atrapa(id); pola[id].value = pomiar[id] == null ? '' : String(pomiar[id]); });
+  }
   pola.restoreStateBtn.style = { display: 'none' };
   const sesja = new Map();
   if (wybor) sesja.set('vildaLoadChoiceV1', wybor);
@@ -224,8 +228,8 @@ describe('P-ODTWORZ-WIEK — formularz po „Odtwórz zapis"', () => {
     expect(D.readExactAge().totalMonths).toBe(203);
   });
 
-  it('data dopisana w formularzu do odtworzonej starej wizyty bez daty: wiek z tej daty na dzień tamtego pomiaru', () => {
-    const stary = { timestampISO: new Date(2026, 5, 17, 15, 0).toISOString(), user: { age: 16, ageMonths: 9, sex: 'M', height: 172, weight: 60 } };
+  it('data dopisana do odtworzonej starej wizyty bez daty: przy PEWNEJ dobie pomiaru (measuredAtISO) wiek z tej daty na tamten dzień', () => {
+    const stary = { timestampISO: new Date(2026, 6, 1, 9, 0).toISOString(), user: { age: 16, ageMonths: 9, sex: 'M', height: 172, weight: 60, measuredAtISO: '2026-06-17' } };
     const { pola, D } = srodowisko({ wybor: 'restore', rekord: stary });
     pola.dobInput.value = '20-07-2009';
     pola.dobInput.dispatchEvent({ type: 'input' });
@@ -234,10 +238,101 @@ describe('P-ODTWORZ-WIEK — formularz po „Odtwórz zapis"', () => {
     expect(D.readExactAge().days).toBe(6176);
   });
 
+  it('data dopisana do odtworzonej starej wizyty bez daty: przy NIEPEWNEJ dobie (sam timestampISO) zostaje zapisany wiek', () => {
+    // timestampISO mógł zostać przesunięty ponownym zapisem — nie nadpisujemy nim wieku z rekordu.
+    const stary = { timestampISO: new Date(2026, 5, 17, 15, 0).toISOString(), user: { age: 16, ageMonths: 9, sex: 'M', height: 172, weight: 60 } };
+    const { pola, D } = srodowisko({ wybor: 'restore', rekord: stary });
+    pola.dobInput.value = '20-07-2009';
+    pola.dobInput.dispatchEvent({ type: 'input' });
+    expect([pola.age.value, pola.ageMonths.value]).toEqual(['16', '9']);
+    expect(pola.dobNote.textContent).toBe('Zapisany pomiar — wiek w dniu pomiaru: 16 lat 9 mies. (aktualnie pacjent ma 16 lat 11 mies.). Wiek na dziś liczy „Nowy pomiar”.');
+    expect(D.readExactAge(), 'doba z datą urodzenia daje 16/10, nie 16/9 — nie zgadujemy').toBeNull();
+  });
+
   it('wybór „restore" bez wczytanego rekordu niczego nie wymyśla — działa wiek na dziś', () => {
     const { pola, D } = srodowisko({ wybor: 'restore', rekord: null });
     D.setFromRecord('2009-07-20');
     expect(pola.ageMonths.value).toBe('11');
+  });
+});
+
+describe('P-ODTWORZ-WIEK — przegląd: ponowny zapis i nowy pomiar w odtworzonej wizycie', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 5, 26, 12, 0)); // 26-06-2026
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  // Dziewczynka ur. 01-06-2026, pomiar 11-06-2026 (10. doba, 1 tydzień), 51 cm / 3,6 kg.
+  const wizyta = () => ({
+    timestampISO: new Date(2026, 5, 11, 12, 0).toISOString(),
+    user: { age: 0, ageMonths: 0, ageWeeks: 1, sex: 'F', height: 51, weight: 3.6, dobISO: '2026-06-01' },
+  });
+
+  it('odtworzona wizyta z przeszłości: kolektor dostaje datę pomiaru do zapisu', () => {
+    const { D, wyslij } = srodowisko({ wybor: 'restore', rekord: wizyta(), pomiar: { weight: '3.6', height: '51' } });
+    wyslij('vilda:state-restored');
+    expect(D.readMeasuredAtISO()).toBe('2026-06-11');
+    expect(D.readExactAge()).toEqual({ totalMonths: 0, days: 10, exactMonths: 10 / 30.4375 });
+    expect(D.readWeeks()).toBe(1);
+  });
+
+  it('po ponownym zapisie (świeży timestampISO + measuredAtISO) doba pomiaru zostaje ta sama', () => {
+    const ponownie = { ...wizyta(), timestampISO: new Date(2026, 5, 26, 11, 0).toISOString() };
+    ponownie.user = { ...ponownie.user, measuredAtISO: '2026-06-11' };
+    const { pola, D, wyslij } = srodowisko({ wybor: 'restore', rekord: ponownie, pomiar: { weight: '3.6', height: '51' } });
+    wyslij('vilda:patient-loaded'); // saveUserData rozgłasza je z source:'save'
+    expect(pola.ageWeeks.value).toBe('1');
+    expect(D.readExactAge().days).toBe(10);
+    expect(D.readMeasuredAtISO()).toBe('2026-06-11');
+    expect(pola.dobNote.textContent).toContain('Pomiar z 11-06-2026');
+  });
+
+  it('rekord zapisany ponownie BEZ daty pomiaru w tym samym miesiącu: zapisane tygodnie nie zgadzają się z dobą — dokładnego wieku nie zgadujemy', () => {
+    const dryf = { ...wizyta(), timestampISO: new Date(2026, 5, 20, 11, 0).toISOString() }; // 19. doba = 2 tyg., zapisano 1 tydz.
+    const { pola, D, wyslij } = srodowisko({ wybor: 'restore', rekord: dryf, pomiar: { weight: '3.6', height: '51' } });
+    wyslij('vilda:state-restored');
+    expect(D.readExactAge()).toBeNull();
+    expect(D.readWeeks(), 'tygodnie z rekordu, nie z przesuniętej doby').toBe(1);
+    expect(pola.ageWeeks.value).toBe('1');
+  });
+
+  it('nowa masa albo wzrost w odtworzonej wizycie to nowy pomiar: wiek na dziś, bez daty pomiaru do zapisu', () => {
+    vi.setSystemTime(new Date(2026, 6, 10, 12, 0)); // 10-07-2026
+    const { pola, D, wyslij } = srodowisko({ wybor: 'restore', rekord: rekordNastolatka(), pomiar: { weight: '60', height: '172' } });
+    pola.age.value = '16'; pola.ageMonths.value = '10';
+    wyslij('vilda:state-restored');
+    expect(pola.ageMonths.value).toBe('10');
+    expect(D.readMeasuredAtISO()).toBe('2026-06-17');
+
+    pola.height.value = '174';
+    pola.height.dispatchEvent({ type: 'input' });
+    expect(pola.ageMonths.value, 'nowy pomiar — wiek z daty urodzenia na dziś').toBe('11');
+    expect(pola.dobNote.textContent).toBe('Z kartoteki. Wiek na dzień dzisiejszej wizyty: 16 lat 11 mies. Zmiana daty w Karcie Pacjenta.');
+    expect(D.readExactAge().totalMonths).toBe(203);
+    expect(D.readMeasuredAtISO()).toBeNull();
+
+    // powrót do zapisanej wartości (pomyłka w polu) przywraca odtworzoną wizytę
+    pola.height.value = '172,0';
+    pola.height.dispatchEvent({ type: 'change' });
+    expect(pola.ageMonths.value).toBe('10');
+  });
+
+  it('bez wyboru „Odtwórz" wpisywanie masy i wzrostu niczego w polach wieku nie rusza', () => {
+    vi.setSystemTime(new Date(2026, 6, 10, 12, 0));
+    const { pola, D } = srodowisko({ wybor: 'new', rekord: rekordNastolatka(), pomiar: { weight: '', height: '' } });
+    D.setFromRecord('2009-07-20');
+    pola.ageMonths.value = 'nie-ruszać';
+    pola.height.value = '174';
+    pola.height.dispatchEvent({ type: 'input' });
+    expect(pola.ageMonths.value).toBe('nie-ruszać');
+    expect(D.readMeasuredAtISO()).toBeNull();
+  });
+
+  it('wizyta zapisana dziś nie dostaje daty pomiaru (wystarcza timestampISO)', () => {
+    vi.setSystemTime(new Date(2026, 5, 11, 18, 0));
+    const { D } = srodowisko({ wybor: 'restore', rekord: wizyta(), pomiar: { weight: '3.6', height: '51' } });
+    expect(D.readMeasuredAtISO()).toBeNull();
   });
 });
 

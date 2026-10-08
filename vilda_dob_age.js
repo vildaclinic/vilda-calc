@@ -439,11 +439,12 @@
     return Number.isFinite(n) && n >= 0 ? n : null;
   }
 
-  /* Doba pomiaru zapisanego rekordu (lokalna północ) albo null. Najpierw `user.measuredAtISO`
-     — data pomiaru dopisanego w Karcie Pacjenta, bez godziny — potem `timestampISO`, chwila
-     zapisu z formularza głównego. Datę bez godziny czytamy wprost z zapisu: new Date('2026-06-17')
-     to północ UTC i w strefach ujemnych cofnęłaby się o dobę (DOB-AGE-1). */
-  function dobaPomiaru(rekord) {
+  /* Doba pomiaru zapisanego rekordu: {doba (lokalna północ), zMiary} albo null. Najpierw
+     `user.measuredAtISO` — data pomiaru, bez godziny (pisze ją Karta Pacjenta, a od P-ODTWORZ-WIEK
+     także ponowny zapis odtworzonej wizyty) — potem `timestampISO`, chwila zapisu z formularza
+     głównego. Datę bez godziny czytamy wprost z zapisu: new Date('2026-06-17') to północ UTC
+     i w strefach ujemnych cofnęłaby się o dobę (DOB-AGE-1). */
+  function zrodloDobyPomiaru(rekord) {
     var uzytkownik = rekord && rekord.user && typeof rekord.user === 'object' ? rekord.user : null;
     var kandydaci = [uzytkownik ? uzytkownik.measuredAtISO : null, rekord ? rekord.timestampISO : null];
     for (var i = 0; i < kandydaci.length; i++) {
@@ -453,49 +454,77 @@
       var data = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(tekst);
       if (isNaN(data.getTime())) continue;
       if (m && (data.getFullYear() !== +m[1] || data.getMonth() !== +m[2] - 1 || data.getDate() !== +m[3])) continue;
-      return dzisLokalnie(data);
+      return { doba: dzisLokalnie(data), zMiary: i === 0 };
     }
     return null;
+  }
+
+  function dobaPomiaru(rekord) {
+    var zrodlo = zrodloDobyPomiaru(rekord);
+    return zrodlo ? zrodlo.doba : null;
+  }
+
+  function liczbaZZapisu(v) {
+    var tekst = String(v == null ? '' : v).trim().replace(',', '.');
+    if (tekst === '') return null;
+    var n = Number(tekst);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  /* Czy formularz nadal pokazuje POMIAR rekordu — masa i wzrost jak w zapisie. Gdy lekarz wpisze
+     nowe wartości, to nowy pomiar i wiek liczy się na dziś, jak przed P-ODTWORZ-WIEK. Strona bez
+     tych pól nie ma czego porównać. */
+  function pomiarNiezmieniony(rekord) {
+    var uzytkownik = rekord && rekord.user && typeof rekord.user === 'object' ? rekord.user : null;
+    if (!uzytkownik) return false;
+    return ['weight', 'height'].every(function (klucz) {
+      var el = pole(klucz);
+      if (!el) return true;
+      var wPolu = liczbaZZapisu(el.value);
+      var wRekordzie = liczbaZZapisu(uzytkownik[klucz]);
+      if (wPolu === null || wRekordzie === null) return wPolu === wRekordzie;
+      return Math.abs(wPolu - wRekordzie) < 1e-6;
+    });
   }
 
   /* Wiek POMIARU zapisanego rekordu — ta sama reguła, co Karta Pacjenta (Rata B, P3): zapisany
      wiek rekordu, a gdy go nie ma, wiek z daty urodzenia na dobę pomiaru. Nigdy dzisiejszy.
      `exact` (dni i tygodnie z kalendarza) tylko wtedy, gdy doba pomiaru daje DOKŁADNIE zapisany
-     wiek. Rekord zapisany ponownie po odtworzeniu ma nową datę zapisu przy starym wieku — wtedy
-     doby pomiaru nie znamy i nie zgadujemy jej. `iso` to data urodzenia z formularza. */
-  function wiekPomiaru(rekord, iso) {
+     wiek i zapisane tygodnie. Rekord zapisany ponownie starym kodem ma nową datę zapisu przy
+     starym wieku — wtedy doby pomiaru nie znamy i nie zgadujemy jej. `iso` to data urodzenia
+     z formularza. */
+  function wiekPomiaru(rekord, iso, teraz) {
     var uzytkownik = rekord && rekord.user && typeof rekord.user === 'object' ? rekord.user : null;
     if (!uzytkownik) return null;
 
     var lata = calkowitaNieujemna(uzytkownik.age);
     var miesiace = calkowitaNieujemna(uzytkownik.ageMonths);
-    var doba = dobaPomiaru(rekord);
+    var zrodlo = zrodloDobyPomiaru(rekord);
+    var doba = zrodlo ? zrodlo.doba : null;
     var zDoby = iso && doba ? ageFromDobISO(iso, doba) : null;
+    var zapisaneTygodnie = parseWeeksInput(uzytkownik.ageWeeks == null ? '' : uzytkownik.ageWeeks);
+    var tygodnieRekordu = zapisaneTygodnie.status === 'ok' ? zapisaneTygodnie.weeks : null;
 
     /* Data urodzenia, której rekord NIE zna (dopisana w formularzu po zapisie wizyty bez daty):
        zapisany wiek wpisano wtedy ręcznie, nie z tej daty, więc o wieku pomiaru mówi ta data na
-       dobę pomiaru — przy wizycie zapisanej dziś to zwykły wiek na dziś, jak przed zapisem. */
+       dobę pomiaru — ale tylko na dobę PEWNĄ (zapisana data pomiaru albo wizyta z dziś; wtedy to
+       zwykły wiek na dziś, jak przed zapisem). Przy niepewnej dobie zostaje zapisany wiek. */
     var dataRekordu = typeof uzytkownik.dobISO === 'string' ? uzytkownik.dobISO.trim() : '';
+    var pewnaDoba = !!(zrodlo && (zrodlo.zMiary || doba.getTime() === dzisLokalnie(teraz || null).getTime()));
     var razem = null;
-    if (zDoby && iso !== dataRekordu) razem = zDoby.totalMonths;
+    if (zDoby && iso !== dataRekordu && (pewnaDoba || lata === null)) razem = zDoby.totalMonths;
     else if (lata !== null) razem = lata * 12 + (miesiace !== null ? miesiace : 0);
     else if (zDoby) razem = zDoby.totalMonths;
     if (razem === null) return null;
 
-    var dokladny = zDoby && zDoby.totalMonths === razem ? zDoby : null;
-    var tygodnie = null;
-    if (dokladny) {
-      tygodnie = dokladny.weeks;
-    } else {
-      var zapisane = parseWeeksInput(uzytkownik.ageWeeks == null ? '' : uzytkownik.ageWeeks);
-      if (zapisane.status === 'ok') tygodnie = zapisane.weeks;
-    }
+    var dokladny = zDoby && zDoby.totalMonths === razem
+      && (tygodnieRekordu === null || tygodnieRekordu === zDoby.weeks) ? zDoby : null;
 
     return {
       years: Math.floor(razem / 12),
       ageMonths: razem % 12,
       totalMonths: razem,
-      weeks: tygodnie,
+      weeks: dokladny ? dokladny.weeks : tygodnieRekordu,
       measuredOn: doba,
       exact: dokladny ? { days: dokladny.days, weeks: dokladny.weeks } : null
     };
@@ -504,7 +533,23 @@
   /* Wiek pomiaru, gdy formularz pokazuje odtworzony zapis; inaczej null i działa wiek na dziś. */
   function pomiarOdtworzony(iso) {
     if (!trybOdtworzenia()) return null;
-    return wiekPomiaru(rekordWczytany(), iso);
+    var rekord = rekordWczytany();
+    if (!pomiarNiezmieniony(rekord)) return null;
+    return wiekPomiaru(rekord, iso);
+  }
+
+  /* Data pomiaru do zapisu (`user.measuredAtISO`) albo null. Ponowny zapis odtworzonej wizyty
+     z PRZESZŁOŚCI dostaje od kolektora świeży `timestampISO`, więc bez tego doba pomiaru
+     przesuwałaby się na dzień zapisu: tygodnie i dokładny wiek niemowlęcia liczyłyby się na
+     inny dzień niż pomiar (przegląd P-ODTWORZ-WIEK, odtworzone na stronie). Wizyta z dziś
+     i nowy pomiar niczego tu nie dokładają. Nie zależy od daty urodzenia. */
+  function readMeasuredAtISO(teraz) {
+    if (!trybOdtworzenia()) return null;
+    var rekord = rekordWczytany();
+    if (!rekord || !pomiarNiezmieniony(rekord)) return null;
+    var doba = dobaPomiaru(rekord);
+    if (!doba || doba.getTime() >= dzisLokalnie(teraz || null).getTime()) return null;
+    return doISO(doba.getFullYear(), doba.getMonth() + 1, doba.getDate());
   }
 
   function opisDaty(data) {
@@ -922,6 +967,19 @@
       });
     });
 
+    /* P-ODTWORZ-WIEK: nowa masa albo wzrost w odtworzonej wizycie to nowy pomiar — wiek wraca
+       na dziś. Nasłuch działa tylko przy wyborze „Odtwórz", żeby zwykłe wpisywanie pomiarów
+       niczego tu nie uruchamiało. */
+    ['weight', 'height'].forEach(function (id) {
+      var el = d.getElementById(id);
+      if (!el) return;
+      ['input', 'change'].forEach(function (nazwa) {
+        el.addEventListener(nazwa, function () {
+          if (trybOdtworzenia()) odswiez();
+        });
+      });
+    });
+
     /* Rekord wczytuje się trzema drogami („Odtwórz zapis”, „Nowy pomiar”, wejście
        z Karty Pacjenta) i żadna nie wysyła zdarzenia `input`. Zamiast dopisywać się
        do każdej z nich, po zdarzeniu aplikacji czytamy datę wprost z wczytanego
@@ -987,6 +1045,7 @@
     readISO: readISO,
     readWeeks: readWeeks,
     readExactAge: readExactAge,
+    readMeasuredAtISO: readMeasuredAtISO,
     mount: mount
   };
 

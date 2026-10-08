@@ -121,8 +121,8 @@ test('„Odtwórz zapis" miesiąc po wizycie: wiek, notka i centyle z dnia pomia
   expect(odtworzony.masaWT).toBe(wizyta.masaWT);
   expect(odtworzony.dokladny).toEqual(wizyta.dokladny);
   expect(odtworzony.wiekDS, 'karta zespołu Downa czyta ten sam wiek').toBe(wizyta.wiekDS);
-  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.age, u.ageMonths]; }), 'ponowny zapis niesie wiek pomiaru')
-    .toEqual([16, 10]);
+  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.age, u.ageMonths, u.measuredAtISO]; }), 'ponowny zapis niesie wiek i datę pomiaru')
+    .toEqual([16, 10, '2026-06-17']);
 
   // F5 — sesja i moduł daty odtwarzają się od nowa.
   await page.reload({ waitUntil: 'load' });
@@ -172,29 +172,107 @@ test('niemowlę w 29. dobie życia odtworzone po miesiącu: 0 mies., 4 tygodnie 
   expect(await page.evaluate(() => window.collectUserData().user.ageWeeks), 'tygodnie do ponownego zapisu z dnia pomiaru').toBe(4);
 });
 
-test('okno wyboru zamknięte Escape, potem sam przycisk „Odtwórz zapisany stan": ten sam wynik co z okna', async ({ page }) => {
+const NIEMOWLE = { lastName: 'Fikcyjna', firstName: 'Testowa', sex: 'F', dobInput: '19-05-2026', height: '53.5', weight: '4.2' };
+const POMIAR_NIEMOWLECIA = { wzrost: 53.5, masa: 4.2, plec: 'F' };
+
+test('okno wyboru zamknięte Escape, potem sam przycisk „Odtwórz zapisany stan": przeliczenia odtwarzania już w wieku pomiaru', async ({ page }) => {
   test.setTimeout(180_000);
   await page.clock.setSystemTime(new Date(ZAPIS));
   await otworz(page);
-  const pid = await zapiszPacjenta(page, NASTOLATEK);
-  const wizyta = await stan(page, POMIAR_NASTOLATKA);
+  const pid = await zapiszPacjenta(page, NIEMOWLE);
+  const wizyta = await stan(page, POMIAR_NIEMOWLECIA);
 
   await page.evaluate(() => window.clearAllData());
-  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  await page.clock.setSystemTime(new Date('2026-07-20T10:00:00Z'));
   await otworzWybor(page, pid);
   await page.keyboard.press('Escape');
   await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
   await expect(page.locator('#restoreStateBtn')).toBeVisible();
-  page.once('dialog', (d) => d.accept());
-  await page.locator('#restoreStateBtn').click();
+
+  // Klik i odczyt w JEDNYM zadaniu strony: to, co restoreLoadedState przelicza synchronicznie,
+  // zanim późniejsze, odroczone przeliczenie zdąży cokolwiek nadpisać. Dotąd wybór „restore"
+  // stawał dopiero na końcu odtwarzania, więc te przeliczenia szły jeszcze w wieku na dziś
+  // (zmierzone: „Waga: 97 centyl Wzrost: >99 centyla").
+  const odRazu = await page.evaluate(() => {
+    window.confirm = () => true;
+    document.getElementById('restoreStateBtn').click();
+    const wyniki = (document.getElementById('results').innerText || '').replace(/\s+/g, ' ');
+    return {
+      centyle: (wyniki.match(/Waga:[\s\S]*?centyl[\s\S]*?Wzrost:[\s\S]*?centyl/) || [''])[0],
+      dokladny: window.VildaDobAge.readExactAge(),
+      wybor: window.sessionStorage.getItem('vildaLoadChoiceV1'),
+    };
+  });
+  expect(odRazu.wybor).toBe('restore');
+  expect(odRazu.dokladny, 'dokładny wiek z doby pomiaru już w trakcie odtwarzania').toEqual(wizyta.dokladny);
+  expect(odRazu.centyle, 'synchroniczne przeliczenie odtwarzania = wizyta').toBe(wizyta.centyle);
+
   await expect(page.locator('#restoreStateBtn')).toBeHidden();
   await page.waitForTimeout(1500);
-
-  const odtworzony = await stan(page, POMIAR_NASTOLATKA);
-  expect(await page.evaluate(() => window.sessionStorage.getItem('vildaLoadChoiceV1'))).toBe('restore');
-  expect([odtworzony.age, odtworzony.ageMonths, odtworzony.notka]).toEqual(['16', '10', NOTKA_ODTWORZENIA]);
+  const odtworzony = await stan(page, POMIAR_NIEMOWLECIA);
+  expect([odtworzony.age, odtworzony.ageMonths, odtworzony.tygodnie]).toEqual(['0', '0', '4']);
   expect(odtworzony.centyle).toBe(wizyta.centyle);
   expect(odtworzony.wzrostHT).toBe(wizyta.wzrostHT);
+});
+
+test('ponowny zapis odtworzonej wizyty w tym samym miesiącu nie przesuwa doby pomiaru — także po F5 i kolejnym wczytaniu', async ({ page }) => {
+  test.setTimeout(240_000);
+  // Dziewczynka ur. 01-06-2026, pomiar 11-06-2026 (10. doba, 1 tydzień). Odtworzona i zapisana
+  // ponownie 26-06-2026 — nadal 0 ukończonych miesięcy, ale już 25. doba i 3 tygodnie.
+  await page.clock.setSystemTime(new Date('2026-06-11T10:00:00Z'));
+  await otworz(page);
+  const pomiar = { wzrost: 51, masa: 3.6, plec: 'F' };
+  const pid = await zapiszPacjenta(page, { lastName: 'Fikcyjna', firstName: 'Testowa', sex: 'F', dobInput: '01-06-2026', height: '51', weight: '3.6' });
+  const wizyta = await stan(page, pomiar);
+  expect([wizyta.tygodnie, wizyta.dokladny.days]).toEqual(['1', 10]);
+
+  await page.evaluate(() => window.clearAllData());
+  await page.clock.setSystemTime(new Date('2026-06-26T10:00:00Z'));
+  await wczytaj(page, pid, 'odtworz');
+  expect(await stan(page, pomiar)).toMatchObject({ tygodnie: '1', dokladny: wizyta.dokladny, centyle: wizyta.centyle });
+
+  // „Zapisz" bez zmian pomiaru (np. po dopisaniu czegoś do wizyty)
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  const poZapisie = await stan(page, pomiar);
+  expect(poZapisie.tygodnie, 'dotąd 3 — tygodnie z dnia zapisu').toBe('1');
+  expect(poZapisie.dokladny).toEqual(wizyta.dokladny);
+  expect(poZapisie.centyle, 'dotąd „Waga: 22 centyl Wzrost: 17 centyl"').toBe(wizyta.centyle);
+  expect(poZapisie.wzrostHT).toBe(wizyta.wzrostHT);
+  expect(await page.evaluate(() => [window.lastLoadedData.user.measuredAtISO, window.lastLoadedData.user.ageWeeks])).toEqual(['2026-06-11', 1]);
+
+  await page.reload({ waitUntil: 'load' });
+  await gotowa(page);
+  expect(await stan(page, pomiar)).toMatchObject({ tygodnie: '1', dokladny: wizyta.dokladny, centyle: wizyta.centyle });
+
+  // Kolejna wizyta w karcie: ten sam zapis odtworzony jeszcze raz
+  await page.evaluate(() => window.clearAllData());
+  await page.clock.setSystemTime(new Date('2026-07-20T10:00:00Z'));
+  await wczytaj(page, pid, 'odtworz');
+  const znowu = await stan(page, pomiar);
+  expect(znowu).toMatchObject({ age: '0', ageMonths: '0', tygodnie: '1', dokladny: wizyta.dokladny, centyle: wizyta.centyle });
+  expect(znowu.notka).toContain('Pomiar z 11-06-2026 — wiek w dniu pomiaru: 0 lat 0 mies.');
+});
+
+test('odtworzona wizyta, potem nowy wzrost i masa: to nowy pomiar — wiek na dziś, jak przed zmianą', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.clock.setSystemTime(new Date(ZAPIS));
+  await otworz(page);
+  const pid = await zapiszPacjenta(page, NASTOLATEK);
+  await page.evaluate(() => window.clearAllData());
+  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  await wczytaj(page, pid, 'odtworz');
+  expect((await stan(page, POMIAR_NASTOLATKA)).ageMonths).toBe('10');
+
+  await page.locator('#height').fill('174');
+  await page.locator('#weight').fill('61');
+  await page.waitForTimeout(800);
+  const nowy = await stan(page, { wzrost: 174, masa: 61, plec: 'M' });
+  expect([nowy.age, nowy.ageMonths]).toEqual(['16', '11']);
+  expect(nowy.notka).toBe('Z kartoteki. Wiek na dzień dzisiejszej wizyty: 16 lat 11 mies. Zmiana daty w Karcie Pacjenta.');
+  expect(nowy.dokladny.totalMonths).toBe(203);
+  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.age, u.ageMonths, u.measuredAtISO]; }))
+    .toEqual([16, 11, undefined]);
 });
 
 /* Powłoka app.html: DocPro w ramce dostaje stan z panelu Start (vilda:persist-restored). */
