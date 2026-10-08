@@ -2706,7 +2706,7 @@ Stąd kumulacja: pierwszy błąd tworzył warunki dla wszystkich następnych. Da
 
 **Do decyzji właściciela.** (1) Akceptacja kliniczna reguły dla formularza głównego. (2) Brzmienie notki. (3) Reguła „nowa masa albo wzrost po odtworzeniu = nowy pomiar na dziś": poprawka literówki w pomiarze starej wizyty też przełączy wiek na dziś (jak przed zmianą); inne pola (obwody, talia, ciśnienie) wpisane do odtworzonej wizyty liczą się w wieku tej wizyty i dostają jej datę. (4) Poprawka daty urodzenia w Karcie zostawia zapisany wiek wizyty (reguła Karty); wiek na dziś daje „Nowy pomiar". (5) Kolektor formularza głównego zapisuje `user.measuredAtISO` (tylko pewną datę) — nowe użycie istniejącego pola rekordu.
 
-### P-ODTWORZ-WIEK-2 — data pomiaru po usunięciu, po północy, przy ponownym zapisie, z klirensu i po poprawce w Karcie (SW 1.1.200, 2026-10-08, przegląd po P-ODTWORZ-WIEK)
+### P-ODTWORZ-WIEK-2 — data pomiaru po usunięciu, po północy, przy ponownym zapisie, z klirensu i po poprawce w Karcie (SW 1.1.201, 2026-10-08, przegląd po P-ODTWORZ-WIEK)
 
 **Skąd.** Trzecia runda przeglądu adwersaryjnego kodu P-ODTWORZ-WIEK po scaleniu (7 znalezisk, każde potwierdzone przez dwóch niezależnych weryfikatorów na prawdziwej stronie z przesuniętym zegarem). Dwa to regresje P-ODTWORZ-WIEK (formularz główny zaczął zapisywać `user.measuredAtISO` także zwykłym wizytom), pięć to luki, przez które gwarancja „odtworzona wizyta liczy się w wieku pomiaru" nie obejmowała wszystkich ścieżek. Właściciel wybrał pełną poprawkę jednym PR.
 
