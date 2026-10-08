@@ -99,7 +99,7 @@ Zmiana synchronizacji wymaga sprawdzenia co najmniej:
 - kompatybilności ze starszym klientem;
 - eksportu i odtworzenia kopii.
 
-Projekt synchronizacji przyrostowej (urządzenie wysyła tylko własne zmiany jako zdarzenia, punkt kontrolny w częściach, dziennik zdarzeń w usłudze) czeka na decyzje właściciela: `docs/SYNC_PRZYROSTOWA_PLAN.md` (2026-10-07). Wdrożona jest tylko część etapu 0 (P-SYNC-MOST: gzip pełnej wysyłki i limit czasu od rozmiaru); pozostałe etapy czekają na decyzje.
+Projekt synchronizacji przyrostowej (urządzenie wysyła tylko własne zmiany jako zdarzenia, punkt kontrolny w częściach, dziennik zdarzeń w usłudze) czeka na decyzje właściciela: `docs/SYNC_PRZYROSTOWA_PLAN.md` (2026-10-07). Wdrożona jest tylko część etapu 0: P-SYNC-MOST (gzip pełnej wysyłki i limit czasu od rozmiaru) i P-SYNC-KURSOR (kursor `/changes` bez przeskoku na `headSeq`, odstęp po 412). Pozostałe etapy czekają na decyzje.
 
 ### 6. PWA i cache
 

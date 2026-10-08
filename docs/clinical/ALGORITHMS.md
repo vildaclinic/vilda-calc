@@ -9621,6 +9621,61 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Kursor dziennika zmian bez przeskoku, odstęp po 412, keepalive w kolejce wysyłki (P-SYNC-KURSOR, SW 1.1.195, `vilda_sync.js` 36, 2026-10-08)
+
+**Skąd.** Reszta etapu 0 planu `docs/SYNC_PRZYROSTOWA_PLAN.md`: poprawka kursora `/changes` i odstęp w pętli 412. Do tego uwaga Codex P2 do #574 (keepalive w kolejce) i trzy ustalenia przeglądu adwersarza tego PR (blokada sejfu w trakcie drenażu, tożsamość synchronizacji przed ponowną próbą, chwila między końcem wysyłki a startem kolejki). Decyzja właściciela z 2026-10-08. Serwer bez zmian.
+
+**1. Kursor dziennika zmian.** Worker v36 nadaje delcie numer w `SlotHub` (`headSeq`) przed zapisem do dziennika R2. Zapis idzie po odpowiedzi 202, w `waitUntil`. `/changes` bierze `headSeq` z `SlotHub`, a delty z listy R2. Błąd listy daje pustą listę z bieżącym `headSeq`. `Yt` przesuwał kursor na `headSeq`, więc delty jeszcze niezapisanej albo pominiętej przez błąd listy ta droga już nigdy nie pobierała. Zostawała tylko pełna wysyłka nadawcy albo WebSocket, jeśli urządzenie było akurat połączone.
+
+Teraz kursor idzie na najwyższy numer delty, którą partia naprawdę zwróciła. W jednej karcie kursor się nie cofa. `MERGE_BUSY` działa jak dotąd: kursor stoi (P-SYNC-STRAZNIK). Tak samo partia kończy się, gdy sejf zablokuje się w trakcie drenażu. Zablokowany sejf nie stosuje delt (`applyEncryptedDelta` oddaje `null` albo zwykły błąd), a drenaż idzie w tle po pobraniu. Po odblokowaniu następne pobranie stosuje partię od nowa. Scalanie delt jest odporne na powtórzenie. Uszkodzona delta jak dotąd nie blokuje kolejki.
+
+Luka u dołu, czyli dziennik przycięty do 200 delt i 3 dni, nie zatrzymuje kursora. Treść takiej delty przychodzi z pełną wysyłką nadawcy, którą `syncPull` pobiera po zmianie ETagu. Plan przewidywał przy pustej partii `syncPull({force:true})`. Celowo go nie ma. Przy tym samym ETagu blob w chmurze to stan już scalony, więc ponowne pobranie nie przyniesie brakującej delty.
+
+**Czego to nie zamyka.** Dziura poniżej najwyższej zwróconej delty dalej jest przeskakiwana. Powstaje, gdy dwie delty z krótkim odstępem trafią do R2 w odwrotnej kolejności albo gdy odczyt jednej delty z R2 raz się nie uda. Worker v36 nie podaje najstarszego numeru w dzienniku, więc klient nie odróżni takiej dziury od przyciętego dziennika. Taka delta dociera wtedy przez WebSocket, jeśli urządzenie jest połączone (`SlotHub` rozgłasza ją przy nadaniu numeru, przed zapisem do R2), albo z najbliższą pełną wysyłką nadawcy. Trwale zamyka to etap 1 planu: worker v37 zapisuje deltę przed 202 i nadaje numery w transakcji, bez dziur.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| kursor 0, `/changes` bez delt, `headSeq` 5 | kursor bez zmian; gdy delta 5 pojawi się w dzienniku, następne pobranie pyta od 0 i ją stosuje (czerwony na kodzie sprzed zmiany) |
+| delty 1 i 2, `headSeq` 3 (delta 3 jeszcze nie w R2) | kursor 2; następne pobranie pyta od 2, stosuje tylko 3, kursor 3 (czerwony na kodzie sprzed zmiany) |
+| delty 1–3, sejf blokuje się po delcie 1 | zastosowana tylko 1, kursor bez zmian; po odblokowaniu 1–3 od nowa, kursor 3 (czerwony na kodzie sprzed zmiany) |
+| delty 1 i 2, sejf blokuje się po delcie 2 | kursor bez zmian (czerwony na kodzie sprzed zmiany) |
+| kursor 1, delty 5 i 6 (dziennik przycięty) | stosowane 5 i 6, kursor 6 |
+| delty w kolejności 3, 1, 2 | kursor 3 |
+| delta 3 uszkodzona | stosowane 1–3, kursor 3 |
+| kursor 10, `headSeq` 4, brak delt | kursor 10 |
+
+**2. Odstęp po 412.** PUT z `If-Match` dostaje 412, gdy inne urządzenie właśnie wysłało. Dotąd ponowne pobranie i PUT szły od razu. Dwa urządzenia, które zderzyły się na `If-Match`, startowały więc znów w tej samej chwili. Teraz przed ponownym pobraniem jest odstęp: po pierwszej próbie 1 s, po drugiej 3 s, razy (0,5 + liczba losowa z [0, 1)). Po trzeciej próbie jak dotąd `CONFLICT`, bez dodatkowego czekania. Liczba prób to nadal 3, więc 9 s z planu nie występuje. Odstęp jest przed pobraniem, nie przed PUT, żeby pobranie widziało też kolejne wysyłki drugiego urządzenia. W tym czasie naraz trwa nadal najwyżej jedna pełna wysyłka, więc kolejne wywołania czekają do 1,5 s i 4,5 s dłużej.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| PUT: 412, 412, 200; los 0,5 | pobranie po 1000 ms, potem po 3000 ms; `uploaded` (czerwony na kodzie sprzed zmiany: 0 ms) |
+| PUT: 412, 200; los 0 i 0,999 | pierwszy odstęp 500 ms i 1499 ms |
+| PUT: 412, 412, 412 | odstępy 1 s i 3 s, `CONFLICT` od razu po trzecim |
+
+**3. Tożsamość synchronizacji przed ponowną próbą (przegląd adwersarza).** Wysyłka czyta tożsamość synchronizacji (slot, token, klucz) raz, na starcie. `revokeAllDevices` nie czeka na trwającą wysyłkę, a odstęp po 412 wydłużył jej czas o 0,5–4,5 s. Teraz przed każdą ponowną próbą pętli, po 412 albo 429, wysyłka sprawdza, czy tożsamość jest ta sama. Gdy się zmieniła, wysyłka kończy się błędem `SYNC_IDENTITY_CHANGED` i nie wraca do starego slotu. Następna wysyłka idzie już na nowy slot. Nowy slot ma i tak pełny stan, bo `revokeAllDevices` wysyła go przy rejestracji.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| PUT na stary slot: 412; 0 ms, 300 ms albo 1050 ms później `revokeAllDevices` (w odstępie albo w ponownym pobraniu) | wysyłka: `SYNC_IDENTITY_CHANGED`; stary slot zostaje skasowany; nowy slot istnieje (czerwony na kodzie sprzed zmiany) |
+| bez rotacji: 412, potem 200 | sprawdzenie przechodzi, `uploaded` |
+
+**4. keepalive w kolejce wysyłki.** Od P-SYNC-MOST-STOPKA naraz trwa najwyżej jedna pełna wysyłka, a wywołania w jej trakcie scalają się w jedną w kolejce. Kolejka brała opcje wywołania, które ją założyło. Gdy kolejkę założyło zwykłe wywołanie, flaga keepalive z późniejszego wywołania przy chowaniu karty (`M()` integracji) ginęła. Teraz keepalive sumuje się dla wszystkich wywołań scalonych w kolejce i zeruje się, gdy kolejka rusza. Nowa wysyłka rusza tylko wtedy, gdy nie trwa żadna i nie czeka kolejka. Wywołanie w chwili między końcem wysyłki a startem kolejki dołącza więc do kolejki, zamiast wysłać osobny PUT bez keepalive. PUT dostaje keepalive jak dotąd tylko przy ciele do 60 000 B (limit przeglądarki 64 KiB). Sejf właściciela po kompresji ma kilka MB, więc ta poprawka go nie dotyczy.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| PUT trwa; potem zwykłe `syncPush`, potem `syncPush({keepalive:true})` | kolejny PUT z keepalive (czerwony na kodzie sprzed zmiany) |
+| zwykłe, keepalive, zwykłe | kolejny PUT z keepalive (czerwony na kodzie sprzed zmiany) |
+| dwa cykle kolejki: [zwykłe, keepalive], potem [zwykłe, zwykłe] | keepalive: nie, tak, nie, nie (czerwony na kodzie sprzed zmiany) |
+| wywołanie zaraz po końcu wysyłki, w tym czasie wywołanie z keepalive | dwa PUT: bez keepalive, z keepalive (czerwony na kodzie sprzed zmiany: trzy PUT) |
+| kolejkę zakłada wywołanie z keepalive, potem zwykłe | kolejny PUT z keepalive |
+| same zwykłe wywołania | PUT bez keepalive |
+| ciało powyżej 60 000 B, flaga keepalive | PUT bez keepalive |
+| `syncPush({keepalive:true})`, nic nie trwa | PUT z keepalive |
+
+**Testy.** `tests/unit/sync-kursor-luki.test.mjs` ma 23 przypadki na prawdziwym `vilda_sync.js`. Na kodzie sprzed zmiany 15 jest czerwonych, czyli wszystkie przypadki poprawek. 8 kontroli niezmienionego zachowania jest zielonych. Przegląd sprawdził testy mutacjami: usunięcie każdej z poprawek albo przesunięcie sprawdzenia tożsamości przed ponowne pobranie daje czerwony test. Strażnik źródła kursora w `tests/unit/synchronizacja-straznik.test.mjs` pilnuje nowego warunku (`Bkm>n&&!Bsp`). Testy odstępu mierzą czas na fałszywym zegarze między zdarzeniami atrapy, bez asercji łącznego czasu, bo ta zależała od szybkości maszyny. Plik przeszedł 12 przebiegów z rzędu bez błędu.
+
+**Wpływ kliniczny: brak.** **Wersje.** `vilda_sync.js` 35 → 36 (8 stron), precache (append-only), `SW_VERSION` 1.1.194 → 1.1.195 (+ pin), fixture wersji. Wszystko nadało `npm run podbij-wersje` względem `origin/audyt` (`bcbdb24`).
+
 ## Wysyłka przyjmuje tylko kompletny gzip (P-SYNC-MOST-STOPKA, SW 1.1.186, `vilda_sync.js` 35, 2026-10-07)
 
 **Ustalenie przeglądu adwersarza po scaleniu P-SYNC-MOST (#573).** Safari, iOS i iPadOS 16.4–16.5 mają `CompressionStream`, ale WebKit przed poprawką z Safari 16.6 („Fixed compression streams to handle large outputs during the flush stage”) wykonuje przy zamknięciu strumienia jedno `deflate(Z_FINISH)` do bufora 16 KiB. Gdy ostatni blok razem ze stopką jest większy, wynik jest ucięty: brakuje końca danych, CRC i ISIZE. P-SYNC-MOST sprawdzał tylko, czy wynik jest krótszy od wejścia, więc takie urządzenie wysłałoby ucinek do chmury. Pozostałe urządzenia konta dostałyby przy pobraniu `DECOMPRESS_FAILED` i nie mogłyby ani scalić, ani wysłać (wysyłka wymaga udanego pobrania w sesji); dane lokalne zostają nietknięte, ale konto staje.
