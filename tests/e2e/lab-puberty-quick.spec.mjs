@@ -243,6 +243,9 @@ test('changing the current age or patient never restores a manual range', async 
   const changedAge = await expectNoReportedRange(page);
   expect(changedAge.evaluation.input.age.years).toBe(6);
   expect(changedAge.evaluation.clinical.code).toBe('early_development');
+  // Finish the native age edit before the programmatic patient switch, as
+  // clicking a patient-loading action does before replacing the form data.
+  await page.locator('#labValue').click();
   const nextId = await loadPatient(page, { sex: 'F', age: 15, stage: '3' });
   expect(nextId).not.toBe(firstId);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
@@ -425,7 +428,7 @@ test('historical manual ranges retain limits, invalid input, censored results an
     }
     if (scenario.raw) {
       expect(fixture.assessment.evaluation.measurement).toMatchObject({ raw: '<2', operator: '<', isExact: false, plotValue: null });
-      expect(fixture.note.labResult.valueNum).toBeNull();
+      expect(fixture.note.labResult).not.toHaveProperty('valueNum');
     }
     if (scenario.configured === false) {
       expect(fixture.assessment.evaluation.input.assay.confirmation).toBe('unknown');
