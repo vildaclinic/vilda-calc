@@ -124,7 +124,7 @@ test.describe('P-ZAPIS-USUNIETEJ — zapis do karty scalonej albo usuniętej w i
     const { x, y } = await page.evaluate(async (r) => {
       const V = window.VildaVault;
       const a = await V.savePatient(r.x, { dedup: false });
-      const b = await V.savePatient(r.y, { dedup: false });
+      const b = await V.savePatient(Object.assign({}, r.y, { ghTherapyPoints: [{ ageMonths: 54, dose: 0.03 }], birth: { weightG: 3200 } }), { dedup: false });
       return { x: a.patientId, y: b.patientId };
     }, { x: rekord([[60, 105, 17], [66, 108, 18]]), y: rekord([[48, 98, 15], [54, 101, 16]]) });
     const kartaB = await kolejnaKarta(context, userId);
@@ -145,6 +145,11 @@ test.describe('P-ZAPIS-USUNIETEJ — zapis do karty scalonej albo usuniętej w i
     await expect(pasek(page)).toContainText('Zapisano');
     expect(await wiekiGlowy(page, y), 'pomiary Y zostają, nowy pomiar trafia do Y')
       .toEqual(['48:98', '54:101', '60:105', '66:108', '72:112'].sort());
+    expect(await page.evaluate(async (id) => {
+      const g = (await window.VildaVault.getPatient(id)).snapshots[0].payload;
+      return { punkty: g.ghTherapyPoints, urodzenie: g.birth, plec: g.user && g.user.sex };
+    }, y), 'P-ZAPIS-USUNIETEJ-2: dane karty Y zostają w bieżącej wersji')
+      .toEqual({ punkty: [{ ageMonths: 54, dose: 0.03 }], urodzenie: { weightG: 3200 }, plec: 'M' });
     expect(await wiekiGlowy(page, x)).toBeNull();
     expect(await liczbaKart(page)).toBe(1);
   });
