@@ -203,12 +203,15 @@ test('okno blokady mostka: wiersz ręczny znika od razu, wiersz punktu GH pojawi
   await pacjentka(page);
   await reczny(page).locator('.gh-z-wiersza-btn').click();
   await page.fill('#ghZWierszaDawka', '0.9');
-  await page.evaluate(() => { window.__vildaSuppressGhAdvancedImportUntil = Date.now() + 2500; });
+  // Okno 10 s, nie 2,5 s: pod obciążeniem (pełny zestaw, 4 workery) klik, zapis i odczyt wierszy
+  // trwały dłużej niż 2,5 s, okno mijało przed asercją „wiersza GH jeszcze nie ma” i test padał,
+  // choć moduł działał dobrze. Czekanie na wiersz po końcu okna — z zapasem.
+  await page.evaluate(() => { window.__vildaSuppressGhAdvancedImportUntil = Date.now() + 10_000; });
   await page.click('#ghZWierszaZapisz');
   await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
   expect(await wiersze(page)).toEqual(['GH 8/0', 'GH 8/6']);
   await expect(page.locator('.gh-z-wiersza-btn')).toHaveCount(0);
-  await expect.poll(() => wiersze(page), { timeout: 8000 }).toEqual(['GH 8/0', 'GH 8/6', 'GH 9/0']);
+  await expect.poll(() => wiersze(page), { timeout: 25_000 }).toEqual(['GH 8/0', 'GH 8/6', 'GH 9/0']);
   const lista = await modul(page);
   expect(lista).toHaveLength(3);
 
