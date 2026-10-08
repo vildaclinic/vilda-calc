@@ -28,10 +28,10 @@
  *   3. P-ODTWORZ-WIEK-2 (G3/G6): wyjątek — formularz pokazuje ZAPISANĄ wizytę bez zmian
  *      (wybór „Odtwórz" albo wizyta zapisana w tej karcie; masa i wzrost jak w starej bazie),
  *      a Karta Pacjenta poprawiła W MIEJSCU właśnie ten pomiar („Historia → Edytuj", usunięcie
- *      bieżącego pomiaru). Wtedy masa, wzrost i wiek wizyty idą za poprawką. Dotąd formularz
- *      zostawał przy starych wartościach, moduł daty urodzenia przestawał uznawać je za
- *      zapisany pomiar i liczył je w wieku na dziś, a następny zapis z formularza cofał
- *      poprawkę z Karty, stemplując starym pomiarom dzisiejszą datę.
+ *      bieżącego pomiaru). Wtedy masa, wzrost i wiek wizyty (z tygodniami) idą za poprawką.
+ *      Dotąd formularz zostawał przy starych wartościach, moduł daty urodzenia przestawał
+ *      uznawać je za zapisany pomiar i liczył je w wieku na dziś, a następny zapis
+ *      z formularza cofał poprawkę z Karty, stemplując starym pomiarom dzisiejszą datę.
  *
  * CZEGO NIE ROBI. Nie reaguje na zmiany przychodzące z synchronizacji ani z innego urządzenia —
  * te ścieżki sejfu nie wołają `onPatientSaved`, więc pytanie o obcą zmianę zostaje dokładnie
@@ -201,7 +201,9 @@
 
   /* ---------------------------------------- wizyta poprawiona w Karcie (G3/G6) */
 
-  var POLA_WIZYTY = ['weight', 'height', 'age', 'ageMonths'];
+  /* Tygodnie razem z wiekiem: sejf usuwa je przy korekcie wieku (Bzw_tygodnieKorekty), więc
+     stare `#ageWeeks` w formularzu wróciłoby z następnym zapisem (uwaga Codex w #592). */
+  var POLA_WIZYTY = ['weight', 'height', 'age', 'ageMonths', 'ageWeeks'];
 
   function liczba(v) {
     var t = String(v == null ? '' : v).trim().replace(',', '.');

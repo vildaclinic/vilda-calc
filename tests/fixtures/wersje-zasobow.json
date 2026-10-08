@@ -481,7 +481,7 @@
  },
  "vilda_baseline_pacjenta.js": {
   "v": 2,
-  "sha256": "b5c9f3c109fc361965f728f77337931d548256bf56c393d2176cff2a1d5b5c9d"
+  "sha256": "9ac8dd75b28902325e27a1bd20e2e5ee9cdfb4d9eaf8152ee13fce1b98699004"
  },
  "vilda_blum_iss.js": {
   "v": 2,
@@ -981,7 +981,7 @@
  },
  "vilda_vault.js": {
   "v": 207,
-  "sha256": "f3d7d861767c64ae2002f1cfcc6d69e82c4b05f7e9d09f925525d065cfc17212"
+  "sha256": "81e5e1ad4a432d6538c90ef4dc381bfc04ea18ecbef8810e8c97e59465d4fda9"
  },
  "vilda_version_history_ui.js": {
   "v": 15,

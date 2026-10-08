@@ -115,13 +115,18 @@ describe('P-ODTWORZ-WIEK-2 (R0) — usunięcie bieżącego pomiaru w Karcie: awa
     expect(g.timestampISO).toBe('2026-06-05T10:00:00.000Z');
   });
 
-  it('korekta wieku albo daty bieżącego pomiaru w Karcie usuwa nieaktualne tygodnie; sama masa ich nie rusza', async () => {
+  it('korekta WIEKU bieżącego pomiaru w Karcie usuwa nieaktualne tygodnie; masa i sama data ich nie ruszają', async () => {
     const v = await sejf();
     const p = { name: 'Fikcyjna Testowa', timestampISO: '2026-06-26T10:00:00.000Z', user: { sex: 'K', age: 0, ageMonths: 0, ageWeeks: 3, height: 55, weight: 4.6 }, advanced: { data: { measurements: [] } } };
     const a = await v.savePatient(kopia(p), { dedup: false });
-    await v.updateMeasurementRow(a.patientId, { key: '0|55.00|4.60' }, { weight: 4.7 });
+    // Jak okno Karty („Historia → Edytuj"): ageMonths i dateISO idą ZAWSZE, także przy korekcie samej masy.
+    // Uwaga Codex w #592: dotąd liczba miesięcy była porównywana z kluczem wiersza („0|55.00|4.60"), więc
+    // tygodnie znikały przy każdej korekcie.
+    await v.updateMeasurementRow(a.patientId, { key: '0|55.00|4.60' }, { ageMonths: 0, height: 55, weight: 4.7, dateISO: '2026-06-26' });
     expect((await glowa(v, a.patientId)).user.ageWeeks, 'masa nie zmienia wieku').toBe(3);
-    await v.updateMeasurementRow(a.patientId, { key: '0|55.00|4.70' }, { ageMonths: 1, height: 55, weight: 4.7 });
+    await v.updateMeasurementRow(a.patientId, { key: '0|55.00|4.70' }, { ageMonths: 0, height: 55, weight: 4.7, dateISO: '2026-06-25' });
+    expect((await glowa(v, a.patientId)).user.ageWeeks, 'sama data: bez daty urodzenia tygodnie to jedyny dokładny wiek').toBe(3);
+    await v.updateMeasurementRow(a.patientId, { key: '0|55.00|4.70' }, { ageMonths: 1, height: 55, weight: 4.7, dateISO: '2026-06-25' });
     expect((await glowa(v, a.patientId)).user.ageWeeks).toBeUndefined();
   });
 });
@@ -262,6 +267,24 @@ describe('P-ODTWORZ-WIEK-2 (G3/G6) — korekta odtworzonej wizyty w Karcie: form
     expect(s.D.readMeasuredAtISO(), 'dotąd 2026-07-10').toBe('2026-06-17');
     expect(s.pola.dobNote.textContent).toContain('Pomiar z 17-06-2026');
     expect(s.win.hasUserModifiedAfterLoad, 'programowy wpis nie jest edycją lekarza').toBe(false);
+  });
+
+  it('ZNALEZISKO (Codex w #592): korekta wieku niemowlęcia w Karcie zdejmuje stare tygodnie także z formularza', async () => {
+    const rekord = {
+      name: 'Fikcyjna Testowa', timestampISO: new Date(2026, 5, 26, 15, 0).toISOString(),
+      user: { sex: 'K', age: 0, ageMonths: 0, ageWeeks: 3, height: 55, weight: 4.6 },
+    };
+    const s = formularz({ wybor: 'restore', rekord, pomiar: { weight: '4.6', height: '55' }, zBaza: true });
+    s.pola.name.value = 'Fikcyjna Testowa';
+    s.pola.age.value = '0'; s.pola.ageMonths.value = '0'; s.pola.ageWeeks.value = '3';
+    s.wyslij('vilda:state-restored');
+    const poprawiona = JSON.parse(JSON.stringify(rekord));
+    poprawiona.user.ageMonths = 1;
+    delete poprawiona.user.ageWeeks; // tak zostawia ją sejf (Bzw_tygodnieKorekty)
+    s.win.__glowa = { snapshots: [{ snapshotId: 's1', payload: poprawiona }] };
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.age.value, s.pola.ageMonths.value, s.pola.ageWeeks.value], 'dotąd tygodnie 3 zostawały i wracały z zapisem').toEqual(['0', '1', '']);
   });
 
   it('KONTROLA: lekarz zmienił już wzrost w formularzu (nowy pomiar) — poprawka z Karty nie nadpisuje formularza', async () => {
