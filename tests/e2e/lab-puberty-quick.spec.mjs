@@ -32,6 +32,9 @@ async function patient(page, { age = 14, stage = '4', sex = 'M', onsetAgeYears =
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI && window.VildaLabPubertyRuntime
     && !document.documentElement.classList.contains('vilda-auth-locked'));
+  return loadPatient(page, { age, stage, sex, onsetAgeYears });
+}
+async function loadPatient(page, { age = 14, stage = '4', sex = 'M', onsetAgeYears = null } = {}) {
   const id = await page.evaluate(async ({ ageYears, tanner, patientSex, onset }) => {
     const user = { name: 'Fikcyjny szybki wynik LH', sex: patientSex, age: ageYears, ageMonths: 0, tannerStage: tanner };
     const saved = await window.VildaVault.savePatient({ name: user.name, user, puberty: { gnrhaStatus: 'brak', onsetAgeYears: onset } }, { dedup: false });
@@ -49,6 +52,39 @@ const comparison = (page, kind) => assessment(page).locator(`[data-comparison="$
 const snapshot = (page, analyte = 'lh') => page.evaluate((testKey) => window.VildaLabPubertyRuntime.getAssessment({
   testKey, raw: document.getElementById('labValue').value, unit: document.getElementById('labUnit').value,
 }), analyte);
+
+async function expectNoReportedRange(page, analyte = 'lh') {
+  await expect(page.locator('#labPubertyOpenRange, #labPubertySectionRange, #labPubertyReportedRange, #labPubertyRangeUnit')).toHaveCount(0);
+  await expect(comparison(page, 'reported')).toHaveCount(0);
+  const saved = await snapshot(page, analyte);
+  expect(saved.status).toBe('recorded');
+  expect(saved.evaluation.input).not.toHaveProperty('reportedRange');
+  expect(saved.evaluation).not.toHaveProperty('reportedRange');
+  expect(saved.evaluation.limitations).not.toContain('reported_range_reference_disagreement');
+  return saved;
+}
+
+// Historical records use the public input contract and real engine/snapshot
+// APIs. Removing the current field must not reinterpret an existing range.
+async function recordReportedRange(page, patientId, { range = '0,5–3', raw = '2', configured = true } = {}) {
+  return page.evaluate(async ({ id, text, value, withProfile }) => {
+    const current = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    const input = window.VildaLabPubertyUI.buildInput({
+      contextBasis: 'current-patient', sex: 'M', ageYears: '14', ageMonths: '0', kind: 'G', stage: '4',
+      specimen: 'serum', gnrha: 'no', configuredAssay: withProfile ? current.assay : null, reportedRange: text,
+    }, { analyte: 'lh', raw: value, unit: 'IU/L' });
+    const evaluation = window.VildaLabPuberty.evaluate(input, window.VildaLabPubertyData);
+    const lab = { test: 'LH', testKey: 'lh', value, valueNum: evaluation.measurement.isExact ? evaluation.measurement.value : null,
+      unit: 'IU/L', clinicalDateISO: '2026-10-04' };
+    const savedAssessment = window.VildaLabSnapshot.create(evaluation, lab);
+    if (savedAssessment.status !== 'recorded') throw new Error('Production snapshot rejected historical reported range fixture');
+    const note = await window.VildaVault.savePatientNote({
+      patientId: id, title: 'Fikcyjny wcześniejszy zakres: ' + text, body: 'Syntetyczny zapis zgodny ze starszym kontraktem',
+      category: 'wynik-badania', clinicalDateISO: lab.clinicalDateISO, labResult: { ...lab, assessment: savedAssessment },
+    });
+    return { note: await window.VildaVault.getPatientNote(note.id), assessment: savedAssessment };
+  }, { id: patientId, text: range, value: raw, withProfile: configured });
+}
 
 async function currentSample(page) {
   await select(page, 'Kind', 'G');
@@ -82,6 +118,7 @@ test('closed quick form keeps four basic controls and imports age and Tanner wit
   expect(saved.evaluation.input.sampleDateISO).toBeNull();
   expect(saved.evaluation.input.age.years).toBe(6);
   expect(saved.evaluation.input.puberty.kind).toBe('unspecified');
+  await expectNoReportedRange(page);
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
 });
 
@@ -120,20 +157,25 @@ test('a method saved once survives reload and a second result while LH and FSH r
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await page.locator('#labValue').fill('3');
   expect((await snapshot(page)).evaluation.input.assay).toEqual(first.evaluation.input.assay);
+  await expectNoReportedRange(page);
   await choose(page, 'fsh');
   await expect(page.locator('#labPubertyMethodSummary')).not.toContainText('AnshLite');
   await expect(page.locator('#labPubertyConfiguredProfile')).toHaveValue('');
   await configureProfile(page, 'fsh');
   await page.locator('#labValue').fill('2');
   expect((await snapshot(page, 'fsh')).evaluation.input.assay).toMatchObject({ confirmation: 'configured', profileId: 'mayo-fsh-pediatric' });
+  await expectNoReportedRange(page, 'fsh');
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaLabPubertyRuntime));
   await choose(page);
   await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   await page.locator('#labValue').fill('2');
   expect((await snapshot(page)).evaluation.input.assay).toEqual(first.evaluation.input.assay);
+  await expectNoReportedRange(page);
   await choose(page, 'fsh');
   await expect(page.locator('#labPubertyMethodSummary')).toContainText('Roche');
+  await page.locator('#labValue').fill('2');
+  await expectNoReportedRange(page, 'fsh');
 });
 
 test('unknown context never becomes no treatment and a different sample method suspends the configured reference', async ({ page }) => {
@@ -161,25 +203,61 @@ test('unknown context never becomes no treatment and a different sample method s
   expect((await snapshot(page)).evaluation.input.treatment).toEqual(unknown.evaluation.input.treatment);
 });
 
-test('a one-field reported range uses the real engine, preserves its text and stays distinct from catalog references', async ({ page }) => {
+for (const analyte of ['lh', 'fsh']) {
+  test(`${analyte.toUpperCase()} needs no transcribed range for age, stage and early development, including method changes`, async ({ page }) => {
+    await open(page);
+    await patient(page, { age: 6 });
+    await choose(page, analyte);
+    await select(page, 'Kind', 'G');
+    await configureProfile(page, analyte);
+    await page.locator('#labValue').fill('3');
+    const current = await expectNoReportedRange(page, analyte);
+    expect(current.evaluation.referencePreview).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'within' } });
+    expect(current.evaluation.clinical.code).toBe('early_development');
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
+    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
+    await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toBeVisible();
+    await page.locator('#labPubertyUnknownMethod').check();
+    const unknown = await expectNoReportedRange(page, analyte);
+    expect(unknown.evaluation.input.assay.confirmation).toBe('unknown');
+    expect(unknown.evaluation).not.toHaveProperty('referencePreview');
+    expect(unknown.evaluation.biochemical).toMatchObject({ byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
+    expect(unknown.evaluation.clinical.code).toBe('early_development');
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
+    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
+    await page.locator('#labPubertyUnknownMethod').uncheck();
+    await page.locator('#labUnit').selectOption('mIU/mL');
+    const equivalentUnit = await expectNoReportedRange(page, analyte);
+    expect(equivalentUnit.evaluation.referencePreview).toEqual(current.evaluation.referencePreview);
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
+    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
+  });
+}
+
+test('changing the current age or patient never restores a manual range', async ({ page }) => {
   await open(page);
-  await patient(page);
+  const firstId = await patient(page);
   await choose(page);
-  await page.locator('#labUnit').selectOption('IU/L');
+  await currentSample(page);
+  await fill(page, 'AgeYears', '6');
+  const changedAge = await expectNoReportedRange(page);
+  expect(changedAge.evaluation.input.age.years).toBe(6);
+  expect(changedAge.evaluation.clinical.code).toBe('early_development');
+  const nextId = await loadPatient(page, { sex: 'F', age: 15, stage: '3' });
+  expect(nextId).not.toBe(firstId);
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
+  await expect(page.locator('#labPubertySex')).toHaveValue('F');
+  await select(page, 'Kind', 'Th');
   await page.locator('#labValue').fill('2');
-  await fill(page, 'ReportedRange', '0,5–3,0');
-  await expect(page.locator('#labPubertyRangeUnit')).toHaveText('Jednostka zakresu: IU/L.');
-  await expect(comparison(page, 'reported')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
-  let saved = await snapshot(page);
-  expect(saved.evaluation.input.reportedRange).toEqual({ text: '0,5–3,0', unit: 'IU/L' });
-  expect(saved.evaluation.reportedRange).toMatchObject({ status: 'within', raw: '0,5–3,0' });
-  await fill(page, 'ReportedRange', '<1');
-  await expect(comparison(page, 'reported')).toHaveAttribute('data-status', 'above');
-  saved = await snapshot(page);
-  expect(saved.evaluation.reportedRange.status).toBe('above');
-  await fill(page, 'ReportedRange', 'tekst bez zakresu');
-  await expect(comparison(page, 'reported')).toHaveAttribute('data-status', 'unavailable');
+  const next = await expectNoReportedRange(page);
+  expect(next.evaluation.input).toMatchObject({ sex: 'F', age: { years: 15 }, puberty: { kind: 'Th', stage: 3 } });
+  expect(next.evaluation.clinical.code).not.toBe('early_development');
+  expect(next.evaluation.referencePreview).toMatchObject({ byAge: { status: 'within' }, byStage: { status: 'within' } });
+  await choose(page, 'fsh');
+  await page.locator('#labValue').fill('2');
+  const withoutMethod = await expectNoReportedRange(page, 'fsh');
+  expect(withoutMethod.evaluation.input.assay.confirmation).toBe('unknown');
+  expect(withoutMethod.evaluation.biochemical.byAge.status).toBe('unavailable');
 });
 
 test('the visible age and stage define the current result even when its note is pinned to an earlier date', async ({ page }) => {
@@ -282,13 +360,12 @@ test('infant prematurity remains in Patient and changes applicability without in
   await expect(page.locator('#labPubertyPreterm')).toBeHidden();
 });
 
-test('pin and history preserve the configured profile and reported range despite later device preference changes', async ({ page }) => {
+test('new pins omit a manual range while history preserves the profile and range of an earlier record', async ({ page }) => {
   await open(page);
   const patientId = await patient(page);
   await choose(page);
   await currentSample(page);
-  await fill(page, 'ReportedRange', '0,5–3');
-  const before = await snapshot(page);
+  const before = await expectNoReportedRange(page);
   await page.locator('#labPinResultBtn').click();
   await page.locator('#labPinComment').fill('Fikcyjny zapis szybkiej oceny');
   await page.locator('#labPinSave').click();
@@ -296,20 +373,80 @@ test('pin and history preserve the configured profile and reported range despite
   const notes = await page.evaluate((id) => window.VildaVault.listPatientNotesForPatient(id), patientId);
   expect(notes).toHaveLength(1);
   expect(notes[0].labResult.assessment.evaluation).toEqual(before.evaluation);
+  expect(notes[0].labResult.assessment.evaluation.input).not.toHaveProperty('reportedRange');
+  expect(notes[0].labResult.assessment.evaluation).not.toHaveProperty('reportedRange');
+  const legacy = await recordReportedRange(page, patientId);
+  expect(legacy.assessment.evaluation.input.reportedRange).toEqual({ text: '0,5–3', unit: 'IU/L' });
+  expect(legacy.assessment.evaluation.reportedRange).toMatchObject({ status: 'within', raw: '0,5–3' });
+  expect(legacy.assessment.evaluation.input.assay).toEqual(before.evaluation.input.assay);
   await page.locator('#labPubertyUnknownMethod').check();
-  await fill(page, 'ReportedRange', '<1');
+  await expectNoReportedRange(page);
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   const saved = await page.evaluate((id) => window.VildaVault.getPatientNote(id), notes[0].id);
   expect(saved.labResult.assessment).toEqual(notes[0].labResult.assessment);
+  const historical = await page.evaluate((id) => window.VildaVault.getPatientNote(id), legacy.note.id);
+  expect(historical.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
-  await expect(recorded.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', 'within');
+  await expect(recorded.locator('[data-comparison="reported"]')).toHaveCount(0);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
   expect(saved.labResult.assessment.evaluation.input.measurementKind).toBe('unknown');
-  await expect(recorded).toContainText('0,5–3');
+  const oldRecord = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${historical.id}"] .vilda-lab-assessment`);
+  await expect(oldRecord.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', 'within');
+  await expect(oldRecord.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
+  await expect(oldRecord.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(oldRecord).toContainText('0,5–3');
+});
+
+test('historical manual ranges retain limits, invalid input, censored results and an unknown method', async ({ page }) => {
+  await open(page);
+  const patientId = await patient(page);
+  await choose(page);
+  await currentSample(page);
+  const cases = [
+    { range: '0,5–3,0', status: 'within' },
+    { range: '<1', status: 'above', conflict: true },
+    { range: 'tekst bez zakresu', status: 'unavailable', reason: 'invalid_reported_range' },
+    { range: '0,5–3', raw: '<2', status: 'indeterminate', reason: 'censored_result_crosses_reference_boundary' },
+    { range: '0,5–3', configured: false, status: 'within' },
+  ];
+  const fixtures = [];
+  for (const scenario of cases) {
+    const fixture = await recordReportedRange(page, patientId, scenario);
+    expect(fixture.assessment.evaluation.input.reportedRange).toEqual({ text: scenario.range, unit: 'IU/L' });
+    expect(fixture.assessment.evaluation.reportedRange).toMatchObject({ raw: scenario.range, status: scenario.status });
+    if (scenario.reason) expect(fixture.assessment.evaluation.reportedRange.reasonCodes).toContain(scenario.reason);
+    if (scenario.conflict) {
+      expect(fixture.assessment.evaluation.limitations).toContain('reported_range_reference_disagreement');
+      expect(fixture.assessment.evaluation.summary.status).toBe('attention');
+    }
+    if (scenario.raw) {
+      expect(fixture.assessment.evaluation.measurement).toMatchObject({ raw: '<2', operator: '<', isExact: false, plotValue: null });
+      expect(fixture.note.labResult.valueNum).toBeNull();
+    }
+    if (scenario.configured === false) {
+      expect(fixture.assessment.evaluation.input.assay.confirmation).toBe('unknown');
+      expect(fixture.assessment.evaluation.biochemical.byAge.status).toBe('unavailable');
+    }
+    fixtures.push({ ...fixture, scenario });
+  }
+  await expectNoReportedRange(page);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
+  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  for (const fixture of fixtures) {
+    const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), fixture.note.id);
+    expect(reread.labResult.assessment).toEqual(fixture.assessment);
+    const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${fixture.note.id}"] .vilda-lab-assessment`);
+    await expect(recorded.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', fixture.scenario.status);
+    await expect(recorded.locator('[data-comparison="reported"]')).toContainText(fixture.scenario.range);
+    if (fixture.scenario.configured === false) await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'unavailable');
+    if (fixture.scenario.conflict) await expect(recorded).toContainText('różne porównania');
+  }
 });
 
 test('a stale saved profile cannot silently select current reference data', async ({ page }) => {
@@ -341,8 +478,13 @@ test.describe('320 px quick form', () => {
     await page.locator('#labValue').fill('2');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     await currentSample(page);
-    await fill(page, 'ReportedRange', '0,5–3');
-    await expect(comparison(page, 'reported')).toHaveAttribute('data-status', 'within');
+    await expectNoReportedRange(page);
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
+    await fill(page, 'AgeYears', '6');
+    await expectNoReportedRange(page);
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
+    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
     const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
     expect(dimensions.width).toBe(320);
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width + 1);

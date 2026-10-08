@@ -4,7 +4,7 @@ import { expect } from './test-czas.mjs';
 // user-facing actions, never by unhiding DOM nodes or calling form internals.
 const sections = {
   Sex: 'Patient', AgeYears: 'Patient', AgeMonths: 'Patient', Preterm: 'Patient',
-  Kind: 'Stage', Stage: 'Stage', ReportedRange: 'Range',
+  Kind: 'Stage', Stage: 'Stage',
 };
 
 export async function quickField(ctx, name) {

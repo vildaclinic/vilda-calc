@@ -150,6 +150,18 @@ Silnik `1.3.0`, dane i kryteria `2026-10-04.1`, snapshot `1.2.0`, renderer, norm
 
 Syntetyczne regresje rzeczywistego formularza, adaptera, silnika i odczytu: M2 lata 9 miesięcy/G3/LH2 IU/L → `current-patient`, bez dat i usuniętych danych, nadal warunkowe `above` dla wieku, `within` dla G3 i `early_development`; M14/LH2 ze starą datą w źródle → wyłącznie bieżący wiek i zakres `0,8–8,7`; źródło z OUN/regresją/objętością → dane nie są przenoszone do nowego wejścia; GnRHa „w trakcie” → brak podglądu bazalnego; niemowlę z wcześniactwem → zachowana bramka populacji; starszy klient i zapis historyczny → zachowany pełny dawny kontekst i ostrzeżenia. Testy nie stanowią walidacji klinicznej.
 
+#### LAB-PUBERTY — usunięcie zakresu z wydruku z bieżącego formularza, 2026-10-08
+
+Formularz usuwa zakładkę „Zakres z wydruku”, pole granic i jego podpowiedź jednostki. Pozostają szczegóły „Pacjent” i „Stadium”. Ręczne porównanie powielało informację dostępną na wydruku; zakres zmiany wynika z decyzji funkcjonalnej właściciela, nie z nowej rekomendacji medycznej.
+
+**Wpływ kliniczny: TAK — zawężenie wejścia nowej oceny.** Nowe sprawdzenie nie tworzy `reportedRange`, dodatkowego porównania z ręcznym zakresem ani wynikającego z niego `reported_range_reference_disagreement`. Automatyczne porównania wieku/stadium, osie, wyróżnienia odchyleń i odrębne ostrzeżenia rozwoju pozostają bez zmian. Minimalne wejście ze zgodną metodą nadal otrzymuje warunkowe `referencePreview`, bez potwierdzania braku leczenia lub oznaczenia bazalnego. Inna/nieznana metoda nadal oznacza brak katalogowej oceny stężenia; konwersja i dostępna ocena rozwoju pozostają. Nie wprowadzamy zastępczej normy ani obejścia ograniczeń metody.
+
+Silnik `1.3.0`, dane i kryteria `2026-10-04.1`, renderer, snapshot, progi oraz jednostki pozostają niezmienione. Publiczny `buildInput` i silnik nadal przyjmują jawny `reportedRange` starszych klientów. Wizyty, przypięte wyniki i historia zachowują utrwalone porównania i konflikty bez migracji, ukrywania lub przeliczania; nie przenoszą tego pola do nowego sprawdzenia. Pełny `localReference` pozostaje odrębnym kontraktem.
+
+**Źródła i populacja:** dotychczasowe katalogi Mayo [LH LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999), AnshLite CLIA, oraz [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), Roche Elecsys ECLIA, odczytane 2–3.10.2026; surowica, IU/L i równoważne mIU/mL, populacje i granice wieku/płci/stadium konkretnych tabel. Model kliniczny 0–18 lat i ograniczenia interpretacji bazalnej pozostają oparte na dotychczasowych K1–K4; pełne cytowania, wersje dokumentów i zakres wcześniejszego odczytu w [LH_FSH.md](LH_FSH.md#źródła-i-rzeczywisty-zakres-odczytu). Nie dodano nowych źródeł ani progów.
+
+Syntetyczne regresje rzeczywistego formularza, silnika i odczytu: M2 lata 9 miesięcy/G3/LH2 IU/L, zgodna metoda → brak `reportedRange`, nadal warunkowo wiek `above` (`≤0,5`), stadium `within` (`0,09–4,2`) i `early_development`; ten sam kontekst z nieznaną metodą → brak katalogowej oceny, zachowana konwersja i ostrzeżenie rozwoju; starszy klient i zapisany snapshot LH15 z ręcznym zakresem `0–20` → zachowane odrębne porównanie i konflikt z katalogiem. Szczegóły: [LH_FSH.md](LH_FSH.md#usunięcie-ręcznego-zakresu-z-bieżącego-formularza--8102026). Testy techniczne nie stanowią walidacji klinicznej; scalenie i wdrożenie pozostają decyzją właściciela.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.
