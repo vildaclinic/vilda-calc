@@ -196,6 +196,204 @@ test('bez punktu Włączenia przycisku nie ma; „Anuluj” niczego nie zmienia'
   await expect(reczny(page).locator('.gh-z-wiersza-btn')).toHaveAttribute('title', 'Uzupełnij wiek, wzrost i masę w tym wierszu.');
 });
 
+// P-GH-PUNKT-Z-WIERSZA-ZGODNOSC (recenzja #582, P1; wariant właściciela 2026-10-08: panel się odświeża). Lekarz
+// poprawia wiersz przy otwartym panelu: podsumowanie, podpowiedź mg/kg i „Zapisz” idą za wierszem, a zapisuje się
+// dokładnie to, co pokazuje panel. Przed poprawką panel pokazywał pomiar z chwili otwarcia (29,1 kg, 0,031 mg/kg/d),
+// a zapis brał wiersz po zmianie (20 kg → 0,045 mg/kg/d w punkcie).
+test('panel pokazuje bieżący pomiar wiersza: podsumowanie, mg/kg i „Zapisz” idą za wierszem; zapis = to, co widać', async ({ page }) => {
+  test.setTimeout(180_000);
+  const bledy = [];
+  page.on('pageerror', (e) => bledy.push(String(e && e.message)));
+  await zaloguj(page);
+  await startGotowy(page);
+  await pacjentka(page);
+  const panel = page.locator('#ghZWierszaPanel');
+  const pomiar = panel.locator('.gh-z-wiersza-pomiar');
+  const powod = page.locator('#ghZWierszaPowod');
+  const zapisz = page.locator('#ghZWierszaZapisz');
+  await reczny(page).locator('.gh-z-wiersza-btn').click();
+  await page.fill('#ghZWierszaDawka', '0.9');
+  await expect(page.locator('#ghZWierszaDawkaInfo')).toHaveText('= 0,031 mg/kg/d przy 29,1 kg');
+  await expect(zapisz).toBeEnabled();
+  await expect(powod).toBeHidden();
+
+  // Masa w wierszu 29,1 → 20 kg: panel i podpowiedź za wierszem.
+  await reczny(page).locator('.adv-weight').fill('20');
+  await expect(pomiar).toHaveText('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa 20 kg · wiek kostny —');
+  await expect(page.locator('#ghZWierszaDawkaInfo')).toHaveText('= 0,045 mg/kg/d przy 20 kg');
+
+  // Niekompletny wiersz: „Zapisz” nieaktywny z powodem; uzupełnienie przywraca zapis.
+  await reczny(page).locator('.adv-weight').fill('');
+  await expect(pomiar).toHaveText('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa — · wiek kostny —');
+  await expect(zapisz).toBeDisabled();
+  await expect(powod).toHaveText('Uzupełnij wiek, wzrost i masę w tym wierszu.');
+  // W spoczynku panel się nie przerysowuje: zero zmian w karcie przez sekundę (wcześniej powód wpisywany od nowa
+  // był mutacją dla obserwatora karty i odświeżanie kręciło się w każdej klatce).
+  expect(await page.evaluate(() => new Promise((ok) => {
+    let n = 0;
+    const o = new MutationObserver((ms) => { n += ms.length; });
+    o.observe(document.getElementById('advMeasurements'), { childList: true, subtree: true, characterData: true });
+    setTimeout(() => { o.disconnect(); ok(n); }, 1000);
+  }))).toBe(0);
+  await reczny(page).locator('.adv-weight').fill('20');
+  await expect(zapisz).toBeEnabled();
+  await expect(powod).toBeHidden();
+
+  // Wiek przestawiony na miesiąc istniejącego punktu (8 l. 6 mies.): „Zapisz” nieaktywny z powodem.
+  await reczny(page).locator('.adv-age-years').fill('8');
+  await reczny(page).locator('.adv-age-months').fill('6');
+  await expect(zapisz).toBeDisabled();
+  await expect(powod).toHaveText('W tym miesiącu wieku jest już punkt leczenia GH.');
+  await reczny(page).locator('.adv-age-years').fill('9');
+  await reczny(page).locator('.adv-age-months').fill('0');
+  await expect(zapisz).toBeEnabled();
+  expect(await modul(page)).toEqual([P1, P2]);
+
+  // Wiersz zmieniony bez zdarzenia (np. przez inny moduł) i od razu „Zapisz”: brak zapisu, panel pokazuje nowy pomiar
+  // i prosi o ponowny zapis; drugi zapis bierze dokładnie pokazane 21 kg.
+  await page.evaluate(() => {
+    const e = document.querySelector('#advMeasurements .measure-row:not([data-gh-id]) .adv-weight');
+    e.value = '21';
+    document.getElementById('ghZWierszaZapisz').click();
+  });
+  await expect(page.locator('#ghZWierszaBlad')).toHaveText('Pomiar w wierszu się zmienił. Sprawdź dane w panelu i zapisz ponownie.');
+  await expect(pomiar).toHaveText('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa 21 kg · wiek kostny —');
+  await expect(page.locator('#ghZWierszaDawkaInfo')).toHaveText('= 0,043 mg/kg/d przy 21 kg');
+  expect(await modul(page)).toEqual([P1, P2]);
+  await zapisz.click();
+  await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
+  const lista = await modul(page);
+  expect(lista).toHaveLength(3);
+  expect(lista[2]).toMatchObject({ type: 'continue', ageYears: 9, ageMonths: 0, weight: 21, height: 128.6, dose: 0.9 / 21, doseAbs: 0.9 });
+  expect(bledy, `pageerror:\n${bledy.join('\n')}`).toEqual([]);
+});
+
+// Uwagi z przeglądu (luki w testach): odświeżanie panelu po edycji wiersza nie kasuje komunikatu o zmianie schematu
+// dawki (dawka pusta — podpowiedzi mg/kg nie ma czego liczyć), a panel zamyka się, gdy z listy zniknie Włączenie
+// (warunek przycisku z decyzji D8; inaczej zostałby nieaktywny „Zapisz” z mylącym powodem).
+test('odświeżanie panelu nie kasuje komunikatu o zmianie preparatu; bez Włączenia na liście panel się zamyka', async ({ page }) => {
+  test.setTimeout(150_000);
+  await zaloguj(page);
+  await startGotowy(page);
+  await pacjentka(page);
+  await reczny(page).locator('.gh-z-wiersza-btn').click();
+  await page.fill('#ghZWierszaDawka', '0.9');
+  await page.selectOption('#ghZWierszaPreparat', 'Ngenla 24 mg');
+  const komunikat = await page.evaluate(() => window.VildaGhDawka.komunikatZmianySchematu('dobowy', 'tygodniowy', 0.9));
+  await expect(page.locator('#ghZWierszaDawka')).toHaveValue('');
+  await expect(page.locator('#ghZWierszaDawkaInfo')).toHaveText(komunikat);
+  await reczny(page).locator('.adv-weight').fill('22');
+  await expect(page.locator('#ghZWierszaPomiar')).toHaveText('Wiek 9 l. 0 mies. · wzrost 128,6 cm · masa 22 kg · wiek kostny —');
+  await expect(page.locator('#ghZWierszaDawkaInfo')).toHaveText(komunikat);
+  await page.fill('#ghZWierszaDawka', '4.9');
+  await expect(page.locator('#ghZWierszaDawkaInfo')).not.toHaveText(komunikat);
+
+  // Włączenie usunięte (np. w DocPro) przy otwartym panelu: panel znika, przycisku nie ma, lista bez nowego punktu.
+  await page.evaluate((pts) => window.VildaGhPunkty.zapisz(pts), [P2]);
+  await page.evaluate(() => window.importTherapyPointsToAdvancedGrowth());
+  await expect(page.locator('#ghZWierszaPanel')).toHaveCount(0);
+  await expect(page.locator('.gh-z-wiersza-btn')).toHaveCount(0);
+  expect(await modul(page)).toEqual([P2]);
+});
+
+// P-GH-PUNKT-Z-WIERSZA-ZGODNOSC (recenzja #582, P2). Panel i komunikat „Zapisano…” dotyczą pacjenta, przy którym
+// powstały. Przed poprawką komunikat o punkcie pacjenta A zostawał nad kartą pacjenta B. Trzy drogi, każda w osobnym
+// teście i bez pozostałych (znacznik pacjenta karty sprawdzany wprost), żeby każdy mechanizm miał własnego strażnika.
+const znacznik = (page) => page.evaluate(() => window._vildaCurrentPatientId || sessionStorage.getItem('vildaCurrentPatientId') || null);
+
+test('zmiana pacjenta (1/3): odtworzenie stanu karty zamyka otwarty panel; zapis nie powstaje', async ({ page }) => {
+  test.setTimeout(150_000);
+  await zaloguj(page);
+  await startGotowy(page);
+  await pacjentka(page);
+  expect(await znacznik(page)).toBeNull();
+  // vilda:patient-loaded najpierw: wcześniejsze zdarzenia uruchamiają w innych modułach opóźnioną przebudowę wierszy,
+  // która zamknęłaby panel niezależnie od nasłuchu tego modułu (test przepuszczałby jego usunięcie).
+  for (const zdarzenie of ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored']) {
+    await expect(reczny(page).locator('.gh-z-wiersza-btn')).toBeEnabled();
+    await reczny(page).locator('.gh-z-wiersza-btn').click();
+    await page.fill('#ghZWierszaDawka', '0.9');
+    // Bez patientId: znacznik pacjenta się nie zmienia, więc panel zamyka samo zdarzenie — od razu, w chwili
+    // zdarzenia (inne moduły przebudowują wiersze dopiero po kilku sekundach i to też zamknęłoby panel).
+    const otwartyPo = await page.evaluate((n) => {
+      document.dispatchEvent(new CustomEvent(n, { detail: { source: 'e2e' } }));
+      return Boolean(document.getElementById('ghZWierszaPanel'));
+    }, zdarzenie);
+    expect(otwartyPo, zdarzenie).toBe(false);
+    expect(await znacznik(page), zdarzenie).toBeNull();
+  }
+  expect(await modul(page)).toEqual([P1, P2]);
+});
+
+test('zmiana pacjenta (2/3): inny znacznik pacjenta karty bez zdarzenia (zmiana w innej ramce) zamyka panel i komunikat', async ({ page }) => {
+  test.setTimeout(150_000);
+  await zaloguj(page);
+  await startGotowy(page);
+  await pacjentka(page);
+  await reczny(page).locator('.gh-z-wiersza-btn').click();
+  await page.fill('#ghZWierszaDawka', '0.9');
+  await page.evaluate(() => { window._vildaCurrentPatientId = 'gh-e2e-znacznik-b'; });
+  await reczny(page).locator('.adv-bone-age').fill('9');
+  await expect(page.locator('#ghZWierszaPanel')).toHaveCount(0);
+  expect(await modul(page)).toEqual([P1, P2]);
+
+  // Zapis przy znaczniku B, komunikat; potem znacznik C i zmiana w karcie („Dodaj kolejny pomiar”) — komunikat znika.
+  await reczny(page).locator('.adv-bone-age').fill('');
+  await reczny(page).locator('.gh-z-wiersza-btn').click();
+  await page.fill('#ghZWierszaDawka', '0.9');
+  await page.click('#ghZWierszaZapisz');
+  await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
+  await page.waitForTimeout(500);
+  await expect(page.locator('#ghZWierszaStatus'), 'ten sam pacjent: komunikat zostaje').toHaveText(ZAPISANO);
+  await page.evaluate(() => { window._vildaCurrentPatientId = 'gh-e2e-znacznik-c'; });
+  await page.click('#advAddMeasurementBtn');
+  await expect(page.locator('#ghZWierszaStatus')).toHaveCount(0);
+});
+
+test('zmiana pacjenta (3/3): „Wyczyść wszystkie pola” na Start usuwa komunikat „Zapisano…”', async ({ page }) => {
+  test.setTimeout(150_000);
+  await zaloguj(page);
+  await startGotowy(page);
+  await pacjentka(page);
+  await reczny(page).locator('.gh-z-wiersza-btn').click();
+  await page.fill('#ghZWierszaDawka', '0.9');
+  await page.click('#ghZWierszaZapisz');
+  await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
+  expect(await znacznik(page)).toBeNull();
+  await page.click('#clearAllDataBtn');
+  const straznik = page.locator('.vug-btn.vug-danger');
+  if (await straznik.isVisible({ timeout: 2000 }).catch(() => false)) await straznik.click();
+  await expect(page.locator('#lastName')).toHaveValue('');
+  await expect(page.locator('#ghZWierszaStatus')).toHaveCount(0);
+  expect(await znacznik(page), 'pacjent bez sejfu: znacznik pusty także po „Wyczyść”').toBeNull();
+});
+
+// Uwaga z przeglądu: „Zapisz dane” wysyła vilda:patient-loaded (source: 'save') i przy pierwszym zapisie zmienia
+// znacznik pacjenta z pustego na id. To ten sam pacjent — panel z wpisaną dawką i komunikat „Zapisano…” zostają.
+test('„Zapisz dane” bieżącego pacjenta nie zamyka panelu ani komunikatu (ten sam pacjent)', async ({ page }) => {
+  test.setTimeout(150_000);
+  await zaloguj(page);
+  await startGotowy(page);
+  await pacjentka(page);
+  expect(await znacznik(page)).toBeNull();
+  await reczny(page).locator('.gh-z-wiersza-btn').click();
+  await page.fill('#ghZWierszaDawka', '0.9');
+  await page.evaluate(() => window.VildaDataImportExport.saveUserData({}));
+  await expect.poll(() => znacznik(page), { message: 'pierwszy zapis nadaje pacjentowi znacznik', timeout: 15000 }).not.toBeNull();
+  await page.locator('#advMeasurements .measure-row[data-gh-id] .adv-bone-age').first().dispatchEvent('input');
+  await page.waitForTimeout(500);
+  await expect(page.locator('#ghZWierszaPanel')).toBeVisible();
+  await expect(page.locator('#ghZWierszaDawka')).toHaveValue('0.9');
+
+  await page.click('#ghZWierszaZapisz');
+  await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
+  await page.evaluate(() => window.VildaDataImportExport.saveUserData({}));
+  await page.waitForTimeout(1500);
+  await page.click('#advAddMeasurementBtn');
+  await page.waitForTimeout(300);
+  await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
+});
+
 test('okno blokady mostka: wiersz ręczny znika od razu, wiersz punktu GH pojawia się po końcu okna; F5 zachowuje stan', async ({ page }) => {
   test.setTimeout(180_000);
   await zaloguj(page);
