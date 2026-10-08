@@ -292,11 +292,12 @@ for (const [tryb, dwieKarty] of [['dwie karty, Web Locks', true], ['jedna karta,
       await Promise.all([scal.obietnica, zapis.obietnica]);
       expect(scal.blad).toBeUndefined();
       expect((await stan(d, cel)).wersje, 'cel ma wersje obu kart i wersję scalenia').toHaveLength(5);
-      // Co dzieje się z zapisem do karty usuniętej przez scalenie, rozstrzyga reguła zapisu po usunięciu (decyzja
-      // właściciela, A13). Tu pilnujemy tylko jednego: zapis zgłoszony jako udany ma swoją wersję w magazynie.
-      if (!zapis.blad) {
-        expect((await stan(d, zapis.wynik.patientId)).wersje, 'zgłoszona wersja jest w magazynie').toContain(zapis.wynik.snapshotId);
-      }
+      // P-ZAPIS-USUNIETEJ (A13, decyzja właściciela 2026-10-08): zapis do karty scalonej w trakcie czekania na blokadę
+      // jest odmawiany pod blokadą — źródło nie wraca z jedną wersją, nic nie zapisano. Kartę docelową odmowa wskazuje
+      // tam, gdzie sejf zna wersje źródła (ta sama karta przeglądarki zapisywała źródło; druga karta go nie wczytywała).
+      expect(zapis.blad && zapis.blad.code, 'odmowa zapisu do karty scalonej').toBe('PATIENT_DELETED');
+      expect(zapis.blad.mergedIntoPatientId, 'wskazanie karty docelowej').toBe(dwieKarty ? null : cel);
+      expect(await stan(d, zrodlo), 'źródło bez rekordu i wersji, z nagrobkiem').toEqual({ rekord: null, wersje: [], nagrobki: [expect.any(String)] });
     });
 
     it('poprawka pomiaru w karcie docelowej w trakcie scalania duplikatów nie znika pod nową głową (A2)', async () => {
