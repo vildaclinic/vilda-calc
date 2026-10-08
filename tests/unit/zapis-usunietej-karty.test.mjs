@@ -297,6 +297,96 @@ describe('A13 — ponowienie do karty docelowej scalenia (dolaczPoScaleniu)', ()
     expect(wszystkie.filter((m) => m.ageMonths === 54), 'wiersz Y z 54. miesiąca dopisany').toHaveLength(1);
   });
 
+  /* Poprawka po przeglądzie (Codex P1 x2 w #586): poza wierszami ponowienie przejmuje kartę docelową jak „Scal
+     pacjentów” — jej dane zostają, z formularza idą tylko zmiany lekarza względem kopii wczytanej. */
+  async function przygotujSekcje({ bezPlciX = false } = {}) {
+    const d = await konto();
+    const zX = Object.assign(payload([[60, 120], [66, 123]]), { ghTherapyPoints: [{ ageMonths: 60, dose: 0.025 }], plan: { tekst: 'plan X', dieta: 'zwykła' } });
+    zX.advanced.motherHeight = 160;
+    zX.advanced.fatherHeight = 180;
+    if (bezPlciX) delete zX.user.sex;
+    const x = (await d.v.savePatient(zX, { dedup: false })).patientId;
+    const zY = Object.assign(payload([48, 54]), {
+      ghTherapyPoints: [{ ageMonths: 54, dose: 0.03 }], birth: { weightG: 3200 }, doctor: { name: 'Dr Fikcyjny' }, plan: { tekst: 'plan Y' },
+    });
+    zY.advanced.motherHeight = 165;
+    Object.assign(zY.user, { height: 104, weight: 17 });
+    const y = (await d.v.savePatient(zY, { dedup: false })).patientId;
+    const glowaX = (await d.v.getPatient(x)).snapshots[0].payload;
+    await d.v.mergePatients(x, y);
+    const glowaY = (await d.v.getPatient(y)).snapshots[0].payload;
+    expect(glowaY.ghTherapyPoints, 'kontrola: scalenie łączy punkty').toHaveLength(2);
+    expect(glowaY.birth, 'kontrola: sekcja tylko Y').toEqual({ weightG: 3200 });
+    expect(glowaY.advanced.motherHeight, 'kontrola: scalenie trzyma wartość karty docelowej').toBe(165);
+    return { d, x, y, glowaX };
+  }
+  const formularzX = (glowaX, zmien) => { const f = JSON.parse(JSON.stringify(glowaX)); f.advanced.data.measurements.push(pomiar(72)); if (zmien) zmien(f); return f; };
+  const dawki = (p) => (p.ghTherapyPoints || []).map((q) => `${q.ageMonths}:${q.dose}`).sort();
+
+  it('sekcje karty docelowej zostają (punkty terapii, dane urodzeniowe, lekarz, plan); punkt dodany przez lekarza dochodzi', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje();
+    const f = formularzX(glowaX, (q) => { q.ghTherapyPoints.push({ ageMonths: 72, dose: 0.033 }); });
+    await d.v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    const g = (await d.v.getPatient(y)).snapshots[0].payload;
+    expect(dawki(g)).toEqual(['54:0.03', '60:0.025', '72:0.033']);
+    expect(g.birth).toEqual({ weightG: 3200 });
+    expect(g.doctor).toEqual({ name: 'Dr Fikcyjny' });
+    expect(g.plan, 'plan niezmieniony przez lekarza — z karty docelowej').toEqual({ tekst: 'plan Y' });
+    expect(g.advanced.motherHeight, 'wzrost matki z karty docelowej, nie ze starej karty').toBe(165);
+    expect(klucze({ payload: g })).toContain('72:126');
+  });
+
+  it('zmiany lekarza w formularzu wygrywają: usunięty punkt nie wraca, poprawiony plan zostaje', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje();
+    const f = formularzX(glowaX, (q) => { q.ghTherapyPoints = []; q.plan = { tekst: 'plan po wizycie' }; });
+    await d.v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    const g = (await d.v.getPatient(y)).snapshots[0].payload;
+    expect(dawki(g), 'punkt X usunięty przez lekarza, punkt Y zostaje').toEqual(['54:0.03']);
+    expect(g.plan).toEqual({ tekst: 'plan po wizycie' });
+  });
+
+  it('brak płci w starej karcie nie kasuje płci karty docelowej (ładunek i nagłówek)', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje({ bezPlciX: true });
+    expect(glowaX.user.sex, 'kontrola: X bez płci').toBeUndefined();
+    await d.v.savePatient(formularzX(glowaX), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    const r = await d.v.getPatient(y);
+    expect(r.snapshots[0].payload.user.sex).toBe('M');
+    expect(r.header.sex).toBe('M');
+  });
+
+  it('formularz z sekcjami domyślnymi i wyzerowaną wizytą (jak prawdziwy formularz): dane karty docelowej zostają', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje();
+    const f = formularzX(glowaX, (q) => {
+      q.doctor = { isDoctor: null, pwzNumber: null }; // sekcja domyślna formularza — w starej karcie jej nie było
+      q.plan = Object.fromEntries(Object.entries(q.plan).reverse()); // ten sam plan, inna kolejność kluczy
+      Object.assign(q.user, { height: null, weight: null }); // „Nowy pomiar” zeruje wizytę, lekarz nic nie wpisał
+    });
+    await d.v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    const g = (await d.v.getPatient(y)).snapshots[0].payload;
+    expect(g.doctor).toEqual({ name: 'Dr Fikcyjny' });
+    expect(g.plan).toEqual({ tekst: 'plan Y' });
+    expect([g.user.height, g.user.weight], 'wizyta karty docelowej zostaje').toEqual([104, 17]);
+  });
+
+  it('puste pole karty docelowej nie kasuje wartości ze starej karty', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje();
+    const r = await d.v.getPatient(y);
+    const bezOjca = JSON.parse(JSON.stringify(r.snapshots[0].payload));
+    bezOjca.advanced.fatherHeight = null;
+    await d.v.savePatient(bezOjca, { patientId: y, dedup: false, baseSnapshotId: r.snapshots[0].snapshotId, skipAdvancedAntiClobber: true });
+    expect((await d.v.getPatient(y)).snapshots[0].payload.advanced.fatherHeight, 'kontrola').toBeNull();
+    await d.v.savePatient(formularzX(glowaX), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await d.v.getPatient(y)).snapshots[0].payload.advanced.fatherHeight).toBe(180);
+  });
+
+  it('bieżąca wizyta wpisana przez lekarza zostaje w polach pacjenta', async () => {
+    const { d, x, y, glowaX } = await przygotujSekcje();
+    const f = formularzX(glowaX, (q) => { Object.assign(q.user, { age: 6, ageMonths: 0, height: 112, weight: 20 }); });
+    await d.v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    const u = (await d.v.getPatient(y)).snapshots[0].payload.user;
+    expect([u.age, u.ageMonths, u.height, u.weight]).toEqual([6, 0, 112, 20]);
+  });
+
   it('kontrola: bez dolaczPoScaleniu zapis do Y pyta jak dotąd', async () => {
     const { d, y, glowaX } = await przygotuj();
     let pytania = 0;
