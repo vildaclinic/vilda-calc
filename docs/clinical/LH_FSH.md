@@ -2,7 +2,42 @@
 
 Stan dokumentu: 7 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
 
+## Bieżący kontekst bez dodatkowego wywiadu i datowania próbki — 7.10.2026
+
+**Decyzja właściciela:** szybki przelicznik ma oceniać wynik wyłącznie względem kontekstu widocznego w formularzu. Formularz `1.7.0` usuwa całą zakładkę „Dodatkowe informacje”, pytania o objawy OUN i regresję wcześniejszych cech, dokładną objętość jąder oraz metodę jej oceny. Usuwa również całą zakładkę „Wcześniejsze badanie”, datę pobrania i powrót do bieżących danych. Nie ma zastępczego odsyłacza „Wynik z innej daty”. Pytanie o wcześniactwo pozostaje w sekcji „Pacjent”, tylko przy znanym wieku obejmującym okres przed pierwszymi urodzinami.
+
+**Zakres nowej oceny:** formularz zawsze tworzy `contextBasis='current-patient'`, a `birthDateISO` i `sampleDateISO` pozostają `null`. Wiek i płeć pochodzą z aktualnego formularza; korekta w przeliczniku dotyczy tego sprawdzenia. Pozostają stadium z prawidłowym dla płci rodzajem cechy, zgodna metoda oznaczenia, opcjonalny zakres z wydruku oraz odczyt właściwego bieżącego źródła: GnRHa, początku rozwoju, progresji i przyspieszenia wzrastania, o ile są znane. Ogólny numer Tannera nie staje się automatycznie G lub Th. Przelicznik nie wylicza wieku w dniu dawnego pobrania i nie rekonstruuje ówczesnego stadium ani leczenia.
+
+Usunięte odpowiedzi nie przechodzą do silnika z ukrycia: `history.cnsSymptoms` i `history.regression` pozostają `unknown`, objętość jąder pozostaje `null`, a metoda pusta. Nie pobieramy tych danych automatycznie z karty ani ze starego stanu kontrolek. Brak pytania nie jest odpowiedzią „Nie”, a przedział objętości z formularza głównego nie staje się dokładnym pomiarem w mL. Zmiana pacjenta, płci, analitu lub odświeżenie źródła nie przywraca usuniętych informacji.
+
+**Wpływ kliniczny:** podstawowe porównania LH/FSH według bieżącego wieku i stadium oraz ostrzeżenia o zbyt wczesnych cechach/początku pozostają dostępne na dotychczasowych zasadach. Z nowego formularza nie powstaną natomiast dodatkowe ostrzeżenia wywoływane zgłoszeniem objawów OUN lub regresji, ani ocena początku/sprzeczności i opis niemowlęcy oparty na dokładnej objętości jąder. Objawy te nadal mają znaczenie kliniczne; usunięcie ich z szybkiego formularza nie oznacza, że zostały wykluczone. Ocena nie obejmuje pełnego wywiadu i badania pacjenta. Samo G/Th pozostaje wejściem do oceny rozwoju, a dotychczasowe ograniczenie nieznanego leczenia nadal może prowadzić do `treatment_context` zamiast pewnego wniosku o czasie rozwoju.
+
+Usunięcie datowania może zmienić wynik względem wcześniejszego trybu próbki, jeżeli aktualny wiek różni się od wieku pobrania. Przykład istniejącego profilu LH Mayo: **M14, LH2 IU/L** daje warunkowo `within` dla wieku (`0,8–8,7 IU/L`), podczas gdy ocena tego samego stężenia w wieku **8 lat** daje `above` (`≤0,5 IU/L`). Nowy formularz użyje widocznego wieku 14 lat; nie rozpozna sam, że wpisano wynik sprzed sześciu lat. Data wizyty lub przypięcia nie zmienia tego w ocenę historycznej próbki. Jest to zaakceptowane ograniczenie zakresu przelicznika, nie uznanie dzisiejszych danych za dane z dnia pobrania.
+
+Stała informacja o oznaczeniach bazalnych bez leczenia pozostaje widoczna. Protokół i niepotwierdzone leczenie nadal mają wartość `unknown`; dostępne jest warunkowe `referencePreview`, bez automatycznego potwierdzenia zastosowania RI. Znane bieżące GnRHa „w trakcie” nadal blokuje zakresy bazalne. Wcześniactwo zachowuje dotychczasową bramkę populacji niemowlęcej; nie wprowadzamy nowych norm ani automatycznie skorygowanego wieku.
+
+**Zgodność zapisów:** zmiana dotyczy zbierania danych przez nowy formularz. Publiczny `buildInput`, silnik `1.3.0`, dane i kryteria `2026-10-04.1`, snapshot `1.2.0` oraz renderer pozostają niezmienione. Nadal obsługują jawne dane starszych klientów, w tym daty, objawy OUN, regresję, dokładną objętość i metodę. Wizyty, przypięcia i historia pokazują zapisane oceny z ich pierwotnymi ostrzeżeniami, datami i kontekstem, bez migracji, filtrowania ani ponownego przeliczania. Dawny zapis oceny i rozpoczęcie nowego sprawdzenia to różne operacje.
+
+**Źródła, populacja i jednostki:** nie zmieniamy żadnego RI, progu ani przeliczenia. Obowiązują istniejące profile surowicy LH Mayo LHPED 62999 (AnshLite CLIA) i FSH 602753 (Roche Elecsys ECLIA), odczytane 2–3.10.2026, z ograniczeniami wieku, płci, stadium i populacji konkretnej tabeli [R1,R2]. Jednostki to IU/L i równoważne mIU/mL. Model kliniczny pozostaje pediatryczny 0–18 lat. Znaczenie objawów OUN: Latronico i wsp., Endocrine Society 2026, DOI 10.1210/clinem/dgag168 [K1]; wywiadu, regresji i oceny początku: Persani i wsp., ENDO-ERN 2021, DOI 10.1007/s12020-021-02626-z [K2] i Howard 2021, DOI 10.1111/cen.14578 [K3]; odrębny kontekst niemowlęcy: Rohayem i wsp. 2024, DOI 10.1210/endrev/bnae003 [M1]. Wcześniactwo oznacza urodzenie przed 37 ukończonymi tygodniami według WHO, *Preterm birth*, 10.05.2023 [K6]. Pełne cytowania i zakres wcześniejszego odczytu są w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Źródła uzasadniają ograniczenia interpretacji; decyzja o redukcji pól jest decyzją funkcjonalną właściciela, nie nowym zaleceniem medycznym.
+
+Syntetyczne przypadki regresyjne wywołują rzeczywisty formularz, adapter, silnik i odczyt zapisu:
+
+| Wejście lub działanie | Oczekiwane zachowanie |
+|---|---|
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, leczenie nieznane | `current-patient`, brak dat; warunkowo `above` dla wieku (`≤0,5`) i `within` dla G3 (`0,09–4,2`), nadal `early_development`. |
+| Dane źródła zawierają objawy OUN, regresję i dokładną objętość jąder | Nowe wejście formularza nie przejmuje usuniętych informacji; OUN/regresja `unknown`, objętość `null`, metoda pusta. |
+| Bieżący M14, LH2 IU/L, zgodna metoda; w źródle dawna data pobrania | Ocena według widocznych 14 lat (`within` dla wieku `0,8–8,7`), bez rekonstrukcji ośmiolatka i bez daty próbki. |
+| Bieżące GnRHa „w trakcie” | Nadal brak bazalnego porównania i podglądu; usunięcie trybu historycznego nie pomija znanego leczenia. |
+| Niemowlę z podanym wcześniactwem / zmiana wieku na 1 rok lub więcej | Pytanie dostępne w „Pacjent” dla niemowlęcia i dotychczasowe ograniczenie populacji; u starszego dziecka nie jest pokazywane jako dodatkowe pole. |
+| Zmiana M↔F, pacjenta lub LH↔FSH | Zachowane reguły doboru rodzaju stadium i źródła; usunięte pola/datowanie nie odżywają. |
+| Starszy klient jawnie przekazuje daty, OUN, regresję lub objętość | Dotychczasowa obsługa przez publiczny adapter i silnik pozostaje. |
+| Odczyt zapisanej wcześniej datowanej oceny z dodatkowymi ostrzeżeniami | Te same utrwalone dane i ostrzeżenia; brak nowej oceny według dzisiejszego formularza. |
+
+Ograniczenie zakresu i jego skutki zostały wyraźnie zaakceptowane przez właściciela. Testy potwierdzają zachowanie implementacji, nie nadają jej statusu walidacji klinicznej.
+
 ## Zakres bazalny bez selektora kontekstu — 7.10.2026
+
+Opis poprzedniej wersji formularza `1.6.0`. Obsługa datowania wymieniona w tej sekcji dotyczy tej wersji; jej usunięcie z bieżącego formularza opisano powyżej.
 
 Formularz `1.6.0` usuwa podsumowanie rodzaju oznaczenia, przycisk jego zmiany, zakładkę „Kontekst oznaczenia” i selektor protokołu/leczenia. Zastępuje je stała informacja: porównania dotyczą **oznaczeń bazalnych bez leczenia hormonalnego**. Moduł nie interpretuje odpowiedzi LH/FSH w testach stymulacyjnych GnRH/LHRH ani stężeń podczas leczenia hormonalnego. Nie dobiera norm dla leku, dawki, odstępu od podania lub protokołu stymulacji i nie ocenia skuteczności GnRHa.
 
@@ -35,6 +70,8 @@ Syntetyczne przypadki regresyjne dotyczą rzeczywistego formularza, adaptera, si
 Akceptacja kliniczna pozostaje wymagana, ponieważ zmienia się sposób ustalania kontekstu nowej oceny. Syntetyczne regresje i zielone testy nie stanowią walidacji klinicznej.
 
 ## Dobór pól dojrzewania do płci — 4.10.2026
+
+Opis formularza `1.5.0`: dobór rodzaju stadium do płci pozostaje aktualny, natomiast pola objętości i metody oraz tryb datowania zostały później usunięte z bieżącego UI w `1.7.0`.
 
 Szybki formularz LH/FSH udostępnia wyłącznie rodzaje obserwacji obsługiwane dla wybranej płci przez istniejący model referencyjny. Nie dodaje nowych pól ani nowego etapu wprowadzania danych.
 
@@ -189,6 +226,8 @@ Właściciel autoryzował realizację etapowego planu, obejmującego kolejne pra
 Podsumowanie nie ma uniwersalnej kategorii „pacjent prawidłowy”. LH w zakresie dla G4 nie usuwa ostrzeżenia o G4 u sześciolatka. Prawidłowe FSH nie staje się z tego powodu „wysokie”. Niskie lub niewykrywalne LH nie wyklucza CPP. Silnik nie ustala centralnej/obwodowej etiologii, nie różnicuje KOWD/CDGP od CHH z jednej liczby i nie dobiera automatycznie MRI, leczenia ani protokołu stymulacyjnego [K1–K4].
 
 ## Wejście i czas badania
+
+Poniższa tabela opisuje publiczny kontrakt silnika i starszych klientów, zachowany również dla odczytu historii. Formularz od `1.7.0` korzysta wyłącznie z `current-patient` i ograniczonego zestawu danych opisanego na początku dokumentu; nie udostępnia wszystkich wymienionych tu pól.
 
 | Obszar | Kontrakt i ograniczenie |
 |---|---|
