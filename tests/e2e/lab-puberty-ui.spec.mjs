@@ -4,7 +4,6 @@ import { quickSelect as select, quickFill as fill, configureProfile as methodCon
 // PR3: all assessments below originate from the production form and engine.
 // Vault records are fictional and live only in the isolated browser context.
 test.use({ serviceWorkers: 'block' });
-const SAMPLE_DATE = '2026-06-17';
 
 async function prepare(page) {
   await page.route('**/*', (route) => {
@@ -35,9 +34,9 @@ async function selectAnalyte(ctx, analyte = 'lh') {
   await expect(ctx.locator('#labPubertyPanel')).toBeVisible();
 }
 
-async function sampleContext(ctx, { sex = 'M', birthDate = '2020-06-17', kind = 'G', stage = '4' } = {}) {
-  await fill(ctx, 'SampleDate', SAMPLE_DATE);
-  await fill(ctx, 'BirthDate', birthDate);
+async function currentContext(ctx, { sex = 'M', years = '6', kind = 'G', stage = '4' } = {}) {
+  await fill(ctx, 'AgeYears', years);
+  await fill(ctx, 'AgeMonths', '0');
   await select(ctx, 'Sex', sex);
   await select(ctx, 'Kind', kind);
   await select(ctx, 'Stage', stage);
@@ -95,7 +94,7 @@ test('unknown context has no adult fallback and an unsaved method cannot suppres
   await expect(page.locator('#labPubertyMethodConfirmed')).toHaveCount(0);
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
 
-  await sampleContext(page);
+  await currentContext(page);
   await page.locator('#labPubertyMethodSettings > summary').click();
   await page.locator('#labPubertyConfiguredProfile').selectOption('mayo-lh-pediatric');
   await expectEarlyDevelopment(page);
@@ -116,7 +115,7 @@ test('M6 G4: FSH2 is within both independent ranges while early development rema
   await openConverter(page);
   await selectAnalyte(page, 'fsh');
   await page.locator('#labValue').fill('2');
-  await sampleContext(page);
+  await currentContext(page);
   await methodContext(page, 'fsh');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
@@ -124,23 +123,35 @@ test('M6 G4: FSH2 is within both independent ranges while early development rema
   await expect(assessment(page)).not.toContainText(/FSH wysokie|Powyżej wskazanego zakresu/);
 });
 
-test('a current G4 examination cannot become the stage of an earlier sample', async ({ page }) => {
+test('only the visible current age and stage drive the comparison, with no earlier-sample controls', async ({ page }) => {
   await openConverter(page);
+  await page.evaluate(() => {
+    if (!window.VildaPersistence.writeShared({ name: 'Fikcyjny bieżący kontekst', sex: 'M',
+      age: 6, ageMonths: 0, dobISO: '2010-06-17', tannerStage: '4' }, { force: true })) throw new Error('Cannot seed fictional current age');
+  });
   await selectAnalyte(page);
   await page.locator('#labValue').fill('2');
-  await sampleContext(page);
+  await select(page, 'Kind', 'G');
   await methodContext(page);
-  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
-  await fill(page, 'SampleDate', '2026-06-16');
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
-  // Date edits invalidate the observed stage; age keeps a conditional range
-  // comparison without inventing a basal protocol or absence of treatment.
+  await expect(page.locator('#labPubertyOpenDate, #labPubertySectionDate, #labPubertySampleDate, #labPubertyBirthDate, #labPubertyDateHint, #labPubertyClearDate')).toHaveCount(0);
+  await expect(page.locator('#labPubertyPatientContext')).toContainText('według wieku i stadium widocznych w formularzu');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
+  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
+  const before = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
+  expect(before.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
+    age: { years: 6, months: 0 }, puberty: { kind: 'G', stage: 4, appliesToSample: false, appliesToCurrentContext: true } });
+
+  await fill(page, 'AgeYears', '14');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('4');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
   await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  const after = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
+  expect(after.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
+    age: { years: 14, months: 0 }, puberty: { kind: 'G', stage: 4 } });
 });
 
-test('switching analytes, resetting and loading another patient isolate sample data and preserve configured methods', async ({ page }) => {
+test('switching analytes, resetting and loading another patient isolate current observations and preserve configured methods', async ({ page }) => {
   await openConverter(page);
   await page.evaluate(() => {
     window._vildaCurrentPatientId = 'fictional-ui-patient-a';
@@ -153,7 +164,7 @@ test('switching analytes, resetting and loading another patient isolate sample d
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await page.locator('#labValue').fill('2');
-  await sampleContext(page);
+  await currentContext(page);
   await methodContext(page);
   await expectEarlyDevelopment(page);
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(sharedBefore);
@@ -162,7 +173,7 @@ test('switching analytes, resetting and loading another patient isolate sample d
   await expect(page.locator('#labPubertyMethodSummary')).not.toContainText('AnshLite');
   await expect(page.locator('#labPubertyConfiguredProfile')).toHaveValue('');
   await page.locator('#labValue').fill('2');
-  await sampleContext(page);
+  await currentContext(page);
   await methodContext(page, 'fsh');
   await expectEarlyDevelopment(page);
   await page.locator('#labClearBtn').click();
@@ -172,7 +183,7 @@ test('switching analytes, resetting and loading another patient isolate sample d
   await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
 
   await page.locator('#labValue').fill('2');
-  await sampleContext(page);
+  await currentContext(page);
   await methodContext(page);
   await page.evaluate(() => {
     window._vildaCurrentPatientId = 'fictional-ui-patient-b';
@@ -190,13 +201,17 @@ test('F7 Th3 LH<LOD pins the reviewed snapshot and history preserves it across l
   const patientId = await createPatient(page);
   await selectAnalyte(page);
   await page.locator('#labValue').fill('<LOD');
-  await sampleContext(page, { sex: 'F', birthDate: '2019-06-17', kind: 'Th', stage: '3' });
+  await currentContext(page, { sex: 'F', years: '7', kind: 'Th', stage: '3' });
   await methodContext(page);
   await expectEarlyDevelopment(page);
   await expect(page.locator('#labResultBig')).toContainText('<LOD');
   await expect(assessment(page)).toContainText('nie jest dokładnym punktem');
   await page.locator('#labPinResultBtn').click();
-  await expect(page.locator('#labPinDate')).toHaveValue(SAMPLE_DATE);
+  const today = await page.evaluate(() => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  });
+  await expect(page.locator('#labPinDate')).toHaveValue(today);
   await page.locator('#labPinComment').fill('Fikcyjna próbka z oceną Th3');
   await page.locator('#labPinSave').click();
   await expect(page.locator('#labPinOverlay')).toHaveCount(0);
@@ -204,7 +219,8 @@ test('F7 Th3 LH<LOD pins the reviewed snapshot and history preserves it across l
   expect(notes).toHaveLength(1);
   const saved = notes[0];
   expect(saved.labResult.assessment.status).toBe('recorded');
-  expect(saved.labResult.assessment.evaluation.input.puberty).toMatchObject({ kind: 'Th', stage: 3 });
+  expect(saved.labResult.assessment.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
+    puberty: { kind: 'Th', stage: 3, appliesToSample: false, appliesToCurrentContext: true } });
   expect(saved.labResult.assessment.evaluation.measurement).toMatchObject({ raw: '<LOD', plotValue: null, isExact: false });
   expect(saved.labResult.assessment.evaluation.clinical.code).toBe('early_development');
 
@@ -239,7 +255,7 @@ test.describe('mobile standalone', () => {
     await openConverter(page);
     await selectAnalyte(page);
     await page.locator('#labValue').fill('2');
-    await sampleContext(page);
+    await currentContext(page);
     await methodContext(page);
     await expectEarlyDevelopment(page);
     await expect(comparison(page, 'age')).toBeVisible();
@@ -264,7 +280,7 @@ test('the app shell loads the same clinical UI inside its laboratory frame', asy
   await frame.waitForFunction(() => Boolean(window.VildaLabPubertyRuntime));
   await selectAnalyte(frame);
   await frame.locator('#labValue').fill('2');
-  await sampleContext(frame);
+  await currentContext(frame);
   await methodContext(frame);
   await expectEarlyDevelopment(frame);
   await expect(comparison(frame, 'age')).toHaveAttribute('data-status', 'above');

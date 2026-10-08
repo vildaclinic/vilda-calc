@@ -115,6 +115,10 @@ test('age and stage use aligned axes while only the severe age deviation activat
   expect(await conditions.locator('xpath=ancestor::details').count()).toBe(0);
   await expect(assessment(page).locator(':scope > details')).toHaveCount(1);
   await expect(assessment(page).locator(':scope > details > summary')).toHaveText('Szczegóły oceny i źródła');
+  const current = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
+  expect(current.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
+    puberty: { kind: 'G', stage: 3, appliesToSample: false, appliesToCurrentContext: true },
+    history: { cnsSymptoms: 'unknown', regression: 'unknown' }, testicularVolume: { value: null, method: '' } });
 });
 
 test('severe thresholds are strict and each axis owns its high or low state', async ({ page }) => {

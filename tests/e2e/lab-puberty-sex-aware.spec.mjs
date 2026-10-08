@@ -60,9 +60,7 @@ async function expectChoices(page, sex) {
 async function expectNoVolume(page) {
   for (const name of ['TesticularVolume', 'VolumeMethod']) {
     const input = page.locator(`#labPuberty${name}`);
-    await expect(input).toBeHidden();
-    await expect(input).toBeDisabled();
-    await expect(input).toHaveValue('');
+    await expect(input).toHaveCount(0);
   }
 }
 
@@ -137,8 +135,6 @@ async function installPendingSource(page) {
   await choose(page);
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
-  await fill(page, 'TesticularVolume', '7');
-  await select(page, 'VolumeMethod', 'Prader');
 }
 
 async function completeSource(page, id) {
@@ -165,11 +161,9 @@ for (const analyte of ['lh', 'fsh']) {
     await expectChoices(page, 'M');
     await select(page, 'Kind', 'G');
     await select(page, 'Stage', '4');
-    await fill(page, 'TesticularVolume', '6');
-    await select(page, 'VolumeMethod', 'Prader');
     const male = await snapshot(page, analyte);
     expect(male.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 4 });
-    expect(male.evaluation.input.testicularVolume).toMatchObject({ value: 6, method: 'Prader' });
+    expect(male.evaluation.input.testicularVolume).toMatchObject({ value: null, method: '' });
 
     await select(page, 'Sex', 'F');
     await expectChoices(page, 'F');
@@ -186,10 +180,7 @@ for (const analyte of ['lh', 'fsh']) {
     await expectChoices(page, 'M');
     await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
     await expect(page.locator('#labPubertyStage')).toHaveValue('');
-    const volume = await quickField(page, 'TesticularVolume');
-    await expect(volume).toBeEnabled();
-    await expect(volume).toHaveValue('');
-    await expect(page.locator('#labPubertyVolumeMethod')).toHaveValue('');
+    await expectNoVolume(page);
     expect((await snapshot(page, analyte)).evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: null });
     await select(page, 'Sex', 'F');
     await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
@@ -231,9 +222,9 @@ test('main-form imports remain untyped and a source refresh cannot restore obser
   await expectChoices(page, 'M');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expect(page.locator('#labPubertyTesticularVolume')).toHaveValue('6');
+  await expectNoVolume(page);
   const before = await page.evaluate(() => window.VildaPersistence.readShared());
-  expect((await snapshot(page)).evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: 3 });
+  expect((await snapshot(page)).evaluation.input).toMatchObject({ puberty: { kind: 'unspecified', stage: 3 }, testicularVolume: { value: null, method: '' } });
 
   await select(page, 'Kind', 'G');
   await select(page, 'Sex', 'F');
@@ -248,38 +239,37 @@ test('main-form imports remain untyped and a source refresh cannot restore obser
   await shared(page, guest({ age: 16, tannerStage: '5', advanced: { testicularVolume: { value: 10, unit: 'mL', method: 'Prader' } } }));
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('16');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(page.locator('#labPubertyTesticularVolume')).toHaveValue('');
+  await expectNoVolume(page);
   const after = await snapshot(page);
   expect(after.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: null });
   expect(after.evaluation.input.testicularVolume.value).toBeNull();
 });
 
-test('a previous sample keeps sex restrictions through date changes and never imports the current stage or volume', async ({ page }) => {
+test('current context keeps sex restrictions after age and source changes, without importing removed measurements', async ({ page }) => {
   await open(page);
-  await shared(page, guest());
+  await shared(page, guest({ dobISO: '2012-06-17', puberty: { history: { cnsSymptoms: 'yes', regression: 'yes' } } }));
   await choose(page, 'fsh');
-  await fill(page, 'SampleDate', '2020-06-17');
+  await expect(page.locator('#labPubertyOpenDate, #labPubertySectionDate, #labPubertySampleDate, #labPubertyBirthDate, #labPubertyClearDate, #labPubertyOpenExtra, #labPubertySectionExtra, #labPubertyCnsSymptoms, #labPubertyRegression')).toHaveCount(0);
   await select(page, 'Sex', 'F');
   await fill(page, 'AgeYears', '8');
   await expectChoices(page, 'F');
   await expectNoVolume(page);
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
   await select(page, 'Kind', 'Th');
   await select(page, 'Stage', '2');
-  expect((await snapshot(page, 'fsh')).evaluation.input).toMatchObject({
-    contextBasis: 'sample', sampleDateISO: '2020-06-17', sex: 'F', puberty: { kind: 'Th', stage: 2, appliesToSample: true },
+  const before = await snapshot(page, 'fsh');
+  expect(before.evaluation.input).toMatchObject({
+    contextBasis: 'current-patient', birthDateISO: null, sampleDateISO: null, sex: 'F', age: { years: 8 },
+    puberty: { kind: 'Th', stage: 2, appliesToSample: false, appliesToCurrentContext: true },
+    testicularVolume: { value: null, method: '' }, history: { cnsSymptoms: 'unknown', regression: 'unknown' },
   });
-  await fill(page, 'SampleDate', '2020-06-18');
+  await shared(page, guest({ age: 16, dobISO: '2010-06-17', tannerStage: '5',
+    puberty: { history: { cnsSymptoms: 'yes', regression: 'yes' } } }));
   await expectChoices(page, 'F');
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('8');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('2');
   await expectNoVolume(page);
-  await page.locator('#labPubertyOpenDate').click();
-  await page.locator('#labPubertyClearDate').click();
-  await expect(page.locator('#labPubertySex')).toHaveValue('F');
-  await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
-  await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expectNoVolume(page);
-  expect((await snapshot(page, 'fsh')).evaluation.input).toMatchObject({ contextBasis: 'current-patient', sex: 'F', puberty: { kind: 'unspecified', stage: 3 } });
+  const after = await snapshot(page, 'fsh');
+  expect(after.evaluation.input).toEqual(before.evaluation.input);
 });
 
 test('a pending same-patient refresh excludes manual observations until the same male sex is confirmed again', async ({ page }) => {
@@ -291,9 +281,8 @@ test('a pending same-patient refresh excludes manual observations until the same
   await expect(page.locator('#labPubertySex')).toHaveValue('M');
   await expect(page.locator('#labPubertyKind')).toHaveValue('G');
   await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expect(page.locator('#labPubertyTesticularVolume')).toHaveValue('7');
-  await expect(page.locator('#labPubertyVolumeMethod')).toHaveValue('Prader');
-  expect((await snapshot(page)).evaluation.input).toMatchObject({ sex: 'M', puberty: { kind: 'G', stage: 3 }, testicularVolume: { value: 7, method: 'Prader' } });
+  await expectNoVolume(page);
+  expect((await snapshot(page)).evaluation.input).toMatchObject({ sex: 'M', puberty: { kind: 'G', stage: 3 }, testicularVolume: { value: null, method: '' } });
 });
 
 test('a completed refresh with female sex discards suspended male observations and they cannot return on a later male refresh', async ({ page }) => {
@@ -311,7 +300,7 @@ test('a completed refresh with female sex discards suspended male observations a
   await expectChoices(page, 'M');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(page.locator('#labPubertyTesticularVolume')).toHaveValue('');
+  await expectNoVolume(page);
   expect((await snapshot(page)).evaluation.input.testicularVolume.value).toBeNull();
 });
 
@@ -327,7 +316,7 @@ test('another patient and a late source response cannot inherit observations sus
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('6');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('1');
-  await expect(page.locator('#labPubertyTesticularVolume')).toHaveValue('');
+  await expectNoVolume(page);
   await expect(page.locator('#labValue')).toHaveValue('');
   await page.locator('#labValue').fill('2');
   const current = await snapshot(page);
@@ -392,13 +381,12 @@ for (const width of [320, 390, 600]) {
       await select(page, 'Sex', 'M');
       await select(page, 'Kind', 'G');
       await select(page, 'Stage', '3');
-      await fill(page, 'TesticularVolume', '6');
       await select(page, 'Sex', 'F');
       await expectChoices(page, 'F');
       await expectNoVolume(page);
       await expect(page.locator('#labPubertyPatientContext')).toBeVisible();
       await expectReadableSummaries(page);
-      for (const section of ['Stage', 'Extra', 'Patient']) {
+      for (const section of ['Stage', 'Range', 'Patient']) {
         await page.locator(`#labPubertyOpen${section}`).click();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
       }
