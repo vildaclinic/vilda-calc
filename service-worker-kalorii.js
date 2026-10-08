@@ -1579,6 +1579,7 @@ const CORE_SHELL_URLS = [
   '/vilda_gh_programy_dane.js?v=1',
   '/vilda_gh_punkt_z_wiersza.js?v=1',
   '/vilda_gh_punkt_z_wiersza.js?v=2',
+  '/vilda_gh_punkt_z_wiersza.js?v=3',
   '/vilda_gh_punkt_z_wiersza.css?v=1',
   '/vilda_gh_punkt_z_wiersza.css?v=2',
   '/antibiotic_therapy.js',
