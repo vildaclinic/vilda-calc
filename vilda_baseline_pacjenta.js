@@ -24,7 +24,14 @@
  *      żeby odświeżenie strony nie wróciło do starej kopii;
  *   2. uzupełnia w formularzu POLA TOŻSAMOŚCI (data urodzenia, nazwisko i imię, płeć) —
  *      ale tylko wtedy, gdy formularz nadal opisuje tego pacjenta (nazwa w polu równa nazwie
- *      starej bazy). Pól wizyty (masa, wzrost, wiek wpisany ręcznie) nie rusza.
+ *      starej bazy). Pól wizyty (masa, wzrost, wiek) co do zasady nie rusza;
+ *   3. P-ODTWORZ-WIEK-2 (G3/G6): wyjątek — formularz pokazuje ZAPISANĄ wizytę bez zmian
+ *      (wybór „Odtwórz" albo wizyta zapisana w tej karcie; masa i wzrost jak w starej bazie),
+ *      a Karta Pacjenta poprawiła W MIEJSCU właśnie ten pomiar („Historia → Edytuj", usunięcie
+ *      bieżącego pomiaru). Wtedy masa, wzrost i wiek wizyty idą za poprawką. Dotąd formularz
+ *      zostawał przy starych wartościach, moduł daty urodzenia przestawał uznawać je za
+ *      zapisany pomiar i liczył je w wieku na dziś, a następny zapis z formularza cofał
+ *      poprawkę z Karty, stemplując starym pomiarom dzisiejszą datę.
  *
  * CZEGO NIE ROBI. Nie reaguje na zmiany przychodzące z synchronizacji ani z innego urządzenia —
  * te ścieżki sejfu nie wołają `onPatientSaved`, więc pytanie o obcą zmianę zostaje dokładnie
@@ -33,7 +40,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   /* Echo własnego zapisu z formularza: `saveUserData` zapisuje id i snapshotId, które właśnie
      wysłał, i sam odświeża bazę — tu nie ma czego robić. Rozstrzyga ZGODNOŚĆ WERSJI; okno
@@ -192,7 +199,119 @@
     return !wBazie || wPolu === wBazie;
   }
 
-  function odswiezZGlowy(patientId) {
+  /* ---------------------------------------- wizyta poprawiona w Karcie (G3/G6) */
+
+  var POLA_WIZYTY = ['weight', 'height', 'age', 'ageMonths'];
+
+  function liczba(v) {
+    var t = String(v == null ? '' : v).trim().replace(',', '.');
+    if (t === '') return null;
+    var n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function rowne(a, b) {
+    var x = liczba(a);
+    var y = liczba(b);
+    if (x === null || y === null) return x === y;
+    return Math.abs(x - y) < 1e-6;
+  }
+
+  function uzytkownik(rekord) {
+    return rekord && rekord.user && typeof rekord.user === 'object' ? rekord.user : null;
+  }
+
+  /* Wybór „Odtwórz" albo znacznik wizyty zapisanej w tej karcie — te same klucze sesji, które
+     czyta vilda_dob_age.js (moduł bazy działa też na stronie klirensu). */
+  function trybZapisanejWizyty() {
+    try {
+      var s = w.sessionStorage;
+      if (!s || typeof s.getItem !== 'function') return false;
+      return s.getItem('vildaLoadChoiceV1') === 'restore' || s.getItem('vildaDobAgeZapisV1') === '1';
+    } catch (e) {
+      zgloc('tryb-wizyty', e);
+      return false;
+    }
+  }
+
+  /* Formularz pokazuje wizytę STAREJ bazy bez zmian: masa i wzrost równe (pole nieobecne na
+     stronie nie przesądza; co najmniej jedno musi być). */
+  function pokazujeWizyteBazy(stara) {
+    var u = uzytkownik(stara);
+    if (!u || !trybZapisanejWizyty()) return false;
+    var jest = false;
+    var zgodne = ['weight', 'height'].every(function (k) {
+      var el = pole(k);
+      if (!el) return true;
+      jest = true;
+      return rowne(el.value, u[k]);
+    });
+    return jest && zgodne;
+  }
+
+  function wizytaZmieniona(stara, nowa) {
+    var a = uzytkownik(stara);
+    var b = uzytkownik(nowa);
+    if (!a || !b) return false;
+    return POLA_WIZYTY.some(function (k) { return !rowne(a[k], b[k]); });
+  }
+
+  /* Programowy wpis nie jest edycją lekarza (wzorzec bezZnaczaniaEdycji z vilda_dob_age.js):
+     flaga edycji i przycisk „Odtwórz zapisany stan" wracają do stanu sprzed wpisu. Na czas
+     zdarzeń wstrzymujemy też autozapis i lustro formularza (__vildaPersistRestoring) oraz
+     zerowanie karty spożycia (__vildaSuspendIntakeUserReset) — utrwal() zapisuje stan po
+     wszystkim. */
+  function bezZnaczaniaEdycji(robota) {
+    var flaga = w.hasUserModifiedAfterLoad;
+    var trwa = w.__vildaPersistRestoring;
+    var spozycie = w.__vildaSuspendIntakeUserReset;
+    var przycisk = pole('restoreStateBtn');
+    var widocznosc = przycisk && przycisk.style ? przycisk.style.display : null;
+    try {
+      w.__vildaPersistRestoring = true;
+      w.__vildaSuspendIntakeUserReset = true;
+      robota();
+    } finally {
+      w.__vildaPersistRestoring = trwa;
+      w.__vildaSuspendIntakeUserReset = spozycie;
+      w.hasUserModifiedAfterLoad = flaga;
+      /* Przycisk był widoczny, a wpis go schował — przywraca go kolektor (razem z nasłuchem). */
+      if (przycisk && przycisk.style && widocznosc !== null && widocznosc !== 'none' && przycisk.style.display === 'none'
+        && typeof w.showRestoreButton === 'function') {
+        try {
+          w.showRestoreButton();
+        } catch (e) {
+          zgloc('przycisk', e);
+        }
+      }
+    }
+  }
+
+  /* Najpierw wszystkie wartości, potem zdarzenia — przeliczenia i moduł daty urodzenia nie
+     widzą stanu pośredniego (nowa masa przy starym wzroście). */
+  function ustawWizyte(payload) {
+    var u = uzytkownik(payload);
+    if (!u) return;
+    var zmienione = [];
+    POLA_WIZYTY.forEach(function (k) {
+      var el = pole(k);
+      if (!el) return;
+      var nowa = u[k] == null ? '' : String(u[k]);
+      if (rowne(el.value, nowa) && (el.value === '') === (nowa === '')) return;
+      el.value = nowa;
+      zmienione.push(el);
+    });
+    zmienione.forEach(function (el) {
+      try {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (e) {
+        zgloc('wizyta-zdarzenie', e);
+      }
+    });
+  }
+
+  function odswiezZGlowy(patientId, info) {
     var v = w.VildaVault;
     if (!v || typeof v.getPatient !== 'function' || !patientId) return Promise.resolve(false);
     return Promise.resolve(v.getPatient(patientId)).then(function (rec) {
@@ -203,17 +322,26 @@
 
       var stara = w.lastLoadedData;
       var tenSam = formularzOpisujeTegoPacjenta(stara);
+      /* Bramka liczona na STAREJ bazie — po podmianie formularz już się z nią nie zgadza. */
+      var wizyta = tenSam && !!(info && info.isUpdate) && pokazujeWizyteBazy(stara) && wizytaZmieniona(stara, payload);
       w.lastLoadedData = klon(payload);
       if (tenSam) {
         ustawNazwe(payload);
         ustawPlec(payload);
-        ustawDate(payload);
+        if (wizyta) {
+          bezZnaczaniaEdycji(function () {
+            ustawWizyte(payload);
+            ustawDate(payload);
+          });
+        } else {
+          ustawDate(payload);
+        }
       }
       utrwal();
       try {
         if (typeof w.CustomEvent === 'function' && dok()) {
           dok().dispatchEvent(new w.CustomEvent('vilda:baseline-refreshed', {
-            detail: { patientId: patientId, snapshotId: snap.snapshotId || null, identity: tenSam }
+            detail: { patientId: patientId, snapshotId: snap.snapshotId || null, identity: tenSam, visit: wizyta }
           }));
         }
       } catch (e) {
@@ -231,7 +359,7 @@
       if (!info || typeof info.patientId !== 'string') return;
       if (info.patientId !== biezacyPacjent()) return;
       if (toEchoWlasnegoZapisu(info)) return;
-      odswiezZGlowy(info.patientId);
+      odswiezZGlowy(info.patientId, info);
     } catch (e) {
       zgloc('naZapis', e);
     }
