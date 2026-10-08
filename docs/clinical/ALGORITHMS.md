@@ -9190,7 +9190,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.197, `vilda_vault.js` 205, 2026-10-08)
+## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.198, `vilda_vault.js` 205, 2026-10-08)
 
 **Zmiana kliniczna: możliwa** — wzory, progi i jednostki bez zmian; zmienia się zawartość bieżącej wersji karty
 docelowej po ponowieniu zapisu z P-ZAPIS-USUNIETEJ. Poprawka dwóch uwag P1 z przeglądu Codex w #586 (scalonym
@@ -9243,7 +9243,7 @@ sekcje oraz zmiany wpisane przez lekarza w formularzu. Przy różnicy wartości,
 docelowa — jak w „Scal pacjentów”.
 
 **Wersje.** `vilda_vault.js` 204 → 205 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js`
-(112 → 113) i `vilda_session_bridge.js` (36 → 37); nowe adresy w precache (append-only); `SW_VERSION` 1.1.196 → 1.1.197
+(112 → 113) i `vilda_session_bridge.js` (36 → 37); nowe adresy w precache (append-only); `SW_VERSION` 1.1.197 → 1.1.198
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
 ## Zapis do karty usuniętej albo scalonej: odmowa ze wskazaniem karty docelowej (P-ZAPIS-USUNIETEJ, SW 1.1.196, `vilda_vault.js` 204, `vilda_data_import_export.js` 100, `vilda_auth_ui.js` 480, 2026-10-08)
@@ -9783,6 +9783,38 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 **Wersje.** `vilda_version_history_ui.js` 14 → 15 (8 stron), precache (append-only), `SW_VERSION` 1.1.179 → 1.1.180 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`2dbd48a`). „Do decyzji”: brak.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
+
+## Slot obrócony w innej karcie (P-SYNC-ROTACJA-KART, SW 1.1.197, `vilda_sync.js` 37, 2026-10-08)
+
+**Skąd.** Zgłoszenie właściciela z 2026-10-08. „Wyloguj wszystkie urządzenia” (`revokeAllDevices`) obraca tożsamość synchronizacji w pamięci karty, w której to wykonano. Inna karta tego samego profilu przeglądarki, odblokowana wcześniej, trzyma poprzednią tożsamość do odświeżenia strony. Serwer i sejf bez zmian.
+
+**Co się zmienia.** Zaraz po rotacji `revokeAllDevices` zapisuje we wspólnym `localStorage` znacznik slotu poprzedniej tożsamości: `vilda-sync-revoked-v1:<slotId>` z chwilą rotacji. Znacznik powstaje przed rejestracją nowego slotu i przed kasowaniem starego, więc obowiązuje także wtedy, gdy któryś z tych kroków się nie uda. Trafia do `localStorage` także w trybie chmurowym, w którym stan slotu jest w pamięci karty.
+
+Wysyłka nie rejestruje slotu, którego tożsamość została obrócona w innej karcie, i nie wysyła na niego. To samo dotyczy pobrania, przywrócenia poprzedniej wersji, `uploadToSlot` i ponownej rotacji z tej karty. Każda z tych operacji kończy się błędem `SYNC_IDENTITY_CHANGED` z komunikatem: „ten slot synchronizacji został zastąpiony nowym (wylogowanie wszystkich urządzeń). Jeśli błąd się powtarza, odśwież stronę.” Wysyłka sprawdza znacznik przed eksportem sejfu i tuż przed każdą rejestracją i każdym PUT. Gdy znacznik pojawi się w trakcie rejestracji, wysyłka kasuje ten slot tak jak `revokeAllDevices` i kończy się tym samym błędem. Sonda nowego urządzenia nie zgłasza slotu ze znacznikiem. Odświeżenie strony wczytuje z sejfu bieżącą tożsamość, więc karta dalej synchronizuje się z nowym slotem.
+
+Integracja (`vilda_sync_integration.js`) bez zmian. Ten kod błędu nie zatrzymuje jej harmonogramu, bo w karcie, która wykonała rotację, oznacza tylko przerwaną wysyłkę, a następna idzie już na nowy slot (P-SYNC-KURSOR). Ponowienia w drugiej karcie nie wysyłają żądań do serwera.
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| karta A: `revokeAllDevices`; karta B (poprzednia tożsamość): `syncPush` | `SYNC_IDENTITY_CHANGED`, bez eksportu sejfu i bez żądań na stary slot (czerwony na kodzie sprzed zmiany) |
+| jak wyżej, karta B: `syncPull`, `syncFull` | `SYNC_IDENTITY_CHANGED` zamiast `not-registered` (czerwony na kodzie sprzed zmiany) |
+| tryb chmurowy, stan slotu w pamięci karty B; dwie wysyłki z B | obie `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| kasowanie starego slotu nieudane (`oldSlotRevoked: false`); wysyłka i sonda w B | `SYNC_IDENTITY_CHANGED`, sonda `isNewDevice: false`, stary slot bez nowej wysyłki (czerwony na kodzie sprzed zmiany) |
+| rejestracja z B wysłana przed rotacją w A, przyjęta po niej | slot skasowany, `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| rotacja w A w trakcie eksportu w B (ze stanem slotu i bez niego) | `SYNC_IDENTITY_CHANGED`, bez rejestracji i PUT na stary slot (czerwony na kodzie sprzed zmiany) |
+| `revokeAllDevices` w B | `SYNC_IDENTITY_CHANGED`, sejf B bez rotacji, slot z rotacji w A zostaje (czerwony na kodzie sprzed zmiany) |
+| `restorePrevBlob` i `uploadToSlot` na stary slot w B | `SYNC_IDENTITY_CHANGED` (czerwony na kodzie sprzed zmiany) |
+| karta A po rotacji: wysyłka i pobranie | `uploaded`, `up-to-date` na nowym slocie, jak dotąd |
+| karta B po odświeżeniu (bieżąca tożsamość) | pobranie i wysyłka na nowym slocie, jak dotąd |
+| pierwsza rejestracja nowego urządzenia | `not-registered`, potem `registered` (201), jak dotąd |
+| „Zresetuj stan synchronizacji”, potem wysyłka | rejestracja 409, pobranie, PUT, `uploaded`, jak dotąd |
+| rotacja w jednej karcie | wynik `revokeAllDevices` i żądania (rejestracja nowego slotu, kasowanie starego) jak dotąd |
+
+**Testy.** `tests/unit/sync-rotacja-kart.test.mjs` ma 14 przypadków na prawdziwym `vilda_sync.js` w dwóch oknach ze wspólnym `localStorage` i osobnym `sessionStorage`. Serwer i sejf to atrapy. Na kodzie sprzed zmiany 9 przypadków jest czerwonych, a 5 kontroli niezmienionego zachowania zielonych. Testy sprawdzono mutacjami: usunięcie każdego z 10 nowych sprawdzeń daje czerwony test. Scenariusz z dwiema kartami sprawdzono też ręcznie w Chromium na prawdziwym sejfie: druga karta po rotacji w pierwszej dostaje `SYNC_IDENTITY_CHANGED`, a po odświeżeniu synchronizuje się z nowym slotem.
+
+**Wpływ kliniczny: brak.** Nie zmieniają się dane, scalanie, format na drucie ani wyniki. **Wersje.** `vilda_sync.js` 36 → 37 (8 stron), precache (append-only), `SW_VERSION` 1.1.196 → 1.1.197 (+ pin), fixture wersji. Wszystko nadało `npm run podbij-wersje` względem `origin/audyt` (`7faecd0`, po scaleniu P-ZAPIS-USUNIETEJ). Pozycji „Do decyzji” brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
 ## Kursor dziennika zmian bez przeskoku, odstęp po 412, keepalive w kolejce wysyłki (P-SYNC-KURSOR, SW 1.1.195, `vilda_sync.js` 36, 2026-10-08)
 
