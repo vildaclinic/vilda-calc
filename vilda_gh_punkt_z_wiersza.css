@@ -217,6 +217,12 @@
   color: #fff !important;
 }
 
+.gh-z-wiersza-zapisz:disabled,
+.liquid-ios26 .gh-z-wiersza-zapisz:disabled {
+  opacity: var(--opacity-disabled-label) !important;
+  cursor: not-allowed !important;
+}
+
 .gh-z-wiersza-status {
   margin: var(--space-0-5) 0;
   padding: var(--space-0-5) var(--space-0-75);

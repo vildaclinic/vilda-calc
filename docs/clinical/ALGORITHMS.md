@@ -8996,6 +8996,78 @@ wiersz ręczny 9 l. 0 mies., 128,6 cm, 29,1 kg):
 (decyzja: dalej w DocPro), karta porównania na Start po zapisie (bez zmian), przeniesienie listy programów karty
 i monitora na `VildaGhProgramyDane` (osobna refaktoryzacja).
 
+### Poprawki po recenzji: panel = bieżący wiersz, zmiana pacjenta czyści panel i komunikat (P-GH-PUNKT-Z-WIERSZA-ZGODNOSC, SW 1.1.200, `vilda_gh_punkt_z_wiersza.js` 2, `vilda_gh_punkt_z_wiersza.css` 2, 2026-10-08)
+
+**Skąd.** Dwie uwagi recenzji automatycznej (Codex) do scalonego #582, dodane kilka minut po scaleniu i bez odpowiedzi
+do 2026-10-08; obie potwierdzone w kodzie. Wariant P1 wybrał właściciel 2026-10-08: „Panel się odświeża”.
+
+- **P1 — zapis inny niż widoczny.** Panel rysował podsumowanie pomiaru i podpowiedź mg/kg z migawki z chwili otwarcia,
+  a zapis czytał wiersz od nowa. Poprawka masy w wierszu przy otwartym panelu (29,1 → 20 kg) zapisywała punkt
+  z 20 kg i 0,045 mg/kg/d, choć panel pokazywał 29,1 kg i 0,031 mg/kg/d. Teraz każda zmiana w karcie odświeża
+  w panelu podsumowanie (brakujące pole jako „—”), podpowiedź mg/kg (gdy zmieniła się masa) i przycisk
+  „Zapisz punkt leczenia”: nieaktywny z powodem pod polami („Uzupełnij wiek, wzrost i masę w tym wierszu.”, „W tym
+  miesiącu wieku jest już punkt leczenia GH.”). Zapis porównuje napisy pól wiersza z pomiarem pokazanym w panelu;
+  gdy się różnią (wiersz zmieniony bez zdarzenia albo w tej samej klatce co klik), nic nie zapisuje, odświeża panel
+  i prosi: „Pomiar w wierszu się zmienił. Sprawdź dane w panelu i zapisz ponownie.” Panel zamyka się także, gdy
+  z listy zniknie punkt Włączenia (warunek przycisku z decyzji D8).
+- **P2 — komunikat o poprzednim pacjencie.** Komunikat „✓ Zapisano punkt leczenia GH…” stoi nad kartą, poza
+  `#advMeasurements`, i znikał tylko przy otwarciu kolejnego panelu. Teraz panel i komunikat znikają przy
+  `vilda:patient-loaded`, `vilda:state-restored`, `vilda:persist-restored` (dokument) i `vilda:user-state-cleared`
+  („Wyczyść”, okno) oraz przy najbliższym odświeżeniu karty, gdy znacznik pacjenta karty (`window._vildaCurrentPatientId`,
+  potem `sessionStorage.vildaCurrentPatientId`, jak w monitorze GH) różni się od tego z chwili otwarcia panelu albo
+  zapisu — to łapie zmianę pacjenta w innej ramce powłoki bez zdarzenia w tej ramce. Wyjątek: `vilda:patient-loaded`
+  z `source: 'save'` („Zapisz dane” bieżącego pacjenta, także pierwszy zapis, który nadaje znacznik) to ten sam
+  pacjent — panel z wpisaną dawką i komunikat zostają, a zapamiętany znacznik przechodzi na nadany id.
+
+**Wpływ kliniczny.** Wzory, jednostki, progi i reguły punktu bez zmian (dalej `VildaGhPunkty.polaZPodawanej`, tryb
+`'wsteczny'`). Zmienia się tylko to, które wartości wiersza trafiają do punktu, gdy lekarz poprawi wiersz przy
+otwartym panelu: teraz zawsze te pokazane w panelu.
+
+**Przypadki (wejście → wynik, e2e na prawdziwym Start).** Punkty 8 l. 0 mies. (Włączenie) i 8 l. 6 mies.; wiersz
+ręczny 9 l. 0 mies., 128,6 cm, 29,1 kg; Omnitrope 10 mg, dawka 0,9 mg/d:
+- masa w wierszu → 20 kg: panel „… masa 20 kg …”, podpowiedź „= 0,045 mg/kg/d przy 20 kg”;
+- masa pusta: „masa —”, „Zapisz” nieaktywny, powód „Uzupełnij wiek, wzrost i masę w tym wierszu.”;
+- wiek 8 l. 6 mies.: „Zapisz” nieaktywny, powód „W tym miesiącu wieku jest już punkt leczenia GH.”;
+- masa 21 kg wpisana bez zdarzenia i od razu „Zapisz”: brak zapisu, komunikat o zmianie, panel „masa 21 kg”,
+  „= 0,043 mg/kg/d przy 21 kg”; drugi „Zapisz” → punkt `weight: 21`, `dose: 0,9/21`, `doseAbs: 0,9`;
+- `vilda:state-restored` / `vilda:persist-restored` / `vilda:patient-loaded` przy otwartym panelu (znacznik pacjenta
+  bez zmian): panel znika, lista punktów bez zmian;
+- inny znacznik pacjenta i zmiana w karcie: panel znika; po zapisie komunikat zostaje przy tym samym pacjencie
+  i znika po zmianie znacznika i „Dodaj kolejny pomiar”;
+- „Wyczyść wszystkie pola” na Start (pacjent bez sejfu, znacznik pusty): komunikat znika;
+- „Zapisz dane” (prawdziwy zapis do sejfu, znacznik pusty → id) przy otwartym panelu z dawką 0,9: panel i dawka
+  zostają; po zapisie punktu i kolejnym „Zapisz dane” komunikat zostaje;
+- zmiana preparatu na Ngenla 24 mg (schemat tygodniowy) czyści dawkę i pokazuje komunikat zmiany schematu;
+  masa w wierszu → 22 kg: panel „masa 22 kg”, komunikat zostaje (dawka pusta — nie ma czego przeliczać);
+- Włączenie usunięte z listy przy otwartym panelu: panel znika, przycisku nie ma.
+
+**Przegląd adwersaryjny (statyczny, 3 wymiary, 2 sceptyków na zgłoszenie).** Utrzymały się dwa błędy pierwszej
+wersji poprawki, oba poprawione przed oddaniem: (1) nieaktywny „Zapisz” odświeżał panel w każdej klatce — powód
+wpisywany od nowa był mutacją dla obserwatora karty (`#advMeasurements`), który znów wołał odświeżenie (teraz zapis
+tekstu tylko przy zmianie; test liczy zmiany w karcie w spoczynku: 63 na sekundę przed, 0 po); (2) „Zapisz dane”
+zamykało panel i usuwało komunikat jak zmiana pacjenta (teraz wyjątek `source: 'save'` wyżej). Do tego dwie luki
+w testach (komunikat zmiany schematu, brak Włączenia) — dopisane. Zgłoszenie „`vilda:persist-restored` po powrocie
+na Start usuwa komunikat także bez zmiany pacjenta” obalone jako zamierzone: komunikat jest chwilowy, a odtworzenie
+stanu i tak przebudowuje wiersze karty.
+
+**Strażnicy.** `tests/e2e/gh-punkt-z-wiersza.spec.mjs` — „panel pokazuje bieżący pomiar wiersza…”, „odświeżanie
+panelu nie kasuje komunikatu o zmianie preparatu; bez Włączenia…”, trzy testy „zmiana pacjenta (1/3–3/3)”, każdy
+na jeden mechanizm, i „„Zapisz dane” bieżącego pacjenta nie zamyka panelu…”; `tests/unit/gh-punkt-z-wiersza.test.mjs`
+— `tekstPomiaru`. Na kodzie sprzed poprawki testy panelu i zmiany pacjenta są czerwone (panel „masa 29,1 kg” zamiast
+20 kg; panel zostaje po zmianie pacjenta). Mutacje modułu: 12 z 12 wykrytych (brak odświeżania panelu w `odswiez`,
+brak kontroli pokazanego pomiaru przy zapisie, brak zdarzeń odtworzenia stanu, brak kontroli znacznika, brak
+nasłuchu „Wyczyść”, podpowiedź mg/kg bez odświeżenia po zmianie masy, „Zapisz” zawsze aktywny, podpowiedź kasująca
+komunikat schematu, panel bez Włączenia, „Zapisz dane” jako zmiana pacjenta, pętla odświeżania, ignorowane
+wczytanie pacjenta). Pierwsza wersja testów przepuszczała 4 z tych mutacji: kroki mieszały mechanizmy (udawane
+wczytanie pacjenta z id zmieniało też znacznik; inne moduły przebudowują wiersze kilka sekund po wczytaniu) —
+teraz każdy test izoluje jeden mechanizm, a zamknięcie przez zdarzenie jest sprawdzane w chwili zdarzenia.
+
+**Wersje.** `vilda_gh_punkt_z_wiersza.js` i `.css` `?v=1` → `?v=2` (wpisy precache dopisane obok `?v=1`), `SW_VERSION` 1.1.199 → 1.1.200 — `npm run podbij-wersje` względem `audyt` `3676f0d`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Pozostałe uwagi recenzji do punktów GH
+(#575 P1 — bramka D6 a plik danych dawki, kliniczne; #581 P1, #572 P1 — monitor; #577 P2 — test S7) są osobnymi
+krokami.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
