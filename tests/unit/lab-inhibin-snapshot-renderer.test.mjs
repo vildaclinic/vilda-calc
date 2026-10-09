@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
@@ -260,8 +262,11 @@ describe('Inhibina B — rzeczywiste źródła przez zapis i prezentację', () =
       expect(visible).toContain('Wiek ≥2 i <3,5 mies.');
       expect(visible).toContain('Wiek ≥3,5 i ≤5 mies.');
     } else {
-      expect(visible).toContain('Najniższa górna granica dla podanego przedziału wieku');
-      expect(visible).toContain('Najwyższa górna granica dla podanego przedziału wieku');
+      expect(visible).toContain('Najniższa górna granica');
+      expect(visible).toContain('Najwyższa górna granica');
+      expect(visible).toContain('Powyżej górnej granicy w całym podanym przedziale wieku.');
+      expect(renderer.buildView(evaluation).result.visualState).toBe('is-above');
+      expect(descendants(render(evaluation), (node) => node.getAttribute('role') === 'img')).toHaveLength(2);
       expect(visible).toContain('Górna granica modelu: ≈');
       expect(descendants(render(evaluation), (node) => node.getAttribute('data-upper-only-note') === 'true')).toHaveLength(1);
     }
@@ -300,5 +305,135 @@ describe('Inhibina B — rzeczywiste źródła przez zapis i prezentację', () =
     expect(assessment.evaluation.input.testicularVolume.value).toBe(7);
     for (const label of ['Obserwacja rozwoju', 'Data obserwacji', 'Źródło obserwacji', 'Objętość jąder', 'Objawy OUN', 'Regresja']) expect(view.presentation.context.map((item) => item.label)).not.toContain(label);
     expect(render(evaluation, true).textContent).not.toMatch(/G3|Objętość jąder|Objawy OUN|Regresja/);
+  });
+});
+
+describe('Inhibina B — pewne porównanie skrajnych granic jednej zapisanej krzywej wieku', () => {
+  function female11(value = '144') {
+    return evaluate({ sex: 'F', value, age: { years: 0, months: 11, precision: 'month' }, preterm: 'no' }, inhibinData);
+  }
+  const variantComparisons = (view) => view.comparisons.filter((comparison) => comparison.key === 'variant');
+
+  it.each([
+    ['30', ['within', 'within'], 'within', '', ['is-normal', 'is-normal']],
+    ['45', ['above', 'within'], 'mixed', '', ['is-above', 'is-normal']],
+    ['80', ['above', 'above'], 'above', 'is-above', ['is-uwaga-high', 'is-above']],
+    ['144', ['above', 'above'], 'above', 'is-uwaga-high', ['is-uwaga-high', 'is-uwaga-high']],
+    ['>50', ['above', 'above'], 'above', 'is-above', ['', '']],
+    ['<30', ['within', 'within'], 'within', '', ['', '']],
+    ['<40', ['indeterminate', 'within'], 'indeterminate', '', ['', '']],
+    ['<140', ['indeterminate', 'indeterminate'], 'indeterminate', '', ['', '']],
+    ['<LOD', ['indeterminate', 'indeterminate'], 'indeterminate', '', ['', '']],
+  ])('11 ukończonych miesięcy i %s: zachowuje oba zapisane werdykty, ich osie oraz zakres pewności', (value, statuses, consensus, state, axisStates) => {
+    const evaluation = female11(value), before = JSON.stringify(evaluation);
+    const view = renderer.buildView(evaluation), comparisons = variantComparisons(view), container = render(evaluation);
+    expect(view.ageVariantMode).toBe(true);
+    expect(evaluation.referencePreview.variants.map((variant) => variant.comparison.status)).toEqual(statuses);
+    expect(view.ageVariantConsensus.status).toBe(consensus);
+    expect(comparisons.map((comparison) => comparison.status)).toEqual(statuses);
+    expect(comparisons.map((comparison) => comparison.axis.upper)).toEqual(evaluation.referencePreview.variants.map((variant) => variant.comparison.range.bounds.upper.value));
+    expect(comparisons[0].axis.upper).toBe(39.132);
+    expect(comparisons[1].axis.upper).toBeCloseTo(49.725666666666676, 10);
+    expect(comparisons.every((comparison) => comparison.axis.lower === null)).toBe(true);
+    expect(comparisons[0].axis.max).toBe(comparisons[1].axis.max);
+    expect(comparisons.map((comparison) => comparison.visualState)).toEqual(axisStates);
+    expect(view.result.visualState).toBe(state);
+    expect(!!view.result.visualAlert).toBe(value === '144');
+    if (value === '144') expect(view.result.visualAlert).toMatchObject({ label: 'Uwaga — znacznie powyżej zakresu referencyjnego', scope: 'W całym podanym przedziale wieku', automatic: true });
+    const rows = descendants(container, (node) => node.getAttribute('data-comparison') === 'variant');
+    expect(rows.map((node) => node.getAttribute('data-status'))).toEqual(statuses);
+    expect(rows.map((node) => node.getAttribute('data-variant-id'))).toEqual(evaluation.referencePreview.variants.map((variant) => variant.id));
+    expect(descendants(container, (node) => node.getAttribute('role') === 'img')).toHaveLength(2);
+    const markers = descendants(container, (node) => (node.className || '').split(' ').includes('vilda-lab-axis-marker'));
+    expect(markers).toHaveLength(evaluation.measurement.isExact ? 2 : 0);
+    expect(comparisons.every((comparison) => comparison.axis.value === (evaluation.measurement.isExact ? Number(value) : null))).toBe(true);
+    expect(descendants(container, (node) => node.getAttribute('data-age-variant-consensus') === consensus)).toHaveLength(1);
+    expect(visibleText(container)).toContain(value + ' pg/mL');
+    expect(visibleText(container)).toContain('Górna granica modelu: ≈39,1 pg/mL');
+    expect(visibleText(container)).toContain('Górna granica modelu: ≈49,7 pg/mL');
+    expect(visibleText(container)).not.toMatch(/39,1\s*[–-]\s*49,7|W zakresie|Prawidłowy/);
+    if (consensus === 'within') expect(view.ageVariantConsensus.label).toContain('Nie przekracza górnej granicy w całym podanym przedziale wieku');
+    if (value === '45') expect(view.ageVariantConsensus.label).toBe('Ocena zależy od dokładnego wieku.');
+    if (consensus === 'indeterminate') expect(view.ageVariantConsensus.label).toBe('Zapis wyniku nie pozwala na jednoznaczne porównanie.');
+    expect(JSON.stringify(evaluation)).toBe(before);
+  });
+
+  it.each([
+    ['inny profil', (e, r) => { r.profileId = 'different'; }],
+    ['inna wersja profilu', (e, r) => { r.profileVersion = 'different'; }],
+    ['inna wersja danych', (e, r) => { r.dataVersion = 'different'; }],
+    ['inna krzywa tego samego profilu', (e, r) => { r.id = 'different:upper-envelope:0.9166666666666666'; }],
+    ['powtórzona rola dolnej obwiedni', (e, r) => { r.id = r.id.replace('upper-envelope', 'lower-envelope'); }],
+    ['brak tożsamości krzywej', (e, r) => { r.id = ''; }],
+    ['inne źródło', (e, r) => { r.sourceId = 'different'; r.source.id = 'different'; }],
+    ['inna wersja publikacji', (e, r) => { r.source.version = 'different'; }],
+    ['inna metoda', (e, r) => { r.method.id = 'different'; }],
+    ['inna czułość metody', (e, r) => { r.method.analyticalSensitivity.value = 4; }],
+    ['inna populacja', (e, r) => { r.population.sourceDescription = 'different'; }],
+    ['inna płeć', (e, r) => { r.sex = 'M'; }],
+    ['inny materiał', (e, r) => { r.material = 'plasma'; }],
+    ['inna jednostka', (e, r) => { r.unit = 'ng/L'; }],
+    ['inny operator granicy', (e, r) => { r.bounds.upper.operator = '<'; }],
+    ['dolna granica', (e, r) => { r.bounds.lower = { operator: '>=', value: 1 }; }],
+    ['inna podstawa porównania', (e, r) => { r.basis = 'infant'; }],
+    ['faza cyklu', (e) => { e.referencePreview.variants[1].reproductiveContext = 'follicular'; }],
+    ['brak przyczyny niepewności wieku', (e) => { e.referencePreview.reasonCodes = []; }],
+    ['inny profil w doborze', (e) => { e.referenceSelection.profileIds.push('different'); }],
+    ['brak metody w obu zapisach', (e) => { e.referencePreview.variants.forEach((variant) => { delete variant.comparison.range.method; }); }],
+  ])('nie nadaje wspólnego werdyktu dla niezgodnej proweniencji: %s', (_label, change) => {
+    const evaluation = female11();
+    change(evaluation, evaluation.referencePreview.variants[1].comparison.range);
+    const view = renderer.buildView(evaluation);
+    expect(view.ageVariantMode).toBe(false);
+    expect(view.ageVariantConsensus).toBeNull();
+    expect(view.result.visualState).toBe('');
+    expect(view.result.visualAlert).toBeNull();
+    expect(variantComparisons(view).every((comparison) => comparison.axis === null)).toBe(true);
+    expect(descendants(render(evaluation), (node) => node.getAttribute('role') === 'img')).toHaveLength(0);
+  });
+
+  it.each(['byAge', 'byStage'])('dostępne %s zachowuje niezależną oś i alarm zamiast nowego trybu wariantów', (key) => {
+    const evaluation = female11();
+    evaluation.referencePreview[key] = JSON.parse(JSON.stringify(evaluation.referencePreview.variants[0].comparison));
+    const view = renderer.buildView(evaluation);
+    expect(view.ageVariantMode).toBe(false);
+    expect(view.ageVariantConsensus).toBeNull();
+    expect(variantComparisons(view).every((comparison) => comparison.axis === null)).toBe(true);
+    expect(view.result.visualState).toBe('is-uwaga-high');
+    expect(view.result.visualAlert).toBeTruthy();
+    expect(descendants(render(evaluation), (node) => node.getAttribute('role') === 'img')).toHaveLength(1);
+  });
+
+  it('męskie przedziały wieku i fazy dorosłych pozostają osobnymi alternatywami bez agregacji', () => {
+    for (const overrides of [
+      { sex: 'M', age: { years: 0, months: 3, precision: 'month' }, preterm: 'no' },
+      { sex: 'F', age: { years: 35, precision: 'year' }, reproductiveContext: 'follicular' },
+    ]) {
+      const evaluation = evaluate({ value: '999', ...overrides }, inhibinData), view = renderer.buildView(evaluation);
+      expect(evaluation.referencePreview.variants).toHaveLength(2);
+      expect(view.ageVariantMode).toBe(false);
+      expect(view.ageVariantConsensus).toBeNull();
+      expect(view.result.visualAlert).toBeNull();
+      expect(view.result.visualState).toBe('');
+      expect(descendants(render(evaluation), (node) => node.getAttribute('role') === 'img')).toHaveLength(0);
+    }
+  });
+
+  it('historyczne dwa warianty odtwarza bez silnika, dzisiejszych norm i zmiany zapisanego schematu', () => {
+    const saved = JSON.parse(JSON.stringify(snapshot.create(female11()))), before = JSON.stringify(saved);
+    expect(saved.status).toBe('recorded');
+    const unexpectedRead = vi.fn(() => { throw new Error('History cannot evaluate or load reference data'); });
+    const win = { VildaLabSnapshot: snapshot, VildaLabInhibinB: { evaluate: unexpectedRead }, VildaLabPuberty: { evaluate: unexpectedRead },
+      VildaLabInhibinBData: new Proxy({}, { get: unexpectedRead }) };
+    runInNewContext(readFileSync(new URL('../../vilda_lab_assessment_ui.js', import.meta.url), 'utf8'), { window: win, URL });
+    const host = documentDouble().createElement('main');
+    const view = win.VildaLabAssessmentUI.renderAssessment(host, saved);
+    expect(view.ageVariantMode).toBe(true);
+    expect(view.result.visualState).toBe('is-uwaga-high');
+    expect(descendants(host, (node) => node.getAttribute('role') === 'img')).toHaveLength(2);
+    expect(visibleText(host)).toContain('Powyżej górnej granicy w całym podanym przedziale wieku.');
+    expect(unexpectedRead).not.toHaveBeenCalled();
+    expect(JSON.stringify(saved)).toBe(before);
+    expect(snapshot.normalize(saved)).toEqual(saved);
   });
 });

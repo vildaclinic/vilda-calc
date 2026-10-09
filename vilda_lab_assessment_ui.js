@@ -315,6 +315,48 @@
       conditional: significant.some(function (c) { return c.conditional; }), automatic: automatic
     } };
   }
+  function sameInfantCurveVariants(e, preview, unit) {
+    // The engine emits the two extrema only after this one curve covers the
+    // complete age interval. Read that saved contract; never merge age bins,
+    // methods, populations or cycle phases, and never recalculate the curve.
+    if (e.analyte !== 'inhibin_b' || !preview || e.referenceSelection.status !== 'variants' ||
+        codeList(e.referenceSelection.profileIds).length !== 1 ||
+        !preview.byAge || preview.byAge.status !== 'unavailable' || !preview.byStage || preview.byStage.status !== 'unavailable' ||
+        !codeList(preview.reasonCodes).includes('age_precision_crosses_reference_boundary') ||
+        !Array.isArray(preview.variants) || preview.variants.length !== 2) return false;
+    var identities = preview.variants.map(function (variant) {
+      var comparison = variant && variant.comparison, range = comparison && comparison.range;
+      var limits = axisBounds(comparison, unit);
+      var envelope = range && /^(.+):(lower|upper)-envelope:([^:]+)$/.exec(text(range.id));
+      if (!range || variant.reproductiveContext || range.reproductiveContext || range.basis !== 'infant-curve' || range.stage ||
+          !envelope || !numeric(Number(envelope[3])) || Number(envelope[3]) < 0 ||
+          !['above', 'within', 'indeterminate'].includes(comparison.status) ||
+          !limits || limits.lower !== null || !(limits.upper > 0) || range.bounds.censoredLower ||
+          !range.age || range.age.axis !== 'chronologicalYears' || range.sex !== e.input.sex || range.profileId !== e.referenceSelection.profileIds[0] ||
+          !['profileId', 'profileVersion', 'dataVersion', 'sourceId', 'material', 'sex'].every(function (key) { return !!text(range[key]); }) ||
+          !record(range.method) || !text(range.method.id) || !record(range.population) || !text(range.population.label) ||
+          !record(range.source) || range.source.id !== range.sourceId) return null;
+      return { role: envelope[2], identity: JSON.stringify([envelope[1], range.profileId, range.profileVersion, range.dataVersion, range.sourceId,
+        range.source, range.method, range.sex, range.population, range.material, range.unit, range.bounds.upper.operator]) };
+    });
+    return !!identities[0] && !!identities[1] && identities[0].identity === identities[1].identity && identities[0].role !== identities[1].role;
+  }
+  function infantCurveConsensus(comparisons) {
+    var variants = comparisons.filter(function (comparison) { return comparison.key === 'variant'; });
+    var above = variants.every(function (comparison) { return comparison.status === 'above'; });
+    var within = variants.every(function (comparison) { return comparison.status === 'within'; });
+    var uncertain = variants.some(function (comparison) { return comparison.status === 'indeterminate'; });
+    var severe = above && variants.every(function (comparison) { return comparison.visualState === 'is-uwaga-high'; });
+    return {
+      status: above ? 'above' : within ? 'within' : uncertain ? 'indeterminate' : 'mixed',
+      label: above ? 'Powyżej górnej granicy w całym podanym przedziale wieku.'
+        : within ? 'Nie przekracza górnej granicy w całym podanym przedziale wieku.'
+          : uncertain ? 'Zapis wyniku nie pozwala na jednoznaczne porównanie.' : 'Ocena zależy od dokładnego wieku.',
+      visualState: severe ? 'is-uwaga-high' : above ? 'is-above' : '',
+      visualAlert: severe ? { label: 'Uwaga — znacznie powyżej zakresu referencyjnego',
+        scope: 'W całym podanym przedziale wieku', conditional: true, automatic: true } : null
+    };
+  }
   function buildView(evaluation, options) {
     var e = record(evaluation) ? evaluation : {};
     if (e.schemaVersion !== 1 || !Object.prototype.hasOwnProperty.call(ANALYTES, e.analyte) || !record(e.input) || !record(e.measurement) || !record(e.ageAtSample) || !record(e.biochemical) || !record(e.clinical) || !record(e.summary) || !['attention', 'limited', 'compared', 'invalid', 'out_of_scope'].includes(e.summary.status)) return { valid: false };
@@ -337,13 +379,14 @@
     var rawComparisons = [['age', 'Względem wieku', preview ? preview.byAge : b.byAge], ['stage', 'Względem stadium', preview ? preview.byStage : b.byStage], ['local', 'Zakres laboratorium', b.local]];
     if (automatic && preview && Array.isArray(preview.variants)) rawComparisons = rawComparisons.concat(preview.variants.map(function (variant) { return ['variant', text(variant.label), variant.comparison, variant]; }));
     if (automatic && rawComparisons.some(function (item) { return item[2] && item[2].range && item[2].range.basis === 'adult'; })) adultProfile = true;
+    var ageVariantMode = !!automatic && sameInfantCurveVariants(e, preview, analyte.unit);
     var point = m.status === 'valid' && m.isExact === true && numeric(m.plotValue) && m.plotValue >= 0 ? m.plotValue : null;
-    var axisLimits = rawComparisons.slice(0, 2).map(function (item) { return axisBounds(item[2], analyte.unit); });
+    var axisLimits = rawComparisons.map(function (item, index) { return index < 2 || ageVariantMode && item[0] === 'variant' ? axisBounds(item[2], analyte.unit) : null; });
     var maximum = axisMaximum(axisLimits, point);
     var comparisons = rawComparisons.map(function (item, index) {
       var c = item[2] || {}, range = c.range || {}, status = Object.prototype.hasOwnProperty.call(STATUS, c.status) ? c.status : 'unavailable';
       var conditional = !!preview && item[0] !== 'local' && status !== 'unavailable';
-      var limits = index < 2 && status !== 'unavailable' ? axisLimits[index] : null;
+      var limits = status !== 'unavailable' ? axisLimits[index] : null;
       var state = visualState(status, limits, point);
       var scope = range.stage ? stage({ kind: range.stage.kind, stage: range.stage.value }) : '';
       var visualLabel = state === 'is-uwaga-high' ? 'Znacznie powyżej normy' : state === 'is-uwaga-low' ? 'Znacznie poniżej normy' : ({ above: 'Powyżej zakresu', below: 'Poniżej zakresu', within: 'W zakresie', indeterminate: 'Porównanie niejednoznaczne', unavailable: 'Brak dopasowanej oceny' })[status];
@@ -354,6 +397,10 @@
       var ageTitle = pretermProfile ? 'Dla wcześniaka' : adultProfile ? adultTitle : inhibin && range.basis === 'infant-broad' ? 'Ogólny zakres dla niemowląt' : inhibin && range.basis === 'infant-curve' ? 'Minipuberty' : 'Dla wieku';
       var title = item[0] === 'age' && (inhibin || pretermProfile || adultProfile) ? ageTitle : item[1];
       var variantTitle = variant && variant.reproductiveContext ? REPRODUCTIVE_CONTEXT[variant.reproductiveContext] : variant ? referenceAgeText(range.age, inhibin ? range.basis : '') : '';
+      if (ageVariantMode && variant) {
+        variantTitle = limits.upper === Math.min.apply(null, axisLimits.filter(Boolean).map(function (entry) { return entry.upper; })) ? 'Najniższa górna granica' : 'Najwyższa górna granica';
+        title = variantTitle;
+      }
       if (variant && variant.reproductiveContext && previewReasons.includes('age_precision_crosses_reference_boundary')) variantTitle += ' · ' + referenceAgeText(range.age).toLowerCase();
       if (c.range && range.source) {
         if (!sourceIds.includes(range.sourceId)) { sources.push(sourceView(range.source)); sourceIds.push(range.sourceId); }
@@ -440,7 +487,8 @@
       if (message === REASONS.missing_puberty_assessment) return 'Brak odpowiedniej oceny Th/M lub G dla bieżącego kontekstu. P i Ax jej nie zastępują.';
       return message;
     });
-    var emphasis = resultEmphasis(comparisons);
+    var ageVariantConsensus = ageVariantMode ? infantCurveConsensus(comparisons) : null;
+    var emphasis = ageVariantConsensus || resultEmphasis(comparisons);
     var view = { valid: true, analyte: analyte.label, analyteKey: e.analyte, pretermProfile: pretermProfile, automatic: !!automatic, adultProfile: adultProfile,
       result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), empty: !text(m.raw), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
         visualState: emphasis.visualState, visualAlert: emphasis.visualAlert,
@@ -453,6 +501,7 @@
       }) ? 'Źródło podaje tylko górną granicę — nie pozwala ocenić, czy wynik jest za niski.' : '',
       referenceMode: preview ? preview.kind : automatic ? 'automatic-source-reference' : '',
       variantMode: !!(automatic && preview && Array.isArray(preview.variants)),
+      ageVariantMode: ageVariantMode, ageVariantConsensus: ageVariantConsensus,
       context: context, contextBasis: currentContext ? 'current-patient' : 'sample',
       contextNote: currentContext ? 'Kontekst z formularza głównego — wiek i obserwacje nie potwierdzają dnia pobrania.' : '',
       assayNote: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia: ' + methodName(assay.methodId) + (assay.profileVersion ? ' · profil ' + text(assay.profileVersion) : '') : '',
@@ -649,7 +698,7 @@
     axis.setAttribute('aria-label', comparison.title + (comparison.scope ? ' ' + comparison.scope : '') + '. ' + comparison.rangeText + '. Wynik ' + result.text + '. ' + comparison.label + '. ' + comparison.visualLabel
       + (model.value !== null ? '. Skala liniowa od 0 do ' + number(model.max) + ' ' + model.unit + '.' : '. Brak dokładnej pozycji liczbowej wyniku.'));
     if (model.value !== null) add(axis, 'span', 'vilda-lab-axis-value ' + comparison.status + ' ' + comparison.visualState, number(model.value) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
-    else add(axis, 'span', 'vilda-lab-axis-no-value', 'Wynik ' + result.text + ' — bez pozycji liczbowej').setAttribute('aria-hidden', 'true');
+    else add(axis, 'span', 'vilda-lab-axis-no-value', 'Bez pozycji liczbowej').setAttribute('aria-hidden', 'true');
     var track = add(axis, 'div', 'vilda-lab-axis-track');
     track.setAttribute('aria-hidden', 'true');
     if (model.lower !== null && lower > 0) add(track, 'span', 'vilda-lab-axis-below');
@@ -726,7 +775,11 @@
     if (view.reportedRangeConflict && !incomplete) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
     if (!incomplete && view.pretermBlock) add(parent, 'p', 'vilda-lab-preterm-block', view.pretermBlock).setAttribute('data-preterm-block', 'true');
     if (!incomplete && view.automaticBlock) add(parent, 'p', 'vilda-lab-preterm-block', view.automaticBlock).setAttribute('data-reference-block', 'true');
-    if (!incomplete && view.variantMode) add(parent, 'p', 'vilda-lab-variants-lead', view.comparisons.some(function (comparison) { return comparison.reproductiveContext; }) ? 'Wybierz znaną fazę lub porównaj dostępne zakresy.' : 'Podany wiek obejmuje różne zakresy odniesienia.');
+    if (!incomplete && view.ageVariantConsensus) {
+      var consensus = add(parent, 'p', 'vilda-lab-variants-lead');
+      consensus.setAttribute('data-age-variant-consensus', view.ageVariantConsensus.status);
+      add(consensus, 'strong', '', view.ageVariantConsensus.label);
+    } else if (!incomplete && view.variantMode) add(parent, 'p', 'vilda-lab-variants-lead', view.comparisons.some(function (comparison) { return comparison.reproductiveContext; }) ? 'Wybierz znaną fazę lub porównaj dostępne zakresy.' : 'Podany wiek obejmuje różne zakresy odniesienia.');
     var comparisons = incomplete || view.pretermBlock || view.automaticBlock ? null : add(parent, 'div', 'vilda-lab-comparisons');
     var visibleComparisons = incomplete || view.pretermBlock || view.automaticBlock ? [] : view.comparisons.filter(function (comparison) {
       return (!(view.pretermProfile || view.adultProfile) || comparison.key !== 'stage') && (!view.automatic || comparison.status !== 'unavailable');
@@ -734,7 +787,7 @@
     if (view.variantMode) visibleComparisons = visibleComparisons.filter(function (comparison) { return comparison.key === 'variant'; }).concat(visibleComparisons.filter(function (comparison) { return comparison.key !== 'variant'; }));
     visibleComparisons.forEach(function (comparison) {
       if (comparison.key === 'local' && comparison.status === 'unavailable') return;
-      if (comparison.key === 'variant') {
+      if (comparison.key === 'variant' && !view.ageVariantMode) {
         var variant = add(comparisons, 'div', 'vilda-lab-reference-variant');
         variant.setAttribute('data-comparison', 'variant');
         variant.setAttribute('data-variant-id', comparison.variantId);
@@ -745,6 +798,7 @@
       }
       var row = add(comparisons, 'div', 'vilda-lab-comparison');
       row.setAttribute('data-comparison', comparison.key);
+      if (comparison.variantId) row.setAttribute('data-variant-id', comparison.variantId);
       row.setAttribute('data-status', comparison.status);
       row.setAttribute('data-visual-state', comparison.visualState);
       if (comparison.conditional) row.setAttribute('data-applicability', comparison.automatic ? 'source-reference' : 'conditional');
@@ -760,6 +814,7 @@
     if (!incomplete) renderLegend(parent, visibleComparisons);
     if (view.conditionNote && !incomplete) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', view.referenceMode);
     var more = details(parent, 'Szczegóły i źródła');
+    if (view.ageVariantMode && !incomplete) add(more, 'p', 'vilda-lab-note', 'Osie pokazują skrajne górne granice tej samej krzywej w całym podanym przedziale wieku. Nie tworzą jednego zakresu prawidłowych stężeń.');
     if (quietInfantContext && clinicalText) add(more, 'p', 'vilda-lab-note', clinicalText);
     if (view.result.visualAlert && !incomplete) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
     list(more, incomplete ? presentation.clinicalLimitations : presentation.limitations, 'vilda-lab-limitations');
