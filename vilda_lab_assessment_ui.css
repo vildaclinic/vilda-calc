@@ -173,6 +173,32 @@
   background: #f0f2f4;
 }
 
+.vilda-lab-assessment .vilda-lab-comparison[data-applicability="source-reference"][data-status="within"] .vilda-lab-comparison-status {
+  color: var(--vilda-lab-muted);
+}
+
+.vilda-lab-assessment .vilda-lab-variants-lead {
+  margin: var(--space-14px) 0 var(--space-8px);
+  font-size: .85rem;
+  color: var(--vilda-lab-muted);
+}
+
+.vilda-lab-assessment .vilda-lab-reference-variant {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4px) var(--space-12px);
+  padding: var(--space-10px) 0;
+  border-bottom: var(--border-hairline) solid var(--vilda-lab-line);
+  font-size: .85rem;
+}
+
+.vilda-lab-assessment .vilda-lab-reference-variant strong {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 .vilda-lab-assessment .vilda-lab-reference-conditions {
   margin: var(--space-8px) 0 var(--space-12px);
   padding: 9px 11px;

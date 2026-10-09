@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Medical-audit regressions use the current form and real historical snapshots.
 // Removed controls are exercised only through the preserved public legacy contract.
@@ -67,7 +67,7 @@ async function sample(page, { sex = 'M', age = '14', months = '0', kind = 'G', s
   await select(page, 'Sex', sex);
   await select(page, 'Kind', kind);
   await select(page, 'Stage', stage);
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill(value);
 }
 
@@ -138,23 +138,23 @@ test('finished GnRHa stays unknown, active treatment blocks current references a
 
   };
   await refresh('zakonczone');
-  await expect(page.locator('#labPubertyPatientContext')).toContainText('GnRHa: zakończone');
+  await expect(page.locator('#labPubertyPatientContext')).toBeHidden();
   await expect(page.locator('#labPubertyContext')).toHaveCount(0);
   await select(page, 'Kind', 'G');
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
   await expectWithinRanges(assessment(page));
-  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
-  await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'source-reference');
+  await expect(assessment(page).locator('[data-reference-conditions="automatic-source-reference"]')).toBeVisible();
   const unknown = await snapshot(page);
   expect(unknown.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
   expect(unknown.evaluation.biochemical.byAge.status).toBe('unavailable');
-  expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' } });
+  expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within' } });
 
   await refresh('w-trakcie');
   await expect(page.locator('#labPubertyPatientContext')).toContainText('leczenie GnRHa w trakcie');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
-  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+  await expect(assessment(page)).toContainText(/leczeni/i);
   const treated = await snapshot(page);
   expect(treated.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
   expect(treated.evaluation.biochemical.reasonCodes).toContain('treatment_requires_separate_profile');
@@ -218,8 +218,8 @@ test('G1 at fourteen retains the missing-history limitation without diagnosing n
   await sample(page, { stage: '1' });
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   // Mayo's G1 row is age-limited; it cannot be extended to a fourteen-year-old.
-  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(comparison(page, 'stage')).toHaveCount(0);
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'source-reference');
   await expect(clinical(page)).toHaveAttribute('data-status', 'limited');
   await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'treatment_context');
   await expect(clinical(page)).toContainText('Brak cech wymaga uwzględnienia wywiadu');
@@ -228,7 +228,7 @@ test('G1 at fourteen retains the missing-history limitation without diagnosing n
   expect(saved.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
   expect(saved.evaluation.clinical.reasonCodes).toContain('treatment_or_previous_onset_context');
   expect(saved.evaluation.clinical.reasonCodes).not.toContain('absent_onset');
-  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'unavailable' } });
+  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within' }, byStage: { status: 'unavailable' } });
 });
 
 test('older CNS symptoms and regression survive current form changes, pinning and history reload', async ({ page }) => {

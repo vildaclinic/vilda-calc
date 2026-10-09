@@ -293,6 +293,53 @@ Syntetyczne przypadki regresyjne rzeczywistych funkcji produkcyjnych:
 | Starsze dziecko urodzone przedwcześnie | Wybór pokwitania i dotychczasowa ocena pozostają dostępne. |
 | Zmiana pacjenta, historia, mobile 320 px, offline | Bez przenoszenia danych innej osoby, ponownego liczenia historii ani zależności od sieci. |
 
+#### LAB-PUBERTY — dorośli i automatyczny dobór źródła, 2026-10-09
+
+**Wpływ kliniczny: TAK.** Silnik `1.5.0` i dane `2026-10-09.4` przywracają
+porównania LH/FSH u dorosłych w nowym module. Właściciel zlecił ten pierwszy
+krok po omówieniu ograniczeń metod i danych; przedstawiono makietę zachowującą
+obecny układ, osie i jeden wybór „Cykl / menopauza”.
+
+Zweryfikowano pełne aktualne katalogi Mayo:
+[LH 602752](https://www.mayocliniclabs.com/test-catalog/Overview/602752),
+[FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) oraz
+[LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999).
+Zakresy dorosłych dotyczą surowicy i Roche ECLIA; pediatryczne LH pozostaje
+osobnym AnshLite CLIA. Nie przywracamy starszych wartości z ogólnej tabeli
+przelicznika. Dokładne zakresy, hashe odczytanych dokumentów i ograniczenia
+cytowanych insertów zapisano w [LH_FSH.md](LH_FSH.md).
+
+Nowy formularz jawnie włącza `referenceSelection: automatic`. Dobór publikacji
+wykorzystuje analit, płeć, przedział wieku oraz kwalifikację wcześniaczą.
+Nie ustala faktycznej metody ani materiału próbki: pozostają nieznane.
+Wynik jest oznaczonym porównaniem orientacyjnym z zakresem źródłowym,
+nie potwierdzoną klasyfikacją według metody laboratorium. Znane leczenie,
+stymulacja, niezgodny materiał lub zgłoszona niezgodna metoda nadal blokują
+niedopasowane porównanie. Stare ustawienia metody urządzenia nie sterują
+nowym formularzem; jawne wywołania legacy zachowują dawny kontrakt.
+
+Zakresy męskie i żeńskie wybieramy bez wnioskowania z Tanner V. Granica
+18 lat respektuje nierówności katalogów: LHPED `<18`, standardowe LH
+z osobnym wierszem `>14–≤18`, dorosłe zakresy `>18`; FSH pediatryczne `≤18`.
+Przedział wieku przecinający granicę daje jawne alternatywy zamiast
+przypisania fikcyjnej dokładnej daty. Niezależna, poprawna oś stadium
+pozostaje dostępna, jeśli warianty wieku należą do jednego profilu dziecięcego.
+
+U dorosłej kobiety wybór obejmuje nieustalony kontekst, fazę folikularną,
+owulację, fazę lutealną i okres po menopauzie. Nieustalony kontekst pokazuje
+cztery krótkie zakresy bez wspólnego werdyktu. Wiek ani pojedyncze FSH
+nie wybierają menopauzy. Wybór jest wspólny dla bieżących LH/FSH i resetowany
+po zmianie osoby lub płci. Nie dodano odrębnych norm perimenopauzy ani
+norm zwalidowanych swoiście dla późnej starości. Brak górnej granicy wieku
+w katalogu dorosłych nie jest dowodem takiej osobnej walidacji.
+
+Dotychczasowe profile dziecięce, Greaves i kryteria rozwoju zachowują liczby
+i wersje. Historia utrwala wybrane źródła, kontekst i ewentualne alternatywy;
+odczyt nie liczy wyniku ponownie. Przypadki regresyjne obejmują granice
+wszystkich dziesięciu zakresów dorosłych, wiek wokół 18 lat, kobietę
+z nieustalonym cyklem, zmianę osoby/płci, niezależne ostrzeżenia dziecięce,
+kwalifikację wcześniaczą oraz zapis/odczyt, mobile i offline.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

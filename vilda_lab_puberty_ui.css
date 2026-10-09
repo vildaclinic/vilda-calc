@@ -106,15 +106,11 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) 
 /* Globalne mobilne width:100% przycisku nie może ścisnąć tekstu podsumowania. */
 .lab-puberty-summary-row .lab-puberty-context-button { flex: 0 0 auto; width: auto; margin: 0; }
 .lab-puberty-stage-row { margin-top: var(--space-0-35); font-size: .85rem; }
-.lab-puberty-method-summary { font-size: .8rem; line-height: 1.5; }
 .lab-puberty-detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-0-35); margin-top: var(--space-0-8); }
 .lab-puberty-detail-actions .lab-puberty-context-button { margin: 0; }
 .lab-puberty-detail-section { border: var(--border-hairline) solid var(--border-color, #dce6e9); border-radius: var(--radius-8); padding: var(--space-0-75); margin-top: var(--space-0-75); }
 .lab-puberty-detail-section h3 { font-size: .88rem; margin: 0 0 var(--space-0-5); }
-#labPubertyMethodSettings .lab-puberty-fields { grid-template-columns: minmax(0, 1fr); }
 .lab-puberty-fields > .lab-puberty-field:only-child { grid-column: 1 / -1; }
-#labPubertyMethodSettings > .lab-puberty-context-button { margin: var(--space-0-75) 0 0; }
-#labPubertySamplePanel > .lab-puberty-checkbox { margin: var(--space-0-5) 0 var(--space-0-75); }
 @media (max-width: 360px) {
   .lab-puberty-summary-row { flex-wrap: wrap; }
   .lab-puberty-summary-row button.lab-puberty-context-button { margin-left: auto; }
@@ -133,5 +129,8 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) 
 .lab-puberty-neonatal .lab-puberty-hint { margin-bottom: 0; }
 .lab-puberty-neonatal #labPubertySectionPatient > :is(h3, .lab-puberty-hint) { display: none; }
 .lab-puberty-neonatal #labPubertySectionPatient .lab-puberty-fields { margin-top: 0; }
-.lab-puberty-neonatal #labPubertyMethodSettings:not([open]) { display: none; }
-.lab-puberty-neonatal #labPubertyMethodSettings > .lab-puberty-checkbox { margin-top: var(--space-0-75); }
+.lab-puberty-cycle-field { max-width: 23rem; margin-top: var(--space-0-75); }
+#labPubertyDetails { border-top: 0; padding-bottom: 0; }
+#labPubertyDetails .lab-puberty-detail-section { margin-top: 0; }
+#labPubertySectionPatient > :is(h3, .lab-puberty-hint) { display: none; }
+#labPubertySectionPatient .lab-puberty-fields { margin-top: 0; }

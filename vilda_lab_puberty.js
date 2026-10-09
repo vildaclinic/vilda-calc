@@ -9,7 +9,7 @@
   if (root) root.VildaLabPuberty = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  var VERSION = '1.4.0';
+  var VERSION = '1.5.0';
   var DAY_MS = 86400000;
   function finite(value) { return typeof value === 'number' && Number.isFinite(value); }
   function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max || 160) : ''; }
@@ -406,11 +406,12 @@
       sourceId: profile.sourceId, source: copy(data.sources && data.sources[profile.sourceId]), population: copy(profile.population), method: copy(profile.method),
       material: profile.material, unit: profile.unit, sex: row.sex, age: copy(row.age), stage: copy(row.stage), bounds: copy(row.range) };
     if (pretermProfile(profile)) c.range.basis = 'preterm';
+    else if (profile.referenceContext) c.range.basis = profile.referenceContext;
     return c;
   }
-  function selectComparison(measurement, profile, data, age, sex, puberty, forStage, neonatal) {
+  function selectComparison(measurement, profile, data, age, sex, puberty, forStage, neonatal, reproductiveContext) {
     var candidates = profile.rows.filter(function (row) {
-      if (!row || row.sex !== sex) return false;
+      if (!row || row.sex !== sex || (row.reproductiveContext && row.reproductiveContext !== reproductiveContext)) return false;
       return forStage ? Boolean(row.stage && row.stage.kind === puberty.kind && row.stage.value === puberty.stage) : !row.stage;
     });
     if (pretermProfile(profile)) {
@@ -422,6 +423,7 @@
       if (!neonatalMatches.length) return unavailable('no_matching_reference_range');
       return comparison(measurement, neonatalMatches[0], profile, data);
     }
+    if (forStage && profile.referenceContext) return unavailable('stage_reference_not_for_adult');
     if (forStage && !puberty.usable) return unavailable(puberty.reasonCodes.concat(['missing_typed_stage_at_sample']));
     if (forStage && !finite(profile.stageAgeMinYears)) return unavailable('stage_age_scope_missing');
     if (forStage && age.lowerYears < profile.stageAgeMinYears) return unavailable('stage_reference_not_for_infant');
@@ -513,15 +515,20 @@
     if (Object.prototype.hasOwnProperty.call(v, 'appliesToCurrentContext')) normalized.testicularVolume.appliesToCurrentContext = v.appliesToCurrentContext === true;
     if (input.reportedRange && text(input.reportedRange.text)) normalized.reportedRange = { text: text(input.reportedRange.text), unit: text(input.reportedRange.unit, 24) };
     if (Object.prototype.hasOwnProperty.call(input, 'neonatalAge')) normalized.neonatalAge = normalizedNeonatalAge(input.neonatalAge);
+    if (input.referenceSelection === 'automatic') {
+      normalized.referenceSelection = 'automatic';
+      normalized.reproductiveContext = text(input.reproductiveContext, 32) || 'unknown';
+    } else if (Object.prototype.hasOwnProperty.call(input, 'reproductiveContext')) normalized.reproductiveContext = text(input.reproductiveContext, 32) || 'unknown';
     return normalized;
   }
-  function evaluate(input, data) {
+  function evaluateExplicit(input, data, automaticProfile) {
     input = input || {}; data = data || {};
+    var automatic = input.referenceSelection === 'automatic';
     var normalized = normalizedInput(input), measurement = parseMeasurement(input.value, input.unit), age = resolveAge(input), puberty = pubertyAtSample(input);
     var clinical = assessTiming(input, data.clinicalProfile);
     var clinicalAttention = appendClinicalContext(input, data.clinicalProfile, clinical, age, puberty);
     var bio = { status: 'unavailable', primary: null, byAge: unavailable('no_matching_profile'), byStage: unavailable('no_matching_profile'), local: unavailable('no_local_reference'), reasonCodes: [] };
-    var profile = Array.isArray(data.profiles) ? data.profiles.find(function (p) { return p && p.id === (input.assay || {}).profileId; }) : null;
+    var profile = automatic ? automaticProfile || null : Array.isArray(data.profiles) ? data.profiles.find(function (p) { return p && p.id === (input.assay || {}).profileId; }) : null;
     var isPretermProfile = pretermProfile(profile);
     var neonatal = isPretermProfile || Object.prototype.hasOwnProperty.call(input, 'neonatalAge') ? resolveNeonatalAge(input) : null;
     var gates = [], assay = input.assay || {}, t = therapy(input), biochemicalPolicy = data.biochemicalPolicy;
@@ -529,7 +536,8 @@
     if (measurement.status !== 'valid') gates.push('invalid_measurement');
     if (age.status !== 'known') gates.push.apply(gates, age.reasonCodes);
     if (!['M', 'F'].includes(input.sex)) gates.push('missing_sex');
-    if (input.specimen !== 'serum') gates.push('unsupported_or_unknown_specimen');
+    if (automatic && [undefined, null, '', 'unknown'].includes(input.specimen)) gates.push('specimen_unconfirmed');
+    else if (input.specimen !== 'serum') gates.push('unsupported_or_unknown_specimen');
     if (input.measurementKind !== 'basal') gates.push('non_basal_or_unknown_measurement');
     if (!untreated(t)) gates.push(t.context === 'hormonal' || t.gnrha === 'yes' || t.sexSteroids === 'yes' ? 'treatment_requires_separate_profile' : 'treatment_context_unknown');
     if (!biochemicalPolicy || !biochemicalPolicy.id || !biochemicalPolicy.version || ageTest({ status: 'known', lowerYears: 0, upperYears: 0, upperInclusive: true }, biochemicalPolicy.infantAgeYears) === 'unknown' || ageTest({ status: 'known', lowerYears: 0, upperYears: 0, upperInclusive: true }, biochemicalPolicy.pretermGestationalWeeks) === 'unknown') gates.push('biochemical_policy_missing');
@@ -540,9 +548,10 @@
     }
     if (isPretermProfile) {
       neonatal.reasonCodes = pretermEligibility(input, profile, data, neonatal, age);
+      if (automatic && neonatal.status === 'missing' && !neonatal.reasonCodes.includes('invalid_preterm_eligibility_policy') && pretermAgeWindowExceeded(input, age, neonatal, data)) neonatal.reasonCodes = ['preterm_age_window_exceeded'];
       gates.push.apply(gates, neonatal.reasonCodes);
     }
-    if (!gates.length && !isPretermProfile) bio.local = localComparison(input, measurement, age, data.clinicalProfile);
+    if (!automatic && !gates.length && !isPretermProfile) bio.local = localComparison(input, measurement, age, data.clinicalProfile);
     else if (input.localReference) bio.local = unavailable(gates);
     var profileGates = gates.slice();
     if (!profile) profileGates.push('no_matching_profile');
@@ -551,17 +560,18 @@
       if (profile.examinationType !== input.measurementKind) profileGates.push('profile_measurement_kind_mismatch');
       if (profile.active !== true) profileGates.push('profile_not_active');
       if (profile.analyte !== input.analyte) profileGates.push('profile_analyte_mismatch');
-      if (!profile.method || assay.methodId !== profile.method.id || !['reported', 'configured'].includes(assay.confirmation)) profileGates.push('method_not_confirmed');
-      if (assay.confirmation === 'configured' && (!assay.profileVersion || assay.profileVersion !== profile.version)) profileGates.push('configured_profile_version_mismatch');
-      if (profile.material !== input.specimen) profileGates.push('profile_material_mismatch');
+      if (automatic && assay.confirmation !== 'reported') profileGates.push('source_method_unconfirmed');
+      else if (!profile.method || assay.methodId !== profile.method.id || !['reported', 'configured'].includes(assay.confirmation)) profileGates.push('method_not_confirmed');
+      if (!automatic && assay.confirmation === 'configured' && (!assay.profileVersion || assay.profileVersion !== profile.version)) profileGates.push('configured_profile_version_mismatch');
+      if (profile.material !== input.specimen && !(automatic && profile.material === 'serum' && [undefined, null, '', 'unknown'].includes(input.specimen))) profileGates.push('profile_material_mismatch');
       if (!isPretermProfile) {
         var scope = ageMatches(age, profile.scope && profile.scope.age);
-        if (scope !== 'within') profileGates.push(scope === 'indeterminate' ? 'age_precision_crosses_scope' : 'age_outside_profile');
+        if (scope !== 'within' && !(automatic && scope === 'indeterminate')) profileGates.push(scope === 'indeterminate' ? 'age_precision_crosses_scope' : 'age_outside_profile');
       }
     }
-    if (!profileGates.length) {
-      bio.byAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false, neonatal);
-      bio.byStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true, neonatal);
+    if (!automatic && !profileGates.length) {
+      bio.byAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false, neonatal, normalized.reproductiveContext);
+      bio.byStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true, neonatal, normalized.reproductiveContext);
     } else { bio.byAge = unavailable(profileGates); bio.byStage = unavailable(profileGates); }
     bio.primary = bio.local.status !== 'unavailable' ? 'local' : bio.byStage.status !== 'unavailable' ? 'stage' : bio.byAge.status !== 'unavailable' ? 'age' : null;
     bio.status = bio.primary ? 'available' : 'unavailable';
@@ -570,17 +580,39 @@
     var preview = null;
     var unknownContextReasons = ['non_basal_or_unknown_measurement', 'treatment_context_unknown'];
     var previewReasons = unique(profileGates.filter(function (reason) { return unknownContextReasons.includes(reason); }));
-    if (previewReasons.length && profile && profile.examinationType === 'basal' && previewContextValid(input, t) &&
+    if (!automatic && previewReasons.length && profile && profile.examinationType === 'basal' && previewContextValid(input, t) &&
         profileGates.every(function (reason) { return unknownContextReasons.includes(reason) || reason === 'profile_measurement_kind_mismatch'; })) {
-      var previewAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false, neonatal);
-      var previewStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true, neonatal);
+      var previewAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false, neonatal, normalized.reproductiveContext);
+      var previewStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true, neonatal, normalized.reproductiveContext);
       if (previewAge.status !== 'unavailable' || previewStage.status !== 'unavailable') {
         preview = { kind: 'conditional-basal-untreated', reasonCodes: previewReasons, byAge: previewAge, byStage: previewStage };
       }
     }
+    if (automatic) {
+      var automaticReasons = ['specimen_unconfirmed', 'non_basal_or_unknown_measurement', 'treatment_context_unknown', 'source_method_unconfirmed', 'profile_measurement_kind_mismatch'];
+      var reproductive = normalized.reproductiveContext;
+      if (input.reproductiveContext != null && typeof input.reproductiveContext !== 'string') profileGates.push('invalid_reproductive_context');
+      if (input.assay != null && (Object.prototype.toString.call(input.assay) !== '[object Object]' || ![undefined, null, '', 'unknown', 'configured', 'reported'].includes(input.assay.confirmation))) profileGates.push('method_not_confirmed');
+      if (profile && (profile.examinationType !== 'basal' || !profile.method || !text(profile.method.id) || !text(profile.method.name))) profileGates.push('invalid_reference_profile');
+      var policy = data.automaticReferencePolicy;
+      if (!policy || !Array.isArray(policy.reproductiveContexts)) profileGates.push('automatic_reference_policy_missing');
+      else if (!policy.reproductiveContexts.includes(reproductive)) profileGates.push('invalid_reproductive_context');
+      else if (reproductive !== 'unknown' && (input.sex !== 'F' || ((!profile || profile.referenceContext !== 'adult') && !automaticProfileIsPartial(profile, age)))) profileGates.push('reproductive_context_not_applicable');
+      if (profile && previewContextValid(input, t) && profileGates.every(function (reason) { return automaticReasons.includes(reason); })) {
+        var autoCompared = automaticComparisons(measurement, profile, data, age, input.sex, puberty, neonatal, reproductive);
+        if (autoCompared.byAge.range || autoCompared.byStage.range || autoCompared.variants) {
+          preview = { kind: 'automatic-source-reference', reasonCodes: unique(profileGates.filter(function (reason) { return reason !== 'profile_measurement_kind_mismatch'; }).concat(autoCompared.reasonCodes)),
+            byAge: autoCompared.byAge, byStage: autoCompared.byStage };
+          if (autoCompared.variants) preview.variants = autoCompared.variants;
+        }
+      }
+      bio = { status: 'unavailable', primary: null, local: unavailable('no_local_reference'),
+        byAge: unavailable('automatic_reference_only'), byStage: unavailable('automatic_reference_only'),
+        reasonCodes: unique(['automatic_reference_only'].concat(profileGates)) };
+    }
     var all = [bio.local, bio.byAge, bio.byStage];
-    var numericComparisons = preview ? all.concat([preview.byAge, preview.byStage]) : all;
-    var reported = reportedComparison(normalized.reportedRange, measurement);
+    var numericComparisons = preview ? all.concat([preview.byAge, preview.byStage], (preview.variants || []).map(function (variant) { return variant.comparison; })) : all;
+    var reported = automatic ? null : reportedComparison(normalized.reportedRange, measurement);
     var hasReportedComparison = reported && reported.status !== 'unavailable';
     var reportedDisagreement = hasReportedComparison && ['within', 'above', 'below'].includes(reported.status) && numericComparisons.some(function (c) {
       return ['within', 'above', 'below'].includes(c.status) && c.status !== reported.status;
@@ -599,6 +631,7 @@
     else if (abnormal) summary = hasReportedComparison
       ? { status: 'attention', code: 'outside_reported_range', title: 'Wynik poza zakresem przepisanym z wyniku' }
       : { status: 'attention', code: 'outside_reference_range', title: 'Wynik poza wskazanym zakresem referencyjnym' };
+    else if (automatic) summary = { status: 'limited', code: preview && preview.variants ? 'reference_variants_available' : preview ? 'automatic_reference_comparison' : 'limited_interpretation', title: preview && preview.variants ? 'Warianty zakresów referencyjnych' : preview ? 'Orientacyjne porównanie ze źródłem' : 'Brak zakresu dla podanych danych' };
     else if (clinical.status === 'out_of_scope') summary = { status: 'out_of_scope', code: 'out_of_scope', title: clinical.title };
     else if (preview) summary = { status: 'limited', code: 'conditional_reference_comparison', title: 'Porównanie warunkowe — rodzaj badania lub leczenie nieustalone' };
     else if ((!bio.primary && !hasReportedComparison) || (reported && !hasReportedComparison) || uncertain || clinical.status === 'limited') summary = { status: 'limited', code: 'limited_interpretation', title: 'Interpretacja ograniczona dostępnymi danymi' };
@@ -621,6 +654,99 @@
       evaluation.provenance.eligibilityPolicyVersion = profile.scope.policyVersion || null;
     }
     return evaluation;
+  }
+  function pretermAgeWindowExceeded(input, age, neonatal, data) {
+    var policy = data.pretermEligibilityPolicy;
+    if (!policy || !boundsInterval(policy.gestationalAgeDays) || !boundsInterval(policy.postmenstrualAgeDays)) return false;
+    var minGA = policy.gestationalAgeDays.lower, maxPMA = policy.postmenstrualAgeDays.upper;
+    if (!minGA || !maxPMA) return false;
+    var lower = neonatal.postnatalDays && neonatal.postnatalDays.lower;
+    if (lower == null && age.status === 'known' && age.source === 'dates') lower = Math.max(0, age.ageDays - 1);
+    if (lower == null && age.status === 'known' && age.source === 'reported-age' && input.age) {
+      var reported = input.age, months = reported.precision === 'year' ? 0 : reported.months;
+      // With no DOB, use the shortest calendar duration among all start months
+      // in a non-leap year. A reported three months cannot mean 3*28 days.
+      var minMonthDays = Infinity;
+      for (var start = 0; start < 12; start += 1) minMonthDays = Math.min(minMonthDays,
+        (Date.UTC(2001, start + months, 1) - Date.UTC(2001, start, 1)) / DAY_MS);
+      lower = reported.years * 365 + minMonthDays + (reported.precision === 'day' ? reported.days : 0);
+    }
+    return finite(lower) && lower + minGA.value > maxPMA.value;
+  }
+  function automaticProfileIsPartial(profile, age) {
+    return !!profile && ageMatches(age, profile.scope && profile.scope.age) === 'indeterminate';
+  }
+  function automaticComparisons(measurement, profile, data, age, sex, puberty, neonatal, reproductive) {
+    var byStage = selectComparison(measurement, profile, data, age, sex, puberty, true, neonatal, reproductive);
+    if (pretermProfile(profile)) return { byAge: selectComparison(measurement, profile, data, age, sex, puberty, false, neonatal, reproductive), byStage: byStage, reasonCodes: [] };
+    var partial = automaticProfileIsPartial(profile, age);
+    var rows = profile.rows.filter(function (row) {
+      return row && !row.stage && row.sex === sex && (!row.reproductiveContext || reproductive === 'unknown' || row.reproductiveContext === reproductive) &&
+        row.age && row.age.axis === 'chronologicalYears' && ['within', 'indeterminate'].includes(ageMatches(age, row.age));
+    });
+    var variants = rows.map(function (row) {
+      return { id: row.id, label: (row.label ? row.label + ' · ' : '') + row.age.sourceText,
+        reproductiveContext: row.reproductiveContext || null, comparison: comparison(measurement, row, profile, data) };
+    }).filter(function (variant) { return variant.comparison.status !== 'unavailable'; });
+    if (variants.length === 1 && !partial && ageMatches(age, rows[0].age) === 'within') return { byAge: variants[0].comparison, byStage: byStage, reasonCodes: [] };
+    var codes = [];
+    if (rows.some(function (row) { return row.reproductiveContext; }) && reproductive === 'unknown') codes.push('reproductive_context_missing');
+    if (partial || rows.some(function (row) { return ageMatches(age, row.age) !== 'within'; })) codes.push('age_precision_crosses_reference_boundary');
+    return { byAge: unavailable(codes.length ? codes : 'no_matching_reference_range'), byStage: byStage,
+      reasonCodes: codes, variants: variants.length ? variants : undefined };
+  }
+  function evaluate(input, data) {
+    input = input || {}; data = data || {};
+    if (input.referenceSelection !== 'automatic') return evaluateExplicit(input, data);
+    var policy = data.automaticReferencePolicy, age = resolveAge(input), neonatal = resolveNeonatalAge(input);
+    var profiles = Array.isArray(data.profiles) ? data.profiles : [];
+    var rule = data.biochemicalPolicy && data.biochemicalPolicy.infantAgeYears;
+    var infant = age.status === 'known' && rule && ageTest(age, rule) !== 'above';
+    var ga = neonatal.gestationalDays, pretermBound = data.biochemicalPolicy && data.biochemicalPolicy.pretermGestationalWeeks;
+    var preterm = flag(input.preterm) === 'yes' || ga && pretermBound && ageTest({ status: 'known', lowerYears: ga.lower / 7, upperYears: ga.upper / 7, upperInclusive: true }, pretermBound) !== 'above';
+    var ids = policy && policy.profileIds && policy.profileIds[input.analyte];
+    var policyValid = policy && policy.id && policy.version && Array.isArray(ids) && policy.pretermProfileIds && Array.isArray(policy.reproductiveContexts);
+    var selected = [];
+    if (policyValid && age.status === 'known') {
+      if (infant && preterm) selected = profiles.filter(function (profile) { return profile.id === policy.pretermProfileIds[input.analyte]; });
+      else selected = ids.map(function (id) { return profiles.find(function (profile) { return profile.id === id; }); }).filter(function (profile) {
+        return profile && ['within', 'indeterminate'].includes(ageMatches(age, profile.scope && profile.scope.age));
+      });
+    }
+    var results = (selected.length ? selected : [null]).map(function (profile) { return evaluateExplicit(input, data, profile); });
+    var result = results[0], previews = results.filter(function (item) { return item.referencePreview; });
+    var codes = unique(results.flatMap(function (item) { return item.biochemical.reasonCodes; }));
+    if (!policyValid) codes.push('automatic_reference_policy_missing');
+    if (selected.length > 1) {
+      // Both source tables remain separate when the reported age straddles a
+      // boundary. Never choose whichever table makes the measured value normal.
+      var variants = previews.flatMap(function (item) {
+        var p = item.referencePreview;
+        if (p.variants) return p.variants;
+        if (!p.byAge.range) return [];
+        return [{ id: p.byAge.range.id, label: p.byAge.range.age.sourceText, reproductiveContext: ['follicular', 'ovulation', 'luteal', 'postmenopause'].includes(input.reproductiveContext) && p.byAge.range.sex === 'F' && p.byAge.range.basis === 'adult' ? input.reproductiveContext : null, comparison: p.byAge }];
+      });
+      result.provenance.profileId = null; result.provenance.profileVersion = null;
+      if (variants.length && previews.length === results.length) {
+        result.referencePreview = { kind: 'automatic-source-reference', reasonCodes: unique(['age_precision_crosses_reference_boundary'].concat(previews.flatMap(function (item) { return item.referencePreview.reasonCodes; }))),
+          byAge: unavailable('reference_variants_available'), byStage: unavailable('reference_variants_available'), variants: variants };
+      } else delete result.referencePreview;
+    }
+    if (!policyValid) delete result.referencePreview;
+    var available = !!result.referencePreview;
+    var status = available ? result.referencePreview.variants ? 'variants' : 'selected' : 'unavailable';
+    result.referenceSelection = { mode: 'automatic', status: status,
+      profileIds: available ? unique([result.referencePreview.byAge, result.referencePreview.byStage].concat((result.referencePreview.variants || []).map(function (variant) { return variant.comparison; })).filter(function (c) { return c.range; }).map(function (c) { return c.range.profileId; })) : selected.map(function (profile) { return profile.id; }),
+      reasonCodes: available ? result.referencePreview.reasonCodes.slice() : unique(codes) };
+    result.provenance.selectionPolicyId = policyValid ? policy.id : null;
+    result.provenance.selectionPolicyVersion = policyValid ? policy.version : null;
+    result.provenance.sourceIds = unique(results.flatMap(function (item) { return item.provenance.sourceIds; }));
+    result.limitations = unique(results.flatMap(function (item) { return item.limitations; }).concat(result.referenceSelection.reasonCodes));
+    result.biochemical.reasonCodes = unique(codes);
+    if (result.summary.status !== 'attention' && result.summary.code !== 'unsupported_analyte' && result.measurement.status === 'valid') result.summary = {
+      status: 'limited', code: status === 'variants' ? 'reference_variants_available' : available ? 'automatic_reference_comparison' : 'limited_interpretation',
+      title: status === 'variants' ? 'Warianty zakresów referencyjnych' : available ? 'Orientacyjne porównanie ze źródłem' : 'Brak zakresu dla podanych danych' };
+    return result;
   }
   return Object.freeze({ version: VERSION, evaluate: evaluate, parseMeasurement: parseMeasurement, resolveAge: resolveAge, resolveNeonatalAge: resolveNeonatalAge, compareMeasurement: compareMeasurement, assessTiming: assessTiming });
 });

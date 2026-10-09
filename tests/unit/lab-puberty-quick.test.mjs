@@ -39,7 +39,7 @@ describe('LH/FSH — zapisany profil oznaczenia', () => {
     expect(result.biochemical.byStage.status).toBe('within');
     expect(result.input.assay).toEqual(input().assay);
     expect(result.summary.status).toBe('compared');
-    expect(result.engineVersion).toBe('1.4.0');
+    expect(result.engineVersion).toBe('1.5.0');
   });
 
   it.each(['', undefined, '2026-01-01.1'])('odrzuca niezgodną lub brakującą wersję %s', (profileVersion) => {

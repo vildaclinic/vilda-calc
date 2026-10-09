@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickField, quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickField, quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // Fictional contexts only. Exercise the production form, source adapter, engine
 // and saved assessment; do not insert disallowed options into native selects.
@@ -65,7 +65,7 @@ async function expectNoVolume(page) {
 }
 
 async function expectReadableSummaries(page) {
-  for (const id of ['labPubertyMethodSummary']) {
+  for (const id of ['labPubertyPatientSummary']) {
     const metrics = await page.locator(`#${id}`).evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return { width: rect.width, height: rect.height, lineHeight: parseFloat(getComputedStyle(element).lineHeight) };
@@ -78,7 +78,7 @@ async function expectReadableSummaries(page) {
   // The scope is a full paragraph, not the former short summary beside a
   // button. Its natural line count depends on font metrics and viewport width;
   // it must retain readable width and display all of its wrapped text.
-  const scope = page.locator('#labPubertyScope');
+  const scope = page.locator('#labPubertyAssessment [data-reference-conditions="automatic-source-reference"]');
   await expect(scope).toBeVisible();
   const scopeMetrics = await scope.evaluate((element) => ({
     width: element.getBoundingClientRect().width,
@@ -343,7 +343,7 @@ test('a recorded Th onset is not relabelled after a sex correction and an alread
   await expect.poll(() => page.evaluate((id) => window.VildaPubertySource.kontekstPacjenta(id).status, patientId)).toBe('ready');
   await choose(page);
   await select(page, 'Kind', 'Th');
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   const before = await snapshot(page);
   expect(before.evaluation.input.onset).toMatchObject({ kind: 'Th', age: { years: 6, precision: 'year' } });
   await page.locator('#labPinResultBtn').click();
@@ -376,6 +376,7 @@ for (const width of [320, 390, 600]) {
     test.use({ viewport: { width, height: 844 }, isMobile: true, hasTouch: true });
     test('keeps native choices and expanded details usable without horizontal scrolling', async ({ page }) => {
       await open(page);
+      await shared(page, guest({ tannerStage: '' }));
       await choose(page);
       await expectReadableSummaries(page);
       await select(page, 'Sex', 'M');
@@ -388,7 +389,7 @@ for (const width of [320, 390, 600]) {
       await expectReadableSummaries(page);
       await expect(page.locator('#labPubertyOpenRange, #labPubertySectionRange')).toHaveCount(0);
       for (const section of ['Stage', 'Patient']) {
-        await page.locator(`#labPubertyOpen${section}`).click();
+        await quickField(page, section === 'Stage' ? 'Kind' : 'Sex');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
       }
     });

@@ -2,6 +2,102 @@
 
 Stan dokumentu: 9 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
 
+## Dorośli i automatyczny dobór zakresu — 9.10.2026
+
+**Zmiana kliniczna i funkcjonalna, zaakceptowana przez właściciela:**
+„przywróć dorosłych na zweryfikowanych danych i wprowadź automatyczny dobór
+profilu”. Baza: `audyt` `fd2e0c05` po #601. Cel obejmuje pierwszy krok
+przywrócenia oceny przez całe życie; nie wypełnia braków dowodów dla wszystkich
+wcześniaków ani nie tworzy odrębnych norm perimenopauzalnych lub geriatrycznych.
+Makietę desktop/mobile przedstawiono przed zmianą widoku i właściciel ją
+zaakceptował z usunięciem etykiety o niepotwierdzonej metodzie. Zachowuje obecny
+układ i osie; usuwa wybór metody, a dorosłej kobiecie udostępnia jedno pole
+„Cykl / menopauza”.
+
+Przyczyna regresji dorosłych: po aktywacji nowego modułu wszystkie anality
+LH/FSH były kierowane do profili pediatrycznych. Stare normy dorosłych nadal
+istnieją w `lab_units_data.js`, lecz nie odpowiadają obecnym katalogom Mayo;
+nie są przywracane ani kopiowane jako aktualne źródło.
+
+### Pełne źródła i zweryfikowane wartości
+
+Odczytano całe publiczne katalogi Mayo 9.10.2026 (Europe/Warsaw): wskazania,
+przedziały referencyjne, opis metod, materiał oraz ograniczenia. Poniższe
+hashe odnoszą się do pobranych stron HTML; pełne kopie pozostają poza repo.
+
+| Źródło | Materiał i metoda opisana w katalogu | SHA-256 kopii HTML |
+|---|---|---|
+| [LH 602752](https://www.mayocliniclabs.com/test-catalog/Overview/602752) | Surowica, Roche LH ECLIA; katalog cytuje insert 03/2024. | `2dc25a75d8d3c17f976baa8a6928dc120bd91364c6ef0909e6b1a373f2ba7fd8` |
+| [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) | Surowica, Roche Elecsys FSH ECLIA; katalog cytuje insert 09/2021. | `ba4460aebc7ca4c095695841c2849f213b57254cdb3cfd2a94ff5817456c5ef8` |
+| [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) | Surowica, AnshLite LH CLIA, unpublished Mayo method; wyłącznie pacjenci <18 lat. | `cd7f38607b6efcff85594fc5aaf82bf29391b30904bba39c6821e7a0d447344e` |
+
+Nie deklarujemy samodzielnego odczytu instrukcji producenta cytowanych przez
+katalog. Przedziały są Mayo-derived; charakterystyka pełnej populacji
+referencyjnej i reprezentacja osób w późnej starości nie są podane.
+
+| Populacja / kontekst | LH [IU/L] | FSH [IU/L] |
+|---|---:|---:|
+| Mężczyźni >18 lat | 1,3–9,6 | 1,2–15,8 |
+| Faza folikularna | 1,9–14,6 | 2,9–14,6 |
+| Okres okołoowulacyjny | 12,2–118,0 | 4,7–23,2 |
+| Faza lutealna | 0,7–12,9 | 1,4–8,9 |
+| Po menopauzie | 5,3–65,4 | 16,0–157,0 |
+
+Jednostki IU/L i mIU/mL mają przelicznik 1:1; nie oznacza to równoważności
+metod analitycznych. Kobiece nagłówki faz i menopauzy nie podają osobnej
+liczbowej granicy wieku. Przypisanie ich w tym kroku do ścieżki >18 lat jest
+jawną polityką aplikacji. Katalog nie uzasadnia osobnych przedziałów co dekadę
+ani przyjmowania menopauzy na podstawie wieku lub pojedynczego FSH.
+
+Granica 18 lat jest zachowana literalnie: LHPED kończy się przed 18.
+urodzinami; standardowy LH ma wiersz >14–≤18 lat (M 1,3–9,8; F 0,5–41,7),
+a męski zakres dorosłych zaczyna się >18. FSH zachowuje wiersze do ≤18 lat.
+Gdy precyzja wieku obejmuje więcej niż jeden profil, wynik może pokazywać
+odrębne warianty źródłowe, bez pozorowania dokładniejszego wieku lub jednego
+werdyktu. Nie wprowadzamy skoku do normy dorosłych na podstawie Tannera V.
+
+### Automatyczny profil nie jest metodą rzeczywistej próbki
+
+Nowy tryb wymaga jawnego `input.referenceSelection = 'automatic'`.
+Wybiera zakres według danych pacjenta, analitu i wersjonowanej polityki
+w pliku danych. Dla kwalifikujących się wcześniaków wybiera Greaves; u starszych
+dzieci wcześniactwo w wywiadzie nie wymusza profilu neonatalnego. Brak
+kwalifikacji niemowlęcia do Greaves nie uruchamia fallbacku do norm donoszonych.
+
+Formularz nie kopiuje metody ani materiału z publikacji do danych próbki:
+`assay.confirmation` i `specimen` pozostają nieznane. Dawne ustawienie metody
+na urządzeniu nie jest potwierdzeniem nowego oznaczenia i nie stanowi ukrytej
+blokady. Wynik to jawne orientacyjne porównanie źródłowe w `referencePreview`,
+nie potwierdzona klasyfikacja laboratoryjna w `biochemical.primary`.
+Zakres zachowuje swoją metodę, populację, surowicę, jednostki i cytowanie.
+Krótka notka podaje metodę zakresu źródłowego i zastosowanie wyłącznie do wartości
+bazalnych w surowicy bez leczenia hormonalnego. Zgodnie z decyzją właściciela
+nie pokazuje etykiety „metoda próbki niepotwierdzona”; nie zmienia to danych
+próbki ani charakteru porównania. Znane niezgodne oznaczenie,
+materiał, stymulacja lub leczenie nadal blokują niedopasowane porównanie.
+
+`reproductiveContext` obejmuje wyłącznie `unknown`, `follicular`, `ovulation`,
+`luteal`, `postmenopause`. Kontekst jest wspólny dla bieżących LH/FSH i resetuje
+się przy zmianie pacjenta lub płci. Główny formularz nie ma wiarygodnego pola
+fazy cyklu/menopauzy, więc aplikacja nie wyprowadza go z wieku menarche ani
+wieku chronologicznego. Przy nieustalonym kontekście cztery zakresy są
+alternatywami bez globalnego werdyktu; nie wybieramy najlepiej pasującej normy,
+nie łączymy ich w jedną szeroką obwiednię i nie przyjmujemy fazy folikularnej.
+
+Stare wywołania bez flagi zachowują kontrakt potwierdzonej metody i próbki.
+Snapshot rozszerza się opcjonalnie o tryb doboru, kontekst reprodukcyjny,
+warianty i pochodzenie zastosowanych zakresów. Odczyt historii nie dobiera
+aktualnych norm i nie zamienia dawnych ocen na tryb automatyczny.
+Ocena dojrzewania u dzieci i niezależne ostrzeżenia kliniczne pozostają
+odrębne; dorosły nie otrzymuje komunikatu braku pediatrycznej oceny pokwitania.
+
+Przykłady testów rzeczywistego silnika: M60 LH2 → odniesienie 1,3–9,6;
+M90 FSH20 → powyżej 15,8; F45 FSH20 z fazą folikularną → powyżej 14,6,
+po menopauzie → w zakresie 16–157, kontekst nieustalony → cztery alternatywy
+bez jednej klasyfikacji. Dodatkowo granice zakresów, wiek wokół 18 lat,
+niezgodna metoda/materiał, leczenie/stymulacja, precyzja wieku, historia,
+zmiana pacjenta, mobile i offline.
+
 ## Suplement i biobank — uzgodniona kwalifikacja i makieta, 9.10.2026
 
 **Stan: polityka kliniczna i makieta desktop/mobile zaakceptowane przez właściciela; wdrożenie aktywnego profilu wcześniaczego.**

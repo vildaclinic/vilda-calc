@@ -123,6 +123,11 @@
       postnatalDays: dayInterval(f.neonatalAge.postnatalDays), gestationalDays: dayInterval(f.neonatalAge.gestationalDays)
     };
     if (f.useNeonatalAge === true && input.neonatalAge && knownDays(input.neonatalAge.postnatalDays)) input.age = null;
+    if (f.referenceSelection === 'automatic') {
+      input.referenceSelection = 'automatic';
+      input.reproductiveContext = sex === 'F' && ['follicular', 'ovulation', 'luteal', 'postmenopause'].includes(f.reproductiveContext) ? f.reproductiveContext : 'unknown';
+      input.assay = { profileId: '', methodId: '', confirmation: 'unknown' };
+    }
     return input;
   }
 
@@ -132,8 +137,6 @@
     var engine = opts.engine || root.VildaLabPuberty, data = opts.data || root.VildaLabPubertyData;
     var snapshots = opts.snapshot || root.VildaLabSnapshot;
     var renderer = opts.renderer || root.VildaLabAssessmentUI;
-    var preferences = opts.preferences || root.VildaLabProfilePreferences;
-    var persistence = opts.persistence || root.VildaPersistence;
     var byId = function (id) { return doc.getElementById(id); };
     var resultSection = byId('labResultSection');
     var patientBody = byId('labStep5') && byId('labStep5').querySelector('.lab-step-body');
@@ -143,7 +146,7 @@
     var analyte = null, evaluation = null, context = null, contextKey = null;
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
     var dirty = {}, imported = {}, kindOptionsSex = null, omittedSexContext = false, suspendedSexFields = null;
-    var neonatalEdit = false;
+    var neonatalEdit = false, reproductiveSex = null;
     function element(tag, className, content) {
       var node = doc.createElement(tag);
       if (className) node.className = className;
@@ -177,20 +180,8 @@
     var neonatalSummary = element('p', 'lab-puberty-neonatal-summary'); neonatalSummary.id = 'labPubertyNeonatalSummary'; neonatalSummary.hidden = true; panel.insertBefore(neonatalSummary, contextLine);
     var neonatalFields = element('div', 'lab-puberty-fields lab-puberty-neonatal-fields'); neonatalFields.id = 'labPubertyNeonatalFields'; neonatalFields.hidden = true; panel.appendChild(neonatalFields);
     var assessment = element('div', 'lab-puberty-assessment-host'); assessment.id = 'labPubertyAssessment'; assessment.hidden = true;
-    var samplePanel = element('section', 'lab-puberty-panel'); samplePanel.id = 'labPubertySamplePanel'; samplePanel.hidden = true;
-    samplePanel.setAttribute('aria-label', 'Szczegóły LH i FSH'); sampleBody.appendChild(samplePanel);
-    var sampleLabel = sampleBody.querySelector('.lab-step-label'), patientLabel = patientBody.querySelector('.lab-step-label');
-    var originalSampleLabel = sampleLabel && sampleLabel.firstChild && sampleLabel.firstChild.textContent;
+    var patientLabel = patientBody.querySelector('.lab-step-label');
     var originalPatientLabel = patientLabel && patientLabel.firstChild && patientLabel.firstChild.textContent;
-    var methodRow = element('div', 'lab-puberty-summary-row'); samplePanel.appendChild(methodRow);
-    var methodSummary = element('span', 'lab-puberty-method-summary'); methodSummary.id = 'labPubertyMethodSummary'; methodRow.appendChild(methodSummary);
-    var editMethod = button(methodRow, 'labPubertyEditMethod', 'Ustaw', function () { methodSettings.open = !methodSettings.open; updateView(); });
-    editMethod.setAttribute('aria-controls', 'labPubertyMethodSettings');
-    var methodSettings = element('details', 'lab-puberty-details'); methodSettings.id = 'labPubertyMethodSettings';
-    methodSettings.addEventListener('toggle', function () { updateView(); });
-    methodSettings.appendChild(element('summary', '', 'Ustawienie metody na tym urządzeniu'));
-    methodSettings.appendChild(element('p', 'lab-puberty-hint', 'Wybierz tylko metodę używaną przez Twoje laboratorium. Zapamiętamy ją osobno dla LH i FSH. Przy wyniku z innego laboratorium sprawdź zgodność lub wybierz „Inna/nieznana metoda”.'));
-    var methodGrid = element('div', 'lab-puberty-fields'); methodSettings.appendChild(methodGrid); samplePanel.appendChild(methodSettings);
     function field(parent, key, label, type, choices, extra) {
       var wrap = element('label', 'lab-puberty-field');
       var id = 'labPuberty' + key.charAt(0).toUpperCase() + key.slice(1);
@@ -205,15 +196,9 @@
       input.setAttribute('autocomplete', 'off'); fields[key] = input; wrappers[key] = wrap; parent.appendChild(wrap);
       input.addEventListener('input', function () { changed(key); }); input.addEventListener('change', function () { changed(key); }); return input;
     }
-    field(methodGrid, 'configuredProfile', 'Metoda laboratorium', 'select', [['', 'Nie ustawiono']]);
-    button(methodSettings, 'labPubertySaveProfile', 'Zapisz na tym urządzeniu', saveProfile);
-    var methodNotice = element('p', 'lab-puberty-hint'); methodNotice.id = 'labPubertyMethodNotice'; methodNotice.setAttribute('role', 'status'); methodSettings.appendChild(methodNotice);
-    field(samplePanel, 'unknownMethod', 'Inna/nieznana metoda dla tego wyniku', 'checkbox');
-    var interpretationScope = element('p', 'lab-puberty-hint', 'Interpretacja dotyczy wyłącznie oznaczeń bazalnych bez leczenia hormonalnego. Wyników po stymulacji nie oceniamy.');
-    interpretationScope.id = 'labPubertyScope'; samplePanel.appendChild(interpretationScope);
     var details = element('details', 'lab-puberty-details'); details.id = 'labPubertyDetails';
-    details.appendChild(element('summary', '', 'Szczegóły badania — opcjonalnie'));
-    var actions = element('div', 'lab-puberty-detail-actions'); details.appendChild(actions); samplePanel.appendChild(details);
+    var detailsSummary = element('summary', '', 'Dane pacjenta'); detailsSummary.hidden = true; details.appendChild(detailsSummary);
+    var actions = element('div', 'lab-puberty-detail-actions'); actions.hidden = true; details.appendChild(actions); panel.appendChild(details);
     function section(name, title, hint) {
       sectionButtons[name] = button(actions, 'labPubertyOpen' + name.charAt(0).toUpperCase() + name.slice(1), title, function () { openSection(name); });
       sectionButtons[name].setAttribute('aria-pressed', 'false');
@@ -223,8 +208,9 @@
       var grid = element('div', 'lab-puberty-fields'); sectionNode.appendChild(grid); details.appendChild(sectionNode); sections[name] = sectionNode; return grid;
     }
     function openSection(name) {
-      details.open = true;
+      details.open = !details.open || sections[name].hidden;
       Object.keys(sections).forEach(function (key) { sections[key].hidden = key !== name; sectionButtons[key].setAttribute('aria-pressed', String(key === name)); });
+      updateView();
     }
     var tri = [['unknown', 'Nie wiadomo'], ['no', 'Nie'], ['yes', 'Tak']];
     var patient = section('patient', 'Pacjent', 'Dane z formularza głównego wczytują się automatycznie. Korekta dotyczy tylko tego sprawdzenia.');
@@ -242,12 +228,16 @@
     field(stage, 'kind', 'Rodzaj cechy', 'select', kindChoices);
     field(stage, 'stage', 'Stadium', 'select', [['', 'Nie podano'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]);
     var stageHint = element('p', 'lab-puberty-hint'); stageHint.id = 'labPubertyStageHint'; sections.stage.appendChild(stageHint);
+    field(panel, 'reproductiveContext', 'Cykl / menopauza', 'select', [['unknown', 'Nie ustalono'], ['follicular', 'Faza folikularna'], ['ovulation', 'Okres okołoowulacyjny'], ['luteal', 'Faza lutealna'], ['postmenopause', 'Po menopauzie']]);
+    wrappers.reproductiveContext.classList.add('lab-puberty-cycle-field'); wrappers.reproductiveContext.hidden = true;
 
-    function materialLabel(value) { return ({ serum: 'surowica', plasma: 'osocze', urine: 'mocz' }[value] || text(value)); }
     function ready() { return !!context && context.sourceStatus === 'ready'; }
-    function resolveProfile() {
-      if (!preferences || typeof preferences.resolve !== 'function' || !analyte) return null;
-      try { return preferences.resolve(preferences.read(persistence, data), analyte, data); } catch (_) { return null; }
+    function adultAgeState(value) {
+      var profile = data && Array.isArray(data.profiles) && data.profiles.find(function (candidate) { return candidate.active === true && candidate.referenceContext === 'adult' && (!analyte || candidate.analyte === analyte); });
+      var lower = profile && profile.scope && profile.scope.age && profile.scope.age.lower;
+      if (!value || value.status !== 'known' || !lower || typeof lower.value !== 'number') return { definite: false, possible: false };
+      return { definite: value.lowerYears > lower.value || lower.operator === '>=' && value.lowerYears === lower.value,
+        possible: value.upperYears > lower.value || lower.operator === '>=' && value.upperInclusive && value.upperYears === lower.value };
     }
     function neonatalValues() {
       var source = ready() && context.neonatalAge || {};
@@ -269,16 +259,14 @@
       if (knownDays(neonatal.postnatalDays)) return neonatal.postnatalDays.lower <= maximum;
       if (neonatalEdit) return true;
       if (years === 0 && months != null && months >= 0 && months / 12 <= (maximum + 1) / 365) return true;
-      var profile = resolveProfile();
-      return !!(profile && profile.profile && profile.profile.scope && profile.profile.scope.age && profile.profile.scope.age.axis === 'postmenstrualDays');
+      return true;
     }
     function readFields() {
       var values = {};
       Object.keys(fields).forEach(function (key) { values[key] = fields[key].type === 'checkbox' ? fields[key].checked : fields[key].value; });
-      var profile = !values.unknownMethod && resolveProfile();
       values.contextBasis = 'current-patient';
+      values.referenceSelection = 'automatic'; values.specimen = 'unknown';
       values.observationSource = imported.stage ? 'patient-record' : 'provided';
-      if (profile && profile.assay) { values.configuredAssay = profile.assay; values.specimen = profile.specimen; }
       values.gnrha = ready() ? ({ brak: 'no', 'w-trakcie': 'yes' }[context.gnrhaStatus] || 'unknown') : 'unknown';
       // Zakres działania modułu nie potwierdza rodzaju konkretnego oznaczenia
       // ani braku leczenia. Znane bieżące GnRHa nadal wyklucza zakresy bazalne.
@@ -286,6 +274,8 @@
       var neonatal = neonatalValues();
       if (neonatalContext() || neonatal.gestationalDays || neonatal.postnatalDays) values.neonatalAge = neonatal;
       values.useNeonatalAge = neonatalContext() && knownDays(neonatal.postnatalDays);
+      var chronological = { age: values.useNeonatalAge ? null : age(values, 'age'), neonatalAge: values.neonatalAge };
+      if (!engine || typeof engine.resolveAge !== 'function' || !adultAgeState(engine.resolveAge(chronological)).possible) values.reproductiveContext = 'unknown';
       if (ready()) {
         var history = context.history || {};
         values.progression = flag(history.progression); values.growthAcceleration = flag(history.growthAcceleration);
@@ -348,7 +338,6 @@
       Object.keys(saved.values).forEach(function (key) { fields[key].value = saved.values[key]; });
     }
     function changed(key) {
-      if (key === 'configuredProfile') return;
       if (suspendedSexFields) {
         if (key === 'sex') suspendedSexFields = null;
         else if (key === 'kind' || key === 'stage') { delete suspendedSexFields.values.kind; delete suspendedSexFields.values.stage; }
@@ -380,31 +369,31 @@
     }
     function updateView() {
       syncSexFields();
+      if ((ready() || dirty.sex) && reproductiveSex !== fields.sex.value) {
+        clearField('reproductiveContext'); reproductiveSex = fields.sex.value;
+      }
       var years = text(fields.ageYears.value), months = text(fields.ageMonths.value);
       var ageLabel = years ? years + ' lat' + (months ? ' i ' + months + ' mies.' : '') : 'wiek niepodany';
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
       var resolvedAge = engine && typeof engine.resolveAge === 'function' ? engine.resolveAge(input) : null;
+      var adult = adultAgeState(resolvedAge);
       var neonatalMode = neonatalContext(), neonatal = neonatalValues();
       if (neonatalMode) ageLabel = knownDays(neonatal.postnatalDays) ? intervalLabel(neonatal.postnatalDays) + (neonatal.postnatalDays.lower === 1 && neonatal.postnatalDays.upper === 1 ? ' ukończony dzień' : ' dni życia') : 'wiek do uzupełnienia';
       else if (!years && knownDays(neonatal.postnatalDays)) ageLabel = intervalLabel(neonatal.postnatalDays) + ' dni życia';
-      patientSummary.textContent = (neonatalMode ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
+      patientSummary.textContent = (adult.definite ? { M: 'Mężczyzna', F: 'Kobieta' } : neonatalMode ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
       if (!['M', 'F'].includes(fields.sex.value)) patientSummary.textContent = 'Płeć niepodana · ' + ageLabel;
       var kind = fields.kind.value, stageValue = fields.stage.value;
       stageSummary.textContent = kind === 'Ax' ? 'Ax — owłosienie pachowe' : stageValue ? (kind === 'unspecified' ? 'Tanner ' + ['', 'I', 'II', 'III', 'IV', 'V'][Number(stageValue)] + ' — rodzaj niepodany' : kind + stageValue) : 'Stadium niepodane';
-      refineStage.textContent = stageValue && kind === 'unspecified' ? 'Doprecyzuj' : 'Zmień stadium';
+      refineStage.textContent = details.open && !sections.stage.hidden ? 'Gotowe' : stageValue && kind === 'unspecified' ? 'Doprecyzuj' : 'Zmień stadium';
+      refineStage.setAttribute('aria-expanded', String(details.open && !sections.stage.hidden));
       stageHint.textContent = (['M', 'F'].includes(fields.sex.value) ? '' : 'Wybierz płeć, aby wskazać Th/M lub G. ') + 'Ocena dotyczy bieżącego kontekstu pacjenta.';
       var infant = resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < 1;
       wrappers.preterm.hidden = !infant && !neonatalMode;
-      stageRow.hidden = neonatalMode; sectionButtons.stage.hidden = neonatalMode;
-      if (neonatalMode) { sections.stage.hidden = true; sectionButtons.stage.setAttribute('aria-pressed', 'false'); }
+      stageRow.hidden = neonatalMode || adult.definite; sectionButtons.stage.hidden = stageRow.hidden;
+      if (stageRow.hidden) { sections.stage.hidden = true; sectionButtons.stage.setAttribute('aria-pressed', 'false'); }
+      wrappers.reproductiveContext.hidden = fields.sex.value !== 'F' || !adult.possible;
       updateNeonatalView(neonatalMode, neonatal);
-      var profile = resolveProfile();
-      var profileName = profile && profile.profile && profile.profile.method ? profile.profile.method.name : '';
-      methodSummary.textContent = profileName ? fields.unknownMethod.checked ? 'Dla tego wyniku: metoda nieznana lub inna niż ustawiona.' : 'Metoda: ' + profileName + ' · ' + materialLabel(profile.specimen) : 'Metoda laboratorium nieustawiona';
-      editMethod.textContent = neonatalMode && methodSettings.open ? 'Zamknij' : profileName ? 'Zmień' : 'Ustaw'; wrappers.unknownMethod.hidden = !profileName;
-      editMethod.setAttribute('aria-label', neonatalMode && methodSettings.open ? 'Zamknij ustawienie metody' : editMethod.textContent + ' metodę oznaczenia');
-      editMethod.setAttribute('aria-expanded', String(methodSettings.open));
-      updateContextLine();
+      updateContextLine(adult.definite);
     }
     function updateNeonatalView(active, neonatal) {
       var ga = neonatal.gestationalDays, pna = neonatal.postnatalDays;
@@ -423,10 +412,7 @@
         details.appendChild(sections.patient); sections.patient.hidden = true; neonatalEdit = false;
         sectionButtons.patient.setAttribute('aria-pressed', 'false');
       }
-      details.hidden = active;
-      samplePanel.classList.toggle('lab-puberty-neonatal', active);
-      if (active && wrappers.unknownMethod.parentNode !== methodSettings) methodSettings.insertBefore(wrappers.unknownMethod, byId('labPubertySaveProfile'));
-      else if (!active && wrappers.unknownMethod.parentNode !== samplePanel) samplePanel.insertBefore(wrappers.unknownMethod, interpretationScope);
+      details.hidden = active || !details.open || Object.keys(sections).every(function (name) { return sections[name].hidden; });
       wrappers.gestationalAge.hidden = !active || !(neonatalEdit || !gaKnown || refineGa || doc.activeElement === fields.gestationalAge);
       wrappers.postnatalDays.hidden = !active || !(neonatalEdit || !pnaKnown || refinePna || doc.activeElement === fields.postnatalDays);
       neonatalFields.hidden = wrappers.gestationalAge.hidden && wrappers.postnatalDays.hidden;
@@ -436,65 +422,45 @@
       fields.postnatalDays.placeholder = pnaKnown ? intervalLabel(pna) + ' dni' : 'np. 43';
       neonatalSummary.hidden = !active || !gaKnown;
       neonatalSummary.textContent = gaKnown ? 'Urodzon' + (fields.sex.value === 'F' ? 'a' : 'y') + ' w ' + intervalLabel(ga, weekLabel) + ' tyg.' + (pma ? ' · PMA ' + intervalLabel(pma, weekLabel) + ' tyg.' : '') : '';
-      editPatient.textContent = active && neonatalEdit ? 'Gotowe' : 'Zmień';
+      var editingPatient = active ? neonatalEdit : details.open && !sections.patient.hidden;
+      editPatient.textContent = editingPatient ? 'Gotowe' : 'Zmień';
       editPatient.setAttribute('aria-expanded', String(active ? neonatalEdit : details.open && !sections.patient.hidden));
-      editPatient.setAttribute('aria-label', active && neonatalEdit ? 'Zakończ zmianę danych pacjenta' : 'Zmień dane pacjenta');
+      editPatient.setAttribute('aria-label', editingPatient ? 'Zakończ zmianę danych pacjenta' : 'Zmień dane pacjenta');
       panel.classList.toggle('lab-puberty-neonatal', active);
     }
-    function updateContextLine() {
-      var parts = [], neonatalMode = neonatalContext();
+    function updateContextLine(adult) {
+      var parts = [];
       if (!ready()) parts.push(context && context.sourceStatus === 'loading' ? 'Trwa odczyt danych aktualnego pacjenta. Dane z karty są tymczasowo wyłączone z oceny.' : 'Dane z formularza głównego są niedostępne. Przeliczenie nie wymaga danych pacjenta.');
-      else if (!neonatalMode) parts.push('Ocena według wieku i stadium widocznych w formularzu, bez odtwarzania kontekstu wcześniejszej próbki.');
-      if (ready() && context.gnrhaStatus && (!neonatalMode || context.gnrhaStatus === 'w-trakcie')) {
+      if (ready() && context.gnrhaStatus === 'w-trakcie') {
         var treatmentText = context.gnrhaStatus === 'zakonczone' ? 'GnRHa: zakończone. Sam status nie określa leczenia ani wpływu ostatniej dawki dla wyniku; kontekst pozostaje nieznany.' : context.gnrhaStatus === 'w-trakcie' ? 'Z karty: leczenie GnRHa w trakcie.' : context.gnrhaStatus === 'brak' ? 'Z karty: brak GnRHa; nie ustala to pozostałego leczenia hormonalnego.' : '';
         if (treatmentText) parts.push(treatmentText);
       }
       var onset = ready() && context.onset;
       var incompatibleOnset = onset && !sexAllowsKind(fields.sex.value, pubertyKind(onset.kind));
-      if (onset && !incompatibleOnset && onset.age && onset.age.years != null) parts.push('Początek ' + text(onset.kind) + ': ' + onset.age.years + ' ukończonych lat — z karty.');
-      if (omittedSexContext || incompatibleOnset) parts.push('Pominięto wcześniejsze cechy niezgodne z wybraną płcią.');
+      if (!adult && onset && !incompatibleOnset && onset.age && onset.age.years != null) parts.push('Początek ' + text(onset.kind) + ': ' + onset.age.years + ' ukończonych lat — z karty.');
+      if (!adult && (omittedSexContext || incompatibleOnset)) parts.push('Pominięto wcześniejsze cechy niezgodne z wybraną płcią.');
       contextLine.textContent = parts.join(' ');
       contextLine.hidden = !parts.length;
-    }
-    function saveProfile() {
-      if (!preferences) { methodNotice.textContent = 'Ustawienia metody są niedostępne.'; return; }
-      try {
-        var settings = preferences.read(persistence, data);
-        var next = fields.configuredProfile.value ? preferences.configure(settings, analyte, fields.configuredProfile.value, data) : preferences.clear(settings, analyte, data);
-        var saved = preferences.write(persistence, next, data);
-        if (saved !== true) { methodNotice.textContent = 'Nie udało się zapisać ustawienia metody na tym urządzeniu.'; return; }
-        fields.unknownMethod.checked = false; methodNotice.textContent = fields.configuredProfile.value ? 'Zapisano ustawienie metody dla ' + analyte.toUpperCase() + '.' : 'Usunięto ustawienie metody.';
-        updateView(); notify();
-      } catch (_) { methodNotice.textContent = 'Nie udało się zapisać ustawienia metody na tym urządzeniu.'; }
     }
     function setAnalyte(next) {
       next = ['lh', 'fsh'].includes(next) ? next : null;
       var changedAnalyte = next !== analyte;
-      if (changedAnalyte) {
-        fields.unknownMethod.checked = false; methodNotice.textContent = ''; evaluation = null;
-        while (fields.configuredProfile.options.length > 1) fields.configuredProfile.remove(1);
-        (data && Array.isArray(data.profiles) ? data.profiles : []).filter(function (profile) { return profile.active === true && profile.analyte === next; }).forEach(function (profile) {
-          var pretermProfile = profile.scope && profile.scope.age && profile.scope.age.axis === 'postmenstrualDays';
-          var option = element('option', '', profile.method.name + ' · ' + materialLabel(profile.material) + (pretermProfile ? ' · wcześniaki' : '')); option.value = profile.id; fields.configuredProfile.appendChild(option);
-        });
-      }
-      analyte = next; panel.hidden = !next; samplePanel.hidden = !next; assessment.hidden = !next;
-      if (changedAnalyte) { var profile = resolveProfile(); fields.configuredProfile.value = profile && profile.assay ? profile.assay.profileId : ''; }
+      if (changedAnalyte) evaluation = null;
+      analyte = next; panel.hidden = !next; assessment.hidden = !next;
+      var sampleStep = byId('labStep4'); if (sampleStep) sampleStep.classList.toggle('lab-puberty-suppressed', !!next);
       resultSection.classList.toggle('lab-puberty-active', !!next);
       ['labResultSourceLine', 'labSourcesWrap', 'labInfoCard'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-suppressed', !!next); });
       ['labStep4', 'labStep5'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-step-active', !!next); });
-      if (sampleLabel && sampleLabel.firstChild) sampleLabel.firstChild.textContent = next ? 'Badanie ' : originalSampleLabel;
       if (patientLabel && patientLabel.firstChild) patientLabel.firstChild.textContent = next ? 'Pacjent ' : originalPatientLabel;
       var valueInput = byId('labValue'); if (valueInput) valueInput.setAttribute('inputmode', next ? 'text' : 'decimal');
       if (!next) assessment.replaceChildren();
       updateView();
     }
     function reset() {
-      Object.keys(fields).forEach(clearField); dirty = {}; imported = {}; evaluation = null; contextKey = null; omittedSexContext = false; suspendedSexFields = null; neonatalEdit = false;
-      lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' }; details.open = false; methodSettings.open = false;
+      Object.keys(fields).forEach(clearField); dirty = {}; imported = {}; evaluation = null; contextKey = null; omittedSexContext = false; suspendedSexFields = null; neonatalEdit = false; reproductiveSex = null;
+      lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' }; details.open = false;
       Object.keys(sections).forEach(function (name) { sections[name].hidden = true; sectionButtons[name].setAttribute('aria-pressed', 'false'); });
-      var profile = resolveProfile(); fields.configuredProfile.value = profile && profile.assay ? profile.assay.profileId : '';
-      methodNotice.textContent = ''; assessment.replaceChildren(); syncSexFields();
+      assessment.replaceChildren(); syncSexFields();
     }
     function setPatientContext(next) {
       next = next && typeof next === 'object' ? next : {};
@@ -543,7 +509,6 @@
       var view = renderer.renderEvaluation(assessment, evaluation, {
         compact: true, hideMeasurement: true, live: true, pretermContextMode: neonatalContext()
       });
-      interpretationScope.hidden = !!(view && view.pretermProfile && view.conditionNote);
       if (big) {
         big.replaceChildren();
         if (valid) {
@@ -559,7 +524,7 @@
           if (alert) {
             var summary = element('div', 'vilda-lab-severity-summary ' + allowedState);
             summary.appendChild(element('strong', 'vilda-lab-severity-summary-title', alert.label));
-            summary.appendChild(element('span', 'vilda-lab-severity-summary-scope', alert.scope + (alert.conditional ? ' · warunkowo' : '')));
+            summary.appendChild(element('span', 'vilda-lab-severity-summary-scope', alert.scope + (alert.automatic ? ' · orientacyjnie' : alert.conditional ? ' · warunkowo' : '')));
             big.appendChild(summary);
           }
         } else big.appendChild(element('span', 'lab-result-big-placeholder', lastMeasurement.raw ? 'Popraw zapis wyniku lub jednostkę.' : 'Wpisz wynik.'));
@@ -595,7 +560,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.11.0', buildInput: buildInput, parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
+  var api = { version: '1.12.0', buildInput: buildInput, parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);
