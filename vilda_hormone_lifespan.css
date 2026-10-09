@@ -8,8 +8,8 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  margin: 20px 0 0;
-  border: 1px solid var(--border-color, #d4e4e7);
+  margin: var(--space-20px) 0 0;
+  border: var(--border-hairline) solid var(--border-color, #d4e4e7);
   border-radius: 17px;
   background: var(--vhl-paper);
   color: var(--vhl-ink);
@@ -49,9 +49,9 @@
   min-height: 40px;
   max-width: 100%;
   margin: 0;
-  padding: 8px 12px;
-  border: 1px solid transparent !important;
-  border-radius: 9px !important;
+  padding: var(--space-8px) var(--space-12px);
+  border: var(--border-hairline) solid transparent !important;
+  border-radius: var(--radius-9) !important;
   background: transparent !important;
   color: var(--vhl-muted) !important;
   font: inherit;
@@ -80,7 +80,7 @@
 .vilda-hormone-lifespan button:focus-visible,
 .vilda-hormone-lifespan summary:focus-visible,
 .vilda-hormone-lifespan a:focus-visible {
-  outline: 3px solid var(--vhl-teal);
+  outline: var(--border-pro) solid var(--vhl-teal);
   outline-offset: 3px;
 }
 .vilda-hormone-lifespan .vhl-toolbar {
@@ -89,20 +89,20 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: var(--space-10px) var(--space-16px);
 }
 .vilda-hormone-lifespan .vhl-views {
   display: inline-flex;
   max-width: 100%;
-  padding: 4px;
-  border: 1px solid #e5edef;
-  border-radius: 11px;
+  padding: var(--space-4px);
+  border: var(--border-hairline) solid #e5edef;
+  border-radius: var(--radius-11);
   background: #f0f5f6;
   gap: 2px;
 }
 .vilda-hormone-lifespan .vhl-views button {
-  padding: 8px 17px;
-  border-radius: 8px !important;
+  padding: var(--space-8px) 17px;
+  border-radius: var(--radius-8) !important;
 }
 .vilda-hormone-lifespan .vhl-views button[aria-pressed="true"] {
   background: var(--vhl-paper) !important;
@@ -112,14 +112,36 @@
 .vilda-hormone-lifespan .vhl-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 9px;
-  padding: 20px 26px 6px;
+  gap: var(--space-8px) 9px;
+  padding: var(--space-20px) 26px var(--space-6px);
+}
+/* Fixed palette matches the approved plot data; no element style writes. */
+.vilda-hormone-lifespan [data-hormone="lh"] {
+  --c: #7842b0;
+}
+.vilda-hormone-lifespan [data-hormone="fsh"] {
+  --c: #a77905;
+}
+.vilda-hormone-lifespan [data-hormone="e2"] {
+  --c: #b84d85;
+}
+.vilda-hormone-lifespan [data-hormone="t"] {
+  --c: #00838d;
+}
+.vilda-hormone-lifespan [data-hormone="amh"] {
+  --c: #ce6049;
+}
+.vilda-hormone-lifespan [data-hormone="inhb"] {
+  --c: #34865c;
+}
+.vilda-hormone-lifespan [data-hormone="insl3"] {
+  --c: #347fa5;
 }
 .vilda-hormone-lifespan .vhl-legend button {
   display: flex;
   gap: 9px;
   min-height: 41px;
-  padding: 9px 12px;
+  padding: 9px var(--space-12px);
   color: #385862 !important;
 }
 .vilda-hormone-lifespan .vhl-legend button:hover {
@@ -131,7 +153,7 @@
   color: var(--c) !important;
 }
 .vilda-hormone-lifespan .vhl-legend button[data-dim="true"] {
-  opacity: 0.6;
+  opacity: var(--opacity-slider-tick);
 }
 .vilda-hormone-lifespan .vhl-swatch {
   height: 3px;
@@ -149,11 +171,11 @@
 }
 .vilda-hormone-lifespan .vhl-chart-heading {
   min-height: 42px;
-  padding: 12px 31px 1px;
+  padding: var(--space-12px) 31px 1px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12px);
 }
 .vilda-hormone-lifespan .vhl-axis-label {
   font-size: 11px;
@@ -166,7 +188,7 @@
   padding: 5px 0;
 }
 .vilda-hormone-lifespan .vhl-chart-wrap {
-  padding: 0 18px;
+  padding: 0 var(--space-18px);
   position: relative;
   min-width: 0;
 }
@@ -188,11 +210,18 @@
 .vilda-hormone-lifespan .vhl-stage-nav {
   display: grid;
   gap: 7px;
-  margin: 6px 25px 8px 49px;
+  margin: var(--space-6px) 25px var(--space-8px) 49px;
+}
+/* Age-sector widths match each population's approved schematic time axis. */
+.vilda-hormone-lifespan[data-sex="male"] .vhl-stage-nav {
+  grid-template-columns: 0.14fr 0.2fr 0.17fr 0.17fr 0.17fr 0.15fr;
+}
+.vilda-hormone-lifespan[data-sex="female"] .vhl-stage-nav {
+  grid-template-columns: 0.2fr 0.16fr 0.16fr 0.2fr 0.16fr 0.12fr;
 }
 .vilda-hormone-lifespan .vhl-stage-nav button {
   min-height: 39px;
-  padding: 8px 5px;
+  padding: var(--space-8px) 5px;
   border-color: #d6e5e8 !important;
   background: #f1f6f7 !important;
   color: #3b606c !important;
@@ -211,8 +240,8 @@
 }
 .vilda-hormone-lifespan .vhl-stage-nav.vhl-compact {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 6px 4px 8px;
+  gap: var(--space-6px);
+  margin: var(--space-6px) var(--space-4px) var(--space-8px);
 }
 .vilda-hormone-lifespan .vhl-stage-nav.vhl-compact button {
   font-size: 12px;
@@ -220,7 +249,7 @@
 }
 .vilda-hormone-lifespan .vhl-chart-caption,
 .vilda-hormone-lifespan .vhl-population-note {
-  margin: 6px 30px 0;
+  margin: var(--space-6px) 30px 0;
   font-size: 12px;
   line-height: 1.65;
   color: #71868e;
@@ -240,13 +269,13 @@
   color: #6d6477;
 }
 .vilda-hormone-lifespan .vhl-insight {
-  margin: 20px 26px 23px;
+  margin: var(--space-20px) 26px 23px;
   display: flex;
-  gap: 16px;
-  padding: 16px 19px;
-  border-radius: 11px;
+  gap: var(--space-16px);
+  padding: var(--space-16px) 19px;
+  border-radius: var(--radius-11);
   background: #f1f7f7;
-  border: 1px solid #e0eeee;
+  border: var(--border-hairline) solid #e0eeee;
   align-items: center;
   min-height: 83px;
 }
@@ -258,10 +287,10 @@
   width: 35px;
   height: 35px;
   flex: 0 0 35px;
-  border: 1px solid #c7e5e6;
+  border: var(--border-hairline) solid #c7e5e6;
   background: #fff;
   color: var(--vhl-teal);
-  border-radius: 10px;
+  border-radius: var(--radius-10);
   display: grid;
   place-items: center;
 }
@@ -290,19 +319,19 @@
   display: none;
 }
 .vilda-hormone-lifespan .vhl-cycle-panel {
-  margin-top: 10px;
+  margin-top: var(--space-10px);
 }
 .vilda-hormone-lifespan .vhl-insight .vhl-cycle-note {
   font-size: 11px;
   line-height: 1.6;
   color: #71868e;
-  margin-top: 6px;
+  margin-top: var(--space-6px);
 }
 .vilda-hormone-lifespan .vhl-insight.vhl-cycle-open h2 {
   color: #945274;
 }
 .vilda-hormone-lifespan .vhl-sources {
-  border-top: 1px solid #e1ebee;
+  border-top: var(--border-hairline) solid #e1ebee;
   margin: 0;
   padding: 0 28px;
   background: #fcfdfd;
@@ -312,7 +341,7 @@
   list-style: none;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-10px);
   align-items: center;
   font: inherit;
   font-size: 12px;
@@ -341,12 +370,12 @@
   overflow-wrap: anywhere;
 }
 .vilda-hormone-lifespan .vhl-source-copy p {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-10px);
 }
 .vilda-hormone-lifespan .vhl-source-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 20px;
+  gap: var(--space-6px) var(--space-20px);
 }
 .vilda-hormone-lifespan a {
   color: #007883;
@@ -369,14 +398,14 @@
 .vilda-hormone-lifespan .vhl-sex-key {
   display: flex;
   gap: 23px;
-  margin: 10px 31px 0;
+  margin: var(--space-10px) 31px 0;
   font-size: 12px;
   color: #42636f;
 }
 .vilda-hormone-lifespan .vhl-sex-key span {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8px);
 }
 .vilda-hormone-lifespan .vhl-sex-key i {
   display: inline-block;
@@ -394,11 +423,11 @@
 }
 @container (max-width: 640px) {
   .vilda-hormone-lifespan .vhl-title {
-    padding: 17px 14px 0;
+    padding: 17px var(--space-14px) 0;
     font-size: 0.95rem;
   }
   .vilda-hormone-lifespan .vhl-toolbar {
-    padding: 14px 13px 0;
+    padding: var(--space-14px) 13px 0;
     justify-content: flex-end;
     gap: 9px;
   }
@@ -411,21 +440,21 @@
   }
   .vilda-hormone-lifespan .vhl-views button {
     flex: 1;
-    padding: 8px 5px;
+    padding: var(--space-8px) 5px;
     font-size: 11.5px;
     min-height: 41px;
     white-space: nowrap;
   }
   .vilda-hormone-lifespan .vhl-legend {
-    padding: 14px 13px 0;
+    padding: var(--space-14px) 13px 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 3px;
   }
   .vilda-hormone-lifespan .vhl-legend button {
-    padding: 8px 5px;
+    padding: var(--space-8px) 5px;
     font-size: 11px;
-    gap: 6px;
+    gap: var(--space-6px);
     justify-content: flex-start;
     min-height: 41px;
   }
@@ -455,8 +484,8 @@
     margin-top: 2px;
   }
   .vilda-hormone-lifespan .vhl-insight {
-    margin: 16px 13px;
-    padding: 13px 14px;
+    margin: var(--space-16px) 13px;
+    padding: 13px var(--space-14px);
     gap: 11px;
     align-items: flex-start;
     min-height: 104px;
@@ -465,7 +494,7 @@
     height: 29px;
     width: 29px;
     flex-basis: 29px;
-    border-radius: 8px;
+    border-radius: var(--radius-8);
   }
   .vilda-hormone-lifespan .vhl-insight-symbol svg {
     width: 17px;
@@ -493,10 +522,10 @@
   }
   .vilda-hormone-lifespan button.vhl-compare-toggle {
     font-size: 11px;
-    padding: 7px 12px;
+    padding: 7px var(--space-12px);
   }
   .vilda-hormone-lifespan .vhl-sex-key {
-    margin: 11px 18px 0;
+    margin: 11px var(--space-18px) 0;
     font-size: 11px;
     gap: 19px;
   }
@@ -513,11 +542,11 @@
   }
   .vilda-hormone-lifespan .vhl-legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: var(--space-10px);
+    padding-right: var(--space-10px);
   }
   .vilda-hormone-lifespan .vhl-legend button {
-    padding: 8px 5px;
+    padding: var(--space-8px) 5px;
     font-size: 11px;
     white-space: nowrap;
   }
@@ -525,7 +554,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
   .vilda-hormone-lifespan .vhl-insight {
-    padding: 12px 11px;
+    padding: var(--space-12px) 11px;
   }
 }
 @media (pointer: coarse) {

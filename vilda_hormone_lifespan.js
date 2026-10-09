@@ -428,7 +428,6 @@
         const b = document.createElement("button");
         b.type = "button";
         b.dataset.hormone = h.id;
-        b.style.setProperty("--c", h.color);
         b.setAttribute(
           "aria-label",
           (compare ? "Porównaj płcie: " : "Wyróżnij: ") + h.name,
@@ -452,9 +451,6 @@
         );
         stageNav.append(b);
       }
-      stageNav.style.gridTemplateColumns = stages()
-        .map((s) => s.width + "fr")
-        .join(" ");
     }
     function moveSectorHighlight(animate = true) {
       cancelAnimationFrame(sectorFrame);
@@ -513,6 +509,7 @@
       sectorFrame = 0;
       panel.hidden = !isSupported();
       if (!isSupported()) return;
+      panel.dataset.sex = sex;
       const populationNote = byId("population-note");
       populationNote.hidden = !(
         patientAgeYears !== null &&
@@ -619,14 +616,10 @@
         pw = W - left - right,
         ph = bottom - top;
       svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-      svg.style.height = H + "px";
+      svg.setAttribute("height", H);
       stageNav.hidden = !full;
       stageNav.classList.toggle("vhl-compact", mobile);
-      stageNav.style.gridTemplateColumns = mobile
-        ? "repeat(3,minmax(0,1fr))"
-        : stages()
-            .map((s) => s.width + "fr")
-            .join(" ");
+
       stageNav
         .querySelectorAll("button")
         .forEach((b) =>
@@ -877,7 +870,7 @@
         pw = W - left - right,
         ph = bottom - top;
       svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-      svg.style.height = H + "px";
+      svg.setAttribute("height", H);
       const g = el("g");
       svg.append(g);
       const x = (age) => left + age * pw,
@@ -1075,7 +1068,7 @@
         width = W - left - right,
         height = bottom - top;
       chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
-      chart.style.height = H + "px";
+      chart.setAttribute("height", H);
       chart.querySelectorAll(":scope > g").forEach((n) => n.remove());
       const g = el("g");
       chart.append(g);
@@ -1400,6 +1393,7 @@
       cancelAnimationFrame(resizeFrame);
       sectorFrame = resizeFrame = 0;
       panel.hidden = true;
+      delete panel.dataset.sex;
       selected.clear();
       identityKey = undefined;
       sex =
