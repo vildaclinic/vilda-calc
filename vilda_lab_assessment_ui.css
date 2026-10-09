@@ -412,6 +412,7 @@
   top: 0;
   left: clamp(min(50%, var(--label-edge, 34px)), var(--value), calc(100% - min(50%, var(--label-edge, 34px))));
   transform: translateX(-50%);
+  width: max-content;
   max-width: min(100%, calc(var(--label-edge, 34px) + var(--label-edge, 34px)));
   font-size: .82rem;
   font-weight: 650;
@@ -420,8 +421,10 @@
   border-radius: 5px;
   color: #356e75;
   background: #eaf3f3;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vilda-lab-assessment .vilda-lab-axis-value.above {

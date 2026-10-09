@@ -1,4 +1,4 @@
-/* Historical LH/FSH assessment transport. No engine, reference data, DOM, storage
+/* Historical laboratory assessment transport. No engine, reference data, DOM, storage
  * or current-date dependency. An explicit unreadable assessment stays explicit;
  * it must never fall back to an interpretation using today's patient context.
  */
@@ -12,6 +12,13 @@
   var own = function (value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); };
   var record = function (value) { return value !== null && typeof value === 'object' && !Array.isArray(value); };
   var finite = function (value) { return typeof value === 'number' && Number.isFinite(value); };
+  var analytes = {
+    lh: { unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
+    fsh: { unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
+    inhibin_b: { unit: 'pg/mL', sourceUnits: ['pg/mL', 'ng/L'] }
+  };
+  var reproductiveContexts = ['unknown', 'follicular', 'ovulation', 'luteal', 'postmenopause'];
+  var inhibinContexts = reproductiveContexts.concat(['early_follicular', 'late_follicular', 'mid_luteal', 'late_luteal']);
 
   // Every object level has an explicit whitelist. Unknown extensions (including
   // patient IDs, DOM/HTML and imported object graphs) are never traversed.
@@ -86,7 +93,7 @@
     // Older readers discard this extension and retain unavailable biochemical
     // comparisons; losing the qualifier can never turn a preview into a RI.
     referencePreview: {
-      kind: 'text', reasonCodes: ['text'], byAge: comparison, byStage: comparison,
+      kind: 'text', reasonCodes: ['text'], byAge: comparison, byStage: comparison, applicabilityText: 'text',
       variants: [{ id: 'text', label: 'text', reproductiveContext: 'text', comparison: comparison }]
     }
   };
@@ -131,6 +138,12 @@
     return out;
   }
   function contains(value, choices) { return choices.indexOf(value) !== -1; }
+  function contextsFor(analyte) { return analyte === 'inhibin_b' ? inhibinContexts : reproductiveContexts; }
+  function matchingReproductiveContext(analyte, supplied, candidate) {
+    if (supplied === 'unknown' || supplied === candidate) return true;
+    return analyte === 'inhibin_b' && (supplied === 'follicular' && contains(candidate, ['early_follicular', 'late_follicular']) ||
+      supplied === 'luteal' && contains(candidate, ['mid_luteal', 'late_luteal']));
+  }
   function required(object, keys) { return record(object) && keys.every(function (key) { return own(object, key); }); }
   function validBound(value, operators, nullableValue) {
     return required(value, ['operator', 'value']) && contains(value.operator, operators) && (finite(value.value) || nullableValue && value.value === null);
@@ -275,7 +288,7 @@
       if (limits.lower && limits.lower.value < 0 || limits.upper && limits.upper.value < 0 ||
         limits.lower && limits.upper && (limits.lower.value > limits.upper.value || limits.lower.value === limits.upper.value && (limits.lower.operator === '>' || limits.upper.operator === '<')) ||
         limits.censoredLower && (limits.lower || limits.censoredLower.value !== null && limits.censoredLower.value <= 0)) return false;
-      if (range.material !== 'serum' || range.sex !== supplied.sex || range.unit !== 'IU/L' || !selection.profileIds.includes(range.profileId) ||
+      if (range.material !== 'serum' || range.sex !== supplied.sex || range.unit !== analytes[evaluation.analyte].unit || !selection.profileIds.includes(range.profileId) ||
         (assay.confirmation === 'reported' && range.method.id !== assay.methodId) ||
         (forStage ? !record(range.stage) || range.stage.kind !== supplied.puberty.kind || range.stage.value !== supplied.puberty.stage : !!range.stage)) return false;
       if (range.basis === 'adult' && supplied.sex === 'F' && selection.status === 'selected' && (!supplied.reproductiveContext || supplied.reproductiveContext === 'unknown')) return false;
@@ -287,8 +300,8 @@
       if (preview.byAge.status !== 'unavailable' || !Array.isArray(variants) || variants.length < 2 || new Set(variants.map(function (variant) { return variant.id; })).size !== variants.length) return false;
       if (!variants.every(function (variant) {
         return required(variant, ['id', 'label', 'reproductiveContext', 'comparison']) && !!variant.id && !!variant.label &&
-          contains(variant.reproductiveContext, [null, 'follicular', 'ovulation', 'luteal', 'postmenopause']) &&
-          (variant.reproductiveContext === null || supplied.sex === 'F' && (supplied.reproductiveContext === 'unknown' || variant.reproductiveContext === supplied.reproductiveContext)) &&
+          contains(variant.reproductiveContext, [null].concat(contextsFor(evaluation.analyte).filter(function (value) { return value !== 'unknown'; }))) &&
+          (variant.reproductiveContext === null || supplied.sex === 'F' && matchingReproductiveContext(evaluation.analyte, supplied.reproductiveContext, variant.reproductiveContext)) &&
           variant.comparison.status !== 'unavailable' && validItem(variant.comparison, false);
       })) return false;
     } else if (own(preview, 'variants') || preview.byAge.status === 'unavailable' && preview.byStage.status === 'unavailable') return false;
@@ -301,7 +314,8 @@
     return evaluation.provenance.profileId === null && evaluation.provenance.profileVersion === null;
   }
   function validEvaluation(value) {
-    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection']); })) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
+    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection']); })) || value.schemaVersion !== 1 || !value.engineVersion || !own(analytes, value.analyte)) return false;
+    if (value.analyte === 'inhibin_b' && (!value.input || value.input.referenceSelection !== 'automatic')) return false;
     if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;
     if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) {
       return required(value.input[key], Object.keys(input[key]).filter(function (field) { return !contains(field, optionalNestedInput[key] || []); }));
@@ -310,12 +324,12 @@
     if (own(value.input.assay, 'profileVersion') && (typeof value.input.assay.profileVersion !== 'string' || value.input.assay.profileVersion.length > 80)) return false;
     if (!['puberty', 'testicularVolume'].every(function (key) { return !own(value.input[key], 'appliesToCurrentContext') || typeof value.input[key].appliesToCurrentContext === 'boolean'; })) return false;
     if (own(value.input.treatment, 'context') && !contains(value.input.treatment.context, ['unknown', 'none', 'hormonal'])) return false;
-    if (own(value.input, 'reproductiveContext') && !contains(value.input.reproductiveContext, ['unknown', 'follicular', 'ovulation', 'luteal', 'postmenopause']) &&
+    if (own(value.input, 'reproductiveContext') && !contains(value.input.reproductiveContext, contextsFor(value.analyte)) &&
       !(value.referenceSelection && value.referenceSelection.status === 'unavailable' && Array.isArray(value.referenceSelection.reasonCodes) && value.referenceSelection.reasonCodes.includes('invalid_reproductive_context'))) return false;
     if (!validReportedRange(value)) return false;
     var m = value.measurement, b = value.biochemical, c = value.clinical;
     if (!required(m, Object.keys(evaluationSchema.measurement)) || !contains(m.status, ['valid', 'invalid']) || typeof m.raw !== 'string' || typeof m.isExact !== 'boolean') return false;
-    if (m.status === 'valid' && (!contains(m.operator, ['=', '<', '<=', '>', '>=']) || m.unit !== 'IU/L' || !contains(m.sourceUnit, ['IU/L', 'mIU/mL']))) return false;
+    if (m.status === 'valid' && (!contains(m.operator, ['=', '<', '<=', '>', '>=']) || m.unit !== analytes[value.analyte].unit || !contains(m.sourceUnit, analytes[value.analyte].sourceUnits))) return false;
     if (m.status === 'valid' && (m.isExact !== (m.operator === '=') || m.sourceValue !== m.value || m.sourceUnit !== value.input.unit || m.value !== null && m.value < 0)) return false;
     if (m.status === 'valid') {
       var rawOperator = m.raw.trim().match(/^(<=|>=|<|>|=|≤|≥)/);

@@ -1,5 +1,5 @@
-/* LH/FSH — kontekst pojedynczego oznaczenia. Ten formularz niczego nie zapisuje
- * w danych pacjenta. Interpretację wykonuje wyłącznie VildaLabPuberty; widok
+/* Kontekst pojedynczego oznaczenia. Ten formularz niczego nie zapisuje
+ * w danych pacjenta. Interpretację wykonuje silnik wybranego analitu; widok
  * zapisanej i bieżącej oceny jest wspólny (VildaLabAssessmentUI).
  */
 (function (root) {
@@ -134,7 +134,8 @@
   function mount(options) {
     var opts = options || {}, doc = opts.document || root.document;
     if (!doc) return null;
-    var engine = opts.engine || root.VildaLabPuberty, data = opts.data || root.VildaLabPubertyData;
+    var pubertyEngine = opts.engine || root.VildaLabPuberty, pubertyData = opts.data || root.VildaLabPubertyData;
+    var engine = pubertyEngine, data = pubertyData;
     var snapshots = opts.snapshot || root.VildaLabSnapshot;
     var renderer = opts.renderer || root.VildaLabAssessmentUI;
     var byId = function (id) { return doc.getElementById(id); };
@@ -147,6 +148,10 @@
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
     var dirty = {}, imported = {}, kindOptionsSex = null, omittedSexContext = false, suspendedSexFields = null;
     var neonatalEdit = false, reproductiveSex = null;
+    function isInhibin() { return analyte === 'inhibin_b'; }
+    function units() { return isInhibin() ? ['pg/mL', 'ng/L'] : ['IU/L', 'mIU/mL']; }
+    function stageReferencesAvailable() { return !(data && data.presentationPolicy && data.presentationPolicy.stageReferencesAvailable === false); }
+    function infantAgeLimit() { return data && data.presentationPolicy && data.presentationPolicy.infantAgeUpperYears; }
     function element(tag, className, content) {
       var node = doc.createElement(tag);
       if (className) node.className = className;
@@ -218,6 +223,7 @@
     field(patient, 'ageYears', 'Ukończone lata', 'number', null, { min: '0', max: '120', step: '1' });
     field(patient, 'ageMonths', 'Dodatkowe miesiące — jeśli znane', 'number', null, { min: '0', max: '11', step: '1' });
     field(patient, 'preterm', 'Urodzenie przedwcześnie', 'select', tri);
+    fields.preterm.addEventListener('blur', function () { if (isInhibin()) updateView(); });
     field(neonatalFields, 'gestationalAge', 'Wiek ciążowy przy urodzeniu', 'text', null, { placeholder: 'np. 28+4', inputmode: 'text' });
     field(neonatalFields, 'postnatalDays', 'Ukończone dni życia', 'text', null, { placeholder: 'np. 43', inputmode: 'numeric' });
     ['gestationalAge', 'postnatalDays'].forEach(function (key) {
@@ -228,12 +234,13 @@
     field(stage, 'kind', 'Rodzaj cechy', 'select', kindChoices);
     field(stage, 'stage', 'Stadium', 'select', [['', 'Nie podano'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]);
     var stageHint = element('p', 'lab-puberty-hint'); stageHint.id = 'labPubertyStageHint'; sections.stage.appendChild(stageHint);
-    field(panel, 'reproductiveContext', 'Cykl / menopauza', 'select', [['unknown', 'Nie ustalono'], ['follicular', 'Faza folikularna'], ['ovulation', 'Okres okołoowulacyjny'], ['luteal', 'Faza lutealna'], ['postmenopause', 'Po menopauzie']]);
+    var reproductiveChoices = [['unknown', 'Nie ustalono'], ['follicular', 'Faza folikularna'], ['ovulation', 'Okres okołoowulacyjny'], ['luteal', 'Faza lutealna'], ['postmenopause', 'Po menopauzie']];
+    field(panel, 'reproductiveContext', 'Cykl / menopauza', 'select', reproductiveChoices);
     wrappers.reproductiveContext.classList.add('lab-puberty-cycle-field'); wrappers.reproductiveContext.hidden = true;
 
     function ready() { return !!context && context.sourceStatus === 'ready'; }
     function adultAgeState(value) {
-      var profile = data && Array.isArray(data.profiles) && data.profiles.find(function (candidate) { return candidate.active === true && candidate.referenceContext === 'adult' && (!analyte || candidate.analyte === analyte); });
+      var profile = data && Array.isArray(data.profiles) && data.profiles.find(function (candidate) { return candidate.active === true && candidate.referenceContext === 'adult' && (!analyte || candidate.analyte === analyte) && (!candidate.scope || !candidate.scope.sex || candidate.scope.sex === fields.sex.value); });
       var lower = profile && profile.scope && profile.scope.age && profile.scope.age.lower;
       if (!value || value.status !== 'known' || !lower || typeof lower.value !== 'number') return { definite: false, possible: false };
       return { definite: value.lowerYears > lower.value || lower.operator === '>=' && value.lowerYears === lower.value,
@@ -247,6 +254,7 @@
       };
     }
     function neonatalContext() {
+      if (isInhibin()) return false;
       if (fields.preterm.value !== 'yes') return false;
       var policy = data && data.pretermEligibilityPolicy;
       var maximum = policy && policy.postmenstrualAgeDays && policy.postmenstrualAgeDays.upper && policy.gestationalAgeDays && policy.gestationalAgeDays.lower ? policy.postmenstrualAgeDays.upper.value - policy.gestationalAgeDays.lower.value : null;
@@ -261,6 +269,11 @@
       if (years === 0 && months != null && months >= 0 && months / 12 <= (maximum + 1) / 365) return true;
       return true;
     }
+    function preferInfantDays(values, neonatal) {
+      if (!isInhibin() || !knownDays(neonatal.postnatalDays) || !engine || typeof engine.resolveAge !== 'function') return false;
+      var coarse = engine.resolveAge({ age: age(values, 'age') });
+      return !age(values, 'age') || coarse.status === 'known' && coarse.lowerYears < infantAgeLimit();
+    }
     function readFields() {
       var values = {};
       Object.keys(fields).forEach(function (key) { values[key] = fields[key].type === 'checkbox' ? fields[key].checked : fields[key].value; });
@@ -273,7 +286,7 @@
       values.sexSteroids = 'unknown'; values.treatmentContext = values.gnrha === 'yes' ? 'hormonal' : 'unknown'; values.measurementKind = 'unknown';
       var neonatal = neonatalValues();
       if (neonatalContext() || neonatal.gestationalDays || neonatal.postnatalDays) values.neonatalAge = neonatal;
-      values.useNeonatalAge = neonatalContext() && knownDays(neonatal.postnatalDays);
+      values.useNeonatalAge = neonatalContext() && knownDays(neonatal.postnatalDays) || preferInfantDays(values, neonatal);
       var chronological = { age: values.useNeonatalAge ? null : age(values, 'age'), neonatalAge: values.neonatalAge };
       if (!engine || typeof engine.resolveAge !== 'function' || !adultAgeState(engine.resolveAge(chronological)).possible) values.reproductiveContext = 'unknown';
       if (ready()) {
@@ -347,7 +360,7 @@
         clearField('postnatalDays'); delete imported.postnatalDays; dirty.postnatalDays = true;
         neonatalEdit = false;
       }
-      if (key === 'postnatalDays') {
+      if (key === 'postnatalDays' && !isInhibin()) {
         ['ageYears', 'ageMonths'].forEach(function (ageKey) { clearField(ageKey); delete imported[ageKey]; dirty[ageKey] = true; });
       }
       if (key === 'kind' && fields.kind.value === 'Ax') { fields.stage.value = ''; delete imported.stage; dirty.stage = true; }
@@ -378,9 +391,11 @@
       var resolvedAge = engine && typeof engine.resolveAge === 'function' ? engine.resolveAge(input) : null;
       var adult = adultAgeState(resolvedAge);
       var neonatalMode = neonatalContext(), neonatal = neonatalValues();
+      var inhibinInfant = isInhibin() && resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < infantAgeLimit();
       if (neonatalMode) ageLabel = knownDays(neonatal.postnatalDays) ? intervalLabel(neonatal.postnatalDays) + (neonatal.postnatalDays.lower === 1 && neonatal.postnatalDays.upper === 1 ? ' ukończony dzień' : ' dni życia') : 'wiek do uzupełnienia';
+      else if (isInhibin() && input.age === null && knownDays(neonatal.postnatalDays)) ageLabel = intervalLabel(neonatal.postnatalDays) + ' dni życia';
       else if (!years && knownDays(neonatal.postnatalDays)) ageLabel = intervalLabel(neonatal.postnatalDays) + ' dni życia';
-      patientSummary.textContent = (adult.definite ? { M: 'Mężczyzna', F: 'Kobieta' } : neonatalMode ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
+      patientSummary.textContent = (adult.definite ? { M: 'Mężczyzna', F: 'Kobieta' } : neonatalMode || inhibinInfant ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
       if (!['M', 'F'].includes(fields.sex.value)) patientSummary.textContent = 'Płeć niepodana · ' + ageLabel;
       var kind = fields.kind.value, stageValue = fields.stage.value;
       stageSummary.textContent = kind === 'Ax' ? 'Ax — owłosienie pachowe' : stageValue ? (kind === 'unspecified' ? 'Tanner ' + ['', 'I', 'II', 'III', 'IV', 'V'][Number(stageValue)] + ' — rodzaj niepodany' : kind + stageValue) : 'Stadium niepodane';
@@ -389,11 +404,32 @@
       stageHint.textContent = (['M', 'F'].includes(fields.sex.value) ? '' : 'Wybierz płeć, aby wskazać Th/M lub G. ') + 'Ocena dotyczy bieżącego kontekstu pacjenta.';
       var infant = resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < 1;
       wrappers.preterm.hidden = !infant && !neonatalMode;
-      stageRow.hidden = neonatalMode || adult.definite; sectionButtons.stage.hidden = stageRow.hidden;
+      stageRow.hidden = neonatalMode || adult.definite || !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
       if (stageRow.hidden) { sections.stage.hidden = true; sectionButtons.stage.setAttribute('aria-pressed', 'false'); }
       wrappers.reproductiveContext.hidden = fields.sex.value !== 'F' || !adult.possible;
       updateNeonatalView(neonatalMode, neonatal);
-      updateContextLine(adult.definite);
+      updateInhibinInfantView(inhibinInfant, neonatal);
+      updateContextLine(adult.definite || !stageReferencesAvailable());
+    }
+    function updateInhibinInfantView(infant, neonatal) {
+      // Wspólne dane wieku pozostają w edycji. Inhibina nie korzysta z PMA ani
+      // formularza kwalifikacji Greaves; nie żąda brakującego wieku ciążowego.
+      if (!isInhibin()) {
+        if (wrappers.preterm.parentNode !== patient) patient.appendChild(wrappers.preterm);
+        return;
+      }
+      var editing = details.open && !sections.patient.hidden;
+      if (infant && wrappers.preterm.parentNode !== panel) panel.insertBefore(wrappers.preterm, wrappers.reproductiveContext);
+      else if (!infant && wrappers.preterm.parentNode !== patient) patient.appendChild(wrappers.preterm);
+      wrappers.preterm.hidden = !infant || !(editing || fields.preterm.value === 'unknown' || doc.activeElement === fields.preterm);
+      var reasons = evaluation && evaluation.referenceSelection && evaluation.referenceSelection.reasonCodes || [];
+      var needsDays = reasons.some(function (reason) { return ['age_precision_crosses_reference_boundary', 'age_precision_crosses_scope', 'invalid_neonatal_age'].includes(reason); });
+      wrappers.gestationalAge.hidden = true;
+      wrappers.postnatalDays.hidden = !infant || fields.preterm.value === 'yes' || !(needsDays || editing && knownDays(neonatal.postnatalDays) || doc.activeElement === fields.postnatalDays);
+      neonatalFields.hidden = wrappers.postnatalDays.hidden;
+      var ga = neonatal.gestationalDays;
+      neonatalSummary.hidden = !infant || !knownDays(ga);
+      neonatalSummary.textContent = knownDays(ga) ? 'Urodzon' + (fields.sex.value === 'F' ? 'a' : 'y') + ' w ' + intervalLabel(ga, weekLabel) + ' tyg.' : '';
     }
     function updateNeonatalView(active, neonatal) {
       var ga = neonatal.gestationalDays, pna = neonatal.postnatalDays;
@@ -443,10 +479,20 @@
       contextLine.hidden = !parts.length;
     }
     function setAnalyte(next) {
-      next = ['lh', 'fsh'].includes(next) ? next : null;
+      next = ['lh', 'fsh', 'inhibin_b'].includes(next) ? next : null;
       var changedAnalyte = next !== analyte;
       if (changedAnalyte) evaluation = null;
       analyte = next; panel.hidden = !next; assessment.hidden = !next;
+      engine = isInhibin() ? opts.inhibinEngine || root.VildaLabInhibinB : pubertyEngine;
+      data = isInhibin() ? opts.inhibinData || root.VildaLabInhibinBData : pubertyData;
+      panel.setAttribute('aria-label', isInhibin() ? 'Pacjent — kontekst inhibiny B' : 'Pacjent — kontekst LH i FSH');
+      if (changedAnalyte) {
+        var selectedContext = fields.reproductiveContext.value;
+        var choices = data && data.presentationPolicy && data.presentationPolicy.reproductiveChoices || reproductiveChoices;
+        fields.reproductiveContext.replaceChildren();
+        choices.forEach(function (choice) { var option = element('option', '', choice[1]); option.value = choice[0]; fields.reproductiveContext.appendChild(option); });
+        fields.reproductiveContext.value = choices.some(function (choice) { return choice[0] === selectedContext; }) ? selectedContext : 'unknown';
+      }
       var sampleStep = byId('labStep4'); if (sampleStep) sampleStep.classList.toggle('lab-puberty-suppressed', !!next);
       resultSection.classList.toggle('lab-puberty-active', !!next);
       ['labResultSourceLine', 'labSourcesWrap', 'labInfoCard'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-suppressed', !!next); });
@@ -498,10 +544,11 @@
       if (status) status.replaceChildren();
       if (!engine || typeof engine.evaluate !== 'function' || !data || !renderer) {
         evaluation = null; resultSection.classList.add('is-empty');
-        if (big) big.textContent = 'Moduł oceny LH/FSH jest niedostępny. Odśwież aplikację.';
+        if (big) big.textContent = 'Moduł oceny ' + (isInhibin() ? 'inhibiny B' : 'LH/FSH') + ' jest niedostępny. Odśwież aplikację.';
         assessment.replaceChildren(); return null;
       }
       evaluation = engine.evaluate(input, data);
+      if (isInhibin()) updateView();
       var valid = evaluation.measurement.status === 'valid';
       resultSection.classList.toggle('is-empty', !valid);
       // Wspólny model prezentacji wyprowadza wyróżnienie z obu zapisanych
@@ -512,7 +559,7 @@
       if (big) {
         big.replaceChildren();
         if (valid) {
-          var target = ['IU/L', 'mIU/mL'].includes(lastMeasurement.targetUnit) ? lastMeasurement.targetUnit : input.unit;
+          var target = units().includes(lastMeasurement.targetUnit) ? lastMeasurement.targetUnit : input.unit;
           // Obie obsługiwane jednostki są liczbowo równoważne. Zachowujemy zapis
           // operatora i LOD/LOQ, nie zaokrąglamy granicy wyniku cenzorowanego.
           var visualState = view && view.valid && view.result ? view.result.visualState : '';
@@ -532,7 +579,7 @@
       var table = byId('labResultsBody'), meta = byId('labMeta');
       if (table) {
         table.replaceChildren();
-        ['IU/L', 'mIU/mL'].filter(function (unit) { return unit !== input.unit; }).forEach(function (unit) {
+        units().filter(function (unit) { return unit !== input.unit; }).forEach(function (unit) {
           var row = element('tr', valid ? '' : 'lab-row-placeholder');
           row.appendChild(element('td', 'lab-unit', unit));
           var cell = element('td', 'lab-value', valid ? evaluation.measurement.raw : '—');
@@ -544,7 +591,7 @@
           row.appendChild(cell); table.appendChild(row);
         });
       }
-      if (meta) meta.textContent = 'IU/L i mIU/mL są liczbowo równoważne. Równość jednostek nie potwierdza zgodności metod oznaczenia.';
+      if (meta) meta.textContent = units().join(' i ') + ' są liczbowo równoważne. Równość jednostek nie potwierdza zgodności metod oznaczenia.';
       return evaluation;
     }
     function getAssessment(result) {
