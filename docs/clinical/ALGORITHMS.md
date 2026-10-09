@@ -19,6 +19,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
+| LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -339,6 +340,47 @@ odczyt nie liczy wyniku ponownie. Przypadki regresyjne obejmują granice
 wszystkich dziesięciu zakresów dorosłych, wiek wokół 18 lat, kobietę
 z nieustalonym cyklem, zmianę osoby/płci, niezależne ostrzeżenia dziecięce,
 kwalifikację wcześniaczą oraz zapis/odczyt, mobile i offline.
+
+### LAB-INHIBIN-B — wiek i minipuberty, 2026-10-09
+
+Osobny silnik `VildaLabInhibinB` 1.0.0 i dane `2026-10-09.1` zastępują
+dawną interpretację inhibiny B. Normy są poza silnikiem, który przyjmuje
+źródło jako argument. Pełne źródła, populacje, metody, jednostki, granice,
+ślady odczytu i luki: [INHIBIN_B.md](INHIBIN_B.md).
+
+**Wpływ kliniczny:** usunięto niezweryfikowane normy minipuberty i zastępczy
+zakres męski 80–300 przy braku dopasowania. Męskie minipuberty 2–5 miesięcy
+wykorzystuje tabelę 1 Johannsen 2018 (DOI 10.1210/jc.2018-00482), a żeńskie
+od 5 ukończonych dni do <1 roku górną krzywą suplementu 1C Ljubičić 2022
+(DOI 10.1210/clinem/dgac363; suplement 10.6084/m9.figshare.19469555.v1).
+Dziewczynkom nie dopisujemy dolnego RI. Liniowa interpolacja opublikowanych
+punktów +2 SD i 365,25 dnia/rok są jawną polityką numeryczną aplikacji,
+nie instrukcją autorów. Pełny model inhibiny chłopców Busch 2022 pozostaje
+niedostępny liczbowo; poza 2–5 miesiącem przed 1 rokiem używany jest jawnie
+szeroki zakres Labcorp, bez oceny pełnej dynamiki minipuberty.
+
+Od 1 roku zakresy pochodzą z pełnego katalogu Labcorp 146795 (AnshLite™
+Enzyme Linked Immunoassay, surowica). Katalogowe kategorie wieku traktujemy
+jako ukończone lata/miesiące, co jest udokumentowaną polityką aplikacji.
+Mężczyźni mają przedziały 18–49 i >49 ukończonych lat; u kobiet po kategorii
+12–18 lat używany jest znany cykl/menopauza albo niezależne warianty.
+Nie ustalamy fazy ani menopauzy z wieku. Nie ma aktywnej osi G/Th ani
+norm wcześniaczych; u starszego dziecka wcześniactwo nie blokuje RI.
+
+Automatyczny wybór ustala źródło orientacyjnego porównania, a nie fakty
+o metodzie próbki. Znana niezgodność materiału/metody, stymulacja i leczenie
+zachowują blokady. Wynik nie rozpoznaje przyczyny, płodności ani skuteczności
+leczenia. Jednostki pg/mL↔ng/L są liczbowo równoważne, operatory i LOD/LOQ
+pozostają zachowane. Nowa ocena jest zapisywana z zakresem i źródłem;
+historia nie oblicza jej ponownie ani nie uzupełnia starszych wpisów.
+
+Regresje produkcyjnego silnika: M90 dni/350 → 229–631; F90 dni/80 → górna
+granica modelu ≈145,9 bez dolnej normy; M35 lat/150 → 66,9–300;
+M75 lat/150 → 34,9–289,2; F35 lat/nieznany cykl → sześć wariantów bez
+wspólnego werdyktu. Testy obejmują również GA/PNA, granice i precyzję wieku,
+zapis, zmianę pacjenta, jednostki, mobile i offline. Zachowany układ oraz
+makieta desktop/mobile zostały przedstawione właścicielowi przed aktywacją
+interfejsu. Akceptacja kliniczna i scalenie pozostają po stronie właściciela.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

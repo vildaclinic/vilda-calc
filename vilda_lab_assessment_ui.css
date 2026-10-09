@@ -408,11 +408,13 @@
 }
 
 .vilda-lab-assessment .vilda-lab-axis-value {
+  --label-inset: min(50%, calc(var(--label-edge, 2em) + var(--space-6px)));
   position: absolute;
   top: 0;
-  left: clamp(min(50%, var(--label-edge, 34px)), var(--value), calc(100% - min(50%, var(--label-edge, 34px))));
+  left: clamp(var(--label-inset), var(--value), calc(100% - var(--label-inset)));
   transform: translateX(-50%);
-  max-width: min(100%, calc(var(--label-edge, 34px) + var(--label-edge, 34px)));
+  width: max-content;
+  max-width: 100%;
   font-size: .82rem;
   font-weight: 650;
   line-height: 21px;
@@ -420,8 +422,10 @@
   border-radius: 5px;
   color: #356e75;
   background: #eaf3f3;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vilda-lab-assessment .vilda-lab-axis-value.above {

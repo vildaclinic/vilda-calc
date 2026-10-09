@@ -360,8 +360,8 @@
   "sha256": "9f1433ddf270167ef6f391f3c9e5c507e524efad6b0edb18cab92b89d0d37097"
  },
  "lab_units_data.js": {
-  "v": 35,
-  "sha256": "4a41916063687adc9c67a0852892ca80fe7deada871aa799fd8f0cd768db4b0f"
+  "v": 36,
+  "sha256": "7f1169d51f9825884d87c5ff3a6248f901cab02348b404911f4364e45f685ab0"
  },
  "lucide.min.js": {
   "v": 1,
@@ -468,8 +468,8 @@
   "sha256": "401a9cb3d8c83dd6185f50a63a0337e260565b8c15b421c451105a4b0dea8cdb"
  },
  "vilda_auth_ui.js": {
-  "v": 482,
-  "sha256": "20a56727544729997aaf52741caa88214db76297688ac39e2488d1d59cb959d3"
+  "v": 483,
+  "sha256": "4c42b066d126d87c7988e347363cb22f7c781839c90a6b66a91c7bcabc572e4d"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -516,8 +516,8 @@
   "sha256": "b8eff7e716de0492d8a7596e372800afa2205b5433fd1c8c3ccee18a797cb4be"
  },
  "vilda_chrome.js": {
-  "v": 121,
-  "sha256": "45ab3c747ae99d209714d31958924de0c2c49544d4c99221cabb4bc3374fbd41"
+  "v": 122,
+  "sha256": "a9549bf70db8b228abae0019388a716e51886cabb65ec943fc1ccf660e9c2804"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -708,12 +708,20 @@
   "sha256": "bd21aa35a6f8eb801a55435c99c1ae6527f327771aa5bcd388f293c95a1bec1c"
  },
  "vilda_lab_assessment_ui.css": {
-  "v": 9,
-  "sha256": "2f24fddc1039db4a4c39a49060e594afd3b5320b4a2fce56538f5e4c99d46484"
+  "v": 10,
+  "sha256": "db9b89bf49abf46381cd78338be973417bc6c07cee11e967cb6cbcd9a48ca21c"
  },
  "vilda_lab_assessment_ui.js": {
-  "v": 10,
-  "sha256": "410378a079f776ed913fb56a4cdc6fe4f9c7a8efb7d95bc455a2fb295f4434e5"
+  "v": 11,
+  "sha256": "31d06eb8e78c18657200570fc1a6e373c26cf3ba3de00f77782287d7822425a9"
+ },
+ "vilda_lab_inhibin_b.js": {
+  "v": 1,
+  "sha256": "a9c3d5e3ba3747d9914e7e0d77e698044a23acb065207b119fbcd5c3bc7b3268"
+ },
+ "vilda_lab_inhibin_b_data.js": {
+  "v": 1,
+  "sha256": "ebe8447c307fe987501305fd29ca0cfd4037ba2c63f30e8a92246d369d80f028"
  },
  "vilda_lab_neonatal_context.js": {
   "v": 1,
@@ -736,12 +744,12 @@
   "sha256": "b907a54e138832cc294889e04e360eb43a3f393dd54ab44b5ff0b13f68fadc96"
  },
  "vilda_lab_puberty_ui.js": {
-  "v": 14,
-  "sha256": "d744d7297674c73361bf191dc64addc0a8fea92459cddf5663fb101c993d0586"
+  "v": 15,
+  "sha256": "5ec982612acbf2bd7d8fe7657bb73cf3be6413ac7e0ceb76f2690bb465ba0fad"
  },
  "vilda_lab_snapshot.js": {
-  "v": 5,
-  "sha256": "fd7aa5b54fc7860fa165239f9cb5424263195c69b05c669f1a04947be072b3ff"
+  "v": 6,
+  "sha256": "2930479864c7a3af4479dd5b02a60513aa948eec5021aa68182c630beb879824"
  },
  "vilda_logger.js": {
   "v": 2,
@@ -900,8 +908,8 @@
   "sha256": "10902bf33b86f2fe48b86468ab5188d751fa810da777736a89bf939d17e8cbba"
  },
  "vilda_session_bridge.js": {
-  "v": 45,
-  "sha256": "4164d82c98edb9f293f740b1be91a614696ae4da74b4758cd1119f61f1927f75"
+  "v": 46,
+  "sha256": "5a0ced064ea6c0de15a93ae3de6221d9ea016a7814d6607ea9a7c2171a3e9bd4"
  },
  "vilda_sga_catchup.js": {
   "v": 2,

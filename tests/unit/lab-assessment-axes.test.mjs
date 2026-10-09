@@ -157,7 +157,7 @@ describe('LH/FSH — osie z zapisanych zakresów i wspólny próg wyróżnienia'
 });
 
 describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
-  it.each(['2', '0', '100000000000000000000', '<LOD'])('inline przechowuje tylko skończone współrzędne i szerokość etykiety dla %s', (value) => {
+  it.each(['2', '0', '100000000000000000000', '<LOD'])('inline przechowuje tylko skończone współrzędne i rezerwę krawędzi etykiety dla %s', (value) => {
     const evaluation = evaluate({ value });
     evaluation.clinical.title = 'Fikcyjna treść; color: red; --value: NaN';
     const host = render(evaluation);
@@ -168,13 +168,13 @@ describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
       const declarations = axis.getAttribute('style').split(';').filter(Boolean).map((entry) => entry.split(':'));
       expect(declarations.map(([key]) => key)).toEqual(value === '<LOD' ? ['--low', '--high'] : ['--low', '--high', '--value', '--label-edge']);
       for (const [key, cssValue] of declarations) {
-        const unit = key === '--label-edge' ? 'px' : '%';
+        const unit = key === '--label-edge' ? 'em' : '%';
         expect(cssValue.endsWith(unit)).toBe(true);
         const coordinate = Number(cssValue.slice(0, -unit.length));
         expect(Number.isFinite(coordinate)).toBe(true);
         expect(coordinate).toBeGreaterThanOrEqual(0);
         if (unit === '%') expect(coordinate).toBeLessThanOrEqual(100);
-        else expect(coordinate).toBeGreaterThanOrEqual(34);
+        else expect(coordinate).toBeGreaterThanOrEqual(2);
       }
       expect(axis.getAttribute('style')).not.toMatch(/color|animation|border|NaN|Infinity/);
     }
