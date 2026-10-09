@@ -328,6 +328,73 @@ Genentech, czułość inhibiny B 15 pg/mL. Artykuł nie potwierdza kitu Gen II,
 GA ani statusu donoszenia. Nie ekstrapolujemy średnich na 90. dzień
 i nie przeliczamy SE na nową normę.
 
+### Gueguen 2025: progi diagnostyczne, bez nowego RI
+
+Pełny PDF właściciela **Gueguen i wsp. 2025**, *Inhibin B and AMH for
+Diagnosis of Hypogonadotropic Hypogonadism in Boys Under 1 Year of Age:
+A Case-control Study*, JCEM 110:e4119–e4128,
+[DOI 10.1210/clinem/dgaf219](https://doi.org/10.1210/clinem/dgaf219),
+oraz [suplement v1](https://doi.org/10.6084/m9.figshare.28773545.v1)
+przeczytano 2026-10-09. Tabelę 3 zweryfikowano również wizualnie.
+Badanie dotyczy **progów różnicowania CHH u wybranych chłopców**,
+nie przedziałów referencyjnych zdrowej populacji.
+
+Retrospektywna kohorta siedmiu ośrodków obejmuje 138 chłopców z
+mikropenisem i/lub wnętrostwem: 58 z izolowanym CHH, 32 z CHH w ramach
+wielohormonalnej niedoczynności przysadki i 48 kontroli z idiopatycznymi
+objawami genitalnymi. Kontrole również nie stanowią próby zdrowych dzieci;
+wykluczono m.in. pierwotną niewydolność jąder (FSH >4,5 IU/L podczas
+minipuberty), DSD i ciężkie zespoły wad. Kryteria rozpoznania wykorzystują testosteron we wczesnej
+minipuberty. Nie ma niezależnej kohorty walidacyjnej; autorzy wymagają
+potwierdzenia progów w takiej kohorcie.
+
+Tabela 3, s. e4125–e4126, **pg/mL**, czułość/swoistość z 95% CI:
+
+| Wiek (dni) | Cel doboru progu | Próg | Czułość % (95% CI) | Swoistość % (95% CI) |
+|---|---|---|---|---|
+| 1–4 | Najwyższa czułość | <150 | 100 (70–100) | 75 (41–96) |
+| 1–4 | Najwyższa swoistość | <85 | 89 (57–99) | 100 (68–100) |
+| 15–65 | Najwyższa czułość | <190 | 98; CI w druku „88–1.0” | 85 (68–94) |
+| 15–65 | Najwyższa swoistość | <100 | 82 (69–91) | 100 (88–100) |
+| 66–179 | Najwyższa czułość | <180 | 100 (81–100) | 80 (49–96) |
+| 66–179 | Najwyższa swoistość | <130 | 81 (57–93) | 100 (72–100) |
+| 180–365 | Oba cele | 100; brak operatora w tabeli | 100 (68–100) | 100 (74–100) |
+
+Nie uzupełniamy luki **5–14 dni**, nie przeliczamy progów na wiek
+skorygowany i nie tworzymy z nich profilu wcześniaczego. Część badanych
+urodziła się przedwcześnie, ale brak progów według GA. Liczba kontroli
+w całym okresie 66–179 dni wynosi tylko 10; tabela ROC nie podaje osobnych
+mianowników oznaczeń inhibiny B. Obserwowana swoistość 100% nie oznacza
+100% prawdopodobieństwa CHH ani pewności działania w innej populacji.
+
+Metody inhibiny B: Oxford Bioinnovation/DSL, zestaw **MCA1312KZZ**,
+czułość 6 pg/mL, oraz Ansh Labs **AL-107**, czułość 7 pg/mL. Autorzy
+deklarują podobną wydajność tych dwóch metod, co nie ustanawia zamienności
+z każdym innym testem. Nie łączymy tych progów z krzywą Gen II ani
+z katalogowym zakresem AnshLite w jedną normę.
+
+Ograniczenia zapisu źródła wymagające zachowania przy przyszłej pracy:
+
+- Tabela 2 błędnie oznacza inhibinę B jako **ng/mL**; metody i tabela 3
+  podają pg/mL. Nie stosować mnożnika 1000 do liczb z tej tabeli.
+- Dla progu <130 tabela/dyskusja podają czułość 81%, tekst wyników 82%.
+  Powyżej zachowano wartości tabeli i jawnie wskazano niepoprawny zapis
+  CI przy progu <190.
+- Dla okresu 180–365 tabela drukuje samą liczbę 100, bez `<`/`≤`.
+  Opis metod mówi o wartości poniżej progu, ale nie rozstrzyga bezpiecznie
+  granicy dokładnie 100 dla implementacji. Nie domyślamy operatora.
+- Mediany i p5–p95 kontroli w tabeli 2 opisują wyselekcjonowaną grupę
+  kliniczną. Szare zakresy ryciny 2 pochodzą z innych publikacji;
+  nie odczytujemy z obrazu nowych granic referencyjnych.
+
+**Decyzja dla obecnej wersji:** źródło dokumentujemy, bez aktywowania
+nowych progów w silniku. Chłopiec w wieku 90 dni z inhibiną B 80 pg/mL
+spełnia próg <130; przy mikropenisie/wnętrostwie może to wspierać potrzebę
+diagnostyki CHH, ale sam wynik go nie rozpoznaje. Dla **dziewczynki
+w wieku 90 dni** badanie nie ma zastosowania i nie uzupełnia dolnej normy.
+Ewentualna przyszła wskazówka diagnostyczna wymaga osobnej akceptacji
+klinicznej, jawnej populacji docelowej oraz oddzielenia od osi RI.
+
 ## Architektura, historia i regresje
 
 - `vilda_lab_inhibin_b_data.js`: jawne normy, źródła, siatka krzywej i
@@ -385,3 +452,4 @@ identyfikuje konkretny odczyt, nie zastępuje cytowania:
 | R3, pełny HTML | `fe6f3e5c913b6cce63d936e6396eff852a6bee5b83168da23aef23c452df73f8` |
 | Crofton 2002, PDF właściciela | `a1cfb39a440cb09bc15ddae664b15e80513d34b7e21aca5e2a6ccfdacf5215e9` |
 | Bergadá 2002, PDF właściciela | `d5a19ef5c10d89c72c78c1b4f8f03bf0e3bbcad61d5474b189bdef92dbb59cd7` |
+| Gueguen 2025, PDF właściciela | `4ec70fe032f1947a6c6f9b05f98c8b5563572962561ef2ae8a4827d9c5c06d14` |

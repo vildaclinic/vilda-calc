@@ -208,9 +208,20 @@ test('three completed months remain uncertain; birth context and known days dete
   await expectReadableAxisLabel(page, '250 pg/mL');
   await capture(page, 'desktop-m90days-inhibin-b');
   const desktop = page.viewportSize();
+  // Real font metrics vary across Linux and accessibility settings. A wider
+  // system face must not clip the value to an estimated character-count width.
+  const widerFont = await page.addStyleTag({ content: '.vilda-lab-axis-value { font-family: monospace !important; font-size: 18px !important; }' });
+  await expectReadableAxisLabel(page, '250 pg/mL');
   await page.setViewportSize({ width: 320, height: 780 });
   await expectReadableAxisLabel(page, '250 pg/mL');
   await expectNoOverflow(page);
+  await page.locator('#labValue').fill('0');
+  await expectReadableAxisLabel(page, '0 pg/mL');
+  await page.locator('#labValue').fill('10000');
+  await expectReadableAxisLabel(page, '10000 pg/mL');
+  await page.locator('#labValue').fill('250');
+  await widerFont.evaluate((node) => node.remove());
+  await expectReadableAxisLabel(page, '250 pg/mL');
   await page.setViewportSize(desktop);
   saved = await snapshot(page);
   expect(saved.evaluation.input.neonatalAge.postnatalDays).toMatchObject({ lower: 90, upper: 90, source: 'manual-completed-days' });

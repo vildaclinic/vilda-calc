@@ -408,12 +408,13 @@
 }
 
 .vilda-lab-assessment .vilda-lab-axis-value {
+  --label-inset: min(50%, calc(var(--label-edge, 2em) + var(--space-6px)));
   position: absolute;
   top: 0;
-  left: clamp(min(50%, var(--label-edge, 34px)), var(--value), calc(100% - min(50%, var(--label-edge, 34px))));
+  left: clamp(var(--label-inset), var(--value), calc(100% - var(--label-inset)));
   transform: translateX(-50%);
   width: max-content;
-  max-width: min(100%, calc(var(--label-edge, 34px) + var(--label-edge, 34px)));
+  max-width: 100%;
   font-size: .82rem;
   font-weight: 650;
   line-height: 21px;

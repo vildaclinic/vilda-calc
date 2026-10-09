@@ -709,11 +709,11 @@
  },
  "vilda_lab_assessment_ui.css": {
   "v": 10,
-  "sha256": "ebf73f51117f25f056f59c0ab05dcf1c3ef8c3f0caec26bb2d4c3304fee8d04f"
+  "sha256": "db9b89bf49abf46381cd78338be973417bc6c07cee11e967cb6cbcd9a48ca21c"
  },
  "vilda_lab_assessment_ui.js": {
   "v": 11,
-  "sha256": "a9889bb30a7dd5a81f4ea3a8176f177f4713a95ecabec724f6896488246f72de"
+  "sha256": "31d06eb8e78c18657200570fc1a6e373c26cf3ba3de00f77782287d7822425a9"
  },
  "vilda_lab_inhibin_b.js": {
   "v": 1,

@@ -641,7 +641,8 @@
     if (model.value !== null) {
       axis.setAttribute('data-patient-value', String(model.value));
       style += '--value:' + (model.value / model.max * 100) + '%;';
-      style += '--label-edge:' + Math.max(34, 6 + (number(model.value) + ' ' + model.unit).length * 4.2) + 'px;';
+      // Reserve font-relative space at the edges; the label's width remains intrinsic.
+      style += '--label-edge:' + Math.max(2, (number(model.value) + ' ' + model.unit).length / 2) + 'em;';
     }
     axis.setAttribute('style', style);
     axis.setAttribute('role', 'img');
