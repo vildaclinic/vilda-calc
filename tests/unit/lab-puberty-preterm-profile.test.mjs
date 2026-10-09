@@ -1,0 +1,150 @@
+import { createRequire } from 'node:module';
+import { describe, expect, it } from 'vitest';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+const require = createRequire(import.meta.url);
+const data = require('../../vilda_lab_puberty_data.js');
+const engine = require('../../vilda_lab_puberty.js');
+const preferences = require('../../vilda_lab_profile_preferences.js');
+const snapshot = require('../../vilda_lab_snapshot.js');
+const candidateId = (analyte) => `greaves-preterm-${analyte}-candidate`;
+const profile = (id) => data.profiles.find((entry) => entry.id === id);
+
+function assay(id) {
+  const selected = profile(id);
+  return { profileId: id, profileVersion: selected.version, methodId: selected.method.id, confirmation: 'configured' };
+}
+
+function input(analyte = 'lh', overrides = {}) {
+  return {
+    analyte, value: '2', unit: 'IU/L', sex: 'M',
+    contextBasis: 'current-patient', age: { years: 0, months: 0, precision: 'month' },
+    specimen: 'serum', measurementKind: 'basal',
+    assay: assay(candidateId(analyte)), preterm: 'yes', gestationalAgeWeeks: 28,
+    treatment: { context: 'none', gnrha: 'no', sexSteroids: 'no' },
+    ...overrides,
+  };
+}
+
+function expectNoReference(result) {
+  expect(result.biochemical).toMatchObject({
+    status: 'unavailable', primary: null,
+    byAge: { status: 'unavailable', range: null },
+    byStage: { status: 'unavailable', range: null },
+  });
+  expect(result).not.toHaveProperty('referencePreview');
+}
+
+describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniaczą', () => {
+  it.each([
+    ['lh', 'M', 0.1, 9.2, 111], ['lh', 'F', 0.2, 134, 108],
+    ['fsh', 'M', 0.16, 3.6, 111], ['fsh', 'F', 2.6, 181, 108],
+  ])('zachowuje raportowany przedział %s/%s bez tworzenia maszynowego zakresu wieku', (analyte, sex, lower, upper, sampleSize) => {
+    const candidate = profile(candidateId(analyte));
+    expect(candidate).toMatchObject({
+      active: false, analyte, sourceId: 'greaves-preterm-2015', version: '2026-10-09.1',
+      method: { id: 'roche-cobas-greaves-2015-unverified' }, material: 'serum', unit: 'IU/L', rows: [],
+    });
+    expect(candidate).not.toHaveProperty('scope');
+    expect(candidate.blockedReasons.length).toBeGreaterThan(0);
+    expect(candidate.reportedIntervals.filter((interval) => interval.sex === sex)).toEqual([
+      expect.objectContaining({ sex, lower, upper, sampleSize }),
+    ]);
+    expect(data.sources[candidate.sourceId]).toMatchObject({ pmid: '25562509', doi: '10.1210/jc.2014-3681' });
+  });
+
+  const contexts = ['lh', 'fsh'].flatMap((analyte) => ['yes', 'no', 'unknown'].flatMap((preterm) =>
+    ['basal', 'unknown'].map((measurementKind) => ({ analyte, preterm, measurementKind }))));
+
+  it.each(contexts)('nie klasyfikuje ani nie podgląda kandydata: $analyte, wcześniactwo $preterm, badanie $measurementKind', ({ analyte, preterm, measurementKind }) => {
+    const result = engine.evaluate(input(analyte, {
+      preterm, gestationalAgeWeeks: null, measurementKind,
+      treatment: measurementKind === 'basal'
+        ? { context: 'none', gnrha: 'no', sexSteroids: 'no' }
+        : { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' },
+    }), data);
+    expectNoReference(result);
+    expect(result.biochemical.reasonCodes).toContain('profile_not_active');
+    expect(result.provenance.profileId).toBe(candidateId(analyte));
+    expect(result.measurement).toMatchObject({ status: 'valid', value: 2, unit: 'IU/L' });
+    expect(result.clinical.code).toBe('infant_context');
+  });
+
+  it.each(['lh', 'fsh'])('dokładne daty, wiek skorygowany ani starszy pacjent nie aktywują %s', (analyte) => {
+    for (const ageContext of [
+      { birthDateISO: '2026-10-09', sampleDateISO: '2026-10-09' },
+      { birthDateISO: '2026-08-27', sampleDateISO: '2026-10-09' },
+      { age: { years: 0, months: 3, precision: 'month' }, correctedAge: { years: 0, months: 1, precision: 'month' } },
+      { age: { years: 2, months: 9, precision: 'month' } },
+    ]) {
+      const result = engine.evaluate(input(analyte, { ...ageContext, preterm: 'no', gestationalAgeWeeks: null }), data);
+      expectNoReference(result);
+      expect(result.biochemical.reasonCodes).toContain('profile_not_active');
+    }
+  });
+
+  it.each(['lh', 'fsh'])('kandydat %s nie może zostać zapisany ani odtworzony jako konfiguracja metody', (analyte) => {
+    const configured = preferences.configure(null, analyte, candidateId(analyte), data);
+    expect(configured.profiles[analyte]).toBeNull();
+    const selected = profile(candidateId(analyte));
+    const injected = { schemaVersion: 1, profiles: { [analyte]: {
+      profileId: selected.id, profileVersion: selected.version, methodId: selected.method.id, material: selected.material,
+    } } };
+    expect(preferences.normalize(injected, data).profiles[analyte]).toBeNull();
+    expect(preferences.resolve(injected, analyte, data)).toBeNull();
+  });
+
+  it.each(['lh', 'fsh'])('dodanie kandydata %s nie pozwala użyć normy Mayo u wcześniaka', (analyte) => {
+    for (const measurementKind of ['basal', 'unknown']) {
+      const result = engine.evaluate(input(analyte, { assay: assay(`mayo-${analyte}-pediatric`), measurementKind }), data);
+      expectNoReference(result);
+      expect(result.biochemical.reasonCodes).toContain('preterm_reference_not_established');
+      expect(result.provenance.profileId).toBe(`mayo-${analyte}-pediatric`);
+      expect(result.provenance.sourceIds).not.toContain('greaves-preterm-2015');
+    }
+  });
+});
+
+function quickInput() {
+  return input('lh', {
+    age: { years: 2, months: 9, precision: 'month' }, preterm: 'unknown', gestationalAgeWeeks: null,
+    assay: assay('mayo-lh-pediatric'), measurementKind: 'unknown',
+    treatment: { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' },
+    puberty: { kind: 'G', stage: 3, appliesToCurrentContext: true, source: 'fictional-patient-record' },
+  });
+}
+
+describe('Greaves 2015 — zgodność dotychczasowych ocen i historii', () => {
+  it('M2 lata 9 miesięcy/G3/LH2 zachowuje oba porównania i ostrzeżenie rozwoju', () => {
+    const referenceWithoutCandidates = structuredClone(data);
+    referenceWithoutCandidates.profiles = referenceWithoutCandidates.profiles.filter((entry) => !entry.id.startsWith('greaves-preterm-'));
+    delete referenceWithoutCandidates.sources['greaves-preterm-2015'];
+    const result = engine.evaluate(quickInput(), data);
+    expect(result).toEqual(engine.evaluate(quickInput(), referenceWithoutCandidates));
+    expect(result.referencePreview).toMatchObject({
+      byAge: { status: 'above', range: { id: 'lh-m-age1-8', bounds: { upper: { operator: '<=', value: 0.5 } } } },
+      byStage: { status: 'within', range: { id: 'lh-m-g3', bounds: { lower: { operator: '>=', value: 0.09 }, upper: { operator: '<=', value: 4.2 } } } },
+    });
+    expect(result.clinical.code).toBe('early_development');
+    expect(result.provenance.sourceIds).not.toContain('greaves-preterm-2015');
+  });
+
+  it('stary snapshot zachowuje utrwaloną wersję i zakresy bez odczytu obecnego silnika lub danych', () => {
+    const oldData = structuredClone(data);
+    oldData.dataVersion = '2026-10-04.1';
+    oldData.profiles = oldData.profiles.filter((entry) => !entry.id.startsWith('greaves-preterm-'));
+    delete oldData.sources['greaves-preterm-2015'];
+    const historical = snapshot.create(engine.evaluate(quickInput(), oldData));
+    expect(historical.status).toBe('recorded');
+    const browser = {};
+    for (const name of ['VildaLabPuberty', 'VildaLabPubertyData']) {
+      Object.defineProperty(browser, name, { get() { throw new Error('Historical reading must not evaluate current data'); } });
+    }
+    loadBrowserScript('vilda_lab_snapshot.js', browser);
+    const read = browser.VildaLabSnapshot.normalize(JSON.parse(JSON.stringify(historical)));
+    expect(read).toEqual(historical);
+    expect(read.evaluation.dataVersion).toBe('2026-10-04.1');
+    expect(read.evaluation.referencePreview.byAge.range.dataVersion).toBe('2026-10-04.1');
+    expect(read.evaluation.provenance.profileVersion).toBe('2026-10-03.1');
+  });
+});

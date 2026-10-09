@@ -180,6 +180,36 @@ Formularz `1.10.0` i renderer `1.7.0` usuwają przycisk „Zatrzymaj/Wznów anim
 
 **Wpływ kliniczny: brak zmiany wyników lub interpretacji.** Normy, progi wyróżnienia, ostrzeżenia, silnik `1.3.0`, dane/kryteria `2026-10-04.1` i snapshoty pozostają niezmienione. Bez nowych źródeł i założeń medycznych; obowiązują dotychczasowe R1/R2, populacje pediatryczne konkretnych tabel, surowica, IU/L i równoważne mIU/mL. Syntetyczna regresja produkcyjnego renderera: M2 lata 9 miesięcy/G3/LH2 ze zgodną metodą → te same warunkowe osie, `early_development` i znaczne odchylenie względem wieku, bez przycisku pauzy; systemowe ograniczenie ruchu/druk → te same ostrzeżenia bez animacji. Szczegóły: [LH_FSH.md](LH_FSH.md#przyciski-edycji-i-animacje--9102026).
 
+#### LAB-PUBERTY — kandydackie profile wcześniacze, 2026-10-09
+
+Zbiór `vilda_lab_puberty_data.js` w wersji `2026-10-09.1` zawiera osobne,
+**nieaktywne** profile `greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate`.
+Źródło: Greaves i wsp., JCEM 2015;100:1097–1103,
+[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/), DOI 10.1210/jc.2014-3681;
+odczytano abstrakt, pełny poster autorów IFCC 2015 i corrigenda 2016 (korekta
+prolaktyny, nie LH/FSH). Pełny artykuł i suplement pozostają niedostępne.
+Populacja źródłowa: wcześniaki urodzone w 24.–32. tygodniu, trzy NICU w Melbourne;
+surowica, Roche Cobas ECLIA, IU/L, centralne 95% RI. Tabela posteru: LH M0,1–9,2,
+F0,2–134; FSH M0,16–3,6, F2,6–181; n111/108. Dane liczbowe są opisowymi
+`reportedIntervals`, a nie wykonywalnymi `rows`.
+
+Niepotwierdzone: dokładne GA/PNA/PMA, pełna kwalifikacja kliniczna, ostateczna
+tabela i tożsamość testów (abstrakt e601, poster E602). Brak `scope`, puste `rows`
+i `active:false` uniemożliwiają automatyczny dobór. Wymóg pełnego źródła z AGENTS.md
+blokuje aktywację, nie samo przygotowanie jawnie nieaktywnego kandydata.
+
+**Wpływ kliniczny tego etapu: brak zmiany wyników i interpretacji.** Silnik `1.3.0`,
+aktywne zakresy, wersje istniejących profili i kryteria są niezmienione. Nie ma nowych
+pól UI, przenoszenia norm pomiędzy metodami ani aktualizacji historycznych ocen.
+Przypadki produkcyjnych funkcji: ręcznie wskazany kandydat LH/FSH → `unavailable`,
+bez `referencePreview`; konfiguracja urządzenia odrzuca kandydata; wcześniak
+ze starym profilem nadal bez RI; M2 lata 9 miesięcy/G3/LH2 IU/L → dotychczasowe
+porównania i ostrzeżenie wczesnego rozwoju; odczyt snapshotu → bez ponownego liczenia.
+
+Pełny zakres odczytu, ograniczenia i warunki przyszłej aktywacji:
+[LH_FSH.md](LH_FSH.md#przygotowanie-profilu-wcześniaczego--9102026).
+Akceptacja kliniczna przed aktywacją oraz scalenie pozostają decyzją właściciela.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

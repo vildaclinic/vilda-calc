@@ -67,7 +67,7 @@
 
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-04.1',
+    dataVersion: '2026-10-09.1',
     implementationStatus: 'prepared-not-connected-to-ui',
     unit: 'IU/L',
     knownLimitations: [
@@ -118,6 +118,55 @@
       }
     },
     sources: {
+      'greaves-preterm-2015': {
+        id: 'greaves-preterm-2015',
+        version: 'JCEM-2015-100-1097-1103-with-corrigenda-2016',
+        title: 'Hormone Modeling in Preterm Neonates: Establishment of Pituitary and Steroid Hormone Reference Intervals',
+        authors: 'Greaves RF, Pitkin J, Ho CS, Baglin J, Hunt RW, Zacharin MR',
+        pmid: '25562509',
+        doi: '10.1210/jc.2014-3681',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/25562509/',
+        doiUrl: 'https://doi.org/10.1210/jc.2014-3681',
+        accessedOn: '2026-10-09',
+        accessTimeZone: 'Europe/Warsaw',
+        readScope: 'Published article abstract; full author-uploaded IFCC EuroMedLab Paris 2015 poster, including the Hormone 95% Reference Intervals table; both 2016 corrigenda. The full JCEM article and supplement were not accessible.',
+        intervalEvidence: {
+          kind: 'author-conference-poster',
+          title: 'Hormone modelling in preterm neonates: establishment of pituitary and steroid hormone reference intervals',
+          version: 'IFCC-EuroMedLab-Paris-2015-author-upload-2015-08-01',
+          url: 'https://www.researchgate.net/publication/280581071_Hormone_modelling_in_preterm_neonates_establishment_of_pituitary_and_steroid_hormone_reference_intervals_Poster_Abstract_-_IFCC_EuroMedLab_Paris_2015_21-25_June_2015_Clin_Chem_Lab_Med_2015_53_Special_',
+          table: 'Hormone 95% Reference Intervals',
+          verification: 'Table text and PDF image checked; agreement with the final journal table remains unverified.'
+        },
+        corrigenda: [
+          { doi: '10.1210/jc.2016-1639', url: 'https://academic.oup.com/jcem/article/101/5/2265/2804857' },
+          { doi: '10.1210/jc.2016-2005', pmid: '27255718', url: 'https://academic.oup.com/jcem/article/101/6/2622/2804884' }
+        ],
+        correctionScope: 'Acknowledgements and prolactin units in Table 4 (mIU/L); neither corrigendum changes LH or FSH intervals.',
+        recruitment: {
+          infants: 248, male: 128, female: 120,
+          setting: 'Three neonatal intensive care wards in Melbourne, Australia.',
+          gestationalAgeSourceText: '24–32 weeks of gestation',
+          postnatalAgeDays: null,
+          verifiedCriteria: ['No ambiguous genitalia or other endocrine abnormalities.', 'Infants included in RI determination survived beyond the equivalent of term.'],
+          completeEligibilityVerified: false
+        },
+        methodEvidence: {
+          articleAbstract: 'Roche Cobas 8000-e601, electrochemiluminescence immunoassay',
+          authorPoster: 'Roche Cobas 8000-E602, electrochemiluminescence immunoassay',
+          assayIdentityResolved: false,
+          transferableToCurrentMayoProfiles: false
+        },
+        knownLimitations: [
+          'Pełny artykuł i suplement nie zostały odczytane; liczby pochodzą z tabeli posteru autorów.',
+          'Nie ustalono dokładnego okna wieku po urodzeniu ani zasad użycia wieku postmenstruacyjnego.',
+          'Opis 24–32 tygodnie nie rozstrzyga dokładnych granic tygodni i dni kwalifikacji.',
+          'Nie potwierdzono pełnych kryteriów włączenia/wyłączenia, w tym leczenia i chorobowości.',
+          'Rozbieżność e601/E602 oraz brak potwierdzonej wersji odczynników i kalibracji wymagają wyjaśnienia.',
+          'Zakresy z posteru nie są uniwersalnymi normami dla wszystkich wcześniaków ani całego pierwszego roku życia.',
+          'Nie wolno przenosić tu okna 0–43 dni z Greaves 2008, harmonogramu Greaves 2014 ani wyznaczać granic ze średniego wieku kohorty.'
+        ]
+      },
       'who-preterm-birth-2023': {
         id: 'who-preterm-birth-2023',
         version: '2023-05-10',
@@ -505,6 +554,58 @@
           { sex: 'M', ageMonthsSourceText: '3.5–5.0', ageEdgesResolved: false, rangeSourceText: '0.42–2.68 IU/L', lower: 0.42, upper: 2.68, sampleSize: 165 },
           { sex: 'F', ageMonthsSourceText: '2.0–3.5', ageEdgesResolved: false, rangeSourceText: '1.23–17.4 IU/L', lower: 1.23, upper: 17.4, sampleSize: 435 },
           { sex: 'F', ageMonthsSourceText: '3.5–5.0', ageEdgesResolved: false, rangeSourceText: '1.30–17.7 IU/L', lower: 1.3, upper: 17.7, sampleSize: 111 }
+        ]
+      },
+      {
+        id: 'greaves-preterm-lh-candidate',
+        version: '2026-10-09.1',
+        active: false,
+        analyte: 'lh',
+        sourceId: 'greaves-preterm-2015',
+        method: {
+          id: 'roche-cobas-greaves-2015-unverified',
+          name: 'Roche Cobas ECLIA — Greaves 2015 (metoda do weryfikacji)',
+          description: 'Abstract: 8000-e601; author poster: 8000-E602. Assay version and transferability unresolved; not an alias of AnshLite or a current Mayo assay.'
+        },
+        material: 'serum',
+        unit: 'IU/L',
+        examinationType: 'unknown',
+        population: {
+          label: 'Wcześniaki urodzone w 24.–32. tygodniu ciąży, Melbourne — Greaves 2015; dokładne kryteria wieku niepotwierdzone',
+          statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
+        },
+        blockedReasons: ['fullPrimaryTextUnavailable', 'unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges', 'unresolvedAssayIdentity', 'unresolvedClinicalEligibility', 'finalJournalTableUnverified'],
+        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonej populacji.', 'Przedziały z posteru są metadanymi do przeglądu, nie aktywnymi normami ani progami rozpoznania.'],
+        rows: [],
+        reportedIntervals: [
+          { sex: 'M', rangeSourceText: '0.1–9.2 IU/L', lower: 0.1, upper: 9.2, sampleSize: 111 },
+          { sex: 'F', rangeSourceText: '0.2–134 IU/L', lower: 0.2, upper: 134, sampleSize: 108 }
+        ]
+      },
+      {
+        id: 'greaves-preterm-fsh-candidate',
+        version: '2026-10-09.1',
+        active: false,
+        analyte: 'fsh',
+        sourceId: 'greaves-preterm-2015',
+        method: {
+          id: 'roche-cobas-greaves-2015-unverified',
+          name: 'Roche Cobas ECLIA — Greaves 2015 (metoda do weryfikacji)',
+          description: 'Abstract: 8000-e601; author poster: 8000-E602. Assay version and transferability unresolved; not an alias of the current Mayo Roche Elecsys FSH profile.'
+        },
+        material: 'serum',
+        unit: 'IU/L',
+        examinationType: 'unknown',
+        population: {
+          label: 'Wcześniaki urodzone w 24.–32. tygodniu ciąży, Melbourne — Greaves 2015; dokładne kryteria wieku niepotwierdzone',
+          statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
+        },
+        blockedReasons: ['fullPrimaryTextUnavailable', 'unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges', 'unresolvedAssayIdentity', 'unresolvedClinicalEligibility', 'finalJournalTableUnverified'],
+        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonej populacji.', 'W posterze część wyników FSH przekraczała liniowość testu 200 IU/L; sposób ich obsługi trzeba potwierdzić w pełnym artykule.'],
+        rows: [],
+        reportedIntervals: [
+          { sex: 'M', rangeSourceText: '0.16–3.6 IU/L', lower: 0.16, upper: 3.6, sampleSize: 111 },
+          { sex: 'F', rangeSourceText: '2.6–181 IU/L', lower: 2.6, upper: 181, sampleSize: 108 }
         ]
       }
     ]
