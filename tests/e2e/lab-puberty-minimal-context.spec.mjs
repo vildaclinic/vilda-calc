@@ -234,7 +234,7 @@ test('recorded hormonal treatment and stimulation keep catalog comparisons block
   }
 });
 
-test('a historical sample preserves dates, volume and interview warnings after removing their live controls', async ({ page }) => {
+test('a historical sample preserves its data and interview warnings without displaying the context table', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await prepareMinimalResult(page);
@@ -281,9 +281,10 @@ test('a historical sample preserves dates, volume and interview warnings after r
   await expect(comparison(recorded, 'age')).toHaveAttribute('data-status', 'above');
   await expect(comparison(recorded, 'stage')).toHaveAttribute('data-status', 'within');
   await kliknij(recorded.locator(':scope > details > summary'));
-  await expect(recorded).toContainText('17.06.2026');
-  await expect(recorded).toContainText('6 mL');
-  await expect(recorded).toContainText('Prader');
+  await expect(recorded.locator('.vilda-lab-context, .vilda-lab-context-note, dl')).toHaveCount(0);
+  await expect(recorded).not.toContainText('17.06.2026');
+  await expect(recorded).not.toContainText('6 mL');
+  await expect(recorded).not.toContainText('Prader');
   await expect(recorded).toContainText('OUN');
   await expect(recorded).toContainText(/regresj/i);
 });

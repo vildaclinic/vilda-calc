@@ -47,6 +47,11 @@ const withClass = (host, name) => descendants(host, (node) => hasClass(node, nam
 const visibleText = (node) => node.tagName === 'details' ? '' : node._text + ' ' + node.children.map(visibleText).join(' ');
 const occurrences = (text, phrase) => text.split(phrase).length - 1;
 const saved = (evaluation) => snapshot.normalize(JSON.parse(JSON.stringify(snapshot.create(evaluation))));
+function expectNoContextTable(host) {
+  expect(withClass(host, 'vilda-lab-context')).toHaveLength(0);
+  expect(descendants(host, (node) => ['dl', 'dt', 'dd'].includes(node.tagName))).toHaveLength(0);
+  expect(host.textContent).not.toMatch(/Kontekst użyty w ocenie|Podstawa oceny|Kontekst z formularza głównego/);
+}
 function render(evaluation, options = {}) {
   const host = documentDouble().createElement('div');
   ui.renderEvaluation(host, evaluation, { compact: true, ...options });
@@ -88,7 +93,7 @@ describe('LH/FSH — zwięzła prezentacja bez zmiany oceny', () => {
     expect(withClass(host, 'vilda-lab-axis')).toHaveLength(0);
   });
 
-  it('metoda i źródła pozostają dostępne raz, a techniczne wersje i puste odpowiedzi znikają z HTML', () => {
+  it('metoda i źródła pozostają dostępne raz, a cała tabela kontekstu i techniczne wersje znikają z HTML', () => {
     const evaluation = evaluate();
     const view = ui.buildView(evaluation);
     const host = render(evaluation, { live: true, hideMeasurement: true });
@@ -101,8 +106,7 @@ describe('LH/FSH — zwięzła prezentacja bez zmiany oceny', () => {
       expect(host.textContent).toContain(population);
     }
     expect(host.textContent).not.toMatch(/Silnik:|Dane:|Kryteria rozwoju:|wersja profilu:|Z zapisanej konfiguracji oznaczenia:/);
-    const values = descendants(host, (node) => node.tagName === 'dd').map((node) => node.textContent);
-    expect(values).not.toEqual(expect.arrayContaining(['Nieznany', 'Nieznana', 'Nie wiadomo', 'Nie podano', 'Nie ustalono', 'Inny lub nieznany', 'Nie oceniono Th/M lub G']));
+    expectNoContextTable(host);
     expect(host.textContent).not.toContain('Nie podano potwierdzonego zakresu laboratorium');
     // Removing copy from the screen must not rewrite the public view data.
     expect(view.context).toContainEqual({ label: 'Podstawa oceny', value: 'Kontekst z formularza głównego' });
@@ -111,13 +115,17 @@ describe('LH/FSH — zwięzła prezentacja bez zmiany oceny', () => {
   });
 
   it.each([
-    ['M', { kind: 'G', stage: 3, appliesToCurrentContext: true }, /chłopiec|mężczyzna/i],
-    ['F', { kind: 'Th', stage: 3, appliesToCurrentContext: true }, /dziewczynka|kobieta/i],
-  ])('płeć %s ma czytelną nazwę w kontekście zamiast technicznego kodu', (sex, puberty, expected) => {
-    const host = render(evaluate({ sex, puberty }));
-    const context = withClass(host, 'vilda-lab-context')[0];
-    expect(context.textContent).toMatch(expected);
-    expect(descendants(context, (node) => node.tagName === 'dd').map((node) => node.textContent)).not.toContain(sex);
+    ['M', { kind: 'G', stage: 3, appliesToCurrentContext: true }],
+    ['F', { kind: 'Th', stage: 3, appliesToCurrentContext: true }],
+  ])('znana płeć %s i stadium pozostają w ocenie i na osi bez dodatkowej tabeli kontekstu', (sex, puberty) => {
+    const evaluation = evaluate({ sex, puberty });
+    const before = JSON.stringify(evaluation);
+    const host = render(evaluation);
+    expectNoContextTable(host);
+    expect(visibleText(host)).toContain('Dla stadium ' + puberty.kind + puberty.stage);
+    expect(ui.buildView(evaluation).context).toContainEqual({ label: 'Płeć dla kryteriów', value: sex });
+    expect(ui.buildView(evaluation).context.find((row) => row.label === 'Obserwacja rozwoju').value).toContain(puberty.kind + puberty.stage);
+    expect(JSON.stringify(evaluation)).toBe(before);
   });
 
   it('minimalny kontekst zachowuje dwa różne porównania, widoczne warunki i istotne odchylenie wieku', () => {
@@ -172,16 +180,22 @@ describe('LH/FSH — zwięzła prezentacja bez zmiany oceny', () => {
 });
 
 describe('LH/FSH — uproszczony odczyt starszych zapisów', () => {
-  it('historyczny błędny wynik nadal ma jeden komunikat błędu obok zachowanego ostrzeżenia rozwoju', () => {
-    const assessment = saved(evaluate({ value: 'błąd' }));
+  it.each(['', '   ', 'błąd'])('historyczny niekompletny wynik %j nie generuje kaskady biochemicznej obok zachowanego ostrzeżenia rozwoju', (value) => {
+    const assessment = saved(evaluate({ value }));
     expect(assessment.status).toBe('recorded');
     expect(assessment.evaluation.measurement.status).toBe('invalid');
+    const before = JSON.stringify(assessment);
     const host = documentDouble().createElement('div');
     ui.renderAssessment(host, assessment, { compact: true });
-    expect(host.textContent).toContain('błąd IU/L');
-    expect(host.textContent.match(/Nieprawidłowy zapis wyniku|Zapis wyniku wymaga poprawienia/g)).toHaveLength(1);
+    if (value.trim()) expect(host.textContent).toContain('błąd IU/L');
+    expect(host.textContent.match(/Nieprawidłowy zapis wyniku|Zapis wyniku wymaga poprawienia/g) || []).toHaveLength(value.trim() ? 1 : 0);
     expect(withClass(host, 'vilda-lab-axis')).toHaveLength(0);
+    expect(withClass(host, 'vilda-lab-comparison')).toHaveLength(0);
+    expect(host.textContent).not.toMatch(/Rodzaj oznaczenia nie odpowiada|tych warunków nie potwierdzono|Nie ustalono stosowania|Brak dopasowanej oceny/);
     expect(visibleText(host)).toContain(assessment.evaluation.clinical.title);
+    expect(host.textContent).toContain('Niskie lub niewykrywalne LH nie wyklucza');
+    expectNoContextTable(host);
+    expect(JSON.stringify(assessment)).toBe(before);
   });
 
   it.each([
@@ -198,7 +212,24 @@ describe('LH/FSH — uproszczony odczyt starszych zapisów', () => {
     expect(assessment.evaluation).not.toHaveProperty('referencePreview');
   });
 
-  it('zapis zachowuje daty, metodę i znane odpowiedzi po usunięciu pustych wierszy bez czytania bieżącego pacjenta', () => {
+  it.each([
+    ['leczenie', { treatment: { context: 'hormonal', gnrha: 'yes', sexSteroids: 'no' } }, /odrębnego profilu/],
+    ['stymulacja', { measurementKind: 'stimulated' }, /po stymulacji/],
+    ['wcześniactwo', { age: { years: 0, months: 3, precision: 'month' }, puberty: {}, preterm: 'yes' }, /wcześniaka/],
+  ])('błędna liczba nie ukrywa znanego ograniczenia: %s', (_, overrides, expected) => {
+    const assessment = saved(evaluate({ value: 'błąd', ...overrides }));
+    expect(assessment.status).toBe('recorded');
+    const before = JSON.stringify(assessment);
+    const host = documentDouble().createElement('div');
+    ui.renderAssessment(host, assessment, { compact: true });
+    expect(host.textContent).toMatch(expected);
+    expect(withClass(host, 'vilda-lab-comparison')).toHaveLength(0);
+    expect(withClass(host, 'vilda-lab-axis')).toHaveLength(0);
+    expectNoContextTable(host);
+    expect(JSON.stringify(assessment)).toBe(before);
+  });
+
+  it('usunięcie całej tabeli nie zmienia zapisanych dat i odpowiedzi ani widocznych ostrzeżeń OUN i regresji', () => {
     const evaluation = evaluate({
       contextBasis: 'sample', birthDateISO: '2018-06-17', sampleDateISO: '2026-06-17', age: null,
       measurementKind: 'basal',
@@ -216,19 +247,25 @@ describe('LH/FSH — uproszczony odczyt starszych zapisów', () => {
     loadBrowserScript('vilda_lab_assessment_ui.js', win);
     const host = doc.createElement('div');
     win.VildaLabAssessmentUI.renderAssessment(host, assessment, { compact: true });
-    expect(host.textContent).toContain('17.06.2026');
-    expect(host.textContent).toContain('17.06.2018');
+    expectNoContextTable(host);
+    expect(host.textContent).not.toContain('17.06.2026');
+    expect(host.textContent).not.toContain('17.06.2018');
     expect(host.textContent).toContain('AnshLite LH CLIA');
-    expect(host.textContent).toContain('Badanie lekarskie');
-    expect(host.textContent).toContain('6 mL');
-    expect(host.textContent).toContain('Pradera');
+    expect(host.textContent).not.toContain('Badanie lekarskie');
+    expect(host.textContent).not.toContain('6 mL');
+    expect(host.textContent).not.toContain('Pradera');
     expect(visibleText(host)).toContain('Objawy OUN:');
     expect(visibleText(host)).toContain('Regresja cech dojrzewania:');
-    const rows = withClass(host, 'vilda-lab-context')[0].children;
-    const progression = rows.findIndex((node) => node.tagName === 'dt' && node.textContent === 'Progresja');
-    expect(progression).toBeGreaterThanOrEqual(0);
-    expect(rows[progression + 1].textContent).toBe('Nie');
-    expect(descendants(host, (node) => node.tagName === 'dd').map((node) => node.textContent)).not.toContain('Nie wiadomo');
+    const view = ui.buildView(assessment.evaluation);
+    expect(view.context).toEqual(expect.arrayContaining([
+      { label: 'Pobranie', value: '17.06.2026' },
+      { label: 'Data urodzenia użyta w ocenie', value: '17.06.2018' },
+      { label: 'Źródło obserwacji', value: 'Badanie lekarskie' },
+      { label: 'Progresja', value: 'Nie' },
+      { label: 'Objawy OUN', value: 'Tak' },
+      { label: 'Regresja', value: 'Tak' },
+    ]));
+    expect(view.context.find((row) => row.label === 'Objętość jąder').value).toContain('6 mL · Orchidometr Pradera');
     expect(JSON.stringify(assessment)).toBe(before);
     expect(win.VildaLabPuberty.evaluate).not.toHaveBeenCalled();
     expect(win.VildaPubertalStatus.dane).not.toHaveBeenCalled();

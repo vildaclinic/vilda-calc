@@ -99,7 +99,7 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     expect(view.versions).toContain('Dane: 2026-10-04.1');
   });
 
-  it('odczyt lokalnego snapshotu zachowuje konkretną metodę, populację oraz osobne wersje źródła i zakresu', () => {
+  it('odczyt lokalnego snapshotu pokazuje metodę i populację, zachowując ukryte wersje źródła i zakresu w danych', () => {
     const input = {
       assay: { profileId: '', methodId: 'synthetic-lh-platform-2024', confirmation: 'reported' },
       localReference: {
@@ -123,11 +123,18 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     expect(more.textContent).toContain('synthetic-lh-platform-2024');
     expect(more.textContent).toContain('Fikcyjna pediatryczna populacja odniesienia');
     expect(more.textContent).toContain('Fikcyjne Laboratorium Alfa');
-    expect(more.textContent).toContain('wersja źródła: raport-2024.3');
-    expect(more.textContent).toContain('wersja zakresu: range-2024.7');
+    expect(more.textContent).not.toContain('raport-2024.3');
+    expect(more.textContent).not.toContain('range-2024.7');
     expect(host.textContent).not.toContain('range-2026.1');
     expect(host.textContent).not.toContain('synthetic-new-platform');
-    expect(ui.buildView(assessment.evaluation).context.find((item) => item.label === 'Metoda próbki').value).toContain('synthetic-lh-platform-2024');
+    const view = ui.buildView(assessment.evaluation);
+    expect(view.context.find((item) => item.label === 'Metoda próbki').value).toContain('synthetic-lh-platform-2024');
+    expect(view.comparisons.find((item) => item.key === 'local')).toMatchObject({
+      referenceVersion: 'range-2024.7', source: { version: 'raport-2024.3' },
+    });
+    expect(assessment.evaluation.input.localReference).toMatchObject({
+      version: 'range-2024.7', source: { version: 'raport-2024.3' },
+    });
   });
 
   it('jawnie opisuje precyzję ręcznego wieku i brak potwierdzenia historycznego Tannera', () => {
@@ -242,7 +249,10 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     const host = documentDouble().createElement('div');
     ui.renderEvaluation(host, value);
     expect(host.textContent).toContain('<img src=x onerror=alert(1)>');
-    expect(host.textContent).toContain('<img src=x onerror=alert(2)>');
+    // The removed context table no longer displays the input method. The
+    // public view still retains its literal text without turning it into HTML.
+    expect(host.textContent).not.toContain('<img src=x onerror=alert(2)>');
+    expect(ui.buildView(value).context.find((row) => row.label === 'Metoda próbki').value).toContain('<img src=x onerror=alert(2)>');
     expect(host.textContent).toContain('<img src=x onerror=alert(3)>');
     expect(descendants(host, (node) => node.tagName === 'img' || node.tagName === 'script')).toEqual([]);
     expect(descendants(host, (node) => node.tagName === 'a').every((node) => /^https?:\/\//.test(node.getAttribute('href')))).toBe(true);
