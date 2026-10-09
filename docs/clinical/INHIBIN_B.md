@@ -250,15 +250,13 @@ operator; cenzorowanego wyniku nie rysujemy jako dokładnego punktu.
 
 ## Luki i materiały potrzebne do dalszego rozszerzenia
 
-- **Dolna granica u dziewczynek w minipuberty:** do uzupełnienia pełny
-  Crofton 2002, [PMID 11874414](https://pubmed.ncbi.nlm.nih.gov/11874414/),
-  DOI 10.1046/j.0300-0664.2001.01449.x, oraz Bergadá 2002,
-  [PMID 11821098](https://pubmed.ncbi.nlm.nih.gov/11821098/),
-  DOI 10.1016/S0015-0282(01)02965-X (31 dziewczynek, 4–65 dni).
-  Abstrakty nie potwierdzają dolnego RI; uzyskanie PDF nie gwarantuje
-  użytecznej normy. Pełny Chada 2003 (PMID 12790766, tabela 2) podaje
-  jedynie min–max w pięcioosobowych grupach 0–3 i 4–6 miesięcy;
-  obserwowanego minimum nie uznajemy za dolny centyl referencyjny.
+- **Dolna granica u dziewczynek w minipuberty:** pełne PDF Crofton 2002
+  i Bergadá 2002 dostarczone przez właściciela przeczytano 2026-10-09,
+  sprawdzając też obrazy tabel. Nie dostarczają liczbowego dolnego RI
+  dla konkretnego dnia/miesiąca minipuberty. Szczegóły poniżej.
+  Pełny Chada 2003 (PMID 12790766, tabela 2) podaje jedynie min–max
+  w pięcioosobowych grupach 0–3 i 4–6 miesięcy; obserwowanego minimum
+  nie uznajemy za dolny centyl referencyjny.
 - **Pełna krzywa chłopców w pierwszym roku:** Busch i wsp. 2022,
   [DOI 10.1210/clinem/dgac115](https://doi.org/10.1210/clinem/dgac115),
   [pełny tekst](https://academic.oup.com/jcem/article/107/6/1560/6539293).
@@ -278,9 +276,10 @@ operator; cenzorowanego wyniku nie rysujemy jako dokładnego punktu.
   2002, [DOI 10.1046/j.0300-0664.2001.01448.x](https://doi.org/10.1046/j.0300-0664.2001.01448.x),
   do niezależnej weryfikacji tabeli/metody/stadium.
 - **Stadium u dziewczynek:** potrzebne pełne tabele i metody Sehested 2000,
-  [DOI 10.1210/jcem.85.4.6512](https://doi.org/10.1210/jcem.85.4.6512),
-  lub Crofton 2002,
-  [DOI 10.1046/j.0300-0664.2001.01449.x](https://doi.org/10.1046/j.0300-0664.2001.01449.x).
+  [DOI 10.1210/jcem.85.4.6512](https://doi.org/10.1210/jcem.85.4.6512).
+  Dostarczony Crofton 2002 rozróżnia B1, B2 i połączone B3–5, lecz
+  jego tabela 2 podaje medianę i IQR, nie RI; część grup obejmuje
+  leczenie GH. Nie nadaje się do bezpośredniego utworzenia norm Th1–Th5.
 - **Wcześniaki:** potrzebne pełne teksty/metody/tabele Kuiri-Hänninen 2018,
   [DOI 10.1111/cen.13716](https://doi.org/10.1111/cen.13716), i Chellakooty
   2003, [DOI 10.1210/jc.2002-021468](https://doi.org/10.1210/jc.2002-021468).
@@ -292,6 +291,42 @@ Pełny lifespan Borelli-Kjær 2025,
 i suplement [10.6084/m9.figshare.26056558.v1](https://doi.org/10.6084/m9.figshare.26056558.v1)
 również przeczytano. Nie zawierają tabel parametrów LMS ani przedziałów
 referencyjnych G/Th; mediany i rozrzuty punktów nie zastępują RI.
+
+### Wynik analizy dostarczonych PDF
+
+**Crofton 2002:** *Dimeric inhibins in girls from birth to adulthood:
+relationship with age, pubertal stage, FSH and oestradiol*, Clinical
+Endocrinology 56:223–230,
+[PMID 11874414](https://pubmed.ncbi.nlm.nih.gov/11874414/),
+DOI 10.1046/j.0300-0664.2001.01449.x. Na s. 227, tabela 1, inhibina B
+ma wspólną grupę **0–6 lat**, n=105, p2,5–p97,5 **<8,0–72,7 ng/L**;
+37/105 próbek (35%) było poniżej przyjętej granicy wykrywalności.
+Nie jest to dodatnia dolna norma 8,0. Osobny wiersz **<0,25 roku,
+n=14 dotyczy inhibiny A**, a nie B. Nie przenosimy go na minipuberty B.
+
+Materiał w Crofton: osocze. Swoisty double-antibody ELISA wg Groome,
+standard immunooczyszczony, skalibrowany wobec rekombinowanej inhibiny B
+Genentech. Na s. 225 czułość analityczna wynosi 5 ng/L, zaś operacyjny
+próg wykrywalności 8 ng/L. Wyniki poniżej progu zastępowano nim w analizie
+statystycznej; to nie podstawa do nadania pacjentce dokładnego wyniku 8.
+Przedziały stadiowe na s. 227 są medianami i IQR, z B3–5 połączonymi
+i z leczeniem GH w części grup B1/B3–5. Nie tworzymy z nich RI.
+
+**Bergadá 2002:** *High serum concentrations of dimeric inhibins A and B
+in normal newborn girls*, Fertility and Sterility 77:363–365,
+[PMID 11821098](https://pubmed.ncbi.nlm.nih.gov/11821098/),
+DOI 10.1016/S0015-0282(01)02965-X. Tabela 1 na s. 364 podaje
+**średnie ± SE**, m.in. 177,2 ±32, 213,9 ±45 oraz 88,6 ±19 pg/mL
+w grupach n=14/10/7; nie są to dolne/górne RI. Rycina 1 przedstawia
+indywidualne wyniki oraz średnie, bez krzywych referencyjnych.
+
+Cała próba: 31 dziewczynek, wiek w abstrakcie/metodach 4–65 dni;
+przypis tabeli podaje 4–14, 17–25 i 31–60 dni, więc zapis wieku jest
+niespójny. W każdym wariancie **90 dni wykracza poza badaną populację**.
+Surowica, swoisty two-site ELISA wg Groome, standardy rekombinowane
+Genentech, czułość inhibiny B 15 pg/mL. Artykuł nie potwierdza kitu Gen II,
+GA ani statusu donoszenia. Nie ekstrapolujemy średnich na 90. dzień
+i nie przeliczamy SE na nową normę.
 
 ## Architektura, historia i regresje
 
@@ -348,3 +383,5 @@ identyfikuje konkretny odczyt, nie zastępuje cytowania:
 | R2, pełny HTML | `5ab2b805ae6ae82c8c0280150db4ce5a0650c65c9e65801181c46ea2f01df465` |
 | R2, oryginalny suplement DOCX v1 | `f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297` |
 | R3, pełny HTML | `fe6f3e5c913b6cce63d936e6396eff852a6bee5b83168da23aef23c452df73f8` |
+| Crofton 2002, PDF właściciela | `a1cfb39a440cb09bc15ddae664b15e80513d34b7e21aca5e2a6ccfdacf5215e9` |
+| Bergadá 2002, PDF właściciela | `d5a19ef5c10d89c72c78c1b4f8f03bf0e3bbcad61d5474b189bdef92dbb59cd7` |
