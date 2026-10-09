@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '9';
+  var VERSION = '10';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -207,14 +207,31 @@
       && typeof payload.puberty === 'object' ? payload.puberty : null;
     var we = naWejscie(p);
     var stan = stanZPayloadu(payload);
-    zapamietane = (we || stan)
+    var neonatal = neonatalZPayloadu(payload);
+    zapamietane = (we || stan || neonatal)
       ? { we: we, stan: stan, plec: plec(payload && payload.user ? payload.user.sex : null) }
       : null;
+    if (neonatal) zapamietane.neonatalAge = neonatal;
     zapamietanyPacjent = patientId;
     sejfPamieci = patientId ? w.VildaVault || null : null;
     statusOdczytu = status;
     oglos();
     return zapamietane;
+  }
+
+  // Same patient/vault lifecycle as puberty. Do not read the unscoped perinatal
+  // cache: it may still contain the previous patient during an asynchronous load.
+  function neonatalZPayloadu(payload) {
+    var p = payload && payload.perinatal;
+    if (!p || p.gestationalWeeks == null || typeof p.gestationalWeeks === 'boolean' || tekst(p.gestationalWeeks) === '') return null;
+    var weeks = Number(p.gestationalWeeks);
+    var hasDays = p.gestationalDays != null && tekst(p.gestationalDays) !== '';
+    var days = hasDays ? Number(p.gestationalDays) : null;
+    if (!Number.isSafeInteger(weeks) || weeks < 0
+      || hasDays && (typeof p.gestationalDays === 'boolean' || !Number.isSafeInteger(days) || days < 0 || days > 6)) return null;
+    var lower = weeks * 7 + (hasDays ? days : 0);
+    if (!Number.isSafeInteger(lower + 6)) return null;
+    return { gestationalDays: { lower: lower, upper: hasDays ? lower : lower + 6, source: 'patient-record' } };
   }
 
   /* Zachowane synchroniczne API dla konsumentów danych bez sejfu. Bez jawnego ID
@@ -237,7 +254,7 @@
     var id = identyfikator(patientId);
     var zgodny = id && id === zapamietanyPacjent && pasujeDoTozsamosci(id) && sejfOdblokowany();
     var status = zgodny ? statusOdczytu : 'unavailable';
-    return {
+    var context = {
       patientId: id, status: status,
       // Płeć to część pochodzenia zapisanego wywiadu. Konsument nie może
       // reinterpretować początku pokwitania według późniejszej korekty formularza.
@@ -245,6 +262,10 @@
       puberty: status === 'ready' && zapamietane && zapamietane.we ? Object.assign({}, zapamietane.we) : null,
       state: status === 'ready' && zapamietane && zapamietane.stan ? Object.assign({}, zapamietane.stan) : null
     };
+    if (status === 'ready' && zapamietane && zapamietane.neonatalAge) {
+      context.neonatalAge = { gestationalDays: Object.assign({}, zapamietane.neonatalAge.gestationalDays) };
+    }
+    return context;
   }
 
   function zKartyPacjenta() {

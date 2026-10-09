@@ -237,8 +237,8 @@ describe('LH/FSH — utrwalenie nowych komunikatów i zgodność starszych ocen'
   });
 
   it('wersjonuje zmienioną interpretację niezależnie od niezmienionych profilów RI', () => {
-    expect(engine.version).toBe('1.3.0');
-    expect(data.dataVersion).toBe('2026-10-09.2');
+    expect(engine.version).toBe('1.4.0');
+    expect(data.dataVersion).toBe('2026-10-09.3');
     expect(data.clinicalProfile.version).toBe('2026-10-04.1');
     expect(data.biochemicalPolicy.version).toBe('2026-10-03.1');
     for (const id of ['mayo-lh-pediatric', 'mayo-fsh-pediatric', 'johannsen-minipuberty-lh-candidate', 'johannsen-minipuberty-fsh-candidate']) {

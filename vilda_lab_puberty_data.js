@@ -64,11 +64,30 @@
 
   var lhStageIAge = age(bound('>=', 1), bound('<', 9), 'Stage I (1–8 years)', 'attained-year-band');
   var lhCensoredLower = bound('<', 0.02);
+  // Operacyjne granice zatwierdzone przez właściciela 9.10.2026 na podstawie
+  // protokołu Greaves 2015; nie są empirycznymi skrajami podgrupy LH/FSH.
+  var pretermPolicy = {
+    id: 'greaves-preterm-applicability', version: '2026-10-09.3',
+    sourceIds: ['greaves-preterm-2015'], approvedOn: '2026-10-09',
+    approval: 'Clinical owner approved GA 24+0–32+0 inclusive, PMA at most 36+0 inclusive, exclusion of the first 24 hours and uncertainty crossing that limit.',
+    gestationalAgeDays: { lower: bound('>=', 168), upper: bound('<=', 224) },
+    postnatalAgeDays: { lower: bound('>=', 1), upper: null },
+    postmenstrualAgeDays: { lower: bound('>=', 0), upper: bound('<=', 252) },
+    ageSemantics: 'Closed intervals of possible completed days. Calendar-date difference D means [max(0,D-1),D]; no birth time is invented. All possible GA/PNA/PMA values must fit.'
+  };
+  function pretermAge() {
+    return { axis: 'postmenstrualDays', lower: pretermPolicy.postmenstrualAgeDays.lower, upper: pretermPolicy.postmenstrualAgeDays.upper,
+      sourceText: 'PMA ≤36+0 tyg.; GA 24+0–32+0; po ukończeniu pierwszej doby', interpretation: 'owner-approved-applicability-policy-2026-10-09' };
+  }
+  function pretermScope() {
+    return { age: pretermAge(), gestationalAgeDays: pretermPolicy.gestationalAgeDays, postnatalAgeDays: pretermPolicy.postnatalAgeDays,
+      policyId: pretermPolicy.id, policyVersion: pretermPolicy.version };
+  }
 
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-09.2',
-    implementationStatus: 'prepared-not-connected-to-ui',
+    dataVersion: '2026-10-09.3',
+    implementationStatus: 'active-in-ui',
     unit: 'IU/L',
     knownLimitations: [
       'Zakres referencyjny nie jest progiem rozpoznania CPP, opóźnienia ani etiologii hipogonadyzmu.',
@@ -129,8 +148,18 @@
         doiUrl: 'https://doi.org/10.1210/jc.2014-3681',
         accessedOn: '2026-10-09',
         accessTimeZone: 'Europe/Warsaw',
-        readScope: 'Full JCEM article supplied as greaves2015.pdf, pp. 1097–1103: methods and eligibility p. 1098, cohort and age analysis pp. 1099–1101, Table 4 p. 1102; both 2016 corrigenda. The supplement was not accessible. The final journal table supersedes the previously read author poster.',
+        readScope: 'Full JCEM article supplied as greaves2015.pdf, pp. 1097–1103: methods and eligibility p. 1098, cohort and age analysis pp. 1099–1101, Table 4 p. 1102; full four-page supplement jc-14-3681.pdf, Tables 1–2 and Figure 1; both 2016 corrigenda. Full Greaves 2014 three-page uncorrected proof was read for biobank context only. The final journal table supersedes the previously read author poster.',
         evidenceSha256: '96c1875105cab6dcc301a7494efa47f3a9bf39161dbd3adcf06847c1fa2bc251',
+        supplementaryEvidence: {
+          filename: 'jc-14-3681.pdf', doi: '10.1210/jc.2014-3681',
+          evidenceSha256: '99671cf6eff7f3e47c9fdcf156de613fd5a4c1579ed5800ce2a1df5b579b87f8',
+          readScope: 'All four pages: Tables 1–2 and Figure 1. The age scatter is PMA, not postnatal days. Figure axes are not exact eligibility bounds.'
+        },
+        biobankEvidence: {
+          doi: '10.1016/j.clinbiochem.2014.05.040', version: 'UNCORRECTED PROOF',
+          evidenceSha256: '096385db34e575a39b28aa5c323739c42b62295b0b7d0ee75451d56ab28481b6',
+          readScope: 'All three pages. R1 scheduled postnatal collections and R2 preliminary ranges/e602 are not transferred to the final 2015 e601 profile.'
+        },
         intervalEvidence: {
           kind: 'journal-table',
           version: 'JCEM-2015-100-1097-1103',
@@ -165,7 +194,7 @@
           transferableToCurrentMayoProfiles: false
         },
         knownLimitations: [
-          'Pełny artykuł odczytano; suplement pozostaje niedostępny. Tabela 4 nie określa dokładnego okna dni życia.',
+          'Pełny artykuł i suplement odczytano. Kwalifikacja GA 24+0–32+0, PMA ≤36+0 i wyłączenie pierwszej doby są zatwierdzoną polityką kliniczną aplikacji, nie empirycznymi skrajami finalnej podgrupy LH/FSH.',
           'Obserwowane GA 23+3–32+4 dotyczy całej kohorty 234 dzieci; nie ustala dokładnej kwalifikacji podgrupy LH/FSH.',
           'Średnia wieku pobrania i obserwacja biobanku do 36 tygodni nie wyznaczają okna stosowania RI z pierwszych próbek.',
           'Górne granice RI mają niepewność: względna szerokość 90% CI wynosi LH M35%/F52%, FSH M30%/F27% (tabela 4).',
@@ -346,6 +375,7 @@
       infantAgeYears: bound('<', 1),
       pretermGestationalWeeks: bound('<', 37)
     },
+    pretermEligibilityPolicy: pretermPolicy,
     clinicalProfile: {
       id: 'puberty-timing-pediatric',
       version: '2026-10-04.1',
@@ -565,8 +595,8 @@
       },
       {
         id: 'greaves-preterm-lh-candidate',
-        version: '2026-10-09.2',
-        active: false,
+        version: '2026-10-09.3',
+        active: true,
         analyte: 'lh',
         sourceId: 'greaves-preterm-2015',
         method: {
@@ -578,12 +608,15 @@
         unit: 'IU/L',
         examinationType: 'basal',
         population: {
-          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; pierwsze próbki, dokładne okno wieku nieustalone',
+          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; GA 24+0–32+0, PMA ≤36+0, po pierwszej dobie według polityki aplikacji',
           statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
         },
-        blockedReasons: ['unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges'],
-        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonego okna wieku.', 'Przedziały z tabeli 4 pełnego artykułu są metadanymi do przeglądu, nie aktywnymi normami ani progami rozpoznania.'],
-        rows: [],
+        scope: pretermScope(),
+        knownLimitations: ['Granice GA/PMA i wyłączenie pierwszej doby są polityką aplikacji zatwierdzoną przez właściciela, a nie min/max badanej podgrupy.', 'Zakres stężenia z tabeli 4 nie rozpoznaje prawidłowej minipuberty ani przyczyny odchylenia.'],
+        rows: [
+          ageRow('greaves-preterm-lh-m', 'M', pretermAge(), range(bound('>=', 0.1), bound('<=', 9.2), '0.1–9.2 IU/L')),
+          ageRow('greaves-preterm-lh-f', 'F', pretermAge(), range(bound('>=', 0.2), bound('<=', 133.9), '0.2–133.9 IU/L'))
+        ],
         reportedIntervals: [
           { sex: 'M', rangeSourceText: '0.1–9.2 IU/L', lower: 0.1, upper: 9.2, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [7.9, 11.1] } },
           { sex: 'F', rangeSourceText: '0.2–133.9 IU/L', lower: 0.2, upper: 133.9, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.5], upper: [104.2, 173.9] } }
@@ -591,8 +624,8 @@
       },
       {
         id: 'greaves-preterm-fsh-candidate',
-        version: '2026-10-09.2',
-        active: false,
+        version: '2026-10-09.3',
+        active: true,
         analyte: 'fsh',
         sourceId: 'greaves-preterm-2015',
         method: {
@@ -604,12 +637,15 @@
         unit: 'IU/L',
         examinationType: 'basal',
         population: {
-          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; pierwsze próbki, dokładne okno wieku nieustalone',
+          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; GA 24+0–32+0, PMA ≤36+0, po pierwszej dobie według polityki aplikacji',
           statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
         },
-        blockedReasons: ['unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges'],
-        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonego okna wieku.', 'Przedziały z tabeli 4 pełnego artykułu są metadanymi do przeglądu, nie aktywnymi normami ani progami rozpoznania.'],
-        rows: [],
+        scope: pretermScope(),
+        knownLimitations: ['Granice GA/PMA i wyłączenie pierwszej doby są polityką aplikacji zatwierdzoną przez właściciela, a nie min/max badanej podgrupy.', 'Zakres stężenia z tabeli 4 nie rozpoznaje prawidłowej minipuberty ani przyczyny odchylenia.'],
+        rows: [
+          ageRow('greaves-preterm-fsh-m', 'M', pretermAge(), range(bound('>=', 0.2), bound('<=', 3.6), '0.2–3.6 IU/L')),
+          ageRow('greaves-preterm-fsh-f', 'F', pretermAge(), range(bound('>=', 2.6), bound('<=', 181.1), '2.6–181.1 IU/L'))
+        ],
         reportedIntervals: [
           { sex: 'M', rangeSourceText: '0.2–3.6 IU/L', lower: 0.2, upper: 3.6, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [3.2, 4.2] } },
           { sex: 'F', rangeSourceText: '2.6–181.1 IU/L', lower: 2.6, upper: 181.1, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [1.0, 4.9], upper: [159.6, 207.6] } }

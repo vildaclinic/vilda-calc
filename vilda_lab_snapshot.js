@@ -17,13 +17,20 @@
   // patient IDs, DOM/HTML and imported object graphs) are never traversed.
   var bound = { operator: 'text', value: 'number' };
   var age = { years: 'number', months: 'number', days: 'number', precision: 'text' };
+  var completedDays = { lower: 'number', upper: 'number', source: 'text' };
+  var neonatalAgeInput = { postnatalDays: completedDays, gestationalDays: completedDays };
+  var neonatalAge = {
+    postnatalDays: completedDays, gestationalDays: completedDays,
+    postmenstrualDays: { lower: 'number', upper: 'number' }, status: 'text', reasonCodes: ['text']
+  };
   var rangeBounds = { lower: bound, upper: bound, censoredLower: bound, sourceText: 'text' };
   var ageBounds = { axis: 'text', lower: bound, upper: bound, sourceText: 'text', interpretation: 'text' };
   var source = {
     id: 'text', label: 'text', version: 'text', title: 'text', organization: 'text', url: 'url',
     accessedOn: 'text', accessTimeZone: 'text', readScope: 'text', evidenceSha256: 'text',
     methodDocumentVersion: 'text', knownLimitations: ['text'], pmid: 'text', doi: 'text',
-    pubmedUrl: 'url', doiUrl: 'url', definition: 'text'
+    pubmedUrl: 'url', doiUrl: 'url', definition: 'text',
+    intervalEvidence: { kind: 'text', version: 'text', url: 'url', table: 'text', page: 'number', verification: 'text' }
   };
   var population = {
     label: 'text', sourceDescription: 'text',
@@ -41,7 +48,7 @@
   var comparison = { status: 'text', reasonCodes: ['text'], range: selectedRange };
   var input = {
     analyte: 'text', value: 'measurementInput', unit: 'text', sex: 'text', sampleDateISO: 'text', birthDateISO: 'text', age: age,
-    contextBasis: 'text',
+    contextBasis: 'text', neonatalAge: neonatalAgeInput,
     specimen: 'text', measurementKind: 'text', assay: { profileId: 'text', profileVersion: 'text', methodId: 'text', confirmation: 'text' },
     puberty: { kind: 'text', stage: 'number', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean', source: 'text' },
     testicularVolume: { value: 'number', unit: 'text', method: 'text', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean' },
@@ -64,12 +71,13 @@
       status: 'text', precision: 'text', source: 'text', lowerYears: 'number', upperYears: 'number', upperInclusive: 'boolean',
       ageDays: 'number', reasonCodes: ['text'], anniversaryPolicy: 'text'
     },
+    neonatalAge: neonatalAge,
     biochemical: { status: 'text', primary: 'text', byAge: comparison, byStage: comparison, local: comparison, reasonCodes: ['text'] },
     clinical: { status: 'text', code: 'text', title: 'text', text: 'text', reasonCodes: ['text'], sourceIds: ['text'] },
     summary: { status: 'text', code: 'text', title: 'text' },
     provenance: {
       clinicalProfileId: 'text', clinicalProfileVersion: 'text', biochemicalPolicyId: 'text', biochemicalPolicyVersion: 'text',
-      profileId: 'text', profileVersion: 'text', sourceIds: ['text']
+      profileId: 'text', profileVersion: 'text', sourceIds: ['text'], eligibilityPolicyId: 'text', eligibilityPolicyVersion: 'text'
     },
     limitations: ['text'],
     reportedRange: { status: 'text', raw: 'text', unit: 'text', lower: bound, upper: bound, reasonCodes: ['text'] },
@@ -79,7 +87,7 @@
   };
   // These schema-1 additions are optional. Reading an older assessment must
   // preserve its original shape and must never infer a current-form context.
-  var optionalInput = ['contextBasis', 'reportedRange'];
+  var optionalInput = ['contextBasis', 'reportedRange', 'neonatalAge'];
   var optionalNestedInput = { assay: ['profileVersion'], puberty: ['appliesToCurrentContext'], testicularVolume: ['appliesToCurrentContext'], treatment: ['context'] };
   var bindingSchema = { testKey: 'text', test: 'text', value: 'text', valueNum: 'number', unit: 'text', norm: 'text', clinicalDateISO: 'text' };
 
@@ -152,6 +160,42 @@
     return required(value, ['status', 'reasonCodes']) && Array.isArray(value.reasonCodes) && contains(value.status, ['unavailable', 'indeterminate', 'within', 'below', 'above']) &&
       (value.status === 'unavailable' ? value.range == null : validRange(value.range));
   }
+  function validDayInterval(value, withSource) {
+    return required(value, withSource ? ['lower', 'upper', 'source'] : ['lower', 'upper']) &&
+      Number.isSafeInteger(value.lower) && Number.isSafeInteger(value.upper) && value.lower >= 0 && value.upper >= value.lower &&
+      (!withSource || typeof value.source === 'string' && !!value.source.trim() && value.source.length <= 80 &&
+        (value.source.trim() !== 'main-calendar-dates' || value.lower === Math.max(0, value.upper - 1)));
+  }
+  function sameDayInterval(a, b) {
+    return a === null && b === null || record(a) && record(b) && a.lower === b.lower && a.upper === b.upper && a.source === b.source;
+  }
+  function validNeonatalAge(evaluation) {
+    var supplied = evaluation.input.neonatalAge, result = evaluation.neonatalAge, provenance = evaluation.provenance;
+    var hasInput = own(evaluation.input, 'neonatalAge'), hasOutput = own(evaluation, 'neonatalAge');
+    var hasPolicy = own(provenance, 'eligibilityPolicyId') || own(provenance, 'eligibilityPolicyVersion');
+    var comparisons = [evaluation.biochemical.byAge, evaluation.biochemical.byStage];
+    if (evaluation.referencePreview) comparisons.push(evaluation.referencePreview.byAge, evaluation.referencePreview.byStage);
+    var hasPretermRange = comparisons.some(function (comparison) { return comparison && comparison.range &&
+      (comparison.range.basis === 'preterm' || comparison.range.age && comparison.range.age.axis === 'postmenstrualDays'); });
+    if (hasPretermRange && (!hasInput || !hasOutput || !hasPolicy)) return false;
+    if (hasPolicy && (!required(provenance, ['eligibilityPolicyId', 'eligibilityPolicyVersion']) ||
+      !provenance.eligibilityPolicyId || !provenance.eligibilityPolicyVersion || !hasOutput)) return false;
+    if (!hasInput && !hasOutput) return true;
+    if (!hasOutput || !required(result, Object.keys(neonatalAge)) || !contains(result.status, ['known', 'missing', 'invalid', 'uncertain']) || !Array.isArray(result.reasonCodes)) return false;
+    if (hasInput && !required(supplied, Object.keys(neonatalAgeInput))) return false;
+    if (!['postnatalDays', 'gestationalDays'].every(function (key) {
+      return (result[key] === null || validDayInterval(result[key], true)) && (!hasInput || sameDayInterval(supplied[key], result[key]));
+    })) return false;
+    var pna = result.postnatalDays, ga = result.gestationalDays, pma = result.postmenstrualDays;
+    if (pma !== null && (!validDayInterval(pma, false) || !pna || !ga || pma.lower !== pna.lower + ga.lower || pma.upper !== pna.upper + ga.upper)) return false;
+    if (contains(result.status, ['known', 'uncertain']) && (!pna || !ga || !pma)) return false;
+    if (result.status === 'missing' && pna && ga || result.status !== 'known' && !result.reasonCodes.length) return false;
+    return comparisons.every(function (comparison) {
+      var range = comparison && comparison.range;
+      return !range || range.basis !== 'preterm' && (!range.age || range.age.axis !== 'postmenstrualDays') ||
+        hasPolicy && hasInput && result.status === 'known' && result.reasonCodes.length === 0 && range.basis === 'preterm' && range.age && range.age.axis === 'postmenstrualDays' && !range.stage;
+    });
+  }
   function validReferencePreview(evaluation) {
     if (!own(evaluation, 'referencePreview')) return true;
     var preview = evaluation.referencePreview, supplied = evaluation.input, biochemical = evaluation.biochemical;
@@ -184,7 +228,7 @@
     return preview.byAge.status !== 'unavailable' || preview.byStage.status !== 'unavailable';
   }
   function validEvaluation(value) {
-    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview']); })) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
+    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge']); })) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
     if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;
     if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) {
       return required(value.input[key], Object.keys(input[key]).filter(function (field) { return !contains(field, optionalNestedInput[key] || []); }));
@@ -220,11 +264,11 @@
     if (!Array.isArray(b.reasonCodes) || (b.status === 'available') !== (b.primary !== null)) return false;
     if (!['byAge', 'byStage', 'local'].every(function (key) { return validComparison(b[key]); })) return false;
     if (b.primary && b[({ age: 'byAge', stage: 'byStage', local: 'local' })[b.primary]].status === 'unavailable') return false;
-    if (!validReferencePreview(value)) return false;
+    if (!validReferencePreview(value) || !validNeonatalAge(value)) return false;
     return required(c, Object.keys(evaluationSchema.clinical)) && contains(c.status, ['limited', 'warning', 'notice', 'out_of_scope', 'no_timing_alert']) &&
       Array.isArray(c.reasonCodes) && Array.isArray(c.sourceIds) &&
       required(value.summary, Object.keys(evaluationSchema.summary)) && contains(value.summary.status, ['attention', 'limited', 'compared', 'invalid', 'out_of_scope']) &&
-      required(value.provenance, Object.keys(evaluationSchema.provenance)) && Array.isArray(value.provenance.sourceIds) && Array.isArray(value.limitations);
+      required(value.provenance, Object.keys(evaluationSchema.provenance).filter(function (key) { return !contains(key, ['eligibilityPolicyId', 'eligibilityPolicyVersion']); })) && Array.isArray(value.provenance.sourceIds) && Array.isArray(value.limitations);
   }
   function unavailable(reason) { return { schemaVersion: 1, status: 'unavailable', reasonCodes: [reason], evaluation: null }; }
   function normalize(envelope) {
@@ -298,5 +342,5 @@
     var value = m && m.status === 'valid' && m.isExact && m.operator === '=' ? m.plotValue : null;
     return { assessment: assessment, valueNum: value, plotValue: value };
   }
-  return Object.freeze({ version: '1.2.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
+  return Object.freeze({ version: '1.3.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
 });

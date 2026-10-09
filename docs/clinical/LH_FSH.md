@@ -2,6 +2,107 @@
 
 Stan dokumentu: 9 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
 
+## Suplement i biobank — uzgodniona kwalifikacja i makieta, 9.10.2026
+
+**Stan: polityka kliniczna i makieta desktop/mobile zaakceptowane przez właściciela; wdrożenie aktywnego profilu wcześniaczego.**
+Właściciel zatwierdził granice GA/PMA i wyłączenie pierwszej doby
+(„1 — tak; 2 — wyłączyć pierwszą dobę”), a następnie polecił przygotowanie
+makiety przed wdrożeniem. Wymaga prostego interfejsu, automatycznego użycia
+danych już znanych aplikacji oraz ograniczenia etykiet, komentarzy i przycisków.
+Po przedstawieniu interaktywnej makiety właściciel potwierdził: „ok,
+zatwierdzam makietę. ruszaj”. Doprecyzowano, że brak pola Tannera dotyczy
+wyłącznie kontekstu noworodkowego profilu wcześniaczego; starsze dzieci,
+także z wcześniactwem w wywiadzie, zachowują wybór pokwitania.
+Odczytano oba dostarczone materiały w całości, wraz z obrazami tabel i wykresów.
+Poniższe ustalenia aktualizują opis dostępności źródeł w starszej sekcji `.2`.
+
+- Suplement `jc-14-3681.pdf`, DOI 10.1210/jc.2014-3681: tabele 1–2 i rycina 1,
+  cztery strony; SHA-256 `99671cf6eff7f3e47c9fdcf156de613fd5a4c1579ed5800ce2a1df5b579b87f8`.
+- Greaves RF, *Hormone profiles in extremely preterm infants*, DOI
+  10.1016/j.clinbiochem.2014.05.040: trzy strony, dostarczona wersja
+  **UNCORRECTED PROOF**; SHA-256
+  `096385db34e575a39b28aa5c323739c42b62295b0b7d0ee75451d56ab28481b6`.
+  Nie utożsamiamy tej kopii z potwierdzoną końcową wersją wydawcy.
+
+**Korekta wcześniejszego warunku:** osobny przedział wieku po urodzeniu (PNA)
+nie jest bezwzględnie wymagany, jeżeli reguły profilu jednoznacznie opisują wiek
+postmenstruacyjny przy ocenie (PMA). PNA może służyć do obliczenia PMA z wieku
+ciążowego przy urodzeniu (GA). Nie należy wymyślać dodatkowego progu PNA tylko
+dlatego, że finalna publikacja nie podaje jego minimum i maksimum.
+
+Suplement potwierdza analizę LH/FSH według płci oraz podział wieku przy pobraniu
+na ≤30 i ≥31 tygodni; nie wykazano potrzeby podziału RI LH/FSH na te grupy wieku.
+Oś ryciny 1 obejmuje około 180–260 **dni PMA**, nie dni po urodzeniu. Skrajów osi
+ani punktów nie przekształcamy w dokładne kryteria kwalifikacji.
+
+Proof 2014 rozróżnia R1 i R2. Harmonogram 1, 4, 7, 14, 21, 28 i 42 dni dotyczy
+R1 i nie określa okna R2/2015. Tabela R2 podaje 24–35 tygodni „corrected age”
+dla pierwszej próbki, ale również inne liczebności, e602 i inne przedziały
+(w tym FSH F3,7–>200 IU/L). Nie łączymy jej zakresu wieku z finalnymi RI e601
+z 2015 r. „Pierwsza próbka” w badaniu nie oznacza pierwszego badania w życiu;
+nie powstanie kontrolka potwierdzania tego warunku.
+
+### Uzgodniony zakres automatycznego porównania
+
+Docelowe wartości i metoda pochodzą z finalnej tabeli 4 i metod 2015, nie z proofu
+2014. Protokół 2015 opisuje urodzenie między 24. a 32. tygodniem oraz pobrania
+biobanku do 36. tygodnia. Poniższe granice są **zaakceptowaną polityką kliniczną
+aplikacji opartą na tym protokole**, a nie odczytanymi min/max finalnej podgrupy
+LH/FSH. Akceptację właściciela uzyskano przed implementacją automatycznej oceny.
+Końce 24+0, 32+0 i 36+0 oraz ich inkluzywność są przyjętym, zawężającym
+wyborem aplikacji; źródło nie rozstrzyga tych dokładnych dni krańcowych.
+
+| Warunek | Uzgodniona reguła |
+|---|---|
+| GA przy urodzeniu | 24+0–32+0 tygodni włącznie (168–224 dni); bez rozszerzenia na cały 32. tydzień ukończony. |
+| PMA w kontekście oceny | Nie mniej niż GA; nie więcej niż 36+0 tygodni włącznie (252 dni). |
+| PNA | Co najmniej jedna ukończona doba; brak oceny, gdy nie można potwierdzić upływu 24 h. Do obliczenia PMA używa się ukończonych dni lub całego przedziału możliwych wartości, bez udawania większej precyzji. |
+| Płeć, materiał, metoda | M/F, surowica, zgodne oznaczenie Roche Cobas 8000-e601 opisane w 2015 r. |
+| Rodzaj oceny | Porównanie stężenia z RI z tabeli 4, osobno od oceny klinicznej; zakres bazalny. |
+
+**Pierwsza doba jest wyłączona decyzją kliniczną właściciela.**
+Protokół nie podaje źródłowego dolnego PNA; przyjęte wyłączenie nie jest
+prezentowane jako opublikowany, zwalidowany próg. Różnica samych dat o jeden
+dzień może oznaczać 0–1 ukończonych dób i nie potwierdza upływu 24 h.
+Nie ma podstaw, aby opisywać każdą taką kombinację GA/PMA jako bezpośrednio
+reprezentowaną w zbiorze finalnych RI. Akceptacja polityki aplikacji nie stanowi
+walidacji klinicznej. Profil aktywowano po zatwierdzeniu makiety.
+
+Wdrożenie obejmuje bezpieczny import pochodnego wieku
+w dniach z bieżącego kontekstu oraz GA z karty; najwyżej dwie brakujące pozycje
+do uzupełnienia w sekcji Pacjent; dobór profilu zgodnego z zapamiętaną metodą;
+jedną oś wcześniaczą bez osi Tanner; widoczne konkretne powody niedopasowania;
+zapis użytego kontekstu i norm bez przeliczania historii. Dla profilu Greaves
+kwalifikacja według GA/PNA/PMA zastępuje ogólną blokadę wcześniactwa. Normy
+Greaves nie są automatycznie przenoszone na AnshLite ani aktualny profil Mayo Roche FSH.
+
+Przypadek regresyjny funkcji produkcyjnej dla zaakceptowanej polityki:
+M, GA28+4, PNA43 dni → PMA34+5; LH2 IU/L, zgodna metoda →
+porównanie z 0,1–9,2 IU/L i status „w zakresie”, bez wniosku o prawidłowości
+całego obrazu klinicznego. Sprawdzeniu podlegają też oba końce GA/PMA, PNA0,
+obie płcie, LH/FSH, niedokładny wiek, zmiana pacjenta, historia, mobile i offline.
+
+Silnik ma wersję `1.4.0`, dane i profile Greaves `2026-10-09.3`, UI `1.11.0`,
+renderer `1.8.0`, helper snapshotu `1.3.0`. Profile Greaves mają aktywne wiersze
+norm oraz jawne reguły kwalifikacji w danych. Wersje profili Mayo/Johannsen
+i kryteria czasu dojrzewania pozostają bez zmian. Nazwy historycznych
+identyfikatorów Greaves z końcówką `candidate` zachowano dla zgodności zapisów;
+nie są etykietami widocznymi w formularzu.
+
+W podstawowym widoku wcześniaka pozostaje istniejący układ przelicznika,
+metoda z przyciskiem „Zmień”, krótkie dane pacjenta i jedna oś. Edytor metody
+oraz jego opcja nieznanej metody są schowane do otwarcia. Przy zgodnych danych
+z formularza/karty nie ma nowych widocznych pól; przy brakach są najwyżej GA
+i ukończone dni życia. Pole nie znika podczas pisania. Przekazanie pochodnego
+PNA używa cache sesji bez DOB i bez modyfikacji `sharedUserData` lub stanu
+niezapisanych zmian. Wiek przy odtworzonej wizycie nadal odnosi się do tej wizyty.
+
+Ocena zachowuje dotychczasową warunkowość porównania bazalnego, gdy kontekst
+leczenia/oznaczenia nie jest potwierdzony. Historyczny snapshot przechowuje
+GA/PNA/PMA, źródło precyzji, wersję polityki i zastosowaną normę; renderer nie
+dobiera na nowo zakresu przy odczycie historii. Poniższe starsze sekcje opisują
+stan wcześniejszych etapów, w tym nieaktywnych kandydatów `.2`.
+
 ## Przygotowanie profilu wcześniaczego — 9.10.2026
 
 **Status: dane zweryfikowane z pełnego artykułu, bez aktywacji interpretacji.**
