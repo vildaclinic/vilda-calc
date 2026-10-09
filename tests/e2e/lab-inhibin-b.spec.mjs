@@ -17,7 +17,18 @@ async function capture(page, name) {
   const directory = process.env.VILDA_INHIBIN_CAPTURE_DIR;
   if (!directory) return;
   await mkdir(directory, { recursive: true });
-  await page.locator('#labResultsCard').screenshot({ path: join(directory, name + '.png') });
+  const viewport = page.viewportSize();
+  // Capture the long mobile card without a fixed navigation overlay in its
+  // middle. All usability assertions still run at the original phone height.
+  try {
+    if (viewport.width <= 400) {
+      const height = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewportSize({ width: viewport.width, height: Math.max(viewport.height, height) });
+    }
+    await page.locator('#labResultsCard').screenshot({ path: join(directory, name + '.png') });
+  } finally {
+    if (viewport.width <= 400) await page.setViewportSize(viewport);
+  }
 }
 
 async function open(page, patient = user()) {
@@ -72,6 +83,33 @@ async function expectVariants(page, expected) {
   await expect(page.locator('.vilda-lab-severity-summary')).toHaveCount(0);
   await expect(page.locator('#labResultBig .lab-result-big-value')).not.toHaveClass(/is-uwaga/);
   expect((await snapshot(page)).evaluation.referenceSelection.status).toBe('variants');
+  await expect(assessment(page).locator('[data-age-variant-consensus]')).toHaveCount(0);
+}
+
+async function expectCurveAgeVariants(container, evaluation, statuses, consensus) {
+  const variants = evaluation.referencePreview.variants;
+  expect(variants).toHaveLength(2);
+  expect(evaluation.referenceSelection.status).toBe('variants');
+  expect(evaluation.input.age).toMatchObject({ years: 0, months: 11, precision: 'month' });
+  expect(evaluation.input.neonatalAge?.postnatalDays ?? null).toBeNull();
+  expect(evaluation.biochemical).toMatchObject({ status: 'unavailable', primary: null });
+  const rows = container.locator('[data-comparison="variant"]');
+  await expect(rows).toHaveCount(2);
+  await expect(container.locator('.vilda-lab-axis')).toHaveCount(2);
+  const limits = variants.map((item) => item.comparison.range.bounds.upper.value);
+  expect(limits[0]).toBeCloseTo(39.132, 6);
+  expect(limits[1]).toBeCloseTo(49.7256666667, 6);
+  for (let i = 0; i < variants.length; i++) {
+    expect(variants[i].comparison.range).toMatchObject({ basis: 'infant-curve', profileId: 'ljubicic-inhibin-b-female-minipuberty' });
+    await expect(rows.nth(i)).toHaveAttribute('data-variant-id', variants[i].id);
+    await expect(rows.nth(i)).toHaveAttribute('data-status', statuses[i]);
+    await expect(rows.nth(i).locator('.vilda-lab-axis')).toHaveAttribute('data-range-lower', 'unknown');
+    await expect(rows.nth(i).locator('.vilda-lab-axis')).toHaveAttribute('data-range-upper', String(limits[i]));
+    await expect(rows.nth(i).locator('.vilda-lab-axis-marker')).toHaveCount(evaluation.measurement.isExact ? 1 : 0);
+  }
+  await expect(container.locator('[data-age-variant-consensus]')).toHaveAttribute('data-age-variant-consensus', consensus);
+  await expect(container.locator('[data-upper-only-note="true"]')).toHaveCount(1);
+  return rows;
 }
 
 async function enterDays(page, value) {
@@ -88,10 +126,10 @@ async function expectNoOverflow(page) {
   expect(size.scroll).toBeLessThanOrEqual(size.width + 1);
 }
 
-async function expectReadableAxisLabel(page, text) {
-  const label = axis(page).locator('.vilda-lab-axis-value');
+async function expectReadableAxisLabel(page, text, target = axis(page)) {
+  const label = target.locator('.vilda-lab-axis-value');
   await expect(label).toHaveText(text);
-  const geometry = await axis(page).evaluate((node) => {
+  const geometry = await target.evaluate((node) => {
     const value = node.querySelector('.vilda-lab-axis-value');
     const labelBox = value.getBoundingClientRect();
     const trackBox = node.querySelector('.vilda-lab-axis-track').getBoundingClientRect();
@@ -256,6 +294,134 @@ test('three completed months remain uncertain; birth context and known days dete
   await expect(page.locator('#labPubertyPreterm')).toBeHidden();
   await expect(page.locator('#labPubertyGestationalAge')).toBeHidden();
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(sharedBefore);
+});
+
+test('F11 months: two curve bounds give a unanimous verdict only when justified, with shared severe effects and no invented exact age', async ({ page }) => {
+  await open(page, user('F', 0, 11));
+  const before = await page.evaluate(() => window.VildaPersistence.readShared());
+  await choose(page, '144');
+  await quickSelect(page, 'Preterm', 'no');
+  await closePatientEditor(page);
+  let saved = await snapshot(page);
+  let rows = await expectCurveAgeVariants(assessment(page), saved.evaluation, ['above', 'above'], 'above');
+  const big = page.locator('#labResultBig .lab-result-big-value');
+  await expect(big).toHaveClass(/is-uwaga-high/);
+  expect(await animation(big)).toMatch(/lab-value-glow-red/);
+  await expect(page.locator('.vilda-lab-severity-summary')).toContainText('Uwaga — znacznie powyżej zakresu referencyjnego');
+  await expect(page.locator('.vilda-lab-severity-summary')).toContainText('W całym podanym przedziale wieku');
+  for (let i = 0; i < 2; i++) {
+    await expect(rows.nth(i)).toHaveAttribute('data-visual-state', 'is-uwaga-high');
+    await expect(rows.nth(i).locator('.vilda-lab-axis')).toHaveAttribute('data-patient-value', '144');
+    const marker = rows.nth(i).locator('.vilda-lab-axis-marker');
+    expect(await animation(marker)).toMatch(/lab-marker-shake/);
+    expect(await marker.evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
+  }
+  await expect(page.locator('#labPubertyPatientSummary')).toContainText('11 mies.');
+  await expect(page.locator('#labPubertyStage')).toBeHidden();
+  await expect(page.locator('#labPubertyPanel input[type="date"]')).toHaveCount(0);
+  await capture(page, 'desktop-f11months-144-two-axes');
+  await page.setViewportSize({ width: 320, height: 780 });
+  await expectNoOverflow(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await animation(big)).toBe('none');
+  for (let i = 0; i < 2; i++) {
+    expect(await animation(rows.nth(i).locator('.vilda-lab-axis-marker'))).toBe('none');
+    await expectReadableAxisLabel(page, '144 pg/mL', rows.nth(i).locator('.vilda-lab-axis'));
+  }
+  await capture(page, 'mobile-320-f11months-144-two-axes');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  for (const scenario of [
+    { raw: '30', statuses: ['within', 'within'], consensus: 'within', visual: '' },
+    { raw: '45', statuses: ['above', 'within'], consensus: 'mixed', visual: '' },
+    { raw: '80', statuses: ['above', 'above'], consensus: 'above', visual: 'is-above' },
+    { raw: '>50', statuses: ['above', 'above'], consensus: 'above', visual: 'is-above' },
+    { raw: '<LOD', statuses: ['indeterminate', 'indeterminate'], consensus: 'indeterminate', visual: '' },
+  ]) {
+    await page.locator('#labValue').fill(scenario.raw);
+    saved = await snapshot(page);
+    rows = await expectCurveAgeVariants(assessment(page), saved.evaluation, scenario.statuses, scenario.consensus);
+    await expect(page.locator('.vilda-lab-severity-summary')).toHaveCount(0);
+    await expect(big).not.toHaveClass(/is-uwaga/);
+    expect(await animation(big)).toBe('none');
+    if (scenario.visual) await expect(big).toHaveClass(new RegExp(scenario.visual));
+    else await expect(big).not.toHaveClass(/is-above|is-below/);
+    if (scenario.raw === '30') {
+      for (let i = 0; i < 2; i++) await expect(rows.nth(i)).not.toContainText(/W zakresie|Poniżej|Prawidł/i);
+    }
+    if (scenario.raw === '45') await expect(assessment(page).locator('[data-age-variant-consensus]')).toHaveText('Ocena zależy od dokładnego wieku.');
+    if (scenario.raw === '80') {
+      await expect(rows.nth(0)).toHaveAttribute('data-visual-state', 'is-uwaga-high');
+      await expect(rows.nth(1)).toHaveAttribute('data-visual-state', 'is-above');
+    }
+    if (!saved.evaluation.measurement.isExact) {
+      expect(saved.evaluation.measurement.plotValue).toBeNull();
+      for (let i = 0; i < 2; i++) {
+        const plotted = rows.nth(i).locator('.vilda-lab-axis');
+        await expect(plotted).not.toHaveAttribute('data-patient-value', /.+/);
+        const geometry = await plotted.evaluate((node) => ({
+          labelBottom: node.querySelector('.vilda-lab-axis-no-value').getBoundingClientRect().bottom,
+          trackTop: node.querySelector('.vilda-lab-axis-track').getBoundingClientRect().top,
+        }));
+        expect(geometry.labelBottom).toBeLessThan(geometry.trackTop);
+      }
+      if (scenario.raw === '>50') await capture(page, 'mobile-320-f11months-censored-two-axes');
+    }
+    await expectNoOverflow(page);
+  }
+  await page.locator('#labValue').fill('');
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+  await expect(assessment(page).locator('[data-age-variant-consensus]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(before);
+});
+
+test('F11 months: real pin and history render the two stored curve comparisons without changing their evaluation after an adult correction', async ({ page }) => {
+  await open(page, user('F', 0, 11));
+  await newVault(page);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI && window.VildaLabPubertyRuntime
+    && !document.documentElement.classList.contains('vilda-auth-locked'));
+  const patientId = await page.evaluate(async (data) => {
+    const result = await window.VildaVault.savePatient({ name: data.name, user: data, puberty: {},
+      perinatal: { gestationalWeeks: 39, gestationalDays: 2 } }, { dedup: false });
+    window._vildaCurrentPatientId = result.patientId;
+    sessionStorage.setItem('vildaCurrentPatientId', result.patientId);
+    window.VildaPersistence.writeShared(data, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: result.patientId } }));
+    return result.patientId;
+  }, user('F', 0, 11));
+  await expect.poll(() => page.evaluate((id) => window.VildaPubertySource.kontekstPacjenta(id).status, patientId)).toBe('ready');
+  await choose(page, '144', 'ng/L');
+  const original = await snapshot(page);
+  await expectCurveAgeVariants(assessment(page), original.evaluation, ['above', 'above'], 'above');
+  await page.locator('#labPinResultBtn').click();
+  await page.locator('#labPinComment').fill('Fikcyjna dziewczynka, 11 ukończonych miesięcy, inhibina B 144');
+  await page.locator('#labPinSave').click();
+  await expect(page.locator('#labPinOverlay')).toHaveCount(0);
+  const notes = await page.evaluate((id) => window.VildaVault.listPatientNotesForPatient(id), patientId);
+  expect(notes).toHaveLength(1);
+  const note = notes[0];
+  expect(note.labResult.assessment.evaluation).toEqual(original.evaluation);
+  expect(note.labResult.unit).toBe('ng/L');
+  await quickFill(page, 'AgeYears', '45');
+  await quickFill(page, 'AgeMonths', '0');
+  await closePatientEditor(page);
+  await expectVariants(page, ['<261', '<286', '<189', '<164', '<107', '<17']);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
+  expect((await page.evaluate((id) => window.VildaVault.getPatientNote(id), note.id)).labResult.assessment).toEqual(note.labResult.assessment);
+  const series = await page.evaluate((id) => window.VildaVault.listPatientLabSeries(id), patientId);
+  const point = series.find((item) => item.testKey === 'inhibin_b').points.find((item) => item.noteId === note.id);
+  expect(point.assessment.evaluation).toEqual(original.evaluation);
+  expect(point.plotValue).toBe(144);
+  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${note.id}"] .vilda-lab-assessment`);
+  await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
+  const rows = await expectCurveAgeVariants(recorded, original.evaluation, ['above', 'above'], 'above');
+  for (let i = 0; i < 2; i++) expect(await animation(rows.nth(i).locator('.vilda-lab-axis-marker'))).toMatch(/lab-marker-shake/);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (let i = 0; i < 2; i++) expect(await animation(rows.nth(i).locator('.vilda-lab-axis-marker'))).toBe('none');
+  expect((await page.evaluate((id) => window.VildaVault.getPatientNote(id), note.id)).labResult.assessment.evaluation).toEqual(original.evaluation);
 });
 
 test('current main-form DOB and patient-card term gestation supply infant context without repeated entry', async ({ page }) => {
@@ -438,5 +604,13 @@ test.describe('inhibin B offline', () => {
     await choose(page);
     await expectRange(page, 34.9, 289.2);
     expect((await snapshot(page)).evaluation.referencePreview).toEqual(online.evaluation.referencePreview);
+    await quickSelect(page, 'Sex', 'F');
+    await quickFill(page, 'AgeYears', '0');
+    await quickFill(page, 'AgeMonths', '11');
+    await quickSelect(page, 'Preterm', 'no');
+    await closePatientEditor(page);
+    await page.locator('#labValue').fill('144');
+    await expectCurveAgeVariants(assessment(page), (await snapshot(page)).evaluation, ['above', 'above'], 'above');
+    await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveClass(/is-uwaga-high/);
   });
 });

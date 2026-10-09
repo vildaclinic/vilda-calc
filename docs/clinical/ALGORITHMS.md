@@ -382,6 +382,24 @@ zapis, zmianę pacjenta, jednostki, mobile i offline. Zachowany układ oraz
 makieta desktop/mobile zostały przedstawione właścicielowi przed aktywacją
 interfejsu. Akceptacja kliniczna i scalenie pozostają po stronie właściciela.
 
+**Poprawka prezentacji niepewnego wieku, 2026-10-09:** F11 ukończonych
+miesięcy / 144 pg/mL już w silniku daje `above` dla obu skrajnych górnych
+granic krzywej R2: 39,132 i 49,7256666667. Renderer pokazuje te statusy na
+osiach oraz wspólny wniosek, jeśli wszystkie porównania jednej krzywej są
+jednoznacznie zgodne. Wspólne znaczne wyróżnienie wymaga spełnienia
+dotychczasowej reguły UI dla każdego wariantu. Dla 45 pg/mL ocena pozostaje
+zależna od dokładnego wieku; dla 30 nie ma przekroczenia górnej granicy.
+Brak dolnej normy i operatory wyniku zachowują znaczenie. Zmiana dotyczy
+prezentacji istniejącej oceny, także zapisanej w historii, bez ponownego
+liczenia i bez nowych norm lub wersji silnika/danych. Przypadki produkcyjnego
+silnika → renderer → snapshot oraz mobile/offline są objęte regresjami.
+
+Zweryfikowano także pełny katalog Mayo INHB / 88722 z 2026-10-09.
+F≤12 lat ma tam górną granicę `<183 pg/mL`, więc ten sam wynik 144 jej nie
+przekracza. To odrębny, szeroki zakres i metoda Mayo ELISA. Katalog i jego
+ograniczenia zapisano w `INHIBIN_B.md`; profil Mayo pozostaje nieaktywny.
+Nie wybieramy źródła według tego, który werdykt daje dla wpisanej liczby.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

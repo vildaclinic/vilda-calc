@@ -81,6 +81,12 @@ Wiek i stadium muszą odpowiadać definicjom źródła. Zachowuj nierówności
 `<`, `≤`, `>`, `≥`; nie dopisuj precyzyjnej daty do wieku w latach/miesiącach.
 Gdy niepewność wieku obejmuje różne zakresy, pokaż krótkie alternatywy lub
 konkretną przyczynę braku porównania. Nie sklejaj zakresów w jedną szeroką normę.
+Wyjątek doprecyzowany przy inhibinie B: gdy warianty są skrajnymi granicami
+**jednej krzywej wieku**, obejmują cały możliwy wiek i wszystkie zapisane
+porównania dają ten sam jednoznaczny status, pokaż ten pewny wniosek.
+Niepewność wieku nie może ukrywać wyniku przekraczającego każdą możliwą
+górną granicę. Zachowaj osobne granice i ograniczenia źródła; nie stosuj
+tego wyjątku do różnych profili, metod, faz cyklu ani niezgodnych statusów.
 
 Nie utożsamiaj wieku chronologicznego, skorygowanego, wieku po urodzeniu
 (PNA) i postmenstruacyjnego (PMA). Granice wcześniacze i wyłączenie pierwszej
@@ -149,6 +155,9 @@ U dorosłego lub we właściwym profilu niemowlęcym jedna odpowiednia oś może
 wystarczyć. Jeśli jedna ocena jest niedostępna, zachowaj drugą, o ile spełnia
 własne warunki. Alternatywne normy przedstawiaj zwartą listą; nie nadawaj im
 wspólnego koloru ani globalnego werdyktu.
+Powyższe nie wyklucza zgodnego wniosku dla skrajnych granic jednej krzywej
+wieku, opisanego w § 3. W takim przypadku wspólne wyróżnienie znacznego
+odchylenia wymaga spełnienia reguły dla **wszystkich** wariantów.
 
 **„W zakresie dla stadium” nie oznacza prawidłowego czasu dojrzewania ani
 prawidłowości całego obrazu klinicznego.** Nie maskuj niezależnego ostrzeżenia

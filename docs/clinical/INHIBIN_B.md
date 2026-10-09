@@ -113,7 +113,12 @@ podlegającą akceptacji klinicznej; nie są cytatem ani instrukcją autorów:
   kwalifikuje do profilu.
 - Dla wieku tylko w latach/miesiącach nie tworzymy fikcyjnej daty urodzenia
   ani punktu środkowego. Sprawdzamy granice przedziału i węzły wewnętrzne
-  krzywej; przy różnych granicach pokazujemy warianty bez wspólnego werdyktu.
+  krzywej; przy różnych granicach zachowujemy oba warianty górnej granicy.
+  Jeżeli oba zapisane porównania tej samej krzywej jednoznacznie wskazują
+  przekroczenie albo nieprzekroczenie, UI pokazuje wspólny wniosek dla
+  całego przedziału wieku. Warianty mieszane lub niejednoznaczne nie dają
+  takiego wniosku. Ten wyjątek nie obejmuje różnych metod, profili ani faz
+  cyklu i nie tworzy jednej połączonej normy.
 - Aktywne okno ograniczamy do **od 5 ukończonych dni do <1 roku**, wewnątrz
   populacji badania. Od roku używamy katalogu dziecięcego R3. Tabela nadal
   przechowuje wszystkie 121 punktów źródłowych. Nie traktujemy publikowanych
@@ -125,6 +130,74 @@ Przykład: 90 dni → 90/365,25 = 0,24640657 roku. Sąsiednie punkty
 0,24 → 146,389 oraz 0,25 → 145,559 pg/mL dają
 **145,8572546201232 pg/mL**. Wynik 80 nie przekracza tej górnej granicy;
 nie oznacza to potwierdzenia prawidłowej funkcji jajników.
+
+### Czytelny wynik przy nieprecyzyjnym wieku
+
+Dziewczynka z **11 ukończonymi miesiącami**, wynik **144 pg/mL**:
+silnik zachowuje wiek [11/12, 1) roku oraz skrajne wartości górnej
+krzywej **39,132 i 49,7256666667 pg/mL**. Oba porównania mają zapisany
+status `above`. Prezentacja nie może ukrywać tej zgodności za samym
+komunikatem o różnych zakresach wieku.
+
+Renderer wyświetla dwa istniejące komponenty osi z ich własnymi granicami
+i statusami. Wspólny komunikat wykorzystuje wyłącznie utrwalone statusy
+dwóch wariantów tej samej krzywej, o zgodnym profilu/wersji, źródle,
+metodzie, populacji, płci, materiale i jednostce. Nie wywołuje ponownie
+silnika ani nie wybiera nowszych norm przy odczycie historii. Dotychczasowe
+podsumowanie kliniczne, dane, wersje silnika i snapshot pozostają zachowane.
+
+Dla 144 istniejąca reguła wizualna `wynik >2 × górna granica` jest
+spełniona także przy najwyższej możliwej granicy. Można więc wyróżnić duży
+wynik i obie osie jako znaczne przekroczenie. Wyróżnienie całego wyniku
+wymaga zgodności wszystkich wariantów; pojedyncze znaczne przekroczenie
+nie wystarcza. Reguła jest efektem UI, nie progiem diagnostycznym.
+
+Regresje tego samego wieku: **30** → nie przekracza żadnej górnej granicy;
+**45** → ocena zależy od dokładnego wieku; **>50** → powyżej obu, bez
+dokładnego punktu; **<30** → nie przekracza obu; **<40** oraz **<LOD** →
+brak pewnego wspólnego wniosku. Nie zastępujemy dolnego RI zerem ani nie
+porównujemy do zaokrąglonych etykiet 39,1/49,7.
+
+### Mayo Clinic INHB — zweryfikowana alternatywa, nieaktywna
+
+Odczyt 2026-10-09: pełny katalog
+[Mayo Clinic Laboratories — Inhibin B, Serum, INHB / 88722](https://www.mayocliniclabs.com/test-catalog/Overview/88722)
+oraz aktualne załączniki Setup PDF/XLS. Katalog nie podaje daty wersji
+samych norm; wartości opisuje jako aktualne w dniu wydruku.
+
+| Płeć i grupa literalnie z katalogu | Zakres [pg/mL] |
+|---|---:|
+| M, <15 dni | 68–373 |
+| M, 15–180 dni | 42–516 |
+| M, 6 miesięcy–7 lat | 24–300 |
+| M, 8–30 lat | 47–383 |
+| M, 31–72 lata | <358 |
+| M, >72 lata | Nie ustalono |
+| F, ≤12 lat | <183 |
+| F, 13–41 lat, regularny cykl, faza folikularna | <224 |
+| F, 42–51 lat, regularny cykl, faza folikularna | <108 |
+| F, 13–51 lat, regularny cykl, faza lutealna | <80 |
+| F, >51 lat, po menopauzie | <12 |
+
+Materiał: surowica. Opis metody: ultrasensitive three-step sandwich
+ELISA, „Unpublished Mayo method”. Obecnie podlinkowane przykładowe
+raporty z 2022 r. wskazują producenta Ansh Labs i ostrzegają przed
+zamiennym stosowaniem wartości z różnych metod/zestawów. Nie określają
+konkretnego kitu; nie nazywamy go automatycznie AnshLite ani Gen II.
+
+Katalog nie podaje dolnej normy u dziewczynek, osobnych norm żeńskiego
+minipuberty, Tannera, wcześniactwa/GA ani parametrów krzywej dla kolejnych
+miesięcy. Nie podaje też populacji wyznaczającej RI, pokrycia centylowego
+ani LOD. Granica męska 180 dni względem 6 miesięcy wymaga osobnej polityki
+kwalifikacji przed ewentualnym wdrożeniem; nie zakładamy ich równoważności.
+Fazy cyklu i menopauzy nie wolno wyprowadzać wyłącznie z wieku.
+
+**Ten sam przykład F11 miesięcy / 144 pg/mL** nie przekracza katalogowej
+górnej granicy Mayo `<183`. Przekracza natomiast górną krzywą Ljubičić
+Gen II dla każdego możliwego wieku w podanym miesiącu. To różne źródła,
+metody i rozdzielczość wieku. Nie łączymy ich granic i nie zmieniamy
+automatycznie źródła zależnie od wartości pacjenta. Obecna poprawka
+ujawnia już obliczone porównanie R2; nie aktywuje profilu Mayo.
 
 ### Alternatywne źródło dolnej granicy — nieaktywne
 
@@ -453,3 +526,4 @@ identyfikuje konkretny odczyt, nie zastępuje cytowania:
 | Crofton 2002, PDF właściciela | `a1cfb39a440cb09bc15ddae664b15e80513d34b7e21aca5e2a6ccfdacf5215e9` |
 | Bergadá 2002, PDF właściciela | `d5a19ef5c10d89c72c78c1b4f8f03bf0e3bbcad61d5474b189bdef92dbb59cd7` |
 | Gueguen 2025, PDF właściciela | `4ec70fe032f1947a6c6f9b05f98c8b5563572962561ef2ae8a4827d9c5c06d14` |
+| Mayo INHB 88722, pełny katalog HTML 2026-10-09 | `fd41bdfc2f203ee22ddcfcd178c317d72ddb5ccf3b3a36cb0ea33606c893cf28` |
