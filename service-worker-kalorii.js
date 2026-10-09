@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.210';
+const SW_VERSION = '1.1.211';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1763,6 +1763,9 @@ const OPTIONAL_DOCUMENTS = [
 ];
 
 const OPTIONAL_ASSETS = [
+  '/vilda_hormone_lifespan_data.js?v=1',
+  '/vilda_hormone_lifespan.js?v=1',
+  '/vilda_hormone_lifespan.css?v=1',
   '/cukrzyca.js',
   '/cukrzyca.js?v=29',
   '/cukrzyca.js?v=30',

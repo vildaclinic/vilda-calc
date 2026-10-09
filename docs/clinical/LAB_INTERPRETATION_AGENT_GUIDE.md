@@ -6,6 +6,13 @@ Stosuj ją przy rozszerzaniu interpretacji o kolejne grupy wieku, etapy
 pokwitania i anality, np. inhibinę B. Aktualne polecenie właściciela ma
 pierwszeństwo; ogólne zasady pracy pozostają w [AGENTS.md](../../AGENTS.md).
 
+Osobny [wykres hormonów w ciągu życia](HORMONE_LIFESPAN.md) jest pomocą
+edukacyjną. Jego względne krzywe nie stanowią norm ani danych do interpretacji.
+Przy dodawaniu analitu powiąż go z domyślnym wyborem jego krzywej, jeśli jest
+dostępna; zachowaj wspólny kontekst pacjenta i nie dodawaj kolejnego formularza.
+INSL3 pozostaje zapisanym zadaniem przyszłego kalkulatora — obecność krzywej
+nie oznacza dostępności jego obliczeń.
+
 ## 1. Cel: szybkie sprawdzenie wyniku, „easy and clean”
 
 Lekarz wybiera badanie, wpisuje wynik i jednostkę. Aplikacja wykorzystuje

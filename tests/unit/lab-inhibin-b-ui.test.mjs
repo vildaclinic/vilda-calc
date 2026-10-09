@@ -77,15 +77,23 @@ function between(start, end) {
   return html.slice(from, to);
 }
 const route = between('    function isPubertySubstance(substance) {', '    function readPubertyPatientContext() {');
-const makeRender = new Function('pubertyUI', 'valueEl', 'unitEl', 'unitTargetEl', 'showError', 'updateStepStates', `${route}\n${between('    function renderResults(substance) {', '    function renderNotesBody(container, body) {')}\nreturn renderResults;`);
+const makeRender = new Function('pubertyUI', 'valueEl', 'unitEl', 'unitTargetEl', 'showError', 'updateStepStates',
+  'syncPatientIdentity', 'updateLifespan', `${route}\n${between('    function renderResults(substance) {', '    function renderNotesBody(container, body) {')}\nreturn renderResults;`);
 const makeSteps = new Function('currentSubstance', 'valueEl', 'unitEl', 'Conv', 'window', 'stepNums', `var step3HintEl = null, step4DefaultHintEl = null; ${route}\n${between('    function updateStepStates() {', '    function substance_label_for_target() {')}\nreturn updateStepStates;`);
 
 describe('Inhibina B — routing w produkcyjnym HTML', () => {
   it('kieruje do wspólnego formularza i nie korzysta z dawnej normy przelicznika', () => {
-    const render = vi.fn(() => ({ measurement: { status: 'valid' } }));
+    const evaluation = { measurement: { status: 'valid' } };
+    const render = vi.fn(() => evaluation);
     const error = vi.fn(), steps = vi.fn();
-    makeRender({ render }, { value: '<LOD' }, { value: 'pg/mL' }, { value: 'ng/L' }, error, steps)({ id: 'inhibin_b' });
+    const syncIdentity = vi.fn(), updateDiagram = vi.fn();
+    const substance = { id: 'inhibin_b' };
+    makeRender({ render }, { value: '<LOD' }, { value: 'pg/mL' }, { value: 'ng/L' }, error, steps, syncIdentity, updateDiagram)(substance);
+    expect(syncIdentity).toHaveBeenCalledOnce();
+    expect(syncIdentity.mock.invocationCallOrder[0]).toBeLessThan(render.mock.invocationCallOrder[0]);
     expect(render).toHaveBeenCalledExactlyOnceWith({ raw: '<LOD', unit: 'pg/mL', targetUnit: 'ng/L' });
+    expect(updateDiagram).toHaveBeenCalledExactlyOnceWith(substance, evaluation);
+    expect(render.mock.invocationCallOrder[0]).toBeLessThan(updateDiagram.mock.invocationCallOrder[0]);
     expect(error).toHaveBeenCalledExactlyOnceWith('');
     expect(steps).toHaveBeenCalledOnce();
   });

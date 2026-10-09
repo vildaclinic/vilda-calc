@@ -12,6 +12,7 @@ const isPuberty = between('    function isPubertySubstance(substance) {', '    f
 const makeReader = new Function('window', 'sessionStorage', 'persistence', 'extractTannerFromAny',
   `${between('    function readPubertyPatientContext() {', '    var pubertyUI =')}; return readPubertyPatientContext;`);
 const makeRender = new Function('pubertyUI', 'valueEl', 'unitEl', 'unitTargetEl', 'showError', 'updateStepStates',
+  'syncPatientIdentity', 'updateLifespan',
   `${isPuberty}\n${between('    function renderResults(substance) {', '    function renderNotesBody(container, body) {')}\nreturn renderResults;`);
 const makeSteps = new Function('currentSubstance', 'valueEl', 'unitEl', 'Conv', 'window', 'stepNums',
   `var step3HintEl = null, step4DefaultHintEl = null; ${isPuberty}\n${between('    function updateStepStates() {', '    function substance_label_for_target() {')}\nreturn updateStepStates;`);
@@ -56,18 +57,28 @@ describe('LH/FSH — dorosły pacjent w produkcyjnym adapterze strony', () => {
   });
 
   it.each(['lh', 'fsh'])('wysyła %s do tego samego modułu bez powrotu do dawnego zakresu dorosłych', id => {
-    const render = vi.fn(() => ({ measurement: { status: 'valid' } }));
+    const evaluation = { measurement: { status: 'valid' } };
+    const render = vi.fn(() => evaluation);
     const showError = vi.fn(), update = vi.fn();
-    const dispatch = makeRender({ render }, { value: '2' }, { value: 'IU/L' }, { value: 'mIU/mL' }, showError, update);
-    dispatch({ id, label_pl: id.toUpperCase() });
+    const syncIdentity = vi.fn(), updateDiagram = vi.fn();
+    const dispatch = makeRender({ render }, { value: '2' }, { value: 'IU/L' }, { value: 'mIU/mL' }, showError, update, syncIdentity, updateDiagram);
+    const substance = { id, label_pl: id.toUpperCase() };
+    dispatch(substance);
+    expect(syncIdentity).toHaveBeenCalledOnce();
+    expect(syncIdentity.mock.invocationCallOrder[0]).toBeLessThan(render.mock.invocationCallOrder[0]);
     expect(render).toHaveBeenCalledExactlyOnceWith({ raw: '2', unit: 'IU/L', targetUnit: 'mIU/mL' });
+    expect(updateDiagram).toHaveBeenCalledExactlyOnceWith(substance, evaluation);
+    expect(render.mock.invocationCallOrder[0]).toBeLessThan(updateDiagram.mock.invocationCallOrder[0]);
     expect(showError).toHaveBeenCalledExactlyOnceWith('');
     expect(update).toHaveBeenCalledOnce();
   });
 
   it.each(['lh', 'fsh'])('brak modułu %s nie uruchamia starej interpretacji jako zastępstwa', id => {
     const showError = vi.fn();
-    makeRender(null, { value: '2' }, { value: 'IU/L' }, null, showError, vi.fn())({ id });
+    const syncIdentity = vi.fn(), updateDiagram = vi.fn();
+    makeRender(null, { value: '2' }, { value: 'IU/L' }, null, showError, vi.fn(), syncIdentity, updateDiagram)({ id });
+    expect(syncIdentity).toHaveBeenCalledOnce();
+    expect(updateDiagram).toHaveBeenCalledExactlyOnceWith({ id }, null);
     expect(showError).toHaveBeenCalledWith(expect.stringContaining('Nieprawidłowy zapis'));
   });
 });

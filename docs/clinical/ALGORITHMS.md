@@ -400,6 +400,53 @@ przekracza. To odrębny, szeroki zakres i metoda Mayo ELISA. Katalog i jego
 ograniczenia zapisano w `INHIBIN_B.md`; profil Mayo pozostaje nieaktywny.
 Nie wybieramy źródła według tego, który werdykt daje dla wpisanej liczby.
 
+### LAB-HORMONE-LIFESPAN — poglądowy przebieg hormonów w ciągu życia
+
+Wdrożenie zatwierdzonych makiet z 2026-10-09: męskie LH, FSH, testosteron
+całkowity, AMH, inhibina B i poglądowe INSL3; żeńskie LH, FSH, estradiol,
+AMH i inhibina B. Dokumentacja danych, populacji, metod i ograniczeń:
+[HORMONE_LIFESPAN.md](HORMONE_LIFESPAN.md). Dane edukacyjne są odrębne od
+norm i silników interpretacji laboratoryjnej; źródła i skrypty odtworzenia
+pozostają w `hormone-lifespan/`.
+
+**Wpływ kliniczny:** dodano edukacyjną wizualizację czasu i kierunku zmian.
+Nie zmienia ona obliczeń, jednostek, zakresów, ostrzeżeń, oceny wyniku ani
+historii. Pozycja pionowa nie oznacza stężenia, percentyla lub proporcji
+różnych hormonów. Znacznik przedstawia wyłącznie wiek chronologiczny;
+etap wykresu nie ustala Tannera, fazy cyklu ani menopauzy. INSL3 na wykresie
+nie uruchamia nowego kalkulatora. Schematy i interpolacje nie uzyskują przez
+testy statusu walidacji klinicznej.
+
+Każdy hormon zachowuje tę samą własną skalę w widokach całego życia,
+minipuberty i pokwitania. Przybliżenie zmienia oś czasu, bez wyrównywania
+szczytów różnych hormonów. Odrębne „Porównaj płcie” dla AMH/inhibiny B
+porównuje kształt dwóch krzywych względem ich własnych maksimów, z widocznym
+opisem; nie porównuje bezwzględnych stężeń. Dorosłe E2 ma poglądowe plateau
+oraz osobny schemat cyklu, a nie połączenie mediany nastolatek z niższą
+medianą wyłącznie wczesnej fazy folikularnej dorosłych.
+
+Właściciel zatwierdził ciągłe, wygładzone krzywe bez dziur. Niepewne mosty
+między badaniami są przerywane i nie dodają fikcyjnych pomiarów. AMH po
+niemowlęctwie ma łagodne wypłaszczenie zamiast skoku do mediany szerokiej
+grupy dzieci; szczegółowe dane minipuberty pozostają zachowane. Modelowy
+garb pokwitaniowy inhibiny B pozostaje, natomiast niepewne ząbki szerokich
+grup LH/FSH/AMH nie stają się obowiązkowymi etapami fizjologii.
+
+Wykres wykorzystuje analit, płeć i efektywny kontekst już wpisany w formularzu,
+również lokalne korekty. Brak płci lub niegotowe źródło nie wybiera domyślnego
+pacjenta; brak wieku nie tworzy znacznika. Zmiana osoby resetuje wybór.
+Niemowlęce źródła dotyczą dzieci donoszonych: znane wcześniactwo lub brak
+potwierdzenia donoszenia nie pozwalają przedstawiać dopasowania niemowlęcia
+do tych krzywych. Nie używamy PMA ani wieku skorygowanego zamiast PNA.
+
+Syntetyczne regresje funkcji produkcyjnych: F/3 miesiące/AMH → początkowo
+tylko AMH, po przybliżeniu ta sama wysokość względna; szczyt żeńskiego E2
+23,908/264 wobec AMH 19,05/28,99 i inhibiny B 52,474/52,474, bez wyrównania
+szczytów. F/30 lat/E2 → osobny cykl po wyborze „Dorosła”; M/LH → zestaw
+męski bez E2. Zmiana pacjenta/płci, brak wieku, wcześniactwo, nieobsługiwany
+analit i reset nie przenoszą poprzedniego kontekstu. Kontrole obejmują
+przełączanie hormonów, stałą skalę, ciągłość, reduced motion, mobile i offline.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

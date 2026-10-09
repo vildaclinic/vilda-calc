@@ -1,0 +1,131 @@
+{
+  "purpose": "Educational comparison of published central concentrations, not a reference interval engine.",
+  "pediatric": {
+    "source": "Jopling et al. 2018, Table 1",
+    "doi": "10.1002/edm2.21",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+    "assay": "Beckman Coulter Access AMH",
+    "matrix": "lithium-heparin plasma",
+    "unit": "pmol/L",
+    "statistic": "published age-group median",
+    "population": "Residual hospital samples; patients investigated for DSD or other endocrinopathy excluded. Not a healthy population birth cohort.",
+    "groups": [
+      {
+        "ageMinYears": 1,
+        "ageMaxYears": 4.9,
+        "n": 42,
+        "median": 14.58,
+        "illustrationMidpointYears": 2.95
+      },
+      {
+        "ageMinYears": 5,
+        "ageMaxYears": 7.9,
+        "n": 42,
+        "median": 11.44,
+        "illustrationMidpointYears": 6.45
+      },
+      {
+        "ageMinYears": 8,
+        "ageMaxYears": 11.9,
+        "n": 47,
+        "median": 20.42,
+        "illustrationMidpointYears": 9.95
+      },
+      {
+        "ageMinYears": 12,
+        "ageMaxYears": 14.9,
+        "n": 33,
+        "median": 17.87,
+        "illustrationMidpointYears": 13.45
+      },
+      {
+        "ageMinYears": 15,
+        "ageMaxYears": 18.9,
+        "n": 30,
+        "median": 21.14,
+        "illustrationMidpointYears": 16.95
+      }
+    ],
+    "notes": [
+      "Illustration midpoint is a display convention, not a reported sample age or model knot.",
+      "These are small cross-sectional groups. Small reversals between adjacent medians must not be presented as established biological peaks or troughs.",
+      "Infant groups were not selected because the 2022 female longitudinal cohort offers better resolved infant serum medians."
+    ]
+  },
+  "adult": {
+    "source": "Beckman Coulter Access AMH, FDA K170524 (2017), Expected Reference Intervals",
+    "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+    "documentPages": {
+      "serum": 14,
+      "plasma": 15
+    },
+    "internalPages": {
+      "serum": 10,
+      "plasma": 11
+    },
+    "assay": "Beckman Coulter Access AMH on Access 2",
+    "unit": "pmol/L",
+    "statistic": "published age-group median",
+    "totalParticipants": 620,
+    "population": "Apparently healthy nonpregnant females at five sites, regular 21–35-day menstrual cycles, both ovaries present, proven fertility.",
+    "groups": [
+      {
+        "ageMinYears": 18,
+        "ageMaxYears": 25,
+        "n": 120,
+        "serumMedianNgMl": 3.6,
+        "serumMedianPmolL": 25.7,
+        "plasmaMedianNgMl": 3.75,
+        "plasmaMedianPmolL": 26.78,
+        "illustrationMidpointYears": 21.5
+      },
+      {
+        "ageMinYears": 26,
+        "ageMaxYears": 30,
+        "n": 131,
+        "serumMedianNgMl": 3.82,
+        "serumMedianPmolL": 27.27,
+        "plasmaMedianNgMl": 4.06,
+        "plasmaMedianPmolL": 28.99,
+        "illustrationMidpointYears": 28.0
+      },
+      {
+        "ageMinYears": 31,
+        "ageMaxYears": 35,
+        "n": 120,
+        "serumMedianNgMl": 2.47,
+        "serumMedianPmolL": 17.64,
+        "plasmaMedianNgMl": 2.56,
+        "plasmaMedianPmolL": 18.28,
+        "illustrationMidpointYears": 33.0
+      },
+      {
+        "ageMinYears": 36,
+        "ageMaxYears": 40,
+        "n": 123,
+        "serumMedianNgMl": 1.71,
+        "serumMedianPmolL": 12.21,
+        "plasmaMedianNgMl": 1.78,
+        "plasmaMedianPmolL": 12.71,
+        "illustrationMidpointYears": 38.0
+      },
+      {
+        "ageMinYears": 41,
+        "ageMaxYears": 45,
+        "n": 126,
+        "serumMedianNgMl": 0.54,
+        "serumMedianPmolL": 3.86,
+        "plasmaMedianNgMl": 0.56,
+        "plasmaMedianPmolL": 4.0,
+        "illustrationMidpointYears": 43.0
+      }
+    ],
+    "notes": [
+      "Not an all-women population estimate: participants were selected for regular cycles and proven fertility.",
+      "Do not silently alternate serum and plasma values. The paper on pediatric Access medians used plasma; the detailed infant cohort used serum.",
+      "Source does not provide median concentrations above 45 years. Do not extrapolate numeric concentrations into menopause or old age.",
+      "The maximum group median occurs at 26–30 years; these data do not locate an exact peak at age 28."
+    ]
+  },
+  "recommendation": "Keep source/matrix provenance and distinguish interpolated display connections from observed/modelled age-specific data. Use plasma for both Jopling and adult Access if a single same-matrix older series is wanted; keep infant serum identified separately. No assay conversion or arbitrary amplitude adjustment."
+}

@@ -148,6 +148,27 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
       if (strona === '/docpro.html') {
         await expect.poll(() => page.evaluate(() => typeof window.VildaVault), { message: 'sejf DocPro offline' }).toBe('object');
       }
+      if (strona === '/przelicznik-jednostek.html') {
+        // All diagram resources must come from the production precache. The
+        // converter has never been opened online, and its server is stopped.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'F', age: 12, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('AMH');
+        await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+        const wykres = page.locator('#labHormoneLifespan');
+        await expect(wykres).toBeVisible();
+        await expect(wykres.locator('[data-hormone="amh"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(wykres.locator('[data-patient-age-marker]')).toHaveAttribute('data-patient-age-marker', '12');
+        await wykres.locator('[data-hormone="inhb"]').click();
+        await expect(wykres.locator('[data-hormone="inhb"]')).toHaveAttribute('aria-pressed', 'true');
+        await page.reload({ waitUntil: 'load' });
+        await page.locator('#labSubstance').fill('AMH');
+        await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+        await expect(wykres).toBeVisible();
+        await expect(wykres.locator('[data-hormone="amh"]')).toHaveAttribute('aria-pressed', 'true');
+      }
     }
 
     expect(await sonda(), 'po całym obchodzie sieci nadal nie ma').toBe('brak sieci');
