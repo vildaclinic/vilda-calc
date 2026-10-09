@@ -238,10 +238,12 @@ describe('LH/FSH — utrwalenie nowych komunikatów i zgodność starszych ocen'
 
   it('wersjonuje zmienioną interpretację niezależnie od niezmienionych profilów RI', () => {
     expect(engine.version).toBe('1.3.0');
-    expect(data.dataVersion).toBe('2026-10-04.1');
+    expect(data.dataVersion).toBe('2026-10-09.1');
     expect(data.clinicalProfile.version).toBe('2026-10-04.1');
     expect(data.biochemicalPolicy.version).toBe('2026-10-03.1');
-    expect(data.profiles.every((profile) => profile.version === '2026-10-03.1')).toBe(true);
+    for (const id of ['mayo-lh-pediatric', 'mayo-fsh-pediatric', 'johannsen-minipuberty-lh-candidate', 'johannsen-minipuberty-fsh-candidate']) {
+      expect(data.profiles.find((profile) => profile.id === id).version).toBe('2026-10-03.1');
+    }
     for (const sourceId of ['puberty-hormones-review-2021', 'minipuberty-review-2024']) {
       expect(data.clinicalProfile.sourceIds).toContain(sourceId);
       expect(data.sources[sourceId]).toMatchObject({ id: sourceId });
