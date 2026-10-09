@@ -217,7 +217,7 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     expect(visibleText(host)).toContain('dają różne porównania');
   });
 
-  it('historia wyświetla zamrożony komparator i kontekst bez silnika ani dzisiejszego pacjenta', () => {
+  it('historia wyświetla zamrożony komparator, zachowując kontekst w danych bez silnika ani dzisiejszego pacjenta', () => {
     const evaluation = quick({ value: '<2', reportedRange: { text: '1-3', unit: 'IU/L' } });
     const assessment = saved(evaluation);
     expect(assessment.evaluation.reportedRange.status).toBe('indeterminate');
@@ -228,7 +228,10 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     loadBrowserScript('vilda_lab_assessment_ui.js', win);
     const host = doc.createElement('div');
     win.VildaLabAssessmentUI.renderAssessment(host, assessment, { compact: true });
-    expect(host.textContent).toContain('Kontekst z formularza głównego');
+    expect(host.textContent).not.toContain('Kontekst z formularza głównego');
+    expect(descendants(host, (node) => ['dl', 'dt', 'dd'].includes(node.tagName))).toHaveLength(0);
+    expect(assessment.evaluation.input.contextBasis).toBe('current-patient');
+    expect(ui.buildView(assessment.evaluation).context).toContainEqual({ label: 'Podstawa oceny', value: 'Kontekst z formularza głównego' });
     expect(visibleText(host)).toContain('Porównanie z podanym zakresem niejednoznaczne');
     expect(visibleText(host)).toContain('1-3 IU/L');
     expect(host.textContent).not.toContain('0-100');

@@ -141,10 +141,10 @@ for (const analyte of ['lh', 'fsh']) {
     await expect(assessment(page)).toContainText(/wiek/i);
     await expect(assessment(page)).not.toContainText('Wiek próbki nie mieści');
     await expect(assessment(page)).not.toContainText('Nie podano potwierdzonego zakresu laboratorium');
-    const context = assessment(page).locator('.vilda-lab-context');
-    await expect(context).not.toContainText('Potwierdzenie metody');
-    await expect(context).not.toContainText('Nie wiadomo');
-    await expect(context).not.toContainText('Nie ustalono');
+    await expect(assessment(page).locator('.vilda-lab-context, .vilda-lab-context-note, dl')).toHaveCount(0);
+    await expect(assessment(page)).not.toContainText('Potwierdzenie metody');
+    await expect(assessment(page)).not.toContainText('Objawy OUN');
+    await expect(assessment(page)).not.toContainText('Regresja');
   });
 }
 
@@ -354,6 +354,10 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
   const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(history).toHaveAttribute('data-assessment-status', 'recorded');
+  await expect(history.locator('.vilda-lab-context, .vilda-lab-context-note, dl')).toHaveCount(0);
+  await expect(history).not.toContainText('Kontekst użyty w ocenie');
+  await expect(history).not.toContainText('Podstawa oceny');
+  await expect(history).not.toContainText('Potwierdzenie metody');
   await expect(history.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-patient-value', '2');
   await expect(history.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
   await expect(history.locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
@@ -381,6 +385,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   const previous = history.locator('.vilda-lab-history');
   await expect(previous).not.toHaveAttribute('open');
   await previous.locator(':scope > summary').click();
+  await expect(previous.locator('.vilda-lab-context, .vilda-lab-context-note, dl')).toHaveCount(0);
   await expect(previous.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-patient-value', '2');
   expect(await previous.locator('.vilda-lab-axis-marker').evaluateAll((nodes) => nodes.every((node) =>
     getComputedStyle(node).animationName === 'none'))).toBe(true);

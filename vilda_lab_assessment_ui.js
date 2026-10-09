@@ -425,7 +425,13 @@
       if (current && code === 'missing_puberty_assessment') return 'Brak odpowiedniej oceny Th/M lub G dla bieżącego kontekstu. P i Ax jej nie zastępują.';
       return reasons([code])[0];
     }
-    var clinicalCodes = unique(codeList(e.clinical.reasonCodes).concat(codes.filter(function (code) { return !Object.prototype.hasOwnProperty.call(REASONS, code); })));
+    // An unreadable concentration does not invalidate independently recorded
+    // clinical risks or known exclusions from the basal reference ranges.
+    var clinicalCodes = unique(codeList(e.clinical.reasonCodes).concat(codes.filter(function (code) {
+      if (!Object.prototype.hasOwnProperty.call(REASONS, code)) return true;
+      if (['treatment_requires_separate_profile', 'preterm_reference_not_established', 'infant_gestational_context_missing', 'broad_infant_reference_not_full_minipuberty_assessment', 'low_lh_does_not_exclude_cpp', 'unquantified_detection_limit', 'censored_result_crosses_reference_boundary', 'censored_reference_lower_limit'].includes(code)) return true;
+      return input.measurementKind === 'stimulated' && ['non_basal_or_unknown_measurement', 'profile_measurement_kind_mismatch'].includes(code);
+    })));
     var clinicalSourceIds = codeList(e.clinical.sourceIds), clinicalSources = clinicalSourceIds.map(function (id) {
       var citation = Object.prototype.hasOwnProperty.call(CITATIONS, id) ? CITATIONS[id] : null;
       return citation ? { label: citation[0], version: '', organization: '', url: citation[1] } : null;
@@ -453,23 +459,18 @@
   function details(parent, title) { var element = add(parent, 'details', 'vilda-lab-details'); add(element, 'summary', '', title); return element; }
   function renderComparisonContext(parent, comparison) {
     if (comparison.key === 'local' && comparison.primary) add(parent, 'p', 'vilda-lab-note', 'Podstawa porównania: zakres laboratorium');
-    if (comparison.method) add(parent, 'p', 'vilda-lab-metadata', comparison.method + (comparison.methodOrigin ? ' · ' + comparison.methodOrigin : ''));
+    if (comparison.method) add(parent, 'p', 'vilda-lab-metadata', comparison.method);
     if (comparison.population) add(parent, 'p', 'vilda-lab-metadata', comparison.population);
     if (comparison.source) {
       var source = add(parent, 'p', 'vilda-lab-metadata');
-      renderSource(source, comparison.source, false);
-      if (comparison.key === 'local') {
-        if (comparison.source.version) add(source, 'span', '', ' · wersja źródła: ' + comparison.source.version);
-        if (comparison.referenceVersion) add(source, 'span', '', ' · wersja zakresu: ' + comparison.referenceVersion);
-      }
+      renderSource(source, comparison.source);
     }
   }
-  function renderSource(parent, source, includeVersion) {
+  function renderSource(parent, source) {
     if (source.url) {
       var link = add(parent, 'a', '', source.label);
       link.setAttribute('href', source.url); link.setAttribute('target', '_blank'); link.setAttribute('rel', 'noopener noreferrer');
     } else add(parent, 'span', '', source.label);
-    if (includeVersion && (source.organization || source.version)) add(parent, 'span', '', ' · ' + [source.organization, source.version].filter(Boolean).join(' · '));
   }
   function renderAxis(parent, comparison, result) {
     var model = comparison.axis;
@@ -537,7 +538,8 @@
   }
   function renderContents(parent, view, options) {
     var presentation = view.presentation;
-    var liveIncomplete = !!(options && options.live && !options.historical && !view.result.valid);
+    var incomplete = !view.result.valid;
+    var live = !!(options && options.live && !options.historical);
     if (!options || !options.hideMeasurement) {
       add(parent, 'p', 'vilda-lab-result-label', 'Wynik ' + view.analyte);
       add(parent, 'p', 'vilda-lab-result' + (view.result.visualState ? ' ' + view.result.visualState : ''), view.result.text);
@@ -547,7 +549,8 @@
         add(alert, 'span', 'vilda-lab-severity-summary-scope', view.result.visualAlert.scope + (view.result.visualAlert.conditional ? ' · warunkowo' : ''));
       }
     }
-    if (view.result.note && !liveIncomplete) add(parent, 'p', 'vilda-lab-note', view.result.note);
+    if (view.result.note && !incomplete) add(parent, 'p', 'vilda-lab-note', view.result.note);
+    if (incomplete && !live && !view.result.empty) add(parent, 'p', 'vilda-lab-note', 'Nieprawidłowy zapis wyniku lub jednostki — popraw wpis, aby porównać stężenie.');
     var clinical = add(parent, 'div', 'vilda-lab-clinical');
     clinical.setAttribute('data-clinical-code', /^[a-z_]+$/.test(view.clinical.code) ? view.clinical.code : 'unavailable');
     clinical.setAttribute('data-status', ['warning', 'notice', 'limited', 'out_of_scope', 'no_timing_alert'].includes(view.clinical.status) ? view.clinical.status : 'limited');
@@ -562,13 +565,13 @@
       ? presentation.clinicalText.replace('Brak wiarygodnego wieku w bieżącym kontekście pacjenta.', 'Brak wiarygodnego wieku w formularzu głównym.') : presentation.clinicalText;
     clinicalText.split(/\n\s*\n/).filter(Boolean).forEach(function (paragraph) { add(clinical, 'p', '', paragraph); });
     if (view.summary.status === 'attention' && view.summary.title !== view.clinical.title && !['outside_reference_range', 'outside_reported_range', 'reported_range_reference_disagreement'].includes(presentation.summaryCode)) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
-    if (!liveIncomplete) {
+    if (!incomplete) {
       var comparisonHead = add(parent, 'div', 'vilda-lab-comparisons-head');
       add(comparisonHead, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
       if (view.conditionNote) add(comparisonHead, 'span', 'vilda-lab-conditional-badge', 'Warunkowo');
       renderMotionToggle(comparisonHead, parent, view, options);
     }
-    if (view.reportedRange && !liveIncomplete) {
+    if (view.reportedRange && !incomplete) {
       var supplied = add(parent, 'div', 'vilda-lab-comparison vilda-lab-reported-range');
       supplied.setAttribute('data-comparison', 'reported');
       supplied.setAttribute('data-status', view.reportedRange.status);
@@ -577,9 +580,9 @@
       add(supplied, 'p', 'vilda-lab-range', [view.reportedRange.raw, view.reportedRange.unit].filter(Boolean).join(' '));
       add(supplied, 'p', 'vilda-lab-note', 'Porównanie liczbowe. Nie potwierdza zastosowania zakresu do wieku, stadium ani metody.');
     }
-    if (view.reportedRangeConflict && !liveIncomplete) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
-    var comparisons = liveIncomplete ? null : add(parent, 'div', 'vilda-lab-comparisons');
-    (liveIncomplete ? [] : view.comparisons).forEach(function (comparison) {
+    if (view.reportedRangeConflict && !incomplete) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
+    var comparisons = incomplete ? null : add(parent, 'div', 'vilda-lab-comparisons');
+    (incomplete ? [] : view.comparisons).forEach(function (comparison) {
       if (comparison.key === 'local' && comparison.status === 'unavailable') return;
       var row = add(comparisons, 'div', 'vilda-lab-comparison');
       row.setAttribute('data-comparison', comparison.key);
@@ -594,21 +597,16 @@
       renderAxis(row, comparison, view.result);
       if (comparison.rangeText) add(row, 'p', 'vilda-lab-range', comparison.rangeText);
     });
-    if (!liveIncomplete) renderLegend(parent, view.comparisons);
-    if (view.conditionNote && !liveIncomplete) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', 'conditional-basal-untreated');
+    if (!incomplete) renderLegend(parent, view.comparisons);
+    if (view.conditionNote && !incomplete) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', 'conditional-basal-untreated');
     var more = details(parent, 'Szczegóły i źródła');
-    if (view.contextNote && (!options || !options.live || options.historical)) add(more, 'p', 'vilda-lab-context-note', 'Kontekst z formularza głównego — bez potwierdzenia dla dnia pobrania.');
-    if (view.result.visualAlert && !liveIncomplete) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
-    if (presentation.context.length) {
-      var dl = add(more, 'dl', 'vilda-lab-context');
-      presentation.context.forEach(function (row) { add(dl, 'dt', '', row.label); add(dl, 'dd', '', row.value); });
-    }
-    list(more, liveIncomplete ? presentation.clinicalLimitations : presentation.limitations, 'vilda-lab-limitations');
-    if (!liveIncomplete) presentation.references.forEach(function (comparison) { renderComparisonContext(more, comparison); });
-    var sourceList = liveIncomplete ? presentation.clinicalSources : presentation.sources;
+    if (view.result.visualAlert && !incomplete) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
+    list(more, incomplete ? presentation.clinicalLimitations : presentation.limitations, 'vilda-lab-limitations');
+    if (!incomplete) presentation.references.forEach(function (comparison) { renderComparisonContext(more, comparison); });
+    var sourceList = incomplete ? presentation.clinicalSources : presentation.sources;
     if (sourceList.length) {
       var sources = add(more, 'ul', 'vilda-lab-sources');
-      sourceList.forEach(function (source) { renderSource(add(sources, 'li', ''), source, true); });
+      sourceList.forEach(function (source) { renderSource(add(sources, 'li', ''), source); });
     }
     if (options && options.expandContext) more.setAttribute('open', '');
   }
@@ -646,5 +644,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.5.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.6.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });
