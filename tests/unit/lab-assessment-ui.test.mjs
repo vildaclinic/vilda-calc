@@ -96,7 +96,7 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     expect(view.comparisons[0].method).toContain('AnshLite');
     expect(view.comparisons[0].population).toContain('Mayo');
     expect(view.sources.some((source) => source.url.includes('/62999'))).toBe(true);
-    expect(view.versions).toContain('Dane: 2026-10-09.1');
+    expect(view.versions).toContain('Dane: 2026-10-09.2');
   });
 
   it('odczyt lokalnego snapshotu pokazuje metodę i populację, zachowując ukryte wersje źródła i zakresu w danych', () => {

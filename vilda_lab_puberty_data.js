@@ -67,7 +67,7 @@
 
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-09.1',
+    dataVersion: '2026-10-09.2',
     implementationStatus: 'prepared-not-connected-to-ui',
     unit: 'IU/L',
     knownLimitations: [
@@ -129,14 +129,15 @@
         doiUrl: 'https://doi.org/10.1210/jc.2014-3681',
         accessedOn: '2026-10-09',
         accessTimeZone: 'Europe/Warsaw',
-        readScope: 'Published article abstract; full author-uploaded IFCC EuroMedLab Paris 2015 poster, including the Hormone 95% Reference Intervals table; both 2016 corrigenda. The full JCEM article and supplement were not accessible.',
+        readScope: 'Full JCEM article supplied as greaves2015.pdf, pp. 1097–1103: methods and eligibility p. 1098, cohort and age analysis pp. 1099–1101, Table 4 p. 1102; both 2016 corrigenda. The supplement was not accessible. The final journal table supersedes the previously read author poster.',
+        evidenceSha256: '96c1875105cab6dcc301a7494efa47f3a9bf39161dbd3adcf06847c1fa2bc251',
         intervalEvidence: {
-          kind: 'author-conference-poster',
-          title: 'Hormone modelling in preterm neonates: establishment of pituitary and steroid hormone reference intervals',
-          version: 'IFCC-EuroMedLab-Paris-2015-author-upload-2015-08-01',
-          url: 'https://www.researchgate.net/publication/280581071_Hormone_modelling_in_preterm_neonates_establishment_of_pituitary_and_steroid_hormone_reference_intervals_Poster_Abstract_-_IFCC_EuroMedLab_Paris_2015_21-25_June_2015_Clin_Chem_Lab_Med_2015_53_Special_',
-          table: 'Hormone 95% Reference Intervals',
-          verification: 'Table text and PDF image checked; agreement with the final journal table remains unverified.'
+          kind: 'journal-table',
+          version: 'JCEM-2015-100-1097-1103',
+          url: 'https://doi.org/10.1210/jc.2014-3681',
+          table: 'Table 4',
+          page: 1102,
+          verification: 'Table text and PDF image checked. Central 95% reference intervals are distinct from observed minima/maxima and the 90% confidence intervals of their limits.'
         },
         corrigenda: [
           { doi: '10.1210/jc.2016-1639', url: 'https://academic.oup.com/jcem/article/101/5/2265/2804857' },
@@ -146,24 +147,30 @@
         recruitment: {
           infants: 248, male: 128, female: 120,
           setting: 'Three neonatal intensive care wards in Melbourne, Australia.',
-          gestationalAgeSourceText: '24–32 weeks of gestation',
+          gestationalAgeSourceText: 'Abstract: 24–32 weeks. Eligible cohort (n=234): observed minimum 23+3 and maximum 32+4 weeks; the LH/FSH subgroup extrema are not reported.',
+          eligibleCohort: { infants: 234, male: 116, female: 118 },
           postnatalAgeDays: null,
-          verifiedCriteria: ['No ambiguous genitalia or other endocrine abnormalities.', 'Infants included in RI determination survived beyond the equivalent of term.'],
+          firstSampleAgeEvidence: 'Only the first sample per infant was used for RI estimation. Narrative: mean PNA 21 days (SD 15); Table 2: total 20 (15), male 21 (15), female 20 (14). No minimum/maximum PNA is reported.',
+          biobankFollowUp: 'Serial sampling every 2–3 weeks to 36 weeks gestational age describes the biobank follow-up, not the validated age window for first-sample LH/FSH RIs.',
+          verifiedCriteria: ['Neonatal physician assessed suitability: usual presentation with complications specific to prematurity.', 'No apparent endocrinopathy, ambiguous genitalia or congenital abnormality; newborn screening was normal.', 'Infants included in RI determination survived beyond the equivalent of term.'],
+          treatmentEvidence: 'Approximately 90% of mothers received antenatal glucocorticoids (median 11 days before sampling). Five infants received glucocorticoids before first collection (median 7, range 3–15 days); one mother used progesterone pessaries. The cohort was not defined as entirely free of hormonal exposure.',
+          clinicalCriteriaVerified: true,
           completeEligibilityVerified: false
         },
         methodEvidence: {
-          articleAbstract: 'Roche Cobas 8000-e601, electrochemiluminescence immunoassay',
-          authorPoster: 'Roche Cobas 8000-E602, electrochemiluminescence immunoassay',
-          assayIdentityResolved: false,
+          articleMethods: 'Roche Cobas 8000-e601 electrochemiluminescence immunoassay, standard manufacturer reagent kits and procedures; analytical performance within manufacturer specifications (p. 1098).',
+          traceability: { fsh: 'WHO 78/549', lh: 'NIBSC 80/552' },
+          authorPosterDiscrepancy: 'The earlier poster names E602; the full journal methods identify e601 and take precedence.',
+          assayIdentityResolved: true,
           transferableToCurrentMayoProfiles: false
         },
         knownLimitations: [
-          'Pełny artykuł i suplement nie zostały odczytane; liczby pochodzą z tabeli posteru autorów.',
-          'Nie ustalono dokładnego okna wieku po urodzeniu ani zasad użycia wieku postmenstruacyjnego.',
-          'Opis 24–32 tygodnie nie rozstrzyga dokładnych granic tygodni i dni kwalifikacji.',
-          'Nie potwierdzono pełnych kryteriów włączenia/wyłączenia, w tym leczenia i chorobowości.',
-          'Rozbieżność e601/E602 oraz brak potwierdzonej wersji odczynników i kalibracji wymagają wyjaśnienia.',
-          'Zakresy z posteru nie są uniwersalnymi normami dla wszystkich wcześniaków ani całego pierwszego roku życia.',
+          'Pełny artykuł odczytano; suplement pozostaje niedostępny. Tabela 4 nie określa dokładnego okna dni życia.',
+          'Obserwowane GA 23+3–32+4 dotyczy całej kohorty 234 dzieci; nie ustala dokładnej kwalifikacji podgrupy LH/FSH.',
+          'Średnia wieku pobrania i obserwacja biobanku do 36 tygodni nie wyznaczają okna stosowania RI z pierwszych próbek.',
+          'Górne granice RI mają niepewność: względna szerokość 90% CI wynosi LH M35%/F52%, FSH M30%/F27% (tabela 4).',
+          'To przedziały stężeń w konkretnej populacji i metodzie, nie progi rozpoznania ani uniwersalne normy dla wszystkich wcześniaków lub całego pierwszego roku życia.',
+          'Nie potwierdzono przenoszalności na AnshLite ani aktualny profil Mayo Roche Elecsys FSH.',
           'Nie wolno przenosić tu okna 0–43 dni z Greaves 2008, harmonogramu Greaves 2014 ani wyznaczać granic ze średniego wieku kohorty.'
         ]
       },
@@ -558,54 +565,54 @@
       },
       {
         id: 'greaves-preterm-lh-candidate',
-        version: '2026-10-09.1',
+        version: '2026-10-09.2',
         active: false,
         analyte: 'lh',
         sourceId: 'greaves-preterm-2015',
         method: {
-          id: 'roche-cobas-greaves-2015-unverified',
-          name: 'Roche Cobas ECLIA — Greaves 2015 (metoda do weryfikacji)',
-          description: 'Abstract: 8000-e601; author poster: 8000-E602. Assay version and transferability unresolved; not an alias of AnshLite or a current Mayo assay.'
+          id: 'roche-cobas-e601-lh-greaves-2015',
+          name: 'Roche Cobas 8000-e601 LH — Greaves 2015',
+          description: 'ECLIA, standard manufacturer kits and procedures; traceable to NIBSC 80/552 (p. 1098). Not an alias of AnshLite or a current Mayo assay.'
         },
         material: 'serum',
         unit: 'IU/L',
-        examinationType: 'unknown',
+        examinationType: 'basal',
         population: {
-          label: 'Wcześniaki urodzone w 24.–32. tygodniu ciąży, Melbourne — Greaves 2015; dokładne kryteria wieku niepotwierdzone',
+          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; pierwsze próbki, dokładne okno wieku nieustalone',
           statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
         },
-        blockedReasons: ['fullPrimaryTextUnavailable', 'unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges', 'unresolvedAssayIdentity', 'unresolvedClinicalEligibility', 'finalJournalTableUnverified'],
-        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonej populacji.', 'Przedziały z posteru są metadanymi do przeglądu, nie aktywnymi normami ani progami rozpoznania.'],
+        blockedReasons: ['unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges'],
+        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonego okna wieku.', 'Przedziały z tabeli 4 pełnego artykułu są metadanymi do przeglądu, nie aktywnymi normami ani progami rozpoznania.'],
         rows: [],
         reportedIntervals: [
-          { sex: 'M', rangeSourceText: '0.1–9.2 IU/L', lower: 0.1, upper: 9.2, sampleSize: 111 },
-          { sex: 'F', rangeSourceText: '0.2–134 IU/L', lower: 0.2, upper: 134, sampleSize: 108 }
+          { sex: 'M', rangeSourceText: '0.1–9.2 IU/L', lower: 0.1, upper: 9.2, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [7.9, 11.1] } },
+          { sex: 'F', rangeSourceText: '0.2–133.9 IU/L', lower: 0.2, upper: 133.9, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.5], upper: [104.2, 173.9] } }
         ]
       },
       {
         id: 'greaves-preterm-fsh-candidate',
-        version: '2026-10-09.1',
+        version: '2026-10-09.2',
         active: false,
         analyte: 'fsh',
         sourceId: 'greaves-preterm-2015',
         method: {
-          id: 'roche-cobas-greaves-2015-unverified',
-          name: 'Roche Cobas ECLIA — Greaves 2015 (metoda do weryfikacji)',
-          description: 'Abstract: 8000-e601; author poster: 8000-E602. Assay version and transferability unresolved; not an alias of the current Mayo Roche Elecsys FSH profile.'
+          id: 'roche-cobas-e601-fsh-greaves-2015',
+          name: 'Roche Cobas 8000-e601 FSH — Greaves 2015',
+          description: 'ECLIA, standard manufacturer kits and procedures; traceable to WHO 78/549 (p. 1098). Not an alias of the current Mayo Roche Elecsys FSH profile.'
         },
         material: 'serum',
         unit: 'IU/L',
-        examinationType: 'unknown',
+        examinationType: 'basal',
         population: {
-          label: 'Wcześniaki urodzone w 24.–32. tygodniu ciąży, Melbourne — Greaves 2015; dokładne kryteria wieku niepotwierdzone',
+          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; pierwsze próbki, dokładne okno wieku nieustalone',
           statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
         },
-        blockedReasons: ['fullPrimaryTextUnavailable', 'unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges', 'unresolvedAssayIdentity', 'unresolvedClinicalEligibility', 'finalJournalTableUnverified'],
-        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonej populacji.', 'W posterze część wyników FSH przekraczała liniowość testu 200 IU/L; sposób ich obsługi trzeba potwierdzić w pełnym artykule.'],
+        blockedReasons: ['unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges'],
+        knownLimitations: ['Profil przygotowany, nieaktywny: brak scope i rows uniemożliwia automatyczny dobór niepotwierdzonego okna wieku.', 'Przedziały z tabeli 4 pełnego artykułu są metadanymi do przeglądu, nie aktywnymi normami ani progami rozpoznania.'],
         rows: [],
         reportedIntervals: [
-          { sex: 'M', rangeSourceText: '0.16–3.6 IU/L', lower: 0.16, upper: 3.6, sampleSize: 111 },
-          { sex: 'F', rangeSourceText: '2.6–181 IU/L', lower: 2.6, upper: 181, sampleSize: 108 }
+          { sex: 'M', rangeSourceText: '0.2–3.6 IU/L', lower: 0.2, upper: 3.6, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [3.2, 4.2] } },
+          { sex: 'F', rangeSourceText: '2.6–181.1 IU/L', lower: 2.6, upper: 181.1, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [1.0, 4.9], upper: [159.6, 207.6] } }
         ]
       }
     ]
