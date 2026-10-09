@@ -182,29 +182,40 @@ Formularz `1.10.0` i renderer `1.7.0` usuwają przycisk „Zatrzymaj/Wznów anim
 
 #### LAB-PUBERTY — kandydackie profile wcześniacze, 2026-10-09
 
-Zbiór `vilda_lab_puberty_data.js` w wersji `2026-10-09.1` zawiera osobne,
-**nieaktywne** profile `greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate`.
-Źródło: Greaves i wsp., JCEM 2015;100:1097–1103,
-[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/), DOI 10.1210/jc.2014-3681;
-odczytano abstrakt, pełny poster autorów IFCC 2015 i corrigenda 2016 (korekta
-prolaktyny, nie LH/FSH). Pełny artykuł i suplement pozostają niedostępne.
-Populacja źródłowa: wcześniaki urodzone w 24.–32. tygodniu, trzy NICU w Melbourne;
-surowica, Roche Cobas ECLIA, IU/L, centralne 95% RI. Tabela posteru: LH M0,1–9,2,
-F0,2–134; FSH M0,16–3,6, F2,6–181; n111/108. Dane liczbowe są opisowymi
-`reportedIntervals`, a nie wykonywalnymi `rows`.
+Zbiór `vilda_lab_puberty_data.js` i kandydaci mają wersję `2026-10-09.2`.
+Profile `greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate` pozostają
+**nieaktywne**. Źródło: Greaves i wsp., JCEM 2015;100:1097–1103,
+[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/), DOI 10.1210/jc.2014-3681.
+Odczytano pełny artykuł dostarczony przez właściciela (metody s. 1098, tabela 4
+s. 1102) i corrigenda 2016 (prolaktyna, nie LH/FSH). Suplement nadal niedostępny.
+Hash PDF i szczegółowy zakres odczytu są w metadanych źródła i planie LH/FSH.
 
-Niepotwierdzone: dokładne GA/PNA/PMA, pełna kwalifikacja kliniczna, ostateczna
-tabela i tożsamość testów (abstrakt e601, poster E602). Brak `scope`, puste `rows`
-i `active:false` uniemożliwiają automatyczny dobór. Wymóg pełnego źródła z AGENTS.md
-blokuje aktywację, nie samo przygotowanie jawnie nieaktywnego kandydata.
+Tabela 4 zastępuje poster użyty w `.1`: LH M0,1–9,2/F0,2–133,9; FSH
+M0,2–3,6/F2,6–181,1 IU/L. Zmieniono trzy granice posteru: FSH M0,16 → 0,2;
+FSH F181 → 181,1; LH F134 → 133,9. Surowica, Roche Cobas 8000-e601 ECLIA,
+standardowe zestawy/procedury producenta, LH NIBSC 80/552, FSH WHO 78/549.
+Finalny tekst rozstrzyga rozbieżność e601/E602 na rzecz e601; brak dowodu
+przenoszalności na aktualne profile Mayo. Centralne 95% RI metodą robust/Box–Cox,
+n111 M/108 F; osobne 90% CI dotyczą niepewności granic, nie zakresów normy.
 
-**Wpływ kliniczny tego etapu: brak zmiany wyników i interpretacji.** Silnik `1.3.0`,
-aktywne zakresy, wersje istniejących profili i kryteria są niezmienione. Nie ma nowych
-pól UI, przenoszenia norm pomiędzy metodami ani aktualizacji historycznych ocen.
-Przypadki produkcyjnych funkcji: ręcznie wskazany kandydat LH/FSH → `unavailable`,
-bez `referencePreview`; konfiguracja urządzenia odrzuca kandydata; wcześniak
-ze starym profilem nadal bez RI; M2 lata 9 miesięcy/G3/LH2 IU/L → dotychczasowe
-porównania i ostrzeżenie wczesnego rozwoju; odczyt snapshotu → bez ponownego liczenia.
+Populacja: wcześniaki z trzech oddziałów w Melbourne, bez jawnej endokrynopatii,
+niejednoznacznych genitaliów i wad wrodzonych, prawidłowy przesiew, przeżycie
+poza wiek odpowiadający terminowi; dopuszczone powikłania wcześniactwa i opisane
+w źródle ekspozycje hormonalne. Skrajne GA23+3–32+4 tygodnia dotyczą całej kohorty
+234 dzieci, nie są potwierdzonymi granicami podgrupy LH/FSH. RI wyliczono tylko
+z pierwszych próbek: średni wiek około 20–21 dni, bez minimum/maksimum PNA.
+Harmonogram biobanku do 36 tygodni nie wyznacza okna RI. Niepotwierdzone kryteria
+wieku nadal uniemożliwiają aktywację; metoda, tabela i kryteria kliniczne są już
+odczytane. Brak `scope`, puste `rows` i `active:false`; liczby wyłącznie jako
+opisowe `reportedIntervals`.
+
+**Wpływ kliniczny: korekta nieaktywnych danych źródłowych, bez zmiany bieżących
+wyników i interpretacji.** Silnik `1.3.0`, aktywne zakresy, wersje istniejących
+profili i kryteria bez zmian. Bez nowych pól UI i przeliczania historii.
+Przypadki produkcyjnych funkcji: kandydat LH/FSH → `unavailable`, bez podglądu,
+również przy PNA21 lub GA28/PNA56 (PMA36); ustawienia urządzenia odrzucają kandydata;
+wcześniak z profilem Mayo nadal bez RI; M2 lata 9 miesięcy/G3/LH2 IU/L → dotychczasowe
+porównania i ostrzeżenie wczesnego rozwoju; snapshot → bez ponownego liczenia.
 
 Pełny zakres odczytu, ograniczenia i warunki przyszłej aktywacji:
 [LH_FSH.md](LH_FSH.md#przygotowanie-profilu-wcześniaczego--9102026).

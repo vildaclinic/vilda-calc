@@ -4,70 +4,95 @@ Stan dokumentu: 9 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po 
 
 ## Przygotowanie profilu wcześniaczego — 9.10.2026
 
-**Status: przygotowane dane, bez aktywacji interpretacji.** Dodano osobne profile
-`greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate`, wersja `2026-10-09.1`.
-Każdy ma `active: false`, puste `rows` i brak `scope`. Liczby są wyłącznie w
-`reportedIntervals`; nie stanowią danych wejściowych do porównania stężenia.
-Samo przełączenie `active` nie wystarcza do użycia tych profili.
+**Status: dane zweryfikowane z pełnego artykułu, bez aktywacji interpretacji.**
+Osobne profile `greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate`
+mają wersję `2026-10-09.2`, `active: false`, puste `rows` i brak `scope`.
+Liczby w `reportedIntervals` dokumentują publikację; nie są wejściem do porównania
+stężenia. Samo przełączenie `active` nie wystarcza do użycia tych profili.
 
 Podstawa: Greaves RF i wsp., *Hormone Modeling in Preterm Neonates: Establishment
 of Pituitary and Steroid Hormone Reference Intervals*, JCEM 2015;100:1097–1103,
 [PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/),
 [DOI 10.1210/jc.2014-3681](https://doi.org/10.1210/jc.2014-3681).
-Odczyt 9.10.2026: abstrakt artykułu oraz pełny
-[poster autorów IFCC EuroMedLab Paris 2015](https://www.researchgate.net/publication/280581071_Hormone_modelling_in_preterm_neonates_establishment_of_pituitary_and_steroid_hormone_reference_intervals_Poster_Abstract_-_IFCC_EuroMedLab_Paris_2015_21-25_June_2015_Clin_Chem_Lab_Med_2015_53_Special_),
-z weryfikacją obrazu tabeli „Hormone 95% Reference Intervals”. **Pełny artykuł
-i suplement nie były dostępne**; nie deklarujemy zgodności tabeli posteru z finalną
-tabelą artykułu. Odczytane corrigenda
+Odczyt 9.10.2026: pełny artykuł dostarczony przez właściciela jako `greaves2015.pdf`,
+s. 1097–1103, w tym metody s. 1098, populacja i analiza wieku s. 1099–1101 oraz
+obraz i tekst tabeli 4 s. 1102. SHA-256 pliku:
+`96c1875105cab6dcc301a7494efa47f3a9bf39161dbd3adcf06847c1fa2bc251`.
+PDF nie jest dołączany do publicznego repozytorium. Suplement `jc-14-3681.pdf`
+pozostaje niedostępny. Odczytane corrigenda
 [10.1210/jc.2016-1639](https://academic.oup.com/jcem/article/101/5/2265/2804857) i
 [10.1210/jc.2016-2005](https://academic.oup.com/jcem/article/101/6/2622/2804884)
 dotyczą podziękowań i jednostki prolaktyny, nie granic LH/FSH.
 
-Rekrutowano 248 noworodków (128 chłopców, 120 dziewczynek) z trzech oddziałów
-intensywnej terapii w Melbourne, urodzonych w 24.–32. tygodniu ciąży. Potwierdzone
-kryteria: brak niejednoznacznych genitaliów/innych zaburzeń endokrynologicznych
-i przeżycie do wieku odpowiadającego terminowi. Materiał: surowica. Statystyka:
-centralny 95% przedział referencyjny, metoda robust po transformacji Box–Cox.
-Liczebności poniżej dotyczą tabeli LH/FSH, nie całej rekrutowanej kohorty.
+**Korekta wersji `.1`:** finalna tabela 4 zastępuje poster autorów IFCC 2015.
+Poprawiono FSH M: dolna granica 0,16 → 0,2; FSH F: górna 181 → 181,1;
+LH F: górna 134 → 133,9 IU/L. Metody s. 1098 rozstrzygają platformę:
+**Roche Cobas 8000-e601**, ECLIA, standardowe zestawy i procedury producenta;
+identyfikowalność FSH do WHO 78/549, LH do NIBSC 80/552. E602 z posteru nie jest
+podstawą identyfikacji. Nie oznacza to zamienności z AnshLite ani z aktualnym
+profilem Mayo Roche Elecsys FSH. Oznaczenia z rutynowego pobrania, bez protokołu
+stymulacyjnego; materiał: surowica, jednostka: IU/L.
+
+Rekrutowano 248 noworodków (128 M/120 F) z trzech oddziałów noworodkowych
+w Melbourne; kwalifikowana kohorta liczyła 234 (116 M/118 F). Rzeczywiste skrajne
+GA całej kwalifikowanej kohorty to 23+3–32+4 tygodnia (opis abstraktu: 24–32),
+ale nie podano skrajnych GA podgrupy LH/FSH. Kwalifikację oceniał neonatolog:
+typowy przebieg wcześniactwa, także z jego powikłaniami, bez jawnej endokrynopatii,
+niejednoznacznych genitaliów i wad wrodzonych, prawidłowy przesiew noworodkowy,
+przeżycie poza wiek odpowiadający terminowi. To nie była populacja całkowicie
+wolna od ekspozycji hormonalnej: około 90% matek otrzymało steroidy prenatalnie,
+pięcioro niemowląt glikokortykosteroidy przed pierwszą próbką; opisano też jedną
+matkę stosującą progesteron. Nie dopisujemy nieistniejącego kryterium wykluczenia
+każdej takiej ekspozycji.
+
+Tabela 4, po usunięciu obserwacji odstających metodą Horn–Tukey: centralne 95% RI
+(2,5.–97,5. centyl), metoda robust po transformacji Box–Cox. Liczebność LH/FSH:
+111 M/108 F. Zapisane osobno 90% przedziały ufności granic RI nie są normami.
+Względna szerokość CI górnej granicy wynosi LH M35%/F52%, FSH M30%/F27%; autorzy
+wskazują ograniczoną precyzję części granic. Uśrednianie wyników bliźniąt M–M
+w tej pracy nie dotyczyło LH ani FSH.
 
 | Analit | Chłopcy (n=111) | Dziewczynki (n=108) |
 |---|---:|---:|
-| LH, IU/L | 0,1–9,2 | 0,2–134 |
-| FSH, IU/L | 0,16–3,6 | 2,6–181 |
+| LH, IU/L | 0,1–9,2 | 0,2–133,9 |
+| FSH, IU/L | 0,2–3,6 | 2,6–181,1 |
 
-**Braki blokujące aktywację:** dokładne dni życia przy pobraniu i reguły wieku
-postmenstruacyjnego, granice tygodni/dni wieku ciążowego, pełne kryteria kliniczne
-(w tym leczenie), finalna tabela oraz identyfikacja oznaczenia. Abstrakt wskazuje
-Roche Cobas 8000-e601, poster 8000-E602; zgodność wersji odczynników/kalibracji
-i przenoszalność na aktualne profile Mayo nie są potwierdzone. FSH w części próbek
-przekraczało liniowość 200 IU/L — sposób obsługi wymaga pełnego artykułu.
-Nie tworzymy kryteriów ze średniego wieku kohorty, nie przejmujemy 0–43 dni
-z pilotażu Greaves 2008 ani harmonogramu innego badania z 2014 r.
+**Nadal nieustalone kryteria wieku:** do RI użyto wyłącznie pierwszej próbki
+każdego dziecka. Artykuł podaje średni PNA 21 dni (SD15); tabela 2: ogółem 20
+(SD15), M21 (SD15), F20 (SD14), bez minimum/maksimum. Pobrania co 2–3 tygodnie
+do 36 tygodni opisują cały biobank, a nie zakres wieku pierwszych próbek użytych
+do RI. Brak potrzeby podziału LH/FSH na grupy wieku w badanej kohorcie nie dowodzi
+stosowalności poza nią. Nie wyznaczamy okna ze średniej ± SD, osi wykresu ani
+samego końca obserwacji; nie przejmujemy 0–43 dni z Greaves 2008 lub harmonogramu
+innego badania z 2014 r. Pozostają blokady `unresolvedPostnatalAge` oraz
+`unresolvedGestationalAgeEdges`; usunięto nieaktualne blokady pełnego tekstu,
+tabeli, metody i klinicznych kryteriów kwalifikacji.
 
 **Wpływ na aplikację:** brak nowych pól i opcji metody; wyniki i interpretacje
-pozostają niezmienione. Profile nie są wybieralne, zapisywalne jako ustawienie
-urządzenia ani używane w `referencePreview`. Dotychczasowa blokada użycia norm Mayo
-u wcześniaka pozostaje. Istnienie norm w literaturze nie oznacza ich dopasowania
-do każdego wcześniaka i całego pierwszego roku życia. Silnik `1.3.0`, wersje profili
-Mayo/Johannsen, polityka biochemiczna i kryteria kliniczne pozostają bez zmian;
-wersja zbioru danych wynosi teraz `2026-10-09.1`. Stare snapshoty nie są migrowane
-ani ponownie liczone. Greaves nie jest dopisywany do źródeł zwykłych ocen Mayo.
+pozostają niezmienione. Kandydaci nie są wybieralni, zapisywalni jako ustawienie
+urządzenia ani używani w `referencePreview`. Dotychczasowa blokada norm Mayo
+u wcześniaka pozostaje. Nie są to uniwersalne normy dla wszystkich wcześniaków
+ani całego pierwszego roku życia. Silnik `1.3.0`, wersje profili Mayo/Johannsen,
+polityka biochemiczna i kryteria kliniczne pozostają bez zmian; wersja zbioru danych
+wynosi `2026-10-09.2`. Stare snapshoty nie są migrowane ani ponownie liczone.
+Greaves nie jest dopisywany do źródeł zwykłych ocen Mayo.
 
 Przypadki dla rzeczywistych funkcji produkcyjnych:
 
 | Wejście/działanie | Oczekiwany wynik |
 |---|---|
 | LH/FSH, wskazanie kandydata Greaves, M/F, wiek i wynik znane | Brak porównania i podglądu; `profile_not_active`; bez zastąpienia normą Mayo. |
+| Dokładny PNA21 dni albo GA28 tygodni/PNA56 dni (PMA36 tygodni) | Średnia kohorty i koniec obserwacji nie tworzą kryterium normy; nadal brak porównania i podglądu. |
 | Próba zapisania konfiguracji kandydata lub odczyt takiej konfiguracji | Kandydat odrzucony; nie pojawia się jako zapamiętana metoda. |
-| Wcześniak, dotychczasowa metoda Mayo | Nadal brak niedopasowanego RI, bez automatycznego przejścia na tabelę posteru. |
+| Wcześniak, dotychczasowa metoda Mayo | Nadal brak niedopasowanego RI, bez automatycznego przejścia na tabelę Greaves. |
 | M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda Mayo | Dotychczasowe porównania: powyżej dla wieku, w zakresie dla G3; ostrzeżenie wczesnego rozwoju pozostaje. |
 | Odczyt starszej oceny | Pierwotne wartości, statusy, źródła i wersje bez ponownego obliczenia. |
 
-Plan aktywacji: pełny artykuł i suplement → rozstrzygnięcie wszystkich kryteriów
-oraz metody → jawne reguły kwalifikacji GA/PNA w danych → testy granic i doboru
-populacji → akceptacja kliniczna właściciela. Dopiero wtedy należy projektować
-minimalne uzupełnienie danych niemowlęcia. Obecny wiek w latach/miesiącach nie
-może udawać dokładnej liczby dni życia. Ten etap przygotowania nie stanowi
+Plan aktywacji: ustalenie dokładnych kryteriów wieku ze źródła (suplement,
+protokół lub dane autorów) → reguły kwalifikacji GA/PNA w danych → testy granic
+i doboru populacji → akceptacja kliniczna właściciela. Dopiero wtedy należy
+projektować minimalne uzupełnienie danych niemowlęcia. Obecny wiek w latach
+/miesiącach nie może udawać dokładnej liczby dni życia. Ten etap nie stanowi
 walidacji klinicznej ani aktywacji nowych norm.
 
 ## Przyciski edycji i animacje — 9.10.2026

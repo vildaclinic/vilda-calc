@@ -37,20 +37,38 @@ function expectNoReference(result) {
 
 describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniaczą', () => {
   it.each([
-    ['lh', 'M', 0.1, 9.2, 111], ['lh', 'F', 0.2, 134, 108],
-    ['fsh', 'M', 0.16, 3.6, 111], ['fsh', 'F', 2.6, 181, 108],
+    ['lh', 'M', 0.1, 9.2, 111], ['lh', 'F', 0.2, 133.9, 108],
+    ['fsh', 'M', 0.2, 3.6, 111], ['fsh', 'F', 2.6, 181.1, 108],
   ])('zachowuje raportowany przedział %s/%s bez tworzenia maszynowego zakresu wieku', (analyte, sex, lower, upper, sampleSize) => {
     const candidate = profile(candidateId(analyte));
     expect(candidate).toMatchObject({
-      active: false, analyte, sourceId: 'greaves-preterm-2015', version: '2026-10-09.1',
-      method: { id: 'roche-cobas-greaves-2015-unverified' }, material: 'serum', unit: 'IU/L', rows: [],
+      active: false, analyte, sourceId: 'greaves-preterm-2015', version: '2026-10-09.2',
+      method: { id: `roche-cobas-e601-${analyte}-greaves-2015` }, material: 'serum', unit: 'IU/L', rows: [],
     });
     expect(candidate).not.toHaveProperty('scope');
-    expect(candidate.blockedReasons.length).toBeGreaterThan(0);
+    expect(candidate.blockedReasons).toEqual(['unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges']);
     expect(candidate.reportedIntervals.filter((interval) => interval.sex === sex)).toEqual([
       expect.objectContaining({ sex, lower, upper, sampleSize }),
     ]);
     expect(data.sources[candidate.sourceId]).toMatchObject({ pmid: '25562509', doi: '10.1210/jc.2014-3681' });
+  });
+
+  it('wiąże zweryfikowane przedziały z tabelą 4 pełnego artykułu i konkretnym PDF, nie posterem', () => {
+    const source = data.sources['greaves-preterm-2015'];
+    expect(source).toMatchObject({
+      evidenceSha256: '96c1875105cab6dcc301a7494efa47f3a9bf39161dbd3adcf06847c1fa2bc251',
+      intervalEvidence: { kind: 'journal-table', page: 1102 },
+      methodEvidence: { assayIdentityResolved: true, transferableToCurrentMayoProfiles: false },
+    });
+    expect(source.readScope).toMatch(/full/i);
+    expect(source.readScope).toMatch(/1098/);
+    expect(source.readScope).toMatch(/Table 4/);
+    expect(source.recruitment.postnatalAgeDays).toBeNull();
+    // The journal table supersedes three numbers previously transcribed from
+    // the author poster; do not silently keep its precision or platform ID.
+    expect(profile(candidateId('fsh')).reportedIntervals.find((row) => row.sex === 'M').lower).not.toBe(0.16);
+    expect(profile(candidateId('fsh')).reportedIntervals.find((row) => row.sex === 'F').upper).not.toBe(181);
+    expect(profile(candidateId('lh')).reportedIntervals.find((row) => row.sex === 'F').upper).not.toBe(134);
   });
 
   const contexts = ['lh', 'fsh'].flatMap((analyte) => ['yes', 'no', 'unknown'].flatMap((preterm) =>
@@ -80,6 +98,22 @@ describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniacz
       const result = engine.evaluate(input(analyte, { ...ageContext, preterm: 'no', gestationalAgeWeeks: null }), data);
       expectNoReference(result);
       expect(result.biochemical.reasonCodes).toContain('profile_not_active');
+    }
+  });
+
+  it.each(['lh', 'fsh'])('średni wiek pobrania i koniec obserwacji biobanku nie tworzą okna normy %s', (analyte) => {
+    for (const birthDateISO of ['2026-09-18', '2026-08-14']) {
+      // Synthetic PNA 21 days and PNA 56 days (GA 28 weeks -> PMA 36 weeks).
+      // Neither the cohort mean nor the biobank follow-up limit establishes
+      // eligibility for the first-sample LH/FSH reference intervals.
+      const result = engine.evaluate(input(analyte, {
+        contextBasis: 'sample', age: null,
+        birthDateISO, sampleDateISO: '2026-10-09', gestationalAgeWeeks: 28,
+      }), data);
+      expectNoReference(result);
+      expect(result.ageAtSample.status).toBe('known');
+      expect(result.biochemical.reasonCodes).toContain('profile_not_active');
+      expect(profile(candidateId(analyte))).not.toHaveProperty('scope');
     }
   });
 
