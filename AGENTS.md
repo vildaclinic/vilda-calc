@@ -47,6 +47,8 @@ Zielone testy nie są dowodem poprawności medycznej. Agent nie nadaje algorytmo
 
 **Normy zawsze jako dane, nigdy jako założenie wbudowane w silnik** (decyzja właściciela 2026-09-09: aplikacja ma docelowo działać międzynarodowo, z możliwością wyboru populacji odniesienia). Nowy moduł referencyjny trzyma normy w osobnym pliku danych, przyjmuje źródło jako argument i niesie nazwę populacji w wyniku. Pełna reguła: `docs/ARCHITECTURE.md`, sekcja „Kierunek: wielopopulacyjność”.
 
+Przed rozszerzeniem interpretacji badań laboratoryjnych o analit, grupę wieku lub etap pokwitania przeczytaj [instrukcję rozszerzania interpretacji badań](docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md). Utrwala ona oczekiwania właściciela: prosty formularz, wykorzystanie danych pacjenta, automatyczny dobór źródła, osie wieku/stadium i zgodność historii; zawiera też wzorzec pracy dla inhibiny B.
+
 ## 4. Dane pacjentów i sekrety
 
 - Używaj wyłącznie jednoznacznie fikcyjnych danych testowych.
