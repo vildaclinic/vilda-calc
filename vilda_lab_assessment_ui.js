@@ -519,23 +519,6 @@
     }
     if (axes.length > 1) add(legend, 'span', 'vilda-lab-same-scale', 'Wspólna skala osi');
   }
-  function renderMotionToggle(parent, section, view, options) {
-    if (!view.result.visualAlert || options && options.historical) return;
-    var paused = !!(options && options.motionPaused);
-    var button = add(parent, 'button', 'vilda-lab-motion-toggle');
-    button.setAttribute('type', 'button');
-    function update() {
-      button.textContent = paused ? 'Wznów animacje' : 'Zatrzymaj animacje';
-      button.setAttribute('aria-pressed', String(paused));
-      section.className = section.className.replace(/\s+is-motion-paused\b/g, '') + (paused ? ' is-motion-paused' : '');
-    }
-    update();
-    if (typeof button.addEventListener === 'function') button.addEventListener('click', function () {
-      paused = !paused;
-      update();
-      if (options && typeof options.onMotionChange === 'function') options.onMotionChange(paused);
-    });
-  }
   function renderContents(parent, view, options) {
     var presentation = view.presentation;
     var incomplete = !view.result.valid;
@@ -569,7 +552,6 @@
       var comparisonHead = add(parent, 'div', 'vilda-lab-comparisons-head');
       add(comparisonHead, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
       if (view.conditionNote) add(comparisonHead, 'span', 'vilda-lab-conditional-badge', 'Warunkowo');
-      renderMotionToggle(comparisonHead, parent, view, options);
     }
     if (view.reportedRange && !incomplete) {
       var supplied = add(parent, 'div', 'vilda-lab-comparison vilda-lab-reported-range');
@@ -644,5 +626,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.6.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.7.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });

@@ -114,30 +114,6 @@
   font-weight: 600;
 }
 
-.vilda-lab-assessment .vilda-lab-motion-toggle {
-  width: auto;
-  min-height: 32px;
-  max-width: 100%;
-  margin: 0;
-  padding: var(--space-6px) var(--space-8px);
-  border: var(--border-hairline) solid var(--vilda-lab-line);
-  border-radius: var(--radius-6);
-  color: #526b75;
-  background: #fff;
-  font: inherit;
-  font-size: .75rem;
-  line-height: 1.4;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.vilda-lab-assessment .vilda-lab-motion-toggle:hover,
-.vilda-lab-assessment .vilda-lab-motion-toggle[aria-pressed="true"] {
-  color: #355964;
-  border-color: #a8bdc4;
-  background: #eaf1f3;
-}
-
 .vilda-lab-assessment .vilda-lab-comparison {
   padding: var(--space-14px) 0 15px;
   border-bottom: var(--border-hairline) solid var(--vilda-lab-line);
@@ -227,7 +203,6 @@
 }
 
 .vilda-lab-assessment .vilda-lab-details summary:focus-visible,
-.vilda-lab-assessment .vilda-lab-motion-toggle:focus-visible,
 .vilda-lab-assessment a:focus-visible {
   outline: var(--border-emphasis) solid #297d82;
   outline-offset: 4px;
@@ -692,18 +667,13 @@
   }
 }
 
-/* A stopped animation retains its warning colour, text and exclamation mark. */
-.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker,
-.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker::after,
-.vilda-lab-assessment.is-motion-paused .vilda-lab-result,
+/* Invalidated assessments remain static inside their historical details. */
 .vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker,
 .vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker::after,
-.vilda-lab-assessment .vilda-lab-history .vilda-lab-result,
-#labResultSection.lab-puberty-active.is-motion-paused .lab-result-big-value {
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-result {
   animation: none;
 }
 
-.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker::after,
 .vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker::after {
   opacity: 0;
 }
@@ -722,19 +692,12 @@
   background: #c7d5d8;
 }
 
-.vilda-lab-assessment .vilda-lab-history .vilda-lab-motion-toggle {
-  display: none;
-}
-
 @media (max-width: 480px) {
   .vilda-lab-assessment .vilda-lab-comparison-head {
     align-items: flex-start;
   }
   .vilda-lab-assessment .vilda-lab-clinical {
     padding: 11px;
-  }
-  .vilda-lab-assessment .vilda-lab-motion-toggle {
-    min-height: 44px;
   }
   .vilda-lab-assessment .vilda-lab-comparison-head {
     gap: 5px var(--space-8px);
@@ -804,9 +767,6 @@
     text-shadow: none;
   }
   .vilda-lab-assessment .vilda-lab-axis-marker::after {
-    display: none;
-  }
-  .vilda-lab-assessment .vilda-lab-motion-toggle {
     display: none;
   }
   .vilda-lab-assessment .vilda-lab-axis-track {
