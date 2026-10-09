@@ -61,13 +61,13 @@
   <link rel="stylesheet" href="style.css?v=87" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
-  <link href="vilda_lab_assessment_ui.css?v=8" rel="stylesheet">
-  <link href="vilda_lab_puberty_ui.css?v=5" rel="stylesheet">
+  <link href="vilda_lab_assessment_ui.css?v=9" rel="stylesheet">
+  <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=44"></script>
+  <script src="vilda_session_bridge.js?v=45"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -104,7 +104,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=120"></script>
+  <script src="vilda_chrome.js?v=121"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -437,12 +437,12 @@
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=35"></script>
   <script src="lab_unit_converter.js?v=4"></script>
-  <script src="vilda_lab_puberty_data.js?v=5"></script>
-  <script src="vilda_lab_puberty.js?v=5"></script>
-  <script src="vilda_lab_snapshot.js?v=4"></script>
-  <script src="vilda_lab_assessment_ui.js?v=9"></script>
+  <script src="vilda_lab_puberty_data.js?v=6"></script>
+  <script src="vilda_lab_puberty.js?v=6"></script>
+  <script src="vilda_lab_snapshot.js?v=5"></script>
+  <script src="vilda_lab_assessment_ui.js?v=10"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=13"></script>
+  <script src="vilda_lab_puberty_ui.js?v=14"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=10"></script>
   <script src="vilda_lab_neonatal_context.js?v=1"></script>
@@ -3376,12 +3376,13 @@
      * Wyniki są deduplikowane wedle tego, co użytkownik faktycznie wypełnił.
      */
     function updateStepStates() {
+      var pubertyMode = isPubertySubstance(currentSubstance);
       var s1 = !!currentSubstance;
       var raw = valueEl.value;
       var hasInput = !(raw == null || String(raw).trim() === '');
       var n = hasInput ? Conv.parseNumber(raw) : NaN;
       var s2 = s1 && hasInput && isFinite(n) && n >= 0;
-      if (isPubertySubstance(currentSubstance)) {
+      if (pubertyMode) {
         s2 = hasInput && !!(window.VildaLabPuberty && window.VildaLabPuberty.parseMeasurement(raw, unitEl.value).status === 'valid');
       }
       var s3 = s2;  // krok 3 (jednostka docelowa) ma default = SI → done gdy s2
@@ -3397,15 +3398,16 @@
       for (var i = 0; i < states.length; i++) {
         var st = states[i];
         if (!st.num) continue;
+        var stepNumber = i + 1 - (pubertyMode && i > 3 ? 1 : 0);
         st.num.classList.remove('is-done', 'is-active');
         if (st.done) {
           st.num.classList.add('is-done');
           st.num.textContent = '✓';
         } else if (st.active) {
           st.num.classList.add('is-active');
-          st.num.textContent = String(i + 1);
+          st.num.textContent = String(stepNumber);
         } else {
-          st.num.textContent = String(i + 1);
+          st.num.textContent = String(stepNumber);
         }
       }
       // Hint w kroku 3 — zaktualizuj etykietę "domyślnie SI" → konkretna jednostka.

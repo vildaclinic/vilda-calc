@@ -35,7 +35,7 @@ describe('LH/FSH — minimalne dane i jawnie warunkowe porównanie', () => {
     const before = structuredClone(source);
     const result = engine.evaluate(source, data);
     expect(source).toEqual(before);
-    expect(result.engineVersion).toBe('1.4.0');
+    expect(result.engineVersion).toBe('1.5.0');
     expect(result.input).toMatchObject(before);
     expect(result.ageAtSample).toMatchObject({ lowerYears: 2.75, source: 'reported-age', precision: 'month' });
     expect(result.input.puberty.appliesToSample).toBe(false);

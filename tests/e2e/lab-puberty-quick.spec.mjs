@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 test.use({ serviceWorkers: 'block' });
 
@@ -68,10 +68,11 @@ async function expectNoReportedRange(page, analyte = 'lh') {
 // APIs. Removing the current field must not reinterpret an existing range.
 async function recordReportedRange(page, patientId, { range = '0,5–3', raw = '2', configured = true } = {}) {
   return page.evaluate(async ({ id, text, value, withProfile }) => {
-    const current = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    const profile = window.VildaLabPubertyData.profiles.find((entry) => entry.id === 'mayo-lh-pediatric');
+    const historicalAssay = { profileId: profile.id, profileVersion: profile.version, methodId: profile.method.id };
     const input = window.VildaLabPubertyUI.buildInput({
       contextBasis: 'current-patient', sex: 'M', ageYears: '14', ageMonths: '0', kind: 'G', stage: '4',
-      specimen: 'serum', gnrha: 'no', configuredAssay: withProfile ? current.assay : null, reportedRange: text,
+      specimen: 'serum', gnrha: 'no', configuredAssay: withProfile ? historicalAssay : null, reportedRange: text,
     }, { analyte: 'lh', raw: value, unit: 'IU/L' });
     const evaluation = window.VildaLabPuberty.evaluate(input, window.VildaLabPubertyData);
     const lab = { test: 'LH', testKey: 'lh', value, valueNum: evaluation.measurement.isExact ? evaluation.measurement.value : null,
@@ -86,9 +87,24 @@ async function recordReportedRange(page, patientId, { range = '0,5–3', raw = '
   }, { id: patientId, text: range, value: raw, withProfile: configured });
 }
 
+async function readLegacyPreferences(page) {
+  return page.evaluate(() => window.VildaPersistence.readPreferenceJSON(window.VildaLabProfilePreferences.KEY, null));
+}
+async function setLegacyPreference(page, analyte, profileId, profileVersion = null) {
+  return page.evaluate(({ analyte, profileId, profileVersion }) => {
+    const prefs = window.VildaLabProfilePreferences;
+    const previous = window.VildaPersistence.readPreferenceJSON(prefs.KEY, null);
+    const configured = prefs.configure(previous, analyte, profileId, window.VildaLabPubertyData);
+    if (!configured.profiles[analyte]) throw new Error('Missing historical profile fixture');
+    if (profileVersion) configured.profiles[analyte].profileVersion = profileVersion;
+    if (!window.VildaPersistence.writePreferenceJSON(prefs.KEY, configured)) throw new Error('Cannot seed historical device preference');
+    return configured;
+  }, { analyte, profileId, profileVersion });
+}
+
 async function currentSample(page) {
   await select(page, 'Kind', 'G');
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
 }
 
@@ -97,7 +113,7 @@ test('closed quick form keeps four basic controls and imports age and Tanner wit
   await patient(page, { age: 6 });
   await choose(page);
   await expect(page.locator('#labPubertyDetails')).not.toHaveAttribute('open');
-  await expect(page.locator('#labPubertyMethodSettings')).not.toHaveAttribute('open');
+  await expectAutomaticReference(page);
   const visibleControls = await page.locator('#labResultsCard input:visible, #labResultsCard select:visible').evaluateAll((nodes) => nodes.map((node) => node.id));
   expect(visibleControls).toEqual(['labSubstance', 'labValue', 'labUnit', 'labUnitTarget']);
   await expect(page.locator('#labPubertyPatientSummary')).toContainText('6');
@@ -106,20 +122,22 @@ test('closed quick form keeps four basic controls and imports age and Tanner wit
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyUsePatientContext')).toHaveCount(0);
   await expect(page.locator('#labPubertyOpenDate, #labPubertySectionDate, #labPubertySampleDate, #labPubertyBirthDate, #labPubertyDateHint, #labPubertyClearDate, #labPubertyOpenExtra, #labPubertySectionExtra, #labPubertyCnsSymptoms, #labPubertyRegression, #labPubertyTesticularVolume, #labPubertyVolumeMethod')).toHaveCount(0);
-  await expect(page.locator('#labPubertyPatientContext')).toContainText('Ocena według wieku i stadium widocznych w formularzu');
+  await expect(page.locator('#labPubertyPatientContext')).toBeHidden();
   await expect(page.locator('#labPubertyContext, #labPubertyContextSummary, #labPubertyEditContext, #labPubertyOpenContext, #labPubertySectionContext')).toHaveCount(0);
-  await expect(page.locator('#labPubertyScope')).toBeVisible();
-  await expect(page.locator('#labPubertyScope')).toContainText('bazaln');
-  await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
+  await expect(page.locator('#labPubertyScope')).toHaveCount(0);
   await page.locator('#labValue').fill('2');
+  const sourceNote = assessment(page).locator('[data-reference-conditions="automatic-source-reference"]');
+  await expect(sourceNote).toContainText('bazaln');
+  await expect(sourceNote).toContainText('bez leczenia hormonalnego');
   const saved = await snapshot(page);
   expect(saved.evaluation.input.contextBasis).toBe('current-patient');
   expect(saved.evaluation.input.birthDateISO).toBeNull();
   expect(saved.evaluation.input.sampleDateISO).toBeNull();
   expect(saved.evaluation.input.age.years).toBe(6);
   expect(saved.evaluation.input.puberty.kind).toBe('unspecified');
+  expect(saved.evaluation.referencePreview.byStage.status).toBe('unavailable');
   await expectNoReportedRange(page);
-  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
+  await expect(comparison(page, 'stage')).toHaveCount(0);
 });
 
 test('an early onset from the current card retains conservative age precision and remains visible at fourteen', async ({ page }) => {
@@ -128,7 +146,7 @@ test('an early onset from the current card retains conservative age precision an
   await choose(page);
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await select(page, 'Kind', 'Th');
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
   const saved = await snapshot(page);
   expect(saved.evaluation.input.contextBasis).toBe('current-patient');
@@ -147,69 +165,79 @@ test('an early onset from the current card retains conservative age precision an
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
 });
 
-test('a method saved once survives reload and a second result while LH and FSH remain separate', async ({ page }) => {
+test('automatic LH and FSH references survive reload without confirming a patient sample method', async ({ page }) => {
   await open(page);
   await patient(page);
   await choose(page);
   await currentSample(page);
   const first = await snapshot(page);
-  expect(first.evaluation.input.assay).toMatchObject({ confirmation: 'configured', profileId: 'mayo-lh-pediatric' });
+  expect(first.evaluation.input.assay).toEqual({ profileId: '', methodId: '', confirmation: 'unknown' });
+  expect(first.evaluation.referencePreview.byAge.range.profileId).toBe('mayo-lh-pediatric');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await page.locator('#labValue').fill('3');
   expect((await snapshot(page)).evaluation.input.assay).toEqual(first.evaluation.input.assay);
   await expectNoReportedRange(page);
   await choose(page, 'fsh');
-  await expect(page.locator('#labPubertyMethodSummary')).not.toContainText('AnshLite');
-  await expect(page.locator('#labPubertyConfiguredProfile')).toHaveValue('');
-  await configureProfile(page, 'fsh');
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
-  expect((await snapshot(page, 'fsh')).evaluation.input.assay).toMatchObject({ confirmation: 'configured', profileId: 'mayo-fsh-pediatric' });
+  const fsh = await snapshot(page, 'fsh');
+  expect(fsh.evaluation.input.assay).toEqual(first.evaluation.input.assay);
+  expect(fsh.evaluation.referencePreview.byAge.range.profileId).toBe('mayo-fsh-pediatric');
   await expectNoReportedRange(page, 'fsh');
   await page.reload({ waitUntil: 'load' });
-  await page.waitForFunction(() => Boolean(window.VildaLabPubertyRuntime));
+  await page.waitForFunction(() => {
+    const id = sessionStorage.getItem('vildaCurrentPatientId');
+    return window.VildaLabPubertyRuntime && id && window.VildaPubertySource?.kontekstPacjenta(id).status === 'ready';
+  });
   await choose(page);
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
-  expect((await snapshot(page)).evaluation.input.assay).toEqual(first.evaluation.input.assay);
+  const reloaded = await snapshot(page);
+  expect(reloaded.evaluation.input.assay).toEqual(first.evaluation.input.assay);
+  expect(reloaded.evaluation.referencePreview.byAge).toEqual(first.evaluation.referencePreview.byAge);
   await expectNoReportedRange(page);
   await choose(page, 'fsh');
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('Roche');
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
+  expect((await snapshot(page, 'fsh')).evaluation.referencePreview.byAge.range.profileId).toBe('mayo-fsh-pediatric');
   await expectNoReportedRange(page, 'fsh');
 });
 
-test('unknown context never becomes no treatment and a different sample method suspends the configured reference', async ({ page }) => {
+test('automatic source comparison leaves treatment, material and actual sample method unknown', async ({ page }) => {
   await open(page);
   await patient(page);
   await choose(page);
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await select(page, 'Kind', 'G');
   await page.locator('#labValue').fill('2');
   const unknown = await snapshot(page);
   expect(unknown.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'no', sexSteroids: 'unknown' });
+  expect(unknown.evaluation.input.specimen).toBe('unknown');
+  expect(unknown.evaluation.input.assay).toEqual({ profileId: '', methodId: '', confirmation: 'unknown' });
   expect(unknown.evaluation.biochemical).toMatchObject({ primary: null, byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
-  expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'within' } });
+  expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within' }, byStage: { status: 'within' } });
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
-  await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'source-reference');
+  await expect(assessment(page).locator('[data-reference-conditions="automatic-source-reference"]')).toBeVisible();
   expect(unknown.evaluation.input.measurementKind).toBe('unknown');
-  await expect(page.locator('#labPubertyContext')).toHaveCount(0);
-  await page.locator('#labPubertyUnknownMethod').check();
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
-  expect((await snapshot(page)).evaluation.input.assay.confirmation).toBe('unknown');
-  await page.locator('#labPubertyUnknownMethod').uncheck();
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
-  expect((await snapshot(page)).evaluation.input.treatment).toEqual(unknown.evaluation.input.treatment);
+  await expect(page.locator('#labPubertyContext, #labPubertyUnknownMethod')).toHaveCount(0);
+  // A former device setting is neither evidence about this sample nor a reason
+  // to replace the automatically selected population with a preterm profile.
+  const preference = await setLegacyPreference(page, 'lh', 'greaves-preterm-lh-candidate');
+  const stillAutomatic = await snapshot(page);
+  expect(stillAutomatic.evaluation.input.treatment).toEqual(unknown.evaluation.input.treatment);
+  expect(stillAutomatic.evaluation.input.assay).toEqual(unknown.evaluation.input.assay);
+  expect(stillAutomatic.evaluation.referencePreview).toEqual(unknown.evaluation.referencePreview);
+  expect(await readLegacyPreferences(page)).toEqual(preference);
 });
 
 for (const analyte of ['lh', 'fsh']) {
-  test(`${analyte.toUpperCase()} needs no transcribed range for age, stage and early development, including method changes`, async ({ page }) => {
+  test(`${analyte.toUpperCase()} needs no transcribed range for age, stage and early development, including old device settings`, async ({ page }) => {
     await open(page);
     await patient(page, { age: 6 });
     await choose(page, analyte);
     await select(page, 'Kind', 'G');
-    await configureProfile(page, analyte);
+    await expectAutomaticReference(page, analyte);
     await page.locator('#labValue').fill('3');
     const current = await expectNoReportedRange(page, analyte);
     expect(current.evaluation.referencePreview).toMatchObject({ byAge: { status: 'above' }, byStage: { status: 'within' } });
@@ -217,15 +245,13 @@ for (const analyte of ['lh', 'fsh']) {
     await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
     await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
     await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toBeVisible();
-    await page.locator('#labPubertyUnknownMethod').check();
-    const unknown = await expectNoReportedRange(page, analyte);
-    expect(unknown.evaluation.input.assay.confirmation).toBe('unknown');
-    expect(unknown.evaluation).not.toHaveProperty('referencePreview');
-    expect(unknown.evaluation.biochemical).toMatchObject({ byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
-    expect(unknown.evaluation.clinical.code).toBe('early_development');
-    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
-    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
-    await page.locator('#labPubertyUnknownMethod').uncheck();
+    await setLegacyPreference(page, analyte, `greaves-preterm-${analyte}-candidate`);
+    const ignoredPreference = await expectNoReportedRange(page, analyte);
+    expect(ignoredPreference.evaluation.input.assay.confirmation).toBe('unknown');
+    expect(ignoredPreference.evaluation.referencePreview).toEqual(current.evaluation.referencePreview);
+    expect(ignoredPreference.evaluation.clinical.code).toBe('early_development');
+    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
+    await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
     await page.locator('#labUnit').selectOption('mIU/mL');
     const equivalentUnit = await expectNoReportedRange(page, analyte);
     expect(equivalentUnit.evaluation.referencePreview).toEqual(current.evaluation.referencePreview);
@@ -261,6 +287,12 @@ test('changing the current age or patient never restores a manual range', async 
   const withoutMethod = await expectNoReportedRange(page, 'fsh');
   expect(withoutMethod.evaluation.input.assay.confirmation).toBe('unknown');
   expect(withoutMethod.evaluation.biochemical.byAge.status).toBe('unavailable');
+  // Completed 15 years / 0 months straddles the catalog's strict >15 cutoff.
+  // Automatic selection must not guess one age row, while Th3 remains usable.
+  expect(withoutMethod.evaluation.referencePreview.byAge).toMatchObject({ status: 'unavailable', reasonCodes: ['age_precision_crosses_reference_boundary'] });
+  expect(withoutMethod.evaluation.referencePreview.byStage.status).toBe('within');
+  await expect(comparison(page, 'age')).toHaveCount(0);
+  await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
 });
 
 test('the visible age and stage define the current result even when its note is pinned to an earlier date', async ({ page }) => {
@@ -278,7 +310,7 @@ test('the visible age and stage define the current result even when its note is 
   expect(current.evaluation.input.age.years).toBe(8);
   expect(current.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 4, appliesToCurrentContext: true, appliesToSample: false });
   expect(current.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'no', sexSteroids: 'unknown' });
-  expect(current.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'above' } });
+  expect(current.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'above' } });
   expect(current.evaluation.ageAtSample.lowerYears).toBe(8);
   await page.locator('#labPinResultBtn').click();
   await page.locator('#labPinDate').fill('2020-06-17');
@@ -301,10 +333,11 @@ test('a previously saved dated sample retains its historical age and absent stag
   await choose(page);
   await currentSample(page);
   const legacy = await page.evaluate(async (id) => {
-    const current = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    const profile = window.VildaLabPubertyData.profiles.find((entry) => entry.id === 'mayo-lh-pediatric');
+    const historicalAssay = { profileId: profile.id, profileVersion: profile.version, methodId: profile.method.id };
     const input = window.VildaLabPubertyUI.buildInput({
       contextBasis: 'sample', birthDate: '2012-06-17', sampleDate: '2020-06-17', sex: 'M',
-      kind: 'unspecified', stage: '', specimen: 'serum', configuredAssay: current.assay,
+      kind: 'unspecified', stage: '', specimen: 'serum', configuredAssay: historicalAssay,
     }, { analyte: 'lh', raw: '2', unit: 'IU/L' });
     const evaluation = window.VildaLabPuberty.evaluate(input, window.VildaLabPubertyData);
     const lab = { test: 'LH', testKey: 'lh', value: '2', valueNum: 2, unit: 'IU/L', clinicalDateISO: '2020-06-17' };
@@ -345,19 +378,21 @@ test('infant prematurity remains in Patient and changes applicability without in
   await fill(page, 'AgeMonths', '3');
   await expect(page.locator('#labPubertySectionPatient #labPubertyPreterm')).toBeVisible();
   await expect(page.locator('#labPubertyPreterm')).toHaveValue('unknown');
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
   expect((await snapshot(page)).evaluation.input.preterm).toBe('unknown');
   await select(page, 'Preterm', 'yes');
   const preterm = await snapshot(page);
   expect(preterm.evaluation.input.preterm).toBe('yes');
-  expect(preterm.evaluation.biochemical.reasonCodes).toContain('preterm_reference_not_established');
+  expect(preterm.evaluation.referenceSelection).toMatchObject({ mode: 'automatic', status: 'unavailable', profileIds: ['greaves-preterm-lh-candidate'] });
+  expect(preterm.evaluation.biochemical.primary).toBeNull();
   expect(preterm.evaluation).not.toHaveProperty('referencePreview');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
+  await expect(assessment(page).locator('[data-preterm-block="true"]')).toBeVisible();
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
   await select(page, 'Preterm', 'no');
   const term = await snapshot(page);
   expect(term.evaluation.input.preterm).toBe('no');
-  expect(term.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' } });
+  expect(term.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within' } });
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await fill(page, 'AgeYears', '1');
   await expect(page.locator('#labPubertyPreterm')).toBeHidden();
@@ -381,8 +416,9 @@ test('new pins omit a manual range while history preserves the profile and range
   const legacy = await recordReportedRange(page, patientId);
   expect(legacy.assessment.evaluation.input.reportedRange).toEqual({ text: '0,5–3', unit: 'IU/L' });
   expect(legacy.assessment.evaluation.reportedRange).toMatchObject({ status: 'within', raw: '0,5–3' });
-  expect(legacy.assessment.evaluation.input.assay).toEqual(before.evaluation.input.assay);
-  await page.locator('#labPubertyUnknownMethod').check();
+  expect(legacy.assessment.evaluation.input.assay).toMatchObject({ confirmation: 'configured', profileId: 'mayo-lh-pediatric' });
+  expect(before.evaluation.input.assay.confirmation).toBe('unknown');
+  await setLegacyPreference(page, 'lh', 'greaves-preterm-lh-candidate');
   await expectNoReportedRange(page);
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
@@ -395,7 +431,7 @@ test('new pins omit a manual range while history preserves the profile and range
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(recorded.locator('[data-comparison="reported"]')).toHaveCount(0);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
-  await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'source-reference');
   expect(saved.labResult.assessment.evaluation.input.measurementKind).toBe('unknown');
   const oldRecord = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${historical.id}"] .vilda-lab-assessment`);
   await expect(oldRecord.locator('[data-comparison="reported"]')).toHaveAttribute('data-status', 'within');
@@ -452,24 +488,26 @@ test('historical manual ranges retain limits, invalid input, censored results an
   }
 });
 
-test('a stale saved profile cannot silently select current reference data', async ({ page }) => {
+test('a stale saved device profile is ignored without being erased or treated as a known sample method', async ({ page }) => {
   await open(page);
   await patient(page);
   await choose(page);
   await currentSample(page);
-  await page.evaluate(() => {
-    const prefs = window.VildaLabProfilePreferences;
-    const saved = window.VildaPersistence.readPreferenceJSON(prefs.KEY, null);
-    saved.profiles.lh.profileVersion = 'fictional-obsolete-profile';
-    if (!window.VildaPersistence.writePreferenceJSON(prefs.KEY, saved)) throw new Error('Cannot simulate stale device preference');
-  });
+  const before = await snapshot(page);
+  const preference = await setLegacyPreference(page, 'lh', 'mayo-lh-pediatric', 'fictional-obsolete-profile');
   await page.reload({ waitUntil: 'load' });
-  await page.waitForFunction(() => Boolean(window.VildaLabPubertyRuntime));
+  await page.waitForFunction(() => {
+    const id = sessionStorage.getItem('vildaCurrentPatientId');
+    return window.VildaLabPubertyRuntime && id && window.VildaPubertySource?.kontekstPacjenta(id).status === 'ready';
+  });
   await choose(page);
   await page.locator('#labValue').fill('2');
-  await expect(page.locator('#labPubertyConfiguredProfile')).toHaveValue('');
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
-  expect((await snapshot(page)).evaluation.input.assay.confirmation).toBe('unknown');
+  await expectAutomaticReference(page);
+  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  const after = await snapshot(page);
+  expect(after.evaluation.input.assay).toEqual(before.evaluation.input.assay);
+  expect(after.evaluation.referencePreview.byAge).toEqual(before.evaluation.referencePreview.byAge);
+  expect(await readLegacyPreferences(page)).toEqual(preference);
 });
 
 test.describe('320 px quick form', () => {

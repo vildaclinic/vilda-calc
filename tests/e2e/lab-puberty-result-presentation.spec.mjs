@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickSelect as select, quickFill as fill, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
 
 // Every value comes through the production form, engine and renderer. Patients
@@ -45,14 +45,11 @@ async function choose(page, analyte = 'lh', value = '2') {
   await page.locator('#labValue').fill(value);
 }
 
-async function prepare(page, { analyte = 'lh', value = '2', configured = true } = {}) {
+async function prepare(page, { analyte = 'lh', value = '2' } = {}) {
   await choose(page, analyte, value);
   await select(page, 'Kind', 'G');
-  if (configured) await configureProfile(page, analyte);
-  for (const id of ['labPubertyDetails', 'labPubertyMethodSettings']) {
-    const details = page.locator(`#${id}`);
-    if (await details.getAttribute('open') !== null) await details.locator(':scope > summary').click();
-  }
+  await expectAutomaticReference(page);
+  await closePatientEditor(page);
 }
 
 async function expectNoSevereMotion(page) {
@@ -94,8 +91,8 @@ test('age and stage use aligned axes while only the severe age deviation activat
   await expect(axis(page, 'stage')).toHaveAttribute('data-range-lower', '0.09');
   await expect(axis(page, 'stage')).toHaveAttribute('data-range-upper', '4.2');
   await expectSharedAxes(page);
-  await expect(axis(page, 'age')).toHaveAccessibleName(/Liczbowo powyżej zakresu.*warunkowo/);
-  await expect(axis(page, 'stage')).toHaveAccessibleName(/Liczbowo w zakresie.*warunkowo/);
+  await expect(axis(page, 'age')).toHaveAccessibleName(/Liczbowo powyżej zakresu.*orientacyjnie/);
+  await expect(axis(page, 'stage')).toHaveAccessibleName(/Liczbowo w zakresie.*orientacyjnie/);
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-normal');
   expect(await animation(marker(page, 'age'))).toMatch(/lab-marker-shake/);
@@ -103,13 +100,13 @@ test('age and stage use aligned axes while only the severe age deviation activat
   expect(await animation(marker(page, 'stage'))).toBe('none');
   expect(await marker(page, 'age').evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
   expect(await animation(bigValue(page))).toMatch(/lab-value-glow-red/);
-  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej normy');
-  await expect(severity(page).locator('.vilda-lab-severity-summary-scope')).toContainText(/wieku.*warunkowo/i);
+  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej zakresu referencyjnego');
+  await expect(severity(page).locator('.vilda-lab-severity-summary-scope')).toContainText(/wieku.*orientacyjnie/i);
   await expect(severity(page)).not.toContainText('stadium');
   const clinical = assessment(page).locator('[data-clinical-code="early_development"]');
   await expect(clinical).toBeVisible();
   expect(await clinical.locator('xpath=ancestor::details').count()).toBe(0);
-  const conditions = assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]');
+  const conditions = assessment(page).locator('[data-reference-conditions="automatic-source-reference"]');
   await expect(conditions).toBeVisible();
   await expect(conditions).toContainText(/bez leczenia hormonalnego/);
   expect(await conditions.locator('xpath=ancestor::details').count()).toBe(0);
@@ -125,7 +122,7 @@ for (const analyte of ['lh', 'fsh']) {
   test(`${analyte.toUpperCase()}: empty and invalid input avoid a cascade of assessment errors`, async ({ page }) => {
     await open(page, { name: 'Fikcyjny niepełny kontekst', sex: 'M' });
     await choose(page, analyte, '');
-    await configureProfile(page, analyte);
+    await expectAutomaticReference(page, analyte);
     await expect(page.locator('#labResultBig')).toHaveText('Wpisz wynik.');
     await expect(assessment(page).locator('.vilda-lab-comparison')).toHaveCount(0);
     await expect(assessment(page)).not.toContainText('Nieprawidłowy zapis');
@@ -137,7 +134,8 @@ for (const analyte of ['lh', 'fsh']) {
     await expect(assessment(page)).not.toContainText('Nieprawidłowy zapis');
     await expect(assessment(page)).not.toContainText('Zapis wyniku wymaga poprawienia');
     await page.locator('#labValue').fill('2');
-    await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
+    await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+    expect((await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment())).evaluation.biochemical.byAge.status).toBe('unavailable');
     await expect(assessment(page)).toContainText(/wiek/i);
     await expect(assessment(page)).not.toContainText('Wiek próbki nie mieści');
     await expect(assessment(page)).not.toContainText('Nie podano potwierdzonego zakresu laboratorium');
@@ -175,7 +173,7 @@ test('severe thresholds are strict and each axis owns its high or low state', as
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-normal');
   await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
-  await expect(severity(page)).toContainText('warunkowo');
+  await expect(severity(page)).toContainText('orientacyjnie');
   await page.locator('#labValue').fill('8,4');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-above');
   await page.locator('#labValue').fill('8,401');
@@ -186,7 +184,7 @@ test('severe thresholds are strict and each axis owns its high or low state', as
   await page.locator('#labValue').fill('15');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-above');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
-  await expect(severity(page).locator('.vilda-lab-severity-summary-scope')).toHaveText('Względem stadium G3 · warunkowo');
+  await expect(severity(page).locator('.vilda-lab-severity-summary-scope')).toHaveText('Względem stadium G3 · orientacyjnie');
   await page.locator('#labValue').fill('0,4');
   await expect(axis(page, 'age')).toHaveAttribute('data-range-lower', '0.8');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-below');
@@ -197,7 +195,7 @@ test('severe thresholds are strict and each axis owns its high or low state', as
   await expect(bigValue(page)).toHaveClass(/is-uwaga-low/);
   expect(await animation(bigValue(page))).toMatch(/lab-value-glow-amber/);
   expect(await animation(marker(page, 'age'))).toMatch(/lab-marker-pulse-amber/);
-  await expect(severity(page)).toContainText('Uwaga — znacznie poniżej normy');
+  await expect(severity(page)).toContainText('Uwaga — znacznie poniżej zakresu referencyjnego');
   await page.locator('#labValue').fill('0,045');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-below');
   await page.locator('#labValue').fill('0,044');
@@ -221,18 +219,14 @@ test('censored results keep reference bands without inventing patient markers or
   }
 });
 
-test('an unknown method or known current GnRHa treatment removes axes and severe effects without hiding the clinical warning', async ({ page }) => {
+test('legacy method preferences do not block auto comparisons, but known GnRHa removes axes and severe effects', async ({ page }) => {
   await open(page);
-  await prepare(page, { configured: false });
-  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
-  await expectNoSevereMotion(page);
-  await configureProfile(page);
+  await page.evaluate(() => window.VildaPersistence.writePreferenceJSON('labAssayProfiles', {
+    schemaVersion: 1, profiles: { lh: { profileId: 'mayo-lh-pediatric', profileVersion: 'obsolete-fixture', methodId: 'unknown-fixture', material: 'serum' }, fsh: null },
+  }));
+  await prepare(page);
   await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
-  await page.locator('#labPubertyUnknownMethod').check();
-  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
-  await expectNoSevereMotion(page);
-  await page.locator('#labPubertyUnknownMethod').uncheck();
-  await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(2);
   await page.evaluate((user) => {
     if (!window.VildaPersistence.writeShared({ ...user, puberty: { gnrhaStatus: 'w-trakcie' } }, { force: true })) throw new Error('Cannot seed fictional treatment');
     window.dispatchEvent(new Event('focus'));
@@ -257,7 +251,7 @@ test('warnings animate without a pause control, while reduced motion and print r
   expect(await animation(bigValue(page))).toMatch(/lab-value-glow-red/);
   expect(await animation(marker(page, 'age'))).toMatch(/lab-marker-shake/);
   await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
-  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej normy');
+  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej zakresu referencyjnego');
   expect(await marker(page, 'age').evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await animation(bigValue(page))).toBe('none');
@@ -267,7 +261,7 @@ test('warnings animate without a pause control, while reduced motion and print r
   await page.emulateMedia({ reducedMotion: 'no-preference', media: 'print' });
   expect(await animation(bigValue(page))).toBe('none');
   expect(await animation(marker(page, 'age'))).toBe('none');
-  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej normy');
+  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej zakresu referencyjnego');
   expect(await marker(page, 'age').evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
 });
 
@@ -360,7 +354,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   await expect(history).not.toContainText('Potwierdzenie metody');
   await expect(history.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-patient-value', '2');
   await expect(history.locator('[data-comparison="age"] .vilda-lab-axis')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
-  await expect(history.locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
+  await expect(history.locator('[data-reference-conditions="automatic-source-reference"]')).toBeVisible();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await animation(history.locator('.vilda-lab-result'))).toBe('none');
   expect(await history.locator('.vilda-lab-axis-marker').evaluateAll((nodes) => nodes.every((node) =>

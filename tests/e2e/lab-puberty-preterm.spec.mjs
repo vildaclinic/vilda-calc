@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickSelect as select, quickFill as fill, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -50,25 +50,17 @@ async function choose(page, analyte = 'lh', value = '2') {
   await page.locator('#labValue').fill(value);
 }
 
-async function configurePreterm(page, analyte = 'lh') {
-  const settings = page.locator('#labPubertyMethodSettings');
-  if (await settings.getAttribute('open') === null) await page.locator('#labPubertyEditMethod').click();
-  await page.locator('#labPubertyConfiguredProfile').selectOption(`greaves-preterm-${analyte}-candidate`);
-  await page.locator('#labPubertySaveProfile').click();
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText(/Roche.*e601/);
-  await page.locator('#labPubertyEditMethod').click();
+async function expectAutomaticPreterm(page) {
+  await expectAutomaticReference(page);
 }
 
 async function closeDetails(page) {
-  const edit = page.locator('#labPubertyEditPatient');
-  if (await edit.textContent() === 'Gotowe') await edit.click();
-  const details = page.locator('#labPubertyDetails');
-  if (await details.isVisible() && await details.getAttribute('open') !== null) await details.locator(':scope > summary').click();
+  await closePatientEditor(page);
 }
 
 async function manual(page, { analyte = 'lh', value = '2', ga = '28+4', days = '43' } = {}) {
   await choose(page, analyte, value);
-  await configurePreterm(page, analyte);
+  await expectAutomaticPreterm(page, analyte);
   await select(page, 'Preterm', 'yes');
   await closeDetails(page);
   await page.locator('#labPubertyGestationalAge').fill(ga);
@@ -153,7 +145,7 @@ test('missing preterm context needs only two fields and sequential typing yields
   await open(page);
   const sharedBefore = await page.evaluate(() => window.VildaPersistence.readShared());
   await choose(page);
-  await configurePreterm(page);
+  await expectAutomaticPreterm(page);
   await select(page, 'Preterm', 'yes');
   await closeDetails(page);
   await expect(page.locator('#labPubertyNeonatalFields input:visible')).toHaveCount(2);
@@ -179,10 +171,10 @@ test('missing preterm context needs only two fields and sequential typing yields
   expect(saved.status).toBe('recorded');
   expect(saved.evaluation.input.neonatalAge).toMatchObject({ gestationalDays: { lower: 200, upper: 200 }, postnatalDays: { lower: 43, upper: 43 } });
   expect(saved.evaluation.neonatalAge).toMatchObject({ postmenstrualDays: { lower: 243, upper: 243 } });
-  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within', range: { basis: 'preterm' } } });
+  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within', range: { basis: 'preterm' } } });
   expect(saved.evaluation.biochemical.byAge.status).toBe('unavailable');
   expect(saved.evaluation.input.treatment.context).toBe('unknown');
-  await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
+  await expect(assessment(page).locator('[data-reference-conditions="automatic-source-reference"]')).toBeVisible();
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(sharedBefore);
 });
 
@@ -220,7 +212,7 @@ test('sex-specific FSH ranges keep the shared severe-result effects and respect 
   expect(await animation(marker)).toMatch(/lab-marker-pulse-red/);
   expect(await animation(big)).toMatch(/lab-value-glow-red/);
   expect(await marker.evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
-  await expect(page.locator('#labResultSection > .vilda-lab-severity-summary, #labResultBig .vilda-lab-severity-summary')).toContainText('Uwaga — znacznie powyżej normy');
+  await expect(page.locator('#labResultSection > .vilda-lab-severity-summary, #labResultBig .vilda-lab-severity-summary')).toContainText('Uwaga — znacznie powyżej zakresu referencyjnego');
   await capture(page, 'desktop-fsh-significant-above');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await animation(marker)).toBe('none');
@@ -234,27 +226,18 @@ test('sex-specific FSH ranges keep the shared severe-result effects and respect 
   expect((await snapshot(page, 'fsh')).evaluation.referencePreview.byAge.range.sex).toBe('F');
 });
 
-test('the saved Mayo method is never silently replaced by e601 and unknown method removes the preterm axis', async ({ page }) => {
+test('an obsolete device method never blocks the automatically selected preterm source', async ({ page }) => {
   await open(page);
+  await page.evaluate(() => window.VildaPersistence.writePreferenceJSON('labAssayProfiles', {
+    schemaVersion: 1, profiles: { lh: { profileId: 'mayo-lh-pediatric', profileVersion: 'fictional-obsolete-profile', methodId: 'different-method', material: 'serum' }, fsh: null },
+  }));
   await manual(page);
-  await configureProfile(page);
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
-  await expect(block(page)).toContainText(/metod.*Roche Cobas e601/);
-  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
-  expect((await snapshot(page)).evaluation.input.assay.profileId).toBe('mayo-lh-pediatric');
-  await configurePreterm(page);
+  await expectAutomaticReference(page);
   await expectSingleAxis(page, { lower: '0.1', upper: '9.2', value: '2' });
-  await expect(page.locator('#labPubertyUnknownMethod')).toBeHidden();
-  await page.locator('#labPubertyEditMethod').click();
-  await page.locator('#labPubertyUnknownMethod').check();
-  await page.locator('#labPubertyEditMethod').click();
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('metoda nieznana');
-  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
-  expect((await snapshot(page)).evaluation).not.toHaveProperty('referencePreview');
-  await page.locator('#labPubertyEditMethod').click();
-  await page.locator('#labPubertyUnknownMethod').uncheck();
-  await page.locator('#labPubertyEditMethod').click();
-  await expectSingleAxis(page, { lower: '0.1', upper: '9.2', value: '2' });
+  const saved = await snapshot(page);
+  expect(saved.evaluation.input.assay.confirmation).toBe('unknown');
+  expect(saved.evaluation.referencePreview.byAge.range.profileId).toBe('greaves-preterm-lh-candidate');
+  expect(saved.evaluation.referencePreview.reasonCodes).toEqual(expect.arrayContaining(['source_method_unconfirmed', 'specimen_unconfirmed']));
 });
 
 test('a history of preterm birth does not hide stage selection in an older child', async ({ page }) => {
@@ -268,7 +251,7 @@ test('a history of preterm birth does not hide stage selection in an older child
   await fill(page, 'AgeMonths', '9');
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await closeDetails(page);
   await expect(page.locator('#labPubertyRefineStage')).toBeVisible();
   await expect(page.locator('#labPubertyStageSummary')).toHaveText('G3');
@@ -283,7 +266,7 @@ test('main-form age and patient-card gestation need no repeated input', async ({
   await open(page);
   await mainFormPatient(page);
   await choose(page);
-  await configurePreterm(page);
+  await expectAutomaticPreterm(page);
   await expect(page.locator('#labPubertyNeonatalFields')).toBeHidden();
   await expect(page.locator('#labPubertyPreterm')).toHaveValue('yes');
   await expect(page.locator('#labPubertyNeonatalSummary')).toContainText('PMA 34+4–34+5');
@@ -348,7 +331,7 @@ test('a date-only age of one calendar day requests completed days rather than as
   await open(page);
   await mainFormPatient(page, 1);
   await choose(page);
-  await configurePreterm(page);
+  await expectAutomaticPreterm(page);
   await expect(block(page)).toContainText('Nie potwierdzono ukończenia pierwszej doby');
   await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
   await expect(page.locator('#labPubertyGestationalAge')).toBeHidden();
@@ -365,7 +348,7 @@ test.describe('preterm result at 320 px', () => {
   test('two missing fields, completed result and editing remain within the viewport', async ({ page }) => {
     await open(page);
     await choose(page);
-    await configurePreterm(page);
+    await expectAutomaticPreterm(page);
     await select(page, 'Preterm', 'yes');
     await closeDetails(page);
     await expect(page.locator('#labPubertyNeonatalFields input:visible')).toHaveCount(2);
@@ -404,7 +387,7 @@ test.describe('preterm profile offline', () => {
     await page.waitForFunction(() => Boolean(window.VildaLabPubertyRuntime && window.VildaLabNeonatalContext));
     expect(await page.evaluate(() => navigator.onLine)).toBe(false);
     await choose(page);
-    await expect(page.locator('#labPubertyMethodSummary')).toContainText(/Roche.*e601/);
+    await expectAutomaticReference(page);
     await select(page, 'Preterm', 'yes');
     await closeDetails(page);
     await page.locator('#labPubertyGestationalAge').fill('28+4');

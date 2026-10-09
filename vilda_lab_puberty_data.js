@@ -62,6 +62,27 @@
     };
   }
 
+  function adultProfile(analyte, sourceId, method, values) {
+    var adultAge = age(bound('>', 18), null, '>18 years');
+    var contexts = ['follicular', 'ovulation', 'luteal', 'postmenopause'];
+    var labels = ['Faza folikularna', 'Środek cyklu', 'Faza lutealna', 'Postmenopauza'];
+    return {
+      id: 'mayo-' + analyte + '-adult', version: '2026-10-09.4', active: true, analyte: analyte, sourceId: sourceId,
+      method: method, material: 'serum', unit: 'IU/L', examinationType: 'basal', referenceContext: 'adult',
+      population: { label: 'Dorośli — Mayo Clinic Laboratories', statistics: { kind: 'referenceInterval', coveragePercent: null, sampleSize: null } },
+      scope: { age: adultAge },
+      knownLimitations: ['Przedziały dotyczą metody katalogu Mayo; wiek ani płeć nie potwierdzają metody badanej próbki.',
+        'Faza cyklu i postmenopauza nie są rozpoznawane z wieku ani pojedynczego LH/FSH. Brak danych nie oznacza fazy folikularnej.',
+        'Katalog nie podaje osobnych norm późnej starości ani perimenopauzy. Zakres >18 lat nie rozpoznaje hipogonadyzmu ani menopauzy.', 'Nagłówki kobiecych faz cyklu i postmenopauzy nie mają własnego progu wieku; >18 lat jest jawną polityką doboru aplikacji.'],
+      rows: [ageRow(analyte + '-adult-m', 'M', adultAge, range(bound('>=', values[0][0]), bound('<=', values[0][1]), values[0].join('–') + ' IU/L'))].concat(contexts.map(function (context, index) {
+        var row = ageRow(analyte + '-adult-f-' + context, 'F', age(bound('>', 18), null, 'Adult female context; application routing >18 years', 'application-adult-routing'), range(bound('>=', values[index + 1][0]), bound('<=', values[index + 1][1]), values[index + 1].join('–') + ' IU/L'));
+        row.reproductiveContext = context; row.label = labels[index]; return row;
+      }))
+    };
+  }
+  var standardLHMethod = { id: 'roche-elecsys-lh-eclia', name: 'Roche Elecsys LH ECLIA', description: 'Electrochemiluminescence immunoassay; Mayo cites Elecsys LH package insert 03/2024.' };
+  var standardFSHMethod = { id: 'roche-elecsys-fsh-eclia', name: 'Roche Elecsys FSH ECLIA', description: 'Electrochemiluminescence immunoassay; Mayo cites Elecsys FSH package insert 09/2021.' };
+
   var lhStageIAge = age(bound('>=', 1), bound('<', 9), 'Stage I (1–8 years)', 'attained-year-band');
   var lhCensoredLower = bound('<', 0.02);
   // Operacyjne granice zatwierdzone przez właściciela 9.10.2026 na podstawie
@@ -86,12 +107,12 @@
 
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-09.3',
+    dataVersion: '2026-10-09.4',
     implementationStatus: 'active-in-ui',
     unit: 'IU/L',
     knownLimitations: [
       'Zakres referencyjny nie jest progiem rozpoznania CPP, opóźnienia ani etiologii hipogonadyzmu.',
-      'Nie przygotowano norm dorosłych ani uniwersalnego pokrycia wszystkich metod i całego wieku 0–18 lat.',
+      'Automatyczny dobór wskazuje populację źródłową, nie potwierdza zgodności metody próbki; nie zapewnia uniwersalnego pokrycia wszystkich metod i grup wieku.',
       'Brak właściwego zakresu nie może uruchamiać zastępczej normy dorosłych ani interpolacji.',
       'Niskie lub nieoznaczalne LH nie wyklucza CPP przy odpowiednich cechach klinicznych.',
       'Brak uniwersalnego progu FSH oraz samodzielnego klasyfikatora LH/FSH.',
@@ -233,6 +254,24 @@
           'Szeroki zakres <1 roku nie opisuje dokładnie tygodniowej dynamiki minipuberty.',
           'Starszego opisu opóźnienia u dziewcząt by age 12 i uproszczonej interpretacji LH nie używa się jako klinicznych reguł tego modułu.'
         ]
+      },
+      'mayo-lh-602752': {
+        id: 'mayo-lh-602752', version: 'catalog-snapshot-2026-10-09',
+        title: 'Luteinizing Hormone (LH), Serum', organization: 'Mayo Clinic Laboratories',
+        url: 'https://www.mayocliniclabs.com/test-catalog/Overview/602752', accessedOn: '2026-10-09', accessTimeZone: 'Europe/Warsaw',
+        readScope: 'Full catalog: Reference Values, Ordering Guidance, Specimen Type, Method Description, Cautions. The manufacturer insert was not independently read.',
+        evidenceSha256: '2dc25a75d8d3c17f976baa8a6928dc120bd91364c6ef0909e6b1a373f2ba7fd8',
+        methodDocumentVersion: 'Elecsys LH package insert 03/2024, as cited by the catalog',
+        knownLimitations: ['Odrębny test Roche ECLIA; nie jest metodą AnshLite pediatrycznego LHPED.', 'Katalog nie ustala odrębnego zakresu perimenopauzy ani progów rozpoznania menopauzy.']
+      },
+      'mayo-fsh-adult-602753': {
+        id: 'mayo-fsh-adult-602753', version: 'catalog-snapshot-2026-10-09',
+        title: 'Follicle-Stimulating Hormone (FSH), Serum', organization: 'Mayo Clinic Laboratories',
+        url: 'https://www.mayocliniclabs.com/test-catalog/Overview/602753', accessedOn: '2026-10-09', accessTimeZone: 'Europe/Warsaw',
+        readScope: 'Full catalog: Reference Values, Specimen Type, Method Description, Cautions. The manufacturer insert was not independently read.',
+        evidenceSha256: 'ba4460aebc7ca4c095695841c2849f213b57254cdb3cfd2a94ff5817456c5ef8',
+        methodDocumentVersion: 'Elecsys FSH package insert 09/2021, as cited by the catalog',
+        knownLimitations: ['Katalog nie podaje osobnego przedziału dla perimenopauzy ani późnej starości.', 'Pojedyncza wartość FSH nie ustala menopauzy ani przyczyny zaburzeń funkcji gonad.']
       },
       'mayo-fsh-602753': {
         id: 'mayo-fsh-602753',
@@ -376,6 +415,13 @@
       pretermGestationalWeeks: bound('<', 37)
     },
     pretermEligibilityPolicy: pretermPolicy,
+    automaticReferencePolicy: {
+      id: 'lh-fsh-demographic-reference-selection', version: '2026-10-09.4',
+      description: 'Source-population selection only; assay method remains unconfirmed unless explicitly reported for this sample.',
+      reproductiveContexts: ['unknown', 'follicular', 'ovulation', 'luteal', 'postmenopause'],
+      pretermProfileIds: { lh: 'greaves-preterm-lh-candidate', fsh: 'greaves-preterm-fsh-candidate' },
+      profileIds: { lh: ['mayo-lh-pediatric', 'mayo-lh-standard-transition', 'mayo-lh-adult'], fsh: ['mayo-fsh-pediatric', 'mayo-fsh-adult'] }
+    },
     clinicalProfile: {
       id: 'puberty-timing-pediatric',
       version: '2026-10-04.1',
@@ -649,6 +695,19 @@
         reportedIntervals: [
           { sex: 'M', rangeSourceText: '0.2–3.6 IU/L', lower: 0.2, upper: 3.6, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [3.2, 4.2] } },
           { sex: 'F', rangeSourceText: '2.6–181.1 IU/L', lower: 2.6, upper: 181.1, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [1.0, 4.9], upper: [159.6, 207.6] } }
+        ]
+      },
+      adultProfile('lh', 'mayo-lh-602752', standardLHMethod, [[1.3, 9.6], [1.9, 14.6], [12.2, 118], [0.7, 12.9], [5.3, 65.4]]),
+      adultProfile('fsh', 'mayo-fsh-adult-602753', standardFSHMethod, [[1.2, 15.8], [2.9, 14.6], [4.7, 23.2], [1.4, 8.9], [16, 157]]),
+      {
+        id: 'mayo-lh-standard-transition', version: '2026-10-09.4', active: true, analyte: 'lh', sourceId: 'mayo-lh-602752',
+        method: standardLHMethod, material: 'serum', unit: 'IU/L', examinationType: 'basal', referenceContext: 'age-transition',
+        population: { label: 'Mayo Clinic Laboratories — standardowe LH na granicy 18. urodzin', statistics: { kind: 'referenceInterval', coveragePercent: null, sampleSize: null } },
+        scope: { age: age(bound('>=', 18), bound('<=', 18), 'Exactly 18 years', 'application-routing-boundary') },
+        knownLimitations: ['Źródłowy przedział >14–18 lat stosujemy tutaj wyłącznie na granicy końca LHPED; nie łączymy przedziałów ani metod.'],
+        rows: [
+          ageRow('lh-standard-m-over14-18', 'M', age(bound('>', 14), bound('<=', 18), '>14 years–18 years'), range(bound('>=', 1.3), bound('<=', 9.8), '1.3–9.8 IU/L')),
+          ageRow('lh-standard-f-over14-18', 'F', age(bound('>', 14), bound('<=', 18), '>14 years–18 years'), range(bound('>=', 0.5), bound('<=', 41.7), '0.5–41.7 IU/L'))
         ]
       }
     ]

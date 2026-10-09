@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickSelect as select, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickSelect as select, expectAutomaticReference, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 import { kliknij } from '../support/uklad-czekanie.mjs';
 
 // Production UI -> engine -> saved snapshot. Every patient below is fictional;
@@ -54,30 +54,25 @@ async function choose(page) {
   await page.locator('#labUnit').selectOption('IU/L');
   await page.locator('#labValue').fill('2');
 }
-async function prepareMinimalResult(page, { withStage = true, withProfile = true } = {}) {
+async function prepareMinimalResult(page, { withStage = true } = {}) {
   await choose(page);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('2');
   await expect(page.locator('#labPubertyAgeMonths')).toHaveValue('9');
   await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext, #labPubertyContextSummary')).toHaveCount(0);
   await expect(page.locator('#labPubertyOpenDate, #labPubertySectionDate, #labPubertySampleDate, #labPubertyBirthDate, #labPubertyClearDate, #labPubertyOpenExtra, #labPubertySectionExtra, #labPubertyCnsSymptoms, #labPubertyRegression, #labPubertyTesticularVolume, #labPubertyVolumeMethod')).toHaveCount(0);
-  await expect(page.locator('#labPubertyScope')).toBeVisible();
-  await expect(page.locator('#labPubertyScope')).toContainText(/wyłącznie.*bazaln/);
-  await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
+  await expectVisibleConditions(assessment(page));
   if (withStage) {
     await expect(page.locator('#labPubertyStage')).toHaveValue('3');
     await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
     await select(page, 'Kind', 'G');
   }
-  if (withProfile) await configureProfile(page);
-  // Method and a typed stage are sufficient; there is no context selector.
-  for (const id of ['labPubertyDetails', 'labPubertyMethodSettings']) {
-    const details = page.locator(`#${id}`);
-    if (await details.getAttribute('open') !== null) await details.locator(':scope > summary').click();
-  }
+  await expectAutomaticReference(page);
+  // The source is selected from patient context; no method is requested.
+  await closePatientEditor(page);
 }
 const assessment = (page) => page.locator('#labPubertyAssessment .vilda-lab-assessment');
 const comparison = (host, kind) => host.locator(`[data-comparison="${kind}"]`);
-const conditions = (host) => host.locator('[data-reference-conditions="conditional-basal-untreated"]');
+const conditions = (host) => host.locator('[data-reference-conditions="automatic-source-reference"]');
 const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({
   testKey: 'lh', raw: document.getElementById('labValue').value, unit: document.getElementById('labUnit').value,
 }));
@@ -92,11 +87,11 @@ async function expectVisibleConditions(host) {
 }
 async function expectConditionalResult(host, { withStage = true } = {}) {
   await expect(comparison(host, 'age')).toHaveAttribute('data-status', 'above');
-  await expect(comparison(host, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(comparison(host, 'age')).toHaveAttribute('data-applicability', 'source-reference');
   await expect(comparison(host, 'age').getByRole('img')).toHaveAccessibleName(/Liczbowo powyżej zakresu/);
   if (withStage) {
     await expect(comparison(host, 'stage')).toHaveAttribute('data-status', 'within');
-    await expect(comparison(host, 'stage')).toHaveAttribute('data-applicability', 'conditional');
+    await expect(comparison(host, 'stage')).toHaveAttribute('data-applicability', 'source-reference');
     await expect(comparison(host, 'stage').getByRole('img')).toHaveAccessibleName(/Liczbowo w zakresie/);
     await expect(host.locator('[data-clinical-code="early_development"]')).toBeVisible();
     await expect(host).toHaveAttribute('data-summary-status', 'attention');
@@ -114,7 +109,7 @@ function expectUnknownInputAndStrictComparison(saved) {
     byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
 }
 
-test('M2y9 G3 LH2 gives conditional numeric comparisons with a visible basal-only scope and no context selector', async ({ page }) => {
+test('M2y9 G3 LH2 gives automatic source comparisons with a visible basal-only scope and no context selector', async ({ page }) => {
   await open(page);
   await seedGuest(page);
   const sharedBefore = await page.evaluate(() => window.VildaPersistence.readShared());
@@ -122,24 +117,21 @@ test('M2y9 G3 LH2 gives conditional numeric comparisons with a visible basal-onl
   await expectConditionalResult(assessment(page));
   await expect(page.locator('#labPubertyDetails')).not.toHaveAttribute('open');
   await expect(page.locator('#labPubertyContext, #labPubertyOpenContext, #labPubertyEditContext, #labPubertySectionContext, #labPubertyContextSummary')).toHaveCount(0);
-  await expect(page.locator('#labPubertyScope')).toBeVisible();
-  await expect(page.locator('#labPubertyScope')).toContainText(/wyłącznie.*bazaln/);
-  await expect(page.locator('#labPubertyScope')).toContainText('bez leczenia hormonalnego');
+  await expectVisibleConditions(assessment(page));
   const saved = await snapshot(page);
   expectUnknownInputAndStrictComparison(saved);
   expect(saved.evaluation.input.age).toMatchObject({ years: 2, months: 9, precision: 'month' });
   expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 3 });
-  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'above' }, byStage: { status: 'within' } });
+  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'above' }, byStage: { status: 'within' } });
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(sharedBefore);
 });
 
-test('age alone gives the conditional age comparison without inventing a Tanner stage', async ({ page }) => {
+test('age alone gives the automatic age comparison without inventing a Tanner stage', async ({ page }) => {
   await open(page);
   await seedGuest(page, '');
   await prepareMinimalResult(page, { withStage: false });
   await expectConditionalResult(assessment(page), { withStage: false });
-  await expect(comparison(assessment(page), 'stage')).toHaveAttribute('data-status', 'unavailable');
-  await expect(comparison(assessment(page), 'stage')).not.toHaveAttribute('data-applicability', 'conditional');
+  await expect(comparison(assessment(page), 'stage')).toHaveCount(0);
   const saved = await snapshot(page);
   expectUnknownInputAndStrictComparison(saved);
   expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: null });
@@ -152,6 +144,11 @@ test('age alone gives the conditional age comparison without inventing a Tanner 
 async function recordExplicitContext(page, patientId, context) {
   return page.evaluate(async ({ id, choice }) => {
     const input = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    const profile = window.VildaLabPubertyData.profiles.find((item) => item.id === 'mayo-lh-pediatric');
+    delete input.referenceSelection;
+    delete input.reproductiveContext;
+    input.specimen = 'serum';
+    input.assay = { profileId: profile.id, profileVersion: profile.version, methodId: profile.method.id, confirmation: 'configured' };
     const treatment = choice === 'basal-untreated'
       ? { context: 'none', gnrha: 'no', sexSteroids: 'no' }
       : { context: choice === 'hormonal' ? 'hormonal' : 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' };
@@ -239,12 +236,12 @@ test('a historical sample preserves its data and interview warnings without disp
   const patientId = await createPatient(page);
   await prepareMinimalResult(page);
   const saved = await page.evaluate(async (id) => {
-    const current = window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }).evaluation.input;
+    const profile = window.VildaLabPubertyData.profiles.find((item) => item.id === 'mayo-lh-pediatric');
     // The public older-client input contract remains supported independently
     // of the simplified live form. Do not recreate deleted controls in the DOM.
     const historical = window.VildaLabPubertyUI.buildInput({
       contextBasis: 'sample', sex: 'M', birthDate: '2018-06-17', sampleDate: '2026-06-17',
-      specimen: 'serum', measurementKind: 'basal', configuredAssay: current.assay,
+      specimen: 'serum', measurementKind: 'basal', configuredAssay: { profileId: profile.id, profileVersion: profile.version, methodId: profile.method.id },
       kind: 'G', stage: '3', observationSource: 'patient-record',
       testicularVolume: '6', volumeMethod: 'Prader',
       cnsSymptoms: 'yes', regression: 'yes', gnrha: 'no', sexSteroids: 'no', treatmentContext: 'none',
@@ -289,25 +286,19 @@ test('a historical sample preserves its data and interview warnings without disp
   await expect(recorded).toContainText(/regresj/i);
 });
 
-test('an absent or unknown method cannot activate the preview', async ({ page }) => {
+test('automatic source comparison does not require a stored or declared assay method', async ({ page }) => {
   await open(page);
   await seedGuest(page);
-  await prepareMinimalResult(page, { withProfile: false });
-  await expect(comparison(assessment(page), 'age')).toHaveAttribute('data-status', 'unavailable');
-  await expect(comparison(assessment(page), 'stage')).toHaveAttribute('data-status', 'unavailable');
-  expect((await snapshot(page)).evaluation).not.toHaveProperty('referencePreview');
-  await configureProfile(page);
+  await prepareMinimalResult(page);
+  await expectAutomaticReference(page);
   await expectConditionalResult(assessment(page));
-  await page.locator('#labPubertyUnknownMethod').check();
-  await expect(conditions(assessment(page))).toHaveCount(0);
-  await expect(comparison(assessment(page), 'age')).toHaveAttribute('data-status', 'unavailable');
-  await expect(comparison(assessment(page), 'stage')).toHaveAttribute('data-status', 'unavailable');
   const saved = await snapshot(page);
-  expect(saved.evaluation).not.toHaveProperty('referencePreview');
+  expectUnknownInputAndStrictComparison(saved);
   expect(saved.evaluation.input.assay.confirmation).toBe('unknown');
+  expect(saved.evaluation.referencePreview.reasonCodes).toEqual(expect.arrayContaining(['source_method_unconfirmed', 'specimen_unconfirmed']));
 });
 
-test('pin and history preserve the conditional preview and its unknown input after a later method change', async ({ page }) => {
+test('pin and history preserve the automatic preview and its unknown input after a later patient-context change', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await prepareMinimalResult(page);
@@ -321,9 +312,12 @@ test('pin and history preserve the conditional preview and its unknown input aft
   const notes = await page.evaluate((id) => window.VildaVault.listPatientNotesForPatient(id), patientId);
   expect(notes).toHaveLength(1);
   expect(notes[0].labResult.assessment.evaluation).toEqual(before.evaluation);
-  await page.locator('#labPubertyUnknownMethod').check();
-  await expect(conditions(assessment(page))).toHaveCount(0);
-  expect((await snapshot(page)).evaluation).not.toHaveProperty('referencePreview');
+  await select(page, 'Sex', '');
+  await expect(assessment(page).locator('.vilda-lab-axis')).toHaveCount(0);
+  const changed = (await snapshot(page)).evaluation;
+  expect(changed.input.sex).toBeNull();
+  expect(changed).not.toHaveProperty('referencePreview');
+  expect(changed.biochemical).toMatchObject({ byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   const saved = await page.evaluate((id) => window.VildaVault.getPatientNote(id), notes[0].id);
@@ -337,7 +331,7 @@ test('pin and history preserve the conditional preview and its unknown input aft
   await expectConditionalResult(recorded);
 });
 
-test.describe('320 px conditional comparison', () => {
+test.describe('320 px automatic comparison', () => {
   test.use({ viewport: { width: 320, height: 780 }, isMobile: true, hasTouch: true });
   test('conditions and early development remain visible outside details without horizontal scrolling', async ({ page }) => {
     await open(page);
