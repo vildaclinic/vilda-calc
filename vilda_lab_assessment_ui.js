@@ -41,6 +41,8 @@
     invalid_age: 'Wpisany wiek jest nieprawidłowy.',
     invalid_birth_date: 'Data urodzenia jest nieprawidłowa.',
     invalid_measurement: 'Zapis wyniku wymaga poprawienia; nie można porównać go z zakresem.',
+    invalid_neonatal_age: 'Sprawdź wiek ciążowy i ukończone dni życia.',
+    invalid_preterm_eligibility_policy: 'Profil wcześniaczy ma niekompletne zasady kwalifikacji.',
     invalid_reference_age_axis: 'Zakres nie ma poprawnie opisanej osi wieku.',
     invalid_reference_profile: 'Wybrany profil referencyjny jest niekompletny.',
     invalid_reference_range: 'Zapis granic zakresu jest nieprawidłowy.',
@@ -65,11 +67,19 @@
     no_local_reference: 'Nie podano potwierdzonego zakresu laboratorium dla tej próbki.',
     no_matching_profile: 'Nie wybrano zgodnego profilu referencyjnego.',
     no_matching_reference_range: 'Brak zgodnego zakresu dla podanego wieku, płci lub stadium.',
+    neonatal_postnatal_age_missing: 'Uzupełnij ukończone dni życia.',
+    neonatal_gestational_age_missing: 'Uzupełnij wiek ciążowy przy urodzeniu.',
+    neonatal_age_context_mismatch: 'Wiek w dniach nie zgadza się z wiekiem pacjenta. Sprawdź dane.',
     non_basal_or_unknown_measurement: 'Zakresy tego modułu dotyczą oznaczenia bazalnego; nie stosuje się ich do nieznanego protokołu lub testu stymulacyjnego.',
     onset_context_uncertain: 'Czas początku wymaga doprecyzowania względem dnia pobrania.',
     onset_history_missing: 'Nie podano czasu początku dojrzewania; nie można go odtworzyć z aktualnego stadium.',
     onset_precision_crosses_clinical_boundary: 'Podany przedział wieku początku przecina granicę interpretacji klinicznej.',
     preterm_reference_not_established: 'Nie ustalono właściwego profilu referencyjnego dla wcześniaka. Wiek skorygowany nie jest automatycznym zamiennikiem wieku próbki.',
+    preterm_context_conflict: 'Wiek ciążowy i informacja o wcześniactwie są niespójne.',
+    preterm_gestational_age_outside_profile: 'Wiek ciążowy przy urodzeniu jest poza zakresem stosowania profilu.',
+    preterm_postmenstrual_age_outside_profile: 'Wiek postmenstruacyjny jest poza zakresem stosowania profilu.',
+    preterm_first_day_excluded: 'Pierwsza doba — bez automatycznej oceny. Profil stosujemy po ukończeniu pierwszych 24 godzin życia.',
+    preterm_age_precision_crosses_scope: 'Doprecyzuj wiek. Podany przedział obejmuje granicę stosowania profilu.',
     profile_analyte_mismatch: 'Wybrany profil dotyczy innego hormonu.',
     profile_material_mismatch: 'Materiał próbki nie odpowiada wybranemu profilowi.',
     profile_measurement_kind_mismatch: 'Rodzaj oznaczenia nie odpowiada wybranemu profilowi.',
@@ -84,6 +94,7 @@
     source_reference_disagreement: 'Zakres laboratorium i pomocniczy zakres katalogowy dają różne porównania. Podstawą biochemiczną pozostaje potwierdzony zakres laboratorium.',
     stage_age_scope_missing: 'Brak zakresu wieku pozwalającego zastosować normę według stadium.',
     stage_reference_not_for_infant: 'W niemowlęctwie nie stosuje się zakresu według stadium; ocena opiera się na odpowiednim zakresie wieku.',
+    stage_reference_not_for_preterm: 'Profil wcześniaczy nie stosuje zakresów według stadium pokwitania.',
     treatment_context: 'Interpretacja zależy od leczenia; pojedyncze LH/FSH nie służy tu do oceny skuteczności GnRHa.',
     treatment_context_unknown: 'Nie ustalono stosowania GnRHa lub steroidów płciowych w kontekście próbki.',
     treatment_or_previous_onset_context: 'Brak aktualnych cech wymaga uwzględnienia leczenia, wcześniejszego początku lub regresji.',
@@ -113,7 +124,9 @@
   var METHODS = {
     'anshlite-lh-clia': 'AnshLite LH CLIA',
     'roche-elecsys-fsh-eclia': 'Roche Elecsys FSH ECLIA',
-    'autodelfia-johannsen-2018': 'AutoDELFIA / PerkinElmer'
+    'autodelfia-johannsen-2018': 'AutoDELFIA / PerkinElmer',
+    'roche-cobas-e601-lh-greaves-2015': 'Roche Cobas e601 LH',
+    'roche-cobas-e601-fsh-greaves-2015': 'Roche Cobas e601 FSH'
   };
   // Bibliographic labels for the IDs preserved by the engine. No reference
   // values or current data file are consulted to render a historical record.
@@ -126,7 +139,8 @@
     'cpp-laboratory-review-2025': ['Critical appraisal of diagnostic laboratory tests in CPP, 2025', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/'],
     'who-preterm-birth-2023': ['WHO — definicja wcześniactwa, 2023', 'https://www.who.int/news-room/fact-sheets/detail/preterm-birth'],
     'mayo-lhped-62999': ['Mayo Clinic Laboratories — LH pediatryczne, LHPED 62999', 'https://www.mayocliniclabs.com/test-catalog/Overview/62999'],
-    'mayo-fsh-602753': ['Mayo Clinic Laboratories — FSH 602753', 'https://www.mayocliniclabs.com/test-catalog/Overview/602753']
+    'mayo-fsh-602753': ['Mayo Clinic Laboratories — FSH 602753', 'https://www.mayocliniclabs.com/test-catalog/Overview/602753'],
+    'greaves-preterm-2015': ['Greaves i wsp., 2015 — tabela 4', 'https://pubmed.ncbi.nlm.nih.gov/25562509/']
   };
 
   function record(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
@@ -166,6 +180,9 @@
   function formatRange(range) {
     var limits = range && range.bounds;
     if (!limits) return '';
+    if (range.basis === 'preterm' && limits.lower && limits.upper && limits.lower.operator === '>=' && limits.upper.operator === '<=' && !limits.censoredLower) {
+      return 'Zakres: ' + number(limits.lower.value) + '–' + number(limits.upper.value) + (range.unit ? ' ' + text(range.unit) : '');
+    }
     var limitsText = [bound(limits.lower), bound(limits.upper)].filter(Boolean).join(' i ');
     var censored = limits.censoredLower;
     if (censored) limitsText = (bound(censored) || '<LOD') + ' (dolna granica oznaczalności); ' + limitsText;
@@ -180,6 +197,10 @@
   }
   function ageText(input, age) {
     if (age.status !== 'known') return age.status === 'invalid' ? 'Nieprawidłowy wiek' : 'Nieznany';
+    if (age.source === 'neonatal-days' && input.neonatalAge && input.neonatalAge.postnatalDays) {
+      var pna = input.neonatalAge.postnatalDays;
+      return number(pna.lower) + (pna.lower === pna.upper ? '' : '–' + number(pna.upper)) + ' ukończonych dni życia';
+    }
     if (age.source === 'dates' && numeric(age.ageDays)) return number(age.ageDays) + ' dni (dokładny wiek z dat)';
     var a = input.age || {};
     var result = numeric(a.years) ? number(a.years) + ' lat' : '';
@@ -189,7 +210,7 @@
   }
   function sourceView(source, fallback) {
     source = source || {};
-    return { label: text(source.label) || text(source.title) || fallback || 'Źródło zapisane z wynikiem',
+    return { label: text(source.label) || (source.id === 'greaves-preterm-2015' ? CITATIONS[source.id][0] : '') || text(source.title) || fallback || 'Źródło zapisane z wynikiem',
       version: text(source.version), organization: text(source.organization), url: safeURL(source.url) };
   }
   function methodName(id, name) {
@@ -247,19 +268,22 @@
     return { visualState: high.length ? 'is-uwaga-high' : 'is-uwaga-low', visualAlert: {
       label: mixed ? 'Uwaga — rozbieżne znaczne odchylenia' : high.length ? 'Uwaga — znacznie powyżej normy' : 'Uwaga — znacznie poniżej normy',
       scope: mixed ? significant.map(function (c) { return (c.visualState === 'is-uwaga-high' ? 'Powyżej: ' : 'Poniżej: ') + (c.key === 'age' ? 'wiek' : 'stadium ' + c.scope); }).join(' · ')
-        : 'Względem ' + significant.map(function (c) { return c.key === 'age' ? 'wieku' : 'stadium ' + c.scope; }).join(' i '),
+        : 'Względem ' + significant.map(function (c) { return c.preterm ? 'zakresu dla wcześniaka' : c.key === 'age' ? 'wieku' : 'stadium ' + c.scope; }).join(' i '),
       conditional: significant.some(function (c) { return c.conditional; })
     } };
   }
-  function buildView(evaluation) {
+  function buildView(evaluation, options) {
     var e = record(evaluation) ? evaluation : {};
     if (e.schemaVersion !== 1 || !['lh', 'fsh'].includes(e.analyte) || !record(e.input) || !record(e.measurement) || !record(e.ageAtSample) || !record(e.biochemical) || !record(e.clinical) || !record(e.summary) || !['attention', 'limited', 'compared', 'invalid', 'out_of_scope'].includes(e.summary.status)) return { valid: false };
     var input = e.input, m = e.measurement, b = e.biochemical, p = input.puberty || {}, assay = input.assay || {};
+    var pretermProfile = !!(e.provenance && e.provenance.eligibilityPolicyId) || ['greaves-preterm-lh-candidate', 'greaves-preterm-fsh-candidate'].includes(assay.profileId) ||
+      !!(options && options.live && !options.historical && options.pretermContextMode === true);
     var preview = record(e.referencePreview) && e.referencePreview.kind === 'conditional-basal-untreated' && b.status === 'unavailable' && b.primary === null ? e.referencePreview : null;
     var previewReasons = preview && Array.isArray(preview.reasonCodes) ? preview.reasonCodes : [];
     var unknownProtocol = previewReasons.includes('non_basal_or_unknown_measurement');
     var unknownTreatment = previewReasons.includes('treatment_context_unknown');
     var conditionNote = preview ? 'Porównanie z zakresami oznaczenia bazalnego bez leczenia hormonalnego. ' + (unknownProtocol && unknownTreatment ? 'Rodzaju badania i leczenia nie ustalono.' : unknownProtocol ? 'Rodzaju badania nie ustalono.' : 'Leczenia nie ustalono.') : '';
+    if (preview && pretermProfile) conditionNote = 'Dla oznaczenia bazalnego bez leczenia hormonalnego — porównanie warunkowe.';
     var sources = [], sourceIds = [];
     var rawComparisons = [['age', 'Względem wieku', preview ? preview.byAge : b.byAge], ['stage', 'Względem stadium', preview ? preview.byStage : b.byStage], ['local', 'Zakres laboratorium', b.local]];
     var point = m.status === 'valid' && m.isExact === true && numeric(m.plotValue) && m.plotValue >= 0 ? m.plotValue : null;
@@ -275,8 +299,9 @@
       if (c.range && range.source) {
         if (!sourceIds.includes(range.sourceId)) { sources.push(sourceView(range.source)); sourceIds.push(range.sourceId); }
       }
-      return { key: item[0], title: item[1], status: status, conditional: conditional,
-        shortTitle: item[0] === 'age' ? 'Dla wieku' : item[0] === 'stage' ? 'Dla stadium' + (scope ? ' ' + scope : '') : item[1],
+      return { key: item[0], title: pretermProfile && item[0] === 'age' ? 'Dla wcześniaka' : item[1], status: status, conditional: conditional,
+        preterm: pretermProfile && item[0] === 'age',
+        shortTitle: item[0] === 'age' ? pretermProfile ? 'Dla wcześniaka' : 'Dla wieku' : item[0] === 'stage' ? 'Dla stadium' + (scope ? ' ' + scope : '') : item[1],
         visualState: state, visualLabel: visualLabel + (conditional ? ' · warunkowo' : ''),
         axis: limits && maximum ? { min: 0, max: maximum, lower: limits.lower, upper: limits.upper, value: point, unit: 'IU/L' } : null,
         label: conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + ' — warunkowo' : STATUS[status], rangeText: formatRange(c.range),
@@ -344,7 +369,7 @@
       return message;
     });
     var emphasis = resultEmphasis(comparisons);
-    var view = { valid: true, analyte: e.analyte.toUpperCase(),
+    var view = { valid: true, analyte: e.analyte.toUpperCase(), pretermProfile: pretermProfile,
       result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), empty: !text(m.raw), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
         visualState: emphasis.visualState, visualAlert: emphasis.visualAlert,
         note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
@@ -360,7 +385,25 @@
     // Preserve the complete public view and recorded evaluation. This projection
     // only removes duplicated or empty presentation; it never recalculates them.
     view.presentation = presentationView(e, view);
+    view.pretermBlock = pretermProfile && comparisons[0].status === 'unavailable' ? pretermBlock(e) : null;
     return view;
+  }
+
+  // This is a presentation of recorded reasons only, never a second eligibility
+  // calculation. Historical cutoffs remain those captured by the saved engine.
+  function pretermBlock(e) {
+    var age = e.neonatalAge || {}, codes = unique(codeList(age.reasonCodes).concat(codeList(e.biochemical.reasonCodes), codeList(e.limitations)));
+    if (codes.includes('neonatal_gestational_age_missing') && codes.includes('neonatal_postnatal_age_missing')) return 'Uzupełnij wiek ciążowy i ukończone dni życia.';
+    var priority = ['missing_sex', 'invalid_neonatal_age', 'neonatal_age_context_mismatch', 'preterm_context_conflict',
+      'neonatal_gestational_age_missing', 'neonatal_postnatal_age_missing', 'preterm_first_day_excluded',
+      'preterm_age_precision_crosses_scope', 'preterm_gestational_age_outside_profile', 'preterm_postmenstrual_age_outside_profile',
+      'treatment_requires_separate_profile', 'non_basal_or_unknown_measurement', 'configured_profile_version_mismatch',
+      'preterm_reference_not_established', 'method_not_confirmed', 'no_matching_profile', 'profile_not_active', 'invalid_preterm_eligibility_policy'];
+    var code = priority.find(function (candidate) { return codes.includes(candidate) && (candidate !== 'non_basal_or_unknown_measurement' || e.input.measurementKind === 'stimulated'); });
+    if (code === 'preterm_first_day_excluded' && age.postnatalDays && age.postnatalDays.upper > 0) return 'Nie potwierdzono ukończenia pierwszej doby. Uzupełnij znaną liczbę ukończonych dni życia.';
+    if (code === 'non_basal_or_unknown_measurement') return e.input.measurementKind === 'stimulated' ? 'Wynik po stymulacji wymaga odrębnej interpretacji; nie stosujemy zakresów bazalnych.' : 'Zakres dotyczy oznaczenia bazalnego bez leczenia hormonalnego.';
+    if (['preterm_reference_not_established', 'method_not_confirmed', 'no_matching_profile'].includes(code)) return 'Brak zakresu dla wybranej metody. Profil wcześniaczy wymaga zgodnej metody Roche Cobas e601.';
+    return code ? reasons([code])[0] : 'Brak zakresu dla podanych danych.';
   }
 
   function codeList(value) { return Array.isArray(value) ? value : []; }
@@ -406,6 +449,8 @@
     // remain visible even when their main clinical warning is above the axes.
     var covered = ['early_development', 'early_thelarche', 'early_onset_history', 'late_onset_history', 'absent_onset', 'inconsistent_puberty_context', 'missing_age', 'missing_sex', 'missing_puberty_assessment', 'ambiguous_puberty_kind'];
     function message(code) {
+      if (view.pretermProfile && ['stage_reference_not_for_preterm', 'stage_reference_not_for_infant', 'missing_typed_stage_at_sample', 'missing_puberty_stage', 'missing_puberty_assessment'].includes(code)) return '';
+      if (view.pretermProfile && code === 'infant_context' && view.clinical.code === code && view.clinical.text) return '';
       if (code === 'no_local_reference' && !input.localReference) return '';
       if (code === 'age_outside_profile' && e.ageAtSample.status !== 'known') return '';
       if (code === 'reported_range_reference_disagreement' && view.reportedRangeConflict) return '';
@@ -436,10 +481,15 @@
       var citation = Object.prototype.hasOwnProperty.call(CITATIONS, id) ? CITATIONS[id] : null;
       return citation ? { label: citation[0], version: '', organization: '', url: citation[1] } : null;
     }).filter(Boolean);
+    function relevantSource(source) {
+      if (!view.pretermProfile) return true;
+      if (view.clinical.status === 'warning') return !['mayo-lhped-62999', 'mayo-fsh-602753'].some(function (id) { return source.url === CITATIONS[id][1]; });
+      return ['greaves-preterm-2015', 'minipuberty-review-2024', 'who-preterm-birth-2023'].some(function (id) { return source.url === CITATIONS[id][1]; });
+    }
     return { context: context, references: references,
       limitations: unique(codes.map(message).filter(Boolean)), clinicalLimitations: unique(clinicalCodes.map(message).filter(Boolean)),
-      sources: view.sources.filter(function (source) { return !references.some(function (reference) { return sourceKey(reference.source) === sourceKey(source); }); }),
-      clinicalSources: clinicalSources,
+      sources: view.sources.filter(function (source) { return relevantSource(source) && !references.some(function (reference) { return sourceKey(reference.source) === sourceKey(source); }); }),
+      clinicalSources: clinicalSources.filter(relevantSource),
       clinicalText: view.clinical.text,
       summaryCode: text(e.summary.code) };
   }
@@ -534,11 +584,14 @@
     }
     if (view.result.note && !incomplete) add(parent, 'p', 'vilda-lab-note', view.result.note);
     if (incomplete && !live && !view.result.empty) add(parent, 'p', 'vilda-lab-note', 'Nieprawidłowy zapis wyniku lub jednostki — popraw wpis, aby porównać stężenie.');
-    var clinical = add(parent, 'div', 'vilda-lab-clinical');
-    clinical.setAttribute('data-clinical-code', /^[a-z_]+$/.test(view.clinical.code) ? view.clinical.code : 'unavailable');
-    clinical.setAttribute('data-status', ['warning', 'notice', 'limited', 'out_of_scope', 'no_timing_alert'].includes(view.clinical.status) ? view.clinical.status : 'limited');
+    var quietInfantContext = view.pretermProfile && view.clinical.status !== 'warning' && ['infant_context', 'missing_age', 'missing_sex', 'missing_puberty_assessment'].includes(view.clinical.code);
+    var clinical = quietInfantContext ? null : add(parent, 'div', 'vilda-lab-clinical');
+    if (clinical) {
+      clinical.setAttribute('data-clinical-code', /^[a-z_]+$/.test(view.clinical.code) ? view.clinical.code : 'unavailable');
+      clinical.setAttribute('data-status', ['warning', 'notice', 'limited', 'out_of_scope', 'no_timing_alert'].includes(view.clinical.status) ? view.clinical.status : 'limited');
+    }
     var basicMissingContext = view.clinical.status === 'limited' && ['missing_age', 'missing_sex', 'missing_puberty_assessment', 'ambiguous_puberty_kind'].includes(view.clinical.code);
-    if (!basicMissingContext || !presentation.clinicalText) {
+    if (clinical && (!basicMissingContext || !presentation.clinicalText)) {
       add(clinical, 'h3', '', 'Rozwój płciowy');
       add(clinical, 'strong', '', view.clinical.title);
     }
@@ -546,9 +599,9 @@
     // podstawie dzisiejszych reguł podczas odczytu historycznego snapshotu.
     var clinicalText = options && options.live && !options.historical && view.contextBasis === 'current-patient'
       ? presentation.clinicalText.replace('Brak wiarygodnego wieku w bieżącym kontekście pacjenta.', 'Brak wiarygodnego wieku w formularzu głównym.') : presentation.clinicalText;
-    clinicalText.split(/\n\s*\n/).filter(Boolean).forEach(function (paragraph) { add(clinical, 'p', '', paragraph); });
+    if (clinical) clinicalText.split(/\n\s*\n/).filter(Boolean).forEach(function (paragraph) { add(clinical, 'p', '', paragraph); });
     if (view.summary.status === 'attention' && view.summary.title !== view.clinical.title && !['outside_reference_range', 'outside_reported_range', 'reported_range_reference_disagreement'].includes(presentation.summaryCode)) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
-    if (!incomplete) {
+    if (!incomplete && !view.pretermProfile) {
       var comparisonHead = add(parent, 'div', 'vilda-lab-comparisons-head');
       add(comparisonHead, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
       if (view.conditionNote) add(comparisonHead, 'span', 'vilda-lab-conditional-badge', 'Warunkowo');
@@ -563,8 +616,10 @@
       add(supplied, 'p', 'vilda-lab-note', 'Porównanie liczbowe. Nie potwierdza zastosowania zakresu do wieku, stadium ani metody.');
     }
     if (view.reportedRangeConflict && !incomplete) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
-    var comparisons = incomplete ? null : add(parent, 'div', 'vilda-lab-comparisons');
-    (incomplete ? [] : view.comparisons).forEach(function (comparison) {
+    if (!incomplete && view.pretermBlock) add(parent, 'p', 'vilda-lab-preterm-block', view.pretermBlock).setAttribute('data-preterm-block', 'true');
+    var comparisons = incomplete || view.pretermBlock ? null : add(parent, 'div', 'vilda-lab-comparisons');
+    var visibleComparisons = incomplete || view.pretermBlock ? [] : view.comparisons.filter(function (comparison) { return !view.pretermProfile || comparison.key !== 'stage'; });
+    visibleComparisons.forEach(function (comparison) {
       if (comparison.key === 'local' && comparison.status === 'unavailable') return;
       var row = add(comparisons, 'div', 'vilda-lab-comparison');
       row.setAttribute('data-comparison', comparison.key);
@@ -575,13 +630,14 @@
       add(head, 'h4', '', comparison.shortTitle);
       var status = add(head, 'span', 'vilda-lab-comparison-status' + (comparison.visualState ? ' ' + comparison.visualState : ''));
       if (comparison.visualState === 'is-uwaga-high' || comparison.visualState === 'is-uwaga-low') add(status, 'span', 'vilda-lab-status-icon', '!').setAttribute('aria-hidden', 'true');
-      add(status, 'span', '', comparison.visualLabel);
+      add(status, 'span', '', view.pretermProfile ? comparison.visualLabel.replace(' · warunkowo', '') : comparison.visualLabel);
       renderAxis(row, comparison, view.result);
       if (comparison.rangeText) add(row, 'p', 'vilda-lab-range', comparison.rangeText);
     });
-    if (!incomplete) renderLegend(parent, view.comparisons);
+    if (!incomplete) renderLegend(parent, visibleComparisons);
     if (view.conditionNote && !incomplete) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', 'conditional-basal-untreated');
     var more = details(parent, 'Szczegóły i źródła');
+    if (quietInfantContext && clinicalText) add(more, 'p', 'vilda-lab-note', clinicalText);
     if (view.result.visualAlert && !incomplete) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
     list(more, incomplete ? presentation.clinicalLimitations : presentation.limitations, 'vilda-lab-limitations');
     if (!incomplete) presentation.references.forEach(function (comparison) { renderComparisonContext(more, comparison); });
@@ -602,7 +658,7 @@
     return section;
   }
   function renderEvaluation(container, evaluation, options) {
-    var view = buildView(evaluation);
+    var view = buildView(evaluation, options);
     if (!view.valid) return renderAssessment(container, null, options);
     var section = mount(container, 'recorded', view.summary.status, options);
     if (section) renderContents(section, view, options);
@@ -626,5 +682,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.7.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.8.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });

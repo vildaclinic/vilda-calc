@@ -91,6 +91,17 @@
   margin: var(--space-12px) 0;
 }
 
+.vilda-lab-assessment .vilda-lab-preterm-block {
+  margin: var(--space-14px) 0;
+  padding: var(--space-12px) var(--space-14px);
+  border: var(--border-hairline) solid #efd3ae;
+  border-left: var(--border-pro) solid #cc862e;
+  border-radius: var(--radius-11);
+  background: var(--vilda-lab-amber-bg);
+  color: var(--vilda-lab-amber);
+  font-size: .9rem;
+}
+
 .vilda-lab-assessment .vilda-lab-comparisons-head {
   display: flex;
   flex-wrap: wrap;

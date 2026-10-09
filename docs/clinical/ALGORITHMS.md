@@ -221,6 +221,78 @@ Pełny zakres odczytu, ograniczenia i warunki przyszłej aktywacji:
 [LH_FSH.md](LH_FSH.md#przygotowanie-profilu-wcześniaczego--9102026).
 Akceptacja kliniczna przed aktywacją oraz scalenie pozostają decyzją właściciela.
 
+#### LAB-PUBERTY — aktywacja profilu wcześniaczego i minimalny formularz, 2026-10-09
+
+**Wpływ kliniczny: TAK.** Silnik `1.4.0` i zbiór danych `2026-10-09.3`
+aktywują profile Greaves LH/FSH, dotąd nieaktywne. Ich stabilne identyfikatory
+zachowują końcówkę `candidate`; wersja profilu i `active:true` rozstrzygają
+aktywację. Nie zmieniono liczb z finalnej tabeli 4: LH M0,1–9,2/F0,2–133,9;
+FSH M0,2–3,6/F2,6–181,1 IU/L (mIU/mL równoważne). Surowica, Roche Cobas
+8000-e601 ECLIA; nie utożsamiamy tej metody z AnshLite ani dotychczasowym
+profilem Mayo Roche Elecsys FSH. Zakresy Mayo i kryteria czasu dojrzewania
+zachowują dotychczasowe wersje.
+
+Źródło: Greaves i wsp., JCEM 2015;100:1097–1103, DOI 10.1210/jc.2014-3681,
+[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/), metody s. 1098,
+finalna tabela 4 s. 1102; odczytano także cały dostarczony suplement
+`jc-14-3681.pdf` (tabele 1–2, rycina 1). Populacja i ograniczenia są opisane
+powyżej; hashe wszystkich dostarczonych materiałów i rozróżnienie biobanków
+z proofu Greaves 2014 znajdują się w [LH_FSH.md](LH_FSH.md).
+Normy ani metoda nie pochodzą z proofu 2014. Przedziały ufności granic RI
+nie zastępują norm.
+
+Polityka `greaves-preterm-applicability`, wersja `2026-10-09.3`, w pliku
+danych wymaga: GA przy urodzeniu 24+0–32+0 tyg. włącznie (168–224 dni),
+PMA nie większego niż 36+0 tyg. (252 dni) i co najmniej jednej ukończonej
+dobie życia. PMA jest sumą GA i PNA. Są to **jawnie przyjęte granice
+aplikacji oparte na protokole**, nie opublikowane dokładne skraje finalnej
+podgrupy ani zwalidowane progi diagnostyczne. Właściciel zaakceptował
+te granice i wyłączenie pierwszej doby, następnie zatwierdził makietę
+desktop/mobile i polecił wdrożenie.
+
+Wiek jest reprezentowany domkniętym przedziałem możliwych ukończonych dni;
+cały przedział GA/PNA/PMA musi spełniać warunki. GA28+4 daje 200 dni;
+samo „28 ukończonych tygodni” daje 196–202 dni. Różnica dat D bez godziny
+urodzenia daje `max(0,D−1)…D` ukończonych dób, więc zmiana daty o jeden dzień
+nie wystarcza do potwierdzenia upływu 24 h. Nie tworzymy daty urodzenia
+z wieku w latach/miesiącach ani nie przenosimy DOB do niezaszyfrowanego
+stanu współdzielonego.
+
+Nowy helper `vilda_lab_neonatal_context.js` przekazuje jedynie pochodny przedział
+PNA przez cache bieżącej sesji (`vildaLabNeonatalAgeV1`), z kontrolą tożsamości,
+wieku/pomiaru formularza, trybu odtworzenia i aktualności dnia. Nie zapisuje
+daty urodzenia, nie modyfikuje `sharedUserData` i nie uruchamia zapisu pacjenta.
+Blokada sejfu lub wyczyszczenie sesji unieważniają cache. GA pochodzi z rekordu
+odczytanego przez chroniony kontekst `VildaPubertySource`; spóźniona odpowiedź
+poprzedniego pacjenta nie dostarcza danych do bieżącej oceny.
+
+Formularz używa danych bieżącego pacjenta; pokazuje maksymalnie dwie brakujące
+pozycje (GA i ukończone dni życia), a PMA wylicza sam. Jedna oś „Dla wcześniaka”
+zastępuje w tym kontekście osie wieku/stadium. Przy braku kwalifikacji pozostaje
+wartość, przeliczenie i konkretny powód. Starsze dzieci, także urodzone
+przedwcześnie, zachowują wybór pokwitania oraz ocenę według wieku/stadium.
+Niezależne ostrzeżenia kliniczne pozostają widoczne. Brak danych o leczeniu
+i rodzaju oznaczenia pozwala wyłącznie na opisane porównanie warunkowe z RI
+bazalnym; znana stymulacja, leczenie, niezgodna metoda lub nieaktualna wersja
+konfiguracji blokują niedopasowaną ocenę.
+
+Snapshot rozszerzono opcjonalnie o użyte przedziały dni, wynik kwalifikacji
+i wersję polityki. Odczyt wizyty, przypięcia i historii odtwarza utrwaloną
+ocenę bez uruchamiania bieżącego silnika; starsze zapisy zachowują kształt.
+
+Syntetyczne przypadki regresyjne rzeczywistych funkcji produkcyjnych:
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| M, GA28+4, PNA43, LH2, zgodne e601 | PMA34+5; porównanie z 0,1–9,2 IU/L, w zakresie; jedna oś, bez wniosku o całym obrazie klinicznym. |
+| Te same GA/PNA, FSH8 M / FSH20 F | M: powyżej 3,6, istniejące wyróżnienie >2×; F: w zakresie 2,6–181,1. |
+| PNA0 albo możliwe PNA0–1 | Brak automatycznego porównania; pierwsza doba nie została wykluczona. |
+| GA28+4, PNA52 / PNA53 | PMA36+0: kwalifikacja; PMA36+1: poza profilem. |
+| GA32 bez dni / GA32+0 | Nie dopisujemy zera; przedział GA224–230 przecina granicę, dokładne GA224 może się kwalifikować. |
+| Profil Mayo, znane leczenie lub stymulacja | Bez automatycznego przeniesienia norm Greaves i bez nieadekwatnego RI. |
+| Starsze dziecko urodzone przedwcześnie | Wybór pokwitania i dotychczasowa ocena pozostają dostępne. |
+| Zmiana pacjenta, historia, mobile 320 px, offline | Bez przenoszenia danych innej osoby, ponownego liczenia historii ani zależności od sieci. |
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

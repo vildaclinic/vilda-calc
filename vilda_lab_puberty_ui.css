@@ -119,3 +119,19 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) 
   .lab-puberty-summary-row { flex-wrap: wrap; }
   .lab-puberty-summary-row button.lab-puberty-context-button { margin-left: auto; }
 }
+/* Wiek wcześniaka uzupełniamy wyłącznie wtedy, gdy brakuje danych z karty. */
+.lab-puberty-neonatal-summary {
+  margin: var(--space-0-35) 0 0;
+  color: var(--text-muted, #5e7178);
+  font-size: .8rem;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+.lab-puberty-neonatal-fields { margin-top: var(--space-0-75); }
+.lab-puberty-neonatal-fields input { font-variant-numeric: tabular-nums; }
+.lab-puberty-neonatal-fields input[aria-invalid="true"] { border-color: var(--warning, #b45309); }
+.lab-puberty-neonatal .lab-puberty-hint { margin-bottom: 0; }
+.lab-puberty-neonatal #labPubertySectionPatient > :is(h3, .lab-puberty-hint) { display: none; }
+.lab-puberty-neonatal #labPubertySectionPatient .lab-puberty-fields { margin-top: 0; }
+.lab-puberty-neonatal #labPubertyMethodSettings:not([open]) { display: none; }
+.lab-puberty-neonatal #labPubertyMethodSettings > .lab-puberty-checkbox { margin-top: var(--space-0-75); }

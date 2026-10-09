@@ -61,13 +61,13 @@
   <link rel="stylesheet" href="style.css?v=87" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
-  <link href="vilda_lab_assessment_ui.css?v=7" rel="stylesheet">
-  <link href="vilda_lab_puberty_ui.css?v=4" rel="stylesheet">
+  <link href="vilda_lab_assessment_ui.css?v=8" rel="stylesheet">
+  <link href="vilda_lab_puberty_ui.css?v=5" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=43"></script>
+  <script src="vilda_session_bridge.js?v=44"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -104,7 +104,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=119"></script>
+  <script src="vilda_chrome.js?v=120"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -437,14 +437,15 @@
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=35"></script>
   <script src="lab_unit_converter.js?v=4"></script>
-  <script src="vilda_lab_puberty_data.js?v=4"></script>
-  <script src="vilda_lab_puberty.js?v=4"></script>
-  <script src="vilda_lab_snapshot.js?v=3"></script>
-  <script src="vilda_lab_assessment_ui.js?v=8"></script>
+  <script src="vilda_lab_puberty_data.js?v=5"></script>
+  <script src="vilda_lab_puberty.js?v=5"></script>
+  <script src="vilda_lab_snapshot.js?v=4"></script>
+  <script src="vilda_lab_assessment_ui.js?v=9"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=12"></script>
+  <script src="vilda_lab_puberty_ui.js?v=13"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
-  <script src="vilda_puberty_source.js?v=9"></script>
+  <script src="vilda_puberty_source.js?v=10"></script>
+  <script src="vilda_lab_neonatal_context.js?v=1"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -614,7 +615,11 @@
       ['progression', 'growthAcceleration', 'cnsSymptoms', 'regression'].forEach(function (key) {
         history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
       });
-      return {
+      var neonatalAge = window.VildaLabNeonatalContext
+        ? window.VildaLabNeonatalContext.read(shared, identity, source) : null;
+      var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
+        && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
+      var context = {
         identityKey: identity,
         sourceStatus: 'ready',
         sex: sex,
@@ -628,6 +633,14 @@
         gnrhaStatus: puberty && puberty.gnrhaStatus || !identity && shared.puberty && shared.puberty.gnrhaStatus || null,
         testicularVolume: shared.advanced && shared.advanced.testicularVolume || pubertyState && pubertyState.jadra || null
       };
+      if (neonatalAge) {
+        context.neonatalAge = neonatalAge;
+        if (neonatalAge.gestationalDays && pretermRule && pretermRule.operator === '<') {
+          context.preterm = neonatalAge.gestationalDays.upper < pretermRule.value * 7 ? 'yes'
+            : neonatalAge.gestationalDays.lower >= pretermRule.value * 7 ? 'no' : 'unknown';
+        }
+      }
+      return context;
     }
     var pubertyUI = window.VildaLabPubertyUI && window.VildaLabPubertyUI.mount({
       document: document,
@@ -4061,7 +4074,8 @@
     // Nasłuch zmian w sharedUserData (z innej karty/strony głównej).
     window.addEventListener('storage', function (e) {
       // Klucz dla sharedUserData może mieć różne nazwy w zależności od wersji adaptera.
-      if (!e.key || e.key === 'vildaCurrentPatientId' || /shared|user/i.test(e.key)) refreshPatientContext();
+      if (!e.key || e.key === 'vildaCurrentPatientId' || /(?:^|:)vildaLabNeonatalAgeV1$/.test(e.key)
+        || /shared|user/i.test(e.key)) refreshPatientContext();
     });
     window.addEventListener('focus', refreshPatientContext);
     window.addEventListener('vilda:user-state-cleared', function () {

@@ -35,18 +35,18 @@ function expectNoReference(result) {
   expect(result).not.toHaveProperty('referencePreview');
 }
 
-describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniaczą', () => {
+describe('Greaves 2015 — aktywny profil wymaga jawnej kwalifikacji wieku', () => {
   it.each([
     ['lh', 'M', 0.1, 9.2, 111], ['lh', 'F', 0.2, 133.9, 108],
     ['fsh', 'M', 0.2, 3.6, 111], ['fsh', 'F', 2.6, 181.1, 108],
-  ])('zachowuje raportowany przedział %s/%s bez tworzenia maszynowego zakresu wieku', (analyte, sex, lower, upper, sampleSize) => {
+  ])('zachowuje raportowany przedział %s/%s wraz z polityką kwalifikacji', (analyte, sex, lower, upper, sampleSize) => {
     const candidate = profile(candidateId(analyte));
     expect(candidate).toMatchObject({
-      active: false, analyte, sourceId: 'greaves-preterm-2015', version: '2026-10-09.2',
-      method: { id: `roche-cobas-e601-${analyte}-greaves-2015` }, material: 'serum', unit: 'IU/L', rows: [],
+      active: true, analyte, sourceId: 'greaves-preterm-2015', version: '2026-10-09.3',
+      method: { id: `roche-cobas-e601-${analyte}-greaves-2015` }, material: 'serum', unit: 'IU/L',
     });
-    expect(candidate).not.toHaveProperty('scope');
-    expect(candidate.blockedReasons).toEqual(['unresolvedPostnatalAge', 'unresolvedGestationalAgeEdges']);
+    expect(candidate.scope).toMatchObject({ age: { axis: 'postmenstrualDays' }, policyId: 'greaves-preterm-applicability', policyVersion: '2026-10-09.3' });
+    expect(candidate.rows.find((row) => row.sex === sex).range).toMatchObject({ lower: { operator: '>=', value: lower }, upper: { operator: '<=', value: upper } });
     expect(candidate.reportedIntervals.filter((interval) => interval.sex === sex)).toEqual([
       expect.objectContaining({ sex, lower, upper, sampleSize }),
     ]);
@@ -74,7 +74,7 @@ describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniacz
   const contexts = ['lh', 'fsh'].flatMap((analyte) => ['yes', 'no', 'unknown'].flatMap((preterm) =>
     ['basal', 'unknown'].map((measurementKind) => ({ analyte, preterm, measurementKind }))));
 
-  it.each(contexts)('nie klasyfikuje ani nie podgląda kandydata: $analyte, wcześniactwo $preterm, badanie $measurementKind', ({ analyte, preterm, measurementKind }) => {
+  it.each(contexts)('brak PNA nie daje RI ani podglądu: $analyte, wcześniactwo $preterm, badanie $measurementKind', ({ analyte, preterm, measurementKind }) => {
     const result = engine.evaluate(input(analyte, {
       preterm, gestationalAgeWeeks: null, measurementKind,
       treatment: measurementKind === 'basal'
@@ -82,13 +82,13 @@ describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniacz
         : { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' },
     }), data);
     expectNoReference(result);
-    expect(result.biochemical.reasonCodes).toContain('profile_not_active');
+    expect(result.biochemical.reasonCodes).toContain('neonatal_postnatal_age_missing');
     expect(result.provenance.profileId).toBe(candidateId(analyte));
     expect(result.measurement).toMatchObject({ status: 'valid', value: 2, unit: 'IU/L' });
     expect(result.clinical.code).toBe('infant_context');
   });
 
-  it.each(['lh', 'fsh'])('dokładne daty, wiek skorygowany ani starszy pacjent nie aktywują %s', (analyte) => {
+  it.each(['lh', 'fsh'])('same daty, wiek skorygowany ani starszy pacjent nie zastępują kwalifikacji %s', (analyte) => {
     for (const ageContext of [
       { birthDateISO: '2026-10-09', sampleDateISO: '2026-10-09' },
       { birthDateISO: '2026-08-27', sampleDateISO: '2026-10-09' },
@@ -97,32 +97,31 @@ describe('Greaves 2015 — przygotowane dane nie są aktywną normą wcześniacz
     ]) {
       const result = engine.evaluate(input(analyte, { ...ageContext, preterm: 'no', gestationalAgeWeeks: null }), data);
       expectNoReference(result);
-      expect(result.biochemical.reasonCodes).toContain('profile_not_active');
+      expect(result.biochemical.reasonCodes).toContain('neonatal_gestational_age_missing');
     }
   });
 
-  it.each(['lh', 'fsh'])('średni wiek pobrania i koniec obserwacji biobanku nie tworzą okna normy %s', (analyte) => {
+  it.each(['lh', 'fsh'])('sam opis wieku z dat bez jawnego przedziału dni nie wystarcza dla %s', (analyte) => {
     for (const birthDateISO of ['2026-09-18', '2026-08-14']) {
       // Synthetic PNA 21 days and PNA 56 days (GA 28 weeks -> PMA 36 weeks).
-      // Neither the cohort mean nor the biobank follow-up limit establishes
-      // eligibility for the first-sample LH/FSH reference intervals.
+      // Calendar dates without explicit conservative completed-day intervals
+      // do not silently establish the new neonatal eligibility contract.
       const result = engine.evaluate(input(analyte, {
         contextBasis: 'sample', age: null,
         birthDateISO, sampleDateISO: '2026-10-09', gestationalAgeWeeks: 28,
       }), data);
       expectNoReference(result);
       expect(result.ageAtSample.status).toBe('known');
-      expect(result.biochemical.reasonCodes).toContain('profile_not_active');
-      expect(profile(candidateId(analyte))).not.toHaveProperty('scope');
+      expect(result.biochemical.reasonCodes).toContain('neonatal_postnatal_age_missing');
     }
   });
 
-  it.each(['lh', 'fsh'])('kandydat %s nie może zostać zapisany ani odtworzony jako konfiguracja metody', (analyte) => {
+  it.each(['lh', 'fsh'])('zapisuje aktywny profil %s, lecz nie odtwarza starej wersji kandydata', (analyte) => {
     const configured = preferences.configure(null, analyte, candidateId(analyte), data);
-    expect(configured.profiles[analyte]).toBeNull();
+    expect(configured.profiles[analyte].profileVersion).toBe('2026-10-09.3');
     const selected = profile(candidateId(analyte));
     const injected = { schemaVersion: 1, profiles: { [analyte]: {
-      profileId: selected.id, profileVersion: selected.version, methodId: selected.method.id, material: selected.material,
+      profileId: selected.id, profileVersion: '2026-10-09.2', methodId: selected.method.id, material: selected.material,
     } } };
     expect(preferences.normalize(injected, data).profiles[analyte]).toBeNull();
     expect(preferences.resolve(injected, analyte, data)).toBeNull();
