@@ -29,22 +29,86 @@
 }
 .lab-puberty-checkbox { grid-column: 1 / -1; flex-direction: row; align-items: flex-start; gap: var(--space-0-55); }
 .lab-puberty-checkbox input { flex: 0 0 auto; width: 18px; height: 18px; margin: .1rem 0 0; }
-.lab-puberty-context-button { border: var(--border-hairline) solid var(--border-color, #9bbec1); border-radius: var(--radius-8); padding: var(--space-0-5) var(--space-0-75); font: inherit; font-size: .78rem; color: var(--text-color, #216a70); background: var(--card-bg, #eff6f6); cursor: pointer; margin: 0 0 var(--space-0-75); max-width: 100%; white-space: normal; }
+/* Jak małe przyciski przelicznika: lokalne !important nadpisuje ogólny
+   szklany skin .liquid-ios26 button, bez zmiany pozostałych przycisków. */
+.lab-puberty-panel button.lab-puberty-context-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: auto;
+  min-height: 36px;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-0-45) var(--space-0-75);
+  border: var(--border-hairline) solid var(--line-teal) !important;
+  border-radius: var(--radius-10) !important;
+  background: var(--tint-teal) !important;
+  color: var(--text-strong) !important;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none;
+  transition: background-color .15s ease, border-color .15s ease !important;
+}
+@media (hover: hover) {
+  .lab-puberty-panel button.lab-puberty-context-button:hover {
+    background: var(--line-teal-soft) !important;
+    border-color: var(--primary) !important;
+    transform: none;
+  }
+}
+.lab-puberty-panel button.lab-puberty-context-button:active {
+  background: var(--tint-teal-active) !important;
+  transform: none;
+}
+.lab-puberty-panel button.lab-puberty-context-button:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: 2px;
+  transform: none;
+}
+.lab-puberty-panel button.lab-puberty-context-button[aria-pressed="true"] {
+  background: var(--tint-teal-active) !important;
+  border-color: var(--primary) !important;
+}
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-puberty-panel button.lab-puberty-context-button {
+  background: var(--hc-button-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-module-btn-border) !important;
+}
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-puberty-panel button.lab-puberty-context-button:is(:hover, :active, [aria-pressed="true"]) {
+  background: var(--hc-module-btn-hover-bg) !important;
+  border-color: var(--hc-module-btn-active-border) !important;
+}
+@media (max-width: 560px), (pointer: coarse) {
+  .lab-puberty-panel button.lab-puberty-context-button { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-puberty-panel button.lab-puberty-context-button { transition: none !important; }
+}
 .lab-puberty-assessment-host { margin-top: var(--space-0-9); min-width: 0; overflow-wrap: anywhere; }
 .lab-puberty-active.is-empty .lab-puberty-assessment-host { opacity: 1; }
 @media (max-width: 560px) {
   .lab-puberty-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-0-7); }
 }
 /* Szybka ścieżka: automatyczny pacjent i jedna zamknięta sekcja danych wyniku. */
-.lab-puberty-summary-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-0-5); min-width: 0; }
+.lab-puberty-summary-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-0-5); min-width: 0; }
 .lab-puberty-summary-row > :first-child { min-width: 0; overflow-wrap: anywhere; }
 /* Globalne mobilne width:100% przycisku nie może ścisnąć tekstu podsumowania. */
-.lab-puberty-summary-row .lab-puberty-context-button { flex: 0 0 auto; width: auto; margin: 0; border-color: transparent; background: transparent; padding: var(--space-0-35) 0; }
+.lab-puberty-summary-row .lab-puberty-context-button { flex: 0 0 auto; width: auto; margin: 0; }
 .lab-puberty-stage-row { margin-top: var(--space-0-35); font-size: .85rem; }
 .lab-puberty-method-summary { font-size: .8rem; line-height: 1.5; }
 .lab-puberty-detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-0-35); margin-top: var(--space-0-8); }
 .lab-puberty-detail-actions .lab-puberty-context-button { margin: 0; }
-.lab-puberty-detail-actions [aria-pressed="true"] { background: var(--primary-color, #287578); color: #fff; }
 .lab-puberty-detail-section { border: var(--border-hairline) solid var(--border-color, #dce6e9); border-radius: var(--radius-8); padding: var(--space-0-75); margin-top: var(--space-0-75); }
 .lab-puberty-detail-section h3 { font-size: .88rem; margin: 0 0 var(--space-0-5); }
 #labPubertyMethodSettings .lab-puberty-fields { grid-template-columns: minmax(0, 1fr); }
@@ -53,5 +117,5 @@
 #labPubertySamplePanel > .lab-puberty-checkbox { margin: var(--space-0-5) 0 var(--space-0-75); }
 @media (max-width: 360px) {
   .lab-puberty-summary-row { flex-wrap: wrap; }
-  .lab-puberty-summary-row .lab-puberty-context-button { margin-left: auto; }
+  .lab-puberty-summary-row button.lab-puberty-context-button { margin-left: auto; }
 }

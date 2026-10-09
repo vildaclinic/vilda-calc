@@ -196,18 +196,17 @@ describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
     expect(visibleText(host)).toContain('Rodzaju badania i leczenia nie ustalono.');
   });
 
-  it('pauza jest dostępna także przy ukrytym pomiarze i przekazuje stan dużemu wynikowi', () => {
+  it('nie oferuje ręcznej pauzy; dawne opcje nie wyłączają wyróżnienia znacznego odchylenia', () => {
     const onMotionChange = vi.fn();
     const host = render(evaluate(), { hideMeasurement: true, motionPaused: true, onMotionChange });
-    const button = descendants(host, (node) => hasClass(node, 'vilda-lab-motion-toggle'))[0];
-    expect(button.getAttribute('aria-pressed')).toBe('true');
-    expect(host.firstChild.className).toContain('is-motion-paused');
-    button.click();
-    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(descendants(host, (node) => hasClass(node, 'vilda-lab-motion-toggle'))).toHaveLength(0);
+    expect(descendants(host, (node) => node.tagName === 'button')).toHaveLength(0);
     expect(host.firstChild.className).not.toContain('is-motion-paused');
-    expect(onMotionChange).toHaveBeenLastCalledWith(false);
-    button.click();
-    expect(onMotionChange).toHaveBeenLastCalledWith(true);
+    expect(onMotionChange).not.toHaveBeenCalled();
+    expect(host.textContent).not.toMatch(/Zatrzymaj animacje|Wznów animacje/);
+    expect(descendants(host, (node) => hasClass(node, 'vilda-lab-axis'))).toHaveLength(2);
+    expect(descendants(host, (node) => hasClass(node, 'vilda-lab-axis-marker') && hasClass(node, 'is-uwaga-high'))).toHaveLength(1);
+    expect(host.textContent).toContain('Znacznie powyżej normy · warunkowo');
     expect(descendants(host, (node) => hasClass(node, 'vilda-lab-result'))).toHaveLength(0);
     expect(descendants(host, (node) => hasClass(node, 'vilda-lab-status-icon'))[0].textContent).toBe('!');
   });

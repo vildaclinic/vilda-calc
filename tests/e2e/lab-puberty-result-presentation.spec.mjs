@@ -245,30 +245,30 @@ test('an unknown method or known current GnRHa treatment removes axes and severe
   expect(treated.evaluation).not.toHaveProperty('referencePreview');
 });
 
-test('pause, reduced motion and print stop movement while preserving the significant-deviation meaning', async ({ page }) => {
+test('warnings animate without a pause control, while reduced motion and print retain a static warning', async ({ page }) => {
   await open(page);
   await prepare(page);
-  const pause = assessment(page).locator('.vilda-lab-motion-toggle');
-  await pause.click();
-  await expect(pause).toHaveAttribute('aria-pressed', 'true');
-  expect(await animation(bigValue(page))).toBe('none');
-  expect(await animation(marker(page, 'age'))).toBe('none');
+  await expect(assessment(page).locator('.vilda-lab-motion-toggle')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Zatrzymaj animacje|Wznów animacje/ })).toHaveCount(0);
+  expect(await animation(bigValue(page))).toMatch(/lab-value-glow-red/);
+  expect(await animation(marker(page, 'age'))).toMatch(/lab-marker-shake/);
   await page.locator('#labValue').fill('3');
-  await expect(pause).toHaveAttribute('aria-pressed', 'true');
-  expect(await animation(bigValue(page))).toBe('none');
-  expect(await animation(marker(page, 'age'))).toBe('none');
+  await expect(assessment(page).locator('.vilda-lab-motion-toggle')).toHaveCount(0);
+  expect(await animation(bigValue(page))).toMatch(/lab-value-glow-red/);
+  expect(await animation(marker(page, 'age'))).toMatch(/lab-marker-shake/);
   await expect(bigValue(page)).toHaveClass(/is-uwaga-high/);
   await expect(severity(page)).toContainText('Uwaga — znacznie powyżej normy');
   expect(await marker(page, 'age').evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
-  await pause.click();
-  expect(await animation(bigValue(page))).toMatch(/lab-value-glow-red/);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await animation(bigValue(page))).toBe('none');
   expect(await animation(marker(page, 'age'))).toBe('none');
   await expect(severity(page)).toBeVisible();
+  expect(await marker(page, 'age').evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
   await page.emulateMedia({ reducedMotion: 'no-preference', media: 'print' });
   expect(await animation(bigValue(page))).toBe('none');
   expect(await animation(marker(page, 'age'))).toBe('none');
+  await expect(severity(page)).toContainText('Uwaga — znacznie powyżej normy');
+  expect(await marker(page, 'age').evaluate((node) => getComputedStyle(node, '::before').content)).toBe('"!"');
 });
 
 test('desktop and narrow screens keep both axes, clinical warning and expanded details inside the viewport', async ({ page }) => {

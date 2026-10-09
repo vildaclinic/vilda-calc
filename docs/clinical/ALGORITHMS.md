@@ -174,6 +174,12 @@ Z widoku znika cała tabela „Kontekst użyty w ocenie” wraz z powtarzającym
 
 Syntetyczne oczekiwania wobec rzeczywistego silnika i renderera: pusty wynik/nieznany wiek → brak fałszywego błędu i pozornego wieku poza profilem; niepusty błędny wynik → jeden właściwy komunikat; M2 lata 9 miesięcy/G3/LH2 IU/L ze zgodną metodą → nadal warunkowo wiek `above` (`≤0,5`), stadium `within` (`0,09–4,2`), `early_development` i dotychczasowe wyróżnienie; znany wczesny rozwój przy pustej liczbie → ostrzeżenie pozostaje; leczenie/stymulacja, wcześniactwo i `<LOD` → ograniczenia pozostają; zapis historyczny z datami, jawnym „Nie”, OUN/regresją lub lokalnym zakresem → brak tabeli kontekstu i technicznych wersji, utrwalone ostrzeżenia i porównania pozostają, pełne dane zapisu i publicznego modelu odczytu niezmienione bez przeliczenia. Szczegóły: [LH_FSH.md](LH_FSH.md#uproszczenie-etykiet-i-szczegółów-oceny--9102026). Wyniki testów należy odczytać w PR; nie stanowią walidacji klinicznej. Akceptacja kliniczna i scalenie pozostają decyzją właściciela.
 
+#### LAB-PUBERTY — przyciski edycji i usunięcie ręcznej pauzy animacji, 2026-10-09
+
+Formularz `1.10.0` i renderer `1.7.0` usuwają przycisk „Zatrzymaj/Wznów animacje” i jego stan. Animowane wyróżnienia znacznego odchylenia działają jak wcześniej; systemowe ograniczenie ruchu, wydruk i statyczna unieważniona historia zachowują swoje reguły. Przyciski edycji otrzymują wspólny styl przelicznika, widoczny fokus, rozróżnialne nazwy dostępności i cel dotykowy minimum 44 px na telefonie.
+
+**Wpływ kliniczny: brak zmiany wyników lub interpretacji.** Normy, progi wyróżnienia, ostrzeżenia, silnik `1.3.0`, dane/kryteria `2026-10-04.1` i snapshoty pozostają niezmienione. Bez nowych źródeł i założeń medycznych; obowiązują dotychczasowe R1/R2, populacje pediatryczne konkretnych tabel, surowica, IU/L i równoważne mIU/mL. Syntetyczna regresja produkcyjnego renderera: M2 lata 9 miesięcy/G3/LH2 ze zgodną metodą → te same warunkowe osie, `early_development` i znaczne odchylenie względem wieku, bez przycisku pauzy; systemowe ograniczenie ruchu/druk → te same ostrzeżenia bez animacji. Szczegóły: [LH_FSH.md](LH_FSH.md#przyciski-edycji-i-animacje--9102026).
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

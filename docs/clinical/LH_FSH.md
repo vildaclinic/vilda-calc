@@ -2,6 +2,12 @@
 
 Stan dokumentu: 9 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
 
+## Przyciski edycji i animacje — 9.10.2026
+
+Formularz `1.10.0` i renderer `1.7.0` usuwają przycisk „Zatrzymaj/Wznów animacje” oraz stan ręcznej pauzy. Dotychczasowe pulsowanie wyniku, drżenie znacznika, wykrzyknik i etykieta znacznego odchylenia pozostają. Systemowa preferencja `prefers-reduced-motion` i wydruk nadal wyłączają ruch; unieważniona poprzednia ocena pozostaje statyczna. Przyciski „Zmień”, „Zmień stadium” i „Doprecyzuj” korzystają z kolorów i obramowań przelicznika, widocznego fokusu i pola dotyku co najmniej 44 px na telefonie. Układ formularza i działanie edycji pozostają dotychczasowe.
+
+**Wpływ kliniczny: brak zmiany obliczeń i interpretacji.** Usunięto sterowanie prezentacją, bez zmiany progów wyróżnienia, tekstu ostrzeżeń, norm, silnika `1.3.0`, danych/kryteriów `2026-10-04.1` ani zapisanych ocen. Obowiązują dotychczasowe źródła, populacje i jednostki R1/R2 oraz ograniczenia opisane poniżej. Regresja na rzeczywistym rendererze: M2 lata 9 miesięcy/G3/LH2 IU/L ze zgodną metodą → dotychczasowe warunkowe porównania wieku i stadium oraz `early_development`; brak przełącznika ruchu; ograniczenie ruchu w systemie lub wydruk → te same ostrzeżenia i wykrzyknik bez animacji.
+
 ## Uproszczenie etykiet i szczegółów oceny — 9.10.2026
 
 **Zakres zmiany:** wynik zachowuje osobną ocenę rozwoju oraz osie wieku i stadium. Rozwijany blok nosi nazwę „Szczegóły i źródła”. Usunięto całą tabelę „Kontekst użyty w ocenie”, powtarzający ją opis kontekstu oraz techniczne wersje silnika, danych i profili z prezentacji wyniku, również przy odczycie ocen historycznych. Szczegóły zawierają krótką informację o metodzie, źródłach i istotnych ograniczeniach, bez audytowego wyliczania danych wejściowych. Wersje i pozostałe metadane nadal należą do danych oceny; uproszczenie ekranu ich nie usuwa.
@@ -170,7 +176,7 @@ Warstwa prezentacji stosuje przyjętą wcześniej dla innych hormonów **konwenc
 
 Warunkowe zestawienie nadal pokazuje warunki zastosowania poza zwijanymi szczegółami; silne wyróżnienie również jest oznaczone jako warunkowe. Nieznana/niezgodna metoda, znane leczenie, stymulacja i pozostałe blokady nie są obchodzone przez wykres. Wyniki `<x`, `≤x`, `>x`, `≥x`, `<LOD` i `<LOQ` zachowują operator: mogą mieć zapisane porównanie przedziałowe, ale nie otrzymują wymyślonego dokładnego punktu ani animowanego wyróżnienia. Zakres przepisany z wydruku pozostaje oddzielnym porównaniem; nie zastępuje zakresów wieku/stadium ani nie wycisza ich rozbieżności.
 
-Ocena rozwoju pozostaje widoczna niezależnie od koloru osi. Tekst zapisanej oceny, w tym dodatkowe akapity dotyczące OUN, regresji i objętości jąder niemowlęcia, zachowuje swoje znaczenie. Metadane, ograniczenia i źródła są zebrane w rozwijanych szczegółach. Kolor pasma „w zakresie” nie oznacza prawidłowości całego obrazu klinicznego. Zatrzymanie animacji oraz preferencja ograniczenia ruchu wyłączają ruch, zachowując kolor, wykrzyknik i tekst. Historyczny odczyt korzysta z zapisanej liczby, granic, warunków, źródeł i akapitów; nie wywołuje silnika ani nie uzupełnia dawnych zapisów dzisiejszym kontekstem. Unieważniona ocena pozostaje jawnie historyczna.
+Ocena rozwoju pozostaje widoczna niezależnie od koloru osi. Tekst zapisanej oceny, w tym dodatkowe akapity dotyczące OUN, regresji i objętości jąder niemowlęcia, zachowuje swoje znaczenie. Metadane, ograniczenia i źródła są zebrane w rozwijanych szczegółach. Kolor pasma „w zakresie” nie oznacza prawidłowości całego obrazu klinicznego. Systemowa preferencja ograniczenia ruchu wyłącza animacje, zachowując kolor, wykrzyknik i tekst; ręczny przełącznik usunięto w rendererze `1.7.0`. Historyczny odczyt korzysta z zapisanej liczby, granic, warunków, źródeł i akapitów; nie wywołuje silnika ani nie uzupełnia dawnych zapisów dzisiejszym kontekstem. Unieważniona ocena pozostaje jawnie historyczna.
 
 Syntetyczne regresje wywołują produkcyjne funkcje oceny i renderera oraz rzeczywisty formularz:
 

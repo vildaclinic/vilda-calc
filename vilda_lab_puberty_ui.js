@@ -113,13 +113,6 @@
     var analyte = null, evaluation = null, context = null, contextKey = null;
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
     var dirty = {}, imported = {}, kindOptionsSex = null, omittedSexContext = false, suspendedSexFields = null;
-    // Preferencja ruchu dotyczy wyłącznie prezentacji w tej karcie, nie pacjenta
-    // ani zapisywanego snapshotu oceny.
-    var motionPaused = false;
-    function setMotionPaused(paused) {
-      motionPaused = paused === true;
-      resultSection.classList.toggle('is-motion-paused', motionPaused && !!analyte);
-    }
     function element(tag, className, content) {
       var node = doc.createElement(tag);
       if (className) node.className = className;
@@ -135,10 +128,13 @@
     panel.setAttribute('aria-label', 'Pacjent — kontekst LH i FSH'); patientBody.appendChild(panel);
     var patientRow = element('div', 'lab-puberty-summary-row'); panel.appendChild(patientRow);
     var patientSummary = element('strong'); patientSummary.id = 'labPubertyPatientSummary'; patientRow.appendChild(patientSummary);
-    button(patientRow, 'labPubertyEditPatient', 'Zmień', function () { openSection('patient'); });
+    var editPatient = button(patientRow, 'labPubertyEditPatient', 'Zmień', function () { openSection('patient'); });
+    editPatient.setAttribute('aria-label', 'Zmień dane pacjenta');
+    editPatient.setAttribute('aria-controls', 'labPubertySectionPatient');
     var stageRow = element('div', 'lab-puberty-summary-row lab-puberty-stage-row'); panel.appendChild(stageRow);
     var stageSummary = element('span'); stageSummary.id = 'labPubertyStageSummary'; stageRow.appendChild(stageSummary);
     var refineStage = button(stageRow, 'labPubertyRefineStage', 'Doprecyzuj', function () { openSection('stage'); });
+    refineStage.setAttribute('aria-controls', 'labPubertySectionStage');
     var contextLine = element('p', 'lab-puberty-hint'); contextLine.id = 'labPubertyPatientContext'; panel.appendChild(contextLine);
     var assessment = element('div', 'lab-puberty-assessment-host'); assessment.id = 'labPubertyAssessment'; assessment.hidden = true;
     var samplePanel = element('section', 'lab-puberty-panel'); samplePanel.id = 'labPubertySamplePanel'; samplePanel.hidden = true;
@@ -149,6 +145,7 @@
     var methodRow = element('div', 'lab-puberty-summary-row'); samplePanel.appendChild(methodRow);
     var methodSummary = element('span', 'lab-puberty-method-summary'); methodSummary.id = 'labPubertyMethodSummary'; methodRow.appendChild(methodSummary);
     var editMethod = button(methodRow, 'labPubertyEditMethod', 'Ustaw', function () { methodSettings.open = !methodSettings.open; });
+    editMethod.setAttribute('aria-controls', 'labPubertyMethodSettings');
     var methodSettings = element('details', 'lab-puberty-details'); methodSettings.id = 'labPubertyMethodSettings';
     methodSettings.appendChild(element('summary', '', 'Ustawienie metody na tym urządzeniu'));
     methodSettings.appendChild(element('p', 'lab-puberty-hint', 'Wybierz tylko metodę używaną przez Twoje laboratorium. Zapamiętamy ją osobno dla LH i FSH. Przy wyniku z innego laboratorium sprawdź zgodność lub wybierz „Inna/nieznana metoda”.'));
@@ -316,6 +313,7 @@
       var profileName = profile && profile.profile && profile.profile.method ? profile.profile.method.name : '';
       methodSummary.textContent = profileName ? fields.unknownMethod.checked ? 'Dla tego wyniku: metoda nieznana lub inna niż ustawiona.' : 'Metoda: ' + profileName + ' · ' + materialLabel(profile.specimen) : 'Metoda laboratorium nieustawiona';
       editMethod.textContent = profileName ? 'Zmień' : 'Ustaw'; wrappers.unknownMethod.hidden = !profileName;
+      editMethod.setAttribute('aria-label', editMethod.textContent + ' metodę oznaczenia');
       updateContextLine();
     }
     function updateContextLine() {
@@ -356,7 +354,6 @@
       analyte = next; panel.hidden = !next; samplePanel.hidden = !next; assessment.hidden = !next;
       if (changedAnalyte) { var profile = resolveProfile(); fields.configuredProfile.value = profile && profile.assay ? profile.assay.profileId : ''; }
       resultSection.classList.toggle('lab-puberty-active', !!next);
-      setMotionPaused(motionPaused);
       ['labResultSourceLine', 'labSourcesWrap', 'labInfoCard'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-suppressed', !!next); });
       ['labStep4', 'labStep5'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-step-active', !!next); });
       if (sampleLabel && sampleLabel.firstChild) sampleLabel.firstChild.textContent = next ? 'Badanie ' : originalSampleLabel;
@@ -417,8 +414,7 @@
       // Wspólny model prezentacji wyprowadza wyróżnienie z obu zapisanych
       // porównań. Formularz nie oblicza ponownie progów ani zakresów.
       var view = renderer.renderEvaluation(assessment, evaluation, {
-        compact: true, hideMeasurement: true, live: true, motionPaused: motionPaused,
-        onMotionChange: setMotionPaused
+        compact: true, hideMeasurement: true, live: true
       });
       if (big) {
         big.replaceChildren();
@@ -471,7 +467,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.9.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.10.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);
