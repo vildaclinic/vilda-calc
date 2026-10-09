@@ -120,4 +120,28 @@ describe('Poglądowy przebieg hormonów — produkcyjne dane i granice dowodów'
     }
     expect(data.maleAges.at(-1)).toBe(90);
   });
+
+  it('punkty prowadzące męskie łuki zachowują granice, szczyty i dołki schematu', () => {
+    for (const hormone of data.maleHormones) {
+      const ages = hormone.ages || data.maleAges;
+      const indices = hormone.displayPointIndices;
+      expect(indices.every(Number.isInteger)).toBe(true);
+      expect(indices).toEqual([...new Set(indices)].sort((a, b) => a - b));
+      expect(indices[0]).toBe(0);
+      expect(indices.at(-1)).toBe(ages.length - 1);
+      expect(indices).toContain(ages.indexOf(0));
+      expect(indices).toContain(ages.indexOf(1));
+      for (let i = 1; i < indices.length; i++) {
+        const from = indices[i - 1];
+        const to = indices[i];
+        const lower = Math.min(hormone.values[from], hormone.values[to]);
+        const upper = Math.max(hormone.values[from], hormone.values[to]);
+        // Removing a shoulder must not remove a higher peak or a lower trough.
+        for (const value of hormone.values.slice(from, to + 1)) {
+          expect(value).toBeGreaterThanOrEqual(lower);
+          expect(value).toBeLessThanOrEqual(upper);
+        }
+      }
+    }
+  });
 });
