@@ -27317,6 +27317,434 @@ const patientPointData = {
     }
   }
 };
+const inhibinEvidence = {
+  "version": "2026-10-10.1",
+  "purpose": "educational-inhibin-b-group-observations",
+  "notClinicalReference": true,
+  "mini": {
+    "source": {
+      "id": "kuiri-hanninen2018",
+      "label": "Kuiri-Hänninen 2018",
+      "title": "Sexual Dimorphism in Postnatal Gonadotropin Levels in Infancy Reflects Diverse Maturation of the Ovarian and Testicular Hormone Synthesis",
+      "doi": "10.1111/cen.13716",
+      "url": "https://doi.org/10.1111/cen.13716",
+      "table": 2,
+      "pdfPage": 16,
+      "version": "User-supplied accepted manuscript, 18 PDF pages",
+      "sha256": "ad935a98dce368bdbe40aa267ae2b4ee3e3a0be492e86b9e964b2568583e7f8f",
+      "method": "Beckman Coulter ELISA; generacja zestawu niepodana",
+      "specimen": "serum",
+      "statistic": "median",
+      "unit": "pg/mL",
+      "loq": 5.2,
+      "participants": 125,
+      "population": "Niemowlęta obu płci, donoszone i wcześniaki; Kuopio, Finlandia. Kohorta obejmuje choroby okresu noworodkowego.",
+      "limitations": [
+        "Inhibinę B w surowicy oznaczono tylko w 7. dniu i 3. miesiącu życia. Pozostałe miesięczne oznaczenia hormonów dotyczą moczu.",
+        "Wiek chronologiczny; nie jest to wiek skorygowany ani PMA. Nie podano okien wizyt ani dokładnej liczby dni w wizycie M3.",
+        "IQR obejmuje środkowe 50% wyników i nie jest zakresem referencyjnym.",
+        "Nie podano generacji zestawu ELISA ani zasad zastępowania wyników poniżej LOQ.",
+        "Dolny kwartyl wcześniaczek w D7 (5,1 pg/mL) jest poniżej LOQ 5,2 pg/mL.",
+        "Dwa terminy nie opisują miesięcznego przebiegu, czasu szczytu ani spadku po trzecim miesiącu. Nie służą do ustawiania punktu pacjenta."
+      ]
+    },
+    "ageBasis": "chronological",
+    "birthGroupDefinitions": {
+      "term": "gestational age ≥37 weeks",
+      "preterm": "gestational age <37 weeks"
+    },
+    "visits": [
+      {
+        "id": "day7",
+        "label": "7. dzień",
+        "nominalAgeDays": 7
+      },
+      {
+        "id": "month3",
+        "label": "3. miesiąc",
+        "nominalAgeMonths": 3
+      }
+    ],
+    "cohorts": [
+      {
+        "id": "term-male",
+        "sex": "male",
+        "birthGroup": "term",
+        "n": 29,
+        "gestationalAgeWeeks": {
+          "median": 39.8,
+          "min": 37.1,
+          "max": 42.1
+        },
+        "points": [
+          {
+            "visitId": "day7",
+            "median": 157.0,
+            "iqr": [
+              129.5,
+              185.6
+            ],
+            "n": 28,
+            "belowLoq": 0,
+            "iqrLowerBelowLoq": false
+          },
+          {
+            "visitId": "month3",
+            "median": 335.5,
+            "iqr": [
+              282.7,
+              400.5
+            ],
+            "n": 29,
+            "belowLoq": 0,
+            "iqrLowerBelowLoq": false
+          }
+        ]
+      },
+      {
+        "id": "term-female",
+        "sex": "female",
+        "birthGroup": "term",
+        "n": 29,
+        "gestationalAgeWeeks": {
+          "median": 39.5,
+          "min": 37.0,
+          "max": 41.7
+        },
+        "points": [
+          {
+            "visitId": "day7",
+            "median": 33.1,
+            "iqr": [
+              17.3,
+              59.6
+            ],
+            "n": 27,
+            "belowLoq": 1,
+            "iqrLowerBelowLoq": false
+          },
+          {
+            "visitId": "month3",
+            "median": 92.0,
+            "iqr": [
+              62.7,
+              124.0
+            ],
+            "n": 27,
+            "belowLoq": 0,
+            "iqrLowerBelowLoq": false
+          }
+        ]
+      },
+      {
+        "id": "preterm-male",
+        "sex": "male",
+        "birthGroup": "preterm",
+        "n": 33,
+        "gestationalAgeWeeks": {
+          "median": 31.8,
+          "min": 24.7,
+          "max": 36.6
+        },
+        "points": [
+          {
+            "visitId": "day7",
+            "median": 201.1,
+            "iqr": [
+              155.1,
+              254.3
+            ],
+            "n": 28,
+            "belowLoq": 0,
+            "iqrLowerBelowLoq": false
+          },
+          {
+            "visitId": "month3",
+            "median": 297.1,
+            "iqr": [
+              260.2,
+              361.5
+            ],
+            "n": 31,
+            "belowLoq": 0,
+            "iqrLowerBelowLoq": false
+          }
+        ]
+      },
+      {
+        "id": "preterm-female",
+        "sex": "female",
+        "birthGroup": "preterm",
+        "n": 34,
+        "gestationalAgeWeeks": {
+          "median": 32.9,
+          "min": 24.7,
+          "max": 36.7
+        },
+        "points": [
+          {
+            "visitId": "day7",
+            "median": 13.8,
+            "iqr": [
+              5.1,
+              23.5
+            ],
+            "n": 27,
+            "belowLoq": 9,
+            "iqrLowerBelowLoq": true
+          },
+          {
+            "visitId": "month3",
+            "median": 131.7,
+            "iqr": [
+              55.5,
+              157.8
+            ],
+            "n": 30,
+            "belowLoq": 1,
+            "iqrLowerBelowLoq": false
+          }
+        ]
+      }
+    ],
+    "displayPolicy": {
+      "type": "observed-visit-group-medians",
+      "connectors": "Illustration only; no interpolation, extrapolation or arbitrary-age patient point.",
+      "dispersion": "IQR; not clinical reference limits."
+    }
+  },
+  "tanner": {
+    "source": {
+      "id": "crofton2002-male",
+      "label": "Crofton 2002 · chłopcy",
+      "title": "Inhibin B in boys from birth to adulthood: relationship with age, pubertal stage, FSH and testosterone",
+      "doi": "10.1046/j.0300-0664.2001.01448.x",
+      "url": "https://doi.org/10.1046/j.0300-0664.2001.01448.x",
+      "table": 2,
+      "printedPage": 218,
+      "pdfPage": 4,
+      "version": "Clinical Endocrinology 56:215–221, published full text",
+      "sha256": "ec26e1021db0442326e14412be2dd1468f725d025cc349e331d83f238ceacdde",
+      "method": "ELISA wg Groome 1996; generacja ani komercyjny zestaw niepodane",
+      "specimen": "plasma",
+      "statistic": "median",
+      "unit": "pg/mL",
+      "sourceUnit": "ng/L",
+      "sourceToCanonicalFactor": 1,
+      "participants": 195,
+      "ghTreatedSamples": 135,
+      "population": "Chłopcy w wieku 5–18 lat; w serii stadiowej dominują próbki osób z rodzinną niskorosłością, w tym 135 próbek podczas leczenia GH.",
+      "limitations": [
+        "IQR obejmuje środkowe 50% wyników i nie jest zakresem referencyjnym.",
+        "135 z 195 próbek kohorty stadiowej pobrano podczas leczenia GH. Nie jest to jednorodna kohorta zdrowych, nieleczonych chłopców.",
+        "Oś G1–G5 opisuje rozwój narządów płciowych, nie owłosienie łonowe ani wiek chronologiczny. Nie przypisujemy stadium do stałego wieku.",
+        "Historyczny ELISA w osoczu; brak uzasadnienia do przeliczania wyników na Gen II lub Ansh.",
+        "Dane według wieku z tej publikacji są częścią modelu Kelsey 2016, a nie niezależną walidacją.",
+        "Opisowe mediany stadiów służą edukacji; nie ustawiają punktu pacjenta ani progów interpretacji."
+      ],
+      "sourceAgeYears": [
+        5,
+        18
+      ]
+    },
+    "sex": "male",
+    "stageType": "G",
+    "points": [
+      {
+        "stage": 1,
+        "label": "G1",
+        "median": 70,
+        "iqr": [
+          54,
+          94
+        ],
+        "n": 90
+      },
+      {
+        "stage": 2,
+        "label": "G2",
+        "median": 150,
+        "iqr": [
+          106,
+          220
+        ],
+        "n": 38
+      },
+      {
+        "stage": 3,
+        "label": "G3",
+        "median": 220,
+        "iqr": [
+          171,
+          236
+        ],
+        "n": 39
+      },
+      {
+        "stage": 4,
+        "label": "G4",
+        "median": 176,
+        "iqr": [
+          143,
+          191
+        ],
+        "n": 18
+      },
+      {
+        "stage": 5,
+        "label": "G5",
+        "median": 172,
+        "iqr": [
+          138,
+          196
+        ],
+        "n": 10
+      }
+    ],
+    "displayPolicy": {
+      "type": "observed-stage-group-medians",
+      "ageMapping": null,
+      "dispersion": "IQR; not clinical reference limits.",
+      "patientPoint": false
+    }
+  },
+  "senior": {
+    "source": {
+      "id": "baccarelli2001",
+      "label": "Baccarelli 2001 · inhibina B",
+      "title": "Activin A serum levels and aging of the pituitary-gonadal axis: a cross-sectional study in middle-aged and elderly healthy subjects",
+      "doi": "10.1016/S0531-5565(01)00117-6",
+      "url": "https://doi.org/10.1016/S0531-5565(01)00117-6",
+      "table": 1,
+      "printedPage": 1406,
+      "pdfPage": 4,
+      "version": "Experimental Gerontology 36:1403–1412, published full text",
+      "sha256": "27e0e3f5b9d4b8d6cf83065b1d7c1b7833d4355b3ad32d676a050d5caa1fa502",
+      "method": "Serotec (Oxford) sandwich ELISA, historyczna metoda",
+      "specimen": "serum",
+      "statistic": "arithmetic-mean",
+      "unit": "pg/mL",
+      "participants": 73,
+      "population": "Mężczyźni w dobrym stanie zdrowia; Mediolan, Włochy; badanie przekrojowe.",
+      "assay": {
+        "method": "Solid-phase sandwich ELISA",
+        "manufacturer": "Serotec, Oxford, UK",
+        "sensitivityPgMl": 15,
+        "generation": "Historical; not Beckman Gen II",
+        "crossAssayConversion": null
+      },
+      "compatibleAssayMethodIds": [
+        "serotec-inhibin-b-elisa"
+      ],
+      "limitations": [
+        "Średnie arytmetyczne grup wieku, nie mediany ani dokładne krzywe zależne od wieku.",
+        "Odchylenie standardowe opisuje rozrzut w grupie; nie jest zakresem referencyjnym i nie służy do klasyfikacji wyniku.",
+        "Małe najstarsze grupy: 18 mężczyzn w grupie 80–90 lat i 9 w grupie 90–101 lat.",
+        "Historyczny test Serotec; brak zweryfikowanego przeliczenia na Gen II lub inne metody.",
+        "Badanie przekrojowe, z doborem osób w lepszym niż przeciętny stanie zdrowia; nie opisuje indywidualnego starzenia.",
+        "Dokładna przynależność wspólnych granic wieku nie została opisana przez autorów; aplikacja stosuje jawną własną konwencję.",
+        "Nie interpolujemy między grupami ani z innymi publikacjami. Powyżej 101 lat źródło nie zapewnia odniesienia.",
+        "Kobietom nie oznaczano inhibiny B; brak wyniku nie oznacza stężenia zerowego ani poniżej LOD."
+      ]
+    },
+    "sex": "male",
+    "groups": [
+      {
+        "id": "30-50",
+        "ageLabel": "30–50 lat",
+        "sourceAgeLabel": "30–50 years",
+        "minAge": 30,
+        "maxAge": 50,
+        "n": 20,
+        "mean": 198,
+        "sd": 60,
+        "active": false,
+        "applicationMaxAgeExclusive": true
+      },
+      {
+        "id": "50-65",
+        "ageLabel": "50–65 lat",
+        "sourceAgeLabel": "50–65 years",
+        "minAge": 50,
+        "maxAge": 65,
+        "n": 14,
+        "mean": 209,
+        "sd": 66,
+        "active": false,
+        "applicationMaxAgeExclusive": true
+      },
+      {
+        "id": "65-80",
+        "ageLabel": "65–80 lat",
+        "sourceAgeLabel": "65–80 years",
+        "minAge": 65,
+        "maxAge": 80,
+        "n": 12,
+        "mean": 165,
+        "sd": 121,
+        "active": false,
+        "applicationMaxAgeExclusive": true
+      },
+      {
+        "id": "80-90",
+        "ageLabel": "80–90 lat",
+        "sourceAgeLabel": "80–90 years",
+        "minAge": 80,
+        "maxAge": 90,
+        "n": 18,
+        "mean": 129,
+        "sd": 101,
+        "active": true,
+        "applicationMaxAgeExclusive": true
+      },
+      {
+        "id": "90-101",
+        "ageLabel": "90–101 lat",
+        "sourceAgeLabel": "90–101 years",
+        "minAge": 90,
+        "maxAge": 101,
+        "n": 9,
+        "mean": 78,
+        "sd": 45,
+        "active": true,
+        "applicationMaxAgeExclusive": false
+      }
+    ],
+    "ageRouting": {
+      "sourceBoundaryDefinition": "Published group labels overlap at 50, 65, 80 and 90 years; the authors do not define inclusivity. Group mean ages are not supplied.",
+      "applicationPolicy": "Use age ≥80 and <90 for the published 80–90 group; age ≥90 and ≤101 for the published 90–101 group. These are explicit application conventions, not source-defined boundaries.",
+      "patientComparisonGroups": [
+        {
+          "groupId": "80-90",
+          "minAge": 80,
+          "maxAge": 90,
+          "maxAgeExclusive": true
+        },
+        {
+          "groupId": "90-101",
+          "minAge": 90,
+          "maxAge": 101,
+          "maxAgeExclusive": false
+        }
+      ],
+      "existingLifespanPolicy": "The existing Borelli-Kjær lifespan profile remains unchanged, including its inclusive maximum age of 80. These observations form a separate group chart; they do not extend or replace a lifespan patient-point profile."
+    },
+    "displayPolicy": {
+      "type": "separate-age-group-means",
+      "ageInterpolation": false,
+      "dispersion": "SD; not clinical reference limits.",
+      "continuousLifespanProfile": false
+    }
+  },
+  "excludedSources": [
+    {
+      "id": "de-schepper2000",
+      "doi": "10.1007/s004310051309",
+      "url": "https://doi.org/10.1007/s004310051309",
+      "reason": "Niejednoznaczne liczebności, średnia/mediana i sprzeczne maksima podgrup w pełnym tekście. Brak danych liczbowych w aplikacji do czasu wyjaśnienia rozbieżności."
+    }
+  ]
+};
 return {
   version: lifespanData.version,
   maleAges: maleAges,
@@ -27324,6 +27752,7 @@ return {
   maleStages: maleStages,
   referenceData: referenceData,
   lifespanData: lifespanData,
-  patientPointData: patientPointData
+  patientPointData: patientPointData,
+  inhibinEvidence: inhibinEvidence
 };
 });

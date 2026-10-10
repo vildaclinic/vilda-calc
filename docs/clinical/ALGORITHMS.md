@@ -702,6 +702,57 @@ stadium i zachowanie poprzednich źródeł; testy nie są walidacją kliniczną.
 Pełne pochodzenie, SHA-256 PDF i polityka:
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
+### HORMONE-INHIBIN-EVIDENCE — grupy minipuberty, Tannera i późnej starości
+
+Właściciel po analizie pełnych tekstów zlecił wdrożenie edukacyjnych
+uzupełnień inhibiny B. Dane są oddzielne od klinicznych zakresów oraz profili
+mediany wieku. Małe wykresy w istniejącej sekcji reagują na wybrany okres,
+płeć, donoszenie i typowane stadium, bez kolejnego formularza.
+
+- Kuiri-Hänninen 2018, DOI `10.1111/cen.13716`, tabela 2 dostarczonego
+  accepted manuscript: cztery kohorty według płci/donoszenia i wyłącznie
+  D7/M3 wieku chronologicznego. Beckman ELISA, LOQ 5,2 pg/mL, generacja
+  zestawu niepodana. Łącznik jest poglądowy; brak interpolowanego punktu
+  pacjenta, krzywej PMA, dokładnego dnia 90 i norm wyprowadzonych z IQR.
+- Crofton 2002, DOI `10.1046/j.0300-0664.2001.01448.x`, tabela 2:
+  genitalne G1–G5, mediany/IQR w osoczu, historyczny ELISA Groome.
+  135 z 195 próbek podczas GH. Wyróżnienie aktualnego G nie oznacza
+  klasyfikacji wyniku. Osobne 366 obserwacji wieku już wchodzi do Kelsey;
+  nie dodajemy ich jako niezależnej kohorty ani nie zmieniamy modelu wieku.
+- Baccarelli 2001, DOI `10.1016/S0531-5565(01)00117-6`, tabela 1:
+  pięć średnich arytmetycznych i SD, Serotec ELISA, surowica, czułość15 pg/mL.
+  Osobne porównanie wyniku dla 80–<90 lat ze średnią129 (n18) i 90–101
+  ze średnią78 (n9). Granice wspólne są jawną konwencją aplikacji; niepewny
+  wiek przekraczający grupę blokuje dopasowanie. Nie rozszerzamy głównej
+  osi innych hormonów, nie utożsamiamy średniej z medianą i SD z normą.
+- De Schepper 2000 nie jest aktywowany: sprzeczne liczebności, opisy
+  statystyk i zakresy w pełnym tekście. Pozostaje metadana wyłączenia.
+
+Ponadto dla męskiej inhibiny B poprawiono prezentację istniejących profili
+Busch/Kelsey/Borelli: osobne dopasowane ścieżki i maska ich łącznej domeny
+zastępują rysowanie wyłącznie źródła aktualnego pacjenta. Wspólna skala
+obejmuje pełne źródła i zachowuje się przy zmianie powiększenia. Właściciel
+zatwierdził jedną wizualnie ciągłą linię: małe pasy na stykach źródeł lub
+schematu mają przerywane połączenia poglądowe. Łączniki są geometrią SVG,
+nie interpolacją modelu mediany; nie zmieniają wartości danych ani punktu
+pacjenta. Jego osobny znacznik mediany pozostaje źródłowy także w pasie
+przejścia. Warunki donoszenia, materiału i metody pozostają.
+
+**Wpływ:** nowe edukacyjne porównania i zakres widocznych danych. Progi,
+normy, interpretacje laboratoryjne, wizyty, historia i persistence bez zmian.
+Fikcyjne przypadki: M/85 lat/129 pg/mL → punkt na średniej grupy80–90;
+M/95 lat/78 ng/L → punkt na średniej90–101; wiek89,9–90,1 → brak punktu
+grupowego. Dziewczynka wcześniaczka w minipuberty → dane populacyjne
+13,8 w D7 i131,7 w M3, bez dopisywania mediany dla dowolnego wieku.
+Chłopiec/14lat/G3 → wyróżnienie G3=220 pg/mL; bez wyprowadzania stadium
+z wieku i bez klasyfikacji stężenia według IQR.
+
+Źródła, sumy kontrolne PDF, metody i ograniczenia są w czytelnych ekstraktach
+`hormone-lifespan/evidence/patient-point/` oraz
+[INHIBIN_EVIDENCE.md](hormone-lifespan/INHIBIN_EVIDENCE.md).
+Generatory pakują dane bez plików PDF/rycin. Regresje wywołują rzeczywisty
+moduł porównań; nie stanowią walidacji klinicznej.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

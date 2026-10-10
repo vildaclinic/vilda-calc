@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "verifiedDate": "2026-10-10",
+  "analyte": "inhb",
+  "notClinicalReference": true,
+  "extraction": "Exact published table values, visually verified against the user-supplied full text; no figure digitization.",
+  "source": {
+    "id": "crofton2002-male",
+    "label": "Crofton 2002 · chłopcy",
+    "title": "Inhibin B in boys from birth to adulthood: relationship with age, pubertal stage, FSH and testosterone",
+    "doi": "10.1046/j.0300-0664.2001.01448.x",
+    "url": "https://doi.org/10.1046/j.0300-0664.2001.01448.x",
+    "table": 2,
+    "printedPage": 218,
+    "pdfPage": 4,
+    "version": "Clinical Endocrinology 56:215–221, published full text",
+    "sha256": "ec26e1021db0442326e14412be2dd1468f725d025cc349e331d83f238ceacdde",
+    "method": "ELISA wg Groome 1996; generacja ani komercyjny zestaw niepodane",
+    "specimen": "plasma",
+    "statistic": "median",
+    "unit": "pg/mL",
+    "sourceUnit": "ng/L",
+    "sourceToCanonicalFactor": 1,
+    "participants": 195,
+    "ghTreatedSamples": 135,
+    "population": "Chłopcy w wieku 5–18 lat; w serii stadiowej dominują próbki osób z rodzinną niskorosłością, w tym 135 próbek podczas leczenia GH.",
+    "limitations": [
+      "IQR obejmuje środkowe 50% wyników i nie jest zakresem referencyjnym.",
+      "135 z 195 próbek kohorty stadiowej pobrano podczas leczenia GH. Nie jest to jednorodna kohorta zdrowych, nieleczonych chłopców.",
+      "Oś G1–G5 opisuje rozwój narządów płciowych, nie owłosienie łonowe ani wiek chronologiczny. Nie przypisujemy stadium do stałego wieku.",
+      "Historyczny ELISA w osoczu; brak uzasadnienia do przeliczania wyników na Gen II lub Ansh.",
+      "Dane według wieku z tej publikacji są częścią modelu Kelsey 2016, a nie niezależną walidacją.",
+      "Opisowe mediany stadiów służą edukacji; nie ustawiają punktu pacjenta ani progów interpretacji."
+    ],
+    "sourceAgeYears": [
+      5,
+      18
+    ]
+  },
+  "sex": "male",
+  "stageType": "G",
+  "points": [
+    {
+      "stage": 1,
+      "label": "G1",
+      "median": 70,
+      "iqr": [
+        54,
+        94
+      ],
+      "n": 90
+    },
+    {
+      "stage": 2,
+      "label": "G2",
+      "median": 150,
+      "iqr": [
+        106,
+        220
+      ],
+      "n": 38
+    },
+    {
+      "stage": 3,
+      "label": "G3",
+      "median": 220,
+      "iqr": [
+        171,
+        236
+      ],
+      "n": 39
+    },
+    {
+      "stage": 4,
+      "label": "G4",
+      "median": 176,
+      "iqr": [
+        143,
+        191
+      ],
+      "n": 18
+    },
+    {
+      "stage": 5,
+      "label": "G5",
+      "median": 172,
+      "iqr": [
+        138,
+        196
+      ],
+      "n": 10
+    }
+  ],
+  "excludedPooledRow": {
+    "label": "G4–G5",
+    "reason": "Combined subset; not an independent additional stage or cohort."
+  },
+  "displayPolicy": {
+    "type": "observed-stage-group-medians",
+    "ageMapping": null,
+    "dispersion": "IQR; not clinical reference limits.",
+    "patientPoint": false
+  }
+}

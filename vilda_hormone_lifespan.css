@@ -402,6 +402,63 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
 .vilda-hormone-lifespan .vhl-cycle-panel {
   margin-top: var(--space-10px);
 }
+.vilda-hormone-lifespan .vhl-observations {
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-12px);
+  padding-top: var(--space-12px);
+  border-top: var(--border-hairline) solid #d5e5e5;
+}
+.vilda-hormone-lifespan .vhl-observations[hidden] {
+  display: none;
+}
+.vilda-hormone-lifespan .vhl-observations-chart {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+.vilda-hormone-lifespan p.vhl-observations-title {
+  color: var(--vhl-ink);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+  margin: 0 0 var(--space-8px);
+}
+.vilda-hormone-lifespan p.vhl-observations-note {
+  color: #526f79;
+  font-size: 11px;
+  line-height: 1.55;
+  margin: var(--space-8px) 0 0;
+}
+.vilda-hormone-lifespan .vhl-observations-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 13px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #365b66;
+}
+.vilda-hormone-lifespan .vhl-observations-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.vilda-hormone-lifespan .vhl-observations-swatch {
+  display: inline-block;
+  flex: 0 0 15px;
+  width: 15px;
+  border-top: var(--border-emphasis) solid;
+}
+.vilda-hormone-lifespan .vhl-observations-swatch[data-sex="male"] {
+  border-color: #246782;
+}
+.vilda-hormone-lifespan .vhl-observations-swatch[data-sex="female"] {
+  border-color: #a54173;
+}
+.vilda-hormone-lifespan .vhl-observations-swatch[data-birth-group="preterm"] {
+  border-top-style: dashed;
+}
 .vilda-hormone-lifespan .vhl-insight .vhl-cycle-note {
   font-size: 11px;
   line-height: 1.6;
