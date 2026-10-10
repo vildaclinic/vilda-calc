@@ -41,21 +41,29 @@ async function expectPoint(page, value, median) {
   await expect(dot(page)).toHaveCount(1);
   await expect.poll(async () => Number(await dot(page).getAttribute('data-value'))).toBeCloseTo(value, 6);
   if (median != null) await expect.poll(async () => Number(await dot(page).getAttribute('data-median'))).toBeCloseTo(median, 4);
-  const geometry = await dot(page).evaluate(group => {
-    const point = group.querySelector('[data-result-point]');
-    const ref = group.querySelector('[data-median-point]');
-    const line = group.ownerSVGElement.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`);
-    const px = Number(point.getAttribute('cx'));
-    let lo = 0, hi = line.getTotalLength();
-    for (let i = 0; i < 32; i++) {
-      const mid = (lo + hi) / 2;
-      if (line.getPointAtLength(mid).x < px) lo = mid; else hi = mid;
-    }
-    return { x: px, y: Number(point.getAttribute('cy')),
-      rx: Number(ref.getAttribute('cx')), ry: Number(ref.getAttribute('cy')),
-      curveY: line.getPointAtLength((lo + hi) / 2).y,
-      bottom: Number(group.dataset.plotBottom), value: Number(group.dataset.value), median: Number(group.dataset.median) };
-  });
+  let geometry;
+  await expect.poll(async () => {
+    // ResizeObserver may replace the SVG children between a locator resolving
+    // and its evaluation. Read the current group from the stable panel instead.
+    geometry = await panel(page).evaluate(host => {
+      const group = host.querySelector('[data-patient-concentration]');
+      if (!group || !group.ownerSVGElement) return null;
+      const point = group.querySelector('[data-result-point]');
+      const ref = group.querySelector('[data-median-point]');
+      const line = group.ownerSVGElement.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`);
+      const px = Number(point.getAttribute('cx'));
+      let lo = 0, hi = line.getTotalLength();
+      for (let i = 0; i < 32; i++) {
+        const mid = (lo + hi) / 2;
+        if (line.getPointAtLength(mid).x < px) lo = mid; else hi = mid;
+      }
+      return { x: px, y: Number(point.getAttribute('cy')),
+        rx: Number(ref.getAttribute('cx')), ry: Number(ref.getAttribute('cy')),
+        curveY: line.getPointAtLength((lo + hi) / 2).y,
+        bottom: Number(group.dataset.plotBottom), value: Number(group.dataset.value), median: Number(group.dataset.median) };
+    });
+    return geometry?.value === value;
+  }).toBe(true);
   expect(Object.values(geometry).every(Number.isFinite)).toBe(true);
   expect(geometry.x).toBe(geometry.rx);
   expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
