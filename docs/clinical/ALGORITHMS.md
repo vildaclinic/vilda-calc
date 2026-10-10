@@ -409,7 +409,12 @@ AMH i inhibina B. Dokumentacja danych, populacji, metod i ograniczeń:
 norm i silników interpretacji laboratoryjnej; źródła i skrypty odtworzenia
 pozostają w `hormone-lifespan/`.
 
-**Wpływ kliniczny:** dodano edukacyjną wizualizację czasu i kierunku zmian.
+Poniższy opis pierwotnego schematu pozostaje historią wdrożenia. Późniejsza
+zatwierdzona funkcja punktu wyniku, opisana na końcu tej sekcji, dopuszcza
+ilościową pozycję pacjenta wyłącznie przy osobnym modelu stężeń; nie zmienia
+schematycznych odcinków w normy.
+
+**Wpływ kliniczny pierwotnego wdrożenia:** dodano edukacyjną wizualizację czasu i kierunku zmian.
 Nie zmienia ona obliczeń, jednostek, zakresów, ostrzeżeń, oceny wyniku ani
 historii. Pozycja pionowa nie oznacza stężenia, percentyla lub proporcji
 różnych hormonów. Znacznik przedstawia wyłącznie wiek chronologiczny;
@@ -532,6 +537,70 @@ ekranu dłuższa niż limit → sesja aktywna, następnie rzeczywista bezczynno�
 sesji. **Wpływ kliniczny:** brak zmiany danych, interpolacji, skal, norm,
 interpretacji wyniku, historii i zapisu pacjenta. Korekta geometrii między
 widokami pozostaje osobną propozycją makiety; nie jest częścią tych zmian.
+
+**2026-10-10 — punkt wyniku na modelu stężeń:** po zatwierdzeniu makiety
+właściciel polecił wdrożenie ilościowej czerwonej kropki z wykorzystaniem
+pozyskanych danych, bez nowych pól. Wiek, płeć, surowy wynik, jednostka
+i znane dane urodzeniowe pochodzą z istniejącego kontekstu przelicznika.
+Wartość pacjenta i linia populacyjna mają ten sam model, jednostkę,
+interpolację i przekształcenie wysokości. Dawny męski schemat oraz mosty
+między źródłami nie są podstawą liczbowego pozycjonowania.
+
+**Podstawa kliniczna i wpływ:** czerwony oznacza pacjenta, nie nieprawidłowy
+wynik; odniesieniem jest mediana/p50 lub przybliżony centralny przebieg
+0 SD, nie górna granica normy ani średnia arytmetyczna. Zmienia się treść
+informacji edukacyjnej o relacji wpisanego stężenia do populacji. Nie
+zmieniają się osobne silniki interpretacji, normy, werdykty laboratoryjne,
+historia, przypięte wyniki ani wizyty. Automatyczny dobór źródła nie
+potwierdza metody próbki i nie dostosowuje modelu do leczenia/stymulacji.
+
+Aktywna polityka ilościowych źródeł:
+
+- Donoszeni chłopcy, 7 dni–<1 roku: przybliżone mediany Busch 2022,
+  ryc. 3 (DOI 10.1210/clinem/dgac115). Przy medianie blisko LOD/LOQ
+  bramka rozdzielczości odczytu ryciny wyłącza punkt; nie podnosi mediany
+  do sztucznej podłogi i nie jest klinicznym progiem.
+- Chłopcy LH/FSH, 6–16 lat: Madsen 2022 (DOI 10.1210/clinem/dgac155),
+  oficjalne roczne L/M/S; p50=`exp(M)/1e6`, nie samo M.
+- Męski testosteron całkowity, 3–88 lat: węzły co 0,1 roku z funkcji Kelsey 2014
+  (DOI 10.1371/journal.pone.0109346) z kontrolą poprawionych p50 z 2015
+  (DOI 10.1371/journal.pone.0117674); pomiędzy węzłami PCHIP.
+- Męska inhibina B, 1–<6,1 roku: opublikowane p50 z tabeli 4 Kelsey 2016
+  (DOI 10.1371/journal.pone.0153843); 6,1–80 lat: osobny przybliżony
+  profil 0 SD Borelli-Kjær 2025, ryc. 2 (DOI 10.1210/clinem/dgae439).
+  Granica publikacji nie jest fizjologicznym skokiem ani jednym modelem.
+- Męskie AMH, 30–70 lat: roczne p50 tabeli 2 Tehrani 2017
+  (DOI 10.1371/journal.pone.0179634).
+- Donoszone dziewczynki LH/FSH/AMH/inhibina B/E2, 0,02–1 roku:
+  mediany GAMLSS z suplementu Ljubicic 2022 (DOI 10.1210/clinem/dgac363).
+
+Pełne populacje, oznaczenia, jednostki, miejsca ekstrakcji, licencje,
+transformacje i ograniczenia: [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+Normy pozostają osobnymi danymi. `vilda_hormone_lifespan_reference.js`
+przyjmuje dane źródłowe jako argument; dobór profilu nie zależy od wartości
+wyniku. Interpolacja PCHIP łączy wyłącznie węzły tego samego profilu;
+nie tworzy median między publikacjami ani poza ich wiekiem. INSL3 pozostaje
+zadaniem przyszłego kalkulatora; dorosłe LH/FSH, wcześniaki i pozostałe
+niepokryte odcinki nie otrzymują punktu z samego schematu lub szerokiej
+grupy wieku. Brak danych urodzeniowych blokuje dopasowanie niemowlęce,
+nie zmienia PMA/wieku skorygowanego w PNA i nie blokuje automatycznie
+profilu pokwitaniowego starszego dziecka.
+
+**Przypadki syntetyczne rzeczywistej funkcji:** M/12 lat/LH 2 IU/L →
+Madsen p50=0,6775625214085037, punkt powyżej bez nowej klasyfikacji;
+M/12 lat/FSH 2,01486005633355 IU/L → punkt na medianie; donoszony M/90 dni/
+LH 2,05589 IU/L → punkt na przybliżonej medianie Busch; M/40 lat/T
+13,049603876520182 nmol/L → centralna linia Kelsey; M/3 lata/inhibina B
+107 pg/mL → p50 Kelsey 2016; M/40 lat/AMH 6,12 ng/mL → p50 Tehrani.
+Nierówność `<0,05`, brak wieku, niewłaściwa jednostka, wcześniak w profilu
+donoszonych i wiek poza źródłem → brak dokładnego punktu. Odznaczenie
+bieżącego hormonu ukrywa punkt, a zmiana pacjenta nie zachowuje poprzedniego.
+
+Regresje silnika: `tests/unit/hormone-lifespan-reference.test.mjs`.
+Kontrola interfejsu obejmuje identyczną relację punkt–linia na komputerze,
+telefonie, po powiększeniu i po zmianie widoku oraz brak przycięcia wyniku
+do brzegu osi. Wzorzec dawnych SVG nadal sprawdza schemat bez ilościowego
+punktu. Testy techniczne nie oznaczają walidacji klinicznej funkcji.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

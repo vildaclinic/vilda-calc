@@ -267,6 +267,12 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
   position: relative;
   min-width: 0;
 }
+.vilda-hormone-lifespan .vhl-patient-point,
+.vilda-hormone-lifespan .vhl-patient-point * {
+  /* Red identifies the measurement; it is not a clinical warning animation. */
+  animation: none !important;
+  transition: none !important;
+}
 .vilda-hormone-lifespan svg {
   display: block;
   width: 100%;

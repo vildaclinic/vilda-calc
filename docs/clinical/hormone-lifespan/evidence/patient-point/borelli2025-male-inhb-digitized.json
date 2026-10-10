@@ -1,0 +1,253 @@
+{
+  "status": "preliminary_educational_digitization_not_clinical_reference",
+  "source": "Borelli-Kjær et al.2025 Figure2, male0SD central curve",
+  "doi": "10.1210/clinem/dgae439",
+  "url": "https://academic.oup.com/jcem/article/110/1/70/7699405",
+  "sourceFile": "dgae439.pdf",
+  "sourceSha256": "86b13b2e2cc6e7311d25df670239fd6a74cc79f47a832063d9a429bf79599f5e",
+  "sourceImage": "dgae439-image-85.png",
+  "sourceImageSha256": "514476da8cbd0e5a6bf199b9a00b76f296e23178983a60053bb36f912d73a516",
+  "statistic": "approximate digitized published GAMLSS0SD model median",
+  "unit": "pg/mL",
+  "originalUnit": "ng/L",
+  "unitConversion": "1ng/L=1pg/mL",
+  "sex": "male",
+  "matrix": "serum",
+  "assay": "MIXED Oxford Bio-innovation two-site immunoassay(n917) and Beckman Coulter InhibinB GenII ELISA(n1090)",
+  "calibrationPixels": {
+    "xAge0": 126,
+    "xAge80": 1057,
+    "yValue0": 614,
+    "yValue700": 39
+  },
+  "approximateDigitizationTolerancePgMl": 5,
+  "retainedAgeRangeYears": [
+    6.1,
+    80
+  ],
+  "maleParticipants": 1818,
+  "maleSamples": 2007,
+  "cohorts": [
+    {
+      "name": "COPENHAGEN Minipuberty",
+      "n": 108,
+      "samples": 297,
+      "agesYears": [
+        0.01,
+        1.13
+      ],
+      "infants": "healthy full-term cohort"
+    },
+    {
+      "name": "COPUSII",
+      "n": 643,
+      "agesYears": [
+        6.1,
+        15.6
+      ]
+    },
+    {
+      "name": "Health2006",
+      "n": 150,
+      "agesYears": [
+        20,
+        69
+      ]
+    },
+    {
+      "name": "COPUSI",
+      "n": 332,
+      "agesYears": [
+        6.1,
+        20.2
+      ]
+    },
+    {
+      "name": "Time-to-Pregnancy",
+      "n": 163,
+      "agesYears": [
+        21,
+        38.5
+      ]
+    },
+    {
+      "name": "MONICA10",
+      "n": 367,
+      "agesYears": [
+        40,
+        70
+      ]
+    },
+    {
+      "name": "1914Cohort",
+      "n": 55,
+      "agesYears": [
+        80,
+        80
+      ]
+    }
+  ],
+  "points": [
+    {
+      "ageYears": 6.1,
+      "pixelX": 197,
+      "pixelY": 556,
+      "rawDigitizedValuePgMl": 70.6087,
+      "approxMedianPgMl": 71
+    },
+    {
+      "ageYears": 7,
+      "pixelX": 207,
+      "pixelY": 556,
+      "rawDigitizedValuePgMl": 70.6087,
+      "approxMedianPgMl": 71
+    },
+    {
+      "ageYears": 8,
+      "pixelX": 219,
+      "pixelY": 556,
+      "rawDigitizedValuePgMl": 70.6087,
+      "approxMedianPgMl": 71
+    },
+    {
+      "ageYears": 9,
+      "pixelX": 231,
+      "pixelY": 552,
+      "rawDigitizedValuePgMl": 75.4783,
+      "approxMedianPgMl": 75
+    },
+    {
+      "ageYears": 10,
+      "pixelX": 242,
+      "pixelY": 543,
+      "rawDigitizedValuePgMl": 86.4348,
+      "approxMedianPgMl": 86
+    },
+    {
+      "ageYears": 11,
+      "pixelX": 254,
+      "pixelY": 520,
+      "rawDigitizedValuePgMl": 114.4348,
+      "approxMedianPgMl": 114
+    },
+    {
+      "ageYears": 12,
+      "pixelX": 266,
+      "pixelY": 494,
+      "rawDigitizedValuePgMl": 146.087,
+      "approxMedianPgMl": 146
+    },
+    {
+      "ageYears": 13,
+      "pixelX": 277,
+      "pixelY": 478,
+      "rawDigitizedValuePgMl": 165.5652,
+      "approxMedianPgMl": 166
+    },
+    {
+      "ageYears": 14,
+      "pixelX": 289,
+      "pixelY": 468,
+      "rawDigitizedValuePgMl": 177.7391,
+      "approxMedianPgMl": 178
+    },
+    {
+      "ageYears": 15,
+      "pixelX": 301,
+      "pixelY": 463,
+      "rawDigitizedValuePgMl": 183.8261,
+      "approxMedianPgMl": 184
+    },
+    {
+      "ageYears": 16,
+      "pixelX": 312,
+      "pixelY": 461,
+      "rawDigitizedValuePgMl": 186.2609,
+      "approxMedianPgMl": 186
+    },
+    {
+      "ageYears": 17,
+      "pixelX": 324,
+      "pixelY": 460,
+      "rawDigitizedValuePgMl": 187.4783,
+      "approxMedianPgMl": 187
+    },
+    {
+      "ageYears": 18,
+      "pixelX": 335,
+      "pixelY": 460,
+      "rawDigitizedValuePgMl": 187.4783,
+      "approxMedianPgMl": 187
+    },
+    {
+      "ageYears": 20,
+      "pixelX": 359,
+      "pixelY": 461,
+      "rawDigitizedValuePgMl": 186.2609,
+      "approxMedianPgMl": 186
+    },
+    {
+      "ageYears": 25,
+      "pixelX": 417,
+      "pixelY": 467,
+      "rawDigitizedValuePgMl": 178.9565,
+      "approxMedianPgMl": 179
+    },
+    {
+      "ageYears": 30,
+      "pixelX": 475,
+      "pixelY": 472,
+      "rawDigitizedValuePgMl": 172.8696,
+      "approxMedianPgMl": 173
+    },
+    {
+      "ageYears": 40,
+      "pixelX": 592,
+      "pixelY": 478,
+      "rawDigitizedValuePgMl": 165.5652,
+      "approxMedianPgMl": 166
+    },
+    {
+      "ageYears": 50,
+      "pixelX": 708,
+      "pixelY": 486,
+      "rawDigitizedValuePgMl": 155.8261,
+      "approxMedianPgMl": 156
+    },
+    {
+      "ageYears": 60,
+      "pixelX": 824,
+      "pixelY": 492,
+      "rawDigitizedValuePgMl": 148.5217,
+      "approxMedianPgMl": 149
+    },
+    {
+      "ageYears": 70,
+      "pixelX": 941,
+      "pixelY": 496,
+      "rawDigitizedValuePgMl": 143.6522,
+      "approxMedianPgMl": 144
+    },
+    {
+      "ageYears": 80,
+      "pixelX": 1057,
+      "pixelY": 499,
+      "rawDigitizedValuePgMl": 140.0,
+      "approxMedianPgMl": 140
+    }
+  ],
+  "license": {
+    "mainArticle": "all rights reserved; supplied by user; numerical facts retained with citation; no republishing PDF or figure in product",
+    "supplement": "CC BY4.0 Figshare10.6084/m9.figshare.26056558.v1"
+  },
+  "notes": [
+    "Coordinates only reconstruct central curve. They do not recover LMS parameters, percentile boundaries, diagnostic scores or exact author model.",
+    "No male source observations between1.13and6.1years. Do not bridge that gap with an apparently measured median.",
+    "Infant model intentionally not digitized from compressed lifetime panel; use dedicated minipuberty source.",
+    "Author supplement shows Oxford/GenII overall ratio1.28 (Oxfordhigher). Authors did not factorize GenII values after earlier validation. Do not apply1.28as a conversion of arbitrary patient assay.",
+    "The pooled median is suitable for explicitly approximate population context, not method-specific result classification.",
+    "Do not splice to Kelsey2016 as a single model; central values differ substantially at late puberty(Kelsey17y304pg/mL versus thiscurveabout188pg/mL).",
+    "In this cohort TannerG3 peaks; age alone does not establish expected stage-specific hormone level.",
+    "No preterm validation; no prenatal comparison. No extrapolation past80years."
+  ]
+}

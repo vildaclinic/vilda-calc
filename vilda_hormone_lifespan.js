@@ -191,6 +191,9 @@
     let sourceStatus = "unavailable",
       preterm = "unknown",
       identityKey;
+    let patientContext = null,
+      patientPoint = null,
+      renderedPoint = null;
     let view = "life",
       compare = false,
       compareHormone = null,
@@ -685,8 +688,11 @@
         compare || (selected.size === 1 && selected.has(current.id));
       reset.textContent = "Tylko " + current.name;
       svg.querySelectorAll(":scope > g").forEach((n) => n.remove());
+      renderedPoint = null;
+      byId("scale-note").removeAttribute("data-current-source");
       if (compare) renderComparison();
       else renderSchematic();
+      explainUnavailablePoint();
       updateInsight();
       updateSources();
     }
@@ -744,6 +750,169 @@
       );
     }
 
+    const pointEngine = () => opts.referenceEngine || root.VildaHormoneLifespanReference;
+    const pointNumber = (value, significantDigits = 6) => new Intl.NumberFormat("pl-PL", {
+      maximumSignificantDigits: significantDigits,
+      ...(value !== 0 && (Math.abs(value) >= 1e7 || Math.abs(value) < 0.0001)
+        ? { notation: "scientific" } : {}),
+    }).format(value);
+    function visibleAgeDomain() {
+      return view === "mini" ? [0, 1] : view === "puberty" ? [8, 20]
+        : [stages()[0].min, stages()[stages().length - 1].max];
+    }
+    function patientDotModel() {
+      const engine = pointEngine();
+      const id = analyteHormones[currentAnalyte];
+      const [minAge, maxAge] = visibleAgeDomain();
+      if (!engine || patientPoint?.status !== "ready" ||
+          !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
+          (compare ? compareHormone !== id : !selected.has(id))) return null;
+      const profiles = [patientPoint.profile];
+      if (compare) {
+        const other = engine.selectProfile(data.patientPointData, {
+          ...patientContext, sex: sex === "female" ? "male" : "female",
+        });
+        if (other.status !== "ready" || other.profile.unit !== profiles[0].unit ||
+            !Number.isFinite(engine.referenceAt(other.profile, patientAgeYears))) return null;
+        profiles.push(other.profile);
+      }
+      const curves = profiles.map((profile) => {
+        const ages = new Set([
+          ...engine.sampleProfile(profile, 400).map((point) => point.ageYears),
+          ...profile.points.map((point) => point.ageYears),
+          patientAgeYears,
+          Math.max(minAge, profile.minAge), Math.min(maxAge, profile.maxAge),
+          ...stages().map((stage) => stage.min),
+        ]);
+        const points = [...ages].filter((age) => age >= profile.minAge && age <= profile.maxAge)
+          .sort((a, b) => a - b).map((ageYears) => ({
+            ageYears, value: engine.referenceAt(profile, ageYears),
+          })).filter((point) => Number.isFinite(point.value) && point.value >= 0);
+        return { profile, points, color: compare
+          ? (profile.sex === "female" ? "#b15786" : "#2b7491")
+          : hormones().find((h) => h.id === id).color };
+      });
+      // The divisor covers the complete source profile, not the zoom viewport.
+      // Divide before applying headroom so even a finite 1e308 remains finite.
+      const divisor = Math.max(patientPoint.value,
+        ...curves.flatMap((curve) => curve.points.map((point) => point.value))) || 1;
+      return { ...patientPoint, id, curves, divisor, ceiling: 1.25, minAge, maxAge };
+    }
+    function referencePath(curve, model, x, y) {
+      return curve.points.filter((point) => point.ageYears >= model.minAge && point.ageYears <= model.maxAge)
+        .map((point, index) => `${index ? "L" : "M"}${x(point.ageYears)},${y(point.value / model.divisor / model.ceiling)}`)
+        .join(" ");
+    }
+    function drawReferenceCurves(group, model, { x, y, mobile }) {
+      for (const curve of model.curves) {
+        const d = referencePath(curve, model, x, y);
+        if (!d) continue;
+        group.append(el("path", {
+          d, fill: "none", stroke: curve.color,
+          "stroke-width": mobile ? 3.2 : 3.7,
+          "stroke-linecap": "round", "stroke-linejoin": "round",
+          "stroke-dasharray": compare && curve.profile.sex === "male" ? "9 6" : "none",
+          "data-reference-line": model.id, "data-profile": curve.profile.id,
+          "data-reference-sex": curve.profile.sex,
+          ...(compare ? { "data-comparison-curve": model.id,
+            "data-comparison-sex": curve.profile.sex, "data-comparison-period": view } : {}),
+        }));
+      }
+    }
+    function drawPatientDot(group, model, { W, mobile, left, right, top, bottom, px, y }) {
+      const py = y(model.value / model.divisor / model.ceiling);
+      const my = y(model.referenceValue / model.divisor / model.ceiling);
+      const unit = model.profile.unit;
+      const person = sex === "female" ? "pacjentki" : "pacjenta";
+      const a11y = `Wynik ${person}: ${pointNumber(model.value)} ${unit}. Mediana dla wieku: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
+      const dot = el("g", {
+        "data-patient-concentration": model.id, "data-value": model.value,
+        "data-median": model.referenceValue, "data-profile": model.profile.id,
+        "data-divisor": model.divisor, "data-ceiling": model.ceiling,
+        "data-plot-top": top, "data-plot-bottom": bottom,
+        "data-age-lower": patientAgeYears, "data-age-upper": patientContext.ageUpperYears ?? patientAgeYears,
+        role: "img", "aria-label": a11y, class: "vhl-patient-point",
+      });
+      dot.append(el("title", {}, a11y));
+      dot.append(el("line", {
+        x1: px, x2: px, y1: py, y2: my, stroke: "#8ba6ad",
+        "stroke-width": 1.5, "stroke-dasharray": "3 4",
+      }));
+      const medianColor = model.curves.find((curve) => curve.profile.sex === sex).color;
+      dot.append(el("circle", { cx: px, cy: my, r: 4.2, fill: "white",
+        stroke: medianColor, "stroke-width": 2, "data-median-point": "" }));
+      dot.append(el("circle", { cx: px, cy: py, r: 11, fill: "#d52d43", opacity: 0.12 }));
+      dot.append(el("circle", { cx: px, cy: py, r: mobile ? 6.5 : 7,
+        fill: "#d52d43", stroke: "white", "stroke-width": 2.5, "data-result-point": "" }));
+      const canvas = document.createElement("canvas"), context = canvas.getContext("2d");
+      const font = mobile ? 11 : 12;
+      const label = (message, yy, color, weight, kind) => {
+        if (context) context.font = `${weight} ${font}px system-ui, sans-serif`;
+        const measured = context ? context.measureText(message).width : message.length * font * 0.6;
+        const width = Math.min(W - left - right, measured + 16);
+        let xx = px + 13;
+        if (xx + width > W - right) xx = px - width - 13;
+        xx = Math.max(left, Math.min(W - right - width, xx));
+        const labelGroup = el("g", { "data-dot-label": kind });
+        labelGroup.append(el("rect", { x: xx, y: yy, width, height: 23, rx: 6,
+          fill: "white", "fill-opacity": 0.96, stroke: kind === "result" ? "#f1cbd0" : "#dce7e9" }));
+        labelGroup.append(text(xx + 8, yy + 16, message, {
+          "font-size": font, "font-weight": weight, fill: color,
+          ...(measured > width - 16 ? { textLength: width - 16, lengthAdjust: "spacingAndGlyphs" } : {}),
+        }));
+        dot.append(labelGroup);
+      };
+      const limit = (position) => Math.max(top + 3, Math.min(bottom - 25, position));
+      let resultTop = limit(py - 27), medianTop = limit(my + 8);
+      if (py > my + 44) { resultTop = limit(py - 20); medianTop = limit(my - 27); }
+      if (Math.abs(resultTop - medianTop) < 27) {
+        resultTop = limit(Math.min(py, my) - 51);
+        medianTop = limit(resultTop + 27);
+      }
+      const personLabel = sex === "female"
+        ? (patientAgeYears < 18 ? "Dziewczynka" : "Kobieta")
+        : (patientAgeYears < 18 ? "Chłopiec" : "Mężczyzna");
+      label(`${compare ? personLabel + " · " : ""}${pointNumber(model.value)} ${unit}`, resultTop, "#b51e33", 700, "result");
+      label(`Mediana ≈${pointNumber(model.referenceValue, 3)} ${unit}`, medianTop, "#365b66", 550, "median");
+      group.append(dot);
+      model.a11y = a11y;
+    }
+    function pointDescription(model) {
+      if (!model) return;
+      renderedPoint = model;
+      const name = hormones().find((h) => h.id === model.id).name;
+      panel.querySelector(".vhl-axis-label").textContent = name + " · wynik na tle mediany";
+      byId("scale-note").textContent = "Kropka: wynik. Linia: mediana, nie granica normy." +
+        (compare ? " Obie płcie we wspólnej skali stężeń." : " Pozostałe linie są poglądowe.") +
+        (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
+      byId("scale-note").setAttribute("data-current-source", model.profile.id);
+      byId("chart-desc").textContent = model.a11y +
+        " Wynik i mediana używają tej samej skali stężeń. " +
+        (compare ? "Obie płcie są pokazane w tej samej jednostce i skali; źródła mogą stosować różne metody oznaczenia."
+          : "Pozostałe hormony i przerywane odcinki zachowują własne skale poglądowe. Nie porównujemy liczbowo wysokości różnych hormonów.");
+    }
+    function explainUnavailablePoint() {
+      const measurement = patientContext?.measurement;
+      const id = analyteHormones[currentAnalyte];
+      const [minAge, maxAge] = visibleAgeDomain();
+      if (renderedPoint || !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
+          (compare ? compareHormone !== id : !selected.has(id)) ||
+          !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
+          (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;
+      const messages = {
+        "unsupported-age": "Dla tego wieku brak mediany pozwalającej nanieść wynik.",
+        "ambiguous-age": "Podany przedział wieku wykracza poza dostępny profil mediany.",
+        "ambiguous-profile": "Brak jednoznacznie dopasowanej mediany do naniesienia wyniku.",
+        "reference-unavailable": "W tym wieku źródło nie pozwala wiarygodnie nanieść wyniku.",
+        "incompatible-specimen": "Mediana nie dotyczy materiału tej próbki.",
+        "incompatible-assay": "Brak mediany dla potwierdzonej metody tej próbki.",
+        "unsupported-unit": "W tej jednostce nie można nanieść wyniku na medianę.",
+        "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na medianę populacji.",
+      };
+      const message = messages[patientPoint?.reason];
+      if (message) byId("scale-note").textContent = message + " Krzywe pozostają poglądowe.";
+    }
+
     function renderSchematic() {
       const W = svg.clientWidth || 1040,
         mobile = W < 640,
@@ -770,6 +939,7 @@
         );
       const g = el("g");
       svg.append(g);
+      const dotModel = patientDotModel();
       const x = (age) => left + xFraction(age) * pw,
         y = (value) => bottom - value * ph;
       const segments = full
@@ -849,7 +1019,18 @@
             ...hormones().filter((h) => selected.has(h.id)),
           ]
         : [];
+      if (dotModel) {
+        const from = Math.max(dotModel.minAge, dotModel.profile.minAge);
+        const to = Math.min(dotModel.maxAge, dotModel.profile.maxAge);
+        const clip = el("clipPath", { id: uid + "patient-source-outside" });
+        clip.append(el("rect", { x: left, y: top, width: Math.max(0, x(from) - left), height: ph }));
+        clip.append(el("rect", { x: x(to), y: top, width: Math.max(0, W - right - x(to)), height: ph }));
+        const defs = el("defs");
+        defs.append(clip);
+        g.append(defs);
+      }
       for (const h of ordered) {
+        const referenceBackground = dotModel?.id === h.id;
         const active = selected.has(h.id),
           style = {
             fill: "none",
@@ -859,6 +1040,11 @@
             "stroke-linejoin": "round",
             opacity: active ? 1 : 0.15,
             class: "vhl-curve",
+            ...(referenceBackground ? {
+              opacity: 0.24, "stroke-dasharray": "5 5",
+              "clip-path": `url(#${uid}patient-source-outside)`,
+              "data-reference-background": h.id,
+            } : {}),
           };
         if (sex === "female" && view !== "mini") {
           const spline = displaySpline(h);
@@ -870,7 +1056,7 @@
               el("path", {
                 ...style,
                 d,
-                "stroke-dasharray": schematic ? "5 5" : "none",
+                "stroke-dasharray": referenceBackground || schematic ? "5 5" : "none",
                 [schematic ? "data-illustrative-line" : "data-line"]: h.id,
                 "data-segment-kind": segment.kind,
                 "data-age-from": segment.points[0].ageYears,
@@ -889,6 +1075,7 @@
           g.append(path);
         }
       }
+      if (dotModel) drawReferenceCurves(g, dotModel, { x, y, mobile });
       const lifeTicks =
         sex === "female"
           ? [
@@ -982,6 +1169,9 @@
           px: x(patientAgeYears),
         });
       }
+      if (dotModel) drawPatientDot(g, dotModel, {
+        W, mobile, left, right, top, bottom, px: x(patientAgeYears), y,
+      });
       panel.querySelector(".vhl-axis-label").textContent = "Przebieg zmian";
       byId("scale-note").textContent =
         sex === "female" && view === "mini"
@@ -997,6 +1187,7 @@
         (sex === "female" ? "dziewczynki i kobiety" : "chłopcy i mężczyźni");
       byId("chart-desc").textContent =
         "Każdy hormon ma własną skalę względną. To nie są normy ani proporcje stężeń różnych hormonów. Etapy całego życia pokazano w różnej skali czasu.";
+      pointDescription(dotModel);
     }
     function renderComparison() {
       stageNav.hidden = true;
@@ -1018,6 +1209,7 @@
       svg.setAttribute("height", H);
       const g = el("g");
       svg.append(g);
+      const dotModel = patientDotModel();
       const x = (age) => left + ((age - minAge) / (maxAge - minAge)) * pw,
         y = (value) => bottom - value * ph;
       g.append(
@@ -1078,7 +1270,7 @@
         );
       }
       let curves = [];
-      if (h && puberty) {
+      if (!dotModel && h && puberty) {
         // Reuse the ordinary puberty curves, including their original knots
         // and smoothing. Only their vertical display scale changes here.
         const femaleSpline = displaySpline(h),
@@ -1104,7 +1296,7 @@
             d: curvePath(male, left, pw, (value) => y(value / maleMax)),
           },
         ];
-      } else if (h) {
+      } else if (!dotModel && h) {
         const mi = maleAges
             .map((age, i) => ({ age, i }))
             .filter((p) => p.age >= 0 && p.age <= 1),
@@ -1129,6 +1321,7 @@
           },
         ];
       }
+      if (dotModel) drawReferenceCurves(g, dotModel, { x, y, mobile });
       for (const curve of curves) {
         const d = curve.d || basisPath(
           Array.from({ length: 193 }, (_, i) => {
@@ -1174,6 +1367,9 @@
           comparison: true,
         });
       }
+      if (dotModel) drawPatientDot(g, dotModel, {
+        W, mobile, left, right, top, bottom, px: x(patientAgeYears), y,
+      });
       panel.querySelector(".vhl-axis-label").textContent =
         h ? h.name + " · przebieg zmian" : "Przebieg zmian";
       byId("scale-note").textContent =
@@ -1186,6 +1382,10 @@
           ? "Wspólna oś wieku od 8 do 20 lat, nie stadium Tannera. Krzywe są poglądowe; żeńska inhibina B odtwarza model źródłowy. "
           : "Wspólna oś wieku od urodzenia do 12 miesięcy. Dziewczynki: przeskalowane mediany od około 7. dnia. Chłopcy: poglądowy schemat. ") +
         "Linia ciągła: dziewczynki, przerywana: chłopcy. Każda krzywa ma własne maksimum w wyświetlanym okresie na tej samej wysokości. Przecięcie linii nie oznacza równych stężeń. To nie są normy ani przebieg u konkretnego dziecka.";
+      if (!dotModel && patientPoint?.status === "ready" && compareHormone === analyteHormones[currentAnalyte]) {
+        byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych median obu płci do umieszczenia wyniku.";
+      }
+      pointDescription(dotModel);
     }
     function updateInsight() {
       let title, copy;
@@ -1242,6 +1442,10 @@
       if (showCycle) {
         title = "Estradiol w cyklu";
         copy = "W wieku rozrodczym zmienia się w cyklu miesiączkowym.";
+      }
+      if (renderedPoint) {
+        title = "Wynik na tle mediany dla wieku";
+        copy = "Mediana opisuje populację z badania. Wynik konkretnej osoby ocenia się z zakresem referencyjnym i kontekstem klinicznym.";
       }
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
@@ -1352,7 +1556,8 @@
       );
     }
     function updateSources() {
-      const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort()]);
+      const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
+        renderedPoint?.curves.map((curve) => curve.profile.id)]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy");
@@ -1363,7 +1568,18 @@
         target.append(p);
       };
       const links = [];
-      if (compare && view === "puberty") {
+      if (renderedPoint) {
+        paragraph("Kropka przedstawia wynik, a linia medianę populacji w tym wieku — nie granicę normy ani indywidualny cel. Kolor kropki nie jest klasyfikacją wyniku. Zakresy odniesienia i ocena kliniczna pozostają w osobnej części przelicznika.");
+        paragraph(compare
+          ? "Obie linie i wynik mają wspólną skalę stężeń. Źródła dotyczą różnych populacji i metod; wykres nie potwierdza zgodności metody próbki z publikacją. Nie wyznacza proporcji hormonalnych ani stadium pokwitania."
+          : "Wynik i mediana korzystają z jednej skali, stałej przy zmianie widoku czasu. Poza zakresem źródła przygaszona przerywana linia pozostaje schematem, bez stężeń i bez dopisywania brakujących danych. Pozostałe hormony zachowują własne skale poglądowe.");
+        for (const { profile } of renderedPoint.curves) {
+          const description = [profile.sourceLabel, profile.method, profile.population]
+            .filter((item) => typeof item === "string" && item.trim()).join(" · ");
+          paragraph(description + (profile.approximate ? ". Mediana odtworzona orientacyjnie ze źródła." : "."));
+          if (typeof profile.url === "string") links.push([profile.sourceLabel || "Źródło mediany", profile.url]);
+        }
+      } else if (compare && view === "puberty") {
         paragraph(
           "Porównanie poglądowe w wieku 8–20 lat. Oś przedstawia wiek, nie stadium Tannera; nie ustalamy stadium z wieku. Każda płeć ma własną skalę względem maksimum w tych latach. Przecięcia linii nie oznaczają równych stężeń, a przesunięcie krzywych nie określa dokładnej różnicy czasu dojrzewania.",
         );
@@ -1640,6 +1856,7 @@
         activeStage =
           null;
       patientAgeLabel = "";
+      patientContext = patientPoint = renderedPoint = null;
       preterm = "unknown";
       sourceStatus = "unavailable";
       view = "life";
@@ -1658,6 +1875,10 @@
       byId("cycle-panel").hidden = true;
       byId("population-note").textContent = "";
       byId("population-note").hidden = true;
+      byId("scale-note").removeAttribute("data-current-source");
+      byId("scale-note").textContent = "Schemat — każdy hormon ma własną skalę.";
+      byId("chart-title").textContent = "Poglądowy przebieg hormonów";
+      byId("chart-desc").textContent = "Krzywe przedstawiają poglądowo czas i kierunek zmian hormonów.";
       panel.querySelector(".vhl-insight").classList.remove("vhl-cycle-open");
       panel.querySelector(".vhl-sources").open = false;
     }
@@ -1707,6 +1928,18 @@
         next.preterm === "yes" || next.preterm === "no"
           ? next.preterm
           : "unknown";
+      patientContext = {
+        analyte: currentAnalyte, sex, ageYears: patientAgeYears,
+        ageUpperYears: next.ageUpperYears, preterm,
+        ageUpperInclusive: next.ageUpperInclusive,
+        measurement: next.measurement ? { ...next.measurement } : null,
+        contraindicated: next.contraindicated === true,
+        assayMethodId: next.assayMethodId,
+        specimen: next.specimen,
+      };
+      const engine = pointEngine();
+      patientPoint = engine && data.patientPointData
+        ? engine.evaluate(data.patientPointData, patientContext) : null;
       if (resetContext) {
         closeFullscreen(false);
         selected.clear();

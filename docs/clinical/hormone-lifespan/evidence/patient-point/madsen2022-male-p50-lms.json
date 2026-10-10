@@ -1,0 +1,732 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+    "authorsShort": "Madsen et al.",
+    "year": 2022,
+    "doi": "10.1210/clinem/dgac155",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+    "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+    "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+    "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+    "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+    "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+    "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+    "retrievedDate": "2026-10-10"
+  },
+  "status": "research_extraction_not_production_reference",
+  "population": {
+    "sex": "male",
+    "country": "Norway",
+    "design": "cross-sectional",
+    "cohorts": [
+      {
+        "name": "Bergen Growth Study 2",
+        "years": "2016",
+        "ageYears": "6 to <16",
+        "viableMaleSamplesTable1": 414
+      },
+      {
+        "name": "Fit Futures 1",
+        "years": "2010–2011",
+        "ageYears": "15–18",
+        "viableMaleSamplesTable1": 491
+      }
+    ],
+    "numberCaution": "These are cohort counts in Table 1, not necessarily the count successfully assayed for each analyte.",
+    "sampling": "serum collected 08:00–14:00; no fasting restriction specified here",
+    "exclusions": "self-reported chronic disease/cancer; corticosteroid users excluded from cortisol references only",
+    "stage": "chronological-age models pool pubertal stages; never relabel as a G-stage median"
+  },
+  "transform": {
+    "modelInput": "ln(concentration_in_published_SI_unit * 1000000)",
+    "centralConcentrationFormula": "exp(M) / 1000000",
+    "statistic": "model_center_at_z0_authors_identify_as_p50",
+    "notArithmeticMean": true,
+    "sourceEvidence": "LCMSMS hormones!K36 and K37, Other biomarkers!K32 and K33 explicitly use LN(SI result*1000000); Figure 1 and results text identify z=0 with p50.",
+    "sourceInconsistency": "Article Methods describe X as SI concentration; workbook actually applies the LMS formula to ln(SI*1e6). Preserve this distinction.",
+    "exampleFormulaError": "LCMSMS hormones!L37 uses AB13 (female estradiol L) in denominator, while numerator uses AG25 (male testosterone L). Do not copy that example formula. Central concentration exp(M)/1e6 is unaffected."
+  },
+  "interpolation": {
+    "publishedAgeStepYears": 1,
+    "rule": "Only exact published ages are extracted. Between-age interpolation remains an implementation decision; label as interpolated and do not claim it is the original fitted curve.",
+    "noExtrapolation": true,
+    "missingForExactContinuousModel": "Original fitted GAMLSS objects or a dense export of age/L/M/S or p50; public author R script is a modeling recipe, not fitted cohort models."
+  },
+  "useConstraints": [
+    "Usable for quantitative educational patient positioning only within listed ages and relevant assay/population context.",
+    "The existing schematic male curves must not be silently renamed as measured p50; patient and reference need the same quantitative display mapping.",
+    "No claim of normality, diagnosis or percentile follows from above/below this central curve.",
+    "No assay interchangeability is established by this source; Siemens IMMULITE LH/FSH differs from Mayo AnshLite LH and Roche preterm profiles.",
+    "Daytime sampling broadens testosterone distributions; this is not a separate early-morning-only reference.",
+    "No fetal, infant, preterm, adult or senior extrapolation from these models."
+  ],
+  "hormones": {
+    "lh": {
+      "unit": "IU/L",
+      "assay": "Siemens IMMULITE 2000 XPi",
+      "lowerLimitOfQuantification": 0.1,
+      "cohorts": "BGS2 only",
+      "ageYearsMin": 6,
+      "ageYearsMax": 16,
+      "points": [
+        {
+          "ageYears": 6,
+          "centralConcentration": 0.1193163370958486,
+          "L": -12.98174381,
+          "M_logSIx1e6": 11.68953354,
+          "S": 0.018505605,
+          "sourceCells": [
+            "Other biomarkers!B17",
+            "Other biomarkers!C17",
+            "Other biomarkers!D17",
+            "Other biomarkers!E17"
+          ]
+        },
+        {
+          "ageYears": 7,
+          "centralConcentration": 0.12956321399782508,
+          "L": -10.70497407,
+          "M_logSIx1e6": 11.77192418,
+          "S": 0.024773132,
+          "sourceCells": [
+            "Other biomarkers!B18",
+            "Other biomarkers!C18",
+            "Other biomarkers!D18",
+            "Other biomarkers!E18"
+          ]
+        },
+        {
+          "ageYears": 8,
+          "centralConcentration": 0.14069009181836767,
+          "L": -8.428204334,
+          "M_logSIx1e6": 11.85431482,
+          "S": 0.033163362,
+          "sourceCells": [
+            "Other biomarkers!B19",
+            "Other biomarkers!C19",
+            "Other biomarkers!D19",
+            "Other biomarkers!E19"
+          ]
+        },
+        {
+          "ageYears": 9,
+          "centralConcentration": 0.1523875871849669,
+          "L": -6.151435008,
+          "M_logSIx1e6": 11.93418247,
+          "S": 0.044371383,
+          "sourceCells": [
+            "Other biomarkers!B20",
+            "Other biomarkers!C20",
+            "Other biomarkers!D20",
+            "Other biomarkers!E20"
+          ]
+        },
+        {
+          "ageYears": 10,
+          "centralConcentration": 0.19252135853814378,
+          "L": -3.874622438,
+          "M_logSIx1e6": 12.16796238,
+          "S": 0.05773272,
+          "sourceCells": [
+            "Other biomarkers!B21",
+            "Other biomarkers!C21",
+            "Other biomarkers!D21",
+            "Other biomarkers!E21"
+          ]
+        },
+        {
+          "ageYears": 11,
+          "centralConcentration": 0.3331908573590624,
+          "L": -1.597877679,
+          "M_logSIx1e6": 12.71647075,
+          "S": 0.066878713,
+          "sourceCells": [
+            "Other biomarkers!B22",
+            "Other biomarkers!C22",
+            "Other biomarkers!D22",
+            "Other biomarkers!E22"
+          ]
+        },
+        {
+          "ageYears": 12,
+          "centralConcentration": 0.6775625214085037,
+          "L": 0.678365392,
+          "M_logSIx1e6": 13.42625711,
+          "S": 0.065198642,
+          "sourceCells": [
+            "Other biomarkers!B23",
+            "Other biomarkers!C23",
+            "Other biomarkers!D23",
+            "Other biomarkers!E23"
+          ]
+        },
+        {
+          "ageYears": 13,
+          "centralConcentration": 1.3007184973188053,
+          "L": 2.953828088,
+          "M_logSIx1e6": 14.07842736,
+          "S": 0.056161897,
+          "sourceCells": [
+            "Other biomarkers!B24",
+            "Other biomarkers!C24",
+            "Other biomarkers!D24",
+            "Other biomarkers!E24"
+          ]
+        },
+        {
+          "ageYears": 14,
+          "centralConcentration": 2.101700464443166,
+          "L": 5.228500484,
+          "M_logSIx1e6": 14.55825732,
+          "S": 0.045621298,
+          "sourceCells": [
+            "Other biomarkers!B25",
+            "Other biomarkers!C25",
+            "Other biomarkers!D25",
+            "Other biomarkers!E25"
+          ]
+        },
+        {
+          "ageYears": 15,
+          "centralConcentration": 2.8209085164981698,
+          "L": 7.5027521,
+          "M_logSIx1e6": 14.85256956,
+          "S": 0.035310354,
+          "sourceCells": [
+            "Other biomarkers!B26",
+            "Other biomarkers!C26",
+            "Other biomarkers!D26",
+            "Other biomarkers!E26"
+          ]
+        },
+        {
+          "ageYears": 16,
+          "centralConcentration": 3.5142066372549756,
+          "L": 9.776900418,
+          "M_logSIx1e6": 15.07232435,
+          "S": 0.02581758,
+          "sourceCells": [
+            "Other biomarkers!B27",
+            "Other biomarkers!C27",
+            "Other biomarkers!D27",
+            "Other biomarkers!E27"
+          ]
+        }
+      ]
+    },
+    "fsh": {
+      "unit": "IU/L",
+      "assay": "Siemens IMMULITE 2000 XPi",
+      "lowerLimitOfQuantification": 0.1,
+      "cohorts": "BGS2 only",
+      "ageYearsMin": 6,
+      "ageYearsMax": 16,
+      "points": [
+        {
+          "ageYears": 6,
+          "centralConcentration": 0.4318941698433671,
+          "L": 2.259448485,
+          "M_logSIx1e6": 12.97593586,
+          "S": 0.04455432,
+          "sourceCells": [
+            "Other biomarkers!G17",
+            "Other biomarkers!H17",
+            "Other biomarkers!I17",
+            "Other biomarkers!J17"
+          ]
+        },
+        {
+          "ageYears": 7,
+          "centralConcentration": 0.54374649750817,
+          "L": 2.459563671,
+          "M_logSIx1e6": 13.20623842,
+          "S": 0.045603587,
+          "sourceCells": [
+            "Other biomarkers!G18",
+            "Other biomarkers!H18",
+            "Other biomarkers!I18",
+            "Other biomarkers!J18"
+          ]
+        },
+        {
+          "ageYears": 8,
+          "centralConcentration": 0.6848343409721656,
+          "L": 2.659577113,
+          "M_logSIx1e6": 13.43693225,
+          "S": 0.046221799,
+          "sourceCells": [
+            "Other biomarkers!G19",
+            "Other biomarkers!H19",
+            "Other biomarkers!I19",
+            "Other biomarkers!J19"
+          ]
+        },
+        {
+          "ageYears": 9,
+          "centralConcentration": 0.8928677923338036,
+          "L": 2.859253853,
+          "M_logSIx1e6": 13.7021938,
+          "S": 0.045853062,
+          "sourceCells": [
+            "Other biomarkers!G20",
+            "Other biomarkers!H20",
+            "Other biomarkers!I20",
+            "Other biomarkers!J20"
+          ]
+        },
+        {
+          "ageYears": 10,
+          "centralConcentration": 1.1587076764301305,
+          "L": 3.058563797,
+          "M_logSIx1e6": 13.96281587,
+          "S": 0.044432537,
+          "sourceCells": [
+            "Other biomarkers!G21",
+            "Other biomarkers!H21",
+            "Other biomarkers!I21",
+            "Other biomarkers!J21"
+          ]
+        },
+        {
+          "ageYears": 11,
+          "centralConcentration": 1.5269843724553924,
+          "L": 3.25725749,
+          "M_logSIx1e6": 14.23880535,
+          "S": 0.042264461,
+          "sourceCells": [
+            "Other biomarkers!G22",
+            "Other biomarkers!H22",
+            "Other biomarkers!I22",
+            "Other biomarkers!J22"
+          ]
+        },
+        {
+          "ageYears": 12,
+          "centralConcentration": 2.01486005633355,
+          "L": 3.455336127,
+          "M_logSIx1e6": 14.5160603,
+          "S": 0.039821954,
+          "sourceCells": [
+            "Other biomarkers!G23",
+            "Other biomarkers!H23",
+            "Other biomarkers!I23",
+            "Other biomarkers!J23"
+          ]
+        },
+        {
+          "ageYears": 13,
+          "centralConcentration": 2.622651954012206,
+          "L": 3.653176242,
+          "M_logSIx1e6": 14.77969656,
+          "S": 0.037547488,
+          "sourceCells": [
+            "Other biomarkers!G24",
+            "Other biomarkers!H24",
+            "Other biomarkers!I24",
+            "Other biomarkers!J24"
+          ]
+        },
+        {
+          "ageYears": 14,
+          "centralConcentration": 3.2934476763740226,
+          "L": 3.851045886,
+          "M_logSIx1e6": 15.0074455,
+          "S": 0.035643147,
+          "sourceCells": [
+            "Other biomarkers!G25",
+            "Other biomarkers!H25",
+            "Other biomarkers!I25",
+            "Other biomarkers!J25"
+          ]
+        },
+        {
+          "ageYears": 15,
+          "centralConcentration": 3.802895506745346,
+          "L": 4.049122502,
+          "M_logSIx1e6": 15.15127331,
+          "S": 0.034070385,
+          "sourceCells": [
+            "Other biomarkers!G26",
+            "Other biomarkers!H26",
+            "Other biomarkers!I26",
+            "Other biomarkers!J26"
+          ]
+        },
+        {
+          "ageYears": 16,
+          "centralConcentration": 4.160651539308952,
+          "L": 4.247324379,
+          "M_logSIx1e6": 15.24118224,
+          "S": 0.032700074,
+          "sourceCells": [
+            "Other biomarkers!G27",
+            "Other biomarkers!H27",
+            "Other biomarkers!I27",
+            "Other biomarkers!J27"
+          ]
+        }
+      ]
+    },
+    "testosterone": {
+      "unit": "nmol/L",
+      "assay": "LC-MS/MS multiplex; Haukeland Hormone Laboratory",
+      "lowerLimitOfQuantification": 0.02,
+      "cohorts": "BGS2 + Fit Futures",
+      "ageYearsMin": 6,
+      "ageYearsMax": 18,
+      "points": [
+        {
+          "ageYears": 6,
+          "centralConcentration": 0.02393726986868612,
+          "L": -1.96579708424661,
+          "M_logSIx1e6": 10.083191932036,
+          "S": 0.093688165245368,
+          "sourceCells": [
+            "LCMSMS hormones!AF19",
+            "LCMSMS hormones!AG19",
+            "LCMSMS hormones!AH19",
+            "LCMSMS hormones!AI19"
+          ]
+        },
+        {
+          "ageYears": 7,
+          "centralConcentration": 0.04428894486069003,
+          "L": -0.880352441159829,
+          "M_logSIx1e6": 10.6984903732126,
+          "S": 0.09005872446155,
+          "sourceCells": [
+            "LCMSMS hormones!AF20",
+            "LCMSMS hormones!AG20",
+            "LCMSMS hormones!AH20",
+            "LCMSMS hormones!AI20"
+          ]
+        },
+        {
+          "ageYears": 8,
+          "centralConcentration": 0.08270416444893601,
+          "L": 0.205273813977808,
+          "M_logSIx1e6": 11.3230252358375,
+          "S": 0.0864683176481477,
+          "sourceCells": [
+            "LCMSMS hormones!AF21",
+            "LCMSMS hormones!AG21",
+            "LCMSMS hormones!AH21",
+            "LCMSMS hormones!AI21"
+          ]
+        },
+        {
+          "ageYears": 9,
+          "centralConcentration": 0.15935758946374518,
+          "L": 1.29158626713708,
+          "M_logSIx1e6": 11.978905946347,
+          "S": 0.0824379047582686,
+          "sourceCells": [
+            "LCMSMS hormones!AF22",
+            "LCMSMS hormones!AG22",
+            "LCMSMS hormones!AH22",
+            "LCMSMS hormones!AI22"
+          ]
+        },
+        {
+          "ageYears": 10,
+          "centralConcentration": 0.32336362859591733,
+          "L": 2.37943136293402,
+          "M_logSIx1e6": 12.6865327541106,
+          "S": 0.0772561114888901,
+          "sourceCells": [
+            "LCMSMS hormones!AF23",
+            "LCMSMS hormones!AG23",
+            "LCMSMS hormones!AH23",
+            "LCMSMS hormones!AI23"
+          ]
+        },
+        {
+          "ageYears": 11,
+          "centralConcentration": 0.6902963832084651,
+          "L": 3.46965494624479,
+          "M_logSIx1e6": 13.444876325229,
+          "S": 0.0703973341412369,
+          "sourceCells": [
+            "LCMSMS hormones!AF24",
+            "LCMSMS hormones!AG24",
+            "LCMSMS hormones!AH24",
+            "LCMSMS hormones!AI24"
+          ]
+        },
+        {
+          "ageYears": 12,
+          "centralConcentration": 1.4977255724595988,
+          "L": 4.56243961149163,
+          "M_logSIx1e6": 14.219458230322,
+          "S": 0.0617804118052895,
+          "sourceCells": [
+            "LCMSMS hormones!AF25",
+            "LCMSMS hormones!AG25",
+            "LCMSMS hormones!AH25",
+            "LCMSMS hormones!AI25"
+          ]
+        },
+        {
+          "ageYears": 13,
+          "centralConcentration": 3.1059898625687334,
+          "L": 5.65769356936082,
+          "M_logSIx1e6": 14.9488430188634,
+          "S": 0.0520245176490833,
+          "sourceCells": [
+            "LCMSMS hormones!AF26",
+            "LCMSMS hormones!AG26",
+            "LCMSMS hormones!AH26",
+            "LCMSMS hormones!AI26"
+          ]
+        },
+        {
+          "ageYears": 14,
+          "centralConcentration": 5.796253989141138,
+          "L": 6.75512921036048,
+          "M_logSIx1e6": 15.5727224029155,
+          "S": 0.0422750239445447,
+          "sourceCells": [
+            "LCMSMS hormones!AF27",
+            "LCMSMS hormones!AG27",
+            "LCMSMS hormones!AH27",
+            "LCMSMS hormones!AI27"
+          ]
+        },
+        {
+          "ageYears": 15,
+          "centralConcentration": 9.338280616859034,
+          "L": 7.85426745141499,
+          "M_logSIx1e6": 16.049632705128,
+          "S": 0.0335767398734342,
+          "sourceCells": [
+            "LCMSMS hormones!AF28",
+            "LCMSMS hormones!AG28",
+            "LCMSMS hormones!AH28",
+            "LCMSMS hormones!AI28"
+          ]
+        },
+        {
+          "ageYears": 16,
+          "centralConcentration": 12.96588173768215,
+          "L": 8.95445972533013,
+          "M_logSIx1e6": 16.3778319837193,
+          "S": 0.0265658945002403,
+          "sourceCells": [
+            "LCMSMS hormones!AF29",
+            "LCMSMS hormones!AG29",
+            "LCMSMS hormones!AH29",
+            "LCMSMS hormones!AI29"
+          ]
+        },
+        {
+          "ageYears": 17,
+          "centralConcentration": 15.939466800893923,
+          "L": 10.0550558886829,
+          "M_logSIx1e6": 16.5843087803838,
+          "S": 0.0213478916214988,
+          "sourceCells": [
+            "LCMSMS hormones!AF30",
+            "LCMSMS hormones!AG30",
+            "LCMSMS hormones!AH30",
+            "LCMSMS hormones!AI30"
+          ]
+        },
+        {
+          "ageYears": 18,
+          "centralConcentration": 18.051151264084126,
+          "L": 11.1556744402432,
+          "M_logSIx1e6": 16.7087200226529,
+          "S": 0.0175214606325566,
+          "sourceCells": [
+            "LCMSMS hormones!AF31",
+            "LCMSMS hormones!AG31",
+            "LCMSMS hormones!AH31",
+            "LCMSMS hormones!AI31"
+          ]
+        }
+      ]
+    },
+    "estradiol": {
+      "unit": "pmol/L",
+      "assay": "LC-MS/MS; BGS2 ultrasensitive and Fit Futures intermediate-sensitivity assays",
+      "lowerLimitOfQuantification": null,
+      "cohorts": "BGS2 + Fit Futures",
+      "ageYearsMin": 6,
+      "ageYearsMax": 18,
+      "points": [
+        {
+          "ageYears": 6,
+          "centralConcentration": 0.24701013272002922,
+          "L": 4.15830180459405,
+          "M_logSIx1e6": 12.4171846379267,
+          "S": 0.0733059765410198,
+          "sourceCells": [
+            "LCMSMS hormones!AA19",
+            "LCMSMS hormones!AB19",
+            "LCMSMS hormones!AC19",
+            "LCMSMS hormones!AD19"
+          ]
+        },
+        {
+          "ageYears": 7,
+          "centralConcentration": 0.37931012200885605,
+          "L": 4.00186716422096,
+          "M_logSIx1e6": 12.8461094133448,
+          "S": 0.0694504634422912,
+          "sourceCells": [
+            "LCMSMS hormones!AA20",
+            "LCMSMS hormones!AB20",
+            "LCMSMS hormones!AC20",
+            "LCMSMS hormones!AD20"
+          ]
+        },
+        {
+          "ageYears": 8,
+          "centralConcentration": 0.5903439912846601,
+          "L": 3.84543220116517,
+          "M_logSIx1e6": 13.2884606820581,
+          "S": 0.0658339291943911,
+          "sourceCells": [
+            "LCMSMS hormones!AA21",
+            "LCMSMS hormones!AB21",
+            "LCMSMS hormones!AC21",
+            "LCMSMS hormones!AD21"
+          ]
+        },
+        {
+          "ageYears": 9,
+          "centralConcentration": 0.9573607691081997,
+          "L": 3.6890393723781,
+          "M_logSIx1e6": 13.7719355786107,
+          "S": 0.0623707651273019,
+          "sourceCells": [
+            "LCMSMS hormones!AA22",
+            "LCMSMS hormones!AB22",
+            "LCMSMS hormones!AC22",
+            "LCMSMS hormones!AD22"
+          ]
+        },
+        {
+          "ageYears": 10,
+          "centralConcentration": 1.6578506045864085,
+          "L": 3.53271112900267,
+          "M_logSIx1e6": 14.3210325048193,
+          "S": 0.0587569042795102,
+          "sourceCells": [
+            "LCMSMS hormones!AA23",
+            "LCMSMS hormones!AB23",
+            "LCMSMS hormones!AC23",
+            "LCMSMS hormones!AD23"
+          ]
+        },
+        {
+          "ageYears": 11,
+          "centralConcentration": 3.097426690113098,
+          "L": 3.37635790767873,
+          "M_logSIx1e6": 14.9460822247681,
+          "S": 0.0545534657456419,
+          "sourceCells": [
+            "LCMSMS hormones!AA24",
+            "LCMSMS hormones!AB24",
+            "LCMSMS hormones!AC24",
+            "LCMSMS hormones!AD24"
+          ]
+        },
+        {
+          "ageYears": 12,
+          "centralConcentration": 6.129050070456699,
+          "L": 3.21979162401055,
+          "M_logSIx1e6": 15.6285503318678,
+          "S": 0.0494106597694168,
+          "sourceCells": [
+            "LCMSMS hormones!AA25",
+            "LCMSMS hormones!AB25",
+            "LCMSMS hormones!AC25",
+            "LCMSMS hormones!AD25"
+          ]
+        },
+        {
+          "ageYears": 13,
+          "centralConcentration": 12.181153681006554,
+          "L": 3.06298270121861,
+          "M_logSIx1e6": 16.3154005350549,
+          "S": 0.0434710913507389,
+          "sourceCells": [
+            "LCMSMS hormones!AA26",
+            "LCMSMS hormones!AB26",
+            "LCMSMS hormones!AC26",
+            "LCMSMS hormones!AD26"
+          ]
+        },
+        {
+          "ageYears": 14,
+          "centralConcentration": 22.714698209171413,
+          "L": 2.90581311399278,
+          "M_logSIx1e6": 16.9385227711165,
+          "S": 0.0372720592838915,
+          "sourceCells": [
+            "LCMSMS hormones!AA27",
+            "LCMSMS hormones!AB27",
+            "LCMSMS hormones!AC27",
+            "LCMSMS hormones!AD27"
+          ]
+        },
+        {
+          "ageYears": 15,
+          "centralConcentration": 37.28518975581513,
+          "L": 2.74814340837573,
+          "M_logSIx1e6": 17.434106748281,
+          "S": 0.0313758217598764,
+          "sourceCells": [
+            "LCMSMS hormones!AA28",
+            "LCMSMS hormones!AB28",
+            "LCMSMS hormones!AC28",
+            "LCMSMS hormones!AD28"
+          ]
+        },
+        {
+          "ageYears": 16,
+          "centralConcentration": 52.52944278497907,
+          "L": 2.58982805587887,
+          "M_logSIx1e6": 17.7768843853159,
+          "S": 0.0262697267594843,
+          "sourceCells": [
+            "LCMSMS hormones!AA29",
+            "LCMSMS hormones!AB29",
+            "LCMSMS hormones!AC29",
+            "LCMSMS hormones!AD29"
+          ]
+        },
+        {
+          "ageYears": 17,
+          "centralConcentration": 64.95767569802108,
+          "L": 2.43086711053598,
+          "M_logSIx1e6": 17.9892464726668,
+          "S": 0.0221538889679792,
+          "sourceCells": [
+            "LCMSMS hormones!AA30",
+            "LCMSMS hormones!AB30",
+            "LCMSMS hormones!AC30",
+            "LCMSMS hormones!AD30"
+          ]
+        },
+        {
+          "ageYears": 18,
+          "centralConcentration": 73.8467861754196,
+          "L": 2.27146583241234,
+          "M_logSIx1e6": 18.1175030477201,
+          "S": 0.0188723013828265,
+          "sourceCells": [
+            "LCMSMS hormones!AA31",
+            "LCMSMS hormones!AB31",
+            "LCMSMS hormones!AC31",
+            "LCMSMS hormones!AD31"
+          ]
+        }
+      ],
+      "useCaution": "Several young-age model centers below assay LLOQ: these are model estimates, not resolved observed medians; not a recommended initial concentration-dot anchor. BGS2 LLOQ=0.58 pmol/L; Fit Futures LLOQ=13 pmol/L."
+    }
+  }
+}

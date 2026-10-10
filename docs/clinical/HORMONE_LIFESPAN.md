@@ -9,10 +9,18 @@ edukacyjna, nie nadanie algorytmowi statusu walidacji klinicznej.
 polecił powrót do „Pierwotnego przebiegu” z makiety. Przywrócono geometrię
 sprzed PR #607; źródła medyczne i zakresy odniesienia pozostają bez zmian.
 
+Następnie właściciel zatwierdził makietę czerwonego punktu wyniku i wdrożenie
+na dostępnych danych liczbowych, bez nowych pól. Ta zmiana zastępuje dawny
+zakaz zaznaczania wyniku **wyłącznie przy odrębnym modelu stężeń**. Źródła,
+granice zastosowania i przypadki kontrolne opisano w
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Nie wolno nadać
+dotychczasowemu schematowi znaczenia mediany przez samo dodanie punktu.
+
 ## Cel i granice
 
-Wykres pokazuje czas i kierunek zmian hormonów. Nie wyznacza norm,
-stężeń pacjenta, centyli, stadium pokwitania, menopauzy ani przyczyny wyniku.
+Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
+model liczbowy, pokazuje również wpisane stężenie pacjenta na jego tle.
+Nie wyznacza norm, centyli, stadium pokwitania, menopauzy ani przyczyny wyniku.
 Nie zastępuje osi interpretacji badania i nie zmienia ich danych, progów,
 jednostek ani werdyktów. Połączenie nie zapisuje porównań do historii,
 przypiętych wyników, wizyt ani stanu pacjenta.
@@ -26,8 +34,56 @@ Sam wykres nie potwierdza dopasowania pacjenta do populacji publikacji.
 Niemowlęce dane dotyczą dzieci donoszonych; wcześniak lub nieznane dane
 urodzeniowe nie mogą automatycznie otrzymać dopasowania do tej populacji.
 Brak wiarygodnej płci lub wieku nie może tworzyć fikcyjnego kontekstu.
-Znacznik pokazuje wyłącznie znany wiek, nigdy wynik laboratoryjny.
+Pionowy znacznik pokazuje znany wiek. Osobny czerwony punkt może pokazać
+wynik laboratoryjny po spełnieniu warunków opisanych poniżej.
 Poza osią wieku znacznik znika zamiast przyklejać się do końca.
+
+## Wynik pacjenta na tle modelu
+
+Czerwony punkt oznacza **wynik pacjenta**, a nie wynik nieprawidłowy.
+Linia odniesienia przedstawia medianę lub centralny przebieg modelu,
+nie górną granicę normy i nie średnią arytmetyczną. Powyżej albo poniżej
+linii nie oznacza poza zakresem referencyjnym. Pozostają dotychczasowe,
+odrębne osie interpretacji badania.
+
+Wiek, płeć, analit, zapis wyniku i jednostka pochodzą z istniejącego
+formularza, również z jego lokalnych korekt. Nie dodajemy selektorów
+publikacji, metody ani dodatkowego formularza. Metoda w źródłach opisuje
+badanie populacyjne; nie potwierdza metody próbki pacjenta. Obecne dane
+Tannera pozostają dostępne, lecz nie zmieniają krzywej wieku w krzywą
+stadium i nie są odgadywane z wyniku.
+
+Punkt i linia muszą korzystać z **tego samego modelu stężenia, jednostki
+i przekształcenia wysokości**, również po zmianie widoku, wyboru hormonów
+i powiększeniu. Nie wolno dopasować punktu do autorskiej linii pojedynczym
+mnożnikiem ani przeliczać schematycznej wysokości na stężenie. Model
+ilościowy ma własne granice i jawnie wskazane źródło; poza nimi schemat
+edukacyjny nie staje się jego ekstrapolacją.
+
+Dobór źródła zależy od analitu, płci i wieku, nigdy od wpisanej wartości
+ani pożądanego położenia punktu. Nie interpolujemy pomiędzy publikacjami.
+Modele i tabele są danymi oddzielnymi od silnika. Między węzłami jednego
+profilu stosujemy PCHIP bez przeregulowania; krzywą i punkt liczy ta sama
+funkcja. Interpolacja węzłów rocznych jest przybliżeniem implementacji,
+nie udostępnionym przez autora pełnym dopasowaniem statystycznym.
+
+Brak profilu, nieznany wiek lub płeć, nieobsługiwana jednostka, pusty albo
+nieprawidłowy wynik oraz nierówność (`<`, `≤`, `>`, `≥`) oznaczają brak
+dokładnego punktu. Odznaczenie hormonu ukrywa jego punkt; nie wyświetlamy
+wyniku LH przy przeglądaniu AMH ani wyniku jednej osoby po zmianie pacjenta.
+Poza widocznym okresem punkt znika, zamiast przesuwać się na jego granicę.
+Wyniku przekraczającego wysokość wykresu nie wolno przyciąć i przedstawić
+jako innego stężenia. Schemat cyklu estradiolu nie przyjmuje punktu wyniku.
+
+Źródła niemowlęce wymagają znanego donoszenia; wcześniactwo i nieznane
+dane urodzeniowe nie kwalifikują do tych populacji. Stosujemy wiek po
+urodzeniu, bez zamiany na PMA lub wiek skorygowany. Wiek zapisany tylko
+w latach i miesiącach nie staje się dokładnie znaną datą pobrania. Bramka
+donoszenia nie usuwa automatycznie danych pokwitaniowych starszego dziecka.
+Przy medianie Busch odczytanej z ryciny zbyt blisko granicy oznaczalności
+nie tworzymy precyzyjnego punktu względem sztucznej podłogi. Szczegóły
+tego ograniczenia graficznego są w dokumentacji danych; nie jest to
+nowy próg interpretacji klinicznej.
 
 ## Wybór i interakcje
 
@@ -88,6 +144,11 @@ ruchu, fokus źródeł) i `hormone-lifespan-puberty-comparison.spec.mjs`
 
 ## Stała skala i połączenia
 
+Poniższe zasady opisują bazową warstwę schematów. Jeżeli wyświetlany jest
+model liczbowy z punktem wyniku, pierwszeństwo mają wspólne przeliczenie
+punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
+i normalizacje nie mogą stanowić liczbowej podstawy wyniku pacjenta.
+
 W żeńskich widokach Całe życie, Minipuberty i Pokwitanie pojedynczy hormon
 zawsze używa tego samego `normalizationMaximum`. Zmienia się tylko oś czasu.
 Zaznaczenie innych hormonów nie przeskalowuje osi pionowej. Nie przywracać
@@ -119,7 +180,8 @@ stężeń ani precyzyjnej różnicy czasu szczytów.
 - **Minipuberty:** AMH albo inhibina B w pierwszym roku. Osobne
   `comparisonValues` nie zmieniają zwykłych `miniValues`, które nadal
   zachowują skalę całego życia. Linia dziewczynek odtwarza mediany
-  Ljubicic 2022, linia chłopców pozostaje autorskim schematem. Dotychczasowa
+  Ljubicic 2022; w bazowej warstwie linia chłopców jest autorskim schematem.
+  Dotychczasowa
   geometria porównania i ograniczenie do dzieci donoszonych nie zmieniają się.
 - **Pokwitanie:** LH, FSH, AMH albo inhibina B na wspólnej osi wieku
   chronologicznego 8–20 lat. Maksimum wyznacza się osobno dla każdej płci
@@ -134,9 +196,9 @@ Pokwitaniowe porównanie dziewczynek wykorzystuje istniejące schematy
 LH/FSH (Ljubicic 2020) i AMH (Jopling 2018 oraz FDA K170524), a dla
 inhibiny B odtworzony model 0 SD Borelli-Kjær 2025. Nie nazywamy wszystkich
 tych przebiegów medianami, a niemowlęce mediany Ljubicic 2022 nie są ich
-źródłem. Męskie linie nadal są autorskim schematem wspartym źródłami
+źródłem. Męskie linie bazowej warstwy są autorskim schematem wspartym źródłami
 opisanymi niżej. Porównanie różnych populacji i metod służy zobrazowaniu
-kierunku zmian; nie ocenia wyniku konkretnego pacjenta ani nie ustala
+kierunku zmian; samo w sobie nie ocenia wyniku pacjenta ani nie ustala
 dokładnego opóźnienia jednej płci względem drugiej.
 
 ## Źródła żeńskie
@@ -192,6 +254,11 @@ nie pomiarem. Widoczna informacja o zmiennej długości cyklu i czasie
 owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 
 ## Źródła męskie i przyszłe anality
+
+Poniżej udokumentowano zachowany **bazowy schemat bez ilościowej oceny
+pacjenta**. Oddzielne liczbowe źródła punktu wyniku znajdują się w
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Obecność schematu
+danego hormonu lub wieku nie oznacza dostępności ilościowego porównania.
 
 Męskie `schematic-data.js` to autorski schemat, bez laboratoryjnych jednostek,
 oparty na [Salonia 2019](https://doi.org/10.1038/s41572-019-0087-y), ryc. 2,
@@ -277,6 +344,15 @@ Syntetyczne wejście: chłopiec, LH, wiek 0,25 roku → początkowo wyłącznie
 krzywa LH i geometria zgodna z pierwotnym wzorcem danego widoku.
 Istniejące testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst
 formularza i interakcje obu płci.
+
+Wzorzec pierwotnych krzywych dotyczy bazowego schematu, nie nowego modelu
+ilościowego. `tests/unit/hormone-lifespan-reference.test.mjs` wywołuje
+rzeczywisty `vilda_hormone_lifespan_reference.js` i sprawdza niezależne
+wartości źródłowe, granice wieku, jednostki, nierówności oraz brak
+ekstrapolacji. W testach interfejsu punkt równy medianie musi trafić na
+odpowiednią linię, a większy/mniejszy wynik odpowiednio nad nią/pod nią;
+pełny ekran i zmiana szerokości nie mogą zmienić tej relacji. Przypadki
+źródłowe podano w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 Pliki źródłowe zawierają odnośniki, sumy kontrolne suplementów i wskazanie
 konkretnych tabel/komórek/pikseli. Repozytorium nie przechowuje pełnych PDF,

@@ -168,6 +168,23 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
         await expect(wykres).toBeVisible();
         await expect(wykres.locator('[data-hormone="amh"]')).toHaveAttribute('aria-pressed', 'true');
+        // The quantitative module and sources must also start from precache,
+        // including after a reload while the server remains stopped.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 40, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('Testosteron');
+        await page.locator('#labSubstanceDropdown [data-id="testosterone_total"]').click();
+        await page.locator('#labUnit').selectOption('nmol/L');
+        await page.locator('#labValue').fill('13');
+        const punkt = wykres.locator('[data-patient-concentration="t"]');
+        await expect(punkt).toHaveAttribute('data-value', '13');
+        await expect.poll(async () => Number(await punkt.getAttribute('data-median'))).toBeCloseTo(13.0496, 3);
+        await wykres.locator('[data-view="puberty"]').click();
+        await expect(punkt).toHaveCount(0);
+        await wykres.locator('[data-view="life"]').click();
+        await expect(punkt).toHaveAttribute('data-value', '13');
       }
     }
 
