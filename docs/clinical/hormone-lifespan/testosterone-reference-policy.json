@@ -1,0 +1,64 @@
+{
+  "version": "2026-10-10.1",
+  "kind": "educational-source-selection",
+  "analyte": "t",
+  "sex": "male",
+  "unit": "nmol/L",
+  "profiles": [
+    {
+      "id": "kelsey2014-male-t-childhood",
+      "source": "kelsey2014",
+      "minAge": 3,
+      "maxAge": 6,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 3, "maxAge": 88 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "madsen2022-male-t",
+      "source": "madsen2022",
+      "minAge": 6,
+      "maxAge": 18,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 6, "maxAge": 18 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "kelsey2014-male-t",
+      "source": "kelsey2014",
+      "minAge": 18,
+      "maxAge": 88,
+      "maxAgeExclusive": false,
+      "sourceDomain": { "minAge": 3, "maxAge": 88 },
+      "retainAllSourcePoints": true
+    }
+  ],
+  "interpolation": {
+    "method": "pchip",
+    "coordinate": "chronological-age-years",
+    "valueScale": "concentration-nmol-per-litre",
+    "madsenPublishedStepYears": 1,
+    "madsenCentralConcentrationFormula": "exp(M_logSIx1e6) / 1000000",
+    "madsenBetweenNodeMeaning": "Application interpolation between 13 published annual p50 values; not a reconstruction of the authors' fitted GAMLSS model.",
+    "crossSourceInterpolation": false,
+    "extrapolation": false,
+    "retainKelseyFullDomainForTangents": true
+  },
+  "qualification": {
+    "selection": "chronological-age-and-sex",
+    "entireRepresentedAgeIntervalMustFitOneProfile": true,
+    "halfOpenAgeIntervalMayEndAtNextProfileBoundary": true,
+    "tannerRequired": false,
+    "morningOnly": false,
+    "knownIncompatibleAssayOrSpecimenStillRejected": true,
+    "knownTreatmentOrStimulationStillRejected": true
+  },
+  "limits": [
+    "This policy selects an educational population central value, not a diagnostic reference interval.",
+    "Madsen represents chronological-age models pooling pubertal stages; a Tanner stage is neither inferred nor required.",
+    "The published Madsen table includes an exact age-18 node, retained for interpolation below 18. Routing at age 18 uses Kelsey; the source node does not extend Madsen to completed age 18-19.",
+    "Reference values genuinely differ at source boundaries. A smooth illustrative display transition cannot supply a patient median or modify source values.",
+    "The existing term-infant Busch profile, graphical readability gate and gap from 1 to less than 3 years remain unchanged.",
+    "The adult and childhood Kelsey records retain all source points from 3 through 88 years so splitting applicability does not change source PCHIP tangents."
+  ]
+}

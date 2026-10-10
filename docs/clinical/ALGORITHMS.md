@@ -562,9 +562,15 @@ Aktywna polityka ilościowych źródeł:
   do sztucznej podłogi i nie jest klinicznym progiem.
 - Chłopcy LH/FSH, 6–16 lat: Madsen 2022 (DOI 10.1210/clinem/dgac155),
   oficjalne roczne L/M/S; p50=`exp(M)/1e6`, nie samo M.
-- Męski testosteron całkowity, 3–88 lat: węzły co 0,1 roku z funkcji Kelsey 2014
+- Męski testosteron całkowity, 6–<18 lat: Madsen 2022, oficjalne roczne
+  L/M/S 6–18 z arkusza `LCMSMS hormones`, AF19:AI31, Supplemental Table 1 v1
+  (DOI 10.6084/m9.figshare.17153336.v1); p50=`exp(M)/1e6` w nmol/L.
+  BGS2 i FitFutures, bezpośrednie LC-MS/MS. Węzeł 18 domyka interpolację
+  dla 17.x; dokładnie 18 lat należy już do Kelsey.
+- Męski testosteron całkowity, 3–<6 i 18–88 lat: zachowane węzły co 0,1 roku z funkcji Kelsey 2014
   (DOI 10.1371/journal.pone.0109346) z kontrolą poprawionych p50 z 2015
   (DOI 10.1371/journal.pone.0117674); pomiędzy węzłami PCHIP.
+  Pełny model 3–88 pozostaje dowodem, osobne rekordy ograniczają dobór.
 - Męska inhibina B, 1–<6,1 roku: opublikowane p50 z tabeli 4 Kelsey 2016
   (DOI 10.1371/journal.pone.0153843); 6,1–80 lat: osobny przybliżony
   profil 0 SD Borelli-Kjær 2025, ryc. 2 (DOI 10.1210/clinem/dgae439).
@@ -810,26 +816,64 @@ Granice, styczne w przejściach, telefon, pełny ekran i offline podlegają
 regresji. Zielone testy nie nadają statusu walidacji klinicznej; scalenie
 oraz końcowa akceptacja kliniczna pozostają decyzją właściciela.
 
-### HORMONE-TESTOSTERONE-STABLE-CURVE — stała linia i skala testosteronu, 2026-10-10
+### HORMONE-TESTOSTERONE-STABLE-CURVE — stała linia testosteronu i pediatryczne źródło, 2026-10-10
 
 **Przyczyna i decyzja właściciela:** audyt wykazał przełączenie schematu
 na inny model po wpisaniu wyniku, przeskalowanie krzywej przy wysokiej
 liczbie oraz powrót do schematu przy zbliżeniu okresu poza wiekiem pacjenta.
-Właściciel zatwierdził stabilizację prezentacji bez zmiany źródeł
-odniesienia. Zwykłe męskie widoki całego życia, minipuberty i pokwitania
-korzystają z jednego przebiegu i jednej skali, także bez wyniku.
+Właściciel zatwierdził stabilizację prezentacji, a po jej scaleniu polecił
+kontynuować naprawę według planu. Kolejny etap zastępuje dziecięce p50
+Kelsey przez Madsen w wieku 6–<18 lat. Zwykłe męskie widoki całego życia,
+minipuberty i pokwitania nadal korzystają z jednego przebiegu i jednej skali,
+także bez wyniku. Końcowa akceptacja kliniczna dotyczy gotowej zmiany w PR;
+nie jest nadaniem modelom statusu walidacji klinicznej.
 
 **Źródła i granice:** pozostają Busch 2022, DOI
 `10.1210/clinem/dgac115`, ryc. 3, mediana GAMLSS donoszonych chłopców
 od 7 dni do <1 roku, surowica LC-MS/MS, oraz Kelsey 2014, DOI
 `10.1371/journal.pone.0109346`, Table S1, z poprawionym p50 z korekty 2015,
-DOI `10.1371/journal.pone.0117674`, 3–88 lat. Jednostka nmol/L;
+DOI `10.1371/journal.pone.0117674`, obecnie w oknach 3–<6 i 18–88 lat.
+Jednostka nmol/L;
 wyłącznie testosteron całkowity. Kelsey łączy 10 097 obserwacji z 13 badań
 i różne metody harmonizowane przez autorów do odpowiednika LC-MS/MS.
 Busch jest odczytem ryciny, nie udostępnioną dokładną funkcją autora;
 warunki donoszenia i bramka rozdzielczości grafiki pozostają bez zmian.
 Szczyt mediany wieku z ryc. 3 około 47. dnia nie jest medianą wieku
 indywidualnych szczytów 29 dni z podłużnej analizy ryc. 2.
+
+W wieku 6–<18 lat źródłem staje się Madsen 2022, *Reference Curves for
+Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical
+Classifications*, JCEM 107(7):2004–2015, DOI `10.1210/clinem/dgac155`,
+PMID 35299255. Pełny artykuł i Supplemental Table 1 v1, DOI
+`10.6084/m9.figshare.17153336.v1`, arkusz `LCMSMS hormones`, AF19:AI31,
+podają 13 węzłów LMS dla chłopców 6–18 lat. Transformacja K37:
+`X=ln(T[nmol/L]*1e6)`, więc `p50=exp(M)/1e6`. Nie kopiujemy błędnego
+mianownika przykładowej formuły SDS L37; błąd nie dotyczy parametrów M.
+Między rocznymi p50 używamy PCHIP, bez deklarowania odtworzenia całej
+autorskiej ciągłej funkcji LMS. Nie wdrażamy SDS ani norm laboratoryjnych.
+
+**Uzasadnienie i ograniczenia wyboru:** norweskie kohorty BGS2 i FitFutures
+mają bezpośrednie oznaczenia surowicy LC-MS/MS w docelowym wieku,
+z pobraniami 08:00–14:00. To mocniejsza podstawa pediatrycznej prezentacji
+niż dawny zbiór różnych metod harmonizowanych w Kelsey. Nie jest to
+badanie podłużne jednej osoby, norma Tannera ani model skorygowany do
+porannego pobrania. Kohorty obejmują różne BMI i głównie osoby pochodzenia
+europejskiego. Nie dodajemy warunku pory pobrania lub stadium do doboru
+tej mediany wieku. Liczebności kohort oraz tabel z innym usuwaniem wartości
+odstających nie są dokładnym N modelu LMS testosteronu.
+
+Przy 6 latach p50 Madsen 0,02393726986868612 nmol/L zastępuje około
+0,323 Kelsey. LLOQ wynosi 0,02 nmol/L; p50 leży powyżej tej granicy.
+Brak jawnej reguły postępowania z surowymi obserwacjami <LLOQ pozostaje
+ograniczeniem, nie dowodem błędu p50. CVA 4% opisano dla 1,5–37 nmol/L,
+nie dla 0,024. Rozbieżność modeli nie wynika z wykrytego błędu jednostki
+i nie oznacza rozpoznania u pojedynczego dziecka.
+
+Granice 6 i 18 są polityką aplikacji. Węzeł Madsen 18 lat służy
+interpolacji przed 18. urodzinami; dokładnie 18 lat otrzymuje oryginalne
+Kelsey około 15,16389 nmol/L. Niepewny wiek przecinający źródła nie daje
+jednej arbitralnej mediany. Kelsey 3–<6 zachowano ostrożnie bez
+ekstrapolacji Madsen w dół, a luka 1–<3 nadal nie otrzymuje punktu.
 
 **Polityka prezentacji:** `testosterone-display-policy.json`, eksport
 `testosteroneDisplayPolicy`, jest oddzielny od danych źródłowego odniesienia.
@@ -838,27 +882,32 @@ renderer tworzy jedną ścieżkę PCHIP z ciągłą styczną (C1) w stałych
 współrzędnych całego życia. Zbliżenie wycina tę samą krzywą. Most 150 dni–4 lata
 jest monotonicznym przejściem poglądowym bez wymuszania stromych stycznych
 źródeł; obejmuje również część dostępnych odcinków, aby uniknąć sztucznego
-wzrostu na styku populacji. Pas 19,3–25 lat łagodzi zmianę skali czasu
-w obrębie Kelsey, zachowując styczne źródłowe i węzeł szczytu 19,3 roku.
+wzrostu na styku populacji. Nowy monotoniczny most 5–6 lat łączy Kelsey
+z Madsen. Pas 17–25 lat łączy Madsen z dorosłym Kelsey i łagodzi zmianę
+skali czasu, zachowując styczne źródłowe na końcach i wewnętrzny węzeł
+Madsen 18 lat/18,051151264084126 nmol/L. Ten koniec tabeli jest kotwicą
+geometrii, nie dowodem fizjologicznego wieku szczytu. Mediana pacjenta
+nie pochodzi z mostu ani z kotwicy innej niż jego dobrane źródło.
 Kotwice przedurodzeniowe oraz płaski ogon 88–90 lat przy końcowej wartości
 Kelsey około 13,222919802 nmol/L są ilustracją, nie ekstrapolacją mediany.
 
-Maksimum źródłowych węzłów 15,41843900285427 nmol/L i zapas 1,25 dają stałą górę osi
-około 19,273049 nmol/L. Wyższy wynik ma strzałkę z rzeczywistą liczbą,
+Maksimum źródłowych węzłów 18,051151264084126 nmol/L i zapas 1,25 dają stałą górę osi
+około 22,563939 nmol/L. Wyższy wynik ma strzałkę z rzeczywistą liczbą,
 bez kropki na granicy i bez przeskalowania. Źródłowy znacznik mediany
 może leżeć poza graficznym mostem: nie przesuwamy go ani wyniku pacjenta,
 aby dopasować je do ilustracji. Pusty, błędny lub cenzurowany zapis
 nie tworzy punktu ani strzałki, a kształt linii pozostaje taki sam.
 
-**Wpływ kliniczny i granica naprawy:** zmienia się wyłącznie prezentacja
-edukacyjna. `vilda_hormone_lifespan_reference.js`, kwalifikacja pacjenta,
-źródłowe mediany, jednostki, normy laboratoryjne, werdykty i zapisy
-pozostają bez zmian. Brak punktu nie blokuje odrębnej interpretacji badania.
-Madsen nie zastępuje Kelsey w tej poprawce. Rozbieżność dziecięcych modeli
-pozostaje otwarta: przy 6 latach Kelsey około 0,323, Madsen około
-0,02394 nmol/L, przy deklarowanym LLOQ Madsen 0,02. Wybór nowego profilu
-wymaga osobnego rozstrzygnięcia klinicznego. Luka 1–<3 lat nie otrzymuje
-mediany z mostu. Plateau dorosłych w Kelsey jest zachowane jako wynik
+**Wpływ kliniczny i granica naprawy:** zmiana źródła i mediany wpływa na
+edukacyjną relację wyniku pacjenta do populacji w wieku 6–<18 lat;
+jest zmianą kliniczną w rozumieniu AGENTS.md. Silnik
+`vilda_hormone_lifespan_reference.js` pozostaje ten sam, natomiast osobne
+rekordy danych dobierają Madsen albo dwa okna oryginalnego Kelsey.
+Mediany poza 6–<18 lat, jednostki, laboratoryjne normy i werdykty,
+zapisy i synchronizacja nie zmieniają się. Brak punktu nie blokuje
+odrębnej interpretacji badania. Mosty służą wyłącznie płynności prezentacji,
+a luka 1–<3 lat nie otrzymuje z nich mediany. Plateau dorosłych w Kelsey
+jest zachowane jako wynik
 tego modelu; nie dowodzi stałego T u każdego seniora. Porównanie płci,
 pozostałe hormony oraz małe wykresy grupowe nie zmieniają swojej polityki.
 
@@ -869,6 +918,11 @@ z tą wartością. M/2 lata/0,1 nmol/L → brak mediany i punktu mimo ciągłej
 ilustracji. M/180 dni/donoszony/wynik równy medianie Busch → zgodne
 znaczniki wyniku i źródła, nawet poza mostem; wcześniactwo lub nieznane
 donoszenie → bez dopasowania do Busch, bez zmiany ogólnego przebiegu.
+M/dokładnie 6 lat/T 0,02393726986868612 nmol/L oraz M/dokładnie 12 lat/T
+1,4977255724595988 → wynik równy medianie Madsen, bez nowego werdyktu.
+M/dokładnie 18 lat → Kelsey około 15,16389, a nie graficzna kotwica
+Madsen 18,05115. Wiek 5,99–6,01 lub 17,99–18,01 lat → brak jednoznacznego
+punktu między źródłami. M/2 lata → nadal brak źródłowej mediany.
 Kontrola obejmuje też granice mostów, brak dodatkowych ekstremów,
 tożsamość krzywej między zbliżeniami, telefon, pełny ekran i offline.
 Testy potwierdzają odtworzenie kontraktu, nie walidację kliniczną.
