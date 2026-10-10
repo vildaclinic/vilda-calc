@@ -119,17 +119,39 @@ async function expectIdleLock(page, owner) {
   });
   await page.waitForFunction(() => ['__chartActivityTopLock', '__chartActivityOwnerLock']
     .some(key => sessionStorage.getItem(key) === 'idle'), {}, { timeout: idleMs * 3 });
-  await page.waitForLoadState('load');
-  await expect(dialog(page)).toHaveCount(0);
-  expect(await page.evaluate(() => document.querySelectorAll('.vhl-scroll-locked').length)).toBe(0);
-  expect(await page.evaluate(() => Boolean(window.VildaVault?.isUnlocked()))).toBe(false);
-  if (owner === page || !owner.isDetached()) {
-    await owner.waitForLoadState('load');
-    await owner.evaluate(() => clearInterval(window.__chartRefresh));
-    await expect(owner.locator('.vilda-hormone-lifespan')).toBeHidden();
-    expect(await owner.evaluate(() => document.querySelectorAll('.vhl-scroll-locked').length)).toBe(0);
-    expect(await owner.evaluate(() => Boolean(window.VildaVault?.isUnlocked()))).toBe(false);
+  // The lock schedules legitimate navigation. Waiting for 'load' alone can
+  // resolve for the old document just before that navigation starts (WebKit).
+  // Retry only destroyed/detached contexts, and verify the complete final state
+  // in both documents. An absent Vault is still loading, not proof of a lock.
+  async function readFinalState(scope) {
+    try {
+      const state = await scope.evaluate(() => {
+        clearInterval(window.__chartRefresh);
+        const vaultReady = typeof window.VildaVault?.isUnlocked === 'function';
+        return {
+          vaultReady,
+          unlocked: vaultReady ? window.VildaVault.isUnlocked() : null,
+          dialogs: document.querySelectorAll('dialog.vhl-fullscreen-dialog').length,
+          scrollLocks: document.querySelectorAll('.vhl-scroll-locked').length,
+        };
+      });
+      return { ...state, chartHidden: !(await scope.locator('.vilda-hormone-lifespan').isVisible()) };
+    } catch (error) {
+      if (/Execution context was destroyed|Cannot find context with specified id|[Ff]rame (?:was|has been) detached|Execution context is not available in detached frame/.test(error.message)) {
+        return { navigating: true };
+      }
+      throw error;
+    }
   }
+  const lockedAndClean = state => state.vaultReady && state.unlocked === false
+    && state.dialogs === 0 && state.scrollLocks === 0 && state.chartHidden;
+  await expect.poll(async () => {
+    const top = await readFinalState(page);
+    const ownerAttached = owner !== page && !owner.isDetached();
+    const frame = ownerAttached ? await readFinalState(owner) : null;
+    return { top: Boolean(lockedAndClean(top)), owner: !ownerAttached || Boolean(lockedAndClean(frame)) };
+  }, { timeout: idleMs * 3, intervals: [100, 250, 500], message: 'Locked vaults, hidden chart, removed dialog and scroll locks after navigation' })
+    .toEqual({ top: true, owner: true });
 }
 
 for (const framed of [false, true]) {
