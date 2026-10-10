@@ -692,12 +692,12 @@
   "sha256": "3cc184cdcc8237c79f70c19c70862649de1ffe2acf680bb877629ca2f8c1483b"
  },
  "vilda_hormone_lifespan.css": {
-  "v": 1,
-  "sha256": "d469ba2316d0012755ac951fcfacb7f9c48b1ae01b50885843b2be239418fef7"
+  "v": 2,
+  "sha256": "243aa71670a74b32a5ba2a95d965e77abbf8c58af9c07640d7ec81c94bf66398"
  },
  "vilda_hormone_lifespan.js": {
-  "v": 3,
-  "sha256": "f4db2252e8d6809ed6d148f4cd5f9c93767ba2968102d0c91d0a885db0ded31f"
+  "v": 4,
+  "sha256": "f0807634abf989dc7c0322f9b1395112c36dc13440556c5f3eab161c76fd12ae"
  },
  "vilda_hormone_lifespan_data.js": {
   "v": 3,

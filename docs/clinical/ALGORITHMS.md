@@ -470,6 +470,16 @@ wzorzec dla sześciu hormonów w trzech widokach na desktopie i telefonie
 oraz porównanie płci AMH/inhibiny B. Test techniczny nie stanowi walidacji
 klinicznej.
 
+**2026-10-10 — powiększanie całej sekcji:** przycisk „Powiększ” otwiera
+istniejący panel w natywnym dialogu zajmującym viewport, ponad ramką
+przelicznika. Zachowuje wybór hormonów, okres, porównanie płci i źródła;
+zamknięcie przywraca panel, fokus i przewijanie. Wykres reaguje na zmianę
+rozmiaru i obrót telefonu. Zmiana kontekstu lub wyjście z karty zamyka
+dialog. Bez zmiany danych, interpolacji, skali względnej, norm, interpretacji
+ani zapisu pacjenta. Regresje: `hormone-lifespan-fullscreen.spec.mjs`
+(desktop, telefon i same-origin iframe), dotychczasowy wzorzec SVG
+oraz testy integracji z przelicznikiem.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

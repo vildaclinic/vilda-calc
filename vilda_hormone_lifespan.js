@@ -36,7 +36,7 @@
       };
     }
     // This HTML is static. All context values are written only with textContent.
-    panel.innerHTML = `<h3 class="vhl-title">Hormony w ciągu życia</h3>
+    panel.innerHTML = `<div class="vhl-header"><h3 class="vhl-title" data-lifespan="title">Hormony w ciągu życia</h3><button type="button" class="vhl-expand" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path class="vhl-expand-icon" d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><path class="vhl-close-icon" d="m6 6 12 12M6 18 18 6"/></svg><span>Powiększ</span></button></div>
 
 <div class="vhl-toolbar"><nav class="vhl-views" aria-label="Zakres wykresu"><button type="button" data-view="life" aria-pressed="true">Całe życie</button><button type="button" data-view="mini" aria-pressed="false">Minipuberty</button><button type="button" data-view="puberty" aria-pressed="false">Pokwitanie</button></nav><button class="vhl-compare-toggle" type="button" aria-pressed="false" hidden>Porównaj płcie</button></div>
 <div class="vhl-legend" role="group" aria-label="Wybierz hormony do porównania — można zaznaczyć kilka"></div>
@@ -195,19 +195,146 @@
     let activeStage = null,
       sectorFrame = 0,
       resizeFrame = 0,
-      destroyed = false;
+      destroyed = false,
+      fullscreen = null;
     const selected = new Set();
     const svg = byId("chart"),
       legend = panel.querySelector(".vhl-legend");
     const stageNav = panel.querySelector(".vhl-stage-nav");
     const toggle = panel.querySelector(".vhl-compare-toggle"),
-      reset = panel.querySelector(".vhl-reset");
+      reset = panel.querySelector(".vhl-reset"),
+      expand = panel.querySelector(".vhl-expand");
     const motionPreference = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     );
     const requestAnimationFrame = window.requestAnimationFrame.bind(window);
     const cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
     const performance = window.performance;
+    // A modal in the child frame cannot cover the app shell. Move this same
+    // panel to the highest same-origin document; its controls and state survive.
+    // Native dialog also works on iOS without the element Fullscreen API.
+    function openFullscreen() {
+      if (fullscreen || destroyed || panel.hidden) return;
+      let target = document;
+      const frames = [];
+      try {
+        let current = window;
+        while (current.parent !== current && current.parent.document.body) {
+          frames.push(current.frameElement);
+          target = current.parent.document;
+          current = current.parent;
+        }
+      } catch {
+        // Cross-origin embedding is limited to the accessible viewport.
+      }
+      if (frames.some((frame) => !frame?.isConnected || frame.hidden)) return;
+      target.defaultView.VildaChrome?.closeDrawer?.({ reason: "handoff" });
+      const dialog = target.createElement("dialog");
+      dialog.className = "vhl-fullscreen-dialog";
+      dialog.setAttribute("aria-labelledby", byId("title").id);
+      const theme = window.getComputedStyle(panel);
+      for (const name of theme) {
+        if (name.startsWith("--"))
+          dialog.style.setProperty(name, theme.getPropertyValue(name));
+      }
+      dialog.style.font = theme.font;
+      let stylesheet = null;
+      if (target !== document) {
+        // Copy the already loaded, versioned component CSS. No new request is
+        // needed, including offline; unrelated styles and patient DOM stay put.
+        const sheet = [...document.styleSheets].find((item) =>
+          item.href && /\/vilda_hormone_lifespan\.css(?:\?|$)/.test(item.href),
+        );
+        try {
+          if (!sheet) return;
+          stylesheet = target.createElement("style");
+          stylesheet.textContent = [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
+          target.head.append(stylesheet);
+        } catch {
+          return;
+        }
+      }
+      const placeholder = document.createElement("div");
+      placeholder.setAttribute("aria-hidden", "true");
+      placeholder.style.height = panel.getBoundingClientRect().height + "px";
+      placeholder.style.marginTop = theme.marginTop;
+      placeholder.style.marginBottom = theme.marginBottom;
+      panel.before(placeholder);
+      const scrollPositions = [...new Set([window, target.defaultView])].map((view) =>
+        ({ view, left: view.scrollX, top: view.scrollY }));
+      const scrollLocks = [...new Set([document, target])].flatMap((doc) =>
+        [doc.documentElement, doc.body].map((node) => ({
+          node,
+          alreadyLocked: node.classList.contains("vhl-scroll-locked"),
+        })),
+      );
+      fullscreen = { dialog, placeholder, stylesheet, scrollLocks, scrollPositions, frames };
+      for (const { node } of scrollLocks)
+        node.classList.add("vhl-scroll-locked");
+      dialog.append(panel);
+      target.body.append(dialog);
+      panel.classList.add("vhl-expanded");
+      expand.setAttribute("aria-expanded", "true");
+      expand.querySelector("span").textContent = "Zamknij";
+      const close = () => closeFullscreen();
+      fullscreen.close = close;
+      const resize = () => onResize();
+      fullscreen.resize = resize;
+      dialog.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        close();
+      });
+      dialog.addEventListener("close", close);
+      window.addEventListener("pagehide", close);
+      target.defaultView.addEventListener("resize", resize);
+      const frameObserver = new window.MutationObserver(() => {
+        if (!host.isConnected || frames.some((frame) =>
+          !frame?.isConnected || frame.hidden || frame.getAttribute("aria-hidden") === "true"))
+          closeFullscreen(false);
+      });
+      for (const frame of frames) {
+        frameObserver.observe(frame, { attributes: true, attributeFilter: ["hidden", "aria-hidden"] });
+        if (frame.parentElement) frameObserver.observe(frame.parentElement, { childList: true });
+      }
+      fullscreen.frameObserver = frameObserver;
+      try {
+        dialog.showModal();
+        expand.focus({ preventScroll: true });
+        render();
+      } catch {
+        closeFullscreen(false);
+      }
+    }
+    function closeFullscreen(restoreFocus = true) {
+      if (!fullscreen) return;
+      const { dialog, placeholder, stylesheet, scrollLocks, scrollPositions, close, resize, frameObserver, frames } = fullscreen;
+      fullscreen = null;
+      frameObserver.disconnect();
+      window.removeEventListener("pagehide", close);
+      dialog.ownerDocument.defaultView.removeEventListener("resize", resize);
+      dialog.removeEventListener("close", close);
+      if (dialog.open) dialog.close();
+      if (placeholder.parentNode) placeholder.replaceWith(panel);
+      else host.append(panel);
+      panel.classList.remove("vhl-expanded");
+      expand.setAttribute("aria-expanded", "false");
+      expand.querySelector("span").textContent = "Powiększ";
+      dialog.remove();
+      stylesheet?.remove();
+      for (const { node, alreadyLocked } of scrollLocks)
+        if (!alreadyLocked) node.classList.remove("vhl-scroll-locked");
+      for (const { view, left, top } of scrollPositions)
+        view.scrollTo({ left, top, behavior: "instant" });
+      if (restoreFocus && host.isConnected && !panel.hidden &&
+        frames.every((frame) => frame.isConnected && !frame.hidden) && host.getClientRects().length)
+        expand.focus({ preventScroll: true });
+      onResize();
+    }
+    function chartHeight(normal) {
+      return fullscreen
+        ? Math.max(normal, Math.min(720, Math.round(fullscreen.dialog.clientHeight * 0.58)))
+        : normal;
+    }
     const NS = "http://www.w3.org/2000/svg";
     const hormones = () =>
       sex === "female" ? femaleHormones : sex === "male" ? maleHormones : [];
@@ -608,7 +735,7 @@
       const W = svg.clientWidth || 1040,
         mobile = W < 640,
         full = view === "life",
-        H = full ? (mobile ? 300 : 353) : mobile ? 334 : 393,
+        H = chartHeight(full ? (mobile ? 300 : 353) : mobile ? 334 : 393),
         left = mobile ? 26 : 49,
         right = mobile ? 12 : 25,
         top = full ? (mobile ? 38 : 36) : mobile ? 72 : 76,
@@ -862,7 +989,7 @@
         male = maleHormones.find((h) => h.id === compareHormone);
       const W = svg.clientWidth || 1040,
         mobile = W < 640,
-        H = mobile ? 334 : 393,
+        H = chartHeight(mobile ? 334 : 393),
         left = mobile ? 28 : 50,
         right = mobile ? 16 : 29,
         top = mobile ? 61 : 63,
@@ -1325,7 +1452,11 @@
       const button = event.target.closest("button");
       if (destroyed || panel.hidden || !button || !panel.contains(button))
         return;
-      if (button.dataset.hormone) {
+      if (button === expand) {
+        if (fullscreen) closeFullscreen();
+        else openFullscreen();
+        return;
+      } else if (button.dataset.hormone) {
         const id = button.dataset.hormone;
         if (compare) compareHormone = id;
         else {
@@ -1389,6 +1520,7 @@
     else window.addEventListener("resize", onResize);
 
     function clear() {
+      closeFullscreen(false);
       cancelAnimationFrame(sectorFrame);
       cancelAnimationFrame(resizeFrame);
       sectorFrame = resizeFrame = 0;
@@ -1470,6 +1602,7 @@
           ? next.preterm
           : "unknown";
       if (resetContext) {
+        closeFullscreen(false);
         selected.clear();
         selected.add(analyteHormones[currentAnalyte]);
         view = "life";

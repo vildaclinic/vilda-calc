@@ -46,6 +46,17 @@ Poza osią wieku znacznik znika zamiast przyklejać się do końca.
   `prefers-reduced-motion` wyłącza ruch. Brak osobnego przycisku zatrzymania.
 - Wiek i płeć pochodzą z istniejącego kontekstu aplikacji; bez kolejnego
   formularza. Etap wybrany do obejrzenia nie zmienia pacjenta.
+- „Powiększ” otwiera całą sekcję w oknie zajmującym viewport, również
+  ponad powłoką aplikacji. Zachowuje hormony, okres, porównanie płci,
+  schemat cyklu i rozwinięte źródła. „Zamknij” lub Escape przywraca
+  sekcję, fokus i przewinięcie. Nie wymaga Fullscreen API ani ukrycia
+  paska przeglądarki, dzięki czemu działa także na telefonie.
+  Zmiana pacjenta, analitu lub płci, blokada, usunięcie modułu i przejście
+  do innej karty zamykają powiększenie. Stan nie trafia do historii pacjenta.
+  Powiększenie zmienia rozmiar renderowania, bez zmiany interpolacji,
+  danych czy normalizacji. Test `hormone-lifespan-fullscreen.spec.mjs`
+  obejmuje oba rozmiary mobilne, obrót, ramkę same-origin i powrót
+  do pierwotnej geometrii po zamknięciu.
 
 ## Stała skala i połączenia
 
