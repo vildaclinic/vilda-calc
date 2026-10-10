@@ -324,24 +324,7 @@
       }
       return d + "L" + pair(points[points.length - 1]);
     }
-    // Select the approved illustrative landmarks without changing source anchors.
-    // The same selection and scale apply to all male views and sex comparison.
-    function maleDisplaySegment(h) {
-      const ages = h.ages || maleAges;
-      const indices = h.displayPointIndices || h.values.map((_, i) => i);
-      return {
-        points: indices.map((i) => ({
-          ageYears: ages[i],
-          relative: h.values[i],
-        })),
-      };
-    }
     function curvePath(h, left, width, y, fromAge, toAge) {
-      if (sex === "male") {
-        const segment = maleDisplaySegment(h);
-        return segmentPath(segment, left, width, y,
-          displaySpline({segments: [segment]}));
-      }
       const s = series(h),
         min =
           fromAge === undefined ? s.min : Math.max(s.min, xFraction(fromAge)),
@@ -354,14 +337,14 @@
         }),
       );
     }
-    function displaySpline(h, coordinate = xFraction) {
+    function displaySpline(h) {
       const nodes = [];
       for (const segment of h.segments)
         for (const p of segment.points) {
           if (!nodes.length || p.ageYears !== nodes[nodes.length - 1].ageYears)
             nodes.push(p);
         }
-      const xs = nodes.map((p) => coordinate(p.ageYears)),
+      const xs = nodes.map((p) => xFraction(p.ageYears)),
         v = nodes.map((p) => p.relative),
         dx = [],
         d = [],
@@ -401,11 +384,11 @@
       };
       return { xs, at };
     }
-    function segmentPath(segment, left, width, y, spline, coordinate = xFraction) {
-      const min = Math.max(0, coordinate(segment.points[0].ageYears)),
+    function segmentPath(segment, left, width, y, spline) {
+      const min = Math.max(0, xFraction(segment.points[0].ageYears)),
         max = Math.min(
           1,
-          coordinate(segment.points[segment.points.length - 1].ageYears),
+          xFraction(segment.points[segment.points.length - 1].ageYears),
         );
       if (max <= min) return null;
       const cuts = [min, ...spline.xs.filter((x) => x > min && x < max), max];
@@ -944,7 +927,7 @@
           }),
         );
       }
-      const mi = (male.ages || maleAges)
+      const mi = maleAges
           .map((age, i) => ({ age, i }))
           .filter((p) => p.age >= 0 && p.age <= 1),
         maleMax = Math.max(...mi.map((p) => male.values[p.i]));
@@ -961,20 +944,18 @@
           color: "#2b7491",
           min: 0,
           max: 1,
-          segment: maleDisplaySegment(male),
+          at: interpolator(
+            mi.map((p) => p.age),
+            mi.map((p) => male.values[p.i] / maleMax),
+          ),
         },
       ];
       for (const curve of curves) {
-        const d = curve.segment
-          ? segmentPath(
-              curve.segment, left, pw, (v) => y(v / maleMax),
-              displaySpline({ segments: [curve.segment] }, (age) => age),
-              (age) => age,
-            )
-          : basisPath(Array.from({ length: 193 }, (_, i) => {
-              const age = curve.min + ((curve.max - curve.min) * i) / 192;
-              return [x(age), y(curve.at(age))];
-            }));
+        const points = Array.from({ length: 193 }, (_, i) => {
+          const age = curve.min + ((curve.max - curve.min) * i) / 192;
+          return [x(age), y(curve.at(age))];
+        });
+        const d = basisPath(points);
         g.append(
           el("path", {
             d,

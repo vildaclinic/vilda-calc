@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
@@ -121,27 +122,27 @@ describe('Poglądowy przebieg hormonów — produkcyjne dane i granice dowodów'
     expect(data.maleAges.at(-1)).toBe(90);
   });
 
-  it('punkty prowadzące męskie łuki zachowują granice, szczyty i dołki schematu', () => {
+  it('męskie krzywe zachowują pełne oryginalne punkty i nie wybierają uproszczonego podzbioru', () => {
+    const original = JSON.parse(readFileSync(new URL(
+      '../fixtures/hormone-lifespan-original-svg.json', import.meta.url), 'utf8'));
+    expect(data.maleAges).toHaveLength(33);
+    expect(data.maleHormones.map(hormone => hormone.id))
+      .toEqual(['lh', 'fsh', 't', 'insl3', 'amh', 'inhb']);
     for (const hormone of data.maleHormones) {
       const ages = hormone.ages || data.maleAges;
-      const indices = hormone.displayPointIndices;
-      expect(indices.every(Number.isInteger)).toBe(true);
-      expect(indices).toEqual([...new Set(indices)].sort((a, b) => a - b));
-      expect(indices[0]).toBe(0);
-      expect(indices.at(-1)).toBe(ages.length - 1);
-      expect(indices).toContain(ages.indexOf(0));
-      expect(indices).toContain(ages.indexOf(1));
-      for (let i = 1; i < indices.length; i++) {
-        const from = indices[i - 1];
-        const to = indices[i];
-        const lower = Math.min(hormone.values[from], hormone.values[to]);
-        const upper = Math.max(hormone.values[from], hormone.values[to]);
-        // Removing a shoulder must not remove a higher peak or a lower trough.
-        for (const value of hormone.values.slice(from, to + 1)) {
-          expect(value).toBeGreaterThanOrEqual(lower);
-          expect(value).toBeLessThanOrEqual(upper);
-        }
+      expect(hormone).not.toHaveProperty('displayPointIndices');
+      expect(hormone.values).toHaveLength(33);
+      expect(ages).toHaveLength(hormone.values.length);
+      expect(ages).toEqual([...new Set(ages)].sort((a, b) => a - b));
+      for (const value of hormone.values) {
+        expect(value).toBeGreaterThanOrEqual(0);
+        expect(value).toBeLessThanOrEqual(1);
       }
     }
+    // Pin all original anchors, individual peak ages and stage widths. The
+    // independent browser fixture was captured before the rejected smoothing.
+    const maleData = JSON.stringify({ maleAges: data.maleAges,
+      maleHormones: data.maleHormones, maleStages: data.maleStages });
+    expect(createHash('sha256').update(maleData).digest('base64')).toBe(original.maleDataSha256Base64);
   });
 });
