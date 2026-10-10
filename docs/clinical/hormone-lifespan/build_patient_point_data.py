@@ -126,8 +126,15 @@ def build():
                             rel_tol=1e-14, abs_tol=0) for point in madsen_t['points'])
     assert all(point['centralConcentration'] > madsen_t['lowerLimitOfQuantification']
                for point in madsen_t['points'])
+    walravens = read('walravens2025-male-total-testosterone-group-means.json')
+    assert (walravens['analyte'], walravens['statistic'], walravens['unit']) == (
+        'total-testosterone', 'arithmetic-group-mean', 'nmol/L')
+    assert sum(row['participants'] for row in walravens['rows']) == walravens['participants'] == 1194
+    assert len(walravens['rows']) == 7
+    walravens_groups = {row['id']: row for row in walravens['rows']}
     routes = testosterone_policy['profiles']
-    assert len(routes) == 3 and len({route['id'] for route in routes}) == 3
+    assert len(routes) == 9 and len({route['id'] for route in routes}) == 9
+    assert [route['sourceGroup'] for route in routes if route['source'] == 'walravens2025'] == list(walravens_groups)
     for index, route in enumerate(routes):
         assert route['sourceDomain']['minAge'] <= route['minAge'] < route['maxAge'] <= route['sourceDomain']['maxAge']
         assert route['retainAllSourcePoints']
@@ -138,8 +145,8 @@ def build():
                    'maxAgeExclusive':route['maxAgeExclusive'],
                    'sourceDomain':route['sourceDomain'], 'retainAllSourcePoints':True}
         if route['source'] == 'kelsey2014':
-            # Applicability is split; the complete original nodes are retained
-            # in both records so PCHIP derivatives at 6/18 remain unchanged.
+            # Retain the complete original nodes so the pediatric PCHIP
+            # derivatives are unchanged by restricting patient applicability.
             add(route['id'],'t','male',[dict(point) for point in kelsey_points],
                 route['minAge'],route['maxAge'],
                 'Kelsey 2014/2015 · testosteron','https://doi.org/10.1371/journal.pone.0109346',
@@ -176,6 +183,42 @@ def build():
                     'The model center is exp(M)/1e6 on the worksheet log-transformed scale, not an arithmetic mean of concentrations.',
                     'The lowest published p50 (age 6) is above the stated LLOQ 0.02 nmol/L; low-range precision is not the 4% quoted at 1.5–37 nmol/L.',
                     'Below-LLOQ preprocessing in the fitted source model was not explicitly reported in the reviewed materials; do not infer a zero or LLOQ/2 substitution.'])
+        elif route['source'] == 'walravens2025':
+            row = walravens_groups[route['sourceGroup']]
+            assert route['id'] == 'walravens2025-male-t-' + row['id']
+            assert all(route[key] == row[key] for key in ('minAge', 'maxAge', 'maxAgeExclusive'))
+            assert route['sourceDomain'] == {
+                'minAge': walravens['population']['minAge'],
+                'maxAge': walravens['population']['maxAge']}
+            assert row['minAge'] <= row['meanAge'] <= row['maxAge']
+            mean = row['meanNmolL']
+            add(route['id'], 't', 'male',
+                [dict(ageYears=row['minAge'], value=mean),
+                 dict(ageYears=row['maxAge'], value=mean)],
+                row['minAge'], row['maxAge'],
+                'Walravens 2025/2026 · testosteron · średnia grupy wieku',
+                walravens['source']['url'], walravens['assay']['method'],
+                'Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne',
+                'group-mean', interpolation='constant', maxAgeExclusive=row['maxAgeExclusive'],
+                compatibleAssayMethodIds=['lc-ms/ms', 'lc-ms-ms', 'lcmsms'],
+                meanAge=row['meanAge'], groupN=row['participants'],
+                ageGroup={'label': row['label'], 'minAge': row['minAge'],
+                          'maxAge': row['maxAge'], 'maxAgeExclusive': row['maxAgeExclusive'],
+                          'meanAge': row['meanAge'], 'n': row['participants'],
+                          'sourceUnit': 'nmol/L', 'sourceMean': mean,
+                          'boundaryPolicy': 'published-decade-groups-limited-to-observed-age-support',
+                          'description': 'Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia.'},
+                provenance={**walravens['source'], 'sourceRouting': routing,
+                            'participants': walravens['participants'],
+                            'groupParticipants': row['participants'],
+                            'publishedMeanAge': row['meanAge'],
+                            'sourceMean': mean, 'sourceSd': row['sdNmolL'],
+                            'sourceUnit': 'nmol/L', 'sourceToCanonicalFactor': 1,
+                            'sourceColumn': row['label'],
+                            'sourcePopulation': walravens['population'],
+                            'assay': walravens['assay'],
+                            'ageRouting': walravens['ageRouting']},
+                limitations=walravens['limitations'])
         else:
             raise ValueError('Unsupported testosterone source in routing policy')
 
@@ -249,9 +292,9 @@ def build():
             provenance={**infant['source'],'table':hormone['supplementTable'],
                         'participants':98,'samples':266},limitations=infant['displayNotes'])
 
-    return {'version':'2026-10-10.4','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-11.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
-            'interpolation':'Monotone PCHIP within continuous source profiles; age-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
+            'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,
             'unitConversions':{
                 'lh':{'unit':'IU/L','factors':{'IU/L':1,'mIU/mL':1}},

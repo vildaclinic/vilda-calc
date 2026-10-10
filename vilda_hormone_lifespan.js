@@ -474,6 +474,19 @@
       return d + "L" + pair(points[points.length - 1]);
     }
     function curvePath(h, left, width, y, fromAge, toAge) {
+      if (sex === "male" && !compare) {
+        let stable = schematicCurves.get(h.id);
+        if (!stable) {
+          const ages = h.ages || maleAges;
+          const segment = { points: ages.map((ageYears, i) => ({ ageYears, relative: h.values[i] })) };
+          stable = { display: { points: segment.points }, segment,
+            spline: displaySpline({ segments: [segment] }, maleLifeFraction) };
+          schematicCurves.set(h.id, stable);
+        }
+        // A zoom must not refit the infant anchors and move their peaks.
+        // Quantitative reference curves remain in their separate engine.
+        return stableReferencePath(stable, left, width, y);
+      }
       const s = series(h),
         min =
           fromAge === undefined ? s.min : Math.max(s.min, xFraction(fromAge)),
@@ -785,6 +798,7 @@
       });
       return [display.id, { display, segment, spline: displaySpline({ segments: [segment] }, maleLifeFraction, tangents) }];
     }));
+    const schematicCurves = new Map();
     const stableVisible = (id) => !compare && sex === "male" && stableCurves.has(id) && selected.has(id);
     const stableInhibinVisible = () => stableVisible("inhb");
     const stableTestosteroneVisible = () => stableVisible("t");
@@ -885,8 +899,9 @@
       const my = y(model.referenceValue / model.divisor / model.ceiling);
       const unit = model.profile.unit;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
-      const medianLabel = model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
-      const medianContext = model.profile.statistic === "group-median"
+      const groupMean = model.profile.statistic === "group-mean";
+      const medianLabel = groupMean ? "Średnia grupy" : model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
+      const medianContext = groupMean ? `Średnia w grupie ${model.profile.ageGroup.label}` : model.profile.statistic === "group-median"
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "Mediana dla wieku";
@@ -894,6 +909,9 @@
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
         "data-median": model.referenceValue, "data-profile": model.profile.id,
+        // Keep the legacy numeric attribute for existing integrations; the
+        // statistic is explicit and must never be inferred from that name.
+        "data-reference-value": model.referenceValue, "data-reference-statistic": model.profile.statistic,
         "data-divisor": model.divisor, "data-ceiling": model.ceiling,
         "data-plot-top": top, "data-plot-bottom": bottom,
         ...(offscale ? { "data-offscale": "above" } : {}),
@@ -974,23 +992,22 @@
       if (!model) return;
       renderedPoint = model;
       const name = hormones().find((h) => h.id === model.id).name;
-      panel.querySelector(".vhl-axis-label").textContent = name + (model.stableDisplay ? " · wynik na tle badań" : " · wynik na tle mediany");
-      const groupLabel = model.profile.statistic === "group-median"
+      const groupMean = model.profile.statistic === "group-mean";
+      panel.querySelector(".vhl-axis-label").textContent = name + (groupMean
+        ? ` · grupa ${model.profile.ageGroup.label}` : model.stableDisplay ? " · wynik na tle badań" : " · wynik na tle mediany");
+      const groupLabel = groupMean || model.profile.statistic === "group-median"
         ? ` grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "";
-      const transition = model.stableDisplay?.transitions.some((part) =>
-        patientAgeYears >= part.minAge && patientAgeYears <= part.maxAge);
       byId("scale-note").textContent = (model.stableDisplay
-        ? "Linia: poglądowy przebieg na podstawie badań. Kropka: wynik."
-        : `Kropka: wynik. Linia: mediana${groupLabel}, nie granica normy.`) +
-        (transition ? " Mediana źródłowa jest oznaczona osobno." : "") +
+        ? `Kropka: wynik. Jasny znacznik: ${groupMean ? "średnia grupy" : "odniesienie z badania"}. Linia jest poglądowa.`
+        : `Kropka: wynik. Linia: ${groupMean ? "średnia" : "mediana"}${groupLabel}, nie granica normy.`) +
         (model.stableDisplay && model.value / model.divisor > model.ceiling ? " ↑ Wynik powyżej skali." : "") +
         (compare ? " Obie płcie we wspólnej skali stężeń." : "") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
       byId("scale-note").setAttribute("data-current-source", model.profile.id);
       byId("chart-desc").textContent = model.a11y +
-        " Wynik i mediana używają tej samej skali stężeń. " +
+        " Wynik i źródłowa wartość odniesienia używają tej samej skali stężeń. " +
         (model.stableDisplay
           ? "Linia jest syntezą badań z wygładzonymi przejściami, a nie jedną medianą populacji. Przejścia nie wyznaczają wartości odniesienia pacjenta. " : "") +
         (compare ? "Obie płcie są pokazane w tej samej jednostce i skali; źródła mogą stosować różne metody oznaczenia."
@@ -1021,7 +1038,17 @@
         "missing-puberty-stage": "Ta mediana dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
         "incompatible-puberty-stage": "Dostępna mediana wymaga zgodnej oceny przed pokwitaniem (Tanner 1).",
       };
-      const message = messages[patientPoint?.reason];
+      const adultTestosterone = id === "t" && sex === "male" && patientAgeYears >= 18;
+      const adultMessages = {
+        "unsupported-age": "Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.",
+        "ambiguous-age": "Podany przedział wieku obejmuje różne grupy odniesienia.",
+        "ambiguous-profile": "Brak jednoznacznej wartości odniesienia do naniesienia wyniku.",
+        "incompatible-specimen": "Wartość odniesienia nie dotyczy materiału tej próbki.",
+        "incompatible-assay": "Brak wartości odniesienia dla potwierdzonej metody tej próbki.",
+        "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
+        "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
+      };
+      const message = (adultTestosterone && adultMessages[patientPoint?.reason]) || messages[patientPoint?.reason];
       if (message) byId("scale-note").textContent = message + " Krzywe pozostają poglądowe.";
     }
 
@@ -1172,6 +1199,19 @@
           };
         if (sex === "male" && stableCurves.has(h.id)) {
           const stable = stableCurves.get(h.id);
+          const tail = h.id === "t" && full && stable.display.illustrativeIntervals.find((part) => part.kind === "older-age-tail");
+          if (tail) {
+            const id = uid + h.id + "-illustrative-tail";
+            const gradient = el("linearGradient", { id, gradientUnits: "userSpaceOnUse",
+              x1: x(tail.minAge), x2: x(tail.maxAge), y1: 0, y2: 0,
+              "data-illustrative-tail-from": tail.minAge });
+            gradient.append(el("stop", { offset: "0%", "stop-color": h.color, "stop-opacity": 1 }),
+              el("stop", { offset: "100%", "stop-color": h.color, "stop-opacity": 0.15 }));
+            const defs = el("defs");
+            defs.append(gradient);
+            g.append(defs);
+            style.stroke = `url(#${id})`;
+          }
           g.append(el("path", { ...style, d: stableReferencePath(stable, left, pw, y),
             "data-line": h.id, "data-stable-reference-line": h.id,
             "data-divisor": stable.display.divisor, "data-ceiling": stable.display.ceiling,
@@ -1323,10 +1363,9 @@
         byId("chart-desc").textContent += " Inhibina B zachowuje stały przebieg i skalę. Przejścia między źródłami oraz okres płodowy i wiek powyżej 80 lat są poglądowe.";
       }
       if (stableTestosteroneVisible()) {
-        byId("scale-note").textContent = (stableInhibinVisible() ? "Testosteron i inhibina B" : "Testosteron") +
-          ": poglądowy przebieg na podstawie badań. Każdy hormon ma własną skalę.";
+        byId("scale-note").textContent = "Przebieg poglądowy. Każdy hormon ma własną skalę.";
         byId("chart-desc").textContent += " Testosteron zachowuje stały przebieg i skalę. " +
-          "Połączenie między niemowlęctwem a dzieciństwem, okres płodowy i wiek powyżej 88 lat są poglądowe.";
+          "Połączenie między niemowlęctwem a dzieciństwem, okres płodowy i dorosły łuk są poglądowe. Po 86 latach brak ilościowego odniesienia.";
       }
       pointDescription(dotModel);
     }
@@ -1585,9 +1624,11 @@
         copy = "W wieku rozrodczym zmienia się w cyklu miesiączkowym.";
       }
       if (renderedPoint) {
-        title = renderedPoint.profile.statistic === "group-median"
+        const groupMean = renderedPoint.profile.statistic === "group-mean";
+        title = groupMean ? "Wynik na tle średniej grupy wieku" : renderedPoint.profile.statistic === "group-median"
           ? "Wynik na tle mediany grupy" : "Wynik na tle mediany dla wieku";
-        copy = "Mediana opisuje populację z badania. Wynik konkretnej osoby ocenia się z zakresem referencyjnym i kontekstem klinicznym.";
+        copy = (groupMean ? `Średnia opisuje badaną grupę ${renderedPoint.profile.ageGroup.label}.` : "Mediana opisuje populację z badania.") +
+          " Wynik konkretnej osoby ocenia się z zakresem referencyjnym i kontekstem klinicznym.";
       }
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
@@ -1740,10 +1781,11 @@
         }
       }
       if (stableTestosteroneVisible()) {
-        paragraph("Linia testosteronu całkowitego zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Łączy poglądowo mediany różnych badań; nie jest jedną medianą populacji ani granicą normy.");
-        paragraph("Niemowlęca część źródłowa dotyczy chłopców urodzonych o czasie. Od 6. do 18. urodzin odniesienie pochodzi z Madsen 2022 (LC-MS/MS); w wieku 3–<6 i 18–88 lat z Kelsey 2014/2015. Granice doboru badań nie oznaczają nagłej zmiany fizjologicznej.");
-        paragraph("Połączenia od około 5. miesiąca do 4 lat, 5–6 i 16–25 lat, okres płodowy oraz odcinek po 88. roku są poglądowe. Zaokrąglony szczyt nie wyznacza wieku biologicznego maksimum. Połączenia nie dostarczają mediany ani normy dla pacjenta.");
-        paragraph("Kropka oznacza wynik, a jasny znacznik medianę wybranego źródła. W poglądowym połączeniu mediana może nie leżeć na linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Kolor nie klasyfikuje wyniku.");
+        paragraph("Linia testosteronu całkowitego zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Pokazuje poglądowy trend na podstawie badań; nie wyznacza norm ani stężenia w każdym roku życia.");
+        paragraph("Niemowlęca część źródłowa dotyczy chłopców urodzonych o czasie. Od 6. do 18. urodzin odniesienie pochodzi z Madsen 2022 (LC-MS/MS), a w wieku 3–<6 lat z Kelsey 2014/2015. Łagodne zejście po minipuberty nie odtwarza różnicy między tymi modelami jako nagłego spadku w wieku 5–6 lat. Okres płodowy i połączenia między źródłami są ilustracyjne.");
+        paragraph("Dorośli: średnie grup wieku z tabeli 1 badania Walravens 2025/2026, 1194 mężczyzn w wieku 18–86 lat. Testosteron całkowity oznaczano rano, na czczo, metodą LC-MS/MS. Zdrowe młodsze kohorty połączono ze starszą populacją, w której występowały choroby współistniejące. Różnice między grupami nie są wyłącznie skutkiem wieku.");
+        paragraph("Dorosłość pokazujemy jednym szerokim łukiem, bez wymuszania przejścia przez każdą średnią grupową. Nie jest to indywidualne tempo starzenia ani ustalenie wieku fizjologicznego maksimum. Wygaszona końcówka po 86 latach nie dostarcza wartości odniesienia.");
+        paragraph("Kropka oznacza wynik, a jasny znacznik źródłową medianę lub u dorosłych średnią grupy wieku. Znacznik może nie leżeć na poglądowej linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Średnia ani mediana nie są granicami normy. Kolor nie klasyfikuje wyniku.");
         const testosteroneSources = new Set();
         for (const profile of testosteroneDisplay.profiles) {
           const sourceKey = profile.url || profile.sourceLabel;
@@ -1769,19 +1811,19 @@
           links.push(["EMAS 2022 · INSL3", "https://doi.org/10.1111/andr.13220"]);
       }
       if (renderedPoint && !renderedPoint.stableDisplay) {
-        const medianBasis = renderedPoint.profile.statistic === "group-median"
+        const medianBasis = renderedPoint.profile.statistic === "group-mean" ? "średnią grupy wieku" : renderedPoint.profile.statistic === "group-median"
           ? (renderedPoint.profile.ageGroup.boundaryPolicy === "application-completed-year-convention"
             ? "medianę rocznej grupy wieku" : "medianę grupy wieku przed pokwitaniem")
           : "medianę populacji w tym wieku";
         paragraph(`Kropka przedstawia wynik, a linia ${medianBasis} — nie granicę normy ani indywidualny cel. Kolor kropki nie jest klasyfikacją wyniku. Zakresy odniesienia i ocena kliniczna pozostają w osobnej części przelicznika.`);
         paragraph(compare
           ? "Obie linie i wynik mają wspólną skalę stężeń. Źródła dotyczą różnych populacji i metod; wykres nie potwierdza zgodności metody próbki z publikacją. Nie wyznacza proporcji hormonalnych ani stadium pokwitania."
-          : "Wynik i mediany korzystają z jednej skali, stałej przy zmianie widoku czasu. Każda publikacja zachowuje własne wartości. Przerywane połączenia między odcinkami są wyłącznie poglądowe: nie służą do wyliczania mediany ani punktu pacjenta. Poza dostępnymi profilami przerywana linia pozostaje schematem. Pozostałe hormony zachowują własne skale poglądowe.");
+          : "Wynik i wartości odniesienia korzystają z jednej skali, stałej przy zmianie widoku czasu. Każda publikacja zachowuje własne wartości. Przerywane połączenia między odcinkami są wyłącznie poglądowe: nie służą do wyliczania odniesienia ani punktu pacjenta. Poza dostępnymi profilami przerywana linia pozostaje schematem. Pozostałe hormony zachowują własne skale poglądowe.");
         for (const { profile } of renderedPoint.curves) {
           const description = [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
             .filter((item) => typeof item === "string" && item.trim()).join(" · ");
           paragraph(description + (profile.approximate ? ". Mediana odtworzona orientacyjnie ze źródła." : "."));
-          if (profile.statistic === "group-median") {
+          if (profile.statistic === "group-median" || profile.statistic === "group-mean") {
             if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
           }
           if (typeof profile.url === "string") links.push([profile.sourceLabel || "Źródło mediany", profile.url]);

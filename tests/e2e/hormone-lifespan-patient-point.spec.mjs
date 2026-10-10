@@ -37,7 +37,7 @@ async function choose(page, analyte) {
   await page.locator(`#labSubstanceDropdown [data-id="${analyte}"]`).click();
 }
 
-async function expectPoint(page, value, median) {
+async function expectPoint(page, value, median, independentReference = false) {
   await expect(dot(page)).toHaveCount(1);
   await expect.poll(async () => Number(await dot(page).getAttribute('data-value'))).toBeCloseTo(value, 6);
   if (median != null) await expect.poll(async () => Number(await dot(page).getAttribute('data-median'))).toBeCloseTo(median, 4);
@@ -69,7 +69,13 @@ async function expectPoint(page, value, median) {
   }).toBe(true);
   expect(['x', 'rx', 'ry', 'curveY', 'bottom', 'value', 'median'].every(key => Number.isFinite(geometry[key]))).toBe(true);
   expect(geometry.x).toBe(geometry.rx);
-  expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
+  if (independentReference) {
+    // A source group mean is not a coordinate read from the illustrative curve.
+    // Both still use the same fixed concentration scale.
+    expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(.1);
+    await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'group-mean');
+    await expect(dot(page)).toHaveAttribute('data-reference-value', String(median));
+  } else expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
   if (geometry.offscale) {
     expect(geometry.overflow).toBe(true);
     expect(geometry.y).toBeNull();
@@ -140,15 +146,15 @@ test('legacy testosterone conversion feeds the same dot for equivalent units', a
   await choose(page, 'testosterone_total');
   await page.locator('#labUnit').selectOption('nmol/L');
   await page.locator('#labValue').fill('13');
-  await expectPoint(page, 13);
+  await expectPoint(page, 13, 18.1, true);
   const median = Number(await dot(page).getAttribute('data-median'));
-  expect(median).toBeGreaterThan(13);
-  expect(median).toBeLessThan(13.1);
+  expect(median).toBe(18.1);
+  await expect(dot(page)).toContainText('Średnia grupy');
   await page.locator('#labUnit').selectOption('ng/dL');
   await page.locator('#labValue').fill('400');
   await expect(dot(page)).toHaveCount(1);
   const canonical = await page.evaluate(() => window.LabUnitConverter.convertAll({ substanceId: 'testosterone_total', value: 400, fromUnit: 'ng/dL' }));
-  await expectPoint(page, canonical.siValue, median);
+  await expectPoint(page, canonical.siValue, median, true);
   await page.locator('#labValue').fill('');
   await expect(dot(page)).toHaveCount(0);
 });

@@ -180,7 +180,7 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         await page.locator('#labValue').fill('13');
         const punkt = wykres.locator('[data-patient-concentration="t"]');
         await expect(punkt).toHaveAttribute('data-value', '13');
-        await expect.poll(async () => Number(await punkt.getAttribute('data-median'))).toBeCloseTo(13.0496, 3);
+        await expect.poll(async () => Number(await punkt.getAttribute('data-median'))).toBeCloseTo(18.1, 3);
         await wykres.locator('[data-view="puberty"]').click();
         await expect(punkt).toHaveCount(0);
         await wykres.locator('[data-view="life"]').click();

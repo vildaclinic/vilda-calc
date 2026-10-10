@@ -18,7 +18,7 @@ const maleAges=[-.75,-.60,-.48,-.32,-.13,0,.04,.085,.17,.33,.42,.5,.75,1,3,6,8,1
 const maleHormones=[
  {id:'lh',name:'LH',color:'#7842b0',values:[.015,.025,.27,.56,.32,.025,.36,.61,.55,.28,.12,.055,.022,.018,.013,.016,.023,.045,.085,.18,.36,.49,.57,.62,.63,.63,.63,.64,.67,.70,.74,.79,.84],copy:'Wczesny wzrost w minipuberty, wyciszenie w dzieciństwie i ponowny wzrost w pokwitaniu.'},
  {id:'fsh',name:'FSH',color:'#a77905',values:[.012,.02,.20,.42,.25,.027,.28,.49,.46,.26,.13,.068,.04,.037,.035,.04,.065,.11,.17,.28,.39,.47,.52,.55,.55,.55,.56,.59,.65,.71,.78,.85,.92],copy:'Po niemowlęcej fali stężenie jest niskie. Wzrasta podczas pokwitania, a w późniejszych latach może stopniowo rosnąć.'},
- {id:'t',name:'Testosteron',color:'#00838d',values:[.022,.29,.69,.66,.37,.028,.33,.56,.49,.27,.13,.064,.023,.016,.013,.016,.025,.042,.073,.19,.38,.62,.79,.94,1,.98,.95,.92,.92,.91,.90,.89,.87],copy:'W minipuberty wzrasta na krótko. W pokwitaniu rośnie ponownie i osiąga poziom typowy dla dorosłych; późniejszy przebieg jest zmienny.'},
+ {id:'t',name:'Testosteron',color:'#00838d',values:[.022,.29,.69,.66,.37,.028,.33,.56,.49,.27,.13,.064,.023,.016,.013,.016,.025,.042,.073,.19,.38,.62,.79,.94,1,.98,.95,.92,.92,.91,.90,.89,.87],copy:'Testosteron rośnie ku młodej dorosłości. W badaniu dorosłych najwyższa średnia dotyczyła grupy 18–29 lat, a w starszych grupach była niższa.'},
  {id:'insl3',name:'INSL3',color:'#347fa5',dash:'6 5',values:[.014,.18,.59,.72,.53,.05,.34,.51,.46,.25,.11,.05,.025,.018,.014,.017,.025,.039,.065,.14,.27,.45,.62,.77,.84,.87,.86,.82,.77,.71,.64,.57,.50],copy:'Towarzyszy aktywności komórek Leydiga. Wzrasta w minipuberty i pokwitaniu, a w starszym wieku zwykle się obniża.'},
  {id:'amh',name:'AMH',color:'#ce6049',values:[.025,.42,.75,.78,.61,.49,.60,.73,.87,.97,1,.99,.97,.95,.90,.86,.80,.73,.66,.56,.40,.25,.16,.105,.085,.082,.078,.071,.065,.057,.050,.043,.037],copy:'Wysokie w niemowlęctwie i dzieciństwie. W pokwitaniu wyraźnie spada, mimo wzrostu testosteronu.'},
  {id:'inhb',name:'Inhibina B',color:'#34865c',values:[.012,.24,.50,.59,.42,.20,.43,.64,.84,1,.97,.96,.74,.55,.33,.30,.35,.47,.57,.69,.78,.83,.87,.91,.89,.88,.87,.85,.84,.83,.81,.79,.79],copy:'Szczyt niemowlęcy pojawia się później niż szczyt LH i testosteronu. W pokwitaniu rośnie ponownie; w dorosłości pozostaje względnie stabilna, z możliwym umiarkowanym spadkiem.'}
@@ -8551,10 +8551,10 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-10.4",
+  "version": "2026-10-11.1",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
-  "interpolation": "Monotone PCHIP within continuous source profiles; age-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
+  "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
   "profiles": [
     {
       "id": "busch2022-male-fsh",
@@ -23610,7 +23610,7 @@ const patientPointData = {
         "license": "CC BY",
         "retrievedOn": "2026-10-10",
         "sourceRouting": {
-          "version": "2026-10-10.1",
+          "version": "2026-10-11.1",
           "source": "kelsey2014",
           "minAge": 3,
           "maxAge": 6,
@@ -23926,7 +23926,7 @@ const patientPointData = {
           "exampleFormulaError": "LCMSMS hormones!L37 uses AB13 (female estradiol L) in denominator, while numerator uses AG25 (male testosterone L). Do not copy that example formula. Central concentration exp(M)/1e6 is unaffected."
         },
         "sourceRouting": {
-          "version": "2026-10-10.1",
+          "version": "2026-10-11.1",
           "source": "madsen2022",
           "minAge": 6,
           "maxAge": 18,
@@ -23944,6 +23944,8 @@ const patientPointData = {
           "madsenPublishedStepYears": 1,
           "madsenCentralConcentrationFormula": "exp(M_logSIx1e6) / 1000000",
           "madsenBetweenNodeMeaning": "Application interpolation between 13 published annual p50 values; not a reconstruction of the authors' fitted GAMLSS model.",
+          "adultGroupMethod": "constant",
+          "adultStatistic": "arithmetic-group-mean",
           "crossSourceInterpolation": false,
           "extrapolation": false,
           "retainKelseyFullDomainForTangents": true
@@ -23969,3472 +23971,815 @@ const patientPointData = {
       ]
     },
     {
-      "id": "kelsey2014-male-t",
+      "id": "walravens2025-male-t-18-29",
       "analyte": "t",
       "sex": "male",
       "minAge": 18,
-      "maxAge": 88,
+      "maxAge": 30,
       "points": [
         {
-          "ageYears": 3.0,
-          "value": 0.3764139001167295
+          "ageYears": 18,
+          "value": 20.7
         },
         {
-          "ageYears": 3.1,
-          "value": 0.3796063030835066
-        },
-        {
-          "ageYears": 3.2,
-          "value": 0.38242677952187054
-        },
-        {
-          "ageYears": 3.3,
-          "value": 0.3848760743583286
-        },
-        {
-          "ageYears": 3.4,
-          "value": 0.38695520389747906
-        },
-        {
-          "ageYears": 3.5,
-          "value": 0.38866546657947687
-        },
-        {
-          "ageYears": 3.6,
-          "value": 0.39000845448229904
-        },
-        {
-          "ageYears": 3.7,
-          "value": 0.39098606559551197
-        },
-        {
-          "ageYears": 3.8,
-          "value": 0.3916005168935457
-        },
-        {
-          "ageYears": 3.9,
-          "value": 0.3918543582378633
-        },
-        {
-          "ageYears": 4.0,
-          "value": 0.39175048713889105
-        },
-        {
-          "ageYears": 4.1,
-          "value": 0.3912921644101537
-        },
-        {
-          "ageYears": 4.2,
-          "value": 0.3904830307487561
-        },
-        {
-          "ageYears": 4.3,
-          "value": 0.3893271242782015
-        },
-        {
-          "ageYears": 4.4,
-          "value": 0.3878288990915635
-        },
-        {
-          "ageYears": 4.5,
-          "value": 0.385993244835233
-        },
-        {
-          "ageYears": 4.6,
-          "value": 0.38382550737595045
-        },
-        {
-          "ageYears": 4.7,
-          "value": 0.3813315105965538
-        },
-        {
-          "ageYears": 4.8,
-          "value": 0.37851757936900143
-        },
-        {
-          "ageYears": 4.9,
-          "value": 0.37539056375667723
-        },
-        {
-          "ageYears": 5.0,
-          "value": 0.3719578645019981
-        },
-        {
-          "ageYears": 5.1,
-          "value": 0.3682274598598396
-        },
-        {
-          "ageYears": 5.2,
-          "value": 0.36420793384251327
-        },
-        {
-          "ageYears": 5.3,
-          "value": 0.3599085059479896
-        },
-        {
-          "ageYears": 5.4,
-          "value": 0.3553390624499644
-        },
-        {
-          "ageYears": 5.5,
-          "value": 0.3505101893363225
-        },
-        {
-          "ageYears": 5.6,
-          "value": 0.3454332069917889
-        },
-        {
-          "ageYears": 5.7,
-          "value": 0.3401202067312452
-        },
-        {
-          "ageYears": 5.8,
-          "value": 0.3345840893025964
-        },
-        {
-          "ageYears": 5.9,
-          "value": 0.32883860549246147
-        },
-        {
-          "ageYears": 6.0,
-          "value": 0.3228983989846572
-        },
-        {
-          "ageYears": 6.1,
-          "value": 0.3167790516407929
-        },
-        {
-          "ageYears": 6.2,
-          "value": 0.3104971313947049
-        },
-        {
-          "ageYears": 6.3,
-          "value": 0.3040702429784199
-        },
-        {
-          "ageYears": 6.4,
-          "value": 0.2975170817272712
-        },
-        {
-          "ageYears": 6.5,
-          "value": 0.29085749074642187
-        },
-        {
-          "ageYears": 6.6,
-          "value": 0.2841125217608311
-        },
-        {
-          "ageYears": 6.7,
-          "value": 0.27730450001652507
-        },
-        {
-          "ageYears": 6.8,
-          "value": 0.2704570936534967
-        },
-        {
-          "ageYears": 6.9,
-          "value": 0.26359538803067495
-        },
-        {
-          "ageYears": 7.0,
-          "value": 0.25674596555192486
-        },
-        {
-          "ageYears": 7.1,
-          "value": 0.24993699162007754
-        },
-        {
-          "ageYears": 7.2,
-          "value": 0.24319830743449233
-        },
-        {
-          "ageYears": 7.3,
-          "value": 0.23656153044769712
-        },
-        {
-          "ageYears": 7.4,
-          "value": 0.23006016340941127
-        },
-        {
-          "ageYears": 7.5,
-          "value": 0.22372971305270117
-        },
-        {
-          "ageYears": 7.6,
-          "value": 0.21760781961834685
-        },
-        {
-          "ageYears": 7.7,
-          "value": 0.21173439857047804
-        },
-        {
-          "ageYears": 7.8,
-          "value": 0.2061517960301973
-        },
-        {
-          "ageYears": 7.9,
-          "value": 0.20090495964456712
-        },
-        {
-          "ageYears": 8.0,
-          "value": 0.19604162681632786
-        },
-        {
-          "ageYears": 8.1,
-          "value": 0.19161253244470133
-        },
-        {
-          "ageYears": 8.2,
-          "value": 0.18767163856852442
-        },
-        {
-          "ageYears": 8.3,
-          "value": 0.18427638855800632
-        },
-        {
-          "ageYears": 8.4,
-          "value": 0.1814879887673695
-        },
-        {
-          "ageYears": 8.5,
-          "value": 0.1793717208330412
-        },
-        {
-          "ageYears": 8.6,
-          "value": 0.17799728807430815
-        },
-        {
-          "ageYears": 8.7,
-          "value": 0.1774391997165039
-        },
-        {
-          "ageYears": 8.8,
-          "value": 0.1777771968989681
-        },
-        {
-          "ageYears": 8.9,
-          "value": 0.17909672463554505
-        },
-        {
-          "ageYears": 9.0,
-          "value": 0.18148945404412453
-        },
-        {
-          "ageYears": 9.1,
-          "value": 0.18505385922843187
-        },
-        {
-          "ageYears": 9.2,
-          "value": 0.18989585314792912
-        },
-        {
-          "ageYears": 9.3,
-          "value": 0.19612948661148555
-        },
-        {
-          "ageYears": 9.4,
-          "value": 0.20387771412955646
-        },
-        {
-          "ageYears": 9.5,
-          "value": 0.21327322970142304
-        },
-        {
-          "ageYears": 9.6,
-          "value": 0.2244593746312149
-        },
-        {
-          "ageYears": 9.7,
-          "value": 0.23759111808137967
-        },
-        {
-          "ageYears": 9.8,
-          "value": 0.252836109196523
-        },
-        {
-          "ageYears": 9.9,
-          "value": 0.2703757971666161
-        },
-        {
-          "ageYears": 10.0,
-          "value": 0.29040661244084864
-        },
-        {
-          "ageYears": 10.1,
-          "value": 0.3131411983439283
-        },
-        {
-          "ageYears": 10.2,
-          "value": 0.3388096774794771
-        },
-        {
-          "ageYears": 10.3,
-          "value": 0.3676609314367216
-        },
-        {
-          "ageYears": 10.4,
-          "value": 0.3999638653773381
-        },
-        {
-          "ageYears": 10.5,
-          "value": 0.43600862104018523
-        },
-        {
-          "ageYears": 10.6,
-          "value": 0.47610769259364405
-        },
-        {
-          "ageYears": 10.7,
-          "value": 0.5205968897049058
-        },
-        {
-          "ageYears": 10.8,
-          "value": 0.5698360814094354
-        },
-        {
-          "ageYears": 10.9,
-          "value": 0.6242096432199551
-        },
-        {
-          "ageYears": 11.0,
-          "value": 0.684126518945148
-        },
-        {
-          "ageYears": 11.1,
-          "value": 0.7500197986168069
-        },
-        {
-          "ageYears": 11.2,
-          "value": 0.8223457056694026
-        },
-        {
-          "ageYears": 11.3,
-          "value": 0.9015818811913994
-        },
-        {
-          "ageYears": 11.4,
-          "value": 0.9882248519473087
-        },
-        {
-          "ageYears": 11.5,
-          "value": 1.0827865733291073
-        },
-        {
-          "ageYears": 11.6,
-          "value": 1.1857899498159643
-        },
-        {
-          "ageYears": 11.7,
-          "value": 1.2977632551548512
-        },
-        {
-          "ageYears": 11.8,
-          "value": 1.4192334032783909
-        },
-        {
-          "ageYears": 11.9,
-          "value": 1.5507180594250474
-        },
-        {
-          "ageYears": 12.0,
-          "value": 1.6927166288128852
-        },
-        {
-          "ageYears": 12.1,
-          "value": 1.845700216483916
-        },
-        {
-          "ageYears": 12.2,
-          "value": 2.0101007145444623
-        },
-        {
-          "ageYears": 12.3,
-          "value": 2.1862992389260425
-        },
-        {
-          "ageYears": 12.4,
-          "value": 2.374614202984662
-        },
-        {
-          "ageYears": 12.5,
-          "value": 2.575289375011913
-        },
-        {
-          "ageYears": 12.6,
-          "value": 2.7884823159137904
-        },
-        {
-          "ageYears": 12.7,
-          "value": 3.014253626847335
-        },
-        {
-          "ageYears": 12.8,
-          "value": 3.2525574499944936
-        },
-        {
-          "ageYears": 12.9,
-          "value": 3.5032336555293258
-        },
-        {
-          "ageYears": 13.0,
-          "value": 3.7660021124366967
-        },
-        {
-          "ageYears": 13.1,
-          "value": 4.040459380364446
-        },
-        {
-          "ageYears": 13.2,
-          "value": 4.326078076437811
-        },
-        {
-          "ageYears": 13.3,
-          "value": 4.622209069275949
-        },
-        {
-          "ageYears": 13.4,
-          "value": 4.9280865383695405
-        },
-        {
-          "ageYears": 13.5,
-          "value": 5.242835817749151
-        },
-        {
-          "ageYears": 13.6,
-          "value": 5.5654838262561075
-        },
-        {
-          "ageYears": 13.7,
-          "value": 5.894971780280157
-        },
-        {
-          "ageYears": 13.8,
-          "value": 6.2301697952061454
-        },
-        {
-          "ageYears": 13.9,
-          "value": 6.569892914199271
-        },
-        {
-          "ageYears": 14.0,
-          "value": 6.912918060658614
-        },
-        {
-          "ageYears": 14.1,
-          "value": 7.2580013949444595
-        },
-        {
-          "ageYears": 14.2,
-          "value": 7.603895566087157
-        },
-        {
-          "ageYears": 14.3,
-          "value": 7.949366382593492
-        },
-        {
-          "ageYears": 14.4,
-          "value": 8.2932084792903
-        },
-        {
-          "ageYears": 14.5,
-          "value": 8.634259624558672
-        },
-        {
-          "ageYears": 14.6,
-          "value": 8.971413389093234
-        },
-        {
-          "ageYears": 14.7,
-          "value": 9.303629978273014
-        },
-        {
-          "ageYears": 14.8,
-          "value": 9.629945110594493
-        },
-        {
-          "ageYears": 14.9,
-          "value": 9.949476900346328
-        },
-        {
-          "ageYears": 15.0,
-          "value": 10.261430770650763
-        },
-        {
-          "ageYears": 15.1,
-          "value": 10.56510248095952
-        },
-        {
-          "ageYears": 15.2,
-          "value": 10.859879399834904
-        },
-        {
-          "ageYears": 15.3,
-          "value": 11.145240188957402
-        },
-        {
-          "ageYears": 15.4,
-          "value": 11.4207530881035
-        },
-        {
-          "ageYears": 15.5,
-          "value": 11.686073004187184
-        },
-        {
-          "ageYears": 15.6,
-          "value": 11.94093761160946
-        },
-        {
-          "ageYears": 15.7,
-          "value": 12.185162667578698
-        },
-        {
-          "ageYears": 15.8,
-          "value": 12.418636736322725
-        },
-        {
-          "ageYears": 15.9,
-          "value": 12.641315501750949
-        },
-        {
-          "ageYears": 16.0,
-          "value": 12.853215830586043
-        },
-        {
-          "ageYears": 16.1,
-          "value": 13.054409728552349
-        },
-        {
-          "ageYears": 16.2,
-          "value": 13.245018311978944
-        },
-        {
-          "ageYears": 16.3,
-          "value": 13.425205897035463
-        },
-        {
-          "ageYears": 16.4,
-          "value": 13.595174289463262
-        },
-        {
-          "ageYears": 16.5,
-          "value": 13.755157339596199
-        },
-        {
-          "ageYears": 16.6,
-          "value": 13.90541581102271
-        },
-        {
-          "ageYears": 16.7,
-          "value": 14.046232596625883
-        },
-        {
-          "ageYears": 16.8,
-          "value": 14.177908303027314
-        },
-        {
-          "ageYears": 16.9,
-          "value": 14.300757213653263
-        },
-        {
-          "ageYears": 17.0,
-          "value": 14.415103631656306
-        },
-        {
-          "ageYears": 17.1,
-          "value": 14.521278596642663
-        },
-        {
-          "ageYears": 17.2,
-          "value": 14.61961696342104
-        },
-        {
-          "ageYears": 17.3,
-          "value": 14.71045482663067
-        },
-        {
-          "ageYears": 17.4,
-          "value": 14.794127271948257
-        },
-        {
-          "ageYears": 17.5,
-          "value": 14.870966432448236
-        },
-        {
-          "ageYears": 17.6,
-          "value": 14.941299827419762
-        },
-        {
-          "ageYears": 17.7,
-          "value": 15.005448960390801
-        },
-        {
-          "ageYears": 17.8,
-          "value": 15.063728153119708
-        },
-        {
-          "ageYears": 17.9,
-          "value": 15.116443592778232
-        },
-        {
-          "ageYears": 18.0,
-          "value": 15.16389257035194
-        },
-        {
-          "ageYears": 18.1,
-          "value": 15.206362889335683
-        },
-        {
-          "ageYears": 18.2,
-          "value": 15.244132425028194
-        },
-        {
-          "ageYears": 18.3,
-          "value": 15.277468816063497
-        },
-        {
-          "ageYears": 18.4,
-          "value": 15.306629271210664
-        },
-        {
-          "ageYears": 18.5,
-          "value": 15.33186047587984
-        },
-        {
-          "ageYears": 18.6,
-          "value": 15.353398584168925
-        },
-        {
-          "ageYears": 18.7,
-          "value": 15.37146928363553
-        },
-        {
-          "ageYears": 18.8,
-          "value": 15.386287921276807
-        },
-        {
-          "ageYears": 18.9,
-          "value": 15.398059680423707
-        },
-        {
-          "ageYears": 19.0,
-          "value": 15.406979799404404
-        },
-        {
-          "ageYears": 19.1,
-          "value": 15.413233823895027
-        },
-        {
-          "ageYears": 19.2,
-          "value": 15.416997885856738
-        },
-        {
-          "ageYears": 19.3,
-          "value": 15.41843900285427
-        },
-        {
-          "ageYears": 19.4,
-          "value": 15.417715392364006
-        },
-        {
-          "ageYears": 19.5,
-          "value": 15.414976796416475
-        },
-        {
-          "ageYears": 19.6,
-          "value": 15.410364812578582
-        },
-        {
-          "ageYears": 19.7,
-          "value": 15.404013227870117
-        },
-        {
-          "ageYears": 19.8,
-          "value": 15.396048352738035
-        },
-        {
-          "ageYears": 19.9,
-          "value": 15.386589352673994
-        },
-        {
-          "ageYears": 20.0,
-          "value": 15.375748575473835
-        },
-        {
-          "ageYears": 20.1,
-          "value": 15.36363187249707
-        },
-        {
-          "ageYears": 20.2,
-          "value": 15.350338912599778
-        },
-        {
-          "ageYears": 20.3,
-          "value": 15.335963487688552
-        },
-        {
-          "ageYears": 20.4,
-          "value": 15.32059380908036
-        },
-        {
-          "ageYears": 20.5,
-          "value": 15.304312794058195
-        },
-        {
-          "ageYears": 20.6,
-          "value": 15.28719834218779
-        },
-        {
-          "ageYears": 20.7,
-          "value": 15.269323601110422
-        },
-        {
-          "ageYears": 20.8,
-          "value": 15.250757221653139
-        },
-        {
-          "ageYears": 20.9,
-          "value": 15.231563602205657
-        },
-        {
-          "ageYears": 21.0,
-          "value": 15.211803122400909
-        },
-        {
-          "ageYears": 21.1,
-          "value": 15.191532366211
-        },
-        {
-          "ageYears": 21.2,
-          "value": 15.170804334630365
-        },
-        {
-          "ageYears": 21.3,
-          "value": 15.149668648166536
-        },
-        {
-          "ageYears": 21.4,
-          "value": 15.128171739397857
-        },
-        {
-          "ageYears": 21.5,
-          "value": 15.106357035886951
-        },
-        {
-          "ageYears": 21.6,
-          "value": 15.084265133762976
-        },
-        {
-          "ageYears": 21.7,
-          "value": 15.061933962299637
-        },
-        {
-          "ageYears": 21.8,
-          "value": 15.039398939829123
-        },
-        {
-          "ageYears": 21.9,
-          "value": 15.016693121337486
-        },
-        {
-          "ageYears": 22.0,
-          "value": 14.993847338089621
-        },
-        {
-          "ageYears": 22.1,
-          "value": 14.970890329632262
-        },
-        {
-          "ageYears": 22.2,
-          "value": 14.947848868519452
-        },
-        {
-          "ageYears": 22.3,
-          "value": 14.92474787810045
-        },
-        {
-          "ageYears": 22.4,
-          "value": 14.901610543702315
-        },
-        {
-          "ageYears": 22.5,
-          "value": 14.878458417532407
-        },
-        {
-          "ageYears": 22.6,
-          "value": 14.855311517615352
-        },
-        {
-          "ageYears": 22.7,
-          "value": 14.832188421069592
-        },
-        {
-          "ageYears": 22.8,
-          "value": 14.809106352017844
-        },
-        {
-          "ageYears": 22.9,
-          "value": 14.78608126441517
-        },
-        {
-          "ageYears": 23.0,
-          "value": 14.763127920065537
-        },
-        {
-          "ageYears": 23.1,
-          "value": 14.740259962088418
-        },
-        {
-          "ageYears": 23.2,
-          "value": 14.717489984083832
-        },
-        {
-          "ageYears": 23.3,
-          "value": 14.694829595233847
-        },
-        {
-          "ageYears": 23.4,
-          "value": 14.672289481566855
-        },
-        {
-          "ageYears": 23.5,
-          "value": 14.64987946360069
-        },
-        {
-          "ageYears": 23.6,
-          "value": 14.627608550569157
-        },
-        {
-          "ageYears": 23.7,
-          "value": 14.605484991426836
-        },
-        {
-          "ageYears": 23.8,
-          "value": 14.583516322816639
-        },
-        {
-          "ageYears": 23.9,
-          "value": 14.56170941417523
-        },
-        {
-          "ageYears": 24.0,
-          "value": 14.540070510141929
-        },
-        {
-          "ageYears": 24.1,
-          "value": 14.518605270427578
-        },
-        {
-          "ageYears": 24.2,
-          "value": 14.497318807292016
-        },
-        {
-          "ageYears": 24.3,
-          "value": 14.476215720769616
-        },
-        {
-          "ageYears": 24.4,
-          "value": 14.455300131775934
-        },
-        {
-          "ageYears": 24.5,
-          "value": 14.4345757132191
-        },
-        {
-          "ageYears": 24.6,
-          "value": 14.414045719235046
-        },
-        {
-          "ageYears": 24.7,
-          "value": 14.393713012656365
-        },
-        {
-          "ageYears": 24.8,
-          "value": 14.373580090820555
-        },
-        {
-          "ageYears": 24.9,
-          "value": 14.353649109815292
-        },
-        {
-          "ageYears": 25.0,
-          "value": 14.333921907254492
-        },
-        {
-          "ageYears": 25.1,
-          "value": 14.314400023672192
-        },
-        {
-          "ageYears": 25.2,
-          "value": 14.295084722616647
-        },
-        {
-          "ageYears": 25.3,
-          "value": 14.275977009522423
-        },
-        {
-          "ageYears": 25.4,
-          "value": 14.257077649433423
-        },
-        {
-          "ageYears": 25.5,
-          "value": 14.238387183645234
-        },
-        {
-          "ageYears": 25.6,
-          "value": 14.219905945331837
-        },
-        {
-          "ageYears": 25.7,
-          "value": 14.201634074217235
-        },
-        {
-          "ageYears": 25.8,
-          "value": 14.183571530348926
-        },
-        {
-          "ageYears": 25.9,
-          "value": 14.165718107027608
-        },
-        {
-          "ageYears": 26.0,
-          "value": 14.14807344294306
-        },
-        {
-          "ageYears": 26.1,
-          "value": 14.130637033563898
-        },
-        {
-          "ageYears": 26.2,
-          "value": 14.113408241826274
-        },
-        {
-          "ageYears": 26.3,
-          "value": 14.096386308162801
-        },
-        {
-          "ageYears": 26.4,
-          "value": 14.079570359911916
-        },
-        {
-          "ageYears": 26.5,
-          "value": 14.062959420144503
-        },
-        {
-          "ageYears": 26.6,
-          "value": 14.046552415942514
-        },
-        {
-          "ageYears": 26.7,
-          "value": 14.03034818616274
-        },
-        {
-          "ageYears": 26.8,
-          "value": 14.014345488716463
-        },
-        {
-          "ageYears": 26.9,
-          "value": 13.998543007393737
-        },
-        {
-          "ageYears": 27.0,
-          "value": 13.982939358260014
-        },
-        {
-          "ageYears": 27.1,
-          "value": 13.967533095650248
-        },
-        {
-          "ageYears": 27.2,
-          "value": 13.952322717785043
-        },
-        {
-          "ageYears": 27.3,
-          "value": 13.937306672031017
-        },
-        {
-          "ageYears": 27.4,
-          "value": 13.922483359827078
-        },
-        {
-          "ageYears": 27.5,
-          "value": 13.90785114129633
-        },
-        {
-          "ageYears": 27.6,
-          "value": 13.893408339562596
-        },
-        {
-          "ageYears": 27.7,
-          "value": 13.879153244789238
-        },
-        {
-          "ageYears": 27.8,
-          "value": 13.865084117956666
-        },
-        {
-          "ageYears": 27.9,
-          "value": 13.851199194394665
-        },
-        {
-          "ageYears": 28.0,
-          "value": 13.837496687083677
-        },
-        {
-          "ageYears": 28.1,
-          "value": 13.823974789739236
-        },
-        {
-          "ageYears": 28.2,
-          "value": 13.810631679692545
-        },
-        {
-          "ageYears": 28.3,
-          "value": 13.797465520579266
-        },
-        {
-          "ageYears": 28.4,
-          "value": 13.784474464848019
-        },
-        {
-          "ageYears": 28.5,
-          "value": 13.77165665609965
-        },
-        {
-          "ageYears": 28.6,
-          "value": 13.759010231267178
-        },
-        {
-          "ageYears": 28.7,
-          "value": 13.74653332264608
-        },
-        {
-          "ageYears": 28.8,
-          "value": 13.734224059784093
-        },
-        {
-          "ageYears": 28.9,
-          "value": 13.722080571238553
-        },
-        {
-          "ageYears": 29.0,
-          "value": 13.710100986209833
-        },
-        {
-          "ageYears": 29.1,
-          "value": 13.698283436057888
-        },
-        {
-          "ageYears": 29.2,
-          "value": 13.686626055709185
-        },
-        {
-          "ageYears": 29.3,
-          "value": 13.675126984960631
-        },
-        {
-          "ageYears": 29.4,
-          "value": 13.663784369686764
-        },
-        {
-          "ageYears": 29.5,
-          "value": 13.652596362955897
-        },
-        {
-          "ageYears": 29.6,
-          "value": 13.641561126061081
-        },
-        {
-          "ageYears": 29.7,
-          "value": 13.630676829470781
-        },
-        {
-          "ageYears": 29.8,
-          "value": 13.619941653704345
-        },
-        {
-          "ageYears": 29.9,
-          "value": 13.609353790136817
-        },
-        {
-          "ageYears": 30.0,
-          "value": 13.598911441737304
-        },
-        {
-          "ageYears": 30.1,
-          "value": 13.588612823745324
-        },
-        {
-          "ageYears": 30.2,
-          "value": 13.57845616428856
-        },
-        {
-          "ageYears": 30.3,
-          "value": 13.568439704945996
-        },
-        {
-          "ageYears": 30.4,
-          "value": 13.558561701259572
-        },
-        {
-          "ageYears": 30.5,
-          "value": 13.548820423197649
-        },
-        {
-          "ageYears": 30.6,
-          "value": 13.53921415557351
-        },
-        {
-          "ageYears": 30.7,
-          "value": 13.529741198421386
-        },
-        {
-          "ageYears": 30.8,
-          "value": 13.520399867332804
-        },
-        {
-          "ageYears": 30.9,
-          "value": 13.511188493755983
-        },
-        {
-          "ageYears": 31.0,
-          "value": 13.502105425260455
-        },
-        {
-          "ageYears": 31.1,
-          "value": 13.493149025768929
-        },
-        {
-          "ageYears": 31.2,
-          "value": 13.48431767575908
-        },
-        {
-          "ageYears": 31.3,
-          "value": 13.475609772436663
-        },
-        {
-          "ageYears": 31.4,
-          "value": 13.467023729882115
-        },
-        {
-          "ageYears": 31.5,
-          "value": 13.458557979172237
-        },
-        {
-          "ageYears": 31.6,
-          "value": 13.450210968478885
-        },
-        {
-          "ageYears": 31.7,
-          "value": 13.44198116314581
-        },
-        {
-          "ageYears": 31.8,
-          "value": 13.433867045745425
-        },
-        {
-          "ageYears": 31.9,
-          "value": 13.425867116116766
-        },
-        {
-          "ageYears": 32.0,
-          "value": 13.41797989138587
-        },
-        {
-          "ageYears": 32.1,
-          "value": 13.410203905969986
-        },
-        {
-          "ageYears": 32.2,
-          "value": 13.4025377115665
-        },
-        {
-          "ageYears": 32.3,
-          "value": 13.394979877127826
-        },
-        {
-          "ageYears": 32.4,
-          "value": 13.387528988823247
-        },
-        {
-          "ageYears": 32.5,
-          "value": 13.38018364998869
-        },
-        {
-          "ageYears": 32.6,
-          "value": 13.37294248106519
-        },
-        {
-          "ageYears": 32.7,
-          "value": 13.365804119526947
-        },
-        {
-          "ageYears": 32.8,
-          "value": 13.358767219800008
-        },
-        {
-          "ageYears": 32.9,
-          "value": 13.35183045317189
-        },
-        {
-          "ageYears": 33.0,
-          "value": 13.34499250769312
-        },
-        {
-          "ageYears": 33.1,
-          "value": 13.338252088071412
-        },
-        {
-          "ageYears": 33.2,
-          "value": 13.331607915558774
-        },
-        {
-          "ageYears": 33.3,
-          "value": 13.32505872783251
-        },
-        {
-          "ageYears": 33.4,
-          "value": 13.31860327887043
-        },
-        {
-          "ageYears": 33.5,
-          "value": 13.3122403388207
-        },
-        {
-          "ageYears": 33.6,
-          "value": 13.305968693867207
-        },
-        {
-          "ageYears": 33.7,
-          "value": 13.299787146090381
-        },
-        {
-          "ageYears": 33.8,
-          "value": 13.293694513324288
-        },
-        {
-          "ageYears": 33.9,
-          "value": 13.28768962901017
-        },
-        {
-          "ageYears": 34.0,
-          "value": 13.281771342046905
-        },
-        {
-          "ageYears": 34.1,
-          "value": 13.275938516638746
-        },
-        {
-          "ageYears": 34.2,
-          "value": 13.270190032140622
-        },
-        {
-          "ageYears": 34.3,
-          "value": 13.264524782901153
-        },
-        {
-          "ageYears": 34.4,
-          "value": 13.258941678104158
-        },
-        {
-          "ageYears": 34.5,
-          "value": 13.253439641608248
-        },
-        {
-          "ageYears": 34.6,
-          "value": 13.24801761178535
-        },
-        {
-          "ageYears": 34.7,
-          "value": 13.242674541357994
-        },
-        {
-          "ageYears": 34.8,
-          "value": 13.237409397235792
-        },
-        {
-          "ageYears": 34.9,
-          "value": 13.232221160351282
-        },
-        {
-          "ageYears": 35.0,
-          "value": 13.227108825495248
-        },
-        {
-          "ageYears": 35.1,
-          "value": 13.222071401151778
-        },
-        {
-          "ageYears": 35.2,
-          "value": 13.21710790933319
-        },
-        {
-          "ageYears": 35.3,
-          "value": 13.21221738541495
-        },
-        {
-          "ageYears": 35.4,
-          "value": 13.207398877970858
-        },
-        {
-          "ageYears": 35.5,
-          "value": 13.202651448608368
-        },
-        {
-          "ageYears": 35.6,
-          "value": 13.19797417180456
-        },
-        {
-          "ageYears": 35.7,
-          "value": 13.193366134742416
-        },
-        {
-          "ageYears": 35.8,
-          "value": 13.188826437147906
-        },
-        {
-          "ageYears": 35.9,
-          "value": 13.184354191127815
-        },
-        {
-          "ageYears": 36.0,
-          "value": 13.17994852100829
-        },
-        {
-          "ageYears": 36.1,
-          "value": 13.175608563174432
-        },
-        {
-          "ageYears": 36.2,
-          "value": 13.171333465910788
-        },
-        {
-          "ageYears": 36.3,
-          "value": 13.16712238924301
-        },
-        {
-          "ageYears": 36.4,
-          "value": 13.162974504780571
-        },
-        {
-          "ageYears": 36.5,
-          "value": 13.158888995560673
-        },
-        {
-          "ageYears": 36.6,
-          "value": 13.154865055893527
-        },
-        {
-          "ageYears": 36.7,
-          "value": 13.150901891208658
-        },
-        {
-          "ageYears": 36.8,
-          "value": 13.146998717902878
-        },
-        {
-          "ageYears": 36.9,
-          "value": 13.143154763189438
-        },
-        {
-          "ageYears": 37.0,
-          "value": 13.139369264948602
-        },
-        {
-          "ageYears": 37.1,
-          "value": 13.135641471579792
-        },
-        {
-          "ageYears": 37.2,
-          "value": 13.131970641855014
-        },
-        {
-          "ageYears": 37.3,
-          "value": 13.128356044774112
-        },
-        {
-          "ageYears": 37.4,
-          "value": 13.124796959421086
-        },
-        {
-          "ageYears": 37.5,
-          "value": 13.121292674822488
-        },
-        {
-          "ageYears": 37.6,
-          "value": 13.117842489806844
-        },
-        {
-          "ageYears": 37.7,
-          "value": 13.114445712866177
-        },
-        {
-          "ageYears": 37.8,
-          "value": 13.11110166201876
-        },
-        {
-          "ageYears": 37.9,
-          "value": 13.107809664673482
-        },
-        {
-          "ageYears": 38.0,
-          "value": 13.104569057496091
-        },
-        {
-          "ageYears": 38.1,
-          "value": 13.101379186276754
-        },
-        {
-          "ageYears": 38.2,
-          "value": 13.098239405799433
-        },
-        {
-          "ageYears": 38.3,
-          "value": 13.095149079712723
-        },
-        {
-          "ageYears": 38.4,
-          "value": 13.092107580402496
-        },
-        {
-          "ageYears": 38.5,
-          "value": 13.08911428886596
-        },
-        {
-          "ageYears": 38.6,
-          "value": 13.086168594587487
-        },
-        {
-          "ageYears": 38.7,
-          "value": 13.083269895416004
-        },
-        {
-          "ageYears": 38.8,
-          "value": 13.080417597443939
-        },
-        {
-          "ageYears": 38.9,
-          "value": 13.07761111488785
-        },
-        {
-          "ageYears": 39.0,
-          "value": 13.074849869970674
-        },
-        {
-          "ageYears": 39.1,
-          "value": 13.072133292805383
-        },
-        {
-          "ageYears": 39.2,
-          "value": 13.069460821280426
-        },
-        {
-          "ageYears": 39.3,
-          "value": 13.066831900946612
-        },
-        {
-          "ageYears": 39.4,
-          "value": 13.064245984905638
-        },
-        {
-          "ageYears": 39.5,
-          "value": 13.061702533700071
-        },
-        {
-          "ageYears": 39.6,
-          "value": 13.059201015204941
-        },
-        {
-          "ageYears": 39.7,
-          "value": 13.056740904520813
-        },
-        {
-          "ageYears": 39.8,
-          "value": 13.054321683868388
-        },
-        {
-          "ageYears": 39.9,
-          "value": 13.051942842484591
-        },
-        {
-          "ageYears": 40.0,
-          "value": 13.049603876520182
-        },
-        {
-          "ageYears": 40.1,
-          "value": 13.047304288938744
-        },
-        {
-          "ageYears": 40.2,
-          "value": 13.045043589417233
-        },
-        {
-          "ageYears": 40.3,
-          "value": 13.042821294247881
-        },
-        {
-          "ageYears": 40.4,
-          "value": 13.040636926241657
-        },
-        {
-          "ageYears": 40.5,
-          "value": 13.038490014632862
-        },
-        {
-          "ageYears": 40.6,
-          "value": 13.036380094985502
-        },
-        {
-          "ageYears": 40.7,
-          "value": 13.034306709100719
-        },
-        {
-          "ageYears": 40.8,
-          "value": 13.032269404925717
-        },
-        {
-          "ageYears": 40.9,
-          "value": 13.030267736464053
-        },
-        {
-          "ageYears": 41.0,
-          "value": 13.028301263687226
-        },
-        {
-          "ageYears": 41.1,
-          "value": 13.02636955244754
-        },
-        {
-          "ageYears": 41.2,
-          "value": 13.024472174392374
-        },
-        {
-          "ageYears": 41.3,
-          "value": 13.022608706879621
-        },
-        {
-          "ageYears": 41.4,
-          "value": 13.020778732894478
-        },
-        {
-          "ageYears": 41.5,
-          "value": 13.018981840967378
-        },
-        {
-          "ageYears": 41.6,
-          "value": 13.017217625093377
-        },
-        {
-          "ageYears": 41.7,
-          "value": 13.015485684652448
-        },
-        {
-          "ageYears": 41.8,
-          "value": 13.013785624331257
-        },
-        {
-          "ageYears": 41.9,
-          "value": 13.012117054045914
-        },
-        {
-          "ageYears": 42.0,
-          "value": 13.010479588866083
-        },
-        {
-          "ageYears": 42.1,
-          "value": 13.008872848940062
-        },
-        {
-          "ageYears": 42.2,
-          "value": 13.007296459421148
-        },
-        {
-          "ageYears": 42.3,
-          "value": 13.00575005039504
-        },
-        {
-          "ageYears": 42.4,
-          "value": 13.004233256808355
-        },
-        {
-          "ageYears": 42.5,
-          "value": 13.002745718398286
-        },
-        {
-          "ageYears": 42.6,
-          "value": 13.001287079623234
-        },
-        {
-          "ageYears": 42.7,
-          "value": 12.999856989594692
-        },
-        {
-          "ageYears": 42.8,
-          "value": 12.998455102009848
-        },
-        {
-          "ageYears": 42.9,
-          "value": 12.997081075085607
-        },
-        {
-          "ageYears": 43.0,
-          "value": 12.995734571493315
-        },
-        {
-          "ageYears": 43.1,
-          "value": 12.994415258294623
-        },
-        {
-          "ageYears": 43.2,
-          "value": 12.99312280687835
-        },
-        {
-          "ageYears": 43.3,
-          "value": 12.991856892898205
-        },
-        {
-          "ageYears": 43.4,
-          "value": 12.990617196211597
-        },
-        {
-          "ageYears": 43.5,
-          "value": 12.9894034008193
-        },
-        {
-          "ageYears": 43.6,
-          "value": 12.988215194806045
-        },
-        {
-          "ageYears": 43.7,
-          "value": 12.987052270282092
-        },
-        {
-          "ageYears": 43.8,
-          "value": 12.985914323325629
-        },
-        {
-          "ageYears": 43.9,
-          "value": 12.984801053926052
-        },
-        {
-          "ageYears": 44.0,
-          "value": 12.983712165928196
-        },
-        {
-          "ageYears": 44.1,
-          "value": 12.98264736697734
-        },
-        {
-          "ageYears": 44.2,
-          "value": 12.98160636846515
-        },
-        {
-          "ageYears": 44.3,
-          "value": 12.980588885476267
-        },
-        {
-          "ageYears": 44.4,
-          "value": 12.979594636735966
-        },
-        {
-          "ageYears": 44.5,
-          "value": 12.97862334455843
-        },
-        {
-          "ageYears": 44.6,
-          "value": 12.977674734795912
-        },
-        {
-          "ageYears": 44.7,
-          "value": 12.976748536788625
-        },
-        {
-          "ageYears": 44.8,
-          "value": 12.975844483315392
-        },
-        {
-          "ageYears": 44.9,
-          "value": 12.974962310545179
-        },
-        {
-          "ageYears": 45.0,
-          "value": 12.974101757989212
-        },
-        {
-          "ageYears": 45.1,
-          "value": 12.973262568453897
-        },
-        {
-          "ageYears": 45.2,
-          "value": 12.972444487994435
-        },
-        {
-          "ageYears": 45.3,
-          "value": 12.971647265869247
-        },
-        {
-          "ageYears": 45.4,
-          "value": 12.970870654494938
-        },
-        {
-          "ageYears": 45.5,
-          "value": 12.97011440940208
-        },
-        {
-          "ageYears": 45.6,
-          "value": 12.9693782891916
-        },
-        {
-          "ageYears": 45.7,
-          "value": 12.968662055491894
-        },
-        {
-          "ageYears": 45.8,
-          "value": 12.967965472916498
-        },
-        {
-          "ageYears": 45.9,
-          "value": 12.967288309022555
-        },
-        {
-          "ageYears": 46.0,
-          "value": 12.96663033426969
-        },
-        {
-          "ageYears": 46.1,
-          "value": 12.96599132197982
-        },
-        {
-          "ageYears": 46.2,
-          "value": 12.965371048297284
-        },
-        {
-          "ageYears": 46.3,
-          "value": 12.96476929214973
-        },
-        {
-          "ageYears": 46.4,
-          "value": 12.964185835209602
-        },
-        {
-          "ageYears": 46.5,
-          "value": 12.963620461856118
-        },
-        {
-          "ageYears": 46.6,
-          "value": 12.963072959137957
-        },
-        {
-          "ageYears": 46.7,
-          "value": 12.962543116736397
-        },
-        {
-          "ageYears": 46.8,
-          "value": 12.962030726929031
-        },
-        {
-          "ageYears": 46.9,
-          "value": 12.961535584554145
-        },
-        {
-          "ageYears": 47.0,
-          "value": 12.961057486975436
-        },
-        {
-          "ageYears": 47.1,
-          "value": 12.960596234047484
-        },
-        {
-          "ageYears": 47.2,
-          "value": 12.960151628081558
-        },
-        {
-          "ageYears": 47.3,
-          "value": 12.959723473812039
-        },
-        {
-          "ageYears": 47.4,
-          "value": 12.959311578363343
-        },
-        {
-          "ageYears": 47.5,
-          "value": 12.95891575121728
-        },
-        {
-          "ageYears": 47.6,
-          "value": 12.958535804181043
-        },
-        {
-          "ageYears": 47.7,
-          "value": 12.95817155135546
-        },
-        {
-          "ageYears": 47.8,
-          "value": 12.957822809103945
-        },
-        {
-          "ageYears": 47.9,
-          "value": 12.957489396021787
-        },
-        {
-          "ageYears": 48.0,
-          "value": 12.957171132905906
-        },
-        {
-          "ageYears": 48.1,
-          "value": 12.956867842725101
-        },
-        {
-          "ageYears": 48.2,
-          "value": 12.95657935059074
-        },
-        {
-          "ageYears": 48.3,
-          "value": 12.956305483727864
-        },
-        {
-          "ageYears": 48.4,
-          "value": 12.956046071446721
-        },
-        {
-          "ageYears": 48.5,
-          "value": 12.95580094511474
-        },
-        {
-          "ageYears": 48.6,
-          "value": 12.955569938128958
-        },
-        {
-          "ageYears": 48.7,
-          "value": 12.955352885888729
-        },
-        {
-          "ageYears": 48.8,
-          "value": 12.95514962576902
-        },
-        {
-          "ageYears": 48.9,
-          "value": 12.954959997093907
-        },
-        {
-          "ageYears": 49.0,
-          "value": 12.954783841110709
-        },
-        {
-          "ageYears": 49.1,
-          "value": 12.954621000964197
-        },
-        {
-          "ageYears": 49.2,
-          "value": 12.95447132167144
-        },
-        {
-          "ageYears": 49.3,
-          "value": 12.954334650096932
-        },
-        {
-          "ageYears": 49.4,
-          "value": 12.95421083492809
-        },
-        {
-          "ageYears": 49.5,
-          "value": 12.954099726651002
-        },
-        {
-          "ageYears": 49.6,
-          "value": 12.95400117752681
-        },
-        {
-          "ageYears": 49.7,
-          "value": 12.953915041568099
-        },
-        {
-          "ageYears": 49.8,
-          "value": 12.953841174515897
-        },
-        {
-          "ageYears": 49.9,
-          "value": 12.95377943381688
-        },
-        {
-          "ageYears": 50.0,
-          "value": 12.953729678600975
-        },
-        {
-          "ageYears": 50.1,
-          "value": 12.953691769659223
-        },
-        {
-          "ageYears": 50.2,
-          "value": 12.953665569422004
-        },
-        {
-          "ageYears": 50.3,
-          "value": 12.95365094193761
-        },
-        {
-          "ageYears": 50.4,
-          "value": 12.95364775285105
-        },
-        {
-          "ageYears": 50.5,
-          "value": 12.953655869383258
-        },
-        {
-          "ageYears": 50.6,
-          "value": 12.953675160310505
-        },
-        {
-          "ageYears": 50.7,
-          "value": 12.953705495944238
-        },
-        {
-          "ageYears": 50.8,
-          "value": 12.95374674811101
-        },
-        {
-          "ageYears": 50.9,
-          "value": 12.953798790132922
-        },
-        {
-          "ageYears": 51.0,
-          "value": 12.953861496808255
-        },
-        {
-          "ageYears": 51.1,
-          "value": 12.95393474439228
-        },
-        {
-          "ageYears": 51.2,
-          "value": 12.95401841057851
-        },
-        {
-          "ageYears": 51.3,
-          "value": 12.954112374480179
-        },
-        {
-          "ageYears": 51.4,
-          "value": 12.954216516611835
-        },
-        {
-          "ageYears": 51.5,
-          "value": 12.954330718871446
-        },
-        {
-          "ageYears": 51.6,
-          "value": 12.954454864522612
-        },
-        {
-          "ageYears": 51.7,
-          "value": 12.954588838176957
-        },
-        {
-          "ageYears": 51.8,
-          "value": 12.954732525777025
-        },
-        {
-          "ageYears": 51.9,
-          "value": 12.954885814579143
-        },
-        {
-          "ageYears": 52.0,
-          "value": 12.955048593136688
-        },
-        {
-          "ageYears": 52.1,
-          "value": 12.95522075128359
-        },
-        {
-          "ageYears": 52.2,
-          "value": 12.955402180117998
-        },
-        {
-          "ageYears": 52.3,
-          "value": 12.955592771986218
-        },
-        {
-          "ageYears": 52.4,
-          "value": 12.955792420466857
-        },
-        {
-          "ageYears": 52.5,
-          "value": 12.956001020355277
-        },
-        {
-          "ageYears": 52.6,
-          "value": 12.956218467648124
-        },
-        {
-          "ageYears": 52.7,
-          "value": 12.95644465952817
-        },
-        {
-          "ageYears": 52.8,
-          "value": 12.956679494349402
-        },
-        {
-          "ageYears": 52.9,
-          "value": 12.956922871622186
-        },
-        {
-          "ageYears": 53.0,
-          "value": 12.9571746919988
-        },
-        {
-          "ageYears": 53.1,
-          "value": 12.957434857259045
-        },
-        {
-          "ageYears": 53.2,
-          "value": 12.957703270296106
-        },
-        {
-          "ageYears": 53.3,
-          "value": 12.957979835102622
-        },
-        {
-          "ageYears": 53.4,
-          "value": 12.958264456756963
-        },
-        {
-          "ageYears": 53.5,
-          "value": 12.9585570414096
-        },
-        {
-          "ageYears": 53.6,
-          "value": 12.958857496269856
-        },
-        {
-          "ageYears": 53.7,
-          "value": 12.95916572959256
-        },
-        {
-          "ageYears": 53.8,
-          "value": 12.959481650665237
-        },
-        {
-          "ageYears": 53.9,
-          "value": 12.959805169795112
-        },
-        {
-          "ageYears": 54.0,
-          "value": 12.960136198296613
-        },
-        {
-          "ageYears": 54.1,
-          "value": 12.96047464847881
-        },
-        {
-          "ageYears": 54.2,
-          "value": 12.960820433633167
-        },
-        {
-          "ageYears": 54.3,
-          "value": 12.96117346802141
-        },
-        {
-          "ageYears": 54.4,
-          "value": 12.961533666863549
-        },
-        {
-          "ageYears": 54.5,
-          "value": 12.961900946326105
-        },
-        {
-          "ageYears": 54.6,
-          "value": 12.962275223510513
-        },
-        {
-          "ageYears": 54.7,
-          "value": 12.96265641644154
-        },
-        {
-          "ageYears": 54.8,
-          "value": 12.963044444056113
-        },
-        {
-          "ageYears": 54.9,
-          "value": 12.963439226192046
-        },
-        {
-          "ageYears": 55.0,
-          "value": 12.96384068357709
-        },
-        {
-          "ageYears": 55.1,
-          "value": 12.964248737818048
-        },
-        {
-          "ageYears": 55.2,
-          "value": 12.964663311390124
-        },
-        {
-          "ageYears": 55.3,
-          "value": 12.965084327626245
-        },
-        {
-          "ageYears": 55.4,
-          "value": 12.965511710706746
-        },
-        {
-          "ageYears": 55.5,
-          "value": 12.965945385649048
-        },
-        {
-          "ageYears": 55.6,
-          "value": 12.96638527829752
-        },
-        {
-          "ageYears": 55.7,
-          "value": 12.966831315313499
-        },
-        {
-          "ageYears": 55.8,
-          "value": 12.967283424165341
-        },
-        {
-          "ageYears": 55.9,
-          "value": 12.96774153311879
-        },
-        {
-          "ageYears": 56.0,
-          "value": 12.968205571227326
-        },
-        {
-          "ageYears": 56.1,
-          "value": 12.968675468322674
-        },
-        {
-          "ageYears": 56.2,
-          "value": 12.969151155005482
-        },
-        {
-          "ageYears": 56.3,
-          "value": 12.969632562636072
-        },
-        {
-          "ageYears": 56.4,
-          "value": 12.970119623325385
-        },
-        {
-          "ageYears": 56.5,
-          "value": 12.970612269925947
-        },
-        {
-          "ageYears": 56.6,
-          "value": 12.971110436023059
-        },
-        {
-          "ageYears": 56.7,
-          "value": 12.971614055926016
-        },
-        {
-          "ageYears": 56.8,
-          "value": 12.972123064659504
-        },
-        {
-          "ageYears": 56.9,
-          "value": 12.972637397955106
-        },
-        {
-          "ageYears": 57.0,
-          "value": 12.973156992242847
-        },
-        {
-          "ageYears": 57.1,
-          "value": 12.973681784642991
-        },
-        {
-          "ageYears": 57.2,
-          "value": 12.974211712957823
-        },
-        {
-          "ageYears": 57.3,
-          "value": 12.974746715663525
-        },
-        {
-          "ageYears": 57.4,
-          "value": 12.975286731902312
-        },
-        {
-          "ageYears": 57.5,
-          "value": 12.975831701474542
-        },
-        {
-          "ageYears": 57.6,
-          "value": 12.976381564830936
-        },
-        {
-          "ageYears": 57.7,
-          "value": 12.976936263064918
-        },
-        {
-          "ageYears": 57.8,
-          "value": 12.97749573790513
-        },
-        {
-          "ageYears": 57.9,
-          "value": 12.978059931707916
-        },
-        {
-          "ageYears": 58.0,
-          "value": 12.97862878745
-        },
-        {
-          "ageYears": 58.1,
-          "value": 12.979202248721174
-        },
-        {
-          "ageYears": 58.2,
-          "value": 12.979780259717241
-        },
-        {
-          "ageYears": 58.3,
-          "value": 12.980362765232819
-        },
-        {
-          "ageYears": 58.4,
-          "value": 12.980949710654462
-        },
-        {
-          "ageYears": 58.5,
-          "value": 12.981541041953687
-        },
-        {
-          "ageYears": 58.6,
-          "value": 12.982136705680258
-        },
-        {
-          "ageYears": 58.7,
-          "value": 12.9827366489554
-        },
-        {
-          "ageYears": 58.8,
-          "value": 12.983340819465232
-        },
-        {
-          "ageYears": 58.9,
-          "value": 12.983949165454163
-        },
-        {
-          "ageYears": 59.0,
-          "value": 12.984561635718546
-        },
-        {
-          "ageYears": 59.1,
-          "value": 12.985178179600146
-        },
-        {
-          "ageYears": 59.2,
-          "value": 12.985798746980036
-        },
-        {
-          "ageYears": 59.3,
-          "value": 12.986423288272208
-        },
-        {
-          "ageYears": 59.4,
-          "value": 12.987051754417593
-        },
-        {
-          "ageYears": 59.5,
-          "value": 12.987684096877878
-        },
-        {
-          "ageYears": 59.6,
-          "value": 12.988320267629682
-        },
-        {
-          "ageYears": 59.7,
-          "value": 12.988960219158505
-        },
-        {
-          "ageYears": 59.8,
-          "value": 12.989603904452995
-        },
-        {
-          "ageYears": 59.9,
-          "value": 12.990251276999187
-        },
-        {
-          "ageYears": 60.0,
-          "value": 12.990902290774828
-        },
-        {
-          "ageYears": 60.1,
-          "value": 12.991556900243742
-        },
-        {
-          "ageYears": 60.2,
-          "value": 12.992215060350349
-        },
-        {
-          "ageYears": 60.3,
-          "value": 12.99287672651413
-        },
-        {
-          "ageYears": 60.4,
-          "value": 12.99354185462433
-        },
-        {
-          "ageYears": 60.5,
-          "value": 12.994210401034548
-        },
-        {
-          "ageYears": 60.6,
-          "value": 12.994882322557544
-        },
-        {
-          "ageYears": 60.7,
-          "value": 12.995557576459962
-        },
-        {
-          "ageYears": 60.8,
-          "value": 12.996236120457315
-        },
-        {
-          "ageYears": 60.9,
-          "value": 12.996917912708813
-        },
-        {
-          "ageYears": 61.0,
-          "value": 12.99760291181244
-        },
-        {
-          "ageYears": 61.1,
-          "value": 12.998291076800012
-        },
-        {
-          "ageYears": 61.2,
-          "value": 12.998982367132232
-        },
-        {
-          "ageYears": 61.3,
-          "value": 12.999676742693966
-        },
-        {
-          "ageYears": 61.4,
-          "value": 13.000374163789429
-        },
-        {
-          "ageYears": 61.5,
-          "value": 13.00107459113755
-        },
-        {
-          "ageYears": 61.6,
-          "value": 13.001777985867216
-        },
-        {
-          "ageYears": 61.7,
-          "value": 13.002484309512846
-        },
-        {
-          "ageYears": 61.8,
-          "value": 13.003193524009772
-        },
-        {
-          "ageYears": 61.9,
-          "value": 13.00390559168979
-        },
-        {
-          "ageYears": 62.0,
-          "value": 13.004620475276768
-        },
-        {
-          "ageYears": 62.1,
-          "value": 13.005338137882253
-        },
-        {
-          "ageYears": 62.2,
-          "value": 13.006058543001227
-        },
-        {
-          "ageYears": 62.3,
-          "value": 13.006781654507803
-        },
-        {
-          "ageYears": 62.4,
-          "value": 13.007507436651036
-        },
-        {
-          "ageYears": 62.5,
-          "value": 13.008235854050808
-        },
-        {
-          "ageYears": 62.6,
-          "value": 13.00896687169369
-        },
-        {
-          "ageYears": 62.7,
-          "value": 13.009700454928947
-        },
-        {
-          "ageYears": 62.8,
-          "value": 13.010436569464508
-        },
-        {
-          "ageYears": 62.9,
-          "value": 13.011175181362995
-        },
-        {
-          "ageYears": 63.0,
-          "value": 13.01191625703787
-        },
-        {
-          "ageYears": 63.1,
-          "value": 13.012659763249593
-        },
-        {
-          "ageYears": 63.2,
-          "value": 13.013405667101758
-        },
-        {
-          "ageYears": 63.3,
-          "value": 13.014153936037392
-        },
-        {
-          "ageYears": 63.4,
-          "value": 13.014904537835216
-        },
-        {
-          "ageYears": 63.5,
-          "value": 13.01565744060595
-        },
-        {
-          "ageYears": 63.6,
-          "value": 13.016412612788784
-        },
-        {
-          "ageYears": 63.7,
-          "value": 13.01717002314768
-        },
-        {
-          "ageYears": 63.8,
-          "value": 13.017929640767878
-        },
-        {
-          "ageYears": 63.9,
-          "value": 13.018691435052478
-        },
-        {
-          "ageYears": 64.0,
-          "value": 13.019455375718868
-        },
-        {
-          "ageYears": 64.1,
-          "value": 13.020221432795397
-        },
-        {
-          "ageYears": 64.2,
-          "value": 13.020989576617978
-        },
-        {
-          "ageYears": 64.3,
-          "value": 13.021759777826734
-        },
-        {
-          "ageYears": 64.4,
-          "value": 13.02253200736277
-        },
-        {
-          "ageYears": 64.5,
-          "value": 13.02330623646485
-        },
-        {
-          "ageYears": 64.6,
-          "value": 13.02408243666627
-        },
-        {
-          "ageYears": 64.7,
-          "value": 13.024860579791572
-        },
-        {
-          "ageYears": 64.8,
-          "value": 13.025640637953542
-        },
-        {
-          "ageYears": 64.9,
-          "value": 13.026422583549982
-        },
-        {
-          "ageYears": 65.0,
-          "value": 13.027206389260783
-        },
-        {
-          "ageYears": 65.1,
-          "value": 13.027992028044782
-        },
-        {
-          "ageYears": 65.2,
-          "value": 13.028779473136813
-        },
-        {
-          "ageYears": 65.3,
-          "value": 13.029568698044795
-        },
-        {
-          "ageYears": 65.4,
-          "value": 13.030359676546738
-        },
-        {
-          "ageYears": 65.5,
-          "value": 13.031152382687912
-        },
-        {
-          "ageYears": 65.6,
-          "value": 13.031946790778035
-        },
-        {
-          "ageYears": 65.7,
-          "value": 13.032742875388337
-        },
-        {
-          "ageYears": 65.8,
-          "value": 13.033540611348887
-        },
-        {
-          "ageYears": 65.9,
-          "value": 13.034339973745755
-        },
-        {
-          "ageYears": 66.0,
-          "value": 13.035140937918369
-        },
-        {
-          "ageYears": 66.1,
-          "value": 13.035943479456828
-        },
-        {
-          "ageYears": 66.2,
-          "value": 13.03674757419916
-        },
-        {
-          "ageYears": 66.3,
-          "value": 13.037553198228764
-        },
-        {
-          "ageYears": 66.4,
-          "value": 13.03836032787181
-        },
-        {
-          "ageYears": 66.5,
-          "value": 13.039168939694697
-        },
-        {
-          "ageYears": 66.6,
-          "value": 13.039979010501433
-        },
-        {
-          "ageYears": 66.7,
-          "value": 13.04079051733127
-        },
-        {
-          "ageYears": 66.8,
-          "value": 13.04160343745607
-        },
-        {
-          "ageYears": 66.9,
-          "value": 13.042417748377972
-        },
-        {
-          "ageYears": 67.0,
-          "value": 13.043233427826943
-        },
-        {
-          "ageYears": 67.1,
-          "value": 13.044050453758352
-        },
-        {
-          "ageYears": 67.2,
-          "value": 13.044868804350678
-        },
-        {
-          "ageYears": 67.3,
-          "value": 13.045688458003122
-        },
-        {
-          "ageYears": 67.4,
-          "value": 13.04650939333327
-        },
-        {
-          "ageYears": 67.5,
-          "value": 13.047331589174904
-        },
-        {
-          "ageYears": 67.6,
-          "value": 13.04815502457565
-        },
-        {
-          "ageYears": 67.7,
-          "value": 13.048979678794822
-        },
-        {
-          "ageYears": 67.8,
-          "value": 13.04980553130118
-        },
-        {
-          "ageYears": 67.9,
-          "value": 13.050632561770731
-        },
-        {
-          "ageYears": 68.0,
-          "value": 13.051460750084614
-        },
-        {
-          "ageYears": 68.1,
-          "value": 13.052290076326985
-        },
-        {
-          "ageYears": 68.2,
-          "value": 13.053120520782816
-        },
-        {
-          "ageYears": 68.3,
-          "value": 13.053952063935952
-        },
-        {
-          "ageYears": 68.4,
-          "value": 13.054784686466936
-        },
-        {
-          "ageYears": 68.5,
-          "value": 13.055618369251023
-        },
-        {
-          "ageYears": 68.6,
-          "value": 13.056453093356167
-        },
-        {
-          "ageYears": 68.7,
-          "value": 13.057288840041046
-        },
-        {
-          "ageYears": 68.8,
-          "value": 13.05812559075304
-        },
-        {
-          "ageYears": 68.9,
-          "value": 13.058963327126373
-        },
-        {
-          "ageYears": 69.0,
-          "value": 13.059802030980123
-        },
-        {
-          "ageYears": 69.1,
-          "value": 13.06064168431633
-        },
-        {
-          "ageYears": 69.2,
-          "value": 13.061482269318143
-        },
-        {
-          "ageYears": 69.3,
-          "value": 13.062323768347952
-        },
-        {
-          "ageYears": 69.4,
-          "value": 13.063166163945523
-        },
-        {
-          "ageYears": 69.5,
-          "value": 13.064009438826242
-        },
-        {
-          "ageYears": 69.6,
-          "value": 13.064853575879267
-        },
-        {
-          "ageYears": 69.7,
-          "value": 13.065698558165744
-        },
-        {
-          "ageYears": 69.8,
-          "value": 13.06654436891712
-        },
-        {
-          "ageYears": 69.9,
-          "value": 13.067390991533317
-        },
-        {
-          "ageYears": 70.0,
-          "value": 13.06823840958111
-        },
-        {
-          "ageYears": 70.1,
-          "value": 13.069086606792316
-        },
-        {
-          "ageYears": 70.2,
-          "value": 13.069935567062231
-        },
-        {
-          "ageYears": 70.3,
-          "value": 13.07078527444788
-        },
-        {
-          "ageYears": 70.4,
-          "value": 13.07163571316642
-        },
-        {
-          "ageYears": 70.5,
-          "value": 13.072486867593542
-        },
-        {
-          "ageYears": 70.6,
-          "value": 13.073338722261756
-        },
-        {
-          "ageYears": 70.7,
-          "value": 13.07419126185895
-        },
-        {
-          "ageYears": 70.8,
-          "value": 13.075044471226704
-        },
-        {
-          "ageYears": 70.9,
-          "value": 13.075898335358803
-        },
-        {
-          "ageYears": 71.0,
-          "value": 13.076752839399633
-        },
-        {
-          "ageYears": 71.1,
-          "value": 13.077607968642763
-        },
-        {
-          "ageYears": 71.2,
-          "value": 13.07846370852937
-        },
-        {
-          "ageYears": 71.3,
-          "value": 13.079320044646726
-        },
-        {
-          "ageYears": 71.4,
-          "value": 13.080176962726812
-        },
-        {
-          "ageYears": 71.5,
-          "value": 13.081034448644811
-        },
-        {
-          "ageYears": 71.6,
-          "value": 13.081892488417704
-        },
-        {
-          "ageYears": 71.7,
-          "value": 13.082751068202786
-        },
-        {
-          "ageYears": 71.8,
-          "value": 13.083610174296322
-        },
-        {
-          "ageYears": 71.9,
-          "value": 13.084469793132133
-        },
-        {
-          "ageYears": 72.0,
-          "value": 13.085329911280212
-        },
-        {
-          "ageYears": 72.1,
-          "value": 13.086190515445397
-        },
-        {
-          "ageYears": 72.2,
-          "value": 13.087051592465965
-        },
-        {
-          "ageYears": 72.3,
-          "value": 13.087913129312346
-        },
-        {
-          "ageYears": 72.4,
-          "value": 13.088775113085825
-        },
-        {
-          "ageYears": 72.5,
-          "value": 13.089637531017162
-        },
-        {
-          "ageYears": 72.6,
-          "value": 13.09050037046539
-        },
-        {
-          "ageYears": 72.7,
-          "value": 13.091363618916457
-        },
-        {
-          "ageYears": 72.8,
-          "value": 13.09222726398207
-        },
-        {
-          "ageYears": 72.9,
-          "value": 13.093091293398329
-        },
-        {
-          "ageYears": 73.0,
-          "value": 13.093955695024567
-        },
-        {
-          "ageYears": 73.1,
-          "value": 13.094820456842136
-        },
-        {
-          "ageYears": 73.2,
-          "value": 13.095685566953145
-        },
-        {
-          "ageYears": 73.3,
-          "value": 13.096551013579301
-        },
-        {
-          "ageYears": 73.4,
-          "value": 13.09741678506074
-        },
-        {
-          "ageYears": 73.5,
-          "value": 13.098282869854819
-        },
-        {
-          "ageYears": 73.6,
-          "value": 13.099149256535
-        },
-        {
-          "ageYears": 73.7,
-          "value": 13.100015933789669
-        },
-        {
-          "ageYears": 73.8,
-          "value": 13.100882890421014
-        },
-        {
-          "ageYears": 73.9,
-          "value": 13.101750115343945
-        },
-        {
-          "ageYears": 74.0,
-          "value": 13.10261759758493
-        },
-        {
-          "ageYears": 74.1,
-          "value": 13.103485326280907
-        },
-        {
-          "ageYears": 74.2,
-          "value": 13.104353290678244
-        },
-        {
-          "ageYears": 74.3,
-          "value": 13.105221480131622
-        },
-        {
-          "ageYears": 74.4,
-          "value": 13.106089884102964
-        },
-        {
-          "ageYears": 74.5,
-          "value": 13.106958492160466
-        },
-        {
-          "ageYears": 74.6,
-          "value": 13.107827293977437
-        },
-        {
-          "ageYears": 74.7,
-          "value": 13.108696279331353
-        },
-        {
-          "ageYears": 74.8,
-          "value": 13.109565438102841
-        },
-        {
-          "ageYears": 74.9,
-          "value": 13.110434760274623
-        },
-        {
-          "ageYears": 75.0,
-          "value": 13.111304235930568
-        },
-        {
-          "ageYears": 75.1,
-          "value": 13.112173855254634
-        },
-        {
-          "ageYears": 75.2,
-          "value": 13.113043608530026
-        },
-        {
-          "ageYears": 75.3,
-          "value": 13.113913486138086
-        },
-        {
-          "ageYears": 75.4,
-          "value": 13.114783478557428
-        },
-        {
-          "ageYears": 75.5,
-          "value": 13.115653576362954
-        },
-        {
-          "ageYears": 75.6,
-          "value": 13.11652377022493
-        },
-        {
-          "ageYears": 75.7,
-          "value": 13.117394050908068
-        },
-        {
-          "ageYears": 75.8,
-          "value": 13.118264409270598
-        },
-        {
-          "ageYears": 75.9,
-          "value": 13.119134836263385
-        },
-        {
-          "ageYears": 76.0,
-          "value": 13.120005322928986
-        },
-        {
-          "ageYears": 76.1,
-          "value": 13.120875860400794
-        },
-        {
-          "ageYears": 76.2,
-          "value": 13.121746439902214
-        },
-        {
-          "ageYears": 76.3,
-          "value": 13.12261705274565
-        },
-        {
-          "ageYears": 76.4,
-          "value": 13.123487690331803
-        },
-        {
-          "ageYears": 76.5,
-          "value": 13.124358344148703
-        },
-        {
-          "ageYears": 76.6,
-          "value": 13.125229005770947
-        },
-        {
-          "ageYears": 76.7,
-          "value": 13.126099666858813
-        },
-        {
-          "ageYears": 76.8,
-          "value": 13.126970319157468
-        },
-        {
-          "ageYears": 76.9,
-          "value": 13.127840954496124
-        },
-        {
-          "ageYears": 77.0,
-          "value": 13.128711564787244
-        },
-        {
-          "ageYears": 77.1,
-          "value": 13.129582142025766
-        },
-        {
-          "ageYears": 77.2,
-          "value": 13.130452678288266
-        },
-        {
-          "ageYears": 77.3,
-          "value": 13.131323165732187
-        },
-        {
-          "ageYears": 77.4,
-          "value": 13.1321935965951
-        },
-        {
-          "ageYears": 77.5,
-          "value": 13.133063963193914
-        },
-        {
-          "ageYears": 77.6,
-          "value": 13.13393425792407
-        },
-        {
-          "ageYears": 77.7,
-          "value": 13.134804473258885
-        },
-        {
-          "ageYears": 77.8,
-          "value": 13.135674601748722
-        },
-        {
-          "ageYears": 77.9,
-          "value": 13.136544636020295
-        },
-        {
-          "ageYears": 78.0,
-          "value": 13.137414568775952
-        },
-        {
-          "ageYears": 78.1,
-          "value": 13.138284392792917
-        },
-        {
-          "ageYears": 78.2,
-          "value": 13.139154100922585
-        },
-        {
-          "ageYears": 78.3,
-          "value": 13.14002368608983
-        },
-        {
-          "ageYears": 78.4,
-          "value": 13.140893141292322
-        },
-        {
-          "ageYears": 78.5,
-          "value": 13.141762459599798
-        },
-        {
-          "ageYears": 78.6,
-          "value": 13.142631634153375
-        },
-        {
-          "ageYears": 78.7,
-          "value": 13.143500658164896
-        },
-        {
-          "ageYears": 78.8,
-          "value": 13.144369524916273
-        },
-        {
-          "ageYears": 78.9,
-          "value": 13.145238227758766
-        },
-        {
-          "ageYears": 79.0,
-          "value": 13.14610676011238
-        },
-        {
-          "ageYears": 79.1,
-          "value": 13.146975115465192
-        },
-        {
-          "ageYears": 79.2,
-          "value": 13.1478432873727
-        },
-        {
-          "ageYears": 79.3,
-          "value": 13.14871126945719
-        },
-        {
-          "ageYears": 79.4,
-          "value": 13.149579055407088
-        },
-        {
-          "ageYears": 79.5,
-          "value": 13.150446638976407
-        },
-        {
-          "ageYears": 79.6,
-          "value": 13.151314013983981
-        },
-        {
-          "ageYears": 79.7,
-          "value": 13.152181174313066
-        },
-        {
-          "ageYears": 79.8,
-          "value": 13.153048113910499
-        },
-        {
-          "ageYears": 79.9,
-          "value": 13.153914826786256
-        },
-        {
-          "ageYears": 80.0,
-          "value": 13.154781307012831
-        },
-        {
-          "ageYears": 80.1,
-          "value": 13.15564754872458
-        },
-        {
-          "ageYears": 80.2,
-          "value": 13.156513546117226
-        },
-        {
-          "ageYears": 80.3,
-          "value": 13.15737929344721
-        },
-        {
-          "ageYears": 80.4,
-          "value": 13.158244785031169
-        },
-        {
-          "ageYears": 80.5,
-          "value": 13.15911001524534
-        },
-        {
-          "ageYears": 80.6,
-          "value": 13.159974978525034
-        },
-        {
-          "ageYears": 80.7,
-          "value": 13.16083966936403
-        },
-        {
-          "ageYears": 80.8,
-          "value": 13.161704082314072
-        },
-        {
-          "ageYears": 80.9,
-          "value": 13.162568211984302
-        },
-        {
-          "ageYears": 81.0,
-          "value": 13.163432053040754
-        },
-        {
-          "ageYears": 81.1,
-          "value": 13.16429560020575
-        },
-        {
-          "ageYears": 81.2,
-          "value": 13.16515884825746
-        },
-        {
-          "ageYears": 81.3,
-          "value": 13.166021792029335
-        },
-        {
-          "ageYears": 81.4,
-          "value": 13.166884426409554
-        },
-        {
-          "ageYears": 81.5,
-          "value": 13.167746746340597
-        },
-        {
-          "ageYears": 81.6,
-          "value": 13.168608746818684
-        },
-        {
-          "ageYears": 81.7,
-          "value": 13.169470422893253
-        },
-        {
-          "ageYears": 81.8,
-          "value": 13.170331769666547
-        },
-        {
-          "ageYears": 81.9,
-          "value": 13.17119278229301
-        },
-        {
-          "ageYears": 82.0,
-          "value": 13.17205345597889
-        },
-        {
-          "ageYears": 82.1,
-          "value": 13.1729137859817
-        },
-        {
-          "ageYears": 82.2,
-          "value": 13.173773767609791
-        },
-        {
-          "ageYears": 82.3,
-          "value": 13.17463339622186
-        },
-        {
-          "ageYears": 82.4,
-          "value": 13.175492667226422
-        },
-        {
-          "ageYears": 82.5,
-          "value": 13.176351576081437
-        },
-        {
-          "ageYears": 82.6,
-          "value": 13.177210118293804
-        },
-        {
-          "ageYears": 82.7,
-          "value": 13.178068289418897
-        },
-        {
-          "ageYears": 82.8,
-          "value": 13.178926085060189
-        },
-        {
-          "ageYears": 82.9,
-          "value": 13.179783500868663
-        },
-        {
-          "ageYears": 83.0,
-          "value": 13.180640532542506
-        },
-        {
-          "ageYears": 83.1,
-          "value": 13.181497175826637
-        },
-        {
-          "ageYears": 83.2,
-          "value": 13.182353426512218
-        },
-        {
-          "ageYears": 83.3,
-          "value": 13.183209280436301
-        },
-        {
-          "ageYears": 83.4,
-          "value": 13.184064733481321
-        },
-        {
-          "ageYears": 83.5,
-          "value": 13.184919781574779
-        },
-        {
-          "ageYears": 83.6,
-          "value": 13.18577442068873
-        },
-        {
-          "ageYears": 83.7,
-          "value": 13.186628646839402
-        },
-        {
-          "ageYears": 83.8,
-          "value": 13.187482456086851
-        },
-        {
-          "ageYears": 83.9,
-          "value": 13.18833584453446
-        },
-        {
-          "ageYears": 84.0,
-          "value": 13.189188808328556
-        },
-        {
-          "ageYears": 84.1,
-          "value": 13.190041343658072
-        },
-        {
-          "ageYears": 84.2,
-          "value": 13.190893446754137
-        },
-        {
-          "ageYears": 84.3,
-          "value": 13.191745113889601
-        },
-        {
-          "ageYears": 84.4,
-          "value": 13.192596341378794
-        },
-        {
-          "ageYears": 84.5,
-          "value": 13.193447125576993
-        },
-        {
-          "ageYears": 84.6,
-          "value": 13.194297462880192
-        },
-        {
-          "ageYears": 84.7,
-          "value": 13.195147349724595
-        },
-        {
-          "ageYears": 84.8,
-          "value": 13.195996782586331
-        },
-        {
-          "ageYears": 84.9,
-          "value": 13.196845757981059
-        },
-        {
-          "ageYears": 85.0,
-          "value": 13.197694272463611
-        },
-        {
-          "ageYears": 85.1,
-          "value": 13.198542322627606
-        },
-        {
-          "ageYears": 85.2,
-          "value": 13.199389905105114
-        },
-        {
-          "ageYears": 85.3,
-          "value": 13.200237016566332
-        },
-        {
-          "ageYears": 85.4,
-          "value": 13.201083653719188
-        },
-        {
-          "ageYears": 85.5,
-          "value": 13.201929813308988
-        },
-        {
-          "ageYears": 85.6,
-          "value": 13.202775492118123
-        },
-        {
-          "ageYears": 85.7,
-          "value": 13.203620686965703
-        },
-        {
-          "ageYears": 85.8,
-          "value": 13.204465394707187
-        },
-        {
-          "ageYears": 85.9,
-          "value": 13.205309612234107
-        },
-        {
-          "ageYears": 86.0,
-          "value": 13.206153336473722
-        },
-        {
-          "ageYears": 86.1,
-          "value": 13.206996564388627
-        },
-        {
-          "ageYears": 86.2,
-          "value": 13.207839292976558
-        },
-        {
-          "ageYears": 86.3,
-          "value": 13.208681519269936
-        },
-        {
-          "ageYears": 86.4,
-          "value": 13.209523240335614
-        },
-        {
-          "ageYears": 86.5,
-          "value": 13.210364453274579
-        },
-        {
-          "ageYears": 86.6,
-          "value": 13.211205155221585
-        },
-        {
-          "ageYears": 86.7,
-          "value": 13.21204534334492
-        },
-        {
-          "ageYears": 86.8,
-          "value": 13.212885014846005
-        },
-        {
-          "ageYears": 86.9,
-          "value": 13.213724166959176
-        },
-        {
-          "ageYears": 87.0,
-          "value": 13.214562796951329
-        },
-        {
-          "ageYears": 87.1,
-          "value": 13.215400902121653
-        },
-        {
-          "ageYears": 87.2,
-          "value": 13.216238479801296
-        },
-        {
-          "ageYears": 87.3,
-          "value": 13.217075527353142
-        },
-        {
-          "ageYears": 87.4,
-          "value": 13.217912042171445
-        },
-        {
-          "ageYears": 87.5,
-          "value": 13.218748021681622
-        },
-        {
-          "ageYears": 87.6,
-          "value": 13.219583463339845
-        },
-        {
-          "ageYears": 87.7,
-          "value": 13.220418364632918
-        },
-        {
-          "ageYears": 87.8,
-          "value": 13.22125272307789
-        },
-        {
-          "ageYears": 87.9,
-          "value": 13.222086536221783
-        },
-        {
-          "ageYears": 88.0,
-          "value": 13.222919801641392
+          "ageYears": 30,
+          "value": 20.7
         }
       ],
-      "sourceLabel": "Kelsey 2014/2015 · testosteron",
-      "url": "https://doi.org/10.1371/journal.pone.0109346",
-      "method": "Mixed methods converted by authors to LC-MS/MS equivalent; not a single directly measured assay cohort",
-      "population": "Połączone badania zdrowych chłopców i mężczyzn",
-      "statistic": "model-central",
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
       "approximate": false,
       "unit": "nmol/L",
-      "interpolation": "pchip",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "meanAge": 23.8,
+      "groupN": 141,
+      "ageGroup": {
+        "label": "18–29 lat",
+        "minAge": 18,
+        "maxAge": 30,
+        "maxAgeExclusive": true,
+        "meanAge": 23.8,
+        "n": 141,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 20.7,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
+      "provenance": {
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+        "sourceRouting": {
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 18,
+          "maxAge": 30,
+          "maxAgeExclusive": true,
+          "sourceDomain": {
+            "minAge": 18,
+            "maxAge": 86
+          },
+          "retainAllSourcePoints": true
+        },
+        "participants": 1194,
+        "groupParticipants": 141,
+        "publishedMeanAge": 23.8,
+        "sourceMean": 20.7,
+        "sourceSd": 5.9,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "18–29 lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+        }
+      },
+      "limitations": [
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+      ]
+    },
+    {
+      "id": "walravens2025-male-t-30-39",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 30,
+      "maxAge": 40,
+      "points": [
+        {
+          "ageYears": 30,
+          "value": 20.0
+        },
+        {
+          "ageYears": 40,
+          "value": 20.0
+        }
+      ],
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "meanAge": 34.3,
+      "groupN": 252,
+      "ageGroup": {
+        "label": "30–39 lat",
+        "minAge": 30,
+        "maxAge": 40,
+        "maxAgeExclusive": true,
+        "meanAge": 34.3,
+        "n": 252,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 20.0,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
+      "provenance": {
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+        "sourceRouting": {
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 30,
+          "maxAge": 40,
+          "maxAgeExclusive": true,
+          "sourceDomain": {
+            "minAge": 18,
+            "maxAge": 86
+          },
+          "retainAllSourcePoints": true
+        },
+        "participants": 1194,
+        "groupParticipants": 252,
+        "publishedMeanAge": 34.3,
+        "sourceMean": 20.0,
+        "sourceSd": 6.6,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "30–39 lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+        }
+      },
+      "limitations": [
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+      ]
+    },
+    {
+      "id": "walravens2025-male-t-40-49",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 40,
+      "maxAge": 50,
+      "points": [
+        {
+          "ageYears": 40,
+          "value": 18.1
+        },
+        {
+          "ageYears": 50,
+          "value": 18.1
+        }
+      ],
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "meanAge": 43.5,
+      "groupN": 207,
+      "ageGroup": {
+        "label": "40–49 lat",
+        "minAge": 40,
+        "maxAge": 50,
+        "maxAgeExclusive": true,
+        "meanAge": 43.5,
+        "n": 207,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 18.1,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
+      "provenance": {
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+        "sourceRouting": {
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 40,
+          "maxAge": 50,
+          "maxAgeExclusive": true,
+          "sourceDomain": {
+            "minAge": 18,
+            "maxAge": 86
+          },
+          "retainAllSourcePoints": true
+        },
+        "participants": 1194,
+        "groupParticipants": 207,
+        "publishedMeanAge": 43.5,
+        "sourceMean": 18.1,
+        "sourceSd": 5.6,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "40–49 lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+        }
+      },
+      "limitations": [
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+      ]
+    },
+    {
+      "id": "walravens2025-male-t-50-59",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 50,
+      "maxAge": 60,
+      "points": [
+        {
+          "ageYears": 50,
+          "value": 16.9
+        },
+        {
+          "ageYears": 60,
+          "value": 16.9
+        }
+      ],
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "meanAge": 55.0,
+      "groupN": 150,
+      "ageGroup": {
+        "label": "50–59 lat",
+        "minAge": 50,
+        "maxAge": 60,
+        "maxAgeExclusive": true,
+        "meanAge": 55.0,
+        "n": 150,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 16.9,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
+      "provenance": {
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+        "sourceRouting": {
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 50,
+          "maxAge": 60,
+          "maxAgeExclusive": true,
+          "sourceDomain": {
+            "minAge": 18,
+            "maxAge": 86
+          },
+          "retainAllSourcePoints": true
+        },
+        "participants": 1194,
+        "groupParticipants": 150,
+        "publishedMeanAge": 55.0,
+        "sourceMean": 16.9,
+        "sourceSd": 5.9,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "50–59 lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+        }
+      },
+      "limitations": [
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+      ]
+    },
+    {
+      "id": "walravens2025-male-t-60-69",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 60,
+      "maxAge": 70,
+      "points": [
+        {
+          "ageYears": 60,
+          "value": 17.1
+        },
+        {
+          "ageYears": 70,
+          "value": 17.1
+        }
+      ],
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "meanAge": 65.1,
+      "groupN": 177,
+      "ageGroup": {
+        "label": "60–69 lat",
+        "minAge": 60,
+        "maxAge": 70,
+        "maxAgeExclusive": true,
+        "meanAge": 65.1,
+        "n": 177,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 17.1,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
+      "provenance": {
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+        "sourceRouting": {
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 60,
+          "maxAge": 70,
+          "maxAgeExclusive": true,
+          "sourceDomain": {
+            "minAge": 18,
+            "maxAge": 86
+          },
+          "retainAllSourcePoints": true
+        },
+        "participants": 1194,
+        "groupParticipants": 177,
+        "publishedMeanAge": 65.1,
+        "sourceMean": 17.1,
+        "sourceSd": 5.5,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "60–69 lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+        }
+      },
+      "limitations": [
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+      ]
+    },
+    {
+      "id": "walravens2025-male-t-70-79",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 70,
+      "maxAge": 80,
+      "points": [
+        {
+          "ageYears": 70,
+          "value": 17.0
+        },
+        {
+          "ageYears": 80,
+          "value": 17.0
+        }
+      ],
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "meanAge": 74.7,
+      "groupN": 167,
+      "ageGroup": {
+        "label": "70–79 lat",
+        "minAge": 70,
+        "maxAge": 80,
+        "maxAgeExclusive": true,
+        "meanAge": 74.7,
+        "n": 167,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 17.0,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
+      "provenance": {
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
+        "sourceRouting": {
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 70,
+          "maxAge": 80,
+          "maxAgeExclusive": true,
+          "sourceDomain": {
+            "minAge": 18,
+            "maxAge": 86
+          },
+          "retainAllSourcePoints": true
+        },
+        "participants": 1194,
+        "groupParticipants": 167,
+        "publishedMeanAge": 74.7,
+        "sourceMean": 17.0,
+        "sourceSd": 5.8,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "70–79 lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+        }
+      },
+      "limitations": [
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+      ]
+    },
+    {
+      "id": "walravens2025-male-t-80-plus",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 80,
+      "maxAge": 86,
+      "points": [
+        {
+          "ageYears": 80,
+          "value": 15.9
+        },
+        {
+          "ageYears": 86,
+          "value": 15.9
+        }
+      ],
+      "sourceLabel": "Walravens 2025/2026 · testosteron · średnia grupy wieku",
+      "url": "https://doi.org/10.1210/clinem/dgaf507",
+      "method": "Total testosterone by LC-MS/MS",
+      "population": "Europejscy mężczyźni; młodsze kohorty zdrowych i starsze kohorty populacyjne",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "nmol/L",
+      "interpolation": "constant",
       "maxAgeExclusive": false,
       "compatibleAssayMethodIds": [
         "lc-ms/ms",
         "lc-ms-ms",
         "lcmsms"
       ],
+      "meanAge": 82.1,
+      "groupN": 100,
+      "ageGroup": {
+        "label": "80+ lat",
+        "minAge": 80,
+        "maxAge": 86,
+        "maxAgeExclusive": false,
+        "meanAge": 82.1,
+        "n": 100,
+        "sourceUnit": "nmol/L",
+        "sourceMean": 15.9,
+        "boundaryPolicy": "published-decade-groups-limited-to-observed-age-support",
+        "description": "Średnia arytmetyczna całej grupy wieku; nie jest medianą, normą ani stężeniem właściwym dla konkretnego roku życia."
+      },
       "provenance": {
-        "doi": "10.1371/journal.pone.0109346",
-        "pmid": "25295520",
-        "correctionDoi": "10.1371/journal.pone.0117674",
-        "location": "Table S1 XLSX A1 and B2:B8; correction Table 3 p50",
-        "license": "CC BY",
-        "retrievedOn": "2026-10-10",
+        "authors": "Walravens et al.",
+        "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+        "doi": "10.1210/clinem/dgaf507",
+        "url": "https://doi.org/10.1210/clinem/dgaf507",
+        "journal": "The Journal of Clinical Endocrinology & Metabolism",
+        "onlinePublicationDate": "2025-09-10",
+        "issue": "111(3), March 2026, e787–e793",
+        "table": 1,
+        "tableTitle": "Characteristics of 1194 participants per age category",
+        "rows": [
+          "Age, y",
+          "Total T, nmol/L"
+        ],
+        "reviewedDate": "2026-10-11",
+        "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+        "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c",
         "sourceRouting": {
-          "version": "2026-10-10.1",
-          "source": "kelsey2014",
-          "minAge": 18,
-          "maxAge": 88,
+          "version": "2026-10-11.1",
+          "source": "walravens2025",
+          "minAge": 80,
+          "maxAge": 86,
           "maxAgeExclusive": false,
           "sourceDomain": {
-            "minAge": 3,
-            "maxAge": 88
+            "minAge": 18,
+            "maxAge": 86
           },
           "retainAllSourcePoints": true
-        }
-      },
-      "formula": {
-        "log10TTplus1": "(a+c*age+e*age^2+g*age^3)/(1+b*age+d*age^2+f*age^3)",
-        "inverse": "10^prediction - 1",
-        "coefficients": {
-          "a": 0.04655009220580975,
-          "b": -0.053105120839422044,
-          "c": 0.051230067427154524,
-          "d": -0.0079259805371925,
-          "e": -0.012221840632369542,
-          "f": 0.0005808117124001521,
-          "g": 0.0006918080153444722
+        },
+        "participants": 1194,
+        "groupParticipants": 100,
+        "publishedMeanAge": 82.1,
+        "sourceMean": 15.9,
+        "sourceSd": 7.2,
+        "sourceUnit": "nmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceColumn": "80+ lat",
+        "sourcePopulation": {
+          "sex": "male",
+          "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+          "minAge": 18,
+          "maxAge": 86,
+          "includedCohorts": [
+            "SIBLOS/SIBEX",
+            "EMAS Leuven",
+            "locally recruited healthy men aged 18–24"
+          ],
+          "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+          "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+        },
+        "assay": {
+          "method": "Total testosterone by LC-MS/MS",
+          "specimen": "serum",
+          "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+        },
+        "ageRouting": {
+          "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+          "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+          "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
         }
       },
       "limitations": [
-        "Not applicable before age 3; no fetal or infant values despite source-generated extrapolated rows.",
-        "Age alone does not establish Tanner stage, a diagnosis or treatment need.",
-        "Pooled method conversions and cohorts have residual heterogeneity; orientation only unless separately justified.",
-        "Original 2014 centiles were corrected in 2015; corrected table retained separately."
-      ],
-      "historicalResearchNotes": [
-        "No interpolation or cross-source stitching has been authorized for production."
+        "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+        "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+        "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+        "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+        "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+        "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+        "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+        "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
       ]
     },
     {
@@ -31610,7 +28955,7 @@ const inhibinDisplayPolicy = {
   ]
 };
 const testosteroneDisplayPolicy = {
-  "version": "2026-10-10.3",
+  "version": "2026-10-11.1",
   "kind": "educational-display-only",
   "analyte": "t",
   "sex": "male",
@@ -31619,7 +28964,13 @@ const testosteroneDisplayPolicy = {
     "busch2022-male-t",
     "kelsey2014-male-t-childhood",
     "madsen2022-male-t",
-    "kelsey2014-male-t"
+    "walravens2025-male-t-18-29",
+    "walravens2025-male-t-30-39",
+    "walravens2025-male-t-40-49",
+    "walravens2025-male-t-50-59",
+    "walravens2025-male-t-60-69",
+    "walravens2025-male-t-70-79",
+    "walravens2025-male-t-80-plus"
   ],
   "sources": [
     {
@@ -31636,61 +28987,59 @@ const testosteroneDisplayPolicy = {
       "doi": "10.1371/journal.pone.0109346",
       "correctionDoi": "10.1371/journal.pone.0117674",
       "statistic": "corrected-model-central-p50",
-      "limit": "Routing is restricted to ages 3 to less than 6 years. The complete 3–88-year source nodes remain intact to preserve original interpolation. This pooled model is not a Tanner-specific pediatric LC-MS/MS reference."
+      "limit": "Numerical routing remains ages 3 to less than 6 years. These original reference nodes are deliberately not display knots: the disagreement with Madsen must not create an apparent childhood hormonal event."
     },
     {
       "id": "madsen2022-male-t",
       "doi": "10.1210/clinem/dgac155",
       "supplementDoi": "10.6084/m9.figshare.17153336.v1",
       "statistic": "published-annual-lms-central-p50",
-      "limit": "Norwegian boys aged 6–18 years, serum LC-MS/MS; chronological-age model across pubertal stages. Routing is 6 to less than 18; the published 18-year endpoint remains a source interpolation neighbor and scale input, not a mandatory display anchor or evidence of a physiological peak age."
+      "limit": "Norwegian boys aged 6–18 years, serum LC-MS/MS; chronological-age model across pubertal stages. Numerical routing is 6 to less than 18. The published 18-year endpoint is used only for display continuity and the fixed scale; it does not assign the pediatric reference to an adult."
     },
     {
-      "id": "kelsey2014-male-t",
-      "doi": "10.1371/journal.pone.0109346",
-      "correctionDoi": "10.1371/journal.pone.0117674",
-      "statistic": "corrected-model-central-p50",
-      "limit": "Routing is restricted to ages 18–88 years, retaining complete 3–88-year source nodes. The pooled model is not an individual longitudinal trajectory or a Tanner-specific reference."
+      "ids": [
+        "walravens2025-male-t-18-29",
+        "walravens2025-male-t-30-39",
+        "walravens2025-male-t-40-49",
+        "walravens2025-male-t-50-59",
+        "walravens2025-male-t-60-69",
+        "walravens2025-male-t-70-79",
+        "walravens2025-male-t-80-plus"
+      ],
+      "doi": "10.1210/clinem/dgaf507",
+      "statistic": "published-age-group-arithmetic-mean",
+      "limit": "Table 1 total testosterone means, not medians or reference intervals. 1194 men aged 18–86; healthy younger cohorts and older community cohorts. The continuous adult arc is an illustration and does not fit every group mean or establish an individual aging trajectory."
     }
   ],
   "scale": {
-    "basis": "maximum-of-complete-source-profiles",
+    "basis": "fixed-published-source-node",
+    "sourceId": "madsen2022-male-t",
+    "ageYears": 18,
     "headroomFactor": 1.25,
     "patientValueMayChangeScale": false
   },
   "transitions": [
     {
-      "minAge": 0.4106776180698152,
-      "maxAge": 4,
-      "fromSource": "busch2022-male-t",
-      "toSource": "kelsey2014-male-t-childhood",
-      "kind": "illustrative-transition",
-      "tangents": "monotone-display",
-      "reason": "The 150-day-to-4-year display transition deliberately includes readable Busch data from days 150–212 and Kelsey data at ages 3–4. Joining the last readable infant median to the first Kelsey median would invent a childhood rebound; this broader monotone illustration does not change either source or a patient's source median."
-    },
-    {
-      "minAge": 5,
+      "minAge": 0.5804243668720055,
       "maxAge": 6,
-      "fromSource": "kelsey2014-male-t-childhood",
+      "fromSource": "busch2022-male-t",
       "toSource": "madsen2022-male-t",
-      "kind": "illustrative-transition",
-      "tangents": "monotone-display",
-      "reason": "Join the existing Kelsey childhood estimate to the lower LC-MS/MS Madsen estimate without a source-switch step. This display descent is not evidence of a biological fall between ages 5 and 6; each eligible patient keeps the original source median."
+      "kind": "illustrative-childhood",
+      "reason": "One broad monotone connection from the last readable infant point to the low childhood LC-MS/MS level avoids turning source disagreement at ages 3–6 into a rise and tooth. Numerical childhood references remain separate."
     },
     {
-      "minAge": 16,
-      "maxAge": 25,
+      "minAge": 18,
+      "maxAge": 23.8,
       "fromSource": "madsen2022-male-t",
-      "toSource": "kelsey2014-male-t",
+      "toSource": "walravens2025-male-t-18-29",
       "kind": "illustrative-transition",
-      "tangents": "original-source-derivative",
-      "reason": "A broad illustrative bridge from the source value and tangent at age 16 to those at age 25 rounds off late puberty without forcing a peak at the last Madsen node (18 years). One canonical-coordinate cubic spans the whole-life time-axis change at age 20. Its rounded maximum is a drawing consequence, not an observed peak or a new population median."
+      "reason": "Join the published pediatric endpoint to the first adult group mean without inventing a late-puberty peak above young adults. These are different cohorts and different statistics."
     }
   ],
   "anchors": [],
   "schematic": {
     "prenatalLastAnchorAge": 0,
-    "prenatalScale": "source-maximum",
+    "prenatalScale": "fixed-published-source-node",
     "tailScale": "hold-last-source-value",
     "tailMaxAge": 90
   },
@@ -31698,18 +29047,38 @@ const testosteroneDisplayPolicy = {
     "method": "shape-preserving-cubic",
     "coordinate": "canonical-whole-life-display-x",
     "zoom": "sample-the-same-canonical-curve",
-    "transitionInteriorSourceNodesDisplayed": "none-unless-explicitly-approved-policy-anchor"
+    "transitionInteriorSourceNodesDisplayed": "none"
   },
   "limits": [
-    "This continuous line is educational display geometry, not one published population model or a reference interval.",
-    "Patient eligibility, source p50 and clinical interpretation remain in their original engines; never derive a patient reference from a display transition.",
-    "All approved source populations remain visible regardless of the current patient's eligibility for numerical comparison.",
-    "The broad 150-day-to-4-year transition is not a source-derived concentration curve. Source reference values remain available at all previously eligible ages, including 150–212 days and 3–4 years.",
-    "No source median is supplied for ages 1–3 years, unreadable late-infant graphical values, or ages beyond 88 years.",
-    "The 5–6-year and 16–25-year transitions connect different source populations and methods; they are not longitudinal concentration models. Patient source medians may lie away from these illustrative bridges.",
-    "The fetal lead and flat tail after 88 years are illustrative drawing conventions, not fetal or oldest-old reference concentrations.",
-    "Kelsey's near-plateau after age 40 is retained; it is not a claim that every man's total testosterone or free testosterone remains constant."
-  ]
+    "This continuous line is educational geometry, not one population median model or a reference interval.",
+    "Numerical patient eligibility, source medians/group means and interpretation remain in the reference engine; never derive a patient reference from the display curve.",
+    "The prenatal lead, post-infant childhood connection, pediatric-to-adult join, adult arc and oldest-age tail are illustrative. Exact patient source markers may lie off the curve.",
+    "All approved source populations remain visible regardless of the current patient eligibility. Childhood Kelsey and intermediate adult group means are numerical references, not required display knots.",
+    "No numerical reference is supplied for unreadable late-infant values, ages 1–3 years or beyond age 86.",
+    "Adult data concern total testosterone. Do not substitute free testosterone, infer longitudinal change from cross-sectional cohorts, or label group means as medians or normal limits.",
+    "The hold after the oldest group mean and faded tail after 86 years do not establish stable concentrations in the oldest old.",
+    "The fixed source-node scale is preserved when adding adult means and when changing patient value, age or zoom; each hormone keeps its own scale."
+  ],
+  "sampling": {
+    "infantSourceId": "busch2022-male-t",
+    "pediatricSourceId": "madsen2022-male-t",
+    "sourceSampleCount": 400,
+    "denseStartAge": 16,
+    "denseStepYears": 0.01,
+    "includePublishedPediatricEndpoint": true
+  },
+  "adultTrend": {
+    "kind": "illustrative-adult-trend",
+    "coordinate": "canonical-whole-life-display-x",
+    "startSourceId": "walravens2025-male-t-18-29",
+    "endSourceId": "walravens2025-male-t-80-plus",
+    "endpointAge": "published-group-mean-age",
+    "method": "single-cubic-bezier-horizontal-end-tangents",
+    "startHandle": 0.2,
+    "endHandle": 0.5,
+    "sampleCount": 601,
+    "reason": "One broad declining arc anchored to first/last published group means. Intermediate means remain numerical references only, avoiding false mid-adult knees and tiny group-to-group oscillations. Canonical display coordinates avoid a new bend at the age-60 axis change."
+  }
 };
 return {
   version: lifespanData.version,

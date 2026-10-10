@@ -13,6 +13,13 @@ dostępna; zachowaj wspólny kontekst pacjenta i nie dodawaj kolejnego formularz
 INSL3 pozostaje zapisanym zadaniem przyszłego kalkulatora — obecność krzywej
 nie oznacza dostępności jego obliczeń.
 
+Przed pracą nad tym wykresem przeczytaj również
+[instrukcję łączenia i wygładzania krzywych](HORMONE_CURVE_AGENT_GUIDE.md).
+Utrwala decyzję z 11 października 2026: płynna linia może upraszczać
+różnice między publikacjami, lecz liczbowe odniesienie pacjenta pochodzi
+z oryginalnego źródła. Nie wolno tworzyć norm ani nowych średnich/median
+z geometrii edukacyjnej. Nie dodawaj osobnego formularza do obsługi wykresu.
+
 ## 1. Cel: szybkie sprawdzenie wyniku, „easy and clean”
 
 Lekarz wybiera badanie, wpisuje wynik i jednostkę. Aplikacja wykorzystuje
