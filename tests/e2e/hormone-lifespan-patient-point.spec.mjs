@@ -50,23 +50,34 @@ async function expectPoint(page, value, median) {
       if (!group || !group.ownerSVGElement) return null;
       const point = group.querySelector('[data-result-point]');
       const ref = group.querySelector('[data-median-point]');
-      const line = group.ownerSVGElement.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`);
-      const px = Number(point.getAttribute('cx'));
+      const line = group.ownerSVGElement.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`) ||
+        group.ownerSVGElement.querySelector('[data-stable-reference-line="inhb"]');
+      if (!line) return null;
+      const px = Number(ref.getAttribute('cx'));
       let lo = 0, hi = line.getTotalLength();
       for (let i = 0; i < 32; i++) {
         const mid = (lo + hi) / 2;
         if (line.getPointAtLength(mid).x < px) lo = mid; else hi = mid;
       }
-      return { x: px, y: Number(point.getAttribute('cy')),
+      return { x: px, y: point ? Number(point.getAttribute('cy')) : null,
         rx: Number(ref.getAttribute('cx')), ry: Number(ref.getAttribute('cy')),
         curveY: line.getPointAtLength((lo + hi) / 2).y,
-        bottom: Number(group.dataset.plotBottom), value: Number(group.dataset.value), median: Number(group.dataset.median) };
+        bottom: Number(group.dataset.plotBottom), value: Number(group.dataset.value), median: Number(group.dataset.median),
+        offscale: group.dataset.offscale === 'above', overflow: Boolean(group.querySelector('[data-result-overflow]')) };
     });
     return geometry && Math.abs(geometry.value - value) <= 1e-10 * Math.max(1, Math.abs(value));
   }).toBe(true);
-  expect(Object.values(geometry).every(Number.isFinite)).toBe(true);
+  expect(['x', 'rx', 'ry', 'curveY', 'bottom', 'value', 'median'].every(key => Number.isFinite(geometry[key]))).toBe(true);
   expect(geometry.x).toBe(geometry.rx);
   expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
+  if (geometry.offscale) {
+    expect(geometry.overflow).toBe(true);
+    expect(geometry.y).toBeNull();
+    await expect(dot(page).locator('[data-result-point]')).toHaveCount(0);
+    return;
+  }
+  expect(Number.isFinite(geometry.y)).toBe(true);
+  expect(geometry.overflow).toBe(false);
   if (geometry.value === 0) expect(geometry.y).toBe(geometry.bottom);
   else expect(((geometry.bottom - geometry.y) / (geometry.bottom - geometry.ry)) / (geometry.value / geometry.median)).toBeCloseTo(1, 6);
   if (median != null && value > median) expect(geometry.y).toBeLessThan(geometry.ry);
@@ -243,6 +254,13 @@ for (const width of [320, 390, 1440]) {
         const svg = group.ownerSVGElement;
         const point = group.querySelector('[data-result-point]');
         const box = svg.viewBox.baseVal;
+        if (group.dataset.offscale === 'above') {
+          const arrow = group.querySelector('[data-result-overflow]');
+          if (!arrow || point) return false;
+          const bounds = arrow.getBBox();
+          return bounds.x >= 0 && bounds.x + bounds.width <= box.width &&
+            bounds.y >= 0 && bounds.y + bounds.height <= box.height && !/NaN|Infinity/.test(svg.innerHTML);
+        }
         const x = Number(point.getAttribute('cx')), y = Number(point.getAttribute('cy'));
         return x >= 0 && x <= box.width && y >= 0 && y <= box.height && !/NaN|Infinity/.test(svg.innerHTML);
       });

@@ -728,15 +728,10 @@ płeć, donoszenie i typowane stadium, bez kolejnego formularza.
 - De Schepper 2000 nie jest aktywowany: sprzeczne liczebności, opisy
   statystyk i zakresy w pełnym tekście. Pozostaje metadana wyłączenia.
 
-Ponadto dla męskiej inhibiny B poprawiono prezentację istniejących profili
-Busch/Kelsey/Borelli: osobne dopasowane ścieżki i maska ich łącznej domeny
-zastępują rysowanie wyłącznie źródła aktualnego pacjenta. Wspólna skala
-obejmuje pełne źródła i zachowuje się przy zmianie powiększenia. Właściciel
-zatwierdził jedną wizualnie ciągłą linię: małe pasy na stykach źródeł lub
-schematu mają przerywane połączenia poglądowe. Łączniki są geometrią SVG,
-nie interpolacją modelu mediany; nie zmieniają wartości danych ani punktu
-pacjenta. Jego osobny znacznik mediany pozostaje źródłowy także w pasie
-przejścia. Warunki donoszenia, materiału i metody pozostają.
+Historyczna wersja PR #615 łączyła osobne ścieżki Busch/Kelsey/Borelli
+przerywanymi mostami i maskowała ich styki. Ta polityka została zastąpiona
+jedną stałą linią w opisanej niżej poprawce HORMONE-INHIBIN-STABLE-CURVE.
+Dane obserwacji grupowych i ich kwalifikacja pozostają niezmienione.
 
 **Wpływ:** nowe edukacyjne porównania i zakres widocznych danych. Progi,
 normy, interpretacje laboratoryjne, wizyty, historia i persistence bez zmian.
@@ -752,6 +747,68 @@ z wieku i bez klasyfikacji stężenia według IQR.
 [INHIBIN_EVIDENCE.md](hormone-lifespan/INHIBIN_EVIDENCE.md).
 Generatory pakują dane bez plików PDF/rycin. Regresje wywołują rzeczywisty
 moduł porównań; nie stanowią walidacji klinicznej.
+
+
+### HORMONE-INHIBIN-STABLE-CURVE — stała, płynna linia inhibiny B, 2026-10-10
+
+**Przyczyna i decyzja właściciela:** po wpisaniu wyniku męskiej inhibiny B
+schemat poglądowy był zastępowany liniami liczbowymi o innym przebiegu.
+Dodatkowo wysoki wynik zmieniał skalę. Właściciel polecił ujednolicić
+prezentację i uzyskać płynną linię bez widocznych łączeń. Zwykłe widoki
+życia, minipuberty i pokwitania używają teraz jednej krzywej, niezależnej
+od obecności i wartości wyniku, wieku pacjenta, donoszenia lub metody.
+Porównanie płci zachowuje dotychczasową politykę.
+
+**Źródła i granice:** oryginalne profile pozostają bez zmian: Busch 2022,
+DOI `10.1210/clinem/dgac115`, ryc. 3, donoszeni chłopcy 7 dni–<1 roku,
+surowica Gen II ELISA; Kelsey 2016, DOI `10.1371/journal.pone.0153843`,
+tabela 4 p50, aplikacyjny odcinek 1–<6,1 roku, historyczne dwumiejscowe
+ELISA; Borelli-Kjær 2025, DOI `10.1210/clinem/dgae439`, ryc. 2 linia 0 SD,
+6,1–80 lat, surowica Oxford Bio-innovation/Gen II ELISA. Jednostka pg/mL
+(równoważna ng/L). Pełne populacje i niepewność digitalizacji pozostają
+w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Różne publikacje
+nie stają się jedną zwalidowaną populacją ani wspólną normą.
+
+**Polityka prezentacji:** `inhibin-display-policy.json` jest oddzielny od
+danych odniesienia i eksportowany jako `inhibinDisplayPolicy`. Produkcyjny
+`VildaHormoneLifespanDisplay.buildMaleInhibin` przygotowuje stałe węzły.
+Renderer buduje jedną ciągłą ścieżkę PCHIP z ciągłą styczną (C1)
+we współrzędnych całego życia; zbliżenie nie zmienia dopasowania. Graficzne
+przejścia 0,75–2 lat oraz 4,5–7 lat nie wyznaczają mediany pacjenta.
+Trzeci pas 18–25 lat pozostaje wewnątrz profilu Borelli i łagodzi wizualne
+załamanie przy zmianie skali czasu w 20. roku. Styczne na końcach pasów
+odpowiadają lokalnym pochodnym źródłowego przebiegu, aby uniknąć krótkich
+zagięć. Nie ma osobnych mostów ani masek. Odcinek
+płodowy zachowuje kotwice poglądowe i dochodzi do Busch w 7. dniu bez
+wcześniejszego dołka w dniu urodzenia. Odcinek 80–90 lat jest płaski,
+zakotwiczony w końcu Borelli (140 pg/mL), i nie przedłuża profilu odniesienia.
+
+Maksimum źródeł 309,779035 pg/mL z zapasem wysokości 1,25 daje stałą górę
+osi około 387,22379 pg/mL. Wynik powyżej jest prezentowany strzałką w górę
+z rzeczywistą liczbą, bez kropki pozorującej położenie na granicy i bez
+przeskalowania linii. Warunki punktu, jego wartości i źródłowej mediany
+pozostają w niezmienionym `vilda_hormone_lifespan_reference.js`. W pasie
+wygładzenia znacznik mediany może leżeć poza linią: wartości źródłowej
+nie zmieniamy w celu dopasowania grafiki. Pusty, błędny lub cenzurowany
+wynik nie tworzy punktu ani strzałki i nie zmienia samej krzywej.
+
+**Wpływ kliniczny:** zmienia się prezentacja edukacyjna i jej kształt,
+bez zmian norm, progów, jednostek, kwalifikacji pacjenta, liczbowych
+odniesień, werdyktów laboratoryjnych i wcześniejszych zapisów. Przedstawienie
+ogólnej populacji donoszonych nie kwalifikuje do niej wcześniaka; brak
+kwalifikacji usuwa punkt, nie populacyjne dane z edukacyjnego przebiegu.
+Małe wykresy Kuiri-Hänninen/Crofton/Baccarelli pozostają odrębne. Wygładzenie
+nie służy wyliczaniu zakresów, rozpoznawaniu chorób ani ekstrapolacji.
+
+**Syntetyczne regresje rzeczywistych funkcji:** M/dokładnie 44 lata/88 pg/mL
+→ punkt poniżej oryginalnego odniesienia Borelli około 162,084705882 pg/mL;
+pusty wynik → 88 → 1000 → wyczyszczenie → identyczny kształt i skala,
+przy 1000 strzałka z tą wartością. M/dokładnie 1 rok/223 → wynik równy
+źródłowej medianie Kelsey mimo niezależnego wygładzenia. M/90 dni/wcześniak
+lub nieznane donoszenie → ta sama ogólna linia, bez punktu Busch.
+Granice, styczne w przejściach, telefon, pełny ekran i offline podlegają
+regresji. Zielone testy nie nadają statusu walidacji klinicznej; scalenie
+oraz końcowa akceptacja kliniczna pozostają decyzją właściciela.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

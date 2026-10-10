@@ -13,34 +13,44 @@ obserwację pokwitania i wynik z istniejącego formularza. Nie wprowadza
 nowych pól pacjenta. Zmiany widoku, powiększenie i wybór serii nie zmieniają
 zapisanych danych ani oceny klinicznej.
 
-W ilościowym widoku męskiej inhibiny B odcinki Busch, Kelsey i Borelli
-zachowują osobne źródła na wspólnej skali stężenia. Wyświetlenie dostępnych
-odcinków nie zmienia doboru profilu ani liczbowej wartości odniesienia
-punktu pacjenta. Przerywane połączenie graficzne ma znaczenie
-wyłącznie poglądowe: nie jest interpolacją używaną do oceny pacjenta i nie
-stanowi nowego modelu populacji. Zachowujemy jedną wizualną ciągłość
-przebiegu, ale oddzielne liczbowe profile. Czerwony punkt nigdy nie jest
-wyznaczany z przerywanego połączenia. Niepewność odczytu ryciny i pochodzenie
-danych pozostają opisane w [PATIENT_POINT.md](PATIENT_POINT.md).
+Po zgłoszeniu zmiany przebiegu po wpisaniu wyniku właściciel polecił
+zachować jedną płynną linię. Ta decyzja zastępuje osobne przycinane
+ścieżki i przerywane łączniki PR #615. W zwykłych męskich widokach
+inhibiny B ogólna krzywa jest taka sama przed wpisaniem wyniku, z wynikiem
+oraz po zmianie wieku lub danych próbki. Obserwacje Busch, Kelsey i Borelli
+pozostają jej stałą podstawą; nie są dobierane do metody lub donoszenia
+bieżącego pacjenta. Brak dopasowania pacjenta usuwa wyłącznie jego punkt,
+a nie fragmenty ogólnego przebiegu.
 
-Mosty łączą niewielkie fragmenty przy styku źródeł oraz źródła ze schematem.
-Końce mostu leżą na odpowiadających im ścieżkach, a lokalne maskowanie
-dotyczy tylko kreski. Oryginalne ścieżki liczbowe pozostają zachowane;
-punkt wyniku i odpowiadający mu punkt mediany nie są maskowane ani
-przesuwane na graficzny łącznik.
+`VildaHormoneLifespanDisplay.buildMaleInhibin` przygotowuje stałe węzły.
+Renderer rysuje z nich jedną ścieżkę PCHIP z ciągłą styczną (C1)
+we współrzędnych całego życia.
+Przejścia między źródłami w wieku 0,75–2 lat i 4,5–7 lat są geometrią
+edukacyjną. Pas 18–25 lat w obrębie Borelli łagodzi wizualne załamanie
+przy zmianie skali czasu w 20. roku. Styczne na końcach pasów odpowiadają
+lokalnym pochodnym źródłowego przebiegu, bez krótkiego zagięcia przy
+powrocie do jego węzłów. Nie ma osobnych łączników, masek ani ponownego dopasowania
+przy zbliżeniu. Zachowany poglądowy odcinek płodowy dochodzi do danych
+Busch z 7. dnia bez wcześniejszej kotwicy dołka przy urodzeniu. Płaskie
+zakończenie 80–90 lat jest zakotwiczone w końcu Borelli (140 pg/mL);
+nie jest modelem stężenia pacjenta poza domeną tego źródła.
 
-Poglądowy ogon po 80. roku życia jest zakotwiczony pionowo w końcu
-odcinka Borelli, z zachowaniem kierunku wcześniejszego schematu. Zapobiega
-to pozornemu wzrostowi wynikającemu wyłącznie z przejścia między skalą
-stężeń a skalą poglądową. Ogon pozostaje przerywany i nie wyznacza
-wartości odniesienia dla pacjenta; osobne średnie Baccarelli mają własny panel.
+Polityka graficzna jest jawna w `inhibin-display-policy.json`, eksportowana
+jako `inhibinDisplayPolicy`. Pełne źródła wyznaczają stałe maksimum
+309,779035 pg/mL, z zapasem wysokości 1,25: około 387,22379 pg/mL na górze
+osi. Wpisana wartość nie przeskalowuje krzywej. Poprawny wynik wyższy od
+osi ma strzałkę w górę z rzeczywistą wartością, bez fałszywej kropki na
+brzegu. Porównanie płci zachowuje swoją odrębną skalę.
 
-Każdy odcinek zachowuje warunki dopasowania swojej populacji: przykładowo
-Busch wymaga znanego donoszenia, także gdy pacjent jest już starszy.
-Przy nieznanym kontekście porodu sam wiek 3 lat nie kwalifikuje profilu
-niemowlęcego. Zachowujemy dotychczasową politykę zbliżenia: jeśli wiek
-pacjenta jest poza widocznym okresem, główny wykres nie tworzy ilościowego
-modelu z jego wyniku; osobne obserwacje grupowe nadal można obejrzeć.
+Oryginalne liczbowe profile i silnik odniesienia pacjenta są niezmienione.
+Warunki wieku, materiału, metody i donoszenia nadal obowiązują dla punktu:
+Busch wymaga znanego donoszenia; ogólna prezentacja jego danych nie
+kwalifikuje wcześniaka ani niemowlęcia z nieznanym donoszeniem. Wynik
+i znacznik mediany są liczone z właściwego źródła nawet w pasie wygładzenia,
+gdzie znacznik mediany może leżeć poza linią edukacyjną. Nie dopasowujemy
+wartości źródłowych do grafiki. Wiek pacjenta poza widocznym okresem
+ukrywa punkt, pozostawiając tę samą krzywą. Niepewność odczytu rycin,
+metody i populacje opisuje [PATIENT_POINT.md](PATIENT_POINT.md).
 
 Osobna, niewielka prezentacja obserwacji grupowych jest dobierana do widoku:
 
@@ -179,9 +189,10 @@ Przypadki syntetyczne testują rzeczywisty produkcyjny moduł obserwacji:
 | Chłopiec 12 lat i znane G3 | Wyróżnione G3=220, bez dopasowania wyniku do normy stadium. |
 | P3, Th3, brak rodzaju stadium, nieznane stadium | Brak wyróżnienia G3. |
 | Odznaczenie inhibiny B lub zmiana osoby/analitu | Poprzednia obserwacja i czerwony punkt nie pozostają. |
-| Chłopiec 3 lata, znane donoszenie, 107 pg/mL | Trzy osobne profile na głównej osi; punkt na medianie Kelsey 107. Końce przerywanych mostów trafiają w odpowiednie oryginalne ścieżki. |
-| Chłopiec dokładnie 1 rok, 223 pg/mL | Czerwony punkt i punkt mediany Kelsey są na tej samej wysokości, także gdy wiek leży w obszarze poglądowego mostu. |
-| Przejście Borelli do poglądowego odcinka po 80. roku | Ogon zaczyna się na końcu Borelli i nie sugeruje nowego wzrostu wynikającego ze zmiany skali. |
+| Chłopiec 3 lata, 107 pg/mL | Jedna płynna linia i punkt na źródłowej medianie Kelsey 107; zmiana donoszenia nie przerywa ogólnego przebiegu. |
+| Chłopiec dokładnie 1 rok, 223 pg/mL | Czerwony punkt i znacznik mediany Kelsey są na tej samej wysokości; wygładzona linia nie zmienia ich źródłowej wartości. |
+| Przejście Borelli do poglądowego odcinka po 80. roku | Płaskie zakończenie do 90 lat na wysokości końca Borelli, bez nowego ilościowego odniesienia. |
+| Dokładnie 44 lata; pusty wynik → 88 → 1000 pg/mL → wyczyszczenie | Ta sama linia i skala; przy 88 punkt pod źródłową medianą około 162,084705882; przy 1000 strzałka w górę z prawdziwą liczbą. |
 | Telefon 320 px i pełny ekran | Widoczna oś i punkty, bez nowych pól ani przewijania w poziomie. |
 
 Testy jednostkowe zachowują niezależną transkrypcję liczb i sprawdzają

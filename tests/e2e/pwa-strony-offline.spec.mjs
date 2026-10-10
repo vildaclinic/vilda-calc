@@ -215,6 +215,25 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
           .toHaveAttribute('data-value', '335.5');
         await expect(obserwacje.locator('[data-observation-series="preterm-male"] [data-observation-point="day7"]'))
           .toHaveAttribute('data-value', '201.1');
+        // The independent display spline must also load from precache. Its
+        // shape and scale stay fixed offline when a result is added/removed.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 44, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await wykres.locator('[data-view="life"]').click();
+        await page.locator('#labValue').fill('');
+        const stabilnaKrzywa = wykres.locator('[data-stable-reference-line="inhb"]');
+        await expect(stabilnaKrzywa).toHaveCount(1);
+        await expect(stabilnaKrzywa).toHaveAttribute('data-divisor', '309.779035');
+        const przebieg = await stabilnaKrzywa.getAttribute('d');
+        expect(przebieg).toContain('C');
+        await page.locator('#labValue').fill('88');
+        const inhibina = wykres.locator('[data-patient-concentration="inhb"]');
+        await expect(inhibina).toHaveAttribute('data-value', '88');
+        await expect.poll(async () => Number(await inhibina.getAttribute('data-median')))
+          .toBeCloseTo(162.08470588235292, 10);
+        await expect(stabilnaKrzywa).toHaveAttribute('d', przebieg);
       }
     }
 
