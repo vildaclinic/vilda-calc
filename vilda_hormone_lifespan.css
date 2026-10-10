@@ -227,10 +227,8 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
 .vilda-hormone-lifespan .vhl-legend button[aria-pressed="true"] {
   background: color-mix(in srgb, var(--c) 9%, white) !important;
   border-color: color-mix(in srgb, var(--c) 35%, white) !important;
-  color: var(--c) !important;
-}
-.vilda-hormone-lifespan .vhl-legend button[data-dim="true"] {
-  opacity: var(--opacity-slider-tick);
+  /* The swatch and tint carry the hormone colour; labels stay legible. */
+  color: var(--vhl-ink) !important;
 }
 .vilda-hormone-lifespan .vhl-swatch {
   height: 3px;
@@ -642,6 +640,7 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .vilda-hormone-lifespan button,
   .vilda-hormone-lifespan *,
   .vilda-hormone-lifespan *::before,
   .vilda-hormone-lifespan *::after {
