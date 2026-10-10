@@ -53,6 +53,10 @@ Poza osią wieku znacznik znika zamiast przyklejać się do końca.
   znika wybór i użytkownik może wskazać hormon z dostępnego zestawu.
   Widok „Całe życie” kończy porównanie płci. Nie dopisujemy żeńskiego
   testosteronu lub INSL3 ani męskiego estradiolu bez odpowiednich danych.
+  Wejście w porównanie respektuje ręczny wybór: wybiera pierwszy zaznaczony
+  hormon dostępny w danym okresie. Bieżący analit nie ma pierwszeństwa.
+  Pusty wybór pozostaje pusty również po wejściu w porównanie; przy samych
+  zaznaczonych hormonach bez danych drugiej płci przycisk jest ukryty.
 - Kliknięcie etapu przesuwa tę samą ramkę płynnie od aktualnego położenia;
   `prefers-reduced-motion` wyłącza ruch. Brak osobnego przycisku zatrzymania.
 - Wiek i płeć pochodzą z istniejącego kontekstu aplikacji; bez kolejnego
@@ -68,6 +72,19 @@ Poza osią wieku znacznik znika zamiast przyklejać się do końca.
   danych czy normalizacji. Test `hormone-lifespan-fullscreen.spec.mjs`
   obejmuje oba rozmiary mobilne, obrót, ramkę same-origin i powrót
   do pierwotnej geometrii po zamknięciu.
+  Rzeczywiste używanie przycisków, klawiatury i przewijania w dialogu
+  odnawia istniejący licznik aktywności przelicznika i powłoki. Automatyczne
+  odświeżanie, zmiana rozmiaru i przewijanie przez skrypt nie odnawiają go.
+  Limit bezczynności i blokada sesji pozostają bez zmian.
+- Przyciski zachowują czytelny kontrast także bez zaznaczenia. Ustawienie
+  ograniczenia ruchu wyłącza również przejścia kolorów. Zmiana rozmiaru
+  wykresu zachowuje fokus odnośnika w źródłach, jeśli ich treść się nie zmieniła.
+
+Regresje interakcji po audycie: `hormone-lifespan-activity.spec.mjs`
+(rzeczywiste moduły sesji, fikcyjne konto, pełny ekran samodzielnie i w ramce),
+`hormone-lifespan-accessibility.spec.mjs` (kontrast, klawiatura, ograniczenie
+ruchu, fokus źródeł) i `hormone-lifespan-puberty-comparison.spec.mjs`
+(ręczny i pusty wybór). Naprawy nie zmieniają geometrii ani źródeł krzywych.
 
 ## Stała skala i połączenia
 

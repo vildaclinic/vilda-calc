@@ -516,6 +516,23 @@ bez zmiany norm, jednostek, interpretacji laboratoryjnej ani historii.
 Przegląd właściciela dotyczy prezentacji; testy nie nadają jej statusu
 walidacji klinicznej.
 
+**2026-10-10 — poprawki interakcji po audycie wykresu:** rzeczywiste
+wejście użytkownika w powiększonym panelu trafia do istniejącego mechanizmu
+aktywności zarówno przelicznika, jak i powłoki aplikacji. Pozostają te same
+limity i blokada przy bezczynności; odświeżanie i automatyczne przewijanie
+nie są aktywnością. Wejście do porównania płci respektuje zaznaczone
+hormony, także pusty wybór, bez przywracania domyślnego analitu.
+Poprawiono kontrast przycisków, ograniczenie przejść przy `reduced-motion`
+i zachowanie fokusu źródeł podczas zmiany rozmiaru.
+
+Syntetyczne przypadki produkcyjnego UI: LH odznaczone + AMH zaznaczone
+→ porównanie AMH; brak zaznaczenia → puste porównanie; obsługa pełnego
+ekranu dłuższa niż limit → sesja aktywna, następnie rzeczywista bezczynność
+→ prawidłowa blokada. Testy używają fikcyjnego konta i rzeczywistych modułów
+sesji. **Wpływ kliniczny:** brak zmiany danych, interpolacji, skal, norm,
+interpretacji wyniku, historii i zapisu pacjenta. Korekta geometrii między
+widokami pozostaje osobną propozycją makiety; nie jest częścią tych zmian.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

@@ -63,12 +63,12 @@
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
   <link href="vilda_lab_assessment_ui.css?v=10" rel="stylesheet">
   <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
-  <link href="vilda_hormone_lifespan.css?v=2" rel="stylesheet">
+  <link href="vilda_hormone_lifespan.css?v=3" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=47"></script>
+  <script src="vilda_session_bridge.js?v=48"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -105,7 +105,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=123"></script>
+  <script src="vilda_chrome.js?v=124"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -452,7 +452,7 @@
   <script src="vilda_puberty_source.js?v=10"></script>
   <script src="vilda_lab_neonatal_context.js?v=1"></script>
   <script src="vilda_hormone_lifespan_data.js?v=3"></script>
-  <script src="vilda_hormone_lifespan.js?v=5"></script>
+  <script src="vilda_hormone_lifespan.js?v=6"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -664,7 +664,20 @@
     // Read-only educational diagram. It receives no measurement, patient name,
     // date of birth, clinical classification or saved-result snapshot.
     var lifespanUI = window.VildaHormoneLifespan && window.VildaHormoneLifespan.mount({
-      host: document.getElementById('labHormoneLifespan')
+      host: document.getElementById('labHormoneLifespan'),
+      onActivity: function (event, displayWindow) {
+        if (!event.isTrusted) return;
+        var notified = new Set();
+        [window, displayWindow].forEach(function (view) {
+          try {
+            var auth = view && view.VildaAuthUI;
+            if (auth && !notified.has(auth) && typeof auth.recordActivity === 'function') {
+              notified.add(auth);
+              auth.recordActivity();
+            }
+          } catch (_) { /* A closing frame must not interrupt input handling. */ }
+        });
+      }
     });
     // The renderer owns visibility of its inner panel; the empty host takes no
     // space when unsupported or awaiting context.

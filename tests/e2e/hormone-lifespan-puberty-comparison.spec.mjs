@@ -97,6 +97,80 @@ test('multiple hormones toggle independently and a new analyte resets an empty s
   await expect(panel(page).locator('[data-lifespan="insight-title"]')).not.toHaveText('Wybierz hormon');
 });
 
+test('comparison follows the visible selection instead of bringing back the calculated hormone', async ({ page }) => {
+  for (const period of ['life', 'puberty']) {
+    await openComponent(page);
+    await view(page, period).click();
+    await hormone(page, 'lh').click();
+    await hormone(page, 'amh').click();
+    expect((await state(page)).selected).toEqual(['amh']);
+    await panel(page).locator('.vhl-compare-toggle').click();
+    await expectComparison(page, 'amh', period === 'life' ? 'mini' : 'puberty');
+    await panel(page).locator('.vhl-compare-toggle').click();
+    expect((await state(page)).compare).toBe(false);
+    expect((await state(page)).selected).toEqual(['amh']);
+    await expect(hormone(page, 'lh')).toHaveAttribute('aria-pressed', 'false');
+    await expect(hormone(page, 'amh')).toHaveAttribute('aria-pressed', 'true');
+  }
+});
+
+test('entering comparison with no selected hormone keeps the chart empty', async ({ page }) => {
+  for (const period of ['life', 'mini', 'puberty']) {
+    await openComponent(page);
+    await view(page, period).click();
+    await hormone(page, 'lh').click();
+    await expectEmpty(page);
+    await expect(panel(page).locator('.vhl-compare-toggle')).toBeVisible();
+    await panel(page).locator('.vhl-compare-toggle').click();
+    await expectEmpty(page, true);
+    expect((await state(page)).compare).toBe(true);
+    expect((await state(page)).view).toBe(period === 'life' ? 'mini' : period);
+    await page.evaluate(context => window.pubertyComparisonChart.update({ ...context, ageYears: 14.5 }), initialContext);
+    await expectEmpty(page, true);
+    await panel(page).locator('.vhl-compare-toggle').click();
+    expect((await state(page)).compare).toBe(false);
+    await expectEmpty(page);
+  }
+});
+
+test('comparison uses the first selected eligible hormone, preserving selection order', async ({ page }) => {
+  await openComponent(page);
+  await view(page, 'puberty').click();
+  await hormone(page, 'lh').click();
+  for (const id of ['t', 'inhb', 'amh', 'lh']) await hormone(page, id).click();
+  expect((await state(page)).selected).toEqual(['t', 'inhb', 'amh', 'lh']);
+  await panel(page).locator('.vhl-compare-toggle').click();
+  await expectComparison(page, 'inhb', 'puberty');
+  await panel(page).locator('.vhl-compare-toggle').click();
+  expect((await state(page)).selected).toEqual(['t', 'inhb', 'amh', 'lh']);
+  await hormone(page, 'inhb').click();
+  await hormone(page, 'inhb').click();
+  expect((await state(page)).selected).toEqual(['t', 'amh', 'lh', 'inhb']);
+  await panel(page).locator('.vhl-compare-toggle').click();
+  await expectComparison(page, 'amh', 'puberty');
+});
+
+test('an unsupported visible selection does not offer an unrelated comparison', async ({ page }) => {
+  await openComponent(page);
+  await view(page, 'puberty').click();
+  await hormone(page, 'lh').click();
+  await hormone(page, 't').click();
+  expect((await state(page)).selected).toEqual(['t']);
+  await expect(panel(page).locator('.vhl-compare-toggle')).toBeHidden();
+  for (const period of ['mini', 'life', 'puberty']) {
+    await view(page, period).click();
+    expect((await state(page)).selected).toEqual(['t']);
+    expect((await state(page)).compare).toBe(false);
+    await expect(panel(page).locator('.vhl-compare-toggle')).toBeHidden();
+  }
+  await hormone(page, 'amh').click();
+  await expect(panel(page).locator('.vhl-compare-toggle')).toBeVisible();
+  await panel(page).locator('.vhl-compare-toggle').click();
+  await expectComparison(page, 'amh', 'puberty');
+  await panel(page).locator('.vhl-compare-toggle').click();
+  expect((await state(page)).selected).toEqual(['t', 'amh']);
+});
+
 test('AMH and inhibin B retain their selection between minipuberty and puberty, including an empty comparison', async ({ page }) => {
   await openComponent(page, { context: { ...initialContext, analyte: 'amh' } });
   await view(page, 'mini').click();

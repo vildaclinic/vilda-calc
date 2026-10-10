@@ -213,6 +213,10 @@
     const requestAnimationFrame = window.requestAnimationFrame.bind(window);
     const cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
     const performance = window.performance;
+    let sourcesKey = null;
+    const fullscreenActivityEvents = [
+      "pointerdown", "mousedown", "keydown", "touchstart", "touchmove", "wheel",
+    ];
     // A modal in the child frame cannot cover the app shell. Move this same
     // panel to the highest same-origin document; its controls and state survive.
     // Native dialog also works on iOS without the element Fullscreen API.
@@ -273,6 +277,20 @@
       fullscreen.close = close;
       const resize = () => onResize();
       fullscreen.resize = resize;
+      // The panel can live in the app shell while its session belongs to the
+      // converter frame. Forward real input, never resize or automatic scroll.
+      const activity = (event) => {
+        if (destroyed || fullscreen?.dialog !== dialog || !event.isTrusted ||
+          !dialog.open || !dialog.isConnected || !host.isConnected || panel.hidden ||
+          document.visibilityState !== "visible" || target.visibilityState !== "visible" ||
+          frames.some((frame) => !frame?.isConnected || frame.hidden ||
+            frame.getAttribute("aria-hidden") === "true")) return;
+        if (typeof opts.onActivity === "function")
+          opts.onActivity(event, target.defaultView);
+      };
+      fullscreen.activity = activity;
+      for (const type of fullscreenActivityEvents)
+        dialog.addEventListener(type, activity, { capture: true, passive: true });
       dialog.addEventListener("cancel", (event) => {
         event.preventDefault();
         close();
@@ -300,12 +318,14 @@
     }
     function closeFullscreen(restoreFocus = true) {
       if (!fullscreen) return;
-      const { dialog, placeholder, stylesheet, scrollLocks, scrollPositions, close, resize, frameObserver, frames } = fullscreen;
+      const { dialog, placeholder, stylesheet, scrollLocks, scrollPositions, close, resize, activity, frameObserver, frames } = fullscreen;
       fullscreen = null;
       frameObserver.disconnect();
       window.removeEventListener("pagehide", close);
       dialog.ownerDocument.defaultView.removeEventListener("resize", resize);
       dialog.removeEventListener("close", close);
+      for (const type of fullscreenActivityEvents)
+        dialog.removeEventListener(type, activity, true);
       if (dialog.open) dialog.close();
       if (placeholder.parentNode) placeholder.replaceWith(panel);
       else host.append(panel);
@@ -639,10 +659,10 @@
       populationNote.textContent = populationNote.hidden
         ? ""
         : "Schemat minipuberty dotyczy dzieci urodzonych o czasie; nie odnosimy do niego wieku tego niemowlęcia.";
-      const available = [analyteHormones[currentAnalyte], ...selected].find(
+      const available = [...selected].find(
         (id) => comparisonHormones().includes(id),
       );
-      toggle.hidden = !available && !compare;
+      toggle.hidden = !compare && selected.size > 0 && !available;
       toggle.setAttribute("aria-pressed", String(compare));
       toggle.textContent = compare ? "Zakończ porównanie" : "Porównaj płcie";
       panel.querySelector(".vhl-sex-key").hidden = !compare;
@@ -1332,6 +1352,9 @@
       );
     }
     function updateSources() {
+      const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort()]);
+      if (nextKey === sourcesKey) return;
+      sourcesKey = nextKey;
       const target = byId("source-copy");
       target.replaceChildren();
       const paragraph = (t) => {
@@ -1565,11 +1588,11 @@
         insightMode = "stage";
       } else if (button === toggle) {
         if (!compare) {
-          const candidate = [analyteHormones[currentAnalyte], ...selected].find(
+          const candidate = [...selected].find(
             (id) => comparisonHormones().includes(id),
           );
-          if (!candidate) return;
-          compareHormone = candidate;
+          if (selected.size > 0 && !candidate) return;
+          compareHormone = candidate || null;
           if (view !== "puberty") view = "mini";
         }
         compare = !compare;
@@ -1629,6 +1652,7 @@
       legend.replaceChildren();
       stageNav.replaceChildren();
       byId("source-copy").replaceChildren();
+      sourcesKey = null;
       byId("insight-title").textContent = "";
       byId("insight-text").textContent = "";
       byId("cycle-panel").hidden = true;
