@@ -8551,10 +8551,10 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-10.1",
+  "version": "2026-10-10.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
-  "interpolation": "Monotone PCHIP of source concentration nodes; no cross-source interpolation or extrapolation.",
+  "interpolation": "Monotone PCHIP within continuous source profiles; annual-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
   "profiles": [
     {
       "id": "busch2022-male-fsh",
@@ -23445,6 +23445,1033 @@ const patientPointData = {
         "Do not splice to Kelsey2016 as a single model; central values differ substantially at late puberty(Kelsey17y304pg/mL versus thiscurveabout188pg/mL).",
         "In this cohort TannerG3 peaks; age alone does not establish expected stage-specific hormone level.",
         "No preterm validation; no prenatal comparison. No extrapolation past80years."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-1",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 1,
+      "maxAge": 2,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 1145.0392576730906
+        },
+        {
+          "ageYears": 2,
+          "value": 1145.0392576730906
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 1,
+        "label": "1–<2 lat",
+        "minAge": 1,
+        "maxAge": 2,
+        "n": 123,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 160.42,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 123,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-2",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 2,
+      "maxAge": 3,
+      "points": [
+        {
+          "ageYears": 2,
+          "value": 1110.4211277658815
+        },
+        {
+          "ageYears": 3,
+          "value": 1110.4211277658815
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 2,
+        "label": "2–<3 lat",
+        "minAge": 2,
+        "maxAge": 3,
+        "n": 129,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 155.57,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 129,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-3",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 3,
+      "maxAge": 4,
+      "points": [
+        {
+          "ageYears": 3,
+          "value": 844.6109921484654
+        },
+        {
+          "ageYears": 4,
+          "value": 844.6109921484654
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 3,
+        "label": "3–<4 lat",
+        "minAge": 3,
+        "maxAge": 4,
+        "n": 147,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 118.33,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 147,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-4",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 4,
+      "maxAge": 5,
+      "points": [
+        {
+          "ageYears": 4,
+          "value": 822.4839400428266
+        },
+        {
+          "ageYears": 5,
+          "value": 822.4839400428266
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 4,
+        "label": "4–<5 lat",
+        "minAge": 4,
+        "maxAge": 5,
+        "n": 142,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 115.23,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 142,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-5",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 5,
+      "maxAge": 6,
+      "points": [
+        {
+          "ageYears": 5,
+          "value": 707.9229122055675
+        },
+        {
+          "ageYears": 6,
+          "value": 707.9229122055675
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 5,
+        "label": "5–<6 lat",
+        "minAge": 5,
+        "maxAge": 6,
+        "n": 134,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 99.18,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 134,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-6",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 6,
+      "maxAge": 7,
+      "points": [
+        {
+          "ageYears": 6,
+          "value": 592.790863668808
+        },
+        {
+          "ageYears": 7,
+          "value": 592.790863668808
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 6,
+        "label": "6–<7 lat",
+        "minAge": 6,
+        "maxAge": 7,
+        "n": 144,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 83.05,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 144,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-7",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 7,
+      "maxAge": 8,
+      "points": [
+        {
+          "ageYears": 7,
+          "value": 496.859386152748
+        },
+        {
+          "ageYears": 8,
+          "value": 496.859386152748
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 7,
+        "label": "7–<8 lat",
+        "minAge": 7,
+        "maxAge": 8,
+        "n": 131,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 69.61,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 131,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-8",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 8,
+      "maxAge": 9,
+      "points": [
+        {
+          "ageYears": 8,
+          "value": 447.89436117059245
+        },
+        {
+          "ageYears": 9,
+          "value": 447.89436117059245
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 8,
+        "label": "8–<9 lat",
+        "minAge": 8,
+        "maxAge": 9,
+        "n": 147,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 62.75,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 147,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-9",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 9,
+      "maxAge": 10,
+      "points": [
+        {
+          "ageYears": 9,
+          "value": 420.84225553176304
+        },
+        {
+          "ageYears": 10,
+          "value": 420.84225553176304
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 9,
+        "label": "9–<10 lat",
+        "minAge": 9,
+        "maxAge": 10,
+        "n": 135,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 58.96,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 135,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-10",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 10,
+      "maxAge": 11,
+      "points": [
+        {
+          "ageYears": 10,
+          "value": 386.7237687366167
+        },
+        {
+          "ageYears": 11,
+          "value": 386.7237687366167
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 10,
+        "label": "10–<11 lat",
+        "minAge": 10,
+        "maxAge": 11,
+        "n": 138,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 54.18,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 138,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-11",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 11,
+      "maxAge": 12,
+      "points": [
+        {
+          "ageYears": 11,
+          "value": 147.75160599571734
+        },
+        {
+          "ageYears": 12,
+          "value": 147.75160599571734
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 11,
+        "label": "11–<12 lat",
+        "minAge": 11,
+        "maxAge": 12,
+        "n": 126,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 20.7,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 126,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-13",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 13,
+      "maxAge": 14,
+      "points": [
+        {
+          "ageYears": 13,
+          "value": 68.807994289793
+        },
+        {
+          "ageYears": 14,
+          "value": 68.807994289793
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 13,
+        "label": "13–<14 lat",
+        "minAge": 13,
+        "maxAge": 14,
+        "n": 132,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 9.64,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 132,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+      ]
+    },
+    {
+      "id": "wang2020-male-amh-age-14",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 14,
+      "maxAge": 15,
+      "points": [
+        {
+          "ageYears": 14,
+          "value": 58.743754461099215
+        },
+        {
+          "ageYears": 15,
+          "value": 58.743754461099215
+        }
+      ],
+      "sourceLabel": "Wang 2020 · AMH · grupa wieku",
+      "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+      "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+      "population": "Zdrowi chłopcy; Wuhan, Chiny",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "access-2",
+        "beckman-access-2"
+      ],
+      "ageGroup": {
+        "labelYears": 14,
+        "label": "14–<15 lat",
+        "minAge": 14,
+        "maxAge": 15,
+        "n": 129,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 8.23,
+        "boundaryPolicy": "application-completed-year-convention"
+      },
+      "provenance": {
+        "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+        "authors": "Wang et al.",
+        "year": 2020,
+        "journal": "Clinica Chimica Acta",
+        "volume": 506,
+        "pages": "154–159",
+        "doi": "10.1016/j.cca.2020.03.028",
+        "pmid": "32199784",
+        "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+        "table": [
+          1,
+          2
+        ],
+        "journalPage": 156,
+        "pdfPage": 3,
+        "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+        "access": "Full primary publication supplied by owner; both tables checked visually.",
+        "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included.",
+        "participants": 2009,
+        "groupParticipants": 129,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceAgeBoundaryDefinition": null,
+        "ageRouting": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+        "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported."
+      },
+      "limitations": [
+        "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+        "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+        "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+        "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+        "There is no monthly minipuberty series or gestational-age stratification in this source.",
+        "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+        "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+        "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+        "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+        "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
       ]
     },
     {

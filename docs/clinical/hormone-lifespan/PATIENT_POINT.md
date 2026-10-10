@@ -9,7 +9,9 @@ nadaniem statusu walidacji klinicznej modelom ani digitalizacji rycin.
 
 Punkt pokazuje wpisane stężenie, a linia — centralny przebieg modelu
 populacyjnego. W zależności od źródła jest to opublikowane p50 lub odczytana
-z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Określenie
+z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy rocznych
+grupach Wang zamiast ciągłej krzywej wieku widoczny jest lokalny poziomy
+odcinek mediany jednej grupy; nie jest to p50 dokładnego wieku. Określenie
 „średnia” nie zastępuje mediany; linia nie jest granicą normy. Kolor czerwony
 identyfikuje pacjenta i nie nadaje wynikom statusu nieprawidłowych.
 
@@ -39,15 +41,17 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Męski testosteron całkowity; 3–88 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 mężczyzn, surowica; różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Węzły co 0,1 roku z funkcji centralnej `log10(T+1)` po odwróceniu transformacji, zgodne z poprawionym p50; między węzłami PCHIP. Nie średnia arytmetyczna stężeń. Model po 40 latach jest niemal płaski; nie wymuszać spadku ze starego schematu. |
 | Męska inhibina B; 1–<6,1 roku | [Kelsey 2016](https://doi.org/10.1371/journal.pone.0153843), tabela 4, opublikowane węzły p50 | Cztery badania, 709 obserwowanych par wiek–stężenie; surowica, historyczne dwumiejscowe ELISA | Pełna tabela 0–17 lat pozostaje dowodem, wybrany odcinek jest polityką aplikacji. Nie używać rocznej tabeli do minipuberty. Nie odtwarzać modelu zaokrąglonymi współczynnikami z tabeli 2. |
 | Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem. |
+| Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. |
 
 INSL3 pozostaje zadaniem przyszłego kalkulatora. Zachowane wartości
 niemowlęce z Busch nie uruchamiają nowego analitu. Dorosłe LH/FSH, dziecięce
-AMH, pozaniemowlęce profile żeńskie i niepokryte fragmenty osi pozostają
-bez ilościowego punktu. Dostępny schemat lub mediana szerokiej grupy wieku
-nie wypełnia tej luki. Dane płodowe, pępowinowe i wcześniacze nie należą
-do powyższych profili.
+AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie i niepokryte
+fragmenty osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
+tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
+odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang.
+Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
 
 ## Transformacje, źródła i granice
 
@@ -85,10 +89,34 @@ minimalnej. W zapisanym odczycie ostatnie całe dni kwalifikujące punkt to
 do końca aktywnego okresu niemowlęcego. INSL3 miałby dodatkowo problem
 jednostki między tekstem a ryciną i nie jest nowym kalkulatorem.
 
+Wang: źródło oznacza grupy wieku liczbami 0–14, a na ryc. 1 ich środki
+znajdują się w przybliżeniu przy N+0,5 roku. Nie opisuje dokładnej reguły
+zaokrąglania wieku. Dlatego `[N,N+1)` jest wyłącznie jawną konwencją
+doboru rocznej grupy w edukacyjnej prezentacji, nie opublikowaną definicją
+granic. Dotyczy to również grupy 14: konwencja `[14,15)` nie dowodzi,
+że autorzy obserwowali wszystkie dokładne wartości wieku aż do 15 lat.
+Każda zgodna grupa ma osobny profil `group-median`, stałą wartość i własną
+liczebność. Dwa jednakowe węzły wyznaczają tylko lokalny poziomy odcinek;
+nie wygładzamy spadków między rocznymi medianami ani nie łączymy tych
+odcinków z Busch lub Tehrani. Nie imputujemy konfliktowej grupy 12 z sąsiadów.
+Przy niepewnym wieku przecinającym granicę grup punkt nie może udawać
+jednoznacznego porównania z jedną z median.
+
+W tabeli 1/tabeli 2 mediana grupy 0 wynosi odpowiednio 134,58/131,58 ng/mL,
+a grupy 12 — 6,99/7,99 ng/mL. Zachowujemy oba zapisy jako dowód konfliktu
+i nie aktywujemy żadnego z nich. Regresje suplementu S1 nie są opisane
+jako modele mediany/kwantylowe; nie służą do rozstrzygnięcia błędu tabel
+ani do odtworzenia ciągłego p50. Pierwszy rok Wang nie zastępuje
+dokładniejszych danych minipuberty. Brak danych Tannera i wcześniactwa
+nie pozwala nazwać mediany normą stadium lub źródłem wcześniaczym.
+Metoda dotyczy kohorty, nie stanowi potwierdzenia metody wyniku pacjenta.
+
 Jednostki źródłowe zachowuje się w danych: LH/FSH IU/L, testosteron nmol/L,
 inhibina B pg/mL, żeńskie E2 pmol/L; AMH Busch/Ljubicic pmol/L, Tehrani
-ng/mL. Runtime używa dla AMH pmol/L; tehraniowskie ng/mL przelicza tym
+oraz Wang ng/mL. Runtime używa dla AMH pmol/L; ng/mL przelicza tym
 samym współczynnikiem co wynik pacjenta (`1 ng/mL = 1/0,1401 pmol/L`).
+Zaokrąglony współczynnik 7,14 z przypisu tabeli Wang pozostaje metadaną
+źródła; nie mieszamy go z innym przelicznikiem punktu pacjenta.
 Konwersja jednostki pacjenta musi być jawna i wspólna z rysowaniem.
 Zgodność jednostek nie dowodzi zamienności metod oznaczenia.
 
@@ -101,7 +129,7 @@ skali co jej linia, nigdy obu populacji naraz.
 
 Suplementy Madsen i Ljubicic oraz dane PLOS są CC BY (dokładna wersja
 w metadanych źródła). Artykuł Madsen ma odrębną licencję CC BY-NC-ND.
-Busch i Borelli zachowują prawa wydawcy: w aplikacji są liczbowe odczyty
+Busch, Borelli i Wang zachowują prawa wydawcy: w aplikacji są liczbowe odczyty
 i cytowania, bez reprodukcji PDF lub ryciny. Rozdzielczość digitalizacji
 i przypisanie statystyki są częścią pochodzenia danych. Pełnych artykułów,
 obrazów źródłowych i surowych danych uczestników nie publikujemy w repo.
@@ -126,9 +154,14 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Donoszony chłopiec, 90 dni, inhibina B 300 pg/mL | Busch około 294,293798 pg/mL; punkt nieznacznie ponad linią. |
 | Mężczyzna 40 lat, testosteron 13,049603876520182 nmol/L | Punkt na centralnej linii Kelsey 2014/2015. |
 | Chłopiec 3 lata, inhibina B 107 pg/mL | Punkt na węźle p50 Kelsey 2016, bez stosowania krzywej niemowlęcej. |
+| Chłopiec 5 lat i 6 miesięcy, AMH 99,18 ng/mL | Punkt na poziomym odcinku mediany rocznej grupy Wang 5–<6 lat, N=134; to nie p50 dla dokładnie 5,5 roku. |
+| Chłopiec 11 lat i 6 miesięcy, AMH 20,70 ng/mL | Punkt na medianie grupy 11–<12 lat; profil kończy się przed 12. urodzinami. |
+| Chłopiec 12 lat i 6 miesięcy, AMH 7 ng/mL | Brak punktu Wang: mediana grupy 12 jest sprzeczna między tabelami; brak interpolacji przez lukę. |
+| Chłopiec 14 lat i 6 miesięcy, AMH 8,23 ng/mL | Punkt na medianie grupy oznaczonej 14, według jawnej konwencji `[14,15)`; brak ekstrapolacji po 15. urodzinach. |
+| Chłopiec, możliwy wiek 5,99–6,01 roku, AMH 99,18 ng/mL | Brak jednoznacznego punktu dla jednej grupy; nie wybieramy mediany z połowy niepewnego przedziału. |
 | Mężczyzna 40 lat, AMH 6,12 ng/mL | Punkt na rocznym p50 Tehrani; metoda Gen II w źródle, bez potwierdzania metody próbki. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
-| LH `<0,05 IU/L`, dorosłe FSH, dziecięce AMH bez profilu, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
+| LH `<0,05 IU/L`, dorosłe FSH, AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
 
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki

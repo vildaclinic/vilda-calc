@@ -89,6 +89,11 @@
     if (!profile || !Array.isArray(profile.points) || profile.points.length < 2) return null;
     if (cache && cache.has(profile)) return cache.get(profile);
     var points = profile.points;
+    // A published group median is a single value across its routing interval,
+    // never a fitted trajectory between observations at individual ages.
+    if (profile.interpolation === 'constant' && points.some(function (point) {
+      return point.value !== points[0].value;
+    })) return null;
     var h = [], delta = [], slopes = [];
     for (var i = 0; i < points.length; i++) {
       if (!finite(points[i].ageYears) || !finite(points[i].value) || points[i].value < 0) return null;
@@ -137,6 +142,7 @@
     if (!fitted) return null;
     var found = interval(fitted.points, age);
     if (!found) return null;
+    if (profile.interpolation === 'constant') return fitted.points[0].value;
     if (found.exact != null) return fitted.points[found.exact].value;
     var p0 = fitted.points[found.low], p1 = fitted.points[found.high];
     var h = p1.ageYears - p0.ageYears;
@@ -210,6 +216,6 @@
     return { status: 'ready', profile: profile, value: value, referenceValue: referenceValue };
   }
 
-  return { version: '1.0.0', evaluate: evaluate, selectProfile: selected,
+  return { version: '1.1.0', evaluate: evaluate, selectProfile: selected,
     referenceAt: referenceAt, sampleProfile: sampleProfile };
 });

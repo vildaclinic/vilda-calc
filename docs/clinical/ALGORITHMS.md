@@ -569,6 +569,9 @@ Aktywna polityka ilościowych źródeł:
   (DOI 10.1371/journal.pone.0153843); 6,1–80 lat: osobny przybliżony
   profil 0 SD Borelli-Kjær 2025, ryc. 2 (DOI 10.1210/clinem/dgae439).
   Granica publikacji nie jest fizjologicznym skokiem ani jednym modelem.
+- Męskie AMH, osobne roczne grupy 1–11, 13 i 14: zgodne mediany tabel 1/2
+  Wang 2020 (DOI 10.1016/j.cca.2020.03.028), poziomy odcinek jednej grupy,
+  nie ciągła krzywa wieku. Konwencja doboru `[N,N+1)` i ograniczenia niżej.
 - Męskie AMH, 30–70 lat: roczne p50 tabeli 2 Tehrani 2017
   (DOI 10.1371/journal.pone.0179634).
 - Donoszone dziewczynki LH/FSH/AMH/inhibina B/E2, 0,02–1 roku:
@@ -582,7 +585,8 @@ wyniku. Interpolacja PCHIP łączy wyłącznie węzły tego samego profilu;
 nie tworzy median między publikacjami ani poza ich wiekiem. INSL3 pozostaje
 zadaniem przyszłego kalkulatora; dorosłe LH/FSH, wcześniaki i pozostałe
 niepokryte odcinki nie otrzymują punktu z samego schematu lub szerokiej
-grupy wieku. Brak danych urodzeniowych blokuje dopasowanie niemowlęce,
+grupy wieku bez odrębnej polityki prezentacji grupowej. Brak danych
+urodzeniowych blokuje dopasowanie niemowlęce,
 nie zmienia PMA/wieku skorygowanego w PNA i nie blokuje automatycznie
 profilu pokwitaniowego starszego dziecka.
 
@@ -601,6 +605,52 @@ Kontrola interfejsu obejmuje identyczną relację punkt–linia na komputerze,
 telefonie, po powiększeniu i po zmianie widoku oraz brak przycięcia wyniku
 do brzegu osi. Wzorzec dawnych SVG nadal sprawdza schemat bez ilościowego
 punktu. Testy techniczne nie oznaczają walidacji klinicznej funkcji.
+
+**2026-10-10 — AMH u chłopców, mediany rocznych grup Wang:** na polecenie
+właściciela po analizie dostarczonej publikacji rozszerzono edukacyjny
+punkt wyniku o 13 zgodnych median grupowych. Źródło: Wang i wsp.,
+*Clinica Chimica Acta* 506 (2020), 154–159,
+DOI [10.1016/j.cca.2020.03.028](https://doi.org/10.1016/j.cca.2020.03.028),
+PMID 32199784, tabele 1 i 2 na str. 156 (PDF 3). Pełny tekst sprawdzono
+wraz z suplementem S1. Kohorta przekrojowa obejmuje 2009 zdrowych chłopców
+z Wuhan; surowica pobierana 08:00–10:00, Beckman Coulter Access 2.
+Brak stratyfikacji Tannera i wieku ciążowego. Nie wykazano zamienności
+metod z innymi profilami aplikacji.
+
+Aktywne etykiety rocznych grup: 1–11, 13 i 14. Dla edukacyjnego porównania
+etykieta N odpowiada `[N,N+1)`; to jawna konwencja aplikacji wsparta
+prezentacją grup około N+0,5 na ryc. 1. Autorzy nie opisują dokładnej
+reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. W tym
+znaczeniu grupa 14 odpowiada `[14,15)`, bez twierdzenia o zweryfikowanej
+ciągłej populacyjnej medianie do 15 lat. Każda grupa ma osobny profil
+`group-median`, `interpolation: constant` i dwa identyczne węzły.
+Punkt i lokalny poziomy odcinek odnoszą się do tej samej mediany; nie
+powstaje wygładzona trajektoria między grupami ani most do innej publikacji.
+Niepewny wiek przecinający granicę grup nie wybiera jednej mediany.
+
+Grupy 0 i 12 pozostają wyłączone: tabela 1/tabela 2 podaje odpowiednio
+134,58/131,58 oraz 6,99/7,99 ng/mL. W ekstrakcie zachowano obie wartości,
+liczebności wszystkich 15 grup i sumę SHA-256 PDF. Regresje suplementu
+nie są określone jako modele kwantylowe i nie zastępują median. Pierwszy
+rok życia nadal korzysta z dotychczasowego Busch; luki 12–<13 i 15–<30 lat
+nie otrzymują imputowanych wartości. Profile Li i Handelsman nie są tu
+aktywowane. Jednostkę źródłową ng/mL przeliczamy wspólnie z wynikiem
+pacjenta przez `1/0,1401`, a zaokrąglone 7,14 z przypisu źródła zachowujemy
+jako metadaną, bez mieszania obu przeliczników.
+
+**Wpływ i przykłady syntetyczne:** nie zmieniają się normy laboratoryjne,
+werdykty, zapis wyników ani schematy innych hormonów. Zmienia się wyłącznie
+możliwość ilościowego, edukacyjnego porównania AMH w wymienionych grupach.
+M/5,5 roku/AMH 99,18 ng/mL → punkt na medianie grupy 5–<6 lat (N=134);
+M/11,5 roku/20,70 ng/mL → mediana grupy 11–<12;
+M/12,5 roku/7 ng/mL → brak profilu, bez mostu przez konflikt;
+M/14,5 roku/8,23 ng/mL → mediana grupy 14;
+M/15 lat → brak profilu Wang. Wiek 5,99–6,01 roku nie daje jednoznacznego
+punktu jednej grupy. Regresje wywołują rzeczywisty silnik i sprawdzają
+wszystkie 13 median, granice roczne, zgodność jednostek, wyłączenia oraz
+zachowanie punktów niemowlęcych i dorosłych. Testy nie oznaczają walidacji
+klinicznej. Pochodzenie i ograniczenia utrwala
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
