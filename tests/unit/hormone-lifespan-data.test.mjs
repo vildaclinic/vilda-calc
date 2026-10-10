@@ -146,3 +146,95 @@ describe('Poglądowy przebieg hormonów — produkcyjne dane i granice dowodów'
     expect(createHash('sha256').update(maleData).digest('base64')).toBe(original.maleDataSha256Base64);
   });
 });
+
+describe('Testosteron chłopców — źródłowe p50 i rozłączna polityka wieku', () => {
+  const profile = id => data.patientPointData.profiles.find(item => item.id === id);
+
+  it('pakuje granice z oddzielnej polityki źródeł i zachowuje różnicę między routingiem a dziedziną publikacji', () => {
+    const policy = readSource('testosterone-reference-policy.json');
+    expect(policy.kind).toBe('educational-source-selection');
+    expect(policy.profiles.map(({ id, minAge, maxAge, maxAgeExclusive }) => ({ id, minAge, maxAge, maxAgeExclusive })))
+      .toEqual([
+        { id: 'kelsey2014-male-t-childhood', minAge: 3, maxAge: 6, maxAgeExclusive: true },
+        { id: 'madsen2022-male-t', minAge: 6, maxAge: 18, maxAgeExclusive: true },
+        { id: 'kelsey2014-male-t', minAge: 18, maxAge: 88, maxAgeExclusive: false }
+      ]);
+    for (const route of policy.profiles) {
+      const generated = profile(route.id);
+      expect(generated).toMatchObject({ minAge: route.minAge, maxAge: route.maxAge,
+        maxAgeExclusive: route.maxAgeExclusive, interpolation: 'pchip', analyte: 't', sex: 'male', unit: 'nmol/L' });
+      expect(generated.provenance.sourceRouting).toEqual({ version: policy.version, source: route.source,
+        minAge: route.minAge, maxAge: route.maxAge, maxAgeExclusive: route.maxAgeExclusive,
+        sourceDomain: route.sourceDomain, retainAllSourcePoints: true });
+    }
+    expect(profile('madsen2022-male-t').provenance.sourceRouting.sourceDomain).toEqual({ minAge: 6, maxAge: 18 });
+    expect(policy.interpolation.crossSourceInterpolation).toBe(false);
+    expect(policy.interpolation.extrapolation).toBe(false);
+  });
+
+  it('zachowuje oryginalne komórki, skalę M, pełny punkt 18 lat i pochodzenie 13 węzłów Madsena', () => {
+    const original = readSource('evidence/patient-point/madsen2022-male-p50-lms.json');
+    const generated = profile('madsen2022-male-t');
+    const sourcePoints = original.hormones.testosterone.points;
+    expect(generated.points).toHaveLength(13);
+    expect(generated.points.map(point => point.ageYears)).toEqual([6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(generated.points).toEqual(sourcePoints.map(point => ({ ageYears: point.ageYears, value: point.centralConcentration })));
+    expect(generated.provenance.sourceSha256).toBe('45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e');
+    expect(generated.provenance.sourceFile).toBe('Supplemental_Table_1_LMS_entries.xlsx');
+    expect(generated.provenance.supplementDoi).toBe('10.6084/m9.figshare.17153336.v1');
+    expect(generated.provenance.sourceCells).toEqual(sourcePoints.map(point => point.sourceCells));
+    expect(generated.provenance.sourceCells[0]).toEqual([
+      'LCMSMS hormones!AF19', 'LCMSMS hormones!AG19', 'LCMSMS hormones!AH19', 'LCMSMS hormones!AI19'
+    ]);
+    expect(generated.provenance.sourceCells.at(-1)).toEqual([
+      'LCMSMS hormones!AF31', 'LCMSMS hormones!AG31', 'LCMSMS hormones!AH31', 'LCMSMS hormones!AI31'
+    ]);
+    expect(generated.provenance.sourceLms).toEqual(sourcePoints.map(({ ageYears, L, M_logSIx1e6, S }) => ({ ageYears, L, M_logSIx1e6, S })));
+    expect(generated.provenance.transform).toEqual(original.transform);
+    expect(generated.statistic).toBe('model-central');
+    for (const [index, point] of generated.points.entries()) {
+      expect(point.value).toBeCloseTo(Math.exp(sourcePoints[index].M_logSIx1e6) / 1e6, 13);
+    }
+    expect(generated.provenance.interpolation).toMatchObject({
+      method: 'pchip', valueScale: 'concentration-nmol-per-litre', madsenPublishedStepYears: 1,
+      crossSourceInterpolation: false, extrapolation: false
+    });
+    expect(generated.provenance.interpolation.madsenBetweenNodeMeaning).toContain('not a reconstruction');
+  });
+
+  it('zachowuje ograniczenia oznaczenia i populacji bez dopisywania godzin, stadium lub obsługi wyników poniżej LOQ', () => {
+    const original = readSource('evidence/patient-point/madsen2022-male-p50-lms.json');
+    const generated = profile('madsen2022-male-t');
+    expect(generated.compatibleAssayMethodIds).toEqual(['lc-ms/ms', 'lc-ms-ms', 'lcmsms']);
+    expect(generated.method).toBe(original.hormones.testosterone.assay);
+    expect(generated.population).toContain('Bergen Growth Study 2 + Fit Futures');
+    expect(generated.provenance.population).toEqual(original.population);
+    expect(generated.provenance.population.sampling).toContain('08:00–14:00');
+    expect(generated.provenance.lowerLimitOfQuantification).toBe(0.02);
+    expect(generated.points[0].value).toBeGreaterThan(generated.provenance.lowerLimitOfQuantification);
+    expect(generated.provenance.belowLoqModelHandling).toMatchObject({ rule: null, reported: false });
+    expect(generated).not.toHaveProperty('requiredGonadalStage');
+    expect(generated).not.toHaveProperty('termOnly');
+    expect(generated).not.toHaveProperty('morningOnly');
+    expect(generated).not.toHaveProperty('referenceInterval');
+    expect(generated).not.toHaveProperty('clinicalCutoff');
+  });
+
+  it('przechowuje oba pełne zbiory Kelsey bez obcinania podpór PCHIP na nowych granicach wieku', () => {
+    const childhood = profile('kelsey2014-male-t-childhood');
+    const adult = profile('kelsey2014-male-t');
+    const original = readSource('evidence/patient-point/testosterone-model.json');
+    expect(childhood.points).toHaveLength(851);
+    expect(adult.points).toHaveLength(851);
+    expect(childhood.points).toEqual(adult.points);
+    expect(childhood.points).not.toBe(adult.points);
+    expect(childhood.points[0]).toEqual({ ageYears: 3, value: 0.3764139001167295 });
+    expect(adult.points.at(-1)).toEqual({ ageYears: 88, value: 13.222919801641392 });
+    expect(childhood.formula).toEqual(original.formula);
+    expect(adult.formula).toEqual(original.formula);
+    expect(childhood.provenance.sourceRouting.sourceDomain).toEqual({ minAge: 3, maxAge: 88 });
+    expect(adult.provenance.sourceRouting.sourceDomain).toEqual({ minAge: 3, maxAge: 88 });
+    expect(childhood.provenance.correctionDoi).toBe('10.1371/journal.pone.0117674');
+    expect(adult.provenance.correctionDoi).toBe('10.1371/journal.pone.0117674');
+  });
+});

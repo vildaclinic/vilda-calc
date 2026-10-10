@@ -141,6 +141,8 @@ for (const width of [320, 1440]) {
     await page.locator('#labValue').fill('');
     const original = await geometry(page);
     expect(original.divisor).toBeGreaterThan(13);
+    expect(original.divisor).toBeCloseTo(18.051151264084126, 10);
+    expect(original.ceiling).toBe(1.25);
     expect(original.divisor * original.ceiling).toBeLessThan(100);
     expect(original.dash).toBe('none');
     smooth(original.d);
@@ -156,6 +158,25 @@ for (const width of [320, 1440]) {
     const decline = lifespan.slice(peakDays.length, peakDays.length + declineAges.length);
     for (let i = 1; i < decline.length; i++) expect(decline[i]).toBeLessThanOrEqual(decline[i - 1] + .00001);
     expect(lifespan.every(value => Number.isFinite(value) && value >= -.00001 && value <= 1.00001)).toBe(true);
+    // Both new source transitions are checked against the real rendered SVG,
+    // including their interior, so a smooth but negative/overshooting join fails.
+    const childhoodAges = Array.from({ length: 101 }, (_, i) => 5 + i / 100);
+    const pubertyBridgeAges = Array.from({ length: 321 }, (_, i) => 17 + i / 40);
+    const joins = await heights(page, [...childhoodAges, ...pubertyBridgeAges]);
+    const childhood = joins.slice(0, childhoodAges.length), adolescence = joins.slice(childhoodAges.length);
+    for (let i = 1; i < childhood.length; i++) {
+      assert.ok(childhood[i] <= childhood[i - 1] + .00001, '5–6-year transition declines monotonically');
+      assert.ok(childhood[i] >= childhood.at(-1) - .00001, 'no childhood undershoot');
+    }
+    const peakIndex = 40; // The display anchor is 18 years; source routing remains separate.
+    expect(adolescence[peakIndex] * original.divisor * original.ceiling).toBeCloseTo(18.051151264084126, 3);
+    for (let i = 0; i < adolescence.length; i++) {
+      assert.ok(adolescence[i] >= Math.min(adolescence[0], adolescence.at(-1)) - .00001, 'no adolescent undershoot');
+      assert.ok(adolescence[i] <= adolescence[peakIndex] + .00001, 'no adolescent overshoot');
+      if (i > 0 && i <= peakIndex) assert.ok(adolescence[i] >= adolescence[i - 1] - .00001, 'rise to 18-year display anchor');
+      if (i > peakIndex) assert.ok(adolescence[i] <= adolescence[i - 1] + .00001, 'decline from 18-year display anchor');
+    }
+    expect(joins.every(value => Number.isFinite(value) && value >= -.00001 && value <= 1.00001)).toBe(true);
     for (const value of ['13', '100', '100000000', '', '13']) {
       await page.locator('#labValue').fill(value);
       await sameGeometry(page, original);
@@ -201,10 +222,12 @@ for (const width of [320, 1440]) {
     // At childhood concentrations both markers sit near the plot baseline.
     // Labels must remain separate and preserve their actual vertical order.
     await sharedPatient(page, { sex: 'M', age: 6, ageMonths: 0 });
-    for (const value of ['0.2', '0.4']) {
+    for (const value of ['0.01', '0.04']) {
       await page.locator('#labValue').fill(value);
       await sameGeometry(page, original);
       await expect(point(page)).toHaveAttribute('data-value', value);
+      await expect(point(page)).toHaveAttribute('data-profile', 'madsen2022-male-t');
+      await expect(point(page).locator('[data-dot-label="median"]')).toContainText('≈0,0239 nmol/L');
       const labels = await point(page).evaluate(group => {
         const result = group.querySelector('[data-dot-label="result"]').getBoundingClientRect();
         const reference = group.querySelector('[data-dot-label="median"]').getBoundingClientRect();
@@ -213,7 +236,7 @@ for (const width of [320, 1440]) {
           resultY: Number(group.querySelector('[data-result-point]').getAttribute('cy')),
           referenceY: Number(group.querySelector('[data-median-point]').getAttribute('cy')) };
       });
-      expect(labels.median).toBeCloseTo(.3228983989846572, 10);
+      expect(labels.median).toBeCloseTo(.02393726986868612, 10);
       if (Number(value) < labels.median) {
         expect(labels.resultY).toBeGreaterThan(labels.referenceY);
         expect(labels.resultTop).toBeGreaterThan(labels.referenceBottom);
@@ -222,7 +245,7 @@ for (const width of [320, 1440]) {
         expect(labels.referenceTop).toBeGreaterThan(labels.resultBottom);
       }
     }
-    await panel(page).screenshot({ path: test.info().outputPath(`testosterone-stable-6y-0.4-${width}.png`) });
+    await panel(page).screenshot({ path: test.info().outputPath(`testosterone-stable-6y-0.04-${width}.png`) });
   });
 }
 
@@ -288,16 +311,55 @@ test('testosterone population geometry stays fixed while real patient age and bi
       expect(Number(await point(page).getAttribute('data-median'))).toBeCloseTo(4.251558321335053, 10);
     } else await expect(point(page)).toHaveCount(0);
   }
-  // A documented premature birth does not exclude older-child/adult Kelsey.
-  for (const [age, median] of [[2, null], [3, .3764139001167295], [12, 1.6927166288128852],
-    [19, 15.406979799404404], [40, 13.049603876520182], [70, 13.06823840958111], [88, null], [89, null]]) {
+  // A documented premature birth does not exclude older children or adults.
+  for (const [age, median, profile] of [[2, null], [3, .3764139001167295, 'kelsey2014-male-t-childhood'],
+    [6, .02393726986868612, 'madsen2022-male-t'], [12, 1.4977255724595988, 'madsen2022-male-t'],
+    [18, 15.16389257035194, 'kelsey2014-male-t'], [19, 15.406979799404404, 'kelsey2014-male-t'],
+    [40, 13.049603876520182, 'kelsey2014-male-t'], [70, 13.06823840958111, 'kelsey2014-male-t'], [88, null], [89, null]]) {
     await sharedPatient(page, { sex: 'M', age, ageMonths: 0 });
     await page.locator('#labValue').fill('13');
     await sameGeometry(page, original);
     if (median === null) await expect(point(page)).toHaveCount(0);
     else {
-      await expect(point(page)).toHaveAttribute('data-profile', 'kelsey2014-male-t');
+      await expect(point(page)).toHaveAttribute('data-profile', profile);
       await expect.poll(async () => Number(await point(page).getAttribute('data-median'))).toBeCloseTo(median, 10);
+    }
+  }
+});
+
+test('testosterone switches the source only at age 6 and 18 and retains reported-age uncertainty', async ({ page }) => {
+  await open(page);
+  const original = await geometry(page);
+  const cases = [
+    { age: 5, months: 11, upper: 6, profile: 'kelsey2014-male-t-childhood' },
+    { age: 5, months: null, upper: 6, profile: 'kelsey2014-male-t-childhood' },
+    { age: 5.9, months: null, profile: null },
+    { age: 6, months: 0, upper: 6 + 1 / 12, profile: 'madsen2022-male-t', median: .02393726986868612 },
+    { age: 6, months: null, upper: 7, profile: 'madsen2022-male-t', median: .02393726986868612 },
+    { age: 12, months: 0, upper: 12 + 1 / 12, profile: 'madsen2022-male-t', median: 1.4977255724595988 },
+    { age: 17, months: 11, upper: 18, profile: 'madsen2022-male-t' },
+    { age: 17, months: null, upper: 18, profile: 'madsen2022-male-t' },
+    { age: 17.9, months: null, profile: null },
+    { age: 18, months: 0, upper: 18 + 1 / 12, profile: 'kelsey2014-male-t', median: 15.16389257035194 },
+    { age: 18, months: null, upper: 19, profile: 'kelsey2014-male-t', median: 15.16389257035194 },
+  ];
+  for (const entry of cases) {
+    await sharedPatient(page, { sex: 'M', age: entry.age, ageMonths: entry.months });
+    await page.locator('#labValue').fill('13');
+    await sameGeometry(page, original);
+    if (entry.profile === null) {
+      await expect(point(page)).toHaveCount(0);
+      continue;
+    }
+    await expect(point(page)).toHaveAttribute('data-profile', entry.profile);
+    const bounds = await point(page).evaluate(group => ({ lower: Number(group.dataset.ageLower),
+      upper: Number(group.dataset.ageUpper), median: Number(group.dataset.median) }));
+    expect(bounds.lower).toBeCloseTo(entry.age + (entry.months || 0) / 12, 10);
+    expect(bounds.upper).toBeCloseTo(entry.upper, 10);
+    expect(bounds.median).toBeGreaterThan(0);
+    if (entry.median != null) expect(bounds.median).toBeCloseTo(entry.median, 10);
+    if ((entry.age === 12 || entry.age === 18) && entry.months === 0) {
+      await panel(page).screenshot({ path: test.info().outputPath(`testosterone-source-${entry.age}y-13.png`) });
     }
   }
 });

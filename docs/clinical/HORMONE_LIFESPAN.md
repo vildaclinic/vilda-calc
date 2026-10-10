@@ -31,10 +31,12 @@ stała krzywa edukacyjna zastępuje przełączanie schematu na osobne ścieżki
 liczbowe oraz przerywane łączniki PR #615. Nie zmienia źródeł mediany
 pacjenta ani laboratoryjnych zakresów odniesienia.
 
-Po audycie testosteronu całkowitego właściciel zatwierdził analogiczne
-ustabilizowanie jego prezentacji. Ta poprawka zachowuje dotychczasowe
-źródła Busch i Kelsey oraz kwalifikację punktu; nie wprowadza Madsen
-do odniesienia testosteronu ani nowych median dziecięcych.
+Po audycie testosteronu całkowitego ustabilizowano jego prezentację.
+Kolejny etap naprawy wprowadza pediatryczne p50 Madsen 2022 w wieku
+6–<18 lat, zachowując Busch w niemowlęctwie i Kelsey 2014/2015
+w wieku 3–<6 oraz 18–88 lat. Zmienia to edukacyjne odniesienie dziecka,
+bez zmiany norm i werdyktów laboratoryjnych. Granice doboru oraz
+ograniczenia źródeł opisano w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 ## Cel i granice
 
@@ -135,11 +137,12 @@ bez kropki sugerującej stężenie równe górze osi. Szczegóły polityki i gra
 przedstawiono w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 Testosteron całkowity również ma jedną stałą, ciągłą linię we wszystkich
-zwykłych widokach męskich. Opiera się na zachowanych danych Busch 2022
+zwykłych widokach męskich. Opiera się na danych Busch 2022, Madsen 2022
 i Kelsey 2014 z korektą 2015, niezależnie od wieku, wyniku, donoszenia
-lub metody bieżącej próbki. Punkt pacjenta nadal kwalifikuje niezmieniony
-silnik odniesienia. W szczególności wiek 2 lat nie otrzymuje mediany
-z graficznego połączenia, a wcześniak nie otrzymuje profilu donoszonych.
+lub metody bieżącej próbki. Niezmieniony silnik odniesienia korzysta
+z osobnych rekordów doboru: Madsen od 6 do <18 lat, Kelsey od 3 do <6
+oraz od 18 do 88 lat. Wiek 2 lat nie otrzymuje mediany z graficznego
+połączenia, a wcześniak nie otrzymuje niemowlęcego profilu donoszonych.
 
 `VildaHormoneLifespanDisplay.buildMaleTestosterone` przygotowuje przebieg
 według `testosterone-display-policy.json`. Renderer używa jednej ścieżki
@@ -149,17 +152,25 @@ mostem poglądowym. Obejmuje także część dostępnych danych, aby nie tworzy�
 sztucznego wzrostu między niskim końcem Busch a początkiem Kelsey.
 Ma monotoniczny przebieg bez wymuszania stromych stycznych źródeł;
 źródłowe mediany i punkty pacjenta w tym pasie nie są przesuwane na most.
-Pas 19,3–25 lat łagodzi zmianę skali czasu po szczycie Kelsey, zachowując
-styczne źródłowe na końcach. Kotwice przed urodzeniem oraz płaski ogon
-88–90 lat przy końcowej wartości Kelsey pozostają wyłącznie ilustracją.
+Monotoniczny pas 5–6 lat łagodzi zmianę Kelsey na Madsen. Pas 17–25 lat
+łączy Madsen z dorosłym Kelsey i łagodzi zmianę skali czasu, zachowując
+wewnętrzny węzeł Madsen dla 18 lat, około 18,051151 nmol/L. To koniec
+źródłowej tabeli i kotwica rysunku, nie ustalony fizjologiczny szczyt.
+Dla pacjenta w wieku dokładnie 18 lat odniesieniem jest już Kelsey.
+Kotwice przed urodzeniem oraz płaski ogon 88–90 lat przy końcowej
+wartości Kelsey pozostają wyłącznie ilustracją.
 
-Stałe maksimum źródłowych węzłów T wynosi około 15,418439 nmol/L; zapas 1,25 daje
-górę osi około 19,273049 nmol/L. Tak jak dla inhibiny B, wynik ponad osią
+Stałe maksimum źródłowych węzłów T wynosi około 18,051151 nmol/L; zapas 1,25 daje
+górę osi około 22,563939 nmol/L. Tak jak dla inhibiny B, wynik ponad osią
 ma strzałkę z rzeczywistą liczbą, bez przyciętej kropki i bez zmiany skali.
 Mężczyzna 40 lat/13 nmol/L pozostaje nieznacznie poniżej oryginalnej
 mediany około 13,049604; wpisanie 100 nmol/L nie zmienia kształtu krzywej.
-Ta stabilizacja nie rozstrzyga odnotowanej w audycie rozbieżności
-przedpokwitaniowych modeli Kelsey i Madsen. Szczegóły i ograniczenia:
+W wieku 6 lat p50 Madsen około 0,02394 nmol/L zastępuje dotychczasowe
+około 0,323 Kelsey. Różnica dotyczy modeli populacyjnych i metod,
+nie jest błędem jednostki ani rozpoznaniem u dziecka. LLOQ Madsen wynosi
+0,02 nmol/L; niewyjaśniona reguła przetwarzania niższych obserwacji pozostaje
+ograniczeniem. Nie nazywamy mediany normą ani nie wyprowadzamy stadium
+z wieku. Szczegóły i ograniczenia:
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 Brak profilu, nieznany wiek lub płeć, nieobsługiwana jednostka, pusty albo

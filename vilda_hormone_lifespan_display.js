@@ -117,8 +117,9 @@
     var sourceData = data && data.patientPointData;
     if (!policy || policy.kind !== 'educational-display-only' || policy.analyte !== 't' ||
         policy.sex !== 'male' || policy.unit !== 'nmol/L' ||
-        !Array.isArray(policy.sourceIds) || policy.sourceIds.length !== 2 ||
-        new Set(policy.sourceIds).size !== 2 || !Array.isArray(policy.transitions) ||
+        !Array.isArray(policy.sourceIds) || policy.sourceIds.length !== 4 ||
+        new Set(policy.sourceIds).size !== 4 || !Array.isArray(policy.transitions) ||
+        !Array.isArray(policy.anchors) || !policy.anchors.length ||
         !sourceData || !Array.isArray(sourceData.profiles) ||
         !engine || typeof engine.referenceAt !== 'function' || typeof engine.sampleProfile !== 'function' ||
         !Array.isArray(data.maleAges) || !Array.isArray(data.maleHormones)) return null;
@@ -133,7 +134,12 @@
           return !point || !finite(point.ageYears) || !finite(point.value) || point.value < 0 ||
             (index > 0 && point.ageYears <= points[index - 1].ageYears);
         });
-    }) || profiles[0].maxAge > profiles[1].minAge) return null;
+    }) || profiles.some(function (profile, index) {
+      if (!index) return false;
+      var previous = profiles[index - 1];
+      return previous.maxAge > profile.minAge ||
+        (previous.maxAge === profile.minAge && !previous.maxAgeExclusive);
+    })) return null;
     var hormone = data.maleHormones.find(function (item) { return item.id === 't'; });
     if (!hormone || !Array.isArray(hormone.values) || hormone.values.length !== data.maleAges.length ||
         hormone.values.some(function (value) { return !finite(value) || value < 0; }) ||
@@ -144,7 +150,7 @@
     var divisor = Math.max.apply(null, profiles.flatMap(function (profile) {
       return profile.points.map(function (point) { return point.value; });
     }));
-    if (!finite(divisor) || divisor <= 0 || !finite(ceiling) || ceiling <= 1 || policy.transitions.length !== 2) return null;
+    if (!finite(divisor) || divisor <= 0 || !finite(ceiling) || ceiling <= 1 || policy.transitions.length !== 3) return null;
     var validTransitions = policy.transitions.every(function (item, index, items) {
       if (!item || !finite(item.minAge) || !finite(item.maxAge) || item.maxAge <= item.minAge ||
           (index > 0 && item.minAge <= items[index - 1].maxAge) ||
@@ -152,7 +158,7 @@
       var from = profiles.find(function (profile) { return profile.id === item.fromSource; });
       var to = profiles.find(function (profile) { return profile.id === item.toSource; });
       return from && to && item.minAge >= from.minAge && item.minAge < from.maxAge &&
-        item.maxAge > to.minAge && item.maxAge <= to.maxAge;
+        item.maxAge >= to.minAge && item.maxAge <= to.maxAge;
     });
     if (!validTransitions) return null;
     var transitions = policy.transitions.map(function (item) {
@@ -160,6 +166,24 @@
         fromSource: item.fromSource, toSource: item.toSource, kind: item.kind };
     });
     var invalid = false;
+    var anchors = policy.anchors.map(function (anchor) {
+      if (!anchor || !finite(anchor.ageYears)) { invalid = true; return null; }
+      var profile = profiles.find(function (item) { return item.id === anchor.sourceId; });
+      var point = profile && profile.points.find(function (item) { return item.ageYears === anchor.ageYears; });
+      var transition = transitions.find(function (item) {
+        return anchor.ageYears > item.minAge && anchor.ageYears < item.maxAge &&
+          (item.fromSource === anchor.sourceId || item.toSource === anchor.sourceId);
+      });
+      // A published endpoint may remain a display anchor even when age routing
+      // assigns that exact birthday to the next profile. Never extend the
+      // numerical reference domain or interpolate an unreported anchor here.
+      if (!profile || !point || point.eligible === false || !transition ||
+          anchor.ageYears < profile.minAge || anchor.ageYears > profile.maxAge) {
+        invalid = true; return null;
+      }
+      return { ageYears: anchor.ageYears, value: point.value, sourceId: profile.id };
+    });
+    if (invalid || new Set(anchors.map(function (anchor) { return anchor.ageYears; })).size !== anchors.length) return null;
     var tangentOverrides = [];
     policy.transitions.forEach(function (transition) {
       if (transition.tangents !== 'original-source-derivative') return;
@@ -216,6 +240,7 @@
         add(ageYears, engine.referenceAt(profile, ageYears));
       });
     });
+    anchors.forEach(function (anchor) { add(anchor.ageYears, anchor.value); });
     // Both ends of every illustrative join must still be genuine readable
     // source values. No partial curve may silently replace missing evidence.
     transitions.forEach(function (transition) {
@@ -239,7 +264,7 @@
     return {
       id: 't', kind: policy.kind, unit: policy.unit, policyVersion: policy.version,
       points: points, profiles: profiles, sourceIds: policy.sourceIds.slice(),
-      divisor: divisor, ceiling: ceiling, transitions: transitions, tangentOverrides: tangentOverrides,
+      divisor: divisor, ceiling: ceiling, transitions: transitions, anchors: anchors, tangentOverrides: tangentOverrides,
       illustrativeIntervals: [
         { minAge: points[0].ageYears, maxAge: first.minAge, kind: 'prenatal-lead' },
         ...transitions,

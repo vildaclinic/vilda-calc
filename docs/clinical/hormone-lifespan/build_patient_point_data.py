@@ -113,16 +113,71 @@ def build():
         c=coefficients
         prediction=(c['a']+c['c']*age+c['e']*age**2+c['g']*age**3)/(1+c['b']*age+c['d']*age**2+c['f']*age**3)
         return 10**prediction-1
-    add('kelsey2014-male-t','t','male',
-        [dict(ageYears=i/10,value=testosterone_at(i/10)) for i in range(30,881)],
-        3,88,'Kelsey 2014/2015 · testosteron','https://doi.org/10.1371/journal.pone.0109346',
-        testosterone['assay'],'Połączone badania zdrowych chłopców i mężczyzn','model-central',
-        compatibleAssayMethodIds=['lc-ms/ms','lc-ms-ms','lcmsms'],
-        provenance=testosterone['source'],formula=testosterone['formula'],
-        limitations=[note for note in testosterone['limits']
-                     if not note.startswith('No interpolation or cross-source stitching has been authorized')],
-        historicalResearchNotes=[note for note in testosterone['limits']
-                                 if note.startswith('No interpolation or cross-source stitching has been authorized')])
+    testosterone_policy = json.loads((ROOT/'testosterone-reference-policy.json').read_text(encoding='utf-8'))
+    assert testosterone_policy['kind'] == 'educational-source-selection'
+    assert (testosterone_policy['analyte'], testosterone_policy['sex'], testosterone_policy['unit']) == ('t','male','nmol/L')
+    assert testosterone_policy['interpolation']['method'] == 'pchip'
+    assert testosterone_policy['interpolation']['valueScale'] == 'concentration-nmol-per-litre'
+    kelsey_points = [dict(ageYears=i/10,value=testosterone_at(i/10)) for i in range(30,881)]
+    madsen_t = madsen['hormones']['testosterone']
+    assert [point['ageYears'] for point in madsen_t['points']] == list(range(6,19))
+    assert madsen_t['unit'] == 'nmol/L'
+    assert all(math.isclose(point['centralConcentration'], math.exp(point['M_logSIx1e6'])/1e6,
+                            rel_tol=1e-14, abs_tol=0) for point in madsen_t['points'])
+    assert all(point['centralConcentration'] > madsen_t['lowerLimitOfQuantification']
+               for point in madsen_t['points'])
+    routes = testosterone_policy['profiles']
+    assert len(routes) == 3 and len({route['id'] for route in routes}) == 3
+    for index, route in enumerate(routes):
+        assert route['sourceDomain']['minAge'] <= route['minAge'] < route['maxAge'] <= route['sourceDomain']['maxAge']
+        assert route['retainAllSourcePoints']
+        if index:
+            assert routes[index-1]['maxAge'] == route['minAge'] and routes[index-1]['maxAgeExclusive']
+        routing = {'version':testosterone_policy['version'], 'source':route['source'],
+                   'minAge':route['minAge'], 'maxAge':route['maxAge'],
+                   'maxAgeExclusive':route['maxAgeExclusive'],
+                   'sourceDomain':route['sourceDomain'], 'retainAllSourcePoints':True}
+        if route['source'] == 'kelsey2014':
+            # Applicability is split; the complete original nodes are retained
+            # in both records so PCHIP derivatives at 6/18 remain unchanged.
+            add(route['id'],'t','male',[dict(point) for point in kelsey_points],
+                route['minAge'],route['maxAge'],
+                'Kelsey 2014/2015 · testosteron','https://doi.org/10.1371/journal.pone.0109346',
+                testosterone['assay'],'Połączone badania zdrowych chłopców i mężczyzn','model-central',
+                maxAgeExclusive=route['maxAgeExclusive'],
+                compatibleAssayMethodIds=['lc-ms/ms','lc-ms-ms','lcmsms'],
+                provenance={**testosterone['source'],'sourceRouting':routing},formula=testosterone['formula'],
+                limitations=[note for note in testosterone['limits']
+                             if not note.startswith('No interpolation or cross-source stitching has been authorized')],
+                historicalResearchNotes=[note for note in testosterone['limits']
+                                         if note.startswith('No interpolation or cross-source stitching has been authorized')])
+        elif route['source'] == 'madsen2022':
+            add(route['id'],'t','male',
+                [dict(ageYears=point['ageYears'],value=point['centralConcentration']) for point in madsen_t['points']],
+                route['minAge'],route['maxAge'],
+                'Madsen 2022 · testosteron · chłopcy','https://doi.org/10.1210/clinem/dgac155',
+                madsen_t['assay'],'Bergen Growth Study 2 + Fit Futures; chłopcy, Norwegia',
+                'model-central',maxAgeExclusive=route['maxAgeExclusive'],
+                compatibleAssayMethodIds=['lc-ms/ms','lc-ms-ms','lcmsms'],
+                provenance={**madsen['source'],
+                            'sourceCells':[point['sourceCells'] for point in madsen_t['points']],
+                            'sourceLms':[{'ageYears':point['ageYears'],'L':point['L'],
+                                          'M_logSIx1e6':point['M_logSIx1e6'],'S':point['S']}
+                                         for point in madsen_t['points']],
+                            'population':madsen['population'],
+                            'transform':madsen['transform'],
+                            'sourceRouting':routing,
+                            'interpolation':testosterone_policy['interpolation'],
+                            'lowerLimitOfQuantification':madsen_t['lowerLimitOfQuantification'],
+                            'belowLoqModelHandling':{'rule':None,'reported':False,
+                                'note':'No explicit below-LLOQ preprocessing rule was established in the article, supplementary tables or generic LMS recipe. No substitution or extra censoring threshold is invented here.'}},
+                limitations=[*madsen['useConstraints'],
+                    testosterone_policy['interpolation']['madsenBetweenNodeMeaning'],
+                    'The model center is exp(M)/1e6 on the worksheet log-transformed scale, not an arithmetic mean of concentrations.',
+                    'The lowest published p50 (age 6) is above the stated LLOQ 0.02 nmol/L; low-range precision is not the 4% quoted at 1.5–37 nmol/L.',
+                    'Below-LLOQ preprocessing in the fitted source model was not explicitly reported in the reviewed materials; do not infer a zero or LLOQ/2 substitution.'])
+        else:
+            raise ValueError('Unsupported testosterone source in routing policy')
 
     kelsey=read('kelsey2016-inhb-published-table.json')
     add('kelsey2016-male-inhb','inhb','male',
@@ -194,7 +249,7 @@ def build():
             provenance={**infant['source'],'table':hormone['supplementTable'],
                         'participants':98,'samples':266},limitations=infant['displayNotes'])
 
-    return {'version':'2026-10-10.3','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-10.4','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,
