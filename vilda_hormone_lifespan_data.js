@@ -31610,7 +31610,7 @@ const inhibinDisplayPolicy = {
   ]
 };
 const testosteroneDisplayPolicy = {
-  "version": "2026-10-10.2",
+  "version": "2026-10-10.3",
   "kind": "educational-display-only",
   "analyte": "t",
   "sex": "male",
@@ -31643,7 +31643,7 @@ const testosteroneDisplayPolicy = {
       "doi": "10.1210/clinem/dgac155",
       "supplementDoi": "10.6084/m9.figshare.17153336.v1",
       "statistic": "published-annual-lms-central-p50",
-      "limit": "Norwegian boys aged 6–18 years, serum LC-MS/MS; chronological-age model across pubertal stages. Routing is 6 to less than 18; the published 18-year endpoint remains a display anchor and interpolation neighbor, not a proven physiological peak age."
+      "limit": "Norwegian boys aged 6–18 years, serum LC-MS/MS; chronological-age model across pubertal stages. Routing is 6 to less than 18; the published 18-year endpoint remains a source interpolation neighbor and scale input, not a mandatory display anchor or evidence of a physiological peak age."
     },
     {
       "id": "kelsey2014-male-t",
@@ -31678,22 +31678,16 @@ const testosteroneDisplayPolicy = {
       "reason": "Join the existing Kelsey childhood estimate to the lower LC-MS/MS Madsen estimate without a source-switch step. This display descent is not evidence of a biological fall between ages 5 and 6; each eligible patient keeps the original source median."
     },
     {
-      "minAge": 17,
+      "minAge": 16,
       "maxAge": 25,
       "fromSource": "madsen2022-male-t",
       "toSource": "kelsey2014-male-t",
       "kind": "illustrative-transition",
       "tangents": "original-source-derivative",
-      "reason": "Retain the published Madsen endpoint at age 18 as an internal anchor, then join smoothly to the adult Kelsey model. Do not force a rising tangent through age 18. This bridge also spans the whole-life time-axis change at age 20. The rounded display maximum is not evidence of a physiological peak at 18."
+      "reason": "A broad illustrative bridge from the source value and tangent at age 16 to those at age 25 rounds off late puberty without forcing a peak at the last Madsen node (18 years). One canonical-coordinate cubic spans the whole-life time-axis change at age 20. Its rounded maximum is a drawing consequence, not an observed peak or a new population median."
     }
   ],
-  "anchors": [
-    {
-      "ageYears": 18,
-      "sourceId": "madsen2022-male-t",
-      "reason": "Exact published endpoint retained only in display geometry even though the patient's exact 18th birthday belongs to the adult Kelsey profile. Read the value from the original source node, never from the display bridge or an extrapolation."
-    }
-  ],
+  "anchors": [],
   "schematic": {
     "prenatalLastAnchorAge": 0,
     "prenatalScale": "source-maximum",
@@ -31704,7 +31698,7 @@ const testosteroneDisplayPolicy = {
     "method": "shape-preserving-cubic",
     "coordinate": "canonical-whole-life-display-x",
     "zoom": "sample-the-same-canonical-curve",
-    "transitionInteriorSourceNodesDisplayed": "explicit-policy-anchors-only"
+    "transitionInteriorSourceNodesDisplayed": "none-unless-explicitly-approved-policy-anchor"
   },
   "limits": [
     "This continuous line is educational display geometry, not one published population model or a reference interval.",
@@ -31712,7 +31706,7 @@ const testosteroneDisplayPolicy = {
     "All approved source populations remain visible regardless of the current patient's eligibility for numerical comparison.",
     "The broad 150-day-to-4-year transition is not a source-derived concentration curve. Source reference values remain available at all previously eligible ages, including 150–212 days and 3–4 years.",
     "No source median is supplied for ages 1–3 years, unreadable late-infant graphical values, or ages beyond 88 years.",
-    "The 5–6-year and 17–25-year transitions connect different source populations and methods; they are not longitudinal concentration models. Patient source medians may lie away from these illustrative bridges.",
+    "The 5–6-year and 16–25-year transitions connect different source populations and methods; they are not longitudinal concentration models. Patient source medians may lie away from these illustrative bridges.",
     "The fetal lead and flat tail after 88 years are illustrative drawing conventions, not fetal or oldest-old reference concentrations.",
     "Kelsey's near-plateau after age 40 is retained; it is not a claim that every man's total testosterone or free testosterone remains constant."
   ]

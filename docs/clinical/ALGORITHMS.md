@@ -828,6 +828,15 @@ minipuberty i pokwitania nadal korzystają z jednego przebiegu i jednej skali,
 także bez wyniku. Końcowa akceptacja kliniczna dotyczy gotowej zmiany w PR;
 nie jest nadaniem modelom statusu walidacji klinicznej.
 
+**Korekta geometrii po zgłoszeniu ostrego szczytu:** po wdrożeniu Madsen
+właściciel zgłosił zbyt ostre zagięcie przy 17–18 latach i zatwierdził
+jego wygładzenie. Przyczyną była wymuszona kotwica na końcu tabeli
+Madsen, nie nowe dane o gwałtownym fizjologicznym spadku. Bieżąca korekta
+poszerza pas z 17–25 do 16–25 lat i usuwa kotwicę 18 lat. Zmienia
+wyłącznie ilustracyjną geometrię; źródłowe mediany, dobór profili,
+kwalifikacja pacjenta, jednostki, normy, interpretacja i skala pozostają
+takie jak po poprzednim wdrożeniu.
+
 **Źródła i granice:** pozostają Busch 2022, DOI
 `10.1210/clinem/dgac115`, ryc. 3, mediana GAMLSS donoszonych chłopców
 od 7 dni do <1 roku, surowica LC-MS/MS, oraz Kelsey 2014, DOI
@@ -883,11 +892,15 @@ współrzędnych całego życia. Zbliżenie wycina tę samą krzywą. Most 150 d
 jest monotonicznym przejściem poglądowym bez wymuszania stromych stycznych
 źródeł; obejmuje również część dostępnych odcinków, aby uniknąć sztucznego
 wzrostu na styku populacji. Nowy monotoniczny most 5–6 lat łączy Kelsey
-z Madsen. Pas 17–25 lat łączy Madsen z dorosłym Kelsey i łagodzi zmianę
-skali czasu, zachowując styczne źródłowe na końcach i wewnętrzny węzeł
-Madsen 18 lat/18,051151264084126 nmol/L. Ten koniec tabeli jest kotwicą
-geometrii, nie dowodem fizjologicznego wieku szczytu. Mediana pacjenta
-nie pochodzi z mostu ani z kotwicy innej niż jego dobrane źródło.
+z Madsen. Pas 16–25 lat łączy Madsen z dorosłym Kelsey i łagodzi zmianę
+skali czasu, zachowując wartości oraz styczne źródłowe na końcach.
+Pojedynczy odcinek Hermite'a/PCHIP w kanonicznych współrzędnych osi
+nie ma wewnętrznej kotwicy Madsen przy 18 latach. Jego szerokie maksimum
+jest geometrią ilustracji, nie medianą, normą ani dowodem fizjologicznego
+wieku szczytu. Węzeł Madsen 18 lat/18,051151264084126 nmol/L pozostaje
+w danych źródłowych dla interpolacji 17.x i niezmienionej skali.
+Mediana pacjenta nadal pochodzi wyłącznie z jego dobranego źródła,
+nigdy z wygładzonego mostu.
 Kotwice przedurodzeniowe oraz płaski ogon 88–90 lat przy końcowej wartości
 Kelsey około 13,222919802 nmol/L są ilustracją, nie ekstrapolacją mediany.
 
@@ -920,11 +933,16 @@ znaczniki wyniku i źródła, nawet poza mostem; wcześniactwo lub nieznane
 donoszenie → bez dopasowania do Busch, bez zmiany ogólnego przebiegu.
 M/dokładnie 6 lat/T 0,02393726986868612 nmol/L oraz M/dokładnie 12 lat/T
 1,4977255724595988 → wynik równy medianie Madsen, bez nowego werdyktu.
-M/dokładnie 18 lat → Kelsey około 15,16389, a nie graficzna kotwica
-Madsen 18,05115. Wiek 5,99–6,01 lub 17,99–18,01 lat → brak jednoznacznego
+M/dokładnie 16 lat → Madsen 12,96588173768215; M/17,9 roku → Madsen
+17,87811097018994; M/dokładnie 18 lat → Kelsey 15,16389257035194.
+Wszystkie trzy mediany pozostają niezmienione po korekcie rysunku,
+choć znaczniki mogą leżeć poza mostem. Wiek 5,99–6,01 lub 17,99–18,01 lat → brak jednoznacznego
 punktu między źródłami. M/2 lata → nadal brak źródłowej mediany.
 Kontrola obejmuje też granice mostów, brak dodatkowych ekstremów,
 tożsamość krzywej między zbliżeniami, telefon, pełny ekran i offline.
+Korekta połączenia sprawdza szerokie zaokrąglenie przy 17–18 latach,
+ciągłość stycznych na końcach pasa 16–25 oraz brak wymuszonego
+źródłowego punktu 18 lat w geometrii, bez zmiany źródeł ani skali.
 Testy potwierdzają odtworzenie kontraktu, nie walidację kliniczną.
 Źródła, statystyki i ograniczenia audytu:
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).

@@ -1742,7 +1742,7 @@
       if (stableTestosteroneVisible()) {
         paragraph("Linia testosteronu całkowitego zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Łączy poglądowo mediany różnych badań; nie jest jedną medianą populacji ani granicą normy.");
         paragraph("Niemowlęca część źródłowa dotyczy chłopców urodzonych o czasie. Od 6. do 18. urodzin odniesienie pochodzi z Madsen 2022 (LC-MS/MS); w wieku 3–<6 i 18–88 lat z Kelsey 2014/2015. Granice doboru badań nie oznaczają nagłej zmiany fizjologicznej.");
-        paragraph("Połączenia od około 5. miesiąca do 4 lat, 5–6 i 17–25 lat, okres płodowy oraz odcinek po 88. roku są poglądowe. Punkt Madsena przy 18 latach zachowuje końcową wartość tabeli; nie wyznacza wieku biologicznego maksimum. Połączenia nie dostarczają mediany ani normy dla pacjenta.");
+        paragraph("Połączenia od około 5. miesiąca do 4 lat, 5–6 i 16–25 lat, okres płodowy oraz odcinek po 88. roku są poglądowe. Zaokrąglony szczyt nie wyznacza wieku biologicznego maksimum. Połączenia nie dostarczają mediany ani normy dla pacjenta.");
         paragraph("Kropka oznacza wynik, a jasny znacznik medianę wybranego źródła. W poglądowym połączeniu mediana może nie leżeć na linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Kolor nie klasyfikuje wyniku.");
         const testosteroneSources = new Set();
         for (const profile of testosteroneDisplay.profiles) {

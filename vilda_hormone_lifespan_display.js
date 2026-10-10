@@ -119,7 +119,7 @@
         policy.sex !== 'male' || policy.unit !== 'nmol/L' ||
         !Array.isArray(policy.sourceIds) || policy.sourceIds.length !== 4 ||
         new Set(policy.sourceIds).size !== 4 || !Array.isArray(policy.transitions) ||
-        !Array.isArray(policy.anchors) || !policy.anchors.length ||
+        !Array.isArray(policy.anchors) ||
         !sourceData || !Array.isArray(sourceData.profiles) ||
         !engine || typeof engine.referenceAt !== 'function' || typeof engine.sampleProfile !== 'function' ||
         !Array.isArray(data.maleAges) || !Array.isArray(data.maleHormones)) return null;
