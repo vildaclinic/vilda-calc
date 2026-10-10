@@ -652,6 +652,56 @@ zachowanie punktów niemowlęcych i dorosłych. Testy nie oznaczają walidacji
 klinicznej. Pochodzenie i ograniczenia utrwala
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
+**2026-10-10 — FSH przed pokwitaniem, mediany grup Zec:** po analizie
+dostarczonego pełnego tekstu właściciel polecił wykorzystanie tych danych
+do edukacyjnego porównania wyniku. Źródło: Zec i wsp., *Clinical Biochemistry*
+45 (2012), 1206–1212, DOI
+[10.1016/j.clinbiochem.2012.05.019](https://doi.org/10.1016/j.clinbiochem.2012.05.019),
+PMID 22634601, tabela 2, str. 1210/PDF 5; metoda w tabeli 1, str. 1208/PDF 3.
+Pełna kohorta: 948 dzieci z Zagrzebia w stadium Tanner 1, w tym pacjenci
+kierowani na badania z powodu ostrych infekcji, alergii i przed zabiegami;
+nie była to wyłącznie próba zdrowych ochotników. Oznaczenie Roche cobas e 411,
+kanapkowe ECLIA, FSH w IU/L. Zbierano surowicę i osocze Li-heparynowe,
+lecz autorzy nie przypisali materiału do poszczególnych hormonów.
+Nie zakładamy zgodności metod innych platform Roche ani profilu Mayo.
+
+Aktywne są cztery osobne profile `group-median`, `interpolation: constant`,
+z danymi `2026-10-10.3`: chłopcy w aplikacji 1–<6 lat otrzymują medianę
+0,48 IU/L pełnej opublikowanej grupy 1–<8 lat (N=303); dziewczynki
+1–<4 lat: 2,57 IU/L (N=124), 4–<8: 1,07 (N=156), 8–<11: 1,55 (N=107).
+Okno chłopców kończy się przed 6 lat, aby zachować istniejący profil Madsen
+6–16 lat. Etykieta, mediana i N=303 nadal dotyczą pełnej grupy źródłowej
+1–<8; nie przedstawiamy ich jako wyniku wydzielonej podgrupy 1–<6.
+Grupę źródłową chłopców 8–<11 lat, 0,79 IU/L (N=117), zachowujemy w dowodzie
+bez aktywowania konkurencyjnego profilu. Węzły poziomych odcinków mają
+identyczną wartość, nie tworzymy ciągłej trajektorii z szerokich grup.
+
+Zec ma `requiredGonadalStage: 1`: wymagane jest znane, typowane i aktualne
+G1 u chłopca albo Th1 u dziewczynki, pobrane z istniejącego kontekstu.
+Brak stadium, stadium 2–5, niewłaściwy rodzaj cechy, P/Ax i historyczna
+obserwacja nie kwalifikują punktu; wieku i samego FSH nie używamy do
+wnioskowania o stadium. Nie dodajemy nowego formularza. Stadium pacjenta
+nie kwalifikuje profilu drugiej płci; ilościowe porównanie płci wymagające
+Zec pozostaje w widoku schematycznym. Wyłącznie niemowlęce żeńskie FSH
+Ljubicic kończy się teraz przed pierwszymi urodzinami; od 1 roku stosuje
+się Zec ze swoim warunkiem stadium, bez zastępowania go profilem niemowlęcym.
+Pozostałe profile Ljubicic zachowują dotychczasową granicę.
+
+**Wpływ i przypadki syntetyczne:** zmienia się dostępność edukacyjnego
+punktu FSH przed pokwitaniem; normy, werdykty laboratoryjne, historia
+i zapis wizyt nie zmieniają się. M/3 lata/G1/FSH 0,48 IU/L → mediana
+grupy Zec 1–<8, N=303; ten sam wiek/G2 lub brak typowanej obserwacji →
+brak punktu Zec. K/2 lata/Th1/2,57; K/5 lat/Th1/1,07; K/9 lat/Th1/1,55
+IU/L → punkty na medianach odpowiednich grup. M/6 lat → zachowany Madsen;
+K/1 rok/Th1 → Zec; K/11 lat lub K/5 lat/Th2 → brak Zec. Niepewny wiek
+K/3,99–4,01 roku nie wybiera jednej mediany. Brak dopasowania nie blokuje
+osobnej interpretacji klinicznej. Nie aktywujemy cenzurowanych median LH
+ani testosteronu i nie importujemy zakresów referencyjnych tej publikacji.
+Regresje wywołują produkcyjny silnik, sprawdzają wartości tabeli, granice,
+stadium i zachowanie poprzednich źródeł; testy nie są walidacją kliniczną.
+Pełne pochodzenie, SHA-256 PDF i polityka:
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

@@ -8,6 +8,8 @@ const require = createRequire(import.meta.url);
 const puberty = require('../../vilda_lab_puberty.js');
 const inhibin = require('../../vilda_lab_inhibin_b.js');
 const policy = require('../../vilda_lab_puberty_data.js');
+const lifespanReference = require('../../vilda_hormone_lifespan_reference.js');
+const lifespanData = require('../../vilda_hormone_lifespan_data.js').patientPointData;
 const html = readFileSync(new URL('../../przelicznik-jednostek.html', import.meta.url), 'utf8');
 // Execute the actual converter adapter, including identity invalidation and the
 // shared age resolver. The fixtures below are fictional, not clinical ranges.
@@ -152,6 +154,88 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     for (const confirmation of ['unknown', 'configured', 'reported']) {
       app.update({ id: 'lh' }, evaluated('2', 'IU/L', { assay: { methodId: 'fictional-method', confirmation } }));
       expect(app.last().assayMethodId).toBe(confirmation === 'reported' ? 'fictional-method' : null);
+    }
+  });
+
+  it('forwards the current typed puberty observation to the actual FSH group selector', () => {
+    const app = adapter();
+    for (const [sex, kind, median, profileId] of [
+      ['M', 'G', 0.48, 'zec2012-male-fsh-age-1-8'],
+      ['F', 'Th', 2.57, 'zec2012-female-fsh-age-1-4']
+    ]) {
+      const input = { sex, contextBasis: 'current-patient',
+        age: { years: 3, months: 0, precision: 'month' },
+        puberty: { kind, stage: 1, appliesToCurrentContext: true } };
+      const assessment = evaluated('0,48', 'mIU/mL', input);
+      app.update({ id: 'fsh' }, assessment);
+      expect(app.last().puberty).toEqual({ kind, stage: 1 });
+      expect(app.last().puberty).not.toBe(assessment.input.puberty);
+      expect(lifespanReference.evaluate(lifespanData, app.last())).toMatchObject({
+        status: 'ready', referenceValue: median, profile: { id: profileId }
+      });
+    }
+  });
+
+  it('does not reuse a historical, unconfirmed or bare Tanner observation for the childhood dot', () => {
+    const app = adapter();
+    const current = { contextBasis: 'current-patient',
+      age: { years: 3, months: 0, precision: 'month' },
+      puberty: { kind: 'G', stage: 1, appliesToCurrentContext: true } };
+    app.context.sourcePatient.tanner = 1;
+    app.context.localOverride.tanner = 1;
+    for (const extras of [
+      { contextBasis: undefined }, { contextBasis: 'sample-date' },
+      { sampleDateISO: '2020-01-01' },
+      { puberty: { kind: 'G', stage: 1, appliesToCurrentContext: false } },
+      { puberty: { kind: 'G', stage: 1 } }, { puberty: null }, { puberty: 1 }
+    ]) {
+      app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', current));
+      expect(app.last().puberty).toEqual({ kind: 'G', stage: 1 });
+      app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', { ...current, ...extras }));
+      expect(app.last().puberty).toBeNull();
+    }
+  });
+
+  it('rechecks the current stage and sex rather than retaining the previously eligible FSH group', () => {
+    const app = adapter();
+    const current = { contextBasis: 'current-patient',
+      age: { years: 3, months: 0, precision: 'month' },
+      puberty: { kind: 'G', stage: 1, appliesToCurrentContext: true } };
+    app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', current));
+    expect(lifespanReference.evaluate(lifespanData, app.last()).status).toBe('ready');
+    for (const extras of [
+      { puberty: { ...current.puberty, stage: 2 } },
+      { puberty: { ...current.puberty, kind: 'P' } }, { sex: 'F' }
+    ]) {
+      app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', { ...current, ...extras }));
+      expect(lifespanReference.evaluate(lifespanData, app.last()))
+        .toEqual({ status: 'unavailable', reason: 'incompatible-puberty-stage' });
+    }
+    app.context.sourcePatient.sourceStatus = 'loading';
+    app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', current));
+    expect(app.last().puberty).toBeNull();
+    expect(app.last().measurement).toBeNull();
+  });
+
+  it('retains treatment and sample method exclusions when a current Tanner 1 qualifies for Zec', () => {
+    const app = adapter();
+    const current = { contextBasis: 'current-patient',
+      age: { years: 3, months: 0, precision: 'month' },
+      puberty: { kind: 'G', stage: 1, appliesToCurrentContext: true } };
+    for (const extras of [
+      { treatment: { context: 'hormonal' } }, { treatment: { gnrha: 'yes' } },
+      { treatment: { sexSteroids: 'yes' } }, { measurementKind: 'stimulated' }
+    ]) {
+      app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', { ...current, ...extras }));
+      expect(lifespanReference.evaluate(lifespanData, app.last()))
+        .toEqual({ status: 'unavailable', reason: 'contraindicated' });
+    }
+    for (const [confirmation, status] of [['configured', 'ready'], ['reported', 'unavailable']]) {
+      app.update({ id: 'fsh' }, evaluated('0.48', 'IU/L', { ...current,
+        assay: { methodId: 'AutoDELFIA', confirmation } }));
+      const result = lifespanReference.evaluate(lifespanData, app.last());
+      expect(result.status).toBe(status);
+      if (status === 'unavailable') expect(result.reason).toBe('incompatible-assay');
     }
   });
 

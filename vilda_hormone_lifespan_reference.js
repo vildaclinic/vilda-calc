@@ -68,6 +68,15 @@
       return unavailable('ambiguous-age');
     }
     if (profile.termOnly && !termBirth(context.preterm)) return unavailable('preterm-context');
+    if (profile.requiredGonadalStage != null) {
+      var puberty = context.puberty;
+      if (!puberty || !Number.isInteger(puberty.stage) || puberty.stage < 1 || puberty.stage > 5 ||
+          !puberty.kind || puberty.kind === 'unspecified') return unavailable('missing-puberty-stage');
+      // A known gonadal observation is supplied by the current-patient adapter.
+      // Pubic/axillary hair and an untyped Tanner number cannot qualify a cohort.
+      if (puberty.kind !== (context.sex === 'male' ? 'G' : 'Th') ||
+          puberty.stage !== profile.requiredGonadalStage) return unavailable('incompatible-puberty-stage');
+    }
     var specimen = typeof context.specimen === 'string' ? context.specimen.trim().toLowerCase() : '';
     if (specimen && specimen !== 'unknown' && specimen !== 'serum' && specimen !== 'surowica') {
       return unavailable('incompatible-specimen');
@@ -216,6 +225,6 @@
     return { status: 'ready', profile: profile, value: value, referenceValue: referenceValue };
   }
 
-  return { version: '1.1.0', evaluate: evaluate, selectProfile: selected,
+  return { version: '1.2.0', evaluate: evaluate, selectProfile: selected,
     referenceAt: referenceAt, sampleProfile: sampleProfile };
 });

@@ -76,6 +76,37 @@ def build():
             compatibleAssayMethodIds=['immulite-2000-xpi','siemens-immulite-2000-xpi'],
             provenance=madsen['source'],limitations=madsen['useConstraints'])
 
+    zec=read('zec2012-fsh-group-medians.json')
+    assert sum(row['participants'] for row in zec['rows']) == zec['fshParticipants']
+    for row in zec['rows']:
+        if not row['active']:
+            continue
+        assert row['tannerStage'] == 1 and row['medianOperator'] == '=' and not row['censored']
+        minimum, maximum = row['applicationMinAge'], row['applicationMaxAge']
+        assert row['minAge'] <= minimum < maximum <= row['maxAge']
+        median=row['medianIuL']
+        add('zec2012-'+row['sex']+'-fsh-age-'+str(row['minAge'])+'-'+str(row['maxAge']),
+            'fsh',row['sex'],
+            [dict(ageYears=minimum,value=median),dict(ageYears=maximum,value=median)],
+            minimum,maximum,'Zec 2012 · FSH · przed pokwitaniem',zec['source']['url'],
+            zec['assay']['method'],'Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja',
+            'group-median',interpolation='constant',maxAgeExclusive=True,
+            requiredGonadalStage=1,
+            compatibleAssayMethodIds=['roche-cobas-e411-fsh','roche-cobas-e-411-fsh'],
+            ageGroup={'label':row['label'],'minAge':row['minAge'],'maxAge':row['maxAge'],
+                      'n':row['participants'],'sourceUnit':'IU/L','sourceMedian':median,
+                      'boundaryPolicy':'published-inclusive-lower-exclusive-upper',
+                      'description':'Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku.'},
+            provenance={**zec['source'],'participants':zec['participants'],
+                        'fshParticipants':zec['fshParticipants'],
+                        'groupParticipants':row['participants'],
+                        'sourceUnit':'IU/L','sourceToCanonicalFactor':1,
+                        'sourceAgeBoundaryDefinition':zec['ageRouting']['sourceBoundaryDefinition'],
+                        'ageRouting':zec['ageRouting']['applicationPolicy'],
+                        'routingNote':row['routingNote'],
+                        'assay':zec['assay']},
+            limitations=zec['limitations'])
+
     testosterone=read('testosterone-model.json')
     coefficients=testosterone['formula']['coefficients']
     def testosterone_at(age):
@@ -132,7 +163,8 @@ def build():
             ageGroup={'labelYears':age,'label':str(age)+'–<'+str(age+1)+' lat',
                       'minAge':age,'maxAge':age+1,'n':row['participants'],
                       'sourceUnit':'ng/mL','sourceMedian':median,
-                      'boundaryPolicy':'application-completed-year-convention'},
+                      'boundaryPolicy':'application-completed-year-convention',
+                      'description':'Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera.'},
             provenance={**wang['source'],'participants':wang['participants'],
                         'groupParticipants':row['participants'],
                         'sourceUnit':'ng/mL','sourceToCanonicalFactor':1/.1401,
@@ -157,13 +189,14 @@ def build():
             [dict(ageYears=p['ageYears'],value=p['median']) for p in hormone['points']],
             .02,1,'Ljubicic 2022 · minipuberty',infant['source']['url'],hormone['assay'],
             'Zdrowe dziewczynki urodzone o czasie; Dania','median',termOnly=True,
+            **({'maxAgeExclusive':True} if analyte == 'fsh' else {}),
             compatibleAssayMethodIds=assay_ids.get(analyte,['lc-ms/ms','lc-ms-ms','lcmsms']),
             provenance={**infant['source'],'table':hormone['supplementTable'],
                         'participants':98,'samples':266},limitations=infant['displayNotes'])
 
-    return {'version':'2026-10-10.2','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-10.3','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
-            'interpolation':'Monotone PCHIP within continuous source profiles; annual-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
+            'interpolation':'Monotone PCHIP within continuous source profiles; age-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,
             'unitConversions':{
                 'lh':{'unit':'IU/L','factors':{'IU/L':1,'mIU/mL':1}},
