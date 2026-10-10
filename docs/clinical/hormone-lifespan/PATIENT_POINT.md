@@ -9,14 +9,15 @@ nadaniem statusu walidacji klinicznej modelom ani digitalizacji rycin.
 
 Punkt pokazuje wpisane stężenie, a linia — centralny przebieg modelu
 populacyjnego. W zależności od źródła jest to opublikowane p50 lub odczytana
-z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy rocznych
-grupach Wang zamiast ciągłej krzywej wieku widoczny jest lokalny poziomy
+z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy grupach
+wieku Wang i Zec zamiast ciągłej krzywej wieku widoczny jest lokalny poziomy
 odcinek mediany jednej grupy; nie jest to p50 dokładnego wieku. Określenie
 „średnia” nie zastępuje mediany; linia nie jest granicą normy. Kolor czerwony
 identyfikuje pacjenta i nie nadaje wynikom statusu nieprawidłowych.
 
 Wykorzystujemy aktualny analit, surowy zapis wyniku, jednostkę, wiek, płeć
-i znane dane urodzeniowe z istniejącego kontekstu. Wybór źródła nie zależy
+i znane dane urodzeniowe oraz aktualne stadium gonadalne z istniejącego
+kontekstu. Wybór źródła nie zależy
 od wartości wyniku. Nie potwierdza metody próbki, materiału, leczenia ani
 stadium. Nie tworzy nowego selektora lub historii pomiarów. Znane leczenie
 lub stymulacja nie uprawniają do opisywania odniesienia zdrowej populacji
@@ -38,19 +39,20 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | --- | --- | --- | --- |
 | Męskie LH, FSH, testosteron całkowity, AMH, inhibina B; 7 dni–<1 roku | [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3, str. 1565; czarna mediana GAMLSS odczytana z wektorów PDF | 119 zdrowych donoszonych chłopców, ciąże pojedyncze, 338 próbek surowicy, COPENHAGEN Minipuberty; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS testosteron | Ekstrakcja obejmuje 7–400 dni; aktywny profil kończy się przed 1. rokiem. To przybliżenie ryciny, nie parametry autora ani średnia podłużna z ryc. 2. Osobna bramka rozdzielczości opisana niżej. |
 | Męskie LH i FSH; 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `Other biomarkers`, wiersze 17–27, kolumny B:E i G:J | Norwegia, BGS2; 414 dostępnych męskich próbek w tabeli kohorty, liczebność oznaczenia może się różnić; surowica, pobrania 08:00–14:00, Siemens IMMULITE 2000 XPi | 11 rocznych węzłów na hormon. `p50 = exp(M)/1e6`. Wiek chronologiczny, bez wyznaczania stadium Tannera. Bez ekstrapolacji na dorosłych. |
+| FSH przed pokwitaniem: chłopcy 1–<6 lat/G1; dziewczynki 1–<4, 4–<8 i 8–<11 lat/Th1 | [Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210/PDF 5: chłopcy grupa źródłowa 1–<8 lat, mediana 0,48 IU/L, N=303; dziewczynki kolejno 2,57/1,07/1,55 IU/L, N=124/156/107 | Zagrzeb, Chorwacja, Tanner 1; całe badanie N=948, nie każdy hormon oznaczano u każdego dziecka. Roche cobas e 411, kanapkowe ECLIA; zbierano surowicę i osocze Li-heparynowe, bez przypisania materiału do analitu | Mediany całych grup, nie model dokładnego wieku. Aktualne typowane G1/Th1 jest wymagane. U chłopców od 6 lat zachowujemy Madsen, lecz mediana 0,48 i N=303 nadal opisują pełną grupę źródłową 1–<8. Źródłową grupę chłopców 8–<11 (0,79 IU/L, N=117) zachowujemy wyłącznie w dowodach. |
 | Męski testosteron całkowity; 3–88 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 mężczyzn, surowica; różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Węzły co 0,1 roku z funkcji centralnej `log10(T+1)` po odwróceniu transformacji, zgodne z poprawionym p50; między węzłami PCHIP. Nie średnia arytmetyczna stężeń. Model po 40 latach jest niemal płaski; nie wymuszać spadku ze starego schematu. |
 | Męska inhibina B; 1–<6,1 roku | [Kelsey 2016](https://doi.org/10.1371/journal.pone.0153843), tabela 4, opublikowane węzły p50 | Cztery badania, 709 obserwowanych par wiek–stężenie; surowica, historyczne dwumiejscowe ELISA | Pełna tabela 0–17 lat pozostaje dowodem, wybrany odcinek jest polityką aplikacji. Nie używać rocznej tabeli do minipuberty. Nie odtwarzać modelu zaokrąglonymi współczynnikami z tabeli 2. |
 | Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem. |
 | Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
-| Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. |
+| Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
 
 INSL3 pozostaje zadaniem przyszłego kalkulatora. Zachowane wartości
 niemowlęce z Busch nie uruchamiają nowego analitu. Dorosłe LH/FSH, dziecięce
-AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie i niepokryte
+AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec i niepokryte
 fragmenty osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
-odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang.
+odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
 
 ## Transformacje, źródła i granice
@@ -111,6 +113,36 @@ dokładniejszych danych minipuberty. Brak danych Tannera i wcześniactwa
 nie pozwala nazwać mediany normą stadium lub źródłem wcześniaczym.
 Metoda dotyczy kohorty, nie stanowi potwierdzenia metody wyniku pacjenta.
 
+Zec: tabela 2 podaje dokładne granice grup jako dolną włącznie i górną
+wyłącznie. Cztery aktywne profile przechowują stałe mediany grupowe;
+nie interpolujemy między nimi ani nie zamieniamy ich w ciągły przebieg FSH.
+Okno aplikacji chłopców 1–<6 lat jest wyłącznie polityką zachowania
+dotychczasowego Madsen od 6 lat. Etykieta porównania i liczebność nadal
+opisują źródłową grupę 1–<8 lat, a nie nieistniejącą podgrupę N=303 w wieku
+1–<6 lat. Granice 4 i 8 lat u dziewczynek należą do kolejnej grupy;
+niepewny wiek obejmujący dwie grupy lub dwa źródła nie daje jednego punktu.
+
+Kohorta Zec obejmowała wyłącznie Tanner 1; odrzucono 14 dzieci w stadium 2.
+Profil ma `requiredGonadalStage: 1`. Adapter przekazuje tylko aktualną,
+jednoznacznie powiązaną z bieżącym kontekstem obserwację gonadalną:
+G1 u chłopca lub Th1 u dziewczynki. Nie ustalamy stadium z wieku, wyniku,
+samego numeru Tannera, P ani Ax. Nie używamy obserwacji historycznej.
+Brak takiego stadium lub znane stadium 2–5 nie dopasowuje punktu Zec;
+nie dodaje nowego pola i nie blokuje niezależnej oceny laboratoryjnej.
+W porównaniu płci nie przenosimy stadium pacjenta na drugą płeć:
+jeżeli ilościowe porównanie wymaga Zec, pozostaje dotychczasowy schemat.
+
+Pełna kohorta N=948 zawierała dzieci kierowane m.in. z ostrymi infekcjami,
+na badania alergologiczne i przed zabiegami; nie opisujemy jej jako czystej
+próby zdrowych ochotników. FSH oznaczono u 807 uczestników, zgodnie z sumą
+liczebności pięciu grup tabeli. W tabeli 1 (str. 1208/PDF 3) LOD FSH wynosi
+0,1 IU/L, LOQ nie podano; żadna aktywna mediana FSH nie jest cenzurowana.
+Brak przypisania surowicy lub osocza Li-heparynowego do konkretnego
+hormonu pozostaje ograniczeniem źródła. Nie deklarujemy zgodności innych
+metod Roche ani metody Mayo wyłącznie na podstawie wspólnego producenta.
+LH i testosteron z cenzurowanymi medianami nie są aktywowane, nie przenosimy
+zakresów referencyjnych Zec do silnika norm laboratoryjnych.
+
 Jednostki źródłowe zachowuje się w danych: LH/FSH IU/L, testosteron nmol/L,
 inhibina B pg/mL, żeńskie E2 pmol/L; AMH Busch/Ljubicic pmol/L, Tehrani
 oraz Wang ng/mL. Runtime używa dla AMH pmol/L; ng/mL przelicza tym
@@ -129,7 +161,7 @@ skali co jej linia, nigdy obu populacji naraz.
 
 Suplementy Madsen i Ljubicic oraz dane PLOS są CC BY (dokładna wersja
 w metadanych źródła). Artykuł Madsen ma odrębną licencję CC BY-NC-ND.
-Busch, Borelli i Wang zachowują prawa wydawcy: w aplikacji są liczbowe odczyty
+Busch, Borelli, Wang i Zec zachowują prawa wydawcy: w aplikacji są liczbowe odczyty
 i cytowania, bez reprodukcji PDF lub ryciny. Rozdzielczość digitalizacji
 i przypisanie statystyki są częścią pochodzenia danych. Pełnych artykułów,
 obrazów źródłowych i surowych danych uczestników nie publikujemy w repo.
@@ -150,6 +182,13 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | --- | --- |
 | Chłopiec 12 lat, LH 2 IU/L | Madsen p50=0,6775625214085037 IU/L; punkt powyżej linii, bez nowego werdyktu „poza normą”. |
 | Chłopiec 12 lat, FSH 2,01486005633355 IU/L | Punkt na linii mediany Madsen w tolerancji obliczeń/rysowania. |
+| Chłopiec 3 lata, aktualne G1, FSH 0,48 IU/L | Punkt na medianie Zec; etykieta pełnej grupy źródłowej 1–<8 lat, N=303, a nie mediana dokładnie dla 3 lat. |
+| Chłopiec 3 lata, aktualne G2 lub brak typowanej obserwacji, FSH 0,48 IU/L | Brak punktu Zec; nie zakładamy G1 z wieku. Dostępna osobna ocena laboratoryjna pozostaje. |
+| Chłopiec dokładnie 6 lat, FSH | Profil Madsen; nie przedłużamy okna Zec ani nie wymagamy G1 od profilu Madsen. |
+| Dziewczynka 2 lata/aktualne Th1/FSH 2,57; 5 lat/Th1/1,07; 9 lat/Th1/1,55 IU/L | Punkt na medianie odpowiedniej całej grupy Zec: 1–<4, 4–<8, 8–<11 lat. |
+| Dziewczynka dokładnie 1 rok, aktualne Th1, FSH 2,57 IU/L | Zec; profil niemowlęcy FSH kończy się przed pierwszymi urodzinami. Inne żeńskie profile Ljubicic zachowują dotychczasową granicę. |
+| Dziewczynka 11 lat/Th1 lub 5 lat/Th2, FSH | Brak profilu Zec; bez ekstrapolacji wieku i bez użycia kohorty przedpokwitaniowej w pokwitaniu. |
+| Dziewczynka Th1, możliwy wiek 3,99–4,01 roku, FSH | Brak jednoznacznego punktu; nie wybieramy jednej z median pośrodku niepewnego wieku. |
 | Donoszony chłopiec, dokładnie 90 dni, LH 2,05589 IU/L | Punkt na przybliżonej medianie Busch; wartość ma dokładność odczytu ryciny, nie sześciu klinicznych miejsc dziesiętnych. |
 | Donoszony chłopiec, 90 dni, inhibina B 300 pg/mL | Busch około 294,293798 pg/mL; punkt nieznacznie ponad linią. |
 | Mężczyzna 40 lat, testosteron 13,049603876520182 nmol/L | Punkt na centralnej linii Kelsey 2014/2015. |

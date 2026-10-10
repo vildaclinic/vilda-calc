@@ -8551,10 +8551,10 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-10.2",
+  "version": "2026-10-10.3",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
-  "interpolation": "Monotone PCHIP within continuous source profiles; annual-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
+  "interpolation": "Monotone PCHIP within continuous source profiles; age-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
   "profiles": [
     {
       "id": "busch2022-male-fsh",
@@ -19805,6 +19805,378 @@ const patientPointData = {
       ]
     },
     {
+      "id": "zec2012-female-fsh-age-1-4",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 1,
+      "maxAge": 4,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 2.57
+        },
+        {
+          "ageYears": 4,
+          "value": 2.57
+        }
+      ],
+      "sourceLabel": "Zec 2012 · FSH · przed pokwitaniem",
+      "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+      "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+      "population": "Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "requiredGonadalStage": 1,
+      "compatibleAssayMethodIds": [
+        "roche-cobas-e411-fsh",
+        "roche-cobas-e-411-fsh"
+      ],
+      "ageGroup": {
+        "label": "1–<4 lat",
+        "minAge": 1,
+        "maxAge": 4,
+        "n": 124,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 2.57,
+        "boundaryPolicy": "published-inclusive-lower-exclusive-upper",
+        "description": "Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku."
+      },
+      "provenance": {
+        "title": "Reference intervals for reproductive hormones in prepubertal children on the automated Roche cobas e 411 analyzer",
+        "authors": "Zec I et al.",
+        "year": 2012,
+        "journal": "Clinical Biochemistry",
+        "volume": 45,
+        "pages": "1206–1212",
+        "doi": "10.1016/j.clinbiochem.2012.05.019",
+        "pmid": "22634601",
+        "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+        "table": 2,
+        "journalPage": 1210,
+        "pdfPage": 5,
+        "sha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
+        "access": "Full primary publication supplied by owner; Table 2 and assay/methods text checked against rendered PDF on 2026-10-10.",
+        "redistribution": "Factual FSH medians, cohort metadata and citation only; publisher PDF and figures are not included.",
+        "participants": 948,
+        "fshParticipants": 807,
+        "groupParticipants": 124,
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceAgeBoundaryDefinition": "Exact inclusive lower and exclusive upper age boundaries in Table 2.",
+        "ageRouting": "Male 1–<6 years uses the published 1–<8-year median; preserve the existing Madsen 2022 age curve from 6 through 16 years. Female 1–<4, 4–<8 and 8–<11 years use their three separate published groups.",
+        "routingNote": "Use the exact age boundaries published in Table 2.",
+        "assay": {
+          "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+          "material": "Serum and Li-heparin plasma collected; analyte-specific matrix assignment is not reported.",
+          "analyteSpecificMaterial": null,
+          "samplingTime": "not reported",
+          "fastingRequired": false,
+          "storage": "Measured immediately or after storage at −20°C for no more than three months.",
+          "lodIuL": 0.1,
+          "loqIuL": null,
+          "traceability": "2nd IRP WHO 78/549",
+          "withinRunCvPercent": 4.3,
+          "betweenRunCvPercent": 5.3,
+          "sourceTable": 1,
+          "journalPage": 1208,
+          "pdfPage": 3
+        }
+      },
+      "limitations": [
+        "These are whole-group medians for children assessed as Tanner stage 1, not exact-age medians, continuous age trajectories or clinical reference limits.",
+        "Do not treat known pubertal children as part of the prepubertal reference cohort. Gonadal-stage eligibility must use the existing sex-specific puberty context, never inferred from age or FSH.",
+        "The boys 1–<6 application window is a source-priority policy, not a new source subgroup; median 0.48 IU/L and N=303 describe the full published 1–<8-year group.",
+        "Recruitment included pediatric outpatient and hospital visits, including acute illness; this was not a pure healthy-volunteer sample.",
+        "Serum and Li-heparin plasma were collected; the paper does not specify the matrix used for each hormone. No matrix-specific equivalence is established.",
+        "The assay belongs to the source cohort; automatic source selection does not establish the method or material of the patient sample, nor equivalence to other Roche assays or the Mayo FSH profile.",
+        "No gestational-age stratification is reported. These are not premature-infant reference data.",
+        "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
+        "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
+      ]
+    },
+    {
+      "id": "zec2012-female-fsh-age-4-8",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 4,
+      "maxAge": 8,
+      "points": [
+        {
+          "ageYears": 4,
+          "value": 1.07
+        },
+        {
+          "ageYears": 8,
+          "value": 1.07
+        }
+      ],
+      "sourceLabel": "Zec 2012 · FSH · przed pokwitaniem",
+      "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+      "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+      "population": "Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "requiredGonadalStage": 1,
+      "compatibleAssayMethodIds": [
+        "roche-cobas-e411-fsh",
+        "roche-cobas-e-411-fsh"
+      ],
+      "ageGroup": {
+        "label": "4–<8 lat",
+        "minAge": 4,
+        "maxAge": 8,
+        "n": 156,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 1.07,
+        "boundaryPolicy": "published-inclusive-lower-exclusive-upper",
+        "description": "Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku."
+      },
+      "provenance": {
+        "title": "Reference intervals for reproductive hormones in prepubertal children on the automated Roche cobas e 411 analyzer",
+        "authors": "Zec I et al.",
+        "year": 2012,
+        "journal": "Clinical Biochemistry",
+        "volume": 45,
+        "pages": "1206–1212",
+        "doi": "10.1016/j.clinbiochem.2012.05.019",
+        "pmid": "22634601",
+        "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+        "table": 2,
+        "journalPage": 1210,
+        "pdfPage": 5,
+        "sha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
+        "access": "Full primary publication supplied by owner; Table 2 and assay/methods text checked against rendered PDF on 2026-10-10.",
+        "redistribution": "Factual FSH medians, cohort metadata and citation only; publisher PDF and figures are not included.",
+        "participants": 948,
+        "fshParticipants": 807,
+        "groupParticipants": 156,
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceAgeBoundaryDefinition": "Exact inclusive lower and exclusive upper age boundaries in Table 2.",
+        "ageRouting": "Male 1–<6 years uses the published 1–<8-year median; preserve the existing Madsen 2022 age curve from 6 through 16 years. Female 1–<4, 4–<8 and 8–<11 years use their three separate published groups.",
+        "routingNote": "Use the exact age boundaries published in Table 2.",
+        "assay": {
+          "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+          "material": "Serum and Li-heparin plasma collected; analyte-specific matrix assignment is not reported.",
+          "analyteSpecificMaterial": null,
+          "samplingTime": "not reported",
+          "fastingRequired": false,
+          "storage": "Measured immediately or after storage at −20°C for no more than three months.",
+          "lodIuL": 0.1,
+          "loqIuL": null,
+          "traceability": "2nd IRP WHO 78/549",
+          "withinRunCvPercent": 4.3,
+          "betweenRunCvPercent": 5.3,
+          "sourceTable": 1,
+          "journalPage": 1208,
+          "pdfPage": 3
+        }
+      },
+      "limitations": [
+        "These are whole-group medians for children assessed as Tanner stage 1, not exact-age medians, continuous age trajectories or clinical reference limits.",
+        "Do not treat known pubertal children as part of the prepubertal reference cohort. Gonadal-stage eligibility must use the existing sex-specific puberty context, never inferred from age or FSH.",
+        "The boys 1–<6 application window is a source-priority policy, not a new source subgroup; median 0.48 IU/L and N=303 describe the full published 1–<8-year group.",
+        "Recruitment included pediatric outpatient and hospital visits, including acute illness; this was not a pure healthy-volunteer sample.",
+        "Serum and Li-heparin plasma were collected; the paper does not specify the matrix used for each hormone. No matrix-specific equivalence is established.",
+        "The assay belongs to the source cohort; automatic source selection does not establish the method or material of the patient sample, nor equivalence to other Roche assays or the Mayo FSH profile.",
+        "No gestational-age stratification is reported. These are not premature-infant reference data.",
+        "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
+        "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
+      ]
+    },
+    {
+      "id": "zec2012-female-fsh-age-8-11",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 8,
+      "maxAge": 11,
+      "points": [
+        {
+          "ageYears": 8,
+          "value": 1.55
+        },
+        {
+          "ageYears": 11,
+          "value": 1.55
+        }
+      ],
+      "sourceLabel": "Zec 2012 · FSH · przed pokwitaniem",
+      "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+      "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+      "population": "Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "requiredGonadalStage": 1,
+      "compatibleAssayMethodIds": [
+        "roche-cobas-e411-fsh",
+        "roche-cobas-e-411-fsh"
+      ],
+      "ageGroup": {
+        "label": "8–<11 lat",
+        "minAge": 8,
+        "maxAge": 11,
+        "n": 107,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 1.55,
+        "boundaryPolicy": "published-inclusive-lower-exclusive-upper",
+        "description": "Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku."
+      },
+      "provenance": {
+        "title": "Reference intervals for reproductive hormones in prepubertal children on the automated Roche cobas e 411 analyzer",
+        "authors": "Zec I et al.",
+        "year": 2012,
+        "journal": "Clinical Biochemistry",
+        "volume": 45,
+        "pages": "1206–1212",
+        "doi": "10.1016/j.clinbiochem.2012.05.019",
+        "pmid": "22634601",
+        "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+        "table": 2,
+        "journalPage": 1210,
+        "pdfPage": 5,
+        "sha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
+        "access": "Full primary publication supplied by owner; Table 2 and assay/methods text checked against rendered PDF on 2026-10-10.",
+        "redistribution": "Factual FSH medians, cohort metadata and citation only; publisher PDF and figures are not included.",
+        "participants": 948,
+        "fshParticipants": 807,
+        "groupParticipants": 107,
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceAgeBoundaryDefinition": "Exact inclusive lower and exclusive upper age boundaries in Table 2.",
+        "ageRouting": "Male 1–<6 years uses the published 1–<8-year median; preserve the existing Madsen 2022 age curve from 6 through 16 years. Female 1–<4, 4–<8 and 8–<11 years use their three separate published groups.",
+        "routingNote": "Use the exact age boundaries published in Table 2.",
+        "assay": {
+          "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+          "material": "Serum and Li-heparin plasma collected; analyte-specific matrix assignment is not reported.",
+          "analyteSpecificMaterial": null,
+          "samplingTime": "not reported",
+          "fastingRequired": false,
+          "storage": "Measured immediately or after storage at −20°C for no more than three months.",
+          "lodIuL": 0.1,
+          "loqIuL": null,
+          "traceability": "2nd IRP WHO 78/549",
+          "withinRunCvPercent": 4.3,
+          "betweenRunCvPercent": 5.3,
+          "sourceTable": 1,
+          "journalPage": 1208,
+          "pdfPage": 3
+        }
+      },
+      "limitations": [
+        "These are whole-group medians for children assessed as Tanner stage 1, not exact-age medians, continuous age trajectories or clinical reference limits.",
+        "Do not treat known pubertal children as part of the prepubertal reference cohort. Gonadal-stage eligibility must use the existing sex-specific puberty context, never inferred from age or FSH.",
+        "The boys 1–<6 application window is a source-priority policy, not a new source subgroup; median 0.48 IU/L and N=303 describe the full published 1–<8-year group.",
+        "Recruitment included pediatric outpatient and hospital visits, including acute illness; this was not a pure healthy-volunteer sample.",
+        "Serum and Li-heparin plasma were collected; the paper does not specify the matrix used for each hormone. No matrix-specific equivalence is established.",
+        "The assay belongs to the source cohort; automatic source selection does not establish the method or material of the patient sample, nor equivalence to other Roche assays or the Mayo FSH profile.",
+        "No gestational-age stratification is reported. These are not premature-infant reference data.",
+        "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
+        "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
+      ]
+    },
+    {
+      "id": "zec2012-male-fsh-age-1-8",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 1,
+      "maxAge": 6,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 0.48
+        },
+        {
+          "ageYears": 6,
+          "value": 0.48
+        }
+      ],
+      "sourceLabel": "Zec 2012 · FSH · przed pokwitaniem",
+      "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+      "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+      "population": "Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "requiredGonadalStage": 1,
+      "compatibleAssayMethodIds": [
+        "roche-cobas-e411-fsh",
+        "roche-cobas-e-411-fsh"
+      ],
+      "ageGroup": {
+        "label": "1–<8 lat",
+        "minAge": 1,
+        "maxAge": 8,
+        "n": 303,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 0.48,
+        "boundaryPolicy": "published-inclusive-lower-exclusive-upper",
+        "description": "Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku."
+      },
+      "provenance": {
+        "title": "Reference intervals for reproductive hormones in prepubertal children on the automated Roche cobas e 411 analyzer",
+        "authors": "Zec I et al.",
+        "year": 2012,
+        "journal": "Clinical Biochemistry",
+        "volume": 45,
+        "pages": "1206–1212",
+        "doi": "10.1016/j.clinbiochem.2012.05.019",
+        "pmid": "22634601",
+        "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
+        "table": 2,
+        "journalPage": 1210,
+        "pdfPage": 5,
+        "sha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
+        "access": "Full primary publication supplied by owner; Table 2 and assay/methods text checked against rendered PDF on 2026-10-10.",
+        "redistribution": "Factual FSH medians, cohort metadata and citation only; publisher PDF and figures are not included.",
+        "participants": 948,
+        "fshParticipants": 807,
+        "groupParticipants": 303,
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceAgeBoundaryDefinition": "Exact inclusive lower and exclusive upper age boundaries in Table 2.",
+        "ageRouting": "Male 1–<6 years uses the published 1–<8-year median; preserve the existing Madsen 2022 age curve from 6 through 16 years. Female 1–<4, 4–<8 and 8–<11 years use their three separate published groups.",
+        "routingNote": "Preserve Madsen 2022 from age 6. The median and sample count still describe the full published 1–<8-year group.",
+        "assay": {
+          "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
+          "material": "Serum and Li-heparin plasma collected; analyte-specific matrix assignment is not reported.",
+          "analyteSpecificMaterial": null,
+          "samplingTime": "not reported",
+          "fastingRequired": false,
+          "storage": "Measured immediately or after storage at −20°C for no more than three months.",
+          "lodIuL": 0.1,
+          "loqIuL": null,
+          "traceability": "2nd IRP WHO 78/549",
+          "withinRunCvPercent": 4.3,
+          "betweenRunCvPercent": 5.3,
+          "sourceTable": 1,
+          "journalPage": 1208,
+          "pdfPage": 3
+        }
+      },
+      "limitations": [
+        "These are whole-group medians for children assessed as Tanner stage 1, not exact-age medians, continuous age trajectories or clinical reference limits.",
+        "Do not treat known pubertal children as part of the prepubertal reference cohort. Gonadal-stage eligibility must use the existing sex-specific puberty context, never inferred from age or FSH.",
+        "The boys 1–<6 application window is a source-priority policy, not a new source subgroup; median 0.48 IU/L and N=303 describe the full published 1–<8-year group.",
+        "Recruitment included pediatric outpatient and hospital visits, including acute illness; this was not a pure healthy-volunteer sample.",
+        "Serum and Li-heparin plasma were collected; the paper does not specify the matrix used for each hormone. No matrix-specific equivalence is established.",
+        "The assay belongs to the source cohort; automatic source selection does not establish the method or material of the patient sample, nor equivalence to other Roche assays or the Mayo FSH profile.",
+        "No gestational-age stratification is reported. These are not premature-infant reference data.",
+        "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
+        "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
+      ]
+    },
+    {
       "id": "kelsey2014-male-t",
       "analyte": "t",
       "sex": "male",
@@ -23484,7 +23856,8 @@ const patientPointData = {
         "n": 123,
         "sourceUnit": "ng/mL",
         "sourceMedian": 160.42,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -23563,7 +23936,8 @@ const patientPointData = {
         "n": 129,
         "sourceUnit": "ng/mL",
         "sourceMedian": 155.57,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -23642,7 +24016,8 @@ const patientPointData = {
         "n": 147,
         "sourceUnit": "ng/mL",
         "sourceMedian": 118.33,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -23721,7 +24096,8 @@ const patientPointData = {
         "n": 142,
         "sourceUnit": "ng/mL",
         "sourceMedian": 115.23,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -23800,7 +24176,8 @@ const patientPointData = {
         "n": 134,
         "sourceUnit": "ng/mL",
         "sourceMedian": 99.18,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -23879,7 +24256,8 @@ const patientPointData = {
         "n": 144,
         "sourceUnit": "ng/mL",
         "sourceMedian": 83.05,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -23958,7 +24336,8 @@ const patientPointData = {
         "n": 131,
         "sourceUnit": "ng/mL",
         "sourceMedian": 69.61,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -24037,7 +24416,8 @@ const patientPointData = {
         "n": 147,
         "sourceUnit": "ng/mL",
         "sourceMedian": 62.75,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -24116,7 +24496,8 @@ const patientPointData = {
         "n": 135,
         "sourceUnit": "ng/mL",
         "sourceMedian": 58.96,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -24195,7 +24576,8 @@ const patientPointData = {
         "n": 138,
         "sourceUnit": "ng/mL",
         "sourceMedian": 54.18,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -24274,7 +24656,8 @@ const patientPointData = {
         "n": 126,
         "sourceUnit": "ng/mL",
         "sourceMedian": 20.7,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -24353,7 +24736,8 @@ const patientPointData = {
         "n": 132,
         "sourceUnit": "ng/mL",
         "sourceMedian": 9.64,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -24432,7 +24816,8 @@ const patientPointData = {
         "n": 129,
         "sourceUnit": "ng/mL",
         "sourceMedian": 8.23,
-        "boundaryPolicy": "application-completed-year-convention"
+        "boundaryPolicy": "application-completed-year-convention",
+        "description": "Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera."
       },
       "provenance": {
         "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
@@ -25527,6 +25912,7 @@ const patientPointData = {
       "unit": "IU/L",
       "interpolation": "pchip",
       "termOnly": true,
+      "maxAgeExclusive": true,
       "compatibleAssayMethodIds": [
         "autodelfia",
         "autodelfia-fsh"

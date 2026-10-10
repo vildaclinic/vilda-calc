@@ -451,9 +451,9 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=10"></script>
   <script src="vilda_lab_neonatal_context.js?v=1"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=5"></script>
-  <script src="vilda_hormone_lifespan_reference.js?v=2"></script>
-  <script src="vilda_hormone_lifespan.js?v=8"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=6"></script>
+  <script src="vilda_hormone_lifespan_reference.js?v=3"></script>
+  <script src="vilda_hormone_lifespan.js?v=9"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -835,6 +835,11 @@
         measurement: status === 'ready' && resolved && resolved.status === 'known'
           ? lifespanMeasurement(evaluation, conversion) : null,
         contraindicated: lifespanContraindicated(source, input, patient),
+        // Reuse the typed observation for the current context only. A bare
+        // shared Tanner number or an observation for a dated sample is not one.
+        puberty: input && input.contextBasis === 'current-patient' && !input.sampleDateISO &&
+          input.puberty && input.puberty.appliesToCurrentContext === true
+          ? { kind: input.puberty.kind, stage: input.puberty.stage } : null,
         specimen: input && input.specimen || null,
         // Only an explicitly reported sample method can exclude a source.
         // An automatic reference choice or saved preference is not that fact.

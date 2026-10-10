@@ -53,6 +53,14 @@ badanie populacyjne; nie potwierdza metody próbki pacjenta. Obecne dane
 Tannera pozostają dostępne, lecz nie zmieniają krzywej wieku w krzywą
 stadium i nie są odgadywane z wyniku.
 
+Przy FSH Zec 2012 istniejąca aktualna ocena G1/Th1 kwalifikuje porównanie
+z medianą grupy dzieci przed pokwitaniem. Brak takiej oceny nie blokuje
+osobnej interpretacji laboratoryjnej. Mediana całej grupy wieku jest
+poziomym odcinkiem, bez interpolowania do sąsiednich grup lub publikacji.
+W porównaniu płci te profile nie tworzą punktu: stadium pacjenta nie
+określa stadium drugiej populacji. Szczegóły źródła i granic opisuje
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
 Punkt i linia muszą korzystać z **tego samego modelu stężenia, jednostki
 i przekształcenia wysokości**, również po zmianie widoku, wyboru hormonów
 i powiększeniu. Nie wolno dopasować punktu do autorskiej linii pojedynczym

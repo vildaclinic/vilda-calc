@@ -769,10 +769,15 @@
           (compare ? compareHormone !== id : !selected.has(id))) return null;
       const profiles = [patientPoint.profile];
       if (compare) {
+        // This view compares ages, not matched Tanner stages. The other sex
+        // has no patient observation, so do not invent its gonadal context.
+        if (profiles[0].requiredGonadalStage != null) return null;
         const other = engine.selectProfile(data.patientPointData, {
           ...patientContext, sex: sex === "female" ? "male" : "female",
+          puberty: null,
         });
         if (other.status !== "ready" || other.profile.unit !== profiles[0].unit ||
+            other.profile.requiredGonadalStage != null ||
             !Number.isFinite(engine.referenceAt(other.profile, patientAgeYears))) return null;
         profiles.push(other.profile);
       }
@@ -826,7 +831,9 @@
       const person = sex === "female" ? "pacjentki" : "pacjenta";
       const medianLabel = model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
       const medianContext = model.profile.statistic === "group-median"
-        ? `Mediana grupy ${model.profile.ageGroup.label}` : "Mediana dla wieku";
+        ? `Mediana grupy ${model.profile.ageGroup.label}` +
+          (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
+        : "Mediana dla wieku";
       const a11y = `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
@@ -885,7 +892,10 @@
       renderedPoint = model;
       const name = hormones().find((h) => h.id === model.id).name;
       panel.querySelector(".vhl-axis-label").textContent = name + " · wynik na tle mediany";
-      const groupLabel = model.profile.statistic === "group-median" ? ` grupy ${model.profile.ageGroup.label}` : "";
+      const groupLabel = model.profile.statistic === "group-median"
+        ? ` grupy ${model.profile.ageGroup.label}` +
+          (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
+        : "";
       byId("scale-note").textContent = `Kropka: wynik. Linia: mediana${groupLabel}, nie granica normy.` +
         (compare ? " Obie płcie we wspólnej skali stężeń." : " Pozostałe linie są poglądowe.") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
@@ -903,6 +913,10 @@
           (compare ? compareHormone !== id : !selected.has(id)) ||
           !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
           (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;
+      if (compare && ["missing-puberty-stage", "incompatible-puberty-stage"].includes(patientPoint?.reason)) {
+        byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych median obu płci do umieszczenia wyniku.";
+        return;
+      }
       const messages = {
         "unsupported-age": "Dla tego wieku brak mediany pozwalającej nanieść wynik.",
         "ambiguous-age": "Podany przedział wieku wykracza poza dostępny profil mediany.",
@@ -912,6 +926,8 @@
         "incompatible-assay": "Brak mediany dla potwierdzonej metody tej próbki.",
         "unsupported-unit": "W tej jednostce nie można nanieść wyniku na medianę.",
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na medianę populacji.",
+        "missing-puberty-stage": "Ta mediana dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
+        "incompatible-puberty-stage": "Dostępna mediana wymaga zgodnej oceny przed pokwitaniem (Tanner 1).",
       };
       const message = messages[patientPoint?.reason];
       if (message) byId("scale-note").textContent = message + " Krzywe pozostają poglądowe.";
@@ -1448,7 +1464,8 @@
         copy = "W wieku rozrodczym zmienia się w cyklu miesiączkowym.";
       }
       if (renderedPoint) {
-        title = "Wynik na tle mediany dla wieku";
+        title = renderedPoint.profile.statistic === "group-median"
+          ? "Wynik na tle mediany grupy" : "Wynik na tle mediany dla wieku";
         copy = "Mediana opisuje populację z badania. Wynik konkretnej osoby ocenia się z zakresem referencyjnym i kontekstem klinicznym.";
       }
       byId("insight-title").textContent = title;
@@ -1574,7 +1591,9 @@
       const links = [];
       if (renderedPoint) {
         const medianBasis = renderedPoint.profile.statistic === "group-median"
-          ? "medianę rocznej grupy wieku" : "medianę populacji w tym wieku";
+          ? (renderedPoint.profile.ageGroup.boundaryPolicy === "application-completed-year-convention"
+            ? "medianę rocznej grupy wieku" : "medianę grupy wieku przed pokwitaniem")
+          : "medianę populacji w tym wieku";
         paragraph(`Kropka przedstawia wynik, a linia ${medianBasis} — nie granicę normy ani indywidualny cel. Kolor kropki nie jest klasyfikacją wyniku. Zakresy odniesienia i ocena kliniczna pozostają w osobnej części przelicznika.`);
         paragraph(compare
           ? "Obie linie i wynik mają wspólną skalę stężeń. Źródła dotyczą różnych populacji i metod; wykres nie potwierdza zgodności metody próbki z publikacją. Nie wyznacza proporcji hormonalnych ani stadium pokwitania."
@@ -1584,7 +1603,7 @@
             .filter((item) => typeof item === "string" && item.trim()).join(" · ");
           paragraph(description + (profile.approximate ? ". Mediana odtworzona orientacyjnie ze źródła." : "."));
           if (profile.statistic === "group-median") {
-            paragraph("Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera.");
+            if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
           }
           if (typeof profile.url === "string") links.push([profile.sourceLabel || "Źródło mediany", profile.url]);
         }
@@ -1943,6 +1962,8 @@
         ageUpperInclusive: next.ageUpperInclusive,
         measurement: next.measurement ? { ...next.measurement } : null,
         contraindicated: next.contraindicated === true,
+        puberty: next.puberty && typeof next.puberty === "object"
+          ? { kind: next.puberty.kind, stage: next.puberty.stage } : null,
         assayMethodId: next.assayMethodId,
         specimen: next.specimen,
       };
