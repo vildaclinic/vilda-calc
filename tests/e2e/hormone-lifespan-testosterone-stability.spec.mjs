@@ -161,7 +161,8 @@ for (const width of [320, 1440]) {
     // Both new source transitions are checked against the real rendered SVG,
     // including their interior, so a smooth but negative/overshooting join fails.
     const childhoodAges = Array.from({ length: 101 }, (_, i) => 5 + i / 100);
-    const pubertyBridgeAges = Array.from({ length: 361 }, (_, i) => 16 + i / 40);
+    // Include young adulthood: the approved peak is no longer in puberty.
+    const pubertyBridgeAges = Array.from({ length: 761 }, (_, i) => 16 + i / 40);
     const joins = await heights(page, [...childhoodAges, ...pubertyBridgeAges]);
     const childhood = joins.slice(0, childhoodAges.length), adolescence = joins.slice(childhoodAges.length);
     for (let i = 1; i < childhood.length; i++) {
@@ -189,26 +190,43 @@ for (const width of [320, 1440]) {
     expect(roundedWidth).toBeGreaterThan(.018);
     expect(peakIndex).toBeGreaterThan(0);
     expect(peakIndex).toBeLessThan(adolescence.length - 1);
-    expect(peak * original.divisor * original.ceiling).toBeLessThan(original.divisor);
+    expect(peak * original.divisor * original.ceiling).toBeCloseTo(20.7, 3);
+    expect(pubertyBridgeAges[peakIndex]).toBeGreaterThan(20);
     for (let i = 0; i < adolescence.length; i++) {
       assert.ok(adolescence[i] >= Math.min(adolescence[0], adolescence.at(-1)) - .00001, 'no adolescent undershoot');
       if (i > 0 && i <= peakIndex) assert.ok(adolescence[i] >= adolescence[i - 1] - .00001, 'one smooth rise to the broad top');
       if (i > peakIndex) assert.ok(adolescence[i] <= adolescence[i - 1] + .00001, 'one smooth decline from the broad top');
     }
     expect(joins.every(value => Number.isFinite(value) && value >= -.00001 && value <= 1.00001)).toBe(true);
+    // The childhood bridge must not draw the Kelsey/Madsen source change as a
+    // hormonal event. Source values remain separately tested at ages 3 and 6.
+    expect((childhood[0] - childhood.at(-1)) * original.divisor * original.ceiling).toBeLessThan(.01);
+    const adultAges = Array.from({ length: 601 }, (_, i) => 23.8 + (90 - 23.8) * i / 600);
+    const adult = (await heights(page, adultAges)).map(v => v * original.divisor * original.ceiling);
+    expect(adult[0]).toBeCloseTo(20.7, 3);
+    expect(adult.at(-1)).toBeCloseTo(15.9, 3);
+    for (let i = 1; i < adult.length; i++) assert.ok(adult[i] <= adult[i - 1] + .0001, 'one broad adult decline');
+    const middleAges = Array.from({ length: 151 }, (_, i) => 35 + i / 10);
+    const middle = (await heights(page, middleAges)).map(v => v * original.divisor * original.ceiling);
+    const slopes = middle.slice(1).map((v, i) => (v - middle[i]) * 10);
+    // Previously the group-by-group fit produced a ~0.263 nmol/L/year knee;
+    // approved broad arc stays under 0.15 and has no abrupt slope changes.
+    expect(Math.max(...slopes.map(Math.abs))).toBeLessThan(.15);
+    expect(Math.max(...slopes.slice(1).map((s, i) => Math.abs(s - slopes[i])))).toBeLessThan(.003);
+    await expect(panel(page).locator('[data-illustrative-tail-from="86"]')).toHaveCount(1);
     for (const value of ['13', '100', '100000000', '', '13']) {
       await page.locator('#labValue').fill(value);
       await sameGeometry(page, original);
       if (!value) { await expect(point(page)).toHaveCount(0); continue; }
       await expect(point(page)).toHaveAttribute('data-value', value);
-      await expect(point(page)).toHaveAttribute('data-profile', 'kelsey2014-male-t');
+      await expect(point(page)).toHaveAttribute('data-profile', 'walravens2025-male-t-40-49');
       const result = await point(page).evaluate(group => ({
         median: Number(group.dataset.median), divisor: Number(group.dataset.divisor), ceiling: Number(group.dataset.ceiling),
         offscale: group.dataset.offscale || null, bottom: Number(group.dataset.plotBottom),
         y: group.querySelector('[data-result-point]')?.getAttribute('cy') ?? null,
         referenceY: Number(group.querySelector('[data-median-point]').getAttribute('cy'))
       }));
-      expect(result.median).toBeCloseTo(13.049603876520182, 10);
+      expect(result.median).toBeCloseTo(18.1, 10);
       expect(result.divisor).toBe(original.divisor);
       expect(result.ceiling).toBe(original.ceiling);
       if (Number(value) > original.divisor * original.ceiling) {
@@ -333,8 +351,8 @@ test('testosterone population geometry stays fixed while real patient age and bi
   // A documented premature birth does not exclude older children or adults.
   for (const [age, median, profile] of [[2, null], [3, .3764139001167295, 'kelsey2014-male-t-childhood'],
     [6, .02393726986868612, 'madsen2022-male-t'], [12, 1.4977255724595988, 'madsen2022-male-t'],
-    [18, 15.16389257035194, 'kelsey2014-male-t'], [19, 15.406979799404404, 'kelsey2014-male-t'],
-    [40, 13.049603876520182, 'kelsey2014-male-t'], [70, 13.06823840958111, 'kelsey2014-male-t'], [88, null], [89, null]]) {
+    [18, 20.7, 'walravens2025-male-t-18-29'], [19, 20.7, 'walravens2025-male-t-18-29'],
+    [40, 18.1, 'walravens2025-male-t-40-49'], [70, 17, 'walravens2025-male-t-70-79'], [82, 15.9, 'walravens2025-male-t-80-plus'], [86, null], [88, null], [89, null]]) {
     await sharedPatient(page, { sex: 'M', age, ageMonths: 0 });
     await page.locator('#labValue').fill('13');
     await sameGeometry(page, original);
@@ -346,7 +364,7 @@ test('testosterone population geometry stays fixed while real patient age and bi
   }
 });
 
-test('testosterone switches the source only at age 6 and 18 and retains reported-age uncertainty', async ({ page }) => {
+test('testosterone retains reported-age uncertainty at childhood, adult group and evidence boundaries', async ({ page }) => {
   await open(page);
   const original = await geometry(page);
   const cases = [
@@ -359,10 +377,18 @@ test('testosterone switches the source only at age 6 and 18 and retains reported
     { age: 17, months: 11, upper: 18, profile: 'madsen2022-male-t', median: 17.907632409388967 },
     { age: 17, months: null, upper: 18, profile: 'madsen2022-male-t', median: 15.939466800893923 },
     { age: 17.9, months: null, profile: null },
-    { age: 18, months: 0, upper: 18 + 1 / 12, profile: 'kelsey2014-male-t', median: 15.16389257035194 },
-    { age: 18, months: null, upper: 19, profile: 'kelsey2014-male-t', median: 15.16389257035194 },
-    { age: 20, months: 0, upper: 20 + 1 / 12, profile: 'kelsey2014-male-t', median: 15.375748575473835 },
-    { age: 25, months: 0, upper: 25 + 1 / 12, profile: 'kelsey2014-male-t', median: 14.333921907254492 },
+    { age: 18, months: 0, upper: 18 + 1 / 12, profile: 'walravens2025-male-t-18-29', median: 20.7 },
+    { age: 18, months: null, upper: 19, profile: 'walravens2025-male-t-18-29', median: 20.7 },
+    { age: 20, months: 0, upper: 20 + 1 / 12, profile: 'walravens2025-male-t-18-29', median: 20.7 },
+    { age: 25, months: 0, upper: 25 + 1 / 12, profile: 'walravens2025-male-t-18-29', median: 20.7 },
+    { age: 29, months: 11, upper: 30, profile: 'walravens2025-male-t-18-29', median: 20.7 },
+    { age: 29.9, months: null, profile: null },
+    { age: 30, months: 0, upper: 30 + 1 / 12, profile: 'walravens2025-male-t-30-39', median: 20 },
+    { age: 44, months: 0, upper: 44 + 1 / 12, profile: 'walravens2025-male-t-40-49', median: 18.1 },
+    { age: 82, months: 0, upper: 82 + 1 / 12, profile: 'walravens2025-male-t-80-plus', median: 15.9 },
+    { age: 85, months: 11, upper: 86, profile: 'walravens2025-male-t-80-plus', median: 15.9 },
+    { age: 86, months: 0, profile: null },
+    { age: 90, months: 0, profile: null },
   ];
   for (const entry of cases) {
     await sharedPatient(page, { sex: 'M', age: entry.age, ageMonths: entry.months });
@@ -379,6 +405,14 @@ test('testosterone switches the source only at age 6 and 18 and retains reported
     expect(bounds.upper).toBeCloseTo(entry.upper, 10);
     expect(bounds.median).toBeGreaterThan(0);
     if (entry.median != null) expect(bounds.median).toBeCloseTo(entry.median, 10);
+    if (entry.age >= 18) {
+      await expect(point(page)).toHaveAttribute('data-reference-statistic', 'group-mean');
+      await expect(point(page)).toHaveAttribute('data-reference-value', String(entry.median));
+      await expect(point(page).locator('[data-dot-label="median"]')).toContainText('Średnia grupy');
+      await expect(point(page)).not.toContainText('Mediana');
+      await expect(panel(page).locator('[data-lifespan="insight-title"]')).toHaveText('Wynik na tle średniej grupy wieku');
+      await expect(panel(page).locator('[data-lifespan="insight-text"]')).not.toContainText('Mediana');
+    }
     if ((entry.age === 12 || entry.age === 18) && entry.months === 0) {
       await panel(page).screenshot({ path: test.info().outputPath(`testosterone-source-${entry.age}y-13.png`) });
     }

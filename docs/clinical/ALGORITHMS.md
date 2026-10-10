@@ -818,6 +818,11 @@ oraz końcowa akceptacja kliniczna pozostają decyzją właściciela.
 
 ### HORMONE-TESTOSTERONE-STABLE-CURVE — stała linia testosteronu i pediatryczne źródło, 2026-10-10
 
+**Wpis historyczny.** Dorosły wybór Kelsey i opisana tu geometria
+testosteronu zostały zastąpione 11 października 2026 przez
+`HORMONE-ILLUSTRATIVE-CURVES` poniżej. Pediatryczne odniesienia liczbowe
+pozostają aktywne w opisanych granicach.
+
 **Przyczyna i decyzja właściciela:** audyt wykazał przełączenie schematu
 na inny model po wpisaniu wyniku, przeskalowanie krzywej przy wysokiej
 liczbie oraz powrót do schematu przy zbliżeniu okresu poza wiekiem pacjenta.
@@ -946,6 +951,96 @@ ciągłość stycznych na końcach pasa 16–25 oraz brak wymuszonego
 Testy potwierdzają odtworzenie kontraktu, nie walidację kliniczną.
 Źródła, statystyki i ograniczenia audytu:
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
+### HORMONE-ILLUSTRATIVE-CURVES — płynne łączenie źródeł i dorosły testosteron, 2026-10-11
+
+**Decyzja i cel:** właściciel zaakceptował końcową makietę z jednym łagodnym
+łukiem testosteronu w dorosłości i polecił wdrożenie oraz utrwalenie zasad
+dla agentów. To pomoc edukacyjna do rozmowy z pacjentami i nauczania:
+dopuszcza autorskie uproszczenie rysunku, nie wymyślanie źródeł, norm lub
+liczbowych odniesień. Zastępuje dorosły profil Kelsey i poprzednie mosty
+testosteronu, w tym pas 16–25 lat z poprzedniego wpisu. Obowiązkową
+instrukcję wskazuje AGENTS.md:
+[HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
+
+**Nowe źródło liczb dorosłych:** Walravens i wsp., JCEM, online
+10 września 2025, wydanie marzec 2026,
+[DOI 10.1210/clinem/dgaf507](https://doi.org/10.1210/clinem/dgaf507),
+tabela 1. Pełny tekst i tabela zostały niezależnie odczytane podczas
+audytu. 1194 mężczyzn pochodzenia europejskiego w wieku 18–86 lat,
+BMI ≤35; młodsze zdrowe kohorty i starsi mieszkańcy społeczności,
+również z chorobami współistniejącymi. Surowica na czczo przed 10:00,
+testosteron całkowity metodą LC-MS/MS, jednostka nmol/L.
+
+| Grupa wieku | N | Średni wiek | Średnia całkowitego T, nmol/L |
+| --- | ---: | ---: | ---: |
+| 18–29 | 141 | 23,8 | 20,7 |
+| 30–39 | 252 | 34,3 | 20,0 |
+| 40–49 | 207 | 43,5 | 18,1 |
+| 50–59 | 150 | 55,0 | 16,9 |
+| 60–69 | 177 | 65,1 | 17,1 |
+| 70–79 | 167 | 74,7 | 17,0 |
+| 80+ | 100 | 82,1 | 15,9 |
+
+To **średnie arytmetyczne grup**, nie mediany, normy, wolny T ani wartości
+dla dokładnego średniego wieku. Siedem profili `group-mean` działa
+odpowiednio w [18,30), [30,40), [40,50), [50,60), [60,70), [70,80)
+i [80,86]. Brak interpolowania grup do liczbowego odniesienia pacjenta.
+Po 86 latach brak punktu ilościowego. Niepewny wiek przecinający grupy
+nie daje jednej arbitralnej średniej. Dane nie opisują izolowanego wpływu
+starzenia ani podłużnego przebiegu jednej osoby; nie przenosimy populacji
+BMI <30 użytej osobno do analizy wolnego T. Plateau starego modelu Kelsey
+nie było błędem transkrypcji i nie jest poprawiane w zachowanym dowodzie.
+
+**Oddzielenie geometrii od źródła:**
+
+- Dzieciństwo: odczyt Busch do 212. dnia, potem jedno monotoniczne zejście
+  do niskiej wartości Madsen w wieku 6 lat. Kelsey 3–5 nie narzuca punktów
+  rysunku; jego p50 3–<6 pozostaje aktywnym liczbowym odniesieniem.
+- Pokwitanie: Madsen i szerokie połączenie do młodej dorosłości nie
+  tworzą sztucznego szczytu 17–18 lat ponad poziomem młodych dorosłych.
+  Źródłowe p50 6–<18 pozostają bez zmian. Dokładnie 18 lat wybiera
+  średnią Walravens 18–29; różnica statystyk nie oznacza skoku fizjologii.
+- Dorosłość: jeden sześcienny łuk Béziera od 23,8/20,7 do 82,1/15,9
+  w kanonicznym X, z poziomymi stycznymi końców, uchwytami 0,20/0,50
+  i 601 próbkami. Nie wymusza pośrednich średnich ani ząbka
+  16,9→17,1→17,0. Po 82,1 roku pozostaje płaski; od 86 do 90 wygasa.
+  Łuk i ogon są ilustracją, nie modelem średniej dla każdego roku życia.
+- Stała skala pozostaje oparta na dzielniku 18,051151264084126 i zapasie
+  1,25 (góra 22,563939080105158 nmol/L). Dzielnik jest historyczną kotwicą,
+  nie maksimum nowej tabeli dorosłych. Wynik, wiek, wybór hormonów i zoom
+  nie zmieniają tej skali.
+- Jasny znacznik bierze prawdziwą średnią/medianę ze źródła i może leżeć
+  poza linią. Czerwony punkt ma rzeczywiste stężenie w tej samej skali.
+  Żaden z nich nie jest przyciągany do wygładzonego rysunku.
+- Zwykłe schematy męskich LH, FSH, INSL3 i AMH używają jednej kanonicznej
+  krzywej PCHIP na zachowanych kotwicach. Zoom próbkuje ją zamiast
+  ponownie dopasowywać 97 próbek i B-spline w nowej osi czasu. Zachowuje
+  skalę, szczyty i kierunek zmian; reszta ponownego próbkowania nie jest
+  deklarowana jako zerowa. Inhibina B zachowuje własną stałą geometrię,
+  a porównanie płci wcześniejszą, odrębną politykę.
+
+**Wpływ kliniczny:** zmiana dorosłego źródła wpływa na edukacyjne położenie
+wyniku względem populacji i podlega regułom zmian klinicznych AGENTS.md.
+Nie zmienia laboratoryjnych norm, klasyfikacji, jednostek, zapisów,
+przypięć ani historii. Źródła i bramki punktu pediatrycznego pozostają
+bez zmian; luka 1–<3 nie otrzymuje wartości z mostu. Średnia/mediana nie
+jest progiem rozpoznania, a zaakceptowany rysunek nie oznacza walidacji
+klinicznej modelu.
+
+**Regresje na funkcjach produkcyjnych i fikcyjnych danych:**
+M/44 lata/18,1 nmol/L → wynik równy źródłowej średniej 40–49, nawet
+gdy łuk leży wyżej; M/82/15,9 → równość ze średnią 80+; dokładnie
+86 → 15,9; >86 → brak odniesienia. M/44: pusty → 12 → 100 → wyczyszczenie
+→ identyczna linia i skala; 100 ma strzałkę z pełną liczbą. M/2 lata
+→ brak punktu; M/6 → p50 0,02393726986868612; M/17,9 →
+17,87811097018994 nmol/L. Zmiana parametrów geometrii nie może zmienić
+żadnej z tych źródłowych liczb. Kontrole obejmują wszystkie granice grup,
+monotoniczność dzieciństwa i dorosłości, brak nowych ekstremów, ciągłość
+stycznych, desktop, 320 px, pełny ekran, odznaczenie hormonów, powiększenia
+i zachowanie porównania płci. Błąd próbkowania zbliżenia mierzy się
+w pikselach; nie utożsamia z identycznością ścieżek SVG. Walidacja
+techniczna nie dowodzi prawidłowości medycznej.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

@@ -1,0 +1,59 @@
+{
+  "source": {
+    "authors": "Walravens et al.",
+    "title": "Age-Stratified Reference Ranges for Directly Measured Serum Free Testosterone in Community-Dwelling and Healthy Men",
+    "doi": "10.1210/clinem/dgaf507",
+    "url": "https://doi.org/10.1210/clinem/dgaf507",
+    "journal": "The Journal of Clinical Endocrinology & Metabolism",
+    "onlinePublicationDate": "2025-09-10",
+    "issue": "111(3), March 2026, e787–e793",
+    "table": 1,
+    "tableTitle": "Characteristics of 1194 participants per age category",
+    "rows": ["Age, y", "Total T, nmol/L"],
+    "reviewedDate": "2026-10-11",
+    "verification": "Full publisher HTML, methods and Table 1 independently reviewed; exact published table values, not figure digitization.",
+    "sha256": "b45f83063a249dc28db9ab4101da0ca62bf8a141cce4e645bf5dcf3c1bdbc49c"
+  },
+  "analyte": "total-testosterone",
+  "statistic": "arithmetic-group-mean",
+  "unit": "nmol/L",
+  "participants": 1194,
+  "population": {
+    "sex": "male",
+    "description": "White European men from mixed healthy younger and community-dwelling older cohorts; Table 1 population, not the BMI <30 filtered free-testosterone reference population.",
+    "minAge": 18,
+    "maxAge": 86,
+    "includedCohorts": ["SIBLOS/SIBEX", "EMAS Leuven", "locally recruited healthy men aged 18–24"],
+    "healthComposition": "Younger participants were selected as healthy, whereas older community-dwelling participants included comorbidities. Cross-sectional group differences do not isolate physiological aging.",
+    "sourceExclusions": "BMI >35 and conditions affecting steroid hormone metabolism in the healthy cohorts; study-specific cohort criteria; 8 extreme hormone outliers excluded from the 1202 samples before Table 1."
+  },
+  "assay": {
+    "method": "Total testosterone by LC-MS/MS",
+    "specimen": "serum",
+    "sampling": "Before 10:00 after overnight fasting; stored at −80 °C; at most one freeze-thaw cycle."
+  },
+  "ageRouting": {
+    "applicationPolicy": "Published decade groups represented as [18,30), [30,40), [40,50), [50,60), [60,70), [70,80), [80,86]. Exact age 86 remains eligible; no numerical patient reference beyond observed support.",
+    "ageUncertaintyPolicy": "The complete represented age interval must fit one group; do not interpolate or blend means across group boundaries.",
+    "displayMeanAgeMeaning": "Published mean age is a display anchor for the group, not evidence of an exact age-specific testosterone concentration."
+  },
+  "rows": [
+    { "id": "18-29", "label": "18–29 lat", "minAge": 18, "maxAge": 30, "maxAgeExclusive": true, "meanAge": 23.8, "participants": 141, "meanNmolL": 20.7, "sdNmolL": 5.9 },
+    { "id": "30-39", "label": "30–39 lat", "minAge": 30, "maxAge": 40, "maxAgeExclusive": true, "meanAge": 34.3, "participants": 252, "meanNmolL": 20.0, "sdNmolL": 6.6 },
+    { "id": "40-49", "label": "40–49 lat", "minAge": 40, "maxAge": 50, "maxAgeExclusive": true, "meanAge": 43.5, "participants": 207, "meanNmolL": 18.1, "sdNmolL": 5.6 },
+    { "id": "50-59", "label": "50–59 lat", "minAge": 50, "maxAge": 60, "maxAgeExclusive": true, "meanAge": 55.0, "participants": 150, "meanNmolL": 16.9, "sdNmolL": 5.9 },
+    { "id": "60-69", "label": "60–69 lat", "minAge": 60, "maxAge": 70, "maxAgeExclusive": true, "meanAge": 65.1, "participants": 177, "meanNmolL": 17.1, "sdNmolL": 5.5 },
+    { "id": "70-79", "label": "70–79 lat", "minAge": 70, "maxAge": 80, "maxAgeExclusive": true, "meanAge": 74.7, "participants": 167, "meanNmolL": 17.0, "sdNmolL": 5.8 },
+    { "id": "80-plus", "label": "80+ lat", "minAge": 80, "maxAge": 86, "maxAgeExclusive": false, "meanAge": 82.1, "participants": 100, "meanNmolL": 15.9, "sdNmolL": 7.2 }
+  ],
+  "limitations": [
+    "Table 1 reports arithmetic means ± SD for total testosterone. These are not medians, age-specific model centers, laboratory reference intervals or diagnostic thresholds.",
+    "The paper primarily investigates measured free testosterone. Its free-testosterone medians and reference limits must not be used as total-testosterone data.",
+    "Group means describe this cross-sectional collection of cohorts, including differing health composition and methods of recruitment; they do not predict an individual's aging trajectory.",
+    "The total-testosterone means in Table 1 include 1194 participants; do not attach the separate nonobese free-testosterone reference population or Table 2 sample counts to them.",
+    "Total testosterone was measured by LC-MS/MS in fasting morning serum. Source methodology does not establish the patient's assay or sampling time.",
+    "A group mean remains constant as a numerical comparison within its own age group. A smooth educational display line may differ from that exact group mean and must not replace it at the patient reference marker.",
+    "Mean ± SD must not be converted into a reference interval or a normal/abnormal result.",
+    "The final group is supported only through the observed age limit of 86 years. Any graphical continuation after 86 is illustrative and supplies no numerical patient reference."
+  ]
+}
