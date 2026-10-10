@@ -130,6 +130,11 @@ Nie aktywujemy danych wolnego T. Dobór p50 pozostaje osobny od geometrii:
 Busch w jego dotychczasowym oknie, Kelsey 3–<6 lat, Madsen 6–<18 lat,
 Kelsey 18–88 lat. Nie ma nowego punktu w luce 1–<3 lat.
 
+Następna, zatwierdzona przez właściciela korekta usuwa ostre zaokrąglenie
+przy granicy tabeli Madsen: zmienia wyłącznie pas graficzny na 16–25 lat
+i rezygnuje z wymuszania punktu 18 lat. Nie zmienia żadnej źródłowej
+mediany, doboru populacji, kwalifikacji pacjenta ani skali.
+
 Polityka graficzna `testosterone-display-policy.json` jest eksportowana
 jako `testosteroneDisplayPolicy`; funkcja produkcyjna to
 `VildaHormoneLifespanDisplay.buildMaleTestosterone`. Jedna ścieżka PCHIP
@@ -147,11 +152,15 @@ dopasowania i bez normalizowania każdego okresu osobno.
 - **5–6 lat:** monotoniczne przejście poglądowe łagodzi różnicę
   między Kelsey a Madsen. Nie jest nowym źródłem p50 ani fizjologicznym
   spadkiem testosteronu w szóste urodziny.
-- **17–25 lat:** przejście między Madsen i dorosłym Kelsey, również
-  przez zmianę skali czasu w 20. roku. Zachowuje wewnętrzny węzeł
-  Madsen 18 lat/18,051151264084126 nmol/L. Koniec tabeli nie dowodzi
-  fizjologicznego szczytu w tym wieku. Dla pacjenta dokładnie 18 lat
-  źródłowym odniesieniem pozostaje Kelsey, nie ten węzeł graficzny.
+- **16–25 lat:** szersze przejście między Madsen i dorosłym Kelsey,
+  również przez zmianę skali czasu w 20. roku. Zachowuje wartości
+  i pochodne źródeł na końcach. Jedna krzywa Hermite'a/PCHIP w stałych
+  współrzędnych wykresu zastępuje dawny pas 17–25 z wymuszoną kotwicą
+  przy 18 latach. Wewnątrz pasa nie ma kotwic źródłowych; łagodne
+  maksimum nie wyznacza fizjologicznego wieku szczytu ani jego stężenia.
+  Węzeł Madsen 18 lat/18,051151264084126 nmol/L pozostaje źródłem
+  interpolacji p50 dla 17.x i składnikiem niezmienionej skali, lecz nie
+  wymusza geometrii. Pacjent dokładnie 18 lat nadal otrzymuje Kelsey.
 - **Przed urodzeniem:** zachowane kotwice schematu do wieku 0 są
   ilustracją, nie ilościowym profilem płodowym lub pępowinowym.
 - **88–90 lat:** płaskie zakończenie przy około 13,222919802 nmol/L
@@ -165,17 +174,22 @@ mediany korzystają z tej samej skali. Wynik większy od góry osi jest
 strzałką w górę z rzeczywistą wartością; równość z granicą nadal daje
 punkt. Pusty, błędny lub cenzurowany zapis nie daje zastępczej strzałki.
 
-`vilda_hormone_lifespan_reference.js` nie zmienia się; zmieniają się dane
-i rekordy doboru pediatrycznego źródła. Źródłowe mediany poza 6–<18 lat
-pozostają takie jak wcześniej.
+Wdrożenie Madsen zmieniło dane i rekordy doboru pediatrycznego źródła,
+z zachowaniem `vilda_hormone_lifespan_reference.js` i median poza 6–<18 lat.
+Obecna korekta pasma 16–25 nie zmienia już żadnych danych odniesienia
+ani silnika. Przykładowo p50 dla 16 lat pozostaje
+12,96588173768215 nmol/L, dla 17,9 roku 17,87811097018994 nmol/L,
+a dla 18 lat 15,16389257035194 nmol/L. Różnica między publikacjami
+nie jest usuwana z mediany pacjenta przez wygładzenie rysunku.
 Mężczyzna 40 lat/13 nmol/L pozostaje poniżej odniesienia
 13,049603876520182 nmol/L; 100 nmol/L jest poza stałą wysokością osi.
 Chłopiec 2 lata nadal nie ma ilościowego punktu. Donoszenie i techniczna
 bramka rozdzielczości Busch pozostają wymagane dla punktu niemowlęcia;
 graficzny most nie obchodzi ich ani nie wyznacza końca minipuberty.
-Zmiana obejmuje edukacyjne porównanie dziecka z inną medianą populacyjną,
-bez nowych norm laboratoryjnych, werdyktów, jednostek ani zmian zapisanych
-wyników. Nie oznacza klinicznej walidacji połączonego przebiegu.
+Wdrożenie Madsen zmieniło edukacyjne porównanie dziecka z medianą populacyjną;
+obecna poprawka zmienia wyłącznie kształt połączenia. Żaden z tych etapów
+nie wprowadza nowych norm laboratoryjnych, werdyktów, jednostek ani zmian
+zapisanych wyników. Nie oznacza klinicznej walidacji połączonego przebiegu.
 
 ## Transformacje, źródła i granice
 
@@ -230,7 +244,8 @@ do LMS ani nie nazywamy 414+491 dokładnym N modelu testosteronu.
 
 Granice 6 i 18 lat są jawną polityką doboru publikacji. Przy dokładnie
 18 latach wraca niezmienione Kelsey (około 15,16389 nmol/L); węzeł Madsen
-18 lat/18,05115 domyka jedynie interpolację dla 17.x oraz płynny rysunek.
+18 lat/18,05115 domyka interpolację dla 17.x i pozostaje składnikiem
+stałej skali, bez obowiązku przejścia linii przez ten punkt.
 Różnica źródeł nie jest fizjologicznym skokiem stężenia. Niepewny wiek
 przecinający granicę źródeł nie daje jednej arbitralnej mediany.
 Kelsey 3–<6 zachowano ostrożnie bez ekstrapolowania Madsen poniżej 6;
@@ -370,7 +385,8 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Chłopiec dokładnie 6 lat, testosteron 0,02393726986868612 nmol/L | Madsen: punkt równy p50, bez rozpoznania i bez sztucznego podniesienia mediany do innej wartości. |
 | Chłopiec dokładnie 12 lat, testosteron 1,4977255724595988 nmol/L | Punkt i znacznik źródłowej mediany Madsen są zgodne; brak stadium nie blokuje modelu wieku. |
 | Chłopiec dokładnie 16 lat, testosteron 12,96588173768215 nmol/L | Nadal Madsen T; nie stosujemy górnej granicy 16 lat właściwej dla profili LH/FSH. |
-| Mężczyzna dokładnie 18 lat, testosteron | Oryginalne p50 Kelsey około 15,16389 nmol/L; nie Madsen 18,05115 będące węzłem interpolacji dla 17.x i kotwicą rysunku. |
+| Chłopiec dokładnie 17,9 roku, testosteron 17,87811097018994 nmol/L | Niezmienione źródłowe p50 Madsen; znacznik może leżeć poza szerokim graficznym połączeniem 16–25 lat. |
+| Mężczyzna dokładnie 18 lat, testosteron | Oryginalne p50 Kelsey około 15,16389 nmol/L; nie Madsen 18,05115 będące węzłem interpolacji dla 17.x. Linia nie musi przechodzić przez żaden z tych punktów w tym wieku. |
 | Chłopiec, możliwy wiek 5,99–6,01 lub 17,99–18,01 lat, testosteron | Brak jednoznacznego punktu między źródłami; wiek pośrodku przedziału nie rozstrzyga publikacji. |
 | Mężczyzna 40 lat, testosteron 13,049603876520182 nmol/L | Punkt na centralnej linii Kelsey 2014/2015. |
 | Mężczyzna dokładnie 40 lat, testosteron: pusty → 13 → 100 → wyczyszczenie | Identyczna krzywa i skala; 13 poniżej oryginalnej mediany 13,049603876520182; 100 ma strzałkę z rzeczywistą liczbą, bez przyciętej kropki. |
@@ -396,6 +412,10 @@ oraz telefon. Dla inhibiny B i testosteronu dochodzą stałość krzywej i skali
 poprawnym, błędnym i cenzurowanym wyniku oraz płynność stycznych przy
 zmianie źródła i w pasach wygładzenia osi. Należy sprawdzić, że zbliżenia
 T pokazują tę samą kanoniczną krzywą również poza wiekiem pacjenta.
+Korekta testosteronu wymaga dodatkowo ciągłych stycznych przy 16 i 25 latach,
+braku ostrego szczytu od wymuszonej kotwicy 18 lat oraz zachowania źródłowych
+median przy 16, 17,9 i 18 latach. Szerokie zaokrąglenie w okolicy 17–18 lat
+nie może zmieniać się po wpisaniu wyniku ani tworzyć dodatkowych ekstremów.
 Test równości punktu ze źródłowym
 odniesieniem nie może
 sprawdzać wyłącznie

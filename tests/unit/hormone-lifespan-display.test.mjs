@@ -216,17 +216,16 @@ describe('Stable male total testosterone educational display — production buil
     }
   });
 
-  it('uses fixed illustrative intervals and only an explicitly approved source anchor inside them', () => {
+  it('uses broad fixed illustrative intervals without forcing the last pediatric source node into a peak', () => {
     const model = display.buildMaleTestosterone(data, engine);
     expect(model.transitions).toEqual([
       { minAge: 150 / 365.25, maxAge: 4, fromSource: testosteroneSources[0], toSource: testosteroneSources[1], kind: 'illustrative-transition' },
       { minAge: 5, maxAge: 6, fromSource: testosteroneSources[1], toSource: testosteroneSources[2], kind: 'illustrative-transition' },
-      { minAge: 17, maxAge: 25, fromSource: testosteroneSources[2], toSource: testosteroneSources[3], kind: 'illustrative-transition' }
+      { minAge: 16, maxAge: 25, fromSource: testosteroneSources[2], toSource: testosteroneSources[3], kind: 'illustrative-transition' }
     ]);
     for (const transition of model.transitions) {
       const interior = model.points.filter(point => point.ageYears > transition.minAge && point.ageYears < transition.maxAge);
-      const approved = model.anchors.filter(point => point.ageYears > transition.minAge && point.ageYears < transition.maxAge);
-      expect(interior).toEqual(approved.map(({ ageYears, value }) => ({ ageYears, value })));
+      expect(interior).toEqual([]);
       expect(model.points.find(point => point.ageYears === transition.minAge)?.value)
         .toBe(engine.referenceAt(source(transition.fromSource), transition.minAge));
       expect(model.points.find(point => point.ageYears === transition.maxAge)?.value)
@@ -248,12 +247,12 @@ describe('Stable male total testosterone educational display — production buil
     expect(model.illustrativeIntervals.at(-1)).toEqual({ minAge: 88, maxAge: 90, kind: 'older-age-tail' });
   });
 
-  it('retains the outer pubertal source tangents without forcing a rising tangent at the 18-year display anchor', () => {
+  it('retains source tangents at the wider transition boundaries and has no internal tangent override', () => {
     const model = display.buildMaleTestosterone(data, engine);
-    expect(model.tangentOverrides.map(item => item.ageYears)).toEqual([17, 25]);
+    expect(model.tangentOverrides.map(item => item.ageYears)).toEqual([16, 25]);
     expect(model.tangentOverrides.some(item => item.ageYears === 18)).toBe(false);
     for (const tangent of model.tangentOverrides) {
-      expect(tangent.sourceId).toBe(tangent.ageYears === 17 ? testosteroneSources[2] : testosteroneSources[3]);
+      expect(tangent.sourceId).toBe(tangent.ageYears === 16 ? testosteroneSources[2] : testosteroneSources[3]);
       const profile = source(tangent.sourceId);
       const delta = 0.0001;
       const independentSlope = (engine.referenceAt(profile, tangent.ageYears + delta) -
@@ -266,20 +265,26 @@ describe('Stable male total testosterone educational display — production buil
     expect(model.tangentOverrides.some(item => item.ageYears <= 6)).toBe(false);
   });
 
-  it('uses the published Madsen endpoint only as a display anchor while the exact 18th birthday keeps its adult source median', () => {
+  it('preserves the Madsen endpoint for source interpolation and scale without making it a display anchor', () => {
     const model = display.buildMaleTestosterone(data, engine);
     const madsen = source(testosteroneSources[2]);
     expect(madsen.maxAge).toBe(18);
     expect(madsen.maxAgeExclusive).toBe(true);
-    expect(model.anchors).toEqual([{ ageYears: 18, value: 18.051151264084126, sourceId: madsen.id }]);
-    expect(model.points.find(point => point.ageYears === 18)?.value).toBe(madsen.points.at(-1).value);
+    expect(model.anchors).toEqual([]);
+    expect(model.points.some(point => point.ageYears === 18)).toBe(false);
+    expect(madsen.points.at(-1)).toEqual({ ageYears: 18, value: 18.051151264084126 });
+    expect(model.divisor).toBe(madsen.points.at(-1).value);
     expect(engine.referenceAt(madsen, 18)).toBeNull();
     const adultReference = engine.evaluate(data, patient(18));
     expect(adultReference.status).toBe('ready');
     expect(adultReference.profile.id).toBe(testosteroneSources[3]);
     expect(adultReference.referenceValue).toBe(15.16389257035194);
-    expect(adultReference.referenceValue).not.toBe(model.anchors[0].value);
-    expect(engine.evaluate(data, patient(17.9)).profile.id).toBe(madsen.id);
+    expect(adultReference.referenceValue).not.toBe(madsen.points.at(-1).value);
+    for (const [ageYears, expected] of [[16, 12.96588173768215], [17, 15.939466800893923], [17.9, 17.87811097018994]]) {
+      const reference = engine.evaluate(data, patient(ageYears));
+      expect(reference.profile.id).toBe(madsen.id);
+      expect(reference.referenceValue).toBeCloseTo(expected, 10);
+    }
     // Full source nodes remain present on both Kelsey routing profiles. The
     // display must filter by each active domain, not import old pediatric
     // Kelsey values into the Madsen portion or change source interpolation.
@@ -363,12 +368,12 @@ describe('Stable male total testosterone educational display — production buil
       ['clinical policy kind', input => { input.testosteroneDisplayPolicy.kind = 'clinical-reference'; }],
       ['invalid scale', input => { input.testosteroneDisplayPolicy.scale.headroomFactor = Infinity; }],
       ['missing anchors', input => { delete input.testosteroneDisplayPolicy.anchors; }],
-      ['empty anchors', input => { input.testosteroneDisplayPolicy.anchors = []; }],
-      ['unknown anchor source', input => { input.testosteroneDisplayPolicy.anchors[0].sourceId = 'unknown'; }],
-      ['unpublished anchor', input => { input.testosteroneDisplayPolicy.anchors[0].ageYears = 17.5; }],
-      ['anchor outside transition', input => { input.testosteroneDisplayPolicy.anchors[0].ageYears = 16; }],
-      ['anchor outside source domain', input => { input.testosteroneDisplayPolicy.anchors[0].ageYears = 19; }],
-      ['duplicate anchor', input => { input.testosteroneDisplayPolicy.anchors.push({ ...input.testosteroneDisplayPolicy.anchors[0] }); }],
+      ['nonarray anchors', input => { input.testosteroneDisplayPolicy.anchors = {}; }],
+      ['unknown anchor source', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: 'unknown', ageYears: 18 }]; }],
+      ['unpublished anchor', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 17.5 }]; }],
+      ['anchor outside transition', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 16 }]; }],
+      ['anchor outside source domain', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 19 }]; }],
+      ['duplicate anchor', input => { input.testosteroneDisplayPolicy.anchors = Array.from({ length: 2 }, () => ({ sourceId: testosteroneSources[2], ageYears: 18 })); }],
       ['overlapping active profiles', input => {
         input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[1]).maxAge = 7;
       }],
@@ -399,6 +404,7 @@ describe('Stable male total testosterone educational display — production buil
         input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[3]).points.at(-1).eligible = false;
       }],
       ['unreadable internal source anchor', input => {
+        input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 18 }];
         input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[2]).points.at(-1).eligible = false;
       }]
     ];

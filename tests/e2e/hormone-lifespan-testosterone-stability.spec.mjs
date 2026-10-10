@@ -161,20 +161,39 @@ for (const width of [320, 1440]) {
     // Both new source transitions are checked against the real rendered SVG,
     // including their interior, so a smooth but negative/overshooting join fails.
     const childhoodAges = Array.from({ length: 101 }, (_, i) => 5 + i / 100);
-    const pubertyBridgeAges = Array.from({ length: 321 }, (_, i) => 17 + i / 40);
+    const pubertyBridgeAges = Array.from({ length: 361 }, (_, i) => 16 + i / 40);
     const joins = await heights(page, [...childhoodAges, ...pubertyBridgeAges]);
     const childhood = joins.slice(0, childhoodAges.length), adolescence = joins.slice(childhoodAges.length);
     for (let i = 1; i < childhood.length; i++) {
       assert.ok(childhood[i] <= childhood[i - 1] + .00001, '5–6-year transition declines monotonically');
       assert.ok(childhood[i] >= childhood.at(-1) - .00001, 'no childhood undershoot');
     }
-    const peakIndex = 40; // The display anchor is 18 years; source routing remains separate.
-    expect(adolescence[peakIndex] * original.divisor * original.ceiling).toBeCloseTo(18.051151264084126, 3);
+    const peak = Math.max(...adolescence), peakIndex = adolescence.indexOf(peak);
+    // A C1 curve can still form the visually sharp tip reported by the owner.
+    // Require a broad rounded top, measured on the real SVG rather than a
+    // particular interpolation implementation or a fixed physiological peak age.
+    const roundedTop = pubertyBridgeAges.filter((_, i) => adolescence[i] >= peak * .99);
+    const roundedWidth = await page.evaluate(([from, to]) => {
+      const fraction = age => {
+        let offset = 0;
+        for (const stage of window.VildaHormoneLifespanData.maleStages) {
+          if (age <= stage.max) return offset + stage.width * (age - stage.min) / (stage.max - stage.min);
+          offset += stage.width;
+        }
+        return offset;
+      };
+      return fraction(to) - fraction(from);
+    }, [roundedTop[0], roundedTop.at(-1)]);
+    // The previous narrow tip occupied only 0.0123 of the whole-life axis;
+    // the approved rounding exceeds 0.018 without pinning an exact peak age.
+    expect(roundedWidth).toBeGreaterThan(.018);
+    expect(peakIndex).toBeGreaterThan(0);
+    expect(peakIndex).toBeLessThan(adolescence.length - 1);
+    expect(peak * original.divisor * original.ceiling).toBeLessThan(original.divisor);
     for (let i = 0; i < adolescence.length; i++) {
       assert.ok(adolescence[i] >= Math.min(adolescence[0], adolescence.at(-1)) - .00001, 'no adolescent undershoot');
-      assert.ok(adolescence[i] <= adolescence[peakIndex] + .00001, 'no adolescent overshoot');
-      if (i > 0 && i <= peakIndex) assert.ok(adolescence[i] >= adolescence[i - 1] - .00001, 'rise to 18-year display anchor');
-      if (i > peakIndex) assert.ok(adolescence[i] <= adolescence[i - 1] + .00001, 'decline from 18-year display anchor');
+      if (i > 0 && i <= peakIndex) assert.ok(adolescence[i] >= adolescence[i - 1] - .00001, 'one smooth rise to the broad top');
+      if (i > peakIndex) assert.ok(adolescence[i] <= adolescence[i - 1] + .00001, 'one smooth decline from the broad top');
     }
     expect(joins.every(value => Number.isFinite(value) && value >= -.00001 && value <= 1.00001)).toBe(true);
     for (const value of ['13', '100', '100000000', '', '13']) {
@@ -205,13 +224,13 @@ for (const width of [320, 1440]) {
     }
     await panel(page).screenshot({ path: test.info().outputPath(`testosterone-stable-40y-13-${width}.png`) });
     const before = await page.evaluate(() => ({ shared: window.VildaPersistence.readShared(), value: document.querySelector('#labValue').value }));
-    const normal = await heights(page, [.25, 3, 12, 19, 40, 70]);
+    const normal = await heights(page, [.25, 3, 12, 16, 17, 18, 19, 20, 25, 40, 70]);
     await panel(page).getByRole('button', { name: 'Powiększ', exact: true }).click();
     await expect(page.locator('dialog.vhl-fullscreen-dialog')).toBeVisible();
     const enlarged = await geometry(page);
     expect(enlarged.divisor).toBe(original.divisor);
     expect(enlarged.ceiling).toBe(original.ceiling);
-    const enlargedHeights = await heights(page, [.25, 3, 12, 19, 40, 70]);
+    const enlargedHeights = await heights(page, [.25, 3, 12, 16, 17, 18, 19, 20, 25, 40, 70]);
     enlargedHeights.forEach((value, i) => expect(value).toBeCloseTo(normal[i], 3));
     await expect(point(page)).toHaveAttribute('data-value', '13');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -253,7 +272,7 @@ test('testosterone zoom preserves the same curve even when the patient lies outs
   await open(page);
   await page.locator('#labValue').fill('13');
   const original = await geometry(page);
-  const infantAges = [.025, .08, .25, .5, .75, .98], pubertyAges = [8, 10, 12, 14, 17, 19.8];
+  const infantAges = [.025, .08, .25, .5, .75, .98], pubertyAges = [8, 10, 12, 14, 16, 17, 18, 18.5, 19, 19.8];
   const infant = await heights(page, infantAges), puberty = await heights(page, pubertyAges);
   for (const [view, ages, expected] of [['mini', infantAges, infant], ['puberty', pubertyAges, puberty]]) {
     await panel(page).locator(`[data-view="${view}"]`).click();
@@ -337,11 +356,13 @@ test('testosterone switches the source only at age 6 and 18 and retains reported
     { age: 6, months: 0, upper: 6 + 1 / 12, profile: 'madsen2022-male-t', median: .02393726986868612 },
     { age: 6, months: null, upper: 7, profile: 'madsen2022-male-t', median: .02393726986868612 },
     { age: 12, months: 0, upper: 12 + 1 / 12, profile: 'madsen2022-male-t', median: 1.4977255724595988 },
-    { age: 17, months: 11, upper: 18, profile: 'madsen2022-male-t' },
-    { age: 17, months: null, upper: 18, profile: 'madsen2022-male-t' },
+    { age: 17, months: 11, upper: 18, profile: 'madsen2022-male-t', median: 17.907632409388967 },
+    { age: 17, months: null, upper: 18, profile: 'madsen2022-male-t', median: 15.939466800893923 },
     { age: 17.9, months: null, profile: null },
     { age: 18, months: 0, upper: 18 + 1 / 12, profile: 'kelsey2014-male-t', median: 15.16389257035194 },
     { age: 18, months: null, upper: 19, profile: 'kelsey2014-male-t', median: 15.16389257035194 },
+    { age: 20, months: 0, upper: 20 + 1 / 12, profile: 'kelsey2014-male-t', median: 15.375748575473835 },
+    { age: 25, months: 0, upper: 25 + 1 / 12, profile: 'kelsey2014-male-t', median: 14.333921907254492 },
   ];
   for (const entry of cases) {
     await sharedPatient(page, { sex: 'M', age: entry.age, ageMonths: entry.months });

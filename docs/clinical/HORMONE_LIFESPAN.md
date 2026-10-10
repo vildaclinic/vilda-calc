@@ -38,6 +38,12 @@ w wieku 3–<6 oraz 18–88 lat. Zmienia to edukacyjne odniesienie dziecka,
 bez zmiany norm i werdyktów laboratoryjnych. Granice doboru oraz
 ograniczenia źródeł opisano w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
+Po zgłoszeniu ostrego szczytu przy 17–18 latach właściciel zatwierdził
+korektę samego połączenia graficznego. Szerszy pas 16–25 lat nie wymusza
+przejścia przez ostatni węzeł Madsen w wieku 18 lat. Źródłowe mediany,
+dobór profilu pacjenta, skala oraz interpretacja laboratoryjna pozostają
+bez zmian.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -152,11 +158,16 @@ mostem poglądowym. Obejmuje także część dostępnych danych, aby nie tworzy�
 sztucznego wzrostu między niskim końcem Busch a początkiem Kelsey.
 Ma monotoniczny przebieg bez wymuszania stromych stycznych źródeł;
 źródłowe mediany i punkty pacjenta w tym pasie nie są przesuwane na most.
-Monotoniczny pas 5–6 lat łagodzi zmianę Kelsey na Madsen. Pas 17–25 lat
-łączy Madsen z dorosłym Kelsey i łagodzi zmianę skali czasu, zachowując
-wewnętrzny węzeł Madsen dla 18 lat, około 18,051151 nmol/L. To koniec
-źródłowej tabeli i kotwica rysunku, nie ustalony fizjologiczny szczyt.
-Dla pacjenta w wieku dokładnie 18 lat odniesieniem jest już Kelsey.
+Monotoniczny pas 5–6 lat łagodzi zmianę Kelsey na Madsen. Pas 16–25 lat
+łączy Madsen z dorosłym Kelsey i łagodzi zmianę skali czasu. Zachowuje
+wartości i styczne źródeł na końcach, bez wewnętrznej kotwicy przy
+18 latach. Szerokie zaokrąglenie jest geometrią poglądową, nie modelem
+stężenia ani ustaleniem wieku fizjologicznego maksimum. Węzeł Madsen
+18 lat, około 18,051151 nmol/L, pozostaje w danych dla interpolacji
+źródłowego p50 przed 18. urodzinami i stałej skali. Dla pacjenta
+w wieku dokładnie 18 lat odniesieniem jest już Kelsey. Źródłowe p50
+w całym pasie 16–25 lat pozostają niezmienione, nawet gdy ich znaczniki
+leżą poza wygładzoną linią.
 Kotwice przed urodzeniem oraz płaski ogon 88–90 lat przy końcowej
 wartości Kelsey pozostają wyłącznie ilustracją.
 
