@@ -96,7 +96,8 @@ test('original male and female AMH/inhibin B comparison survives resizing', asyn
     await page.locator('[data-view="mini"]').click();
     await page.locator('.vhl-compare-toggle').click();
     for (const id of ['amh', 'inhb']) {
-      await page.locator(`.vhl-legend [data-hormone="${id}"]`).click();
+      const choice = page.locator(`.vhl-legend [data-hormone="${id}"]`);
+      if (await choice.getAttribute('aria-pressed') !== 'true') await choice.click();
       expectOriginalGeometry(await readGeometry(page, true), original.widths[width].comparison[id],
         `${width}/comparison/${id}`);
       await expect(page.locator('[data-comparison-sex="female"]')).toHaveCount(1);

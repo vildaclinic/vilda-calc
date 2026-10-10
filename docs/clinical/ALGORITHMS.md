@@ -420,7 +420,8 @@ testy statusu walidacji klinicznej.
 Każdy hormon zachowuje tę samą własną skalę w widokach całego życia,
 minipuberty i pokwitania. Przybliżenie zmienia oś czasu, bez wyrównywania
 szczytów różnych hormonów. Odrębne „Porównaj płcie” dla AMH/inhibiny B
-porównuje kształt dwóch krzywych względem ich własnych maksimów, z widocznym
+w minipuberty oraz LH/FSH/AMH/inhibiny B w pokwitaniu porównuje kształt
+dwóch krzywych względem ich własnych maksimów wybranego okresu, z widocznym
 opisem; nie porównuje bezwzględnych stężeń. Dorosłe E2 ma poglądowe plateau
 oraz osobny schemat cyklu, a nie połączenie mediany nastolatek z niższą
 medianą wyłącznie wczesnej fazy folikularnej dorosłych.
@@ -479,6 +480,41 @@ dialog. Bez zmiany danych, interpolacji, skali względnej, norm, interpretacji
 ani zapisu pacjenta. Regresje: `hormone-lifespan-fullscreen.spec.mjs`
 (desktop, telefon i same-origin iframe), dotychczasowy wzorzec SVG
 oraz testy integracji z przelicznikiem.
+
+**2026-10-10 — wybór hormonów i porównanie płci w pokwitaniu:** etykietę
+„Poziom względny” zastąpiono „Przebieg zmian”. Można odznaczyć również
+ostatni hormon; pusty wybór ukrywa linie i pokazuje „Wybierz hormon”,
+bez automatycznego ponownego wyboru analitu. Dotyczy to także osobnego
+porównania płci. Powiększenie i aktualizacja tego samego kontekstu
+zachowują ręczny wybór.
+
+Porównanie płci rozszerzono o LH, FSH, AMH i inhibinę B w wieku
+chronologicznym 8–20 lat. To istniejące krzywe, przeskalowane osobno
+do maksimum każdej płci w tym przedziale. Nie zmieniono danych, węzłów
+ani interpolacji: męskie PCHIP z 97 próbkami/B-spline oraz żeńskie
+`displaySpline`/`segmentPath`. Żeńskie LH/FSH i AMH pozostają schematami,
+a inhibina B odtworzeniem modelu 0 SD. Źródła: Ljubicic 2020
+(DOI 10.1093/humrep/deaa182), Jopling 2018 (DOI 10.1002/edm2.21),
+FDA K170524 i Borelli-Kjær 2025 (DOI 10.1210/clinem/dgae439),
+oraz dotychczasowe źródła męskiego schematu. Populacje, oznaczenia
+i ograniczenia opisano w [HORMONE_LIFESPAN.md](HORMONE_LIFESPAN.md).
+Wspólna oś wieku nie zrównuje stadium Tannera ani nie ustala jego początku.
+Własne maksima nie pozwalają porównywać bezwzględnych stężeń lub ich
+ilorazów. Nie dodano porównań E2, testosteronu lub INSL3 bez danych
+drugiej płci.
+
+Syntetyczne przypadki rzeczywistego renderera: M/LH/12 lat → odznaczenie
+LH daje pusty wybór, który pozostaje po zmianie rozmiaru i odświeżeniu
+wyniku; pokwitanie/AMH → opadający schemat chłopców i żeński przebieg
+bez podobnego spadku; pokwitanie/inhibina B → zachowany garb żeńskiego
+modelu. Pokwitanie/LH → minipuberty zachowuje tryb porównania z pustym
+wyborem, ponieważ porównanie niemowlęce nadal obsługuje tylko AMH/inhibinę B.
+Przejście do całego życia kończy porównanie. Dotychczasowy wzorzec SVG
+kontroluje niezmienność zwykłych krzywych i porównania niemowlęcego.
+**Wpływ kliniczny:** rozszerzenie wyłącznie edukacyjnej prezentacji,
+bez zmiany norm, jednostek, interpretacji laboratoryjnej ani historii.
+Przegląd właściciela dotyczy prezentacji; testy nie nadają jej statusu
+walidacji klinicznej.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

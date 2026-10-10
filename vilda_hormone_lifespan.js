@@ -41,7 +41,7 @@
 <div class="vhl-toolbar"><nav class="vhl-views" aria-label="Zakres wykresu"><button type="button" data-view="life" aria-pressed="true">Całe życie</button><button type="button" data-view="mini" aria-pressed="false">Minipuberty</button><button type="button" data-view="puberty" aria-pressed="false">Pokwitanie</button></nav><button class="vhl-compare-toggle" type="button" aria-pressed="false" hidden>Porównaj płcie</button></div>
 <div class="vhl-legend" role="group" aria-label="Wybierz hormony do porównania — można zaznaczyć kilka"></div>
 <div class="vhl-sex-key" hidden><span><i class="vhl-female-key"></i>Dziewczynki</span><span><i class="vhl-male-key"></i>Chłopcy</span></div>
-<div class="vhl-chart-heading"><span class="vhl-axis-label">Poziom względny</span><button class="vhl-reset" type="button" hidden>Tylko LH</button></div>
+<div class="vhl-chart-heading"><span class="vhl-axis-label">Przebieg zmian</span><button class="vhl-reset" type="button" hidden>Tylko LH</button></div>
 <div class="vhl-chart-wrap"><div class="vhl-stage-nav" role="group" aria-label="Wyróżnij etap życia"></div><svg data-lifespan="chart" role="img" aria-labelledby="chart-title chart-desc"><title data-lifespan="chart-title">Schemat zmian hormonów w ciągu życia mężczyzny</title><desc data-lifespan="chart-desc">Krzywe przedstawiają poglądowo czas i kierunek zmian. Każdy hormon ma własną skalę. Oś życia jest podzielona na etapy o różnej skali czasu. To nie są stężenia ani zakresy referencyjne.</desc></svg></div>
 <p data-lifespan="population-note" class="vhl-population-note" hidden></p>
 <p class="vhl-chart-caption"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor"/><path d="M8 7v4M8 4.5v.5" stroke="currentColor" stroke-linecap="round"/></svg><span data-lifespan="scale-note">Schemat — każdy hormon ma własną skalę.</span></p>
@@ -63,7 +63,10 @@
     const { maleAges, maleHormones, maleStages, referenceData, lifespanData } =
       data;
     const infant = referenceData.femaleInfantMedians;
-    const comparisonHormones = new Set(["amh", "inhb"]);
+    const comparisonHormones = () =>
+      view === "puberty"
+        ? ["lh", "fsh", "amh", "inhb"]
+        : ["amh", "inhb"];
     const femaleDefinitions = [
       {
         id: "lh",
@@ -412,8 +415,8 @@
       };
     }
     function series(h) {
-      const xs = sex === "female" ? h.miniAges : h.ages || maleAges;
-      const vs = sex === "female" ? h.miniValues : h.values;
+      const xs = h.miniAges || h.ages || maleAges;
+      const vs = h.miniValues || h.values;
       const positions = xs.map((age) => xFraction(age));
       return {
         at: interpolator(positions, vs),
@@ -539,7 +542,7 @@
           : "Wybierz hormony do porównania — można zaznaczyć kilka",
       );
       const list = compare
-        ? femaleHormones.filter((h) => h.id === "amh" || h.id === "inhb")
+        ? femaleHormones.filter((h) => comparisonHormones().includes(h.id))
         : hormones();
       for (const h of list) {
         const b = document.createElement("button");
@@ -637,7 +640,7 @@
         ? ""
         : "Schemat minipuberty dotyczy dzieci urodzonych o czasie; nie odnosimy do niego wieku tego niemowlęcia.";
       const available = [analyteHormones[currentAnalyte], ...selected].find(
-        (id) => comparisonHormones.has(id),
+        (id) => comparisonHormones().includes(id),
       );
       toggle.hidden = !available && !compare;
       toggle.setAttribute("aria-pressed", String(compare));
@@ -820,10 +823,12 @@
               "stroke-dasharray": "3 5",
             }),
           );
-      const ordered = [
-        ...hormones().filter((h) => !selected.has(h.id)),
-        ...hormones().filter((h) => selected.has(h.id)),
-      ];
+      const ordered = selected.size
+        ? [
+            ...hormones().filter((h) => !selected.has(h.id)),
+            ...hormones().filter((h) => selected.has(h.id)),
+          ]
+        : [];
       for (const h of ordered) {
         const active = selected.has(h.id),
           style = {
@@ -957,7 +962,7 @@
           px: x(patientAgeYears),
         });
       }
-      panel.querySelector(".vhl-axis-label").textContent = "Poziom względny";
+      panel.querySelector(".vhl-axis-label").textContent = "Przebieg zmian";
       byId("scale-note").textContent =
         sex === "female" && view === "mini"
           ? "Ta sama skala co w „Całym życiu” — powiększona jest tylko oś czasu."
@@ -976,7 +981,10 @@
     function renderComparison() {
       stageNav.hidden = true;
       const h = femaleHormones.find((h) => h.id === compareHormone),
-        male = maleHormones.find((h) => h.id === compareHormone);
+        male = maleHormones.find((h) => h.id === compareHormone),
+        puberty = view === "puberty",
+        minAge = puberty ? 8 : 0,
+        maxAge = puberty ? 20 : 1;
       const W = svg.clientWidth || 1040,
         mobile = W < 640,
         H = chartHeight(mobile ? 334 : 393),
@@ -990,7 +998,7 @@
       svg.setAttribute("height", H);
       const g = el("g");
       svg.append(g);
-      const x = (age) => left + age * pw,
+      const x = (age) => left + ((age - minAge) / (maxAge - minAge)) * pw,
         y = (value) => bottom - value * ph;
       g.append(
         el("rect", {
@@ -1026,9 +1034,14 @@
           fill: "#82979e",
         }),
       );
-      const ticks = mobile ? [0, 3, 6, 9, 12] : [0, 1, 2, 3, 4, 5, 6, 9, 12];
-      for (const month of ticks) {
-        const px = x(month / 12);
+      const ticks = puberty
+        ? [8, 10, 12, 14, 16, 18, 20]
+        : mobile
+          ? [0, 3, 6, 9, 12]
+          : [0, 1, 2, 3, 4, 5, 6, 9, 12];
+      for (const tick of ticks) {
+        const px = x(puberty ? tick : tick / 12),
+          last = tick === ticks[ticks.length - 1];
         g.append(
           el("line", {
             x1: px,
@@ -1037,42 +1050,72 @@
             y2: bottom + 5,
             stroke: "#bdcfd5",
           }),
-          text(px, bottom + 22, month === 12 ? "12 mies." : String(month), {
+          text(px, bottom + 22, last ? (puberty ? "20 lat" : "12 mies.") : String(tick), {
             "text-anchor":
-              month === 0 ? "start" : month === 12 ? "end" : "middle",
+              tick === ticks[0] ? "start" : last ? "end" : "middle",
             "font-size": mobile ? 10 : 11,
           }),
         );
       }
-      const mi = maleAges
-          .map((age, i) => ({ age, i }))
-          .filter((p) => p.age >= 0 && p.age <= 1),
-        maleMax = Math.max(...mi.map((p) => male.values[p.i]));
-      const curves = [
-        {
-          sex: "female",
-          color: "#b15786",
-          min: h.miniAges[0],
-          max: 1,
-          at: interpolator(h.miniAges, h.comparisonValues),
-        },
-        {
-          sex: "male",
-          color: "#2b7491",
-          min: 0,
-          max: 1,
-          at: interpolator(
-            mi.map((p) => p.age),
-            mi.map((p) => male.values[p.i] / maleMax),
-          ),
-        },
-      ];
+      let curves = [];
+      if (h && puberty) {
+        // Reuse the ordinary puberty curves, including their original knots
+        // and smoothing. Only their vertical display scale changes here.
+        const femaleSpline = displaySpline(h),
+          maleSeries = series(male),
+          maximum = (at, xs) =>
+            Math.max(at(0), at(1), ...xs.filter((f) => f > 0 && f < 1).map(at)) || 1,
+          femaleMax = maximum((f) => femaleSpline.at(f).value, femaleSpline.xs),
+          maleMax = maximum(maleSeries.at, (male.ages || maleAges).map(xFraction));
+        curves = [
+          {
+            sex: "female",
+            color: "#b15786",
+            d: h.segments
+              .map((segment) => segmentPath(
+                segment, left, pw, (value) => y(value / femaleMax), femaleSpline,
+              ))
+              .filter(Boolean)
+              .join(" "),
+          },
+          {
+            sex: "male",
+            color: "#2b7491",
+            d: curvePath(male, left, pw, (value) => y(value / maleMax)),
+          },
+        ];
+      } else if (h) {
+        const mi = maleAges
+            .map((age, i) => ({ age, i }))
+            .filter((p) => p.age >= 0 && p.age <= 1),
+          maleMax = Math.max(...mi.map((p) => male.values[p.i]));
+        curves = [
+          {
+            sex: "female",
+            color: "#b15786",
+            min: h.miniAges[0],
+            max: 1,
+            at: interpolator(h.miniAges, h.comparisonValues),
+          },
+          {
+            sex: "male",
+            color: "#2b7491",
+            min: 0,
+            max: 1,
+            at: interpolator(
+              mi.map((p) => p.age),
+              mi.map((p) => male.values[p.i] / maleMax),
+            ),
+          },
+        ];
+      }
       for (const curve of curves) {
-        const points = Array.from({ length: 193 }, (_, i) => {
-          const age = curve.min + ((curve.max - curve.min) * i) / 192;
-          return [x(age), y(curve.at(age))];
-        });
-        const d = basisPath(points);
+        const d = curve.d || basisPath(
+          Array.from({ length: 193 }, (_, i) => {
+            const age = curve.min + ((curve.max - curve.min) * i) / 192;
+            return [x(age), y(curve.at(age))];
+          }),
+        );
         g.append(
           el("path", {
             d,
@@ -1095,10 +1138,11 @@
             "stroke-dasharray": curve.sex === "male" ? "9 6" : "none",
             "data-comparison-sex": curve.sex,
             "data-comparison-curve": compareHormone,
+            "data-comparison-period": view,
           }),
         );
       }
-      if (canShowAgeMarker() && patientAgeYears >= 0 && patientAgeYears <= 1) {
+      if (canShowAgeMarker() && patientAgeYears >= minAge && patientAgeYears <= maxAge) {
         drawAgeMarker(g, {
           W,
           mobile,
@@ -1111,14 +1155,17 @@
         });
       }
       panel.querySelector(".vhl-axis-label").textContent =
-        h.name + " · poziom względny";
+        h ? h.name + " · przebieg zmian" : "Przebieg zmian";
       byId("scale-note").textContent =
-        "Każda krzywa względem własnego maksimum. Schemat porównuje przebieg zmian, nie stężenia.";
+        "Każda płeć we własnej skali. Porównujemy przebieg zmian, nie stężenia.";
       byId("chart-title").textContent =
-        h.name +
-        ": przebieg zmian u dziewczynek i chłopców w pierwszym roku życia";
+        (h ? h.name : "Hormony") + ": przebieg zmian u dziewczynek i chłopców " +
+        (puberty ? "w pokwitaniu" : "w pierwszym roku życia");
       byId("chart-desc").textContent =
-        "Wspólna oś wieku od urodzenia do 12 miesięcy. Linia ciągła: dziewczynki, przerywana: chłopcy. Każda krzywa ma własne maksimum na tej samej wysokości. Przecięcie linii nie oznacza równych stężeń. Dziewczynki: przeskalowane mediany od około 7. dnia. Chłopcy: poglądowy schemat. To nie są normy ani przebieg u konkretnego dziecka.";
+        (puberty
+          ? "Wspólna oś wieku od 8 do 20 lat, nie stadium Tannera. Krzywe są poglądowe; żeńska inhibina B odtwarza model źródłowy. "
+          : "Wspólna oś wieku od urodzenia do 12 miesięcy. Dziewczynki: przeskalowane mediany od około 7. dnia. Chłopcy: poglądowy schemat. ") +
+        "Linia ciągła: dziewczynki, przerywana: chłopcy. Każda krzywa ma własne maksimum w wyświetlanym okresie na tej samej wysokości. Przecięcie linii nie oznacza równych stężeń. To nie są normy ani przebieg u konkretnego dziecka.";
     }
     function updateInsight() {
       let title, copy;
@@ -1128,14 +1175,25 @@
         view === "life" &&
         activeStage === 3 &&
         selected.has("e2");
-      if (compare) {
+      if (compare ? !compareHormone : !selected.size) {
+        title = "Wybierz hormon";
+        copy = "Kliknij nazwę hormonu nad wykresem.";
+      } else if (compare && view === "puberty") {
+        const h = femaleHormones.find((h) => h.id === compareHormone);
+        title = h.name + " · pokwitanie";
+        copy = compareHormone === "amh"
+          ? "U chłopców AMH maleje w trakcie dojrzewania. U dziewczynek nie występuje podobny spadek."
+          : compareHormone === "inhb"
+            ? "Po wzroście krzywa dziewczynek opada, a u chłopców przechodzi w plateau."
+            : h.name + " wzrasta w pokwitaniu u obu płci. Początek i tempo dojrzewania są indywidualne.";
+      } else if (compare) {
         title =
           compareHormone === "amh"
             ? "AMH · różny przebieg po szczycie"
             : "Inhibina B · podobny czas szczytu";
         copy =
           compareHormone === "amh"
-            ? "U dziewczynek po szczycie około 4. miesiąca krzywa opada. U chłopców szczyt przypada nieco później, a poziom względny utrzymuje się wysoko."
+            ? "U dziewczynek po szczycie około 4. miesiąca krzywa opada. U chłopców szczyt przypada nieco później, a krzywa dłużej utrzymuje się wysoko."
             : "Obie krzywe osiągają szczyt w pobliżu 4. miesiąca, a następnie opadają. To podobny kierunek zmian, mimo różnych stężeń u obu płci.";
       } else {
         const h =
@@ -1282,7 +1340,40 @@
         target.append(p);
       };
       const links = [];
-      if (compare) {
+      if (compare && view === "puberty") {
+        paragraph(
+          "Porównanie poglądowe w wieku 8–20 lat. Oś przedstawia wiek, nie stadium Tannera; nie ustalamy stadium z wieku. Każda płeć ma własną skalę względem maksimum w tych latach. Przecięcia linii nie oznaczają równych stężeń, a przesunięcie krzywych nie określa dokładnej różnicy czasu dojrzewania.",
+        );
+        paragraph(
+          "Chłopcy: dotychczasowy autorski schemat czasu i kierunku zmian, nie pomiary ani model median. Zachowano pełne węzły i sposób wygładzania. Linie ciągłe oznaczają dziewczynki, przerywane chłopców; rodzaj linii w tym porównaniu nie określa pewności danych.",
+        );
+        links.push(
+          ["Salonia 2019 · schemat rozwoju", "https://doi.org/10.1038/s41572-019-0087-y"],
+          ["Madsen 2022 · pokwitanie", "https://doi.org/10.1210/clinem/dgac155"],
+        );
+        if (compareHormone === "lh" || compareHormone === "fsh") {
+          paragraph(
+            "Dziewczynki, LH/FSH: schemat na podstawie grup wieku w tabeli I Ljubicic 2020, AutoDELFIA. Tabela nie definiuje jednoznacznie rodzaju statystyki. Nie przedstawiamy go jako modelu median ani dokładnego wieku szczytu.",
+          );
+          links.push(["Ljubicic 2020 · LH i FSH", "https://doi.org/10.1093/humrep/deaa182"]);
+        } else if (compareHormone === "amh") {
+          paragraph(
+            "Dziewczynki, AMH: istniejący schemat oparty na medianach grup wieku Jopling 2018 i FDA K170524, Access AMH, osocze. Grupy pediatryczne są niewielkie i szpitalne; dorosłe wybrano według regularnych cykli i płodności. Łagodny przebieg nie jest dodatkowym modelem stężeń ani precyzyjnym wiekiem maksimum.",
+          );
+          links.push(
+            ["Jopling 2018 · AMH", "https://doi.org/10.1002/edm2.21"],
+            ["FDA · Access AMH", "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf"],
+          );
+        } else if (compareHormone === "inhb") {
+          paragraph(
+            "Dziewczynki, inhibina B: mediana z ryciny 1 Borelli-Kjær 2025, odtworzona orientacyjnie (około ±2 pg/mL), Gen II ELISA. Dorosła część populacji liczy 149 kobiet, bez standaryzacji fazy cyklu. Zachowano krzywą źródłową; porównanie z męskim schematem nie daje norm ani proporcji stężeń.",
+          );
+          links.push(
+            ["Borelli-Kjær 2025 · inhibina B", "https://doi.org/10.1210/clinem/dgae439"],
+            ["Kelsey 2016 · chłopcy", "https://doi.org/10.1371/journal.pone.0153843"],
+          );
+        }
+      } else if (compare) {
         paragraph(
           "Dziewczynki: mediany GAMLSS z suplementu Ljubicic 2022, od 0,02 do 1 roku, podzielone przez najwyższą medianę w tym przedziale. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; wybrano i przeskalowano dane.",
         );
@@ -1448,11 +1539,10 @@
         return;
       } else if (button.dataset.hormone) {
         const id = button.dataset.hormone;
-        if (compare) compareHormone = id;
+        if (compare) compareHormone = compareHormone === id ? null : id;
         else {
           if (selected.has(id)) selected.delete(id);
           else selected.add(id);
-          if (!selected.size) selected.add(analyteHormones[currentAnalyte]);
           insightMode = selected.size === 1 ? "hormone" : "stage";
         }
       } else if (button.dataset.stage !== undefined) {
@@ -1465,20 +1555,22 @@
         updateInsight();
         return;
       } else if (button.dataset.view) {
+        view = button.dataset.view;
         if (compare) {
-          compare = false;
+          if (view === "life") compare = false;
+          else if (!comparisonHormones().includes(compareHormone))
+            compareHormone = null;
           rebuildControls();
         }
-        view = button.dataset.view;
         insightMode = "stage";
       } else if (button === toggle) {
         if (!compare) {
           const candidate = [analyteHormones[currentAnalyte], ...selected].find(
-            (id) => comparisonHormones.has(id),
+            (id) => comparisonHormones().includes(id),
           );
           if (!candidate) return;
           compareHormone = candidate;
-          view = "mini";
+          if (view !== "puberty") view = "mini";
         }
         compare = !compare;
         rebuildControls();

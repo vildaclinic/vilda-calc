@@ -40,8 +40,19 @@ Poza osią wieku znacznik znika zamiast przyklejać się do końca.
 - Zmiana analitu lub płci przywraca pojedynczy właściwy hormon.
   Aktualizacja wyniku, wieku albo rozmiaru ekranu przy tym samym analicie
   nie usuwa ręcznie dołączonych porównań.
-- Ostatniego hormonu nie można odznaczyć do pustego widoku. Powrót
-  przyciskiem „Tylko…” wybiera bieżący analit.
+- Każdy hormon, także ostatni i domyślnie wybrany, można odznaczyć.
+  Pusty wybór ukrywa krzywe i pokazuje „Wybierz hormon”; nie przywraca
+  automatycznie bieżącego analitu. Powrót przyciskiem „Tylko…” wybiera
+  bieżący analit. Ta sama możliwość odznaczenia dotyczy porównania płci.
+- Nagłówek osi „Przebieg zmian” zastępuje techniczne „Poziom względny”.
+  Nie zmienia znaczenia wysokości linii; zasada osobnych skal pozostaje
+  widoczna pod wykresem.
+- „Porównaj płcie” działa w minipuberty dla AMH i inhibiny B, a w pokwitaniu
+  dla LH, FSH, AMH i inhibiny B. Przejście między tymi okresami zachowuje
+  tryb porównania. Gdy wybrany hormon nie ma porównania w nowym okresie,
+  znika wybór i użytkownik może wskazać hormon z dostępnego zestawu.
+  Widok „Całe życie” kończy porównanie płci. Nie dopisujemy żeńskiego
+  testosteronu lub INSL3 ani męskiego estradiolu bez odpowiednich danych.
 - Kliknięcie etapu przesuwa tę samą ramkę płynnie od aktualnego położenia;
   `prefers-reduced-motion` wyłącza ruch. Brak osobnego przycisku zatrzymania.
 - Wiek i płeć pochodzą z istniejącego kontekstu aplikacji; bez kolejnego
@@ -82,12 +93,34 @@ minipuberty zachowuje wszystkie 99 źródłowych punktów. Wartość
 `qualitativeTail.displayFloor` jest wyłącznie odległością od osi: niskie
 lub niewykrywalne nie znaczy stężenie równe zero.
 
-Wyjątek: osobny widok **Porównaj płcie** porównuje kształt AMH albo inhibiny B
-w pierwszym roku. Każda płeć używa własnego maksimum tego okresu, z widocznym
-podpisem tej zasady. Wymaga osobnych `comparisonValues`; zwykłe `miniValues`
-nadal zachowuje skalę całego życia. Linia dziewczynek odtwarza mediany,
-linia chłopców jest autorskim schematem. Nie wyprowadzać z porównania
-ilorazów stężeń ani precyzyjnej różnicy czasu szczytów.
+Wyjątek: osobny widok **Porównaj płcie** używa własnego maksimum każdej płci
+w wybranym okresie, z widocznym podpisem tej zasady. Porównuje kształt
+i kierunek zmian, nie bezwzględne stężenia. Równa wysokość i przecięcie
+linii nie oznaczają równych stężeń. Nie wyprowadzać z porównania ilorazów
+stężeń ani precyzyjnej różnicy czasu szczytów.
+
+- **Minipuberty:** AMH albo inhibina B w pierwszym roku. Osobne
+  `comparisonValues` nie zmieniają zwykłych `miniValues`, które nadal
+  zachowują skalę całego życia. Linia dziewczynek odtwarza mediany
+  Ljubicic 2022, linia chłopców pozostaje autorskim schematem. Dotychczasowa
+  geometria porównania i ograniczenie do dzieci donoszonych nie zmieniają się.
+- **Pokwitanie:** LH, FSH, AMH albo inhibina B na wspólnej osi wieku
+  chronologicznego 8–20 lat. Maksimum wyznacza się osobno dla każdej płci
+  w tym przedziale, bez przesuwania krzywych w czasie. To umowny wycinek
+  wykresu, nie zakres prawidłowego początku lub zakończenia pokwitania.
+  Wiek nie zastępuje stadium Tannera. Zachowujemy istniejącą interpolację
+  pełnych tablic: męskie PCHIP i 97 próbek z B-spline oraz żeńskie
+  `displaySpline`/`segmentPath`. Nie obliczamy nowego splajnu z samych
+  węzłów 8–20 lat i nie zmieniamy węzłów, kształtu ani zwykłych widoków.
+
+Pokwitaniowe porównanie dziewczynek wykorzystuje istniejące schematy
+LH/FSH (Ljubicic 2020) i AMH (Jopling 2018 oraz FDA K170524), a dla
+inhibiny B odtworzony model 0 SD Borelli-Kjær 2025. Nie nazywamy wszystkich
+tych przebiegów medianami, a niemowlęce mediany Ljubicic 2022 nie są ich
+źródłem. Męskie linie nadal są autorskim schematem wspartym źródłami
+opisanymi niżej. Porównanie różnych populacji i metod służy zobrazowaniu
+kierunku zmian; nie ocenia wyniku konkretnego pacjenta ani nie ustala
+dokładnego opóźnienia jednej płci względem drugiej.
 
 ## Źródła żeńskie
 
