@@ -55,6 +55,35 @@ tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
 
+Uzupełnienia inhibiny B opisuje [INHIBIN_EVIDENCE.md](INHIBIN_EVIDENCE.md):
+dwie wizyty minipuberty Kuiri-Hänninen, stadia G Crofton oraz średnie grup
+Baccarelli są osobnymi prezentacjami. Nie dopisują węzłów do powyższych
+median wieku. Wyjątkiem od medianowego punktu jest jawnie oznaczone
+porównanie ze **średnią grupy** dla mężczyzn 80–101 lat, w osobnym wykresie
+grupowym i z własnymi warunkami kwalifikacji. Nie przedłuża ono osi głównej.
+
+Gdy męska inhibina B ma dopasowany punkt w aktualnym widoku, prezentujemy
+wszystkie zgodne z kontekstem odcinki Busch, Kelsey i Borelli. Każda
+publikacja zachowuje osobną ścieżkę i własny model mediany.
+Całe profile wyznaczają wspólną skalę, a schemat pozostaje tylko poza ich
+łącznym pokryciem. Warunki materiału, metody i donoszenia nadal obowiązują;
+nieznane donoszenie nie uprawnia do dopasowania profilu Busch. Przy wieku
+pacjenta poza zbliżeniem zachowujemy dotychczasowy widok poglądowy bez
+punktu, niezależnie od dodatkowego panelu obserwacji grupowych.
+
+Po wyraźnej decyzji właściciela zachowujemy wizualną ciągłość inhibiny B:
+małe pasy na stykach źródeł i schematu mają przerywane połączenia poglądowe.
+To geometria ekranu, nie nowa funkcja stężenia względem wieku. W pasie
+przejścia ukrywamy tylko kreskę, bez zmiany wartości źródłowych. Czerwony
+punkt oraz jego osobny znacznik mediany nadal korzystają z właściwego
+profilu, również gdy wiek wypada w pasie połączenia. Nie wyznaczamy z
+takiego łącznika mediany, normy, wartości odniesienia ani klasyfikacji.
+Poglądowy ogon po końcu Borelli jest graficznie zakotwiczony do końca
+tego źródła, z zachowaniem względnego kierunku dalszych zmian. Nie jest
+ekstrapolacją stężeń: zapobiega jedynie sztucznemu skokowi między skalą
+liczbową a wcześniejszym schematem. Porównanie liczbowe starszego pacjenta
+pozostaje w osobnym wykresie średnich grup Baccarelli.
+
 ## Transformacje, źródła i granice
 
 Madsen: parametry dotyczą `X = ln(stężenie w jednostce SI × 1e6)`.

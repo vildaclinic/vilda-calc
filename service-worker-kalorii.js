@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.219';
+const SW_VERSION = '1.1.220';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1770,9 +1770,11 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan_data.js?v=4',
   '/vilda_hormone_lifespan_data.js?v=5',
   '/vilda_hormone_lifespan_data.js?v=6',
+  '/vilda_hormone_lifespan_data.js?v=7',
   '/vilda_hormone_lifespan_reference.js?v=1',
   '/vilda_hormone_lifespan_reference.js?v=2',
   '/vilda_hormone_lifespan_reference.js?v=3',
+  '/vilda_hormone_lifespan_observations.js?v=1',
   '/vilda_hormone_lifespan.js?v=1',
   '/vilda_hormone_lifespan.js?v=2',
   '/vilda_hormone_lifespan.js?v=3',
@@ -1782,10 +1784,12 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan.js?v=7',
   '/vilda_hormone_lifespan.js?v=8',
   '/vilda_hormone_lifespan.js?v=9',
+  '/vilda_hormone_lifespan.js?v=10',
   '/vilda_hormone_lifespan.css?v=1',
   '/vilda_hormone_lifespan.css?v=2',
   '/vilda_hormone_lifespan.css?v=3',
   '/vilda_hormone_lifespan.css?v=4',
+  '/vilda_hormone_lifespan.css?v=5',
   '/cukrzyca.js',
   '/cukrzyca.js?v=29',
   '/cukrzyca.js?v=30',

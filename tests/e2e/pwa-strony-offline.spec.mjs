@@ -197,6 +197,24 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         await expect(amh).toHaveAttribute('data-profile', 'wang2020-male-amh-age-5');
         await expect.poll(async () => Number(await amh.getAttribute('data-median'))).toBeCloseTo(99.18 / .1401, 6);
         await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('mediana grupy 5–<6 lat');
+        // The new observation renderer is a separate script. Verify its
+        // actual numeric output after offline reload, not just its global.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 0, ageMonths: 3 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('Inhibina B');
+        await page.locator('#labSubstanceDropdown [data-id="inhibin_b"]').click();
+        await page.locator('#labValue').fill('250');
+        await wykres.locator('[data-view="mini"]').click();
+        const obserwacje = wykres.locator('[data-lifespan="observations"]');
+        await expect(obserwacje.locator('[data-inhibin-observation="mini"]')).toBeVisible();
+        await expect(obserwacje.locator('[data-observation-series]')).toHaveCount(2);
+        await expect(obserwacje.locator('[data-observation-point]')).toHaveCount(4);
+        await expect(obserwacje.locator('[data-observation-series="term-male"] [data-observation-point="month3"]'))
+          .toHaveAttribute('data-value', '335.5');
+        await expect(obserwacje.locator('[data-observation-series="preterm-male"] [data-observation-point="day7"]'))
+          .toHaveAttribute('data-value', '201.1');
       }
     }
 

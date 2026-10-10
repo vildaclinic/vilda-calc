@@ -48,6 +48,11 @@
 <div class="vhl-insight" aria-live="polite"><span class="vhl-insight-symbol" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16c4 0 3-9 7-9s4 12 8 12h3M3 19c4 0 7-7 10-7s5 3 8 3"/></svg></span><div><h2 data-lifespan="insight-title">Hormony w ciągu życia</h2><p data-lifespan="insight-text">Wybierz etap, aby przyjrzeć się przebiegowi zmian.</p><div data-lifespan="cycle-panel" class="vhl-cycle-panel" hidden><svg data-lifespan="cycle-chart" role="img" aria-labelledby="cycle-title cycle-desc"><title data-lifespan="cycle-title">Poglądowy przebieg estradiolu w cyklu miesiączkowym</title><desc data-lifespan="cycle-desc">Oś pozioma przedstawia dni przykładowego cyklu 28-dniowego, a pionowa poziom względny. Widoczny jest większy szczyt okołoowulacyjny i mniejszy w fazie lutealnej. To schemat na podstawie median faz, nie pomiary poszczególnych dni ani przewidywanie owulacji pacjentki.</desc></svg><p class="vhl-cycle-note">Przykładowy cykl 28-dniowy. Długość cyklu i czas owulacji są zmienne.</p></div></div></div>
 <details class="vhl-sources"><summary>O wykresie i źródła</summary><div class="vhl-source-copy" data-lifespan="source-copy"></div></details>
 `;
+    const observationsHost = document.createElement("div");
+    observationsHost.className = "vhl-observations";
+    observationsHost.dataset.lifespan = "observations";
+    observationsHost.hidden = true;
+    panel.querySelector(".vhl-insight > div").append(observationsHost);
     const uid = "vilda-lifespan-" + ++instanceSequence + "-";
     const byId = (name) =>
       panel.querySelector('[data-lifespan="' + name + '"]');
@@ -193,7 +198,8 @@
       identityKey;
     let patientContext = null,
       patientPoint = null,
-      renderedPoint = null;
+      renderedPoint = null,
+      renderedObservation = null;
     let view = "life",
       compare = false,
       compareHormone = null,
@@ -692,8 +698,8 @@
       byId("scale-note").removeAttribute("data-current-source");
       if (compare) renderComparison();
       else renderSchematic();
-      explainUnavailablePoint();
       updateInsight();
+      explainUnavailablePoint();
       updateSources();
     }
     function drawAgeMarker(
@@ -767,7 +773,23 @@
       if (!engine || patientPoint?.status !== "ready" ||
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id))) return null;
-      const profiles = [patientPoint.profile];
+      let profiles = [patientPoint.profile];
+      if (!compare && id === "inhb" && sex === "male") {
+        // Each source keeps its own path and population. A result using Kelsey
+        // must not hide the already available Busch and Borelli age segments.
+        // Select against each source's age, retaining specimen/method/birth gates.
+        profiles = data.patientPointData.profiles.filter((profile) => {
+          if (profile.analyte !== id || profile.sex !== sex ||
+              profile.unit !== patientPoint.profile.unit) return false;
+          const candidate = engine.selectProfile(data.patientPointData, {
+            ...patientContext,
+            ageYears: profile.minAge,
+            ageUpperYears: profile.minAge,
+            ageUpperInclusive: true,
+          });
+          return candidate.status === "ready" && candidate.profile.id === profile.id;
+        });
+      }
       if (compare) {
         // This view compares ages, not matched Tanner stages. The other sex
         // has no patient observation, so do not invent its gonadal context.
@@ -823,6 +845,147 @@
             "data-comparison-sex": curve.profile.sex, "data-comparison-period": view } : {}),
         }));
       }
+    }
+    function connectInhibinSegments(group, model, { x, top, bottom, mobile }) {
+      model.illustrativeBridges = 0;
+      if (compare || sex !== "male" || model.id !== "inhb") return;
+      const background = group.querySelector('path[data-reference-background="inhb"]');
+      if (!background) return;
+      const plotLeft = x(model.minAge), plotRight = x(model.maxAge);
+      const geometry = (path, id, profile) => {
+        if (!path) return null;
+        let length;
+        try { length = path.getTotalLength(); } catch { return null; }
+        if (!Number.isFinite(length) || length <= 0) return null;
+        const first = path.getPointAtLength(0), last = path.getPointAtLength(length);
+        if (![first.x, first.y, last.x, last.y].every(Number.isFinite) || last.x <= first.x) return null;
+        return { path, id, profile, length, from: Math.max(plotLeft, first.x),
+          to: Math.min(plotRight, last.x) };
+      };
+      const pointAtX = (part, targetX) => {
+        let low = 0, high = part.length;
+        for (let step = 0; step < 26; step++) {
+          const middle = (low + high) / 2;
+          if (part.path.getPointAtLength(middle).x < targetX) low = middle;
+          else high = middle;
+        }
+        const distance = (low + high) / 2;
+        const point = part.path.getPointAtLength(distance);
+        const before = part.path.getPointAtLength(Math.max(0, distance - 0.15));
+        const after = part.path.getPointAtLength(Math.min(part.length, distance + 0.15));
+        const slope = after.x > before.x ? (after.y - before.y) / (after.x - before.x) : 0;
+        return { x: point.x, y: point.y, slope: Number.isFinite(slope) ? slope : 0 };
+      };
+      const schematic = geometry(background, "schematic");
+      if (!schematic) return;
+      const sources = model.curves.map(({ profile }) => geometry(
+        [...group.querySelectorAll('path[data-reference-line="inhb"]')]
+          .find((path) => path.dataset.profile === profile.id), profile.id, profile,
+      )).filter((part) => part && part.to > part.from)
+        .sort((a, b) => a.from - b.from);
+      if (!sources.length) return;
+      const pieces = [];
+      const addSchematic = (from, to) => {
+        const part = { ...schematic, from: Math.max(from, schematic.from),
+          to: Math.min(to, schematic.to) };
+        if (part.to - part.from > 0.01) pieces.push(part);
+      };
+      if (sources[0].profile.minAge > model.minAge) addSchematic(plotLeft, sources[0].from);
+      for (const [index, source] of sources.entries()) {
+        const previous = sources[index - 1];
+        // A tiny gap caused by an exclusive source endpoint belongs to the
+        // visual bridge. Only a genuine missing age interval uses the schematic.
+        if (previous && source.profile.minAge > previous.profile.maxAge) {
+          addSchematic(previous.to, source.from);
+        }
+        pieces.push({ ...source });
+      }
+      const last = sources[sources.length - 1];
+      if (last.profile.maxAge < model.maxAge) {
+        let tail = null;
+        if (last.id === "borelli2025-male-inhb" && schematic.to - last.to > 0.01) {
+          const anchor = pointAtX(last, last.to);
+          const original = pointAtX(schematic, anchor.x);
+          const originalHeight = bottom - original.y;
+          const scale = originalHeight > 0 ? (bottom - anchor.y) / originalHeight : NaN;
+          // Only the illustrative senior tail is anchored to its adjoining
+          // source. Retain its direction instead of implying a new rise at 80.
+          if (Number.isFinite(scale) && scale >= 0 && scale <= 1) {
+            const points = Array.from({ length: 33 }, (_, index) => {
+              if (index === 0) return anchor;
+              const point = pointAtX(schematic, anchor.x + (schematic.to - anchor.x) * index / 32);
+              return { x: point.x, y: bottom - (bottom - point.y) * scale };
+            });
+            const path = el("path", {
+              d: points.map((point, index) => `${index ? "L" : "M"}${point.x},${point.y}`).join(" "),
+              fill: "none", stroke: background.getAttribute("stroke"),
+              "stroke-width": mobile ? 3.2 : 3.7, "stroke-linecap": "round",
+              "stroke-linejoin": "round", "stroke-dasharray": "5 5", opacity: 0.65,
+              "data-reference-background": "inhb", "data-schematic-tail": "inhb",
+            });
+            group.append(path);
+            tail = geometry(path, "schematic-tail");
+            if (!tail || tail.to <= tail.from) { path.remove(); tail = null; }
+          }
+        }
+        if (tail) pieces.push(tail);
+        else addSchematic(last.to, plotRight);
+      }
+      for (const part of pieces) {
+        part.visibleFrom = part.from;
+        part.visibleTo = part.to;
+      }
+      // Pure display geometry: endpoints come from the actual SVG strokes.
+      // Short tangent handles keep the bridge smooth without an invented peak.
+      const bridgePath = (left, right) => {
+        const span = right.x - left.x;
+        if (span <= 0 || ![left.x, left.y, right.x, right.y].every(Number.isFinite)) return null;
+        const lower = Math.max(top, Math.min(left.y, right.y) - 2);
+        const upper = Math.min(bottom, Math.max(left.y, right.y) + 2);
+        const handle = (point, direction) => {
+          const delta = point.slope * direction;
+          const room = delta > 0 ? upper - point.y : point.y - lower;
+          const width = Math.max(0, Math.min(span / 3, delta ? room / Math.abs(delta) : span / 3));
+          return [point.x + direction * width, point.y + delta * width];
+        };
+        const first = handle(left, 1), second = handle(right, -1);
+        return `M${left.x},${left.y} C${first.join(",")} ${second.join(",")} ${right.x},${right.y}`;
+      };
+      const bridges = [];
+      for (let index = 1; index < pieces.length; index++) {
+        const left = pieces[index - 1], right = pieces[index];
+        const width = mobile ? 8 : 12;
+        const leftPoint = pointAtX(left, left.to - Math.min(width, (left.to - left.from) / 4));
+        const rightPoint = pointAtX(right, right.from + Math.min(width, (right.to - right.from) / 4));
+        const d = bridgePath(leftPoint, rightPoint);
+        if (!d) continue;
+        left.visibleTo = leftPoint.x;
+        right.visibleFrom = rightPoint.x;
+        bridges.push({ d, from: left.id, to: right.id });
+      }
+      if (!bridges.length) return;
+      const defs = el("defs");
+      const paths = [...new Set([background, ...pieces.map((part) => part.path)])];
+      for (const [index, path] of paths.entries()) {
+        const id = `${uid}inhibin-piece-${index}`;
+        const clip = el("clipPath", { id });
+        for (const part of pieces.filter((piece) => piece.path === path)) {
+          if (part.visibleTo <= part.visibleFrom) continue;
+          clip.append(el("rect", { x: part.visibleFrom, y: top - 3,
+            width: part.visibleTo - part.visibleFrom, height: bottom - top + 6 }));
+        }
+        defs.append(clip);
+        path.setAttribute("clip-path", `url(#${id})`);
+      }
+      group.append(defs);
+      for (const bridge of bridges) group.append(el("path", {
+        d: bridge.d, fill: "none", stroke: sources[0].path.getAttribute("stroke"),
+        "stroke-width": mobile ? 3.2 : 3.7, "stroke-linecap": "round",
+        "stroke-linejoin": "round", "stroke-dasharray": "5 5", opacity: 0.65,
+        "data-illustrative-bridge": "inhb", "data-from-source": bridge.from,
+        "data-to-source": bridge.to,
+      }));
+      model.illustrativeBridges = bridges.length;
     }
     function drawPatientDot(group, model, { W, mobile, left, right, top, bottom, px, y }) {
       const py = y(model.value / model.divisor / model.ceiling);
@@ -896,16 +1059,21 @@
         ? ` grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "";
-      byId("scale-note").textContent = `Kropka: wynik. Linia: mediana${groupLabel}, nie granica normy.` +
+      byId("scale-note").textContent = (model.illustrativeBridges
+        ? "Kropka: wynik. Linia ciągła: mediana; przerywane połączenia są poglądowe."
+        : `Kropka: wynik. Linia: mediana${groupLabel}, nie granica normy.`) +
         (compare ? " Obie płcie we wspólnej skali stężeń." : " Pozostałe linie są poglądowe.") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
       byId("scale-note").setAttribute("data-current-source", model.profile.id);
       byId("chart-desc").textContent = model.a11y +
         " Wynik i mediana używają tej samej skali stężeń. " +
+        (model.illustrativeBridges
+          ? "Przerywane połączenia zapewniają ciągłość wizualną; nie wyznaczają median ani punktu pacjenta. " : "") +
         (compare ? "Obie płcie są pokazane w tej samej jednostce i skali; źródła mogą stosować różne metody oznaczenia."
           : "Pozostałe hormony i przerywane odcinki zachowują własne skale poglądowe. Nie porównujemy liczbowo wysokości różnych hormonów.");
     }
     function explainUnavailablePoint() {
+      if (renderedObservation?.patientPoint?.status === "ready") return;
       const measurement = patientContext?.measurement;
       const id = analyteHormones[currentAnalyte];
       const [minAge, maxAge] = visibleAgeDomain();
@@ -1040,11 +1208,23 @@
           ]
         : [];
       if (dotModel) {
-        const from = Math.max(dotModel.minAge, dotModel.profile.minAge);
-        const to = Math.min(dotModel.maxAge, dotModel.profile.maxAge);
         const clip = el("clipPath", { id: uid + "patient-source-outside" });
-        clip.append(el("rect", { x: left, y: top, width: Math.max(0, x(from) - left), height: ph }));
-        clip.append(el("rect", { x: x(to), y: top, width: Math.max(0, W - right - x(to)), height: ph }));
+        // Keep the schematic only in the complement of all displayed sources.
+        // Adjacent source domains never become a pair of interpolation nodes.
+        const covered = dotModel.curves.map(({ profile }) => [
+          Math.max(dotModel.minAge, profile.minAge),
+          Math.min(dotModel.maxAge, profile.maxAge),
+        ]).filter(([from, to]) => to > from).sort((a, b) => a[0] - b[0]);
+        let cursor = dotModel.minAge;
+        for (const [from, to] of covered) {
+          if (from > cursor) clip.append(el("rect", {
+            x: x(cursor), y: top, width: x(from) - x(cursor), height: ph,
+          }));
+          cursor = Math.max(cursor, to);
+        }
+        if (cursor < dotModel.maxAge) clip.append(el("rect", {
+          x: x(cursor), y: top, width: x(dotModel.maxAge) - x(cursor), height: ph,
+        }));
         const defs = el("defs");
         defs.append(clip);
         g.append(defs);
@@ -1096,6 +1276,7 @@
         }
       }
       if (dotModel) drawReferenceCurves(g, dotModel, { x, y, mobile });
+      if (dotModel) connectInhibinSegments(g, dotModel, { x, top, bottom, mobile });
       const lifeTicks =
         sex === "female"
           ? [
@@ -1470,11 +1651,31 @@
       }
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
-      panel
-        .querySelector(".vhl-insight")
-        .classList.toggle("vhl-cycle-open", showCycle);
+      const observations = opts.observations || root.VildaHormoneLifespanObservations;
+      // Measure the inset in its final, full-width layout rather than beside
+      // the insight icon. Restore the compact layout if nothing is rendered.
+      const mayShowObservations = observations && data.inhibinEvidence &&
+        (compare ? compareHormone === "inhb" : selected.has("inhb"));
+      panel.querySelector(".vhl-insight")
+        .classList.toggle("vhl-cycle-open", showCycle || Boolean(mayShowObservations));
       byId("cycle-panel").hidden = !showCycle;
       if (showCycle) renderCycle();
+      const stage = activeStage == null ? null : stages()[activeStage];
+      const activeStageKind = stage?.min === 0 ? "mini"
+        : stage?.min === 10 && stage?.max === 20 ? "puberty"
+        : sex === "male" && (stage?.min === 60 ||
+          (activeStage == null && patientAgeYears > 90)) ? "senior" : null;
+      renderedObservation = observations && data.inhibinEvidence
+        ? observations.render(observationsHost, data.inhibinEvidence, {
+          ...patientContext, view, sex, preterm, compare, selected: [...selected],
+          compareHormone, activeStageKind,
+        }) : null;
+      if (!renderedObservation) {
+        observationsHost.hidden = true;
+        observationsHost.replaceChildren();
+      }
+      panel.querySelector(".vhl-insight")
+        .classList.toggle("vhl-cycle-open", showCycle || Boolean(renderedObservation));
     }
     function renderCycle() {
       const chart = byId("cycle-chart"),
@@ -1578,7 +1779,7 @@
     }
     function updateSources() {
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
-        renderedPoint?.curves.map((curve) => curve.profile.id)]);
+        renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy");
@@ -1597,7 +1798,7 @@
         paragraph(`Kropka przedstawia wynik, a linia ${medianBasis} — nie granicę normy ani indywidualny cel. Kolor kropki nie jest klasyfikacją wyniku. Zakresy odniesienia i ocena kliniczna pozostają w osobnej części przelicznika.`);
         paragraph(compare
           ? "Obie linie i wynik mają wspólną skalę stężeń. Źródła dotyczą różnych populacji i metod; wykres nie potwierdza zgodności metody próbki z publikacją. Nie wyznacza proporcji hormonalnych ani stadium pokwitania."
-          : "Wynik i mediana korzystają z jednej skali, stałej przy zmianie widoku czasu. Poza zakresem źródła przygaszona przerywana linia pozostaje schematem, bez stężeń i bez dopisywania brakujących danych. Pozostałe hormony zachowują własne skale poglądowe.");
+          : "Wynik i mediany korzystają z jednej skali, stałej przy zmianie widoku czasu. Każda publikacja zachowuje własne wartości. Przerywane połączenia między odcinkami są wyłącznie poglądowe: nie służą do wyliczania mediany ani punktu pacjenta. Poza dostępnymi profilami przerywana linia pozostaje schematem. Pozostałe hormony zachowują własne skale poglądowe.");
         for (const { profile } of renderedPoint.curves) {
           const description = [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
             .filter((item) => typeof item === "string" && item.trim()).join(" · ");
@@ -1781,6 +1982,12 @@
           ["EMAS 2022 · INSL3", "https://doi.org/10.1111/andr.13220"],
         );
       }
+      if (renderedObservation?.source) {
+        const source = renderedObservation.source;
+        paragraph([source.label, source.method, source.specimen].filter(Boolean).join(" · ") + ".");
+        if (Array.isArray(source.limitations)) source.limitations.forEach(paragraph);
+        if (source.url) links.push([source.label, source.url]);
+      }
       const group = document.createElement("div");
       group.className = "vhl-source-links";
       for (const [label, url] of links) {
@@ -1820,6 +2027,7 @@
           moveSectorHighlight();
         }
         updateInsight();
+        updateSources();
         return;
       } else if (button.dataset.view) {
         view = button.dataset.view;
@@ -1884,7 +2092,9 @@
         activeStage =
           null;
       patientAgeLabel = "";
-      patientContext = patientPoint = renderedPoint = null;
+      patientContext = patientPoint = renderedPoint = renderedObservation = null;
+      observationsHost.hidden = true;
+      observationsHost.replaceChildren();
       preterm = "unknown";
       sourceStatus = "unavailable";
       view = "life";

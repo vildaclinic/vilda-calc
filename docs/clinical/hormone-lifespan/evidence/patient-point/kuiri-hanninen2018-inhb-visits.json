@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "verifiedDate": "2026-10-10",
+  "analyte": "inhb",
+  "notClinicalReference": true,
+  "extraction": "Exact published table values, visually verified against the user-supplied full text; no figure digitization.",
+  "source": {
+    "id": "kuiri-hanninen2018",
+    "label": "Kuiri-Hänninen 2018",
+    "title": "Sexual Dimorphism in Postnatal Gonadotropin Levels in Infancy Reflects Diverse Maturation of the Ovarian and Testicular Hormone Synthesis",
+    "doi": "10.1111/cen.13716",
+    "url": "https://doi.org/10.1111/cen.13716",
+    "table": 2,
+    "pdfPage": 16,
+    "version": "User-supplied accepted manuscript, 18 PDF pages",
+    "sha256": "ad935a98dce368bdbe40aa267ae2b4ee3e3a0be492e86b9e964b2568583e7f8f",
+    "method": "Beckman Coulter ELISA; generacja zestawu niepodana",
+    "specimen": "serum",
+    "statistic": "median",
+    "unit": "pg/mL",
+    "loq": 5.2,
+    "participants": 125,
+    "population": "Niemowlęta obu płci, donoszone i wcześniaki; Kuopio, Finlandia. Kohorta obejmuje choroby okresu noworodkowego.",
+    "limitations": [
+      "Inhibinę B w surowicy oznaczono tylko w 7. dniu i 3. miesiącu życia. Pozostałe miesięczne oznaczenia hormonów dotyczą moczu.",
+      "Wiek chronologiczny; nie jest to wiek skorygowany ani PMA. Nie podano okien wizyt ani dokładnej liczby dni w wizycie M3.",
+      "IQR obejmuje środkowe 50% wyników i nie jest zakresem referencyjnym.",
+      "Nie podano generacji zestawu ELISA ani zasad zastępowania wyników poniżej LOQ.",
+      "Dolny kwartyl wcześniaczek w D7 (5,1 pg/mL) jest poniżej LOQ 5,2 pg/mL.",
+      "Dwa terminy nie opisują miesięcznego przebiegu, czasu szczytu ani spadku po trzecim miesiącu. Nie służą do ustawiania punktu pacjenta."
+    ]
+  },
+  "ageBasis": "chronological",
+  "birthGroupDefinitions": {
+    "term": "gestational age ≥37 weeks",
+    "preterm": "gestational age <37 weeks"
+  },
+  "visits": [
+    {
+      "id": "day7",
+      "label": "7. dzień",
+      "nominalAgeDays": 7
+    },
+    {
+      "id": "month3",
+      "label": "3. miesiąc",
+      "nominalAgeMonths": 3
+    }
+  ],
+  "cohorts": [
+    {
+      "id": "term-male",
+      "sex": "male",
+      "birthGroup": "term",
+      "n": 29,
+      "gestationalAgeWeeks": {
+        "median": 39.8,
+        "min": 37.1,
+        "max": 42.1
+      },
+      "points": [
+        {
+          "visitId": "day7",
+          "median": 157.0,
+          "iqr": [
+            129.5,
+            185.6
+          ],
+          "n": 28,
+          "belowLoq": 0,
+          "iqrLowerBelowLoq": false
+        },
+        {
+          "visitId": "month3",
+          "median": 335.5,
+          "iqr": [
+            282.7,
+            400.5
+          ],
+          "n": 29,
+          "belowLoq": 0,
+          "iqrLowerBelowLoq": false
+        }
+      ]
+    },
+    {
+      "id": "term-female",
+      "sex": "female",
+      "birthGroup": "term",
+      "n": 29,
+      "gestationalAgeWeeks": {
+        "median": 39.5,
+        "min": 37.0,
+        "max": 41.7
+      },
+      "points": [
+        {
+          "visitId": "day7",
+          "median": 33.1,
+          "iqr": [
+            17.3,
+            59.6
+          ],
+          "n": 27,
+          "belowLoq": 1,
+          "iqrLowerBelowLoq": false
+        },
+        {
+          "visitId": "month3",
+          "median": 92.0,
+          "iqr": [
+            62.7,
+            124.0
+          ],
+          "n": 27,
+          "belowLoq": 0,
+          "iqrLowerBelowLoq": false
+        }
+      ]
+    },
+    {
+      "id": "preterm-male",
+      "sex": "male",
+      "birthGroup": "preterm",
+      "n": 33,
+      "gestationalAgeWeeks": {
+        "median": 31.8,
+        "min": 24.7,
+        "max": 36.6
+      },
+      "points": [
+        {
+          "visitId": "day7",
+          "median": 201.1,
+          "iqr": [
+            155.1,
+            254.3
+          ],
+          "n": 28,
+          "belowLoq": 0,
+          "iqrLowerBelowLoq": false
+        },
+        {
+          "visitId": "month3",
+          "median": 297.1,
+          "iqr": [
+            260.2,
+            361.5
+          ],
+          "n": 31,
+          "belowLoq": 0,
+          "iqrLowerBelowLoq": false
+        }
+      ]
+    },
+    {
+      "id": "preterm-female",
+      "sex": "female",
+      "birthGroup": "preterm",
+      "n": 34,
+      "gestationalAgeWeeks": {
+        "median": 32.9,
+        "min": 24.7,
+        "max": 36.7
+      },
+      "points": [
+        {
+          "visitId": "day7",
+          "median": 13.8,
+          "iqr": [
+            5.1,
+            23.5
+          ],
+          "n": 27,
+          "belowLoq": 9,
+          "iqrLowerBelowLoq": true
+        },
+        {
+          "visitId": "month3",
+          "median": 131.7,
+          "iqr": [
+            55.5,
+            157.8
+          ],
+          "n": 30,
+          "belowLoq": 1,
+          "iqrLowerBelowLoq": false
+        }
+      ]
+    }
+  ],
+  "displayPolicy": {
+    "type": "observed-visit-group-medians",
+    "connectors": "Illustration only; no interpolation, extrapolation or arbitrary-age patient point.",
+    "dispersion": "IQR; not clinical reference limits."
+  }
+}

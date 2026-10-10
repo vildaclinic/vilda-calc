@@ -16,6 +16,15 @@ granice zastosowania i przypadki kontrolne opisano w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Nie wolno nadać
 dotychczasowemu schematowi znaczenia mediany przez samo dodanie punktu.
 
+Po analizie czterech dostarczonych pełnych tekstów właściciel polecił wdrożenie
+uzupełnień inhibiny B: dwóch wizyt minipuberty według płci i donoszenia,
+median G1–G5 oraz średnich grup wieku mężczyzn do 101 lat. Osobne małe
+wykresy grupowe zachowują rodzaj statystyki i nie zastępują głównych modeli
+wieku. Zakres i ograniczenia: [INHIBIN_EVIDENCE.md](hormone-lifespan/INHIBIN_EVIDENCE.md).
+Nie rozszerza to norm laboratoryjnych ani nie zatwierdza danych jako
+zwalidowanych klinicznie. Publikacji De Schepper nie aktywowano z powodu
+niespójności tekstu i tabel.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -46,6 +55,11 @@ nie górną granicę normy i nie średnią arytmetyczną. Powyżej albo poniżej
 linii nie oznacza poza zakresem referencyjnym. Pozostają dotychczasowe,
 odrębne osie interpretacji badania.
 
+Wyjątek jest jawny: osobny wykres starszych grup Baccarelli pokazuje
+średnie arytmetyczne i tak je nazywa. Wynik w wieku 80–101 lat może być
+porównany ze średnią całej dopasowanej grupy. Nie jest to punkt na medianie
+dla dokładnego wieku ani przedłużenie głównej osi pozostałych hormonów.
+
 Wiek, płeć, analit, zapis wyniku i jednostka pochodzą z istniejącego
 formularza, również z jego lokalnych korekt. Nie dodajemy selektorów
 publikacji, metody ani dodatkowego formularza. Metoda w źródłach opisuje
@@ -74,6 +88,15 @@ Modele i tabele są danymi oddzielnymi od silnika. Między węzłami jednego
 profilu stosujemy PCHIP bez przeregulowania; krzywą i punkt liczy ta sama
 funkcja. Interpolacja węzłów rocznych jest przybliżeniem implementacji,
 nie udostępnionym przez autora pełnym dopasowaniem statystycznym.
+
+W męskim widoku inhibiny B z wynikiem rysujemy wszystkie dopuszczone
+przez kontekst profile, nie tylko aktualnie użyty do punktu. Busch,
+Kelsey i Borelli pozostają osobnymi modelami liczbowymi. Małe, przerywane
+łączniki na granicach źródeł zapewniają wyłącznie wizualną ciągłość
+zatwierdzoną przez właściciela. Nie uczestniczą w wyznaczaniu punktu ani
+mediany. Przerywany schemat jest widoczny poza sumą domen źródeł;
+w pasach łączenia maskujemy tylko kreskę, a nie dane lub znacznik mediany.
+Skala obejmuje pełne profile i nie zależy od przybliżenia okresu.
 
 Brak profilu, nieznany wiek lub płeć, nieobsługiwana jednostka, pusty albo
 nieprawidłowy wynik oraz nierówność (`<`, `≤`, `>`, `≥`) oznaczają brak
