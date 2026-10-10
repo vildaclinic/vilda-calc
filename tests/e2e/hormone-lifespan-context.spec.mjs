@@ -157,9 +157,20 @@ test('a real patient switch clears legacy overrides, a same-patient refresh pres
   await quickSelect(page, 'Preterm', 'no');
   await expect.poll(() => page.evaluate(() => window.VildaHormoneLifespanRuntime.getState().preterm)).toBe('yes');
   await expect(ageMarker(page)).toHaveCount(0);
+  // Prematurity does not disqualify the older-child source. Verify that a real
+  // numerical result, including its accessible description, is cleared on lock.
+  await page.evaluate((person) => {
+    window.VildaPersistence.writeShared({ ...person.user, age: 12, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  }, people[1]);
+  await page.locator('#labValue').fill('2.12345');
+  await expect(chart(page).locator('[data-patient-concentration="lh"]')).toHaveCount(1);
+  await expect(chart(page).locator('[data-lifespan="chart-desc"]')).toContainText('2,12345');
   await page.evaluate(() => window.VildaVault.lock());
   await expect(chart(page)).toBeHidden();
   await expect(ageMarker(page)).toHaveCount(0);
+  await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+  await expect(chart(page).locator('[data-lifespan="chart-desc"]').filter({ hasText: '2,12345' })).toHaveCount(0);
 });
 
 async function infantPeakHeights(page) {
