@@ -1,0 +1,75 @@
+{
+  "version": "2026-10-10.1",
+  "kind": "educational-display-only",
+  "analyte": "t",
+  "sex": "male",
+  "unit": "nmol/L",
+  "sourceIds": [
+    "busch2022-male-t",
+    "kelsey2014-male-t"
+  ],
+  "sources": [
+    {
+      "id": "busch2022-male-t",
+      "doi": "10.1210/clinem/dgac115",
+      "statistic": "graphically-reconstructed-age-specific-median",
+      "readability": "retain-only-eligible-source-points",
+      "lastReadableDailyAgeDays": 212,
+      "daysPerYear": 365.25,
+      "limit": "Day 212 is a graphical reading limit, not the assay LOQ or the end of minipuberty."
+    },
+    {
+      "id": "kelsey2014-male-t",
+      "doi": "10.1371/journal.pone.0109346",
+      "correctionDoi": "10.1371/journal.pone.0117674",
+      "statistic": "corrected-model-central-p50",
+      "limit": "The pooled 3–88-year model is not an individual longitudinal trajectory or a Tanner-specific reference."
+    }
+  ],
+  "scale": {
+    "basis": "maximum-of-complete-source-profiles",
+    "headroomFactor": 1.25,
+    "patientValueMayChangeScale": false
+  },
+  "transitions": [
+    {
+      "minAge": 0.4106776180698152,
+      "maxAge": 4,
+      "fromSource": "busch2022-male-t",
+      "toSource": "kelsey2014-male-t",
+      "kind": "illustrative-transition",
+      "tangents": "monotone-display",
+      "reason": "The 150-day-to-4-year display transition deliberately includes readable Busch data from days 150–212 and Kelsey data at ages 3–4. Joining the last readable infant median to the first Kelsey median would invent a childhood rebound; this broader monotone illustration does not change either source or a patient's source median."
+    },
+    {
+      "minAge": 19.3,
+      "maxAge": 25,
+      "fromSource": "kelsey2014-male-t",
+      "toSource": "kelsey2014-male-t",
+      "kind": "illustrative-axis-transition",
+      "tangents": "original-source-derivative",
+      "reason": "Retain the model maximum at 19.3 years while softening the whole-life time-axis change at age 20."
+    }
+  ],
+  "schematic": {
+    "prenatalLastAnchorAge": 0,
+    "prenatalScale": "source-maximum",
+    "tailScale": "hold-last-source-value",
+    "tailMaxAge": 90
+  },
+  "interpolation": {
+    "method": "shape-preserving-cubic",
+    "coordinate": "canonical-whole-life-display-x",
+    "zoom": "sample-the-same-canonical-curve",
+    "transitionInteriorSourceNodesDisplayed": false
+  },
+  "limits": [
+    "This continuous line is educational display geometry, not one published population model or a reference interval.",
+    "Patient eligibility, source p50 and clinical interpretation remain in their original engines; never derive a patient reference from a display transition.",
+    "Both source populations remain visible regardless of the current patient's eligibility for numerical comparison.",
+    "The broad 150-day-to-4-year transition is not a source-derived concentration curve. Source reference values remain available at all previously eligible ages, including 150–212 days and 3–4 years.",
+    "No source median is supplied for ages 1–3 years, unreadable late-infant graphical values, or ages beyond 88 years.",
+    "The fetal lead and flat tail after 88 years are illustrative drawing conventions, not fetal or oldest-old reference concentrations.",
+    "Kelsey's near-plateau after age 40 is retained; it is not a claim that every man's total testosterone or free testosterone remains constant."
+  ]
+}

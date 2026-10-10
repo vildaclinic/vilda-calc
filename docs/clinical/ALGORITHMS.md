@@ -810,6 +810,71 @@ Granice, styczne w przejściach, telefon, pełny ekran i offline podlegają
 regresji. Zielone testy nie nadają statusu walidacji klinicznej; scalenie
 oraz końcowa akceptacja kliniczna pozostają decyzją właściciela.
 
+### HORMONE-TESTOSTERONE-STABLE-CURVE — stała linia i skala testosteronu, 2026-10-10
+
+**Przyczyna i decyzja właściciela:** audyt wykazał przełączenie schematu
+na inny model po wpisaniu wyniku, przeskalowanie krzywej przy wysokiej
+liczbie oraz powrót do schematu przy zbliżeniu okresu poza wiekiem pacjenta.
+Właściciel zatwierdził stabilizację prezentacji bez zmiany źródeł
+odniesienia. Zwykłe męskie widoki całego życia, minipuberty i pokwitania
+korzystają z jednego przebiegu i jednej skali, także bez wyniku.
+
+**Źródła i granice:** pozostają Busch 2022, DOI
+`10.1210/clinem/dgac115`, ryc. 3, mediana GAMLSS donoszonych chłopców
+od 7 dni do <1 roku, surowica LC-MS/MS, oraz Kelsey 2014, DOI
+`10.1371/journal.pone.0109346`, Table S1, z poprawionym p50 z korekty 2015,
+DOI `10.1371/journal.pone.0117674`, 3–88 lat. Jednostka nmol/L;
+wyłącznie testosteron całkowity. Kelsey łączy 10 097 obserwacji z 13 badań
+i różne metody harmonizowane przez autorów do odpowiednika LC-MS/MS.
+Busch jest odczytem ryciny, nie udostępnioną dokładną funkcją autora;
+warunki donoszenia i bramka rozdzielczości grafiki pozostają bez zmian.
+Szczyt mediany wieku z ryc. 3 około 47. dnia nie jest medianą wieku
+indywidualnych szczytów 29 dni z podłużnej analizy ryc. 2.
+
+**Polityka prezentacji:** `testosterone-display-policy.json`, eksport
+`testosteroneDisplayPolicy`, jest oddzielny od danych źródłowego odniesienia.
+`VildaHormoneLifespanDisplay.buildMaleTestosterone` przygotowuje węzły;
+renderer tworzy jedną ścieżkę PCHIP z ciągłą styczną (C1) w stałych
+współrzędnych całego życia. Zbliżenie wycina tę samą krzywą. Most 150 dni–4 lata
+jest monotonicznym przejściem poglądowym bez wymuszania stromych stycznych
+źródeł; obejmuje również część dostępnych odcinków, aby uniknąć sztucznego
+wzrostu na styku populacji. Pas 19,3–25 lat łagodzi zmianę skali czasu
+w obrębie Kelsey, zachowując styczne źródłowe i węzeł szczytu 19,3 roku.
+Kotwice przedurodzeniowe oraz płaski ogon 88–90 lat przy końcowej wartości
+Kelsey około 13,222919802 nmol/L są ilustracją, nie ekstrapolacją mediany.
+
+Maksimum źródłowych węzłów 15,41843900285427 nmol/L i zapas 1,25 dają stałą górę osi
+około 19,273049 nmol/L. Wyższy wynik ma strzałkę z rzeczywistą liczbą,
+bez kropki na granicy i bez przeskalowania. Źródłowy znacznik mediany
+może leżeć poza graficznym mostem: nie przesuwamy go ani wyniku pacjenta,
+aby dopasować je do ilustracji. Pusty, błędny lub cenzurowany zapis
+nie tworzy punktu ani strzałki, a kształt linii pozostaje taki sam.
+
+**Wpływ kliniczny i granica naprawy:** zmienia się wyłącznie prezentacja
+edukacyjna. `vilda_hormone_lifespan_reference.js`, kwalifikacja pacjenta,
+źródłowe mediany, jednostki, normy laboratoryjne, werdykty i zapisy
+pozostają bez zmian. Brak punktu nie blokuje odrębnej interpretacji badania.
+Madsen nie zastępuje Kelsey w tej poprawce. Rozbieżność dziecięcych modeli
+pozostaje otwarta: przy 6 latach Kelsey około 0,323, Madsen około
+0,02394 nmol/L, przy deklarowanym LLOQ Madsen 0,02. Wybór nowego profilu
+wymaga osobnego rozstrzygnięcia klinicznego. Luka 1–<3 lat nie otrzymuje
+mediany z mostu. Plateau dorosłych w Kelsey jest zachowane jako wynik
+tego modelu; nie dowodzi stałego T u każdego seniora. Porównanie płci,
+pozostałe hormony oraz małe wykresy grupowe nie zmieniają swojej polityki.
+
+**Syntetyczne regresje rzeczywistych funkcji:** M/dokładnie 40 lat,
+pusty wynik → 13 → 100 nmol/L → wyczyszczenie: identyczna linia i skala;
+13 leży poniżej niezmienionej mediany 13,049603876520182, 100 ma strzałkę
+z tą wartością. M/2 lata/0,1 nmol/L → brak mediany i punktu mimo ciągłej
+ilustracji. M/180 dni/donoszony/wynik równy medianie Busch → zgodne
+znaczniki wyniku i źródła, nawet poza mostem; wcześniactwo lub nieznane
+donoszenie → bez dopasowania do Busch, bez zmiany ogólnego przebiegu.
+Kontrola obejmuje też granice mostów, brak dodatkowych ekstremów,
+tożsamość krzywej między zbliżeniami, telefon, pełny ekran i offline.
+Testy potwierdzają odtworzenie kontraktu, nie walidację kliniczną.
+Źródła, statystyki i ograniczenia audytu:
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

@@ -51,7 +51,7 @@ async function expectPoint(page, value, median) {
       const point = group.querySelector('[data-result-point]');
       const ref = group.querySelector('[data-median-point]');
       const line = group.ownerSVGElement.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`) ||
-        group.ownerSVGElement.querySelector('[data-stable-reference-line="inhb"]');
+        group.ownerSVGElement.querySelector(`[data-stable-reference-line="${group.dataset.patientConcentration}"]`);
       if (!line) return null;
       const px = Number(ref.getAttribute('cx'));
       let lo = 0, hi = line.getTotalLength();

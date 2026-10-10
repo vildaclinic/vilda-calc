@@ -31,6 +31,11 @@ stała krzywa edukacyjna zastępuje przełączanie schematu na osobne ścieżki
 liczbowe oraz przerywane łączniki PR #615. Nie zmienia źródeł mediany
 pacjenta ani laboratoryjnych zakresów odniesienia.
 
+Po audycie testosteronu całkowitego właściciel zatwierdził analogiczne
+ustabilizowanie jego prezentacji. Ta poprawka zachowuje dotychczasowe
+źródła Busch i Kelsey oraz kwalifikację punktu; nie wprowadza Madsen
+do odniesienia testosteronu ani nowych median dziecięcych.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -86,6 +91,7 @@ jednostki i funkcji skali**. Mediana pochodzi z oryginalnego modelu
 źródłowego, również po zmianie widoku, wyboru hormonów i powiększeniu.
 Nie wolno dopasować punktu do autorskiej linii pojedynczym mnożnikiem
 ani przeliczać schematycznej wysokości na stężenie. W męskiej inhibinie B
+i testosteronie całkowitym
 ciągła linia jest wygładzoną prezentacją: w pasach wygładzenia znacznik
 źródłowej mediany może leżeć poza nią. Nie przesuwamy go na linię.
 Model ilościowy zachowuje własne granice; poza nimi krzywa edukacyjna
@@ -127,6 +133,34 @@ wyznaczają górę osi około 387,22379 pg/mL. Wpisana liczba nie zmienia skali
 ani krzywej. Wyższy poprawny wynik ma strzałkę w górę z rzeczywistą wartością,
 bez kropki sugerującej stężenie równe górze osi. Szczegóły polityki i granic
 przedstawiono w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
+Testosteron całkowity również ma jedną stałą, ciągłą linię we wszystkich
+zwykłych widokach męskich. Opiera się na zachowanych danych Busch 2022
+i Kelsey 2014 z korektą 2015, niezależnie od wieku, wyniku, donoszenia
+lub metody bieżącej próbki. Punkt pacjenta nadal kwalifikuje niezmieniony
+silnik odniesienia. W szczególności wiek 2 lat nie otrzymuje mediany
+z graficznego połączenia, a wcześniak nie otrzymuje profilu donoszonych.
+
+`VildaHormoneLifespanDisplay.buildMaleTestosterone` przygotowuje przebieg
+według `testosterone-display-policy.json`. Renderer używa jednej ścieżki
+PCHIP we współrzędnych całego życia; Minipuberty i Pokwitanie wycinają
+i powiększają tę samą krzywą. Przejście od 150. dnia do 4 lat jest jawnym
+mostem poglądowym. Obejmuje także część dostępnych danych, aby nie tworzyć
+sztucznego wzrostu między niskim końcem Busch a początkiem Kelsey.
+Ma monotoniczny przebieg bez wymuszania stromych stycznych źródeł;
+źródłowe mediany i punkty pacjenta w tym pasie nie są przesuwane na most.
+Pas 19,3–25 lat łagodzi zmianę skali czasu po szczycie Kelsey, zachowując
+styczne źródłowe na końcach. Kotwice przed urodzeniem oraz płaski ogon
+88–90 lat przy końcowej wartości Kelsey pozostają wyłącznie ilustracją.
+
+Stałe maksimum źródłowych węzłów T wynosi około 15,418439 nmol/L; zapas 1,25 daje
+górę osi około 19,273049 nmol/L. Tak jak dla inhibiny B, wynik ponad osią
+ma strzałkę z rzeczywistą liczbą, bez przyciętej kropki i bez zmiany skali.
+Mężczyzna 40 lat/13 nmol/L pozostaje nieznacznie poniżej oryginalnej
+mediany około 13,049604; wpisanie 100 nmol/L nie zmienia kształtu krzywej.
+Ta stabilizacja nie rozstrzyga odnotowanej w audycie rozbieżności
+przedpokwitaniowych modeli Kelsey i Madsen. Szczegóły i ograniczenia:
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 Brak profilu, nieznany wiek lub płeć, nieobsługiwana jednostka, pusty albo
 nieprawidłowy wynik oraz nierówność (`<`, `≤`, `>`, `≥`) oznaczają brak
@@ -206,7 +240,8 @@ ruchu, fokus źródeł) i `hormone-lifespan-puberty-comparison.spec.mjs`
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.
-Męska inhibina B korzysta ze stałej krzywej opisanej powyżej. Jeżeli
+Męska inhibina B i testosteron całkowity korzystają ze stałych krzywych
+opisanych powyżej. Jeżeli
 wyświetlany jest model liczbowy z punktem wyniku, pierwszeństwo mają wspólne przeliczenie
 punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
 i normalizacje nie mogą stanowić liczbowej podstawy wyniku pacjenta.
@@ -318,8 +353,9 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 ## Źródła męskie i przyszłe anality
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
-pacjenta**. Zwykłe męskie widoki inhibiny B zastępuje obecnie jedna
-stała krzywa opisana powyżej; pozostałe krzywe zachowują tę politykę.
+pacjenta**. Zwykłe męskie widoki inhibiny B i testosteronu całkowitego
+zastępują obecnie stałe krzywe opisane powyżej; pozostałe krzywe zachowują
+tę politykę.
 Oddzielne liczbowe źródła punktu wyniku znajdują się w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Obecność schematu
 danego hormonu lub wieku nie oznacza dostępności ilościowego porównania.
@@ -389,7 +425,8 @@ node --check vilda_hormone_lifespan_data.js
 `build_runtime.py` jedynie pakuje zatwierdzone dane do czytelnego UMD:
 `window.VildaHormoneLifespanData` / `module.exports` z polami
 `version`, `maleAges`, `maleHormones`, `maleStages`, `referenceData`,
-`lifespanData`, `patientPointData`, `inhibinEvidence`, `inhibinDisplayPolicy`.
+`lifespanData`, `patientPointData`, `inhibinEvidence`, `inhibinDisplayPolicy`,
+`testosteroneDisplayPolicy`.
 Przeglądarka nie potrzebuje Pythona, źródłowych JSON,
 sieci ani bibliotek wykresów. Historyczne wzmianki „mock” w metadanych
 pochodzą z zatwierdzonego zbioru; nie rozszerzają jego zastosowania.
@@ -411,14 +448,15 @@ krzywa LH i geometria zgodna z pierwotnym wzorcem danego widoku.
 Istniejące testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst
 formularza i interakcje obu płci.
 
-Wzorzec pierwotnych krzywych dotyczy zachowanych schematów, nie nowej
-stałej linii męskiej inhibiny B ani modelu ilościowego.
+Wzorzec pierwotnych krzywych dotyczy zachowanych schematów, nie nowych
+stałych linii męskiej inhibiny B i testosteronu całkowitego ani modelu ilościowego.
 `tests/unit/hormone-lifespan-reference.test.mjs` wywołuje
 rzeczywisty `vilda_hormone_lifespan_reference.js` i sprawdza niezależne
 wartości źródłowe, granice wieku, jednostki, nierówności oraz brak
 ekstrapolacji. W testach interfejsu punkt równy medianie musi trafić na
 znacznik źródłowej mediany, a większy/mniejszy wynik odpowiednio nad nim/pod nim;
-w pasach wygładzenia inhibiny B znacznik nie musi leżeć na linii edukacyjnej;
+w pasach wygładzenia inhibiny B i testosteronu znacznik nie musi leżeć
+na linii edukacyjnej;
 pełny ekran i zmiana szerokości nie mogą zmienić tej relacji. Przypadki
 źródłowe podano w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
