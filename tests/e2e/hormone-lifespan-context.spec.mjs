@@ -170,7 +170,7 @@ test('a real patient switch clears legacy overrides, a same-patient refresh pres
   await expect(chart(page)).toBeHidden();
   await expect(ageMarker(page)).toHaveCount(0);
   await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
-  await expect(chart(page).locator('[data-lifespan="chart-desc"]')).not.toContainText('2,12345');
+  await expect(chart(page).locator('[data-lifespan="chart-desc"]').filter({ hasText: '2,12345' })).toHaveCount(0);
 });
 
 async function infantPeakHeights(page) {
