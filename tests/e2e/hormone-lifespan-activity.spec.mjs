@@ -5,6 +5,9 @@ import { expect, test } from '../support/test-czas.mjs';
 // fullscreen, while the session and its inactivity timestamp belong to the
 // converter frame. Both must still see actual user activity.
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
+// The real shell also loads its other clinical frames. Leave room for account
+// setup on a busy CI worker; the inactivity window below remains only 3 s.
+test.setTimeout(120_000);
 
 const idleMs = 3000;
 const dialog = page => page.locator('dialog.vhl-fullscreen-dialog');
