@@ -73,111 +73,231 @@ async function expectSeniorPoint(page, value, reference) {
   if (value > reference) expect(geometry.x).toBeGreaterThan(geometry.rx);
 }
 
-test('all three existing male inhibin profiles remain separate and numeric when the childhood result is selected', async ({ page }) => {
-  await open(page, { sex: 'M', age: 3, ageMonths: 0 }, '107');
-  const lines = panel(page).locator('[data-reference-line="inhb"]');
-  // Unknown birth context does not qualify the term-infant population.
-  await expect(lines).toHaveCount(2);
-  await quickFill(page, 'AgeYears', '0');
-  await quickFill(page, 'AgeMonths', '3');
-  await quickSelect(page, 'Preterm', 'no');
-  await quickFill(page, 'AgeYears', '3');
-  await quickFill(page, 'AgeMonths', '0');
-  await closePatientEditor(page);
-  await expect(lines).toHaveCount(3);
-  expect(await lines.evaluateAll(nodes => nodes.map(node => node.dataset.profile).sort()))
-    .toEqual(['borelli2025-male-inhb', 'busch2022-male-inhb', 'kelsey2016-male-inhb']);
-  await expect.poll(() => panel(page).locator('[data-illustrative-bridge="inhb"]').count()).toBeGreaterThanOrEqual(2);
-  const continuity = await panel(page).evaluate(host => {
-    const sourcePath = id => id === 'schematic'
-      ? host.querySelector('path[data-reference-background="inhb"]:not([data-schematic-tail])')
-      : id === 'schematic-tail'
-        ? host.querySelector('path[data-schematic-tail="inhb"]')
-        : host.querySelector(`path[data-reference-line="inhb"][data-profile="${id}"]`);
-    function distanceFromSource(point, source) {
-      if (!source) return Infinity;
-      let lo = 0, hi = source.getTotalLength();
+const stableLine = page => panel(page).locator('[data-stable-reference-line="inhb"]');
+const patientDot = page => panel(page).locator('[data-patient-concentration="inhb"]');
+
+async function stableGeometry(page) {
+  await expect(stableLine(page)).toHaveCount(1);
+  return stableLine(page).evaluate(line => ({
+    d: line.getAttribute('d'), divisor: Number(line.dataset.divisor),
+    ceiling: Number(line.dataset.ceiling),
+    dash: getComputedStyle(line).strokeDasharray,
+    viewBox: line.ownerSVGElement.getAttribute('viewBox')
+  }));
+}
+
+async function expectStableGeometry(page, expected) {
+  await expect.poll(() => stableGeometry(page)).toEqual(expected);
+  await expect(panel(page).locator('[data-illustrative-bridge="inhb"], [data-schematic-tail="inhb"], [data-reference-line="inhb"]'))
+    .toHaveCount(0);
+}
+
+async function pointGeometry(page) {
+  return patientDot(page).evaluate(group => {
+    const point = group.querySelector('[data-result-point]');
+    const reference = group.querySelector('[data-median-point]');
+    return { value: Number(group.dataset.value), median: Number(group.dataset.median),
+      y: point ? Number(point.getAttribute('cy')) : null,
+      referenceY: Number(reference.getAttribute('cy')), bottom: Number(group.dataset.plotBottom),
+      offscale: group.dataset.offscale || null,
+      overflow: Boolean(group.querySelector('[data-result-overflow]')) };
+  });
+}
+
+function expectSmoothPath(d) {
+  // Inspect the actual rendered cubics. Adjacent segments must meet at one
+  // point and have aligned handles, rather than merely hiding a gap by stroke.
+  const commands = [...d.matchAll(/([MC])([^MC]*)/g)].map(match => ({
+    command: match[1], points: match[2].trim().split(/[\s,]+/).map(Number)
+  }));
+  expect(commands[0].command).toBe('M');
+  expect(commands[0].points).toHaveLength(2);
+  expect(commands.length).toBeGreaterThan(10);
+  let start = commands[0].points;
+  let incoming = null;
+  let checkedTangents = 0;
+  for (const { command, points } of commands.slice(1)) {
+    expect(command).toBe('C');
+    expect(points).toHaveLength(6);
+    expect(points.every(Number.isFinite)).toBe(true);
+    const outgoing = [points[0] - start[0], points[1] - start[1]];
+    expect(points[4]).toBeGreaterThanOrEqual(start[0]);
+    // Dense source nodes can have x rounded to the same 1e-4px on mobile.
+    // Permit the remaining subpixel slope, but no visible vertical segment.
+    if (points[4] === start[0]) expect(Math.abs(points[5] - start[1])).toBeLessThan(.01);
+    if (incoming && Math.hypot(...incoming) > .05 && Math.hypot(...outgoing) > .05) {
+      // Four-decimal SVG serialization permits tiny angular rounding errors.
+      const cosine = (incoming[0] * outgoing[0] + incoming[1] * outgoing[1]) /
+        (Math.hypot(...incoming) * Math.hypot(...outgoing));
+      expect(cosine).toBeGreaterThan(.999);
+      checkedTangents++;
+    }
+    incoming = [points[4] - points[2], points[5] - points[3]];
+    start = points.slice(4);
+  }
+  expect(checkedTangents).toBeGreaterThan(10);
+}
+
+async function normalizedCurveHeights(page, ages) {
+  return panel(page).evaluate((host, ages) => {
+    const line = host.querySelector('[data-stable-reference-line="inhb"]');
+    const svg = line.ownerSVGElement;
+    const mini = svg.querySelector('[data-sector="mini"]');
+    const puberty = svg.querySelector('[data-sector="puberty"]');
+    const stages = window.VildaHormoneLifespanData.maleStages;
+    return ages.map(age => {
+      const stageIndex = stages.findIndex(stage => age >= stage.min && age <= stage.max);
+      const stage = mini ? { min: 0, max: 1 } : puberty ? { min: 8, max: 20 } : stages[stageIndex];
+      const sector = mini || puberty || svg.querySelector(`[data-sector="${stageIndex}"]`);
+      const x = Number(sector.getAttribute('x')) + Number(sector.getAttribute('width')) *
+        (age - stage.min) / (stage.max - stage.min);
+      let lo = 0, hi = line.getTotalLength();
       for (let i = 0; i < 36; i++) {
         const mid = (lo + hi) / 2;
-        if (source.getPointAtLength(mid).x < point.x) lo = mid; else hi = mid;
+        if (line.getPointAtLength(mid).x < x) lo = mid; else hi = mid;
       }
-      const nearest = source.getPointAtLength((lo + hi) / 2);
-      return Math.hypot(point.x - nearest.x, point.y - nearest.y);
-    }
-    const joins = [...host.querySelectorAll('[data-illustrative-bridge="inhb"]')].map(bridge => {
-      const start = bridge.getPointAtLength(0);
-      const end = bridge.getPointAtLength(bridge.getTotalLength());
-      return {
-        startError: distanceFromSource(start, sourcePath(bridge.dataset.fromSource)),
-        endError: distanceFromSource(end, sourcePath(bridge.dataset.toSource)),
-        increasingAge: end.x > start.x,
-        dashed: /[1-9]/.test(bridge.getAttribute('stroke-dasharray') || ''),
-        numericProfile: bridge.hasAttribute('data-reference-line'),
-        finite: !/NaN|Infinity/.test(bridge.getAttribute('d') || '')
-      };
+      const y = line.getPointAtLength((lo + hi) / 2).y;
+      const height = Number(sector.getAttribute('height'));
+      return (Number(sector.getAttribute('y')) + height - y) / height;
     });
-    const tail = sourcePath('schematic-tail');
-    const borelli = sourcePath('borelli2025-male-inhb');
-    if (!tail || !borelli) return { joins, tail: null };
-    const anchor = borelli.getPointAtLength(borelli.getTotalLength());
-    const start = tail.getPointAtLength(0);
-    const samples = Array.from({ length: 33 }, (_, i) => tail.getPointAtLength(tail.getTotalLength() * i / 32));
-    return { joins, tail: {
-      anchorError: Math.hypot(start.x - anchor.x, start.y - anchor.y),
-      // In SVG a smaller y would incorrectly suggest a rise after age 80.
-      minimumYOffset: Math.min(...samples.map(point => point.y - anchor.y)),
-      numericProfile: tail.hasAttribute('data-reference-line')
-    } };
+  }, ages);
+}
+const normalizedCurveHeight = async (page, age) => (await normalizedCurveHeights(page, [age]))[0];
+
+for (const width of [320, 1440]) {
+  test(`male inhibin curve remains one smooth path with a fixed scale before and after entering a result at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page, { sex: 'M', age: 44, ageMonths: 0 }, '');
+    const original = await stableGeometry(page);
+    expect(original.divisor).toBe(309.779035);
+    expect(original.ceiling).toBe(1.25);
+    expect(original.d.match(/M/g)).toHaveLength(1);
+    expect(original.d).toContain('C');
+    expect(original.d).not.toMatch(/NaN|Infinity/);
+    expect(original.dash).toBe('none');
+    expectSmoothPath(original.d);
+    // The new display transition crosses the compressed time-axis boundary
+    // at 20 years. It must not invent an additional rise or peak after puberty.
+    const adulthood = await normalizedCurveHeights(page, Array.from({ length: 29 }, (_, i) => 18 + i / 4));
+    expect(adulthood.every(Number.isFinite)).toBe(true);
+    for (let i = 1; i < adulthood.length; i++) {
+      expect(adulthood[i]).toBeLessThanOrEqual(adulthood[i - 1] + .00001);
+    }
+    await expect(patientDot(page)).toHaveCount(0);
+    for (const value of ['88', '400', '100000000', '<88', '', '88']) {
+      await page.locator('#labValue').fill(value);
+      await expectStableGeometry(page, original);
+      if (value === '' || value.startsWith('<')) {
+        await expect(patientDot(page)).toHaveCount(0);
+        continue;
+      }
+      await expect(patientDot(page)).toHaveAttribute('data-value', value);
+      await expect(patientDot(page)).toHaveAttribute('data-profile', 'borelli2025-male-inhb');
+      const point = await pointGeometry(page);
+      expect(point.median).toBeCloseTo(162.08470588235292, 10);
+      if (Number(value) > original.divisor * original.ceiling) {
+        expect(point.offscale).toBe('above');
+        expect(point.overflow).toBe(true);
+        expect(point.y).toBeNull();
+      } else {
+        expect(point.offscale).toBeNull();
+        expect(point.overflow).toBe(false);
+        expect((point.bottom - point.y) / (point.bottom - point.referenceY))
+          .toBeCloseTo(Number(value) / point.median, 6);
+      }
+    }
+    const clinicalBefore = await patientState(page);
+    await panel(page).getByRole('button', { name: 'Powiększ', exact: true }).click();
+    await expect(page.locator('dialog.vhl-fullscreen-dialog')).toBeVisible();
+    const fullscreen = await stableGeometry(page);
+    expect(fullscreen.divisor).toBe(original.divisor);
+    expect(fullscreen.ceiling).toBe(original.ceiling);
+    await expect(patientDot(page)).toHaveAttribute('data-value', '88');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`inhb-stable-fullscreen-${width}.png`) });
+    await panel(page).getByRole('button', { name: 'Zamknij', exact: true }).click();
+    await expectStableGeometry(page, original);
+    expect(await patientState(page)).toEqual(clinicalBefore);
+    await panel(page).locator('[data-lifespan="chart"]').screenshot({ path: test.info().outputPath(`inhb-stable-inline-${width}.png`) });
   });
-  for (const join of continuity.joins) {
-    expect(join.startError).toBeLessThan(0.1);
-    expect(join.endError).toBeLessThan(0.1);
-    expect(join.increasingAge).toBe(true);
-    expect(join.dashed).toBe(true);
-    expect(join.numericProfile).toBe(false);
-    expect(join.finite).toBe(true);
+}
+
+test('the population curve does not inherit patient eligibility, while age, birth context and censored values still gate the dot', async ({ page }) => {
+  await open(page, { sex: 'M', age: 3, ageMonths: 0 }, '107');
+  const original = await stableGeometry(page);
+  await expect(patientDot(page)).toHaveAttribute('data-profile', 'kelsey2016-male-inhb');
+  await expect(patientDot(page)).toHaveAttribute('data-median', '107');
+  const childhood = await pointGeometry(page);
+  expect(childhood.y).toBeCloseTo(childhood.referenceY, 6);
+  await quickFill(page, 'AgeYears', '0');
+  await quickFill(page, 'AgeMonths', '3');
+  for (const preterm of ['no', 'yes', 'unknown', 'no']) {
+    await quickSelect(page, 'Preterm', preterm);
+    await closePatientEditor(page);
+    await expectStableGeometry(page, original);
+    if (preterm === 'no') await expect(patientDot(page)).toHaveAttribute('data-profile', 'busch2022-male-inhb');
+    else await expect(patientDot(page)).toHaveCount(0);
   }
-  expect(continuity.tail).not.toBeNull();
-  expect(continuity.tail.anchorError).toBeLessThan(0.1);
-  expect(continuity.tail.minimumYOffset).toBeGreaterThanOrEqual(-0.1);
-  expect(continuity.tail.numericProfile).toBe(false);
-  const dot = panel(page).locator('[data-patient-concentration]');
-  await expect(dot).toHaveAttribute('data-profile', 'kelsey2016-male-inhb');
-  await expect.poll(async () => Number(await dot.getAttribute('data-median'))).toBe(107);
-  const geometry = await panel(page).evaluate(host => {
-    const point = host.querySelector('[data-patient-concentration]');
-    const actual = point.querySelector('[data-result-point]');
-    const expected = point.querySelector('[data-median-point]');
-    return { actualY: Number(actual.getAttribute('cy')), medianY: Number(expected.getAttribute('cy')),
-      finite: !/NaN|Infinity/.test(host.querySelector('[data-lifespan="chart"]').innerHTML) };
-  });
-  expect(geometry.actualY).toBeCloseTo(geometry.medianY, 6);
-  expect(geometry.finite).toBe(true);
-  await panel(page).locator('[data-view="mini"]').click();
-  // Existing zoom policy: an out-of-view patient does not supply a numeric
-  // main-chart model; the independent Kuiri observation remains available.
-  await expect(lines).toHaveCount(0);
-  await expect(dot).toHaveCount(0);
-  await expect(observations(page).locator('[data-inhibin-observation="mini"]')).toBeVisible();
-  await panel(page).locator('[data-view="life"]').click();
-  await expect(lines).toHaveCount(3);
-  await expect(dot).toHaveAttribute('data-profile', 'kelsey2016-male-inhb');
-  // Exactly at a visual bridge, the result still uses the original numeric
-  // Kelsey reference, never the smoothed educational connector.
   await quickFill(page, 'AgeYears', '1');
+  await quickFill(page, 'AgeMonths', '0');
   await closePatientEditor(page);
   await page.locator('#labValue').fill('223');
-  await expect(dot).toHaveAttribute('data-profile', 'kelsey2016-male-inhb');
-  await expect(dot).toHaveAttribute('data-value', '223');
-  await expect(dot).toHaveAttribute('data-median', '223');
-  const atBoundary = await panel(page).evaluate(host => {
-    const current = host.querySelector('[data-patient-concentration]');
-    return {
-      valueY: Number(current.querySelector('[data-result-point]').getAttribute('cy')),
-      referenceY: Number(current.querySelector('[data-median-point]').getAttribute('cy'))
-    };
-  });
-  expect(atBoundary.valueY).toBeCloseTo(atBoundary.referenceY, 6);
+  await expectStableGeometry(page, original);
+  await expect(patientDot(page)).toHaveAttribute('data-profile', 'kelsey2016-male-inhb');
+  await expect(patientDot(page)).toHaveAttribute('data-median', '223');
+  // The numeric reference remains the source value even inside an educational
+  // transition. The marker must never be projected onto the smoothed curve.
+  const boundary = await pointGeometry(page);
+  expect(boundary.y).toBeCloseTo(boundary.referenceY, 6);
+  await quickFill(page, 'AgeYears', '44');
+  await closePatientEditor(page);
+  await page.locator('#labValue').fill('88');
+  await expectStableGeometry(page, original);
+  await expect(patientDot(page)).toHaveAttribute('data-profile', 'borelli2025-male-inhb');
+  const infantHeight = await normalizedCurveHeight(page, .25);
+  const pubertalHeight = await normalizedCurveHeight(page, 12);
+  await panel(page).locator('[data-view="mini"]').click();
+  const mini = await stableGeometry(page);
+  expectSmoothPath(mini.d);
+  expect(mini.divisor).toBe(original.divisor);
+  expect(mini.ceiling).toBe(original.ceiling);
+  expect(await normalizedCurveHeight(page, .25)).toBeCloseTo(infantHeight, 3);
+  await expect(patientDot(page)).toHaveCount(0);
+  await expect(observations(page).locator('[data-inhibin-observation="mini"]')).toBeVisible();
+  await panel(page).locator('[data-view="puberty"]').click();
+  const puberty = await stableGeometry(page);
+  expectSmoothPath(puberty.d);
+  expect(puberty.divisor).toBe(original.divisor);
+  expect(puberty.ceiling).toBe(original.ceiling);
+  expect(await normalizedCurveHeight(page, 12)).toBeCloseTo(pubertalHeight, 3);
+  await expect(patientDot(page)).toHaveCount(0);
+  await panel(page).locator('[data-view="life"]').click();
+  await expectStableGeometry(page, original);
+  await expect(patientDot(page)).toHaveAttribute('data-value', '88');
+  await panel(page).locator('[data-hormone="inhb"]').click();
+  await expect(patientDot(page)).toHaveCount(0);
+  await panel(page).locator('[data-hormone="inhb"]').click();
+  await expectStableGeometry(page, original);
+  await expect(patientDot(page)).toHaveAttribute('data-value', '88');
+});
+
+test('adding the inhibin curve retains the active testosterone result and both sources', async ({ page }) => {
+  await open(page, { sex: 'M', age: 44, ageMonths: 0 }, '');
+  await choose(page, 'testosterone_total', 'Testosteron');
+  await page.locator('#labUnit').selectOption('nmol/L');
+  await page.locator('#labValue').fill('13');
+  const testosterone = panel(page).locator('[data-patient-concentration="t"]');
+  await expect(testosterone).toHaveAttribute('data-profile', 'kelsey2014-male-t');
+  await panel(page).locator('[data-hormone="inhb"]').click();
+  await expect(stableLine(page)).toHaveCount(1);
+  await expect(testosterone).toHaveAttribute('data-value', '13');
+  await expect(patientDot(page)).toHaveCount(0);
+  await panel(page).getByText('O wykresie i źródła', { exact: true }).click();
+  const sources = panel(page).locator('[data-lifespan="source-copy"]');
+  await expect(sources).toContainText(/Kelsey.*2014/);
+  await expect(sources).toContainText(/Borelli.*2025/);
+  await expect(sources.locator('a[href="https://doi.org/10.1371/journal.pone.0109346"]')).toHaveCount(1);
+  await expect(sources.locator('a[href="https://doi.org/10.1210/clinem/dgae439"]')).toHaveCount(1);
 });
 
 test('minipuberty shows only D7 and M3 per cohort, including both sexes, without inventing a preterm patient curve', async ({ page }) => {

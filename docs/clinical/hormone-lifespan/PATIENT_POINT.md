@@ -7,8 +7,10 @@ nadaniem statusu walidacji klinicznej modelom ani digitalizacji rycin.
 
 ## Znaczenie i dane wejściowe
 
-Punkt pokazuje wpisane stężenie, a linia — centralny przebieg modelu
-populacyjnego. W zależności od źródła jest to opublikowane p50 lub odczytana
+Punkt pokazuje wpisane stężenie, a jego znacznik odniesienia — centralną
+wartość modelu populacyjnego. Linia zwykle odtwarza ten model; męska
+inhibina B ma osobno opisaną niżej płynną prezentację wielu źródeł.
+W zależności od źródła jest to opublikowane p50 lub odczytana
 z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy grupach
 wieku Wang i Zec zamiast ciągłej krzywej wieku widoczny jest lokalny poziomy
 odcinek mediany jednej grupy; nie jest to p50 dokładnego wieku. Określenie
@@ -42,7 +44,7 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | FSH przed pokwitaniem: chłopcy 1–<6 lat/G1; dziewczynki 1–<4, 4–<8 i 8–<11 lat/Th1 | [Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210/PDF 5: chłopcy grupa źródłowa 1–<8 lat, mediana 0,48 IU/L, N=303; dziewczynki kolejno 2,57/1,07/1,55 IU/L, N=124/156/107 | Zagrzeb, Chorwacja, Tanner 1; całe badanie N=948, nie każdy hormon oznaczano u każdego dziecka. Roche cobas e 411, kanapkowe ECLIA; zbierano surowicę i osocze Li-heparynowe, bez przypisania materiału do analitu | Mediany całych grup, nie model dokładnego wieku. Aktualne typowane G1/Th1 jest wymagane. U chłopców od 6 lat zachowujemy Madsen, lecz mediana 0,48 i N=303 nadal opisują pełną grupę źródłową 1–<8. Źródłową grupę chłopców 8–<11 (0,79 IU/L, N=117) zachowujemy wyłącznie w dowodach. |
 | Męski testosteron całkowity; 3–88 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 mężczyzn, surowica; różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Węzły co 0,1 roku z funkcji centralnej `log10(T+1)` po odwróceniu transformacji, zgodne z poprawionym p50; między węzłami PCHIP. Nie średnia arytmetyczna stężeń. Model po 40 latach jest niemal płaski; nie wymuszać spadku ze starego schematu. |
 | Męska inhibina B; 1–<6,1 roku | [Kelsey 2016](https://doi.org/10.1371/journal.pone.0153843), tabela 4, opublikowane węzły p50 | Cztery badania, 709 obserwowanych par wiek–stężenie; surowica, historyczne dwumiejscowe ELISA | Pełna tabela 0–17 lat pozostaje dowodem, wybrany odcinek jest polityką aplikacji. Nie używać rocznej tabeli do minipuberty. Nie odtwarzać modelu zaokrąglonymi współczynnikami z tabeli 2. |
-| Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem. |
+| Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem odniesienia pacjenta; wygładzona wspólna linia jest wyłącznie prezentacją. |
 | Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
@@ -62,27 +64,57 @@ median wieku. Wyjątkiem od medianowego punktu jest jawnie oznaczone
 porównanie ze **średnią grupy** dla mężczyzn 80–101 lat, w osobnym wykresie
 grupowym i z własnymi warunkami kwalifikacji. Nie przedłuża ono osi głównej.
 
-Gdy męska inhibina B ma dopasowany punkt w aktualnym widoku, prezentujemy
-wszystkie zgodne z kontekstem odcinki Busch, Kelsey i Borelli. Każda
-publikacja zachowuje osobną ścieżkę i własny model mediany.
-Całe profile wyznaczają wspólną skalę, a schemat pozostaje tylko poza ich
-łącznym pokryciem. Warunki materiału, metody i donoszenia nadal obowiązują;
-nieznane donoszenie nie uprawnia do dopasowania profilu Busch. Przy wieku
-pacjenta poza zbliżeniem zachowujemy dotychczasowy widok poglądowy bez
-punktu, niezależnie od dodatkowego panelu obserwacji grupowych.
+### Stała, płynna linia męskiej inhibiny B
 
-Po wyraźnej decyzji właściciela zachowujemy wizualną ciągłość inhibiny B:
-małe pasy na stykach źródeł i schematu mają przerywane połączenia poglądowe.
-To geometria ekranu, nie nowa funkcja stężenia względem wieku. W pasie
-przejścia ukrywamy tylko kreskę, bez zmiany wartości źródłowych. Czerwony
-punkt oraz jego osobny znacznik mediany nadal korzystają z właściwego
-profilu, również gdy wiek wypada w pasie połączenia. Nie wyznaczamy z
-takiego łącznika mediany, normy, wartości odniesienia ani klasyfikacji.
-Poglądowy ogon po końcu Borelli jest graficznie zakotwiczony do końca
-tego źródła, z zachowaniem względnego kierunku dalszych zmian. Nie jest
-ekstrapolacją stężeń: zapobiega jedynie sztucznemu skokowi między skalą
-liczbową a wcześniejszym schematem. Porównanie liczbowe starszego pacjenta
-pozostaje w osobnym wykresie średnich grup Baccarelli.
+Decyzja właściciela z 10 października 2026 zastępuje osobne przycinane
+ścieżki i przerywane łączniki PR #615 jedną ciągłą linią. W zwykłych
+widokach życia, minipuberty i pokwitania ta sama krzywa edukacyjna jest
+widoczna bez wyniku i z wynikiem. Wiek, wcześniactwo, materiał i metoda
+próbki nie zmieniają jej kształtu ani pionowej skali; nadal określają,
+czy wolno na niej umieścić wynik danej osoby. Porównanie płci zachowuje
+odrębną politykę i skalowanie opisane w
+[HORMONE_LIFESPAN.md](../HORMONE_LIFESPAN.md).
+
+Linia wykorzystuje oryginalne punkty Busch, Kelsey i Borelli w ich
+oknach podanych wyżej. `vilda_hormone_lifespan_display.js` przygotowuje
+stałe węzły; renderer buduje z nich jedną ścieżkę PCHIP z ciągłą styczną
+(C1) we współrzędnych osi całego życia.
+Zbliżenie wycina jej przedział, bez ponownego dopasowania krzywej.
+Polityka jest zapisana w `inhibin-display-policy.json`, eksportowanym
+jako `inhibinDisplayPolicy`; funkcja produkcyjna to
+`VildaHormoneLifespanDisplay.buildMaleInhibin`.
+Płynne przejścia 0,75–2 lat oraz 4,5–7 lat należą do jawnej polityki
+graficznej, nie do publikacji. Trzeci pas 18–25 lat wygładza widoczne
+załamanie przy zmianie skali czasu w 20. roku, w obrębie tego samego
+źródła Borelli. Styczne na końcach pasów odpowiadają lokalnym pochodnym
+źródłowego przebiegu, aby uniknąć krótkich zagięć. Nie tworzy to wspólnej
+zwalidowanej mediany ani norm. Odcinek płodowy korzysta z dotychczasowych kotwic poglądowych,
+bez wcześniejszego dołka przy urodzeniu, i dochodzi do danych z 7. dnia.
+Zakończenie 80–90 lat pozostaje płaską ilustracją zakotwiczoną w końcu
+Borelli (140 pg/mL). Nie przedłuża źródłowego profilu dla pacjenta.
+
+Mediana pacjenta nadal pochodzi wyłącznie z
+`vilda_hormone_lifespan_reference.js`, z niezmienionych danych i bramek
+profilu. Wynik i znacznik mediany używają wspólnej liniowej skali:
+stałe źródłowe maksimum 309,779035 pg/mL × zapas 1,25, czyli około
+387,22379 pg/mL na górze osi. Wynik ponad tę wysokość jest oznaczany
+strzałką w górę i pełną wartością, bez fałszywej kropki na granicy osi
+oraz bez przeskalowania krzywej. Wartość dokładnie na granicy pozostaje
+punktem. Zapis cenzurowany nie staje się strzałką dokładnego wyniku.
+
+W pasie wygładzenia znacznik źródłowej mediany może leżeć poza krzywą
+edukacyjną: zachowujemy go, zamiast przesuwać medianę lub wynik na linię.
+Przykładowo dla dokładnie 1 roku i 223 pg/mL oba znaczniki są na wysokości
+oryginalnej mediany Kelsey 223, niezależnie od przebiegu wygładzenia.
+Dla dokładnie 44 lat mediana Borelli pozostaje około 162,084705882 pg/mL;
+wynik 88 pg/mL leży poniżej niej. Ta dokładność służy regresji technicznej;
+UI respektuje przybliżony charakter odczytu ryciny.
+
+Nieznane donoszenie lub wcześniactwo blokuje dopasowanie niemowlęcego
+punktu do Busch, ale nie usuwa tej populacji z ogólnej prezentacji zmian.
+Gdy wiek jest poza wybranym zbliżeniem, punkt znika i krzywa pozostaje
+niezmieniona. Porównanie starszego pacjenta ze średnią Baccarelli nadal
+korzysta z osobnego wykresu grupowego, nie z poglądowego ogona.
 
 ## Transformacje, źródła i granice
 
@@ -181,7 +213,9 @@ Zaokrąglony współczynnik 7,14 z przypisu tabeli Wang pozostaje metadaną
 Konwersja jednostki pacjenta musi być jawna i wspólna z rysowaniem.
 Zgodność jednostek nie dowodzi zamienności metod oznaczenia.
 
-Punkt i linia używają wspólnego modelu oraz monotonicznej funkcji skali.
+Punkt i znacznik źródłowej mediany używają wspólnej monotonicznej funkcji
+skali. Płynna linia męskiej inhibiny B ma wyłącznie opisane wyżej
+graficzne przejścia między źródłami oraz pas 18–25 lat w obrębie Borelli.
 Nie przycinamy punktu do zakresu `[0,1]` i nie przesuwamy wieku na brzeg
 widoku. Odcinki interpolowane PCHIP pozostają w zakresie węzłów swojego
 profilu; granica publikacji nie jest parą węzłów do interpolacji. W osobnym
@@ -221,7 +255,10 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Donoszony chłopiec, dokładnie 90 dni, LH 2,05589 IU/L | Punkt na przybliżonej medianie Busch; wartość ma dokładność odczytu ryciny, nie sześciu klinicznych miejsc dziesiętnych. |
 | Donoszony chłopiec, 90 dni, inhibina B 300 pg/mL | Busch około 294,293798 pg/mL; punkt nieznacznie ponad linią. |
 | Mężczyzna 40 lat, testosteron 13,049603876520182 nmol/L | Punkt na centralnej linii Kelsey 2014/2015. |
-| Chłopiec 3 lata, inhibina B 107 pg/mL | Punkt na węźle p50 Kelsey 2016, bez stosowania krzywej niemowlęcej. |
+| Chłopiec 3 lata, inhibina B 107 pg/mL | Punkt na węźle p50 Kelsey 2016, bez stosowania krzywej niemowlęcej do jego odniesienia. |
+| Mężczyzna dokładnie 44 lata, inhibina B 88 pg/mL; przed wpisaniem, po wpisaniu i po wyczyszczeniu | Identyczna ścieżka i skala; wynik poniżej źródłowego odniesienia Borelli około 162,084705882 pg/mL. |
+| Ten sam kontekst, inhibina B 1000 pg/mL | Ta sama ścieżka i skala; strzałka w górę z 1000 pg/mL, bez kropki na górnej granicy. |
+| Chłopiec dokładnie 1 rok, inhibina B 223 pg/mL | Punkt i znacznik mediany Kelsey są zgodne; linia edukacyjna w pasie wygładzenia może przebiegać inaczej. |
 | Chłopiec 5 lat i 6 miesięcy, AMH 99,18 ng/mL | Punkt na poziomym odcinku mediany rocznej grupy Wang 5–<6 lat, N=134; to nie p50 dla dokładnie 5,5 roku. |
 | Chłopiec 11 lat i 6 miesięcy, AMH 20,70 ng/mL | Punkt na medianie grupy 11–<12 lat; profil kończy się przed 12. urodzinami. |
 | Chłopiec 12 lat i 6 miesięcy, AMH 7 ng/mL | Brak punktu Wang: mediana grupy 12 jest sprzeczna między tabelami; brak interpolacji przez lukę. |
@@ -234,7 +271,11 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki
 i konwersje, zmianę osoby/analitu/płci, odznaczenie hormonu, pełny ekran
-oraz telefon. Test równości punktu z linią nie może sprawdzać wyłącznie
+oraz telefon. Dla inhibiny B dochodzą stałość krzywej i skali przy pustym,
+poprawnym, błędnym i cenzurowanym wyniku oraz płynność stycznych przy
+zmianie źródła i w pasie 18–25 lat. Test równości punktu ze źródłowym
+odniesieniem nie może
+sprawdzać wyłącznie
 wspólnej błędnej implementacji: potrzebne są też powyższe wartości źródłowe.
 Zielone testy potwierdzają techniczne odtworzenie danych, nie walidację
 medyczną ani przydatność diagnostyczną nowej wizualizacji.

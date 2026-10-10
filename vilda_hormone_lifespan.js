@@ -486,14 +486,14 @@
         }),
       );
     }
-    function displaySpline(h) {
+    function displaySpline(h, fraction = xFraction, tangentOverrides = []) {
       const nodes = [];
       for (const segment of h.segments)
         for (const p of segment.points) {
           if (!nodes.length || p.ageYears !== nodes[nodes.length - 1].ageYears)
             nodes.push(p);
         }
-      const xs = nodes.map((p) => xFraction(p.ageYears)),
+      const xs = nodes.map((p) => fraction(p.ageYears)),
         v = nodes.map((p) => p.relative),
         dx = [],
         d = [],
@@ -511,6 +511,10 @@
             b = dx[i] + 2 * dx[i - 1];
           m[i] = (a + b) / (a / d[i - 1] + b / d[i]);
         }
+      }
+      for (const tangent of tangentOverrides) {
+        const index = nodes.findIndex((point) => point.ageYears === tangent.ageYears);
+        if (index >= 0 && Number.isFinite(tangent.slope)) m[index] = tangent.slope;
       }
       const at = (x) => {
         let i = 0;
@@ -757,6 +761,28 @@
     }
 
     const pointEngine = () => opts.referenceEngine || root.VildaHormoneLifespanReference;
+    const inhibinDisplay = (opts.displayEngine || root.VildaHormoneLifespanDisplay)
+      ?.buildMaleInhibin(data, pointEngine());
+    const maleLifeFraction = (age) => {
+      let offset = 0;
+      for (const stage of maleStages) {
+        if (age <= stage.max)
+          return offset + (age - stage.min) / (stage.max - stage.min) * stage.width;
+        offset += stage.width;
+      }
+      return 1;
+    };
+    const inhibinSegment = inhibinDisplay && { points: inhibinDisplay.points.map((point) => ({
+      ageYears: point.ageYears, relative: point.value / inhibinDisplay.divisor / inhibinDisplay.ceiling,
+    })) };
+    const inhibinTangents = (inhibinDisplay?.tangentOverrides || []).map((tangent) => {
+      const step = Math.max(1, Math.abs(tangent.ageYears)) * 1e-5;
+      const timeScale = (maleLifeFraction(tangent.ageYears + step) - maleLifeFraction(tangent.ageYears - step)) / (2 * step);
+      return { ageYears: tangent.ageYears,
+        slope: tangent.slopePerYear / inhibinDisplay.divisor / inhibinDisplay.ceiling / timeScale };
+    });
+    const inhibinSpline = inhibinSegment && displaySpline({ segments: [inhibinSegment] }, maleLifeFraction, inhibinTangents);
+    const stableInhibinVisible = () => !compare && sex === "male" && inhibinDisplay && selected.has("inhb");
     const pointNumber = (value, significantDigits = 6) => new Intl.NumberFormat("pl-PL", {
       maximumSignificantDigits: significantDigits,
       ...(value !== 0 && (Math.abs(value) >= 1e7 || Math.abs(value) < 0.0001)
@@ -774,22 +800,8 @@
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id))) return null;
       let profiles = [patientPoint.profile];
-      if (!compare && id === "inhb" && sex === "male") {
-        // Each source keeps its own path and population. A result using Kelsey
-        // must not hide the already available Busch and Borelli age segments.
-        // Select against each source's age, retaining specimen/method/birth gates.
-        profiles = data.patientPointData.profiles.filter((profile) => {
-          if (profile.analyte !== id || profile.sex !== sex ||
-              profile.unit !== patientPoint.profile.unit) return false;
-          const candidate = engine.selectProfile(data.patientPointData, {
-            ...patientContext,
-            ageYears: profile.minAge,
-            ageUpperYears: profile.minAge,
-            ageUpperInclusive: true,
-          });
-          return candidate.status === "ready" && candidate.profile.id === profile.id;
-        });
-      }
+      const stableDisplay = !compare && id === "inhb" && sex === "male" ? inhibinDisplay : null;
+      if (stableDisplay) profiles = stableDisplay.profiles;
       if (compare) {
         // This view compares ages, not matched Tanner stages. The other sex
         // has no patient observation, so do not invent its gonadal context.
@@ -821,9 +833,9 @@
       });
       // The divisor covers the complete source profile, not the zoom viewport.
       // Divide before applying headroom so even a finite 1e308 remains finite.
-      const divisor = Math.max(patientPoint.value,
+      const divisor = stableDisplay?.divisor || Math.max(patientPoint.value,
         ...curves.flatMap((curve) => curve.points.map((point) => point.value))) || 1;
-      return { ...patientPoint, id, curves, divisor, ceiling: 1.25, minAge, maxAge };
+      return { ...patientPoint, id, curves, divisor, ceiling: stableDisplay?.ceiling || 1.25, minAge, maxAge, stableDisplay };
     }
     function referencePath(curve, model, x, y) {
       return curve.points.filter((point) => point.ageYears >= model.minAge && point.ageYears <= model.maxAge)
@@ -846,149 +858,23 @@
         }));
       }
     }
-    function connectInhibinSegments(group, model, { x, top, bottom, mobile }) {
-      model.illustrativeBridges = 0;
-      if (compare || sex !== "male" || model.id !== "inhb") return;
-      const background = group.querySelector('path[data-reference-background="inhb"]');
-      if (!background) return;
-      const plotLeft = x(model.minAge), plotRight = x(model.maxAge);
-      const geometry = (path, id, profile) => {
-        if (!path) return null;
-        let length;
-        try { length = path.getTotalLength(); } catch { return null; }
-        if (!Number.isFinite(length) || length <= 0) return null;
-        const first = path.getPointAtLength(0), last = path.getPointAtLength(length);
-        if (![first.x, first.y, last.x, last.y].every(Number.isFinite) || last.x <= first.x) return null;
-        return { path, id, profile, length, from: Math.max(plotLeft, first.x),
-          to: Math.min(plotRight, last.x) };
-      };
-      const pointAtX = (part, targetX) => {
-        let low = 0, high = part.length;
-        for (let step = 0; step < 26; step++) {
-          const middle = (low + high) / 2;
-          if (part.path.getPointAtLength(middle).x < targetX) low = middle;
-          else high = middle;
-        }
-        const distance = (low + high) / 2;
-        const point = part.path.getPointAtLength(distance);
-        const before = part.path.getPointAtLength(Math.max(0, distance - 0.15));
-        const after = part.path.getPointAtLength(Math.min(part.length, distance + 0.15));
-        const slope = after.x > before.x ? (after.y - before.y) / (after.x - before.x) : 0;
-        return { x: point.x, y: point.y, slope: Number.isFinite(slope) ? slope : 0 };
-      };
-      const schematic = geometry(background, "schematic");
-      if (!schematic) return;
-      const sources = model.curves.map(({ profile }) => geometry(
-        [...group.querySelectorAll('path[data-reference-line="inhb"]')]
-          .find((path) => path.dataset.profile === profile.id), profile.id, profile,
-      )).filter((part) => part && part.to > part.from)
-        .sort((a, b) => a.from - b.from);
-      if (!sources.length) return;
-      const pieces = [];
-      const addSchematic = (from, to) => {
-        const part = { ...schematic, from: Math.max(from, schematic.from),
-          to: Math.min(to, schematic.to) };
-        if (part.to - part.from > 0.01) pieces.push(part);
-      };
-      if (sources[0].profile.minAge > model.minAge) addSchematic(plotLeft, sources[0].from);
-      for (const [index, source] of sources.entries()) {
-        const previous = sources[index - 1];
-        // A tiny gap caused by an exclusive source endpoint belongs to the
-        // visual bridge. Only a genuine missing age interval uses the schematic.
-        if (previous && source.profile.minAge > previous.profile.maxAge) {
-          addSchematic(previous.to, source.from);
-        }
-        pieces.push({ ...source });
-      }
-      const last = sources[sources.length - 1];
-      if (last.profile.maxAge < model.maxAge) {
-        let tail = null;
-        if (last.id === "borelli2025-male-inhb" && schematic.to - last.to > 0.01) {
-          const anchor = pointAtX(last, last.to);
-          const original = pointAtX(schematic, anchor.x);
-          const originalHeight = bottom - original.y;
-          const scale = originalHeight > 0 ? (bottom - anchor.y) / originalHeight : NaN;
-          // Only the illustrative senior tail is anchored to its adjoining
-          // source. Retain its direction instead of implying a new rise at 80.
-          if (Number.isFinite(scale) && scale >= 0 && scale <= 1) {
-            const points = Array.from({ length: 33 }, (_, index) => {
-              if (index === 0) return anchor;
-              const point = pointAtX(schematic, anchor.x + (schematic.to - anchor.x) * index / 32);
-              return { x: point.x, y: bottom - (bottom - point.y) * scale };
-            });
-            const path = el("path", {
-              d: points.map((point, index) => `${index ? "L" : "M"}${point.x},${point.y}`).join(" "),
-              fill: "none", stroke: background.getAttribute("stroke"),
-              "stroke-width": mobile ? 3.2 : 3.7, "stroke-linecap": "round",
-              "stroke-linejoin": "round", "stroke-dasharray": "5 5", opacity: 0.65,
-              "data-reference-background": "inhb", "data-schematic-tail": "inhb",
-            });
-            group.append(path);
-            tail = geometry(path, "schematic-tail");
-            if (!tail || tail.to <= tail.from) { path.remove(); tail = null; }
-          }
-        }
-        if (tail) pieces.push(tail);
-        else addSchematic(last.to, plotRight);
-      }
-      for (const part of pieces) {
-        part.visibleFrom = part.from;
-        part.visibleTo = part.to;
-      }
-      // Pure display geometry: endpoints come from the actual SVG strokes.
-      // Short tangent handles keep the bridge smooth without an invented peak.
-      const bridgePath = (left, right) => {
-        const span = right.x - left.x;
-        if (span <= 0 || ![left.x, left.y, right.x, right.y].every(Number.isFinite)) return null;
-        const lower = Math.max(top, Math.min(left.y, right.y) - 2);
-        const upper = Math.min(bottom, Math.max(left.y, right.y) + 2);
-        const handle = (point, direction) => {
-          const delta = point.slope * direction;
-          const room = delta > 0 ? upper - point.y : point.y - lower;
-          const width = Math.max(0, Math.min(span / 3, delta ? room / Math.abs(delta) : span / 3));
-          return [point.x + direction * width, point.y + delta * width];
-        };
-        const first = handle(left, 1), second = handle(right, -1);
-        return `M${left.x},${left.y} C${first.join(",")} ${second.join(",")} ${right.x},${right.y}`;
-      };
-      const bridges = [];
-      for (let index = 1; index < pieces.length; index++) {
-        const left = pieces[index - 1], right = pieces[index];
-        const width = mobile ? 8 : 12;
-        const leftPoint = pointAtX(left, left.to - Math.min(width, (left.to - left.from) / 4));
-        const rightPoint = pointAtX(right, right.from + Math.min(width, (right.to - right.from) / 4));
-        const d = bridgePath(leftPoint, rightPoint);
-        if (!d) continue;
-        left.visibleTo = leftPoint.x;
-        right.visibleFrom = rightPoint.x;
-        bridges.push({ d, from: left.id, to: right.id });
-      }
-      if (!bridges.length) return;
-      const defs = el("defs");
-      const paths = [...new Set([background, ...pieces.map((part) => part.path)])];
-      for (const [index, path] of paths.entries()) {
-        const id = `${uid}inhibin-piece-${index}`;
-        const clip = el("clipPath", { id });
-        for (const part of pieces.filter((piece) => piece.path === path)) {
-          if (part.visibleTo <= part.visibleFrom) continue;
-          clip.append(el("rect", { x: part.visibleFrom, y: top - 3,
-            width: part.visibleTo - part.visibleFrom, height: bottom - top + 6 }));
-        }
-        defs.append(clip);
-        path.setAttribute("clip-path", `url(#${id})`);
-      }
-      group.append(defs);
-      for (const bridge of bridges) group.append(el("path", {
-        d: bridge.d, fill: "none", stroke: sources[0].path.getAttribute("stroke"),
-        "stroke-width": mobile ? 3.2 : 3.7, "stroke-linecap": "round",
-        "stroke-linejoin": "round", "stroke-dasharray": "5 5", opacity: 0.65,
-        "data-illustrative-bridge": "inhb", "data-from-source": bridge.from,
-        "data-to-source": bridge.to,
-      }));
-      model.illustrativeBridges = bridges.length;
+    function stableInhibinPath(left, width, y) {
+      if (view === "life") return segmentPath(inhibinSegment, left, width, y, inhibinSpline);
+      const [minAge, maxAge] = visibleAgeDomain();
+      // Zoom samples the same full-life display spline. It never refits the
+      // source transitions to a new time scale or to a patient's measurement.
+      const ages = new Set(Array.from({ length: 801 }, (_, index) =>
+        minAge + (maxAge - minAge) * index / 800));
+      for (const point of inhibinDisplay.points)
+        if (point.ageYears >= minAge && point.ageYears <= maxAge) ages.add(point.ageYears);
+      const segment = { points: [...ages].sort((a, b) => a - b).map((ageYears) => ({
+        ageYears, relative: inhibinSpline.at(maleLifeFraction(ageYears)).value,
+      })) };
+      return segmentPath(segment, left, width, y, displaySpline({ segments: [segment] }));
     }
     function drawPatientDot(group, model, { W, mobile, left, right, top, bottom, px, y }) {
-      const py = y(model.value / model.divisor / model.ceiling);
+      const offscale = !!model.stableDisplay && model.value / model.divisor > model.ceiling;
+      const py = offscale ? top + 5 : y(model.value / model.divisor / model.ceiling);
       const my = y(model.referenceValue / model.divisor / model.ceiling);
       const unit = model.profile.unit;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
@@ -997,12 +883,13 @@
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "Mediana dla wieku";
-      const a11y = `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
+      const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") + `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
         "data-median": model.referenceValue, "data-profile": model.profile.id,
         "data-divisor": model.divisor, "data-ceiling": model.ceiling,
         "data-plot-top": top, "data-plot-bottom": bottom,
+        ...(offscale ? { "data-offscale": "above" } : {}),
         "data-age-lower": patientAgeYears, "data-age-upper": patientContext.ageUpperYears ?? patientAgeYears,
         role: "img", "aria-label": a11y, class: "vhl-patient-point",
       });
@@ -1014,9 +901,15 @@
       const medianColor = model.curves.find((curve) => curve.profile.sex === sex).color;
       dot.append(el("circle", { cx: px, cy: my, r: 4.2, fill: "white",
         stroke: medianColor, "stroke-width": 2, "data-median-point": "" }));
-      dot.append(el("circle", { cx: px, cy: py, r: 11, fill: "#d52d43", opacity: 0.12 }));
-      dot.append(el("circle", { cx: px, cy: py, r: mobile ? 6.5 : 7,
-        fill: "#d52d43", stroke: "white", "stroke-width": 2.5, "data-result-point": "" }));
+      if (offscale) {
+        dot.append(el("path", { d: `M${px},${top + 16}V${top + 2}M${px - 5},${top + 7}L${px},${top + 2}L${px + 5},${top + 7}`,
+          fill: "none", stroke: "#d52d43", "stroke-width": 2.5,
+          "stroke-linecap": "round", "stroke-linejoin": "round", "data-result-overflow": "above" }));
+      } else {
+        dot.append(el("circle", { cx: px, cy: py, r: 11, fill: "#d52d43", opacity: 0.12 }));
+        dot.append(el("circle", { cx: px, cy: py, r: mobile ? 6.5 : 7,
+          fill: "#d52d43", stroke: "white", "stroke-width": 2.5, "data-result-point": "" }));
+      }
       const canvas = document.createElement("canvas"), context = canvas.getContext("2d");
       const font = mobile ? 11 : 12;
       const label = (message, yy, color, weight, kind) => {
@@ -1042,10 +935,21 @@
         resultTop = limit(Math.min(py, my) - 51);
         medianTop = limit(resultTop + 27);
       }
+      if (model.stableDisplay && py !== my) {
+        // Keep the labels in the same vertical order as their markers, even
+        // when the fixed scale puts the two markers close together.
+        if (py > my) {
+          medianTop = limit(my - 27);
+          resultTop = limit(py + 8);
+        } else {
+          resultTop = limit(py - 27);
+          medianTop = limit(my + 8);
+        }
+      }
       const personLabel = sex === "female"
         ? (patientAgeYears < 18 ? "Dziewczynka" : "Kobieta")
         : (patientAgeYears < 18 ? "Chłopiec" : "Mężczyzna");
-      label(`${compare ? personLabel + " · " : ""}${pointNumber(model.value)} ${unit}`, resultTop, "#b51e33", 700, "result");
+      label(`${compare ? personLabel + " · " : ""}${offscale ? "↑ " : ""}${pointNumber(model.value)} ${unit}`, resultTop, "#b51e33", 700, "result");
       label(`${medianLabel} ≈${pointNumber(model.referenceValue, 3)} ${unit}`, medianTop, "#365b66", 550, "median");
       group.append(dot);
       model.a11y = a11y;
@@ -1054,23 +958,27 @@
       if (!model) return;
       renderedPoint = model;
       const name = hormones().find((h) => h.id === model.id).name;
-      panel.querySelector(".vhl-axis-label").textContent = name + " · wynik na tle mediany";
+      panel.querySelector(".vhl-axis-label").textContent = name + (model.stableDisplay ? " · wynik na tle badań" : " · wynik na tle mediany");
       const groupLabel = model.profile.statistic === "group-median"
         ? ` grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "";
-      byId("scale-note").textContent = (model.illustrativeBridges
-        ? "Kropka: wynik. Linia ciągła: mediana; przerywane połączenia są poglądowe."
+      const transition = model.stableDisplay?.transitions.some((part) =>
+        patientAgeYears >= part.minAge && patientAgeYears <= part.maxAge);
+      byId("scale-note").textContent = (model.stableDisplay
+        ? "Linia: poglądowy przebieg na podstawie badań. Kropka: wynik."
         : `Kropka: wynik. Linia: mediana${groupLabel}, nie granica normy.`) +
-        (compare ? " Obie płcie we wspólnej skali stężeń." : " Pozostałe linie są poglądowe.") +
+        (transition ? " Mediana źródłowa jest oznaczona osobno." : "") +
+        (model.stableDisplay && model.value / model.divisor > model.ceiling ? " ↑ Wynik powyżej skali." : "") +
+        (compare ? " Obie płcie we wspólnej skali stężeń." : "") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
       byId("scale-note").setAttribute("data-current-source", model.profile.id);
       byId("chart-desc").textContent = model.a11y +
         " Wynik i mediana używają tej samej skali stężeń. " +
-        (model.illustrativeBridges
-          ? "Przerywane połączenia zapewniają ciągłość wizualną; nie wyznaczają median ani punktu pacjenta. " : "") +
+        (model.stableDisplay
+          ? "Linia jest syntezą badań z wygładzonymi przejściami, a nie jedną medianą populacji. Przejścia nie wyznaczają wartości odniesienia pacjenta. " : "") +
         (compare ? "Obie płcie są pokazane w tej samej jednostce i skali; źródła mogą stosować różne metody oznaczenia."
-          : "Pozostałe hormony i przerywane odcinki zachowują własne skale poglądowe. Nie porównujemy liczbowo wysokości różnych hormonów.");
+          : "Pozostałe hormony zachowują własne skale poglądowe. Nie porównujemy liczbowo wysokości różnych hormonów.");
     }
     function explainUnavailablePoint() {
       if (renderedObservation?.patientPoint?.status === "ready") return;
@@ -1207,7 +1115,7 @@
             ...hormones().filter((h) => selected.has(h.id)),
           ]
         : [];
-      if (dotModel) {
+      if (dotModel && !dotModel.stableDisplay) {
         const clip = el("clipPath", { id: uid + "patient-source-outside" });
         // Keep the schematic only in the complement of all displayed sources.
         // Adjacent source domains never become a pair of interpolation nodes.
@@ -1230,7 +1138,7 @@
         g.append(defs);
       }
       for (const h of ordered) {
-        const referenceBackground = dotModel?.id === h.id;
+        const referenceBackground = dotModel?.id === h.id && !dotModel.stableDisplay;
         const active = selected.has(h.id),
           style = {
             fill: "none",
@@ -1246,7 +1154,13 @@
               "data-reference-background": h.id,
             } : {}),
           };
-        if (sex === "female" && view !== "mini") {
+        if (sex === "male" && h.id === "inhb" && inhibinDisplay) {
+          g.append(el("path", { ...style, d: stableInhibinPath(left, pw, y),
+            "data-line": "inhb", "data-stable-reference-line": "inhb",
+            "data-divisor": inhibinDisplay.divisor, "data-ceiling": inhibinDisplay.ceiling,
+            "data-plot-top": top, "data-plot-bottom": bottom,
+          }));
+        } else if (sex === "female" && view !== "mini") {
           const spline = displaySpline(h);
           for (const segment of h.segments) {
             const d = segmentPath(segment, left, pw, y, spline);
@@ -1275,8 +1189,7 @@
           g.append(path);
         }
       }
-      if (dotModel) drawReferenceCurves(g, dotModel, { x, y, mobile });
-      if (dotModel) connectInhibinSegments(g, dotModel, { x, top, bottom, mobile });
+      if (dotModel && !dotModel.stableDisplay) drawReferenceCurves(g, dotModel, { x, y, mobile });
       const lifeTicks =
         sex === "female"
           ? [
@@ -1388,6 +1301,10 @@
         (sex === "female" ? "dziewczynki i kobiety" : "chłopcy i mężczyźni");
       byId("chart-desc").textContent =
         "Każdy hormon ma własną skalę względną. To nie są normy ani proporcje stężeń różnych hormonów. Etapy całego życia pokazano w różnej skali czasu.";
+      if (stableInhibinVisible()) {
+        byId("scale-note").textContent = "Inhibina B: poglądowy przebieg na podstawie badań. Każdy hormon ma własną skalę.";
+        byId("chart-desc").textContent += " Inhibina B zachowuje stały przebieg i skalę. Przejścia między źródłami oraz okres płodowy i wiek powyżej 80 lat są poglądowe.";
+      }
       pointDescription(dotModel);
     }
     function renderComparison() {
@@ -1790,7 +1707,16 @@
         target.append(p);
       };
       const links = [];
-      if (renderedPoint) {
+      if (stableInhibinVisible()) {
+        paragraph("Linia inhibiny B jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Pozostałe hormony mają własne skale.");
+        paragraph("Łagodne przejścia między źródłami (około 9–24 miesięcy, 4,5–7 i 18–25 lat), okres płodowy oraz odcinek po 80. roku są ilustracyjne. Nie służą do wyznaczania mediany, norm ani wyniku pacjenta. Niemowlęcy przebieg źródłowy dotyczy chłopców urodzonych o czasie.");
+        paragraph("Kropka oznacza wynik, a jasny znacznik medianę wybranego źródła. W obszarze wygładzonego przejścia mediana źródłowa może nie leżeć na linii poglądowej. Strzałka w górę oznacza wynik poza stałą skalą; etykieta zachowuje jego rzeczywistą wartość. Kolor nie klasyfikuje wyniku.");
+        for (const profile of inhibinDisplay.profiles) {
+          paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
+          if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
+        }
+      }
+      if (renderedPoint && !renderedPoint.stableDisplay) {
         const medianBasis = renderedPoint.profile.statistic === "group-median"
           ? (renderedPoint.profile.ageGroup.boundaryPolicy === "application-completed-year-convention"
             ? "medianę rocznej grupy wieku" : "medianę grupy wieku przed pokwitaniem")
@@ -1808,7 +1734,7 @@
           }
           if (typeof profile.url === "string") links.push([profile.sourceLabel || "Źródło mediany", profile.url]);
         }
-      } else if (compare && view === "puberty") {
+      } else if (!stableInhibinVisible() && compare && view === "puberty") {
         paragraph(
           "Porównanie poglądowe w wieku 8–20 lat. Oś przedstawia wiek, nie stadium Tannera; nie ustalamy stadium z wieku. Każda płeć ma własną skalę względem maksimum w tych latach. Przecięcia linii nie oznaczają równych stężeń, a przesunięcie krzywych nie określa dokładnej różnicy czasu dojrzewania.",
         );
@@ -1841,7 +1767,7 @@
             ["Kelsey 2016 · chłopcy", "https://doi.org/10.1371/journal.pone.0153843"],
           );
         }
-      } else if (compare) {
+      } else if (!stableInhibinVisible() && compare) {
         paragraph(
           "Dziewczynki: mediany GAMLSS z suplementu Ljubicic 2022, od 0,02 do 1 roku, podzielone przez najwyższą medianę w tym przedziale. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; wybrano i przeskalowano dane.",
         );
@@ -1863,7 +1789,7 @@
             "https://doi.org/10.1038/s41572-019-0087-y",
           ],
         );
-      } else if (sex === "female") {
+      } else if (!stableInhibinVisible() && sex === "female") {
         paragraph(
           "Minipuberty: mediany GAMLSS Ljubicic 2022, od około 7,3 dnia do 1 roku. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; mediany przeskalowano do prezentacji względnej. Dane dotyczą donoszonych dziewczynek.",
         );
@@ -1950,7 +1876,7 @@
             );
           }
         }
-      } else {
+      } else if (!stableInhibinVisible()) {
         paragraph(
           "Autorski schemat oparty na opisanym w publikacjach czasie i kierunku zmian. Wysokości linii dobrano ilustracyjnie; nie są stężeniami, percentylami ani ilorazami hormonów. Linie nie przedstawiają pomiarów jednej osoby przez całe życie.",
         );

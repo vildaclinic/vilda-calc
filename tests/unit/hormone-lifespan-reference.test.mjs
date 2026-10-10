@@ -173,6 +173,21 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(evaluate('inhb', 1).profile.id).toBe('kelsey2016-male-inhb');
   });
 
+  it('44-letni mężczyzna zachowuje medianę Borelli bez dopasowywania do wyniku ani wygładzania rysunku', () => {
+    for (const value of [0, 88, 400, 100000000]) {
+      for (const preterm of ['unknown', 'yes', 'no']) {
+        const result = evaluate('inhb', 44, { preterm,
+          measurement: { value, unit: 'pg/mL' } });
+        expect(result).toMatchObject({ status: 'ready', value,
+          profile: { id: 'borelli2025-male-inhb' } });
+        expect(result.referenceValue).toBeCloseTo(162.08470588235292, 10);
+      }
+    }
+    expect(evaluate('inhb', 44, { measurement: { value: 88, unit: 'pg/mL', operator: '<' } }))
+      .toEqual(unavailable('censored-result'));
+    expect(evaluate('inhb', 44, { measurement: null })).toEqual(unavailable('invalid-value'));
+  });
+
   it('nie uzupełnia luk dowodowych ani nie ekstrapoluje poza wiek źródła', () => {
     for (const [analyte, age] of [['lh', 6 / 365.25], ['lh', 1], ['lh', 5.99],
       ['lh', 16.01], ['fsh', 40], ['t', 2.99], ['t', 88.01], ['amh', 20],
