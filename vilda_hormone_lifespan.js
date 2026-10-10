@@ -232,12 +232,6 @@
       const dialog = target.createElement("dialog");
       dialog.className = "vhl-fullscreen-dialog";
       dialog.setAttribute("aria-labelledby", byId("title").id);
-      const theme = window.getComputedStyle(panel);
-      for (const name of theme) {
-        if (name.startsWith("--"))
-          dialog.style.setProperty(name, theme.getPropertyValue(name));
-      }
-      dialog.style.font = theme.font;
       let stylesheet = null;
       if (target !== document) {
         // Copy the already loaded, versioned component CSS. No new request is
@@ -254,11 +248,7 @@
           return;
         }
       }
-      const placeholder = document.createElement("div");
-      placeholder.setAttribute("aria-hidden", "true");
-      placeholder.style.height = panel.getBoundingClientRect().height + "px";
-      placeholder.style.marginTop = theme.marginTop;
-      placeholder.style.marginBottom = theme.marginBottom;
+      const placeholder = document.createComment("hormone-chart-position");
       panel.before(placeholder);
       const scrollPositions = [...new Set([window, target.defaultView])].map((view) =>
         ({ view, left: view.scrollX, top: view.scrollY }));

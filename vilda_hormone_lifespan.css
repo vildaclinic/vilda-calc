@@ -130,6 +130,7 @@ dialog.vhl-fullscreen-dialog {
   border-radius: 0;
   background: var(--card-bg, #fff);
   color: var(--text-color, #183c48);
+  font: inherit;
   overflow: auto;
   overscroll-behavior: contain;
 }
