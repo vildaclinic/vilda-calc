@@ -9,7 +9,8 @@ nadaniem statusu walidacji klinicznej modelom ani digitalizacji rycin.
 
 Punkt pokazuje wpisane stężenie, a jego znacznik odniesienia — centralną
 wartość modelu populacyjnego. Linia zwykle odtwarza ten model; męska
-inhibina B ma osobno opisaną niżej płynną prezentację wielu źródeł.
+inhibina B i testosteron całkowity mają osobno opisane niżej płynne
+prezentacje wielu źródeł.
 W zależności od źródła jest to opublikowane p50 lub odczytana
 z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy grupach
 wieku Wang i Zec zamiast ciągłej krzywej wieku widoczny jest lokalny poziomy
@@ -42,7 +43,7 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Męskie LH, FSH, testosteron całkowity, AMH, inhibina B; 7 dni–<1 roku | [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3, str. 1565; czarna mediana GAMLSS odczytana z wektorów PDF | 119 zdrowych donoszonych chłopców, ciąże pojedyncze, 338 próbek surowicy, COPENHAGEN Minipuberty; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS testosteron | Ekstrakcja obejmuje 7–400 dni; aktywny profil kończy się przed 1. rokiem. To przybliżenie ryciny, nie parametry autora ani średnia podłużna z ryc. 2. Osobna bramka rozdzielczości opisana niżej. |
 | Męskie LH i FSH; 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `Other biomarkers`, wiersze 17–27, kolumny B:E i G:J | Norwegia, BGS2; 414 dostępnych męskich próbek w tabeli kohorty, liczebność oznaczenia może się różnić; surowica, pobrania 08:00–14:00, Siemens IMMULITE 2000 XPi | 11 rocznych węzłów na hormon. `p50 = exp(M)/1e6`. Wiek chronologiczny, bez wyznaczania stadium Tannera. Bez ekstrapolacji na dorosłych. |
 | FSH przed pokwitaniem: chłopcy 1–<6 lat/G1; dziewczynki 1–<4, 4–<8 i 8–<11 lat/Th1 | [Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210/PDF 5: chłopcy grupa źródłowa 1–<8 lat, mediana 0,48 IU/L, N=303; dziewczynki kolejno 2,57/1,07/1,55 IU/L, N=124/156/107 | Zagrzeb, Chorwacja, Tanner 1; całe badanie N=948, nie każdy hormon oznaczano u każdego dziecka. Roche cobas e 411, kanapkowe ECLIA; zbierano surowicę i osocze Li-heparynowe, bez przypisania materiału do analitu | Mediany całych grup, nie model dokładnego wieku. Aktualne typowane G1/Th1 jest wymagane. U chłopców od 6 lat zachowujemy Madsen, lecz mediana 0,48 i N=303 nadal opisują pełną grupę źródłową 1–<8. Źródłową grupę chłopców 8–<11 (0,79 IU/L, N=117) zachowujemy wyłącznie w dowodach. |
-| Męski testosteron całkowity; 3–88 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 mężczyzn, surowica; różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Węzły co 0,1 roku z funkcji centralnej `log10(T+1)` po odwróceniu transformacji, zgodne z poprawionym p50; między węzłami PCHIP. Nie średnia arytmetyczna stężeń. Model po 40 latach jest niemal płaski; nie wymuszać spadku ze starego schematu. |
+| Męski testosteron całkowity; 3–88 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 obserwacji, niekoniecznie niezależnych osób; surowica, różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Węzły co 0,1 roku z funkcji centralnej `log10(T+1)` po odwróceniu transformacji, zgodne z poprawionym p50; między węzłami PCHIP. Nie średnia arytmetyczna stężeń. Model po 40 latach jest niemal płaski; nie wymuszać spadku ze starego schematu. |
 | Męska inhibina B; 1–<6,1 roku | [Kelsey 2016](https://doi.org/10.1371/journal.pone.0153843), tabela 4, opublikowane węzły p50 | Cztery badania, 709 obserwowanych par wiek–stężenie; surowica, historyczne dwumiejscowe ELISA | Pełna tabela 0–17 lat pozostaje dowodem, wybrany odcinek jest polityką aplikacji. Nie używać rocznej tabeli do minipuberty. Nie odtwarzać modelu zaokrąglonymi współczynnikami z tabeli 2. |
 | Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem odniesienia pacjenta; wygładzona wspólna linia jest wyłącznie prezentacją. |
 | Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
@@ -116,6 +117,55 @@ Gdy wiek jest poza wybranym zbliżeniem, punkt znika i krzywa pozostaje
 niezmieniona. Porównanie starszego pacjenta ze średnią Baccarelli nadal
 korzysta z osobnego wykresu grupowego, nie z poglądowego ogona.
 
+### Stała, płynna linia męskiego testosteronu całkowitego
+
+Po audycie z 10 października 2026 właściciel zatwierdził stabilizację
+prezentacji przy zachowaniu obecnych źródeł i warunków kwalifikacji.
+Busch 2022 i Kelsey 2014/2015 są stałą podstawą ogólnego przebiegu;
+wpisanie, zmiana lub wyczyszczenie wyniku nie zmienia linii ani skali.
+Zmiana wieku, donoszenia, metody lub wybranego zbliżenia może usunąć
+niedopasowany punkt, lecz nie podmienia populacyjnego przebiegu.
+Nie aktywujemy nowego testosteronowego profilu Madsen ani danych wolnego T.
+
+Polityka graficzna `testosterone-display-policy.json` jest eksportowana
+jako `testosteroneDisplayPolicy`; funkcja produkcyjna to
+`VildaHormoneLifespanDisplay.buildMaleTestosterone`. Jedna ścieżka PCHIP
+z ciągłą styczną (C1) powstaje w kanonicznych współrzędnych osi całego
+życia. Zbliżenie i pełny ekran pokazują tę samą geometrię, bez ponownego
+dopasowania i bez normalizowania każdego okresu osobno.
+
+- **150 dni–4 lata:** monotoniczny most poglądowy od około 0,895098 nmol/L
+  Busch do około 0,391750487 nmol/L Kelsey, bez narzucania stromych
+  stycznych źródłowych. To decyzja graficzna obejmująca również dostępne
+  odcinki źródeł, nie tylko lukę 1–3 lata. Unika sztucznego wzrostu przy
+  łączeniu niskiego końca niemowlęctwa z inną populacją Kelsey. Nie jest
+  nowym modelem stężenia dla dzieci; źródłowy znacznik mediany może
+  przebiegać poza linią.
+- **19,3–25 lat:** przejście w obrębie Kelsey łagodzi załamanie
+  skompresowanej osi w 20. roku. Zachowuje szczyt źródłowych węzłów
+  przy 19,3 roku i lokalne styczne źródła na końcach pasa.
+- **Przed urodzeniem:** zachowane kotwice schematu do wieku 0 są
+  ilustracją, nie ilościowym profilem płodowym lub pępowinowym.
+- **88–90 lat:** płaskie zakończenie przy około 13,222919802 nmol/L
+  jest zakotwiczone w ostatnim węźle Kelsey; nie przedłuża jego zakresu
+  odniesienia pacjenta poza 88 lat.
+
+Stałe maksimum źródłowych węzłów to 15,41843900285427 nmol/L, a zapas
+1,25 daje górną wysokość osi 19,27304875356784 nmol/L. Te cyfry służą
+regresji technicznej, nie dokładności klinicznej. Punkt pacjenta i znacznik
+mediany korzystają z tej samej skali. Wynik większy od góry osi jest
+strzałką w górę z rzeczywistą wartością; równość z granicą nadal daje
+punkt. Pusty, błędny lub cenzurowany zapis nie daje zastępczej strzałki.
+
+`vilda_hormone_lifespan_reference.js` i jego dane nie zmieniają się.
+Mężczyzna 40 lat/13 nmol/L pozostaje poniżej odniesienia
+13,049603876520182 nmol/L; 100 nmol/L jest poza stałą wysokością osi.
+Chłopiec 2 lata nadal nie ma ilościowego punktu. Donoszenie i techniczna
+bramka rozdzielczości Busch pozostają wymagane dla punktu niemowlęcia;
+graficzny most nie obchodzi ich ani nie wyznacza końca minipuberty.
+Zmiana obejmuje prezentację edukacyjną, bez nowych norm, median,
+werdyktów, jednostek ani zmian zapisanych wyników.
+
 ## Transformacje, źródła i granice
 
 Madsen: parametry dotyczą `X = ln(stężenie w jednostce SI × 1e6)`.
@@ -133,6 +183,28 @@ runtime interpoluje je PCHIP. Porównanie produkcyjnej interpolacji z funkcją
 0,000121 nmol/L; regresja wymaga błędu poniżej 0,00013 nmol/L.
 Funkcja nie może kwalifikować wieku
 poza 3–88 lat tylko dlatego, że algebraicznie zwraca liczbę.
+
+**Otwarte ustalenie audytu testosteronu, bez zmiany źródła:** w dzieciństwie
+Kelsey istotnie różni się od bezpośrednich oznaczeń LC-MS/MS
+[Madsen 2022](https://doi.org/10.1210/clinem/dgac155). W wieku 6 lat
+centralne wartości wynoszą odpowiednio około 0,323 i 0,02394 nmol/L.
+Niezależny odczyt oryginalnych współczynników i transformacji nie wykazał
+błędu jednostki. Madsen podaje LLOQ 0,02 nmol/L, więc jego p50 nie wolno
+odrzucać jako wartości poniżej tego progu; reguła przygotowania obserwacji
+poniżej LLOQ pozostaje niewyjaśniona. To różne populacje i metody, nie
+dowód błędnego wyniku pojedynczego dziecka. Decyzja o osobnym dziecięcym
+profilu, jego granicach i przejściach wymaga osobnego wdrożenia klinicznego;
+stabilizacja grafiki nie rozstrzyga tego problemu. Luka 1–<3 lat pozostaje
+bez dokładnej mediany pacjenta.
+
+Audyt modelu Kelsey potwierdził zgodność 1020 wierszy Table S1 i wszystkich
+86 p50 skorygowanej tabeli Kelsey. Nie zmieniamy plateau na spadek wyłącznie
+dla wyglądu. Nowsza [metaanaliza Marriott/Yeap 2023](https://doi.org/10.7326/M23-0342)
+opisuje względną stabilność średniego całkowitego T przed 70 lat i spadek
+później, zależny również od zdrowia i BMI. Są to skorygowane różnice średnich,
+nie bezwzględne mediany do podmiany. Kelsey pozostaje jednym modelem źródłowym,
+nie uniwersalną trajektorią zdrowego mężczyzny. Nie zastępujemy całkowitego T
+publikacjami dotyczącymi wolnego T ani nie ekstrapolujemy p50 powyżej 88 lat.
 
 Kelsey 2016: zaokrąglone współczynniki powodują narastający błąd, np.
 w 17. roku około 284,9 zamiast opublikowanego p50=304 pg/mL. Dlatego
@@ -216,6 +288,8 @@ Zgodność jednostek nie dowodzi zamienności metod oznaczenia.
 Punkt i znacznik źródłowej mediany używają wspólnej monotonicznej funkcji
 skali. Płynna linia męskiej inhibiny B ma wyłącznie opisane wyżej
 graficzne przejścia między źródłami oraz pas 18–25 lat w obrębie Borelli.
+Testosteron ma odrębną politykę graficzną opisaną wyżej; żaden z jego
+mostów nie wyznacza mediany ani nie rozszerza wieku kwalifikacji.
 Nie przycinamy punktu do zakresu `[0,1]` i nie przesuwamy wieku na brzeg
 widoku. Odcinki interpolowane PCHIP pozostają w zakresie węzłów swojego
 profilu; granica publikacji nie jest parą węzłów do interpolacji. W osobnym
@@ -255,6 +329,9 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Donoszony chłopiec, dokładnie 90 dni, LH 2,05589 IU/L | Punkt na przybliżonej medianie Busch; wartość ma dokładność odczytu ryciny, nie sześciu klinicznych miejsc dziesiętnych. |
 | Donoszony chłopiec, 90 dni, inhibina B 300 pg/mL | Busch około 294,293798 pg/mL; punkt nieznacznie ponad linią. |
 | Mężczyzna 40 lat, testosteron 13,049603876520182 nmol/L | Punkt na centralnej linii Kelsey 2014/2015. |
+| Mężczyzna dokładnie 40 lat, testosteron: pusty → 13 → 100 → wyczyszczenie | Identyczna krzywa i skala; 13 poniżej oryginalnej mediany 13,049603876520182; 100 ma strzałkę z rzeczywistą liczbą, bez przyciętej kropki. |
+| Chłopiec 2 lata, testosteron 0,1 nmol/L | Stała linia poglądowa, bez źródłowej mediany i bez punktu wyprowadzonego z mostu. |
+| Donoszony chłopiec 180 dni, testosteron równy medianie Busch | Punkt równy źródłowemu odniesieniu; oba znaczniki mogą leżeć poza mostem poglądowym 150 dni–4 lata. |
 | Chłopiec 3 lata, inhibina B 107 pg/mL | Punkt na węźle p50 Kelsey 2016, bez stosowania krzywej niemowlęcej do jego odniesienia. |
 | Mężczyzna dokładnie 44 lata, inhibina B 88 pg/mL; przed wpisaniem, po wpisaniu i po wyczyszczeniu | Identyczna ścieżka i skala; wynik poniżej źródłowego odniesienia Borelli około 162,084705882 pg/mL. |
 | Ten sam kontekst, inhibina B 1000 pg/mL | Ta sama ścieżka i skala; strzałka w górę z 1000 pg/mL, bez kropki na górnej granicy. |
@@ -271,9 +348,11 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki
 i konwersje, zmianę osoby/analitu/płci, odznaczenie hormonu, pełny ekran
-oraz telefon. Dla inhibiny B dochodzą stałość krzywej i skali przy pustym,
+oraz telefon. Dla inhibiny B i testosteronu dochodzą stałość krzywej i skali przy pustym,
 poprawnym, błędnym i cenzurowanym wyniku oraz płynność stycznych przy
-zmianie źródła i w pasie 18–25 lat. Test równości punktu ze źródłowym
+zmianie źródła i w pasach wygładzenia osi. Należy sprawdzić, że zbliżenia
+T pokazują tę samą kanoniczną krzywą również poza wiekiem pacjenta.
+Test równości punktu ze źródłowym
 odniesieniem nie może
 sprawdzać wyłącznie
 wspólnej błędnej implementacji: potrzebne są też powyższe wartości źródłowe.

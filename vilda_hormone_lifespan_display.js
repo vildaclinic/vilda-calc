@@ -112,5 +112,141 @@
     };
   }
 
-  return { buildMaleInhibin: buildMaleInhibin };
+  function buildMaleTestosterone(data, engine) {
+    var policy = data && data.testosteroneDisplayPolicy;
+    var sourceData = data && data.patientPointData;
+    if (!policy || policy.kind !== 'educational-display-only' || policy.analyte !== 't' ||
+        policy.sex !== 'male' || policy.unit !== 'nmol/L' ||
+        !Array.isArray(policy.sourceIds) || policy.sourceIds.length !== 2 ||
+        new Set(policy.sourceIds).size !== 2 || !Array.isArray(policy.transitions) ||
+        !sourceData || !Array.isArray(sourceData.profiles) ||
+        !engine || typeof engine.referenceAt !== 'function' || typeof engine.sampleProfile !== 'function' ||
+        !Array.isArray(data.maleAges) || !Array.isArray(data.maleHormones)) return null;
+    var profiles = policy.sourceIds.map(function (id) {
+      return sourceData.profiles.find(function (profile) { return profile.id === id; });
+    });
+    if (profiles.some(function (profile) {
+      return !profile || profile.analyte !== 't' || profile.sex !== 'male' || profile.unit !== 'nmol/L' ||
+        !finite(profile.minAge) || !finite(profile.maxAge) || profile.maxAge <= profile.minAge ||
+        !Array.isArray(profile.points) || profile.points.length < 2 ||
+        profile.points.some(function (point, index, points) {
+          return !point || !finite(point.ageYears) || !finite(point.value) || point.value < 0 ||
+            (index > 0 && point.ageYears <= points[index - 1].ageYears);
+        });
+    }) || profiles[0].maxAge > profiles[1].minAge) return null;
+    var hormone = data.maleHormones.find(function (item) { return item.id === 't'; });
+    if (!hormone || !Array.isArray(hormone.values) || hormone.values.length !== data.maleAges.length ||
+        hormone.values.some(function (value) { return !finite(value) || value < 0; }) ||
+        data.maleAges.some(function (age, index, ages) {
+          return !finite(age) || (index > 0 && age <= ages[index - 1]);
+        })) return null;
+    var ceiling = policy.scale && policy.scale.headroomFactor;
+    var divisor = Math.max.apply(null, profiles.flatMap(function (profile) {
+      return profile.points.map(function (point) { return point.value; });
+    }));
+    if (!finite(divisor) || divisor <= 0 || !finite(ceiling) || ceiling <= 1 || policy.transitions.length !== 2) return null;
+    var validTransitions = policy.transitions.every(function (item, index, items) {
+      if (!item || !finite(item.minAge) || !finite(item.maxAge) || item.maxAge <= item.minAge ||
+          (index > 0 && item.minAge <= items[index - 1].maxAge) ||
+          !['monotone-display', 'original-source-derivative'].includes(item.tangents)) return false;
+      var from = profiles.find(function (profile) { return profile.id === item.fromSource; });
+      var to = profiles.find(function (profile) { return profile.id === item.toSource; });
+      return from && to && item.minAge >= from.minAge && item.minAge < from.maxAge &&
+        item.maxAge > to.minAge && item.maxAge <= to.maxAge;
+    });
+    if (!validTransitions) return null;
+    var transitions = policy.transitions.map(function (item) {
+      return { minAge: item.minAge, maxAge: item.maxAge,
+        fromSource: item.fromSource, toSource: item.toSource, kind: item.kind };
+    });
+    var invalid = false;
+    var tangentOverrides = [];
+    policy.transitions.forEach(function (transition) {
+      if (transition.tangents !== 'original-source-derivative') return;
+      [[transition.minAge, transition.fromSource], [transition.maxAge, transition.toSource]].forEach(function (endpoint) {
+        var ageYears = endpoint[0];
+        var profile = profiles.find(function (item) { return item.id === endpoint[1]; });
+        var delta = Math.min(0.00001, (ageYears - profile.minAge) / 2, (profile.maxAge - ageYears) / 2);
+        if (!(delta > 0)) { invalid = true; return; }
+        var before = engine.referenceAt(profile, ageYears - delta);
+        var after = engine.referenceAt(profile, ageYears + delta);
+        var slope = (after - before) / (2 * delta);
+        if (!finite(before) || !finite(after) || !finite(slope)) { invalid = true; return; }
+        var sourceIndex = profile.points.findIndex(function (point) { return point.ageYears === ageYears; });
+        if (sourceIndex > 0 && sourceIndex < profile.points.length - 1) {
+          var sourceValue = profile.points[sourceIndex].value;
+          if ((sourceValue - profile.points[sourceIndex - 1].value) *
+              (profile.points[sourceIndex + 1].value - sourceValue) <= 0) slope = 0;
+        }
+        tangentOverrides.push({ ageYears: ageYears, slopePerYear: slope, sourceId: profile.id });
+      });
+    });
+    if (invalid) return null;
+    var knots = new Map();
+    function add(ageYears, value) {
+      if (!finite(ageYears) || !finite(value) || value < 0) { invalid = true; return; }
+      knots.set(ageYears, { ageYears: ageYears, value: value });
+    }
+    function inTransition(ageYears) {
+      return transitions.some(function (item) { return ageYears > item.minAge && ageYears < item.maxAge; });
+    }
+    function readable(profile, ageYears) {
+      var index = profile.points.findIndex(function (point) { return point.ageYears >= ageYears; });
+      if (index < 0 || profile.points[index].eligible === false) return false;
+      return profile.points[index].ageYears === ageYears || index === 0 || profile.points[index - 1].eligible !== false;
+    }
+    var stageAges = Array.isArray(data.maleStages) ? data.maleStages.flatMap(function (stage) {
+      return [stage.min, stage.max];
+    }) : [];
+    profiles.forEach(function (profile) {
+      var samples = engine.sampleProfile(profile, 400);
+      if (!Array.isArray(samples) || samples.length < 2) { invalid = true; return; }
+      var ages = new Set(samples.map(function (point) { return point.ageYears; }));
+      profile.points.forEach(function (point) { ages.add(point.ageYears); });
+      stageAges.forEach(function (ageYears) { ages.add(ageYears); });
+      for (var age = Math.ceil(profile.minAge); age <= profile.maxAge; age++) ages.add(age);
+      transitions.forEach(function (transition) {
+        if (transition.fromSource === profile.id) ages.add(transition.minAge);
+        if (transition.toSource === profile.id) ages.add(transition.maxAge);
+      });
+      ages.forEach(function (ageYears) {
+        if (ageYears < profile.minAge || ageYears > profile.maxAge ||
+            (profile.maxAgeExclusive && ageYears === profile.maxAge) ||
+            inTransition(ageYears) || !readable(profile, ageYears)) return;
+        add(ageYears, engine.referenceAt(profile, ageYears));
+      });
+    });
+    // Both ends of every illustrative join must still be genuine readable
+    // source values. No partial curve may silently replace missing evidence.
+    transitions.forEach(function (transition) {
+      if (!knots.has(transition.minAge) || !knots.has(transition.maxAge)) invalid = true;
+    });
+    var first = profiles[0], last = profiles[profiles.length - 1];
+    var schematic = policy.schematic;
+    if (invalid || !knots.has(first.minAge) || !knots.has(last.maxAge) ||
+        !schematic || !finite(schematic.prenatalLastAnchorAge) ||
+        schematic.prenatalLastAnchorAge >= first.minAge ||
+        schematic.tailScale !== 'hold-last-source-value' || !finite(schematic.tailMaxAge) ||
+        schematic.tailMaxAge <= last.maxAge) return null;
+    data.maleAges.forEach(function (ageYears, index) {
+      if (ageYears <= schematic.prenatalLastAnchorAge) add(ageYears, hormone.values[index] * divisor);
+    });
+    var lastReference = engine.referenceAt(last, last.maxAge);
+    if (!finite(lastReference) || lastReference < 0) return null;
+    add(schematic.tailMaxAge, lastReference);
+    var points = Array.from(knots.values()).sort(function (a, b) { return a.ageYears - b.ageYears; });
+    if (invalid || points.length < 2) return null;
+    return {
+      id: 't', kind: policy.kind, unit: policy.unit, policyVersion: policy.version,
+      points: points, profiles: profiles, sourceIds: policy.sourceIds.slice(),
+      divisor: divisor, ceiling: ceiling, transitions: transitions, tangentOverrides: tangentOverrides,
+      illustrativeIntervals: [
+        { minAge: points[0].ageYears, maxAge: first.minAge, kind: 'prenatal-lead' },
+        ...transitions,
+        { minAge: last.maxAge, maxAge: schematic.tailMaxAge, kind: 'older-age-tail' }
+      ]
+    };
+  }
+
+  return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone };
 });

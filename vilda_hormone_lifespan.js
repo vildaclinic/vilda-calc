@@ -761,8 +761,9 @@
     }
 
     const pointEngine = () => opts.referenceEngine || root.VildaHormoneLifespanReference;
-    const inhibinDisplay = (opts.displayEngine || root.VildaHormoneLifespanDisplay)
-      ?.buildMaleInhibin(data, pointEngine());
+    const displayEngine = opts.displayEngine || root.VildaHormoneLifespanDisplay;
+    const inhibinDisplay = displayEngine?.buildMaleInhibin(data, pointEngine());
+    const testosteroneDisplay = displayEngine?.buildMaleTestosterone?.(data, pointEngine());
     const maleLifeFraction = (age) => {
       let offset = 0;
       for (const stage of maleStages) {
@@ -772,17 +773,22 @@
       }
       return 1;
     };
-    const inhibinSegment = inhibinDisplay && { points: inhibinDisplay.points.map((point) => ({
-      ageYears: point.ageYears, relative: point.value / inhibinDisplay.divisor / inhibinDisplay.ceiling,
-    })) };
-    const inhibinTangents = (inhibinDisplay?.tangentOverrides || []).map((tangent) => {
-      const step = Math.max(1, Math.abs(tangent.ageYears)) * 1e-5;
-      const timeScale = (maleLifeFraction(tangent.ageYears + step) - maleLifeFraction(tangent.ageYears - step)) / (2 * step);
-      return { ageYears: tangent.ageYears,
-        slope: tangent.slopePerYear / inhibinDisplay.divisor / inhibinDisplay.ceiling / timeScale };
-    });
-    const inhibinSpline = inhibinSegment && displaySpline({ segments: [inhibinSegment] }, maleLifeFraction, inhibinTangents);
-    const stableInhibinVisible = () => !compare && sex === "male" && inhibinDisplay && selected.has("inhb");
+    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay].filter(Boolean).map((display) => {
+      const segment = { points: display.points.map((point) => ({
+        ageYears: point.ageYears, relative: point.value / display.divisor / display.ceiling,
+      })) };
+      const tangents = (display.tangentOverrides || []).map((tangent) => {
+        const step = Math.max(1, Math.abs(tangent.ageYears)) * 1e-5;
+        const timeScale = (maleLifeFraction(tangent.ageYears + step) - maleLifeFraction(tangent.ageYears - step)) / (2 * step);
+        return { ageYears: tangent.ageYears,
+          slope: tangent.slopePerYear / display.divisor / display.ceiling / timeScale };
+      });
+      return [display.id, { display, segment, spline: displaySpline({ segments: [segment] }, maleLifeFraction, tangents) }];
+    }));
+    const stableVisible = (id) => !compare && sex === "male" && stableCurves.has(id) && selected.has(id);
+    const stableInhibinVisible = () => stableVisible("inhb");
+    const stableTestosteroneVisible = () => stableVisible("t");
+    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible();
     const pointNumber = (value, significantDigits = 6) => new Intl.NumberFormat("pl-PL", {
       maximumSignificantDigits: significantDigits,
       ...(value !== 0 && (Math.abs(value) >= 1e7 || Math.abs(value) < 0.0001)
@@ -800,7 +806,7 @@
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id))) return null;
       let profiles = [patientPoint.profile];
-      const stableDisplay = !compare && id === "inhb" && sex === "male" ? inhibinDisplay : null;
+      const stableDisplay = !compare && sex === "male" ? stableCurves.get(id)?.display : null;
       if (stableDisplay) profiles = stableDisplay.profiles;
       if (compare) {
         // This view compares ages, not matched Tanner stages. The other sex
@@ -858,17 +864,18 @@
         }));
       }
     }
-    function stableInhibinPath(left, width, y) {
-      if (view === "life") return segmentPath(inhibinSegment, left, width, y, inhibinSpline);
+    function stableReferencePath(stable, left, width, y) {
+      const { display, segment: sourceSegment, spline } = stable;
+      if (view === "life") return segmentPath(sourceSegment, left, width, y, spline);
       const [minAge, maxAge] = visibleAgeDomain();
       // Zoom samples the same full-life display spline. It never refits the
       // source transitions to a new time scale or to a patient's measurement.
       const ages = new Set(Array.from({ length: 801 }, (_, index) =>
         minAge + (maxAge - minAge) * index / 800));
-      for (const point of inhibinDisplay.points)
+      for (const point of display.points)
         if (point.ageYears >= minAge && point.ageYears <= maxAge) ages.add(point.ageYears);
       const segment = { points: [...ages].sort((a, b) => a - b).map((ageYears) => ({
-        ageYears, relative: inhibinSpline.at(maleLifeFraction(ageYears)).value,
+        ageYears, relative: spline.at(maleLifeFraction(ageYears)).value,
       })) };
       return segmentPath(segment, left, width, y, displaySpline({ segments: [segment] }));
     }
@@ -944,6 +951,15 @@
         } else {
           resultTop = limit(py - 27);
           medianTop = limit(my + 8);
+        }
+        // Very low childhood concentrations can put both markers near the
+        // baseline. Separate their labels without swapping their vertical order.
+        if (py > my) {
+          resultTop = limit(Math.max(resultTop, medianTop + 27));
+          medianTop = limit(Math.min(medianTop, resultTop - 27));
+        } else {
+          medianTop = limit(Math.max(medianTop, resultTop + 27));
+          resultTop = limit(Math.min(resultTop, medianTop - 27));
         }
       }
       const personLabel = sex === "female"
@@ -1154,10 +1170,11 @@
               "data-reference-background": h.id,
             } : {}),
           };
-        if (sex === "male" && h.id === "inhb" && inhibinDisplay) {
-          g.append(el("path", { ...style, d: stableInhibinPath(left, pw, y),
-            "data-line": "inhb", "data-stable-reference-line": "inhb",
-            "data-divisor": inhibinDisplay.divisor, "data-ceiling": inhibinDisplay.ceiling,
+        if (sex === "male" && stableCurves.has(h.id)) {
+          const stable = stableCurves.get(h.id);
+          g.append(el("path", { ...style, d: stableReferencePath(stable, left, pw, y),
+            "data-line": h.id, "data-stable-reference-line": h.id,
+            "data-divisor": stable.display.divisor, "data-ceiling": stable.display.ceiling,
             "data-plot-top": top, "data-plot-bottom": bottom,
           }));
         } else if (sex === "female" && view !== "mini") {
@@ -1304,6 +1321,12 @@
       if (stableInhibinVisible()) {
         byId("scale-note").textContent = "Inhibina B: poglądowy przebieg na podstawie badań. Każdy hormon ma własną skalę.";
         byId("chart-desc").textContent += " Inhibina B zachowuje stały przebieg i skalę. Przejścia między źródłami oraz okres płodowy i wiek powyżej 80 lat są poglądowe.";
+      }
+      if (stableTestosteroneVisible()) {
+        byId("scale-note").textContent = (stableInhibinVisible() ? "Testosteron i inhibina B" : "Testosteron") +
+          ": poglądowy przebieg na podstawie badań. Każdy hormon ma własną skalę.";
+        byId("chart-desc").textContent += " Testosteron zachowuje stały przebieg i skalę. " +
+          "Połączenie między niemowlęctwem a dzieciństwem, okres płodowy i wiek powyżej 88 lat są poglądowe.";
       }
       pointDescription(dotModel);
     }
@@ -1716,6 +1739,30 @@
           if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
         }
       }
+      if (stableTestosteroneVisible()) {
+        paragraph("Linia testosteronu całkowitego zachowuje ten sam przebieg i skalę przed wpisaniem wyniku i po nim. Łączy poglądowo mediany różnych badań; nie jest jedną medianą populacji ani granicą normy.");
+        paragraph("Niemowlęca część źródłowa dotyczy chłopców urodzonych o czasie. Połączenie od około 5. miesiąca do 4 lat, wygładzenie w wieku 19,3–25 lat, okres płodowy i odcinek po 88. roku są ilustracyjne. Nie dostarczają mediany ani normy dla pacjenta.");
+        paragraph("Kropka oznacza wynik, a jasny znacznik medianę wybranego źródła. W poglądowym połączeniu mediana może nie leżeć na linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Kolor nie klasyfikuje wyniku.");
+        for (const profile of testosteroneDisplay.profiles) {
+          paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
+          if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
+        }
+      }
+      const selectedSchematics = stableStudyVisible() ? maleHormones.filter((h) =>
+        selected.has(h.id) && !stableCurves.has(h.id) && h.id !== renderedPoint?.id) : [];
+      if (selectedSchematics.length) {
+        paragraph(selectedSchematics.map((h) => h.name).join(", ") +
+          ": autorski schemat czasu i kierunku zmian. Wysokości tych linii są ilustracyjne; nie przedstawiają stężeń ani median.");
+        links.push(["Salonia 2019 · schemat rozwoju", "https://doi.org/10.1038/s41572-019-0087-y"]);
+        if (selectedSchematics.some((h) => h.id === "lh" || h.id === "fsh")) links.push(
+          ["Busch 2022 · minipuberty", "https://doi.org/10.1210/clinem/dgac115"],
+          ["Madsen 2022 · pokwitanie", "https://doi.org/10.1210/clinem/dgac155"],
+        );
+        if (selectedSchematics.some((h) => h.id === "amh"))
+          links.push(["Tehrani 2017 · dorosłość", "https://doi.org/10.1371/journal.pone.0179634"]);
+        if (selectedSchematics.some((h) => h.id === "insl3"))
+          links.push(["EMAS 2022 · INSL3", "https://doi.org/10.1111/andr.13220"]);
+      }
       if (renderedPoint && !renderedPoint.stableDisplay) {
         const medianBasis = renderedPoint.profile.statistic === "group-median"
           ? (renderedPoint.profile.ageGroup.boundaryPolicy === "application-completed-year-convention"
@@ -1734,7 +1781,7 @@
           }
           if (typeof profile.url === "string") links.push([profile.sourceLabel || "Źródło mediany", profile.url]);
         }
-      } else if (!stableInhibinVisible() && compare && view === "puberty") {
+      } else if (!stableStudyVisible() && compare && view === "puberty") {
         paragraph(
           "Porównanie poglądowe w wieku 8–20 lat. Oś przedstawia wiek, nie stadium Tannera; nie ustalamy stadium z wieku. Każda płeć ma własną skalę względem maksimum w tych latach. Przecięcia linii nie oznaczają równych stężeń, a przesunięcie krzywych nie określa dokładnej różnicy czasu dojrzewania.",
         );
@@ -1767,7 +1814,7 @@
             ["Kelsey 2016 · chłopcy", "https://doi.org/10.1371/journal.pone.0153843"],
           );
         }
-      } else if (!stableInhibinVisible() && compare) {
+      } else if (!stableStudyVisible() && compare) {
         paragraph(
           "Dziewczynki: mediany GAMLSS z suplementu Ljubicic 2022, od 0,02 do 1 roku, podzielone przez najwyższą medianę w tym przedziale. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; wybrano i przeskalowano dane.",
         );
@@ -1789,7 +1836,7 @@
             "https://doi.org/10.1038/s41572-019-0087-y",
           ],
         );
-      } else if (!stableInhibinVisible() && sex === "female") {
+      } else if (!stableStudyVisible() && sex === "female") {
         paragraph(
           "Minipuberty: mediany GAMLSS Ljubicic 2022, od około 7,3 dnia do 1 roku. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; mediany przeskalowano do prezentacji względnej. Dane dotyczą donoszonych dziewczynek.",
         );
@@ -1876,7 +1923,7 @@
             );
           }
         }
-      } else if (!stableInhibinVisible()) {
+      } else if (!stableStudyVisible()) {
         paragraph(
           "Autorski schemat oparty na opisanym w publikacjach czasie i kierunku zmian. Wysokości linii dobrano ilustracyjnie; nie są stężeniami, percentylami ani ilorazami hormonów. Linie nie przedstawiają pomiarów jednej osoby przez całe życie.",
         );
