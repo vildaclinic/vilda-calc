@@ -23,17 +23,21 @@ def build():
 
     def add(identifier, analyte, sex, points, minimum, maximum, source_label,
             url, method, population, statistic, approximate=False, **extra):
+        interpolation = extra.pop('interpolation', 'pchip')
         profile = dict(id=identifier, analyte=analyte, sex=sex, minAge=minimum,
                        maxAge=maximum, points=points, sourceLabel=source_label,
                        url=url, method=method, population=population,
                        statistic=statistic, approximate=approximate,
                        unit={'lh':'IU/L','fsh':'IU/L','t':'nmol/L','inhb':'pg/mL',
                              'amh':'pmol/L','e2':'pmol/L','insl3':'ug/L'}[analyte],
-                       interpolation='pchip', **extra)
+                       interpolation=interpolation, **extra)
         assert len(points) >= 2
         assert all(math.isfinite(p['value']) and p['value'] >= 0 for p in points)
         assert all(points[i]['ageYears'] < points[i+1]['ageYears'] for i in range(len(points)-1))
         assert points[0]['ageYears'] <= minimum < maximum <= points[-1]['ageYears']
+        assert interpolation in ('pchip', 'constant')
+        if interpolation == 'constant':
+            assert all(p['value'] == points[0]['value'] for p in points)
         profiles.append(profile)
 
     busch = read('busch2022-figure3-vector-medians.json')
@@ -108,6 +112,35 @@ def build():
                     'digitizationTolerancePgMl':5,'participants':1818,'samples':2007},
         limitations=borelli['notes'])
 
+    wang=read('wang2020-male-amh-group-medians.json')
+    assert sum(row['participants'] for row in wang['rows']) == wang['participants']
+    assert [row['ageGroupLabelYears'] for row in wang['rows'] if row['active']] == wang['ageRouting']['activeAgeGroupLabelsYears']
+    for row in wang['rows']:
+        if not row['active']:
+            continue
+        assert not row['medianConflict']
+        median = row['agreedGroupMedianNgMl']
+        assert median == row['table1MedianNgMl'] == row['table2MedianNgMl']
+        age = row['ageGroupLabelYears']
+        value = median / .1401
+        add('wang2020-male-amh-age-'+str(age),'amh','male',
+            [dict(ageYears=age,value=value),dict(ageYears=age+1,value=value)],
+            age,age+1,'Wang 2020 · AMH · grupa wieku',wang['source']['url'],
+            wang['assay']['method'],'Zdrowi chłopcy; Wuhan, Chiny','group-median',
+            interpolation='constant',maxAgeExclusive=True,
+            compatibleAssayMethodIds=['access-2','beckman-access-2'],
+            ageGroup={'labelYears':age,'label':str(age)+'–<'+str(age+1)+' lat',
+                      'minAge':age,'maxAge':age+1,'n':row['participants'],
+                      'sourceUnit':'ng/mL','sourceMedian':median,
+                      'boundaryPolicy':'application-completed-year-convention'},
+            provenance={**wang['source'],'participants':wang['participants'],
+                        'groupParticipants':row['participants'],
+                        'sourceUnit':'ng/mL','sourceToCanonicalFactor':1/.1401,
+                        'sourceAgeBoundaryDefinition':None,
+                        'ageRouting':wang['ageRouting']['applicationPolicy'],
+                        'upperAgePolicy':wang['ageRouting']['upperAgePolicy']},
+            limitations=wang['limitations'])
+
     tehrani=read('tehrani2017-male-amh-published-table.json')
     add('tehrani2017-male-amh','amh','male',
         [dict(ageYears=p['ageYears'],value=p['p50']/0.1401) for p in tehrani['points']],
@@ -128,9 +161,9 @@ def build():
             provenance={**infant['source'],'table':hormone['supplementTable'],
                         'participants':98,'samples':266},limitations=infant['displayNotes'])
 
-    return {'version':'2026-10-10.1','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-10.2','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
-            'interpolation':'Monotone PCHIP of source concentration nodes; no cross-source interpolation or extrapolation.',
+            'interpolation':'Monotone PCHIP within continuous source profiles; annual-group medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,
             'unitConversions':{
                 'lh':{'unit':'IU/L','factors':{'IU/L':1,'mIU/mL':1}},

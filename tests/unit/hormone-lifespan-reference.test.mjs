@@ -24,7 +24,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     expect(data.notClinicalReference).toBe(true);
-    expect(data.profiles).toHaveLength(17);
+    expect(data.profiles).toHaveLength(30);
     expect(data.profiles.every(item => item.sourceLabel && item.url && item.method && item.population)).toBe(true);
   });
 
@@ -53,6 +53,97 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
       expect(evaluate('t', age).referenceValue).toBeCloseTo(expected, 11);
     }
     expect(evaluate('inhb', .25, { sex: 'female' }).referenceValue).toBe(49.684);
+  });
+
+  it('AMH u chłopców używa wyłącznie zgodnych median rocznych grup Wang, bez interpolacji między grupami', () => {
+    // Independently transcribed from the matching Table 1 / Table 2 entries,
+    // journal page 156. These are group medians, not exact-age predictions.
+    const groups = [
+      [1, 160.42, 123], [2, 155.57, 129], [3, 118.33, 147], [4, 115.23, 142],
+      [5, 99.18, 134], [6, 83.05, 144], [7, 69.61, 131], [8, 62.75, 147],
+      [9, 58.96, 135], [10, 54.18, 138], [11, 20.70, 126],
+      [13, 9.64, 132], [14, 8.23, 129]
+    ];
+    expect(data.profiles.filter(item => item.id.startsWith('wang2020-'))).toHaveLength(groups.length);
+    for (const [age, median, n] of groups) {
+      for (const offset of [0, .25, .5, .99]) {
+        const result = evaluate('amh', age + offset);
+        expect(result.status).toBe('ready');
+        expect(result.referenceValue).toBeCloseTo(median / 0.1401, 10);
+        expect(result.profile).toMatchObject({
+          id: `wang2020-male-amh-age-${age}`, statistic: 'group-median',
+          interpolation: 'constant', minAge: age, maxAge: age + 1,
+          maxAgeExclusive: true,
+          ageGroup: { labelYears: age, minAge: age, maxAge: age + 1, n,
+            sourceUnit: 'ng/mL', sourceMedian: median }
+        });
+      }
+      expect(engine.referenceAt(profile(`wang2020-male-amh-age-${age}`), age + 1)).toBeNull();
+    }
+  });
+
+  it('AMH zachowuje lukę 12 lat, dane minipuberty i dorosłych oraz nie przenosi grup chłopców na dziewczęta', () => {
+    for (const age of [12, 12.5, 12.999, 15, 19.99]) {
+      expect(evaluate('amh', age)).toEqual(unavailable('unsupported-age'));
+    }
+    expect(profile('wang2020-male-amh-age-0')).toBeUndefined();
+    expect(profile('wang2020-male-amh-age-12')).toBeUndefined();
+    const infant = evaluate('amh', 90 / 365.25);
+    expect(infant).toMatchObject({
+      status: 'ready', referenceValue: 1154.040945,
+      profile: { id: 'busch2022-male-amh' }
+    });
+    expect(evaluate('amh', 40).referenceValue).toBe(6.12 / 0.1401);
+    expect(evaluate('amh', 70).status).toBe('ready');
+    expect(evaluate('amh', 1, { sex: 'female' })).toMatchObject({
+      status: 'ready', profile: { id: 'ljubicic2022-female-amh' }
+    });
+    for (const age of [1.01, 5, 11, 13, 14]) {
+      expect(evaluate('amh', age, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+    }
+  });
+
+  it('odrzuca sprzeczne wartości w profilu stałej mediany zamiast wybierać jeden węzeł', () => {
+    const original = profile('wang2020-male-amh-age-5');
+    const broken = { ...original, points: original.points.map((point, index) => ({
+      ...point, value: point.value + index
+    })) };
+    expect(engine.referenceAt(broken, 5)).toBeNull();
+    expect(engine.referenceAt(broken, 5.5)).toBeNull();
+    expect(engine.sampleProfile(broken, 20)).toEqual([]);
+    const corruptedData = { ...data, profiles: data.profiles.map(item => item.id === broken.id ? broken : item) };
+    expect(engine.evaluate(corruptedData, context('amh', 5))).toEqual(unavailable('reference-unavailable'));
+  });
+
+  it('AMH w pełnych latach i miesiącach dobiera jedną grupę, a wiek obejmujący dwie grupy nie tworzy pozornej mediany', () => {
+    const openEnd = { ageUpperYears: 6, ageUpperInclusive: false };
+    expect(evaluate('amh', 5, openEnd)).toMatchObject({
+      status: 'ready', profile: { id: 'wang2020-male-amh-age-5' }
+    });
+    expect(evaluate('amh', 5 + 11 / 12, openEnd).referenceValue).toBeCloseTo(99.18 / 0.1401, 10);
+    expect(evaluate('amh', 5, { ageUpperYears: 6 })).toEqual(unavailable('ambiguous-age'));
+    expect(evaluate('amh', 5, { ...openEnd, ageUpperInclusive: true })).toEqual(unavailable('ambiguous-age'));
+    expect(evaluate('amh', 5.5, { ageUpperYears: 6.01, ageUpperInclusive: false }))
+      .toEqual(unavailable('ambiguous-age'));
+    expect(evaluate('amh', 11, { ageUpperYears: 12, ageUpperInclusive: false }).status).toBe('ready');
+    expect(evaluate('amh', 11, { ageUpperYears: 12 })).toEqual(unavailable('ambiguous-age'));
+    expect(evaluate('amh', 14, { ageUpperYears: 15, ageUpperInclusive: false }).status).toBe('ready');
+  });
+
+  it('AMH Wang zachowuje jednostki i znaną metodę zamiast traktować automatyczny wybór źródła jako zgodność oznaczenia', () => {
+    const ng = evaluate('amh', 5, { measurement: { value: 100, unit: 'ng/mL' } });
+    const pmol = evaluate('amh', 5, { measurement: { value: 100 / 0.1401, unit: 'pmol/L' } });
+    expect(ng.status).toBe('ready');
+    expect(ng.value).toBeCloseTo(pmol.value, 10);
+    expect(ng.referenceValue).toBe(pmol.referenceValue);
+    expect(evaluate('amh', 5, { assayMethodId: 'Access-2', specimen: 'serum' }).status).toBe('ready');
+    expect(evaluate('amh', 5, { assayMethodId: 'beckman-access-2' }).status).toBe('ready');
+    expect(evaluate('amh', 5, { assayMethodId: 'roche-elecsys' })).toEqual(unavailable('incompatible-assay'));
+    expect(evaluate('amh', 5, { assayMethodId: 'unknown' }).status).toBe('ready');
+    expect(evaluate('amh', 5, { assayMethodId: 'unknown' })).not.toHaveProperty('methodConfirmed');
+    expect(evaluate('amh', 5, { specimen: 'plasma' })).toEqual(unavailable('incompatible-specimen'));
+    expect(evaluate('amh', 5, { contraindicated: true })).toEqual(unavailable('contraindicated'));
+    expect(evaluate('amh', 5, { preterm: 'unknown' }).status).toBe('ready');
   });
 
   it('interpolacja gęstych węzłów testosteronu nie zmienia istotnie opublikowanej funkcji', () => {

@@ -824,7 +824,10 @@
       const my = y(model.referenceValue / model.divisor / model.ceiling);
       const unit = model.profile.unit;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
-      const a11y = `Wynik ${person}: ${pointNumber(model.value)} ${unit}. Mediana dla wieku: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
+      const medianLabel = model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
+      const medianContext = model.profile.statistic === "group-median"
+        ? `Mediana grupy ${model.profile.ageGroup.label}` : "Mediana dla wieku";
+      const a11y = `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
         "data-median": model.referenceValue, "data-profile": model.profile.id,
@@ -873,7 +876,7 @@
         ? (patientAgeYears < 18 ? "Dziewczynka" : "Kobieta")
         : (patientAgeYears < 18 ? "Chłopiec" : "Mężczyzna");
       label(`${compare ? personLabel + " · " : ""}${pointNumber(model.value)} ${unit}`, resultTop, "#b51e33", 700, "result");
-      label(`Mediana ≈${pointNumber(model.referenceValue, 3)} ${unit}`, medianTop, "#365b66", 550, "median");
+      label(`${medianLabel} ≈${pointNumber(model.referenceValue, 3)} ${unit}`, medianTop, "#365b66", 550, "median");
       group.append(dot);
       model.a11y = a11y;
     }
@@ -882,7 +885,8 @@
       renderedPoint = model;
       const name = hormones().find((h) => h.id === model.id).name;
       panel.querySelector(".vhl-axis-label").textContent = name + " · wynik na tle mediany";
-      byId("scale-note").textContent = "Kropka: wynik. Linia: mediana, nie granica normy." +
+      const groupLabel = model.profile.statistic === "group-median" ? ` grupy ${model.profile.ageGroup.label}` : "";
+      byId("scale-note").textContent = `Kropka: wynik. Linia: mediana${groupLabel}, nie granica normy.` +
         (compare ? " Obie płcie we wspólnej skali stężeń." : " Pozostałe linie są poglądowe.") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
       byId("scale-note").setAttribute("data-current-source", model.profile.id);
@@ -1569,14 +1573,19 @@
       };
       const links = [];
       if (renderedPoint) {
-        paragraph("Kropka przedstawia wynik, a linia medianę populacji w tym wieku — nie granicę normy ani indywidualny cel. Kolor kropki nie jest klasyfikacją wyniku. Zakresy odniesienia i ocena kliniczna pozostają w osobnej części przelicznika.");
+        const medianBasis = renderedPoint.profile.statistic === "group-median"
+          ? "medianę rocznej grupy wieku" : "medianę populacji w tym wieku";
+        paragraph(`Kropka przedstawia wynik, a linia ${medianBasis} — nie granicę normy ani indywidualny cel. Kolor kropki nie jest klasyfikacją wyniku. Zakresy odniesienia i ocena kliniczna pozostają w osobnej części przelicznika.`);
         paragraph(compare
           ? "Obie linie i wynik mają wspólną skalę stężeń. Źródła dotyczą różnych populacji i metod; wykres nie potwierdza zgodności metody próbki z publikacją. Nie wyznacza proporcji hormonalnych ani stadium pokwitania."
           : "Wynik i mediana korzystają z jednej skali, stałej przy zmianie widoku czasu. Poza zakresem źródła przygaszona przerywana linia pozostaje schematem, bez stężeń i bez dopisywania brakujących danych. Pozostałe hormony zachowują własne skale poglądowe.");
         for (const { profile } of renderedPoint.curves) {
-          const description = [profile.sourceLabel, profile.method, profile.population]
+          const description = [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
             .filter((item) => typeof item === "string" && item.trim()).join(" · ");
           paragraph(description + (profile.approximate ? ". Mediana odtworzona orientacyjnie ze źródła." : "."));
+          if (profile.statistic === "group-median") {
+            paragraph("Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku. Grupy dobieramy według ukończonych lat, zgodnie z rocznymi oznaczeniami tabel i położeniem punktów na rycinie; autorzy nie podają dokładnych granic grup. Porównanie nie uwzględnia stadium Tannera.");
+          }
           if (typeof profile.url === "string") links.push([profile.sourceLabel || "Źródło mediany", profile.url]);
         }
       } else if (compare && view === "puberty") {

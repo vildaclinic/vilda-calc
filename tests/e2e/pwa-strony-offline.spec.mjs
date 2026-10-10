@@ -185,6 +185,18 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         await expect(punkt).toHaveCount(0);
         await wykres.locator('[data-view="life"]').click();
         await expect(punkt).toHaveAttribute('data-value', '13');
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 5, ageMonths: 6 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('AMH');
+        await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+        await page.locator('#labUnit').selectOption('ng/mL');
+        await page.locator('#labValue').fill('99.18');
+        const amh = wykres.locator('[data-patient-concentration="amh"]');
+        await expect(amh).toHaveAttribute('data-profile', 'wang2020-male-amh-age-5');
+        await expect.poll(async () => Number(await amh.getAttribute('data-median'))).toBeCloseTo(99.18 / .1401, 6);
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('mediana grupy 5–<6 lat');
       }
     }
 

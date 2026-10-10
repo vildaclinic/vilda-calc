@@ -62,7 +62,7 @@ async function expectPoint(page, value, median) {
         curveY: line.getPointAtLength((lo + hi) / 2).y,
         bottom: Number(group.dataset.plotBottom), value: Number(group.dataset.value), median: Number(group.dataset.median) };
     });
-    return geometry?.value === value;
+    return geometry && Math.abs(geometry.value - value) <= 1e-10 * Math.max(1, Math.abs(value));
   }).toBe(true);
   expect(Object.values(geometry).every(Number.isFinite)).toBe(true);
   expect(geometry.x).toBe(geometry.rx);
@@ -140,6 +140,73 @@ test('legacy testosterone conversion feeds the same dot for equivalent units', a
   await expectPoint(page, canonical.siValue, median);
   await page.locator('#labValue').fill('');
   await expect(dot(page)).toHaveCount(0);
+});
+
+test('boys AMH uses the current Wang age-group median, preserves units and leaves the disputed age group empty', async ({ page }) => {
+  await open(page, { sex: 'M', age: 5, ageMonths: 0 });
+  await choose(page, 'amh');
+  await page.locator('#labUnit').selectOption('ng/mL');
+  await page.locator('#labValue').fill('100');
+  await expectPoint(page, 100 / .1401, 99.18 / .1401);
+  await expect(dot(page)).toHaveAttribute('data-profile', 'wang2020-male-amh-age-5');
+  await expect(dot(page)).toContainText('Mediana grupy');
+  await expect(panel(page).locator('[data-lifespan="scale-note"]'))
+    .toContainText('Linia: mediana grupy 5–<6 lat, nie granica normy.');
+  await panel(page).getByText('O wykresie i źródła', { exact: true }).click();
+  await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('Wang');
+  await expect(panel(page).locator('[data-lifespan="source-copy"]'))
+    .toContainText('Mediana rocznej grupy wieku; nie opisuje zmian stężenia wewnątrz tego roku.');
+  await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('5–<6 lat');
+  await panel(page).screenshot({ path: test.info().outputPath('amh-group-desktop-5-years.png') });
+  await page.locator('#labUnit').selectOption('pmol/L');
+  await page.locator('#labValue').fill('1000');
+  await expectPoint(page, 1000, 99.18 / .1401);
+  await page.evaluate(() => {
+    window.VildaPersistence.writeShared({ sex: 'M', age: 12, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  });
+  await expect(dot(page)).toHaveCount(0);
+  await expect(panel(page)).toBeVisible();
+  await page.evaluate(() => {
+    window.VildaPersistence.writeShared({ sex: 'M', age: 13, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  });
+  await expectPoint(page, 1000, 9.64 / .1401);
+  await expect(dot(page)).toHaveAttribute('data-profile', 'wang2020-male-amh-age-13');
+  await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('13–<14 lat');
+  await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('13–<14 lat');
+});
+
+test('AMH group-median labels fit at 320px in the chart and fullscreen without introducing patient inputs', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await open(page, { sex: 'M', age: 5, ageMonths: 7 });
+  await choose(page, 'amh');
+  await page.locator('#labUnit').selectOption('ng/mL');
+  await page.locator('#labValue').fill('100');
+  const before = await page.evaluate(() => window.VildaPersistence.readShared());
+  for (const fullscreen of [false, true]) {
+    if (fullscreen) {
+      await panel(page).getByRole('button', { name: 'Powiększ', exact: true }).click();
+      await expect(page.locator('dialog.vhl-fullscreen-dialog')).toBeVisible();
+    }
+    await expectPoint(page, 100 / .1401, 99.18 / .1401);
+    await expect(panel(page).locator('input, select, textarea')).toHaveCount(0);
+    const fits = await dot(page).evaluate(group => {
+      const bounds = group.ownerSVGElement.viewBox.baseVal;
+      return [...group.querySelectorAll('text, circle')].every(node => {
+        const box = node.getBBox();
+        return box.x >= -1 && box.x + box.width <= bounds.width + 1 &&
+          box.y >= -1 && box.y + box.height <= bounds.height + 1;
+      });
+    });
+    expect(fits).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await panel(page).locator('[data-lifespan="chart"]').screenshot({
+      path: test.info().outputPath(`amh-group-${fullscreen ? 'fullscreen' : 'inline'}-320.png`)
+    });
+  }
+  await panel(page).getByRole('button', { name: 'Zamknij', exact: true }).click();
+  expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(before);
 });
 
 test('minipuberty compares quantitative medians for both sexes and retains only the current patient result', async ({ page }) => {
