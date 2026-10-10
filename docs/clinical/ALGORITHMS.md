@@ -447,27 +447,28 @@ męski bez E2. Zmiana pacjenta/płci, brak wieku, wcześniactwo, nieobsługiwany
 analit i reset nie przenoszą poprzedniego kontekstu. Kontrole obejmują
 przełączanie hormonów, stałą skalę, ciągłość, reduced motion, mobile i offline.
 
-**2026-10-10 — zatwierdzone wygładzenie męskich krzywych:** właściciel
-zaakceptował makietę i polecił wdrożenie. `displayPointIndices` w osobnym
-źródle danych wybiera istotne punkty autorskiego schematu; pełne tablice
-wieku i wysokości pozostają zachowane. Dokładne kubiczne odcinki PCHIP
-zastępują rysowanie przez wszystkie punkty i wtórne wygładzanie B-spline.
-Zachowują wybrane ekstrema, kierunek zmian i wspólne styczne, bez
-przeregulowania. Wybór punktów jest wspólny dla trzech widoków; nie dodano
-normalizacji do maksimum widoku. Porównanie płci korzysta z tej samej
-męskiej krzywej minipuberty, nadal względem własnego maksimum niemowlęcego.
+**2026-10-10 — powrót do pierwotnych męskich krzywych:** po ocenie
+wariantów właściciel polecił przywrócić „Pierwotny przebieg” z makiety.
+Renderer odpowiada `c6b03379`, sprzed PR #607: pełne tablice punktów,
+PCHIP i 97 próbek wygładzanych B-spline; porównanie płci ponownie używa
+193 próbek interpolacji niemowlęcej. Usunięto `displayPointIndices`.
+Dane wieku/wysokości, skale hormonów, interakcje i geometria żeńska
+pozostają bez zmian. Nie wdraża się alternatywnego algorytmu z kolejnej
+makiety. Wtórne wygładzenie może spłaszczać lub przesuwać ostre szczyty;
+nie gwarantuje dokładnego przejścia przez węzły źródłowe.
 
-Źródła pozostają te same: Salonia 2019, ryc. 2 (DOI
-10.1038/s41572-019-0087-y), i Busch 2022 (DOI 10.1210/clinem/dgac115).
-Załączona przez właściciela rycina służyła jako wzorzec płynności, bez
-nowej digitalizacji. **Wpływ kliniczny:** zmienia się geometria edukacyjna
-pomiędzy wybranymi punktami, nie zakresy, interpretacja badania, historia
-ani krzywe żeńskie. Wysokości są bezwymiarowym schematem, nie medianami
-stężeń. Regresja produkcyjnego renderera
-`tests/e2e/hormone-lifespan-smoothing.spec.mjs`: M/FSH/11 dni → maksimum
-minipuberty `0,49` we właściwym wieku, bez przesunięcia lub spłaszczenia;
-ponadto zachowane punkty i brak dodatkowych ekstremów dla sześciu krzywych
-oraz zgodność męskiej minipuberty z porównaniem płci.
+Źródła: Salonia 2019, ryc. 2 (DOI 10.1038/s41572-019-0087-y), Busch 2022
+(DOI 10.1210/clinem/dgac115); dane i ograniczenia pozostają w
+`docs/clinical/HORMONE_LIFESPAN.md`. **Wpływ kliniczny:** wyłącznie
+geometria edukacyjna, bez zmian norm, jednostek, interpretacji ani historii.
+Wysokości są bezwymiarowym schematem, nie medianami stężeń; szczyty
+minipuberty dotyczą orientacyjnego przebiegu u donoszonych chłopców.
+Regresja rzeczywistego renderera:
+`tests/e2e/hormone-lifespan-original-curves.spec.mjs` — syntetyczne
+M/LH/0,25 roku → domyślnie LH i pierwotna geometria; ponadto utrwalony
+wzorzec dla sześciu hormonów w trzech widokach na desktopie i telefonie
+oraz porównanie płci AMH/inhibiny B. Test techniczny nie stanowi walidacji
+klinicznej.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

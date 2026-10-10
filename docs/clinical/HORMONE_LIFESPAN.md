@@ -5,9 +5,9 @@ desktopowych i mobilnych oraz po poprawach połączeń okresów życia i skali
 minipuberty. Dane: `2026-10-09.5`. Zakres zatwierdzenia to prezentacja
 edukacyjna, nie nadanie algorytmowi statusu walidacji klinicznej.
 
-10 października 2026 właściciel zatwierdził osobną makietę wygładzenia
-męskich krzywych i polecił jej wdrożenie. Zmiana dotyczy geometrii schematu;
-nie dodaje nowych danych medycznych ani zakresów odniesienia.
+10 października 2026, po porównaniu kolejnych wariantów, właściciel
+polecił powrót do „Pierwotnego przebiegu” z makiety. Przywrócono geometrię
+sprzed PR #607; źródła medyczne i zakresy odniesienia pozostają bez zmian.
 
 ## Cel i granice
 
@@ -149,35 +149,28 @@ Dalszy przebieg wspierają: [Madsen 2022](https://doi.org/10.1210/clinem/dgac155
 [EMAS 2022 — INSL3](https://doi.org/10.1111/andr.13220).
 Wysokości pozostają poglądowe; odcinek do 90 lat nie jest ilościową prognozą.
 
-### Wygładzenie męskiego schematu — 2026-10-10
+### Pierwotny przebieg męskiego schematu — 2026-10-10
 
-Pełne tablice `ages`/`values` pozostają zachowane. Osobne
-`displayPointIndices` w źródłowym `schematic-data.js` wskazuje istotne
-punkty do rysowania: granice schematu, szczyty, minima i szerokie zmiany
-kierunku. Pominięcie pośrednich punktów w warstwie rysowania usuwa drobne
-załamania, których nie należy przedstawiać jako osobnych zdarzeń
-fizjologicznych. Rycina Salonia 2019 była inspiracją płynności linii;
-nie digitalizowano z niej nowych wartości ani nie zmieniono czasu szczytów
-ustalonego na podstawie Busch 2022.
+Na polecenie właściciela przywrócono wariant „Pierwotny przebieg”,
+odpowiadający rendererowi z commita `c6b03379` (przed PR #607).
+Źródłowe tablice `ages`/`values` nie zmieniają się. Usunięto
+`displayPointIndices`: wszystkie pierwotne punkty znów uczestniczą
+w interpolacji, bez selekcji punktów prowadzących.
 
-Renderer prowadzi monotoniczne odcinki PCHIP przez wybrane punkty,
-korzystając z istniejącej funkcji `displaySpline`. Dokładne krzywe kubiczne
-Béziera zastępują próbkowanie i wtórne wygładzanie B-spline. Zachowują
-wysokość i czas wybranych ekstremów, wspólne styczne oraz brak
-przeregulowania między sąsiednimi punktami. Nie oznacza to ciągłości drugiej
-pochodnej ani odtworzenia zmierzonych median.
+Trzy widoki męskie korzystają z pierwotnej interpolacji PCHIP, 97 próbek
+na widocznej osi i wtórnego wygładzenia B-spline. Porównanie płci wraca
+do interpolacji punktów niemowlęcych i 193 próbek z tym samym sposobem
+rysowania. Jest to dokładne przywrócenie zaakceptowanego wyglądu, nie nowy
+algorytm. Wygładzenie może nieznacznie spłaszczyć lub przesunąć ostry
+szczyt względem węzła; nie gwarantuje przejścia linii przez każdy punkt.
+Własne `h.ages` pozostają w źródłach. Zachowano niezależną skalę każdego
+hormonu i dotychczasową skalę porównania płci.
 
-Ten sam wybór punktów obowiązuje w całym życiu, minipuberty i pokwitaniu,
-bez normalizacji do maksimum danego widoku. Interpolacja uwzględnia oś
-czasu widoku, więc pomiędzy zachowanymi punktami geometria może się różnić
-po przybliżeniu; wysokości tych punktów i znaczenie skali pozostają stałe.
-W „Porównaj płcie” linia chłopców korzysta z tej samej krzywej co męska
-minipuberty, z wcześniej opisanym wyjątkiem własnego maksimum niemowlęcego.
-
-**Wpływ kliniczny:** zmienia się poglądowy przebieg pomiędzy wybranymi
-punktami, a nie pomiary, normy, klasyfikacja wyniku lub historia.
-Krzywe dziewczynek i kobiet pozostają bez zmian. Wygładzenie nie nadaje
-schematowi dokładności modelu stężeń ani statusu walidacji klinicznej.
+**Wpływ kliniczny:** zmienia się tylko geometria edukacyjna; nie pomiary,
+zakresy, klasyfikacja wyniku ani historia. Krzywe żeńskie pozostają
+niezmienione. Schemat nadal nie jest modelem stężeń ani narzędziem
+odczytu dokładnego czasu lub wysokości szczytów. Źródła i ograniczenia
+populacji pozostają opisane powyżej.
 
 **Backlog: kalkulator INSL3.** Obecna krzywa nie oznacza działającego
 przelicznika ani interpretacji. Po wdrożeniu rzeczywistego analitu powiązać
@@ -214,15 +207,15 @@ AMH po niemowlęctwie bez skoku do mediany grupy 1–4,9 lat; E2 18→30 lat
 bez spadku do 156/264; ciągłe łączenie mostu inhibiny B od 1 do 5,6 roku;
 odróżnienie źródłowych 29 dni od schematycznych 28 dni cyklu.
 
-`tests/e2e/hormone-lifespan-smoothing.spec.mjs` sprawdza ścieżki SVG
-wytworzone przez rzeczywisty renderer. Syntetyczny przypadek M/FSH/wiek
-11 dni → szczyt minipuberty o wysokości względnej `0,49`, bez przesunięcia
-lub obniżenia przez wtórne wygładzanie; nie jest to stężenie w jednostkach
-laboratoryjnych. Regresje obejmują zachowane punkty sześciu męskich krzywych,
-ich ograniczenie i kierunek między punktami w trzech widokach, zgodność
-AMH/inhibiny B między męską minipuberty a porównaniem płci. Istniejące
-testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst formularza
-i interakcje obu płci.
+`tests/e2e/hormone-lifespan-original-curves.spec.mjs` porównuje ścieżki
+SVG rzeczywistego renderera z utrwalonym wzorcem „Pierwotnego przebiegu”.
+Obejmuje sześć męskich hormonów, trzy widoki, desktop i telefon oraz
+porównanie płci dla AMH i inhibiny B. Sprawdza powrót do zatwierdzonej
+geometrii, bez wymagania dokładnego przejścia przez szczyty źródłowe.
+Syntetyczne wejście: chłopiec, LH, wiek 0,25 roku → początkowo wyłącznie
+krzywa LH i geometria zgodna z pierwotnym wzorcem danego widoku.
+Istniejące testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst
+formularza i interakcje obu płci.
 
 Pliki źródłowe zawierają odnośniki, sumy kontrolne suplementów i wskazanie
 konkretnych tabel/komórek/pikseli. Repozytorium nie przechowuje pełnych PDF,
