@@ -1243,6 +1243,81 @@ pełny ekran, komputer i 320 px. Odtwarzalne źródła, zatwierdzona makieta
 i dokładniejsze punkty kontrolne:
 [`amh-infant-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
 
+### HORMONE-INHIBIN-SEX-COMPARISON — wspólna oś i punkt dziewcząt 8–20 lat, 2026-10-11
+
+**Decyzja właściciela:** wdrożyć zaakceptowane makiety porównania płci
+inhibiny B w minipuberty i pokwitaniu, wraz z osobno zaakceptowanym
+odniesieniem wyniku dziewcząt 8–20 lat wyłącznie w porównaniu pokwitania.
+To zmiana prezentacji oraz rozszerzenie kwalifikacji edukacyjnego punktu,
+nie refaktoryzacja bez wpływu na wynik. Nie zmienia norm laboratoryjnych,
+oceny stadium, diagnozy, zapisu ani historii.
+
+**Minipuberty — źródła i populacja:** [Busch 2022](https://doi.org/10.1210/clinem/dgac115),
+ryc. 3 — 119 zdrowych donoszonych chłopców, 338 próbek surowicy;
+[Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363),
+[tabela C suplementu](https://doi.org/10.6084/m9.figshare.19469555.v1) —
+98 zdrowych donoszonych dziewczynek, 266 próbek. Oba badania COPENHAGEN
+Minipuberty dotyczą ciąż pojedynczych i stosują Beckman Coulter Inhibin B
+Gen II ELISA. Są to mediany modeli wieku GAMLSS, nie średnie trajektorie
+podłużne. LOD wynosi 3 pg/mL; osobnego LOQ inhibiny B nie podano.
+99 żeńskich median sprawdzono z oryginalną tabelą; męski odczyt ryciny
+nie ma dokładności wszystkich zapisanych miejsc dziesiętnych.
+
+**Pokwitanie — źródło i ograniczenia:** [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439),
+ryc. 1–3, przybliżone mediany GAMLSS. Żeńska kohorta 5,6–20,2 lat liczy
+648 dziewcząt; wszystkie żeńskie próbki oznaczano w surowicy metodą
+Gen II. Męski model łączy Oxford Bio-innovation i Gen II. Przybliżenie
+digitalizacji wynosi odpowiednio około ±2 i ±5 pg/mL; to nie przedziały
+ufności, normy ani precyzja oznaczenia. Nie stosujemy współczynnika 1,28
+między metodami: autorzy nie skorygowali nim łączonych stężeń.
+Fazy cyklu nie standaryzowano, a antykoncepcja wpływa na stężenia.
+Wiek nie ustala Tannera. Nie odzyskano parametrów L/S i nie oblicza się
+SDS, percentyli ani norm z samej centralnej krzywej.
+
+**Dane i prezentacja:** `inhibin-comparison-policy.json`, eksport
+`inhibinComparisonPolicy` oraz `buildInhibinComparison(data, referenceEngine, period)`
+ustalają stałą wspólną liniową oś 0–400 pg/mL, z podziałką co 100.
+1 ng/L = 1 pg/mL; każda płeć zachowuje tę samą jednostkę i skalę.
+Granice osi nie są granicami normy ani wykrywalności. Linie, źródła
+i skala nie zależą od wyniku. Zero jest punktem na dolnej granicy,
+wynik ponad osią strzałką z rzeczywistą wartością; wynik cenzurowany
+nie otrzymuje dokładnej kropki. Nie dodano pól ani wyboru skali.
+
+Minipuberty używa niezmienionych `busch2022-male-inhb` i
+`ljubicic2022-female-inhb`: wspólne linie od 0,02 do <1 roku,
+bez ekstrapolacji do urodzenia. Własny punkt chłopca pozostaje dostępny
+od 7. dnia mimo początku wspólnych krzywych w 7,305 dnia. Dokładnie
+1 rok nie otrzymuje punktu żadnej płci w tym porównaniu; nie podstawiamy
+Kelsey ani nie zmieniamy żeńskiej granicy profilu w innych widokach.
+Wcześniactwo i nieznane donoszenie nadal blokują punkt tych profili,
+nie linie populacyjne.
+
+Pokwitanie używa istniejącego `borelli2025-male-inhb` oraz osobnego
+`borelli2025-female-inhb-puberty-comparison`. Nowe dane żeńskie są
+w `inhibin-comparison-reference-data.json` / `inhibinComparisonReferenceData`,
+poza globalnym `patientPointData`. Wszystkie 24 dotychczasowe węzły
+ryc. 1 z wieku 5,6–47 lat pozostają w PCHIP, ale kwalifikacja obejmuje
+wyłącznie 8–20 lat włącznie w tym porównaniu. Nie aktywuje to punktu
+w zwykłych widokach ani poza tym wiekiem. Istniejący `evaluate`
+kwalifikuje własną płeć z zachowaniem reguł wieku, metody, materiału,
+jednostki i znanych przeciwwskazań; metoda drugiej płci nie blokuje
+własnego zgodnego odniesienia. Panele obserwacji Kuiri-Hänninen,
+Crofton i Baccarelli pozostają odrębnymi, niezmienionymi zestawieniami.
+
+**Przypadki syntetyczne rzeczywistych funkcji:** w 90. dniu mediana
+inhibiny B M≈294,2938, F≈49,4718 pg/mL; w 7. dniu tylko własne
+odniesienie M≈187,9788. Dokładnie 1 rok → brak punktu minipuberty.
+Dziewczynka 8/12/13/20 lat w porównaniu → przybliżone mediany
+14/43/47/34 pg/mL; przed 8 lub po 20 latach i w zwykłym widoku
+→ bez tego nowego odniesienia. Niepewny wiek przekraczający granicę
+nie wybiera arbitralnie profilu. Wyniki pusty → 0 → 400 → 1000 →
+wyczyszczenie zachowują linie i skalę. Kontrole obejmują własną płeć,
+niezgodną metodę/materiał, wcześniactwo, nierówności, jednostki,
+pełny ekran, telefon i niezmienione źródłowe profile.
+Źródła, granice, zatwierdzone makiety i punkty kontrolne:
+[`inhibin-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/inhibin-comparison-audit-2026-10-11.json).
+Akceptacja makiet i testy techniczne nie są walidacją kliniczną.
+
 ### HORMONE-INSL3-STABLE-CURVE — przerywana ilustracja INSL3, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć poprawioną makietę zwykłych męskich

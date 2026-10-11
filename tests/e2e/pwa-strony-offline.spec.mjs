@@ -326,6 +326,51 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
             await expect(wykres.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', value === 0 ? 'below' : 'above');
           else await expect(wykres.locator('[data-result-point]')).toHaveCount(1);
         }
+        // INHB uses the same fixed concentration axis for both periods. The
+        // scoped female puberty source must be available after a real offline
+        // reload without adding it to the ordinary patient reference registry.
+        await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(() => window.VildaHormoneLifespanRuntime &&
+          window.VildaHormoneLifespanDisplay?.buildInhibinComparison);
+        for (const [period, ageYears, profile, reference] of [
+          ['mini', 90 / 365.25, 'ljubicic2022-female-inhb', 49.4717876166],
+          ['puberty', 14, 'borelli2025-female-inhb-puberty-comparison', 46],
+        ]) {
+          const context = { analyte: 'inhibin_b', sex: 'female', ageYears, preterm: 'no',
+            sourceStatus: 'ready', identityKey: 'fictional-offline-inhibin-comparison', measurement: null };
+          await page.evaluate(context => window.VildaHormoneLifespanRuntime.update(context), context);
+          await wykres.locator(`[data-view="${period}"]`).click();
+          if (await wykres.locator('.vhl-compare-toggle').getAttribute('aria-pressed') !== 'true')
+            await wykres.locator('.vhl-compare-toggle').click();
+          const curves = wykres.locator('[data-comparison-curve="inhb"]');
+          await expect(curves).toHaveCount(2);
+          await expect(wykres.locator('[data-lifespan="chart"]')).toHaveAttribute('data-comparison-max', '400');
+          const fixedPaths = await curves.evaluateAll(nodes => nodes.map(node => node.getAttribute('d')));
+          const result = wykres.locator('[data-patient-concentration="inhb"]');
+          for (const value of [0, 40, 1000, null]) {
+            await page.evaluate(({ context, value }) => window.VildaHormoneLifespanRuntime.update({
+              ...context, measurement: value === null ? null : { value, unit: 'pg/mL' },
+            }), { context, value });
+            await expect.poll(() => curves.evaluateAll(nodes => nodes.map(node => node.getAttribute('d')))).toEqual(fixedPaths);
+            if (value === null) await expect(result).toHaveCount(0);
+            else {
+              await expect(result).toHaveAttribute('data-profile', profile);
+              await expect.poll(async () => Number(await result.getAttribute('data-reference-value'))).toBeCloseTo(reference, 8);
+              if (value > 400) await expect(result.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', 'above');
+              else await expect(result.locator('[data-result-point]')).toHaveCount(1);
+            }
+          }
+        }
+        await page.evaluate(() => window.VildaHormoneLifespanRuntime.update({
+          analyte: 'inhibin_b', sex: 'female', ageYears: 14, sourceStatus: 'ready',
+          identityKey: 'fictional-offline-inhibin-comparison', measurement: { value: 40, unit: 'pg/mL' },
+        }));
+        await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(1);
+        await wykres.locator('[data-view="life"]').click();
+        await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(0);
+        expect(await page.evaluate(() => window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
+          analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
+        }).status)).toBe('unavailable');
       }
     }
 

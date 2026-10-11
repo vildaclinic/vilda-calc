@@ -1,0 +1,146 @@
+{
+  "version": "2026-10-11.1",
+  "scope": "inhibin-sex-comparison-puberty",
+  "globalPatientProfiles": false,
+  "profiles": [
+    {
+      "id": "borelli2025-female-inhb-puberty-comparison",
+      "analyte": "inhb",
+      "sex": "female",
+      "minAge": 8,
+      "maxAge": 20,
+      "maxAgeExclusive": false,
+      "points": [
+        {
+          "ageYears": 5.6,
+          "value": 11
+        },
+        {
+          "ageYears": 6,
+          "value": 11
+        },
+        {
+          "ageYears": 7,
+          "value": 12
+        },
+        {
+          "ageYears": 8,
+          "value": 14
+        },
+        {
+          "ageYears": 9,
+          "value": 18
+        },
+        {
+          "ageYears": 10,
+          "value": 27
+        },
+        {
+          "ageYears": 11,
+          "value": 36
+        },
+        {
+          "ageYears": 12,
+          "value": 43
+        },
+        {
+          "ageYears": 13,
+          "value": 47
+        },
+        {
+          "ageYears": 14,
+          "value": 46
+        },
+        {
+          "ageYears": 15,
+          "value": 44
+        },
+        {
+          "ageYears": 16,
+          "value": 40
+        },
+        {
+          "ageYears": 17,
+          "value": 37
+        },
+        {
+          "ageYears": 18,
+          "value": 36
+        },
+        {
+          "ageYears": 20,
+          "value": 34
+        },
+        {
+          "ageYears": 25,
+          "value": 32
+        },
+        {
+          "ageYears": 30,
+          "value": 30
+        },
+        {
+          "ageYears": 35,
+          "value": 29
+        },
+        {
+          "ageYears": 40,
+          "value": 28
+        },
+        {
+          "ageYears": 42,
+          "value": 26
+        },
+        {
+          "ageYears": 44,
+          "value": 23
+        },
+        {
+          "ageYears": 45,
+          "value": 20
+        },
+        {
+          "ageYears": 46,
+          "value": 17
+        },
+        {
+          "ageYears": 47,
+          "value": 11
+        }
+      ],
+      "sourceLabel": "Borelli-Kjær 2025 · inhibina B · porównanie pokwitania",
+      "url": "https://doi.org/10.1210/clinem/dgae439",
+      "method": "Beckman Coulter Inhibin B Gen II ELISA",
+      "specimen": "serum",
+      "population": "Zdrowe dziewczynki i kobiety; kohorty duńskie. Kohorta wieku 5,6–20,2 lat: 648 dziewcząt.",
+      "statistic": "median",
+      "approximate": true,
+      "unit": "pg/mL",
+      "interpolation": "pchip",
+      "compatibleAssayMethodIds": [
+        "inhibin-b-gen-ii",
+        "beckman-inhibin-b-gen-ii"
+      ],
+      "provenance": {
+        "doi": "10.1210/clinem/dgae439",
+        "figure": 1,
+        "digitizationTolerancePgMl": 2,
+        "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+        "originalUnit": "ng/L",
+        "unitFactor": 1,
+        "fullSourceKnotDomain": [
+          5.6,
+          47
+        ],
+        "readableSource": "evidence/inhb-digitized-median.json",
+        "qualificationScope": "inhibin-sex-comparison-puberty"
+      },
+      "limitations": [
+        "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
+        "Kwalifikacja wyłącznie dla porównania płci inhibiny B w wieku 8–20 lat. Wszystkie 24 źródłowe węzły 5,6–47 lat zachowano do interpolacji; nie rozszerzają uprawnionego wieku.",
+        "Wiek nie wyznacza stadium Tannera. W kohorcie nie standaryzowano fazy cyklu; antykoncepcja doustna wpływa na stężenia.",
+        "Nie jest normą laboratoryjną ani metodą rozpoznawania zaburzeń. Porównanie nie harmonizuje żeńskiego Gen II z mieszanymi oznaczeniami męskimi."
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 /* Stable display models, separate from source eligibility and laboratory norms.
  * Ordinary educational knots use the fixed whole-life display coordinate;
- * the infant AMH comparison samples its two unchanged population models.
+ * the sex comparisons sample their separately packaged population models.
  * No patient data or eligibility decisions enter this module. */
 (function (root, factory) {
   'use strict';
@@ -110,6 +110,117 @@
     // Keep its real value; only the boundary classification needs tolerance.
     return value < scale.min - tolerance(scale.min) ? 'below' :
       value > scale.max + tolerance(scale.max) ? 'above' : null;
+  }
+
+  function inhibinComparison(data, engine, period) {
+    var policy = data && data.inhibinComparisonPolicy;
+    var source = data && data.patientPointData;
+    if ((period !== 'mini' && period !== 'puberty') || !policy ||
+        policy.kind !== 'population-model-comparison' || policy.analyte !== 'inhb' ||
+        policy.sourceStatistic !== 'median' || policy.sourceUnit !== 'pg/mL' ||
+        !source || !Array.isArray(source.profiles) || !engine || typeof engine.referenceAt !== 'function') return null;
+    var settings = policy.periods && policy.periods[period];
+    var domain = settings && settings.domain, scale = policy.scale, sampling = policy.sampling;
+    if (!settings || !settings.profileIds || !domain || !finite(domain.minAge) ||
+        !finite(domain.maxAge) || domain.minAge < 0 || domain.minAge >= domain.maxAge ||
+        typeof domain.maxAgeExclusive !== 'boolean' ||
+        !scale || scale.kind !== 'linear' || scale.unit !== 'pg/mL' || scale.min !== 0 ||
+        !finite(scale.max) || scale.max <= scale.min || scale.independentOfPatient !== true ||
+        scale.conversionSource !== 'patientPointData.unitConversions.inhb' ||
+        !Array.isArray(scale.ticks) || scale.ticks.length < 2 ||
+        scale.ticks[0] !== scale.min || scale.ticks[scale.ticks.length - 1] !== scale.max ||
+        scale.ticks.some(function (tick, index) {
+          return !finite(tick) || tick !== scale.min + (scale.max - scale.min) * index / (scale.ticks.length - 1);
+        }) || !sampling || !Number.isInteger(sampling.sampleCount) || sampling.sampleCount < 2 ||
+        sampling.sampleCount > 2000 || sampling.includeSourceNodes !== true ||
+        !finite(sampling.exclusiveEndpointGapYears) || sampling.exclusiveEndpointGapYears <= 0) return null;
+    var referenceData = data;
+    if (period === 'mini') {
+      if (settings.referenceScope !== 'original-patient-data' ||
+          settings.pointPolicy !== 'own-infant-profile-before-first-birthday' ||
+          domain.maxAge !== 1 || !domain.maxAgeExclusive) return null;
+    } else {
+      var scoped = data.inhibinComparisonReferenceData;
+      if (settings.referenceScope !== 'inhibin-sex-comparison-puberty' ||
+          settings.pointPolicy !== 'own-age-profile-within-view' || domain.maxAgeExclusive ||
+          !scoped || scoped.scope !== settings.referenceScope || scoped.globalPatientProfiles !== false ||
+          !Array.isArray(scoped.profiles) || scoped.profiles.length !== 1) return null;
+      var female = scoped.profiles[0];
+      if (!female || female.id !== settings.profileIds.female || female.sex !== 'female' ||
+          female.minAge !== domain.minAge || female.maxAge !== domain.maxAge || female.maxAgeExclusive ||
+          source.profiles.some(function (p) { return p && p.id === female.id; })) return null;
+      // Only this comparison receives the additional reference. Its own array
+      // cannot register or replace a profile in ordinary views or other analytes.
+      referenceData = Object.assign({}, data, { patientPointData: Object.assign({}, source, {
+        profiles: source.profiles.concat([female])
+      }) });
+    }
+    var end = domain.maxAgeExclusive ? domain.maxAge - sampling.exclusiveEndpointGapYears : domain.maxAge;
+    if (!(end > domain.minAge) || (domain.maxAgeExclusive && end >= domain.maxAge)) return null;
+    var conversion = source.unitConversions && source.unitConversions.inhb;
+    if (!conversion || conversion.unit !== policy.sourceUnit || !conversion.factors ||
+        conversion.factors[scale.unit] !== 1) return null;
+    var factor = 1 / conversion.factors[scale.unit];
+    var sexes = ['female', 'male'];
+    var profiles = sexes.map(function (sex) {
+      var id = settings.profileIds[sex];
+      var matches = referenceData.patientPointData.profiles.filter(function (p) { return p && p.id === id; });
+      return typeof id === 'string' && matches.length === 1 ? matches[0] : null;
+    });
+    if (profiles.some(function (profile, index) {
+      return !profile || profile.analyte !== policy.analyte || profile.sex !== sexes[index] ||
+        profile.unit !== policy.sourceUnit || profile.statistic !== policy.sourceStatistic ||
+        profile.requiredGonadalStage != null || !finite(profile.minAge) || !finite(profile.maxAge) ||
+        profile.minAge >= profile.maxAge || domain.minAge < profile.minAge || end > profile.maxAge ||
+        (profile.maxAgeExclusive && end === profile.maxAge) ||
+        !Array.isArray(profile.points) || profile.points.length < 2 ||
+        profile.points.some(function (point, i, points) {
+          return !point || !finite(point.ageYears) || !finite(point.value) || point.value < 0 ||
+            (i > 0 && point.ageYears <= points[i - 1].ageYears);
+        }) || !policy.colors || !/^#[0-9a-f]{6}$/i.test(policy.colors[sexes[index]]);
+    })) return null;
+    var invalid = false;
+    var curves = profiles.map(function (profile) {
+      // Use the complete source profile when evaluating this fixed view grid.
+      // In particular, retain female puberty knots outside 8–20 as PCHIP context.
+      var ages = new Set();
+      for (var index = 0; index < sampling.sampleCount; index++)
+        ages.add(domain.minAge + (end - domain.minAge) * index / (sampling.sampleCount - 1));
+      profile.points.forEach(function (point) {
+        if (point.ageYears >= domain.minAge &&
+            (domain.maxAgeExclusive ? point.ageYears < domain.maxAge : point.ageYears <= domain.maxAge))
+          ages.add(point.ageYears);
+      });
+      var points = Array.from(ages).sort(function (a, b) { return a - b; }).map(function (ageYears) {
+        var value = engine.referenceAt(profile, ageYears);
+        if (!finite(value) || value < 0) invalid = true;
+        return { ageYears: ageYears, value: value * factor };
+      });
+      return { sex: profile.sex, profileId: profile.id, color: policy.colors[profile.sex], points: points };
+    });
+    if (invalid) return null;
+    return {
+      id: 'inhb', kind: policy.kind, policyVersion: policy.version, period: period, curves: curves,
+      scale: { kind: scale.kind, unit: scale.unit, min: scale.min, max: scale.max,
+        ticks: scale.ticks.slice(), sourceToPgMl: factor, independentOfPatient: true },
+      domain: { minAge: domain.minAge, maxAge: domain.maxAge, maxAgeExclusive: domain.maxAgeExclusive },
+      profileIds: { female: settings.profileIds.female, male: settings.profileIds.male },
+      referenceData: referenceData
+    };
+  }
+
+  function buildInhibinComparison(data, engine, period) {
+    // Optional comparison data fail closed, without falling back to an age
+    // schematic or qualifying a patient from the drawing itself.
+    try { return inhibinComparison(data, engine, period); }
+    catch (_error) { return null; }
+  }
+
+  function classifyInhibinComparisonValue(model, value) {
+    var scale = model && model.scale;
+    if (!scale || !finite(scale.min) || !finite(scale.max) || !finite(value)) return null;
+    var tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(scale.max));
+    return value < scale.min - tolerance ? 'below' : value > scale.max + tolerance ? 'above' : null;
   }
 
   function buildMaleInhibin(data, engine) {
@@ -1003,5 +1114,6 @@
   return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
     buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins,
     buildMaleAmh: buildMaleAmh, buildMaleInsl3: buildMaleInsl3,
-    buildAmhInfantComparison: buildAmhInfantComparison, classifyAmhComparisonValue: classifyAmhComparisonValue };
+    buildAmhInfantComparison: buildAmhInfantComparison, classifyAmhComparisonValue: classifyAmhComparisonValue,
+    buildInhibinComparison: buildInhibinComparison, classifyInhibinComparisonValue: classifyInhibinComparisonValue };
 });

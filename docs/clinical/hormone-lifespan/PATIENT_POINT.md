@@ -54,6 +54,7 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
+| Żeńska inhibina B; wyłącznie porównanie płci w wieku 8–20 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, przybliżona mediana GAMLSS (0 SD) | Surowica, Beckman Coulter Gen II ELISA; żeńska kohorta 5,6–20,2 lat obejmuje 648 dziewcząt | Osobne dane tego porównania, poza globalną tablicą profili. Wszystkie 24 węzły 5,6–47 lat zachowane do PCHIP; kwalifikacja tylko 8–20 włącznie. Digitalizacja około ±2 pg/mL, bez SDS i norm. Wiek nie zastępuje Tannera; faz cyklu nie standaryzowano. |
 
 INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
 11 października 2026 przerywana linia ma osobną względną politykę
@@ -61,8 +62,9 @@ INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
 Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
 nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
-AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec i niepokryte
-fragmenty osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
+AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec
+i zaakceptowanym porównaniem inhibiny B 8–20 oraz niepokryte fragmenty
+osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
@@ -509,6 +511,48 @@ ani normą: LOD AMH w obu publikacjach wynosi 0,14 pmol/L, osobnego
 LOQ AMH nie podano. Zapis źródeł i odtworzenia:
 [audyt porównania AMH](evidence/amh-infant-comparison-audit-2026-10-11.json).
 
+### Wspólna oś inhibiny B i odniesienie dziewcząt tylko w porównaniu
+
+Makiety minipuberty i pokwitania zaakceptowano 11 października 2026.
+`buildInhibinComparison(data, referenceEngine, period)` odczytuje
+`inhibinComparisonPolicy`. Oba okresy zachowują stałą liniową oś
+0–400 pg/mL; zero jest punktem na osi, a wynik ponad 400 strzałką
+z prawdziwą wartością. 1 ng/L = 1 pg/mL; bez normalizacji osobno dla płci.
+
+Minipuberty używa niezmienionych profili Busch/Ljubicic. Wspólne linie
+mają zakres 0,02–<1 roku; własne odniesienie chłopca zaczyna się od
+7. dnia. Dokładnie 1 rok nie otrzymuje punktu tego porównania,
+bez przełączenia na Kelsey i bez skracania źródłowej domeny dziewcząt
+w innych widokach. Dotychczasowe warunki donoszenia, metody i materiału
+zachowują znaczenie. Same linie nie kwalifikują wcześniaka.
+
+Pokwitanie korzysta z męskiego Borelli i nowego, zaakceptowanego
+odniesienia `borelli2025-female-inhb-puberty-comparison` tylko w wieku
+8–20 lat włącznie. Żeński profil przechowuje
+`inhibin-comparison-reference-data.json`, eksportowany jako
+`inhibinComparisonReferenceData`, poza globalnym `patientPointData`.
+Nie włącza punktu w zwykłych widokach, przed 8 ani po 20 latach.
+Kwalifikacja używa istniejącego `evaluate` z danymi tego porównania
+i dotyczy wyłącznie własnej płci; metoda drugiej płci nie blokuje
+własnego zgodnego profilu.
+
+Żeńska mediana jest przybliżonym odczytem ryc. 1 Borelli-Kjær 2025,
+surowica Gen II, bez odzyskanych parametrów L/S. Wszystkie 24 węzły
+5,6–47 lat pozostają w PCHIP, a granice kwalifikacji nadal wynoszą
+8–20. Obcięcie węzłów do widoku zmieniłoby styczne i część wartości.
+Odczyt około ±2 pg/mL nie jest przedziałem ufności ani normą.
+Męska krzywa łączy dwie metody (Oxford i Gen II); nie stosujemy
+między nimi współczynnika 1,28. Brak standaryzacji cyklu i wpływ
+antykoncepcji pozostają ograniczeniami, nie nowym formularzem lub
+osobnymi dostosowanymi normami. Znane przeciwwskazania i niezgodna
+metoda/materiał nadal ograniczają punkt.
+
+Wiek nie ustala stadium Tannera. Porównanie nie wyznacza SDS,
+percentyli, diagnozy ani prawidłowości wyniku. Osobne panele obserwacji
+Kuiri-Hänninen, Crofton i Baccarelli, globalne profile, normy oraz zapis
+pozostają bez zmian. Źródła i odtworzenie:
+[audyt inhibiny B](evidence/inhibin-comparison-audit-2026-10-11.json).
+
 ## Weryfikacja i przypadki syntetyczne
 
 Silnik `vilda_hormone_lifespan_reference.js` przyjmuje dane jako argument;
@@ -563,6 +607,14 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Porównanie AMH, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własna mediana Busch ≈64,25565 ng/mL i punkt chłopca dostępne; brak źródła dziewczynki. Wspólne linie zaczynają się w 7,305 dnia, bez ekstrapolacji. |
 | Porównanie AMH, dokładnie pierwsze urodziny, dowolna płeć | Krzywe pozostają identyczne, ale brak punktu tego widoku; nie podstawiamy grupy Wang. |
 | Porównanie AMH, kwalifikujący kontekst: 0 → 0,1 → 1000 → 10000 ng/mL | Strzałka w dół → punkt na dolnej granicy → punkt na górnej granicy → strzałka w górę; krzywe i oś stałe. Nie traktujemy błędu konwersji 1000,0000000000001 jako przekroczenia osi. |
+| Porównanie inhibiny B, donoszone niemowlę dokładnie 90 dni | Mediany modeli M≈294,2938 i F≈49,4718 pg/mL; stała wspólna liniowa oś 0–400 również bez wyniku. |
+| Porównanie inhibiny B, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własne odniesienie M≈187,9788 pg/mL dostępne, F bez odniesienia; wspólne linie od 7,305 dnia. |
+| Porównanie inhibiny B w minipuberty, dokładnie 1 rok | Brak punktu obu płci w tym widoku; bez podstawienia Kelsey i bez zmiany globalnych granic profili. |
+| Porównanie inhibiny B w pokwitaniu, dziewczynka dokładnie 8/12/13/20 lat, zgodny kontekst | Nowe, ograniczone do tego widoku odniesienie Borelli ≈14/43/47/34 pg/mL. PCHIP zachowuje wszystkie 24 węzły 5,6–47 lat. |
+| Dziewczynka przed 8 / po 20 latach lub zwykły widok w wieku 13 lat, inhibina B | Brak nowego odniesienia porównania; nie aktywujemy globalnego profilu żeńskiego. |
+| Porównanie pokwitania inhibiny B, chłopiec ze zgodną własną metodą, niedopasowaną do żeńskiego Gen II | Kwalifikacja wyłącznie własnego męskiego profilu; druga płeć nie blokuje punktu. |
+| Porównanie pokwitania inhibiny B, możliwy wiek 7,99–8,01 albo 19,99–20,01 lat | Brak punktu dla wieku przekraczającego granicę widoku; nie zawężamy wieku do jego środka. |
+| Porównanie inhibiny B, kwalifikujący kontekst: pusty → 0 → 400 → 1000 pg/mL → wyczyszczenie | Brak punktu → punkt na zerze → punkt na górnej granicy → strzałka w górę → brak punktu. Te same linie i skala; 400 ng/L równe 400 pg/mL. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
 | Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
@@ -589,6 +641,10 @@ i skali, bez deklarowania idealnej równości ścieżek SVG. Sprawdzamy też
 desktop i 320 px oraz niezmienioną politykę pozostałych porównań płci.
 AMH w minipuberty wymaga osobnej kontroli stałej pary modeli, wspólnej
 osi log10 i zachowania punktu przy granicach 7 dni, 0,02 i 1 roku.
+Inhibina B wymaga stałej osi liniowej obu okresów, własnej kwalifikacji
+płci i zachowania tych samych granic niemowlęcych. W pokwitaniu
+sprawdzamy 8 i 20 lat włącznie, cały zestaw 24 żeńskich węzłów oraz
+brak nowego odniesienia poza porównaniem i poza zakresem wieku.
 Test równości punktu ze źródłowym
 odniesieniem nie może
 sprawdzać wyłącznie
