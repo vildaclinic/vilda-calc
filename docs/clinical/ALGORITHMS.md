@@ -1018,8 +1018,9 @@ nie było błędem transkrypcji i nie jest poprawiane w zachowanym dowodzie.
   ponownie dopasowywać 97 próbek i B-spline w nowej osi czasu. Zachowuje
   skalę, szczyty i kierunek zmian; reszta ponownego próbkowania nie jest
   deklarowana jako zerowa. Inhibina B zachowuje własną stałą geometrię,
-  a porównanie płci wcześniejszą, odrębną politykę. Zwykłe AMH zastępuje
-  następny etap `HORMONE-AMH-STABLE-CURVE` opisany niżej.
+  a porównanie płci wcześniejszą, odrębną politykę. Zwykłe LH, FSH i AMH
+  zastępują kolejne etapy `HORMONE-LH-FSH-STABLE-CURVES` oraz
+  `HORMONE-AMH-STABLE-CURVE` opisane niżej.
 
 **Wpływ kliniczny:** zmiana dorosłego źródła wpływa na edukacyjne położenie
 wyniku względem populacji i podlega regułom zmian klinicznych AGENTS.md.
@@ -1042,6 +1043,72 @@ stycznych, desktop, 320 px, pełny ekran, odznaczenie hormonów, powiększenia
 i zachowanie porównania płci. Błąd próbkowania zbliżenia mierzy się
 w pikselach; nie utożsamia z identycznością ścieżek SVG. Walidacja
 techniczna nie dowodzi prawidłowości medycznej.
+
+### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
+
+**Decyzja właściciela:** wdrożenie poprawionej makiety LH/FSH po kontroli
+zbyt silnego wzrostu FSH w środkowej dorosłości. To edukacyjna prezentacja
+zmian hormonów, nie nowe normy. Polityka `lh-fsh-display-policy.json`
+oddziela rysunek od źródłowych median/średnich i laboratoryjnej interpretacji.
+Makieta wyświetlała początkowo oba hormony dla porównania; aplikacja nadal
+wybiera domyślnie tylko bieżący analit.
+
+**Nowe źródła odniesienia pacjenta:** pełne teksty i tabele odczytano
+podczas audytu. Jednostką jest IU/L; nie zamieniamy statystyk grupowych
+w mediany dokładnego wieku. Metoda publikacji nie potwierdza metody próbki.
+
+| Źródło | Populacja i oznaczenie | Zastosowanie |
+| --- | --- | --- |
+| Laurentino 2020, FAMe, tabela 1, DOI [10.1111/acel.13242](https://doi.org/10.1111/acel.13242) | Zdrowi ochotnicy, Münster; najmłodsza grupa N=34; Abbott Architect i1000 CMIA | 18–<25 lat: średnia grupy LH=3,0 i FSH=3,0. Górna granica 24/25 jest niespójna w źródle; 18–<25 to jawna zachowawcza polityka, bez przeliczania grupy. |
+| Perheentupa 2013, FINRISK, tabela 4 (LH) i tabela 5 (FSH), kolumna All, DOI [10.1530/EJE-12-0288](https://doi.org/10.1530/EJE-12-0288) | Finlandia, połączone badania 1972, 1977 i 2002; Wallac DELFIA | Sześć median grup wieku 25–29, 30–39, 40–49, 50–59, 60–69, 70–74; profile aplikacji kończą się przed kolejnymi urodzinami 30/40/50/60/70/75. |
+| Yeap 2007, HIMS, tabela 1, DOI [10.1530/EJE-06-0714](https://doi.org/10.1530/EJE-06-0714) | Starsi mężczyźni mieszkający samodzielnie, Perth; także choroby współistniejące; Immulite 2000 | Tylko LH: mediany 75–79=4,44; 80–84=5,14; 85–89=5,22. Ostatnia grupa działa do dokładnie 89 lat. |
+| Ljubicic 2020, ryc. 1, środkowa krzywa 0 SD, DOI [10.1093/humrep/deaa182](https://doi.org/10.1093/humrep/deaa182) | Duńskie kohorty mężczyzn badanych w wieku 41/51/61/71/80 lat; AutoDELFIA | FSH 75–80: przybliżona mediana modelu, 7,8289→8,4178. Roczne odczyty nie są obserwacjami osobnych roczników; znak ≈ i około dwie cyfry znaczące. |
+
+FINRISK: LH odpowiednio 3,74 / 3,76 / 3,91 / 4,53 / 4,73 / 5,57;
+FSH 3,43 / 4,00 / 4,56 / 5,64 / 5,92 / 6,43 IU/L. Mediany grup są
+stałe wewnątrz profilu, bez interpolacji pomiędzy grupami. Różnice kohort,
+platform i statystyk nie są nagłym zdarzeniem fizjologicznym. FINRISK
+obejmuje efekt kohorty urodzeniowej; ilustracja nie przewiduje podłużnego
+przebiegu u jednej osoby. Odczyty Ljubicic mają roboczą tolerancję
+graficzną około 8,5%, nie przedział ufności; nie obliczamy z nich SDS.
+
+**Rysunek:** jedna kanoniczna krzywa na hormon i stała skala we wszystkich
+zwykłych widokach. Dzielnik LH=5,57, FSH=8,4178; zapas wysokości 1,25.
+Pusty/wysoki/usunięty wynik, wiek, wybór hormonów i powiększenie nie
+zmieniają przebiegu. Wynik ponad osią ma strzałkę z rzeczywistą liczbą.
+Jasny znacznik zachowuje źródłową statystykę, nawet gdy leży poza linią.
+
+FSH po 12 latach przechodzi szerokim mostem do 25 lat, bez wymuszonego
+szczytu na styku Madsen i dorosłych badań. Łuk 25–80 jest sprawdzony
+względem 40 pośrednich odczytów Ljubicic 41–80: RMS około 0,050,
+maksymalna różnica około 0,127 IU/L. Uchwyty w kanonicznym X wynoszą
+0,5907758320847372 i 0,08; początkowe nachylenie 0,05 IU/L/rok nie tworzy
+przystanku przy 25 latach. Po 80 latach zakończenie jest płaskie i wygasa.
+Most 12–25 jest świadomym uproszczeniem: przy 14–16 latach leży około
+24–34% poniżej median Madsen, które pozostają niezmienione w odniesieniu
+pacjenta. Nie jest to nowy model p50 ani poprawa dokładności tych median.
+
+Spadek FSH w minipuberty pozostaje zgodny z ponowną kontrolą ryciny Busch;
+ryc. 2 opisuje średnie trajektorie, ryc. 3 medianę populacyjną. Nie
+utożsamiamy ich szczytów. Odcinek „Płód · schemat” nie ma zweryfikowanych
+stężeń płodowych ani liczbowego punktu pacjenta. Podpis wyjaśnia, że
+LH i FSH porównujemy w czasie na osobnych skalach: przecięcie nie oznacza
+równych stężeń ani ilorazu LH/FSH. Porównanie płci zachowuje własny kontrakt.
+
+**Wpływ kliniczny:** nowe dorosłe odniesienia zmieniają edukacyjne położenie
+wyniku i są objęte akceptacją tej makiety. Nie zmieniają norm laboratoryjnych,
+werdyktów, konwersji, danych pacjenta, historii, wizyt ani przypiętych wyników.
+Pozostają bramki metody, materiału, wieku, donoszenia i cenzurowania.
+Luka >16–<18 lat, FSH >80 i LH >89 nie otrzymują wymyślonego odniesienia.
+
+**Przypadki na rzeczywistych funkcjach produkcyjnych:** M/44/LH 2 → mediana
+grupy 3,91; M/44/FSH 2 → mediana grupy 4,56; M/75/LH → 4,44;
+M/75/FSH → ≈7,8; M/80/FSH → ≈8,4; M/>80/FSH → brak odniesienia;
+M/89/LH → 5,22; M/>89/LH → brak odniesienia. Niepewny wiek przecinający
+grupę nie daje arbitralnej wartości. Testy obejmują puste/typowe/wysokie/
+cenzurowane wyniki, odznaczanie, desktop, 320 px, pełny ekran, zbliżenia,
+tryb offline, zgodność źródeł i oddzielenie geometrii od odniesienia.
+Weryfikacja techniczna nie nadaje wykresowi statusu walidacji klinicznej.
 
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 

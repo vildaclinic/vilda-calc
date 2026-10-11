@@ -89,17 +89,28 @@ async function startShortIdleWindow(page, owner) {
 }
 
 async function expectActiveAfterResume(page, owner) {
-  for (const scope of new Set([page, owner])) {
-    expect(await scope.evaluate(() => Date.now() - window.__chartActivityStart)).toBeGreaterThan(idleMs);
-    expect(await scope.evaluate(() => window.VildaVault.isUnlocked())).toBe(true);
+  // Capture both documents concurrently, with one browser roundtrip each.
+  // Ten sequential reads previously consumed the entire 3 s inactivity window
+  // under CI load: the vault correctly locked between isUnlocked and locks.
+  // Do not reset the timer or generate input to make these assertions pass.
+  const states = await Promise.all([...new Set([page, owner])].map(scope => scope.evaluate(async () => {
+    const elapsed = Date.now() - window.__chartActivityStart;
+    const unlockedBefore = window.VildaVault.isUnlocked();
+    const locksBefore = [...window.__chartActivityLocks];
     // The shell and converter have separate timers AND last-activity values.
     // Resetting only the timer is insufficient when either document resumes.
-    await scope.evaluate(() => {
-      document.dispatchEvent(new Event('visibilitychange'));
-      dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
-    });
-    expect(await scope.evaluate(() => window.VildaVault.isUnlocked())).toBe(true);
-    expect(await scope.evaluate(() => window.__chartActivityLocks)).toEqual([]);
+    document.dispatchEvent(new Event('visibilitychange'));
+    dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    await Promise.resolve();
+    return { elapsed, unlockedBefore, locksBefore,
+      unlockedAfter: window.VildaVault.isUnlocked(), locksAfter: [...window.__chartActivityLocks] };
+  })));
+  for (const state of states) {
+    expect(state.elapsed).toBeGreaterThan(idleMs);
+    expect(state.unlockedBefore).toBe(true);
+    expect(state.locksBefore).toEqual([]);
+    expect(state.unlockedAfter).toBe(true);
+    expect(state.locksAfter).toEqual([]);
   }
   await expect(dialog(page)).toBeVisible();
 }

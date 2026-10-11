@@ -15,6 +15,23 @@ const displayAt = (id, age) => profiles[id].displaySegments.flatMap(s => s.point
   .find(point => point.ageYears === age)?.relative;
 
 describe('Poglądowy przebieg hormonów — produkcyjne dane i granice dowodów', () => {
+  it('pakuje zatwierdzoną politykę LH/FSH jako geometrię edukacyjną, odrębną od danych liczbowych', () => {
+    const policy = readSource('lh-fsh-display-policy.json');
+    expect(data.lhFshDisplayPolicy).toEqual(policy);
+    expect(policy).toMatchObject({ version: '2026-10-11.1', kind: 'educational-display-only',
+      providesClinicalReference: false, sex: 'male', unit: 'IU/L' });
+    expect(policy.hormones.lh.scale).toMatchObject({ divisor: 5.57, headroomFactor: 1.25, patientValueMayChangeScale: false });
+    expect(policy.hormones.fsh.scale).toMatchObject({ divisor: 8.4178, headroomFactor: 1.25, patientValueMayChangeScale: false });
+    for (const id of ['lh', 'fsh']) {
+      const hormone = policy.hormones[id];
+      expect(hormone.prenatalSchematic.providesPatientReference).toBe(false);
+      expect(hormone.childhood.providesPatientReference).toBe(false);
+      expect(hormone.tail.providesPatientReference).toBe(false);
+      expect(hormone.sourceIds.every(sourceId => data.patientPointData.profiles.some(profile => profile.id === sourceId)))
+        .toBe(true);
+    }
+  });
+
   it('eksport przeglądarkowy i CommonJS zachowuje cały zatwierdzony zbiór źródłowy', () => {
     expect(require('../../vilda_hormone_lifespan_data.js')).toEqual(data);
     expect(data.referenceData).toEqual(readSource('female-reference-data.json'));

@@ -22,6 +22,7 @@ def build():
     inhibin_evidence = json.loads((ROOT / 'inhibin-observational-data.json').read_text(encoding='utf-8'))
     inhibin_display_policy = json.loads((ROOT / 'inhibin-display-policy.json').read_text(encoding='utf-8'))
     testosterone_display_policy = json.loads((ROOT / 'testosterone-display-policy.json').read_text(encoding='utf-8'))
+    lh_fsh_display_policy = json.loads((ROOT / 'lh-fsh-display-policy.json').read_text(encoding='utf-8'))
     amh_display_policy = json.loads((ROOT / 'amh-display-policy.json').read_text(encoding='utf-8'))
     reference_js = json.dumps(reference, ensure_ascii=False, indent=2)
     lifespan_js = json.dumps(lifespan, ensure_ascii=False, indent=2)
@@ -29,6 +30,7 @@ def build():
     inhibin_evidence_js = json.dumps(inhibin_evidence, ensure_ascii=False, indent=2)
     inhibin_display_policy_js = json.dumps(inhibin_display_policy, ensure_ascii=False, indent=2)
     testosterone_display_policy_js = json.dumps(testosterone_display_policy, ensure_ascii=False, indent=2)
+    lh_fsh_display_policy_js = json.dumps(lh_fsh_display_policy, ensure_ascii=False, indent=2)
     amh_display_policy_js = json.dumps(amh_display_policy, ensure_ascii=False, indent=2)
     return (
         '/* Educational hormone lifespan data; not reference intervals or patient scoring.\n'
@@ -49,6 +51,7 @@ def build():
         f'const inhibinEvidence = {inhibin_evidence_js};\n'
         f'const inhibinDisplayPolicy = {inhibin_display_policy_js};\n'
         f'const testosteroneDisplayPolicy = {testosterone_display_policy_js};\n'
+        f'const lhFshDisplayPolicy = {lh_fsh_display_policy_js};\n'
         f'const amhDisplayPolicy = {amh_display_policy_js};\n'
         'return {\n'
         '  version: lifespanData.version,\n'
@@ -61,6 +64,7 @@ def build():
         '  inhibinEvidence: inhibinEvidence,\n'
         '  inhibinDisplayPolicy: inhibinDisplayPolicy,\n'
         '  testosteroneDisplayPolicy: testosteroneDisplayPolicy,\n'
+        '  lhFshDisplayPolicy: lhFshDisplayPolicy,\n'
         '  amhDisplayPolicy: amhDisplayPolicy\n'
         '};\n'
         '});\n'

@@ -51,6 +51,20 @@ zastępuje opisane wyżej historyczne połączenia testosteronu i dorosły
 wybór Kelsey; aktualny kontrakt znajduje się niżej. Obowiązująca instrukcja
 dla kolejnych agentów: [HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
 
+11 października 2026 właściciel zatwierdził także poprawioną makietę LH/FSH:
+stałe krzywe i skale, łagodniejszy wzrost FSH w środkowej dorosłości,
+dorosłe źródłowe średnie/mediany oraz podpis porównania. Zastępuje ona
+przełączanie schematu po wpisaniu wyniku. Politykę i źródła opisują
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md) i
+[ALGORITHMS.md](ALGORITHMS.md#hormone-lh-fsh-stable-curves--stałe-krzywe-i-dorosłe-odniesienia-2026-10-11).
+FSH ma ilustracyjny most 12–25 lat oraz łuk dorosłości sprawdzony w wieku
+41–80, bez wymuszonego wypłaszczenia przy 25 latach. Źródłowe mediany
+Madsen pozostają niezmienione mimo uproszczenia rysunku pokwitania.
+Pod wykresem widnieje: „Porównanie zmian LH i FSH w czasie. Każdy hormon
+ma własną skalę — podobna wysokość linii nie oznacza takiego samego
+stężenia.” Podpis działa również w pełnym ekranie; nie zastępuje opisu
+osobnego trybu porównania płci. Domyślny wybór nadal obejmuje jeden analit.
+
 11 października 2026 właściciel zaakceptował także makietę męskiego AMH
 ze stałą linią, szerokim maksimum niemowlęcym, opadającym dzieciństwem
 i płynnym spadkiem pokwitaniowym. Poniższa polityka AMH zmienia
@@ -102,8 +116,8 @@ stadium i nie są odgadywane z wyniku.
 
 Przy FSH Zec 2012 istniejąca aktualna ocena G1/Th1 kwalifikuje porównanie
 z medianą grupy dzieci przed pokwitaniem. Brak takiej oceny nie blokuje
-osobnej interpretacji laboratoryjnej. Mediana całej grupy wieku jest
-poziomym odcinkiem, bez interpolowania do sąsiednich grup lub publikacji.
+osobnej interpretacji laboratoryjnej. Odniesienie jest stałą medianą
+całej grupy wieku, bez interpolowania do sąsiednich grup lub publikacji.
 W porównaniu płci te profile nie tworzą punktu: stadium pacjenta nie
 określa stadium drugiej populacji. Szczegóły źródła i granic opisuje
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
@@ -112,8 +126,8 @@ Punkt wyniku i jego znacznik odniesienia muszą korzystać z **tej samej
 jednostki i funkcji skali**. Mediana lub średnia pochodzi z oryginalnego źródła
 źródłowego, również po zmianie widoku, wyboru hormonów i powiększeniu.
 Nie wolno dopasować punktu do autorskiej linii pojedynczym mnożnikiem
-ani przeliczać schematycznej wysokości na stężenie. W męskiej inhibinie B,
-AMH i testosteronie całkowitym
+ani przeliczać schematycznej wysokości na stężenie. W męskich LH, FSH,
+AMH, inhibinie B i testosteronie całkowitym
 ciągła linia jest wygładzoną prezentacją: w pasach wygładzenia znacznik
 źródłowej mediany/średniej może leżeć poza nią. Nie przesuwamy go na linię.
 Model ilościowy zachowuje własne granice; poza nimi krzywa edukacyjna
@@ -310,7 +324,7 @@ ruchu, fokus źródeł) i `hormone-lifespan-puberty-comparison.spec.mjs`
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.
-Męska inhibina B, AMH i testosteron całkowity korzystają ze stałych krzywych
+Męskie LH, FSH, AMH, inhibina B i testosteron całkowity korzystają ze stałych krzywych
 opisanych powyżej. Jeżeli
 wyświetlany jest model liczbowy z punktem wyniku, pierwszeństwo mają wspólne przeliczenie
 punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
@@ -423,11 +437,11 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 ## Źródła męskie i przyszłe anality
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
-pacjenta**. Zwykłe męskie widoki inhibiny B, AMH i testosteronu całkowitego
-zastępują obecnie stałe krzywe opisane powyżej. LH, FSH i INSL3
-zachowują kotwice schematu, ale od 11 października 2026 korzystają
+pacjenta**. Zwykłe męskie widoki LH, FSH, AMH, inhibiny B i testosteronu
+całkowitego zastępują obecnie stałe krzywe opisane powyżej. INSL3
+zachowuje kotwice schematu, ale od 11 października 2026 korzysta
 z jednej kanonicznej krzywej PCHIP: zbliżenia próbkują ją, zamiast
-ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowują skalę,
+ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowuje skalę,
 kierunek zmian i szczyty, z niewielkim błędem ponownego próbkowania.
 Porównanie płci zachowuje wcześniejszą interpolację i własną politykę.
 Oddzielne liczbowe źródła punktu wyniku znajdują się w

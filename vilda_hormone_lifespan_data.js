@@ -28410,6 +28410,1505 @@ const patientPointData = {
         "Do not label these median lines as the biphasic mean curves from Figure 3.",
         "The female cohort and the paired 2018 comparison use different assays for AMH and inhibin B; do not merge their numbers into one continuous series."
       ]
+    },
+    {
+      "id": "laurentino2020-male-lh-18-under25",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 18,
+      "maxAge": 25,
+      "points": [
+        {
+          "ageYears": 18,
+          "value": 3.0,
+          "eligible": true
+        },
+        {
+          "ageYears": 25,
+          "value": 3.0,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Laurentino 2020 · FAMe · średnia grupy wieku",
+      "url": "https://doi.org/10.1111/acel.13242",
+      "method": "Abbott Architect i1000 CMIA",
+      "population": "Zdrowi mężczyźni, Münster, Niemcy; FAMe, rekrutacja 2014–2016",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "abbott-architect-i1000",
+        "architect-i1000"
+      ],
+      "provenance": {
+        "authors": "Laurentino et al.",
+        "year": 2020,
+        "title": "Laurentino et al., A germ cell-specific ageing pattern in otherwise healthy men",
+        "pmid": "32951333",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7576283/",
+        "table": 1,
+        "sourceFile": "fame2020.xml",
+        "sourceSha256": "821476940870ee6b715b4e0f8002a08cf32284d62a9fd38ee046e9a7d41e32fe",
+        "supplementFile": "ACEL-19-e13242-s004.docx",
+        "supplementSha256": "1452e41fe10af8c0af8c954796faf735d80f9893e2c74eb4e8eb12fd809ebe65",
+        "supplementUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7576283/supplementaryFiles",
+        "participants": 197,
+        "sourceAgeLabel": "18–25 years",
+        "assay": {
+          "method": "Abbott Architect i1000 CMIA",
+          "specimen": "serum",
+          "sampling": "Fasting, after 15 minutes of rest; clock time not reported."
+        },
+        "ageRouting": "Use18–<25 only: Table1/S1 says18–25, Methods says18–24. Mean3.0 and N34 still describe the original complete group, not a recalculated18–24 subset.",
+        "sourceAgeDiscrepancies": [
+          "Main Table1 and TableS1 youngest18–25; Methods says18–24.",
+          "Main age span18–84; Methods oldest group range65–82.",
+          "Main Table1 oldest>66; TableS1>=66; Methods>65 and range65–82.",
+          "Methods recruitment arithmetic200 examined minus2 tumours implies198, but ultimately197; main abstract198 versus main results197."
+        ],
+        "dataLicense": "CC BY4.0; numerical source facts only.",
+        "doi": "10.1111/acel.13242",
+        "url": "https://doi.org/10.1111/acel.13242",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 34
+      },
+      "limitations": [
+        "Średnia arytmetyczna całej grupy; nie jest medianą, normą ani wartością właściwą dla konkretnego roku życia.",
+        "Grupa obejmuje34 zdrowych ochotników; selekcja nie reprezentuje wszystkich mężczyzn w populacji.",
+        "Górna granica grupy jest niespójna w źródle:24 lub25 lat. Routing18–<25 jest zachowawczą polityką aplikacji, a nie nowo obliczoną grupą.",
+        "Metoda dotyczy badania źródłowego; nie potwierdza metody próbki pacjenta ani równoważności innych platform."
+      ],
+      "ageGroup": {
+        "label": "18–25 lat",
+        "minAge": 18,
+        "maxAge": 25,
+        "maxAgeExclusive": false,
+        "n": 34,
+        "sourceUnit": "IU/L",
+        "sourceMean": 3.0,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Średnia arytmetyczna całej grupy badania; nie jest medianą ani wartością dokładnego wieku."
+      },
+      "groupN": 34
+    },
+    {
+      "id": "perheentupa2013-male-lh-25-29",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 25,
+      "maxAge": 30,
+      "points": [
+        {
+          "ageYears": 25,
+          "value": 3.74,
+          "eligible": true
+        },
+        {
+          "ageYears": 30,
+          "value": 3.74,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 4,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.05
+        },
+        "publishedP5": 1.79,
+        "publishedP95": 7.65,
+        "groupParticipants": 352
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "25–29 lat",
+        "minAge": 25,
+        "maxAge": 29,
+        "maxAgeExclusive": false,
+        "n": 352,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 3.74,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 352
+    },
+    {
+      "id": "perheentupa2013-male-lh-30-39",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 30,
+      "maxAge": 40,
+      "points": [
+        {
+          "ageYears": 30,
+          "value": 3.76,
+          "eligible": true
+        },
+        {
+          "ageYears": 40,
+          "value": 3.76,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 4,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.05
+        },
+        "publishedP5": 1.6,
+        "publishedP95": 7.48,
+        "groupParticipants": 859
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "30–39 lat",
+        "minAge": 30,
+        "maxAge": 39,
+        "maxAgeExclusive": false,
+        "n": 859,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 3.76,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 859
+    },
+    {
+      "id": "perheentupa2013-male-lh-40-49",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 40,
+      "maxAge": 50,
+      "points": [
+        {
+          "ageYears": 40,
+          "value": 3.91,
+          "eligible": true
+        },
+        {
+          "ageYears": 50,
+          "value": 3.91,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 4,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.05
+        },
+        "publishedP5": 1.86,
+        "publishedP95": 9.05,
+        "groupParticipants": 887
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "40–49 lat",
+        "minAge": 40,
+        "maxAge": 49,
+        "maxAgeExclusive": false,
+        "n": 887,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 3.91,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 887
+    },
+    {
+      "id": "perheentupa2013-male-lh-50-59",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 50,
+      "maxAge": 60,
+      "points": [
+        {
+          "ageYears": 50,
+          "value": 4.53,
+          "eligible": true
+        },
+        {
+          "ageYears": 60,
+          "value": 4.53,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 4,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.05
+        },
+        "publishedP5": 1.95,
+        "publishedP95": 11.44,
+        "groupParticipants": 751
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "50–59 lat",
+        "minAge": 50,
+        "maxAge": 59,
+        "maxAgeExclusive": false,
+        "n": 751,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 4.53,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 751
+    },
+    {
+      "id": "perheentupa2013-male-lh-60-69",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 60,
+      "maxAge": 70,
+      "points": [
+        {
+          "ageYears": 60,
+          "value": 4.73,
+          "eligible": true
+        },
+        {
+          "ageYears": 70,
+          "value": 4.73,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 4,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.05
+        },
+        "publishedP5": 2.06,
+        "publishedP95": 12.86,
+        "groupParticipants": 345
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "60–69 lat",
+        "minAge": 60,
+        "maxAge": 69,
+        "maxAgeExclusive": false,
+        "n": 345,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 4.73,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 345
+    },
+    {
+      "id": "perheentupa2013-male-lh-70-74",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 70,
+      "maxAge": 75,
+      "points": [
+        {
+          "ageYears": 70,
+          "value": 5.57,
+          "eligible": true
+        },
+        {
+          "ageYears": 75,
+          "value": 5.57,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 4,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.05
+        },
+        "publishedP5": 2.28,
+        "publishedP95": 11.61,
+        "groupParticipants": 77
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "70–74 lat",
+        "minAge": 70,
+        "maxAge": 74,
+        "maxAgeExclusive": false,
+        "n": 77,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 5.57,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 77
+    },
+    {
+      "id": "laurentino2020-male-fsh-18-under25",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 18,
+      "maxAge": 25,
+      "points": [
+        {
+          "ageYears": 18,
+          "value": 3.0,
+          "eligible": true
+        },
+        {
+          "ageYears": 25,
+          "value": 3.0,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Laurentino 2020 · FAMe · średnia grupy wieku",
+      "url": "https://doi.org/10.1111/acel.13242",
+      "method": "Abbott Architect i1000 CMIA",
+      "population": "Zdrowi mężczyźni, Münster, Niemcy; FAMe, rekrutacja 2014–2016",
+      "statistic": "group-mean",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "abbott-architect-i1000",
+        "architect-i1000"
+      ],
+      "provenance": {
+        "authors": "Laurentino et al.",
+        "year": 2020,
+        "title": "Laurentino et al., A germ cell-specific ageing pattern in otherwise healthy men",
+        "pmid": "32951333",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7576283/",
+        "table": 1,
+        "sourceFile": "fame2020.xml",
+        "sourceSha256": "821476940870ee6b715b4e0f8002a08cf32284d62a9fd38ee046e9a7d41e32fe",
+        "supplementFile": "ACEL-19-e13242-s004.docx",
+        "supplementSha256": "1452e41fe10af8c0af8c954796faf735d80f9893e2c74eb4e8eb12fd809ebe65",
+        "supplementUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7576283/supplementaryFiles",
+        "participants": 197,
+        "sourceAgeLabel": "18–25 years",
+        "assay": {
+          "method": "Abbott Architect i1000 CMIA",
+          "specimen": "serum",
+          "sampling": "Fasting, after 15 minutes of rest; clock time not reported."
+        },
+        "ageRouting": "Use18–<25 only: Table1/S1 says18–25, Methods says18–24. Mean3.0 and N34 still describe the original complete group, not a recalculated18–24 subset.",
+        "sourceAgeDiscrepancies": [
+          "Main Table1 and TableS1 youngest18–25; Methods says18–24.",
+          "Main age span18–84; Methods oldest group range65–82.",
+          "Main Table1 oldest>66; TableS1>=66; Methods>65 and range65–82.",
+          "Methods recruitment arithmetic200 examined minus2 tumours implies198, but ultimately197; main abstract198 versus main results197."
+        ],
+        "dataLicense": "CC BY4.0; numerical source facts only.",
+        "doi": "10.1111/acel.13242",
+        "url": "https://doi.org/10.1111/acel.13242",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 34
+      },
+      "limitations": [
+        "Średnia arytmetyczna całej grupy; nie jest medianą, normą ani wartością właściwą dla konkretnego roku życia.",
+        "Grupa obejmuje34 zdrowych ochotników; selekcja nie reprezentuje wszystkich mężczyzn w populacji.",
+        "Górna granica grupy jest niespójna w źródle:24 lub25 lat. Routing18–<25 jest zachowawczą polityką aplikacji, a nie nowo obliczoną grupą.",
+        "Metoda dotyczy badania źródłowego; nie potwierdza metody próbki pacjenta ani równoważności innych platform."
+      ],
+      "ageGroup": {
+        "label": "18–25 lat",
+        "minAge": 18,
+        "maxAge": 25,
+        "maxAgeExclusive": false,
+        "n": 34,
+        "sourceUnit": "IU/L",
+        "sourceMean": 3.0,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Średnia arytmetyczna całej grupy badania; nie jest medianą ani wartością dokładnego wieku."
+      },
+      "groupN": 34
+    },
+    {
+      "id": "perheentupa2013-male-fsh-25-29",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 25,
+      "maxAge": 30,
+      "points": [
+        {
+          "ageYears": 25,
+          "value": 3.43,
+          "eligible": true
+        },
+        {
+          "ageYears": 30,
+          "value": 3.43,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 5,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.06
+        },
+        "publishedP5": 1.47,
+        "publishedP95": 10.85,
+        "groupParticipants": 352
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "25–29 lat",
+        "minAge": 25,
+        "maxAge": 29,
+        "maxAgeExclusive": false,
+        "n": 352,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 3.43,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 352
+    },
+    {
+      "id": "perheentupa2013-male-fsh-30-39",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 30,
+      "maxAge": 40,
+      "points": [
+        {
+          "ageYears": 30,
+          "value": 4.0,
+          "eligible": true
+        },
+        {
+          "ageYears": 40,
+          "value": 4.0,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 5,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.06
+        },
+        "publishedP5": 1.66,
+        "publishedP95": 10.31,
+        "groupParticipants": 859
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "30–39 lat",
+        "minAge": 30,
+        "maxAge": 39,
+        "maxAgeExclusive": false,
+        "n": 859,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 4.0,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 859
+    },
+    {
+      "id": "perheentupa2013-male-fsh-40-49",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 40,
+      "maxAge": 50,
+      "points": [
+        {
+          "ageYears": 40,
+          "value": 4.56,
+          "eligible": true
+        },
+        {
+          "ageYears": 50,
+          "value": 4.56,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 5,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.06
+        },
+        "publishedP5": 2.05,
+        "publishedP95": 15.17,
+        "groupParticipants": 887
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "40–49 lat",
+        "minAge": 40,
+        "maxAge": 49,
+        "maxAgeExclusive": false,
+        "n": 887,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 4.56,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 887
+    },
+    {
+      "id": "perheentupa2013-male-fsh-50-59",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 50,
+      "maxAge": 60,
+      "points": [
+        {
+          "ageYears": 50,
+          "value": 5.64,
+          "eligible": true
+        },
+        {
+          "ageYears": 60,
+          "value": 5.64,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 5,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.06
+        },
+        "publishedP5": 2.2,
+        "publishedP95": 18.84,
+        "groupParticipants": 751
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "50–59 lat",
+        "minAge": 50,
+        "maxAge": 59,
+        "maxAgeExclusive": false,
+        "n": 751,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 5.64,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 751
+    },
+    {
+      "id": "perheentupa2013-male-fsh-60-69",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 60,
+      "maxAge": 70,
+      "points": [
+        {
+          "ageYears": 60,
+          "value": 5.92,
+          "eligible": true
+        },
+        {
+          "ageYears": 70,
+          "value": 5.92,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 5,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.06
+        },
+        "publishedP5": 2.02,
+        "publishedP95": 18.68,
+        "groupParticipants": 345
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "60–69 lat",
+        "minAge": 60,
+        "maxAge": 69,
+        "maxAgeExclusive": false,
+        "n": 345,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 5.92,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 345
+    },
+    {
+      "id": "perheentupa2013-male-fsh-70-74",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 70,
+      "maxAge": 75,
+      "points": [
+        {
+          "ageYears": 70,
+          "value": 6.43,
+          "eligible": true
+        },
+        {
+          "ageYears": 75,
+          "value": 6.43,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-12-0288",
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "delfia",
+        "wallac-delfia"
+      ],
+      "provenance": {
+        "authors": "Perheentupa et al.",
+        "year": 2013,
+        "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+        "pmid": "23161753",
+        "column": "All",
+        "sourceFile": "perheentupa2013.pdf",
+        "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+        "participants": 3271,
+        "sourceAgeDomain": {
+          "minAge": 25,
+          "maxAge": 74
+        },
+        "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-12-0288",
+        "url": "https://doi.org/10.1530/EJE-12-0288",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "table": 5,
+        "assay": {
+          "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+          "specimen": "serum",
+          "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+          "lodIuL": 0.06
+        },
+        "publishedP5": 2.88,
+        "publishedP95": 27.13,
+        "groupParticipants": 77
+      },
+      "limitations": [
+        "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+        "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+        "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+        "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+        "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+      ],
+      "ageGroup": {
+        "label": "70–74 lat",
+        "minAge": 70,
+        "maxAge": 74,
+        "maxAgeExclusive": false,
+        "n": 77,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 6.43,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku."
+      },
+      "groupN": 77
+    },
+    {
+      "id": "yeap2007-male-lh-75-79",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 75,
+      "maxAge": 80,
+      "points": [
+        {
+          "ageYears": 75,
+          "value": 4.44,
+          "eligible": true
+        },
+        {
+          "ageYears": 80,
+          "value": 4.44,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Yeap 2007 · HIMS · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-06-0714",
+      "method": "Immulite 2000 chemiluminescent immunoassay",
+      "population": "Mężczyźni mieszkający samodzielnie, Perth, Australia; HIMS,70–89 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "immulite-2000",
+        "siemens-immulite-2000"
+      ],
+      "provenance": {
+        "authors": "Yeap et al.",
+        "year": 2007,
+        "title": "Yeap et al., In men older than 70 years, total testosterone remains stable while free testosterone declines with age. The Health in Men Study",
+        "table": 1,
+        "sourceFile": "yeap2007.pdf",
+        "sourceSha256": "3482342a1e3f55bdf9bf8f98a53c4df654597010fe8f37da990da654c6f1da26",
+        "participants": 3645,
+        "sourceAgeDomain": {
+          "minAge": 70,
+          "maxAge": 89
+        },
+        "assay": {
+          "method": "Immulite 2000 chemiluminescent immunoassay",
+          "specimen": "serum",
+          "sampling": "08:00–10:30; stored at−80°C.",
+          "lodIuL": 0.1
+        },
+        "ageRouting": "Source selected from75 to avoid overlap withFINRISK.85+ published group capped at observed89years inclusive; no automatic90+ extrapolation.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-06-0714",
+        "url": "https://doi.org/10.1530/EJE-06-0714",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "publishedAgeLabel": "75–79",
+        "publishedMeanAge": 77.36,
+        "publishedP25": 3.15,
+        "publishedP75": 6.76,
+        "groupParticipants": 1555
+      },
+      "limitations": [
+        "Mediana całej grupy HIMS; nie jest normą laboratoryjną ani medianą dokładnego wieku.",
+        "Ogólna populacja starszych mężczyzn obejmuje choroby współistniejące i zaburzenia funkcji jąder.",
+        "Różnica względem FINRISK na granicy75 lat wynika z odrębnej kohorty i metody; nie dowodzi nagłego spadku LH i nie wymusza kształtu linii.",
+        "Ostatnia grupa85+ ma obserwowany zakres do89 lat; nie daje liczbowego odniesienia powyżej89.",
+        "Średni wiek grupy nie jest dowodem dokładnej mediany LH w tym wieku. Immulite2000 nie jest automatycznie równoważnyXPi."
+      ],
+      "ageGroup": {
+        "label": "75–79 lat",
+        "minAge": 75,
+        "maxAge": 79,
+        "maxAgeExclusive": false,
+        "n": 1555,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 4.44,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku.",
+        "meanAge": 77.36
+      },
+      "groupN": 1555,
+      "meanAge": 77.36
+    },
+    {
+      "id": "yeap2007-male-lh-80-84",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 80,
+      "maxAge": 85,
+      "points": [
+        {
+          "ageYears": 80,
+          "value": 5.14,
+          "eligible": true
+        },
+        {
+          "ageYears": 85,
+          "value": 5.14,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Yeap 2007 · HIMS · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-06-0714",
+      "method": "Immulite 2000 chemiluminescent immunoassay",
+      "population": "Mężczyźni mieszkający samodzielnie, Perth, Australia; HIMS,70–89 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "immulite-2000",
+        "siemens-immulite-2000"
+      ],
+      "provenance": {
+        "authors": "Yeap et al.",
+        "year": 2007,
+        "title": "Yeap et al., In men older than 70 years, total testosterone remains stable while free testosterone declines with age. The Health in Men Study",
+        "table": 1,
+        "sourceFile": "yeap2007.pdf",
+        "sourceSha256": "3482342a1e3f55bdf9bf8f98a53c4df654597010fe8f37da990da654c6f1da26",
+        "participants": 3645,
+        "sourceAgeDomain": {
+          "minAge": 70,
+          "maxAge": 89
+        },
+        "assay": {
+          "method": "Immulite 2000 chemiluminescent immunoassay",
+          "specimen": "serum",
+          "sampling": "08:00–10:30; stored at−80°C.",
+          "lodIuL": 0.1
+        },
+        "ageRouting": "Source selected from75 to avoid overlap withFINRISK.85+ published group capped at observed89years inclusive; no automatic90+ extrapolation.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-06-0714",
+        "url": "https://doi.org/10.1530/EJE-06-0714",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "publishedAgeLabel": "80–84",
+        "publishedMeanAge": 82.02,
+        "publishedP25": 3.36,
+        "publishedP75": 8.16,
+        "groupParticipants": 584
+      },
+      "limitations": [
+        "Mediana całej grupy HIMS; nie jest normą laboratoryjną ani medianą dokładnego wieku.",
+        "Ogólna populacja starszych mężczyzn obejmuje choroby współistniejące i zaburzenia funkcji jąder.",
+        "Różnica względem FINRISK na granicy75 lat wynika z odrębnej kohorty i metody; nie dowodzi nagłego spadku LH i nie wymusza kształtu linii.",
+        "Ostatnia grupa85+ ma obserwowany zakres do89 lat; nie daje liczbowego odniesienia powyżej89.",
+        "Średni wiek grupy nie jest dowodem dokładnej mediany LH w tym wieku. Immulite2000 nie jest automatycznie równoważnyXPi."
+      ],
+      "ageGroup": {
+        "label": "80–84 lat",
+        "minAge": 80,
+        "maxAge": 84,
+        "maxAgeExclusive": false,
+        "n": 584,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 5.14,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku.",
+        "meanAge": 82.02
+      },
+      "groupN": 584,
+      "meanAge": 82.02
+    },
+    {
+      "id": "yeap2007-male-lh-85-89",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 85,
+      "maxAge": 89,
+      "points": [
+        {
+          "ageYears": 85,
+          "value": 5.22,
+          "eligible": true
+        },
+        {
+          "ageYears": 89,
+          "value": 5.22,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Yeap 2007 · HIMS · mediana grupy wieku",
+      "url": "https://doi.org/10.1530/EJE-06-0714",
+      "method": "Immulite 2000 chemiluminescent immunoassay",
+      "population": "Mężczyźni mieszkający samodzielnie, Perth, Australia; HIMS,70–89 lat",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "constant",
+      "maxAgeExclusive": false,
+      "compatibleAssayMethodIds": [
+        "immulite-2000",
+        "siemens-immulite-2000"
+      ],
+      "provenance": {
+        "authors": "Yeap et al.",
+        "year": 2007,
+        "title": "Yeap et al., In men older than 70 years, total testosterone remains stable while free testosterone declines with age. The Health in Men Study",
+        "table": 1,
+        "sourceFile": "yeap2007.pdf",
+        "sourceSha256": "3482342a1e3f55bdf9bf8f98a53c4df654597010fe8f37da990da654c6f1da26",
+        "participants": 3645,
+        "sourceAgeDomain": {
+          "minAge": 70,
+          "maxAge": 89
+        },
+        "assay": {
+          "method": "Immulite 2000 chemiluminescent immunoassay",
+          "specimen": "serum",
+          "sampling": "08:00–10:30; stored at−80°C.",
+          "lodIuL": 0.1
+        },
+        "ageRouting": "Source selected from75 to avoid overlap withFINRISK.85+ published group capped at observed89years inclusive; no automatic90+ extrapolation.",
+        "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+        "doi": "10.1530/EJE-06-0714",
+        "url": "https://doi.org/10.1530/EJE-06-0714",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1,
+        "publishedAgeLabel": "85+",
+        "publishedMeanAge": 86.2,
+        "publishedP25": 3.36,
+        "publishedP75": 8.93,
+        "groupParticipants": 123
+      },
+      "limitations": [
+        "Mediana całej grupy HIMS; nie jest normą laboratoryjną ani medianą dokładnego wieku.",
+        "Ogólna populacja starszych mężczyzn obejmuje choroby współistniejące i zaburzenia funkcji jąder.",
+        "Różnica względem FINRISK na granicy75 lat wynika z odrębnej kohorty i metody; nie dowodzi nagłego spadku LH i nie wymusza kształtu linii.",
+        "Ostatnia grupa85+ ma obserwowany zakres do89 lat; nie daje liczbowego odniesienia powyżej89.",
+        "Średni wiek grupy nie jest dowodem dokładnej mediany LH w tym wieku. Immulite2000 nie jest automatycznie równoważnyXPi."
+      ],
+      "ageGroup": {
+        "label": "85–89 lat",
+        "minAge": 85,
+        "maxAge": 89,
+        "maxAgeExclusive": false,
+        "n": 123,
+        "sourceUnit": "IU/L",
+        "sourceMedian": 5.22,
+        "boundaryPolicy": "Preserve published age label; separate minAge/maxAge fields of profile define application routing.",
+        "description": "Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku.",
+        "meanAge": 86.2
+      },
+      "groupN": 123,
+      "meanAge": 86.2
+    },
+    {
+      "id": "ljubicic2020-male-fsh-75-80-approximate",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 75,
+      "maxAge": 80,
+      "points": [
+        {
+          "ageYears": 75,
+          "value": 7.8289,
+          "eligible": true
+        },
+        {
+          "ageYears": 76,
+          "value": 7.9721,
+          "eligible": true
+        },
+        {
+          "ageYears": 77,
+          "value": 8.0447,
+          "eligible": true
+        },
+        {
+          "ageYears": 78,
+          "value": 8.1919,
+          "eligible": true
+        },
+        {
+          "ageYears": 79,
+          "value": 8.3418,
+          "eligible": true
+        },
+        {
+          "ageYears": 80,
+          "value": 8.4178,
+          "eligible": true
+        }
+      ],
+      "sourceLabel": "Ljubicic 2020 · przybliżona mediana modelu",
+      "url": "https://doi.org/10.1093/humrep/deaa182",
+      "method": "AutoDELFIA time-resolved fluoroimmunometric assay",
+      "population": "Duńscy mężczyźni; model zdrowych kohort, badania w wieku41,51,61,71 i80 lat",
+      "statistic": "median",
+      "approximate": true,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "maxAgeExclusive": false,
+      "compatibleAssayMethodIds": [
+        "autodelfia",
+        "autodelfia-fsh"
+      ],
+      "provenance": {
+        "authors": "Ljubicic et al.",
+        "year": 2020,
+        "title": "Ljubicic et al., 2020; Figure1, male LH top-left and maleFSH middle-left",
+        "pmid": "32976602",
+        "figure": 1,
+        "panel": "male FSH, middle-left; thick central0SD line",
+        "sourceFile": "ljubicic2020-figure1.jpeg",
+        "sourceSha256": "b190e2ec025aea6df09d54d96d06edcce2a151674683ece55f82be638a7ec441",
+        "sourceAgeDomain": {
+          "minAge": 41,
+          "maxAge": 80
+        },
+        "sourcePopulation": "3144 healthy male samples/participants as reported; Danish Caucasian combined cohorts. Older cohortsMONICA10 at41,51,61,71 and1914cohort examined80.",
+        "assay": {
+          "method": "AutoDELFIA time-resolved fluoroimmunometric assay",
+          "specimen": "serum",
+          "lodIuL": 0.05,
+          "sampling": "Stored at−20°C, up to20years."
+        },
+        "statisticDefinition": "Methods definesM as median and0SD impliesX=M. Figure1 caption calls the central line mean; retain wording conflict. TableI statistic is unspecified and is not used.",
+        "graphicalUncertainty": {
+          "assumedMaxYPixelError": 4.5,
+          "multiplicativeFactor": 1.085008,
+          "explanation": "Half stroke plus rounding/calibration; approx8.5% concentration error allowance, not a statistical confidence interval"
+        },
+        "sourceAgeRouting": "Use only75–80inclusive as educational model reference. The source curve spans older ages41–80, between sparse cohorts; no80+ extrapolation.",
+        "verification": "Thick central line and log-y calibration checked visually; independent prior extraction differed by no more than0.5pixel. Raster precision is not model uncertainty.",
+        "redistribution": "Digitized numerical facts and citation only; no publisher image included.",
+        "doi": "10.1093/humrep/deaa182",
+        "url": "https://doi.org/10.1093/humrep/deaa182",
+        "reviewedDate": "2026-10-11",
+        "sourceUnit": "IU/L",
+        "sourceToCanonicalFactor": 1
+      },
+      "limitations": [
+        "Przybliżony odczyt środkowej krzywej0SD; wyświetlać≈ i około2cyfr znaczących, nie dokładność przechowywanych węzłów.",
+        "Methods określaM jako medianę; podpis ryciny używa słowa mean. Nie jest to średnia ani nieokreślona statystyka z TableI.",
+        "Roczne węzły są próbkami modelu między kohortami71 i80 lat, nie empirycznymi medianami osobnych roczników.",
+        "Przyjęty błąd graficzny około8,5% nie jest przedziałem ufności ani miarą rozrzutu biologicznego.",
+        "Nie obliczać z tych odczytów z-score, centyla ani kategorii prawidłowości. Po80r.ż. brak numerycznego odniesienia.",
+        "AutoDELFIA badania źródłowego nie potwierdza metody próbki pacjenta."
+      ]
     }
   ],
   "unitConversions": {
@@ -29080,6 +30579,293 @@ const testosteroneDisplayPolicy = {
     "reason": "One broad declining arc anchored to first/last published group means. Intermediate means remain numerical references only, avoiding false mid-adult knees and tiny group-to-group oscillations. Canonical display coordinates avoid a new bend at the age-60 axis change."
   }
 };
+const lhFshDisplayPolicy = {
+  "version": "2026-10-11.1",
+  "kind": "educational-display-only",
+  "sex": "male",
+  "unit": "IU/L",
+  "coordinate": "canonical-whole-life-display-x",
+  "daysPerYear": 365.25,
+  "ageKeyPrecision": 12,
+  "providesClinicalReference": false,
+  "approval": {
+    "date": "2026-10-11",
+    "candidateSha256": "261e4c2d6861349bd55b391b3574942ab992fe7b7530d82bdb1129b237a95d20",
+    "scope": "Approved revised LH/FSH preview: independent source markers, qualitative prenatal segment, broad infant rise and source-informed postnatal illustration."
+  },
+  "constraints": [
+    "Display geometry never supplies a patient reference, reference interval or diagnosis.",
+    "Profiles and patient values do not change the fixed scale. Adding a source requires a separate reviewed scale decision.",
+    "Prenatal fractions are frozen graphical coordinates, not verified fetal serum concentrations.",
+    "Annual pediatric medians and adult group statistics remain separate from illustrative bridges.",
+    "The two hormones have independent scales; equal heights or crossings do not imply equal concentrations or an LH/FSH ratio."
+  ],
+  "hormones": {
+    "lh": {
+      "sourceIds": [
+        "busch2022-male-lh",
+        "madsen2022-male-lh",
+        "laurentino2020-male-lh-18-under25",
+        "perheentupa2013-male-lh-25-29",
+        "perheentupa2013-male-lh-30-39",
+        "perheentupa2013-male-lh-40-49",
+        "perheentupa2013-male-lh-50-59",
+        "perheentupa2013-male-lh-60-69",
+        "perheentupa2013-male-lh-70-74",
+        "yeap2007-male-lh-75-79",
+        "yeap2007-male-lh-80-84",
+        "yeap2007-male-lh-85-89"
+      ],
+      "scale": {
+        "basis": "fixed-approved-display-scale",
+        "divisor": 5.57,
+        "headroomFactor": 1.25,
+        "patientValueMayChangeScale": false,
+        "sourceId": "perheentupa2013-male-lh-70-74",
+        "sourceAgeYears": 70
+      },
+      "prenatalSchematic": {
+        "coordinateSystem": "dimensionless display fractions; not fetal concentrations",
+        "policy": "Retain existing visual shape, explicitly label as schematic; no new fetal evidence or numerical reference is claimed.",
+        "points": [
+          {
+            "ageYears": -0.75,
+            "relative": 0.01654164876239809
+          },
+          {
+            "ageYears": -0.6,
+            "relative": 0.02756941460399682
+          },
+          {
+            "ageYears": -0.48,
+            "relative": 0.2977496777231657
+          },
+          {
+            "ageYears": -0.32,
+            "relative": 0.6175548871295289
+          },
+          {
+            "ageYears": -0.13,
+            "relative": 0.3528885069311593
+          },
+          {
+            "ageYears": 0,
+            "relative": 0.02756941460399682
+          }
+        ],
+        "providesPatientReference": false
+      },
+      "infant": {
+        "sourceId": "busch2022-male-lh",
+        "peakAgeDays": 14,
+        "peakValue": 4.5,
+        "peakAgeIsIllustrative": true,
+        "controlFractions": [
+          0.045,
+          0.68
+        ],
+        "sampleCount": 601,
+        "shoulderPoints": [
+          {
+            "ageDays": 21,
+            "value": 4.4
+          }
+        ],
+        "sourceStartAgeDays": 45,
+        "sourceMaxAgeYears": 1,
+        "includeSourceMaxAge": false,
+        "explanation": "Broad educational first-week ascent and shoulder. Fig.3 source median at the patient marker stays unchanged; this is not the measured day of a population maximum."
+      },
+      "childhood": {
+        "minAge": 0.6652977412731006,
+        "maxAge": 6,
+        "kind": "schematic-low-baseline",
+        "points": [
+          {
+            "ageYears": 1,
+            "value": 0.06
+          },
+          {
+            "ageYears": 3,
+            "value": 0.06
+          },
+          {
+            "ageYears": 5,
+            "value": 0.08
+          }
+        ],
+        "providesPatientReference": false,
+        "explanation": "Smooth low background across source gaps; group FSH0.48 and censored LH values are not forced as geometric knots."
+      },
+      "puberty": {
+        "sourceId": "madsen2022-male-lh",
+        "minAge": 14,
+        "maxAge": 25,
+        "kind": "illustrative-puberty-adult-bridge",
+        "startDerivativeStepYears": 0.001,
+        "controlFractions": [
+          0.16,
+          0.3
+        ],
+        "sampleCount": 601,
+        "endValue": 3.74,
+        "endSourceId": "perheentupa2013-male-lh-25-29",
+        "endSlopePerYear": 0,
+        "explanation": "Preserve a smooth puberty transition; late-pubertal source medians remain separate and may lie above the line."
+      },
+      "adultTrend": {
+        "minAge": 25,
+        "maxAge": 80,
+        "kind": "illustrative-adult-trend",
+        "controlFractions": [
+          0.27,
+          0.4
+        ],
+        "sampleCount": 601,
+        "endValue": 5.23,
+        "endSlopePerYear": 0,
+        "explanation": "One broad illustrative adult rise; differences between source groups do not create physiological notches."
+      },
+      "tail": {
+        "minAge": 89,
+        "maxAge": 90,
+        "kind": "older-age-tail",
+        "mode": "flat-fading-illustration",
+        "providesPatientReference": false
+      }
+    },
+    "fsh": {
+      "sourceIds": [
+        "busch2022-male-fsh",
+        "madsen2022-male-fsh",
+        "zec2012-male-fsh-age-1-8",
+        "laurentino2020-male-fsh-18-under25",
+        "perheentupa2013-male-fsh-25-29",
+        "perheentupa2013-male-fsh-30-39",
+        "perheentupa2013-male-fsh-40-49",
+        "perheentupa2013-male-fsh-50-59",
+        "perheentupa2013-male-fsh-60-69",
+        "perheentupa2013-male-fsh-70-74",
+        "ljubicic2020-male-fsh-75-80-approximate"
+      ],
+      "scale": {
+        "basis": "fixed-approved-display-scale",
+        "divisor": 8.4178,
+        "headroomFactor": 1.25,
+        "patientValueMayChangeScale": false,
+        "sourceId": "ljubicic2020-male-fsh-75-80-approximate",
+        "sourceAgeYears": 80
+      },
+      "prenatalSchematic": {
+        "coordinateSystem": "dimensionless display fractions; not fetal concentrations",
+        "policy": "Retain existing visual shape, explicitly label as schematic; no new fetal evidence or numerical reference is claimed.",
+        "points": [
+          {
+            "ageYears": -0.75,
+            "relative": 0.0062814554774843
+          },
+          {
+            "ageYears": -0.6,
+            "relative": 0.010469092462473836
+          },
+          {
+            "ageYears": -0.48,
+            "relative": 0.10469092462473836
+          },
+          {
+            "ageYears": -0.32,
+            "relative": 0.21985094171195058
+          },
+          {
+            "ageYears": -0.13,
+            "relative": 0.13086365578092293
+          },
+          {
+            "ageYears": 0,
+            "relative": 0.014133274824339678
+          }
+        ],
+        "providesPatientReference": false
+      },
+      "infant": {
+        "sourceId": "busch2022-male-fsh",
+        "peakAgeDays": 11,
+        "peakValue": 2.6,
+        "peakAgeIsIllustrative": true,
+        "controlFractions": [
+          0.045,
+          0.68
+        ],
+        "sampleCount": 601,
+        "shoulderPoints": [
+          {
+            "ageDays": 14,
+            "value": 2.55
+          },
+          {
+            "ageDays": 21,
+            "value": 2.35
+          }
+        ],
+        "sourceStartAgeDays": 45,
+        "sourceMaxAgeYears": 1,
+        "includeSourceMaxAge": true,
+        "explanation": "Broad educational first-week ascent and shoulder. Fig.3 source median at the patient marker stays unchanged; this is not the measured day of a population maximum."
+      },
+      "childhood": {
+        "minAge": 1,
+        "maxAge": 6,
+        "kind": "low-childhood-bridge",
+        "points": [],
+        "providesPatientReference": false,
+        "explanation": "Smooth low background across source gaps; group FSH0.48 and censored LH values are not forced as geometric knots."
+      },
+      "puberty": {
+        "sourceId": "madsen2022-male-fsh",
+        "minAge": 12,
+        "maxAge": 25,
+        "kind": "illustrative-puberty-adult-bridge",
+        "startDerivativeStepYears": 0.001,
+        "controlFractions": [
+          0.12,
+          0.2
+        ],
+        "sampleCount": 801,
+        "endValue": 3.43,
+        "endSourceId": "perheentupa2013-male-fsh-25-29",
+        "endSlopePerYear": 0.05,
+        "explanation": "Preserve a smooth puberty transition; late-pubertal source medians remain separate and may lie above the line."
+      },
+      "adultTrend": {
+        "minAge": 25,
+        "maxAge": 80,
+        "kind": "source-constrained-illustrative-adult-trend",
+        "controlFractions": [
+          0.5907758320847372,
+          0.08000000000000002
+        ],
+        "sampleCount": 801,
+        "endValue": 8.4178,
+        "endSlopePerYear": 0,
+        "explanation": "Broad curve checked at all40 verified41–80yr model readings. Fitted geometry is not a new model median or a laboratory reference interval.",
+        "sourceDoi": "10.1093/humrep/deaa182",
+        "fitErrorRmsIuL": 0.049829897933818645,
+        "sourceCheckAgeYears": [
+          41,
+          80
+        ],
+        "sourceCheckPoints": 40
+      },
+      "tail": {
+        "minAge": 80,
+        "maxAge": 90,
+        "kind": "older-age-tail",
+        "mode": "flat-fading-illustration",
+        "providesPatientReference": false
+      }
+    }
+  }
+};
 const amhDisplayPolicy = {
   "version": "2026-10-11.1",
   "kind": "educational-display-only",
@@ -29287,6 +31073,7 @@ return {
   inhibinEvidence: inhibinEvidence,
   inhibinDisplayPolicy: inhibinDisplayPolicy,
   testosteroneDisplayPolicy: testosteroneDisplayPolicy,
+  lhFshDisplayPolicy: lhFshDisplayPolicy,
   amhDisplayPolicy: amhDisplayPolicy
 };
 });
