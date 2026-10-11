@@ -399,8 +399,8 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 ## Źródła męskie i przyszłe anality
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
-pacjenta**. Zwykłe męskie widoki inhibiny B i testosteronu całkowitego
-zastępują obecnie stałe krzywe opisane powyżej. LH, FSH, INSL3 i AMH
+pacjenta**. Zwykłe męskie widoki inhibiny B, testosteronu całkowitego
+oraz LH i FSH zastępują obecnie stałe krzywe opisane powyżej. INSL3 i AMH
 zachowują kotwice schematu, ale od 11 października 2026 korzystają
 z jednej kanonicznej krzywej PCHIP: zbliżenia próbkują ją, zamiast
 ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowują skalę,

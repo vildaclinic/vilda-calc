@@ -38,19 +38,36 @@ async function stage(page, kind, value) {
   await closePatientEditor(page);
 }
 
+async function stableMaleGeometry(page) {
+  const line = panel(page).locator('[data-stable-reference-line="fsh"]');
+  await expect(line).toHaveCount(1);
+  await expect(panel(page).locator('[data-reference-line="fsh"], [data-reference-background="fsh"]')).toHaveCount(0);
+  return line.evaluate(node => ({ path: node.getAttribute('d'),
+    divisor: Number(node.dataset.divisor), ceiling: Number(node.dataset.ceiling),
+    viewBox: node.ownerSVGElement.getAttribute('viewBox') }));
+}
+
 async function expectPoint(page, value, median, profile) {
+  // Male FSH now has one fixed educational curve, independent of Zec's
+  // numerical group median. Female FSH retains its source-curve contract.
+  // Branch on the expected source, never on whichever path happens to exist.
+  const stableMale = profile === 'zec2012-male-fsh-age-1-8';
   await expect(dot(page)).toHaveCount(1);
   await expect(dot(page)).toHaveAttribute('data-profile', profile);
+  await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'group-median');
   await expect.poll(async () => Number(await dot(page).getAttribute('data-value'))).toBeCloseTo(value, 6);
   await expect.poll(async () => Number(await dot(page).getAttribute('data-median'))).toBeCloseTo(median, 6);
+  await expect.poll(async () => Number(await dot(page).getAttribute('data-reference-value'))).toBeCloseTo(median, 6);
   // Read one current SVG snapshot: ResizeObserver can replace its children.
   let geometry;
   await expect.poll(async () => {
-    geometry = await panel(page).evaluate(host => {
+    geometry = await panel(page).evaluate((host, stableMale) => {
       const group = host.querySelector('[data-patient-concentration]');
       const point = group?.querySelector('[data-result-point]');
       const ref = group?.querySelector('[data-median-point]');
-      const line = group?.ownerSVGElement?.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`);
+      const line = group?.ownerSVGElement?.querySelector(stableMale
+        ? '[data-stable-reference-line="fsh"]'
+        : `[data-reference-line][data-profile="${group.dataset.profile}"]`);
       if (!point || !ref || !line) return null;
       const x = Number(point.getAttribute('cx'));
       let lo = 0, hi = line.getTotalLength();
@@ -60,13 +77,29 @@ async function expectPoint(page, value, median, profile) {
       }
       return { x, y: Number(point.getAttribute('cy')), rx: Number(ref.getAttribute('cx')),
         ry: Number(ref.getAttribute('cy')), curveY: line.getPointAtLength((lo + hi) / 2).y,
-        bottom: Number(group.dataset.plotBottom), value: Number(group.dataset.value) };
-    });
+        bottom: Number(group.dataset.plotBottom), top: Number(group.dataset.plotTop), value: Number(group.dataset.value),
+        divisor: Number(group.dataset.divisor), ceiling: Number(group.dataset.ceiling),
+        ...(stableMale ? { lineDivisor: Number(line.dataset.divisor), lineCeiling: Number(line.dataset.ceiling) } : {}) };
+    }, stableMale);
     return geometry?.value === value;
   }).toBe(true);
   expect(Object.values(geometry).every(Number.isFinite)).toBe(true);
   expect(geometry.x).toBe(geometry.rx);
-  expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
+  if (stableMale) {
+    expect(geometry.divisor).toBe(8.4178);
+    expect(geometry.ceiling).toBe(1.25);
+    expect(geometry.lineDivisor).toBe(geometry.divisor);
+    expect(geometry.lineCeiling).toBe(geometry.ceiling);
+    expect((geometry.bottom - geometry.ry) / (geometry.bottom - geometry.top))
+      .toBeCloseTo(median / geometry.divisor / geometry.ceiling, 6);
+    expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.top))
+      .toBeCloseTo(value / geometry.divisor / geometry.ceiling, 6);
+    // At this 3-year-old fixture the illustrative line differs from 0.48:
+    // the exact Zec reference must remain separate rather than snap to it.
+    expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(0.05);
+  } else {
+    expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
+  }
   expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.ry)).toBeCloseTo(value / median, 6);
   if (value < median) expect(geometry.y).toBeGreaterThan(geometry.ry);
   if (value > median) expect(geometry.y).toBeLessThan(geometry.ry);
@@ -84,17 +117,21 @@ async function patientState(page) {
 
 test('Zec requires current G1; a number without a type, G2, P1 and unknown stage never supply the dot or block clinical age assessment', async ({ page }) => {
   await open(page, { sex: 'M', age: 3, ageMonths: 0, tannerStage: '1' });
+  const original = await stableMaleGeometry(page);
   await expect(dot(page)).toHaveCount(0);
   await expectClinicalAgeComparison(page);
   await stage(page, 'G', '1');
   await expectPoint(page, 2, 0.48, 'zec2012-male-fsh-age-1-8');
+  expect(await stableMaleGeometry(page)).toEqual(original);
   for (const [kind, value] of [['G', '2'], ['G', ''], ['P', '1']]) {
     await stage(page, kind, value);
     await expect(dot(page)).toHaveCount(0);
     await expectClinicalAgeComparison(page);
+    expect(await stableMaleGeometry(page)).toEqual(original);
   }
   await stage(page, 'G', '1');
   await expectPoint(page, 2, 0.48, 'zec2012-male-fsh-age-1-8');
+  expect(await stableMaleGeometry(page)).toEqual(original);
   await quickSelect(page, 'Sex', 'F');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
@@ -123,17 +160,21 @@ test('female group boundaries select exact Table 2 medians and equivalent units 
 
 test('FSH point sits below, on and above its group median and cannot survive an inexact result', async ({ page }) => {
   await open(page, { sex: 'M', age: 3, ageMonths: 0 }, '0.24');
+  const original = await stableMaleGeometry(page);
   await stage(page, 'G', '1');
   for (const value of [0.24, 0.48, 0.96]) {
     await page.locator('#labValue').fill(String(value));
     await expectPoint(page, value, 0.48, 'zec2012-male-fsh-age-1-8');
+    expect(await stableMaleGeometry(page)).toEqual(original);
   }
   for (const value of ['<0.48', '']) {
     await page.locator('#labValue').fill(value);
     await expect(dot(page)).toHaveCount(0);
+    expect(await stableMaleGeometry(page)).toEqual(original);
   }
   await page.locator('#labValue').fill('0.48');
   await expectPoint(page, 0.48, 0.48, 'zec2012-male-fsh-age-1-8');
+  expect(await stableMaleGeometry(page)).toEqual(original);
 });
 
 test('sex comparison remains schematic because the other sex has no patient Tanner observation', async ({ page }) => {
@@ -166,6 +207,7 @@ for (const width of [1440, 320]) {
     await open(page, { sex: 'M', age: 3, ageMonths: 0 });
     await stage(page, 'G', '1');
     await expectPoint(page, 2, 0.48, 'zec2012-male-fsh-age-1-8');
+    const original = await stableMaleGeometry(page);
     const before = await patientState(page);
     await panel(page).getByText('O wykresie i źródła', { exact: true }).click();
     for (const fullscreen of [false, true]) {
@@ -181,7 +223,8 @@ for (const width of [1440, 320]) {
       await expect(source).toContainText(/Tanner(?:a)? 1/);
       await expect(source).not.toContainText('Mediana rocznej grupy wieku');
       await expect(source).not.toContainText('Porównanie nie uwzględnia stadium Tannera');
-      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('1–<8');
+      await expect(source).toContainText('mediana grupy 1–<8 lat');
+      await expect(dot(page)).toHaveAttribute('aria-label', /Mediana grupy 1–<8 lat, Tanner 1/);
       const fits = await dot(page).evaluate(group => {
         const bounds = group.ownerSVGElement.viewBox.baseVal;
         return [...group.querySelectorAll('text, circle')].every(node => {
@@ -195,6 +238,7 @@ for (const width of [1440, 320]) {
     }
     await panel(page).getByRole('button', { name: 'Zamknij', exact: true }).click();
     await expectPoint(page, 2, 0.48, 'zec2012-male-fsh-age-1-8');
+    expect(await stableMaleGeometry(page)).toEqual(original);
     expect(await patientState(page)).toEqual(before);
   });
 }
