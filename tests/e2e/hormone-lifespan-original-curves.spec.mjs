@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { expect, test } from '../support/test-czas.mjs';
 
-// Comparison geometry is unchanged. On 2026-10-11 the owner approved
+// Inhibin B comparison geometry is unchanged. AMH infant comparison now has
+// its separately approved fixed source/log axis, checked below. On2026-10-11 the owner approved
 // canonical ordinary male splines that preserve anchors and zoom peaks. These
 // fixtures were captured from the actual pre-#607 component (c6b03379), with
 // its original data, this HTML harness, widths 1360/320 and reduced motion.
@@ -16,7 +17,7 @@ const sha256 = value => createHash('sha256').update(value).digest('base64');
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 
-async function openComponent(page, width) {
+async function openComponent(page, width, amhComparison = false) {
   await page.setViewportSize({ width, height: 1000 });
   await page.route('**/__test-hormone-lifespan', route => route.fulfill({
     contentType: 'text/html',
@@ -25,14 +26,24 @@ async function openComponent(page, width) {
       <link rel="stylesheet" href="/vilda_hormone_lifespan.css">
       </head><body><main id="diagram"></main>
       <script src="/vilda_hormone_lifespan_data.js"></script>
+      ${amhComparison ? '<script src="/vilda_hormone_lifespan_reference.js"></script><script src="/vilda_hormone_lifespan_display.js"></script>' : ''}
       <script src="/vilda_hormone_lifespan.js"></script></body></html>`,
   }));
   await page.goto('/__test-hormone-lifespan', { waitUntil: 'load' });
-  await page.evaluate(() => {
-    window.originalCurveTestDiagram = window.VildaHormoneLifespan.mount({ host: document.querySelector('#diagram') });
+  await page.evaluate(amhComparison => {
+    // This file protects the retained ordinary illustration anchors. Enable
+    // only the newly approved comparison builder, preserving that fallback.
+    const comparisonOnly = amhComparison ? {
+      buildMaleInhibin: () => null,
+      buildAmhInfantComparison: window.VildaHormoneLifespanDisplay.buildAmhInfantComparison,
+      classifyAmhComparisonValue: window.VildaHormoneLifespanDisplay.classifyAmhComparisonValue,
+    } : undefined;
+    window.originalCurveTestDiagram = window.VildaHormoneLifespan.mount({
+      host: document.querySelector('#diagram'), displayEngine: comparisonOnly,
+    });
     window.originalCurveTestDiagram.update({ analyte: 'lh', sex: 'male', ageYears: 0.25,
       preterm: 'no', sourceStatus: 'ready', identityKey: 'fictional-original-curve-example' });
-  });
+  }, amhComparison);
   await expect(page.locator('[data-lifespan="chart"]')).toBeVisible();
 }
 
@@ -65,7 +76,7 @@ function expectOriginalGeometry(actual, expected, label) {
 // Check the actual rendered geometry against all retained illustration anchors.
 // This deliberately replaces only ordinary male SVG hashes: the approved change
 // removes view-dependent refitting. The independent source-data fingerprint and
-// unchanged sex-comparison hashes below still protect the old baselines.
+// unchanged inhibin B comparison hashes below still protect the old baseline.
 async function expectIllustrativeGeometry(page, view) {
   const result = await page.locator('[data-lifespan="chart"]').evaluate((svg, view) => {
     const data = window.VildaHormoneLifespanData;
@@ -148,10 +159,10 @@ for (const width of [1360, 320]) {
   });
 }
 
-test('original male and female AMH/inhibin B comparison survives resizing', async ({ page }) => {
+test('approved fixed AMH and original inhibin B comparisons survive resizing', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await openComponent(page, 1360);
+  await openComponent(page, 1360, true);
   await page.locator('.vhl-legend [data-hormone="amh"]').click();
   for (const width of [1360, 320]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -160,8 +171,40 @@ test('original male and female AMH/inhibin B comparison survives resizing', asyn
     for (const id of ['amh', 'inhb']) {
       const choice = page.locator(`.vhl-legend [data-hormone="${id}"]`);
       if (await choice.getAttribute('aria-pressed') !== 'true') await choice.click();
-      expectOriginalGeometry(await readGeometry(page, true), original.widths[width].comparison[id],
-        `${width}/comparison/${id}`);
+      if (id === 'inhb') {
+        expectOriginalGeometry(await readGeometry(page, true), original.widths[width].comparison[id],
+          `${width}/comparison/${id}`);
+      } else {
+        const sourceGeometry = await page.locator('[data-lifespan="chart"]').evaluate(svg => {
+          const model = window.VildaHormoneLifespanDisplay.buildAmhInfantComparison(
+            window.VildaHormoneLifespanData, window.VildaHormoneLifespanReference);
+          const ticks = [...svg.querySelectorAll('[data-log-tick]')];
+          const bottom = Number(ticks[0].getAttribute('y')) - 3;
+          const top = Number(ticks[ticks.length - 1].getAttribute('y')) - 3;
+          return { scale: svg.dataset.comparisonScale, unit: model.scale.unit,
+            ticks: ticks.map(tick => Number(tick.dataset.logTick)),
+            curves: model.curves.map(curve => {
+              const path = svg.querySelector(`[data-comparison-sex="${curve.sex}"]`);
+              const first = path.getPointAtLength(0);
+              return { profile: path.dataset.profile, expectedProfile: curve.profileId,
+                d: path.getAttribute('d'), length: path.getTotalLength(),
+                firstHeight: (bottom - first.y) / (bottom - top),
+                expectedHeight: (Math.log10(curve.points[0].value) + 1) / 4 };
+            }) };
+        });
+        expect(sourceGeometry.scale).toBe('log10');
+        expect(sourceGeometry.unit).toBe('ng/mL');
+        expect(sourceGeometry.ticks).toEqual([.1, 1, 10, 100, 1000]);
+        expect(sourceGeometry.curves).toHaveLength(2);
+        for (const curve of sourceGeometry.curves) {
+          expect(curve.profile).toBe(curve.expectedProfile);
+          expect(curve.d).toMatch(/^M/);
+          expect(curve.d).not.toMatch(/NaN|Infinity/);
+          expect(curve.length).toBeGreaterThan(100);
+          expect(curve.firstHeight).toBeCloseTo(curve.expectedHeight, 4);
+        }
+        expect((await readGeometry(page, true)).overflow).toBe(false);
+      }
       await expect(page.locator('[data-comparison-sex="female"]')).toHaveCount(1);
       await expect(page.locator('[data-comparison-sex="male"]')).toHaveCount(1);
     }

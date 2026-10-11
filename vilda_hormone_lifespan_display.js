@@ -1,5 +1,6 @@
-/* Stable educational display knots, separate from source reference values.
- * The renderer interpolates them in the fixed whole-life display coordinate.
+/* Stable display models, separate from source eligibility and laboratory norms.
+ * Ordinary educational knots use the fixed whole-life display coordinate;
+ * the infant AMH comparison samples its two unchanged population models.
  * No patient data or eligibility decisions enter this module. */
 (function (root, factory) {
   'use strict';
@@ -11,6 +12,104 @@
 
   function finite(value) {
     return typeof value === 'number' && Number.isFinite(value);
+  }
+
+  function amhInfantComparison(data, engine) {
+    var policy = data && data.amhComparisonPolicy;
+    var source = data && data.patientPointData;
+    if (!policy || policy.kind !== 'population-model-comparison' || policy.analyte !== 'amh' ||
+        policy.view !== 'mini' || policy.sourceStatistic !== 'median' || policy.sourceUnit !== 'pmol/L' ||
+        !policy.profileIds || !source || !Array.isArray(source.profiles) ||
+        !engine || typeof engine.referenceAt !== 'function') return null;
+    var domain = policy.domain, scale = policy.scale, sampling = policy.sampling;
+    var pointPolicy = policy.pointPolicy;
+    if (!domain || !finite(domain.minAge) || !finite(domain.maxAge) || domain.minAge < 0 ||
+        domain.minAge >= domain.maxAge || domain.maxAgeExclusive !== true ||
+        !scale || scale.kind !== 'log10' || scale.unit !== 'ng/mL' ||
+        !finite(scale.min) || scale.min <= 0 || !finite(scale.max) || scale.max <= scale.min ||
+        scale.independentOfPatient !== true || scale.conversionSource !== 'patientPointData.unitConversions.amh' ||
+        !Array.isArray(scale.ticks) || scale.ticks.length < 2 ||
+        scale.ticks[0] !== scale.min || scale.ticks[scale.ticks.length - 1] !== scale.max ||
+        scale.ticks.some(function (tick, index) {
+          return !finite(tick) || tick <= 0 || (index > 0 && tick !== scale.ticks[index - 1] * 10);
+        }) || !sampling || !Number.isInteger(sampling.sampleCount) || sampling.sampleCount < 2 ||
+        sampling.sampleCount > 2000 || sampling.includeSourceNodes !== true ||
+        !finite(sampling.exclusiveEndpointGapYears) || sampling.exclusiveEndpointGapYears <= 0 ||
+        !pointPolicy || pointPolicy.qualification !== 'unchanged-reference-engine-and-own-infant-profile' ||
+        pointPolicy.maxAge !== domain.maxAge || pointPolicy.maxAgeExclusive !== true ||
+        pointPolicy.ownSexReferenceMayPrecedeCommonCurve !== true ||
+        pointPolicy.outsideAxis !== 'directional-arrow-with-actual-value') return null;
+    var end = domain.maxAge - sampling.exclusiveEndpointGapYears;
+    if (!(end > domain.minAge && end < domain.maxAge)) return null;
+    var conversion = source.unitConversions && source.unitConversions.amh;
+    var unitFactor = conversion && conversion.factors && conversion.factors[scale.unit];
+    if (!conversion || conversion.unit !== policy.sourceUnit || !finite(unitFactor) || unitFactor <= 0) return null;
+    var factor = 1 / unitFactor;
+    if (!finite(factor) || factor <= 0) return null;
+    var sexes = ['female', 'male'];
+    var profiles = sexes.map(function (sex) {
+      var id = policy.profileIds[sex];
+      if (typeof id !== 'string' || !id || source.profiles.filter(function (p) { return p && p.id === id; }).length !== 1)
+        return null;
+      return source.profiles.find(function (p) { return p && p.id === id; });
+    });
+    if (profiles.some(function (profile, index) {
+      return !profile || profile.analyte !== policy.analyte || profile.sex !== sexes[index] ||
+        profile.unit !== policy.sourceUnit || profile.statistic !== policy.sourceStatistic ||
+        !finite(profile.minAge) || !finite(profile.maxAge) || profile.minAge >= profile.maxAge ||
+        !Array.isArray(profile.points) || profile.points.length < 2 ||
+        profile.points.some(function (point, i, points) {
+          return !point || !finite(point.ageYears) || !finite(point.value) || point.value <= 0 ||
+            (i > 0 && point.ageYears <= points[i - 1].ageYears);
+        }) || !policy.colors || typeof policy.colors[sexes[index]] !== 'string';
+    }) || domain.minAge !== Math.max.apply(null, profiles.map(function (p) { return p.minAge; })) ||
+        domain.maxAge !== Math.min.apply(null, profiles.map(function (p) { return p.maxAge; }))) return null;
+    var invalid = false;
+    var curves = profiles.map(function (profile) {
+      // This fixed grid matches the approved preview. Patient age and value
+      // never become interpolation knots; original source nodes stay exact.
+      var ages = new Set();
+      for (var index = 0; index < sampling.sampleCount; index++)
+        ages.add(domain.minAge + (end - domain.minAge) * index / (sampling.sampleCount - 1));
+      profile.points.forEach(function (point) {
+        if (point.ageYears >= domain.minAge && point.ageYears < domain.maxAge) ages.add(point.ageYears);
+      });
+      var points = Array.from(ages).sort(function (a, b) { return a - b; }).map(function (ageYears) {
+        var sourceValue = engine.referenceAt(profile, ageYears);
+        var value = sourceValue * factor;
+        if (!finite(sourceValue) || sourceValue <= 0 || !finite(value) || value <= 0) invalid = true;
+        return { ageYears: ageYears, value: value };
+      });
+      return { sex: profile.sex, profileId: profile.id, color: policy.colors[profile.sex], points: points };
+    });
+    if (invalid) return null;
+    return {
+      id: 'amh', kind: policy.kind, policyVersion: policy.version,
+      curves: curves,
+      scale: { kind: scale.kind, unit: scale.unit, min: scale.min, max: scale.max,
+        ticks: scale.ticks.slice(), sourcePmolToNgMl: factor, independentOfPatient: true },
+      domain: { minAge: domain.minAge, maxAge: domain.maxAge, maxAgeExclusive: true },
+      profileIds: { female: policy.profileIds.female, male: policy.profileIds.male }
+    };
+  }
+
+  function buildAmhInfantComparison(data, engine) {
+    // A missing or damaged optional display policy supplies no substitute
+    // profile, extrapolation or synthetic patient reference.
+    try { return amhInfantComparison(data, engine); }
+    catch (_error) { return null; }
+  }
+
+  function classifyAmhComparisonValue(model, value) {
+    var scale = model && model.scale;
+    if (!scale || !finite(scale.min) || !finite(scale.max) || !finite(value)) return null;
+    function tolerance(boundary) {
+      return 8 * Number.EPSILON * Math.max(1, Math.abs(value), Math.abs(boundary));
+    }
+    // An exact axis endpoint may gain one rounding bit in ng/mL → SI → ng/mL.
+    // Keep its real value; only the boundary classification needs tolerance.
+    return value < scale.min - tolerance(scale.min) ? 'below' :
+      value > scale.max + tolerance(scale.max) ? 'above' : null;
   }
 
   function buildMaleInhibin(data, engine) {
@@ -903,5 +1002,6 @@
 
   return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
     buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins,
-    buildMaleAmh: buildMaleAmh, buildMaleInsl3: buildMaleInsl3 };
+    buildMaleAmh: buildMaleAmh, buildMaleInsl3: buildMaleInsl3,
+    buildAmhInfantComparison: buildAmhInfantComparison, classifyAmhComparisonValue: classifyAmhComparisonValue };
 });

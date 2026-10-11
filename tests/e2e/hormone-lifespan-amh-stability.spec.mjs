@@ -38,8 +38,15 @@ async function openConverter(page, width) {
 }
 
 async function geometry(page) {
-  return line(page).evaluate(path => ({ d: path.getAttribute('d'), divisor: Number(path.dataset.divisor),
-    ceiling: Number(path.dataset.ceiling), viewBox: path.ownerSVGElement.getAttribute('viewBox') }));
+  // Closing fullscreen schedules a ResizeObserver render that replaces the
+  // SVG children. Read the current path atomically from the persistent panel,
+  // rather than evaluating a path detached after the locator resolved it.
+  return panel(page).evaluate(host => {
+    const path = host.querySelector('[data-stable-reference-line="amh"]');
+    const svg = path?.ownerSVGElement;
+    return svg ? { d: path.getAttribute('d'), divisor: Number(path.dataset.divisor),
+      ceiling: Number(path.dataset.ceiling), viewBox: svg.getAttribute('viewBox') } : null;
+  });
 }
 
 async function sourcePoint(page, ngMl, profile) {

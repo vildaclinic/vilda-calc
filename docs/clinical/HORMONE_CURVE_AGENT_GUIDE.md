@@ -83,10 +83,12 @@ dawało resztę do około 0,06 px: wygląd i szczyty były zachowane, mimo
 ośmiu niespełnionych porównań o zbyt ścisłym progu względnym 0,00001.
 Nie przedstawiaj tego jako pełnej matematycznej równości.
 
-**Porównanie płci ma odrębny kontrakt.** Obecnie używa własnej skali
-każdej płci w danym okresie i opisuje kierunek, nie iloraz stężeń.
-Nie przenoś automatycznie naprawy zwykłych widoków do porównania płci.
-Zmiana tej polityki wymaga jawnego zakresu zadania i osobnej weryfikacji.
+**Porównanie płci ma odrębny kontrakt.** Wyjątkiem od dotychczasowych
+osobnych skal jest zatwierdzone AMH w minipuberty, opisane niżej:
+obie płcie używają stałej wspólnej osi stężeń. Pozostałe porównania
+zachowują własną politykę; schemat z osobnymi maksimami opisuje kierunek,
+nie iloraz stężeń. Nie przenoś automatycznie tej zmiany do innych hormonów
+lub pokwitania. Wymagałoby to osobnej weryfikacji.
 
 ## Utrwalony przykład: testosteron, 11 października 2026
 
@@ -197,6 +199,38 @@ w historycznym przykładzie testosteronu powyżej dotyczy stanu sprzed tej zmian
   niemowląt ani jako dowodu dokładnego uniwersalnego szczytu w 22. roku.
   Odczyty, DOI i dostępność źródeł zachowuje
   [audyt INSL3](hormone-lifespan/evidence/insl3-lifespan-display-audit-2026-10-11.json).
+
+## Utrwalony wyjątek: porównanie płci AMH w minipuberty, 11 października 2026
+
+- Stosuj `amh-comparison-policy.json`, `amhComparisonPolicy` i
+  `buildAmhInfantComparison(data, referenceEngine)`. Zawsze rysuj te same
+  mediany modeli: Busch 2022 u chłopców, Ljubicic 2022 u dziewczynek.
+  Oba badania dotyczą surowicy zdrowych donoszonych niemowląt, Access 2.
+  Nie zastępuj ich schematem po usunięciu wyniku ani roczną grupą Wang po
+  pierwszych urodzinach.
+- Oś jest wspólna i stała: log10, 0,1–1000 ng/mL, opisane poziomy
+  0,1 / 1 / 10 / 100 / 1000. Każdy krok oznacza 10× stężenie;
+  równa wysokość oznacza równe stężenie. Używaj tego samego przelicznika
+  źródeł i wyniku: 1 pmol/L = 0,1401 ng/mL. Nie normalizuj osobno płci,
+  nie dobieraj maksimum do pacjenta i nie dodawaj selektora skali.
+- Wspólne linie obejmują 0,02–<1 roku, bez ekstrapolacji do urodzenia.
+  Ich koniec jest lewostronną granicą, nie dostępnym punktem dokładnie
+  w pierwsze urodziny. Własne odniesienie chłopca jest poprawne już
+  od 7. dnia; nie blokuj go tylko dlatego, że druga linia zaczyna się
+  w 7,305 dnia. W tym porównaniu dokładnie 1 rok nie otrzymuje punktu
+  żadnej płci; źródłowych domen i zwykłych widoków nie zmieniamy.
+- Punkt nadal kwalifikuje oryginalny silnik. Wcześniactwo, nieznane
+  donoszenie, nierówność wyniku lub niezgodna metoda nie tworzą
+  zastępczego odniesienia; krzywe populacyjne pozostają widoczne.
+  Zero i liczba poniżej osi mają strzałkę w dół, powyżej osi w górę,
+  z rzeczywistą wartością. Nie obliczaj log(0) ani nie podstawiaj LOD/2.
+  Tolerancja maszynowa przy granicy osi nie jest tolerancją oznaczenia.
+- To mediany GAMLSS, nie średnie trajektorie podłużne ani normy.
+  Męska mediana jest przybliżonym odczytem ryciny; żeńska pochodzi
+  z tabeli suplementu. AMH ma LOD 0,14 pmol/L w obu publikacjach;
+  odrębnego LOQ nie podano. Podłoga osi 0,1 ng/mL nie jest LOD.
+  Źródła i punkty kontrolne zachowuje
+  [audyt porównania AMH](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
 
 ## Co sprawdzić przed oddaniem zmiany
 

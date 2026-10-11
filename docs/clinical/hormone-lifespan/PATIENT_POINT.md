@@ -476,6 +476,39 @@ wysokości. Odmienne źródła rozważone w audycie, m.in. Jopling,
 Benderradji i Chong, nie są nowymi profilami. Przebieg porównania płci
 oraz laboratoryjne normy mają odrębne kontrakty.
 
+### Wspólna oś AMH w porównaniu płci podczas minipuberty
+
+Decyzja właściciela z 11 października 2026 dotyczy wyłącznie tego
+porównania. `buildAmhInfantComparison(data, referenceEngine)` korzysta
+z `amh-comparison-policy.json` i stałej pary istniejących profili
+Busch/Ljubicic. Linie median GAMLSS obejmują wspólnie 0,02–<1 roku.
+Nie są przełączane na schemat przy braku wyniku ani na grupę Wang
+przy pierwszych urodzinach. Źródłowych profili i ich domen nie zmieniono.
+
+Obie linie, czerwony wynik i jasny znacznik mediany używają osi log10
+0,1–1000 ng/mL; 1 pmol/L = 0,1401 ng/mL. Równa wysokość oznacza
+równe stężenie, a kolejne poziomy 0,1 / 1 / 10 / 100 / 1000 są
+dziesięciokrotnymi zmianami. Dane zdrowych donoszonych niemowląt
+oznaczano metodą Access 2. Mediana chłopców jest przybliżonym odczytem
+ryciny, dziewczynek pochodzi z tabeli suplementu. Nie są to normy.
+
+`evaluate` nadal kwalifikuje własny punkt i źródłowy znacznik pacjenta,
+z dotychczasowym uwzględnieniem całego przedziału wieku, donoszenia,
+materiału, metody i jednostki. Chłopiec od 7. do <7,305 dnia zachowuje
+własne odniesienie Busch, choć wspólne linie zaczynają się później.
+Dokładnie 1 rok nie otrzymuje punktu w tym porównaniu żadnej płci;
+to ograniczenie widoku, nie skrócenie żeńskiego profilu Ljubicic ani
+usunięcie Wang z innych widoków. Wcześniactwo i nieznane donoszenie
+wykluczają punkt niemowlęcy, lecz nie zmieniają populacyjnych krzywych.
+
+Liczbowy wynik poniżej osi, w tym zero, ma strzałkę w dół z prawdziwą
+wartością; ponad osią — strzałkę w górę. Nie ma dokładnej kropki
+z nierówności ani dodatniej wartości zastępczej dla log(0). Tolerancja
+maszynowa przy granicy osi nie zmienia wyniku. Granice osi nie są LOD
+ani normą: LOD AMH w obu publikacjach wynosi 0,14 pmol/L, osobnego
+LOQ AMH nie podano. Zapis źródeł i odtworzenia:
+[audyt porównania AMH](evidence/amh-infant-comparison-audit-2026-10-11.json).
+
 ## Weryfikacja i przypadki syntetyczne
 
 Silnik `vilda_hormone_lifespan_reference.js` przyjmuje dane jako argument;
@@ -526,6 +559,10 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Mężczyzna 40 lat, AMH 6,12 ng/mL | Punkt równy znacznikowi rocznego p50 Tehrani, nawet gdy ilustracja przebiega nieco wyżej; zmodyfikowany Gen II w źródle. |
 | Mężczyzna 70 lat, AMH 3,95 ng/mL / powyżej 70 lat | Przy 70 latach punkt równy p50 Tehrani; powyżej brak odniesienia mimo wygaszonego ogona. |
 | Męskie AMH, ten sam wiek: pusty → wynik równy źródłu → ponad osią → wyczyszczenie | Stała linia i skala; wynik ponad osią zachowuje prawdziwą wartość ze strzałką. |
+| Porównanie płci AMH, donoszone niemowlę dokładnie 90 dni | Mediany modeli: chłopcy ≈161,6811 ng/mL; dziewczynki ≈2,3535 ng/mL. Obie linie i punkty na tej samej stałej osi log10, również bez wyniku. |
+| Porównanie AMH, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własna mediana Busch ≈64,25565 ng/mL i punkt chłopca dostępne; brak źródła dziewczynki. Wspólne linie zaczynają się w 7,305 dnia, bez ekstrapolacji. |
+| Porównanie AMH, dokładnie pierwsze urodziny, dowolna płeć | Krzywe pozostają identyczne, ale brak punktu tego widoku; nie podstawiamy grupy Wang. |
+| Porównanie AMH, kwalifikujący kontekst: 0 → 0,1 → 1000 → 10000 ng/mL | Strzałka w dół → punkt na dolnej granicy → punkt na górnej granicy → strzałka w górę; krzywe i oś stałe. Nie traktujemy błędu konwersji 1000,0000000000001 jako przekroczenia osi. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
 | Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
@@ -549,7 +586,9 @@ niezmienione po zmianie uchwytów łuku; pediatryczne mediany 16 i 17,9 lat
 zachowują dotychczasowe wartości. Zbliżenia mogą mieć mały błąd ponownego
 próbkowania — kontrolujemy go w pikselach, wraz z zachowaniem szczytów
 i skali, bez deklarowania idealnej równości ścieżek SVG. Sprawdzamy też
-desktop i 320 px oraz niezmienioną politykę porównania płci.
+desktop i 320 px oraz niezmienioną politykę pozostałych porównań płci.
+AMH w minipuberty wymaga osobnej kontroli stałej pary modeli, wspólnej
+osi log10 i zachowania punktu przy granicach 7 dni, 0,02 i 1 roku.
 Test równości punktu ze źródłowym
 odniesieniem nie może
 sprawdzać wyłącznie

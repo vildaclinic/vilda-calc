@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-11",
+  "status": "owner_approved_educational_display_policy_not_clinical_validation",
+  "scope": "AMH sex comparison in minipuberty only; no changes to source profiles, ordinary lifespan views, puberty comparison or laboratory reference intervals.",
+  "policyFile": "../amh-comparison-policy.json",
+  "approvedPreviewSha256": "b8f62173fc08dfd04151acf0df5837d86a908fdb90a2c9cc192013fa5dc92274",
+  "sourceFilesPolicy": "Complete articles and original female supplement were inspected. No full PDFs, figures, participant data or local file paths are redistributed.",
+  "sources": [
+    {
+      "id": "busch2022-male-amh",
+      "doi": "10.1210/clinem/dgac115",
+      "url": "https://doi.org/10.1210/clinem/dgac115",
+      "location": "Figure 3, p 1565; hormone assays, Methods p 1561",
+      "population": "119 healthy term singleton Caucasian boys followed postnatally; COPENHAGEN Minipuberty Study, Denmark, 2016–2018; 338 postnatal serum samples. Total paper population 128 includes 9 cord-only boys.",
+      "observedAgeDays": [
+        4,
+        440
+      ],
+      "assay": "Beckman Coulter Access 2 chemiluminescence, B13127, RRID AB_2892998",
+      "specimen": "serum",
+      "sourceUnit": "pmol/L",
+      "statistic": "Age-specific GAMLSS median, approximate vector-PDF extraction; not Figure 2 normalized longitudinal mean.",
+      "sourcePdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+      "existingEvidenceFile": "patient-point/busch2022-figure3-vector-medians.json",
+      "activeReferenceDomain": {
+        "minAgeDays": 7,
+        "maxAgeYears": 1,
+        "maxExclusive": true
+      },
+      "lodPmolL": 0.14,
+      "amhLoqReported": false,
+      "medianMaximum": {
+        "ageDays": 175,
+        "pmolL": 1335.592934,
+        "ngMl": 187.1165700534
+      },
+      "caution": "Stored decimal precision exceeds the source figure resolution. The paper’s longitudinal mean AMH peak at 146 days is another statistic, not a replacement for this median maximum."
+    },
+    {
+      "id": "ljubicic2022-female-amh",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://doi.org/10.1210/clinem/dgac363",
+      "population": "98 healthy term singleton Caucasian girls; COPENHAGEN Minipuberty Study, Denmark; 266 serum samples, median 3 per girl (IQR 1–4), observed from 5 days to 14.2 months.",
+      "assay": "Beckman Coulter Access 2 chemiluminescence, RRID AB_2892998",
+      "specimen": "serum",
+      "sourceUnit": "pmol/L",
+      "statistic": "Age-specific GAMLSS median from original supplement Table D, not the biphasic normalized longitudinal mean trajectory.",
+      "supplement": {
+        "doi": "10.6084/m9.figshare.19469555.v1",
+        "url": "https://ndownloader.figshare.com/files/34594370",
+        "sha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+        "table": "D; median column, selected ages 0.02–1 years",
+        "license": "CC BY 4.0",
+        "independentTranscription": "All 99 current AMH median values exactly match the original table. Original supplement has 121 rows, age 0–1.2 years; this change does not enlarge the active subset."
+      },
+      "existingDataFile": "../female-reference-data.json",
+      "activeReferenceDomain": {
+        "minAgeYears": 0.02,
+        "maxAgeYears": 1,
+        "maxInclusive": true
+      },
+      "lodPmolL": 0.14,
+      "amhLoqReported": false,
+      "medianMaximum": {
+        "ageYears": 0.33,
+        "pmolL": 19.05,
+        "ngMl": 2.668905
+      },
+      "caution": "LOQ 2.9 and 4.0 pmol/L in the assay paragraph belong to estrone and estradiol, not AMH. The model median has one broad maximum; do not import two peaks from the separately modelled mean trajectory."
+    }
+  ],
+  "presentation": {
+    "domain": {
+      "minAgeYears": 0.02,
+      "minAgeDays": 7.305,
+      "minInclusive": true,
+      "maxAgeYears": 1,
+      "maxAgeDays": 365.25,
+      "maxInclusive": false,
+      "endpointSamplingAgeYears": 0.9999999999,
+      "extrapolateToBirth": false
+    },
+    "fixedScale": {
+      "kind": "log10",
+      "unit": "ng/mL",
+      "min": 0.1,
+      "max": 1000,
+      "ticks": [
+        0.1,
+        1,
+        10,
+        100,
+        1000
+      ],
+      "sourcePmolToNgMl": 0.1401,
+      "position": "(log10(valueNgMl)+1)/4",
+      "meaning": "Equal heights mean equal concentrations. One tick step is a tenfold ratio, not an equal additive difference. Limits are graphical boundaries, not normal limits or assay detection bounds."
+    },
+    "curves": "Sample the same two unchanged source profiles through referenceAt, independently of patient or result; no separate normalization and no Wang substitution at age 1.",
+    "reproduction": "VildaHormoneLifespanDisplay.buildAmhInfantComparison(data, referenceEngine); source checkpoints: referenceEngine.referenceAt(profile, ageDays/365.25) * 0.1401. Data: vilda_hormone_lifespan_data.js; engine: vilda_hormone_lifespan_reference.js.",
+    "approvedSampleCheck": {
+      "femalePoints": 898,
+      "malePoints": 1159,
+      "sourceValueDifferences": 0,
+      "meaning": "All 2057 approved preview samples matched the actual source engine. This is technical reproducibility, not independent clinical validation."
+    },
+    "referencePolicy": "The original evaluate function qualifies the point, including the whole age interval, term birth, method, specimen, unit and uncensored finite nonnegative value. Existing profiles and source-domain boundaries stay unchanged.",
+    "edgeCases": [
+      "Male age 7–<7.305 days may retain his own source reference and point before shared curve support. No female curve is extrapolated to this interval.",
+      "Exactly 1 year has no patient point in this paired infant view for either sex. The female source endpoint remains valid in its original profile elsewhere; male Wang remains available in other views.",
+      "Preterm or unknown birth status does not qualify for either term-infant point, but does not change or remove these educational population curves. Do not substitute corrected age.",
+      "Exact numeric 0 or a result below 0.1 ng/mL: below-axis arrow and unchanged value, no log(0), artificial positive floor or fabricated precise dot. Above 1000: above-axis arrow and unchanged value.",
+      "A result with < or > is not an exact point. Do not replace censored measurements with the source modelling convention LOD/2.",
+      "Floating-point tolerance at an axis edge only prevents SI roundtrip artifacts, e.g. 1000.0000000000001 ng/mL; it is not assay or clinical tolerance."
+    ],
+    "assayFloor": "LOD 0.14 pmol/L ≈0.019614 ng/mL is below the chosen display floor. All existing median values exceed 0.1 ng/mL. The axis floor is not the LOD; no AMH-specific LOQ was reported."
+  },
+  "checkpoints": [
+    {
+      "ageDays": 7,
+      "ageYears": 0.019164955509924708,
+      "maleNgMl": 64.2556500528,
+      "femaleNgMl": null,
+      "bothCurvesSupported": false,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 7.305,
+      "ageYears": 0.02,
+      "maleNgMl": 64.68713058808063,
+      "femaleNgMl": 0.4910505,
+      "bothCurvesSupported": true,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 30,
+      "ageYears": 0.08213552361396304,
+      "maleNgMl": 96.203103054,
+      "femaleNgMl": 0.80926825444781,
+      "bothCurvesSupported": true,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 90,
+      "ageYears": 0.2464065708418891,
+      "maleNgMl": 161.6811363945,
+      "femaleNgMl": 2.3535164052688584,
+      "bothCurvesSupported": true,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 120,
+      "ageYears": 0.32854209445585214,
+      "maleNgMl": 178.6894478769,
+      "femaleNgMl": 2.6688487707075947,
+      "bothCurvesSupported": true,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 175,
+      "ageYears": 0.4791238877481177,
+      "maleNgMl": 187.1165700534,
+      "femaleNgMl": 2.0849748220983924,
+      "bothCurvesSupported": true,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 250,
+      "ageYears": 0.6844626967830253,
+      "maleNgMl": 181.8074371224,
+      "femaleNgMl": 1.4444527561854275,
+      "bothCurvesSupported": true,
+      "comparisonPointAgeAllowed": true
+    },
+    {
+      "ageDays": 365.25,
+      "ageYears": 1,
+      "maleNgMl": null,
+      "femaleNgMl": 0.9916278000000001,
+      "bothCurvesSupported": false,
+      "comparisonPointAgeAllowed": false
+    }
+  ],
+  "checkpointQualification": "Numeric entries are source-engine checkpoints, including interpolation between female table knots; they do not create norms. At 365.25 days male Busch is null, female source remains 0.9916278 ng/mL, but neither patient point is shown in this comparison. The male left limit is ≈166.471455 ng/mL.",
+  "limitations": [
+    "Same method and study setting support descriptive sex comparison, not assay-independent diagnostic limits.",
+    "Cohort medians do not show individual variability or the course of a particular child; model-specific peak timing is not an exact individual event.",
+    "The male graph read and female rounded table/interpolation have different numerical precision.",
+    "Both cohorts concern healthy term singletons and are not preterm references.",
+    "No new laboratory norm, threshold, percentile, SDS, diagnosis or treatment recommendation follows from a point’s distance to a median."
+  ]
+}

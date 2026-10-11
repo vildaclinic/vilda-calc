@@ -1183,6 +1183,66 @@ pełny ekran, desktop i 320 px, ciągłość stycznych, nieujemność, brak
 odbicia po szczycie oraz brak ekstrapolacji profili. Zestawienie audytu:
 [`amh-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/patient-point/amh-lifespan-display-audit-2026-10-11.json).
 
+### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
+
+**Decyzja właściciela:** wdrożyć zatwierdzoną makietę porównania płci
+AMH w minipuberty. Bez wyniku i po jego wpisaniu obie linie mają te same
+źródła i wspólną skalę. Zastępuje to przełączanie osobno normalizowanego
+schematu na modele stężeń oraz dobieranie skali do wysokości wyniku.
+Inne hormony, porównania pokwitania i zwykłe widoki pozostają odrębne.
+
+**Źródła i populacja:** [Busch 2022](https://doi.org/10.1210/clinem/dgac115),
+rycina 3 — 119 zdrowych donoszonych chłopców, 338 próbek surowicy,
+przybliżony odczyt mediany GAMLSS; [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363),
+[tabela D suplementu](https://doi.org/10.6084/m9.figshare.19469555.v1) —
+98 zdrowych donoszonych dziewczynek, 266 próbek, 99 zachowanych median
+sprawdzonych z oryginalną tabelą. Oba badania: COPENHAGEN Minipuberty,
+ciąże pojedyncze, surowica, Beckman Coulter Access 2. To modele median,
+nie średnie trajektorie podłużne ani zaobserwowana mediana każdego dnia.
+Wspólna metoda nie usuwa ograniczeń populacji i dopasowania modelu.
+LOD AMH wynosi w obu pracach 0,14 pmol/L; osobnego LOQ AMH nie podano.
+LOQ 2,9 i 4,0 pmol/L w Ljubicic dotyczą estrogenów. Imputacja LOD/2
+w badaniu nie jest dokładną wartością cenzurowanego wyniku pacjenta.
+
+**Polityka prezentacji:** `amh-comparison-policy.json`, eksport
+`amhComparisonPolicy` i `VildaHormoneLifespanDisplay.buildAmhInfantComparison`
+utrwalają parę `busch2022-male-amh` / `ljubicic2022-female-amh`.
+Wspólny zakres linii: 0,02–<1 roku, bez ekstrapolacji do urodzenia.
+Oś log10 ma stałe poziomy 0,1 / 1 / 10 / 100 / 1000 ng/mL. Każdy krok
+oznacza 10× wyższe stężenie; jednakowa wysokość obu płci oznacza tę samą
+liczbę. Oś, krzywe i źródła nie zależą od obecności wyniku ani jego wartości.
+Oba znaczniki i linie stosują dotychczasowy współczynnik
+1 pmol/L = 0,1401 ng/mL. Granice osi są decyzją graficzną, nie normą
+lub granicą wykrywalności. Nie dodano wyboru skali ani pól pacjenta.
+
+**Punkt i granice:** dotychczasowe `evaluate` zachowuje kwalifikację
+wieku, donoszenia, metody, materiału i jednostki. Odniesienie chłopca
+od 7. do <7,305 dnia pozostaje dostępne mimo późniejszego początku
+wspólnych krzywych. Dokładnie pierwsze urodziny nie otrzymują punktu
+żadnej płci w tym widoku; nie zastępujemy męskiej linii profilem Wang.
+Wcześniactwo, nieznane donoszenie lub niekwalifikujący wynik ukrywają
+punkt, nie linie populacyjne. Zero i wynik poniżej osi otrzymują
+strzałkę w dół, ponad osią w górę, z zachowaniem liczby. Nie używamy
+log(0), sztucznego dodatniego minimum ani dokładnej kropki dla „<…”.
+Maszynowa tolerancja granicy osi zapobiega strzałce dla 1000 ng/mL
+po konwersji do SI i z powrotem; nie zmienia klinicznych progów.
+
+**Wpływ kliniczny:** zmienia się znaczenie prezentacji — zamiast
+osobno wyrównanych szczytów widać rzeczywistą różnicę stężeń median
+modeli. Nie zmieniają się źródłowe profile, ich domeny, współczynniki,
+normy, werdykty, zapis ani historia. Czerwony punkt nie oznacza sam
+w sobie nieprawidłowości. Akceptacja makiety nie jest walidacją kliniczną.
+
+**Przypadki i kontrole:** przy 90 dniach mediana M≈161,6811 ng/mL,
+F≈2,3535; przy 7 dniach M≈64,25565, F bez odniesienia. Wspólne linie
+od 7,305 dnia; w 1 roku obie bez punktu tego porównania. Pusty wynik,
+0, 0,1, 1000, 10000 i wyczyszczenie nie zmieniają krzywych ani skali.
+Kontrole obejmują rzeczywiste funkcje modelu i renderera, przeliczenie
+pmol/L, nierówności, niepewny wiek, wcześniactwo, niezgodną metodę,
+pełny ekran, komputer i 320 px. Odtwarzalne źródła, zatwierdzona makieta
+i dokładniejsze punkty kontrolne:
+[`amh-infant-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+
 ### HORMONE-INSL3-STABLE-CURVE — przerywana ilustracja INSL3, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć poprawioną makietę zwykłych męskich
