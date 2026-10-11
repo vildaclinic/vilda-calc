@@ -83,12 +83,13 @@ dawało resztę do około 0,06 px: wygląd i szczyty były zachowane, mimo
 ośmiu niespełnionych porównań o zbyt ścisłym progu względnym 0,00001.
 Nie przedstawiaj tego jako pełnej matematycznej równości.
 
-**Porównanie płci ma odrębny kontrakt.** Wyjątkiem od dotychczasowych
-osobnych skal jest zatwierdzone AMH w minipuberty, opisane niżej:
-obie płcie używają stałej wspólnej osi stężeń. Pozostałe porównania
+**Porównanie płci ma odrębny kontrakt.** Zatwierdzone wyjątki od
+dotychczasowych osobnych skal to AMH w minipuberty oraz inhibina B
+w minipuberty i pokwitaniu, opisane niżej. Obie płcie używają w nich
+stałej wspólnej osi stężeń. Pozostałe porównania
 zachowują własną politykę; schemat z osobnymi maksimami opisuje kierunek,
-nie iloraz stężeń. Nie przenoś automatycznie tej zmiany do innych hormonów
-lub pokwitania. Wymagałoby to osobnej weryfikacji.
+nie iloraz stężeń. Nie przenoś automatycznie tych zmian do innych hormonów
+lub okresów. Wymagałoby to osobnej weryfikacji.
 
 ## Utrwalony przykład: testosteron, 11 października 2026
 
@@ -231,6 +232,44 @@ w historycznym przykładzie testosteronu powyżej dotyczy stanu sprzed tej zmian
   odrębnego LOQ nie podano. Podłoga osi 0,1 ng/mL nie jest LOD.
   Źródła i punkty kontrolne zachowuje
   [audyt porównania AMH](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+
+## Utrwalony wyjątek: porównania płci inhibiny B, 11 października 2026
+
+- `inhibin-comparison-policy.json`, `inhibinComparisonPolicy` i
+  `buildInhibinComparison(data, referenceEngine, period)` utrzymują
+  stałe źródła i wspólną liniową oś 0–400 pg/mL w obu okresach.
+  1 ng/L = 1 pg/mL. Zero jest punktem na poziomie 0; wynik ponad 400
+  ma strzałkę z rzeczywistą liczbą. Nie kopiuj logarytmicznej osi AMH.
+- Minipuberty: oryginalne mediany GAMLSS Busch/Ljubicic, Gen II ELISA,
+  surowica, zdrowe donoszone niemowlęta; wspólne linie 0,02–<1 roku.
+  Chłopiec zachowuje własne odniesienie od 7. dnia, bez ekstrapolacji
+  żeńskiej linii. Dokładnie 1 rok nie otrzymuje punktu tego porównania;
+  nie przełączaj linii na Kelsey. Dotychczasowe profile, ich granice
+  i warunek donoszenia nie zmieniają się.
+- Pokwitanie: mediany modeli Borelli-Kjær 2025 w wieku 8–20 lat,
+  nie mediany Tannera. Męski profil i jego mieszane metody pozostają
+  dotychczasowe. Dla dziewcząt właściciel osobno zaakceptował nowe
+  odniesienie **wyłącznie w porównaniu płci inhibiny B 8–20 lat**.
+  Dane `inhibinComparisonReferenceData` pozostają poza globalnym
+  `patientPointData`; nie aktywuj punktu w zwykłych widokach lub poza
+  zaakceptowanym wiekiem.
+- Zachowaj wszystkie 24 żeńskie węzły ryc. 1 od 5,6 do 47 lat podczas
+  PCHIP. Okno kwalifikacji 8–20 ogranicza wynik, nie zbiór węzłów
+  potrzebnych do stycznych. Nie dopasowuj nowej krzywej z obciętej
+  tabeli. Odczyt około ±2 pg/mL jest dokładnością digitalizacji,
+  nie przedziałem ufności ani normą. Źródło dotyczy surowicy Gen II;
+  faz cyklu nie standaryzowano, a antykoncepcja może zmieniać wynik.
+- Własna płeć kwalifikuje punkt niezależnie przez oryginalny silnik
+  i dane odniesienia właściwe dla tego widoku. Brak dopasowania do
+  metody drugiej płci nie blokuje poprawnego własnego odniesienia.
+  Znana niezgodna metoda, materiał, przeciwwskazanie, niepewny wiek
+  przecinający granice i cenzurowany wynik nadal mają znaczenie.
+- Nie przeliczaj Oxford na Gen II współczynnikiem 1,28. Wspólna oś
+  pokazuje opublikowane modele, nie harmonizuje ich metod. Nie dodawaj
+  SDS, percentyli, norm, diagnoz ani stadium wywnioskowanego z wieku.
+  Osobne obserwacje Kuiri-Hänninen, Crofton i Baccarelli pozostają
+  odrębne. Uzasadnienie i przypadki:
+  [audyt porównań inhibiny B](hormone-lifespan/evidence/inhibin-comparison-audit-2026-10-11.json).
 
 ## Co sprawdzić przed oddaniem zmiany
 

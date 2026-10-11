@@ -30453,6 +30453,220 @@ const inhibinDisplayPolicy = {
     "The prenatal scale and older-age tail anchor are drawing conventions, not calibrated fetal or elderly concentrations."
   ]
 };
+const inhibinComparisonPolicy = {
+  "version": "2026-10-11.1",
+  "kind": "population-model-comparison",
+  "analyte": "inhb",
+  "sourceStatistic": "median",
+  "sourceUnit": "pg/mL",
+  "scale": {
+    "kind": "linear",
+    "unit": "pg/mL",
+    "min": 0,
+    "max": 400,
+    "ticks": [
+      0,
+      100,
+      200,
+      300,
+      400
+    ],
+    "independentOfPatient": true,
+    "conversionSource": "patientPointData.unitConversions.inhb"
+  },
+  "sampling": {
+    "sampleCount": 801,
+    "includeSourceNodes": true,
+    "exclusiveEndpointGapYears": 1e-10
+  },
+  "colors": {
+    "female": "#b15786",
+    "male": "#2b7491"
+  },
+  "periods": {
+    "mini": {
+      "profileIds": {
+        "female": "ljubicic2022-female-inhb",
+        "male": "busch2022-male-inhb"
+      },
+      "domain": {
+        "minAge": 0.02,
+        "maxAge": 1,
+        "maxAgeExclusive": true
+      },
+      "referenceScope": "original-patient-data",
+      "pointPolicy": "own-infant-profile-before-first-birthday"
+    },
+    "puberty": {
+      "profileIds": {
+        "female": "borelli2025-female-inhb-puberty-comparison",
+        "male": "borelli2025-male-inhb"
+      },
+      "domain": {
+        "minAge": 8,
+        "maxAge": 20,
+        "maxAgeExclusive": false
+      },
+      "referenceScope": "inhibin-sex-comparison-puberty",
+      "pointPolicy": "own-age-profile-within-view"
+    }
+  },
+  "limits": [
+    "This policy applies only to inhibin B sex comparison in minipuberty and puberty. Both views use the same fixed 0–400 pg/mL concentration scale, independent of any patient result.",
+    "Infant lines are separate Busch and Ljubicic population medians, not longitudinal mean trajectories. Their common drawing domain is 0.02–<1 year; a qualified seven-day boy may have an own-sex reference before the common line starts.",
+    "Puberty lines are approximate Borelli-Kjær age medians. The female comparison-only reference uses all 24 original 5.6–47-year nodes as interpolation context, with eligibility restricted to 8–20 years.",
+    "Female serum results use Inhibin B Gen II ELISA; the male Borelli model pools Oxford Bio-innovation and Gen II assays. A shared axis does not harmonize assays or create a new conversion factor.",
+    "Chronological age is not Tanner stage. Cycle phase was not standardized and oral contraception affects female inhibin B concentrations.",
+    "The female puberty reference is isolated from global patient profiles and ordinary views. Original reference values, clinical laboratory norms and Tanner observations remain unchanged.",
+    "Zero is a result point on a linear axis. A value above 400 uses a directional arrow with its actual concentration. Axis bounds are not reference or detection limits."
+  ]
+};
+const inhibinComparisonReferenceData = {
+  "version": "2026-10-11.1",
+  "scope": "inhibin-sex-comparison-puberty",
+  "globalPatientProfiles": false,
+  "profiles": [
+    {
+      "id": "borelli2025-female-inhb-puberty-comparison",
+      "analyte": "inhb",
+      "sex": "female",
+      "minAge": 8,
+      "maxAge": 20,
+      "maxAgeExclusive": false,
+      "points": [
+        {
+          "ageYears": 5.6,
+          "value": 11
+        },
+        {
+          "ageYears": 6,
+          "value": 11
+        },
+        {
+          "ageYears": 7,
+          "value": 12
+        },
+        {
+          "ageYears": 8,
+          "value": 14
+        },
+        {
+          "ageYears": 9,
+          "value": 18
+        },
+        {
+          "ageYears": 10,
+          "value": 27
+        },
+        {
+          "ageYears": 11,
+          "value": 36
+        },
+        {
+          "ageYears": 12,
+          "value": 43
+        },
+        {
+          "ageYears": 13,
+          "value": 47
+        },
+        {
+          "ageYears": 14,
+          "value": 46
+        },
+        {
+          "ageYears": 15,
+          "value": 44
+        },
+        {
+          "ageYears": 16,
+          "value": 40
+        },
+        {
+          "ageYears": 17,
+          "value": 37
+        },
+        {
+          "ageYears": 18,
+          "value": 36
+        },
+        {
+          "ageYears": 20,
+          "value": 34
+        },
+        {
+          "ageYears": 25,
+          "value": 32
+        },
+        {
+          "ageYears": 30,
+          "value": 30
+        },
+        {
+          "ageYears": 35,
+          "value": 29
+        },
+        {
+          "ageYears": 40,
+          "value": 28
+        },
+        {
+          "ageYears": 42,
+          "value": 26
+        },
+        {
+          "ageYears": 44,
+          "value": 23
+        },
+        {
+          "ageYears": 45,
+          "value": 20
+        },
+        {
+          "ageYears": 46,
+          "value": 17
+        },
+        {
+          "ageYears": 47,
+          "value": 11
+        }
+      ],
+      "sourceLabel": "Borelli-Kjær 2025 · inhibina B · porównanie pokwitania",
+      "url": "https://doi.org/10.1210/clinem/dgae439",
+      "method": "Beckman Coulter Inhibin B Gen II ELISA",
+      "specimen": "serum",
+      "population": "Zdrowe dziewczynki i kobiety; kohorty duńskie. Kohorta wieku 5,6–20,2 lat: 648 dziewcząt.",
+      "statistic": "median",
+      "approximate": true,
+      "unit": "pg/mL",
+      "interpolation": "pchip",
+      "compatibleAssayMethodIds": [
+        "inhibin-b-gen-ii",
+        "beckman-inhibin-b-gen-ii"
+      ],
+      "provenance": {
+        "doi": "10.1210/clinem/dgae439",
+        "figure": 1,
+        "digitizationTolerancePgMl": 2,
+        "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+        "originalUnit": "ng/L",
+        "unitFactor": 1,
+        "fullSourceKnotDomain": [
+          5.6,
+          47
+        ],
+        "readableSource": "evidence/inhb-digitized-median.json",
+        "qualificationScope": "inhibin-sex-comparison-puberty"
+      },
+      "limitations": [
+        "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
+        "Kwalifikacja wyłącznie dla porównania płci inhibiny B w wieku 8–20 lat. Wszystkie 24 źródłowe węzły 5,6–47 lat zachowano do interpolacji; nie rozszerzają uprawnionego wieku.",
+        "Wiek nie wyznacza stadium Tannera. W kohorcie nie standaryzowano fazy cyklu; antykoncepcja doustna wpływa na stężenia.",
+        "Nie jest normą laboratoryjną ani metodą rozpoznawania zaburzeń. Porównanie nie harmonizuje żeńskiego Gen II z mieszanymi oznaczeniami męskimi."
+      ]
+    }
+  ]
+};
 const testosteroneDisplayPolicy = {
   "version": "2026-10-11.1",
   "kind": "educational-display-only",
@@ -31411,6 +31625,8 @@ return {
   patientPointData: patientPointData,
   inhibinEvidence: inhibinEvidence,
   inhibinDisplayPolicy: inhibinDisplayPolicy,
+  inhibinComparisonPolicy: inhibinComparisonPolicy,
+  inhibinComparisonReferenceData: inhibinComparisonReferenceData,
   testosteroneDisplayPolicy: testosteroneDisplayPolicy,
   lhFshDisplayPolicy: lhFshDisplayPolicy,
   amhDisplayPolicy: amhDisplayPolicy,

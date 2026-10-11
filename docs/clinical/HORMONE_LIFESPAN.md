@@ -79,8 +79,14 @@ INSL3 pozostaje przerywaną ilustracją bez liczbowego punktu pacjenta.
 Następnie właściciel zaakceptował wspólną, stałą oś stężenia AMH
 w porównaniu płci podczas minipuberty. Obie linie od początku odtwarzają
 mediany modeli niemowlęcych, także bez wyniku. Jest to wąski wyjątek
-od wcześniejszego porównywania względnych wysokości płci; pokwitanie
-i inne hormony zachowują dotychczasową politykę.
+od wcześniejszego porównywania względnych wysokości płci. Ta zmiana AMH
+nie obejmowała pokwitania ani innych hormonów.
+
+Kolejna zatwierdzona makieta obejmuje inhibinę B: wspólną liniową oś
+stężenia w minipuberty i pokwitaniu. Właściciel zaakceptował również
+punkt dziewcząt według modelu Borelli-Kjær 2025, wyłącznie w porównaniu
+płci inhibiny B w wieku 8–20 lat. To ograniczone rozszerzenie odniesienia
+edukacyjnego, bez zmiany norm laboratoryjnych lub zwykłych widoków.
 
 ## Cel i granice
 
@@ -319,6 +325,59 @@ Wartości LOQ 2,9 i 4,0 pmol/L w Ljubicic dotyczą estrogenów.
 [audyt AMH](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
 Normy laboratoryjne, profile pacjenta, historia i zwykłe widoki nie zmieniają się.
 
+### Inhibina B — wspólna skala w minipuberty i pokwitaniu
+
+`inhibin-comparison-policy.json` i `buildInhibinComparison(data,
+referenceEngine, period)` przygotowują stałą parę krzywych dla każdego
+okresu. Obie płcie i znaczniki używają tej samej liniowej osi
+0–400 pg/mL, z poziomami 0 / 100 / 200 / 300 / 400. Równa wysokość
+oznacza równe stężenie; 1 pg/mL = 1 ng/L. Zero pozostaje punktem na
+osi, a wynik ponad nią ma strzałkę z prawdziwą liczbą. Krzywe i oś
+nie zmieniają się po wpisaniu lub wyczyszczeniu wyniku, zmianie osoby
+ani rozmiaru ekranu. Oś nie wyznacza norm ani granic oznaczenia.
+
+**Minipuberty:** istniejące `busch2022-male-inhb` i
+`ljubicic2022-female-inhb`, wspólne linie 0,02–<1 roku. Oba źródła
+dotyczą surowicy zdrowych donoszonych niemowląt i Gen II ELISA Beckman.
+To mediany GAMLSS, nie średnie trajektorie podłużne. Męska jest
+przybliżonym odczytem ryciny, żeńska pochodzi z tabeli C suplementu.
+Przy 90 dniach wynoszą odpowiednio około 294,29 i 49,47 pg/mL.
+Obie prace podają LOD 3 pg/mL, bez osobnego LOQ inhibiny B.
+Własny punkt chłopca pozostaje dostępny od 7. dnia, mimo początku
+wspólnych linii w 7,305 dnia. Dokładnie pierwsze urodziny nie dostają
+punktu tego porównania; nie włączamy na końcu profilu Kelsey.
+Wcześniactwo lub nieznane donoszenie ogranicza punkt, nie usuwa linii.
+
+**Pokwitanie:** dotychczasowy męski profil Borelli-Kjær 2025 i żeńska
+mediana ryc. 1, na wspólnej osi wieku chronologicznego 8–20 lat.
+Nie jest to oś Tannera. Męski model łączy Oxford Bio-innovation
+i Gen II, żeński używa surowicy Gen II. Wspólna jednostka nie dowodzi
+zamienności metod; nie stosujemy między nimi nowego przelicznika.
+Przybliżenia odczytu wynoszą około ±5 pg/mL u chłopców i ±2 u dziewcząt;
+to rozdzielczość digitalizacji, nie granice kliniczne.
+
+Nowe żeńskie odniesienie `borelli2025-female-inhb-puberty-comparison`
+jest odrębne od globalnych profili: `inhibin-comparison-reference-data.json`
+eksportuje `inhibinComparisonReferenceData` wyłącznie dla tego widoku.
+Kwalifikacja obejmuje 8–20 lat włącznie, natomiast PCHIP zachowuje
+wszystkie 24 źródłowe węzły 5,6–47 lat, aby granice widoku nie zmieniały
+stycznych. W wieku 8/12/13/20 lat żeńskie mediany wynoszą około
+14/43/47/34 pg/mL. Przed 8 i po 20 latach nie dodajemy tego punktu;
+nie pojawia się też w zwykłych widokach. Źródło nie daje tu parametrów
+L/S, SDS ani nowych percentyli. Fazy cyklu nie standaryzowano,
+a antykoncepcja doustna wpływa na stężenia; nie dodajemy formularza
+ani norm dostosowanych do tych okoliczności.
+
+Każda płeć kwalifikuje własny punkt niezależnie przez istniejący
+silnik, z uwzględnieniem wieku, materiału, metody, przeciwwskazań,
+jednostki i zapisu wyniku. Brak dopasowania do profilu drugiej płci
+nie blokuje poprawnego własnego odniesienia. Nierówność „<” lub „>”
+nie staje się dokładną kropką. Pozostałe profile, normy laboratoryjne,
+werdykty, historia i zwykłe wykresy pozostają bez zmian. Osobne panele
+obserwacji Kuiri-Hänninen, Crofton i Baccarelli zachowują swoje dane
+i zasady; nie dopisują median do nowych linii. Źródła i granice:
+[audyt porównań inhibiny B](hormone-lifespan/evidence/inhibin-comparison-audit-2026-10-11.json).
+
 ### Stała przerywana linia męskiego INSL3
 
 `buildMaleInsl3(data)` korzysta z osobnej polityki
@@ -391,8 +450,8 @@ laboratoryjne i liczbowe profile innych hormonów pozostają odrębne.
   bieżący analit. Ta sama możliwość odznaczenia dotyczy porównania płci.
 - Nagłówek osi „Przebieg zmian” zastępuje techniczne „Poziom względny”.
   Zasada osobnych skal pozostaje widoczna pod zwykłym wykresem.
-  Wyjątek AMH/minipuberty w porównaniu płci opisuje stężenie w ng/mL
-  i wspólną skalę logarytmiczną.
+  Porównanie AMH/minipuberty opisuje stężenie w ng/mL i wspólną skalę
+  logarytmiczną; inhibina B w obu porównaniach ma liniową oś pg/mL.
 - „Porównaj płcie” działa w minipuberty dla AMH i inhibiny B, a w pokwitaniu
   dla LH, FSH, AMH i inhibiny B. Przejście między tymi okresami zachowuje
   tryb porównania. Gdy wybrany hormon nie ma porównania w nowym okresie,
@@ -464,22 +523,25 @@ minipuberty zachowuje wszystkie 99 źródłowych punktów. Wartość
 lub niewykrywalne nie znaczy stężenie równe zero.
 
 Widok **Porównaj płcie** ma odrębną politykę. Dla AMH w minipuberty
-obowiązują stałe mediany i wspólna oś stężenia opisane wyżej. Pozostała
+oraz inhibiny B w minipuberty i pokwitaniu obowiązują stałe mediany
+i wspólne osie stężenia opisane wyżej. Pozostała
 bazowa warstwa porównania używa własnego maksimum każdej płci
 w wybranym okresie, z widocznym podpisem tej zasady. Taki schemat
 porównuje kształt i kierunek zmian, nie bezwzględne stężenia. Nie wolno
 wyprowadzać z jego przecięć równości stężeń, ilorazów ani precyzyjnej
 różnicy czasu szczytów. Dotychczasowe ilościowe tryby pozostałych
-analitów nie otrzymują automatycznie nowej polityki AMH.
+analitów nie otrzymują automatycznie nowych polityk AMH i inhibiny B.
 
 - **Minipuberty, AMH:** stała wspólna oś log10, modele Busch/Ljubicic
   od 0,02 do <1 roku; bez przełączenia po wpisaniu wyniku. Nie zmienia
   zwykłych `miniValues` ani skali całego życia.
-- **Minipuberty, inhibina B:** dotychczasowe `comparisonValues`,
-  żeńskie mediany Ljubicic 2022 i męski schemat w bazowej warstwie.
-  Geometria, skalowanie i kwalifikacja ilościowego punktu pozostają
-  odrębne od zatwierdzonej zmiany AMH.
-- **Pokwitanie:** LH, FSH, AMH albo inhibina B na wspólnej osi wieku
+- **Minipuberty, inhibina B:** stałe mediany Busch/Ljubicic od
+  0,02 do <1 roku, wspólna liniowa oś 0–400 pg/mL. Bez przełączenia
+  geometrii po wpisaniu wyniku lub powiększeniu.
+- **Pokwitanie, inhibina B:** stałe modele Borelli-Kjær obu płci,
+  8–20 lat i ta sama liniowa oś 0–400 pg/mL; osobno zaakceptowane
+  żeńskie odniesienie pacjentki tylko w tym porównaniu.
+- **Pokwitanie, pozostałe hormony:** LH, FSH i AMH na wspólnej osi wieku
   chronologicznego 8–20 lat. Maksimum wyznacza się osobno dla każdej płci
   w tym przedziale, bez przesuwania krzywych w czasie. To umowny wycinek
   wykresu, nie zakres prawidłowego początku lub zakończenia pokwitania.
@@ -492,8 +554,10 @@ Pokwitaniowe porównanie dziewczynek wykorzystuje istniejące schematy
 LH/FSH (Ljubicic 2020) i AMH (Jopling 2018 oraz FDA K170524), a dla
 inhibiny B odtworzony model 0 SD Borelli-Kjær 2025. Nie nazywamy wszystkich
 tych przebiegów medianami, a niemowlęce mediany Ljubicic 2022 nie są ich
-źródłem. Męskie linie bazowej warstwy są autorskim schematem wspartym źródłami
-opisanymi niżej. Porównanie różnych populacji i metod służy zobrazowaniu
+źródłem. Nowe porównanie inhibiny B korzysta z median Borelli-Kjær
+także u chłopców. Pozostałe męskie linie bazowej warstwy są autorskim
+schematem wspartym źródłami opisanymi niżej. Porównanie populacji i metod
+służy zobrazowaniu
 kierunku zmian; samo w sobie nie ocenia wyniku pacjenta ani nie ustala
 dokładnego opóźnienia jednej płci względem drugiej.
 
@@ -560,7 +624,7 @@ kanoniczną krzywą, zamiast ponownie dopasowywać 97 punktów i wtórny
 B-spline. Zachowują skalę, kierunek zmian i szczyty, z niewielkim błędem
 ponownego próbkowania.
 Porównanie płci zachowuje wcześniejszą interpolację i własną politykę
-poza nowym wspólnym modelem AMH w minipuberty opisanym wyżej.
+poza wspólnymi modelami AMH/minipuberty i inhibiny B opisanymi wyżej.
 Oddzielne liczbowe źródła punktu wyniku znajdują się w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Obecność schematu
 danego hormonu lub wieku nie oznacza dostępności ilościowego porównania.
@@ -586,7 +650,8 @@ Wysokości pozostają poglądowe; odcinek do 90 lat nie jest ilościową prognoz
 
 Opis historyczny: zwykłe widoki zastępuje obecnie geometria opisana
 powyżej. Dawny sposób porównania płci pozostaje aktywny poza AMH
-w minipuberty, które ma osobną zatwierdzoną politykę.
+w minipuberty i inhibiną B w obu okresach, z osobnymi zatwierdzonymi
+politykami.
 
 Na polecenie właściciela przywrócono wariant „Pierwotny przebieg”,
 odpowiadający rendererowi z commita `c6b03379` (przed PR #607).
@@ -651,8 +716,8 @@ odróżnienie źródłowych 29 dni od schematycznych 28 dni cyklu.
 SVG rzeczywistego renderera z utrwalonym wzorcem „Pierwotnego przebiegu”.
 Historyczny wzorzec zwykłych widoków zastępuje aktualna polityka
 kanonicznej geometrii. Niezmienione porównania płci nadal wymagają
-zgodności ze swoim dotychczasowym wzorcem; AMH w minipuberty ma nowy
-kontrakt stałych modeli, granic i wspólnej osi. Kontrola obejmuje
+zgodności ze swoim dotychczasowym wzorcem; AMH w minipuberty i inhibina B
+mają nowe kontrakty stałych modeli, granic i wspólnych osi. Kontrola obejmuje
 desktop i telefon oraz brak nowych ekstremów, bez udawania, że kotwice
 schematu są ilościowymi obserwacjami.
 Syntetyczne wejście: chłopiec, LH, wiek 0,25 roku → początkowo wyłącznie
@@ -661,8 +726,8 @@ Istniejące testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst
 formularza i interakcje obu płci.
 
 Wzorzec pierwotnych krzywych pozostaje właściwy dla niezmienionych
-porównań płci, nie dla nowego AMH w minipuberty, zastąpionej geometrii
-zwykłych męskich widoków ani modelu ilościowego.
+porównań płci, nie dla nowych porównań AMH/minipuberty i inhibiny B,
+zastąpionej geometrii zwykłych męskich widoków ani modelu ilościowego.
 `tests/unit/hormone-lifespan-reference.test.mjs` wywołuje
 rzeczywisty `vilda_hormone_lifespan_reference.js` i sprawdza niezależne
 wartości źródłowe, granice wieku, jednostki, nierówności oraz brak
