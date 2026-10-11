@@ -123,8 +123,7 @@ describe('Poglądowy przebieg hormonów — produkcyjne dane i granice dowodów'
   });
 
   it('męskie krzywe zachowują pełne oryginalne punkty i nie wybierają uproszczonego podzbioru', () => {
-    const original = JSON.parse(readFileSync(new URL(
-      '../fixtures/hormone-lifespan-original-svg.json', import.meta.url), 'utf8'));
+
     expect(data.maleAges).toHaveLength(33);
     expect(data.maleHormones.map(hormone => hormone.id))
       .toEqual(['lh', 'fsh', 't', 'insl3', 'amh', 'inhb']);
@@ -139,11 +138,13 @@ describe('Poglądowy przebieg hormonów — produkcyjne dane i granice dowodów'
         expect(value).toBeLessThanOrEqual(1);
       }
     }
-    // Pin all original anchors, individual peak ages and stage widths. The
-    // independent browser fixture was captured before the rejected smoothing.
+    // Pin all original anchors, individual peak ages and stage widths from
+    // the unmodified audyt base 0333abe4 (not the implementation under test).
+    // Clinical explanatory copy was deliberately updated for Walravens; it is
+    // excluded from this geometry fingerprint, not replaced with a new baseline.
     const maleData = JSON.stringify({ maleAges: data.maleAges,
-      maleHormones: data.maleHormones, maleStages: data.maleStages });
-    expect(createHash('sha256').update(maleData).digest('base64')).toBe(original.maleDataSha256Base64);
+      maleHormones: data.maleHormones.map(({ id, ages, values }) => ({ id, ages, values })), maleStages: data.maleStages });
+    expect(createHash('sha256').update(maleData).digest('base64')).toBe('9D8YfxhHE4WrExAPprGh9YTdiiAHaobSc/ElkHQXn5U=');
   });
 });
 
@@ -157,12 +158,18 @@ describe('Testosteron chłopców — źródłowe p50 i rozłączna polityka wiek
       .toEqual([
         { id: 'kelsey2014-male-t-childhood', minAge: 3, maxAge: 6, maxAgeExclusive: true },
         { id: 'madsen2022-male-t', minAge: 6, maxAge: 18, maxAgeExclusive: true },
-        { id: 'kelsey2014-male-t', minAge: 18, maxAge: 88, maxAgeExclusive: false }
+        { id: 'walravens2025-male-t-18-29', minAge: 18, maxAge: 30, maxAgeExclusive: true },
+        { id: 'walravens2025-male-t-30-39', minAge: 30, maxAge: 40, maxAgeExclusive: true },
+        { id: 'walravens2025-male-t-40-49', minAge: 40, maxAge: 50, maxAgeExclusive: true },
+        { id: 'walravens2025-male-t-50-59', minAge: 50, maxAge: 60, maxAgeExclusive: true },
+        { id: 'walravens2025-male-t-60-69', minAge: 60, maxAge: 70, maxAgeExclusive: true },
+        { id: 'walravens2025-male-t-70-79', minAge: 70, maxAge: 80, maxAgeExclusive: true },
+        { id: 'walravens2025-male-t-80-plus', minAge: 80, maxAge: 86, maxAgeExclusive: false }
       ]);
     for (const route of policy.profiles) {
       const generated = profile(route.id);
       expect(generated).toMatchObject({ minAge: route.minAge, maxAge: route.maxAge,
-        maxAgeExclusive: route.maxAgeExclusive, interpolation: 'pchip', analyte: 't', sex: 'male', unit: 'nmol/L' });
+        maxAgeExclusive: route.maxAgeExclusive, interpolation: route.source === 'walravens2025' ? 'constant' : 'pchip', analyte: 't', sex: 'male', unit: 'nmol/L' });
       expect(generated.provenance.sourceRouting).toEqual({ version: policy.version, source: route.source,
         minAge: route.minAge, maxAge: route.maxAge, maxAgeExclusive: route.maxAgeExclusive,
         sourceDomain: route.sourceDomain, retainAllSourcePoints: true });
@@ -220,21 +227,41 @@ describe('Testosteron chłopców — źródłowe p50 i rozłączna polityka wiek
     expect(generated).not.toHaveProperty('clinicalCutoff');
   });
 
-  it('przechowuje oba pełne zbiory Kelsey bez obcinania podpór PCHIP na nowych granicach wieku', () => {
+  it('zachowuje pełny źródłowy Kelsey dla dzieci, niezależnie od łagodnego rysunku dzieciństwa', () => {
     const childhood = profile('kelsey2014-male-t-childhood');
-    const adult = profile('kelsey2014-male-t');
     const original = readSource('evidence/patient-point/testosterone-model.json');
     expect(childhood.points).toHaveLength(851);
-    expect(adult.points).toHaveLength(851);
-    expect(childhood.points).toEqual(adult.points);
-    expect(childhood.points).not.toBe(adult.points);
     expect(childhood.points[0]).toEqual({ ageYears: 3, value: 0.3764139001167295 });
-    expect(adult.points.at(-1)).toEqual({ ageYears: 88, value: 13.222919801641392 });
+    expect(childhood.points.at(-1)).toEqual({ ageYears: 88, value: 13.222919801641392 });
     expect(childhood.formula).toEqual(original.formula);
-    expect(adult.formula).toEqual(original.formula);
     expect(childhood.provenance.sourceRouting.sourceDomain).toEqual({ minAge: 3, maxAge: 88 });
-    expect(adult.provenance.sourceRouting.sourceDomain).toEqual({ minAge: 3, maxAge: 88 });
     expect(childhood.provenance.correctionDoi).toBe('10.1371/journal.pone.0117674');
-    expect(adult.provenance.correctionDoi).toBe('10.1371/journal.pone.0117674');
+    expect(profile('kelsey2014-male-t')).toBeUndefined();
+  });
+
+  it('zachowuje średnie TT, wiek i liczebność grup z tabeli 1 Walravens, bez pomylenia z wolnym testosteronem', () => {
+    const original = readSource('evidence/patient-point/walravens2025-male-total-testosterone-group-means.json');
+    expect(original.source.doi).toBe('10.1210/clinem/dgaf507');
+    expect(original.source.table).toBe(1);
+    expect(original.unit).toBe('nmol/L');
+    const independentlyChecked = [
+      ['18-29', 23.8, 141, 20.7], ['30-39', 34.3, 252, 20.0], ['40-49', 43.5, 207, 18.1],
+      ['50-59', 55, 150, 16.9], ['60-69', 65.1, 177, 17.1], ['70-79', 74.7, 167, 17.0],
+      ['80-plus', 82.1, 100, 15.9]
+    ];
+    expect(independentlyChecked.reduce((sum, row) => sum + row[2], 0)).toBe(1194);
+    for (const [suffix, age, n, mean] of independentlyChecked) {
+      const item = profile(`walravens2025-male-t-${suffix}`);
+      expect(item).toMatchObject({ statistic: 'group-mean', interpolation: 'constant', unit: 'nmol/L',
+        meanAge: age, groupN: n, ageGroup: { meanAge: age, n, sourceMean: mean, sourceUnit: 'nmol/L' } });
+      expect(item.points.length).toBeGreaterThanOrEqual(2);
+      expect(item.points.every(point => point.value === mean)).toBe(true);
+      expect(item.provenance).toMatchObject({ doi: '10.1210/clinem/dgaf507', table: 1,
+        participants: 1194, groupParticipants: n, publishedMeanAge: age, sourceMean: mean,
+        sourceUnit: 'nmol/L', sourceToCanonicalFactor: 1 });
+      expect(item).not.toHaveProperty('formula');
+      expect(item).not.toHaveProperty('referenceInterval');
+      expect(item).not.toHaveProperty('clinicalCutoff');
+    }
   });
 });

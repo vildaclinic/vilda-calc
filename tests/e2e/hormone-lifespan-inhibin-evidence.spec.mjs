@@ -287,16 +287,16 @@ test('adding the inhibin curve retains the active testosterone result and both s
   await page.locator('#labUnit').selectOption('nmol/L');
   await page.locator('#labValue').fill('13');
   const testosterone = panel(page).locator('[data-patient-concentration="t"]');
-  await expect(testosterone).toHaveAttribute('data-profile', 'kelsey2014-male-t');
+  await expect(testosterone).toHaveAttribute('data-profile', 'walravens2025-male-t-40-49');
   await panel(page).locator('[data-hormone="inhb"]').click();
   await expect(stableLine(page)).toHaveCount(1);
   await expect(testosterone).toHaveAttribute('data-value', '13');
   await expect(patientDot(page)).toHaveCount(0);
   await panel(page).getByText('O wykresie i źródła', { exact: true }).click();
   const sources = panel(page).locator('[data-lifespan="source-copy"]');
-  await expect(sources).toContainText(/Kelsey.*2014/);
+  await expect(sources).toContainText(/Walravens.*2025/);
   await expect(sources).toContainText(/Borelli.*2025/);
-  await expect(sources.locator('a[href="https://doi.org/10.1371/journal.pone.0109346"]')).toHaveCount(1);
+  await expect(sources.locator('a[href="https://doi.org/10.1210/clinem/dgaf507"]')).toHaveCount(1);
   await expect(sources.locator('a[href="https://doi.org/10.1210/clinem/dgae439"]')).toHaveCount(1);
 });
 

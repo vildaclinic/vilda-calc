@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-10.1",
+  "version": "2026-10-11.1",
   "kind": "educational-source-selection",
   "analyte": "t",
   "sex": "male",
@@ -24,12 +24,73 @@
       "retainAllSourcePoints": true
     },
     {
-      "id": "kelsey2014-male-t",
-      "source": "kelsey2014",
+      "id": "walravens2025-male-t-18-29",
+      "source": "walravens2025",
+      "sourceGroup": "18-29",
       "minAge": 18,
-      "maxAge": 88,
+      "maxAge": 30,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "walravens2025-male-t-30-39",
+      "source": "walravens2025",
+      "sourceGroup": "30-39",
+      "minAge": 30,
+      "maxAge": 40,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "walravens2025-male-t-40-49",
+      "source": "walravens2025",
+      "sourceGroup": "40-49",
+      "minAge": 40,
+      "maxAge": 50,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "walravens2025-male-t-50-59",
+      "source": "walravens2025",
+      "sourceGroup": "50-59",
+      "minAge": 50,
+      "maxAge": 60,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "walravens2025-male-t-60-69",
+      "source": "walravens2025",
+      "sourceGroup": "60-69",
+      "minAge": 60,
+      "maxAge": 70,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "walravens2025-male-t-70-79",
+      "source": "walravens2025",
+      "sourceGroup": "70-79",
+      "minAge": 70,
+      "maxAge": 80,
+      "maxAgeExclusive": true,
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
+      "retainAllSourcePoints": true
+    },
+    {
+      "id": "walravens2025-male-t-80-plus",
+      "source": "walravens2025",
+      "sourceGroup": "80-plus",
+      "minAge": 80,
+      "maxAge": 86,
       "maxAgeExclusive": false,
-      "sourceDomain": { "minAge": 3, "maxAge": 88 },
+      "sourceDomain": { "minAge": 18, "maxAge": 86 },
       "retainAllSourcePoints": true
     }
   ],
@@ -40,6 +101,8 @@
     "madsenPublishedStepYears": 1,
     "madsenCentralConcentrationFormula": "exp(M_logSIx1e6) / 1000000",
     "madsenBetweenNodeMeaning": "Application interpolation between 13 published annual p50 values; not a reconstruction of the authors' fitted GAMLSS model.",
+    "adultGroupMethod": "constant",
+    "adultStatistic": "arithmetic-group-mean",
     "crossSourceInterpolation": false,
     "extrapolation": false,
     "retainKelseyFullDomainForTangents": true
@@ -56,9 +119,12 @@
   "limits": [
     "This policy selects an educational population central value, not a diagnostic reference interval.",
     "Madsen represents chronological-age models pooling pubertal stages; a Tanner stage is neither inferred nor required.",
-    "The published Madsen table includes an exact age-18 node, retained for interpolation below 18. Routing at age 18 uses Kelsey; the source node does not extend Madsen to completed age 18-19.",
-    "Reference values genuinely differ at source boundaries. A smooth illustrative display transition cannot supply a patient median or modify source values.",
+    "The published Madsen table includes an exact age-18 node, retained for interpolation below 18. Routing at age 18 uses the Walravens 18–29 group mean; the source node does not extend Madsen to completed age 18-19.",
+    "Reference values genuinely differ at source and adult group boundaries. A smooth illustrative display transition cannot supply a patient mean or median or modify source values.",
     "The existing term-infant Busch profile, graphical readability gate and gap from 1 to less than 3 years remain unchanged.",
-    "The adult and childhood Kelsey records retain all source points from 3 through 88 years so splitting applicability does not change source PCHIP tangents."
+    "The childhood Kelsey record retains all source points from 3 through 88 years so restricted applicability does not change source PCHIP tangents; these retained nodes do not authorize adult comparison.",
+    "Adult total-testosterone comparisons use the seven exact Table 1 arithmetic means from Walravens 2025/2026, not free-testosterone medians, reference limits or a normal/abnormal classification.",
+    "Walravens contains heterogeneous healthy younger and community-dwelling older cohorts. Its morning fasting LC-MS/MS group differences do not isolate causal aging or establish the patient's sampling conditions.",
+    "The final adult group is eligible through exact age 86 only. A graphical tail beyond that limit supplies no numerical patient comparison."
   ]
 }

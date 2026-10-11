@@ -31,7 +31,7 @@ stała krzywa edukacyjna zastępuje przełączanie schematu na osobne ścieżki
 liczbowe oraz przerywane łączniki PR #615. Nie zmienia źródeł mediany
 pacjenta ani laboratoryjnych zakresów odniesienia.
 
-Po audycie testosteronu całkowitego ustabilizowano jego prezentację.
+Historia zmian testosteronu: po audycie ustabilizowano jego prezentację.
 Kolejny etap naprawy wprowadza pediatryczne p50 Madsen 2022 w wieku
 6–<18 lat, zachowując Busch w niemowlęctwie i Kelsey 2014/2015
 w wieku 3–<6 oraz 18–88 lat. Zmienia to edukacyjne odniesienie dziecka,
@@ -43,6 +43,13 @@ korektę samego połączenia graficznego. Szerszy pas 16–25 lat nie wymusza
 przejścia przez ostatni węzeł Madsen w wieku 18 lat. Źródłowe mediany,
 dobór profilu pacjenta, skala oraz interpretacja laboratoryjna pozostają
 bez zmian.
+
+11 października 2026 właściciel zaakceptował kolejną makietę i wdrożenie:
+łagodne dzieciństwo bez ząbka źródeł, jeden szeroki łuk dorosłości oraz
+średnie grup Walravens jako dorosłe odniesienie edukacyjne. Ta decyzja
+zastępuje opisane wyżej historyczne połączenia testosteronu i dorosły
+wybór Kelsey; aktualny kontrakt znajduje się niżej. Obowiązująca instrukcja
+dla kolejnych agentów: [HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
 
 ## Cel i granice
 
@@ -69,12 +76,14 @@ Poza osią wieku znacznik znika zamiast przyklejać się do końca.
 ## Wynik pacjenta na tle modelu
 
 Czerwony punkt oznacza **wynik pacjenta**, a nie wynik nieprawidłowy.
-Linia odniesienia przedstawia medianę lub centralny przebieg modelu,
-nie górną granicę normy i nie średnią arytmetyczną. Powyżej albo poniżej
+Znacznik odniesienia przedstawia źródłową medianę, centralny przebieg
+modelu albo jawnie podpisaną średnią grupy, zależnie od źródła.
+Poglądowa linia może upraszczać ich przebieg. Nie jest górną granicą normy. Powyżej albo poniżej
 linii nie oznacza poza zakresem referencyjnym. Pozostają dotychczasowe,
 odrębne osie interpretacji badania.
 
-Wyjątek jest jawny: osobny wykres starszych grup Baccarelli pokazuje
+Średnie są jawne: dorosły testosteron korzysta z grup Walravens,
+a osobny wykres starszych grup Baccarelli pokazuje
 średnie arytmetyczne i tak je nazywa. Wynik w wieku 80–101 lat może być
 porównany ze średnią całej dopasowanej grupy. Nie jest to punkt na medianie
 dla dokładnego wieku ani przedłużenie głównej osi pozostałych hormonów.
@@ -94,14 +103,14 @@ W porównaniu płci te profile nie tworzą punktu: stadium pacjenta nie
 określa stadium drugiej populacji. Szczegóły źródła i granic opisuje
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
-Punkt wyniku i jego znacznik mediany muszą korzystać z **tej samej
-jednostki i funkcji skali**. Mediana pochodzi z oryginalnego modelu
+Punkt wyniku i jego znacznik odniesienia muszą korzystać z **tej samej
+jednostki i funkcji skali**. Mediana lub średnia pochodzi z oryginalnego źródła
 źródłowego, również po zmianie widoku, wyboru hormonów i powiększeniu.
 Nie wolno dopasować punktu do autorskiej linii pojedynczym mnożnikiem
 ani przeliczać schematycznej wysokości na stężenie. W męskiej inhibinie B
 i testosteronie całkowitym
 ciągła linia jest wygładzoną prezentacją: w pasach wygładzenia znacznik
-źródłowej mediany może leżeć poza nią. Nie przesuwamy go na linię.
+źródłowej mediany/średniej może leżeć poza nią. Nie przesuwamy go na linię.
 Model ilościowy zachowuje własne granice; poza nimi krzywa edukacyjna
 nie staje się jego ekstrapolacją.
 
@@ -142,47 +151,48 @@ ani krzywej. Wyższy poprawny wynik ma strzałkę w górę z rzeczywistą warto�
 bez kropki sugerującej stężenie równe górze osi. Szczegóły polityki i granic
 przedstawiono w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
-Testosteron całkowity również ma jedną stałą, ciągłą linię we wszystkich
-zwykłych widokach męskich. Opiera się na danych Busch 2022, Madsen 2022
-i Kelsey 2014 z korektą 2015, niezależnie od wieku, wyniku, donoszenia
-lub metody bieżącej próbki. Niezmieniony silnik odniesienia korzysta
-z osobnych rekordów doboru: Madsen od 6 do <18 lat, Kelsey od 3 do <6
-oraz od 18 do 88 lat. Wiek 2 lat nie otrzymuje mediany z graficznego
-połączenia, a wcześniak nie otrzymuje niemowlęcego profilu donoszonych.
+Testosteron całkowity ma jedną stałą linię we wszystkich zwykłych męskich
+widokach. Zatwierdzona 11 października 2026 geometria opiera się na Busch,
+Madsen i trendzie grup Walravens. Osobne liczbowe odniesienia nadal
+kwalifikują pacjenta: Busch w dotychczasowym oknie z bramką jakości,
+Kelsey 3–<6, Madsen 6–<18 i siedem średnich Walravens 18–86 lat.
+Wiek 2 lat nie otrzymuje mediany z mostu; wcześniak nie otrzymuje profilu
+niemowląt donoszonych. Znacznik dorosłego ma nazwę „Średnia grupy”.
 
-`VildaHormoneLifespanDisplay.buildMaleTestosterone` przygotowuje przebieg
-według `testosterone-display-policy.json`. Renderer używa jednej ścieżki
-PCHIP we współrzędnych całego życia; Minipuberty i Pokwitanie wycinają
-i powiększają tę samą krzywą. Przejście od 150. dnia do 4 lat jest jawnym
-mostem poglądowym. Obejmuje także część dostępnych danych, aby nie tworzyć
-sztucznego wzrostu między niskim końcem Busch a początkiem Kelsey.
-Ma monotoniczny przebieg bez wymuszania stromych stycznych źródeł;
-źródłowe mediany i punkty pacjenta w tym pasie nie są przesuwane na most.
-Monotoniczny pas 5–6 lat łagodzi zmianę Kelsey na Madsen. Pas 16–25 lat
-łączy Madsen z dorosłym Kelsey i łagodzi zmianę skali czasu. Zachowuje
-wartości i styczne źródeł na końcach, bez wewnętrznej kotwicy przy
-18 latach. Szerokie zaokrąglenie jest geometrią poglądową, nie modelem
-stężenia ani ustaleniem wieku fizjologicznego maksimum. Węzeł Madsen
-18 lat, około 18,051151 nmol/L, pozostaje w danych dla interpolacji
-źródłowego p50 przed 18. urodzinami i stałej skali. Dla pacjenta
-w wieku dokładnie 18 lat odniesieniem jest już Kelsey. Źródłowe p50
-w całym pasie 16–25 lat pozostają niezmienione, nawet gdy ich znaczniki
-leżą poza wygładzoną linią.
-Kotwice przed urodzeniem oraz płaski ogon 88–90 lat przy końcowej
-wartości Kelsey pozostają wyłącznie ilustracją.
+`VildaHormoneLifespanDisplay.buildMaleTestosterone` i osobna polityka
+`testosterone-display-policy.json` przygotowują edukacyjny przebieg.
+Odczyt Busch do 212. dnia przechodzi łagodnie do niskiego poziomu Madsen
+w wieku 6 lat; Kelsey 3–5 nie wymusza węzłów rysunku. Usunięto sztuczny
+ząbek wynikający z połączenia różnych badań. Wartości Kelsey nadal
+stanowią odrębne liczbowe odniesienie w wieku 3–<6 lat.
 
-Stałe maksimum źródłowych węzłów T wynosi około 18,051151 nmol/L; zapas 1,25 daje
-górę osi około 22,563939 nmol/L. Tak jak dla inhibiny B, wynik ponad osią
-ma strzałkę z rzeczywistą liczbą, bez przyciętej kropki i bez zmiany skali.
-Mężczyzna 40 lat/13 nmol/L pozostaje nieznacznie poniżej oryginalnej
-mediany około 13,049604; wpisanie 100 nmol/L nie zmienia kształtu krzywej.
-W wieku 6 lat p50 Madsen około 0,02394 nmol/L zastępuje dotychczasowe
-około 0,323 Kelsey. Różnica dotyczy modeli populacyjnych i metod,
-nie jest błędem jednostki ani rozpoznaniem u dziecka. LLOQ Madsen wynosi
-0,02 nmol/L; niewyjaśniona reguła przetwarzania niższych obserwacji pozostaje
-ograniczeniem. Nie nazywamy mediany normą ani nie wyprowadzamy stadium
-z wieku. Szczegóły i ograniczenia:
+Po pokwitaniu linia dochodzi do młodej dorosłości. Jeden sześcienny
+łuk Béziera od 23,8 lat / 20,7 nmol/L do 82,1 lat / 15,9 nmol/L
+zastępuje przechodzenie przez każdą średnią grupową. W kanonicznym X
+uchwyty mają ułamki 0,20/0,50, styczne końców są poziome, a łuk ma
+601 próbek. To łagodny trend bez kolanka około czterdziestki, nie model
+stężenia dla każdego roku życia. Wartości grupowe pozostają w źródle
+pacjenta. Po 82,1 roku linia utrzymuje końcowy poziom; od 86 do 90 lat
+wygasa i nie stanowi liczbowego odniesienia. Kotwice płodowe są ilustracją.
+
+Walravens, tabela 1, [DOI 10.1210/clinem/dgaf507](https://doi.org/10.1210/clinem/dgaf507),
+opisuje średnie arytmetyczne testosteronu całkowitego u 1194 mężczyzn
+w wieku 18–86 lat, surowica rano na czczo, LC-MS/MS. Zdrowe młodsze
+kohorty połączono ze starszą populacją społecznościową, także z chorobami.
+Różnice nie przedstawiają wyłącznie wpływu wieku ani podłużnego losu
+jednej osoby. Nie są medianami ani normami. Nie używamy tu wolnego T.
+
+Stała kotwica skali 18,051151264084126 nmol/L i zapas 1,25 zachowują górę
+osi około 22,563939 nmol/L. Kotwica nie jest maksimum nowego zbioru.
+Wynik ponad osią ma strzałkę z rzeczywistą liczbą bez zmiany geometrii.
+M/44 lata/12 nmol/L otrzymuje średnią grupy 40–49 równą 18,1;
+M/82 lata/12 otrzymuje średnią grupy 80+ równą 15,9. Znacznik średniej
+może leżeć poza ilustracyjnym łukiem; nie przesuwamy go na linię.
+Pediatryczne mediany pozostają bez zmian, np. Madsen w wieku 6 lat
+około 0,02394 nmol/L (LLOQ 0,02). Szczegóły i ograniczenia:
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+Trwałe zasady kolejnych zmian:
+[HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
 
 Brak profilu, nieznany wiek lub płeć, nieobsługiwana jednostka, pusty albo
 nieprawidłowy wynik oraz nierówność (`<`, `≤`, `>`, `≥`) oznaczają brak
@@ -376,8 +386,12 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
 pacjenta**. Zwykłe męskie widoki inhibiny B i testosteronu całkowitego
-zastępują obecnie stałe krzywe opisane powyżej; pozostałe krzywe zachowują
-tę politykę.
+zastępują obecnie stałe krzywe opisane powyżej. LH, FSH, INSL3 i AMH
+zachowują kotwice schematu, ale od 11 października 2026 korzystają
+z jednej kanonicznej krzywej PCHIP: zbliżenia próbkują ją, zamiast
+ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowują skalę,
+kierunek zmian i szczyty, z niewielkim błędem ponownego próbkowania.
+Porównanie płci zachowuje wcześniejszą interpolację i własną politykę.
 Oddzielne liczbowe źródła punktu wyniku znajdują się w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Obecność schematu
 danego hormonu lub wieku nie oznacza dostępności ilościowego porównania.
@@ -400,6 +414,9 @@ Dalszy przebieg wspierają: [Madsen 2022](https://doi.org/10.1210/clinem/dgac155
 Wysokości pozostają poglądowe; odcinek do 90 lat nie jest ilościową prognozą.
 
 ### Pierwotny przebieg męskiego schematu — 2026-10-10
+
+Opis historyczny: zwykłe widoki zastępuje obecnie geometria opisana
+powyżej. Dawny sposób porównania płci pozostaje aktywny.
 
 Na polecenie właściciela przywrócono wariant „Pierwotny przebieg”,
 odpowiadający rendererowi z commita `c6b03379` (przed PR #607).
@@ -462,24 +479,31 @@ odróżnienie źródłowych 29 dni od schematycznych 28 dni cyklu.
 
 `tests/e2e/hormone-lifespan-original-curves.spec.mjs` porównuje ścieżki
 SVG rzeczywistego renderera z utrwalonym wzorcem „Pierwotnego przebiegu”.
-Obejmuje zachowane męskie schematy, trzy widoki, desktop i telefon oraz
-porównanie płci dla AMH i inhibiny B. Sprawdza powrót do zatwierdzonej
-geometrii, bez wymagania dokładnego przejścia przez szczyty źródłowe.
+Historyczny wzorzec zwykłych widoków zastępuje aktualna polityka
+kanonicznej geometrii. Niezmienione porównanie płci dla AMH i inhibiny B
+nadal wymaga zgodności ze swoim dotychczasowym wzorcem. Kontrola obejmuje
+desktop i telefon oraz brak nowych ekstremów, bez udawania, że kotwice
+schematu są ilościowymi obserwacjami.
 Syntetyczne wejście: chłopiec, LH, wiek 0,25 roku → początkowo wyłącznie
-krzywa LH i geometria zgodna z pierwotnym wzorcem danego widoku.
+krzywa LH i geometria zgodna z kanonicznym przebiegiem danego hormonu.
 Istniejące testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst
 formularza i interakcje obu płci.
 
-Wzorzec pierwotnych krzywych dotyczy zachowanych schematów, nie nowych
-stałych linii męskiej inhibiny B i testosteronu całkowitego ani modelu ilościowego.
+Wzorzec pierwotnych krzywych pozostaje właściwy dla niezmienionego
+porównania płci, nie dla zastąpionej geometrii zwykłych męskich widoków
+ani modelu ilościowego.
 `tests/unit/hormone-lifespan-reference.test.mjs` wywołuje
 rzeczywisty `vilda_hormone_lifespan_reference.js` i sprawdza niezależne
 wartości źródłowe, granice wieku, jednostki, nierówności oraz brak
-ekstrapolacji. W testach interfejsu punkt równy medianie musi trafić na
-znacznik źródłowej mediany, a większy/mniejszy wynik odpowiednio nad nim/pod nim;
+ekstrapolacji. W testach interfejsu punkt równy medianie/średniej musi trafić na
+znacznik źródłowego odniesienia, a większy/mniejszy wynik odpowiednio nad nim/pod nim;
 w pasach wygładzenia inhibiny B i testosteronu znacznik nie musi leżeć
 na linii edukacyjnej;
-pełny ekran i zmiana szerokości nie mogą zmienić tej relacji. Przypadki
+pełny ekran i zmiana szerokości nie mogą zmienić tej relacji. Dla T
+44 lata wymagają średniej 18,1 nmol/L, 82 lata 15,9, a >86 braku
+odniesienia. Pusty wynik, wpisanie i wyczyszczenie nie zmieniają linii
+ani skali; zbliżenia zachowują przebieg w granicach jawnego błędu
+próbkowania, bez deklarowania identycznych ścieżek SVG. Przypadki
 źródłowe podano w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
 
 Pliki źródłowe zawierają odnośniki, sumy kontrolne suplementów i wskazanie

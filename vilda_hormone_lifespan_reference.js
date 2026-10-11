@@ -98,7 +98,7 @@
     if (!profile || !Array.isArray(profile.points) || profile.points.length < 2) return null;
     if (cache && cache.has(profile)) return cache.get(profile);
     var points = profile.points;
-    // A published group median is a single value across its routing interval,
+    // A published group mean or median is one value across its routing interval,
     // never a fitted trajectory between observations at individual ages.
     if (profile.interpolation === 'constant' && points.some(function (point) {
       return point.value !== points[0].value;

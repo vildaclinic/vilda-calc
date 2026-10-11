@@ -49,6 +49,8 @@ Zielone testy nie są dowodem poprawności medycznej. Agent nie nadaje algorytmo
 
 Przed rozszerzeniem interpretacji badań laboratoryjnych o analit, grupę wieku lub etap pokwitania przeczytaj [instrukcję rozszerzania interpretacji badań](docs/clinical/LAB_INTERPRETATION_AGENT_GUIDE.md). Utrwala ona oczekiwania właściciela: prosty formularz, wykorzystanie danych pacjenta, automatyczny dobór źródła, osie wieku/stadium i zgodność historii; zawiera też wzorzec pracy dla inhibiny B.
 
+Przed zmianą danych, łączenia źródeł, wygładzania, skal lub punktu pacjenta na wykresach hormonów obowiązkowo przeczytaj [instrukcję krzywych hormonów](docs/clinical/HORMONE_CURVE_AGENT_GUIDE.md). Linia ma być płynną ilustracją przebiegu życia, bez sztucznych ząbków na styku badań. Geometria edukacyjna, liczbowe odniesienie pacjenta i normy laboratoryjne mają odrębne kontrakty; nie przesuwaj źródłowej średniej/mediany na wygładzoną linię.
+
 ## 4. Dane pacjentów i sekrety
 
 - Używaj wyłącznie jednoznacznie fikcyjnych danych testowych.

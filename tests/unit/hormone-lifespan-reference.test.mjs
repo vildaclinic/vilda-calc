@@ -24,7 +24,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     expect(data.notClinicalReference).toBe(true);
-    expect(data.profiles).toHaveLength(36);
+    expect(data.profiles).toHaveLength(42);
     expect(data.profiles.every(item => item.sourceLabel && item.url && item.method && item.population)).toBe(true);
   });
 
@@ -49,7 +49,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(evaluate('inhb', 12).referenceValue).toBe(146);
     expect(evaluate('amh', 40).referenceValue).toBe(6.12 / 0.1401);
     for (const [age, expected] of [[3, 0.3764139001167295], [12, 1.4977255724595988],
-      [40, 13.049603876520182], [88, 13.222919801641392]]) {
+      [40, 18.1], [82, 15.9]]) {
       expect(evaluate('t', age).referenceValue).toBeCloseTo(expected, 11);
     }
     expect(evaluate('inhb', .25, { sex: 'female' }).referenceValue).toBe(49.684);
@@ -146,23 +146,52 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(evaluate('amh', 5, { preterm: 'unknown' }).status).toBe('ready');
   });
 
-  it('oba profile Kelsey zachowują całą funkcję źródłową, niezależnie od przedziału doboru', () => {
+  it('dziecięcy profil Kelsey zachowuje całą funkcję źródłową, ale dorosłych dobiera z nowego badania', () => {
     const childhood = profile('kelsey2014-male-t-childhood');
-    const adult = profile('kelsey2014-male-t');
     expect(childhood).toMatchObject({ minAge: 3, maxAge: 6, maxAgeExclusive: true });
-    expect(adult).toMatchObject({ minAge: 18, maxAge: 88 });
-    expect(adult.maxAgeExclusive).not.toBe(true);
-    expect(childhood.points).toEqual(adult.points);
-    expect(childhood.formula).toEqual(adult.formula);
-    for (const source of [childhood, adult]) {
-      expect(source.points).toHaveLength(851);
-      expect(source.points[0]).toMatchObject({ ageYears: 3, value: 0.3764139001167295 });
-      expect(source.points.at(-1)).toMatchObject({ ageYears: 88, value: 13.222919801641392 });
+    expect(childhood.points).toHaveLength(851);
+    expect(childhood.points[0]).toMatchObject({ ageYears: 3, value: 0.3764139001167295 });
+    expect(childhood.points.at(-1)).toMatchObject({ ageYears: 88, value: 13.222919801641392 });
+    expect(profile('kelsey2014-male-t')).toBeUndefined();
+  });
+
+  it('dorośli zachowują siedem średnich grup Walravens, bez mediany lub interpolacji dokładnego wieku', () => {
+    // Independent transcription of Table 1, TT mean in nmol/L (dgaf507).
+    const groups = [
+      ['18-29', 18, 30, 20.7], ['30-39', 30, 40, 20.0], ['40-49', 40, 50, 18.1],
+      ['50-59', 50, 60, 16.9], ['60-69', 60, 70, 17.1], ['70-79', 70, 80, 17.0],
+      ['80-plus', 80, 86, 15.9]
+    ];
+    for (const [suffix, min, max, mean] of groups) {
+      for (const age of [min, (min + max) / 2, max - .000001]) {
+        for (const value of [0, 12, 10000]) {
+          const result = evaluate('t', age, { measurement: { value, unit: 'nmol/L' } });
+          expect(result).toMatchObject({ status: 'ready', referenceValue: mean,
+            profile: { id: `walravens2025-male-t-${suffix}`, statistic: 'group-mean', interpolation: 'constant' } });
+          expect(result.profile).not.toHaveProperty('referenceInterval');
+          expect(result.profile).not.toHaveProperty('clinicalCutoff');
+        }
+      }
+      if (max < 86) {
+        expect(evaluate('t', max - .5, { ageUpperYears: max, ageUpperInclusive: false }).status).toBe('ready');
+        expect(evaluate('t', max - .5, { ageUpperYears: max })).toEqual(unavailable('ambiguous-age'));
+        expect(evaluate('t', max - .5, { ageUpperYears: max + .01, ageUpperInclusive: false }))
+          .toEqual(unavailable('ambiguous-age'));
+      }
     }
+    expect(evaluate('t', 44).referenceValue).toBe(18.1);
+    expect(evaluate('t', 82).referenceValue).toBe(15.9);
+    expect(evaluate('t', 86).referenceValue).toBe(15.9);
+    expect(evaluate('t', 86, { ageUpperYears: 86.1 })).toEqual(unavailable('ambiguous-age'));
+    for (const age of [86.000001, 88, 90]) expect(evaluate('t', age)).toEqual(unavailable('unsupported-age'));
+    expect(evaluate('t', 44, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+    const source = profile('walravens2025-male-t-40-49');
+    const corrupted = { ...source, points: source.points.map((point, i) => ({ ...point, value: point.value + i })) };
+    expect(engine.referenceAt(corrupted, 44)).toBeNull();
   });
 
   it('interpolacja gęstych węzłów testosteronu nie zmienia istotnie opublikowanej funkcji', () => {
-    for (const id of ['kelsey2014-male-t-childhood', 'kelsey2014-male-t']) {
+    for (const id of ['kelsey2014-male-t-childhood']) {
       // Test the complete original model even though routing now restricts its
       // application. Truncating source nodes would change endpoint tangents.
       const source = { ...profile(id), minAge: 3, maxAge: 88, maxAgeExclusive: false };
@@ -207,8 +236,8 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     }
     expect(engine.referenceAt(routed, 18)).toBeNull();
     const adult = evaluate('t', 18);
-    expect(adult).toMatchObject({ status: 'ready', profile: { id: 'kelsey2014-male-t' } });
-    expect(adult.referenceValue).toBeCloseTo(15.16389257035198, 12);
+    expect(adult).toMatchObject({ status: 'ready', profile: { id: 'walravens2025-male-t-18-29' } });
+    expect(adult.referenceValue).toBe(20.7);
   });
 
   it('Madsen między rocznymi węzłami stosuje PCHIP stężenia, bez zmiany algorytmu na interpolację logarytmiczną', () => {
@@ -232,8 +261,8 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     for (const [age, id] of [
       [3, 'kelsey2014-male-t-childhood'], [5.999999, 'kelsey2014-male-t-childhood'],
       [6, 'madsen2022-male-t'], [6.000001, 'madsen2022-male-t'],
-      [17.999999, 'madsen2022-male-t'], [18, 'kelsey2014-male-t'],
-      [18.000001, 'kelsey2014-male-t'], [88, 'kelsey2014-male-t']
+      [17.999999, 'madsen2022-male-t'], [18, 'walravens2025-male-t-18-29'],
+      [18.000001, 'walravens2025-male-t-18-29'], [86, 'walravens2025-male-t-80-plus']
     ]) {
       expect(engine.selectProfile(data, context('t', age)))
         .toMatchObject({ status: 'ready', profile: { id } });
@@ -241,15 +270,15 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     }
     expect(engine.referenceAt(profile('kelsey2014-male-t-childhood'), 6)).toBeNull();
     expect(engine.referenceAt(profile('madsen2022-male-t'), 5.999999)).toBeNull();
-    expect(engine.referenceAt(profile('kelsey2014-male-t'), 17.999999)).toBeNull();
+    expect(engine.referenceAt(profile('walravens2025-male-t-18-29'), 17.999999)).toBeNull();
     expect(evaluate('t', 2.999999)).toEqual(unavailable('unsupported-age'));
-    expect(evaluate('t', 88.000001)).toEqual(unavailable('unsupported-age'));
+    expect(evaluate('t', 86.000001)).toEqual(unavailable('unsupported-age'));
   });
 
   it('przedział wieku testosteronu nie łączy źródeł na granicach 6 i 18 lat', () => {
     for (const [boundary, earlierId, laterId] of [
       [6, 'kelsey2014-male-t-childhood', 'madsen2022-male-t'],
-      [18, 'madsen2022-male-t', 'kelsey2014-male-t']
+      [18, 'madsen2022-male-t', 'walravens2025-male-t-18-29']
     ]) {
       const age = boundary - .5;
       expect(evaluate('t', age, { ageUpperYears: boundary, ageUpperInclusive: false }))
@@ -334,7 +363,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
 
   it('nie uzupełnia luk dowodowych ani nie ekstrapoluje poza wiek źródła', () => {
     for (const [analyte, age] of [['lh', 6 / 365.25], ['lh', 1], ['lh', 5.99],
-      ['lh', 16.01], ['fsh', 40], ['t', 2.99], ['t', 88.01], ['amh', 20],
+      ['lh', 16.01], ['fsh', 40], ['t', 2.99], ['t', 86.01], ['amh', 20],
       ['amh', 70.01], ['inhb', 80.01], ['insl3', 12]]) {
       expect(evaluate(analyte, age)).toEqual(unavailable('unsupported-age'));
     }

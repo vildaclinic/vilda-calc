@@ -149,15 +149,17 @@ describe('Stable male inhibin B educational display — production builder', () 
 });
 
 describe('Stable male total testosterone educational display — production builder', () => {
-  const testosteroneSources = ['busch2022-male-t', 'kelsey2014-male-t-childhood', 'madsen2022-male-t', 'kelsey2014-male-t'];
+  const pediatricIds = ['busch2022-male-t', 'kelsey2014-male-t-childhood', 'madsen2022-male-t'];
+  const adultIds = ['18-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80-plus']
+    .map(group => `walravens2025-male-t-${group}`);
+  const testosteroneSources = [...pediatricIds, ...adultIds];
   const patient = (ageYears, extras = {}) => ({
     analyte: 't', sex: 'male', preterm: 'no', ageYears,
     measurement: { value: 1, unit: 'nmol/L' }, ...extras
   });
 
-  it('always draws the approved Busch, childhood Kelsey, Madsen and adult Kelsey profiles without qualifying a patient', () => {
-    const unrelated = { ...data, patientContext: patient(6, { preterm: 'yes' }) };
-    const model = display.buildMaleTestosterone(unrelated, {
+  it('retains every approved numerical source without qualifying a patient or making the geometry a reference', () => {
+    const model = display.buildMaleTestosterone({ ...data, patientContext: patient(6, { preterm: 'yes' }) }, {
       ...engine,
       selectProfile() { throw new Error('Display construction must not qualify a patient'); },
       evaluate() { throw new Error('Display construction must not evaluate a result'); }
@@ -167,7 +169,7 @@ describe('Stable male total testosterone educational display — production buil
     expect(model.points[0].ageYears).toBe(-0.75);
     expect(model.points.at(-1).ageYears).toBe(90);
     expect(model.points.every((point, index, points) =>
-      Number.isFinite(point.ageYears) && Number.isFinite(point.value) && point.value > 0 &&
+      Number.isFinite(point.ageYears) && Number.isFinite(point.value) && point.value >= 0 &&
       (!index || point.ageYears > points[index - 1].ageYears))).toBe(true);
     expect(model.id).toBe('t');
     expect(model.unit).toBe('nmol/L');
@@ -175,147 +177,140 @@ describe('Stable male total testosterone educational display — production buil
     for (const property of ['referenceValue', 'classification', 'percentile']) expect(model).not.toHaveProperty(property);
   });
 
-  it('uses one source-based scale for every patient result, age and measurement context', () => {
+  it('keeps the approved fixed Madsen scale when adult means or patient measurements are larger', () => {
     const baseline = display.buildMaleTestosterone(data, engine);
-    const expectedMaximum = Math.max(...testosteroneSources.flatMap(id => source(id).points.map(point => point.value)));
-    expect(baseline.divisor).toBe(expectedMaximum);
     expect(baseline.divisor).toBe(18.051151264084126);
+    expect(baseline.divisor).toBe(source(pediatricIds[2]).points.at(-1).value);
     expect(baseline.ceiling).toBe(1.25);
+    expect(baseline.divisor * baseline.ceiling).toBeCloseTo(22.563939080105158, 12);
+    expect(Math.max(...baseline.points.map(point => point.value))).toBe(20.7);
+    expect(baseline.points.every(point => point.value <= baseline.divisor * baseline.ceiling)).toBe(true);
     for (const context of [
       patient(90 / 365.25, { measurement: { value: 0, unit: 'nmol/L' } }),
       patient(6, { preterm: 'unknown', assayMethodId: 'incompatible' }),
       patient(40, { measurement: { value: 1000, unit: 'ng/dL' } }),
       patient(90, { contraindicated: true, measurement: { value: 1e308, unit: 'nmol/L' } })
-    ]) {
-      expect(display.buildMaleTestosterone({ ...data, patientContext: context }, engine)).toEqual(baseline);
-    }
-    // An unrelated source must not silently change this hormone's scale or
-    // constitute an automatically adopted alternative childhood reference.
+    ]) expect(display.buildMaleTestosterone({ ...data, patientContext: context }, engine)).toEqual(baseline);
     const withAlternative = structuredClone(data);
-    withAlternative.patientPointData.profiles.push({ ...source(testosteroneSources[1]),
+    withAlternative.patientPointData.profiles.push({ ...source(pediatricIds[1]),
       id: 'unapproved-alternative-male-t', points: [{ ageYears: 3, value: 1e6 }, { ageYears: 88, value: 1e6 }] });
     expect(display.buildMaleTestosterone(withAlternative, engine)).toEqual(baseline);
   });
 
-  it('keeps the independently verified infant, childhood and adult source values outside illustrative transitions', () => {
+  it('preserves all readable infant observations and the verified source median peak near day 47', () => {
     const model = display.buildMaleTestosterone(data, engine);
-    for (const [ageYears, expected] of [
-      [90 / 365.25, 4.360537], [6, 0.02393726986868612], [12, 1.4977255724595988],
-      [40, 13.049603876520182], [88, 13.222919801641392]
-    ]) {
-      expect(model.points.find(point => point.ageYears === ageYears)?.value).toBe(expected);
-      expect(engine.evaluate(data, patient(ageYears)).referenceValue).toBe(expected);
-    }
-    for (const profile of model.profiles) {
-      const outsideTransitions = profile.points.filter(point => point.ageYears >= profile.minAge &&
-        (profile.maxAgeExclusive ? point.ageYears < profile.maxAge : point.ageYears <= profile.maxAge) &&
-        !model.transitions.some(transition => point.ageYears > transition.minAge && point.ageYears < transition.maxAge));
-      for (const point of outsideTransitions) {
-        expect(model.points.find(item => item.ageYears === point.ageYears)?.value).toBe(point.value);
-      }
-    }
-  });
-
-  it('uses broad fixed illustrative intervals without forcing the last pediatric source node into a peak', () => {
-    const model = display.buildMaleTestosterone(data, engine);
-    expect(model.transitions).toEqual([
-      { minAge: 150 / 365.25, maxAge: 4, fromSource: testosteroneSources[0], toSource: testosteroneSources[1], kind: 'illustrative-transition' },
-      { minAge: 5, maxAge: 6, fromSource: testosteroneSources[1], toSource: testosteroneSources[2], kind: 'illustrative-transition' },
-      { minAge: 16, maxAge: 25, fromSource: testosteroneSources[2], toSource: testosteroneSources[3], kind: 'illustrative-transition' }
-    ]);
-    for (const transition of model.transitions) {
-      const interior = model.points.filter(point => point.ageYears > transition.minAge && point.ageYears < transition.maxAge);
-      expect(interior).toEqual([]);
-      expect(model.points.find(point => point.ageYears === transition.minAge)?.value)
-        .toBe(engine.referenceAt(source(transition.fromSource), transition.minAge));
-      expect(model.points.find(point => point.ageYears === transition.maxAge)?.value)
-        .toBe(engine.referenceAt(source(transition.toSource), transition.maxAge));
-    }
+    const infant = source(pediatricIds[0]);
+    const readable = infant.points.filter(point => point.eligible !== false);
+    for (const point of readable) expect(model.points.find(item => item.ageYears === point.ageYears)?.value).toBe(point.value);
+    expect(model.points.find(point => point.ageYears === 90 / 365.25)?.value).toBe(4.360537);
     expect(model.points.find(point => point.ageYears === 150 / 365.25)?.value).toBe(0.895098);
-    expect(model.points.find(point => point.ageYears === 4)?.value).toBe(0.39175048713889105);
-    expect(model.points.find(point => point.ageYears === 5)?.value).toBe(0.3719578645019981);
-    expect(model.points.every(point => point.value >= 0 && point.value <= model.divisor)).toBe(true);
-    const infantPoints = model.points.filter(point => point.ageYears >= 0 && point.ageYears < 1);
+    expect(model.points.find(point => point.ageYears === 212 / 365.25)?.value).toBe(0.168563);
+    const infantPoints = model.points.filter(point => point.ageYears > 0 && point.ageYears < 1);
     const peak = infantPoints.reduce((highest, point) => point.value > highest.value ? point : highest);
-    // The age-specific Figure 3 median peaks near day47; day29 concerns
-    // individual longitudinal peaks from Figure 2, a different statistic.
+    // Figure 3 age-specific median peak, not the distinct longitudinal statistic.
     expect(peak.ageYears * 365.25).toBeCloseTo(47, 10);
     expect(peak.value).toBe(6.021286);
-    expect(model.points.some(point => point.ageYears === 1 || point.ageYears === 3 || point.ageYears === 20)).toBe(false);
-    expect(model.points.find(point => point.ageYears === 88)?.value).toBe(13.222919801641392);
-    expect(model.points.find(point => point.ageYears === 90)?.value).toBe(13.222919801641392);
-    expect(model.illustrativeIntervals.at(-1)).toEqual({ minAge: 88, maxAge: 90, kind: 'older-age-tail' });
+    expect(infantPoints.at(-1).ageYears).toBe(212 / 365.25);
   });
 
-  it('retains source tangents at the wider transition boundaries and has no internal tangent override', () => {
+  it('removes the 3–6-year source-switch tooth with one broad childhood connection', () => {
     const model = display.buildMaleTestosterone(data, engine);
-    expect(model.tangentOverrides.map(item => item.ageYears)).toEqual([16, 25]);
-    expect(model.tangentOverrides.some(item => item.ageYears === 18)).toBe(false);
-    for (const tangent of model.tangentOverrides) {
-      expect(tangent.sourceId).toBe(tangent.ageYears === 16 ? testosteroneSources[2] : testosteroneSources[3]);
-      const profile = source(tangent.sourceId);
-      const delta = 0.0001;
-      const independentSlope = (engine.referenceAt(profile, tangent.ageYears + delta) -
-        engine.referenceAt(profile, tangent.ageYears - delta)) / (2 * delta);
-      expect(tangent.slopePerYear).toBeCloseTo(independentSlope, 4);
-    }
-    // Extending the very steep infant source derivative across several years
-    // would overshoot below zero; no such derivative is forced onto this
-    // illustrative connection. It remains independent of patient eligibility.
-    expect(model.tangentOverrides.some(item => item.ageYears <= 6)).toBe(false);
+    expect(model.transitions[0]).toEqual({
+      minAge: 212 / 365.25, maxAge: 6, fromSource: pediatricIds[0],
+      toSource: pediatricIds[2], kind: 'illustrative-childhood'
+    });
+    expect(model.points.filter(point => point.ageYears > 212 / 365.25 && point.ageYears < 6)).toEqual([]);
+    expect(model.points.find(point => point.ageYears === 6)?.value).toBe(0.02393726986868612);
+    expect(model.tangentOverrides).toEqual([]);
+    // Kelsey is retained as a numerical source, without pulling the educational
+    // curve up to that model and down to Madsen at the sixth birthday.
+    expect(engine.evaluate(data, patient(3)).referenceValue).toBe(0.3764139001167295);
+    expect(engine.evaluate(data, patient(5)).referenceValue).toBe(0.3719578645019981);
+    expect(model.profiles.find(profile => profile.id === pediatricIds[1])).toBe(source(pediatricIds[1]));
   });
 
-  it('preserves the Madsen endpoint for source interpolation and scale without making it a display anchor', () => {
+  it('keeps the pediatric observations through the source endpoint while routing age 18 to the adult group', () => {
     const model = display.buildMaleTestosterone(data, engine);
-    const madsen = source(testosteroneSources[2]);
+    const madsen = source(pediatricIds[2]);
+    for (const point of madsen.points) expect(model.points.find(item => item.ageYears === point.ageYears)?.value).toBe(point.value);
+    expect(model.points.find(point => point.ageYears === 12)?.value).toBe(1.4977255724595988);
+    expect(model.points.find(point => point.ageYears === 18)?.value).toBe(18.051151264084126);
     expect(madsen.maxAge).toBe(18);
     expect(madsen.maxAgeExclusive).toBe(true);
-    expect(model.anchors).toEqual([]);
-    expect(model.points.some(point => point.ageYears === 18)).toBe(false);
-    expect(madsen.points.at(-1)).toEqual({ ageYears: 18, value: 18.051151264084126 });
-    expect(model.divisor).toBe(madsen.points.at(-1).value);
     expect(engine.referenceAt(madsen, 18)).toBeNull();
-    const adultReference = engine.evaluate(data, patient(18));
-    expect(adultReference.status).toBe('ready');
-    expect(adultReference.profile.id).toBe(testosteroneSources[3]);
-    expect(adultReference.referenceValue).toBe(15.16389257035194);
-    expect(adultReference.referenceValue).not.toBe(madsen.points.at(-1).value);
+    expect(engine.evaluate(data, patient(18))).toMatchObject({
+      status: 'ready', profile: { id: adultIds[0], statistic: 'group-mean' }, referenceValue: 20.7
+    });
     for (const [ageYears, expected] of [[16, 12.96588173768215], [17, 15.939466800893923], [17.9, 17.87811097018994]]) {
       const reference = engine.evaluate(data, patient(ageYears));
       expect(reference.profile.id).toBe(madsen.id);
       expect(reference.referenceValue).toBeCloseTo(expected, 10);
     }
-    // Full source nodes remain present on both Kelsey routing profiles. The
-    // display must filter by each active domain, not import old pediatric
-    // Kelsey values into the Madsen portion or change source interpolation.
-    expect(source(testosteroneSources[1]).points).toEqual(source(testosteroneSources[3]).points);
-    expect(source(testosteroneSources[1]).points[0].ageYears).toBe(3);
-    expect(source(testosteroneSources[3]).points.at(-1).ageYears).toBe(88);
+    expect(model.transitions[1]).toEqual({
+      minAge: 18, maxAge: 23.8, fromSource: pediatricIds[2],
+      toSource: adultIds[0], kind: 'illustrative-transition'
+    });
+    expect(model.points.some(point => point.ageYears > 18 && point.ageYears < 23.8)).toBe(false);
   });
 
-  it('does not turn the low-resolution infant tail or the 1–3-year display connection into a patient median', () => {
+  it('draws the approved single broad adult arc instead of fitting middle group means', () => {
+    const model = display.buildMaleTestosterone(data, engine);
+    const arc = model.points.filter(point => point.ageYears >= 23.8 && point.ageYears <= 82.1);
+    expect(arc).toHaveLength(601);
+    expect(arc[0]).toEqual({ ageYears: 23.8, value: 20.7 });
+    expect(arc.at(-1)).toEqual({ ageYears: 82.1, value: 15.9 });
+    // Independent approved mockup snapshots at t=.25/.50/.75. These verify the
+    // drawing coordinate, not a new numeric concentration model for these ages.
+    for (const [index, ageYears, value] of [[150, 34.3934375, 19.95], [300, 47.9025, 18.3], [450, 64.173765625, 16.65]]) {
+      expect(arc[index].ageYears).toBeCloseTo(ageYears, 10);
+      expect(arc[index].value).toBeCloseTo(value, 12);
+    }
+    expect(arc.every((point, index) => point.value >= 15.9 && point.value <= 20.7 &&
+      (!index || point.value < arc[index - 1].value))).toBe(true);
+    for (const age of [34.3, 43.5, 55, 65.1, 74.7]) expect(arc.some(point => point.ageYears === age)).toBe(false);
+    expect(model.illustrativeIntervals).toContainEqual({ minAge: 23.8, maxAge: 86, kind: 'illustrative-adult-trend' });
+    // Adult published values stay independent of the educational line.
+    for (const [ageYears, expected] of [[23.8, 20.7], [34.3, 20], [43.5, 18.1], [55, 16.9], [65.1, 17.1], [74.7, 17], [82.1, 15.9]]) {
+      const result = engine.evaluate(data, patient(ageYears));
+      expect(result.profile.statistic).toBe('group-mean');
+      expect(result.referenceValue).toBe(expected);
+    }
+    expect(engine.evaluate(data, patient(44)).referenceValue).toBe(18.1);
+  });
+
+  it('preserves illustrative prenatal proportions and ends the source-supported adult region at age 86', () => {
+    const model = display.buildMaleTestosterone(data, engine);
+    const hormone = data.maleHormones.find(item => item.id === 't');
+    data.maleAges.forEach((ageYears, index) => {
+      if (ageYears <= 0) expect(model.points.find(point => point.ageYears === ageYears)?.value).toBe(hormone.values[index] * model.divisor);
+    });
+    expect(model.illustrativeIntervals[0]).toEqual({ minAge: -0.75, maxAge: 7 / 365.25, kind: 'prenatal-lead' });
+    expect(model.points.find(point => point.ageYears === 86)?.value).toBe(15.9);
+    expect(model.points.find(point => point.ageYears === 90)?.value).toBe(15.9);
+    expect(model.illustrativeIntervals.at(-1)).toEqual({ minAge: 86, maxAge: 90, kind: 'older-age-tail' });
+    expect(engine.evaluate(data, patient(86)).referenceValue).toBe(15.9);
+    for (const ageYears of [86.01, 88, 90]) {
+      expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
+    }
+  });
+
+  it('does not turn unreadable infant or unsupported childhood display intervals into patient references', () => {
     const model = display.buildMaleTestosterone(data, engine);
     expect(model).not.toBeNull();
-    const infant = source(testosteroneSources[0]);
+    const infant = source(pediatricIds[0]);
     const firstIneligibleAge = 213 / 365.25;
     expect(infant.points.find(point => point.ageYears === firstIneligibleAge)?.eligible).toBe(false);
-    // This is a graphical reliability gate, not the assay LOQ of 0.012.
     expect(engine.referenceAt(infant, firstIneligibleAge)).toBe(0.164593);
     expect(engine.evaluate(data, patient(212 / 365.25)).referenceValue).toBe(0.168563);
     expect(engine.evaluate(data, patient(firstIneligibleAge))).toEqual({ status: 'unavailable', reason: 'reference-unavailable' });
     for (const ageYears of [1, 1.5, 2, 2.999]) {
       expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
     }
-    expect(engine.evaluate(data, patient(3)).referenceValue).toBe(0.3764139001167295);
-    expect(engine.evaluate(data, patient(88)).status).toBe('ready');
-    for (const ageYears of [88.01, 90]) {
-      expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
-    }
-    const straddling = patient(212 / 365.25, { ageUpperYears: 213 / 365.25 });
-    expect(engine.evaluate(data, straddling)).toEqual({ status: 'unavailable', reason: 'reference-unavailable' });
+    expect(engine.evaluate(data, patient(212 / 365.25, { ageUpperYears: 213 / 365.25 })))
+      .toEqual({ status: 'unavailable', reason: 'reference-unavailable' });
   });
 
-  it('leaves premature birth, method, specimen, censored results and treatment gates in the independent reference engine', () => {
+  it('leaves birth, method, specimen, censored-result and treatment gates in the independent reference engine', () => {
     const model = display.buildMaleTestosterone(data, engine);
     for (const [extras, reason] of [
       [{ preterm: 'yes' }, 'preterm-context'],
@@ -331,7 +326,7 @@ describe('Stable male total testosterone educational display — production buil
     }
   });
 
-  it('does not mutate frozen data or alter the established inhibin B display', () => {
+  it('does not mutate frozen numerical data or alter the established inhibin B display', () => {
     const input = freeze(structuredClone(data));
     const before = JSON.stringify(input);
     const inhibinBefore = display.buildMaleInhibin(input, engine);
@@ -342,11 +337,10 @@ describe('Stable male total testosterone educational display — production buil
     expect(model.transitions).not.toBe(input.testosteroneDisplayPolicy.transitions);
     expect(model.anchors).not.toBe(input.testosteroneDisplayPolicy.anchors);
     expect(display.buildMaleInhibin(input, engine)).toEqual(inhibinBefore);
-    const withoutTestosteronePolicy = { ...input, testosteroneDisplayPolicy: null };
-    expect(display.buildMaleInhibin(withoutTestosteronePolicy, engine)).toEqual(inhibinBefore);
+    expect(display.buildMaleInhibin({ ...input, testosteroneDisplayPolicy: null }, engine)).toEqual(inhibinBefore);
   });
 
-  it('fails closed when required source data, policy or source evaluators are missing', () => {
+  it('fails closed when required evidence, policy or evaluators are missing', () => {
     expect(display.buildMaleTestosterone(null, engine)).toBeNull();
     expect(display.buildMaleTestosterone(data, null)).toBeNull();
     expect(display.buildMaleTestosterone({ ...data, testosteroneDisplayPolicy: null }, engine)).toBeNull();
@@ -361,51 +355,51 @@ describe('Stable male total testosterone educational display — production buil
     }
   });
 
-  it('rejects malformed clinical source metadata, nonfinite measurements and inconsistent display policy', () => {
+  it('rejects malformed clinical metadata, measurements and policy instead of drawing partial evidence', () => {
     const cases = [
       ['wrong policy unit', input => { input.testosteroneDisplayPolicy.unit = 'ng/dL'; }],
       ['wrong analyte', input => { input.testosteroneDisplayPolicy.analyte = 'inhb'; }],
       ['clinical policy kind', input => { input.testosteroneDisplayPolicy.kind = 'clinical-reference'; }],
       ['invalid scale', input => { input.testosteroneDisplayPolicy.scale.headroomFactor = Infinity; }],
+      ['dynamic scale', input => { input.testosteroneDisplayPolicy.scale.patientValueMayChangeScale = true; }],
+      ['unpublished scale anchor', input => { input.testosteroneDisplayPolicy.scale.ageYears = 17.5; }],
       ['missing anchors', input => { delete input.testosteroneDisplayPolicy.anchors; }],
       ['nonarray anchors', input => { input.testosteroneDisplayPolicy.anchors = {}; }],
-      ['unknown anchor source', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: 'unknown', ageYears: 18 }]; }],
-      ['unpublished anchor', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 17.5 }]; }],
-      ['anchor outside transition', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 16 }]; }],
-      ['anchor outside source domain', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 19 }]; }],
-      ['duplicate anchor', input => { input.testosteroneDisplayPolicy.anchors = Array.from({ length: 2 }, () => ({ sourceId: testosteroneSources[2], ageYears: 18 })); }],
-      ['overlapping active profiles', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[1]).maxAge = 7;
+      ['unapproved extra anchor', input => { input.testosteroneDisplayPolicy.anchors = [{ sourceId: 'unknown', ageYears: 18 }]; }],
+      ['missing sampling policy', input => { delete input.testosteroneDisplayPolicy.sampling; }],
+      ['invalid sampling resolution', input => { input.testosteroneDisplayPolicy.sampling.denseStepYears = 0; }],
+      ['invalid sampling domain', input => { input.testosteroneDisplayPolicy.sampling.denseStartAge = 19; }],
+      ['fractional samples', input => { input.testosteroneDisplayPolicy.adultTrend.sampleCount = 600.5; }],
+      ['nonfinite handle', input => { input.testosteroneDisplayPolicy.adultTrend.startHandle = Infinity; }],
+      ['crossed handles', input => { input.testosteroneDisplayPolicy.adultTrend.startHandle = 0.8; }],
+      ['unknown endpoint source', input => { input.testosteroneDisplayPolicy.adultTrend.endSourceId = 'unknown'; }],
+      ['invalid canonical coordinate', input => { input.testosteroneDisplayPolicy.adultTrend.coordinate = 'age'; }],
+      ['overlapping active profiles', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[1]).maxAge = 7; }],
+      ['ambiguous source boundary', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[2]).maxAgeExclusive = false; }],
+      ['reversed transition', input => { input.testosteroneDisplayPolicy.transitions[0].maxAge = 0.5; }],
+      ['unknown transition source', input => { input.testosteroneDisplayPolicy.transitions[0].fromSource = 'unknown'; }],
+      ['incorrect prenatal lead', input => { input.testosteroneDisplayPolicy.schematic.prenatalLastAnchorAge = 1; }],
+      ['shortened tail', input => { input.testosteroneDisplayPolicy.schematic.tailMaxAge = 85; }],
+      ['axis overlap', input => { input.maleStages[4].min = 19; }],
+      ['invalid axis width', input => { input.maleStages[4].width = -0.1; }],
+      ['wrong source population', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[0]).sex = 'female'; }],
+      ['missing source record', input => {
+        const index = input.patientPointData.profiles.findIndex(p => p.id === pediatricIds[0]);
+        input.patientPointData.profiles[index] = null;
       }],
-      ['ambiguous source boundary', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[2]).maxAgeExclusive = false;
+      ['wrong source unit', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[0]).unit = 'pg/mL'; }],
+      ['nonfinite source value', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[0]).points[0].value = NaN; }],
+      ['unreadable first source endpoint', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[0]).points[0].eligible = false; }],
+      ['unreadable infant join', input => {
+        input.patientPointData.profiles.find(p => p.id === pediatricIds[0]).points.find(p => p.ageYears === 212 / 365.25).eligible = false;
       }],
-      ['reversed transition', input => {
-        const transition = input.testosteroneDisplayPolicy.transitions[0];
-        transition.maxAge = transition.minAge - 1;
-      }],
-      ['wrong source population', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[0]).sex = 'female';
-      }],
-      ['wrong source unit', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[0]).unit = 'pg/mL';
-      }],
-      ['nonfinite source value', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[0]).points[0].value = NaN;
-      }],
-      ['unreadable first source endpoint', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[0]).points[0].eligible = false;
-      }],
-      ['unreadable transition endpoint', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[0]).points
-          .find(point => point.ageYears === 150 / 365.25).eligible = false;
-      }],
-      ['unreadable last source endpoint', input => {
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[3]).points.at(-1).eligible = false;
-      }],
-      ['unreadable internal source anchor', input => {
-        input.testosteroneDisplayPolicy.anchors = [{ sourceId: testosteroneSources[2], ageYears: 18 }];
-        input.patientPointData.profiles.find(profile => profile.id === testosteroneSources[2]).points.at(-1).eligible = false;
+      ['unreadable pediatric anchor', input => { input.patientPointData.profiles.find(p => p.id === pediatricIds[2]).points.at(-1).eligible = false; }],
+      ['unreadable adult endpoint', input => { input.patientPointData.profiles.find(p => p.id === adultIds.at(-1)).points.at(-1).eligible = false; }],
+      ['incorrect adult statistic', input => { input.patientPointData.profiles.find(p => p.id === adultIds[2]).statistic = 'median'; }],
+      ['unpublished adult within-group trend', input => { input.patientPointData.profiles.find(p => p.id === adultIds[2]).points.at(-1).value = 18.2; }],
+      ['invalid mean age', input => { input.patientPointData.profiles.find(p => p.id === adultIds[0]).meanAge = 31; }],
+      ['clipped numerical adult anchor', input => {
+        input.patientPointData.profiles.find(p => p.id === adultIds[0]).points.forEach(p => { p.value = 100; });
       }]
     ];
     for (const [label, mutate] of cases) {
