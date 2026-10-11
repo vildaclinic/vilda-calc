@@ -115,7 +115,7 @@ Zmiana tej polityki wymaga jawnego zakresu zadania i osobnej weryfikacji.
   na niezmienionych kotwicach. Usunięto ponowne dopasowanie 97 próbek
   i wtórny B-spline dla każdego zbliżenia. Porównanie płci zachowuje
   dotychczasowy sposób rysowania; inhibina B własną ciągłą krzywą.
-  Zwykłe LH, FSH i AMH otrzymały następnie osobne polityki opisane poniżej.
+  Zwykłe LH, FSH, AMH i INSL3 otrzymały następnie osobne polityki opisane poniżej.
 
 ## Utrwalony przykład: męskie AMH, makieta zatwierdzona 11 października 2026
 
@@ -167,6 +167,36 @@ w historycznym przykładzie testosteronu powyżej dotyczy stanu sprzed tej zmian
 - Podpis porównania LH/FSH wyjaśnia osobne skale. Przecięcie linii nie
   przedstawia równości stężeń ani ilorazu LH/FSH. Makieta może włączać oba
   hormony dla recenzenta; aplikacja nadal zaczyna od bieżącego analitu.
+
+## Utrwalony przykład: INSL3, poprawiona makieta zatwierdzona 11 października 2026
+
+- Zachowaj przerywaną tożsamość linii (`6 5`) oraz `insl3-display-policy.json`
+  i `buildMaleInsl3(data)`. Jedna krzywa ma tę samą względną skalę
+  (`divisor = 1`, `ceiling = 1`) w zwykłych widokach i pełnym ekranie.
+  Powiększenie minipuberty nie normalizuje jej do własnego maksimum.
+- Mała fala pierwszego miesiąca ma oparcie w modelowanej średniej
+  trajektorii z ryc. 2 Busch 2022. Normalizacja dotyczy maksimum każdego
+  hormonu, nie dorosłego INSL3 ani osobno każdego uczestnika. Ryc. 3
+  przedstawia medianę GAMLSS tej samej kohorty; jej spadek nie uprawnia
+  do usunięcia wczesnego wzrostu z ilustracji fizjologii.
+- Kotwice rysunku: urodzenie 0,109158, około 27. dnia 0,14, pierwszy
+  rok 0,012, młoda dorosłość 0,87. To współrzędne bez jednostki.
+  Nie przypisuj im stężeń ani zwalidowanego ilorazu niemowlę/dorosły.
+  Wspólna pozioma styczna przy urodzeniu zapobiega sztucznemu dołkowi;
+  nie dowodzi dokładnego dnia biologicznego minimum.
+- Łagodny łuk dorosłości dochodzi w wieku 80 lat do 0,455; do 90 lat
+  utrzymuje i wygasza tę wysokość. To zakończenie ilustracyjne,
+  nie ekstrapolacja normy ani dowód plateau. Nie łącz liczbowo LC-MS/MS,
+  TRFIA i średnich różnych kohort tak, by tworzyły nowe zdarzenia hormonalne.
+- Mediana poniżej LOQ ogranicza pewność liczbową, ale sama nie dowodzi
+  braku biologicznej fali i nie unieważnia każdej estymacji populacyjnej.
+  Nie aktywuj punktu pacjenta, stężeń w tooltipach ani norm INSL3 z tej
+  polityki. Zachowaj oddzielnie liczbowe profile pozostałych hormonów.
+- Tulumcu 2025 zawiera własne dane późnego pokwitania i dorosłości;
+  opis niemowlęctwa cytuje Busch. Nie licz tego jako kolejnej kohorty
+  niemowląt ani jako dowodu dokładnego uniwersalnego szczytu w 22. roku.
+  Odczyty, DOI i dostępność źródeł zachowuje
+  [audyt INSL3](hormone-lifespan/evidence/insl3-lifespan-display-audit-2026-10-11.json).
 
 ## Co sprawdzić przed oddaniem zmiany
 

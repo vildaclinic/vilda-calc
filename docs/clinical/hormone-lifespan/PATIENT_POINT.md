@@ -55,14 +55,40 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
 
-INSL3 pozostaje zadaniem przyszłego kalkulatora. Zachowane wartości
-niemowlęce z Busch nie uruchamiają nowego analitu. Dorosłe LH/FSH opisuje
+INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
+11 października 2026 przerywana linia ma osobną względną politykę
+`insl3-display-policy.json`; jej wysokości nie mają jednostki stężenia.
+Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
+nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec i niepokryte
 fragmenty osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
+
+### INSL3: ilustracja bez liczbowego odniesienia — 11 października 2026
+
+Mały wzrost do około 27. dnia korzysta jakościowo z modelowanej średniej
+trajektorii podłużnej Busch, ryc. 2, znormalizowanej do własnego
+niemowlęcego maksimum hormonu. Mediana GAMLSS z ryc. 3 jest inną
+statystyką tej samej kohorty. Żadna z tych figur nie kalibruje wysokości
+rysunku 0,14 względem dorosłej 0,87. Nie wolno użyć tych współrzędnych
+jako mianownika wyniku pacjenta lub przesunąć wyniku na przerywaną linię.
+
+Odczyty ryc. 3 w µg/L są już po transformacji odwrotnej. Busch podaje
+LOD 0,03; jednostka µg/mL w Methods jest niespójna z ryciną i tabelą S1.
+LOQ 0,15 µg/L pochodzi z cytowanego opisu metody Albrethsen, nie z jawnego
+progu INSL3 w artykule niemowlęcym. Te ograniczenia, imputacja wyników
+poniżej LOD jako LOD/2 i brak współczynników autora ograniczają dokładność
+liczbowego odniesienia. Mediana modelu poniżej LOQ nie dowodzi braku
+biologicznej fali ani automatycznej nieważności estymacji populacyjnej.
+
+Połączenia płodowe, dziecięce i dorosłe oraz wygaszony koniec 80–90 lat
+nie uzupełniają brakujących profili. Nie zmieniono norm laboratoryjnych,
+werdyktów ani liczbowych odniesień innych hormonów. DOI, populacje,
+rodzaje statystyk i dostępność źródeł podaje
+[audyt INSL3](evidence/insl3-lifespan-display-audit-2026-10-11.json).
 
 ### Dorosłe LH/FSH i stała ilustracja — 11 października 2026
 
@@ -334,8 +360,9 @@ rozdzielczości grafiki, nie przedział ufności modelu, norma, warunek autora
 ani próg rozpoznania. Nie podnosimy surowych median do sztucznej wartości
 minimalnej. W zapisanym odczycie ostatnie całe dni kwalifikujące punkt to
 243 dla LH i 212 dla testosteronu; FSH, AMH i inhibina B zachowują punkt
-do końca aktywnego okresu niemowlęcego. INSL3 miałby dodatkowo problem
-jednostki między tekstem a ryciną i nie jest nowym kalkulatorem.
+do końca aktywnego okresu niemowlęcego. INSL3 nie jest aktywnym kalkulatorem;
+jego odrębne ograniczenia omówiono wyżej. Heurystyka rozdzielczości grafiki
+nie jest dowodem nieobecności wczesnej fali fizjologicznej.
 
 Wang: źródło oznacza grupy wieku liczbami 0–14, a na ryc. 1 ich środki
 znajdują się w przybliżeniu przy N+0,5 roku. Nie opisuje dokładnej reguły

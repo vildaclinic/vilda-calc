@@ -31062,6 +31062,287 @@ const amhDisplayPolicy = {
     "Ordinary male views only. Sex comparison retains its existing separate display policy."
   ]
 };
+const insl3DisplayPolicy = {
+  "version": "2026-10-11.1",
+  "kind": "educational-display-only",
+  "analyte": "insl3",
+  "sex": "male",
+  "unit": null,
+  "coordinate": "canonical-whole-life-display-x",
+  "patientPointAvailable": false,
+  "numericTooltipsAvailable": false,
+  "sourceProfileIds": [],
+  "scale": {
+    "basis": "fixed-relative-illustration",
+    "divisor": 1,
+    "headroomFactor": 1,
+    "patientValueMayChangeScale": false
+  },
+  "provenance": {
+    "approvedPreviewSha256": "80fe0ec943d39a5e1b165c04fc86b927e13a7824887797e00ad93c9cb935c951",
+    "approvedComparisonSha256": "26b602aa3ed97752ae8823c8f36e7369c1a8c4ec236553f6faa95ec087a0d27e",
+    "approvedPointCount": 5186,
+    "meaning": "Relative drawing controls, not source concentrations, a reference interval, or a fitted population median."
+  },
+  "presentation": {
+    "hormoneCopy": "Niewielki wzrost INSL3 w pierwszych tygodniach, potem spadek. Kolejny wyraźny wzrost następuje w pokwitaniu.",
+    "infantCopy": "Niewielki wzrost w pierwszych tygodniach, potem spadek. Poziom pozostaje znacznie niższy niż po pokwitaniu.",
+    "caption": "Poglądowy przebieg INSL3. Hormony mają odrębne skale.",
+    "dash": "6 5"
+  },
+  "prenatal": {
+    "kind": "inherited-relative-schematic",
+    "anchors": [
+      {
+        "ageYears": -0.75,
+        "relative": 0.014
+      },
+      {
+        "ageYears": -0.6,
+        "relative": 0.18
+      },
+      {
+        "ageYears": -0.48,
+        "relative": 0.59
+      },
+      {
+        "ageYears": -0.32,
+        "relative": 0.72
+      },
+      {
+        "ageYears": -0.13,
+        "relative": 0.53
+      },
+      {
+        "ageYears": 0,
+        "relative": 0.05
+      }
+    ],
+    "sampleFromAge": -0.75,
+    "sampleToAge": -0.13,
+    "sampleCount": 401,
+    "lastAnchorIsTangentSupportOnly": true
+  },
+  "birthBridge": {
+    "kind": "illustrative-bridge",
+    "fromAge": -0.13,
+    "toAge": 0,
+    "x": [
+      0.11573333333333334,
+      0.12382222222222224,
+      0.13191111111111112,
+      0.14
+    ],
+    "y": [
+      0.53,
+      0.4582662905530114,
+      0.109158,
+      0.109158
+    ],
+    "sampleCount": 321
+  },
+  "infancy": {
+    "kind": "relative-educational-rise-and-fall",
+    "source": "Busch 2022, Figure 2: normalized modeled mean longitudinal trajectory",
+    "doi": "10.1210/clinem/dgac115",
+    "peakAgeDays": 27,
+    "peakRelative": 0.14,
+    "orientationControls": [
+      {
+        "ageDays": 0,
+        "relativeToInfantPeak": 0.7797
+      },
+      {
+        "ageDays": 7,
+        "relativeToInfantPeak": 0.8793
+      },
+      {
+        "ageDays": 14,
+        "relativeToInfantPeak": 0.9502
+      },
+      {
+        "ageDays": 27,
+        "relativeToInfantPeak": 1
+      },
+      {
+        "ageDays": 50,
+        "relativeToInfantPeak": 0.895
+      },
+      {
+        "ageDays": 100,
+        "relativeToInfantPeak": 0.4048
+      },
+      {
+        "ageDays": 200,
+        "relativeToInfantPeak": 0.1811
+      }
+    ],
+    "anchors": [
+      {
+        "ageYears": 0,
+        "relative": 0.109158
+      },
+      {
+        "ageYears": 0.019164955509924708,
+        "relative": 0.123102
+      },
+      {
+        "ageYears": 0.038329911019849415,
+        "relative": 0.133028
+      },
+      {
+        "ageYears": 0.07392197125256673,
+        "relative": 0.14
+      },
+      {
+        "ageYears": 0.13689253935660506,
+        "relative": 0.12530000000000002
+      },
+      {
+        "ageYears": 0.2737850787132101,
+        "relative": 0.05667200000000001
+      },
+      {
+        "ageYears": 0.5475701574264202,
+        "relative": 0.025354000000000005
+      },
+      {
+        "ageYears": 1,
+        "relative": 0.01199999872493842
+      }
+    ],
+    "sampleFromAge": 0,
+    "sampleToAge": 1,
+    "sampleCount": 2001,
+    "tangentOverrides": [
+      {
+        "ageYears": 0,
+        "slope": 0
+      },
+      {
+        "ageYears": 1,
+        "slope": -0.04001461342645489
+      }
+    ],
+    "includeAnchors": true,
+    "meaning": "The peak height is authored geometry. The source-normalized infant shape does not establish an infant/adult concentration ratio. The decline after day200 bridges to the approved childhood drawing."
+  },
+  "childhoodPuberty": {
+    "kind": "inherited-approved-illustrative-spline",
+    "anchors": [
+      {
+        "ageYears": 1,
+        "relative": 0.012
+      },
+      {
+        "ageYears": 3,
+        "relative": 0.011
+      },
+      {
+        "ageYears": 6,
+        "relative": 0.011
+      },
+      {
+        "ageYears": 10,
+        "relative": 0.039
+      },
+      {
+        "ageYears": 12,
+        "relative": 0.14
+      },
+      {
+        "ageYears": 14,
+        "relative": 0.45
+      },
+      {
+        "ageYears": 17,
+        "relative": 0.77
+      },
+      {
+        "ageYears": 25,
+        "relative": 0.87
+      }
+    ],
+    "tangentOverrides": [
+      {
+        "ageYears": 1,
+        "slope": -0.040000735240055894
+      },
+      {
+        "ageYears": 25,
+        "slope": 0
+      }
+    ],
+    "sampleGridFromAge": 0,
+    "sampleGridToAge": 25,
+    "sampleCount": 1801,
+    "keepAfterAge": 1,
+    "meaning": "Canonical sample grid and end tangents preserve the approved post-infancy geometry. Ages do not assign Tanner stages."
+  },
+  "adult": {
+    "kind": "single-monotonic-cubic-bezier",
+    "fromAge": 25,
+    "toAge": 80,
+    "x": [
+      0.70125,
+      0.7584625,
+      0.9126875000000001,
+      0.9500000000000001
+    ],
+    "y": [
+      0.87,
+      0.87,
+      0.455,
+      0.455
+    ],
+    "sampleCount": 1201,
+    "meaning": "A broad illustrative decline, not a model fitted through every age-group median."
+  },
+  "olderAge": {
+    "kind": "older-age-tail",
+    "minAge": 80,
+    "maxAge": 90,
+    "relative": 0.455,
+    "sampleCount": 101,
+    "policy": "hold-terminal-height-and-fade",
+    "meaning": "80 years is a conservative graphic cutoff, not the exact upper age of EMAS. No further physiological decline or plateau is inferred."
+  },
+  "sources": [
+    {
+      "doi": "10.1210/clinem/dgac115",
+      "role": "Modeled longitudinal infant shape, distinct from the GAMLSS median in Figure3."
+    },
+    {
+      "doi": "10.1210/jc.2007-0974",
+      "role": "Infant group summaries; cannot locate the exact 1-month peak."
+    },
+    {
+      "doi": "10.1210/jc.2004-2257",
+      "role": "Adult central concentrations; no new patient reference or calibrated ratio."
+    },
+    {
+      "doi": "10.1210/clinem/dgaa496",
+      "role": "Pubertal rise; no Tanner-to-age mapping."
+    },
+    {
+      "doi": "10.1210/clinem/dgaa145",
+      "role": "Adult assay and physiology context."
+    },
+    {
+      "doi": "10.1111/andr.13220",
+      "role": "Adult age-group trend orientation."
+    },
+    {
+      "doi": "10.3389/fendo.2019.00596",
+      "role": "Qualitative fetal physiology; prenatal drawing heights are schematic."
+    }
+  ],
+  "limitations": [
+    "Mixed LC-MS/MS and immunoassay results are not harmonized by this drawing.",
+    "Low measured levels limit numerical certainty but do not establish the absence of a biological early rise.",
+    "No numerical INSL3 patient point, percentile, reference interval, laboratory classification or new calculator."
+  ]
+};
 return {
   version: lifespanData.version,
   maleAges: maleAges,
@@ -31074,6 +31355,7 @@ return {
   inhibinDisplayPolicy: inhibinDisplayPolicy,
   testosteroneDisplayPolicy: testosteroneDisplayPolicy,
   lhFshDisplayPolicy: lhFshDisplayPolicy,
-  amhDisplayPolicy: amhDisplayPolicy
+  amhDisplayPolicy: amhDisplayPolicy,
+  insl3DisplayPolicy: insl3DisplayPolicy
 };
 });

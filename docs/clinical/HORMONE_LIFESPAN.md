@@ -70,6 +70,12 @@ ze stałą linią, szerokim maksimum niemowlęcym, opadającym dzieciństwem
 i płynnym spadkiem pokwitaniowym. Poniższa polityka AMH zmienia
 prezentację edukacyjną, zachowując 15 istniejących profili liczbowych.
 
+Tego samego dnia właściciel zaakceptował poprawioną makietę INSL3:
+niewielką falę w pierwszym miesiącu, niski poziom dzieciństwa, szeroki
+wzrost pokwitaniowy i łagodny spadek dorosłości. Zatwierdzona wersja
+zastępuje wcześniejszą propozycję niemal płaskiego przebiegu niemowlęcego.
+INSL3 pozostaje przerywaną ilustracją bez liczbowego punktu pacjenta.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -264,6 +270,61 @@ wszystkie 15 profili, bramkę donoszenia oraz luki: przed 7. dniem,
 norm ani interpretacji. Osobne porównanie płci zachowuje wcześniejszą
 geometrię i zasady skalowania.
 
+### Stała przerywana linia męskiego INSL3
+
+`buildMaleInsl3(data)` korzysta z osobnej polityki
+[`insl3-display-policy.json`](hormone-lifespan/insl3-display-policy.json).
+Jedna krzywa w kanonicznym X osi całego życia zachowuje własną stałą
+skalę względną (`divisor = 1`, `ceiling = 1`) w widokach całego życia,
+minipuberty, pokwitania i pełnego ekranu. Wybór innych hormonów,
+wiek i wynik pacjenta nie zmieniają jej skali. Przerywany styl `6 5`
+identyfikuje INSL3; nie oznacza przerwy w danych ani nowej normy.
+
+[Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 2, pokazuje
+modelowaną średnią trajektorię podłużną, znormalizowaną do własnego
+niemowlęcego maksimum każdego hormonu. Dla INSL3 wzrost od urodzenia
+do około 27. dnia jest niewielki: od około 0,78 do 1 tej skali źródłowej.
+Ryc. 3 przedstawia odrębną medianę GAMLSS tej samej kohorty, bez krwi
+pępowinowej w dopasowaniu. Jej malejący przebieg nie wyklucza wczesnej
+fali modelu podłużnego. Odczyty ryc. 3 są już po transformacji odwrotnej,
+w µg/L; nie należy ich ponownie podnosić do kwadratu.
+
+Zatwierdzone wysokości techniczne to 0,109158 przy urodzeniu i 0,14
+około 27. dnia; później linia opada, przechodząc od 200. dnia łagodnie
+do 0,012 w pierwszym roku. Wysokość 0,14 jest decyzją graficzną.
+Jej stosunek do dorosłego maksimum 0,87 **nie jest zweryfikowanym
+ilorazem stężeń**. [Bay 2007](https://doi.org/10.1210/jc.2007-0974)
+i [Bay 2005](https://doi.org/10.1210/jc.2004-2257) wspierają niższe
+centralne stężenia niemowlęce niż dorosłe, lecz pobranie około trzeciego
+miesiąca nie określa wysokości szczytu pierwszego miesiąca. Nie mieszamy
+median, średnich ani maksimów obserwowanych u pojedynczych osób.
+
+Przy urodzeniu wspólna pozioma styczna łączy schemat płodowy z małym
+wzrostem postnatalnym, bez dodatkowego dołka lub przeregulowania.
+To połączenie graficzne, nie dowód dokładnego biologicznego minimum
+w dniu urodzenia. Dzieciństwo pozostaje niskie, wzrost pokwitaniowy
+przechodzi w szeroki wysoki obszar młodej dorosłości. Jeden łuk 25–80 lat
+prowadzi od 0,87 do 0,455; od 80 do 90 lat ta wysokość wygasa. Granica
+80 lat jest konserwatywną polityką prezentacji, nie dokładnym końcem
+obserwacji EMAS ani twierdzeniem o biologicznym plateau.
+
+[Tulumcu 2025](https://doi.org/10.3389/fendo.2025.1574760), sprawdzony
+także w dostarczonym pełnym PDF, zawiera własne dane ALSPAC z wizyt około
+17. i 24. roku. Opis małej fali postnatalnej cytuje Busch, a ryc. 1B
+zestawia średnie kilku badań od późnego dzieciństwa. Nie dodaje niezależnych
+pomiarów niemowląt, wspólnej mediany całego życia ani uniwersalnego szczytu
+dokładnie w 22. roku. [EMAS 2022](https://doi.org/10.1111/andr.13220)
+i [FAMAS 2006](https://doi.org/10.1111/j.1365-2605.2006.00714.x)
+uzasadniają kierunek późniejszego spadku, bez kalibracji LC-MS/MS i TRFIA.
+
+Brak liczbowych tooltipów stężenia, profilu odniesienia i punktu pacjenta
+dla INSL3. Niskie odczyty i ograniczenia oznaczenia zmniejszają pewność
+dokładnych liczb; wynik mediany poniżej LOQ nie dowodzi braku biologicznej
+fali ani nie unieważnia automatycznie estymacji populacyjnej. Normy
+laboratoryjne i liczbowe profile innych hormonów pozostają odrębne.
+Źródła, dostępność pełnych tekstów i ograniczenia zapisano w
+[`insl3-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/insl3-lifespan-display-audit-2026-10-11.json).
+
 ## Wybór i interakcje
 
 - Domyślnie wybrany jest tylko bieżący analit przelicznika. Pozostałe
@@ -438,11 +499,12 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
 pacjenta**. Zwykłe męskie widoki LH, FSH, AMH, inhibiny B i testosteronu
-całkowitego zastępują obecnie stałe krzywe opisane powyżej. INSL3
-zachowuje kotwice schematu, ale od 11 października 2026 korzysta
-z jednej kanonicznej krzywej PCHIP: zbliżenia próbkują ją, zamiast
-ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowuje skalę,
-kierunek zmian i szczyty, z niewielkim błędem ponownego próbkowania.
+całkowitego oraz przerywaną ilustrację INSL3 zastępują obecnie stałe
+krzywe opisane powyżej. INSL3 ma własną zatwierdzoną politykę geometrii,
+bez przeliczania jej wysokości na stężenie. Zbliżenia próbkują jedną
+kanoniczną krzywą, zamiast ponownie dopasowywać 97 punktów i wtórny
+B-spline. Zachowują skalę, kierunek zmian i szczyty, z niewielkim błędem
+ponownego próbkowania.
 Porównanie płci zachowuje wcześniejszą interpolację i własną politykę.
 Oddzielne liczbowe źródła punktu wyniku znajdują się w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Obecność schematu
@@ -517,7 +579,7 @@ node --check vilda_hormone_lifespan_data.js
 `window.VildaHormoneLifespanData` / `module.exports` z polami
 `version`, `maleAges`, `maleHormones`, `maleStages`, `referenceData`,
 `lifespanData`, `patientPointData`, `inhibinEvidence`, `inhibinDisplayPolicy`,
-`testosteroneDisplayPolicy`.
+`testosteroneDisplayPolicy` oraz `insl3DisplayPolicy`.
 Przeglądarka nie potrzebuje Pythona, źródłowych JSON,
 sieci ani bibliotek wykresów. Historyczne wzmianki „mock” w metadanych
 pochodzą z zatwierdzonego zbioru; nie rozszerzają jego zastosowania.

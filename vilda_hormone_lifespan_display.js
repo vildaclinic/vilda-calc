@@ -722,6 +722,172 @@
     };
   }
 
+  function maleInsl3Illustration(data) {
+    var policy = data && data.insl3DisplayPolicy;
+    var stages = data && data.maleStages;
+    if (!policy || policy.kind !== 'educational-display-only' || policy.analyte !== 'insl3' ||
+        policy.sex !== 'male' || policy.unit !== null ||
+        policy.coordinate !== 'canonical-whole-life-display-x' || policy.patientPointAvailable !== false ||
+        policy.numericTooltipsAvailable !== false || !Array.isArray(policy.sourceProfileIds) ||
+        !policy.presentation || typeof policy.presentation.hormoneCopy !== 'string' ||
+        !policy.presentation.hormoneCopy.trim() ||
+        policy.sourceProfileIds.length || !policy.scale || policy.scale.basis !== 'fixed-relative-illustration' ||
+        policy.scale.divisor !== 1 || policy.scale.headroomFactor !== 1 ||
+        policy.scale.patientValueMayChangeScale !== false || !Array.isArray(stages) || !stages.length ||
+        stages.some(function (stage, index) {
+          return !stage || !finite(stage.min) || !finite(stage.max) || stage.min >= stage.max ||
+            !finite(stage.width) || stage.width <= 0 || (index && stage.min !== stages[index - 1].max);
+        }) || Math.abs(stages.reduce(function (sum, stage) { return sum + stage.width; }, 0) - 1) > 1e-10) return null;
+    var prenatal = policy.prenatal, birth = policy.birthBridge, infant = policy.infancy;
+    var childhood = policy.childhoodPuberty, adult = policy.adult, tail = policy.olderAge;
+    function count(value) { return Number.isInteger(value) && value >= 2 && value <= 4001; }
+    function nodesValid(nodes) {
+      return Array.isArray(nodes) && nodes.length >= 2 && nodes.every(function (node, index) {
+        return node && finite(node.ageYears) && node.ageYears >= stages[0].min &&
+          node.ageYears <= stages[stages.length - 1].max && finite(node.relative) &&
+          node.relative >= 0 && node.relative <= 1 && (!index || node.ageYears > nodes[index - 1].ageYears);
+      });
+    }
+    function overridesValid(overrides, nodes) {
+      return Array.isArray(overrides) && overrides.every(function (override) {
+        return override && finite(override.slope) && nodes.some(function (node) { return node.ageYears === override.ageYears; });
+      });
+    }
+    if (!prenatal || !birth || !infant || !childhood || !adult || !tail ||
+        !nodesValid(prenatal.anchors) || !nodesValid(infant.anchors) || !nodesValid(childhood.anchors) ||
+        !overridesValid(infant.tangentOverrides, infant.anchors) ||
+        !overridesValid(childhood.tangentOverrides, childhood.anchors) ||
+        ![prenatal, birth, infant, childhood, adult, tail].every(function (part) { return count(part.sampleCount); }) ||
+        prenatal.sampleFromAge !== stages[0].min || prenatal.sampleToAge !== birth.fromAge ||
+        birth.fromAge >= 0 || birth.toAge !== 0 || infant.sampleFromAge !== 0 || infant.sampleToAge !== 1 ||
+        infant.includeAnchors !== true || infant.anchors[0].ageYears !== 0 ||
+        infant.anchors[infant.anchors.length - 1].ageYears !== 1 ||
+        childhood.sampleGridFromAge !== 0 || childhood.keepAfterAge !== 1 ||
+        childhood.anchors[0].ageYears !== 1 || childhood.sampleGridToAge !== adult.fromAge ||
+        childhood.anchors[childhood.anchors.length - 1].ageYears !== adult.fromAge ||
+        adult.toAge !== tail.minAge || tail.maxAge !== stages[stages.length - 1].max ||
+        tail.minAge >= tail.maxAge || !finite(tail.relative) || tail.relative < 0 || tail.relative > 1 ||
+        tail.policy !== 'hold-terminal-height-and-fade') return null;
+    function lifeX(age) {
+      var offset = 0;
+      for (var index = 0; index < stages.length; index++) {
+        var stage = stages[index];
+        if (age <= stage.max) return offset + (age - stage.min) / (stage.max - stage.min) * stage.width;
+        offset += stage.width;
+      }
+      return 1;
+    }
+    function ageAtLifeX(x) {
+      var offset = 0;
+      for (var index = 0; index < stages.length; index++) {
+        var stage = stages[index];
+        if (x <= offset + stage.width + 1e-14) return stage.min + (x - offset) / stage.width * (stage.max - stage.min);
+        offset += stage.width;
+      }
+      return stages[stages.length - 1].max;
+    }
+    // The same canonical-coordinate Hermite/PCHIP convention used by the
+    // approved renderer. These are graphic nodes, never laboratory values.
+    function drawingSpline(nodes, overrides) {
+      var xs = nodes.map(function (node) { return lifeX(node.ageYears); });
+      var values = nodes.map(function (node) { return node.relative; });
+      var dx = [], d = [], m = [];
+      for (var index = 0; index < xs.length - 1; index++) {
+        dx[index] = xs[index + 1] - xs[index];
+        d[index] = (values[index + 1] - values[index]) / dx[index];
+      }
+      m[0] = d[0]; m[xs.length - 1] = d[d.length - 1];
+      for (var inner = 1; inner < xs.length - 1; inner++) {
+        if (d[inner - 1] * d[inner] <= 0) m[inner] = 0;
+        else {
+          var a = 2 * dx[inner] + dx[inner - 1], b = dx[inner] + 2 * dx[inner - 1];
+          m[inner] = (a + b) / (a / d[inner - 1] + b / d[inner]);
+        }
+      }
+      (overrides || []).forEach(function (override) {
+        m[nodes.findIndex(function (node) { return node.ageYears === override.ageYears; })] = override.slope;
+      });
+      return function (x) {
+        var index = 0;
+        while (index < xs.length - 2 && x > xs[index + 1]) index++;
+        var t = Math.max(0, Math.min(1, (x - xs[index]) / dx[index])), t2 = t * t, t3 = t2 * t;
+        return (2 * t3 - 3 * t2 + 1) * values[index] + (t3 - 2 * t2 + t) * dx[index] * m[index] +
+          (-2 * t3 + 3 * t2) * values[index + 1] + (t3 - t2) * dx[index] * m[index + 1];
+      };
+    }
+    function bridgeValid(bridge) {
+      if (!Array.isArray(bridge.x) || bridge.x.length !== 4 || !Array.isArray(bridge.y) || bridge.y.length !== 4 ||
+          !finite(bridge.fromAge) || !finite(bridge.toAge) || bridge.fromAge >= bridge.toAge ||
+          Math.abs(bridge.x[0] - lifeX(bridge.fromAge)) > 1e-12 ||
+          Math.abs(bridge.x[3] - lifeX(bridge.toAge)) > 1e-12) return false;
+      var direction = Math.sign(bridge.y[3] - bridge.y[0]);
+      return bridge.x.every(function (value, index) {
+        return finite(value) && (!index || value > bridge.x[index - 1]);
+      }) && bridge.y.every(function (value, index) {
+        return finite(value) && value >= 0 && value <= 1 && (!index || direction * (value - bridge.y[index - 1]) >= 0);
+      });
+    }
+    var prenatalAt = drawingSpline(prenatal.anchors);
+    var infantAt = drawingSpline(infant.anchors, infant.tangentOverrides);
+    var childhoodAt = drawingSpline(childhood.anchors, childhood.tangentOverrides);
+    if (!bridgeValid(birth) || !bridgeValid(adult) ||
+        Math.abs(birth.y[0] - prenatalAt(lifeX(birth.fromAge))) > 1e-12 ||
+        birth.y[3] !== infant.anchors[0].relative || adult.y[0] !== childhood.anchors[childhood.anchors.length - 1].relative ||
+        adult.y[3] !== tail.relative) return null;
+    var points = [], invalid = false;
+    function add(ageYears, value) {
+      if (!finite(ageYears) || !finite(value) || value < 0 || value > 1) { invalid = true; return; }
+      if (points.length && Math.abs(ageYears - points[points.length - 1].ageYears) < 1e-12) return;
+      if (points.length && ageYears <= points[points.length - 1].ageYears) { invalid = true; return; }
+      points.push({ ageYears: ageYears, value: value });
+    }
+    function bezier(t, controls) {
+      var u = 1 - t;
+      return u * u * u * controls[0] + 3 * u * u * t * controls[1] +
+        3 * u * t * t * controls[2] + t * t * t * controls[3];
+    }
+    function addBridge(bridge) {
+      for (var index = 0; index < bridge.sampleCount; index++) {
+        var t = index / (bridge.sampleCount - 1);
+        add(ageAtLifeX(bezier(t, bridge.x)), bezier(t, bridge.y));
+      }
+    }
+    var prenatalStart = lifeX(prenatal.sampleFromAge), prenatalEnd = lifeX(prenatal.sampleToAge);
+    for (var prenatalIndex = 0; prenatalIndex < prenatal.sampleCount; prenatalIndex++) {
+      var prenatalX = prenatalStart + (prenatalEnd - prenatalStart) * prenatalIndex / (prenatal.sampleCount - 1);
+      add(ageAtLifeX(prenatalX), prenatalAt(prenatalX));
+    }
+    addBridge(birth);
+    var infantAges = new Set(infant.anchors.map(function (anchor) { return anchor.ageYears; }));
+    for (var infantIndex = 0; infantIndex < infant.sampleCount; infantIndex++)
+      infantAges.add(infant.sampleFromAge + (infant.sampleToAge - infant.sampleFromAge) * infantIndex / (infant.sampleCount - 1));
+    Array.from(infantAges).sort(function (a, b) { return a - b; }).forEach(function (age) { add(age, infantAt(lifeX(age))); });
+    var childhoodStart = lifeX(childhood.sampleGridFromAge), childhoodEnd = lifeX(childhood.sampleGridToAge);
+    for (var childhoodIndex = 0; childhoodIndex < childhood.sampleCount; childhoodIndex++) {
+      var childX = childhoodStart + (childhoodEnd - childhoodStart) * childhoodIndex / (childhood.sampleCount - 1);
+      var childAge = ageAtLifeX(childX);
+      if (childAge > childhood.keepAfterAge + 1e-12) add(childAge, childhoodAt(lifeX(childAge)));
+    }
+    addBridge(adult);
+    var tailStart = lifeX(tail.minAge);
+    for (var tailIndex = 0; tailIndex < tail.sampleCount; tailIndex++)
+      add(ageAtLifeX(tailStart + (1 - tailStart) * tailIndex / (tail.sampleCount - 1)), tail.relative);
+    if (invalid || points.length < 2) return null;
+    return { id: 'insl3', kind: policy.kind, unit: null, policyVersion: policy.version,
+      points: points, profiles: [], sourceIds: [], divisor: 1, ceiling: 1, policy: policy,
+      tangentOverrides: [], transitions: [birth, adult], illustrativeIntervals: [
+        { minAge: points[0].ageYears, maxAge: 0, kind: 'prenatal-lead' },
+        { minAge: tail.minAge, maxAge: tail.maxAge, kind: 'older-age-tail' }
+      ] };
+  }
+
+  function buildMaleInsl3(data) {
+    // Optional educational data fail closed; this path never evaluates or
+    // manufactures an INSL3 patient reference from a graphic ordinate.
+    try { return maleInsl3Illustration(data); }
+    catch (_error) { return null; }
+  }
+
   function safeMaleGonadotropin(data, engine, id) {
     // Fail closed if an incomplete source bundle or malformed policy reaches
     // this optional display layer; never manufacture a patient reference.
@@ -737,5 +903,5 @@
 
   return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
     buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins,
-    buildMaleAmh: buildMaleAmh };
+    buildMaleAmh: buildMaleAmh, buildMaleInsl3: buildMaleInsl3 };
 });

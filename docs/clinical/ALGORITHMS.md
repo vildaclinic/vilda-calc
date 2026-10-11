@@ -1183,6 +1183,96 @@ pełny ekran, desktop i 320 px, ciągłość stycznych, nieujemność, brak
 odbicia po szczycie oraz brak ekstrapolacji profili. Zestawienie audytu:
 [`amh-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/patient-point/amh-lifespan-display-audit-2026-10-11.json).
 
+### HORMONE-INSL3-STABLE-CURVE — przerywana ilustracja INSL3, 2026-10-11
+
+**Decyzja właściciela:** wdrożyć poprawioną makietę zwykłych męskich
+widoków. Linia zachowuje niewielki wzrost w pierwszych tygodniach,
+zaokrąglony szczyt około miesiąca, niski poziom dzieciństwa i łagodny
+przebieg od pokwitania przez dorosłość. Wysokość niemowlęca jest wyraźnie
+niższa niż w młodej dorosłości. Zastępuje to pierwotny wysoki schemat
+oraz odrzuconą propozycję usuwającą wczesny wzrost.
+
+**Źródła i znaczenie:** pełny tekst [Busch 2022](https://doi.org/10.1210/clinem/dgac115),
+str. 1561–1565, i [tabela S1](https://doi.org/10.6084/m9.figshare.19093793.v1)
+opisują COPENHAGEN Minipuberty: 119 zdrowych donoszonych chłopców,
+338 postnatalnych próbek surowicy, w tym 226 oznaczeń INSL3 metodą
+LC-MS/MS. Ryc. 2 przedstawia modelowaną średnią trajektorię podłużną
+z krwią pępowinową, znormalizowaną do maksimum każdego hormonu w tym
+okresie; INSL3 rośnie od około 0,78 tej skali przy urodzeniu do maksimum
+około 27. dnia. To nie normalizacja do dorosłego INSL3 ani indywidualne
+skalowanie każdego uczestnika. Ryc. 3 przedstawia medianę GAMLSS tej
+samej kohorty, bez krwi pępowinowej w dopasowaniu. Jej malejący kształt
+nie wyklucza wczesnej fali modelu podłużnego. Wartości ryc. 3 są już po
+transformacji odwrotnej; ponowne podniesienie odczytu do kwadratu byłoby błędem.
+
+Tabela S1 zawiera medianę 0,11 µg/L i średnią 0,17 µg/L w grupie
+4–50 dni oraz medianę 0,10 µg/L w grupie 51–100 dni. To statystyki
+grup, nie stężenia w dokładnym dniu. [Bay 2007](https://doi.org/10.1210/jc.2007-0974),
+tabela 2, podaje dla zdrowych chłopców około trzeciego miesiąca mediany
+0,13 i 0,15 ng/mL; [Bay 2005](https://doi.org/10.1210/jc.2004-2257)
+podaje dorosłą medianę 0,99 ng/mL. Powiązany typ oznaczenia TRFIA
+wspiera niższy poziom centralny niemowląt, ale nie ustala uniwersalnego
+ilorazu stężeń ani wysokości szczytu pierwszego miesiąca. Dla Bay 2005
+sprawdzono pierwotny indeksowany abstrakt, bez nowego pełnego PDF.
+
+Pokwitanie i dorosłość wspierają [Albrethsen 2020](https://doi.org/10.1210/clinem/dgaa145),
+[Johansen 2014](https://doi.org/10.1530/REP-13-0435),
+[Tulumcu 2025](https://doi.org/10.3389/fendo.2025.1574760),
+[EMAS 2022](https://doi.org/10.1111/andr.13220) i
+[FAMAS 2006](https://doi.org/10.1111/j.1365-2605.2006.00714.x).
+Dostarczony pełny tekst Tulumcu zawiera własne wizyty ALSPAC około
+17. i 24. roku; opis niemowlęctwa cytuje Busch. Ryc. 1B jest syntezą
+średnich kilku badań od późnego dzieciństwa, nie nowym badaniem niemowląt
+ani medianą całego życia. Wnioskowanego maksimum około 22 lat nie
+przekształcamy w dokładny uniwersalny wiek szczytu. LC-MS/MS, TRFIA,
+średnie i mediany różnych kohort nie tworzą jednej skalibrowanej serii.
+Prenatalne kotwice pozostają schematem, z jakościowym oparciem w
+[Harrison 2019](https://doi.org/10.3389/fendo.2019.00596).
+
+**Zatwierdzona geometria:**
+[`insl3-display-policy.json`](hormone-lifespan/insl3-display-policy.json),
+`insl3DisplayPolicy` i `buildMaleInsl3(data)` opisują jedną krzywą
+w kanonicznym X całego życia. Stała skala względna ma `divisor = 1`
+i `ceiling = 1`; zbliżenia i pełny ekran nie normalizują niemowlęctwa
+osobno. Zachowany przerywany styl `6 5` identyfikuje analit. Nie oznacza
+normy ani braku ciągłości. Wysokości 0,109158 przy urodzeniu i 0,14
+około 27. dnia są bezwymiarowymi kotwicami rysunku; stosunek 0,14/0,87
+do młodej dorosłości nie jest zwalidowanym ilorazem stężeń.
+
+Wspólna pozioma styczna przy urodzeniu łączy schemat prenatalny z małą
+falą bez dodatkowego dołka; nie dowodzi dokładnego biologicznego minimum.
+Odcinek od 200. dnia przechodzi łagodnie do 0,012 w pierwszym roku,
+bez nazywania ilustracyjnego ogona stężeniem modelu. Niskie dzieciństwo
+i wzrost pokwitaniowy dochodzą do szerokiego wysokiego obszaru młodej
+dorosłości. Jeden łuk 25–80 lat opada od 0,87 do 0,455; ostatnia wysokość
+wygasa do 90 lat. Granica 80 lat jest decyzją prezentacji, nie dokładnym
+końcem obserwacji EMAS; etykieta grupy 80–89 nie ustala maksymalnego wieku.
+
+**Ograniczenia i wpływ kliniczny:** zmienia się edukacyjny obraz przebiegu
+INSL3, bez aktywacji kalkulatora, liczbowego punktu pacjenta, stężeń
+w tooltipach, profilu norm lub nowych werdyktów. Dane odniesienia innych
+hormonów, ich normy laboratoryjne, jednostki i zapis pacjenta pozostają
+bez zmian. Busch podaje LOD 0,03 µg/L (niespójna jednostka µg/mL
+w Methods); wyniki poniżej LOD zastępuje LOD/2. LOQ 0,15 µg/L pochodzi
+z cytowanego opisu metody Albrethsen, nie z jawnej wartości LOQ INSL3
+w pracy niemowlęcej. Mediana poniżej LOQ ogranicza pewność dokładnej
+liczby; nie dowodzi braku biologicznej fali ani nie unieważnia automatycznie
+estymacji populacyjnej. Autorski rysunek nie rozwiązuje tych ograniczeń.
+
+**Przypadki kontrolne rzeczywistej funkcji:** męski INSL3 → przy urodzeniu
+0,109158, około 27. dnia 0,14, w 100. dniu 0,056672, w wieku 25 lat
+0,87, a 80–90 lat 0,455 z wygaszeniem; wszystkie liczby są względnymi
+wysokościami, bez jednostki stężenia. Przekazanie wyniku INSL3 0,04, 1
+lub 10000 nie uruchamia punktu odniesienia i nie zmienia rysunku ani skali.
+Kontrole obejmują brak przeregulowania, ciągłość stycznych, ten sam
+przebieg w minipuberty i całym życiu, desktop, 320 px i pełny ekran.
+Test funkcji: `hormone-lifespan-insl3.test.mjs`; E2E:
+`hormone-lifespan-insl3-stability.spec.mjs`. Akceptacja makiety
+i testy techniczne nie nadają jej statusu walidacji klinicznej.
+
+Źródła, dostępność pełnych tekstów, statystyki i rozstrzygnięcia audytu:
+[`insl3-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/insl3-lifespan-display-audit-2026-10-11.json).
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.
