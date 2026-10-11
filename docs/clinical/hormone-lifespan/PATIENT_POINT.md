@@ -55,12 +55,58 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
 
 INSL3 pozostaje zadaniem przyszłego kalkulatora. Zachowane wartości
-niemowlęce z Busch nie uruchamiają nowego analitu. Dorosłe LH/FSH, dziecięce
+niemowlęce z Busch nie uruchamiają nowego analitu. Dorosłe LH/FSH opisuje
+poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec i niepokryte
 fragmenty osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
+
+### Dorosłe LH/FSH i stała ilustracja — 11 października 2026
+
+18 nowych profili edukacyjnych uzupełnia istniejące źródła; nie zmienia
+ich liczb ani laboratoryjnych norm. Wszystkie stężenia poniżej mają
+jednostkę IU/L. Pełne pochodzenie, ograniczenia i konkretne tabele:
+[ALGORITHMS.md](../ALGORITHMS.md#hormone-lh-fsh-stable-curves--stałe-krzywe-i-dorosłe-odniesienia-2026-10-11).
+
+| Okno aplikacji | Źródło i statystyka | LH | FSH |
+| --- | --- | ---: | ---: |
+| 18–<25 | FAMe/Laurentino 2020, średnia grupy, Architect i1000 | 3,0 | 3,0 |
+| 25–<30 | FINRISK/Perheentupa 2013, mediana grupy, DELFIA | 3,74 | 3,43 |
+| 30–<40 | jw. | 3,76 | 4,00 |
+| 40–<50 | jw. | 3,91 | 4,56 |
+| 50–<60 | jw. | 4,53 | 5,64 |
+| 60–<70 | jw. | 4,73 | 5,92 |
+| 70–<75 | jw. | 5,57 | 6,43 |
+| 75–<80 | LH: HIMS/Yeap 2007, mediana grupy, Immulite 2000; FSH: Ljubicic 2020, przybliżona mediana modelu, AutoDELFIA | 4,44 | odczyt modelu |
+| 80–<85 | HIMS/Yeap 2007, mediana grupy | 5,14 | tylko dokładnie 80: ≈8,4 |
+| 85–89 włącznie | HIMS/Yeap 2007, mediana grupy | 5,22 | brak |
+
+FSH Ljubicic obejmuje 75–80 włącznie, z sześcioma odczytami rocznymi;
+przy 75 latach ≈7,8 IU/L. To próbkowanie modelu pomiędzy obserwowanymi
+kohortami, nie sześć empirycznych median roczników. Tolerancja odczytu
+około 8,5% nie jest przedziałem ufności. FAMe ma niejednoznaczną górną
+granicę najmłodszej grupy 24/25; okno 18–<25 jest zachowawczą polityką,
+nie ponownie obliczoną średnią. FINRISK łączy lata badania i kohorty.
+HIMS nie stanowi wyłącznie populacji zdrowej. Średnia nie jest medianą,
+a różnice między metodami nie są kalibracją próbki użytkownika.
+
+Grupy mają stałe wartości, bez uśredniania między publikacjami. Wiek
+przecinający granicę profili nie kwalifikuje do jednego odniesienia.
+Luka >16–<18, FSH >80 i LH >89 pozostają bez liczbowego punktu.
+Niemowlęce oraz pediatryczne źródła, w tym warunek G1 dla Zec, zachowują
+dotychczasowe ograniczenia.
+
+`lh-fsh-display-policy.json` definiuje osobną, ciągłą ilustrację i stałą
+skalę: LH 5,57 × 1,25, FSH 8,4178 × 1,25. Nie zależą od pacjenta ani
+wyniku. Most FSH 12–25 lat nie przechodzi przez wszystkie mediany Madsen;
+jasny znacznik odniesienia zachowuje źródłową medianę i może leżeć poza
+linią; czerwony punkt pokazuje wpisany wynik.
+Łuk dorosłości sprawdzono także w pośrednich latach, aby nie przenosił
+poziomu starszych mężczyzn na wiek średni. Odcinek płodowy pozostaje
+schematem; zakończenie poza źródłem nie dostarcza liczbowego odniesienia.
+Zbliżenia pokazują tę samą krzywą. Porównanie płci pozostaje odrębne.
 
 Uzupełnienia inhibiny B opisuje [INHIBIN_EVIDENCE.md](INHIBIN_EVIDENCE.md):
 dwie wizyty minipuberty Kuiri-Hänninen, stadia G Crofton oraz średnie grup
@@ -383,8 +429,8 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 
 | Fikcyjne wejście | Oczekiwana podstawa i zachowanie |
 | --- | --- |
-| Chłopiec 12 lat, LH 2 IU/L | Madsen p50=0,6775625214085037 IU/L; punkt powyżej linii, bez nowego werdyktu „poza normą”. |
-| Chłopiec 12 lat, FSH 2,01486005633355 IU/L | Punkt na linii mediany Madsen w tolerancji obliczeń/rysowania. |
+| Chłopiec 12 lat, LH 2 IU/L | Madsen p50=0,6775625214085037 IU/L; wynik powyżej znacznika odniesienia, bez nowego werdyktu „poza normą”. |
+| Chłopiec 12 lat, FSH 2,01486005633355 IU/L | Wynik równy źródłowemu znacznikowi Madsen; zgodność z ilustracją nie jest warunkiem poprawności odniesienia. |
 | Chłopiec 3 lata, aktualne G1, FSH 0,48 IU/L | Punkt na medianie Zec; etykieta pełnej grupy źródłowej 1–<8 lat, N=303, a nie mediana dokładnie dla 3 lat. |
 | Chłopiec 3 lata, aktualne G2 lub brak typowanej obserwacji, FSH 0,48 IU/L | Brak punktu Zec; nie zakładamy G1 z wieku. Dostępna osobna ocena laboratoryjna pozostaje. |
 | Chłopiec dokładnie 6 lat, FSH | Profil Madsen; nie przedłużamy okna Zec ani nie wymagamy G1 od profilu Madsen. |
@@ -418,7 +464,10 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Chłopiec, możliwy wiek 5,99–6,01 roku, AMH 99,18 ng/mL | Brak jednoznacznego punktu dla jednej grupy; nie wybieramy mediany z połowy niepewnego przedziału. |
 | Mężczyzna 40 lat, AMH 6,12 ng/mL | Punkt na rocznym p50 Tehrani; metoda Gen II w źródle, bez potwierdzania metody próbki. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
-| LH `<0,05 IU/L`, dorosłe FSH, AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
+| Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
+| Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
+| FSH dokładnie 80 / >80; LH dokładnie 89 / >89 | Odpowiednio ≈8,4 / brak oraz 5,22 / brak, bez przedłużania źródła wygaszonym ogonem. |
+| LH `<0,05 IU/L`, AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
 
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki

@@ -45,6 +45,7 @@
 <div class="vhl-chart-wrap"><div class="vhl-stage-nav" role="group" aria-label="Wyróżnij etap życia"></div><svg data-lifespan="chart" role="img" aria-labelledby="chart-title chart-desc"><title data-lifespan="chart-title">Schemat zmian hormonów w ciągu życia mężczyzny</title><desc data-lifespan="chart-desc">Krzywe przedstawiają poglądowo czas i kierunek zmian. Każdy hormon ma własną skalę. Oś życia jest podzielona na etapy o różnej skali czasu. To nie są stężenia ani zakresy referencyjne.</desc></svg></div>
 <p data-lifespan="population-note" class="vhl-population-note" hidden></p>
 <p class="vhl-chart-caption"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor"/><path d="M8 7v4M8 4.5v.5" stroke="currentColor" stroke-linecap="round"/></svg><span data-lifespan="scale-note">Schemat — każdy hormon ma własną skalę.</span></p>
+<p data-lifespan="comparison-note" class="vhl-relationship-note" hidden>Porównanie zmian LH i FSH w czasie. Każdy hormon ma własną skalę — podobna wysokość linii nie oznacza takiego samego stężenia.</p>
 <div class="vhl-insight" aria-live="polite"><span class="vhl-insight-symbol" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16c4 0 3-9 7-9s4 12 8 12h3M3 19c4 0 7-7 10-7s5 3 8 3"/></svg></span><div><h2 data-lifespan="insight-title">Hormony w ciągu życia</h2><p data-lifespan="insight-text">Wybierz etap, aby przyjrzeć się przebiegowi zmian.</p><div data-lifespan="cycle-panel" class="vhl-cycle-panel" hidden><svg data-lifespan="cycle-chart" role="img" aria-labelledby="cycle-title cycle-desc"><title data-lifespan="cycle-title">Poglądowy przebieg estradiolu w cyklu miesiączkowym</title><desc data-lifespan="cycle-desc">Oś pozioma przedstawia dni przykładowego cyklu 28-dniowego, a pionowa poziom względny. Widoczny jest większy szczyt okołoowulacyjny i mniejszy w fazie lutealnej. To schemat na podstawie median faz, nie pomiary poszczególnych dni ani przewidywanie owulacji pacjentki.</desc></svg><p class="vhl-cycle-note">Przykładowy cykl 28-dniowy. Długość cyklu i czas owulacji są zmienne.</p></div></div></div>
 <details class="vhl-sources"><summary>O wykresie i źródła</summary><div class="vhl-source-copy" data-lifespan="source-copy"></div></details>
 `;
@@ -712,11 +713,13 @@
       reset.textContent = "Tylko " + current.name;
       svg.querySelectorAll(":scope > g").forEach((n) => n.remove());
       renderedPoint = null;
+      panel.querySelector(".vhl-chart-caption").hidden = false;
       byId("scale-note").removeAttribute("data-current-source");
       if (compare) renderComparison();
       else renderSchematic();
       updateInsight();
       explainUnavailablePoint();
+      updateGonadotropinPresentation();
       updateSources();
     }
     function drawAgeMarker(
@@ -777,6 +780,7 @@
     const displayEngine = opts.displayEngine || root.VildaHormoneLifespanDisplay;
     const inhibinDisplay = displayEngine?.buildMaleInhibin(data, pointEngine());
     const testosteroneDisplay = displayEngine?.buildMaleTestosterone?.(data, pointEngine());
+    const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
     const maleLifeFraction = (age) => {
       let offset = 0;
       for (const stage of maleStages) {
@@ -786,7 +790,7 @@
       }
       return 1;
     };
-    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay].filter(Boolean).map((display) => {
+    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay, ...gonadotropinDisplays].filter(Boolean).map((display) => {
       const segment = { points: display.points.map((point) => ({
         ageYears: point.ageYears, relative: point.value / display.divisor / display.ceiling,
       })) };
@@ -802,7 +806,8 @@
     const stableVisible = (id) => !compare && sex === "male" && stableCurves.has(id) && selected.has(id);
     const stableInhibinVisible = () => stableVisible("inhb");
     const stableTestosteroneVisible = () => stableVisible("t");
-    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible();
+    const stableGonadotropinVisible = () => gonadotropinDisplays.some((display) => stableVisible(display.id));
+    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible() || stableGonadotropinVisible();
     const pointNumber = (value, significantDigits = 6) => new Intl.NumberFormat("pl-PL", {
       maximumSignificantDigits: significantDigits,
       ...(value !== 0 && (Math.abs(value) >= 1e7 || Math.abs(value) < 0.0001)
@@ -900,12 +905,15 @@
       const unit = model.profile.unit;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
       const groupMean = model.profile.statistic === "group-mean";
+      // This profile is a graph reading with an approximately 8.5% source
+      // uncertainty. Do not imply three-digit precision in its visual label.
+      const referenceDigits = model.profile.id === "ljubicic2020-male-fsh-75-80-approximate" ? 2 : 3;
       const medianLabel = groupMean ? "Średnia grupy" : model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
       const medianContext = groupMean ? `Średnia w grupie ${model.profile.ageGroup.label}` : model.profile.statistic === "group-median"
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "Mediana dla wieku";
-      const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") + `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, 3)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
+      const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") + `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, referenceDigits)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
         "data-median": model.referenceValue, "data-profile": model.profile.id,
@@ -984,7 +992,7 @@
         ? (patientAgeYears < 18 ? "Dziewczynka" : "Kobieta")
         : (patientAgeYears < 18 ? "Chłopiec" : "Mężczyzna");
       label(`${compare ? personLabel + " · " : ""}${offscale ? "↑ " : ""}${pointNumber(model.value)} ${unit}`, resultTop, "#b51e33", 700, "result");
-      label(`${medianLabel} ≈${pointNumber(model.referenceValue, 3)} ${unit}`, medianTop, "#365b66", 550, "median");
+      label(`${medianLabel} ≈${pointNumber(model.referenceValue, referenceDigits)} ${unit}`, medianTop, "#365b66", 550, "median");
       group.append(dot);
       model.a11y = a11y;
     }
@@ -1012,6 +1020,27 @@
           ? "Linia jest syntezą badań z wygładzonymi przejściami, a nie jedną medianą populacji. Przejścia nie wyznaczają wartości odniesienia pacjenta. " : "") +
         (compare ? "Obie płcie są pokazane w tej samej jednostce i skali; źródła mogą stosować różne metody oznaczenia."
           : "Pozostałe hormony zachowują własne skale poglądowe. Nie porównujemy liczbowo wysokości różnych hormonów.");
+    }
+    function updateGonadotropinPresentation() {
+      const visible = stableGonadotropinVisible();
+      byId("comparison-note").hidden = !visible;
+      const prenatal = stageNav.querySelector('[data-stage="0"]');
+      if (prenatal && sex === "male")
+        prenatal.textContent = visible ? "Płód · schemat" : maleStages[0].short;
+      if (!visible) return;
+      const model = renderedPoint;
+      if (model && (model.id === "lh" || model.id === "fsh")) {
+        const basis = model.profile.statistic === "group-mean" ? "średnia grupy"
+          : model.profile.statistic === "group-median" ? "mediana grupy" : "mediana badania";
+        const offscale = model.value / model.divisor > model.ceiling;
+        byId("scale-note").textContent = (offscale ? "Strzałka: wynik ponad skalą." : "Kropka: wynik.") +
+          " Jasny znacznik: " + basis + "." +
+          (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
+      } else if (!model && !(patientContext?.measurement && patientPoint?.status === "unavailable")) {
+        // The persistent LH/FSH note already explains the separate scales.
+        // Keep a qualification error or another analyte's point caption visible.
+        panel.querySelector(".vhl-chart-caption").hidden = true;
+      }
     }
     function explainUnavailablePoint() {
       if (renderedObservation?.patientPoint?.status === "ready") return;
@@ -1199,7 +1228,8 @@
           };
         if (sex === "male" && stableCurves.has(h.id)) {
           const stable = stableCurves.get(h.id);
-          const tail = h.id === "t" && full && stable.display.illustrativeIntervals.find((part) => part.kind === "older-age-tail");
+          const tail = (h.id === "t" || gonadotropinDisplays.some((display) => display.id === h.id)) &&
+            full && stable.display.illustrativeIntervals.find((part) => part.kind === "older-age-tail");
           if (tail) {
             const id = uid + h.id + "-illustrative-tail";
             const gradient = el("linearGradient", { id, gradientUnits: "userSpaceOnUse",
@@ -1623,6 +1653,12 @@
         title = "Estradiol w cyklu";
         copy = "W wieku rozrodczym zmienia się w cyklu miesiączkowym.";
       }
+      if (stableGonadotropinVisible() && [...selected].every((id) => id === "lh" || id === "fsh") &&
+          (view === "mini" || (view === "life" && insightMode === "stage" && activeStage === 1))) {
+        title = [...selected].map((id) => id.toUpperCase()).join(" i ") + " · minipuberty";
+        copy = "Wczesna fala aktywności po urodzeniu, potem stopniowe wyciszenie. " +
+          "Szeroki wierzchołek linii jest poglądowy; nie wyznacza dnia szczytu u konkretnego dziecka.";
+      }
       if (renderedPoint) {
         const groupMean = renderedPoint.profile.statistic === "group-mean";
         title = groupMean ? "Wynik na tle średniej grupy wieku" : renderedPoint.profile.statistic === "group-median"
@@ -1760,7 +1796,7 @@
     }
     function updateSources() {
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
-        renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind]);
+        renderedPoint?.profile.id, renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy");
@@ -1794,6 +1830,31 @@
           paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
           if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
         }
+      }
+      if (stableGonadotropinVisible()) {
+        paragraph("Linie LH i FSH pokazują poglądowy przebieg zmian, zachowując stałą geometrię i skalę przed wpisaniem wyniku i po nim. Jasny znacznik przedstawia źródłową medianę lub średnią i może leżeć poza linią. Nie są to granice normy ani iloraz LH/FSH.");
+        paragraph("Okres płodowy jest wyłącznie schematem; jego wysokości nie pochodzą ze zweryfikowanych stężeń płodowych. Nie dostarcza liczbowego odniesienia pacjenta. Wczesny wierzchołek po urodzeniu również jest ilustracyjny, a nie oszacowaniem dnia szczytu mediany populacji.");
+        paragraph("Minipuberty: przybliżone mediany modelu Busch 2022 dotyczą zdrowych chłopców urodzonych o czasie. Bergadá 2006 wspiera kierunek wczesnego wzrostu. Dzieciństwo i pokwitanie: Madsen 2022, model 6–16 lat; FSH przed pokwitaniem także Zec 2012, mediana grupy ze stadium G1. Niski odcinek dziecięcy nie uzupełnia brakujących lub niewiarygodnych median LH.");
+        paragraph("Dorośli: Laurentino 2020 — średnia młodej grupy stosowana w wieku 18–<25 lat; Perheentupa 2013 — mediany grup 25–74 lata. Starsi mężczyźni: Yeap 2007 dla LH, 75–89 lat; Ljubicic 2020 dla FSH, przybliżony środek modelu w wieku 75–80 lat. Luka 16–<18 lat pozostaje bez liczbowego odniesienia. Po 89 latach dla LH i po 80 latach dla FSH wygaszona linia nie dostarcza kolejnych wartości odniesienia.");
+        paragraph("Badania różnią się populacją i metodą oznaczenia: AutoDELFIA/DELFIA, IMMULITE, Roche, Abbott. Nie tworzą jednej zwalidowanej krzywej referencyjnej ani trajektorii jednej osoby. Dorosły łuk FSH sprawdzono względem centralnej krzywej Ljubicic; graficzne odczyty są przybliżone. Wygładzenie nie zmienia średnich i median przy jasnym znaczniku ani norm laboratoryjnych w przeliczniku.");
+        if (renderedPoint && (renderedPoint.id === "lh" || renderedPoint.id === "fsh")) {
+          const profile = renderedPoint.profile;
+          const statistic = profile.statistic === "group-mean" ? "średnia grupy"
+            : profile.statistic === "group-median" ? "mediana grupy" : "mediana modelu";
+          paragraph("Odniesienie dla tego wyniku: " + [profile.sourceLabel,
+            statistic + (profile.ageGroup?.label ? " " + profile.ageGroup.label : ""),
+            profile.method, profile.population].filter(Boolean).join(" · ") + ".");
+        }
+        const sources = new Set();
+        for (const display of gonadotropinDisplays.filter((item) => stableVisible(item.id))) {
+          for (const profile of display.profiles) {
+            const sourceKey = profile.url || profile.sourceLabel;
+            if (sources.has(sourceKey)) continue;
+            sources.add(sourceKey);
+            if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
+          }
+        }
+        links.push(["Bergadá 2006 · wczesny wzrost", "https://doi.org/10.1210/jc.2006-1079"]);
       }
       const selectedSchematics = stableStudyVisible() ? maleHormones.filter((h) =>
         selected.has(h.id) && !stableCurves.has(h.id) && h.id !== renderedPoint?.id) : [];
@@ -2133,6 +2194,8 @@
       byId("cycle-panel").hidden = true;
       byId("population-note").textContent = "";
       byId("population-note").hidden = true;
+      byId("comparison-note").hidden = true;
+      panel.querySelector(".vhl-chart-caption").hidden = false;
       byId("scale-note").removeAttribute("data-current-source");
       byId("scale-note").textContent = "Schemat — każdy hormon ma własną skalę.";
       byId("chart-title").textContent = "Poglądowy przebieg hormonów";

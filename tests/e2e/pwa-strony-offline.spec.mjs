@@ -234,6 +234,27 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         await expect.poll(async () => Number(await inhibina.getAttribute('data-median')))
           .toBeCloseTo(162.08470588235292, 10);
         await expect(stabilnaKrzywa).toHaveAttribute('d', przebieg);
+        // The approved LH/FSH data and fixed display policy must survive a
+        // real offline start too, including the independent source marker.
+        for (const [id, label, reference, divisor] of [
+          ['lh', 'LH', 3.91, 5.57], ['fsh', 'FSH', 4.56, 8.4178]
+        ]) {
+          await page.locator('#labSubstance').fill(label);
+          await page.locator(`#labSubstanceDropdown [data-id="${id}"]`).click();
+          await page.locator('#labUnit').selectOption('IU/L');
+          await page.locator('#labValue').fill('');
+          const line = wykres.locator(`[data-stable-reference-line="${id}"]`);
+          await expect(line).toHaveAttribute('data-divisor', String(divisor));
+          const emptyPath = await line.getAttribute('d');
+          await page.locator('#labValue').fill('2');
+          const result = wykres.locator(`[data-patient-concentration="${id}"]`);
+          await expect(result).toHaveAttribute('data-value', '2');
+          await expect.poll(async () => Number(await result.getAttribute('data-reference-value')))
+            .toBeCloseTo(reference, 8);
+          await expect(line).toHaveAttribute('d', emptyPath);
+          await page.locator('#labValue').fill('');
+          await expect(line).toHaveAttribute('d', emptyPath);
+        }
       }
     }
 

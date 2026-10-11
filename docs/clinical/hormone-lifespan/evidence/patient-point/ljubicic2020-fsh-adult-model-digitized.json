@@ -1,0 +1,392 @@
+{
+  "schemaVersion": 1,
+  "reviewedDate": "2026-10-11",
+  "purpose": "Audited source facts for educational patient comparison; not clinical reference intervals or an exact-age trajectory.",
+  "sex": "male",
+  "unit": "IU/L",
+  "source": {
+    "authors": "Ljubicic et al.",
+    "year": 2020,
+    "title": "Ljubicic et al., 2020; Figure1, male LH top-left and maleFSH middle-left",
+    "pmid": "32976602",
+    "figure": 1,
+    "panel": "male FSH, middle-left; thick central0SD line",
+    "sourceFile": "ljubicic2020-figure1.jpeg",
+    "sourceSha256": "b190e2ec025aea6df09d54d96d06edcce2a151674683ece55f82be638a7ec441",
+    "sourceAgeDomain": {
+      "minAge": 41,
+      "maxAge": 80
+    },
+    "sourcePopulation": "3144 healthy male samples/participants as reported; Danish Caucasian combined cohorts. Older cohortsMONICA10 at41,51,61,71 and1914cohort examined80.",
+    "assay": {
+      "method": "AutoDELFIA time-resolved fluoroimmunometric assay",
+      "specimen": "serum",
+      "lodIuL": 0.05,
+      "sampling": "Stored at−20°C, up to20years."
+    },
+    "statisticDefinition": "Methods definesM as median and0SD impliesX=M. Figure1 caption calls the central line mean; retain wording conflict. TableI statistic is unspecified and is not used.",
+    "graphicalUncertainty": {
+      "assumedMaxYPixelError": 4.5,
+      "multiplicativeFactor": 1.085008,
+      "explanation": "Half stroke plus rounding/calibration; approx8.5% concentration error allowance, not a statistical confidence interval"
+    },
+    "sourceAgeRouting": "Use only75–80inclusive as educational model reference. The source curve spans older ages41–80, between sparse cohorts; no80+ extrapolation.",
+    "verification": "Thick central line and log-y calibration checked visually; independent prior extraction differed by no more than0.5pixel. Raster precision is not model uncertainty.",
+    "redistribution": "Digitized numerical facts and citation only; no publisher image included.",
+    "doi": "10.1093/humrep/deaa182",
+    "url": "https://doi.org/10.1093/humrep/deaa182",
+    "reviewedDate": "2026-10-11",
+    "sourceUnit": "IU/L",
+    "sourceToCanonicalFactor": 1
+  },
+  "presentation": {
+    "sourceLabel": "Ljubicic 2020 · przybliżona mediana modelu",
+    "method": "AutoDELFIA time-resolved fluoroimmunometric assay",
+    "population": "Duńscy mężczyźni; model zdrowych kohort, badania w wieku41,51,61,71 i80 lat",
+    "compatibleAssayMethodIds": [
+      "autodelfia",
+      "autodelfia-fsh"
+    ]
+  },
+  "limitations": [
+    "Przybliżony odczyt środkowej krzywej0SD; wyświetlać≈ i około2cyfr znaczących, nie dokładność przechowywanych węzłów.",
+    "Methods określaM jako medianę; podpis ryciny używa słowa mean. Nie jest to średnia ani nieokreślona statystyka z TableI.",
+    "Roczne węzły są próbkami modelu między kohortami71 i80 lat, nie empirycznymi medianami osobnych roczników.",
+    "Przyjęty błąd graficzny około8,5% nie jest przedziałem ufności ani miarą rozrzutu biologicznego.",
+    "Nie obliczać z tych odczytów z-score, centyla ani kategorii prawidłowości. Po80r.ż. brak numerycznego odniesienia.",
+    "AutoDELFIA badania źródłowego nie potwierdza metody próbki pacjenta."
+  ],
+  "statistic": "approximate-model-median",
+  "approximate": true,
+  "application": {
+    "minAge": 75,
+    "maxAge": 80,
+    "maxAgeExclusive": false
+  },
+  "calibration": {
+    "xAgeTicksYears": [
+      0,
+      20,
+      40,
+      60,
+      80
+    ],
+    "xTickPixels": [
+      131.5,
+      310.5,
+      489.5,
+      668.5,
+      847.5
+    ],
+    "yTickLog10Concentrations": [
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3
+    ],
+    "yTicksPixels": {
+      "LH": [
+        647.0,
+        520.0,
+        393.0,
+        266.0,
+        139.0,
+        12.0
+      ],
+      "FSH": [
+        1402.0,
+        1275.0,
+        1148.0,
+        1021.0,
+        894.0,
+        767.0
+      ]
+    },
+    "concentrationPixelsPerDecade": 127.0
+  },
+  "rows": [
+    {
+      "ageYears": 41,
+      "centralIUperL": 4.3826,
+      "xPixel": 498.45,
+      "yPixel": 1066.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 42,
+      "centralIUperL": 4.5034,
+      "xPixel": 507.4,
+      "yPixel": 1065,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 43,
+      "centralIUperL": 4.5444,
+      "xPixel": 516.35,
+      "yPixel": 1064.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 44,
+      "centralIUperL": 4.6276,
+      "xPixel": 525.3,
+      "yPixel": 1063.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 45,
+      "centralIUperL": 4.7123,
+      "xPixel": 534.25,
+      "yPixel": 1062.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 46,
+      "centralIUperL": 4.7552,
+      "xPixel": 543.2,
+      "yPixel": 1062,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 47,
+      "centralIUperL": 4.8422,
+      "xPixel": 552.15,
+      "yPixel": 1061,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 48,
+      "centralIUperL": 4.9308,
+      "xPixel": 561.1,
+      "yPixel": 1060,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 49,
+      "centralIUperL": 5.021,
+      "xPixel": 570.05,
+      "yPixel": 1059,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 50,
+      "centralIUperL": 5.0667,
+      "xPixel": 579.0,
+      "yPixel": 1058.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 51,
+      "centralIUperL": 5.2064,
+      "xPixel": 587.95,
+      "yPixel": 1057,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 52,
+      "centralIUperL": 5.3016,
+      "xPixel": 596.9,
+      "yPixel": 1056,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 53,
+      "centralIUperL": 5.3499,
+      "xPixel": 605.85,
+      "yPixel": 1055.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 54,
+      "centralIUperL": 5.4478,
+      "xPixel": 614.8,
+      "yPixel": 1054.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 55,
+      "centralIUperL": 5.598,
+      "xPixel": 623.75,
+      "yPixel": 1053,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 56,
+      "centralIUperL": 5.649,
+      "xPixel": 632.7,
+      "yPixel": 1052.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 57,
+      "centralIUperL": 5.7523,
+      "xPixel": 641.65,
+      "yPixel": 1051.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 58,
+      "centralIUperL": 5.8576,
+      "xPixel": 650.6,
+      "yPixel": 1050.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 59,
+      "centralIUperL": 5.9647,
+      "xPixel": 659.55,
+      "yPixel": 1049.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 60,
+      "centralIUperL": 6.0739,
+      "xPixel": 668.5,
+      "yPixel": 1048.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 61,
+      "centralIUperL": 6.185,
+      "xPixel": 677.45,
+      "yPixel": 1047.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 62,
+      "centralIUperL": 6.2981,
+      "xPixel": 686.4,
+      "yPixel": 1046.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 63,
+      "centralIUperL": 6.3555,
+      "xPixel": 695.35,
+      "yPixel": 1046,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 64,
+      "centralIUperL": 6.5307,
+      "xPixel": 704.3,
+      "yPixel": 1044.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 65,
+      "centralIUperL": 6.5902,
+      "xPixel": 713.25,
+      "yPixel": 1044,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 66,
+      "centralIUperL": 6.7108,
+      "xPixel": 722.2,
+      "yPixel": 1043,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 67,
+      "centralIUperL": 6.8335,
+      "xPixel": 731.15,
+      "yPixel": 1042,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 68,
+      "centralIUperL": 6.9586,
+      "xPixel": 740.1,
+      "yPixel": 1041,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 69,
+      "centralIUperL": 7.0859,
+      "xPixel": 749.05,
+      "yPixel": 1040,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 70,
+      "centralIUperL": 7.2812,
+      "xPixel": 758.0,
+      "yPixel": 1038.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 71,
+      "centralIUperL": 7.3475,
+      "xPixel": 766.95,
+      "yPixel": 1038,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 72,
+      "centralIUperL": 7.482,
+      "xPixel": 775.9,
+      "yPixel": 1037,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 73,
+      "centralIUperL": 7.5501,
+      "xPixel": 784.85,
+      "yPixel": 1036.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 74,
+      "centralIUperL": 7.6882,
+      "xPixel": 793.8,
+      "yPixel": 1035.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 75,
+      "centralIUperL": 7.8289,
+      "xPixel": 802.75,
+      "yPixel": 1034.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 76,
+      "centralIUperL": 7.9721,
+      "xPixel": 811.7,
+      "yPixel": 1033.5,
+      "medianStrokePixels": 6
+    },
+    {
+      "ageYears": 77,
+      "centralIUperL": 8.0447,
+      "xPixel": 820.65,
+      "yPixel": 1033,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 78,
+      "centralIUperL": 8.1919,
+      "xPixel": 829.6,
+      "yPixel": 1032,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 79,
+      "centralIUperL": 8.3418,
+      "xPixel": 838.55,
+      "yPixel": 1031,
+      "medianStrokePixels": 7
+    },
+    {
+      "ageYears": 80,
+      "centralIUperL": 8.4178,
+      "xPixel": 847.5,
+      "yPixel": 1030.5,
+      "medianStrokePixels": 5.0
+    }
+  ],
+  "selectionNote": "Retain audited annual samples of the published adult model for verification of the illustrative trend. Only 75–80 inclusive are selected for numeric patient comparison; younger ages use the separately cited group statistics. These are samples of a fitted curve, not annual empirical medians."
+}

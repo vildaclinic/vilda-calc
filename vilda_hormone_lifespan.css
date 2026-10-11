@@ -346,6 +346,14 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
   flex: 0 0 14px;
   margin-top: 3px;
 }
+.vilda-hormone-lifespan .vhl-relationship-note {
+  margin: var(--space-14px) 30px 0;
+  color: #54707b;
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 880px;
+  flex-shrink: 0;
+}
 .vilda-hormone-lifespan .vhl-population-note {
   color: #6d6477;
 }
@@ -622,6 +630,10 @@ dialog.vhl-fullscreen-dialog > .vilda-hormone-lifespan {
   }
   .vilda-hormone-lifespan .vhl-chart-caption svg {
     margin-top: 2px;
+  }
+  .vilda-hormone-lifespan .vhl-relationship-note {
+    margin: var(--space-12px) 17px 0;
+    font-size: 11px;
   }
   .vilda-hormone-lifespan .vhl-insight {
     margin: var(--space-16px) 13px;
