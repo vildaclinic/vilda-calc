@@ -274,6 +274,34 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
           await page.locator('#labValue').fill('');
           await expect(line).toHaveAttribute('d', emptyPath);
         }
+        // INSL3 is an illustration, including after a first offline start.
+        // Its retained infant evidence must not silently enable a result point.
+        await wykres.locator('[data-hormone="insl3"]').click();
+        await wykres.locator('[data-hormone="fsh"]').click();
+        await wykres.locator('[data-view="mini"]').click();
+        const insl3 = wykres.locator('[data-stable-reference-line="insl3"]');
+        await expect(insl3).toHaveAttribute('stroke-dasharray', '6 5');
+        const peak = await insl3.evaluate(path => {
+          const rect = path.ownerSVGElement.querySelector('[data-sector="mini"]');
+          const x = Number(rect.getAttribute('x')) + Number(rect.getAttribute('width')) * 27 / 365.25;
+          let low = 0, high = path.getTotalLength();
+          for (let i = 0; i < 27; i++) {
+            const middle = (low + high) / 2;
+            if (path.getPointAtLength(middle).x < x) low = middle; else high = middle;
+          }
+          return (Number(rect.getAttribute('y')) + Number(rect.getAttribute('height')) -
+            path.getPointAtLength((low + high) / 2).y) / Number(rect.getAttribute('height'));
+        });
+        expect(peak).toBeCloseTo(.14, 3);
+        for (const value of [null, .04]) {
+          await page.evaluate(value => window.VildaHormoneLifespanRuntime.update({
+            analyte: 'insl3', sex: 'male', ageYears: 30 / 365.25, preterm: 'no',
+            sourceStatus: 'ready', identityKey: 'fictional-offline-insl3',
+            measurement: value === null ? null : { value, unit: 'ug/L', operator: '=' },
+          }), value);
+          await expect(wykres.locator('[data-patient-concentration="insl3"], [data-reference-line="insl3"]')).toHaveCount(0);
+        }
+        await expect(insl3).toBeVisible();
       }
     }
 

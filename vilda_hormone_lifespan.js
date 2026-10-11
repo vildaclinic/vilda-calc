@@ -706,7 +706,7 @@
         b.dataset.dim = String(!active);
       });
       const firstStage = stageNav.querySelector('[data-stage="0"]');
-      if (firstStage) firstStage.textContent = stableAmhVisible() || stableGonadotropinVisible()
+      if (firstStage) firstStage.textContent = stableAmhVisible() || stableInsl3Visible() || stableGonadotropinVisible()
         ? "Płód · schemat" : stages()[0].short;
       const current = hormones().find(
         (h) => h.id === analyteHormones[currentAnalyte],
@@ -784,6 +784,7 @@
     const inhibinDisplay = displayEngine?.buildMaleInhibin(data, pointEngine());
     const testosteroneDisplay = displayEngine?.buildMaleTestosterone?.(data, pointEngine());
     const amhDisplay = displayEngine?.buildMaleAmh?.(data, pointEngine());
+    const insl3Display = displayEngine?.buildMaleInsl3?.(data);
     const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
     const maleLifeFraction = (age) => {
       let offset = 0;
@@ -794,7 +795,7 @@
       }
       return 1;
     };
-    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay, amhDisplay, ...gonadotropinDisplays].filter(Boolean).map((display) => {
+    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay, amhDisplay, insl3Display, ...gonadotropinDisplays].filter(Boolean).map((display) => {
       const segment = { points: display.points.map((point) => ({
         ageYears: point.ageYears, relative: point.value / display.divisor / display.ceiling,
       })) };
@@ -811,8 +812,9 @@
     const stableInhibinVisible = () => stableVisible("inhb");
     const stableTestosteroneVisible = () => stableVisible("t");
     const stableAmhVisible = () => stableVisible("amh");
+    const stableInsl3Visible = () => stableVisible("insl3");
     const stableGonadotropinVisible = () => gonadotropinDisplays.some((display) => stableVisible(display.id));
-    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible() || stableAmhVisible() || stableGonadotropinVisible();
+    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible() || stableAmhVisible() || stableInsl3Visible() || stableGonadotropinVisible();
     const pointNumber = (value, significantDigits = 6) => new Intl.NumberFormat("pl-PL", {
       maximumSignificantDigits: significantDigits,
       ...(value !== 0 && (Math.abs(value) >= 1e7 || Math.abs(value) < 0.0001)
@@ -825,6 +827,9 @@
     function patientDotModel() {
       const engine = pointEngine();
       const id = analyteHormones[currentAnalyte];
+      // INSL3 has a unitless educational curve, not an activated numeric
+      // patient reference. Keep this guard even when the display is unavailable.
+      if (id === "insl3") return null;
       const [minAge, maxAge] = visibleAgeDomain();
       if (!engine || patientPoint?.status !== "ready" ||
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
@@ -1230,7 +1235,7 @@
           };
         if (sex === "male" && stableCurves.has(h.id)) {
           const stable = stableCurves.get(h.id);
-          const tail = (h.id === "t" || h.id === "amh" || gonadotropinDisplays.some((display) => display.id === h.id)) &&
+          const tail = (h.id === "t" || h.id === "amh" || h.id === "insl3" || gonadotropinDisplays.some((display) => display.id === h.id)) &&
             full && stable.display.illustrativeIntervals.find((part) => part.kind === "older-age-tail");
           if (tail) {
             const id = uid + h.id + "-illustrative-tail";
@@ -1245,6 +1250,7 @@
             style.stroke = `url(#${id})`;
           }
           g.append(el("path", { ...style, d: stableReferencePath(stable, left, pw, y),
+            ...(h.dash ? { "stroke-dasharray": h.dash } : {}),
             "data-line": h.id, "data-stable-reference-line": h.id,
             "data-divisor": stable.display.divisor, "data-ceiling": stable.display.ceiling,
             "data-plot-top": top, "data-plot-bottom": bottom,
@@ -1325,17 +1331,17 @@
               [18, "18"],
               [20, "20 lat"],
             ];
+      const miniEndTicks = [];
       for (const [age, label] of ticks) {
         const px = x(age);
-        g.append(
-          el("line", {
+        const tick = el("line", {
             x1: px,
             x2: px,
             y1: bottom,
             y2: bottom + 5,
             stroke: "#bdcfd5",
-          }),
-          text(
+          });
+        const tickLabel = text(
             px,
             bottom + 21,
             mobile && full
@@ -1350,8 +1356,18 @@
                     : "middle",
               "font-size": mobile ? 10 : 11,
             },
-          ),
-        );
+          );
+        g.append(tick, tickLabel);
+        if (view === "mini" && (age === 0.75 || age === 1)) miniEndTicks.push({ tick, tickLabel });
+      }
+      // A narrow app card can be smaller than the viewport. Keep the 12-month
+      // endpoint and omit the intermediate tick only when its text overlaps.
+      if (miniEndTicks.length === 2) {
+        const [nine, last] = miniEndTicks;
+        if (nine.tickLabel.getBoundingClientRect().right + 5 > last.tickLabel.getBoundingClientRect().left) {
+          nine.tick.remove();
+          nine.tickLabel.remove();
+        }
       }
       const fraction = xFraction(patientAgeYears),
         withinLifeAxis =
@@ -1405,6 +1421,13 @@
         byId("chart-desc").textContent += " AMH zachowuje stały przebieg i skalę. " +
           "Połączenia grup wieku i badań są poglądowe, nie stanowią median konkretnego wieku ani stadiów Tannera. " +
           "Okres płodowy jest schematem. Wygaszony odcinek po 70 latach oznacza koniec danych, nie zatrzymanie biologicznego spadku.";
+      }
+      if (stableInsl3Visible()) {
+        byId("scale-note").textContent = selected.size === 1
+          ? "Poglądowy przebieg INSL3. Hormony mają odrębne skale."
+          : "Przebieg poglądowy. Każdy hormon ma własną skalę.";
+        byId("chart-desc").textContent += " INSL3: niewielki wzrost w pierwszych tygodniach, spadek w niemowlęctwie, wzrost pokwitaniowy i stopniowy spadek w dorosłości. " +
+          "Wysokości są ilustracyjne, nie oznaczają stężeń. Odcinek po 80 latach jest wygaszonym przedłużeniem poglądowym.";
       }
       pointDescription(dotModel);
     }
@@ -1678,6 +1701,13 @@
       if (stableAmhVisible() && selected.size === 1 && insightMode === "hormone") {
         copy = "AMH jest wysokie w niemowlęctwie. Z wiekiem spada, a w okresie dojrzewania osiąga znacznie niższe wartości. Tempo zmian zależy od rozwoju pacjenta.";
       }
+      if (stableInsl3Visible() && selected.size === 1) {
+        if (insightMode === "hormone") copy = insl3Display.policy.presentation.hormoneCopy;
+        if (view === "mini" || (view === "life" && activeStage === 1)) {
+          title = "Minipuberty";
+          copy = "Niewielki wzrost w pierwszych tygodniach, potem spadek. Poziom pozostaje znacznie niższy niż po pokwitaniu.";
+        }
+      }
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
       const observations = opts.observations || root.VildaHormoneLifespanObservations;
@@ -1861,6 +1891,23 @@
           paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
           if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
         }
+      }
+      if (stableInsl3Visible()) {
+        paragraph("Linia pokazuje poglądowy przebieg INSL3. Nie jest krzywą mediany ani zakresem referencyjnym. Hormony mają odrębne skale.");
+        paragraph("Niemowlęctwo: Busch 2022, rycina 2, pokazuje modelowaną średnią trajektorię z niewielkim wzrostem do około 27. dnia i późniejszym spadkiem. Rycina 3 opisuje inną statystykę: medianę modelu. Jej opadający kształt nie wyklucza wczesnej fali pokazanej w modelu podłużnym.");
+        paragraph("Mała wysokość niemowlęcego odcinka względem dorosłości jest ilustracyjna. Bay 2007 i Bay 2005 wspierają niższe centralne stężenia u niemowląt niż u dorosłych, ale nie ustalają dokładnej wysokości miesięcznego szczytu na wspólnej krzywej. Wyników z różnych metod i populacji nie zharmonizowano.");
+        paragraph("Niskie wartości oraz ograniczenia oznaczenia zmniejszają pewność dokładnych liczb. Nie są dowodem braku wzrostu biologicznego. Na tym wykresie nie dodano liczbowego odniesienia dla wyniku pacjenta.");
+        paragraph("Pokwitanie i dorośli: Albrethsen 2020 oraz EMAS 2022 wspierają wzrost pokwitaniowy i stopniowy spadek w dorosłości. Stadium Tannera nie jest przypisane do dokładnego wieku. Wygładzona linia nie odtwarza każdej średniej ani mediany grupowej.");
+        paragraph("Życie płodowe: schemat oparty jakościowo na fizjologii opisanej przez Harrison 2019. Wysokość nie oznacza stężenia. Odcinek 80–90 lat pozostaje wygaszonym przedłużeniem poglądowym.");
+        links.push(
+          ["Busch 2022 · minipuberty", "https://doi.org/10.1210/clinem/dgac115"],
+          ["Bay 2007 · niemowlęta", "https://doi.org/10.1210/jc.2007-0974"],
+          ["Bay 2005 · dorośli", "https://doi.org/10.1210/jc.2004-2257"],
+          ["Albrethsen 2020 · pokwitanie", "https://doi.org/10.1210/clinem/dgaa496"],
+          ["Albrethsen 2020 · dorośli", "https://doi.org/10.1210/clinem/dgaa145"],
+          ["EMAS 2022 · dorośli", "https://doi.org/10.1111/andr.13220"],
+          ["Harrison 2019 · życie płodowe", "https://doi.org/10.3389/fendo.2019.00596"],
+        );
       }
       if (stableGonadotropinVisible()) {
         paragraph("Linie LH i FSH pokazują poglądowy przebieg zmian, zachowując stałą geometrię i skalę przed wpisaniem wyniku i po nim. Jasny znacznik przedstawia źródłową medianę lub średnią i może leżeć poza linią. Nie są to granice normy ani iloraz LH/FSH.");
@@ -2292,7 +2339,7 @@
         specimen: next.specimen,
       };
       const engine = pointEngine();
-      patientPoint = engine && data.patientPointData
+      patientPoint = currentAnalyte !== "insl3" && engine && data.patientPointData
         ? engine.evaluate(data.patientPointData, patientContext) : null;
       if (resetContext) {
         closeFullscreen(false);
