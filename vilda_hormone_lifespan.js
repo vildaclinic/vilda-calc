@@ -704,6 +704,9 @@
         b.setAttribute("aria-pressed", String(active));
         b.dataset.dim = String(!active);
       });
+      const firstStage = stageNav.querySelector('[data-stage="0"]');
+      if (firstStage) firstStage.textContent = stableAmhVisible()
+        ? "Płód · schemat" : stages()[0].short;
       const current = hormones().find(
         (h) => h.id === analyteHormones[currentAnalyte],
       );
@@ -777,6 +780,7 @@
     const displayEngine = opts.displayEngine || root.VildaHormoneLifespanDisplay;
     const inhibinDisplay = displayEngine?.buildMaleInhibin(data, pointEngine());
     const testosteroneDisplay = displayEngine?.buildMaleTestosterone?.(data, pointEngine());
+    const amhDisplay = displayEngine?.buildMaleAmh?.(data, pointEngine());
     const maleLifeFraction = (age) => {
       let offset = 0;
       for (const stage of maleStages) {
@@ -786,7 +790,7 @@
       }
       return 1;
     };
-    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay].filter(Boolean).map((display) => {
+    const stableCurves = new Map([inhibinDisplay, testosteroneDisplay, amhDisplay].filter(Boolean).map((display) => {
       const segment = { points: display.points.map((point) => ({
         ageYears: point.ageYears, relative: point.value / display.divisor / display.ceiling,
       })) };
@@ -802,7 +806,8 @@
     const stableVisible = (id) => !compare && sex === "male" && stableCurves.has(id) && selected.has(id);
     const stableInhibinVisible = () => stableVisible("inhb");
     const stableTestosteroneVisible = () => stableVisible("t");
-    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible();
+    const stableAmhVisible = () => stableVisible("amh");
+    const stableStudyVisible = () => stableInhibinVisible() || stableTestosteroneVisible() || stableAmhVisible();
     const pointNumber = (value, significantDigits = 6) => new Intl.NumberFormat("pl-PL", {
       maximumSignificantDigits: significantDigits,
       ...(value !== 0 && (Math.abs(value) >= 1e7 || Math.abs(value) < 0.0001)
@@ -1199,7 +1204,7 @@
           };
         if (sex === "male" && stableCurves.has(h.id)) {
           const stable = stableCurves.get(h.id);
-          const tail = h.id === "t" && full && stable.display.illustrativeIntervals.find((part) => part.kind === "older-age-tail");
+          const tail = (h.id === "t" || h.id === "amh") && full && stable.display.illustrativeIntervals.find((part) => part.kind === "older-age-tail");
           if (tail) {
             const id = uid + h.id + "-illustrative-tail";
             const gradient = el("linearGradient", { id, gradientUnits: "userSpaceOnUse",
@@ -1366,6 +1371,13 @@
         byId("scale-note").textContent = "Przebieg poglądowy. Każdy hormon ma własną skalę.";
         byId("chart-desc").textContent += " Testosteron zachowuje stały przebieg i skalę. " +
           "Połączenie między niemowlęctwem a dzieciństwem, okres płodowy i dorosły łuk są poglądowe. Po 86 latach brak ilościowego odniesienia.";
+      }
+      if (stableAmhVisible()) {
+        byId("scale-note").textContent = "Poglądowy przebieg na podstawie badań." +
+          (selected.size > 1 ? " Każdy hormon ma własną skalę." : "");
+        byId("chart-desc").textContent += " AMH zachowuje stały przebieg i skalę. " +
+          "Połączenia grup wieku i badań są poglądowe, nie stanowią median konkretnego wieku ani stadiów Tannera. " +
+          "Okres płodowy jest schematem. Wygaszony odcinek po 70 latach oznacza koniec danych, nie zatrzymanie biologicznego spadku.";
       }
       pointDescription(dotModel);
     }
@@ -1630,6 +1642,9 @@
         copy = (groupMean ? `Średnia opisuje badaną grupę ${renderedPoint.profile.ageGroup.label}.` : "Mediana opisuje populację z badania.") +
           " Wynik konkretnej osoby ocenia się z zakresem referencyjnym i kontekstem klinicznym.";
       }
+      if (stableAmhVisible() && selected.size === 1 && insightMode === "hormone") {
+        copy = "AMH jest wysokie w niemowlęctwie. Z wiekiem spada, a w okresie dojrzewania osiąga znacznie niższe wartości. Tempo zmian zależy od rozwoju pacjenta.";
+      }
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
       const observations = opts.observations || root.VildaHormoneLifespanObservations;
@@ -1760,7 +1775,7 @@
     }
     function updateSources() {
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
-        renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind]);
+        renderedPoint?.curves.map((curve) => curve.profile.id), renderedPoint?.profile.id, renderedObservation?.kind]);
       if (nextKey === sourcesKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy");
@@ -1791,6 +1806,25 @@
           const sourceKey = profile.url || profile.sourceLabel;
           if (testosteroneSources.has(sourceKey)) continue;
           testosteroneSources.add(sourceKey);
+          paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
+          if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
+        }
+      }
+      if (stableAmhVisible()) {
+        paragraph("Linia AMH jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę po wpisaniu wyniku. Pozostałe hormony mają własne skale.");
+        paragraph("Minipuberty opiera się na medianie modelu Busch u donoszonych chłopców. Dalszy przebieg łączy mediany rocznych grup Wang z dorosłymi Tehrani. Grupy wieku nie są stadiami Tannera; różne populacje i metody oznaczeń nie są wymienne. Okres płodowy i łagodne połączenia są ilustracyjne.");
+        paragraph("Jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia: przed 7. dniem, w grupie 12–<13 lat, od 15 do <30 lat oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
+        if (renderedPoint?.id === "amh") {
+          const profile = renderedPoint.profile;
+          paragraph("Odniesienie dla wyniku: " +
+            [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population].filter(Boolean).join(" · ") + ".");
+          if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
+        }
+        const amhSources = new Set();
+        for (const profile of amhDisplay.profiles) {
+          const sourceKey = profile.url || profile.sourceLabel;
+          if (amhSources.has(sourceKey)) continue;
+          amhSources.add(sourceKey);
           paragraph([profile.sourceLabel, profile.method, profile.population].filter(Boolean).join(" · "));
           if (profile.url) links.push([profile.sourceLabel || "Źródło", profile.url]);
         }

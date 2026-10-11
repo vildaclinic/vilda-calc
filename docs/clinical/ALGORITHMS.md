@@ -1018,7 +1018,8 @@ nie było błędem transkrypcji i nie jest poprawiane w zachowanym dowodzie.
   ponownie dopasowywać 97 próbek i B-spline w nowej osi czasu. Zachowuje
   skalę, szczyty i kierunek zmian; reszta ponownego próbkowania nie jest
   deklarowana jako zerowa. Inhibina B zachowuje własną stałą geometrię,
-  a porównanie płci wcześniejszą, odrębną politykę.
+  a porównanie płci wcześniejszą, odrębną politykę. Zwykłe AMH zastępuje
+  następny etap `HORMONE-AMH-STABLE-CURVE` opisany niżej.
 
 **Wpływ kliniczny:** zmiana dorosłego źródła wpływa na edukacyjne położenie
 wyniku względem populacji i podlega regułom zmian klinicznych AGENTS.md.
@@ -1041,6 +1042,79 @@ stycznych, desktop, 320 px, pełny ekran, odznaczenie hormonów, powiększenia
 i zachowanie porównania płci. Błąd próbkowania zbliżenia mierzy się
 w pikselach; nie utożsamia z identycznością ścieżek SVG. Walidacja
 techniczna nie dowodzi prawidłowości medycznej.
+
+### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
+
+**Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana
+11 października 2026 do wdrożenia w zwykłych męskich widokach. Jedna
+płynna linia zastępuje przełączanie schematu na odcinki źródłowe po
+wpisaniu wyniku. Jej dzieciństwo stopniowo opada, zamiast pozostawać
+blisko niemowlęcego maksimum. Porównanie płci zachowuje osobny kontrakt.
+
+**Zweryfikowane źródła, bez nowych profili:**
+
+- [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3: mediana
+  GAMLSS odczytana z wektorów PDF, 119 zdrowych donoszonych chłopców,
+  338 próbek surowicy, Access 2. Zachowane odniesienie 7 dni–<1 roku.
+  Szerokie maksimum odczytanej mediany około 175. dnia wynosi około
+  187 ng/mL. Szczyt około 146. dnia w tekście dotyczy innej statystyki,
+  modelu podłużnego; nie przesuwamy do niego mediany ryc. 3.
+- [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2:
+  2009 zdrowych chłopców z Wuhan, surowica, Access 2. Pozostaje 13
+  zgodnych median rocznych grup 1–11, 13 i 14; `[N,N+1)` jest jawną
+  konwencją aplikacji, nie definicją dokładnego wieku podaną przez autora.
+  Mediany nie opisują stadiów Tannera. Konflikt grupy 12 (6,99/7,99 ng/mL)
+  oraz grupy 0 pozostaje w dowodzie; ilustracja nie rozstrzyga go.
+- [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2:
+  831 zdrowych mężczyzn z Teheranu, 30–70 lat, surowica, zmodyfikowany
+  Gen II EIA. Wszystkie 328 komórek tabeli sprawdzono z pełnym XML.
+  To roczne p50 modelu, m.in. 30/7,08, 40/6,12, 60/4,57 i 70/3,95 ng/mL;
+  interpolacja pomiędzy nimi nie jest pełnym równaniem autora.
+
+To różne populacje i statystyki. Access 2 oraz zmodyfikowany Gen II
+nie zostały tu skalibrowane między sobą. Przeliczenie jednostek AMH
+(`ng/mL / 0,1401` na pmol/L) nie jest harmonizacją metod.
+
+**Zatwierdzona geometria:** czytelna polityka
+[`amh-display-policy.json`](hormone-lifespan/amh-display-policy.json),
+`amhDisplayPolicy` oraz `VildaHormoneLifespanDisplay.buildMaleAmh`
+przygotowują stałe węzły. Rysowanie odbywa się w kanonicznym X osi całego
+życia; zbliżenia próbkują ten sam przebieg. Węzły mediany Busch od 7. do
+250. dnia zachowano. Sześcienne łuki Béziera prowadzą dalej do
+9,5 roku / 58,96 ng/mL, 14,5 / 8,23, 30 / 7,08 i 70 / 3,95.
+Środki grup Wang służą wyłącznie kontroli rysunku. Nie przypisują mediany
+całej grupy dokładnemu wiekowi ani momentowi osiągnięcia stadium.
+Wygładzenie nie wymusza wszystkich wartości grupowych: przykładowo
+przy 11,5 roku linia odpowiada około 25,01 ng/mL, a źródłowy znacznik
+pozostaje na medianie grupy 20,70 ng/mL. Różnica nie zmienia danych.
+
+Dzielnik skali wynosi 1335,592934 pmol/L, zapas 1,25; oba pozostają stałe
+przy pustym wyniku, wpisaniu liczby, zmianie wieku i powiększeniu. Dorosłe
+4–7 ng/mL pozostaje blisko osi wobec niemowlęcych około 187 ng/mL;
+nie podnosimy go sztucznie dla czytelności. Kotwice płodowe oraz odcinek
+urodzenie–7. dzień są oznaczonym schematem. Ich wysokości techniczne
+nie otrzymują liczbowych tooltipów ani znacznika źródłowego. Po 70 latach
+linia zachowuje ostatnią wysokość i wygasa do 90; to koniec dowodu,
+nie twierdzenie o biologicznym plateau lub nowe odniesienie pacjenta.
+
+**Wpływ kliniczny:** zmienia się edukacyjny obraz relacji okresów życia.
+Wszystkie 15 męskich profili AMH, ich liczby, kwalifikacja pacjenta,
+normy laboratoryjne i werdykty pozostają dotychczasowe. Brak ilościowego
+odniesienia przed 7. dniem, w grupie 12–<13 lat, w wieku 15–<30 i po
+70 latach. Niemowlę wcześniacze lub z nieznanym donoszeniem nadal nie
+kwalifikuje się do Busch. Płynna linia nie wypełnia tych luk liczbami.
+Akceptacja makiety i techniczne kontrole nie nadają połączonej krzywej
+statusu walidacji klinicznej.
+
+**Przypadki i kontrole:** M/5,5 roku/99,18 ng/mL → znacznik mediany
+całej grupy Wang 5–<6, niezależny od linii około 95,25; M/11,5/20,70 →
+mediana grupy 11–<12; M/12,5/7 i M/20/7 → brak odniesienia;
+M/40/6,12 → p50 Tehrani; M/70/3,95 → p50, >70 → brak odniesienia.
+Dla tych samych danych pusty → zgodny → wysoki → wyczyszczony wynik
+musi zachować linię i skalę. Kontrole obejmują minipuberty, pokwitanie,
+pełny ekran, desktop i 320 px, ciągłość stycznych, nieujemność, brak
+odbicia po szczycie oraz brak ekstrapolacji profili. Zestawienie audytu:
+[`amh-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/patient-point/amh-lifespan-display-audit-2026-10-11.json).
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 

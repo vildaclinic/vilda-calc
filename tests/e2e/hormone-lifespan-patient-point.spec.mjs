@@ -73,7 +73,7 @@ async function expectPoint(page, value, median, independentReference = false) {
     // A source group mean is not a coordinate read from the illustrative curve.
     // Both still use the same fixed concentration scale.
     expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(.1);
-    await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'group-mean');
+    await expect(dot(page)).toHaveAttribute('data-reference-statistic', typeof independentReference === 'string' ? independentReference : 'group-mean');
     await expect(dot(page)).toHaveAttribute('data-reference-value', String(median));
   } else expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
   if (geometry.offscale) {
@@ -164,11 +164,11 @@ test('boys AMH uses the current Wang age-group median, preserves units and leave
   await choose(page, 'amh');
   await page.locator('#labUnit').selectOption('ng/mL');
   await page.locator('#labValue').fill('100');
-  await expectPoint(page, 100 / .1401, 99.18 / .1401);
+  await expectPoint(page, 100 / .1401, 99.18 / .1401, 'group-median');
   await expect(dot(page)).toHaveAttribute('data-profile', 'wang2020-male-amh-age-5');
   await expect(dot(page)).toContainText('Mediana grupy');
   await expect(panel(page).locator('[data-lifespan="scale-note"]'))
-    .toContainText('Linia: mediana grupy 5–<6 lat, nie granica normy.');
+    .toContainText('Linia jest poglądowa.');
   await panel(page).getByText('O wykresie i źródła', { exact: true }).click();
   await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('Wang');
   await expect(panel(page).locator('[data-lifespan="source-copy"]'))
@@ -177,7 +177,7 @@ test('boys AMH uses the current Wang age-group median, preserves units and leave
   await panel(page).screenshot({ path: test.info().outputPath('amh-group-desktop-5-years.png') });
   await page.locator('#labUnit').selectOption('pmol/L');
   await page.locator('#labValue').fill('1000');
-  await expectPoint(page, 1000, 99.18 / .1401);
+  await expectPoint(page, 1000, 99.18 / .1401, 'group-median');
   await page.evaluate(() => {
     window.VildaPersistence.writeShared({ sex: 'M', age: 12, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
@@ -188,9 +188,9 @@ test('boys AMH uses the current Wang age-group median, preserves units and leave
     window.VildaPersistence.writeShared({ sex: 'M', age: 13, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
   });
-  await expectPoint(page, 1000, 9.64 / .1401);
+  await expectPoint(page, 1000, 9.64 / .1401, 'group-median');
   await expect(dot(page)).toHaveAttribute('data-profile', 'wang2020-male-amh-age-13');
-  await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('13–<14 lat');
+  await expect(panel(page).locator('[data-lifespan="source-copy"] p').filter({ hasText: 'Odniesienie dla wyniku:' })).toContainText('13–<14 lat');
   await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('13–<14 lat');
 });
 
@@ -206,7 +206,7 @@ test('AMH group-median labels fit at 320px in the chart and fullscreen without i
       await panel(page).getByRole('button', { name: 'Powiększ', exact: true }).click();
       await expect(page.locator('dialog.vhl-fullscreen-dialog')).toBeVisible();
     }
-    await expectPoint(page, 100 / .1401, 99.18 / .1401);
+    await expectPoint(page, 100 / .1401, 99.18 / .1401, 'group-median');
     await expect(panel(page).locator('input, select, textarea')).toHaveCount(0);
     const fits = await dot(page).evaluate(group => {
       const bounds = group.ownerSVGElement.viewBox.baseVal;

@@ -115,6 +115,29 @@ Zmiana tej polityki wymaga jawnego zakresu zadania i osobnej weryfikacji.
   na niezmienionych kotwicach. Usunięto ponowne dopasowanie 97 próbek
   i wtórny B-spline dla każdego zbliżenia. Porównanie płci zachowuje
   dotychczasowy sposób rysowania; inhibina B własną ciągłą krzywą.
+  Zwykłe AMH otrzymało następnie osobną politykę opisaną poniżej.
+
+## Utrwalony przykład: męskie AMH, makieta zatwierdzona 11 października 2026
+
+- Zachowaj jedną linię bez wyniku i po jego wpisaniu. Stosuj
+  `amh-display-policy.json` i `buildMaleAmh`; widoki zwykłe używają
+  stałego dzielnika 1335,592934 pmol/L i zapasu 1,25. Dorosłych 4–7 ng/mL
+  nie podnoś do pozornej wysokości zbliżonej do niemowlęcych około 187.
+- Busch zachowuje odczyt mediany od 7. do 250. dnia, z szerokim
+  maksimum około 175. dnia. Nie myl go ze szczytem modelu podłużnego
+  około 146. dnia. Prenatalne kotwice i dojście do 7. dnia są schematem.
+- Kolejne łuki w kanonicznym X łączą 250. dzień, 9,5 roku, 14,5 roku,
+  30 i 70 lat. Nie wymuszają wszystkich median grup Wang. Środek grupy
+  jest punktem kontroli geometrii, nie medianą dokładnego wieku.
+  Przykład: przy 11,5 roku linia około 25,01 ng/mL, lecz źródłowe p50
+  grupy nadal 20,70. Jasny znacznik musi zachować tę drugą wartość.
+- Wang nie zawiera median Tannera. Nie ustalaj stadium z wieku ani
+  początku pokwitania z miejsca spadku linii. Access 2 i zmodyfikowany
+  Gen II nie otrzymały kalibracji przez samo połączenie rysunku.
+- Zachowaj 15 profili i luki przed 7. dniem, 12–<13 lat, 15–<30 lat
+  oraz >70 lat. Krzywa przez lukę nie uprawnia do dodania źródłowej liczby.
+  Po 70 latach wygaszony płaski ogon oznacza koniec danych, nie biologiczne
+  plateau. Normy laboratoryjne i porównanie płci mają odrębne kontrakty.
 
 ## Co sprawdzić przed oddaniem zmiany
 

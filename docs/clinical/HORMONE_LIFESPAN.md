@@ -51,6 +51,11 @@ zastępuje opisane wyżej historyczne połączenia testosteronu i dorosły
 wybór Kelsey; aktualny kontrakt znajduje się niżej. Obowiązująca instrukcja
 dla kolejnych agentów: [HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
 
+11 października 2026 właściciel zaakceptował także makietę męskiego AMH
+ze stałą linią, szerokim maksimum niemowlęcym, opadającym dzieciństwem
+i płynnym spadkiem pokwitaniowym. Poniższa polityka AMH zmienia
+prezentację edukacyjną, zachowując 15 istniejących profili liczbowych.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -107,8 +112,8 @@ Punkt wyniku i jego znacznik odniesienia muszą korzystać z **tej samej
 jednostki i funkcji skali**. Mediana lub średnia pochodzi z oryginalnego źródła
 źródłowego, również po zmianie widoku, wyboru hormonów i powiększeniu.
 Nie wolno dopasować punktu do autorskiej linii pojedynczym mnożnikiem
-ani przeliczać schematycznej wysokości na stężenie. W męskiej inhibinie B
-i testosteronie całkowitym
+ani przeliczać schematycznej wysokości na stężenie. W męskiej inhibinie B,
+AMH i testosteronie całkowitym
 ciągła linia jest wygładzoną prezentacją: w pasach wygładzenia znacznik
 źródłowej mediany/średniej może leżeć poza nią. Nie przesuwamy go na linię.
 Model ilościowy zachowuje własne granice; poza nimi krzywa edukacyjna
@@ -212,6 +217,39 @@ nie tworzymy precyzyjnego punktu względem sztucznej podłogi. Szczegóły
 tego ograniczenia graficznego są w dokumentacji danych; nie jest to
 nowy próg interpretacji klinicznej.
 
+### Stała linia męskiego AMH
+
+Zatwierdzona 11 października 2026 linia jest taka sama przed wpisaniem
+wyniku, po wpisaniu i po wyczyszczeniu. Wiek pacjenta, kwalifikacja
+niemowlęcia, wybór innych hormonów i powiększenie nie dobierają innego
+rysunku. `buildMaleAmh` korzysta z
+[`amh-display-policy.json`](hormone-lifespan/amh-display-policy.json).
+
+Przebieg zachowuje odczyt mediany Busch od 7. do 250. dnia. Jej szerokie
+maksimum około 175. dnia wynosi około 187 ng/mL. Później łagodne łuki
+prowadzą przez dzieciństwo i wyraźniejszy spadek pokwitaniowy do niskiego
+poziomu dorosłych. Kontrole geometrii w 9,5 i 14,5 roku odnoszą się do
+median grup Wang 58,96 i 8,23 ng/mL. Nie są pomiarami dokładnego wieku
+ani momentami osiągnięcia stadium. Łuk 14,5–30 dochodzi do p50 Tehrani
+7,08 ng/mL; dorosły odcinek maleje do 3,95 w 70. roku. Po 70 latach
+ostatnia wysokość wygasa do 90 lat, oznaczając koniec dostępnych danych,
+bez twierdzenia o biologicznym plateau. Odcinek płodowy oraz urodzenie–
+7. dzień pozostają jawnie schematyczne i nie dostają liczbowych tooltipów.
+
+Cała linia używa dzielnika 1335,592934 pmol/L z zapasem 1,25. Dorosłe
+około 4–7 ng/mL jest na tej skali niskie względem niemowlęcych około 187;
+nie jest podnoszone sztucznym przesunięciem. Płynne łączenia są syntezą
+edukacyjną różnych populacji i metod. Access 2 oraz zmodyfikowany Gen II
+nie są przez to skalibrowane. Źródła i granice opisuje
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
+Jasny znacznik nadal wskazuje źródłową medianę; przy 11,5 roku wynosi ona
+20,70 ng/mL, choć uproszczona linia odpowiada około 25,01. Zachowano
+wszystkie 15 profili, bramkę donoszenia oraz luki: przed 7. dniem,
+12–<13 lat, 15–<30 i >70 lat. Ciągłość obrazu nie daje nowych median,
+norm ani interpretacji. Osobne porównanie płci zachowuje wcześniejszą
+geometrię i zasady skalowania.
+
 ## Wybór i interakcje
 
 - Domyślnie wybrany jest tylko bieżący analit przelicznika. Pozostałe
@@ -272,7 +310,7 @@ ruchu, fokus źródeł) i `hormone-lifespan-puberty-comparison.spec.mjs`
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.
-Męska inhibina B i testosteron całkowity korzystają ze stałych krzywych
+Męska inhibina B, AMH i testosteron całkowity korzystają ze stałych krzywych
 opisanych powyżej. Jeżeli
 wyświetlany jest model liczbowy z punktem wyniku, pierwszeństwo mają wspólne przeliczenie
 punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
@@ -385,8 +423,8 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 ## Źródła męskie i przyszłe anality
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
-pacjenta**. Zwykłe męskie widoki inhibiny B i testosteronu całkowitego
-zastępują obecnie stałe krzywe opisane powyżej. LH, FSH, INSL3 i AMH
+pacjenta**. Zwykłe męskie widoki inhibiny B, AMH i testosteronu całkowitego
+zastępują obecnie stałe krzywe opisane powyżej. LH, FSH i INSL3
 zachowują kotwice schematu, ale od 11 października 2026 korzystają
 z jednej kanonicznej krzywej PCHIP: zbliżenia próbkują ją, zamiast
 ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowują skalę,
