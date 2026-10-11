@@ -292,6 +292,97 @@ def build():
             provenance={**infant['source'],'table':hormone['supplementTable'],
                         'participants':98,'samples':266},limitations=infant['displayNotes'])
 
+    # Adult LH/FSH central observations remain separate from the educational
+    # display curve and laboratory reference intervals. A constant profile is
+    # the published whole-group statistic, never an interpolated exact-age p50.
+    fame = read('laurentino2020-lh-fsh-group-means.json')
+    finrisk = read('perheentupa2013-lh-fsh-group-medians.json')
+    hims = read('yeap2007-lh-group-medians.json')
+    ljubicic = read('ljubicic2020-fsh-adult-model-digitized.json')
+    for source in (fame, finrisk, hims, ljubicic):
+        assert (source['sex'], source['unit']) == ('male', 'IU/L')
+    for source in (fame, finrisk, hims):
+        assert sum(row['n'] for row in source['rows']) == source['participants']
+    assert fame['statistic'] == 'arithmetic-group-mean'
+    assert finrisk['statistic'] == hims['statistic'] == 'group-median'
+
+    def add_adult_group(identifier, analyte, source, row, value, statistic,
+                        provenance, mean_age=None):
+        route = row['application']
+        minimum, maximum = route['minAge'], route['maxAge']
+        lower, upper = row['ageGroupYears']
+        assert lower <= minimum < maximum
+        # FINRISK/HIMS table brackets use completed years; the final HIMS
+        # group is instead capped at its actual observed upper age, 89.
+        assert maximum <= upper + (1 if route['maxAgeExclusive'] else 0)
+        age_group = {
+            'label': str(lower) + '–' + str(upper) + ' lat',
+            'minAge': lower, 'maxAge': upper, 'maxAgeExclusive': False,
+            'n': row['n'], 'sourceUnit': 'IU/L',
+            'sourceMean' if statistic == 'group-mean' else 'sourceMedian': value,
+            'boundaryPolicy': 'Preserve published age label; separate minAge/maxAge fields of profile define application routing.',
+            'description': ('Średnia arytmetyczna całej grupy badania; nie jest medianą ani wartością dokładnego wieku.'
+                            if statistic == 'group-mean' else
+                            'Mediana całej grupy badania; nie opisuje zmian wewnątrz jej przedziału wieku.')}
+        extra = {}
+        if mean_age is not None:
+            age_group['meanAge'] = mean_age
+            extra['meanAge'] = mean_age
+        presentation = source['presentation']
+        add(identifier, analyte, 'male',
+            [dict(ageYears=minimum, value=value, eligible=True),
+             dict(ageYears=maximum, value=value, eligible=True)],
+            minimum, maximum, presentation['sourceLabel'], source['source']['url'],
+            presentation['method'], presentation['population'], statistic,
+            interpolation='constant', maxAgeExclusive=route['maxAgeExclusive'],
+            compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
+            provenance={**provenance, 'groupParticipants':row['n']},
+            limitations=source['limitations'], ageGroup=age_group,
+            groupN=row['n'], **extra)
+
+    fame_selected = [row for row in fame['rows'] if row['application']]
+    assert len(fame_selected) == 1 and fame_selected[0]['ageGroupYears'] == [18, 25]
+    assert fame_selected[0]['application'] == {
+        'minAge':18, 'maxAge':25, 'maxAgeExclusive':True}
+    for analyte in ('lh', 'fsh'):
+        row = fame_selected[0]
+        add_adult_group('laurentino2020-male-' + analyte + '-18-under25',
+            analyte, fame, row, row[analyte.upper()]['arithmeticMean'],
+            'group-mean', fame['source'])
+        for row in finrisk['rows']:
+            lower, upper = row['ageGroupYears']
+            central = row[analyte.upper()]
+            add_adult_group('perheentupa2013-male-' + analyte + '-' + str(lower) + '-' + str(upper),
+                analyte, finrisk, row, central['median'], 'group-median',
+                {**finrisk['source'], 'table':finrisk['tables'][analyte],
+                 'assay':finrisk['assay'][analyte],
+                 'publishedP5':central['p5'], 'publishedP95':central['p95']})
+
+    for row in hims['rows']:
+        if not row['application']:
+            continue
+        lower, upper = row['ageGroupYears']
+        add_adult_group('yeap2007-male-lh-' + str(lower) + '-' + str(upper),
+            'lh', hims, row, row['median'], 'group-median',
+            {**hims['source'], 'publishedAgeLabel':row['publishedAgeLabel'],
+             'publishedMeanAge':row['meanAgeYears'],
+             'publishedP25':row['p25'], 'publishedP75':row['p75']},
+            mean_age=row['meanAgeYears'])
+
+    route = ljubicic['application']
+    assert ljubicic['statistic'] == 'approximate-model-median' and ljubicic['approximate']
+    assert route == {'minAge':75, 'maxAge':80, 'maxAgeExclusive':False}
+    assert [row['ageYears'] for row in ljubicic['rows']] == list(range(41, 81))
+    points = [dict(ageYears=row['ageYears'], value=row['centralIUperL'], eligible=True)
+              for row in ljubicic['rows'] if route['minAge'] <= row['ageYears'] <= route['maxAge']]
+    presentation = ljubicic['presentation']
+    add('ljubicic2020-male-fsh-75-80-approximate', 'fsh', 'male', points,
+        route['minAge'], route['maxAge'], presentation['sourceLabel'],
+        ljubicic['source']['url'], presentation['method'], presentation['population'],
+        'median', True, maxAgeExclusive=route['maxAgeExclusive'],
+        compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
+        provenance=ljubicic['source'], limitations=ljubicic['limitations'])
+
     return {'version':'2026-10-11.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',

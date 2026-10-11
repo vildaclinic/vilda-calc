@@ -51,6 +51,20 @@ zastępuje opisane wyżej historyczne połączenia testosteronu i dorosły
 wybór Kelsey; aktualny kontrakt znajduje się niżej. Obowiązująca instrukcja
 dla kolejnych agentów: [HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
 
+11 października 2026 właściciel zatwierdził także poprawioną makietę LH/FSH:
+stałe krzywe i skale, łagodniejszy wzrost FSH w środkowej dorosłości,
+dorosłe źródłowe średnie/mediany oraz podpis porównania. Zastępuje ona
+przełączanie schematu po wpisaniu wyniku. Politykę i źródła opisują
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md) i
+[ALGORITHMS.md](ALGORITHMS.md#hormone-lh-fsh-stable-curves--stałe-krzywe-i-dorosłe-odniesienia-2026-10-11).
+FSH ma ilustracyjny most 12–25 lat oraz łuk dorosłości sprawdzony w wieku
+41–80, bez wymuszonego wypłaszczenia przy 25 latach. Źródłowe mediany
+Madsen pozostają niezmienione mimo uproszczenia rysunku pokwitania.
+Pod wykresem widnieje: „Porównanie zmian LH i FSH w czasie. Każdy hormon
+ma własną skalę — podobna wysokość linii nie oznacza takiego samego
+stężenia.” Podpis działa również w pełnym ekranie; nie zastępuje opisu
+osobnego trybu porównania płci. Domyślny wybór nadal obejmuje jeden analit.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -107,8 +121,8 @@ Punkt wyniku i jego znacznik odniesienia muszą korzystać z **tej samej
 jednostki i funkcji skali**. Mediana lub średnia pochodzi z oryginalnego źródła
 źródłowego, również po zmianie widoku, wyboru hormonów i powiększeniu.
 Nie wolno dopasować punktu do autorskiej linii pojedynczym mnożnikiem
-ani przeliczać schematycznej wysokości na stężenie. W męskiej inhibinie B
-i testosteronie całkowitym
+ani przeliczać schematycznej wysokości na stężenie. W męskich LH, FSH,
+inhibinie B i testosteronie całkowitym
 ciągła linia jest wygładzoną prezentacją: w pasach wygładzenia znacznik
 źródłowej mediany/średniej może leżeć poza nią. Nie przesuwamy go na linię.
 Model ilościowy zachowuje własne granice; poza nimi krzywa edukacyjna
@@ -385,8 +399,8 @@ owulacji pozostaje. Danych Roche nie łączymy liczbowo z LC-MS/MS osi życia.
 ## Źródła męskie i przyszłe anality
 
 Poniżej udokumentowano historyczny **bazowy schemat bez ilościowej oceny
-pacjenta**. Zwykłe męskie widoki inhibiny B i testosteronu całkowitego
-zastępują obecnie stałe krzywe opisane powyżej. LH, FSH, INSL3 i AMH
+pacjenta**. Zwykłe męskie widoki inhibiny B, testosteronu całkowitego
+oraz LH i FSH zastępują obecnie stałe krzywe opisane powyżej. INSL3 i AMH
 zachowują kotwice schematu, ale od 11 października 2026 korzystają
 z jednej kanonicznej krzywej PCHIP: zbliżenia próbkują ją, zamiast
 ponownie dopasowywać 97 punktów i wtórny B-spline. Zachowują skalę,

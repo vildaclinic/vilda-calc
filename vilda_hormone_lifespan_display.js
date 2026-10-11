@@ -299,5 +299,233 @@
     };
   }
 
-  return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone };
+  function buildMaleGonadotropin(data, engine, id) {
+    var shared = data && data.lhFshDisplayPolicy;
+    var policy = shared && shared.hormones && shared.hormones[id];
+    var sources = data && data.patientPointData && data.patientPointData.profiles;
+    var stages = data && data.maleStages;
+    if ((id !== 'lh' && id !== 'fsh') || !shared || !policy ||
+        shared.kind !== 'educational-display-only' || shared.sex !== 'male' || shared.unit !== 'IU/L' ||
+        typeof shared.version !== 'string' || !shared.version.trim() ||
+        shared.coordinate !== 'canonical-whole-life-display-x' || shared.providesClinicalReference !== false ||
+        !finite(shared.daysPerYear) || shared.daysPerYear < 365 || shared.daysPerYear > 366 ||
+        !Number.isInteger(shared.ageKeyPrecision) || shared.ageKeyPrecision < 6 || shared.ageKeyPrecision > 14 ||
+        !Array.isArray(sources) || !Array.isArray(stages) || !stages.length ||
+        !engine || typeof engine.referenceAt !== 'function' ||
+        !Array.isArray(policy.sourceIds) || !policy.sourceIds.length ||
+        new Set(policy.sourceIds).size !== policy.sourceIds.length) return null;
+    if (stages.some(function (stage, index) {
+      return !stage || !finite(stage.min) || !finite(stage.max) || stage.min >= stage.max ||
+        !finite(stage.width) || stage.width <= 0 || (index > 0 && stage.min !== stages[index - 1].max);
+    }) || Math.abs(stages.reduce(function (sum, stage) { return sum + stage.width; }, 0) - 1) > 1e-10) return null;
+    var profiles = policy.sourceIds.map(function (sourceId) {
+      var matching = sources.filter(function (profile) { return profile && profile.id === sourceId; });
+      return matching.length === 1 ? matching[0] : null;
+    });
+    if (profiles.some(function (profile) {
+      return !profile || profile.sex !== 'male' || profile.analyte !== id || profile.unit !== 'IU/L' ||
+        !finite(profile.minAge) || !finite(profile.maxAge) || profile.minAge >= profile.maxAge ||
+        !Array.isArray(profile.points) || profile.points.length < 2 ||
+        profile.points.some(function (point, index, points) {
+          return !point || !finite(point.ageYears) || !finite(point.value) || point.value < 0 ||
+            (index > 0 && point.ageYears <= points[index - 1].ageYears);
+        });
+    })) return null;
+    function profileById(sourceId) {
+      return profiles.find(function (profile) { return profile.id === sourceId; });
+    }
+    var scale = policy.scale, prenatal = policy.prenatalSchematic, infant = policy.infant;
+    var childhood = policy.childhood, puberty = policy.puberty, trend = policy.adultTrend, tail = policy.tail;
+    if (!scale || !prenatal || !infant || !childhood || !puberty || !trend || !tail ||
+        scale.basis !== 'fixed-approved-display-scale' || scale.patientValueMayChangeScale !== false ||
+        !finite(scale.divisor) || scale.divisor <= 0 || !finite(scale.headroomFactor) || scale.headroomFactor <= 1 ||
+        !finite(scale.sourceAgeYears) ||
+        prenatal.coordinateSystem !== 'dimensionless display fractions; not fetal concentrations' ||
+        prenatal.providesPatientReference !== false || !Array.isArray(prenatal.points) || prenatal.points.length < 2 ||
+        childhood.providesPatientReference !== false || !Array.isArray(childhood.points) ||
+        !finite(childhood.minAge) || !finite(childhood.maxAge) || childhood.minAge >= childhood.maxAge ||
+        (childhood.kind !== 'schematic-low-baseline' && childhood.kind !== 'low-childhood-bridge') ||
+        tail.kind !== 'older-age-tail' || tail.mode !== 'flat-fading-illustration' || tail.providesPatientReference !== false ||
+        !finite(tail.minAge) || !finite(tail.maxAge) || tail.minAge >= tail.maxAge ||
+        tail.maxAge > stages[stages.length - 1].max) return null;
+    var divisor = scale.divisor, ceiling = scale.headroomFactor;
+    var axisTop = divisor * ceiling;
+    var infantSource = profileById(infant.sourceId), pediatricSource = profileById(puberty.sourceId);
+    var adultFirst = profileById(puberty.endSourceId), scaleSource = profileById(scale.sourceId);
+    if (!finite(axisTop) || !infantSource || !pediatricSource || !adultFirst || !scaleSource ||
+        engine.referenceAt(scaleSource, scale.sourceAgeYears) !== divisor ||
+        !finite(infant.peakAgeDays) || infant.peakAgeDays <= 0 || infant.peakAgeIsIllustrative !== true ||
+        !finite(infant.peakValue) || infant.peakValue <= 0 || infant.peakValue > axisTop ||
+        !finite(infant.sourceStartAgeDays) || infant.sourceStartAgeDays <= infant.peakAgeDays ||
+        !finite(infant.sourceMaxAgeYears) || infant.sourceMaxAgeYears <= infant.sourceStartAgeDays / shared.daysPerYear ||
+        typeof infant.includeSourceMaxAge !== 'boolean' || !Array.isArray(infant.shoulderPoints) ||
+        infant.sourceStartAgeDays / shared.daysPerYear < infantSource.minAge ||
+        infant.sourceMaxAgeYears > infantSource.maxAge || childhood.maxAge !== pediatricSource.minAge ||
+        puberty.kind !== 'illustrative-puberty-adult-bridge' ||
+        (trend.kind !== 'illustrative-adult-trend' && trend.kind !== 'source-constrained-illustrative-adult-trend') ||
+        !finite(puberty.minAge) || !finite(puberty.maxAge) || puberty.minAge >= puberty.maxAge ||
+        !finite(puberty.startDerivativeStepYears) || puberty.startDerivativeStepYears <= 0 || puberty.startDerivativeStepYears > 0.01 ||
+        puberty.minAge - puberty.startDerivativeStepYears < pediatricSource.minAge ||
+        puberty.minAge + puberty.startDerivativeStepYears > pediatricSource.maxAge ||
+        puberty.minAge < childhood.maxAge ||
+        !finite(puberty.endValue) || puberty.endValue <= 0 || puberty.endValue > axisTop ||
+        engine.referenceAt(adultFirst, puberty.maxAge) !== puberty.endValue ||
+        !finite(puberty.endSlopePerYear) || puberty.endSlopePerYear < 0 ||
+        trend.minAge !== puberty.maxAge || !finite(trend.maxAge) || trend.maxAge <= trend.minAge ||
+        !finite(trend.endValue) || trend.endValue < puberty.endValue || trend.endValue > axisTop ||
+        trend.endSlopePerYear !== 0 || trend.maxAge > tail.minAge ||
+        trend.maxAge >= tail.maxAge) return null;
+    function validArc(item) {
+      return Array.isArray(item.controlFractions) && item.controlFractions.length === 2 &&
+        item.controlFractions.every(function (value) { return finite(value) && value > 0; }) &&
+        item.controlFractions[0] + item.controlFractions[1] <= 1 &&
+        Number.isInteger(item.sampleCount) && item.sampleCount >= 3 && item.sampleCount <= 2000;
+    }
+    if (![infant, puberty, trend].every(validArc) ||
+        prenatal.points.some(function (point, index, points) {
+          return !point || !finite(point.ageYears) || point.ageYears > 0 || point.ageYears < stages[0].min ||
+            !finite(point.relative) || point.relative < 0 || point.relative > 1 ||
+            (index > 0 && point.ageYears <= points[index - 1].ageYears);
+        }) || prenatal.points[0].ageYears !== stages[0].min || prenatal.points[prenatal.points.length - 1].ageYears !== 0 ||
+        infant.shoulderPoints.some(function (point, index, points) {
+          return !point || !finite(point.ageDays) || point.ageDays <= infant.peakAgeDays ||
+            point.ageDays >= infant.sourceStartAgeDays || !finite(point.value) || point.value < 0 ||
+            point.value > infant.peakValue || (index > 0 &&
+              (point.ageDays <= points[index - 1].ageDays || point.value > points[index - 1].value));
+        }) || childhood.points.some(function (point, index, points) {
+          return !point || !finite(point.ageYears) || point.ageYears <= childhood.minAge ||
+            point.ageYears >= childhood.maxAge || !finite(point.value) || point.value < 0 || point.value > axisTop ||
+            (index > 0 && point.ageYears <= points[index - 1].ageYears);
+        })) return null;
+    function lifeX(ageYears) {
+      var offset = 0;
+      for (var i = 0; i < stages.length; i++) {
+        var stage = stages[i];
+        if (ageYears <= stage.max) return offset + (ageYears - stage.min) / (stage.max - stage.min) * stage.width;
+        offset += stage.width;
+      }
+      return null;
+    }
+    function ageAtLifeX(x) {
+      var offset = 0;
+      for (var i = 0; i < stages.length; i++) {
+        var stage = stages[i];
+        if (x <= offset + stage.width + 1e-12) return stage.min + (x - offset) / stage.width * (stage.max - stage.min);
+        offset += stage.width;
+      }
+      return null;
+    }
+    function canonicalSlope(slopePerYear, ageYears) {
+      var stage = stages.find(function (item) { return ageYears >= item.min && ageYears < item.max; });
+      return stage ? slopePerYear * (stage.max - stage.min) / stage.width : null;
+    }
+    function bezier(a, b, c, d, t) {
+      var u = 1 - t;
+      return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+    }
+    var invalid = false, knots = new Map();
+    function add(ageYears, value) {
+      if (!finite(ageYears) || ageYears < stages[0].min || ageYears > tail.maxAge ||
+          !finite(value) || value < 0 || value > axisTop) { invalid = true; return; }
+      knots.set(Number(ageYears.toFixed(shared.ageKeyPrecision)), { ageYears: ageYears, value: value });
+    }
+    function arc(minAge, maxAge, startValue, endValue, item, startSlope, endSlope) {
+      var x0 = lifeX(minAge), x1 = lifeX(maxAge), width = x1 - x0;
+      var firstHandle = item.controlFractions[0], lastHandle = item.controlFractions[1];
+      var c1 = startValue + startSlope * width * firstHandle;
+      var c2 = endValue - endSlope * width * lastHandle;
+      if (!finite(x0) || !finite(x1) || width <= 0 || !finite(startValue) || !finite(endValue) ||
+          !finite(startSlope) || !finite(endSlope) || !finite(c1) || !finite(c2) ||
+          startValue > c1 || c1 > c2 || c2 > endValue) { invalid = true; return; }
+      for (var i = 0; i < item.sampleCount; i++) {
+        var t = i / (item.sampleCount - 1);
+        var ageYears = i === 0 ? minAge : i === item.sampleCount - 1 ? maxAge :
+          ageAtLifeX(bezier(x0, x0 + width * firstHandle, x1 - width * lastHandle, x1, t));
+        add(ageYears, bezier(startValue, c1, c2, endValue, t));
+      }
+    }
+    // These are frozen graphic fractions, not concentrations inferred from
+    // infant data. Multiplication only adapts them to the renderer's coordinates.
+    prenatal.points.forEach(function (point) { add(point.ageYears, point.relative * divisor * ceiling); });
+    var birth = knots.get(0);
+    if (!birth) return null;
+    arc(0, infant.peakAgeDays / shared.daysPerYear, birth.value, infant.peakValue, infant, 0, 0);
+    infant.shoulderPoints.forEach(function (point) { add(point.ageDays / shared.daysPerYear, point.value); });
+    var sourcePoints = infantSource.points.filter(function (point) {
+      return point.eligible !== false && point.ageYears >= infant.sourceStartAgeDays / shared.daysPerYear &&
+        point.ageYears <= infant.sourceMaxAgeYears;
+    });
+    if (sourcePoints.length < 2) return null;
+    sourcePoints.forEach(function (point) { add(point.ageYears, point.value); });
+    var childhoodStart = sourcePoints[sourcePoints.length - 1].ageYears;
+    if (infant.includeSourceMaxAge) {
+      // Only the drawing may read the published endpoint; source routing stays exclusive.
+      var inclusiveInfant = Object.assign({}, infantSource, { maxAgeExclusive: false });
+      add(infant.sourceMaxAgeYears, engine.referenceAt(inclusiveInfant, infant.sourceMaxAgeYears));
+      childhoodStart = infant.sourceMaxAgeYears;
+    }
+    if (childhoodStart !== childhood.minAge) return null;
+    childhood.points.forEach(function (point) { add(point.ageYears, point.value); });
+    pediatricSource.points.filter(function (point) {
+      return point.ageYears >= pediatricSource.minAge && point.ageYears <= puberty.minAge;
+    }).forEach(function (point) {
+      if (point.eligible === false) invalid = true;
+      add(point.ageYears, point.value);
+    });
+    var delta = puberty.startDerivativeStepYears;
+    var startValue = engine.referenceAt(pediatricSource, puberty.minAge);
+    var before = engine.referenceAt(pediatricSource, puberty.minAge - delta);
+    var after = engine.referenceAt(pediatricSource, puberty.minAge + delta);
+    if (!finite(startValue) || !finite(before) || !finite(after)) return null;
+    var startSlope = (after - before) / (lifeX(puberty.minAge + delta) - lifeX(puberty.minAge - delta));
+    var adultSlope = canonicalSlope(puberty.endSlopePerYear, puberty.maxAge);
+    arc(puberty.minAge, puberty.maxAge, startValue, puberty.endValue, puberty, startSlope, adultSlope);
+    arc(trend.minAge, trend.maxAge, puberty.endValue, trend.endValue, trend, adultSlope, 0);
+    add(tail.maxAge, trend.endValue);
+    var points = Array.from(knots.values()).sort(function (a, b) { return a.ageYears - b.ageYears; });
+    if (invalid || points.length < 2 || points.some(function (point, index) {
+      return index > 0 && point.ageYears <= points[index - 1].ageYears;
+    })) return null;
+    var transitions = [
+      { minAge: puberty.minAge, maxAge: puberty.maxAge, kind: puberty.kind,
+        controlFractions: puberty.controlFractions.slice(), startSlopeCanonical: startSlope,
+        endSlopeCanonical: adultSlope },
+      { minAge: trend.minAge, maxAge: trend.maxAge, kind: trend.kind,
+        controlFractions: trend.controlFractions.slice(), startSlopeCanonical: adultSlope,
+        endSlopeCanonical: 0 }
+    ];
+    if (trend.sourceDoi) transitions[1].sourceDoi = trend.sourceDoi;
+    if (finite(trend.fitErrorRmsIuL)) transitions[1].fitErrorRmsIuL = trend.fitErrorRmsIuL;
+    return {
+      id: id, kind: shared.kind, unit: shared.unit, policyVersion: shared.version,
+      points: points, profiles: profiles, sourceIds: policy.sourceIds.slice(),
+      divisor: divisor, ceiling: ceiling, transitions: transitions, tangentOverrides: [],
+      prenatalSchematic: { coordinateSystem: prenatal.coordinateSystem, policy: prenatal.policy,
+        points: prenatal.points.map(function (point) { return { ageYears: point.ageYears, relative: point.relative }; }) },
+      illustrativeIntervals: [
+        { minAge: prenatal.points[0].ageYears, maxAge: 0, kind: 'prenatal-schematic' },
+        { minAge: 0, maxAge: infant.sourceStartAgeDays / shared.daysPerYear, kind: 'broad-early-infant-rise',
+          controlFractions: infant.controlFractions.slice(), peakAgeIsIllustrative: true },
+        { minAge: childhood.minAge, maxAge: childhood.maxAge, kind: childhood.kind },
+        ...transitions,
+        { minAge: tail.minAge, maxAge: tail.maxAge, kind: tail.kind }
+      ]
+    };
+  }
+
+  function safeMaleGonadotropin(data, engine, id) {
+    // Fail closed if an incomplete source bundle or malformed policy reaches
+    // this optional display layer; never manufacture a patient reference.
+    try { return buildMaleGonadotropin(data, engine, id); }
+    catch (_error) { return null; }
+  }
+
+  function buildMaleLh(data, engine) { return safeMaleGonadotropin(data, engine, 'lh'); }
+  function buildMaleFsh(data, engine) { return safeMaleGonadotropin(data, engine, 'fsh'); }
+  function buildMaleGonadotropins(data, engine) {
+    return [buildMaleLh(data, engine), buildMaleFsh(data, engine)].filter(Boolean);
+  }
+
+  return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
+    buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins };
 });

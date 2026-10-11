@@ -116,6 +116,35 @@ Zmiana tej polityki wymaga jawnego zakresu zadania i osobnej weryfikacji.
   i wtórny B-spline dla każdego zbliżenia. Porównanie płci zachowuje
   dotychczasowy sposób rysowania; inhibina B własną ciągłą krzywą.
 
+## Uzupełnienie po audycie LH/FSH, 11 października 2026
+
+Właściciel zatwierdził poprawioną makietę i jej wdrożenie. LH/FSH mają
+teraz własną politykę `lh-fsh-display-policy.json`, zamiast dawnego
+przełączania schematu na fragment profilu po wpisaniu wyniku. Opis LH/FSH
+w historycznym przykładzie testosteronu powyżej dotyczy stanu sprzed tej zmiany.
+
+- Sprawdzenie tylko końców łuku nie wystarcza. Pierwsza propozycja FSH
+  dochodziła do poprawnego poziomu w wieku 80 lat, ale narastała zbyt
+  szybko około 45–70. Kontroluj również wartości pośrednie i nachylenia.
+  Zatwierdzony łuk FSH 25–80 sprawdzono względem 40 odczytów modelu
+  Ljubicic; RMS około 0,050 IU/L i maksymalna różnica około 0,127 IU/L.
+- Nie wymuszaj poziomej stycznej w miejscu, które nie jest szczytem ani
+  plateau: przy 25 latach FSH zachowuje dodatnie nachylenie, a most
+  12–25 łączy pokwitanie z tym łukiem bez zatrzymania.
+- Przejście między źródłami może celowo omijać ich środkowe wartości.
+  Most FSH jest przy 14–16 latach około 24–34% poniżej median Madsen.
+  To jawne uproszczenie edukacyjne, nie nowa mediana ani dokładniejsze
+  odtworzenie badania. Oryginalny znacznik zachowuje te mediany.
+- Zmiana wysokości w minipuberty może wynikać ze stałej skali całego
+  życia. Nie przywracaj dawnej wysokości samego szczytu bez sprawdzenia,
+  jakie stężenie oznaczałaby na nowej skali. Średnie trajektorie i mediana
+  populacyjna Busch są odrębnymi wielkościami.
+- Prenatalny fragment pozostaje schematem. Nie przypisuj jego amplitudzie
+  zweryfikowanego stężenia ani pacjentowi liczbowego odniesienia.
+- Podpis porównania LH/FSH wyjaśnia osobne skale. Przecięcie linii nie
+  przedstawia równości stężeń ani ilorazu LH/FSH. Makieta może włączać oba
+  hormony dla recenzenta; aplikacja nadal zaczyna od bieżącego analitu.
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

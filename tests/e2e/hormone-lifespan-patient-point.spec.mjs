@@ -70,10 +70,11 @@ async function expectPoint(page, value, median, independentReference = false) {
   expect(['x', 'rx', 'ry', 'curveY', 'bottom', 'value', 'median'].every(key => Number.isFinite(geometry[key]))).toBe(true);
   expect(geometry.x).toBe(geometry.rx);
   if (independentReference) {
-    // A source group mean is not a coordinate read from the illustrative curve.
+    // A source group statistic is not a coordinate read from the illustrative curve.
     // Both still use the same fixed concentration scale.
     expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(.1);
-    await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'group-mean');
+    await expect(dot(page)).toHaveAttribute('data-reference-statistic',
+      typeof independentReference === 'string' ? independentReference : 'group-mean');
     await expect(dot(page)).toHaveAttribute('data-reference-value', String(median));
   } else expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
   if (geometry.offscale) {
@@ -134,7 +135,11 @@ test('boys use numeric puberty data; changing analyte, unit and age never leaves
     window.VildaPersistence.writeShared({ sex: 'M', age: 40, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
   });
-  await expect(dot(page)).toHaveCount(0);
+  // Changing the analyte restored the whole-life view; the new adult source
+  // replaces the preceding pediatric marker without requiring another click.
+  await expect(panel(page).locator('[data-view="life"]')).toHaveAttribute('aria-pressed', 'true');
+  await expectPoint(page, 3, 4.56, 'group-median');
+  await expect(dot(page)).toHaveAttribute('data-profile', 'perheentupa2013-male-fsh-40-49');
   await expect(panel(page)).toBeVisible();
   await page.locator('#labClearBtn').click();
   await expect(panel(page)).toBeHidden();
