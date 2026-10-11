@@ -107,7 +107,9 @@ for (const width of [320, 1440]) {
       await expect(note(page)).toBeVisible();
       await expect(note(page)).toContainText('podobna wysokość linii nie oznacza takiego samego stężenia');
       await expect(panel(page).locator('[data-stage="0"]')).toHaveText('Płód · schemat');
-      await expect(panel(page).locator(`[data-illustrative-tail-from="${tail}"]`)).toHaveCount(1);
+      // Other background hormones can share the same tail age (INSL3 and
+      // FSH both use 80); verify the gradient belonging to this hormone.
+      await expect(panel(page).locator(`linearGradient[id$="${id}-illustrative-tail"][data-illustrative-tail-from="${tail}"]`)).toHaveCount(1);
       const sourceHeight = (await heights(page, id, [44]))[0];
       expect(Math.abs(sourceHeight - reference / divisor / 1.25)).toBeGreaterThan(.001);
       for (const value of [String(reference), '1', '100', '100000000', '', String(reference)]) {
