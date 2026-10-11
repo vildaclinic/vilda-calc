@@ -196,7 +196,26 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         const amh = wykres.locator('[data-patient-concentration="amh"]');
         await expect(amh).toHaveAttribute('data-profile', 'wang2020-male-amh-age-5');
         await expect.poll(async () => Number(await amh.getAttribute('data-median'))).toBeCloseTo(99.18 / .1401, 6);
-        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('mediana grupy 5–<6 lat');
+        await expect(wykres.locator('[data-lifespan="source-copy"] p').filter({ hasText: 'Odniesienie dla wyniku:' })).toContainText('5–<6 lat');
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('Linia jest poglądowa.');
+        const amhLine = wykres.locator('[data-stable-reference-line="amh"]');
+        await expect(amhLine).toHaveAttribute('data-divisor', '1335.592934');
+        const amhPath = await amhLine.getAttribute('d');
+        await page.locator('#labValue').fill('10000');
+        await expect(amh).toHaveAttribute('data-offscale', 'above');
+        await expect(amh.locator('[data-result-overflow]')).toHaveCount(1);
+        await expect(amhLine).toHaveAttribute('d', amhPath);
+        await page.locator('#labValue').fill('');
+        await expect(amh).toHaveCount(0);
+        await expect(amhLine).toHaveAttribute('d', amhPath);
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 44, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labValue').fill('5.77');
+        await expect(amh).toHaveAttribute('data-profile', 'tehrani2017-male-amh');
+        await expect.poll(async () => Number(await amh.getAttribute('data-median')) * .1401).toBeCloseTo(5.77, 8);
+        await expect(amhLine).toHaveAttribute('d', amhPath);
         // The new observation renderer is a separate script. Verify its
         // actual numeric output after offline reload, not just its global.
         await page.evaluate(() => {

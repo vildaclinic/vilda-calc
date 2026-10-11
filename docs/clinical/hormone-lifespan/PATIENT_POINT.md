@@ -8,13 +8,14 @@ nadaniem statusu walidacji klinicznej modelom ani digitalizacji rycin.
 ## Znaczenie i dane wejściowe
 
 Punkt pokazuje wpisane stężenie, a jego znacznik odniesienia — centralną
-wartość modelu populacyjnego. Linia zwykle odtwarza ten model; męska
-inhibina B i testosteron całkowity mają osobno opisane niżej płynne
-prezentacje wielu źródeł.
+wartość modelu populacyjnego. Linia zwykle odtwarza ten model; męskie
+LH, FSH, AMH, inhibina B i testosteron całkowity mają osobno opisane niżej
+płynne prezentacje wielu źródeł.
 W zależności od źródła jest to opublikowane p50 lub odczytana
 z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy grupach
-wieku Wang i Zec zamiast ciągłej krzywej wieku widoczny jest lokalny poziomy
-odcinek mediany jednej grupy; nie jest to p50 dokładnego wieku. Określenie
+wieku Wang i Zec odniesienie pozostaje stałą medianą jednej grupy;
+nie jest to p50 dokładnego wieku. Żeńskie FSH Zec pokazuje lokalny poziomy
+odcinek, a zwykłe męskie FSH i AMH osobne ciągłe ilustracje. Określenie
 „średnia” nie zastępuje mediany. Osobny dorosły profil testosteronu
 Walravens przedstawia rzeczywiste średnie arytmetyczne grup wieku, jawnie
 tak podpisane, na tle ciągłej ilustracji. Linia nie jest granicą normy. Kolor czerwony
@@ -343,9 +344,10 @@ doboru rocznej grupy w edukacyjnej prezentacji, nie opublikowaną definicją
 granic. Dotyczy to również grupy 14: konwencja `[14,15)` nie dowodzi,
 że autorzy obserwowali wszystkie dokładne wartości wieku aż do 15 lat.
 Każda zgodna grupa ma osobny profil `group-median`, stałą wartość i własną
-liczebność. Dwa jednakowe węzły wyznaczają tylko lokalny poziomy odcinek;
-nie wygładzamy spadków między rocznymi medianami ani nie łączymy tych
-odcinków z Busch lub Tehrani. Nie imputujemy konfliktowej grupy 12 z sąsiadów.
+liczebność. Dwa jednakowe węzły kodują stałą wartość odniesienia grupy;
+nie interpolujemy liczbowej mediany między grupami, Busch i Tehrani.
+Osobna linia edukacyjna AMH może łączyć te okresy według polityki opisanej
+niżej. Nie imputujemy konfliktowej grupy 12 z sąsiadów.
 Przy niepewnym wieku przecinającym granicę grup punkt nie może udawać
 jednoznacznego porównania z jedną z median.
 
@@ -415,6 +417,38 @@ i cytowania, bez reprodukcji PDF lub ryciny. Rozdzielczość digitalizacji
 i przypisanie statystyki są częścią pochodzenia danych. Pełnych artykułów,
 obrazów źródłowych i surowych danych uczestników nie publikujemy w repo.
 
+### Stała linia AMH i niezależne źródłowe odniesienie
+
+Makieta zatwierdzona przez właściciela 11 października 2026 zastępuje
+zależną od wyniku prezentację męskiego AMH jedną linią edukacyjną.
+Polityka `amh-display-policy.json`, eksport `amhDisplayPolicy` i funkcja
+`VildaHormoneLifespanDisplay.buildMaleAmh` wyznaczają jej geometrię.
+15 profili liczbowych — Busch, 13 grup Wang i Tehrani — pozostaje
+bez zmian. Zbliżenia próbkują tę samą kanoniczną krzywą.
+
+Dzielnik 1335,592934 pmol/L oraz zapas 1,25 nie zależą od wyniku ani
+wieku pacjenta. Źródłowy odczyt mediany Busch zostaje zachowany od 7.
+do 250. dnia, obejmując szerokie maksimum około 175. dnia / 187 ng/mL.
+Łuki do 9,5, 14,5, 30 i 70 lat wygładzają dalszy spadek. Wielkości
+dorosłych 4–7 ng/mL pozostają odpowiednio niskie. Prenatalny schemat
+oraz dojście do 7. dnia nie są nowymi stężeniami odniesienia. Ogon po
+70 latach wygasa na ostatniej wysokości, bez dowodu biologicznego plateau.
+
+Kontrola kształtu przy środku grupy wieku nie zmienia jej statystyki.
+Przy 5,5 roku Wang daje 99,18 ng/mL, podczas gdy linia odpowiada około
+95,25; przy 11,5 roku odpowiednio 20,70 i 25,01. Punkt wyniku równego
+medianie ma pokrywać się ze znacznikiem źródła, nawet jeśli linia leży
+obok. Nie wolno przyciągać znacznika do krzywej. Wang nie określa stadium
+Tannera. Przeliczenie jednostek nie harmonizuje Access 2 i zmodyfikowanego
+Gen II ani odmiennych populacji.
+
+Przed 7. dniem, w grupie 12–<13 lat, w wieku 15–<30 i po 70 latach nadal
+brak źródłowego odniesienia. Tak samo pozostaje bramka donoszenia Busch.
+W tych przypadkach obecność ilustracji nie tworzy punktu pacjenta z jej
+wysokości. Odmienne źródła rozważone w audycie, m.in. Jopling,
+Benderradji i Chong, nie są nowymi profilami. Przebieg porównania płci
+oraz laboratoryjne normy mają odrębne kontrakty.
+
 ## Weryfikacja i przypadki syntetyczne
 
 Silnik `vilda_hormone_lifespan_reference.js` przyjmuje dane jako argument;
@@ -457,12 +491,14 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Mężczyzna dokładnie 44 lata, inhibina B 88 pg/mL; przed wpisaniem, po wpisaniu i po wyczyszczeniu | Identyczna ścieżka i skala; wynik poniżej źródłowego odniesienia Borelli około 162,084705882 pg/mL. |
 | Ten sam kontekst, inhibina B 1000 pg/mL | Ta sama ścieżka i skala; strzałka w górę z 1000 pg/mL, bez kropki na górnej granicy. |
 | Chłopiec dokładnie 1 rok, inhibina B 223 pg/mL | Punkt i znacznik mediany Kelsey są zgodne; linia edukacyjna w pasie wygładzenia może przebiegać inaczej. |
-| Chłopiec 5 lat i 6 miesięcy, AMH 99,18 ng/mL | Punkt na poziomym odcinku mediany rocznej grupy Wang 5–<6 lat, N=134; to nie p50 dla dokładnie 5,5 roku. |
-| Chłopiec 11 lat i 6 miesięcy, AMH 20,70 ng/mL | Punkt na medianie grupy 11–<12 lat; profil kończy się przed 12. urodzinami. |
+| Chłopiec 5 lat i 6 miesięcy, AMH 99,18 ng/mL | Punkt zgodny ze znacznikiem mediany grupy Wang 5–<6 lat, N=134, choć linia edukacyjna odpowiada około 95,25; to nie p50 dokładnego wieku. |
+| Chłopiec 11 lat i 6 miesięcy, AMH 20,70 ng/mL | Punkt zgodny ze znacznikiem mediany grupy 11–<12, niezależnie od linii około 25,01; profil kończy się przed 12. urodzinami. |
 | Chłopiec 12 lat i 6 miesięcy, AMH 7 ng/mL | Brak punktu Wang: mediana grupy 12 jest sprzeczna między tabelami; brak interpolacji przez lukę. |
 | Chłopiec 14 lat i 6 miesięcy, AMH 8,23 ng/mL | Punkt na medianie grupy oznaczonej 14, według jawnej konwencji `[14,15)`; brak ekstrapolacji po 15. urodzinach. |
 | Chłopiec, możliwy wiek 5,99–6,01 roku, AMH 99,18 ng/mL | Brak jednoznacznego punktu dla jednej grupy; nie wybieramy mediany z połowy niepewnego przedziału. |
-| Mężczyzna 40 lat, AMH 6,12 ng/mL | Punkt na rocznym p50 Tehrani; metoda Gen II w źródle, bez potwierdzania metody próbki. |
+| Mężczyzna 40 lat, AMH 6,12 ng/mL | Punkt równy znacznikowi rocznego p50 Tehrani, nawet gdy ilustracja przebiega nieco wyżej; zmodyfikowany Gen II w źródle. |
+| Mężczyzna 70 lat, AMH 3,95 ng/mL / powyżej 70 lat | Przy 70 latach punkt równy p50 Tehrani; powyżej brak odniesienia mimo wygaszonego ogona. |
+| Męskie AMH, ten sam wiek: pusty → wynik równy źródłu → ponad osią → wyczyszczenie | Stała linia i skala; wynik ponad osią zachowuje prawdziwą wartość ze strzałką. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
 | Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
@@ -472,10 +508,13 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki
 i konwersje, zmianę osoby/analitu/płci, odznaczenie hormonu, pełny ekran
-oraz telefon. Dla inhibiny B i testosteronu dochodzą stałość krzywej i skali przy pustym,
+oraz telefon. Dla męskich LH, FSH, AMH, inhibiny B i testosteronu dochodzą
+stałość krzywej i skali przy pustym,
 poprawnym, błędnym i cenzurowanym wyniku oraz płynność stycznych przy
 zmianie źródła i w pasach wygładzenia osi. Należy sprawdzić, że zbliżenia
-T pokazują tę samą kanoniczną krzywą również poza wiekiem pacjenta.
+LH, FSH, T i AMH pokazują tę samą kanoniczną krzywą również poza wiekiem pacjenta.
+Dla AMH sprawdzić szeroki niemowlęcy szczyt i monotoniczny spadek po nim,
+ciągłość stycznych na połączeniach oraz niezmienione 15 profili i luki.
 Korekta testosteronu wymaga ciągłości przy końcach wszystkich połączeń,
 monotonicznego dzieciństwa po 212. dniu, braku sztucznego maksimum 17–18 lat
 i łagodnego, monotonicznego łuku dorosłości. Średnie Walravens pozostają

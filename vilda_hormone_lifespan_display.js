@@ -513,6 +513,215 @@
     };
   }
 
+  function buildMaleAmh(data, engine) {
+    var policy = data && data.amhDisplayPolicy;
+    var sourceData = data && data.patientPointData;
+    if (!policy || policy.kind !== 'educational-display-only' || policy.analyte !== 'amh' ||
+        policy.sex !== 'male' || policy.unit !== 'pmol/L' || policy.coordinate !== 'canonical-whole-life-display-x' ||
+        !Array.isArray(policy.sourceIds) || policy.sourceIds.length !== 15 ||
+        new Set(policy.sourceIds).size !== policy.sourceIds.length ||
+        !sourceData || !Array.isArray(sourceData.profiles) ||
+        !engine || typeof engine.referenceAt !== 'function' || !Array.isArray(data.maleStages)) return null;
+    var stages = data.maleStages;
+    if (!stages.length || stages.some(function (stage, index) {
+      return !stage || !finite(stage.min) || !finite(stage.max) || stage.min >= stage.max ||
+        !finite(stage.width) || stage.width <= 0 || (index > 0 && stage.min !== stages[index - 1].max);
+    }) || Math.abs(stages.reduce(function (sum, stage) { return sum + stage.width; }, 0) - 1) > 1e-10) return null;
+    var profiles = policy.sourceIds.map(function (id) {
+      var matches = sourceData.profiles.filter(function (profile) { return profile && profile.id === id; });
+      return matches.length === 1 ? matches[0] : null;
+    });
+    if (profiles.some(function (profile, index) {
+      var previous = profiles[index - 1];
+      return !profile || profile.analyte !== 'amh' || profile.sex !== 'male' || profile.unit !== 'pmol/L' ||
+        !finite(profile.minAge) || !finite(profile.maxAge) || profile.minAge >= profile.maxAge ||
+        !Array.isArray(profile.points) || profile.points.length < 2 ||
+        profile.points.some(function (point, i, points) {
+          return !point || !finite(point.ageYears) || !finite(point.value) || point.value < 0 ||
+            (i > 0 && point.ageYears <= points[i - 1].ageYears);
+        }) || (previous && (previous.maxAge > profile.minAge ||
+          (previous.maxAge === profile.minAge && !previous.maxAgeExclusive)));
+    })) return null;
+    function profileById(id) {
+      return profiles.find(function (profile) { return profile.id === id; });
+    }
+    var scale = policy.scale, sampling = policy.sampling, prenatal = policy.prenatal, tail = policy.olderAge;
+    if (!scale || !sampling || !prenatal || !tail ||
+        scale.basis !== 'maximum-eligible-infant-source-point' || scale.patientValueMayChangeScale !== false ||
+        !finite(scale.headroomFactor) || scale.headroomFactor <= 1 ||
+        !finite(scale.canonicalToNgMlFactor) || scale.canonicalToNgMlFactor <= 0 ||
+        !finite(sampling.daysPerYear) || sampling.daysPerYear <= 0 ||
+        !finite(sampling.sourceSlopeDeltaYears) || sampling.sourceSlopeDeltaYears <= 0 || sampling.sourceSlopeDeltaYears > 0.001 ||
+        !finite(sampling.coordinateSlopeDeltaYears) || sampling.coordinateSlopeDeltaYears <= 0 || sampling.coordinateSlopeDeltaYears > 0.001 ||
+        !finite(sampling.firstSourceDays) || !finite(sampling.lastDisplayedSourceDays) ||
+        sampling.firstSourceDays <= 0 || sampling.lastDisplayedSourceDays <= sampling.firstSourceDays ||
+        prenatal.kind !== 'schematic-relative-only' || !Array.isArray(prenatal.anchors) || !prenatal.anchors.length ||
+        !finite(prenatal.birthDrawingRelative) || prenatal.birthDrawingRelative < 0 || prenatal.birthDrawingRelative > 1 ||
+        !Array.isArray(policy.nodes) || policy.nodes.length !== 7 ||
+        !Array.isArray(policy.bridges) || policy.bridges.length !== 5 ||
+        tail.policy !== 'hold-last-source-height-and-fade' || tail.numericalReferenceAfterEndpoint !== false ||
+        !finite(tail.minAge) || !finite(tail.maxAge) || tail.minAge >= tail.maxAge ||
+        !finite(tail.sampleStepYears) || tail.sampleStepYears <= 0) return null;
+    var infant = profileById(sampling.infantSourceId), adult = profileById(tail.sourceId);
+    var firstAge = sampling.firstSourceDays / sampling.daysPerYear;
+    var lastInfantAge = sampling.lastDisplayedSourceDays / sampling.daysPerYear;
+    if (!infant || !adult || infant !== profiles[0] || adult !== profiles[profiles.length - 1] ||
+        scale.sourceId !== infant.id || infant.statistic !== 'median' || infant.termOnly !== true ||
+        infant.minAge !== firstAge || infant.maxAge <= lastInfantAge ||
+        adult.statistic !== 'median' || adult.maxAge !== tail.minAge || adult.maxAgeExclusive ||
+        tail.maxAge !== stages[stages.length - 1].max ||
+        profiles.slice(1, -1).some(function (profile) {
+          return profile.statistic !== 'group-median' || profile.interpolation !== 'constant' || !profile.maxAgeExclusive ||
+            !profile.ageGroup || profile.points.some(function (point) { return point.value !== profile.points[0].value; });
+        })) return null;
+    var infantPoints = infant.points.filter(function (point) {
+      return point.eligible !== false && point.ageYears >= infant.minAge && point.ageYears < infant.maxAge;
+    });
+    if (infantPoints.length < 2 || infantPoints[0].ageYears !== firstAge) return null;
+    var peak = infantPoints.reduce(function (best, point) { return point.value > best.value ? point : best; });
+    var divisor = peak.value, ceiling = scale.headroomFactor, factor = scale.canonicalToNgMlFactor;
+    if (!(divisor > 0) || !finite(divisor * ceiling) || peak.ageYears > lastInfantAge) return null;
+    function lifeX(ageYears) {
+      var offset = 0;
+      for (var i = 0; i < stages.length; i++) {
+        var stage = stages[i];
+        if (ageYears <= stage.max) return offset + (ageYears - stage.min) / (stage.max - stage.min) * stage.width;
+        offset += stage.width;
+      }
+      return 1;
+    }
+    function ageAtLifeX(x) {
+      var offset = 0;
+      for (var i = 0; i < stages.length; i++) {
+        var stage = stages[i];
+        if (x <= offset + stage.width) return stage.min + (x - offset) / stage.width * (stage.max - stage.min);
+        offset += stage.width;
+      }
+      return stages[stages.length - 1].max;
+    }
+    function coordinateSlope(ageYears) {
+      var delta = sampling.coordinateSlopeDeltaYears;
+      return (lifeX(ageYears + delta) - lifeX(ageYears - delta)) / (2 * delta);
+    }
+    var nodes = [], nodeIds = new Set();
+    for (var index = 0; index < policy.nodes.length; index++) {
+      var spec = policy.nodes[index];
+      if (!spec || typeof spec.id !== 'string' || nodeIds.has(spec.id) || !spec.slope ||
+          (finite(spec.ageYears) === finite(spec.ageDays))) return null;
+      nodeIds.add(spec.id);
+      var ageYears = finite(spec.ageYears) ? spec.ageYears : spec.ageDays / sampling.daysPerYear;
+      if (!finite(ageYears) || ageYears < 0 || ageYears > tail.minAge || (index && ageYears <= nodes[index - 1].ageYears)) return null;
+      var profile = profileById(spec.sourceId), value;
+      if (spec.valueKind === 'relative-birth-drawing' && index === 0 && ageYears === 0) {
+        value = prenatal.birthDrawingRelative * divisor * factor;
+      } else if (profile && (spec.valueKind === 'source' || spec.valueKind === 'group-median')) {
+        if (ageYears < profile.minAge || ageYears > profile.maxAge ||
+            (ageYears === profile.maxAge && profile.maxAgeExclusive) ||
+            (spec.valueKind === 'group-median' && (profile.statistic !== 'group-median' ||
+              ageYears !== (profile.minAge + profile.maxAge) / 2))) return null;
+        var sourceValue = engine.referenceAt(profile, ageYears);
+        if (!finite(sourceValue) || sourceValue < 0) return null;
+        value = sourceValue * factor;
+      } else return null;
+      var slope = spec.slope, slopeX, perYear;
+      var timeScale = coordinateSlope(ageYears);
+      if (!(timeScale > 0)) return null;
+      if (slope.kind === 'ngml-per-display-x' && finite(slope.value)) {
+        slopeX = slope.value;
+        perYear = slopeX * timeScale / factor;
+      } else if (slope.kind === 'ngml-per-year' && finite(slope.value)) {
+        slopeX = slope.value / timeScale;
+        perYear = slope.value / factor;
+      } else if (profile === infant && (slope.kind === 'source-forward' || slope.kind === 'source-central')) {
+        var delta = sampling.sourceSlopeDeltaYears;
+        var before = slope.kind === 'source-central' ? ageYears - delta : ageYears;
+        if (before < infant.minAge || ageYears + delta >= infant.maxAge) return null;
+        // Keep the approved finite-difference order; these are drawing tangents,
+        // never an alternative interpolation for a patient's reference value.
+        var sourceAfter = engine.referenceAt(infant, ageYears + delta), sourceBefore = engine.referenceAt(infant, before);
+        if (!finite(sourceAfter) || !finite(sourceBefore)) return null;
+        var difference = (sourceAfter - sourceBefore) * factor;
+        slopeX = slope.kind === 'source-central'
+          ? difference / (2 * delta) / timeScale : difference / delta / timeScale;
+        perYear = slopeX * timeScale / factor;
+      } else return null;
+      if (!finite(value) || value < 0 || value > divisor * factor || !finite(slopeX) || !finite(perYear)) return null;
+      nodes.push({ id: spec.id, ageYears: ageYears, value: value, slopeX: slopeX, slopePerYear: perYear });
+    }
+    if (nodes[1].ageYears !== firstAge || nodes[2].ageYears !== lastInfantAge ||
+        nodes[5].ageYears !== adult.minAge || nodes[6].ageYears !== tail.minAge || nodes[6].slopePerYear !== 0) return null;
+    var invalid = false, knots = new Map(), transitions = [];
+    function add(ageYears, valueNgMl) {
+      var value = valueNgMl / factor;
+      if (!finite(ageYears) || !finite(value) || value < 0 || value > divisor * ceiling) { invalid = true; return; }
+      knots.set(ageYears, { ageYears: ageYears, value: value });
+    }
+    if (prenatal.anchors.some(function (anchor, index, anchors) {
+      return !anchor || !finite(anchor.ageYears) || anchor.ageYears < stages[0].min || anchor.ageYears >= 0 ||
+        !finite(anchor.relative) || anchor.relative < 0 || anchor.relative > 1 ||
+        (index && anchor.ageYears <= anchors[index - 1].ageYears);
+    }) || prenatal.anchors[0].ageYears !== stages[0].min) return null;
+    prenatal.anchors.forEach(function (anchor) { add(anchor.ageYears, anchor.relative * divisor * factor); });
+    add(0, nodes[0].value);
+    // Approved source knots through day 250 retain the actual infant maximum.
+    // Intermediate yearly medians orient the policy, not extra forced knots.
+    infantPoints.forEach(function (point) {
+      if (point.ageYears <= lastInfantAge) add(point.ageYears, point.value * factor);
+    });
+    add(lastInfantAge, nodes[2].value);
+    var expectedPairs = [[0, 1], [2, 3], [3, 4], [4, 5], [5, 6]];
+    for (var bridgeIndex = 0; bridgeIndex < policy.bridges.length; bridgeIndex++) {
+      var bridge = policy.bridges[bridgeIndex];
+      var start = nodes[expectedPairs[bridgeIndex][0]], end = nodes[expectedPairs[bridgeIndex][1]];
+      if (!bridge || bridge.from !== start.id || bridge.to !== end.id ||
+          typeof bridge.name !== 'string' || !finite(bridge.startHandle) || !finite(bridge.endHandle) ||
+          bridge.startHandle <= 0 || bridge.startHandle >= 1 || bridge.endHandle <= 0 || bridge.endHandle >= 1 ||
+          !Number.isInteger(bridge.sampleCount) || bridge.sampleCount < 3 || bridge.sampleCount > 2000) return null;
+      var x0 = lifeX(start.ageYears), x3 = lifeX(end.ageYears), width = x3 - x0;
+      var px = [x0, x0 + bridge.startHandle * width, x3 - bridge.endHandle * width, x3];
+      var py = [start.value, start.value + start.slopeX * bridge.startHandle * width,
+        end.value - end.slopeX * bridge.endHandle * width, end.value];
+      // The approved control handles can overlap in X. Check the quadratic
+      // derivative, rather than incorrectly requiring ordered control points.
+      var dx0 = px[1] - px[0], dx1 = px[2] - px[1], dx2 = px[3] - px[2];
+      var qa = dx0 - 2 * dx1 + dx2, qb = 2 * (dx1 - dx0);
+      var vertex = qa > 0 ? -qb / (2 * qa) : -1;
+      if (!(width > 0) || Math.min(dx0, dx2) <= 0 ||
+          (vertex > 0 && vertex < 1 && qa * vertex * vertex + qb * vertex + dx0 <= 0)) return null;
+      var direction = end.value >= start.value ? 1 : -1;
+      if (py.some(function (value, index) {
+        return !finite(value) || value < 0 || (index && direction * (value - py[index - 1]) < -1e-10);
+      })) return null;
+      for (var sample = 0; sample < bridge.sampleCount; sample++) {
+        var t = sample / (bridge.sampleCount - 1), u = 1 - t;
+        var x = u * u * u * px[0] + 3 * u * u * t * px[1] + 3 * u * t * t * px[2] + t * t * t * px[3];
+        var y = u * u * u * py[0] + 3 * u * u * t * py[1] + 3 * u * t * t * py[2] + t * t * t * py[3];
+        add(sample === 0 ? start.ageYears : sample === bridge.sampleCount - 1 ? end.ageYears : ageAtLifeX(x), y);
+      }
+      transitions.push({ name: bridge.name, minAge: start.ageYears, maxAge: end.ageYears,
+        kind: 'illustrative-bridge', coordinate: policy.coordinate, method: 'cubic-bezier',
+        x: px, yNgMl: py, sampleCount: bridge.sampleCount, sourceValuesUnchanged: true });
+    }
+    var tailSteps = (tail.maxAge - tail.minAge) / tail.sampleStepYears;
+    if (!Number.isInteger(tailSteps) || tailSteps < 1 || tailSteps > 100) return null;
+    for (var tailStep = 0; tailStep <= tailSteps; tailStep++) add(tail.minAge + tailStep * tail.sampleStepYears, nodes[6].value);
+    var points = Array.from(knots.values()).sort(function (a, b) { return a.ageYears - b.ageYears; });
+    if (invalid || points.length < 2 || points.some(function (point, index) {
+      return index > 0 && points[index - 1].ageYears >= peak.ageYears && point.value > points[index - 1].value + 1e-8;
+    })) return null;
+    return {
+      id: 'amh', kind: policy.kind, unit: policy.unit, policyVersion: policy.version,
+      points: points, profiles: profiles, sourceIds: policy.sourceIds.slice(),
+      divisor: divisor, ceiling: ceiling, transitions: transitions,
+      tangentOverrides: nodes.map(function (node) { return { ageYears: node.ageYears, slopePerYear: node.slopePerYear }; }),
+      illustrativeIntervals: [
+        { minAge: points[0].ageYears, maxAge: firstAge, kind: 'prenatal-lead' },
+        ...transitions,
+        { minAge: tail.minAge, maxAge: tail.maxAge, kind: 'older-age-tail' }
+      ]
+    };
+  }
+
   function safeMaleGonadotropin(data, engine, id) {
     // Fail closed if an incomplete source bundle or malformed policy reaches
     // this optional display layer; never manufacture a patient reference.
@@ -527,5 +736,6 @@
   }
 
   return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
-    buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins };
+    buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins,
+    buildMaleAmh: buildMaleAmh };
 });

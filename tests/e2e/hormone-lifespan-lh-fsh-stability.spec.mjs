@@ -216,16 +216,34 @@ test('LH/FSH zoom and selection preserve the canonical curve and keep comparison
     await panel(page).locator('[data-hormone="amh"]').click();
     await expect(note(page)).toBeHidden();
     await panel(page).locator('[data-stage="0"]').click();
-    await expect(panel(page).locator('[data-stage="0"]')).toHaveText('Płód');
+    // AMH now has its own source-informed fixed illustration too; selecting
+    // it keeps prenatal provenance visible without showing the LH/FSH caption.
+    await expect(panel(page).locator('[data-stage="0"]')).toHaveText('Płód · schemat');
+    await expect(panel(page).locator('[data-stable-reference-line="amh"]')).toHaveAttribute('data-divisor', '1335.592934');
     await panel(page).locator(`[data-hormone="${id}"]`).click();
     await expect(note(page)).toBeVisible();
     await sameGeometry(page, id, original);
     const sources = await panel(page).locator('[data-lifespan="source-copy"]').textContent();
     expect(sources).toContain('Perheentupa');
     expect(sources).toContain('Tehrani');
-    expect(sources).toContain('AMH: autorski schemat');
+    expect(sources).toContain('Linia AMH jest poglądową syntezą badań');
+    expect(sources).toContain('Wang');
     await panel(page).locator('[data-hormone="amh"]').click();
   }
+  await page.locator('#labSubstance').fill('Testosteron');
+  await page.locator('#labSubstanceDropdown [data-id="testosterone_total"]').click();
+  await expect(panel(page).locator('[data-stage="0"]')).toHaveText('Płód');
+  await expect(note(page)).toBeHidden();
+  await page.locator('#labSubstance').fill('AMH');
+  await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+  await expect(panel(page).locator('[data-stage="0"]')).toHaveText('Płód · schemat');
+  await page.evaluate(() => {
+    window.VildaPersistence.writeShared({ sex: 'F', age: 12, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  });
+  await expect(panel(page).locator('[data-stage="0"]')).not.toContainText('schemat');
+  await expect(note(page)).toBeHidden();
+  await expect(panel(page).locator('[data-stable-reference-line="amh"]')).toHaveCount(0);
 });
 
 test('known term birth and source qualification gate the infant LH/FSH point without changing the illustration', async ({ page }) => {
