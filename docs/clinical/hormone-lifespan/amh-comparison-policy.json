@@ -1,0 +1,52 @@
+{
+  "version": "2026-10-11.1",
+  "kind": "population-model-comparison",
+  "analyte": "amh",
+  "view": "mini",
+  "sourceStatistic": "median",
+  "sourceUnit": "pmol/L",
+  "profileIds": {
+    "female": "ljubicic2022-female-amh",
+    "male": "busch2022-male-amh"
+  },
+  "domain": {
+    "minAge": 0.02,
+    "maxAge": 1,
+    "maxAgeExclusive": true
+  },
+  "scale": {
+    "kind": "log10",
+    "unit": "ng/mL",
+    "min": 0.1,
+    "max": 1000,
+    "ticks": [0.1, 1, 10, 100, 1000],
+    "independentOfPatient": true,
+    "conversionSource": "patientPointData.unitConversions.amh"
+  },
+  "sampling": {
+    "sampleCount": 801,
+    "includeSourceNodes": true,
+    "exclusiveEndpointGapYears": 1e-10
+  },
+  "colors": {
+    "female": "#b15786",
+    "male": "#2b7491"
+  },
+  "pointPolicy": {
+    "qualification": "unchanged-reference-engine-and-own-infant-profile",
+    "maxAge": 1,
+    "maxAgeExclusive": true,
+    "ownSexReferenceMayPrecedeCommonCurve": true,
+    "outsideAxis": "directional-arrow-with-actual-value"
+  },
+  "limits": [
+    "Only AMH sex comparison in minipuberty uses this policy; ordinary multiple-hormone views and puberty comparison keep their existing contracts.",
+    "The lines are medians of two separate infant population models, not paired observations, longitudinal mean trajectories, reference intervals or a diagnostic classification.",
+    "Both infant studies used serum and Access 2. The male model is an approximate figure digitization; the female model comes from the published table.",
+    "No extrapolation to birth and no older-child model is joined at the first birthday. The common curve domain is distinct from an individual patient's unchanged source eligibility.",
+    "A qualified seven-day boy may have his own Busch reference marker before the common curve starts at 0.02 years. Neither sex receives a numeric comparison point at exactly one year.",
+    "The fixed logarithmic axis expresses concentration ratios. Its bounds are presentation choices, not normal ranges or assay detection limits.",
+    "Zero and results below the axis use a downward arrow; results above the axis use an upward arrow. Neither is placed as an exact result circle at the log boundary.",
+    "Source points, domains, unit factors and laboratory interpretation remain unchanged."
+  ]
+}

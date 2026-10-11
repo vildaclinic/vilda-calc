@@ -23,6 +23,7 @@ async function openComponent(page, { width = 1360, context = initialContext } = 
       <link rel="stylesheet" href="/vilda_hormone_lifespan.css">
       <style>body{display:block;margin:0}main{width:100%;box-sizing:border-box}</style></head>
       <body><main id="diagram"></main><script src="/vilda_hormone_lifespan_data.js"></script>
+      <script src="/vilda_hormone_lifespan_reference.js"></script><script src="/vilda_hormone_lifespan_display.js"></script>
       <script src="/vilda_hormone_lifespan.js"></script></body></html>`,
   }));
   await page.goto('/__test-hormone-puberty-comparison', { waitUntil: 'load' });

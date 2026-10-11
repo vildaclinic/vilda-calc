@@ -19,7 +19,10 @@ async function openFixture(page, { width = 1440, height = 1000, framed = false, 
   const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/ios26-v2.css"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vilda_hormone_lifespan.css">
     <style>html{scroll-behavior:auto}body{margin:0;display:block}.fixture-gap{height:650px;flex-shrink:0}.fixture-shell{width:100%;max-width:760px;margin:0 auto;padding:12px;box-sizing:border-box}iframe{width:100%;height:480px;border:0;display:block}#background-control{position:fixed;bottom:12px;left:12px}</style>`;
-  const scripts = `<script src="/vilda_hormone_lifespan_data.js"></script><script src="/vilda_hormone_lifespan.js"></script>`;
+  const scripts = `<script src="/vilda_hormone_lifespan_data.js"></script>
+    <script src="/vilda_hormone_lifespan_reference.js"></script>
+    <script src="/vilda_hormone_lifespan_display.js"></script>
+    <script src="/vilda_hormone_lifespan.js"></script>`;
   await page.route('**/__test-hormone-fullscreen**', route => {
     const child = new URL(route.request().url()).pathname.endsWith('-frame');
     const body = child

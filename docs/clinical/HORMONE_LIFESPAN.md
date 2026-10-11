@@ -76,6 +76,12 @@ wzrost pokwitaniowy i łagodny spadek dorosłości. Zatwierdzona wersja
 zastępuje wcześniejszą propozycję niemal płaskiego przebiegu niemowlęcego.
 INSL3 pozostaje przerywaną ilustracją bez liczbowego punktu pacjenta.
 
+Następnie właściciel zaakceptował wspólną, stałą oś stężenia AMH
+w porównaniu płci podczas minipuberty. Obie linie od początku odtwarzają
+mediany modeli niemowlęcych, także bez wyniku. Jest to wąski wyjątek
+od wcześniejszego porównywania względnych wysokości płci; pokwitanie
+i inne hormony zachowują dotychczasową politykę.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -85,8 +91,9 @@ Nie zastępuje osi interpretacji badania i nie zmienia ich danych, progów,
 jednostek ani werdyktów. Połączenie nie zapisuje porównań do historii,
 przypiętych wyników, wizyt ani stanu pacjenta.
 
-Każdy hormon ma własną skalę względną. Przecięcie linii różnych hormonów
-nie oznacza równego stężenia. Oś całego życia ma różną skalę czasu w etapach.
+W zwykłych widokach każdy hormon ma własną skalę względną. Przecięcie
+linii różnych hormonów nie oznacza równego stężenia. Oś całego życia
+ma różną skalę czasu w etapach.
 Granice pokwitania, dorosłości i przejścia menopauzalnego są umowne,
 nie są diagnozą na podstawie wieku.
 
@@ -267,8 +274,50 @@ Jasny znacznik nadal wskazuje źródłową medianę; przy 11,5 roku wynosi ona
 20,70 ng/mL, choć uproszczona linia odpowiada około 25,01. Zachowano
 wszystkie 15 profili, bramkę donoszenia oraz luki: przed 7. dniem,
 12–<13 lat, 15–<30 i >70 lat. Ciągłość obrazu nie daje nowych median,
-norm ani interpretacji. Osobne porównanie płci zachowuje wcześniejszą
-geometrię i zasady skalowania.
+norm ani interpretacji. Porównanie płci ma odrębną politykę; dla AMH
+w minipuberty obowiązuje poniższy wyjątek.
+
+### AMH w minipuberty — wspólna skala porównania płci
+
+Zatwierdzona makieta zastępuje zmianę geometrii i skali po wpisaniu
+wyniku. `amh-comparison-policy.json`, eksport `amhComparisonPolicy`
+i `buildAmhInfantComparison(data, referenceEngine)` przygotowują stałe
+krzywe: `busch2022-male-amh` oraz `ljubicic2022-female-amh`.
+Oba źródła dotyczą zdrowych donoszonych niemowląt, surowicy i Access 2.
+Linie przedstawiają mediany GAMLSS; męska jest przybliżonym odczytem
+ryciny 3, żeńska pochodzi z tabeli D suplementu. Nie są średnimi
+trajektoriami podłużnymi ani granicami norm.
+
+Obie płcie, wynik i znacznik źródłowy używają wspólnej osi log10
+0,1–1000 ng/mL, z poziomami 0,1 / 1 / 10 / 100 / 1000 i krótkim
+podpisem „Kolejne poziomy osi oznaczają 10× większe stężenie”. Równa
+wysokość oznacza równe stężenie; odstęp pionowy wyraża iloraz, nie
+różnicę arytmetyczną. Używamy dotychczasowego przeliczenia
+1 pmol/L = 0,1401 ng/mL. Skala nie zależy od wyniku, płci pacjenta,
+wieku ani rozmiaru ekranu. Nie ma nowego wyboru skali.
+
+Wspólny zakres linii wynosi 0,02–<1 roku (7,305–<365,25 dnia).
+Nie dopisujemy krzywych przy urodzeniu ani rocznej grupy Wang na końcu.
+Niezależny silnik zachowuje własne źródłowe domeny: chłopiec może mieć
+punkt już od 7. dnia, mimo późniejszego początku wspólnych krzywych.
+W tym widoku dokładnie pierwsze urodziny nie otrzymują punktu żadnej
+płci. Nie zmienia to żeńskiego profilu obejmującego 1 rok w pozostałych
+widokach. Niepewny wiek nadal podlega kwalifikacji całego przedziału.
+
+Wcześniactwo, nieznane donoszenie i inne dotychczasowe ograniczenia
+silnika mogą wykluczyć punkt, lecz nie zmieniają krzywych populacyjnych.
+Zapis „<” lub „>” nie jest dokładną kropką. Wynik poniżej 0,1 ng/mL,
+w tym zero, ma strzałkę w dół; ponad 1000 strzałkę w górę, zawsze
+z prawdziwą wartością. Nie podstawiamy dodatniego minimum do log(0).
+Tolerancja błędu zmiennoprzecinkowego przy granicach zapobiega
+fałszywej strzałce po konwersji jednostek; nie jest tolerancją kliniczną.
+
+Podłoga osi jest decyzją graficzną, nie granicą oznaczenia. Obie prace
+podają LOD AMH 0,14 pmol/L (około 0,0196 ng/mL), bez odrębnego LOQ AMH.
+Wartości LOQ 2,9 i 4,0 pmol/L w Ljubicic dotyczą estrogenów.
+Źródła, ograniczenia i punkty kontrolne:
+[audyt AMH](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+Normy laboratoryjne, profile pacjenta, historia i zwykłe widoki nie zmieniają się.
 
 ### Stała przerywana linia męskiego INSL3
 
@@ -341,8 +390,9 @@ laboratoryjne i liczbowe profile innych hormonów pozostają odrębne.
   automatycznie bieżącego analitu. Powrót przyciskiem „Tylko…” wybiera
   bieżący analit. Ta sama możliwość odznaczenia dotyczy porównania płci.
 - Nagłówek osi „Przebieg zmian” zastępuje techniczne „Poziom względny”.
-  Nie zmienia znaczenia wysokości linii; zasada osobnych skal pozostaje
-  widoczna pod wykresem.
+  Zasada osobnych skal pozostaje widoczna pod zwykłym wykresem.
+  Wyjątek AMH/minipuberty w porównaniu płci opisuje stężenie w ng/mL
+  i wspólną skalę logarytmiczną.
 - „Porównaj płcie” działa w minipuberty dla AMH i inhibiny B, a w pokwitaniu
   dla LH, FSH, AMH i inhibiny B. Przejście między tymi okresami zachowuje
   tryb porównania. Gdy wybrany hormon nie ma porównania w nowym okresie,
@@ -413,18 +463,22 @@ minipuberty zachowuje wszystkie 99 źródłowych punktów. Wartość
 `qualitativeTail.displayFloor` jest wyłącznie odległością od osi: niskie
 lub niewykrywalne nie znaczy stężenie równe zero.
 
-Wyjątek: osobny widok **Porównaj płcie** używa własnego maksimum każdej płci
-w wybranym okresie, z widocznym podpisem tej zasady. Porównuje kształt
-i kierunek zmian, nie bezwzględne stężenia. Równa wysokość i przecięcie
-linii nie oznaczają równych stężeń. Nie wyprowadzać z porównania ilorazów
-stężeń ani precyzyjnej różnicy czasu szczytów.
+Widok **Porównaj płcie** ma odrębną politykę. Dla AMH w minipuberty
+obowiązują stałe mediany i wspólna oś stężenia opisane wyżej. Pozostała
+bazowa warstwa porównania używa własnego maksimum każdej płci
+w wybranym okresie, z widocznym podpisem tej zasady. Taki schemat
+porównuje kształt i kierunek zmian, nie bezwzględne stężenia. Nie wolno
+wyprowadzać z jego przecięć równości stężeń, ilorazów ani precyzyjnej
+różnicy czasu szczytów. Dotychczasowe ilościowe tryby pozostałych
+analitów nie otrzymują automatycznie nowej polityki AMH.
 
-- **Minipuberty:** AMH albo inhibina B w pierwszym roku. Osobne
-  `comparisonValues` nie zmieniają zwykłych `miniValues`, które nadal
-  zachowują skalę całego życia. Linia dziewczynek odtwarza mediany
-  Ljubicic 2022; w bazowej warstwie linia chłopców jest autorskim schematem.
-  Dotychczasowa
-  geometria porównania i ograniczenie do dzieci donoszonych nie zmieniają się.
+- **Minipuberty, AMH:** stała wspólna oś log10, modele Busch/Ljubicic
+  od 0,02 do <1 roku; bez przełączenia po wpisaniu wyniku. Nie zmienia
+  zwykłych `miniValues` ani skali całego życia.
+- **Minipuberty, inhibina B:** dotychczasowe `comparisonValues`,
+  żeńskie mediany Ljubicic 2022 i męski schemat w bazowej warstwie.
+  Geometria, skalowanie i kwalifikacja ilościowego punktu pozostają
+  odrębne od zatwierdzonej zmiany AMH.
 - **Pokwitanie:** LH, FSH, AMH albo inhibina B na wspólnej osi wieku
   chronologicznego 8–20 lat. Maksimum wyznacza się osobno dla każdej płci
   w tym przedziale, bez przesuwania krzywych w czasie. To umowny wycinek
@@ -505,7 +559,8 @@ bez przeliczania jej wysokości na stężenie. Zbliżenia próbkują jedną
 kanoniczną krzywą, zamiast ponownie dopasowywać 97 punktów i wtórny
 B-spline. Zachowują skalę, kierunek zmian i szczyty, z niewielkim błędem
 ponownego próbkowania.
-Porównanie płci zachowuje wcześniejszą interpolację i własną politykę.
+Porównanie płci zachowuje wcześniejszą interpolację i własną politykę
+poza nowym wspólnym modelem AMH w minipuberty opisanym wyżej.
 Oddzielne liczbowe źródła punktu wyniku znajdują się w
 [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Obecność schematu
 danego hormonu lub wieku nie oznacza dostępności ilościowego porównania.
@@ -530,7 +585,8 @@ Wysokości pozostają poglądowe; odcinek do 90 lat nie jest ilościową prognoz
 ### Pierwotny przebieg męskiego schematu — 2026-10-10
 
 Opis historyczny: zwykłe widoki zastępuje obecnie geometria opisana
-powyżej. Dawny sposób porównania płci pozostaje aktywny.
+powyżej. Dawny sposób porównania płci pozostaje aktywny poza AMH
+w minipuberty, które ma osobną zatwierdzoną politykę.
 
 Na polecenie właściciela przywrócono wariant „Pierwotny przebieg”,
 odpowiadający rendererowi z commita `c6b03379` (przed PR #607).
@@ -594,8 +650,9 @@ odróżnienie źródłowych 29 dni od schematycznych 28 dni cyklu.
 `tests/e2e/hormone-lifespan-original-curves.spec.mjs` porównuje ścieżki
 SVG rzeczywistego renderera z utrwalonym wzorcem „Pierwotnego przebiegu”.
 Historyczny wzorzec zwykłych widoków zastępuje aktualna polityka
-kanonicznej geometrii. Niezmienione porównanie płci dla AMH i inhibiny B
-nadal wymaga zgodności ze swoim dotychczasowym wzorcem. Kontrola obejmuje
+kanonicznej geometrii. Niezmienione porównania płci nadal wymagają
+zgodności ze swoim dotychczasowym wzorcem; AMH w minipuberty ma nowy
+kontrakt stałych modeli, granic i wspólnej osi. Kontrola obejmuje
 desktop i telefon oraz brak nowych ekstremów, bez udawania, że kotwice
 schematu są ilościowymi obserwacjami.
 Syntetyczne wejście: chłopiec, LH, wiek 0,25 roku → początkowo wyłącznie
@@ -603,9 +660,9 @@ krzywa LH i geometria zgodna z kanonicznym przebiegiem danego hormonu.
 Istniejące testy `hormone-lifespan-context.spec.mjs` sprawdzają kontekst
 formularza i interakcje obu płci.
 
-Wzorzec pierwotnych krzywych pozostaje właściwy dla niezmienionego
-porównania płci, nie dla zastąpionej geometrii zwykłych męskich widoków
-ani modelu ilościowego.
+Wzorzec pierwotnych krzywych pozostaje właściwy dla niezmienionych
+porównań płci, nie dla nowego AMH w minipuberty, zastąpionej geometrii
+zwykłych męskich widoków ani modelu ilościowego.
 `tests/unit/hormone-lifespan-reference.test.mjs` wywołuje
 rzeczywisty `vilda_hormone_lifespan_reference.js` i sprawdza niezależne
 wartości źródłowe, granice wieku, jednostki, nierówności oraz brak

@@ -24,6 +24,7 @@ def build():
     testosterone_display_policy = json.loads((ROOT / 'testosterone-display-policy.json').read_text(encoding='utf-8'))
     lh_fsh_display_policy = json.loads((ROOT / 'lh-fsh-display-policy.json').read_text(encoding='utf-8'))
     amh_display_policy = json.loads((ROOT / 'amh-display-policy.json').read_text(encoding='utf-8'))
+    amh_comparison_policy = json.loads((ROOT / 'amh-comparison-policy.json').read_text(encoding='utf-8'))
     insl3_display_policy = json.loads((ROOT / 'insl3-display-policy.json').read_text(encoding='utf-8'))
     reference_js = json.dumps(reference, ensure_ascii=False, indent=2)
     lifespan_js = json.dumps(lifespan, ensure_ascii=False, indent=2)
@@ -33,6 +34,7 @@ def build():
     testosterone_display_policy_js = json.dumps(testosterone_display_policy, ensure_ascii=False, indent=2)
     lh_fsh_display_policy_js = json.dumps(lh_fsh_display_policy, ensure_ascii=False, indent=2)
     amh_display_policy_js = json.dumps(amh_display_policy, ensure_ascii=False, indent=2)
+    amh_comparison_policy_js = json.dumps(amh_comparison_policy, ensure_ascii=False, indent=2)
     insl3_display_policy_js = json.dumps(insl3_display_policy, ensure_ascii=False, indent=2)
     return (
         '/* Educational hormone lifespan data; not reference intervals or patient scoring.\n'
@@ -55,6 +57,7 @@ def build():
         f'const testosteroneDisplayPolicy = {testosterone_display_policy_js};\n'
         f'const lhFshDisplayPolicy = {lh_fsh_display_policy_js};\n'
         f'const amhDisplayPolicy = {amh_display_policy_js};\n'
+        f'const amhComparisonPolicy = {amh_comparison_policy_js};\n'
         f'const insl3DisplayPolicy = {insl3_display_policy_js};\n'
         'return {\n'
         '  version: lifespanData.version,\n'
@@ -69,6 +72,7 @@ def build():
         '  testosteroneDisplayPolicy: testosteroneDisplayPolicy,\n'
         '  lhFshDisplayPolicy: lhFshDisplayPolicy,\n'
         '  amhDisplayPolicy: amhDisplayPolicy,\n'
+        '  amhComparisonPolicy: amhComparisonPolicy,\n'
         '  insl3DisplayPolicy: insl3DisplayPolicy\n'
         '};\n'
         '});\n'

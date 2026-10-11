@@ -302,6 +302,30 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
           await expect(wykres.locator('[data-patient-concentration="insl3"], [data-reference-line="insl3"]')).toHaveCount(0);
         }
         await expect(insl3).toBeVisible();
+        // The approved AMH comparison must start from the real precache too.
+        // Population lines retain one common scale even without a qualified dot.
+        const infantAmh = {
+          analyte: 'amh', sex: 'female', ageYears: 90 / 365.25, preterm: 'no',
+          sourceStatus: 'ready', identityKey: 'fictional-offline-amh-comparison',
+          measurement: null,
+        };
+        await page.evaluate(context => window.VildaHormoneLifespanRuntime.update(context), infantAmh);
+        await wykres.getByRole('button', { name: 'Porównaj płcie', exact: true }).click();
+        const amhComparison = wykres.locator('[data-comparison-curve="amh"]');
+        await expect(amhComparison).toHaveCount(2);
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('10×');
+        const fixedAmhPaths = await amhComparison.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
+        for (const value of [1.5, 10000, 0, null]) {
+          await page.evaluate(({ context, value }) => window.VildaHormoneLifespanRuntime.update({
+            ...context, measurement: value === null ? null : { value, unit: 'ng/mL', operator: '=' },
+          }), { context: infantAmh, value });
+          await expect.poll(() => amhComparison.evaluateAll(paths => paths.map(path => path.getAttribute('d'))))
+            .toEqual(fixedAmhPaths);
+          if (value === null) await expect(wykres.locator('[data-patient-concentration="amh"]')).toHaveCount(0);
+          else if (value === 0 || value === 10000)
+            await expect(wykres.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', value === 0 ? 'below' : 'above');
+          else await expect(wykres.locator('[data-result-point]')).toHaveCount(1);
+        }
       }
     }
 
