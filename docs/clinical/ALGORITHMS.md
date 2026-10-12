@@ -1670,6 +1670,78 @@ pełny ekran, komputer i 320 px. Odtwarzalne źródła, zatwierdzona makieta
 i dokładniejsze punkty kontrolne:
 [`amh-infant-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
 
+### HORMONE-AUDIT-FOLLOWUPS — granica porównania AMH i opisy, 2026-10-12
+
+**Zakres:** uzupełnienie ustaleń HM-3, HM-4 i HM-5 audytu spójności
+modułu z 11 października 2026, zatwierdzone przez właściciela. HM-3
+dotyczy technicznej kwalifikacji punktu w istniejącym porównaniu AMH,
+HM-4 opisu dostępności SVG, HM-5 ogólnych komunikatów braku odniesienia.
+Nie powstaje nowa norma, źródło, ekstrapolacja ani krzywa.
+
+**HM-3 — cały przedział wieku:** porównanie płci AMH w minipuberty
+wymaga, aby cały możliwy wiek pacjenta mieścił się przed pierwszymi
+urodzinami. Górna granica równa 1 roku jest dopuszczalna wyłącznie jako
+wyłączony koniec niepustego przedziału (`ageUpperInclusive: false`).
+Przedział obejmujący 1 rok włącznie, przekraczający 1 rok lub dokładny
+wiek 1 rok nie otrzymuje punktu ani znacznika odniesienia w tym widoku.
+Wcześniej publiczny renderer mógł dopuścić żeński punkt dla `[11/12, 1]`;
+obecny formularz przekazuje poprawne przedziały półotwarte i nie
+odtwarzał tego błędu. Kontrola widoku uzupełnia oryginalne `evaluate`,
+które nadal kwalifikuje całe źródłowe okno, donoszenie, metodę, materiał,
+jednostkę i wynik. Własne odniesienie chłopca od 7. dnia pozostaje
+dostępne przed początkiem wspólnych linii w 7,305 dnia.
+
+Źródła i populacje pozostają wcześniej sprawdzone:
+[Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3 — 119
+donoszonych chłopców, 338 próbek; [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363),
+[suplement v1, tabela D](https://doi.org/10.6084/m9.figshare.19469555.v1) —
+98 donoszonych dziewczynek, 266 próbek. Oba źródła: zdrowe niemowlęta
+z ciąż pojedynczych, COPENHAGEN, surowica, Access 2, mediany GAMLSS
+w pmol/L; prezentacja nadal używa 1 pmol/L = 0,1401 ng/mL.
+Przybliżony odczyt ryciny chłopców i tabela dziewczynek mają różną
+precyzję; nie są odniesieniem wcześniaczym ani normą diagnostyczną.
+Ograniczenia i pochodzenie liczb utrwala
+[dotychczasowy audyt AMH](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+Żeński profil źródłowy nadal obejmuje dokładnie 1 rok w zwykłych
+widokach; globalne profile i dostępność Wang poza tym porównaniem
+pozostają bez zmian. Linie oraz stała oś log10 nie zależą od kwalifikacji.
+
+**HM-4 i HM-5 — znaczenie tekstu:** ogólny opis SVG porównania AMH
+w pokwitaniu nie zawiera historycznego zdania o żeńskiej inhibinie B.
+Odrębny renderer porównania LH/FSH już korzysta z własnego opisu.
+Ogólne komunikaty niedostępnego dopasowania stosują neutralną „wartość
+odniesienia”. Odrębne opisy porównań korzystających wyłącznie z median
+zachowują nazwę tej statystyki. Prawidłowo zakwalifikowane źródła nadal
+mają własne podpisy „średnia” lub „mediana”. Przykładowo Laurentino 2020,
+[DOI 10.1111/acel.13242](https://doi.org/10.1111/acel.13242), tabela 1,
+podaje średnie LH i FSH po 3,0 IU/L dla najmłodszej grupy N=34 zdrowych
+mężczyzn FAMe, surowica, Abbott Architect i1000 CMIA. Aplikacja zachowuje
+okno 18–<25 lat i ograniczenia rozbieżnych etykiet wieku źródła,
+opisane w [istniejącym ekstrakcie](hormone-lifespan/evidence/patient-point/laurentino2020-lh-fsh-group-means.json).
+
+**Syntetyczne przypadki wejście → oczekiwane zachowanie:**
+
+- AMH, dowolna płeć, zgodny kontekst źródłowy, `[11/12, 1)` → punkt;
+  `[11/12, 1]`, `[0.99, 1.01]` albo dokładnie 1 rok → brak punktu
+  porównania, bez zmiany krzywych lub skali.
+- AMH, donoszony chłopiec, dokładnie 7 dni → własne odniesienie Busch
+  około 64,25565 ng/mL; dziewczynka 7 dni → brak źródłowego odniesienia.
+- AMH, donoszona dziewczynka, dokładnie 1 rok, zwykły widok → zachowane
+  źródłowe p50 0,9916278 ng/mL; w porównaniu minipuberty brak punktu.
+- AMH, porównanie pokwitania → opis SVG dotyczy tego porównania,
+  bez twierdzenia o żeńskiej inhibinie B.
+- Mężczyzna 20 lat, LH lub FSH, znana niezgodna metoda albo materiał →
+  brak dopasowania i neutralna „wartość odniesienia”; zgodny kontekst →
+  nadal podpis „średnia”, a kwalifikujące źródło medianowe nadal „mediana”.
+
+**Wpływ i weryfikacja:** zmienia się wyłącznie odmowa punktu dla
+brzegowego kontekstu API oraz brzmienie dwóch rodzajów opisów.
+Normy laboratoryjne, wartości i granice źródeł, jednostki, geometria,
+interpretacja laboratoryjna, zapis i historia pozostają bez zmian.
+Regresje mają wywoływać rzeczywisty renderer i silnik, z kontrolą obu
+rodzajów końca przedziału oraz zachowanych podpisów poprawnych punktów.
+Ten zapis określa oczekiwany kontrakt, nie wynik testów ani walidację kliniczną.
+
 ### HORMONE-INHIBIN-SEX-COMPARISON — wspólna oś i punkt dziewcząt 8–20 lat, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć zaakceptowane makiety porównania płci
