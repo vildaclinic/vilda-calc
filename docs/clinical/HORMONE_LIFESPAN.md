@@ -94,6 +94,12 @@ minipuberty z dwiema falami modelowanej średniej. To jawny wyjątek
 od wcześniejszego obowiązku tej samej statystyki i skali we wszystkich
 zbliżeniach. Zakres i ograniczenia opisano w sekcji żeńskich LH/FSH poniżej.
 
+Tego samego dnia właściciel zatwierdził makietę stałej żeńskiej krzywej
+AMH i polecił jej implementację („ok, koduj to”). Naprawa zachowuje
+dotychczasowy przebieg całego życia, usuwa jego zastępowanie i skalowanie
+po wpisaniu wyniku oraz przenosi tę samą geometrię do zbliżeń. Nie dodaje
+źródeł liczbowego punktu, norm ani kalibracji między badaniami.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -155,7 +161,7 @@ jednostki i funkcji skali**. Mediana lub średnia pochodzi z oryginalnego źród
 źródłowego, również po zmianie widoku, wyboru hormonów i powiększeniu.
 Nie wolno dopasować punktu do autorskiej linii pojedynczym mnożnikiem
 ani przeliczać schematycznej wysokości na stężenie. W męskich LH, FSH,
-AMH, inhibinie B i testosteronie całkowitym
+AMH, inhibinie B i testosteronie całkowitym oraz żeńskim AMH
 ciągła linia jest wygładzoną prezentacją: w pasach wygładzenia znacznik
 źródłowej mediany/średniej może leżeć poza nią. Nie przesuwamy go na linię.
 Model ilościowy zachowuje własne granice; poza nimi krzywa edukacyjna
@@ -266,6 +272,61 @@ Przy medianie Busch odczytanej z ryciny zbyt blisko granicy oznaczalności
 nie tworzymy precyzyjnego punktu względem sztucznej podłogi. Szczegóły
 tego ograniczenia graficznego są w dokumentacji danych; nie jest to
 nowy próg interpretacji klinicznej.
+
+### Stała linia żeńskiego AMH — 12 października 2026
+
+Zwykłe widoki żeńskiego AMH korzystają ze stałego dzielnika
+`lifespanData.hormones.amh.normalizationMaximum = 28.99 pmol/L`
+i `ceiling = 1`. To dotychczasowa kotwica graficzna, pochodząca
+z mediany osocza grupy 26–30 lat FDA K170524; nie górna granica normy.
+Wpisanie, zwiększenie, wyczyszczenie lub cenzurowanie wyniku nie zmienia
+tej skali ani linii. Wynik i oryginalna mediana źródłowa stosują tę samą
+funkcję liniową. Zero jest punktem na osi, a wynik ponad 28,99 pmol/L
+otrzymuje strzałkę i rzeczywistą liczbę, bez zmniejszania całej krzywej.
+Tolerancja ośmiu epsilonów maszynowych przy granicy skali usuwa tylko
+błąd arytmetyki konwersji; nie jest tolerancją oznaczenia.
+
+Renderer buduje `displaySpline` z niezmienionych `displaySegments`
+we współrzędnych żeńskiej osi całego życia. Jej dotychczasowa geometria
+zostaje zachowana. Minipuberty i pokwitanie odwzorowują te same kawałki
+Hermite'a/Béziera po podziale na węzłach oraz granicach skali czasu;
+nie dopasowują nowego splajnu. Dotyczy to również AMH dołączonego do
+LH/FSH: korzysta z osi czasu danego widoku, zachowując własną krzywą
+i skalę AMH. Podpis osi LH/FSH nie nadaje AMH jednostki IU/L ani
+normalizacji do maksymalnej średniej gonadotropin.
+
+Most 0,9–1,3 roku pozostaje ilustracyjny również w minipuberty.
+Wszystkie 99 źródłowych median niemowlęcych pozostają w danych,
+ale rysunek mostu nie musi przez nie przechodzić. Jasny znacznik
+zachowuje medianę źródłową, nawet gdy leży obok linii. Nie wymuszamy
+odbicia po pierwszych urodzinach do mediany szerokiej grupy 1–4,9 lat.
+Także późniejszy szeroki szczyt nie wskazuje dokładnego wieku maksimum.
+Odcinek po ostatniej grupie FDA 41–45 lat i niska końcówka do 75 lat
+są jakościowe, bez liczbowych odniesień, LOD lub ustalonego wieku menopauzy.
+
+Źródła pozostają te same: mediana GAMLSS Ljubicic 2022 (98 donoszonych
+dziewczynek, 266 próbek surowicy, Access 2), mediany niewielkich szpitalnych
+grup Jopling 2018 (osocze litowo-heparynowe, Access AMH) oraz mediany
+osocza FDA K170524 (620 kobiet z regularnymi cyklami i potwierdzoną
+płodnością, Access 2). Sowers 2008 wspiera jakościowy spadek wokół
+ostatniej miesiączki. Połączenie nie harmonizuje surowicy, osocza ani
+populacji i nie tworzy jednego zwalidowanego modelu życia.
+
+Jedyny dotychczasowy żeński profil liczbowy AMH w zwykłym widoku,
+`ljubicic2022-female-amh`, zachowuje okno 0,02–1 roku, kwalifikację
+donoszenia, metody, materiału i wyniku. W wieku 19,668 lub 35 lat
+poglądowa linia nie uprawnia do dopisania mediany ani punktu stężenia.
+Męskie AMH, porównanie płci i pozostałe hormony mają odrębne, niezmienione
+kontrakty. Laboratoryjne normy, wyniki, jednostki wejściowe i zapis
+pacjenta pozostają bez zmian.
+
+Przypadki syntetyczne: dziewczynka donoszona, 0,25 roku, AMH
+10 pmol/L → mediana 16,999 pmol/L, oba znaczniki na stałej skali 28,99;
+200 pmol/L → strzałka z etykietą 200, bez przesunięcia mediany lub linii;
+0,95 roku → oryginalna mediana 7,747 pmol/L mimo ilustracyjnego mostu.
+Wiek 0,25 roku nie jest dokładnie równy 90 dniom makiety.
+Dowód źródłowy i decyzję utrwala
+[audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
 
 ### Stała linia męskiego AMH
 
@@ -650,8 +711,8 @@ nich źródeł Madsen lub względnej średniej COPENHAGEN.
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.
-Męskie LH, FSH, AMH, inhibina B i testosteron całkowity korzystają ze stałych krzywych
-opisanych powyżej. Jeżeli
+Męskie LH, FSH, AMH, inhibina B i testosteron całkowity oraz żeńskie AMH
+korzystają ze stałych krzywych opisanych powyżej. Jeżeli
 wyświetlany jest model liczbowy z punktem wyniku, pierwszeństwo mają wspólne przeliczenie
 punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
 i normalizacje nie mogą stanowić liczbowej podstawy wyniku pacjenta.
@@ -674,8 +735,10 @@ Przerwy w obserwacjach (`evidenceGaps`) są połączone przerywanymi mostami
 poglądowymi. Nie oznaczają nowych pomiarów. Wspólne styczne PCHIP i dokładne
 krzywe Béziera zachowują ciągłość bez przeregulowania. Dla AMH szerokie
 wypłaszczenie około końca niemowlęctwa zastępuje skok do mediany całej grupy
-1–4,9 lat; odcinek 0,9–1,3 roku to geometria schematu. Szczegółowy widok
-minipuberty zachowuje wszystkie 99 źródłowych punktów. Wartość
+1–4,9 lat; odcinek 0,9–1,3 roku to geometria schematu. Po naprawie żeńskiego
+AMH z 12 października zwykłe zbliżenie minipuberty pokazuje ten sam most
+co całe życie; wszystkie 99 źródłowych punktów pozostają niezależnymi
+danymi odniesienia, nie wymuszanymi węzłami rysunku mostu. Wartość
 `qualitativeTail.displayFloor` jest wyłącznie odległością od osi: niskie
 lub niewykrywalne nie znaczy stężenie równe zero.
 
@@ -870,6 +933,13 @@ Przypadki regresji: E2 minipuberty 23,908/264 zamiast sztucznego szczytu 1;
 AMH po niemowlęctwie bez skoku do mediany grupy 1–4,9 lat; E2 18→30 lat
 bez spadku do 156/264; ciągłe łączenie mostu inhibiny B od 1 do 5,6 roku;
 odróżnienie źródłowych 29 dni od schematycznych 28 dni cyklu.
+
+`tests/e2e/hormone-lifespan-female-amh-stability.spec.mjs` sprawdza
+rzeczywisty renderer: pusty wynik → zero → mediana → wysoki → wyczyszczenie,
+stałe 28,99 pmol/L, jednostki, źródłowy znacznik w moście 0,9–1,3 roku,
+kanoniczne zbliżenia i wybór mieszany z LH/FSH, brak nowego punktu
+19,668 roku, desktop, 320 px i pełny ekran. Porównanie płci zachowuje
+własną geometrię oraz skalę, odrębne od tej naprawy zwykłych widoków.
 
 `tests/e2e/hormone-lifespan-original-curves.spec.mjs` porównuje ścieżki
 SVG rzeczywistego renderera z utrwalonym wzorcem „Pierwotnego przebiegu”.

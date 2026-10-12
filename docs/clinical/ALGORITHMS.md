@@ -1206,6 +1206,84 @@ granice źródeł, niezmienność po wpisie/wyczyszczeniu, zmianę okresu,
 wybór mieszany, pełny ekran, telefon oraz zachowanie oddzielnych odniesień.
 Akceptacja makiety i testy techniczne nie stanowią walidacji klinicznej.
 
+### HORMONE-FEMALE-AMH-STABLE-CURVE — stała linia i zbliżenia AMH, 2026-10-12
+
+**Problem i decyzja:** obecność i wielkość wyniku zastępowały żeński
+schemat AMH osobną krzywą odniesienia oraz zmieniały wysokość osi.
+Pokwitanie dopasowywało splajn ponownie w innej skali czasu. Właściciel
+zatwierdził makietę przed/po i implementację („ok, koduj to”). Naprawa
+zachowuje pierwotny pusty widok całego życia, stabilizuje go po wpisaniu
+wyniku i pokazuje tę samą geometrię w zwykłych zbliżeniach.
+
+**Źródła pozostają niezmienione:**
+
+- Ljubicic 2022, DOI `10.1210/clinem/dgac363`, ryc. 1 i suplement
+  tabela 1 D, DOI `10.6084/m9.figshare.19469555.v1`: mediana GAMLSS,
+  98 zdrowych donoszonych dziewczynek, 266 próbek surowicy, Access 2,
+  pmol/L. Zachowane 99 węzłów 0,02–1 roku; p50 przy 0,25 roku wynosi
+  16,999. To nie znormalizowana średnia podłużna używana dla LH/FSH.
+- Jopling 2018, DOI `10.1002/edm2.21`, tabela 1: mediany niewielkich
+  szpitalnych grup wieku 1–18,9 lat, osocze litowo-heparynowe,
+  Access AMH. Grupy nie wyznaczają trajektorii stadiów Tannera.
+- FDA K170524, *Access AMH*, 2017, Expected Reference Intervals,
+  strona PDF 15/wewnętrzna 11: 620 kobiet z regularnymi cyklami,
+  oboma jajnikami i potwierdzoną płodnością. Mediany osocza grup
+  18–25/26–30/31–35/36–40/41–45 lat: 26,78/28,99/18,28/12,71/4,00
+  pmol/L. Nie podstawiamy odrębnych median surowicy i nie ekstrapolujemy
+  liczbowo poza ostatnią grupę. Sowers 2008, DOI `10.1210/jc.2008-0567`,
+  wspiera jedynie jakościowy spadek wokół ostatniej miesiączki.
+
+**Geometria i skala:** `vilda_hormone_lifespan.js` buduje kanoniczny
+`displaySpline` z istniejących `displaySegments` AMH we współrzędnych
+żeńskiej osi całego życia. Zbliżenia przenoszą jego kawałki
+Hermite'a/Béziera, dzielone na oryginalnych węzłach i granicach skali
+czasu, bez ponownego dopasowania. Mieszany wybór z LH/FSH korzysta
+z tego samego AMH na osi czasu danego widoku. Dotychczasowe rozróżnienie
+odcinków źródłowych i przerywanych ilustracji pozostaje zachowane.
+
+Dzielnik 28,99 pmol/L pochodzi z niezmienionego `normalizationMaximum`,
+a `ceiling = 1`. Wynik i źródłowy znacznik mają tę samą transformację
+`C / 28.99`; skala nie zależy od pacjenta, wyniku ani wyboru hormonów.
+28,99 nie jest granicą normy. Zero pozostaje na osi, a wynik ponad nią
+otrzymuje strzałkę z rzeczywistą liczbą. Tolerancja ośmiu epsilonów
+maszynowych dotyczy wyłącznie zaokrągleń na tej granicy, nie dokładności
+metody. Konwersje jednostek nadal wykonuje oryginalny silnik odniesienia.
+
+Most 0,9–1,3 roku nie wyznacza nowych median. Źródłowy znacznik może
+leżeć obok niego i nie jest przesuwany na ilustrację. Tak samo środki
+grup Jopling/FDA nie określają dokładnego wieku szczytu. Po 41–45 latach
+linia i jej niska końcówka są jakościowe, bez nowych stężeń lub LOD.
+Połączenie surowicy niemowląt i osocza starszych grup nie harmonizuje
+materiałów lub populacji i nie tworzy zwalidowanej trajektorii życia.
+
+**Wpływ kliniczny:** zmienia się wizualna relacja wyniku i okresów życia,
+dlatego zmianę opisano klinicznie. Wszystkie liczby źródłowe, profile,
+warunki kwalifikacji, normy laboratoryjne, konwersje, interpretacje i
+zapis pacjenta pozostają bez zmian. Jedyny zwykły żeński profil AMH
+`ljubicic2022-female-amh` nadal obejmuje 0,02–1 roku. Starsza ilustracja
+nie aktywuje punktów w wieku 19,668 lub 35 lat. Porównanie płci, męskie
+AMH i pozostałe hormony zachowują wcześniejsze kontrakty.
+
+**Syntetyczne wejście → oczekiwane zachowanie:**
+
+- Dziewczynka donoszona, 0,25 roku, AMH 10 pmol/L → źródłowe p50
+  16,999 pmol/L; stałe położenia `10/28.99` i `16.999/28.99`.
+- Ten sam kontekst, 200 pmol/L → strzałka z liczbą 200, bez kropki
+  udającej górę skali; mediana, linia i skala pozostają na miejscu.
+- Ten sam kontekst, pusty/wyczyszczony/cenzurowany wynik → ta sama
+  linia, bez sztucznego punktu; 0 pmol/L → punkt na osi.
+- 0,95 roku → oryginalne p50 7,747 pmol/L, również w graficznym moście.
+- 19,668 roku → ten sam przebieg w całym życiu i pokwitaniu,
+  bez dopisanego liczbowego odniesienia lub punktu.
+
+Przypadki uruchamiają rzeczywisty renderer i silnik w
+`tests/e2e/hormone-lifespan-female-amh-stability.spec.mjs`, na desktopie,
+320 px, w pełnym ekranie i mieszanym wyborze z LH/FSH. Pochodzenie,
+ograniczenia, hash zatwierdzonej makiety i zakres jej przeglądu:
+[audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
+Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną
+całego połączonego wykresu.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana
