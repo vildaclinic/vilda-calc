@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.247';
+const SW_VERSION = '1.1.248';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1048,6 +1048,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=125',
   '/vilda_chrome.js?v=126',
   '/vilda_chrome.js?v=127',
+  '/vilda_chrome.js?v=128',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1306,6 +1307,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=74',
   '/vilda_auth_ui.css?v=75',
   '/vilda_auth_ui.css?v=76',
+  '/vilda_auth_ui.css?v=77',
   '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
@@ -1334,6 +1336,7 @@ const CORE_SHELL_URLS = [
   '/vilda_gh_therapy_resource_audit.js?v=32',
   '/vilda_gh_therapy_resource_audit.js?v=33',
   '/vilda_gh_therapy_resource_audit.js?v=34',
+  '/vilda_gh_therapy_resource_audit.js?v=35',
   '/vilda_app_helpers.js',
   '/vilda_app_helpers.js?v=2',
   '/vilda_app_helpers.js?v=3',
@@ -1662,6 +1665,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=42',
   '/ios26-ui.js?v=43',
   '/ios26-ui.js?v=44',
+  '/ios26-ui.js?v=45',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/tutorial.js?v=8',
@@ -3036,9 +3040,12 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync.js?v=35',
   '/vilda_sync.js?v=36',
   '/vilda_sync.js?v=37',
+  '/vilda_sync.js?v=38',
   '/vilda_sync_integration.js?v=45',
   '/vilda_sync_integration.js?v=46',
   '/vilda_sync_integration.js?v=47',
+  '/vilda_sync_integration.js?v=48',
+  '/vilda_nowe_urzadzenie.js?v=1',
   '/vilda_session_bridge.js?v=3',
   '/vilda_session_bridge.js?v=4',
   '/vilda_session_bridge.js?v=5',
@@ -3088,6 +3095,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=49',
   '/vilda_session_bridge.js?v=50',
   '/vilda_session_bridge.js?v=51',
+  '/vilda_session_bridge.js?v=52',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
