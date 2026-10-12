@@ -79,7 +79,34 @@ describe('P-ODTWORZ-WIEK-2 (R0) — usunięcie bieżącego pomiaru w Karcie: awa
     expect(g.timestampISO).toBe('2026-05-10T10:00:00.000Z');
   });
 
-  it('wiersz z datą (pisze ją Karta) ma pierwszeństwo; bez starszej wersji timestampISO z tej daty', async () => {
+  it('P-ODTWORZ-WIEK-3: data wiersza poprawiona w Karcie wygrywa ze starszą wersją; przy niezgodności tygodnie i timestampISO starszej wersji nie przechodzą', async () => {
+    const v = await sejf();
+    const p1 = wizyta1();
+    p1.user.ageWeeks = 5; // sztuczna wartość: ma NIE przejść przy niezgodnej dacie
+    const a = await v.savePatient(p1, { dedup: false });
+    await v.savePatient(wizyta2(), { patientId: a.patientId, dedup: false });
+    // Karta „Historia → Edytuj" wiersza wizyty 1 (wywołanie jak z okna Karty): data 10-05 → 09-05.
+    await v.updateMeasurementRow(a.patientId, { key: '201|170.00|58.00' }, { ageMonths: 201, height: 170, weight: 58, dateISO: '2026-05-09' });
+    await v.deleteMeasurementRow(a.patientId, { key: '202|172.00|60.00' });
+    const g = await glowa(v, a.patientId);
+    expect(g.user.measuredAtISO, 'data z wiersza, nie ze starszej wersji (2026-05-10)').toBe('2026-05-09');
+    expect(g.user.ageWeeks).toBeUndefined();
+    expect(g.timestampISO).toBe('2026-05-09T12:00:00.000Z');
+  });
+
+  it('P-ODTWORZ-WIEK-3, KONTROLA: data wiersza zgodna ze starszą wersją — tygodnie i timestampISO z tej wersji', async () => {
+    const v = await sejf();
+    const p1 = wizyta1();
+    p1.user.ageWeeks = 5;
+    const a = await v.savePatient(p1, { dedup: false });
+    await v.savePatient(wizyta2(), { patientId: a.patientId, dedup: false });
+    await v.updateMeasurementRow(a.patientId, { key: '201|170.00|58.00' }, { ageMonths: 201, height: 170, weight: 58, dateISO: '2026-05-10' });
+    await v.deleteMeasurementRow(a.patientId, { key: '202|172.00|60.00' });
+    const g = await glowa(v, a.patientId);
+    expect([g.user.measuredAtISO, g.user.ageWeeks, g.timestampISO]).toEqual(['2026-05-10', 5, '2026-05-10T10:00:00.000Z']);
+  });
+
+  it('wiersz z datą (pisze ją Karta) wygrywa z datą usuniętej wizyty; bez starszej wersji timestampISO z tej daty', async () => {
     const v = await sejf();
     const p = wizyta2();
     p.advanced.data.measurements[0].dateISO = '2026-05-11';
@@ -285,6 +312,60 @@ describe('P-ODTWORZ-WIEK-2 (G3/G6) — korekta odtworzonej wizyty w Karcie: form
     await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
     await tick();
     expect([s.pola.age.value, s.pola.ageMonths.value, s.pola.ageWeeks.value], 'dotąd tygodnie 3 zostawały i wracały z zapisem').toEqual(['0', '1', '']);
+  });
+
+  it('P-ODTWORZ-WIEK-3: ścieżka znacznika — wizyta zapisana po „Nowym pomiarze" (wybór new + znacznik) też idzie za poprawką z Karty', async () => {
+    const s = await przygotuj({ wybor: 'new', znacznik: true });
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect(s.pola.height.value).toBe('172.5');
+    expect([s.pola.age.value, s.pola.ageMonths.value]).toEqual(['16', '10']);
+    expect(s.D.readMeasuredAtISO()).toBe('2026-06-17');
+  });
+
+  it('P-ODTWORZ-WIEK-3: usunięcie bieżącego pomiaru w Karcie przełącza formularz na awansowaną wizytę z jej dniem pomiaru', async () => {
+    const s = await przygotuj();
+    const awansowana = odtworzona();
+    Object.assign(awansowana.user, { age: 16, ageMonths: 9, height: 170, weight: 58, measuredAtISO: '2026-05-10' });
+    s.win.__glowa = { snapshots: [{ snapshotId: 's1', payload: awansowana }] };
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.height.value, s.pola.weight.value, s.pola.age.value, s.pola.ageMonths.value]).toEqual(['170', '58', '16', '9']);
+    expect(s.D.readMeasuredAtISO()).toBe('2026-05-10');
+    expect(s.pola.dobNote.textContent).toContain('Pomiar z 10-05-2026');
+  });
+
+  it('P-ODTWORZ-WIEK-3: wpis pole po polu — niezapisana poprawka wieku w formularzu zostaje, korekta masy z Karty dochodzi', async () => {
+    const rekord = {
+      name: 'Fikcyjny Testowy', timestampISO: new Date(2026, 5, 3, 12, 0).toISOString(),
+      user: { sex: 'M', age: 5, ageMonths: 2, height: 110, weight: 19 },
+    };
+    const s = formularz({ wybor: 'restore', rekord, pomiar: { weight: '19', height: '110' }, zBaza: true });
+    s.pola.name.value = 'Fikcyjny Testowy';
+    s.pola.age.value = '5'; s.pola.ageMonths.value = '2';
+    s.wyslij('vilda:state-restored');
+    s.pola.ageMonths.value = '4'; // lekarz poprawia wiek w formularzu, jeszcze bez zapisu
+    const poprawiona = JSON.parse(JSON.stringify(rekord));
+    poprawiona.user.weight = 19.5; // Karta: korekta samej masy (wiek z rekordu 5/2)
+    s.win.__glowa = { snapshots: [{ snapshotId: 's1', payload: poprawiona }] };
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.age.value, s.pola.ageMonths.value, s.pola.weight.value], 'dotąd 5/2 — wiek z rekordu nadpisywał poprawkę lekarza').toEqual(['5', '4', '19.5']);
+  });
+
+  it('P-ODTWORZ-WIEK-3: wpis nie wstrzymuje lustra formularza (powłoka, DocPro), wstrzymuje zerowanie karty spożycia i nie zostawia flagi edycji', async () => {
+    const s = await przygotuj();
+    const wTrakcie = [];
+    s.pola.height.addEventListener('input', () => {
+      wTrakcie.push([s.win.__vildaPersistRestoring, s.win.__vildaSuspendIntakeUserReset]);
+      s.win.hasUserModifiedAfterLoad = true; // jak nasłuch, który uznałby wpis za edycję lekarza
+    });
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect(s.pola.height.value).toBe('172.5');
+    expect(wTrakcie, 'dotąd [true, true] — lustro wstrzymane, DocPro w powłoce dostawał stare wartości').toEqual([[undefined, true]]);
+    expect(s.win.__vildaSuspendIntakeUserReset).toBeFalsy();
+    expect(s.win.hasUserModifiedAfterLoad, 'flaga edycji wraca do stanu sprzed wpisu').toBe(false);
   });
 
   it('KONTROLA: lekarz zmienił już wzrost w formularzu (nowy pomiar) — poprawka z Karty nie nadpisuje formularza', async () => {

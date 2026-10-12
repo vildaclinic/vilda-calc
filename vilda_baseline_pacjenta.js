@@ -32,6 +32,9 @@
  *      Dotąd formularz zostawał przy starych wartościach, moduł daty urodzenia przestawał
  *      uznawać je za zapisany pomiar i liczył je w wieku na dziś, a następny zapis
  *      z formularza cofał poprawkę z Karty, stemplując starym pomiarom dzisiejszą datę.
+ *      Po usunięciu bieżącego pomiaru formularz przechodzi na awansowaną, starszą wizytę.
+ *      P-ODTWORZ-WIEK-3: wpis pole po polu (pola, które lekarz zmienił w formularzu, zostają)
+ *      i bez wstrzymywania lustra formularza — poprawka dociera też do paneli powłoki.
  *
  * CZEGO NIE ROBI. Nie reaguje na zmiany przychodzące z synchronizacji ani z innego urządzenia —
  * te ścieżki sejfu nie wołają `onPatientSaved`, więc pytanie o obcą zmianę zostaje dokładnie
@@ -40,7 +43,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
 
   /* Echo własnego zapisu z formularza: `saveUserData` zapisuje id i snapshotId, które właśnie
      wysłał, i sam odświeża bazę — tu nie ma czego robić. Rozstrzyga ZGODNOŚĆ WERSJI; okno
@@ -260,21 +263,20 @@
 
   /* Programowy wpis nie jest edycją lekarza (wzorzec bezZnaczaniaEdycji z vilda_dob_age.js):
      flaga edycji i przycisk „Odtwórz zapisany stan" wracają do stanu sprzed wpisu. Na czas
-     zdarzeń wstrzymujemy też autozapis i lustro formularza (__vildaPersistRestoring) oraz
-     zerowanie karty spożycia (__vildaSuspendIntakeUserReset) — utrwal() zapisuje stan po
-     wszystkim. */
+     zdarzeń wstrzymujemy tylko zerowanie karty spożycia (__vildaSuspendIntakeUserReset).
+     P-ODTWORZ-WIEK-3: lustra formularza NIE wstrzymujemy (dotąd __vildaPersistRestoring) —
+     zdarzenia mają dojść do `sharedUserData` i sesji formularza, tak jak wpis wieku z modułu
+     daty urodzenia. Inaczej w powłoce app.html panel DocPro dostawał stare wartości wizyty
+     (wiek na dziś), a zapis z niego cofał poprawkę z Karty, stemplując dzisiejszą datę. */
   function bezZnaczaniaEdycji(robota) {
     var flaga = w.hasUserModifiedAfterLoad;
-    var trwa = w.__vildaPersistRestoring;
     var spozycie = w.__vildaSuspendIntakeUserReset;
     var przycisk = pole('restoreStateBtn');
     var widocznosc = przycisk && przycisk.style ? przycisk.style.display : null;
     try {
-      w.__vildaPersistRestoring = true;
       w.__vildaSuspendIntakeUserReset = true;
       robota();
     } finally {
-      w.__vildaPersistRestoring = trwa;
       w.__vildaSuspendIntakeUserReset = spozycie;
       w.hasUserModifiedAfterLoad = flaga;
       /* Przycisk był widoczny, a wpis go schował — przywraca go kolektor (razem z nasłuchem). */
@@ -290,14 +292,20 @@
   }
 
   /* Najpierw wszystkie wartości, potem zdarzenia — przeliczenia i moduł daty urodzenia nie
-     widzą stanu pośredniego (nowa masa przy starym wzroście). */
-  function ustawWizyte(payload) {
+     widzą stanu pośredniego (nowa masa przy starym wzroście).
+     P-ODTWORZ-WIEK-3: pole po polu. Wpisujemy tylko pole, które Karta zmieniła (stara baza
+     ≠ nowa głowa) i którego lekarz nie zmienił w formularzu (pole = stara baza). Dotąd
+     korekta samej masy w Karcie nadpisywała niezapisaną poprawkę wieku wpisaną w formularzu. */
+  function ustawWizyte(payload, stara) {
     var u = uzytkownik(payload);
     if (!u) return;
+    var s = uzytkownik(stara);
     var zmienione = [];
     POLA_WIZYTY.forEach(function (k) {
       var el = pole(k);
       if (!el) return;
+      if (s && rowne(s[k], u[k])) return;
+      if (s && !rowne(el.value, s[k])) return;
       var nowa = u[k] == null ? '' : String(u[k]);
       if (rowne(el.value, nowa) && (el.value === '') === (nowa === '')) return;
       el.value = nowa;
@@ -332,7 +340,7 @@
         ustawPlec(payload);
         if (wizyta) {
           bezZnaczaniaEdycji(function () {
-            ustawWizyte(payload);
+            ustawWizyte(payload, stara);
             ustawDate(payload);
           });
         } else {
