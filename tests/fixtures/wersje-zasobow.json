@@ -12,8 +12,8 @@
   "sha256": "b52fd3ace2e4d73edea28097d5ad246f047227fa66195b18aa8e06103fe62c4b"
  },
  "app.js": {
-  "v": 230,
-  "sha256": "0c4fbf92512eb4f6e94603bb95be1ac25ebb4b69d82833ea981f748959b162cd"
+  "v": 231,
+  "sha256": "00f51684341925ca23da0c8f9904a6dd5d3fcded79bd0b16171efcf83d7c98a8"
  },
  "bisphos_therapy.js": {
   "v": 8,
@@ -416,8 +416,8 @@
   "sha256": "622ba25930dbd5376a15f95036b8b1693371433ea8747c54ff0392c5c4f1d7fb"
  },
  "style.css": {
-  "v": 87,
-  "sha256": "60e46ffb0dd30a12d43e7e24a356c7710cf6b1802d6551e6560e42fced1ff46c"
+  "v": 88,
+  "sha256": "b9ca734e4ae37643a7bff90a0ae677ab50c873fd2a553f3261ece22ebd86fbaf"
  },
  "thyroid_cancer_kids.js": {
   "v": 4,
@@ -952,8 +952,8 @@
   "sha256": "4b0f5233f215bc438b0422b8cdc07fc0552c173cc875d1dfc8a96cc0886ce4f9"
  },
  "vilda_shell.js": {
-  "v": 60,
-  "sha256": "4056cc3c37be789b3d6bc2f4a3fc22c8a4031f5cb86d00c0afcf009a47bada28"
+  "v": 61,
+  "sha256": "ffefc71fd28e3092f14e2d151c1688f212188a8b41c50a8a632ce035745caf4c"
  },
  "vilda_spojnosc_zapisow.js": {
   "v": 3,
