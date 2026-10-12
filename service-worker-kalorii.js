@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.239';
+const SW_VERSION = '1.1.240';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2640,6 +2640,7 @@ const OPTIONAL_ASSETS = [
   '/growth-basic-module.js?v=17',
   '/growth-basic-module.js?v=18',
   '/growth-basic-module.js?v=19',
+  '/growth-basic-module.js?v=20',
   '/vilda_summary_cards.js?v=33',
   '/vilda_summary_cards.js?v=34',
   '/vilda_summary_cards.js?v=35',
