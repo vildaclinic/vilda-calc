@@ -23,8 +23,9 @@ jobs:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
         with:
-          # Commit scalenia PR-a z rodzicami: HEAD^1 to audyt, do którego PR wejdzie (krok wersji niżej).
-          fetch-depth: 2
+          # Krok wersji niżej. PR: commit scalenia z rodzicami, HEAD^1 to audyt, do którego PR wejdzie.
+          # workflow_dispatch na gałęzi (np. „Wygląd” po odświeżeniu wzorców): pełna historia z origin/audyt.
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt' && '0' || '2' }}
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,14 +40,25 @@ jobs:
       # npm test, bo scalone drzewo jest wewnętrznie spójne — a dwa wątki z tym samym SW_VERSION
       # scalały się bez konfliktu (siedem razy od 2026-09-28, m.in. #591, #594, #595). Na PR-ze
       # checkout daje commit scalenia, więc HEAD^1 jest dokładnie bazą; reguła „up to date”
-      # sprawia, że ten krok widzi audyt sprzed scalenia PR-a. Na push do audyt krok pomijamy.
+      # sprawia, że ten krok widzi audyt sprzed scalenia PR-a. „Wygląd” wypycha wzorce commitem
+      # bota i uruchamia ten workflow przez workflow_dispatch na gałęzi PR-a — ten przebieg też
+      # daje wymagany status, więc krok idzie i tam, z bazą origin/audyt (gałąź musi go zawierać).
+      # Na push do audyt krok pomijamy.
       - name: Sprawdź wersje względem audyt
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/audyt')
+        env:
+          BAZA: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/audyt' }}
         run: |
           kod=0
-          node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza=HEAD^1 || kod=$?
+          wynik=$(node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza="$BAZA" 2>&1) || kod=$?
+          printf '%s\n' "$wynik"
+          # Linie „BŁĄD:” (np. usunięty historyczny wpis precache) skrypt odmawia naprawić sam.
+          printf '%s\n' "$wynik" | grep '^BŁĄD: ' | while IFS= read -r linia; do
+            linia=${linia#BŁĄD: }
+            echo "::error title=Błąd wersji do ręcznej poprawki::${linia//%/%25}"
+          done || true
           if [ "$kod" = 1 ]; then
-            echo "::error title=Wersje niespójne z audyt::Na gałęzi PR-a: git fetch origin audyt && git merge origin/audyt && npm run podbij-wersje && npm test, potem commit i push. Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”."
+            echo "::error title=Wersje niespójne z audyt::Na gałęzi PR-a: git fetch origin audyt && git merge origin/audyt && npm run podbij-wersje && npm test, potem git add -A, commit i push. Linie „BŁĄD:” z logu popraw najpierw ręcznie — bez tego skrypt nic nie zapisze. Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”."
           elif [ "$kod" != 0 ]; then
             echo "::error title=Nie policzono wersji::podbij-wersje zakończył się kodem $kod — przyczyna w logu wyżej."
           fi
