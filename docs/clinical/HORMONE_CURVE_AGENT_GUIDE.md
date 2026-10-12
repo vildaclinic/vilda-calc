@@ -184,6 +184,45 @@ Ta naprawa zwykłych widoków nie obejmuje odrębnego porównania płci.
 [audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
 Akceptacja prezentacji nie nadaje jej statusu walidacji klinicznej.
 
+## Utrwalony przykład: żeński estradiol, 12 października 2026
+
+Właściciel zatwierdził makietę i wdrożenie („ok, koduj”), po wyjaśnieniu
+niższego szczytu minipuberty na stałej osi całego życia.
+
+- Zachowaj dotychczasowe `displaySegments` E2 i stałą liniową skalę
+  `normalizationMaximum = 264 pmol/L`, `ceiling = 1`, niezależnie od
+  pustego/wpisanego/wyczyszczonego wyniku i wyboru LH/FSH. To historyczna
+  normalizacja graficzna, nie górna norma, maksimum fizjologiczne ani
+  mediana całego cyklu. Wynik ponad osią ma strzałkę z rzeczywistą liczbą.
+- Zbliżenia przenoszą tę samą kanoniczną krzywą Hermite'a/Béziera po
+  podziale na węzłach i granicach osi czasu. E2 dołączone do LH/FSH
+  zachowuje wszystkie swoje odcinki i własną skalę; nie przyjmuje osi
+  IU/L ani procentowego maksimum średniej gonadotropin.
+- Ljubicic 2022: 99 median GAMLSS pozostaje bez zmian. Szczyt 23,908
+  pmol/L przy 0,34 roku zajmuje `23.908 / 264 ≈ 0.0906` wysokości osi.
+  Jest około 13% mediany Madsen przy 18 latach, 185,456 pmol/L. To
+  porównanie różnych modeli i kohort, nie uniwersalny iloraz ani miara
+  znaczenia biologicznego minipuberty. Nie podnoś szczytu dla wyglądu.
+- Dwie fale E2 w ryc. 3 Ljubicic dotyczą względnej modelowanej średniej
+  podłużnej, nie mediany ryc. 1/suplementu F. Brak fizycznej kalibracji
+  maksimów tej średniej nie pozwala dokleić ich do osi pmol/L. Początek
+  przy 0,02 roku nie jest pomiarem narodzin; nie ekstrapoluj do dnia 0.
+- Most 1–6 lat i dorosłe plateau są ilustracjami. Nie twórz dorosłej
+  mediany z wysokości końca pokwitania lub median poszczególnych faz.
+  Osobny cykl Anckaert ma własną normalizację 817 i pozostaje schematem
+  bez punktu pacjentki. Cui 2026, pełny artykuł/tabela 2, potwierdza
+  zbiorcze p50 4,9 pg/mL ≈18 pmol/L po menopauzie; nie medianę konkretnego
+  wieku ani stałe stężenie każdej kobiety. Przejście 45–55 jest umowne.
+- Profil `ljubicic2022-female-e2` pozostaje wyłącznie dla donoszonych
+  dziewczynek 0,02–1 roku. Dla 0,25 roku i 50 pmol/L źródłowy znacznik
+  ma nadal 21,616 pmol/L; 1000 pmol/L zmienia tylko punkt na strzałkę.
+  Nie dodawaj liczbowego odniesienia dzieciństwa, pokwitania lub
+  dorosłości przez samą obecność tam linii. Normy i kwalifikacja bez zmian.
+
+Źródła, hashe i syntetyczne kontrole:
+[audyt żeńskiego estradiolu](hormone-lifespan/evidence/female-estradiol-display-audit-2026-10-12.json).
+Akceptacja prezentacji nie jest walidacją kliniczną połączonej krzywej.
+
 ## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 
 Właściciel zatwierdził poprawioną makietę i jej wdrożenie. LH/FSH mają
