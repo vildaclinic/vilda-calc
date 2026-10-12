@@ -1370,6 +1370,87 @@ Pochodzenie danych, ograniczenia, hashe i zakres zatwierdzenia:
 [audyt żeńskiego estradiolu](hormone-lifespan/evidence/female-estradiol-display-audit-2026-10-12.json).
 Akceptacja makiety i testy nie są walidacją kliniczną połączonego wykresu.
 
+### HORMONE-FEMALE-INHB-STABLE-CURVE — stała linia inhibiny B, 2026-10-12
+
+**Problem i decyzja:** wynik inhibiny B zmieniał dzielnik i wysokość
+krzywej, a wybór LH/FSH mógł zastępować cały przebieg samym profilem
+niemowlęcym. Właściciel zatwierdził makietę przed/po i polecił wdrożenie
+(„ok, koduj”). Naprawa zachowuje pierwotny pusty przebieg całego życia
+we wszystkich zwykłych widokach, niezależnie od wpisanego wyniku.
+
+**Sprawdzone źródła, bez nowych stężeń:**
+
+- Ljubicic 2022, DOI `10.1210/clinem/dgac363`, ryc. 1 i suplement
+  tabela 1 C, DOI `10.6084/m9.figshare.19469555.v1`: 98 zdrowych
+  donoszonych dziewczynek, 266 próbek surowicy, Inhibin B Gen II ELISA,
+  LOD 3 pg/mL, bez osobno podanego LOQ. Wszystkie 99 median GAMLSS
+  w wybranym oknie 0,02–1 roku zgadzają się z oryginalnym suplementem.
+  Przy 0,25 roku p50 wynosi 49,684; maksimum 52,474 przy 0,35 roku.
+  Dwie fale ryc. 3 są inną statystyką: względną średnią podłużną.
+  Nie mają ustalonej tu fizycznej kalibracji i nie zastępują median.
+- Borelli-Kjær 2025, DOI `10.1210/clinem/dgae439`, pełny artykuł
+  i ryc. 1: 889 uczestniczek, 1005 próbek; 92 niemowlęta,
+  648 dziewcząt 5,6–20,2 roku i 149 kobiet 20–69 lat. Wszystkie
+  żeńskie próbki to surowica Gen II ELISA. Linia 0 SD oznacza medianę
+  GAMLSS, nie średnią. Zachowano 24 odczytane węzły 5,6–47 lat;
+  około 47/34/30/28 pg/mL w wieku 13/20/30/40 lat. Oszacowanie
+  digitalizacji ±2 pg/mL nie jest przedziałem ufności ani normą.
+  Fazy cyklu nie standaryzowano; dane antykoncepcji są niepełne.
+  To nie zweryfikowana populacja wyłącznie bez leczenia.
+- Crofton 2002, DOI `10.1046/j.0300-0664.2001.01449.x`, pełny tekst:
+  niskie dzieciństwo i wzrost pokwitaniowy wspierają ogólny kierunek.
+  Osocze, historyczna ELISA i szerokie grupy wieku nie uzupełniają
+  liczbowo luki. Sowers 2008, DOI `10.1210/jc.2008-0567`, sprawdzony
+  abstrakt pierwotny: spadek w odniesieniu do ostatniej miesiączki
+  wspiera jakościowe zakończenie, nie dokładny wiek menopauzy.
+  Pełny artykuł Borelli niezależnie potwierdza niski/niewykrywalny
+  poziom po menopauzie.
+
+**Skala i geometria:** renderer zachowuje istniejące `displaySegments`
+i liniową transformację `C / 52.474`, `ceiling = 1`. Dzielnik pochodzi
+z maksimum wybranych median niemowlęcych; nie jest górną normą lub
+maksimum fizjologicznym. Wynik i jasny znacznik źródła używają tej
+samej skali. Zero pozostaje na osi, ponad osią jest strzałka z prawdziwą
+wartością. Osiem epsilonów maszynowych na granicy dotyczy zaokrąglenia,
+nie niepewności oznaczenia. `1 ng/L = 1 pg/mL`; istniejący silnik nadal
+odpowiada za kwalifikację i konwersje.
+
+Zbliżenia przenoszą kanoniczne kawałki Hermite'a/Béziera po podziale
+na węzłach i granicach osi czasu. Nie dopasowują ponownie krzywej.
+Dołączenie LH/FSH zachowuje wszystkie odcinki inhibiny B i jej własną
+skalę. Most 1–5,6 roku pozostaje ilustracją, a niski ogon po 47 latach
+nie wyznacza stężeń. `displayFloor = 0.012` i wiek 55 są konwencjami
+rysunku, nie LOD, pomiarem lub progiem menopauzy. Wiek 47 jest końcem
+zachowanej digitalizacji, nie ostatnią obserwacją źródła. Łączenie
+osobnych modeli nie harmonizuje ich populacji lub wpływu cyklu.
+
+**Wpływ kliniczny:** poprawia się wizualna relacja wyniku do przebiegu
+życia. Źródła, normy, progi, kwalifikacja, jednostki i zapis nie zmieniają
+się. Zwykły profil `ljubicic2022-female-inhb` pozostaje ograniczony
+do donoszonych dziewczynek 0,02–1 roku, obie granice włącznie. Odrębny
+profil porównania płci `borelli2025-female-inhb-puberty-comparison`
+nadal działa tylko w tym porównaniu, 8–20 lat. Nie trafia do globalnego
+`patientPointData`. Inne hormony i wykresy męskie zachowują swój kontrakt.
+
+**Syntetyczne wejście → oczekiwane zachowanie:**
+
+- Dziewczynka donoszona, 0,25 roku, 30 pg/mL → źródłowe p50
+  49,684 pg/mL; wysokości `30/52.474` i `49.684/52.474`.
+- Ten sam kontekst, 80 pg/mL → strzałka z liczbą 80; ta sama mediana,
+  krzywa i skala. Wynik 80 ng/L daje to samo; 0 pg/mL jest na osi.
+- Pusty/wyczyszczony/cenzurowany wynik → ta sama linia, bez nowej kropki.
+- Wiek 0,02/1 roku → p50 odpowiednio 30,583/16,329 pg/mL. Wiek
+  <0,02 lub >1 roku, wcześniactwo, nieznane donoszenie albo znana
+  niezgodna metoda nie otrzymują zastępczego odniesienia liczbowego.
+- Dołączenie LH/FSH, zbliżenie, pełny ekran i 320 px → ta sama
+  kanoniczna krzywa i stała skala; bez przenoszenia mediany na ilustrację.
+
+Regresja wywołuje rzeczywisty renderer i silnik:
+`tests/e2e/hormone-lifespan-female-inhibin-stability.spec.mjs`.
+Źródła, hashe, ograniczenia i zakres zatwierdzenia:
+[audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
+Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana

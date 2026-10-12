@@ -223,6 +223,45 @@ niższego szczytu minipuberty na stałej osi całego życia.
 [audyt żeńskiego estradiolu](hormone-lifespan/evidence/female-estradiol-display-audit-2026-10-12.json).
 Akceptacja prezentacji nie jest walidacją kliniczną połączonej krzywej.
 
+## Utrwalony przykład: żeńska inhibina B, 12 października 2026
+
+Właściciel zatwierdził makietę przed/po i wdrożenie („ok, koduj”).
+Zwykły widok i porównanie płci zachowują odrębne kontrakty.
+
+- Zachowaj pierwotne `displaySegments`, stały dzielnik 52,474 pg/mL
+  i `ceiling = 1`, niezależnie od wyniku, wieku pacjentki i wyboru
+  innych hormonów. Jest to maksimum wybranych median niemowlęcych,
+  nie norma. Wynik ponad osią ma strzałkę z rzeczywistą liczbą.
+- Zbliżenia przenoszą kanoniczną krzywą Hermite'a/Béziera po podziale
+  na węzłach i granicach osi czasu. Dołączenie LH/FSH zachowuje wszystkie
+  odcinki oraz własną skalę inhibiny B. Nie zastępuj życia samym
+  profilem niemowlęcym i nie dopasowuj linii od nowa w każdym okresie.
+- Zachowaj 99 dokładnych median Ljubicic 2022, tabela 1 C: surowica,
+  donoszone dziewczynki, Gen II ELISA. Mediana ma maksimum 52,474
+  pg/mL przy 0,35 roku. Dwie fale ryc. 3 dotyczą odrębnej względnej
+  średniej podłużnej; nie doklejaj ich do liczbowej mediany. Modelowy
+  wiersz wieku 0 nie jest obserwacją narodzin. LOD 3 pg/mL nie daje
+  zgody na imputację wyniku pacjentki.
+- Borelli-Kjær 2025: zachowaj 24 przybliżone odczyty mediany 0 SD
+  5,6–47 lat i źródłowy wzrost około 13 lat. Nie utożsamiaj go ze
+  stadium Tannera lub szczytem każdej dziewczynki. Fazy cyklu nie
+  standaryzowano, dane antykoncepcji są niepełne; to nie populacja
+  wyłącznie bez leczenia. ±2 pg/mL jest oszacowaniem digitalizacji.
+- Most 1–5,6 roku nie tworzy nowych stężeń. Ogon po 47 latach,
+  `displayFloor = 0.012` i umowny wiek 55 są jakościowe, bez LOD
+  lub prognozy menopauzy. Wiek 47 kończy wybrany odczyt, choć badanie
+  obserwowało dorosłe kobiety do 69 lat. Nie zamieniaj ogona na medianę.
+- Zwykły profil `ljubicic2022-female-inhb` pozostaje 0,02–1 roku,
+  włącznie. Odrębny `borelli2025-female-inhb-puberty-comparison`
+  8–20 lat nie trafia do globalnych profili. Obecność starszej linii
+  nie aktywuje punktu. Dla 0,25 roku wynik 30 lub 80 pg/mL zachowuje
+  p50 49,684; tylko 80 wymaga strzałki. Źródłowy znacznik pozostaje
+  niezależny od ilustracji, kwalifikacja i normy nie zmieniają się.
+
+Źródła, ograniczenia i hashe:
+[audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
+Akceptacja ilustracji nie oznacza walidacji klinicznej połączonej krzywej.
+
 ## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 
 Właściciel zatwierdził poprawioną makietę i jej wdrożenie. LH/FSH mają

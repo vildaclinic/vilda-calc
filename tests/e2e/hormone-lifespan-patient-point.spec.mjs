@@ -51,7 +51,8 @@ async function expectPoint(page, value, median, independentReference = false) {
       const point = group.querySelector('[data-result-point]');
       const ref = group.querySelector('[data-median-point]');
       const line = group.ownerSVGElement.querySelector(`[data-reference-line][data-profile="${group.dataset.profile}"]`) ||
-        group.ownerSVGElement.querySelector(`[data-stable-reference-line="${group.dataset.patientConcentration}"]`);
+        group.ownerSVGElement.querySelector(`[data-stable-reference-line="${group.dataset.patientConcentration}"]`) ||
+        group.ownerSVGElement.querySelector(`[data-female-stable-line="${group.dataset.patientConcentration}"]`);
       if (!line) return null;
       const px = Number(ref.getAttribute('cx'));
       let lo = 0, hi = line.getTotalLength();
@@ -103,7 +104,14 @@ test('female infant result shares its numeric median scale, survives zoom and di
   await panel(page).locator('[data-view="mini"]').click();
   await expectPoint(page, 80, 49.684);
   await expect(dot(page)).toHaveAttribute('data-profile', profile);
-  await expect(panel(page).locator('[data-reference-line="inhb"]')).toHaveCount(1);
+  // The result uses the fixed original curve, rather than replacing it with
+  // the selected profile. An 80 pg/mL result is above this graphical scale.
+  await expect(panel(page).locator('[data-reference-line="inhb"]')).toHaveCount(0);
+  const stableLine = panel(page).locator('[data-female-stable-line="inhb"]');
+  await expect(stableLine).toHaveCount(1);
+  await expect(stableLine).toHaveAttribute('data-divisor', '52.474');
+  await expect(stableLine).toHaveAttribute('data-ceiling', '1');
+  await expect(dot(page).locator('[data-result-overflow="above"]')).toHaveCount(1);
   await panel(page).locator('[data-hormone="inhb"]').click();
   await expect(dot(page)).toHaveCount(0);
   await panel(page).locator('[data-hormone="inhb"]').click();
