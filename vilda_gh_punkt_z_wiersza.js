@@ -16,7 +16,8 @@
  * BIEŻĄCY pomiar wiersza — podsumowanie, podpowiedź mg/kg i stan przycisku „Zapisz” odświeżają się przy każdej zmianie
  * wiersza, a zapis odmawia, gdy wiersz różni się od pokazanego (wtedy odświeża panel). Zmiana pacjenta (wczytanie,
  * odtworzenie stanu, „Wyczyść”, inny znacznik pacjenta) zamyka panel i usuwa komunikat „Zapisano…”; „Zapisz dane”
- * bieżącego pacjenta (vilda:patient-loaded, source 'save') zmianą pacjenta nie jest.
+ * bieżącego pacjenta (vilda:patient-loaded, source 'save') zmianą pacjenta nie jest. Znacznik pacjenta: najpierw wspólny
+ * dla ramek powłoki sessionStorage (P-GH-PUNKT-Z-WIERSZA-ZNACZNIK, uwaga recenzji do #590).
  *
  * Funkcje czyste (eksport dla testów): pomiarWiersza, tekstPomiaru, stanPrzycisku, ostatniPunkt, domyslne,
  * preparatyProgramu, schematPreparatu, poleDawki, etykietaWierszaGh, przygotujPunkt. Warstwa DOM: init (wołana raz
@@ -261,10 +262,14 @@
     if (stan.powod) b.title = stan.powod; else b.removeAttribute('title');
   }
 
-  // Znacznik pacjenta karty (jak w monitorze GH): pamięć okna, potem sesja karty. Pusty bez pacjenta z sejfu.
+  // Znacznik pacjenta karty: najpierw WSPÓLNY dla ramek powłoki sessionStorage.vildaCurrentPatientId, potem pamięć
+  // okna. Wczytanie pacjenta w innej ramce zmienia tylko ten wspólny — ukryta ramka Start celowo trzyma swój
+  // _vildaCurrentPatientId (vilda_panel_pacjent.js), więc odczyt od pamięci okna nie widziałby zmiany (uwaga recenzji
+  // do #590). Pusty bez pacjenta z sejfu.
   function znacznikPacjenta() {
+    try { var s = w.sessionStorage.getItem('vildaCurrentPatientId'); if (s) return s; } catch (e) { /* brak */ }
     try { if (typeof w._vildaCurrentPatientId === 'string' && w._vildaCurrentPatientId) return w._vildaCurrentPatientId; } catch (e) { /* brak */ }
-    try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; } catch (e) { return null; }
+    return null;
   }
   function wDokumencie(n) {
     return !!(n && (typeof n.isConnected === 'boolean' ? n.isConnected : d.documentElement.contains(n)));

@@ -1,4 +1,5 @@
 /* vilda_dob_age.js — pole „Data urodzenia” w formularzu głównym (index.html, docpro.html).
+ * Na kalkulator-klirens.html samo API dla kolektora: bez pola daty mount() niczego nie montuje.
  *
  * DOB-AGE-1 (decyzja właściciela 2026-09-13). Lekarz wpisuje datę urodzenia raz, a wiek
  * w latach i miesiącach wypełnia się sam — przy tej wizycie i przy każdej następnej,
@@ -87,7 +88,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '8';
+  var VERSION = '9';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -430,6 +431,38 @@
     }
   }
 
+  /* P-ODTWORZ-WIEK-2 (R1/G4). „Wizyta zapisana w tej karcie": znacznik ustawia kolektor po
+     udanym zapisie (`saveUserData`), a zdejmuje każde nowe wczytanie pacjenta i „Wyczyść".
+     Po „Nowym pomiarze" wybór zostaje 'new', więc bez znacznika zapisana właśnie wizyta po
+     północy liczyła się już w wieku z nowego dnia, wskaźnik zapisu pokazywał „Niezapisane
+     zmiany", a ponowny zapis stemplował datę następnego dnia. */
+  var KLUCZ_ZAPISU = 'vildaDobAgeZapisV1';
+
+  function wizytaZapisana() {
+    try {
+      var s = w.sessionStorage;
+      return !!(s && typeof s.getItem === 'function' && s.getItem(KLUCZ_ZAPISU) === '1');
+    } catch (e) {
+      zgloc('wizyta-zapisana', e);
+      return false;
+    }
+  }
+
+  function zdejmijZnacznikZapisu() {
+    try {
+      var s = w.sessionStorage;
+      if (s && typeof s.removeItem === 'function') s.removeItem(KLUCZ_ZAPISU);
+    } catch (e) {
+      zgloc('znacznik-zapisu', e);
+    }
+  }
+
+  /* Tryb pomiaru: formularz może pokazywać ZAPISANĄ wizytę — odtworzoną albo zapisaną w tej
+     karcie. Czy rzeczywiście ją pokazuje, rozstrzyga dopiero porównanie masy i wzrostu. */
+  function trybPomiaru() {
+    return trybOdtworzenia() || wizytaZapisana();
+  }
+
   function rekordWczytany() {
     try {
       var r = w.lastLoadedData;
@@ -550,10 +583,18 @@
 
   /* Wiek pomiaru, gdy formularz pokazuje odtworzony zapis; inaczej null i działa wiek na dziś. */
   function pomiarOdtworzony(iso) {
-    if (!trybOdtworzenia()) return null;
+    if (!trybPomiaru()) return null;
     var rekord = rekordWczytany();
     if (!pomiarNiezmieniony(rekord)) return null;
     return wiekPomiaru(rekord, iso);
+  }
+
+  /* Czy formularz pokazuje zapisaną wizytę bez zmian w pomiarze — kolektor zachowuje wtedy jej
+     `timestampISO` (P-ODTWORZ-WIEK-2, G2). */
+  function showsSavedMeasurement() {
+    if (!trybPomiaru()) return false;
+    var rekord = rekordWczytany();
+    return !!(rekord && pomiarNiezmieniony(rekord));
   }
 
   function wartoscPola(id) {
@@ -571,7 +612,7 @@
        z konstrukcji). Wiek wpisany ręcznie daty nie dostaje — mógł opisywać inny dzień. */
   function readMeasuredAtISO(teraz) {
     var dzis = dzisLokalnie(teraz || null);
-    var rekord = trybOdtworzenia() ? rekordWczytany() : null;
+    var rekord = trybPomiaru() ? rekordWczytany() : null;
     if (rekord && pomiarNiezmieniony(rekord)) {
       var zrodlo = zrodloDobyPomiaru(rekord);
       if (!zrodlo || zrodlo.doba.getTime() > dzis.getTime()) return null;
@@ -859,6 +900,7 @@
      `vilda:user-state-cleared`. Różni się od `clear()` (przycisk „×" przy polu), który
      celowo NIE rusza daty pochodzącej z rekordu i oddaje fokus do pola. */
   function odblokujPoWyczyszczeniuPacjenta() {
+    zdejmijZnacznikZapisu();
     var wejscie = pole(ID.dob);
     if (!wejscie) return;
     try {
@@ -1012,7 +1054,7 @@
       if (!el) return;
       ['input', 'change'].forEach(function (nazwa) {
         el.addEventListener(nazwa, function () {
-          if (trybOdtworzenia()) odswiez();
+          if (trybPomiaru()) odswiez();
         });
       });
     });
@@ -1083,6 +1125,7 @@
     readWeeks: readWeeks,
     readExactAge: readExactAge,
     readMeasuredAtISO: readMeasuredAtISO,
+    showsSavedMeasurement: showsSavedMeasurement,
     mount: mount
   };
 

@@ -51,9 +51,9 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
-    # Jeden odłamek to ok. jedna trzecia zestawu; 20 minut zostawia zapas na wolniejszą
-    # maszynę i dalszy wzrost, a nadal wyłapie zawieszony test.
-    timeout-minutes: 20
+    # Pełny odłamek potrafi zająć ok. 20 minut; limit obejmuje również instalację
+    # zależności i kończenie joba. Zachowaj zapas bez zmiany limitów pojedynczych testów.
+    timeout-minutes: 30
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

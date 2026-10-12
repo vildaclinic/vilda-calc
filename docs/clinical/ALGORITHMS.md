@@ -19,6 +19,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
+| LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -149,6 +150,1263 @@ Silnik `1.3.0`, dane i kryteria `2026-10-04.1`, snapshot `1.2.0`, renderer, norm
 **Źródła i populacja:** dotychczasowe zakresy Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999), LH AnshLite CLIA, oraz [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), Roche Elecsys ECLIA, odczyt 2–3.10.2026; surowica, IU/L i równoważne mIU/mL, granice wieku/płci/stadium i populacji danej tabeli. Model kliniczny 0–18 lat. Znaczenie OUN: Latronico i wsp., Endocrine Society 2026, [DOI 10.1210/clinem/dgag168](https://doi.org/10.1210/clinem/dgag168); wywiadu/regresji/początku: Persani i wsp., ENDO-ERN 2021, [DOI 10.1007/s12020-021-02626-z](https://doi.org/10.1007/s12020-021-02626-z), Howard 2021, [DOI 10.1111/cen.14578](https://doi.org/10.1111/cen.14578); ograniczenia niemowlęce: Rohayem i wsp. 2024, [DOI 10.1210/endrev/bnae003](https://doi.org/10.1210/endrev/bnae003). Wcześniactwo `<37` ukończonych tygodni: WHO, *Preterm birth*, 10.05.2023. Pełne cytowania i zakres wcześniejszego odczytu: [LH_FSH.md](LH_FSH.md#źródła-i-rzeczywisty-zakres-odczytu). Nie wywodzimy z publikacji zalecenia usunięcia pytań; zawężenie interfejsu wynika z decyzji właściciela.
 
 Syntetyczne regresje rzeczywistego formularza, adaptera, silnika i odczytu: M2 lata 9 miesięcy/G3/LH2 IU/L → `current-patient`, bez dat i usuniętych danych, nadal warunkowe `above` dla wieku, `within` dla G3 i `early_development`; M14/LH2 ze starą datą w źródle → wyłącznie bieżący wiek i zakres `0,8–8,7`; źródło z OUN/regresją/objętością → dane nie są przenoszone do nowego wejścia; GnRHa „w trakcie” → brak podglądu bazalnego; niemowlę z wcześniactwem → zachowana bramka populacji; starszy klient i zapis historyczny → zachowany pełny dawny kontekst i ostrzeżenia. Testy nie stanowią walidacji klinicznej.
+
+#### LAB-PUBERTY — usunięcie zakresu z wydruku z bieżącego formularza, 2026-10-08
+
+Formularz usuwa zakładkę „Zakres z wydruku”, pole granic i jego podpowiedź jednostki. Pozostają szczegóły „Pacjent” i „Stadium”. Ręczne porównanie powielało informację dostępną na wydruku; zakres zmiany wynika z decyzji funkcjonalnej właściciela, nie z nowej rekomendacji medycznej.
+
+**Wpływ kliniczny: TAK — zawężenie wejścia nowej oceny.** Nowe sprawdzenie nie tworzy `reportedRange`, dodatkowego porównania z ręcznym zakresem ani wynikającego z niego `reported_range_reference_disagreement`. Automatyczne porównania wieku/stadium, osie, wyróżnienia odchyleń i odrębne ostrzeżenia rozwoju pozostają bez zmian. Minimalne wejście ze zgodną metodą nadal otrzymuje warunkowe `referencePreview`, bez potwierdzania braku leczenia lub oznaczenia bazalnego. Inna/nieznana metoda nadal oznacza brak katalogowej oceny stężenia; konwersja i dostępna ocena rozwoju pozostają. Nie wprowadzamy zastępczej normy ani obejścia ograniczeń metody.
+
+Silnik `1.3.0`, dane i kryteria `2026-10-04.1`, renderer, snapshot, progi oraz jednostki pozostają niezmienione. Publiczny `buildInput` i silnik nadal przyjmują jawny `reportedRange` starszych klientów. Wizyty, przypięte wyniki i historia zachowują utrwalone porównania i konflikty bez migracji, ukrywania lub przeliczania; nie przenoszą tego pola do nowego sprawdzenia. Pełny `localReference` pozostaje odrębnym kontraktem.
+
+**Źródła i populacja:** dotychczasowe katalogi Mayo [LH LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999), AnshLite CLIA, oraz [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), Roche Elecsys ECLIA, odczytane 2–3.10.2026; surowica, IU/L i równoważne mIU/mL, populacje i granice wieku/płci/stadium konkretnych tabel. Model kliniczny 0–18 lat i ograniczenia interpretacji bazalnej pozostają oparte na dotychczasowych K1–K4; pełne cytowania, wersje dokumentów i zakres wcześniejszego odczytu w [LH_FSH.md](LH_FSH.md#źródła-i-rzeczywisty-zakres-odczytu). Nie dodano nowych źródeł ani progów.
+
+Syntetyczne regresje rzeczywistego formularza, silnika i odczytu: M2 lata 9 miesięcy/G3/LH2 IU/L, zgodna metoda → brak `reportedRange`, nadal warunkowo wiek `above` (`≤0,5`), stadium `within` (`0,09–4,2`) i `early_development`; ten sam kontekst z nieznaną metodą → brak katalogowej oceny, zachowana konwersja i ostrzeżenie rozwoju; starszy klient i zapisany snapshot LH15 z ręcznym zakresem `0–20` → zachowane odrębne porównanie i konflikt z katalogiem. Szczegóły: [LH_FSH.md](LH_FSH.md#usunięcie-ręcznego-zakresu-z-bieżącego-formularza--8102026). Testy techniczne nie stanowią walidacji klinicznej; scalenie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — redukcja etykiet i usunięcie tabeli kontekstu, 2026-10-08
+
+Renderer zachowuje niezależną ocenę rozwoju i osie wieku/stadium, a szczegóły zbiera pod nazwą „Szczegóły i źródła”. Pusty wynik nie jest prezentowany jako błędny zapis. Przy niepustym błędnym wyniku lub nieobsługiwanej jednostce powód jest widoczny raz; niezależne znane ostrzeżenia kliniczne pozostają. Brak wiarygodnego wieku nie otrzymuje dodatkowego pozornego rozpoznania wieku poza profilem.
+
+Z widoku znika cała tabela „Kontekst użyty w ocenie” wraz z powtarzającym ją opisem, również dla znanych danych i odczytu historycznego. Nie jest odtwarzana w innym miejscu. Szczegóły pozostają krótką prezentacją metody, źródeł i istotnych ograniczeń. Ograniczenia są deduplikowane według kodów, zamiast powtarzania pod porównaniem wieku, stadium i niepodanego zakresu laboratorium. Bez wejścia `localReference` nie jest pokazywane `no_local_reference`. Techniczne wersje silnika, danych i profili, także historycznego lokalnego profilu, znikają z widoku wyniku. Pełne dane i metadane pozostają zapisane i dostępne w publicznym modelu odczytu; `unknown` nie zmienia się w „Nie”.
+
+**Wpływ kliniczny: TAK — zmiana prezentacji i hierarchii ograniczeń, bez zmiany ocen.** Silnik `1.3.0`, dane i kryteria `2026-10-04.1`, wejście, jednostki, normy, statusy oraz reguły wyróżnienia osi pozostają bez zmian. Warunkowy zakres nadal dotyczy oznaczenia bazalnego bez leczenia hormonalnego. Ograniczenia związane ze znanym leczeniem lub stymulacją, zastrzeżenie o niewykluczaniu CPP przez niskie LH, minipuberty, wcześniactwo i przyczyny niejednoznaczności wyników cenzorowanych nie znikają. Snapshoty nie są zmieniane, migrowane ani ponownie liczone; prostszy widok zachowuje utrwalone ostrzeżenia. Dawny `reportedRange`, konflikty porównań oraz `localReference` pozostają obsługiwane; ich pełne pochodzenie i wersje pozostają w danych, bez przywracania audytowej tabeli na ekranie.
+
+**Źródła i populacja:** dotychczasowe katalogi Mayo [LH LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999), AnshLite CLIA, oraz [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), Roche Elecsys ECLIA, odczytane 2–3.10.2026; surowica, IU/L i równoważne mIU/mL, populacje i granice wieku/płci/stadium konkretnych tabel. Model kliniczny 0–18 lat. Dotychczasowe K1–K4 uzasadniają rozdzielenie oceny stężenia i rozwoju oraz ograniczenia bazalne, M1 — kontekst niemowlęcy, K6 — definicję wcześniactwa. Pełne cytowania, wersje i zakres wcześniejszego dostępu: [LH_FSH.md](LH_FSH.md#źródła-i-rzeczywisty-zakres-odczytu). Nie dodano źródeł, progów ani nowych założeń medycznych; redukcja etykiet wynika z decyzji funkcjonalnej właściciela.
+
+Syntetyczne oczekiwania wobec rzeczywistego silnika i renderera: pusty wynik/nieznany wiek → brak fałszywego błędu i pozornego wieku poza profilem; niepusty błędny wynik → jeden właściwy komunikat; M2 lata 9 miesięcy/G3/LH2 IU/L ze zgodną metodą → nadal warunkowo wiek `above` (`≤0,5`), stadium `within` (`0,09–4,2`), `early_development` i dotychczasowe wyróżnienie; znany wczesny rozwój przy pustej liczbie → ostrzeżenie pozostaje; leczenie/stymulacja, wcześniactwo i `<LOD` → ograniczenia pozostają; zapis historyczny z datami, jawnym „Nie”, OUN/regresją lub lokalnym zakresem → brak tabeli kontekstu i technicznych wersji, utrwalone ostrzeżenia i porównania pozostają, pełne dane zapisu i publicznego modelu odczytu niezmienione bez przeliczenia. Szczegóły: [LH_FSH.md](LH_FSH.md#uproszczenie-etykiet-i-szczegółów-oceny--9102026). Wyniki testów należy odczytać w PR; nie stanowią walidacji klinicznej. Akceptacja kliniczna i scalenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — przyciski edycji i usunięcie ręcznej pauzy animacji, 2026-10-09
+
+Formularz `1.10.0` i renderer `1.7.0` usuwają przycisk „Zatrzymaj/Wznów animacje” i jego stan. Animowane wyróżnienia znacznego odchylenia działają jak wcześniej; systemowe ograniczenie ruchu, wydruk i statyczna unieważniona historia zachowują swoje reguły. Przyciski edycji otrzymują wspólny styl przelicznika, widoczny fokus, rozróżnialne nazwy dostępności i cel dotykowy minimum 44 px na telefonie.
+
+**Wpływ kliniczny: brak zmiany wyników lub interpretacji.** Normy, progi wyróżnienia, ostrzeżenia, silnik `1.3.0`, dane/kryteria `2026-10-04.1` i snapshoty pozostają niezmienione. Bez nowych źródeł i założeń medycznych; obowiązują dotychczasowe R1/R2, populacje pediatryczne konkretnych tabel, surowica, IU/L i równoważne mIU/mL. Syntetyczna regresja produkcyjnego renderera: M2 lata 9 miesięcy/G3/LH2 ze zgodną metodą → te same warunkowe osie, `early_development` i znaczne odchylenie względem wieku, bez przycisku pauzy; systemowe ograniczenie ruchu/druk → te same ostrzeżenia bez animacji. Szczegóły: [LH_FSH.md](LH_FSH.md#przyciski-edycji-i-animacje--9102026).
+
+#### LAB-PUBERTY — kandydackie profile wcześniacze, 2026-10-09
+
+Zbiór `vilda_lab_puberty_data.js` i kandydaci mają wersję `2026-10-09.2`.
+Profile `greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate` pozostają
+**nieaktywne**. Źródło: Greaves i wsp., JCEM 2015;100:1097–1103,
+[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/), DOI 10.1210/jc.2014-3681.
+Odczytano pełny artykuł dostarczony przez właściciela (metody s. 1098, tabela 4
+s. 1102) i corrigenda 2016 (prolaktyna, nie LH/FSH). Suplement nadal niedostępny.
+Hash PDF i szczegółowy zakres odczytu są w metadanych źródła i planie LH/FSH.
+
+Tabela 4 zastępuje poster użyty w `.1`: LH M0,1–9,2/F0,2–133,9; FSH
+M0,2–3,6/F2,6–181,1 IU/L. Zmieniono trzy granice posteru: FSH M0,16 → 0,2;
+FSH F181 → 181,1; LH F134 → 133,9. Surowica, Roche Cobas 8000-e601 ECLIA,
+standardowe zestawy/procedury producenta, LH NIBSC 80/552, FSH WHO 78/549.
+Finalny tekst rozstrzyga rozbieżność e601/E602 na rzecz e601; brak dowodu
+przenoszalności na aktualne profile Mayo. Centralne 95% RI metodą robust/Box–Cox,
+n111 M/108 F; osobne 90% CI dotyczą niepewności granic, nie zakresów normy.
+
+Populacja: wcześniaki z trzech oddziałów w Melbourne, bez jawnej endokrynopatii,
+niejednoznacznych genitaliów i wad wrodzonych, prawidłowy przesiew, przeżycie
+poza wiek odpowiadający terminowi; dopuszczone powikłania wcześniactwa i opisane
+w źródle ekspozycje hormonalne. Skrajne GA23+3–32+4 tygodnia dotyczą całej kohorty
+234 dzieci, nie są potwierdzonymi granicami podgrupy LH/FSH. RI wyliczono tylko
+z pierwszych próbek: średni wiek około 20–21 dni, bez minimum/maksimum PNA.
+Harmonogram biobanku do 36 tygodni nie wyznacza okna RI. Niepotwierdzone kryteria
+wieku nadal uniemożliwiają aktywację; metoda, tabela i kryteria kliniczne są już
+odczytane. Brak `scope`, puste `rows` i `active:false`; liczby wyłącznie jako
+opisowe `reportedIntervals`.
+
+**Wpływ kliniczny: korekta nieaktywnych danych źródłowych, bez zmiany bieżących
+wyników i interpretacji.** Silnik `1.3.0`, aktywne zakresy, wersje istniejących
+profili i kryteria bez zmian. Bez nowych pól UI i przeliczania historii.
+Przypadki produkcyjnych funkcji: kandydat LH/FSH → `unavailable`, bez podglądu,
+również przy PNA21 lub GA28/PNA56 (PMA36); ustawienia urządzenia odrzucają kandydata;
+wcześniak z profilem Mayo nadal bez RI; M2 lata 9 miesięcy/G3/LH2 IU/L → dotychczasowe
+porównania i ostrzeżenie wczesnego rozwoju; snapshot → bez ponownego liczenia.
+
+Pełny zakres odczytu, ograniczenia i warunki przyszłej aktywacji:
+[LH_FSH.md](LH_FSH.md#przygotowanie-profilu-wcześniaczego--9102026).
+Akceptacja kliniczna przed aktywacją oraz scalenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — aktywacja profilu wcześniaczego i minimalny formularz, 2026-10-09
+
+**Wpływ kliniczny: TAK.** Silnik `1.4.0` i zbiór danych `2026-10-09.3`
+aktywują profile Greaves LH/FSH, dotąd nieaktywne. Ich stabilne identyfikatory
+zachowują końcówkę `candidate`; wersja profilu i `active:true` rozstrzygają
+aktywację. Nie zmieniono liczb z finalnej tabeli 4: LH M0,1–9,2/F0,2–133,9;
+FSH M0,2–3,6/F2,6–181,1 IU/L (mIU/mL równoważne). Surowica, Roche Cobas
+8000-e601 ECLIA; nie utożsamiamy tej metody z AnshLite ani dotychczasowym
+profilem Mayo Roche Elecsys FSH. Zakresy Mayo i kryteria czasu dojrzewania
+zachowują dotychczasowe wersje.
+
+Źródło: Greaves i wsp., JCEM 2015;100:1097–1103, DOI 10.1210/jc.2014-3681,
+[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/), metody s. 1098,
+finalna tabela 4 s. 1102; odczytano także cały dostarczony suplement
+`jc-14-3681.pdf` (tabele 1–2, rycina 1). Populacja i ograniczenia są opisane
+powyżej; hashe wszystkich dostarczonych materiałów i rozróżnienie biobanków
+z proofu Greaves 2014 znajdują się w [LH_FSH.md](LH_FSH.md).
+Normy ani metoda nie pochodzą z proofu 2014. Przedziały ufności granic RI
+nie zastępują norm.
+
+Polityka `greaves-preterm-applicability`, wersja `2026-10-09.3`, w pliku
+danych wymaga: GA przy urodzeniu 24+0–32+0 tyg. włącznie (168–224 dni),
+PMA nie większego niż 36+0 tyg. (252 dni) i co najmniej jednej ukończonej
+dobie życia. PMA jest sumą GA i PNA. Są to **jawnie przyjęte granice
+aplikacji oparte na protokole**, nie opublikowane dokładne skraje finalnej
+podgrupy ani zwalidowane progi diagnostyczne. Właściciel zaakceptował
+te granice i wyłączenie pierwszej doby, następnie zatwierdził makietę
+desktop/mobile i polecił wdrożenie.
+
+Wiek jest reprezentowany domkniętym przedziałem możliwych ukończonych dni;
+cały przedział GA/PNA/PMA musi spełniać warunki. GA28+4 daje 200 dni;
+samo „28 ukończonych tygodni” daje 196–202 dni. Różnica dat D bez godziny
+urodzenia daje `max(0,D−1)…D` ukończonych dób, więc zmiana daty o jeden dzień
+nie wystarcza do potwierdzenia upływu 24 h. Nie tworzymy daty urodzenia
+z wieku w latach/miesiącach ani nie przenosimy DOB do niezaszyfrowanego
+stanu współdzielonego.
+
+Nowy helper `vilda_lab_neonatal_context.js` przekazuje jedynie pochodny przedział
+PNA przez cache bieżącej sesji (`vildaLabNeonatalAgeV1`), z kontrolą tożsamości,
+wieku/pomiaru formularza, trybu odtworzenia i aktualności dnia. Nie zapisuje
+daty urodzenia, nie modyfikuje `sharedUserData` i nie uruchamia zapisu pacjenta.
+Blokada sejfu lub wyczyszczenie sesji unieważniają cache. GA pochodzi z rekordu
+odczytanego przez chroniony kontekst `VildaPubertySource`; spóźniona odpowiedź
+poprzedniego pacjenta nie dostarcza danych do bieżącej oceny.
+
+Formularz używa danych bieżącego pacjenta; pokazuje maksymalnie dwie brakujące
+pozycje (GA i ukończone dni życia), a PMA wylicza sam. Jedna oś „Dla wcześniaka”
+zastępuje w tym kontekście osie wieku/stadium. Przy braku kwalifikacji pozostaje
+wartość, przeliczenie i konkretny powód. Starsze dzieci, także urodzone
+przedwcześnie, zachowują wybór pokwitania oraz ocenę według wieku/stadium.
+Niezależne ostrzeżenia kliniczne pozostają widoczne. Brak danych o leczeniu
+i rodzaju oznaczenia pozwala wyłącznie na opisane porównanie warunkowe z RI
+bazalnym; znana stymulacja, leczenie, niezgodna metoda lub nieaktualna wersja
+konfiguracji blokują niedopasowaną ocenę.
+
+Snapshot rozszerzono opcjonalnie o użyte przedziały dni, wynik kwalifikacji
+i wersję polityki. Odczyt wizyty, przypięcia i historii odtwarza utrwaloną
+ocenę bez uruchamiania bieżącego silnika; starsze zapisy zachowują kształt.
+
+Syntetyczne przypadki regresyjne rzeczywistych funkcji produkcyjnych:
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| M, GA28+4, PNA43, LH2, zgodne e601 | PMA34+5; porównanie z 0,1–9,2 IU/L, w zakresie; jedna oś, bez wniosku o całym obrazie klinicznym. |
+| Te same GA/PNA, FSH8 M / FSH20 F | M: powyżej 3,6, istniejące wyróżnienie >2×; F: w zakresie 2,6–181,1. |
+| PNA0 albo możliwe PNA0–1 | Brak automatycznego porównania; pierwsza doba nie została wykluczona. |
+| GA28+4, PNA52 / PNA53 | PMA36+0: kwalifikacja; PMA36+1: poza profilem. |
+| GA32 bez dni / GA32+0 | Nie dopisujemy zera; przedział GA224–230 przecina granicę, dokładne GA224 może się kwalifikować. |
+| Profil Mayo, znane leczenie lub stymulacja | Bez automatycznego przeniesienia norm Greaves i bez nieadekwatnego RI. |
+| Starsze dziecko urodzone przedwcześnie | Wybór pokwitania i dotychczasowa ocena pozostają dostępne. |
+| Zmiana pacjenta, historia, mobile 320 px, offline | Bez przenoszenia danych innej osoby, ponownego liczenia historii ani zależności od sieci. |
+
+#### LAB-PUBERTY — dorośli i automatyczny dobór źródła, 2026-10-09
+
+**Wpływ kliniczny: TAK.** Silnik `1.5.0` i dane `2026-10-09.4` przywracają
+porównania LH/FSH u dorosłych w nowym module. Właściciel zlecił ten pierwszy
+krok po omówieniu ograniczeń metod i danych; przedstawiono makietę zachowującą
+obecny układ, osie i jeden wybór „Cykl / menopauza”.
+
+Zweryfikowano pełne aktualne katalogi Mayo:
+[LH 602752](https://www.mayocliniclabs.com/test-catalog/Overview/602752),
+[FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) oraz
+[LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999).
+Zakresy dorosłych dotyczą surowicy i Roche ECLIA; pediatryczne LH pozostaje
+osobnym AnshLite CLIA. Nie przywracamy starszych wartości z ogólnej tabeli
+przelicznika. Dokładne zakresy, hashe odczytanych dokumentów i ograniczenia
+cytowanych insertów zapisano w [LH_FSH.md](LH_FSH.md).
+
+Nowy formularz jawnie włącza `referenceSelection: automatic`. Dobór publikacji
+wykorzystuje analit, płeć, przedział wieku oraz kwalifikację wcześniaczą.
+Nie ustala faktycznej metody ani materiału próbki: pozostają nieznane.
+Wynik jest oznaczonym porównaniem orientacyjnym z zakresem źródłowym,
+nie potwierdzoną klasyfikacją według metody laboratorium. Znane leczenie,
+stymulacja, niezgodny materiał lub zgłoszona niezgodna metoda nadal blokują
+niedopasowane porównanie. Stare ustawienia metody urządzenia nie sterują
+nowym formularzem; jawne wywołania legacy zachowują dawny kontrakt.
+
+Zakresy męskie i żeńskie wybieramy bez wnioskowania z Tanner V. Granica
+18 lat respektuje nierówności katalogów: LHPED `<18`, standardowe LH
+z osobnym wierszem `>14–≤18`, dorosłe zakresy `>18`; FSH pediatryczne `≤18`.
+Przedział wieku przecinający granicę daje jawne alternatywy zamiast
+przypisania fikcyjnej dokładnej daty. Niezależna, poprawna oś stadium
+pozostaje dostępna, jeśli warianty wieku należą do jednego profilu dziecięcego.
+
+U dorosłej kobiety wybór obejmuje nieustalony kontekst, fazę folikularną,
+owulację, fazę lutealną i okres po menopauzie. Nieustalony kontekst pokazuje
+cztery krótkie zakresy bez wspólnego werdyktu. Wiek ani pojedyncze FSH
+nie wybierają menopauzy. Wybór jest wspólny dla bieżących LH/FSH i resetowany
+po zmianie osoby lub płci. Nie dodano odrębnych norm perimenopauzy ani
+norm zwalidowanych swoiście dla późnej starości. Brak górnej granicy wieku
+w katalogu dorosłych nie jest dowodem takiej osobnej walidacji.
+
+Dotychczasowe profile dziecięce, Greaves i kryteria rozwoju zachowują liczby
+i wersje. Historia utrwala wybrane źródła, kontekst i ewentualne alternatywy;
+odczyt nie liczy wyniku ponownie. Przypadki regresyjne obejmują granice
+wszystkich dziesięciu zakresów dorosłych, wiek wokół 18 lat, kobietę
+z nieustalonym cyklem, zmianę osoby/płci, niezależne ostrzeżenia dziecięce,
+kwalifikację wcześniaczą oraz zapis/odczyt, mobile i offline.
+
+### LAB-INHIBIN-B — wiek i minipuberty, 2026-10-09
+
+Osobny silnik `VildaLabInhibinB` 1.0.0 i dane `2026-10-09.1` zastępują
+dawną interpretację inhibiny B. Normy są poza silnikiem, który przyjmuje
+źródło jako argument. Pełne źródła, populacje, metody, jednostki, granice,
+ślady odczytu i luki: [INHIBIN_B.md](INHIBIN_B.md).
+
+**Wpływ kliniczny:** usunięto niezweryfikowane normy minipuberty i zastępczy
+zakres męski 80–300 przy braku dopasowania. Męskie minipuberty 2–5 miesięcy
+wykorzystuje tabelę 1 Johannsen 2018 (DOI 10.1210/jc.2018-00482), a żeńskie
+od 5 ukończonych dni do <1 roku górną krzywą suplementu 1C Ljubičić 2022
+(DOI 10.1210/clinem/dgac363; suplement 10.6084/m9.figshare.19469555.v1).
+Dziewczynkom nie dopisujemy dolnego RI. Liniowa interpolacja opublikowanych
+punktów +2 SD i 365,25 dnia/rok są jawną polityką numeryczną aplikacji,
+nie instrukcją autorów. Pełny model inhibiny chłopców Busch 2022 pozostaje
+niedostępny liczbowo; poza 2–5 miesiącem przed 1 rokiem używany jest jawnie
+szeroki zakres Labcorp, bez oceny pełnej dynamiki minipuberty.
+
+Od 1 roku zakresy pochodzą z pełnego katalogu Labcorp 146795 (AnshLite™
+Enzyme Linked Immunoassay, surowica). Katalogowe kategorie wieku traktujemy
+jako ukończone lata/miesiące, co jest udokumentowaną polityką aplikacji.
+Mężczyźni mają przedziały 18–49 i >49 ukończonych lat; u kobiet po kategorii
+12–18 lat używany jest znany cykl/menopauza albo niezależne warianty.
+Nie ustalamy fazy ani menopauzy z wieku. Nie ma aktywnej osi G/Th ani
+norm wcześniaczych; u starszego dziecka wcześniactwo nie blokuje RI.
+
+Automatyczny wybór ustala źródło orientacyjnego porównania, a nie fakty
+o metodzie próbki. Znana niezgodność materiału/metody, stymulacja i leczenie
+zachowują blokady. Wynik nie rozpoznaje przyczyny, płodności ani skuteczności
+leczenia. Jednostki pg/mL↔ng/L są liczbowo równoważne, operatory i LOD/LOQ
+pozostają zachowane. Nowa ocena jest zapisywana z zakresem i źródłem;
+historia nie oblicza jej ponownie ani nie uzupełnia starszych wpisów.
+
+Regresje produkcyjnego silnika: M90 dni/350 → 229–631; F90 dni/80 → górna
+granica modelu ≈145,9 bez dolnej normy; M35 lat/150 → 66,9–300;
+M75 lat/150 → 34,9–289,2; F35 lat/nieznany cykl → sześć wariantów bez
+wspólnego werdyktu. Testy obejmują również GA/PNA, granice i precyzję wieku,
+zapis, zmianę pacjenta, jednostki, mobile i offline. Zachowany układ oraz
+makieta desktop/mobile zostały przedstawione właścicielowi przed aktywacją
+interfejsu. Akceptacja kliniczna i scalenie pozostają po stronie właściciela.
+
+**Poprawka prezentacji niepewnego wieku, 2026-10-09:** F11 ukończonych
+miesięcy / 144 pg/mL już w silniku daje `above` dla obu skrajnych górnych
+granic krzywej R2: 39,132 i 49,7256666667. Renderer pokazuje te statusy na
+osiach oraz wspólny wniosek, jeśli wszystkie porównania jednej krzywej są
+jednoznacznie zgodne. Wspólne znaczne wyróżnienie wymaga spełnienia
+dotychczasowej reguły UI dla każdego wariantu. Dla 45 pg/mL ocena pozostaje
+zależna od dokładnego wieku; dla 30 nie ma przekroczenia górnej granicy.
+Brak dolnej normy i operatory wyniku zachowują znaczenie. Zmiana dotyczy
+prezentacji istniejącej oceny, także zapisanej w historii, bez ponownego
+liczenia i bez nowych norm lub wersji silnika/danych. Przypadki produkcyjnego
+silnika → renderer → snapshot oraz mobile/offline są objęte regresjami.
+
+Zweryfikowano także pełny katalog Mayo INHB / 88722 z 2026-10-09.
+F≤12 lat ma tam górną granicę `<183 pg/mL`, więc ten sam wynik 144 jej nie
+przekracza. To odrębny, szeroki zakres i metoda Mayo ELISA. Katalog i jego
+ograniczenia zapisano w `INHIBIN_B.md`; profil Mayo pozostaje nieaktywny.
+Nie wybieramy źródła według tego, który werdykt daje dla wpisanej liczby.
+
+### LAB-HORMONE-LIFESPAN — poglądowy przebieg hormonów w ciągu życia
+
+Wdrożenie zatwierdzonych makiet z 2026-10-09: męskie LH, FSH, testosteron
+całkowity, AMH, inhibina B i poglądowe INSL3; żeńskie LH, FSH, estradiol,
+AMH i inhibina B. Dokumentacja danych, populacji, metod i ograniczeń:
+[HORMONE_LIFESPAN.md](HORMONE_LIFESPAN.md). Dane edukacyjne są odrębne od
+norm i silników interpretacji laboratoryjnej; źródła i skrypty odtworzenia
+pozostają w `hormone-lifespan/`.
+
+Poniższy opis pierwotnego schematu pozostaje historią wdrożenia. Późniejsza
+zatwierdzona funkcja punktu wyniku, opisana na końcu tej sekcji, dopuszcza
+ilościową pozycję pacjenta wyłącznie przy osobnym modelu stężeń; nie zmienia
+schematycznych odcinków w normy.
+
+**Wpływ kliniczny pierwotnego wdrożenia:** dodano edukacyjną wizualizację czasu i kierunku zmian.
+Nie zmienia ona obliczeń, jednostek, zakresów, ostrzeżeń, oceny wyniku ani
+historii. Pozycja pionowa nie oznacza stężenia, percentyla lub proporcji
+różnych hormonów. Znacznik przedstawia wyłącznie wiek chronologiczny;
+etap wykresu nie ustala Tannera, fazy cyklu ani menopauzy. INSL3 na wykresie
+nie uruchamia nowego kalkulatora. Schematy i interpolacje nie uzyskują przez
+testy statusu walidacji klinicznej.
+
+Każdy hormon zachowuje tę samą własną skalę w widokach całego życia,
+minipuberty i pokwitania. Przybliżenie zmienia oś czasu, bez wyrównywania
+szczytów różnych hormonów. Odrębne „Porównaj płcie” dla AMH/inhibiny B
+w minipuberty oraz LH/FSH/AMH/inhibiny B w pokwitaniu porównuje kształt
+dwóch krzywych względem ich własnych maksimów wybranego okresu, z widocznym
+opisem; nie porównuje bezwzględnych stężeń. Dorosłe E2 ma poglądowe plateau
+oraz osobny schemat cyklu, a nie połączenie mediany nastolatek z niższą
+medianą wyłącznie wczesnej fazy folikularnej dorosłych.
+
+Właściciel zatwierdził ciągłe, wygładzone krzywe bez dziur. Niepewne mosty
+między badaniami są przerywane i nie dodają fikcyjnych pomiarów. AMH po
+niemowlęctwie ma łagodne wypłaszczenie zamiast skoku do mediany szerokiej
+grupy dzieci; szczegółowe dane minipuberty pozostają zachowane. Modelowy
+garb pokwitaniowy inhibiny B pozostaje, natomiast niepewne ząbki szerokich
+grup LH/FSH/AMH nie stają się obowiązkowymi etapami fizjologii.
+
+Wykres wykorzystuje analit, płeć i efektywny kontekst już wpisany w formularzu,
+również lokalne korekty. Brak płci lub niegotowe źródło nie wybiera domyślnego
+pacjenta; brak wieku nie tworzy znacznika. Zmiana osoby resetuje wybór.
+Niemowlęce źródła dotyczą dzieci donoszonych: znane wcześniactwo lub brak
+potwierdzenia donoszenia nie pozwalają przedstawiać dopasowania niemowlęcia
+do tych krzywych. Nie używamy PMA ani wieku skorygowanego zamiast PNA.
+
+Syntetyczne regresje funkcji produkcyjnych: F/3 miesiące/AMH → początkowo
+tylko AMH, po przybliżeniu ta sama wysokość względna; szczyt żeńskiego E2
+23,908/264 wobec AMH 19,05/28,99 i inhibiny B 52,474/52,474, bez wyrównania
+szczytów. F/30 lat/E2 → osobny cykl po wyborze „Dorosła”; M/LH → zestaw
+męski bez E2. Zmiana pacjenta/płci, brak wieku, wcześniactwo, nieobsługiwany
+analit i reset nie przenoszą poprzedniego kontekstu. Kontrole obejmują
+przełączanie hormonów, stałą skalę, ciągłość, reduced motion, mobile i offline.
+
+**2026-10-10 — powrót do pierwotnych męskich krzywych:** po ocenie
+wariantów właściciel polecił przywrócić „Pierwotny przebieg” z makiety.
+Renderer odpowiada `c6b03379`, sprzed PR #607: pełne tablice punktów,
+PCHIP i 97 próbek wygładzanych B-spline; porównanie płci ponownie używa
+193 próbek interpolacji niemowlęcej. Usunięto `displayPointIndices`.
+Dane wieku/wysokości, skale hormonów, interakcje i geometria żeńska
+pozostają bez zmian. Nie wdraża się alternatywnego algorytmu z kolejnej
+makiety. Wtórne wygładzenie może spłaszczać lub przesuwać ostre szczyty;
+nie gwarantuje dokładnego przejścia przez węzły źródłowe.
+
+Źródła: Salonia 2019, ryc. 2 (DOI 10.1038/s41572-019-0087-y), Busch 2022
+(DOI 10.1210/clinem/dgac115); dane i ograniczenia pozostają w
+`docs/clinical/HORMONE_LIFESPAN.md`. **Wpływ kliniczny:** wyłącznie
+geometria edukacyjna, bez zmian norm, jednostek, interpretacji ani historii.
+Wysokości są bezwymiarowym schematem, nie medianami stężeń; szczyty
+minipuberty dotyczą orientacyjnego przebiegu u donoszonych chłopców.
+Regresja rzeczywistego renderera:
+`tests/e2e/hormone-lifespan-original-curves.spec.mjs` — syntetyczne
+M/LH/0,25 roku → domyślnie LH i pierwotna geometria; ponadto utrwalony
+wzorzec dla sześciu hormonów w trzech widokach na desktopie i telefonie
+oraz porównanie płci AMH/inhibiny B. Test techniczny nie stanowi walidacji
+klinicznej.
+
+**2026-10-10 — powiększanie całej sekcji:** przycisk „Powiększ” otwiera
+istniejący panel w natywnym dialogu zajmującym viewport, ponad ramką
+przelicznika. Zachowuje wybór hormonów, okres, porównanie płci i źródła;
+zamknięcie przywraca panel, fokus i przewijanie. Wykres reaguje na zmianę
+rozmiaru i obrót telefonu. Zmiana kontekstu lub wyjście z karty zamyka
+dialog. Bez zmiany danych, interpolacji, skali względnej, norm, interpretacji
+ani zapisu pacjenta. Regresje: `hormone-lifespan-fullscreen.spec.mjs`
+(desktop, telefon i same-origin iframe), dotychczasowy wzorzec SVG
+oraz testy integracji z przelicznikiem.
+
+**2026-10-10 — wybór hormonów i porównanie płci w pokwitaniu:** etykietę
+„Poziom względny” zastąpiono „Przebieg zmian”. Można odznaczyć również
+ostatni hormon; pusty wybór ukrywa linie i pokazuje „Wybierz hormon”,
+bez automatycznego ponownego wyboru analitu. Dotyczy to także osobnego
+porównania płci. Powiększenie i aktualizacja tego samego kontekstu
+zachowują ręczny wybór.
+
+Porównanie płci rozszerzono o LH, FSH, AMH i inhibinę B w wieku
+chronologicznym 8–20 lat. To istniejące krzywe, przeskalowane osobno
+do maksimum każdej płci w tym przedziale. Nie zmieniono danych, węzłów
+ani interpolacji: męskie PCHIP z 97 próbkami/B-spline oraz żeńskie
+`displaySpline`/`segmentPath`. Żeńskie LH/FSH i AMH pozostają schematami,
+a inhibina B odtworzeniem modelu 0 SD. Źródła: Ljubicic 2020
+(DOI 10.1093/humrep/deaa182), Jopling 2018 (DOI 10.1002/edm2.21),
+FDA K170524 i Borelli-Kjær 2025 (DOI 10.1210/clinem/dgae439),
+oraz dotychczasowe źródła męskiego schematu. Populacje, oznaczenia
+i ograniczenia opisano w [HORMONE_LIFESPAN.md](HORMONE_LIFESPAN.md).
+Wspólna oś wieku nie zrównuje stadium Tannera ani nie ustala jego początku.
+Własne maksima nie pozwalają porównywać bezwzględnych stężeń lub ich
+ilorazów. Nie dodano porównań E2, testosteronu lub INSL3 bez danych
+drugiej płci.
+
+Syntetyczne przypadki rzeczywistego renderera: M/LH/12 lat → odznaczenie
+LH daje pusty wybór, który pozostaje po zmianie rozmiaru i odświeżeniu
+wyniku; pokwitanie/AMH → opadający schemat chłopców i żeński przebieg
+bez podobnego spadku; pokwitanie/inhibina B → zachowany garb żeńskiego
+modelu. Pokwitanie/LH → minipuberty zachowuje tryb porównania z pustym
+wyborem, ponieważ porównanie niemowlęce nadal obsługuje tylko AMH/inhibinę B.
+Przejście do całego życia kończy porównanie. Dotychczasowy wzorzec SVG
+kontroluje niezmienność zwykłych krzywych i porównania niemowlęcego.
+**Wpływ kliniczny:** rozszerzenie wyłącznie edukacyjnej prezentacji,
+bez zmiany norm, jednostek, interpretacji laboratoryjnej ani historii.
+Przegląd właściciela dotyczy prezentacji; testy nie nadają jej statusu
+walidacji klinicznej.
+
+**2026-10-10 — poprawki interakcji po audycie wykresu:** rzeczywiste
+wejście użytkownika w powiększonym panelu trafia do istniejącego mechanizmu
+aktywności zarówno przelicznika, jak i powłoki aplikacji. Pozostają te same
+limity i blokada przy bezczynności; odświeżanie i automatyczne przewijanie
+nie są aktywnością. Wejście do porównania płci respektuje zaznaczone
+hormony, także pusty wybór, bez przywracania domyślnego analitu.
+Poprawiono kontrast przycisków, ograniczenie przejść przy `reduced-motion`
+i zachowanie fokusu źródeł podczas zmiany rozmiaru.
+
+Syntetyczne przypadki produkcyjnego UI: LH odznaczone + AMH zaznaczone
+→ porównanie AMH; brak zaznaczenia → puste porównanie; obsługa pełnego
+ekranu dłuższa niż limit → sesja aktywna, następnie rzeczywista bezczynność
+→ prawidłowa blokada. Testy używają fikcyjnego konta i rzeczywistych modułów
+sesji. **Wpływ kliniczny:** brak zmiany danych, interpolacji, skal, norm,
+interpretacji wyniku, historii i zapisu pacjenta. Korekta geometrii między
+widokami pozostaje osobną propozycją makiety; nie jest częścią tych zmian.
+
+**2026-10-10 — punkt wyniku na modelu stężeń:** po zatwierdzeniu makiety
+właściciel polecił wdrożenie ilościowej czerwonej kropki z wykorzystaniem
+pozyskanych danych, bez nowych pól. Wiek, płeć, surowy wynik, jednostka
+i znane dane urodzeniowe pochodzą z istniejącego kontekstu przelicznika.
+Wartość pacjenta i linia populacyjna mają ten sam model, jednostkę,
+interpolację i przekształcenie wysokości. Dawny męski schemat oraz mosty
+między źródłami nie są podstawą liczbowego pozycjonowania.
+
+**Podstawa kliniczna i wpływ:** czerwony oznacza pacjenta, nie nieprawidłowy
+wynik; odniesieniem jest mediana/p50 lub przybliżony centralny przebieg
+0 SD, nie górna granica normy ani średnia arytmetyczna. Zmienia się treść
+informacji edukacyjnej o relacji wpisanego stężenia do populacji. Nie
+zmieniają się osobne silniki interpretacji, normy, werdykty laboratoryjne,
+historia, przypięte wyniki ani wizyty. Automatyczny dobór źródła nie
+potwierdza metody próbki i nie dostosowuje modelu do leczenia/stymulacji.
+
+Aktywna polityka ilościowych źródeł:
+
+- Donoszeni chłopcy, 7 dni–<1 roku: przybliżone mediany Busch 2022,
+  ryc. 3 (DOI 10.1210/clinem/dgac115). Przy medianie blisko LOD/LOQ
+  bramka rozdzielczości odczytu ryciny wyłącza punkt; nie podnosi mediany
+  do sztucznej podłogi i nie jest klinicznym progiem.
+- Chłopcy LH/FSH, 6–16 lat: Madsen 2022 (DOI 10.1210/clinem/dgac155),
+  oficjalne roczne L/M/S; p50=`exp(M)/1e6`, nie samo M.
+- Męski testosteron całkowity, 6–<18 lat: Madsen 2022, oficjalne roczne
+  L/M/S 6–18 z arkusza `LCMSMS hormones`, AF19:AI31, Supplemental Table 1 v1
+  (DOI 10.6084/m9.figshare.17153336.v1); p50=`exp(M)/1e6` w nmol/L.
+  BGS2 i FitFutures, bezpośrednie LC-MS/MS. Węzeł 18 domyka interpolację
+  dla 17.x; dokładnie 18 lat należy już do Kelsey.
+- Męski testosteron całkowity, 3–<6 i 18–88 lat: zachowane węzły co 0,1 roku z funkcji Kelsey 2014
+  (DOI 10.1371/journal.pone.0109346) z kontrolą poprawionych p50 z 2015
+  (DOI 10.1371/journal.pone.0117674); pomiędzy węzłami PCHIP.
+  Pełny model 3–88 pozostaje dowodem, osobne rekordy ograniczają dobór.
+- Męska inhibina B, 1–<6,1 roku: opublikowane p50 z tabeli 4 Kelsey 2016
+  (DOI 10.1371/journal.pone.0153843); 6,1–80 lat: osobny przybliżony
+  profil 0 SD Borelli-Kjær 2025, ryc. 2 (DOI 10.1210/clinem/dgae439).
+  Granica publikacji nie jest fizjologicznym skokiem ani jednym modelem.
+- Męskie AMH, osobne roczne grupy 1–11, 13 i 14: zgodne mediany tabel 1/2
+  Wang 2020 (DOI 10.1016/j.cca.2020.03.028), poziomy odcinek jednej grupy,
+  nie ciągła krzywa wieku. Konwencja doboru `[N,N+1)` i ograniczenia niżej.
+- Męskie AMH, 30–70 lat: roczne p50 tabeli 2 Tehrani 2017
+  (DOI 10.1371/journal.pone.0179634).
+- Donoszone dziewczynki LH/FSH/AMH/inhibina B/E2, 0,02–1 roku:
+  mediany GAMLSS z suplementu Ljubicic 2022 (DOI 10.1210/clinem/dgac363).
+
+Pełne populacje, oznaczenia, jednostki, miejsca ekstrakcji, licencje,
+transformacje i ograniczenia: [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+Normy pozostają osobnymi danymi. `vilda_hormone_lifespan_reference.js`
+przyjmuje dane źródłowe jako argument; dobór profilu nie zależy od wartości
+wyniku. Interpolacja PCHIP łączy wyłącznie węzły tego samego profilu;
+nie tworzy median między publikacjami ani poza ich wiekiem. INSL3 pozostaje
+zadaniem przyszłego kalkulatora; dorosłe LH/FSH, wcześniaki i pozostałe
+niepokryte odcinki nie otrzymują punktu z samego schematu lub szerokiej
+grupy wieku bez odrębnej polityki prezentacji grupowej. Brak danych
+urodzeniowych blokuje dopasowanie niemowlęce,
+nie zmienia PMA/wieku skorygowanego w PNA i nie blokuje automatycznie
+profilu pokwitaniowego starszego dziecka.
+
+**Przypadki syntetyczne rzeczywistej funkcji:** M/12 lat/LH 2 IU/L →
+Madsen p50=0,6775625214085037, punkt powyżej bez nowej klasyfikacji;
+M/12 lat/FSH 2,01486005633355 IU/L → punkt na medianie; donoszony M/90 dni/
+LH 2,05589 IU/L → punkt na przybliżonej medianie Busch; M/40 lat/T
+13,049603876520182 nmol/L → centralna linia Kelsey; M/3 lata/inhibina B
+107 pg/mL → p50 Kelsey 2016; M/40 lat/AMH 6,12 ng/mL → p50 Tehrani.
+Nierówność `<0,05`, brak wieku, niewłaściwa jednostka, wcześniak w profilu
+donoszonych i wiek poza źródłem → brak dokładnego punktu. Odznaczenie
+bieżącego hormonu ukrywa punkt, a zmiana pacjenta nie zachowuje poprzedniego.
+
+Regresje silnika: `tests/unit/hormone-lifespan-reference.test.mjs`.
+Kontrola interfejsu obejmuje identyczną relację punkt–linia na komputerze,
+telefonie, po powiększeniu i po zmianie widoku oraz brak przycięcia wyniku
+do brzegu osi. Wzorzec dawnych SVG nadal sprawdza schemat bez ilościowego
+punktu. Testy techniczne nie oznaczają walidacji klinicznej funkcji.
+
+**2026-10-10 — AMH u chłopców, mediany rocznych grup Wang:** na polecenie
+właściciela po analizie dostarczonej publikacji rozszerzono edukacyjny
+punkt wyniku o 13 zgodnych median grupowych. Źródło: Wang i wsp.,
+*Clinica Chimica Acta* 506 (2020), 154–159,
+DOI [10.1016/j.cca.2020.03.028](https://doi.org/10.1016/j.cca.2020.03.028),
+PMID 32199784, tabele 1 i 2 na str. 156 (PDF 3). Pełny tekst sprawdzono
+wraz z suplementem S1. Kohorta przekrojowa obejmuje 2009 zdrowych chłopców
+z Wuhan; surowica pobierana 08:00–10:00, Beckman Coulter Access 2.
+Brak stratyfikacji Tannera i wieku ciążowego. Nie wykazano zamienności
+metod z innymi profilami aplikacji.
+
+Aktywne etykiety rocznych grup: 1–11, 13 i 14. Dla edukacyjnego porównania
+etykieta N odpowiada `[N,N+1)`; to jawna konwencja aplikacji wsparta
+prezentacją grup około N+0,5 na ryc. 1. Autorzy nie opisują dokładnej
+reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. W tym
+znaczeniu grupa 14 odpowiada `[14,15)`, bez twierdzenia o zweryfikowanej
+ciągłej populacyjnej medianie do 15 lat. Każda grupa ma osobny profil
+`group-median`, `interpolation: constant` i dwa identyczne węzły.
+Punkt i lokalny poziomy odcinek odnoszą się do tej samej mediany; nie
+powstaje wygładzona trajektoria między grupami ani most do innej publikacji.
+Niepewny wiek przecinający granicę grup nie wybiera jednej mediany.
+
+Grupy 0 i 12 pozostają wyłączone: tabela 1/tabela 2 podaje odpowiednio
+134,58/131,58 oraz 6,99/7,99 ng/mL. W ekstrakcie zachowano obie wartości,
+liczebności wszystkich 15 grup i sumę SHA-256 PDF. Regresje suplementu
+nie są określone jako modele kwantylowe i nie zastępują median. Pierwszy
+rok życia nadal korzysta z dotychczasowego Busch; luki 12–<13 i 15–<30 lat
+nie otrzymują imputowanych wartości. Profile Li i Handelsman nie są tu
+aktywowane. Jednostkę źródłową ng/mL przeliczamy wspólnie z wynikiem
+pacjenta przez `1/0,1401`, a zaokrąglone 7,14 z przypisu źródła zachowujemy
+jako metadaną, bez mieszania obu przeliczników.
+
+**Wpływ i przykłady syntetyczne:** nie zmieniają się normy laboratoryjne,
+werdykty, zapis wyników ani schematy innych hormonów. Zmienia się wyłącznie
+możliwość ilościowego, edukacyjnego porównania AMH w wymienionych grupach.
+M/5,5 roku/AMH 99,18 ng/mL → punkt na medianie grupy 5–<6 lat (N=134);
+M/11,5 roku/20,70 ng/mL → mediana grupy 11–<12;
+M/12,5 roku/7 ng/mL → brak profilu, bez mostu przez konflikt;
+M/14,5 roku/8,23 ng/mL → mediana grupy 14;
+M/15 lat → brak profilu Wang. Wiek 5,99–6,01 roku nie daje jednoznacznego
+punktu jednej grupy. Regresje wywołują rzeczywisty silnik i sprawdzają
+wszystkie 13 median, granice roczne, zgodność jednostek, wyłączenia oraz
+zachowanie punktów niemowlęcych i dorosłych. Testy nie oznaczają walidacji
+klinicznej. Pochodzenie i ograniczenia utrwala
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
+**2026-10-10 — FSH przed pokwitaniem, mediany grup Zec:** po analizie
+dostarczonego pełnego tekstu właściciel polecił wykorzystanie tych danych
+do edukacyjnego porównania wyniku. Źródło: Zec i wsp., *Clinical Biochemistry*
+45 (2012), 1206–1212, DOI
+[10.1016/j.clinbiochem.2012.05.019](https://doi.org/10.1016/j.clinbiochem.2012.05.019),
+PMID 22634601, tabela 2, str. 1210/PDF 5; metoda w tabeli 1, str. 1208/PDF 3.
+Pełna kohorta: 948 dzieci z Zagrzebia w stadium Tanner 1, w tym pacjenci
+kierowani na badania z powodu ostrych infekcji, alergii i przed zabiegami;
+nie była to wyłącznie próba zdrowych ochotników. Oznaczenie Roche cobas e 411,
+kanapkowe ECLIA, FSH w IU/L. Zbierano surowicę i osocze Li-heparynowe,
+lecz autorzy nie przypisali materiału do poszczególnych hormonów.
+Nie zakładamy zgodności metod innych platform Roche ani profilu Mayo.
+
+Aktywne są cztery osobne profile `group-median`, `interpolation: constant`,
+z danymi `2026-10-10.3`: chłopcy w aplikacji 1–<6 lat otrzymują medianę
+0,48 IU/L pełnej opublikowanej grupy 1–<8 lat (N=303); dziewczynki
+1–<4 lat: 2,57 IU/L (N=124), 4–<8: 1,07 (N=156), 8–<11: 1,55 (N=107).
+Okno chłopców kończy się przed 6 lat, aby zachować istniejący profil Madsen
+6–16 lat. Etykieta, mediana i N=303 nadal dotyczą pełnej grupy źródłowej
+1–<8; nie przedstawiamy ich jako wyniku wydzielonej podgrupy 1–<6.
+Grupę źródłową chłopców 8–<11 lat, 0,79 IU/L (N=117), zachowujemy w dowodzie
+bez aktywowania konkurencyjnego profilu. Węzły poziomych odcinków mają
+identyczną wartość, nie tworzymy ciągłej trajektorii z szerokich grup.
+
+Zec ma `requiredGonadalStage: 1`: wymagane jest znane, typowane i aktualne
+G1 u chłopca albo Th1 u dziewczynki, pobrane z istniejącego kontekstu.
+Brak stadium, stadium 2–5, niewłaściwy rodzaj cechy, P/Ax i historyczna
+obserwacja nie kwalifikują punktu; wieku i samego FSH nie używamy do
+wnioskowania o stadium. Nie dodajemy nowego formularza. Stadium pacjenta
+nie kwalifikuje profilu drugiej płci; ilościowe porównanie płci wymagające
+Zec pozostaje w widoku schematycznym. Wyłącznie niemowlęce żeńskie FSH
+Ljubicic kończy się teraz przed pierwszymi urodzinami; od 1 roku stosuje
+się Zec ze swoim warunkiem stadium, bez zastępowania go profilem niemowlęcym.
+Pozostałe profile Ljubicic zachowują dotychczasową granicę.
+
+**Wpływ i przypadki syntetyczne:** zmienia się dostępność edukacyjnego
+punktu FSH przed pokwitaniem; normy, werdykty laboratoryjne, historia
+i zapis wizyt nie zmieniają się. M/3 lata/G1/FSH 0,48 IU/L → mediana
+grupy Zec 1–<8, N=303; ten sam wiek/G2 lub brak typowanej obserwacji →
+brak punktu Zec. K/2 lata/Th1/2,57; K/5 lat/Th1/1,07; K/9 lat/Th1/1,55
+IU/L → punkty na medianach odpowiednich grup. M/6 lat → zachowany Madsen;
+K/1 rok/Th1 → Zec; K/11 lat lub K/5 lat/Th2 → brak Zec. Niepewny wiek
+K/3,99–4,01 roku nie wybiera jednej mediany. Brak dopasowania nie blokuje
+osobnej interpretacji klinicznej. Nie aktywujemy cenzurowanych median LH
+ani testosteronu i nie importujemy zakresów referencyjnych tej publikacji.
+Regresje wywołują produkcyjny silnik, sprawdzają wartości tabeli, granice,
+stadium i zachowanie poprzednich źródeł; testy nie są walidacją kliniczną.
+Pełne pochodzenie, SHA-256 PDF i polityka:
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
+### HORMONE-INHIBIN-EVIDENCE — grupy minipuberty, Tannera i późnej starości
+
+Właściciel po analizie pełnych tekstów zlecił wdrożenie edukacyjnych
+uzupełnień inhibiny B. Dane są oddzielne od klinicznych zakresów oraz profili
+mediany wieku. Małe wykresy w istniejącej sekcji reagują na wybrany okres,
+płeć, donoszenie i typowane stadium, bez kolejnego formularza.
+
+- Kuiri-Hänninen 2018, DOI `10.1111/cen.13716`, tabela 2 dostarczonego
+  accepted manuscript: cztery kohorty według płci/donoszenia i wyłącznie
+  D7/M3 wieku chronologicznego. Beckman ELISA, LOQ 5,2 pg/mL, generacja
+  zestawu niepodana. Łącznik jest poglądowy; brak interpolowanego punktu
+  pacjenta, krzywej PMA, dokładnego dnia 90 i norm wyprowadzonych z IQR.
+- Crofton 2002, DOI `10.1046/j.0300-0664.2001.01448.x`, tabela 2:
+  genitalne G1–G5, mediany/IQR w osoczu, historyczny ELISA Groome.
+  135 z 195 próbek podczas GH. Wyróżnienie aktualnego G nie oznacza
+  klasyfikacji wyniku. Osobne 366 obserwacji wieku już wchodzi do Kelsey;
+  nie dodajemy ich jako niezależnej kohorty ani nie zmieniamy modelu wieku.
+- Baccarelli 2001, DOI `10.1016/S0531-5565(01)00117-6`, tabela 1:
+  pięć średnich arytmetycznych i SD, Serotec ELISA, surowica, czułość15 pg/mL.
+  Osobne porównanie wyniku dla 80–<90 lat ze średnią129 (n18) i 90–101
+  ze średnią78 (n9). Granice wspólne są jawną konwencją aplikacji; niepewny
+  wiek przekraczający grupę blokuje dopasowanie. Nie rozszerzamy głównej
+  osi innych hormonów, nie utożsamiamy średniej z medianą i SD z normą.
+- De Schepper 2000 nie jest aktywowany: sprzeczne liczebności, opisy
+  statystyk i zakresy w pełnym tekście. Pozostaje metadana wyłączenia.
+
+Historyczna wersja PR #615 łączyła osobne ścieżki Busch/Kelsey/Borelli
+przerywanymi mostami i maskowała ich styki. Ta polityka została zastąpiona
+jedną stałą linią w opisanej niżej poprawce HORMONE-INHIBIN-STABLE-CURVE.
+Dane obserwacji grupowych i ich kwalifikacja pozostają niezmienione.
+
+**Wpływ:** nowe edukacyjne porównania i zakres widocznych danych. Progi,
+normy, interpretacje laboratoryjne, wizyty, historia i persistence bez zmian.
+Fikcyjne przypadki: M/85 lat/129 pg/mL → punkt na średniej grupy80–90;
+M/95 lat/78 ng/L → punkt na średniej90–101; wiek89,9–90,1 → brak punktu
+grupowego. Dziewczynka wcześniaczka w minipuberty → dane populacyjne
+13,8 w D7 i131,7 w M3, bez dopisywania mediany dla dowolnego wieku.
+Chłopiec/14lat/G3 → wyróżnienie G3=220 pg/mL; bez wyprowadzania stadium
+z wieku i bez klasyfikacji stężenia według IQR.
+
+Źródła, sumy kontrolne PDF, metody i ograniczenia są w czytelnych ekstraktach
+`hormone-lifespan/evidence/patient-point/` oraz
+[INHIBIN_EVIDENCE.md](hormone-lifespan/INHIBIN_EVIDENCE.md).
+Generatory pakują dane bez plików PDF/rycin. Regresje wywołują rzeczywisty
+moduł porównań; nie stanowią walidacji klinicznej.
+
+
+### HORMONE-INHIBIN-STABLE-CURVE — stała, płynna linia inhibiny B, 2026-10-10
+
+**Przyczyna i decyzja właściciela:** po wpisaniu wyniku męskiej inhibiny B
+schemat poglądowy był zastępowany liniami liczbowymi o innym przebiegu.
+Dodatkowo wysoki wynik zmieniał skalę. Właściciel polecił ujednolicić
+prezentację i uzyskać płynną linię bez widocznych łączeń. Zwykłe widoki
+życia, minipuberty i pokwitania używają teraz jednej krzywej, niezależnej
+od obecności i wartości wyniku, wieku pacjenta, donoszenia lub metody.
+Porównanie płci zachowuje dotychczasową politykę.
+
+**Źródła i granice:** oryginalne profile pozostają bez zmian: Busch 2022,
+DOI `10.1210/clinem/dgac115`, ryc. 3, donoszeni chłopcy 7 dni–<1 roku,
+surowica Gen II ELISA; Kelsey 2016, DOI `10.1371/journal.pone.0153843`,
+tabela 4 p50, aplikacyjny odcinek 1–<6,1 roku, historyczne dwumiejscowe
+ELISA; Borelli-Kjær 2025, DOI `10.1210/clinem/dgae439`, ryc. 2 linia 0 SD,
+6,1–80 lat, surowica Oxford Bio-innovation/Gen II ELISA. Jednostka pg/mL
+(równoważna ng/L). Pełne populacje i niepewność digitalizacji pozostają
+w [PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md). Różne publikacje
+nie stają się jedną zwalidowaną populacją ani wspólną normą.
+
+**Polityka prezentacji:** `inhibin-display-policy.json` jest oddzielny od
+danych odniesienia i eksportowany jako `inhibinDisplayPolicy`. Produkcyjny
+`VildaHormoneLifespanDisplay.buildMaleInhibin` przygotowuje stałe węzły.
+Renderer buduje jedną ciągłą ścieżkę PCHIP z ciągłą styczną (C1)
+we współrzędnych całego życia; zbliżenie nie zmienia dopasowania. Graficzne
+przejścia 0,75–2 lat oraz 4,5–7 lat nie wyznaczają mediany pacjenta.
+Trzeci pas 18–25 lat pozostaje wewnątrz profilu Borelli i łagodzi wizualne
+załamanie przy zmianie skali czasu w 20. roku. Styczne na końcach pasów
+odpowiadają lokalnym pochodnym źródłowego przebiegu, aby uniknąć krótkich
+zagięć. Nie ma osobnych mostów ani masek. Odcinek
+płodowy zachowuje kotwice poglądowe i dochodzi do Busch w 7. dniu bez
+wcześniejszego dołka w dniu urodzenia. Odcinek 80–90 lat jest płaski,
+zakotwiczony w końcu Borelli (140 pg/mL), i nie przedłuża profilu odniesienia.
+
+Maksimum źródeł 309,779035 pg/mL z zapasem wysokości 1,25 daje stałą górę
+osi około 387,22379 pg/mL. Wynik powyżej jest prezentowany strzałką w górę
+z rzeczywistą liczbą, bez kropki pozorującej położenie na granicy i bez
+przeskalowania linii. Warunki punktu, jego wartości i źródłowej mediany
+pozostają w niezmienionym `vilda_hormone_lifespan_reference.js`. W pasie
+wygładzenia znacznik mediany może leżeć poza linią: wartości źródłowej
+nie zmieniamy w celu dopasowania grafiki. Pusty, błędny lub cenzurowany
+wynik nie tworzy punktu ani strzałki i nie zmienia samej krzywej.
+
+**Wpływ kliniczny:** zmienia się prezentacja edukacyjna i jej kształt,
+bez zmian norm, progów, jednostek, kwalifikacji pacjenta, liczbowych
+odniesień, werdyktów laboratoryjnych i wcześniejszych zapisów. Przedstawienie
+ogólnej populacji donoszonych nie kwalifikuje do niej wcześniaka; brak
+kwalifikacji usuwa punkt, nie populacyjne dane z edukacyjnego przebiegu.
+Małe wykresy Kuiri-Hänninen/Crofton/Baccarelli pozostają odrębne. Wygładzenie
+nie służy wyliczaniu zakresów, rozpoznawaniu chorób ani ekstrapolacji.
+
+**Syntetyczne regresje rzeczywistych funkcji:** M/dokładnie 44 lata/88 pg/mL
+→ punkt poniżej oryginalnego odniesienia Borelli około 162,084705882 pg/mL;
+pusty wynik → 88 → 1000 → wyczyszczenie → identyczny kształt i skala,
+przy 1000 strzałka z tą wartością. M/dokładnie 1 rok/223 → wynik równy
+źródłowej medianie Kelsey mimo niezależnego wygładzenia. M/90 dni/wcześniak
+lub nieznane donoszenie → ta sama ogólna linia, bez punktu Busch.
+Granice, styczne w przejściach, telefon, pełny ekran i offline podlegają
+regresji. Zielone testy nie nadają statusu walidacji klinicznej; scalenie
+oraz końcowa akceptacja kliniczna pozostają decyzją właściciela.
+
+### HORMONE-TESTOSTERONE-STABLE-CURVE — stała linia testosteronu i pediatryczne źródło, 2026-10-10
+
+**Wpis historyczny.** Dorosły wybór Kelsey i opisana tu geometria
+testosteronu zostały zastąpione 11 października 2026 przez
+`HORMONE-ILLUSTRATIVE-CURVES` poniżej. Pediatryczne odniesienia liczbowe
+pozostają aktywne w opisanych granicach.
+
+**Przyczyna i decyzja właściciela:** audyt wykazał przełączenie schematu
+na inny model po wpisaniu wyniku, przeskalowanie krzywej przy wysokiej
+liczbie oraz powrót do schematu przy zbliżeniu okresu poza wiekiem pacjenta.
+Właściciel zatwierdził stabilizację prezentacji, a po jej scaleniu polecił
+kontynuować naprawę według planu. Kolejny etap zastępuje dziecięce p50
+Kelsey przez Madsen w wieku 6–<18 lat. Zwykłe męskie widoki całego życia,
+minipuberty i pokwitania nadal korzystają z jednego przebiegu i jednej skali,
+także bez wyniku. Końcowa akceptacja kliniczna dotyczy gotowej zmiany w PR;
+nie jest nadaniem modelom statusu walidacji klinicznej.
+
+**Korekta geometrii po zgłoszeniu ostrego szczytu:** po wdrożeniu Madsen
+właściciel zgłosił zbyt ostre zagięcie przy 17–18 latach i zatwierdził
+jego wygładzenie. Przyczyną była wymuszona kotwica na końcu tabeli
+Madsen, nie nowe dane o gwałtownym fizjologicznym spadku. Bieżąca korekta
+poszerza pas z 17–25 do 16–25 lat i usuwa kotwicę 18 lat. Zmienia
+wyłącznie ilustracyjną geometrię; źródłowe mediany, dobór profili,
+kwalifikacja pacjenta, jednostki, normy, interpretacja i skala pozostają
+takie jak po poprzednim wdrożeniu.
+
+**Źródła i granice:** pozostają Busch 2022, DOI
+`10.1210/clinem/dgac115`, ryc. 3, mediana GAMLSS donoszonych chłopców
+od 7 dni do <1 roku, surowica LC-MS/MS, oraz Kelsey 2014, DOI
+`10.1371/journal.pone.0109346`, Table S1, z poprawionym p50 z korekty 2015,
+DOI `10.1371/journal.pone.0117674`, obecnie w oknach 3–<6 i 18–88 lat.
+Jednostka nmol/L;
+wyłącznie testosteron całkowity. Kelsey łączy 10 097 obserwacji z 13 badań
+i różne metody harmonizowane przez autorów do odpowiednika LC-MS/MS.
+Busch jest odczytem ryciny, nie udostępnioną dokładną funkcją autora;
+warunki donoszenia i bramka rozdzielczości grafiki pozostają bez zmian.
+Szczyt mediany wieku z ryc. 3 około 47. dnia nie jest medianą wieku
+indywidualnych szczytów 29 dni z podłużnej analizy ryc. 2.
+
+W wieku 6–<18 lat źródłem staje się Madsen 2022, *Reference Curves for
+Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical
+Classifications*, JCEM 107(7):2004–2015, DOI `10.1210/clinem/dgac155`,
+PMID 35299255. Pełny artykuł i Supplemental Table 1 v1, DOI
+`10.6084/m9.figshare.17153336.v1`, arkusz `LCMSMS hormones`, AF19:AI31,
+podają 13 węzłów LMS dla chłopców 6–18 lat. Transformacja K37:
+`X=ln(T[nmol/L]*1e6)`, więc `p50=exp(M)/1e6`. Nie kopiujemy błędnego
+mianownika przykładowej formuły SDS L37; błąd nie dotyczy parametrów M.
+Między rocznymi p50 używamy PCHIP, bez deklarowania odtworzenia całej
+autorskiej ciągłej funkcji LMS. Nie wdrażamy SDS ani norm laboratoryjnych.
+
+**Uzasadnienie i ograniczenia wyboru:** norweskie kohorty BGS2 i FitFutures
+mają bezpośrednie oznaczenia surowicy LC-MS/MS w docelowym wieku,
+z pobraniami 08:00–14:00. To mocniejsza podstawa pediatrycznej prezentacji
+niż dawny zbiór różnych metod harmonizowanych w Kelsey. Nie jest to
+badanie podłużne jednej osoby, norma Tannera ani model skorygowany do
+porannego pobrania. Kohorty obejmują różne BMI i głównie osoby pochodzenia
+europejskiego. Nie dodajemy warunku pory pobrania lub stadium do doboru
+tej mediany wieku. Liczebności kohort oraz tabel z innym usuwaniem wartości
+odstających nie są dokładnym N modelu LMS testosteronu.
+
+Przy 6 latach p50 Madsen 0,02393726986868612 nmol/L zastępuje około
+0,323 Kelsey. LLOQ wynosi 0,02 nmol/L; p50 leży powyżej tej granicy.
+Brak jawnej reguły postępowania z surowymi obserwacjami <LLOQ pozostaje
+ograniczeniem, nie dowodem błędu p50. CVA 4% opisano dla 1,5–37 nmol/L,
+nie dla 0,024. Rozbieżność modeli nie wynika z wykrytego błędu jednostki
+i nie oznacza rozpoznania u pojedynczego dziecka.
+
+Granice 6 i 18 są polityką aplikacji. Węzeł Madsen 18 lat służy
+interpolacji przed 18. urodzinami; dokładnie 18 lat otrzymuje oryginalne
+Kelsey około 15,16389 nmol/L. Niepewny wiek przecinający źródła nie daje
+jednej arbitralnej mediany. Kelsey 3–<6 zachowano ostrożnie bez
+ekstrapolacji Madsen w dół, a luka 1–<3 nadal nie otrzymuje punktu.
+
+**Polityka prezentacji:** `testosterone-display-policy.json`, eksport
+`testosteroneDisplayPolicy`, jest oddzielny od danych źródłowego odniesienia.
+`VildaHormoneLifespanDisplay.buildMaleTestosterone` przygotowuje węzły;
+renderer tworzy jedną ścieżkę PCHIP z ciągłą styczną (C1) w stałych
+współrzędnych całego życia. Zbliżenie wycina tę samą krzywą. Most 150 dni–4 lata
+jest monotonicznym przejściem poglądowym bez wymuszania stromych stycznych
+źródeł; obejmuje również część dostępnych odcinków, aby uniknąć sztucznego
+wzrostu na styku populacji. Nowy monotoniczny most 5–6 lat łączy Kelsey
+z Madsen. Pas 16–25 lat łączy Madsen z dorosłym Kelsey i łagodzi zmianę
+skali czasu, zachowując wartości oraz styczne źródłowe na końcach.
+Pojedynczy odcinek Hermite'a/PCHIP w kanonicznych współrzędnych osi
+nie ma wewnętrznej kotwicy Madsen przy 18 latach. Jego szerokie maksimum
+jest geometrią ilustracji, nie medianą, normą ani dowodem fizjologicznego
+wieku szczytu. Węzeł Madsen 18 lat/18,051151264084126 nmol/L pozostaje
+w danych źródłowych dla interpolacji 17.x i niezmienionej skali.
+Mediana pacjenta nadal pochodzi wyłącznie z jego dobranego źródła,
+nigdy z wygładzonego mostu.
+Kotwice przedurodzeniowe oraz płaski ogon 88–90 lat przy końcowej wartości
+Kelsey około 13,222919802 nmol/L są ilustracją, nie ekstrapolacją mediany.
+
+Maksimum źródłowych węzłów 18,051151264084126 nmol/L i zapas 1,25 dają stałą górę osi
+około 22,563939 nmol/L. Wyższy wynik ma strzałkę z rzeczywistą liczbą,
+bez kropki na granicy i bez przeskalowania. Źródłowy znacznik mediany
+może leżeć poza graficznym mostem: nie przesuwamy go ani wyniku pacjenta,
+aby dopasować je do ilustracji. Pusty, błędny lub cenzurowany zapis
+nie tworzy punktu ani strzałki, a kształt linii pozostaje taki sam.
+
+**Wpływ kliniczny i granica naprawy:** zmiana źródła i mediany wpływa na
+edukacyjną relację wyniku pacjenta do populacji w wieku 6–<18 lat;
+jest zmianą kliniczną w rozumieniu AGENTS.md. Silnik
+`vilda_hormone_lifespan_reference.js` pozostaje ten sam, natomiast osobne
+rekordy danych dobierają Madsen albo dwa okna oryginalnego Kelsey.
+Mediany poza 6–<18 lat, jednostki, laboratoryjne normy i werdykty,
+zapisy i synchronizacja nie zmieniają się. Brak punktu nie blokuje
+odrębnej interpretacji badania. Mosty służą wyłącznie płynności prezentacji,
+a luka 1–<3 lat nie otrzymuje z nich mediany. Plateau dorosłych w Kelsey
+jest zachowane jako wynik
+tego modelu; nie dowodzi stałego T u każdego seniora. Porównanie płci,
+pozostałe hormony oraz małe wykresy grupowe nie zmieniają swojej polityki.
+
+**Syntetyczne regresje rzeczywistych funkcji:** M/dokładnie 40 lat,
+pusty wynik → 13 → 100 nmol/L → wyczyszczenie: identyczna linia i skala;
+13 leży poniżej niezmienionej mediany 13,049603876520182, 100 ma strzałkę
+z tą wartością. M/2 lata/0,1 nmol/L → brak mediany i punktu mimo ciągłej
+ilustracji. M/180 dni/donoszony/wynik równy medianie Busch → zgodne
+znaczniki wyniku i źródła, nawet poza mostem; wcześniactwo lub nieznane
+donoszenie → bez dopasowania do Busch, bez zmiany ogólnego przebiegu.
+M/dokładnie 6 lat/T 0,02393726986868612 nmol/L oraz M/dokładnie 12 lat/T
+1,4977255724595988 → wynik równy medianie Madsen, bez nowego werdyktu.
+M/dokładnie 16 lat → Madsen 12,96588173768215; M/17,9 roku → Madsen
+17,87811097018994; M/dokładnie 18 lat → Kelsey 15,16389257035194.
+Wszystkie trzy mediany pozostają niezmienione po korekcie rysunku,
+choć znaczniki mogą leżeć poza mostem. Wiek 5,99–6,01 lub 17,99–18,01 lat → brak jednoznacznego
+punktu między źródłami. M/2 lata → nadal brak źródłowej mediany.
+Kontrola obejmuje też granice mostów, brak dodatkowych ekstremów,
+tożsamość krzywej między zbliżeniami, telefon, pełny ekran i offline.
+Korekta połączenia sprawdza szerokie zaokrąglenie przy 17–18 latach,
+ciągłość stycznych na końcach pasa 16–25 oraz brak wymuszonego
+źródłowego punktu 18 lat w geometrii, bez zmiany źródeł ani skali.
+Testy potwierdzają odtworzenie kontraktu, nie walidację kliniczną.
+Źródła, statystyki i ograniczenia audytu:
+[PATIENT_POINT.md](hormone-lifespan/PATIENT_POINT.md).
+
+### HORMONE-ILLUSTRATIVE-CURVES — płynne łączenie źródeł i dorosły testosteron, 2026-10-11
+
+**Decyzja i cel:** właściciel zaakceptował końcową makietę z jednym łagodnym
+łukiem testosteronu w dorosłości i polecił wdrożenie oraz utrwalenie zasad
+dla agentów. To pomoc edukacyjna do rozmowy z pacjentami i nauczania:
+dopuszcza autorskie uproszczenie rysunku, nie wymyślanie źródeł, norm lub
+liczbowych odniesień. Zastępuje dorosły profil Kelsey i poprzednie mosty
+testosteronu, w tym pas 16–25 lat z poprzedniego wpisu. Obowiązkową
+instrukcję wskazuje AGENTS.md:
+[HORMONE_CURVE_AGENT_GUIDE.md](HORMONE_CURVE_AGENT_GUIDE.md).
+
+**Nowe źródło liczb dorosłych:** Walravens i wsp., JCEM, online
+10 września 2025, wydanie marzec 2026,
+[DOI 10.1210/clinem/dgaf507](https://doi.org/10.1210/clinem/dgaf507),
+tabela 1. Pełny tekst i tabela zostały niezależnie odczytane podczas
+audytu. 1194 mężczyzn pochodzenia europejskiego w wieku 18–86 lat,
+BMI ≤35; młodsze zdrowe kohorty i starsi mieszkańcy społeczności,
+również z chorobami współistniejącymi. Surowica na czczo przed 10:00,
+testosteron całkowity metodą LC-MS/MS, jednostka nmol/L.
+
+| Grupa wieku | N | Średni wiek | Średnia całkowitego T, nmol/L |
+| --- | ---: | ---: | ---: |
+| 18–29 | 141 | 23,8 | 20,7 |
+| 30–39 | 252 | 34,3 | 20,0 |
+| 40–49 | 207 | 43,5 | 18,1 |
+| 50–59 | 150 | 55,0 | 16,9 |
+| 60–69 | 177 | 65,1 | 17,1 |
+| 70–79 | 167 | 74,7 | 17,0 |
+| 80+ | 100 | 82,1 | 15,9 |
+
+To **średnie arytmetyczne grup**, nie mediany, normy, wolny T ani wartości
+dla dokładnego średniego wieku. Siedem profili `group-mean` działa
+odpowiednio w [18,30), [30,40), [40,50), [50,60), [60,70), [70,80)
+i [80,86]. Brak interpolowania grup do liczbowego odniesienia pacjenta.
+Po 86 latach brak punktu ilościowego. Niepewny wiek przecinający grupy
+nie daje jednej arbitralnej średniej. Dane nie opisują izolowanego wpływu
+starzenia ani podłużnego przebiegu jednej osoby; nie przenosimy populacji
+BMI <30 użytej osobno do analizy wolnego T. Plateau starego modelu Kelsey
+nie było błędem transkrypcji i nie jest poprawiane w zachowanym dowodzie.
+
+**Oddzielenie geometrii od źródła:**
+
+- Dzieciństwo: odczyt Busch do 212. dnia, potem jedno monotoniczne zejście
+  do niskiej wartości Madsen w wieku 6 lat. Kelsey 3–5 nie narzuca punktów
+  rysunku; jego p50 3–<6 pozostaje aktywnym liczbowym odniesieniem.
+- Pokwitanie: Madsen i szerokie połączenie do młodej dorosłości nie
+  tworzą sztucznego szczytu 17–18 lat ponad poziomem młodych dorosłych.
+  Źródłowe p50 6–<18 pozostają bez zmian. Dokładnie 18 lat wybiera
+  średnią Walravens 18–29; różnica statystyk nie oznacza skoku fizjologii.
+- Dorosłość: jeden sześcienny łuk Béziera od 23,8/20,7 do 82,1/15,9
+  w kanonicznym X, z poziomymi stycznymi końców, uchwytami 0,20/0,50
+  i 601 próbkami. Nie wymusza pośrednich średnich ani ząbka
+  16,9→17,1→17,0. Po 82,1 roku pozostaje płaski; od 86 do 90 wygasa.
+  Łuk i ogon są ilustracją, nie modelem średniej dla każdego roku życia.
+- Stała skala pozostaje oparta na dzielniku 18,051151264084126 i zapasie
+  1,25 (góra 22,563939080105158 nmol/L). Dzielnik jest historyczną kotwicą,
+  nie maksimum nowej tabeli dorosłych. Wynik, wiek, wybór hormonów i zoom
+  nie zmieniają tej skali.
+- Jasny znacznik bierze prawdziwą średnią/medianę ze źródła i może leżeć
+  poza linią. Czerwony punkt ma rzeczywiste stężenie w tej samej skali.
+  Żaden z nich nie jest przyciągany do wygładzonego rysunku.
+- Zwykłe schematy męskich LH, FSH, INSL3 i AMH używają jednej kanonicznej
+  krzywej PCHIP na zachowanych kotwicach. Zoom próbkuje ją zamiast
+  ponownie dopasowywać 97 próbek i B-spline w nowej osi czasu. Zachowuje
+  skalę, szczyty i kierunek zmian; reszta ponownego próbkowania nie jest
+  deklarowana jako zerowa. Inhibina B zachowuje własną stałą geometrię,
+  a porównanie płci wcześniejszą, odrębną politykę. Zwykłe LH, FSH i AMH
+  zastępują kolejne etapy `HORMONE-LH-FSH-STABLE-CURVES` oraz
+  `HORMONE-AMH-STABLE-CURVE` opisane niżej.
+
+**Wpływ kliniczny:** zmiana dorosłego źródła wpływa na edukacyjne położenie
+wyniku względem populacji i podlega regułom zmian klinicznych AGENTS.md.
+Nie zmienia laboratoryjnych norm, klasyfikacji, jednostek, zapisów,
+przypięć ani historii. Źródła i bramki punktu pediatrycznego pozostają
+bez zmian; luka 1–<3 nie otrzymuje wartości z mostu. Średnia/mediana nie
+jest progiem rozpoznania, a zaakceptowany rysunek nie oznacza walidacji
+klinicznej modelu.
+
+**Regresje na funkcjach produkcyjnych i fikcyjnych danych:**
+M/44 lata/18,1 nmol/L → wynik równy źródłowej średniej 40–49, nawet
+gdy łuk leży wyżej; M/82/15,9 → równość ze średnią 80+; dokładnie
+86 → 15,9; >86 → brak odniesienia. M/44: pusty → 12 → 100 → wyczyszczenie
+→ identyczna linia i skala; 100 ma strzałkę z pełną liczbą. M/2 lata
+→ brak punktu; M/6 → p50 0,02393726986868612; M/17,9 →
+17,87811097018994 nmol/L. Zmiana parametrów geometrii nie może zmienić
+żadnej z tych źródłowych liczb. Kontrole obejmują wszystkie granice grup,
+monotoniczność dzieciństwa i dorosłości, brak nowych ekstremów, ciągłość
+stycznych, desktop, 320 px, pełny ekran, odznaczenie hormonów, powiększenia
+i zachowanie porównania płci. Błąd próbkowania zbliżenia mierzy się
+w pikselach; nie utożsamia z identycznością ścieżek SVG. Walidacja
+techniczna nie dowodzi prawidłowości medycznej.
+
+### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
+
+**Decyzja właściciela:** wdrożenie poprawionej makiety LH/FSH po kontroli
+zbyt silnego wzrostu FSH w środkowej dorosłości. To edukacyjna prezentacja
+zmian hormonów, nie nowe normy. Polityka `lh-fsh-display-policy.json`
+oddziela rysunek od źródłowych median/średnich i laboratoryjnej interpretacji.
+Makieta wyświetlała początkowo oba hormony dla porównania; aplikacja nadal
+wybiera domyślnie tylko bieżący analit.
+
+**Nowe źródła odniesienia pacjenta:** pełne teksty i tabele odczytano
+podczas audytu. Jednostką jest IU/L; nie zamieniamy statystyk grupowych
+w mediany dokładnego wieku. Metoda publikacji nie potwierdza metody próbki.
+
+| Źródło | Populacja i oznaczenie | Zastosowanie |
+| --- | --- | --- |
+| Laurentino 2020, FAMe, tabela 1, DOI [10.1111/acel.13242](https://doi.org/10.1111/acel.13242) | Zdrowi ochotnicy, Münster; najmłodsza grupa N=34; Abbott Architect i1000 CMIA | 18–<25 lat: średnia grupy LH=3,0 i FSH=3,0. Górna granica 24/25 jest niespójna w źródle; 18–<25 to jawna zachowawcza polityka, bez przeliczania grupy. |
+| Perheentupa 2013, FINRISK, tabela 4 (LH) i tabela 5 (FSH), kolumna All, DOI [10.1530/EJE-12-0288](https://doi.org/10.1530/EJE-12-0288) | Finlandia, połączone badania 1972, 1977 i 2002; Wallac DELFIA | Sześć median grup wieku 25–29, 30–39, 40–49, 50–59, 60–69, 70–74; profile aplikacji kończą się przed kolejnymi urodzinami 30/40/50/60/70/75. |
+| Yeap 2007, HIMS, tabela 1, DOI [10.1530/EJE-06-0714](https://doi.org/10.1530/EJE-06-0714) | Starsi mężczyźni mieszkający samodzielnie, Perth; także choroby współistniejące; Immulite 2000 | Tylko LH: mediany 75–79=4,44; 80–84=5,14; 85–89=5,22. Ostatnia grupa działa do dokładnie 89 lat. |
+| Ljubicic 2020, ryc. 1, środkowa krzywa 0 SD, DOI [10.1093/humrep/deaa182](https://doi.org/10.1093/humrep/deaa182) | Duńskie kohorty mężczyzn badanych w wieku 41/51/61/71/80 lat; AutoDELFIA | FSH 75–80: przybliżona mediana modelu, 7,8289→8,4178. Roczne odczyty nie są obserwacjami osobnych roczników; znak ≈ i około dwie cyfry znaczące. |
+
+FINRISK: LH odpowiednio 3,74 / 3,76 / 3,91 / 4,53 / 4,73 / 5,57;
+FSH 3,43 / 4,00 / 4,56 / 5,64 / 5,92 / 6,43 IU/L. Mediany grup są
+stałe wewnątrz profilu, bez interpolacji pomiędzy grupami. Różnice kohort,
+platform i statystyk nie są nagłym zdarzeniem fizjologicznym. FINRISK
+obejmuje efekt kohorty urodzeniowej; ilustracja nie przewiduje podłużnego
+przebiegu u jednej osoby. Odczyty Ljubicic mają roboczą tolerancję
+graficzną około 8,5%, nie przedział ufności; nie obliczamy z nich SDS.
+
+**Rysunek:** jedna kanoniczna krzywa na hormon i stała skala we wszystkich
+zwykłych widokach. Dzielnik LH=5,57, FSH=8,4178; zapas wysokości 1,25.
+Pusty/wysoki/usunięty wynik, wiek, wybór hormonów i powiększenie nie
+zmieniają przebiegu. Wynik ponad osią ma strzałkę z rzeczywistą liczbą.
+Jasny znacznik zachowuje źródłową statystykę, nawet gdy leży poza linią.
+
+FSH po 12 latach przechodzi szerokim mostem do 25 lat, bez wymuszonego
+szczytu na styku Madsen i dorosłych badań. Łuk 25–80 jest sprawdzony
+względem 40 pośrednich odczytów Ljubicic 41–80: RMS około 0,050,
+maksymalna różnica około 0,127 IU/L. Uchwyty w kanonicznym X wynoszą
+0,5907758320847372 i 0,08; początkowe nachylenie 0,05 IU/L/rok nie tworzy
+przystanku przy 25 latach. Po 80 latach zakończenie jest płaskie i wygasa.
+Most 12–25 jest świadomym uproszczeniem: przy 14–16 latach leży około
+24–34% poniżej median Madsen, które pozostają niezmienione w odniesieniu
+pacjenta. Nie jest to nowy model p50 ani poprawa dokładności tych median.
+
+Spadek FSH w minipuberty pozostaje zgodny z ponowną kontrolą ryciny Busch;
+ryc. 2 opisuje średnie trajektorie, ryc. 3 medianę populacyjną. Nie
+utożsamiamy ich szczytów. Odcinek „Płód · schemat” nie ma zweryfikowanych
+stężeń płodowych ani liczbowego punktu pacjenta. Podpis wyjaśnia, że
+LH i FSH porównujemy w czasie na osobnych skalach: przecięcie nie oznacza
+równych stężeń ani ilorazu LH/FSH. Porównanie płci zachowuje własny kontrakt.
+
+**Wpływ kliniczny:** nowe dorosłe odniesienia zmieniają edukacyjne położenie
+wyniku i są objęte akceptacją tej makiety. Nie zmieniają norm laboratoryjnych,
+werdyktów, konwersji, danych pacjenta, historii, wizyt ani przypiętych wyników.
+Pozostają bramki metody, materiału, wieku, donoszenia i cenzurowania.
+Luka >16–<18 lat, FSH >80 i LH >89 nie otrzymują wymyślonego odniesienia.
+
+**Przypadki na rzeczywistych funkcjach produkcyjnych:** M/44/LH 2 → mediana
+grupy 3,91; M/44/FSH 2 → mediana grupy 4,56; M/75/LH → 4,44;
+M/75/FSH → ≈7,8; M/80/FSH → ≈8,4; M/>80/FSH → brak odniesienia;
+M/89/LH → 5,22; M/>89/LH → brak odniesienia. Niepewny wiek przecinający
+grupę nie daje arbitralnej wartości. Testy obejmują puste/typowe/wysokie/
+cenzurowane wyniki, odznaczanie, desktop, 320 px, pełny ekran, zbliżenia,
+tryb offline, zgodność źródeł i oddzielenie geometrii od odniesienia.
+Weryfikacja techniczna nie nadaje wykresowi statusu walidacji klinicznej.
+
+### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
+
+**Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana
+11 października 2026 do wdrożenia w zwykłych męskich widokach. Jedna
+płynna linia zastępuje przełączanie schematu na odcinki źródłowe po
+wpisaniu wyniku. Jej dzieciństwo stopniowo opada, zamiast pozostawać
+blisko niemowlęcego maksimum. Porównanie płci zachowuje osobny kontrakt.
+
+**Zweryfikowane źródła, bez nowych profili:**
+
+- [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3: mediana
+  GAMLSS odczytana z wektorów PDF, 119 zdrowych donoszonych chłopców,
+  338 próbek surowicy, Access 2. Zachowane odniesienie 7 dni–<1 roku.
+  Szerokie maksimum odczytanej mediany około 175. dnia wynosi około
+  187 ng/mL. Szczyt około 146. dnia w tekście dotyczy innej statystyki,
+  modelu podłużnego; nie przesuwamy do niego mediany ryc. 3.
+- [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2:
+  2009 zdrowych chłopców z Wuhan, surowica, Access 2. Pozostaje 13
+  zgodnych median rocznych grup 1–11, 13 i 14; `[N,N+1)` jest jawną
+  konwencją aplikacji, nie definicją dokładnego wieku podaną przez autora.
+  Mediany nie opisują stadiów Tannera. Konflikt grupy 12 (6,99/7,99 ng/mL)
+  oraz grupy 0 pozostaje w dowodzie; ilustracja nie rozstrzyga go.
+- [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2:
+  831 zdrowych mężczyzn z Teheranu, 30–70 lat, surowica, zmodyfikowany
+  Gen II EIA. Wszystkie 328 komórek tabeli sprawdzono z pełnym XML.
+  To roczne p50 modelu, m.in. 30/7,08, 40/6,12, 60/4,57 i 70/3,95 ng/mL;
+  interpolacja pomiędzy nimi nie jest pełnym równaniem autora.
+
+To różne populacje i statystyki. Access 2 oraz zmodyfikowany Gen II
+nie zostały tu skalibrowane między sobą. Przeliczenie jednostek AMH
+(`ng/mL / 0,1401` na pmol/L) nie jest harmonizacją metod.
+
+**Zatwierdzona geometria:** czytelna polityka
+[`amh-display-policy.json`](hormone-lifespan/amh-display-policy.json),
+`amhDisplayPolicy` oraz `VildaHormoneLifespanDisplay.buildMaleAmh`
+przygotowują stałe węzły. Rysowanie odbywa się w kanonicznym X osi całego
+życia; zbliżenia próbkują ten sam przebieg. Węzły mediany Busch od 7. do
+250. dnia zachowano. Sześcienne łuki Béziera prowadzą dalej do
+9,5 roku / 58,96 ng/mL, 14,5 / 8,23, 30 / 7,08 i 70 / 3,95.
+Środki grup Wang służą wyłącznie kontroli rysunku. Nie przypisują mediany
+całej grupy dokładnemu wiekowi ani momentowi osiągnięcia stadium.
+Wygładzenie nie wymusza wszystkich wartości grupowych: przykładowo
+przy 11,5 roku linia odpowiada około 25,01 ng/mL, a źródłowy znacznik
+pozostaje na medianie grupy 20,70 ng/mL. Różnica nie zmienia danych.
+
+Dzielnik skali wynosi 1335,592934 pmol/L, zapas 1,25; oba pozostają stałe
+przy pustym wyniku, wpisaniu liczby, zmianie wieku i powiększeniu. Dorosłe
+4–7 ng/mL pozostaje blisko osi wobec niemowlęcych około 187 ng/mL;
+nie podnosimy go sztucznie dla czytelności. Kotwice płodowe oraz odcinek
+urodzenie–7. dzień są oznaczonym schematem. Ich wysokości techniczne
+nie otrzymują liczbowych tooltipów ani znacznika źródłowego. Po 70 latach
+linia zachowuje ostatnią wysokość i wygasa do 90; to koniec dowodu,
+nie twierdzenie o biologicznym plateau lub nowe odniesienie pacjenta.
+
+**Wpływ kliniczny:** zmienia się edukacyjny obraz relacji okresów życia.
+Wszystkie 15 męskich profili AMH, ich liczby, kwalifikacja pacjenta,
+normy laboratoryjne i werdykty pozostają dotychczasowe. Brak ilościowego
+odniesienia przed 7. dniem, w grupie 12–<13 lat, w wieku 15–<30 i po
+70 latach. Niemowlę wcześniacze lub z nieznanym donoszeniem nadal nie
+kwalifikuje się do Busch. Płynna linia nie wypełnia tych luk liczbami.
+Akceptacja makiety i techniczne kontrole nie nadają połączonej krzywej
+statusu walidacji klinicznej.
+
+**Przypadki i kontrole:** M/5,5 roku/99,18 ng/mL → znacznik mediany
+całej grupy Wang 5–<6, niezależny od linii około 95,25; M/11,5/20,70 →
+mediana grupy 11–<12; M/12,5/7 i M/20/7 → brak odniesienia;
+M/40/6,12 → p50 Tehrani; M/70/3,95 → p50, >70 → brak odniesienia.
+Dla tych samych danych pusty → zgodny → wysoki → wyczyszczony wynik
+musi zachować linię i skalę. Kontrole obejmują minipuberty, pokwitanie,
+pełny ekran, desktop i 320 px, ciągłość stycznych, nieujemność, brak
+odbicia po szczycie oraz brak ekstrapolacji profili. Zestawienie audytu:
+[`amh-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/patient-point/amh-lifespan-display-audit-2026-10-11.json).
+
+### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
+
+**Decyzja właściciela:** wdrożyć zatwierdzoną makietę porównania płci
+AMH w minipuberty. Bez wyniku i po jego wpisaniu obie linie mają te same
+źródła i wspólną skalę. Zastępuje to przełączanie osobno normalizowanego
+schematu na modele stężeń oraz dobieranie skali do wysokości wyniku.
+Inne hormony, porównania pokwitania i zwykłe widoki pozostają odrębne.
+
+**Źródła i populacja:** [Busch 2022](https://doi.org/10.1210/clinem/dgac115),
+rycina 3 — 119 zdrowych donoszonych chłopców, 338 próbek surowicy,
+przybliżony odczyt mediany GAMLSS; [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363),
+[tabela D suplementu](https://doi.org/10.6084/m9.figshare.19469555.v1) —
+98 zdrowych donoszonych dziewczynek, 266 próbek, 99 zachowanych median
+sprawdzonych z oryginalną tabelą. Oba badania: COPENHAGEN Minipuberty,
+ciąże pojedyncze, surowica, Beckman Coulter Access 2. To modele median,
+nie średnie trajektorie podłużne ani zaobserwowana mediana każdego dnia.
+Wspólna metoda nie usuwa ograniczeń populacji i dopasowania modelu.
+LOD AMH wynosi w obu pracach 0,14 pmol/L; osobnego LOQ AMH nie podano.
+LOQ 2,9 i 4,0 pmol/L w Ljubicic dotyczą estrogenów. Imputacja LOD/2
+w badaniu nie jest dokładną wartością cenzurowanego wyniku pacjenta.
+
+**Polityka prezentacji:** `amh-comparison-policy.json`, eksport
+`amhComparisonPolicy` i `VildaHormoneLifespanDisplay.buildAmhInfantComparison`
+utrwalają parę `busch2022-male-amh` / `ljubicic2022-female-amh`.
+Wspólny zakres linii: 0,02–<1 roku, bez ekstrapolacji do urodzenia.
+Oś log10 ma stałe poziomy 0,1 / 1 / 10 / 100 / 1000 ng/mL. Każdy krok
+oznacza 10× wyższe stężenie; jednakowa wysokość obu płci oznacza tę samą
+liczbę. Oś, krzywe i źródła nie zależą od obecności wyniku ani jego wartości.
+Oba znaczniki i linie stosują dotychczasowy współczynnik
+1 pmol/L = 0,1401 ng/mL. Granice osi są decyzją graficzną, nie normą
+lub granicą wykrywalności. Nie dodano wyboru skali ani pól pacjenta.
+
+**Punkt i granice:** dotychczasowe `evaluate` zachowuje kwalifikację
+wieku, donoszenia, metody, materiału i jednostki. Odniesienie chłopca
+od 7. do <7,305 dnia pozostaje dostępne mimo późniejszego początku
+wspólnych krzywych. Dokładnie pierwsze urodziny nie otrzymują punktu
+żadnej płci w tym widoku; nie zastępujemy męskiej linii profilem Wang.
+Wcześniactwo, nieznane donoszenie lub niekwalifikujący wynik ukrywają
+punkt, nie linie populacyjne. Zero i wynik poniżej osi otrzymują
+strzałkę w dół, ponad osią w górę, z zachowaniem liczby. Nie używamy
+log(0), sztucznego dodatniego minimum ani dokładnej kropki dla „<…”.
+Maszynowa tolerancja granicy osi zapobiega strzałce dla 1000 ng/mL
+po konwersji do SI i z powrotem; nie zmienia klinicznych progów.
+
+**Wpływ kliniczny:** zmienia się znaczenie prezentacji — zamiast
+osobno wyrównanych szczytów widać rzeczywistą różnicę stężeń median
+modeli. Nie zmieniają się źródłowe profile, ich domeny, współczynniki,
+normy, werdykty, zapis ani historia. Czerwony punkt nie oznacza sam
+w sobie nieprawidłowości. Akceptacja makiety nie jest walidacją kliniczną.
+
+**Przypadki i kontrole:** przy 90 dniach mediana M≈161,6811 ng/mL,
+F≈2,3535; przy 7 dniach M≈64,25565, F bez odniesienia. Wspólne linie
+od 7,305 dnia; w 1 roku obie bez punktu tego porównania. Pusty wynik,
+0, 0,1, 1000, 10000 i wyczyszczenie nie zmieniają krzywych ani skali.
+Kontrole obejmują rzeczywiste funkcje modelu i renderera, przeliczenie
+pmol/L, nierówności, niepewny wiek, wcześniactwo, niezgodną metodę,
+pełny ekran, komputer i 320 px. Odtwarzalne źródła, zatwierdzona makieta
+i dokładniejsze punkty kontrolne:
+[`amh-infant-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+
+### HORMONE-INHIBIN-SEX-COMPARISON — wspólna oś i punkt dziewcząt 8–20 lat, 2026-10-11
+
+**Decyzja właściciela:** wdrożyć zaakceptowane makiety porównania płci
+inhibiny B w minipuberty i pokwitaniu, wraz z osobno zaakceptowanym
+odniesieniem wyniku dziewcząt 8–20 lat wyłącznie w porównaniu pokwitania.
+To zmiana prezentacji oraz rozszerzenie kwalifikacji edukacyjnego punktu,
+nie refaktoryzacja bez wpływu na wynik. Nie zmienia norm laboratoryjnych,
+oceny stadium, diagnozy, zapisu ani historii.
+
+**Minipuberty — źródła i populacja:** [Busch 2022](https://doi.org/10.1210/clinem/dgac115),
+ryc. 3 — 119 zdrowych donoszonych chłopców, 338 próbek surowicy;
+[Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363),
+[tabela C suplementu](https://doi.org/10.6084/m9.figshare.19469555.v1) —
+98 zdrowych donoszonych dziewczynek, 266 próbek. Oba badania COPENHAGEN
+Minipuberty dotyczą ciąż pojedynczych i stosują Beckman Coulter Inhibin B
+Gen II ELISA. Są to mediany modeli wieku GAMLSS, nie średnie trajektorie
+podłużne. LOD wynosi 3 pg/mL; osobnego LOQ inhibiny B nie podano.
+99 żeńskich median sprawdzono z oryginalną tabelą; męski odczyt ryciny
+nie ma dokładności wszystkich zapisanych miejsc dziesiętnych.
+
+**Pokwitanie — źródło i ograniczenia:** [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439),
+ryc. 1–3, przybliżone mediany GAMLSS. Żeńska kohorta 5,6–20,2 lat liczy
+648 dziewcząt; wszystkie żeńskie próbki oznaczano w surowicy metodą
+Gen II. Męski model łączy Oxford Bio-innovation i Gen II. Przybliżenie
+digitalizacji wynosi odpowiednio około ±2 i ±5 pg/mL; to nie przedziały
+ufności, normy ani precyzja oznaczenia. Nie stosujemy współczynnika 1,28
+między metodami: autorzy nie skorygowali nim łączonych stężeń.
+Fazy cyklu nie standaryzowano, a antykoncepcja wpływa na stężenia.
+Wiek nie ustala Tannera. Nie odzyskano parametrów L/S i nie oblicza się
+SDS, percentyli ani norm z samej centralnej krzywej.
+
+**Dane i prezentacja:** `inhibin-comparison-policy.json`, eksport
+`inhibinComparisonPolicy` oraz `buildInhibinComparison(data, referenceEngine, period)`
+ustalają stałą wspólną liniową oś 0–400 pg/mL, z podziałką co 100.
+1 ng/L = 1 pg/mL; każda płeć zachowuje tę samą jednostkę i skalę.
+Granice osi nie są granicami normy ani wykrywalności. Linie, źródła
+i skala nie zależą od wyniku. Zero jest punktem na dolnej granicy,
+wynik ponad osią strzałką z rzeczywistą wartością; wynik cenzurowany
+nie otrzymuje dokładnej kropki. Nie dodano pól ani wyboru skali.
+
+Minipuberty używa niezmienionych `busch2022-male-inhb` i
+`ljubicic2022-female-inhb`: wspólne linie od 0,02 do <1 roku,
+bez ekstrapolacji do urodzenia. Własny punkt chłopca pozostaje dostępny
+od 7. dnia mimo początku wspólnych krzywych w 7,305 dnia. Dokładnie
+1 rok nie otrzymuje punktu żadnej płci w tym porównaniu; nie podstawiamy
+Kelsey ani nie zmieniamy żeńskiej granicy profilu w innych widokach.
+Wcześniactwo i nieznane donoszenie nadal blokują punkt tych profili,
+nie linie populacyjne.
+
+Pokwitanie używa istniejącego `borelli2025-male-inhb` oraz osobnego
+`borelli2025-female-inhb-puberty-comparison`. Nowe dane żeńskie są
+w `inhibin-comparison-reference-data.json` / `inhibinComparisonReferenceData`,
+poza globalnym `patientPointData`. Wszystkie 24 dotychczasowe węzły
+ryc. 1 z wieku 5,6–47 lat pozostają w PCHIP, ale kwalifikacja obejmuje
+wyłącznie 8–20 lat włącznie w tym porównaniu. Nie aktywuje to punktu
+w zwykłych widokach ani poza tym wiekiem. Istniejący `evaluate`
+kwalifikuje własną płeć z zachowaniem reguł wieku, metody, materiału,
+jednostki i znanych przeciwwskazań; metoda drugiej płci nie blokuje
+własnego zgodnego odniesienia. Panele obserwacji Kuiri-Hänninen,
+Crofton i Baccarelli pozostają odrębnymi, niezmienionymi zestawieniami.
+
+**Przypadki syntetyczne rzeczywistych funkcji:** w 90. dniu mediana
+inhibiny B M≈294,2938, F≈49,4718 pg/mL; w 7. dniu tylko własne
+odniesienie M≈187,9788. Dokładnie 1 rok → brak punktu minipuberty.
+Dziewczynka 8/12/13/20 lat w porównaniu → przybliżone mediany
+14/43/47/34 pg/mL; przed 8 lub po 20 latach i w zwykłym widoku
+→ bez tego nowego odniesienia. Niepewny wiek przekraczający granicę
+nie wybiera arbitralnie profilu. Wyniki pusty → 0 → 400 → 1000 →
+wyczyszczenie zachowują linie i skalę. Kontrole obejmują własną płeć,
+niezgodną metodę/materiał, wcześniactwo, nierówności, jednostki,
+pełny ekran, telefon i niezmienione źródłowe profile.
+Źródła, granice, zatwierdzone makiety i punkty kontrolne:
+[`inhibin-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/inhibin-comparison-audit-2026-10-11.json).
+Akceptacja makiet i testy techniczne nie są walidacją kliniczną.
+
+### HORMONE-INSL3-STABLE-CURVE — przerywana ilustracja INSL3, 2026-10-11
+
+**Decyzja właściciela:** wdrożyć poprawioną makietę zwykłych męskich
+widoków. Linia zachowuje niewielki wzrost w pierwszych tygodniach,
+zaokrąglony szczyt około miesiąca, niski poziom dzieciństwa i łagodny
+przebieg od pokwitania przez dorosłość. Wysokość niemowlęca jest wyraźnie
+niższa niż w młodej dorosłości. Zastępuje to pierwotny wysoki schemat
+oraz odrzuconą propozycję usuwającą wczesny wzrost.
+
+**Źródła i znaczenie:** pełny tekst [Busch 2022](https://doi.org/10.1210/clinem/dgac115),
+str. 1561–1565, i [tabela S1](https://doi.org/10.6084/m9.figshare.19093793.v1)
+opisują COPENHAGEN Minipuberty: 119 zdrowych donoszonych chłopców,
+338 postnatalnych próbek surowicy, w tym 226 oznaczeń INSL3 metodą
+LC-MS/MS. Ryc. 2 przedstawia modelowaną średnią trajektorię podłużną
+z krwią pępowinową, znormalizowaną do maksimum każdego hormonu w tym
+okresie; INSL3 rośnie od około 0,78 tej skali przy urodzeniu do maksimum
+około 27. dnia. To nie normalizacja do dorosłego INSL3 ani indywidualne
+skalowanie każdego uczestnika. Ryc. 3 przedstawia medianę GAMLSS tej
+samej kohorty, bez krwi pępowinowej w dopasowaniu. Jej malejący kształt
+nie wyklucza wczesnej fali modelu podłużnego. Wartości ryc. 3 są już po
+transformacji odwrotnej; ponowne podniesienie odczytu do kwadratu byłoby błędem.
+
+Tabela S1 zawiera medianę 0,11 µg/L i średnią 0,17 µg/L w grupie
+4–50 dni oraz medianę 0,10 µg/L w grupie 51–100 dni. To statystyki
+grup, nie stężenia w dokładnym dniu. [Bay 2007](https://doi.org/10.1210/jc.2007-0974),
+tabela 2, podaje dla zdrowych chłopców około trzeciego miesiąca mediany
+0,13 i 0,15 ng/mL; [Bay 2005](https://doi.org/10.1210/jc.2004-2257)
+podaje dorosłą medianę 0,99 ng/mL. Powiązany typ oznaczenia TRFIA
+wspiera niższy poziom centralny niemowląt, ale nie ustala uniwersalnego
+ilorazu stężeń ani wysokości szczytu pierwszego miesiąca. Dla Bay 2005
+sprawdzono pierwotny indeksowany abstrakt, bez nowego pełnego PDF.
+
+Pokwitanie i dorosłość wspierają [Albrethsen 2020](https://doi.org/10.1210/clinem/dgaa145),
+[Johansen 2014](https://doi.org/10.1530/REP-13-0435),
+[Tulumcu 2025](https://doi.org/10.3389/fendo.2025.1574760),
+[EMAS 2022](https://doi.org/10.1111/andr.13220) i
+[FAMAS 2006](https://doi.org/10.1111/j.1365-2605.2006.00714.x).
+Dostarczony pełny tekst Tulumcu zawiera własne wizyty ALSPAC około
+17. i 24. roku; opis niemowlęctwa cytuje Busch. Ryc. 1B jest syntezą
+średnich kilku badań od późnego dzieciństwa, nie nowym badaniem niemowląt
+ani medianą całego życia. Wnioskowanego maksimum około 22 lat nie
+przekształcamy w dokładny uniwersalny wiek szczytu. LC-MS/MS, TRFIA,
+średnie i mediany różnych kohort nie tworzą jednej skalibrowanej serii.
+Prenatalne kotwice pozostają schematem, z jakościowym oparciem w
+[Harrison 2019](https://doi.org/10.3389/fendo.2019.00596).
+
+**Zatwierdzona geometria:**
+[`insl3-display-policy.json`](hormone-lifespan/insl3-display-policy.json),
+`insl3DisplayPolicy` i `buildMaleInsl3(data)` opisują jedną krzywą
+w kanonicznym X całego życia. Stała skala względna ma `divisor = 1`
+i `ceiling = 1`; zbliżenia i pełny ekran nie normalizują niemowlęctwa
+osobno. Zachowany przerywany styl `6 5` identyfikuje analit. Nie oznacza
+normy ani braku ciągłości. Wysokości 0,109158 przy urodzeniu i 0,14
+około 27. dnia są bezwymiarowymi kotwicami rysunku; stosunek 0,14/0,87
+do młodej dorosłości nie jest zwalidowanym ilorazem stężeń.
+
+Wspólna pozioma styczna przy urodzeniu łączy schemat prenatalny z małą
+falą bez dodatkowego dołka; nie dowodzi dokładnego biologicznego minimum.
+Odcinek od 200. dnia przechodzi łagodnie do 0,012 w pierwszym roku,
+bez nazywania ilustracyjnego ogona stężeniem modelu. Niskie dzieciństwo
+i wzrost pokwitaniowy dochodzą do szerokiego wysokiego obszaru młodej
+dorosłości. Jeden łuk 25–80 lat opada od 0,87 do 0,455; ostatnia wysokość
+wygasa do 90 lat. Granica 80 lat jest decyzją prezentacji, nie dokładnym
+końcem obserwacji EMAS; etykieta grupy 80–89 nie ustala maksymalnego wieku.
+
+**Ograniczenia i wpływ kliniczny:** zmienia się edukacyjny obraz przebiegu
+INSL3, bez aktywacji kalkulatora, liczbowego punktu pacjenta, stężeń
+w tooltipach, profilu norm lub nowych werdyktów. Dane odniesienia innych
+hormonów, ich normy laboratoryjne, jednostki i zapis pacjenta pozostają
+bez zmian. Busch podaje LOD 0,03 µg/L (niespójna jednostka µg/mL
+w Methods); wyniki poniżej LOD zastępuje LOD/2. LOQ 0,15 µg/L pochodzi
+z cytowanego opisu metody Albrethsen, nie z jawnej wartości LOQ INSL3
+w pracy niemowlęcej. Mediana poniżej LOQ ogranicza pewność dokładnej
+liczby; nie dowodzi braku biologicznej fali ani nie unieważnia automatycznie
+estymacji populacyjnej. Autorski rysunek nie rozwiązuje tych ograniczeń.
+
+**Przypadki kontrolne rzeczywistej funkcji:** męski INSL3 → przy urodzeniu
+0,109158, około 27. dnia 0,14, w 100. dniu 0,056672, w wieku 25 lat
+0,87, a 80–90 lat 0,455 z wygaszeniem; wszystkie liczby są względnymi
+wysokościami, bez jednostki stężenia. Przekazanie wyniku INSL3 0,04, 1
+lub 10000 nie uruchamia punktu odniesienia i nie zmienia rysunku ani skali.
+Kontrole obejmują brak przeregulowania, ciągłość stycznych, ten sam
+przebieg w minipuberty i całym życiu, desktop, 320 px i pełny ekran.
+Test funkcji: `hormone-lifespan-insl3.test.mjs`; E2E:
+`hormone-lifespan-insl3-stability.spec.mjs`. Akceptacja makiety
+i testy techniczne nie nadają jej statusu walidacji klinicznej.
+
+Źródła, dostępność pełnych tekstów, statystyki i rozstrzygnięcia audytu:
+[`insl3-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/insl3-lifespan-display-audit-2026-10-11.json).
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
@@ -2705,6 +3963,40 @@ Stąd kumulacja: pierwszy błąd tworzył warunki dla wszystkich następnych. Da
 *Strażnicy:* `tests/unit/odtworzenie-wiek-pomiaru.test.mjs` (30, prawdziwy `vilda_dob_age.js` na atrapie DOM i prawdziwy resolver daty raportu: doba pomiaru z `measuredAtISO`/`timestampISO` i strefy, wiek pomiaru wg reguły Karty, dokładne doby tylko przy zgodnej dobie, reguły tygodni, notka zgłoszenia co do znaku, kontrola „Nowy pomiar"/nowe wczytanie na dziś, F5, nowy pomiar po odtworzeniu, wizyta zapisana dziś, rekord zapisany ponownie, data dopisana po zapisie, tylko pewna data pomiaru do zapisu, kolejność wyboru w `restoreLoadedState`). **Zmierzone czerwone:** 28 z 30 przeciwko kodowi sprzed zmiany (zielone zostają dwaj strażnicy zachowania, które ma zostać: „wybór bez rekordu" i tygodnie z Karty). `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs` (8 na prawdziwej stronie z przesuniętym zegarem: nastolatek z F5, DocPro i kontrolą „Nowy pomiar"; niemowlę w 29. dobie; okno zamknięte Escape i sam przycisk z odczytem synchronicznym; ponowny zapis w tym samym miesiącu z F5 i kolejnym odtworzeniem; nowy pomiar po odtworzeniu; data pomiaru w Karcie, karcie porównania i raporcie; zapis z kalkulatora klirensu; powłoka Start → DocPro). **Zmierzone czerwone:** 8 z 8 przeciwko kodowi sprzed zmiany; test z Escape czerwony także po cofnięciu samej zmiany w `restoreLoadedState`. `tests/unit/odtworzenie-na-zywo.test.mjs`: pin `VERSION` 7 → 8.
 
 **Do decyzji właściciela.** (1) Akceptacja kliniczna reguły dla formularza głównego. (2) Brzmienie notki. (3) Reguła „nowa masa albo wzrost po odtworzeniu = nowy pomiar na dziś": poprawka literówki w pomiarze starej wizyty też przełączy wiek na dziś (jak przed zmianą); inne pola (obwody, talia, ciśnienie) wpisane do odtworzonej wizyty liczą się w wieku tej wizyty i dostają jej datę. (4) Poprawka daty urodzenia w Karcie zostawia zapisany wiek wizyty (reguła Karty); wiek na dziś daje „Nowy pomiar". (5) Kolektor formularza głównego zapisuje `user.measuredAtISO` (tylko pewną datę) — nowe użycie istniejącego pola rekordu.
+
+### P-ODTWORZ-WIEK-2 — data pomiaru po usunięciu, po północy, przy ponownym zapisie, z klirensu i po poprawce w Karcie (SW 1.1.201, 2026-10-08, przegląd po P-ODTWORZ-WIEK)
+
+**Skąd.** Trzecia runda przeglądu adwersaryjnego kodu P-ODTWORZ-WIEK po scaleniu (7 znalezisk, każde potwierdzone przez dwóch niezależnych weryfikatorów na prawdziwej stronie z przesuniętym zegarem). Dwa to regresje P-ODTWORZ-WIEK (formularz główny zaczął zapisywać `user.measuredAtISO` także zwykłym wizytom), pięć to luki, przez które gwarancja „odtworzona wizyta liczy się w wieku pomiaru" nie obejmowała wszystkich ścieżek. Właściciel wybrał pełną poprawkę jednym PR.
+
+**Reguła** bez zmian (Rata B, P3): wzrost i masę znamy wyłącznie z chwili pomiaru; data urodzenia podpowiada wiek tylko **następnego** pomiaru. Data pomiaru trafia do rekordu tylko wtedy, gdy jest **pewna**.
+
+**Zmiana.**
+
+1. **R0 — usunięcie bieżącego pomiaru w Karcie (`vilda_vault.js`, `Bzw_dataAwansu`).** Po usunięciu bieżącego pomiaru do `user` awansuje najnowszy wiersz historii, ale `measuredAtISO`, `ageWeeks` i `timestampISO` zostawały z **usuniętej** wizyty. Starsza wizyta dostawała fałszywą „pewną" datę: „Odtwórz zapis" liczył na nią dokładny wiek, a Karta „+ Nowy pomiar" wpisywała ją do historii. Teraz po kolei: data wiersza (pisze ją Karta), potem starsza wersja rekordu, w której ten pomiar był bieżący (jej `measuredAtISO`, `ageWeeks` i `timestampISO`, gdy daty się zgadzają). Bez żadnej z nich daty nie zgadujemy — pola znikają. Edycja bieżącego pomiaru w Karcie (`Bzw_tygodnieKorekty`) usuwa nieaktualne `ageWeeks`, gdy zmienia się **wiek** pomiaru (porównanie z poprzednią liczbą miesięcy rekordu; okno Karty podaje wiek i datę zawsze, także przy korekcie samej masy). Masa, wzrost i sama data ich nie ruszają: bez daty urodzenia tygodnie to jedyny dokładny wiek pomiaru, a z datą urodzenia i pewną dobą moduł daty i tak liczy je z kalendarza.
+2. **R1/G4 — wizyta zapisana po „Nowym pomiarze" (`vilda_dob_age.js` 8 → 9, kolektor).** Po zapisie wybór zostaje `'new'`, więc tuż po północy zapisana właśnie wizyta liczyła się już w wieku nowego dnia. Wskaźnik zapisu pokazywał „Niezapisane zmiany" przy niezmienionych danych, a ponowny zapis stemplował datę następnego dnia. Kolektor po udanym zapisie stawia w sesji karty znacznik `vildaDobAgeZapisV1` („wizyta zapisana w tej karcie"). Zdejmuje go każde nowe wczytanie pacjenta i „Wyczyść". Przy znaczniku moduł daty urodzenia traktuje formularz jak odtworzoną wizytę — **tylko** dopóki masa i wzrost są równe zapisanym. Nowa masa albo wzrost to nowy pomiar na dziś, jak dotąd.
+3. **G2 — ponowny zapis wizyty bez pewnej daty (kolektor 1.26.0 → 1.27.0, `Bts0`).** Bez daty urodzenia (albo przy wieku wpisanym ręcznie) data pomiaru nie jest pewna, więc kolektor jej nie pisze. Do tej pory dawał przy tym świeży `timestampISO`, więc każdy ponowny zapis przesuwał dzień pomiaru na dzień zapisu. Po późniejszym dopisaniu daty urodzenia ten dzień uchodził za „potwierdzony" (ta sama liczba ukończonych miesięcy), szedł do dokładnego wieku niemowlęcia i do raportu. Teraz, gdy formularz pokazuje zapisaną wizytę bez zmian w masie i wzroście (`VildaDobAge.showsSavedMeasurement()`), a rekord nie ma pewnej daty, kolektor zachowuje `timestampISO` rekordu. Kiedy wersję zapisano, mówi i tak `savedAtISO` wersji. Ostatni pomiar klirensu podaje „Data zapisu" z czasu zapisu sesji klirensu (`clcr.savedAtISO`), a nie z `timestampISO`.
+4. **G5 — strona kalkulatora klirensu (`kalkulator-klirens.html`).** Strona nie ładowała modułu daty urodzenia, więc zapis z niej rekordu sprzed wdrożenia P-ODTWORZ-WIEK (bez `measuredAtISO`) gubił dzień pomiaru: nowy `timestampISO` zamieniał dzień zapisu z klirensu w dzień pomiaru. Moduł jest tu teraz ładowany przed kolektorem jako samo API (strona nie ma pola daty, `mount()` niczego nie montuje, wygląd bez zmian), więc kolektor liczy pewną datę tak samo jak w formularzu głównym.
+5. **G3/G6 — poprawka odtworzonej wizyty w Karcie (`vilda_baseline_pacjenta.js` 1 → 2).** „Historia → Edytuj" (`updateMeasurementRow`) nie przeładowuje formularza; moduł linii bazowej podmieniał tylko `lastLoadedData`. Formularz zostawał przy starej masie i wzroście, moduł daty urodzenia przestawał uznawać je za zapisany pomiar i liczył je **w wieku na dziś** (pierwotne zgłoszenie wracało). Następny „Zapisz" cofał poprawkę z Karty i stemplował starym wartościom dzisiejszą datę. Teraz, gdy formularz pokazuje zapisaną wizytę bez zmian (wybór „Odtwórz" albo znacznik zapisu; masa i wzrost jak w starej bazie), a Karta poprawiła **w miejscu** ten pomiar (`isUpdate`), masa, wzrost i wiek wizyty idą za poprawką — także tygodnie: gdy sejf je usunął, pole `#ageWeeks` jest czyszczone, bo stara wartość wróciłaby z zapisem. Wpis jest programowy: flaga edycji lekarza i przycisk „Odtwórz zapisany stan" zostają jak były, autozapis i zerowanie karty spożycia są na ten czas wstrzymane. Gdy lekarz zmienił już masę albo wzrost w formularzu (nowy pomiar), poprawka z Karty go nie nadpisuje.
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, prawdziwa strona, strefa Europe/Warsaw, zegar strony przesunięty; dane fikcyjne).**
+
+| Wejście | Przed zmianą (origin/audyt 3676f0d) | Po zmianie |
+|---|---|---|
+| R1/G4: chłopiec ur. 20-07-2009; „Nowy pomiar" 174 cm / 62 kg zapisany 19-07-2026 o 23:55; o 00:03 lekarz przepisuje tę samą masę, potem F5 | wskaźnik „Niezapisane zmiany"; `measuredAtISO` do zapisu 2026-07-20; po F5 17 l. 0 m. | „Dane pacjenta zapisane"; `measuredAtISO` 2026-07-19; po F5 16 l. 11 m., notka „Pomiar z 19-07-2026 — wiek w dniu pomiaru: 16 lat 11 mies. (aktualnie pacjent ma 17 lat 0 mies.)", te same centyle. Kontrola: masa 63 kg → 17 l. 0 m., data 2026-07-20 |
+| R0: ten sam chłopiec, wizyta 10-05-2026 (170 / 58, 16 l. 9 m.), wizyta 17-06-2026 przez „Nowy pomiar" (172 / 60), potem usunięcie bieżącego pomiaru w Karcie | awansowana wizyta 16 l. 9 m. z `measuredAtISO` 2026-06-17 (data usuniętej) | `measuredAtISO` 2026-05-10, `timestampISO` z wersji z 10-05; „Odtwórz zapis" 10-07: „Pomiar z 10-05-2026 — wiek w dniu pomiaru: 16 lat 9 mies." |
+| G2: chłopiec bez daty urodzenia, wiek ręcznie 0 l. 4 m., 63,5 cm / 6,9 kg, zapis 03-06-2026; odtworzony i zapisany ponownie 28-06; 20-07 odtworzony i dopisana data urodzenia 01-02-2026 | `timestampISO` 28-06; doba 147; raport „28.06.2026" | `timestampISO` 03-06 (`savedAtISO` wersji 28-06), bez `measuredAtISO`; doba 122; raport „03.06.2026" |
+| G5: chłopiec ur. 01-02-2026, 63,5 / 6,9, zapis 03-06-2026 bez `measuredAtISO` (jak przed P-ODTWORZ-WIEK); 28-06 kalkulator klirensu: „Odtwórz zapisany stan" i zapis; 20-07 „Odtwórz zapis" w formularzu | brak daty, `timestampISO` 28-06; doba 147; „Waga: 26 centyl Wzrost: 16 centyl" | `measuredAtISO` 2026-06-03; doba 122; centyle jak w dniu pomiaru (45./42.); notka „Pomiar z 03-06-2026" |
+| G3/G6: chłopiec ur. 20-07-2009, 172 / 60, zapis 17-06-2026; „Odtwórz zapis" 10-07; Karta „Historia → Edytuj": wzrost 172 → 172,5, data bez zmian; potem „Zapisz" | formularz 172; 16 l. 11 m., „Wiek na dzień dzisiejszej wizyty"; zapis: 172 cm, 16/11, `measuredAtISO` 2026-07-10 (poprawka cofnięta) | formularz 172,5; 16 l. 10 m., „Pomiar z 17-06-2026 …"; zapis: 172,5 cm, 16/10, `measuredAtISO` 2026-06-17; to samo po F5 |
+
+**Wpływ kliniczny.** Zmienia się wyłącznie data i wiek, w których formularz liczy **zapisaną, niezmienioną** wizytę, oraz to, jaką datę pomiaru trafia do rekordu. W pięciu ścieżkach wyżej dzień pomiaru był dotąd zastępowany dniem zapisu, usuniętej wizyty albo dniem dzisiejszym. U niemowlęcia między 3. a ok. 36. miesiącem przesuwało to dokładny wiek siatek LMS (doba 122 → 147: 45./42. → 26./16. centyl). U nastolatka po północy dawało cudzy wiek pomiaru. Wzory, tablice, progi, interpolacja i jednostki bez zmian. Nowa wizyta (nowa masa albo wzrost, „Nowy pomiar" przed zapisem) liczy się jak dotąd — na dziś.
+
+**Przegląd.** Runda 3 (po scaleniu P-ODTWORZ-WIEK): 7 potwierdzonych znalezisk, wszystkie objęte punktami 1–5. Przegląd Codex w #592: korekta tygodni porównywała liczbę miesięcy z kluczem wiersza, więc usuwała tygodnie przy każdej korekcie (także samej masy), a moduł linii bazowej nie czyścił `#ageWeeks` — oba poprawione, każdy z testem czerwonym bez poprawki. Zgłoszenie G4 i R1 to ten sam mechanizm (znacznik zapisu), G3 i G6 — dwa opisy tej samej ścieżki „Historia → Edytuj" (ekran „Edytuj dane pacjenta" nie wyświetla pól masy i wzrostu, więc tamtą drogą poprawki nie ma).
+
+**Czego ta zmiana NIE robi.** Nie naprawia rekordów już zapisanych z błędną datą. Awansowany po usunięciu wiersz bez daty i bez starszej wersji traci `timestampISO`; następny zapis da mu dzień zapisu (rzadkie: rekord sprzed historii wersji). Wskaźnik zapisu po poprawce w Karcie zgłasza „Niezapisane zmiany" po pierwszym wpisie — tak samo jak przed zmianą (zmierzone na obu wersjach: po poprawce znika `intake.history` karty spożycia, a odcisk formularza wskaźnik bierze przed odświeżeniem bazy; przyczyna poza zakresem tej zmiany). Zapis jest wtedy bezpieczny: formularz równa się głowie rekordu. Nie zmienia reguły Karty ani `lmsNiemowleWiek`.
+
+*Strażnicy:* `tests/unit/odtworzenie-wiek-pomiaru-2.test.mjs` (16: prawdziwy `vilda_vault.js` dla R0 i korekty tygodni — wywołania jak z okna Karty, z wiekiem i datą; prawdziwy `vilda_dob_age.js` dla znacznika z kontrolami; prawdziwe `vilda_baseline_pacjenta.js` + `vilda_dob_age.js` dla G3 z kontrolami i tygodniami niemowlęcia; okablowanie kolektora i strony klirensu). **Zmierzone czerwone:** 14 z 16 przeciwko origin/audyt 3676f0d (zielone zostają dwie kontrole „poprawka z Karty nie nadpisuje nowego pomiaru" i „zwykły zapis nie rusza pól wizyty"). `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs` (+5 scenariuszy z tabeli; test klirensu z P-ODTWORZ-WIEK sprawdza teraz API modułu bez pola daty). **Zmierzone czerwone:** wszystkie 5 nowych i test klirensu przeciwko origin/audyt 3676f0d; 7 wcześniejszych zielone na obu. Piny: `odtworzenie-na-zywo.test.mjs` (VERSION 9), `odtworz-po-wyborze.test.mjs` (kotwica czyszczenia wyboru i znacznika), `vilda_smoke_tests.js` (kolektor 1.27.0).
+
+**Do decyzji właściciela.** (1) Akceptacja kliniczna. (2) Znacznik „wizyta zapisana w tej karcie": po zapisie „Nowego pomiaru" formularz zostaje tą wizytą także następnego dnia, aż do nowej masy lub wzrostu, nowego wczytania albo „Wyczyść" (wiek na dziś daje „Nowy pomiar"). (3) Moduł linii bazowej po raz pierwszy wpisuje do formularza pola wizyty (masa, wzrost, wiek) — wyłącznie przy poprawce w miejscu zapisanej, niezmienionej wizyty. (4) Moduł daty urodzenia ładowany na stronie klirensu (jako samo API; wcześniej ta strona go nie miała). (5) `timestampISO` ponownie zapisanej wizyty bez pewnej daty zostaje z pierwszego zapisu; „Data zapisu" ostatniego pomiaru klirensu z `clcr.savedAtISO`.
 
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
@@ -9013,9 +10305,10 @@ do 2026-10-08; obie potwierdzone w kodzie. Wariant P1 wybrał właściciel 2026-
 - **P2 — komunikat o poprzednim pacjencie.** Komunikat „✓ Zapisano punkt leczenia GH…” stoi nad kartą, poza
   `#advMeasurements`, i znikał tylko przy otwarciu kolejnego panelu. Teraz panel i komunikat znikają przy
   `vilda:patient-loaded`, `vilda:state-restored`, `vilda:persist-restored` (dokument) i `vilda:user-state-cleared`
-  („Wyczyść”, okno) oraz przy najbliższym odświeżeniu karty, gdy znacznik pacjenta karty (`window._vildaCurrentPatientId`,
-  potem `sessionStorage.vildaCurrentPatientId`, jak w monitorze GH) różni się od tego z chwili otwarcia panelu albo
-  zapisu — to łapie zmianę pacjenta w innej ramce powłoki bez zdarzenia w tej ramce. Wyjątek: `vilda:patient-loaded`
+  („Wyczyść”, okno) oraz przy najbliższym odświeżeniu karty, gdy znacznik pacjenta karty (od SW 1.1.201 najpierw
+  wspólny `sessionStorage.vildaCurrentPatientId`, potem `window._vildaCurrentPatientId` — niżej „Znacznik wspólny”)
+  różni się od tego z chwili otwarcia panelu albo zapisu — to łapie zmianę pacjenta w innej ramce powłoki bez
+  zdarzenia w tej ramce. Wyjątek: `vilda:patient-loaded`
   z `source: 'save'` („Zapisz dane” bieżącego pacjenta, także pierwszy zapis, który nadaje znacznik) to ten sam
   pacjent — panel z wpisaną dawką i komunikat zostają, a zapamiętany znacznik przechodzi na nadany id.
 
@@ -9067,6 +10360,37 @@ teraz każdy test izoluje jeden mechanizm, a zamknięcie przez zdarzenie jest sp
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Pozostałe uwagi recenzji do punktów GH
 (#575 P1 — bramka D6 a plik danych dawki, kliniczne; #581 P1, #572 P1 — monitor; #577 P2 — test S7) są osobnymi
 krokami.
+
+### Znacznik wspólny: zmiana pacjenta w innej ramce powłoki (P-GH-PUNKT-Z-WIERSZA-ZNACZNIK, SW 1.1.201, `vilda_gh_punkt_z_wiersza.js` 3, 2026-10-08)
+
+**Skąd.** Uwaga recenzji automatycznej (Codex, P2) do scalonego #590, dodana 3 minuty po scaleniu; potwierdzona
+w kodzie. Kontrola znacznika z P-GH-PUNKT-Z-WIERSZA-ZGODNOSC czytała najpierw pamięć okna
+(`window._vildaCurrentPatientId`), jak monitor GH. W powłoce wczytanie pacjenta w innej ramce zmienia tylko wspólny
+dla karty `sessionStorage.vildaCurrentPatientId`; ukryta ramka Start celowo zostawia swój znacznik w pamięci okna
+(`vilda_panel_pacjent.js`, P-POWLOKA-OBCY), więc kontrola tej zmiany nie widziała. Test (2/3) zmieniał pamięć okna,
+czyli nie odtwarzał prawdziwej drogi.
+
+**Zmiana.** `znacznikPacjenta()` czyta najpierw wspólny `sessionStorage.vildaCurrentPatientId`, potem pamięć okna
+(strona samodzielna bez sesji). Reszta reguł bez zmian (wyjątek „Zapisz dane”, zdarzenia cyklu pacjenta).
+
+**Skutek przed poprawką.** W bieżącej powłoce (protokół panelu ≥ 1) panel i komunikat i tak znikały: ramka Start
+z danymi poprzedniego pacjenta jest nieaktualna, a powłoka przeładowuje ją przy pokazaniu. Kontrola znacznika była
+jedynym zabezpieczeniem w powłoce bez tego protokołu (mieszane wersje po aktualizacji) — tam nie działała.
+
+**Wpływ kliniczny.** Brak zmiany wzorów i reguł punktu.
+
+**Strażnicy.** `tests/e2e/gh-punkt-z-wiersza.spec.mjs`: „zmiana pacjenta (2/3)” zmienia wyłącznie wspólny znacznik
+(pamięć okna zostaje przy poprzednim pacjencie) — czerwony na kodzie sprzed poprawki (panel zostaje), zielony po niej;
+„powłoka: wczytanie innego pacjenta w DocPro przy otwartym panelu na Start — po powrocie panelu nie ma” — prawdziwa
+powłoka i sejf: pacjent zapisany, wczytany w DocPro (`source: 'pick'`), powrót na Start bez panelu i bez punktu
+z panelu na liście nowego pacjenta. Ten drugi test przechodzi także przed poprawką (zamyka przeładowanie ramki
+przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
+
+**Wersje.** `vilda_gh_punkt_z_wiersza.js` `?v=2` → `?v=3`, `SW_VERSION` — `npm run podbij-wersje`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Proces: recenzja Codex uruchamia się przy
+oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
+#575, #577, #581, #582, #590).
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
@@ -9300,7 +10624,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Błąd odczytu mapy właścicieli przerywa „Scal kopię konta”; nowa generacja pamięci SW (P-KOPIA-POMIJA-2, SW 1.1.201, `vilda_vault.js` 207, 2026-10-08)
+## Błąd odczytu mapy właścicieli przerywa „Scal kopię konta” (P-KOPIA-POMIJA-2, SW 1.1.231, `vilda_vault.js` 208, 2026-10-08, scalenie z `audyt` 2026-10-12)
 
 **Zmiana kliniczna: NIE** w zakresie wzorów, progów i interpretacji; integralność danych przy scalaniu kopii konta.
 Poprawka dwóch uwag P1 z przeglądu Codex w #591 (scalonym 2026-10-08).
@@ -9315,15 +10639,16 @@ Poprawka dwóch uwag P1 z przeglądu Codex w #591 (scalonym 2026-10-08).
 
 **Reguła po zmianie.** Błąd odczytu wersji którejkolwiek karty przerywa podgląd i scalenie kopii konta. Mapa powstaje
 przed pierwszym zapisem wersji (strażnik i karta brakująca pytają ją przed zapisem), więc przerwanie następuje, zanim
-cokolwiek zostanie zapisane. `SW_VERSION` 1.1.201 (`npm run podbij-wersje`, bo zmienił się `vilda_vault.js`) — osobna
-generacja pamięci.
+cokolwiek zostanie zapisane. Kolizja `SW_VERSION` 1.1.200 z #590/#591 rozwiązała się w międzyczasie: kolejne
+wydania (#592 i następne, do 1.1.230) dostały własne numery, więc ten PR nie zmienia już numeru z tego powodu.
 
 **Przypadek syntetyczny** — `tests/unit/kopia-konta-pomija.test.mjs`: X w kopii, Y założona po kopii, X scalony z Y,
 nagrobek X przycięty, odczyt wersji Y kończy się błędem → podgląd i scalenie odrzucone, magazyn bez zmian, wersje X
 zostają pod Y. Na `e0b0df4` czerwony (X wracał, wersje znikały z Y).
 
-**Wersje.** `vilda_vault.js` 206 → 207 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (115 → 116)
-i `vilda_session_bridge.js` (39 → 40); nowe adresy w precache (append-only); `SW_VERSION` 1.1.200 → 1.1.201 (+ pin
+**Wersje** (po scaleniu `audyt` `7a338be` 2026-10-12; #592 wziął w międzyczasie `vilda_vault.js` 207 z inną treścią).
+`vilda_vault.js` 207 → 208 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (124 → 125)
+i `vilda_session_bridge.js` (48 → 49); nowe adresy w precache (append-only); `SW_VERSION` 1.1.230 → 1.1.231 (+ pin
 w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
 ## „Scal kopię konta” pomija pacjentów usuniętych albo scalonych tutaj i mówi o tym (P-KOPIA-POMIJA, SW 1.1.200, `vilda_vault.js` 206, `vilda_auth_ui.js` 482, 2026-10-08)

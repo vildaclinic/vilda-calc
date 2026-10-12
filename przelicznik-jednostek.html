@@ -61,13 +61,14 @@
   <link rel="stylesheet" href="style.css?v=87" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
-  <link href="vilda_lab_assessment_ui.css?v=4" rel="stylesheet">
-  <link href="vilda_lab_puberty_ui.css?v=3" rel="stylesheet">
+  <link href="vilda_lab_assessment_ui.css?v=10" rel="stylesheet">
+  <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
+  <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=40"></script>
+  <script src="vilda_session_bridge.js?v=49"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -104,7 +105,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=116"></script>
+  <script src="vilda_chrome.js?v=125"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -312,6 +313,8 @@
               </div>
             </div>
 
+            <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
+
             <button type="button" id="labClearBtn" class="lab-clear-btn">
               <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
             </button>
@@ -435,16 +438,24 @@
   <script src="ios26-ui.js?v=44" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=35"></script>
+  <script src="lab_units_data.js?v=36"></script>
   <script src="lab_unit_converter.js?v=4"></script>
-  <script src="vilda_lab_puberty_data.js?v=2"></script>
-  <script src="vilda_lab_puberty.js?v=4"></script>
-  <script src="vilda_lab_snapshot.js?v=3"></script>
-  <script src="vilda_lab_assessment_ui.js?v=5"></script>
+  <script src="vilda_lab_puberty_data.js?v=6"></script>
+  <script src="vilda_lab_puberty.js?v=6"></script>
+  <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
+  <script src="vilda_lab_inhibin_b.js?v=1"></script>
+  <script src="vilda_lab_snapshot.js?v=6"></script>
+  <script src="vilda_lab_assessment_ui.js?v=12"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=9"></script>
+  <script src="vilda_lab_puberty_ui.js?v=15"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
-  <script src="vilda_puberty_source.js?v=9"></script>
+  <script src="vilda_puberty_source.js?v=10"></script>
+  <script src="vilda_lab_neonatal_context.js?v=1"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=17"></script>
+  <script src="vilda_hormone_lifespan_reference.js?v=4"></script>
+  <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
+  <script src="vilda_hormone_lifespan_display.js?v=10"></script>
+  <script src="vilda_hormone_lifespan.js?v=20"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -574,10 +585,10 @@
     var suggestTitleEl    = document.getElementById('labSuggestResultsTitle');
     var suggestBodyEl     = document.getElementById('labSuggestResultsBody');
 
-    // LH/FSH ma osobny kontekst próbki. Stary pacjent {age,tanner,life_stage}
+    // Te anality mają osobny kontekst próbki. Stary pacjent {age,tanner,life_stage}
     // pozostaje wejściem innych analitów, ale nie jest wejściem nowego silnika.
     function isPubertySubstance(substance) {
-      return !!(substance && (substance.id === 'lh' || substance.id === 'fsh'));
+      return !!(substance && (substance.id === 'lh' || substance.id === 'fsh' || substance.id === 'inhibin_b'));
     }
     function readPubertyPatientContext() {
       var shared = null, patient = null, puberty = null, pubertyState = null, source = null;
@@ -614,7 +625,11 @@
       ['progression', 'growthAcceleration', 'cnsSymptoms', 'regression'].forEach(function (key) {
         history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
       });
-      return {
+      var neonatalAge = window.VildaLabNeonatalContext
+        ? window.VildaLabNeonatalContext.read(shared, identity, source) : null;
+      var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
+        && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
+      var context = {
         identityKey: identity,
         sourceStatus: 'ready',
         sex: sex,
@@ -628,6 +643,14 @@
         gnrhaStatus: puberty && puberty.gnrhaStatus || !identity && shared.puberty && shared.puberty.gnrhaStatus || null,
         testicularVolume: shared.advanced && shared.advanced.testicularVolume || pubertyState && pubertyState.jadra || null
       };
+      if (neonatalAge) {
+        context.neonatalAge = neonatalAge;
+        if (neonatalAge.gestationalDays && pretermRule && pretermRule.operator === '<') {
+          context.preterm = neonatalAge.gestationalDays.upper < pretermRule.value * 7 ? 'yes'
+            : neonatalAge.gestationalDays.lower >= pretermRule.value * 7 ? 'no' : 'unknown';
+        }
+      }
+      return context;
     }
     var pubertyUI = window.VildaLabPubertyUI && window.VildaLabPubertyUI.mount({
       document: document,
@@ -639,6 +662,195 @@
     window.VildaLabPubertyRuntime = pubertyUI;
     if (pubertyUI && window.VildaLabPinResult) {
       window.VildaLabPinResult.setAssessmentProvider(function (result) { return pubertyUI.getAssessment(result); });
+    }
+
+    // Read-only educational diagram. The optional concentration comes from the
+    // current calculation, never a saved snapshot, patient name or date of birth.
+    var lifespanUI = window.VildaHormoneLifespan && window.VildaHormoneLifespan.mount({
+      host: document.getElementById('labHormoneLifespan'),
+      onActivity: function (event, displayWindow) {
+        if (!event.isTrusted) return;
+        var notified = new Set();
+        [window, displayWindow].forEach(function (view) {
+          try {
+            var auth = view && view.VildaAuthUI;
+            if (auth && !notified.has(auth) && typeof auth.recordActivity === 'function') {
+              notified.add(auth);
+              auth.recordActivity();
+            }
+          } catch (_) { /* A closing frame must not interrupt input handling. */ }
+        });
+      }
+    });
+    // The renderer owns visibility of its inner panel; the empty host takes no
+    // space when unsupported or awaiting context.
+    if (lifespanUI) document.getElementById('labHormoneLifespan').hidden = false;
+    window.VildaHormoneLifespanRuntime = lifespanUI || null;
+    var lifespanVault = null;
+    function currentPatientIdentity() {
+      try { return sessionStorage.getItem('vildaCurrentPatientId') || ''; }
+      catch (_) { return window._vildaCurrentPatientId || ''; }
+    }
+    function isLifespanSubstance(substance) {
+      return !!substance && ['lh', 'fsh', 'inhibin_b', 'amh', 'estradiol', 'testosterone_total'].includes(substance.id);
+    }
+    function resetLocalPatientOverride() {
+      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
+      [overrideSexEl, overrideAgeEl, overrideAgeMonthsEl, overrideCycleEl, overrideTannerEl].forEach(function (node) {
+        if (node) node.value = '';
+      });
+    }
+    function syncPatientIdentity() {
+      var next = currentPatientIdentity();
+      if (localOverrideIdentity === next) return false;
+      localOverrideIdentity = next;
+      resetLocalPatientOverride();
+      // A result belongs to the previous person even if their age or sex match.
+      if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
+      if (lifespanUI) lifespanUI.clear();
+      return true;
+    }
+    function bindLifespanVault() {
+      var vault = window.VildaVault;
+      if (!vault || vault === lifespanVault || typeof vault.onLock !== 'function') return;
+      lifespanVault = vault;
+      vault.onLock(function () { if (window.VildaVault === vault && lifespanUI) lifespanUI.clear(); });
+    }
+    function lifespanAgeLabel(age, input) {
+      if (!age || age.status !== 'known') return '';
+      var pna = input && input.neonatalAge && input.neonatalAge.postnatalDays;
+      if (age.source === 'neonatal-days' && pna && Number.isFinite(pna.lower) && Number.isFinite(pna.upper)) {
+        return pna.lower + (pna.lower === pna.upper ? '' : '–' + pna.upper) + ' dni';
+      }
+      var reported = input && input.age;
+      if (reported && Number.isInteger(reported.years)) {
+        if (reported.precision === 'year') return reported.years + ' lat';
+        if (reported.years === 0) return reported.months + ' mies.';
+        return reported.years + ' lat' + (reported.months ? ' i ' + reported.months + ' mies.' : '');
+      }
+      return '';
+    }
+    function lifespanMeasurement(evaluation, conversion) {
+      var value = evaluation && evaluation.measurement;
+      if (value && value.status === 'valid' && Number.isFinite(value.value) && value.value >= 0) {
+        // Preserve censoring: the reference engine must never plot < or > as =.
+        return { value: value.value, unit: value.unit, operator: value.operator };
+      }
+      if (conversion && conversion.ok && Number.isFinite(conversion.siValue) && conversion.siValue >= 0) {
+        return { value: conversion.siValue, unit: conversion.siUnit, operator: '=' };
+      }
+      return null;
+    }
+    function lifespanLegacyAge(source) {
+      var local = localOverride.age != null;
+      var rawYears = local ? overrideAgeEl.value : source.ageYears;
+      var rawMonths = local ? overrideAgeMonthsEl && overrideAgeMonthsEl.value : source.ageMonths;
+      var years = rawYears == null || rawYears === '' ? null : Number(rawYears);
+      var months = rawMonths == null || rawMonths === '' ? null : Number(rawMonths);
+      var input = { age: years == null ? null : { years: years, months: months,
+        precision: months == null ? 'year' : 'month' } };
+      var engine = window.VildaLabPuberty;
+      if (!engine || typeof engine.resolveAge !== 'function') return { input: input, resolved: null };
+      var resolved = engine.resolveAge(input);
+      // Reuse known postnatal days; never substitute corrected or PMA age.
+      if (!local && source.neonatalAge && (years == null || resolved.status === 'known' && resolved.lowerYears < 1)) {
+        var neonatalInput = { neonatalAge: source.neonatalAge };
+        var neonatalAge = engine.resolveAge(neonatalInput);
+        if (neonatalAge.status === 'known') { input = neonatalInput; resolved = neonatalAge; }
+      }
+      return { input: input, resolved: resolved };
+    }
+    function lifespanContraindicated(source, input, patient) {
+      var treatment = input && input.treatment || {};
+      var kind = input && input.measurementKind;
+      var protocol = patient && patient.test_protocol;
+      var specimen = input && input.specimen;
+      // false means no known exclusion, not confirmation of basal/no treatment.
+      return source.gnrhaStatus === 'w-trakcie' || treatment.context === 'hormonal'
+        || treatment.gnrha === 'yes' || treatment.gnrha === true
+        || treatment.sexSteroids === 'yes' || treatment.sexSteroids === true
+        || ![undefined, null, '', 'unknown', 'basal'].includes(kind)
+        || ![undefined, null, '', 'unknown', 'basal'].includes(protocol)
+        || ![undefined, null, '', 'unknown', 'serum'].includes(specimen);
+    }
+    function updateLifespan(substance, evaluation, conversion) {
+      if (!lifespanUI) return;
+      var identityChanged = syncPatientIdentity();
+      // Normally renderResults clears before parsing. Also protect direct
+      // callers carrying a conversion/evaluation from the previous identity.
+      if (identityChanged) { evaluation = null; conversion = null; }
+      bindLifespanVault();
+      if (!substance) { lifespanUI.clear(); return; }
+      var source = readPubertyPatientContext();
+      var status = source.sourceStatus || 'unavailable';
+      var vault = window.VildaVault;
+      if (source.identityKey && vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) status = 'unavailable';
+      var patient = null, input = null, resolved = null, years = null, upperYears = null, label = '';
+      if (status === 'ready') {
+        if (isPubertySubstance(substance)) {
+          input = evaluation && evaluation.input;
+          resolved = evaluation && evaluation.ageAtSample;
+          patient = input;
+          if (resolved && resolved.status === 'known') {
+            // Position denotes the completed age, never an invented birthday.
+            years = resolved.lowerYears;
+            upperYears = resolved.upperYears;
+            label = lifespanAgeLabel(resolved, input);
+          }
+        } else {
+          patient = getEffectivePatient();
+          var legacyAge = lifespanLegacyAge(source);
+          input = legacyAge.input; resolved = legacyAge.resolved;
+          if (resolved && resolved.status === 'known') {
+            years = resolved.lowerYears; upperYears = resolved.upperYears;
+            label = lifespanAgeLabel(resolved, input);
+          } else if (Number.isFinite(patient.age) && !Number.isInteger(patient.age)) {
+            // Legacy fractional ages retain their age marker, but do not gain
+            // invented precision for a numerical concentration comparison.
+            years = patient.age;
+          }
+        }
+      }
+      var premature = isPubertySubstance(substance)
+        ? input && ['yes', 'no'].includes(input.preterm) ? input.preterm : 'unknown'
+        : ['yes', 'no'].includes(source.preterm) ? source.preterm : 'unknown';
+      var neonatal = isPubertySubstance(substance) ? input && input.neonatalAge : source.neonatalAge;
+      var gestational = neonatal && neonatal.gestationalDays;
+      var pretermBoundary = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
+        && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
+      // A contradictory local "No" cannot turn a documented premature birth
+      // into the term population used by this educational infant diagram.
+      if (premature !== 'yes' && gestational && Number.isFinite(gestational.lower) && Number.isFinite(gestational.upper)
+        && gestational.lower >= 0 && gestational.upper >= gestational.lower
+        && pretermBoundary && pretermBoundary.operator === '<' && Number.isFinite(pretermBoundary.value)
+        && gestational.lower < pretermBoundary.value * 7) {
+        premature = gestational.upper < pretermBoundary.value * 7 ? 'yes' : 'unknown';
+      }
+      lifespanUI.update({
+        analyte: substance.id,
+        sex: patient && patient.sex === 'F' ? 'female' : patient && patient.sex === 'M' ? 'male' : null,
+        ageYears: Number.isFinite(years) && years >= 0 && years <= 120 ? years : null,
+        ageUpperYears: Number.isFinite(upperYears) && upperYears >= years ? upperYears : null,
+        ageUpperInclusive: !!resolved && resolved.upperInclusive === true,
+        ageLabel: label,
+        preterm: premature,
+        measurement: status === 'ready' && resolved && resolved.status === 'known'
+          ? lifespanMeasurement(evaluation, conversion) : null,
+        contraindicated: lifespanContraindicated(source, input, patient),
+        // Reuse the typed observation for the current context only. A bare
+        // shared Tanner number or an observation for a dated sample is not one.
+        puberty: input && input.contextBasis === 'current-patient' && !input.sampleDateISO &&
+          input.puberty && input.puberty.appliesToCurrentContext === true
+          ? { kind: input.puberty.kind, stage: input.puberty.stage } : null,
+        specimen: input && input.specimen || null,
+        // Only an explicitly reported sample method can exclude a source.
+        // An automatic reference choice or saved preference is not that fact.
+        assayMethodId: input && input.assay && input.assay.confirmation === 'reported'
+          ? input.assay.methodId || null : !isPubertySubstance(substance) && patient && patient.method || null,
+        sourceStatus: status,
+        // Used in memory only to invalidate the previous person's UI state.
+        identityKey: source.identityKey || ''
+      });
     }
 
     // ID substancji, dla których proponujemy link do steroidy.html
@@ -921,6 +1133,7 @@
 
     // Lokalne nadpisania – żyją tylko w pamięci tej karty, nie idą do sharedUserData.
     var localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
+    var localOverrideIdentity = currentPatientIdentity();
 
     /**
      * Czyta wiek/płeć/Tanner z VildaPersistence.readShared(). Zwraca obiekt
@@ -1049,6 +1262,7 @@
      * dla każdego pola, gdy nie jest puste/null. Dolicza life_stage z wieku.
      */
     function getEffectivePatient() {
+      syncPatientIdentity();
       var shared = readPatientFromShared() || {};
       var p = {
         sex: localOverride.sex || shared.sex || null,
@@ -1240,6 +1454,7 @@
     }
 
     function renderPatientSummary() {
+      syncPatientIdentity();
       if (isPubertySubstance(currentSubstance)) {
         if (pubertyUI) pubertyUI.setPatientContext(readPubertyPatientContext());
         if (clinicalHintEl) { clinicalHintEl.textContent = ''; clinicalHintEl.style.display = 'none'; }
@@ -2781,14 +2996,17 @@
      *   – wartość poprawna → wypełniamy szkielet liczbami.
      */
     function renderResults(substance) {
+      syncPatientIdentity();
       if (isPubertySubstance(substance)) {
         var pubertyEvaluation = pubertyUI && pubertyUI.render({ raw: valueEl.value, unit: unitEl.value, targetUnit: unitTargetEl && unitTargetEl.value });
+        updateLifespan(substance, pubertyEvaluation);
         showError(String(valueEl.value || '').trim() && (!pubertyEvaluation || pubertyEvaluation.measurement.status !== 'valid')
           ? 'Nieprawidłowy zapis wyniku lub jednostki. Dozwolone są także <0,02, >10 i <LOD.' : '');
         updateStepStates();
         return;
       }
       if (!substance) {
+        updateLifespan(null);
         // Faza 18: smart-card jest zawsze widoczna; tylko sekcja wyniku
         // przechodzi w stan placeholdera.
         renderBigResult(null, false, NaN, null);
@@ -2823,6 +3041,7 @@
 
       // Jeśli wartość poprawna, podmieniamy myślniki na liczby.
       var precision = substance.precision || 3;
+      var lifespanConversion = null;
       if (isValid) {
         var res = Conv.convertAll({
           substanceId: substance.id,
@@ -2830,6 +3049,7 @@
           fromUnit: fromUnitSym
         });
         if (res.ok) {
+          lifespanConversion = res;
           var lookup = {};
           for (var k = 0; k < res.results.length; k++) {
             lookup[res.results[k].unit] = res.results[k];
@@ -2938,6 +3158,7 @@
       renderRangeBlock(substance, isValid, n, fromUnitObj);
       // Faza 18 — duży wynik + status pill + linia źródła + show-all toggle
       renderBigResult(substance, isValid, n, fromUnitObj);
+      updateLifespan(substance, null, lifespanConversion);
       updateStepStates();
     }
 
@@ -3363,13 +3584,15 @@
      * Wyniki są deduplikowane wedle tego, co użytkownik faktycznie wypełnił.
      */
     function updateStepStates() {
+      var pubertyMode = isPubertySubstance(currentSubstance);
       var s1 = !!currentSubstance;
       var raw = valueEl.value;
       var hasInput = !(raw == null || String(raw).trim() === '');
       var n = hasInput ? Conv.parseNumber(raw) : NaN;
       var s2 = s1 && hasInput && isFinite(n) && n >= 0;
-      if (isPubertySubstance(currentSubstance)) {
-        s2 = hasInput && !!(window.VildaLabPuberty && window.VildaLabPuberty.parseMeasurement(raw, unitEl.value).status === 'valid');
+      if (pubertyMode) {
+        var selectedEngine = currentSubstance.id === 'inhibin_b' ? window.VildaLabInhibinB : window.VildaLabPuberty;
+        s2 = hasInput && !!(selectedEngine && selectedEngine.parseMeasurement(raw, unitEl.value).status === 'valid');
       }
       var s3 = s2;  // krok 3 (jednostka docelowa) ma default = SI → done gdy s2
       var s4 = s2;  // krok 4 (opcjonalny) — mark as done gdy mamy wartość
@@ -3384,15 +3607,16 @@
       for (var i = 0; i < states.length; i++) {
         var st = states[i];
         if (!st.num) continue;
+        var stepNumber = i + 1 - (pubertyMode && i > 3 ? 1 : 0);
         st.num.classList.remove('is-done', 'is-active');
         if (st.done) {
           st.num.classList.add('is-done');
           st.num.textContent = '✓';
         } else if (st.active) {
           st.num.classList.add('is-active');
-          st.num.textContent = String(i + 1);
+          st.num.textContent = String(stepNumber);
         } else {
-          st.num.textContent = String(i + 1);
+          st.num.textContent = String(stepNumber);
         }
       }
       // Hint w kroku 3 — zaktualizuj etykietę "domyślnie SI" → konkretna jednostka.
@@ -3533,6 +3757,7 @@
       if (!substance) {
         // Pusty stan: zerujemy bieżącą substancję i czyścimy widok wyników.
         currentSubstance = null;
+        updateLifespan(null);
         updateMeasurementFields(null);
         clearResultsView();
         renderPatientSummary();   // i tak utrzymuj nagłówek kontekstu pacjenta
@@ -4039,12 +4264,7 @@
     bindMeasListeners(measProtocolEl);
     bindMeasListeners(measMethodEl);
     if (overrideResetEl) overrideResetEl.addEventListener('click', function () {
-      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
-      overrideSexEl.value = '';
-      overrideAgeEl.value = '';
-      if (overrideAgeMonthsEl) overrideAgeMonthsEl.value = '';
-      overrideCycleEl.value = '';
-      if (overrideTannerEl) overrideTannerEl.value = '';
+      resetLocalPatientOverride();
       refreshPatientContext();
       showToast('Przywrócono dane pacjenta');
     });
@@ -4061,17 +4281,14 @@
     // Nasłuch zmian w sharedUserData (z innej karty/strony głównej).
     window.addEventListener('storage', function (e) {
       // Klucz dla sharedUserData może mieć różne nazwy w zależności od wersji adaptera.
-      if (!e.key || e.key === 'vildaCurrentPatientId' || /shared|user/i.test(e.key)) refreshPatientContext();
+      if (!e.key || e.key === 'vildaCurrentPatientId' || /(?:^|:)vildaLabNeonatalAgeV1$/.test(e.key)
+        || /shared|user/i.test(e.key)) refreshPatientContext();
     });
     window.addEventListener('focus', refreshPatientContext);
     window.addEventListener('vilda:user-state-cleared', function () {
       if (pubertyUI) pubertyUI.reset();
-      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
-      if (overrideSexEl) overrideSexEl.value = '';
-      if (overrideAgeEl) overrideAgeEl.value = '';
-      if (overrideAgeMonthsEl) overrideAgeMonthsEl.value = '';
-      if (overrideCycleEl) overrideCycleEl.value = '';
-      if (overrideTannerEl) overrideTannerEl.value = '';
+      resetLocalPatientOverride();
+      if (lifespanUI) lifespanUI.clear();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
       // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
@@ -4096,11 +4313,13 @@
 
     document.addEventListener('vilda:patient-loaded', function () {
       if (pubertyUI) pubertyUI.reset();
-      if (isPubertySubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
+      if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
       refreshPatientContext();
     });
     document.addEventListener('vilda:session-changed', refreshPatientContext);
     document.addEventListener('vilda:zrodlo-pacjenta-zmienione', refreshPatientContext);
+    document.addEventListener('vilda:auth-loaded', bindLifespanVault);
+    bindLifespanVault();
 
     // Delegacja kliknięć w komórkę wartości → kopiowanie do schowka.
     function handleValueActivation(td) {

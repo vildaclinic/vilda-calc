@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-11",
+  "status": "owner_approved_educational_display_policy_not_clinical_validation",
+  "scope": "Male INSL3 illustration in ordinary lifespan views; no numeric patient reference or laboratory norm.",
+  "policyFile": "../insl3-display-policy.json",
+  "sourceFilesPolicy": "Full PDFs and user-uploaded files were read in the audit workspace; they are not redistributed in this repository. Source availability below describes the actual audit access.",
+  "geometry": {
+    "coordinate": "canonical whole-life display X",
+    "unit": null,
+    "fixedScale": {
+      "divisor": 1,
+      "ceiling": 1
+    },
+    "dash": "6 5",
+    "firstMonth": {
+      "birth": 0.109158,
+      "peakAgeDays": 27,
+      "peak": 0.14,
+      "day100": 0.056672,
+      "oneYear": 0.012
+    },
+    "adult": {
+      "age25": 0.87,
+      "age80": 0.455,
+      "age90": 0.455,
+      "tail": "Hold terminal display height and fade between 80 and 90; no further biological trend inferred."
+    },
+    "meaning": "All values here are authored graphic coordinates. Peak 0.14 is not a measured concentration; 0.14/0.87 is not a validated infant/adult concentration ratio.",
+    "birthJoin": "Shared horizontal tangent; no prenatal undershoot. The exact location of the illustrative minimum is not a claim about biological timing.",
+    "infantTail": "Source-inspired decline through 200 days, followed by an illustrative smooth connection to the unchanged one-year height.",
+    "patientPointAvailable": false,
+    "concentrationTooltipsAvailable": false
+  },
+  "sources": [
+    {
+      "id": "busch2022",
+      "doi": "10.1210/clinem/dgac115",
+      "title": "Dynamic Changes of Reproductive Hormones in Male Minipuberty: Temporal Dissociation of Leydig and Sertoli Cell Activity",
+      "availability": "Complete primary PDF inspected, including original vector paths and rendered figures. No original model code or numeric coefficients acquired.",
+      "pdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+      "locations": [
+        "Methods p 1561",
+        "Statistical methods and Results p 1562",
+        "Figure 2 and Discussion p 1564",
+        "Figure 3 and caption p 1565"
+      ],
+      "population": "COPENHAGEN Minipuberty Study 2016–2018; healthy term male singletons; 119 boys in postnatal follow-up, 338 postnatal serum samples, 226 postnatal INSL3 determinations. Study reports only Caucasian infants.",
+      "assay": "In-house serum LC-MS/MS",
+      "concentrationUnit": "µg/L (= ng/mL)",
+      "figure2": {
+        "statistic": "Modeled mean longitudinal trajectory from random-coefficient spline analysis, including umbilical cord samples. Normalized to the infant peak of each hormone variable, not to adult concentration or each participant individually.",
+        "reportedPeakAgeDays": 27,
+        "approximateRelativeReadings": {
+          "birth": 0.7797,
+          "day7": 0.8793,
+          "day14": 0.9502,
+          "day27": 1,
+          "day50": 0.895,
+          "day100": 0.4048,
+          "day200": 0.1811
+        },
+        "readingMethod": "Original light-blue PDF vector path, index 5 on PDF page 5; linear displayed axes. Rounded typography-derived readings, not author coefficients."
+      },
+      "figure3": {
+        "statistic": "Age-specific GAMLSS median, with postnatal observations only in the fit; same cohort as Figure 2.",
+        "caption": "Median and ±SD scores are provided for INSL3.",
+        "approximateMedianUgL": {
+          "day7": 0.05136,
+          "day27": 0.047207,
+          "day90": 0.035509,
+          "day365": 0.015918
+        },
+        "readingMethod": "Original thick black vector path 2117 on PDF page 6; linear concentration axes. Methods explicitly report square-root transformation followed by back-transformation; do not square the published values again.",
+        "limit": "The fitted median declines and differs materially from early empirical age-bin medians. Without raw data/model coefficients this difference cannot be fully reconstructed or ascribed to a single cause."
+      },
+      "interpretation": "A decreasing Figure 3 median does not refute the distinct Figure 2 trajectory or justify eliminating the modest early rise from an educational illustration.",
+      "assayCaveats": [
+        "Methods prints LOD 0.03 µg/mL, inconsistent with Figure 3/Table S1 µg/L and the assay reference; treat this as a unit discrepancy, not a 1000-fold conversion.",
+        "Below-LOD observations are represented as LOD/2 = 0.015 µg/L; a fitted late tail near this value is not an established childhood concentration.",
+        "Main text says 55/77 = 77% detectable cord samples; Table S1 gives 55/71 = 77.46%. Preserve this discrepancy."
+      ]
+    },
+    {
+      "id": "busch2022-table-s1",
+      "doi": "10.6084/m9.figshare.19093793.v1",
+      "availability": "Author workbook 19093793-STable1.xlsx inspected, Sheet 1 rows 1–10.",
+      "statistic": "Empirical bin summaries, not exact-age median model coefficients.",
+      "unit": "µg/L (= ng/mL)",
+      "groups": [
+        {
+          "age": "cord",
+          "n": 71,
+          "nAboveLod": 55,
+          "median": 0.1,
+          "mean": 0.13
+        },
+        {
+          "ageDays": [
+            4,
+            50
+          ],
+          "n": 51,
+          "nAboveLod": 40,
+          "median": 0.11,
+          "mean": 0.17
+        },
+        {
+          "ageDays": [
+            51,
+            100
+          ],
+          "n": 37,
+          "nAboveLod": 30,
+          "median": 0.1,
+          "mean": 0.1
+        },
+        {
+          "ageDays": [
+            101,
+            200
+          ],
+          "n": 69,
+          "nAboveLod": 28,
+          "median": "<LOD"
+        },
+        {
+          "ageDays": [
+            201,
+            300
+          ],
+          "n": 34,
+          "nAboveLod": 5,
+          "median": "<LOD"
+        },
+        {
+          "ageDays": [
+            301,
+            440
+          ],
+          "n": 35,
+          "nAboveLod": 4,
+          "median": "<LOD"
+        }
+      ],
+      "limit": "The first 100 days have roughly 78–81% detectable samples. The pooled postnatal 47% detection rate must not be applied to early infancy alone. Bins do not establish the exact peak day."
+    },
+    {
+      "id": "bay2007",
+      "doi": "10.1210/jc.2007-0974",
+      "availability": "Full primary text and Table 2 inspected; Methods p 4021, Table 2 p 4022, Discussion pp 4024–4025.",
+      "population": "Healthy control boys from Finnish and Danish birth cohorts, sampling at 2.5–3.5 months; other study groups concern cryptorchidism.",
+      "assay": "Serum TRFIA described in Bay 2005; LOD 0.05 ng/mL.",
+      "statistic": "Group medians and observed ranges, not a fitted trajectory.",
+      "controls": [
+        {
+          "country": "Finland",
+          "n": 100,
+          "medianNgMl": 0.13,
+          "observedRangeNgMl": "<0.05–0.60"
+        },
+        {
+          "country": "Denmark",
+          "n": 51,
+          "medianNgMl": 0.15,
+          "observedRangeNgMl": "<0.05–0.34"
+        }
+      ],
+      "limit": "Cord-versus-three-month comparisons do not resolve a transient first-month peak. The infant upper observed range must not be substituted for the central concentration."
+    },
+    {
+      "id": "bay2005",
+      "doi": "10.1210/jc.2004-2257",
+      "pmid": "15755855",
+      "availability": "Primary indexed PubMed abstract checked; no new complete PDF acquired. Bay 2007 explicitly links its assay to this work.",
+      "population": "135 normal young adult men",
+      "assay": "Serum semicompetitive TRFIA",
+      "statistic": "Median with 2.5th–97.5th percentiles",
+      "medianNgMl": 0.99,
+      "percentileRangeNgMl": [
+        0.55,
+        1.73
+      ],
+      "limit": "Infant and adult cohorts are separate. Their median ratio near 13–15% describes these groups at about three months, not the longitudinal first-month peak or a universal calibration. Adult percentile intervals differ from infant observed ranges."
+    },
+    {
+      "id": "albrethsen2020-reference-and-method",
+      "doi": "10.1210/clinem/dgaa145",
+      "availability": "Complete author PDF inspected; Methods pp 1869–1870, Figure 1A p 1870, Discussion pp 1872–1875.",
+      "pdfSha256": "5b93df6cc397b4dadf1ab4738cc25298c73d01dfcedc1036cf1e7c7553aad363",
+      "population": "1073 boys and men across reference cohorts; listed ages 10.0–60.9 years, with a recruitment gap 27.6–31.4 years. Other hCG/diurnal cohorts do not extend the healthy reference chart.",
+      "assay": "Serum LC-MS/MS",
+      "unit": "µg/L (= ng/mL)",
+      "lod": 0.03,
+      "loq": 0.15,
+      "limitUpdate": "Discussion pp 1872–1873 explicitly lowers LOD from 0.06 to 0.03 after an additional spiking experiment and retains LOQ 0.15. Applying LOQ to Busch is an assay-reference inference; Busch does not explicitly state its INSL3 LOQ.",
+      "interpretation": "Supports pubertal rise and broadly high young-adult concentrations, followed by lower older-group concentrations; not a calibrated numerical splice to TRFIA studies."
+    },
+    {
+      "id": "johansen2014",
+      "doi": "10.1530/REP-13-0435",
+      "availability": "Complete author PDF inspected; Methods pp 530–531, Results p 531, Discussion p 532.",
+      "population": "Selected longitudinal pilot of 10 healthy Copenhagen boys, repeated six-month visits.",
+      "assay": "Serum TRFIA, LOD 0.01 ng/mL",
+      "statistic": "Tanner genital-stage group medians and observed ranges, not exact chronological-age medians.",
+      "interpretation": "Supports pubertal increase; authors caution against using this small pilot as a population reference. No stage-to-age mapping or numeric INSL3 patient profile activated."
+    },
+    {
+      "id": "albrethsen2020-puberty",
+      "doi": "10.1210/clinem/dgaa496",
+      "availability": "Primary abstract and indexed Methods inspected; complete PDF not acquired during this audit.",
+      "population": "18 pubertal Danish boys",
+      "assay": "Serum LC-MS/MS",
+      "interpretation": "Qualitative corroboration of pubertal rise and varying timing relative to testosterone; not a source of annual numeric medians."
+    },
+    {
+      "id": "tulumcu2025",
+      "doi": "10.3389/fendo.2025.1574760",
+      "title": "Defining the end of puberty in boys: INSL3 and the acute determinants of adult Leydig-cell functional capacity",
+      "availability": "Full text and the user-supplied PDF inspected; Introduction p 2, Table 1 p 4, Figure 1A/B p 5, Discussion p 7, reference 11 p 9. User file not redistributed.",
+      "uploadedPdfSha256": "8559c10b645d00e9c9a725c889609d8b5b12c8bc1319dd5fb9169e2d33331659",
+      "population": "UK ALSPAC male cohort; nominal visits at 17 and 24 years.",
+      "assay": "TRFIA; Methods describes serum/plasma without resolving an INSL3-specific matrix.",
+      "groups": [
+        {
+          "nominalAgeYears": 17,
+          "medianActualAgeMonths": 213,
+          "n": 1250,
+          "medianNgMl": 1.12,
+          "meanNgMl": 1.48
+        },
+        {
+          "nominalAgeYears": 24,
+          "medianActualAgeMonths": 294,
+          "n": 1177,
+          "medianNgMl": 1.8,
+          "meanNgMl": 2.16
+        }
+      ],
+      "infantClaim": "Introduction describes a small postnatal increase and cites Busch 2022; no independent infant data are provided.",
+      "figure1B": "Collated means ± SEM from several puberty/adult studies, plotted from later childhood around 9 years. An axis beginning at 0 does not establish a neonatal curve.",
+      "limit": "Peak around 22 years is inferred rather than directly and universally established. Do not splice group means/medians into a common calibrated lifespan concentration model."
+    },
+    {
+      "id": "emas2022",
+      "doi": "10.1111/andr.13220",
+      "availability": "Complete primary HTML/XML, Methods, Table 1, Figures 2/3 and Discussion inspected; Figure 3B medians are approximate visual readings, no author numeric age-bin table acquired.",
+      "population": "Community-dwelling men from eight European centres; baseline 40–79 years, follow-up mean 4.3 years, variable morbidity and lifestyle.",
+      "assay": "Morning serum TRFIA",
+      "unit": "ng/mL",
+      "interpretation": "Cross-sectional and longitudinal results support gradual adult decline, without a sudden age-defined cliff.",
+      "limit": "Age-bin medians are not exact-age medians; 80–89 bin does not establish observed age 89. No complete regression intercept, exact maximum observed age or calibrated infant/adult relationship obtained."
+    },
+    {
+      "id": "famas2006",
+      "doi": "10.1111/j.1365-2605.2006.00714.x",
+      "availability": "Primary Methods/Results/Discussion inspected through web retrieval; publisher download blocked, no complete PDF acquired. Figure 1 was corrected 1 November 2006; no unverified old figure digitized.",
+      "population": "1160 South Australian men 35–80 years",
+      "assay": "Serum TRFIA",
+      "statistic": "Cross-sectional group arithmetic means; not individual aging trajectories.",
+      "interpretation": "Independent support for gradual later-adult decline; no interpolation of missing group means and no concentration splice across studies."
+    },
+    {
+      "id": "harrison2019",
+      "doi": "10.3389/fendo.2019.00596",
+      "availability": "Complete primary text/XML inspected.",
+      "population": "12 fetal cord-serum samples at gestational weeks 15–20; distinct fetal testis samples for mRNA.",
+      "assay": "Older noncommercial RIA, explicitly not fully validated; cross-reactivity unknown.",
+      "interpretation": "Qualitative evidence of fetal presence only. Does not validate the prenatal graphic amplitude or a serum concentration peak reconstructed from mRNA."
+    }
+  ],
+  "statisticalLimits": [
+    "Below-LOQ modeled medians reduce confidence in precise numerical claims. They do not prove absence of a biological wave or automatically invalidate every population estimate.",
+    "LOD/LOQ for individual assays, fitted population summaries, and display readability are different concepts. Do not silently recensor all Busch values at the external assay LOQ.",
+    "The published Figure 2 mean trajectory and Figure 3 median are distinct estimands in the same cohort. Neither can be relabeled as the other.",
+    "No common calibrated lifetime concentration model or diagnostic percentile reference is created. Laboratory norms and reference profiles of other analytes remain unchanged."
+  ]
+}

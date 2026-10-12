@@ -1,0 +1,256 @@
+{
+  "reviewedAt": "2026-10-09",
+  "scope": "Educational female lifespan mock only; no reference-range engine, no clinical inference from age. Read-only frontend review.",
+  "preferredAdultEstradiol": {
+    "citation": "Frederiksen et al. 2020, JCEM 105:754–768",
+    "doi": "10.1210/clinem/dgz196",
+    "url": "https://doi.org/10.1210/clinem/dgz196",
+    "evidence": "Supplementary Table 8, existing local full PDF/text; primary full article viewed through web PDF",
+    "method": "Isotope-dilution online TurboFlow LC-MS/MS, Department of Growth and Reproduction, Rigshospitalet",
+    "material": "serum",
+    "ageYears": [
+      24.7,
+      43.9
+    ],
+    "statistic": "median",
+    "unit": "pmol/L",
+    "allPhaseCombinedMedianReported": false,
+    "phasePoints": [
+      {
+        "cycleDays": "1–7",
+        "phase": "early follicular",
+        "nPrinted": 47,
+        "median": 156,
+        "p25": 111,
+        "p75": 184
+      },
+      {
+        "cycleDays": "8–14",
+        "phase": "late follicular",
+        "nPrinted": 53,
+        "median": 254,
+        "p25": 193,
+        "p75": 378
+      },
+      {
+        "cycleDays": "15+",
+        "phase": "all observations from day15",
+        "nPrinted": 89,
+        "median": 264,
+        "p25": 186,
+        "p75": 355
+      }
+    ],
+    "overlappingSubset": {
+      "cycleDays": "15+",
+      "selection": "progesterone >10 nmol/L; ovulation confirmed",
+      "n": 48,
+      "median": 303,
+      "p25": 229,
+      "p75": 392
+    },
+    "recommendedIllustrativeBand": {
+      "lower": 156,
+      "upper": 264,
+      "meaning": "Envelope of three published calendar-phase medians; NOT full cycle amplitude, percentile interval or RI",
+      "centerLine": "No synthetic center. Optional lower line156 ONLY if explicitly identified as early follicular."
+    },
+    "countCaution": "Caption says188women but phase counts printed47+53+89=189; figure caption gives46 for early follicular. Preserve source discrepancy rather than claiming resolvedN.",
+    "postmenopause": "Main article describes93 presumed postmenopausal women54.6–60.7y, mostly7–80pmol/L plus outliers; no numeric pooled median was found. Never derive median from this range."
+  },
+  "preferredPostmenopausalEstradiol": {
+    "citation": "Cui et al. 2026, JCEM111(10):2745–2755",
+    "doi": "10.1210/clinem/dgag188",
+    "pmid": "42120349",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/42120349/",
+    "verified": "Primary PubMed/EuropePMC core abstract and publisher/PMC indexed abstract; not a full-paper extraction",
+    "cohorts": 5,
+    "n": 7206,
+    "ageYears": [
+      38,
+      100
+    ],
+    "population": "Community-dwelling postmenopausal women, primarily European ancestry, no exogenous estrogens",
+    "material": "plasma",
+    "method": "Primarily LC-MS/MS; some extraction/chromatography RIA in one cohort; cohort results recalibrated to CDC reference measurement procedure",
+    "statistic": "median",
+    "medianAllPmolL": 18.0,
+    "medianNonObesePmolL": 15.1,
+    "medianAllPgMl": 4.9,
+    "medianNonObesePgMl": 4.1,
+    "ageRelationship": "Estradiol correlated with BMI, not chronological age in this analysis",
+    "use": "A pooled postmenopausal group anchor, NOT an age-specific median or a claim of identical assay to Danish childhood/adult data."
+  },
+  "cycleIndependentCrossCheck": {
+    "citation": "Anckaert et al.2021, Pract Lab Med24:e00211",
+    "doi": "10.1016/j.plabm.2021.e00211",
+    "pmcid": "PMC8042396",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8042396/",
+    "verified": "Downloaded and read full primary XML, Table1",
+    "n": 85,
+    "ageYearsOverall": [
+      18,
+      37
+    ],
+    "material": "serum",
+    "method": "Roche Elecsys EstradiolIII and LH, cobas e801",
+    "statistic": "median",
+    "e2MainPhaseMediansPmolL": {
+      "follicular": 198,
+      "ovulation": 757,
+      "luteal": 412
+    },
+    "lhMainPhaseMediansIuL": {
+      "follicular": 7.14,
+      "ovulation": 22.6,
+      "luteal": 6.24
+    },
+    "e2SubphaseMediansPmolL": {
+      "earlyFollicular": 125,
+      "intermediateFollicular": 172,
+      "lateFollicular": 464,
+      "ovulation": 817,
+      "earlyLuteal": 390,
+      "intermediateLuteal": 505,
+      "lateLuteal": 396
+    },
+    "use": "Source-specific cycle cross-check; do not substitute these immunoassay medians for Danish LC-MS/MS values or portray pooled phase measurements as a continuous daily median curve."
+  },
+  "swanTransition": {
+    "citation": "Randolph et al.2011, JCEM96:746–754",
+    "doi": "10.1210/jc.2010-1746",
+    "pmid": "21159842",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/21159842/",
+    "verified": "Complete primary abstract via EuropePMC; Table1 numeric means checked in primary indexed PMC text, full HTML retrieval hit browser challenge",
+    "nCohort": 3302,
+    "nNaturalFmpAnalysis": 1215,
+    "baselineAgeYears": [
+      42,
+      52
+    ],
+    "timeAxis": "years relative to actual final menstrual period; cannot assign these knots to every woman at fixed chronological ages",
+    "fshTimingYearsFromFmp": {
+      "initialIncrease": -6.1,
+      "acceleration": -2.05,
+      "deceleration": -0.2,
+      "stable": 2.0
+    },
+    "e2TimingYearsFromFmp": {
+      "declineBegins": -2.03,
+      "maximumDeclineRate": 0,
+      "stable": 2.17
+    },
+    "table1ObservedVisitMeans": {
+      "fshIuL": {
+        "baseline": 19.25,
+        "visit9": 99.3
+      },
+      "e2PgMl": {
+        "baseline": 55.08,
+        "visit9": 18.4
+      }
+    },
+    "use": "Support timing and direction, not the amplitude of an LC-MS/MS curve. Overall meanE2 did not show a universal premenopausal rise. An E2 hump is optional individual-pattern illustration, not mandatory physiology."
+  },
+  "alspacCrossCheck": {
+    "citation": "Soares et al.2020, Scientific Reports",
+    "doi": "10.1038/s41598-020-77871-9",
+    "pmcid": "PMC7718240",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7718240/",
+    "verified": "Full primary XML read, Table1 and Results/Discussion",
+    "n": 1608,
+    "statistic": "median",
+    "unit": "mIU/mL, numerically equal toIU/L",
+    "visit1Groups": {
+      "premenopausal": {
+        "meanAge": 48.3,
+        "lh": 10.2,
+        "fsh": 11.9
+      },
+      "perimenopausal": {
+        "meanAge": 49.6,
+        "lh": 24.9,
+        "fsh": 33.4
+      },
+      "postmenopausal": {
+        "meanAge": 53.6,
+        "lh": 40.3,
+        "fsh": 78.4
+      }
+    },
+    "postmenopausalVisitMedians": {
+      "lh": [
+        40.3,
+        39.2,
+        40.3,
+        37.0
+      ],
+      "fsh": [
+        78.4,
+        77.6,
+        85.5,
+        82.7
+      ]
+    },
+    "publishedModelIllustrationsFshIuL": [
+      {
+        "chronologicalAge": 45,
+        "predictedMean": 13
+      },
+      {
+        "chronologicalAge": 50,
+        "predictedMean": 39
+      },
+      {
+        "chronologicalAge": 55,
+        "predictedMean": 77
+      },
+      {
+        "chronologicalAge": 60,
+        "predictedMean": 89
+      },
+      {
+        "chronologicalAge": 65,
+        "predictedMean": 46
+      }
+    ],
+    "use": "Confirms rise around menopause and possible later fall. Premenopausal group is midlife, not general young-adult baseline; example modeled means are not observed medians."
+  },
+  "amhInhibinTransitionCrossCheck": {
+    "citation": "Sowers et al.2008,JCEM93:3478–3483",
+    "doi": "10.1210/jc.2008-0567",
+    "pmid": "18593767",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/18593767/",
+    "verified": "Primary abstract via EuropePMC",
+    "nWomen": 50,
+    "nSpecimens": 300,
+    "sampling": "six annual follicular-phase samples",
+    "finding": "AMH declines and low/nondetectable inhibinB already occur several years before FMP; low or undetectable inhibinB noted4–5y before FMP.",
+    "use": "Do not delay all AMH/INHB decline to the FMP or force literal0. Exact nondetection timing depends on assay sensitivity."
+  },
+  "latePostmenopauseVariation": {
+    "citation": "Lima et al.2026 (online2025),Menopause33(1)",
+    "doi": "10.1097/GME.0000000000002631",
+    "pmid": "40891652",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/40891652/",
+    "verified": "Primary abstract via EuropePMC",
+    "n": 291,
+    "followupYears": 20,
+    "population": "WHI OsteoPerio women not using hormone therapy",
+    "finding": "Distinct FSH/LH trajectory groups include stable, declining and late-rising patterns. No universal monotonic age curve fits all postmenopausal women.",
+    "use": "Broad elevated postmenopausal state is defensible; do not claim all women keep rising or all decline at one exact age."
+  },
+  "frontendReview": {
+    "file": "/workspace/onboarding/hormone-lifespan-preview/preview.js",
+    "reviewedOriginal": "femaleDefinitions uses independently chosen infantHeight values and fixed adult tail heights; these cannot substantiate cross-age amplitudes.",
+    "recommendations": [
+      "Use one display normalization per hormone after source-unit anchors are assembled; do not boost infant and adult segments independently.",
+      "ForE2 use the LC-MS/MS phase-median band156–264pmol/L with no fabricated overall mean; a pooled18pmol/L postmenopausal anchor can be separate and identified.",
+      "Inter-study connectors, ageplacement of grouped medians and transition timing remain illustrative, not an observed longitudinal trajectory.",
+      "Keep cycle bands as phase-median envelopes only if sourced; earlier arbitrary widths cannot be called real variation or RI.",
+      "Do not infer an individual menopause status, cycle phase or reproductive age from chronological age.",
+      "Do not infer pregnancy,lactation,hormone treatment or PCOS trajectories from this baseline female overview."
+    ],
+    "editsMade": false
+  }
+}

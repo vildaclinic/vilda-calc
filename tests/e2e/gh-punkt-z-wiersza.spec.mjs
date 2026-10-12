@@ -299,7 +299,7 @@ test('odświeżanie panelu nie kasuje komunikatu o zmianie preparatu; bez Włąc
 // P-GH-PUNKT-Z-WIERSZA-ZGODNOSC (recenzja #582, P2). Panel i komunikat „Zapisano…” dotyczą pacjenta, przy którym
 // powstały. Przed poprawką komunikat o punkcie pacjenta A zostawał nad kartą pacjenta B. Trzy drogi, każda w osobnym
 // teście i bez pozostałych (znacznik pacjenta karty sprawdzany wprost), żeby każdy mechanizm miał własnego strażnika.
-const znacznik = (page) => page.evaluate(() => window._vildaCurrentPatientId || sessionStorage.getItem('vildaCurrentPatientId') || null);
+const znacznik = (page) => page.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId') || window._vildaCurrentPatientId || null);
 
 test('zmiana pacjenta (1/3): odtworzenie stanu karty zamyka otwarty panel; zapis nie powstaje', async ({ page }) => {
   test.setTimeout(150_000);
@@ -325,6 +325,9 @@ test('zmiana pacjenta (1/3): odtworzenie stanu karty zamyka otwarty panel; zapis
   expect(await modul(page)).toEqual([P1, P2]);
 });
 
+// Inna ramka powłoki, wczytując pacjenta, zmienia tylko WSPÓLNY sessionStorage.vildaCurrentPatientId; pamięć tej ramki
+// (_vildaCurrentPatientId) zostaje stara (vilda_panel_pacjent.js). Test zmienia więc wyłącznie wspólny znacznik
+// (uwaga recenzji do #590: wcześniej zmieniał pamięć okna, a moduł czytał ją pierwszą i prawdziwej zmiany nie widział).
 test('zmiana pacjenta (2/3): inny znacznik pacjenta karty bez zdarzenia (zmiana w innej ramce) zamyka panel i komunikat', async ({ page }) => {
   test.setTimeout(150_000);
   await zaloguj(page);
@@ -332,7 +335,7 @@ test('zmiana pacjenta (2/3): inny znacznik pacjenta karty bez zdarzenia (zmiana 
   await pacjentka(page);
   await reczny(page).locator('.gh-z-wiersza-btn').click();
   await page.fill('#ghZWierszaDawka', '0.9');
-  await page.evaluate(() => { window._vildaCurrentPatientId = 'gh-e2e-znacznik-b'; });
+  await page.evaluate(() => { sessionStorage.setItem('vildaCurrentPatientId', 'gh-e2e-znacznik-b'); window._vildaCurrentPatientId = 'gh-e2e-znacznik-a'; });
   await reczny(page).locator('.adv-bone-age').fill('9');
   await expect(page.locator('#ghZWierszaPanel')).toHaveCount(0);
   expect(await modul(page)).toEqual([P1, P2]);
@@ -345,7 +348,7 @@ test('zmiana pacjenta (2/3): inny znacznik pacjenta karty bez zdarzenia (zmiana 
   await expect(page.locator('#ghZWierszaStatus')).toHaveText(ZAPISANO);
   await page.waitForTimeout(500);
   await expect(page.locator('#ghZWierszaStatus'), 'ten sam pacjent: komunikat zostaje').toHaveText(ZAPISANO);
-  await page.evaluate(() => { window._vildaCurrentPatientId = 'gh-e2e-znacznik-c'; });
+  await page.evaluate(() => { sessionStorage.setItem('vildaCurrentPatientId', 'gh-e2e-znacznik-c'); });
   await page.click('#advAddMeasurementBtn');
   await expect(page.locator('#ghZWierszaStatus')).toHaveCount(0);
 });
@@ -451,6 +454,50 @@ test('powłoka: punkt zapisany z wiersza na Start jest w tabeli monitora w DocPr
   await docpro.evaluate(() => window.refreshGHTherapyMonitor());
   await expect.poll(() => docpro.evaluate(() => Array.from(document.querySelectorAll('#ghTherapyTbody .edit-gh-pt-btn'))
     .map((b) => b.getAttribute('data-id')))).toEqual([P1.id, P2.id, String(id)]);
+});
+
+// Prawdziwa ścieżka powłoki (uwaga recenzji do #590): panel otwarty na Start, w DocPro lekarz wczytuje innego pacjenta
+// (zapisanego w sejfie), potem wraca na Start — panelu z pomiarem poprzedniego pacjenta już nie ma, a lista punktów GH
+// nowego pacjenta nie ma punktu z panelu. (Zamyka go przeładowanie nieaktualnej ramki przez powłokę albo kontrola
+// wspólnego znacznika w tym module — test sprawdza wynik widoczny dla lekarza.)
+test('powłoka: wczytanie innego pacjenta w DocPro przy otwartym panelu na Start — po powrocie panelu nie ma', async ({ page }) => {
+  test.setTimeout(180_000);
+  await zaloguj(page, '/app.html#/start');
+  const ramka = async (tytul) => {
+    await page.waitForFunction((n) => {
+      const f = [...document.querySelectorAll('iframe.app-pane')].find((x) => x.title === n);
+      return Boolean(f && f.contentWindow && f.contentWindow.VildaPersistence && typeof f.contentWindow.applyLoadedData === 'function');
+    }, tytul, { timeout: 30000 });
+    return (await page.$(`iframe.app-pane[title="${tytul}"]`)).contentFrame();
+  };
+  let start = await ramka('Start');
+  await startGotowy(start);
+  const idB = await start.evaluate(async () => (await window.VildaVault.savePatient({
+    name: 'Fikcyjny Drugi', user: { lastName: 'Fikcyjny', firstName: 'Drugi', sex: 'M', age: 11, ageMonths: 0, height: 140, weight: 33 },
+  }, { dedup: false })).patientId);
+  await pacjentka(start);
+  await start.locator('#advMeasurements .measure-row:not([data-gh-id]) .gh-z-wiersza-btn').click();
+  await start.fill('#ghZWierszaDawka', '0.9');
+  await expect(start.locator('#ghZWierszaPanel')).toBeVisible();
+
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka('DocPro');
+  await docpro.evaluate(async (pid) => {
+    const p = await window.VildaVault.getPatient(pid);
+    const snap = p.snapshots[0];
+    window.applyLoadedData(snap.payload);
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', {
+      detail: { patientId: pid, savedAtISO: snap.savedAtISO || null, snapshotCount: p.snapshotCount || 1, source: 'pick' },
+    }));
+  }, idB);
+  const wybor = docpro.locator('#vildaLcmNew');
+  if (await wybor.isVisible({ timeout: 5000 }).catch(() => false)) await wybor.click();
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId')), { timeout: 15000 }).toBe(idB);
+
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  start = await ramka('Start');
+  await expect.poll(() => start.evaluate(() => Boolean(document.getElementById('ghZWierszaPanel'))), { timeout: 20000 }).toBe(false);
+  expect(await start.evaluate(() => (window.VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []) || []).length)).toBe(0);
 });
 
 test('VildaGhProgramyDane = programy karty leczenia (kolejność, etykiety) i preparaty programu w monitorze (DocPro)', async ({ page }) => {

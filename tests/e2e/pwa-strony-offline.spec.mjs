@@ -148,6 +148,230 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
       if (strona === '/docpro.html') {
         await expect.poll(() => page.evaluate(() => typeof window.VildaVault), { message: 'sejf DocPro offline' }).toBe('object');
       }
+      if (strona === '/przelicznik-jednostek.html') {
+        // All diagram resources must come from the production precache. The
+        // converter has never been opened online, and its server is stopped.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'F', age: 12, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('AMH');
+        await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+        const wykres = page.locator('#labHormoneLifespan');
+        await expect(wykres).toBeVisible();
+        await expect(wykres.locator('[data-hormone="amh"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(wykres.locator('[data-patient-age-marker]')).toHaveAttribute('data-patient-age-marker', '12');
+        await wykres.locator('[data-hormone="inhb"]').click();
+        await expect(wykres.locator('[data-hormone="inhb"]')).toHaveAttribute('aria-pressed', 'true');
+        await page.reload({ waitUntil: 'load' });
+        await page.locator('#labSubstance').fill('AMH');
+        await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+        await expect(wykres).toBeVisible();
+        await expect(wykres.locator('[data-hormone="amh"]')).toHaveAttribute('aria-pressed', 'true');
+        // The quantitative module and sources must also start from precache,
+        // including after a reload while the server remains stopped.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 40, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('Testosteron');
+        await page.locator('#labSubstanceDropdown [data-id="testosterone_total"]').click();
+        await page.locator('#labUnit').selectOption('nmol/L');
+        await page.locator('#labValue').fill('13');
+        const punkt = wykres.locator('[data-patient-concentration="t"]');
+        await expect(punkt).toHaveAttribute('data-value', '13');
+        await expect.poll(async () => Number(await punkt.getAttribute('data-median'))).toBeCloseTo(18.1, 3);
+        await wykres.locator('[data-view="puberty"]').click();
+        await expect(punkt).toHaveCount(0);
+        await wykres.locator('[data-view="life"]').click();
+        await expect(punkt).toHaveAttribute('data-value', '13');
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 5, ageMonths: 6 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('AMH');
+        await page.locator('#labSubstanceDropdown [data-id="amh"]').click();
+        await page.locator('#labUnit').selectOption('ng/mL');
+        await page.locator('#labValue').fill('99.18');
+        const amh = wykres.locator('[data-patient-concentration="amh"]');
+        await expect(amh).toHaveAttribute('data-profile', 'wang2020-male-amh-age-5');
+        await expect.poll(async () => Number(await amh.getAttribute('data-median'))).toBeCloseTo(99.18 / .1401, 6);
+        await expect(wykres.locator('[data-lifespan="source-copy"] p').filter({ hasText: 'Odniesienie dla wyniku:' })).toContainText('5–<6 lat');
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('Linia jest poglądowa.');
+        const amhLine = wykres.locator('[data-stable-reference-line="amh"]');
+        await expect(amhLine).toHaveAttribute('data-divisor', '1335.592934');
+        const amhPath = await amhLine.getAttribute('d');
+        await page.locator('#labValue').fill('10000');
+        await expect(amh).toHaveAttribute('data-offscale', 'above');
+        await expect(amh.locator('[data-result-overflow]')).toHaveCount(1);
+        await expect(amhLine).toHaveAttribute('d', amhPath);
+        await page.locator('#labValue').fill('');
+        await expect(amh).toHaveCount(0);
+        await expect(amhLine).toHaveAttribute('d', amhPath);
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 44, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labValue').fill('5.77');
+        await expect(amh).toHaveAttribute('data-profile', 'tehrani2017-male-amh');
+        await expect.poll(async () => Number(await amh.getAttribute('data-median')) * .1401).toBeCloseTo(5.77, 8);
+        await expect(amhLine).toHaveAttribute('d', amhPath);
+        // The new observation renderer is a separate script. Verify its
+        // actual numeric output after offline reload, not just its global.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 0, ageMonths: 3 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await page.locator('#labSubstance').fill('Inhibina B');
+        await page.locator('#labSubstanceDropdown [data-id="inhibin_b"]').click();
+        await page.locator('#labValue').fill('250');
+        await wykres.locator('[data-view="mini"]').click();
+        const obserwacje = wykres.locator('[data-lifespan="observations"]');
+        await expect(obserwacje.locator('[data-inhibin-observation="mini"]')).toBeVisible();
+        await expect(obserwacje.locator('[data-observation-series]')).toHaveCount(2);
+        await expect(obserwacje.locator('[data-observation-point]')).toHaveCount(4);
+        await expect(obserwacje.locator('[data-observation-series="term-male"] [data-observation-point="month3"]'))
+          .toHaveAttribute('data-value', '335.5');
+        await expect(obserwacje.locator('[data-observation-series="preterm-male"] [data-observation-point="day7"]'))
+          .toHaveAttribute('data-value', '201.1');
+        // The independent display spline must also load from precache. Its
+        // shape and scale stay fixed offline when a result is added/removed.
+        await page.evaluate(() => {
+          window.VildaPersistence.writeShared({ sex: 'M', age: 44, ageMonths: 0 }, { force: true });
+          document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+        });
+        await wykres.locator('[data-view="life"]').click();
+        await page.locator('#labValue').fill('');
+        const stabilnaKrzywa = wykres.locator('[data-stable-reference-line="inhb"]');
+        await expect(stabilnaKrzywa).toHaveCount(1);
+        await expect(stabilnaKrzywa).toHaveAttribute('data-divisor', '309.779035');
+        const przebieg = await stabilnaKrzywa.getAttribute('d');
+        expect(przebieg).toContain('C');
+        await page.locator('#labValue').fill('88');
+        const inhibina = wykres.locator('[data-patient-concentration="inhb"]');
+        await expect(inhibina).toHaveAttribute('data-value', '88');
+        await expect.poll(async () => Number(await inhibina.getAttribute('data-median')))
+          .toBeCloseTo(162.08470588235292, 10);
+        await expect(stabilnaKrzywa).toHaveAttribute('d', przebieg);
+        // The approved LH/FSH data and fixed display policy must survive a
+        // real offline start too, including the independent source marker.
+        for (const [id, label, reference, divisor] of [
+          ['lh', 'LH', 3.91, 5.57], ['fsh', 'FSH', 4.56, 8.4178]
+        ]) {
+          await page.locator('#labSubstance').fill(label);
+          await page.locator(`#labSubstanceDropdown [data-id="${id}"]`).click();
+          await page.locator('#labUnit').selectOption('IU/L');
+          await page.locator('#labValue').fill('');
+          const line = wykres.locator(`[data-stable-reference-line="${id}"]`);
+          await expect(line).toHaveAttribute('data-divisor', String(divisor));
+          const emptyPath = await line.getAttribute('d');
+          await page.locator('#labValue').fill('2');
+          const result = wykres.locator(`[data-patient-concentration="${id}"]`);
+          await expect(result).toHaveAttribute('data-value', '2');
+          await expect.poll(async () => Number(await result.getAttribute('data-reference-value')))
+            .toBeCloseTo(reference, 8);
+          await expect(line).toHaveAttribute('d', emptyPath);
+          await page.locator('#labValue').fill('');
+          await expect(line).toHaveAttribute('d', emptyPath);
+        }
+        // INSL3 is an illustration, including after a first offline start.
+        // Its retained infant evidence must not silently enable a result point.
+        await wykres.locator('[data-hormone="insl3"]').click();
+        await wykres.locator('[data-hormone="fsh"]').click();
+        await wykres.locator('[data-view="mini"]').click();
+        const insl3 = wykres.locator('[data-stable-reference-line="insl3"]');
+        await expect(insl3).toHaveAttribute('stroke-dasharray', '6 5');
+        const peak = await insl3.evaluate(path => {
+          const rect = path.ownerSVGElement.querySelector('[data-sector="mini"]');
+          const x = Number(rect.getAttribute('x')) + Number(rect.getAttribute('width')) * 27 / 365.25;
+          let low = 0, high = path.getTotalLength();
+          for (let i = 0; i < 27; i++) {
+            const middle = (low + high) / 2;
+            if (path.getPointAtLength(middle).x < x) low = middle; else high = middle;
+          }
+          return (Number(rect.getAttribute('y')) + Number(rect.getAttribute('height')) -
+            path.getPointAtLength((low + high) / 2).y) / Number(rect.getAttribute('height'));
+        });
+        expect(peak).toBeCloseTo(.14, 3);
+        for (const value of [null, .04]) {
+          await page.evaluate(value => window.VildaHormoneLifespanRuntime.update({
+            analyte: 'insl3', sex: 'male', ageYears: 30 / 365.25, preterm: 'no',
+            sourceStatus: 'ready', identityKey: 'fictional-offline-insl3',
+            measurement: value === null ? null : { value, unit: 'ug/L', operator: '=' },
+          }), value);
+          await expect(wykres.locator('[data-patient-concentration="insl3"], [data-reference-line="insl3"]')).toHaveCount(0);
+        }
+        await expect(insl3).toBeVisible();
+        // The approved AMH comparison must start from the real precache too.
+        // Population lines retain one common scale even without a qualified dot.
+        const infantAmh = {
+          analyte: 'amh', sex: 'female', ageYears: 90 / 365.25, preterm: 'no',
+          sourceStatus: 'ready', identityKey: 'fictional-offline-amh-comparison',
+          measurement: null,
+        };
+        await page.evaluate(context => window.VildaHormoneLifespanRuntime.update(context), infantAmh);
+        await wykres.getByRole('button', { name: 'Porównaj płcie', exact: true }).click();
+        const amhComparison = wykres.locator('[data-comparison-curve="amh"]');
+        await expect(amhComparison).toHaveCount(2);
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('10×');
+        const fixedAmhPaths = await amhComparison.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
+        for (const value of [1.5, 10000, 0, null]) {
+          await page.evaluate(({ context, value }) => window.VildaHormoneLifespanRuntime.update({
+            ...context, measurement: value === null ? null : { value, unit: 'ng/mL', operator: '=' },
+          }), { context: infantAmh, value });
+          await expect.poll(() => amhComparison.evaluateAll(paths => paths.map(path => path.getAttribute('d'))))
+            .toEqual(fixedAmhPaths);
+          if (value === null) await expect(wykres.locator('[data-patient-concentration="amh"]')).toHaveCount(0);
+          else if (value === 0 || value === 10000)
+            await expect(wykres.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', value === 0 ? 'below' : 'above');
+          else await expect(wykres.locator('[data-result-point]')).toHaveCount(1);
+        }
+        // INHB uses the same fixed concentration axis for both periods. The
+        // scoped female puberty source must be available after a real offline
+        // reload without adding it to the ordinary patient reference registry.
+        await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(() => window.VildaHormoneLifespanRuntime &&
+          window.VildaHormoneLifespanDisplay?.buildInhibinComparison);
+        for (const [period, ageYears, profile, reference] of [
+          ['mini', 90 / 365.25, 'ljubicic2022-female-inhb', 49.4717876166],
+          ['puberty', 14, 'borelli2025-female-inhb-puberty-comparison', 46],
+        ]) {
+          const context = { analyte: 'inhibin_b', sex: 'female', ageYears, preterm: 'no',
+            sourceStatus: 'ready', identityKey: 'fictional-offline-inhibin-comparison', measurement: null };
+          await page.evaluate(context => window.VildaHormoneLifespanRuntime.update(context), context);
+          await wykres.locator(`[data-view="${period}"]`).click();
+          if (await wykres.locator('.vhl-compare-toggle').getAttribute('aria-pressed') !== 'true')
+            await wykres.locator('.vhl-compare-toggle').click();
+          const curves = wykres.locator('[data-comparison-curve="inhb"]');
+          await expect(curves).toHaveCount(2);
+          await expect(wykres.locator('[data-lifespan="chart"]')).toHaveAttribute('data-comparison-max', '400');
+          const fixedPaths = await curves.evaluateAll(nodes => nodes.map(node => node.getAttribute('d')));
+          const result = wykres.locator('[data-patient-concentration="inhb"]');
+          for (const value of [0, 40, 1000, null]) {
+            await page.evaluate(({ context, value }) => window.VildaHormoneLifespanRuntime.update({
+              ...context, measurement: value === null ? null : { value, unit: 'pg/mL' },
+            }), { context, value });
+            await expect.poll(() => curves.evaluateAll(nodes => nodes.map(node => node.getAttribute('d')))).toEqual(fixedPaths);
+            if (value === null) await expect(result).toHaveCount(0);
+            else {
+              await expect(result).toHaveAttribute('data-profile', profile);
+              await expect.poll(async () => Number(await result.getAttribute('data-reference-value'))).toBeCloseTo(reference, 8);
+              if (value > 400) await expect(result.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', 'above');
+              else await expect(result.locator('[data-result-point]')).toHaveCount(1);
+            }
+          }
+        }
+        await page.evaluate(() => window.VildaHormoneLifespanRuntime.update({
+          analyte: 'inhibin_b', sex: 'female', ageYears: 14, sourceStatus: 'ready',
+          identityKey: 'fictional-offline-inhibin-comparison', measurement: { value: 40, unit: 'pg/mL' },
+        }));
+        await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(1);
+        await wykres.locator('[data-view="life"]').click();
+        await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(0);
+        expect(await page.evaluate(() => window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
+          analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
+        }).status)).toBe('unavailable');
+      }
     }
 
     expect(await sonda(), 'po całym obchodzie sieci nadal nie ma').toBe('brak sieci');

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "doi": "10.1210/clinem/dgz196",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7007877/",
+    "supplement": "https://doi.org/10.6084/m9.figshare.10084145",
+    "supplementFile": "https://ndownloader.figshare.com/files/18182171",
+    "table": "Supplementary Table 8"
+  },
+  "sex": "female",
+  "hormone": "e2",
+  "unit": "pmol/L",
+  "statistic": "median",
+  "ageRangeYears": [
+    24.7,
+    43.9
+  ],
+  "assay": "Isotope-dilution online TurboFlow LC-MS/MS, Rigshospitalet; Dionex UltiMate 3000 / TSQ Quantiva",
+  "rows": [
+    {
+      "cycleDayGroup": "1–7",
+      "description": "early follicular",
+      "median": 156,
+      "n_E1_E2": 47
+    },
+    {
+      "cycleDayGroup": "8–14",
+      "description": "late follicular",
+      "median": 254,
+      "n_E1_E2": 53
+    },
+    {
+      "cycleDayGroup": "15+ (all)",
+      "description": "post-day-15 group, all participants",
+      "median": 264,
+      "n_E1_E2": 89
+    },
+    {
+      "cycleDayGroup": "15+ (ovul)",
+      "description": "post-day-15 subgroup with progesterone >10 nmol/L",
+      "median": 303,
+      "n_E1_E2": 48
+    }
+  ],
+  "displayNotes": [
+    "Separate phases of one adult age cohort, not consecutive chronological-age milestones. Do not turn 156,254,264,303 into a life-course rise.",
+    "Adult group phase medians establish the scale of reproductive-age E2; they do not provide a single cycle-independent age curve.",
+    "Table title says 188 women, phase E1/E2 counts sum to 189; retain per-row n as printed and flag unresolved total inconsistency.",
+    "No adolescent or postmenopausal median is included here; the parent paper provides those mainly graphically.",
+    "Lower E2 in childhood (1–7 years, values did not exceed 20 pmol/L in this source) is descriptive distribution evidence, not a replacement median anchor."
+  ]
+}

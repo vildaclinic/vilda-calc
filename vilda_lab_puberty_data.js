@@ -62,17 +62,57 @@
     };
   }
 
+  function adultProfile(analyte, sourceId, method, values) {
+    var adultAge = age(bound('>', 18), null, '>18 years');
+    var contexts = ['follicular', 'ovulation', 'luteal', 'postmenopause'];
+    var labels = ['Faza folikularna', 'Środek cyklu', 'Faza lutealna', 'Postmenopauza'];
+    return {
+      id: 'mayo-' + analyte + '-adult', version: '2026-10-09.4', active: true, analyte: analyte, sourceId: sourceId,
+      method: method, material: 'serum', unit: 'IU/L', examinationType: 'basal', referenceContext: 'adult',
+      population: { label: 'Dorośli — Mayo Clinic Laboratories', statistics: { kind: 'referenceInterval', coveragePercent: null, sampleSize: null } },
+      scope: { age: adultAge },
+      knownLimitations: ['Przedziały dotyczą metody katalogu Mayo; wiek ani płeć nie potwierdzają metody badanej próbki.',
+        'Faza cyklu i postmenopauza nie są rozpoznawane z wieku ani pojedynczego LH/FSH. Brak danych nie oznacza fazy folikularnej.',
+        'Katalog nie podaje osobnych norm późnej starości ani perimenopauzy. Zakres >18 lat nie rozpoznaje hipogonadyzmu ani menopauzy.', 'Nagłówki kobiecych faz cyklu i postmenopauzy nie mają własnego progu wieku; >18 lat jest jawną polityką doboru aplikacji.'],
+      rows: [ageRow(analyte + '-adult-m', 'M', adultAge, range(bound('>=', values[0][0]), bound('<=', values[0][1]), values[0].join('–') + ' IU/L'))].concat(contexts.map(function (context, index) {
+        var row = ageRow(analyte + '-adult-f-' + context, 'F', age(bound('>', 18), null, 'Adult female context; application routing >18 years', 'application-adult-routing'), range(bound('>=', values[index + 1][0]), bound('<=', values[index + 1][1]), values[index + 1].join('–') + ' IU/L'));
+        row.reproductiveContext = context; row.label = labels[index]; return row;
+      }))
+    };
+  }
+  var standardLHMethod = { id: 'roche-elecsys-lh-eclia', name: 'Roche Elecsys LH ECLIA', description: 'Electrochemiluminescence immunoassay; Mayo cites Elecsys LH package insert 03/2024.' };
+  var standardFSHMethod = { id: 'roche-elecsys-fsh-eclia', name: 'Roche Elecsys FSH ECLIA', description: 'Electrochemiluminescence immunoassay; Mayo cites Elecsys FSH package insert 09/2021.' };
+
   var lhStageIAge = age(bound('>=', 1), bound('<', 9), 'Stage I (1–8 years)', 'attained-year-band');
   var lhCensoredLower = bound('<', 0.02);
+  // Operacyjne granice zatwierdzone przez właściciela 9.10.2026 na podstawie
+  // protokołu Greaves 2015; nie są empirycznymi skrajami podgrupy LH/FSH.
+  var pretermPolicy = {
+    id: 'greaves-preterm-applicability', version: '2026-10-09.3',
+    sourceIds: ['greaves-preterm-2015'], approvedOn: '2026-10-09',
+    approval: 'Clinical owner approved GA 24+0–32+0 inclusive, PMA at most 36+0 inclusive, exclusion of the first 24 hours and uncertainty crossing that limit.',
+    gestationalAgeDays: { lower: bound('>=', 168), upper: bound('<=', 224) },
+    postnatalAgeDays: { lower: bound('>=', 1), upper: null },
+    postmenstrualAgeDays: { lower: bound('>=', 0), upper: bound('<=', 252) },
+    ageSemantics: 'Closed intervals of possible completed days. Calendar-date difference D means [max(0,D-1),D]; no birth time is invented. All possible GA/PNA/PMA values must fit.'
+  };
+  function pretermAge() {
+    return { axis: 'postmenstrualDays', lower: pretermPolicy.postmenstrualAgeDays.lower, upper: pretermPolicy.postmenstrualAgeDays.upper,
+      sourceText: 'PMA ≤36+0 tyg.; GA 24+0–32+0; po ukończeniu pierwszej doby', interpretation: 'owner-approved-applicability-policy-2026-10-09' };
+  }
+  function pretermScope() {
+    return { age: pretermAge(), gestationalAgeDays: pretermPolicy.gestationalAgeDays, postnatalAgeDays: pretermPolicy.postnatalAgeDays,
+      policyId: pretermPolicy.id, policyVersion: pretermPolicy.version };
+  }
 
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-04.1',
-    implementationStatus: 'prepared-not-connected-to-ui',
+    dataVersion: '2026-10-09.4',
+    implementationStatus: 'active-in-ui',
     unit: 'IU/L',
     knownLimitations: [
       'Zakres referencyjny nie jest progiem rozpoznania CPP, opóźnienia ani etiologii hipogonadyzmu.',
-      'Nie przygotowano norm dorosłych ani uniwersalnego pokrycia wszystkich metod i całego wieku 0–18 lat.',
+      'Automatyczny dobór wskazuje populację źródłową, nie potwierdza zgodności metody próbki; nie zapewnia uniwersalnego pokrycia wszystkich metod i grup wieku.',
       'Brak właściwego zakresu nie może uruchamiać zastępczej normy dorosłych ani interpolacji.',
       'Niskie lub nieoznaczalne LH nie wyklucza CPP przy odpowiednich cechach klinicznych.',
       'Brak uniwersalnego progu FSH oraz samodzielnego klasyfikatora LH/FSH.',
@@ -118,6 +158,72 @@
       }
     },
     sources: {
+      'greaves-preterm-2015': {
+        id: 'greaves-preterm-2015',
+        version: 'JCEM-2015-100-1097-1103-with-corrigenda-2016',
+        title: 'Hormone Modeling in Preterm Neonates: Establishment of Pituitary and Steroid Hormone Reference Intervals',
+        authors: 'Greaves RF, Pitkin J, Ho CS, Baglin J, Hunt RW, Zacharin MR',
+        pmid: '25562509',
+        doi: '10.1210/jc.2014-3681',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/25562509/',
+        doiUrl: 'https://doi.org/10.1210/jc.2014-3681',
+        accessedOn: '2026-10-09',
+        accessTimeZone: 'Europe/Warsaw',
+        readScope: 'Full JCEM article supplied as greaves2015.pdf, pp. 1097–1103: methods and eligibility p. 1098, cohort and age analysis pp. 1099–1101, Table 4 p. 1102; full four-page supplement jc-14-3681.pdf, Tables 1–2 and Figure 1; both 2016 corrigenda. Full Greaves 2014 three-page uncorrected proof was read for biobank context only. The final journal table supersedes the previously read author poster.',
+        evidenceSha256: '96c1875105cab6dcc301a7494efa47f3a9bf39161dbd3adcf06847c1fa2bc251',
+        supplementaryEvidence: {
+          filename: 'jc-14-3681.pdf', doi: '10.1210/jc.2014-3681',
+          evidenceSha256: '99671cf6eff7f3e47c9fdcf156de613fd5a4c1579ed5800ce2a1df5b579b87f8',
+          readScope: 'All four pages: Tables 1–2 and Figure 1. The age scatter is PMA, not postnatal days. Figure axes are not exact eligibility bounds.'
+        },
+        biobankEvidence: {
+          doi: '10.1016/j.clinbiochem.2014.05.040', version: 'UNCORRECTED PROOF',
+          evidenceSha256: '096385db34e575a39b28aa5c323739c42b62295b0b7d0ee75451d56ab28481b6',
+          readScope: 'All three pages. R1 scheduled postnatal collections and R2 preliminary ranges/e602 are not transferred to the final 2015 e601 profile.'
+        },
+        intervalEvidence: {
+          kind: 'journal-table',
+          version: 'JCEM-2015-100-1097-1103',
+          url: 'https://doi.org/10.1210/jc.2014-3681',
+          table: 'Table 4',
+          page: 1102,
+          verification: 'Table text and PDF image checked. Central 95% reference intervals are distinct from observed minima/maxima and the 90% confidence intervals of their limits.'
+        },
+        corrigenda: [
+          { doi: '10.1210/jc.2016-1639', url: 'https://academic.oup.com/jcem/article/101/5/2265/2804857' },
+          { doi: '10.1210/jc.2016-2005', pmid: '27255718', url: 'https://academic.oup.com/jcem/article/101/6/2622/2804884' }
+        ],
+        correctionScope: 'Acknowledgements and prolactin units in Table 4 (mIU/L); neither corrigendum changes LH or FSH intervals.',
+        recruitment: {
+          infants: 248, male: 128, female: 120,
+          setting: 'Three neonatal intensive care wards in Melbourne, Australia.',
+          gestationalAgeSourceText: 'Abstract: 24–32 weeks. Eligible cohort (n=234): observed minimum 23+3 and maximum 32+4 weeks; the LH/FSH subgroup extrema are not reported.',
+          eligibleCohort: { infants: 234, male: 116, female: 118 },
+          postnatalAgeDays: null,
+          firstSampleAgeEvidence: 'Only the first sample per infant was used for RI estimation. Narrative: mean PNA 21 days (SD 15); Table 2: total 20 (15), male 21 (15), female 20 (14). No minimum/maximum PNA is reported.',
+          biobankFollowUp: 'Serial sampling every 2–3 weeks to 36 weeks gestational age describes the biobank follow-up, not the validated age window for first-sample LH/FSH RIs.',
+          verifiedCriteria: ['Neonatal physician assessed suitability: usual presentation with complications specific to prematurity.', 'No apparent endocrinopathy, ambiguous genitalia or congenital abnormality; newborn screening was normal.', 'Infants included in RI determination survived beyond the equivalent of term.'],
+          treatmentEvidence: 'Approximately 90% of mothers received antenatal glucocorticoids (median 11 days before sampling). Five infants received glucocorticoids before first collection (median 7, range 3–15 days); one mother used progesterone pessaries. The cohort was not defined as entirely free of hormonal exposure.',
+          clinicalCriteriaVerified: true,
+          completeEligibilityVerified: false
+        },
+        methodEvidence: {
+          articleMethods: 'Roche Cobas 8000-e601 electrochemiluminescence immunoassay, standard manufacturer reagent kits and procedures; analytical performance within manufacturer specifications (p. 1098).',
+          traceability: { fsh: 'WHO 78/549', lh: 'NIBSC 80/552' },
+          authorPosterDiscrepancy: 'The earlier poster names E602; the full journal methods identify e601 and take precedence.',
+          assayIdentityResolved: true,
+          transferableToCurrentMayoProfiles: false
+        },
+        knownLimitations: [
+          'Pełny artykuł i suplement odczytano. Kwalifikacja GA 24+0–32+0, PMA ≤36+0 i wyłączenie pierwszej doby są zatwierdzoną polityką kliniczną aplikacji, nie empirycznymi skrajami finalnej podgrupy LH/FSH.',
+          'Obserwowane GA 23+3–32+4 dotyczy całej kohorty 234 dzieci; nie ustala dokładnej kwalifikacji podgrupy LH/FSH.',
+          'Średnia wieku pobrania i obserwacja biobanku do 36 tygodni nie wyznaczają okna stosowania RI z pierwszych próbek.',
+          'Górne granice RI mają niepewność: względna szerokość 90% CI wynosi LH M35%/F52%, FSH M30%/F27% (tabela 4).',
+          'To przedziały stężeń w konkretnej populacji i metodzie, nie progi rozpoznania ani uniwersalne normy dla wszystkich wcześniaków lub całego pierwszego roku życia.',
+          'Nie potwierdzono przenoszalności na AnshLite ani aktualny profil Mayo Roche Elecsys FSH.',
+          'Nie wolno przenosić tu okna 0–43 dni z Greaves 2008, harmonogramu Greaves 2014 ani wyznaczać granic ze średniego wieku kohorty.'
+        ]
+      },
       'who-preterm-birth-2023': {
         id: 'who-preterm-birth-2023',
         version: '2023-05-10',
@@ -148,6 +254,24 @@
           'Szeroki zakres <1 roku nie opisuje dokładnie tygodniowej dynamiki minipuberty.',
           'Starszego opisu opóźnienia u dziewcząt by age 12 i uproszczonej interpretacji LH nie używa się jako klinicznych reguł tego modułu.'
         ]
+      },
+      'mayo-lh-602752': {
+        id: 'mayo-lh-602752', version: 'catalog-snapshot-2026-10-09',
+        title: 'Luteinizing Hormone (LH), Serum', organization: 'Mayo Clinic Laboratories',
+        url: 'https://www.mayocliniclabs.com/test-catalog/Overview/602752', accessedOn: '2026-10-09', accessTimeZone: 'Europe/Warsaw',
+        readScope: 'Full catalog: Reference Values, Ordering Guidance, Specimen Type, Method Description, Cautions. The manufacturer insert was not independently read.',
+        evidenceSha256: '2dc25a75d8d3c17f976baa8a6928dc120bd91364c6ef0909e6b1a373f2ba7fd8',
+        methodDocumentVersion: 'Elecsys LH package insert 03/2024, as cited by the catalog',
+        knownLimitations: ['Odrębny test Roche ECLIA; nie jest metodą AnshLite pediatrycznego LHPED.', 'Katalog nie ustala odrębnego zakresu perimenopauzy ani progów rozpoznania menopauzy.']
+      },
+      'mayo-fsh-adult-602753': {
+        id: 'mayo-fsh-adult-602753', version: 'catalog-snapshot-2026-10-09',
+        title: 'Follicle-Stimulating Hormone (FSH), Serum', organization: 'Mayo Clinic Laboratories',
+        url: 'https://www.mayocliniclabs.com/test-catalog/Overview/602753', accessedOn: '2026-10-09', accessTimeZone: 'Europe/Warsaw',
+        readScope: 'Full catalog: Reference Values, Specimen Type, Method Description, Cautions. The manufacturer insert was not independently read.',
+        evidenceSha256: 'ba4460aebc7ca4c095695841c2849f213b57254cdb3cfd2a94ff5817456c5ef8',
+        methodDocumentVersion: 'Elecsys FSH package insert 09/2021, as cited by the catalog',
+        knownLimitations: ['Katalog nie podaje osobnego przedziału dla perimenopauzy ani późnej starości.', 'Pojedyncza wartość FSH nie ustala menopauzy ani przyczyny zaburzeń funkcji gonad.']
       },
       'mayo-fsh-602753': {
         id: 'mayo-fsh-602753',
@@ -289,6 +413,14 @@
       sourceIds: ['mayo-lhped-62999', 'mayo-fsh-602753', 'who-preterm-birth-2023'],
       infantAgeYears: bound('<', 1),
       pretermGestationalWeeks: bound('<', 37)
+    },
+    pretermEligibilityPolicy: pretermPolicy,
+    automaticReferencePolicy: {
+      id: 'lh-fsh-demographic-reference-selection', version: '2026-10-09.4',
+      description: 'Source-population selection only; assay method remains unconfirmed unless explicitly reported for this sample.',
+      reproductiveContexts: ['unknown', 'follicular', 'ovulation', 'luteal', 'postmenopause'],
+      pretermProfileIds: { lh: 'greaves-preterm-lh-candidate', fsh: 'greaves-preterm-fsh-candidate' },
+      profileIds: { lh: ['mayo-lh-pediatric', 'mayo-lh-standard-transition', 'mayo-lh-adult'], fsh: ['mayo-fsh-pediatric', 'mayo-fsh-adult'] }
     },
     clinicalProfile: {
       id: 'puberty-timing-pediatric',
@@ -505,6 +637,77 @@
           { sex: 'M', ageMonthsSourceText: '3.5–5.0', ageEdgesResolved: false, rangeSourceText: '0.42–2.68 IU/L', lower: 0.42, upper: 2.68, sampleSize: 165 },
           { sex: 'F', ageMonthsSourceText: '2.0–3.5', ageEdgesResolved: false, rangeSourceText: '1.23–17.4 IU/L', lower: 1.23, upper: 17.4, sampleSize: 435 },
           { sex: 'F', ageMonthsSourceText: '3.5–5.0', ageEdgesResolved: false, rangeSourceText: '1.30–17.7 IU/L', lower: 1.3, upper: 17.7, sampleSize: 111 }
+        ]
+      },
+      {
+        id: 'greaves-preterm-lh-candidate',
+        version: '2026-10-09.3',
+        active: true,
+        analyte: 'lh',
+        sourceId: 'greaves-preterm-2015',
+        method: {
+          id: 'roche-cobas-e601-lh-greaves-2015',
+          name: 'Roche Cobas 8000-e601 LH — Greaves 2015',
+          description: 'ECLIA, standard manufacturer kits and procedures; traceable to NIBSC 80/552 (p. 1098). Not an alias of AnshLite or a current Mayo assay.'
+        },
+        material: 'serum',
+        unit: 'IU/L',
+        examinationType: 'basal',
+        population: {
+          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; GA 24+0–32+0, PMA ≤36+0, po pierwszej dobie według polityki aplikacji',
+          statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
+        },
+        scope: pretermScope(),
+        knownLimitations: ['Granice GA/PMA i wyłączenie pierwszej doby są polityką aplikacji zatwierdzoną przez właściciela, a nie min/max badanej podgrupy.', 'Zakres stężenia z tabeli 4 nie rozpoznaje prawidłowej minipuberty ani przyczyny odchylenia.'],
+        rows: [
+          ageRow('greaves-preterm-lh-m', 'M', pretermAge(), range(bound('>=', 0.1), bound('<=', 9.2), '0.1–9.2 IU/L')),
+          ageRow('greaves-preterm-lh-f', 'F', pretermAge(), range(bound('>=', 0.2), bound('<=', 133.9), '0.2–133.9 IU/L'))
+        ],
+        reportedIntervals: [
+          { sex: 'M', rangeSourceText: '0.1–9.2 IU/L', lower: 0.1, upper: 9.2, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [7.9, 11.1] } },
+          { sex: 'F', rangeSourceText: '0.2–133.9 IU/L', lower: 0.2, upper: 133.9, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.5], upper: [104.2, 173.9] } }
+        ]
+      },
+      {
+        id: 'greaves-preterm-fsh-candidate',
+        version: '2026-10-09.3',
+        active: true,
+        analyte: 'fsh',
+        sourceId: 'greaves-preterm-2015',
+        method: {
+          id: 'roche-cobas-e601-fsh-greaves-2015',
+          name: 'Roche Cobas 8000-e601 FSH — Greaves 2015',
+          description: 'ECLIA, standard manufacturer kits and procedures; traceable to WHO 78/549 (p. 1098). Not an alias of the current Mayo Roche Elecsys FSH profile.'
+        },
+        material: 'serum',
+        unit: 'IU/L',
+        examinationType: 'basal',
+        population: {
+          label: 'Wcześniaki z oddziałów noworodkowych w Melbourne — Greaves 2015; GA 24+0–32+0, PMA ≤36+0, po pierwszej dobie według polityki aplikacji',
+          statistics: { kind: 'referenceInterval', coveragePercent: 95, lowerPercentile: 2.5, upperPercentile: 97.5, method: 'robust', transformation: 'Box-Cox', sampleSize: 219, sampleSizeBySex: { M: 111, F: 108 } }
+        },
+        scope: pretermScope(),
+        knownLimitations: ['Granice GA/PMA i wyłączenie pierwszej doby są polityką aplikacji zatwierdzoną przez właściciela, a nie min/max badanej podgrupy.', 'Zakres stężenia z tabeli 4 nie rozpoznaje prawidłowej minipuberty ani przyczyny odchylenia.'],
+        rows: [
+          ageRow('greaves-preterm-fsh-m', 'M', pretermAge(), range(bound('>=', 0.2), bound('<=', 3.6), '0.2–3.6 IU/L')),
+          ageRow('greaves-preterm-fsh-f', 'F', pretermAge(), range(bound('>=', 2.6), bound('<=', 181.1), '2.6–181.1 IU/L'))
+        ],
+        reportedIntervals: [
+          { sex: 'M', rangeSourceText: '0.2–3.6 IU/L', lower: 0.2, upper: 3.6, sampleSize: 111, confidenceIntervals: { coveragePercent: 90, lower: [0.1, 0.2], upper: [3.2, 4.2] } },
+          { sex: 'F', rangeSourceText: '2.6–181.1 IU/L', lower: 2.6, upper: 181.1, sampleSize: 108, confidenceIntervals: { coveragePercent: 90, lower: [1.0, 4.9], upper: [159.6, 207.6] } }
+        ]
+      },
+      adultProfile('lh', 'mayo-lh-602752', standardLHMethod, [[1.3, 9.6], [1.9, 14.6], [12.2, 118], [0.7, 12.9], [5.3, 65.4]]),
+      adultProfile('fsh', 'mayo-fsh-adult-602753', standardFSHMethod, [[1.2, 15.8], [2.9, 14.6], [4.7, 23.2], [1.4, 8.9], [16, 157]]),
+      {
+        id: 'mayo-lh-standard-transition', version: '2026-10-09.4', active: true, analyte: 'lh', sourceId: 'mayo-lh-602752',
+        method: standardLHMethod, material: 'serum', unit: 'IU/L', examinationType: 'basal', referenceContext: 'age-transition',
+        population: { label: 'Mayo Clinic Laboratories — standardowe LH na granicy 18. urodzin', statistics: { kind: 'referenceInterval', coveragePercent: null, sampleSize: null } },
+        scope: { age: age(bound('>=', 18), bound('<=', 18), 'Exactly 18 years', 'application-routing-boundary') },
+        knownLimitations: ['Źródłowy przedział >14–18 lat stosujemy tutaj wyłącznie na granicy końca LHPED; nie łączymy przedziałów ani metod.'],
+        rows: [
+          ageRow('lh-standard-m-over14-18', 'M', age(bound('>', 14), bound('<=', 18), '>14 years–18 years'), range(bound('>=', 1.3), bound('<=', 9.8), '1.3–9.8 IU/L')),
+          ageRow('lh-standard-f-over14-18', 'F', age(bound('>', 14), bound('<=', 18), '>14 years–18 years'), range(bound('>=', 0.5), bound('<=', 41.7), '0.5–41.7 IU/L'))
         ]
       }
     ]

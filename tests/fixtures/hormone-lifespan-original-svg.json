@@ -1,0 +1,127 @@
+{
+  "sourceCommit": "c6b0337922309d1314e9120e32d0152ac6bb1417",
+  "meaning": "Approved original illustrative SVG curves, before PR #607. SHA-256 covers the complete rendered path d, without tolerance or copied interpolation code. These are schematic curves, not clinical reference intervals.",
+  "capture": {
+    "harness": "openComponent in tests/e2e/hormone-lifespan-original-curves.spec.mjs",
+    "height": 1000,
+    "reducedMotion": "reduce",
+    "encoding": "UTF-8",
+    "styles": {
+      "ios26-v2.css": "gQ6wA/34i8PeXHibyWzIVQngvxCPMr9igvCwULP8EhY=",
+      "vilda_hormone_lifespan.css": "1Gm6IxbQASdVrJUfz6y3+cSLGuAbUIhYQ7K+I5QY/vc="
+    },
+    "procedure": "Serve renderer/data from sourceCommit in the test harness, mount LH/male/ageYears0.25/preterm=no, render each view, then select AMH and inhibin B in sex comparison. Hash the complete d attribute with SHA-256.",
+    "checksumEncoding": "SHA-256 encoded as base64"
+  },
+  "widths": {
+    "320": {
+      "views": {
+        "life": {
+          "viewBox": "0 0 286 300",
+          "paths": {
+            "fsh": "TG8EWBejwMAzopdgtAjpZ5GJuX2bUYbW5R81iGd68jA=",
+            "t": "e9a4sPW8BTS8rXA1vyiFXUS7P7btoSPGTIbLI3cMwC0=",
+            "insl3": "l2AWmYpTeeP6ifdyL/XhE1LroN/GPmIMsgVuNO61Ehw=",
+            "amh": "WjMCWgsE3YgpkndIzxEb9YB0rk86FtBRoUwuiD0Vxio=",
+            "inhb": "CuRxCNxKgMDrtoyf58Q2NX9DcF3+LqylWTvkuMyvE44=",
+            "lh": "eyWE6ogo2QYmjogJ0FIlpg/bQyI2yrDKxGarQdjh8Gg="
+          }
+        },
+        "mini": {
+          "viewBox": "0 0 286 334",
+          "paths": {
+            "fsh": "uuna7Xqu/SuTIlDkgZOSHrbvCI90xrURGKpQTS9sGuo=",
+            "t": "D43jAF0M2pLAhrvXQ18CijDvpKuPfW7ARQskK3Speks=",
+            "insl3": "esiMrA3UsA/7VBJffQEv2nrgHEbxN8ayIRmwaW0/If8=",
+            "amh": "aFmphvrX/WxkDSaBD5UcmRJ15kH2KqDxJJGfWSMltJI=",
+            "inhb": "cycne3aemN7o6JYKZ7WuBplpo3FP95N25IG5ueJkzLQ=",
+            "lh": "fCoYff21nSle+4YG7QSkMbpktzDe1LFVh5qMXfEVh4I="
+          }
+        },
+        "puberty": {
+          "viewBox": "0 0 286 334",
+          "paths": {
+            "fsh": "SdR0pj3tYRORFC9qQApaya8JAR55jHo6jjycDs4grR0=",
+            "t": "syYpu+adViWh3QcH6d0zhpAUlMQkISrRTPGEw97N/Lo=",
+            "insl3": "qfmMWAwBxFAZBFYFPpkcwzNeKn9wdXwOoQ4nQgdLIPs=",
+            "amh": "VoE7vF6pYSg01mBT0MjYGwYJjwaUiI2wMSEmsQA5CDc=",
+            "inhb": "j+Xm9utO1fb0lRi0Hgv+i9yc0H5I09pOn3ETd4HXEss=",
+            "lh": "wQOBOOk51WtlSaMb2vXsqb2aQSp1n1HXjuzdXWRejHo="
+          }
+        }
+      },
+      "comparison": {
+        "amh": {
+          "viewBox": "0 0 286 334",
+          "paths": {
+            "female": "KvPxtU+wlzp92/uqg3qudkaTqWV7roaVE/iKRv8Pjes=",
+            "male": "kbUiFr8skg8AYtBNk/stb9PTiveUJZGLgHcXD5rU9p0="
+          }
+        },
+        "inhb": {
+          "viewBox": "0 0 286 334",
+          "paths": {
+            "female": "0WXcI6W7ClHL0J1E3cBwZCD30gIStACMt6feb6MkD5s=",
+            "male": "qlEEbiANhNqwp53mvTxjBf9GDh32hhW48zeQRtpMsYk="
+          }
+        }
+      }
+    },
+    "1360": {
+      "views": {
+        "life": {
+          "viewBox": "0 0 1344 353",
+          "paths": {
+            "fsh": "Bpv1MgJPY80EoLMyDZAhTKlY01jA5IZMMyFZfU+lPu4=",
+            "t": "rQBvwO6zSy/k5CMgsGF/hKarRw5jkbo7SILdZZzxfzM=",
+            "insl3": "6RyJ81zjxeRFjlKVwk4uXMyH+mg2TeGrDxLkGdVpVPc=",
+            "amh": "5wX/D3lQb3VR1vzU3WdeLH/PmtZfvWoX2ZpsyIQ+2Vs=",
+            "inhb": "rE4vzWzK/ZCjObdTz/tISZFaAa+uktAcQbuMzK9Wzzo=",
+            "lh": "UOHeJdiWMEQluK65lmfAhYRP5RbHOUeVjfrG3Wn2wS4="
+          }
+        },
+        "mini": {
+          "viewBox": "0 0 1344 393",
+          "paths": {
+            "fsh": "cKaJgcSWTyvQucOcu1R6mi3vajnFGxX37gRNOSqEbZA=",
+            "t": "1jnGWdRAj27xqYl9wB8+7brxZNgA3m8tcQO6s8FYCN8=",
+            "insl3": "gTkFtUhXPh6mAvFJWwuB9bu7BodfCSjXbeliDolpVXI=",
+            "amh": "c0gJk5/ZCczUDQj+8Bom/aBCOrtN524RLtTrILHt384=",
+            "inhb": "tkkZ+42Rwo7xh0ER+VFtJAnoIEML9/F1mQcFR7hW2Qg=",
+            "lh": "08SK8UZhK5jMoyxLaAEy628fVjJyJZyBeYeuH/WUDu0="
+          }
+        },
+        "puberty": {
+          "viewBox": "0 0 1344 393",
+          "paths": {
+            "fsh": "9DrCXD3ludm6MsZZ4QaWm8WwpdXUYokW13jK/2jbBAo=",
+            "t": "XKARvLYsbyAcIfv9g2iIe6QacntTMrsIdJuqYyl0sAc=",
+            "insl3": "7JJyReExSiTbJ0wN+M9mudgdUANSvBD+D6LPyntJqfc=",
+            "amh": "2Mq9q44OfGHci/XgvkCTlRm4C2jL2lqCs0PpgGeQa0M=",
+            "inhb": "68wf5U9BYm7ZbCwfebHi6TRkVSeRP2rpLYPvAXcCHsw=",
+            "lh": "V8ZvOW+PqKfxzqHgYqa2LAPhRbzIiPw2r5Aq8+yoW5U="
+          }
+        }
+      },
+      "comparison": {
+        "amh": {
+          "viewBox": "0 0 1344 393",
+          "paths": {
+            "female": "xBmmpt0O6jNUq63QQr4/H6aV6sl59NTKzZwaDSi2LwQ=",
+            "male": "K8SD9BYMMJqKKnfBWT1a+6HIqNnKZh3ioHHj0P2IVes="
+          }
+        },
+        "inhb": {
+          "viewBox": "0 0 1344 393",
+          "paths": {
+            "female": "9Zrd3TfETPwTnRwk3ZeXdBh/bDFbLPzCKGIXcG/1mtA=",
+            "male": "S4mLTaaCUm/XWmEVhBywKAf1XanhN2xItye/bdVsbRY="
+          }
+        }
+      }
+    }
+  },
+  "rendererSha256Base64": "9NsiUujWgJ7W0Uj0zV+ck3Z7opaBAtDJHQqIXbDe0x8=",
+  "dataSha256Base64": "nTQHbdX8yQZntJk5AszDk6k6DPJ236E0ZY5nNkK99dk=",
+  "maleDataSha256Base64": "YmWprHkMlG1TH0uH4rVFL2YVzqjb3a/1MhEyoU7FVwE="
+}

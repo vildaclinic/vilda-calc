@@ -1,8 +1,355 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 7 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+Stan dokumentu: 9 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+
+## Dorośli i automatyczny dobór zakresu — 9.10.2026
+
+**Zmiana kliniczna i funkcjonalna, zaakceptowana przez właściciela:**
+„przywróć dorosłych na zweryfikowanych danych i wprowadź automatyczny dobór
+profilu”. Baza: `audyt` `fd2e0c05` po #601. Cel obejmuje pierwszy krok
+przywrócenia oceny przez całe życie; nie wypełnia braków dowodów dla wszystkich
+wcześniaków ani nie tworzy odrębnych norm perimenopauzalnych lub geriatrycznych.
+Makietę desktop/mobile przedstawiono przed zmianą widoku i właściciel ją
+zaakceptował z usunięciem etykiety o niepotwierdzonej metodzie. Zachowuje obecny
+układ i osie; usuwa wybór metody, a dorosłej kobiecie udostępnia jedno pole
+„Cykl / menopauza”.
+
+Przyczyna regresji dorosłych: po aktywacji nowego modułu wszystkie anality
+LH/FSH były kierowane do profili pediatrycznych. Stare normy dorosłych nadal
+istnieją w `lab_units_data.js`, lecz nie odpowiadają obecnym katalogom Mayo;
+nie są przywracane ani kopiowane jako aktualne źródło.
+
+### Pełne źródła i zweryfikowane wartości
+
+Odczytano całe publiczne katalogi Mayo 9.10.2026 (Europe/Warsaw): wskazania,
+przedziały referencyjne, opis metod, materiał oraz ograniczenia. Poniższe
+hashe odnoszą się do pobranych stron HTML; pełne kopie pozostają poza repo.
+
+| Źródło | Materiał i metoda opisana w katalogu | SHA-256 kopii HTML |
+|---|---|---|
+| [LH 602752](https://www.mayocliniclabs.com/test-catalog/Overview/602752) | Surowica, Roche LH ECLIA; katalog cytuje insert 03/2024. | `2dc25a75d8d3c17f976baa8a6928dc120bd91364c6ef0909e6b1a373f2ba7fd8` |
+| [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) | Surowica, Roche Elecsys FSH ECLIA; katalog cytuje insert 09/2021. | `ba4460aebc7ca4c095695841c2849f213b57254cdb3cfd2a94ff5817456c5ef8` |
+| [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) | Surowica, AnshLite LH CLIA, unpublished Mayo method; wyłącznie pacjenci <18 lat. | `cd7f38607b6efcff85594fc5aaf82bf29391b30904bba39c6821e7a0d447344e` |
+
+Nie deklarujemy samodzielnego odczytu instrukcji producenta cytowanych przez
+katalog. Przedziały są Mayo-derived; charakterystyka pełnej populacji
+referencyjnej i reprezentacja osób w późnej starości nie są podane.
+
+| Populacja / kontekst | LH [IU/L] | FSH [IU/L] |
+|---|---:|---:|
+| Mężczyźni >18 lat | 1,3–9,6 | 1,2–15,8 |
+| Faza folikularna | 1,9–14,6 | 2,9–14,6 |
+| Okres okołoowulacyjny | 12,2–118,0 | 4,7–23,2 |
+| Faza lutealna | 0,7–12,9 | 1,4–8,9 |
+| Po menopauzie | 5,3–65,4 | 16,0–157,0 |
+
+Jednostki IU/L i mIU/mL mają przelicznik 1:1; nie oznacza to równoważności
+metod analitycznych. Kobiece nagłówki faz i menopauzy nie podają osobnej
+liczbowej granicy wieku. Przypisanie ich w tym kroku do ścieżki >18 lat jest
+jawną polityką aplikacji. Katalog nie uzasadnia osobnych przedziałów co dekadę
+ani przyjmowania menopauzy na podstawie wieku lub pojedynczego FSH.
+
+Granica 18 lat jest zachowana literalnie: LHPED kończy się przed 18.
+urodzinami; standardowy LH ma wiersz >14–≤18 lat (M 1,3–9,8; F 0,5–41,7),
+a męski zakres dorosłych zaczyna się >18. FSH zachowuje wiersze do ≤18 lat.
+Gdy precyzja wieku obejmuje więcej niż jeden profil, wynik może pokazywać
+odrębne warianty źródłowe, bez pozorowania dokładniejszego wieku lub jednego
+werdyktu. Nie wprowadzamy skoku do normy dorosłych na podstawie Tannera V.
+
+### Automatyczny profil nie jest metodą rzeczywistej próbki
+
+Nowy tryb wymaga jawnego `input.referenceSelection = 'automatic'`.
+Wybiera zakres według danych pacjenta, analitu i wersjonowanej polityki
+w pliku danych. Dla kwalifikujących się wcześniaków wybiera Greaves; u starszych
+dzieci wcześniactwo w wywiadzie nie wymusza profilu neonatalnego. Brak
+kwalifikacji niemowlęcia do Greaves nie uruchamia fallbacku do norm donoszonych.
+
+Formularz nie kopiuje metody ani materiału z publikacji do danych próbki:
+`assay.confirmation` i `specimen` pozostają nieznane. Dawne ustawienie metody
+na urządzeniu nie jest potwierdzeniem nowego oznaczenia i nie stanowi ukrytej
+blokady. Wynik to jawne orientacyjne porównanie źródłowe w `referencePreview`,
+nie potwierdzona klasyfikacja laboratoryjna w `biochemical.primary`.
+Zakres zachowuje swoją metodę, populację, surowicę, jednostki i cytowanie.
+Krótka notka podaje metodę zakresu źródłowego i zastosowanie wyłącznie do wartości
+bazalnych w surowicy bez leczenia hormonalnego. Zgodnie z decyzją właściciela
+nie pokazuje etykiety „metoda próbki niepotwierdzona”; nie zmienia to danych
+próbki ani charakteru porównania. Znane niezgodne oznaczenie,
+materiał, stymulacja lub leczenie nadal blokują niedopasowane porównanie.
+
+`reproductiveContext` obejmuje wyłącznie `unknown`, `follicular`, `ovulation`,
+`luteal`, `postmenopause`. Kontekst jest wspólny dla bieżących LH/FSH i resetuje
+się przy zmianie pacjenta lub płci. Główny formularz nie ma wiarygodnego pola
+fazy cyklu/menopauzy, więc aplikacja nie wyprowadza go z wieku menarche ani
+wieku chronologicznego. Przy nieustalonym kontekście cztery zakresy są
+alternatywami bez globalnego werdyktu; nie wybieramy najlepiej pasującej normy,
+nie łączymy ich w jedną szeroką obwiednię i nie przyjmujemy fazy folikularnej.
+
+Stare wywołania bez flagi zachowują kontrakt potwierdzonej metody i próbki.
+Snapshot rozszerza się opcjonalnie o tryb doboru, kontekst reprodukcyjny,
+warianty i pochodzenie zastosowanych zakresów. Odczyt historii nie dobiera
+aktualnych norm i nie zamienia dawnych ocen na tryb automatyczny.
+Ocena dojrzewania u dzieci i niezależne ostrzeżenia kliniczne pozostają
+odrębne; dorosły nie otrzymuje komunikatu braku pediatrycznej oceny pokwitania.
+
+Przykłady testów rzeczywistego silnika: M60 LH2 → odniesienie 1,3–9,6;
+M90 FSH20 → powyżej 15,8; F45 FSH20 z fazą folikularną → powyżej 14,6,
+po menopauzie → w zakresie 16–157, kontekst nieustalony → cztery alternatywy
+bez jednej klasyfikacji. Dodatkowo granice zakresów, wiek wokół 18 lat,
+niezgodna metoda/materiał, leczenie/stymulacja, precyzja wieku, historia,
+zmiana pacjenta, mobile i offline.
+
+## Suplement i biobank — uzgodniona kwalifikacja i makieta, 9.10.2026
+
+**Stan: polityka kliniczna i makieta desktop/mobile zaakceptowane przez właściciela; wdrożenie aktywnego profilu wcześniaczego.**
+Właściciel zatwierdził granice GA/PMA i wyłączenie pierwszej doby
+(„1 — tak; 2 — wyłączyć pierwszą dobę”), a następnie polecił przygotowanie
+makiety przed wdrożeniem. Wymaga prostego interfejsu, automatycznego użycia
+danych już znanych aplikacji oraz ograniczenia etykiet, komentarzy i przycisków.
+Po przedstawieniu interaktywnej makiety właściciel potwierdził: „ok,
+zatwierdzam makietę. ruszaj”. Doprecyzowano, że brak pola Tannera dotyczy
+wyłącznie kontekstu noworodkowego profilu wcześniaczego; starsze dzieci,
+także z wcześniactwem w wywiadzie, zachowują wybór pokwitania.
+Odczytano oba dostarczone materiały w całości, wraz z obrazami tabel i wykresów.
+Poniższe ustalenia aktualizują opis dostępności źródeł w starszej sekcji `.2`.
+
+- Suplement `jc-14-3681.pdf`, DOI 10.1210/jc.2014-3681: tabele 1–2 i rycina 1,
+  cztery strony; SHA-256 `99671cf6eff7f3e47c9fdcf156de613fd5a4c1579ed5800ce2a1df5b579b87f8`.
+- Greaves RF, *Hormone profiles in extremely preterm infants*, DOI
+  10.1016/j.clinbiochem.2014.05.040: trzy strony, dostarczona wersja
+  **UNCORRECTED PROOF**; SHA-256
+  `096385db34e575a39b28aa5c323739c42b62295b0b7d0ee75451d56ab28481b6`.
+  Nie utożsamiamy tej kopii z potwierdzoną końcową wersją wydawcy.
+
+**Korekta wcześniejszego warunku:** osobny przedział wieku po urodzeniu (PNA)
+nie jest bezwzględnie wymagany, jeżeli reguły profilu jednoznacznie opisują wiek
+postmenstruacyjny przy ocenie (PMA). PNA może służyć do obliczenia PMA z wieku
+ciążowego przy urodzeniu (GA). Nie należy wymyślać dodatkowego progu PNA tylko
+dlatego, że finalna publikacja nie podaje jego minimum i maksimum.
+
+Suplement potwierdza analizę LH/FSH według płci oraz podział wieku przy pobraniu
+na ≤30 i ≥31 tygodni; nie wykazano potrzeby podziału RI LH/FSH na te grupy wieku.
+Oś ryciny 1 obejmuje około 180–260 **dni PMA**, nie dni po urodzeniu. Skrajów osi
+ani punktów nie przekształcamy w dokładne kryteria kwalifikacji.
+
+Proof 2014 rozróżnia R1 i R2. Harmonogram 1, 4, 7, 14, 21, 28 i 42 dni dotyczy
+R1 i nie określa okna R2/2015. Tabela R2 podaje 24–35 tygodni „corrected age”
+dla pierwszej próbki, ale również inne liczebności, e602 i inne przedziały
+(w tym FSH F3,7–>200 IU/L). Nie łączymy jej zakresu wieku z finalnymi RI e601
+z 2015 r. „Pierwsza próbka” w badaniu nie oznacza pierwszego badania w życiu;
+nie powstanie kontrolka potwierdzania tego warunku.
+
+### Uzgodniony zakres automatycznego porównania
+
+Docelowe wartości i metoda pochodzą z finalnej tabeli 4 i metod 2015, nie z proofu
+2014. Protokół 2015 opisuje urodzenie między 24. a 32. tygodniem oraz pobrania
+biobanku do 36. tygodnia. Poniższe granice są **zaakceptowaną polityką kliniczną
+aplikacji opartą na tym protokole**, a nie odczytanymi min/max finalnej podgrupy
+LH/FSH. Akceptację właściciela uzyskano przed implementacją automatycznej oceny.
+Końce 24+0, 32+0 i 36+0 oraz ich inkluzywność są przyjętym, zawężającym
+wyborem aplikacji; źródło nie rozstrzyga tych dokładnych dni krańcowych.
+
+| Warunek | Uzgodniona reguła |
+|---|---|
+| GA przy urodzeniu | 24+0–32+0 tygodni włącznie (168–224 dni); bez rozszerzenia na cały 32. tydzień ukończony. |
+| PMA w kontekście oceny | Nie mniej niż GA; nie więcej niż 36+0 tygodni włącznie (252 dni). |
+| PNA | Co najmniej jedna ukończona doba; brak oceny, gdy nie można potwierdzić upływu 24 h. Do obliczenia PMA używa się ukończonych dni lub całego przedziału możliwych wartości, bez udawania większej precyzji. |
+| Płeć, materiał, metoda | M/F, surowica, zgodne oznaczenie Roche Cobas 8000-e601 opisane w 2015 r. |
+| Rodzaj oceny | Porównanie stężenia z RI z tabeli 4, osobno od oceny klinicznej; zakres bazalny. |
+
+**Pierwsza doba jest wyłączona decyzją kliniczną właściciela.**
+Protokół nie podaje źródłowego dolnego PNA; przyjęte wyłączenie nie jest
+prezentowane jako opublikowany, zwalidowany próg. Różnica samych dat o jeden
+dzień może oznaczać 0–1 ukończonych dób i nie potwierdza upływu 24 h.
+Nie ma podstaw, aby opisywać każdą taką kombinację GA/PMA jako bezpośrednio
+reprezentowaną w zbiorze finalnych RI. Akceptacja polityki aplikacji nie stanowi
+walidacji klinicznej. Profil aktywowano po zatwierdzeniu makiety.
+
+Wdrożenie obejmuje bezpieczny import pochodnego wieku
+w dniach z bieżącego kontekstu oraz GA z karty; najwyżej dwie brakujące pozycje
+do uzupełnienia w sekcji Pacjent; dobór profilu zgodnego z zapamiętaną metodą;
+jedną oś wcześniaczą bez osi Tanner; widoczne konkretne powody niedopasowania;
+zapis użytego kontekstu i norm bez przeliczania historii. Dla profilu Greaves
+kwalifikacja według GA/PNA/PMA zastępuje ogólną blokadę wcześniactwa. Normy
+Greaves nie są automatycznie przenoszone na AnshLite ani aktualny profil Mayo Roche FSH.
+
+Przypadek regresyjny funkcji produkcyjnej dla zaakceptowanej polityki:
+M, GA28+4, PNA43 dni → PMA34+5; LH2 IU/L, zgodna metoda →
+porównanie z 0,1–9,2 IU/L i status „w zakresie”, bez wniosku o prawidłowości
+całego obrazu klinicznego. Sprawdzeniu podlegają też oba końce GA/PMA, PNA0,
+obie płcie, LH/FSH, niedokładny wiek, zmiana pacjenta, historia, mobile i offline.
+
+Silnik ma wersję `1.4.0`, dane i profile Greaves `2026-10-09.3`, UI `1.11.0`,
+renderer `1.8.0`, helper snapshotu `1.3.0`. Profile Greaves mają aktywne wiersze
+norm oraz jawne reguły kwalifikacji w danych. Wersje profili Mayo/Johannsen
+i kryteria czasu dojrzewania pozostają bez zmian. Nazwy historycznych
+identyfikatorów Greaves z końcówką `candidate` zachowano dla zgodności zapisów;
+nie są etykietami widocznymi w formularzu.
+
+W podstawowym widoku wcześniaka pozostaje istniejący układ przelicznika,
+metoda z przyciskiem „Zmień”, krótkie dane pacjenta i jedna oś. Edytor metody
+oraz jego opcja nieznanej metody są schowane do otwarcia. Przy zgodnych danych
+z formularza/karty nie ma nowych widocznych pól; przy brakach są najwyżej GA
+i ukończone dni życia. Pole nie znika podczas pisania. Przekazanie pochodnego
+PNA używa cache sesji bez DOB i bez modyfikacji `sharedUserData` lub stanu
+niezapisanych zmian. Wiek przy odtworzonej wizycie nadal odnosi się do tej wizyty.
+
+Ocena zachowuje dotychczasową warunkowość porównania bazalnego, gdy kontekst
+leczenia/oznaczenia nie jest potwierdzony. Historyczny snapshot przechowuje
+GA/PNA/PMA, źródło precyzji, wersję polityki i zastosowaną normę; renderer nie
+dobiera na nowo zakresu przy odczycie historii. Poniższe starsze sekcje opisują
+stan wcześniejszych etapów, w tym nieaktywnych kandydatów `.2`.
+
+## Przygotowanie profilu wcześniaczego — 9.10.2026
+
+**Status: dane zweryfikowane z pełnego artykułu, bez aktywacji interpretacji.**
+Osobne profile `greaves-preterm-lh-candidate` i `greaves-preterm-fsh-candidate`
+mają wersję `2026-10-09.2`, `active: false`, puste `rows` i brak `scope`.
+Liczby w `reportedIntervals` dokumentują publikację; nie są wejściem do porównania
+stężenia. Samo przełączenie `active` nie wystarcza do użycia tych profili.
+
+Podstawa: Greaves RF i wsp., *Hormone Modeling in Preterm Neonates: Establishment
+of Pituitary and Steroid Hormone Reference Intervals*, JCEM 2015;100:1097–1103,
+[PMID 25562509](https://pubmed.ncbi.nlm.nih.gov/25562509/),
+[DOI 10.1210/jc.2014-3681](https://doi.org/10.1210/jc.2014-3681).
+Odczyt 9.10.2026: pełny artykuł dostarczony przez właściciela jako `greaves2015.pdf`,
+s. 1097–1103, w tym metody s. 1098, populacja i analiza wieku s. 1099–1101 oraz
+obraz i tekst tabeli 4 s. 1102. SHA-256 pliku:
+`96c1875105cab6dcc301a7494efa47f3a9bf39161dbd3adcf06847c1fa2bc251`.
+PDF nie jest dołączany do publicznego repozytorium. Suplement `jc-14-3681.pdf`
+pozostaje niedostępny. Odczytane corrigenda
+[10.1210/jc.2016-1639](https://academic.oup.com/jcem/article/101/5/2265/2804857) i
+[10.1210/jc.2016-2005](https://academic.oup.com/jcem/article/101/6/2622/2804884)
+dotyczą podziękowań i jednostki prolaktyny, nie granic LH/FSH.
+
+**Korekta wersji `.1`:** finalna tabela 4 zastępuje poster autorów IFCC 2015.
+Poprawiono FSH M: dolna granica 0,16 → 0,2; FSH F: górna 181 → 181,1;
+LH F: górna 134 → 133,9 IU/L. Metody s. 1098 rozstrzygają platformę:
+**Roche Cobas 8000-e601**, ECLIA, standardowe zestawy i procedury producenta;
+identyfikowalność FSH do WHO 78/549, LH do NIBSC 80/552. E602 z posteru nie jest
+podstawą identyfikacji. Nie oznacza to zamienności z AnshLite ani z aktualnym
+profilem Mayo Roche Elecsys FSH. Oznaczenia z rutynowego pobrania, bez protokołu
+stymulacyjnego; materiał: surowica, jednostka: IU/L.
+
+Rekrutowano 248 noworodków (128 M/120 F) z trzech oddziałów noworodkowych
+w Melbourne; kwalifikowana kohorta liczyła 234 (116 M/118 F). Rzeczywiste skrajne
+GA całej kwalifikowanej kohorty to 23+3–32+4 tygodnia (opis abstraktu: 24–32),
+ale nie podano skrajnych GA podgrupy LH/FSH. Kwalifikację oceniał neonatolog:
+typowy przebieg wcześniactwa, także z jego powikłaniami, bez jawnej endokrynopatii,
+niejednoznacznych genitaliów i wad wrodzonych, prawidłowy przesiew noworodkowy,
+przeżycie poza wiek odpowiadający terminowi. To nie była populacja całkowicie
+wolna od ekspozycji hormonalnej: około 90% matek otrzymało steroidy prenatalnie,
+pięcioro niemowląt glikokortykosteroidy przed pierwszą próbką; opisano też jedną
+matkę stosującą progesteron. Nie dopisujemy nieistniejącego kryterium wykluczenia
+każdej takiej ekspozycji.
+
+Tabela 4, po usunięciu obserwacji odstających metodą Horn–Tukey: centralne 95% RI
+(2,5.–97,5. centyl), metoda robust po transformacji Box–Cox. Liczebność LH/FSH:
+111 M/108 F. Zapisane osobno 90% przedziały ufności granic RI nie są normami.
+Względna szerokość CI górnej granicy wynosi LH M35%/F52%, FSH M30%/F27%; autorzy
+wskazują ograniczoną precyzję części granic. Uśrednianie wyników bliźniąt M–M
+w tej pracy nie dotyczyło LH ani FSH.
+
+| Analit | Chłopcy (n=111) | Dziewczynki (n=108) |
+|---|---:|---:|
+| LH, IU/L | 0,1–9,2 | 0,2–133,9 |
+| FSH, IU/L | 0,2–3,6 | 2,6–181,1 |
+
+**Nadal nieustalone kryteria wieku:** do RI użyto wyłącznie pierwszej próbki
+każdego dziecka. Artykuł podaje średni PNA 21 dni (SD15); tabela 2: ogółem 20
+(SD15), M21 (SD15), F20 (SD14), bez minimum/maksimum. Pobrania co 2–3 tygodnie
+do 36 tygodni opisują cały biobank, a nie zakres wieku pierwszych próbek użytych
+do RI. Brak potrzeby podziału LH/FSH na grupy wieku w badanej kohorcie nie dowodzi
+stosowalności poza nią. Nie wyznaczamy okna ze średniej ± SD, osi wykresu ani
+samego końca obserwacji; nie przejmujemy 0–43 dni z Greaves 2008 lub harmonogramu
+innego badania z 2014 r. Pozostają blokady `unresolvedPostnatalAge` oraz
+`unresolvedGestationalAgeEdges`; usunięto nieaktualne blokady pełnego tekstu,
+tabeli, metody i klinicznych kryteriów kwalifikacji.
+
+**Wpływ na aplikację:** brak nowych pól i opcji metody; wyniki i interpretacje
+pozostają niezmienione. Kandydaci nie są wybieralni, zapisywalni jako ustawienie
+urządzenia ani używani w `referencePreview`. Dotychczasowa blokada norm Mayo
+u wcześniaka pozostaje. Nie są to uniwersalne normy dla wszystkich wcześniaków
+ani całego pierwszego roku życia. Silnik `1.3.0`, wersje profili Mayo/Johannsen,
+polityka biochemiczna i kryteria kliniczne pozostają bez zmian; wersja zbioru danych
+wynosi `2026-10-09.2`. Stare snapshoty nie są migrowane ani ponownie liczone.
+Greaves nie jest dopisywany do źródeł zwykłych ocen Mayo.
+
+Przypadki dla rzeczywistych funkcji produkcyjnych:
+
+| Wejście/działanie | Oczekiwany wynik |
+|---|---|
+| LH/FSH, wskazanie kandydata Greaves, M/F, wiek i wynik znane | Brak porównania i podglądu; `profile_not_active`; bez zastąpienia normą Mayo. |
+| Dokładny PNA21 dni albo GA28 tygodni/PNA56 dni (PMA36 tygodni) | Średnia kohorty i koniec obserwacji nie tworzą kryterium normy; nadal brak porównania i podglądu. |
+| Próba zapisania konfiguracji kandydata lub odczyt takiej konfiguracji | Kandydat odrzucony; nie pojawia się jako zapamiętana metoda. |
+| Wcześniak, dotychczasowa metoda Mayo | Nadal brak niedopasowanego RI, bez automatycznego przejścia na tabelę Greaves. |
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda Mayo | Dotychczasowe porównania: powyżej dla wieku, w zakresie dla G3; ostrzeżenie wczesnego rozwoju pozostaje. |
+| Odczyt starszej oceny | Pierwotne wartości, statusy, źródła i wersje bez ponownego obliczenia. |
+
+Plan aktywacji: ustalenie dokładnych kryteriów wieku ze źródła (suplement,
+protokół lub dane autorów) → reguły kwalifikacji GA/PNA w danych → testy granic
+i doboru populacji → akceptacja kliniczna właściciela. Dopiero wtedy należy
+projektować minimalne uzupełnienie danych niemowlęcia. Obecny wiek w latach
+/miesiącach nie może udawać dokładnej liczby dni życia. Ten etap nie stanowi
+walidacji klinicznej ani aktywacji nowych norm.
+
+## Przyciski edycji i animacje — 9.10.2026
+
+Formularz `1.10.0` i renderer `1.7.0` usuwają przycisk „Zatrzymaj/Wznów animacje” oraz stan ręcznej pauzy. Dotychczasowe pulsowanie wyniku, drżenie znacznika, wykrzyknik i etykieta znacznego odchylenia pozostają. Systemowa preferencja `prefers-reduced-motion` i wydruk nadal wyłączają ruch; unieważniona poprzednia ocena pozostaje statyczna. Przyciski „Zmień”, „Zmień stadium” i „Doprecyzuj” korzystają z kolorów i obramowań przelicznika, widocznego fokusu i pola dotyku co najmniej 44 px na telefonie. Układ formularza i działanie edycji pozostają dotychczasowe.
+
+**Wpływ kliniczny: brak zmiany obliczeń i interpretacji.** Usunięto sterowanie prezentacją, bez zmiany progów wyróżnienia, tekstu ostrzeżeń, norm, silnika `1.3.0`, danych/kryteriów `2026-10-04.1` ani zapisanych ocen. Obowiązują dotychczasowe źródła, populacje i jednostki R1/R2 oraz ograniczenia opisane poniżej. Regresja na rzeczywistym rendererze: M2 lata 9 miesięcy/G3/LH2 IU/L ze zgodną metodą → dotychczasowe warunkowe porównania wieku i stadium oraz `early_development`; brak przełącznika ruchu; ograniczenie ruchu w systemie lub wydruk → te same ostrzeżenia i wykrzyknik bez animacji.
+
+## Uproszczenie etykiet i szczegółów oceny — 9.10.2026
+
+**Zakres zmiany:** wynik zachowuje osobną ocenę rozwoju oraz osie wieku i stadium. Rozwijany blok nosi nazwę „Szczegóły i źródła”. Usunięto całą tabelę „Kontekst użyty w ocenie”, powtarzający ją opis kontekstu oraz techniczne wersje silnika, danych i profili z prezentacji wyniku, również przy odczycie ocen historycznych. Szczegóły zawierają krótką informację o metodzie, źródłach i istotnych ograniczeniach, bez audytowego wyliczania danych wejściowych. Wersje i pozostałe metadane nadal należą do danych oceny; uproszczenie ekranu ich nie usuwa.
+
+**Brak wyniku i błąd wyniku to różne stany.** Puste pole nie otrzymuje komunikatu „Nieprawidłowy zapis wyniku lub jednostki”. Niepusty błędny zapis wymaga poprawienia, ale powód nie jest powtarzany w podsumowaniu i osobno pod każdym niedostępnym porównaniem. Niezależne, znane ostrzeżenie kliniczne pozostaje widoczne także wtedy, gdy liczba nie została jeszcze podana lub jest błędna. Brak wiarygodnego wieku nie jest przedstawiany jednocześnie jako stwierdzenie, że wiek leży poza populacją profilu.
+
+**Kontekst i ograniczenia:** usunięcie tabeli obejmuje zarówno wartości puste/nieznane, jak i znane daty, odpowiedzi „Tak”/„Nie”, objętości oraz inne pola dawnego kontekstu. Nie odtwarzamy tabeli dla starszych zapisów ani nie przenosimy jej do innej części wyniku. Nie oznacza to zamiany `unknown` na „Nie” ani usunięcia danych. Ostrzeżenia kliniczne nadal pochodzą z oceny, a powody ograniczeń są zbierane według ich kodów do jednej listy. Przy braku historycznego wejścia `localReference` nie jest pokazywana pusta sekcja „Zakres laboratorium” ani komunikat `no_local_reference`.
+
+Uproszczenie nie ukrywa ograniczeń związanych ze znanym leczeniem lub stymulacją, zastrzeżenia, że niskie LH nie wyklucza CPP, ograniczeń minipuberty i wcześniactwa ani przyczyn niejednoznaczności wyników cenzorowanych. Warunek porównania z zakresami **bazalnymi bez leczenia hormonalnego** pozostaje czytelny przy porównaniach warunkowych. Wynik `<x`, `≤x`, `>x`, `≥x`, `<LOD` lub `<LOQ` nadal zachowuje operator i nie otrzymuje wymyślonego dokładnego punktu. Zgodność stężenia ze stadium nadal nie oznacza prawidłowego czasu rozwoju ani nie ustala jego przyczyny.
+
+**Wpływ kliniczny: TAK — zmiana prezentacji ograniczeń i hierarchii informacji.** Nie zmieniają się dane wejściowe, dobór norm, granice, jednostki, statusy oceny ani reguły animowanych wyróżnień. Silnik `1.3.0`, dane i kryteria `2026-10-04.1` oraz kontrakt snapshotu pozostają niezmienione. Zapisane oceny nie są migrowane ani ponownie liczone. Ich odczyt korzysta z prostszego widoku bez tabeli kontekstu, zachowując utrwalone ostrzeżenia i ograniczenia. Historyczny `reportedRange`, konflikt porównań oraz `localReference` nadal są obsługiwane, ale wersje lokalnego profilu także nie są wyświetlane. Pełne dane kontekstu, pochodzenie i wersje pozostają w snapshocie i publicznym modelu odczytu, bez mutacji.
+
+**Źródła, populacja i jednostki:** bez nowych założeń medycznych i bez nowego odczytu piśmiennictwa. Obowiązują dotychczasowe katalogi Mayo LH LHPED 62999 (AnshLite CLIA) [R1] i FSH 602753 (Roche Elecsys ECLIA) [R2], odczytane 2–3.10.2026: surowica, IU/L i równoważne mIU/mL, ograniczenia wieku, płci, stadium i populacji konkretnego profilu. Model kliniczny pozostaje pediatryczny 0–18 lat. Rozdzielenie stężenia i rozwoju oraz ograniczenia leczenia/stymulacji opierają się na dotychczasowych K1–K4; ograniczenia niemowlęce na M1, a definicja wcześniactwa na K6. Pełne cytowania, wersje dokumentów i rzeczywisty zakres wcześniejszego odczytu pozostają w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Decyzja o redukcji etykiet jest decyzją funkcjonalną właściciela, nie zaleceniem wynikającym z tych publikacji.
+
+Syntetyczne przypadki wymagane dla rzeczywistego silnika i renderera:
+
+| Wejście lub działanie | Oczekiwany widok |
+|---|---|
+| Pusta wartość LH, nieznany wiek, skonfigurowana metoda | Brak fałszywego błędu zapisu, powielonych list i pustego zakresu laboratorium; brak wieku nie udaje wieku poza profilem. |
+| Niepusty błędny zapis wyniku lub nieobsługiwana jednostka | Jeden właściwy komunikat poprawienia danych; brak porównania liczbowego i jego wielokrotnie powtórzonych przyczyn. |
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, leczenie nieznane | Nadal warunkowo `above` dla wieku (`≤0,5`), `within` dla G3 (`0,09–4,2`), ostrzeżenie `early_development` i dotychczasowe wyróżnienie odchylenia. |
+| Ten sam wczesny rozwój przy pustej lub błędnej wartości LH | Znane ostrzeżenie rozwoju nie znika razem z niedostępnym porównaniem stężenia. |
+| Jawne leczenie/stymulacja, niemowlę z wcześniactwem lub wynik `<LOD` | Właściwe ograniczenia pozostają, bez niedopasowanego zakresu lub dokładnego punktu wyniku cenzorowanego. |
+| Wcześniejszy snapshot z datami, OUN/regresją, jawnym „Nie”, początkiem rozwoju lub `localReference` | Brak tabeli kontekstu i technicznych wersji także w historii; utrwalone ostrzeżenia i porównania pozostają. Pełne dane w zapisie i publicznym modelu odczytu są niezmienione, bez ponownego liczenia. |
+
+Przypadki opisują oczekiwania regresyjne; wyniki wykonania testów są raportowane w PR. Zmiana wymaga przeglądu klinicznego właściciela ze względu na sposób odczytu ograniczeń, a testy techniczne nie stanowią walidacji klinicznej.
+
+## Usunięcie ręcznego zakresu z bieżącego formularza — 8.10.2026
+
+**Zakres zmiany:** szybki formularz nie udostępnia już zakładki „Zakres z wydruku”, pola granic ani podpowiedzi jednostki tego pola. Pozostają sekcje „Pacjent” i „Stadium”, zgodna konfiguracja oznaczenia oraz bieżący kontekst opisany w poprzedniej wersji poniżej. Użytkownik nie musi przepisywać przedziału, który może odczytać bezpośrednio z wydruku laboratorium. To decyzja o uproszczeniu funkcji, nie nowe zalecenie medyczne.
+
+**Wpływ kliniczny:** nowe sprawdzenie nie tworzy `input.reportedRange` ani `evaluation.reportedRange`. Nie daje dodatkowej klasyfikacji „w/powyżej/poniżej podanego zakresu” ani komunikatu `reported_range_reference_disagreement` wywołanego rozbieżnością ręcznego zakresu z katalogiem. Automatyczne porównania wieku i stadium, ich osie i wyróżnienia oraz niezależna ocena rozwoju pozostają na dotychczasowych zasadach. Minimalne wejście ze zgodną metodą nadal korzysta z warunkowego `referencePreview`; usunięcie pola nie potwierdza oznaczenia bazalnego ani braku leczenia. Przy nieznanej lub niezgodnej metodzie nadal nie ma katalogowej oceny stężenia. Dostępne pozostają konwersja i ocena rozwoju w granicach znanego kontekstu; aplikacja nie zastępuje brakującej metody zgadywaną normą.
+
+**Zgodność zapisów:** usunięto wyłącznie drogę wprowadzania ręcznego zakresu w bieżącym UI. Publiczny `buildInput` nadal przyjmuje jawny `reportedRange` starszego klienta, a produkcyjny silnik, renderer i kontrakt snapshotu zachowują jego dotychczasową obsługę. Wizyty, przypięte wyniki i historia pokazują utrwalony zakres, porównanie i ewentualny konflikt, bez migracji, filtrowania lub ponownego obliczania. Te dane nie są automatycznie przenoszone do nowego sprawdzenia. `reportedRange` pozostaje odrębny od pełnego, zweryfikowanego `localReference`.
+
+**Źródła, populacja i jednostki:** bez zmian w silniku `1.3.0`, danych i kryteriach `2026-10-04.1`, profilach, progach i przeliczeniach. Obowiązują katalogi Mayo LH LHPED 62999 (AnshLite CLIA) [R1] i FSH 602753 (Roche Elecsys ECLIA) [R2], odczytane 2–3.10.2026: surowica, IU/L i równoważne mIU/mL, ograniczenia wieku, płci, stadium i populacji konkretnego oznaczenia. Model kliniczny pozostaje pediatryczny 0–18 lat, z dotychczasowymi ograniczeniami leczenia, stymulacji i niemowlęctwa. Źródła rozdzielenia oceny stężenia i rozwoju pozostają K1–K4; pełne cytowania i rzeczywisty zakres wcześniejszego odczytu są w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Nie dodano nowych źródeł ani norm.
+
+Syntetyczne przypadki regresyjne dla rzeczywistego formularza, silnika i odczytu zapisów:
+
+| Wejście lub działanie | Oczekiwane zachowanie |
+|---|---|
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, leczenie nieznane | Bez `reportedRange`; nadal warunkowo `above` dla wieku (`≤0,5`), `within` dla G3 (`0,09–4,2`) i `early_development`. |
+| Ten sam kontekst, inna/nieznana metoda | Brak katalogowego porównania i podglądu oraz brak zastępczego ręcznego zakresu; konwersja i ostrzeżenie o zbyt wczesnym rozwoju pozostają. |
+| Zmiana LH↔FSH, pacjenta lub ponowne otwarcie szczegółów | Dwie sekcje szczegółów; usunięte pole nie wraca i nie wpływa na nowe wejście z ukrycia. |
+| Starszy klient przekazuje LH15 IU/L i `reportedRange` `0–20` przy katalogowym odchyleniu | Dotychczasowe odrębne porównanie i komunikat rozbieżności nadal obsługiwane przez publiczny adapter i silnik. |
+| Odczyt wcześniej utrwalonego snapshotu z ręcznym zakresem | Ten sam zakres, status i ewentualny konflikt w historii/przypięciu; bez przeliczenia według aktualnego formularza. |
+
+Testy sprawdzają zachowanie implementacji, nie stanowią walidacji klinicznej. Wpływ polega na zawężeniu danych nowej oceny, bez zmiany automatycznych norm i ich ograniczeń.
 
 ## Bieżący kontekst bez dodatkowego wywiadu i datowania próbki — 7.10.2026
+
+Opis formularza `1.7.0`. Ograniczenie do bieżącego kontekstu pozostaje aktualne; wspomniany niżej zakres z wydruku usunięto z późniejszego UI zgodnie z sekcją powyżej.
 
 **Decyzja właściciela:** szybki przelicznik ma oceniać wynik wyłącznie względem kontekstu widocznego w formularzu. Formularz `1.7.0` usuwa całą zakładkę „Dodatkowe informacje”, pytania o objawy OUN i regresję wcześniejszych cech, dokładną objętość jąder oraz metodę jej oceny. Usuwa również całą zakładkę „Wcześniejsze badanie”, datę pobrania i powrót do bieżących danych. Nie ma zastępczego odsyłacza „Wynik z innej daty”. Pytanie o wcześniactwo pozostaje w sekcji „Pacjent”, tylko przy znanym wieku obejmującym okres przed pierwszymi urodzinami.
 
@@ -119,7 +466,7 @@ Warstwa prezentacji stosuje przyjętą wcześniej dla innych hormonów **konwenc
 
 Warunkowe zestawienie nadal pokazuje warunki zastosowania poza zwijanymi szczegółami; silne wyróżnienie również jest oznaczone jako warunkowe. Nieznana/niezgodna metoda, znane leczenie, stymulacja i pozostałe blokady nie są obchodzone przez wykres. Wyniki `<x`, `≤x`, `>x`, `≥x`, `<LOD` i `<LOQ` zachowują operator: mogą mieć zapisane porównanie przedziałowe, ale nie otrzymują wymyślonego dokładnego punktu ani animowanego wyróżnienia. Zakres przepisany z wydruku pozostaje oddzielnym porównaniem; nie zastępuje zakresów wieku/stadium ani nie wycisza ich rozbieżności.
 
-Ocena rozwoju pozostaje widoczna niezależnie od koloru osi. Tekst zapisanej oceny, w tym dodatkowe akapity dotyczące OUN, regresji i objętości jąder niemowlęcia, zachowuje swoje znaczenie. Metadane, ograniczenia i źródła są zebrane w rozwijanych szczegółach. Kolor pasma „w zakresie” nie oznacza prawidłowości całego obrazu klinicznego. Zatrzymanie animacji oraz preferencja ograniczenia ruchu wyłączają ruch, zachowując kolor, wykrzyknik i tekst. Historyczny odczyt korzysta z zapisanej liczby, granic, warunków, źródeł i akapitów; nie wywołuje silnika ani nie uzupełnia dawnych zapisów dzisiejszym kontekstem. Unieważniona ocena pozostaje jawnie historyczna.
+Ocena rozwoju pozostaje widoczna niezależnie od koloru osi. Tekst zapisanej oceny, w tym dodatkowe akapity dotyczące OUN, regresji i objętości jąder niemowlęcia, zachowuje swoje znaczenie. Metadane, ograniczenia i źródła są zebrane w rozwijanych szczegółach. Kolor pasma „w zakresie” nie oznacza prawidłowości całego obrazu klinicznego. Systemowa preferencja ograniczenia ruchu wyłącza animacje, zachowując kolor, wykrzyknik i tekst; ręczny przełącznik usunięto w rendererze `1.7.0`. Historyczny odczyt korzysta z zapisanej liczby, granic, warunków, źródeł i akapitów; nie wywołuje silnika ani nie uzupełnia dawnych zapisów dzisiejszym kontekstem. Unieważniona ocena pozostaje jawnie historyczna.
 
 Syntetyczne regresje wywołują produkcyjne funkcje oceny i renderera oraz rzeczywisty formularz:
 
@@ -161,7 +508,7 @@ Opis historycznej wersji: silnik `1.2.0`, formularz `1.2.0`, renderer `1.2.0` i 
 
 **Wcześniejsze badanie.** Data pobrania przełącza na `contextBasis='sample'`: wiek wynika z rzeczywistej DOB albo ręcznie podanego wieku wówczas. Dzisiejsze stadium i leczenie nie są przypisywane próbce. Jeżeli użytkownik uzupełni stadium w tej ścieżce, etykieta wskazuje wprost dzień pobrania; nie ma osobnego checkboxu ani pola źródła obserwacji. Zmiana pacjenta usuwa lokalny wynik i kontekst kliniczny; odczyt `loading/unavailable` nie wykorzystuje starych importów. Ręczne korekty tej samej osoby pozostają odrębne od automatycznego źródła.
 
-**Zakres z wydruku.** Jedno opcjonalne pole przyjmuje przedział `0,5–3,0` lub granicę `<`, `≤`, `>`, `≥`. Jednostka pochodzi z wyniku (IU/L lub równoważne mIU/mL). `reportedRange` jest porównaniem liczbowym z zakresem przepisanym przez użytkownika — nie kompletnym `localReference`, zweryfikowaną populacją ani profilem Mayo. Wykorzystuje produkcyjne porównywanie przedziałów; wyniki cenzorowane zachowują operator i możliwą niejednoznaczność. Nieprawidłowy zakres nie daje oceny. Rozbieżność z dopasowanym katalogowym RI pozostaje widoczna i wymaga uzgodnienia; zgodność z ręcznym zakresem nie usuwa ostrzeżenia rozwoju.
+**Zakres z wydruku — wcześniejszy interfejs i zachowany kontrakt.** Ówczesne opcjonalne pole przyjmowało przedział `0,5–3,0` lub granicę `<`, `≤`, `>`, `≥`; od 8.10.2026 nie ma go w bieżącym formularzu. Jednostka pochodzi z wyniku (IU/L lub równoważne mIU/mL). Obsługiwany dla zgodności `reportedRange` jest porównaniem liczbowym z zakresem przepisanym przez użytkownika — nie kompletnym `localReference`, zweryfikowaną populacją ani profilem Mayo. Wykorzystuje produkcyjne porównywanie przedziałów; wyniki cenzorowane zachowują operator i możliwą niejednoznaczność. Nieprawidłowy zakres nie daje oceny. Rozbieżność z dopasowanym katalogowym RI pozostaje widoczna i wymaga uzgodnienia; zgodność z ręcznym zakresem nie usuwa ostrzeżenia rozwoju.
 
 **Zapis.** Nowe pola są opcjonalnym rozszerzeniem schematu oceny `1`. Snapshot utrwala faktycznie użyty profil, pochodzenie konfiguracji, podstawę wieku/obserwacji oraz wpisany zakres. Historyczny odczyt nie pobiera dzisiejszych preferencji i nie przelicza oceny. Starsze oceny zachowują treść i znaczenie; zmiana komentarza nie zmienia oceny, zmiana wyniku/daty nadal wymaga jawnego unieważnienia lub przeliczenia.
 

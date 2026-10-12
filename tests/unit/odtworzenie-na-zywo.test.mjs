@@ -23,7 +23,7 @@ describe('Odtworzenie „na żywo” wysyła vilda:persist-restored, a moduły d
   it('moduł daty urodzenia czyta lastLoadedData także po tym zdarzeniu', () => {
     const src = zrodlo('vilda_dob_age.js');
     expect(src).toMatch(/\['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored'\]\.forEach/);
-    expect(src).toContain("var VERSION = '8';");
+    expect(src).toContain("var VERSION = '9';");
   });
 
   it('blokada tożsamości ocenia pola także po tym zdarzeniu', () => {

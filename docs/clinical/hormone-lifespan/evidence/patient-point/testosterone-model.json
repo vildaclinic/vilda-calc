@@ -1,0 +1,117 @@
+{
+  "id": "male-testosterone-kelsey2014-corrected2015",
+  "status": "source-extracted-research-candidate-not-production",
+  "hormone": "testosterone_total",
+  "sex": "male",
+  "unit": "nmol/L",
+  "source": {
+    "doi": "10.1371/journal.pone.0109346",
+    "pmid": "25295520",
+    "correctionDoi": "10.1371/journal.pone.0117674",
+    "location": "Table S1 XLSX A1 and B2:B8; correction Table 3 p50",
+    "license": "CC BY",
+    "retrievedOn": "2026-10-10"
+  },
+  "ageYears": {
+    "minimum": 3,
+    "maximum": 88,
+    "boundary": "inclusive"
+  },
+  "population": {
+    "n": 10097,
+    "studies": 13,
+    "description": "Pooled healthy male datasets; original measurements ages 3–101 years; selected published model display 3–88 years"
+  },
+  "assay": "Mixed methods converted by authors to LC-MS/MS equivalent; not a single directly measured assay cohort",
+  "material": "serum",
+  "statistic": "Back-transformed central log10(TT+1) prediction; matches published corrected p50. Do not call this arithmetic mean in original units.",
+  "formula": {
+    "log10TTplus1": "(a+c*age+e*age^2+g*age^3)/(1+b*age+d*age^2+f*age^3)",
+    "inverse": "10^prediction - 1",
+    "coefficients": {
+      "a": 0.04655009220580975,
+      "b": -0.053105120839422044,
+      "c": 0.051230067427154524,
+      "d": -0.0079259805371925,
+      "e": -0.012221840632369542,
+      "f": 0.0005808117124001521,
+      "g": 0.0006918080153444722
+    }
+  },
+  "limits": [
+    "Not applicable before age 3; no fetal or infant values despite source-generated extrapolated rows.",
+    "Age alone does not establish Tanner stage, a diagnosis or treatment need.",
+    "Pooled method conversions and cohorts have residual heterogeneity; orientation only unless separately justified.",
+    "Original 2014 centiles were corrected in 2015; corrected table retained separately.",
+    "No interpolation or cross-source stitching has been authorized for production."
+  ],
+  "validation": {
+    "generatedSpreadsheetRowsChecked": 1020,
+    "maxLogDifferenceToSource": 1.5543122344752192e-15,
+    "annualP50RowsChecked": 86,
+    "maxDifferenceToRoundedCorrectedP50": 0.049603876520182055,
+    "examples": [
+      {
+        "ageYears": 3,
+        "centralNmolL": 0.3764139001167295
+      },
+      {
+        "ageYears": 12,
+        "centralNmolL": 1.6927166288128852
+      },
+      {
+        "ageYears": 14,
+        "centralNmolL": 6.912918060658614
+      },
+      {
+        "ageYears": 19,
+        "centralNmolL": 15.406979799404404
+      },
+      {
+        "ageYears": 40,
+        "centralNmolL": 13.049603876520182
+      },
+      {
+        "ageYears": 70,
+        "centralNmolL": 13.06823840958111
+      },
+      {
+        "ageYears": 88,
+        "centralNmolL": 13.222919801641392
+      }
+    ]
+  },
+  "sourceSha256Encoding": "Concatenate each file hexSegments array in order to reconstruct its SHA-256 hex digest.",
+  "sourceSha256HexSegments": {
+    "kelsey2014.xml": [
+      "facbcf9d",
+      "955b0cfa",
+      "bcb5c718",
+      "4bb0b982",
+      "d3058bb4",
+      "d781fe92",
+      "11736589",
+      "1c50aac7"
+    ],
+    "correction2015.xml": [
+      "0db4a32b",
+      "8aebc539",
+      "f90b4f19",
+      "08d40e2a",
+      "010526ca",
+      "47157214",
+      "6705df3b",
+      "fa261992"
+    ],
+    "supplement-s1.xlsx": [
+      "9bd12a85",
+      "440d881c",
+      "f31c7d8d",
+      "7ca55dbe",
+      "c4b0a096",
+      "f153d21b",
+      "7264ca54",
+      "f795fe9e"
+    ]
+  }
+}

@@ -91,6 +91,17 @@
   margin: var(--space-12px) 0;
 }
 
+.vilda-lab-assessment .vilda-lab-preterm-block {
+  margin: var(--space-14px) 0;
+  padding: var(--space-12px) var(--space-14px);
+  border: var(--border-hairline) solid #efd3ae;
+  border-left: var(--border-pro) solid #cc862e;
+  border-radius: var(--radius-11);
+  background: var(--vilda-lab-amber-bg);
+  color: var(--vilda-lab-amber);
+  font-size: .9rem;
+}
+
 .vilda-lab-assessment .vilda-lab-comparisons-head {
   display: flex;
   flex-wrap: wrap;
@@ -112,30 +123,6 @@
   color: #526b75;
   font-size: .75rem;
   font-weight: 600;
-}
-
-.vilda-lab-assessment .vilda-lab-motion-toggle {
-  width: auto;
-  min-height: 32px;
-  max-width: 100%;
-  margin: 0;
-  padding: var(--space-6px) var(--space-8px);
-  border: var(--border-hairline) solid var(--vilda-lab-line);
-  border-radius: var(--radius-6);
-  color: #526b75;
-  background: #fff;
-  font: inherit;
-  font-size: .75rem;
-  line-height: 1.4;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.vilda-lab-assessment .vilda-lab-motion-toggle:hover,
-.vilda-lab-assessment .vilda-lab-motion-toggle[aria-pressed="true"] {
-  color: #355964;
-  border-color: #a8bdc4;
-  background: #eaf1f3;
 }
 
 .vilda-lab-assessment .vilda-lab-comparison {
@@ -186,6 +173,32 @@
   background: #f0f2f4;
 }
 
+.vilda-lab-assessment .vilda-lab-comparison[data-applicability="source-reference"][data-status="within"] .vilda-lab-comparison-status {
+  color: var(--vilda-lab-muted);
+}
+
+.vilda-lab-assessment .vilda-lab-variants-lead {
+  margin: var(--space-14px) 0 var(--space-8px);
+  font-size: .85rem;
+  color: var(--vilda-lab-muted);
+}
+
+.vilda-lab-assessment .vilda-lab-reference-variant {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4px) var(--space-12px);
+  padding: var(--space-10px) 0;
+  border-bottom: var(--border-hairline) solid var(--vilda-lab-line);
+  font-size: .85rem;
+}
+
+.vilda-lab-assessment .vilda-lab-reference-variant strong {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 .vilda-lab-assessment .vilda-lab-reference-conditions {
   margin: var(--space-8px) 0 var(--space-12px);
   padding: 9px 11px;
@@ -203,7 +216,6 @@
 }
 
 .vilda-lab-assessment .vilda-lab-note,
-.vilda-lab-assessment .vilda-lab-context-note,
 .vilda-lab-assessment .vilda-lab-metadata,
 .vilda-lab-assessment .vilda-lab-reasons {
   color: var(--vilda-lab-muted);
@@ -228,7 +240,6 @@
 }
 
 .vilda-lab-assessment .vilda-lab-details summary:focus-visible,
-.vilda-lab-assessment .vilda-lab-motion-toggle:focus-visible,
 .vilda-lab-assessment a:focus-visible {
   outline: var(--border-emphasis) solid #297d82;
   outline-offset: 4px;
@@ -236,23 +247,6 @@
 
 .vilda-lab-assessment .vilda-lab-details > h4 {
   margin-top: var(--space-18px);
-}
-
-.vilda-lab-assessment .vilda-lab-context {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(0, 1.6fr);
-  column-gap: var(--space-16px);
-  row-gap: var(--space-8px);
-  font-size: .8rem;
-  margin: var(--space-14px) 0 0;
-}
-
-.vilda-lab-assessment .vilda-lab-context dt {
-  color: var(--vilda-lab-muted);
-}
-
-.vilda-lab-assessment .vilda-lab-context dd {
-  margin: 0;
 }
 
 .vilda-lab-assessment .vilda-lab-limitations,
@@ -270,11 +264,6 @@
 .vilda-lab-assessment a {
   color: #23616d;
   text-decoration: underline;
-}
-
-.vilda-lab-assessment .vilda-lab-versions {
-  color: var(--vilda-lab-muted);
-  font-size: .75rem;
 }
 
 .vilda-lab-assessment[data-assessment-status="invalidated"],
@@ -308,11 +297,6 @@
 
 .vilda-lab-assessment.is-compact .vilda-lab-comparison {
   padding: var(--space-12px) 0 13px;
-}
-
-.vilda-lab-assessment .vilda-lab-context-note {
-  border-left: var(--border-emphasis) solid var(--vilda-lab-line);
-  padding-left: var(--space-10px);
 }
 
 .vilda-lab-assessment .vilda-lab-reported-range {
@@ -424,11 +408,13 @@
 }
 
 .vilda-lab-assessment .vilda-lab-axis-value {
+  --label-inset: min(50%, calc(var(--label-edge, 2em) + var(--space-6px)));
   position: absolute;
   top: 0;
-  left: clamp(min(50%, var(--label-edge, 34px)), var(--value), calc(100% - min(50%, var(--label-edge, 34px))));
+  left: clamp(var(--label-inset), var(--value), calc(100% - var(--label-inset)));
   transform: translateX(-50%);
-  max-width: min(100%, calc(var(--label-edge, 34px) + var(--label-edge, 34px)));
+  width: max-content;
+  max-width: 100%;
   font-size: .82rem;
   font-weight: 650;
   line-height: 21px;
@@ -436,8 +422,10 @@
   border-radius: 5px;
   color: #356e75;
   background: #eaf3f3;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vilda-lab-assessment .vilda-lab-axis-value.above {
@@ -720,18 +708,13 @@
   }
 }
 
-/* A stopped animation retains its warning colour, text and exclamation mark. */
-.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker,
-.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker::after,
-.vilda-lab-assessment.is-motion-paused .vilda-lab-result,
+/* Invalidated assessments remain static inside their historical details. */
 .vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker,
 .vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker::after,
-.vilda-lab-assessment .vilda-lab-history .vilda-lab-result,
-#labResultSection.lab-puberty-active.is-motion-paused .lab-result-big-value {
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-result {
   animation: none;
 }
 
-.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker::after,
 .vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker::after {
   opacity: 0;
 }
@@ -750,26 +733,12 @@
   background: #c7d5d8;
 }
 
-.vilda-lab-assessment .vilda-lab-history .vilda-lab-motion-toggle {
-  display: none;
-}
-
 @media (max-width: 480px) {
-  .vilda-lab-assessment .vilda-lab-context {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 3px;
-  }
-  .vilda-lab-assessment .vilda-lab-context dd {
-    margin-bottom: 7px;
-  }
   .vilda-lab-assessment .vilda-lab-comparison-head {
     align-items: flex-start;
   }
   .vilda-lab-assessment .vilda-lab-clinical {
     padding: 11px;
-  }
-  .vilda-lab-assessment .vilda-lab-motion-toggle {
-    min-height: 44px;
   }
   .vilda-lab-assessment .vilda-lab-comparison-head {
     gap: 5px var(--space-8px);
@@ -839,9 +808,6 @@
     text-shadow: none;
   }
   .vilda-lab-assessment .vilda-lab-axis-marker::after {
-    display: none;
-  }
-  .vilda-lab-assessment .vilda-lab-motion-toggle {
     display: none;
   }
   .vilda-lab-assessment .vilda-lab-axis-track {

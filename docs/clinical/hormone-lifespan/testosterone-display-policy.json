@@ -1,0 +1,126 @@
+{
+  "version": "2026-10-11.1",
+  "kind": "educational-display-only",
+  "analyte": "t",
+  "sex": "male",
+  "unit": "nmol/L",
+  "sourceIds": [
+    "busch2022-male-t",
+    "kelsey2014-male-t-childhood",
+    "madsen2022-male-t",
+    "walravens2025-male-t-18-29",
+    "walravens2025-male-t-30-39",
+    "walravens2025-male-t-40-49",
+    "walravens2025-male-t-50-59",
+    "walravens2025-male-t-60-69",
+    "walravens2025-male-t-70-79",
+    "walravens2025-male-t-80-plus"
+  ],
+  "sources": [
+    {
+      "id": "busch2022-male-t",
+      "doi": "10.1210/clinem/dgac115",
+      "statistic": "graphically-reconstructed-age-specific-median",
+      "readability": "retain-only-eligible-source-points",
+      "lastReadableDailyAgeDays": 212,
+      "daysPerYear": 365.25,
+      "limit": "Day 212 is a graphical reading limit, not the assay LOQ or the end of minipuberty."
+    },
+    {
+      "id": "kelsey2014-male-t-childhood",
+      "doi": "10.1371/journal.pone.0109346",
+      "correctionDoi": "10.1371/journal.pone.0117674",
+      "statistic": "corrected-model-central-p50",
+      "limit": "Numerical routing remains ages 3 to less than 6 years. These original reference nodes are deliberately not display knots: the disagreement with Madsen must not create an apparent childhood hormonal event."
+    },
+    {
+      "id": "madsen2022-male-t",
+      "doi": "10.1210/clinem/dgac155",
+      "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+      "statistic": "published-annual-lms-central-p50",
+      "limit": "Norwegian boys aged 6–18 years, serum LC-MS/MS; chronological-age model across pubertal stages. Numerical routing is 6 to less than 18. The published 18-year endpoint is used only for display continuity and the fixed scale; it does not assign the pediatric reference to an adult."
+    },
+    {
+      "ids": [
+        "walravens2025-male-t-18-29",
+        "walravens2025-male-t-30-39",
+        "walravens2025-male-t-40-49",
+        "walravens2025-male-t-50-59",
+        "walravens2025-male-t-60-69",
+        "walravens2025-male-t-70-79",
+        "walravens2025-male-t-80-plus"
+      ],
+      "doi": "10.1210/clinem/dgaf507",
+      "statistic": "published-age-group-arithmetic-mean",
+      "limit": "Table 1 total testosterone means, not medians or reference intervals. 1194 men aged 18–86; healthy younger cohorts and older community cohorts. The continuous adult arc is an illustration and does not fit every group mean or establish an individual aging trajectory."
+    }
+  ],
+  "scale": {
+    "basis": "fixed-published-source-node",
+    "sourceId": "madsen2022-male-t",
+    "ageYears": 18,
+    "headroomFactor": 1.25,
+    "patientValueMayChangeScale": false
+  },
+  "transitions": [
+    {
+      "minAge": 0.5804243668720055,
+      "maxAge": 6,
+      "fromSource": "busch2022-male-t",
+      "toSource": "madsen2022-male-t",
+      "kind": "illustrative-childhood",
+      "reason": "One broad monotone connection from the last readable infant point to the low childhood LC-MS/MS level avoids turning source disagreement at ages 3–6 into a rise and tooth. Numerical childhood references remain separate."
+    },
+    {
+      "minAge": 18,
+      "maxAge": 23.8,
+      "fromSource": "madsen2022-male-t",
+      "toSource": "walravens2025-male-t-18-29",
+      "kind": "illustrative-transition",
+      "reason": "Join the published pediatric endpoint to the first adult group mean without inventing a late-puberty peak above young adults. These are different cohorts and different statistics."
+    }
+  ],
+  "anchors": [],
+  "schematic": {
+    "prenatalLastAnchorAge": 0,
+    "prenatalScale": "fixed-published-source-node",
+    "tailScale": "hold-last-source-value",
+    "tailMaxAge": 90
+  },
+  "interpolation": {
+    "method": "shape-preserving-cubic",
+    "coordinate": "canonical-whole-life-display-x",
+    "zoom": "sample-the-same-canonical-curve",
+    "transitionInteriorSourceNodesDisplayed": "none"
+  },
+  "limits": [
+    "This continuous line is educational geometry, not one population median model or a reference interval.",
+    "Numerical patient eligibility, source medians/group means and interpretation remain in the reference engine; never derive a patient reference from the display curve.",
+    "The prenatal lead, post-infant childhood connection, pediatric-to-adult join, adult arc and oldest-age tail are illustrative. Exact patient source markers may lie off the curve.",
+    "All approved source populations remain visible regardless of the current patient eligibility. Childhood Kelsey and intermediate adult group means are numerical references, not required display knots.",
+    "No numerical reference is supplied for unreadable late-infant values, ages 1–3 years or beyond age 86.",
+    "Adult data concern total testosterone. Do not substitute free testosterone, infer longitudinal change from cross-sectional cohorts, or label group means as medians or normal limits.",
+    "The hold after the oldest group mean and faded tail after 86 years do not establish stable concentrations in the oldest old.",
+    "The fixed source-node scale is preserved when adding adult means and when changing patient value, age or zoom; each hormone keeps its own scale."
+  ],
+  "sampling": {
+    "infantSourceId": "busch2022-male-t",
+    "pediatricSourceId": "madsen2022-male-t",
+    "sourceSampleCount": 400,
+    "denseStartAge": 16,
+    "denseStepYears": 0.01,
+    "includePublishedPediatricEndpoint": true
+  },
+  "adultTrend": {
+    "kind": "illustrative-adult-trend",
+    "coordinate": "canonical-whole-life-display-x",
+    "startSourceId": "walravens2025-male-t-18-29",
+    "endSourceId": "walravens2025-male-t-80-plus",
+    "endpointAge": "published-group-mean-age",
+    "method": "single-cubic-bezier-horizontal-end-tangents",
+    "startHandle": 0.2,
+    "endHandle": 0.5,
+    "sampleCount": 601,
+    "reason": "One broad declining arc anchored to first/last published group means. Intermediate means remain numerical references only, avoiding false mid-adult knees and tiny group-to-group oscillations. Canonical display coordinates avoid a new bend at the age-60 axis change."
+  }
+}

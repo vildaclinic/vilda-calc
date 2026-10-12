@@ -1,0 +1,62 @@
+{
+  "version": "2026-10-11.1",
+  "kind": "population-model-comparison",
+  "analyte": "inhb",
+  "sourceStatistic": "median",
+  "sourceUnit": "pg/mL",
+  "scale": {
+    "kind": "linear",
+    "unit": "pg/mL",
+    "min": 0,
+    "max": 400,
+    "ticks": [0, 100, 200, 300, 400],
+    "independentOfPatient": true,
+    "conversionSource": "patientPointData.unitConversions.inhb"
+  },
+  "sampling": {
+    "sampleCount": 801,
+    "includeSourceNodes": true,
+    "exclusiveEndpointGapYears": 1e-10
+  },
+  "colors": {
+    "female": "#b15786",
+    "male": "#2b7491"
+  },
+  "periods": {
+    "mini": {
+      "profileIds": {
+        "female": "ljubicic2022-female-inhb",
+        "male": "busch2022-male-inhb"
+      },
+      "domain": {
+        "minAge": 0.02,
+        "maxAge": 1,
+        "maxAgeExclusive": true
+      },
+      "referenceScope": "original-patient-data",
+      "pointPolicy": "own-infant-profile-before-first-birthday"
+    },
+    "puberty": {
+      "profileIds": {
+        "female": "borelli2025-female-inhb-puberty-comparison",
+        "male": "borelli2025-male-inhb"
+      },
+      "domain": {
+        "minAge": 8,
+        "maxAge": 20,
+        "maxAgeExclusive": false
+      },
+      "referenceScope": "inhibin-sex-comparison-puberty",
+      "pointPolicy": "own-age-profile-within-view"
+    }
+  },
+  "limits": [
+    "This policy applies only to inhibin B sex comparison in minipuberty and puberty. Both views use the same fixed 0–400 pg/mL concentration scale, independent of any patient result.",
+    "Infant lines are separate Busch and Ljubicic population medians, not longitudinal mean trajectories. Their common drawing domain is 0.02–<1 year; a qualified seven-day boy may have an own-sex reference before the common line starts.",
+    "Puberty lines are approximate Borelli-Kjær age medians. The female comparison-only reference uses all 24 original 5.6–47-year nodes as interpolation context, with eligibility restricted to 8–20 years.",
+    "Female serum results use Inhibin B Gen II ELISA; the male Borelli model pools Oxford Bio-innovation and Gen II assays. A shared axis does not harmonize assays or create a new conversion factor.",
+    "Chronological age is not Tanner stage. Cycle phase was not standardized and oral contraception affects female inhibin B concentrations.",
+    "The female puberty reference is isolated from global patient profiles and ordinary views. Original reference values, clinical laboratory norms and Tanner observations remain unchanged.",
+    "Zero is a result point on a linear axis. A value above 400 uses a directional arrow with its actual concentration. Axis bounds are not reference or detection limits."
+  ]
+}

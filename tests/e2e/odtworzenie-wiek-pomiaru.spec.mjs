@@ -348,7 +348,9 @@ test('zapis z kalkulatora klirensu przenosi datę pomiaru odtworzonej wizyty', a
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
     && !document.documentElement.classList.contains('vilda-auth-locked') && Boolean(window.VildaAuthUI), null, { timeout: 30000 });
   await page.waitForTimeout(1500);
-  expect(await page.evaluate(() => typeof window.VildaDobAge), 'strona klirensu bez modułu daty urodzenia').toBe('undefined');
+  // P-ODTWORZ-WIEK-2 (G5): moduł działa tu jako samo API dla kolektora — bez pola daty urodzenia.
+  expect(await page.evaluate(() => [typeof window.VildaDobAge, Boolean(document.getElementById('dobInput'))]), 'strona klirensu: API modułu daty, bez pola')
+    .toEqual(['object', false]);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
@@ -410,4 +412,222 @@ test('powłoka: „Odtwórz zapis" na Start i przejście na DocPro — DocPro te
   ]), { timeout: 15000, message: 'DocPro: data z kartoteki i wiek pomiaru' }).toEqual(['20-07-2009', '16', '10', NOTKA_ODTWORZENIA]);
   // Start nic nie traci po przełączeniu.
   expect(await start.evaluate(() => [document.getElementById('age').value, document.getElementById('ageMonths').value])).toEqual(['16', '10']);
+});
+
+/* ------------------------------------------------------------------------------------------
+ * P-ODTWORZ-WIEK-2 (trzeci przegląd adwersaryjny po #589). Każdy scenariusz zmierzony
+ * czerwony na origin/audyt 3676f0d; wartości „dotąd" w komunikatach to wyniki z bazy.
+ * ---------------------------------------------------------------------------------------- */
+
+const stanZapisu = (page) => page.evaluate(() => window.VildaSaveStatusIndicator.getState());
+
+test('R1/G4: wizyta „Nowy pomiar" zapisana przed północą — po północy i po F5 nadal ta sama wizyta, bez „Niezapisanych zmian"', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.clock.setSystemTime(new Date(ZAPIS));
+  await otworz(page);
+  const pid = await zapiszPacjenta(page, NASTOLATEK);
+  await page.evaluate(() => window.clearAllData());
+
+  // 19-07-2026, 23:55 w Warszawie: dzień przed 17. urodzinami (ur. 20-07-2009).
+  await page.clock.setSystemTime(new Date('2026-07-19T21:55:00Z'));
+  await wczytaj(page, pid, 'nowy');
+  await page.locator('#height').fill('174');
+  await page.locator('#weight').fill('62');
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  const pomiar = { wzrost: 174, masa: 62, plec: 'M' };
+  const wizyta = await stan(page, pomiar);
+  expect([wizyta.age, wizyta.ageMonths]).toEqual(['16', '11']);
+  expect(await stanZapisu(page)).toBe('saved');
+  expect(await page.evaluate(() => [window.sessionStorage.getItem('vildaLoadChoiceV1'), window.lastLoadedData.user.measuredAtISO]))
+    .toEqual(['new', '2026-07-19']);
+
+  // 00:03 następnego dnia, karta nadal otwarta: lekarz tylko przepisuje tę samą masę.
+  await page.clock.setSystemTime(new Date('2026-07-19T22:03:00Z'));
+  await page.locator('#weight').fill('62');
+  await page.waitForTimeout(1500);
+  expect(await stanZapisu(page), 'dotąd „dirty" — data pomiaru przeskakiwała na 20-07').toBe('saved');
+  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.age, u.ageMonths, u.measuredAtISO]; }))
+    .toEqual([16, 11, '2026-07-19']);
+
+  // F5 po północy: zapisana wizyta pokazuje wiek w dniu pomiaru.
+  await page.reload({ waitUntil: 'load' });
+  await gotowa(page);
+  const poF5 = await stan(page, pomiar);
+  expect([poF5.age, poF5.ageMonths], 'dotąd 17/0 — wiek z nowego dnia').toEqual(['16', '11']);
+  expect(poF5.notka).toContain('Pomiar z 19-07-2026 — wiek w dniu pomiaru: 16 lat 11 mies. (aktualnie pacjent ma 17 lat 0 mies.)');
+  expect(poF5.dokladny).toEqual(wizyta.dokladny);
+  expect(poF5.centyle).toBe(wizyta.centyle);
+  expect(await page.evaluate(() => window.collectUserData().user.measuredAtISO), 'dotąd 2026-07-20').toBe('2026-07-19');
+
+  // KONTROLA: nowe wartości to już nowy pomiar — wiek i data na dziś.
+  await page.locator('#weight').fill('63');
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.age, u.ageMonths, u.measuredAtISO]; }))
+    .toEqual([17, 0, '2026-07-20']);
+});
+
+test('R0: usunięcie bieżącego pomiaru w Karcie — awansowana wizyta wraca ze swoją datą pomiaru, nie z datą usuniętej', async ({ page }) => {
+  test.setTimeout(240_000);
+  // Wizyta 1: 10-05-2026, 16 lat 9 mies., 170 cm / 58 kg.
+  await page.clock.setSystemTime(new Date('2026-05-10T10:00:00Z'));
+  await otworz(page);
+  const pid = await zapiszPacjenta(page, { ...NASTOLATEK, height: '170', weight: '58' });
+  expect(await glowa(page, pid)).toMatchObject({ age: 16, ageMonths: 9, measuredAtISO: '2026-05-10' });
+  await page.evaluate(() => window.clearAllData());
+
+  // Wizyta 2: 17-06-2026 przez „Nowy pomiar" — błędna, lekarz ją usuwa.
+  await page.clock.setSystemTime(new Date(ZAPIS));
+  await wczytaj(page, pid, 'nowy');
+  await page.locator('#height').fill('172');
+  await page.locator('#weight').fill('60');
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  expect(await glowa(page, pid)).toMatchObject({ age: 16, ageMonths: 10, measuredAtISO: '2026-06-17' });
+  await page.evaluate(() => window.clearAllData());
+
+  await page.evaluate(async (id) => window.VildaVault.deleteMeasurementRow(id, { key: '202|172.00|60.00' }), pid);
+  const poUsunieciu = await page.evaluate(async (id) => {
+    const r = await window.VildaVault.getPatient(id);
+    const p = r.snapshots[0].payload;
+    return { age: p.user.age, ageMonths: p.user.ageMonths, height: p.user.height, weight: p.user.weight, measuredAtISO: p.user.measuredAtISO, ts: p.timestampISO };
+  }, pid);
+  expect(poUsunieciu).toMatchObject({ age: 16, ageMonths: 9, height: 170, weight: 58 });
+  expect(poUsunieciu.measuredAtISO, 'dotąd 2026-06-17 — data usuniętej wizyty').toBe('2026-05-10');
+  expect(poUsunieciu.ts.slice(0, 10)).toBe('2026-05-10');
+
+  // „Odtwórz zapis" miesiąc później: wizyta z 10-05, nie z 17-06.
+  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  await wczytaj(page, pid, 'odtworz');
+  const odtworzony = await stan(page, { wzrost: 170, masa: 58, plec: 'M' });
+  expect([odtworzony.age, odtworzony.ageMonths]).toEqual(['16', '9']);
+  expect(odtworzony.notka).toContain('Pomiar z 10-05-2026 — wiek w dniu pomiaru: 16 lat 9 mies.');
+  expect(await page.evaluate(() => window.collectUserData().user.measuredAtISO)).toBe('2026-05-10');
+});
+
+test('G2: ponowny zapis odtworzonej wizyty bez daty urodzenia nie przesuwa dnia pomiaru', async ({ page }) => {
+  test.setTimeout(240_000);
+  // 03-06-2026: chłopiec bez daty urodzenia, wiek wpisany ręcznie 0 lat 4 mies.
+  await page.clock.setSystemTime(new Date('2026-06-03T10:00:00Z'));
+  await otworz(page);
+  const pid = await zapiszPacjenta(page, { lastName: 'Fikcyjny', firstName: 'Bezdaty', sex: 'M', age: '0', ageMonths: '4', height: '63.5', weight: '6.9' });
+  const pierwsza = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.timestampISO, pid);
+  expect(pierwsza.slice(0, 10)).toBe('2026-06-03');
+  await page.evaluate(() => window.clearAllData());
+
+  // 28-06: ta sama wizyta odtworzona i zapisana ponownie (np. po dopisaniu ciśnienia).
+  await page.clock.setSystemTime(new Date('2026-06-28T10:00:00Z'));
+  await wczytaj(page, pid, 'odtworz');
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  const glowaPoZapisie = await page.evaluate(async (id) => { const s = (await window.VildaVault.getPatient(id)).snapshots[0]; return { ts: s.payload.timestampISO, savedAtISO: s.savedAtISO, m: s.payload.user.measuredAtISO }; }, pid);
+  expect(glowaPoZapisie.ts, 'dotąd 2026-06-28 — dzień pomiaru szedł za dniem zapisu').toBe(pierwsza);
+  expect(glowaPoZapisie.savedAtISO.slice(0, 10), 'wersja zapisana dziś').toBe('2026-06-28');
+  expect(glowaPoZapisie.m, 'bez daty urodzenia data pomiaru nie jest pewna').toBeUndefined();
+  await page.evaluate(() => window.clearAllData());
+
+  // 20-07: odtworzenie i dopisana data urodzenia 01-02-2026 — dokładny wiek z 03-06 (122. doba).
+  await page.clock.setSystemTime(new Date('2026-07-20T10:00:00Z'));
+  await wczytaj(page, pid, 'odtworz');
+  await page.locator('#dobInput').fill('01-02-2026');
+  await page.locator('#dobInput').dispatchEvent('change');
+  await page.waitForTimeout(1000);
+  const dokladny = await page.evaluate(() => window.VildaDobAge.readExactAge());
+  expect(dokladny && dokladny.days, 'dotąd 147 — doba z dnia ponownego zapisu').toBe(122);
+  expect(await page.evaluate(() => window.patientReportBuildDateChips().measurementLabel)).toBe('03.06.2026');
+});
+
+test('G5: wizyta sprzed wdrożenia (bez measuredAtISO) zapisana ponownie z kalkulatora klirensu zachowuje dzień pomiaru', async ({ page }) => {
+  test.setTimeout(300_000);
+  // 03-06-2026: zapis jak przed #589 — rekord bez user.measuredAtISO.
+  await page.clock.setSystemTime(new Date('2026-06-03T10:00:00Z'));
+  await otworz(page);
+  await page.evaluate(() => { window.VildaDobAge.readMeasuredAtISO = () => null; });
+  const pomiar = { wzrost: 63.5, masa: 6.9, plec: 'M' };
+  const pid = await zapiszPacjenta(page, { lastName: 'Fikcyjny', firstName: 'Archiwalny', sex: 'M', dobInput: '01-02-2026', height: '63.5', weight: '6.9' });
+  const wizyta = await stan(page, pomiar);
+  expect(wizyta.dokladny.days).toBe(122);
+  expect(await glowa(page, pid)).toMatchObject({ age: 0, ageMonths: 4, measuredAtISO: undefined });
+  await page.evaluate(() => window.clearAllData());
+
+  // 28-06: strona klirensu, „Odtwórz zapisany stan" i zapis.
+  await page.clock.setSystemTime(new Date('2026-06-28T10:00:00Z'));
+  await przejdz(page, '/kalkulator-klirens.html');
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
+    && !document.documentElement.classList.contains('vilda-auth-locked') && Boolean(window.VildaAuthUI), null, { timeout: 30000 });
+  await page.waitForTimeout(1500);
+  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
+  const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
+  await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
+  await wczytajBtn.click();
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => { window.confirm = () => true; window.restoreLoadedState(); });
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => window.collectUserData().user.measuredAtISO), 'dotąd brak daty i świeży timestampISO').toBe('2026-06-03');
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  expect(await glowa(page, pid)).toMatchObject({ measuredAtISO: '2026-06-03' });
+
+  // 20-07: formularz główny — doba pomiaru 03-06 (122.), nie 28-06 (147.).
+  await page.clock.setSystemTime(new Date('2026-07-20T10:00:00Z'));
+  await przejdz(page, '/index.html');
+  await gotowa(page);
+  await page.evaluate(() => window.clearAllData());
+  await wczytaj(page, pid, 'odtworz');
+  const znowu = await stan(page, pomiar);
+  expect(znowu.dokladny, 'dotąd 147. doba').toEqual(wizyta.dokladny);
+  expect(znowu.centyle, 'dotąd „Waga: 26 centyl Wzrost: 16 centyl"').toBe(wizyta.centyle);
+  expect(znowu.notka).toContain('Pomiar z 03-06-2026');
+});
+
+test('G3/G6: poprawka odtworzonej wizyty w Karcie („Historia → Edytuj") trafia do formularza — wiek, data i centyle nadal z dnia pomiaru', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.clock.setSystemTime(new Date(ZAPIS));
+  await otworz(page);
+  const pid = await zapiszPacjenta(page, NASTOLATEK);
+  await page.evaluate(() => window.clearAllData());
+  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  await wczytaj(page, pid, 'odtworz');
+  expect((await stan(page, POMIAR_NASTOLATKA)).ageMonths).toBe('10');
+
+  // Literówka we wzroście poprawiona w Karcie: 172 → 172,5 (data pomiaru bez zmian).
+  const snap = (await glowa(page, pid)).snapshotId;
+  await page.evaluate(({ id, s }) => window.VildaAuthUI.showQuickMeasureModal(id, {
+    mode: 'edit', snapshotId: s, rowRef: { uid: null, key: '202|172.00|60.00' }, rowValues: { ageMonths: 202, height: 172, weight: 60 },
+  }), { id: pid, s: snap });
+  const okno = page.locator('.vilda-quick-measure-overlay');
+  await expect(okno).toBeVisible();
+  await expect(okno.locator('input[type="date"]')).toHaveValue('2026-06-17');
+  // Pola okna korekty są puste, stara wartość stoi w podpowiedzi (placeholder); okno wymaga obu.
+  await okno.getByRole('textbox', { name: '172', exact: true }).fill('172.5');
+  await okno.getByRole('textbox', { name: '60', exact: true }).fill('60');
+  // Pisanie w oknie Karty samo podnosi globalną flagę edycji (słuchacz input/change w app.js, bez
+  // zmian tutaj; „change" pada przy utracie fokusu). Po nim zerujemy flagę, by sprawdzić, że wpis
+  // poprawki do formularza głównego jej nie podnosi.
+  await page.keyboard.press('Tab');
+  await page.evaluate(() => { window.hasUserModifiedAfterLoad = false; });
+  await okno.getByRole('button', { name: 'Zapisz korektę' }).click();
+  await expect(okno).toHaveCount(0, { timeout: 15000 });
+  await page.waitForTimeout(2000);
+
+  const poprawiony = await stan(page, { wzrost: 172.5, masa: 60, plec: 'M' });
+  expect(await page.evaluate(() => document.getElementById('height').value), 'dotąd 172 — formularz zostawał przy starej wartości').toBe('172.5');
+  expect([poprawiony.age, poprawiony.ageMonths], 'dotąd 16/11 — wiek na dziś').toEqual(['16', '10']);
+  expect(poprawiony.notka).toContain('Pomiar z 17-06-2026 — wiek w dniu pomiaru: 16 lat 10 mies.');
+  expect(await page.evaluate(() => { const u = window.collectUserData().user; return [u.height, u.age, u.ageMonths, u.measuredAtISO]; }), 'dotąd [172, 16, 11, "2026-07-10"]')
+    .toEqual([172.5, 16, 10, '2026-06-17']);
+  expect(await page.evaluate(() => window.hasUserModifiedAfterLoad), 'wpis programowy to nie edycja lekarza').toBeFalsy();
+  // „Zapisz" z formularza nie cofa poprawki z Karty i nie stempluje dzisiejszej daty.
+  expect(await page.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(async (id) => { const u = (await window.VildaVault.getPatient(id)).snapshots[0].payload.user; return [u.height, u.age, u.ageMonths, u.measuredAtISO]; }, pid),
+    'dotąd [172, 16, 11, "2026-07-10"]').toEqual([172.5, 16, 10, '2026-06-17']);
+
+  // Po F5 to samo.
+  await page.reload({ waitUntil: 'load' });
+  await gotowa(page);
+  expect(await page.evaluate(() => [document.getElementById('height').value, document.getElementById('age').value, document.getElementById('ageMonths').value]))
+    .toEqual(['172.5', '16', '10']);
 });

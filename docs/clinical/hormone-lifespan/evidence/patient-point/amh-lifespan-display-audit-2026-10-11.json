@@ -1,0 +1,167 @@
+{
+  "version": "2026-10-11.1",
+  "purpose": "Evidence review and owner-approved educational AMH geometry; not clinical reference data",
+  "ownerApproval": {
+    "date": "2026-10-11",
+    "scope": "ordinary male lifespan/minipuberty/puberty views; approved before/after mockup; implementation requested"
+  },
+  "scope": {
+    "analyte": "amh",
+    "sex": "male",
+    "referenceProfilesCount": 15,
+    "profilesAdded": 0,
+    "sourceValuesChanged": false,
+    "clinicalNormsChanged": false,
+    "sexComparisonPolicyChanged": false
+  },
+  "approvedCandidateSha256": "235e2a1b89c8843662683b3d2684ba818bf46f38e8ef703ef579bc3177da91d4",
+  "policyFile": "../../amh-display-policy.json",
+  "sources": [
+    {
+      "id": "busch2022",
+      "doi": "10.1210/clinem/dgac115",
+      "locator": "Figure 3, black GAMLSS median; vector PDF reading",
+      "population": "119 healthy term boys, 338 serum samples, Copenhagen Minipuberty",
+      "assay": "Beckman Coulter Access 2",
+      "statistic": "approximately digitized median model",
+      "referenceAge": "7 days to <1 year",
+      "audit": "Independent vector extraction; maximum difference from existing data 0.1764 pmol/L, smaller than printed line half-width ~21.78 pmol/L. This is graphical reading uncertainty, not biological confidence.",
+      "peak": {
+        "day": 175,
+        "ngMlApprox": 187,
+        "note": "The article longitudinal peak around day 146 is a different estimand."
+      }
+    },
+    {
+      "id": "wang2020",
+      "doi": "10.1016/j.cca.2020.03.028",
+      "locator": "Tables 1 and 2, journal page 156",
+      "population": "2009 healthy boys, Wuhan; cross-sectional age groups",
+      "assay": "Beckman Coulter Access 2, serum",
+      "statistic": "year-group medians; not Tanner or exact-age medians",
+      "referenceAge": "13 concordant groups labelled 1–11, 13 and 14; [N,N+1) is an explicit application convention",
+      "audit": "Primary page visually reviewed; existing 15 extracted rows agree. Groups 0 and 12 are contradictory between source tables and remain excluded.",
+      "conflictsNgMl": {
+        "group0": [
+          134.58,
+          131.58
+        ],
+        "group12": [
+          6.99,
+          7.99
+        ]
+      }
+    },
+    {
+      "id": "tehrani2017",
+      "doi": "10.1371/journal.pone.0179634",
+      "locator": "Table 2",
+      "population": "831 healthy men aged 30–70, Tehran Lipid and Glucose Study",
+      "assay": "Modified AMH Gen II EIA, serum, morning fasting sample",
+      "statistic": "41 yearly p50 predictions of an exponential-normal model",
+      "referenceAge": "30 through 70 years inclusive",
+      "audit": "All 328 cells (41 rows including age and 7 centiles) match the primary XML; all 41 generated median values agree. Intermediate ages use application interpolation, not supplied author coefficients.",
+      "checksNgMl": {
+        "30": 7.08,
+        "40": 6.12,
+        "44": 5.77,
+        "50": 5.29,
+        "60": 4.57,
+        "70": 3.95
+      }
+    }
+  ],
+  "unitContract": {
+    "canonical": "pmol/L",
+    "ngMlPerPmolL": 0.1401,
+    "assaysHarmonized": false
+  },
+  "geometry": {
+    "sourcePreservedDays": [
+      7,
+      250
+    ],
+    "coordinate": "canonical whole-life display X",
+    "method": "fixed source nodes plus cubic Bezier educational bridges, sampled for PCHIP rendering",
+    "bridgeEndpointsYears": [
+      9.5,
+      14.5,
+      30,
+      70
+    ],
+    "scaleDivisorPmolL": 1335.592934,
+    "headroomFactor": 1.25,
+    "prenatal": "Relative schematic only; no numerical clinical reference or concentration tooltip.",
+    "tail": "Hold last height and fade from 70 to 90; endpoint of available evidence, not a biological plateau.",
+    "approvedCandidatePoints": 4153,
+    "sourceMarkerIndependentOfLine": true,
+    "illustrativeCheckpointsNgMl": [
+      {
+        "age": 5.5,
+        "groupMedian": 99.18,
+        "lineApprox": 95.25
+      },
+      {
+        "age": 11.5,
+        "groupMedian": 20.7,
+        "lineApprox": 25.01
+      },
+      {
+        "age": 60,
+        "sourceMedian": 4.57,
+        "lineApprox": 4.3434
+      }
+    ]
+  },
+  "referenceGaps": [
+    "before day 7",
+    "12–<13 years",
+    "15–<30 years",
+    "above 70 years"
+  ],
+  "constraints": [
+    "Term-infant eligibility is unchanged.",
+    "No Tanner stage is inferred from chronological age or curve descent.",
+    "Cross-cohort bridges do not calibrate Access 2 with modified Gen II.",
+    "No new patient reference is obtained from a bridge or a tail.",
+    "Drawing medians at group midpoints does not make them exact-age measurements.",
+    "Owner mockup approval and technical checks are not clinical validation."
+  ],
+  "additionalSourcesReviewedNotActivated": [
+    {
+      "doi": "10.1210/jc.2010-1207",
+      "name": "Aksglaede 2010",
+      "role": "Tanner and age direction; older Immunotech method, approximate adult graphic."
+    },
+    {
+      "doi": "10.1002/edm2.21",
+      "name": "Jopling 2018",
+      "role": "Broad age-group medians, Access lithium-heparin plasma; no Tanner; not a new profile."
+    },
+    {
+      "doi": "10.1177/0004563219830733",
+      "name": "Yates 2019",
+      "role": "Same hospital cohort reassayed with Roche; method differences, not independent population harmonization."
+    },
+    {
+      "doi": "10.1210/clinem/dgac218",
+      "name": "Benderradji 2022",
+      "role": "Selected normozoospermic adults 20–62; candidate for separate future group comparison."
+    },
+    {
+      "doi": "10.1371/journal.pone.0070967",
+      "name": "Chong 2013",
+      "role": "Senior cohorts and group geometric means; direct join to Tehrani would mix methods/statistics/populations."
+    },
+    {
+      "doi": "10.21037/tp-2025-104",
+      "name": "Shang 2025",
+      "role": "Mindray paediatric age groups; dilution protocol requires clarification before preferred adoption."
+    }
+  ],
+  "onlineMetadataReview": {
+    "date": "2026-10-11",
+    "provider": "Europe PMC",
+    "finding": "Reviewed DOI metadata; Chong author-name erratum does not indicate changed numerical data. Other reviewed records did not list corrections; this does not exclude unindexed corrections."
+  }
+}
