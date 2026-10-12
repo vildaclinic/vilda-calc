@@ -50,6 +50,29 @@ Addytywne `labResult.assessment` przenosi wersjonowaną kopię wyniku PR1 przez 
 
 **Wpływ kliniczny: bez zmiany norm, silnika PR1 i obecnego przelicznika.** Nowe UI i producent ocen pozostają wyłączone do PR3. Regresje wywołują rzeczywiste API modelu/sejfu i ścieżki przeglądarkowe na syntetycznych danych: M6/G4/LH2 zachowuje kontekst po zmianie aktualnego pacjenta; zmiana komentarza zachowuje ocenę, zmiana liczby/daty ją unieważnia; `<0,02` nie staje się punktem `0,02`; wpis starszego formatu nie otrzymuje domniemanej metody ani stadium. Szczegóły kontraktu i ograniczenia zgodności z wcześniejszymi wersjami aplikacji: [LH_FSH.md](LH_FSH.md#pr2--transport-historycznej-oceny).
 
+#### LAB-PUBERTY — osie i statusy wariantów wieku, 2026-10-12
+
+Naprawa prezentacji po audycie, zaakceptowana przez właściciela. Przy wieku
+przecinającym granice tabel każdy zapisany wariant wyłącznie wieku LH/FSH
+otrzymuje osobny status i oś. Wcześniej renderer wyświetlał same zakresy,
+choć silnik już porównał wynik z każdym z nich. M18 lat 0 mies./LH50 IU/L
+pokazuje `above` względem 1,3–9,8 oraz 1,3–9,6; LH9,7 pokazuje odrębnie
+`within` i `above`; M5/FSH10 przekracza obie granice ≤1,9 i ≤2,3.
+
+**Wpływ kliniczny:** odchylenia przestają być ukryte przez niepewność wieku.
+Bez zmiany norm, silnika, jednostek, precyzji wieku, kwalifikacji lub snapshotu.
+Nie tworzymy wspólnej normy ani werdyktu; znaczne odchylenie jest wyróżniane
+na właściwej osi. Alternatywy faz cyklu/menopauzy i odrębny konsensus inhibiny B
+zachowują dotychczasowe reguły. Odczyt historii korzysta wyłącznie z utrwalonej
+oceny; wynik z operatorem nie otrzymuje dokładnego punktu.
+
+Źródła: pełne katalogi Mayo LHPED62999, LH602752 i FSH602753, ponownie odczytane
+12.10.2026; surowica, IU/L = mIU/mL, populacje i metody właściwe każdemu profilowi.
+Porównanie źródłowe nadal dotyczy oznaczeń bazalnych bez leczenia i nie potwierdza
+metody próbki. Regresje wywołują rzeczywisty silnik, renderer i formularz;
+obejmują rozbieżne statusy, granice wieku, historię i 320 px.
+Pełny kontrakt, źródła i ograniczenia: [LH_FSH.md](LH_FSH.md#osobne-osie-wariantów-wieku--12102026).
+
 #### LAB-PUBERTY — PR3: aktywacja interfejsu LH/FSH, 2026-10-03
 
 Nowy adapter próbki i wspólny renderer zastępują dawną interpretację wyłącznie LH/FSH, zachowując układ przelicznika, dużą wartość wyniku i konwersje na dotychczasowych miejscach. Ostrzeżenie rozwoju względem wieku jest niezależne od stężenia; zakres wieku i stadium pozostają osobnymi porównaniami. Nie ma uniwersalnego „pacjent prawidłowy”, domyślnego Th/G, metody, braku leczenia ani zastępczej normy dorosłych. Historyczna ocena pochodzi z utrwalonego snapshotu i nie jest przeliczana bieżącym kontekstem; unieważnienie oraz wynik cenzorowany mają jawny widok tekstowy.
