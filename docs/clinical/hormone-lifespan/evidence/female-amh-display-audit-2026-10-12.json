@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-12",
+  "status": "implementation-authorized-by-owner; educational-display-review-not-clinical-validation",
+  "approval": {
+    "date": "2026-10-12",
+    "instruction": "ok, koduj to",
+    "scope": "Ordinary female AMH fixed geometry and scale, canonical mini/puberty projection and mixed LH/FSH selection; no new numerical source or reference profile.",
+    "baseCommit": "652c1a9842df32d68d5a8f8361e462378fcadd51",
+    "approvedCandidateSha256": "550e80091c124140b8b4bf9647a9c93447d4a2e4e61609db7edda22a7385ca85",
+    "approvedBeforeAfterHtmlSha256": "b9cb8f0c71b9f4ca05b7704e2b45739a9f4ab2aacb1876e39db8fe546f65952e"
+  },
+  "clinicalNormsChanged": false,
+  "numericPatientProfilesChanged": false,
+  "sourceDataChanged": false,
+  "referenceEngineChanged": false,
+  "preservedSourceFiles": [
+    {
+      "file": "docs/clinical/hormone-lifespan/female-lifespan-data.json",
+      "sha256": "226aa8771c75fae45f0a047d21e843005dce03df37db487fbcb46ac914b165c6"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/female-reference-data.json",
+      "sha256": "18785f71947ccb93da901169d283af8810ed5ee35816eb40860a32d05e6aed2a"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/evidence/amh-access-groups.json",
+      "sha256": "4ca3ec5cdf4e2574a22277b933038ef4fa6554c5493ff7ef1297d30276766494"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/population-reference-data.json",
+      "sha256": "9d0e6f9da1b6a2832d97b31324aba0647449e0f647486a5865ec6f56d5ed92d4"
+    }
+  ],
+  "sources": [
+    {
+      "id": "ljubicic2022",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://academic.oup.com/jcem/article/107/9/2598/6608768",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35704034/",
+      "supplementDoi": "10.6084/m9.figshare.19469555.v1",
+      "supplementSha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+      "reviewBasis": "Repository extraction/provenance and numerical model checked; original supplementary DOCX was not freshly downloaded in this review.",
+      "table": "Supplementary table 1, Table D; Figure 1 age-specific GAMLSS median, not Figure 3 normalized longitudinal mean",
+      "population": {
+        "participants": 98,
+        "serumSamples": 266,
+        "sex": "female",
+        "termOnly": true,
+        "observedAgeRange": "5 days–14.2 months"
+      },
+      "method": "Beckman Coulter Access 2 Immunoassay System",
+      "matrix": "serum",
+      "statistic": "age-specific GAMLSS median",
+      "unit": "pmol/L",
+      "selectedSourceGrid": {
+        "minAgeYears": 0.02,
+        "maxAgeYears": 1.0,
+        "stepYears": 0.01,
+        "points": 99
+      },
+      "limitations": [
+        "Selected model begins at 0.02 years (approximately 7.3 days); no extrapolated numerical value at birth or prenatally.",
+        "Term infant cohort; not a preterm AMH reference.",
+        "Model median is not the biphasic relative mean trajectory used for ordinary female LH/FSH.",
+        "Infant serum and older plasma cohorts do not form one harmonized longitudinal lifespan model."
+      ]
+    },
+    {
+      "id": "jopling2018",
+      "doi": "10.1002/edm2.21",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "primaryTableVerified": true,
+      "primaryFileSha256": "b9101b64625bdf6634da0dbed19d44d1662e470bd8d4e7717cc1d96518514026",
+      "table": "Table 1",
+      "assay": "Beckman Coulter Access AMH",
+      "matrix": "lithium-heparin plasma",
+      "population": "Residual hospital samples; patients investigated for DSD or other endocrinopathy excluded. Not a healthy population birth cohort.",
+      "statistic": "published age-group median",
+      "unit": "pmol/L",
+      "limitations": [
+        "Small cross-sectional age groups from residual hospital samples, not a prospectively screened healthy birth cohort.",
+        "Illustration midpoint is a display convention, not an observed individual age or an age-specific model node.",
+        "Adjacent small group reversals do not establish physiological peaks or troughs.",
+        "No Tanner-specific trajectory; chronological age does not establish pubertal stage.",
+        "The pooled 1–4.9-year median does not establish an abrupt rebound immediately after the first birthday."
+      ]
+    },
+    {
+      "id": "fdaK170524",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+      "primaryPdfVerifiedOnline": true,
+      "verifiedDate": "2026-10-12",
+      "primaryPdfSha256": "dbc33f56880cb0f244d7c3d4c1edbc5fe69b9e6b80f90f68caeeedde86f06fe2",
+      "verificationMethod": "Downloaded original FDA PDF; pdftotext -layout; independent reading of Expected Reference Intervals tables and exact checks against repository values.",
+      "documentPages": {
+        "serum": 14,
+        "plasma": 15
+      },
+      "internalPages": {
+        "serum": 10,
+        "plasma": 11
+      },
+      "assay": "Beckman Coulter Access AMH on Access 2",
+      "population": "Apparently healthy nonpregnant females at five sites, regular 21–35-day menstrual cycles, both ovaries present, proven fertility.",
+      "totalParticipants": 620,
+      "statistic": "published age-group median",
+      "selectedMatrix": "lithium-heparin plasma",
+      "limitations": [
+        "Women were selected for regular 21–35-day cycles, both ovaries present and proven fertility; these are not all-women population medians.",
+        "Preserve plasma values consistently for older illustrative groups; do not silently substitute serum values.",
+        "Highest median belongs to the 26–30-year group; midpoint 28 is not an established exact biological peak age.",
+        "Last group is 41–45 years; no median concentrations for older women, menopause or late life are provided.",
+        "Published reference intervals exist in this FDA document, but this work does not activate or change laboratory norms."
+      ]
+    },
+    {
+      "id": "sowers2008",
+      "doi": "10.1210/jc.2008-0567",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/18593767/",
+      "pmc": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2567855/",
+      "metadataAndAbstractVerifiedOnline": true,
+      "reviewBasis": "Primary article metadata and abstract; no new quantitative extraction or profile.",
+      "population": {
+        "women": 50,
+        "archivalFollicularPhaseSpecimens": 300,
+        "annualVisits": 6,
+        "timing": "Premenopausal/perimenopausal visits; each woman subsequently had documented final menstrual period."
+      },
+      "supports": "Declining AMH near the menopause transition, timed to individual final menstrual period.",
+      "doesNotSupport": [
+        "Universal menopause age 55",
+        "Age-specific late-life median concentrations",
+        "A literal zero concentration",
+        "A quantitative flat postmenopausal plateau"
+      ]
+    }
+  ],
+  "scale": {
+    "unit": "pmol/L",
+    "divisor": 28.99,
+    "ceiling": 1,
+    "transform": "linear",
+    "source": "lifespanData.hormones.amh.normalizationMaximum; existing FDA plasma group 26–30-year median",
+    "notReferenceLimit": true,
+    "independentOf": [
+      "result-presence",
+      "result-value",
+      "patient-age",
+      "view",
+      "viewport",
+      "other-selected-hormones"
+    ],
+    "infantSourceMaximum": {
+      "ageYears": 0.33,
+      "medianPmolL": 19.05,
+      "displayFraction": 0.6571231459123836
+    },
+    "zero": "baseline result point after original qualification",
+    "aboveAxis": "arrow with actual result, no replacement of curve or source reference",
+    "boundaryTolerance": "8 machine epsilons on female AMH fixed scale only; not assay tolerance"
+  },
+  "geometry": {
+    "wholeLife": "Existing displaySegments retained without new anchors or refitting in whole-life coordinates.",
+    "zoom": "Exact piecewise canonical Hermite-to-Bezier projection, split at source/display nodes and canonical time-axis boundaries.",
+    "mixedLHFSH": "Same AMH curve projected on the selected period age axis, using its own 28.99 pmol/L scale; never IU/L or the normalized gonadotropin mean.",
+    "bridgeYears": [
+      0.9,
+      1.3
+    ],
+    "bridgeMeaning": "Illustrative connection; source medians and their markers remain independent and may lie off the line.",
+    "olderTail": "Qualitative after final FDA 41–45-year group. Display floor/timing imply no concentration, detection limit, universal menopause age or old-age plateau.",
+    "solidDashedStyles": "Existing source versus illustrative segment distinction retained."
+  },
+  "patientReference": {
+    "id": "ljubicic2022-female-amh",
+    "minAgeYears": 0.02,
+    "maxAgeYears": 1,
+    "unit": "pmol/L",
+    "statistic": "median",
+    "termOnly": true,
+    "selection": "Unchanged existing reference engine, specimen/assay, age precision and censored-result qualification.",
+    "newAfterInfancy": false,
+    "projectSourceMarkerOntoIllustration": false
+  },
+  "syntheticCases": [
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPmolL": 10,
+      "expectedSourceMedianPmolL": 16.999,
+      "expectedResultFraction": 0.3449465332873405,
+      "expectedSourceFraction": 0.5863746119351501
+    },
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPmolL": 200,
+      "expected": "above-axis arrow labelled 200 pmol/L; unchanged source median 16.999, curve and scale"
+    },
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPmolL": 0,
+      "expected": "baseline point; unchanged source median, curve and scale"
+    },
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.95,
+      "expectedSourceMedianPmolL": 7.747,
+      "expected": "Original source median, independent of illustrative bridge; same display curve in life and mini."
+    },
+    {
+      "sex": "female",
+      "ageYears": 19.668,
+      "expected": "Same canonical curve in life and puberty; no newly invented reference or concentration point."
+    },
+    {
+      "sex": "female",
+      "ageYears": 35,
+      "expected": "Illustrative curve only; no newly activated adult patient reference."
+    }
+  ],
+  "unchangedScopes": [
+    "male AMH",
+    "sex comparisons",
+    "female LH/FSH policies",
+    "other female hormone curves",
+    "laboratory interpretation",
+    "patient persistence"
+  ],
+  "review": {
+    "scope": "Source integrity, educational-display candidate review and standalone browser QA before implementation; not clinical validation.",
+    "sourceLimit": "No claim of exhaustive literature/erratum search or fresh redownload of the Ljubicic supplementary table.",
+    "standaloneBrowserChecks": {
+      "passed": 291,
+      "failed": 0,
+      "protocols": [
+        "file",
+        "http"
+      ],
+      "widths": [
+        1440,
+        320
+      ]
+    },
+    "productionRegression": "tests/e2e/hormone-lifespan-female-amh-stability.spec.mjs; actual renderer and original reference engine; execution status belongs to current test/CI reports."
+  }
+}
