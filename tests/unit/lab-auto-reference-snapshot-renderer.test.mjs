@@ -227,8 +227,23 @@ describe('Automatyczny LH/FSH — prezentacja dorosłych i wariantów', () => {
 
   it('pediatryczne warianty wieku zachowują niezależną oś G3', () => {
     const container = render(evaluate({ analyte: 'fsh', age: { years: 10, months: 0, precision: 'month' }, puberty: { kind: 'G', stage: 3, appliesToCurrentContext: true } }));
-    expect(descendants(container, (node) => node.getAttribute('data-comparison') === 'variant')).toHaveLength(2);
-    expect(descendants(container, (node) => node.getAttribute('role') === 'img')).toHaveLength(1);
+    const variants = descendants(container, (node) => node.getAttribute('data-comparison') === 'variant');
+    expect(variants).toHaveLength(2);
+    expect(variants.map((row) => row.getAttribute('data-status'))).toEqual(['within', 'within']);
+    for (const [index, row] of variants.entries()) {
+      const axes = descendants(row, (node) => node.getAttribute('role') === 'img');
+      expect(axes).toHaveLength(1);
+      expect(axes[0].getAttribute('data-range-lower')).toBe(['unknown', '0.6'][index]);
+      expect(axes[0].getAttribute('data-range-upper')).toBe(['2.3', '6.9'][index]);
+    }
+    const stages = descendants(container, (node) => node.getAttribute('data-comparison') === 'stage');
+    expect(stages).toHaveLength(1);
+    expect(stages[0].getAttribute('data-status')).toBe('within');
+    const stageAxes = descendants(stages[0], (node) => node.getAttribute('role') === 'img');
+    expect(stageAxes).toHaveLength(1);
+    expect(stageAxes[0].getAttribute('data-range-lower')).toBe('0.4');
+    expect(stageAxes[0].getAttribute('data-range-upper')).toBe('6.2');
+    expect(descendants(container, (node) => node.getAttribute('role') === 'img')).toHaveLength(3);
     expect(visibleText(container)).toContain('Dla stadium G3');
   });
 

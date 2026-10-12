@@ -357,6 +357,19 @@
         scope: 'W całym podanym przedziale wieku', conditional: true, automatic: true } : null
     };
   }
+  function ageReferenceVariants(e, preview) {
+    // Display each saved age comparison independently. Cycle alternatives and
+    // the inhibin curve consensus retain their separate presentation contracts.
+    if (!['lh', 'fsh'].includes(e.analyte) || !preview || e.referenceSelection.status !== 'variants' ||
+        !codeList(preview.reasonCodes).includes('age_precision_crosses_reference_boundary') ||
+        codeList(preview.reasonCodes).includes('reproductive_context_missing') ||
+        !Array.isArray(preview.variants) || !preview.variants.length) return false;
+    return preview.variants.every(function (variant) {
+      var range = variant && variant.comparison && variant.comparison.range;
+      return !!range && !!range.age && range.age.axis === 'chronologicalYears' &&
+        !range.stage && !variant.reproductiveContext && !range.reproductiveContext;
+    });
+  }
   function buildView(evaluation, options) {
     var e = record(evaluation) ? evaluation : {};
     if (e.schemaVersion !== 1 || !Object.prototype.hasOwnProperty.call(ANALYTES, e.analyte) || !record(e.input) || !record(e.measurement) || !record(e.ageAtSample) || !record(e.biochemical) || !record(e.clinical) || !record(e.summary) || !['attention', 'limited', 'compared', 'invalid', 'out_of_scope'].includes(e.summary.status)) return { valid: false };
@@ -380,8 +393,9 @@
     if (automatic && preview && Array.isArray(preview.variants)) rawComparisons = rawComparisons.concat(preview.variants.map(function (variant) { return ['variant', text(variant.label), variant.comparison, variant]; }));
     if (automatic && rawComparisons.some(function (item) { return item[2] && item[2].range && item[2].range.basis === 'adult'; })) adultProfile = true;
     var ageVariantMode = !!automatic && sameInfantCurveVariants(e, preview, analyte.unit);
+    var ageReferenceVariantMode = !!automatic && ageReferenceVariants(e, preview);
     var point = m.status === 'valid' && m.isExact === true && numeric(m.plotValue) && m.plotValue >= 0 ? m.plotValue : null;
-    var axisLimits = rawComparisons.map(function (item, index) { return index < 2 || ageVariantMode && item[0] === 'variant' ? axisBounds(item[2], analyte.unit) : null; });
+    var axisLimits = rawComparisons.map(function (item, index) { return index < 2 || (ageVariantMode || ageReferenceVariantMode) && item[0] === 'variant' ? axisBounds(item[2], analyte.unit) : null; });
     var maximum = axisMaximum(axisLimits, point);
     var comparisons = rawComparisons.map(function (item, index) {
       var c = item[2] || {}, range = c.range || {}, status = Object.prototype.hasOwnProperty.call(STATUS, c.status) ? c.status : 'unavailable';
@@ -397,6 +411,7 @@
       var ageTitle = pretermProfile ? 'Dla wcześniaka' : adultProfile ? adultTitle : inhibin && range.basis === 'infant-broad' ? 'Ogólny zakres dla niemowląt' : inhibin && range.basis === 'infant-curve' ? 'Minipuberty' : 'Dla wieku';
       var title = item[0] === 'age' && (inhibin || pretermProfile || adultProfile) ? ageTitle : item[1];
       var variantTitle = variant && variant.reproductiveContext ? REPRODUCTIVE_CONTEXT[variant.reproductiveContext] : variant ? referenceAgeText(range.age, inhibin ? range.basis : '') : '';
+      if (ageReferenceVariantMode && variant) title = variantTitle;
       if (ageVariantMode && variant) {
         variantTitle = limits.upper === Math.min.apply(null, axisLimits.filter(Boolean).map(function (entry) { return entry.upper; })) ? 'Najniższa górna granica' : 'Najwyższa górna granica';
         title = variantTitle;
@@ -502,6 +517,7 @@
       referenceMode: preview ? preview.kind : automatic ? 'automatic-source-reference' : '',
       variantMode: !!(automatic && preview && Array.isArray(preview.variants)),
       ageVariantMode: ageVariantMode, ageVariantConsensus: ageVariantConsensus,
+      ageReferenceVariantMode: ageReferenceVariantMode,
       context: context, contextBasis: currentContext ? 'current-patient' : 'sample',
       contextNote: currentContext ? 'Kontekst z formularza głównego — wiek i obserwacje nie potwierdzają dnia pobrania.' : '',
       assayNote: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia: ' + methodName(assay.methodId) + (assay.profileVersion ? ' · profil ' + text(assay.profileVersion) : '') : '',
@@ -787,7 +803,7 @@
     if (view.variantMode) visibleComparisons = visibleComparisons.filter(function (comparison) { return comparison.key === 'variant'; }).concat(visibleComparisons.filter(function (comparison) { return comparison.key !== 'variant'; }));
     visibleComparisons.forEach(function (comparison) {
       if (comparison.key === 'local' && comparison.status === 'unavailable') return;
-      if (comparison.key === 'variant' && !view.ageVariantMode) {
+      if (comparison.key === 'variant' && !view.ageVariantMode && !view.ageReferenceVariantMode) {
         var variant = add(comparisons, 'div', 'vilda-lab-reference-variant');
         variant.setAttribute('data-comparison', 'variant');
         variant.setAttribute('data-variant-id', comparison.variantId);
@@ -816,7 +832,7 @@
     var more = details(parent, 'Szczegóły i źródła');
     if (view.ageVariantMode && !incomplete) add(more, 'p', 'vilda-lab-note', 'Osie pokazują skrajne górne granice tej samej krzywej w całym podanym przedziale wieku. Nie tworzą jednego zakresu prawidłowych stężeń.');
     if (quietInfantContext && clinicalText) add(more, 'p', 'vilda-lab-note', clinicalText);
-    if (view.result.visualAlert && !incomplete) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
+    if (!incomplete && (view.result.visualAlert || visibleComparisons.some(function (comparison) { return ['is-uwaga-high', 'is-uwaga-low'].includes(comparison.visualState); }))) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
     list(more, incomplete ? presentation.clinicalLimitations : presentation.limitations, 'vilda-lab-limitations');
     if (!incomplete) presentation.references.forEach(function (comparison) { renderComparisonContext(more, comparison); });
     var sourceList = incomplete ? presentation.clinicalSources : presentation.sources;
