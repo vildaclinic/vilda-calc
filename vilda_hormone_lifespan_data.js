@@ -33163,6 +33163,285 @@ const femaleGonadotropinData = {
     }
   }
 };
+const gonadotropinComparisonPolicy = {
+  "version": "2026-10-12.1",
+  "kind": "population-model-comparison",
+  "analytes": [
+    "lh",
+    "fsh"
+  ],
+  "sourceStatistic": "median",
+  "sourceUnit": "IU/L",
+  "globalPatientProfiles": false,
+  "colors": {
+    "female": "#b15786",
+    "male": "#2b7491"
+  },
+  "sampling": {
+    "sampleCount": 801,
+    "includeSourceNodes": true,
+    "exclusiveEndpointGapYears": 1e-10
+  },
+  "periods": {
+    "mini": {
+      "domain": {
+        "minAge": 0.02,
+        "maxAge": 1,
+        "maxAgeExclusive": true
+      },
+      "scale": {
+        "kind": "linear",
+        "unit": "IU/L",
+        "min": 0,
+        "max": 6,
+        "ticks": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "independentOfPatient": true,
+        "commonToBothAnalytesAndSexes": true
+      },
+      "profileIds": {
+        "lh": {
+          "female": "ljubicic2022-female-lh",
+          "male": "busch2022-male-lh"
+        },
+        "fsh": {
+          "female": "ljubicic2022-female-fsh",
+          "male": "busch2022-male-fsh"
+        }
+      },
+      "pointPolicy": "own-target-profile-only; retain-engine-gates",
+      "referenceScope": "gonadotropin-sex-comparison"
+    },
+    "puberty": {
+      "domain": {
+        "minAge": 6,
+        "maxAge": 16,
+        "maxAgeExclusive": false
+      },
+      "scale": {
+        "kind": "linear",
+        "unit": "IU/L",
+        "min": 0,
+        "max": 8,
+        "ticks": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "independentOfPatient": true,
+        "commonToBothAnalytesAndSexes": true
+      },
+      "profileIds": {
+        "lh": {
+          "female": "madsen2022-female-lh-sex-comparison",
+          "male": "madsen2022-male-lh"
+        },
+        "fsh": {
+          "female": "madsen2022-female-fsh-sex-comparison",
+          "male": "madsen2022-male-fsh"
+        }
+      },
+      "pointPolicy": "own-target-profile-only; retain-engine-gates",
+      "referenceScope": "gonadotropin-sex-comparison"
+    }
+  },
+  "limitations": [
+    "Comparison uses concentration medians, not longitudinal mean trajectories shown in ordinary female minipuberty.",
+    "No extrapolation to birth or after the chosen model domain.",
+    "Own male infant reference starts at day 7; paired curves start at 0.02 years.",
+    "Exactly first birthday does not qualify in infant comparison.",
+    "Puberty uses age, never inferred Tanner stage.",
+    "Madsen source cohort is 6–<16; year-16 model row is a published boundary.",
+    "No new norms, SDS, diagnosis, or inter-assay conversion."
+  ]
+};
+const gonadotropinComparisonReferenceData = {
+  "scope": "gonadotropin-sex-comparison",
+  "globalPatientProfiles": false,
+  "profiles": [
+    {
+      "id": "madsen2022-female-lh-sex-comparison",
+      "analyte": "lh",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 16,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 7.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 9.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.18673993015217238
+        },
+        {
+          "ageYears": 11.0,
+          "value": 0.3899391576851016
+        },
+        {
+          "ageYears": 12.0,
+          "value": 0.932808521560225
+        },
+        {
+          "ageYears": 13.0,
+          "value": 2.0309931340891243
+        },
+        {
+          "ageYears": 14.0,
+          "value": 3.3600097374977715
+        },
+        {
+          "ageYears": 15.0,
+          "value": 4.536879278178766
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.64856591188875
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczynki",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "method": "Siemens IMMULITE 2000 XPi",
+      "population": "Bergen Growth Study 2; dziewczynki, Norwegia; bez antykoncepcji doustnej; fazy cyklu nie standaryzowano",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "compatibleAssayMethodIds": [
+        "immulite-2000-xpi",
+        "siemens-immulite-2000-xpi"
+      ],
+      "provenance": {
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "authorsShort": "Madsen et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac155",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+        "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+        "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+        "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+        "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+        "retrievedDate": "2026-10-10"
+      },
+      "limitations": [
+        "Mediana wieku modelu BGS2, nie stadium Tannera ani norma laboratoryjna.",
+        "Dane kohorty od 6 do <16 lat; opublikowany brzeg modelu w wieku 16 lat.",
+        "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
+        "Profil dostępny wyłącznie w porównaniu płci LH/FSH; nie jest zarejestrowany globalnie."
+      ]
+    },
+    {
+      "id": "madsen2022-female-fsh-sex-comparison",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 16,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 0.9328995961019171
+        },
+        {
+          "ageYears": 7.0,
+          "value": 1.1842024760702738
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.513649499646752
+        },
+        {
+          "ageYears": 9.0,
+          "value": 1.964770298470689
+        },
+        {
+          "ageYears": 10.0,
+          "value": 2.5801910640780314
+        },
+        {
+          "ageYears": 11.0,
+          "value": 3.3495190622916695
+        },
+        {
+          "ageYears": 12.0,
+          "value": 4.151220353235434
+        },
+        {
+          "ageYears": 13.0,
+          "value": 4.80572027357214
+        },
+        {
+          "ageYears": 14.0,
+          "value": 5.230782382619504
+        },
+        {
+          "ageYears": 15.0,
+          "value": 5.541214563590151
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.826063174564676
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczynki",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "method": "Siemens IMMULITE 2000 XPi",
+      "population": "Bergen Growth Study 2; dziewczynki, Norwegia; bez antykoncepcji doustnej; fazy cyklu nie standaryzowano",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "compatibleAssayMethodIds": [
+        "immulite-2000-xpi",
+        "siemens-immulite-2000-xpi"
+      ],
+      "provenance": {
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "authorsShort": "Madsen et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac155",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+        "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+        "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+        "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+        "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+        "retrievedDate": "2026-10-10"
+      },
+      "limitations": [
+        "Mediana wieku modelu BGS2, nie stadium Tannera ani norma laboratoryjna.",
+        "Dane kohorty od 6 do <16 lat; opublikowany brzeg modelu w wieku 16 lat.",
+        "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
+        "Profil dostępny wyłącznie w porównaniu płci LH/FSH; nie jest zarejestrowany globalnie."
+      ]
+    }
+  ]
+};
 return {
   version: lifespanData.version,
   maleAges: maleAges,
@@ -33181,6 +33460,8 @@ return {
   amhComparisonPolicy: amhComparisonPolicy,
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
-  femaleGonadotropinData: femaleGonadotropinData
+  femaleGonadotropinData: femaleGonadotropinData,
+  gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
+  gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData
 };
 });

@@ -73,7 +73,7 @@
     const comparisonHormones = () =>
       view === "puberty"
         ? ["lh", "fsh", "amh", "inhb"]
-        : ["amh", "inhb"];
+        : ["lh", "fsh", "amh", "inhb"];
     const femaleDefinitions = [
       {
         id: "lh",
@@ -203,6 +203,7 @@
       renderedPoint = null,
       renderedAmhComparison = null,
       renderedInhibinComparison = null,
+      renderedGonadotropinComparison = null,
       renderedObservation = null;
     let view = "life",
       compare = false,
@@ -721,6 +722,7 @@
       renderedPoint = null;
       renderedAmhComparison = null;
       renderedInhibinComparison = null;
+      renderedGonadotropinComparison = null;
       delete svg.dataset.comparisonScale;
       delete svg.dataset.comparisonMin;
       delete svg.dataset.comparisonMax;
@@ -801,6 +803,11 @@
       puberty: displayEngine?.buildInhibinComparison?.(data, pointEngine(), "puberty"),
     };
     const inhibinComparisonActive = () => compare && compareHormone === "inhb" &&
+      (view === "mini" || view === "puberty");
+    const gonadotropinComparisons = Object.fromEntries(["mini", "puberty"].map((period) =>
+      [period, Object.fromEntries(["lh", "fsh"].map((id) => [id,
+        displayEngine?.buildGonadotropinComparison?.(data, pointEngine(), period, id)]))]));
+    const gonadotropinComparisonActive = () => compare && ["lh", "fsh"].includes(compareHormone) &&
       (view === "mini" || view === "puberty");
     const insl3Display = displayEngine?.buildMaleInsl3?.(data);
     const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
@@ -1199,7 +1206,7 @@
       }
     }
     function explainUnavailablePoint() {
-      if (amhInfantComparisonActive() || inhibinComparisonActive()) return;
+      if (amhInfantComparisonActive() || inhibinComparisonActive() || gonadotropinComparisonActive()) return;
       if (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(analyteHormones[currentAnalyte])) return;
       if (renderedObservation?.patientPoint?.status === "ready") return;
       const measurement = patientContext?.measurement;
@@ -2337,10 +2344,191 @@
           : view === "puberty" ? "Mediany według wieku. Wykres nie ustala stadium pokwitania."
             : "Mediany z badań niemowląt urodzonych o czasie. U chłopców stężenie jest znacznie wyższe."];
     }
+    function renderGonadotropinComparison() {
+      const model = gonadotropinComparisons[view][compareHormone], puberty = view === "puberty", name = compareHormone.toUpperCase();
+      panel.querySelector(".vhl-axis-label").textContent = name + " · stężenie";
+      byId("scale-note").textContent = "Mediany stężeń · wspólna skala IU/L";
+      byId("chart-title").textContent = name + " u dziewczynek i chłopców " +
+        (puberty ? "w pokwitaniu" : "w pierwszym roku życia") + " — wspólna skala stężenia";
+      byId("chart-desc").textContent = `Stała oś liniowa od 0 do ${puberty ? 8 : 6} IU/L. ` +
+        "Linie przedstawiają mediany modeli wieku: różowa dziewczynki, niebieska przerywana chłopcy. " +
+        (puberty ? "Linie od 6 do 16 lat; wiek nie ustala stadium Tannera. " : "Linie od 0,02 roku do końca pierwszego roku. ") +
+        "Wynik nie zmienia krzywych ani osi. To nie są granice normy.";
+      if (!model) {
+        renderedGonadotropinComparison = { point: null, reason: "missing-comparison-data" };
+        return;
+      }
+      const W = svg.clientWidth || 1040, mobile = W < 640;
+      const H = chartHeight(mobile ? 350 : 403), left = mobile ? 43 : 60,
+        right = mobile ? 14 : 28, top = mobile ? 60 : 64, bottom = H - 43;
+      const width = W - left - right, height = bottom - top;
+      const { min, max, unit, sourceToIU } = model.scale;
+      const minAge = puberty ? model.domain.minAge : 0, maxAge = model.domain.maxAge;
+      const x = (age) => left + (age - minAge) / (maxAge - minAge) * width;
+      const y = (value) => bottom - (value - min) / (max - min) * height;
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      svg.setAttribute("height", H);
+      svg.dataset.comparisonScale = "linear";
+      svg.dataset.comparisonMin = min;
+      svg.dataset.comparisonMax = max;
+      const g = el("g", { "data-fixed-comparison": compareHormone });
+      svg.append(g);
+      g.append(el("rect", { x: left, y: top, width, height, rx: 8, fill: "#f4f8f9" }));
+      for (const value of model.scale.ticks) {
+        const yy = y(value);
+        g.append(el("line", { x1: left, x2: W - right, y1: yy, y2: yy,
+          stroke: "#dce7ea", "stroke-width": 0.8, "stroke-dasharray": value === min ? "none" : "3 5" }),
+        text(left - 7, yy + 3, pointNumber(value), {
+          "text-anchor": "end", "font-size": mobile ? 9.5 : 11,
+          fill: "#5c7b85", "data-linear-tick": value,
+        }));
+      }
+      g.append(text(left - 7, top - 12, unit, {
+        "text-anchor": "end", "font-size": mobile ? 9 : 10, fill: "#5c7b85",
+      }));
+      const ticks = puberty ? (mobile ? [6, 10, 14, 16] : [6, 8, 10, 12, 14, 16])
+        : mobile ? [0, 3, 6, 9, 12] : [0, 1, 3, 6, 9, 12];
+      for (const tick of ticks) {
+        const xx = x(puberty ? tick : tick / 12), lastTick = tick === ticks[ticks.length - 1];
+        g.append(el("line", { x1: xx, x2: xx, y1: bottom, y2: bottom + 5, stroke: "#bdcfd5" }),
+          text(xx, bottom + 22, lastTick ? (puberty ? "16 lat" : "12 mies.") : String(tick), {
+            "text-anchor": tick === ticks[0] ? "start" : lastTick ? "end" : "middle",
+            "font-size": mobile ? 10 : 11, [puberty ? "data-year-tick" : "data-month-tick"]: tick,
+          }));
+      }
+      // Test the actual card width, including the narrow embedded mobile form.
+      const trailingTick = g.querySelector(puberty ? '[data-year-tick="14"]' : '[data-month-tick="9"]');
+      const last = g.querySelector(puberty ? '[data-year-tick="16"]' : '[data-month-tick="12"]');
+      if (trailingTick && trailingTick.getBoundingClientRect().right + 5 > last.getBoundingClientRect().left) {
+        trailingTick.previousElementSibling.remove();
+        trailingTick.remove();
+      }
+      for (const curve of model.curves) {
+        // Points already sample the original source interpolation. Do not fit
+        // another spline or normalize to a patient value or a sex-specific peak.
+        const d = curve.points.map((point, index) =>
+          (index ? "L" : "M") + x(point.ageYears).toFixed(4) + "," + y(point.value).toFixed(4)).join("");
+        const common = { d, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" };
+        g.append(el("path", { ...common, stroke: "#fff", "stroke-width": mobile ? 6 : 7, "aria-hidden": "true" }),
+          el("path", { ...common, stroke: curve.color, "stroke-width": mobile ? 3 : 3.7,
+            "stroke-dasharray": curve.sex === "male" ? "9 6" : "none",
+            "data-comparison-sex": curve.sex, "data-comparison-curve": compareHormone,
+            "data-comparison-period": view, "data-profile": curve.profileId, "data-reference-line": compareHormone,
+            "data-common-scale": "linear", "data-unit": unit,
+          }));
+      }
+      if (canShowAgeMarker() && patientAgeYears >= minAge && patientAgeYears <= maxAge) {
+        drawAgeMarker(g, { W, mobile, left, right, top, bottom,
+          px: x(patientAgeYears), comparison: true });
+      }
+      let point = null, reason = null;
+      if (analyteHormones[currentAnalyte] === compareHormone && patientContext?.measurement) {
+        // The scoped reference data adds a female puberty profile only for
+        // this comparison. Ordinary views keep the original patientPoint.
+        const evaluated = pointEngine()?.evaluate(model.referenceData, patientContext);
+        const age = patientAgeYears, upper = patientContext.ageUpperYears ?? age;
+        const exclusiveInfantEnd = upper === maxAge && patientContext.ageUpperInclusive === false && upper > age;
+        const outside = puberty ? !(age >= minAge && age <= maxAge) || upper > maxAge
+          : !(age >= 0 && age < maxAge) || upper > maxAge || (upper === maxAge && !exclusiveInfantEnd);
+        const outsideReason = puberty ? "outside-puberty-comparison" : "outside-infant-comparison";
+        if (outside) reason = outsideReason;
+        else if (evaluated?.status !== "ready") reason = evaluated?.reason || "reference-unavailable";
+        else if (evaluated.profile.id !== model.profileIds[sex]) reason = outsideReason;
+        else point = { ...evaluated, valueIU: evaluated.value * sourceToIU,
+          referenceIU: evaluated.referenceValue * sourceToIU };
+      }
+      // The qualified seven-day male point may precede the shared curves by
+      // about 0.3 day. Its own source median never extends either curve domain.
+      renderedGonadotropinComparison = { point, reason };
+      if (!point) return;
+      const px = x(patientAgeYears), value = point.valueIU, median = point.referenceIU;
+      const offscale = displayEngine.classifyInhibinComparisonValue(model, value);
+      const py = offscale === "below" ? bottom - 3 : offscale === "above" ? top + 3 : y(value);
+      const my = y(median), person = sex === "female" ? "Dziewczynka" : "Chłopiec";
+      const a11y = `${person}: ${pointNumber(value)} ${unit}. Mediana dla wieku: około ${pointNumber(median, 3)} ${unit}.` +
+        (offscale ? ` Wynik ${offscale === "above" ? "powyżej" : "poniżej"} osi; strzałka nie jest dokładną pozycją stężenia.` : "") +
+        " Kolor nie klasyfikuje wyniku.";
+      const dot = el("g", { class: "vhl-patient-point", "data-patient-concentration": compareHormone,
+        "data-value": value, "data-reference-value": median, "data-median": median,
+        "data-reference-statistic": point.profile.statistic, "data-profile": point.profile.id,
+        "data-unit": unit, "data-age": patientAgeYears,
+        "data-age-lower": patientAgeYears, "data-age-upper": patientContext.ageUpperYears ?? patientAgeYears,
+        "data-plot-top": top, "data-plot-bottom": bottom, "data-scale-min": min, "data-scale-max": max,
+        ...(offscale ? { "data-offscale": offscale } : {}), role: "img", "aria-label": a11y,
+      });
+      dot.append(el("title", {}, a11y), el("line", { x1: px, x2: px, y1: py, y2: my,
+        stroke: "#8ba6ad", "stroke-width": 1.5, "stroke-dasharray": "3 4" }),
+      el("circle", { cx: px, cy: my, r: 4.3, fill: "white", stroke: sex === "female" ? "#b15786" : "#2b7491",
+        "stroke-width": 2, "data-median-point": "" }));
+      if (offscale) {
+        const tip = offscale === "above" ? top + 2 : bottom - 2;
+        const base = offscale === "above" ? tip + 15 : tip - 15;
+        const head = offscale === "above" ? tip + 5 : tip - 5;
+        dot.append(el("path", { d: `M${px},${base}V${tip}M${px - 5},${head}L${px},${tip}L${px + 5},${head}`,
+          fill: "none", stroke: "#d52d43", "stroke-width": 2.5, "stroke-linecap": "round",
+          "stroke-linejoin": "round", "data-result-overflow": offscale }));
+      } else {
+        dot.append(el("circle", { cx: px, cy: py, r: 11, fill: "#d52d43", opacity: 0.12 }),
+          el("circle", { cx: px, cy: py, r: mobile ? 6.5 : 7, fill: "#d52d43",
+            stroke: "white", "stroke-width": 2.5, "data-result-point": "" }));
+      }
+      const font = mobile ? 10.5 : 12, canvas = document.createElement("canvas"), context = canvas.getContext("2d");
+      const label = (message, yy, color, kind) => {
+        if (context) context.font = `600 ${font}px system-ui`;
+        const measured = context ? context.measureText(message).width : message.length * font * 0.6;
+        const labelWidth = Math.min(width, measured + 16);
+        let xx = px + 13;
+        if (xx + labelWidth > W - right) xx = px - labelWidth - 13;
+        xx = Math.max(left, Math.min(W - right - labelWidth, xx));
+        const box = el("g", { "data-dot-label": kind });
+        box.append(el("rect", { x: xx, y: yy, width: labelWidth, height: 23, rx: 6,
+          fill: "white", "fill-opacity": 0.97, stroke: kind === "result" ? "#f1cbd0" : "#dce7e9" }),
+        text(xx + 8, yy + 16, message, { "font-size": font, "font-weight": kind === "result" ? 700 : 550, fill: color,
+          ...(measured > labelWidth - 16 ? { textLength: labelWidth - 16, lengthAdjust: "spacingAndGlyphs" } : {}),
+        }));
+        dot.append(box);
+      };
+      const limit = (position) => Math.max(top + 3, Math.min(bottom - 26, position));
+      let resultY = limit(py - 28), medianY = limit(my + 8);
+      if (py > my) {
+        medianY = limit(my - 28); resultY = limit(py + 8);
+        if (resultY - medianY < 28) { medianY = limit(resultY - 28); resultY = limit(medianY + 28); }
+      } else if (medianY - resultY < 28) { resultY = limit(medianY - 28); medianY = limit(resultY + 28); }
+      label(`${offscale === "above" ? "↑ " : offscale === "below" ? "↓ " : ""}${pointNumber(value)} ${unit}`, resultY, "#b51e33", "result");
+      label(`Mediana ≈${pointNumber(median, 3)} ${unit}`, medianY, "#365b66", "median");
+      g.append(dot);
+      byId("scale-note").dataset.currentSource = point.profile.id;
+      byId("chart-desc").textContent += " " + a11y;
+    }
+    function gonadotropinComparisonInsight() {
+      const { point, reason } = renderedGonadotropinComparison || {};
+      if (point) return ["Wynik na tle mediany", "Czerwony punkt: wynik. Jasny znacznik: mediana z badania." +
+        (displayEngine.classifyInhibinComparisonValue(gonadotropinComparisons[view][compareHormone], point.valueIU) ? " Strzałka oznacza wynik poza osią." : "")];
+      const messages = {
+        "outside-infant-comparison": "Porównanie dotyczy okresu przed 1. urodzinami.",
+        "outside-puberty-comparison": "Porównanie dotyczy wieku od 6 do 16 lat.",
+        "preterm-context": "Te dane dotyczą niemowląt urodzonych o czasie; brak dopasowanego odniesienia dla wyniku.",
+        "censored-result": "Wynik z oznaczeniem „<” lub „>” nie otrzymuje dokładnego punktu.",
+        "ambiguous-age": "Podany wiek obejmuje różne zakresy odniesienia.",
+        "missing-age": "Uzupełnij wiek, aby umieścić wynik.",
+        "incompatible-assay": "Dla tej metody nie nanosimy punktu na te mediany.",
+        "incompatible-specimen": "Materiał próbki nie odpowiada źródłu porównania.",
+        "contraindicated": "Ten kontekst nie pozwala umieścić wyniku na krzywej.",
+        "unsupported-age": "Dla podanego wieku nie ma odpowiedniego odniesienia.",
+        "invalid-value": "Wpisz prawidłową wartość wyniku.",
+        "missing-comparison-data": "Brak danych do wyświetlenia porównania.",
+        "reference-unavailable": "Mediana jest zbyt niska lub zbyt niepewna, aby precyzyjnie umieścić punkt.",
+      };
+      return [compareHormone.toUpperCase() + (view === "puberty" ? " · pokwitanie" : " · minipuberty"),
+        reason ? messages[reason] || "Brak dopasowanego odniesienia dla punktu pacjenta."
+          : view === "puberty" ? "Mediany według wieku. Wykres nie ustala stadium pokwitania."
+            : "Mediany stężeń z badań donoszonych niemowląt. To inny model niż przebieg zmian jednej osoby."];
+    }
     function renderComparison() {
       stageNav.hidden = true;
       if (amhInfantComparisonActive()) return renderAmhInfantComparison();
       if (inhibinComparisonActive()) return renderInhibinComparison();
+      if (gonadotropinComparisonActive()) return renderGonadotropinComparison();
       const h = femaleHormones.find((h) => h.id === compareHormone),
         male = maleHormones.find((h) => h.id === compareHormone),
         puberty = view === "puberty",
@@ -2622,6 +2810,7 @@
       }
       if (amhInfantComparisonActive()) [title, copy] = amhComparisonInsight();
       if (inhibinComparisonActive()) [title, copy] = inhibinComparisonInsight();
+      if (gonadotropinComparisonActive()) [title, copy] = gonadotropinComparisonInsight();
       byId("insight-title").textContent = title;
       byId("insight-text").textContent = copy;
       const observations = opts.observations || root.VildaHormoneLifespanObservations;
@@ -2871,7 +3060,21 @@
         if (selectedSchematics.some((h) => h.id === "insl3"))
           links.push(["EMAS 2022 · INSL3", "https://doi.org/10.1111/andr.13220"]);
       }
-      if (inhibinComparisonActive()) {
+      if (gonadotropinComparisonActive()) {
+        paragraph("Obie płcie i LH/FSH mają w danym okresie tę samą stałą oś IU/L: 0–6 w minipuberty i 0–8 w pokwitaniu. Mediany opisują populację, nie normy ani indywidualną trajektorię. Wynik nie zmienia linii ani skali.");
+        if (view === "mini") {
+          paragraph("Donoszone niemowlęta: Busch 2022 — chłopcy (119 uczestników, 338 próbek); Ljubicic 2022 — dziewczynki (98 uczestniczek, 266 próbek). Surowica, AutoDELFIA. Męskie mediany GAMLSS odczytano z ryciny; żeńskie pochodzą z tabel suplementu. Wspólne linie: 0,02–<1 roku. Nie ekstrapolujemy do urodzenia.");
+          paragraph("To inne statystyki niż średnie trajektorie podłużne w zwykłym widoku minipuberty. Dlatego porównanie median nie musi powtarzać dwóch fal żeńskiej średniej: względnie płaska mediana FSH nie oznacza braku zmienności u pojedynczej dziewczynki. Nie kalibrujemy średniej względnej do IU/L.");
+          paragraph("Własny punkt chłopca może być dostępny od 7. dnia, choć obie linie zaczynają się około 7,3 dnia. Dokładnie pierwsze urodziny są poza tym porównaniem. Przy bardzo niskiej lub niepewnej medianie punkt pozostaje niedostępny; nie podstawiamy LOD/2. Męskie LH od około 244. dnia zachowuje dotychczasowe ograniczenie dokładnego punktu; późniejsza linia nadal pokazuje oszacowanie modelu. Około 327. dnia schodzi ono poniżej granicy oznaczenia 0,05 IU/L — nie oznacza dokładnie zmierzonego stężenia.");
+          links.push(["Busch 2022 — chłopcy", "https://doi.org/10.1210/clinem/dgac115"],
+            ["Ljubicic 2022 — dziewczynki", "https://doi.org/10.1210/clinem/dgac363"]);
+        } else {
+          paragraph("Madsen 2022, Bergen Growth Study 2: mediany GAMLSS obu płci, surowica, Siemens IMMULITE 2000 XPi. Kohorta z dostępnymi próbkami: 601 dziewcząt i 414 chłopców; liczba oznaczeń jest zależna od analitu. Każda krzywa ma 11 źródłowych median wieku 6–16 lat. Kohorta obejmowała 6–<16 lat; węzeł 16 lat jest opublikowanym brzegiem modelu. Nie przedłużamy do 20 lat.");
+          paragraph("Fazy cyklu nie standaryzowano, użytkowniczki antykoncepcji doustnej wykluczono. To porównanie według wieku, bez przypisywania stadium Tannera. Dane pacjentki w tym okresie działają tylko w tym porównaniu; nie zmieniają globalnych profili ani norm.");
+          links.push(["Madsen 2022 — obie płcie", "https://doi.org/10.1210/clinem/dgac155"]);
+        }
+        paragraph("Kropka pokazuje rzeczywisty wynik, jasny znacznik medianę jego płci, a strzałka wynik ponad osią. Własny profil kwalifikuje się niezależnie od metody drugiej płci. Zgodność metody, materiału, wieku i kontekstu nadal obowiązuje. Wspólna oś nie ustanawia wymienności metod ani klinicznego ilorazu LH/FSH.");
+      } else if (inhibinComparisonActive()) {
         if (view === "mini") {
           paragraph("Mediany modeli populacyjnych inhibiny B z badań zdrowych niemowląt urodzonych o czasie: Busch 2022 — chłopcy i Ljubicic 2022 — dziewczynki. Oba badania: surowica, Inhibin B Gen II ELISA, Beckman Coulter.");
           paragraph("Męska krzywa jest przybliżonym odczytem mediany modelu GAMLSS z ryciny; żeńska pochodzi z tabeli modelu. Nie zastępujemy ich schematem ani średnią trajektorią podłużną. To odrębne badania; linie nie określają norm ani rozpoznania. W obu źródłach podano LOD 3 pg/mL, bez osobnej granicy LOQ. LOD nie jest granicą normy.");
@@ -3206,7 +3409,7 @@
         activeStage =
           null;
       patientAgeLabel = "";
-      patientContext = patientPoint = renderedPoint = renderedAmhComparison = renderedInhibinComparison = renderedObservation = null;
+      patientContext = patientPoint = renderedPoint = renderedAmhComparison = renderedInhibinComparison = renderedGonadotropinComparison = renderedObservation = null;
       clearFemalePeriodMetadata();
       delete svg.dataset.comparisonScale;
       delete svg.dataset.comparisonMin;

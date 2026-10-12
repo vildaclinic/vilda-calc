@@ -1,0 +1,1938 @@
+{
+  "description": "Independent published concentration expectations extracted from the primary supplements during the 2026-10-12 audit; never generated from the runtime curve builder.",
+  "unit": "IU/L",
+  "statistic": "median",
+  "sources": {
+    "madsen2022": {
+      "doi": "10.1210/clinem/dgac155",
+      "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+      "supplementSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "table": "Other biomarkers",
+      "extraction": "Published LMS M inverted once as exp(M)/1000000 during source review."
+    },
+    "ljubicic2022": {
+      "doi": "10.1210/clinem/dgac363",
+      "supplementDoi": "10.6084/m9.figshare.19469555.v1",
+      "supplementSha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+      "extraction": "Independent DOCX XML cell extraction of the published median column; LH table A and FSH table B."
+    }
+  },
+  "puberty": [
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 6.0,
+      "median": 0.10494872221541938,
+      "sourceCells": [
+        "Other biomarkers!B3",
+        "Other biomarkers!C3",
+        "Other biomarkers!D3",
+        "Other biomarkers!E3"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 7.0,
+      "median": 0.10494872221541938,
+      "sourceCells": [
+        "Other biomarkers!B4",
+        "Other biomarkers!C4",
+        "Other biomarkers!D4",
+        "Other biomarkers!E4"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 8.0,
+      "median": 0.10494872221541938,
+      "sourceCells": [
+        "Other biomarkers!B5",
+        "Other biomarkers!C5",
+        "Other biomarkers!D5",
+        "Other biomarkers!E5"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 9.0,
+      "median": 0.10494872221541938,
+      "sourceCells": [
+        "Other biomarkers!B6",
+        "Other biomarkers!C6",
+        "Other biomarkers!D6",
+        "Other biomarkers!E6"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 10.0,
+      "median": 0.18673993015217238,
+      "sourceCells": [
+        "Other biomarkers!B7",
+        "Other biomarkers!C7",
+        "Other biomarkers!D7",
+        "Other biomarkers!E7"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 11.0,
+      "median": 0.3899391576851016,
+      "sourceCells": [
+        "Other biomarkers!B8",
+        "Other biomarkers!C8",
+        "Other biomarkers!D8",
+        "Other biomarkers!E8"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 12.0,
+      "median": 0.932808521560225,
+      "sourceCells": [
+        "Other biomarkers!B9",
+        "Other biomarkers!C9",
+        "Other biomarkers!D9",
+        "Other biomarkers!E9"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 13.0,
+      "median": 2.0309931340891243,
+      "sourceCells": [
+        "Other biomarkers!B10",
+        "Other biomarkers!C10",
+        "Other biomarkers!D10",
+        "Other biomarkers!E10"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 14.0,
+      "median": 3.3600097374977715,
+      "sourceCells": [
+        "Other biomarkers!B11",
+        "Other biomarkers!C11",
+        "Other biomarkers!D11",
+        "Other biomarkers!E11"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 15.0,
+      "median": 4.536879278178766,
+      "sourceCells": [
+        "Other biomarkers!B12",
+        "Other biomarkers!C12",
+        "Other biomarkers!D12",
+        "Other biomarkers!E12"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 16.0,
+      "median": 5.64856591188875,
+      "sourceCells": [
+        "Other biomarkers!B13",
+        "Other biomarkers!C13",
+        "Other biomarkers!D13",
+        "Other biomarkers!E13"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 6.0,
+      "median": 0.9328995961019171,
+      "sourceCells": [
+        "Other biomarkers!G3",
+        "Other biomarkers!H3",
+        "Other biomarkers!I3",
+        "Other biomarkers!J3"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 7.0,
+      "median": 1.1842024760702738,
+      "sourceCells": [
+        "Other biomarkers!G4",
+        "Other biomarkers!H4",
+        "Other biomarkers!I4",
+        "Other biomarkers!J4"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 8.0,
+      "median": 1.513649499646752,
+      "sourceCells": [
+        "Other biomarkers!G5",
+        "Other biomarkers!H5",
+        "Other biomarkers!I5",
+        "Other biomarkers!J5"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 9.0,
+      "median": 1.964770298470689,
+      "sourceCells": [
+        "Other biomarkers!G6",
+        "Other biomarkers!H6",
+        "Other biomarkers!I6",
+        "Other biomarkers!J6"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 10.0,
+      "median": 2.5801910640780314,
+      "sourceCells": [
+        "Other biomarkers!G7",
+        "Other biomarkers!H7",
+        "Other biomarkers!I7",
+        "Other biomarkers!J7"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 11.0,
+      "median": 3.3495190622916695,
+      "sourceCells": [
+        "Other biomarkers!G8",
+        "Other biomarkers!H8",
+        "Other biomarkers!I8",
+        "Other biomarkers!J8"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 12.0,
+      "median": 4.151220353235434,
+      "sourceCells": [
+        "Other biomarkers!G9",
+        "Other biomarkers!H9",
+        "Other biomarkers!I9",
+        "Other biomarkers!J9"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 13.0,
+      "median": 4.80572027357214,
+      "sourceCells": [
+        "Other biomarkers!G10",
+        "Other biomarkers!H10",
+        "Other biomarkers!I10",
+        "Other biomarkers!J10"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 14.0,
+      "median": 5.230782382619504,
+      "sourceCells": [
+        "Other biomarkers!G11",
+        "Other biomarkers!H11",
+        "Other biomarkers!I11",
+        "Other biomarkers!J11"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 15.0,
+      "median": 5.541214563590151,
+      "sourceCells": [
+        "Other biomarkers!G12",
+        "Other biomarkers!H12",
+        "Other biomarkers!I12",
+        "Other biomarkers!J12"
+      ]
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 16.0,
+      "median": 5.826063174564676,
+      "sourceCells": [
+        "Other biomarkers!G13",
+        "Other biomarkers!H13",
+        "Other biomarkers!I13",
+        "Other biomarkers!J13"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 6.0,
+      "median": 0.1193163370958486,
+      "sourceCells": [
+        "Other biomarkers!B17",
+        "Other biomarkers!C17",
+        "Other biomarkers!D17",
+        "Other biomarkers!E17"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 7.0,
+      "median": 0.12956321399782508,
+      "sourceCells": [
+        "Other biomarkers!B18",
+        "Other biomarkers!C18",
+        "Other biomarkers!D18",
+        "Other biomarkers!E18"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 8.0,
+      "median": 0.14069009181836767,
+      "sourceCells": [
+        "Other biomarkers!B19",
+        "Other biomarkers!C19",
+        "Other biomarkers!D19",
+        "Other biomarkers!E19"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 9.0,
+      "median": 0.1523875871849669,
+      "sourceCells": [
+        "Other biomarkers!B20",
+        "Other biomarkers!C20",
+        "Other biomarkers!D20",
+        "Other biomarkers!E20"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 10.0,
+      "median": 0.19252135853814378,
+      "sourceCells": [
+        "Other biomarkers!B21",
+        "Other biomarkers!C21",
+        "Other biomarkers!D21",
+        "Other biomarkers!E21"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 11.0,
+      "median": 0.3331908573590624,
+      "sourceCells": [
+        "Other biomarkers!B22",
+        "Other biomarkers!C22",
+        "Other biomarkers!D22",
+        "Other biomarkers!E22"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 12.0,
+      "median": 0.6775625214085037,
+      "sourceCells": [
+        "Other biomarkers!B23",
+        "Other biomarkers!C23",
+        "Other biomarkers!D23",
+        "Other biomarkers!E23"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 13.0,
+      "median": 1.3007184973188053,
+      "sourceCells": [
+        "Other biomarkers!B24",
+        "Other biomarkers!C24",
+        "Other biomarkers!D24",
+        "Other biomarkers!E24"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 14.0,
+      "median": 2.101700464443166,
+      "sourceCells": [
+        "Other biomarkers!B25",
+        "Other biomarkers!C25",
+        "Other biomarkers!D25",
+        "Other biomarkers!E25"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 15.0,
+      "median": 2.8209085164981698,
+      "sourceCells": [
+        "Other biomarkers!B26",
+        "Other biomarkers!C26",
+        "Other biomarkers!D26",
+        "Other biomarkers!E26"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "lh",
+      "ageYears": 16.0,
+      "median": 3.5142066372549756,
+      "sourceCells": [
+        "Other biomarkers!B27",
+        "Other biomarkers!C27",
+        "Other biomarkers!D27",
+        "Other biomarkers!E27"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 6.0,
+      "median": 0.4318941698433671,
+      "sourceCells": [
+        "Other biomarkers!G17",
+        "Other biomarkers!H17",
+        "Other biomarkers!I17",
+        "Other biomarkers!J17"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 7.0,
+      "median": 0.54374649750817,
+      "sourceCells": [
+        "Other biomarkers!G18",
+        "Other biomarkers!H18",
+        "Other biomarkers!I18",
+        "Other biomarkers!J18"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 8.0,
+      "median": 0.6848343409721656,
+      "sourceCells": [
+        "Other biomarkers!G19",
+        "Other biomarkers!H19",
+        "Other biomarkers!I19",
+        "Other biomarkers!J19"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 9.0,
+      "median": 0.8928677923338036,
+      "sourceCells": [
+        "Other biomarkers!G20",
+        "Other biomarkers!H20",
+        "Other biomarkers!I20",
+        "Other biomarkers!J20"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 10.0,
+      "median": 1.1587076764301305,
+      "sourceCells": [
+        "Other biomarkers!G21",
+        "Other biomarkers!H21",
+        "Other biomarkers!I21",
+        "Other biomarkers!J21"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 11.0,
+      "median": 1.5269843724553924,
+      "sourceCells": [
+        "Other biomarkers!G22",
+        "Other biomarkers!H22",
+        "Other biomarkers!I22",
+        "Other biomarkers!J22"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 12.0,
+      "median": 2.01486005633355,
+      "sourceCells": [
+        "Other biomarkers!G23",
+        "Other biomarkers!H23",
+        "Other biomarkers!I23",
+        "Other biomarkers!J23"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 13.0,
+      "median": 2.622651954012206,
+      "sourceCells": [
+        "Other biomarkers!G24",
+        "Other biomarkers!H24",
+        "Other biomarkers!I24",
+        "Other biomarkers!J24"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 14.0,
+      "median": 3.2934476763740226,
+      "sourceCells": [
+        "Other biomarkers!G25",
+        "Other biomarkers!H25",
+        "Other biomarkers!I25",
+        "Other biomarkers!J25"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 15.0,
+      "median": 3.802895506745346,
+      "sourceCells": [
+        "Other biomarkers!G26",
+        "Other biomarkers!H26",
+        "Other biomarkers!I26",
+        "Other biomarkers!J26"
+      ]
+    },
+    {
+      "sex": "male",
+      "analyte": "fsh",
+      "ageYears": 16.0,
+      "median": 4.160651539308952,
+      "sourceCells": [
+        "Other biomarkers!G27",
+        "Other biomarkers!H27",
+        "Other biomarkers!I27",
+        "Other biomarkers!J27"
+      ]
+    }
+  ],
+  "mini": [
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.02,
+      "median": 0.421,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.03,
+      "median": 0.396,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.04,
+      "median": 0.371,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.05,
+      "median": 0.347,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.06,
+      "median": 0.325,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.07,
+      "median": 0.303,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.08,
+      "median": 0.282,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.09,
+      "median": 0.262,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.1,
+      "median": 0.243,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.11,
+      "median": 0.225,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.12,
+      "median": 0.208,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.13,
+      "median": 0.192,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.14,
+      "median": 0.178,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.15,
+      "median": 0.164,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.16,
+      "median": 0.152,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.17,
+      "median": 0.14,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.18,
+      "median": 0.13,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.19,
+      "median": 0.121,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.2,
+      "median": 0.113,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.21,
+      "median": 0.106,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.22,
+      "median": 0.099,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.23,
+      "median": 0.094,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.24,
+      "median": 0.089,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.25,
+      "median": 0.085,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.26,
+      "median": 0.082,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.27,
+      "median": 0.079,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.28,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.29,
+      "median": 0.075,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.3,
+      "median": 0.074,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.31,
+      "median": 0.073,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.32,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.33,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.34,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.35,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.36,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.37,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.38,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.39,
+      "median": 0.073,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.4,
+      "median": 0.073,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.41,
+      "median": 0.074,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.42,
+      "median": 0.074,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.43,
+      "median": 0.075,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.44,
+      "median": 0.076,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.45,
+      "median": 0.076,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.46,
+      "median": 0.076,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.47,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.48,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.49,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.5,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.51,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.52,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.53,
+      "median": 0.077,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.54,
+      "median": 0.076,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.55,
+      "median": 0.076,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.56,
+      "median": 0.075,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.57,
+      "median": 0.074,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.58,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.59,
+      "median": 0.071,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.6,
+      "median": 0.069,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.61,
+      "median": 0.068,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.62,
+      "median": 0.067,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.63,
+      "median": 0.065,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.64,
+      "median": 0.064,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.65,
+      "median": 0.063,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.66,
+      "median": 0.061,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.67,
+      "median": 0.061,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.68,
+      "median": 0.06,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.69,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.7,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.71,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.72,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.73,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.74,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.75,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.76,
+      "median": 0.059,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.77,
+      "median": 0.06,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.78,
+      "median": 0.06,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.79,
+      "median": 0.061,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.8,
+      "median": 0.061,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.81,
+      "median": 0.062,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.82,
+      "median": 0.062,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.83,
+      "median": 0.063,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.84,
+      "median": 0.064,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.85,
+      "median": 0.064,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.86,
+      "median": 0.065,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.87,
+      "median": 0.066,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.88,
+      "median": 0.067,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.89,
+      "median": 0.067,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.9,
+      "median": 0.068,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.91,
+      "median": 0.069,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.92,
+      "median": 0.07,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.93,
+      "median": 0.07,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.94,
+      "median": 0.071,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.95,
+      "median": 0.072,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.96,
+      "median": 0.073,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.97,
+      "median": 0.073,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.98,
+      "median": 0.074,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 0.99,
+      "median": 0.075,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "lh",
+      "ageYears": 1.0,
+      "median": 0.076,
+      "table": "A"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.02,
+      "median": 4.259,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.03,
+      "median": 4.251,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.04,
+      "median": 4.241,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.05,
+      "median": 4.229,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.06,
+      "median": 4.213,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.07,
+      "median": 4.194,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.08,
+      "median": 4.17,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.09,
+      "median": 4.144,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.1,
+      "median": 4.114,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.11,
+      "median": 4.082,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.12,
+      "median": 4.047,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.13,
+      "median": 4.011,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.14,
+      "median": 3.973,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.15,
+      "median": 3.935,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.16,
+      "median": 3.897,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.17,
+      "median": 3.86,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.18,
+      "median": 3.826,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.19,
+      "median": 3.795,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.2,
+      "median": 3.767,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.21,
+      "median": 3.743,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.22,
+      "median": 3.724,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.23,
+      "median": 3.709,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.24,
+      "median": 3.7,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.25,
+      "median": 3.697,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.26,
+      "median": 3.7,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.27,
+      "median": 3.709,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.28,
+      "median": 3.722,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.29,
+      "median": 3.739,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.3,
+      "median": 3.759,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.31,
+      "median": 3.782,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.32,
+      "median": 3.807,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.33,
+      "median": 3.833,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.34,
+      "median": 3.86,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.35,
+      "median": 3.887,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.36,
+      "median": 3.914,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.37,
+      "median": 3.94,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.38,
+      "median": 3.965,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.39,
+      "median": 3.988,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.4,
+      "median": 4.009,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.41,
+      "median": 4.029,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.42,
+      "median": 4.045,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.43,
+      "median": 4.059,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.44,
+      "median": 4.07,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.45,
+      "median": 4.077,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.46,
+      "median": 4.08,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.47,
+      "median": 4.08,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.48,
+      "median": 4.076,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.49,
+      "median": 4.069,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.5,
+      "median": 4.058,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.51,
+      "median": 4.044,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.52,
+      "median": 4.027,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.53,
+      "median": 4.009,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.54,
+      "median": 3.988,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.55,
+      "median": 3.967,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.56,
+      "median": 3.946,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.57,
+      "median": 3.925,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.58,
+      "median": 3.907,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.59,
+      "median": 3.891,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.6,
+      "median": 3.878,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.61,
+      "median": 3.868,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.62,
+      "median": 3.86,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.63,
+      "median": 3.855,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.64,
+      "median": 3.852,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.65,
+      "median": 3.85,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.66,
+      "median": 3.849,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.67,
+      "median": 3.849,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.68,
+      "median": 3.849,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.69,
+      "median": 3.851,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.7,
+      "median": 3.854,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.71,
+      "median": 3.858,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.72,
+      "median": 3.864,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.73,
+      "median": 3.871,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.74,
+      "median": 3.88,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.75,
+      "median": 3.89,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.76,
+      "median": 3.902,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.77,
+      "median": 3.915,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.78,
+      "median": 3.928,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.79,
+      "median": 3.942,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.8,
+      "median": 3.957,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.81,
+      "median": 3.972,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.82,
+      "median": 3.987,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.83,
+      "median": 4.001,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.84,
+      "median": 4.016,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.85,
+      "median": 4.031,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.86,
+      "median": 4.046,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.87,
+      "median": 4.06,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.88,
+      "median": 4.074,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.89,
+      "median": 4.087,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.9,
+      "median": 4.101,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.91,
+      "median": 4.114,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.92,
+      "median": 4.126,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.93,
+      "median": 4.139,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.94,
+      "median": 4.151,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.95,
+      "median": 4.163,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.96,
+      "median": 4.174,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.97,
+      "median": 4.186,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.98,
+      "median": 4.197,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 0.99,
+      "median": 4.209,
+      "table": "B"
+    },
+    {
+      "sex": "female",
+      "analyte": "fsh",
+      "ageYears": 1.0,
+      "median": 4.22,
+      "table": "B"
+    }
+  ]
+}
