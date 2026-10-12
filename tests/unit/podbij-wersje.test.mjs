@@ -459,6 +459,128 @@ describe('P-WATKI: podbij-wersje liczy wersje z bazy i treści', () => {
   });
 });
 
+// P-WERSJE-CI: krok „Sprawdź wersje względem audyt” w ci.yml. Na PR-ze checkout daje commit scalenia
+// z audyt (fetch-depth 2), więc HEAD^1 jest bazą. Test wycina polecenie kroku z prawdziwego ci.yml
+// i uruchamia je w płytkim klonie takiego commita — z prawdziwymi skryptami podbij-wersje.
+const CI = fs.readFileSync(path.join(korzen, '.github/workflows/ci.yml'), 'utf8');
+const NAZWA_KROKU = 'Sprawdź wersje względem audyt';
+
+/** Blok `run: |` kroku o danej nazwie, bez wcięcia YAML. */
+function poleceniaKroku(yml, nazwa) {
+  const linie = yml.split('\n');
+  const start = linie.findIndex((l) => l.trim() === `- name: ${nazwa}`);
+  if (start < 0) return null;
+  const wciecieKroku = linie[start].indexOf('-');
+  let i = start + 1;
+  while (i < linie.length && !/^\s*run: \|\s*$/.test(linie[i])) {
+    if (linie[i].trim() && linie[i].search(/\S/) <= wciecieKroku) return null;
+    i += 1;
+  }
+  const blok = [];
+  let wciecie = null;
+  for (i += 1; i < linie.length; i += 1) {
+    const l = linie[i];
+    if (l.trim() === '') { blok.push(''); continue; }
+    const w = l.search(/\S/);
+    if (wciecie === null) wciecie = w;
+    if (w < wciecie) break;
+    blok.push(l.slice(wciecie));
+  }
+  return blok.join('\n').trim();
+}
+
+/** Job `unit` z ci.yml (do następnego joba). */
+function jobUnit(yml) {
+  const m = /^ {2}unit:\n([\s\S]*?)(?=^ {2}[A-Za-z0-9_-]+:\n)/m.exec(yml);
+  return m ? m[1] : '';
+}
+
+/**
+ * Commit scalenia PR-a jak na GitHubie (pierwszy rodzic: audyt, drugi: głowa PR-a), sklonowany płytko
+ * (--depth=… jak actions/checkout z fetch-depth), z prawdziwymi skryptami podbij-wersje dołożonymi do klonu.
+ */
+function klonScaleniaPR(r, galaz, glebokosc = 2) {
+  const powrot = r.git('rev-parse', '--abbrev-ref', 'HEAD').trim();
+  r.git('checkout', '-q', '-B', 'pr/scalenie', 'audyt');
+  r.git('merge', '-q', '--no-ff', '--no-edit', galaz);
+  r.git('checkout', '-q', powrot);
+  const klon = fs.mkdtempSync(path.join(os.tmpdir(), 'podbij-wersje-ci-'));
+  katalogi.push(klon);
+  execFileSync('git', ['clone', '-q', `--depth=${glebokosc}`, '--branch', 'pr/scalenie', `file://${r.katalog}`, klon], { env: SRODOWISKO, stdio: 'ignore' });
+  execFileSync('git', ['config', 'core.autocrlf', 'false'], { cwd: klon, env: SRODOWISKO });
+  for (const p of ['tests/scripts/podbij-wersje.mjs', 'tests/support/podbij-wersje.mjs', 'tests/support/wersje-zasobow.mjs']) {
+    fs.mkdirSync(path.dirname(path.join(klon, p)), { recursive: true });
+    fs.copyFileSync(path.join(korzen, p), path.join(klon, p));
+  }
+  return klon;
+}
+
+function uruchomKrokCI(klon) {
+  const polecenia = poleceniaKroku(CI, NAZWA_KROKU);
+  return spawnSync('bash', ['-eo', 'pipefail', '-c', polecenia], { cwd: klon, encoding: 'utf8', env: SRODOWISKO });
+}
+
+describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
+  it('ci.yml: krok w wymaganym jobie unit, tylko na pull_request, checkout z rodzicami commita scalenia', () => {
+    const unit = jobUnit(CI);
+    expect(unit).toContain('name: Lint, składnia i testy jednostkowe');
+    expect(unit).toMatch(/uses: actions\/checkout@v\d+\n\s+with:\n(?:\s+#.*\n)*\s+fetch-depth: 2\n/);
+    const krok = unit.slice(unit.indexOf(`- name: ${NAZWA_KROKU}`));
+    expect(krok).toMatch(new RegExp(`^- name: ${NAZWA_KROKU}\\n\\s+if: github\\.event_name == 'pull_request'\\n\\s+run: \\|`));
+    expect(poleceniaKroku(CI, NAZWA_KROKU)).toContain('node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza=HEAD^1');
+  });
+
+  it('kolizja SW po czystym scaleniu (#592 + #594): npm test zielony, krok CI kończy się kodem 1 i żąda SW + 1', () => {
+    const r = repo();
+    // Wątek B (ta gałąź) zmienia samą stronę i podbija względem audyt sprzed A: SW 1.1.11.
+    r.zapisz('index.html', r.czytaj('index.html').replace('<p>Strona główna</p>', '<p>Strona główna, nowa treść</p>'));
+    expect(r.podbij().sw.cel).toBe('1.1.11');
+    r.git('commit', '-q', '-am', 'B');
+    // Wątek A zmienia skrypt, podbija względem tego samego audyt — też SW 1.1.11 — i wchodzi pierwszy (squash).
+    r.git('checkout', '-q', '-b', 'agent/a', 'audyt');
+    r.zapisz('silnik.js', r.czytaj('silnik.js').replace('silnikA = 1', 'silnikA = 2'));
+    expect(r.podbij().sw.cel).toBe('1.1.11');
+    r.git('commit', '-q', '-am', 'A');
+    r.git('checkout', '-q', 'audyt');
+    r.git('merge', '-q', '--squash', 'agent/a');
+    r.git('commit', '-q', '-m', 'A (#1)');
+    // „Update branch”: audyt do B scala się bez konfliktu, bo obie strony wpisały to samo SW_VERSION.
+    r.git('checkout', '-q', 'agent/watek');
+    r.git('merge', '-q', '--no-edit', 'audyt');
+    expect(r.czytaj('index.html')).toContain('silnik.js?v=4');
+    expect(r.czytaj('index.html')).toContain('nowa treść');
+    expect(wersjaSW(r.czytaj('service-worker-kalorii.js'))).toBe('1.1.11');
+    // Drzewo jest wewnętrznie spójne — dlatego strażnicy z npm test tego nie widzą.
+    expect(stan(r)).toEqual(biezaceWersje(r.katalog));
+
+    const klon = klonScaleniaPR(r, 'agent/watek');
+    expect(execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: klon, encoding: 'utf8' }).trim()).toBe('true');
+    const krok = uruchomKrokCI(klon);
+    expect(krok.status, krok.stdout + krok.stderr).toBe(1);
+    expect(krok.stdout).toContain('SW_VERSION: 1.1.11 → 1.1.12');
+    expect(krok.stdout).toContain('::error title=Wersje niespójne z audyt::');
+
+    // Po npm run podbij-wersje na gałęzi PR-a ten sam krok przechodzi.
+    expect(r.podbij().sw.cel).toBe('1.1.12');
+    r.git('commit', '-q', '-am', 'podbij-wersje po scaleniu audyt');
+    const poPoprawce = uruchomKrokCI(klonScaleniaPR(r, 'agent/watek'));
+    expect(poPoprawce.status, poPoprawce.stdout + poPoprawce.stderr).toBe(0);
+    expect(poPoprawce.stdout).toContain('Nic do zmiany — wersje są spójne z bazą.');
+  });
+
+  it('PR bez zmian w zasobach przechodzi, a bez rodzica commita scalenia (fetch-depth 1) krok pada zamiast przejść', () => {
+    const r = repo();
+    r.zapisz('docs/notatka.md', 'notatka 2\n');
+    r.git('commit', '-q', '-am', 'tylko dokumentacja');
+    const zielony = uruchomKrokCI(klonScaleniaPR(r, 'agent/watek'));
+    expect(zielony.status, zielony.stdout + zielony.stderr).toBe(0);
+    const bezRodzica = uruchomKrokCI(klonScaleniaPR(r, 'agent/watek', 1));
+    expect(bezRodzica.status).toBe(2);
+    expect(bezRodzica.stderr).toContain('nie ma rewizji bazowej HEAD^1');
+    expect(bezRodzica.stdout).toContain('::error title=Nie policzono wersji::');
+  });
+});
+
 describe('P-WATKI: skrypt rozumie prawdziwe repozytorium', () => {
   it('prawdziwy service worker i strony dają się przeliczyć względem HEAD', () => {
     const p = zaplanuj({ katalog: korzen, baza: 'HEAD' });

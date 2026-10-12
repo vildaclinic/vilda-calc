@@ -22,6 +22,9 @@ jobs:
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
+        with:
+          # Commit scalenia PR-a z rodzicami: HEAD^1 to audyt, do którego PR wejdzie (krok wersji niżej).
+          fetch-depth: 2
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:
@@ -31,6 +34,23 @@ jobs:
         run: npm ci
       - name: Uruchom kontrole bez przeglądarki
         run: npm test
+      # P-WERSJE-CI: drzewo PR-a po scaleniu z audyt musi mieć wersje policzone względem tego audyt.
+      # „Update branch” albo scalenie audyt bez ponownego `npm run podbij-wersje` przechodziło
+      # npm test, bo scalone drzewo jest wewnętrznie spójne — a dwa wątki z tym samym SW_VERSION
+      # scalały się bez konfliktu (siedem razy od 2026-09-28, m.in. #591, #594, #595). Na PR-ze
+      # checkout daje commit scalenia, więc HEAD^1 jest dokładnie bazą; reguła „up to date”
+      # sprawia, że ten krok widzi audyt sprzed scalenia PR-a. Na push do audyt krok pomijamy.
+      - name: Sprawdź wersje względem audyt
+        if: github.event_name == 'pull_request'
+        run: |
+          kod=0
+          node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza=HEAD^1 || kod=$?
+          if [ "$kod" = 1 ]; then
+            echo "::error title=Wersje niespójne z audyt::Na gałęzi PR-a: git fetch origin audyt && git merge origin/audyt && npm run podbij-wersje && npm test, potem commit i push. Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”."
+          elif [ "$kod" != 0 ]; then
+            echo "::error title=Nie policzono wersji::podbij-wersje zakończył się kodem $kod — przyczyna w logu wyżej."
+          fi
+          exit "$kod"
 
   browser:
     # Nazwa jest widoczna dla właściciela jako odłamek, a wymagany status w regułach gałęzi
