@@ -493,7 +493,8 @@ if (!isEmbeddedShellFrame()) {                  // w artefakcie T()
           // DAWNIEJ: session.setItem(KLUCZ_ODPOWIEDZI, '1') tutaj — teraz stawia go okno po odpowiedzi
           document.dispatchEvent(new CustomEvent('vilda:new-device-restore-available', { detail: { lastModified: wynik.lastModified || null } }));
         } else {
-          session.setItem('vilda-probe-done-v1', '1');
+          // tylko pewne „nie” odhacza sondę; wynik z inconclusive (błąd sieci, przerwane żądanie) — nie
+          if (!(wynik && wynik.inconclusive)) session.setItem('vilda-probe-done-v1', '1');
           if (syncEnabled() && !authFailed) trzymajDo(sync.syncFull()).catch(() => {});
         }
       })).catch(() => { if (syncEnabled() && !authFailed) trzymajDo(sync.syncFull()).catch(() => {}); });
@@ -505,6 +506,28 @@ if (!isEmbeddedShellFrame()) {                  // w artefakcie T()
 // odstęp po 429 trzyma krok do ponownego wejścia; łańcuch canWarmStartCloudOnly kończy się .then(koniecKroku, koniecKroku).
 
 // eksport: VildaSyncIntegration.isStartupSyncInProgress = isStartupSyncInProgress
+```
+
+## Łatka P-NOWE-URZADZENIE w sondzie (`vilda_sync.js` 37 → 38, 2026-10-12)
+
+Zmiana wprost w artefakcie, tylko w `probeNewDevice` (w artefakcie `Xt`). Pewne „nie” zostaje bez zmian; wynik bez rozstrzygnięcia dostaje pole `inconclusive: true`, żeby integracja nie odhaczała sondy (`vilda-probe-done-v1`) po błędzie. Nazwy z artefaktu: `I()` — odblokowany sejf (rzuca `VAULT_LOCKED`), `m(slot)` — stan slotu w magazynie, `Brv_jest` — znacznik slotu obróconego w innej karcie, `f` — `fetch` z limitem czasu, `j()` — adres workera. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE.
+
+```js
+async function probeNewDevice() {
+  const niepewny = { isNewDevice: false, lastModified: null, inconclusive: true };   // w artefakcie Pn0
+  let vault, material;
+  try { vault = requireUnlockedVault(); } catch { return niepewny; }                // DAWNIEJ: pewne „nie”
+  try { material = await vault.getSyncMaterial(); } catch { return niepewny; }     // DAWNIEJ: pewne „nie”
+  const slot = material.slotId;
+  if (loadSyncState(slot).registered || isRevokedSlot(slot)) return { isNewDevice: false, lastModified: null };
+  try {
+    const odp = await fetchWithTimeout(`${workerUrl()}/v1/slots/${slot}/status`, { method: 'GET', headers: { Authorization: `Bearer ${material.authToken}` } });
+    if (odp.status === 404) return { isNewDevice: false, lastModified: null };     // serwer nie ma slotu — pewne „nie”
+    if (!odp.ok) return niepewny;                                                   // DAWNIEJ: każde !ok = pewne „nie”
+    const st = await odp.json();
+    return { isNewDevice: true, lastModified: st.lastModified || st.updatedAt || null };
+  } catch { return niepewny; }   // sieć, timeout, żądanie przerwane (przeładowanie karty) — DAWNIEJ: pewne „nie”
+}
 ```
 
 ## Łatka P-AKTUALIZACJA-BRAMKA (`ios26-ui.js` 44 → 45, 2026-10-12)

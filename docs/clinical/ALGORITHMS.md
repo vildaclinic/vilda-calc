@@ -12193,17 +12193,18 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.247, `vilda_sync_integration.js` 48, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
+## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.247, `vilda_sync_integration.js` 48, `vilda_sync.js` 38, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
 
 **Skąd.** Zgłoszenie właściciela z 2026-10-12. Użytkowniczka z kontem PRO (dane z telefonu w chmurze) logowała się pierwszy raz na komputerze w pracy. Na pytaniu „Pobierz dane z serwera” wyskoczył baner „Dostępna nowa wersja aplikacji”. Kliknęła „Aktualizuj”, karta się przeładowała i pytanie zniknęło. Baza pacjentów się nie pobrała, a synchronizacja na tym komputerze została wyłączona, bez żadnego komunikatu. To etap 1 z trzech; decyzje do kolejnych etapów są niżej.
 
 **Co było.**
 - Integracja (`vilda_sync_integration.js`) stawiała znaczniki w `sessionStorage`, zanim użytkownik odpowiedział: `vilda-probe-done-v1` przed sondą serwera, `vilda-new-device-restore-shown-v1` w chwili pokazania pytania. Przeładowanie karty zachowuje `sessionStorage` i odtwarza sesję sejfu, więc po nim znaczniki blokowały i pytanie, i pobranie. Zmierzone w Chromium: po przeładowaniu nie szło już żadne zapytanie o stan slotu.
+- Sonda (`VildaSync.probeNewDevice`, `vilda_sync.js`) oddawała „to nie jest nowe urządzenie” także wtedy, gdy nie dostała odpowiedzi: błąd sieci, timeout, odpowiedź serwera inna niż 200, a także żądanie przerwane przez przeładowanie karty w trakcie sondy. Integracja odhaczała wtedy sondę w karcie, więc po takim przeładowaniu pytanie też znikało. Znalezione w CI tego PR (test bramki banera): karta przeładowała się, zanim serwer odpowiedział; zmierzone w Chromium — po przeładowaniu `vilda-probe-done-v1` = „1”, jedno zapytanie o stan slotu, okna brak.
 - Okno pytania było wbudowane tylko w `index.html` (`inline_index_10.js`). Sonda działa w każdym dokumencie najwyższego poziomu, który ładuje integrację. W powłoce `app.html` (adres startowy PWA) i na siedmiu innych stronach z logowaniem zdarzenie szło w próżnię: pytanie nie pokazywało się wcale, a znaczniki i tak się zużywały.
 - Baner aktualizacji (`ios26-ui.js`, `Mt`) pokazywał się, gdy tylko czekał nowy SW, niezależnie od logowania, pytania i pierwszej synchronizacji. Leżał nad oknem pytania.
 
 **Co jest.**
-- *Integracja.* `vilda-probe-done-v1` powstaje dopiero po wyniku „to nie jest nowe urządzenie”; zdarzenie pytania idzie bez znacznika. Dopóki pytanie czeka na odpowiedź, każde odblokowanie (także odtworzenie sesji po przeładowaniu) sonduje serwer od nowa i pyta ponownie. Nowe API `VildaSyncIntegration.isStartupSyncInProgress()` zwraca prawdę od odblokowania: przez odstęp 600 ms, sondę i `syncFull` startu, a w trybie chmurowym do końca pobrania z chmury. Sufit: 5 minut od ostatniego kroku.
+- *Integracja i sonda.* `vilda-probe-done-v1` powstaje dopiero po pewnym wyniku „to nie jest nowe urządzenie”: urządzenie zna slot (albo slot obrócono w innej karcie) lub serwer nie ma slotu (404). Wynik bez rozstrzygnięcia sonda oznacza polem `inconclusive: true` (sejf zablokowany, brak tożsamości synchronizacji, błąd sieci, timeout, żądanie przerwane, odpowiedź inna niż 200 i 404); taki wynik nie odhacza sondy, więc następne odblokowanie albo przeładowanie sonduje ponownie. Zdarzenie pytania idzie bez znacznika. Dopóki pytanie czeka na odpowiedź, każde odblokowanie (także odtworzenie sesji po przeładowaniu) sonduje serwer od nowa i pyta ponownie. Nowe API `VildaSyncIntegration.isStartupSyncInProgress()` zwraca prawdę od odblokowania: przez odstęp 600 ms, sondę i `syncFull` startu, a w trybie chmurowym do końca pobrania z chmury. Sufit: 5 minut od ostatniego kroku.
 - *Okno pytania.* Nowy moduł `vilda_nowe_urzadzenie.js` buduje okno w dokumencie najwyższego poziomu na wszystkich 8 stronach z logowaniem (`app.html`, `index.html`, `docpro.html`, `kalkulator-klirens.html`, `notatki.html`, `subskrypcja.html`, `terminarz.html`, `ustawienia.html`); ramki paneli powłoki go nie budują. Znacznik odpowiedzi `vilda-new-device-restore-shown-v1` stawia dopiero kliknięcie. „Pobierz dane z serwera” stawia go przed startem pobierania, więc przeładowanie w trakcie wznawia pobieranie. Drugi przycisk to „Zacznij od nowa (nie pobieraj)”. Blokada sejfu chowa okno bez odpowiedzi. Treść, identyfikatory i wygląd zostały jak dotąd. Style z atrybutów `style=` przeszły do `vilda_auth_ui.css` (selektory od `#vilda-restore-overlay`). Style obliczone i położenie każdego elementu okna są identyczne jak przed zmianą: 2 szerokości (1440 i 390 px) × 5 trybów wyglądu. `index.html` nie ładuje już `inline_index_10.js`; plik i jego wpis precache zostają (append-only).
 - *Bramka banera* (`ios26-ui.js`). `Mt` nie pokazuje banera wprost, tylko zgłasza go bramce. Baner czeka, dopóki:
   - widać ekran logowania (`html.vilda-auth-locked`, widoczny `.vilda-auth-root` albo `body.vilda-auth-embedded-open` w ramce powłoki);
@@ -12213,7 +12214,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
   Baner pokazuje się po 1,5 s otwartej bramki. Widoczny baner chowa się, gdy taki proces ruszy, i wraca po nim. Gdy bramka jest zamknięta bez przerwy dłużej niż 10 min, baner pokazuje się mimo to. Odroczenie jest bezpieczne: nowy SW aktywuje się tylko po „Aktualizuj” (`SKIP_WAITING`), a bez kliknięcia wchodzi po zamknięciu wszystkich kart. Bramka nie dotyka wskaźnika po „Później” ani przeładowania po `controllerchange` (aktualizacja z innej karty). Diagnostyka: `VildaServiceWorkerClientLifecycle.updateBannerGateReasons()` i pola stanu `updateBannerGateRequestCount`, `updateBannerDeferredCount`, `updateBannerDeferReasons`, `updateBannerDeferredHideCount`, `updateBannerDeferLimitCount`.
 
-**Czego ta rata nie zmienia.** Reguły scalania, wysyłki i pobierania (`vilda_sync.js` bez zmian), znaczenie flagi `vilda-sync-enabled-v1`, PRO oraz tryby „Komputer w pracy” i „Obcy komputer”. „Zacznij od nowa” obowiązuje jak dotąd do końca karty; w nowej karcie pytanie wraca, tak jak wcześniej w `index.html`. W powłoce pytanie zobaczą teraz także urządzenia, które go dotąd nie widziały: konto ma slot w chmurze, a to urządzenie nigdy nie synchronizowało.
+**Czego ta rata nie zmienia.** Reguły scalania, wysyłki i pobierania (w `vilda_sync.js` zmienia się tylko wynik sondy nowego urządzenia: pole `inconclusive`), znaczenie flagi `vilda-sync-enabled-v1`, PRO oraz tryby „Komputer w pracy” i „Obcy komputer”. „Zacznij od nowa” obowiązuje jak dotąd do końca karty; w nowej karcie pytanie wraca, tak jak wcześniej w `index.html`. W powłoce pytanie zobaczą teraz także urządzenia, które go dotąd nie widziały: konto ma slot w chmurze, a to urządzenie nigdy nie synchronizowało.
 
 **Decyzje właściciela do kolejnych etapów (2026-10-12).**
 1. Przy aktywnym PRO synchronizacja ma być domyślnie włączona na wszystkich urządzeniach konta, z możliwością wyłączenia na urządzeniu. Politykę prywatności doprecyzować razem z tą zmianą.
@@ -12229,6 +12230,9 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 |---|---|
 | nowe urządzenie, slot w chmurze, odblokowanie | zdarzenie pytania; w `sessionStorage` brak znaczników (czerwony na kodzie sprzed zmiany) |
 | jak wyżej, przeładowanie bez odpowiedzi | ponowna sonda, pytanie wraca (czerwony na kodzie sprzed zmiany) |
+| przeładowanie, zanim serwer odpowiedział na sondę | sonda nieodhaczona; po przeładowaniu ponowna sonda i pytanie (czerwony na kodzie sprzed poprawki) |
+| sonda bez rozstrzygnięcia: błąd sieci, przerwane żądanie, 503, 429, 401, sejf zablokowany | `inconclusive: true`, bez znacznika sondy (czerwony na kodzie sprzed poprawki) |
+| serwer bez slotu (404) albo urządzenie znające slot | pewne „nie”: bez `inconclusive`, znacznik sondy jak dotąd |
 | „Pobierz”, przeładowanie w trakcie pobierania | bez pytania, pobieranie rusza samo |
 | „Zacznij od nowa”, przeładowanie | bez sondy, bez pobierania, bez pytania (jak dotąd) |
 | urządzenie zsynchronizowane | znacznik sondy po wyniku, `syncFull` przy włączonej synchronizacji, jedna sonda na kartę (jak dotąd) |
@@ -12239,16 +12243,16 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 | baner widoczny, okno pytania się otwiera | baner chowa się (czerwony na `ios26-ui.js` sprzed zmiany); po odpowiedzi wraca, a „Aktualizuj” przeładowuje pod nowym SW |
 | tryb gościa, nowy SW | baner jak dotąd (`tests/e2e/pwa-pierwsza-wizyta.spec.mjs`) |
 
-Testy: `tests/unit/nowe-urzadzenie-pytanie.test.mjs` (prawdziwy `vilda_sync_integration.js`), `tests/e2e/nowe-urzadzenie-pytanie.spec.mjs`, `tests/e2e/nowe-urzadzenie-pytanie-mobile.spec.mjs`, `tests/e2e/baner-aktualizacji-bramka.spec.mjs` (prawdziwy SW). Atrapa serwera synchronizacji: `tests/support/atrapa-synchronizacji.mjs`.
+Testy: `tests/unit/nowe-urzadzenie-pytanie.test.mjs` (prawdziwe `vilda_sync_integration.js` i `vilda_sync.js`), `tests/e2e/nowe-urzadzenie-pytanie.spec.mjs`, `tests/e2e/nowe-urzadzenie-pytanie-mobile.spec.mjs`, `tests/e2e/baner-aktualizacji-bramka.spec.mjs` (prawdziwy SW). Atrapa serwera synchronizacji: `tests/support/atrapa-synchronizacji.mjs`.
 
-**Źródło kodu.** `vilda_sync_integration.js` i `ios26-ui.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
+**Źródło kodu.** `vilda_sync_integration.js`, `vilda_sync.js` i `ios26-ui.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
 
-**Wersje.** `vilda_sync_integration.js` 47 → 48, `ios26-ui.js` 44 → 45, `vilda_auth_ui.css` 76 → 77, nowy `vilda_nowe_urzadzenie.js?v=1` (wpis precache dopisany ręcznie). Pliki wstrzykujące podbite przez `npm run podbij-wersje`. `SW_VERSION` 1.1.246 → 1.1.247 (numery 1.1.245 i 1.1.246 nadały równolegle #642 i #644).
+**Wersje.** `vilda_sync_integration.js` 47 → 48, `vilda_sync.js` 37 → 38, `ios26-ui.js` 44 → 45, `vilda_auth_ui.css` 76 → 77, nowy `vilda_nowe_urzadzenie.js?v=1` (wpis precache dopisany ręcznie). Pliki wstrzykujące podbite przez `npm run podbij-wersje`. `SW_VERSION` 1.1.246 → 1.1.247 (numery 1.1.245 i 1.1.246 nadały równolegle #642 i #644).
 
 **Ryzyko resztkowe.**
 - „Aktualizuj” kliknięte w innej karcie nadal przeładowuje wszystkie karty (`controllerchange`); bramka tego nie wstrzymuje. Pytanie i pobieranie wracają po przeładowaniu same.
-- Dopóki pytanie czeka na odpowiedź, każde odblokowanie wysyła jedno zapytanie o stan slotu (dotąd jedno na kartę).
-- Sonda bez odpowiedzi serwera (brak sieci) nadal liczy się jako „nie nowe urządzenie” do końca karty, jak dotąd.
+- Dopóki pytanie czeka na odpowiedź albo sonda nie dostała rozstrzygnięcia, każde odblokowanie i przeładowanie wysyła jedno zapytanie o stan slotu (dotąd jedno na kartę).
+- Po sondzie bez rozstrzygnięcia (np. brak sieci przy logowaniu) pytanie wraca przy następnym odblokowaniu albo przeładowaniu, a nie zaraz po powrocie sieci. Ponawianie z paskiem postępu to etap 2.
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages) i makieta etapu 2.
 

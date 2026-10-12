@@ -972,12 +972,12 @@
   "sha256": "adf5fb6e5178b71898936d78550d361a3bc09f5125b809fc9e45802763af74b0"
  },
  "vilda_sync.js": {
-  "v": 37,
-  "sha256": "0b257fca76a1034cd856fd3327dd841205f8ecfa76552581221d20640dda54c0"
+  "v": 38,
+  "sha256": "fc328c3e3ab1fca0ba8d23c3e75ca2f93a207fb4c1f7a7fda07733010a8e7736"
  },
  "vilda_sync_integration.js": {
   "v": 48,
-  "sha256": "d97f930a58efe5e7da8d83a498b1e62d35c0784ef771b3b389683c7cc7ac8885"
+  "sha256": "2abc231ea38086d6aed95500a39e0b60a189796fe6d2b2a7a4ae37b677389b5b"
  },
  "vilda_tab_guard.js": {
   "v": 5,

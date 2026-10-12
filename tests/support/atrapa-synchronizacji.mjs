@@ -9,7 +9,7 @@ export const DATA_W_CHMURZE = '2026-10-11T08:00:00.000Z';
 
 /**
  * @param {import('@playwright/test').BrowserContext} context
- * @param {{ slotNaSerwerze?: boolean, wstrzymajBlob?: () => Promise<void> }} [opcje]
+ * @param {{ slotNaSerwerze?: boolean, wstrzymajBlob?: () => Promise<void>, wstrzymajStatus?: () => Promise<void> }} [opcje]
  * @returns {Promise<string[]>} lista obsłużonych żądań „METODA /ścieżka” (slot zastąpiony <slot>)
  */
 export async function atrapaSynchronizacji(context, opcje = {}) {
@@ -22,6 +22,7 @@ export async function atrapaSynchronizacji(context, opcje = {}) {
     zadania.push(`${metoda} ${sciezka}`);
     const json = (status, cialo) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(cialo) }).catch(() => {});
     if (sciezka.endsWith('/status')) {
+      if (typeof opcje.wstrzymajStatus === 'function') await opcje.wstrzymajStatus();
       return slotNaSerwerze ? json(200, { etag: 'E1', size: 2048, lastModified: DATA_W_CHMURZE }) : json(404, {});
     }
     if (sciezka.endsWith('/entitlement')) return json(200, { plan: 'free' });
@@ -54,14 +55,19 @@ export async function zaakceptujRegulamin(context) {
  * Wzór: blokada-usuwania.spec.mjs (createUser odblokowuje sejf; przeładowanie odtwarza sesję).
  */
 export async function zalozKontoIZaloguj(page) {
-  await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaSyncIntegration && window.VildaNoweUrzadzenie));
-  const userId = await page.evaluate(async () => {
-    const konto = await window.VildaVault.createUser('Haslo-Testowe-123', { iterations: 1, label: 'Fikcyjna Lekarka' });
-    return konto.userId;
-  });
+  const userId = await zalozKonto(page);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await czekajNaOdtworzenieSesji(page);
   return userId;
+}
+
+/** Samo założenie fikcyjnego konta: createUser odblokowuje sejf w bieżącym dokumencie (start synchronizacji rusza). */
+export async function zalozKonto(page) {
+  await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaSyncIntegration && window.VildaNoweUrzadzenie));
+  return page.evaluate(async () => {
+    const konto = await window.VildaVault.createUser('Haslo-Testowe-123', { iterations: 1, label: 'Fikcyjna Lekarka' });
+    return konto.userId;
+  });
 }
 
 /** Po przeładowaniu: sesja sejfu wraca sama — czekamy na odblokowanie i zdjęcie ekranu logowania. */

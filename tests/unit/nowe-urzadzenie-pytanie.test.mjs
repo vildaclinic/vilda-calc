@@ -176,6 +176,37 @@ describe('Pytanie „Pobierz dane z serwera” przeżywa przeładowanie karty', 
     expect(po.sync.syncFull).toHaveBeenCalledTimes(1);
   });
 
+  it('sonda bez rozstrzygnięcia (przerwana przeładowaniem, błąd sieci) nie jest odhaczana: po przeładowaniu sonduje i pyta', async () => {
+    // Znalezione w CI (2026-10-12): przeładowanie w trakcie sondy przerywało zapytanie o stan slotu, sonda oddawała
+    // „nie nowe”, a integracja odhaczała sondę do końca karty — pytanie znikało jak w zgłoszeniu. Teraz sonda oznacza
+    // taki wynik (inconclusive), a znacznik powstaje tylko po pewnym „nie”.
+    const magazyny = { localStorage: magazyn(), sessionStorage: magazyn() };
+    const sonda = vi.fn()
+      .mockResolvedValueOnce({ isNewDevice: false, lastModified: null, inconclusive: true })
+      .mockResolvedValue({ isNewDevice: true, lastModified: '2026-10-11T08:00:00.000Z' });
+    const przed = zaladujStrone({ ...magazyny, sonda });
+    przed.odblokuj();
+    await vi.advanceTimersByTimeAsync(700);
+    expect(przed.pytania()).toHaveLength(0);
+    expect(magazyny.sessionStorage.getItem(SONDA), 'wynik niepewny nie odhacza sondy').toBeNull();
+
+    const po = zaladujStrone({ ...magazyny, sonda });
+    po.odblokuj();
+    await vi.advanceTimersByTimeAsync(700);
+    expect(sonda, 'po przeładowaniu sonda idzie ponownie').toHaveBeenCalledTimes(2);
+    expect(po.pytania(), 'pytanie się pokazuje').toHaveLength(1);
+  });
+
+  it('wynik niepewny przy włączonej synchronizacji: pobranie startu jak dotąd, ale bez znacznika sondy', async () => {
+    const magazyny = { localStorage: magazyn({ 'vilda-sync-enabled-v1': 'true' }), sessionStorage: magazyn() };
+    const sonda = vi.fn(() => Promise.resolve({ isNewDevice: false, lastModified: null, inconclusive: true }));
+    const s = zaladujStrone({ ...magazyny, sonda });
+    s.odblokuj();
+    await vi.advanceTimersByTimeAsync(700);
+    expect(s.sync.syncFull).toHaveBeenCalledTimes(1);
+    expect(magazyny.sessionStorage.getItem(SONDA)).toBeNull();
+  });
+
   it('kontrola: ramka panelu powłoki (?embedded=1) nie sonduje — robi to dokument najwyższego poziomu', async () => {
     const magazyny = { localStorage: magazyn(), sessionStorage: magazyn() };
     const sonda = vi.fn(() => Promise.resolve({ isNewDevice: true, lastModified: null }));
@@ -244,5 +275,73 @@ describe('isStartupSyncInProgress: start synchronizacji po odblokowaniu (bramka 
     expect(s.start()).toBe(true);
     await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
     expect(s.start()).toBe(false);
+  });
+});
+
+/* Prawdziwe vilda_sync.js: wynik sondy nowego urządzenia. Integracja odhacza sondę w karcie tylko po pewnym „nie”,
+   więc sonda musi odróżniać brak danych w chmurze od braku odpowiedzi. Sejf i serwer to atrapy (fetch podmieniony
+   globalnie, jak w sync-rotacja-kart.test.mjs); slot i token fikcyjne. */
+const SLOT = 'a'.repeat(64);
+const odpowiedzSerwera = (status, cialo = {}) => () => Promise.resolve({
+  status,
+  ok: status >= 200 && status < 300,
+  json: async () => cialo,
+  headers: { get: () => null },
+});
+
+function sondaVildaSync({ odpowiedz, odblokowany = true, zarejestrowany = false }) {
+  const zapytania = [];
+  vi.stubGlobal('fetch', (url, init = {}) => {
+    zapytania.push(`${init.method || 'GET'} ${new URL(url).pathname.replace(SLOT, '<slot>')}`);
+    return odpowiedz();
+  });
+  const stan = zarejestrowany
+    ? { [`vilda-sync-state-v1:${SLOT}`]: JSON.stringify({ registered: true, localEtag: 'E1', lastSyncAt: null }) }
+    : {};
+  const win = {
+    localStorage: magazyn(stan),
+    sessionStorage: magazyn(),
+    document: { dispatchEvent() { return true; } },
+    VildaVault: {
+      isUnlocked: () => odblokowany,
+      isCloudOnlyMode: () => false,
+      getSyncMaterial: async () => ({ slotId: SLOT, authToken: 'FIKCYJNY-TOKEN' }),
+    },
+  };
+  win.window = win; win.self = win; win.top = win;
+  loadBrowserScript('vilda_sync.js', win);
+  return { sonda: () => win.VildaSync.probeNewDevice(), zapytania };
+}
+
+describe('Sonda nowego urządzenia (prawdziwe vilda_sync.js): pewne „nie” bez inconclusive, brak rozstrzygnięcia z inconclusive', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('slot w chmurze (200): nowe urządzenie z datą ostatniej synchronizacji', async () => {
+    const s = sondaVildaSync({ odpowiedz: odpowiedzSerwera(200, { etag: 'E1', lastModified: '2026-10-11T08:00:00.000Z' }) });
+    expect(await s.sonda()).toEqual({ isNewDevice: true, lastModified: '2026-10-11T08:00:00.000Z' });
+    expect(s.zapytania).toEqual(['GET /v1/slots/<slot>/status']);
+  });
+
+  it('pewne „nie”: serwer nie ma slotu (404) albo urządzenie zna slot (bez zapytania)', async () => {
+    expect(await sondaVildaSync({ odpowiedz: odpowiedzSerwera(404) }).sonda()).toEqual({ isNewDevice: false, lastModified: null });
+    const znany = sondaVildaSync({ odpowiedz: odpowiedzSerwera(200), zarejestrowany: true });
+    expect(await znany.sonda()).toEqual({ isNewDevice: false, lastModified: null });
+    expect(znany.zapytania).toEqual([]);
+  });
+
+  it.each([
+    ['błąd sieci', () => Promise.reject(new TypeError('Failed to fetch'))],
+    ['żądanie przerwane (przeładowanie karty w trakcie sondy)', () => Promise.reject(new DOMException('The operation was aborted.', 'AbortError'))],
+    ['serwer 503', odpowiedzSerwera(503)],
+    ['limit zapytań 429', odpowiedzSerwera(429)],
+    ['uwierzytelnienie 401', odpowiedzSerwera(401)],
+  ])('brak rozstrzygnięcia — %s: inconclusive', async (_, odpowiedz) => {
+    expect(await sondaVildaSync({ odpowiedz }).sonda()).toEqual({ isNewDevice: false, lastModified: null, inconclusive: true });
+  });
+
+  it('sejf zablokowany: inconclusive, bez zapytania', async () => {
+    const s = sondaVildaSync({ odpowiedz: odpowiedzSerwera(200), odblokowany: false });
+    expect(await s.sonda()).toEqual({ isNewDevice: false, lastModified: null, inconclusive: true });
+    expect(s.zapytania).toEqual([]);
   });
 });

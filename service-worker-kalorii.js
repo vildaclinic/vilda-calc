@@ -3038,6 +3038,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sync.js?v=35',
   '/vilda_sync.js?v=36',
   '/vilda_sync.js?v=37',
+  '/vilda_sync.js?v=38',
   '/vilda_sync_integration.js?v=45',
   '/vilda_sync_integration.js?v=46',
   '/vilda_sync_integration.js?v=47',

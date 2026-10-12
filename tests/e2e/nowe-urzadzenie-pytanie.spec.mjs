@@ -3,6 +3,7 @@ import {
   atrapaSynchronizacji,
   czekajNaOdtworzenieSesji,
   zaakceptujRegulamin,
+  zalozKonto,
   zalozKontoIZaloguj,
 } from '../support/atrapa-synchronizacji.mjs';
 
@@ -95,6 +96,37 @@ test('przeładowanie w trakcie pobierania wznawia pobieranie, bez ponownego pyta
     timeout: 15_000,
   }).toBeGreaterThanOrEqual(2);
   await expect(okno(page), 'bez ponownego pytania').toBeHidden();
+});
+
+test('przeładowanie, gdy sonda czeka na serwer: po przeładowaniu pytanie się pokazuje', async ({ page, context }) => {
+  // Znalezione w CI (2026-10-12): karta przeładowała się, zanim serwer odpowiedział na pytanie o stan slotu. Przerwane
+  // żądanie sonda oddawała jako „to nie jest nowe urządzenie”, integracja odhaczała sondę w sessionStorage, a nowy
+  // dokument już nie sondował — pytanie znikało tak samo jak w zgłoszeniu. Zmierzone na kodzie sprzed poprawki:
+  // po przeładowaniu vilda-probe-done-v1 = „1”, jedno zapytanie o stan slotu, okna brak.
+  await zaakceptujRegulamin(context);
+  let zwolnij;
+  const odpowiedzSerwera = new Promise((r) => { zwolnij = r; });
+  let sondaRuszyla;
+  const sondaWToku = new Promise((r) => { sondaRuszyla = r; });
+  let pierwsza = true;
+  const zadania = await atrapaSynchronizacji(context, {
+    wstrzymajStatus: async () => {
+      if (!pierwsza) return;
+      pierwsza = false;
+      sondaRuszyla();
+      await odpowiedzSerwera;
+    },
+  });
+  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+  await zalozKonto(page);
+  await sondaWToku;
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  zwolnij();
+  await czekajNaOdtworzenieSesji(page);
+  await expect(okno(page), 'pytanie po przeładowaniu').toBeVisible({ timeout: 15_000 });
+  expect(await page.evaluate(() => sessionStorage.getItem('vilda-probe-done-v1')), 'przerwana sonda nie jest odhaczana').toBeNull();
+  expect(statusy(zadania), 'nowy dokument sonduje ponownie').toBeGreaterThanOrEqual(2);
 });
 
 test('bramka banera aktualizacji widzi ekran logowania, okno pytania i start synchronizacji', async ({ page, context }) => {
