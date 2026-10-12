@@ -405,8 +405,12 @@
     if (!id) return;
     if (id === ID.plec) {
       if (e.type !== 'change') return;
+      /* Zaufana zmiana = wybór lekarza. Programowa (odtworzenie, lustro, import, inne moduły):
+         płeć przyszła z zewnątrz, gdy idzie razem z tożsamością albo gdy nie jest domyślnym „M”
+         (formularz bez nazwiska z „Kobietą” po F5). Samo „M” przy pustej tożsamości to stan
+         wyjściowy — tak kończy się „Wyczyść”. */
       if (e.isTrusted) stan = STAN.LEKARZ;
-      else if (!tozsamoscPusta()) stan = STAN.ZEWNETRZNA;
+      else if (!tozsamoscPusta() || (t.value && t.value !== 'M')) stan = STAN.ZEWNETRZNA;
       else stan = STAN.DOMYSLNA;
       zaplanujNotke();
       return;

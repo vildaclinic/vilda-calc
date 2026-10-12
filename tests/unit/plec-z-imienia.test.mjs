@@ -392,6 +392,25 @@ describe('formularz — czego automat nie rusza', () => {
     expect(f.pola.sex.value, 'zdarzenie programowe nie uruchamia automatu').toBe('M');
   });
 
+  it('płeć inna niż domyślne M wpisana programowo przy pustej tożsamości (np. F5 formularza bez nazwiska) jest nietykalna', () => {
+    const f = formularz();
+    f.pola.sex.value = 'F';
+    f.pola.sex.dispatchEvent({ type: 'change', isTrusted: false });
+    f.tick();
+    expect(f.M.stan()).toBe('zewnetrzna');
+    f.wpisz('firstName', 'Jan');
+    expect(f.pola.sex.value, 'automat nie przestawia płci z zewnątrz').toBe('F');
+    expect(f.notka().tekst).toBe('Sprawdź płeć: imię „Jan” jest zwykle męskie.');
+    // KONTROLA: domyślne „M” przy pustej tożsamości (tak kończy się „Wyczyść”) to stan wyjściowy.
+    const g = formularz();
+    g.pola.sex.value = 'M';
+    g.pola.sex.dispatchEvent({ type: 'change', isTrusted: false });
+    g.tick();
+    expect(g.M.stan()).toBe('domyslna');
+    g.wpisz('firstName', 'Anna');
+    expect(g.pola.sex.value).toBe('F');
+  });
+
   it('„Wyczyść” (vilda:user-state-cleared) zaczyna od nowa: stan domyślny, notka schowana', () => {
     const f = formularz();
     f.wpisz('firstName', 'Anna');

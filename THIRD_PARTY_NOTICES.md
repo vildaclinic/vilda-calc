@@ -135,3 +135,14 @@ sources are not original work of Vilda Clinic sp. z o.o. The Apache-2.0 grant
 covers this project's source code; it does not grant rights in third-party
 reference data. The provenance of each algorithm and data set is documented in
 [`docs/clinical/ALGORITHMS.md`](docs/clinical/ALGORITHMS.md).
+
+## Public sector data — first names from the PESEL registry (CC0 1.0)
+
+`vilda_imiona_plec_dane.js` is generated from, and `docs/clinical/imiona-pesel/*.csv` are
+unmodified copies of, the dataset *Lista imion występujących w rejestrze PESEL* (first names in
+the PESEL registry, living persons) published by the Polish Ministry of Digital Affairs
+(Ministerstwo Cyfryzacji) on [dane.gov.pl](https://dane.gov.pl/pl/dataset/1667,lista-imion-wystepujacych-w-rejestrze-pesel-osoby-zyjace)
+(resources 1159670 and 1159669, state as of 2026-01-20), made available under
+[CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/legalcode).
+Provenance, checksums and processing: [`docs/clinical/imiona-pesel/README.md`](docs/clinical/imiona-pesel/README.md)
+and the P-PLEC-IMIE entry in [`docs/clinical/ALGORITHMS.md`](docs/clinical/ALGORITHMS.md).
