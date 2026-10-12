@@ -79,11 +79,12 @@ Dwa wątki biorą ten sam „następny numer”. Po scaleniu pierwszego PR drugi
 
 Wątek, który obserwuje swój PR, dostaje powiadomienie o konflikcie i aktualizuje się sam. W pozostałych przypadkach wklej mu:
 
-> `audyt` się zmienił. Scal `origin/audyt` do swojej gałęzi (`git merge`, bez rebase), rozwiąż konflikty według `docs/GITHUB_WORKFLOW.md` → „Kilka wątków naraz”, uruchom `npm run podbij-wersje` i `npm test`, zatwierdź (commit) i wypchnij.
+> `audyt` się zmienił. Pobierz swoją gałąź z GitHuba (`git pull --no-rebase` — mogła dostać „Update branch”), scal `origin/audyt` do swojej gałęzi (`git merge`, bez rebase), rozwiąż konflikty według `docs/GITHUB_WORKFLOW.md` → „Kilka wątków naraz”, uruchom `npm run podbij-wersje` i `npm test`, zatwierdź (commit) i wypchnij.
 
 ### Procedura wątku po zmianie `audyt`
 
 ```bash
+git pull --no-rebase            # gałąź PR-a mogła dostać na GitHubie „Update branch”
 git fetch origin audyt
 git merge origin/audyt          # na cudzej gałęzi: bez rebase i force-push
 # konflikty — tabela niżej; rozwiązane pliki: git add
@@ -117,26 +118,34 @@ Symulacja na kodzie z 2026-09-30 (`audyt` `567597c`, otwarte #503 i #504):
 - **#503 i #504 scalają się bez żadnego konfliktu**, a mimo to wynik jest zły. #504 podbija SW do 1.1.130, a #503 zmienia cztery pliki, ale SW nie podbija. Po obu scaleniach zmiany #503 wyszłyby pod wersją 1.1.130 z #504. `npm run podbij-wersje` na stanie po scaleniu daje 1.1.131.
 - **Dwa wątki zmieniają ten sam plik** (`vilda_diet_recommendations.js`, oba podbijają do `?v=67`). Strony, precache i `SW_VERSION` scalają się bez konfliktu, bo obie strony wpisały to samo. Konflikt jest tylko w `wersje-zasobow.json`. Połączona treść obu zmian zostałaby pod `?v=67`, który klient z zainstalowaną aplikacją ma już w pamięci z treścią pierwszego wątku. Service worker nie odświeża wpisów z `?v=` (P-SW rata 1), więc druga zmiana nigdy by do niego nie dotarła. Skrypt nadaje `?v=68` i SW 1.1.132, a strażnicy wersji przechodzą.
 
-2026-10-08 zdarzyło się to trzy razy jednego dnia. #591 wyszedł pod `SW_VERSION` 1.1.200 z #590. #594 i #595 wyszły pod 1.1.201 z #592. #594 dostał `audyt` przyciskiem „Update branch” i został scalony bez ponownego uruchomienia skryptu. Od 2026-09-28 takich scaleń było siedem: #446, #470, #503, #560, #591, #594 i #595. Treść pod tym samym `?v=` nie rozjechała się w żadnym z nich (pilnuje tego `wersje-zasobow.json`). Zderzało się tylko `SW_VERSION`, czyli nazwa pamięci powłoki. Nowa wersja instalowała się wtedy w pamięć, z której korzystał działający SW, aż do następnego podbicia SW.
+2026-10-08 zdarzyło się to trzy razy jednego dnia. #591 wyszedł pod `SW_VERSION` 1.1.200 z #590. #594 i #595 wyszły pod 1.1.201 z #592. Od 2026-09-28 takich scaleń było siedem: #446, #470, #503, #560, #591, #594 i #595. W każdym ostatnim commitem PR-a było „Merge branch 'audyt'” z przycisku „Update branch”, a skrypt nie został po nim uruchomiony ponownie. Treść pod tym samym `?v=` nie rozjechała się w żadnym z nich (pilnuje tego `wersje-zasobow.json`). Zderzało się tylko `SW_VERSION`, czyli nazwa pamięci powłoki. Nowa wersja instalowała się wtedy w pamięć, z której korzystał działający SW, aż do następnego podbicia SW.
 
 ### Strażnik w CI
 
-Wymagany job „Lint, składnia i testy jednostkowe” ma na pull requeście krok **„Sprawdź wersje względem audyt”**:
+Wymagany job „Lint, składnia i testy jednostkowe” ma krok **„Sprawdź wersje względem audyt”**:
 
 ```bash
-node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza=HEAD^1
+node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza="$BAZA"
 ```
 
-Na PR-ze `actions/checkout` pobiera commit scalenia PR-a z `audyt` z rodzicami (`fetch-depth: 2`), więc `HEAD^1` jest dokładnie tym `audyt`, do którego PR wejdzie. Zestaw reguł wymaga aktualnej gałęzi przed scaleniem („Require branches to be up to date”, `strict_required_status_checks_policy`). Krok liczy więc względem najnowszego `audyt`, także po „Update branch”.
+Krok działa w dwóch sytuacjach:
 
-- Kod 1 oznacza, że wersje trzeba przeliczyć. Raport kroku mówi, co skrypt by zmienił, np. `SW_VERSION: 1.1.201 → 1.1.202`. Naprawa: procedura wyżej (scal `audyt`, `npm run podbij-wersje`, `npm test`, commit, push).
-- Kod 2 oznacza, że skrypt nie policzył wersji, np. bez rodzica commita scalenia. Wtedy krok też jest czerwony, a nie po cichu zielony.
-- Pozycje „Do decyzji” nie zmieniają wyniku kroku.
-- Na push do `audyt` krok jest pomijany.
+- **Pull request.** `BAZA=HEAD^1`. `actions/checkout` pobiera commit scalenia PR-a z `audyt` z rodzicami (`fetch-depth: 2`), więc `HEAD^1` jest dokładnie tym `audyt`, do którego PR wejdzie. Zestaw reguł wymaga aktualnej gałęzi przed scaleniem („Require branches to be up to date”, `strict_required_status_checks_policy`). Krok liczy więc względem najnowszego `audyt`, także po „Update branch”.
+- **`workflow_dispatch` na gałęzi innej niż `audyt`.** `BAZA=origin/audyt`, checkout z pełną historią (`fetch-depth: 0`). Tak „Wygląd” uruchamia CI dla commita bota z odświeżonymi wzorcami. Commit z `GITHUB_TOKEN` nie wywołuje zdarzenia `pull_request`, a status z tego przebiegu też liczy się jako wymagany. Gałąź musi zawierać najnowszy `audyt`, inaczej krok jest czerwony („gałąź nie zawiera origin/audyt”).
+
+Na push do `audyt` krok jest pomijany.
+
+Wynik kroku:
+
+- **Kod 1:** wersje trzeba przeliczyć albo raport ma linię „BŁĄD:”.
+  - Raport mówi, co skrypt by zmienił, np. `SW_VERSION: 1.1.201 → 1.1.202`. Naprawa: procedura wyżej (scal `audyt`, `npm run podbij-wersje`, `npm test`, `git add -A`, commit, push).
+  - Każda linia „BŁĄD:” (np. usunięty historyczny wpis precache, append-only) ma osobną adnotację „Błąd wersji do ręcznej poprawki”. Skrypt bez jej poprawienia nic nie zapisze.
+- **Kod 2:** skrypt nie policzył wersji, np. bez rodzica commita scalenia. Wtedy krok też jest czerwony, a nie po cichu zielony.
+- **Pozycje „Do decyzji”** nie zmieniają wyniku kroku. Każda (poza listą pinów w testach) ma adnotację-ostrzeżenie „Wersje — do decyzji” w podsumowaniu PR-a, np. zmieniona treść pliku z nieliczbowym `?v=`, którą SW zostawiłby klientom w starej postaci.
 
 Szkic PR-a, który zmienia zasoby, ma ten krok czerwony, dopóki wątek nie uruchomi skryptu. Zasada „wersje na końcu” zostaje, bo drugie uruchomienie skryptu po scaleniu `audyt` i tak liczy wszystko od nowa.
 
-Odtworzenie na historii `audyt`: każdy z 121 commitów od wprowadzenia skryptu (#506) do `7a338be`, z jego własną wersją skryptu, z bazą = poprzedni commit `audyt`. Krok byłby czerwony dokładnie przy pięciu zderzeniach z tego okresu (#503, #560, #591, #594 i #595), a pozostałe 116 commitów przeszłoby bez fałszywego alarmu. Test: `tests/unit/podbij-wersje.test.mjs`, „P-WERSJE-CI”. Wycina polecenie kroku z `ci.yml` i uruchamia je w płytkim klonie commita scalenia.
+Odtworzenie na historii `audyt`: każdy z 121 commitów od wprowadzenia skryptu (#506) do `7a338be`, z jego własną wersją skryptu, z bazą = poprzedni commit `audyt`. Krok byłby czerwony dokładnie przy pięciu zderzeniach z tego okresu (#503, #560, #591, #594 i #595), a pozostałe 116 commitów przeszłoby bez fałszywego alarmu. Test: `tests/unit/podbij-wersje.test.mjs`, „P-WERSJE-CI”. Wycina polecenia kroku z joba `unit` w `ci.yml` i uruchamia je tak jak runner: w płytkim klonie commita scalenia (PR) albo w pełnym klonie gałęzi z `origin/audyt` (dispatch). Pilnuje też, by krok i checkout nie dostały kluczy, które wyłączyłyby kontrolę po cichu (`continue-on-error`, `if:` joba, `ref:`, `shell:`).
 
 ### Co robi `npm run podbij-wersje`
 
@@ -163,9 +172,10 @@ Opcje: `-- --sprawdz` (tylko raport; kod 1, gdy coś trzeba zmienić, jest błą
 
 ### Otwarte decyzje właściciela
 
-- **`npm run podbij-wersje -- --sprawdz` w CI.** Wykryłby cichą kolizję na etapie PR, zanim zmiana trafi na `audyt`. Wymaga checkoutu z historią `audyt` (dziś CI pobiera jedną rewizję) i dopisania kontroli do wymaganych statusów.
 - **SW podbijany przy wydaniu, a nie w każdym PR.** Usunąłby ostatnią linię wspólną dla wszystkich PR-ów. Dziś jednak każdy commit na `audyt` może trafić na GitHub Pages, więc to zmiana modelu wdrożenia.
-- **Merge queue na GitHubie.** Sama nie rozwiązuje konfliktów w tych samych liniach — PR z konfliktem wypada z kolejki. Dopiero razem z kontrolą w CI dawałaby automatyczne „po kolei”.
+- **Merge queue na GitHubie.** Sama nie rozwiązuje konfliktów w tych samych liniach — PR z konfliktem wypada z kolejki. Razem z krokiem „Sprawdź wersje względem audyt” dawałaby automatyczne „po kolei”. Wymaga wtedy wyzwalacza `merge_group` w `ci.yml` i rozszerzenia warunku kroku.
+
+Kontrola `npm run podbij-wersje -- --sprawdz` w CI, wcześniej na tej liście, działa od #626 (wyżej, „Strażnik w CI”).
 
 ## Dependabot
 
