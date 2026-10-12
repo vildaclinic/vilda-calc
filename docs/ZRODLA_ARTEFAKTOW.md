@@ -16,6 +16,7 @@ Stan na 2026-09-29 (`audyt` `d79d9d8`). Ustalenia z przeglądu pełnej historii 
 | `621c4cd5` (2026-06-02) – `265e9812` (2026-07-24) | zminifikowany, wgrywany z lokalnego źródła (7 wersji, 52 → 67 kB) |
 | `4e3ed7e9` (2026-09-17, #344 P-DYMKI) | zmiana wprost w artefakcie: publikacja `--vilda-dol-wolny` |
 | `f632fe0` (2026-09-29, #476 P-SW-PIERWSZA-WIZYTA) | zmiana wprost w artefakcie: bez przeładowania przy pierwszym przejęciu strony przez SW |
+| 2026-10-12, P-AKTUALIZACJA-BRAMKA | zmiana wprost w artefakcie: bramka banera aktualizacji (łatka niżej, „Łatka P-AKTUALIZACJA-BRAMKA”) |
 
 Poniżej obie zmiany w czytelnej postaci, jako łatki względem ostatniej czytelnej wersji (`git show e5106bbf:ios26-ui.js`). Nałożone razem dają poprawny składniowo JS (`patch -p1` bez konfliktów, `node --check`).
 
@@ -454,6 +455,138 @@ try {
     if (Array.isArray(zModulu)) sesja.ghTherapyPoints = zModulu;   // także []
   }
 } catch (e) { logBledu('vilda_data_import_export:saveMainSessionNow:gh-module', e); }
+```
+
+## Łatka P-NOWE-URZADZENIE (`vilda_sync_integration.js` 47 → 48, 2026-10-12)
+
+Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. Dotyczy słuchacza odblokowania w `bindVault` (w artefakcie `G()` → wewnętrzne `r()`), pobrania w trybie chmurowym (`J()`) i eksportu `VildaSyncIntegration`. Nazwy z artefaktu: `n` — okno, `e` — `VildaSync`, `c` — wstrzymanie po błędzie uwierzytelnienia, `q` — klucz `vilda-new-device-restore-shown-v1`, `f()` — synchronizacja włączona, `lt` — 600 ms. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE.
+
+```js
+// P-NOWE-URZADZENIE: licznik kroków startu synchronizacji (bramka banera aktualizacji czyta isStartupSyncInProgress)
+let krokiStartu = 0, ostatniKrok = 0;
+function startKrok() { krokiStartu++; ostatniKrok = Date.now(); }
+function koniecKroku() { if (krokiStartu > 0) krokiStartu--; }
+function trzymajDo(obietnica) {                 // w artefakcie Qn3
+  startKrok();
+  return Promise.resolve(obietnica).then((v) => { koniecKroku(); return v; }, (e) => { koniecKroku(); throw e; });
+}
+function isStartupSyncInProgress() {            // w artefakcie Qn4; sufit 5 min od ostatniego kroku
+  return krokiStartu > 0 && Date.now() - ostatniKrok < 300000;
+}
+
+// w słuchaczu odblokowania (tryb lokalny, dokument najwyższego poziomu):
+if (!isEmbeddedShellFrame()) {                  // w artefakcie T()
+  startKrok();
+  setTimeout(() => {
+    try {
+      if (authFailed) return;                   // c
+      /* … odstęp po 429 bez zmian … */
+      if (session.getItem(KLUCZ_ODPOWIEDZI)) { if (syncEnabled()) trzymajDo(sync.syncFull()).catch(() => {}); return; }
+      if (session.getItem('vilda-probe-done-v1') || typeof sync.probeNewDevice !== 'function') {
+        if (syncEnabled()) trzymajDo(sync.syncFull()).catch(() => {});
+        return;
+      }
+      // DAWNIEJ: session.setItem('vilda-probe-done-v1', '1') tutaj, przed sondą
+      trzymajDo(sync.probeNewDevice().then((wynik) => {
+        if (authFailed) return;
+        if (wynik && wynik.isNewDevice) {
+          // DAWNIEJ: session.setItem(KLUCZ_ODPOWIEDZI, '1') tutaj — teraz stawia go okno po odpowiedzi
+          document.dispatchEvent(new CustomEvent('vilda:new-device-restore-available', { detail: { lastModified: wynik.lastModified || null } }));
+        } else {
+          // tylko pewne „nie” odhacza sondę; wynik z inconclusive (błąd sieci, przerwane żądanie) — nie
+          if (!(wynik && wynik.inconclusive)) session.setItem('vilda-probe-done-v1', '1');
+          if (syncEnabled() && !authFailed) trzymajDo(sync.syncFull()).catch(() => {});
+        }
+      })).catch(() => { if (syncEnabled() && !authFailed) trzymajDo(sync.syncFull()).catch(() => {}); });
+    } finally { koniecKroku(); }
+  }, 600);
+}
+
+// tryb chmurowy (J): startKrok() na wejściu; pobranie (forcePullForCloudOnly) owinięte w trzymajDo;
+// odstęp po 429 trzyma krok do ponownego wejścia; łańcuch canWarmStartCloudOnly kończy się .then(koniecKroku, koniecKroku).
+
+// eksport: VildaSyncIntegration.isStartupSyncInProgress = isStartupSyncInProgress
+```
+
+## Łatka P-NOWE-URZADZENIE w sondzie (`vilda_sync.js` 37 → 38, 2026-10-12)
+
+Zmiana wprost w artefakcie, tylko w `probeNewDevice` (w artefakcie `Xt`). Pewne „nie” zostaje bez zmian; wynik bez rozstrzygnięcia dostaje pole `inconclusive: true`, żeby integracja nie odhaczała sondy (`vilda-probe-done-v1`) po błędzie. Nazwy z artefaktu: `I()` — odblokowany sejf (rzuca `VAULT_LOCKED`), `m(slot)` — stan slotu w magazynie, `Brv_jest` — znacznik slotu obróconego w innej karcie, `f` — `fetch` z limitem czasu, `j()` — adres workera. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE.
+
+```js
+async function probeNewDevice() {
+  const niepewny = { isNewDevice: false, lastModified: null, inconclusive: true };   // w artefakcie Pn0
+  let vault, material;
+  try { vault = requireUnlockedVault(); } catch { return niepewny; }                // DAWNIEJ: pewne „nie”
+  try { material = await vault.getSyncMaterial(); } catch { return niepewny; }     // DAWNIEJ: pewne „nie”
+  const slot = material.slotId;
+  if (loadSyncState(slot).registered || isRevokedSlot(slot)) return { isNewDevice: false, lastModified: null };
+  try {
+    const odp = await fetchWithTimeout(`${workerUrl()}/v1/slots/${slot}/status`, { method: 'GET', headers: { Authorization: `Bearer ${material.authToken}` } });
+    if (odp.status === 404) return { isNewDevice: false, lastModified: null };     // serwer nie ma slotu — pewne „nie”
+    if (!odp.ok) return niepewny;                                                   // DAWNIEJ: każde !ok = pewne „nie”
+    const st = await odp.json();
+    return { isNewDevice: true, lastModified: st.lastModified || st.updatedAt || null };
+  } catch { return niepewny; }   // sieć, timeout, żądanie przerwane (przeładowanie karty) — DAWNIEJ: pewne „nie”
+}
+```
+
+## Łatka P-AKTUALIZACJA-BRAMKA (`ios26-ui.js` 44 → 45, 2026-10-12)
+
+Zmiana wprost w artefakcie. W funkcji, która pokazuje baner czekającego SW (w artefakcie `Mt(registration, worker, reason)`), wywołanie banera (`zn(...)`) idzie przez bramkę; reszta bez zmian. Nazwy z artefaktu: `D()` — stan `window.__vildaServiceWorkerClientLifecycle`, `zn` — budowa banera, `At` — `SKIP_WAITING`. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE.
+
+```js
+// P-AKTUALIZACJA-BRAMKA
+const LIMIT = 600000, SPOKOJ = 1500, TAKT = 1000;
+let pokaz = null, pokazany = false, wymuszony = false, wolneOd = 0, zamknieteOd = 0, zegar = 0;
+
+function widoczny(el) { try { return !!el && getComputedStyle(el).display !== 'none'; } catch { return false; } }
+function powodyWstrzymania() {
+  const p = [];
+  const html = document.documentElement;
+  if (html.classList.contains('vilda-auth-locked') || widoczny(document.querySelector('.vilda-auth-root'))) p.push('logowanie');
+  else for (const ramka of Array.from(window.frames)) {          // ramki powłoki (same-origin)
+    try { if (ramka.document.body.classList.contains('vilda-auth-embedded-open')) { p.push('logowanie'); break; } } catch {}
+  }
+  if (window.VildaSyncIntegration?.isStartupSyncInProgress?.()) p.push('start-synchronizacji');
+  if (window.VildaNoweUrzadzenie?.czyAktywne?.()) p.push('nowe-urzadzenie');
+  if (widoczny(document.getElementById('vildaCloudOnlyLoading'))) p.push('tryb-chmurowy');
+  return p;
+}
+function stop() { clearInterval(zegar); zegar = 0; pokaz = null; pokazany = false; wymuszony = false; wolneOd = 0; zamknieteOd = 0; }
+function krok() {
+  const stan = getSWClientLifecycleState(), teraz = Date.now(), p = powodyWstrzymania();
+  const baner = document.getElementById('sw-update-banner');
+  stan.updateBannerDeferReasons = p.slice();
+  if (p.length) { wolneOd = 0; zamknieteOd ||= teraz; } else { zamknieteOd = 0; wymuszony = false; wolneOd ||= teraz; }
+  if (pokazany) {
+    if (!baner || stan.updateBannerPendingReload) return stop();        // „Później” albo „Aktualizuj”
+    if (p.length && !wymuszony) {                                        // proces ruszył — schowaj, wróci po nim
+      baner.remove(); stan.updateBannerActive = false;
+      stan.updateBannerDeferredHideCount = (stan.updateBannerDeferredHideCount || 0) + 1; pokazany = false;
+    }
+    return;
+  }
+  if (!pokaz) return stop();
+  if (p.length) {
+    if (teraz - zamknieteOd < LIMIT) return;
+    wymuszony = true; stan.updateBannerDeferLimitCount = (stan.updateBannerDeferLimitCount || 0) + 1;
+  } else if (teraz - wolneOd < SPOKOJ) return;
+  try { pokaz(); } catch (e) { stan.lastError = e?.message || String(e); }
+  pokazany = !!document.getElementById('sw-update-banner');
+  if (!pokazany) stop();
+}
+function zglosBaner(fn) {                                                // w artefakcie Bab_zglos
+  const stan = getSWClientLifecycleState();
+  pokaz = fn; stan.updateBannerGateRequestCount = (stan.updateBannerGateRequestCount || 0) + 1;
+  if (powodyWstrzymania().length) stan.updateBannerDeferredCount = (stan.updateBannerDeferredCount || 0) + 1;
+  if (pokazany && document.getElementById('sw-update-banner')) return;
+  pokazany = false; krok();
+  if (!zegar && pokaz) zegar = setInterval(krok, TAKT);
+}
+window.VildaServiceWorkerClientLifecycle.updateBannerGateReasons = powodyWstrzymania;
+
+// w Mt, zamiast bezpośredniego showUpdateBanner(...):
+zglosBaner(() => showUpdateBanner(() => postSkipWaiting(registration, reason), { reason, notes }, onDismissShowIndicator));
 ```
 
 ## Jak odtworzyć
