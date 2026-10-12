@@ -88,6 +88,12 @@ punkt dziewcząt według modelu Borelli-Kjær 2025, wyłącznie w porównaniu
 płci inhibiny B w wieku 8–20 lat. To ograniczone rozszerzenie odniesienia
 edukacyjnego, bez zmiany norm laboratoryjnych lub zwykłych widoków.
 
+12 października 2026 właściciel polecił wdrożenie zatwierdzonych makiet
+żeńskich LH/FSH: całego życia, pokwitania i cyklu oraz poprawionej
+minipuberty z dwiema falami modelowanej średniej. To jawny wyjątek
+od wcześniejszego obowiązku tej samej statystyki i skali we wszystkich
+zbliżeniach. Zakres i ograniczenia opisano w sekcji żeńskich LH/FSH poniżej.
+
 ## Cel i granice
 
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
@@ -97,8 +103,11 @@ Nie zastępuje osi interpretacji badania i nie zmienia ich danych, progów,
 jednostek ani werdyktów. Połączenie nie zapisuje porównań do historii,
 przypiętych wyników, wizyt ani stanu pacjenta.
 
-W zwykłych widokach każdy hormon ma własną skalę względną. Przecięcie
-linii różnych hormonów nie oznacza równego stężenia. Oś całego życia
+W bazowych zwykłych widokach każdy hormon ma własną skalę względną.
+Wyjątkiem są żeńskie LH/FSH: całe życie i pokwitanie mają wspólną
+oś stężeń tych dwóch hormonów, a minipuberty — osobne własne maksima
+modelowanych średnich. Przecięcie linii pozostałych hormonów nie
+oznacza równego stężenia. Oś całego życia
 ma różną skalę czasu w etapach.
 Granice pokwitania, dorosłości i przejścia menopauzalnego są umowne,
 nie są diagnozą na podstawie wieku.
@@ -159,6 +168,14 @@ Modele i tabele są danymi oddzielnymi od silnika. Między węzłami jednego
 profilu stosujemy PCHIP bez przeregulowania; wartości odniesienia
 oblicza jedna funkcja źródłowa, niezależna od wygładzenia prezentacji. Interpolacja węzłów rocznych jest przybliżeniem implementacji,
 nie udostępnionym przez autora pełnym dopasowaniem statystycznym.
+
+Zwykły żeński widok LH/FSH **Minipuberty** nie ma liczbowego punktu
+gonadotropiny ani znacznika odniesienia: jego oś jest względną średnią
+z ryc. 3 COPENHAGEN, bez znanego przeliczenia do IU/L. Wpisany wynik
+pozostaje tekstem w swojej jednostce, a pion oznacza tylko wiek. Nie
+blokuje to interpretacji laboratoryjnej ani kwalifikowanego punktu po
+powrocie do widoku ilościowego. Inne anality w mieszanym wyborze zachowują
+własne dotychczasowe reguły punktu, bez używania skali LH/FSH.
 
 Męska inhibina B ma jedną gładką, ciągłą krzywą edukacyjną w zwykłych
 widokach. Przebieg jest taki sam przed wpisaniem wyniku, po jego wpisaniu
@@ -491,6 +508,145 @@ Regresje interakcji po audycie: `hormone-lifespan-activity.spec.mjs`
 ruchu, fokus źródeł) i `hormone-lifespan-puberty-comparison.spec.mjs`
 (ręczny i pusty wybór). Naprawy nie zmieniają geometrii ani źródeł krzywych.
 
+## Żeńskie LH/FSH — odrębne widoki okresów, 12 października 2026
+
+Zatwierdzone makiety zastępują niemal płaską prezentację median niemowlęcych
+i nadmierną kompresję wcześniejszych etapów przez wartości pomenopauzalne.
+Nie powstaje jeden zwalidowany model całego życia. Widoki celowo mają
+różne źródła, statystyki i stałe skale; przełączenie okresu nie jest samym
+powiększeniem. Wynik, wiek bieżącej pacjentki, rozmiar ekranu oraz dołączenie
+innego hormonu nie mogą zmieniać krzywych LH/FSH w obrębie danego widoku.
+
+| Widok | Linia i źródło | Stała oś | Wynik LH/FSH |
+| --- | --- | --- | --- |
+| Całe życie | Synteza edukacyjna grup Schmidt 2000, Ji 2008 i Ljubicic 2020; mosty są poglądowe | Wspólna 0–70 IU/L, `log1p(C / 0.5) / log1p(70 / 0.5)` | Oryginalnie kwalifikowany wynik i źródłowe odniesienie, ta sama funkcja skali; znacznik nie jest przyciągany do ilustracji |
+| Minipuberty | Odczyt ryc. 3 Ljubicic 2022: podłużna średnia modelowana każdego hormonu / jego własne maksimum | Własny szczyt każdego hormonu = 100%; bez IU/L | Tekst wyniku w jednostce wejściowej oraz pion wieku; bez liczbowej kropki i mediany na względnej osi |
+| Pokwitanie | Osobne mediany wieku Madsen 2022, 6–16 lat | Wspólna liniowa 0–8 IU/L | Wyłącznie odniesienie kwalifikowane przez istniejący silnik; sam model żeński nie aktywuje nowego profilu |
+| Cykl przy etapie „Dorosła” | Stricker 2006, 30 dziennych median, od −15 do +14 dni względem szczytu LH | Wspólna liniowa 0–50 IU/L | Brak punktu pacjentki i wyznaczania jej fazy cyklu |
+
+Równa wysokość LH i FSH na osi stężeń odpowiada tej samej liczbie IU/L,
+ale połączenie różnych badań nie harmonizuje metod. Nieliniowa oś życia
+nie pozwala odczytywać ilorazu ze stosunku odległości od zera. Poziomy
+0 / 0,5 / 2 / 10 / 70 i krótki opis kompresji są widoczne. W minipuberty
+100% to własne maksimum modelu, nie percentyl lub granica normy; wysokości
+LH i FSH nie służą do porównania stężeń.
+
+### Całe życie: narodziny, łączenie źródeł i późniejsze etapy
+
+[Schmidt i Schwarz 2000](https://doi.org/10.1530/eje.0.1430213), tabela 2,
+obejmuje 73 zdrowe donoszone dziewczynki w wieku 1–28 dni, po jednej
+próbce krwi żylnej na osobę, pobranej 08:00–10:00. Mediany grupy
+1–5 dni wynoszą LH 0,20 i FSH 1,80 IU/L (n=31), a grupy 26–28 dni
+odpowiednio 2,80 i 6,15 (n=8). Oznaczenie to Serono MAIA clone RIA;
+LOD wynosi LH 0,15 i FSH 0,30 IU/L. Reaktywność krzyżowa LH wobec hCG
+wynosi 3%; bez równoległych pomiarów hCG nie można jej liczbowo odjąć.
+Nie jest to profil ilościowy noworodka w aplikacji ani badanie podłużne.
+
+Pierwsza grupa jest umieszczona w dniu 3, druga w dniu 27 wyłącznie
+dla rysunku; początek osi opisuje „1–5 dni”. Nie ma wartości przy urodzeniu
+ani dowodu dokładnego dnia maksimum. Wszystkie grupy źródłowe pozostają
+w dowodzie, lecz wahania małych grup n=3–8 nie są wymuszanymi szczytami.
+Wybrane mediany [Ji 2008](https://www.indianpediatrics.net/june2008/june-489-492.htm),
+tabela I, opisują dalsze niemowlęctwo: 201 zdrowych donoszonych dziewczynek,
+badanie przekrojowe, surowica, DPC Immulite, LOD 0,1 IU/L. Nie stosujemy
+kalibracji między RIA, Immulite i AutoDELFIA.
+
+Wczesny łuk LH od 0,20 do 2,80 i z powrotem do 0,20 IU/L około
+5. miesiąca jest szerokim połączeniem edukacyjnym. Pomija mediany
+grup Ji 2/3/4 miesiące jako wymuszane węzły, aby nie tworzyć ostrego
+zjazdu i kolanka po zmianie publikacji. Zastosowano asymetryczne
+odwzorowanie X oraz funkcję `6t^5 − 15t^4 + 10t^3` we współrzędnej
+`log1p(C / 0.5)`, z odwrotnym przeliczeniem do IU/L przed rysowaniem.
+Zerowe pochodne na końcach i gęste próbkowanie zachowują płynność.
+Parametry łuku opisują geometrię, nie zmierzone stężenia pośrednie.
+Nie wyprowadzamy z niego tempa spadku u pojedynczego dziecka.
+
+FSH prowadzą kotwice 1,80 / 6,15 z grup noworodkowych, następnie
+7,10 w grupie 3-miesięcznej, 6,10 w 5-miesięcznej i 5,70 w rocznej.
+Pominięto drobne fluktuacje grup oraz Ji 2 miesiące / 5,90 jako węzeł
+geometrii, by różnica kohort nie stworzyła dodatkowego dołka. Nie oznacza
+to uniwersalnego maksimum dokładnie w 3. miesiącu. Most od 1 do 6 lat
+jest poglądowy. Zec 2012, grupa Th1 1–<4 lat, mediana 2,57, pozostaje
+osobnym dowodem i dotychczasowym odniesieniem grupowym; nie wymusza
+punktu geometrii dokładnie w wieku 2,5 roku.
+
+Po niemowlęctwie wybrane wartości tabeli I [Ljubicic 2020](https://doi.org/10.1093/humrep/deaa182)
+są umieszczone w reprezentatywnych pozycjach wieku. Ich statystyki
+nie nazwano w źródle jednoznacznie medianą. Grupa 20–<40 lat liczy
+17 kobiet, fazy cyklu nie standaryzowano. Nie należy rysować spadku
+po pokwitaniu wyłącznie z różnicy tej grupy i median Madsen. Pominięte
+grupy pośrednie pozostają w dowodach, bez wymuszania kolejnych ząbków.
+Przejście menopauzalne 45–55 lat jest umownym położeniem ilustracji,
+nie rozpoznaniem menopauzy z wieku. Późny LH zachowuje niewielki spadek
+27,83 → 24,95, a FSH wzrost 61,66 → 64,54 właściwy temu zbiorowi;
+inne badania pokazują inne trendy. Nie doklejamy regresji innej metody.
+Rysunek kończy się przy 75 latach: etykieta źródłowej grupy 70–100
+nie uprawnia do przedłużenia danych do 90 lub 100 lat, gdy obserwacje
+sięgają 80 lat. Wiek 75 jest pozycją graficzną, nie medianą wieku grupy.
+
+### Minipuberty: dwie fale średniej z COPENHAGEN
+
+[Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 3, dotyczy
+98 zdrowych donoszonych dziewczynek, 266 próbek surowicy i mediany
+3 próbek na dziecko. LH/FSH oznaczano AutoDELFIA, LOD 0,05 IU/L.
+Model mieszany ze splajnami opisuje podłużną średnią populacyjną;
+każdy hormon podzielono przez jego własne maksimum. Odczyt ryciny
+zachowuje pierwszy szczyt LH około 23. dnia, minimum około 85. dnia
+i mniejszy drugi szczyt około 165. dnia, około 18% wysokości pierwszego.
+LH narasta ponownie w 3.–4. miesiącu. Drugi szczyt FSH wynosi około
+76% jego własnego pierwszego szczytu. To cechy modelu tej kohorty,
+nie dokładny harmonogram każdej dziewczynki.
+
+Odczyt zaczyna się około 5,6 dnia; nie przedłużamy go do narodzin.
+Kończy się dla LH w dniu 360, a FSH w dniu 357, bez przedłużenia do
+365. dnia. Nie nadajemy odczytanym współrzędnym dokładności oryginalnych
+danych. Ryc. 1 i suplement LMS tej samej publikacji podają mediany
+GAMLSS z innym kształtem: niska mediana nie unieważnia fal średniej.
+Nie wolno jednak użyć mediany lub innej kohorty do wyliczenia brakującego
+fizycznego maksimum średniej. Brak tych maksimów wyklucza przeliczenie
+przedstawionej krzywej do IU/L i umieszczenie na niej liczbowego wyniku.
+
+### Pokwitanie i wstawka cyklu
+
+[Madsen 2022](https://doi.org/10.1210/clinem/dgac155) i
+[suplement LMS](https://doi.org/10.6084/m9.figshare.17153336.v1) dostarczają
+11 żeńskich rocznych median wieku 6–16 lat. Dla LH/FSH surowicę oznaczano
+Siemens IMMULITE 2000 XPi; mediana to `exp(M) / 1e6`, nie parametr M.
+PCHIP odtwarza przebieg między rocznymi węzłami, bez ekstrapolacji.
+Przy 16 latach LH ≈5,6486 i FSH ≈5,8261 IU/L. To model wieku,
+nie stadium Tannera i nie ten sam model co synteza całego życia.
+Nie powstaje dodatkowy profil punktu pacjentki ani nowy zakres norm.
+
+[Stricker 2006](https://doi.org/10.1515/CCLM.2006.160), tabela 1A,
+obejmuje codzienne oznaczenia surowicy podczas jednego cyklu u 20 zdrowych
+kobiet 20–36 lat, bez antykoncepcji doustnej; Abbott ARCHITECT i2000SR.
+Wstawka zachowuje 30 dziennych median od −15 do +14 dni względem
+indywidualnego szczytu LH. W dniu 0 LH wynosi 41,19, a FSH 12,82 IU/L.
+Nie jest to automatycznie 14. dzień cyklu ani dokładny moment owulacji.
+Liczebności dzienne wynoszą 8–20; wartości nie są uniwersalną normą.
+Wstawka przy istniejącym etapie „Dorosła” nie wprowadza nowego formularza
+lub selektora, nie dotyczy ciąży, leczenia ani menopauzy i nie interpretuje
+wyniku konkretnej pacjentki. Oś dni jest oddzielna od osi lat życia.
+
+### Granice wdrożenia i pliki
+
+`buildFemaleGonadotropins(data)` korzysta z odrębnych plików
+[`female-gonadotropin-display-policy.json`](hormone-lifespan/female-gonadotropin-display-policy.json)
+i [`female-gonadotropin-display-data.json`](hormone-lifespan/female-gonadotropin-display-data.json).
+Generator eksportuje `femaleGonadotropinPolicy` i `femaleGonadotropinData`.
+[Audyt źródeł i geometrii](hormone-lifespan/evidence/female-gonadotropin-display-audit-2026-10-12.json)
+utrwala pochodzenie, metodę, jednostki, zakresy, przybliżenia i decyzje
+prezentacji. Nie aktywuje nowych źródeł w `patientPointData`, nie zmienia
+norm, diagnoz, konwersji wyniku, zapisu wizyt ani historii.
+
+Dodanie AMH, E2 lub inhibiny B do LH/FSH nie przywraca dawnej krzywej
+gonadotropin. Podpis wskazuje, że oś IU/L dotyczy wyłącznie LH i FSH,
+a pozostałe hormony zachowują własne skale. W minipuberty względne
+maksima LH/FSH również nie kalibrują innych analitów. Bieżący wynik
+innego hormonu zachowuje własne kwalifikowanie, jednostkę i skalę.
+Porównania płci pozostają osobnymi trybami; ta zmiana nie przenosi do
+nich źródeł Madsen lub względnej średniej COPENHAGEN.
+
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.
@@ -500,7 +656,8 @@ wyświetlany jest model liczbowy z punktem wyniku, pierwszeństwo mają wspólne
 punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
 i normalizacje nie mogą stanowić liczbowej podstawy wyniku pacjenta.
 
-W żeńskich widokach Całe życie, Minipuberty i Pokwitanie pojedynczy hormon
+Poza opisanym wyżej wyjątkiem LH/FSH w żeńskich widokach Całe życie,
+Minipuberty i Pokwitanie pojedynczy hormon
 zawsze używa tego samego `normalizationMaximum`. Zmienia się tylko oś czasu.
 Zaznaczenie innych hormonów nie przeskalowuje osi pionowej. Nie przywracać
 normalizowania każdej niemowlęcej krzywej do jej szczytu ani arbitralnego
@@ -701,6 +858,8 @@ node --check vilda_hormone_lifespan_data.js
 `version`, `maleAges`, `maleHormones`, `maleStages`, `referenceData`,
 `lifespanData`, `patientPointData`, `inhibinEvidence`, `inhibinDisplayPolicy`,
 `testosteroneDisplayPolicy` oraz `insl3DisplayPolicy`.
+Żeńskie odrębne widoki LH/FSH dodają `femaleGonadotropinPolicy`
+i `femaleGonadotropinData`, bez zastępowania liczbowych profili pacjenta.
 Przeglądarka nie potrzebuje Pythona, źródłowych JSON,
 sieci ani bibliotek wykresów. Historyczne wzmianki „mock” w metadanych
 pochodzą z zatwierdzonego zbioru; nie rozszerzają jego zastosowania.

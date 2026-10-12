@@ -1,0 +1,276 @@
+{
+  "id": "female-gonadotropin-display-v1",
+  "version": "2026-10-12.1",
+  "kind": "educational-display-only",
+  "sex": "female",
+  "analytes": [
+    "lh",
+    "fsh"
+  ],
+  "approval": "Owner approved the final mockup and requested implementation on 2026-10-12.",
+  "clinicalNormsChanged": false,
+  "numericPatientProfilesChanged": false,
+  "life": {
+    "domain": {
+      "minAge": 0,
+      "maxAge": 75
+    },
+    "statistic": "educational-mixed-source",
+    "scale": {
+      "kind": "log1p",
+      "unit": "IU/L",
+      "min": 0,
+      "max": 70,
+      "softening": 0.5,
+      "ticks": [
+        0,
+        0.5,
+        2,
+        10,
+        70
+      ],
+      "independentOfPatient": true
+    },
+    "displaySegments": [
+      {
+        "min": 0,
+        "max": 1,
+        "width": 0.2,
+        "label": "Niemowlę",
+        "color": "#eaf5f2"
+      },
+      {
+        "min": 1,
+        "max": 10,
+        "width": 0.16,
+        "label": "Dziecko",
+        "color": "#edf4f9"
+      },
+      {
+        "min": 10,
+        "max": 20,
+        "width": 0.16,
+        "label": "Pokwitanie",
+        "color": "#e8f2f9"
+      },
+      {
+        "min": 20,
+        "max": 45,
+        "width": 0.2,
+        "label": "Dorosła",
+        "color": "#f5f5e9"
+      },
+      {
+        "min": 45,
+        "max": 55,
+        "width": 0.16,
+        "label": "Perimenopauza",
+        "color": "#faeee7"
+      },
+      {
+        "min": 55,
+        "max": 75,
+        "width": 0.12,
+        "label": "Po menopauzie",
+        "color": "#f1edf8"
+      }
+    ],
+    "sampling": {
+      "count": 1601,
+      "includeSourceNodes": true,
+      "lhBridgeCount": 1601
+    },
+    "firstDrawAgeYears": 0.008213552361396304,
+    "lhInfantDrawing": {
+      "kind": "asymmetric_smooth_bridge_in_shared_life_axis_coordinates",
+      "startAgeYears": 0.008213552361396304,
+      "peakAgeYears": 0.07392197125256673,
+      "endAgeYears": 0.4166666666666667,
+      "lowValue": 0.2,
+      "peakValue": 2.8,
+      "descentXControls": [
+        0.08,
+        0.1
+      ],
+      "verticalInterpolation": "quintic_smoothstep_in_log1p(value/0.5); invert to IU/L before common display mapping",
+      "role": "Educational bridge only. Graphical handles and intermediate heights are not measured concentrations.",
+      "why": "Forcing the Ji2month bin after Schmidt end-neonatal bin makes a steep cross-assay fall followed by an abrupt horizontal segment. Retain original source values, relax that drawing knot and approach the low later-infant level smoothly.",
+      "omittedGeometryKnots": [
+        {
+          "ageMonths": 2,
+          "lhMedian": 0.2,
+          "source": "Ji2008"
+        },
+        {
+          "ageMonths": 3,
+          "lhMedian": 0.2,
+          "source": "Ji2008"
+        },
+        {
+          "ageMonths": 4,
+          "lhMedian": 0.3,
+          "source": "Ji2008"
+        }
+      ],
+      "noLaterPeakInvented": true,
+      "laterWaveEvidence": {
+        "source": "Ljubicic2022 Figure3",
+        "doi": "10.1210/clinem/dgac363",
+        "statistic": "normalized longitudinal model mean, NOT age-specific median",
+        "direction": "LH rises again after its early trough during months3–4, with a smaller second model peak around days164–165.",
+        "absoluteConcentrationsAvailableForThisMeanModel": false,
+        "policy": "Explain this source in the source panel; do not calibrate its normalized curve using Schmidt or Ji medians."
+      }
+    },
+    "sources": [
+      {
+        "label": "Schmidt i Schwarz 2000 · pierwsze 28 dni",
+        "url": "https://doi.org/10.1530/eje.0.1430213"
+      },
+      {
+        "label": "Ji i wsp. 2008 · tabela I",
+        "url": "https://www.indianpediatrics.net/june2008/june-489-492.htm"
+      },
+      {
+        "label": "Ljubicic i wsp. 2020 · tabela I",
+        "url": "https://doi.org/10.1093/humrep/deaa182"
+      },
+      {
+        "label": "Ljubicic i wsp. 2022 · COPENHAGEN, rycina 3",
+        "url": "https://doi.org/10.1210/clinem/dgac363"
+      },
+      {
+        "label": "Stricker i wsp. 2006 · codzienne mediany w cyklu",
+        "url": "https://doi.org/10.1515/CCLM.2006.160"
+      }
+    ],
+    "caveats": [
+      "Linie łączą różne badania i metody. To ilustracja, nie jedna mediana populacyjna ani norma. Grupy wieku umieszczono w umownych pozycjach; rysunek nie wyznacza wieku menopauzy.",
+      "Schmidt 2000: 73 donoszone dziewczynki, każda badana raz, surowica z żyły obwodowej, RIA Serono MAIA clone. Grupy 1–5 dni i 26–28 dni umieszczono przy 3. i 27. dniu. Nie znamy stężenia przy urodzeniu ani dokładnego dnia szczytu. Małe grupy liczyły 3–8 osób.",
+      "Schmidt: LOD LH 0,15 i FSH 0,3 IU/L; test LH wykazywał 3% reaktywności krzyżowej z hCG. Bez oznaczenia hCG nie można skorygować LH. Nie traktujemy metod z różnych publikacji jako równoważnych.",
+      "Neonatalne mediany LH/FSH (IU/L): dni 1–5: 0,20/1,80; 6–10: 0,30/1,40; 11–15: 1,60/8,95; 16–20: 0,35/1,90; 21–25: 0,50/3,90; 26–28: 2,80/6,15. Rysunek pomija wahania małych grup; szczyt FSH w 3. miesiącu nie jest uniwersalną regułą.",
+      "Ji 2008: 201 donoszonych dziewczynek, przekrojowe oznaczenia Immulite. Mediany FSH w 2./3./5./6./12. miesiącu: 5,9/7,1/6,1/5,4/5,7 IU/L; LH 0,2–0,3 IU/L. Most między badaniami nie odtwarza indywidualnego tempa zmian. Jego wysokości nie są nowymi pomiarami.",
+      "Łuk LH łagodnie schodzi od grupy końca pierwszego miesiąca do niskiego poziomu grupy 5 miesięcy, bez wymuszania mediany Ji przy 2 miesiącach. Zbliżenie „Minipuberty” przedstawia inną statystykę: dwufazową średnią modelu podłużnego COPENHAGEN we własnej skali względnej. Tej średniej nie przeliczamy na IU/L.",
+      "Zec 2012: FSH 2,57 IU/L dotyczy całej grupy 1–<4 lat, Tanner I, Roche cobas e 411. Nie wymuszamy tej wartości w wieku 2,5 roku. Most do dzieciństwa nie jest nową referencją liczbową.",
+      "Późniejsze grupy: Ljubicic 2020, AutoDELFIA, tabela I. Autorzy nie określają jednoznacznie statystyki tabeli jako mediany. Grupa 20–<40 lat liczy 17 kobiet; fazy cyklu nie są ujednolicone. 75 lat jest graficzną pozycją grupy 70–100, nie medianą jej wieku. Po 75 latach nie dopisujemy przebiegu.",
+      "W tej kohorcie późne LH nieco maleje, a FSH rośnie. Inne kohorty wykazują inne trendy; nie jest to prognoza dla pojedynczej osoby. Kliknięcie „Dorosła” pokazuje osobno mediany w cyklu z badania Stricker.",
+      "Oś stężeń: log(1 + stężenie/0,5), ze wspólną górą 70 IU/L. Równa wysokość oznacza równe stężenie, ale odległości nie pokazują ich ilorazu. Odcinki osi wieku mają różną skalę.",
+      "Punkt pacjentki i jasny znacznik zachowują istniejące liczbowe odniesienie i jego kwalifikację. Jasny znacznik może leżeć poza poglądową linią. Wykres nie zmienia norm laboratoryjnych."
+    ]
+  },
+  "mini": {
+    "domain": {
+      "minAge": 0,
+      "maxAge": 1
+    },
+    "statistic": "digitized-normalized-longitudinal-mean",
+    "scale": {
+      "kind": "relative",
+      "unit": null,
+      "min": 0,
+      "max": 1.1,
+      "ticks": [
+        0,
+        0.25,
+        0.5,
+        0.75,
+        1
+      ],
+      "normalization": "each-hormones-own-longitudinal-mean-maximum",
+      "independentOfPatient": true
+    },
+    "sampling": {
+      "count": 801,
+      "includeSourceNodes": true
+    },
+    "patientPointPolicy": "age-only-no-concentration-point",
+    "sources": [
+      {
+        "label": "Ljubicic i wsp. 2022 · COPENHAGEN, rycina 3",
+        "url": "https://doi.org/10.1210/clinem/dgac363"
+      }
+    ],
+    "caveats": [
+      "Ljubicic 2022, COPENHAGEN: 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy, AutoDELFIA. Rycina 3 pokazuje średnią trajektorię podłużnego modelu, podzieloną przez własne maksimum każdego hormonu. To nie mediana GAMLSS z ryciny 1 ani zakres normy.",
+      "Pierwsze maksimum modelu przypada w pierwszym miesiącu, drugie LH/FSH około 164.–165. dnia. Ponowny wzrost zaczyna się wcześniej, w 3.–4. miesiącu. To wynik tej kohorty, nie harmonogram dla każdej dziewczynki.",
+      "Krzywe odczytano w przybliżeniu z ryciny. Druga fala LH ma około 18% wysokości pierwszej. Zachowujemy tę proporcję oraz osobne końce odczytu: LH około 360 dni, FSH około 357 dni. Nie dorysowujemy stężenia przy urodzeniu ani poza odczytanym zakresem.",
+      "100% oznacza własny szczyt LH lub FSH. Równa wysokość LH i FSH nie oznacza równego stężenia. Artykuł i suplement nie podają fizycznych maksimów tej średniej; nie kalibrujemy jej medianami z innych modeli lub badań.",
+      "LOD LH i FSH wynosiło 0,05 IU/L; odrębnego LOQ nie podano. Zastępowanie wartości poniżej progu połową progu było zabiegiem analizy badania, nie regułą dla wyniku pacjentki.",
+      "Wynik pacjentki pozostaje liczbą z jednostką, a na tej osi zaznaczamy tylko wiek. Względna średnia nie kwalifikuje wyniku ani wcześniaków. Normy i istniejące źródłowe mediany pozostają niezależne."
+    ]
+  },
+  "puberty": {
+    "domain": {
+      "minAge": 6,
+      "maxAge": 16
+    },
+    "statistic": "model-median",
+    "scale": {
+      "kind": "linear",
+      "unit": "IU/L",
+      "min": 0,
+      "max": 8,
+      "ticks": [
+        0,
+        2,
+        4,
+        6,
+        8
+      ],
+      "independentOfPatient": true
+    },
+    "sampling": {
+      "count": 801,
+      "includeSourceNodes": true
+    },
+    "sources": [
+      {
+        "label": "Madsen i wsp. 2022 · suplement LMS",
+        "url": "https://doi.org/10.1210/clinem/dgac155"
+      }
+    ],
+    "caveats": [
+      "Madsen 2022, suplement LMS: mediany LH i FSH według wieku, Bergen Growth Study 2, zdrowe dziewczęta 6–16 lat, surowica, Siemens IMMULITE 2000 XPi. Wspólna liniowa oś 0–8 IU/L.",
+      "To odrębny model zbliżenia, nie dosłowny wycinek ilustracji całego życia. Wiek nie wyznacza stadium Tannera ani fazy cyklu; różnice kohort nie dowodzą spadku po pokwitaniu. Nie ekstrapolujemy modelu po 16. roku życia.",
+      "Punkt pacjentki i jasny znacznik korzystają z dotychczasowego silnika odniesień. Nowy model służy wyłącznie prezentacji, nie rozszerza kwalifikacji ani norm."
+    ]
+  },
+  "cycle": {
+    "domain": {
+      "minDay": -15,
+      "maxDay": 14
+    },
+    "statistic": "published-daily-median",
+    "scale": {
+      "kind": "linear",
+      "unit": "IU/L",
+      "min": 0,
+      "max": 50,
+      "ticks": [
+        0,
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "independentOfPatient": true
+    },
+    "sampling": {
+      "count": 349,
+      "includeSourceNodes": true
+    },
+    "patientPointPolicy": "no-cycle-patient-reference",
+    "sources": [
+      {
+        "label": "Stricker i wsp. 2006 · codzienne mediany w cyklu",
+        "url": "https://doi.org/10.1515/CCLM.2006.160"
+      }
+    ],
+    "caveats": [
+      "Stricker 2006: 20 kobiet w wieku 20–36 lat, prawidłowe owulacyjne cykle, codzienne próbki surowicy, Abbott ARCHITECT i2000SR. Obie krzywe przedstawiają opublikowane dzienne mediany na wspólnej osi 0–50 IU/L.",
+      "Dzień 0 oznacza indywidualny szczyt LH użyty do wyrównania cykli. To nie uniwersalny 14. dzień od miesiączki ani dokładna chwila owulacji. Liczebności dzienne wynoszą 8–20; małych wahań median nie traktujemy jako obowiązkowych zdarzeń biologicznych.",
+      "Ten wykres nie przewiduje owulacji, nie jest normą dla fazy cyklu ani odniesieniem pacjentki. Dotyczy kobiet bez antykoncepcji hormonalnej i innych leków, nie menopauzy lub leczenia hormonalnego."
+    ]
+  }
+}
