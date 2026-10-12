@@ -74,7 +74,12 @@ wyniku, wieku bieżącego pacjenta, wyboru innych hormonów, szerokości ekranu
 czy zbliżenia. Zbliżenie próbkuje wcześniej zbudowaną krzywą i zmienia
 oś czasu; nie dopasowuje nowej krzywej do rzadszego podzbioru kotwic.
 Nie normalizuj osobno minipuberty do jej własnego maksimum, jeżeli zwykły
-widok całego życia używa innego stałego maksimum.
+widok całego życia używa innego stałego maksimum, poza jawnym wyjątkiem
+żeńskich LH/FSH zatwierdzonym 12 października 2026 i opisanym niżej.
+W tym wyjątku zmiana okresu zmienia również źródło, statystykę i skalę;
+nie jest zwykłym powiększeniem tej samej krzywej. W obrębie wybranego
+okresu wynik pacjenta i wybór dodatkowych hormonów nadal nie mogą
+przeskalowywać ani zastępować linii LH/FSH.
 
 Nie obiecuj identycznych ciągów SVG ani idealnej równości po ponownym
 próbkowaniu. Kontroluj błąd geometryczny w pikselach, położenie szczytów,
@@ -142,7 +147,7 @@ lub okresów. Wymagałoby to osobnej weryfikacji.
   Po 70 latach wygaszony płaski ogon oznacza koniec danych, nie biologiczne
   plateau. Normy laboratoryjne i porównanie płci mają odrębne kontrakty.
 
-## Uzupełnienie po audycie LH/FSH, 11 października 2026
+## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 
 Właściciel zatwierdził poprawioną makietę i jej wdrożenie. LH/FSH mają
 teraz własną politykę `lh-fsh-display-policy.json`, zamiast dawnego
@@ -170,6 +175,79 @@ w historycznym przykładzie testosteronu powyżej dotyczy stanu sprzed tej zmian
 - Podpis porównania LH/FSH wyjaśnia osobne skale. Przecięcie linii nie
   przedstawia równości stężeń ani ilorazu LH/FSH. Makieta może włączać oba
   hormony dla recenzenta; aplikacja nadal zaczyna od bieżącego analitu.
+
+## Utrwalony wyjątek: żeńskie LH/FSH, 12 października 2026
+
+Właściciel zatwierdził kolejne makiety: wspólną czytelną oś całego życia,
+oddzielny przebieg pokwitania i cyklu, poprawione pierwsze dni oraz
+dwufazową względną średnią minipuberty. Następnie polecił ich wdrożenie.
+To wąski wyjątek od zasady identycznej normalizacji każdego zbliżenia.
+Nie przenoś go na męskie wykresy, porównania płci ani inne hormony.
+
+- Korzystaj z `female-gonadotropin-display-policy.json`,
+  `female-gonadotropin-display-data.json` i
+  `buildFemaleGonadotropins(data)`. Dane prezentacji są odrębne od
+  źródeł punktu pacjenta i norm laboratoryjnych. Nie dopisuj źródła
+  ilościowego tylko dlatego, że można narysować jego linię.
+- **Całe życie:** obie gonadotropiny mają wspólną stałą oś 0–70 IU/L,
+  `log1p(C / 0.5) / log1p(70 / 0.5)`, z liczbowymi poziomami i jawnym
+  opisem kompresji. Równe wysokości LH/FSH odpowiadają równym stężeniom
+  na tej osi, ale odległości nie wyznaczają ich ilorazu. Linie pozostają
+  poglądowym połączeniem różnych badań, nie nową medianą całego życia.
+- **Początek osi:** grupa Schmidt 1–5 dni jest umieszczona graficznie
+  w dniu 3, grupa 26–28 w dniu 27. Nie opisuj ich jako pomiarów
+  w dokładnym dniu ani nie dopisuj wartości przy urodzeniu. Pełny
+  artykuł obejmuje 73 zdrowe donoszone dziewczynki, po jednej próbce.
+  Wczesne LH pochodzi z RIA Serono MAIA z 3% reaktywnością krzyżową
+  wobec hCG; nie ma podstaw do korekty liczbowej ani kalibracji do
+  późniejszych Immulite/AutoDELFIA. Małe grupy i ich fluktuacje nie
+  wymuszają liczby fizjologicznych szczytów.
+- **Łączenie niemowlęctwa w całym życiu:** szeroki asymetryczny łuk
+  LH dochodzi łagodnie do niskiego poziomu Ji około 5. miesiąca,
+  z zerowymi pochodnymi na końcach. Nie wymuszaj mediany grupy
+  2-miesięcznej jako węzła: powstawał ostry zjazd zakończony kolankiem.
+  Gęste próbkowanie początku usuwa również narożnik polilinii SVG.
+  Wartości pośrednie mostu nie są zmierzonymi stężeniami. Wybrane
+  kotwice Ljubicic 2020 po niemowlęctwie mają umowne pozycje wieku;
+  nie identyfikują dokładnego wieku menopauzy ani stadium Tannera.
+- **Minipuberty:** używaj wyłącznie odczytu ryc. 3 Ljubicic 2022
+  (COPENHAGEN): modelowanej średniej podłużnej, dzielonej przez własne
+  maksimum każdego hormonu. LH ma pierwszy szczyt około 23. dnia
+  i drugi około 165. dnia, około 18% wysokości pierwszego. Zachowaj
+  mniejszą drugą falę i ponowny wzrost w 3.–4. miesiącu; nie podnoś
+  jej arbitralnie do wysokości FSH. To wynik modelu jednej kohorty,
+  nie harmonogram dla każdej dziewczynki. Ryc. 1 i suplement LMS tej
+  samej publikacji przedstawiają inne statystyki — mediany GAMLSS.
+- Oś minipuberty oznacza **100% własnego szczytu**, nie IU/L,
+  percentyl ani procent normy. Wysokości LH i FSH nie porównują
+  stężeń. Brakuje fizycznych maksimów modelu średniej: nie odtwarzaj
+  ich z median Schmidt, Ji lub GAMLSS. Nie dodawaj punktu LH/FSH pacjentki
+  ani znacznika mediany gonadotropiny na tej osi. Zachowaj wynik tekstowo w jego
+  jednostce oraz pion wieku; powrót do widoku ilościowego przywraca
+  tylko punkt kwalifikowany przez istniejący silnik.
+- Dane ryc. 3 zaczynają się około 5,6 dnia, kończą dla LH w dniu 360,
+  dla FSH w dniu 357. Brzegowa luka jest poprawna: nie ekstrapoluj
+  do narodzin lub 365. dnia. Digitalizacja jest przybliżeniem ryciny,
+  a nie udostępnioną przez autorów tabelą współczynników modelu.
+- **Pokwitanie:** osobne mediany Madsen 2022, 6–16 lat, wspólna
+  liniowa oś 0–8 IU/L. To odrębny model wieku, nie dokładny wycinek
+  poglądowej syntezy całego życia. Nie ustalaj Tannera z wieku i nie
+  aktywuj nowego profilu pacjentki przez samą obecność modelu.
+- **Dorosłość:** osobna wstawka cyklu Stricker 2006 zachowuje 30
+  dziennych median obu hormonów oraz wspólną liniową oś 0–50 IU/L.
+  Dzień 0 oznacza szczyt LH w badaniu, nie zawsze 14. dzień cyklu
+  ani dokładny moment owulacji. Nie rysuj na niej wyniku pacjentki
+  bez odrębnie zweryfikowanego kontekstu cyklu.
+- Dołączenie AMH, E2 lub inhibiny B nie przywraca starych linii LH/FSH.
+  Ich własne skale nie stają się wspólną osią IU/L. Jawnie ogranicz
+  opis osi stężeń do gonadotropin; porównania płci zachowują odrębny
+  dotychczasowy kontrakt. Wynik innego bieżącego analitu zachowuje
+  własny silnik kwalifikacji, jednostkę i skalę; nie przenoś jego kropki
+  na procentową ani ilościową oś LH/FSH.
+
+Źródła, ograniczenia oznaczeń i syntetyczne punkty kontrolne:
+[audyt żeńskich LH/FSH](hormone-lifespan/evidence/female-gonadotropin-display-audit-2026-10-12.json)
+oraz [opis modułu](HORMONE_LIFESPAN.md#żeńskie-lhfsh--odrębne-widoki-okresów-12-października-2026).
 
 ## Utrwalony przykład: INSL3, poprawiona makieta zatwierdzona 11 października 2026
 

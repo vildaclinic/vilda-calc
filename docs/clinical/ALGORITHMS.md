@@ -1110,6 +1110,102 @@ cenzurowane wyniki, odznaczanie, desktop, 320 px, pełny ekran, zbliżenia,
 tryb offline, zgodność źródeł i oddzielenie geometrii od odniesienia.
 Weryfikacja techniczna nie nadaje wykresowi statusu walidacji klinicznej.
 
+### HORMONE-FEMALE-LH-FSH-PERIODS — odrębne żeńskie widoki życia, minipuberty, pokwitania i cyklu, 2026-10-12
+
+**Problem i zatwierdzenie.** Wspólna z późną dorosłością skala spłaszczała
+wcześniejsze etapy, a niemowlęca mediana nie przedstawiała dwóch fal
+podłużnej średniej opisanej w COPENHAGEN. Mechaniczne połączenie grup
+noworodkowych i niemowlęcych tworzyło ponadto ostry zjazd LH. Właściciel
+zatwierdził kolejne makiety i polecił wdrożenie końcowego wariantu:
+stałe, odrębne źródła i skale dla wybranego okresu, płynna geometria
+oraz jawne rozdzielenie względnej średniej od stężenia pacjentki.
+
+**Kontrakt prezentacji.** `buildFemaleGonadotropins(data)` w
+`vilda_hormone_lifespan_display.js` buduje `life`, `mini`, `puberty`
+i `cycle`. Czytelne dane i polityka to
+`hormone-lifespan/female-gonadotropin-display-data.json` oraz
+`female-gonadotropin-display-policy.json`; `build_runtime.py` eksportuje
+`femaleGonadotropinData` i `femaleGonadotropinPolicy`. Wynik, jego
+wyczyszczenie, rozmiar ekranu i wybór dodatkowych hormonów nie mogą
+zmieniać krzywych LH/FSH w obrębie okresu. To zatwierdzony wyjątek od
+wcześniejszej zasady identycznego źródła i skali we wszystkich żeńskich
+zbliżeniach, ograniczony do zwykłych widoków LH/FSH. Męskie wykresy,
+porównania płci i skale pozostałych hormonów zachowują swoje kontrakty.
+
+- **Całe życie:** wspólna oś LH/FSH 0–70 IU/L,
+  `log1p(C / 0.5) / log1p(70 / 0.5)`, z poziomami 0 / 0,5 / 2 / 10 / 70
+  i informacją o kompresji. Linia jest syntezą edukacyjną, nie nową
+  medianą. PCHIP w kanonicznym X oraz szeroki asymetryczny łuk wczesnego
+  LH usuwają ząbki między publikacjami; uchwyty i pośrednie wysokości
+  łuku nie są obserwacjami. Łuk zachowuje łagodne wejście i wyjście
+  dzięki `6t^5 − 15t^4 + 10t^3` i gęstemu próbkowaniu.
+- **Minipuberty:** odczyt ryc. 3 Ljubicic 2022, modelowana średnia
+  podłużna / własne maksimum każdego hormonu, a nie p50. Etykieta
+  100% oznacza własny szczyt. LH ma w odczycie szczyty około 23 i 165
+  dni; drugi wynosi około 18% pierwszego. Ponowny wzrost występuje
+  w 3.–4. miesiącu. FSH zachowuje własną amplitudę drugiej fali,
+  około 76%. Wysokości obu linii nie porównują stężeń.
+- Na względnej osi minipuberty nie ma liczbowej kropki LH/FSH ani
+  znacznika mediany; pozostają tekst wpisanego wyniku w jego jednostce
+  oraz pion wieku. Nie wylicza się nieudostępnionego maksimum w IU/L
+  z median GAMLSS lub innej publikacji. Po powrocie do życia/pokwitania
+  punkt kwalifikuje dotychczasowy silnik, bez przesuwania go na ilustrację.
+- **Pokwitanie:** żeńskie mediany Madsen 2022, 11 rocznych węzłów
+  6–16 lat, `exp(M) / 1e6`, PCHIP, wspólna liniowa oś 0–8 IU/L.
+  To odrębny model wieku, nie dokładny wycinek syntezy całego życia
+  ani model stadium Tannera. Nie dodaje nowego profilu punktu pacjentki.
+- **Dorosła:** wstawka cyklu Stricker 2006, 30 dziennych median,
+  wspólna liniowa oś 0–50 IU/L; −15 do +14 dni względem szczytu LH.
+  Dzień 0 nie oznacza zawsze 14. dnia cyklu lub chwili owulacji.
+  Bez punktu pacjentki, nowych pól oraz określania jej fazy cyklu.
+
+**Podstawa źródłowa i ograniczenia.**
+
+| Źródło | Populacja, oznaczenie, statystyka i użycie |
+| --- | --- |
+| Schmidt i Schwarz 2000, DOI [10.1530/eje.0.1430213](https://doi.org/10.1530/eje.0.1430213), tabela 2 | 73 zdrowe donoszone dziewczynki, 1–28 dni, jedna próbka/osobę; surowica, Serono MAIA clone RIA. Mediany grup 1–5 dni (n=31) LH/FSH 0,20/1,80 i 26–28 dni (n=8) 2,80/6,15 IU/L. LH LOD 0,15, FSH 0,30; reaktywność LH wobec hCG 3%, bez danych do korekty. Kotwice dnia 3/27 są położeniami grup na rysunku, nie pomiarem konkretnego dnia ani wartością przy urodzeniu. |
+| Ji 2008, [pełny tekst i tabela I](https://www.indianpediatrics.net/june2008/june-489-492.htm), PMID 18599936 | 201 zdrowych donoszonych dziewczynek, badanie przekrojowe, surowica, DPC Immulite, LOD 0,1 IU/L. Wybrane mediany grup wspierają syntezę niemowlęctwa; nie harmonizują RIA ani nie ustalają trajektorii pojedynczego dziecka. Niewymuszone fluktuacje pozostają w dowodach. |
+| Ljubicic 2020, DOI [10.1093/humrep/deaa182](https://doi.org/10.1093/humrep/deaa182), tabela I | Zdrowa część badania 3273 kobiet; surowica, AutoDELFIA. Centralna statystyka tabeli nie jest jednoznacznie nazwana medianą. Grupa 20–<40 lat ma n=17, fazy cyklu nie standaryzowano. Pozycje wieku/menopauzy są graficzne. Koniec rysunku 75 lat nie ekstrapoluje grupy nazwanej 70–100 ponad obserwowane 80 lat. |
+| Ljubicic 2022, DOI [10.1210/clinem/dgac363](https://doi.org/10.1210/clinem/dgac363), ryc. 3 | 98 zdrowych donoszonych dziewczynek, 266 próbek, mediana 3/osobę; AutoDELFIA w surowicy, LOD 0,05 IU/L. Własne maksima normalizują średnią modelu mieszanego, bez jednostki. Odczyt około 5,6–360 dni LH / 5,6–357 dni FSH, bez przedłużania do narodzin lub 365. dnia. Ryc. 1 i LMS to odrębne mediany; nie dostarczają maksimów średniej w IU/L. |
+| Madsen 2022, DOI [10.1210/clinem/dgac155](https://doi.org/10.1210/clinem/dgac155), [oficjalny LMS](https://doi.org/10.6084/m9.figshare.17153336.v1) | Populacyjne kohorty norweskie, dla LH/FSH BGS2; surowica Siemens IMMULITE 2000 XPi. Model przekrojowy wieku, bez prognozowania stadium; jedynie prezentacja 6–16 lat. |
+| Stricker 2006, DOI [10.1515/CCLM.2006.160](https://doi.org/10.1515/CCLM.2006.160), tabela 1A | 20 zdrowych kobiet 20–36 lat bez antykoncepcji doustnej, codziennie jeden cykl, surowica Abbott ARCHITECT i2000SR. Dzienne mediany, n=8–20; nie uniwersalny cykl, norma ani korekcja do AutoDELFIA. |
+
+Pełne ekstrakty, SHA źródeł, zachowane pominięte grupy i reguły mostów:
+[audyt danych](hormone-lifespan/evidence/female-gonadotropin-display-audit-2026-10-12.json)
+oraz [opis modułu](HORMONE_LIFESPAN.md#żeńskie-lhfsh--odrębne-widoki-okresów-12-października-2026).
+FSH Zec Th1 1–<4 lat / 2,57 IU/L pozostaje odrębnym istniejącym
+odniesieniem grupowym; nie wymusza nowej mediany dokładnie w wieku 2,5
+roku. Nie dodajemy szczytów z wahań małych grup ani menopauzy z daty urodzin.
+
+**Przypadki syntetyczne rzeczywistych funkcji produkcyjnych.**
+
+- F / LH / 165 dni / pusty wynik → dwie fale względnej średniej;
+  drugi szczyt ≈0,183, pierwszy ≈1; wynik 0,2 IU/L → ta sama linia
+  i skala, wynik w tekście, bez kropki stężenia. Wyczyszczenie nie
+  zmienia geometrii, a pion nadal odpowiada wiekowi.
+- F / LH+FSH / minipuberty → własne maksima, bez jednostki IU/L
+  na osi; brak wartości przy urodzeniu i nieprzedłużone końce źródeł.
+- F / LH / całe życie / grupa 1–5 dni → początek 0,20 IU/L rysowany
+  przy umownym dniu 3, bez nowego profilu punktu noworodka. Istniejąca
+  mediana niemowlęca w późniejszym wieku pozostaje z oryginalnego modelu
+  i może leżeć poza syntezą; nie przejmuje 2,80 IU/L z łuku Schmidt.
+- F / LH+FSH / pokwitanie / 16 lat → linie ≈5,6486 i ≈5,8261 IU/L
+  na osi 0–8, bez wywnioskowanego Tannera i nowej oceny normy.
+- F / LH+FSH / Dorosła / dzień 0 wstawki → LH 41,19 i FSH 12,82 IU/L
+  na wspólnej osi 0–50, bez punktu pacjentki lub predykcji owulacji.
+- Dołączenie AMH/E2/inhibiny B → te same linie LH/FSH; podpis ogranicza
+  oś IU/L do gonadotropin, inne hormony i ich punkty zachowują własne
+  skale. Odznaczenie ostatniego hormonu pozostawia pusty wybór.
+
+**Wpływ kliniczny:** zmieniają się źródła, skale i znaczenie edukacyjnego
+obrazu żeńskich LH/FSH. Nie zmieniają się normy, werdykty, progi, konwersje,
+istniejące dane odniesienia pacjentki, historia, wizyty ani przypięte wyniki.
+Ograniczenie kropki dotyczy względnego widoku minipuberty; nie usuwa
+interpretacji laboratoryjnej. Testy regresji funkcji i interfejsu obejmują
+granice źródeł, niezmienność po wpisie/wyczyszczeniu, zmianę okresu,
+wybór mieszany, pełny ekran, telefon oraz zachowanie oddzielnych odniesień.
+Akceptacja makiety i testy techniczne nie stanowią walidacji klinicznej.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana

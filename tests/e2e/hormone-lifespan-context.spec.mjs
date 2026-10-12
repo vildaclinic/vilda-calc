@@ -85,6 +85,43 @@ test('diagram controls do not change the clinical assessment, entered result or 
   expect(after).toEqual(before);
 });
 
+test('female LH minipuberty uses the real converter result without changing laboratory assessment or patient data', async ({ page }) => {
+  await open(page, { name: 'Fikcyjna pacjentka dwóch fal LH', sex: 'F', age: 0, ageMonths: 4 });
+  await choose(page, 'lh');
+  await quickSelect(page, 'Preterm', 'no');
+  await closePatientEditor(page);
+  await page.locator('#labValue').fill('0.3');
+  const before = await page.evaluate(() => ({
+    shared: window.VildaPersistence.readShared(),
+    assessment: window.VildaLabPubertyRuntime.getAssessment(),
+  }));
+  await expect(chart(page).locator('[data-patient-concentration="lh"]')).toHaveCount(1);
+  await chart(page).locator('[data-view="mini"]').click();
+  await expect(chart(page).locator('[data-patient-concentration="lh"]')).toHaveCount(0);
+  await expectAge(page, 4 / 12);
+  await expect(chart(page).locator('[data-lifespan="scale-note"]')).toContainText('100%');
+  await expect(chart(page).locator('[data-lifespan="scale-note"]')).toContainText('0,3 IU/L');
+  const curve = chart(page).locator('[data-line="lh"]');
+  const shape = await curve.getAttribute('d');
+  await chart(page).locator('[data-hormone="fsh"]').click();
+  await expect(curve).toHaveAttribute('d', shape);
+  await chart(page).locator('.vhl-expand').click();
+  await expect(page.locator('dialog.vhl-fullscreen-dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await chart(page).locator('[data-view="life"]').click();
+  await expect(chart(page).locator('[data-patient-concentration="lh"]')).toHaveCount(1);
+  expect(await page.evaluate(() => ({
+    shared: window.VildaPersistence.readShared(),
+    assessment: window.VildaLabPubertyRuntime.getAssessment(),
+  }))).toEqual(before);
+  await expect(page.locator('#labValue')).toHaveValue('0.3');
+  await chart(page).locator('[data-view="mini"]').click();
+  await page.locator('#labValue').fill('<0.1');
+  await expect(chart(page).locator('[data-lifespan="scale-note"]')).toContainText('<0,1 IU/L');
+  await expect(chart(page).locator('[data-result-point]')).toHaveCount(0);
+  await expect(curve).toHaveAttribute('d', shape);
+});
+
 test('legacy AMH uses the current local age, unknown age has no adult marker and analyte changes reset selection', async ({ page }) => {
   await open(page, { name: 'Fikcyjna pacjentka bez wieku', sex: 'F' });
   await choose(page, 'amh');

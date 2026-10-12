@@ -31615,6 +31615,1554 @@ const insl3DisplayPolicy = {
     "No numerical INSL3 patient point, percentile, reference interval, laboratory classification or new calculator."
   ]
 };
+const femaleGonadotropinPolicy = {
+  "id": "female-gonadotropin-display-v1",
+  "version": "2026-10-12.1",
+  "kind": "educational-display-only",
+  "sex": "female",
+  "analytes": [
+    "lh",
+    "fsh"
+  ],
+  "approval": "Owner approved the final mockup and requested implementation on 2026-10-12.",
+  "clinicalNormsChanged": false,
+  "numericPatientProfilesChanged": false,
+  "life": {
+    "domain": {
+      "minAge": 0,
+      "maxAge": 75
+    },
+    "statistic": "educational-mixed-source",
+    "scale": {
+      "kind": "log1p",
+      "unit": "IU/L",
+      "min": 0,
+      "max": 70,
+      "softening": 0.5,
+      "ticks": [
+        0,
+        0.5,
+        2,
+        10,
+        70
+      ],
+      "independentOfPatient": true
+    },
+    "displaySegments": [
+      {
+        "min": 0,
+        "max": 1,
+        "width": 0.2,
+        "label": "Niemowlę",
+        "color": "#eaf5f2"
+      },
+      {
+        "min": 1,
+        "max": 10,
+        "width": 0.16,
+        "label": "Dziecko",
+        "color": "#edf4f9"
+      },
+      {
+        "min": 10,
+        "max": 20,
+        "width": 0.16,
+        "label": "Pokwitanie",
+        "color": "#e8f2f9"
+      },
+      {
+        "min": 20,
+        "max": 45,
+        "width": 0.2,
+        "label": "Dorosła",
+        "color": "#f5f5e9"
+      },
+      {
+        "min": 45,
+        "max": 55,
+        "width": 0.16,
+        "label": "Perimenopauza",
+        "color": "#faeee7"
+      },
+      {
+        "min": 55,
+        "max": 75,
+        "width": 0.12,
+        "label": "Po menopauzie",
+        "color": "#f1edf8"
+      }
+    ],
+    "sampling": {
+      "count": 1601,
+      "includeSourceNodes": true,
+      "lhBridgeCount": 1601
+    },
+    "firstDrawAgeYears": 0.008213552361396304,
+    "lhInfantDrawing": {
+      "kind": "asymmetric_smooth_bridge_in_shared_life_axis_coordinates",
+      "startAgeYears": 0.008213552361396304,
+      "peakAgeYears": 0.07392197125256673,
+      "endAgeYears": 0.4166666666666667,
+      "lowValue": 0.2,
+      "peakValue": 2.8,
+      "descentXControls": [
+        0.08,
+        0.1
+      ],
+      "verticalInterpolation": "quintic_smoothstep_in_log1p(value/0.5); invert to IU/L before common display mapping",
+      "role": "Educational bridge only. Graphical handles and intermediate heights are not measured concentrations.",
+      "why": "Forcing the Ji2month bin after Schmidt end-neonatal bin makes a steep cross-assay fall followed by an abrupt horizontal segment. Retain original source values, relax that drawing knot and approach the low later-infant level smoothly.",
+      "omittedGeometryKnots": [
+        {
+          "ageMonths": 2,
+          "lhMedian": 0.2,
+          "source": "Ji2008"
+        },
+        {
+          "ageMonths": 3,
+          "lhMedian": 0.2,
+          "source": "Ji2008"
+        },
+        {
+          "ageMonths": 4,
+          "lhMedian": 0.3,
+          "source": "Ji2008"
+        }
+      ],
+      "noLaterPeakInvented": true,
+      "laterWaveEvidence": {
+        "source": "Ljubicic2022 Figure3",
+        "doi": "10.1210/clinem/dgac363",
+        "statistic": "normalized longitudinal model mean, NOT age-specific median",
+        "direction": "LH rises again after its early trough during months3–4, with a smaller second model peak around days164–165.",
+        "absoluteConcentrationsAvailableForThisMeanModel": false,
+        "policy": "Explain this source in the source panel; do not calibrate its normalized curve using Schmidt or Ji medians."
+      }
+    },
+    "sources": [
+      {
+        "label": "Schmidt i Schwarz 2000 · pierwsze 28 dni",
+        "url": "https://doi.org/10.1530/eje.0.1430213"
+      },
+      {
+        "label": "Ji i wsp. 2008 · tabela I",
+        "url": "https://www.indianpediatrics.net/june2008/june-489-492.htm"
+      },
+      {
+        "label": "Ljubicic i wsp. 2020 · tabela I",
+        "url": "https://doi.org/10.1093/humrep/deaa182"
+      },
+      {
+        "label": "Ljubicic i wsp. 2022 · COPENHAGEN, rycina 3",
+        "url": "https://doi.org/10.1210/clinem/dgac363"
+      },
+      {
+        "label": "Stricker i wsp. 2006 · codzienne mediany w cyklu",
+        "url": "https://doi.org/10.1515/CCLM.2006.160"
+      }
+    ],
+    "caveats": [
+      "Linie łączą różne badania i metody. To ilustracja, nie jedna mediana populacyjna ani norma. Grupy wieku umieszczono w umownych pozycjach; rysunek nie wyznacza wieku menopauzy.",
+      "Schmidt 2000: 73 donoszone dziewczynki, każda badana raz, surowica z żyły obwodowej, RIA Serono MAIA clone. Grupy 1–5 dni i 26–28 dni umieszczono przy 3. i 27. dniu. Nie znamy stężenia przy urodzeniu ani dokładnego dnia szczytu. Małe grupy liczyły 3–8 osób.",
+      "Schmidt: LOD LH 0,15 i FSH 0,3 IU/L; test LH wykazywał 3% reaktywności krzyżowej z hCG. Bez oznaczenia hCG nie można skorygować LH. Nie traktujemy metod z różnych publikacji jako równoważnych.",
+      "Neonatalne mediany LH/FSH (IU/L): dni 1–5: 0,20/1,80; 6–10: 0,30/1,40; 11–15: 1,60/8,95; 16–20: 0,35/1,90; 21–25: 0,50/3,90; 26–28: 2,80/6,15. Rysunek pomija wahania małych grup; szczyt FSH w 3. miesiącu nie jest uniwersalną regułą.",
+      "Ji 2008: 201 donoszonych dziewczynek, przekrojowe oznaczenia Immulite. Mediany FSH w 2./3./5./6./12. miesiącu: 5,9/7,1/6,1/5,4/5,7 IU/L; LH 0,2–0,3 IU/L. Most między badaniami nie odtwarza indywidualnego tempa zmian. Jego wysokości nie są nowymi pomiarami.",
+      "Łuk LH łagodnie schodzi od grupy końca pierwszego miesiąca do niskiego poziomu grupy 5 miesięcy, bez wymuszania mediany Ji przy 2 miesiącach. Zbliżenie „Minipuberty” przedstawia inną statystykę: dwufazową średnią modelu podłużnego COPENHAGEN we własnej skali względnej. Tej średniej nie przeliczamy na IU/L.",
+      "Zec 2012: FSH 2,57 IU/L dotyczy całej grupy 1–<4 lat, Tanner I, Roche cobas e 411. Nie wymuszamy tej wartości w wieku 2,5 roku. Most do dzieciństwa nie jest nową referencją liczbową.",
+      "Późniejsze grupy: Ljubicic 2020, AutoDELFIA, tabela I. Autorzy nie określają jednoznacznie statystyki tabeli jako mediany. Grupa 20–<40 lat liczy 17 kobiet; fazy cyklu nie są ujednolicone. 75 lat jest graficzną pozycją grupy 70–100, nie medianą jej wieku. Po 75 latach nie dopisujemy przebiegu.",
+      "W tej kohorcie późne LH nieco maleje, a FSH rośnie. Inne kohorty wykazują inne trendy; nie jest to prognoza dla pojedynczej osoby. Kliknięcie „Dorosła” pokazuje osobno mediany w cyklu z badania Stricker.",
+      "Oś stężeń: log(1 + stężenie/0,5), ze wspólną górą 70 IU/L. Równa wysokość oznacza równe stężenie, ale odległości nie pokazują ich ilorazu. Odcinki osi wieku mają różną skalę.",
+      "Punkt pacjentki i jasny znacznik zachowują istniejące liczbowe odniesienie i jego kwalifikację. Jasny znacznik może leżeć poza poglądową linią. Wykres nie zmienia norm laboratoryjnych."
+    ]
+  },
+  "mini": {
+    "domain": {
+      "minAge": 0,
+      "maxAge": 1
+    },
+    "statistic": "digitized-normalized-longitudinal-mean",
+    "scale": {
+      "kind": "relative",
+      "unit": null,
+      "min": 0,
+      "max": 1.1,
+      "ticks": [
+        0,
+        0.25,
+        0.5,
+        0.75,
+        1
+      ],
+      "normalization": "each-hormones-own-longitudinal-mean-maximum",
+      "independentOfPatient": true
+    },
+    "sampling": {
+      "count": 801,
+      "includeSourceNodes": true
+    },
+    "patientPointPolicy": "age-only-no-concentration-point",
+    "sources": [
+      {
+        "label": "Ljubicic i wsp. 2022 · COPENHAGEN, rycina 3",
+        "url": "https://doi.org/10.1210/clinem/dgac363"
+      }
+    ],
+    "caveats": [
+      "Ljubicic 2022, COPENHAGEN: 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy, AutoDELFIA. Rycina 3 pokazuje średnią trajektorię podłużnego modelu, podzieloną przez własne maksimum każdego hormonu. To nie mediana GAMLSS z ryciny 1 ani zakres normy.",
+      "Pierwsze maksimum modelu przypada w pierwszym miesiącu, drugie LH/FSH około 164.–165. dnia. Ponowny wzrost zaczyna się wcześniej, w 3.–4. miesiącu. To wynik tej kohorty, nie harmonogram dla każdej dziewczynki.",
+      "Krzywe odczytano w przybliżeniu z ryciny. Druga fala LH ma około 18% wysokości pierwszej. Zachowujemy tę proporcję oraz osobne końce odczytu: LH około 360 dni, FSH około 357 dni. Nie dorysowujemy stężenia przy urodzeniu ani poza odczytanym zakresem.",
+      "100% oznacza własny szczyt LH lub FSH. Równa wysokość LH i FSH nie oznacza równego stężenia. Artykuł i suplement nie podają fizycznych maksimów tej średniej; nie kalibrujemy jej medianami z innych modeli lub badań.",
+      "LOD LH i FSH wynosiło 0,05 IU/L; odrębnego LOQ nie podano. Zastępowanie wartości poniżej progu połową progu było zabiegiem analizy badania, nie regułą dla wyniku pacjentki.",
+      "Wynik pacjentki pozostaje liczbą z jednostką, a na tej osi zaznaczamy tylko wiek. Względna średnia nie kwalifikuje wyniku ani wcześniaków. Normy i istniejące źródłowe mediany pozostają niezależne."
+    ]
+  },
+  "puberty": {
+    "domain": {
+      "minAge": 6,
+      "maxAge": 16
+    },
+    "statistic": "model-median",
+    "scale": {
+      "kind": "linear",
+      "unit": "IU/L",
+      "min": 0,
+      "max": 8,
+      "ticks": [
+        0,
+        2,
+        4,
+        6,
+        8
+      ],
+      "independentOfPatient": true
+    },
+    "sampling": {
+      "count": 801,
+      "includeSourceNodes": true
+    },
+    "sources": [
+      {
+        "label": "Madsen i wsp. 2022 · suplement LMS",
+        "url": "https://doi.org/10.1210/clinem/dgac155"
+      }
+    ],
+    "caveats": [
+      "Madsen 2022, suplement LMS: mediany LH i FSH według wieku, Bergen Growth Study 2, zdrowe dziewczęta 6–16 lat, surowica, Siemens IMMULITE 2000 XPi. Wspólna liniowa oś 0–8 IU/L.",
+      "To odrębny model zbliżenia, nie dosłowny wycinek ilustracji całego życia. Wiek nie wyznacza stadium Tannera ani fazy cyklu; różnice kohort nie dowodzą spadku po pokwitaniu. Nie ekstrapolujemy modelu po 16. roku życia.",
+      "Punkt pacjentki i jasny znacznik korzystają z dotychczasowego silnika odniesień. Nowy model służy wyłącznie prezentacji, nie rozszerza kwalifikacji ani norm."
+    ]
+  },
+  "cycle": {
+    "domain": {
+      "minDay": -15,
+      "maxDay": 14
+    },
+    "statistic": "published-daily-median",
+    "scale": {
+      "kind": "linear",
+      "unit": "IU/L",
+      "min": 0,
+      "max": 50,
+      "ticks": [
+        0,
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "independentOfPatient": true
+    },
+    "sampling": {
+      "count": 349,
+      "includeSourceNodes": true
+    },
+    "patientPointPolicy": "no-cycle-patient-reference",
+    "sources": [
+      {
+        "label": "Stricker i wsp. 2006 · codzienne mediany w cyklu",
+        "url": "https://doi.org/10.1515/CCLM.2006.160"
+      }
+    ],
+    "caveats": [
+      "Stricker 2006: 20 kobiet w wieku 20–36 lat, prawidłowe owulacyjne cykle, codzienne próbki surowicy, Abbott ARCHITECT i2000SR. Obie krzywe przedstawiają opublikowane dzienne mediany na wspólnej osi 0–50 IU/L.",
+      "Dzień 0 oznacza indywidualny szczyt LH użyty do wyrównania cykli. To nie uniwersalny 14. dzień od miesiączki ani dokładna chwila owulacji. Liczebności dzienne wynoszą 8–20; małych wahań median nie traktujemy jako obowiązkowych zdarzeń biologicznych.",
+      "Ten wykres nie przewiduje owulacji, nie jest normą dla fazy cyklu ani odniesieniem pacjentki. Dotyczy kobiet bez antykoncepcji hormonalnej i innych leków, nie menopauzy lub leczenia hormonalnego."
+    ]
+  }
+};
+const femaleGonadotropinData = {
+  "version": "2026-10-12.1",
+  "scope": "female-gonadotropin-educational-display",
+  "globalPatientProfiles": false,
+  "life": {
+    "statistic": "educational-mixed-source",
+    "unit": "IU/L",
+    "hormones": {
+      "lh": [
+        {
+          "ageYears": 0.008213552361396304,
+          "value": 0.2,
+          "source": "schmidt2000",
+          "statistic": "age_group_median",
+          "sourceAgeBandDays": [
+            1,
+            5
+          ],
+          "n": 31,
+          "agePlacement": "graphical_bin_midpoint_not_measured_age",
+          "method": "Serono MAIA clone RIA"
+        },
+        {
+          "ageYears": 0.07392197125256673,
+          "value": 2.8,
+          "source": "schmidt2000",
+          "statistic": "age_group_median",
+          "sourceAgeBandDays": [
+            26,
+            28
+          ],
+          "n": 8,
+          "agePlacement": "graphical_bin_midpoint_not_measured_age",
+          "method": "Serono MAIA clone RIA"
+        },
+        {
+          "ageYears": 0.4166666666666667,
+          "value": 0.2,
+          "source": "ji2008",
+          "statistic": "age_group_median"
+        },
+        {
+          "ageYears": 1,
+          "value": 0.2,
+          "source": "ji2008",
+          "statistic": "age_group_median"
+        },
+        {
+          "ageYears": 6.0,
+          "value": 0.03,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "5–<7",
+          "n": 82,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.05,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "7–<9",
+          "n": 275,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.4,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "9–<11",
+          "n": 502,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 12.0,
+          "value": 2.66,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "11–<13",
+          "n": 544,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.35,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "15–<17",
+          "n": 198,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 30.0,
+          "value": 5.63,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "20–<40",
+          "n": 17,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 45.0,
+          "value": 6.61,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "40–<50",
+          "n": 162,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 55.0,
+          "value": 25.89,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "50–<60",
+          "n": 151,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 65.0,
+          "value": 27.83,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "60–<70",
+          "n": 130,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 75.0,
+          "value": 24.95,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "70–100",
+          "n": 143,
+          "agePlacement": "graphical_age_position_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        }
+      ],
+      "fsh": [
+        {
+          "ageYears": 0.008213552361396304,
+          "value": 1.8,
+          "source": "schmidt2000",
+          "statistic": "age_group_median",
+          "sourceAgeBandDays": [
+            1,
+            5
+          ],
+          "n": 31,
+          "agePlacement": "graphical_bin_midpoint_not_measured_age",
+          "method": "Serono MAIA clone RIA"
+        },
+        {
+          "ageYears": 0.07392197125256673,
+          "value": 6.15,
+          "source": "schmidt2000",
+          "statistic": "age_group_median",
+          "sourceAgeBandDays": [
+            26,
+            28
+          ],
+          "n": 8,
+          "agePlacement": "graphical_bin_midpoint_not_measured_age",
+          "method": "Serono MAIA clone RIA"
+        },
+        {
+          "ageYears": 0.25,
+          "value": 7.1,
+          "source": "ji2008",
+          "statistic": "age_group_median"
+        },
+        {
+          "ageYears": 0.4166666666666667,
+          "value": 6.1,
+          "source": "ji2008",
+          "statistic": "age_group_median"
+        },
+        {
+          "ageYears": 1,
+          "value": 5.7,
+          "source": "ji2008",
+          "statistic": "age_group_median"
+        },
+        {
+          "ageYears": 6.0,
+          "value": 1.3,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "5–<7",
+          "n": 82,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.46,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "7–<9",
+          "n": 275,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 10.0,
+          "value": 2.41,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "9–<11",
+          "n": 502,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 12.0,
+          "value": 4.25,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "11–<13",
+          "n": 544,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 30.0,
+          "value": 4.44,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "20–<40",
+          "n": 17,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 45.0,
+          "value": 7.56,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "40–<50",
+          "n": 162,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 55.0,
+          "value": 50.63,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "50–<60",
+          "n": 151,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 65.0,
+          "value": 61.66,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "60–<70",
+          "n": 130,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 75.0,
+          "value": 64.54,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "70–100",
+          "n": 143,
+          "agePlacement": "graphical_age_position_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        }
+      ]
+    }
+  },
+  "mini": {
+    "unit": null,
+    "statistic": "digitized-normalized-longitudinal-mean",
+    "doi": "10.1210/clinem/dgac363",
+    "sourceSha256": "1931626b3ef2ad22c2a18c1d92a0d770ee81b925bd079727112390afab46d994",
+    "hormones": {
+      "lh": [
+        {
+          "ageYears": 0.015345429158110883,
+          "value": 0.172339
+        },
+        {
+          "ageYears": 0.01642710472279261,
+          "value": 0.203471
+        },
+        {
+          "ageYears": 0.019164955509924708,
+          "value": 0.251024
+        },
+        {
+          "ageYears": 0.02190280629705681,
+          "value": 0.315239
+        },
+        {
+          "ageYears": 0.024640657084188913,
+          "value": 0.42404
+        },
+        {
+          "ageYears": 0.02737850787132101,
+          "value": 0.508975
+        },
+        {
+          "ageYears": 0.030116358658453114,
+          "value": 0.577994
+        },
+        {
+          "ageYears": 0.03285420944558522,
+          "value": 0.649738
+        },
+        {
+          "ageYears": 0.03559206023271732,
+          "value": 0.71698
+        },
+        {
+          "ageYears": 0.038329911019849415,
+          "value": 0.770787
+        },
+        {
+          "ageYears": 0.04106776180698152,
+          "value": 0.823896
+        },
+        {
+          "ageYears": 0.04380561259411362,
+          "value": 0.865572
+        },
+        {
+          "ageYears": 0.04654346338124572,
+          "value": 0.897197
+        },
+        {
+          "ageYears": 0.049281314168377825,
+          "value": 0.935815
+        },
+        {
+          "ageYears": 0.05201916495550993,
+          "value": 0.955547
+        },
+        {
+          "ageYears": 0.05475701574264202,
+          "value": 0.978063
+        },
+        {
+          "ageYears": 0.057494866529774126,
+          "value": 0.98837
+        },
+        {
+          "ageYears": 0.06023271731690623,
+          "value": 0.997418
+        },
+        {
+          "ageYears": 0.06187542778918549,
+          "value": 0.998495
+        },
+        {
+          "ageYears": 0.06310746064339494,
+          "value": 0.999759
+        },
+        {
+          "ageYears": 0.06570841889117043,
+          "value": 0.998817
+        },
+        {
+          "ageYears": 0.06844626967830253,
+          "value": 0.989575
+        },
+        {
+          "ageYears": 0.07392197125256673,
+          "value": 0.960378
+        },
+        {
+          "ageYears": 0.08213552361396304,
+          "value": 0.905296
+        },
+        {
+          "ageYears": 0.08761122518822724,
+          "value": 0.853512
+        },
+        {
+          "ageYears": 0.09582477754962354,
+          "value": 0.75277
+        },
+        {
+          "ageYears": 0.1026694045174538,
+          "value": 0.682591
+        },
+        {
+          "ageYears": 0.10951403148528405,
+          "value": 0.603793
+        },
+        {
+          "ageYears": 0.1163586584531143,
+          "value": 0.528014
+        },
+        {
+          "ageYears": 0.12320328542094455,
+          "value": 0.459902
+        },
+        {
+          "ageYears": 0.13689253935660506,
+          "value": 0.343172
+        },
+        {
+          "ageYears": 0.15058179329226556,
+          "value": 0.251747
+        },
+        {
+          "ageYears": 0.16427104722792607,
+          "value": 0.180929
+        },
+        {
+          "ageYears": 0.17796030116358658,
+          "value": 0.129522
+        },
+        {
+          "ageYears": 0.19164955509924708,
+          "value": 0.094974
+        },
+        {
+          "ageYears": 0.2053388090349076,
+          "value": 0.072891
+        },
+        {
+          "ageYears": 0.2190280629705681,
+          "value": 0.061999
+        },
+        {
+          "ageYears": 0.2327173169062286,
+          "value": 0.059256
+        },
+        {
+          "ageYears": 0.2464065708418891,
+          "value": 0.06336
+        },
+        {
+          "ageYears": 0.2600958247775496,
+          "value": 0.068701
+        },
+        {
+          "ageYears": 0.2737850787132101,
+          "value": 0.076441
+        },
+        {
+          "ageYears": 0.30116358658453113,
+          "value": 0.096039
+        },
+        {
+          "ageYears": 0.32854209445585214,
+          "value": 0.11946
+        },
+        {
+          "ageYears": 0.35592060232717315,
+          "value": 0.142422
+        },
+        {
+          "ageYears": 0.38329911019849416,
+          "value": 0.162649
+        },
+        {
+          "ageYears": 0.4106776180698152,
+          "value": 0.175921
+        },
+        {
+          "ageYears": 0.4380561259411362,
+          "value": 0.182661
+        },
+        {
+          "ageYears": 0.4517453798767967,
+          "value": 0.183082
+        },
+        {
+          "ageYears": 0.4654346338124572,
+          "value": 0.181597
+        },
+        {
+          "ageYears": 0.4928131416837782,
+          "value": 0.174235
+        },
+        {
+          "ageYears": 0.5201916495550992,
+          "value": 0.161253
+        },
+        {
+          "ageYears": 0.5475701574264202,
+          "value": 0.143059
+        },
+        {
+          "ageYears": 0.5749486652977412,
+          "value": 0.121175
+        },
+        {
+          "ageYears": 0.6023271731690623,
+          "value": 0.097977
+        },
+        {
+          "ageYears": 0.6297056810403833,
+          "value": 0.073492
+        },
+        {
+          "ageYears": 0.6570841889117043,
+          "value": 0.051423
+        },
+        {
+          "ageYears": 0.6844626967830253,
+          "value": 0.03268
+        },
+        {
+          "ageYears": 0.7118412046543463,
+          "value": 0.018146
+        },
+        {
+          "ageYears": 0.7392197125256673,
+          "value": 0.008094
+        },
+        {
+          "ageYears": 0.7665982203969883,
+          "value": 0.002558
+        },
+        {
+          "ageYears": 0.7939767282683093,
+          "value": 0.001715
+        },
+        {
+          "ageYears": 0.8213552361396304,
+          "value": 0.003822
+        },
+        {
+          "ageYears": 0.8487337440109514,
+          "value": 0.01096
+        },
+        {
+          "ageYears": 0.8761122518822724,
+          "value": 0.020434
+        },
+        {
+          "ageYears": 0.9034907597535934,
+          "value": 0.033733
+        },
+        {
+          "ageYears": 0.9308692676249144,
+          "value": 0.049536
+        },
+        {
+          "ageYears": 0.9582477754962354,
+          "value": 0.068933
+        },
+        {
+          "ageYears": 0.971937029431896,
+          "value": 0.07818
+        },
+        {
+          "ageYears": 0.9774127310061602,
+          "value": 0.082443
+        },
+        {
+          "ageYears": 0.9856262833675564,
+          "value": 0.088502
+        }
+      ],
+      "fsh": [
+        {
+          "ageYears": 0.015345429158110883,
+          "value": 0.218681
+        },
+        {
+          "ageYears": 0.01642710472279261,
+          "value": 0.226928
+        },
+        {
+          "ageYears": 0.019164955509924708,
+          "value": 0.335649
+        },
+        {
+          "ageYears": 0.02190280629705681,
+          "value": 0.38266
+        },
+        {
+          "ageYears": 0.024640657084188913,
+          "value": 0.46614
+        },
+        {
+          "ageYears": 0.02737850787132101,
+          "value": 0.559162
+        },
+        {
+          "ageYears": 0.030116358658453114,
+          "value": 0.631051
+        },
+        {
+          "ageYears": 0.03285420944558522,
+          "value": 0.702402
+        },
+        {
+          "ageYears": 0.03559206023271732,
+          "value": 0.757041
+        },
+        {
+          "ageYears": 0.038329911019849415,
+          "value": 0.814721
+        },
+        {
+          "ageYears": 0.04106776180698152,
+          "value": 0.848853
+        },
+        {
+          "ageYears": 0.04380561259411362,
+          "value": 0.898906
+        },
+        {
+          "ageYears": 0.04654346338124572,
+          "value": 0.925349
+        },
+        {
+          "ageYears": 0.049281314168377825,
+          "value": 0.946548
+        },
+        {
+          "ageYears": 0.05201916495550993,
+          "value": 0.968582
+        },
+        {
+          "ageYears": 0.05475701574264202,
+          "value": 0.987741
+        },
+        {
+          "ageYears": 0.057494866529774126,
+          "value": 0.993761
+        },
+        {
+          "ageYears": 0.06023271731690623,
+          "value": 0.996071
+        },
+        {
+          "ageYears": 0.06187542778918549,
+          "value": 0.996142
+        },
+        {
+          "ageYears": 0.06310746064339494,
+          "value": 0.996168
+        },
+        {
+          "ageYears": 0.06570841889117043,
+          "value": 0.99544
+        },
+        {
+          "ageYears": 0.06844626967830253,
+          "value": 0.99013
+        },
+        {
+          "ageYears": 0.07392197125256673,
+          "value": 0.969223
+        },
+        {
+          "ageYears": 0.08213552361396304,
+          "value": 0.924155
+        },
+        {
+          "ageYears": 0.08761122518822724,
+          "value": 0.897586
+        },
+        {
+          "ageYears": 0.09582477754962354,
+          "value": 0.851069
+        },
+        {
+          "ageYears": 0.1026694045174538,
+          "value": 0.822849
+        },
+        {
+          "ageYears": 0.10951403148528405,
+          "value": 0.783024
+        },
+        {
+          "ageYears": 0.1163586584531143,
+          "value": 0.756272
+        },
+        {
+          "ageYears": 0.12320328542094455,
+          "value": 0.730678
+        },
+        {
+          "ageYears": 0.13689253935660506,
+          "value": 0.683198
+        },
+        {
+          "ageYears": 0.15058179329226556,
+          "value": 0.639107
+        },
+        {
+          "ageYears": 0.16427104722792607,
+          "value": 0.602043
+        },
+        {
+          "ageYears": 0.17796030116358658,
+          "value": 0.572024
+        },
+        {
+          "ageYears": 0.19164955509924708,
+          "value": 0.546787
+        },
+        {
+          "ageYears": 0.2053388090349076,
+          "value": 0.52485
+        },
+        {
+          "ageYears": 0.2190280629705681,
+          "value": 0.509421
+        },
+        {
+          "ageYears": 0.2327173169062286,
+          "value": 0.499978
+        },
+        {
+          "ageYears": 0.2464065708418891,
+          "value": 0.492311
+        },
+        {
+          "ageYears": 0.2600958247775496,
+          "value": 0.490626
+        },
+        {
+          "ageYears": 0.2737850787132101,
+          "value": 0.494335
+        },
+        {
+          "ageYears": 0.30116358658453113,
+          "value": 0.516056
+        },
+        {
+          "ageYears": 0.32854209445585214,
+          "value": 0.557447
+        },
+        {
+          "ageYears": 0.35592060232717315,
+          "value": 0.617414
+        },
+        {
+          "ageYears": 0.38329911019849416,
+          "value": 0.679349
+        },
+        {
+          "ageYears": 0.4106776180698152,
+          "value": 0.732619
+        },
+        {
+          "ageYears": 0.4380561259411362,
+          "value": 0.757203
+        },
+        {
+          "ageYears": 0.4517453798767967,
+          "value": 0.760254
+        },
+        {
+          "ageYears": 0.4654346338124572,
+          "value": 0.754518
+        },
+        {
+          "ageYears": 0.4928131416837782,
+          "value": 0.723597
+        },
+        {
+          "ageYears": 0.5201916495550992,
+          "value": 0.681721
+        },
+        {
+          "ageYears": 0.5475701574264202,
+          "value": 0.634217
+        },
+        {
+          "ageYears": 0.5749486652977412,
+          "value": 0.584575
+        },
+        {
+          "ageYears": 0.6023271731690623,
+          "value": 0.549766
+        },
+        {
+          "ageYears": 0.6297056810403833,
+          "value": 0.526
+        },
+        {
+          "ageYears": 0.6570841889117043,
+          "value": 0.50798
+        },
+        {
+          "ageYears": 0.6844626967830253,
+          "value": 0.496381
+        },
+        {
+          "ageYears": 0.7118412046543463,
+          "value": 0.489257
+        },
+        {
+          "ageYears": 0.7392197125256673,
+          "value": 0.482677
+        },
+        {
+          "ageYears": 0.7665982203969883,
+          "value": 0.480979
+        },
+        {
+          "ageYears": 0.7939767282683093,
+          "value": 0.480094
+        },
+        {
+          "ageYears": 0.8213552361396304,
+          "value": 0.481159
+        },
+        {
+          "ageYears": 0.8487337440109514,
+          "value": 0.484458
+        },
+        {
+          "ageYears": 0.8761122518822724,
+          "value": 0.488941
+        },
+        {
+          "ageYears": 0.9034907597535934,
+          "value": 0.494651
+        },
+        {
+          "ageYears": 0.9308692676249144,
+          "value": 0.502423
+        },
+        {
+          "ageYears": 0.9582477754962354,
+          "value": 0.511061
+        },
+        {
+          "ageYears": 0.971937029431896,
+          "value": 0.516325
+        },
+        {
+          "ageYears": 0.9774127310061602,
+          "value": 0.518176
+        }
+      ]
+    },
+    "sourceSha256Kind": "digitized-presentation-json",
+    "originalFigureSha256": "cecad5e7fc5bb25222ca56f2507b9b37ac7cc45f85fb26d547e1a9be410ee0b9",
+    "digitization": "Approximate colour-mask trace of Figure 3, calibrated to original ticks; sparse source anchors, no extrapolation. Details and source residuals are in evidence/female-gonadotropin-display-audit-2026-10-12.json."
+  },
+  "puberty": {
+    "unit": "IU/L",
+    "statistic": "age-median",
+    "doi": "10.1210/clinem/dgac155",
+    "sourceSha256": "ae4f269f561e439438ae1822850cbca5d46ad583cce35d8d7041c6d12194179a",
+    "hormones": {
+      "lh": [
+        {
+          "ageYears": 6.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 7.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 9.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.18673993015217238
+        },
+        {
+          "ageYears": 11.0,
+          "value": 0.3899391576851016
+        },
+        {
+          "ageYears": 12.0,
+          "value": 0.932808521560225
+        },
+        {
+          "ageYears": 13.0,
+          "value": 2.0309931340891243
+        },
+        {
+          "ageYears": 14.0,
+          "value": 3.3600097374977715
+        },
+        {
+          "ageYears": 15.0,
+          "value": 4.536879278178766
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.64856591188875
+        }
+      ],
+      "fsh": [
+        {
+          "ageYears": 6.0,
+          "value": 0.9328995961019171
+        },
+        {
+          "ageYears": 7.0,
+          "value": 1.1842024760702738
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.513649499646752
+        },
+        {
+          "ageYears": 9.0,
+          "value": 1.964770298470689
+        },
+        {
+          "ageYears": 10.0,
+          "value": 2.5801910640780314
+        },
+        {
+          "ageYears": 11.0,
+          "value": 3.3495190622916695
+        },
+        {
+          "ageYears": 12.0,
+          "value": 4.151220353235434
+        },
+        {
+          "ageYears": 13.0,
+          "value": 4.80572027357214
+        },
+        {
+          "ageYears": 14.0,
+          "value": 5.230782382619504
+        },
+        {
+          "ageYears": 15.0,
+          "value": 5.541214563590151
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.826063174564676
+        }
+      ]
+    },
+    "sourceSha256Kind": "verified-source-review-json",
+    "sourceWorkbookSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e"
+  },
+  "cycle": {
+    "statistic": "published-daily-median",
+    "unit": "IU/L",
+    "doi": "10.1515/CCLM.2006.160",
+    "sourceSha256": "af2ba5f10c3655009fb40052cc54451c21d90fad47b5429f82c5be2b24f11c29",
+    "hormones": {
+      "lh": [
+        {
+          "dayFromLHPeak": -15,
+          "value": 2.28,
+          "n": 9
+        },
+        {
+          "dayFromLHPeak": -14,
+          "value": 3.39,
+          "n": 12
+        },
+        {
+          "dayFromLHPeak": -13,
+          "value": 3.47,
+          "n": 15
+        },
+        {
+          "dayFromLHPeak": -12,
+          "value": 3.59,
+          "n": 17
+        },
+        {
+          "dayFromLHPeak": -11,
+          "value": 3.82,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": -10,
+          "value": 3.82,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -9,
+          "value": 4.26,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -8,
+          "value": 4.96,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -7,
+          "value": 4.54,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -6,
+          "value": 4.47,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -5,
+          "value": 4.18,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -4,
+          "value": 4.58,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -3,
+          "value": 5.12,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -2,
+          "value": 7.02,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -1,
+          "value": 12.36,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 0,
+          "value": 41.19,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 1,
+          "value": 14.92,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 2,
+          "value": 7.75,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": 3,
+          "value": 6.26,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 4,
+          "value": 6.46,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 5,
+          "value": 4.32,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": 6,
+          "value": 4.5,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 7,
+          "value": 4.29,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 8,
+          "value": 3.89,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 9,
+          "value": 3.07,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 10,
+          "value": 1.75,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": 11,
+          "value": 2.52,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 12,
+          "value": 3.42,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 13,
+          "value": 2.55,
+          "n": 16
+        },
+        {
+          "dayFromLHPeak": 14,
+          "value": 3.23,
+          "n": 9
+        }
+      ],
+      "fsh": [
+        {
+          "dayFromLHPeak": -15,
+          "value": 4.59,
+          "n": 9
+        },
+        {
+          "dayFromLHPeak": -14,
+          "value": 6.45,
+          "n": 12
+        },
+        {
+          "dayFromLHPeak": -13,
+          "value": 6.34,
+          "n": 14
+        },
+        {
+          "dayFromLHPeak": -12,
+          "value": 6.26,
+          "n": 17
+        },
+        {
+          "dayFromLHPeak": -11,
+          "value": 6.61,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": -10,
+          "value": 6.88,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -9,
+          "value": 6.65,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -8,
+          "value": 6.46,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -7,
+          "value": 6.63,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -6,
+          "value": 5.65,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -5,
+          "value": 5.45,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -4,
+          "value": 4.59,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -3,
+          "value": 4.35,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -2,
+          "value": 4.32,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": -1,
+          "value": 5.15,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 0,
+          "value": 12.82,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 1,
+          "value": 8.01,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 2,
+          "value": 5.19,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": 3,
+          "value": 4.73,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 4,
+          "value": 4.36,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 5,
+          "value": 3.88,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 6,
+          "value": 3.34,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": 7,
+          "value": 3.31,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 8,
+          "value": 2.97,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 9,
+          "value": 2.73,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 10,
+          "value": 2.55,
+          "n": 19
+        },
+        {
+          "dayFromLHPeak": 11,
+          "value": 2.54,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 12,
+          "value": 3.08,
+          "n": 20
+        },
+        {
+          "dayFromLHPeak": 13,
+          "value": 3.73,
+          "n": 16
+        },
+        {
+          "dayFromLHPeak": 14,
+          "value": 3.81,
+          "n": 8
+        }
+      ]
+    }
+  }
+};
 return {
   version: lifespanData.version,
   maleAges: maleAges,
@@ -31631,6 +33179,8 @@ return {
   lhFshDisplayPolicy: lhFshDisplayPolicy,
   amhDisplayPolicy: amhDisplayPolicy,
   amhComparisonPolicy: amhComparisonPolicy,
-  insl3DisplayPolicy: insl3DisplayPolicy
+  insl3DisplayPolicy: insl3DisplayPolicy,
+  femaleGonadotropinPolicy: femaleGonadotropinPolicy,
+  femaleGonadotropinData: femaleGonadotropinData
 };
 });
