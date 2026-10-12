@@ -502,6 +502,24 @@ describe('plik danych vilda_imiona_plec_dane.js (rejestr PESEL)', () => {
     });
   });
 
+  it('plik danych jest dokładnie wynikiem generatora z oficjalnych plików CSV w docs/clinical/imiona-pesel/', () => {
+    // Odtwarzalność artefaktu (AGENTS.md § 2): argumenty generatora pochodzą z metadanych pliku danych,
+    // a SHA-256 plików źródłowych musi się zgadzać z zapisanym.
+    const z = zrodla()[0];
+    const katalog = path.join(korzen, 'docs/clinical/imiona-pesel');
+    const [kobiety, mezczyzni] = z.pliki;
+    const odtworzone = zbudujZrodlo({
+      kobiety: path.join(katalog, kobiety.nazwa),
+      mezczyzni: path.join(katalog, mezczyzni.nazwa),
+      stanNa: z.stanNa,
+      adres: z.adres,
+      warunki: z.warunki,
+      min: z.minLiczba,
+    });
+    expect(odtworzone.pliki).toEqual(z.pliki);
+    expect(trescPliku(odtworzone)).toBe(zrodlo('vilda_imiona_plec_dane.js'));
+  });
+
   it('przypadki syntetyczne (wejście → oczekiwana płeć) na prawdziwym słowniku', () => {
     const z = zrodla()[0];
     const S = P();
