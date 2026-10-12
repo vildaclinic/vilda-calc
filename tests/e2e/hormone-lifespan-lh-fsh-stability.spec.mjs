@@ -202,12 +202,26 @@ test('LH/FSH zoom and selection preserve the canonical curve and keep comparison
     }
     await panel(page).locator('.vhl-compare-toggle').click();
     await expect(note(page)).toBeHidden();
-    // The 44-year-old is outside this puberty viewport; preserve the existing
-    // no-matched-pair explanation, then check the ordinary empty comparison.
-    await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('brak dopasowanych median obu płci');
-    await page.locator('#labValue').fill('');
-    await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('Każda płeć we własnej skali');
-    await page.locator('#labValue').fill('4');
+    // The 44-year-old cannot supply a puberty point. The source medians and
+    // their common 0–8 IU/L scale remain available independently of his result.
+    const comparisonChart = panel(page).locator('[data-lifespan="chart"]');
+    const comparisonLines = comparisonChart.locator(`[data-comparison-curve="${id}"]`);
+    await expect(comparisonLines).toHaveCount(2);
+    for (const sex of ['female', 'male']) {
+      await expect(comparisonChart.locator(`[data-comparison-curve="${id}"][data-comparison-sex="${sex}"]`))
+        .toHaveAttribute('data-profile', `madsen2022-${sex}-${id}${sex === 'female' ? '-sex-comparison' : ''}`);
+    }
+    const comparisonPaths = () => comparisonLines.evaluateAll(lines => lines.map(line => line.getAttribute('d')));
+    const initialComparison = await comparisonPaths();
+    for (const value of ['4', '', '4']) {
+      await page.locator('#labValue').fill(value);
+      await expect(dot(page, id)).toHaveCount(0);
+      await expect(comparisonChart).toHaveAttribute('data-comparison-scale', 'linear');
+      await expect(comparisonChart).toHaveAttribute('data-comparison-min', '0');
+      await expect(comparisonChart).toHaveAttribute('data-comparison-max', '8');
+      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toHaveText('Mediany stężeń · wspólna skala IU/L');
+      await expect.poll(comparisonPaths).toEqual(initialComparison);
+    }
     await panel(page).locator('.vhl-compare-toggle').click();
     await expect(note(page)).toBeVisible();
     await panel(page).locator('[data-view="life"]').click();

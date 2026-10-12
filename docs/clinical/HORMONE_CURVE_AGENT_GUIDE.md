@@ -90,7 +90,7 @@ Nie przedstawiaj tego jako pełnej matematycznej równości.
 
 **Porównanie płci ma odrębny kontrakt.** Zatwierdzone wyjątki od
 dotychczasowych osobnych skal to AMH w minipuberty oraz inhibina B
-w minipuberty i pokwitaniu, opisane niżej. Obie płcie używają w nich
+i LH/FSH w minipuberty i pokwitaniu, opisane niżej. Obie płcie używają w nich
 stałej wspólnej osi stężeń. Pozostałe porównania
 zachowują własną politykę; schemat z osobnymi maksimami opisuje kierunek,
 nie iloraz stężeń. Nie przenoś automatycznie tych zmian do innych hormonów
@@ -463,6 +463,44 @@ oraz [opis modułu](HORMONE_LIFESPAN.md#żeńskie-lhfsh--odrębne-widoki-okresó
   Osobne obserwacje Kuiri-Hänninen, Crofton i Baccarelli pozostają
   odrębne. Uzasadnienie i przypadki:
   [audyt porównań inhibiny B](hormone-lifespan/evidence/inhibin-comparison-audit-2026-10-11.json).
+
+## Utrwalony wyjątek: porównania płci LH/FSH, 12 października 2026
+
+Właściciel zatwierdził makietę i wdrożenie („ok, ładnie, koduj”).
+Stosuj `gonadotropin-comparison-policy.json` i
+`buildGonadotropinComparison(data, referenceEngine, period, analyte)`.
+
+- Obie płcie i oba hormony mają stałą liniową skalę IU/L w danym
+  okresie: minipuberty 0–6, pokwitanie 0–8. Nie normalizuj osobno
+  maksimów i nie dostosowuj osi do wyniku. Zero to punkt na osi;
+  ponad osią strzałka z rzeczywistą wartością, bez ukrytego przycięcia.
+- Minipuberty przedstawia mediany GAMLSS Busch/Ljubicic, surowica
+  AutoDELFIA, zdrowe donoszone niemowlęta. Zachowaj oryginalne węzły,
+  kwalifikację i wspólne linie 0,02–<1 roku. Chłopiec zachowuje
+  własną medianę od 7. dnia; brak żeńskiej mediany nie blokuje punktu.
+  Dokładnie 1 rok nie otrzymuje punktu tego porównania. Nie przenoś
+  tej granicy do zwykłego API źródeł ani nie podstawiaj FSH Zec.
+- Nie zastępuj zatwierdzonych dwufazowych średnich zwykłej żeńskiej
+  minipuberty tym porównaniem median. Nie kalibruj ich procentowych
+  szczytów medianami IU/L. Względnie płaska mediana FSH nie znaczy
+  stałego FSH u konkretnej dziewczynki. Niski ogon męskiego LH
+  pozostaje oszacowaniem, bez punktu po 243. dniu według istniejącej
+  bramki digitalizacji; ta bramka nie jest LOD ani normą.
+- Pokwitanie: 44 mediany Madsen, 6–16 lat obu płci, IMMULITE 2000 XPi.
+  Zachowaj wszystkie roczne węzły i `exp(M)/1e6`; M nie jest IU/L.
+  Węzeł 16 jest opublikowanym brzegiem kohorty 6–<16. Fit Futures
+  do 18 lat dotyczy steroidów, nie LH/FSH. Nie dopisuj 17–20 lat,
+  nie ustalaj Tannera z wieku ani fazy cyklu z mediany.
+- Dwa żeńskie profile Madsen pozostają w odrębnych danych porównania,
+  poza globalnym `patientPointData`. Kwalifikuj własny profil przez
+  istniejący silnik; nie przekazuj kontekstu pacjenta drugiej płci.
+  Zachowaj bramki wieku, metody, materiału, leczenia, donoszenia
+  i cenzurowanego wyniku. Nie aktywuj nowych zwykłych odniesień,
+  norm, SDS ani klinicznego ilorazu LH/FSH.
+
+Źródła, weryfikacja 198/788/44 wartości i ograniczenia:
+[audyt porównań LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
+Zatwierdzenie ilustracji nie nadaje jej statusu walidacji klinicznej.
 
 ## Co sprawdzić przed oddaniem zmiany
 

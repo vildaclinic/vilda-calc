@@ -1307,7 +1307,123 @@
     catch (_error) { return null; }
   }
 
-  return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
+
+  function gonadotropinComparison(data, engine, period, analyte) {
+    var policy = data && data.gonadotropinComparisonPolicy;
+    var source = data && data.patientPointData;
+    var scoped = data && data.gonadotropinComparisonReferenceData;
+    if (!policy || policy.kind !== 'population-model-comparison' ||
+        policy.sourceStatistic !== 'median' || policy.sourceUnit !== 'IU/L' ||
+        policy.globalPatientProfiles !== false ||
+        !Array.isArray(policy.analytes) || policy.analytes.length !== 2 ||
+        !['lh', 'fsh'].every(function (id) { return policy.analytes.includes(id); }) ||
+        !policy.analytes.includes(analyte) || !['mini', 'puberty'].includes(period) ||
+        !source || !Array.isArray(source.profiles) || !engine ||
+        typeof engine.referenceAt !== 'function') return null;
+    var settings = policy.periods && policy.periods[period];
+    var domain = settings && settings.domain, scale = settings && settings.scale;
+    var ids = settings && settings.profileIds && settings.profileIds[analyte];
+    var sampling = policy.sampling;
+    if (!settings || settings.referenceScope !== 'gonadotropin-sex-comparison' ||
+        settings.pointPolicy !== 'own-target-profile-only; retain-engine-gates' || !ids ||
+        !scale || scale.kind !== 'linear' || scale.unit !== policy.sourceUnit || scale.min !== 0 ||
+        !finite(scale.max) || scale.max <= scale.min || scale.independentOfPatient !== true ||
+        scale.commonToBothAnalytesAndSexes !== true ||
+        !Array.isArray(scale.ticks) || scale.ticks.length < 2 ||
+        scale.ticks[0] !== scale.min || scale.ticks[scale.ticks.length - 1] !== scale.max ||
+        scale.ticks.some(function (tick, index) {
+          return !finite(tick) || tick !== scale.min + (scale.max - scale.min) * index / (scale.ticks.length - 1);
+        }) || !domain || !finite(domain.minAge) || !finite(domain.maxAge) ||
+        domain.minAge < 0 || domain.maxAge <= domain.minAge ||
+        domain.maxAgeExclusive !== (period === 'mini') ||
+        !sampling || !Number.isInteger(sampling.sampleCount) || sampling.sampleCount < 2 ||
+        sampling.sampleCount > 2000 || sampling.includeSourceNodes !== true ||
+        !finite(sampling.exclusiveEndpointGapYears) || sampling.exclusiveEndpointGapYears <= 0) return null;
+    var conversion = source.unitConversions && source.unitConversions[analyte];
+    if (!conversion || conversion.unit !== policy.sourceUnit || !conversion.factors ||
+        conversion.factors[scale.unit] !== 1) return null;
+    if (!scoped || scoped.scope !== settings.referenceScope ||
+        scoped.globalPatientProfiles !== false || !Array.isArray(scoped.profiles) ||
+        scoped.profiles.length !== policy.analytes.length) return null;
+    var puberty = policy.periods.puberty;
+    if (!puberty || !puberty.domain || !puberty.profileIds || scoped.profiles.some(function (profile) {
+      var expected = profile && puberty.profileIds[profile.analyte];
+      return !profile || !policy.analytes.includes(profile.analyte) || !expected ||
+        typeof profile.id !== 'string' || !profile.id || expected.female !== profile.id ||
+        profile.sex !== 'female' || profile.minAge !== puberty.domain.minAge ||
+        profile.maxAge !== puberty.domain.maxAge || profile.maxAgeExclusive === true ||
+        scoped.profiles.filter(function (p) { return p && p.id === profile.id; }).length !== 1 ||
+        source.profiles.some(function (p) { return p && p.id === profile.id; });
+    })) return null;
+    var pool = source.profiles.concat(period === 'puberty' ? scoped.profiles : []);
+    var sexes = ['female', 'male'];
+    var profiles = sexes.map(function (sex) {
+      var id = ids[sex];
+      if (typeof id !== 'string' || !id) return null;
+      var matches = pool.filter(function (p) { return p && p.id === id; });
+      return matches.length === 1 ? matches[0] : null;
+    });
+    var end = domain.maxAgeExclusive ? domain.maxAge - sampling.exclusiveEndpointGapYears : domain.maxAge;
+    if (!(end > domain.minAge) || (domain.maxAgeExclusive && end >= domain.maxAge) ||
+        profiles.some(function (profile, index) {
+          return !profile || profile.sex !== sexes[index] || profile.analyte !== analyte ||
+            profile.unit !== policy.sourceUnit || profile.statistic !== policy.sourceStatistic ||
+            profile.interpolation !== 'pchip' || profile.requiredGonadalStage != null ||
+            !finite(profile.minAge) || !finite(profile.maxAge) || profile.minAge >= profile.maxAge ||
+            domain.minAge < profile.minAge || end > profile.maxAge ||
+            (profile.maxAgeExclusive && end === profile.maxAge) ||
+            (period === 'mini' && profile.termOnly !== true) ||
+            !Array.isArray(profile.compatibleAssayMethodIds) || !profile.compatibleAssayMethodIds.length ||
+            profile.compatibleAssayMethodIds.some(function (method) { return typeof method !== 'string' || !method; }) ||
+            !Array.isArray(profile.points) || profile.points.length < 2 ||
+            profile.points.some(function (point, i, points) {
+              return !point || !finite(point.ageYears) || !finite(point.value) || point.value < 0 ||
+                (point.eligible != null && typeof point.eligible !== 'boolean') ||
+                (i > 0 && point.ageYears <= points[i - 1].ageYears);
+            }) || !policy.colors || !/^#[0-9a-f]{6}$/i.test(policy.colors[sexes[index]]);
+        }) || domain.minAge !== Math.max.apply(null, profiles.map(function (p) { return p.minAge; })) ||
+        domain.maxAge !== Math.min.apply(null, profiles.map(function (p) { return p.maxAge; }))) return null;
+    // Only the two target age models enter this view. The ordinary FSH Zec
+    // stage profile cannot substitute for Madsen, and a mismatch in the other
+    // sex cannot suppress a valid own point. Global profile arrays stay intact.
+    var referenceData = Object.assign({}, data, { patientPointData: Object.assign({}, source, {
+      profiles: profiles.slice()
+    }) });
+    var invalid = false;
+    var curves = profiles.map(function (profile) {
+      var ages = new Set();
+      for (var n = 0; n < sampling.sampleCount; n++)
+        ages.add(domain.minAge + (end - domain.minAge) * n / (sampling.sampleCount - 1));
+      profile.points.forEach(function (point) {
+        if (point.ageYears >= domain.minAge && point.ageYears <= end) ages.add(point.ageYears);
+      });
+      // Source interpolation retains every original knot and eligibility flag.
+      // Display samples never become new source data or patient references.
+      var points = Array.from(ages).sort(function (a, b) { return a - b; }).map(function (ageYears) {
+        var value = engine.referenceAt(profile, ageYears);
+        if (!finite(value) || value < scale.min || value > scale.max) invalid = true;
+        return { ageYears: ageYears, value: value };
+      });
+      return { sex: profile.sex, profileId: profile.id, color: policy.colors[profile.sex], points: points };
+    });
+    if (invalid) return null;
+    return {
+      id: analyte, period: period, kind: policy.kind, curves: curves,
+      scale: Object.assign({}, scale, { ticks: scale.ticks.slice(), sourceToIU: 1 }),
+      domain: Object.assign({}, domain), profileIds: Object.assign({}, ids),
+      referenceData: referenceData, policyVersion: policy.version
+    };
+  }
+
+  function buildGonadotropinComparison(data, engine, period, analyte) {
+    // Missing or damaged optional comparison data provide no fallback profile,
+    // no extrapolation and no registration in ordinary views or clinical norms.
+    try { return gonadotropinComparison(data, engine, period, analyte); }
+    catch (_error) { return null; }
+  }
+
+  return { buildGonadotropinComparison: buildGonadotropinComparison,
+    buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
     buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins,
     buildMaleAmh: buildMaleAmh, buildMaleInsl3: buildMaleInsl3,
     buildAmhInfantComparison: buildAmhInfantComparison, classifyAmhComparisonValue: classifyAmhComparisonValue,

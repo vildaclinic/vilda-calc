@@ -196,7 +196,7 @@ test('AMH and inhibin B retain their selection between minipuberty and puberty, 
   await expect(hormone(page, 'amh')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('puberty supports LH and FSH; minipuberty never substitutes another hormone for an unsupported choice', async ({ page }) => {
+test('LH and FSH remain available and preserve the selected hormone between comparison periods', async ({ page }) => {
   await openComponent(page);
   await view(page, 'puberty').click();
   await panel(page).locator('.vhl-compare-toggle').click();
@@ -206,10 +206,12 @@ test('puberty supports LH and FSH; minipuberty never substitutes another hormone
   await hormone(page, 'fsh').click();
   await expectComparison(page, 'fsh', 'puberty');
   await view(page, 'mini').click();
-  await expectEmpty(page, true);
+  await expectComparison(page, 'fsh', 'mini');
   expect(await panel(page).locator('[data-hormone]').evaluateAll(buttons => buttons.map(button => button.dataset.hormone).sort()))
-    .toEqual(['amh', 'inhb']);
+    .toEqual(['amh', 'fsh', 'inhb', 'lh']);
   await view(page, 'puberty').click();
+  await expectComparison(page, 'fsh', 'puberty');
+  await hormone(page, 'fsh').click();
   await expectEmpty(page, true);
   await hormone(page, 'lh').click();
   await expectComparison(page, 'lh', 'puberty');

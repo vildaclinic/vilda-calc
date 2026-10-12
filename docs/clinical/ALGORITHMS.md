@@ -1451,6 +1451,92 @@ Regresja wywołuje rzeczywisty renderer i silnik:
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną.
 
+### HORMONE-LH-FSH-SEX-COMPARISON — wspólne stężenia obu płci, 2026-10-12
+
+**Problem i decyzja:** dotychczasowe pokwitaniowe porównanie LH/FSH
+normalizowało osobno schemat każdej płci do jednakowej wysokości.
+Minipuberty nie udostępniała jeszcze porównania tych hormonów.
+Właściciel zaakceptował makietę („ok, ładnie, koduj”): oba okresy
+pokazują stałe mediany stężeń, niezależne od obecności wyniku.
+
+**Źródła i populacje:**
+
+- [Busch 2022](https://doi.org/10.1210/clinem/dgac115), pełny artykuł,
+  ryc. 3: przybliżone mediany GAMLSS odczytane z wektorów PDF;
+  119 zdrowych donoszonych chłopców, 338 próbek surowicy,
+  COPENHAGEN, Dania. Weryfikacja 788 odczytów LH/FSH z dni 7–400
+  różni się od zachowanych liczb o mniej niż 0,0000005 IU/L.
+  To zgodność digitalizacji, nie dokładność oznaczenia.
+- [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), pełny tekst,
+  ryc. 1 i tabele A/B [suplementu v1](https://doi.org/10.6084/m9.figshare.19469555.v1):
+  98 zdrowych donoszonych dziewczynek, 266 próbek surowicy, COPENHAGEN.
+  Potwierdzono dokładnie 198 zachowanych median (99 na hormon).
+  Oba badania stosowały AutoDELFIA; LOD LH/FSH 0,05 IU/L, bez
+  osobno podanego LOQ. Nie dają wcześniaczych norm ani kalibracji
+  innych metod. Mediany nie są względnymi średnimi podłużnymi
+  z ryc. 2 Busch i ryc. 3 Ljubicic.
+- [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), pełny tekst
+  i [suplement v1](https://doi.org/10.6084/m9.figshare.17153336.v1),
+  arkusz `Other biomarkers`: 44 zgodne mediany obu płci i hormonów,
+  po 11 rocznych węzłów 6–16 lat, `p50 = exp(M) / 1000000`.
+  BGS2, Norwegia; tabela kohorty podaje 601 dostępnych próbek
+  dziewcząt i 414 chłopców, nie liczebność każdego oznaczenia.
+  Surowica, 08:00–14:00, Siemens IMMULITE 2000 XPi, LLOQ 0,1 IU/L.
+  Kohorta obejmowała 6–<16 lat; 16 jest opublikowanym brzegiem
+  modelu. Fit Futures do 18 lat rozszerza steroidy, nie gonadotropiny.
+  Użytkowniczki doustnej antykoncepcji wykluczono; fazy cyklu nie
+  standaryzowano. Model wieku nie wyznacza Tannera.
+
+**Polityka prezentacji:** `gonadotropin-comparison-policy.json` oraz
+`buildGonadotropinComparison` wyznaczają wspólne liniowe osie IU/L:
+minipuberty 0–6, pokwitanie 0–8. Obie płcie i oba hormony mają tę
+samą skalę w danym okresie. Krzywe nie zmieniają się po wpisaniu,
+wyczyszczeniu lub zmianie wyniku ani płci pacjenta. Zero jest na osi;
+wynik ponad osią otrzymuje strzałkę z rzeczywistą liczbą.
+
+Wspólne niemowlęce linie obejmują 0,02–<1 roku, bez ekstrapolacji
+do narodzin. Chłopiec zachowuje własne odniesienie już od 7. dnia;
+nie wymaga dostępności żeńskiej mediany tego dnia. Dokładnie pierwsze
+urodziny nie otrzymują punktu tego porównania. Późna niska mediana
+LH chłopców zachowuje istniejącą bramkę rozdzielczości digitalizacji:
+po 243. dniu brak dokładnego punktu, mimo widocznego modelowego ogona.
+Ta bramka nie jest LOD, normą ani dowodem zerowego stężenia.
+
+Pokwitanie pokazuje 6–16 lat, bez przedłużania do 20. roku.
+`gonadotropin-comparison-reference-data.json` dodaje dwa żeńskie
+profile Madsen wyłącznie dla tego porównania, poza globalnymi
+profilami pacjenta. Istniejące męskie i niemowlęce źródła zachowują
+liczby oraz kwalifikację. Własny profil ocenia istniejący silnik;
+metoda, stadium lub brak kwalifikacji drugiej płci nie blokują
+poprawnego własnego odniesienia. Zachowano bramki wyniku cenzurowanego,
+materiału, znanej niezgodnej metody, leczenia, donoszenia niemowlęcia
+i niepewnego wieku. Nie wnioskujemy Tannera z wieku.
+
+**Wpływ kliniczny:** nowe edukacyjne porównanie stężeń oraz ograniczone
+odniesienie dziewcząt 6–16 lat. Nie zmieniają się normy laboratoryjne,
+werdykty, zapis, jednostki ani zwykłe krzywe. Zwykła żeńska minipuberty
+nadal przedstawia względną średnią podłużną z dwiema falami; mediana
+FSH w porównaniu może być znacznie bardziej płaska. To inna statystyka,
+nie dowód stałego FSH u pojedynczej dziewczynki. Stosunek median
+populacyjnych nie jest referencją klinicznego ilorazu LH/FSH.
+
+**Syntetyczne wejście → oczekiwane zachowanie:**
+
+- Donoszona dziewczynka, 0,25 roku → p50 LH 0,085 / FSH 3,697 IU/L;
+  chłopiec w tym wieku → około 2,023701 / 1,113548 IU/L.
+- 12 lat → LH F/M 0,932809/0,677563, FSH F/M 4,151220/2,014860 IU/L.
+  Ten sam wiek bez stadium nadal ma źródło Madsen.
+- Wynik 0 → oś; 100 IU/L → strzałka, bez przeskalowania median.
+- Chłopiec 300 dni, LH → brak dokładnego punktu; dziewczynka tego
+  samego wieku zachowuje własną medianę przy zgodnym kontekście.
+- Dokładnie 16 lat → opublikowany brzeg modelu; wiek [16,17) albo
+  >16 lat → brak odniesienia tego porównania. Zwykły widok nie
+  otrzymuje nowego żeńskiego profilu Madsen.
+
+Źródła, hashe, zakres zgody i ograniczenia:
+[audyt porównania LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
+Akceptacja prezentacji i testy techniczne nie są walidacją kliniczną.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana
