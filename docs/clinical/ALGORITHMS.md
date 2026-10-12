@@ -28,6 +28,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | OTHER-RX | Grypa, nadciśnienie i tarczyca | `flu_therapy.js`, `hypertension_therapy.js`, `thyroid_cancer_kids.js` | kontrola składni; brak dedykowanej regresji dawkowania | źródło do weryfikacji per moduł |
 | STEROIDS | Konwersje GKS/AAS i model HPTA | `steroidy.html` | kontrola składni; brak dedykowanego E2E lub regresji wyników | zinwentaryzowane; część HPTA ma charakter edukacyjny |
 | DIABETES | Kalkulatory diabetologiczne | `cukrzyca.html`, `cukrzyca.js` | kontrola składni; brak dedykowanego E2E lub regresji wyników | źródło do weryfikacji |
+| SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; akceptacja kliniczna właściciela przed scaleniem |
 
 ## Długi walidacyjne o najwyższym priorytecie
 
@@ -3410,6 +3411,58 @@ Otwarte (poza planem): precyzja mediany OLAF BMI do 0,1 kg/m² (audyt, znalezisk
 **Kolor kafelka MPH** (`vilda_auth_ui.js`, ?v 436 → 437). Kafelek dostawał dotąd centyl MPH w podpisie, ale kolor zawsze neutralny (`null`). Teraz klasa koloru idzie z tej samej funkcji `Y("height", …)`, która koloruje kafelek wzrostu: centyl MPH (liczony na 18 lat, płeć dziecka, siatka jak w rdzeniu) **< 3 lub > 97 → alarm**, **3–10 lub 90–97 → ostrzeżenie**, inaczej neutralny. U pacjenta powyżej 18 lat reguła wzrostu nie koloruje (tak jak dla wzrostu). Wzór MPH i centyl bez zmian — zmienia się wyłącznie kolor.
 
 *Strażnicy:* `tests/unit/panel-zwiniety-mph-kolor.test.mjs` — panel: brak auto-otwarcia w skrypcie, etykieta „(wpisane)", zwijanie po „Wyczyść"; wiersz wieku na docpro bajt w bajt jak na index (blok `.vild-age-row` i reguły CSS); kafelek MPH woła `Y("height", rt, vt)`. `tests/e2e/panel-dojrzewania.spec.mjs` (2 przepisane) — wartość w polu i wczytany rekord z objętością jąder nie otwierają panelu, przycisk mówi „(wpisane)", klik otwiera. `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs` — na docpro panel zwinięty po wczytaniu. `tests/e2e/panel-zwiniety-i-mph.spec.mjs` (3) — prawdziwa strona: po „Nowy pomiar" i po „Odtwórz zapis" panel zwinięty z etykietą „(wpisane)" (index i docpro); Karta pacjenta z bardzo niskimi rodzicami: kafelek MPH w kolorze alarmu przy centylu < 3, ostrzeżenia przy 3–10, neutralny przy MPH w normie.
+
+### P-PLEC-IMIE — płeć nowego pacjenta z imienia (słownik PESEL) i nazwiska, zawsze z notką pod polem (2026-10-12, decyzja właściciela)
+
+**Zgłoszenie i decyzja.** Pole „Płeć” formularza głównego zaczyna od „Mężczyzna” (pierwsza opcja; „Wyczyść” i `clearAllData` wracają do `M`). Lekarz, który zapomni je przestawić, liczy „Annę …” jako mężczyznę — siatki, normy i wzory zależne od płci idą wtedy dla mężczyzny. Właściciel (2026-10-12): płeć ma się ustawiać z imienia **tylko przy pierwszej rejestracji pacjenta**, z możliwością ręcznej zmiany; wybrany wariant — automatyczna zmiana z notką, słownik imion z rejestru PESEL, nazwisko jako druga wskazówka, kalkulatora klirensu nie ruszać. Pozostawienie pola bez wartości domyślnej odrzucono na ten etap: kilkanaście plików liczy każdą wartość inną niż `F` jako mężczyznę (np. `sex === "F" ? 0.7 : 0.9`, `sex || "M"`), więc puste pole po cichu dawałoby obliczenia męskie.
+
+**Reguła** (nowy czytelny moduł `vilda_plec_z_imienia.js`, dane w osobnym `vilda_imiona_plec_dane.js`; oba na `index.html` i `docpro.html`, po `vilda_pola_tozsamosci.js`):
+
+1. **Tylko nowy pacjent.** Moduł działa, gdy pola tożsamości są wolne (P-TOZSAMOSC: brak wczytanego pacjenta) i `#sex` nie jest wyłączone. Po pierwszym zapisie albo wczytaniu płeć jest z kartoteki i zmienia się ją w Karcie Pacjenta.
+2. **Tylko wpis lekarza.** Decyzja zapada po zaufanym (`isTrusted`) zdarzeniu `change` na `#firstName` albo `#lastName`, czyli po wyjściu z pola, nie po każdym znaku. Wczytanie, odtworzenie po F5 (`__vildaPersistRestoring`), lustro formularza między stronami (`__vildaLustroWpis`), import i podpowiedź pacjenta automatu nie uruchamiają.
+3. **Wybór lekarza wygrywa.** Po zaufanej zmianie `#sex` automat tej płci już nie zmienia (do „Wyczyść”). Płeć, która przyszła z zewnątrz razem z tożsamością (odtworzenie, lustro, import), też jest nietykalna. Gdy lekarz sam wyczyści imię i nazwisko, automat znów może działać; jego własny wybór płci zostaje.
+4. **Tylko jednoznaczny sygnał.** Imię rozstrzyga, gdy w słowniku nosi je co najmniej 20 osób i co najmniej 99 % z nich ma jedną płeć. Poniżej 99 % imię jest „niejednoznaczne”, poniżej 20 osób albo poza słownikiem — „nieznane”. Imię to pierwszy wyraz pola (do spacji albo łącznika), bez rozróżniania wielkości liter; wpis bez polskich znaków („Lukasz”) trafia przez indeks złożony. Nazwisko: człon z końcówką -ska/-cka/-dzka → kobieta, -ski/-cki/-dzki → mężczyzna (co najmniej dwie litery przed końcówką); człony sprzeczne nie dają sygnału. Imię ze słownika jest silniejsze od nazwiska; nazwisko decyduje tylko wtedy, gdy imię nie rozstrzyga.
+5. **Nigdy po cichu.** Notka `#plecZImieniaNote` pod polem płci (`role="status"`), w kolorze notki daty urodzenia, a przy wątpliwości w kolorze błędu daty:
+
+| Sytuacja | Notka |
+|---|---|
+| automat ustawił płeć z imienia | „Płeć ustawiona na podstawie imienia „Anna” — sprawdź.” |
+| … z imienia i zgodnego nazwiska | „Płeć ustawiona na podstawie imienia i nazwiska — sprawdź.” |
+| … z samego nazwiska | „Płeć ustawiona na podstawie nazwiska „Testowska” — sprawdź.” |
+| … z imienia, nazwisko sprzeczne | „Płeć ustawiona na podstawie imienia „Jan”, ale nazwisko „Testowska” ma formę żeńską — sprawdź.” (uwaga) |
+| płeć w polu (wybór lekarza albo z zewnątrz) inna niż wskazanie | „Sprawdź płeć: imię „Anna” jest zwykle żeńskie.” / „…nazwisko „Testowski” ma formę męską.” / „…imię i nazwisko wskazują płeć żeńską.” (uwaga) |
+| imię niejednoznaczne, nazwisko bez sygnału | „Sprawdź płeć: imię „…” noszą kobiety i mężczyźni.” (uwaga) |
+| imię nieznane, nazwisko bez sygnału | „Sprawdź płeć: imienia „…” nie ma w słowniku.” (uwaga) |
+
+   Wybór lekarza zgodny ze wskazaniem, wątpliwość przy płci wybranej przez lekarza oraz pacjent z kartoteki — bez notki. Po najechaniu notka podaje liczby ze słownika i jego stan.
+6. **Format rekordu bez zmian.** Płeć nadal `M`/`F`; zmiana idzie zdarzeniami `input` i `change`, więc przeliczenia, autozapis sesji i lustro formularza działają jak przy wyborze z listy.
+
+**Dane i źródło.** Ministerstwo Cyfryzacji, zbiór „Lista imion występujących w rejestrze PESEL” (dane.gov.pl): dwa pliki — imiona żeńskie i męskie osób żyjących, pole „imię pierwsze”. Populacja: osoby żyjące z numerem PESEL. Plik danych jest generowany (`node tests/scripts/imiona-pesel.mjs`, klucz imienia z produkcyjnego `kluczImienia`), zawiera dla każdego imienia noszonego przez co najmniej 20 osób parę `[kobiety, mężczyźni]`, a w metadanych zbiór, wydawcę, stan, adres i SHA-256 obu plików źródłowych. Silnik przyjmuje źródło jako argument i wynik niesie jego identyfikator i stan (reguła właściciela 2026-09-09 — `docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność”); inne kraje to kolejne źródła w `window.VildaImionaPlecZrodla`, bez zmiany silnika. *(Stan zbioru, liczba imion i sumy kontrolne — do uzupełnienia po pobraniu plików z dane.gov.pl; środowisko agenta nie miało dostępu do portalu.)*
+
+**Ograniczenia.**
+- Słownik opisuje osoby z numerem PESEL; imię spoza tej populacji jest „nieznane” i daje notkę „Sprawdź płeć”, bez zmiany pola.
+- Nazwiska rzeczownikowe na -ska/-cka (np. „Laska”, „Kluska”) mają jedną formę dla obu płci; reguła bierze je za żeńskie. Ma to znaczenie tylko wtedy, gdy imię nie rozstrzyga, a notka mówi wtedy „na podstawie nazwiska”.
+- Reguła nazwiska dotyczy polskich nazwisk przymiotnikowych; inne systemy (np. -ova/-ov) nie dają sygnału.
+- Imię wpisane w kartach (`#advName`, `#basicGrowthName`) zamiast w formularzu głównym automatu nie uruchamia.
+- Słownik podaje płeć z rejestru. Wybór siatek i norm u konkretnego pacjenta pozostaje decyzją lekarza — stąd zawsze „sprawdź”.
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik; prawdziwe strony, dane fikcyjne).**
+
+| Wejście (nowy pacjent, płeć nieruszana) | Przed zmianą | Po zmianie |
+|---|---|---|
+| Nazwisko „Testowska”, Tab | Mężczyzna | Kobieta, notka „…na podstawie nazwiska „Testowska” — sprawdź.” |
+| dalej imię „Anna”, Tab; zapis | Mężczyzna, rekord `sex: "M"` | Kobieta, notka „…imienia i nazwiska…”; rekord `sex: "F"`, po zapisie płeć zablokowana, notka znika |
+| „Fikcyjny Jan”; lekarz wybiera „Kobieta”; imię → „Piotr”; F5 | Kobieta | Kobieta (wybór lekarza), notka „Sprawdź płeć: imię „Piotr” jest zwykle męskie.”; po F5 płeć bez zmian |
+| DocPro: „Testowski”, potem „Anna” | Mężczyzna | Kobieta, notka o sprzecznym nazwisku |
+| imię spoza słownika „Xyzabc” | Mężczyzna | płeć bez zmian, notka „Sprawdź płeć: imienia „Xyzabc” nie ma w słowniku.” |
+
+**Wpływ kliniczny.** Zmienia się wartość wejściowa u **nowego** pacjenta, którego płci lekarz sam nie ustawił: przy jednoznacznie żeńskim imieniu albo nazwisku pole przechodzi na „Kobieta”, więc wszystkie obliczenia zależne od płci liczą się dla kobiety/dziewczynki (dotąd — dla mężczyzny). Żaden wzór, próg, tabela, jednostka ani zakres się nie zmienia. Pacjenci wczytani i rekordy zapisane — bez zmian. Ryzyko resztkowe: błędna podpowiedź przy imieniu rzadkim albo nazwisku rzeczownikowym na -ska; łagodzi je notka przy każdej decyzji i pierwszeństwo wyboru lekarza.
+
+**Co się NIE zmienia.** Format rekordu, JSON, autozapis, synchronizacja, P-TOZSAMOSC (blokada po zapisie), P-DUP. Kalkulator klirensu (`kalkulator-klirens.html`, jedno pole „imię i nazwisko”) — bez modułu, decyzja właściciela.
+
+*Strażnicy:* `tests/unit/plec-z-imienia.test.mjs` — prawdziwy `vilda_plec_z_imienia.js`: klucz imienia, progi 99 % / 20 na granicy (syntetyczny słownik), indeks bez polskich znaków, źródło domyślne z rejestru, końcówki nazwisk i człony, pierwszeństwo imienia, wszystkie treści notki; formularz na atrapie DOM (tylko `change` lekarza, wybór lekarza wygrywa, F5 i lustro nietykalne, zdarzenia programowe bez flag nie są „zewnętrzne”, „Wyczyść”, blokada tożsamości, strona bez pól); generator na syntetycznych CSV (oba formaty, pomylone pliki, próg, determinizm); plik danych (metadane, klucze jak w silniku, przypadki syntetyczne); okablowanie obu stron i SW, brak modułu na stronie klirensu. `tests/e2e/plec-z-imienia.spec.mjs` (index: nazwisko i imię, zapis i blokada; wybór lekarza, F5, „Wyczyść”; docpro: sprzeczne nazwisko, imię spoza słownika) i `tests/e2e/plec-z-imienia-mobile.spec.mjs` (notka na ekranie telefonu, bez poziomego przewijania).
+
+**Do decyzji właściciela.** (1) Akceptacja kliniczna. (2) Progi: 99 % jednej płci i co najmniej 20 nosicieli imienia. (3) Ostrzeżenie o rozbieżności także po ręcznym wyborze lekarza (nie zmienia płci, znika po zapisie). (4) Notki ostrzegawcze w kolorze błędu daty urodzenia (bez nowego stylu).
 
 ### P-TOZSAMOSC-2 — podpowiedź pacjenta milczy przy zablokowanym polu tożsamości (SW 1.0.957, 2026-09-15, zgłoszenie właściciela)
 
