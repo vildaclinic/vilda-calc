@@ -34,6 +34,10 @@ nieznane jednostki, brak wyniku/wieku/płci i brak właściwego profilu nie
 tworzą zastępczej liczby. Nie utożsamiamy testosteronu wolnego z całkowitym.
 Nie przypisujemy wyniku do innego hormonu po zmianie wyboru. Brak punktu
 na wykresie nie blokuje osobnej, dostępnej interpretacji laboratoryjnej.
+Ogólne komunikaty braku dopasowania stosują neutralne określenie „wartość
+odniesienia”. Odrębne opisy porównań median zachowują nazwę tej statystyki.
+Podpis poprawnie dobranej
+wartości nadal wskazuje rzeczywistą statystykę źródła: średnią albo medianę.
 
 ## Aktywne źródła
 
@@ -536,9 +540,14 @@ ryciny, dziewczynek pochodzi z tabeli suplementu. Nie są to normy.
 z dotychczasowym uwzględnieniem całego przedziału wieku, donoszenia,
 materiału, metody i jednostki. Chłopiec od 7. do <7,305 dnia zachowuje
 własne odniesienie Busch, choć wspólne linie zaczynają się później.
-Dokładnie 1 rok nie otrzymuje punktu w tym porównaniu żadnej płci;
-to ograniczenie widoku, nie skrócenie żeńskiego profilu Ljubicic ani
-usunięcie Wang z innych widoków. Wcześniactwo i nieznane donoszenie
+Cały przedział wieku musi dodatkowo mieścić się przed 1. rokiem:
+`[11/12, 1)` może otrzymać punkt, `[11/12, 1]` i przedział przekraczający
+1 rok nie mogą. Górna granica 1 jest dopuszczalna tylko jako wyłączony
+koniec niepustego przedziału (`ageUpperInclusive: false`). Dokładnie
+1 rok nie otrzymuje punktu w tym porównaniu żadnej płci; to ograniczenie
+widoku, nie skrócenie żeńskiego profilu Ljubicic ani usunięcie Wang
+z innych widoków. Kontrolę granicy uzupełniono po HM-3, 12 października
+2026, bez zmiany źródeł, krzywych lub norm. Wcześniactwo i nieznane donoszenie
 wykluczają punkt niemowlęcy, lecz nie zmieniają populacyjnych krzywych.
 
 Liczbowy wynik poniżej osi, w tym zero, ma strzałkę w dół z prawdziwą
@@ -644,6 +653,8 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Porównanie płci AMH, donoszone niemowlę dokładnie 90 dni | Mediany modeli: chłopcy ≈161,6811 ng/mL; dziewczynki ≈2,3535 ng/mL. Obie linie i punkty na tej samej stałej osi log10, również bez wyniku. |
 | Porównanie AMH, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własna mediana Busch ≈64,25565 ng/mL i punkt chłopca dostępne; brak źródła dziewczynki. Wspólne linie zaczynają się w 7,305 dnia, bez ekstrapolacji. |
 | Porównanie AMH, dokładnie pierwsze urodziny, dowolna płeć | Krzywe pozostają identyczne, ale brak punktu tego widoku; nie podstawiamy grupy Wang. |
+| Porównanie AMH, dowolna płeć i zgodny kontekst, przedział `[11/12, 1)` / `[11/12, 1]` / wiek przekraczający 1 rok | Punkt tylko dla przedziału z wyłączonym końcem 1; pozostałe nie mieszczą się w oknie widoku. Źródłowe granice i obie krzywe pozostają bez zmian. |
+| AMH, donoszona dziewczynka, dokładnie 1 rok, zwykły widok | Nadal p50 Ljubicic 0,9916278 ng/mL; brak punktu w porównaniu nie skraca źródłowego profilu. |
 | Porównanie AMH, kwalifikujący kontekst: 0 → 0,1 → 1000 → 10000 ng/mL | Strzałka w dół → punkt na dolnej granicy → punkt na górnej granicy → strzałka w górę; krzywe i oś stałe. Nie traktujemy błędu konwersji 1000,0000000000001 jako przekroczenia osi. |
 | Porównanie inhibiny B, donoszone niemowlę dokładnie 90 dni | Mediany modeli M≈294,2938 i F≈49,4718 pg/mL; stała wspólna liniowa oś 0–400 również bez wyniku. |
 | Porównanie inhibiny B, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własne odniesienie M≈187,9788 pg/mL dostępne, F bez odniesienia; wspólne linie od 7,305 dnia. |
@@ -655,6 +666,7 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Porównanie inhibiny B, kwalifikujący kontekst: pusty → 0 → 400 → 1000 pg/mL → wyczyszczenie | Brak punktu → punkt na zerze → punkt na górnej granicy → strzałka w górę → brak punktu. Te same linie i skala; 400 ng/L równe 400 pg/mL. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
 | Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
+| Mężczyzna 20 lat, LH lub FSH, niezgodna metoda albo materiał / kontekst zgodny | Brak punktu opisany neutralną „wartością odniesienia” / źródłowa średnia Laurentino 3,0 IU/L nadal podpisana jako średnia. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
 | FSH dokładnie 80 / >80; LH dokładnie 89 / >89 | Odpowiednio ≈8,4 / brak oraz 5,22 / brak, bez przedłużania źródła wygaszonym ogonem. |
 | LH `<0,05 IU/L`, AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |

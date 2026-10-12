@@ -134,6 +134,9 @@ modelu albo jawnie podpisaną średnią grupy, zależnie od źródła.
 Poglądowa linia może upraszczać ich przebieg. Nie jest górną granicą normy. Powyżej albo poniżej
 linii nie oznacza poza zakresem referencyjnym. Pozostają dotychczasowe,
 odrębne osie interpretacji badania.
+Ogólny komunikat braku dopasowania używa neutralnej „wartości odniesienia”,
+nie przypisuje nieudostępnionej wartości średniej lub mediany.
+Poprawnie dobrany znacznik zachowuje właściwy podpis statystyki źródłowej.
 
 Średnie są jawne: dorosły testosteron korzysta z grup Walravens,
 a osobny wykres starszych grup Baccarelli pokazuje
@@ -496,7 +499,11 @@ Niezależny silnik zachowuje własne źródłowe domeny: chłopiec może mieć
 punkt już od 7. dnia, mimo późniejszego początku wspólnych krzywych.
 W tym widoku dokładnie pierwsze urodziny nie otrzymują punktu żadnej
 płci. Nie zmienia to żeńskiego profilu obejmującego 1 rok w pozostałych
-widokach. Niepewny wiek nadal podlega kwalifikacji całego przedziału.
+widokach. Cały przedział niepewnego wieku musi mieścić się przed 1. rokiem:
+`[11/12, 1)` może otrzymać punkt przy zgodnym kontekście źródłowym,
+`[11/12, 1]` oraz przedział przekraczający 1 rok nie mogą. To uzupełniona
+kontrola granicy widoku (HM-3, 12 października 2026), bez nowego źródła,
+normy, ekstrapolacji ani zmiany krzywych.
 
 Wcześniactwo, nieznane donoszenie i inne dotychczasowe ograniczenia
 silnika mogą wykluczyć punkt, lecz nie zmieniają krzywych populacyjnych.
