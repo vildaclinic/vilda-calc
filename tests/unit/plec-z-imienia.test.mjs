@@ -524,9 +524,16 @@ describe('plik danych vilda_imiona_plec_dane.js (rejestr PESEL)', () => {
     const z = zrodla()[0];
     const S = P();
     const plec = (imie) => S.ocenImie(imie, z).plec;
-    ['Anna', 'Maria', 'Katarzyna', 'Zuzanna', 'Julia', 'Noemi', 'Miriam', 'Beatrycze'].forEach((i) => expect(plec(i), i).toBe('F'));
-    ['Jan', 'Piotr', 'Jakub', 'Antoni', 'Barnaba', 'Kosma', 'Bonawentura'].forEach((i) => expect(plec(i), i).toBe('M'));
+    const powod = (imie) => S.ocenImie(imie, z).powod;
+    // Imiona żeńskie, także bez końcówki -a (reguła „-a = kobieta” myliłaby się właśnie tu).
+    ['Anna', 'Maria', 'Katarzyna', 'Zuzanna', 'Julia', 'Noemi', 'Miriam', 'Nel', 'Rut', 'Beatrycze', 'Abigail', 'Zoe', 'Nikola']
+      .forEach((i) => expect(plec(i), i).toBe('F'));
+    // Imiona męskie, także z końcówką -a.
+    ['Jan', 'Piotr', 'Jakub', 'Antoni', 'Kuba', 'Kosma', 'Mustafa', 'Mykyta'].forEach((i) => expect(plec(i), i).toBe('M'));
     expect(plec('Lukasz'), 'bez polskich znaków').toBe('M');
+    // Noszone przez obie płcie poniżej progu 99 % — automat nie zgaduje, notka „Sprawdź płeć”.
+    ['Andrea', 'Sasza', 'Kim', 'Nicola'].forEach((i) => expect([plec(i), powod(i)], i).toEqual([null, 'niejednoznaczne']));
+    expect(powod('Xyzabc')).toBe('nieznane');
   });
 });
 
