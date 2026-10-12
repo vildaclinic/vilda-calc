@@ -1217,20 +1217,20 @@
           !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
           (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;
       if (compare && ["missing-puberty-stage", "incompatible-puberty-stage"].includes(patientPoint?.reason)) {
-        byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych median obu płci do umieszczenia wyniku.";
+        byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych wartości odniesienia obu płci do umieszczenia wyniku.";
         return;
       }
       const messages = {
-        "unsupported-age": "Dla tego wieku brak mediany pozwalającej nanieść wynik.",
-        "ambiguous-age": "Podany przedział wieku wykracza poza dostępny profil mediany.",
-        "ambiguous-profile": "Brak jednoznacznie dopasowanej mediany do naniesienia wyniku.",
+        "unsupported-age": "Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.",
+        "ambiguous-age": "Podany przedział wieku wykracza poza dostępny profil odniesienia.",
+        "ambiguous-profile": "Brak jednoznacznie dopasowanej wartości odniesienia do naniesienia wyniku.",
         "reference-unavailable": "W tym wieku źródło nie pozwala wiarygodnie nanieść wyniku.",
-        "incompatible-specimen": "Mediana nie dotyczy materiału tej próbki.",
-        "incompatible-assay": "Brak mediany dla potwierdzonej metody tej próbki.",
-        "unsupported-unit": "W tej jednostce nie można nanieść wyniku na medianę.",
-        "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na medianę populacji.",
-        "missing-puberty-stage": "Ta mediana dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
-        "incompatible-puberty-stage": "Dostępna mediana wymaga zgodnej oceny przed pokwitaniem (Tanner 1).",
+        "incompatible-specimen": "Wartość odniesienia nie dotyczy materiału tej próbki.",
+        "incompatible-assay": "Brak wartości odniesienia dla potwierdzonej metody tej próbki.",
+        "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
+        "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
+        "missing-puberty-stage": "To odniesienie dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
+        "incompatible-puberty-stage": "Dostępne odniesienie wymaga zgodnej oceny przed pokwitaniem (Tanner 1).",
       };
       const adultTestosterone = id === "t" && sex === "male" && patientAgeYears >= 18;
       const adultMessages = {
@@ -2076,7 +2076,11 @@
       let point = null, reason = null;
       if (analyteHormones[currentAnalyte] === "amh" && patientContext?.measurement) {
         const evaluated = patientPoint;
-        if (!(patientAgeYears >= 0 && patientAgeYears < model.domain.maxAge)) reason = "outside-infant-comparison";
+        const age = patientAgeYears, upper = patientContext.ageUpperYears ?? age;
+        const maxAge = model.domain.maxAge;
+        const exclusiveInfantEnd = upper === maxAge && patientContext.ageUpperInclusive === false && upper > age;
+        if (!(age >= 0 && age < maxAge) || upper > maxAge || (upper === maxAge && !exclusiveInfantEnd))
+          reason = "outside-infant-comparison";
         else if (evaluated?.status !== "ready") reason = evaluated?.reason || "reference-unavailable";
         else if (evaluated.profile.id !== model.profileIds[sex]) reason = "outside-infant-comparison";
         else point = { ...evaluated, valueNgMl: evaluated.value * sourcePmolToNgMl,
@@ -2717,11 +2721,11 @@
         (puberty ? "w pokwitaniu" : "w pierwszym roku życia");
       byId("chart-desc").textContent =
         (puberty
-          ? "Wspólna oś wieku od 8 do 20 lat, nie stadium Tannera. Krzywe są poglądowe; żeńska inhibina B odtwarza model źródłowy. "
+          ? `Wspólna oś wieku od 8 do 20 lat, nie stadium Tannera. Krzywe ${h ? h.name : "hormonów"} są poglądowe. `
           : "Wspólna oś wieku od urodzenia do 12 miesięcy. Dziewczynki: przeskalowane mediany od około 7. dnia. Chłopcy: poglądowy schemat. ") +
         "Linia ciągła: dziewczynki, przerywana: chłopcy. Każda krzywa ma własne maksimum w wyświetlanym okresie na tej samej wysokości. Przecięcie linii nie oznacza równych stężeń. To nie są normy ani przebieg u konkretnego dziecka.";
       if (!dotModel && patientPoint?.status === "ready" && compareHormone === analyteHormones[currentAnalyte]) {
-        byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych median obu płci do umieszczenia wyniku.";
+        byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych wartości odniesienia obu płci do umieszczenia wyniku.";
       }
       pointDescription(dotModel);
     }
