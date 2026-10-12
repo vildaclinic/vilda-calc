@@ -855,6 +855,14 @@
       ages: [...new Set(femaleE2Hormone.segments.flatMap((segment) =>
         segment.points.map((point) => point.ageYears)))],
     } : null;
+    const femaleInhibinHormone = femaleHormones.find((h) => h.id === "inhb");
+    const femaleInhibinStable = femaleInhibinHormone ? {
+      display: { id: "inhb", kind: "female-inhibin-life", divisor: femaleInhibinHormone.life.normalizationMaximum,
+        ceiling: 1, unit: femaleInhibinHormone.life.unit },
+      spline: displaySpline(femaleInhibinHormone, femaleAmhLifeFraction),
+      ages: [...new Set(femaleInhibinHormone.segments.flatMap((segment) =>
+        segment.points.map((point) => point.ageYears)))],
+    } : null;
     const schematicCurves = new Map();
     const stableVisible = (id) => !compare && sex === "male" && stableCurves.has(id) && selected.has(id);
     const stableInhibinVisible = () => stableVisible("inhb");
@@ -889,8 +897,10 @@
       let profiles = [patientPoint.profile];
       const stableDisplay = !compare ? (sex === "male" ? stableCurves.get(id)?.display
         : sex === "female" && id === "amh" ? femaleAmhStable?.display
-        : sex === "female" && id === "e2" ? femaleE2Stable?.display : null) : null;
-      if ((stableDisplay?.kind === "female-amh-life" || stableDisplay?.kind === "female-e2-life") &&
+        : sex === "female" && id === "e2" ? femaleE2Stable?.display
+        : sex === "female" && id === "inhb" ? femaleInhibinStable?.display : null) : null;
+      if ((stableDisplay?.kind === "female-amh-life" || stableDisplay?.kind === "female-e2-life" ||
+          stableDisplay?.kind === "female-inhibin-life") &&
           stableDisplay.unit !== patientPoint.profile.unit) return null;
       if (stableDisplay?.profiles) profiles = stableDisplay.profiles;
       if (compare) {
@@ -1010,10 +1020,34 @@
       }
       return path;
     }
+    function femaleInhibinReferencePath(segment, left, width, y, fraction = xFraction, domain = visibleAgeDomain()) {
+      const stable = femaleInhibinStable;
+      if (!stable) return null;
+      // Preserve the original full-life SVG path exactly. For a zoom, an affine
+      // piece of the time axis projects the same cubic without fitting it again.
+      if (view === "life") return segmentPath(segment, left, width, y, stable.spline);
+      const min = Math.max(domain[0], segment.points[0].ageYears);
+      const max = Math.min(domain[1], segment.points[segment.points.length - 1].ageYears);
+      if (max <= min) return null;
+      const ages = [...new Set([min, max, ...stable.ages, ...femaleStages.map((stage) => stage.min)])]
+        .filter((age) => age >= min && age <= max).sort((a, b) => a - b);
+      const pair = (position, value) => (left + width * position).toFixed(4) + "," + y(value).toFixed(4);
+      let path = "M" + pair(fraction(min), stable.spline.at(femaleAmhLifeFraction(min)).value);
+      for (let i = 0; i < ages.length - 1; i++) {
+        const a = ages[i], b = ages[i + 1];
+        const ca = femaleAmhLifeFraction(a), cb = femaleAmhLifeFraction(b);
+        const va = stable.spline.at(ca), vb = stable.spline.at(cb);
+        const xa = fraction(a), xb = fraction(b), xStep = (xb - xa) / 3, sourceStep = (cb - ca) / 3;
+        path += "C" + pair(xa + xStep, va.value + sourceStep * va.slope) + " " +
+          pair(xb - xStep, vb.value - sourceStep * vb.slope) + " " + pair(xb, vb.value);
+      }
+      return path;
+    }
     function patientPointAboveScale(model) {
       if (!model.stableDisplay) return false;
       const relative = model.value / model.divisor;
-      const tolerance = (model.stableDisplay.kind === "female-amh-life" || model.stableDisplay.kind === "female-e2-life")
+      const tolerance = (model.stableDisplay.kind === "female-amh-life" || model.stableDisplay.kind === "female-e2-life" ||
+        model.stableDisplay.kind === "female-inhibin-life")
         ? 8 * Number.EPSILON * Math.max(1, Math.abs(relative), Math.abs(model.ceiling)) : 0;
       return relative > model.ceiling + tolerance;
     }
@@ -1339,6 +1373,27 @@
           }
           continue;
         }
+        if (h.id === "inhb" && femaleInhibinStable) {
+          for (const segment of h.segments) {
+            const d = femaleInhibinReferencePath(segment, left, width, relativeY, period.xFraction,
+              [period.domain.minAge, period.domain.maxAge]);
+            if (!d) continue;
+            const schematic = segment.kind === "schematic";
+            g.append(el("path", { d, fill: "none", stroke: h.color, "stroke-width": mobile ? 3 : 3.5,
+              "stroke-linecap": "round", "stroke-linejoin": "round",
+              "stroke-dasharray": schematic ? "5 5" : "none",
+              [schematic ? "data-illustrative-line" : "data-line"]: h.id,
+              "data-independent-scale": h.id, "data-female-stable-line": h.id,
+              "data-segment-kind": segment.kind,
+              "data-divisor": femaleInhibinStable.display.divisor, "data-ceiling": 1,
+              "data-plot-left": left, "data-plot-right": left + width,
+              "data-plot-top": top, "data-plot-bottom": bottom,
+              "data-age-from": segment.points[0].ageYears,
+              "data-age-to": segment.points[segment.points.length - 1].ageYears,
+            }));
+          }
+          continue;
+        }
         if (dotModel?.id === h.id) {
           drawReferenceCurves(g, dotModel, { x, y: relativeY, mobile });
           continue;
@@ -1386,7 +1441,8 @@
         ? " Pozostałe hormony zachowują własne skale."
         : " Oś IU/L dotyczy LH i FSH; pozostałe hormony mają własne skale.";
       if (renderedPoint) caption += " Kropka: wynik; jasny znacznik: odniesienie z badania." +
-        (((renderedPoint.stableDisplay?.kind === "female-amh-life" || renderedPoint.stableDisplay?.kind === "female-e2-life") ? patientPointAboveScale(renderedPoint)
+        (((renderedPoint.stableDisplay?.kind === "female-amh-life" || renderedPoint.stableDisplay?.kind === "female-e2-life" ||
+          renderedPoint.stableDisplay?.kind === "female-inhibin-life") ? patientPointAboveScale(renderedPoint)
           : renderedPoint.stableDisplay && renderedPoint.value > period.scale.max) ? " ↑ Wynik powyżej skali." : "");
       const measurement = patientContext?.measurement;
       if (mini && gonadotropinResult && selected.has(currentId) && measurement &&
@@ -1494,6 +1550,7 @@
         target.append(p);
       };
       for (const copy of period.caveats || []) paragraph(copy);
+      if (selected.has("inhb")) paragraph("Inhibina B zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii. Most dzieciństwa i końcowy spadek po 47. roku są poglądowe; nie stanowią nowych odniesień liczbowych.");
       if (selected.has("e2")) paragraph("Estradiol zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. W niemowlęctwie linia przedstawia medianę modelu GAMLSS, a nie dwie fale średniej podłużnej z ryciny 3. Dorosłe plateau jest poglądowe; osobny schemat cyklu pokazuje zmienność w jego obrębie. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii.");
       if (selected.has("amh")) paragraph("AMH zachowuje własną stałą skalę i tę samą poglądową linię, także po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Końcówka pierwszego roku przechodzi łagodnie w poglądowy odcinek dzieciństwa. Jasny znacznik AMH zachowuje medianę źródłową także wtedy, gdy nie leży na linii.");
       if (view === "life") for (const copy of femaleGonadotropins.cycle.caveats || []) paragraph(copy);
@@ -1738,6 +1795,22 @@
               [schematic ? "data-illustrative-line" : "data-line"]: h.id,
               "data-segment-kind": segment.kind, "data-female-stable-line": h.id,
               "data-divisor": femaleE2Stable.display.divisor, "data-ceiling": 1,
+              "data-plot-left": left, "data-plot-right": left + pw,
+              "data-plot-top": top, "data-plot-bottom": bottom,
+              "data-age-from": segment.points[0].ageYears,
+              "data-age-to": segment.points[segment.points.length - 1].ageYears,
+            }));
+          }
+        } else if (sex === "female" && h.id === "inhb" && femaleInhibinStable) {
+          for (const segment of h.segments) {
+            const d = femaleInhibinReferencePath(segment, left, pw, y);
+            if (!d) continue;
+            const schematic = segment.kind === "schematic";
+            g.append(el("path", { ...style, d,
+              "stroke-dasharray": schematic ? "5 5" : "none",
+              [schematic ? "data-illustrative-line" : "data-line"]: h.id,
+              "data-segment-kind": segment.kind, "data-female-stable-line": h.id,
+              "data-divisor": femaleInhibinStable.display.divisor, "data-ceiling": 1,
               "data-plot-left": left, "data-plot-right": left + pw,
               "data-plot-top": top, "data-plot-bottom": bottom,
               "data-age-from": segment.points[0].ageYears,
@@ -2894,6 +2967,7 @@
           ],
         );
       } else if (!stableStudyVisible() && sex === "female") {
+        if (selected.has("inhb")) paragraph("Inhibina B zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii. Most dzieciństwa i końcowy spadek po 47. roku są poglądowe; nie stanowią nowych odniesień liczbowych.");
         if (selected.has("e2")) paragraph("Estradiol zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. W niemowlęctwie linia przedstawia medianę modelu GAMLSS, a nie dwie fale średniej podłużnej z ryciny 3. Dorosłe plateau jest poglądowe; osobny schemat cyklu pokazuje zmienność w jego obrębie. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii.");
         if (selected.has("amh")) {
           paragraph("AMH zachowuje tę samą linię i stałą skalę we wszystkich zwykłych widokach, także po wpisaniu wyniku. Zbliżenie powiększa ten sam przebieg. Końcówka pierwszego roku przechodzi łagodnie w poglądowy odcinek dzieciństwa. Jasny znacznik zachowuje medianę źródłową także wtedy, gdy nie leży na linii.");

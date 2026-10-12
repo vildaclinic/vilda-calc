@@ -378,6 +378,66 @@ bez przesunięcia źródła; pusty/wyczyszczony wynik → identyczna linia.
 Dowód, ograniczenia i decyzja właściciela:
 [audyt żeńskiego estradiolu](hormone-lifespan/evidence/female-estradiol-display-audit-2026-10-12.json).
 
+### Stała linia żeńskiej inhibiny B — 12 października 2026
+
+Właściciel zatwierdził makietę przed/po i jej wdrożenie („ok, koduj”).
+Zwykły wykres inhibiny B zachowuje pierwotne `displaySegments` pustego
+widoku całego życia. Wpisanie, podwyższenie lub wyczyszczenie wyniku
+nie dobiera już nowej skali ani nie zastępuje krzywej profilem niemowlęcym.
+Stały dzielnik `normalizationMaximum = 52.474 pg/mL`, `ceiling = 1`
+pochodzi z maksimum zachowanych median Ljubicic. To kotwica graficzna,
+nie norma lub maksimum fizjologiczne. Wynik ponad osią ma strzałkę
+i rzeczywistą liczbę; zero pozostaje na osi. Tolerancja ośmiu epsilonów
+maszynowych dotyczy tylko zaokrągleń na granicy wykresu.
+
+Minipuberty i pokwitanie odwzorowują te same kanoniczne kawałki
+Hermite'a/Béziera, dzielone na węzłach i granicach osi czasu. Wybór
+LH/FSH nie usuwa starszych odcinków inhibiny B i nie nadaje jej osi
+IU/L ani procentu maksimum gonadotropin. Jasny znacznik zachowuje
+oryginalną medianę oraz skalę wyniku; nie jest przyciągany do ilustracji.
+Dotychczasowe odróżnienie modeli i przerywanych mostów pozostaje.
+
+Audyt potwierdził wszystkie 99 median tabeli 1 C suplementu Ljubicic
+2022, DOI `10.1210/clinem/dgac363`: 98 zdrowych donoszonych dziewczynek,
+266 próbek surowicy, Gen II ELISA. Szczyt mediany wynosi 52,474 pg/mL
+przy 0,35 roku. Dwie fale względnej średniej podłużnej z ryc. 3
+nie stanowią tej samej statystyki i nie mają ustalonej tu kalibracji
+stężenia. Nie dopisujemy pomiaru przy urodzeniu z modelowego wiersza
+wieku 0: pierwsza próbka w badaniu pochodziła z 5. dnia.
+
+Pełny artykuł Borelli-Kjær 2025, DOI `10.1210/clinem/dgae439`, i ryc. 1
+potwierdzają późniejszy wzrost i niższy poziom dorosły. Zachowane
+24 węzły 5,6–47 lat są przybliżonym odczytem mediany 0 SD, m.in.
+13/20/30/40 lat → około 47/34/30/28 pg/mL. Dotyczą surowicy Gen II;
+648 dziewcząt 5,6–20,2 roku i 149 kobiet 20–69 lat. Faza cyklu
+nie była standaryzowana, a dane antykoncepcji są niepełne. Nie jest to
+trajektoria pojedynczej kobiety ani populacja wyłącznie bez leczenia.
+Około ±2 pg/mL opisuje odczyt ryciny, nie normę lub przedział ufności.
+
+Most 1–5,6 roku pozostaje poglądowy; dane Borelli mają lukę 1,08–5,6.
+Crofton 2002 wspiera kierunek, lecz inne oznaczenie w osoczu i szerokie
+grupy nie uzupełniają jej stężeniami. Po 47 latach niski ogon jest
+jakościowy; `displayFloor = 0.012` oraz wiek 55 nie są pomiarem, LOD
+lub przewidywaniem menopauzy. Źródło Borelli obserwowało kobiety do
+69 lat; 47 kończy jedynie zachowany odczyt liczbowy. Sowers 2008 wspiera
+spadek względem ostatniej miesiączki na poziomie sprawdzonego abstraktu.
+Wspólna jednostka `1 ng/L = 1 pg/mL` i rodzina metody nie harmonizują
+osobnych modeli, populacji lub wpływu cyklu. LOD Gen II wynosi 3 pg/mL,
+bez osobnego LOQ; nie podstawiamy pacjentce wartości LOD/2.
+
+Zwykły profil `ljubicic2022-female-inhb` nadal obejmuje 0,02–1 roku
+włącznie i donoszone dziewczynki. Porównanie płci ma osobny profil
+żeńskich median 8–20 lat, poza globalnym `patientPointData`; nie
+aktywuje on starszego punktu w zwykłych widokach. Normy laboratoryjne,
+źródła liczbowe, kwalifikacja, zapis i męska krzywa pozostają bez zmian.
+
+Przypadek syntetyczny: dziewczynka donoszona, 0,25 roku, 30 pg/mL
+→ mediana 49,684 pg/mL; 80 pg/mL lub 80 ng/L → strzałka z liczbą 80,
+bez zmiany mediany, krzywej lub skali. 90 dni daje inne p50, około
+49,4718 pg/mL: 0,25 roku nie jest dokładnie równe 90 dniom.
+Źródła i decyzję utrwala
+[audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
+
 ### Stała linia męskiego AMH
 
 Zatwierdzona 11 października 2026 linia jest taka sama przed wpisaniem

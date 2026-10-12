@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-12",
+  "status": "implementation-authorized-by-owner; educational-display-review-not-clinical-validation",
+  "approval": {
+    "date": "2026-10-12",
+    "instruction": "ok, koduj",
+    "scope": "Ordinary female inhibin B fixed geometry and scale, canonical mini/puberty projection and mixed LH/FSH selection; no new numerical reference or laboratory profile.",
+    "context": "Owner approved the source audit and standalone desktop/mobile before/after mockup.",
+    "auditBaseCommit": "3817d35efeeb0caac45967a7af8e9fb6778d8ef9",
+    "implementationBaseCommit": "3817d35efeeb0caac45967a7af8e9fb6778d8ef9",
+    "approvedCandidateSha256": "6c1faee53ff9a4f49f83258230b498391bf6502976b45168526078221a3a50e9",
+    "approvedBeforeAfterHtmlSha256": "5f38f9686680d1dbed0781b07a2f7b9b1e215106e61b85550f4ad7645d98fd07"
+  },
+  "clinicalNormsChanged": false,
+  "numericPatientProfilesChanged": false,
+  "sourceConcentrationsChanged": false,
+  "referenceEngineChanged": false,
+  "preservedSourceFiles": [
+    {
+      "file": "docs/clinical/hormone-lifespan/female-lifespan-data.json",
+      "sha256": "226aa8771c75fae45f0a047d21e843005dce03df37db487fbcb46ac914b165c6"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/female-reference-data.json",
+      "sha256": "18785f71947ccb93da901169d283af8810ed5ee35816eb40860a32d05e6aed2a"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/inhibin-comparison-reference-data.json",
+      "sha256": "00f556f1f93522ddb80b0d30551263a319b03a9e5fe609ecec852a7e1883cf37"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/inhibin-comparison-policy.json",
+      "sha256": "4d98133e46119abc82c9305cb1fd74aa1e1a8d1930f92e916fa358a527834fa0"
+    },
+    {
+      "file": "vilda_hormone_lifespan_reference.js",
+      "sha256": "d359cb9b250f3540d9401dbbdbd67e45c9baff81c162f52c54439e5264edf061"
+    }
+  ],
+  "sources": [
+    {
+      "id": "ljubicic2022",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://academic.oup.com/jcem/article/107/9/2598/6608768",
+      "supplementDoi": "10.6084/m9.figshare.19469555.v1",
+      "supplementUrl": "https://ndownloader.figshare.com/files/34594370",
+      "supplementSha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+      "reviewBasis": "Full primary article and original Word supplement; independent table C extraction agrees exactly with all 99 retained reference, lifespan and runtime medians.",
+      "table": "Supplementary Table 1C; Figure 1 GAMLSS model median",
+      "population": "98 healthy term female infants from singleton pregnancies, 266 serum samples, Copenhagen; observations 5 days–14.2 months. All girls Caucasian, with selected socioeconomic backgrounds.",
+      "method": "Beckman Coulter Inhibin B Gen II ELISA",
+      "matrix": "serum",
+      "unit": "pg/mL",
+      "lodPgMl": 3,
+      "separateLoqReported": false,
+      "sourceHandlingBelowLod": "Authors used LOD/2; not permission to impute a censored patient result.",
+      "selectedGrid": {
+        "minAgeYears": 0.02,
+        "maxAgeYears": 1,
+        "stepYears": 0.01,
+        "nodes": 99,
+        "endpointsInclusive": true
+      },
+      "checkpoints": [
+        {
+          "ageYears": 0.02,
+          "medianPgMl": 30.583
+        },
+        {
+          "ageYears": 0.25,
+          "medianPgMl": 49.684
+        },
+        {
+          "ageYears": 0.35,
+          "medianPgMl": 52.474
+        },
+        {
+          "ageYears": 0.5,
+          "medianPgMl": 46.122
+        },
+        {
+          "ageYears": 0.75,
+          "medianPgMl": 32.746
+        },
+        {
+          "ageYears": 1,
+          "medianPgMl": 16.329
+        }
+      ],
+      "statisticDistinction": "Figure 3 gives a separate longitudinal model mean normalized to its own maximum, with two waves of similar INHB height. No physical mean maximum is established here; do not replace the single-peaked concentration median or calibrate the mean with its 52.474 maximum.",
+      "limitations": [
+        "Age-zero fitted rows are not birth measurements; earliest observed specimen was at day 5. No reference before 0.02 years.",
+        "The full supplement grid extends to 1.2 years; that does not extend the approved ordinary 0.02–1-year patient profile.",
+        "Term-only model; median 3 samples per girl, IQR 1–4, missing repeated specimens and non-standardized time of day."
+      ]
+    },
+    {
+      "id": "borelli2025",
+      "doi": "10.1210/clinem/dgae439",
+      "url": "https://doi.org/10.1210/clinem/dgae439",
+      "title": "Serum Concentrations of Inhibin B in Healthy Females and Males Throughout Life",
+      "publication": "JCEM 110(1):70–77, 2025; advance online 2024-06-26",
+      "fullPdfSha256": "86b13b2e2cc6e7311d25df670239fd6a74cc79f47a832063d9a429bf79599f5e",
+      "figure1Sha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+      "reviewBasis": "Full uploaded primary article and Figure 1 inspected. All 24 retained nodes match archived extraction and the original figure raster hash. Independent pixel check supports 19/24 nodes; five overlap plotted observations and are indeterminate. No full independent redigitization claimed.",
+      "population": {
+        "femaleParticipants": 889,
+        "femaleSamples": 1005,
+        "infantParticipants": 92,
+        "infantSamples": 208,
+        "infantObservedAgeYears": [
+          0.02,
+          1.08
+        ],
+        "girlsParticipants": 648,
+        "girlsObservedAgeYears": [
+          5.6,
+          20.2
+        ],
+        "adultParticipants": 149,
+        "adultObservedAgeYears": [
+          20,
+          69
+        ]
+      },
+      "method": "Beckman Coulter Inhibin B Gen II ELISA in all female samples",
+      "matrix": "serum",
+      "sourceUnit": "ng/L",
+      "applicationUnit": "pg/mL",
+      "unitFactor": 1,
+      "lodPgMl": 3,
+      "separateLoqReported": false,
+      "statistic": "Figure 1 0 SD is the GAMLSS median M, not an arithmetic mean.",
+      "digitization": {
+        "nodes": 24,
+        "domainYears": [
+          5.6,
+          47
+        ],
+        "approximatePgMl": 2,
+        "meaning": "Repository estimate of graphical reading accuracy, not author-reported precision, confidence interval or reference interval."
+      },
+      "checkpoints": [
+        {
+          "ageYears": 5.6,
+          "approximateMedianPgMl": 11
+        },
+        {
+          "ageYears": 8,
+          "approximateMedianPgMl": 14
+        },
+        {
+          "ageYears": 10,
+          "approximateMedianPgMl": 27
+        },
+        {
+          "ageYears": 12,
+          "approximateMedianPgMl": 43
+        },
+        {
+          "ageYears": 13,
+          "approximateMedianPgMl": 47
+        },
+        {
+          "ageYears": 16,
+          "approximateMedianPgMl": 40
+        },
+        {
+          "ageYears": 20,
+          "approximateMedianPgMl": 34
+        },
+        {
+          "ageYears": 30,
+          "approximateMedianPgMl": 30
+        },
+        {
+          "ageYears": 40,
+          "approximateMedianPgMl": 28
+        },
+        {
+          "ageYears": 45,
+          "approximateMedianPgMl": 20
+        },
+        {
+          "ageYears": 47,
+          "approximateMedianPgMl": 11
+        }
+      ],
+      "limitations": [
+        "Cycle phase was not standardized; oral contraception data were missing in most controls. Do not label this an untreated-only population.",
+        "Age-matched adolescent users/nonusers had medians 8/55 pg/mL; this does not provide a correction factor.",
+        "Mostly Caucasian, sparse adult sample; cross-sectional pooled models are not an individual ageing trajectory.",
+        "Age 47 ends the retained digitization, not observation: adult women were observed through age 69.",
+        "Five percent of prepubertal and 13 percent of reproductive-age females had undetectable values; a median is not a diagnostic lower limit.",
+        "Same assay family and unit do not harmonize separate infant/later fits, cohort selection or cycle variation."
+      ]
+    },
+    {
+      "id": "crofton2002",
+      "doi": "10.1046/j.0300-0664.2001.01449.x",
+      "url": "https://doi.org/10.1046/j.0300-0664.2001.01449.x",
+      "reviewBasis": "Full primary text reviewed; qualitative corroboration only.",
+      "methodAndMatrix": "Historical ELISA in plasma; broad age groups, unrecorded menstrual timing.",
+      "ageGroupMediansPgMl": {
+        "0–6": 10.6,
+        "6–10": 20.8,
+        "10–11": 37.1,
+        "11–12": 68.3,
+        "12–18": 98.5
+      },
+      "allowedUse": "Supports low childhood and pubertal increase. Do not relabel 0–6 as 1–6, insert bin medians into the source gap or merge the partly GH-treated Tanner cohort into age data."
+    },
+    {
+      "id": "sowers2008",
+      "doi": "10.1210/jc.2008-0567",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/18593767/",
+      "reviewBasis": "Fresh primary abstract only; full-text retrieval unavailable in this audit. Complete Borelli article independently supports the low postmenopausal state.",
+      "population": "50 women, 300 specimens: six consecutive annual follicular-phase samples.",
+      "finding": "Declining inhibin B associated with time to final menstrual period, low/nondetectable 4–5 years before it; not significantly associated with chronological age at FMP.",
+      "allowedUse": "Qualitative direction only, not quantitative cross-assay merging or a universal chronological menopause age."
+    }
+  ],
+  "scale": {
+    "unit": "pg/mL",
+    "divisor": 52.474,
+    "ceiling": 1,
+    "transform": "linear",
+    "source": "Unchanged lifespanData.hormones.inhb.normalizationMaximum; maximum of 99 retained infant medians at 0.35 years.",
+    "notReferenceLimitOrPhysiologicMaximum": true,
+    "independentOf": [
+      "result-presence",
+      "result-value",
+      "patient-age",
+      "view",
+      "viewport",
+      "other-selected-hormones"
+    ],
+    "zero": "Baseline point after original qualification",
+    "aboveAxis": "Arrow labelled with the actual value; unchanged line and source marker",
+    "boundaryTolerance": "Eight machine epsilons on the fixed INHB scale only; not assay uncertainty"
+  },
+  "geometry": {
+    "wholeLife": "Original blank-life displaySegments retained, including source and dashed schematic styles; no new anchors.",
+    "zoom": "Canonical PCHIP in female whole-life coordinates; piecewise Hermite-to-Bezier projection split at nodes and time-axis boundaries.",
+    "mixedLHFSH": "Same complete INHB line on the selected period age axis, retaining its own scale; not IU/L or gonadotropin relative-mean normalization.",
+    "childhoodBridgeYears": [
+      1,
+      5.6
+    ],
+    "childhoodBridgeMeaning": "Illustrative decline from 16.329 to about 11 pg/mL at supported ends; no source concentrations or patient reference inside the bridge.",
+    "qualitativeTail": {
+      "fromAgeYears": 47,
+      "lowByAgeYears": 55,
+      "toAgeYears": 75,
+      "displayFloor": 0.012,
+      "meaning": "Low/undetectable qualitative ending; no inferred concentration, LOD or individual menopause timing."
+    },
+    "sourceMarkerProjectedOntoIllustration": false,
+    "relativeAmplitude": "The selected infant maximum 52.474 exceeds digitized adolescent 47 and adult 30. Separate models and cycle effects preclude a universal infant-to-adult ratio or biological activity claim."
+  },
+  "patientReference": {
+    "ordinaryProfileId": "ljubicic2022-female-inhb",
+    "minAgeYears": 0.02,
+    "maxAgeYears": 1,
+    "endpointsInclusive": true,
+    "termOnly": true,
+    "unit": "pg/mL",
+    "statistic": "median",
+    "selection": "Original engine, method/specimen, age precision, units and censored-result qualification unchanged.",
+    "newAfterInfancy": false,
+    "separateComparison": {
+      "id": "borelli2025-female-inhb-puberty-comparison",
+      "domainYears": [
+        8,
+        20
+      ],
+      "endpointsInclusive": true,
+      "globalPatientProfiles": false,
+      "all24SourceNodesRetainedForInterpolation": true
+    },
+    "minipubertyComparisonBoundary": "Separate comparison retains 0.02–<1-year common lines; exactly 1 year has no comparison point. Ordinary female profile still includes 1 year."
+  },
+  "syntheticCases": [
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPgMl": 30,
+      "expectedSourceMedianPgMl": 49.684,
+      "expectedResultFraction": 0.5717117048443039,
+      "expectedSourceFraction": 0.9468308114494798
+    },
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPgMl": 80,
+      "expected": "Above-axis arrow labelled 80 pg/mL; unchanged source median 49.684, line and scale."
+    },
+    {
+      "input": "Same context, 80 ng/L",
+      "expected": "Same result as 80 pg/mL; original engine performs conversion."
+    },
+    {
+      "input": "Same context, 0 pg/mL",
+      "expected": "Baseline point; same source median, line and scale."
+    },
+    {
+      "input": "Blank, cleared or censored result",
+      "expected": "No new concentration point; unchanged line and scale."
+    },
+    {
+      "input": "Female term 0.02 or 1 year",
+      "expected": "Original source medians 30.583 or 16.329 pg/mL; inclusive ordinary source endpoints."
+    },
+    {
+      "input": "Below 0.02 or above 1 year, preterm/unknown term status or known incompatible assay",
+      "expected": "No substitute ordinary numeric reference; source eligibility unchanged."
+    },
+    {
+      "input": "Female 13 years",
+      "expected": "No ordinary patient reference; existing puberty sex comparison keeps its separate approximate median 47 pg/mL."
+    },
+    {
+      "input": "INHB with LH/FSH; mini/puberty, fullscreen or 320px",
+      "expected": "Same canonical INHB line, source and 52.474/1 scale on the chosen time viewport."
+    }
+  ],
+  "unchangedScopes": [
+    "Other female hormone curves",
+    "Male views",
+    "Sex comparisons",
+    "Laboratory interpretation and persistence",
+    "Source concentrations, patient profile selection and units"
+  ],
+  "review": {
+    "scope": "Source integrity and approved educational display, not clinical validation or exhaustive literature/erratum review.",
+    "standaloneBeforeImplementation": {
+      "browserScenarios": 148,
+      "browserChecksPassed": 385,
+      "browserChecksFailed": 0,
+      "qualificationGuards": 20,
+      "joinsAndRegressionChecksPassed": 69,
+      "independentChecksPassed": 108,
+      "independentChecksFailed": 0,
+      "previewChecksPassed": 50,
+      "widths": [
+        1440,
+        320
+      ],
+      "fullscreen": true,
+      "wrapperProtocols": [
+        "file",
+        "http"
+      ],
+      "physicalMobileDevice": false
+    },
+    "provenanceReportHashes": {
+      "evidence/infant/source-audit.json": "b4dcd800b716064a703116b8eeeed7ba10d46142fd9faf117b3f8141116823c9",
+      "evidence/older/older-source-review.json": "a5de9bebe41abf9069584e33755b1158b72a2ccebf9c5ca538bd9f7fe0851b73",
+      "qa/independent/summary.json": "86370bfc4d7fdb8ed4d53fc3bdce54384e6f28d5f6277aa6742c23f01b088aaf"
+    },
+    "productionRegression": "tests/e2e/hormone-lifespan-female-inhibin-stability.spec.mjs; actual renderer and original engine. Current implementation test/CI reports determine execution status.",
+    "sourceDistribution": "Primary PDFs, screenshots and large logs are not committed. Citations, factual extractions, source hashes, limits and approval are retained here."
+  }
+}
