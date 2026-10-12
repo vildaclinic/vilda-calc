@@ -34,7 +34,7 @@ async function update(page, patch) {
   await page.evaluate(ctx => window.femaleGonadotropinChart.update(ctx), { ...context, ...patch, ageLabel });
 }
 async function choose(page, selected) {
-  for (const id of ['lh', 'fsh']) {
+  for (const id of ['lh', 'fsh', 'amh', 'e2', 'inhb']) {
     const button = panel(page).locator(`[data-hormone="${id}"]`);
     if ((await button.getAttribute('aria-pressed') === 'true') !== selected.includes(id)) await button.click();
   }
@@ -119,7 +119,13 @@ for (const width of [1440, 320]) {
     expectSameGeometry(both, await geometry(page));
     await expect(panel(page).locator('[data-patient-concentration]')).toHaveCount(0);
     await panel(page).screenshot({ path: test.info().outputPath(`female-mini-mixed-${width}.png`) });
-    await panel(page).locator('[data-hormone="amh"]').click();
+    // With both gonadotropins deselected, an AMH-only chart must not retain
+    // their percent or concentration axis merely because LH is calculated.
+    await choose(page, ['amh']);
+    await expect(panel(page).locator('[data-lifespan="chart"]'))
+      .not.toHaveAttribute('data-female-gonadotropin-view');
+    await expect(panel(page).locator('[data-period-y-tick]')).toHaveCount(0);
+    await expect(panel(page).locator('[data-lifespan="insight-title"]')).toHaveText('AMH');
     await choose(page, []);
     expect((await geometry(page)).paths).toEqual({});
     await expect(panel(page).locator('[data-lifespan="insight-title"]')).toHaveText('Wybierz hormon');

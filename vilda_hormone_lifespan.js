@@ -806,7 +806,8 @@
     const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
     const femaleGonadotropins = displayEngine?.buildFemaleGonadotropins?.(data);
     const femaleGonadotropinsActive = () => !!femaleGonadotropins && sex === "female" && !compare &&
-      (["lh", "fsh"].includes(analyteHormones[currentAnalyte]) || selected.has("lh") || selected.has("fsh"));
+      ((selected.size === 0 && ["lh", "fsh"].includes(analyteHormones[currentAnalyte])) ||
+        selected.has("lh") || selected.has("fsh"));
     const maleLifeFraction = (age) => {
       let offset = 0;
       for (const stage of maleStages) {
