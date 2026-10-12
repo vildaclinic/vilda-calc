@@ -78,7 +78,9 @@ function smooth(d) {
 }
 
 async function heights(page, ages) {
-  return line(page).evaluate((path, ages) => {
+  // Read the current path atomically, as in geometry(), after any SVG rerender.
+  return panel(page).evaluate((host, ages) => {
+    const path = host.querySelector('[data-stable-reference-line="amh"]');
     const svg = path.ownerSVGElement;
     const mini = svg.querySelector('[data-sector="mini"]'), puberty = svg.querySelector('[data-sector="puberty"]');
     return ages.map(age => {
