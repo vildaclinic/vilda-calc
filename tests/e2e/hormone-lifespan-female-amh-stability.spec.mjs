@@ -174,7 +174,8 @@ for (const width of [1440, 320]) {
       expectHeights((await geometry(page, ages[view])).samples, zoom.samples);
       await page.keyboard.press('Escape');
       await expect(page.locator('dialog.vhl-fullscreen-dialog')).toHaveCount(0);
-      expect(await geometry(page, ages[view])).toEqual(zoom);
+      // Closing the dialog schedules the inline redraw for the next animation frame.
+      await expect.poll(() => geometry(page, ages[view])).toEqual(zoom);
     }
     await choose(page, []);
     await expect(point(page)).toHaveCount(0);
