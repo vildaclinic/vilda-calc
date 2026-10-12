@@ -12,6 +12,8 @@ import { expect, test } from '../support/test-czas.mjs';
 //   - 87 próbek widocznych klatek z takim efektem w ciągu ok. 0,5 s (desktop), 224 na telefonie.
 // Po poprawce panel pokazany ponownie przez 2 s ma klasę vilda-panel-powrot: animacje wejścia startują jako
 // zakończone, liczby nie są odliczane, a po zdjęciu klasy żadna animacja nie rusza od nowa. Dane FIKCYJNE.
+// Na obciążonej maszynie (pełny zestaw, 4 workery) klatki potrafią przychodzić rzadko, więc próbnik klatek służy tylko
+// do wykrycia ruchu; to, że animacje po oknie działają, sprawdza odczyt w chwili wstawienia i bramka liczb.
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#PanelPowrot!26';
@@ -95,6 +97,32 @@ const wlaczProbnik = (fr) => fr.evaluate((ids) => {
 
 const zatrzymajProbnik = (fr) => fr.evaluate(() => { const P = window.__probnik; P.stop = true; return P; });
 
+// Nowy #bmiResult odczytany w obserwatorze mutacji — w tym samym zadaniu co przebudowa wyników, zanim minie
+// jakakolwiek klatka, więc odczyt nie zależy od obciążenia maszyny. Obserwator powstaje po obserwatorze app.js,
+// który nadaje kafelkom `animate-in --pulse`, więc widzi już te klasy. Świeża animacja CSS stoi wtedy w chwili 0:
+// zwykła daje opacity 0 (początek wjazdu), w trybie powrotu startuje jako zakończona — opacity 1, nic nie biegnie.
+const wlaczStraznikaWstawien = (fr) => fr.evaluate(() => {
+  if (window.__wstawienia) window.__wstawienia.mo.disconnect();
+  const W = { lista: [], mo: null };
+  W.mo = new MutationObserver((zmiany) => {
+    zmiany.forEach((z) => z.addedNodes.forEach((n) => {
+      if (n.nodeType !== 1) return;
+      const el = n.id === 'bmiResult' ? n : n.querySelector('#bmiResult');
+      if (!el) return;
+      const cs = getComputedStyle(el);
+      W.lista.push({
+        klasa: document.documentElement.classList.contains('vilda-panel-powrot'),
+        op: cs.opacity,
+        trwajace: el.getAnimations().filter((a) => a.playState === 'running').map((a) => a.animationName),
+      });
+    }));
+  });
+  W.mo.observe(document.getElementById('results'), { childList: true, subtree: true });
+  window.__wstawienia = W;
+});
+
+const odczytajWstawienia = (fr) => fr.evaluate(() => window.__wstawienia.lista);
+
 const bezRuchu = (tr) => !tr || tr === 'none' || tr === 'matrix(1, 0, 0, 1, 0, 0)';
 
 test('powrót na Start po zmianie panelu: karta „Centyle i BMI” i przyciski podsumowania nie wjeżdżają od nowa, BMI nie odlicza się od zera', async ({ page }) => {
@@ -107,8 +135,10 @@ test('powrót na Start po zmianie panelu: karta „Centyle i BMI” i przyciski 
   await docpro.waitForFunction(() => window.VildaVault.isUnlocked(), null, { timeout: 30000 });
   await page.waitForTimeout(1500);
 
+  await wlaczStraznikaWstawien(start);
   await wlaczProbnik(start);
   await page.evaluate(() => window.VildaShell.navigate('start'));
+  const liczbyWOknie = await start.evaluate(() => window.vildaShouldAnimateNumbers());
   // Odtworzenie sesji i przeliczenie wyników po powrocie trwają kilkadziesiąt–kilkaset ms; patrzymy przez 1,4 s.
   await page.waitForTimeout(1400);
   const P = await zatrzymajProbnik(start);
@@ -119,23 +149,30 @@ test('powrót na Start po zmianie panelu: karta „Centyle i BMI” i przyciski 
   }
   for (const id of ZGLOSZONE) {
     const gory = P.probki.filter((p) => p.id === id).map((p) => p.top);
-    expect(gory.length, `${id}: próbki z widocznych klatek`).toBeGreaterThan(5);
+    expect(gory.length, `${id}: próbki z widocznych klatek`).toBeGreaterThan(0);
     expect(Math.max(...gory) - Math.min(...gory), `${id}: położenie w dokumencie stałe`).toBeLessThanOrEqual(1);
   }
-  expect(P.liczby.length).toBeGreaterThan(5);
+  expect(P.liczby.length).toBeGreaterThan(0);
   expect([...new Set(P.liczby)], 'liczba BMI od pierwszej klatki ma wartość końcową').toEqual(['21,9']);
   expect(P.klasa, 'panel pokazany ponownie jest w trybie powrotu').toBe(true);
+  expect(liczbyWOknie, 'w oknie powrotu liczby nie są odliczane').toBe(false);
+  for (const w of (await odczytajWstawienia(start)).filter((x) => x.klasa)) {
+    expect(w, 'wynik przebudowany w oknie powrotu startuje bez animacji').toEqual({ klasa: true, op: '1', trwajace: [] });
+  }
 
   // Po oknie uspokojenia klasa znika, a zwykła zmiana danych znów animuje wyniki — tryb powrotu niczego nie wyłącza na stałe.
   await start.waitForFunction(() => !document.documentElement.classList.contains('vilda-panel-powrot'), null, { timeout: 5000 });
-  await wlaczProbnik(start);
+  expect(await start.evaluate(() => window.vildaShouldAnimateNumbers()), 'po oknie liczby znów są odliczane').toBe(true);
+  await wlaczStraznikaWstawien(start);
   await wpisz(start, { weight: '41' });
   await expect(start.locator('#bmiResult .result-number')).toHaveText('22,5', { timeout: 15000 });
-  await page.waitForTimeout(300);
-  const Q = await zatrzymajProbnik(start);
-  const wjazd = Q.probki.filter((p) => p.id === 'bmiResult' && (p.op < 0.999 || !bezRuchu(p.tr)));
-  expect(wjazd.length, 'nowy wynik po zmianie masy wjeżdża jak dotąd').toBeGreaterThan(0);
-  expect(Q.liczby.some((v) => v !== '21,9' && v !== '22,5'), 'liczba BMI po zmianie masy odlicza się jak dotąd').toBe(true);
+  const poOknie = await odczytajWstawienia(start);
+  expect(poOknie.length, 'zmiana masy przebudowała wynik').toBeGreaterThan(0);
+  for (const w of poOknie) {
+    expect(w.klasa, 'po oknie panel nie jest w trybie powrotu').toBe(false);
+    expect(w.op, 'nowy wynik po zmianie masy wjeżdża jak dotąd: animacja startuje od opacity 0').toBe('0');
+    expect(w.trwajace, 'nowy wynik po zmianie masy ma biegnącą animację wjazdu').toContain('fadeSlideUp');
+  }
 });
 
 test('zdjęcie klasy trybu powrotu nie wznawia animacji: dłuższa jednorazowa animacja zaczęta w oknie zostaje zakończona', async ({ page }) => {
