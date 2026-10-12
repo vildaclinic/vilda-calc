@@ -2642,6 +2642,7 @@ const OPTIONAL_ASSETS = [
   '/growth-basic-module.js?v=17',
   '/growth-basic-module.js?v=18',
   '/growth-basic-module.js?v=19',
+  '/growth-basic-module.js?v=20',
   '/vilda_summary_cards.js?v=33',
   '/vilda_summary_cards.js?v=34',
   '/vilda_summary_cards.js?v=35',

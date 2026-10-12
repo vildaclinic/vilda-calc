@@ -2628,6 +2628,46 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
+### P-WZRASTANIE-PRZEBUDOWA — wczytanie pacjenta leczonego GH nie przebudowuje tabeli historii w kółko (SW 1.1.240, `growth-basic-module.js` 20, 2026-10-12, zgłoszenie właściciela)
+
+**Objaw.** U pacjentki leczonej hormonem wzrostu „Wczytaj tego pacjenta" → „Odtwórz zapis" trwało znacząco dłużej niż u innych pacjentów: strona nie reagowała przez kilka do kilkunastu sekund. „Nowy pomiar" działał prawidłowo.
+
+**Czy to pojedynczy przypadek.** Nie. Dane pacjentki są poprawne, a błąd jest ogólny. Dotyczy każdego pacjenta z punktami terapii GH, który ma w historii pomiar ręczny późniejszy niż pierwszy punkt terapii. Wystarczy kontrola wpisana ręcznie w trakcie leczenia albo bieżąca wizyta przeniesiona do historii przez „Nowy pomiar". Koszt rośnie z kwadratem liczby wierszy, więc najmocniej odczuwają go pacjenci leczeni od lat. Pacjent bez punktów GH nie jest dotknięty: odtworzenie układa jego wiersze ręczne chronologicznie, także gdy wpisano je nie po kolei (zmierzone: 2 przeliczenia).
+
+**Przyczyna (zmierzona profilem CPU i licznikami wywołań, dane fikcyjne).**
+
+1. Karta podstawowa (`growth-basic-module.js`) przy każdym przeliczeniu (`z()`) sprawdza, czy jej historia zmieniła się od ostatniej synchronizacji z kartą zaawansowaną. Jeśli tak, przebudowuje tabelę zaawansowaną (`J()`). Porównuje „podpisy" historii, ale bieżący podpis powstawał po sortowaniu wg wieku (`de()`), a zapamiętany — w kolejności wierszy (`J()`: `$()`, `K()`: kolejność tabeli zaawansowanej). Mostek punktów terapii dopisuje punkty GH na końcu tabeli zaawansowanej. Gdy któryś pomiar ręczny jest późniejszy niż pierwszy punkt, kolejność nie jest chronologiczna i podpisy nigdy się nie zgadzały. Każde przeliczenie karty podstawowej czyściło więc tabelę zaawansowaną i budowało ją od nowa, z tymi samymi wierszami w tej samej kolejności. Takich przeliczeń jest wiele: każde zdarzenie w polach wieku, miesięcy, wzrostu, masy i płci. „Odtwórz zapis" wysyła ich więcej niż „Nowy pomiar", do tego dochodzi odświeżenie pól z `custom-fixes.js` 3,2 s po `vilda:state-restored`.
+2. Przebudowa (`Me()`) dodawała wiersze przez `addAdvMeasurementRow()` bez `skipInitialRecalc`. Każdy dodany wiersz uruchamiał pełne `calculateGrowthAdvanced()` na niedokończonej tabeli, łącznie z parowaniem ze spożyciem, kartą spożycia i podsumowaniem. `J()` i tak przelicza kartę raz, po zbudowaniu całej tabeli.
+
+| Scenariusz (Chromium, `index.html`, dziewczynka 12 l.) | Przed zmianą | Po zmianie |
+|---|---|---|
+| 7 pomiarów ręcznych (jeden w trakcie terapii) + 12 punktów GH, „Odtwórz zapis" | 163 pełne przeliczenia, 159 dodanych wierszy, długie zadania ≈ 2,2 s | 3 przeliczenia, 7 wierszy, ≈ 0,7 s |
+| to samo, „Nowy pomiar" | 108 przeliczeń, 108 wierszy | 3, 8 |
+| 12 pomiarów ręcznych + 30 punktów GH, „Odtwórz zapis" | 347 przeliczeń, ≈ 5,1 s | 3, ≈ 1,0 s |
+| 10 pomiarów ręcznych + 40 punktów GH, „Odtwórz zapis" | ≈ 12,3 s długich zadań (samo kliknięcie 4,0 s) | ≈ 1,8 s (0,7 s) |
+| 19 pomiarów ręcznych bez GH (po kolei i nie po kolei), „Odtwórz zapis" | 2 przeliczenia, ≈ 0,6 s | bez zmian |
+
+**Zmiana (`growth-basic-module.js` 19 → 20).**
+
+1. Podpis historii (`ie()`) nie zależy od kolejności wierszy: wpisy są sortowane przed złączeniem. Przebudowa nadal rusza, gdy treść historii karty podstawowej różni się od ostatniej synchronizacji. Nie rusza, gdy różni się tylko kolejność.
+2. Przebudowa (`Me()`) dodaje wiersze z `{ skipInitialRecalc: true }`. Kartę przelicza raz `J()`, po zbudowaniu tabeli.
+
+**Wpływ kliniczny.** Brak. Wzory, progi, tabele, dane, zapis i synchronizacja bez zmian. Zmienia się tylko liczba powtórzeń tej samej pracy. Dowód równoważności: zrzut stanu końcowego po zapisie, po „Odtwórz zapis" i po „Nowy pomiar" w pięciu scenariuszach (trzy z punktami GH, dwa bez). Zrzut obejmował tabelę zaawansowaną z wartościami i znacznikami GH, tabelę podstawową, tabelę spożycia, `advancedGrowthData`, `basicGrowthData`, teksty wyników kart zaawansowanej, podstawowej i spożycia, `generateMetabolicSummary()`, rekord `collectUserData()` i sesję `vildaMainSessionV1`. Przed zmianą i po niej zrzut był identyczny w 15 z 15 porównań. Różniły się tylko znaczniki czasu `timestampISO`. Klasyfikacja: refaktoryzacja wydajnościowa (AGENTS.md § 2).
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, dane fikcyjne).** Dziewczynka 12 l. 0 m., 140,5 cm, 33,5 kg. Pomiary ręczne w 60, 66, 72, 78, 84, 90 i 110 mies. życia, punkty terapii GH co 3 mies. od 96. do 129. mies. Zapis, „Wczytaj tego pacjenta", „Odtwórz zapis" → tabela taka sama jak przed zapisem: 7 wierszy ręcznych, potem 12 punktów GH ze znacznikami. Najwyżej 6 pełnych przeliczeń karty zaawansowanej (dotąd 163).
+
+**Strażnicy.** `tests/e2e/gh-odtworzenie-bez-przebudowy.spec.mjs` (nowy, 2). Liczy wywołania, nie mierzy czasu, bo czas zależy od maszyny.
+- Test 1 — „Odtwórz zapis" i „Nowy pomiar" na powyższej pacjentce. Liczba przeliczeń nie rośnie z liczbą wierszy, a tabela się nie zmienia.
+- Test 2 — jawna przebudowa z karty podstawowej (`syncBasicGrowthRowsToAdvanced()`): każdy wiersz dodany raz, jedno przeliczenie, tabela i znaczniki GH bez zmian.
+
+**Zmierzone czerwone** na `audyt` d0c1bda: **2 z 2** (163 przeliczenia; 20 przeliczeń przy przebudowie 19 wierszy). Mutacje: podpis bez sortowania → czerwony test 1 (12 przeliczeń); przeliczenie po każdym wierszu → czerwony test 2 (20).
+
+**Czego ta zmiana NIE robi.**
+- Mostek nadal dopisuje punkty terapii na końcu tabeli. Kolejność wierszy na ekranie się nie zmienia; ułożenie chronologiczne to osobna decyzja.
+- Pozostały koszt „Odtwórz zapis" (≈ 0,6 s u każdego pacjenta, łącznie z odświeżeniem pól po 3,2 s) to zwykła praca odtwarzania, nie pętla.
+
+**Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie.
+
 ### GROWTH-HV-UI10 — ręczny wiersz i identyczny punkt terapii GH liczone podwójnie (SW 1.0.884, 2026-09-11, zgłoszenie właściciela)
 
 **Objaw.** Lekarz wpisał historyczne pomiary ręcznie w „Zaawansowanych obliczeniach wzrostowych", a potem — wstecznie — te same pomiary jako punkty terapii w monitorze GH (docpro). Po wczytaniu pacjenta każdy pomiar widniał **dwa razy**: raz jako wiersz ręczny, raz jako kopia punktu terapii. Usunięcie kopii i zapis nic nie dawało — po ponownym wczytaniu dubel wracał. Pacjent nie jest „zepsuty": obie kopie mają te same liczby, więc tempo liczy się z tej samej pary punktów — ale każde tempo liczone „z ostatnich N pomiarów" widziało jeden pomiar jako dwa, a lista była nieczytelna.
