@@ -1,6 +1,7 @@
 /* Educational lifespan visualization. Approved source/display data are separate
  * from the clinical reference engine. This module never classifies a result,
- * infers puberty/menopause, writes patient data, or normalizes zoom views anew.
+ * infers puberty/menopause or writes patient data. Approved female LH/FSH
+ * periods use explicit source models/scales, never patient-dependent scaling.
  * Context updates are atomic; an opaque identity token stays inside the closure.
  */
 (function (root) {
@@ -723,9 +724,11 @@
       delete svg.dataset.comparisonScale;
       delete svg.dataset.comparisonMin;
       delete svg.dataset.comparisonMax;
+      clearFemalePeriodMetadata();
       panel.querySelector(".vhl-chart-caption").hidden = false;
       byId("scale-note").removeAttribute("data-current-source");
       if (compare) renderComparison();
+      else if (femaleGonadotropinsActive()) renderFemaleGonadotropins();
       else renderSchematic();
       updateInsight();
       explainUnavailablePoint();
@@ -801,6 +804,10 @@
       (view === "mini" || view === "puberty");
     const insl3Display = displayEngine?.buildMaleInsl3?.(data);
     const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
+    const femaleGonadotropins = displayEngine?.buildFemaleGonadotropins?.(data);
+    const femaleGonadotropinsActive = () => !!femaleGonadotropins && sex === "female" && !compare &&
+      ((selected.size === 0 && ["lh", "fsh"].includes(analyteHormones[currentAnalyte])) ||
+        selected.has("lh") || selected.has("fsh"));
     const maleLifeFraction = (age) => {
       let offset = 0;
       for (const stage of maleStages) {
@@ -836,6 +843,10 @@
         ? { notation: "scientific" } : {}),
     }).format(value);
     function visibleAgeDomain() {
+      if (femaleGonadotropinsActive()) {
+        const { minAge, maxAge } = femaleGonadotropins[view].domain;
+        return [minAge, maxAge];
+      }
       return view === "mini" ? [0, 1] : view === "puberty" ? [8, 20]
         : [stages()[0].min, stages()[stages().length - 1].max];
     }
@@ -925,8 +936,9 @@
     }
     function drawPatientDot(group, model, { W, mobile, left, right, top, bottom, px, y }) {
       const offscale = !!model.stableDisplay && model.value / model.divisor > model.ceiling;
-      const py = offscale ? top + 5 : y(model.value / model.divisor / model.ceiling);
-      const my = y(model.referenceValue / model.divisor / model.ceiling);
+      const fraction = model.valueFraction || ((value) => value / model.divisor / model.ceiling);
+      const py = offscale ? top + 5 : y(fraction(model.value));
+      const my = y(fraction(model.referenceValue));
       const unit = model.profile.unit;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
       const groupMean = model.profile.statistic === "group-mean";
@@ -946,6 +958,7 @@
         // statistic is explicit and must never be inferred from that name.
         "data-reference-value": model.referenceValue, "data-reference-statistic": model.profile.statistic,
         "data-divisor": model.divisor, "data-ceiling": model.ceiling,
+        ...(model.scaleTransform ? { "data-scale-transform": model.scaleTransform } : {}),
         "data-plot-top": top, "data-plot-bottom": bottom,
         ...(offscale ? { "data-offscale": "above" } : {}),
         "data-age-lower": patientAgeYears, "data-age-upper": patientContext.ageUpperYears ?? patientAgeYears,
@@ -1047,6 +1060,10 @@
           : "Pozostałe hormony zachowują własne skale poglądowe. Nie porównujemy liczbowo wysokości różnych hormonów.");
     }
     function updateGonadotropinPresentation() {
+      if (femaleGonadotropinsActive()) {
+        byId("comparison-note").hidden = true;
+        return;
+      }
       const visible = stableGonadotropinVisible();
       byId("comparison-note").hidden = !visible;
       if (!visible) return;
@@ -1066,6 +1083,7 @@
     }
     function explainUnavailablePoint() {
       if (amhInfantComparisonActive() || inhibinComparisonActive()) return;
+      if (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(analyteHormones[currentAnalyte])) return;
       if (renderedObservation?.patientPoint?.status === "ready") return;
       const measurement = patientContext?.measurement;
       const id = analyteHormones[currentAnalyte];
@@ -1101,7 +1119,302 @@
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
       };
       const message = (adultTestosterone && adultMessages[patientPoint?.reason]) || messages[patientPoint?.reason];
-      if (message) byId("scale-note").textContent = message + " Krzywe pozostają poglądowe.";
+      if (message) byId("scale-note").textContent = (femaleGonadotropinsActive()
+        ? byId("scale-note").textContent + " " : "") + message + " Krzywe pozostają poglądowe.";
+    }
+
+    function clearFemalePeriodMetadata() {
+      for (const key of ["femaleGonadotropinView", "periodProfile", "periodUnit", "periodCeiling",
+        "periodMin", "periodMax", "scaleTransform"]) delete svg.dataset[key];
+      for (const key of ["cycleSource", "cycleUnit", "cycleDomain", "cycleCeiling"])
+        delete byId("cycle-chart").dataset[key];
+    }
+    function renderFemaleGonadotropins() {
+      const period = femaleGonadotropins[view], life = view === "life", mini = view === "mini";
+      const W = svg.clientWidth || 1040, mobile = W < 640;
+      const H = chartHeight(mobile ? 350 : 415), left = mobile ? 36 : 52, right = mobile ? 13 : 25;
+      const top = 48, bottom = H - 42, width = W - left - right, height = bottom - top;
+      const x = (age) => left + period.xFraction(age) * width;
+      const y = (value) => bottom - period.valueFraction(value) * height;
+      const relativeY = (value) => bottom - value * height;
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      svg.setAttribute("height", H);
+      Object.assign(svg.dataset, {
+        femaleGonadotropinView: view, periodProfile: femaleGonadotropins.policy.id + "-" + view,
+        periodUnit: period.scale.unit || "relative",
+        periodCeiling: period.scale.max, periodMin: period.domain.minAge,
+        periodMax: period.domain.maxAge, scaleTransform: period.scale.kind,
+      });
+      stageNav.hidden = !life;
+      stageNav.classList.toggle("vhl-compact", mobile);
+      stageNav.querySelectorAll("button").forEach((b) =>
+        b.setAttribute("aria-pressed", String(Number(b.dataset.stage) === activeStage)));
+      const g = el("g", { "data-female-gonadotropin-plot": view,
+        "data-plot-left": left, "data-plot-right": W - right,
+        "data-plot-top": top, "data-plot-bottom": bottom });
+      svg.append(g);
+      const backgrounds = life ? femaleStages : [{
+        min: period.domain.minAge, max: period.domain.maxAge, color: mini ? "#eaf5f2" : "#edf4f9",
+      }];
+      for (const [i, stage] of backgrounds.entries()) g.append(el("rect", {
+        x: x(stage.min), y: top, width: x(stage.max) - x(stage.min), height,
+        fill: stage.color, "data-period-background": view,
+        "data-sector": life ? i : view, "data-active": String(life && i === activeStage),
+      }));
+      if (life && activeStage !== null) {
+        const stage = femaleStages[activeStage];
+        g.append(el("rect", { x: x(stage.min) + 0.8, y: top - 3,
+          width: x(stage.max) - x(stage.min) - 1.6, height: height + 6, rx: 5,
+          fill: "#dcefeb", stroke: "#228c91", "stroke-width": 1.6,
+          "pointer-events": "none", "data-sector-highlight": activeStage }));
+      }
+      for (const tick of period.scale.ticks) {
+        g.append(el("line", { x1: left, x2: W - right, y1: y(tick), y2: y(tick),
+          stroke: "#cddfe3", "stroke-width": 0.8, "stroke-dasharray": tick === 0 ? "0" : "3 5" }),
+        text(left - 7, y(tick) + 4, mini ? Math.round(tick * 100) + "%" : fmt(tick), {
+          "text-anchor": "end", "font-size": mobile ? 9 : 11,
+          "data-period-y-tick": tick, fill: "#54757e" }));
+      }
+      if (!mini) g.append(text(left - 7, top - 14, "IU/L", {
+        "text-anchor": "end", "font-size": mobile ? 9 : 10, "font-weight": 600 }));
+      const startAge = Math.min(...period.curves.map((curve) => curve.points[0].ageYears));
+      const ticks = life ? (mobile ? [0, 1, 10, 20, 45, 75] : [0, 1, 10, 20, 45, 55, 75])
+        : mini ? (mobile ? [0, 3, 6, 9, 12] : [0, 1, 3, 6, 9, 12]) : [6, 8, 10, 12, 14, 16];
+      for (const [i, tick] of ticks.entries()) {
+        const firstDays = (life || mini) && i === 0;
+        const age = firstDays ? startAge : mini ? tick / 12 : tick;
+        if (life && i > 0 && i < ticks.length - 1) g.append(el("line", {
+          x1: x(age), x2: x(age), y1: top, y2: bottom, stroke: "#d5e3e7", "stroke-dasharray": "3 5",
+        }));
+        g.append(el("line", { x1: x(age), x2: x(age), y1: bottom, y2: bottom + 5, stroke: "#b7ced5" }),
+        text(x(age), bottom + 23, firstDays ? (mini ? "~6 dni" : "1–5 dni")
+          : String(tick) + (i === ticks.length - 1 ? mini ? " mies." : " lat" : ""), {
+          "text-anchor": i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle",
+          "font-size": mobile ? 9.5 : 11, "data-period-x-tick": tick,
+          ...(firstDays ? { "data-birth-measurement": "false" } : {}),
+        }));
+      }
+      // Source/drawing models are built once. Selection, result and viewport
+      // change visibility and coordinates only, never the underlying trajectory.
+      for (const curve of period.curves) {
+        if (!selected.has(curve.id)) continue;
+        const h = femaleDefinitions.find((h) => h.id === curve.id);
+        const path = curve.points.map((point, i) =>
+          `${i ? "L" : "M"}${x(point.ageYears)},${y(point.value)}`).join(" ");
+        g.append(el("path", { d: path, fill: "none", stroke: h.color,
+          "stroke-width": mobile ? 3 : 3.5, "stroke-linecap": "round", "stroke-linejoin": "round",
+          "data-line": h.id, "data-period-hormone": h.id, "data-period-statistic": curve.statistic,
+          "data-source-min": curve.points[0].ageYears,
+          "data-source-max": curve.points[curve.points.length - 1].ageYears,
+        }));
+      }
+      const currentId = analyteHormones[currentAnalyte];
+      const gonadotropinResult = currentId === "lh" || currentId === "fsh";
+      const dotModel = mini && gonadotropinResult ? null : patientDotModel();
+      // Other hormones keep their own existing scale in a mixed selection.
+      // No IU/L tick is assigned to AMH, estradiol or inhibin B.
+      for (const h of femaleHormones.filter((h) => selected.has(h.id) && h.id !== "lh" && h.id !== "fsh")) {
+        if (dotModel?.id === h.id) {
+          drawReferenceCurves(g, dotModel, { x, y: relativeY, mobile });
+          continue;
+        }
+        const fullSpline = displaySpline(h, femaleGonadotropins.life.xFraction);
+        const infantAt = interpolator(h.miniAges, h.miniValues);
+        for (const segment of mini ? [{ points: h.miniAges.map((ageYears) => ({ ageYears })) }] : h.segments) {
+          const min = Math.max(period.domain.minAge, segment.points[0].ageYears);
+          const max = Math.min(period.domain.maxAge, segment.points[segment.points.length - 1].ageYears);
+          if (max <= min) continue;
+          const points = Array.from({ length: 801 }, (_, i) => {
+            const age = min + (max - min) * i / 800;
+            return [x(age), relativeY(mini ? infantAt(age) : fullSpline.at(femaleGonadotropins.life.xFraction(age)).value)];
+          });
+          g.append(el("path", { d: points.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(" "),
+            fill: "none", stroke: h.color, "stroke-width": mobile ? 3 : 3.5,
+            "stroke-linecap": "round", "stroke-linejoin": "round",
+            "stroke-dasharray": segment.kind === "schematic" ? "5 5" : "none",
+            "data-line": h.id, "data-independent-scale": h.id }));
+        }
+      }
+      if (canShowAgeMarker() && patientAgeYears >= period.domain.minAge && patientAgeYears <= period.domain.maxAge) {
+        drawAgeMarker(g, { W, mobile, left, right, top, bottom, px: x(patientAgeYears) });
+        if (dotModel) {
+          if (gonadotropinResult) {
+            dotModel.divisor = period.scale.max;
+            dotModel.ceiling = 1;
+            dotModel.valueFraction = period.valueFraction;
+            dotModel.scaleTransform = period.scale.kind;
+            dotModel.stableDisplay = { kind: "female-gonadotropins", divisor: period.scale.max, ceiling: 1 };
+          }
+          drawPatientDot(g, dotModel, { W, mobile, left, right, top, bottom,
+            px: x(patientAgeYears), y: relativeY });
+          renderedPoint = dotModel;
+        }
+      }
+      const gonadotropinsSelected = selected.has("lh") || selected.has("fsh");
+      panel.querySelector(".vhl-axis-label").textContent = mini ? "Przebieg zmian · minipuberty"
+        : gonadotropinsSelected ? life ? "LH i FSH · przebieg przez życie" : "LH i FSH · dojrzewanie" : "Przebieg zmian";
+      let caption = mini
+        ? "100% oznacza własny szczyt LH lub FSH w minipuberty. Wysokości LH i FSH nie porównują stężeń."
+        : life ? "Wspólna skala LH i FSH. Wysokie stężenia są skompresowane, aby uwidocznić wcześniejsze etapy."
+          : "Wspólna, liniowa skala 0–8 IU/L — inna niż w widoku całego życia.";
+      if ([...selected].some((id) => id !== "lh" && id !== "fsh")) caption += mini
+        ? " Pozostałe hormony zachowują własne skale."
+        : " Oś IU/L dotyczy LH i FSH; pozostałe hormony mają własne skale.";
+      if (renderedPoint) caption += " Kropka: wynik; jasny znacznik: odniesienie z badania." +
+        (renderedPoint.stableDisplay && renderedPoint.value > period.scale.max ? " ↑ Wynik powyżej skali." : "");
+      const measurement = patientContext?.measurement;
+      if (mini && gonadotropinResult && selected.has(currentId) && measurement &&
+        Number.isFinite(measurement.value) && measurement.value >= 0 && typeof measurement.unit === "string") {
+        const operators = { "<": "<", "<=": "≤", "≤": "≤", ">": ">", ">=": "≥", "≥": "≥", "=": "" };
+        const operator = operators[measurement.operator || "="];
+        if (operator !== undefined) caption += ` Wynik ${currentId.toUpperCase()}: ${operator}${pointNumber(measurement.value)} ${measurement.unit}. Na tej osi zaznaczamy tylko wiek.`;
+      }
+      byId("scale-note").textContent = caption;
+      byId("chart-title").textContent = !gonadotropinsSelected ? "Poglądowy przebieg wybranych hormonów u dziewczynek i kobiet"
+        : mini ? "LH i FSH u dziewczynek — dwie fale w modelu badania COPENHAGEN"
+        : life ? "LH i FSH u kobiet — poglądowy przebieg życia" : "Mediany LH i FSH według wieku 6–16 lat";
+      byId("chart-desc").textContent = (mini
+        ? "Przybliżony odczyt ryciny 3 Ljubicic 2022: średnie modelowane podłużnie względem własnego maksimum. To nie mediana ani norma; pion zaznacza wiek, nie stężenie. "
+        : life ? "Oś LH i FSH jest wspólna i nieliniowa w IU/L. Linie łączą różne badania, nie są jedną medianą populacyjną. Pierwsza grupa obejmuje dni 1–5, nie chwilę porodu. Przejście menopauzalne jest umowne. "
+          : "Madsen 2022: niezależny model median 6–16 lat, nie dosłowny wycinek całego życia. Wiek nie wyznacza stadium pokwitania. ") +
+        caption + (renderedPoint ? " " + renderedPoint.a11y : "");
+    }
+    function updateFemaleGonadotropinInsight() {
+      const messages = [
+        ["Minipuberty", "LH wzrasta w pierwszych tygodniach. U dziewczynek przeważa FSH, którego podwyższone stężenia utrzymują się dłużej."],
+        ["Dzieciństwo · względne wyciszenie", "LH pozostaje bardzo niskie. FSH nie musi spadać do zera."],
+        ["Pokwitanie · ponowna aktywacja", "LH i FSH narastają. Zbliżenie „Pokwitanie” pokazuje mediany według wieku."],
+        ["Dorosłość · rytm cyklu", "Gładka linia przez lata nie oznacza stałego stężenia. W obrębie cyklu pojawia się wyraźny szczyt LH."],
+        ["Przejście menopauzalne", "FSH i LH wzrastają, ale moment i przebieg zmian są indywidualne. Granice wieku na schemacie są umowne."],
+        ["Po menopauzie", "FSH zwykle przewyższa LH. Przebieg w późnym wieku różni się między badaniami i nie jest uniwersalną prognozą."],
+      ];
+      const gonadotropinsSelected = selected.has("lh") || selected.has("fsh");
+      const other = selected.size === 1 ? femaleHormones.find((h) => selected.has(h.id)) : null;
+      const message = !selected.size ? ["Wybierz hormon", "Kliknij nazwę hormonu nad wykresem."]
+        : !gonadotropinsSelected ? [other ? other.name : "Przebieg zmian", other ? other.copy : "Pozostałe hormony zachowują własne skale."]
+        : view === "mini" ? [selected.has("lh") ? "LH — mniejsza druga fala" : "FSH — dwie fale w badaniu",
+          "Po wczesnym szczycie model ponownie narasta w 3.–4. miesiącu, z maksimum około 5.–6. miesiąca. To przebieg z jednego badania, nie harmonogram dla każdej dziewczynki."]
+          : view === "puberty" ? ["Wzrost w okresie dojrzewania", "Mediany z badania dziewcząt 6–16 lat. Wiek nie określa stadium Tannera ani fazy cyklu."]
+            : activeStage === null ? ["Od minipuberty do menopauzy", "Wczesna aktywność, względne wyciszenie dzieciństwa, wzrost w pokwitaniu i zmiany okołomenopauzalne. Linia jest poglądowa."]
+              : messages[activeStage];
+      byId("insight-title").textContent = message[0];
+      byId("insight-text").textContent = message[1];
+      const cycle = view === "life" && activeStage === 3 && (selected.has("lh") || selected.has("fsh"));
+      byId("cycle-panel").hidden = !cycle;
+      panel.querySelector(".vhl-insight").classList.toggle("vhl-cycle-open", cycle);
+      if (cycle) renderFemaleGonadotropinCycle();
+      const observations = opts.observations || root.VildaHormoneLifespanObservations;
+      const stage = activeStage === null ? null : stages()[activeStage];
+      const activeStageKind = stage?.min === 0 ? "mini"
+        : stage?.min === 10 && stage?.max === 20 ? "puberty" : null;
+      // Selecting LH/FSH must not remove the separate inhibin-B evidence inset.
+      const mayShowObservations = observations && data.inhibinEvidence && selected.has("inhb");
+      panel.querySelector(".vhl-insight").classList.toggle("vhl-cycle-open", cycle || Boolean(mayShowObservations));
+      renderedObservation = mayShowObservations ? observations.render(observationsHost, data.inhibinEvidence, {
+        ...patientContext, view, sex, preterm, compare, selected: [...selected], compareHormone, activeStageKind,
+      }) : null;
+      if (!renderedObservation) {
+        observationsHost.hidden = true;
+        observationsHost.replaceChildren();
+      }
+      panel.querySelector(".vhl-insight").classList.toggle("vhl-cycle-open", cycle || Boolean(renderedObservation));
+    }
+    function renderFemaleGonadotropinCycle() {
+      const chart = byId("cycle-chart"), cycle = femaleGonadotropins.cycle;
+      const active = cycle.curves.filter((curve) => selected.has(curve.id));
+      const W = chart.clientWidth || 800, mobile = W < 560, H = mobile ? 204 : 228;
+      const left = mobile ? 34 : 42, right = mobile ? 12 : 20, top = 39, bottom = H - 38;
+      const x = (day) => left + cycle.xFraction(day) * (W - left - right);
+      const y = (value) => bottom - cycle.valueFraction(value) * (bottom - top);
+      chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      chart.setAttribute("height", H);
+      Object.assign(chart.dataset, { cycleSource: "stricker2006", cycleUnit: "IU/L", cycleDomain: "-15,14", cycleCeiling: cycle.scale.max });
+      byId("cycle-title").textContent = active.map((curve) => curve.id.toUpperCase()).join(" i ") + " w cyklu miesiączkowym";
+      byId("cycle-desc").textContent = "Dzienne mediany 20 zdrowych kobiet w wieku 20–36 lat, Abbott ARCHITECT. LH i FSH na wspólnej osi 0–50 IU/L. Dni −15 do +14 względem indywidualnego szczytu LH (0), nie przewidywanie owulacji pacjentki.";
+      panel.querySelector(".vhl-cycle-note").textContent = "Dni względem szczytu LH (0). To nie jest stały dzień cyklu.";
+      chart.querySelectorAll(":scope > g").forEach((node) => node.remove());
+      const g = el("g", { "data-cycle-content": "paired-daily-medians",
+        "data-plot-left": left, "data-plot-right": W - right, "data-plot-top": top, "data-plot-bottom": bottom });
+      chart.append(g);
+      for (const tick of cycle.scale.ticks) g.append(
+        el("line", { x1: left, x2: W - right, y1: y(tick), y2: y(tick), stroke: "#d7e4e7", "stroke-dasharray": tick === 0 ? "0" : "3 5" }),
+        text(left - 7, y(tick) + 3.5, String(tick), { "text-anchor": "end", "font-size": mobile ? 9.5 : 10.5 }));
+      g.append(text(left, top - 19, "IU/L", { "font-size": 10.5, "font-weight": 600 }),
+        el("line", { x1: x(0), x2: x(0), y1: top, y2: bottom, stroke: "#aebfc6", "stroke-dasharray": "3 5" }));
+      active.forEach((curve, index) => {
+        const h = femaleDefinitions.find((h) => h.id === curve.id);
+        g.append(el("path", { d: curve.points.map((p, i) => `${i ? "L" : "M"}${x(p.day)},${y(p.value)}`).join(" "),
+          fill: "none", stroke: h.color, "stroke-width": mobile ? 2.8 : 3.1,
+          "stroke-linecap": "round", "stroke-linejoin": "round", "data-cycle-curve": h.id,
+          "data-cycle-statistic": "published-daily-median" }));
+        const legendX = W - right - (active.length - index) * 62;
+        g.append(el("line", { x1: legendX, x2: legendX + 16, y1: top - 22, y2: top - 22, stroke: h.color, "stroke-width": 3 }),
+          text(legendX + 23, top - 18, h.name, { fill: h.color, "font-size": 11, "font-weight": 650 }));
+      });
+      for (const day of mobile ? [-15, -5, 0, 5, 14] : [-15, -10, -5, 0, 5, 10, 14]) g.append(
+        el("line", { x1: x(day), x2: x(day), y1: bottom, y2: bottom + 4, stroke: "#bfcfd4" }),
+        text(x(day), bottom + 19, day < 0 ? `−${Math.abs(day)}` : day > 0 ? `+${day}` : "0", {
+          "text-anchor": day === -15 ? "start" : day === 14 ? "end" : "middle", "font-size": mobile ? 10 : 11 }));
+    }
+    function updateFemaleGonadotropinSources() {
+      const nextKey = JSON.stringify(["female-gonadotropins", view, [...selected].sort(), renderedPoint?.profile.id, renderedObservation?.kind]);
+      if (sourcesKey === nextKey) return;
+      sourcesKey = nextKey;
+      const target = byId("source-copy"), period = femaleGonadotropins[view];
+      target.replaceChildren();
+      const paragraph = (copy) => {
+        const p = document.createElement("p");
+        p.textContent = copy;
+        target.append(p);
+      };
+      for (const copy of period.caveats || []) paragraph(copy);
+      if (view === "life") for (const copy of femaleGonadotropins.cycle.caveats || []) paragraph(copy);
+      paragraph(view === "mini"
+        ? "LH i FSH podzielono osobno przez własne maksimum modelowanej średniej podłużnej. 100% nie oznacza konkretnego stężenia ani mediany GAMLSS. Nie przeliczamy tego modelu na IU/L. Pierwszy odczyt pochodzi z około 6. dnia, a końce linii z około 357.–360. dnia; nie dopisujemy pomiaru w chwili narodzin ani przy 12 miesiącach. Wynik LH/FSH pozostaje tekstem, a pion zaznacza tylko wiek."
+        : "Kropka oznacza wynik, a jasny znacznik źródłowe odniesienie oryginalnego silnika aplikacji. Wartość źródłowa może leżeć poza poglądową linią. Wysokość ilustracji nie zmienia median, norm laboratoryjnych ani interpretacji wyniku. Strzałka zachowuje rzeczywistą liczbę ponad stałą skalą.");
+      if (view === "life") paragraph("Zbliżenie minipuberty ma odrębny, względny model średniej z badania podłużnego. Zbliżenie pokwitania przedstawia model median Madsen. Te różne statystyki nie są dosłownym wycinkiem syntezy całego życia. W wieku rozrodczym kliknij „Dorosła”, aby zobaczyć codzienne mediany LH i FSH względem szczytu LH, nie stałego dnia cyklu.");
+      if (renderedPoint) paragraph("Odniesienie wyniku: " + [renderedPoint.profile.sourceLabel,
+        renderedPoint.profile.method, renderedPoint.profile.population].filter(Boolean).join(" · ") + ".");
+      if ([...selected].some((id) => id !== "lh" && id !== "fsh")) paragraph("Pozostałe wybrane hormony zachowują odrębne, dotychczasowe skale. Oś LH/FSH nie opisuje ich stężeń. Ewentualny wynik innego hormonu i jego źródłowe odniesienie stosują własną skalę i oryginalną jednostkę.");
+      const links = [...(period.sources || []), ...(view === "life" ? femaleGonadotropins.cycle.sources || [] : [])];
+      if ([...selected].some((id) => id !== "lh" && id !== "fsh")) {
+        paragraph("Pozostałe hormony w minipuberty: mediany GAMLSS z suplementu Ljubicic 2022, około 7,3 dnia–1 rok, donoszone dziewczynki. To odrębna statystyka od dwufazowej średniej LH/FSH. Zachowują dotychczasową normalizację całego życia.");
+        links.push({ label: "Ljubicic 2022 · mediany pozostałych hormonów", url: infant.source.url },
+          { label: "Suplement GAMLSS · CC BY 4.0", url: "https://doi.org/10.6084/m9.figshare.19469555.v1" });
+        if (view !== "mini" && selected.has("amh")) {
+          paragraph("AMH po niemowlęctwie: mediany grup wieku Jopling 2018 i FDA K170524, Access AMH, osocze. Grupy pediatryczne są niewielkie i szpitalne, dorosłe wybrano według regularnych cykli i płodności. Niemowlęctwo dotyczy surowicy; nie przeliczamy materiałów. Połączenia i końcowy spadek po 45 latach są poglądowe, bez nowych stężeń i wieku biologicznego maksimum.");
+          links.push({ label: "Jopling 2018 · AMH", url: "https://doi.org/10.1002/edm2.21" },
+            { label: "FDA · Access AMH", url: "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf" },
+            { label: "Sowers 2008 · przejście menopauzalne", url: "https://doi.org/10.1210/jc.2008-0567" });
+        }
+        if (view !== "mini" && selected.has("inhb")) {
+          paragraph("Inhibina B po niemowlęctwie: orientacyjny odczyt mediany z ryciny 1 Borelli-Kjær 2025 (około ±2 pg/mL), Gen II ELISA. Most 1–5,6 roku jest poglądowy, w źródle brak obserwacji 1,08–5,6 roku. Dorosła grupa liczyła 149 kobiet, bez standaryzacji fazy cyklu. Końcowy niski przebieg nie nadaje stężeń poniżej granicy wykrywalności.");
+          links.push({ label: "Borelli-Kjær 2025 · inhibina B", url: "https://doi.org/10.1210/clinem/dgae439" });
+        }
+        if (view !== "mini" && selected.has("e2")) {
+          paragraph("Estradiol: mediany Madsen 2022 w pokwitaniu, LC-MS/MS. Dorosłe plateau zachowuje poglądową wysokość końca pokwitania, nie jest średnią całego cyklu. Niski stan po menopauzie wspiera ogólna mediana Cui 2026, ale rysunek nie określa indywidualnego spadku ani wieku menopauzy.");
+          links.push({ label: "Madsen 2022 · estradiol", url: "https://doi.org/10.1210/clinem/dgac155" },
+            { label: "Suplement LMS · CC BY 4.0", url: "https://doi.org/10.6084/m9.figshare.17153336.v1" },
+            { label: "Cui 2026 · po menopauzie", url: "https://pubmed.ncbi.nlm.nih.gov/42120349/" });
+        }
+      }
+      if (renderedObservation?.source) {
+        const source = renderedObservation.source;
+        paragraph([source.label, source.method, source.specimen].filter(Boolean).join(" · ") + ".");
+        for (const limitation of source.limitations || []) paragraph(limitation);
+        if (source.url) links.push({ label: source.label, url: source.url });
+      }
+      if (renderedPoint?.profile.url) links.push({ label: renderedPoint.profile.sourceLabel || "Odniesienie wyniku", url: renderedPoint.profile.url });
+      const group = document.createElement("div");
+      group.className = "vhl-source-links";
+      for (const source of links) {
+        if (!/^https:\/\//.test(source.url)) continue;
+        const link = document.createElement("a");
+        link.href = source.url; link.textContent = source.label;
+        link.target = "_blank"; link.rel = "noopener noreferrer";
+        group.append(link);
+      }
+      target.append(group);
     }
 
     function renderSchematic() {
@@ -1992,6 +2305,10 @@
       pointDescription(dotModel);
     }
     function updateInsight() {
+      if (femaleGonadotropinsActive()) {
+        updateFemaleGonadotropinInsight();
+        return;
+      }
       let title, copy;
       const showCycle =
         sex === "female" &&
@@ -2105,6 +2422,10 @@
         W = chart.clientWidth || 800,
         mobile = W < 560,
         H = mobile ? 200 : 224;
+      for (const key of ["cycleSource", "cycleUnit", "cycleDomain", "cycleCeiling"]) delete chart.dataset[key];
+      byId("cycle-title").textContent = "Poglądowy przebieg estradiolu w cyklu miesiączkowym";
+      byId("cycle-desc").textContent = "Schemat estradiolu na podstawie median faz, nie pomiary poszczególnych dni ani przewidywanie owulacji pacjentki. Przykładowa oś 28 dni i względna wysokość; większy szczyt okołoowulacyjny i mniejszy w fazie lutealnej.";
+      panel.querySelector(".vhl-cycle-note").textContent = "Przykładowy cykl 28-dniowy. Długość cyklu i czas owulacji są zmienne.";
       const left = mobile ? 30 : 42,
         right = mobile ? 12 : 21,
         top = 35,
@@ -2201,6 +2522,10 @@
       );
     }
     function updateSources() {
+      if (femaleGonadotropinsActive()) {
+        updateFemaleGonadotropinSources();
+        return;
+      }
       const nextKey = JSON.stringify([sex, view, compare, compareHormone, [...selected].sort(),
         renderedPoint?.profile.id, renderedPoint?.curves.map((curve) => curve.profile.id), renderedObservation?.kind]);
       if (nextKey === sourcesKey) return;
@@ -2638,6 +2963,7 @@
           null;
       patientAgeLabel = "";
       patientContext = patientPoint = renderedPoint = renderedAmhComparison = renderedInhibinComparison = renderedObservation = null;
+      clearFemalePeriodMetadata();
       delete svg.dataset.comparisonScale;
       delete svg.dataset.comparisonMin;
       delete svg.dataset.comparisonMax;

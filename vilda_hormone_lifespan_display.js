@@ -1111,9 +1111,206 @@
     return [buildMaleLh(data, engine), buildMaleFsh(data, engine)].filter(Boolean);
   }
 
+  function femaleGonadotropins(data) {
+    var policy = data && data.femaleGonadotropinPolicy;
+    var source = data && data.femaleGonadotropinData;
+    if (!policy || policy.kind !== 'educational-display-only' || policy.sex !== 'female' ||
+        policy.numericPatientProfilesChanged !== false || policy.clinicalNormsChanged !== false ||
+        !Array.isArray(policy.analytes) || policy.analytes.join(',') !== 'lh,fsh' ||
+        !source || source.scope !== 'female-gonadotropin-educational-display' ||
+        source.globalPatientProfiles !== false) return null;
+
+    var periods = ['life', 'mini', 'puberty', 'cycle'];
+    var expected = {
+      life: { min: 0, max: 75, ceiling: 70, unit: 'IU/L', kind: 'log1p', statistic: 'educational-mixed-source' },
+      mini: { min: 0, max: 1, ceiling: 1.1, unit: null, kind: 'relative', statistic: 'digitized-normalized-longitudinal-mean' },
+      puberty: { min: 6, max: 16, ceiling: 8, unit: 'IU/L', kind: 'linear', statistic: 'age-median' },
+      cycle: { min: -15, max: 14, ceiling: 50, unit: 'IU/L', kind: 'linear', statistic: 'published-daily-median' }
+    };
+    var invalid = periods.some(function (period) {
+      var p = policy[period], s = source[period], e = expected[period];
+      var domain = p && p.domain, scale = p && p.scale, sampling = p && p.sampling;
+      if (!p || !s || !domain || !scale || !sampling ||
+          domain[period === 'cycle' ? 'minDay' : 'minAge'] !== e.min ||
+          domain[period === 'cycle' ? 'maxDay' : 'maxAge'] !== e.max ||
+          scale.kind !== e.kind || scale.unit !== e.unit || scale.min !== 0 || scale.max !== e.ceiling ||
+          scale.independentOfPatient !== true || s.unit !== e.unit || s.statistic !== e.statistic ||
+          !Array.isArray(scale.ticks) || scale.ticks.length < 2 || scale.ticks[0] !== 0 ||
+          scale.ticks.some(function (tick, index, ticks) {
+            return !finite(tick) || tick < 0 || tick > scale.max || (index > 0 && tick <= ticks[index - 1]);
+          }) || !Number.isInteger(sampling.count) || sampling.count < 2 || sampling.count > 2000 ||
+          sampling.includeSourceNodes !== true || !Array.isArray(p.sources) || !p.sources.length ||
+          p.sources.some(function (item) { return !item || typeof item.label !== 'string' ||
+            typeof item.url !== 'string' || !/^https:\/\//.test(item.url); }) ||
+          !Array.isArray(p.caveats) || p.caveats.some(function (item) { return typeof item !== 'string'; }) ||
+          !s.hormones || Object.keys(s.hormones).sort().join(',') !== 'fsh,lh') return true;
+      return policy.analytes.some(function (id) {
+        var nodes = s.hormones[id], key = period === 'cycle' ? 'dayFromLHPeak' : 'ageYears';
+        if (!Array.isArray(nodes) || nodes.length < 2 || nodes.some(function (node, index) {
+          return !node || !finite(node[key]) || !finite(node.value) || node.value < 0 || node.value > scale.max ||
+            node[key] < e.min || node[key] > e.max || (index > 0 && node[key] <= nodes[index - 1][key]);
+        })) return true;
+        if (period === 'life') return nodes[0].ageYears !== p.firstDrawAgeYears || nodes[nodes.length - 1].ageYears !== e.max;
+        if (period === 'mini') return nodes[0].ageYears <= 0 || nodes[nodes.length - 1].ageYears >= 1;
+        if (period === 'cycle') return nodes.length !== 30 || nodes.some(function (node, index) { return node[key] !== -15 + index; });
+        return nodes[0].ageYears !== e.min || nodes[nodes.length - 1].ageYears !== e.max;
+      });
+    });
+    if (invalid || policy.life.scale.softening !== 0.5 ||
+        policy.mini.scale.normalization !== 'each-hormones-own-longitudinal-mean-maximum' ||
+        policy.mini.patientPointPolicy !== 'age-only-no-concentration-point' ||
+        policy.cycle.patientPointPolicy !== 'no-cycle-patient-reference') return null;
+    var stages = policy.life.displaySegments, bridge = policy.life.lhInfantDrawing;
+    if (!Array.isArray(stages) || !stages.length || stages[0].min !== 0 || stages[stages.length - 1].max !== 75 ||
+        stages.some(function (stage, index) { return !stage || !finite(stage.min) || !finite(stage.max) ||
+          stage.min >= stage.max || !finite(stage.width) || stage.width <= 0 ||
+          (index > 0 && stage.min !== stages[index - 1].max); }) ||
+        Math.abs(stages.reduce(function (sum, stage) { return sum + stage.width; }, 0) - 1) > 1e-12 ||
+        !bridge || !finite(bridge.startAgeYears) || !finite(bridge.peakAgeYears) || !finite(bridge.endAgeYears) ||
+        bridge.startAgeYears !== policy.life.firstDrawAgeYears || bridge.startAgeYears >= bridge.peakAgeYears ||
+        bridge.peakAgeYears >= bridge.endAgeYears || bridge.endAgeYears >= 1 ||
+        !finite(bridge.lowValue) || !finite(bridge.peakValue) || bridge.lowValue < 0 || bridge.lowValue >= bridge.peakValue ||
+        !Array.isArray(bridge.descentXControls) || bridge.descentXControls.length !== 2 ||
+        !finite(bridge.descentXControls[0]) || !finite(bridge.descentXControls[1]) ||
+        bridge.descentXControls[0] <= 0 || bridge.descentXControls[0] > bridge.descentXControls[1] ||
+        bridge.descentXControls[1] >= 1 || !Number.isInteger(policy.life.sampling.lhBridgeCount) ||
+        policy.life.sampling.lhBridgeCount < 2 || policy.life.sampling.lhBridgeCount > 2000) return null;
+    var lhNodes = source.life.hormones.lh;
+    if ([[bridge.startAgeYears, bridge.lowValue], [bridge.peakAgeYears, bridge.peakValue],
+      [bridge.endAgeYears, bridge.lowValue]].some(function (pair) {
+      return !lhNodes.some(function (node) { return node.ageYears === pair[0] && node.value === pair[1]; });
+    })) return null;
+
+    function lifeX(age) {
+      var offset = 0;
+      for (var index = 0; index < stages.length; index++) {
+        var stage = stages[index];
+        if (age <= stage.max) return offset + (age - stage.min) / (stage.max - stage.min) * stage.width;
+        offset += stage.width;
+      }
+      return 1;
+    }
+    function ageAtLifeX(x) {
+      var offset = 0;
+      for (var index = 0; index < stages.length; index++) {
+        var stage = stages[index];
+        if (x <= offset + stage.width + 1e-14) return stage.min + (x - offset) / stage.width * (stage.max - stage.min);
+        offset += stage.width;
+      }
+      return stages[stages.length - 1].max;
+    }
+    // Shape-preserving Hermite interpolation, with the same endpoint secants
+    // as the approved preview. This function never qualifies a patient result.
+    function spline(xs, values) {
+      var dx = [], slopes = [], tangents = [];
+      for (var index = 0; index < xs.length - 1; index++) {
+        dx[index] = xs[index + 1] - xs[index];
+        slopes[index] = (values[index + 1] - values[index]) / dx[index];
+      }
+      tangents[0] = slopes[0]; tangents[xs.length - 1] = slopes[slopes.length - 1];
+      for (var inner = 1; inner < xs.length - 1; inner++) {
+        if (slopes[inner - 1] * slopes[inner] <= 0) tangents[inner] = 0;
+        else {
+          var a = 2 * dx[inner] + dx[inner - 1], b = dx[inner] + 2 * dx[inner - 1];
+          tangents[inner] = (a + b) / (a / slopes[inner - 1] + b / slopes[inner]);
+        }
+      }
+      return function (x) {
+        var index = 0;
+        while (index < xs.length - 2 && x > xs[index + 1]) index++;
+        var t = Math.max(0, Math.min(1, (x - xs[index]) / dx[index])), t2 = t * t, t3 = t2 * t;
+        return (2 * t3 - 3 * t2 + 1) * values[index] + (t3 - 2 * t2 + t) * dx[index] * tangents[index] +
+          (-2 * t3 + 3 * t2) * values[index + 1] + (t3 - t2) * dx[index] * tangents[index + 1];
+      };
+    }
+    function infantLh(age) {
+      if (age < bridge.startAgeYears || age > bridge.endAgeYears) return null;
+      var softening = policy.life.scale.softening;
+      var low = Math.log1p(bridge.lowValue / softening), high = Math.log1p(bridge.peakValue / softening);
+      function smooth(t) { return t * t * t * (10 + t * (-15 + 6 * t)); }
+      var x = lifeX(age), peak = lifeX(bridge.peakAgeYears), position;
+      if (age <= bridge.peakAgeYears) position = smooth((x - lifeX(bridge.startAgeYears)) / (peak - lifeX(bridge.startAgeYears)));
+      else {
+        var fraction = (x - peak) / (lifeX(bridge.endAgeYears) - peak);
+        var a = bridge.descentXControls[0], b = bridge.descentXControls[1], left = 0, right = 1;
+        for (var step = 0; step < 45; step++) {
+          var t = (left + right) / 2, u = 1 - t;
+          if (3 * u * u * t * a + 3 * u * t * t * b + t * t * t < fraction) left = t;
+          else right = t;
+        }
+        position = 1 - smooth((left + right) / 2);
+      }
+      return softening * Math.expm1(low + (high - low) * position);
+    }
+    var result = { policy: policy };
+    periods.forEach(function (period) {
+      var p = policy[period], s = source[period], cycle = period === 'cycle';
+      var key = cycle ? 'dayFromLHPeak' : 'ageYears';
+      var minimum = p.domain[cycle ? 'minDay' : 'minAge'], maximum = p.domain[cycle ? 'maxDay' : 'maxAge'];
+      var xFraction = period === 'life' ? lifeX : function (age) { return (age - minimum) / (maximum - minimum); };
+      var valueFraction = period === 'life' ? function (value) {
+        if (!finite(value)) return null;
+        var positive = Math.max(0, value), ratio = positive / p.scale.softening;
+        // A finite outlier can overflow the intermediate division, while its
+        // logarithm and the honest off-scale marker remain finite.
+        var numerator = finite(ratio) ? Math.log1p(ratio) :
+          Math.log(positive) - Math.log(p.scale.softening);
+        return numerator / Math.log1p(p.scale.max / p.scale.softening);
+      } : function (value) { return value / p.scale.max; };
+      var curves = policy.analytes.map(function (id) {
+        var nodes = s.hormones[id], first = nodes[0][key], last = nodes[nodes.length - 1][key];
+        var atSpline = spline(nodes.map(function (node) { return xFraction(node[key]); }),
+          nodes.map(function (node) { return node.value; }));
+        function at(age) {
+          if (!finite(age) || age < first || age > last) return null;
+          // Native source knots stay exact, including the ends of the infant
+          // digitization. No birth, day 365 or future-age extrapolation.
+          var exact = nodes.find(function (node) { return node[key] === age; });
+          if (exact) return exact.value;
+          var bridgeValue = period === 'life' && id === 'lh' ? infantLh(age) : null;
+          return bridgeValue === null ? Math.max(0, atSpline(xFraction(age))) : bridgeValue;
+        }
+        var ages = new Set(nodes.map(function (node) { return node[key]; }));
+        for (var index = 0; index < p.sampling.count; index++) {
+          var fraction = index / (p.sampling.count - 1);
+          ages.add(period === 'life' ? ageAtLifeX(lifeX(first) + (lifeX(last) - lifeX(first)) * fraction) :
+            first + (last - first) * fraction);
+        }
+        if (period === 'life' && id === 'lh') {
+          for (var bridgeIndex = 0; bridgeIndex < p.sampling.lhBridgeCount; bridgeIndex++)
+            ages.add(bridge.startAgeYears + (bridge.endAgeYears - bridge.startAgeYears) *
+              bridgeIndex / (p.sampling.lhBridgeCount - 1));
+        }
+        var points = Array.from(ages).filter(function (age) { return age >= first && age <= last; })
+          .sort(function (a, b) { return a - b; }).map(function (age) {
+            return cycle ? { day: age, value: at(age) } : { ageYears: age, value: at(age) };
+          });
+        return { id: id, points: points, sourcePoints: nodes, at: at,
+          domain: cycle ? { minDay: first, maxDay: last } : { minAge: first, maxAge: last },
+          statistic: p.statistic, unit: p.scale.unit, segments: [{ points: points }] };
+      });
+      result[period] = { period: period, kind: policy.kind, policyVersion: policy.version,
+        domain: Object.assign({}, p.domain), scale: Object.assign({}, p.scale, { ticks: p.scale.ticks.slice() }),
+        curves: curves, xFraction: xFraction, valueFraction: valueFraction,
+        displaySegments: period === 'life' ? stages.map(function (stage) { return Object.assign({}, stage); }) : [],
+        sources: p.sources.slice(), caveats: p.caveats.slice(), statistic: p.statistic,
+        patientPointPolicy: p.patientPointPolicy || 'unchanged-reference-engine',
+        firstDrawAgeYears: period === 'life' ? p.firstDrawAgeYears : undefined };
+    });
+    return result;
+  }
+
+  function buildFemaleGonadotropins(data) {
+    // This independent optional bundle cannot register a reference profile or
+    // turn a normalized mean into a physical-unit concentration.
+    try { return femaleGonadotropins(data); }
+    catch (_error) { return null; }
+  }
+
   return { buildMaleInhibin: buildMaleInhibin, buildMaleTestosterone: buildMaleTestosterone,
     buildMaleLh: buildMaleLh, buildMaleFsh: buildMaleFsh, buildMaleGonadotropins: buildMaleGonadotropins,
     buildMaleAmh: buildMaleAmh, buildMaleInsl3: buildMaleInsl3,
     buildAmhInfantComparison: buildAmhInfantComparison, classifyAmhComparisonValue: classifyAmhComparisonValue,
-    buildInhibinComparison: buildInhibinComparison, classifyInhibinComparisonValue: classifyInhibinComparisonValue };
+    buildInhibinComparison: buildInhibinComparison, classifyInhibinComparisonValue: classifyInhibinComparisonValue,
+    buildFemaleGonadotropins: buildFemaleGonadotropins };
 });

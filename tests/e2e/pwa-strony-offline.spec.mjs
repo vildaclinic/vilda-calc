@@ -371,6 +371,34 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         expect(await page.evaluate(() => window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
           analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
         }).status)).toBe('unavailable');
+        // The female longitudinal mean is packaged locally too. An offline
+        // result never calibrates this unitless model into a concentration.
+        await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(() => window.VildaHormoneLifespanRuntime &&
+          window.VildaHormoneLifespanDisplay?.buildFemaleGonadotropins);
+        const infantLh = { analyte: 'lh', sex: 'female', ageYears: 165 / 365.25,
+          preterm: 'no', sourceStatus: 'ready', identityKey: 'fictional-offline-two-wave-lh' };
+        await page.evaluate(context => window.VildaHormoneLifespanRuntime.update({
+          ...context, measurement: { value: .3, unit: 'IU/L' },
+        }), infantLh);
+        await wykres.locator('[data-view="mini"]').click();
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('100%');
+        await expect(wykres.locator('[data-lifespan="scale-note"]')).toContainText('0,3 IU/L');
+        await expect(wykres.locator('[data-patient-concentration]')).toHaveCount(0);
+        await expect(wykres.locator('[data-patient-age-marker]')).toHaveCount(1);
+        const relativePath = await wykres.locator('[data-line="lh"]').getAttribute('d');
+        for (const value of [0, 100, null]) {
+          await page.evaluate(({ context, value }) => window.VildaHormoneLifespanRuntime.update({
+            ...context, measurement: value === null ? null : { value, unit: 'IU/L' },
+          }), { context: infantLh, value });
+          await expect(wykres.locator('[data-line="lh"]')).toHaveAttribute('d', relativePath);
+          await expect(wykres.locator('[data-patient-concentration]')).toHaveCount(0);
+        }
+        await page.evaluate(context => window.VildaHormoneLifespanRuntime.update({
+          ...context, measurement: { value: .3, unit: 'IU/L' },
+        }), infantLh);
+        await wykres.locator('[data-view="life"]').click();
+        await expect(wykres.locator('[data-patient-concentration="lh"]')).toHaveCount(1);
       }
     }
 
