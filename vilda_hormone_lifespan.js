@@ -350,11 +350,13 @@
       stylesheet?.remove();
       for (const { node, alreadyLocked } of scrollLocks)
         if (!alreadyLocked) node.classList.remove("vhl-scroll-locked");
-      for (const { view, left, top } of scrollPositions)
-        view.scrollTo({ left, top, behavior: "instant" });
       if (restoreFocus && host.isConnected && !panel.hidden &&
         frames.every((frame) => frame.isConnected && !frame.hidden) && host.getClientRects().length)
         expand.focus({ preventScroll: true });
+      // Returning focus across documents can scroll the iframe despite preventScroll.
+      // Restore the saved positions after focus, before the next paint.
+      for (const { view, left, top } of scrollPositions)
+        view.scrollTo({ left, top, behavior: "instant" });
       onResize();
     }
     function chartHeight(normal) {
