@@ -3387,6 +3387,44 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 **Wersje.** `vilda_shell.js` 62; SW 1.1.244 → 1.1.245 (numer 1.1.244 nadał równolegle #641).
 
+### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
+
+**Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
+
+**Wyzwalacz.** Przy włączonej synchronizacji `vilda_sync_integration.js` pobiera zmiany co ok. 20 s (sprawdza co 10 s, a odstęp między pobraniami ma co najmniej 12 s). Działa tak, dopóki dokument jest widoczny, także w oknie bez fokusu obok innej aplikacji. Pobiera też przy `focus` i powrocie widoczności, a przy utracie fokusu wysyła zaległe zmiany. Każda wymiana to dwa zdarzenia `vilda:sync-status-changed`. Na nie, a także na `vilda:session-changed`, `vilda:auth-hidden` i `storage` (`vildaCurrentPatientId`), reaguje `vilda_puberty_source.js` (`odswiez()`). Moduł czyta wczytanego pacjenta z sejfu od nowa i ogłasza najpierw `loading` bez danych, potem `ready`. `vilda_zrodla_pacjenta.js` widzi dwie zmiany odcisku i zamawia pełne `update()`. Dane pacjenta się przy tym nie zmieniają. Okno w tle nie jest więc osobną przyczyną: to czas, w którym synchronizacja działa sama, bez udziału użytkownika.
+
+**Pomiar przed zmianą.** Playwright na prawdziwej powłoce `app.html`, Chromium, fikcyjny pacjent zapisany w sejfie i wczytany z Karty pacjenta (chłopiec 9 lat, 135 cm, 40 kg), tryb profesjonalny, 1440×1000 i 390×844. Liczone były wszystkie zdarzenia `animationstart` w ramce Start, także animacji zapętlonych. Każde ze zdarzeń `vilda:sync-status-changed` (`syncing`, `idle`) i `vilda:auth-hidden` dawało 1–2 przeliczenia i 16 startów animacji:
+- `#metabolicSummarySection` (przyciski „Podsumowanie wyników” i „Zalecenia dietetyczne”) wjeżdżała od nowa (`fadeSlideUp`: 12 px, od `opacity` 0), a `#intakeCard` — `ios-enter`;
+- `#bmiResult`, `#whResult` i `#bmiJourneyMount` (karta „Centyle i BMI”) wjeżdżały z błyskiem tła (`pulseBG`), a liczba BMI odliczała się od zera (1,5 → 21,9);
+- obracający się obrys „Podsumowania wyników” (`rotateSummaryBorder`, 6 s na obrót) wracał do 0°;
+- zapętlone pulsowania ostrzeżeń (`pulseRed`/`pulseOrange` na `#intakeResults`, `#coleInfo`, `#whrSuggest` i pierścień `.pro-overlay` karty BMI) zaczynały od zera.
+
+Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczenia, bo w środowisku testowym nie ma usługi synchronizacji.
+
+**Przyczyny.**
+1. `vildaUpdatePrepResetResultContainers` (`vilda_update_prep.js`) chował `#results` (`display:none`) na początku każdego przeliczenia, a `vildaUpdatePrepRunMainUpdate` pokazywał je z powrotem (`display:grid`) w tym samym zadaniu. Przeliczenie po drodze wymusza obliczenie stylu, więc przeglądarka zdejmowała animacje z całego poddrzewa i po pokazaniu uruchamiała je od nowa. Dotyczyło to także jednorazowych animacji wejścia, które dawno się skończyły, i animacji zapętlonych. Na czas przeliczenia dokument był też krótszy.
+2. `update()` buduje kafelki wyników od nowa (`#bmrInfo`), a obserwator w `app.js` nadawał każdemu nowemu `.result-box` `animate-in --pulse` i odliczanie liczby, bez względu na to, czy treść się zmieniła.
+3. Pierścień ostrzeżenia trybu profesjonalnego (`.pro-overlay`, `applyProModePulse` → `applyPulse`) powstaje razem z kafelkiem, więc jego zapętlona animacja startowała od zera przy każdym przeliczeniu.
+
+**Rozwiązanie.**
+- `vilda_update_prep.js`: przy gotowym BMI `#results` zostaje widoczny przez całe przeliczenie (`zostawWyniki`), które i tak kończy się jego pokazaniem. Bez gotowego BMI wyniki są chowane jak dotąd. Wyjątek w trakcie budowy wyników chowa `#results`, tak jak przed zmianą, i jest rzucany dalej. Dzięki temu stare karty nie zostają widoczne obok wyczyszczonego BMI.
+- `app.js` (obserwator `app:result-box-enhancement-observer`): kafelek, który w tej samej partii zmian DOM zastępuje kafelek o tym samym `id` z tą samą treścią tekstową i klasami, nie dostaje `animate-in` ani `--pulse`. Liczba BMI jest wtedy wpisywana od razu (`animateValue` z czwartym argumentem). Nowy kafelek i zmieniona treść animują się jak dotąd.
+- `app.js` (`vildaPulsWspolnaFaza`, wołane z `applyPulse`): zapętlone `pulseRed`/`pulseOrange` danego elementu i jego `::after` dostają `startTime = 0`, czyli fazę z zegara dokumentu. Odtworzony pierścień kontynuuje więc cykl poprzednika. Jeśli element nie jest jeszcze wyrenderowany (wyniki pokazywane na końcu przeliczenia), funkcja próbuje jeszcze raz w następnej klatce, przed pierwszym malowaniem. Jednorazowego impulsu (`pulse-*-2s`) to nie dotyczy.
+
+**Pomiar po zmianie.** Te same zdarzenia nadal dają 1–2 przeliczenia, ale żadna animacja wjazdu, błysku ani obrysu nie startuje, a `#results` nie znika ani razu. Przyciski i karta stoją w tym samym miejscu, a liczba BMI się nie odlicza. Na odtwarzanych nakładkach nadal startują `pulseOrange`/`pulseRed`, ale z fazą z zegara: wszystkie zapętlone pulsowania mają `startTime` 0 (faza = zegar dokumentu mod 1250 ms), na desktopie i telefonie. Wpisanie innej masy działa jak dotąd: nowy wynik wjeżdża i liczba się odlicza. Ponowne wpisanie tej samej masy na bazie dawało wjazd od `opacity` 0, a po zmianie nie ma animacji.
+
+**Czego nie zmieniono.** Liczba i kolejność przeliczeń, `vilda_puberty_source.js`, `vilda_zrodla_pacjenta.js` i harmonogram synchronizacji zostają bez zmian. Treść i kolejność kafelków, ostrzeżenia oraz P-PANEL-POWROT też się nie zmieniają. Pierwsze pojawienie się wyników i każda zmiana treści kafelka animują jak dotąd. Karta „Porównanie z poprzednim pomiarem” (`vilda_summary_cards.js`) jest przy każdej zmianie stanu synchronizacji budowana od nowa, ale bez animacji i bez zmiany wysokości (691 px przez cały pomiar).
+
+**Ustalenie poza zakresem (do decyzji właściciela).** `vilda_puberty_source.js` przy każdym ponownym odczycie tego samego pacjenta ogłasza `loading` bez danych, a potem `ready`. Daje to zbędne pełne przeliczenia na każde zdarzenie synchronizacji, sesji i `storage`, a przy synchronizacji co ok. 20 s. Po tej zmianie ich nie widać, ale kosztują pracę procesora i baterię. Komentarz w module opisuje czyszczenie przy ponownym odczycie jako celowe: wynik starszej generacji odczytu nie potwierdza bieżącego rekordu. Zmiana, np. zachowanie danych do czasu odczytu przy tym samym `patientId`, wymaga więc decyzji właściciela.
+
+**Testy.** `tests/e2e/wyniki-przeliczenie-w-tle.spec.mjs` (2, prawdziwa powłoka, desktop):
+1. Wpisany pacjent, dwa `update()` z rzędu. `#results` ani razu nie ma `display:none` (obserwator stylu z `oldValue`). Nowy `#bmiResult` w chwili wstawienia ma `opacity` 1, nie ma `animate-in` ani biegnącej animacji. Nie startuje żadna z animacji `fadeSlideUp`, `ios-enter`, `pulseBG`, `rotateSummaryBorder`. Obrys „Podsumowania wyników” to ta sama animacja (`getAnimations()`), a położenie przycisków i karty się nie zmienia. Odtworzone pulsowania mają fazę poprzednika (±2 ms, odczyt po `Animation.ready`), a liczba BMI ma tylko wartość „21,9”. Po zmianie masy na 41 kg nowy wynik wjeżdża od `opacity` 0 z `fadeSlideUp`.
+2. Pacjent zapisany w sejfie i wczytany jak z listy, potem cykl synchronizacji w kształcie z `vilda_sync_integration.js` i `vilda:auth-hidden`. Sprawdzane są te same warunki.
+
+Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (bez `zostawWyniki`, bez porównania treści kafelka, bez wspólnej fazy pulsowania) wywraca oba testy na właściwej asercji. `tests/e2e/powloka-powrot-bez-animacji.spec.mjs` jest bez zmian i przechodzi. Playwright nie ma tu WebKita, więc zachowanie w Safari do potwierdzenia przez właściciela.
+
+**Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
+
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
 **Zgłoszenie właściciela.** Po P-DYMKI: „sprawdź, czy wyskakujące modale, np. od Terminarza i inne, nie wchodzą w konflikt z dockiem i strzałką nawigacyjną".
