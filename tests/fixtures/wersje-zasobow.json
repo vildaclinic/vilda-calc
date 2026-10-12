@@ -88,8 +88,8 @@
   "sha256": "5f0836ce0fc9d85a893d013c28d02877e180297e6c7a5049ec9c580f2159d0eb"
  },
  "growth-basic-module.js": {
-  "v": 19,
-  "sha256": "304afa0b18bc55e55f13c800c1d83878118c11e4c9c699e82762b8377b352fb7"
+  "v": 20,
+  "sha256": "ac4cabd79ba1848608b30127a807bb734705234ffab37ab98454b3d1f5bb2b42"
  },
  "html2canvas.min.js": {
   "v": 1,
