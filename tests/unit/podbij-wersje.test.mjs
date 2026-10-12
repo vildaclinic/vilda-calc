@@ -517,7 +517,8 @@ function klonScaleniaPR(r, galaz, glebokosc = 2) {
 
 function uruchomKrokCI(klon) {
   const polecenia = poleceniaKroku(CI, NAZWA_KROKU);
-  return spawnSync('bash', ['-eo', 'pipefail', '-c', polecenia], { cwd: klon, encoding: 'utf8', env: SRODOWISKO });
+  // Domyślna powłoka kroku w Actions (bez `shell:`) to `bash -e {0}` — widać ją w logu joba.
+  return spawnSync('bash', ['-e', '-c', polecenia], { cwd: klon, encoding: 'utf8', env: SRODOWISKO });
 }
 
 describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
