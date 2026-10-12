@@ -10624,6 +10624,35 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Mapa właścicieli przed pierwszym zapisem także przy kartach bez nowych wersji (P-KOPIA-POMIJA-3, SW 1.1.232, `vilda_vault.js` 209, 2026-10-12)
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów i interpretacji; integralność danych przy scalaniu kopii konta.
+Poprawka uwagi P2 z przeglądu Codex w #593 (P-KOPIA-POMIJA-2, scalonym 2026-10-12).
+
+**Co było** (`audyt` `b644065`). Mapa właścicieli wersji powstawała dopiero przy pierwszej potrzebie: przy wersji z kopii,
+której nie ma w karcie, albo przy pacjencie bez karty. Wcześniej import do istniejącej karty, która ma już wszystkie wersje
+z kopii, wołał `Bkz_poImporcie`. Gdy wersja tej karty leży jednocześnie w karcie i w koszu (taki stan opisuje
+P-KOSZ-PRZYWROC-NOWSZA), import zdejmował wpis kosza i podbijał rewizję wersji. Dopiero dalszy pacjent kopii budował mapę;
+błąd odczytu przerywał wtedy scalenie po tych zmianach — wbrew regule P-KOPIA-POMIJA-2. Podgląd mógł też przejść bez
+błędu (mapa niepotrzebna), a scalenie tej samej kopii — skończyć się błędem.
+
+**Reguła po zmianie.** Podgląd i scalenie budują mapę raz, przed pętlą pacjentów kopii. Błąd odczytu wersji którejkolwiek
+karty przerywa oba, zanim cokolwiek zostanie zapisane — także gdy kopia nie wnosi nic nowego. Reguły pomijania, teksty
+i UI bez zmian.
+
+**Przypadki syntetyczne** — `tests/unit/kopia-konta-pomija.test.mjs`, prawdziwy `vilda_vault.js`, magazyn w pamięci:
+- kopia z Adamem (wszystkie wersje w karcie, jedna z nich także w koszu) i X; X scalony tu z Y spoza kopii, nagrobek X
+  przycięty, odczyt wersji Y kończy się błędem → scalenie odrzucone, wpis kosza Adama zostaje, wersja Adama bez nowej
+  rewizji, magazyn bez zmian;
+- kopia z samym Adamem (jak wyżej), odczyt wersji karty Y spoza kopii kończy się błędem → podgląd i scalenie odrzucone,
+  wpis kosza zostaje, magazyn bez zmian.
+Na `b644065` oba czerwone (wpis kosza znikał; w drugim przypadku podgląd i scalenie przechodziły). Pozostałe przypadki
+P-KOPIA-POMIJA bez zmian (zielone).
+
+**Wersje.** `vilda_vault.js` 208 → 209 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (125 → 126)
+i `vilda_session_bridge.js` (49 → 50); nowe adresy w precache (append-only); `SW_VERSION` 1.1.231 → 1.1.232 (+ pin
+w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
 ## Błąd odczytu mapy właścicieli przerywa „Scal kopię konta” (P-KOPIA-POMIJA-2, SW 1.1.231, `vilda_vault.js` 208, 2026-10-08, scalenie z `audyt` 2026-10-12)
 
 **Zmiana kliniczna: NIE** w zakresie wzorów, progów i interpretacji; integralność danych przy scalaniu kopii konta.
@@ -10639,7 +10668,8 @@ Poprawka dwóch uwag P1 z przeglądu Codex w #591 (scalonym 2026-10-08).
 
 **Reguła po zmianie.** Błąd odczytu wersji którejkolwiek karty przerywa podgląd i scalenie kopii konta. Mapa powstaje
 przed pierwszym zapisem wersji (strażnik i karta brakująca pytają ją przed zapisem), więc przerwanie następuje, zanim
-cokolwiek zostanie zapisane. Kolizja `SW_VERSION` 1.1.200 z #590/#591 rozwiązała się w międzyczasie: kolejne
+cokolwiek zostanie zapisane. *(Aktualizacja 2026-10-12: import do karty bez nowych wersji mógł wcześniej zdjąć wpis kosza; mapa
+powstaje teraz przed pętlą pacjentów — P-KOPIA-POMIJA-3.)* Kolizja `SW_VERSION` 1.1.200 z #590/#591 rozwiązała się w międzyczasie: kolejne
 wydania (#592 i następne, do 1.1.230) dostały własne numery, więc ten PR nie zmienia już numeru z tego powodu.
 
 **Przypadek syntetyczny** — `tests/unit/kopia-konta-pomija.test.mjs`: X w kopii, Y założona po kopii, X scalony z Y,
