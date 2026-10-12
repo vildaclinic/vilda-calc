@@ -452,3 +452,194 @@ test.describe('Spóźniona odpowiedź sejfu nie cofa zmian formularza', () => {
     });
   });
 });
+
+// P-NAME-FIX-WYCZYSC (zgłoszenie właściciela 2026-10-12): po wyborze w pytaniu o rozdzielenie
+// komunikat „Zapisano. Nazwisko: …, Imię: …” zostawał pod formularzem wyczyszczonym przyciskiem
+// „Wyczyść wszystkie pola”. Czyszczenie rozgłasza `vilda:user-state-cleared` na window — moduł go
+// nie słuchał. Ścieżka jak u lekarza: applyLoadedData + zdarzenie, okno „Co chcesz zrobić?” →
+// „Nowy pomiar”, wybór w pytaniu, prawdziwy przycisk czyszczenia. Dane wyłącznie fikcyjne.
+
+async function wczytajJakLekarz(page, payload) {
+  const patientId = await page.evaluate(async (p) => {
+    const saved = await window.VildaVault.savePatient(p);
+    return saved.patientId || saved.id || (saved.patient && saved.patient.patientId);
+  }, payload);
+  expect(patientId.length).toBeGreaterThan(0);
+  await page.evaluate(({ pid, p }) => {
+    window.applyLoadedData(p);
+    document.dispatchEvent(
+      new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid, source: 'pick' } }),
+    );
+  }, { pid: patientId, p: payload });
+  await page.locator('#vildaLcmNew').click();
+  return patientId;
+}
+
+/* Zapis korekty do sejfu (updateSnapshotPayload) dla jednego pacjenta wisi do zwolnienia,
+   a potem kończy się błędem — jak przy blokadzie sejfu albo zerwanej sieci w trakcie zapisu. */
+async function wstrzymajZapisKorekty(page, patientId) {
+  await page.evaluate((pid) => {
+    const V = window.VildaVault;
+    const orig = V.updateSnapshotPayload.bind(V);
+    let zwolnij = null;
+    const bramka = new Promise((res) => { zwolnij = res; });
+    window.__vnfZapis = { wejscia: 0, wyjscia: 0, zwolnij: () => zwolnij() };
+    V.updateSnapshotPayload = async (id, ...reszta) => {
+      if (id !== pid) return orig(id, ...reszta);
+      window.__vnfZapis.wejscia += 1;
+      try {
+        await bramka;
+        throw new Error('fikcyjny błąd zapisu (test)');
+      } finally {
+        window.__vnfZapis.wyjscia += 1;
+      }
+    };
+  }, patientId);
+}
+
+async function zwolnijZapisKorekty(page) {
+  await page.evaluate(() => window.__vnfZapis.zwolnij());
+  await expect.poll(() => page.evaluate(() => window.__vnfZapis.wyjscia), { timeout: 15000 }).toBe(1);
+  // Kontynuacja persistCorrection(...).then w module to osobne mikrozadania — niech się wykonają.
+  await page.evaluate(() => new Promise((res) => { setTimeout(res, 0); }));
+}
+
+test.describe('„Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty nazwiska', () => {
+  test('po wyborze: komunikat „Zapisano. Nazwisko…, Imię…” znika razem z danymi pacjenta', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    // Stary rekord jednopolowy w konwencji „Nazwisko Imię” — jak w zgłoszeniu.
+    const patientId = await wczytajJakLekarz(page, {
+      name: 'Fikcyjna Testowa',
+      user: { age: 7, sex: 'F', weight: 23, height: 121 },
+    });
+
+    const fix = page.locator('#vnfFix');
+    const done = page.locator('#vnfDone');
+    await expect(fix).toBeVisible();
+    const choice1 = page.locator('#vnfChoice1');
+    await expect(choice1).toHaveAttribute('data-vnf-ln', 'Fikcyjna');
+    await expect(choice1).toHaveAttribute('data-vnf-fn', 'Testowa');
+    await choice1.click();
+
+    await expect(done).toBeVisible();
+    await expect(done).toContainText('Zapisano. Nazwisko: Fikcyjna, Imię: Testowa');
+    await expect(done).toContainText('następnym razem wczyta się bez pytania');
+    // Utrwalenie w tle dobiegło końca — później nic już nie podmienia komunikatu.
+    await expect
+      .poll(async () => (await readHeader(page, patientId)).header?.firstName || '', { timeout: 15000 })
+      .toBe('Testowa');
+
+    await page.locator('#clearAllDataBtn').click();
+
+    expect(await polaTozsamosci(page)).toEqual({ name: '', lastName: '', firstName: '' });
+    await expect(done, 'dotąd komunikat zostawał przy pustym formularzu').toBeHidden();
+    await expect(fix).toBeHidden();
+    // Czyszczenie formularza nie cofa wyboru zapisanego w rekordzie.
+    const po = await readHeader(page, patientId);
+    expect([po.header.lastName, po.header.firstName]).toEqual(['Fikcyjna', 'Testowa']);
+  });
+
+  test('pytanie otwarte: znika po „Wyczyść”, a ponowne wczytanie tego pacjenta pyta od nowa', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    const payload = { name: 'Fikcyjny Pytany', user: { age: 8, sex: 'M', weight: 26, height: 128 } };
+    const patientId = await wczytajJakLekarz(page, payload);
+    const fix = page.locator('#vnfFix');
+    await expect(fix).toBeVisible();
+
+    await page.locator('#clearAllDataBtn').click();
+
+    expect(await polaTozsamosci(page)).toEqual({ name: '', lastName: '', firstName: '' });
+    await expect(fix, 'dotąd pytanie o pacjenta sprzed czyszczenia zostawało otwarte').toBeHidden();
+    await expect(page.locator('#vnfDone')).toBeHidden();
+    // Wybór nie padł — rekord bez jawnych części, jak przed wczytaniem.
+    const rekord = await readHeader(page, patientId);
+    expect(rekord.latestPayload.user.firstName).toBeUndefined();
+    expect(rekord.latestPayload.user.lastName).toBeUndefined();
+
+    // Ponowne wczytanie tego samego pacjenta: pytanie wraca (nie zostało w stanie „już otwarte”).
+    await page.evaluate(({ pid, p }) => {
+      window.applyLoadedData(p);
+      document.dispatchEvent(
+        new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid, source: 'pick' } }),
+      );
+    }, { pid: patientId, p: payload });
+    await page.locator('#vildaLcmNew').click();
+    await expect(fix).toBeVisible();
+    await expect(fix).toContainText('Fikcyjny Pytany');
+    await expect(page.locator('#lastName')).toHaveValue('Fikcyjny Pytany');
+    await expect(page.locator('#firstName')).toHaveValue('');
+  });
+
+  test('zapis korekty kończy się błędem już po „Wyczyść” — ostrzeżenie nie wraca na pusty formularz', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    const patientId = await wczytajJakLekarz(page, {
+      name: 'Fikcyjna Zapisowa',
+      user: { age: 6, sex: 'F', weight: 21, height: 116 },
+    });
+    await expect(page.locator('#vnfFix')).toBeVisible();
+    await wstrzymajZapisKorekty(page, patientId);
+
+    await page.locator('#vnfChoice1').click();
+    const done = page.locator('#vnfDone');
+    await expect(done).toContainText('Zapisano.');
+    await expect.poll(() => page.evaluate(() => window.__vnfZapis.wejscia), { timeout: 15000 }).toBe(1);
+
+    await page.locator('#clearAllDataBtn').click();
+    await expect(done).toBeHidden();
+
+    await zwolnijZapisKorekty(page);
+
+    await expect(done, 'dotąd po nieudanym zapisie wracało „Poprawiono w tej sesji…”').toBeHidden();
+    expect(await polaTozsamosci(page)).toEqual({ name: '', lastName: '', firstName: '' });
+  });
+
+  test('KONTROLA: bez „Wyczyść” nieudany zapis korekty pokazuje ostrzeżenie jak dotąd', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    const patientId = await wczytajJakLekarz(page, {
+      name: 'Fikcyjna Zapisowa',
+      user: { age: 6, sex: 'F', weight: 21, height: 116 },
+    });
+    await expect(page.locator('#vnfFix')).toBeVisible();
+    await wstrzymajZapisKorekty(page, patientId);
+
+    await page.locator('#vnfChoice1').click();
+    const done = page.locator('#vnfDone');
+    await expect(done).toContainText('Zapisano.');
+    await expect.poll(() => page.evaluate(() => window.__vnfZapis.wejscia), { timeout: 15000 }).toBe(1);
+
+    await zwolnijZapisKorekty(page);
+
+    await expect(done).toBeVisible();
+    await expect(done).toContainText('Poprawiono w tej sesji.');
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'Fikcyjna Zapisowa', lastName: 'Fikcyjna', firstName: 'Zapisowa',
+    });
+  });
+
+  test('odczyt sejfu w toku podczas „Wyczyść” — spóźniona odpowiedź nie pyta i nie wpisuje nazwy', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    // Zdarzenie przy pustym formularzu (tak działają ścieżki, w których nazwa przychodzi dopiero
+    // z odczytu) — tu zabezpieczenie v3 („formularz poszedł dalej”) nie ma czego porównać.
+    const patientId = await page.evaluate(async (p) => {
+      const saved = await window.VildaVault.savePatient(p);
+      return saved.patientId || saved.id || (saved.patient && saved.patient.patientId);
+    }, { name: 'Fikcyjny Spozniony', user: { age: 9, sex: 'M' } });
+    await wstrzymajOdczyty(page, patientId);
+    await page.evaluate((pid) => {
+      document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }));
+    }, patientId);
+
+    await page.locator('#clearAllDataBtn').click();
+    await zwolnijOdczyty(page);
+
+    expect(await polaTozsamosci(page), 'dotąd nazwa wracała do pola Nazwisko').toEqual({
+      name: '', lastName: '', firstName: '',
+    });
+    await expect(page.locator('#vnfFix'), 'dotąd pokazywało się pytanie o rozdzielenie').toBeHidden();
+  });
+});
