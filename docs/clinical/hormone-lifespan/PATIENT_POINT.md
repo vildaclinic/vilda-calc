@@ -34,6 +34,10 @@ nieznane jednostki, brak wyniku/wieku/płci i brak właściwego profilu nie
 tworzą zastępczej liczby. Nie utożsamiamy testosteronu wolnego z całkowitym.
 Nie przypisujemy wyniku do innego hormonu po zmianie wyboru. Brak punktu
 na wykresie nie blokuje osobnej, dostępnej interpretacji laboratoryjnej.
+Ogólne komunikaty braku dopasowania stosują neutralne określenie „wartość
+odniesienia”. Odrębne opisy porównań median zachowują nazwę tej statystyki.
+Podpis poprawnie dobranej
+wartości nadal wskazuje rzeczywistą statystykę źródła: średnią albo medianę.
 
 ## Aktywne źródła
 
@@ -45,6 +49,7 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | --- | --- | --- | --- |
 | Męskie LH, FSH, testosteron całkowity, AMH, inhibina B; 7 dni–<1 roku | [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3, str. 1565; czarna mediana GAMLSS odczytana z wektorów PDF | 119 zdrowych donoszonych chłopców, ciąże pojedyncze, 338 próbek surowicy, COPENHAGEN Minipuberty; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS testosteron | Ekstrakcja obejmuje 7–400 dni; aktywny profil kończy się przed 1. rokiem. To przybliżenie ryciny, nie parametry autora ani średnia podłużna z ryc. 2. Osobna bramka rozdzielczości opisana niżej. |
 | Męskie LH i FSH; 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `Other biomarkers`, wiersze 17–27, kolumny B:E i G:J | Norwegia, BGS2; 414 dostępnych męskich próbek w tabeli kohorty, liczebność oznaczenia może się różnić; surowica, pobrania 08:00–14:00, Siemens IMMULITE 2000 XPi | 11 rocznych węzłów na hormon. `p50 = exp(M)/1e6`. Wiek chronologiczny, bez wyznaczania stadium Tannera. Bez ekstrapolacji na dorosłych. |
+| Żeńskie LH i FSH; wyłącznie porównanie płci w wieku 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [suplement v1](https://doi.org/10.6084/m9.figshare.17153336.v1), `Other biomarkers` B3:E13 i G3:J13 | BGS2, Norwegia, 601 dostępnych próbek dziewcząt w tabeli kohorty; surowica 08:00–14:00, IMMULITE 2000 XPi | 22 mediany, `exp(M)/1e6`, wyłącznie w danych porównania. Bez Tannera z wieku, standaryzacji fazy cyklu i rozszerzenia zwykłych profili. Wiek 16 jest opublikowanym brzegiem modelu. |
 | FSH przed pokwitaniem: chłopcy 1–<6 lat/G1; dziewczynki 1–<4, 4–<8 i 8–<11 lat/Th1 | [Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210/PDF 5: chłopcy grupa źródłowa 1–<8 lat, mediana 0,48 IU/L, N=303; dziewczynki kolejno 2,57/1,07/1,55 IU/L, N=124/156/107 | Zagrzeb, Chorwacja, Tanner 1; całe badanie N=948, nie każdy hormon oznaczano u każdego dziecka. Roche cobas e 411, kanapkowe ECLIA; zbierano surowicę i osocze Li-heparynowe, bez przypisania materiału do analitu | Mediany całych grup, nie model dokładnego wieku. Aktualne typowane G1/Th1 jest wymagane. U chłopców od 6 lat zachowujemy Madsen, lecz mediana 0,48 i N=303 nadal opisują pełną grupę źródłową 1–<8. Źródłową grupę chłopców 8–<11 (0,79 IU/L, N=117) zachowujemy wyłącznie w dowodach. |
 | Męski testosteron całkowity; 6–<18 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1 v1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `LCMSMS hormones`, AF19:AI31; przykładowa transformacja K37 | Norwegia, BGS2 i FitFutures; przekrojowe kohorty populacyjne, głównie pochodzenia europejskiego; surowica, pobrania 08:00–14:00, LC-MS/MS, LLOQ 0,02 nmol/L | 13 rocznych węzłów 6–18, p50=`exp(M)/1e6`; PCHIP jest przybliżeniem między nimi. Aplikacja używa profilu przed 18. urodzinami; węzeł 18 domyka interpolację dla wieku 17.x. Bez narzucania Tannera i bez korekty do pory pobrania. Nie są to normy laboratoryjne ani średnia arytmetyczna. |
 | Męski testosteron całkowity; 3–<6 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 obserwacji, niekoniecznie niezależnych osób; surowica, różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Pełny model 3–88 lat pozostaje dowodem; aktywny wybór ograniczono do 3–<6. Funkcja centralna `log10(T+1)` po odwróceniu transformacji, zgodna z poprawionym p50; między węzłami PCHIP. Źródło punktu nie wymusza kotwic geometrii 3–5 lat. Dawny dorosły profil zastąpił Walravens; nie poprawiamy liczb Kelsey pod oczekiwany trend. |
@@ -63,7 +68,7 @@ Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
 nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec
-i zaakceptowanym porównaniem inhibiny B 8–20 oraz niepokryte fragmenty
+i zaakceptowanymi porównaniami inhibiny B 8–20 i LH/FSH 6–16 oraz niepokryte fragmenty
 osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
@@ -406,7 +411,8 @@ samego numeru Tannera, P ani Ax. Nie używamy obserwacji historycznej.
 Brak takiego stadium lub znane stadium 2–5 nie dopasowuje punktu Zec;
 nie dodaje nowego pola i nie blokuje niezależnej oceny laboratoryjnej.
 W porównaniu płci nie przenosimy stadium pacjenta na drugą płeć:
-jeżeli ilościowe porównanie wymaga Zec, pozostaje dotychczasowy schemat.
+Zec nie jest źródłem tego porównania. LH/FSH w wieku 6–16 lat
+korzystają z osobno zatwierdzonych median Madsen obu płci.
 
 Pełna kohorta N=948 zawierała dzieci kierowane m.in. z ostrymi infekcjami,
 na badania alergologiczne i przed zabiegami; nie opisujemy jej jako czystej
@@ -478,6 +484,42 @@ wysokości. Odmienne źródła rozważone w audycie, m.in. Jopling,
 Benderradji i Chong, nie są nowymi profilami. Przebieg porównania płci
 oraz laboratoryjne normy mają odrębne kontrakty.
 
+### Wspólne osie LH/FSH i żeńskie odniesienie tylko w porównaniu
+
+Zatwierdzona 12 października 2026 polityka porównania LH/FSH stosuje
+stałe mediany obu płci: liniową oś 0–6 IU/L w minipuberty i 0–8 IU/L
+w pokwitaniu. Dane i normy zwykłych widoków pozostają odrębne.
+`buildGonadotropinComparison` przekazuje istniejącemu silnikowi tylko
+profile właściwe dla analitu i okresu; wynik kwalifikuje własna płeć.
+Nie kopiujemy stadium, metody lub leczenia na drugą populację.
+
+Minipuberty zachowuje Busch/Ljubicic i dotychczasowe bramki. Wspólne
+linie zaczynają się od 0,02 roku; własne odniesienie chłopca już
+od 7. dnia. Poniżej żeńskiej granicy nie ekstrapolujemy mediany.
+Dokładnie 1 rok jest poza tym porównaniem dla obu płci; nie zmienia
+to globalnych granic źródeł. Po 243. dniu LH chłopców pozostaje
+bez dokładnego punktu według istniejącej reguły wiarygodności
+odczytu, niezależnie od widocznego ogona. Dziewczynka tego samego
+wieku zachowuje własną kwalifikację.
+
+Pokwitanie obejmuje 6–16 lat obu płci: Madsen 2022, surowica
+IMMULITE 2000 XPi, po 11 rocznych median na hormon i płeć.
+`gonadotropin-comparison-reference-data.json` dodaje tylko
+`madsen2022-female-lh-sex-comparison` i
+`madsen2022-female-fsh-sex-comparison`, poza globalnym `patientPointData`.
+Nie używa Zec jako zamiennika i nie wymaga Tannera dla modelu wieku.
+Cały przedział niepewnego wieku musi mieścić się w profilu: dokładnie
+16 lat jest opublikowanym brzegiem, lecz [16,17) go przekracza.
+
+Kontekst znanej niezgodnej metody, materiału, leczenia, wyniku
+cenzurowanego i donoszenia zachowuje działanie dotychczasowego silnika.
+Linie pozostają widoczne bez kwalifikowanego punktu i nie zależą od
+wysokości wyniku. Zero leży na osi, ponad nią jest strzałka z liczbą.
+Nie nadajemy nowych diagnoz, norm, percentyli lub SDS. Względne średnie
+zwykłej żeńskiej minipuberty nie służą do ustawiania tego punktu.
+Źródła, hashe i przypadki:
+[audyt LH/FSH](evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
+
 ### Wspólna oś AMH w porównaniu płci podczas minipuberty
 
 Decyzja właściciela z 11 października 2026 dotyczy wyłącznie tego
@@ -498,9 +540,14 @@ ryciny, dziewczynek pochodzi z tabeli suplementu. Nie są to normy.
 z dotychczasowym uwzględnieniem całego przedziału wieku, donoszenia,
 materiału, metody i jednostki. Chłopiec od 7. do <7,305 dnia zachowuje
 własne odniesienie Busch, choć wspólne linie zaczynają się później.
-Dokładnie 1 rok nie otrzymuje punktu w tym porównaniu żadnej płci;
-to ograniczenie widoku, nie skrócenie żeńskiego profilu Ljubicic ani
-usunięcie Wang z innych widoków. Wcześniactwo i nieznane donoszenie
+Cały przedział wieku musi dodatkowo mieścić się przed 1. rokiem:
+`[11/12, 1)` może otrzymać punkt, `[11/12, 1]` i przedział przekraczający
+1 rok nie mogą. Górna granica 1 jest dopuszczalna tylko jako wyłączony
+koniec niepustego przedziału (`ageUpperInclusive: false`). Dokładnie
+1 rok nie otrzymuje punktu w tym porównaniu żadnej płci; to ograniczenie
+widoku, nie skrócenie żeńskiego profilu Ljubicic ani usunięcie Wang
+z innych widoków. Kontrolę granicy uzupełniono po HM-3, 12 października
+2026, bez zmiany źródeł, krzywych lub norm. Wcześniactwo i nieznane donoszenie
 wykluczają punkt niemowlęcy, lecz nie zmieniają populacyjnych krzywych.
 
 Liczbowy wynik poniżej osi, w tym zero, ma strzałkę w dół z prawdziwą
@@ -606,6 +653,8 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Porównanie płci AMH, donoszone niemowlę dokładnie 90 dni | Mediany modeli: chłopcy ≈161,6811 ng/mL; dziewczynki ≈2,3535 ng/mL. Obie linie i punkty na tej samej stałej osi log10, również bez wyniku. |
 | Porównanie AMH, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własna mediana Busch ≈64,25565 ng/mL i punkt chłopca dostępne; brak źródła dziewczynki. Wspólne linie zaczynają się w 7,305 dnia, bez ekstrapolacji. |
 | Porównanie AMH, dokładnie pierwsze urodziny, dowolna płeć | Krzywe pozostają identyczne, ale brak punktu tego widoku; nie podstawiamy grupy Wang. |
+| Porównanie AMH, dowolna płeć i zgodny kontekst, przedział `[11/12, 1)` / `[11/12, 1]` / wiek przekraczający 1 rok | Punkt tylko dla przedziału z wyłączonym końcem 1; pozostałe nie mieszczą się w oknie widoku. Źródłowe granice i obie krzywe pozostają bez zmian. |
+| AMH, donoszona dziewczynka, dokładnie 1 rok, zwykły widok | Nadal p50 Ljubicic 0,9916278 ng/mL; brak punktu w porównaniu nie skraca źródłowego profilu. |
 | Porównanie AMH, kwalifikujący kontekst: 0 → 0,1 → 1000 → 10000 ng/mL | Strzałka w dół → punkt na dolnej granicy → punkt na górnej granicy → strzałka w górę; krzywe i oś stałe. Nie traktujemy błędu konwersji 1000,0000000000001 jako przekroczenia osi. |
 | Porównanie inhibiny B, donoszone niemowlę dokładnie 90 dni | Mediany modeli M≈294,2938 i F≈49,4718 pg/mL; stała wspólna liniowa oś 0–400 również bez wyniku. |
 | Porównanie inhibiny B, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własne odniesienie M≈187,9788 pg/mL dostępne, F bez odniesienia; wspólne linie od 7,305 dnia. |
@@ -617,6 +666,7 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Porównanie inhibiny B, kwalifikujący kontekst: pusty → 0 → 400 → 1000 pg/mL → wyczyszczenie | Brak punktu → punkt na zerze → punkt na górnej granicy → strzałka w górę → brak punktu. Te same linie i skala; 400 ng/L równe 400 pg/mL. |
 | Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
 | Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
+| Mężczyzna 20 lat, LH lub FSH, niezgodna metoda albo materiał / kontekst zgodny | Brak punktu opisany neutralną „wartością odniesienia” / źródłowa średnia Laurentino 3,0 IU/L nadal podpisana jako średnia. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
 | FSH dokładnie 80 / >80; LH dokładnie 89 / >89 | Odpowiednio ≈8,4 / brak oraz 5,22 / brak, bez przedłużania źródła wygaszonym ogonem. |
 | LH `<0,05 IU/L`, AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |

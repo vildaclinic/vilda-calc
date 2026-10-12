@@ -2086,3 +2086,87 @@ body.vilda-modal-alert-open #scrollTopBtn {
     padding-bottom: 28px
   }
 }
+
+/* P-NOWE-URZADZENIE (decyzja właściciela 2026-10-12, etap 1): okno „Pobierz dane z serwera”
+   po zalogowaniu na nowym urządzeniu (vilda_nowe_urzadzenie.js). Wcześniej znacznik ze stylami
+   inline tylko w index.html; teraz moduł buduje okno na każdej stronie z logowaniem, a wygląd
+   jest tu — te same wartości. Selektory od #vilda-restore-overlay mają swoistość zbliżoną do
+   stylów inline, więc reguły skórki dla button/h2 nie zmieniają wyglądu okna. */
+#vilda-restore-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drawer);
+  background: var(--bg, #f5f5f7);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-1-25);
+  box-sizing: border-box
+}
+
+#vilda-restore-overlay.is-open {
+  display: flex
+}
+
+#vilda-restore-overlay .vilda-restore-panel {
+  max-width: 420px;
+  width: 100%;
+  text-align: center
+}
+
+#vilda-restore-overlay .vilda-restore-ikona {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-20);
+  background: var(--primary, #00838d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-1-5);
+  font-size: 2rem
+}
+
+#vilda-restore-overlay .vilda-restore-tytul {
+  margin: 0 0 var(--space-0-5);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text, #1c1c1e)
+}
+
+#vilda-restore-overlay .vilda-restore-etykieta {
+  margin: 0 0 var(--space-0-4);
+  font-size: .95rem;
+  color: #6e6e73
+}
+
+#vilda-restore-overlay .vilda-restore-data {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #1c1c1e)
+}
+
+#vilda-restore-overlay .vilda-restore-opis {
+  margin: 0 0 var(--space-2);
+  font-size: .88rem;
+  color: #6e6e73;
+  line-height: 1.5
+}
+
+#vilda-restore-overlay .vilda-restore-pobierz {
+  display: block;
+  width: 100%;
+  padding: var(--space-0-9) var(--space-1-5);
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: var(--space-1)
+}
+
+#vilda-restore-overlay .vilda-restore-pomin {
+  font-size: .92rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: var(--space-0-4)
+}

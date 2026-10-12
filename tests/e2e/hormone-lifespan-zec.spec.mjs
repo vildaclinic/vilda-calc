@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect, quickFill, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 
@@ -5,6 +6,7 @@ import { quickSelect, quickFill, closePatientEditor } from '../support/lab-puber
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 const panel = page => page.locator('.vilda-hormone-lifespan');
 const dot = page => panel(page).locator('[data-patient-concentration]');
+const sourceMedians = JSON.parse(readFileSync(new URL('../fixtures/hormone-lifespan-gonadotropin-source-medians.json', import.meta.url), 'utf8'));
 
 async function open(page, patient, value = '2') {
   await page.route('**/*', route => {
@@ -201,25 +203,67 @@ test('FSH point sits below, on and above its group median and cannot survive an 
   expect(await stableMaleGeometry(page)).toEqual(original);
 });
 
-test('sex comparison remains schematic because the other sex has no patient Tanner observation', async ({ page }) => {
+test('FSH comparison keeps its own-sex Madsen median independent of Tanner and restores the ordinary Zec reference', async ({ page }) => {
+  const median = sourceMedians.puberty.find(row => row.sex === 'female' && row.analyte === 'fsh' && row.ageYears === 8).median;
+  async function expectComparisonPoint() {
+    const chart = panel(page).locator('[data-lifespan="chart"]');
+    await expect(chart).toHaveAttribute('data-comparison-scale', 'linear');
+    await expect(chart).toHaveAttribute('data-comparison-min', '0');
+    await expect(chart).toHaveAttribute('data-comparison-max', '8');
+    await expect(panel(page).locator('[data-reference-line="fsh"]')).toHaveCount(2);
+    for (const sex of ['female', 'male']) {
+      const line = panel(page).locator(`[data-comparison-sex="${sex}"]`);
+      await expect(line).toHaveCount(1);
+      await expect(line).toHaveAttribute('data-comparison-curve', 'fsh');
+      await expect(line).toHaveAttribute('data-profile', `madsen2022-${sex}-fsh${sex === 'female' ? '-sex-comparison' : ''}`);
+      await expect(line).toHaveAttribute('data-common-scale', 'linear');
+      await expect(line).toHaveAttribute('data-unit', 'IU/L');
+    }
+    await expect(dot(page)).toHaveCount(1);
+    await expect(dot(page)).toHaveAttribute('data-profile', 'madsen2022-female-fsh-sex-comparison');
+    await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'median');
+    await expect(dot(page)).toHaveAttribute('data-unit', 'IU/L');
+    await expect(dot(page)).toHaveAttribute('data-value', '2');
+    await expect.poll(async () => Number(await dot(page).getAttribute('data-median'))).toBeCloseTo(median, 8);
+    await expect.poll(async () => Number(await dot(page).getAttribute('data-reference-value'))).toBeCloseTo(median, 8);
+    const note = panel(page).locator('[data-lifespan="scale-note"]');
+    await expect(note).toContainText('Mediany stężeń · wspólna skala IU/L');
+    await expect(note).not.toContainText('brak dopasowanych median obu płci');
+    await expect(note).not.toContainText('Uzupełnij stadium');
+    const geometry = await chart.evaluate(svg => {
+      const group = svg.querySelector('[data-patient-concentration]');
+      const result = group.querySelector('[data-result-point]');
+      const reference = group.querySelector('[data-median-point]');
+      const bottom = Number(group.dataset.plotBottom), top = Number(group.dataset.plotTop);
+      return { resultX: Number(result.getAttribute('cx')), referenceX: Number(reference.getAttribute('cx')),
+        resultHeight: (bottom - Number(result.getAttribute('cy'))) / (bottom - top),
+        referenceHeight: (bottom - Number(reference.getAttribute('cy'))) / (bottom - top),
+        paths: [...svg.querySelectorAll('[data-comparison-curve="fsh"]')].map(line => line.getAttribute('d')) };
+    });
+    expect(geometry.resultX).toBe(geometry.referenceX);
+    expect(geometry.resultHeight).toBeCloseTo(2 / 8, 8);
+    expect(geometry.referenceHeight).toBeCloseTo(median / 8, 8);
+    return geometry;
+  }
   await open(page, { sex: 'F', age: 8, ageMonths: 0 });
+  const withoutTanner = await patientState(page);
   await panel(page).locator('[data-view="puberty"]').click();
   await panel(page).getByRole('button', { name: 'Porównaj płcie', exact: true }).click();
-  await expect(dot(page)).toHaveCount(0);
-  await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('brak dopasowanych median obu płci');
-  await expect(panel(page).locator('[data-lifespan="scale-note"]')).not.toContainText('Uzupełnij stadium');
+  const comparison = await expectComparisonPoint();
+  expect(await patientState(page)).toEqual(withoutTanner);
   await panel(page).locator('.vhl-compare-toggle').click();
+  // The comparison-only Madsen profile must not supply an ordinary point.
+  await expect(dot(page)).toHaveCount(0);
+  expect(await patientState(page)).toEqual(withoutTanner);
   await stage(page, 'Th', '1');
   await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
   const before = await patientState(page);
   await panel(page).locator('[data-view="puberty"]').click();
   await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
   await panel(page).getByRole('button', { name: 'Porównaj płcie', exact: true }).click();
-  await expect(dot(page)).toHaveCount(0);
-  await expect(panel(page).locator('[data-reference-line]')).toHaveCount(0);
-  await expect(panel(page).locator('[data-comparison-sex="female"]')).toHaveCount(1);
-  await expect(panel(page).locator('[data-comparison-sex="male"]')).toHaveCount(1);
+  expect(await expectComparisonPoint()).toEqual(comparison);
   await expectClinicalAgeComparison(page);
+  expect(await patientState(page)).toEqual(before);
   await panel(page).locator('.vhl-compare-toggle').click();
   await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
   expect(await patientState(page)).toEqual(before);

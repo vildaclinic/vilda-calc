@@ -487,6 +487,15 @@ ani zapisu pacjenta. Regresje: `hormone-lifespan-fullscreen.spec.mjs`
 (desktop, telefon i same-origin iframe), dotychczasowy wzorzec SVG
 oraz testy integracji z przelicznikiem.
 
+**2026-10-12 — powrót z pełnego ekranu bez przesuwania strony:**
+w powłoce `app.html` oddanie fokusu przyciskowi „Powiększ” mogło przewinąć
+ramkę mimo `preventScroll`. Zapamiętane pozycje ramki i powłoki są teraz
+odtwarzane po przywróceniu fokusu. Regresja
+`hormone-lifespan-shell-scroll.spec.mjs` sprawdza wielokrotne otwarcie
+i zamknięcie przez Escape oraz przycisk na desktopie i telefonie 320 px,
+z zachowaniem kontekstu pacjenta i stanu wykresu. Bez zmiany danych,
+krzywych, skal, norm, interpretacji ani zapisu pacjenta.
+
 **2026-10-10 — wybór hormonów i porównanie płci w pokwitaniu:** etykietę
 „Poziom względny” zastąpiono „Przebieg zmian”. Można odznaczyć również
 ostatni hormon; pusty wybór ukrywa linie i pokazuje „Wybierz hormon”,
@@ -1451,6 +1460,92 @@ Regresja wywołuje rzeczywisty renderer i silnik:
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną.
 
+### HORMONE-LH-FSH-SEX-COMPARISON — wspólne stężenia obu płci, 2026-10-12
+
+**Problem i decyzja:** dotychczasowe pokwitaniowe porównanie LH/FSH
+normalizowało osobno schemat każdej płci do jednakowej wysokości.
+Minipuberty nie udostępniała jeszcze porównania tych hormonów.
+Właściciel zaakceptował makietę („ok, ładnie, koduj”): oba okresy
+pokazują stałe mediany stężeń, niezależne od obecności wyniku.
+
+**Źródła i populacje:**
+
+- [Busch 2022](https://doi.org/10.1210/clinem/dgac115), pełny artykuł,
+  ryc. 3: przybliżone mediany GAMLSS odczytane z wektorów PDF;
+  119 zdrowych donoszonych chłopców, 338 próbek surowicy,
+  COPENHAGEN, Dania. Weryfikacja 788 odczytów LH/FSH z dni 7–400
+  różni się od zachowanych liczb o mniej niż 0,0000005 IU/L.
+  To zgodność digitalizacji, nie dokładność oznaczenia.
+- [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), pełny tekst,
+  ryc. 1 i tabele A/B [suplementu v1](https://doi.org/10.6084/m9.figshare.19469555.v1):
+  98 zdrowych donoszonych dziewczynek, 266 próbek surowicy, COPENHAGEN.
+  Potwierdzono dokładnie 198 zachowanych median (99 na hormon).
+  Oba badania stosowały AutoDELFIA; LOD LH/FSH 0,05 IU/L, bez
+  osobno podanego LOQ. Nie dają wcześniaczych norm ani kalibracji
+  innych metod. Mediany nie są względnymi średnimi podłużnymi
+  z ryc. 2 Busch i ryc. 3 Ljubicic.
+- [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), pełny tekst
+  i [suplement v1](https://doi.org/10.6084/m9.figshare.17153336.v1),
+  arkusz `Other biomarkers`: 44 zgodne mediany obu płci i hormonów,
+  po 11 rocznych węzłów 6–16 lat, `p50 = exp(M) / 1000000`.
+  BGS2, Norwegia; tabela kohorty podaje 601 dostępnych próbek
+  dziewcząt i 414 chłopców, nie liczebność każdego oznaczenia.
+  Surowica, 08:00–14:00, Siemens IMMULITE 2000 XPi, LLOQ 0,1 IU/L.
+  Kohorta obejmowała 6–<16 lat; 16 jest opublikowanym brzegiem
+  modelu. Fit Futures do 18 lat rozszerza steroidy, nie gonadotropiny.
+  Użytkowniczki doustnej antykoncepcji wykluczono; fazy cyklu nie
+  standaryzowano. Model wieku nie wyznacza Tannera.
+
+**Polityka prezentacji:** `gonadotropin-comparison-policy.json` oraz
+`buildGonadotropinComparison` wyznaczają wspólne liniowe osie IU/L:
+minipuberty 0–6, pokwitanie 0–8. Obie płcie i oba hormony mają tę
+samą skalę w danym okresie. Krzywe nie zmieniają się po wpisaniu,
+wyczyszczeniu lub zmianie wyniku ani płci pacjenta. Zero jest na osi;
+wynik ponad osią otrzymuje strzałkę z rzeczywistą liczbą.
+
+Wspólne niemowlęce linie obejmują 0,02–<1 roku, bez ekstrapolacji
+do narodzin. Chłopiec zachowuje własne odniesienie już od 7. dnia;
+nie wymaga dostępności żeńskiej mediany tego dnia. Dokładnie pierwsze
+urodziny nie otrzymują punktu tego porównania. Późna niska mediana
+LH chłopców zachowuje istniejącą bramkę rozdzielczości digitalizacji:
+po 243. dniu brak dokładnego punktu, mimo widocznego modelowego ogona.
+Ta bramka nie jest LOD, normą ani dowodem zerowego stężenia.
+
+Pokwitanie pokazuje 6–16 lat, bez przedłużania do 20. roku.
+`gonadotropin-comparison-reference-data.json` dodaje dwa żeńskie
+profile Madsen wyłącznie dla tego porównania, poza globalnymi
+profilami pacjenta. Istniejące męskie i niemowlęce źródła zachowują
+liczby oraz kwalifikację. Własny profil ocenia istniejący silnik;
+metoda, stadium lub brak kwalifikacji drugiej płci nie blokują
+poprawnego własnego odniesienia. Zachowano bramki wyniku cenzurowanego,
+materiału, znanej niezgodnej metody, leczenia, donoszenia niemowlęcia
+i niepewnego wieku. Nie wnioskujemy Tannera z wieku.
+
+**Wpływ kliniczny:** nowe edukacyjne porównanie stężeń oraz ograniczone
+odniesienie dziewcząt 6–16 lat. Nie zmieniają się normy laboratoryjne,
+werdykty, zapis, jednostki ani zwykłe krzywe. Zwykła żeńska minipuberty
+nadal przedstawia względną średnią podłużną z dwiema falami; mediana
+FSH w porównaniu może być znacznie bardziej płaska. To inna statystyka,
+nie dowód stałego FSH u pojedynczej dziewczynki. Stosunek median
+populacyjnych nie jest referencją klinicznego ilorazu LH/FSH.
+
+**Syntetyczne wejście → oczekiwane zachowanie:**
+
+- Donoszona dziewczynka, 0,25 roku → p50 LH 0,085 / FSH 3,697 IU/L;
+  chłopiec w tym wieku → około 2,023701 / 1,113548 IU/L.
+- 12 lat → LH F/M 0,932809/0,677563, FSH F/M 4,151220/2,014860 IU/L.
+  Ten sam wiek bez stadium nadal ma źródło Madsen.
+- Wynik 0 → oś; 100 IU/L → strzałka, bez przeskalowania median.
+- Chłopiec 300 dni, LH → brak dokładnego punktu; dziewczynka tego
+  samego wieku zachowuje własną medianę przy zgodnym kontekście.
+- Dokładnie 16 lat → opublikowany brzeg modelu; wiek [16,17) albo
+  >16 lat → brak odniesienia tego porównania. Zwykły widok nie
+  otrzymuje nowego żeńskiego profilu Madsen.
+
+Źródła, hashe, zakres zgody i ograniczenia:
+[audyt porównania LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
+Akceptacja prezentacji i testy techniczne nie są walidacją kliniczną.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana
@@ -1583,6 +1678,78 @@ pmol/L, nierówności, niepewny wiek, wcześniactwo, niezgodną metodę,
 pełny ekran, komputer i 320 px. Odtwarzalne źródła, zatwierdzona makieta
 i dokładniejsze punkty kontrolne:
 [`amh-infant-comparison-audit-2026-10-11.json`](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+
+### HORMONE-AUDIT-FOLLOWUPS — granica porównania AMH i opisy, 2026-10-12
+
+**Zakres:** uzupełnienie ustaleń HM-3, HM-4 i HM-5 audytu spójności
+modułu z 11 października 2026, zatwierdzone przez właściciela. HM-3
+dotyczy technicznej kwalifikacji punktu w istniejącym porównaniu AMH,
+HM-4 opisu dostępności SVG, HM-5 ogólnych komunikatów braku odniesienia.
+Nie powstaje nowa norma, źródło, ekstrapolacja ani krzywa.
+
+**HM-3 — cały przedział wieku:** porównanie płci AMH w minipuberty
+wymaga, aby cały możliwy wiek pacjenta mieścił się przed pierwszymi
+urodzinami. Górna granica równa 1 roku jest dopuszczalna wyłącznie jako
+wyłączony koniec niepustego przedziału (`ageUpperInclusive: false`).
+Przedział obejmujący 1 rok włącznie, przekraczający 1 rok lub dokładny
+wiek 1 rok nie otrzymuje punktu ani znacznika odniesienia w tym widoku.
+Wcześniej publiczny renderer mógł dopuścić żeński punkt dla `[11/12, 1]`;
+obecny formularz przekazuje poprawne przedziały półotwarte i nie
+odtwarzał tego błędu. Kontrola widoku uzupełnia oryginalne `evaluate`,
+które nadal kwalifikuje całe źródłowe okno, donoszenie, metodę, materiał,
+jednostkę i wynik. Własne odniesienie chłopca od 7. dnia pozostaje
+dostępne przed początkiem wspólnych linii w 7,305 dnia.
+
+Źródła i populacje pozostają wcześniej sprawdzone:
+[Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3 — 119
+donoszonych chłopców, 338 próbek; [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363),
+[suplement v1, tabela D](https://doi.org/10.6084/m9.figshare.19469555.v1) —
+98 donoszonych dziewczynek, 266 próbek. Oba źródła: zdrowe niemowlęta
+z ciąż pojedynczych, COPENHAGEN, surowica, Access 2, mediany GAMLSS
+w pmol/L; prezentacja nadal używa 1 pmol/L = 0,1401 ng/mL.
+Przybliżony odczyt ryciny chłopców i tabela dziewczynek mają różną
+precyzję; nie są odniesieniem wcześniaczym ani normą diagnostyczną.
+Ograniczenia i pochodzenie liczb utrwala
+[dotychczasowy audyt AMH](hormone-lifespan/evidence/amh-infant-comparison-audit-2026-10-11.json).
+Żeński profil źródłowy nadal obejmuje dokładnie 1 rok w zwykłych
+widokach; globalne profile i dostępność Wang poza tym porównaniem
+pozostają bez zmian. Linie oraz stała oś log10 nie zależą od kwalifikacji.
+
+**HM-4 i HM-5 — znaczenie tekstu:** ogólny opis SVG porównania AMH
+w pokwitaniu nie zawiera historycznego zdania o żeńskiej inhibinie B.
+Odrębny renderer porównania LH/FSH już korzysta z własnego opisu.
+Ogólne komunikaty niedostępnego dopasowania stosują neutralną „wartość
+odniesienia”. Odrębne opisy porównań korzystających wyłącznie z median
+zachowują nazwę tej statystyki. Prawidłowo zakwalifikowane źródła nadal
+mają własne podpisy „średnia” lub „mediana”. Przykładowo Laurentino 2020,
+[DOI 10.1111/acel.13242](https://doi.org/10.1111/acel.13242), tabela 1,
+podaje średnie LH i FSH po 3,0 IU/L dla najmłodszej grupy N=34 zdrowych
+mężczyzn FAMe, surowica, Abbott Architect i1000 CMIA. Aplikacja zachowuje
+okno 18–<25 lat i ograniczenia rozbieżnych etykiet wieku źródła,
+opisane w [istniejącym ekstrakcie](hormone-lifespan/evidence/patient-point/laurentino2020-lh-fsh-group-means.json).
+
+**Syntetyczne przypadki wejście → oczekiwane zachowanie:**
+
+- AMH, dowolna płeć, zgodny kontekst źródłowy, `[11/12, 1)` → punkt;
+  `[11/12, 1]`, `[0.99, 1.01]` albo dokładnie 1 rok → brak punktu
+  porównania, bez zmiany krzywych lub skali.
+- AMH, donoszony chłopiec, dokładnie 7 dni → własne odniesienie Busch
+  około 64,25565 ng/mL; dziewczynka 7 dni → brak źródłowego odniesienia.
+- AMH, donoszona dziewczynka, dokładnie 1 rok, zwykły widok → zachowane
+  źródłowe p50 0,9916278 ng/mL; w porównaniu minipuberty brak punktu.
+- AMH, porównanie pokwitania → opis SVG dotyczy tego porównania,
+  bez twierdzenia o żeńskiej inhibinie B.
+- Mężczyzna 20 lat, LH lub FSH, znana niezgodna metoda albo materiał →
+  brak dopasowania i neutralna „wartość odniesienia”; zgodny kontekst →
+  nadal podpis „średnia”, a kwalifikujące źródło medianowe nadal „mediana”.
+
+**Wpływ i weryfikacja:** zmienia się wyłącznie odmowa punktu dla
+brzegowego kontekstu API oraz brzmienie dwóch rodzajów opisów.
+Normy laboratoryjne, wartości i granice źródeł, jednostki, geometria,
+interpretacja laboratoryjna, zapis i historia pozostają bez zmian.
+Regresje mają wywoływać rzeczywisty renderer i silnik, z kontrolą obu
+rodzajów końca przedziału oraz zachowanych podpisów poprawnych punktów.
+Ten zapis określa oczekiwany kontrakt, nie wynik testów ani walidację kliniczną.
 
 ### HORMONE-INHIBIN-SEX-COMPARISON — wspólna oś i punkt dziewcząt 8–20 lat, 2026-10-11
 
@@ -3165,6 +3332,99 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 *Strażnicy:* `tests/unit/ostatni-pomiar-porownanie.test.mjs` (9 — prawdziwe silniki tempa, trajektorii i BMI z produkcyjnymi tablicami w Node: zdanie tempa = `formatuj()`, werdykty = `verdictForPair`, nakładka waga↔BMI, krótki odstęp bez oceny, dorosły bez werdyktu z kategorią, Cole/talia/biodra/WHR neutralne; strażnik źródła bez starych pomocników, kontrola usuwacza komentarzy); `tests/e2e/ostatni-pomiar-porownanie.spec.mjs` (2 — prawdziwa ścieżka z modalem „Nowy pomiar": tekst sekcji zawiera zdanie tempa i werdykty policzone silnikami w tej samej stronie, brak „oczekiwania", zero alertów na trzech „stabilnych torach"; kontrola negatywna po 2 mies.: „krótki odstęp — bez oceny", bez „norma").
 
+### P-PANEL-POWROT — powrót do panelu powłoki bez ponownego wjazdu kart i przycisków (SW 1.1.242, 2026-10-12, zgłoszenie właściciela)
+
+**Zgłoszenie właściciela.** „Często jest tak, że karta »Centyle i BMI« oraz przyciski »Podsumowanie wyników« i »Zalecenia dietetyczne« skaczą, jak się zmienia strony, i to wygląda głupio.” Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, ostrzeżeń, zapisu ani synchronizacji.
+
+**Pomiar przed zmianą.** Playwright na prawdziwej powłoce `app.html`, fikcyjny pacjent (chłopiec 9 lat, 135 cm, 40 kg), tryb profesjonalny; Start → DocPro → Start; styl obliczony śledzonych elementów próbkowany w każdej widocznej klatce ramki Start (1440×1000, 1280×900, 390×844):
+- `#metabolicSummarySection` (oba przyciski) w pierwszej klatce po powrocie stała 12 px niżej z `opacity: 0` i przez 0,45 s podjeżdżała (`fadeSlideUp`); `#intakeCard` wjeżdżała o 18 px (`ios-enter`);
+- wyniki karty „Centyle i BMI” (`#bmiResult`, `#whResult`) i `#bmiJourneyMount` powstawały od nowa: wjeżdżały (`fadeSlideUp`), błyskały tłem (`pulseBG`), a liczba BMI odliczała się od zera (0,1 → 21,9 przez ok. 0,6 s, po drodze także „-0,0”);
+- 87 próbek widocznych klatek z takim efektem na desktopie i 224 na telefonie; powrót do „Jednostek lab.”: 95 próbek — pięć kroków `.lab-step` wjeżdżało od nowa.
+
+**Przyczyny.**
+1. Powłoka chowa nieaktywny panel przez `display:none` (`.app-pane[hidden]`). Przeglądarka zdejmuje wtedy układ ramki, a po ponownym pokazaniu od nowa uruchamia animacje CSS elementów, które odzyskują ramkę — także jednorazowe animacje wejścia, które dawno się skończyły (sprawdzone na tym samym węźle `#metabolicSummarySection`, bez zmiany jego klasy ani stylu).
+2. Przy powrocie powłoka odtwarza sesję w panelu (`Gp_p`: `vildaPersistRestoreAll`, `vildaSession.restore`), więc `update()` przebudowuje wyniki. Nowe kafelki dostają w `app.js` `animate-in --pulse` i odliczanie liczby, choć wartości się nie zmieniły.
+
+**Rozwiązanie.**
+- `vilda_shell.js` (`Pw_start`, `Pw_koniec`, wywołanie w `w()`): gdy pokazywany jest wczytany panel zamiast innego, powłoka — zanim ramka stanie się widoczna — dodaje do jego `<html>` klasę `vilda-panel-powrot` na 2 s. Potem zdejmuje klasę i od razu kończy (`finish()`) jednorazowe animacje CSS, które jeszcze trwają; zapętlonych nie rusza.
+- `style.css`: w trybie powrotu `.animate-in`, `._enter`, `._pop`, `._bounce`, `.lab-step`, `.pulse-danger-2s`, `.pulse-warning-2s` i błyski `::after` (`.--pulse`, `.pulse-*-2s`) mają `animation-delay: -60s !important`, więc animacja startuje jako zakończona. Ujemne opóźnienie, a nie `animation: none`: zdjęcie klasy nie zmienia nazwy animacji, więc jej nie uruchamia od nowa; zapętlone pulsowanie ostrzeżeń na tych elementach (1,25 s) mieści się w 60 s całkowitą liczbę razy i nie zmienia fazy. Animacja zaczęta pod koniec okna po zdjęciu klasy odzyskałaby zwykłe opóźnienie i ruszyła z miejsca — dlatego `Pw_koniec` ją kończy (bez tego próbka 5-sekundowa wraca do `opacity` 0,60).
+- `app.js` (`vildaShouldAnimateNumbers`): w trybie powrotu liczby nie są odliczane od zera.
+
+**Czego nie zmieniono.** Pierwsze otwarcie i przeładowanie panelu, strony otwierane bezpośrednio (bez powłoki) i zmiany danych po oknie animują jak dotąd. Ostrzeżenia zostają widoczne, zapętlone pulsowanie biegnie dalej, a jednorazowy impuls ostrzeżenia (`pulse-*-2s`) nie powtarza się przy powrocie. Zmiana danych w pierwszych 2 s po powrocie pokazuje nowy wynik bez animacji. Ukrywanie paneli przez `display:none` zostaje: trzymanie ukrytych paneli w układzie (np. `visibility:hidden`) zmieniłoby koszt pamięci i pracy w tle wszystkich paneli — osobna decyzja.
+
+**Ustalenie poza zakresem (do decyzji właściciela).** Ten sam `display:none` zeruje przewinięcie panelu: po powrocie strona stoi na samej górze (zmierzone na Start: `scrollY` 679 → 0 na desktopie, 513 → 0 na telefonie; wystarcza samo `hidden` ramki, bez nawigacji). Naprawa wymaga zapamiętania i odtworzenia przewinięcia w powłoce z uwzględnieniem nawigacji do celu (`Sn_deliverTarget`), więc nie jest częścią tej zmiany. *Rozstrzygnięte decyzją właściciela 2026-10-12: panel wraca tam, gdzie go zostawiono — wpis P-PANEL-PRZEWINIECIE niżej.*
+
+**Testy.** `tests/e2e/powloka-powrot-bez-animacji.spec.mjs` (2): (1) prawdziwa powłoka, Start → DocPro → Start: przez 1,4 s w żadnej widocznej klatce `#metabolicSummarySection`, `#bmiResult`, `#whResult` i `#intakeCard` nie mają `opacity < 1` ani przesunięcia, położenie trzech pierwszych jest stałe, liczba BMI od pierwszej klatki ma wartość „21,9”, panel jest w trybie powrotu, a `vildaShouldAnimateNumbers()` zwraca `false`; wynik przebudowany w oknie ma w chwili wstawienia `opacity` 1 i żadnej biegnącej animacji. Po oknie bramka liczb znów zwraca `true`, a nowy wynik po zmianie masy w chwili wstawienia startuje wjazd od `opacity` 0 (`fadeSlideUp` biegnie). Odczyt w chwili wstawienia (obserwator mutacji, przed pierwszą klatką) nie zależy od obciążenia — pierwsza wersja testu sprawdzała odliczanie próbkami klatek i w pełnym lokalnym przebiegu na 4 workerach nie zobaczyła wartości pośrednich, bo pierwsza klatka odliczania przyszła po ponad 600 ms. Na bazie bez poprawki test pada na sekcji z przyciskami (`opacity 0`, `translateY(12px)`, góra 691 zamiast 679). (2) Element `.animate-in` z czasem 5 s dodany w oknie jest po zdjęciu klasy w stanie końcowym, bez trwającej animacji; bez `finish()` w `Pw_koniec` test pada (`opacity` 0,60, `fadeSlideUp` trwa). Playwright nie ma tu WebKita — zachowanie w Safari na iPhonie i iPadzie do potwierdzenia przez właściciela.
+
+**Wersje.** `app.js` 231, `style.css` 88, `vilda_shell.js` 61; SW 1.1.241 → 1.1.242.
+
+### P-PANEL-PRZEWINIECIE — panel powłoki wraca tam, gdzie go zostawiono (SW 1.1.245, 2026-10-12, decyzja właściciela)
+
+**Decyzja właściciela.** Ustalenie z P-PANEL-POWROT: po powrocie do panelu strona stała na samej górze, ale jako skutek uboczny `display:none`, nie decyzja. Właściciel wybrał spośród dwóch wariantów („tam, gdzie zostawiono” albo jawnie „zawsze od góry”) wariant **tam, gdzie zostawiono**. Start pod listą i kartą pacjenta otwieranymi z innego panelu też wraca tam, gdzie go zostawiono, jak przy otwarciu listy na samym Start. Ukrywanie paneli przez `visibility:hidden` zachowałoby przewinięcie i układ, ale ukryte panele dalej liczyłyby układ i animacje w tle. To osobna decyzja, poza tą zmianą. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, ostrzeżeń, zapisu ani synchronizacji.
+
+**Pomiar przed zmianą** (Playwright z Chromium 141 w środowisku agenta; prawdziwa powłoka `app.html`; konto sejfu z fikcyjnym hasłem; fikcyjny pacjent: chłopiec 9 lat, 135 cm, 40 kg, tryb profesjonalny):
+- ramka Start przewinięta na 679 px (okno 1440×1000, ramka 853×920) → DocPro → Start: `scrollY` 0; na telefonie (iPhone 15 Pro, ramka 393×568) 513 → 0;
+- samo `frame.hidden = true`, bez nawigacji powłoki: `scrollY` czyta 0 już w tym samym zadaniu, a zdarzenie `scroll` z wartością 0 przychodzi w czasie ukrycia; po `hidden = false` bez odtworzenia zostaje 0;
+- `hidden = false` i w tym samym zadaniu `scrollTo({top, behavior: 'instant'})`: pierwsza i kolejne klatki ramki mają odtworzoną wartość;
+- przewinięcie elementów wewnątrz ramki (`position:fixed; overflow-y:auto`, jak `.vilda-auth-root`) przeglądarka zachowuje sama (1234 → 1234);
+- żadna z 11 tras nie przewija treści w wewnętrznym elemencie — przewija się okno dokumentu (1440×1000).
+
+**Rozwiązanie** (`vilda_shell.js`):
+- `Pp_zapisz` — w `w()` tuż przed `hidden = true` czyta przewinięcie okna wczytanego panelu i zapamiętuje je razem z dokumentem;
+- `Pp_odtworz` — w `w()` zaraz po pokazaniu i zmianie klasy trasy powłoki (ramka ma już szerokość tej trasy), a przed odświeżeniem podsumowania, przypomnień i odtworzeniem sesji (`Gp_p`). Wywołuje `scrollTo({top, behavior: 'instant'})`, bo `html` ma `scroll-behavior: smooth`. Działa w tym samym zadaniu, więc przed pierwszym malowaniem. Przycisk „na górę” powłoki od razu widzi odtworzoną pozycję (`at()` → `nt()`);
+- bez odtwarzania: (1) nawigacja z celem, np. sekcja konta w Ustawieniach albo wskazanie w Jednostkach lab., także Wstecz do takiego wpisu. `P()` i `Sn_historyEvent` wpisują cel do historii (`shellHref`) przed `w()`, a `Sn_setTarget` doręcza go po `w()`, więc `Pp_odtworz` rozpoznaje cel z `history.state` — cel ma pierwszeństwo. (2) Nowy dokument w ramce: przeładowany panel (`B`, `Gp5_przeladuj`, `stale`) startuje od góry, a `load` porzuca zapamiętaną pozycję;
+- lista i karta pacjenta (`Sn_openPatient`) bez wyjątku: Start pod listą wraca na zapamiętane miejsce, a lista ma własne przewijanie.
+
+**Dlaczego przed `Gp_p`.** Pierwszy powrót do Start po wpisaniu pacjenta zawsze odtwarza sesję (`Gp_p`), bo odcisk sesji zmienił się od wczytania ramki. `vildaPersistRestoreAll()` przebudowuje wtedy `#intakeMeasurements` bez wiersza historii (telefon: 487 → 235 px; desktop: −143 px), a wiersz wraca dopiero w następnym zadaniu. Pierwsza wersja odtwarzała przewinięcie w mikrozadaniu po `Gp_p`, więc trafiała w skrócony dokument. Na telefonie w oknie tuż pod kartą cały widok stał wtedy 252 px dalej, także po oknie powrotu, bo zakotwiczenie przewinięcia utrwalało przesunięty widok. Przewinięcie ustawione przed `Gp_p` przeglądarka trzyma przy treści: gdy karta nad oknem chwilowo się skraca, `scrollY` przesuwa się razem z nią. Na dole strony telefonu pierwsza klatka ma `scrollY` 7408 zamiast 7660, ale te same elementy stoją w tych samych miejscach, a po powrocie wiersza `scrollY` wraca do 7660.
+
+**Ustalenie poza zakresem (do decyzji właściciela).** Dwuetapową przebudowę karty „Szacowane spożycie energii” w `Gp_p` widać, gdy karta jest w oknie w chwili powrotu. Przez jedną klatkę karta nie ma wiersza historii: na desktopie treść pod kartą podnosi się o 143 px, a na samym dole strony desktopu, gdzie karta zawsze jest w oknie, treść nad kartą obniża się o 143 px. W następnej klatce wszystko wraca na miejsce. Dawniej panel wracał na górę, więc tego nie było widać. Przyczyną jest odtwarzanie wierszy karty, nie przewinięcie: `vilda_persist_runtime.js` odtwarza wiersz bieżący, a wiersze historii dopisuje później synchronizacja z pomiarami zaawansowanymi. Naprawa wymaga zmiany w modułach spożycia i persistence, więc nie jest częścią tej zmiany.
+
+**Czego nie zmieniono.** Ukrywanie paneli (`display:none`) i P-PANEL-POWROT (klasa `vilda-panel-powrot` nadal przed pokazaniem). Pierwsze otwarcie panelu startuje od góry, jak dotąd; mobilna korekta `ios26-ui.js` działa tylko na samej górze strony, więc nie nadpisze odtworzonej pozycji. Poziome przewinięcie nie jest odtwarzane. Przewijanie wewnątrz ramki (`.vilda-auth-root`, przewijane listy) zachowuje przeglądarka. Playwright nie ma tu WebKita, więc zachowanie w Safari na iPhonie i iPadzie do potwierdzenia przez właściciela. Bez zakotwiczenia przewinięcia przebudowa nad oknem może tam przesunąć widok na jedną klatkę.
+
+**Testy.**
+- `tests/unit/powloka-przewiniecie.test.mjs` (7) — prawdziwy `vilda_shell.js` na atrapie powłoki; ramka zeruje przewinięcie przy ukryciu. Sprawdza: powrót odtwarza 679 natychmiast, w tym samym zadaniu i przed odtworzeniem sesji; kontrolę bez przewinięcia; pierwszeństwo celu, także przez Wstecz, a po celu zwykły powrót odtwarza; brak odtworzenia w nowym dokumencie (w trakcie przeładowania i po nim); kilka przełączeń w jednym zadaniu; listę pacjentów z innego panelu. Na bazie pada 5 z 7. Każda z mutacji (bez sprawdzenia celu, bez sprawdzenia dokumentu, odtworzenie po `Gp_p`) wywraca co najmniej jeden test.
+- `tests/e2e/powloka-przewiniecie-panelu.spec.mjs` (3, desktop) i `tests/e2e/powloka-przewiniecie-panelu-mobile.spec.mjs` (1, telefon) — prawdziwa powłoka. Elementy w całości widoczne przed wyjściem stoją w oknie w tych samych miejscach w każdej widocznej klatce po powrocie, od pierwszej, a po oknie powrotu `scrollY` równa się zapamiętanemu. Ukryta ramka czyta 0 (kontrola przyczyny), a przycisk „na górę” powłoki jest widoczny. Desktop: Start 679 px; cel konta w Ustawieniach — sekcja otwarta i w oknie, zapamiętane miejsce nie pojawia się w żadnej klatce, a zwykły powrót odtwarza; lista pacjentów otwierana z DocPro — Start pod listą i po jej zamknięciu na zapamiętanym miejscu. Telefon: okno tuż pod kartą szacowanego spożycia (pierwszy powrót, z przebudową), 513 px i dół strony; dock widoczny, bez poziomego przewijania. Asercje czekają na warunek (minięcie okna powrotu, liczba klatek), nie na upływ czasu. Na bazie padają wszystkie 4; przy odtworzeniu po `Gp_p` pada wariant „tuż pod kartą”.
+
+**Wersje.** `vilda_shell.js` 62; SW 1.1.244 → 1.1.245 (numer 1.1.244 nadał równolegle #641).
+
+### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
+
+**Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
+
+**Wyzwalacz.** Przy włączonej synchronizacji `vilda_sync_integration.js` pobiera zmiany co ok. 20 s (sprawdza co 10 s, a odstęp między pobraniami ma co najmniej 12 s). Działa tak, dopóki dokument jest widoczny, także w oknie bez fokusu obok innej aplikacji. Pobiera też przy `focus` i powrocie widoczności, a przy utracie fokusu wysyła zaległe zmiany. Każda wymiana to dwa zdarzenia `vilda:sync-status-changed`. Na nie, a także na `vilda:session-changed`, `vilda:auth-hidden` i `storage` (`vildaCurrentPatientId`), reaguje `vilda_puberty_source.js` (`odswiez()`). Moduł czyta wczytanego pacjenta z sejfu od nowa i ogłasza najpierw `loading` bez danych, potem `ready`. `vilda_zrodla_pacjenta.js` widzi dwie zmiany odcisku i zamawia pełne `update()`. Dane pacjenta się przy tym nie zmieniają. Okno w tle nie jest więc osobną przyczyną: to czas, w którym synchronizacja działa sama, bez udziału użytkownika.
+
+**Pomiar przed zmianą.** Playwright na prawdziwej powłoce `app.html`, Chromium, fikcyjny pacjent zapisany w sejfie i wczytany z Karty pacjenta (chłopiec 9 lat, 135 cm, 40 kg), tryb profesjonalny, 1440×1000 i 390×844. Liczone były wszystkie zdarzenia `animationstart` w ramce Start, także animacji zapętlonych. Każde ze zdarzeń `vilda:sync-status-changed` (`syncing`, `idle`) i `vilda:auth-hidden` dawało 1–2 przeliczenia i 16 startów animacji:
+- `#metabolicSummarySection` (przyciski „Podsumowanie wyników” i „Zalecenia dietetyczne”) wjeżdżała od nowa (`fadeSlideUp`: 12 px, od `opacity` 0), a `#intakeCard` — `ios-enter`;
+- `#bmiResult`, `#whResult` i `#bmiJourneyMount` (karta „Centyle i BMI”) wjeżdżały z błyskiem tła (`pulseBG`), a liczba BMI odliczała się od zera (1,5 → 21,9);
+- obracający się obrys „Podsumowania wyników” (`rotateSummaryBorder`, 6 s na obrót) wracał do 0°;
+- zapętlone pulsowania ostrzeżeń (`pulseRed`/`pulseOrange` na `#intakeResults`, `#coleInfo`, `#whrSuggest` i pierścień `.pro-overlay` karty BMI) zaczynały od zera.
+
+Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczenia, bo w środowisku testowym nie ma usługi synchronizacji.
+
+**Przyczyny.**
+1. `vildaUpdatePrepResetResultContainers` (`vilda_update_prep.js`) chował `#results` (`display:none`) na początku każdego przeliczenia, a `vildaUpdatePrepRunMainUpdate` pokazywał je z powrotem (`display:grid`) w tym samym zadaniu. Przeliczenie po drodze wymusza obliczenie stylu, więc przeglądarka zdejmowała animacje z całego poddrzewa i po pokazaniu uruchamiała je od nowa. Dotyczyło to także jednorazowych animacji wejścia, które dawno się skończyły, i animacji zapętlonych. Na czas przeliczenia dokument był też krótszy.
+2. `update()` buduje kafelki wyników od nowa (`#bmrInfo`), a obserwator w `app.js` nadawał każdemu nowemu `.result-box` `animate-in --pulse` i odliczanie liczby, bez względu na to, czy treść się zmieniła.
+3. Pierścień ostrzeżenia trybu profesjonalnego (`.pro-overlay`, `applyProModePulse` → `applyPulse`) powstaje razem z kafelkiem, więc jego zapętlona animacja startowała od zera przy każdym przeliczeniu.
+
+**Rozwiązanie.**
+- `vilda_update_prep.js`: przy gotowym BMI `#results` zostaje widoczny przez całe przeliczenie (`zostawWyniki`), które i tak kończy się jego pokazaniem. Bez gotowego BMI wyniki są chowane jak dotąd. Wyjątek w trakcie budowy wyników chowa `#results`, tak jak przed zmianą, i jest rzucany dalej. Dzięki temu stare karty nie zostają widoczne obok wyczyszczonego BMI.
+- `app.js` (obserwator `app:result-box-enhancement-observer`): kafelek, który w tej samej partii zmian DOM zastępuje kafelek o tym samym `id` z tą samą treścią tekstową i klasami, nie dostaje `animate-in` ani `--pulse`. Liczba BMI jest wtedy wpisywana od razu (`animateValue` z czwartym argumentem). Nowy kafelek i zmieniona treść animują się jak dotąd.
+- `app.js` (`vildaPulsWspolnaFaza`, wołane z `applyPulse`): zapętlone `pulseRed`/`pulseOrange` danego elementu i jego `::after` dostają `startTime = 0`, czyli fazę z zegara dokumentu. Odtworzony pierścień kontynuuje więc cykl poprzednika. Jeśli element nie jest jeszcze wyrenderowany (wyniki pokazywane na końcu przeliczenia), funkcja próbuje jeszcze raz w następnej klatce, przed pierwszym malowaniem. Jednorazowego impulsu (`pulse-*-2s`) to nie dotyczy.
+
+**Pomiar po zmianie.** Te same zdarzenia nadal dają 1–2 przeliczenia, ale żadna animacja wjazdu, błysku ani obrysu nie startuje, a `#results` nie znika ani razu. Przyciski i karta stoją w tym samym miejscu, a liczba BMI się nie odlicza. Na odtwarzanych nakładkach nadal startują `pulseOrange`/`pulseRed`, ale z fazą z zegara: wszystkie zapętlone pulsowania mają `startTime` 0 (faza = zegar dokumentu mod 1250 ms), na desktopie i telefonie. Wpisanie innej masy działa jak dotąd: nowy wynik wjeżdża i liczba się odlicza. Ponowne wpisanie tej samej masy na bazie dawało wjazd od `opacity` 0, a po zmianie nie ma animacji.
+
+**Czego nie zmieniono.** Liczba i kolejność przeliczeń, `vilda_puberty_source.js`, `vilda_zrodla_pacjenta.js` i harmonogram synchronizacji zostają bez zmian. Treść i kolejność kafelków, ostrzeżenia oraz P-PANEL-POWROT też się nie zmieniają. Pierwsze pojawienie się wyników i każda zmiana treści kafelka animują jak dotąd. Karta „Porównanie z poprzednim pomiarem” (`vilda_summary_cards.js`) jest przy każdej zmianie stanu synchronizacji budowana od nowa, ale bez animacji i bez zmiany wysokości (691 px przez cały pomiar).
+
+**Ustalenie poza zakresem (do decyzji właściciela).** `vilda_puberty_source.js` przy każdym ponownym odczycie tego samego pacjenta ogłasza `loading` bez danych, a potem `ready`. Daje to zbędne pełne przeliczenia na każde zdarzenie synchronizacji, sesji i `storage`, a przy synchronizacji co ok. 20 s. Po tej zmianie ich nie widać, ale kosztują pracę procesora i baterię. Komentarz w module opisuje czyszczenie przy ponownym odczycie jako celowe: wynik starszej generacji odczytu nie potwierdza bieżącego rekordu. Zmiana, np. zachowanie danych do czasu odczytu przy tym samym `patientId`, wymaga więc decyzji właściciela.
+
+**Testy.** `tests/e2e/wyniki-przeliczenie-w-tle.spec.mjs` (2, prawdziwa powłoka, desktop):
+1. Wpisany pacjent, dwa `update()` z rzędu. `#results` ani razu nie ma `display:none` (obserwator stylu z `oldValue`). Nowy `#bmiResult` w chwili wstawienia ma `opacity` 1, nie ma `animate-in` ani biegnącej animacji. Nie startuje żadna z animacji `fadeSlideUp`, `ios-enter`, `pulseBG`, `rotateSummaryBorder`. Obrys „Podsumowania wyników” to ta sama animacja (`getAnimations()`), a położenie przycisków i karty się nie zmienia. Odtworzone pulsowania mają fazę poprzednika (±2 ms, odczyt po `Animation.ready`), a liczba BMI ma tylko wartość „21,9”. Po zmianie masy na 41 kg nowy wynik wjeżdża od `opacity` 0 z `fadeSlideUp`.
+2. Pacjent zapisany w sejfie i wczytany jak z listy, potem cykl synchronizacji w kształcie z `vilda_sync_integration.js` i `vilda:auth-hidden`. Sprawdzane są te same warunki.
+
+Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (bez `zostawWyniki`, bez porównania treści kafelka, bez wspólnej fazy pulsowania) wywraca oba testy na właściwej asercji. `tests/e2e/powloka-powrot-bez-animacji.spec.mjs` jest bez zmian i przechodzi. Playwright nie ma tu WebKita, więc zachowanie w Safari do potwierdzenia przez właściciela.
+
+**Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
+
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
 **Zgłoszenie właściciela.** Po P-DYMKI: „sprawdź, czy wyskakujące modale, np. od Terminarza i inne, nie wchodzą w konflikt z dockiem i strzałką nawigacyjną".
@@ -4475,10 +4735,65 @@ Testy pokrycia, każdy z mutacją wyłapaną w tym PR:
 
 **Czego ta zmiana NIE robi.** Podpowiedź daty w oknie Karty („Popraw pomiar") i data w karcie porównania dla rekordów zapisanych ponownie przed #592 zostają jak były. Oba zachowania są wcześniejsze niż #592 i ten PR ich nie dotyka; przegląd uznał je za poza zakresem. Wskaźnik zapisu po poprawce w Karcie zachowuje się jak przed zmianą (wpis P-ODTWORZ-WIEK-2).
 
+*(Aktualizacja: P-ODTWORZ-WIEK-4 — punkt 1 wprowadził regresję w powłoce: ukryty panel dostawał lustrem nowe wartości przy starej bazie, a po F5 Start liczył wiek na dziś. Punkt 2 rozbijał wiek na niezależne pola i przy awansie po usunięciu zostawiał niezapisaną zmianę wieku usuniętej wizyty. Poprawki są we wpisie niżej.)*
+
 **Do decyzji właściciela.**
 1. Akceptacja kliniczna.
 2. Wpis pole po polu: pole zmienione przez lekarza w formularzu wygrywa z poprawką z Karty do zapisu; zapis z formularza da wtedy wartość lekarza.
 3. Przejście formularza na awansowaną wizytę po usunięciu bieżącego pomiaru (opisane tu jawnie).
+
+### P-ODTWORZ-WIEK-4 — bazę odświeżają też panele-rodzeństwo w powłoce; wiek jako jedna wielkość; awans po usunięciu w całości (SW 1.1.241, `vilda_baseline_pacjenta.js` 4, `vilda_vault.js` 210, 2026-10-12, przegląd po P-ODTWORZ-WIEK-3)
+
+**Skąd.** Piąta runda przeglądu adwersaryjnego, tym razem kodu P-ODTWORZ-WIEK-3 (#631): 3 perspektywy, każde znalezisko sprawdzał niezależny weryfikator na prawdziwej stronie. Potwierdzono dwie regresje #631 i dwie drobne sprawy, a właściciel zdecydował: „Pełna poprawka teraz".
+
+**Reguła** bez zmian (Rata B, P3): wzrost i masę znamy wyłącznie z chwili pomiaru; data urodzenia podpowiada wiek tylko **następnego** pomiaru.
+
+**Zmiana (`vilda_baseline_pacjenta.js` 3 → 4, `vilda_vault.js`).**
+
+1. **Panele-rodzeństwo odświeżają bazę (regresja #631, poważna).** Od #631 lustro formularza przenosi poprawkę z Karty do pozostałych paneli powłoki, ale powiadomienie sejfu (`onPatientSaved`) dostaje tylko ramka, która zmieniała rekord. Ukryty, wcześniej otwarty DocPro (wystarczała 1 s) miał więc nowe wartości (172,5) przy starej bazie (172). Jego moduł daty urodzenia brał je za nowy pomiar i liczył wiek na dziś: 16 l. 11 m., „Wiek na dzień dzisiejszej wizyty", `measuredAtISO` z dzisiejszą datą. Przy zamknięciu karty albo F5 autozapis tego panelu nadpisywał wspólną sesję. Po F5 Start pokazywał wiek na dziś, a „Zapisz" stemplował dzisiejszą datę — to błąd G3/G6, który #631 miał usunąć. Przed #631 poprawka się cofała, ale wiek i data zostawały dobre. Teraz ramka, która odświeżyła bazę po zmianie w miejscu (`isUpdate`), prosi ramki-rodzeństwo tego samego originu (`parent.frames`) o to samo (`VildaBaselinePacjenta.refreshFromSibling`). Razem z prośbą podaje listę pól wizyty, które sama wpisała. Rodzeństwo przechodzi strażnika bieżącego pacjenta i tożsamości, odświeża bazę i wpisuje tylko te pola. Decyzji nie liczy u siebie, bo jego baza bywa o wizytę starsza (własny zapis innego panelu jej nie odświeża), a tygodni lustro nie przenosi. Rodzeństwo nie wymusza też zapisu wspólnej sesji: zapisała ją ramka z powiadomieniem, a jego zwykły autozapis zostaje jak był. Dalej nie przekazuje (bez pętli). Moduł ładują tylko strony z formularzem wizyty (`index.html`, `docpro.html`, `kalkulator-klirens.html`).
+2. **Wiek jako jedna wielkość (regresja #631, drobna).** Lata, miesiące i tygodnie idą razem. Gdy lekarz zmienił w formularzu którekolwiek z nich (a pole nie jest tylko do odczytu z daty urodzenia), zostaje cały jego wiek. Inaczej poprawka wieku z Karty wchodzi w całości. Dotąd zmiana miesięcy w formularzu (5/11 → 5/10) i lat w Karcie (→ 6/0) składała się w 6 l. 10 m. — wiek, którego nikt nie wpisał.
+3. **Inna wizyta wchodzi w całości (regresja #631, poważna, rzadka).** Gdy nowa głowa jest inną wizytą, wpisywane są wszystkie pola tej wizyty. Tak jest po usunięciu bieżącego pomiaru z awansem starszej wizyty. Sejf oznacza wtedy powiadomienie znacznikiem `promoted` (`vilda_vault.js`, `deleteMeasurementRow`). Moduł rozpoznaje też inny `timestampISO` (poprawka w miejscu go nie zmienia). Sam znacznik czasu nie wystarczał: po pierwszym awansie bez daty `timestampISO` znika, więc drugi awans z rzędu wyglądał jak poprawka w miejscu. Dotąd niezapisana ręczna zmiana wieku USUWANEJ wizyty zostawała przy starszej (bez daty urodzenia; u niemowlęcia centyle 81./87. → 12./8.).
+
+**Źródło i populacja.** Wzory, tablice, progi, interpolacja i jednostki są bez zmian. Centyle w przykładach liczą produkcyjne funkcje formularza: siatki WHO 2006 (`LMS_INFANT_*`) poniżej 36 mies., OLAF (domyślne źródło formularza) dla starszych.
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, prawdziwa strona albo prawdziwe moduły; Europe/Warsaw; dane fikcyjne).**
+
+| Wejście | Przed zmianą (`audyt` ff1c098) | Po zmianie |
+|---|---|---|
+| Powłoka: chłopiec ur. 20-07-2009, 172 cm / 60 kg, zapis 17-06-2026. 10-07: „Odtwórz zapis" na Start, DocPro otwarty na 1 s, powrót na Start, Karta: wzrost 172 → 172,5, F5, „Zapisz" | ukryty DocPro: 172,5, 16/11, baza 172, data 2026-07-10; po F5: 16 l. 11 m.; zapis: 172,5, 16/11, 2026-07-10 | ukryty DocPro: 172,5, 16/10, baza 172,5, data 2026-06-17; po F5: 16 l. 10 m., „Pomiar z 17-06-2026"; zapis: 172,5, 16/10, 2026-06-17 |
+| Bez daty urodzenia, wizyta 5 l. 11 m.; lekarz: miesiące 10 (bez zapisu); Karta: 6 l. 0 m. | formularz 6 l. 10 m. | formularz 5 l. 10 m. (wiek lekarza); kontrola bez zmiany lekarza: 6 l. 0 m. |
+| Bez daty urodzenia, wizyta 5 l. 2 m. (110 / 19); lekarz: miesiące 1 (bez zapisu); usunięcie bieżącego pomiaru, awans wizyty 5 l. 0 m. (108 / 18) | formularz 5 l. **1** m., 108 / 18 | formularz 5 l. 0 m., 108 / 18 |
+| Bez daty urodzenia, 5 l. 2 m.; lekarz: miesiące 4; Karta: miesiące 3 i masa 19,5 | formularz 5 l. 4 m., 19,5 (bez zmian, teraz z testem) | jak obok |
+
+**Wpływ kliniczny.** W powłoce poprawka z Karty nie zamienia już po F5 zapisanej wizyty w wizytę „na dziś" i nie stempluje dzisiejszej daty. Wiek pokazany i zapisany to zawsze wiek, który ktoś wpisał. Po usunięciu bieżącego pomiaru formularz pokazuje spójną starszą wizytę. Nowa wizyta liczy się jak dotąd.
+
+**Przegląd tej zmiany (runda 6: 2 perspektywy, każde znalezisko u niezależnego weryfikatora na prawdziwej stronie).** Potwierdzone 4 drobne znaleziska w pierwszej wersji tego PR. Wszystkie są poprawione w nim samym:
+- **Odbiorca liczył wiek ze swoich tygodni.** Lustro ich nie przenosi, więc ukryty DocPro wpisywał wiek z Karty nad niezapisanymi tygodniami lekarza. Zapis z DocPro gubił 0 l. 1 m. + 7 tyg.
+- **Odbiorca ze starszą bazą brał zmianę w miejscu za „inną wizytę”.** Wpisywał całą głowę, a lustro przenosiło ją na Start: niezapisane 16/9 albo 5/4 lekarza wracało do zapisanego wieku. Działo się tak nawet po zmianie samej daty starszego wiersza.
+- **Brak wykrycia drugiego z rzędu awansu bez znacznika czasu.** Wiek usuwanej wizyty zostawał przy awansowanej.
+
+Poprawki: lista pól od nadawcy, odbiorca bez własnej decyzji i bez wymuszonego zapisu, znacznik `promoted` z sejfu.
+
+**Testy.** `tests/unit/odtworzenie-wiek-pomiaru-2.test.mjs` (31, prawdziwe moduły, w tym prawdziwy `vilda_vault.js` dla znacznika `promoted`).
+- Na `audyt` ff1c098 czerwonych jest 7 z 31 (`vilda_baseline_pacjenta.js` i `vilda_vault.js` są takie same w d0c1bda): powiadamianie rodzeństwa z listą pól i bez przekazywania dalej, wiek jako jedna wielkość, pełny wpis innej wizyty, znacznik `promoted` w powiadomieniu sejfu, odbiorca ze starszą bazą, odbiorca z tygodniami nieprzeniesionymi lustrem i awans bez znaczników czasu.
+- Na pierwszej wersji tego PR (a50339b) czerwonych jest 5 z 31: powiadamianie rodzeństwa (bez listy pól) i cztery przypadki z przeglądu — znacznik `promoted`, odbiorca ze starszą bazą, odbiorca z tygodniami i awans bez znaczników czasu.
+- Test pokrycia „to samo pole zmienione przez lekarza i Kartę” jest zielony na obu wersjach; mutacja warunku „lekarz zmienił wiek” daje 2 czerwone.
+
+`tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs`:
+- powłoka bez ponownego wejścia do DocPro, z F5 i zapisem — czerwony na `audyt` (ukryty DocPro 16/11, baza 172, 2026-07-10);
+- ukryty DocPro ze starszą bazą i niezapisany wiek lekarza po zmianie daty starszego wiersza w Karcie — czerwony na a50339b (Start 16/11 zamiast 16/9).
+
+Testy powłoki (odtwarzanie, P-ODTWORZ-WIEK-3, -4) przeszły 3 razy z rzędu (15 z 15).
+
+Zmierzone przy okazji, bez zmian kodu: wskaźnik zapisu po poprawce w Karcie pokazuje „zapisane”, a „Niezapisane zmiany” dopiero po następnym wpisie — tak samo na `audyt` i po zmianie (jak we wpisie P-ODTWORZ-WIEK-2).
+
+**Czego ta zmiana NIE robi.** Panele bez modułu linii bazowej nie odświeżają bazy. To strony bez formularza wizyty, więc nie ma tam czego liczyć. Zmiany z innego urządzenia albo z synchronizacji nadal nie wołają `onPatientSaved` (jak dotąd).
+
+**Do decyzji właściciela.**
+1. Akceptacja kliniczna.
+2. Wiek jako jedna wielkość: wiek wpisany przez lekarza w formularzu wygrywa w całości z poprawką wieku z Karty.
+3. Panele-rodzeństwo w powłoce odświeżają bazę po zmianie w miejscu i wpisują dokładnie pola wpisane przez panel, w którym pracuje lekarz.
+4. Znacznik `promoted` w powiadomieniu sejfu o zmianie w miejscu (nowe pole powiadomienia, bez zmiany formatu rekordu).
 
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
@@ -11915,6 +12230,70 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 **Wersje.** `vilda_version_history_ui.js` 14 → 15 (8 stron), precache (append-only), `SW_VERSION` 1.1.179 → 1.1.180 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`2dbd48a`). „Do decyzji”: brak.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
+
+## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.248, `vilda_sync_integration.js` 48, `vilda_sync.js` 38, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
+
+**Skąd.** Zgłoszenie właściciela z 2026-10-12. Użytkowniczka z kontem PRO (dane z telefonu w chmurze) logowała się pierwszy raz na komputerze w pracy. Na pytaniu „Pobierz dane z serwera” wyskoczył baner „Dostępna nowa wersja aplikacji”. Kliknęła „Aktualizuj”, karta się przeładowała i pytanie zniknęło. Baza pacjentów się nie pobrała, a synchronizacja na tym komputerze została wyłączona, bez żadnego komunikatu. To etap 1 z trzech; decyzje do kolejnych etapów są niżej.
+
+**Co było.**
+- Integracja (`vilda_sync_integration.js`) stawiała znaczniki w `sessionStorage`, zanim użytkownik odpowiedział: `vilda-probe-done-v1` przed sondą serwera, `vilda-new-device-restore-shown-v1` w chwili pokazania pytania. Przeładowanie karty zachowuje `sessionStorage` i odtwarza sesję sejfu, więc po nim znaczniki blokowały i pytanie, i pobranie. Zmierzone w Chromium: po przeładowaniu nie szło już żadne zapytanie o stan slotu.
+- Sonda (`VildaSync.probeNewDevice`, `vilda_sync.js`) oddawała „to nie jest nowe urządzenie” także wtedy, gdy nie dostała odpowiedzi: błąd sieci, timeout, odpowiedź serwera inna niż 200, a także żądanie przerwane przez przeładowanie karty w trakcie sondy. Integracja odhaczała wtedy sondę w karcie, więc po takim przeładowaniu pytanie też znikało. Znalezione w CI tego PR (test bramki banera): karta przeładowała się, zanim serwer odpowiedział; zmierzone w Chromium — po przeładowaniu `vilda-probe-done-v1` = „1”, jedno zapytanie o stan slotu, okna brak.
+- Okno pytania było wbudowane tylko w `index.html` (`inline_index_10.js`). Sonda działa w każdym dokumencie najwyższego poziomu, który ładuje integrację. W powłoce `app.html` (adres startowy PWA) i na siedmiu innych stronach z logowaniem zdarzenie szło w próżnię: pytanie nie pokazywało się wcale, a znaczniki i tak się zużywały.
+- Baner aktualizacji (`ios26-ui.js`, `Mt`) pokazywał się, gdy tylko czekał nowy SW, niezależnie od logowania, pytania i pierwszej synchronizacji. Leżał nad oknem pytania.
+
+**Co jest.**
+- *Integracja i sonda.* `vilda-probe-done-v1` powstaje dopiero po pewnym wyniku „to nie jest nowe urządzenie”: urządzenie zna slot (albo slot obrócono w innej karcie) lub serwer nie ma slotu (404). Wynik bez rozstrzygnięcia sonda oznacza polem `inconclusive: true` (sejf zablokowany, brak tożsamości synchronizacji, błąd sieci, timeout, żądanie przerwane, odpowiedź inna niż 200 i 404); taki wynik nie odhacza sondy, więc następne odblokowanie albo przeładowanie sonduje ponownie. Zdarzenie pytania idzie bez znacznika. Dopóki pytanie czeka na odpowiedź, każde odblokowanie (także odtworzenie sesji po przeładowaniu) sonduje serwer od nowa i pyta ponownie. Nowe API `VildaSyncIntegration.isStartupSyncInProgress()` zwraca prawdę od odblokowania: przez odstęp 600 ms, sondę i `syncFull` startu, a w trybie chmurowym do końca pobrania z chmury. Sufit: 5 minut od ostatniego kroku.
+- *Okno pytania.* Nowy moduł `vilda_nowe_urzadzenie.js` buduje okno w dokumencie najwyższego poziomu na wszystkich 8 stronach z logowaniem (`app.html`, `index.html`, `docpro.html`, `kalkulator-klirens.html`, `notatki.html`, `subskrypcja.html`, `terminarz.html`, `ustawienia.html`); ramki paneli powłoki go nie budują. Znacznik odpowiedzi `vilda-new-device-restore-shown-v1` stawia dopiero kliknięcie. „Pobierz dane z serwera” stawia go przed startem pobierania, więc przeładowanie w trakcie wznawia pobieranie. Drugi przycisk to „Zacznij od nowa (nie pobieraj)”. Blokada sejfu chowa okno bez odpowiedzi. Treść, identyfikatory i wygląd zostały jak dotąd. Style z atrybutów `style=` przeszły do `vilda_auth_ui.css` (selektory od `#vilda-restore-overlay`). Style obliczone i położenie każdego elementu okna są identyczne jak przed zmianą: 2 szerokości (1440 i 390 px) × 5 trybów wyglądu. Obramowania, zaokrąglenia, tła i kolorów przycisków arkusz nie deklaruje: nadaje je zawsze włączona skórka (`.liquid-ios26 button` z `!important`, P-STYLE rata 4a), jak dotąd, gdy przegrywały z nią atrybuty `style=`. W `index.html` okno zostaje w znacznikach, ukryte, jak dotąd; moduł tylko podpina do niego przyciski. `vilda_chrome.js` (`he`) traktuje każdy `[aria-modal="true"]` w dokumencie jako otwarte okno, więc strona główna nadal nie ma przejść widoku między stronami ani gestu przesuwania stron. Na pozostałych stronach okno powstaje dopiero przy pytaniu. `index.html` nie ładuje już `inline_index_10.js`; plik i jego wpis precache zostają (append-only).
+- *Bramka banera* (`ios26-ui.js`). `Mt` nie pokazuje banera wprost, tylko zgłasza go bramce. Baner czeka, dopóki:
+  - widać ekran logowania (`html.vilda-auth-locked`, widoczny `.vilda-auth-root` albo `body.vilda-auth-embedded-open` w ramce powłoki);
+  - trwa start synchronizacji (`isStartupSyncInProgress`);
+  - okno nowego urządzenia jest otwarte albo trwa pobieranie z niego (`VildaNoweUrzadzenie.czyAktywne`);
+  - widać nakładkę trybu chmurowego.
+
+  Baner pokazuje się po 1,5 s otwartej bramki. Widoczny baner chowa się, gdy taki proces ruszy, i wraca po nim. Gdy bramka jest zamknięta bez przerwy dłużej niż 10 min, baner pokazuje się mimo to. Odroczenie jest bezpieczne: nowy SW aktywuje się tylko po „Aktualizuj” (`SKIP_WAITING`), a bez kliknięcia wchodzi po zamknięciu wszystkich kart. Bramka nie dotyka wskaźnika po „Później” ani przeładowania po `controllerchange` (aktualizacja z innej karty). Diagnostyka: `VildaServiceWorkerClientLifecycle.updateBannerGateReasons()` i pola stanu `updateBannerGateRequestCount`, `updateBannerDeferredCount`, `updateBannerDeferReasons`, `updateBannerDeferredHideCount`, `updateBannerDeferLimitCount`.
+
+**Czego ta rata nie zmienia.** Reguły scalania, wysyłki i pobierania (w `vilda_sync.js` zmienia się tylko wynik sondy nowego urządzenia: pole `inconclusive`), znaczenie flagi `vilda-sync-enabled-v1`, PRO oraz tryby „Komputer w pracy” i „Obcy komputer”. „Zacznij od nowa” obowiązuje jak dotąd do końca karty; w nowej karcie pytanie wraca, tak jak wcześniej w `index.html`. W powłoce pytanie zobaczą teraz także urządzenia, które go dotąd nie widziały: konto ma slot w chmurze, a to urządzenie nigdy nie synchronizowało.
+
+**Decyzje właściciela do kolejnych etapów (2026-10-12).**
+1. Przy aktywnym PRO synchronizacja ma być domyślnie włączona na wszystkich urządzeniach konta, z możliwością wyłączenia na urządzeniu. Politykę prywatności doprecyzować razem z tą zmianą.
+2. Dawna odpowiedź „Nie, tylko to urządzenie” nie była nigdzie zapisywana; sposób jej potraktowania rozstrzyga wykonawca. Plan: jednorazowe włączenie z komunikatem i przełącznikiem „Wyłącz na tym urządzeniu”. Jawne wyłączenie w Ustawieniach zawsze respektowane.
+3. Po wygaśnięciu PRO synchronizacja ma się wyłączać.
+4. Etap 3 (PRO = synchronizacja domyślna, flaga per konto) czeka na synchronizację przyrostową (`docs/SYNC_PRZYROSTOWA_PLAN.md`). Etap 2 (automatyczne pierwsze pobranie na „Komputerze prywatnym”, pasek postępu, błąd z „Spróbuj ponownie”) zaczyna się od makiety.
+
+**Wpływ kliniczny.** Brak: wyniki, dane, scalanie i zapis bez zmian. Zmienia się tylko moment pokazania pytania o pobranie danych i banera aktualizacji.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| nowe urządzenie, slot w chmurze, odblokowanie | zdarzenie pytania; w `sessionStorage` brak znaczników (czerwony na kodzie sprzed zmiany) |
+| jak wyżej, przeładowanie bez odpowiedzi | ponowna sonda, pytanie wraca (czerwony na kodzie sprzed zmiany) |
+| przeładowanie, zanim serwer odpowiedział na sondę | sonda nieodhaczona; po przeładowaniu ponowna sonda i pytanie (czerwony na kodzie sprzed poprawki) |
+| sonda bez rozstrzygnięcia: błąd sieci, przerwane żądanie, 503, 429, 401, sejf zablokowany | `inconclusive: true`, bez znacznika sondy (czerwony na kodzie sprzed poprawki) |
+| serwer bez slotu (404) albo urządzenie znające slot | pewne „nie”: bez `inconclusive`, znacznik sondy jak dotąd |
+| „Pobierz”, przeładowanie w trakcie pobierania | bez pytania, pobieranie rusza samo |
+| `index.html` po zalogowaniu, bez danych w chmurze | ukryte okno `[aria-modal="true"]` w dokumencie, jak przed zmianą: strona główna bez przejść widoku (`he`). Wersja budująca okno dopiero przy pytaniu włączała te przejścia, a w Chrome 149 (CI) nowa strona po przejściu z `index.html` do Ustawień przestawała się rysować |
+| „Zacznij od nowa”, przeładowanie | bez sondy, bez pobierania, bez pytania (jak dotąd) |
+| urządzenie zsynchronizowane | znacznik sondy po wyniku, `syncFull` przy włączonej synchronizacji, jedna sonda na kartę (jak dotąd) |
+| ramka panelu powłoki | bez sondy i bez okna (jak dotąd) |
+| `app.html`, nowe urządzenie | okno w dokumencie powłoki; „Pobierz” włącza synchronizację i pobiera (przed zmianą: brak okna) |
+| telefon, `app.html` | okno na całym ekranie, przyciski widoczne, brak przewijania w poziomie |
+| nowy SW czeka, okno pytania otwarte | baner wstrzymany (czerwony na `ios26-ui.js` sprzed zmiany); po odpowiedzi baner się pokazuje |
+| baner widoczny, okno pytania się otwiera | baner chowa się (czerwony na `ios26-ui.js` sprzed zmiany); po odpowiedzi wraca, a „Aktualizuj” przeładowuje pod nowym SW |
+| tryb gościa, nowy SW | baner jak dotąd (`tests/e2e/pwa-pierwsza-wizyta.spec.mjs`) |
+
+Testy: `tests/unit/nowe-urzadzenie-pytanie.test.mjs` (prawdziwe `vilda_sync_integration.js` i `vilda_sync.js`), `tests/e2e/nowe-urzadzenie-pytanie.spec.mjs`, `tests/e2e/nowe-urzadzenie-pytanie-mobile.spec.mjs`, `tests/e2e/baner-aktualizacji-bramka.spec.mjs` (prawdziwy SW). Atrapa serwera synchronizacji: `tests/support/atrapa-synchronizacji.mjs`.
+
+**Źródło kodu.** `vilda_sync_integration.js`, `vilda_sync.js` i `ios26-ui.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
+
+**Wersje.** `vilda_sync_integration.js` 47 → 48, `vilda_sync.js` 37 → 38, `ios26-ui.js` 44 → 45, `vilda_auth_ui.css` 76 → 77, nowy `vilda_nowe_urzadzenie.js?v=1` (wpis precache dopisany ręcznie). Pliki wstrzykujące podbite przez `npm run podbij-wersje`. `SW_VERSION` 1.1.247 → 1.1.248 (numery 1.1.245, 1.1.246 i 1.1.247 nadały równolegle #642, #644 i #646).
+
+**Ryzyko resztkowe.**
+- „Aktualizuj” kliknięte w innej karcie nadal przeładowuje wszystkie karty (`controllerchange`); bramka tego nie wstrzymuje. Pytanie i pobieranie wracają po przeładowaniu same.
+- Dopóki pytanie czeka na odpowiedź albo sonda nie dostała rozstrzygnięcia, każde odblokowanie i przeładowanie wysyła jedno zapytanie o stan slotu (dotąd jedno na kartę).
+- Po sondzie bez rozstrzygnięcia (np. brak sieci przy logowaniu) pytanie wraca przy następnym odblokowaniu albo przeładowaniu, a nie zaraz po powrocie sieci. Ponawianie z paskiem postępu to etap 2.
+
+**Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages) i makieta etapu 2.
 
 ## Slot obrócony w innej karcie (P-SYNC-ROTACJA-KART, SW 1.1.197, `vilda_sync.js` 37, 2026-10-08)
 

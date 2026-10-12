@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { expect, test } from '../support/test-czas.mjs';
 import { quickFill, quickSelect, closePatientEditor } from '../support/lab-puberty-quick.mjs';
 
@@ -110,32 +111,34 @@ function expectSmoothPath(d) {
   const commands = [...d.matchAll(/([MC])([^MC]*)/g)].map(match => ({
     command: match[1], points: match[2].trim().split(/[\s,]+/).map(Number)
   }));
-  expect(commands[0].command).toBe('M');
-  expect(commands[0].points).toHaveLength(2);
-  expect(commands.length).toBeGreaterThan(10);
+  assert.equal(commands[0].command, 'M', 'path starts with a move command');
+  assert.equal(commands[0].points.length, 2, 'move command has two coordinates');
+  assert.ok(commands.length > 10, 'path has more than ten commands');
   let start = commands[0].points;
   let incoming = null;
   let checkedTangents = 0;
-  for (const { command, points } of commands.slice(1)) {
-    expect(command).toBe('C');
-    expect(points).toHaveLength(6);
-    expect(points.every(Number.isFinite)).toBe(true);
+  // These dense synchronous checks need no per-assertion Playwright reporting.
+  for (const [index, { command, points }] of commands.slice(1).entries()) {
+    const segment = `cubic segment ${index + 1}`;
+    assert.equal(command, 'C', `${segment}: cubic command`);
+    assert.equal(points.length, 6, `${segment}: six coordinates`);
+    assert.ok(points.every(Number.isFinite), `${segment}: finite coordinates`);
     const outgoing = [points[0] - start[0], points[1] - start[1]];
-    expect(points[4]).toBeGreaterThanOrEqual(start[0]);
+    assert.ok(points[4] >= start[0], `${segment}: time does not reverse (${start[0]} → ${points[4]})`);
     // Dense source nodes can have x rounded to the same 1e-4px on mobile.
     // Permit the remaining subpixel slope, but no visible vertical segment.
-    if (points[4] === start[0]) expect(Math.abs(points[5] - start[1])).toBeLessThan(.01);
+    if (points[4] === start[0]) assert.ok(Math.abs(points[5] - start[1]) < .01, `${segment}: no visible vertical segment`);
     if (incoming && Math.hypot(...incoming) > .05 && Math.hypot(...outgoing) > .05) {
       // Four-decimal SVG serialization permits tiny angular rounding errors.
       const cosine = (incoming[0] * outgoing[0] + incoming[1] * outgoing[1]) /
         (Math.hypot(...incoming) * Math.hypot(...outgoing));
-      expect(cosine).toBeGreaterThan(.999);
+      assert.ok(cosine > .999, `${segment}: continuous rendered tangent (${cosine} > .999)`);
       checkedTangents++;
     }
     incoming = [points[4] - points[2], points[5] - points[3]];
     start = points.slice(4);
   }
-  expect(checkedTangents).toBeGreaterThan(10);
+  assert.ok(checkedTangents > 10, `more than ten rendered tangents checked (${checkedTangents})`);
 }
 
 async function normalizedCurveHeights(page, ages) {

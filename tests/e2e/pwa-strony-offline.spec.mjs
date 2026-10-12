@@ -399,6 +399,50 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         }), infantLh);
         await wykres.locator('[data-view="life"]').click();
         await expect(wykres.locator('[data-patient-concentration="lh"]')).toHaveCount(1);
+        // The audited sex comparison is a separate concentration-median model.
+        // Its scoped puberty data must also survive a first offline reload,
+        // without changing the ordinary female longitudinal-mean chart above.
+        await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(() => window.VildaHormoneLifespanRuntime &&
+          window.VildaHormoneLifespanDisplay?.buildGonadotropinComparison);
+        for (const [period, id, sex, ageYears, reference] of [
+          ['mini', 'lh', 'female', 90 / 365.25, .0863163248325721],
+          ['mini', 'lh', 'male', 90 / 365.25, 2.05589],
+          ['mini', 'fsh', 'female', 90 / 365.25, 3.6975114715026205],
+          ['mini', 'fsh', 'male', 90 / 365.25, 1.127305],
+          ['puberty', 'lh', 'female', 13, 2.0309931340891243],
+          ['puberty', 'lh', 'male', 13, 1.3007184973188053],
+          ['puberty', 'fsh', 'female', 13, 4.80572027357214],
+          ['puberty', 'fsh', 'male', 13, 2.622651954012206],
+        ]) {
+          const context = { analyte: id, sex, ageYears, preterm: 'no', sourceStatus: 'ready',
+            identityKey: 'fictional-offline-gonadotropin-comparison', measurement: null };
+          await page.evaluate(context => window.VildaHormoneLifespanRuntime.update(context), context);
+          await wykres.locator(`[data-view="${period}"]`).click();
+          if (await wykres.locator('.vhl-compare-toggle').getAttribute('aria-pressed') !== 'true')
+            await wykres.locator('.vhl-compare-toggle').click();
+          const curves = wykres.locator(`[data-comparison-curve="${id}"]`);
+          const result = wykres.locator(`[data-patient-concentration="${id}"]`);
+          await expect(curves).toHaveCount(2);
+          await expect(wykres.locator('[data-lifespan="chart"]')).toHaveAttribute('data-comparison-scale', 'linear');
+          await expect(wykres.locator('[data-lifespan="chart"]')).toHaveAttribute('data-comparison-max', period === 'mini' ? '6' : '8');
+          const fixedPaths = await curves.evaluateAll(nodes => nodes.map(node => node.getAttribute('d')));
+          for (const value of [0, 2, 80, null]) {
+            await page.evaluate(({ context, value }) => window.VildaHormoneLifespanRuntime.update({
+              ...context, measurement: value === null ? null : { value, unit: 'IU/L' },
+            }), { context, value });
+            await expect.poll(() => curves.evaluateAll(nodes => nodes.map(node => node.getAttribute('d')))).toEqual(fixedPaths);
+            if (value === null) await expect(result).toHaveCount(0);
+            else {
+              await expect(result).toHaveAttribute('data-value', String(value));
+              await expect(result).toHaveAttribute('data-reference-statistic', 'median');
+              await expect(result).toHaveAttribute('data-unit', 'IU/L');
+              await expect.poll(async () => Number(await result.getAttribute('data-reference-value'))).toBeCloseTo(reference, 8);
+              if (value === 80) await expect(result.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', 'above');
+              else await expect(result.locator('[data-result-point]')).toHaveCount(1);
+            }
+          }
+        }
       }
     }
 

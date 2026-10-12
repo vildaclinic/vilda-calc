@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-12",
+  "status": "owner_approved_educational_comparison_and_scoped_female_points_not_clinical_validation",
+  "ownerApproval": {
+    "quote": "ok, ładnie, koduj",
+    "scope": "Approved desktop/mobile mockup of LH/FSH sex comparison in minipuberty and chronological ages6–16; implementation of shared concentration axes and own-sex patient reference. Approval does not confer clinical validation."
+  },
+  "scope": "LH and FSH sex comparisons only. Existing source numbers, ordinary female longitudinal mean display, ordinary male geometry, global patient profiles, laboratory norms, conversions and patient history remain unchanged.",
+  "policyFile": "../gonadotropin-comparison-policy.json",
+  "scopedReferenceFile": "../gonadotropin-comparison-reference-data.json",
+  "policyVersion": "2026-10-12.1",
+  "approvedPreviewSha256": {
+    "przed-po.html": "ac528785b49eba0c06724c7b2ee270988e28b60cd21568c2b5f8fce8ec1e7e15",
+    "makieta.html": "2a41078597f2656926520133ed96bbf216361e113de2271c4a267df49abd7b4f"
+  },
+  "sourceFilesPolicy": "Full primary articles and original supplements inspected. Only source facts, citations and provenance are redistributed here; no complete copyrighted PDFs, source figures, participant-level data or private local paths.",
+  "sources": [
+    {
+      "id": "busch2022-male-gonadotropins",
+      "doi": "10.1210/clinem/dgac115",
+      "url": "https://doi.org/10.1210/clinem/dgac115",
+      "pmid": "35225342",
+      "location": "Figure3,JCEM107(6):1560–1569,2022; Methods and assay descriptions.",
+      "statistic": "Age-specific GAMLSS median approximately digitized from original vector PDF, distinct from normalized longitudinal mean in Figure2.",
+      "population": {
+        "boysContributing": 128,
+        "postnatalBoys": 119,
+        "postnatalSerumSamples": 338,
+        "cordSamples": 78,
+        "postnatalVisits": 630,
+        "observedVisitDaysRange": [
+          4,
+          440
+        ],
+        "birth": "healthy term singleton infants",
+        "location": "Denmark,Copenhagen,2016–2018",
+        "reportedAncestry": "Caucasian"
+      },
+      "method": {
+        "platform": "AutoDELFIA time-resolved fluoroimmunometric assay, PerkinElmer",
+        "LH_catalog": "B031-101",
+        "LH_RRID": "AB_2783737",
+        "FSH_catalog": "B017-201",
+        "FSH_RRID": "AB_2783738",
+        "unit": "IU/L",
+        "LOD": 0.05,
+        "LOQ": null,
+        "interassayCV": "<5%",
+        "belowLOD": "reported as LOD/2",
+        "cordSamplesExcludedFromReferenceCurves": true
+      },
+      "sourcePdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+      "evidenceFile": "patient-point/busch2022-figure3-vector-medians.json",
+      "agePolicy": {
+        "sourceDigitizedDays": [
+          7,
+          400
+        ],
+        "existingActiveProfileMinDays": 7,
+        "existingActiveProfileMaxYears": 1,
+        "maxAgeExclusive": true,
+        "sharedComparisonCurveMinYears": 0.02,
+        "ownReferenceIndependentOfFemaleSource": true
+      },
+      "precisionPolicy": {
+        "lastEligibleMaleLhDay": 243,
+        "firstIntegerDayMedianBelowLod": 327,
+        "lhEducationalReferenceFloorIuL": 0.17075142361420598,
+        "fshEducationalReferenceFloorIuL": 0.10557074424445989,
+        "caution": "These existing floors concern digitization reliability. They are not LOD, LOQ, clinical cutoffs or invented patient concentrations. The late maleLH curve is a model estimate and does not reinstate a precise patient reference."
+      }
+    },
+    {
+      "id": "ljubicic2022-female-gonadotropins",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://doi.org/10.1210/clinem/dgac363",
+      "pmid": "35704034",
+      "location": "Figure1 and SupplementaryTable1A(LH)/1B(FSH).",
+      "supplementDoi": "10.6084/m9.figshare.19469555.v1",
+      "supplementVersion": 1,
+      "supplementSha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+      "supplementLicense": "CC BY4.0",
+      "statistic": "Tabulated age-specific GAMLSS median, distinct from normalized longitudinal mean in Figure3.",
+      "population": {
+        "girls": 98,
+        "serumSamples": 266,
+        "observedAgeDaysMin": 5,
+        "observedAgeMaxMonths": 14.2,
+        "birth": "healthy term singleton infants",
+        "location": "Denmark, Copenhagen,2016–2018",
+        "reportedAncestry": "Caucasian",
+        "samplingHours": "08:00–16:00, diurnal effects not adjusted"
+      },
+      "method": {
+        "platform": "AutoDELFIA time-resolved fluoroimmunometric assay, PerkinElmer",
+        "LH_RRID": "AB_2783737",
+        "FSH_RRID": "AB_2783738",
+        "unit": "IU/L",
+        "LOD": 0.05,
+        "LOQ": null,
+        "interassayCV": "<6%",
+        "intraassayCV": "<=3%",
+        "belowLOD": "reported as LOD/2"
+      },
+      "evidenceFile": "../female-reference-data.json",
+      "agePolicy": {
+        "retainedGridYears": [
+          0.02,
+          1
+        ],
+        "gridNodesPerHormone": 99,
+        "comparisonMaxAgeExclusive": true,
+        "caution": "Original supplement includes mathematical age-zero rows; first observed serum sample was day5. Do not infer observed birth concentrations or extend source eligibility."
+      },
+      "longitudinalMeanCaution": "Ordinary female minipuberty preserves the previously approved normalized longitudinal mean with two waves. Absolute maxima of that model are not provided; do not reconstruct its IU/L values from GAMLSS medians or replace it with this median comparison. Nearly flat FSH population medians do not prove stable FSH within an individual."
+    },
+    {
+      "id": "madsen2022-gonadotropins-both-sexes",
+      "doi": "10.1210/clinem/dgac155",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "pmid": "35299255",
+      "pmcid": "PMC9202734",
+      "location": "SupplementalTable1,Other biomarkers: femaleB3:E13/G3:J13,maleB17:E27/G17:J27; mainTable1 and Methods.",
+      "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+      "supplementVersion": 1,
+      "supplementSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "supplementLicense": "CC BY4.0",
+      "articleLicense": "CC BY-NC-ND4.0",
+      "population": {
+        "cohort": "Bergen Growth Study2,Norway2016;cross-sectional,approximately90% Caucasian",
+        "viableCohortSerumSamples": {
+          "female": 601,
+          "male": 414
+        },
+        "countsCaution": "MainTable1 viable cohort counts, not necessarily successfully assayed counts for each analyte.",
+        "observedAgesYears": "6 to <16",
+        "publishedBoundaryModelNodeYears": 16,
+        "sampling": "08:00–14:00; serum stored at−80°C.",
+        "femaleExclusions": "Oral contraceptive users excluded from all female biomarker reference models.",
+        "cycle": "Age model not standardized to a menstrual-cycle phase.",
+        "fitFutures": "15–18-year FitFutures cohort contributes steroid references, not these LH/FSH models."
+      },
+      "method": {
+        "platform": "Siemens IMMULITE2000XPi",
+        "specimen": "serum",
+        "unit": "IU/L",
+        "lhLloq": 0.1,
+        "fshLloq": 0.1,
+        "lhInterassayCVPercent": 7,
+        "lhCvConcentrationIuL": 10,
+        "fshInterassayCVPercent": 5,
+        "fshCvConcentrationIuL": 5
+      },
+      "statistic": "Published annual p50 values from sex-specific chronological-age LMS models.",
+      "transformation": "p50IuL=exp(M)/1000000; modelM is on ln(SI×1000000), not concentration. Workbook examples Other biomarkersK32/K33 establish the transformation.",
+      "interpolation": "PCHIP through all11annual source nodes per sex and hormone; between-node values are application interpolation, not original fitted GAMLSS objects.",
+      "evidenceFiles": [
+        "madsen2022-female-median-si.json",
+        "patient-point/madsen2022-male-p50-lms.json"
+      ],
+      "agePolicy": {
+        "minYears": 6,
+        "maxYears": 16,
+        "maxExclusive": false,
+        "noExtrapolation": true
+      },
+      "patientScope": "Existing male sources retained; two new female sources scoped solely to gonadotropin sex comparison, never added to global patientPointData."
+    }
+  ],
+  "independentSourceVerification": {
+    "date": "2026-10-12",
+    "femaleInfant": {
+      "originalTableRowsRead": 242,
+      "retainedMedianValuesChecked": 198,
+      "matchedExistingSourceGrid": 198,
+      "matchedExistingPopulationProfiles": 198,
+      "exactDecimalEquality": true
+    },
+    "maleInfant": {
+      "integerDaysPerHormone": 394,
+      "bothHormonesTotal": 788,
+      "method": "Independent PDF-axis least-squares calibration and cubic polynomial roots, compared with existing vector extraction.",
+      "maximumAbsoluteDifferencesIuL": {
+        "lh": 4.931448769340818e-07,
+        "fsh": 4.966790932980913e-07
+      },
+      "caution": "Agreement of independent digitizations does not imply submicroIU/L source precision."
+    },
+    "puberty": {
+      "publishedNodesChecked": 44,
+      "matchedExistingSources": 44,
+      "maximumAbsoluteDifferenceIuL": 0
+    },
+    "immutableExpectedValuesFixture": "../../../../tests/fixtures/hormone-lifespan-gonadotropin-source-medians.json"
+  },
+  "presentationPolicy": {
+    "unit": "IU/L",
+    "scale": "linear",
+    "mini": {
+      "axis": [
+        0,
+        6
+      ],
+      "ticks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "sharedCurveDomainYears": [
+        0.02,
+        1
+      ],
+      "maxExclusive": true,
+      "ownMalePointMinDays": 7,
+      "ownFemalePointMinYears": 0.02,
+      "exactFirstBirthdayPoint": false
+    },
+    "puberty": {
+      "axis": [
+        0,
+        8
+      ],
+      "ticks": [
+        0,
+        2,
+        4,
+        6,
+        8
+      ],
+      "curveAndPointDomainYears": [
+        6,
+        16
+      ],
+      "maxExclusive": false
+    },
+    "invariants": [
+      "Same scale for both sexes and both gonadotropins within the selected period.",
+      "Curves and scale independent of patient result, patient sex, extra selections, viewport or fullscreen.",
+      "Zero lies on the zero axis; above-axis result uses an arrow labelled with the actual result.",
+      "One target profile of own sex determines patient reference; no inherited patient-method or Tanner gate for the other population.",
+      "Existing gates retain uncertain-age intervals, censored results, known incompatible assay/specimen, contraindication and infant term-birth requirement.",
+      "A source-method label does not establish the method of the patient sample or assay harmonization.",
+      "No new Tanner inference, laboratory intervals, SDS, percentiles, diagnosis or clinical LH/FSH ratio."
+    ]
+  },
+  "syntheticCases": [
+    {
+      "input": {
+        "period": "mini",
+        "sex": "female",
+        "ageYears": 0.25,
+        "preterm": false
+      },
+      "expectedSourceMedianIuL": {
+        "lh": 0.085,
+        "fsh": 3.697
+      },
+      "expectedAxis": [
+        0,
+        6
+      ]
+    },
+    {
+      "input": {
+        "period": "mini",
+        "sex": "male",
+        "ageYears": 0.25,
+        "preterm": false
+      },
+      "expectedSourceMedianIuL": {
+        "lh": 2.023700675412483,
+        "fsh": 1.1135483561107788
+      },
+      "expectedAxis": [
+        0,
+        6
+      ],
+      "precision": "Approximate source figure and interpolation; stored digits are not assay precision."
+    },
+    {
+      "input": {
+        "period": "puberty",
+        "ageYears": 12
+      },
+      "expectedSourceMedianIuL": {
+        "female": {
+          "lh": 0.932808521560225,
+          "fsh": 4.151220353235434
+        },
+        "male": {
+          "lh": 0.6775625214085037,
+          "fsh": 2.01486005633355
+        }
+      },
+      "expectedAxis": [
+        0,
+        8
+      ]
+    },
+    {
+      "input": {
+        "period": "puberty",
+        "ageYears": 16
+      },
+      "expectedSourceMedianIuL": {
+        "female": {
+          "lh": 5.64856591188875,
+          "fsh": 5.826063174564676
+        },
+        "male": {
+          "lh": 3.5142066372549756,
+          "fsh": 4.160651539308952
+        }
+      },
+      "condition": "Exact age, compatible own context; published boundary model row."
+    },
+    {
+      "input": {
+        "measurementIuL": 0
+      },
+      "expected": "Point on zero axis, reference and source curves unchanged."
+    },
+    {
+      "input": {
+        "measurementIuL": 100
+      },
+      "expected": "Arrow with100IU/L, fixed6or8IU/L axis, source curves unchanged."
+    },
+    {
+      "input": {
+        "period": "mini",
+        "sex": "male",
+        "ageDays": 7,
+        "analyte": "lh",
+        "preterm": false
+      },
+      "expectedMedianIuL": 4.68363,
+      "expected": "Own source eligible despite unavailable female reference; paired lines still start at.02years."
+    },
+    {
+      "input": {
+        "period": "mini",
+        "sex": "male",
+        "ageDays": 300,
+        "analyte": "lh",
+        "preterm": false
+      },
+      "expected": "No precise patient point under existing vector-quality gate; female own-sex reference at same age is independently eligible."
+    },
+    {
+      "input": {
+        "period": "mini",
+        "ageYears": 1
+      },
+      "expected": "No patient point for either sex; do not substitute Zec or change global source boundaries."
+    },
+    {
+      "input": {
+        "period": "puberty",
+        "ageYears": 16,
+        "ageUpperYears": 17,
+        "ageUpperInclusive": false
+      },
+      "expected": "No point: uncertain age exceeds source domain."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "ageYears": 12,
+        "view": "ordinary"
+      },
+      "expected": "No new Madsen patient reference from comparison-only sources."
+    },
+    {
+      "input": {
+        "period": "mini",
+        "preterm": "unknown"
+      },
+      "expected": "Population curves remain, no point for term-only source."
+    }
+  ],
+  "clinicalImpact": "Adds comparison-specific quantitative education and female Madsen patient references6–16. Preserves separate ordinary mean/median policies and all laboratory norms, classification, source unit conversions, existing global references and patient data.",
+  "knownLimits": [
+    "Median curves do not show every individual pulse, cycle phase or longitudinal wave.",
+    "Madsen youngestLH medians are near LLOQ; minor early differences should not infer biological timing.",
+    "No coefficients for a fully quantitative longitudinal-mean comparison are available.",
+    "No source-supported gonadotropin age model17–20 is created.",
+    "Source review and technical checks do not constitute clinical validation."
+  ]
+}

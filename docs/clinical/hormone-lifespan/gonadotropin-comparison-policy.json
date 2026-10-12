@@ -1,0 +1,101 @@
+{
+  "version": "2026-10-12.1",
+  "kind": "population-model-comparison",
+  "analytes": [
+    "lh",
+    "fsh"
+  ],
+  "sourceStatistic": "median",
+  "sourceUnit": "IU/L",
+  "globalPatientProfiles": false,
+  "colors": {
+    "female": "#b15786",
+    "male": "#2b7491"
+  },
+  "sampling": {
+    "sampleCount": 801,
+    "includeSourceNodes": true,
+    "exclusiveEndpointGapYears": 1e-10
+  },
+  "periods": {
+    "mini": {
+      "domain": {
+        "minAge": 0.02,
+        "maxAge": 1,
+        "maxAgeExclusive": true
+      },
+      "scale": {
+        "kind": "linear",
+        "unit": "IU/L",
+        "min": 0,
+        "max": 6,
+        "ticks": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "independentOfPatient": true,
+        "commonToBothAnalytesAndSexes": true
+      },
+      "profileIds": {
+        "lh": {
+          "female": "ljubicic2022-female-lh",
+          "male": "busch2022-male-lh"
+        },
+        "fsh": {
+          "female": "ljubicic2022-female-fsh",
+          "male": "busch2022-male-fsh"
+        }
+      },
+      "pointPolicy": "own-target-profile-only; retain-engine-gates",
+      "referenceScope": "gonadotropin-sex-comparison"
+    },
+    "puberty": {
+      "domain": {
+        "minAge": 6,
+        "maxAge": 16,
+        "maxAgeExclusive": false
+      },
+      "scale": {
+        "kind": "linear",
+        "unit": "IU/L",
+        "min": 0,
+        "max": 8,
+        "ticks": [
+          0,
+          2,
+          4,
+          6,
+          8
+        ],
+        "independentOfPatient": true,
+        "commonToBothAnalytesAndSexes": true
+      },
+      "profileIds": {
+        "lh": {
+          "female": "madsen2022-female-lh-sex-comparison",
+          "male": "madsen2022-male-lh"
+        },
+        "fsh": {
+          "female": "madsen2022-female-fsh-sex-comparison",
+          "male": "madsen2022-male-fsh"
+        }
+      },
+      "pointPolicy": "own-target-profile-only; retain-engine-gates",
+      "referenceScope": "gonadotropin-sex-comparison"
+    }
+  },
+  "limitations": [
+    "Comparison uses concentration medians, not longitudinal mean trajectories shown in ordinary female minipuberty.",
+    "No extrapolation to birth or after the chosen model domain.",
+    "Own male infant reference starts at day 7; paired curves start at 0.02 years.",
+    "Exactly first birthday does not qualify in infant comparison.",
+    "Puberty uses age, never inferred Tanner stage.",
+    "Madsen source cohort is 6–<16; year-16 model row is a published boundary.",
+    "No new norms, SDS, diagnosis, or inter-assay conversion."
+  ]
+}
