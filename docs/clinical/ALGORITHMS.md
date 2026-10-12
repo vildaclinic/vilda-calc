@@ -487,6 +487,15 @@ ani zapisu pacjenta. Regresje: `hormone-lifespan-fullscreen.spec.mjs`
 (desktop, telefon i same-origin iframe), dotychczasowy wzorzec SVG
 oraz testy integracji z przelicznikiem.
 
+**2026-10-12 — powrót z pełnego ekranu bez przesuwania strony:**
+w powłoce `app.html` oddanie fokusu przyciskowi „Powiększ” mogło przewinąć
+ramkę mimo `preventScroll`. Zapamiętane pozycje ramki i powłoki są teraz
+odtwarzane po przywróceniu fokusu. Regresja
+`hormone-lifespan-shell-scroll.spec.mjs` sprawdza wielokrotne otwarcie
+i zamknięcie przez Escape oraz przycisk na desktopie i telefonie 320 px,
+z zachowaniem kontekstu pacjenta i stanu wykresu. Bez zmiany danych,
+krzywych, skal, norm, interpretacji ani zapisu pacjenta.
+
 **2026-10-10 — wybór hormonów i porównanie płci w pokwitaniu:** etykietę
 „Poziom względny” zastąpiono „Przebieg zmian”. Można odznaczyć również
 ostatni hormon; pusty wybór ukrywa linie i pokazuje „Wybierz hormon”,
