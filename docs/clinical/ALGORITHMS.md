@@ -4482,7 +4482,7 @@ Testy pokrycia, każdy z mutacją wyłapaną w tym PR:
 2. Wpis pole po polu: pole zmienione przez lekarza w formularzu wygrywa z poprawką z Karty do zapisu; zapis z formularza da wtedy wartość lekarza.
 3. Przejście formularza na awansowaną wizytę po usunięciu bieżącego pomiaru (opisane tu jawnie).
 
-### P-ODTWORZ-WIEK-4 — bazę odświeżają też panele-rodzeństwo w powłoce; wiek jako jedna wielkość; awans po usunięciu w całości (SW 1.1.240, `vilda_baseline_pacjenta.js` 4, `vilda_vault.js` 210, 2026-10-12, przegląd po P-ODTWORZ-WIEK-3)
+### P-ODTWORZ-WIEK-4 — bazę odświeżają też panele-rodzeństwo w powłoce; wiek jako jedna wielkość; awans po usunięciu w całości (SW 1.1.241, `vilda_baseline_pacjenta.js` 4, `vilda_vault.js` 210, 2026-10-12, przegląd po P-ODTWORZ-WIEK-3)
 
 **Skąd.** Piąta runda przeglądu adwersaryjnego, tym razem kodu P-ODTWORZ-WIEK-3 (#631): 3 perspektywy, każde znalezisko sprawdzał niezależny weryfikator na prawdziwej stronie. Potwierdzono dwie regresje #631 i dwie drobne sprawy, a właściciel zdecydował: „Pełna poprawka teraz".
 
