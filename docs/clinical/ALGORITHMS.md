@@ -12184,7 +12184,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.245, `vilda_sync_integration.js` 48, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
+## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.246, `vilda_sync_integration.js` 48, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
 
 **Skąd.** Zgłoszenie właściciela z 2026-10-12. Użytkowniczka z kontem PRO (dane z telefonu w chmurze) logowała się pierwszy raz na komputerze w pracy. Na pytaniu „Pobierz dane z serwera” wyskoczył baner „Dostępna nowa wersja aplikacji”. Kliknęła „Aktualizuj”, karta się przeładowała i pytanie zniknęło. Baza pacjentów się nie pobrała, a synchronizacja na tym komputerze została wyłączona, bez żadnego komunikatu. To etap 1 z trzech; decyzje do kolejnych etapów są niżej.
 
@@ -12234,7 +12234,7 @@ Testy: `tests/unit/nowe-urzadzenie-pytanie.test.mjs` (prawdziwy `vilda_sync_inte
 
 **Źródło kodu.** `vilda_sync_integration.js` i `ios26-ui.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
 
-**Wersje.** `vilda_sync_integration.js` 47 → 48, `ios26-ui.js` 44 → 45, `vilda_auth_ui.css` 76 → 77, nowy `vilda_nowe_urzadzenie.js?v=1` (wpis precache dopisany ręcznie). Pliki wstrzykujące podbite przez `npm run podbij-wersje`. `SW_VERSION` 1.1.244 → 1.1.245.
+**Wersje.** `vilda_sync_integration.js` 47 → 48, `ios26-ui.js` 44 → 45, `vilda_auth_ui.css` 76 → 77, nowy `vilda_nowe_urzadzenie.js?v=1` (wpis precache dopisany ręcznie). Pliki wstrzykujące podbite przez `npm run podbij-wersje`. `SW_VERSION` 1.1.245 → 1.1.246 (numer 1.1.245 nadał równolegle #642).
 
 **Ryzyko resztkowe.**
 - „Aktualizuj” kliknięte w innej karcie nadal przeładowuje wszystkie karty (`controllerchange`); bramka tego nie wstrzymuje. Pytanie i pobieranie wracają po przeładowaniu same.
