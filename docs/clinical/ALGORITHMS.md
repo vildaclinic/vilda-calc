@@ -13938,7 +13938,7 @@ sejfu opóźnionymi o 150/250/350 ms (kopia robocza testu): na bazie 1/1/3 z 9 p
 1.1.121 wydał P-SESJA-OBCA, #492; 1.1.122 bierze P-CEL-WLASNY-ZAPIS, #494, a 1.1.123 P-ZAPISY-DWIE-KARTY, #495), fixture
 wersji.
 
-## „Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty nazwiska (P-NAME-FIX-WYCZYSC, SW 1.1.236, `vilda_name_fix.js` 5, 2026-10-12)
+## „Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty nazwiska (P-NAME-FIX-WYCZYSC, SW 1.1.237, `vilda_name_fix.js` 5, 2026-10-12)
 
 **Zgłoszenie właściciela (2026-10-12).** Wczytanie starego rekordu jednopolowego → pytanie „Rozdziel imię i nazwisko”
 → wybór → komunikat „Zapisano. Nazwisko: …, Imię: …. Rekord pacjenta poprawiony — następnym razem wczyta się bez
@@ -13992,8 +13992,8 @@ i nazwa z odczytu); bez strażnika ostrzeżenia w `onPick`; nasłuch na `documen
 sprawdzona jednorazowym skryptem Playwright (poza zestawem): komunikat na Start znika po „Wyczyść”, komunikat w DocPro
 znika po „Wyczyść” klikniętym na Start; na `99fd1c0` oba zostawały.
 
-**Wersje.** `vilda_name_fix.js` 4 → 5 (index, docpro), precache (append-only), `SW_VERSION` 1.1.235 → 1.1.236 (+ pin;
-1.1.235 wydał P-ODTWORZ-WIEK-3), fixture wersji.
+**Wersje.** `vilda_name_fix.js` 4 → 5 (index, docpro), precache (append-only), `SW_VERSION` 1.1.236 → 1.1.237 (+ pin;
+1.1.235 wydał P-ODTWORZ-WIEK-3, a 1.1.236 poprawka krzywej estradiolu u kobiet, #633), fixture wersji.
 
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
