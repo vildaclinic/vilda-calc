@@ -10624,6 +10624,33 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Błąd odczytu mapy właścicieli przerywa „Scal kopię konta” (P-KOPIA-POMIJA-2, SW 1.1.231, `vilda_vault.js` 208, 2026-10-08, scalenie z `audyt` 2026-10-12)
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów i interpretacji; integralność danych przy scalaniu kopii konta.
+Poprawka dwóch uwag P1 z przeglądu Codex w #591 (scalonym 2026-10-08).
+
+**Co było** (`audyt` `e0b0df4`).
+- Mapa właścicieli wersji (P-KOPIA-POMIJA) pomijała po cichu kartę, której wersji nie udało się odczytać. Strażnik nie
+  widział wtedy jej wersji: pacjent X scalony z tą kartą (przy przyciętym nagrobku X, gdy karty docelowej nie ma
+  w kopii) wracał jako nowy, a jego wersje — klucz `snapshotId` jest globalny — znikały z karty docelowej.
+- #590 i #591 weszły do `audyt` z tym samym `SW_VERSION` 1.1.200 (scalenie gałęzi przez „Update branch” przeszło bez
+  konfliktu, a poprawka numeru doszła po scaleniu #591). Nowy service worker wypełniałby wtedy tę samą pamięć
+  `pwa-kalorii-shell-v1.1.200`, z której serwuje jeszcze stary — strona mogła dostać częściowo zaktualizowane wydanie.
+
+**Reguła po zmianie.** Błąd odczytu wersji którejkolwiek karty przerywa podgląd i scalenie kopii konta. Mapa powstaje
+przed pierwszym zapisem wersji (strażnik i karta brakująca pytają ją przed zapisem), więc przerwanie następuje, zanim
+cokolwiek zostanie zapisane. Kolizja `SW_VERSION` 1.1.200 z #590/#591 rozwiązała się w międzyczasie: kolejne
+wydania (#592 i następne, do 1.1.230) dostały własne numery, więc ten PR nie zmienia już numeru z tego powodu.
+
+**Przypadek syntetyczny** — `tests/unit/kopia-konta-pomija.test.mjs`: X w kopii, Y założona po kopii, X scalony z Y,
+nagrobek X przycięty, odczyt wersji Y kończy się błędem → podgląd i scalenie odrzucone, magazyn bez zmian, wersje X
+zostają pod Y. Na `e0b0df4` czerwony (X wracał, wersje znikały z Y).
+
+**Wersje** (po scaleniu `audyt` `7a338be` 2026-10-12; #592 wziął w międzyczasie `vilda_vault.js` 207 z inną treścią).
+`vilda_vault.js` 207 → 208 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (124 → 125)
+i `vilda_session_bridge.js` (48 → 49); nowe adresy w precache (append-only); `SW_VERSION` 1.1.230 → 1.1.231 (+ pin
+w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
 ## „Scal kopię konta” pomija pacjentów usuniętych albo scalonych tutaj i mówi o tym (P-KOPIA-POMIJA, SW 1.1.200, `vilda_vault.js` 206, `vilda_auth_ui.js` 482, 2026-10-08)
 
 **Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, które
