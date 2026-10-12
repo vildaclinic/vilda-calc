@@ -3349,7 +3349,7 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 **Wersje.** `app.js` 231, `style.css` 88, `vilda_shell.js` 61; SW 1.1.241 → 1.1.242.
 
-### P-PANEL-PRZEWINIECIE — panel powłoki wraca tam, gdzie go zostawiono (SW 1.1.244, 2026-10-12, decyzja właściciela)
+### P-PANEL-PRZEWINIECIE — panel powłoki wraca tam, gdzie go zostawiono (SW 1.1.245, 2026-10-12, decyzja właściciela)
 
 **Decyzja właściciela.** Ustalenie z P-PANEL-POWROT: po powrocie do panelu strona stała na samej górze, ale jako skutek uboczny `display:none`, nie decyzja. Właściciel wybrał spośród dwóch wariantów („tam, gdzie zostawiono” albo jawnie „zawsze od góry”) wariant **tam, gdzie zostawiono**. Start pod listą i kartą pacjenta otwieranymi z innego panelu też wraca tam, gdzie go zostawiono, jak przy otwarciu listy na samym Start. Ukrywanie paneli przez `visibility:hidden` zachowałoby przewinięcie i układ, ale ukryte panele dalej liczyłyby układ i animacje w tle. To osobna decyzja, poza tą zmianą. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, ostrzeżeń, zapisu ani synchronizacji.
 
@@ -3376,7 +3376,7 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 - `tests/unit/powloka-przewiniecie.test.mjs` (7) — prawdziwy `vilda_shell.js` na atrapie powłoki; ramka zeruje przewinięcie przy ukryciu. Sprawdza: powrót odtwarza 679 natychmiast, w tym samym zadaniu i przed odtworzeniem sesji; kontrolę bez przewinięcia; pierwszeństwo celu, także przez Wstecz, a po celu zwykły powrót odtwarza; brak odtworzenia w nowym dokumencie (w trakcie przeładowania i po nim); kilka przełączeń w jednym zadaniu; listę pacjentów z innego panelu. Na bazie pada 5 z 7. Każda z mutacji (bez sprawdzenia celu, bez sprawdzenia dokumentu, odtworzenie po `Gp_p`) wywraca co najmniej jeden test.
 - `tests/e2e/powloka-przewiniecie-panelu.spec.mjs` (3, desktop) i `tests/e2e/powloka-przewiniecie-panelu-mobile.spec.mjs` (1, telefon) — prawdziwa powłoka. Elementy w całości widoczne przed wyjściem stoją w oknie w tych samych miejscach w każdej widocznej klatce po powrocie, od pierwszej, a po oknie powrotu `scrollY` równa się zapamiętanemu. Ukryta ramka czyta 0 (kontrola przyczyny), a przycisk „na górę” powłoki jest widoczny. Desktop: Start 679 px; cel konta w Ustawieniach — sekcja otwarta i w oknie, zapamiętane miejsce nie pojawia się w żadnej klatce, a zwykły powrót odtwarza; lista pacjentów otwierana z DocPro — Start pod listą i po jej zamknięciu na zapamiętanym miejscu. Telefon: okno tuż pod kartą szacowanego spożycia (pierwszy powrót, z przebudową), 513 px i dół strony; dock widoczny, bez poziomego przewijania. Asercje czekają na warunek (minięcie okna powrotu, liczba klatek), nie na upływ czasu. Na bazie padają wszystkie 4; przy odtworzeniu po `Gp_p` pada wariant „tuż pod kartą”.
 
-**Wersje.** `vilda_shell.js` 62; SW 1.1.243 → 1.1.244.
+**Wersje.** `vilda_shell.js` 62; SW 1.1.244 → 1.1.245 (numer 1.1.244 nadał równolegle #641).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
