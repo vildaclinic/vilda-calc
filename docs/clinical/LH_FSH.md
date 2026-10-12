@@ -1,6 +1,43 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 9 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+Stan dokumentu: 12 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+
+## Osobne osie wariantów wieku — 12.10.2026
+
+Pierwsza naprawa po audycie klinicznej interpretacji chłopców/mężczyzn,
+zaakceptowana przez właściciela. Przy nieprecyzyjnym wieku przecinającym
+granice tabel renderer wcześniej pokazywał tylko zakresy, pomijając zapisany
+status każdego porównania. Teraz warianty **wyłącznie wieku** LH/FSH mają
+osobne osie, klasyfikacje i polskie opisy dostępne dla czytnika ekranu.
+Dotyczy również pediatrycznych wariantów wieku u dziewcząt. Warianty faz
+cyklu/menopauzy oraz warianty mieszające wiek i fazę pozostają dotychczasową
+listą. Odrębny konsensus jednej krzywej inhibiny B nie jest rozszerzany.
+
+**Wpływ kliniczny:** widoczne staje się już obliczone przekroczenie konkretnego
+zakresu. Nie zmieniają się silnik, normy, operatory, jednostki, kwalifikacja
+populacji ani precyzja wieku. Każda oś wykorzystuje własne utrwalone granice
+i status; wspólna skala graficzna nie scala norm. Wyróżnienie znacznego
+odchylenia pozostaje lokalne dla wariantu, bez globalnego werdyktu i pulsowania
+dużej liczby na podstawie alternatyw. Osobna dostępna ocena stadium zachowuje
+dotychczasowe znaczenie. Wynik z operatorem nie otrzymuje dokładnego znacznika.
+Historia odtwarza zapisane warianty bez wywołania silnika i bez mutacji oceny.
+
+Źródła pozostają pełnymi katalogami Mayo: [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999),
+[LH 602752](https://www.mayocliniclabs.com/test-catalog/Overview/602752) i
+[FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753),
+ponownie odczytanymi w audycie 12.10.2026 (Reference Values, Method Description,
+Specimen Type i Cautions). Profile/dane zachowują własne wersje źródłowe.
+Populacje i ograniczenia są przypisane do konkretnej tabeli: LH pediatryczne
+AnshLite CLIA, standardowe/dorosłe LH Roche ECLIA, FSH Roche Elecsys ECLIA;
+surowica, IU/L i równoważne mIU/mL. Porównanie pozostaje orientacyjne dla
+oznaczeń bazalnych bez leczenia, bez potwierdzania rzeczywistej metody próbki.
+
+Regresje rzeczywistego silnika i renderera: M18 lat 0 mies./LH50 → `above`
+dla 1,3–9,8 i 1,3–9,6; ten sam wiek/LH9,7 → `within` oraz `above`;
+M18/FSH50 → `above` dla 0,7–9,6 i 1,2–15,8; M5/FSH10 → `above` wobec
+≤1,9 i ≤2,3. Granice 10 i 15 lat, cenzurowanie, historia i brak wspólnego
+werdyktu mają osobne kontrole. Normy minipuberty oraz komunikat G1 od 14 lat
+pozostają odrębnymi zadaniami audytu; ta poprawka ich nie zmienia.
 
 ## Dorośli i automatyczny dobór zakresu — 9.10.2026
 
