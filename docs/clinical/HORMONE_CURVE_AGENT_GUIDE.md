@@ -147,6 +147,43 @@ lub okresów. Wymagałoby to osobnej weryfikacji.
   Po 70 latach wygaszony płaski ogon oznacza koniec danych, nie biologiczne
   plateau. Normy laboratoryjne i porównanie płci mają odrębne kontrakty.
 
+## Utrwalony przykład: żeńskie AMH, 12 października 2026
+
+Właściciel zatwierdził makietę i implementację („ok, koduj to”).
+Ta naprawa zwykłych widoków nie obejmuje odrębnego porównania płci.
+
+- Zachowaj dotychczasową linię całego życia z `displaySegments`, także
+  po wpisaniu wyniku. Stała skala to `normalizationMaximum = 28.99 pmol/L`
+  i `ceiling = 1`. Nie zastępuj linii wybranym profilem i nie dobieraj
+  wysokości osi do największego wyniku pacjenta. Ponad osią pokaż
+  strzałkę z rzeczywistą liczbą; zero pozostaje na osi.
+- Zbliżenie jest projekcją tej samej kanonicznej krzywej. Podziel kawałki
+  Hermite'a/Béziera również na granicach skali czasu, a następnie zmień
+  współrzędne. Ponowne dopasowanie pełnego zbioru węzłów w nowym X także
+  zmienia kształt: przed naprawą AMH w wieku 19,668 roku różniło się
+  między całym życiem a pokwitaniem o około 9,3 px na wykresie 277 px.
+- Zaznaczenie LH/FSH nie przełącza AMH na inną linię lub ich skalę.
+  Mieszany widok używa tej samej krzywej AMH na osi czasu wybranego
+  okresu. IU/L oraz własne maksima średnich LH/FSH nie dotyczą AMH.
+- Most 0,9–1,3 roku pozostaje ilustracją we wszystkich zwykłych widokach.
+  Przy 0,95 roku źródłowa mediana nadal wynosi 7,747 pmol/L, niezależnie
+  od wysokości mostu. Wszystkie 99 median źródła zachowaj w danych;
+  nie przyciągaj jasnego znacznika do poglądowej linii.
+- Nie twórz dorosłego profilu z kotwic graficznych. Istniejące zwykłe
+  żeńskie odniesienie AMH kończy się przy 1 roku. Jopling/FDA opisują
+  osobne grupy osocza, a niemowlęta Ljubicic — surowicę. To nie jedna
+  skalibrowana populacja. Wysokość po 45 latach i `displayFloor` są
+  jakościowe, bez koncentracji, LOD lub dokładnego wieku menopauzy.
+- Przypadek kontrolny: dziewczynka donoszona 0,25 roku, wynik 10 pmol/L
+  → mediana 16,999 pmol/L; 200 pmol/L → strzałka, ta sama linia i mediana.
+  Wiek 19,668 roku → brak wymyślonego odniesienia liczbowego. Prawidłowe
+  projekcje porównuj geometrycznie z tolerancją zaokrąglenia SVG, nie
+  przez oczekiwanie identycznego tekstu ścieżek między różnymi osiami.
+
+Źródła i trwały zapis decyzji:
+[audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
+Akceptacja prezentacji nie nadaje jej statusu walidacji klinicznej.
+
 ## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 
 Właściciel zatwierdził poprawioną makietę i jej wdrożenie. LH/FSH mają

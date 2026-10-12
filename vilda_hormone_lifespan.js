@@ -829,6 +829,24 @@
       });
       return [display.id, { display, segment, spline: displaySpline({ segments: [segment] }, maleLifeFraction, tangents) }];
     }));
+    // Female AMH keeps its approved whole-life curve and scale in every ordinary view.
+    const femaleAmhLifeFraction = (age) => {
+      let offset = 0;
+      for (const stage of femaleStages) {
+        if (age <= stage.max)
+          return offset + (age - stage.min) / (stage.max - stage.min) * stage.width;
+        offset += stage.width;
+      }
+      return 1;
+    };
+    const femaleAmhHormone = femaleHormones.find((h) => h.id === "amh");
+    const femaleAmhStable = femaleAmhHormone ? {
+      display: { id: "amh", kind: "female-amh-life", divisor: femaleAmhHormone.life.normalizationMaximum,
+        ceiling: 1, unit: femaleAmhHormone.life.unit },
+      spline: displaySpline(femaleAmhHormone, femaleAmhLifeFraction),
+      ages: [...new Set(femaleAmhHormone.segments.flatMap((segment) =>
+        segment.points.map((point) => point.ageYears)))],
+    } : null;
     const schematicCurves = new Map();
     const stableVisible = (id) => !compare && sex === "male" && stableCurves.has(id) && selected.has(id);
     const stableInhibinVisible = () => stableVisible("inhb");
@@ -861,8 +879,10 @@
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id))) return null;
       let profiles = [patientPoint.profile];
-      const stableDisplay = !compare && sex === "male" ? stableCurves.get(id)?.display : null;
-      if (stableDisplay) profiles = stableDisplay.profiles;
+      const stableDisplay = !compare ? (sex === "male" ? stableCurves.get(id)?.display
+        : sex === "female" && id === "amh" ? femaleAmhStable?.display : null) : null;
+      if (stableDisplay?.kind === "female-amh-life" && stableDisplay.unit !== patientPoint.profile.unit) return null;
+      if (stableDisplay?.profiles) profiles = stableDisplay.profiles;
       if (compare) {
         // This view compares ages, not matched Tanner stages. The other sex
         // has no patient observation, so do not invent its gonadal context.
@@ -934,8 +954,38 @@
       })) };
       return segmentPath(segment, left, width, y, displaySpline({ segments: [segment] }));
     }
+    function femaleAmhReferencePath(segment, left, width, y, fraction = xFraction, domain = visibleAgeDomain()) {
+      const stable = femaleAmhStable;
+      if (!stable) return null;
+      // Preserve the original full-life SVG path exactly. For a zoom, an affine
+      // piece of the time axis projects the same cubic without fitting it again.
+      if (view === "life") return segmentPath(segment, left, width, y, stable.spline);
+      const min = Math.max(domain[0], segment.points[0].ageYears);
+      const max = Math.min(domain[1], segment.points[segment.points.length - 1].ageYears);
+      if (max <= min) return null;
+      const ages = [...new Set([min, max, ...stable.ages, ...femaleStages.map((stage) => stage.min)])]
+        .filter((age) => age >= min && age <= max).sort((a, b) => a - b);
+      const pair = (position, value) => (left + width * position).toFixed(4) + "," + y(value).toFixed(4);
+      let path = "M" + pair(fraction(min), stable.spline.at(femaleAmhLifeFraction(min)).value);
+      for (let i = 0; i < ages.length - 1; i++) {
+        const a = ages[i], b = ages[i + 1];
+        const ca = femaleAmhLifeFraction(a), cb = femaleAmhLifeFraction(b);
+        const va = stable.spline.at(ca), vb = stable.spline.at(cb);
+        const xa = fraction(a), xb = fraction(b), xStep = (xb - xa) / 3, sourceStep = (cb - ca) / 3;
+        path += "C" + pair(xa + xStep, va.value + sourceStep * va.slope) + " " +
+          pair(xb - xStep, vb.value - sourceStep * vb.slope) + " " + pair(xb, vb.value);
+      }
+      return path;
+    }
+    function patientPointAboveScale(model) {
+      if (!model.stableDisplay) return false;
+      const relative = model.value / model.divisor;
+      const tolerance = model.stableDisplay.kind === "female-amh-life"
+        ? 8 * Number.EPSILON * Math.max(1, Math.abs(relative), Math.abs(model.ceiling)) : 0;
+      return relative > model.ceiling + tolerance;
+    }
     function drawPatientDot(group, model, { W, mobile, left, right, top, bottom, px, y }) {
-      const offscale = !!model.stableDisplay && model.value / model.divisor > model.ceiling;
+      const offscale = patientPointAboveScale(model);
       const fraction = model.valueFraction || ((value) => value / model.divisor / model.ceiling);
       const py = offscale ? top + 5 : y(fraction(model.value));
       const my = y(fraction(model.referenceValue));
@@ -1048,7 +1098,7 @@
       byId("scale-note").textContent = (model.stableDisplay
         ? `Kropka: wynik. Jasny znacznik: ${groupMean ? "średnia grupy" : "odniesienie z badania"}. Linia jest poglądowa.`
         : `Kropka: wynik. Linia: ${groupMean ? "średnia" : "mediana"}${groupLabel}, nie granica normy.`) +
-        (model.stableDisplay && model.value / model.divisor > model.ceiling ? " ↑ Wynik powyżej skali." : "") +
+        (patientPointAboveScale(model) ? " ↑ Wynik powyżej skali." : "") +
         (compare ? " Obie płcie we wspólnej skali stężeń." : "") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
       byId("scale-note").setAttribute("data-current-source", model.profile.id);
@@ -1214,6 +1264,27 @@
       // Other hormones keep their own existing scale in a mixed selection.
       // No IU/L tick is assigned to AMH, estradiol or inhibin B.
       for (const h of femaleHormones.filter((h) => selected.has(h.id) && h.id !== "lh" && h.id !== "fsh")) {
+        if (h.id === "amh" && femaleAmhStable) {
+          for (const segment of h.segments) {
+            const d = femaleAmhReferencePath(segment, left, width, relativeY, period.xFraction,
+              [period.domain.minAge, period.domain.maxAge]);
+            if (!d) continue;
+            const schematic = segment.kind === "schematic";
+            g.append(el("path", { d, fill: "none", stroke: h.color, "stroke-width": mobile ? 3 : 3.5,
+              "stroke-linecap": "round", "stroke-linejoin": "round",
+              "stroke-dasharray": schematic ? "5 5" : "none",
+              [schematic ? "data-illustrative-line" : "data-line"]: h.id,
+              "data-independent-scale": h.id, "data-female-stable-line": h.id,
+              "data-segment-kind": segment.kind,
+              "data-divisor": femaleAmhStable.display.divisor, "data-ceiling": 1,
+              "data-plot-left": left, "data-plot-right": left + width,
+              "data-plot-top": top, "data-plot-bottom": bottom,
+              "data-age-from": segment.points[0].ageYears,
+              "data-age-to": segment.points[segment.points.length - 1].ageYears,
+            }));
+          }
+          continue;
+        }
         if (dotModel?.id === h.id) {
           drawReferenceCurves(g, dotModel, { x, y: relativeY, mobile });
           continue;
@@ -1261,7 +1332,8 @@
         ? " Pozostałe hormony zachowują własne skale."
         : " Oś IU/L dotyczy LH i FSH; pozostałe hormony mają własne skale.";
       if (renderedPoint) caption += " Kropka: wynik; jasny znacznik: odniesienie z badania." +
-        (renderedPoint.stableDisplay && renderedPoint.value > period.scale.max ? " ↑ Wynik powyżej skali." : "");
+        ((renderedPoint.stableDisplay?.kind === "female-amh-life" ? patientPointAboveScale(renderedPoint)
+          : renderedPoint.stableDisplay && renderedPoint.value > period.scale.max) ? " ↑ Wynik powyżej skali." : "");
       const measurement = patientContext?.measurement;
       if (mini && gonadotropinResult && selected.has(currentId) && measurement &&
         Number.isFinite(measurement.value) && measurement.value >= 0 && typeof measurement.unit === "string") {
@@ -1368,6 +1440,7 @@
         target.append(p);
       };
       for (const copy of period.caveats || []) paragraph(copy);
+      if (selected.has("amh")) paragraph("AMH zachowuje własną stałą skalę i tę samą poglądową linię, także po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Końcówka pierwszego roku przechodzi łagodnie w poglądowy odcinek dzieciństwa. Jasny znacznik AMH zachowuje medianę źródłową także wtedy, gdy nie leży na linii.");
       if (view === "life") for (const copy of femaleGonadotropins.cycle.caveats || []) paragraph(copy);
       paragraph(view === "mini"
         ? "LH i FSH podzielono osobno przez własne maksimum modelowanej średniej podłużnej. 100% nie oznacza konkretnego stężenia ani mediany GAMLSS. Nie przeliczamy tego modelu na IU/L. Pierwszy odczyt pochodzi z około 6. dnia, a końce linii z około 357.–360. dnia; nie dopisujemy pomiaru w chwili narodzin ani przy 12 miesiącach. Wynik LH/FSH pozostaje tekstem, a pion zaznacza tylko wiek."
@@ -1584,6 +1657,22 @@
             "data-divisor": stable.display.divisor, "data-ceiling": stable.display.ceiling,
             "data-plot-top": top, "data-plot-bottom": bottom,
           }));
+        } else if (sex === "female" && h.id === "amh" && femaleAmhStable) {
+          for (const segment of h.segments) {
+            const d = femaleAmhReferencePath(segment, left, pw, y);
+            if (!d) continue;
+            const schematic = segment.kind === "schematic";
+            g.append(el("path", { ...style, d,
+              "stroke-dasharray": schematic ? "5 5" : "none",
+              [schematic ? "data-illustrative-line" : "data-line"]: h.id,
+              "data-segment-kind": segment.kind, "data-female-stable-line": h.id,
+              "data-divisor": femaleAmhStable.display.divisor, "data-ceiling": 1,
+              "data-plot-left": left, "data-plot-right": left + pw,
+              "data-plot-top": top, "data-plot-bottom": bottom,
+              "data-age-from": segment.points[0].ageYears,
+              "data-age-to": segment.points[segment.points.length - 1].ageYears,
+            }));
+          }
         } else if (sex === "female" && view !== "mini") {
           const spline = displaySpline(h);
           for (const segment of h.segments) {
@@ -2734,6 +2823,15 @@
           ],
         );
       } else if (!stableStudyVisible() && sex === "female") {
+        if (selected.has("amh")) {
+          paragraph("AMH zachowuje tę samą linię i stałą skalę we wszystkich zwykłych widokach, także po wpisaniu wyniku. Zbliżenie powiększa ten sam przebieg. Końcówka pierwszego roku przechodzi łagodnie w poglądowy odcinek dzieciństwa. Jasny znacznik zachowuje medianę źródłową także wtedy, gdy nie leży na linii.");
+          if (renderedPoint?.stableDisplay?.kind === "female-amh-life") {
+            const profile = renderedPoint.profile;
+            paragraph("Odniesienie wyniku AMH: " + [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
+              .filter(Boolean).join(" · ") + ".");
+            if (profile.url) links.push([profile.sourceLabel || "Źródło odniesienia AMH", profile.url]);
+          }
+        }
         paragraph(
           "Minipuberty: mediany GAMLSS Ljubicic 2022, od około 7,3 dnia do 1 roku. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; mediany przeskalowano do prezentacji względnej. Dane dotyczą donoszonych dziewczynek.",
         );
