@@ -1834,6 +1834,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_hormone_lifespan.js?v=24',
   '/vilda_hormone_lifespan.js?v=25',
   '/vilda_hormone_lifespan.js?v=26',
+  '/vilda_hormone_lifespan.js?v=27',
   '/vilda_hormone_lifespan.css?v=1',
   '/vilda_hormone_lifespan.css?v=2',
   '/vilda_hormone_lifespan.css?v=3',
