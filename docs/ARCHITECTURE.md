@@ -48,6 +48,8 @@ Trasy i osadzanie paneli definiuje przede wszystkim `vilda_shell.js`. Zmiana adr
 
 Skrypty są globalne i zależne od kolejności ładowania. Publiczne obiekty `window.Vilda…` pełnią rolę kontraktów między modułami. Ich zmiana wymaga wyszukania wszystkich konsumentów oraz testu uruchomienia zarówno w shellu, jak i samodzielnie.
 
+**Powrót do panelu (P-PANEL-POWROT, 2026-10-12).** Nieaktywny panel jest ukryty przez `display:none`, więc jego ponowne pokazanie uruchamia od nowa animacje CSS elementów, a powłoka odtwarza w nim sesję i wyniki są przeliczane. Żeby karty i przyciski nie wjeżdżały ponownie, `vilda_shell.js` przed pokazaniem wczytanego panelu dodaje do jego `<html>` klasę `vilda-panel-powrot` na 2 s: `style.css` startuje wtedy animacje wejścia (`.animate-in`, `._enter`, `._pop`, `._bounce`, `.lab-step`, jednorazowe impulsy) jako zakończone, a `app.js` nie odlicza liczb. Nowa klasa animacji wejścia powinna trafić do tej samej reguły w `style.css`. Ten sam `display:none` zeruje przewinięcie panelu — pomiary i opis: `docs/clinical/ALGORITHMS.md`, wpis P-PANEL-POWROT.
+
 ### 2. Obliczenia i dane domenowe
 
 Do tej warstwy należą m.in.:

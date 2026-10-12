@@ -1017,6 +1017,23 @@ input[type=submit]:focus-visible {
   }
 }
 
+/* P-PANEL-POWROT: panel powłoki pokazany ponownie (vilda_shell.js, Pw_start) przez chwilę startuje animacje
+   wejścia i jednorazowe błyski jako już zakończone, więc karty i przyciski nie wjeżdżają od nowa. Ujemne
+   opóźnienie, a nie animation:none: zdjęcie klasy nie zmienia nazwy animacji, więc jej nie uruchamia; zapętlone
+   pulsowanie ostrzeżeń na tych elementach (1,25 s) mieści się w 60 s całkowitą liczbę razy i nie zmienia fazy. */
+.vilda-panel-powrot .animate-in,
+.vilda-panel-powrot ._enter,
+.vilda-panel-powrot ._pop,
+.vilda-panel-powrot ._bounce,
+.vilda-panel-powrot .lab-step,
+.vilda-panel-powrot .pulse-danger-2s,
+.vilda-panel-powrot .pulse-warning-2s,
+.vilda-panel-powrot .--pulse::after,
+.vilda-panel-powrot .pulse-danger-2s::after,
+.vilda-panel-powrot .pulse-warning-2s::after {
+  animation-delay: -60s!important
+}
+
 .data-card {
   padding: var(--space-1-25) var(--space-1);
   overflow: auto
