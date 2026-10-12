@@ -793,3 +793,53 @@ test('P-ODTWORZ-WIEK-4: powłoka — poprawka w Karcie na Start, DocPro nieodwie
   expect(await start.evaluate(async (id) => { const u = (await window.VildaVault.getPatient(id)).snapshots[0].payload.user; return [u.height, u.age, u.ageMonths, u.measuredAtISO]; }, pid),
     'dotąd zapis po F5: [172.5, 16, 11, "2026-07-10"]').toEqual([172.5, 16, 10, '2026-06-17']);
 });
+
+test('P-ODTWORZ-WIEK-4 (przegląd): ukryty DocPro ze starszą bazą nie nadpisuje niezapisanego wieku lekarza po zmianie w Karcie', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.clock.setSystemTime(new Date(ZAPIS));
+  await page.addInitScript(() => {
+    try { window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() })); } catch (_) { /* brak storage */ }
+  });
+  await page.goto('/app.html', { waitUntil: 'load' });
+  let start = await ramka(page, 'Start');
+  await start.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+  await page.reload({ waitUntil: 'load' });
+  start = await ramka(page, 'Start');
+  await gotowa(start);
+  // Wizyta A (17-06): bez daty urodzenia, wiek wpisany ręcznie 16 l. 10 m.
+  const pid = await zapiszPacjenta(start, { lastName: 'Fikcyjny', firstName: 'Bezdaty', sex: 'M', age: '16', ageMonths: '10', height: '172', weight: '60' });
+  await start.evaluate(() => window.clearAllData());
+
+  // 10-07: „Nowy pomiar"; DocPro otwarty na chwilę (zostaje w tle z bazą A), powrót na Start.
+  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  await wczytaj(start, pid, 'nowy');
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  await page.waitForTimeout(1500);
+  // Wizyta B: ta sama masa i wzrost, 16 l. 11 m. — zapis z formularza nie odświeża bazy DocPro.
+  await start.locator('#height').fill('172');
+  await start.locator('#weight').fill('60');
+  await start.locator('#age').fill('16');
+  await start.locator('#ageMonths').fill('11');
+  await page.waitForTimeout(1000);
+  expect(await start.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(2000);
+  expect(await docpro.evaluate(() => window.lastLoadedData && window.lastLoadedData.user && window.lastLoadedData.user.ageMonths), 'ukryty DocPro z bazą A').toBe(10);
+
+  // Lekarz poprawia wiek w formularzu (bez zapisu), potem w Karcie zmienia tylko datę STARSZEGO wiersza.
+  await start.locator('#ageMonths').fill('9');
+  await page.waitForTimeout(1500);
+  await start.evaluate(async (id) => window.VildaVault.updateMeasurementRow(id, { key: '202|172.00|60.00' },
+    { ageMonths: 202, height: 172, weight: 60, dateISO: '2026-06-16' }), pid);
+  await page.waitForTimeout(3000);
+
+  expect(await start.evaluate(() => [document.getElementById('age').value, document.getElementById('ageMonths').value]),
+    'dotąd 16/11 — DocPro na starej bazie wpisał całą wizytę, a lustro przeniosło ją na Start').toEqual(['16', '9']);
+  expect(await docpro.evaluate(() => window.lastLoadedData.user.ageMonths), 'baza DocPro odświeżona').toBe(11);
+  expect(await start.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  expect(await start.evaluate(async (id) => { const u = (await window.VildaVault.getPatient(id)).snapshots[0].payload.user; return [u.age, u.ageMonths]; }, pid))
+    .toEqual([16, 9]);
+});

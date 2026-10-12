@@ -317,26 +317,39 @@
      edycją lekarza. Dotąd zmiana lat w Karcie i miesięcy w formularzu składała się w wiek,
      którego nikt nie wpisał. (b) Inna wizyta (awans po usunięciu) wchodzi w całości — dotąd
      niezapisana ręczna zmiana wieku usuniętej wizyty zostawała przy starszej. */
-  function ustawWizyte(payload, stara) {
+  /* Decyzja, które pola wizyty idą za poprawką z Karty (reguły P-ODTWORZ-WIEK-3/-4 wyżej).
+     Liczona tylko w ramce, która dostała powiadomienie sejfu — tam lekarz pracuje i tam jest
+     pełny formularz. Pole nieobecne na stronie nie jest „zmienione przez lekarza". */
+  function polaDoWpisu(payload, stara, info) {
     var u = uzytkownik(payload);
-    if (!u) return;
     var s = uzytkownik(stara);
-    if (s && innaWizyta(stara, payload)) s = null;
+    if (s && (innaWizyta(stara, payload) || !!(info && info.promoted))) s = null;
     var lekarzWiek = !!s && POLA_WIEKU.some(function (k) {
       var el = pole(k);
       return !!el && !el.readOnly && !rowne(el.value, s[k]);
     });
     var kartaWiek = !s || POLA_WIEKU.some(function (k) { return !rowne(s[k], u[k]); });
+    return POLA_WIZYTY.filter(function (k) {
+      if (POLA_WIEKU.indexOf(k) >= 0) return !lekarzWiek && kartaWiek;
+      if (!s) return true;
+      if (rowne(s[k], u[k])) return false;
+      var el = pole(k);
+      return !el || rowne(el.value, s[k]);
+    });
+  }
+
+  /* Zwraca listę pól, które poszły za poprawką — ramki-rodzeństwo wpisują dokładnie ją.
+     P-ODTWORZ-WIEK-4 (przegląd): odbiorca NIE liczy decyzji ze swojej, bywa że nieaktualnej
+     bazy i formularza (tygodnie nie idą lustrem, baza ukrytego panelu bywa o wizytę starsza) —
+     dotąd potrafił nadpisać niezapisany wiek lekarza wiekiem z Karty albo całą wizytą. */
+  function ustawWizyte(payload, stara, info) {
+    var u = uzytkownik(payload);
+    if (!u) return [];
+    var pola = info && info.relay && Array.isArray(info.pola) ? info.pola : polaDoWpisu(payload, stara, info);
     var zmienione = [];
-    POLA_WIZYTY.forEach(function (k) {
+    pola.forEach(function (k) {
       var el = pole(k);
       if (!el) return;
-      if (POLA_WIEKU.indexOf(k) >= 0) {
-        if (lekarzWiek || !kartaWiek) return;
-      } else if (s) {
-        if (rowne(s[k], u[k])) return;
-        if (!rowne(el.value, s[k])) return;
-      }
       var nowa = u[k] == null ? '' : String(u[k]);
       if (rowne(el.value, nowa) && (el.value === '') === (nowa === '')) return;
       el.value = nowa;
@@ -350,6 +363,7 @@
         zgloc('wizyta-zdarzenie', e);
       }
     });
+    return pola.slice();
   }
 
   function odswiezZGlowy(patientId, info) {
@@ -363,23 +377,32 @@
 
       var stara = w.lastLoadedData;
       var tenSam = formularzOpisujeTegoPacjenta(stara);
-      /* Bramka liczona na STAREJ bazie — po podmianie formularz już się z nią nie zgadza. */
-      var wizyta = tenSam && !!(info && info.isUpdate) && pokazujeWizyteBazy(stara) && wizytaZmieniona(stara, payload);
+      var zRodzenstwa = !!(info && info.relay);
+      /* Bramka liczona na STAREJ bazie — po podmianie formularz już się z nią nie zgadza.
+         Ramka-rodzeństwo nie liczy bramki u siebie: wpisuje dokładnie pola, które wpisała
+         ramka z powiadomieniem sejfu (P-ODTWORZ-WIEK-4). */
+      var wizyta = zRodzenstwa
+        ? tenSam && Array.isArray(info.pola) && info.pola.length > 0
+        : tenSam && !!(info && info.isUpdate) && pokazujeWizyteBazy(stara) && wizytaZmieniona(stara, payload);
+      var wpisane = [];
       w.lastLoadedData = klon(payload);
       if (tenSam) {
         ustawNazwe(payload);
         ustawPlec(payload);
         if (wizyta) {
           bezZnaczaniaEdycji(function () {
-            ustawWizyte(payload, stara);
+            wpisane = ustawWizyte(payload, stara, info);
             ustawDate(payload);
           });
         } else {
           ustawDate(payload);
         }
       }
-      utrwal();
-      if (info && info.isUpdate && !info.relay) powiadomRodzenstwo(patientId, snap.snapshotId || null);
+      /* Ukryty panel nie wymusza zapisu sesji — wspólną sesję zapisała ramka z powiadomieniem,
+         a dodatkowy zapis z panelu w tle mógłby wnieść jego starsze pola (np. tygodnie, których
+         lustro nie przenosi). Jego zwykły autozapis zostaje jak był. */
+      if (!zRodzenstwa) utrwal();
+      if (info && info.isUpdate && !zRodzenstwa) powiadomRodzenstwo(patientId, snap.snapshotId || null, wpisane);
       try {
         if (typeof w.CustomEvent === 'function' && dok()) {
           dok().dispatchEvent(new w.CustomEvent('vilda:baseline-refreshed', {
@@ -402,9 +425,10 @@
      urodzenia brał je wtedy za nowy pomiar i liczył wiek na dziś, a autozapis ukrytego panelu
      przy zamknięciu karty nadpisywał wspólną sesję — po F5 Start pokazywał wiek na dziś,
      a „Zapisz" stemplował dzisiejszą datę. Teraz ramka, która odświeżyła bazę po zmianie
-     w miejscu, prosi ramki-rodzeństwo (ten sam origin) o to samo; one przechodzą zwykłą
-     ścieżkę `naZapis` (strażnik bieżącego pacjenta, bramka wizyty) i nie przekazują dalej. */
-  function powiadomRodzenstwo(patientId, snapshotId) {
+     w miejscu, prosi ramki-rodzeństwo (ten sam origin) o to samo i podaje listę pól, które
+     sama wpisała. Rodzeństwo przechodzi strażnika bieżącego pacjenta i tożsamości, odświeża
+     bazę i wpisuje tylko te pola — nie liczy decyzji ze swojej bazy — i nie przekazuje dalej. */
+  function powiadomRodzenstwo(patientId, snapshotId, pola) {
     var rodzic;
     var ramki;
     try {
@@ -422,7 +446,7 @@
         if (!f || f === w) continue;
         var b = f.VildaBaselinePacjenta;
         if (b && typeof b.refreshFromSibling === 'function') {
-          b.refreshFromSibling({ patientId: patientId, snapshotId: snapshotId, isUpdate: true });
+          b.refreshFromSibling({ patientId: patientId, snapshotId: snapshotId, isUpdate: true, pola: (pola || []).slice() });
         }
       } catch (e) {
         zgloc('rodzenstwo', e);
@@ -432,7 +456,10 @@
 
   function odRodzenstwa(info) {
     if (!info || typeof info.patientId !== 'string') return;
-    naZapis({ patientId: info.patientId, snapshotId: info.snapshotId || null, isUpdate: true, relay: true });
+    var pola = Array.isArray(info.pola)
+      ? info.pola.filter(function (k) { return POLA_WIZYTY.indexOf(k) >= 0; })
+      : [];
+    naZapis({ patientId: info.patientId, snapshotId: info.snapshotId || null, isUpdate: true, relay: true, pola: pola });
   }
 
   function naZapis(info) {
