@@ -79,11 +79,12 @@ Dwa wątki biorą ten sam „następny numer”. Po scaleniu pierwszego PR drugi
 
 Wątek, który obserwuje swój PR, dostaje powiadomienie o konflikcie i aktualizuje się sam. W pozostałych przypadkach wklej mu:
 
-> `audyt` się zmienił. Scal `origin/audyt` do swojej gałęzi (`git merge`, bez rebase), rozwiąż konflikty według `docs/GITHUB_WORKFLOW.md` → „Kilka wątków naraz”, uruchom `npm run podbij-wersje` i `npm test`, zatwierdź (commit) i wypchnij.
+> `audyt` się zmienił. Pobierz swoją gałąź z GitHuba (`git pull --no-rebase` — mogła dostać „Update branch”), scal `origin/audyt` do swojej gałęzi (`git merge`, bez rebase), rozwiąż konflikty według `docs/GITHUB_WORKFLOW.md` → „Kilka wątków naraz”, uruchom `npm run podbij-wersje` i `npm test`, zatwierdź (commit) i wypchnij.
 
 ### Procedura wątku po zmianie `audyt`
 
 ```bash
+git pull --no-rebase            # gałąź PR-a mogła dostać na GitHubie „Update branch”
 git fetch origin audyt
 git merge origin/audyt          # na cudzej gałęzi: bez rebase i force-push
 # konflikty — tabela niżej; rozwiązane pliki: git add
@@ -140,7 +141,7 @@ Wynik kroku:
   - Raport mówi, co skrypt by zmienił, np. `SW_VERSION: 1.1.201 → 1.1.202`. Naprawa: procedura wyżej (scal `audyt`, `npm run podbij-wersje`, `npm test`, `git add -A`, commit, push).
   - Każda linia „BŁĄD:” (np. usunięty historyczny wpis precache, append-only) ma osobną adnotację „Błąd wersji do ręcznej poprawki”. Skrypt bez jej poprawienia nic nie zapisze.
 - **Kod 2:** skrypt nie policzył wersji, np. bez rodzica commita scalenia. Wtedy krok też jest czerwony, a nie po cichu zielony.
-- **Pozycje „Do decyzji”** nie zmieniają wyniku kroku.
+- **Pozycje „Do decyzji”** nie zmieniają wyniku kroku. Każda (poza listą pinów w testach) ma adnotację-ostrzeżenie „Wersje — do decyzji” w podsumowaniu PR-a, np. zmieniona treść pliku z nieliczbowym `?v=`, którą SW zostawiłby klientom w starej postaci.
 
 Szkic PR-a, który zmienia zasoby, ma ten krok czerwony, dopóki wątek nie uruchomi skryptu. Zasada „wersje na końcu” zostaje, bo drugie uruchomienie skryptu po scaleniu `audyt` i tak liczy wszystko od nowa.
 

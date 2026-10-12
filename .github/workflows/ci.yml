@@ -57,8 +57,14 @@ jobs:
             linia=${linia#BŁĄD: }
             echo "::error title=Błąd wersji do ręcznej poprawki::${linia//%/%25}"
           done || true
+          # „Do decyzji” (np. zmieniona treść pliku z nieliczbowym ?v=) nie zmienia kodu, ale ma być widoczne
+          # w podsumowaniu PR-a, nie tylko w logu zielonego joba. Piny w testach pomijamy — to lista do przejrzenia.
+          printf '%s\n' "$wynik" | grep '^Do decyzji: ' | grep -v '^Do decyzji: pin wersji w teście' | while IFS= read -r linia; do
+            linia=${linia#Do decyzji: }
+            echo "::warning title=Wersje — do decyzji::${linia//%/%25}"
+          done || true
           if [ "$kod" = 1 ]; then
-            echo "::error title=Wersje niespójne z audyt::Na gałęzi PR-a: git fetch origin audyt && git merge origin/audyt && npm run podbij-wersje && npm test, potem git add -A, commit i push. Linie „BŁĄD:” z logu popraw najpierw ręcznie — bez tego skrypt nic nie zapisze. Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”."
+            echo "::error title=Wersje niespójne z audyt::Na gałęzi PR-a: git pull --no-rebase (po „Update branch” gałąź na GitHubie ma nowy commit) && git fetch origin audyt && git merge origin/audyt && npm run podbij-wersje && npm test, potem git add -A, commit i push. Linie „BŁĄD:” z logu popraw najpierw ręcznie — bez tego skrypt nic nie zapisze. Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”."
           elif [ "$kod" != 0 ]; then
             echo "::error title=Nie policzono wersji::podbij-wersje zakończył się kodem $kod — przyczyna w logu wyżej."
           fi

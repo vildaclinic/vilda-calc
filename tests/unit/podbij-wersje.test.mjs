@@ -657,6 +657,31 @@ describe('P-WERSJE-CI: CI sprawdza wersje PR-a względem audyt', () => {
     expect(krok.stdout).toContain('::error title=Wersje niespójne z audyt::');
   });
 
+  it('„Do decyzji” (nieliczbowe ?v= ze zmienioną treścią) daje ostrzeżenie w podsumowaniu, lista pinów w testach — nie', () => {
+    const r = repo();
+    wAudyt(r, () => {
+      r.zapisz('edu.css', '.edu { color: red; }\n');
+      r.zapisz('app.html', r.czytaj('app.html').replace('<p>', '<link rel="stylesheet" href="edu.css?v=20261001a">\n<p>'));
+    });
+    r.zapisz('edu.css', '.edu { color: blue; }\n');
+    r.podbij();
+    r.git('add', '-A');
+    r.git('commit', '-q', '-m', 'edu.css bez nowego tokenu');
+    const krok = uruchomKrokCI(klonScaleniaPR(r, 'agent/watek'));
+    expect(krok.status, bezPolecen(krok)).toBe(0);
+    expect(krok.stdout).toMatch(/^::warning title=Wersje — do decyzji::edu\.css ma nieliczbowe \?v= \(20261001a\)/m);
+
+    // Zwykłe podbicie pliku z pinem w teście: lista pinów zostaje w logu, bez ostrzeżenia.
+    const r2 = repo();
+    r2.zapisz('silnik.js', r2.czytaj('silnik.js').replace('silnikA = 1', 'silnikA = 2'));
+    r2.podbij();
+    r2.git('commit', '-q', '-am', 'silnik 4');
+    const zwykly = uruchomKrokCI(klonScaleniaPR(r2, 'agent/watek'));
+    expect(zwykly.status, bezPolecen(zwykly)).toBe(0);
+    expect(zwykly.stdout).toContain('Do decyzji: pin wersji w teście');
+    expect(zwykly.stdout).not.toMatch(/^::warning/m);
+  });
+
   it('PR bez zmian w zasobach przechodzi, a bez rodzica commita scalenia (fetch-depth 1) krok pada zamiast przejść', () => {
     const r = repo();
     r.zapisz('docs/notatka.md', 'notatka 2\n');
