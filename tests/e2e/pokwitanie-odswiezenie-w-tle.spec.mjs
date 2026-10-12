@@ -67,6 +67,12 @@ async function otworz(page, context, strona) {
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault.isUnlocked() && typeof window.update === 'function'
     && !document.documentElement.classList.contains('vilda-auth-locked'), null, { timeout: 30000 });
+  // Chwila ostatniego update() — pomiar rusza dopiero po ucichnięciu przeliczeń po wczytaniu (patrz ciszaPrzeliczen).
+  await page.evaluate(() => {
+    const update = window.update;
+    window.__ostatnieUpdate = performance.now();
+    window.update = function () { window.__ostatnieUpdate = performance.now(); return update.apply(this, arguments); };
+  });
   // Stan ustalony: zakończona pełna synchronizacja po odblokowaniu.
   await expect.poll(() => page.evaluate(() => window.__dziennikSync.some((s) => s.state === 'ok' && s.op === 'full')),
     { timeout: 20000, message: 'pełna synchronizacja po odblokowaniu' }).toBe(true);
@@ -95,6 +101,14 @@ async function wczytaj(page, pid) {
 async function zamknijWyborWczytania(page) {
   const nowy = page.locator('#vildaLcmNew');
   await nowy.waitFor({ state: 'visible', timeout: 5000 }).then(() => nowy.click()).catch(() => { /* okno się nie pokazało */ });
+}
+
+// Wczytanie daje jeszcze kaskadę przeliczeń niezależną od synchronizacji: custom-fixes.js po vilda:patient-loaded
+// rozgłasza stan i po 3,2 s wysyła `change` na polach formularza (#sex → debouncedUpdate()). Rejestrator rusza
+// dopiero, gdy przez 4 s nie było żadnego update(), żeby liczyć wyłącznie skutki zdarzeń synchronizacji.
+async function ciszaPrzeliczen(page) {
+  await expect.poll(() => page.evaluate(() => performance.now() - window.__ostatnieUpdate >= 4000),
+    { timeout: 30000, intervals: [250], message: 'strona przestała się przeliczać po wczytaniu' }).toBe(true);
 }
 
 // Rejestrator: update() ze stanem źródła w chwili przeliczenia, ogłoszenia źródła pokwitania i stan źródła przy
@@ -147,6 +161,7 @@ for (const strona of ['index.html', 'docpro.html']) {
     await otworz(page, context, strona);
     const anna = await zapisz(page, ANNA);
     await wczytaj(page, anna);
+    await ciszaPrzeliczen(page);
     await wlaczRejestrator(page);
     for (let i = 0; i < 3; i += 1) await cyklSynchronizacji(page);
     const R = await odczytaj(page);
@@ -166,6 +181,7 @@ test('index.html: zmiana rekordu tego samego pacjenta dochodzi przy synchronizac
   await otworz(page, context, 'index.html');
   const anna = await zapisz(page, ANNA);
   await wczytaj(page, anna);
+  await ciszaPrzeliczen(page);
   await wlaczRejestrator(page);
   // Nowa wersja rekordu zapisana poza formularzem tej strony (np. w innej ramce): start pokwitania 10,5 r.
   await page.evaluate(async ({ id, p }) => {
@@ -186,6 +202,7 @@ test('index.html: dane pokwitania nie zostają po innym pacjencie — zmiana pac
   const anna = await zapisz(page, ANNA);
   const jan = await zapisz(page, JAN);
   await wczytaj(page, anna);
+  await ciszaPrzeliczen(page);
   await wlaczRejestrator(page);
   await cyklSynchronizacji(page);
   expect(await statusZrodla(page, anna), 'Anna po cichym odświeżeniu').toBe('ready');

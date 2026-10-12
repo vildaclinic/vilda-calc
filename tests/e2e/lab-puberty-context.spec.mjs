@@ -192,7 +192,9 @@ test('logout and session reset cannot be reversed by a late patient response', a
   await expect(contextSummary(page)).not.toContainText('brak GnRHa');
 });
 
-test('a current-patient update suspends copied context and automatically applies the completed current record', async ({ page }) => {
+// P-POKWITANIE-W-TLE (decyzja właściciela 2026-10-12): odczyt w tle tego samego pacjenta nie zawiesza kontekstu.
+// Do końca odczytu źródło niesie ostatni potwierdzony rekord; nowy wynik podmienia go po odczycie.
+test('a background update of the current patient keeps the last confirmed record during the read and then applies the completed record', async ({ page }) => {
   await open(page);
   await ready(page);
   await sample(page);
@@ -200,14 +202,13 @@ test('a current-patient update suspends copied context and automatically applies
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await page.evaluate((id) => window.__lhContext.refresh(id, { age: 15, tannerStage: '5' }, { gnrhaStatus: 'brak' }), B);
-  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
-  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
+  // Rekord jest czytany ponownie; do końca odczytu GnRHa pochodzi z ostatniego potwierdzonego rekordu tego pacjenta.
+  expect(await page.evaluate(() => window.__lhContext.requests.at(-1))).toBe(B);
+  expect(await source(page, B)).toMatchObject({ status: 'ready', puberty: { gnrhaStatus: 'w-trakcie' } });
   const pending = await snapshot(page);
-  expect(pending.evaluation.input.treatment.gnrha).toBe('unknown');
-  expect(pending.evaluation.input.puberty.stage).toBeNull();
-  expect(pending.evaluation.ageAtSample.status).toBe('unknown');
+  expect(pending.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await complete(page, B);
+  expect(await source(page, B)).toMatchObject({ status: 'ready', puberty: { gnrhaStatus: 'brak' } });
   expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
   await expect(page.locator('#labPubertyStage')).toHaveValue('5');
@@ -281,18 +282,19 @@ test('the app frame uses current session identity B when its old window global s
   expect(saved.evaluation.biochemical.primary).toBeNull();
 });
 
-test('an unchanged refresh suspends imported data and restores the current sample after the read', async ({ page }) => {
+test('an unchanged background refresh keeps imported data and the current sample during and after the read', async ({ page }) => {
   await open(page);
   await ready(page);
   await select(page, 'Kind', 'G');
   await sample(page);
   const before = await snapshot(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
-  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
-  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
-  const pending = await snapshot(page);
-  expect(pending.evaluation.input.treatment.gnrha).toBe('unknown');
-  expect(pending.evaluation.biochemical.primary).toBeNull();
+  // P-POKWITANIE-W-TLE: niezmieniony rekord tego samego pacjenta nie zawiesza importów ani na czas odczytu.
+  expect(await source(page, B)).toMatchObject({ status: 'ready', puberty: { gnrhaStatus: 'w-trakcie' } });
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('4');
+  await expect(page.locator('#labPubertyKind')).toHaveValue('G');
+  expect((await snapshot(page)).evaluation.input).toEqual(before.evaluation.input);
   await complete(page, B);
   expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
@@ -301,12 +303,37 @@ test('an unchanged refresh suspends imported data and restores the current sampl
   expect((await snapshot(page)).evaluation.input).toEqual(before.evaluation.input);
 });
 
-test('manual age correction during a refresh survives while known treatment and automatic selection are restored', async ({ page }) => {
+test('after a failed read the next refresh of the same patient suspends imported data until the read completes', async ({ page }) => {
+  await open(page);
+  await ready(page);
+  await sample(page);
+  // Nieudany odczyt w tle czyści źródło: kontekst karty jest niedostępny, importy znikają.
+  await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
+  await complete(page, B, true);
+  expect((await source(page, B)).status).toBe('unavailable');
+  expect((await snapshot(page)).evaluation.input.treatment.context).toBe('unknown');
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
+  // Kolejne odświeżenie nie ma czego zachować: zwykły odczyt z „loading”, importy wyłączone do jego końca.
+  await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
+  expect((await source(page, B)).status).toBe('loading');
+  const pending = await snapshot(page);
+  expect(pending.evaluation.input.treatment.gnrha).toBe('unknown');
+  expect(pending.evaluation.biochemical.primary).toBeNull();
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
+  await complete(page, B);
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('4');
+  await expectAutomaticReference(page);
+});
+
+test('manual age correction during a background refresh survives while known treatment and automatic selection stay', async ({ page }) => {
   await open(page);
   await ready(page);
   await sample(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
-  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
+  // P-POKWITANIE-W-TLE: import zostaje w trakcie odczytu w tle; ręczna korekta z tego czasu nie jest nadpisywana.
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await fill(page, 'AgeYears', '9');
   await complete(page, B);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');

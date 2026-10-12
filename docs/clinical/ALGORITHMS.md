@@ -3500,9 +3500,14 @@ Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany
 **Testy.**
 - `tests/unit/pokwitanie-odswiezenie-w-tle.test.mjs` (21): prawdziwe `vilda_zrodla_pacjenta.js` i `vilda_puberty_source.js` na atrapie okna i sejfu, z zegarem zdarzeń w kolejności z przeglądarki (zamówienie przeliczenia przed rozstrzygnięciem odczytu).
   - Na starym module pada 9 testów zachowania w tle. Testy bezpieczeństwa przechodzą na obu wersjach.
-  - Każda z mutacji warunku cichego odświeżenia (bez rozróżnienia jawny/w tle, bez porównania pacjenta, bez warunku zakończonego odczytu, bez warunku sejfu) wywraca co najmniej jeden test tego pliku albo `pokwitanie-zrodlo-pacjent.test.mjs`.
+  - Każda z mutacji warunku cichego odświeżenia (bez rozróżnienia jawny/w tle, bez porównania pacjenta, bez warunku udanego odczytu, bez warunku sejfu) wywraca co najmniej jeden test tego pliku albo `pokwitanie-zrodlo-pacjent.test.mjs`.
 - `tests/unit/pokwitanie-zrodlo-pacjent.test.mjs`: dwa testy przypinały czyszczenie przy ponownym odczycie przez zdarzenie synchronizacji. Teraz sprawdzają je przez jawne `vilda:patient-loaded`; zachowanie tej drogi się nie zmieniło.
-- `tests/e2e/pokwitanie-odswiezenie-w-tle.spec.mjs` (4): prawdziwy Chromium z prawdziwą synchronizacją i atrapą serwera.
+- Stary kontrakt przypinało też sześć testów e2e LH/FSH. Przy przedstawianiu wariantów podano tylko dwa testy jednostkowe; resztę wykazało CI. Każdy z sześciu sprawdza teraz nowy kontrakt, a asercje końcowe zostały bez zmian.
+  - `tests/e2e/lab-puberty-context.spec.mjs` (3): w trakcie odczytu w tle obowiązuje ostatni potwierdzony rekord (GnRHa, importy formularza), a po odczycie zmieniony rekord jest stosowany automatycznie. Rekord niezmieniony nie rusza formularza. Ręczna korekta wieku z czasu odczytu zostaje.
+  - `tests/e2e/lab-puberty-sex-aware.spec.mjs` (3): obserwacje G/Th zostają w trakcie odczytu w tle tej samej płci. Płeć F z formularza odrzuca je od razu i nie wracają po powrocie do M. Wczytanie innego pacjenta czyści je przed spóźnioną odpowiedzią.
+  - Nowe testy w obu plikach pilnują ścieżki, która nadal zawiesza: po nieudanym odczycie kolejne odświeżenie idzie przez `loading`, importy i obserwacje są wyłączone do końca odczytu i wracają przy tej samej płci.
+  - Na starym module padają zaktualizowane testy; nowe testy ścieżki z `loading` przechodzą na obu wersjach.
+- `tests/e2e/pokwitanie-odswiezenie-w-tle.spec.mjs` (4): prawdziwy Chromium z prawdziwą synchronizacją i atrapą serwera. Pomiar rusza po 4 s bez `update()`, bo `custom-fixes.js` po `vilda:patient-loaded` wysyła jeszcze `change` na polach formularza po 3,2 s. To przeliczenie nie zależy od synchronizacji.
   - `index.html` i `docpro.html`, trzy wymiany bez zmian: bez `loading`, 0 ogłoszeń, 0 `update()`.
   - Zmiana rekordu tego samego pacjenta: jedno ogłoszenie i przeliczenie z nowym startem pokwitania.
   - Zmiana pacjenta, synchronizacja, `clearAllData()` (→ `vilda:user-state-cleared`) i blokada sejfu: u Jana nigdy dane Anny.
