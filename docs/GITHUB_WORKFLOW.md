@@ -74,7 +74,7 @@ Dwa wątki biorą ten sam „następny numer”. Po scaleniu pierwszego PR drugi
 ### Zasady dla właściciela
 
 1. **Jeden obszar — jeden wątek.** Równolegle idą prace w różnych modułach. Dwie raty tego samego tematu (np. P-DIETA w `vilda_diet_recommendations.js`) prowadź po kolei.
-2. **Scalaj jeden PR naraz.** Po każdym scaleniu pozostałe otwarte PR-y trzeba zaktualizować — także te bez konfliktu.
+2. **Scalaj jeden PR naraz.** Po każdym scaleniu pozostałe otwarte PR-y trzeba zaktualizować — także te bez konfliktu. Przycisk „Update branch” na GitHubie scala `audyt`, ale wersji nie przelicza. Jeżeli po nim krok CI „Sprawdź wersje względem audyt” jest czerwony, wklej wątkowi polecenie niżej.
 3. **Wersje na końcu.** Wątek nadaje numery skryptem `npm run podbij-wersje` jako ostatni krok, po scaleniu najnowszego `audyt`.
 
 Wątek, który obserwuje swój PR, dostaje powiadomienie o konflikcie i aktualizuje się sam. W pozostałych przypadkach wklej mu:
@@ -94,7 +94,7 @@ git commit                      # kończy też scalanie, jeżeli było w toku
 git push
 ```
 
-Bez `git add` i `git commit` poprawki skryptu zostają tylko na dysku, a PR na GitHubie dalej ma zderzone numery. CI przejdzie wtedy na zielono, bo wypchnięte drzewo jest wewnętrznie spójne. Testy przeglądarkowe po scaleniu uruchamia CI (wymagany status „Testy przeglądarkowe i PWA”).
+Bez `git add` i `git commit` poprawki skryptu zostają tylko na dysku, a PR na GitHubie dalej ma zderzone numery. `npm test` przechodzi wtedy na zielono, bo wypchnięte drzewo jest wewnętrznie spójne. Zderzenie wykrywa dopiero krok CI „Sprawdź wersje względem audyt” (niżej). Testy przeglądarkowe po scaleniu uruchamia CI (wymagany status „Testy przeglądarkowe i PWA”).
 
 | Konflikt w | Jak rozwiązać |
 |---|---|
@@ -116,6 +116,27 @@ Symulacja na kodzie z 2026-09-30 (`audyt` `567597c`, otwarte #503 i #504):
 
 - **#503 i #504 scalają się bez żadnego konfliktu**, a mimo to wynik jest zły. #504 podbija SW do 1.1.130, a #503 zmienia cztery pliki, ale SW nie podbija. Po obu scaleniach zmiany #503 wyszłyby pod wersją 1.1.130 z #504. `npm run podbij-wersje` na stanie po scaleniu daje 1.1.131.
 - **Dwa wątki zmieniają ten sam plik** (`vilda_diet_recommendations.js`, oba podbijają do `?v=67`). Strony, precache i `SW_VERSION` scalają się bez konfliktu, bo obie strony wpisały to samo. Konflikt jest tylko w `wersje-zasobow.json`. Połączona treść obu zmian zostałaby pod `?v=67`, który klient z zainstalowaną aplikacją ma już w pamięci z treścią pierwszego wątku. Service worker nie odświeża wpisów z `?v=` (P-SW rata 1), więc druga zmiana nigdy by do niego nie dotarła. Skrypt nadaje `?v=68` i SW 1.1.132, a strażnicy wersji przechodzą.
+
+2026-10-08 zdarzyło się to trzy razy jednego dnia. #591 wyszedł pod `SW_VERSION` 1.1.200 z #590. #594 i #595 wyszły pod 1.1.201 z #592. #594 dostał `audyt` przyciskiem „Update branch” i został scalony bez ponownego uruchomienia skryptu. Od 2026-09-28 takich scaleń było siedem: #446, #470, #503, #560, #591, #594 i #595. Treść pod tym samym `?v=` nie rozjechała się w żadnym z nich (pilnuje tego `wersje-zasobow.json`). Zderzało się tylko `SW_VERSION`, czyli nazwa pamięci powłoki. Nowa wersja instalowała się wtedy w pamięć, z której korzystał działający SW, aż do następnego podbicia SW.
+
+### Strażnik w CI
+
+Wymagany job „Lint, składnia i testy jednostkowe” ma na pull requeście krok **„Sprawdź wersje względem audyt”**:
+
+```bash
+node tests/scripts/podbij-wersje.mjs --sprawdz --bez-sieci --baza=HEAD^1
+```
+
+Na PR-ze `actions/checkout` pobiera commit scalenia PR-a z `audyt` z rodzicami (`fetch-depth: 2`), więc `HEAD^1` jest dokładnie tym `audyt`, do którego PR wejdzie. Zestaw reguł wymaga aktualnej gałęzi przed scaleniem („Require branches to be up to date”, `strict_required_status_checks_policy`). Krok liczy więc względem najnowszego `audyt`, także po „Update branch”.
+
+- Kod 1 oznacza, że wersje trzeba przeliczyć. Raport kroku mówi, co skrypt by zmienił, np. `SW_VERSION: 1.1.201 → 1.1.202`. Naprawa: procedura wyżej (scal `audyt`, `npm run podbij-wersje`, `npm test`, commit, push).
+- Kod 2 oznacza, że skrypt nie policzył wersji, np. bez rodzica commita scalenia. Wtedy krok też jest czerwony, a nie po cichu zielony.
+- Pozycje „Do decyzji” nie zmieniają wyniku kroku.
+- Na push do `audyt` krok jest pomijany.
+
+Szkic PR-a, który zmienia zasoby, ma ten krok czerwony, dopóki wątek nie uruchomi skryptu. Zasada „wersje na końcu” zostaje, bo drugie uruchomienie skryptu po scaleniu `audyt` i tak liczy wszystko od nowa.
+
+Odtworzenie na historii `audyt`: każdy z 121 commitów od wprowadzenia skryptu (#506) do `7a338be`, z jego własną wersją skryptu, z bazą = poprzedni commit `audyt`. Krok byłby czerwony dokładnie przy pięciu zderzeniach z tego okresu (#503, #560, #591, #594 i #595), a pozostałe 116 commitów przeszłoby bez fałszywego alarmu. Test: `tests/unit/podbij-wersje.test.mjs`, „P-WERSJE-CI”. Wycina polecenie kroku z `ci.yml` i uruchamia je w płytkim klonie commita scalenia.
 
 ### Co robi `npm run podbij-wersje`
 
