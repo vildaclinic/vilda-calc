@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-12",
+  "status": "implementation-authorized-by-owner; educational-display-review-not-clinical-validation",
+  "approval": {
+    "date": "2026-10-12",
+    "instruction": "ok, koduj",
+    "scope": "Ordinary female E2 fixed geometry and scale, canonical mini/puberty projection and mixed LH/FSH selection; no new numerical reference or laboratory profile.",
+    "context": "Owner approved after reviewing before/after and the explanation that the lower infant peak preserves source concentrations on a fixed whole-life scale.",
+    "auditBaseCommit": "e656093c31d590ac1df86e66b95e206eb8c6223e",
+    "implementationBaseCommit": "6a4e349d2553b2cb235eba3ff0626da4a7ae47dc",
+    "approvedCandidateSha256": "4d4e45ad07f8d0d2dfb519f86279220b0a13e914d4c746823df597d51325e7fb",
+    "approvedBeforeAfterHtmlSha256": "db7ed9520205cd37cae4027061733f6e2eaf864893be1fc4e42bb1aa466cbc8a"
+  },
+  "clinicalNormsChanged": false,
+  "numericPatientProfilesChanged": false,
+  "sourceConcentrationsChanged": false,
+  "referenceEngineChanged": false,
+  "preservedSourceFiles": [
+    {
+      "file": "docs/clinical/hormone-lifespan/female-lifespan-data.json",
+      "sha256": "226aa8771c75fae45f0a047d21e843005dce03df37db487fbcb46ac914b165c6"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/female-reference-data.json",
+      "sha256": "18785f71947ccb93da901169d283af8810ed5ee35816eb40860a32d05e6aed2a"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/population-reference-data.json",
+      "sha256": "9d0e6f9da1b6a2832d97b31324aba0647449e0f647486a5865ec6f56d5ed92d4"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/evidence/madsen2022-female-median-si.json",
+      "sha256": "d1797532592d8f018bf6a246b77065ddcd8a7d2362d8eec1304f350352582299"
+    },
+    {
+      "file": "docs/clinical/hormone-lifespan/evidence/frederiksen2020-adult-e2-cycle-medians.json",
+      "sha256": "c87a6877b0613a720d3aef9d931023674d13eccf129b4f346061af8276e31059"
+    }
+  ],
+  "sources": [
+    {
+      "id": "ljubicic2022",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://academic.oup.com/jcem/article/107/9/2598/6608768",
+      "supplementDoi": "10.6084/m9.figshare.19469555.v1",
+      "supplementUrl": "https://ndownloader.figshare.com/files/34594370",
+      "supplementSha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+      "reviewBasis": "Archived full publisher article, metadata reconfirmed; original supplement freshly downloaded and parsed. All 99 existing E2 medians match exactly.",
+      "table": "Supplementary Table 1, section F; Figure 1 GAMLSS model median",
+      "population": "98 healthy term female infants, 266 serum samples; observations 5 days–14.2 months.",
+      "method": "LC-MS/MS",
+      "matrix": "serum",
+      "unit": "pmol/L",
+      "loqPmolL": 4,
+      "sourceBelowLoqSubstitutionPmolL": 2,
+      "selectedGrid": {
+        "minAgeYears": 0.02,
+        "maxAgeYears": 1,
+        "stepYears": 0.01,
+        "nodes": 99
+      },
+      "checkpoints": [
+        { "ageYears": 0.02, "medianPmolL": 8.249 },
+        { "ageYears": 0.25, "medianPmolL": 21.616 },
+        { "ageYears": 0.34, "medianPmolL": 23.908 },
+        { "ageYears": 0.5, "medianPmolL": 18.549 },
+        { "ageYears": 1, "medianPmolL": 5.933 }
+      ],
+      "statisticDistinction": "Figure 3 shows a separate normalized longitudinal mean with early and later E2 waves. Its absolute mean maxima were not established here. Do not multiply it by the median maximum 23.908 or add its waves to the concentration median.",
+      "limitations": [
+        "No birth or prenatal patient value: fitted supplementary rows at age zero are not measured cord-blood concentrations.",
+        "Not a preterm reference; observed within-child variability is not captured by the cross-sectional median.",
+        "Source handling below LOQ does not authorize application-side substitution of a censored patient result."
+      ]
+    },
+    {
+      "id": "madsen2022",
+      "doi": "10.1210/clinem/dgac155",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+      "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+      "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+      "supplementSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "reviewBasis": "Fresh primary full-text XML and original workbook; all 13 source medians match exactly.",
+      "table": "LCMSMS hormones worksheet, female E2 AA3:AD15; inverse-log example K36/L36",
+      "population": "Norwegian BGS2/Fit Futures girls, age 6–18 years; different cycle phases, oral contraceptive users excluded.",
+      "matrix": "serum",
+      "method": "LC-MS/MS; LLOQ 0.58 pmol/L in BGS2, 13 pmol/L in Fit Futures",
+      "statistic": "Chronological-age model median, not Tanner-stage median or longitudinal individual trajectory",
+      "formula": "median_pmol_L = exp(M_logSIx1e6) / 1000000",
+      "checkpoints": [
+        { "ageYears": 6, "medianPmolL": 1.257681951881138 },
+        { "ageYears": 12, "medianPmolL": 52.46318409704675 },
+        { "ageYears": 18, "medianPmolL": 185.45583618764735 }
+      ],
+      "limitations": [
+        "No data-derived concentration in the illustrative 1–6-year bridge.",
+        "No patient reference profile is activated from these display nodes in this implementation.",
+        "Internal publication method comparison does not harmonize all other lifespan sources."
+      ]
+    },
+    {
+      "id": "frederiksen2020",
+      "doi": "10.1210/clinem/dgz196",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7007877/",
+      "supplementDoi": "10.6084/m9.figshare.10084145",
+      "supplementUrl": "https://ndownloader.figshare.com/files/18182171",
+      "supplementSha256": "d061a335bd42a0d7607c20abd96611529d73f225f11d0e27856c3913b549ee19",
+      "reviewBasis": "Full primary article, original supplemental Table 8 and Figure 2 inspected.",
+      "population": "Women aged 24.7–43.9 years with regular cycles; adult phase groups are cross-sectional.",
+      "matrix": "serum",
+      "method": "Isotope-dilution TurboFlow LC-MS/MS",
+      "phaseMediansPmolL": [156, 254, 264],
+      "phaseGroupsDays": ["1–7", "8–14", "15+"],
+      "overlappingDay15PlusOvulatorySubgroupMedianPmolL": 303,
+      "limitations": [
+        "Phase medians are not age nodes or a whole-cycle mean; the 303 subgroup overlaps day 15+.",
+        "Caption N=188, row counts sum to 189, and Figure 7 gives a different first-group N. Preserve this source discrepancy.",
+        "Total E2 Figure 2a supports a broadly stable adult median beyond age 40; do not substitute free E2 Figure 2c.",
+        "Adult screen plateau is an illustration, not a source-derived concentration of 185.456 pmol/L."
+      ]
+    },
+    {
+      "id": "anckaert2021",
+      "doi": "10.1016/j.plabm.2021.e00211",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8042396/",
+      "fullArticleSha256": "af25809af65e14bcaf020658570f7d2cfbabe3303bddb877b3ad67314a7c63e7",
+      "supplementSha256": "adf0b88a12c66fe8563717fc6e8370e0c874982f7b43dab44d71a42f7554c2cb",
+      "reviewBasis": "Primary full text and cached original supplement, Table 1 and Supplementary Table S3; all seven medians and phase boundaries match.",
+      "population": "85 evaluable women aged 18–37 years, selected natural ovulatory cycles; approximately three blood collections per week.",
+      "matrix": "serum",
+      "method": "Roche Elecsys Estradiol III on cobas e801",
+      "phaseMediansPmolL": [125, 172, 464, 817, 390, 505, 396],
+      "sourceStandardizedCycleDays": 29,
+      "displayCycleDays": 28,
+      "displayDivisorPmolL": 817,
+      "limitations": [
+        "Seven subphase medians are not daily medians or a whole-cycle average.",
+        "The 28-day schematic and final downward closure are illustrative; no ovulation prediction or patient concentration point.",
+        "The separate cycle normalizer does not calibrate LC-MS/MS lifespan data."
+      ]
+    },
+    {
+      "id": "cui2026",
+      "doi": "10.1210/clinem/dgag188",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13461334/",
+      "fullPdfUrl": "https://europepmc.org/api/getPdf?pmcid=PMC13461334",
+      "fullPdfSha256": "c0ffac937343a16c6e3bf776332dd3cb7e830197376a53c1c2e199bc33bf8da6",
+      "reviewBasis": "Full author manuscript and NCBI BioC read, Table 2 inspected visually; replaces prior abstract-only verification.",
+      "table": "Table 2 harmonized pooled sample quantiles, not the reweighted or conditional BMI-specific median",
+      "population": "7206 postmenopausal women aged 38–100 years in five cohorts; 96% White, one specimen each. No hormone therapy at draw or preceding 3 months; BMI below 18.5 excluded.",
+      "matrix": "plasma",
+      "method": "Mainly LC-MS/MS with part of NHS measured by extraction/chromatography RIA; calibrated to CDC reference procedure within this publication.",
+      "pooledMedianPgMl": 4.9,
+      "reportedMedianPmolL": 18,
+      "limitations": [
+        "Pooled median is not age-specific at 55 or 75 years and is not a longitudinal individual plateau.",
+        "One sample per woman precludes longitudinal time-since-menopause inference; BMI affects the concentration.",
+        "Internal harmonization does not calibrate unrelated app publications or serum against plasma.",
+        "Published reference intervals are evidence only; no new laboratory norm is adopted."
+      ]
+    },
+    {
+      "id": "randolph2011",
+      "doi": "10.1210/jc.2010-1746",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/21159842/",
+      "reviewBasis": "Complete primary abstract only; no fresh full-body assay or table review claimed.",
+      "population": "SWAN: 1215 women with natural final menstrual period from a cohort of 3302, baseline age 42–52 years.",
+      "statistic": "Modeled mean change relative to individual final menstrual period",
+      "declineBeginsYearsFromFmp": -2.03,
+      "stableAfterYearsFromFmp": 2.17,
+      "allowedUse": "Qualitative menopausal decline, not universal chronological ages, LC-MS/MS amplitudes or an individual prediction."
+    }
+  ],
+  "scale": {
+    "unit": "pmol/L",
+    "divisor": 264,
+    "ceiling": 1,
+    "transform": "linear",
+    "source": "Unchanged lifespanData.hormones.e2.normalizationMaximum; historical Frederiksen phase median",
+    "notReferenceLimitOrPhysiologicMaximum": true,
+    "independentOf": ["result-presence", "result-value", "patient-age", "view", "viewport", "other-selected-hormones"],
+    "infantPeakFraction": 0.09056060606060606,
+    "infantPeakToAge18MedianRatio": 0.1289147890488034,
+    "ratioMeaning": "Comparison of selected medians from different cohorts, not a universal patient ratio or a measure of biological importance.",
+    "zero": "Baseline point after original qualification",
+    "aboveAxis": "Arrow with actual value, unchanged curve and source marker",
+    "boundaryTolerance": "Eight machine epsilons on the fixed E2 scale only; not assay uncertainty"
+  },
+  "geometry": {
+    "wholeLife": "Original blank-life displaySegments and source/illustrative styles retained; no new anchors.",
+    "zoom": "Canonical PCHIP in female whole-life coordinates; exact piecewise Hermite-to-Bezier projection split at nodes and time-axis boundaries.",
+    "mixedLHFSH": "Same full E2 line on the selected period age axis with its own scale; never IU/L or gonadotropin mean normalization.",
+    "childhoodBridgeYears": [1, 6],
+    "adultPlateau": "Educational continuation of terminal pubertal height; no numeric adult tooltip or patient reference.",
+    "menopauseTransitionYears": [45, 55],
+    "menopauseTransitionMeaning": "Illustrative chronological positions, not inferred individual menopause dates.",
+    "lateTail": "Low pooled-study context; not an exact age-specific median or proof of zero age effect."
+  },
+  "patientReference": {
+    "id": "ljubicic2022-female-e2",
+    "minAgeYears": 0.02,
+    "maxAgeYears": 1,
+    "unit": "pmol/L",
+    "statistic": "median",
+    "termOnly": true,
+    "selection": "Original reference engine, specimen/assay, age precision, unit conversion and censored-result qualification unchanged.",
+    "newAfterInfancy": false,
+    "projectSourceMarkerOntoIllustration": false
+  },
+  "syntheticCases": [
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPmolL": 50,
+      "expectedSourceMedianPmolL": 21.616,
+      "expectedResultFraction": 0.1893939393939394,
+      "expectedSourceFraction": 0.08187878787878788
+    },
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPmolL": 1000,
+      "expected": "Above-axis arrow labelled 1000 pmol/L; unchanged source median 21.616, curve and scale."
+    },
+    {
+      "sex": "female",
+      "preterm": "no",
+      "ageYears": 0.25,
+      "resultPmolL": 0,
+      "expected": "Baseline point; original source, scale and line unchanged."
+    },
+    {
+      "input": "Blank, cleared or censored E2 result",
+      "expected": "No new patient concentration point; unchanged full line and scale."
+    },
+    {
+      "input": "Age below 0.02 years, above 1 year, puberty or adulthood",
+      "expected": "No new numerical E2 reference; existing illustration alone does not extend source eligibility."
+    },
+    {
+      "input": "E2 result with LH/FSH selected; mini, puberty, fullscreen or 320px",
+      "expected": "Same full canonical E2 line and own 264/1 scale, subject to selected time viewport."
+    }
+  ],
+  "unchangedScopes": [
+    "Other female hormone curves",
+    "Male views",
+    "Sex comparisons",
+    "Laboratory interpretation and persistence",
+    "Separate cycle data and panel precedence: LH/FSH cycle when selected, E2 cycle after deselecting them"
+  ],
+  "review": {
+    "scope": "Source integrity and approved educational display, not clinical validation or exhaustive literature/erratum review.",
+    "standaloneBeforeImplementation": {
+      "independentChecksPassed": 81,
+      "independentChecksFailed": 0,
+      "browserScenarios": 148,
+      "browserVerdict": "PASS",
+      "qualificationGuards": 20,
+      "widths": [1440, 320],
+      "fullscreen": true,
+      "wrapperProtocols": ["file", "http"],
+      "physicalMobileDevice": false
+    },
+    "provenanceReportHashes": {
+      "infant-puberty-e2-audit.json": "026c2958ded75a376b33954a41439c44a1de9bc9a66383644aafbe8ff92db725",
+      "adult-source-review.json": "f30c3a988ddcfd18484fdb2808a54a75b4c8640f92bede26807d7de06357fd11",
+      "cycle-menopause-review.json": "a658c3616bb0c267aaf18b8b46673a9c63eae3a578a4c7bead4c35725b8277d0"
+    },
+    "productionRegression": "tests/e2e/hormone-lifespan-female-e2-stability.spec.mjs; actual renderer and original reference engine; execution status belongs to current test/CI reports.",
+    "sourceDistribution": "Primary article PDFs are not committed; this record retains citations, factual extractions, hashes and limitations."
+  }
+}

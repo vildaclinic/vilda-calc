@@ -328,6 +328,56 @@ Wiek 0,25 roku nie jest dokładnie równy 90 dniom makiety.
 Dowód źródłowy i decyzję utrwala
 [audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
 
+### Stała linia żeńskiego estradiolu — 12 października 2026
+
+Zwykłe widoki E2 zachowują pierwotną linię pustego wykresu całego życia,
+również po wpisaniu lub wyczyszczeniu wyniku i dołączeniu LH/FSH.
+Wcześniej wynik zmieniał skalę, a wybór mieszany mógł zastąpić wszystkie
+odcinki samym profilem niemowlęcym. Stały dzielnik to niezmienione
+`lifespanData.hormones.e2.normalizationMaximum = 264 pmol/L`,
+`ceiling = 1`. Wartość pochodzi z archiwalnej mediany fazy lutealnej
+Frederiksen; jest normalizacją graficzną, nie normą, maksimum życia
+lub cyklu ani medianą dorosłej pacjentki.
+
+Renderer korzysta z kanonicznego `displaySpline` istniejących
+`displaySegments`. Minipuberty i pokwitanie przenoszą te same kawałki
+Hermite'a/Béziera po podziale na węzłach i granicach osi czasu, bez
+nowego dopasowania. W mieszanym widoku E2 używa osi czasu okresu,
+zachowując własną skalę; nie przejmuje IU/L lub względnej średniej
+LH/FSH. Wysokość punktów wyniku i źródłowej mediany to `C / 264`.
+Zero pozostaje na osi; wynik ponad nią ma strzałkę i rzeczywistą liczbę.
+Osiem epsilonów maszynowych na granicy usuwa wyłącznie błąd zaokrąglenia,
+nie wyznacza tolerancji laboratoryjnej. Konwersje wykonuje istniejący silnik.
+
+Wszystkie 99 median niemowlęcych Ljubicic i 13 median wieku Madsen
+zgadzają się z ponownie odczytanymi suplementami. Mediana E2 ma
+maksimum 23,908 pmol/L przy 0,34 roku: około 9,1% osi i 13% mediany
+18-latki 185,456 pmol/L z innej kohorty. Niższa wysokość po wpisie
+wyniku usuwa wcześniejsze powiększenie; nie obniża danych źródłowych.
+Względna średnia podłużna ryc. 3 Ljubicic ma dwie fale, lecz jest inną
+statystyką bez ustalonej tu fizycznej kalibracji. Nie zastępuje mediany
+GAMLSS i nie uprawnia do dopisania szczytów na osi stężeń.
+
+Most 1–6 lat, dorosłe plateau i przejście menopauzalne pozostają
+poglądowe, bez nowych median lub przewidywania wieku menopauzy.
+Siedem median faz Anckaert zachowuje osobny schemat cyklu; pełna tabela 2
+Cui potwierdza zbiorcze pomenopauzalne p50 4,9 pg/mL ≈18 pmol/L,
+nie dokładną medianę wieku 55 lub 75 lat. Zestawienie publikacji
+nie harmonizuje ich populacji, metod ani surowicy i osocza.
+
+Jedyny zwykły żeński profil liczbowy E2 `ljubicic2022-female-e2`
+nadal obejmuje 0,02–1 roku i donoszone dziewczynki. Nie ekstrapoluje
+do urodzenia ani po pierwszym roku. Normy, źródłowe stężenia, warunki
+kwalifikacji, zapis i interpretacja laboratoryjna pozostają bez zmian.
+Także odrębne porównania płci i wybór wstawki cyklu nie zmieniają się:
+przy LH/FSH panel cyklu nadal ma pierwszeństwo dla gonadotropin.
+
+Syntetyczny przypadek: dziewczynka donoszona, 0,25 roku, 50 pmol/L
+→ mediana 21,616 pmol/L i ta sama krzywa; 1000 pmol/L → strzałka,
+bez przesunięcia źródła; pusty/wyczyszczony wynik → identyczna linia.
+Dowód, ograniczenia i decyzja właściciela:
+[audyt żeńskiego estradiolu](hormone-lifespan/evidence/female-estradiol-display-audit-2026-10-12.json).
+
 ### Stała linia męskiego AMH
 
 Zatwierdzona 11 października 2026 linia jest taka sama przed wpisaniem
@@ -711,7 +761,7 @@ nich źródeł Madsen lub względnej średniej COPENHAGEN.
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.
-Męskie LH, FSH, AMH, inhibina B i testosteron całkowity oraz żeńskie AMH
+Męskie LH, FSH, AMH, inhibina B i testosteron całkowity oraz żeńskie AMH i E2
 korzystają ze stałych krzywych opisanych powyżej. Jeżeli
 wyświetlany jest model liczbowy z punktem wyniku, pierwszeństwo mają wspólne przeliczenie
 punktu i modelu oraz granice profilu opisane powyżej. Mosty schematyczne
@@ -798,7 +848,7 @@ Są to różne populacje i oznaczenia, nie jeden model całego życia.
 | Inhibina B: 5,6–47 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, linia 0 SD | Gen II ELISA, surowica, oryginalnie ng/L = pg/mL. Odtworzenie rastra około ±2 pg/mL; kalibracja pikseli i SHA źródła w ekstrakcie. 149 dorosłych kobiet, bez standaryzacji fazy cyklu. Luka obserwacji 1,08–5,6 lat; nasz most zaczyna się przy 1 roku. Nie dopisujemy stężeń pod LOD 3 pg/mL. |
 | E2: 6–18 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [suplement LMS](https://doi.org/10.6084/m9.figshare.17153336.v1), CC BY 4.0 | BGS2/Fit Futures, LC-MS/MS, różne fazy cyklu, bez użytkowniczek antykoncepcji doustnej. Mediana = `exp(M) / 1e6`, według komórek przykładowych K36/L36, nie samo M. To model przekrojowy, nie trajektoria jednej osoby. |
 | E2: archiwum faz dorosłych | [Frederiksen 2020](https://doi.org/10.1210/clinem/dgz196), suplement tabela 8 | Surowica, izotopowe TurboFlow LC-MS/MS, 24,7–43,9 lat. Mediany 156/254/264 pmol/L dotyczą różnych faz. 156 nie jest średnią całego cyklu i nie ustala linii dorosłości. Podgrupa 303 pmol/L pokrywa się z fazą ≥15 dni; nie jest dodatkową fazą. Rozbieżność liczebności w źródle zachowano. |
-| E2: po menopauzie | [Cui 2026](https://pubmed.ncbi.nlm.nih.gov/42120349/), DOI 10.1210/clinem/dgag188, pierwotny abstrakt | 7206 kobiet, 5 kohort, głównie LC-MS/MS, harmonizacja do CDC. Potwierdzono abstrakt, nie pełną ekstrakcję artykułu. Mediana 18 pmol/L jest zbiorcza, nie swoista dla 55 czy 75 lat. |
+| E2: po menopauzie | [Cui 2026](https://pmc.ncbi.nlm.nih.gov/articles/PMC13461334/), DOI 10.1210/clinem/dgag188, pełny artykuł, tabela 2 | 7206 kobiet 38–100 lat, 5 kohort, osocze, głównie LC-MS/MS i część RIA, harmonizacja do CDC wewnątrz publikacji. Potwierdzone zbiorcze p50 4,9 pg/mL ≈18 pmol/L nie jest medianą wieku 55 czy 75 lat. Jedna próbka na uczestniczkę nie opisuje jej trajektorii starzenia; BMI ma znaczenie dla stężenia. |
 
 Źródła pomocnicze kierunku zmian: [SWAN/Randolph 2011](https://doi.org/10.1210/jc.2010-1746)
 odnosi przejście do rzeczywistej ostatniej miesiączki, nie uniwersalnego wieku;
@@ -940,6 +990,12 @@ stałe 28,99 pmol/L, jednostki, źródłowy znacznik w moście 0,9–1,3 roku,
 kanoniczne zbliżenia i wybór mieszany z LH/FSH, brak nowego punktu
 19,668 roku, desktop, 320 px i pełny ekran. Porównanie płci zachowuje
 własną geometrię oraz skalę, odrębne od tej naprawy zwykłych widoków.
+
+`tests/e2e/hormone-lifespan-female-e2-stability.spec.mjs` sprawdza
+stałą linię i skalę E2 po wpisaniu/wyczyszczeniu wyniku, zero i strzałkę
+ponad 264 pmol/L, konwersje, niezmienione źródło 21,616 pmol/L przy
+0,25 roku oraz kwalifikację tylko 0,02–1 roku. Kontrole obejmują zwykłe
+zbliżenia, mieszany wybór LH/FSH, desktop, 320 px i pełny ekran.
 
 `tests/e2e/hormone-lifespan-original-curves.spec.mjs` porównuje ścieżki
 SVG rzeczywistego renderera z utrwalonym wzorcem „Pierwotnego przebiegu”.
