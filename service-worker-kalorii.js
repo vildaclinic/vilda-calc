@@ -2175,6 +2175,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_name_fix.js?v=2',
   '/vilda_name_fix.js?v=3',
   '/vilda_name_fix.js?v=4',
+  '/vilda_name_fix.js?v=5',
   '/vilda_data_import_export.js?v=54',
   '/vilda_data_import_export.js?v=55',
   '/vilda_data_import_export.js?v=56',

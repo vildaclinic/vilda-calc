@@ -53,7 +53,8 @@
  *     poprawnie zapisany pacjent potrafił dostać fałszywy prompt korekty.
  *   - Kolejność zdarzeń: monotoniczny licznik `loadSeq` unieważnia w locie starsze,
  *     jeszcze nieukończone odczyty (w tym oczekującą ponowną próbę), gdy nadejdzie
- *     nowsze 'vilda:patient-loaded' — stan pól zawsze odpowiada OSTATNIEMU zdarzeniu.
+ *     nowsze 'vilda:patient-loaded' albo czyszczenie formularza — stan pól zawsze
+ *     odpowiada OSTATNIEMU zdarzeniu.
  *   - ZMIANA FORMULARZA W TRAKCIE ODCZYTU (v3, P-NAME-FIX-WYSCIG 2026-09-30): odczyt sejfu
  *     trwa (od ułamka sekundy do ok. 1 s pod obciążeniem, dłużej w chmurze, +1,2 s przy
  *     ponownej próbie). Jeżeli w tym czasie pola tożsamości zmieniły się i nie pokazują
@@ -61,6 +62,12 @@
  *     NIE rusza pól i nie pokazuje pytania — inaczej nazwisko wczytanego pacjenta wracało
  *     do formularza z danymi innego dziecka. Ta sama nazwa w innej kolejności lub
  *     wielkości liter nie jest zmianą pacjenta, więc korekta wtedy działa jak dotąd.
+ *   - „WYCZYŚĆ WSZYSTKIE POLA” (v5, P-NAME-FIX-WYCZYSC 2026-10-12): czyszczenie formularza
+ *     (tą samą drogą clearAllData idą też wylogowanie i blokada sejfu) rozgłasza na window
+ *     'vilda:user-state-cleared'. Zamyka ono pytanie i komunikat, unieważnia trwający odczyt
+ *     sejfu i spóźnione „Poprawiono w tej sesji” — nic o pacjencie sprzed czyszczenia nie
+ *     zostaje przy pustym formularzu. Wybór zapamiętany w `resolved` i jego zapis do rekordu
+ *     zostają: dotyczą rekordu, nie formularza.
  *   - Nie zmieniamy matematyki silnika ani innych funkcji.
  */
 (function (w) {
@@ -86,8 +93,8 @@
   var resolved = new Map();
   // currentPromptId: id pacjenta, dla którego prompt jest AKTUALNIE otwarty (albo null).
   var currentPromptId = null;
-  // loadSeq: rośnie z każdym 'vilda:patient-loaded'; handler porównuje po każdym await,
-  // by starszy (jeszcze trwający) odczyt nie nadpisał stanu nowszego zdarzenia.
+  // loadSeq: rośnie z każdym 'vilda:patient-loaded' i z każdym czyszczeniem formularza; handler
+  // porównuje po każdym await, by starszy (jeszcze trwający) odczyt nie nadpisał stanu nowszego zdarzenia.
   var loadSeq = 0;
   // Odstęp przed ponowną próbą odczytu, gdy payload snapshotu jest chwilowo niedostępny.
   var RETRY_DELAY_MS = 1200;
@@ -360,9 +367,11 @@
     currentPromptId = null;
     els.fix.hidden = true;
     showDone('success', ln, fn);
-    // Utrwalenie w tle; przy niepowodzeniu zmień komunikat na „tylko sesja”.
+    // Utrwalenie w tle; przy niepowodzeniu zmień komunikat na „tylko sesja” — o ile w międzyczasie
+    // nie przyszło nowe wczytanie ani „Wyczyść” (komunikat dotyczy już innego stanu formularza).
+    var seq = loadSeq;
     persistCorrection(patientId, ln, fn).then(function (ok) {
-      if (!ok) showDone('session', ln, fn);
+      if (!ok && seq === loadSeq) showDone('session', ln, fn);
     });
   }
 
@@ -573,6 +582,18 @@
     });
   }
 
+  // P-NAME-FIX-WYCZYSC (2026-10-12): „Wyczyść wszystkie pola” kasowało formularz, a komunikat
+  // „Zapisano. Nazwisko: …, Imię: …” zostawał pod pustym formularzem; otwarte pytanie dalej
+  // wpisywało wybór do pustego formularza. Zdarzenie leci na window (nie na document — A2282).
+  // Bez rekurencji: zamknięcie pytania niczego nie zapisuje i nie emituje zdarzeń.
+  if (typeof w.addEventListener === 'function') {
+    w.addEventListener('vilda:user-state-cleared', function () {
+      loadSeq += 1; // trwający odczyt sejfu i spóźnione „Poprawiono w tej sesji” są już nieaktualne
+      hidePrompt();
+      hideDone();
+    });
+  }
+
   // Handler NIGDY nie rzuca; asynchroniczne odrzucenia też wyłapujemy.
   doc.addEventListener('vilda:patient-loaded', function (ev) {
     try {
@@ -588,7 +609,7 @@
   // Publiczny znacznik gotowości (dla testów/diagnostyki; nie zmienia zachowania aplikacji).
   w.VildaNameFix = {
     __init: true,
-    version: '4',
+    version: '5',
     resolvedCount: function () { return resolved.size; }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
