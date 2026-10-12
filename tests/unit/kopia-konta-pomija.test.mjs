@@ -465,6 +465,59 @@ describe('P-KOPIA-POMIJA — strażnik wersji innej karty i kontrole', () => {
     expect(await A.baza.getPatientForUser(A.uid, x)).toBeFalsy();
   });
 
+  it('błąd odczytu przerywa scalenie także przed zdjęciem wpisu kosza karty bez nowych wersji (Codex P2 w #593)', async () => {
+    // Karta Adama ma wszystkie wersje z kopii, ale jedna leży też w koszu — zapis bywa jednocześnie w karcie i w koszu
+    // (P-KOSZ-PRZYWROC-NOWSZA). Dla takiej wersji import zdejmuje wpis kosza i podbija rewizję (Bkz_poImporcie).
+    // Dopiero dalszy pacjent kopii (X, scalony tu z Y spoza kopii) potrzebuje mapy właścicieli, której odczyt zawodzi.
+    const A = await sejf();
+    const p = await karta(A.v, 'Testowy', 'Adam');
+    const x = await karta(A.v, 'Testowy', 'Jan');
+    expect((await A.baza.listPatientsForUser(A.uid)).map((k) => k.patientId), 'warunek: Adam przed X w kopii').toEqual([p, x]);
+    const kopia = await A.v.exportVaultBackup();
+    const y = await karta(A.v, 'Testowy', 'Jan'); // Y spoza kopii
+    await chwila(5);
+    await A.v.mergePatients(x, y);
+    await A.baza.removeTombstoneForUser(A.uid, x);
+    const [w] = await A.baza.listSnapshotsForUser(A.uid, p);
+    await A.v.moveSnapshotToTrash(p, w.snapshotId);
+    await A.baza.putSnapshotForUser(A.uid, w); // ta sama wersja z powrotem w karcie, wpis kosza zostaje
+    const przed = await stan(A), wKoszu = await kosz(A);
+    expect(wKoszu, 'warunek: wersja Adama jednocześnie w karcie i w koszu').toEqual([w.snapshotId]);
+    const wersja = async () => (await A.baza.listSnapshotsForUser(A.uid, p)).find((s) => s.snapshotId === w.snapshotId);
+    const wersjaPrzed = await wersja();
+    const czytaj = A.baza.listSnapshotsForUser.bind(A.baza);
+    A.baza.listSnapshotsForUser = async (uid, pid) => {
+      if (pid === y) throw new Error('odczyt nieudany (test)');
+      return czytaj(uid, pid);
+    };
+    await expect(A.v.mergeVaultBackup(kopia, A.haslo)).rejects.toThrow(/odczyt nieudany/);
+    A.baza.listSnapshotsForUser = czytaj;
+    expect(await kosz(A), 'wpis kosza Adama zostaje').toEqual(wKoszu);
+    expect(await wersja(), 'wersja Adama bez nowej rewizji').toEqual(wersjaPrzed);
+    expect(await stan(A), 'nic nie zapisano').toEqual(przed);
+  });
+
+  it('podgląd mówi to samo co scalenie: błąd odczytu przerywa oba, także gdy kopia nie wnosi nic nowego', async () => {
+    const A = await sejf();
+    const p = await karta(A.v, 'Testowy', 'Adam');
+    const kopia = await A.v.exportVaultBackup();
+    const y = await karta(A.v, 'Testowy', 'Jan'); // karta spoza kopii, której odczyt zawodzi
+    const [w] = await A.baza.listSnapshotsForUser(A.uid, p);
+    await A.v.moveSnapshotToTrash(p, w.snapshotId);
+    await A.baza.putSnapshotForUser(A.uid, w);
+    const przed = await stan(A), wKoszu = await kosz(A);
+    const czytaj = A.baza.listSnapshotsForUser.bind(A.baza);
+    A.baza.listSnapshotsForUser = async (uid, pid) => {
+      if (pid === y) throw new Error('odczyt nieudany (test)');
+      return czytaj(uid, pid);
+    };
+    await expect(A.v.previewVaultBackupMerge(kopia, A.haslo)).rejects.toThrow(/odczyt nieudany/);
+    await expect(A.v.mergeVaultBackup(kopia, A.haslo)).rejects.toThrow(/odczyt nieudany/);
+    A.baza.listSnapshotsForUser = czytaj;
+    expect(await kosz(A), 'wpis kosza zostaje').toEqual(wKoszu);
+    expect(await stan(A)).toEqual(przed);
+  });
+
   it('kontrola: nowi pacjenci i nowe wersje istniejących kart dochodzą jak dotąd', async () => {
     const A = await sejf();
     const p1 = await karta(A.v, 'Testowy', 'Adam', 'N-P1');
