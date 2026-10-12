@@ -47,11 +47,22 @@ async function stableMaleGeometry(page) {
     viewBox: node.ownerSVGElement.getAttribute('viewBox') }));
 }
 
-async function expectPoint(page, value, median, profile) {
-  // Male FSH now has one fixed educational curve, independent of Zec's
-  // numerical group median. Female FSH retains its source-curve contract.
-  // Branch on the expected source, never on whichever path happens to exist.
+async function expectPoint(page, value, median, profile, view = 'life') {
+  // Both sexes keep the exact Zec group median separate from the educational
+  // line. Female life uses the approved log concentration map, while puberty
+  // uses a shared linear 0–8 IU/L axis. Select this contract from the expected
+  // source and explicitly requested view, never from whichever DOM path exists.
   const stableMale = profile === 'zec2012-male-fsh-age-1-8';
+  if (!stableMale) {
+    expect(profile).toMatch(/^zec2012-female-fsh-age-(1-4|4-8|8-11)$/);
+    expect(['life', 'puberty']).toContain(view);
+    const chart = panel(page).locator('[data-lifespan="chart"]');
+    await expect(chart).toHaveAttribute('data-female-gonadotropin-view', view);
+    await expect(chart).toHaveAttribute('data-period-unit', 'IU/L');
+    await expect(chart).toHaveAttribute('data-period-ceiling', view === 'life' ? '70' : '8');
+    await expect(chart).toHaveAttribute('data-scale-transform', view === 'life' ? 'log1p' : 'linear');
+    await expect(panel(page).locator('[data-reference-line="fsh"]')).toHaveCount(0);
+  }
   await expect(dot(page)).toHaveCount(1);
   await expect(dot(page)).toHaveAttribute('data-profile', profile);
   await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'group-median');
@@ -61,13 +72,13 @@ async function expectPoint(page, value, median, profile) {
   // Read one current SVG snapshot: ResizeObserver can replace its children.
   let geometry;
   await expect.poll(async () => {
-    geometry = await panel(page).evaluate((host, stableMale) => {
+    geometry = await panel(page).evaluate((host, { stableMale, view, value, median }) => {
       const group = host.querySelector('[data-patient-concentration]');
       const point = group?.querySelector('[data-result-point]');
       const ref = group?.querySelector('[data-median-point]');
       const line = group?.ownerSVGElement?.querySelector(stableMale
         ? '[data-stable-reference-line="fsh"]'
-        : `[data-reference-line][data-profile="${group.dataset.profile}"]`);
+        : '[data-period-hormone="fsh"]');
       if (!point || !ref || !line) return null;
       const x = Number(point.getAttribute('cx'));
       let lo = 0, hi = line.getTotalLength();
@@ -75,12 +86,15 @@ async function expectPoint(page, value, median, profile) {
         const mid = (lo + hi) / 2;
         if (line.getPointAtLength(mid).x < x) lo = mid; else hi = mid;
       }
+      const period = stableMale ? null : window.VildaHormoneLifespanDisplay
+        .buildFemaleGonadotropins(window.VildaHormoneLifespanData)[view];
       return { x, y: Number(point.getAttribute('cy')), rx: Number(ref.getAttribute('cx')),
         ry: Number(ref.getAttribute('cy')), curveY: line.getPointAtLength((lo + hi) / 2).y,
         bottom: Number(group.dataset.plotBottom), top: Number(group.dataset.plotTop), value: Number(group.dataset.value),
         divisor: Number(group.dataset.divisor), ceiling: Number(group.dataset.ceiling),
-        ...(stableMale ? { lineDivisor: Number(line.dataset.divisor), lineCeiling: Number(line.dataset.ceiling) } : {}) };
-    }, stableMale);
+        ...(stableMale ? { lineDivisor: Number(line.dataset.divisor), lineCeiling: Number(line.dataset.ceiling) }
+          : { resultHeight: period.valueFraction(value), referenceHeight: period.valueFraction(median) }) };
+    }, { stableMale, view, value, median });
     return geometry?.value === value;
   }).toBe(true);
   expect(Object.values(geometry).every(Number.isFinite)).toBe(true);
@@ -97,10 +111,20 @@ async function expectPoint(page, value, median, profile) {
     // At this 3-year-old fixture the illustrative line differs from 0.48:
     // the exact Zec reference must remain separate rather than snap to it.
     expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(0.05);
+    expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.ry)).toBeCloseTo(value / median, 6);
   } else {
-    expect(Math.abs(geometry.ry - geometry.curveY)).toBeLessThan(0.05);
+    expect(geometry.divisor).toBe(view === 'life' ? 70 : 8);
+    expect(geometry.ceiling).toBe(1);
+    expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.top))
+      .toBeCloseTo(geometry.resultHeight, 6);
+    expect((geometry.bottom - geometry.ry) / (geometry.bottom - geometry.top))
+      .toBeCloseTo(geometry.referenceHeight, 6);
+    expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.ry))
+      .toBeCloseTo(geometry.resultHeight / geometry.referenceHeight, 6);
+    // These Table 2 group medians differ from the life synthesis and Madsen
+    // puberty model. Do not snap Zec's original number onto either curve.
+    expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(0.05);
   }
-  expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.ry)).toBeCloseTo(value / median, 6);
   if (value < median) expect(geometry.y).toBeGreaterThan(geometry.ry);
   if (value > median) expect(geometry.y).toBeLessThan(geometry.ry);
   if (value === median) expect(geometry.y).toBeCloseTo(geometry.ry, 6);
@@ -186,10 +210,10 @@ test('sex comparison remains schematic because the other sex has no patient Tann
   await expect(panel(page).locator('[data-lifespan="scale-note"]')).not.toContainText('Uzupełnij stadium');
   await panel(page).locator('.vhl-compare-toggle').click();
   await stage(page, 'Th', '1');
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11');
+  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
   const before = await patientState(page);
   await panel(page).locator('[data-view="puberty"]').click();
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11');
+  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
   await panel(page).getByRole('button', { name: 'Porównaj płcie', exact: true }).click();
   await expect(dot(page)).toHaveCount(0);
   await expect(panel(page).locator('[data-reference-line]')).toHaveCount(0);
@@ -197,7 +221,7 @@ test('sex comparison remains schematic because the other sex has no patient Tann
   await expect(panel(page).locator('[data-comparison-sex="male"]')).toHaveCount(1);
   await expectClinicalAgeComparison(page);
   await panel(page).locator('.vhl-compare-toggle').click();
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11');
+  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
   expect(await patientState(page)).toEqual(before);
 });
 
