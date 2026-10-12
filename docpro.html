@@ -196,6 +196,8 @@
 <script defer src="vilda_data_import_export.js?v=102"></script>
 <script defer src="vilda_baseline_pacjenta.js?v=4"></script>
 <script defer src="vilda_pola_tozsamosci.js?v=4"></script>
+<script defer src="vilda_imiona_plec_dane.js?v=1"></script>
+<script defer src="vilda_plec_z_imienia.js?v=1"></script>
 <script defer src="vilda_save_status_indicator.js?v=27"></script>
 <script defer src="vilda_unsaved_guard.js?v=6"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
@@ -465,6 +467,9 @@
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
+      <!-- P-PLEC-IMIE (decyzja właściciela 2026-10-12): płeć NOWEGO pacjenta z imienia (słownik PESEL)
+           i nazwiska, zawsze z notką pod polem — logika: vilda_plec_z_imienia.js. -->
+      <div id="plecZImieniaNote" class="vild-dob-note" role="status" aria-live="polite" hidden></div>
       <!-- Dojrzewanie płciowe — progressive disclosure (2026-06-23), rozszerzone 2026-09-09
            (decyzja właściciela). Panel jest JEDYNYM miejscem wpisu danych pokwitaniowych;
            reszta aplikacji już tylko czyta, przez vilda_pubertal_status.js. Dwa rodzaje
