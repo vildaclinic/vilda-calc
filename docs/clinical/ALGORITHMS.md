@@ -1284,6 +1284,91 @@ ograniczenia, hash zatwierdzonej makiety i zakres jej przeglądu:
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną
 całego połączonego wykresu.
 
+### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
+
+**Problem i decyzja:** wpisanie E2 zmieniało skalę i krzywą odniesienia;
+dołączenie LH/FSH mogło usuwać odcinki po niemowlęctwie. Właściciel
+zatwierdził makietę i implementację („ok, koduj”), po wyjaśnieniu
+niższego szczytu minipuberty na stałej osi. Naprawa zachowuje pierwotny
+pusty przebieg całego życia i pokazuje go niezależnie od wyniku.
+
+**Sprawdzone źródła, bez zmiany stężeń:**
+
+- Ljubicic 2022, DOI `10.1210/clinem/dgac363`, ryc. 1 i suplement
+  tabela 1 F, DOI `10.6084/m9.figshare.19469555.v1`: 98 zdrowych
+  donoszonych dziewczynek, 266 próbek surowicy, LC-MS/MS, LOQ 4 pmol/L.
+  Wszystkie 99 median GAMLSS 0,02–1 roku zgadzają się z ponownie
+  pobranym suplementem. Przy 0,25 roku p50 wynosi 21,616; maksimum
+  23,908 przy 0,34 roku. Dwie fale ryc. 3 dotyczą innej statystyki,
+  względnej średniej podłużnej; nie mają ustalonej tu kalibracji pmol/L.
+- Madsen 2022, DOI `10.1210/clinem/dgac155`, suplement
+  `10.6084/m9.figshare.17153336.v1`: 13 median 6–18 lat odtworzonych
+  jako `exp(M) / 1e6`, zgodnych z arkuszem. Surowica LC-MS/MS,
+  BGS2/Fit Futures, różne fazy cyklu, wykluczona antykoncepcja doustna.
+  Przy 18 latach p50 wynosi 185,455836 pmol/L. To model wieku,
+  nie stadium Tannera lub trajektoria jednej pacjentki.
+- Frederiksen 2020, DOI `10.1210/clinem/dgz196`, pełny artykuł i
+  suplement tabela 8: surowica TurboFlow LC-MS/MS, 24,7–43,9 lat;
+  mediany faz 156/254/264 pmol/L nie są węzłami wieku ani średnią
+  całego cyklu. Podgrupa 303 jest nakładającą się grupą dni ≥15.
+- Anckaert 2021, DOI `10.1016/j.plabm.2021.e00211`, pełny artykuł
+  i suplement S3: 85 kobiet 18–37 lat, Roche Elecsys E2 III/cobas e801,
+  surowica. Siedem median 125/172/464/817/390/505/396 pozostaje
+  w osobnym schemacie cyklu; nie kalibruje osi życia LC-MS/MS.
+- Cui 2026, DOI `10.1210/clinem/dgag188`, pełny artykuł/tabela 2:
+  7206 kobiet 38–100 lat, 5 kohort, osocze, głównie LC-MS/MS oraz
+  część RIA, harmonizacja wewnętrzna do CDC. Zbiorcze p50 4,9 pg/mL
+  ≈18 pmol/L potwierdza niski poziom po menopauzie, nie medianę
+  konkretnego wieku lub przebieg jednej kobiety. SWAN/Randolph 2011,
+  DOI `10.1210/jc.2010-1746`, wspiera kierunek wokół rzeczywistej
+  ostatniej miesiączki; w tym audycie sprawdzono jego pełny abstrakt.
+
+**Skala i geometria:** `vilda_hormone_lifespan.js` używa dotychczasowych
+`displaySegments`, stałego `normalizationMaximum = 264 pmol/L`
+i `ceiling = 1`. Dzielnik jest historyczną normalizacją graficzną,
+nie górną normą ani maksimum fizjologicznym. Mediana minipuberty zajmuje
+`23.908 / 264 ≈ 0.0906` wysokości osi; około 13% mediany 18-latki
+z innej kohorty nie jest uniwersalną proporcją lub miarą aktywności jajnika.
+
+Zbliżenia odwzorowują kanoniczne kawałki Hermite'a/Béziera po podziale
+na węzłach i granicach skali czasu, bez ponownego dopasowania krzywej.
+Wybór mieszany z LH/FSH zachowuje wszystkie odcinki i własną skalę E2.
+Punkt wyniku i oryginalna mediana stosują `C / 264`; zero pozostaje
+na osi, a wynik ponad nią otrzymuje strzałkę z rzeczywistą liczbą.
+Osiem epsilonów maszynowych na granicy dotyczy arytmetyki konwersji,
+nie niepewności oznaczenia. Jasny znacznik nie jest przyciągany do linii.
+
+Most 1–6 lat pozostaje ilustracją. Dorosłe plateau zachowuje wysokość
+końca pokwitania bez przypisywania jej stężenia lub dorosłej mediany.
+Przejście 45–55 i niski późniejszy odcinek są poglądowe; nie określają
+indywidualnego wieku menopauzy. Krzywa nie harmonizuje różnych metod,
+materiałów i populacji. Osobny cykl i jego wybór pozostają bez zmian.
+
+**Wpływ kliniczny:** zmienia się prezentacja relacji wyniku do okresów
+życia. Dane źródłowe, normy, progi, konwersje, kwalifikacja i zapis
+pacjentki pozostają bez zmian. Profil `ljubicic2022-female-e2` nadal
+obejmuje wyłącznie donoszone dziewczynki 0,02–1 roku; rysunek nie
+aktywuje nowych odniesień od narodzin, dzieciństwa, pokwitania lub
+dorosłości. Inne anality i porównania płci zachowują własne kontrakty.
+
+**Syntetyczne wejście → oczekiwane zachowanie:**
+
+- Dziewczynka donoszona, 0,25 roku, 50 pmol/L → źródłowe p50
+  21,616 pmol/L; stałe położenia `50/264` i `21.616/264`.
+- Ten sam kontekst, 1000 pmol/L → strzałka z liczbą 1000, bez zmiany
+  mediany, krzywej lub skali; 0 pmol/L → punkt na osi.
+- Pusty/wyczyszczony/cenzurowany wynik → ta sama linia bez nowej kropki.
+- Wiek <0,02 lub >1 roku → brak dopisanego liczbowego odniesienia;
+  0,02 i 1 roku zachowują istniejące granice źródła.
+- Dołączenie LH/FSH → wszystkie odcinki E2, ta sama skala i źródło;
+  zbliżenie/pełny ekran/telefon → ta sama kanoniczna geometria.
+
+Regresja rzeczywistego renderera i silnika:
+`tests/e2e/hormone-lifespan-female-e2-stability.spec.mjs`.
+Pochodzenie danych, ograniczenia, hashe i zakres zatwierdzenia:
+[audyt żeńskiego estradiolu](hormone-lifespan/evidence/female-estradiol-display-audit-2026-10-12.json).
+Akceptacja makiety i testy nie są walidacją kliniczną połączonego wykresu.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana
