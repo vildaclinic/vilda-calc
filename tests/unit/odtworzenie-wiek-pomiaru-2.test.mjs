@@ -326,6 +326,7 @@ describe('P-ODTWORZ-WIEK-2 (G3/G6) — korekta odtworzonej wizyty w Karcie: form
   it('P-ODTWORZ-WIEK-3: usunięcie bieżącego pomiaru w Karcie przełącza formularz na awansowaną wizytę z jej dniem pomiaru', async () => {
     const s = await przygotuj();
     const awansowana = odtworzona();
+    awansowana.timestampISO = new Date(2026, 4, 10, 12, 0).toISOString(); // sejf: znacznik czasu awansowanej wizyty
     Object.assign(awansowana.user, { age: 16, ageMonths: 9, height: 170, weight: 58, measuredAtISO: '2026-05-10' });
     s.win.__glowa = { snapshots: [{ snapshotId: 's1', payload: awansowana }] };
     await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
@@ -366,6 +367,83 @@ describe('P-ODTWORZ-WIEK-2 (G3/G6) — korekta odtworzonej wizyty w Karcie: form
     expect(wTrakcie, 'dotąd [true, true] — lustro wstrzymane, DocPro w powłoce dostawał stare wartości').toEqual([[undefined, true]]);
     expect(s.win.__vildaSuspendIntakeUserReset).toBeFalsy();
     expect(s.win.hasUserModifiedAfterLoad, 'flaga edycji wraca do stanu sprzed wpisu').toBe(false);
+  });
+
+  /* P-ODTWORZ-WIEK-4 — rekord bez daty urodzenia, wiek wpisany ręcznie (pola wieku edytowalne). */
+  async function bezDaty(rekordUser, ts = new Date(2026, 5, 17, 12, 0).toISOString()) {
+    const rekord = { name: 'Fikcyjny Testowy', timestampISO: ts, user: Object.assign({ sex: 'M' }, rekordUser) };
+    const s = formularz({ wybor: 'restore', rekord, pomiar: { weight: String(rekordUser.weight), height: String(rekordUser.height) }, zBaza: true });
+    s.pola.name.value = 'Fikcyjny Testowy';
+    s.pola.age.value = String(rekordUser.age); s.pola.ageMonths.value = String(rekordUser.ageMonths);
+    s.wyslij('vilda:state-restored');
+    return { s, rekord };
+  }
+  const glowaZ = (s, rekord, zmiany, ts) => {
+    const g = JSON.parse(JSON.stringify(rekord));
+    Object.assign(g.user, zmiany);
+    if (ts !== undefined) g.timestampISO = ts;
+    s.win.__glowa = { snapshots: [{ snapshotId: 's1', payload: g }] };
+  };
+
+  it('P-ODTWORZ-WIEK-4: lekarz zmienił w formularzu to samo pole, które poprawia Karta — zostaje wartość lekarza', async () => {
+    const { s, rekord } = await bezDaty({ age: 5, ageMonths: 2, height: 110, weight: 19 });
+    s.pola.ageMonths.value = '4';
+    glowaZ(s, rekord, { ageMonths: 3, weight: 19.5 });
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.age.value, s.pola.ageMonths.value, s.pola.weight.value]).toEqual(['5', '4', '19.5']);
+  });
+
+  it('P-ODTWORZ-WIEK-4: wiek to jedna wielkość — zmiana miesięcy w formularzu i lat w Karcie nie składa się w wiek, którego nikt nie wpisał', async () => {
+    const { s, rekord } = await bezDaty({ age: 5, ageMonths: 11, height: 112, weight: 20 });
+    s.pola.ageMonths.value = '10'; // lekarz: 5 l. 10 m.
+    glowaZ(s, rekord, { age: 6, ageMonths: 0 }); // Karta: 6 l. 0 m.
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.age.value, s.pola.ageMonths.value], 'dotąd 6/10 — lata z Karty, miesiące od lekarza').toEqual(['5', '10']);
+  });
+
+  it('P-ODTWORZ-WIEK-4, KONTROLA: lekarz nie ruszał wieku — poprawka wieku z Karty wchodzi w całości', async () => {
+    const { s, rekord } = await bezDaty({ age: 5, ageMonths: 11, height: 112, weight: 20 });
+    glowaZ(s, rekord, { age: 6, ageMonths: 0 });
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.age.value, s.pola.ageMonths.value]).toEqual(['6', '0']);
+  });
+
+  it('P-ODTWORZ-WIEK-4: usunięcie bieżącego pomiaru po niezapisanej zmianie wieku — formularz dostaje CAŁĄ awansowaną wizytę', async () => {
+    const { s, rekord } = await bezDaty({ age: 5, ageMonths: 2, height: 110, weight: 19 });
+    s.pola.ageMonths.value = '1'; // niezapisana zmiana wieku USUWANEJ wizyty
+    glowaZ(s, rekord, { age: 5, ageMonths: 0, height: 108, weight: 18 }, new Date(2026, 4, 10, 12, 0).toISOString());
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect([s.pola.age.value, s.pola.ageMonths.value, s.pola.height.value, s.pola.weight.value], 'dotąd 5/1 — wiek usuniętej wizyty przy starszej')
+      .toEqual(['5', '0', '108', '18']);
+  });
+
+  it('P-ODTWORZ-WIEK-4: po zmianie w miejscu panele-rodzeństwo w powłoce odświeżają bazę; one same dalej nie przekazują', async () => {
+    const s = await przygotuj();
+    const wywolania = [];
+    const siostra = { VildaBaselinePacjenta: { refreshFromSibling: (info) => wywolania.push(info) } };
+    s.win.parent = { frames: [s.win, siostra] };
+    await s.powiadom({ patientId: 'p1', snapshotId: 's1', isUpdate: true });
+    await tick();
+    expect(wywolania, 'dotąd brak — DocPro zostawał ze starą bazą').toEqual([{ patientId: 'p1', snapshotId: 's1', isUpdate: true }]);
+    // Ta sama ramka jako odbiorca: odświeża się, ale nie rozsyła dalej (bez pętli).
+    const s2 = await przygotuj();
+    const dalej = [];
+    s2.win.parent = { frames: [s2.win, { VildaBaselinePacjenta: { refreshFromSibling: (info) => dalej.push(info) } }] };
+    s2.win.VildaBaselinePacjenta.refreshFromSibling({ patientId: 'p1', snapshotId: 's1' });
+    await tick();
+    expect(s2.pola.height.value, 'odbiorca dostaje poprawkę').toBe('172.5');
+    expect(dalej).toEqual([]);
+    // Zwykły zapis (bez isUpdate) nikogo nie powiadamia.
+    const s3 = await przygotuj();
+    const zwykly = [];
+    s3.win.parent = { frames: [s3.win, { VildaBaselinePacjenta: { refreshFromSibling: (info) => zwykly.push(info) } }] };
+    await s3.powiadom({ patientId: 'p1', snapshotId: 's1' });
+    await tick();
+    expect(zwykly).toEqual([]);
   });
 
   it('KONTROLA: lekarz zmienił już wzrost w formularzu (nowy pomiar) — poprawka z Karty nie nadpisuje formularza', async () => {

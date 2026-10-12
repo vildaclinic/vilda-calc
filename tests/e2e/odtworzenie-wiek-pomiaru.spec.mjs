@@ -733,3 +733,63 @@ test('P-ODTWORZ-WIEK-3: „Data zapisu" ostatniego pomiaru klirensu z czasu zapi
   delete bezCzasuKlirensu.clcr.savedAtISO;
   expect(await meta(bezCzasuKlirensu), 'KONTROLA: bez clcr.savedAtISO jak dotąd — timestampISO').toContain('Data zapisu: 3.06.2026');
 });
+
+/* ------------------------------------------------------------------------------------------
+ * P-ODTWORZ-WIEK-4 (przegląd adwersaryjny scalonego #631). Dane wyłącznie FIKCYJNE.
+ * ---------------------------------------------------------------------------------------- */
+
+test('P-ODTWORZ-WIEK-4: powłoka — poprawka w Karcie na Start, DocPro nieodwiedzony po poprawce, potem F5: wiek i data pomiaru zostają', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.clock.setSystemTime(new Date(ZAPIS));
+  await page.addInitScript(() => {
+    try { window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() })); } catch (_) { /* brak storage */ }
+  });
+  await page.goto('/app.html', { waitUntil: 'load' });
+  let start = await ramka(page, 'Start');
+  await start.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+  await page.reload({ waitUntil: 'load' });
+  start = await ramka(page, 'Start');
+  await gotowa(start);
+  const pid = await zapiszPacjenta(start, NASTOLATEK);
+  await start.evaluate(() => window.clearAllData());
+
+  await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  await wczytaj(start, pid, 'odtworz');
+  // DocPro otwarty na chwilę (jego ramka zostaje w tle ze swoją bazą), potem powrót na Start.
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await page.waitForTimeout(1000);
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  await page.waitForTimeout(1500);
+
+  const snap = (await glowa(start, pid)).snapshotId;
+  await start.evaluate(({ id, s }) => window.VildaAuthUI.showQuickMeasureModal(id, {
+    mode: 'edit', snapshotId: s, rowRef: { uid: null, key: '202|172.00|60.00' }, rowValues: { ageMonths: 202, height: 172, weight: 60 },
+  }), { id: pid, s: snap });
+  const okno = start.locator('.vilda-quick-measure-overlay');
+  await expect(okno).toBeVisible();
+  await okno.getByRole('textbox', { name: '172', exact: true }).fill('172.5');
+  await okno.getByRole('textbox', { name: '60', exact: true }).fill('60');
+  await okno.getByRole('button', { name: 'Zapisz korektę' }).click();
+  await expect(okno).toHaveCount(0, { timeout: 15000 });
+  await page.waitForTimeout(3000);
+
+  // Ukryty DocPro: nowa baza i wiek pomiaru (dotąd 172,5 przy starej bazie → 16/11 i dzisiejsza data).
+  expect(await docpro.evaluate(() => [
+    document.getElementById('height').value, document.getElementById('ageMonths').value,
+    window.lastLoadedData && window.lastLoadedData.user && window.lastLoadedData.user.height, window.collectUserData().user.measuredAtISO,
+  ]), 'ukryty DocPro').toEqual(['172.5', '10', 172.5, '2026-06-17']);
+
+  // F5 całej powłoki: autozapis paneli przy zamknięciu nie wnosi wieku na dziś.
+  await page.reload({ waitUntil: 'load' });
+  start = await ramka(page, 'Start');
+  await gotowa(start);
+  await page.waitForTimeout(1500);
+  expect(await start.evaluate(() => [document.getElementById('height').value, document.getElementById('age').value, document.getElementById('ageMonths').value]),
+    'dotąd po F5: 172.5 i 16/11 („Wiek na dzień dzisiejszej wizyty")').toEqual(['172.5', '16', '10']);
+  expect(await start.evaluate(() => document.getElementById('dobNote').textContent)).toContain('Pomiar z 17-06-2026');
+  expect(await start.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1500);
+  expect(await start.evaluate(async (id) => { const u = (await window.VildaVault.getPatient(id)).snapshots[0].payload.user; return [u.height, u.age, u.ageMonths, u.measuredAtISO]; }, pid),
+    'dotąd zapis po F5: [172.5, 16, 11, "2026-07-10"]').toEqual([172.5, 16, 10, '2026-06-17']);
+});

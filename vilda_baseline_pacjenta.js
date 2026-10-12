@@ -35,6 +35,9 @@
  *      Po usunięciu bieżącego pomiaru formularz przechodzi na awansowaną, starszą wizytę.
  *      P-ODTWORZ-WIEK-3: wpis pole po polu (pola, które lekarz zmienił w formularzu, zostają)
  *      i bez wstrzymywania lustra formularza — poprawka dociera też do paneli powłoki.
+ *      P-ODTWORZ-WIEK-4: wiek (lata, miesiące, tygodnie) jako jedna wielkość, inna wizyta
+ *      (awans po usunięciu) w całości, a po zmianie w miejscu bazę odświeżają też panele-
+ *      rodzeństwo w powłoce (`refreshFromSibling`).
  *
  * CZEGO NIE ROBI. Nie reaguje na zmiany przychodzące z synchronizacji ani z innego urządzenia —
  * te ścieżki sejfu nie wołają `onPatientSaved`, więc pytanie o obcą zmianę zostaje dokładnie
@@ -43,7 +46,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
 
   /* Echo własnego zapisu z formularza: `saveUserData` zapisuje id i snapshotId, które właśnie
      wysłał, i sam odświeża bazę — tu nie ma czego robić. Rozstrzyga ZGODNOŚĆ WERSJI; okno
@@ -291,21 +294,49 @@
     }
   }
 
+  /* Pola jednej wielkości: wiek pomiaru (lata, miesiące, tygodnie). */
+  var POLA_WIEKU = ['age', 'ageMonths', 'ageWeeks'];
+
+  /* P-ODTWORZ-WIEK-4: nowa głowa to INNA wizyta — usunięcie bieżącego pomiaru awansuje starszą,
+     a sejf ustawia wtedy jej znacznik czasu (Bzw_dataAwansu albo usuwa go). Poprawka w miejscu
+     („Historia → Edytuj") znacznika czasu nie rusza. */
+  function innaWizyta(stara, nowa) {
+    var a = stara && typeof stara.timestampISO === 'string' ? stara.timestampISO : '';
+    var b = nowa && typeof nowa.timestampISO === 'string' ? nowa.timestampISO : '';
+    return a !== b;
+  }
+
   /* Najpierw wszystkie wartości, potem zdarzenia — przeliczenia i moduł daty urodzenia nie
      widzą stanu pośredniego (nowa masa przy starym wzroście).
      P-ODTWORZ-WIEK-3: pole po polu. Wpisujemy tylko pole, które Karta zmieniła (stara baza
      ≠ nowa głowa) i którego lekarz nie zmienił w formularzu (pole = stara baza). Dotąd
-     korekta samej masy w Karcie nadpisywała niezapisaną poprawkę wieku wpisaną w formularzu. */
+     korekta samej masy w Karcie nadpisywała niezapisaną poprawkę wieku wpisaną w formularzu.
+     P-ODTWORZ-WIEK-4: (a) wiek to JEDNA wielkość — lata, miesiące i tygodnie idą razem: gdy
+     lekarz zmienił w formularzu którekolwiek z nich, zostaje cały jego wiek; inaczej poprawka
+     wieku z Karty wchodzi w całości. Pola tylko do odczytu (wiek z daty urodzenia) nie są
+     edycją lekarza. Dotąd zmiana lat w Karcie i miesięcy w formularzu składała się w wiek,
+     którego nikt nie wpisał. (b) Inna wizyta (awans po usunięciu) wchodzi w całości — dotąd
+     niezapisana ręczna zmiana wieku usuniętej wizyty zostawała przy starszej. */
   function ustawWizyte(payload, stara) {
     var u = uzytkownik(payload);
     if (!u) return;
     var s = uzytkownik(stara);
+    if (s && innaWizyta(stara, payload)) s = null;
+    var lekarzWiek = !!s && POLA_WIEKU.some(function (k) {
+      var el = pole(k);
+      return !!el && !el.readOnly && !rowne(el.value, s[k]);
+    });
+    var kartaWiek = !s || POLA_WIEKU.some(function (k) { return !rowne(s[k], u[k]); });
     var zmienione = [];
     POLA_WIZYTY.forEach(function (k) {
       var el = pole(k);
       if (!el) return;
-      if (s && rowne(s[k], u[k])) return;
-      if (s && !rowne(el.value, s[k])) return;
+      if (POLA_WIEKU.indexOf(k) >= 0) {
+        if (lekarzWiek || !kartaWiek) return;
+      } else if (s) {
+        if (rowne(s[k], u[k])) return;
+        if (!rowne(el.value, s[k])) return;
+      }
       var nowa = u[k] == null ? '' : String(u[k]);
       if (rowne(el.value, nowa) && (el.value === '') === (nowa === '')) return;
       el.value = nowa;
@@ -348,6 +379,7 @@
         }
       }
       utrwal();
+      if (info && info.isUpdate && !info.relay) powiadomRodzenstwo(patientId, snap.snapshotId || null);
       try {
         if (typeof w.CustomEvent === 'function' && dok()) {
           dok().dispatchEvent(new w.CustomEvent('vilda:baseline-refreshed', {
@@ -362,6 +394,45 @@
       zgloc('getPatient', e);
       return false;
     });
+  }
+
+  /* P-ODTWORZ-WIEK-4. Powiadomienie sejfu (`onPatientSaved`) dostaje tylko ramka, która
+     zmieniała rekord. W powłoce app.html pozostałe panele z formularzem wizyty (DocPro, klirens)
+     zostawały ze STARĄ bazą, a lustro formularza wnosiło im już nowe wartości. Moduł daty
+     urodzenia brał je wtedy za nowy pomiar i liczył wiek na dziś, a autozapis ukrytego panelu
+     przy zamknięciu karty nadpisywał wspólną sesję — po F5 Start pokazywał wiek na dziś,
+     a „Zapisz" stemplował dzisiejszą datę. Teraz ramka, która odświeżyła bazę po zmianie
+     w miejscu, prosi ramki-rodzeństwo (ten sam origin) o to samo; one przechodzą zwykłą
+     ścieżkę `naZapis` (strażnik bieżącego pacjenta, bramka wizyty) i nie przekazują dalej. */
+  function powiadomRodzenstwo(patientId, snapshotId) {
+    var rodzic;
+    var ramki;
+    try {
+      rodzic = w.parent;
+      if (!rodzic || rodzic === w) return;
+      ramki = rodzic.frames;
+    } catch (e) {
+      zgloc('rodzenstwo-ramki', e);
+      return;
+    }
+    var n = ramki && typeof ramki.length === 'number' ? ramki.length : 0;
+    for (var i = 0; i < n; i += 1) {
+      try {
+        var f = ramki[i];
+        if (!f || f === w) continue;
+        var b = f.VildaBaselinePacjenta;
+        if (b && typeof b.refreshFromSibling === 'function') {
+          b.refreshFromSibling({ patientId: patientId, snapshotId: snapshotId, isUpdate: true });
+        }
+      } catch (e) {
+        zgloc('rodzenstwo', e);
+      }
+    }
+  }
+
+  function odRodzenstwa(info) {
+    if (!info || typeof info.patientId !== 'string') return;
+    naZapis({ patientId: info.patientId, snapshotId: info.snapshotId || null, isUpdate: true, relay: true });
   }
 
   function naZapis(info) {
@@ -400,6 +471,7 @@
     ECHO_MS: ECHO_MS,
     mount: mount,
     refreshFromHead: odswiezZGlowy,
+    refreshFromSibling: odRodzenstwa,
     _naZapis: naZapis,
     _toEcho: toEchoWlasnegoZapisu,
     _opisujeTegoPacjenta: formularzOpisujeTegoPacjenta
