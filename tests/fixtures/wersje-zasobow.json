@@ -461,7 +461,7 @@
  },
  "vilda_auth_ui.css": {
   "v": 77,
-  "sha256": "2471d535c9edb39f856095bee7e14622299acd4e6d7bfe05e11ca00d657dfe8b"
+  "sha256": "177096b1f02af07289d27c7155874ebcd607e81788162ee21baadf083b9032e2"
  },
  "vilda_auth_ui.js": {
   "v": 484,
@@ -797,7 +797,7 @@
  },
  "vilda_nowe_urzadzenie.js": {
   "v": 1,
-  "sha256": "ea47654a5269a26a09b26dd5e5c02f3675a9d4d4e5dc50934e1d95dc523ed7fb"
+  "sha256": "c50bef611fbc3264363c413ae91ae9d613af2024f8a49cd79b2238748327ea21"
  },
  "vilda_obesity_banner.css": {
   "v": 7,

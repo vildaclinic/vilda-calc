@@ -2340,7 +2340,22 @@
 
   <script defer src="inline_index_09.js?v=1"></script>
 
-  <!-- P-NOWE-URZADZENIE (2026-10-12): okno „Pobierz dane z serwera” po zalogowaniu na nowym urządzeniu
-       buduje vilda_nowe_urzadzenie.js — na każdej stronie z logowaniem, także w powłoce app.html. -->
+  <!-- P-NOWE-URZADZENIE (2026-10-12): okno „Pobierz dane z serwera” po zalogowaniu na nowym urządzeniu.
+       Obsługa: vilda_nowe_urzadzenie.js (na każdej stronie z logowaniem, także w powłoce app.html; na innych
+       stronach moduł buduje to samo okno dopiero przy pytaniu). Style: vilda_auth_ui.css.
+       Ukryty element zostaje w tej stronie jak dotąd, bo vilda_chrome.js (he) traktuje każdy [aria-modal="true"]
+       w dokumencie jako otwarte okno: strona główna nie ma przejść widoku między stronami ani gestu przesuwania
+       stron. Usunięcie elementu zmieniłoby to zachowanie. -->
+  <div id="vilda-restore-overlay" class="vilda-restore-overlay" role="dialog" aria-modal="true" aria-labelledby="vilda-restore-title">
+    <div class="vilda-restore-panel">
+      <div class="vilda-restore-ikona" aria-hidden="true">☁️</div>
+      <h2 id="vilda-restore-title" class="vilda-restore-tytul">Znaleziono Twoje dane na serwerze</h2>
+      <p class="vilda-restore-etykieta">Ostatnia synchronizacja:</p>
+      <p id="vilda-restore-date" class="vilda-restore-data">…</p>
+      <p class="vilda-restore-opis">Serwer przechowuje wyłącznie zaszyfrowane dane — tylko Ty, znając hasło, możesz je odczytać.</p>
+      <button id="vilda-restore-btn" class="vilda-restore-pobierz" type="button">Pobierz dane z serwera</button>
+      <button id="vilda-restore-skip" class="vilda-restore-pomin" type="button">Zacznij od nowa (nie pobieraj)</button>
+    </div>
+  </div>
 </body>
 </html>

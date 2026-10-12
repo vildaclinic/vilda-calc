@@ -2158,10 +2158,6 @@ body.vilda-modal-alert-open #scrollTopBtn {
   display: block;
   width: 100%;
   padding: var(--space-0-9) var(--space-1-5);
-  border: none;
-  border-radius: var(--radius-14);
-  background: var(--primary, #00838d);
-  color: #fff;
   font-size: 1.05rem;
   font-weight: 600;
   cursor: pointer;
@@ -2169,9 +2165,6 @@ body.vilda-modal-alert-open #scrollTopBtn {
 }
 
 #vilda-restore-overlay .vilda-restore-pomin {
-  background: none;
-  border: none;
-  color: #6e6e73;
   font-size: .92rem;
   cursor: pointer;
   text-decoration: underline;

@@ -60,9 +60,10 @@ test('app.html (powłoka PWA): pytanie pokazuje się w dokumencie powłoki, „P
   await zalozKontoIZaloguj(page);
 
   await expect(okno(page)).toBeVisible({ timeout: 15_000 });
-  // Okno należy do powłoki, nie do ramki panelu Start (ramka nie sonduje i nie buduje okna).
+  // Okno należy do powłoki, nie do ramki panelu Start: ramka nie sonduje i nie otwiera okna (index.html ma je
+  // w znacznikach, ukryte — zob. test o he() niżej).
   const ramkaStart = page.frames().find((f) => /index\.html\?embedded=1/.test(f.url()));
-  if (ramkaStart) expect(await ramkaStart.locator('#vilda-restore-overlay').count()).toBe(0);
+  if (ramkaStart) await expect(ramkaStart.locator('#vilda-restore-overlay')).toBeHidden();
 
   await okno(page).getByRole('button', { name: 'Pobierz dane z serwera' }).click();
   await expect(okno(page)).toBeHidden({ timeout: 20_000 });
@@ -96,6 +97,21 @@ test('przeładowanie w trakcie pobierania wznawia pobieranie, bez ponownego pyta
     timeout: 15_000,
   }).toBeGreaterThanOrEqual(2);
   await expect(okno(page), 'bez ponownego pytania').toBeHidden();
+});
+
+test('index.html: ukryte okno jest w znacznikach jak przed zmianą — strona główna bez przejść widoku (he w vilda_chrome.js)', async ({ page, context }) => {
+  // vilda_chrome.js (he) pomija przejścia widoku między stronami i gest przesuwania stron, gdy w dokumencie jest
+  // [aria-modal="true"]. Ukryte okno pytania zawsze było w index.html, więc strona główna tych przejść nie miała.
+  // Pierwsza wersja tej zmiany budowała okno dopiero przy pytaniu: przejście z index.html do Ustawień ruszyło
+  // i w Chrome 149 (CI, 2026-10-12) nowa strona przestała się rysować — powloka-konto-stan-narzedzi
+  // „standalone /index.html” czerwony 4/4, na kodzie bazowym zielony.
+  await zaakceptujRegulamin(context);
+  await atrapaSynchronizacji(context, { slotNaSerwerze: false });
+  await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+  await zalozKontoIZaloguj(page);
+  await expect(okno(page)).toHaveCount(1);
+  await expect(okno(page)).toHaveAttribute('aria-modal', 'true');
+  await expect(okno(page), 'bez danych w chmurze okno zostaje ukryte').toBeHidden();
 });
 
 test('przeładowanie, gdy sonda czeka na serwer: po przeładowaniu pytanie się pokazuje', async ({ page, context }) => {

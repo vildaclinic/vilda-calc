@@ -16,6 +16,11 @@
  * synchronizacji (VildaSync.syncFull). Treść, identyfikatory i wygląd okna są takie jak w index.html
  * przed zmianą; style są w vilda_auth_ui.css (arkusz jest na każdej stronie z logowaniem).
  *
+ * index.html ma okno w znacznikach (ukryte), a moduł tylko podpina do niego przyciski. Element musi tam
+ * zostać: vilda_chrome.js (he) traktuje każdy [aria-modal="true"] w dokumencie jako otwarte okno, więc
+ * strona główna jak dotąd nie ma przejść widoku między stronami ani gestu przesuwania stron. Na pozostałych
+ * stronach okno powstaje dopiero przy pytaniu, więc przejścia działają tam jak dotąd.
+ *
  * Bramka banera aktualizacji (ios26-ui.js) pyta `VildaNoweUrzadzenie.czyAktywne()`: baner nie
  * pojawia się, dopóki okno jest otwarte albo trwa pobieranie uruchomione z okna.
  */
@@ -69,11 +74,24 @@
     return el;
   }
 
+  // Przyciski podpinamy raz na element: okno budowane tutaj albo gotowe w index.html.
+  var podpiete = typeof WeakSet === "function" ? new WeakSet() : null;
+  function podepnijPrzyciski(o) {
+    if (!o || (podpiete && podpiete.has(o))) return;
+    if (podpiete) podpiete.add(o);
+    var pobierz = o.querySelector("#vilda-restore-btn");
+    var pomin = o.querySelector("#vilda-restore-skip");
+    if (pobierz) pobierz.addEventListener("click", naPobierz);
+    if (pomin) pomin.addEventListener("click", naPomin);
+  }
+
   function zbuduj() {
     var d = dok();
     if (!d || !d.body) return null;
     var juz = d.getElementById(ID_OKNA);
     if (juz) {
+      // index.html ma okno w znacznikach (ukryte, jak dotąd — zob. komentarz w index.html).
+      podepnijPrzyciski(juz);
       okno = juz;
       return juz;
     }
@@ -104,9 +122,6 @@
     pomin.id = "vilda-restore-skip";
     pomin.type = "button";
 
-    pobierz.addEventListener("click", naPobierz);
-    pomin.addEventListener("click", naPomin);
-
     panel.appendChild(ikona);
     panel.appendChild(tytul);
     panel.appendChild(etykieta);
@@ -116,6 +131,7 @@
     panel.appendChild(pomin);
     o.appendChild(panel);
     d.body.appendChild(o);
+    podepnijPrzyciski(o);
     okno = o;
     return o;
   }
