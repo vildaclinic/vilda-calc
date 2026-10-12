@@ -1,0 +1,384 @@
+{
+  "source": "Kelsey et al. 2016, Table 4",
+  "doi": "10.1371/journal.pone.0153843",
+  "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0153843",
+  "statistic": "published model centiles; p50 central value (not arithmetic mean of original concentration)",
+  "sex": "male",
+  "unit": "pg/mL",
+  "matrix": "serum",
+  "license": "CC BY 4.0",
+  "ageRangeYears": [
+    0,
+    17
+  ],
+  "nExtractedObservedPairs": 709,
+  "assay": "four source studies used two-site ELISA, Groome alpha/betaB antibodies; historical assay family",
+  "points": [
+    {
+      "ageYears": 0.0,
+      "p2_5": 99.0,
+      "p10": 140.0,
+      "p25": 183.0,
+      "p50": 238.0,
+      "p75": 301.0,
+      "p90": 362.0,
+      "p97_5": 439.0
+    },
+    {
+      "ageYears": 1.0,
+      "p2_5": 89.0,
+      "p10": 129.0,
+      "p25": 170.0,
+      "p50": 223.0,
+      "p75": 283.0,
+      "p90": 343.0,
+      "p97_5": 418.0
+    },
+    {
+      "ageYears": 2.0,
+      "p2_5": 43.0,
+      "p10": 72.0,
+      "p25": 104.0,
+      "p50": 146.0,
+      "p75": 196.0,
+      "p90": 246.0,
+      "p97_5": 310.0
+    },
+    {
+      "ageYears": 3.0,
+      "p2_5": 23.0,
+      "p10": 46.0,
+      "p25": 71.0,
+      "p50": 107.0,
+      "p75": 150.0,
+      "p90": 195.0,
+      "p97_5": 251.0
+    },
+    {
+      "ageYears": 4.0,
+      "p2_5": 16.0,
+      "p10": 34.0,
+      "p25": 57.0,
+      "p50": 90.0,
+      "p75": 129.0,
+      "p90": 171.0,
+      "p97_5": 224.0
+    },
+    {
+      "ageYears": 5.0,
+      "p2_5": 13.0,
+      "p10": 31.0,
+      "p25": 52.0,
+      "p50": 84.0,
+      "p75": 122.0,
+      "p90": 162.0,
+      "p97_5": 214.0
+    },
+    {
+      "ageYears": 6.0,
+      "p2_5": 14.0,
+      "p10": 31.0,
+      "p25": 53.0,
+      "p50": 85.0,
+      "p75": 123.0,
+      "p90": 164.0,
+      "p97_5": 216.0
+    },
+    {
+      "ageYears": 7.0,
+      "p2_5": 17.0,
+      "p10": 36.0,
+      "p25": 59.0,
+      "p50": 92.0,
+      "p75": 131.0,
+      "p90": 173.0,
+      "p97_5": 227.0
+    },
+    {
+      "ageYears": 8.0,
+      "p2_5": 22.0,
+      "p10": 43.0,
+      "p25": 68.0,
+      "p50": 103.0,
+      "p75": 145.0,
+      "p90": 189.0,
+      "p97_5": 245.0
+    },
+    {
+      "ageYears": 9.0,
+      "p2_5": 29.0,
+      "p10": 53.0,
+      "p25": 81.0,
+      "p50": 119.0,
+      "p75": 164.0,
+      "p90": 210.0,
+      "p97_5": 269.0
+    },
+    {
+      "ageYears": 10.0,
+      "p2_5": 40.0,
+      "p10": 67.0,
+      "p25": 98.0,
+      "p50": 139.0,
+      "p75": 187.0,
+      "p90": 236.0,
+      "p97_5": 299.0
+    },
+    {
+      "ageYears": 11.0,
+      "p2_5": 53.0,
+      "p10": 84.0,
+      "p25": 118.0,
+      "p50": 162.0,
+      "p75": 214.0,
+      "p90": 267.0,
+      "p97_5": 333.0
+    },
+    {
+      "ageYears": 12.0,
+      "p2_5": 68.0,
+      "p10": 103.0,
+      "p25": 140.0,
+      "p50": 188.0,
+      "p75": 244.0,
+      "p90": 300.0,
+      "p97_5": 370.0
+    },
+    {
+      "ageYears": 13.0,
+      "p2_5": 85.0,
+      "p10": 123.0,
+      "p25": 164.0,
+      "p50": 216.0,
+      "p75": 275.0,
+      "p90": 335.0,
+      "p97_5": 408.0
+    },
+    {
+      "ageYears": 14.0,
+      "p2_5": 102.0,
+      "p10": 144.0,
+      "p25": 188.0,
+      "p50": 243.0,
+      "p75": 306.0,
+      "p90": 368.0,
+      "p97_5": 444.0
+    },
+    {
+      "ageYears": 15.0,
+      "p2_5": 118.0,
+      "p10": 163.0,
+      "p25": 209.0,
+      "p50": 268.0,
+      "p75": 333.0,
+      "p90": 398.0,
+      "p97_5": 478.0
+    },
+    {
+      "ageYears": 16.0,
+      "p2_5": 132.0,
+      "p10": 179.0,
+      "p25": 228.0,
+      "p50": 289.0,
+      "p75": 357.0,
+      "p90": 424.0,
+      "p97_5": 506.0
+    },
+    {
+      "ageYears": 17.0,
+      "p2_5": 141.0,
+      "p10": 191.0,
+      "p25": 241.0,
+      "p50": 304.0,
+      "p75": 374.0,
+      "p90": 444.0,
+      "p97_5": 528.0
+    }
+  ],
+  "cohorts": [
+    [
+      "Year",
+      "1st Author",
+      "PMID",
+      "n",
+      "Median age",
+      "Age range"
+    ],
+    [
+      "1998",
+      "Andersson",
+      "9467591",
+      "133",
+      "1 year",
+      "0–2 years"
+    ],
+    [
+      "2005",
+      "Radicioni",
+      "15757857",
+      "96",
+      "10.5 years",
+      "1.5–16.9 years"
+    ],
+    [
+      "2002",
+      "Crofton",
+      "11874413",
+      "366",
+      "8.6 years",
+      "0–17 years"
+    ],
+    [
+      "2006",
+      "Bergada",
+      "16849404",
+      "114",
+      "2.5 days",
+      "1–36 days"
+    ],
+    [
+      "Total",
+      "",
+      "",
+      "709",
+      "4.9 years",
+      "0–17 years"
+    ]
+  ],
+  "notFor": [
+    "preterm reference interpretation",
+    "prenatal serum interpretation",
+    "adults over17",
+    "Tanner-specific interpretation",
+    "arbitrary modern assay calibration"
+  ],
+  "notes": [
+    "Published model treated longitudinal observations as cross-sectional and added adult imputed values and zero-at-conception anchors.",
+    "Annual Table4 nodes miss the minipuberty peak; do not interpolate between birth and1year and call this the published infant curve.",
+    "Do not use Table2 rounded coefficients blindly. At17years they produce284.9 rather than Table4 p50=304. Cause consistent with numerical sensitivity to coefficient rounding; full-precision authors coefficients unavailable.",
+    "The article describes the central curve as mean after root transformation; Table4 explicitly identifies50th centile. Label median/model central value in graph.",
+    "No model extrapolation beyond17years, even though the fitted rational function can return a number.",
+    "Workbook Combined has307rows age30,50fixed−0.75anchors and710other rows, while the article reports300adult imputations and709observations. CSV retains row provenance but is exploratory: resolve this discrepancy before re-fitting or presenting source counts as exact."
+  ],
+  "publishedRoundedCoefficients": {
+    "a": 15.4403,
+    "b": 0.8408,
+    "c": 19.6695,
+    "d": 0.4985,
+    "e": -1.0425,
+    "f": -0.0402,
+    "g": 0.2895,
+    "h": 0.0015
+  },
+  "roundedCoefficientChecks": [
+    {
+      "ageYears": 0.0,
+      "publishedP50": 238.0,
+      "roundedCoefficientValue": 238.40286409,
+      "difference": 0.40286409000000845
+    },
+    {
+      "ageYears": 1.0,
+      "publishedP50": 223.0,
+      "roundedCoefficientValue": 223.01967705940115,
+      "difference": 0.019677059401146835
+    },
+    {
+      "ageYears": 2.0,
+      "publishedP50": 146.0,
+      "roundedCoefficientValue": 146.14203227243405,
+      "difference": 0.1420322724340508
+    },
+    {
+      "ageYears": 3.0,
+      "publishedP50": 107.0,
+      "roundedCoefficientValue": 107.02570640307344,
+      "difference": 0.02570640307344263
+    },
+    {
+      "ageYears": 4.0,
+      "publishedP50": 90.0,
+      "roundedCoefficientValue": 89.38634671312451,
+      "difference": -0.6136532868754898
+    },
+    {
+      "ageYears": 5.0,
+      "publishedP50": 84.0,
+      "roundedCoefficientValue": 83.27157224883855,
+      "difference": -0.7284277511614476
+    },
+    {
+      "ageYears": 6.0,
+      "publishedP50": 85.0,
+      "roundedCoefficientValue": 84.36779647349078,
+      "difference": -0.6322035265092154
+    },
+    {
+      "ageYears": 7.0,
+      "publishedP50": 92.0,
+      "roundedCoefficientValue": 90.84034449626276,
+      "difference": -1.1596555037372411
+    },
+    {
+      "ageYears": 8.0,
+      "publishedP50": 103.0,
+      "roundedCoefficientValue": 101.89865456679492,
+      "difference": -1.1013454332050827
+    },
+    {
+      "ageYears": 9.0,
+      "publishedP50": 119.0,
+      "roundedCoefficientValue": 117.13116731255403,
+      "difference": -1.8688326874459733
+    },
+    {
+      "ageYears": 10.0,
+      "publishedP50": 139.0,
+      "roundedCoefficientValue": 136.13986423619306,
+      "difference": -2.8601357638069373
+    },
+    {
+      "ageYears": 11.0,
+      "publishedP50": 162.0,
+      "roundedCoefficientValue": 158.30959156346148,
+      "difference": -3.690408436538519
+    },
+    {
+      "ageYears": 12.0,
+      "publishedP50": 188.0,
+      "roundedCoefficientValue": 182.67381952874788,
+      "difference": -5.3261804712521155
+    },
+    {
+      "ageYears": 13.0,
+      "publishedP50": 216.0,
+      "roundedCoefficientValue": 207.88703834274432,
+      "difference": -8.112961657255681
+    },
+    {
+      "ageYears": 14.0,
+      "publishedP50": 243.0,
+      "roundedCoefficientValue": 232.31832093995172,
+      "difference": -10.681679060048282
+    },
+    {
+      "ageYears": 15.0,
+      "publishedP50": 268.0,
+      "roundedCoefficientValue": 254.2540523944325,
+      "difference": -13.745947605567494
+    },
+    {
+      "ageYears": 16.0,
+      "publishedP50": 289.0,
+      "roundedCoefficientValue": 272.1584349841105,
+      "difference": -16.8415650158895
+    },
+    {
+      "ageYears": 17.0,
+      "publishedP50": 304.0,
+      "roundedCoefficientValue": 284.9136652850215,
+      "difference": -19.086334714978477
+    }
+  ],
+  "sourceSha256": "aa58c5c6afe3d43781c30265fec61c905a2d3da61e07f512c2051845f3d3773e"
+}

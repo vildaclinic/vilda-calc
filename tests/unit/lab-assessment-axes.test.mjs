@@ -157,7 +157,7 @@ describe('LH/FSH — osie z zapisanych zakresów i wspólny próg wyróżnienia'
 });
 
 describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
-  it.each(['2', '0', '100000000000000000000', '<LOD'])('inline przechowuje tylko skończone współrzędne i szerokość etykiety dla %s', (value) => {
+  it.each(['2', '0', '100000000000000000000', '<LOD'])('inline przechowuje tylko skończone współrzędne i rezerwę krawędzi etykiety dla %s', (value) => {
     const evaluation = evaluate({ value });
     evaluation.clinical.title = 'Fikcyjna treść; color: red; --value: NaN';
     const host = render(evaluation);
@@ -168,13 +168,13 @@ describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
       const declarations = axis.getAttribute('style').split(';').filter(Boolean).map((entry) => entry.split(':'));
       expect(declarations.map(([key]) => key)).toEqual(value === '<LOD' ? ['--low', '--high'] : ['--low', '--high', '--value', '--label-edge']);
       for (const [key, cssValue] of declarations) {
-        const unit = key === '--label-edge' ? 'px' : '%';
+        const unit = key === '--label-edge' ? 'em' : '%';
         expect(cssValue.endsWith(unit)).toBe(true);
         const coordinate = Number(cssValue.slice(0, -unit.length));
         expect(Number.isFinite(coordinate)).toBe(true);
         expect(coordinate).toBeGreaterThanOrEqual(0);
         if (unit === '%') expect(coordinate).toBeLessThanOrEqual(100);
-        else expect(coordinate).toBeGreaterThanOrEqual(34);
+        else expect(coordinate).toBeGreaterThanOrEqual(2);
       }
       expect(axis.getAttribute('style')).not.toMatch(/color|animation|border|NaN|Infinity/);
     }
@@ -190,23 +190,23 @@ describe('LH/FSH — prezentacja, dostępność i stan animacji', () => {
     expect(axes[0].getAttribute('data-axis-max')).toBe(axes[1].getAttribute('data-axis-max'));
     expect(axes[0].getAttribute('data-patient-value')).toBe(axes[1].getAttribute('data-patient-value'));
     expect(descendants(host, (node) => node.tagName === 'details')).toHaveLength(1);
-    expect(visibleText(host)).not.toContain('Z zapisanej konfiguracji oznaczenia:');
-    expect(host.textContent).toContain('Z zapisanej konfiguracji oznaczenia:');
+    expect(visibleText(host)).not.toContain('AnshLite LH CLIA');
+    expect(host.textContent).toContain('AnshLite LH CLIA');
+    expect(host.textContent).not.toContain('Z zapisanej konfiguracji oznaczenia:');
     expect(visibleText(host)).toContain('Rodzaju badania i leczenia nie ustalono.');
   });
 
-  it('pauza jest dostępna także przy ukrytym pomiarze i przekazuje stan dużemu wynikowi', () => {
+  it('nie oferuje ręcznej pauzy; dawne opcje nie wyłączają wyróżnienia znacznego odchylenia', () => {
     const onMotionChange = vi.fn();
     const host = render(evaluate(), { hideMeasurement: true, motionPaused: true, onMotionChange });
-    const button = descendants(host, (node) => hasClass(node, 'vilda-lab-motion-toggle'))[0];
-    expect(button.getAttribute('aria-pressed')).toBe('true');
-    expect(host.firstChild.className).toContain('is-motion-paused');
-    button.click();
-    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(descendants(host, (node) => hasClass(node, 'vilda-lab-motion-toggle'))).toHaveLength(0);
+    expect(descendants(host, (node) => node.tagName === 'button')).toHaveLength(0);
     expect(host.firstChild.className).not.toContain('is-motion-paused');
-    expect(onMotionChange).toHaveBeenLastCalledWith(false);
-    button.click();
-    expect(onMotionChange).toHaveBeenLastCalledWith(true);
+    expect(onMotionChange).not.toHaveBeenCalled();
+    expect(host.textContent).not.toMatch(/Zatrzymaj animacje|Wznów animacje/);
+    expect(descendants(host, (node) => hasClass(node, 'vilda-lab-axis'))).toHaveLength(2);
+    expect(descendants(host, (node) => hasClass(node, 'vilda-lab-axis-marker') && hasClass(node, 'is-uwaga-high'))).toHaveLength(1);
+    expect(host.textContent).toContain('Znacznie powyżej normy · warunkowo');
     expect(descendants(host, (node) => hasClass(node, 'vilda-lab-result'))).toHaveLength(0);
     expect(descendants(host, (node) => hasClass(node, 'vilda-lab-status-icon'))[0].textContent).toBe('!');
   });

@@ -1,0 +1,196 @@
+{
+  "version": "2026-10-11.1",
+  "kind": "educational-display-only",
+  "analyte": "amh",
+  "sex": "male",
+  "unit": "pmol/L",
+  "sourceIds": [
+    "busch2022-male-amh",
+    "wang2020-male-amh-age-1",
+    "wang2020-male-amh-age-2",
+    "wang2020-male-amh-age-3",
+    "wang2020-male-amh-age-4",
+    "wang2020-male-amh-age-5",
+    "wang2020-male-amh-age-6",
+    "wang2020-male-amh-age-7",
+    "wang2020-male-amh-age-8",
+    "wang2020-male-amh-age-9",
+    "wang2020-male-amh-age-10",
+    "wang2020-male-amh-age-11",
+    "wang2020-male-amh-age-13",
+    "wang2020-male-amh-age-14",
+    "tehrani2017-male-amh"
+  ],
+  "scale": {
+    "basis": "maximum-eligible-infant-source-point",
+    "sourceId": "busch2022-male-amh",
+    "headroomFactor": 1.25,
+    "canonicalToNgMlFactor": 0.1401,
+    "patientValueMayChangeScale": false
+  },
+  "coordinate": "canonical-whole-life-display-x",
+  "sampling": {
+    "daysPerYear": 365.25,
+    "sourceSlopeDeltaYears": 1e-05,
+    "coordinateSlopeDeltaYears": 1e-06,
+    "infantSourceId": "busch2022-male-amh",
+    "firstSourceDays": 7,
+    "lastDisplayedSourceDays": 250
+  },
+  "prenatal": {
+    "kind": "schematic-relative-only",
+    "anchors": [
+      {
+        "ageYears": -0.75,
+        "relative": 0.025
+      },
+      {
+        "ageYears": -0.6,
+        "relative": 0.42
+      },
+      {
+        "ageYears": -0.48,
+        "relative": 0.75
+      },
+      {
+        "ageYears": -0.32,
+        "relative": 0.78
+      },
+      {
+        "ageYears": -0.13,
+        "relative": 0.61
+      }
+    ],
+    "birthDrawingRelative": 0.28859015524167253,
+    "reason": "Relative fetal anchors retained from the previous schematic; the birth anchor was approved in the mockup. Neither represents measured prenatal or birth serum concentrations or a numerical patient reference."
+  },
+  "nodes": [
+    {
+      "id": "birth",
+      "ageYears": 0,
+      "valueKind": "relative-birth-drawing",
+      "slope": {
+        "kind": "ngml-per-year",
+        "value": 0
+      }
+    },
+    {
+      "id": "infant-first",
+      "ageDays": 7,
+      "valueKind": "source",
+      "sourceId": "busch2022-male-amh",
+      "slope": {
+        "kind": "source-forward"
+      }
+    },
+    {
+      "id": "infant-bridge",
+      "ageDays": 250,
+      "valueKind": "source",
+      "sourceId": "busch2022-male-amh",
+      "slope": {
+        "kind": "source-central"
+      }
+    },
+    {
+      "id": "childhood",
+      "ageYears": 9.5,
+      "valueKind": "group-median",
+      "sourceId": "wang2020-male-amh-age-9",
+      "slope": {
+        "kind": "ngml-per-display-x",
+        "value": -399
+      }
+    },
+    {
+      "id": "adolescence",
+      "ageYears": 14.5,
+      "valueKind": "group-median",
+      "sourceId": "wang2020-male-amh-age-14",
+      "slope": {
+        "kind": "ngml-per-year",
+        "value": -0.07
+      }
+    },
+    {
+      "id": "adult-first",
+      "ageYears": 30,
+      "valueKind": "source",
+      "sourceId": "tehrani2017-male-amh",
+      "slope": {
+        "kind": "ngml-per-year",
+        "value": -0.08
+      }
+    },
+    {
+      "id": "adult-last",
+      "ageYears": 70,
+      "valueKind": "source",
+      "sourceId": "tehrani2017-male-amh",
+      "slope": {
+        "kind": "ngml-per-year",
+        "value": 0
+      }
+    }
+  ],
+  "bridges": [
+    {
+      "name": "Birth-to-source schematic",
+      "from": "birth",
+      "to": "infant-first",
+      "startHandle": 0.33,
+      "endHandle": 0.33,
+      "sampleCount": 101
+    },
+    {
+      "name": "Broad childhood decline",
+      "from": "infant-bridge",
+      "to": "childhood",
+      "startHandle": 0.699,
+      "endHandle": 0.8,
+      "sampleCount": 1601
+    },
+    {
+      "name": "Broad pubertal decline",
+      "from": "childhood",
+      "to": "adolescence",
+      "startHandle": 0.497,
+      "endHandle": 0.8,
+      "sampleCount": 801
+    },
+    {
+      "name": "Adolescence to adult cohort",
+      "from": "adolescence",
+      "to": "adult-first",
+      "startHandle": 0.3,
+      "endHandle": 0.25,
+      "sampleCount": 601
+    },
+    {
+      "name": "Adult illustrative decline",
+      "from": "adult-first",
+      "to": "adult-last",
+      "startHandle": 0.35,
+      "endHandle": 0.35,
+      "sampleCount": 801
+    }
+  ],
+  "olderAge": {
+    "sourceId": "tehrani2017-male-amh",
+    "minAge": 70,
+    "maxAge": 90,
+    "sampleStepYears": 5,
+    "policy": "hold-last-source-height-and-fade",
+    "numericalReferenceAfterEndpoint": false
+  },
+  "limits": [
+    "One smooth educational synthesis, not a continuous age-specific median, reference interval or clinical classification.",
+    "All 15 numerical AMH source profiles remain unchanged. Patient reference markers may lie off the display line.",
+    "Busch 2022 approximate source median is retained through day 250, including the maximum near day 175; graphical bridges do not extend infant eligibility.",
+    "Wang age-group medians orient the childhood/pubertal illustration; chronological ages are not Tanner stages or a prediction of individual pubertal onset.",
+    "Group midpoints are graphical checkpoints only. Conflict in Wang age label 12 is not resolved by the smooth bridge and supplies no numerical reference.",
+    "Access 2 childhood and modified Gen II adult results are not calibrated into one assay model; their join is illustrative.",
+    "The adult curve remains low relative to the infant maximum. The tail after age 70 adds no numerical reference or inference of stable old-age AMH.",
+    "Ordinary male views only. Sex comparison retains its existing separate display policy."
+  ]
+}

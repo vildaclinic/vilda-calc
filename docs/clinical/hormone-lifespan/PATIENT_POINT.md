@@ -1,0 +1,653 @@
+# Punkt wyniku na wykresie hormonów
+
+Decyzja właściciela z 10 października 2026: wdrożyć zatwierdzony czerwony
+punkt na dostępnych danych liczbowych, wykorzystując istniejący formularz.
+Zakres decyzji dotyczy orientacyjnej prezentacji edukacyjnej; nie jest
+nadaniem statusu walidacji klinicznej modelom ani digitalizacji rycin.
+
+## Znaczenie i dane wejściowe
+
+Punkt pokazuje wpisane stężenie, a jego znacznik odniesienia — centralną
+wartość modelu populacyjnego. Linia zwykle odtwarza ten model; męskie
+LH, FSH, AMH, inhibina B i testosteron całkowity mają osobno opisane niżej
+płynne prezentacje wielu źródeł.
+W zależności od źródła jest to opublikowane p50 lub odczytana
+z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy grupach
+wieku Wang i Zec odniesienie pozostaje stałą medianą jednej grupy;
+nie jest to p50 dokładnego wieku. Żeńskie FSH Zec pokazuje lokalny poziomy
+odcinek, a zwykłe męskie FSH i AMH osobne ciągłe ilustracje. Określenie
+„średnia” nie zastępuje mediany. Osobny dorosły profil testosteronu
+Walravens przedstawia rzeczywiste średnie arytmetyczne grup wieku, jawnie
+tak podpisane, na tle ciągłej ilustracji. Linia nie jest granicą normy. Kolor czerwony
+identyfikuje pacjenta i nie nadaje wynikom statusu nieprawidłowych.
+
+Wykorzystujemy aktualny analit, surowy zapis wyniku, jednostkę, wiek, płeć
+i znane dane urodzeniowe oraz aktualne stadium gonadalne z istniejącego
+kontekstu. Wybór źródła nie zależy
+od wartości wyniku. Nie potwierdza metody próbki, materiału, leczenia ani
+stadium. Nie tworzy nowego selektora lub historii pomiarów. Znane leczenie
+lub stymulacja nie uprawniają do opisywania odniesienia zdrowej populacji
+jako dostosowanego do tego kontekstu.
+
+Dokładny punkt wymaga liczby skończonej i zgodnej jednostki. Nierówności,
+nieznane jednostki, brak wyniku/wieku/płci i brak właściwego profilu nie
+tworzą zastępczej liczby. Nie utożsamiamy testosteronu wolnego z całkowitym.
+Nie przypisujemy wyniku do innego hormonu po zmianie wyboru. Brak punktu
+na wykresie nie blokuje osobnej, dostępnej interpretacji laboratoryjnej.
+
+## Aktywne źródła
+
+Przedziały poniżej są polityką tego wykresu, a nie nowymi normami.
+Każda publikacja zachowuje osobny profil, metodę, jednostkę i pochodzenie
+liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
+
+| Profil i zastosowanie | Konkretne źródło liczb | Populacja, materiał i metoda | Ograniczenia |
+| --- | --- | --- | --- |
+| Męskie LH, FSH, testosteron całkowity, AMH, inhibina B; 7 dni–<1 roku | [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3, str. 1565; czarna mediana GAMLSS odczytana z wektorów PDF | 119 zdrowych donoszonych chłopców, ciąże pojedyncze, 338 próbek surowicy, COPENHAGEN Minipuberty; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS testosteron | Ekstrakcja obejmuje 7–400 dni; aktywny profil kończy się przed 1. rokiem. To przybliżenie ryciny, nie parametry autora ani średnia podłużna z ryc. 2. Osobna bramka rozdzielczości opisana niżej. |
+| Męskie LH i FSH; 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `Other biomarkers`, wiersze 17–27, kolumny B:E i G:J | Norwegia, BGS2; 414 dostępnych męskich próbek w tabeli kohorty, liczebność oznaczenia może się różnić; surowica, pobrania 08:00–14:00, Siemens IMMULITE 2000 XPi | 11 rocznych węzłów na hormon. `p50 = exp(M)/1e6`. Wiek chronologiczny, bez wyznaczania stadium Tannera. Bez ekstrapolacji na dorosłych. |
+| FSH przed pokwitaniem: chłopcy 1–<6 lat/G1; dziewczynki 1–<4, 4–<8 i 8–<11 lat/Th1 | [Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210/PDF 5: chłopcy grupa źródłowa 1–<8 lat, mediana 0,48 IU/L, N=303; dziewczynki kolejno 2,57/1,07/1,55 IU/L, N=124/156/107 | Zagrzeb, Chorwacja, Tanner 1; całe badanie N=948, nie każdy hormon oznaczano u każdego dziecka. Roche cobas e 411, kanapkowe ECLIA; zbierano surowicę i osocze Li-heparynowe, bez przypisania materiału do analitu | Mediany całych grup, nie model dokładnego wieku. Aktualne typowane G1/Th1 jest wymagane. U chłopców od 6 lat zachowujemy Madsen, lecz mediana 0,48 i N=303 nadal opisują pełną grupę źródłową 1–<8. Źródłową grupę chłopców 8–<11 (0,79 IU/L, N=117) zachowujemy wyłącznie w dowodach. |
+| Męski testosteron całkowity; 6–<18 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1 v1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `LCMSMS hormones`, AF19:AI31; przykładowa transformacja K37 | Norwegia, BGS2 i FitFutures; przekrojowe kohorty populacyjne, głównie pochodzenia europejskiego; surowica, pobrania 08:00–14:00, LC-MS/MS, LLOQ 0,02 nmol/L | 13 rocznych węzłów 6–18, p50=`exp(M)/1e6`; PCHIP jest przybliżeniem między nimi. Aplikacja używa profilu przed 18. urodzinami; węzeł 18 domyka interpolację dla wieku 17.x. Bez narzucania Tannera i bez korekty do pory pobrania. Nie są to normy laboratoryjne ani średnia arytmetyczna. |
+| Męski testosteron całkowity; 3–<6 lat | [Kelsey 2014](https://doi.org/10.1371/journal.pone.0109346), Table S1, A1/B2:B8; [korekta 2015](https://doi.org/10.1371/journal.pone.0117674), poprawiona tabela 3 | Połączone 13 badań, 10 097 obserwacji, niekoniecznie niezależnych osób; surowica, różne oznaczenia przeliczone przez autorów do odpowiednika LC-MS/MS | Pełny model 3–88 lat pozostaje dowodem; aktywny wybór ograniczono do 3–<6. Funkcja centralna `log10(T+1)` po odwróceniu transformacji, zgodna z poprawionym p50; między węzłami PCHIP. Źródło punktu nie wymusza kotwic geometrii 3–5 lat. Dawny dorosły profil zastąpił Walravens; nie poprawiamy liczb Kelsey pod oczekiwany trend. |
+| Męski testosteron całkowity; 18–86 lat | [Walravens 2025/2026](https://doi.org/10.1210/clinem/dgaf507), tabela 1; publikacja online 10.09.2025, wydanie JCEM marzec 2026 | 1194 mężczyzn pochodzenia europejskiego, 18–86 lat, BMI ≤35; młodsze zdrowe kohorty i starsza populacja społecznościowa, także z chorobami; surowica rano przed 10:00, na czczo; LC-MS/MS | Siedem średnich arytmetycznych całkowitego T: 18–29: 20,7; 30–39: 20,0; 40–49: 18,1; 50–59: 16,9; 60–69: 17,1; 70–79: 17,0; 80+: 15,9 nmol/L. Nie mediany, normy, wolny T ani model ciągłego wieku. Grupa 80+ działa tylko do obserwowanych 86 lat. Poglądowa krzywa nie interpoluje średniej dla pacjenta. |
+| Męska inhibina B; 1–<6,1 roku | [Kelsey 2016](https://doi.org/10.1371/journal.pone.0153843), tabela 4, opublikowane węzły p50 | Cztery badania, 709 obserwowanych par wiek–stężenie; surowica, historyczne dwumiejscowe ELISA | Pełna tabela 0–17 lat pozostaje dowodem, wybrany odcinek jest polityką aplikacji. Nie używać rocznej tabeli do minipuberty. Nie odtwarzać modelu zaokrąglonymi współczynnikami z tabeli 2. |
+| Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem odniesienia pacjenta; wygładzona wspólna linia jest wyłącznie prezentacją. |
+| Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
+| Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
+| Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
+| Żeńska inhibina B; wyłącznie porównanie płci w wieku 8–20 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, przybliżona mediana GAMLSS (0 SD) | Surowica, Beckman Coulter Gen II ELISA; żeńska kohorta 5,6–20,2 lat obejmuje 648 dziewcząt | Osobne dane tego porównania, poza globalną tablicą profili. Wszystkie 24 węzły 5,6–47 lat zachowane do PCHIP; kwalifikacja tylko 8–20 włącznie. Digitalizacja około ±2 pg/mL, bez SDS i norm. Wiek nie zastępuje Tannera; faz cyklu nie standaryzowano. |
+
+INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
+11 października 2026 przerywana linia ma osobną względną politykę
+`insl3-display-policy.json`; jej wysokości nie mają jednostki stężenia.
+Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
+nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
+poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
+AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec
+i zaakceptowanym porównaniem inhibiny B 8–20 oraz niepokryte fragmenty
+osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
+tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
+odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
+Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
+
+### INSL3: ilustracja bez liczbowego odniesienia — 11 października 2026
+
+Mały wzrost do około 27. dnia korzysta jakościowo z modelowanej średniej
+trajektorii podłużnej Busch, ryc. 2, znormalizowanej do własnego
+niemowlęcego maksimum hormonu. Mediana GAMLSS z ryc. 3 jest inną
+statystyką tej samej kohorty. Żadna z tych figur nie kalibruje wysokości
+rysunku 0,14 względem dorosłej 0,87. Nie wolno użyć tych współrzędnych
+jako mianownika wyniku pacjenta lub przesunąć wyniku na przerywaną linię.
+
+Odczyty ryc. 3 w µg/L są już po transformacji odwrotnej. Busch podaje
+LOD 0,03; jednostka µg/mL w Methods jest niespójna z ryciną i tabelą S1.
+LOQ 0,15 µg/L pochodzi z cytowanego opisu metody Albrethsen, nie z jawnego
+progu INSL3 w artykule niemowlęcym. Te ograniczenia, imputacja wyników
+poniżej LOD jako LOD/2 i brak współczynników autora ograniczają dokładność
+liczbowego odniesienia. Mediana modelu poniżej LOQ nie dowodzi braku
+biologicznej fali ani automatycznej nieważności estymacji populacyjnej.
+
+Połączenia płodowe, dziecięce i dorosłe oraz wygaszony koniec 80–90 lat
+nie uzupełniają brakujących profili. Nie zmieniono norm laboratoryjnych,
+werdyktów ani liczbowych odniesień innych hormonów. DOI, populacje,
+rodzaje statystyk i dostępność źródeł podaje
+[audyt INSL3](evidence/insl3-lifespan-display-audit-2026-10-11.json).
+
+### Dorosłe LH/FSH i stała ilustracja — 11 października 2026
+
+18 nowych profili edukacyjnych uzupełnia istniejące źródła; nie zmienia
+ich liczb ani laboratoryjnych norm. Wszystkie stężenia poniżej mają
+jednostkę IU/L. Pełne pochodzenie, ograniczenia i konkretne tabele:
+[ALGORITHMS.md](../ALGORITHMS.md#hormone-lh-fsh-stable-curves--stałe-krzywe-i-dorosłe-odniesienia-2026-10-11).
+
+| Okno aplikacji | Źródło i statystyka | LH | FSH |
+| --- | --- | ---: | ---: |
+| 18–<25 | FAMe/Laurentino 2020, średnia grupy, Architect i1000 | 3,0 | 3,0 |
+| 25–<30 | FINRISK/Perheentupa 2013, mediana grupy, DELFIA | 3,74 | 3,43 |
+| 30–<40 | jw. | 3,76 | 4,00 |
+| 40–<50 | jw. | 3,91 | 4,56 |
+| 50–<60 | jw. | 4,53 | 5,64 |
+| 60–<70 | jw. | 4,73 | 5,92 |
+| 70–<75 | jw. | 5,57 | 6,43 |
+| 75–<80 | LH: HIMS/Yeap 2007, mediana grupy, Immulite 2000; FSH: Ljubicic 2020, przybliżona mediana modelu, AutoDELFIA | 4,44 | odczyt modelu |
+| 80–<85 | HIMS/Yeap 2007, mediana grupy | 5,14 | tylko dokładnie 80: ≈8,4 |
+| 85–89 włącznie | HIMS/Yeap 2007, mediana grupy | 5,22 | brak |
+
+FSH Ljubicic obejmuje 75–80 włącznie, z sześcioma odczytami rocznymi;
+przy 75 latach ≈7,8 IU/L. To próbkowanie modelu pomiędzy obserwowanymi
+kohortami, nie sześć empirycznych median roczników. Tolerancja odczytu
+około 8,5% nie jest przedziałem ufności. FAMe ma niejednoznaczną górną
+granicę najmłodszej grupy 24/25; okno 18–<25 jest zachowawczą polityką,
+nie ponownie obliczoną średnią. FINRISK łączy lata badania i kohorty.
+HIMS nie stanowi wyłącznie populacji zdrowej. Średnia nie jest medianą,
+a różnice między metodami nie są kalibracją próbki użytkownika.
+
+Grupy mają stałe wartości, bez uśredniania między publikacjami. Wiek
+przecinający granicę profili nie kwalifikuje do jednego odniesienia.
+Luka >16–<18, FSH >80 i LH >89 pozostają bez liczbowego punktu.
+Niemowlęce oraz pediatryczne źródła, w tym warunek G1 dla Zec, zachowują
+dotychczasowe ograniczenia.
+
+`lh-fsh-display-policy.json` definiuje osobną, ciągłą ilustrację i stałą
+skalę: LH 5,57 × 1,25, FSH 8,4178 × 1,25. Nie zależą od pacjenta ani
+wyniku. Most FSH 12–25 lat nie przechodzi przez wszystkie mediany Madsen;
+jasny znacznik odniesienia zachowuje źródłową medianę i może leżeć poza
+linią; czerwony punkt pokazuje wpisany wynik.
+Łuk dorosłości sprawdzono także w pośrednich latach, aby nie przenosił
+poziomu starszych mężczyzn na wiek średni. Odcinek płodowy pozostaje
+schematem; zakończenie poza źródłem nie dostarcza liczbowego odniesienia.
+Zbliżenia pokazują tę samą krzywą. Porównanie płci pozostaje odrębne.
+
+Uzupełnienia inhibiny B opisuje [INHIBIN_EVIDENCE.md](INHIBIN_EVIDENCE.md):
+dwie wizyty minipuberty Kuiri-Hänninen, stadia G Crofton oraz średnie grup
+Baccarelli są osobnymi prezentacjami. Nie dopisują węzłów do powyższych
+median wieku. Wyjątkiem od medianowego punktu jest jawnie oznaczone
+porównanie ze **średnią grupy** dla mężczyzn 80–101 lat, w osobnym wykresie
+grupowym i z własnymi warunkami kwalifikacji. Nie przedłuża ono osi głównej.
+
+### Stała, płynna linia męskiej inhibiny B
+
+Decyzja właściciela z 10 października 2026 zastępuje osobne przycinane
+ścieżki i przerywane łączniki PR #615 jedną ciągłą linią. W zwykłych
+widokach życia, minipuberty i pokwitania ta sama krzywa edukacyjna jest
+widoczna bez wyniku i z wynikiem. Wiek, wcześniactwo, materiał i metoda
+próbki nie zmieniają jej kształtu ani pionowej skali; nadal określają,
+czy wolno na niej umieścić wynik danej osoby. Porównanie płci zachowuje
+odrębną politykę i skalowanie opisane w
+[HORMONE_LIFESPAN.md](../HORMONE_LIFESPAN.md).
+
+Linia wykorzystuje oryginalne punkty Busch, Kelsey i Borelli w ich
+oknach podanych wyżej. `vilda_hormone_lifespan_display.js` przygotowuje
+stałe węzły; renderer buduje z nich jedną ścieżkę PCHIP z ciągłą styczną
+(C1) we współrzędnych osi całego życia.
+Zbliżenie wycina jej przedział, bez ponownego dopasowania krzywej.
+Polityka jest zapisana w `inhibin-display-policy.json`, eksportowanym
+jako `inhibinDisplayPolicy`; funkcja produkcyjna to
+`VildaHormoneLifespanDisplay.buildMaleInhibin`.
+Płynne przejścia 0,75–2 lat oraz 4,5–7 lat należą do jawnej polityki
+graficznej, nie do publikacji. Trzeci pas 18–25 lat wygładza widoczne
+załamanie przy zmianie skali czasu w 20. roku, w obrębie tego samego
+źródła Borelli. Styczne na końcach pasów odpowiadają lokalnym pochodnym
+źródłowego przebiegu, aby uniknąć krótkich zagięć. Nie tworzy to wspólnej
+zwalidowanej mediany ani norm. Odcinek płodowy korzysta z dotychczasowych kotwic poglądowych,
+bez wcześniejszego dołka przy urodzeniu, i dochodzi do danych z 7. dnia.
+Zakończenie 80–90 lat pozostaje płaską ilustracją zakotwiczoną w końcu
+Borelli (140 pg/mL). Nie przedłuża źródłowego profilu dla pacjenta.
+
+Mediana pacjenta nadal pochodzi wyłącznie z
+`vilda_hormone_lifespan_reference.js`, z niezmienionych danych i bramek
+profilu. Wynik i znacznik mediany używają wspólnej liniowej skali:
+stałe źródłowe maksimum 309,779035 pg/mL × zapas 1,25, czyli około
+387,22379 pg/mL na górze osi. Wynik ponad tę wysokość jest oznaczany
+strzałką w górę i pełną wartością, bez fałszywej kropki na granicy osi
+oraz bez przeskalowania krzywej. Wartość dokładnie na granicy pozostaje
+punktem. Zapis cenzurowany nie staje się strzałką dokładnego wyniku.
+
+W pasie wygładzenia znacznik źródłowej mediany może leżeć poza krzywą
+edukacyjną: zachowujemy go, zamiast przesuwać medianę lub wynik na linię.
+Przykładowo dla dokładnie 1 roku i 223 pg/mL oba znaczniki są na wysokości
+oryginalnej mediany Kelsey 223, niezależnie od przebiegu wygładzenia.
+Dla dokładnie 44 lat mediana Borelli pozostaje około 162,084705882 pg/mL;
+wynik 88 pg/mL leży poniżej niej. Ta dokładność służy regresji technicznej;
+UI respektuje przybliżony charakter odczytu ryciny.
+
+Nieznane donoszenie lub wcześniactwo blokuje dopasowanie niemowlęcego
+punktu do Busch, ale nie usuwa tej populacji z ogólnej prezentacji zmian.
+Gdy wiek jest poza wybranym zbliżeniem, punkt znika i krzywa pozostaje
+niezmieniona. Porównanie starszego pacjenta ze średnią Baccarelli nadal
+korzysta z osobnego wykresu grupowego, nie z poglądowego ogona.
+
+### Stała, płynna linia męskiego testosteronu całkowitego
+
+Decyzja właściciela z 11 października 2026 zastępuje poprzednie połączenia
+150 dni–4, 5–6 i 16–25 lat oraz dorosły model Kelsey w tym wykresie.
+Zatwierdzona makieta usuwa sztuczny spadek przy 5–6 latach i kolanko
+w dorosłości. Reguły dla przyszłych prac utrwala
+[HORMONE_CURVE_AGENT_GUIDE.md](../HORMONE_CURVE_AGENT_GUIDE.md).
+
+Wpisanie, zmiana lub wyczyszczenie wyniku, wieku, metody czy donoszenia
+nie zmienia krzywej ani skali. Zbliżenia korzystają z tego samego przebiegu
+w kanonicznych współrzędnych całego życia; ponowne próbkowanie daje
+przybliżenie geometryczne, nie nowy model. Nie aktywujemy wolnego T.
+Dobór liczbowego odniesienia nadal jest osobny od geometrii: Busch
+w dotychczasowym oknie z bramką jakości, Kelsey 3–<6, Madsen 6–<18,
+a od 18 do 86 lat siedem osobnych średnich grup Walravens.
+Luka 1–<3 oraz wiek >86 nie otrzymują punktu z ilustracyjnego połączenia.
+
+Polityka `testosterone-display-policy.json`, eksportowana jako
+`testosteroneDisplayPolicy`, kieruje
+`VildaHormoneLifespanDisplay.buildMaleTestosterone`. Wspólna, ciągła
+ścieżka zachowuje styczne (C1), nieujemność i jedną stałą skalę.
+
+- **Niemowlęctwo i dzieciństwo:** odczyt Busch pozostaje w rysunku do
+  212. dnia. Dalej jedno monotoniczne zejście prowadzi do niskiej wartości
+  Madsen w wieku 6 lat. Węzły Kelsey 3–5 lat nie wymuszają geometrii,
+  dzięki czemu różnica między badaniami nie wygląda jak osobny spadek
+  hormonalny. Źródłowe mediany Kelsey 3–<6 pozostają dostępne dla punktu.
+- **Pokwitanie i młoda dorosłość:** Madsen prowadzi ku źródłowej wartości
+  w wieku 18 lat, następnie poglądowe połączenie 18–23,8 lat dochodzi do
+  średniej młodych dorosłych 20,7 nmol/L. Nie tworzy sztucznego szczytu
+  17–18 lat przewyższającego młodą dorosłość. Mediany Madsen i średnia
+  Walravens są różnymi statystykami i nie tworzą wspólnego modelu p50.
+- **23,8–82,1 roku:** jeden sześcienny łuk Béziera w kanonicznym X,
+  od 20,7 do 15,9 nmol/L; poziome styczne końcowe, ułamki uchwytów
+  0,20/0,50 i 601 próbek. Linia łagodnie maleje, nie musi przechodzić
+  przez każdą średnią grupową, nie odtwarza falowania 16,9→17,1→17,0
+  ani kolanka około czterdziestki. Jest ilustracją, nie estymacją
+  stężenia w każdym roku ani osobniczego tempa starzenia.
+- **82,1–90 lat:** płaskie zakończenie na poziomie 15,9; po 86 latach
+  linia wygasa. Obserwowany zakres źródła kończy się na 86 latach.
+  Poglądowy ogon nie dostarcza wartości pacjenta.
+- **Przed urodzeniem:** dotychczasowe kotwice pozostają ilustracją,
+  nie ilościowym profilem płodowym lub pępowinowym.
+
+Stały dzielnik skali 18,051151264084126 nmol/L i zapas 1,25 zachowują
+wysokość osi 22,563939080105158 nmol/L. Dzielnik pochodzi z poprzedniej
+polityki; nie jest już maksimum danych dorosłych. Punkt pacjenta i znacznik
+odniesienia używają tej samej funkcji. Wynik ponad osią jest strzałką
+z rzeczywistą liczbą; równość daje punkt. Nieprawidłowy, pusty lub
+cenzurowany zapis nie dostarcza zastępczej liczby.
+
+Dorosły znacznik oznacza **średnią grupy wieku**, nie medianę dokładnego
+wieku. Przykładowo M/44 lata/12 nmol/L otrzymuje źródłową średnią grupy
+40–49 lat równą 18,1; M/82 lata/12 otrzymuje średnią grupy 80+ równą
+15,9. Jasny znacznik może leżeć poza łukiem. Nigdy nie podstawiamy wartości
+krzywej do podpisu źródłowej średniej ani nie przesuwamy punktu na linię.
+Pediatryczne p50 pozostają: 6 lat → 0,02393726986868612; 16 lat →
+12,96588173768215; 17,9 roku → 17,87811097018994 nmol/L. Dokładnie
+18 lat otrzymuje teraz średnią grupy 18–29 równą 20,7. Ta zmiana
+odniesienia nie oznacza fizjologicznego skoku w dniu osiemnastych urodzin.
+
+**Wpływ:** zmienia się dorosłe odniesienie edukacyjne i geometria.
+Źródłowe dane pediatryczne, jednostki, silniki norm, laboratoryjne werdykty,
+historia, zapis i synchronizacja pozostają bez zmian. Brak punktu nie
+blokuje osobnej interpretacji laboratoryjnej. Nowa linia nie jest
+zwalidowaną krzywą jednej populacji.
+
+## Transformacje, źródła i granice
+
+Madsen: parametry dotyczą `X = ln(stężenie w jednostce SI × 1e6)`.
+Stąd dla `z=0` zachodzi `X=M`, czyli stężenie `exp(M)/1e6`. Sama wartość
+M nie jest medianą w IU/L lub nmol/L. Przykłady arkusza K36/K37 potwierdzają logarytm;
+formuła przykładu testosteronu L37 ma błędne odwołanie w mianowniku i nie
+jest kopiowana do aplikacji. To nie wpływa na wyznaczenie p50 z M.
+
+Kelsey 2014/2015: stosujemy pełną precyzję współczynników funkcji wymiernej
+`q(a)=(A+C·a+E·a²+G·a³)/(1+B·a+D·a²+F·a³)`, następnie
+`T(a)=10^q(a)−1` w nmol/L. Poprawiona tabela p50, nie pierwotne błędne
+centyle, jest niezależnym sprawdzeniem. Generator oblicza węzły co 0,1 roku;
+runtime interpoluje je PCHIP. Porównanie produkcyjnej interpolacji z funkcją
+źródłową co 0,005 roku w przedziale 3–88 lat wykazało maksymalny błąd
+0,000121 nmol/L; regresja wymaga błędu poniżej 0,00013 nmol/L.
+Funkcja nie może kwalifikować wieku
+poza 3–88 lat tylko dlatego, że algebraicznie zwraca liczbę.
+
+**Wybór dziecięcego źródła testosteronu po audycie:** bezpośrednie
+pediatryczne oznaczenia LC-MS/MS [Madsen 2022](https://doi.org/10.1210/clinem/dgac155)
+zastępują p50 Kelsey w wieku 6–<18 lat. Pełne źródło to *Reference Curves
+for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical
+Classifications*, JCEM 107(7):2004–2015, PMID 35299255, oraz suplement
+LMS v1 z 9 grudnia 2021. Model T korzysta z BGS2 i FitFutures, a nie
+wyłącznie BGS2 jak LH/FSH. Dla 6 lat mediana wynosi około 0,02394,
+dla 12 lat 1,49773, dla 16 lat 12,96588 nmol/L. Wartości z oryginalnych
+komórek M i transformacja są sprawdzalne bez digitalizacji wykresu.
+Kelsey 6 lat daje około 0,323 nmol/L; niezależna kontrola nie wykazała
+błędu jednostki. Preferencja dla Madsen wynika z bezpośrednich pomiarów
+LC-MS/MS w docelowym wieku, nie z dopasowania krzywej do konkretnego wyniku.
+
+LLOQ Madsen wynosi 0,02 nmol/L; p50 dla 6 lat jest wyższe, choć bliskie
+tej granicy. Artykuł i suplementy nie wyjaśniają, jak potraktowano
+pojedyncze obserwacje poniżej LLOQ. Publiczny przykładowy kod LMS dla SHBG
+nie wyjaśnia przygotowania danych T. Jest to ograniczenie, nie dowód
+błędu opublikowanego p50 ani podstawa do arbitralnego wyłączenia sześciolatków.
+CVA 4% opisano dla stężeń 1,5–37 nmol/L; nie przypisujemy tej precyzji
+medianie około 0,024. Nie kopiujemy SDS ani zakresów z błędnej formuły
+przykładowej L37. W aplikacji p50 pozostaje przybliżonym odniesieniem
+edukacyjnym, bez nowych progów diagnostycznych.
+
+To przekrojowe norweskie kohorty o zróżnicowanym BMI, głównie pochodzenia
+europejskiego, z pobraniami 08:00–14:00. Model wieku nie jest skorygowany
+do porannego pobrania i miesza stadia pokwitania; nie nazywamy go normą
+G1–G5. Nie wymagamy nowego pola Tannera lub pory pobrania. Table 1 podaje
+liczebności kohort, nie jednoznaczne N testosteronowego dopasowania LMS.
+[Supplemental Table 2 v4](https://doi.org/10.6084/m9.figshare.17153369.v4),
+arkusz `Ark2`, wiersze 64–67, podaje łącznie 835 obserwacji w grupach T,
+lecz stosuje inne usuwanie wartości odstających; nie przenosimy tej liczby
+do LMS ani nie nazywamy 414+491 dokładnym N modelu testosteronu.
+
+Granice 6 i 18 lat są jawną polityką doboru publikacji. Przy dokładnie
+18 latach wybierana jest średnia Walravens 18–29 (20,7 nmol/L); węzeł Madsen
+18 lat/18,05115 domyka interpolację dla 17.x i pozostaje składnikiem
+stałej skali, bez obowiązku przejścia linii przez ten punkt.
+Różnica źródeł nie jest fizjologicznym skokiem stężenia. Niepewny wiek
+przecinający granicę źródeł nie daje jednej arbitralnej mediany.
+Kelsey 3–<6 zachowano ostrożnie bez ekstrapolowania Madsen poniżej 6;
+luka 1–<3 lat nadal nie ma dokładnej mediany pacjenta.
+
+Audyt modelu Kelsey potwierdził zgodność 1020 wierszy Table S1 i wszystkich
+86 p50 skorygowanej tabeli Kelsey. Nie zmieniamy plateau na spadek wyłącznie
+dla wyglądu. Nowsza [metaanaliza Marriott/Yeap 2023](https://doi.org/10.7326/M23-0342)
+opisuje względną stabilność średniego całkowitego T przed 70 lat i spadek
+później, zależny również od zdrowia i BMI. Są to skorygowane różnice średnich,
+nie bezwzględne mediany do podmiany. Kelsey pozostaje dowodem i aktywnym
+modelem 3–<6 lat, a nie uniwersalną trajektorią zdrowego mężczyzny.
+Od 11 października 2026 dorosłe odniesienie edukacyjne korzysta ze średnich
+Walravens. Nie zastępujemy całkowitego T publikacjami dotyczącymi wolnego T
+ani nie ekstrapolujemy punktu poza 86 lat.
+
+Walravens: tabela 1 obejmuje siedem grup o liczebnościach
+141/252/207/150/177/167/100 i średnich wieku
+23,8/34,3/43,5/55,0/65,1/74,7/82,1 roku. Wartości T są średnimi całych
+grup, nie estymacją dla tych dokładnych lat. Źródło łączy różne kohorty;
+nie jest podłużną historią starzenia jednej osoby. Nie przenosimy do
+tego porównania populacji BMI <30 wybranej osobno do zakresów wolnego T.
+Przedziały wyboru wynoszą [18,30), [30,40), [40,50), [50,60), [60,70),
+[70,80) i [80,86]. Niepewny wiek obejmujący różne grupy nie dostarcza
+jednej arbitralnej średniej. Drobna różnica 16,9→17,1 między grupami
+50–59 i 60–69 nie jest dowodem fizjologicznego odbicia; nie wymusza
+zagięcia poglądowej linii. Dokładne opublikowane średnie pozostają
+liczbowym odniesieniem, mimo uproszczenia geometrii.
+
+Kelsey 2016: zaokrąglone współczynniki powodują narastający błąd, np.
+w 17. roku około 284,9 zamiast opublikowanego p50=304 pg/mL. Dlatego
+podstawą są węzły tabeli, a nie ponowne dopasowanie modelu z surowych danych.
+Przejście do Borelli przy 6,1 roku jest zmianą badania i nie może być
+przedstawione jako nagły fizjologiczny spadek ani jednolita krzywa populacji.
+
+Busch: osie zostały skalibrowane z opisanych podziałek, przebieg odczytano
+z wektorów bez wtórnego wygładzania ekstraktu. Maksymalna reszta kalibracji
+wieku jest mniejsza niż 0,051 dnia. Dla punktu przyjęto konserwatywną bramkę
+wyświetlania: mediana musi być co najmniej równa `LOD/LOQ + połowa grubości
+linii w jednostce stężenia + maksymalna reszta kalibracji Y`. To heurystyka
+rozdzielczości grafiki, nie przedział ufności modelu, norma, warunek autora
+ani próg rozpoznania. Nie podnosimy surowych median do sztucznej wartości
+minimalnej. W zapisanym odczycie ostatnie całe dni kwalifikujące punkt to
+243 dla LH i 212 dla testosteronu; FSH, AMH i inhibina B zachowują punkt
+do końca aktywnego okresu niemowlęcego. INSL3 nie jest aktywnym kalkulatorem;
+jego odrębne ograniczenia omówiono wyżej. Heurystyka rozdzielczości grafiki
+nie jest dowodem nieobecności wczesnej fali fizjologicznej.
+
+Wang: źródło oznacza grupy wieku liczbami 0–14, a na ryc. 1 ich środki
+znajdują się w przybliżeniu przy N+0,5 roku. Nie opisuje dokładnej reguły
+zaokrąglania wieku. Dlatego `[N,N+1)` jest wyłącznie jawną konwencją
+doboru rocznej grupy w edukacyjnej prezentacji, nie opublikowaną definicją
+granic. Dotyczy to również grupy 14: konwencja `[14,15)` nie dowodzi,
+że autorzy obserwowali wszystkie dokładne wartości wieku aż do 15 lat.
+Każda zgodna grupa ma osobny profil `group-median`, stałą wartość i własną
+liczebność. Dwa jednakowe węzły kodują stałą wartość odniesienia grupy;
+nie interpolujemy liczbowej mediany między grupami, Busch i Tehrani.
+Osobna linia edukacyjna AMH może łączyć te okresy według polityki opisanej
+niżej. Nie imputujemy konfliktowej grupy 12 z sąsiadów.
+Przy niepewnym wieku przecinającym granicę grup punkt nie może udawać
+jednoznacznego porównania z jedną z median.
+
+W tabeli 1/tabeli 2 mediana grupy 0 wynosi odpowiednio 134,58/131,58 ng/mL,
+a grupy 12 — 6,99/7,99 ng/mL. Zachowujemy oba zapisy jako dowód konfliktu
+i nie aktywujemy żadnego z nich. Regresje suplementu S1 nie są opisane
+jako modele mediany/kwantylowe; nie służą do rozstrzygnięcia błędu tabel
+ani do odtworzenia ciągłego p50. Pierwszy rok Wang nie zastępuje
+dokładniejszych danych minipuberty. Brak danych Tannera i wcześniactwa
+nie pozwala nazwać mediany normą stadium lub źródłem wcześniaczym.
+Metoda dotyczy kohorty, nie stanowi potwierdzenia metody wyniku pacjenta.
+
+Zec: tabela 2 podaje dokładne granice grup jako dolną włącznie i górną
+wyłącznie. Cztery aktywne profile przechowują stałe mediany grupowe;
+nie interpolujemy między nimi ani nie zamieniamy ich w ciągły przebieg FSH.
+Okno aplikacji chłopców 1–<6 lat jest wyłącznie polityką zachowania
+dotychczasowego Madsen od 6 lat. Etykieta porównania i liczebność nadal
+opisują źródłową grupę 1–<8 lat, a nie nieistniejącą podgrupę N=303 w wieku
+1–<6 lat. Granice 4 i 8 lat u dziewczynek należą do kolejnej grupy;
+niepewny wiek obejmujący dwie grupy lub dwa źródła nie daje jednego punktu.
+
+Kohorta Zec obejmowała wyłącznie Tanner 1; odrzucono 14 dzieci w stadium 2.
+Profil ma `requiredGonadalStage: 1`. Adapter przekazuje tylko aktualną,
+jednoznacznie powiązaną z bieżącym kontekstem obserwację gonadalną:
+G1 u chłopca lub Th1 u dziewczynki. Nie ustalamy stadium z wieku, wyniku,
+samego numeru Tannera, P ani Ax. Nie używamy obserwacji historycznej.
+Brak takiego stadium lub znane stadium 2–5 nie dopasowuje punktu Zec;
+nie dodaje nowego pola i nie blokuje niezależnej oceny laboratoryjnej.
+W porównaniu płci nie przenosimy stadium pacjenta na drugą płeć:
+jeżeli ilościowe porównanie wymaga Zec, pozostaje dotychczasowy schemat.
+
+Pełna kohorta N=948 zawierała dzieci kierowane m.in. z ostrymi infekcjami,
+na badania alergologiczne i przed zabiegami; nie opisujemy jej jako czystej
+próby zdrowych ochotników. FSH oznaczono u 807 uczestników, zgodnie z sumą
+liczebności pięciu grup tabeli. W tabeli 1 (str. 1208/PDF 3) LOD FSH wynosi
+0,1 IU/L, LOQ nie podano; żadna aktywna mediana FSH nie jest cenzurowana.
+Brak przypisania surowicy lub osocza Li-heparynowego do konkretnego
+hormonu pozostaje ograniczeniem źródła. Nie deklarujemy zgodności innych
+metod Roche ani metody Mayo wyłącznie na podstawie wspólnego producenta.
+LH i testosteron z cenzurowanymi medianami nie są aktywowane, nie przenosimy
+zakresów referencyjnych Zec do silnika norm laboratoryjnych.
+
+Jednostki źródłowe zachowuje się w danych: LH/FSH IU/L, testosteron nmol/L,
+inhibina B pg/mL, żeńskie E2 pmol/L; AMH Busch/Ljubicic pmol/L, Tehrani
+oraz Wang ng/mL. Runtime używa dla AMH pmol/L; ng/mL przelicza tym
+samym współczynnikiem co wynik pacjenta (`1 ng/mL = 1/0,1401 pmol/L`).
+Zaokrąglony współczynnik 7,14 z przypisu tabeli Wang pozostaje metadaną
+źródła; nie mieszamy go z innym przelicznikiem punktu pacjenta.
+Konwersja jednostki pacjenta musi być jawna i wspólna z rysowaniem.
+Zgodność jednostek nie dowodzi zamienności metod oznaczenia.
+
+Punkt i znacznik źródłowej mediany używają wspólnej monotonicznej funkcji
+skali. Płynna linia męskiej inhibiny B ma wyłącznie opisane wyżej
+graficzne przejścia między źródłami oraz pas 18–25 lat w obrębie Borelli.
+Testosteron ma odrębną politykę graficzną opisaną wyżej; żaden z jego
+mostów nie wyznacza mediany ani nie rozszerza wieku kwalifikacji.
+Nie przycinamy punktu do zakresu `[0,1]` i nie przesuwamy wieku na brzeg
+widoku. Odcinki interpolowane PCHIP pozostają w zakresie węzłów swojego
+profilu; granica publikacji nie jest parą węzłów do interpolacji. W osobnym
+porównaniu płci ewentualny punkt dotyczy tylko płci pacjenta i tej samej
+skali co jej linia, nigdy obu populacji naraz.
+
+Suplementy Madsen i Ljubicic oraz dane PLOS są CC BY (dokładna wersja
+w metadanych źródła). Artykuł Madsen ma odrębną licencję CC BY-NC-ND.
+Busch, Borelli, Wang i Zec zachowują prawa wydawcy: w aplikacji są liczbowe odczyty
+i cytowania, bez reprodukcji PDF lub ryciny. Rozdzielczość digitalizacji
+i przypisanie statystyki są częścią pochodzenia danych. Pełnych artykułów,
+obrazów źródłowych i surowych danych uczestników nie publikujemy w repo.
+
+### Stała linia AMH i niezależne źródłowe odniesienie
+
+Makieta zatwierdzona przez właściciela 11 października 2026 zastępuje
+zależną od wyniku prezentację męskiego AMH jedną linią edukacyjną.
+Polityka `amh-display-policy.json`, eksport `amhDisplayPolicy` i funkcja
+`VildaHormoneLifespanDisplay.buildMaleAmh` wyznaczają jej geometrię.
+15 profili liczbowych — Busch, 13 grup Wang i Tehrani — pozostaje
+bez zmian. Zbliżenia próbkują tę samą kanoniczną krzywą.
+
+Dzielnik 1335,592934 pmol/L oraz zapas 1,25 nie zależą od wyniku ani
+wieku pacjenta. Źródłowy odczyt mediany Busch zostaje zachowany od 7.
+do 250. dnia, obejmując szerokie maksimum około 175. dnia / 187 ng/mL.
+Łuki do 9,5, 14,5, 30 i 70 lat wygładzają dalszy spadek. Wielkości
+dorosłych 4–7 ng/mL pozostają odpowiednio niskie. Prenatalny schemat
+oraz dojście do 7. dnia nie są nowymi stężeniami odniesienia. Ogon po
+70 latach wygasa na ostatniej wysokości, bez dowodu biologicznego plateau.
+
+Kontrola kształtu przy środku grupy wieku nie zmienia jej statystyki.
+Przy 5,5 roku Wang daje 99,18 ng/mL, podczas gdy linia odpowiada około
+95,25; przy 11,5 roku odpowiednio 20,70 i 25,01. Punkt wyniku równego
+medianie ma pokrywać się ze znacznikiem źródła, nawet jeśli linia leży
+obok. Nie wolno przyciągać znacznika do krzywej. Wang nie określa stadium
+Tannera. Przeliczenie jednostek nie harmonizuje Access 2 i zmodyfikowanego
+Gen II ani odmiennych populacji.
+
+Przed 7. dniem, w grupie 12–<13 lat, w wieku 15–<30 i po 70 latach nadal
+brak źródłowego odniesienia. Tak samo pozostaje bramka donoszenia Busch.
+W tych przypadkach obecność ilustracji nie tworzy punktu pacjenta z jej
+wysokości. Odmienne źródła rozważone w audycie, m.in. Jopling,
+Benderradji i Chong, nie są nowymi profilami. Przebieg porównania płci
+oraz laboratoryjne normy mają odrębne kontrakty.
+
+### Wspólna oś AMH w porównaniu płci podczas minipuberty
+
+Decyzja właściciela z 11 października 2026 dotyczy wyłącznie tego
+porównania. `buildAmhInfantComparison(data, referenceEngine)` korzysta
+z `amh-comparison-policy.json` i stałej pary istniejących profili
+Busch/Ljubicic. Linie median GAMLSS obejmują wspólnie 0,02–<1 roku.
+Nie są przełączane na schemat przy braku wyniku ani na grupę Wang
+przy pierwszych urodzinach. Źródłowych profili i ich domen nie zmieniono.
+
+Obie linie, czerwony wynik i jasny znacznik mediany używają osi log10
+0,1–1000 ng/mL; 1 pmol/L = 0,1401 ng/mL. Równa wysokość oznacza
+równe stężenie, a kolejne poziomy 0,1 / 1 / 10 / 100 / 1000 są
+dziesięciokrotnymi zmianami. Dane zdrowych donoszonych niemowląt
+oznaczano metodą Access 2. Mediana chłopców jest przybliżonym odczytem
+ryciny, dziewczynek pochodzi z tabeli suplementu. Nie są to normy.
+
+`evaluate` nadal kwalifikuje własny punkt i źródłowy znacznik pacjenta,
+z dotychczasowym uwzględnieniem całego przedziału wieku, donoszenia,
+materiału, metody i jednostki. Chłopiec od 7. do <7,305 dnia zachowuje
+własne odniesienie Busch, choć wspólne linie zaczynają się później.
+Dokładnie 1 rok nie otrzymuje punktu w tym porównaniu żadnej płci;
+to ograniczenie widoku, nie skrócenie żeńskiego profilu Ljubicic ani
+usunięcie Wang z innych widoków. Wcześniactwo i nieznane donoszenie
+wykluczają punkt niemowlęcy, lecz nie zmieniają populacyjnych krzywych.
+
+Liczbowy wynik poniżej osi, w tym zero, ma strzałkę w dół z prawdziwą
+wartością; ponad osią — strzałkę w górę. Nie ma dokładnej kropki
+z nierówności ani dodatniej wartości zastępczej dla log(0). Tolerancja
+maszynowa przy granicy osi nie zmienia wyniku. Granice osi nie są LOD
+ani normą: LOD AMH w obu publikacjach wynosi 0,14 pmol/L, osobnego
+LOQ AMH nie podano. Zapis źródeł i odtworzenia:
+[audyt porównania AMH](evidence/amh-infant-comparison-audit-2026-10-11.json).
+
+### Wspólna oś inhibiny B i odniesienie dziewcząt tylko w porównaniu
+
+Makiety minipuberty i pokwitania zaakceptowano 11 października 2026.
+`buildInhibinComparison(data, referenceEngine, period)` odczytuje
+`inhibinComparisonPolicy`. Oba okresy zachowują stałą liniową oś
+0–400 pg/mL; zero jest punktem na osi, a wynik ponad 400 strzałką
+z prawdziwą wartością. 1 ng/L = 1 pg/mL; bez normalizacji osobno dla płci.
+
+Minipuberty używa niezmienionych profili Busch/Ljubicic. Wspólne linie
+mają zakres 0,02–<1 roku; własne odniesienie chłopca zaczyna się od
+7. dnia. Dokładnie 1 rok nie otrzymuje punktu tego porównania,
+bez przełączenia na Kelsey i bez skracania źródłowej domeny dziewcząt
+w innych widokach. Dotychczasowe warunki donoszenia, metody i materiału
+zachowują znaczenie. Same linie nie kwalifikują wcześniaka.
+
+Pokwitanie korzysta z męskiego Borelli i nowego, zaakceptowanego
+odniesienia `borelli2025-female-inhb-puberty-comparison` tylko w wieku
+8–20 lat włącznie. Żeński profil przechowuje
+`inhibin-comparison-reference-data.json`, eksportowany jako
+`inhibinComparisonReferenceData`, poza globalnym `patientPointData`.
+Nie włącza punktu w zwykłych widokach, przed 8 ani po 20 latach.
+Kwalifikacja używa istniejącego `evaluate` z danymi tego porównania
+i dotyczy wyłącznie własnej płci; metoda drugiej płci nie blokuje
+własnego zgodnego profilu.
+
+Żeńska mediana jest przybliżonym odczytem ryc. 1 Borelli-Kjær 2025,
+surowica Gen II, bez odzyskanych parametrów L/S. Wszystkie 24 węzły
+5,6–47 lat pozostają w PCHIP, a granice kwalifikacji nadal wynoszą
+8–20. Obcięcie węzłów do widoku zmieniłoby styczne i część wartości.
+Odczyt około ±2 pg/mL nie jest przedziałem ufności ani normą.
+Męska krzywa łączy dwie metody (Oxford i Gen II); nie stosujemy
+między nimi współczynnika 1,28. Brak standaryzacji cyklu i wpływ
+antykoncepcji pozostają ograniczeniami, nie nowym formularzem lub
+osobnymi dostosowanymi normami. Znane przeciwwskazania i niezgodna
+metoda/materiał nadal ograniczają punkt.
+
+Wiek nie ustala stadium Tannera. Porównanie nie wyznacza SDS,
+percentyli, diagnozy ani prawidłowości wyniku. Osobne panele obserwacji
+Kuiri-Hänninen, Crofton i Baccarelli, globalne profile, normy oraz zapis
+pozostają bez zmian. Źródła i odtworzenie:
+[audyt inhibiny B](evidence/inhibin-comparison-audit-2026-10-11.json).
+
+## Weryfikacja i przypadki syntetyczne
+
+Silnik `vilda_hormone_lifespan_reference.js` przyjmuje dane jako argument;
+`selectProfile` dobiera źródło, `referenceAt` odtwarza jego centralną
+wartość, `sampleProfile` przygotowuje linię, a `evaluate` kwalifikuje punkt.
+Skrypt `build_patient_point_data.py` przygotowuje dane runtime; nie wpisujemy
+progów publikacji jako ukrytych stałych silnika. Źródłowe liczby, adresy
+komórek/pikseli, sumy SHA i ograniczenia pozostają w czytelnych ekstraktach.
+
+Poniższe wartości są niezależnymi punktami kontrolnymi do testów rzeczywistej
+funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
+
+| Fikcyjne wejście | Oczekiwana podstawa i zachowanie |
+| --- | --- |
+| Chłopiec 12 lat, LH 2 IU/L | Madsen p50=0,6775625214085037 IU/L; wynik powyżej znacznika odniesienia, bez nowego werdyktu „poza normą”. |
+| Chłopiec 12 lat, FSH 2,01486005633355 IU/L | Wynik równy źródłowemu znacznikowi Madsen; zgodność z ilustracją nie jest warunkiem poprawności odniesienia. |
+| Chłopiec 3 lata, aktualne G1, FSH 0,48 IU/L | Punkt na medianie Zec; etykieta pełnej grupy źródłowej 1–<8 lat, N=303, a nie mediana dokładnie dla 3 lat. |
+| Chłopiec 3 lata, aktualne G2 lub brak typowanej obserwacji, FSH 0,48 IU/L | Brak punktu Zec; nie zakładamy G1 z wieku. Dostępna osobna ocena laboratoryjna pozostaje. |
+| Chłopiec dokładnie 6 lat, FSH | Profil Madsen; nie przedłużamy okna Zec ani nie wymagamy G1 od profilu Madsen. |
+| Dziewczynka 2 lata/aktualne Th1/FSH 2,57; 5 lat/Th1/1,07; 9 lat/Th1/1,55 IU/L | Punkt na medianie odpowiedniej całej grupy Zec: 1–<4, 4–<8, 8–<11 lat. |
+| Dziewczynka dokładnie 1 rok, aktualne Th1, FSH 2,57 IU/L | Zec; profil niemowlęcy FSH kończy się przed pierwszymi urodzinami. Inne żeńskie profile Ljubicic zachowują dotychczasową granicę. |
+| Dziewczynka 11 lat/Th1 lub 5 lat/Th2, FSH | Brak profilu Zec; bez ekstrapolacji wieku i bez użycia kohorty przedpokwitaniowej w pokwitaniu. |
+| Dziewczynka Th1, możliwy wiek 3,99–4,01 roku, FSH | Brak jednoznacznego punktu; nie wybieramy jednej z median pośrodku niepewnego wieku. |
+| Donoszony chłopiec, dokładnie 90 dni, LH 2,05589 IU/L | Punkt na przybliżonej medianie Busch; wartość ma dokładność odczytu ryciny, nie sześciu klinicznych miejsc dziesiętnych. |
+| Donoszony chłopiec, 90 dni, inhibina B 300 pg/mL | Busch około 294,293798 pg/mL; punkt nieznacznie ponad linią. |
+| Chłopiec dokładnie 6 lat, testosteron 0,02393726986868612 nmol/L | Madsen: punkt równy p50, bez rozpoznania i bez sztucznego podniesienia mediany do innej wartości. |
+| Chłopiec dokładnie 12 lat, testosteron 1,4977255724595988 nmol/L | Punkt i znacznik źródłowej mediany Madsen są zgodne; brak stadium nie blokuje modelu wieku. |
+| Chłopiec dokładnie 16 lat, testosteron 12,96588173768215 nmol/L | Nadal Madsen T; nie stosujemy górnej granicy 16 lat właściwej dla profili LH/FSH. |
+| Chłopiec dokładnie 17,9 roku, testosteron 17,87811097018994 nmol/L | Niezmienione źródłowe p50 Madsen; geometrię i odniesienie oblicza się oddzielnie. |
+| Mężczyzna dokładnie 18 lat, testosteron | Średnia grupy Walravens 18–29: 20,7 nmol/L; nie mediana Madsen ani Kelsey. Znacznik nie musi leżeć na połączeniu graficznym. |
+| Chłopiec, możliwy wiek 5,99–6,01 lub 17,99–18,01 lat, testosteron | Brak jednoznacznego punktu między źródłami; wiek pośrodku przedziału nie rozstrzyga publikacji. |
+| Mężczyzna 44 lata, testosteron 18,1 nmol/L | Punkt zgodny ze znacznikiem opublikowanej średniej grupy 40–49, nawet gdy łuk jest na innej wysokości. |
+| Mężczyzna dokładnie 44 lata, testosteron: pusty → 12 → 100 → wyczyszczenie | Identyczna krzywa i skala; 12 poniżej średniej 18,1; 100 ma strzałkę z rzeczywistą liczbą, bez przyciętej kropki. |
+| Mężczyzna 82 lata, testosteron 15,9 nmol/L | Punkt równy średniej grupy 80+, nie medianie dokładnego wieku. |
+| Mężczyzna dokładnie 86 lat / powyżej 86 lat, testosteron | Przy 86 latach średnia grupy 80+ wynosi 15,9; powyżej 86 brak liczbowego odniesienia mimo wygaszonego ogona linii. |
+| Mężczyzna, możliwy wiek 39,99–40,01 lat, testosteron | Brak jednej średniej między grupami; nie uśredniamy 20,0 i 18,1. |
+| Chłopiec 2 lata, testosteron 0,1 nmol/L | Stała linia poglądowa, bez źródłowej mediany i bez punktu wyprowadzonego z mostu. |
+| Donoszony chłopiec 180 dni, testosteron równy medianie Busch | Punkt równy źródłowemu odniesieniu; niezmienione dane i bramka jakości Busch. |
+| Chłopiec 3 lata, inhibina B 107 pg/mL | Punkt na węźle p50 Kelsey 2016, bez stosowania krzywej niemowlęcej do jego odniesienia. |
+| Mężczyzna dokładnie 44 lata, inhibina B 88 pg/mL; przed wpisaniem, po wpisaniu i po wyczyszczeniu | Identyczna ścieżka i skala; wynik poniżej źródłowego odniesienia Borelli około 162,084705882 pg/mL. |
+| Ten sam kontekst, inhibina B 1000 pg/mL | Ta sama ścieżka i skala; strzałka w górę z 1000 pg/mL, bez kropki na górnej granicy. |
+| Chłopiec dokładnie 1 rok, inhibina B 223 pg/mL | Punkt i znacznik mediany Kelsey są zgodne; linia edukacyjna w pasie wygładzenia może przebiegać inaczej. |
+| Chłopiec 5 lat i 6 miesięcy, AMH 99,18 ng/mL | Punkt zgodny ze znacznikiem mediany grupy Wang 5–<6 lat, N=134, choć linia edukacyjna odpowiada około 95,25; to nie p50 dokładnego wieku. |
+| Chłopiec 11 lat i 6 miesięcy, AMH 20,70 ng/mL | Punkt zgodny ze znacznikiem mediany grupy 11–<12, niezależnie od linii około 25,01; profil kończy się przed 12. urodzinami. |
+| Chłopiec 12 lat i 6 miesięcy, AMH 7 ng/mL | Brak punktu Wang: mediana grupy 12 jest sprzeczna między tabelami; brak interpolacji przez lukę. |
+| Chłopiec 14 lat i 6 miesięcy, AMH 8,23 ng/mL | Punkt na medianie grupy oznaczonej 14, według jawnej konwencji `[14,15)`; brak ekstrapolacji po 15. urodzinach. |
+| Chłopiec, możliwy wiek 5,99–6,01 roku, AMH 99,18 ng/mL | Brak jednoznacznego punktu dla jednej grupy; nie wybieramy mediany z połowy niepewnego przedziału. |
+| Mężczyzna 40 lat, AMH 6,12 ng/mL | Punkt równy znacznikowi rocznego p50 Tehrani, nawet gdy ilustracja przebiega nieco wyżej; zmodyfikowany Gen II w źródle. |
+| Mężczyzna 70 lat, AMH 3,95 ng/mL / powyżej 70 lat | Przy 70 latach punkt równy p50 Tehrani; powyżej brak odniesienia mimo wygaszonego ogona. |
+| Męskie AMH, ten sam wiek: pusty → wynik równy źródłu → ponad osią → wyczyszczenie | Stała linia i skala; wynik ponad osią zachowuje prawdziwą wartość ze strzałką. |
+| Porównanie płci AMH, donoszone niemowlę dokładnie 90 dni | Mediany modeli: chłopcy ≈161,6811 ng/mL; dziewczynki ≈2,3535 ng/mL. Obie linie i punkty na tej samej stałej osi log10, również bez wyniku. |
+| Porównanie AMH, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własna mediana Busch ≈64,25565 ng/mL i punkt chłopca dostępne; brak źródła dziewczynki. Wspólne linie zaczynają się w 7,305 dnia, bez ekstrapolacji. |
+| Porównanie AMH, dokładnie pierwsze urodziny, dowolna płeć | Krzywe pozostają identyczne, ale brak punktu tego widoku; nie podstawiamy grupy Wang. |
+| Porównanie AMH, kwalifikujący kontekst: 0 → 0,1 → 1000 → 10000 ng/mL | Strzałka w dół → punkt na dolnej granicy → punkt na górnej granicy → strzałka w górę; krzywe i oś stałe. Nie traktujemy błędu konwersji 1000,0000000000001 jako przekroczenia osi. |
+| Porównanie inhibiny B, donoszone niemowlę dokładnie 90 dni | Mediany modeli M≈294,2938 i F≈49,4718 pg/mL; stała wspólna liniowa oś 0–400 również bez wyniku. |
+| Porównanie inhibiny B, donoszony chłopiec 7 dni / dziewczynka 7 dni | Własne odniesienie M≈187,9788 pg/mL dostępne, F bez odniesienia; wspólne linie od 7,305 dnia. |
+| Porównanie inhibiny B w minipuberty, dokładnie 1 rok | Brak punktu obu płci w tym widoku; bez podstawienia Kelsey i bez zmiany globalnych granic profili. |
+| Porównanie inhibiny B w pokwitaniu, dziewczynka dokładnie 8/12/13/20 lat, zgodny kontekst | Nowe, ograniczone do tego widoku odniesienie Borelli ≈14/43/47/34 pg/mL. PCHIP zachowuje wszystkie 24 węzły 5,6–47 lat. |
+| Dziewczynka przed 8 / po 20 latach lub zwykły widok w wieku 13 lat, inhibina B | Brak nowego odniesienia porównania; nie aktywujemy globalnego profilu żeńskiego. |
+| Porównanie pokwitania inhibiny B, chłopiec ze zgodną własną metodą, niedopasowaną do żeńskiego Gen II | Kwalifikacja wyłącznie własnego męskiego profilu; druga płeć nie blokuje punktu. |
+| Porównanie pokwitania inhibiny B, możliwy wiek 7,99–8,01 albo 19,99–20,01 lat | Brak punktu dla wieku przekraczającego granicę widoku; nie zawężamy wieku do jego środka. |
+| Porównanie inhibiny B, kwalifikujący kontekst: pusty → 0 → 400 → 1000 pg/mL → wyczyszczenie | Brak punktu → punkt na zerze → punkt na górnej granicy → strzałka w górę → brak punktu. Te same linie i skala; 400 ng/L równe 400 pg/mL. |
+| Wcześniak 90 dni lub niemowlę z nieznanym donoszeniem | Brak dopasowania punktu do Busch/Ljubicic; bez użycia wieku skorygowanego. |
+| Mężczyzna 44 lata, LH 2 / FSH 2 IU/L | Źródłowe mediany grupowe 3,91 / 4,56; przebieg i skala identyczne przed wpisaniem oraz po wyczyszczeniu wyniku. |
+| Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
+| FSH dokładnie 80 / >80; LH dokładnie 89 / >89 | Odpowiednio ≈8,4 / brak oraz 5,22 / brak, bez przedłużania źródła wygaszonym ogonem. |
+| LH `<0,05 IU/L`, AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
+
+Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
+granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki
+i konwersje, zmianę osoby/analitu/płci, odznaczenie hormonu, pełny ekran
+oraz telefon. Dla męskich LH, FSH, AMH, inhibiny B i testosteronu dochodzą
+stałość krzywej i skali przy pustym,
+poprawnym, błędnym i cenzurowanym wyniku oraz płynność stycznych przy
+zmianie źródła i w pasach wygładzenia osi. Należy sprawdzić, że zbliżenia
+LH, FSH, T i AMH pokazują tę samą kanoniczną krzywą również poza wiekiem pacjenta.
+Dla AMH sprawdzić szeroki niemowlęcy szczyt i monotoniczny spadek po nim,
+ciągłość stycznych na połączeniach oraz niezmienione 15 profili i luki.
+Korekta testosteronu wymaga ciągłości przy końcach wszystkich połączeń,
+monotonicznego dzieciństwa po 212. dniu, braku sztucznego maksimum 17–18 lat
+i łagodnego, monotonicznego łuku dorosłości. Średnie Walravens pozostają
+niezmienione po zmianie uchwytów łuku; pediatryczne mediany 16 i 17,9 lat
+zachowują dotychczasowe wartości. Zbliżenia mogą mieć mały błąd ponownego
+próbkowania — kontrolujemy go w pikselach, wraz z zachowaniem szczytów
+i skali, bez deklarowania idealnej równości ścieżek SVG. Sprawdzamy też
+desktop i 320 px oraz niezmienioną politykę pozostałych porównań płci.
+AMH w minipuberty wymaga osobnej kontroli stałej pary modeli, wspólnej
+osi log10 i zachowania punktu przy granicach 7 dni, 0,02 i 1 roku.
+Inhibina B wymaga stałej osi liniowej obu okresów, własnej kwalifikacji
+płci i zachowania tych samych granic niemowlęcych. W pokwitaniu
+sprawdzamy 8 i 20 lat włącznie, cały zestaw 24 żeńskich węzłów oraz
+brak nowego odniesienia poza porównaniem i poza zakresem wieku.
+Test równości punktu ze źródłowym
+odniesieniem nie może
+sprawdzać wyłącznie
+wspólnej błędnej implementacji: potrzebne są też powyższe wartości źródłowe.
+Zielone testy potwierdzają techniczne odtworzenie danych, nie walidację
+medyczną ani przydatność diagnostyczną nowej wizualizacji.

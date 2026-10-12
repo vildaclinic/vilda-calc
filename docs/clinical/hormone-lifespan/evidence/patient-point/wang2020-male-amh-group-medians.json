@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "title": "Age-specific reference intervals for anti-Müllerian hormone in Chinese boys: A population-based study",
+    "authors": "Wang et al.",
+    "year": 2020,
+    "journal": "Clinica Chimica Acta",
+    "volume": 506,
+    "pages": "154–159",
+    "doi": "10.1016/j.cca.2020.03.028",
+    "pmid": "32199784",
+    "url": "https://doi.org/10.1016/j.cca.2020.03.028",
+    "table": [
+      1,
+      2
+    ],
+    "journalPage": 156,
+    "pdfPage": 3,
+    "sha256": "3cabaf2f9dace00f9f63385d16888edb0d6f3505def437410268272d99cfd9d9",
+    "access": "Full primary publication supplied by owner; both tables checked visually.",
+    "redistribution": "Factual numerical extract and citation only; publisher PDF and figures are not included."
+  },
+  "analyte": "amh",
+  "sex": "male",
+  "unit": "ng/mL",
+  "statistic": "single-year-group-median",
+  "participants": 2009,
+  "population": {
+    "country": "China",
+    "location": "Wuhan",
+    "design": "cross-sectional",
+    "selection": "Healthy boys after medical and physical examination",
+    "ageGroupLabelsYears": [
+      0,
+      14
+    ],
+    "medianAgeYears": 7.8,
+    "recruitment": "Wuhan Children’s Hospital and five randomly selected schools; October 2017–April 2019",
+    "exclusions": [
+      "Klinefelter syndrome",
+      "Y-chromosome deletions",
+      "congenital or acquired cryptorchidism",
+      "history of testicular disease",
+      "liver malfunction",
+      "kidney malfunction",
+      "endocrine disease",
+      "inherited metabolic disease",
+      "circulatory system disease"
+    ],
+    "gestationalAge": "not reported",
+    "tannerStage": "not reported"
+  },
+  "assay": {
+    "method": "Beckman Coulter Access 2 automated chemiluminescence immunoassay",
+    "material": "serum",
+    "samplingTime": "08:00–10:00",
+    "storage": "−80 °C",
+    "lod": null,
+    "loq": null,
+    "analyticalMeasuringRange": null,
+    "dilutionProtocol": null,
+    "intraAssayCvPercent": [
+      1.39,
+      2.5
+    ],
+    "interAssayCvPercent": [
+      1.97,
+      3.16
+    ]
+  },
+  "ageRouting": {
+    "sourceBoundaryDefinition": null,
+    "sourceBoundaryLimitation": "Tables use age labels 0 through 14; exact chronological-age rounding and interval closures are not stated. Figure 1 places groups approximately at half-year centres.",
+    "applicationPolicy": "For this educational grouped comparison only, interpret each enabled age label N as completed-year group [N,N+1). This is an explicit application convention, not an exact-age population median or a published boundary formula.",
+    "activeAgeGroupLabelsYears": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      14
+    ],
+    "inactiveAgeGroupLabelsYears": [
+      0,
+      12
+    ],
+    "upperAgePolicy": "Apply the same completed-year convention to label 14: [14,15). This identifies a labelled annual group, not verified exact-age coverage up to 15; the maximum observed participant age was not reported.",
+    "betweenGroups": "No interpolation or bridge between annual groups, gaps or sources.",
+    "minipuberty": "Do not replace the finer existing infant data with the single first-year group."
+  },
+  "conversion": {
+    "sourceTable2PmolLPerNgMl": 7.14,
+    "applicationPmolLPerNgMl": 7.137758743754461,
+    "applicationRule": "Use the same canonical conversion as the patient result (ng/mL / 0.1401); do not combine the rounded table-footnote factor with a different patient conversion."
+  },
+  "limitations": [
+    "The median describes all boys in an annual group, not the expected median at an exact birthday or Tanner stage.",
+    "The completed-year routing is an explicit educational application convention because the paper does not state precise age rounding or interval closure.",
+    "Published AMH medians disagree at labels 0 and 12; both values are preserved and neither group is activated.",
+    "Age label 14 follows the same completed-year routing convention as the other annual groups; the maximum observed age and exact upper support are not reported.",
+    "There is no monthly minipuberty series or gestational-age stratification in this source.",
+    "Serum Access 2 cohort data do not establish interchangeability with other assays or plasma.",
+    "LOD, LOQ, analytical range and high-concentration dilution details are not reported.",
+    "Supplement Table S1 regression equations are not described as median or quantile models and are not used.",
+    "Some Figure 1A median readings differ from the tables; the figure is not used to resolve the conflicting table medians.",
+    "No reference limits, SDS, diagnostic classifications or treatment recommendations are derived from these group medians."
+  ],
+  "rows": [
+    {
+      "ageGroupLabelYears": 0,
+      "participants": 121,
+      "table1MedianNgMl": 134.58,
+      "table2MedianNgMl": 131.58,
+      "medianConflict": true,
+      "agreedGroupMedianNgMl": null,
+      "active": false,
+      "inactiveReason": "conflicting-published-medians"
+    },
+    {
+      "ageGroupLabelYears": 1,
+      "participants": 123,
+      "table1MedianNgMl": 160.42,
+      "table2MedianNgMl": 160.42,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 160.42,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 2,
+      "participants": 129,
+      "table1MedianNgMl": 155.57,
+      "table2MedianNgMl": 155.57,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 155.57,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 3,
+      "participants": 147,
+      "table1MedianNgMl": 118.33,
+      "table2MedianNgMl": 118.33,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 118.33,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 4,
+      "participants": 142,
+      "table1MedianNgMl": 115.23,
+      "table2MedianNgMl": 115.23,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 115.23,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 5,
+      "participants": 134,
+      "table1MedianNgMl": 99.18,
+      "table2MedianNgMl": 99.18,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 99.18,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 6,
+      "participants": 144,
+      "table1MedianNgMl": 83.05,
+      "table2MedianNgMl": 83.05,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 83.05,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 7,
+      "participants": 131,
+      "table1MedianNgMl": 69.61,
+      "table2MedianNgMl": 69.61,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 69.61,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 8,
+      "participants": 147,
+      "table1MedianNgMl": 62.75,
+      "table2MedianNgMl": 62.75,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 62.75,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 9,
+      "participants": 135,
+      "table1MedianNgMl": 58.96,
+      "table2MedianNgMl": 58.96,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 58.96,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 10,
+      "participants": 138,
+      "table1MedianNgMl": 54.18,
+      "table2MedianNgMl": 54.18,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 54.18,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 11,
+      "participants": 126,
+      "table1MedianNgMl": 20.7,
+      "table2MedianNgMl": 20.7,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 20.7,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 12,
+      "participants": 131,
+      "table1MedianNgMl": 6.99,
+      "table2MedianNgMl": 7.99,
+      "medianConflict": true,
+      "agreedGroupMedianNgMl": null,
+      "active": false,
+      "inactiveReason": "conflicting-published-medians"
+    },
+    {
+      "ageGroupLabelYears": 13,
+      "participants": 132,
+      "table1MedianNgMl": 9.64,
+      "table2MedianNgMl": 9.64,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 9.64,
+      "active": true,
+      "inactiveReason": null
+    },
+    {
+      "ageGroupLabelYears": 14,
+      "participants": 129,
+      "table1MedianNgMl": 8.23,
+      "table2MedianNgMl": 8.23,
+      "medianConflict": false,
+      "agreedGroupMedianNgMl": 8.23,
+      "active": true,
+      "inactiveReason": null
+    }
+  ],
+  "verification": {
+    "sourceArtifactSha256": "9c5c1a4bbac6b8735b66f81dfd3ed36c9745b2c60bb50260c82376dab9cda91a",
+    "sumParticipants": 2009,
+    "concordantMedianGroups": 13,
+    "activeGroups": 13,
+    "conflictAgeLabelsYears": [
+      0,
+      12
+    ]
+  }
+}

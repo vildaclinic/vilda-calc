@@ -1,0 +1,2456 @@
+{
+  "id": "female-gonadotropin-display-audit-2026-10-12",
+  "status": "owner-approved-educational-display-not-clinical-validation",
+  "scope": "Female LH/FSH ordinary lifespan, infant mean, puberty median and adult cycle illustrations. No source-reference or laboratory-norm activation.",
+  "sourceVerificationDate": "2026-10-12",
+  "minipuberty": {
+    "paper": {
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://academic.oup.com/jcem/article/107/9/2598/6608768",
+      "fullTextAccessibleUrl": "https://oup.silverchair-cdn.com/article-minimal/6608768",
+      "journalPages": "2598–2605",
+      "pageLocations": "HTML sections and figure captions verified; PDF pagination for individual passages not verified."
+    },
+    "population": {
+      "femaleIncluded": 98,
+      "femaleCompletedSixthVisit": 89,
+      "bloodSamples": 266,
+      "visitsPlanned": 6,
+      "bloodSamplesPerGirlMedian": 3,
+      "bloodSamplesPerGirlIQR": [
+        1,
+        4
+      ],
+      "earliestActualSampleDays": 5,
+      "latestActualSampleMonths": 14.2,
+      "termHealthy": true,
+      "ethnicity": "Caucasian",
+      "setting": "Copenhagen, singleton pregnancies, affluent and educated maternal population",
+      "maleData": "The parent cohort included boys, but this paper’s fitted hormone trajectories concern girls only."
+    },
+    "assay": {
+      "analytes": [
+        "LH",
+        "FSH"
+      ],
+      "method": "AutoDELFIA time-resolved fluoroimmunometric assays, PerkinElmer",
+      "specimen": "serum",
+      "unit": "IU/L",
+      "lod": 0.05,
+      "loq": "not separately supplied in main article",
+      "interAssayCv": "<6%",
+      "intraAssayCv": "≤3%",
+      "valuesBelowDetection": "Research data represented below-LOD/LOQ values at half the respective threshold; this does not authorize substitution of patient results."
+    },
+    "figure1": {
+      "statistic": "Age-dependent GAMLSS median and ±1/±2 SD curves",
+      "model": "Box-Cox GAMLSS with smoothed age-dependent L, M, S. Treats the repeated measurements as a cross-sectional sample for this purpose.",
+      "xUnit": "years",
+      "plottedAgeDomain": [
+        0,
+        1.2
+      ],
+      "yUnit": "analyte-specific concentration; LH and FSH IU/L",
+      "clinicalRole": "Source of quantitative age-specific median/reference distributions; existing educational patient marker uses this independently from display geometry.",
+      "verifiedVisualFinding": "FSH median is almost horizontal; LH median declines early and has only a weak later bump. Current source-table curves resemble these black median curves."
+    },
+    "figure3": {
+      "statistic": "Longitudinal population mean trajectory, normalized separately for each hormone",
+      "model": "Maximum-likelihood linear mixed model; natural-spline fixed mean, Gaussian random spline coefficients with unrestricted covariance, independent Gaussian measurement noise. Spline degrees of freedom searched from 3 through 12 using AIC.",
+      "xUnit": "days",
+      "analysisAgeDomainYears": [
+        0,
+        1
+      ],
+      "normalization": "mean concentration at age / maximum of that hormone’s mean trajectory",
+      "yUnit": "dimensionless, not IU/L; not normalized individually per infant; not normalized against adult/menopausal concentration",
+      "firstPeakRangeDays": [
+        15,
+        27
+      ],
+      "interpeakNadirRangeDays": [
+        58,
+        92
+      ],
+      "secondLhFshPeakDaysReportedAsRange": [
+        164,
+        165
+      ],
+      "secondOvarianHormonePeakRangeDays": [
+        107,
+        125
+      ],
+      "relativeAmplitudes": "Approximate digitization retained in display-data.json: LH first peak 0.999759 and second 0.183082; FSH first 0.996168 and second 0.760254. These are dimensionless model mean ratios, not IU/L.",
+      "verifiedVisualFinding": "Original image shows distinct first and second waves for both LH and FSH. These differ materially from the medians in Fig.1.",
+      "mainLimitation": "No physical-unit maximum, fitted coefficients, selected degrees of freedom by hormone, or mean-trajectory numerical table found in this article or its two linked public supplements.",
+      "timingScope": "Approximate population-level model peak timings reported for this cohort, not universal clinical days, individual peak predictions, or validated diagnostic thresholds."
+    },
+    "supplements": [
+      {
+        "doi": "10.6084/m9.figshare.19469555.v1",
+        "url": "https://figshare.com/articles/dataset/Supplementary_table_1_2022_03_30_docx/19469555/1",
+        "file": "Supplementary-table-1.docx",
+        "scope": "One DOCX: reference lines −2 SD, −1 SD, median, +1 SD, +2 SD and L,M,S for all seven hormones. These do not encode the separate longitudinal mean model.",
+        "license": "CC BY 4.0"
+      },
+      {
+        "doi": "10.6084/m9.figshare.19400840.v2",
+        "url": "https://figshare.com/articles/figure/Suppl_fig_1_Longiforl_b_2021_07_08_pdf/19400840/2",
+        "file": "supplement-longitudinal-individuals.pdf",
+        "scope": "One PDF of individual longitudinal observations and reference curves. LH/FSH axes are logarithmic. No raw numerical observations or mean-model coefficients.",
+        "license": "CC BY 4.0",
+        "absoluteMeanScale": "Not supplied. Physical-unit axes belong to individual observed concentrations and GAMLSS reference curves. They do not provide the separate Figure3 longitudinal mean maxima or fixed-effect model."
+      }
+    ],
+    "availability": {
+      "articleDeclaration": "The article restricts some/all underlying data for confidentiality or licensing, with conditions available from the corresponding author on request.",
+      "searchScope": [
+        "Full article HTML",
+        "Figure1 and Figure3 full-resolution images",
+        "Both linked public Figshare supplements and current metadata",
+        "Web queries combining article DOI/title with code, GitHub, spline and data availability"
+      ],
+      "result": "No numerical mean model or analysis code found in the inspected materials. This does not establish that authors have never shared additional data elsewhere.",
+      "scatterReconstruction": "Not attempted. No cohort mean was reconstructed by averaging/digitizing plotted individuals or by multiplying normalized Figure3 by GAMLSS median maxima."
+    }
+  },
+  "minipubertyDigitization": {
+    "schemaVersion": 1,
+    "provenance": {
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://academic.oup.com/jcem/article/107/9/2598/6608768",
+      "figure": "3",
+      "imageSha256": "cecad5e7fc5bb25222ca56f2507b9b37ac7cc45f85fb26d547e1a9be410ee0b9",
+      "statistic": "population longitudinal mean from random-coefficient natural-spline model",
+      "normalization": "Each hormone mean concentration divided by that hormone mean maximum. No absolute maximum was provided.",
+      "sex": "female",
+      "population": "98 healthy term infant girls, Copenhagen; 266 serum samples; earliest real sampling day5.",
+      "reconstruction": "Colour-mask trace centre at each available image column; PCHIP fills only bounded dashed gaps. Sparse day anchors sampled from that trace. No concentrations in IU/L reconstructed.",
+      "clinicalReference": "Does not alter numerical GAMLSS median, reference limits, assay qualification or patient results.",
+      "timingScope": "Approximate shape and cohort-model timing, not universally exact physiologic ages."
+    },
+    "calibration": {
+      "imageSize": [
+        3600,
+        2622
+      ],
+      "xDayToPixel": {
+        "intercept": 265.25263157894693,
+        "slope": 7.805175438596491,
+        "tickMaxResidualPx": 0.3157894736848448
+      },
+      "yRelativeToPixel": {
+        "intercept": 2397.0714285714284,
+        "slope": -2373.642857142857,
+        "tickMaxResidualPx": 0.15714285714284415
+      },
+      "digitizationUncertainty": "Pixel position and curve width imply approximate relative values. These are not raw model predictions, confidence intervals or assay precision."
+    },
+    "hormones": {
+      "lh": {
+        "points": [
+          {
+            "day": 5.604918,
+            "value": 0.172339
+          },
+          {
+            "day": 6.0,
+            "value": 0.203471
+          },
+          {
+            "day": 7.0,
+            "value": 0.251024
+          },
+          {
+            "day": 8.0,
+            "value": 0.315239
+          },
+          {
+            "day": 9.0,
+            "value": 0.42404
+          },
+          {
+            "day": 10.0,
+            "value": 0.508975
+          },
+          {
+            "day": 11.0,
+            "value": 0.577994
+          },
+          {
+            "day": 12.0,
+            "value": 0.649738
+          },
+          {
+            "day": 13.0,
+            "value": 0.71698
+          },
+          {
+            "day": 14.0,
+            "value": 0.770787
+          },
+          {
+            "day": 15.0,
+            "value": 0.823896
+          },
+          {
+            "day": 16.0,
+            "value": 0.865572
+          },
+          {
+            "day": 17.0,
+            "value": 0.897197
+          },
+          {
+            "day": 18.0,
+            "value": 0.935815
+          },
+          {
+            "day": 19.0,
+            "value": 0.955547
+          },
+          {
+            "day": 20.0,
+            "value": 0.978063
+          },
+          {
+            "day": 21.0,
+            "value": 0.98837
+          },
+          {
+            "day": 22.0,
+            "value": 0.997418
+          },
+          {
+            "day": 22.6,
+            "value": 0.998495
+          },
+          {
+            "day": 23.05,
+            "value": 0.999759
+          },
+          {
+            "day": 24.0,
+            "value": 0.998817
+          },
+          {
+            "day": 25.0,
+            "value": 0.989575
+          },
+          {
+            "day": 27.0,
+            "value": 0.960378
+          },
+          {
+            "day": 30.0,
+            "value": 0.905296
+          },
+          {
+            "day": 32.0,
+            "value": 0.853512
+          },
+          {
+            "day": 35.0,
+            "value": 0.75277
+          },
+          {
+            "day": 37.5,
+            "value": 0.682591
+          },
+          {
+            "day": 40.0,
+            "value": 0.603793
+          },
+          {
+            "day": 42.5,
+            "value": 0.528014
+          },
+          {
+            "day": 45.0,
+            "value": 0.459902
+          },
+          {
+            "day": 50.0,
+            "value": 0.343172
+          },
+          {
+            "day": 55.0,
+            "value": 0.251747
+          },
+          {
+            "day": 60.0,
+            "value": 0.180929
+          },
+          {
+            "day": 65.0,
+            "value": 0.129522
+          },
+          {
+            "day": 70.0,
+            "value": 0.094974
+          },
+          {
+            "day": 75.0,
+            "value": 0.072891
+          },
+          {
+            "day": 80.0,
+            "value": 0.061999
+          },
+          {
+            "day": 85.0,
+            "value": 0.059256
+          },
+          {
+            "day": 90.0,
+            "value": 0.06336
+          },
+          {
+            "day": 95.0,
+            "value": 0.068701
+          },
+          {
+            "day": 100.0,
+            "value": 0.076441
+          },
+          {
+            "day": 110.0,
+            "value": 0.096039
+          },
+          {
+            "day": 120.0,
+            "value": 0.11946
+          },
+          {
+            "day": 130.0,
+            "value": 0.142422
+          },
+          {
+            "day": 140.0,
+            "value": 0.162649
+          },
+          {
+            "day": 150.0,
+            "value": 0.175921
+          },
+          {
+            "day": 160.0,
+            "value": 0.182661
+          },
+          {
+            "day": 165.0,
+            "value": 0.183082
+          },
+          {
+            "day": 170.0,
+            "value": 0.181597
+          },
+          {
+            "day": 180.0,
+            "value": 0.174235
+          },
+          {
+            "day": 190.0,
+            "value": 0.161253
+          },
+          {
+            "day": 200.0,
+            "value": 0.143059
+          },
+          {
+            "day": 210.0,
+            "value": 0.121175
+          },
+          {
+            "day": 220.0,
+            "value": 0.097977
+          },
+          {
+            "day": 230.0,
+            "value": 0.073492
+          },
+          {
+            "day": 240.0,
+            "value": 0.051423
+          },
+          {
+            "day": 250.0,
+            "value": 0.03268
+          },
+          {
+            "day": 260.0,
+            "value": 0.018146
+          },
+          {
+            "day": 270.0,
+            "value": 0.008094
+          },
+          {
+            "day": 280.0,
+            "value": 0.002558
+          },
+          {
+            "day": 290.0,
+            "value": 0.001715
+          },
+          {
+            "day": 300.0,
+            "value": 0.003822
+          },
+          {
+            "day": 310.0,
+            "value": 0.01096
+          },
+          {
+            "day": 320.0,
+            "value": 0.020434
+          },
+          {
+            "day": 330.0,
+            "value": 0.033733
+          },
+          {
+            "day": 340.0,
+            "value": 0.049536
+          },
+          {
+            "day": 350.0,
+            "value": 0.068933
+          },
+          {
+            "day": 355.0,
+            "value": 0.07818
+          },
+          {
+            "day": 357.0,
+            "value": 0.082443
+          },
+          {
+            "day": 360.0,
+            "value": 0.088502
+          }
+        ],
+        "statistic": "approximately digitized normalized longitudinal mean",
+        "unit": null,
+        "sourceProfile": "Ljubicic2022 Figure3 female",
+        "domainDays": [
+          5.604918,
+          360.0
+        ],
+        "sourcePixelAgreement": {
+          "maxNormalizedAbsoluteResidual": 0.021461680782808745,
+          "rmsNormalizedResidual": 0.0015311723724703281,
+          "maxResidualPlotPixels": 50.94236529239409,
+          "residualMeaning": "Residual to column colour centres, including line intersections/occlusion and antialiasing; not accuracy against unavailable original model. Sparse anchors intentionally avoid tracing every raster wiggle.",
+          "worstResidualDay": 34.56006473437559
+        },
+        "terminalPolicy": "Retain the gentle late behavior present in the source; do not characterize the small rise as a third physiologic wave. No invented terminal plateau. FSH presentation stops at day357, omitting only the final rounded dash cap (raw trace continues to357.294643)."
+      },
+      "fsh": {
+        "points": [
+          {
+            "day": 5.604918,
+            "value": 0.218681
+          },
+          {
+            "day": 6.0,
+            "value": 0.226928
+          },
+          {
+            "day": 7.0,
+            "value": 0.335649
+          },
+          {
+            "day": 8.0,
+            "value": 0.38266
+          },
+          {
+            "day": 9.0,
+            "value": 0.46614
+          },
+          {
+            "day": 10.0,
+            "value": 0.559162
+          },
+          {
+            "day": 11.0,
+            "value": 0.631051
+          },
+          {
+            "day": 12.0,
+            "value": 0.702402
+          },
+          {
+            "day": 13.0,
+            "value": 0.757041
+          },
+          {
+            "day": 14.0,
+            "value": 0.814721
+          },
+          {
+            "day": 15.0,
+            "value": 0.848853
+          },
+          {
+            "day": 16.0,
+            "value": 0.898906
+          },
+          {
+            "day": 17.0,
+            "value": 0.925349
+          },
+          {
+            "day": 18.0,
+            "value": 0.946548
+          },
+          {
+            "day": 19.0,
+            "value": 0.968582
+          },
+          {
+            "day": 20.0,
+            "value": 0.987741
+          },
+          {
+            "day": 21.0,
+            "value": 0.993761
+          },
+          {
+            "day": 22.0,
+            "value": 0.996071
+          },
+          {
+            "day": 22.6,
+            "value": 0.996142
+          },
+          {
+            "day": 23.05,
+            "value": 0.996168
+          },
+          {
+            "day": 24.0,
+            "value": 0.99544
+          },
+          {
+            "day": 25.0,
+            "value": 0.99013
+          },
+          {
+            "day": 27.0,
+            "value": 0.969223
+          },
+          {
+            "day": 30.0,
+            "value": 0.924155
+          },
+          {
+            "day": 32.0,
+            "value": 0.897586
+          },
+          {
+            "day": 35.0,
+            "value": 0.851069
+          },
+          {
+            "day": 37.5,
+            "value": 0.822849
+          },
+          {
+            "day": 40.0,
+            "value": 0.783024
+          },
+          {
+            "day": 42.5,
+            "value": 0.756272
+          },
+          {
+            "day": 45.0,
+            "value": 0.730678
+          },
+          {
+            "day": 50.0,
+            "value": 0.683198
+          },
+          {
+            "day": 55.0,
+            "value": 0.639107
+          },
+          {
+            "day": 60.0,
+            "value": 0.602043
+          },
+          {
+            "day": 65.0,
+            "value": 0.572024
+          },
+          {
+            "day": 70.0,
+            "value": 0.546787
+          },
+          {
+            "day": 75.0,
+            "value": 0.52485
+          },
+          {
+            "day": 80.0,
+            "value": 0.509421
+          },
+          {
+            "day": 85.0,
+            "value": 0.499978
+          },
+          {
+            "day": 90.0,
+            "value": 0.492311
+          },
+          {
+            "day": 95.0,
+            "value": 0.490626
+          },
+          {
+            "day": 100.0,
+            "value": 0.494335
+          },
+          {
+            "day": 110.0,
+            "value": 0.516056
+          },
+          {
+            "day": 120.0,
+            "value": 0.557447
+          },
+          {
+            "day": 130.0,
+            "value": 0.617414
+          },
+          {
+            "day": 140.0,
+            "value": 0.679349
+          },
+          {
+            "day": 150.0,
+            "value": 0.732619
+          },
+          {
+            "day": 160.0,
+            "value": 0.757203
+          },
+          {
+            "day": 165.0,
+            "value": 0.760254
+          },
+          {
+            "day": 170.0,
+            "value": 0.754518
+          },
+          {
+            "day": 180.0,
+            "value": 0.723597
+          },
+          {
+            "day": 190.0,
+            "value": 0.681721
+          },
+          {
+            "day": 200.0,
+            "value": 0.634217
+          },
+          {
+            "day": 210.0,
+            "value": 0.584575
+          },
+          {
+            "day": 220.0,
+            "value": 0.549766
+          },
+          {
+            "day": 230.0,
+            "value": 0.526
+          },
+          {
+            "day": 240.0,
+            "value": 0.50798
+          },
+          {
+            "day": 250.0,
+            "value": 0.496381
+          },
+          {
+            "day": 260.0,
+            "value": 0.489257
+          },
+          {
+            "day": 270.0,
+            "value": 0.482677
+          },
+          {
+            "day": 280.0,
+            "value": 0.480979
+          },
+          {
+            "day": 290.0,
+            "value": 0.480094
+          },
+          {
+            "day": 300.0,
+            "value": 0.481159
+          },
+          {
+            "day": 310.0,
+            "value": 0.484458
+          },
+          {
+            "day": 320.0,
+            "value": 0.488941
+          },
+          {
+            "day": 330.0,
+            "value": 0.494651
+          },
+          {
+            "day": 340.0,
+            "value": 0.502423
+          },
+          {
+            "day": 350.0,
+            "value": 0.511061
+          },
+          {
+            "day": 355.0,
+            "value": 0.516325
+          },
+          {
+            "day": 357.0,
+            "value": 0.518176
+          }
+        ],
+        "statistic": "approximately digitized normalized longitudinal mean",
+        "unit": null,
+        "sourceProfile": "Ljubicic2022 Figure3 female",
+        "domainDays": [
+          5.604918,
+          357.0
+        ],
+        "sourcePixelAgreement": {
+          "maxNormalizedAbsoluteResidual": 0.024963365137093685,
+          "rmsNormalizedResidual": 0.0023777426840968494,
+          "maxResidualPlotPixels": 59.25411334791144,
+          "residualMeaning": "Residual to column colour centres, including line intersections/occlusion and antialiasing; not accuracy against unavailable original model. Sparse anchors intentionally avoid tracing every raster wiggle.",
+          "worstResidualDay": 8.423560615426169
+        },
+        "terminalPolicy": "Retain the gentle late behavior present in the source; do not characterize the small rise as a third physiologic wave. No invented terminal plateau. FSH presentation stops at day357, omitting only the final rounded dash cap (raw trace continues to357.294643)."
+      }
+    },
+    "checkpoints": {
+      "lh": [
+        {
+          "day": 5,
+          "value": null,
+          "reason": "outside readable curve; no extrapolation"
+        },
+        {
+          "day": 15,
+          "value": 0.8238962932434881,
+          "reason": null
+        },
+        {
+          "day": 25,
+          "value": 0.9895745291231248,
+          "reason": null
+        },
+        {
+          "day": 40,
+          "value": 0.6037932924887409,
+          "reason": null
+        },
+        {
+          "day": 60,
+          "value": 0.180928664033428,
+          "reason": null
+        },
+        {
+          "day": 80,
+          "value": 0.061999226514287825,
+          "reason": null
+        },
+        {
+          "day": 100,
+          "value": 0.07644113980126052,
+          "reason": null
+        },
+        {
+          "day": 140,
+          "value": 0.16264900974166155,
+          "reason": null
+        },
+        {
+          "day": 165,
+          "value": 0.18308206193012544,
+          "reason": null
+        },
+        {
+          "day": 200,
+          "value": 0.14305919171857598,
+          "reason": null
+        },
+        {
+          "day": 240,
+          "value": 0.051422784546312134,
+          "reason": null
+        },
+        {
+          "day": 280,
+          "value": 0.002557852607504986,
+          "reason": null
+        },
+        {
+          "day": 320,
+          "value": 0.02043390534455213,
+          "reason": null
+        },
+        {
+          "day": 360,
+          "value": 0.08850170021967435,
+          "reason": "visible axis endpoint within tick calibration precision"
+        }
+      ],
+      "fsh": [
+        {
+          "day": 5,
+          "value": null,
+          "reason": "outside readable curve; no extrapolation"
+        },
+        {
+          "day": 15,
+          "value": 0.8488528033098307,
+          "reason": null
+        },
+        {
+          "day": 25,
+          "value": 0.9901299351567049,
+          "reason": null
+        },
+        {
+          "day": 40,
+          "value": 0.7830240789933821,
+          "reason": null
+        },
+        {
+          "day": 60,
+          "value": 0.6020433844935006,
+          "reason": null
+        },
+        {
+          "day": 80,
+          "value": 0.5094209784929846,
+          "reason": null
+        },
+        {
+          "day": 100,
+          "value": 0.4943347852648965,
+          "reason": null
+        },
+        {
+          "day": 140,
+          "value": 0.6793489143765984,
+          "reason": null
+        },
+        {
+          "day": 165,
+          "value": 0.7602539797177335,
+          "reason": null
+        },
+        {
+          "day": 200,
+          "value": 0.6342165269114324,
+          "reason": null
+        },
+        {
+          "day": 240,
+          "value": 0.5079796319269337,
+          "reason": null
+        },
+        {
+          "day": 280,
+          "value": 0.4809792071359257,
+          "reason": null
+        },
+        {
+          "day": 320,
+          "value": 0.4889410490204929,
+          "reason": null
+        },
+        {
+          "day": 360,
+          "value": null,
+          "reason": "outside readable curve; no extrapolation"
+        }
+      ]
+    },
+    "reproducibility": {
+      "coordinateSystem": "Original 3600 × 2622 image pixel coordinates. Linear tick calibration is retained in calibration.",
+      "colourMasks": {
+        "lh": "blue > red + 20, red > green + 20, red < 200, green < 120",
+        "fsh": "green > red + 50, green > blue + 20, red < 100"
+      },
+      "trace": "At available image columns x=300..3075 and y<2398, take median matching pixel y. Convert to day/value using calibration. Values within 0.003 of the published 0..1 axis were clipped for line-width/antialiasing residue.",
+      "interpolation": "PCHIP fills only gaps between available trace columns. Sparse ages explicitly retained below; no fit to median/physical-unit data.",
+      "endpoints": "FSH ends at day 357, omitting a rounded dash-cap residue to 357.294643. LH last readable point snaps to day 360 by less than the measured x-tick residual. No extension to birth/day 365.",
+      "uncertainty": "Raster-derived approximate model means, not raw fitted predictions. Source-pixel residuals include occlusion and anti-aliasing; they are not confidence limits or assay uncertainty."
+    }
+  },
+  "neonatal": {
+    "verifiedAt": "2026-10-11",
+    "status": "PRIMARY_PDF_VERIFIED_RESEARCH_EVIDENCE_NOT_CLINICAL_VALIDATION",
+    "source": {
+      "id": "SchmidtSchwarz2000",
+      "title": "Serum concentrations of LH and FSH in the healthy newborn",
+      "authors": [
+        "H Schmidt",
+        "H P Schwarz"
+      ],
+      "journal": "European Journal of Endocrinology",
+      "year": 2000,
+      "volume": 143,
+      "pages": "213–215",
+      "doi": "10.1530/eje.0.1430213",
+      "pmid": "10913940",
+      "femaleTable": {
+        "number": 2,
+        "journalPage": 214,
+        "pdfIndex": 1
+      },
+      "methodsPage": 213,
+      "verification": "Read full3page PDF text; rendered and visually inspected originalpage214 containingTable1 andTable2. All femaleLH/FSHmedians,means,SD andN independently checked.",
+      "originalPdfSha256": "23acae8fe3f392604cd33d262dc2f56547f929dff2f2100d7e66b22a36bf4692"
+    },
+    "population": {
+      "total": 164,
+      "male": 91,
+      "female": 73,
+      "gestation": "Full term; precise week limits not specified",
+      "health": "No severe distress; health confirmed retrospectively",
+      "samplingReason": "Residual blood from clinically indicated haemoglobin,bilirubin,glucose andother laboratorymeasurements",
+      "samplingDesign": "Cross-sectional: each neonate sampled once, not a longitudinal series.",
+      "ageDays": [
+        1,
+        28
+      ],
+      "limitations": "Female agegroups afterday10 contain8,6,3,8 infants; authors explicitly caution smallgroups and wide inter-individual variation."
+    },
+    "materialAndMethod": {
+      "material": "Peripheral venous serum",
+      "collection": "Venipuncture between08:00–10:00",
+      "cordBlood": false,
+      "dayZeroIncluded": false,
+      "platform": "Serono MAIA clone, Freiburg,Germany",
+      "method": "Standard radioimmunoassay (RIA), as stated by authors",
+      "reportedUnit": "mIU/mL",
+      "displayEquivalent": "IU/L",
+      "unitConversionFactor": 1,
+      "minimumDetectableConcentration": {
+        "LH": 0.15,
+        "FSH": 0.3
+      },
+      "LOQ": null,
+      "intraAssayCVPercent": {
+        "LH": 4.5,
+        "FSH": 5.4
+      },
+      "interAssayCVPercent": null,
+      "LH_hCG_crossReactivityPercent": 3,
+      "LODdefinition": "Authors define detectionlimit using mean counts ofzero standard plus2SD; preserve originalmethod description rather than assuming contemporaryanalyticalLOQ."
+    },
+    "femaleTable2Rows": [
+      {
+        "ageDaysInclusive": [
+          1,
+          5
+        ],
+        "n": 31,
+        "LH": {
+          "median": 0.2,
+          "mean": 0.48,
+          "SD": 0.66
+        },
+        "FSH": {
+          "median": 1.8,
+          "mean": 2,
+          "SD": 1.37
+        }
+      },
+      {
+        "ageDaysInclusive": [
+          6,
+          10
+        ],
+        "n": 17,
+        "LH": {
+          "median": 0.3,
+          "mean": 0.45,
+          "SD": 0.33
+        },
+        "FSH": {
+          "median": 1.4,
+          "mean": 2.44,
+          "SD": 2.52
+        }
+      },
+      {
+        "ageDaysInclusive": [
+          11,
+          15
+        ],
+        "n": 8,
+        "LH": {
+          "median": 1.6,
+          "mean": 1.58,
+          "SD": 1.28
+        },
+        "FSH": {
+          "median": 8.95,
+          "mean": 8.16,
+          "SD": 4.27
+        }
+      },
+      {
+        "ageDaysInclusive": [
+          16,
+          20
+        ],
+        "n": 6,
+        "LH": {
+          "median": 0.35,
+          "mean": 1.03,
+          "SD": 1.39
+        },
+        "FSH": {
+          "median": 1.9,
+          "mean": 1.62,
+          "SD": 1.05
+        }
+      },
+      {
+        "ageDaysInclusive": [
+          21,
+          25
+        ],
+        "n": 3,
+        "LH": {
+          "median": 0.5,
+          "mean": 0.46,
+          "SD": 0.25
+        },
+        "FSH": {
+          "median": 3.9,
+          "mean": 7.07,
+          "SD": 5.92
+        }
+      },
+      {
+        "ageDaysInclusive": [
+          26,
+          28
+        ],
+        "n": 8,
+        "LH": {
+          "median": 2.8,
+          "mean": 2.75,
+          "SD": 2.39
+        },
+        "FSH": {
+          "median": 6.15,
+          "mean": 9.74,
+          "SD": 9.89
+        }
+      }
+    ],
+    "tableChecks": {
+      "femaleNSum": 73,
+      "femaleMedianFSHExceedsLHInEveryAgeGroup": true,
+      "highestFemaleLHMedian": {
+        "ageDays": [
+          26,
+          28
+        ],
+        "value": 2.8,
+        "n": 8
+      },
+      "highestFemaleFSHMedian": {
+        "ageDays": [
+          11,
+          15
+        ],
+        "value": 8.95,
+        "n": 8
+      },
+      "highestFemaleFSHMean": {
+        "ageDays": [
+          26,
+          28
+        ],
+        "value": 9.74,
+        "SD": 9.89,
+        "n": 8
+      },
+      "meanAndMedianMustNotBeMixed": true
+    },
+    "secondarySourceCorrection": {
+      "source": "EndotextTable10",
+      "finding": "Confirmed transcription error in maleLHdays6–10. OriginalTable1 givesmean2.31±2.29 andmedian1.50, not femalevalues0.45±0.33 andmedian0.30 reproducedinEndotext.",
+      "femaleRows": "All reproduced female rows checked against originalTable2 agree.",
+      "implication": "Use primaryverifiednumbers; this isolated maleerror doesnot invalidate verifiedfemalerows."
+    },
+    "hCGInterpretation": [
+      "3% crossreactivity means assayresponse to hCG, not a fixed3% share ofevery measured LHvalue.",
+      "No simultaneous hCG concentrations or sample-specific corrections are reported. Do not subtract3% from LH or derive a numerical correction fromage alone.",
+      "ResidualhCG could bias especiallyearlyneonatal LH upward; originalRIA is not automaticallyinterchangeable withlaterImmulite orAutoDELFIA assays.",
+      "The paper remains evidence ofsource-specific neonatal gonadotropinpatterns. Crossreactivity doesnot byitself proveeverylaterLH elevation isartefact, nor establishan exact calibration betweenstudies.",
+      "FirstdaysLHmedian0.20 isnearLOD0.15. Do not pretend these numbers support fineresolution day-byday physiology."
+    ],
+    "clinicalConclusions": [
+      "Lowearlyvalues followedbyhigherfemaleLH groups in thefirstmonth are real observations in thiscohort. A flatJi2–12monthLH line is incomplete as an illustration ofthefirstmonth.",
+      "FSH dominatesLH in allfemale groups; preserve thisrelationship onsharedIU/Laxis.",
+      "The reported twoFSH peaks are cross-sectional group features, not repeated twopeaks documented within eachinfant.",
+      "Smallagegroups, pulsatility andassay issues prohibit interpreting everydip orpeak as a compulsory developmental event.",
+      "The source beginsday1 andgroupsdays1–5. It doesnotprovide a birth/day0meanormedian or justify zero.",
+      "Numeric patientreferenceprofiles must remain independent of anyeducational interpolation."
+    ]
+  },
+  "infancy": {
+    "schemaVersion": 1,
+    "reviewedDate": "2026-10-11",
+    "primarySource": {
+      "id": "Ji2008",
+      "title": "Gonadotropins and Sex Hormones in Healthy Chinese Infants",
+      "authors": [
+        "Chai Ji",
+        "Xin-wen Huang",
+        "Rong-wang Yang",
+        "Xu Wang",
+        "Zheng-yan Zhao"
+      ],
+      "journal": "Indian Pediatrics",
+      "year": 2008,
+      "volume": 45,
+      "pages": "489–492",
+      "doi": null,
+      "pmid": "18599936",
+      "urls": {
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/18599936/",
+        "pdf": "https://www.indianpediatrics.net/june2008/489.pdf",
+        "html": "https://www.indianpediatrics.net/june2008/june-489-492.htm"
+      },
+      "table": {
+        "number": "I",
+        "journalPage": 490,
+        "pdfPageIndex": 1
+      },
+      "verification": [
+        "Publisher PDF browser text.",
+        "Original PDF table screenshot, including decimal points and censor signs.",
+        "Full publisher HTML."
+      ],
+      "snapshotType": "Browser-tool text response containing the original publisher article. Not a downloaded PDF binary; direct HTTP returned403."
+    },
+    "cohort": {
+      "total": 416,
+      "male": 215,
+      "female": 201,
+      "population": "Healthy full-term Chinese infants, appropriate for gestational age; normal physical examination.",
+      "reportedAgeRangeMonths": [
+        1,
+        12
+      ],
+      "tableAgeLabelsMonths": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        12
+      ],
+      "exactAgeBinBoundaries": "Not specified. Do not invent bin boundaries or treat group labels as precise individual ages.",
+      "design": "Age-group series; repeated sampling within the same infants is not established by the methods. Do not describe as a serial within-child trajectory.",
+      "exclusions": [
+        "Perinatal asphyxia or pathological jaundice",
+        "Chromosomal abnormalities or endocrine disturbance",
+        "Cerebral trauma, kidney disease, congenital cardiopathy or malformations",
+        "Medication"
+      ]
+    },
+    "assay": {
+      "material": "Peripheral venous serum",
+      "samplingTime": "08:00–11:00",
+      "platform": "Immulite (DPC, USA)",
+      "method": "Automated nonisotopic chemiluminescence immunoassay",
+      "units": "IU/L",
+      "LOD": {
+        "LH": 0.1,
+        "FSH": 0.1
+      },
+      "LOQ": null,
+      "intraAssayCVPercent": {
+        "LH": 4.8,
+        "FSH": 5.4
+      },
+      "interAssayCVPercent": {
+        "LH": 7.2,
+        "FSH": 8.1
+      },
+      "compatibility": "Do not assume interchangeability with AutoDELFIA (Ljubicic2022) or later Siemens IMMULITE2000XPi merely because analytes/units overlap."
+    },
+    "statistic": {
+      "center": "Median",
+      "bounds": "Table footnote states range (2.5 and97.5percentiles).",
+      "discrepancies": [
+        "Methods prose calls bounds 95% confidence intervals. Preserve the table's stated percentile labels with this uncertainty; do not present them as confidence bands for a median.",
+        "Results prose reports female LH0.36 at2–3months, inconsistent with TableI (0.2 at2/3months;0.3 at4months). For extracted numbers use TableI.",
+        "General prose describes gonadotropins reaching juvenile levels by6months; femaleFSH table medians remain5.4–5.7IU/L at6–12months. Do not force femaleFSH to a nearzero male-like course."
+      ]
+    },
+    "rows": [
+      {
+        "sex": "female",
+        "ageLabelMonths": 2,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 49,
+        "LH": {
+          "median": 0.2,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 4.7
+          }
+        },
+        "FSH": {
+          "median": 5.9,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 0.6
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 48.1
+          }
+        }
+      },
+      {
+        "sex": "female",
+        "ageLabelMonths": 3,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 26,
+        "LH": {
+          "median": 0.2,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 1
+          }
+        },
+        "FSH": {
+          "median": 7.1,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 1.3
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 19.9
+          }
+        }
+      },
+      {
+        "sex": "female",
+        "ageLabelMonths": 4,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 16,
+        "LH": {
+          "median": 0.3,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 1.1
+          }
+        },
+        "FSH": {
+          "median": 6.5,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 3
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 12
+          }
+        }
+      },
+      {
+        "sex": "female",
+        "ageLabelMonths": 5,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 20,
+        "LH": {
+          "median": 0.2,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 0.8
+          }
+        },
+        "FSH": {
+          "median": 6.1,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 2
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 14.1
+          }
+        }
+      },
+      {
+        "sex": "female",
+        "ageLabelMonths": 6,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 23,
+        "LH": {
+          "median": 0.2,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 0.8
+          }
+        },
+        "FSH": {
+          "median": 5.4,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 2
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 11.4
+          }
+        }
+      },
+      {
+        "sex": "female",
+        "ageLabelMonths": 7,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 17,
+        "LH": {
+          "median": 0.2,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 2.5
+          }
+        },
+        "FSH": {
+          "median": 5.5,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 2.7
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 11.3
+          }
+        }
+      },
+      {
+        "sex": "female",
+        "ageLabelMonths": 12,
+        "ageBinLowerMonths": null,
+        "ageBinUpperMonths": null,
+        "n": 50,
+        "LH": {
+          "median": 0.2,
+          "p2_5AsStated": {
+            "operator": "<",
+            "value": 0.1
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 1.3
+          }
+        },
+        "FSH": {
+          "median": 5.7,
+          "p2_5AsStated": {
+            "operator": "=",
+            "value": 0.3
+          },
+          "p97_5AsStated": {
+            "operator": "=",
+            "value": 14.7
+          }
+        }
+      }
+    ]
+  },
+  "laterLife": {
+    "source": "Ljubicic2020TableI",
+    "doi": "10.1093/humrep/deaa182",
+    "assay": "AutoDELFIA",
+    "statistic": "group_summary_unspecified",
+    "anchors": {
+      "lh": [
+        {
+          "ageYears": 6.0,
+          "value": 0.03,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "5–<7",
+          "n": 82,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.05,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "7–<9",
+          "n": 275,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.4,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "9–<11",
+          "n": 502,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 12.0,
+          "value": 2.66,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "11–<13",
+          "n": 544,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.35,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "15–<17",
+          "n": 198,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 30.0,
+          "value": 5.63,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "20–<40",
+          "n": 17,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 45.0,
+          "value": 6.61,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "40–<50",
+          "n": 162,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 55.0,
+          "value": 25.89,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "50–<60",
+          "n": 151,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 65.0,
+          "value": 27.83,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "60–<70",
+          "n": 130,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 75.0,
+          "value": 24.95,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "70–100",
+          "n": 143,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        }
+      ],
+      "fsh": [
+        {
+          "ageYears": 6.0,
+          "value": 1.3,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "5–<7",
+          "n": 82,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.46,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "7–<9",
+          "n": 275,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 10.0,
+          "value": 2.41,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "9–<11",
+          "n": 502,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 12.0,
+          "value": 4.25,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "11–<13",
+          "n": 544,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 30.0,
+          "value": 4.44,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "20–<40",
+          "n": 17,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 45.0,
+          "value": 7.56,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "40–<50",
+          "n": 162,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 55.0,
+          "value": 50.63,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "50–<60",
+          "n": 151,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 65.0,
+          "value": 61.66,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "60–<70",
+          "n": 130,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        },
+        {
+          "ageYears": 75.0,
+          "value": 64.54,
+          "source": "ljubicic2020",
+          "statistic": "reported_group_summary_not_explicitly_defined",
+          "sourceAgeBand": "70–100",
+          "n": 143,
+          "agePlacement": "display_midpoint_not_reported_age",
+          "role": "published_group_value_at_illustrative_age_position"
+        }
+      ]
+    },
+    "comparisonStudyNotSpliced": {
+      "url": "https://repub.eur.nl/pub/50926/891102_KWEKKEBOOM-Dirk-Jan.pdf",
+      "sha256": "413f716e06fe147224b69180587bcc236239313f1d2c683bc3c847040aa6c5c4",
+      "kind": "Public1989 doctoral thesis, chapter7.2 submitted manuscript preceding1990 publication, not asserted to be identical final published full text.",
+      "finalPublicationDoi": "10.1210/jcem-70-4-944",
+      "chapterPdfPages": [
+        76,
+        90
+      ],
+      "chapterPrintedPages": [
+        74,
+        88
+      ],
+      "finalAbstractCrosscheck": "1990 publisher abstract independently agrees with55/75-year predictions andn680.",
+      "methodsPdfPages": [
+        78,
+        79
+      ],
+      "table1PdfPage": 80,
+      "table3PdfPage": 82,
+      "n": 680,
+      "observedAgeRangeYears": [
+        52.9,
+        76.2
+      ],
+      "yearsAfterMenopause": {
+        "mean": 13.5,
+        "sd": 7.4,
+        "range": [
+          1,
+          38
+        ]
+      },
+      "selection": "Follow-up of a population survey; excludes17 women withE2>100pmol/L from697 complete datasets. This is not a repeatedly sampled within-person55→75 trajectory.",
+      "assayLHFSH": "IRE-Medgenix radioimmunometric assays, distinct from AutoDELFIA.",
+      "statistic": "Table3 univariate age-regression predicted values; not observed age-bin medians and not reference limits.",
+      "points": {
+        "lh": [
+          {
+            "ageYears": 55,
+            "value": 47.1
+          },
+          {
+            "ageYears": 65,
+            "value": 39.8
+          },
+          {
+            "ageYears": 75,
+            "value": 32.4
+          }
+        ],
+        "fsh": [
+          {
+            "ageYears": 55,
+            "value": 72.1
+          },
+          {
+            "ageYears": 65,
+            "value": 66.8
+          },
+          {
+            "ageYears": 75,
+            "value": 61.6
+          }
+        ]
+      },
+      "numericDomainSafeForDirectPublishedEndpoints": [
+        55,
+        75
+      ],
+      "canReconstruct": "A straight regression trend between those rounded model predictions is source-derived interpolation, not invented annual measurements. Do not infer unsupported endpoints outside this range.",
+      "cannotDo": "No validated assay conversion to AutoDELFIA, no early adulthood or menopausal-transition curve, no90-year values, no individual percentile band. Do not splice at55 as if the jump reflects menopause or biology."
+    },
+    "sourceDetails": {
+      "key": "Ljubicic2020",
+      "title": "The LH/FSH ratio is not a sex-dimorphic marker after infancy: data from 6417 healthy individuals and125 patients with Differences of Sex Development",
+      "doi": "10.1093/humrep/deaa182",
+      "pmid": "32976602",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/32976602/",
+      "location": "TableI; healthy cohort description; Discussion",
+      "population": "3273 healthy females in pooled cohorts; adult20–<40 female group only17; cycles not standardized. AutoDELFIA, LOD0.05IU/L.",
+      "statisticWarning": "TableI group entries are not explicitly identified as mean versus median. Do not relabel as p50.",
+      "clinicalMeaning": [
+        "Adult reproductive-age group LH5.63 andFSH4.44IU/L; postmenopausal age groups much higher. Broad age groups do not diagnose menopause status or exact transition age.",
+        "Cross-method/cohort stitching from Madsen female16years LH5.65/FSH5.83 to adult5.63/4.44 does not justify an abrupt biological fall at16–18.",
+        "Use a broad modest adult transition for illustration and retain original source numbers separately. Do not fit local trough/rebound through sparse age-group centers.",
+        "Menopause-related FSH increase supports much larger whole-life concentrations; must not determine zoom scale for childhood/puberty."
+      ]
+    }
+  },
+  "puberty": {
+    "source": {
+      "key": "Madsen2022",
+      "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+      "doi": "10.1210/clinem/dgac155",
+      "pmid": "35299255",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+      "pages": "JCEM107(7):2004–2013; Methods, Table1, Figure2, supplement1 Other biomarkers",
+      "population": "BGS2 Norwegian girls, 650 unique samples, 601 viable after exclusions across references. Approx90% Caucasian. Gonadotropins from BGS2 ages6–<16; tabulated model nodes6–16. FitFutures extends steroid curves to18, NOT LH/FSH.",
+      "assay": "Siemens IMMULITE2000XPi; LLOQ0.1IU/L; blood08:00–14:00; oral contraceptive users excluded; cycles not uniformly phased",
+      "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+      "download": "https://ndownloader.figshare.com/files/31716608",
+      "sha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "formula": "p50_SI=exp(M)/1000000; verified against example formula LN(sample*1000000) and independent existing extraction",
+      "clinicalMeaning": [
+        "Female FSH rises gradually through adolescence; LH low near LLOQ in childhood then rises more sharply around12–16.",
+        "Chronological-age p50 pools maturation stages; must not infer Tanner stage from age.",
+        "Not valid beyond16 for numerical gonadotropin references; no source-backed plateau16–20 from this study.",
+        "Population p50 and group maturation patterns are not a single woman’s menstrual trajectory."
+      ]
+    },
+    "verifiedValues": [
+      {
+        "ageYears": 6.0,
+        "LH_IU_L": 0.10494872221541938,
+        "FSH_IU_L": 0.9328995961019171,
+        "sourceCells": {
+          "LH": "D3",
+          "FSH": "I3"
+        }
+      },
+      {
+        "ageYears": 7.0,
+        "LH_IU_L": 0.10494872221541938,
+        "FSH_IU_L": 1.1842024760702738,
+        "sourceCells": {
+          "LH": "D4",
+          "FSH": "I4"
+        }
+      },
+      {
+        "ageYears": 8.0,
+        "LH_IU_L": 0.10494872221541938,
+        "FSH_IU_L": 1.513649499646752,
+        "sourceCells": {
+          "LH": "D5",
+          "FSH": "I5"
+        }
+      },
+      {
+        "ageYears": 9.0,
+        "LH_IU_L": 0.10494872221541938,
+        "FSH_IU_L": 1.964770298470689,
+        "sourceCells": {
+          "LH": "D6",
+          "FSH": "I6"
+        }
+      },
+      {
+        "ageYears": 10.0,
+        "LH_IU_L": 0.18673993015217238,
+        "FSH_IU_L": 2.5801910640780314,
+        "sourceCells": {
+          "LH": "D7",
+          "FSH": "I7"
+        }
+      },
+      {
+        "ageYears": 11.0,
+        "LH_IU_L": 0.3899391576851016,
+        "FSH_IU_L": 3.3495190622916695,
+        "sourceCells": {
+          "LH": "D8",
+          "FSH": "I8"
+        }
+      },
+      {
+        "ageYears": 12.0,
+        "LH_IU_L": 0.932808521560225,
+        "FSH_IU_L": 4.151220353235434,
+        "sourceCells": {
+          "LH": "D9",
+          "FSH": "I9"
+        }
+      },
+      {
+        "ageYears": 13.0,
+        "LH_IU_L": 2.0309931340891243,
+        "FSH_IU_L": 4.80572027357214,
+        "sourceCells": {
+          "LH": "D10",
+          "FSH": "I10"
+        }
+      },
+      {
+        "ageYears": 14.0,
+        "LH_IU_L": 3.3600097374977715,
+        "FSH_IU_L": 5.230782382619504,
+        "sourceCells": {
+          "LH": "D11",
+          "FSH": "I11"
+        }
+      },
+      {
+        "ageYears": 15.0,
+        "LH_IU_L": 4.536879278178766,
+        "FSH_IU_L": 5.541214563590151,
+        "sourceCells": {
+          "LH": "D12",
+          "FSH": "I12"
+        }
+      },
+      {
+        "ageYears": 16.0,
+        "LH_IU_L": 5.64856591188875,
+        "FSH_IU_L": 5.826063174564676,
+        "sourceCells": {
+          "LH": "D13",
+          "FSH": "I13"
+        }
+      }
+    ],
+    "approvedProfileSourceSha256": "ae4f269f561e439438ae1822850cbca5d46ad583cce35d8d7041c6d12194179a",
+    "sourceWorkbookSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+    "approvedProfileSourceSha256Kind": "verified-source-review-json"
+  },
+  "cycle": {
+    "id": "stricker2006-paired-lh-fsh-cycle-medians-v1",
+    "doi": "10.1515/CCLM.2006.160",
+    "pmid": "16776638",
+    "title": "Establishment of detailed reference values for luteinizing hormone, follicle stimulating hormone, estradiol, and progesterone during different phases of the menstrual cycle on the Abbott ARCHITECT analyzer",
+    "sourceUrl": "https://www.dianalabs.ch/documents/ajouts/Hormones.pdf",
+    "sourceSha256": "af2ba5f10c3655009fb40052cc54451c21d90fad47b5429f82c5be2b24f11c29",
+    "sourceVersion": "Public author/laboratory-hosted PDF marked Article in press - uncorrected proof; published journal citation44(7):883–887; do not call this the final typeset version.",
+    "unit": "IU/L",
+    "statistic": "published_median",
+    "population": {
+      "women": 20,
+      "ageRangeYears": [
+        20,
+        36
+      ],
+      "health": "Apparently healthy, normal menstrual cycles",
+      "exclusions": "No oral contraceptives or other medications",
+      "ovulation": "All cycles included were ovulatory;3 transvaginalUS examinations atcycle days10/13 and1or2days postovulation assessed follicular/corpusluteum development."
+    },
+    "methods": {
+      "sample": "serum",
+      "frequency": "Daily during one cycle per volunteer",
+      "instrument": "Abbott ARCHITECT i2000SR",
+      "technology": "chemiluminescent microparticle immunoassay",
+      "lhReagent": "6C25",
+      "fshReagent": "6C24",
+      "lhStandard": "WHO2ndIS80/552",
+      "fshStandard": "WHO2ndIRP78/549",
+      "alignment": "Day0 is the day of each volunteer’s measured LH maximum. This aligns variable cycles; it is NOT universally day14 after menstruation and is not necessarily the exact instant of ovulation."
+    },
+    "dailyTable": {
+      "table": "1A",
+      "pdfPage": 2,
+      "journalPage": 884,
+      "rows": [
+        {
+          "dayFromLHPeak": -15,
+          "lh": {
+            "n": 9,
+            "mean": 2.59,
+            "median": 2.28,
+            "p5": 0.37,
+            "p95": 5.79
+          },
+          "fsh": {
+            "n": 9,
+            "mean": 4.44,
+            "median": 4.59,
+            "p5": 1.95,
+            "p95": 5.86
+          }
+        },
+        {
+          "dayFromLHPeak": -14,
+          "lh": {
+            "n": 12,
+            "mean": 3.73,
+            "median": 3.39,
+            "p5": 1.35,
+            "p95": 6.29
+          },
+          "fsh": {
+            "n": 12,
+            "mean": 5.99,
+            "median": 6.45,
+            "p5": 2.79,
+            "p95": 8.15
+          }
+        },
+        {
+          "dayFromLHPeak": -13,
+          "lh": {
+            "n": 15,
+            "mean": 4.1,
+            "median": 3.47,
+            "p5": 2.35,
+            "p95": 7.36
+          },
+          "fsh": {
+            "n": 14,
+            "mean": 6.29,
+            "median": 6.34,
+            "p5": 4.24,
+            "p95": 7.79
+          }
+        },
+        {
+          "dayFromLHPeak": -12,
+          "lh": {
+            "n": 17,
+            "mean": 3.85,
+            "median": 3.59,
+            "p5": 1.52,
+            "p95": 6.61
+          },
+          "fsh": {
+            "n": 17,
+            "mean": 6.49,
+            "median": 6.26,
+            "p5": 4.62,
+            "p95": 7.93
+          }
+        },
+        {
+          "dayFromLHPeak": -11,
+          "lh": {
+            "n": 19,
+            "mean": 4.27,
+            "median": 3.82,
+            "p5": 2.5,
+            "p95": 7.81
+          },
+          "fsh": {
+            "n": 19,
+            "mean": 6.87,
+            "median": 6.61,
+            "p5": 5.5,
+            "p95": 9.01
+          }
+        },
+        {
+          "dayFromLHPeak": -10,
+          "lh": {
+            "n": 20,
+            "mean": 4.44,
+            "median": 3.82,
+            "p5": 2.24,
+            "p95": 8.73
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 7.07,
+            "median": 6.88,
+            "p5": 5.4,
+            "p95": 10.25
+          }
+        },
+        {
+          "dayFromLHPeak": -9,
+          "lh": {
+            "n": 20,
+            "mean": 4.46,
+            "median": 4.26,
+            "p5": 2.43,
+            "p95": 7.39
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 6.69,
+            "median": 6.65,
+            "p5": 5.04,
+            "p95": 8.8
+          }
+        },
+        {
+          "dayFromLHPeak": -8,
+          "lh": {
+            "n": 20,
+            "mean": 5.11,
+            "median": 4.96,
+            "p5": 2.76,
+            "p95": 7.52
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 6.54,
+            "median": 6.46,
+            "p5": 4.97,
+            "p95": 9.53
+          }
+        },
+        {
+          "dayFromLHPeak": -7,
+          "lh": {
+            "n": 20,
+            "mean": 5.13,
+            "median": 4.54,
+            "p5": 3.57,
+            "p95": 7.9
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 6.74,
+            "median": 6.63,
+            "p5": 4.66,
+            "p95": 8.59
+          }
+        },
+        {
+          "dayFromLHPeak": -6,
+          "lh": {
+            "n": 20,
+            "mean": 4.81,
+            "median": 4.47,
+            "p5": 3.26,
+            "p95": 7.03
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 5.93,
+            "median": 5.65,
+            "p5": 4.41,
+            "p95": 8.1
+          }
+        },
+        {
+          "dayFromLHPeak": -5,
+          "lh": {
+            "n": 20,
+            "mean": 4.42,
+            "median": 4.18,
+            "p5": 3.11,
+            "p95": 6.68
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 5.33,
+            "median": 5.45,
+            "p5": 4.19,
+            "p95": 7.33
+          }
+        },
+        {
+          "dayFromLHPeak": -4,
+          "lh": {
+            "n": 20,
+            "mean": 4.63,
+            "median": 4.58,
+            "p5": 3.29,
+            "p95": 6.89
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 4.76,
+            "median": 4.59,
+            "p5": 3.83,
+            "p95": 6.33
+          }
+        },
+        {
+          "dayFromLHPeak": -3,
+          "lh": {
+            "n": 20,
+            "mean": 5.23,
+            "median": 5.12,
+            "p5": 3.31,
+            "p95": 7.35
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 4.61,
+            "median": 4.35,
+            "p5": 3.55,
+            "p95": 6.62
+          }
+        },
+        {
+          "dayFromLHPeak": -2,
+          "lh": {
+            "n": 20,
+            "mean": 7.03,
+            "median": 7.02,
+            "p5": 4.58,
+            "p95": 9.64
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 4.33,
+            "median": 4.32,
+            "p5": 2.95,
+            "p95": 5.71
+          }
+        },
+        {
+          "dayFromLHPeak": -1,
+          "lh": {
+            "n": 20,
+            "mean": 12.55,
+            "median": 12.36,
+            "p5": 6.36,
+            "p95": 19.08
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 5.26,
+            "median": 5.15,
+            "p5": 3.2,
+            "p95": 8.56
+          }
+        },
+        {
+          "dayFromLHPeak": 0,
+          "lh": {
+            "n": 20,
+            "mean": 42.65,
+            "median": 41.19,
+            "p5": 21.16,
+            "p95": 73.63
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 11.54,
+            "median": 12.82,
+            "p5": 5.3,
+            "p95": 15.07
+          }
+        },
+        {
+          "dayFromLHPeak": 1,
+          "lh": {
+            "n": 20,
+            "mean": 14.54,
+            "median": 14.92,
+            "p5": 7.47,
+            "p95": 21.38
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 8.44,
+            "median": 8.01,
+            "p5": 5.2,
+            "p95": 15.43
+          }
+        },
+        {
+          "dayFromLHPeak": 2,
+          "lh": {
+            "n": 19,
+            "mean": 7.92,
+            "median": 7.75,
+            "p5": 3.93,
+            "p95": 13.24
+          },
+          "fsh": {
+            "n": 19,
+            "mean": 6.2,
+            "median": 5.19,
+            "p5": 3.78,
+            "p95": 9.51
+          }
+        },
+        {
+          "dayFromLHPeak": 3,
+          "lh": {
+            "n": 20,
+            "mean": 6.66,
+            "median": 6.26,
+            "p5": 3.15,
+            "p95": 11.0
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 5.3,
+            "median": 4.73,
+            "p5": 3.05,
+            "p95": 8.18
+          }
+        },
+        {
+          "dayFromLHPeak": 4,
+          "lh": {
+            "n": 20,
+            "mean": 6.38,
+            "median": 6.46,
+            "p5": 3.42,
+            "p95": 9.98
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 4.72,
+            "median": 4.36,
+            "p5": 2.71,
+            "p95": 7.1
+          }
+        },
+        {
+          "dayFromLHPeak": 5,
+          "lh": {
+            "n": 19,
+            "mean": 4.91,
+            "median": 4.32,
+            "p5": 2.53,
+            "p95": 9.19
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 4.03,
+            "median": 3.88,
+            "p5": 2.22,
+            "p95": 5.97
+          }
+        },
+        {
+          "dayFromLHPeak": 6,
+          "lh": {
+            "n": 20,
+            "mean": 5.39,
+            "median": 4.5,
+            "p5": 1.32,
+            "p95": 10.75
+          },
+          "fsh": {
+            "n": 19,
+            "mean": 3.64,
+            "median": 3.34,
+            "p5": 2.01,
+            "p95": 5.53
+          }
+        },
+        {
+          "dayFromLHPeak": 7,
+          "lh": {
+            "n": 20,
+            "mean": 4.14,
+            "median": 4.29,
+            "p5": 1.04,
+            "p95": 7.2
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 3.24,
+            "median": 3.31,
+            "p5": 1.47,
+            "p95": 5.34
+          }
+        },
+        {
+          "dayFromLHPeak": 8,
+          "lh": {
+            "n": 20,
+            "mean": 3.87,
+            "median": 3.89,
+            "p5": 1.58,
+            "p95": 5.9
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 2.97,
+            "median": 2.97,
+            "p5": 1.53,
+            "p95": 4.88
+          }
+        },
+        {
+          "dayFromLHPeak": 9,
+          "lh": {
+            "n": 20,
+            "mean": 3.19,
+            "median": 3.07,
+            "p5": 0.73,
+            "p95": 6.51
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 2.58,
+            "median": 2.73,
+            "p5": 1.26,
+            "p95": 4.09
+          }
+        },
+        {
+          "dayFromLHPeak": 10,
+          "lh": {
+            "n": 19,
+            "mean": 2.63,
+            "median": 1.75,
+            "p5": 0.97,
+            "p95": 6.34
+          },
+          "fsh": {
+            "n": 19,
+            "mean": 2.4,
+            "median": 2.55,
+            "p5": 1.12,
+            "p95": 3.57
+          }
+        },
+        {
+          "dayFromLHPeak": 11,
+          "lh": {
+            "n": 20,
+            "mean": 2.85,
+            "median": 2.52,
+            "p5": 0.49,
+            "p95": 6.05
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 2.42,
+            "median": 2.54,
+            "p5": 1.09,
+            "p95": 3.26
+          }
+        },
+        {
+          "dayFromLHPeak": 12,
+          "lh": {
+            "n": 20,
+            "mean": 3.59,
+            "median": 3.42,
+            "p5": 0.42,
+            "p95": 7.29
+          },
+          "fsh": {
+            "n": 20,
+            "mean": 2.84,
+            "median": 3.08,
+            "p5": 1.13,
+            "p95": 4.37
+          }
+        },
+        {
+          "dayFromLHPeak": 13,
+          "lh": {
+            "n": 16,
+            "mean": 3.13,
+            "median": 2.55,
+            "p5": 1.19,
+            "p95": 6.05
+          },
+          "fsh": {
+            "n": 16,
+            "mean": 3.94,
+            "median": 3.73,
+            "p5": 1.55,
+            "p95": 7.58
+          }
+        },
+        {
+          "dayFromLHPeak": 14,
+          "lh": {
+            "n": 9,
+            "mean": 3.11,
+            "median": 3.23,
+            "p5": 0.85,
+            "p95": 6.2
+          },
+          "fsh": {
+            "n": 8,
+            "mean": 3.8,
+            "median": 3.81,
+            "p5": 1.54,
+            "p95": 5.78
+          }
+        }
+      ]
+    },
+    "phaseTable": {
+      "table": "2",
+      "pdfPage": 4,
+      "journalPage": 886,
+      "rows": [
+        {
+          "phase": "early_follicular",
+          "firstDayFromLHPeak": -15,
+          "lastDayFromLHPeak": -6,
+          "lhMedian": 3.96,
+          "fshMedian": 6.42
+        },
+        {
+          "phase": "late_follicular",
+          "firstDayFromLHPeak": -5,
+          "lastDayFromLHPeak": -1,
+          "lhMedian": 5.68,
+          "fshMedian": 4.66
+        },
+        {
+          "phase": "LH_peak",
+          "firstDayFromLHPeak": 0,
+          "lastDayFromLHPeak": 0,
+          "lhMedian": 41.19,
+          "fshMedian": 12.82
+        },
+        {
+          "phase": "early_luteal",
+          "firstDayFromLHPeak": 1,
+          "lastDayFromLHPeak": 4,
+          "lhMedian": 7.86,
+          "fshMedian": 5.62
+        },
+        {
+          "phase": "mid_luteal",
+          "firstDayFromLHPeak": 5,
+          "lastDayFromLHPeak": 9,
+          "lhMedian": 3.88,
+          "fshMedian": 3.14
+        },
+        {
+          "phase": "late_luteal",
+          "firstDayFromLHPeak": 10,
+          "lastDayFromLHPeak": 14,
+          "lhMedian": 2.75,
+          "fshMedian": 2.85
+        }
+      ],
+      "meaning": "These are reported phase medians; NOT midpoint of a reference interval and NOT a measured concentration at phase-midpoint day."
+    },
+    "uncertainty": "Small20-woman cohort, daily counts8–20. Authors explicitly caution5th/95th percentiles whenn<19; median traces show this cohort, not universal diagnostic limits. Small day-to-day fluctuations of group medians must not be promoted to fixed biological events.",
+    "checks": {
+      "dayCount": 30,
+      "eachDayHasBothMedians": true,
+      "day0MatchesPhaseLH": true,
+      "day0MatchesPhaseFSH": true
+    }
+  },
+  "sourceExtractionHashes": {
+    "approvedMiniProfileSha256": "3f8a99d11fe86da11f434b5008e15897002ee5eb4ba7f17216c48e40c917bd42",
+    "digitizedPresentationJsonSha256": "1931626b3ef2ad22c2a18c1d92a0d770ee81b925bd079727112390afab46d994",
+    "originalFigure3ImageSha256": "cecad5e7fc5bb25222ca56f2507b9b37ac7cc45f85fb26d547e1a9be410ee0b9",
+    "note": "The 193162... digest identifies the digitized presentation JSON (nodes, calibration and provenance), not an image. The cecad5... digest identifies the original Figure 3 image. Runtime nodes are unchanged; ageYears = digitized day / 365.25."
+  },
+  "approvedPresentation": {
+    "patientReferencesChanged": false,
+    "labNormsChanged": false,
+    "patientValueControlsScale": false,
+    "differentPeriodStatisticsExplicit": true,
+    "rawPaperFilesRedistributed": false
+  }
+}

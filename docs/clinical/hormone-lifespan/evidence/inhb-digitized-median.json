@@ -1,0 +1,220 @@
+{
+  "purpose": "Approximate reconstruction of the published central curve for an educational plot, not clinical cutoffs or original author LMS data.",
+  "source": "Borelli-Kjaer et al., 2025, Figure 1 (0 SD central line)",
+  "doi": "10.1210/clinem/dgae439",
+  "url": "https://academic.oup.com/jcem/article/110/1/70/7699405",
+  "statistic": "published GAMLSS central reference line (median), digitized approximately",
+  "assay": "Beckman Coulter Inhibin B Gen II ELISA",
+  "matrix": "serum",
+  "originalUnit": "ng/L",
+  "outputUnit": "pg/mL",
+  "unitConversion": "1 ng/L = 1 pg/mL",
+  "femaleParticipants": 889,
+  "femaleSamples": 1005,
+  "cohorts": [
+    {
+      "n": 92,
+      "samples": 208,
+      "ageMinYears": 0.02,
+      "ageMaxYears": 1.08
+    },
+    {
+      "n": 648,
+      "ageMinYears": 5.6,
+      "ageMaxYears": 20.2
+    },
+    {
+      "n": 149,
+      "ageMinYears": 20,
+      "ageMaxYears": 69
+    }
+  ],
+  "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+  "calibrationPixels": {
+    "xAge0": 132.0,
+    "xAge70": 990.5,
+    "yValue0": 646.5,
+    "yValue350": 43.5
+  },
+  "approximateDigitizationTolerancePgMl": 2,
+  "points": [
+    {
+      "ageYears": 5.6,
+      "approxMedianPgMl": 11,
+      "rawDigitizedValuePgMl": 10.74,
+      "pixelX": 201,
+      "pixelY": 628
+    },
+    {
+      "ageYears": 6,
+      "approxMedianPgMl": 11,
+      "rawDigitizedValuePgMl": 10.74,
+      "pixelX": 206,
+      "pixelY": 628
+    },
+    {
+      "ageYears": 7,
+      "approxMedianPgMl": 12,
+      "rawDigitizedValuePgMl": 11.9,
+      "pixelX": 218,
+      "pixelY": 626
+    },
+    {
+      "ageYears": 8,
+      "approxMedianPgMl": 14,
+      "rawDigitizedValuePgMl": 13.64,
+      "pixelX": 230,
+      "pixelY": 623
+    },
+    {
+      "ageYears": 9,
+      "approxMedianPgMl": 18,
+      "rawDigitizedValuePgMl": 18.28,
+      "pixelX": 242,
+      "pixelY": 615
+    },
+    {
+      "ageYears": 10,
+      "approxMedianPgMl": 27,
+      "rawDigitizedValuePgMl": 26.99,
+      "pixelX": 255,
+      "pixelY": 600
+    },
+    {
+      "ageYears": 11,
+      "approxMedianPgMl": 36,
+      "rawDigitizedValuePgMl": 35.7,
+      "pixelX": 267,
+      "pixelY": 585
+    },
+    {
+      "ageYears": 12,
+      "approxMedianPgMl": 43,
+      "rawDigitizedValuePgMl": 43.24,
+      "pixelX": 279,
+      "pixelY": 572
+    },
+    {
+      "ageYears": 13,
+      "approxMedianPgMl": 47,
+      "rawDigitizedValuePgMl": 46.72,
+      "pixelX": 291,
+      "pixelY": 566
+    },
+    {
+      "ageYears": 14,
+      "approxMedianPgMl": 46,
+      "rawDigitizedValuePgMl": 46.14,
+      "pixelX": 304,
+      "pixelY": 567
+    },
+    {
+      "ageYears": 15,
+      "approxMedianPgMl": 44,
+      "rawDigitizedValuePgMl": 43.82,
+      "pixelX": 316,
+      "pixelY": 571
+    },
+    {
+      "ageYears": 16,
+      "approxMedianPgMl": 40,
+      "rawDigitizedValuePgMl": 40.34,
+      "pixelX": 328,
+      "pixelY": 577
+    },
+    {
+      "ageYears": 17,
+      "approxMedianPgMl": 37,
+      "rawDigitizedValuePgMl": 37.44,
+      "pixelX": 340,
+      "pixelY": 582
+    },
+    {
+      "ageYears": 18,
+      "approxMedianPgMl": 36,
+      "rawDigitizedValuePgMl": 35.7,
+      "pixelX": 353,
+      "pixelY": 585
+    },
+    {
+      "ageYears": 20,
+      "approxMedianPgMl": 34,
+      "rawDigitizedValuePgMl": 33.96,
+      "pixelX": 377,
+      "pixelY": 588
+    },
+    {
+      "ageYears": 25,
+      "approxMedianPgMl": 32,
+      "rawDigitizedValuePgMl": 31.63,
+      "pixelX": 439,
+      "pixelY": 592
+    },
+    {
+      "ageYears": 30,
+      "approxMedianPgMl": 30,
+      "rawDigitizedValuePgMl": 30.47,
+      "pixelX": 500,
+      "pixelY": 594
+    },
+    {
+      "ageYears": 35,
+      "approxMedianPgMl": 29,
+      "rawDigitizedValuePgMl": 28.73,
+      "pixelX": 561,
+      "pixelY": 597
+    },
+    {
+      "ageYears": 40,
+      "approxMedianPgMl": 28,
+      "rawDigitizedValuePgMl": 27.57,
+      "pixelX": 623,
+      "pixelY": 599
+    },
+    {
+      "ageYears": 42,
+      "approxMedianPgMl": 26,
+      "rawDigitizedValuePgMl": 26.41,
+      "pixelX": 647,
+      "pixelY": 601
+    },
+    {
+      "ageYears": 44,
+      "approxMedianPgMl": 23,
+      "rawDigitizedValuePgMl": 22.93,
+      "pixelX": 672,
+      "pixelY": 607
+    },
+    {
+      "ageYears": 45,
+      "approxMedianPgMl": 20,
+      "rawDigitizedValuePgMl": 20.02,
+      "pixelX": 684,
+      "pixelY": 612
+    },
+    {
+      "ageYears": 46,
+      "approxMedianPgMl": 17,
+      "rawDigitizedValuePgMl": 16.54,
+      "pixelX": 696,
+      "pixelY": 618
+    },
+    {
+      "ageYears": 47,
+      "approxMedianPgMl": 11,
+      "rawDigitizedValuePgMl": 11.32,
+      "pixelX": 708,
+      "pixelY": 627
+    }
+  ],
+  "notes": [
+    "Female samples throughout the source study used the same Inhibin B Gen II assay; unlike the male cohort, no older assay is mixed into this female series.",
+    "The 2022 Ljubicic infant medians use the same inhibin B assay, but are a separately fitted published model. Preserve this source boundary; do not relabel the composite as one original GAMLSS model.",
+    "There are no observed female samples between 1.08 and 5.6 years in this study. The original figure leaves a gap; do not insert source-derived numeric points there.",
+    "The source has only 149 adult women and sampling was not standardized to menstrual-cycle phase. Oral contraceptive information was missing for many adult controls.",
+    "Central curve approaches the 3 pg/mL detection limit around the late forties. No precise digitized values are retained below/near that limit and there is no zero imputation in this file.",
+    "Use the qualitative low/undetectable postmenopausal state, without invented concentration values or age-specific predictions after the quantitative segment ends.",
+    "Tanner medians in the text are B1=15, B2=26, B3=46, B4=55, B5=34 pg/mL. They are stage-specific and must not be substituted for exact chronological-age medians.",
+    "All points are approximate readings from a raster figure; round display quantities if exposed and identify digitization in source details."
+  ]
+}

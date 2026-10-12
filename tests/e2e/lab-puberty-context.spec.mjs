@@ -1,5 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
-import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { quickSelect as select, quickFill as fill, expectAutomaticReference } from '../support/lab-puberty-quick.mjs';
 
 // LH/FSH A01: real source broker -> converter adapter -> form -> engine/snapshot.
 // Only getPatient's asynchronous storage boundary is controlled. Every browser
@@ -102,7 +102,7 @@ async function ready(page, id = B) {
   await expect.poll(() => source(page, id).then((context) => context.status)).toBe('ready');
 }
 async function sample(page) {
-  await configureProfile(page);
+  await expectAutomaticReference(page);
   await page.locator('#labValue').fill('2');
 }
 async function restart(page) {
@@ -167,7 +167,7 @@ test('loading and rejected reads suspend automatic data without blocking explici
   expect(saved.evaluation.input.age.years).toBe(9);
   expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 3 });
   expect(saved.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });
-  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'within' } });
+  expect(saved.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within' }, byStage: { status: 'within' } });
 });
 
 test('logout and session reset cannot be reversed by a late patient response', async ({ page }) => {
@@ -212,9 +212,9 @@ test('a current-patient update suspends copied context and automatically applies
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
   await expect(page.locator('#labPubertyStage')).toHaveValue('5');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
-  // The result and configured assay remain independently owned by the form/device.
+  // The result remains in the form; reference selection stays automatic.
   await expect(page.locator('#labValue')).toHaveValue('2');
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
+  await expectAutomaticReference(page);
   const reviewed = await snapshot(page);
   expect(reviewed.status).toBe('recorded');
   expect(reviewed.evaluation.input.treatment.gnrha).toBe('no');
@@ -297,11 +297,11 @@ test('an unchanged refresh suspends imported data and restores the current sampl
   expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
+  await expectAutomaticReference(page);
   expect((await snapshot(page)).evaluation.input).toEqual(before.evaluation.input);
 });
 
-test('manual age correction during a refresh survives while known treatment and configured assay are restored', async ({ page }) => {
+test('manual age correction during a refresh survives while known treatment and automatic selection are restored', async ({ page }) => {
   await open(page);
   await ready(page);
   await sample(page);
@@ -311,15 +311,15 @@ test('manual age correction during a refresh survives while known treatment and 
   await complete(page, B);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
+  await expectAutomaticReference(page);
   const corrected = await snapshot(page);
   expect(corrected.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   expect(corrected.evaluation).not.toHaveProperty('referencePreview');
   expect(corrected.evaluation.input.age.years).toBe(9);
-  // Unspecified legacy Tanner remains ineligible even after choosing a method.
+  // Unspecified legacy Tanner remains ineligible with automatic source selection.
   expect(corrected.evaluation.biochemical.byStage.status).toBe('unavailable');
   await restart(page);
   expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes' });
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
-  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
+  await expectAutomaticReference(page);
 });

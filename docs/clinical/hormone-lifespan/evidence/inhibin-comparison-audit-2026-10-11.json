@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-11",
+  "status": "owner_approved_educational_comparison_and_scoped_female_point_not_clinical_validation",
+  "scope": "Inhibin B sex comparisons in minipuberty and chronological ages 8–20 years. The new female puberty reference is restricted to that comparison; existing global profiles, laboratory norms, Tanner observations and patient history are unchanged.",
+  "policyFile": "../inhibin-comparison-policy.json",
+  "scopedReferenceFile": "../inhibin-comparison-reference-data.json",
+  "approvedPreviewSha256": {
+    "mini": "8b31ac7753c7ca2dc25552492c43a3847d779bc14f692d01a12cdcf325760838",
+    "puberty": "c49318764d95b02b9500b3b740eaab6c92f22eec88b4d6b4332e5c8a7c0b78c0"
+  },
+  "sourceFilesPolicy": "Full primary articles and the original female infant supplement were inspected. No complete PDFs, copyrighted figures, participant data or private local paths are redistributed.",
+  "sources": [
+    {
+      "id": "busch2022-male-inhb",
+      "doi": "10.1210/clinem/dgac115",
+      "url": "https://doi.org/10.1210/clinem/dgac115",
+      "location": "Figure 3, p 1565; Methods and hormone assays",
+      "population": "119 healthy term singleton Caucasian boys followed postnatally in the COPENHAGEN Minipuberty Study, Denmark, 2016–2018; 338 postnatal serum samples. Total paper population 128 includes 9 cord-only boys.",
+      "observedAgeDays": [4, 440],
+      "assay": "Beckman Coulter Inhibin B Gen II ELISA, A81303, RRID AB_2827405",
+      "specimen": "serum",
+      "sourceUnit": "pg/mL",
+      "statistic": "Age-specific GAMLSS median, approximately reconstructed from the vector PDF; not the separately modelled normalized longitudinal mean trajectory.",
+      "sourcePdfSha256": "373c982e4e4f3221a3d17c646f833db5a0672eda41f689c5785d6633cb1ceb45",
+      "existingEvidenceFile": "patient-point/busch2022-figure3-vector-medians.json",
+      "activeReferenceDomain": {"minAgeDays": 7, "maxAgeYears": 1, "maxExclusive": true},
+      "lodPgMl": 3,
+      "inhibinBLoqReported": false,
+      "medianMaximum": {"ageDays": 138, "pgMl": 309.779035},
+      "independentVerification": "A separate extraction using the original black central path and axis endpoints differed from all 359 active integer-day source knots by at most 0.083 pg/mL; both are approximate readings of the same figure, not author numerical coefficients.",
+      "caution": "The paper's 119-day peak of the modelled longitudinal mean is a different statistic. Stored decimal precision exceeds the source figure resolution; graphical quality guards are not LOD, LOQ or normal limits."
+    },
+    {
+      "id": "ljubicic2022-female-inhb",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://doi.org/10.1210/clinem/dgac363",
+      "location": "Figure 1 and original supplement Table C",
+      "population": "98 healthy term singleton Caucasian girls in the COPENHAGEN Minipuberty Study; 266 serum samples, median 3 per girl (IQR 1–4), observed from 5 days to 14.2 months.",
+      "assay": "Beckman Coulter Inhibin B Gen II ELISA, RRID AB_2827405",
+      "specimen": "serum",
+      "sourceUnit": "pg/mL",
+      "statistic": "Age-specific GAMLSS median from the original numerical supplement, not the biphasic normalized longitudinal mean trajectory.",
+      "supplement": {
+        "doi": "10.6084/m9.figshare.19469555.v1",
+        "url": "https://ndownloader.figshare.com/files/34594370",
+        "sha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+        "table": "C; median column, selected ages 0.02–1 years",
+        "license": "CC BY 4.0",
+        "independentTranscription": "All 99 current inhibin B median values exactly match Table C. The supplement has 121 rows, ages 0–1.2 years; this change does not enlarge the active subset."
+      },
+      "existingDataFile": "../female-reference-data.json",
+      "activeReferenceDomain": {"minAgeYears": 0.02, "maxAgeYears": 1, "maxInclusive": true},
+      "lodPgMl": 3,
+      "inhibinBLoqReported": false,
+      "medianMaximum": {"ageYears": 0.35, "ageDays": 127.8375, "pgMl": 52.474},
+      "caution": "The Table C median has one broad peak. Do not add two peaks from the separate mean-trajectory analysis or treat model medians as observations at every age."
+    },
+    {
+      "id": "borelli2025-puberty-inhb",
+      "doi": "10.1210/clinem/dgae439",
+      "url": "https://doi.org/10.1210/clinem/dgae439",
+      "title": "Serum Concentrations of Inhibin B in Healthy Females and Males Throughout Life",
+      "publication": "Journal of Clinical Endocrinology & Metabolism 110 (2025), 70–77; first published online 26 June 2024",
+      "location": "Figures 1–3, Methods, menstrual cycle and oral contraception results, assay supplement",
+      "sourcePdfSha256": "86b13b2e2cc6e7311d25df670239fd6a74cc79f47a832063d9a429bf79599f5e",
+      "originalUnit": "ng/L",
+      "outputUnit": "pg/mL",
+      "unitFactor": 1,
+      "statistic": "Approximate digitization of the central GAMLSS model curve, labelled median/0 SD. Original L/S coefficients are not recovered; no author SDS or centiles are calculated.",
+      "female": {
+        "population": "889 participants and 1005 samples in the full model; the COPUS II cohort includes 648 girls aged 5.6–20.2 years. Other cohorts include 92 infants and 149 adults.",
+        "assay": "Serum Beckman Coulter Inhibin B Gen II ELISA for all female samples",
+        "lodPgMl": 3,
+        "sourceFigure": 1,
+        "existingEvidenceFile": "inhb-digitized-median.json",
+        "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+        "sourceNodeCount": 24,
+        "sourceNodeDomainYears": [5.6, 47],
+        "digitizationTolerancePgMl": 2,
+        "newProfileId": "borelli2025-female-inhb-puberty-comparison",
+        "qualificationDomainYears": [8, 20],
+        "boundsInclusive": true,
+        "interpolation": "PCHIP using all 24 existing source nodes; the source-node domain is not the patient qualification domain.",
+        "cycleLimit": "The age model is not standardized by cycle phase. Oral contraception affects concentrations; contraceptive status was unknown in part of the control sample. This is not a phase-specific or untreated-only norm."
+      },
+      "male": {
+        "population": "1818 participants and 2007 samples in the full model, including cohorts spanning ages 6.1–15.6 and 6.1–20.2 years.",
+        "assays": "Serum Oxford Bio-innovation (917 samples) and Gen II (1090 samples), pooled in the source model",
+        "lodPgMl": {"oxford": 20, "genII": 3},
+        "sourceFigure": 2,
+        "existingEvidenceFile": "patient-point/borelli2025-male-inhb-digitized.json",
+        "profileId": "borelli2025-male-inhb",
+        "unchangedGlobalDomainYears": [6.1, 80],
+        "digitizationTolerancePgMl": 5,
+        "assayLimit": "The source did not factorize pooled results using the reported overall Oxford/Gen II ratio 1.28. This implementation also applies no such conversion."
+      },
+      "caution": "Figure 3 supports a common concentration axis but does not harmonize assays. Digitization tolerances are not confidence intervals, assay precision or normal ranges. Chronological age cannot assign breast/genital Tanner stage; published stage medians remain separate observations."
+    }
+  ],
+  "presentation": {
+    "fixedScale": {"kind": "linear", "unit": "pg/mL", "min": 0, "max": 400, "ticks": [0, 100, 200, 300, 400]},
+    "meaning": "Equal height means equal concentration. Limits are a display choice, not laboratory reference limits or detection thresholds. Both periods retain the same axis regardless of patient, selected sex, result or marker eligibility.",
+    "mini": {
+      "profileIds": ["busch2022-male-inhb", "ljubicic2022-female-inhb"],
+      "commonDomainYears": [0.02, 1],
+      "minInclusive": true,
+      "maxExclusive": true,
+      "commonDomainDays": [7.305, 365.25],
+      "endpointSamplingAgeYears": 0.9999999999,
+      "extrapolateToBirth": false,
+      "pointPolicy": "Use the existing own-sex infant qualification. A seven-day boy can have a point before the common curves start. Neither sex receives a comparison point at exactly one year; no Kelsey substitution and no change to the female profile elsewhere.",
+      "termPolicy": "Term birth must be established for these infant point profiles. Preterm or unknown status prevents the point, not the population curves; corrected age does not qualify a premature infant."
+    },
+    "puberty": {
+      "profileIds": ["borelli2025-male-inhb", "borelli2025-female-inhb-puberty-comparison"],
+      "domainYears": [8, 20],
+      "boundsInclusive": true,
+      "referenceScope": "inhibin-sex-comparison-puberty",
+      "globalPatientProfilesChanged": false,
+      "pointPolicy": "Evaluate the patient's own sex through the existing reference engine with the isolated comparison reference data. Female point eligibility is newly enabled only in this view and age window; the other sex's assay must not block a compatible own-sex point."
+    },
+    "offScale": "Zero is a valid point on the linear baseline; above 400 pg/mL use an upward arrow with the real number, without rescaling. Negative/invalid or censored values do not create an exact dot. Numerical tolerance at an axis boundary is not a clinical threshold.",
+    "centralReference": "Patient concentration and own-sex source median are evaluated independently. Do not force either onto another sex's line or an unrelated smoothed lifespan illustration."
+  },
+  "controlValues": {
+    "unit": "pg/mL",
+    "precision": "Extra digits support reproducibility, not clinical measurement precision. Infant intermediate ages use the existing source interpolation.",
+    "miniByAgeDays": [
+      {"ageDays": 7, "male": 187.978788, "female": null},
+      {"ageDays": 7.305, "male": 188.48227369758663, "female": 30.583},
+      {"ageDays": 30, "male": 225.00128, "female": 35.742538649922416},
+      {"ageDays": 90, "male": 294.293798, "female": 49.47178761658046},
+      {"ageDays": 120, "male": 307.795754, "female": 52.38028987370108},
+      {"ageDays": 175, "male": 302.553118, "female": 47.549839585791666},
+      {"ageDays": 250, "male": 260.068662, "female": 36.35108207512803},
+      {"ageDays": 365.25, "male": null, "female": 16.329, "comparisonPointAllowed": false}
+    ],
+    "pubertyByAgeYears": [
+      {"ageYears": 8, "male": 71, "female": 14},
+      {"ageYears": 10, "male": 86, "female": 27},
+      {"ageYears": 12, "male": 146, "female": 43},
+      {"ageYears": 13, "male": 166, "female": 47},
+      {"ageYears": 14, "male": 178, "female": 46},
+      {"ageYears": 16, "male": 186, "female": 40},
+      {"ageYears": 18, "male": 187, "female": 36},
+      {"ageYears": 20, "male": 186, "female": 34}
+    ],
+    "syntheticContracts": [
+      "Female puberty comparison ages 8 and 20 are eligible in a compatible context; below 8 or above 20 are not. Ordinary views do not gain this female profile.",
+      "An age interval crossing a comparison boundary is not reduced to its midpoint to create a point.",
+      "Empty, 0, 400, 1000 and cleared results preserve identical lines and scale; 0 and 400 are boundary points, 1000 is an upward arrow.",
+      "400 ng/L and 400 pg/mL are equivalent. No newly invented assay-conversion factor is used.",
+      "Unsupported own assay/material, known contraindications and censored results retain existing engine restrictions. Curves remain population context when a point is unavailable."
+    ]
+  },
+  "unchangedObservationalPanels": [
+    {
+      "source": "Kuiri-Hänninen 2018",
+      "doi": "10.1111/cen.13716",
+      "existingEvidenceFile": "patient-point/kuiri-hanninen2018-inhb-visits.json",
+      "meaning": "Separate medians and IQR at nominal day 7 and month 3, term/preterm and sex groups; not an arbitrary-age trajectory or a norm.",
+      "assayLimit": "Serum Beckman Coulter ELISA, generation not specified; LOQ 5.2 pg/mL. Do not assume Gen II or splice these visits into the term-infant GAMLSS curves."
+    },
+    {
+      "source": "Crofton 2002",
+      "doi": "10.1046/j.0300-0664.2001.01448.x",
+      "existingEvidenceFile": "patient-point/crofton2002-male-inhb-tanner.json",
+      "meaning": "Separate male genital-stage medians, older plasma ELISA, including GH-treated short-stature participants. Neither an age assignment nor a replacement for Borelli age medians."
+    },
+    {
+      "source": "Baccarelli 2001",
+      "existingEvidenceFile": "patient-point/baccarelli2001-male-inhb-group-means.json",
+      "meaning": "Existing older-age group means remain independent; not a source for the two comparison windows."
+    }
+  ],
+  "reproduction": [
+    "Build readable data through build_runtime.py, retaining all original global source profiles and units.",
+    "Call VildaHormoneLifespanDisplay.buildInhibinComparison(data, referenceEngine, period) for mini/puberty; both models must use the same fixed linear scale and the documented source IDs.",
+    "Compare the scoped female profile's full 24-point array against inhb-digitized-median.json before PCHIP; only qualification is restricted to 8–20.",
+    "Evaluate each synthetic own-sex context through the real reference engine using the comparison model's referenceData, then enforce view/profile identity. Do not verify with a copied interpolation formula alone.",
+    "Check point/line invariance across empty, valid, off-scale and cleared results, own-sex assay independence, first birthday, 8/20-year boundaries and no female global-profile activation."
+  ],
+  "clinicalLimits": [
+    "This is educational population context, not a diagnostic rule, normal range, personalized target or cross-assay calibration.",
+    "Source median, individual concentration, longitudinal mean trajectory, Tanner median, IQR and reference interval are different statistics.",
+    "The source checks and owner approval do not constitute clinical validation; implementation tests must exercise the actual production functions."
+  ]
+}

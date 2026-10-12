@@ -1,0 +1,287 @@
+{
+  "version": "2026-10-11.1",
+  "kind": "educational-display-only",
+  "sex": "male",
+  "unit": "IU/L",
+  "coordinate": "canonical-whole-life-display-x",
+  "daysPerYear": 365.25,
+  "ageKeyPrecision": 12,
+  "providesClinicalReference": false,
+  "approval": {
+    "date": "2026-10-11",
+    "candidateSha256": "261e4c2d6861349bd55b391b3574942ab992fe7b7530d82bdb1129b237a95d20",
+    "scope": "Approved revised LH/FSH preview: independent source markers, qualitative prenatal segment, broad infant rise and source-informed postnatal illustration."
+  },
+  "constraints": [
+    "Display geometry never supplies a patient reference, reference interval or diagnosis.",
+    "Profiles and patient values do not change the fixed scale. Adding a source requires a separate reviewed scale decision.",
+    "Prenatal fractions are frozen graphical coordinates, not verified fetal serum concentrations.",
+    "Annual pediatric medians and adult group statistics remain separate from illustrative bridges.",
+    "The two hormones have independent scales; equal heights or crossings do not imply equal concentrations or an LH/FSH ratio."
+  ],
+  "hormones": {
+    "lh": {
+      "sourceIds": [
+        "busch2022-male-lh",
+        "madsen2022-male-lh",
+        "laurentino2020-male-lh-18-under25",
+        "perheentupa2013-male-lh-25-29",
+        "perheentupa2013-male-lh-30-39",
+        "perheentupa2013-male-lh-40-49",
+        "perheentupa2013-male-lh-50-59",
+        "perheentupa2013-male-lh-60-69",
+        "perheentupa2013-male-lh-70-74",
+        "yeap2007-male-lh-75-79",
+        "yeap2007-male-lh-80-84",
+        "yeap2007-male-lh-85-89"
+      ],
+      "scale": {
+        "basis": "fixed-approved-display-scale",
+        "divisor": 5.57,
+        "headroomFactor": 1.25,
+        "patientValueMayChangeScale": false,
+        "sourceId": "perheentupa2013-male-lh-70-74",
+        "sourceAgeYears": 70
+      },
+      "prenatalSchematic": {
+        "coordinateSystem": "dimensionless display fractions; not fetal concentrations",
+        "policy": "Retain existing visual shape, explicitly label as schematic; no new fetal evidence or numerical reference is claimed.",
+        "points": [
+          {
+            "ageYears": -0.75,
+            "relative": 0.01654164876239809
+          },
+          {
+            "ageYears": -0.6,
+            "relative": 0.02756941460399682
+          },
+          {
+            "ageYears": -0.48,
+            "relative": 0.2977496777231657
+          },
+          {
+            "ageYears": -0.32,
+            "relative": 0.6175548871295289
+          },
+          {
+            "ageYears": -0.13,
+            "relative": 0.3528885069311593
+          },
+          {
+            "ageYears": 0,
+            "relative": 0.02756941460399682
+          }
+        ],
+        "providesPatientReference": false
+      },
+      "infant": {
+        "sourceId": "busch2022-male-lh",
+        "peakAgeDays": 14,
+        "peakValue": 4.5,
+        "peakAgeIsIllustrative": true,
+        "controlFractions": [
+          0.045,
+          0.68
+        ],
+        "sampleCount": 601,
+        "shoulderPoints": [
+          {
+            "ageDays": 21,
+            "value": 4.4
+          }
+        ],
+        "sourceStartAgeDays": 45,
+        "sourceMaxAgeYears": 1,
+        "includeSourceMaxAge": false,
+        "explanation": "Broad educational first-week ascent and shoulder. Fig.3 source median at the patient marker stays unchanged; this is not the measured day of a population maximum."
+      },
+      "childhood": {
+        "minAge": 0.6652977412731006,
+        "maxAge": 6,
+        "kind": "schematic-low-baseline",
+        "points": [
+          {
+            "ageYears": 1,
+            "value": 0.06
+          },
+          {
+            "ageYears": 3,
+            "value": 0.06
+          },
+          {
+            "ageYears": 5,
+            "value": 0.08
+          }
+        ],
+        "providesPatientReference": false,
+        "explanation": "Smooth low background across source gaps; group FSH0.48 and censored LH values are not forced as geometric knots."
+      },
+      "puberty": {
+        "sourceId": "madsen2022-male-lh",
+        "minAge": 14,
+        "maxAge": 25,
+        "kind": "illustrative-puberty-adult-bridge",
+        "startDerivativeStepYears": 0.001,
+        "controlFractions": [
+          0.16,
+          0.3
+        ],
+        "sampleCount": 601,
+        "endValue": 3.74,
+        "endSourceId": "perheentupa2013-male-lh-25-29",
+        "endSlopePerYear": 0,
+        "explanation": "Preserve a smooth puberty transition; late-pubertal source medians remain separate and may lie above the line."
+      },
+      "adultTrend": {
+        "minAge": 25,
+        "maxAge": 80,
+        "kind": "illustrative-adult-trend",
+        "controlFractions": [
+          0.27,
+          0.4
+        ],
+        "sampleCount": 601,
+        "endValue": 5.23,
+        "endSlopePerYear": 0,
+        "explanation": "One broad illustrative adult rise; differences between source groups do not create physiological notches."
+      },
+      "tail": {
+        "minAge": 89,
+        "maxAge": 90,
+        "kind": "older-age-tail",
+        "mode": "flat-fading-illustration",
+        "providesPatientReference": false
+      }
+    },
+    "fsh": {
+      "sourceIds": [
+        "busch2022-male-fsh",
+        "madsen2022-male-fsh",
+        "zec2012-male-fsh-age-1-8",
+        "laurentino2020-male-fsh-18-under25",
+        "perheentupa2013-male-fsh-25-29",
+        "perheentupa2013-male-fsh-30-39",
+        "perheentupa2013-male-fsh-40-49",
+        "perheentupa2013-male-fsh-50-59",
+        "perheentupa2013-male-fsh-60-69",
+        "perheentupa2013-male-fsh-70-74",
+        "ljubicic2020-male-fsh-75-80-approximate"
+      ],
+      "scale": {
+        "basis": "fixed-approved-display-scale",
+        "divisor": 8.4178,
+        "headroomFactor": 1.25,
+        "patientValueMayChangeScale": false,
+        "sourceId": "ljubicic2020-male-fsh-75-80-approximate",
+        "sourceAgeYears": 80
+      },
+      "prenatalSchematic": {
+        "coordinateSystem": "dimensionless display fractions; not fetal concentrations",
+        "policy": "Retain existing visual shape, explicitly label as schematic; no new fetal evidence or numerical reference is claimed.",
+        "points": [
+          {
+            "ageYears": -0.75,
+            "relative": 0.0062814554774843
+          },
+          {
+            "ageYears": -0.6,
+            "relative": 0.010469092462473836
+          },
+          {
+            "ageYears": -0.48,
+            "relative": 0.10469092462473836
+          },
+          {
+            "ageYears": -0.32,
+            "relative": 0.21985094171195058
+          },
+          {
+            "ageYears": -0.13,
+            "relative": 0.13086365578092293
+          },
+          {
+            "ageYears": 0,
+            "relative": 0.014133274824339678
+          }
+        ],
+        "providesPatientReference": false
+      },
+      "infant": {
+        "sourceId": "busch2022-male-fsh",
+        "peakAgeDays": 11,
+        "peakValue": 2.6,
+        "peakAgeIsIllustrative": true,
+        "controlFractions": [
+          0.045,
+          0.68
+        ],
+        "sampleCount": 601,
+        "shoulderPoints": [
+          {
+            "ageDays": 14,
+            "value": 2.55
+          },
+          {
+            "ageDays": 21,
+            "value": 2.35
+          }
+        ],
+        "sourceStartAgeDays": 45,
+        "sourceMaxAgeYears": 1,
+        "includeSourceMaxAge": true,
+        "explanation": "Broad educational first-week ascent and shoulder. Fig.3 source median at the patient marker stays unchanged; this is not the measured day of a population maximum."
+      },
+      "childhood": {
+        "minAge": 1,
+        "maxAge": 6,
+        "kind": "low-childhood-bridge",
+        "points": [],
+        "providesPatientReference": false,
+        "explanation": "Smooth low background across source gaps; group FSH0.48 and censored LH values are not forced as geometric knots."
+      },
+      "puberty": {
+        "sourceId": "madsen2022-male-fsh",
+        "minAge": 12,
+        "maxAge": 25,
+        "kind": "illustrative-puberty-adult-bridge",
+        "startDerivativeStepYears": 0.001,
+        "controlFractions": [
+          0.12,
+          0.2
+        ],
+        "sampleCount": 801,
+        "endValue": 3.43,
+        "endSourceId": "perheentupa2013-male-fsh-25-29",
+        "endSlopePerYear": 0.05,
+        "explanation": "Preserve a smooth puberty transition; late-pubertal source medians remain separate and may lie above the line."
+      },
+      "adultTrend": {
+        "minAge": 25,
+        "maxAge": 80,
+        "kind": "source-constrained-illustrative-adult-trend",
+        "controlFractions": [
+          0.5907758320847372,
+          0.08000000000000002
+        ],
+        "sampleCount": 801,
+        "endValue": 8.4178,
+        "endSlopePerYear": 0,
+        "explanation": "Broad curve checked at all40 verified41–80yr model readings. Fitted geometry is not a new model median or a laboratory reference interval.",
+        "sourceDoi": "10.1093/humrep/deaa182",
+        "fitErrorRmsIuL": 0.049829897933818645,
+        "sourceCheckAgeYears": [
+          41,
+          80
+        ],
+        "sourceCheckPoints": 40
+      },
+      "tail": {
+        "minAge": 80,
+        "maxAge": 90,
+        "kind": "older-age-tail",
+        "mode": "flat-fading-illustration",
+        "providesPatientReference": false
+      }
+    }
+  }
+}

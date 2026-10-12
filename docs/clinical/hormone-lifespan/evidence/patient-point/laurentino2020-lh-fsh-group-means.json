@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "reviewedDate": "2026-10-11",
+  "purpose": "Audited source facts for educational patient comparison; not clinical reference intervals or an exact-age trajectory.",
+  "sex": "male",
+  "unit": "IU/L",
+  "source": {
+    "authors": "Laurentino et al.",
+    "year": 2020,
+    "title": "Laurentino et al., A germ cell-specific ageing pattern in otherwise healthy men",
+    "pmid": "32951333",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7576283/",
+    "table": 1,
+    "sourceFile": "fame2020.xml",
+    "sourceSha256": "821476940870ee6b715b4e0f8002a08cf32284d62a9fd38ee046e9a7d41e32fe",
+    "supplementFile": "ACEL-19-e13242-s004.docx",
+    "supplementSha256": "1452e41fe10af8c0af8c954796faf735d80f9893e2c74eb4e8eb12fd809ebe65",
+    "supplementUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7576283/supplementaryFiles",
+    "participants": 197,
+    "sourceAgeLabel": "18–25 years",
+    "assay": {
+      "method": "Abbott Architect i1000 CMIA",
+      "specimen": "serum",
+      "sampling": "Fasting, after 15 minutes of rest; clock time not reported."
+    },
+    "ageRouting": "Use18–<25 only: Table1/S1 says18–25, Methods says18–24. Mean3.0 and N34 still describe the original complete group, not a recalculated18–24 subset.",
+    "sourceAgeDiscrepancies": [
+      "Main Table1 and TableS1 youngest18–25; Methods says18–24.",
+      "Main age span18–84; Methods oldest group range65–82.",
+      "Main Table1 oldest>66; TableS1>=66; Methods>65 and range65–82.",
+      "Methods recruitment arithmetic200 examined minus2 tumours implies198, but ultimately197; main abstract198 versus main results197."
+    ],
+    "dataLicense": "CC BY4.0; numerical source facts only.",
+    "doi": "10.1111/acel.13242",
+    "url": "https://doi.org/10.1111/acel.13242",
+    "reviewedDate": "2026-10-11",
+    "sourceUnit": "IU/L",
+    "sourceToCanonicalFactor": 1
+  },
+  "presentation": {
+    "sourceLabel": "Laurentino 2020 · FAMe · średnia grupy wieku",
+    "method": "Abbott Architect i1000 CMIA",
+    "population": "Zdrowi mężczyźni, Münster, Niemcy; FAMe, rekrutacja 2014–2016",
+    "compatibleAssayMethodIds": [
+      "abbott-architect-i1000",
+      "architect-i1000"
+    ]
+  },
+  "limitations": [
+    "Średnia arytmetyczna całej grupy; nie jest medianą, normą ani wartością właściwą dla konkretnego roku życia.",
+    "Grupa obejmuje34 zdrowych ochotników; selekcja nie reprezentuje wszystkich mężczyzn w populacji.",
+    "Górna granica grupy jest niespójna w źródle:24 lub25 lat. Routing18–<25 jest zachowawczą polityką aplikacji, a nie nowo obliczoną grupą.",
+    "Metoda dotyczy badania źródłowego; nie potwierdza metody próbki pacjenta ani równoważności innych platform."
+  ],
+  "statistic": "arithmetic-group-mean",
+  "participants": 197,
+  "rows": [
+    {
+      "ageGroupYears": [
+        18,
+        25
+      ],
+      "n": 34,
+      "publishedAgeLabel": "18–25",
+      "LH": {
+        "arithmeticMean": 3.0,
+        "sd": 0.9
+      },
+      "FSH": {
+        "arithmeticMean": 3.0,
+        "sd": 1.9
+      },
+      "application": {
+        "minAge": 18,
+        "maxAge": 25,
+        "maxAgeExclusive": true
+      },
+      "selectionNote": "Only the youngest group is selected. Published label 18–25 is retained; application routing 18–<25 reflects the conflicting 18–24 label in Methods."
+    },
+    {
+      "ageGroupYears": [
+        26,
+        35
+      ],
+      "n": 36,
+      "publishedAgeLabel": "26–35",
+      "LH": {
+        "arithmeticMean": 3.2,
+        "sd": 1.1
+      },
+      "FSH": {
+        "arithmeticMean": 3.4,
+        "sd": 1.5
+      },
+      "application": null,
+      "selectionNote": "Source observation only; not selected for numeric patient comparison."
+    },
+    {
+      "ageGroupYears": [
+        36,
+        45
+      ],
+      "n": 28,
+      "publishedAgeLabel": "36–45",
+      "LH": {
+        "arithmeticMean": 3.5,
+        "sd": 1.5
+      },
+      "FSH": {
+        "arithmeticMean": 4.0,
+        "sd": 2.0
+      },
+      "application": null,
+      "selectionNote": "Source observation only; not selected for numeric patient comparison."
+    },
+    {
+      "ageGroupYears": [
+        46,
+        55
+      ],
+      "n": 39,
+      "publishedAgeLabel": "46–55",
+      "LH": {
+        "arithmeticMean": 3.0,
+        "sd": 1.1
+      },
+      "FSH": {
+        "arithmeticMean": 4.1,
+        "sd": 2.4
+      },
+      "application": null,
+      "selectionNote": "Source observation only; not selected for numeric patient comparison."
+    },
+    {
+      "ageGroupYears": [
+        56,
+        65
+      ],
+      "n": 36,
+      "publishedAgeLabel": "56–65",
+      "LH": {
+        "arithmeticMean": 2.8,
+        "sd": 1.2
+      },
+      "FSH": {
+        "arithmeticMean": 5.2,
+        "sd": 5.9
+      },
+      "application": null,
+      "selectionNote": "Source observation only; not selected for numeric patient comparison."
+    },
+    {
+      "ageGroupYears": [
+        66,
+        84
+      ],
+      "n": 24,
+      "publishedAgeLabel": ">66",
+      "LH": {
+        "arithmeticMean": 4.0,
+        "sd": 1.7
+      },
+      "FSH": {
+        "arithmeticMean": 6.1,
+        "sd": 3.0
+      },
+      "application": null,
+      "selectionNote": "Source observation only; not selected for numeric patient comparison."
+    }
+  ],
+  "sourceBoundaryWarning": "The oldest Table 1 label is >66, the supplement uses >=66 and Methods uses >65 with an observed maximum of 82, versus 84 in the main article. Stored ageGroupYears for the unselected oldest row is only a reported table span; it must not define an application domain."
+}

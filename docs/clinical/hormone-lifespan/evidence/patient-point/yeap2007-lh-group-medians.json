@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "reviewedDate": "2026-10-11",
+  "purpose": "Audited source facts for educational patient comparison; not clinical reference intervals or an exact-age trajectory.",
+  "sex": "male",
+  "unit": "IU/L",
+  "source": {
+    "authors": "Yeap et al.",
+    "year": 2007,
+    "title": "Yeap et al., In men older than 70 years, total testosterone remains stable while free testosterone declines with age. The Health in Men Study",
+    "table": 1,
+    "sourceFile": "yeap2007.pdf",
+    "sourceSha256": "3482342a1e3f55bdf9bf8f98a53c4df654597010fe8f37da990da654c6f1da26",
+    "participants": 3645,
+    "sourceAgeDomain": {
+      "minAge": 70,
+      "maxAge": 89
+    },
+    "assay": {
+      "method": "Immulite 2000 chemiluminescent immunoassay",
+      "specimen": "serum",
+      "sampling": "08:00–10:30; stored at−80°C.",
+      "lodIuL": 0.1
+    },
+    "ageRouting": "Source selected from75 to avoid overlap withFINRISK.85+ published group capped at observed89years inclusive; no automatic90+ extrapolation.",
+    "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+    "doi": "10.1530/EJE-06-0714",
+    "url": "https://doi.org/10.1530/EJE-06-0714",
+    "reviewedDate": "2026-10-11",
+    "sourceUnit": "IU/L",
+    "sourceToCanonicalFactor": 1
+  },
+  "presentation": {
+    "sourceLabel": "Yeap 2007 · HIMS · mediana grupy wieku",
+    "method": "Immulite 2000 chemiluminescent immunoassay",
+    "population": "Mężczyźni mieszkający samodzielnie, Perth, Australia; HIMS,70–89 lat",
+    "compatibleAssayMethodIds": [
+      "immulite-2000",
+      "siemens-immulite-2000"
+    ]
+  },
+  "limitations": [
+    "Mediana całej grupy HIMS; nie jest normą laboratoryjną ani medianą dokładnego wieku.",
+    "Ogólna populacja starszych mężczyzn obejmuje choroby współistniejące i zaburzenia funkcji jąder.",
+    "Różnica względem FINRISK na granicy75 lat wynika z odrębnej kohorty i metody; nie dowodzi nagłego spadku LH i nie wymusza kształtu linii.",
+    "Ostatnia grupa85+ ma obserwowany zakres do89 lat; nie daje liczbowego odniesienia powyżej89.",
+    "Średni wiek grupy nie jest dowodem dokładnej mediany LH w tym wieku. Immulite2000 nie jest automatycznie równoważnyXPi."
+  ],
+  "statistic": "group-median",
+  "participants": 3645,
+  "rows": [
+    {
+      "ageGroupYears": [
+        70,
+        74
+      ],
+      "publishedAgeLabel": "70–74",
+      "observedAgeCeilingYears": 89,
+      "n": 1383,
+      "meanAgeYears": 73.58,
+      "median": 3.92,
+      "p25": 2.74,
+      "p75": 5.78,
+      "arithmeticMean": 4.79,
+      "sd": 3.39,
+      "application": null,
+      "selectionNote": "The 70–74 group is not routed because FINRISK remains selected below 75. The published 85+ group is capped at the observed age 89, without extending to a completed-age 89–90 interval."
+    },
+    {
+      "ageGroupYears": [
+        75,
+        79
+      ],
+      "publishedAgeLabel": "75–79",
+      "observedAgeCeilingYears": 89,
+      "n": 1555,
+      "meanAgeYears": 77.36,
+      "median": 4.44,
+      "p25": 3.15,
+      "p75": 6.76,
+      "arithmeticMean": 6.04,
+      "sd": 5.7,
+      "application": {
+        "minAge": 75,
+        "maxAge": 80,
+        "maxAgeExclusive": true
+      },
+      "selectionNote": "The 70–74 group is not routed because FINRISK remains selected below 75. The published 85+ group is capped at the observed age 89, without extending to a completed-age 89–90 interval."
+    },
+    {
+      "ageGroupYears": [
+        80,
+        84
+      ],
+      "publishedAgeLabel": "80–84",
+      "observedAgeCeilingYears": 89,
+      "n": 584,
+      "meanAgeYears": 82.02,
+      "median": 5.14,
+      "p25": 3.36,
+      "p75": 8.16,
+      "arithmeticMean": 7.16,
+      "sd": 6.82,
+      "application": {
+        "minAge": 80,
+        "maxAge": 85,
+        "maxAgeExclusive": true
+      },
+      "selectionNote": "The 70–74 group is not routed because FINRISK remains selected below 75. The published 85+ group is capped at the observed age 89, without extending to a completed-age 89–90 interval."
+    },
+    {
+      "ageGroupYears": [
+        85,
+        89
+      ],
+      "publishedAgeLabel": "85+",
+      "observedAgeCeilingYears": 89,
+      "n": 123,
+      "meanAgeYears": 86.2,
+      "median": 5.22,
+      "p25": 3.36,
+      "p75": 8.93,
+      "arithmeticMean": 7.66,
+      "sd": 7.34,
+      "application": {
+        "minAge": 85,
+        "maxAge": 89,
+        "maxAgeExclusive": false
+      },
+      "selectionNote": "The 70–74 group is not routed because FINRISK remains selected below 75. The published 85+ group is capped at the observed age 89, without extending to a completed-age 89–90 interval."
+    }
+  ]
+}

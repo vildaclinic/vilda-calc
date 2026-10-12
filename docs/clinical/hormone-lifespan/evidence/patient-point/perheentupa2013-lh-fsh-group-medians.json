@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "reviewedDate": "2026-10-11",
+  "purpose": "Audited source facts for educational patient comparison; not clinical reference intervals or an exact-age trajectory.",
+  "sex": "male",
+  "unit": "IU/L",
+  "source": {
+    "authors": "Perheentupa et al.",
+    "year": 2013,
+    "title": "Perheentupa et al., A cohort effect on serum testosterone levels in Finnish men",
+    "pmid": "23161753",
+    "column": "All",
+    "sourceFile": "perheentupa2013.pdf",
+    "sourceSha256": "02e94258f3726a6c8ec64fd77b6300512c369393aed24b840329d27adac0e7fa",
+    "participants": 3271,
+    "sourceAgeDomain": {
+      "minAge": 25,
+      "maxAge": 74
+    },
+    "ageRouting": "Published completed-year groups normalized to half-open intervals[25,30),[30,40),[40,50),[50,60),[60,70),[70,75). All-column historical group medians remain constant.",
+    "redistribution": "Numerical facts and citation only; no publisher PDF included.",
+    "doi": "10.1530/EJE-12-0288",
+    "url": "https://doi.org/10.1530/EJE-12-0288",
+    "reviewedDate": "2026-10-11",
+    "sourceUnit": "IU/L",
+    "sourceToCanonicalFactor": 1
+  },
+  "presentation": {
+    "sourceLabel": "Perheentupa 2013 · FINRISK · mediana grupy wieku",
+    "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+    "population": "Mężczyźni z Finlandii; FINRISK1972,1977 i2002,25–74 lat",
+    "compatibleAssayMethodIds": [
+      "delfia",
+      "wallac-delfia"
+    ]
+  },
+  "limitations": [
+    "Mediana całej grupy wieku z kolumnyAll; nie jest dokładną krzywą p50(age) ani granicą normy.",
+    "Połączono badania1972,1977 i2002. Publikacja wykazuje silny efekt kohorty urodzeniowej; różnice grup nie opisują czystego starzenia tej samej osoby.",
+    "Populacja nie była jednolitą współczesną kohortą zdrowych mężczyzn.",
+    "Percentyle5–95 opisują centralne90% obserwacji; nie są importowane do silnika norm.",
+    "MetodaDELFIA ze źródła nie potwierdza zgodności metody pacjenta ani równoważności AutoDELFIA, AnshLite lub Roche."
+  ],
+  "statistic": "group-median",
+  "participants": 3271,
+  "tables": {
+    "lh": 4,
+    "fsh": 5
+  },
+  "assay": {
+    "lh": {
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "specimen": "serum",
+      "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+      "lodIuL": 0.05
+    },
+    "fsh": {
+      "method": "Wallac DELFIA time-resolved fluoroimmunoassay",
+      "specimen": "serum",
+      "sampling": "Office hours, at least4h fasting; stored at−20°C.",
+      "lodIuL": 0.06
+    }
+  },
+  "rows": [
+    {
+      "ageGroupYears": [
+        25,
+        29
+      ],
+      "n": 352,
+      "LH": {
+        "median": 3.74,
+        "p5": 1.79,
+        "p95": 7.65
+      },
+      "FSH": {
+        "median": 3.43,
+        "p5": 1.47,
+        "p95": 10.85
+      },
+      "application": {
+        "minAge": 25,
+        "maxAge": 30,
+        "maxAgeExclusive": true
+      }
+    },
+    {
+      "ageGroupYears": [
+        30,
+        39
+      ],
+      "n": 859,
+      "LH": {
+        "median": 3.76,
+        "p5": 1.6,
+        "p95": 7.48
+      },
+      "FSH": {
+        "median": 4.0,
+        "p5": 1.66,
+        "p95": 10.31
+      },
+      "application": {
+        "minAge": 30,
+        "maxAge": 40,
+        "maxAgeExclusive": true
+      }
+    },
+    {
+      "ageGroupYears": [
+        40,
+        49
+      ],
+      "n": 887,
+      "LH": {
+        "median": 3.91,
+        "p5": 1.86,
+        "p95": 9.05
+      },
+      "FSH": {
+        "median": 4.56,
+        "p5": 2.05,
+        "p95": 15.17
+      },
+      "application": {
+        "minAge": 40,
+        "maxAge": 50,
+        "maxAgeExclusive": true
+      }
+    },
+    {
+      "ageGroupYears": [
+        50,
+        59
+      ],
+      "n": 751,
+      "LH": {
+        "median": 4.53,
+        "p5": 1.95,
+        "p95": 11.44
+      },
+      "FSH": {
+        "median": 5.64,
+        "p5": 2.2,
+        "p95": 18.84
+      },
+      "application": {
+        "minAge": 50,
+        "maxAge": 60,
+        "maxAgeExclusive": true
+      }
+    },
+    {
+      "ageGroupYears": [
+        60,
+        69
+      ],
+      "n": 345,
+      "LH": {
+        "median": 4.73,
+        "p5": 2.06,
+        "p95": 12.86
+      },
+      "FSH": {
+        "median": 5.92,
+        "p5": 2.02,
+        "p95": 18.68
+      },
+      "application": {
+        "minAge": 60,
+        "maxAge": 70,
+        "maxAgeExclusive": true
+      }
+    },
+    {
+      "ageGroupYears": [
+        70,
+        74
+      ],
+      "n": 77,
+      "LH": {
+        "median": 5.57,
+        "p5": 2.28,
+        "p95": 11.61
+      },
+      "FSH": {
+        "median": 6.43,
+        "p5": 2.88,
+        "p95": 27.13
+      },
+      "application": {
+        "minAge": 70,
+        "maxAge": 75,
+        "maxAgeExclusive": true
+      }
+    }
+  ]
+}

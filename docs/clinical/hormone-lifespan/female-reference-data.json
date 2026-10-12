@@ -1,0 +1,2172 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Educational standalone mockup data. Not a clinical interpretation engine or patient classification.",
+  "femaleInfantMedians": {
+    "source": {
+      "authors": "Ljubicic et al.",
+      "year": 2022,
+      "title": "A Biphasic Pattern of Reproductive Hormones in Healthy Female Infants: The COPENHAGEN Minipuberty Study",
+      "doi": "10.1210/clinem/dgac363",
+      "url": "https://academic.oup.com/jcem/article/107/9/2598/6608768",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35704034/",
+      "supplementDoi": "10.6084/m9.figshare.19469555.v1",
+      "supplementUrl": "https://ndownloader.figshare.com/files/34594370",
+      "supplementFile": "Supplementary table 1_2022.03.30.docx",
+      "supplementSha256": "f440f7e4ef2b3e7f06d3a538dd56df3529c71f6e83dfb7a22e7affc518f04297",
+      "supplementLicense": "CC BY 4.0"
+    },
+    "statistic": "median",
+    "model": "GAMLSS cross-sectional age-specific reference medians, Figure 1 and Supplementary Table 1A-G. These are not the longitudinal normalized mean trajectories in Figure 3.",
+    "population": {
+      "sex": "female",
+      "termBirthsOnly": true,
+      "participants": 98,
+      "samples": 266,
+      "observedAgeMinDays": 5,
+      "observedAgeMaxMonths": 14.2
+    },
+    "selectedGrid": {
+      "ageUnit": "years",
+      "minAgeYears": 0.02,
+      "maxAgeYears": 1,
+      "stepYears": 0.01,
+      "pointsPerHormone": 99,
+      "note": "First included published grid node is 0.02 years (about 7.3 days), not an observed birth value or an interpolated day-5 value. Do not extend this subset before its first point."
+    },
+    "displayNotes": [
+      "Smooth interpolation may connect the published median points within the selected interval without creating new local extrema.",
+      "Use a relative per-hormone display only for timing and shape, never as evidence of concentration ratios.",
+      "Do not label these median lines as the biphasic mean curves from Figure 3.",
+      "The female cohort and the paired 2018 comparison use different assays for AMH and inhibin B; do not merge their numbers into one continuous series."
+    ],
+    "hormones": {
+      "lh": {
+        "label": "LH",
+        "unit": "IU/L",
+        "assay": "AutoDELFIA, PerkinElmer",
+        "supplementTable": "A",
+        "points": [
+          {
+            "ageYears": 0.02,
+            "median": 0.421
+          },
+          {
+            "ageYears": 0.03,
+            "median": 0.396
+          },
+          {
+            "ageYears": 0.04,
+            "median": 0.371
+          },
+          {
+            "ageYears": 0.05,
+            "median": 0.347
+          },
+          {
+            "ageYears": 0.06,
+            "median": 0.325
+          },
+          {
+            "ageYears": 0.07,
+            "median": 0.303
+          },
+          {
+            "ageYears": 0.08,
+            "median": 0.282
+          },
+          {
+            "ageYears": 0.09,
+            "median": 0.262
+          },
+          {
+            "ageYears": 0.1,
+            "median": 0.243
+          },
+          {
+            "ageYears": 0.11,
+            "median": 0.225
+          },
+          {
+            "ageYears": 0.12,
+            "median": 0.208
+          },
+          {
+            "ageYears": 0.13,
+            "median": 0.192
+          },
+          {
+            "ageYears": 0.14,
+            "median": 0.178
+          },
+          {
+            "ageYears": 0.15,
+            "median": 0.164
+          },
+          {
+            "ageYears": 0.16,
+            "median": 0.152
+          },
+          {
+            "ageYears": 0.17,
+            "median": 0.14
+          },
+          {
+            "ageYears": 0.18,
+            "median": 0.13
+          },
+          {
+            "ageYears": 0.19,
+            "median": 0.121
+          },
+          {
+            "ageYears": 0.2,
+            "median": 0.113
+          },
+          {
+            "ageYears": 0.21,
+            "median": 0.106
+          },
+          {
+            "ageYears": 0.22,
+            "median": 0.099
+          },
+          {
+            "ageYears": 0.23,
+            "median": 0.094
+          },
+          {
+            "ageYears": 0.24,
+            "median": 0.089
+          },
+          {
+            "ageYears": 0.25,
+            "median": 0.085
+          },
+          {
+            "ageYears": 0.26,
+            "median": 0.082
+          },
+          {
+            "ageYears": 0.27,
+            "median": 0.079
+          },
+          {
+            "ageYears": 0.28,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.29,
+            "median": 0.075
+          },
+          {
+            "ageYears": 0.3,
+            "median": 0.074
+          },
+          {
+            "ageYears": 0.31,
+            "median": 0.073
+          },
+          {
+            "ageYears": 0.32,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.33,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.34,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.35,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.36,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.37,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.38,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.39,
+            "median": 0.073
+          },
+          {
+            "ageYears": 0.4,
+            "median": 0.073
+          },
+          {
+            "ageYears": 0.41,
+            "median": 0.074
+          },
+          {
+            "ageYears": 0.42,
+            "median": 0.074
+          },
+          {
+            "ageYears": 0.43,
+            "median": 0.075
+          },
+          {
+            "ageYears": 0.44,
+            "median": 0.076
+          },
+          {
+            "ageYears": 0.45,
+            "median": 0.076
+          },
+          {
+            "ageYears": 0.46,
+            "median": 0.076
+          },
+          {
+            "ageYears": 0.47,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.48,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.49,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.5,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.51,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.52,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.53,
+            "median": 0.077
+          },
+          {
+            "ageYears": 0.54,
+            "median": 0.076
+          },
+          {
+            "ageYears": 0.55,
+            "median": 0.076
+          },
+          {
+            "ageYears": 0.56,
+            "median": 0.075
+          },
+          {
+            "ageYears": 0.57,
+            "median": 0.074
+          },
+          {
+            "ageYears": 0.58,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.59,
+            "median": 0.071
+          },
+          {
+            "ageYears": 0.6,
+            "median": 0.069
+          },
+          {
+            "ageYears": 0.61,
+            "median": 0.068
+          },
+          {
+            "ageYears": 0.62,
+            "median": 0.067
+          },
+          {
+            "ageYears": 0.63,
+            "median": 0.065
+          },
+          {
+            "ageYears": 0.64,
+            "median": 0.064
+          },
+          {
+            "ageYears": 0.65,
+            "median": 0.063
+          },
+          {
+            "ageYears": 0.66,
+            "median": 0.061
+          },
+          {
+            "ageYears": 0.67,
+            "median": 0.061
+          },
+          {
+            "ageYears": 0.68,
+            "median": 0.06
+          },
+          {
+            "ageYears": 0.69,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.7,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.71,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.72,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.73,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.74,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.75,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.76,
+            "median": 0.059
+          },
+          {
+            "ageYears": 0.77,
+            "median": 0.06
+          },
+          {
+            "ageYears": 0.78,
+            "median": 0.06
+          },
+          {
+            "ageYears": 0.79,
+            "median": 0.061
+          },
+          {
+            "ageYears": 0.8,
+            "median": 0.061
+          },
+          {
+            "ageYears": 0.81,
+            "median": 0.062
+          },
+          {
+            "ageYears": 0.82,
+            "median": 0.062
+          },
+          {
+            "ageYears": 0.83,
+            "median": 0.063
+          },
+          {
+            "ageYears": 0.84,
+            "median": 0.064
+          },
+          {
+            "ageYears": 0.85,
+            "median": 0.064
+          },
+          {
+            "ageYears": 0.86,
+            "median": 0.065
+          },
+          {
+            "ageYears": 0.87,
+            "median": 0.066
+          },
+          {
+            "ageYears": 0.88,
+            "median": 0.067
+          },
+          {
+            "ageYears": 0.89,
+            "median": 0.067
+          },
+          {
+            "ageYears": 0.9,
+            "median": 0.068
+          },
+          {
+            "ageYears": 0.91,
+            "median": 0.069
+          },
+          {
+            "ageYears": 0.92,
+            "median": 0.07
+          },
+          {
+            "ageYears": 0.93,
+            "median": 0.07
+          },
+          {
+            "ageYears": 0.94,
+            "median": 0.071
+          },
+          {
+            "ageYears": 0.95,
+            "median": 0.072
+          },
+          {
+            "ageYears": 0.96,
+            "median": 0.073
+          },
+          {
+            "ageYears": 0.97,
+            "median": 0.073
+          },
+          {
+            "ageYears": 0.98,
+            "median": 0.074
+          },
+          {
+            "ageYears": 0.99,
+            "median": 0.075
+          },
+          {
+            "ageYears": 1.0,
+            "median": 0.076
+          }
+        ]
+      },
+      "fsh": {
+        "label": "FSH",
+        "unit": "IU/L",
+        "assay": "AutoDELFIA, PerkinElmer",
+        "supplementTable": "B",
+        "points": [
+          {
+            "ageYears": 0.02,
+            "median": 4.259
+          },
+          {
+            "ageYears": 0.03,
+            "median": 4.251
+          },
+          {
+            "ageYears": 0.04,
+            "median": 4.241
+          },
+          {
+            "ageYears": 0.05,
+            "median": 4.229
+          },
+          {
+            "ageYears": 0.06,
+            "median": 4.213
+          },
+          {
+            "ageYears": 0.07,
+            "median": 4.194
+          },
+          {
+            "ageYears": 0.08,
+            "median": 4.17
+          },
+          {
+            "ageYears": 0.09,
+            "median": 4.144
+          },
+          {
+            "ageYears": 0.1,
+            "median": 4.114
+          },
+          {
+            "ageYears": 0.11,
+            "median": 4.082
+          },
+          {
+            "ageYears": 0.12,
+            "median": 4.047
+          },
+          {
+            "ageYears": 0.13,
+            "median": 4.011
+          },
+          {
+            "ageYears": 0.14,
+            "median": 3.973
+          },
+          {
+            "ageYears": 0.15,
+            "median": 3.935
+          },
+          {
+            "ageYears": 0.16,
+            "median": 3.897
+          },
+          {
+            "ageYears": 0.17,
+            "median": 3.86
+          },
+          {
+            "ageYears": 0.18,
+            "median": 3.826
+          },
+          {
+            "ageYears": 0.19,
+            "median": 3.795
+          },
+          {
+            "ageYears": 0.2,
+            "median": 3.767
+          },
+          {
+            "ageYears": 0.21,
+            "median": 3.743
+          },
+          {
+            "ageYears": 0.22,
+            "median": 3.724
+          },
+          {
+            "ageYears": 0.23,
+            "median": 3.709
+          },
+          {
+            "ageYears": 0.24,
+            "median": 3.7
+          },
+          {
+            "ageYears": 0.25,
+            "median": 3.697
+          },
+          {
+            "ageYears": 0.26,
+            "median": 3.7
+          },
+          {
+            "ageYears": 0.27,
+            "median": 3.709
+          },
+          {
+            "ageYears": 0.28,
+            "median": 3.722
+          },
+          {
+            "ageYears": 0.29,
+            "median": 3.739
+          },
+          {
+            "ageYears": 0.3,
+            "median": 3.759
+          },
+          {
+            "ageYears": 0.31,
+            "median": 3.782
+          },
+          {
+            "ageYears": 0.32,
+            "median": 3.807
+          },
+          {
+            "ageYears": 0.33,
+            "median": 3.833
+          },
+          {
+            "ageYears": 0.34,
+            "median": 3.86
+          },
+          {
+            "ageYears": 0.35,
+            "median": 3.887
+          },
+          {
+            "ageYears": 0.36,
+            "median": 3.914
+          },
+          {
+            "ageYears": 0.37,
+            "median": 3.94
+          },
+          {
+            "ageYears": 0.38,
+            "median": 3.965
+          },
+          {
+            "ageYears": 0.39,
+            "median": 3.988
+          },
+          {
+            "ageYears": 0.4,
+            "median": 4.009
+          },
+          {
+            "ageYears": 0.41,
+            "median": 4.029
+          },
+          {
+            "ageYears": 0.42,
+            "median": 4.045
+          },
+          {
+            "ageYears": 0.43,
+            "median": 4.059
+          },
+          {
+            "ageYears": 0.44,
+            "median": 4.07
+          },
+          {
+            "ageYears": 0.45,
+            "median": 4.077
+          },
+          {
+            "ageYears": 0.46,
+            "median": 4.08
+          },
+          {
+            "ageYears": 0.47,
+            "median": 4.08
+          },
+          {
+            "ageYears": 0.48,
+            "median": 4.076
+          },
+          {
+            "ageYears": 0.49,
+            "median": 4.069
+          },
+          {
+            "ageYears": 0.5,
+            "median": 4.058
+          },
+          {
+            "ageYears": 0.51,
+            "median": 4.044
+          },
+          {
+            "ageYears": 0.52,
+            "median": 4.027
+          },
+          {
+            "ageYears": 0.53,
+            "median": 4.009
+          },
+          {
+            "ageYears": 0.54,
+            "median": 3.988
+          },
+          {
+            "ageYears": 0.55,
+            "median": 3.967
+          },
+          {
+            "ageYears": 0.56,
+            "median": 3.946
+          },
+          {
+            "ageYears": 0.57,
+            "median": 3.925
+          },
+          {
+            "ageYears": 0.58,
+            "median": 3.907
+          },
+          {
+            "ageYears": 0.59,
+            "median": 3.891
+          },
+          {
+            "ageYears": 0.6,
+            "median": 3.878
+          },
+          {
+            "ageYears": 0.61,
+            "median": 3.868
+          },
+          {
+            "ageYears": 0.62,
+            "median": 3.86
+          },
+          {
+            "ageYears": 0.63,
+            "median": 3.855
+          },
+          {
+            "ageYears": 0.64,
+            "median": 3.852
+          },
+          {
+            "ageYears": 0.65,
+            "median": 3.85
+          },
+          {
+            "ageYears": 0.66,
+            "median": 3.849
+          },
+          {
+            "ageYears": 0.67,
+            "median": 3.849
+          },
+          {
+            "ageYears": 0.68,
+            "median": 3.849
+          },
+          {
+            "ageYears": 0.69,
+            "median": 3.851
+          },
+          {
+            "ageYears": 0.7,
+            "median": 3.854
+          },
+          {
+            "ageYears": 0.71,
+            "median": 3.858
+          },
+          {
+            "ageYears": 0.72,
+            "median": 3.864
+          },
+          {
+            "ageYears": 0.73,
+            "median": 3.871
+          },
+          {
+            "ageYears": 0.74,
+            "median": 3.88
+          },
+          {
+            "ageYears": 0.75,
+            "median": 3.89
+          },
+          {
+            "ageYears": 0.76,
+            "median": 3.902
+          },
+          {
+            "ageYears": 0.77,
+            "median": 3.915
+          },
+          {
+            "ageYears": 0.78,
+            "median": 3.928
+          },
+          {
+            "ageYears": 0.79,
+            "median": 3.942
+          },
+          {
+            "ageYears": 0.8,
+            "median": 3.957
+          },
+          {
+            "ageYears": 0.81,
+            "median": 3.972
+          },
+          {
+            "ageYears": 0.82,
+            "median": 3.987
+          },
+          {
+            "ageYears": 0.83,
+            "median": 4.001
+          },
+          {
+            "ageYears": 0.84,
+            "median": 4.016
+          },
+          {
+            "ageYears": 0.85,
+            "median": 4.031
+          },
+          {
+            "ageYears": 0.86,
+            "median": 4.046
+          },
+          {
+            "ageYears": 0.87,
+            "median": 4.06
+          },
+          {
+            "ageYears": 0.88,
+            "median": 4.074
+          },
+          {
+            "ageYears": 0.89,
+            "median": 4.087
+          },
+          {
+            "ageYears": 0.9,
+            "median": 4.101
+          },
+          {
+            "ageYears": 0.91,
+            "median": 4.114
+          },
+          {
+            "ageYears": 0.92,
+            "median": 4.126
+          },
+          {
+            "ageYears": 0.93,
+            "median": 4.139
+          },
+          {
+            "ageYears": 0.94,
+            "median": 4.151
+          },
+          {
+            "ageYears": 0.95,
+            "median": 4.163
+          },
+          {
+            "ageYears": 0.96,
+            "median": 4.174
+          },
+          {
+            "ageYears": 0.97,
+            "median": 4.186
+          },
+          {
+            "ageYears": 0.98,
+            "median": 4.197
+          },
+          {
+            "ageYears": 0.99,
+            "median": 4.209
+          },
+          {
+            "ageYears": 1.0,
+            "median": 4.22
+          }
+        ]
+      },
+      "inhb": {
+        "label": "Inhibina B",
+        "unit": "pg/mL",
+        "assay": "Inhibin B Gen II ELISA, Beckman Coulter",
+        "supplementTable": "C",
+        "points": [
+          {
+            "ageYears": 0.02,
+            "median": 30.583
+          },
+          {
+            "ageYears": 0.03,
+            "median": 31.385
+          },
+          {
+            "ageYears": 0.04,
+            "median": 32.197
+          },
+          {
+            "ageYears": 0.05,
+            "median": 33.02
+          },
+          {
+            "ageYears": 0.06,
+            "median": 33.854
+          },
+          {
+            "ageYears": 0.07,
+            "median": 34.7
+          },
+          {
+            "ageYears": 0.08,
+            "median": 35.558
+          },
+          {
+            "ageYears": 0.09,
+            "median": 36.426
+          },
+          {
+            "ageYears": 0.1,
+            "median": 37.303
+          },
+          {
+            "ageYears": 0.11,
+            "median": 38.187
+          },
+          {
+            "ageYears": 0.12,
+            "median": 39.078
+          },
+          {
+            "ageYears": 0.13,
+            "median": 39.974
+          },
+          {
+            "ageYears": 0.14,
+            "median": 40.873
+          },
+          {
+            "ageYears": 0.15,
+            "median": 41.773
+          },
+          {
+            "ageYears": 0.16,
+            "median": 42.668
+          },
+          {
+            "ageYears": 0.17,
+            "median": 43.555
+          },
+          {
+            "ageYears": 0.18,
+            "median": 44.427
+          },
+          {
+            "ageYears": 0.19,
+            "median": 45.281
+          },
+          {
+            "ageYears": 0.2,
+            "median": 46.112
+          },
+          {
+            "ageYears": 0.21,
+            "median": 46.913
+          },
+          {
+            "ageYears": 0.22,
+            "median": 47.679
+          },
+          {
+            "ageYears": 0.23,
+            "median": 48.402
+          },
+          {
+            "ageYears": 0.24,
+            "median": 49.073
+          },
+          {
+            "ageYears": 0.25,
+            "median": 49.684
+          },
+          {
+            "ageYears": 0.26,
+            "median": 50.231
+          },
+          {
+            "ageYears": 0.27,
+            "median": 50.714
+          },
+          {
+            "ageYears": 0.28,
+            "median": 51.139
+          },
+          {
+            "ageYears": 0.29,
+            "median": 51.506
+          },
+          {
+            "ageYears": 0.3,
+            "median": 51.815
+          },
+          {
+            "ageYears": 0.31,
+            "median": 52.067
+          },
+          {
+            "ageYears": 0.32,
+            "median": 52.261
+          },
+          {
+            "ageYears": 0.33,
+            "median": 52.395
+          },
+          {
+            "ageYears": 0.34,
+            "median": 52.466
+          },
+          {
+            "ageYears": 0.35,
+            "median": 52.474
+          },
+          {
+            "ageYears": 0.36,
+            "median": 52.421
+          },
+          {
+            "ageYears": 0.37,
+            "median": 52.311
+          },
+          {
+            "ageYears": 0.38,
+            "median": 52.147
+          },
+          {
+            "ageYears": 0.39,
+            "median": 51.926
+          },
+          {
+            "ageYears": 0.4,
+            "median": 51.651
+          },
+          {
+            "ageYears": 0.41,
+            "median": 51.319
+          },
+          {
+            "ageYears": 0.42,
+            "median": 50.928
+          },
+          {
+            "ageYears": 0.43,
+            "median": 50.475
+          },
+          {
+            "ageYears": 0.44,
+            "median": 49.964
+          },
+          {
+            "ageYears": 0.45,
+            "median": 49.4
+          },
+          {
+            "ageYears": 0.46,
+            "median": 48.794
+          },
+          {
+            "ageYears": 0.47,
+            "median": 48.155
+          },
+          {
+            "ageYears": 0.48,
+            "median": 47.491
+          },
+          {
+            "ageYears": 0.49,
+            "median": 46.811
+          },
+          {
+            "ageYears": 0.5,
+            "median": 46.122
+          },
+          {
+            "ageYears": 0.51,
+            "median": 45.43
+          },
+          {
+            "ageYears": 0.52,
+            "median": 44.742
+          },
+          {
+            "ageYears": 0.53,
+            "median": 44.069
+          },
+          {
+            "ageYears": 0.54,
+            "median": 43.416
+          },
+          {
+            "ageYears": 0.55,
+            "median": 42.786
+          },
+          {
+            "ageYears": 0.56,
+            "median": 42.183
+          },
+          {
+            "ageYears": 0.57,
+            "median": 41.608
+          },
+          {
+            "ageYears": 0.58,
+            "median": 41.064
+          },
+          {
+            "ageYears": 0.59,
+            "median": 40.548
+          },
+          {
+            "ageYears": 0.6,
+            "median": 40.058
+          },
+          {
+            "ageYears": 0.61,
+            "median": 39.589
+          },
+          {
+            "ageYears": 0.62,
+            "median": 39.14
+          },
+          {
+            "ageYears": 0.63,
+            "median": 38.705
+          },
+          {
+            "ageYears": 0.64,
+            "median": 38.279
+          },
+          {
+            "ageYears": 0.65,
+            "median": 37.857
+          },
+          {
+            "ageYears": 0.66,
+            "median": 37.434
+          },
+          {
+            "ageYears": 0.67,
+            "median": 37.003
+          },
+          {
+            "ageYears": 0.68,
+            "median": 36.557
+          },
+          {
+            "ageYears": 0.69,
+            "median": 36.089
+          },
+          {
+            "ageYears": 0.7,
+            "median": 35.595
+          },
+          {
+            "ageYears": 0.71,
+            "median": 35.077
+          },
+          {
+            "ageYears": 0.72,
+            "median": 34.534
+          },
+          {
+            "ageYears": 0.73,
+            "median": 33.965
+          },
+          {
+            "ageYears": 0.74,
+            "median": 33.369
+          },
+          {
+            "ageYears": 0.75,
+            "median": 32.746
+          },
+          {
+            "ageYears": 0.76,
+            "median": 32.099
+          },
+          {
+            "ageYears": 0.77,
+            "median": 31.431
+          },
+          {
+            "ageYears": 0.78,
+            "median": 30.745
+          },
+          {
+            "ageYears": 0.79,
+            "median": 30.046
+          },
+          {
+            "ageYears": 0.8,
+            "median": 29.336
+          },
+          {
+            "ageYears": 0.81,
+            "median": 28.619
+          },
+          {
+            "ageYears": 0.82,
+            "median": 27.897
+          },
+          {
+            "ageYears": 0.83,
+            "median": 27.174
+          },
+          {
+            "ageYears": 0.84,
+            "median": 26.453
+          },
+          {
+            "ageYears": 0.85,
+            "median": 25.735
+          },
+          {
+            "ageYears": 0.86,
+            "median": 25.024
+          },
+          {
+            "ageYears": 0.87,
+            "median": 24.322
+          },
+          {
+            "ageYears": 0.88,
+            "median": 23.631
+          },
+          {
+            "ageYears": 0.89,
+            "median": 22.951
+          },
+          {
+            "ageYears": 0.9,
+            "median": 22.283
+          },
+          {
+            "ageYears": 0.91,
+            "median": 21.628
+          },
+          {
+            "ageYears": 0.92,
+            "median": 20.985
+          },
+          {
+            "ageYears": 0.93,
+            "median": 20.356
+          },
+          {
+            "ageYears": 0.94,
+            "median": 19.74
+          },
+          {
+            "ageYears": 0.95,
+            "median": 19.139
+          },
+          {
+            "ageYears": 0.96,
+            "median": 18.552
+          },
+          {
+            "ageYears": 0.97,
+            "median": 17.979
+          },
+          {
+            "ageYears": 0.98,
+            "median": 17.419
+          },
+          {
+            "ageYears": 0.99,
+            "median": 16.87
+          },
+          {
+            "ageYears": 1.0,
+            "median": 16.329
+          }
+        ]
+      },
+      "amh": {
+        "label": "AMH",
+        "unit": "pmol/L",
+        "assay": "Access 2 Immunoassay System, Beckman Coulter",
+        "supplementTable": "D",
+        "points": [
+          {
+            "ageYears": 0.02,
+            "median": 3.505
+          },
+          {
+            "ageYears": 0.03,
+            "median": 3.802
+          },
+          {
+            "ageYears": 0.04,
+            "median": 4.123
+          },
+          {
+            "ageYears": 0.05,
+            "median": 4.47
+          },
+          {
+            "ageYears": 0.06,
+            "median": 4.845
+          },
+          {
+            "ageYears": 0.07,
+            "median": 5.248
+          },
+          {
+            "ageYears": 0.08,
+            "median": 5.68
+          },
+          {
+            "ageYears": 0.09,
+            "median": 6.144
+          },
+          {
+            "ageYears": 0.1,
+            "median": 6.639
+          },
+          {
+            "ageYears": 0.11,
+            "median": 7.167
+          },
+          {
+            "ageYears": 0.12,
+            "median": 7.73
+          },
+          {
+            "ageYears": 0.13,
+            "median": 8.327
+          },
+          {
+            "ageYears": 0.14,
+            "median": 8.961
+          },
+          {
+            "ageYears": 0.15,
+            "median": 9.631
+          },
+          {
+            "ageYears": 0.16,
+            "median": 10.336
+          },
+          {
+            "ageYears": 0.17,
+            "median": 11.075
+          },
+          {
+            "ageYears": 0.18,
+            "median": 11.844
+          },
+          {
+            "ageYears": 0.19,
+            "median": 12.642
+          },
+          {
+            "ageYears": 0.2,
+            "median": 13.464
+          },
+          {
+            "ageYears": 0.21,
+            "median": 14.278
+          },
+          {
+            "ageYears": 0.22,
+            "median": 15.047
+          },
+          {
+            "ageYears": 0.23,
+            "median": 15.763
+          },
+          {
+            "ageYears": 0.24,
+            "median": 16.417
+          },
+          {
+            "ageYears": 0.25,
+            "median": 16.999
+          },
+          {
+            "ageYears": 0.26,
+            "median": 17.503
+          },
+          {
+            "ageYears": 0.27,
+            "median": 17.931
+          },
+          {
+            "ageYears": 0.28,
+            "median": 18.29
+          },
+          {
+            "ageYears": 0.29,
+            "median": 18.579
+          },
+          {
+            "ageYears": 0.3,
+            "median": 18.799
+          },
+          {
+            "ageYears": 0.31,
+            "median": 18.951
+          },
+          {
+            "ageYears": 0.32,
+            "median": 19.035
+          },
+          {
+            "ageYears": 0.33,
+            "median": 19.05
+          },
+          {
+            "ageYears": 0.34,
+            "median": 18.997
+          },
+          {
+            "ageYears": 0.35,
+            "median": 18.88
+          },
+          {
+            "ageYears": 0.36,
+            "median": 18.706
+          },
+          {
+            "ageYears": 0.37,
+            "median": 18.481
+          },
+          {
+            "ageYears": 0.38,
+            "median": 18.215
+          },
+          {
+            "ageYears": 0.39,
+            "median": 17.917
+          },
+          {
+            "ageYears": 0.4,
+            "median": 17.596
+          },
+          {
+            "ageYears": 0.41,
+            "median": 17.259
+          },
+          {
+            "ageYears": 0.42,
+            "median": 16.914
+          },
+          {
+            "ageYears": 0.43,
+            "median": 16.564
+          },
+          {
+            "ageYears": 0.44,
+            "median": 16.214
+          },
+          {
+            "ageYears": 0.45,
+            "median": 15.867
+          },
+          {
+            "ageYears": 0.46,
+            "median": 15.524
+          },
+          {
+            "ageYears": 0.47,
+            "median": 15.186
+          },
+          {
+            "ageYears": 0.48,
+            "median": 14.853
+          },
+          {
+            "ageYears": 0.49,
+            "median": 14.523
+          },
+          {
+            "ageYears": 0.5,
+            "median": 14.195
+          },
+          {
+            "ageYears": 0.51,
+            "median": 13.873
+          },
+          {
+            "ageYears": 0.52,
+            "median": 13.561
+          },
+          {
+            "ageYears": 0.53,
+            "median": 13.262
+          },
+          {
+            "ageYears": 0.54,
+            "median": 12.978
+          },
+          {
+            "ageYears": 0.55,
+            "median": 12.71
+          },
+          {
+            "ageYears": 0.56,
+            "median": 12.456
+          },
+          {
+            "ageYears": 0.57,
+            "median": 12.212
+          },
+          {
+            "ageYears": 0.58,
+            "median": 11.976
+          },
+          {
+            "ageYears": 0.59,
+            "median": 11.745
+          },
+          {
+            "ageYears": 0.6,
+            "median": 11.52
+          },
+          {
+            "ageYears": 0.61,
+            "median": 11.302
+          },
+          {
+            "ageYears": 0.62,
+            "median": 11.094
+          },
+          {
+            "ageYears": 0.63,
+            "median": 10.902
+          },
+          {
+            "ageYears": 0.64,
+            "median": 10.734
+          },
+          {
+            "ageYears": 0.65,
+            "median": 10.591
+          },
+          {
+            "ageYears": 0.66,
+            "median": 10.477
+          },
+          {
+            "ageYears": 0.67,
+            "median": 10.391
+          },
+          {
+            "ageYears": 0.68,
+            "median": 10.33
+          },
+          {
+            "ageYears": 0.69,
+            "median": 10.29
+          },
+          {
+            "ageYears": 0.7,
+            "median": 10.263
+          },
+          {
+            "ageYears": 0.71,
+            "median": 10.245
+          },
+          {
+            "ageYears": 0.72,
+            "median": 10.228
+          },
+          {
+            "ageYears": 0.73,
+            "median": 10.207
+          },
+          {
+            "ageYears": 0.74,
+            "median": 10.172
+          },
+          {
+            "ageYears": 0.75,
+            "median": 10.12
+          },
+          {
+            "ageYears": 0.76,
+            "median": 10.05
+          },
+          {
+            "ageYears": 0.77,
+            "median": 9.963
+          },
+          {
+            "ageYears": 0.78,
+            "median": 9.863
+          },
+          {
+            "ageYears": 0.79,
+            "median": 9.751
+          },
+          {
+            "ageYears": 0.8,
+            "median": 9.63
+          },
+          {
+            "ageYears": 0.81,
+            "median": 9.501
+          },
+          {
+            "ageYears": 0.82,
+            "median": 9.367
+          },
+          {
+            "ageYears": 0.83,
+            "median": 9.23
+          },
+          {
+            "ageYears": 0.84,
+            "median": 9.093
+          },
+          {
+            "ageYears": 0.85,
+            "median": 8.956
+          },
+          {
+            "ageYears": 0.86,
+            "median": 8.821
+          },
+          {
+            "ageYears": 0.87,
+            "median": 8.692
+          },
+          {
+            "ageYears": 0.88,
+            "median": 8.567
+          },
+          {
+            "ageYears": 0.89,
+            "median": 8.447
+          },
+          {
+            "ageYears": 0.9,
+            "median": 8.33
+          },
+          {
+            "ageYears": 0.91,
+            "median": 8.215
+          },
+          {
+            "ageYears": 0.92,
+            "median": 8.1
+          },
+          {
+            "ageYears": 0.93,
+            "median": 7.984
+          },
+          {
+            "ageYears": 0.94,
+            "median": 7.867
+          },
+          {
+            "ageYears": 0.95,
+            "median": 7.747
+          },
+          {
+            "ageYears": 0.96,
+            "median": 7.624
+          },
+          {
+            "ageYears": 0.97,
+            "median": 7.495
+          },
+          {
+            "ageYears": 0.98,
+            "median": 7.36
+          },
+          {
+            "ageYears": 0.99,
+            "median": 7.221
+          },
+          {
+            "ageYears": 1.0,
+            "median": 7.078
+          }
+        ]
+      },
+      "e2": {
+        "label": "Estradiol",
+        "unit": "pmol/L",
+        "assay": "LC-MS/MS",
+        "supplementTable": "F",
+        "points": [
+          {
+            "ageYears": 0.02,
+            "median": 8.249
+          },
+          {
+            "ageYears": 0.03,
+            "median": 8.8
+          },
+          {
+            "ageYears": 0.04,
+            "median": 9.372
+          },
+          {
+            "ageYears": 0.05,
+            "median": 9.959
+          },
+          {
+            "ageYears": 0.06,
+            "median": 10.56
+          },
+          {
+            "ageYears": 0.07,
+            "median": 11.17
+          },
+          {
+            "ageYears": 0.08,
+            "median": 11.787
+          },
+          {
+            "ageYears": 0.09,
+            "median": 12.407
+          },
+          {
+            "ageYears": 0.1,
+            "median": 13.026
+          },
+          {
+            "ageYears": 0.11,
+            "median": 13.642
+          },
+          {
+            "ageYears": 0.12,
+            "median": 14.257
+          },
+          {
+            "ageYears": 0.13,
+            "median": 14.871
+          },
+          {
+            "ageYears": 0.14,
+            "median": 15.481
+          },
+          {
+            "ageYears": 0.15,
+            "median": 16.087
+          },
+          {
+            "ageYears": 0.16,
+            "median": 16.687
+          },
+          {
+            "ageYears": 0.17,
+            "median": 17.28
+          },
+          {
+            "ageYears": 0.18,
+            "median": 17.867
+          },
+          {
+            "ageYears": 0.19,
+            "median": 18.446
+          },
+          {
+            "ageYears": 0.2,
+            "median": 19.016
+          },
+          {
+            "ageYears": 0.21,
+            "median": 19.575
+          },
+          {
+            "ageYears": 0.22,
+            "median": 20.119
+          },
+          {
+            "ageYears": 0.23,
+            "median": 20.643
+          },
+          {
+            "ageYears": 0.24,
+            "median": 21.143
+          },
+          {
+            "ageYears": 0.25,
+            "median": 21.616
+          },
+          {
+            "ageYears": 0.26,
+            "median": 22.055
+          },
+          {
+            "ageYears": 0.27,
+            "median": 22.461
+          },
+          {
+            "ageYears": 0.28,
+            "median": 22.828
+          },
+          {
+            "ageYears": 0.29,
+            "median": 23.153
+          },
+          {
+            "ageYears": 0.3,
+            "median": 23.428
+          },
+          {
+            "ageYears": 0.31,
+            "median": 23.648
+          },
+          {
+            "ageYears": 0.32,
+            "median": 23.805
+          },
+          {
+            "ageYears": 0.33,
+            "median": 23.893
+          },
+          {
+            "ageYears": 0.34,
+            "median": 23.908
+          },
+          {
+            "ageYears": 0.35,
+            "median": 23.851
+          },
+          {
+            "ageYears": 0.36,
+            "median": 23.73
+          },
+          {
+            "ageYears": 0.37,
+            "median": 23.551
+          },
+          {
+            "ageYears": 0.38,
+            "median": 23.321
+          },
+          {
+            "ageYears": 0.39,
+            "median": 23.047
+          },
+          {
+            "ageYears": 0.4,
+            "median": 22.736
+          },
+          {
+            "ageYears": 0.41,
+            "median": 22.395
+          },
+          {
+            "ageYears": 0.42,
+            "median": 22.029
+          },
+          {
+            "ageYears": 0.43,
+            "median": 21.642
+          },
+          {
+            "ageYears": 0.44,
+            "median": 21.24
+          },
+          {
+            "ageYears": 0.45,
+            "median": 20.823
+          },
+          {
+            "ageYears": 0.46,
+            "median": 20.393
+          },
+          {
+            "ageYears": 0.47,
+            "median": 19.95
+          },
+          {
+            "ageYears": 0.48,
+            "median": 19.494
+          },
+          {
+            "ageYears": 0.49,
+            "median": 19.026
+          },
+          {
+            "ageYears": 0.5,
+            "median": 18.549
+          },
+          {
+            "ageYears": 0.51,
+            "median": 18.064
+          },
+          {
+            "ageYears": 0.52,
+            "median": 17.575
+          },
+          {
+            "ageYears": 0.53,
+            "median": 17.085
+          },
+          {
+            "ageYears": 0.54,
+            "median": 16.599
+          },
+          {
+            "ageYears": 0.55,
+            "median": 16.118
+          },
+          {
+            "ageYears": 0.56,
+            "median": 15.644
+          },
+          {
+            "ageYears": 0.57,
+            "median": 15.178
+          },
+          {
+            "ageYears": 0.58,
+            "median": 14.719
+          },
+          {
+            "ageYears": 0.59,
+            "median": 14.266
+          },
+          {
+            "ageYears": 0.6,
+            "median": 13.818
+          },
+          {
+            "ageYears": 0.61,
+            "median": 13.379
+          },
+          {
+            "ageYears": 0.62,
+            "median": 12.947
+          },
+          {
+            "ageYears": 0.63,
+            "median": 12.524
+          },
+          {
+            "ageYears": 0.64,
+            "median": 12.111
+          },
+          {
+            "ageYears": 0.65,
+            "median": 11.708
+          },
+          {
+            "ageYears": 0.66,
+            "median": 11.322
+          },
+          {
+            "ageYears": 0.67,
+            "median": 10.957
+          },
+          {
+            "ageYears": 0.68,
+            "median": 10.613
+          },
+          {
+            "ageYears": 0.69,
+            "median": 10.287
+          },
+          {
+            "ageYears": 0.7,
+            "median": 9.98
+          },
+          {
+            "ageYears": 0.71,
+            "median": 9.69
+          },
+          {
+            "ageYears": 0.72,
+            "median": 9.415
+          },
+          {
+            "ageYears": 0.73,
+            "median": 9.155
+          },
+          {
+            "ageYears": 0.74,
+            "median": 8.908
+          },
+          {
+            "ageYears": 0.75,
+            "median": 8.673
+          },
+          {
+            "ageYears": 0.76,
+            "median": 8.45
+          },
+          {
+            "ageYears": 0.77,
+            "median": 8.24
+          },
+          {
+            "ageYears": 0.78,
+            "median": 8.041
+          },
+          {
+            "ageYears": 0.79,
+            "median": 7.853
+          },
+          {
+            "ageYears": 0.8,
+            "median": 7.676
+          },
+          {
+            "ageYears": 0.81,
+            "median": 7.509
+          },
+          {
+            "ageYears": 0.82,
+            "median": 7.353
+          },
+          {
+            "ageYears": 0.83,
+            "median": 7.207
+          },
+          {
+            "ageYears": 0.84,
+            "median": 7.07
+          },
+          {
+            "ageYears": 0.85,
+            "median": 6.943
+          },
+          {
+            "ageYears": 0.86,
+            "median": 6.825
+          },
+          {
+            "ageYears": 0.87,
+            "median": 6.716
+          },
+          {
+            "ageYears": 0.88,
+            "median": 6.615
+          },
+          {
+            "ageYears": 0.89,
+            "median": 6.523
+          },
+          {
+            "ageYears": 0.9,
+            "median": 6.438
+          },
+          {
+            "ageYears": 0.91,
+            "median": 6.36
+          },
+          {
+            "ageYears": 0.92,
+            "median": 6.289
+          },
+          {
+            "ageYears": 0.93,
+            "median": 6.226
+          },
+          {
+            "ageYears": 0.94,
+            "median": 6.168
+          },
+          {
+            "ageYears": 0.95,
+            "median": 6.117
+          },
+          {
+            "ageYears": 0.96,
+            "median": 6.071
+          },
+          {
+            "ageYears": 0.97,
+            "median": 6.03
+          },
+          {
+            "ageYears": 0.98,
+            "median": 5.994
+          },
+          {
+            "ageYears": 0.99,
+            "median": 5.962
+          },
+          {
+            "ageYears": 1.0,
+            "median": 5.933
+          }
+        ]
+      }
+    }
+  },
+  "pairedInfantComparison": {
+    "source": {
+      "authors": "Johannsen et al.",
+      "year": 2018,
+      "title": "Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development",
+      "doi": "10.1210/jc.2018-00482",
+      "url": "https://doi.org/10.1210/jc.2018-00482",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/29917083/",
+      "table": "Table 1"
+    },
+    "statistic": "geometricMean",
+    "population": {
+      "termBirthsOnly": true,
+      "gestationalAgeMinWeeks": 37,
+      "gestationalAgeMaxWeeksPlusDays": "41+6",
+      "participantsTotal": 1840,
+      "maleParticipantsTotal": 1041,
+      "femaleParticipantsTotal": 799,
+      "design": "Pooled cross-sectional data from three cohorts; one blood sample per child; hormone-specific n below."
+    },
+    "ageBands": [
+      {
+        "id": "2_to_under_3_5_months",
+        "label": "2–<3,5 mies.",
+        "minAgeMonths": 2,
+        "minInclusive": true,
+        "maxAgeMonths": 3.5,
+        "maxInclusive": false
+      },
+      {
+        "id": "3_5_to_5_months",
+        "label": "3,5–5 mies.",
+        "minAgeMonths": 3.5,
+        "minInclusive": true,
+        "maxAgeMonths": 5,
+        "maxInclusive": true
+      }
+    ],
+    "hormones": {
+      "amh": {
+        "label": "AMH",
+        "unit": "pmol/L",
+        "assay": "Double-antibody enzyme immunometric assay, Immunotech / Beckman Coulter, Marseille",
+        "limitOfDetection": 2,
+        "bands": {
+          "2_to_under_3_5_months": {
+            "male": {
+              "geometricMean": 1013,
+              "n": 48
+            },
+            "female": {
+              "geometricMean": 11,
+              "n": 339
+            }
+          },
+          "3_5_to_5_months": {
+            "male": {
+              "geometricMean": 1183,
+              "n": 12
+            },
+            "female": {
+              "geometricMean": 15,
+              "n": 67
+            }
+          }
+        }
+      },
+      "inhb": {
+        "label": "Inhibina B",
+        "unit": "pg/mL",
+        "assay": "Double-antibody enzyme immunometric assay, Oxford Bio-Innovation / Serotec",
+        "limitOfDetection": 20,
+        "bands": {
+          "2_to_under_3_5_months": {
+            "male": {
+              "geometricMean": 379,
+              "n": 571
+            },
+            "female": {
+              "geometricMean": 62,
+              "n": 423
+            }
+          },
+          "3_5_to_5_months": {
+            "male": {
+              "geometricMean": 379,
+              "n": 158
+            },
+            "female": {
+              "geometricMean": 67,
+              "n": 106
+            }
+          }
+        }
+      }
+    },
+    "displayNotes": [
+      "Display each age band as a grouped comparison of published geometric means, not a time-resolved concentration curve.",
+      "Use one shared unit and one shared scale for the two sexes within the same hormone.",
+      "Do not independently normalize each sex to its own maximum.",
+      "These population summaries are not individual patient targets, diagnostic cutoffs or reference interval endpoints.",
+      "Do not smoothly connect the two age bands as if they established a continuous trajectory.",
+      "Do not extrapolate these data outside 2 to 5 months or to preterm infants.",
+      "For AMH in the older band, only 12 boys contributed; preserve this denominator in optional source details.",
+      "No percentile endpoints are included in this mockup dataset; comparisons show means only."
+    ]
+  }
+}

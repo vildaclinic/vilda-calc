@@ -46,6 +46,23 @@ describe('LabUnitConverter', () => {
     expect(result.value).toBe(2.5);
   });
 
+  it('przelicza inhibinę B bez zmiany wartości między pg/mL i ng/L', () => {
+    const converter = loadConverter();
+    for (const [fromUnit, toUnit] of [['pg/mL', 'ng/L'], ['ng/L', 'pg/mL']]) {
+      const result = converter.convert({ substanceId: 'inhibin_b', value: '80,5', fromUnit, toUnit });
+      expect(result.ok).toBe(true);
+      expect(result.value).toBe(80.5);
+    }
+  });
+
+  it.each([{}, { sex: 'M', age: 0.25 }, { sex: 'F', age: 0.25 }, { sex: 'M', age: 35 }])(
+    'nie przypisuje dawnego zakresu dorosłych inhibinie bez zapisanego kontekstu oceny: %j',
+    patient => {
+      const result = loadConverter().evaluate('inhibin_b', { value: 80, unit: 'pg/mL', patient });
+      expect(result).toMatchObject({ ok: true, status: 'no_range', low: null, high: null, matched: false });
+    }
+  );
+
   it('odrzuca wartości ujemne i nieznane jednostki', () => {
     const converter = loadConverter();
 

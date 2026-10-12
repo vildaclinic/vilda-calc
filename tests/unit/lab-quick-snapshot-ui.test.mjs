@@ -189,7 +189,7 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     expect(visible).not.toContain('Mayo');
     const details = descendants(host, (node) => node.tagName === 'details');
     expect(details.every((node) => node.getAttribute('open') === null)).toBe(true);
-    expect(details.some((node) => node.textContent.includes('Źródło zakresu:'))).toBe(true);
+    expect(details.some((node) => node.textContent.includes('AnshLite LH CLIA'))).toBe(true);
     expect(details.some((node) => node.textContent.includes('Mayo'))).toBe(true);
   });
 
@@ -197,10 +197,12 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     const host = documentDouble().createElement('div');
     ui.renderAssessment(host, saved(quick({ assay: {}, treatment: { context: 'unknown' }, puberty: {} })), { compact: true });
     const visible = visibleText(host);
-    expect(visible).not.toContain('Nie potwierdzono zgodnej metody');
-    expect(visible).not.toContain('Nie ustalono stosowania');
-    expect(host.textContent).toContain('Nie ustalono stosowania');
-    expect(descendants(host, (node) => node.tagName === 'details').some((node) => node.textContent.includes('Nie wybrano zgodnego profilu'))).toBe(true);
+    const scope = 'Zakresy dotyczą oznaczenia bazalnego bez leczenia hormonalnego; tych warunków nie potwierdzono.';
+    const method = 'Nie można porównać stężenia z normami aplikacji bez zgodnej metody oznaczenia.';
+    expect(visible).not.toContain(method);
+    expect(visible).not.toContain(scope);
+    expect(host.textContent.split(scope)).toHaveLength(2);
+    expect(descendants(host, (node) => node.tagName === 'details').some((node) => node.textContent.includes(method))).toBe(true);
   });
 
   it('komparator zakresu nie udaje źródła, populacji ani metody laboratorium', () => {
@@ -215,7 +217,7 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     expect(visibleText(host)).toContain('dają różne porównania');
   });
 
-  it('historia wyświetla zamrożony komparator i kontekst bez silnika ani dzisiejszego pacjenta', () => {
+  it('historia wyświetla zamrożony komparator, zachowując kontekst w danych bez silnika ani dzisiejszego pacjenta', () => {
     const evaluation = quick({ value: '<2', reportedRange: { text: '1-3', unit: 'IU/L' } });
     const assessment = saved(evaluation);
     expect(assessment.evaluation.reportedRange.status).toBe('indeterminate');
@@ -226,7 +228,10 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     loadBrowserScript('vilda_lab_assessment_ui.js', win);
     const host = doc.createElement('div');
     win.VildaLabAssessmentUI.renderAssessment(host, assessment, { compact: true });
-    expect(visibleText(host)).toContain('Kontekst z formularza głównego');
+    expect(host.textContent).not.toContain('Kontekst z formularza głównego');
+    expect(descendants(host, (node) => ['dl', 'dt', 'dd'].includes(node.tagName))).toHaveLength(0);
+    expect(assessment.evaluation.input.contextBasis).toBe('current-patient');
+    expect(ui.buildView(assessment.evaluation).context).toContainEqual({ label: 'Podstawa oceny', value: 'Kontekst z formularza głównego' });
     expect(visibleText(host)).toContain('Porównanie z podanym zakresem niejednoznaczne');
     expect(visibleText(host)).toContain('1-3 IU/L');
     expect(host.textContent).not.toContain('0-100');

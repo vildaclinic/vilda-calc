@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "verifiedDate": "2026-10-10",
+  "analyte": "inhb",
+  "notClinicalReference": true,
+  "extraction": "Exact published table values, visually verified against the user-supplied full text; no figure digitization.",
+  "source": {
+    "id": "baccarelli2001",
+    "label": "Baccarelli 2001 · inhibina B",
+    "title": "Activin A serum levels and aging of the pituitary-gonadal axis: a cross-sectional study in middle-aged and elderly healthy subjects",
+    "doi": "10.1016/S0531-5565(01)00117-6",
+    "url": "https://doi.org/10.1016/S0531-5565(01)00117-6",
+    "table": 1,
+    "printedPage": 1406,
+    "pdfPage": 4,
+    "version": "Experimental Gerontology 36:1403–1412, published full text",
+    "sha256": "27e0e3f5b9d4b8d6cf83065b1d7c1b7833d4355b3ad32d676a050d5caa1fa502",
+    "method": "Serotec (Oxford) sandwich ELISA, historyczna metoda",
+    "specimen": "serum",
+    "statistic": "arithmetic-mean",
+    "unit": "pg/mL",
+    "participants": 73,
+    "population": "Mężczyźni w dobrym stanie zdrowia; Mediolan, Włochy; badanie przekrojowe.",
+    "assay": {
+      "method": "Solid-phase sandwich ELISA",
+      "manufacturer": "Serotec, Oxford, UK",
+      "sensitivityPgMl": 15,
+      "generation": "Historical; not Beckman Gen II",
+      "crossAssayConversion": null
+    },
+    "compatibleAssayMethodIds": [
+      "serotec-inhibin-b-elisa"
+    ],
+    "limitations": [
+      "Średnie arytmetyczne grup wieku, nie mediany ani dokładne krzywe zależne od wieku.",
+      "Odchylenie standardowe opisuje rozrzut w grupie; nie jest zakresem referencyjnym i nie służy do klasyfikacji wyniku.",
+      "Małe najstarsze grupy: 18 mężczyzn w grupie 80–90 lat i 9 w grupie 90–101 lat.",
+      "Historyczny test Serotec; brak zweryfikowanego przeliczenia na Gen II lub inne metody.",
+      "Badanie przekrojowe, z doborem osób w lepszym niż przeciętny stanie zdrowia; nie opisuje indywidualnego starzenia.",
+      "Dokładna przynależność wspólnych granic wieku nie została opisana przez autorów; aplikacja stosuje jawną własną konwencję.",
+      "Nie interpolujemy między grupami ani z innymi publikacjami. Powyżej 101 lat źródło nie zapewnia odniesienia.",
+      "Kobietom nie oznaczano inhibiny B; brak wyniku nie oznacza stężenia zerowego ani poniżej LOD."
+    ]
+  },
+  "sex": "male",
+  "ageRouting": {
+    "sourceBoundaryDefinition": "Published group labels overlap at 50, 65, 80 and 90 years; the authors do not define inclusivity. Group mean ages are not supplied.",
+    "applicationPolicy": "Use age ≥80 and <90 for the published 80–90 group; age ≥90 and ≤101 for the published 90–101 group. These are explicit application conventions, not source-defined boundaries.",
+    "patientComparisonGroups": [
+      {
+        "groupId": "80-90",
+        "minAge": 80,
+        "maxAge": 90,
+        "maxAgeExclusive": true
+      },
+      {
+        "groupId": "90-101",
+        "minAge": 90,
+        "maxAge": 101,
+        "maxAgeExclusive": false
+      }
+    ],
+    "existingLifespanPolicy": "The existing Borelli-Kjær lifespan profile remains unchanged, including its inclusive maximum age of 80. These observations form a separate group chart; they do not extend or replace a lifespan patient-point profile."
+  },
+  "groups": [
+    {
+      "id": "30-50",
+      "ageLabel": "30–50 lat",
+      "sourceAgeLabel": "30–50 years",
+      "minAge": 30,
+      "maxAge": 50,
+      "n": 20,
+      "mean": 198,
+      "sd": 60,
+      "active": false,
+      "applicationMaxAgeExclusive": true
+    },
+    {
+      "id": "50-65",
+      "ageLabel": "50–65 lat",
+      "sourceAgeLabel": "50–65 years",
+      "minAge": 50,
+      "maxAge": 65,
+      "n": 14,
+      "mean": 209,
+      "sd": 66,
+      "active": false,
+      "applicationMaxAgeExclusive": true
+    },
+    {
+      "id": "65-80",
+      "ageLabel": "65–80 lat",
+      "sourceAgeLabel": "65–80 years",
+      "minAge": 65,
+      "maxAge": 80,
+      "n": 12,
+      "mean": 165,
+      "sd": 121,
+      "active": false,
+      "applicationMaxAgeExclusive": true
+    },
+    {
+      "id": "80-90",
+      "ageLabel": "80–90 lat",
+      "sourceAgeLabel": "80–90 years",
+      "minAge": 80,
+      "maxAge": 90,
+      "n": 18,
+      "mean": 129,
+      "sd": 101,
+      "active": true,
+      "applicationMaxAgeExclusive": true
+    },
+    {
+      "id": "90-101",
+      "ageLabel": "90–101 lat",
+      "sourceAgeLabel": "90–101 years",
+      "minAge": 90,
+      "maxAge": 101,
+      "n": 9,
+      "mean": 78,
+      "sd": 45,
+      "active": true,
+      "applicationMaxAgeExclusive": false
+    }
+  ],
+  "displayPolicy": {
+    "type": "separate-age-group-means",
+    "ageInterpolation": false,
+    "dispersion": "SD; not clinical reference limits.",
+    "continuousLifespanProfile": false
+  }
+}
