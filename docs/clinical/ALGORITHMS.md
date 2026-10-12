@@ -4475,10 +4475,65 @@ Testy pokrycia, każdy z mutacją wyłapaną w tym PR:
 
 **Czego ta zmiana NIE robi.** Podpowiedź daty w oknie Karty („Popraw pomiar") i data w karcie porównania dla rekordów zapisanych ponownie przed #592 zostają jak były. Oba zachowania są wcześniejsze niż #592 i ten PR ich nie dotyka; przegląd uznał je za poza zakresem. Wskaźnik zapisu po poprawce w Karcie zachowuje się jak przed zmianą (wpis P-ODTWORZ-WIEK-2).
 
+*(Aktualizacja: P-ODTWORZ-WIEK-4 — punkt 1 wprowadził regresję w powłoce: ukryty panel dostawał lustrem nowe wartości przy starej bazie, a po F5 Start liczył wiek na dziś. Punkt 2 rozbijał wiek na niezależne pola i przy awansie po usunięciu zostawiał niezapisaną zmianę wieku usuniętej wizyty. Poprawki są we wpisie niżej.)*
+
 **Do decyzji właściciela.**
 1. Akceptacja kliniczna.
 2. Wpis pole po polu: pole zmienione przez lekarza w formularzu wygrywa z poprawką z Karty do zapisu; zapis z formularza da wtedy wartość lekarza.
 3. Przejście formularza na awansowaną wizytę po usunięciu bieżącego pomiaru (opisane tu jawnie).
+
+### P-ODTWORZ-WIEK-4 — bazę odświeżają też panele-rodzeństwo w powłoce; wiek jako jedna wielkość; awans po usunięciu w całości (SW 1.1.241, `vilda_baseline_pacjenta.js` 4, `vilda_vault.js` 210, 2026-10-12, przegląd po P-ODTWORZ-WIEK-3)
+
+**Skąd.** Piąta runda przeglądu adwersaryjnego, tym razem kodu P-ODTWORZ-WIEK-3 (#631): 3 perspektywy, każde znalezisko sprawdzał niezależny weryfikator na prawdziwej stronie. Potwierdzono dwie regresje #631 i dwie drobne sprawy, a właściciel zdecydował: „Pełna poprawka teraz".
+
+**Reguła** bez zmian (Rata B, P3): wzrost i masę znamy wyłącznie z chwili pomiaru; data urodzenia podpowiada wiek tylko **następnego** pomiaru.
+
+**Zmiana (`vilda_baseline_pacjenta.js` 3 → 4, `vilda_vault.js`).**
+
+1. **Panele-rodzeństwo odświeżają bazę (regresja #631, poważna).** Od #631 lustro formularza przenosi poprawkę z Karty do pozostałych paneli powłoki, ale powiadomienie sejfu (`onPatientSaved`) dostaje tylko ramka, która zmieniała rekord. Ukryty, wcześniej otwarty DocPro (wystarczała 1 s) miał więc nowe wartości (172,5) przy starej bazie (172). Jego moduł daty urodzenia brał je za nowy pomiar i liczył wiek na dziś: 16 l. 11 m., „Wiek na dzień dzisiejszej wizyty", `measuredAtISO` z dzisiejszą datą. Przy zamknięciu karty albo F5 autozapis tego panelu nadpisywał wspólną sesję. Po F5 Start pokazywał wiek na dziś, a „Zapisz" stemplował dzisiejszą datę — to błąd G3/G6, który #631 miał usunąć. Przed #631 poprawka się cofała, ale wiek i data zostawały dobre. Teraz ramka, która odświeżyła bazę po zmianie w miejscu (`isUpdate`), prosi ramki-rodzeństwo tego samego originu (`parent.frames`) o to samo (`VildaBaselinePacjenta.refreshFromSibling`). Razem z prośbą podaje listę pól wizyty, które sama wpisała. Rodzeństwo przechodzi strażnika bieżącego pacjenta i tożsamości, odświeża bazę i wpisuje tylko te pola. Decyzji nie liczy u siebie, bo jego baza bywa o wizytę starsza (własny zapis innego panelu jej nie odświeża), a tygodni lustro nie przenosi. Rodzeństwo nie wymusza też zapisu wspólnej sesji: zapisała ją ramka z powiadomieniem, a jego zwykły autozapis zostaje jak był. Dalej nie przekazuje (bez pętli). Moduł ładują tylko strony z formularzem wizyty (`index.html`, `docpro.html`, `kalkulator-klirens.html`).
+2. **Wiek jako jedna wielkość (regresja #631, drobna).** Lata, miesiące i tygodnie idą razem. Gdy lekarz zmienił w formularzu którekolwiek z nich (a pole nie jest tylko do odczytu z daty urodzenia), zostaje cały jego wiek. Inaczej poprawka wieku z Karty wchodzi w całości. Dotąd zmiana miesięcy w formularzu (5/11 → 5/10) i lat w Karcie (→ 6/0) składała się w 6 l. 10 m. — wiek, którego nikt nie wpisał.
+3. **Inna wizyta wchodzi w całości (regresja #631, poważna, rzadka).** Gdy nowa głowa jest inną wizytą, wpisywane są wszystkie pola tej wizyty. Tak jest po usunięciu bieżącego pomiaru z awansem starszej wizyty. Sejf oznacza wtedy powiadomienie znacznikiem `promoted` (`vilda_vault.js`, `deleteMeasurementRow`). Moduł rozpoznaje też inny `timestampISO` (poprawka w miejscu go nie zmienia). Sam znacznik czasu nie wystarczał: po pierwszym awansie bez daty `timestampISO` znika, więc drugi awans z rzędu wyglądał jak poprawka w miejscu. Dotąd niezapisana ręczna zmiana wieku USUWANEJ wizyty zostawała przy starszej (bez daty urodzenia; u niemowlęcia centyle 81./87. → 12./8.).
+
+**Źródło i populacja.** Wzory, tablice, progi, interpolacja i jednostki są bez zmian. Centyle w przykładach liczą produkcyjne funkcje formularza: siatki WHO 2006 (`LMS_INFANT_*`) poniżej 36 mies., OLAF (domyślne źródło formularza) dla starszych.
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, prawdziwa strona albo prawdziwe moduły; Europe/Warsaw; dane fikcyjne).**
+
+| Wejście | Przed zmianą (`audyt` ff1c098) | Po zmianie |
+|---|---|---|
+| Powłoka: chłopiec ur. 20-07-2009, 172 cm / 60 kg, zapis 17-06-2026. 10-07: „Odtwórz zapis" na Start, DocPro otwarty na 1 s, powrót na Start, Karta: wzrost 172 → 172,5, F5, „Zapisz" | ukryty DocPro: 172,5, 16/11, baza 172, data 2026-07-10; po F5: 16 l. 11 m.; zapis: 172,5, 16/11, 2026-07-10 | ukryty DocPro: 172,5, 16/10, baza 172,5, data 2026-06-17; po F5: 16 l. 10 m., „Pomiar z 17-06-2026"; zapis: 172,5, 16/10, 2026-06-17 |
+| Bez daty urodzenia, wizyta 5 l. 11 m.; lekarz: miesiące 10 (bez zapisu); Karta: 6 l. 0 m. | formularz 6 l. 10 m. | formularz 5 l. 10 m. (wiek lekarza); kontrola bez zmiany lekarza: 6 l. 0 m. |
+| Bez daty urodzenia, wizyta 5 l. 2 m. (110 / 19); lekarz: miesiące 1 (bez zapisu); usunięcie bieżącego pomiaru, awans wizyty 5 l. 0 m. (108 / 18) | formularz 5 l. **1** m., 108 / 18 | formularz 5 l. 0 m., 108 / 18 |
+| Bez daty urodzenia, 5 l. 2 m.; lekarz: miesiące 4; Karta: miesiące 3 i masa 19,5 | formularz 5 l. 4 m., 19,5 (bez zmian, teraz z testem) | jak obok |
+
+**Wpływ kliniczny.** W powłoce poprawka z Karty nie zamienia już po F5 zapisanej wizyty w wizytę „na dziś" i nie stempluje dzisiejszej daty. Wiek pokazany i zapisany to zawsze wiek, który ktoś wpisał. Po usunięciu bieżącego pomiaru formularz pokazuje spójną starszą wizytę. Nowa wizyta liczy się jak dotąd.
+
+**Przegląd tej zmiany (runda 6: 2 perspektywy, każde znalezisko u niezależnego weryfikatora na prawdziwej stronie).** Potwierdzone 4 drobne znaleziska w pierwszej wersji tego PR. Wszystkie są poprawione w nim samym:
+- **Odbiorca liczył wiek ze swoich tygodni.** Lustro ich nie przenosi, więc ukryty DocPro wpisywał wiek z Karty nad niezapisanymi tygodniami lekarza. Zapis z DocPro gubił 0 l. 1 m. + 7 tyg.
+- **Odbiorca ze starszą bazą brał zmianę w miejscu za „inną wizytę”.** Wpisywał całą głowę, a lustro przenosiło ją na Start: niezapisane 16/9 albo 5/4 lekarza wracało do zapisanego wieku. Działo się tak nawet po zmianie samej daty starszego wiersza.
+- **Brak wykrycia drugiego z rzędu awansu bez znacznika czasu.** Wiek usuwanej wizyty zostawał przy awansowanej.
+
+Poprawki: lista pól od nadawcy, odbiorca bez własnej decyzji i bez wymuszonego zapisu, znacznik `promoted` z sejfu.
+
+**Testy.** `tests/unit/odtworzenie-wiek-pomiaru-2.test.mjs` (31, prawdziwe moduły, w tym prawdziwy `vilda_vault.js` dla znacznika `promoted`).
+- Na `audyt` ff1c098 czerwonych jest 7 z 31 (`vilda_baseline_pacjenta.js` i `vilda_vault.js` są takie same w d0c1bda): powiadamianie rodzeństwa z listą pól i bez przekazywania dalej, wiek jako jedna wielkość, pełny wpis innej wizyty, znacznik `promoted` w powiadomieniu sejfu, odbiorca ze starszą bazą, odbiorca z tygodniami nieprzeniesionymi lustrem i awans bez znaczników czasu.
+- Na pierwszej wersji tego PR (a50339b) czerwonych jest 5 z 31: powiadamianie rodzeństwa (bez listy pól) i cztery przypadki z przeglądu — znacznik `promoted`, odbiorca ze starszą bazą, odbiorca z tygodniami i awans bez znaczników czasu.
+- Test pokrycia „to samo pole zmienione przez lekarza i Kartę” jest zielony na obu wersjach; mutacja warunku „lekarz zmienił wiek” daje 2 czerwone.
+
+`tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs`:
+- powłoka bez ponownego wejścia do DocPro, z F5 i zapisem — czerwony na `audyt` (ukryty DocPro 16/11, baza 172, 2026-07-10);
+- ukryty DocPro ze starszą bazą i niezapisany wiek lekarza po zmianie daty starszego wiersza w Karcie — czerwony na a50339b (Start 16/11 zamiast 16/9).
+
+Testy powłoki (odtwarzanie, P-ODTWORZ-WIEK-3, -4) przeszły 3 razy z rzędu (15 z 15).
+
+Zmierzone przy okazji, bez zmian kodu: wskaźnik zapisu po poprawce w Karcie pokazuje „zapisane”, a „Niezapisane zmiany” dopiero po następnym wpisie — tak samo na `audyt` i po zmianie (jak we wpisie P-ODTWORZ-WIEK-2).
+
+**Czego ta zmiana NIE robi.** Panele bez modułu linii bazowej nie odświeżają bazy. To strony bez formularza wizyty, więc nie ma tam czego liczyć. Zmiany z innego urządzenia albo z synchronizacji nadal nie wołają `onPatientSaved` (jak dotąd).
+
+**Do decyzji właściciela.**
+1. Akceptacja kliniczna.
+2. Wiek jako jedna wielkość: wiek wpisany przez lekarza w formularzu wygrywa w całości z poprawką wieku z Karty.
+3. Panele-rodzeństwo w powłoce odświeżają bazę po zmianie w miejscu i wpisują dokładnie pola wpisane przez panel, w którym pracuje lekarz.
+4. Znacznik `promoted` w powiadomieniu sejfu o zmianie w miejscu (nowe pole powiadomienia, bez zmiany formatu rekordu).
 
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
