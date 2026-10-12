@@ -4394,8 +4394,8 @@ Testy pokrycia, każdy z mutacją wyłapaną w tym PR:
 Poprawki: lista pól od nadawcy, odbiorca bez własnej decyzji i bez wymuszonego zapisu, znacznik `promoted` z sejfu.
 
 **Testy.** `tests/unit/odtworzenie-wiek-pomiaru-2.test.mjs` (31, prawdziwe moduły, w tym prawdziwy `vilda_vault.js` dla znacznika `promoted`).
-- Na `audyt` ff1c098 czerwone są: powiadamianie rodzeństwa z listą pól i bez przekazywania dalej, wiek jako jedna wielkość oraz pełny wpis innej wizyty.
-- Na pierwszej wersji tego PR (a50339b) czerwone są dodatkowo: znacznik `promoted` w powiadomieniu sejfu, odbiorca ze starszą bazą, odbiorca z tygodniami nieprzeniesionymi lustrem i awans bez znaczników czasu.
+- Na `audyt` ff1c098 czerwonych jest 7 z 31 (`vilda_baseline_pacjenta.js` i `vilda_vault.js` są takie same w d0c1bda): powiadamianie rodzeństwa z listą pól i bez przekazywania dalej, wiek jako jedna wielkość, pełny wpis innej wizyty, znacznik `promoted` w powiadomieniu sejfu, odbiorca ze starszą bazą, odbiorca z tygodniami nieprzeniesionymi lustrem i awans bez znaczników czasu.
+- Na pierwszej wersji tego PR (a50339b) czerwonych jest 5 z 31: powiadamianie rodzeństwa (bez listy pól) i cztery przypadki z przeglądu — znacznik `promoted`, odbiorca ze starszą bazą, odbiorca z tygodniami i awans bez znaczników czasu.
 - Test pokrycia „to samo pole zmienione przez lekarza i Kartę” jest zielony na obu wersjach; mutacja warunku „lekarz zmienił wiek” daje 2 czerwone.
 
 `tests/e2e/odtworzenie-wiek-pomiaru.spec.mjs`:
