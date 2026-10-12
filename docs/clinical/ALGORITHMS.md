@@ -13938,6 +13938,63 @@ sejfu opóźnionymi o 150/250/350 ms (kopia robocza testu): na bazie 1/1/3 z 9 p
 1.1.121 wydał P-SESJA-OBCA, #492; 1.1.122 bierze P-CEL-WLASNY-ZAPIS, #494, a 1.1.123 P-ZAPISY-DWIE-KARTY, #495), fixture
 wersji.
 
+## „Wyczyść wszystkie pola” zamyka pytanie i komunikat korekty nazwiska (P-NAME-FIX-WYCZYSC, SW 1.1.237, `vilda_name_fix.js` 5, 2026-10-12)
+
+**Zgłoszenie właściciela (2026-10-12).** Wczytanie starego rekordu jednopolowego → pytanie „Rozdziel imię i nazwisko”
+→ wybór → komunikat „Zapisano. Nazwisko: …, Imię: …. Rekord pacjenta poprawiony — następnym razem wczyta się bez
+pytania.” → „Wyczyść wszystkie pola”: formularz główny pusty, a komunikat o poprzednim pacjencie zostaje.
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dane referencyjne ani interpretacja. Zmienia się tylko czas
+życia pytania i komunikatu modułu oraz los spóźnionych odpowiedzi po wyczyszczeniu formularza.
+
+**Przyczyna.** `clearAllData` (przycisk „Wyczyść wszystkie pola”; tą samą drogą idą wylogowanie i blokada sejfu,
+a w powłoce `vilda_chrome.js` powtarza czyszczenie w każdej ramce) rozgłasza `vilda:user-state-cleared` na `window`.
+`vilda_name_fix.js` tego zdarzenia nie słuchał: komunikat znikał dopiero przy kolejnym `vilda:patient-loaded`, a pytanie
+także przy przejęciu innego pacjenta w powłoce (P-PRZEJECIE-MODULY). Na tej samej ścieżce (zmierzone na `audyt`
+`99fd1c0`, dane fikcyjne):
+1. komunikat „Zapisano…” (tak samo „Zostawiono całość w polu Nazwisko…”) zostawał przy pustym formularzu — zgłoszenie;
+   w powłoce na Start i w DocPro, także po „Wyczyść” klikniętym w innej ramce;
+2. otwarte pytanie zostawało otwarte przy pustym formularzu, a wybór wpisywał imię i nazwisko poprzedniego pacjenta
+   z powrotem do wyczyszczonych pól;
+3. odczyt sejfu w toku podczas „Wyczyść”, gdy zdarzenie przyszło przy pustym formularzu (zabezpieczenie v3 nie ma
+   wtedy czego porównać): spóźniona odpowiedź wpisywała nazwę do pola Nazwisko i pokazywała pytanie;
+4. zapis korekty w toku podczas „Wyczyść”, zakończony błędem: „Poprawiono w tej sesji…” pojawiało się na pustym
+   formularzu.
+
+**Co jest (`vilda_name_fix.js` v5).** Nasłuch `vilda:user-state-cleared` na `window` (nie na `document` — A2282) zamyka
+pytanie wraz ze stanem „pytanie otwarte”, chowa komunikat i podbija `loadSeq`, więc trwający odczyt sejfu jest
+odrzucany. Ostrzeżenie o nieudanym zapisie pokazuje się tylko wtedy, gdy od wyboru nie było nowego wczytania ani
+czyszczenia (z kodu wynika, że dotąd mogło trafić także na formularz pacjenta wczytanego w trakcie zapisu; tego
+wariantu nie mierzono osobno). Zostają wybór zapamiętany w sesji (`resolved`) i jego zapis do rekordu — dotyczą rekordu, nie formularza.
+Ponowne wczytanie pacjenta po „Wyczyść” idzie bez pytania, gdy wybór padł, a gdy nie padł — pyta od nowa.
+
+**Czego zmiana nie robi.** Nie zmienia treści pytania i komunikatów, reguły podziału, zapisu korekty
+(`updateSnapshotPayload`), formatu rekordu ani synchronizacji. Nie zmienia reakcji na przejęcie pacjenta w powłoce
+(`vilda:persist-restored`); panel z danymi innego pacjenta przeładowuje się przy pokazaniu (P-POWLOKA-OBCY).
+
+**Wpływ kliniczny.** Brak zmiany wyników i interpretacji. Integralność formularza: po „Wyczyść” nic o poprzednim
+pacjencie nie wraca do pól ani do komunikatów modułu.
+
+**Przypadki (e2e, `tests/e2e/name-fix.spec.mjs`, dane fikcyjne; ścieżka lekarza: `applyLoadedData` + zdarzenie,
+okno „Co chcesz zrobić?” → „Nowy pomiar”, prawdziwy przycisk „Wyczyść wszystkie pola”).**
+
+| Scenariusz | Oczekiwany wynik | Na `audyt` `99fd1c0` |
+|---|---|---|
+| rekord jednopolowy „Fikcyjna Testowa” → wybór Nazwisko „Fikcyjna”, Imię „Testowa” → „Zapisano…” → „Wyczyść” | pola puste, bez komunikatu i pytania; rekord zachowuje wybór | pada (komunikat zostaje) |
+| „Fikcyjny Pytany” → pytanie otwarte → „Wyczyść” → ponowne wczytanie | pytanie znika, rekord bez części; po ponownym wczytaniu pytanie wraca | pada (pytanie zostaje) |
+| „Fikcyjna Zapisowa” → wybór, zapis korekty wstrzymany → „Wyczyść” → zapis kończy się błędem | bez komunikatu przy pustym formularzu | pada (komunikat zostaje już po „Wyczyść”) |
+| Kontrola: jw. bez „Wyczyść” | „Poprawiono w tej sesji.”, pola z wyboru | przechodzi |
+| „Fikcyjny Spozniony”: zdarzenie przy pustym formularzu, odczyt wstrzymany → „Wyczyść” → odpowiedź | pola puste, bez pytania | pada (nazwa w polu Nazwisko, pytanie) |
+
+Mutanty — każdy wywraca co najmniej jeden z nowych testów: bez ukrycia komunikatu; bez zamknięcia pytania; zamknięcie
+bez zerowania stanu „pytanie otwarte” (ponowne wczytanie nie pyta); bez podbicia `loadSeq` (wraca spóźnione ostrzeżenie
+i nazwa z odczytu); bez strażnika ostrzeżenia w `onPick`; nasłuch na `document` zamiast `window`. Powłoka `app.html`
+sprawdzona jednorazowym skryptem Playwright (poza zestawem): komunikat na Start znika po „Wyczyść”, komunikat w DocPro
+znika po „Wyczyść” klikniętym na Start; na `99fd1c0` oba zostawały.
+
+**Wersje.** `vilda_name_fix.js` 4 → 5 (index, docpro), precache (append-only), `SW_VERSION` 1.1.236 → 1.1.237 (+ pin;
+1.1.235 wydał P-ODTWORZ-WIEK-3, a 1.1.236 poprawka krzywej estradiolu u kobiet, #633), fixture wersji.
+
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe
