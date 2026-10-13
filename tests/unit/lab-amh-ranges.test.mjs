@@ -27,6 +27,7 @@ describe('AMH — verified Mayo age reference, independent of chart medians', ()
       status: exclusive ? 'above' : 'within', matched: true, is_default: false,
       amh_reference: true, clinical_reference_kind: 'age-source-comparison',
       source_method: 'Roche Elecsys AMH ECLIA', source_material: 'serum', source_ids: ['mayo_test_amh'] });
+    expect(result.source_population).toBe('Populacja referencyjna katalogu Mayo AMH1 według wieku i płci; szczegóły kohorty niepodane');
     if (low !== null) {
       expect(evaluate(low, sex, lowerAge).status).toBe('within');
       expect(evaluate(low * .9, sex, lowerAge).status).toBe('below');

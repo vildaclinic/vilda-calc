@@ -10,6 +10,7 @@ function amhReferenceMetadata(substance) {
     reference_policy_version: policy.version || null,
     source_method: policy.method_name || null,
     source_material: policy.specimen || null,
+    source_population: policy.population_name || null,
     source_ids: policy.source_id ? [policy.source_id] : [],
     reason_codes: [],
     matched: false,
@@ -112,7 +113,7 @@ function compareAmhReference(value, range) {
 function finishAmhEvaluation(result, range, unit) {
   if (!range) return result;
   ['amh_reference', 'clinical_reference_kind', 'reference_policy_id', 'reference_policy_version',
-    'source_method', 'source_material', 'source_age_label', 'high_exclusive', 'no_interpretation'].forEach(function (key) {
+    'source_method', 'source_material', 'source_population', 'source_age_label', 'high_exclusive', 'no_interpretation'].forEach(function (key) {
     if (Object.prototype.hasOwnProperty.call(range, key)) result[key] = range[key];
   });
   result.range_id = range.id || null;

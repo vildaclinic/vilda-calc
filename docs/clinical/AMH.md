@@ -107,6 +107,8 @@ zapisana konfiguracja źródła nie spełnia tego warunku.
 Wybrany zakres zachowuje `amh_reference: true`,
 `clinical_reference_kind: 'age-source-comparison'`, identyfikator i wersję
 polityki, źródło, metodę/materiał **zakresu** oraz `high_exclusive`.
+`source_population` wskazuje populację katalogu Mayo według wieku i płci,
+z jawnym brakiem szczegółów kohorty; nie deklaruje populacji pacjenta.
 Brak kwalifikacji daje `no_interpretation: true`, krótką przyczynę i puste
 granice. `evaluate` zachowuje te metadane i rozpoznaje górny zakres bez dolnej
 granicy. Dla ścisłego `<13` stężenie **13 jest powyżej**; dolne zero nie jest

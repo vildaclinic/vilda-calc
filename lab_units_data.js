@@ -76,6 +76,7 @@
     "version": "2026-10-13.1",
     "source_id": "mayo_test_amh",
     "source_read_date": "2026-10-13",
+    "population_name": "Populacja referencyjna katalogu Mayo AMH1 według wieku i płci; szczegóły kohorty niepodane",
     "method_id": "roche-elecsys-amh",
     "method_name": "Roche Elecsys AMH ECLIA",
     "specimen": "serum",
