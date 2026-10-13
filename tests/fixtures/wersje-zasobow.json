@@ -12,8 +12,8 @@
   "sha256": "b52fd3ace2e4d73edea28097d5ad246f047227fa66195b18aa8e06103fe62c4b"
  },
  "app.js": {
-  "v": 233,
-  "sha256": "10fb34156f8ef1ae248bc4982a74269bd66f925fc6f140001b22cc3a186fa1c8"
+  "v": 234,
+  "sha256": "6558b5f388554b706ed83b08482c667a25e76556384f0d47deb128a1478a2d62"
  },
  "bisphos_therapy.js": {
   "v": 8,
@@ -968,8 +968,8 @@
   "sha256": "0345302f147c2eb15091b9413e40791131366aa80eb0ca4fa77d3e0062d33813"
  },
  "vilda_summary_cards.js": {
-  "v": 58,
-  "sha256": "fb50f0b7e6e47d275741e1bafaab4bf1a1274810e90955e87863df53aadeca52"
+  "v": 59,
+  "sha256": "4b0a1151087a7d0af55a15e9e8da35909f4a499b16b6bd4e88f2b46884e32967"
  },
  "vilda_sync.js": {
   "v": 39,

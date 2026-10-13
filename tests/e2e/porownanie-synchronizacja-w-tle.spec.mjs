@@ -18,6 +18,7 @@ const HASLO = 'E2e#PorownanieTlo!26';
 const MASA_POPRZEDNIO = '#prevSummaryContent tr[data-klucz="masa"] .pt-kol-poprzednio .pt-w';
 const MASA_DZIS = '#prevSummaryContent tr[data-klucz="masa"] .pt-dzis .pt-w';
 const MASA_ZMIANA = '#prevSummaryContent tr[data-klucz="masa"] .pt-zmiana';
+const WZROST_POPRZEDNIO_CENTYL = '#prevSummaryContent tr[data-klucz="wzrost"] .pt-kol-poprzednio .pt-s';
 
 const wpisz = (page, pola) => page.evaluate((p) => {
   Object.keys(p).forEach((id) => {
@@ -131,22 +132,25 @@ async function pacjentZPorownaniem(page) {
   await page.click('#vildaLcmNew');
   await page.waitForSelector('#vildaLoadChoiceModal', { state: 'detached', timeout: 8000 }).catch(() => {});
   await expect(page.locator('#prevSummaryWrap')).toBeVisible({ timeout: 15000 });
+  const centylPrzyWczytaniu = await page.locator(WZROST_POPRZEDNIO_CENTYL).textContent();
   await wpisz(page, { weight: '41', height: '136' });
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg', { timeout: 15000 });
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg', { timeout: 15000 });
   await page.waitForFunction(() => window.__wczytanie.impuls > 0, null, { timeout: 20000 });
   // Kartę z wczytania (vilda:patient-loaded, source 'pick') buduje odczyt z sejfu, a datę urodzenia formularz dostaje
-  // ok. 200 ms później. Kto wygra, zależy od tempa maszyny. Centyl wzrostu w kolumnie „Poprzednio” liczy się bez daty
-  // z pełnych miesięcy, a z datą — z dokładnego wieku (lmsNiemowleWiek → VildaDobAge.readExactAge), tu 39 → 38 centyl.
-  // Karta zbudowana przed datą słusznie powstaje więc od nowa przy pierwszej synchronizacji (na CI 142 mutacje, jedna
-  // przebudowa). Tu, po dacie w formularzu, karta jest budowana jawnie, jak po edycji pomiaru — pomiar zaczyna się od
-  // karty zgodnej z bieżącym stanem, niezależnie od wyścigu.
+  // ok. 200 ms później; kto wygra, zależy od tempa maszyny. Do P-POROWNANIE-WIEK centyl wzrostu w kolumnie „Poprzednio”
+  // liczył się bez daty z pełnych miesięcy, a z datą z dzisiejszego dokładnego wieku (tu 39 → 38 centyl), więc pierwsza
+  // synchronizacja przebudowywała kartę (na CI 142 mutacje, jedna przebudowa). Teraz liczy się z doby pomiaru zapisanej
+  // w rekordzie i nie zależy od formularza — sprawdza to porównanie niżej. Jawna przebudowa po dacie w formularzu zostaje,
+  // jak po edycji pomiaru: pomiar zaczyna się od karty zgodnej z bieżącym stanem, cokolwiek jeszcze zależałoby od pól.
   await expect(page.locator('#dobInput')).toHaveValue(dob);
   await wlaczLicznik(page);
   expect(await zdarzenia(page, [['vilda:measurement-changed', { patientId: pid, action: 'edit' }]]),
     'jawna przebudowa czyta pacjenta z sejfu').toBeGreaterThan(0);
   expect(await mutacjeKarty(page), 'jawne zdarzenie buduje kartę od nowa').toBeGreaterThan(0);
   await page.waitForFunction(() => performance.now() - window.__wczytanie.mutacjaKarty > 1500, null, { timeout: 20000 });
+  expect(await page.locator(WZROST_POPRZEDNIO_CENTYL).textContent(),
+    'centyl wzrostu z doby pomiaru, ten sam przed datą urodzenia w formularzu i po niej').toBe(centylPrzyWczytaniu);
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg');
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg');
   return pid;
