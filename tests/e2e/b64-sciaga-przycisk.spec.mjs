@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { spozaWindows1250 } from '../support/windows1250.mjs';
 
 // Przycisk „Kopiuj ściągę B.64" w karcie SGA (decyzja właściciela co do miejsca).
 //
@@ -82,7 +83,9 @@ test('dane z karty urodzeniowej realnie trafiają do zestawienia', async ({ page
   });
   const t = await klik(page);
 
-  expect(t).toMatch(/1\. Masa lub długość urodzeniowa < −2 SD[^\n]*— SPEŁNIONE/);
+  // P-SCHOWEK-HIS-2: w schowku zwykły minus — „−" HIS zamieniał w „?" albo „-" (vilda_schowek.js)
+  expect(t).toMatch(/1\. Masa lub długość urodzeniowa < -2 SD[^\n]*— SPEŁNIONE/);
+  expect(spozaWindows1250(t), 'ściąga w schowku bez znaków spoza Windows-1250').toEqual([]);
   expect(t).toMatch(/34\+2 tc/);
   expect(t).toMatch(/wg Niklasson/);
   // Kryteria spoza aplikacji zostają nazwane wprost, a nie jako brak danych.
