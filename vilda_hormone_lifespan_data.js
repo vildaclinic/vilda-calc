@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-13.2",
+  "version": "2026-10-13.3",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -26207,6 +26207,285 @@ const patientPointData = {
         "Coefficient estimates for continuous EN3parameter model were not located in the article. Raw author dataset is public on Figshare10.6084/m9.figshare.5082118.",
         "Not an Access or Elecsys conversion; do not seamlessly join Jopling plasma childhood and this serum adult series as one measured lifespan model.",
         "No extrapolation before30or after70; racial/cohort/assay generalizability limited."
+      ]
+    },
+    {
+      "id": "jopling2018-male-amh-age-12-under13",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 12,
+      "maxAge": 13,
+      "points": [
+        {
+          "ageYears": 12,
+          "value": 64.66
+        },
+        {
+          "ageYears": 13,
+          "value": 64.66
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH automated assay; all male samples diluted offline 1:10 in manufacturer diluent",
+      "population": "Pozostałości próbek szpitalnych chłopców; Manchester, Wielka Brytania. Wykluczono podejrzenie DSD lub innej endokrynopatii; zdrowie przyjęto na podstawie kwalifikacji, bez danych o stadium Tannera.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 12–14,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "12–14,9 lat",
+        "minAge": 12,
+        "maxAge": 14.9,
+        "n": 36,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 64.66,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej opublikowanej grupy wieku; nie jest medianą dokładnego wieku ani stadium Tannera. Węższy przedział wyboru w aplikacji nie zmienia grupy źródłowej."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "title": "Paediatric Anti-Müllerian Hormone measurement: Male and female reference intervals established using the automated Beckman Coulter Access AMH assay",
+        "sourceLocator": "Table 1, PDF page 4 of 8; Methods 2.1 / Results page 3; population limitations page 6",
+        "license": "CC BY-NC 4.0; cite numerical facts; do not commit source images or PDFs",
+        "table": 1,
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Full primary article and Table 1 reread; table PDF page visually checked.",
+        "sourceSha256": "c4b63200a31deeabbdc1b92811650226751c16a96215eab3409f5254ce29925f",
+        "sourceFormat": "PDF",
+        "sourceQuantification": {
+          "loqAsPrintedPmolPerL": 0.036,
+          "loqProvenance": "Manufacturer figure quoted in Methods 2.1; not independently revalidated; source male dilution means no patient-result detection policy inferred",
+          "lod": null,
+          "sourceReportedLinearRangeUpperPmolPerL": 181,
+          "intermediatePrecision": "CV <5% at 7, 34 and 103 pmol/L"
+        },
+        "participants": 469,
+        "groupParticipants": 36,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "readableSource": "evidence/patient-point/jopling2018-male-amh-group-medians.json",
+        "sourceGroupId": "12-14p9",
+        "ageRouting": "Jopling 12–14.9 is used only in the uncovered 12–<13 interval, preserving Wang from age 13; Jopling 15–18.9 is conservatively restricted below 18 because the methods state a study maximum of 18 years. Benderradji 20–39 is used only from 20 to <30, preserving Tehrani from age 30. These narrower routing intervals do not redefine the source groups or their medians. The gap 18–<20 remains unavailable.",
+        "selectionPolicy": "Disjoint routing intervals preserve every existing Busch, Wang and Tehrani reference. Source choice is fixed by age and sex, never by the result, desired classification or assay fallback. The entire possible age interval must fit one routing domain. A known incompatible source context blocks the point rather than selecting another source.",
+        "specimenPolicy": "Missing/unknown specimen permits an orientational educational comparison without asserting the patient specimen. Known Jopling specimen must be lithium-heparin plasma; known Benderradji specimen must be serum. No conversion between matrices is implied.",
+        "assayPolicy": "Missing/unknown assay permits an orientational educational comparison without confirmation of the patient's assay. Known assay must match the source-specific identifiers. Unit conversion is not assay calibration.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Przekrojowa grupa pozostałości próbek szpitalnych, nie podłużna trajektoria ani losowa próba zdrowej populacji.",
+        "Mediana obejmuje całą opublikowaną grupę wieku; nie jest medianą węższego przedziału używanego przez aplikację ani dokładnego wieku lub stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; wszystkie męskie próbki rozcieńczono poza analizatorem 1:10. Nie przeliczamy osocza na surowicę ani metod oznaczenia.",
+        "Dane stosowane tylko w lukach 12–<13 oraz 15–<18 lat. Od 13 do <15 lat pozostają dotychczasowe profile Wang.",
+        "Metody opisują wiek do 18 lat, chociaż etykieta ostatniej grupy sięga 18,9. Granica poniżej 18 lat jest ostrożnościową polityką aplikacji.",
+        "Brak danych o stadium nie blokuje porównania wieku; wcześniactwo w wywiadzie starszego dziecka nie kwalifikuje ani nie wyklucza tej grupy.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania; źródłowy znacznik nie jest przesuwany na poglądową linię."
+      ]
+    },
+    {
+      "id": "jopling2018-male-amh-age-15-under18",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 15,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 15,
+          "value": 55.61
+        },
+        {
+          "ageYears": 18,
+          "value": 55.61
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH automated assay; all male samples diluted offline 1:10 in manufacturer diluent",
+      "population": "Pozostałości próbek szpitalnych chłopców; Manchester, Wielka Brytania. Wykluczono podejrzenie DSD lub innej endokrynopatii; zdrowie przyjęto na podstawie kwalifikacji, bez danych o stadium Tannera.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 15–18,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "15–18,9 lat",
+        "minAge": 15,
+        "maxAge": 18.9,
+        "n": 48,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 55.61,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej opublikowanej grupy wieku; nie jest medianą dokładnego wieku ani stadium Tannera. Węższy przedział wyboru w aplikacji nie zmienia grupy źródłowej."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "title": "Paediatric Anti-Müllerian Hormone measurement: Male and female reference intervals established using the automated Beckman Coulter Access AMH assay",
+        "sourceLocator": "Table 1, PDF page 4 of 8; Methods 2.1 / Results page 3; population limitations page 6",
+        "license": "CC BY-NC 4.0; cite numerical facts; do not commit source images or PDFs",
+        "table": 1,
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Full primary article and Table 1 reread; table PDF page visually checked.",
+        "sourceSha256": "c4b63200a31deeabbdc1b92811650226751c16a96215eab3409f5254ce29925f",
+        "sourceFormat": "PDF",
+        "sourceQuantification": {
+          "loqAsPrintedPmolPerL": 0.036,
+          "loqProvenance": "Manufacturer figure quoted in Methods 2.1; not independently revalidated; source male dilution means no patient-result detection policy inferred",
+          "lod": null,
+          "sourceReportedLinearRangeUpperPmolPerL": 181,
+          "intermediatePrecision": "CV <5% at 7, 34 and 103 pmol/L"
+        },
+        "participants": 469,
+        "groupParticipants": 48,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "readableSource": "evidence/patient-point/jopling2018-male-amh-group-medians.json",
+        "sourceGroupId": "15-18p9",
+        "ageRouting": "Jopling 12–14.9 is used only in the uncovered 12–<13 interval, preserving Wang from age 13; Jopling 15–18.9 is conservatively restricted below 18 because the methods state a study maximum of 18 years. Benderradji 20–39 is used only from 20 to <30, preserving Tehrani from age 30. These narrower routing intervals do not redefine the source groups or their medians. The gap 18–<20 remains unavailable.",
+        "selectionPolicy": "Disjoint routing intervals preserve every existing Busch, Wang and Tehrani reference. Source choice is fixed by age and sex, never by the result, desired classification or assay fallback. The entire possible age interval must fit one routing domain. A known incompatible source context blocks the point rather than selecting another source.",
+        "specimenPolicy": "Missing/unknown specimen permits an orientational educational comparison without asserting the patient specimen. Known Jopling specimen must be lithium-heparin plasma; known Benderradji specimen must be serum. No conversion between matrices is implied.",
+        "assayPolicy": "Missing/unknown assay permits an orientational educational comparison without confirmation of the patient's assay. Known assay must match the source-specific identifiers. Unit conversion is not assay calibration.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Przekrojowa grupa pozostałości próbek szpitalnych, nie podłużna trajektoria ani losowa próba zdrowej populacji.",
+        "Mediana obejmuje całą opublikowaną grupę wieku; nie jest medianą węższego przedziału używanego przez aplikację ani dokładnego wieku lub stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; wszystkie męskie próbki rozcieńczono poza analizatorem 1:10. Nie przeliczamy osocza na surowicę ani metod oznaczenia.",
+        "Dane stosowane tylko w lukach 12–<13 oraz 15–<18 lat. Od 13 do <15 lat pozostają dotychczasowe profile Wang.",
+        "Metody opisują wiek do 18 lat, chociaż etykieta ostatniej grupy sięga 18,9. Granica poniżej 18 lat jest ostrożnościową polityką aplikacji.",
+        "Brak danych o stadium nie blokuje porównania wieku; wcześniactwo w wywiadzie starszego dziecka nie kwalifikuje ani nie wyklucza tej grupy.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania; źródłowy znacznik nie jest przesuwany na poglądową linię."
+      ]
+    },
+    {
+      "id": "benderradji2022-male-amh-age-20-under30",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 20,
+      "maxAge": 30,
+      "points": [
+        {
+          "ageYears": 20,
+          "value": 43.8
+        },
+        {
+          "ageYears": 30,
+          "value": 43.8
+        }
+      ],
+      "sourceLabel": "Benderradji 2022 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202722/",
+      "method": "Beckman Coulter DxI Access AMH fully automated sandwich chemiluminescent immunoassay",
+      "population": "Mężczyźni z normozoospermią z par z obniżoną płodnością; Lille, Francja. Wymagano prawidłowych stężeń inhibiny B, FSH, LH i testosteronu; wykluczono stymulację hormonalną oraz 29 odstających wyników AMH.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "dxi-access-amh",
+        "beckman-dxi-access-amh"
+      ],
+      "patientNote": "Grupa 20–39 lat · normozoospermia · DxI Access AMH, surowica.",
+      "ageGroup": {
+        "label": "20–39 lat",
+        "minAge": 20,
+        "maxAge": 39,
+        "n": null,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 43.8,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej opublikowanej grupy wieku; nie jest medianą dokładnego wieku ani stadium Tannera. Węższy przedział wyboru w aplikacji nie zmienia grupy źródłowej."
+      },
+      "provenance": {
+        "authors": "Benderradji et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac218",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202722/",
+        "title": "Defining Reference Ranges for Serum Anti-Müllerian Hormone on a Large Cohort of Normozoospermic Adult Men Highlights New Potential Physiological Functions of AMH on FSH Secretion and Sperm Motility",
+        "sourceLocator": "Table 1, journal page 1881 (PDF page 4 of 10); Methods pages 1879–1880; actual age minimum/maximum page 1881; limitations page 1885",
+        "license": "CC BY-NC-ND 4.0; cite numerical facts; do not commit source images or PDFs",
+        "table": 1,
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Full primary article and Table 1 reread; table PDF page visually checked.",
+        "sourceSha256": "85bafa18dd75086cfcfa86a4441b2adbef1acceb153679d81fc2c03fb5eb4e5b",
+        "sourceFormat": "PDF",
+        "sourceQuantification": {
+          "loqPmolPerL": 0.47,
+          "lod": null,
+          "belowLoqDefinition": "undetectable in study",
+          "intraAssayCv": "<2%",
+          "interAssayCv": "<3%"
+        },
+        "initialSelected": 607,
+        "excludedAmhOutliers": 29,
+        "collection": "One sample per participant, 08:00–10:00, nonfasting; semen and blood provided same day.",
+        "participants": 578,
+        "groupParticipants": null,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/benderradji2022-male-amh-group-medians.json",
+        "sourceGroupId": "20-39",
+        "ageRouting": "Jopling 12–14.9 is used only in the uncovered 12–<13 interval, preserving Wang from age 13; Jopling 15–18.9 is conservatively restricted below 18 because the methods state a study maximum of 18 years. Benderradji 20–39 is used only from 20 to <30, preserving Tehrani from age 30. These narrower routing intervals do not redefine the source groups or their medians. The gap 18–<20 remains unavailable.",
+        "selectionPolicy": "Disjoint routing intervals preserve every existing Busch, Wang and Tehrani reference. Source choice is fixed by age and sex, never by the result, desired classification or assay fallback. The entire possible age interval must fit one routing domain. A known incompatible source context blocks the point rather than selecting another source.",
+        "specimenPolicy": "Missing/unknown specimen permits an orientational educational comparison without asserting the patient specimen. Known Jopling specimen must be lithium-heparin plasma; known Benderradji specimen must be serum. No conversion between matrices is implied.",
+        "assayPolicy": "Missing/unknown assay permits an orientational educational comparison without confirmation of the patient's assay. Known assay must match the source-specific identifiers. Unit conversion is not assay calibration.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Wyselekcjonowana retrospektywna grupa normozoospermicznych partnerów z par z obniżoną płodnością, nie norma dla całej populacji mężczyzn.",
+        "Mediana 43,8 pmol/L dotyczy całej opublikowanej grupy 20–39 lat, nie wyłącznie 20–29 lat ani dokładnego wieku. Liczebności tej grupy nie podano; 578 dotyczy całego badania.",
+        "Dane stosowane wyłącznie w wieku 20–<30 lat. Od 30 lat pozostają dotychczasowe odniesienia Tehrani; luka 18–<20 pozostaje bez liczbowego odniesienia.",
+        "Surowica, DxI Access AMH; poranne pobranie 08:00–10:00, bez wymogu pozostawania na czczo. Nie harmonizujemy tego źródła z Access 2, Elecsys ani Gen II.",
+        "Próba po usunięciu 29 odstających wyników AMH metodą ROUT. Wynik zależy od kwalifikacji uczestników.",
+        "Nie interpolujemy między medianami grup ani nie aktywujemy norm laboratoryjnych, percentyli, SDS lub rozpoznania. Poglądowa linia pozostaje niezależna."
       ]
     },
     {

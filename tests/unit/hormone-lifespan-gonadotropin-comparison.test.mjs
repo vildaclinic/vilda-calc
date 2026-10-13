@@ -30,8 +30,15 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
     expect(data.gonadotropinComparisonPolicy).toEqual(readable('gonadotropin-comparison-policy.json'));
     expect(data.gonadotropinComparisonReferenceData).toEqual(readable('gonadotropin-comparison-reference-data.json'));
     expect(data.patientPointData).toEqual(readable('population-reference-data.json'));
-    // Current reference bundle; the original female LH/FSH display models remain byte-for-byte unchanged.
-    expect(digest(data.patientPointData)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
+    // Preserve the full original bundle; the later three male AMH gap profiles have a separate contract.
+    const laterMaleIds = JSON.parse(readFileSync(new URL(
+      '../../docs/clinical/hormone-lifespan/male-amh-reference-policy.json', import.meta.url), 'utf8'))
+      .profiles.map(p => p.id);
+    const original = { ...data.patientPointData, version: '2026-10-13.2',
+      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id)) };
+    expect(laterMaleIds).toHaveLength(3);
+    expect(original.profiles).toHaveLength(66);
+    expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     expect(digest(data.femaleGonadotropinData)).toBe('16f3df99ba8518e5145091abedda0b74cb33ef9db5ea7f3f108f1052ac0b8148');
     expect(digest(data.femaleGonadotropinPolicy)).toBe('08b2e92c570e90d392839dde7440c99bf23944aff414384a4988410b0e363487');
     for (const p of data.gonadotropinComparisonReferenceData.profiles) {

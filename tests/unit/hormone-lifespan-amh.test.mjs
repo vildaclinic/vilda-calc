@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 const display = require('../../vilda_hormone_lifespan_display.js');
 const engine = require('../../vilda_hormone_lifespan_reference.js');
 const data = require('../../vilda_hormone_lifespan_data.js');
-const sourceProfiles = data.patientPointData.profiles.filter(profile => profile.analyte === 'amh' && profile.sex === 'male');
+const sourceProfiles = data.amhDisplayPolicy.sourceIds.map(id => data.patientPointData.profiles.find(profile => profile.id === id));
 const patient = (ageYears, extras = {}) => ({ analyte: 'amh', sex: 'male', ageYears, preterm: 'no',
   measurement: { value: 100, unit: 'ng/mL' }, ...extras });
 const freeze = value => {
@@ -85,7 +85,7 @@ describe('Stable male AMH illustration — production builder and independent re
 
   it('does not turn illustrative bridges or a completed70th year into numerical coverage', () => {
     display.buildMaleAmh(data, engine);
-    for (const ageYears of [0, 6 / 365.25, 12, 12.999, 15, 29.999, 70.001, 75, 90]) {
+    for (const ageYears of [0, 6 / 365.25, 18, 18.999, 19, 19.999, 70.001, 75, 90]) {
       expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
     }
     expect(engine.evaluate(data, patient(70, { ageUpperYears: 70 + 1 / 12, ageUpperInclusive: false })))

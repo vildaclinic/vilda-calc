@@ -1,0 +1,61 @@
+{
+  "version": "2026-10-13.1",
+  "purpose": "Published source-group medians for educational comparison, not clinical reference intervals.",
+  "sex": "male",
+  "unit": "pmol/L",
+  "statistic": "group-median",
+  "sourceLabel": "Benderradji 2022 · AMH · grupa wieku",
+  "source": {
+    "authors": "Benderradji et al.",
+    "year": 2022,
+    "doi": "10.1210/clinem/dgac218",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202722/",
+    "title": "Defining Reference Ranges for Serum Anti-Müllerian Hormone on a Large Cohort of Normozoospermic Adult Men Highlights New Potential Physiological Functions of AMH on FSH Secretion and Sperm Motility",
+    "sourceLocator": "Table 1, journal page 1881 (PDF page 4 of 10); Methods pages 1879–1880; actual age minimum/maximum page 1881; limitations page 1885",
+    "license": "CC BY-NC-ND 4.0; cite numerical facts; do not commit source images or PDFs",
+    "table": 1,
+    "reviewDate": "2026-10-13",
+    "reviewBasis": "Full primary article and Table 1 reread; table PDF page visually checked.",
+    "sourceSha256": "85bafa18dd75086cfcfa86a4441b2adbef1acceb153679d81fc2c03fb5eb4e5b",
+    "sourceFormat": "PDF",
+    "sourceQuantification": {
+      "loqPmolPerL": 0.47,
+      "lod": null,
+      "belowLoqDefinition": "undetectable in study",
+      "intraAssayCv": "<2%",
+      "interAssayCv": "<3%"
+    },
+    "initialSelected": 607,
+    "excludedAmhOutliers": 29,
+    "collection": "One sample per participant, 08:00–10:00, nonfasting; semen and blood provided same day."
+  },
+  "assay": "Beckman Coulter DxI Access AMH fully automated sandwich chemiluminescent immunoassay",
+  "matrix": "serum",
+  "population": "Mężczyźni z normozoospermią z par z obniżoną płodnością; Lille, Francja. Wymagano prawidłowych stężeń inhibiny B, FSH, LH i testosteronu; wykluczono stymulację hormonalną oraz 29 odstających wyników AMH.",
+  "participants": 578,
+  "observedMinAge": 20,
+  "observedMaxAge": 62,
+  "groups": [
+    {
+      "id": "20-39",
+      "label": "20–39 lat",
+      "minAge": 20,
+      "maxAge": 39,
+      "n": null,
+      "median": 43.8
+    }
+  ],
+  "sourceInconsistencies": [
+    "Table 1 labels 20–39 years while narrative later says <39; routing limited to 20–<30 does not depend on this boundary discrepancy.",
+    "Source uses age <31 in quartile analysis, not a separate published <30 group. Do not call 43.8 the median of 20–29 or <30.",
+    "Source Table 1 has no subgroup counts. 578 is whole cohort, never n of 20–39 or 20–<30."
+  ],
+  "limitations": [
+    "Wyselekcjonowana retrospektywna grupa normozoospermicznych partnerów z par z obniżoną płodnością, nie norma dla całej populacji mężczyzn.",
+    "Mediana 43,8 pmol/L dotyczy całej opublikowanej grupy 20–39 lat, nie wyłącznie 20–29 lat ani dokładnego wieku. Liczebności tej grupy nie podano; 578 dotyczy całego badania.",
+    "Dane stosowane wyłącznie w wieku 20–<30 lat. Od 30 lat pozostają dotychczasowe odniesienia Tehrani; luka 18–<20 pozostaje bez liczbowego odniesienia.",
+    "Surowica, DxI Access AMH; poranne pobranie 08:00–10:00, bez wymogu pozostawania na czczo. Nie harmonizujemy tego źródła z Access 2, Elecsys ani Gen II.",
+    "Próba po usunięciu 29 odstających wyników AMH metodą ROUT. Wynik zależy od kwalifikacji uczestników.",
+    "Nie interpolujemy między medianami grup ani nie aktywujemy norm laboratoryjnych, percentyli, SDS lub rozpoznania. Poglądowa linia pozostaje niezależna."
+  ]
+}
