@@ -3700,7 +3700,7 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 **Wersje.** `ustawienia.html` (strona z pamięci SW, bez `?v=`); SW 1.1.256 → 1.1.257.
 
-### P-SPOZYCIE-POWROT — karta „Szacowane spożycie energii” po powrocie do panelu bez klatki bez wiersza historii (SW 1.1.258, 2026-10-13, polecenie właściciela)
+### P-SPOZYCIE-POWROT — karta „Szacowane spożycie energii” po powrocie do panelu bez klatki bez wiersza historii (SW 1.1.259, 2026-10-13, polecenie właściciela)
 
 **Skąd.** Ustalenie poza zakresem z P-PANEL-PRZEWINIECIE. Właściciel polecił poprawkę w osobnym PR 2026-10-13 („napraw migotanie kart spożycia w osobnym PR”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych ani treści zapisu (JSON, persistence, autosave) czy synchronizacji. Zmienia się tylko chwila wykonania kroku końcowego odtworzenia przy pokazaniu panelu.
 
@@ -3739,7 +3739,7 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 - `tests/e2e/spozycie-powrot-powloka.spec.mjs` (desktop) i `tests/e2e/spozycie-powrot-powloka-mobile.spec.mjs` (telefon), wspólne kroki w `tests/support/spozycie-powrot.mjs` — prawdziwa powłoka. Zadania z `setTimeout` w ramce Start są na czas powrotu opóźnione o 250 ms, jak w P-USTAWIENIA-CEL, więc krok oparty na timerze zawsze przegrywa z pierwszą klatką. Próbnik w każdej widocznej klatce sprawdza wiersz historii i wysokość karty. Kontrola: powrót odtworzył stan wspólny (`vilda:persist-restored`). Asercje czekają na warunek (minięcie okna powrotu, zakończony krok końcowy, liczba klatek), nie na upływ czasu. Na bazie pada 4/4: pierwsze klatki mają 0 wierszy historii i 126 px zamiast 269 px na desktopie, a 235 px zamiast 487 px na telefonie. Z poprawką przechodzi 8/8 przy 4 workerach.
 - `tests/unit/sesja-glowna-po-wczytaniu.test.mjs`: strażnik `Gp_p` uzupełniony o wywołanie po sesji. W `tests/e2e/powloka-przewiniecie-panelu-mobile.spec.mjs` zmieniono tylko komentarz.
 
-**Wersje.** `vilda_persist_runtime.js` 21, `vilda_shell.js` 63; SW 1.1.257 → 1.1.258.
+**Wersje.** `vilda_persist_runtime.js` 21, `vilda_shell.js` 63; SW 1.1.258 → 1.1.259 (numer 1.1.258 nadał równolegle #658).
 
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
