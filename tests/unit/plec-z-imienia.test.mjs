@@ -411,6 +411,67 @@ describe('formularz — czego automat nie rusza', () => {
     expect(g.pola.sex.value).toBe('F');
   });
 
+  it('P-PLEC-IMIE-2: ponowione powiadomienie lustra (~3,2 s po „Wyczyść”, bez zmiany płci) nie wyłącza automatu', () => {
+    // Zgłoszenie właściciela 2026-10-13: po „Odrzuć dane i wyczyść” drugi nowy pacjent zostawał przy „M”.
+    // custom-fixes.js po „Wyczyść” ponawia `change` na polach lustra (#name, #sex) bez flag i bez zmiany
+    // wartości; gdy lekarz zdążył wpisać nazwisko, moduł brał to za płeć wpisaną z zewnątrz.
+    const f = formularz();
+    f.wpisz('firstName', 'Anna');
+    f.wyczysc();
+    f.wpisz('lastName', 'Fikcyjna');
+    f.pola.name.dispatchEvent({ type: 'change', isTrusted: false });
+    f.pola.sex.dispatchEvent({ type: 'change', isTrusted: false });
+    f.tick();
+    expect(f.M.stan(), 'dotąd „zewnetrzna”').toBe('domyslna');
+    f.wpisz('firstName', 'Anna');
+    expect(f.pola.sex.value).toBe('F');
+    expect(f.notka().tekst).toBe('Płeć ustawiona na podstawie imienia „Anna” — sprawdź.');
+    // KONTROLA: programowa ZMIANA płci przy wpisanej tożsamości nadal jest wpisem z zewnątrz.
+    f.pola.sex.value = 'M';
+    f.pola.sex.dispatchEvent({ type: 'change', isTrusted: false });
+    f.tick();
+    expect(f.M.stan()).toBe('zewnetrzna');
+  });
+
+  it('P-PLEC-IMIE-2: ta sama tożsamość ponowiona z flagą odtworzenia nie wyłącza automatu; inna — wyłącza', () => {
+    const f = formularz();
+    f.wpisz('lastName', 'Fikcyjna');
+    f.win.__vildaPersistRestoring = true;
+    f.pola.name.dispatchEvent({ type: 'input', isTrusted: false });
+    f.win.__vildaPersistRestoring = false;
+    f.tick();
+    expect(f.M.stan()).toBe('domyslna');
+    f.wpisz('firstName', 'Anna');
+    expect(f.pola.sex.value).toBe('F');
+    // KONTROLA: odtworzenie wpisuje INNĄ tożsamość — płeć przyszła z nią z zewnątrz.
+    const g = formularz();
+    g.wpisz('lastName', 'Fikcyjna');
+    g.zZewnatrz({ nazwisko: 'Testowa', imie: 'Ewa', plec: 'M' });
+    expect(g.M.stan()).toBe('zewnetrzna');
+  });
+
+  it('P-PLEC-IMIE-2: vilda:persist-restored bez zmian w polach nie przestawia stanu; ze zmianą — przestawia', () => {
+    const f = formularz();
+    f.wpisz('lastName', 'Fikcyjna');
+    f.win.document.dispatchEvent({ type: 'vilda:persist-restored' });
+    f.tick();
+    expect(f.M.stan()).toBe('domyslna');
+    f.pola.firstName.value = 'Ewa'; // odtworzenie „na żywo” wpisało imię po cichu
+    f.win.document.dispatchEvent({ type: 'vilda:persist-restored' });
+    f.tick();
+    expect(f.M.stan()).toBe('zewnetrzna');
+    // Formularz bez nazwiska z „Kobietą” odtworzony po cichu: jak przy polu płci — nietykalna,
+    // także gdy potem przyjdzie ponowione powiadomienie z tą samą płcią.
+    const g = formularz();
+    g.pola.sex.value = 'F';
+    g.win.document.dispatchEvent({ type: 'vilda:persist-restored' });
+    g.pola.sex.dispatchEvent({ type: 'change', isTrusted: false });
+    g.tick();
+    expect(g.M.stan()).toBe('zewnetrzna');
+    g.wpisz('firstName', 'Jan');
+    expect(g.pola.sex.value).toBe('F');
+  });
+
   it('„Wyczyść” (vilda:user-state-cleared) zaczyna od nowa: stan domyślny, notka schowana', () => {
     const f = formularz();
     f.wpisz('firstName', 'Anna');
