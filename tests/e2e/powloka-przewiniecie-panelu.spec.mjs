@@ -53,6 +53,48 @@ test('cel nawigacji ma pierwszeństwo: sekcja konta zamiast zapamiętanego miejs
   sprawdzKlatki(await zbierzProbki(ust), naCelu, 'Ustawienia po zwykłym powrocie');
 });
 
+// P-USTAWIENIA-CEL (2026-10-13): Ustawienia otwierały sekcję celu dopiero w setTimeout(0) po doręczeniu
+// vilda:shell-navigate-target. Każda klatka namalowana wcześniej pokazywała panel tam, gdzie właśnie był:
+// w Chromium 141 na górze strony, a w CI (Chromium 149) w miejscu sprzed wyjścia. Test wyżej łapał to tylko pod
+// obciążeniem: padał w CI na #643, #652 i #653, lokalnie nigdy. Tu zadania ramki są celowo opóźnione, jak na
+// zajętym procesorze, więc wyścig zachodzi za każdym razem. Od pierwszej widocznej klatki panel ma pokazywać
+// otwartą sekcję konta.
+test('cel nawigacji przy zajętej ramce: sekcja konta w każdej widocznej klatce, od pierwszej', async ({ page }) => {
+  test.setTimeout(150_000);
+  await otworzPowloke(page, HASLO);
+  await przejdz(page, 'ustawienia');
+  const ust = await ramka(page, 'Ustawienia');
+  await ust.waitForFunction(() => window.VildaVault.isUnlocked(), null, { timeout: 30000 });
+  const zapamietane = await przewin(ust, Math.round((await najdalej(ust)) / 2));
+  expect(zapamietane, 'Ustawienia przewinięte przed wyjściem').toBeGreaterThan(160);
+  await przejdz(page, 'start');
+
+  await ust.evaluate(() => {
+    // Zajęty procesor: zadania z setTimeout w ramce Ustawień ruszają najwcześniej po 250 ms, czyli po kilku klatkach.
+    const zwykly = window.setTimeout;
+    window.setTimeout = (fn, ms, ...reszta) => zwykly(fn, Math.max(Number(ms) || 0, 250), ...reszta);
+    // Próbnik: w każdej klatce, w której ramka jest widoczna, czy sekcja konta jest otwarta i jej nagłówek w oknie.
+    const P = { klatki: [], stop: false };
+    window.__przewCel = P;
+    const krok = () => {
+      if (P.stop) return;
+      if (!window.frameElement.hidden) {
+        const sekcja = document.getElementById('settings-section-account');
+        const r = sekcja.querySelector('summary').getBoundingClientRect();
+        P.klatki.push({ y: window.scrollY, otwarta: sekcja.open, wOknie: r.top >= 0 && r.bottom <= window.innerHeight });
+      }
+      requestAnimationFrame(krok);
+    };
+    requestAnimationFrame(krok);
+  });
+  await przejdz(page, 'ustawienia', 'ustawienia.html#settings-section-account');
+  await ust.waitForFunction(() => window.__przewCel.klatki.length >= 6, null, { timeout: 30000 });
+  const klatki = await ust.evaluate(() => { window.__przewCel.stop = true; return window.__przewCel.klatki; });
+  const zle = klatki.map((k, i) => ({ klatka: i, ...k })).filter((k) => !k.otwarta || !k.wOknie);
+  expect(zle, 'każda widoczna klatka, od pierwszej, pokazuje otwartą sekcję konta').toEqual([]);
+  expect(klatki.filter((k) => Math.abs(k.y - zapamietane) <= 1), 'zapamiętane miejsce nie pojawia się w żadnej klatce').toEqual([]);
+});
+
 test('lista pacjentów otwierana z innego panelu: Start pod listą i po jej zamknięciu stoi tam, gdzie go zostawiono', async ({ page }) => {
   test.setTimeout(150_000);
   const start = await otworzPowloke(page, HASLO);
