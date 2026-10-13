@@ -1239,10 +1239,15 @@
       const measurement = patientContext?.measurement;
       const id = analyteHormones[currentAnalyte];
       const [minAge, maxAge] = visibleAgeDomain();
-      if (renderedPoint || !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
+      const termAmhUnavailable = !compare && id === "amh" && patientPoint?.reason === "preterm-context";
+      if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id)) ||
           !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
           (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;
+      if (termAmhUnavailable) {
+        byId("scale-note").textContent = "Te dane dotyczą niemowląt urodzonych o czasie; brak dopasowanego odniesienia dla wyniku.";
+        return;
+      }
       if (compare && ["missing-puberty-stage", "incompatible-puberty-stage"].includes(patientPoint?.reason)) {
         byId("scale-note").textContent = "Porównanie poglądowe — brak dopasowanych wartości odniesienia obu płci do umieszczenia wyniku.";
         return;

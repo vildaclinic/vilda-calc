@@ -1,0 +1,315 @@
+{
+  "id": "mayo-amh1-reference-2026-10-13",
+  "version": "2026-10-13.1",
+  "retrievedOn": "2026-10-13",
+  "reviewScope": "Full current official catalogue and six-page PDF read; reference table page 3 also visually checked. No inferred medians.",
+  "source": {
+    "title": "Mayo Clinic Laboratories — AMH1: Antimullerian Hormone, Serum",
+    "catalogId": "608824",
+    "testId": "AMH1",
+    "url": "https://www.mayocliniclabs.com/test-catalog/Overview/608824",
+    "pdfUrl": "https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=608824",
+    "pdfGeneratedAt": "October 13, 2026 at 12:06 PM CT",
+    "rangeLocation": "Reference Values; PDF page 3 of 6",
+    "methodLocation": "Method Name/Specimen, PDF page 1; Method Description, PDF page 5",
+    "cautionsLocation": "PDF pages 4–5",
+    "rangeVersion": "No independent effective date supplied in catalogue; date above is retrieval/generation, not an invented source revision."
+  },
+  "method": {
+    "id": "roche-elecsys-amh",
+    "name": "Roche Elecsys AMH ECLIA",
+    "specimen": "serum",
+    "description": "Two-site immunometric sandwich assay with electrochemiluminescence detection. Catalogue cites Elecsys AMH package insert 2.0 English 10/2022; that insert was not independently retrieved."
+  },
+  "population": {
+    "description": "Catalogue sex- and age-specific reference intervals. Cohort N, ethnicity, gestational age and premature-birth inclusion are not specified. Intervals are Mayo-derived unless otherwise designated per catalogue introduction.",
+    "tanner": null,
+    "gestationalAge": null,
+    "prematureBirth": null,
+    "menopauseSpecificRows": false,
+    "cyclePhaseSpecificRows": false,
+    "maximumObservedAge": null
+  },
+  "rows": [
+    {
+      "id": "mayo_amh_M_0_2",
+      "sex": "M",
+      "sourceAgeLabel": "<2 years",
+      "ageMinYears": 0,
+      "ageMaxYearsExclusive": 2,
+      "lower": {
+        "operator": ">=",
+        "value": 18
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 283
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_M_2_13",
+      "sex": "M",
+      "sourceAgeLabel": "2-12 years",
+      "ageMinYears": 2,
+      "ageMaxYearsExclusive": 13,
+      "lower": {
+        "operator": ">=",
+        "value": 8.9
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 109
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_M_13_plus",
+      "sex": "M",
+      "sourceAgeLabel": ">12 years",
+      "ageMinYears": 13,
+      "ageMaxYearsExclusive": null,
+      "lower": null,
+      "upper": {
+        "operator": "<",
+        "value": 13
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_0_3",
+      "sex": "F",
+      "sourceAgeLabel": "<3 years",
+      "ageMinYears": 0,
+      "ageMaxYearsExclusive": 3,
+      "lower": {
+        "operator": ">=",
+        "value": 0.11
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 4.2
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_3_7",
+      "sex": "F",
+      "sourceAgeLabel": "3-6 years",
+      "ageMinYears": 3,
+      "ageMaxYearsExclusive": 7,
+      "lower": {
+        "operator": ">=",
+        "value": 0.21
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 4.9
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_7_12",
+      "sex": "F",
+      "sourceAgeLabel": "7-11 years",
+      "ageMinYears": 7,
+      "ageMaxYearsExclusive": 12,
+      "lower": {
+        "operator": ">=",
+        "value": 0.36
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 5.9
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_12_15",
+      "sex": "F",
+      "sourceAgeLabel": "12-14 years",
+      "ageMinYears": 12,
+      "ageMaxYearsExclusive": 15,
+      "lower": {
+        "operator": ">=",
+        "value": 0.49
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 6.9
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_15_20",
+      "sex": "F",
+      "sourceAgeLabel": "15-19 years",
+      "ageMinYears": 15,
+      "ageMaxYearsExclusive": 20,
+      "lower": {
+        "operator": ">=",
+        "value": 0.62
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 7.8
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_20_25",
+      "sex": "F",
+      "sourceAgeLabel": "20-24 years",
+      "ageMinYears": 20,
+      "ageMaxYearsExclusive": 25,
+      "lower": {
+        "operator": ">=",
+        "value": 1.2
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 12
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_25_30",
+      "sex": "F",
+      "sourceAgeLabel": "25-29 years",
+      "ageMinYears": 25,
+      "ageMaxYearsExclusive": 30,
+      "lower": {
+        "operator": ">=",
+        "value": 0.89
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 9.9
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_30_35",
+      "sex": "F",
+      "sourceAgeLabel": "30-34 years",
+      "ageMinYears": 30,
+      "ageMaxYearsExclusive": 35,
+      "lower": {
+        "operator": ">=",
+        "value": 0.58
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 8.1
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_35_40",
+      "sex": "F",
+      "sourceAgeLabel": "35-39 years",
+      "ageMinYears": 35,
+      "ageMaxYearsExclusive": 40,
+      "lower": {
+        "operator": ">=",
+        "value": 0.15
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 7.5
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_40_45",
+      "sex": "F",
+      "sourceAgeLabel": "40-44 years",
+      "ageMinYears": 40,
+      "ageMaxYearsExclusive": 45,
+      "lower": {
+        "operator": ">=",
+        "value": 0.03
+      },
+      "upper": {
+        "operator": "<=",
+        "value": 5.5
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_45_51",
+      "sex": "F",
+      "sourceAgeLabel": "45-50 years",
+      "ageMinYears": 45,
+      "ageMaxYearsExclusive": 51,
+      "lower": null,
+      "upper": {
+        "operator": "<",
+        "value": 2.6
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_51_56",
+      "sex": "F",
+      "sourceAgeLabel": "51-55 years",
+      "ageMinYears": 51,
+      "ageMaxYearsExclusive": 56,
+      "lower": null,
+      "upper": {
+        "operator": "<",
+        "value": 0.88
+      },
+      "unit": "ng/mL"
+    },
+    {
+      "id": "mayo_amh_F_56_plus",
+      "sex": "F",
+      "sourceAgeLabel": ">55 years",
+      "ageMinYears": 56,
+      "ageMaxYearsExclusive": null,
+      "lower": null,
+      "upper": {
+        "operator": "<",
+        "value": 0.03
+      },
+      "unit": "ng/mL"
+    }
+  ],
+  "ageRoutingPolicy": "Interpret integer source age labels as completed years: 2–12 -> [2,13), >12 -> [13,infinity), 45–50 -> [45,51). Application routing convention, not a formula published by Mayo. Qualify the full known age interval; upper bound at the next group is allowed only when exclusive.",
+  "applicationGuards": {
+    "knownPretermBeforeYears": 1,
+    "prematureGuardOrigin": "Conservative application policy because no preterm-specific reference is published; NOT a Mayo gestational-age or one-year exclusion criterion. No transplanted Johannsen/Greaves GA thresholds.",
+    "unknownBirthContext": "May receive orientative general age/sex catalogue comparison; does not assert term birth.",
+    "method": "Unknown permits source comparison without confirming sample method. Known incompatible assay/kit is excluded.",
+    "specimen": "Unknown permits source comparison; known non-serum excluded.",
+    "menopause": "Not inferred from age. Age rows remain age references, including older women; no transplantation of >55 row to younger postmenopausal women.",
+    "cycle": "No phase-specific RI in catalogue; relatively stable concentrations per Clinical Information, so no required cycle selector.",
+    "tanner": "No stage-specific RI; no Tanner V-to-adult inference.",
+    "knownContraindication": "Known treatment/stimulation or other supplied contraindication is outside this generic age comparison; no adapted treatment norms are implemented."
+  },
+  "notReferenceRanges": [
+    "IVF/AFC response cutoffs",
+    "PCOS decision thresholds",
+    "LOD/LOQ",
+    "Midpoints or means/medians inferred from reference limits"
+  ],
+  "legacyCaliperCorrection": {
+    "legacyDoi": "10.1016/j.clinbiochem.2022.06.011",
+    "legacyDoiActualTitle": "Huge discrepancy between serum immunoglobulin concentration and proteinemia due to heavy chain disease",
+    "correctDoi": "10.1016/j.clinbiochem.2022.06.005",
+    "pmid": "35760370",
+    "correctCitation": "Ronn R, Bohn MK, Greenblatt EM, Hoffman B, Adeli K. Anti-mullerian hormone (AMH) reference values in the CALIPER cohort of healthy community children and adolescents. Clin Biochem. 2022;108:63–66.",
+    "readScope": "Bibliographic record and full abstract only; full publisher text unavailable. Not activated as laboratory RI in this change.",
+    "abstractFinding": "3.18 ± 1.62 ng/mL (6–<9y) and 4.16 ± 2.55 ng/mL (9–<12y) are means ± SD, not medians. Cohort females 6–<19y, 300 samples. Does not support legacy F2–12 median label.",
+    "metadataEvidence": [
+      "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:35760370&format=json&resultType=core",
+      "https://api.crossref.org/works/10.1016/j.clinbiochem.2022.06.011"
+    ]
+  },
+  "downloadHashes": {
+    "mayo-amh-overview.html": "25d134ceb2f4be1b76aeaffa0e67a35d130fe6fd09a2799edc24c83c522a479a",
+    "mayo-amh-setup.pdf": "1eb789f7c7169d8eb73b2615fb0e8063bd68f622f07f4f7641c641c48ccc3aa6",
+    "mayo-amh-setup.xls": "59db1e44e3dda388a202367fb41570a52e0c78228551c00c370c26c5bcfee40d"
+  }
+}

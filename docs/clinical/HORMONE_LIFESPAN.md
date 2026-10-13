@@ -107,6 +107,19 @@ laboratoryjnych norm ani kontraktów porównania płci.
 
 ## Cel i granice
 
+Aktualizacja kontekstu AMH z 13.10.2026: przelicznik wykorzystuje także
+istniejący dokładniejszy wiek minipuberty z karty. Zachowuje powiązanie
+z pacjentem, niepewność dni, pierwszeństwo lokalnej korekty i fallback
+miesięczny. Nie zmienia modeli ani kształtu krzywych. Przy prawidłowym
+wyniku niemowlęcia, którego nie można zakwalifikować do modelu populacji
+donoszonej, zwykły widok wyjaśnia brak punktu takim samym krótkim tekstem
+jak porównanie płci. Nie pokazuje zastępczej mediany.
+
+Równoległa naprawa laboratoryjnej tabeli AMH jest osobną zmianą opisaną
+w [AMH.md](AMH.md). Zakres Mayo nie służy do obliczania mediany na wykresie.
+Przegląd Xu 2026 nie aktywuje nowego modelu; kolejne etapy opisuje
+[plan odniesień AMH/inhibiny B](AMH_REFERENCE_PLAN.md).
+
 Wykres pokazuje czas i kierunek zmian hormonów. Jeśli dostępny jest właściwy
 model liczbowy, pokazuje również wpisane stężenie pacjenta na jego tle.
 Nie wyznacza norm, centyli, stadium pokwitania, menopauzy ani przyczyny wyniku.

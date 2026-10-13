@@ -57,7 +57,7 @@ afterEach(() => vi.useRealTimers());
 
 describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
   it.each([['2026-06-26', 105], ['2026-06-11', 120], ['2026-04-22', 170]])(
-    'przekazuje znane dni z daty %s po trzecim miesiącu tylko odbiorcy LH/FSH', (iso, days) => {
+    'przekazuje znane dni z daty %s po trzecim miesiącu wyłącznie przy świadomym odczycie', (iso, days) => {
       const h = harness(); h.dob(iso);
       expect(h.api.publish()).toBe(true);
       expect(h.api.readCache()).toMatchObject({ minipubertyOnly: true });
@@ -99,11 +99,30 @@ describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
     'adapter dla %s wybiera rozszerzony transport bez zmiany wieku pozostałych analitów', id => {
       const h = harness(); h.dob('2026-06-11'); h.api.publish();
       const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, { id });
-      if (['lh', 'fsh'].includes(id)) {
+      if (['lh', 'fsh', 'amh'].includes(id)) {
         expect(reader()).toMatchObject({ neonatalAge: { postnatalDays: { lower: 119, upper: 120 } } });
       } else expect(reader()).not.toHaveProperty('neonatalAge');
     },
   );
+
+  it('AMH korzysta z daty niemowlęcia i odrzuca pozostawione dni po usunięciu lub błędnej dacie', () => {
+    const h = harness();
+    const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, { id: 'amh' });
+    for (const invalidDate of ['', '31-02-2026']) {
+      h.dob('2026-06-11'); h.api.publish();
+      expect(reader()).toMatchObject({ neonatalAge: {
+        postnatalDays: { lower: 119, upper: 120, source: 'main-calendar-dates' },
+      } });
+      h.fields.dobInput.value = invalidDate;
+      // Hidden weeks cannot lend precision to a four-month-old infant.
+      h.fields.ageWeeks.value = '17';
+      h.api.publish();
+      expect(h.api.readCache()).toBeNull();
+      expect(reader()).not.toHaveProperty('neonatalAge');
+    }
+    expect(h.writeShared).not.toHaveBeenCalled();
+    expect(h.w.hasUserModifiedAfterLoad).toBe(false);
+  });
 
   it('przenosi 43 dni kalendarzowe jako 42–43 ukończone dni, bez daty urodzenia i bez zmiany rekordu', () => {
     const h = harness(); h.dob('2026-08-27');
