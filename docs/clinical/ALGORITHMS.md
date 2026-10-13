@@ -4010,6 +4010,51 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 *Strażnicy:* `tests/unit/schowek.test.mjs` (12) — tekst zaczynający się od `Waga:` dostaje **dokładnie jeden** U+2060, a reszta treści zostaje bit w bit; U+2060 nie jest odstępem i przeżywa `trim()`; teksty, które nie wyglądają jak adres (`Augmentin –`, `Pow. ciała:`, `Wskaźnik Cole'a:`, `63,4 kg`) **nie** dostają nic; ścieżka zapasowa kopiuje tę samą zabezpieczoną treść; przy dostępnym Clipboard API `execCommand` nie rusza ani razu. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku: pierwszy znak wklejonej treści to U+2060, zaraz za nim `Waga:`.
 
+*Zmiana 2026-10-13 (P-SCHOWEK-HIS, niżej):* łącznik dokładany już tylko na iPhonie i iPadzie — w systemie szpitalnym pod Windows wracał jako „?" przed pierwszym wierszem.
+
+### P-SCHOWEK-HIS — „≥" i pierwszy znak podsumowania wracały z systemu szpitalnego jako „?" (SW 1.1.261, 2026-10-13)
+
+**Zgłoszenie właściciela.** Tekst z przycisku „Podsumowanie wyników — kliknij i skopiuj" po wklejeniu do Eskulapa (HIS) wygląda dobrze, ale w PDF-ie tworzonym przez Eskulapa i w dokumencie wysłanym na platformę P1 zamiast „≥" stoi „?" (np. „norma ?4 cm/rok"). Już po wklejeniu pierwszym znakiem tekstu jest „?".
+
+#### Przyczyna
+
+- **Pierwszy „?"** to łącznik wyrazów U+2060, który od P-IOS-SCHOWEK (wyżej) trafiał przed każde podsumowanie zaczynające się od „Waga:" — na każdej platformie, choć objaw z adresem był tylko na iPhonie.
+- **Wzór zamian zgadza się co do znaku z konwersją tekstu na jednobajtową stronę kodową Windows-1250 tak, jak robi to Windows** — z tablicą „najlepszego dopasowania" (`bestfit1250.txt`, Microsoft, w zbiorze map unicode.org). Znak, który ma w niej odpowiednik, przechodzi po cichu: „−" → „-", „²" → „2", „‑" → „-", „μ" → „µ". Znak bez odpowiednika dostaje znak domyślny „?": „≥", „≤", „≈", U+2060, „Δ", „α". Dlatego właściciel widział „?" tylko w miejscu „≥" i na początku tekstu, a minusy i „kg/m²" przeszły (jako „-" i „kg/m2").
+- Ta sama tablica zmienia też liczby, bez żadnego „?": „½" → „1" (więc „1½" → „11"), „¼" → „1", „¾" → „3", „10³" → „103", „10⁶" → „106". W kopiowanym podsumowaniu dziś ich nie ma.
+- **Ograniczenie dowodu.** Kodu Eskulapa nie znamy; konwersję wydedukowano z objawu i z tablicy Windows, nie odtworzono jej w Eskulapie. Gdyby jakiś HIS konwertował bez „najlepszego dopasowania" (np. koderem Javy), „?" dostałyby też „−" i „²" — SDS traciłyby znak („wSDS ?1,54"). Rozwiązanie niżej działa w obu wariantach.
+
+#### Rozwiązanie (`vilda_schowek.js` ?v 4)
+
+1. **`VildaSchowek.dlaSystemuSzpitalnego(tekst)`** — `kopiuj()` przed zapisem zamienia znaki spoza Windows-1250, które aplikacja wypisuje w wynikach, na jednoznaczne odpowiedniki z ASCII:
+   - „≥" → „>=", „≤" → „<=", „≈" → „~";
+   - minus „−" i łączniki „‐", „‑", „‒" → „-";
+   - „→" → „->", „←" → „<-", „↔" → „<->";
+   - „μ" → „µ" (znak mikro z Windows-1250);
+   - indeksy górne: wykładnik jednostki → cyfra („kg/m²" → „kg/m2", „cm³" → „cm3", „m⁻²" → „m-2"), wykładnik liczby → „^" („10³/µl" → „10^3/µl", „10⁹/l" → „10^9/l", „10⁻³" → „10^-3");
+   - indeksy dolne → cyfry („CO₂" → „CO2");
+   - ułamki: „½" → „1/2", „1½" → „1 1/2", „¼" → „1/4", „¾" → „3/4";
+   - odstępy typograficzne (U+2000–U+200A, U+202F, U+205F) → spacja; znaki niewidoczne (U+200B–U+200D, U+2060, U+FEFF) → usunięte.
+
+   Znaki z Windows-1250 zostają: polskie litery, „–", „—", „’", „„”", „…", „±", „×", „°", „µ", spacja nierozdzielająca. **Znak spoza tabel zostaje bez zmian** — moduł nie zgaduje znaczenia (np. „β", „Δ", „⚠"; w kopiowanym podsumowaniu ich nie ma — sprawdzone sondą poza repozytorium na 14 fikcyjnych pacjentach od noworodka do dorosłego).
+2. **Łącznik U+2060 tylko na iPhonie i iPadzie** — rozpoznanie jak w `ios26-ui.js`: iPhone/iPad/iPod w identyfikatorze przeglądarki albo `MacIntel` z ekranem dotykowym (iPadOS w trybie „witryna na komputer"). Tylko tam był objaw z P-IOS-SCHOWEK („na komputerze — bez zarzutu"), więc na iPhonie zachowanie się nie zmienia, a na Windows, Macu i Androidzie tekst zaczyna się od „Waga:".
+3. **Kolejność w `kopiuj()`**: najpierw zamiana znaków, potem łącznik — w odwrotnej kolejności zamiana usunęłaby łącznik potrzebny na iPhonie. Tekst pusty po zamianie (same znaki niewidoczne) to odmowa, jak tekst pusty dotąd.
+4. **Karta „Podsumowanie wyników" na ekranie bez zmian** — dalej „≥", „−", „kg/m²" i „Z‑score". Format z decyzji 10 (P-BMI-2) i zapis SDS z P-WSDS obowiązują na ekranie; w schowku od teraz „kg/m2" i zwykły minus.
+
+**Wpływ kliniczny.** Brak zmiany wartości, progów, jednostek, zaokrągleń, kolejności i podziału wierszy. Zmienia się wyłącznie zapis znaków w tekście kopiowanym przyciskiem „Podsumowanie wyników — kliknij i skopiuj"; każda zamiana ma to samo znaczenie. Bez poprawki próg normy tempa wzrastania docierał do PDF-u i na P1 jako „?4 cm/rok".
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne):
+- Windows: „Tempo wzrastania: 6,1 cm/rok (z 13 mies.) — w normie, norma ≥4 cm/rok — wg wieku kostnego 12 lat (okres okołopokwitaniowy)" → „… norma >=4 cm/rok …"; „Waga: 41,2 kg, 22 centyl (wSDS −0,77)" → „Waga: 41,2 kg, 22 centyl (wSDS -0,77)" bez znaku przed „Waga"; „BMI: 18,1 kg/m² – 41 centyl (bmiSDS −0,23)" → „BMI: 18,1 kg/m2 – 41 centyl (bmiSDS -0,23)"; „(Z‑score = -0,25)" → „(Z-score = -0,25)"; „Wskaźnik Cole’a: 95,0 %" → bez zmian;
+- iPhone: ten sam tekst, z łącznikiem U+2060 na początku (jak dotąd);
+- „6,5 × 10³/µl" → „6,5 × 10^3/µl" (tablica Windows: „103"); „1½ tabletki" → „1 1/2 tabletki" (tablica Windows: „11 tabletki").
+
+*Strażnicy:* `tests/unit/schowek.test.mjs` (28, +16) — wyrocznią repertuaru jest dekoder Windows-1250 z Node (z kontrolą dodatnią: „ą" i „–" są, „≥" i U+2060 nie), a nie tabela modułu: fikcyjne podsumowanie → dokładny tekst wynikowy, każdy znak w Windows-1250, te same liczby ujemne, ta sama liczba wierszy; 27 pojedynczych zamian; znaki Windows-1250 i ASCII bit w bit; idempotencja; znak spoza tabel zostaje; łącznik dla iPhone'a i iPadOS jako Mac z ekranem dotykowym, nie dla Windows, Maca, Androida i okna bez `navigator`; łącznik z treści nie przechodzi na Windows i nie dubluje się na iPhonie; strażnik źródła — bez wyrażeń „lookbehind" (starsze Safari na iOS odrzuciłyby cały moduł). Istniejące testy P-IOS-SCHOWEK sprawdzają łącznik na identyfikatorze iPhone'a, bez zmniejszenia liczby asercji. `tests/e2e/schowek-podsumowanie.spec.mjs` (5, +2) — systemowy schowek w Chromium: pierwszy znak „W" i każdy znak w Windows-1250; z identyfikatorem iPhone'a pierwszy znak U+2060; chłopiec 12;6 z poprzednim pomiarem i wiekiem kostnym: karta pokazuje „norma ≥4" i „hSDS −…", schowek „norma >=4" i „hSDS -…". `tests/e2e/bmi-jedna-liczba.spec.mjs` (etap 2) — w schowku „kg/m2" i zwykły minus, karta główna dalej „kg/m²". **Kontrola ujemna:** te same testy na `vilda_schowek.js` sprzed zmiany — 14 testów jednostkowych i 3 e2e czerwone (pierwszy znak U+2060, „≥" w schowku).
+
+**Poza zakresem.** Pozostałe przyciski kopiowania (m.in. „Kopiuj opis pacjenta", epikryza, zalecenia dietetyczne i antybiotykoterapii, ściąga B.64, dawki GH) piszą do schowka własnym kodem i nadal kopiują „≥", „−", „Δ"… Przejście przez `VildaSchowek.kopiuj()` dałoby im to samo zabezpieczenie — osobna decyzja.
+
+**Decyzje właściciela.** (1) Zapis „>=" zamiast „≥" (alternatywa: słownie „co najmniej"). (2) Zamiana także „−", „²" i „‑", które tablica Windows już dziś zamienia po cichu na „-", „2" i „-" — w schowku odstępstwo od formatu decyzji 10 i P-WSDS; rekomendacja: zostawić, bo nie znamy konwersji każdego systemu, a bez „najlepszego dopasowania" minus staje się „?". (3) Rozszerzenie na pozostałe przyciski kopiowania.
+
+**Pliki.** `vilda_schowek.js` 4; SW 1.1.260 → 1.1.261 (numery nadane `npm run podbij-wersje`).
+
 ### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
 
 **Decyzja właściciela (2026-10-01): „Tylko BMI”.** Ocena BMI (kategoria, ostrzeżenie, klasa, Cole, sugestia WHR, „idealna masa”, nagłówek i karta BMI raportu) idzie za silnikiem BMI i decyzją D3 — siatka DS do 20 lat. Masa, wzrost, ciśnienie, tętno i opisy dorosłego **zostają przy wieku 18 lat** (raport: 18, PDF: 19) — osobna decyzja, jeśli kiedyś.

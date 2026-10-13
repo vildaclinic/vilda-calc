@@ -26,14 +26,19 @@
  *
  * ZASADA: na schowek idzie JEDEN wariant — czysty tekst (`navigator.clipboard.writeText`) —
  * a tekst nie może zaczynać się czymś, co przeglądarka przeczyta jako adres. Pilnuje tego
- * `bezSchematuNaPoczatku()`.
+ * `bezSchematuNaPoczatku()` — tylko na iPhonie i iPadzie, bo tylko tam był objaw.
+ *
+ * DRUGA ZASADA (P-SCHOWEK-HIS, zgłoszenie z 2026-10-13): tekst trafia do dokumentacji w systemie
+ * szpitalnym (HIS), który po drodze przepuszcza go przez jednobajtową stronę kodową Windows-1250.
+ * Znaki spoza niej zamieniamy sami, jednoznacznie, zanim zrobi to cudza konwersja. Pilnuje tego
+ * `dlaSystemuSzpitalnego()`; uzasadnienie przy tabeli zamian niżej.
  *
  * CZEGO TU NIE MA: żadnych powiadomień ani tekstów interfejsu. Moduł zwraca obietnicę i tyle.
  */
 (function (root) {
   'use strict';
   if (!root) return;
-  var WERSJA = 1;
+  var WERSJA = 2;
 
   function dokument() {
     try { return root.document || null; } catch (e) { return null; }
@@ -128,11 +133,104 @@
   var LACZNIK = '\u2060';
   var SCHEMAT = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 
+  /* Łącznik jest potrzebny TYLKO na iPhonie i iPadzie: to tam WebKit dokładał wariant „adres"
+     (zgłoszenie z 2026-09-16; „na komputerze — bez zarzutu"). W systemie szpitalnym pod Windows
+     ten sam znak nie ma odpowiednika w Windows-1250 i wracał jako „?" przed pierwszym wierszem —
+     zaraz po wklejeniu, w wydruku PDF i w dokumencie wysłanym na P1 (P-SCHOWEK-HIS).
+     Rozpoznanie platformy jak w ios26-ui.js: iPhone/iPad/iPod w identyfikatorze przeglądarki albo
+     iPadOS, który w trybie „witryna na komputer" przedstawia się jako Mac z ekranem dotykowym. */
+  function naIOS() {
+    try {
+      var n = root.navigator;
+      if (!n) return false;
+      if (/iPhone|iPad|iPod/i.test(String(n.userAgent || ''))) return true;
+      return n.platform === 'MacIntel' && (Number(n.maxTouchPoints) || 0) > 1;
+    } catch (e) { return false; }
+  }
+
   /* Dokłada łącznik TYLKO wtedy, gdy tekst faktycznie zaczyna się jak adres. Gdyby kiedyś
      pierwszy wiersz przestał być etykietą z dwukropkiem, do schowka nie trafi żaden dodatkowy
      znak — zabezpieczenie znika samo, zamiast zostać na zawsze. */
   function bezSchematuNaPoczatku(tekst) {
-    return SCHEMAT.test(tekst) ? LACZNIK + tekst : tekst;
+    return naIOS() && SCHEMAT.test(tekst) ? LACZNIK + tekst : tekst;
+  }
+
+  /* ---------- P-SCHOWEK-HIS: tekst, który przeżyje stronę kodową Windows-1250 ----------
+
+     ZGŁOSZENIE WŁAŚCICIELA (2026-10-13). Podsumowanie wklejone do Eskulapa (HIS) wygląda dobrze,
+     ale w wydruku PDF i w dokumencie wysłanym na platformę P1 zamiast „≥" stoi „?" („norma ?4
+     cm/rok"), a już po wklejeniu tekst zaczyna się od „?".
+
+     PRZYCZYNA. Objaw zgadza się co do znaku z zamianą tekstu na jednobajtową stronę kodową
+     Windows-1250 tak, jak robi to Windows — z tablicą „najlepszego dopasowania" (bestfit1250.txt,
+     unicode.org). Znak, który ma w niej odpowiednik, przechodzi po cichu: „−" → „-", „²" → „2",
+     „‑" → „-". Znak bez odpowiednika dostaje znak domyślny „?": „≥", „≤", „≈" i łącznik U+2060
+     z `bezSchematuNaPoczatku()`. Ta sama tablica robi też rzeczy groźne dla liczb: „½" → „1",
+     „¼" → „1", „10³" → „103".
+
+     ROZWIĄZANIE. Znaki spoza Windows-1250, które aplikacja wypisuje w wynikach, zamieniamy przed
+     zapisem na jednoznaczne odpowiedniki z ASCII. Znaki należące do Windows-1250 (polskie litery,
+     „–", „—", „’", „„", „”", „…", „±", „×", „°", „µ", spacja nierozdzielająca) zostają. Liczby,
+     jednostki, progi, kolejność i podział wierszy — bez zmian. Znaku spoza tabel moduł nie zgaduje:
+     zostaje taki, jaki był. Karta na ekranie nadal pokazuje „≥" — zmienia się tylko tekst
+     w schowku. */
+  var ZAMIANY = {
+    /* porównania: bez tego „norma ≥4 cm/rok" staje się w HIS „norma ?4 cm/rok" */
+    '\u2265': '>=',
+    '\u2264': '<=',
+    '\u2248': '~',
+    /* minus i łączniki: „hSDS −0,84" i „Z‑score" — zwykły łącznik-minus z ASCII */
+    '\u2212': '-',
+    '\u2010': '-',
+    '\u2011': '-',
+    '\u2012': '-',
+    /* strzałki: tablica Windows dałaby „›", „‹" i „-" */
+    '\u2192': '->',
+    '\u2190': '<-',
+    '\u2194': '<->',
+    /* grecka litera mi w jednostkach („μg") — Windows-1250 ma znak mikro „µ" */
+    '\u03BC': '\u00B5',
+    /* indeksy dolne: „CO₂" → „CO2" */
+    '\u2080': '0', '\u2081': '1', '\u2082': '2', '\u2083': '3', '\u2084': '4',
+    '\u2085': '5', '\u2086': '6', '\u2087': '7', '\u2088': '8', '\u2089': '9',
+    /* odstępy typograficzne (wąski, cienki, cyfrowy…) — zwykła spacja */
+    '\u2000': ' ', '\u2001': ' ', '\u2002': ' ', '\u2003': ' ', '\u2004': ' ', '\u2005': ' ',
+    '\u2006': ' ', '\u2007': ' ', '\u2008': ' ', '\u2009': ' ', '\u200A': ' ', '\u202F': ' ',
+    '\u205F': ' ',
+    /* znaki niewidoczne: po konwersji zostałby z nich sam „?" */
+    '\u200B': '', '\u200C': '', '\u200D': '', '\u2060': '', '\uFEFF': ''
+  };
+
+  /* Indeksy górne. Wykładnik liczby dostaje „^" („10⁹/l" → „10^9/l", „10⁻³" → „10^-3"), wykładnik
+     jednostki — nie („kg/m²" → „kg/m2", „cm³" → „cm3"). Bez „^" „10³" czytałoby się jak „103". */
+  var GORNE = {
+    '\u2070': '0', '\u00B9': '1', '\u00B2': '2', '\u00B3': '3', '\u2074': '4', '\u2075': '5',
+    '\u2076': '6', '\u2077': '7', '\u2078': '8', '\u2079': '9', '\u207A': '+', '\u207B': '-'
+  };
+  /* Bez wyrażeń „lookbehind": starsze Safari na iOS ich nie znają, a błąd składni wyłączyłby
+     cały moduł, czyli kopiowanie. Cyfrę przed wykładnikiem łapie opcjonalna grupa. */
+  var GORNE_CIAG = /(\d?)([\u2070\u00B9\u00B2\u00B3\u2074-\u207B]+)/g;
+
+  /* Ułamki zwykłe: „½" → „1/2", a „1½" → „1 1/2" (nie „11/2"). Tablica Windows dałaby „1". */
+  var ULAMKI = { '\u00BC': '1/4', '\u00BD': '1/2', '\u00BE': '3/4' };
+  var ULAMKI_CIAG = /(\d?)([\u00BC-\u00BE])/g;
+
+  function dlaSystemuSzpitalnego(tekst) {
+    var t = typeof tekst === 'string' ? tekst : String(tekst == null ? '' : tekst);
+    t = t.replace(GORNE_CIAG, function (_, cyfra, ciag) {
+      var plaski = '';
+      for (var i = 0; i < ciag.length; i += 1) plaski += GORNE[ciag.charAt(i)];
+      return cyfra ? cyfra + '^' + plaski : plaski;
+    });
+    t = t.replace(ULAMKI_CIAG, function (_, cyfra, ulamek) {
+      return cyfra ? cyfra + ' ' + ULAMKI[ulamek] : ULAMKI[ulamek];
+    });
+    var wynik = '';
+    for (var j = 0; j < t.length; j += 1) {
+      var znak = t.charAt(j);
+      wynik += Object.prototype.hasOwnProperty.call(ZAMIANY, znak) ? ZAMIANY[znak] : znak;
+    }
+    return wynik;
   }
 
   /* Kopiuje tekst do schowka. Musi być wywołane W GEŚCIE UŻYTKOWNIKA (obsługa kliknięcia).
@@ -141,9 +239,12 @@
      Kolejność jest tu istotna klinicznie, nie estetycznie. `writeText` kładzie na schowku JEDEN
      wariant — czysty tekst — więc każda aplikacja wkleja to samo. Uruchomienie obok niego
      `execCommand` dokładałoby drugi wariant i to on wygrywałby w Notatkach i Wiadomościach.
-     Dlatego droga zapasowa rusza WYŁĄCZNIE wtedy, gdy Clipboard API w ogóle nie ma. */
+     Dlatego droga zapasowa rusza WYŁĄCZNIE wtedy, gdy Clipboard API w ogóle nie ma.
+
+     Najpierw zamiana znaków dla HIS, potem łącznik na iOS — w odwrotnej kolejności zamiana
+     usunęłaby łącznik, który na iPhonie jest potrzebny. */
   function kopiuj(tekst) {
-    var t = typeof tekst === 'string' ? tekst : String(tekst == null ? '' : tekst);
+    var t = dlaSystemuSzpitalnego(tekst);
     if (!t) return Promise.reject(new Error('Brak tekstu do skopiowania.'));
 
     t = bezSchematuNaPoczatku(t);
@@ -156,5 +257,9 @@
     return Promise.reject(new Error('Przeglądarka nie pozwoliła zapisać do schowka.'));
   }
 
-  root.VildaSchowek = Object.freeze({ wersja: WERSJA, kopiuj: kopiuj });
+  root.VildaSchowek = Object.freeze({
+    wersja: WERSJA,
+    kopiuj: kopiuj,
+    dlaSystemuSzpitalnego: dlaSystemuSzpitalnego
+  });
 })(typeof window !== 'undefined' ? window : null);

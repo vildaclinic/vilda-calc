@@ -11,7 +11,26 @@ import { expect, test } from '../support/test-czas.mjs';
 // UWAGA CO DO ZAKRESU: to Chromium, nie WebKit — ten plik NIE dowodzi zachowania na iPhonie.
 // Dowodzi tego, co da się sprawdzić bez tamtej platformy: że tekst ląduje w systemowym schowku
 // i że przy dostępnym Clipboard API druga droga zapisu w ogóle nie rusza. Dane FIKCYJNE.
+//
+// P-SCHOWEK-HIS (zgłoszenie właściciela, 2026-10-13): w Eskulapie (HIS) „≥" z podsumowania
+// zamieniał się w wydruku PDF i na P1 w „?", a tekst zaczynał się od „?". Tekst w schowku mieści
+// się odtąd w stronie kodowej Windows-1250, a łącznik U+2060 dostaje tylko iPhone i iPad.
+// Wyrocznią repertuaru jest dekoder Windows-1250 z Node, nie tabela modułu.
 test.use({ serviceWorkers: 'block', permissions: ['clipboard-read', 'clipboard-write'] });
+
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 '
+  + '(KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1';
+
+const WIN1250 = (() => {
+  const dekoder = new TextDecoder('windows-1250');
+  const znaki = new Set();
+  for (let bajt = 0; bajt < 256; bajt += 1) {
+    const znak = dekoder.decode(new Uint8Array([bajt]));
+    if (znak !== '\uFFFD') znaki.add(znak);
+  }
+  return znaki;
+})();
+const spozaWindows1250 = (tekst) => [...tekst].filter((z) => !WIN1250.has(z));
 
 const ZNACZNIK = 'POPRZEDNIA-ZAWARTOSC-SCHOWKA-1234';
 const HASLO = 'E2e#Schowek!26a';
@@ -61,7 +80,7 @@ async function otworz(page, { bezApiSchowka = false, zepsuteZaznaczenie = false,
   await page.waitForFunction(() => Boolean(window.VildaSchowek));
 }
 
-async function wpiszPacjenta(page) {
+async function wlaczTrybPro(page) {
   // Przycisk podsumowania pokazuje się dopiero w trybie profesjonalnym — włączamy go
   // prawdziwym przełącznikiem, jak lekarz. Ponawiamy, aż zadziała: zaraz po wczytaniu strony
   // nasłuch przełącznika bywa jeszcze niepodpięty i pojedyncze kliknięcie przepada.
@@ -71,6 +90,10 @@ async function wpiszPacjenta(page) {
     if (!pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
     return window.professionalMode === true;
   }, { timeout: 15000 });
+}
+
+async function wpiszPacjenta(page) {
+  await wlaczTrybPro(page);
   await page.evaluate(() => {
     const set = (id, v) => {
       const el = document.getElementById(id);
@@ -123,10 +146,11 @@ test('tekst ląduje w SYSTEMOWYM schowku, a druga droga zapisu nie rusza', async
 
   const wklejone = await wklejZeSchowka(page);
   expect(wklejone, 'schowek nie może zostać z poprzednią zawartością').not.toContain(ZNACZNIK);
-  // potwierdzone na iPhonie: bez tego znaku tekst zaczyna się od „Waga:", co WebKit czyta jako
-  // schemat adresu i Notatki wklejają CAŁOŚĆ jako jedno łącze
-  expect(wklejone.charCodeAt(0), 'na początku łącznik wyrazów U+2060').toBe(0x2060);
-  expect(wklejone.slice(1), 'zaraz za nim właściwa treść').toMatch(/^Waga:/);
+  // P-SCHOWEK-HIS: na komputerze BEZ łącznika U+2060 — w HIS-ie pod Windows wracał jako „?" przed
+  // pierwszym wierszem. Łącznik zostaje tylko na iPhonie i iPadzie (osobny test niżej).
+  expect(wklejone.charCodeAt(0), 'pierwszy znak to litera etykiety, nie łącznik U+2060').toBe('W'.charCodeAt(0));
+  expect(wklejone, 'od razu właściwa treść').toMatch(/^Waga:/);
+  expect(spozaWindows1250(wklejone), 'każdy znak przeżyje stronę kodową Windows-1250').toEqual([]);
   expect(wklejone).toContain('BMI:');
   expect(wklejone).toContain('Waga:');
   expect(wklejone).toContain('Wzrost:');
@@ -162,4 +186,87 @@ test('gdy kopiowanie się nie uda, przycisk mówi prawdę zamiast pokazywać „
 
   expect(komunikaty.join(' '), 'lekarz musi wiedzieć, że schowek został bez zmian').toMatch(/nie uda/i);
   await expect(page.locator('#vildaDymek'), 'żadnego fałszywego „skopiowane"').toHaveCount(0);
+});
+
+test.describe('na iPhonie (identyfikator przeglądarki iPhone’a)', () => {
+  test.use({ userAgent: IPHONE });
+
+  test('łącznik U+2060 zostaje przed „Waga:" — poprawka P-IOS-SCHOWEK działa dalej', async ({ page }) => {
+    // Chromium z identyfikatorem iPhone’a: sprawdza decyzję modułu „czy to iOS", nie WebKit.
+    await otworz(page);
+    expect(await page.evaluate(() => navigator.userAgent), 'kontrola: strona widzi iPhone’a').toContain('iPhone');
+    await wpiszPacjenta(page);
+    await zasiejZnacznik(page, ZNACZNIK);
+
+    await page.locator('#metabolicSummaryBtn').click();
+    await expect(page.locator('#vildaDymek')).toBeVisible({ timeout: 10000 });
+
+    const wklejone = await wklejZeSchowka(page);
+    expect(wklejone, 'schowek nie może zostać z poprzednią zawartością').not.toContain(ZNACZNIK);
+    // potwierdzone na iPhonie: bez tego znaku tekst zaczyna się od „Waga:", co WebKit czyta jako
+    // schemat adresu i Notatki wklejają CAŁOŚĆ jako jedno łącze
+    expect(wklejone.charCodeAt(0), 'na początku łącznik wyrazów U+2060').toBe(0x2060);
+    expect(wklejone.slice(1), 'zaraz za nim właściwa treść').toMatch(/^Waga:/);
+    expect(spozaWindows1250(wklejone.slice(1)), 'reszta w Windows-1250 jak na komputerze').toEqual([]);
+  });
+});
+
+test('P-SCHOWEK-HIS: norma tempa wzrastania trafia do schowka jako „>=", a karta dalej pokazuje „≥"', async ({ page }) => {
+  // Chłopiec 12;6, 146 cm, 36 kg; rok wcześniej 140 cm, 33 kg; wiek kostny 11,5 roku; rodzice
+  // 164 i 178 cm. Dane FIKCYJNE. Tempo 6,0 cm/rok z normą okołopokwitaniową „≥4 cm/rok" i ujemne SDS
+  // („−") — dokładnie te znaki, które w zgłoszeniu wracały z HIS-u jako „?".
+  await otworz(page);
+  await wlaczTrybPro(page);
+  await page.evaluate(() => {
+    const set = (id, v) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = String(v);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    set('sex', 'M'); set('age', 12); set('ageMonths', 6); set('height', 146); set('weight', 36);
+    window.update();
+  });
+  // Karta zaawansowana podpina przycisk leniwie — czekamy na znacznik, który stawia sama aplikacja.
+  await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
+    { state: 'attached' });
+  await page.locator('#toggleAdvancedGrowth').click();
+  await page.waitForSelector('#advMeasurements .measure-row');
+  await page.evaluate(() => {
+    const wiersz = document.querySelector('#advMeasurements .measure-row');
+    const wpisz = (sel, v) => {
+      const e = wiersz.querySelector(sel);
+      if (e) { e.value = String(v); e.dispatchEvent(new Event('input', { bubbles: true })); }
+    };
+    wpisz('.adv-age-years', 11); wpisz('.adv-age-months', 6); wpisz('.adv-height', 140); wpisz('.adv-weight', 33);
+    const set = (id, v) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = String(v);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    set('advMotherHeight', 164); set('advFatherHeight', 178); set('advBoneAge', 11.5);
+    if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
+    window.update();
+  });
+  const karta = page.locator('#currentSummaryContent');
+  // kontrola dodatnia: karta na ekranie ma „≥" — bez tego asercje schowka niżej niczego by nie dowodziły
+  await expect(karta).toContainText(/norma \u2265\d/, { timeout: 15000 });
+  await expect(page.locator('#metabolicSummaryBtn')).toBeVisible({ timeout: 15000 });
+  await zasiejZnacznik(page, ZNACZNIK);
+
+  await page.locator('#metabolicSummaryBtn').click();
+  await expect(page.locator('#vildaDymek')).toBeVisible({ timeout: 10000 });
+  const wklejone = await wklejZeSchowka(page);
+
+  expect(wklejone, 'schowek nie może zostać z poprzednią zawartością').not.toContain(ZNACZNIK);
+  expect(wklejone, 'norma tempa zapisana znakami ASCII').toMatch(/Tempo wzrastania: [^\n]*norma >=\d/);
+  expect(wklejone, 'żadnego „≥", które HIS zamienia w „?"').not.toContain('\u2265');
+  expect(wklejone, 'ujemne SDS ze zwykłym minusem').toMatch(/hSDS -\d/);
+  expect(spozaWindows1250(wklejone), 'każdy znak przeżyje stronę kodową Windows-1250').toEqual([]);
+  // ekran bez zmian: karta nadal pokazuje „≥" i „−" po skopiowaniu
+  await expect(karta).toContainText(/norma \u2265\d/);
+  await expect(karta).toContainText(/hSDS \u2212\d/);
 });
