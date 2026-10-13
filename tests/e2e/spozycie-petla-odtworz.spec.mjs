@@ -13,6 +13,10 @@ import { expect, test } from '../support/test-czas.mjs';
 // przepełnieniem stosu: ok. 4,6 tys. parowań i pełnych przeliczeń, 42–62 s zablokowanej strony.
 // „Nowy pomiar” czyści bieżący pomiar, więc karta się nie rozwija i pętli nie ma.
 //
+// Przy okazji (P4): monitor GH w DocPro budował lustro punktów w ukrytej karcie zaawansowanej
+// z pełnym przeliczeniem karty po każdym punkcie — w powłoce app.html także w tle, na wspólnym
+// wątku z Start. Teraz jedno przeliczenie na końcu, stan karty bez zmian.
+//
 // Strażnicy liczą wywołania, nie mierzą czasu. Dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -228,41 +232,24 @@ test.describe('„Odtwórz zapis” u pacjentki z punktem GH na bieżącej wizyc
   }
 });
 
-test.describe('Punkty terapii GH dochodzą do historii jednym przeliczeniem', () => {
-  // Mostek importTherapyPointsToAdvancedGrowth (Start) dodawał każdy wiersz punktu z pełnym
-  // przeliczeniem karty, a na końcu przeliczał ją jeszcze raz — praca rosła z kwadratem liczby
-  // punktów (faza „Wczytaj tego pacjenta”, wspólna dla obu wyborów).
-  test('mostek punktów GH na Start: przeliczeń nie przybywa z liczbą punktów', async ({ page }) => {
-    await otworz(page);
-    const wariant = WARIANTY[0];
-    await policzPacjentke(page, wariant);
-    const zPunktami = await tabela(page);
-    // Bez punktów: mostek usuwa wiersze punktów.
-    await page.evaluate(() => {
-      window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', [], { force: true });
-      window.ghTherapyPoints = [];
-    });
-    await page.evaluate(() => window.importTherapyPointsToAdvancedGrowth());
-    await expect.poll(() => page.evaluate(
-      () => document.querySelectorAll('#advMeasurements .measure-row[data-gh-id]').length,
-    )).toBe(0);
-
-    await page.evaluate((p) => {
-      window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', p, { force: true });
-      window.ghTherapyPoints = p;
-    }, punktyGh(wariant));
-    await wlaczLicznik(page);
-    await page.evaluate(() => window.importTherapyPointsToAdvancedGrowth());
-    const import1 = await licznik(page);
-    const dodane = await page.evaluate(
-      () => document.querySelectorAll('#advMeasurements .measure-row[data-gh-id]').length,
-    );
-    expect(dodane, 'mostek dodał wiersze punktów').toBeGreaterThanOrEqual(WIEK_PUNKTOW.length - 1);
-    // Dotąd: jedno przeliczenie na każdy dodany wiersz plus jedno na końcu.
-    expect(import1.przeliczenia, 'pełne przeliczenia na jeden import punktów').toBeLessThanOrEqual(2);
-    expect(await tabela(page), 'tabela po ponownym imporcie jak przed nim').toEqual(zPunktami);
+// Stan ukrytej karty zaawansowanej w DocPro: lustro punktów GH, wszystkie wiersze, wynik karty
+// i pomiary w advancedGrowthData.
+const stanDocPro = (page) => page.evaluate(() => {
+  const wiersze = Array.from(document.querySelectorAll('#advMeasurements .measure-row')).map((w) => {
+    const v = (s) => w.querySelector(s)?.value ?? '';
+    const liczba = (s) => (v(s) === '' ? null : Number(v(s)));
+    const m = (Number(v('.adv-age-years')) || 0) * 12 + (Number(v('.adv-age-months')) || 0);
+    return [m, liczba('.adv-height'), liczba('.adv-weight'), w.getAttribute('data-gh-id') || '', w.getAttribute('data-gh-sync') || ''];
   });
+  return {
+    wiersze,
+    lustro: wiersze.filter((w) => w[4] === 'true').map((w) => w.slice(0, 4)),
+    wynik: (document.getElementById('advResults')?.innerText || '').trim(),
+    pomiary: JSON.stringify((window.advancedGrowthData && window.advancedGrowthData.measurements) || []),
+  };
+});
 
+test.describe('Monitor GH w DocPro buduje lustro punktów jednym przeliczeniem', () => {
   // Monitor GH w DocPro buduje w ukrytej karcie zaawansowanej lustro punktów (ue()). W powłoce
   // app.html robi to w tle przy każdym wczytaniu i odtworzeniu — na wspólnym wątku z Start.
   test('monitor GH w DocPro: odświeżenie monitora to jedno przeliczenie karty', async ({ page }) => {
@@ -272,14 +259,18 @@ test.describe('Punkty terapii GH dochodzą do historii jednym przeliczeniem', ()
     await page.waitForFunction(() => typeof window.refreshGHTherapyMonitor === 'function', null, { timeout: 60000 });
     // Odtworzenie stanu DocPro biegnie w przebiegach do 1,5 s po starcie strony (+350 ms na zapis).
     await page.waitForTimeout(2500);
+    const przed = await stanDocPro(page);
+    expect(przed.lustro.length, 'lustro punktów GH w ukrytej karcie DocPro').toBeGreaterThanOrEqual(WIEK_PUNKTOW.length - 1);
+    // Wiersze lustra niosą wartości punktów z monitora (pominięte przeliczenie pośrednie nie może
+    // zostawić pustego ani przesuniętego wiersza).
+    const oczekiwane = Object.fromEntries(punktyGh(WARIANTY[0]).map((p) => [p.id, [p.ageYears * 12 + p.ageMonths, p.height, p.weight]]));
+    for (const [m, cm, kg, id] of przed.lustro) expect([m, cm, kg], `wiersz punktu ${id}`).toEqual(oczekiwane[id]);
+
     await wlaczLicznik(page);
     await page.evaluate(() => window.refreshGHTherapyMonitor());
     const odswiezenie = await licznik(page);
-    const lustro = await page.evaluate(
-      () => document.querySelectorAll('#advMeasurements .measure-row[data-gh-sync="true"]').length,
-    );
-    expect(lustro, 'lustro punktów GH w ukrytej karcie DocPro').toBeGreaterThanOrEqual(WIEK_PUNKTOW.length - 1);
     // Dotąd: jedno przeliczenie na każdy punkt plus jedno na końcu.
     expect(odswiezenie.przeliczenia, 'pełne przeliczenia na jedno odświeżenie monitora').toBeLessThanOrEqual(2);
+    expect(await stanDocPro(page), 'tabela, wyniki i dane karty po odświeżeniu monitora bez zmian').toEqual(przed);
   });
 });
