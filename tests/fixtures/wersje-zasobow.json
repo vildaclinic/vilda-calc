@@ -552,8 +552,8 @@
   "sha256": "f227761d1de9d59f63f6739b2b7084ebdf5a2d94dec95ffc0bfdab9c291fb088"
  },
  "vilda_dob_age.js": {
-  "v": 9,
-  "sha256": "ff3164c104e74b71140c513b1e5e66daa9dca11e57226ad91f04344b88b7c601"
+  "v": 10,
+  "sha256": "82f546228c77d6225f66c603aad4d93075f85ce09db6a62e4aac5a8a0f59d53d"
  },
  "vilda_down_syndrome.js": {
   "v": 4,
@@ -968,8 +968,8 @@
   "sha256": "0345302f147c2eb15091b9413e40791131366aa80eb0ca4fa77d3e0062d33813"
  },
  "vilda_summary_cards.js": {
-  "v": 58,
-  "sha256": "fb50f0b7e6e47d275741e1bafaab4bf1a1274810e90955e87863df53aadeca52"
+  "v": 59,
+  "sha256": "5b02049d85bf84b7f6615eabb991558bd5d6520c31d095d1bbbd0bc914d0bd37"
  },
  "vilda_sync.js": {
   "v": 39,

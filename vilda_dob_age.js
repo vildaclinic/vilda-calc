@@ -88,7 +88,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '9';
+  var VERSION = '10';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -980,6 +980,42 @@
     }
   }
 
+  /* P-POROWNANIE-DATA (polecenie właściciela 2026-10-13): przyjęcie daty z rekordu jest odroczone
+     (setTimeout po zdarzeniu wczytania), a karta „Porównanie z poprzednim pomiarem” buduje się po
+     asynchronicznym odczycie z sejfu. Kto był pierwszy, zależał od tempa maszyny. Karta zbudowana
+     przed datą liczyła centyl wzrostu „Poprzednio” z pełnych miesięcy (lmsNiemowleWiek bez
+     readExactAge), a ta sama karta po dacie — z wieku dokładnego. Do następnej przebudowy (zwykle
+     najbliższej synchronizacji) lekarz widział więc inną liczbę niż po niej. Moduł mówi teraz,
+     że przyjęcie daty jest w toku (restorePending), i ogłasza jego koniec zdarzeniem
+     `vilda:dob-restored`. Karta czeka na nie przed budową. Licznik, nie flaga: dwa zdarzenia
+     wczytania tuż po sobie (np. wczytanie i odtworzenie w powłoce) dają dwa przyjęcia, a koniec
+     ogłaszamy po ostatnim. Rejestr: docs/clinical/ALGORITHMS.md, P-POROWNANIE-DATA. */
+  var oczekujeNaRekord = 0;
+
+  function restorePending() {
+    return oczekujeNaRekord > 0;
+  }
+
+  function ogloszPrzyjecie() {
+    var d = dok();
+    var Zdarzenie = w && w.CustomEvent;
+    if (!d || typeof d.dispatchEvent !== 'function' || typeof Zdarzenie !== 'function') return;
+    try {
+      d.dispatchEvent(new Zdarzenie('vilda:dob-restored', { detail: { iso: readISO() } }));
+    } catch (e) {
+      zgloc('dob-restored', e);
+    }
+  }
+
+  function przyjmijIOglos() {
+    try {
+      przyjmijZWczytanego();
+    } finally {
+      oczekujeNaRekord = Math.max(0, oczekujeNaRekord - 1);
+      if (oczekujeNaRekord === 0) ogloszPrzyjecie();
+    }
+  }
+
   function przyjmijZWczytanego() {
     bezZnaczaniaEdycji(function () {
       var iso = null;
@@ -1070,11 +1106,23 @@
        vilda_persist_runtime.js wysyła teraz `vilda:persist-restored`. */
     ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored'].forEach(function (nazwa) {
       d.addEventListener(nazwa, function () {
+        oczekujeNaRekord += 1;
+        var zaplanowano = false;
         try {
-          if (w.setTimeout) w.setTimeout(przyjmijZWczytanego, 0);
-          else przyjmijZWczytanego();
+          if (w.setTimeout) {
+            w.setTimeout(przyjmijIOglos, 0);
+            zaplanowano = true;
+          } else {
+            zaplanowano = true;
+            przyjmijIOglos();
+          }
         } catch (e) {
           zgloc(nazwa, e);
+          /* Nie zaplanowano przyjęcia — licznik nie może czekać na nie w nieskończoność. */
+          if (!zaplanowano) {
+            oczekujeNaRekord = Math.max(0, oczekujeNaRekord - 1);
+            if (oczekujeNaRekord === 0) ogloszPrzyjecie();
+          }
         }
       });
     });
@@ -1125,6 +1173,7 @@
     readWeeks: readWeeks,
     readExactAge: readExactAge,
     readMeasuredAtISO: readMeasuredAtISO,
+    restorePending: restorePending,
     showsSavedMeasurement: showsSavedMeasurement,
     mount: mount
   };
