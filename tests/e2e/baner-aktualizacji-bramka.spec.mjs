@@ -48,7 +48,7 @@ async function wdrozNowaWersje(page, wersja) {
   }).toBeGreaterThanOrEqual(1);
 }
 
-test('pytanie „Pobierz dane z serwera” wstrzymuje baner; po odpowiedzi baner się pokazuje', async ({ page, context }) => {
+test('okno pierwszego pobrania („Gotowe”) wstrzymuje baner; po „Przejdź do aplikacji” baner się pokazuje', async ({ page, context }) => {
   test.setTimeout(150_000);
   await zaakceptujRegulamin(context);
   await szybkiSw(context);
@@ -61,11 +61,12 @@ test('pytanie „Pobierz dane z serwera” wstrzymuje baner; po odpowiedzi baner
   await wdrozNowaWersje(page, '2.0.0-e2e');
   // Bez bramki baner byłby widoczny od razu; dajemy mu wyraźnie dłużej niż odstęp bramki (1,5 s).
   await page.waitForTimeout(4000);
-  await expect(baner(page), 'baner czeka, dopóki pytanie jest otwarte').toHaveCount(0);
+  await expect(baner(page), 'baner czeka, dopóki okno jest otwarte').toHaveCount(0);
   expect((await stanBramki(page)).powody).toContain('nowe-urzadzenie');
 
-  await okno(page).getByRole('button', { name: 'Zacznij od nowa (nie pobieraj)' }).click();
-  await expect(baner(page).locator('#sw-refresh'), 'po odpowiedzi baner się pokazuje').toBeVisible({ timeout: 15_000 });
+  // Etap 2: na „Komputerze prywatnym” pobieranie rusza samo; „Gotowe” czeka na kliknięcie (atrapa bez bloba).
+  await okno(page).getByRole('button', { name: 'Przejdź do aplikacji' }).click({ timeout: 20_000 });
+  await expect(baner(page).locator('#sw-refresh'), 'po zamknięciu okna baner się pokazuje').toBeVisible({ timeout: 15_000 });
 });
 
 test('widoczny baner chowa się, gdy proces rusza, i wraca po nim; „Aktualizuj” działa jak dotąd', async ({ page, context }) => {

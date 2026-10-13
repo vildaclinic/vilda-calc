@@ -4,11 +4,14 @@ import { atrapaSynchronizacji, zaakceptujRegulamin, zalozKontoIZaloguj } from '.
 // P-NOWE-URZADZENIE na telefonie: w powłoce app.html (adres startowy zainstalowanej PWA) okno „Pobierz dane
 // z serwera” zakrywa całą aplikację, oba przyciski mieszczą się na ekranie, a strona nie przewija się w poziomie.
 // Przed zmianą pytanie w powłoce nie pokazywało się wcale. Serwer synchronizacji to atrapa; dane fikcyjne.
+// Etap 2: na „Komputerze prywatnym” pytanie zostaje tylko przy synchronizacji wyłączonej celowo w Ustawieniach
+// (vilda-sync-enabled-v1 = "false"); okno pobierania na telefonie: nowe-urzadzenie-pobieranie-mobile.spec.mjs.
 
 test('telefon, powłoka PWA: okno pytania na całym ekranie, przyciski widoczne, bez przewijania w poziomie', async ({ page, context }) => {
   await zaakceptujRegulamin(context);
   await atrapaSynchronizacji(context);
   await page.goto('/app.html#/start', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => localStorage.setItem('vilda-sync-enabled-v1', 'false'));
   await zalozKontoIZaloguj(page);
 
   const okno = page.locator('#vilda-restore-overlay');
