@@ -135,6 +135,37 @@ test.describe('Płeć nowego pacjenta z imienia i nazwiska', () => {
     expect(await plec(page)).toBe('F');
   });
 
+  // P-PLEC-IMIE-2 (zgłoszenie właściciela 2026-10-13): drugi nowy pacjent po „Odrzuć dane i wyczyść”
+  // zostawał przy „Mężczyzna” z notką „Sprawdź płeć: imię „Anna” jest zwykle żeńskie.”, a po twardym
+  // odświeżeniu pierwszy znowu działał. Przyczyna: ~3,2 s po „Wyczyść” custom-fixes.js ponawia `change`
+  // na polach lustra formularza (także na płci, bez zmiany wartości). Gdy lekarz zdążył już wpisać
+  // nazwisko, moduł brał to powiadomienie za płeć wpisaną z zewnątrz i wyłączał automat.
+  test('po „Odrzuć dane i wyczyść” kolejny nowy pacjent też dostaje płeć z imienia — nawet gdy nazwisko wpisano przed odświeżeniem lustra formularza', async ({ page }) => {
+    test.setTimeout(150_000);
+    await otworzZKontem(page);
+    await wpisz(page, '#lastName', 'Fikcyjna');
+    await wpisz(page, '#firstName', 'Anna');
+    expect(await plec(page)).toBe('F');
+
+    // Prawdziwe kliknięcie „Wyczyść” → okno strażnika niezapisanych danych → „Odrzuć dane i wyczyść”.
+    // Strażnik pyta tylko, gdy wskaźnik zapisu zdążył uznać formularz za nowego pacjenta.
+    await page.waitForFunction(() => window.VildaSaveStatusIndicator.getState() === 'new_patient');
+    await page.locator('#clearAllDataBtn').scrollIntoViewIfNeeded();
+    await page.locator('#clearAllDataBtn').click();
+    await page.locator('.vug-btn.vug-danger').click();
+    await expect(page.locator('.vug-backdrop')).toHaveCount(0);
+    await expect(page.locator('#sex')).toHaveValue('M');
+    await expect.poll(() => page.evaluate(() => window.VildaPlecZImienia.stan())).toBe('domyslna');
+
+    // Nazwisko od razu, imię dopiero po odświeżeniu lustra (custom-fixes.js, 3,2 s po kliknięciu).
+    await wpisz(page, '#lastName', 'Fikcyjna');
+    await page.waitForTimeout(3600);
+    await wpisz(page, '#firstName', 'Anna');
+    expect(await plec(page), 'dotąd zostawało M z notką „Sprawdź płeć”').toBe('F');
+    expect(await page.evaluate(() => window.VildaPlecZImienia.stan())).toBe('automat');
+    await expect(notka(page)).toHaveText('Płeć ustawiona na podstawie imienia „Anna” — sprawdź.');
+  });
+
   test('docpro: ten sam formularz; imię i nazwisko sprzeczne — decyduje imię, notka mówi o nazwisku; imię spoza słownika ostrzega', async ({ page }) => {
     test.setTimeout(150_000);
     await otworzZKontem(page, '/docpro.html');
