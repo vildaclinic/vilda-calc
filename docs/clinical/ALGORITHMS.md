@@ -3980,7 +3980,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
-### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.262, 2026-10-13, polecenie właściciela)
+### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
 
 **Skąd.** Test „„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera to samo okno z akcjami” (`tests/e2e/przypomnienia-karta-akcje.spec.mjs`) padał w CI (m.in. na #652), a lokalnie przechodził: `boundingBox()` przycisku „⋮” dawał `null`, choć na zrzucie przycisk był widoczny. Na #652 ustalono, że karta przebudowuje się w całości chwilę po pierwszym renderze, także na czystym `audyt`. Właściciel polecił naprawę 2026-10-13 („napraw niestabilny test przypomnień”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
 
@@ -4003,7 +4003,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Ustalenie poza zakresem (do decyzji właściciela).** Po akcji w oknie pozycji, np. „Zrobione”, karta przebudowuje się dwa razy w odstępie kilku milisekund. Raz z samej akcji (`remOdswiez()` → `Rr()`), drugi raz z powiadomienia sejfu o zmianie wpisu (`onPatientNoteChanged` → `xe()`). Komunikat sejfu z kanału wpada w tę samą klatkę. Obie przebudowy mają tę samą treść, a testy tego nie wywracają, bo dalsze kroki czekają na elementy. Ta zmiana tego nie dotyka.
 
-**Wersje.** `vilda_auth_ui.js` 485 → 486; `vilda_chrome.js` 134 i `vilda_session_bridge.js` 58 (tylko nowy `?v=` wstrzykiwanego `vilda_auth_ui.js`); SW 1.1.261 → 1.1.262.
+**Wersje.** `vilda_auth_ui.js` 485 → 486; `vilda_chrome.js` 134 i `vilda_session_bridge.js` 58 (tylko nowy `?v=` wstrzykiwanego `vilda_auth_ui.js`); SW 1.1.262 → 1.1.263 (numer 1.1.262 nadał równolegle #663).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
