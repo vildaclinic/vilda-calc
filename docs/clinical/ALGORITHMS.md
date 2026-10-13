@@ -3980,7 +3980,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
-### P-POROWNANIE-DATA — karta porównania czeka na datę urodzenia: centyl „Poprzednio” od pierwszej klatki taki jak po synchronizacji (SW 1.1.261, 2026-10-13, polecenie właściciela)
+### P-POROWNANIE-DATA — karta porównania czeka na datę urodzenia: centyl „Poprzednio” od pierwszej klatki taki jak po synchronizacji (SW 1.1.262, 2026-10-13, polecenie właściciela)
 
 **Polecenie właściciela.** „Napraw wyścig z datą urodzenia w osobnym PR” — ustalenie z P-POROWNANIE-W-TLE.
 
@@ -4034,7 +4034,7 @@ W stanie ustalonym karta pokazuje te same liczby co dotąd, tyle że od pierwsze
 
 Kierunek naprawy obu: wiek dokładny pomiaru liczony z daty urodzenia i daty pomiaru zapisanych w rekordzie (`VildaDobAge.ageAtMeasurement`, ta sama reguła co „Odtwórz zapis” w P-ODTWORZ-WIEK). Ten wiek trzeba przekazać do siatek jawnie, zamiast odczytywać go z formularza.
 
-**Wersje.** `vilda_dob_age.js` 10, `vilda_summary_cards.js` 59; SW 1.1.260 → 1.1.261.
+**Wersje.** `vilda_dob_age.js` 10, `vilda_summary_cards.js` 59; SW 1.1.261 → 1.1.262 (numer 1.1.261 nadał równolegle #661).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
