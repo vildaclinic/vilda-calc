@@ -170,7 +170,8 @@ Ta naprawa zwykłych widoków nie obejmuje odrębnego porównania płci.
   od wysokości mostu. Wszystkie 99 median źródła zachowaj w danych;
   nie przyciągaj jasnego znacznika do poglądowej linii.
 - Nie twórz dorosłego profilu z kotwic graficznych. Istniejące zwykłe
-  żeńskie odniesienie AMH kończy się przy 1 roku. Jopling/FDA opisują
+  żeńskie odniesienie AMH kończyło się przy 1 roku; rozszerzenie
+  Jopling z 13 października opisano poniżej. Jopling/FDA opisują
   osobne grupy osocza, a niemowlęta Ljubicic — surowicę. To nie jedna
   skalibrowana populacja. Wysokość po 45 latach i `displayFloor` są
   jakościowe, bez koncentracji, LOD lub dokładnego wieku menopauzy.
@@ -253,14 +254,50 @@ Zwykły widok i porównanie płci zachowują odrębne kontrakty.
   obserwowało dorosłe kobiety do 69 lat. Nie zamieniaj ogona na medianę.
 - Zwykły profil `ljubicic2022-female-inhb` pozostaje 0,02–1 roku,
   włącznie. Odrębny `borelli2025-female-inhb-puberty-comparison`
-  8–20 lat nie trafia do globalnych profili. Obecność starszej linii
-  nie aktywuje punktu. Dla 0,25 roku wynik 30 lub 80 pg/mL zachowuje
+  8–20 lat w tej historycznej zmianie nie trafiał do globalnych profili.
+  Zatwierdzone rozszerzenie z 13 października opisano poniżej; sama
+  obecność starszej linii nadal nie aktywuje punktu poza źródłem.
+  Dla 0,25 roku wynik 30 lub 80 pg/mL zachowuje
   p50 49,684; tylko 80 wymaga strzałki. Źródłowy znacznik pozostaje
   niezależny od ilustracji, kwalifikacja i normy nie zmieniają się.
 
 Źródła, ograniczenia i hashe:
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
 Akceptacja ilustracji nie oznacza walidacji klinicznej połączonej krzywej.
+
+## Żeńskie mediany poza niemowlęctwem — 13 października 2026
+
+Po zgłoszeniu braku median przy AMH i inhibinie B u 15-latki właściciel
+zaakceptował rozszerzenie odniesień edukacyjnych, z krótkim komentarzem
+o ograniczeniach i bez nowych pól. Nie zmienia to norm laboratoryjnych,
+źródłowych liczb, geometrii linii, skali ani zapisu wyniku.
+
+- AMH: Jopling 2018, tabela 1, pięć stałych median grup wieku,
+  Access AMH, osocze litowo-heparynowe. Routing aplikacji to `(1,5)`,
+  `[5,8)`, `[8,12)`, `[12,15)`, `[15,18)`; zachowaj oryginalne etykiety
+  grup i liczebności. To jawna konwencja dopasowania, nie odzyskana
+  reguła autora ani nowa ciągła mediana wieku. Ograniczenie do <18 lat
+  jest konserwatywną polityką pediatryczną. FDA nie jest aktywowane.
+- Dokładnie 1 rok zachowuje Ljubicic. Nieprecyzyjny wiek obejmujący
+  tę granicę lub dwie grupy Jopling nie otrzymuje arbitralnej mediany;
+  wystarczy krótki powód. Nie wymagaj nowych danych o stadium lub cyklu.
+- Inhibina B: istniejące mediany Borelli-Kjær 8–20 lat włącznie są
+  dostępne także w zwykłych widokach. Zachowaj wszystkie 24 węzły
+  5,6–47 lat do PCHIP. Cykl i antykoncepcja pozostają ograniczeniami
+  zbiorczej mediany wieku; nie twórz z niej normy fazy cyklu.
+- Materiał Jopling jest osoczem, a Borelli surowicą. Nieznane metoda
+  lub materiał pozwalają na edukacyjne zestawienie, bez potwierdzania
+  zgodności próbki. Znana niezgodność blokuje punkt, nie krzywą wieku.
+  Profilowa lista `compatibleSpecimenIds` nie znosi dotychczasowej
+  domyślnej kwalifikacji surowicy pozostałych źródeł.
+- Jasny znacznik AMH podpisuj jako medianę grupy; 15–18,9 lat daje
+  21,14 pmol/L ≈2,96 ng/mL. Inhibina B dokładnie w wieku 15 lat daje
+  ≈44 pg/mL z odczytu ryciny. Nie przyciągaj żadnej liczby do linii;
+  wynik poniżej mediany nie staje się automatycznie nieprawidłowy.
+
+Źródła, granice i przypadki kontrolne:
+[przegląd odniesień](hormone-lifespan/evidence/female-reference-points-2026-10-13.json)
+oraz [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
 
 ## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 
@@ -442,10 +479,10 @@ oraz [opis modułu](HORMONE_LIFESPAN.md#żeńskie-lhfsh--odrębne-widoki-okresó
 - Pokwitanie: mediany modeli Borelli-Kjær 2025 w wieku 8–20 lat,
   nie mediany Tannera. Męski profil i jego mieszane metody pozostają
   dotychczasowe. Dla dziewcząt właściciel osobno zaakceptował nowe
-  odniesienie **wyłącznie w porównaniu płci inhibiny B 8–20 lat**.
+  odniesienie **początkowo wyłącznie w porównaniu płci inhibiny B 8–20 lat**.
   Dane `inhibinComparisonReferenceData` pozostają poza globalnym
-  `patientPointData`; nie aktywuj punktu w zwykłych widokach lub poza
-  zaakceptowanym wiekiem.
+  `patientPointData`. Osobne rozszerzenie z 13 października udostępnia
+  te same mediany w zwykłych widokach, nadal tylko w wieku 8–20 lat.
 - Zachowaj wszystkie 24 żeńskie węzły ryc. 1 od 5,6 do 47 lat podczas
   PCHIP. Okno kwalifikacji 8–20 ogranicza wynik, nie zbiór węzłów
   potrzebnych do stycznych. Nie dopasowuj nowej krzywej z obciętej

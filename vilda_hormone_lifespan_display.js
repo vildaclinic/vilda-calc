@@ -149,10 +149,14 @@
       if (!female || female.id !== settings.profileIds.female || female.sex !== 'female' ||
           female.minAge !== domain.minAge || female.maxAge !== domain.maxAge || female.maxAgeExclusive ||
           source.profiles.some(function (p) { return p && p.id === female.id; })) return null;
-      // Only this comparison receives the additional reference. Its own array
-      // cannot register or replace a profile in ordinary views or other analytes.
+      // Keep this comparison's source ID and scope. The ordinary-view copy
+      // derives from the same source; exclude that copy only from this local
+      // array so it cannot produce two eligible references for the patient.
       referenceData = Object.assign({}, data, { patientPointData: Object.assign({}, source, {
-        profiles: source.profiles.concat([female])
+        profiles: source.profiles.filter(function (profile) {
+          return !(profile.analyte === female.analyte && profile.sex === female.sex &&
+            profile.provenance && profile.provenance.sourceProfileId === female.id);
+        }).concat([female])
       }) });
     }
     var end = domain.maxAgeExclusive ? domain.maxAge - sampling.exclusiveEndpointGapYears : domain.maxAge;

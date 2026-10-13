@@ -26,8 +26,8 @@ describe('Fixed inhibin B sex comparison — production model', () => {
     expect(data.inhibinComparisonPolicy).toEqual(readable('inhibin-comparison-policy.json'));
     expect(data.inhibinComparisonReferenceData).toEqual(readable('inhibin-comparison-reference-data.json'));
     expect(data.patientPointData).toEqual(readable('population-reference-data.json'));
-    // Entire original reference bundle at ea130862, including all routing and unit metadata.
-    expect(digest(data.patientPointData)).toBe('9d5c86ac8f47e822c5768c8ac68e7987e6e46cafdfe37c0a8c776f9cd3e88dff');
+    // Entire source bundle, including the six separately scoped ordinary-view references.
+    expect(digest(data.patientPointData)).toBe('2b59a6eb7cf2503fe61259e87dcb811f0ac6c5785e6907b23681738b63e19869');
     const female = data.inhibinComparisonReferenceData.profiles[0];
     const source = readable('evidence/inhb-digitized-median.json');
     expect(female.points).toEqual(source.points.map(point => ({ ageYears: point.ageYears, value: point.approxMedianPgMl })));
@@ -108,25 +108,29 @@ describe('Fixed inhibin B sex comparison — production model', () => {
     }
   });
 
-  it('isolates the female puberty reference from ordinary views and every existing profile', () => {
+  it('isolates the scoped female puberty reference from its ordinary-view copy and preserves all other profiles', () => {
     const mini = build('mini'), puberty = build('puberty');
     const original = JSON.stringify(data.patientPointData);
     expect(mini.referenceData).toBe(data);
     expect(puberty.referenceData).not.toBe(data);
     expect(puberty.referenceData.patientPointData).not.toBe(data.patientPointData);
     expect(puberty.referenceData.patientPointData.profiles).not.toBe(data.patientPointData.profiles);
-    expect(puberty.referenceData.patientPointData.profiles.slice(0, -1)).toEqual(data.patientPointData.profiles);
-    data.patientPointData.profiles.forEach((profile, i) => {
+    const originalOthers = data.patientPointData.profiles.filter(p =>
+      p.id !== 'borelli2025-female-inhb-age-8-20');
+    expect(puberty.referenceData.patientPointData.profiles.slice(0, -1)).toEqual(originalOthers);
+    originalOthers.forEach((profile, i) => {
       expect(puberty.referenceData.patientPointData.profiles[i]).toBe(profile);
     });
-    expect(engine.evaluate(data, patient(14))).toEqual(unavailable('unsupported-age'));
+    expect(engine.evaluate(data, patient(14))).toMatchObject({ status: 'ready', referenceValue: 46,
+      profile: { id: 'borelli2025-female-inhb-age-8-20', ordinaryOnly: true } });
     expect(engine.evaluate(puberty.referenceData, patient(14))).toMatchObject({ status: 'ready', referenceValue: 46,
       profile: { id: puberty.profileIds.female, statistic: 'median', approximate: true } });
     for (const context of [patient(.25), patient(14, 'male'), { ...patient(14), analyte: 'amh' }]) {
       expect(engine.evaluate(puberty.referenceData, context)).toEqual(engine.evaluate(data, context));
     }
     expect(JSON.stringify(data.patientPointData)).toBe(original);
-    expect(engine.evaluate(data, patient(14))).toEqual(unavailable('unsupported-age'));
+    expect(engine.evaluate(data, patient(14))).toMatchObject({ status: 'ready', referenceValue: 46,
+      profile: { id: 'borelli2025-female-inhb-age-8-20', ordinaryOnly: true } });
   });
 
   it('keeps scoped eligibility at 8–20 years without assigning Tanner or narrowing the original male source', () => {

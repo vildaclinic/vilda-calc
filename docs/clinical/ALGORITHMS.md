@@ -1316,10 +1316,11 @@ materiałów lub populacji i nie tworzy zwalidowanej trajektorii życia.
 **Wpływ kliniczny:** zmienia się wizualna relacja wyniku i okresów życia,
 dlatego zmianę opisano klinicznie. Wszystkie liczby źródłowe, profile,
 warunki kwalifikacji, normy laboratoryjne, konwersje, interpretacje i
-zapis pacjenta pozostają bez zmian. Jedyny zwykły żeński profil AMH
+zapis pacjenta pozostają bez zmian. Jedyny w chwili tej naprawy żeński profil AMH
 `ljubicic2022-female-amh` nadal obejmuje 0,02–1 roku. Starsza ilustracja
 nie aktywuje punktów w wieku 19,668 lub 35 lat. Porównanie płci, męskie
-AMH i pozostałe hormony zachowują wcześniejsze kontrakty.
+AMH i pozostałe hormony zachowują wcześniejsze kontrakty. Zakres punktów
+żeńskich rozszerza osobna zmiana `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10.
 
 **Syntetyczne wejście → oczekiwane zachowanie:**
 
@@ -1340,6 +1341,71 @@ ograniczenia, hash zatwierdzonej makiety i zakres jej przeglądu:
 [audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną
 całego połączonego wykresu.
+
+### HORMONE-FEMALE-REFERENCE-POINTS — mediany AMH i inhibiny B, 2026-10-13
+
+**Problem i zgoda właściciela:** 15-latka z AMH 0,45 ng/mL lub inhibiną B
+w zwykłym widoku otrzymywała linię i wiek, lecz brak mediany. Właściciel
+zaakceptował udostępnienie źródłowych odniesień z krótkimi komentarzami
+granicznymi, bez nowych pól. Zmiana rozszerza wcześniejszy kontrakt
+punktów opisany historycznie w sekcjach z 11–12 października.
+
+**Źródła i kwalifikacja:** ponownie odczytano dostępne pełne teksty
+Jopling 2018, DOI `10.1002/edm2.21`, oraz Borelli-Kjær 2025, DOI
+`10.1210/clinem/dgae439`. Hashe, liczby, populacje i ograniczenia zawiera
+[przegląd źródłowy](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
+
+- Jopling, tabela 1: osocze litowo-heparynowe, Access AMH, pozostałości
+  próbek szpitalnych po wykluczeniu podejrzanych endokrynopatii/DSD,
+  brak Tannera. Mediany pełnych grup: 14,58/11,44/20,42/17,87/21,14 pmol/L,
+  N=42/42/47/33/30. Routing `(1,5)`, `[5,8)`, `[8,12)`, `[12,15)`,
+  `[15,18)` jest jawną konwencją aplikacji bez luk 4,9–5 itd.
+  Oryginalne etykiety 1–4,9 … 15–18,9 i N pozostają. Autorzy podali wiek
+  w dniach i ogólny zakres do 18 lat, ale nie regułę zaokrągleń ani
+  najstarszy rzeczywisty wiek. Cap <18 jest konserwatywny; mediany są
+  stałymi wartościami grup, nie p50 dokładnego wieku ani stadium.
+- Dokładnie 1 rok nadal należy do Ljubicic. Pierwszy Jopling ma
+  `minAgeExclusive`; nieprecyzyjny wiek przecinający źródła lub grupy
+  nie otrzymuje mediany wybranej ze środka. FDA nie jest aktywowane.
+- Borelli, ryc. 1: surowica Gen II ELISA, 648 dziewcząt 5,6–20,2 lat
+  w większym żeńskim zbiorze. Zwykły profil zachowuje kwalifikację 8–20
+  włącznie i wszystkie 24 przybliżone węzły 5,6–47 do PCHIP, tak jak
+  dotychczasowe porównanie płci. ±2 pg/mL oznacza digitalizację, nie
+  przedział ufności. Cyklu nie standaryzowano, dane antykoncepcji były
+  niepełne; nie jest to mediana konkretnej fazy lub wyłącznie bez leczenia.
+
+`compatibleSpecimenIds` pozwala odróżnić osocze Jopling od surowiczych
+profili. Nieznane metoda/materiał dopuszczają porównanie edukacyjne
+z komentarzem pochodzenia; nie potwierdzają zgodności próbki. Znana
+niezgodność i przeciwwskazania blokują punkt. Pozostałe profile zachowują
+dotychczasową domyślną politykę materiału.
+
+**Wpływ kliniczny:** nowe odniesienia mogą pokazać relację stężenia do
+mediany w starszym wieku. Nie zmieniają laboratoryjnych norm, progów,
+statusów, konwersji, zapisu, geometrii ani skal. Wynik poniżej mediany
+nie oznacza automatycznie „poniżej normy”. Jasny znacznik nie jest
+przyciągany do linii; AMH jest podpisane jako mediana grupy, a inhibina B
+jako przybliżone odniesienie wieku.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistych funkcji:**
+
+- F15, AMH 0,45 ng/mL, nieznane metoda/materiał → mediana grupy
+  15–18,9: 21,14 pmol/L ≈2,96 ng/mL; wynik 0,45, bez werdyktu normy.
+- F4,99/F5/F14,99/F15 → 14,58/11,44/17,87/21,14 pmol/L; bez luk.
+- F dokładnie 1 rok → Ljubicic; `[1,1+1/12)` lub `[14.99,15.01]`
+  → brak jednej mediany; F18 → brak Jopling/FDA.
+- F15, AMH, jawnie surowica lub niezgodna metoda → brak punktu,
+  zachowana krzywa i wiek, krótki powód.
+- F dokładnie 8/15/20 lat, inhibina B → ≈14/44/34 pg/mL;
+  `[15,16)` → przedział median około 40–44; >20 → brak tego profilu.
+- Pusty/cenzurowany wynik, zmiana jednostki, zero/ponadskalowy wynik,
+  zmiana osoby/analitu, zbliżenie, telefon i pełny ekran zachowują
+  wcześniejsze reguły; wpisanie i wyczyszczenie nie zmieniają linii.
+
+Kontrole obejmują silnik produkcyjny, generator danych, renderer i
+rzeczywisty formularz. Status wykonania należy do raportu implementacji;
+te przypadki nie deklarują zaliczonych testów ani walidacji klinicznej.
+Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
 
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
@@ -1485,8 +1551,10 @@ osobnych modeli nie harmonizuje ich populacji lub wpływu cyklu.
 się. Zwykły profil `ljubicic2022-female-inhb` pozostaje ograniczony
 do donoszonych dziewczynek 0,02–1 roku, obie granice włącznie. Odrębny
 profil porównania płci `borelli2025-female-inhb-puberty-comparison`
-nadal działa tylko w tym porównaniu, 8–20 lat. Nie trafia do globalnego
-`patientPointData`. Inne hormony i wykresy męskie zachowują swój kontrakt.
+w tej historycznej naprawie działał tylko w tym porównaniu, 8–20 lat. Nie trafił do globalnego
+`patientPointData` w tej historycznej naprawie. Osobne rozszerzenie
+`HORMONE-FEMALE-REFERENCE-POINTS` z 13.10 udostępnia te same mediany
+8–20 lat w zwykłym widoku. Inne hormony i wykresy męskie zachowują swój kontrakt.
 
 **Syntetyczne wejście → oczekiwane zachowanie:**
 
@@ -1496,8 +1564,10 @@ nadal działa tylko w tym porównaniu, 8–20 lat. Nie trafia do globalnego
   krzywa i skala. Wynik 80 ng/L daje to samo; 0 pg/mL jest na osi.
 - Pusty/wyczyszczony/cenzurowany wynik → ta sama linia, bez nowej kropki.
 - Wiek 0,02/1 roku → p50 odpowiednio 30,583/16,329 pg/mL. Wiek
-  <0,02 lub >1 roku, wcześniactwo, nieznane donoszenie albo znana
-  niezgodna metoda nie otrzymują zastępczego odniesienia liczbowego.
+  <0,02 lub >1 roku nie kwalifikuje do tego profilu niemowlęcego;
+  późniejsze rozszerzenie Borelli 8–20 opisano powyżej. Wcześniactwo,
+  nieznane donoszenie albo znana niezgodna metoda nie otrzymują
+  zastępczego odniesienia niemowlęcego.
 - Dołączenie LH/FSH, zbliżenie, pełny ekran i 320 px → ta sama
   kanoniczna krzywa i stała skala; bez przenoszenia mediany na ilustrację.
 
@@ -1802,7 +1872,8 @@ Ten zapis określa oczekiwany kontrakt, nie wynik testów ani walidację klinicz
 
 **Decyzja właściciela:** wdrożyć zaakceptowane makiety porównania płci
 inhibiny B w minipuberty i pokwitaniu, wraz z osobno zaakceptowanym
-odniesieniem wyniku dziewcząt 8–20 lat wyłącznie w porównaniu pokwitania.
+odniesieniem wyniku dziewcząt 8–20 lat, w tej historycznej zmianie
+wyłącznie w porównaniu pokwitania. Zwykłe widoki rozszerzono osobno 13.10.
 To zmiana prezentacji oraz rozszerzenie kwalifikacji edukacyjnego punktu,
 nie refaktoryzacja bez wpływu na wynik. Nie zmienia norm laboratoryjnych,
 oceny stadium, diagnozy, zapisu ani historii.
@@ -1853,7 +1924,9 @@ w `inhibin-comparison-reference-data.json` / `inhibinComparisonReferenceData`,
 poza globalnym `patientPointData`. Wszystkie 24 dotychczasowe węzły
 ryc. 1 z wieku 5,6–47 lat pozostają w PCHIP, ale kwalifikacja obejmuje
 wyłącznie 8–20 lat włącznie w tym porównaniu. Nie aktywuje to punktu
-w zwykłych widokach ani poza tym wiekiem. Istniejący `evaluate`
+w zwykłych widokach w ramach tej historycznej zmiany ani poza tym wiekiem.
+Osobne rozszerzenie `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10 udostępnia
+te same mediany także w zwykłym widoku. Istniejący `evaluate`
 kwalifikuje własną płeć z zachowaniem reguł wieku, metody, materiału,
 jednostki i znanych przeciwwskazań; metoda drugiej płci nie blokuje
 własnego zgodnego odniesienia. Panele obserwacji Kuiri-Hänninen,

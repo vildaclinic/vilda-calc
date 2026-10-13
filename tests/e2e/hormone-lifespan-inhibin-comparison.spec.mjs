@@ -238,13 +238,21 @@ for (const width of [320, 1440]) {
     await expect.poll(() => paths(page)).toEqual(initial);
     await context(page, 'puberty', { sex: 'female', ageYears: 19.9, ageUpperYears: 20, ageUpperInclusive: false });
     await checkPoint(page, 160, 'puberty');
+    const sourceMedian = await point(page).getAttribute('data-reference-value');
     await panel(page).locator('[data-view="life"]').click();
-    await expect(point(page)).toHaveCount(0);
+    await expect(point(page)).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-8-20');
+    await expect(point(page)).toHaveAttribute('data-value', '160');
+    await expect(point(page)).toHaveAttribute('data-reference-value', sourceMedian);
+    await expect(point(page)).toHaveAttribute('data-divisor', '52.474');
+    await expect(point(page).locator('[data-result-overflow="above"]')).toHaveCount(1);
     await expect(chart(page).locator('[data-linear-tick]')).toHaveCount(0);
     expect(await page.evaluate(() => JSON.stringify(window.VildaHormoneLifespanData.patientPointData))).toBe(sourceBefore);
-    expect(await page.evaluate(() => window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
+    expect(await page.evaluate(() => {
+      const result = window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
       analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
-    }).status)).toBe('unavailable');
+      });
+      return { status: result.status, profile: result.profile?.id, value: result.value, reference: result.referenceValue };
+    })).toEqual({ status: 'ready', profile: 'borelli2025-female-inhb-age-8-20', value: 40, reference: 46 });
   });
 
   test(`inhibin B comparison keeps labels readable in fullscreen and clears scoped state at ${width}px`, async ({ page }, testInfo) => {

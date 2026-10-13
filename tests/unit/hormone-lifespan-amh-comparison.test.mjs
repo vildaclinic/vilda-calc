@@ -22,8 +22,8 @@ describe('Fixed infant AMH sex comparison — production model', () => {
       new URL('../../docs/clinical/hormone-lifespan/amh-comparison-policy.json', import.meta.url), 'utf8')));
     expect(data.patientPointData).toEqual(JSON.parse(readFileSync(
       new URL('../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
-    // Entire reference bundle from e1341c0, including clinical eligibility and conversion metadata.
-    expect(digest(data.patientPointData)).toBe('9d5c86ac8f47e822c5768c8ac68e7987e6e46cafdfe37c0a8c776f9cd3e88dff');
+    // Entire reference bundle, including the ordinary-only pediatric group medians.
+    expect(digest(data.patientPointData)).toBe('2b59a6eb7cf2503fe61259e87dcb811f0ac6c5785e6907b23681738b63e19869');
     const model = display.buildAmhInfantComparison(data, engine);
     expect(model).toMatchObject({ id: 'amh', kind: 'population-model-comparison',
       profileIds: { female: 'ljubicic2022-female-amh', male: 'busch2022-male-amh' },
