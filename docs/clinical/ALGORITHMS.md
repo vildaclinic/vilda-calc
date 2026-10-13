@@ -3526,6 +3526,8 @@ Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczen
 
 **Ustalenie poza zakresem (do decyzji właściciela).** `vilda_puberty_source.js` przy każdym ponownym odczycie tego samego pacjenta ogłasza `loading` bez danych, a potem `ready`. Daje to zbędne pełne przeliczenia na każde zdarzenie synchronizacji, sesji i `storage`, a przy synchronizacji co ok. 20 s. Po tej zmianie ich nie widać, ale kosztują pracę procesora i baterię. Komentarz w module opisuje czyszczenie przy ponownym odczycie jako celowe: wynik starszej generacji odczytu nie potwierdza bieżącego rekordu. Zmiana, np. zachowanie danych do czasu odczytu przy tym samym `patientId`, wymaga więc decyzji właściciela.
 
+*(Uzupełnienie 2026-10-12: rozstrzygnięte decyzją właściciela w P-POKWITANIE-W-TLE — wpis niżej.)*
+
 **Testy.** `tests/e2e/wyniki-przeliczenie-w-tle.spec.mjs` (2, prawdziwa powłoka, desktop):
 1. Wpisany pacjent, dwa `update()` z rzędu. `#results` ani razu nie ma `display:none` (obserwator stylu z `oldValue`). Nowy `#bmiResult` w chwili wstawienia ma `opacity` 1, nie ma `animate-in` ani biegnącej animacji. Nie startuje żadna z animacji `fadeSlideUp`, `ios-enter`, `pulseBG`, `rotateSummaryBorder`. Obrys „Podsumowania wyników” to ta sama animacja (`getAnimations()`), a położenie przycisków i karty się nie zmienia. Odtworzone pulsowania mają fazę poprzednika (±2 ms, odczyt po `Animation.ready`), a liczba BMI ma tylko wartość „21,9”. Po zmianie masy na 41 kg nowy wynik wjeżdża od `opacity` 0 z `fadeSlideUp`.
 2. Pacjent zapisany w sejfie i wczytany jak z listy, potem cykl synchronizacji w kształcie z `vilda_sync_integration.js` i `vilda:auth-hidden`. Sprawdzane są te same warunki.
@@ -3533,6 +3535,94 @@ Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczen
 Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (bez `zostawWyniki`, bez porównania treści kafelka, bez wspólnej fazy pulsowania) wywraca oba testy na właściwej asercji. `tests/e2e/powloka-powrot-bez-animacji.spec.mjs` jest bez zmian i przechodzi. Playwright nie ma tu WebKita, więc zachowanie w Safari do potwierdzenia przez właściciela.
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
+
+### P-POKWITANIE-W-TLE — ponowny odczyt pokwitania w tle bez „loading” i bez zbędnych przeliczeń (SW 1.1.251, 2026-10-12, decyzja właściciela)
+
+**Zgłoszenie i decyzja.** Ustalenie poza zakresem z P-WYNIKI-SPOKOJ. Przedstawiono cztery warianty, właściciel wybrał A:
+- A — ciche odświeżenie tego samego pacjenta;
+- B — pomijanie odczytu, gdy rekord się nie zmienił;
+- C — bez zmian;
+- D — odczyt po synchronizacji tylko przy `vilda:sync-merged`.
+
+B odpadł, bo sejf nie ma taniego znacznika wersji pacjenta: `listPatients()` odszyfrowuje nagłówki wszystkich pacjentów. Samo sprawdzenie byłoby też asynchroniczne, więc i tak potrzebowałoby semantyki A.
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów, tabel, jednostek i wyników po zakończonym odczycie. Zmienia się przepływ danych pacjenta i kontrakt źródła z `LH_FSH.md` („Spójność źródła danych pacjenta”). Przez czas odczytu w tle tego samego pacjenta konsumenci widzą ostatni potwierdzony rekord tego pacjenta zamiast pustego kontekstu. Wpływ na ocenę LH/FSH opisuje akapit „Ciche odświeżenie w tle” w `LH_FSH.md`.
+
+**Co było (pomiar na `audyt` b38803b).** Warunki pomiaru:
+- prawdziwy Chromium z prawdziwymi `vilda_sync.js` i `vilda_sync_integration.js`;
+- serwer synchronizacji jako atrapa w stanie ustalonym: każde pobranie kończy się „up-to-date”;
+- fikcyjna pacjentka z danymi pokwitania w rekordzie (start 9,5 r., Tanner 3, dwa pomiary);
+- trzy wymiany wymuszone `VildaSyncIntegration.pullNow()`. Każda wymiana to `syncing` → `ok`, a na każde zdarzenie `vilda_puberty_source.js` ogłaszał `loading`, potem `ready`.
+
+| Scenariusz | Ogłoszenia źródła | Pełne `update()` | Mutacje DOM | Skrypt / czas zadań wątku głównego |
+|---|---|---|---|---|
+| `index.html`, tryb profesjonalny, „Nowy pomiar” | 12 | 6 | 936 (408 w `update()`) | ok. 45 / 135 ms |
+| `docpro.html` | 12 | 10 | 909 | 113 / 185 ms |
+| `index.html`, naturalny rytm 65 s (4 wymiany) | 16 | 8 | 1175 | 205 / 577 ms |
+
+Pierwsze `update()` każdej wymiany liczyło stronę w stanie `loading`, czyli bez danych pokwitania z rekordu. Przy sztucznie spowolnionym odczycie (1,5 s) trwało to 1,5 s w każdej wymianie. W sprawdzonych kartach tekst się przy tym nie zmieniał. W przeliczniku LH/FSH każde takie odświeżenie usuwało importy z karty, zerowało ocenę i importowało je ponownie.
+
+W powłoce `app.html` (adres startowy PWA) okresowe pobrania wykonuje dokument powłoki, a ramki nie dostają ich zdarzeń. Trzy wymiany dały 0 zdarzeń i 0 `update()` w ramce Start. W ramce koszt pojawiał się przy jej własnej wysyłce (60 s po zapisie: 2 `update()`), przy `vilda:auth-hidden`, `vilda:session-changed` i `storage`. Rytm „co 20 s” dotyczy więc stron otwartych samodzielnie.
+
+**Co jest.** `vilda_puberty_source.js` (wersja 10 → 11) rozróżnia dwa rodzaje odczytu.
+- **Jawny:** `vilda:patient-loaded`, inny pacjent, odczyt jeszcze niezakończony, inna instancja sejfu. Pamięć jest czyszczona od razu (`loading`/`unavailable`), jak dotąd.
+- **W tle:** `odswiez()` po synchronizacji, zmianie sesji, zamknięciu panelu konta, `storage` lub `auth-loaded`. Dotyczy tego samego pacjenta z tego samego odblokowanego sejfu, gdy pamięć niesie udany odczyt (`ready`).
+  - Ostatni potwierdzony rekord zostaje do końca odczytu, a nowy go podmienia.
+  - `vilda_zrodla_pacjenta.js` (bez zmian) zamawia przeliczenie tylko przy różnicy odcisku.
+  - Błąd odczytu czyści jak dotąd: odrzucenie, brak rekordu, migawki albo payloadu, zablokowany sejf, zmiana tożsamości w trakcie.
+
+Dane innego pacjenta nie przechodzą żadną drogą:
+- zmiana pacjenta, wylogowanie, `vilda:user-state-cleared`, blokada i inna instancja sejfu czyszczą od razu;
+- spóźnioną odpowiedź wcześniejszego odczytu odrzuca licznik generacji;
+- gettery przy każdym odczycie sprawdzają tożsamość sesji karty i sejf (`pamiecBiezaca`, `kontekstPacjenta`).
+
+**Pomiar po zmianie.** Te same scenariusze:
+
+| Scenariusz | Ogłoszenia źródła | Pełne `update()` | Mutacje DOM | Skrypt / czas zadań wątku głównego |
+|---|---|---|---|---|
+| `index.html`, tryb profesjonalny, „Nowy pomiar” | 0 | 0 | 312 (0 w `update()`) | ok. 11 / 90 ms |
+| `docpro.html` | 0 | 0 | 49 | 14 / 59 ms |
+| `index.html`, naturalny rytm 65 s (4 wymiany) | 0 | 0 | 226 | 52 / 300 ms |
+| powłoka, ramka Start, własna wysyłka | 0 | 0 (przed: 2) | — | — |
+
+Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany przed zmianą i po niej (źródła pokwitania, DS i okołoporodowe). Zmiana rekordu tego samego pacjenta daje jedno ogłoszenie i jedno przeliczenie z nowymi danymi, bez `loading`. Czasy pochodzą z szybkiego procesora serwera (`Performance.getMetrics`). Na telefonie i starszym laptopie należy oczekiwać wielokrotności.
+
+**Przypadki syntetyczne (prawdziwy moduł, wejście → oczekiwany wynik).**
+
+| Stan → zdarzenie | Oczekiwany wynik |
+|---|---|
+| A gotowy → trzy wymiany synchronizacji, rekord bez zmian | przy każdym zdarzeniu `ready` z danymi A (start 9,5); rekord czytany 6 razy; 0 ogłoszeń, 0 przeliczeń strony (przed zmianą: 4 ogłoszenia i 2 przeliczenia na wymianę) |
+| A gotowy → `session-changed` / `auth-hidden` / `auth-loaded` / `storage` (klucz pacjenta albo `key=null`) | jak wyżej: dane do końca odczytu, bez ogłoszenia |
+| A gotowy → zdarzenie w tle, rekord zmieniony (start 10,5, GnRHa „w trakcie”, Tanner 4) | do końca odczytu dane poprzednie, potem nowe; 1 ogłoszenie, 1 przeliczenie |
+| A gotowy → zdarzenie w tle, odczyt odrzucony / bez rekordu / bez migawek / bez payloadu | `unavailable`, gettery `null`; poprzedni wynik nie wraca; kolejne zdarzenie czyta z `loading` |
+| A gotowy, odczyt w tle w toku → wczytanie B | od razu A `unavailable`, B `loading`, gettery `null`; spóźnione A odrzucone; kolejna wymiana czyta już tylko B |
+| A gotowy, odczyt w tle w toku → B w innej ramce (`storage`), usunięcie tożsamości karty, `vilda:user-state-cleared`, blokada sejfu z powiadomieniem i bez, nowa instancja sejfu | dane A niedostępne od razu; późna odpowiedź ich nie przywraca |
+| A w trakcie pierwszego odczytu → zdarzenie w tle | nadal `loading`; starszy wynik nie nadpisuje nowszego |
+| A gotowy → `vilda:patient-loaded` tego samego A | `loading`, dane wyczyszczone (jak dotąd) |
+
+**Czego nie zmieniono.** Bez zmian zostają `vilda_zrodla_pacjenta.js`, `vilda_sync_integration.js`, źródła DS i okołoporodowe, harmonogram synchronizacji i format rekordu.
+
+**Ustalenia poza zakresem (do decyzji właściciela).**
+1. Karta „Porównanie z poprzednim pomiarem” ma własnego słuchacza `vilda:sync-status-changed` (`vilda_summary_cards.js`, plik zminifikowany). Nadal przebudowuje się przy każdej zmianie stanu synchronizacji: w pomiarze 456 → 276 mutacji karty na trzy wymiany, bo zostaje część niezależna od źródła pokwitania.
+2. Po pobraniu „up-to-date” `vilda_sync.js` stosuje delty z `/changes` asynchronicznie, już po zdarzeniu `ok`. Ogłasza je tylko przez `vilda:sync-merged`, a żadne z trzech źródeł pacjenta tego zdarzenia nie słucha. W powłoce tak samo trafia do ramek scalenie wykonane przez dokument powłoki. Zmiana z delty dociera więc do źródeł dopiero przy następnym wyzwalaczu. Ustalone z lektury kodu, niezmierzone.
+
+**Testy.**
+- `tests/unit/pokwitanie-odswiezenie-w-tle.test.mjs` (21): prawdziwe `vilda_zrodla_pacjenta.js` i `vilda_puberty_source.js` na atrapie okna i sejfu, z zegarem zdarzeń w kolejności z przeglądarki (zamówienie przeliczenia przed rozstrzygnięciem odczytu).
+  - Na starym module pada 9 testów zachowania w tle. Testy bezpieczeństwa przechodzą na obu wersjach.
+  - Każda z mutacji warunku cichego odświeżenia (bez rozróżnienia jawny/w tle, bez porównania pacjenta, bez warunku udanego odczytu, bez warunku sejfu) wywraca co najmniej jeden test tego pliku albo `pokwitanie-zrodlo-pacjent.test.mjs`.
+- `tests/unit/pokwitanie-zrodlo-pacjent.test.mjs`: dwa testy przypinały czyszczenie przy ponownym odczycie przez zdarzenie synchronizacji. Teraz sprawdzają je przez jawne `vilda:patient-loaded`; zachowanie tej drogi się nie zmieniło.
+- Stary kontrakt przypinało też sześć testów e2e LH/FSH. Przy przedstawianiu wariantów podano tylko dwa testy jednostkowe; resztę wykazało CI. Każdy z sześciu sprawdza teraz nowy kontrakt, a asercje końcowe zostały bez zmian.
+  - `tests/e2e/lab-puberty-context.spec.mjs` (3): w trakcie odczytu w tle obowiązuje ostatni potwierdzony rekord (GnRHa, importy formularza), a po odczycie zmieniony rekord jest stosowany automatycznie. Rekord niezmieniony nie rusza formularza. Ręczna korekta wieku z czasu odczytu zostaje.
+  - `tests/e2e/lab-puberty-sex-aware.spec.mjs` (3): obserwacje G/Th zostają w trakcie odczytu w tle tej samej płci. Płeć F z formularza odrzuca je od razu i nie wracają po powrocie do M. Wczytanie innego pacjenta czyści je przed spóźnioną odpowiedzią.
+  - Nowe testy w obu plikach pilnują ścieżki, która nadal zawiesza: po nieudanym odczycie kolejne odświeżenie idzie przez `loading`, importy i obserwacje są wyłączone do końca odczytu i wracają przy tej samej płci.
+  - Na starym module padają zaktualizowane testy; nowe testy ścieżki z `loading` przechodzą na obu wersjach.
+- `tests/e2e/pokwitanie-odswiezenie-w-tle.spec.mjs` (4): prawdziwy Chromium z prawdziwą synchronizacją i atrapą serwera. Pomiar rusza po 4 s bez `update()`, bo `custom-fixes.js` po `vilda:patient-loaded` wysyła jeszcze `change` na polach formularza po 3,2 s. To przeliczenie nie zależy od synchronizacji.
+  - `index.html` i `docpro.html`, trzy wymiany bez zmian: bez `loading`, 0 ogłoszeń, 0 `update()`.
+  - Zmiana rekordu tego samego pacjenta: jedno ogłoszenie i przeliczenie z nowym startem pokwitania.
+  - Zmiana pacjenta, synchronizacja, `clearAllData()` (→ `vilda:user-state-cleared`) i blokada sejfu: u Jana nigdy dane Anny.
+  - Na starym module padają trzy pierwsze; test bezpieczeństwa przechodzi na obu wersjach.
+
+**Wersje.** `vilda_puberty_source.js` 11; SW 1.1.250 → 1.1.251 (numery 1.1.248, 1.1.249 i 1.1.250 nadały równolegle #643, #647 i #649).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 

@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '10';
+  var VERSION = '11';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -249,6 +249,7 @@
 
   /* Odczyt powiązany z tożsamością. Status jest częścią sygnału zmiany, więc
    * loading -> ready/unavailable odświeża formularz także dla pustej sekcji.
+   * Ciche odświeżenie w tle (patrz wczytaj()) statusu nie zmienia.
    * Kopie zapobiegają zmienianiu pamięci źródła przez odbiorcę. */
   function kontekstPacjenta(patientId) {
     var id = identyfikator(patientId);
@@ -332,14 +333,30 @@
 
   // ── Wczytanie z vaulta ───────────────────────────────────────────────────────
 
-  function wczytaj(patientId) {
+  /* Dwa rodzaje odczytu (P-POKWITANIE-W-TLE, decyzja właściciela 2026-10-12).
+   *
+   *   Jawny: `vilda:patient-loaded`, inny pacjent, odczyt jeszcze niezakończony, inna
+   *   instancja sejfu. Pamięć jest czyszczona od razu (`loading`/`unavailable`), bo poprzedni
+   *   wynik nie potwierdza rekordu, który właśnie wczytano.
+   *
+   *   W tle: `odswiez()` (synchronizacja, sesja, panel konta, `storage`, `auth-loaded`) dla
+   *   TEGO SAMEGO pacjenta z TEGO SAMEGO odblokowanego sejfu, gdy pamięć niesie udany odczyt
+   *   (`ready`). Ostatni potwierdzony rekord tego pacjenta zostaje do końca odczytu, a nowy wynik
+   *   go podmienia; `ogloszJesliInne` zamawia przeliczenie tylko przy różnicy. Błąd odczytu
+   *   czyści jak dotąd. Wcześniej każda wymiana synchronizacji (na stronie samodzielnej co
+   *   ok. 20 s) dawała loading → ready i 1–2 pełne update(), pierwsze bez danych pokwitania.
+   *
+   * Dane innego pacjenta nie przechodzą żadną z tych dróg: zmiana pacjenta, wylogowanie,
+   * `vilda:user-state-cleared` i blokada sejfu czyszczą pamięć od razu, a gettery sprawdzają
+   * tożsamość i sejf przy każdym odczycie (`pamiecBiezaca`, `kontekstPacjenta`). */
+  function wczytaj(patientId, wTle) {
     podepnijCyklSejfu();
     var id = identyfikator(patientId);
     var generacja = ++generacjaOdczytu;
     var V = w.VildaVault;
-    // Czyścimy również przy ponownym odczycie tego samego pacjenta: wynik starszej
-    // generacji nie jest potwierdzeniem zawartości obecnie wczytywanego rekordu.
-    opublikuj(null, id, id ? 'loading' : 'unavailable');
+    var odswiezenie = !!wTle && !!id && id === zapamietanyPacjent && statusOdczytu === 'ready'
+      && sejfPamieci === V && sejfOdblokowany() && pasujeDoTozsamosci(id);
+    if (!odswiezenie) opublikuj(null, id, id ? 'loading' : 'unavailable');
     function nadalBiezacy() {
       return generacja === generacjaOdczytu && zapamietanyPacjent === id;
     }
@@ -362,7 +379,7 @@
 
   function odswiez() {
     var id = biezacaTozsamosc().id;
-    if (id) wczytaj(id);
+    if (id) wczytaj(id, true);
     else if (zapamietanyPacjent) zapomnij();
   }
 
