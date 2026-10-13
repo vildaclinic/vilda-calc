@@ -162,3 +162,76 @@ test('„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera t
   await expect(page.locator('.vild-rem-dlg')).toHaveCount(0);
   await expect(k).toHaveCount(0);
 });
+
+// P-PRZYPOMNIENIA-ECHO (2026-10-13): po pierwszym renderze karta wysyła ping samonaprawy licznika
+// (BroadcastChannel „vilda-notes”, Tr w vilda_auth_ui.js), gdy licznik paska w sessionStorage jest inny.
+// Nasłuchiwała jednak na drugim obiekcie tego kanału, więc dostawała własny ping i przebudowywała się
+// jeszcze raz z tą samą treścią. Test „⋮” wyżej mierzył przycisk w tej chwili i w CI dostawał null
+// (#652, #653). Tu karta wysyła ping za każdym razem: licznik paska nie trafia do sessionStorage.
+test('własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki nadal ją odświeża', async ({ page }) => {
+  await page.addInitScript(() => {
+    const P = { pingi: [], zmiany: [], wToku: new Set() };
+    window.__echo = P;
+    // Licznik paska (vilda_chrome.js) kasujemy — sessionStorage przeżywa przeładowanie — i nie dajemy go
+    // zapisać przed żadnym skryptem strony, więc karta zawsze widzi inny licznik niż swój.
+    const LICZNIK = 'vilda-reminders-count-v1';
+    try { sessionStorage.removeItem(LICZNIK); } catch (_) { /* brak storage */ }
+    const zapis = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (klucz, wartosc) {
+      if (klucz === LICZNIK) return undefined;
+      return zapis.call(this, klucz, wartosc);
+    };
+    // Podsłuch kanału powstaje przed skryptami strony, więc dostaje każdy komunikat przed kartą;
+    // referencja w P, żeby obiekt kanału nie zniknął przy odśmiecaniu.
+    try {
+      P.kanal = new BroadcastChannel('vilda-notes');
+      P.kanal.onmessage = (e) => {
+        if (e.data && e.data.sender === 'rem-inline-selfheal') P.pingi.push(e.data);
+      };
+    } catch (_) { /* brak BroadcastChannel — test padnie na warunku wstępnym */ }
+    document.addEventListener('DOMContentLoaded', () => {
+      const karta = document.getElementById('remindersInline');
+      if (karta) {
+        new MutationObserver((lista) => {
+          for (const m of lista) P.zmiany.push({ dodane: m.addedNodes.length, usuniete: m.removedNodes.length });
+        }).observe(karta, { childList: true });
+      }
+      // Pobrania wpisów w toku: przebudowa karty kończy się dopiero po nich.
+      const sejf = window.VildaVault;
+      const zwykle = sejf && sejf.listPatientNotesDueByDate;
+      if (!zwykle) return;
+      sejf.listPatientNotesDueByDate = function (...argumenty) {
+        const wynik = Promise.resolve(zwykle.apply(this, argumenty));
+        P.wToku.add(wynik);
+        wynik.finally(() => P.wToku.delete(wynik)).catch(() => {});
+        return wynik;
+      };
+    });
+  });
+  await otworzZDanymi(page);
+  // Daje każdemu nasłuchowi czas na odebranie komunikatu i czeka, aż skończą się pobrania wpisów.
+  const ustal = () => page.evaluate(async () => {
+    const klatka = () => new Promise((ok) => { requestAnimationFrame(() => ok()); });
+    await klatka(); await klatka();
+    while (window.__echo.wToku.size) await Promise.allSettled([...window.__echo.wToku]);
+    await klatka(); await klatka();
+    return window.__echo.zmiany.slice();
+  });
+  await page.waitForFunction(() => window.__echo.pingi.length >= 1, null, { timeout: 20_000 });
+  const poPingu = await ustal();
+  expect(poPingu.filter((z) => z.dodane > 0).length, 'karta wypełniła się raz').toBe(1);
+  expect(poPingu.filter((z) => z.usuniete > 0), 'własny ping karty nie przebudowuje jej drugi raz').toEqual([]);
+  const box = await wierszObs(page).locator('.vild-rem-more').boundingBox();
+  expect(box, 'przycisk „⋮” mierzalny po pingu').toBeTruthy();
+
+  // Kontrola: ten sam ping z innego obiektu kanału (inna karta przeglądarki albo ramka powłoki) odświeża kartę.
+  await page.evaluate(() => {
+    const k = new BroadcastChannel('vilda-notes');
+    k.postMessage({ type: 'note-changed', ts: Date.now(), sender: 'rem-inline-selfheal', action: 'recount' });
+    k.close();
+  });
+  await expect.poll(async () => (await ustal()).filter((z) => z.usuniete > 0).length, {
+    message: 'ping z innej karty przebudowuje kartę',
+  }).toBe(1);
+  await expect(wierszObs(page)).toHaveCount(1);
+});
