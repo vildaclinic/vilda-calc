@@ -272,7 +272,7 @@ test('clearing the main-form date for the same patient removes borrowed day prec
   await page.locator('#height').fill('60');
   await page.locator('#height').dispatchEvent('change');
   await expect.poll(() => page.evaluate(() => window.VildaLabNeonatalContext.readCache())).toBeNull();
-  await expect.poll(() => page.evaluate(() => window.VildaPersistence.readShared()?.ageMonths)).toBe(3);
+  await expect.poll(() => page.evaluate(() => String(window.VildaPersistence.readShared()?.ageMonths))).toBe('3');
   await converter(page, id);
   await choose(page, 'lh', '3.6');
   await expectAxes(page, [first(), second()], 3.6);
