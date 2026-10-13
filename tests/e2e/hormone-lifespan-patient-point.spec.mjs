@@ -172,7 +172,7 @@ test('legacy testosterone conversion feeds the same dot for equivalent units', a
   await expect(dot(page)).toHaveCount(0);
 });
 
-test('boys AMH uses the current Wang age-group median, preserves units and leaves the disputed age group empty', async ({ page }) => {
+test('boys AMH preserves Wang at ages five and thirteen and fills age twelve with the Jopling group median', async ({ page }) => {
   await open(page, { sex: 'M', age: 5, ageMonths: 0 });
   await choose(page, 'amh');
   await page.locator('#labUnit').selectOption('ng/mL');
@@ -195,7 +195,8 @@ test('boys AMH uses the current Wang age-group median, preserves units and leave
     window.VildaPersistence.writeShared({ sex: 'M', age: 12, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
   });
-  await expect(dot(page)).toHaveCount(0);
+  await expectPoint(page, 1000, 64.66, 'group-median');
+  await expect(dot(page)).toHaveAttribute('data-profile', 'jopling2018-male-amh-age-12-under13');
   await expect(panel(page)).toBeVisible();
   await page.evaluate(() => {
     window.VildaPersistence.writeShared({ sex: 'M', age: 13, ageMonths: 0 }, { force: true });
@@ -205,6 +206,13 @@ test('boys AMH uses the current Wang age-group median, preserves units and leave
   await expect(dot(page)).toHaveAttribute('data-profile', 'wang2020-male-amh-age-13');
   await expect(panel(page).locator('[data-lifespan="source-copy"] p').filter({ hasText: 'Odniesienie dla wyniku:' })).toContainText('13–<14 lat');
   await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('13–<14 lat');
+  // The reviewed pediatric groups do not fill the remaining 18–<20 gap.
+  await page.evaluate(() => {
+    window.VildaPersistence.writeShared({ sex: 'M', age: 18, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  });
+  await expect(dot(page)).toHaveCount(0);
+  await expect(panel(page)).toBeVisible();
 });
 
 test('AMH group-median labels fit at 320px in the chart and fullscreen without introducing patient inputs', async ({ page }) => {
