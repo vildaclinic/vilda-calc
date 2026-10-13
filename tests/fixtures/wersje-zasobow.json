@@ -532,8 +532,8 @@
   "sha256": "93104c7afce5beeb1e48c586bcfe22b857d05c0ca75fbbd2c98d260bb69148a7"
  },
  "vilda_data_import_export.js": {
-  "v": 102,
-  "sha256": "d535e16b9474a47b130b35f8b5887603faa8faee286b30e49da990763378bf6f"
+  "v": 103,
+  "sha256": "6ed551afa7250c7a9943b904346026a41257945f9b8426fd3033182f41b8114c"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -1012,8 +1012,8 @@
   "sha256": "24c58ed5ec36bb21278feeb35441df3ccddfbde2b018c2f2fd2aca8f9e5f2e1f"
  },
  "vilda_update_prep.js": {
-  "v": 95,
-  "sha256": "ff3249a2ce1a5c4c13ee8b8d333af00f961464c9202db5224ffd8a3065bcb478"
+  "v": 96,
+  "sha256": "8d46fb34bbb52c1da03ade504f191cf57630f540b4a9c6621262ecc4b59fa4c4"
  },
  "vilda_urodzeniowe_rozbieznosc.css": {
   "v": 1,

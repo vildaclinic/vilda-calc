@@ -3073,6 +3073,57 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
+### P-COLE-RESET — Cole i rodzina BMI poprzedniego pacjenta nie przechodzą na następnego (SW 1.1.263, `vilda_update_prep.js` 96, `vilda_data_import_export.js` 103, 2026-10-13, polecenie właściciela)
+
+**Objaw.** Punkt z listy P-SPOZYCIE-PETLA („nieaktualny Cole między pacjentami”), polecenie właściciela: „zajmij się resetem Cola między pacjentami”. Po pacjencie z Cole ≥ 110% karta „Szacowane spożycie energii” rozwijała się u następnego dziecka. Decyzja zapadała na wskaźniku poprzedniego pacjenta. Do opuszczenia pola rekord (`collectUserData()`) i sesja karty niosły wtedy `intake.history`.
+
+**Przyczyna.** Cole (`colePercentValue`, `coleCatValue`, `coleKluczValue`) i rodzina BMI (`bmiPercentileValue`, `lastBmiCategory`, `lastBmiKategoria`, `lastBmiPercentile`) to globalne wartości pochodne. Zapisuje je tylko pełne `update()`, po walidacji (`vildaUpdatePrepRenderColeMetrics`, `vildaUpdatePrepApplyBmiGlobals`). Nic ich nie zerowało:
+- `xt()` w `vilda_data_import_export.js` (wołane przez `clearAllData` i przez `identityReset` przy wczytaniu) czyściło tylko `percSbp` … `chestCircSD`;
+- `update()` zatrzymane na niekompletnych danych (`incomplete-anthro`) albo błędzie zakresu (`range-errors`) zostawiało stare wartości.
+
+Kryterium rozwinięcia karty spożycia (`shouldAutoExpandEstimatedIntakeCard`, `app.js`) czyta Cole w słuchaczu pola, zanim `update()` policzy nowy. Po zmianie pacjenta widziało więc Cole poprzedniego.
+
+Zmierzone na `audyt` 94d7b55 (Chromium, dane fikcyjne; A: Cole 128,7%, centyl BMI 91,5; B: Cole ok. 98%):
+- B po A, „Wczytaj tego pacjenta” → „Nowy pomiar”: w oknie wyboru i przy pustych polach wszystkie 7 wartości należą do A. Przy wpisie masy, potem wzrostu karta spożycia rozwija się (`none → block`). `intake.history` w `collectUserData()` ma wiersz B (140 mies., 150 cm, 40 kg).
+- „Wyczyść” i nowe dziecko wpisane ręcznie: to samo. W analizie także blokada sejfu i ponowne logowanie (`qa()` → `clearAllData`).
+- `update()` zatrzymane na wzroście 39 cm: nagłówek raportu (`patientReportZbierzFaktyNaglowka`) ma `cole` {128,7; otylosc; alert}. W analizie epikryza wywołana przez API (z interfejsu `index.html` niedostępna) dała dla B przy pustych polach zdanie „Na podstawie wskaźnika Cole'a (127,4%) rozpoznano otyłość prostą”.
+
+Zapis przyciskiem był w zmierzonych przypadkach czysty, bo kliknięcie najpierw zdejmuje fokus z pola (`change` → `update()`).
+
+**Zmiana.**
+1. `vilda_update_prep.js` (właściciel tych wartości): lista `VILDA_UPDATE_PREP_POCHODNE_BMI` i funkcja `vildaUpdatePrepZerujPochodneBmi()`. Wołają ją na początku `vildaUpdatePrepHandleIncompleteAnthro` i `vildaUpdatePrepHandleRangeErrors`. Przypisuje `null` tylko wtedy, gdy wartość nie jest już `null`, bo akcesor `colePercentValue` z `vilda_patient_report.js` przebudowuje Podsumowanie przy każdym zapisie.
+2. `vilda_data_import_export.js`: `xt()` woła tę funkcję. `xt()` biegnie synchronicznie, przed pierwszym zdarzeniem pola, w dwóch miejscach:
+   - w `clearAllData`: „Wyczyść”, blokada sejfu, logowanie, tryb gościa;
+   - w `identityReset`: wczytanie rekordu inne niż odtworzenie sesji (lista pacjentów, plik, historia wersji, zamiar wczytania, skok GH, szybki pomiar).
+
+Niezmiennik: wartość globalna odpowiada bieżącemu formularzowi albo jest `null`. Bez zerowania zostają odtworzenie sesji (F5, `isSessionRestore`) i podgląd klirensu. Tam pełne `update()` i tak liczy wartości bieżącego pacjenta.
+
+**Wpływ kliniczny.** Klasyfikacja: zmiana funkcjonalna (AGENTS.md § 2), bez zmiany algorytmu. Wzory, progi, tabele i jednostki zostają bez zmian. Przy kompletnym formularzu Cole i BMI mają te same wartości co dotąd. Zmienia się:
+- (a) decyzja o samoczynnym rozwinięciu karty spożycia po zmianie pacjenta. Zapada teraz wyłącznie na danych bieżącego pacjenta.
+- (b) zawartość `collectUserData()` i sesji karty przed opuszczeniem pola: nie ma już `intake.history` z rozwinięcia na cudzym Cole.
+- (c) nagłówek raportu, epikryza i Podsumowanie. W stanie bez ważnego BMI (puste pola, błąd zakresu) nie pokazują Cole poprzedniego pacjenta ani poprzednich wartości pól.
+
+Cole nie jest utrwalany ani synchronizowany (nie ma go w `collectUserData()` ani w trwałości globali), więc samo zerowanie niczego nie zapisuje.
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, dane fikcyjne, zegar testów 2026-06-17).**
+- Dane: dwie dziewczynki ur. 1.10.2014 (11 l. 8 mies.), 150 cm. A: 52 kg → Cole 128,7%, centyl BMI 91,5 („Nadwaga”). B: 40 kg → Cole ok. 98%.
+- A „Odtwórz zapis”, potem B „Wczytaj tego pacjenta” → 7 wartości `null`. „Nowy pomiar” → `null`. Masa 40, potem wzrost 150 z klawiatury → karta spożycia ani razu nie rozwinięta, `intake.history` = `null`, Cole = wartość B.
+- „Wyczyść” → `null` w tym samym zadaniu.
+- Wzrost 39 cm → `null`, nagłówek raportu bez Cole. Wzrost 150 → Cole A wraca. Pusta masa → `null`.
+- Kontrola: A wczytana ponownie i „Odtwórz zapis” → Cole A. F5 → Cole A.
+
+**Strażnicy.** `tests/e2e/cole-reset-pacjent.spec.mjs` (nowy, 4 testy): „Nowy pomiar” innej pacjentki; „Wyczyść” i ręczny wpis; zatrzymane `update()`; kontrola tej samej pacjentki (ponowne wczytanie, F5). **Zmierzone czerwone** na `audyt` 94d7b55: 3 z 3. Na bazie widać też skutki w interfejsie: karta `none → block`, `intake.history` z wierszem B, `cole` w nagłówku raportu. Kontrola jest zielona po obu stronach.
+
+**Czego ta zmiana NIE robi (do decyzji właściciela).**
+- **Kryterium karty spożycia jest o jedno przeliczenie spóźnione.** `shouldAutoExpandEstimatedIntakeCard` czyta Cole w słuchaczu pola, przed `update()`. Przy pierwszym wpisie dziecka z Cole ≥ 110% i BMI poniżej progu nadwagi karta rozwija się dopiero na opuszczeniu pola. Tak samo jest w świeżej karcie. Naprawa to Cole liczony w kryterium z bieżących pól albo ponowna ocena po `update()`. To zmiana funkcjonalna.
+- **Epikryza** (`vilda_epicrisis_ui.js`) bierze globalny Cole także bez własnego BMI. Utwardzenie: używać go tylko przy policzonym BMI.
+- **Ten sam wzorzec, poza zakresem.** `lastWeightPercentile` i `lastHeightPercentile` czytają puls trybu PRO i ton wiersza masy w raporcie; `update()` nie nadpisuje ich u dorosłego (wyczytane z kodu, niezmierzone). Do tego `wfhPercentile`, `wfhSD` i `wfhSource`.
+- **Podsumowanie przy błędzie zakresu** (`generateMetabolicSummary`) liczy Cole samo z błędnych pól (np. „1453 %”). Tak jest też w świeżej karcie; ta zmiana tego nie rusza.
+- **`plan.dietLevel`** po „Wyczyść” przechodzi do rekordu następnego, ręcznie wpisanego pacjenta. To osobny przeciek, zmierzony w analizie.
+- Zerowanie przy zatrzymanym `update()` w ukrytej ramce powłoki zależy od klatki animacji (zmierzone w headless Chromium). Na Safari/iOS tego nie sprawdzano. Zerowanie w `xt()` od klatki nie zależy.
+
+**Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
+
 ### P-SPOZYCIE-PETLA — „Odtwórz zapis” nie wpada w rekurencję karty „Szacowane spożycie energii” (SW 1.1.250, `app.js` 233, `gh_therapy_monitor.js` 58, 2026-10-13, zgłoszenie właściciela)
 
 **Objaw.** Po P-WZRASTANIE-PRZEBUDOWA (#638) właściciel zgłosił, że u tej samej pacjentki „nic to nie dało”. Pacjentka jest leczona GH. Ścieżka „Wczytaj tego pacjenta” → „Odtwórz zapis” trwa nadal kilkanaście sekund, a „Nowy pomiar” działa prawidłowo. Warunki pracy: powłoka `app.html`, Chrome/Edge na komputerze. Pacjentka ma datę urodzenia, wiele wizyt, punkty z monitora GH i badania.
@@ -3121,7 +3172,7 @@ Klasyfikacja: refaktoryzacja (AGENTS.md § 2).
 
 **Czego ta zmiana NIE robi (do decyzji właściciela, wszystko zmierzone w tej analizie).**
 - **(B) naprawa u źródła braku zbieżności parowania.** `Qa` i `_intakeHistoryRowDuplicatesCurrentBasics` mogłyby pomijać wiersze-lustra GH symetrycznie do `er()`. W scenariuszach z pętlą daje to ten sam stan co strażnik, ale zmienia, które wiersze spożycia są przycinane, także poza odtwarzaniem.
-- **Nieaktualny Cole między pacjentami.** `window.colePercentValue`, `coleCatValue` i `coleKluczValue` przeżywają `clearAllData` i wczytanie innego pacjenta. Decyzja o rozwinięciu karty spożycia zapada wtedy na wskaźniku poprzedniego pacjenta; po „Nowym pomiarze” wpływa to też na to, co trafia do zapisu wizyty. To zmiana funkcjonalna.
+- **Nieaktualny Cole między pacjentami.** `window.colePercentValue`, `coleCatValue` i `coleKluczValue` przeżywają `clearAllData` i wczytanie innego pacjenta. Decyzja o rozwinięciu karty spożycia zapada wtedy na wskaźniku poprzedniego pacjenta; po „Nowym pomiarze” wpływa to też na to, co trafia do zapisu wizyty. To zmiana funkcjonalna. *Załatwione 2026-10-13 w P-COLE-RESET (zerowanie razem z rodziną BMI); opóźnienie kryterium o jedno przeliczenie zostaje tam na liście decyzji.*
 - **Mostek punktów GH w Start bez przeliczenia po każdym wierszu** (`importTherapyPointsToAdvancedGrowth`, faza „Wczytaj tego pacjenta”, F5, rozgłoszenia). Daje 9–21 → 2–4 przeliczenia. Przegląd zmierzył jednak dwie różnice w nietypowych ścieżkach:
   - pusty wiersz dodany przez lekarza nie jest już przy imporcie „przypadkiem” usuwany;
   - przy sztucznie usuniętych wierszach GH nieaktualne lustro spożycia nie odświeża się przy okazji (kcal/d inne).
