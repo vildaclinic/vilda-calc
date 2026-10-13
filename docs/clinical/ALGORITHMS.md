@@ -3512,7 +3512,7 @@ Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (be
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
 
-### P-POKWITANIE-W-TLE — ponowny odczyt pokwitania w tle bez „loading” i bez zbędnych przeliczeń (SW 1.1.250, 2026-10-12, decyzja właściciela)
+### P-POKWITANIE-W-TLE — ponowny odczyt pokwitania w tle bez „loading” i bez zbędnych przeliczeń (SW 1.1.251, 2026-10-12, decyzja właściciela)
 
 **Zgłoszenie i decyzja.** Ustalenie poza zakresem z P-WYNIKI-SPOKOJ. Przedstawiono cztery warianty, właściciel wybrał A:
 - A — ciche odświeżenie tego samego pacjenta;
@@ -3598,7 +3598,7 @@ Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany
   - Zmiana pacjenta, synchronizacja, `clearAllData()` (→ `vilda:user-state-cleared`) i blokada sejfu: u Jana nigdy dane Anny.
   - Na starym module padają trzy pierwsze; test bezpieczeństwa przechodzi na obu wersjach.
 
-**Wersje.** `vilda_puberty_source.js` 11; SW 1.1.249 → 1.1.250 (numery 1.1.248 i 1.1.249 nadały równolegle #643 i #647).
+**Wersje.** `vilda_puberty_source.js` 11; SW 1.1.250 → 1.1.251 (numery 1.1.248, 1.1.249 i 1.1.250 nadały równolegle #643, #647 i #649).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
