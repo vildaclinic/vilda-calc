@@ -3906,7 +3906,12 @@ Czas skryptu (`ScriptDuration`) wynosi 13–15 ms na trzy wymiany w obu warianta
 
 **Czego nie zmieniono.** Bez zmian zostają wybór kotwicy, treść karty, obliczenia poprzedniego pomiaru (centyle, BMI, Cole, talia/biodra), `updatePrevSummaryDiff`, `vilda_sync_integration.js` i odczyty z sejfu. Zostaje też ustalenie nr 2 z P-POKWITANIE-W-TLE: zmiana z delty `/changes` scalona po zdarzeniu `ok` (`vilda:sync-merged`) dociera do karty dopiero przy następnym wyzwalaczu, tak jak dotąd.
 
-**Testy.** `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` (2, `index.html`; czeka na koniec odczytów z sejfu, nie na upływ czasu). Przygotowanie czeka na impuls z `custom-fixes.js`: po każdym `vilda:patient-loaded` ten moduł wysyła po 3,2 s `change` na polach formularza, a wywołane tym `update()` wypełnia kolumny karty od nowa (ok. 2000 mutacji) bez udziału synchronizacji. Rozpoznajemy go po `change` na `#ageMonths` co najmniej 3 s po ostatnim wczytaniu. Potem test czeka na 1,5 s ciszy w karcie. Pierwsza wersja testu nie czekała i na CI padła (142 mutacje), bo dłuższe okno pomiaru objęło ten impuls; po wydłużeniu okna o 3 s padała tak samo lokalnie, a wersja z oczekiwaniem przechodzi.
+**Testy.** `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` (2, `index.html`; czeka na koniec odczytów z sejfu, nie na upływ czasu). Przygotowanie ustala stan stały karty w trzech krokach:
+- czeka na impuls z `custom-fixes.js`: po każdym `vilda:patient-loaded` ten moduł wysyła po 3,2 s `change` na polach formularza, a wywołane tym `update()` wypełnia kolumny karty od nowa (ok. 2000 mutacji) bez udziału synchronizacji. Rozpoznajemy go po `change` na `#ageMonths` co najmniej 3 s po ostatnim wczytaniu;
+- czeka na odtworzoną datę urodzenia (`VildaDobAge.readExactAge()`) i buduje kartę jawnie (`vilda:measurement-changed`, jak po edycji pomiaru);
+- czeka na tę przebudowę i na 1,5 s ciszy w karcie.
+
+Przypadki:
 1. Trzy wymiany synchronizacji i `vilda:auth-hidden` przy niezmienionym rekordzie: 0 mutacji karty, a „Poprzednio” 40,0 kg, „Dziś” 41,0 kg, „Zmiana” i `prevMeasurementInfo` bez zmian. Jawne `vilda:measurement-changed` nadal buduje kartę.
 2. Poprawka w sejfie, jak z innego urządzenia:
    - masa poprzedniego pomiaru 40 → 39,5 kg: po najbliższej wymianie „Poprzednio” 39,5 kg, a „Zmiana” liczona od nowej masy;
@@ -3914,10 +3919,16 @@ Czas skryptu (`ScriptDuration`) wynosi 13–15 ms na trzy wymiany w obu warianta
    - kolejna wymiana bez zmian: 0 mutacji;
    - karta schowana zdarzeniem `storage` wraca przy najbliższej wymianie.
 
-Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywraca co najmniej jeden test:
+Na bazie oba testy padają (994 i 284 mutacje), także po zmianie przygotowania. Każda z mutacji poprawki wywraca co najmniej jeden test:
 - bez znacznika tła w `Z`: oba testy;
 - bez sprawdzenia widoczności karty i `prevMeasurementInfo`: schowana karta nie wraca;
 - bez porównania HTML: poprawiona data się nie pokazuje.
+
+Dlaczego drugi krok przygotowania. Test padał na CI (`0467f71`, `0792c50`, oba podejścia) zawsze ze 142 mutacjami, czyli jedną przebudową. Pierwsze wyjaśnienie (impuls `custom-fixes.js`) było błędne: oczekiwanie na impuls tego nie zmieniło. Migawki DOM z trace'u CI pokazują w pierwszym odświeżeniu w tle zmianę centyla wzrostu w kolumnie „Poprzednio” z 39 na 38. Karta budowana przy wczytaniu bywa szybsza niż odtworzenie daty urodzenia przez `vilda_dob_age.js`. `calcPercentileStats` dostaje wtedy wiek w pełnych miesiącach (109 → 38,9 centyla). Po odtworzeniu daty `lmsNiemowleWiek` doprecyzowuje wiek do 109,4 mies. (37,8 centyla), bo pełne miesiące się zgadzają. Odświeżenie w tle słusznie przebudowuje taką kartę, bo wyszłaby inna. Lokalnie ten wyścig przegrywał mniej więcej co trzeci przebieg z instrumentacją. Przy wymuszonym wyścigu (`readExactAge()` zwraca `null` przez 1,5 s po wczytaniu, jak na wolnym CI) stara wersja testu pada 3/3 ze 142 mutacjami, a nowa przechodzi 6/6. Bez wymuszenia nowa przechodzi 20/20 przy 4 workerach.
+
+**Ustalenie poza zakresem (do decyzji właściciela).** Karta porównania budowana przy wczytaniu pacjenta może wyprzedzić odtworzenie daty urodzenia. Kolumna „Poprzednio” pokazuje wtedy centyl wzrostu z wieku w pełnych miesiącach, a nie z wieku dokładnego: w teście 39. zamiast 38. centyla. Ten stan trwa do następnej przebudowy karty. Tak było też przed tą zmianą: dotąd poprawiała go każda synchronizacja (co ok. 20 s). Teraz poprawia go pierwsze odświeżenie w tle, bo karta wyszłaby inna, więc zachowanie widoczne dla lekarza się nie zmienia. Naprawa zmienia chwilę albo sposób liczenia wyświetlanego centyla, więc wymaga decyzji. Możliwe kierunki:
+- przebudować kartę po odtworzeniu daty urodzenia;
+- liczyć wiek dokładny poprzedniego pomiaru z daty urodzenia i daty tego pomiaru zapisanych w rekordzie, a nie z dzisiejszego wieku z formularza. `lmsNiemowleWiek` doprecyzowuje dziś wiek tylko wtedy, gdy pełne miesiące się zgadzają. Dla pomiaru z początku tego samego miesiąca bierze więc dzisiejszy ułamek.
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 

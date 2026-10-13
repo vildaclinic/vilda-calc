@@ -75,8 +75,9 @@ async function pacjentZPorownaniem(page) {
   await page.evaluate(() => window.clearAllData());
   // custom-fixes.js po każdym vilda:patient-loaded nastawia od nowa zegar 3,2 s i wysyła potem `change` na polach formularza
   // (age, ageMonths, weight, height, sex). Wywołane tym update() wypełnia kolumny karty od nowa (ok. 2000 mutacji), także
-  // bez żadnej synchronizacji. Na CI ten impuls trafił w okno pomiaru, więc przygotowanie czeka na niego i na uspokojenie
-  // karty. `change` na #ageMonths (test go nie wpisuje) co najmniej 3 s po ostatnim wczytaniu to właśnie ten impuls.
+  // bez żadnej synchronizacji. Gdyby impuls trafił w okno pomiaru, test policzyłby jego mutacje, więc przygotowanie czeka
+  // na niego i na uspokojenie karty. `change` na #ageMonths (test go nie wpisuje) co najmniej 3 s po ostatnim wczytaniu
+  // to właśnie ten impuls.
   await page.evaluate(() => {
     const W = { ostatnieWczytanie: 0, impuls: 0, mutacjaKarty: 0 };
     window.__wczytanie = W;
@@ -99,6 +100,22 @@ async function pacjentZPorownaniem(page) {
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg', { timeout: 15000 });
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg', { timeout: 15000 });
   await page.waitForFunction(() => window.__wczytanie.impuls > 0, null, { timeout: 20000 });
+  // Karta zbudowana przy wczytaniu bywa szybsza niż odtworzenie daty urodzenia (vilda_dob_age.js). Centyl wzrostu
+  // „Poprzednio” liczy się wtedy z pełnych miesięcy (109 → 39. centyl), a po odtworzeniu daty z wieku dokładnego
+  // (lmsNiemowleWiek: 109,4 → 38. centyl). Pierwsze odświeżenie w tle słusznie przebudowuje taką kartę, bo wyszłaby inna.
+  // To dawało 142 mutacje na CI, a lokalnie co trzeci przebieg. Test sprawdza odświeżenie bez zmiany danych, więc
+  // najpierw ustala stan stały: czeka na datę urodzenia i buduje kartę jawnie, jak po edycji pomiaru.
+  await page.waitForFunction(() => {
+    try { return Boolean(window.VildaDobAge.readExactAge()); } catch (_) { return false; }
+  }, null, { timeout: 20000 });
+  const przedBudowa = await page.evaluate(() => {
+    const t = performance.now();
+    document.dispatchEvent(new CustomEvent('vilda:measurement-changed', {
+      detail: { patientId: sessionStorage.getItem('vildaPrevSummaryPid'), action: 'edit' },
+    }));
+    return t;
+  });
+  await page.waitForFunction((t) => window.__wczytanie.mutacjaKarty > t, przedBudowa, { timeout: 20000 });
   await page.waitForFunction(() => performance.now() - window.__wczytanie.mutacjaKarty > 1500, null, { timeout: 20000 });
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg');
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg');
