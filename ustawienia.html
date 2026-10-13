@@ -2118,16 +2118,18 @@
         if (!pendingSection || pendingTask !== null) return;
         // Task po inicjalizacji wszystkich listenerów: mikro-zadanie mogłoby wykonać
         // się przed ustawieniem kłódek przez następny listener DOMContentLoaded.
-        pendingTask = setTimeout(function() {
-          pendingTask = null;
-          const target = pendingSection;
-          if (!target || target.classList.contains('settings-accordion--locked')) return;
-          pendingSection = null;
-          target.open = true;
-          // Cel deep-linku musi być od razu widoczny. Odziedziczone płynne przewijanie
-          // może zostać przerwane przez mobilną optymalizację paska przeglądarki.
-          try { target.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch (_) { /* starsze przeglądarki */ }
-        }, 0);
+        pendingTask = setTimeout(openPendingSection, 0);
+      }
+
+      function openPendingSection() {
+        if (pendingTask !== null) { clearTimeout(pendingTask); pendingTask = null; }
+        const target = pendingSection;
+        if (!target || target.classList.contains('settings-accordion--locked')) return;
+        pendingSection = null;
+        target.open = true;
+        // Cel deep-linku musi być od razu widoczny. Odziedziczone płynne przewijanie
+        // może zostać przerwane przez mobilną optymalizację paska przeglądarki.
+        try { target.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch (_) { /* starsze przeglądarki */ }
       }
 
       // Nasłuch rejestrujemy PRZED pierwszym wywołaniem — gdyby cokolwiek w środku padło,
@@ -2140,6 +2142,9 @@
         try { targetURL = new URL(href, window.location.href); } catch (_) { return; }
         if (targetURL.origin !== window.location.origin || targetURL.pathname !== window.location.pathname) return;
         openSectionFromHash(targetURL.hash);
+        // Powłoka doręcza cel w tym samym zadaniu, w którym pokazuje ramkę, i dopiero po jej `load`,
+        // więc kłódki są już ustawione: sekcja od razu, bez klatki z poprzednim przewinięciem panelu.
+        openPendingSection();
       });
       // Zmiana wyboru użytkownika anuluje oczekujący cel. Programowe zamknięcie
       // sekcji przez kłódkę nie jest takim wyborem i pozostawia cel do odblokowania.
