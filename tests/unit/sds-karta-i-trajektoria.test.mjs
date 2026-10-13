@@ -33,7 +33,7 @@ describe('Karta pacjenta (vilda_auth_ui.js) — wzrost przez rdzeń, granice i z
   const src = zrodlo('vilda_auth_ui.js');
 
   it('En(): wzrost zawsze calcPercentileStats (reguła siatki w silniku); masa zostaje przy Palczewskiej z rekordu', () => {
-    expect(src).toContain('function En(t,a,n,r,o){try{if(r!=="HT"&&o==="PALCZEWSKA"&&typeof calcPercentileStatsPal=="function")return calcPercentileStatsPal(t,a,n,r);');
+    expect(src).toContain('function En(t,a,n,r,o,w){try{if(r!=="HT"&&o==="PALCZEWSKA"&&typeof calcPercentileStatsPal=="function")return calcPercentileStatsPal(t,a,n,r);');
   });
 
   it('granica 18 lat jak w rdzeniu (216 mies. włącznie): warstwa GH i Status Karty', () => {

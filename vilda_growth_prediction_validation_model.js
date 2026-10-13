@@ -111,7 +111,11 @@
       var f = pal ? fun('calcPercentileStatsPal') : fun('calcPercentileStats');
       if (!f) f = fun('calcPercentileStats');
       if (!f) return null;
-      var st = f(wzrost, plec, wiekLat, 'HT');
+      /* P-WIEK-POMIARU (2026-10-13): punkty walidacji to pomiary zapisane (także innych pacjentów
+       * w eksporcie kohorty), więc wiek podajemy jawnie: null = pełne miesiące punktu. Bez tego
+       * calcPercentileStats brał dokładny wiek pomiaru z formularza, gdy zgadzał się miesiąc życia.
+       * Ścieżka Palczewskiej nie czyta formularza i piątego argumentu nie zna. */
+      var st = f(wzrost, plec, wiekLat, 'HT', null);
       return st && typeof st.sd === 'number' && isFinite(st.sd) ? st.sd : null;
     } catch (e) { return null; }
   }

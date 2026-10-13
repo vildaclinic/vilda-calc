@@ -89,8 +89,8 @@ describe('Kryteria odpowiedzi (obesity_response_criteria.js) — ramię z-score 
 describe('Kafelki, dymek siatki i oś czasu Karty — strażnicy źródła i kolor z kategorii silnika', () => {
   const karta = zrodlo('vilda_auth_ui.js');
   it('kafelek BMI: jeden ocen() (wiek pomiaru, źródło preferowane), kolor z kategorii, „kg/m²"; Cole z cole()', () => {
-    expect(karta).toContain('Tb.ocen({bmi:$,plec:it,wiekMies:I,zrodlo:h})');
-    expect(karta).toContain('Tb.cole({bmi:$,plec:it,wiekMies:I,zrodlo:h})');
+    expect(karta).toContain('Tb.ocen({bmi:$,plec:it,wiekMies:wP!=null?wP:I,zrodlo:h})');
+    expect(karta).toContain('Tb.cole({bmi:$,plec:it,wiekMies:wP!=null?wP:I,zrodlo:h})');
     expect(karta).toContain('var Pe=Tb&&!tt?Bk:Y("bmi",$,yt)');
     expect(karta).toContain('At.push(xt("BMI",St($)+" kg/m\\xB2",Xt,Pe,zt))');
     expect(karta).toContain('var de=Tb&&!tt?Ck:Y("cole",f,null)');

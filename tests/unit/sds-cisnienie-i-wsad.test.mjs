@@ -94,7 +94,7 @@ describe('Wsad XLSX (vilda_professional_module.js)', () => {
       .toContain('const q=Ts.policz({wzrost:hh,plec:pp,wiekMies:yy*12,zrodlo:zz,populacja:"OGOLNA"})');
     expect(src).toContain('Ne=Zw(ae,r,re,"PALCZEWSKA");');
     expect(src).toContain('Ne=Zw(ae,r,re,t);');
-    expect(src, 'masa nadal przez rdzeń (poza zakresem planu)').toContain('const y=calcPercentileStats(P,r,re,"WT");We=y?y.sd:null;');
+    expect(src, 'masa nadal przez rdzeń (poza zakresem planu), od P-WIEK-POMIARU w dokładnym wieku wiersza').toContain('const y=calcPercentileStats(P,r,re,"WT",Ce);We=y?y.sd:null;');
     const i = src.indexOf('const Zw=(hh,pp,yy,zz)=>');
     expect(i).toBeGreaterThan(-1);
     const log = [];

@@ -736,6 +736,48 @@ nasluch.onmessage = (e) => {                                            // bez z
 };
 ```
 
+## Łatka P-WIEK-POMIARU (`app.js` 233 → 234 i wołający, 2026-10-13)
+
+Zmiana wprost w artefaktach. Rdzeń dostaje opcjonalny, jawnie podany wiek pomiaru, a każde miejsce liczące pomiar zapisany, innego pacjenta albo krzywą odniesienia go podaje. Rejestr: `docs/clinical/ALGORITHMS.md`, P-WIEK-POMIARU.
+
+```js
+// app.js — rdzeń. `w`: wiek TEGO pomiaru w miesiącach; liczba = ten wiek, null = pełne miesiące,
+// undefined = pomiar z formularza (bramka DOB-AGE-4 jak dotąd).
+function lmsNiemowleWiek(pelneMies, w) {
+  if (w !== undefined) return typeof w === 'number' && isFinite(w) && w >= 0 ? w : null;
+  /* … bez zmian: readExactAge() formularza, gdy totalMonths === pelneMies … */
+}
+function lmsNiemowle(tablica, pelneMies, w) { const wiek = lmsNiemowleWiek(pelneMies, w); /* … */ }
+function getChildLMS(plec, wiekLat, param, w) { /* … */ if (a < 36) return lmsNiemowle(tablicaNiemowleca, a, w); /* … */ }
+function calcPercentileStats(wartosc, plec, wiekLat, param, w) {
+  // wzrost: silnik dostaje lmsNiemowleWiek(pelneMies, w) ?? pelneMies; masa: getChildLMS(plec, wiekLat, param, w)
+}
+
+// Wiek pomiaru ZAPISANEGO rekordu: data urodzenia z rekordu (albo pacjenta) i doba pomiaru z rekordu,
+// reguła VildaDobAge.ageAtMeasurement; wynik tylko, gdy doba jest pewna i daje zapisane pełne miesiące.
+function vildaWiekPomiaruMies(rekord, pelneMies, dataUrodzeniaPacjenta) {
+  const iso = rekord.user.dobISO || dataUrodzeniaPacjenta;
+  const p = VildaDobAge.ageAtMeasurement(rekord, iso);
+  if (!p || !p.exact || p.totalMonths !== pelneMies) return null;
+  return VildaDobAge.exactMonthsFromDays(p.exact.days);
+}
+window.vildaWiekPomiaruMies = vildaWiekPomiaruMies;
+```
+
+Wołający (nazwy z artefaktów):
+
+| Plik | Miejsce | Wiek |
+|---|---|---|
+| `vilda_summary_cards.js` 60 | `Se()` — „Poprzednio”: `calcPercentileStats` wzrostu i masy, `T0.ocen`/`T0.cole`, `ee()` (kg do normy) | `wP = vildaWiekPomiaruMies(payload, l, null)`; Palczewska bez zmian |
+| `vilda_auth_ui.js` 487 | `En(t,a,n,r,o,w)`; kafelki w `showPatientCard` (`En`, `Tb.ocen`, `Tb.cole`) | `wP = vildaWiekPomiaruMies(s, I, null)` poza rekordem na Palczewskiej |
+| `vilda_auth_ui.js` 487 | `ci()` (żetony hSDS panelu GH), MPH `En(rt,S,18,…)`, `getLms` wykresów | `null` |
+| `vilda_patient_summary_copy.js` 15 | `I(…, w)`, `x(…, w)`, BMI/Cole, hSDS − mpSDS w `We()` | `wP = vildaWiekPomiaruMies(e, N, null)` poza Palczewską |
+| `gh_therapy_monitor.js` 59 | `r(u,c,f)` — punkty GH | `null` |
+| `vilda_growth_prediction_validation_model.js` 4 | `hSds()` | `null` |
+| `vilda_professional_module.js` 12 | wsad: masa (i zapas wzrostu) | `Ce` — dokładny wiek wiersza |
+| `custom-fixes.js` 74 | `A(…, w)` w mini-podsumowaniu | `null`, gdy ramka nieaktualna (`Gq5s`) |
+| `inline_index_04.js` 27, `inline_index_07.js` 12 | wzrost rodziców na 18 lat | `null` |
+
 ## Jak odtworzyć
 
 ```bash

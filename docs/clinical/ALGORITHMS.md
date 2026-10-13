@@ -4027,7 +4027,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 - bez sprawdzenia widoczności karty i `prevMeasurementInfo`: schowana karta nie wraca;
 - bez porównania HTML: poprawiona data się nie pokazuje.
 
-**Ustalenie poza zakresem (do decyzji właściciela; zmiana kliniczna).** Centyl wzrostu poprzedniego pomiaru (`Se()` → `calcPercentileStats(…, "HT")` w `app.js`) przechodzi przez `lmsNiemowleWiek()`. Gdy formularz ma datę urodzenia, a pełne miesiące wieku dziś zgadzają się z pełnymi miesiącami poprzedniego pomiaru, silnik `vilda_sds_wzrostu.js` dostaje dokładny wiek z dzisiejszej daty (`VildaDobAge.readExactAge()`), a nie z dnia poprzedniego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek jest więc zawyżony o te tygodnie. Bez daty w formularzu silnik liczy z pełnych miesięcy. Ta sama karta pokazuje więc inny centyl zależnie od chwili budowy (w teście 39 albo 38). Zachowanie jest sprzed tej zmiany i ta zmiana go nie dotyka. Poprawka, np. dokładny wiek z daty poprzedniego pomiaru, zmienia wynik kliniczny i wymaga decyzji właściciela. *(Wyścig rozstrzygnięty poleceniem właściciela 2026-10-13: P-POROWNANIE-DATA niżej. Doprecyzowanie wieku dzisiejszą datą dla pomiaru z tego samego miesiąca życia zostaje do decyzji.)*
+**Ustalenie poza zakresem (do decyzji właściciela; zmiana kliniczna).** Centyl wzrostu poprzedniego pomiaru (`Se()` → `calcPercentileStats(…, "HT")` w `app.js`) przechodzi przez `lmsNiemowleWiek()`. Gdy formularz ma datę urodzenia, a pełne miesiące wieku dziś zgadzają się z pełnymi miesiącami poprzedniego pomiaru, silnik `vilda_sds_wzrostu.js` dostaje dokładny wiek z dzisiejszej daty (`VildaDobAge.readExactAge()`), a nie z dnia poprzedniego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek jest więc zawyżony o te tygodnie. Bez daty w formularzu silnik liczy z pełnych miesięcy. Ta sama karta pokazuje więc inny centyl zależnie od chwili budowy (w teście 39 albo 38). Zachowanie jest sprzed tej zmiany i ta zmiana go nie dotyka. Poprawka, np. dokładny wiek z daty poprzedniego pomiaru, zmienia wynik kliniczny i wymaga decyzji właściciela. *(Wyścig rozstrzygnięty poleceniem właściciela 2026-10-13: P-POROWNANIE-DATA niżej. Doprecyzowanie wieku dzisiejszą datą dla pomiaru z tego samego miesiąca życia zostaje do decyzji.)* *Rozwiązane w P-WIEK-POMIARU (2026-10-13, polecenie właściciela): poprzedni pomiar liczy się w swoim wieku z rekordu, niezależnie od formularza.*
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
@@ -4108,7 +4108,7 @@ W stanie ustalonym karta pokazuje te same liczby co dotąd, tyle że od pierwsze
 1. `lmsNiemowleWiek` doprecyzowuje wiek dzisiejszym wiekiem dokładnym z formularza w każdym wywołaniu o tych samych pełnych miesiącach. Dotyczy to też poprzedniego pomiaru sprzed kilku tygodni w tym samym miesiącu życia: jego wiek jest zawyżony o te tygodnie. To ustalenie z P-POROWNANIE-W-TLE i nadal jest aktualne.
 2. Z lektury kodu, niezmierzone: z tego samego powodu Karta Pacjenta (`vilda_auth_ui.js`) liczy centyle wzrostu historycznych pomiarów z daty urodzenia pacjenta wczytanego w formularzu. Dzieje się tak także wtedy, gdy przegląda innego pacjenta — wystarczy zgodność pełnych miesięcy.
 
-Kierunek naprawy obu: wiek dokładny pomiaru liczony z daty urodzenia i daty pomiaru zapisanych w rekordzie (`VildaDobAge.ageAtMeasurement`, ta sama reguła co „Odtwórz zapis” w P-ODTWORZ-WIEK). Ten wiek trzeba przekazać do siatek jawnie, zamiast odczytywać go z formularza.
+Kierunek naprawy obu: wiek dokładny pomiaru liczony z daty urodzenia i daty pomiaru zapisanych w rekordzie (`VildaDobAge.ageAtMeasurement`, ta sama reguła co „Odtwórz zapis” w P-ODTWORZ-WIEK). Ten wiek trzeba przekazać do siatek jawnie, zamiast odczytywać go z formularza. *Oba rozwiązane w P-WIEK-POMIARU (2026-10-13, polecenie właściciela). Ustalenie 2 zmierzone tam na prawdziwej stronie: kafelek drugiego chłopca pokazywał 4. zamiast 51. centyla długości.*
 
 **Wersje.** `vilda_dob_age.js` 10, `vilda_summary_cards.js` 59; SW 1.1.264 → 1.1.265 (numery 1.1.261–1.1.264 nadały równolegle #661, #663, #664 i #666).
 
@@ -5550,6 +5550,126 @@ Zmierzone przy okazji, bez zmian kodu: wskaźnik zapisu po poprawce w Karcie pok
 3. Panele-rodzeństwo w powłoce odświeżają bazę po zmianie w miejscu i wpisują dokładnie pola wpisane przez panel, w którym pracuje lekarz.
 4. Znacznik `promoted` w powiadomieniu sejfu o zmianie w miejscu (nowe pole powiadomienia, bez zmiany formatu rekordu).
 
+### P-WIEK-POMIARU — pomiar zapisany liczy się w swoim wieku, nie w dokładnym wieku dziecka z formularza (SW 1.1.266, 2026-10-13, polecenie właściciela)
+
+**Polecenie właściciela.** „Napraw ustalenia poza zakresem w osobnym PR”. Chodzi o oba ustalenia z P-POROWNANIE-DATA (#662); pierwsze zanotowano już w P-POROWNANIE-W-TLE.
+
+**Co było.** `calcPercentileStats` uściślał wiek przez `lmsNiemowleWiek` — dla wzrostu w każdym wieku, a dla masy poniżej 36 mies. (`getChildLMS` → `lmsNiemowle`). Gdy pełne miesiące, które dostał, zgadzały się z pełnymi miesiącami pomiaru w formularzu, brał dokładny wiek pomiaru z formularza (`VildaDobAge.readExactAge()`). Bramka tożsamości z DOB-AGE-4 porównuje tylko pełne miesiące, więc ten wiek dostawał każdy inny pomiar z tym samym miesiącem życia:
+1. **Karta porównania**, kolumna „Poprzednio” i dopisek „było …”: pomiar sprzed kilku tygodni z tego samego miesiąca życia liczony w dzisiejszej dobie.
+2. **Karta Pacjenta**: kafelki „Wzrost” i „Waga” oraz „Skopiuj podsumowanie wyników”. Pomiar pacjenta z Karty liczony w dobie dziecka wczytanego w formularzu — także **innego pacjenta**, np. rodzeństwa albo bliźniąt.
+3. **Pozostałe miejsca:**
+   - punkty monitora GH i żetony hSDS w panelu GH Karty;
+   - próbki krzywych odniesienia na wykresach Karty (załamanie pasma w miesiącu dziecka z formularza);
+   - bramki walidacji prognoz, także w eksporcie kohorty;
+   - kolumna `Z_waga` wsadu XLS/CSV;
+   - mini-podsumowanie nieaktualnej ramki powłoki;
+   - centyl wzrostu rodziców na 18 lat przy dziecku w wieku dokładnie 18 lat 0 mies.
+
+Bez daty w formularzu te same miejsca liczyły z pełnych miesięcy. Wynik zależał więc od tego, co akurat było w formularzu.
+
+Skala, policzona na tablicach z repozytorium (chłopiec, pomiar dokładnie na medianie WHO; pomiar poniżej 1. miesiąca liczy się z WHO 2006 także przy źródle OLAF):
+
+| Pomiar | Formularz | Było | Jest | Pełne miesiące |
+|---|---|---|---|---|
+| długość 51,47 cm, 10. doba | 25. doba | 10,9 c. (z −1,23) | 50,0 c. (z 0,00) | 80,0 c. (z +0,84) |
+| masa 3,72 kg, 10. doba | 25. doba | 15,8 c. (z −1,00) | 50,0 c. | 76,7 c. (z +0,73) |
+| długość 50,36 cm, 3. doba | 25. doba | 3,6 c. (z −1,80) | 50,0 c. | 59,9 c. (z +0,25) |
+| masa 3,46 kg, 3. doba | 25. doba | 6,5 c. (z −1,51) | 50,0 c. | 58,9 c. (z +0,22) |
+| długość 50,68 cm, 5. doba | 15. doba | 20,4 c. (z −0,83) | 50,0 c. | 66,3 c. (z +0,42) |
+
+Od 3. roku życia różnica wieku w obrębie miesiąca zmienia hSDS najwyżej o ok. 0,07.
+
+**Reguła (kierunek z P-POROWNANIE-DATA, polecenie właściciela).** Pomiar zapisany liczy się w swoim wieku:
+- **wiek dokładny** — tylko wtedy, gdy rekord niesie datę urodzenia i pewną dobę pomiaru, która daje dokładnie zapisany wiek w pełnych miesiącach. To ta sama reguła co „Odtwórz zapis” (`VildaDobAge.ageAtMeasurement`, P-ODTWORZ-WIEK): doba z `user.measuredAtISO`, a bez niego z `timestampISO` potwierdzonego datą urodzenia;
+- **pełne miesiące** — w każdym innym przypadku, jak dotąd;
+- **nigdy** data urodzenia dziecka wczytanego w formularzu ani dzisiejsza data.
+
+W jednym widoku wszystkie liczby z siatek jednego pomiaru liczą się w tym samym wieku: centyle masy i wzrostu, BMI, Cole, granice 3./97. centyla, „kg do granicy normy” oraz hSDS − mpSDS.
+
+**Co jest.**
+- **`app.js` (?v 234).** Opcjonalny, jawnie podany wiek pomiaru w miesiącach: `calcPercentileStats(wartość, płeć, wiekLat, param, w)`, `getChildLMS(płeć, wiekLat, param, w)`, `lmsNiemowle(t, a, w)` i `lmsNiemowleWiek(a, w)`.
+  - Liczba: ten wiek. Silnik wzrostu dostaje go wprost, a masa niemowlęca interpoluje L, M i S w tym wieku.
+  - `null`: pełne miesiące.
+  - Brak argumentu: pomiar z formularza, bramka DOB-AGE-4 jak dotąd.
+  - Nowy pomocnik `vildaWiekPomiaruMies(rekord, pełneMiesiące, dataUrodzeniaPacjenta)`, wystawiony też na `window`.
+  - Gałęzie siatek (36 mies., 216 mies.) i populacja z zespołem Downa decydują jak dotąd — po pełnych miesiącach.
+- **Wiek z rekordu:**
+  - karta porównania: `Se()` w `vilda_summary_cards.js` (?v 60);
+  - kafelki Karty: `vilda_auth_ui.js` (?v 487);
+  - schowek: `vilda_patient_summary_copy.js` (?v 15).
+
+  Rekord liczony na Palczewskiej zostaje przy pełnych miesiącach — jej ścieżka masy nie zna wieku ułamkowego.
+- **`null` (pełne miesiące, bez formularza):**
+  - punkty GH: `gh_therapy_monitor.js` (?v 59) i `ci` w Karcie;
+  - krzywe odniesienia wykresów Karty;
+  - walidacja prognoz: `vilda_growth_prediction_validation_model.js` (?v 4);
+  - mini-podsumowanie nieaktualnej ramki: `custom-fixes.js` (?v 74), tylko gdy ramka pokazuje stan wspólny innego pacjenta;
+  - wzrost rodziców na 18 lat: MPH w Karcie i etykiety eksportu siatek, `inline_index_04.js` (?v 27) i `inline_index_07.js` (?v 12).
+- **Wsad: `vilda_professional_module.js` (?v 12).** Masa w dokładnym wieku wiersza (`Ce`), tak jak wzrost i BMI tego wiersza.
+
+**Czego nie zmieniono.**
+- Wzory, siatki, źródła i interpolacja.
+- Pomiar z formularza: karta główna i każde miejsce bez jawnego wieku.
+- Widoki, które pomiar zapisany liczą bez `lmsNiemowleWiek`, w pełnych miesiącach:
+  - Historia i panel analizy punktu historii (`advHistoryResolveMetric`);
+  - trajektoria (`statFor`);
+  - ΔSDS i werdykt karty porównania (`vildaPorownanieZPoprzednim`);
+  - tabela raportu PDF karty zaawansowanej;
+  - kafelek tempa (`hvSdsKafelek`);
+  - generator siatek publikacyjnych.
+- Martwe zapasy mpSDS na wypadek braku `vildaMpSdsStats` (w `gh_therapy_monitor.js`, `vilda_summary_cards.js`, `vilda_epicrisis_ui.js` i schowku) oraz nieładowany już `inline_docpro_05.js`. Ten plik jest tylko adresem w precache (append-only), więc zmiana dałaby dwie treści pod jednym `?v=`.
+- Zapis, synchronizacja i persistence.
+
+**Wpływ kliniczny.** Zmienia się wynik, który widzi lekarz:
+- **Przeciek z formularza usunięty wszędzie.** Wyliczenie pomiaru zapisanego, innego pacjenta albo krzywej odniesienia nie zależy już od tego, kto i z jaką datą jest w formularzu.
+- **Karta porównania, kafelki Karty i schowek.** Pomiar zapisany z datą urodzenia i pewną dobą pomiaru dostaje centyl w dokładnym wieku pomiaru zamiast w pełnych miesiącach. U niemowlęcia znika jednostronne zawyżenie opisane w DOB-AGE-4 (tabela wyżej, kolumna „Pełne miesiące”). Od 3. roku życia różnica jest najwyżej ok. 0,07 SD.
+- **Wsad.** `Z_waga` poniżej 3 lat liczy się w dokładnym wieku wiersza, nie w zaokrąglonym miesiącu.
+
+Rekordy bez pewnej doby pomiaru (punkty GH, starsze zapisy) liczą się w pełnych miesiącach jak dotąd; zmienia się tylko przypadek przecieku.
+
+**Źródło medyczne i wersja.** Bez zmian:
+- siatki z P-SDS-1, czyli WHO 2006/2007, OLAF i Palczewska z regułą siatek silnika;
+- skala wieku z DOB-AGE-4: miesiąc = 30,4375 dnia, interpolacja L, M i S między wierszami;
+- reguła doby pomiaru z P-ODTWORZ-WIEK.
+
+Populacja i jednostki jak w tych wpisach: długość i wzrost w cm, masa w kg, wiek w miesiącach.
+
+**Przypadki `wejście → oczekiwany wynik`** (zegar testów 2026-06-17, dane fikcyjne):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| Chłopiec ur. 2026-06-02. Pomiar z 2026-06-07 (5. doba) na medianie WHO zapisany z datą urodzenia i datą pomiaru. Wczytany jako „Nowy pomiar” 2026-06-17 (15. doba) | „Poprzednio” — długość i masa: 50 centyl w każdej klatce z kartą, także przed wpisem daty do formularza. Przed zmianą: 67 (pełne miesiące, karta zbudowana przed wpisem daty) albo 21 (15. doba z formularza) |
+| Jak wyżej, telefon (iPhone 15 Pro) | dopisek „było …”: 50 centyl, bez poziomego przewijania |
+| W formularzu chłopiec ur. 2026-05-23 (25. doba). Otwarta Karta innego chłopca, ur. 2026-06-14, zmierzonego 2026-06-17 (3. doba) na medianie | kafelek „Wzrost”: 51. centyl (mediana zaokrąglona do 0,1 cm), „Waga”: jego centyl w 3. dobie. Przed zmianą: 4. centyl długości |
+| Rekord bez doby pomiaru albo z dobą, która nie daje zapisanego wieku | pełne miesiące, bez formularza |
+| Rekord liczony na Palczewskiej | pełne miesiące, jak dotąd |
+| Chłopiec 9 l. 1 mies. 12 dni, pomiar zapisany dziś (przypadek P-POROWNANIE-DATA) | wiek z rekordu równy wiekowi z formularza: 38. centyl |
+| Wiersz wsadu, niemowlę z datą urodzenia i datą pomiaru | `Z_waga` w dokładnym wieku wiersza (`Ce`), jak `Z_wzrost` i `Z_BMI` |
+
+**Testy.**
+- `tests/unit/wiek-pomiaru-z-rekordu.test.mjs` (29). Funkcje wycięte z `app.js` z prawdziwym silnikiem wzrostu i prawdziwym `vilda_dob_age.js`:
+  - przeciek przed i po dla długości i masy;
+  - jawny wiek wyłącza formularz, a `null` daje pełne miesiące;
+  - niepoprawny jawny wiek liczy się jak `null`;
+  - pomiar z formularza bez zmian (DOB-AGE-4) i jawny wiek powyżej 36 mies. wprost do silnika;
+  - `vildaWiekPomiaruMies`: formularz innego pacjenta, brak doby, niezgodna doba, inny wiek wołającego, data urodzenia pacjenta, brak modułu, pomiar z dziś;
+  - strażnik źródła w każdym miejscu wołającym;
+  - schowek: jeden wiek dla wszystkich liczb, `null` bez wieku dokładnego, Palczewska.
+- `tests/e2e/wiek-pomiaru-z-rekordu.spec.mjs` (2: karta porównania z próbnikiem klatek i Karta innego chłopca) oraz `…-mobile.spec.mjs` (1).
+- **Kontrola ujemna na kodzie `audyt` cdfa0a6.** Testy e2e padają 3/3 na samym zachowaniu: „Poprzednio” 67 na desktopie i 21 na telefonie zamiast 50; kafelek 4. zamiast 51. centyla. Test unit pada 30/30 (wymaga nowej funkcji).
+- Zaktualizowane dosłowne fragmenty w pięciu strażnikach źródła; liczba asercji bez zmian:
+  - `bmi-karta-monitor`, `bmi-wyjscia-tekstowe` — wiek BMI i Cole;
+  - `sds-cisnienie-i-wsad` — `Ce` dla masy wsadu;
+  - `sds-karta-i-trajektoria` — sygnatura `En`;
+  - `sds-konsumenci-rdzenia` — wiek w `wartoscDlaSds` schowka.
+
+**Pozostaje (poza zakresem, do decyzji właściciela).**
+1. **Spójność pozostałych widoków.** Widoki liczące w pełnych miesiącach (lista w „Czego nie zmieniono”) mogą u niemowlęcia z datą pomiaru pokazać inny centyl tego samego pomiaru niż kafelek Karty i karta porównania. Spójność wymaga przekazania wieku pomiaru także tam (osobna rata).
+2. **ΔSDS karty porównania.** Liczy oba pomiary w pełnych miesiącach. Dla dwóch pomiarów niemowlęcia z tego samego miesiąca życia pomija więc tygodnie między nimi i może pokazać pozorny przyrost SDS.
+3. **Oś wieku kostnego w karcie zaawansowanej (`heightSdsForBoneAge`).** Gdy wiek kostny w pełnych miesiącach równa się kalendarzowemu, liczy się w dokładnym wieku kalendarzowym z formularza. Dotyczy tego samego pacjenta; różnica jest mniejsza niż miesiąc wieku.
+
+**Wersje.** `app.js` 234, `vilda_summary_cards.js` 60, `vilda_auth_ui.js` 487 (wstrzykiwany: `vilda_chrome.js` 135, `vilda_session_bridge.js` 59), `vilda_patient_summary_copy.js` 15, `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.265 → 1.1.266 (1.1.265 wydał #662).
+
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
 **Zgłoszenie.** Przy pracy nad datą urodzenia wyszedł defekt istniejący od dawna, niezależny od rat 1–3. Właściciel poprosił o poszukanie tablic WHO w rozdzielczości dziennej, „żeby tygodnie realnie zmieniały centyl"; po zmierzeniu skali problemu okazało się, że tablice dzienne nie są do tego potrzebne. Właściciel: „ruszaj".
@@ -5580,7 +5700,7 @@ Do tego status prawny tablic dziennych jest sporny: `WorldHealthOrganization/sma
 
 **Bramka tożsamości pomiaru.** `readExactAge()` oddaje też `totalMonths`, a `getChildLMS` uściśla **tylko wtedy, gdy ta liczba zgadza się z wiekiem, który sam dostał**. Bez tego „Nowy pomiar" i punkty historyczne dostałyby dzisiejszy wiek dziecka doklejony do pomiaru sprzed roku. Niezgodność, brak modułu albo wyjątek z modułu = brak uściślenia, czyli zachowanie jak dotąd.
 
-**Punkty historyczne zostają z dawnym centylem — świadomie.** Rekord trzyma wiek pomiaru w **pełnych miesiącach**, więc o pomiarze sprzed roku nie wiemy, w której dobie miesiąca został zrobiony. Bramka tożsamości słusznie go wtedy nie uściśla, co znaczy, że **zapisany punkt niemowlęcy zachowuje stary, zawyżony centyl**. Poprawka działa na pomiarze bieżącym, nie wstecz. Tak samo jak tygodnie w DOB-AGE-3: podstawienie dzisiejszej doby pod tamten pomiar byłoby zmyślaniem. Wsteczne uściślenie wymagałoby zapisania w rekordzie doby pomiaru — osobna zmiana, osobna decyzja.
+**Punkty historyczne zostają z dawnym centylem — świadomie.** Rekord trzyma wiek pomiaru w **pełnych miesiącach**, więc o pomiarze sprzed roku nie wiemy, w której dobie miesiąca został zrobiony. Bramka tożsamości słusznie go wtedy nie uściśla, co znaczy, że **zapisany punkt niemowlęcy zachowuje stary, zawyżony centyl**. Poprawka działa na pomiarze bieżącym, nie wstecz. Tak samo jak tygodnie w DOB-AGE-3: podstawienie dzisiejszej doby pod tamten pomiar byłoby zmyślaniem. Wsteczne uściślenie wymagałoby zapisania w rekordzie doby pomiaru — osobna zmiana, osobna decyzja. *Aktualizacja (P-WIEK-POMIARU, 2026-10-13, polecenie właściciela): rekordy niosą dziś dobę pomiaru (`user.measuredAtISO`, P-ODTWORZ-WIEK). Karta porównania, kafelki Karty Pacjenta i schowek liczą pomiar zapisany w jego dokładnym wieku, gdy rekord ma datę urodzenia i pewną dobę pomiaru; bez tego — w pełnych miesiącach. Bramka tożsamości chroni już tylko pomiar z formularza: wyliczenia dla innych pomiarów podają wiek jawnie, bo bramka porównująca same pełne miesiące przenosiła dokładny wiek z formularza na każdy pomiar z tym samym miesiącem życia.*
 
 **Czego ta zmiana NIE robi.** Nie rusza modułów wykresów (`getLMSFromDataset`, `getLMSHeightHybrid`, `getAnthroLMSForChartSource` w `inline_index_03/04`, `inline_docpro_01/02`) — one interpolują od zawsze, ale też dostają wiek w pełnych miesiącach; doprowadzenie do nich dokładnego wieku to osobna zmiana. Nie dodaje żadnych danych referencyjnych.
 
