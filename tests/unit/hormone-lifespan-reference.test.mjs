@@ -372,7 +372,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(evaluate('lh', 7 / 365.25).status).toBe('ready');
     expect(evaluate('lh', 6).status).toBe('ready');
     expect(evaluate('lh', 16).status).toBe('ready');
-    expect(evaluate('inhb', 7.99, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+    expect(evaluate('inhb', 5.59, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
     expect(evaluate('lh', .019, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
     expect(evaluate('lh', .02, { sex: 'female' }).status).toBe('ready');
   });

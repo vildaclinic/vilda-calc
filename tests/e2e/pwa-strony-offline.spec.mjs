@@ -368,7 +368,7 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(1);
         await wykres.locator('[data-view="life"]').click();
         const ordinaryInhibin = wykres.locator('[data-patient-concentration="inhb"]');
-        await expect(ordinaryInhibin).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-8-20');
+        await expect(ordinaryInhibin).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-20');
         await expect(ordinaryInhibin).toHaveAttribute('data-value', '40');
         await expect(ordinaryInhibin).toHaveAttribute('data-reference-value', '46');
         await expect(ordinaryInhibin).toHaveAttribute('data-divisor', '52.474');
@@ -381,7 +381,7 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
             analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
           });
           return { status: result.status, profile: result.profile?.id, value: result.value, reference: result.referenceValue };
-        })).toEqual({ status: 'ready', profile: 'borelli2025-female-inhb-age-8-20', value: 40, reference: 46 });
+        })).toEqual({ status: 'ready', profile: 'borelli2025-female-inhb-age-5p6-20', value: 40, reference: 46 });
         const ordinaryInhibinLines = wykres.locator('[data-female-stable-line="inhb"]');
         const ordinaryInhibinPaths = await ordinaryInhibinLines.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
         expect(ordinaryInhibinPaths.length).toBeGreaterThan(0);
@@ -389,7 +389,7 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
           analyte: 'inhibin_b', sex: 'female', ageYears: 14, sourceStatus: 'ready',
           identityKey: 'fictional-offline-inhibin-comparison', measurement: { value: 80, unit: 'pg/mL' },
         }));
-        await expect(ordinaryInhibin).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-8-20');
+        await expect(ordinaryInhibin).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-20');
         await expect(ordinaryInhibin).toHaveAttribute('data-value', '80');
         await expect(ordinaryInhibin).toHaveAttribute('data-reference-value', '46');
         await expect(ordinaryInhibin).toHaveAttribute('data-divisor', '52.474');

@@ -240,7 +240,7 @@ for (const width of [320, 1440]) {
     await checkPoint(page, 160, 'puberty');
     const sourceMedian = await point(page).getAttribute('data-reference-value');
     await panel(page).locator('[data-view="life"]').click();
-    await expect(point(page)).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-8-20');
+    await expect(point(page)).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-20');
     await expect(point(page)).toHaveAttribute('data-value', '160');
     await expect(point(page)).toHaveAttribute('data-reference-value', sourceMedian);
     await expect(point(page)).toHaveAttribute('data-divisor', '52.474');
@@ -252,7 +252,7 @@ for (const width of [320, 1440]) {
       analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
       });
       return { status: result.status, profile: result.profile?.id, value: result.value, reference: result.referenceValue };
-    })).toEqual({ status: 'ready', profile: 'borelli2025-female-inhb-age-8-20', value: 40, reference: 46 });
+    })).toEqual({ status: 'ready', profile: 'borelli2025-female-inhb-age-5p6-20', value: 40, reference: 46 });
   });
 
   test(`inhibin B comparison keeps labels readable in fullscreen and clears scoped state at ${width}px`, async ({ page }, testInfo) => {
