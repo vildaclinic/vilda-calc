@@ -281,10 +281,17 @@ o ograniczeniach i bez nowych pól. Nie zmienia to norm laboratoryjnych,
 - Dokładnie 1 rok zachowuje Ljubicic. Nieprecyzyjny wiek obejmujący
   tę granicę lub dwie grupy Jopling nie otrzymuje arbitralnej mediany;
   wystarczy krótki powód. Nie wymagaj nowych danych o stadium lub cyklu.
-- Inhibina B: istniejące mediany Borelli-Kjær 8–20 lat włącznie są
-  dostępne także w zwykłych widokach. Zachowaj wszystkie 24 węzły
-  5,6–47 lat do PCHIP. Cykl i antykoncepcja pozostają ograniczeniami
-  zbiorczej mediany wieku; nie twórz z niej normy fazy cyklu.
+- Inhibina B: zwykłe odniesienie Borelli-Kjær obejmuje **5,6–20 lat
+  włącznie**. Początkowe 8–20 z PR #651 wynikało z przejęcia okna
+  porównania pokwitania; po zgłoszeniu braku punktu u 6-latki właściciel
+  13 października zatwierdził rozszerzenie do początku danych źródła.
+  Porównanie płci nadal ma własne okno 8–20. Zachowaj wszystkie 24 węzły
+  5,6–47 do PCHIP, te same liczby i geometrię. Dla F6/33 pg/mL pokaż
+  wynik ponad przybliżoną medianą ≈11 pg/mL; nie oznacza to przekroczenia
+  normy. Luka >1–<5,6 nie otrzymuje liczby z mostu graficznego.
+  Nie wymagaj Th1, nie wyznaczaj stadium z wieku. Cykl i antykoncepcja
+  pozostają ograniczeniami modelu w odpowiednim kontekście, nie normą
+  fazy cyklu ani nowymi polami.
 - Materiał Jopling jest osoczem, a Borelli surowicą. Nieznane metoda
   lub materiał pozwalają na edukacyjne zestawienie, bez potwierdzania
   zgodności próbki. Znana niezgodność blokuje punkt, nie krzywą wieku.
@@ -482,9 +489,10 @@ oraz [opis modułu](HORMONE_LIFESPAN.md#żeńskie-lhfsh--odrębne-widoki-okresó
   odniesienie **początkowo wyłącznie w porównaniu płci inhibiny B 8–20 lat**.
   Dane `inhibinComparisonReferenceData` pozostają poza globalnym
   `patientPointData`. Osobne rozszerzenie z 13 października udostępnia
-  te same mediany w zwykłych widokach, nadal tylko w wieku 8–20 lat.
+  te same mediany w zwykłych widokach, po zatwierdzonym uzupełnieniu
+  również 5,6–<8 lat; okno samego porównania pozostaje 8–20.
 - Zachowaj wszystkie 24 żeńskie węzły ryc. 1 od 5,6 do 47 lat podczas
-  PCHIP. Okno kwalifikacji 8–20 ogranicza wynik, nie zbiór węzłów
+  PCHIP. Okno porównania płci 8–20 ogranicza wynik, nie zbiór węzłów
   potrzebnych do stycznych. Nie dopasowuj nowej krzywej z obciętej
   tabeli. Odczyt około ±2 pg/mL jest dokładnością digitalizacji,
   nie przedziałem ufności ani normą. Źródło dotyczy surowicy Gen II;

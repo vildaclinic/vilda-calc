@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-13.1",
+  "version": "2026-10-13.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -28797,10 +28797,10 @@ const patientPointData = {
       ]
     },
     {
-      "id": "borelli2025-female-inhb-age-8-20",
+      "id": "borelli2025-female-inhb-age-5p6-20",
       "analyte": "inhb",
       "sex": "female",
-      "minAge": 8,
+      "minAge": 5.6,
       "maxAge": 20,
       "maxAgeExclusive": false,
       "points": [
@@ -28926,13 +28926,13 @@ const patientPointData = {
           47
         ],
         "readableSource": "evidence/inhb-digitized-median.json",
-        "qualificationScope": "ordinary-female-inhibin-b-age-8-20",
+        "qualificationScope": "ordinary-female-inhibin-b-age-5p6-20",
         "sourceProfileId": "borelli2025-female-inhb-puberty-comparison",
-        "routingVersion": "2026-10-13.1"
+        "routingVersion": "2026-10-13.2"
       },
       "limitations": [
         "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
-        "Preserve the already enabled comparison age domain 8–20 inclusive; all 24 original source knots at 5.6–47 years remain for PCHIP endpoint derivatives but do not extend patient eligibility.",
+        "Zwykły wykres udostępnia odniesienie od 5,6 do 20 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano wszystkie 24 węzły źródłowe do interpolacji. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku brak liczbowego odniesienia.",
         "Wiek nie wyznacza stadium Tannera. W kohorcie nie standaryzowano fazy cyklu; antykoncepcja doustna wpływa na stężenia.",
         "Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń."
       ],

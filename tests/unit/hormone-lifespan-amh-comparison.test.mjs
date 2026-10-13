@@ -23,7 +23,7 @@ describe('Fixed infant AMH sex comparison — production model', () => {
     expect(data.patientPointData).toEqual(JSON.parse(readFileSync(
       new URL('../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     // Entire reference bundle, including the ordinary-only pediatric group medians.
-    expect(digest(data.patientPointData)).toBe('2b59a6eb7cf2503fe61259e87dcb811f0ac6c5785e6907b23681738b63e19869');
+    expect(digest(data.patientPointData)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     const model = display.buildAmhInfantComparison(data, engine);
     expect(model).toMatchObject({ id: 'amh', kind: 'population-model-comparison',
       profileIds: { female: 'ljubicic2022-female-amh', male: 'busch2022-male-amh' },

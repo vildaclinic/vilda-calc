@@ -334,7 +334,7 @@ def build():
                         'ageRouting':amh_policy['ageRouting'],
                         'specimenPolicy':amh_policy['specimenPolicy'],
                         'assayPolicy':amh_policy['assayPolicy'],
-                        'routingVersion':female_policy['version']},
+                        'routingVersion':amh_policy['version']},
             limitations=[
                 'Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.',
                 'Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.',
@@ -348,14 +348,20 @@ def build():
                           if p['id'] == 'borelli2025-female-inhb-puberty-comparison')
     inhb_policy = female_policy['inhb']
     assert inhb_policy['retainAllSourcePoints'] and len(source_profile['points']) == 24
-    assert (inhb_policy['minAge'], inhb_policy['maxAge']) == (source_profile['minAge'], source_profile['maxAge'])
+    inhibin_source = json.loads((ROOT/'evidence'/'inhb-digitized-median.json').read_text(encoding='utf-8'))
+    assert any(cohort['ageMinYears'] <= inhb_policy['minAge'] < inhb_policy['maxAge'] <= cohort['ageMaxYears']
+               for cohort in inhibin_source['cohorts'])
+    assert source_profile['points'][0]['ageYears'] <= inhb_policy['minAge']
+    assert inhb_policy['maxAge'] <= source_profile['maxAge']
     ordinary = {**source_profile, 'id':inhb_policy['id'],
+                'minAge':inhb_policy['minAge'], 'maxAge':inhb_policy['maxAge'],
+                'maxAgeExclusive':inhb_policy['maxAgeExclusive'],
                 'ordinaryOnly':female_policy['ordinaryOnly'],
                 'sourceLabel':'Borelli-Kjær 2025 · inhibina B · model wieku',
                 'patientNote':inhb_policy['patientNote'],
                 'provenance':{**source_profile['provenance'],
                               'sourceProfileId':source_profile['id'],
-                              'qualificationScope':'ordinary-female-inhibin-b-age-8-20',
+                              'qualificationScope':inhb_policy['qualificationScope'],
                               'routingVersion':female_policy['version']},
                 'limitations':[source_profile['limitations'][0], inhb_policy['ageRouting'],
                                source_profile['limitations'][2],
@@ -453,7 +459,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-13.1','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-13.2','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

@@ -11,7 +11,7 @@ const examples = [
     median: 21.14, medianInput: 21.14 * .1401, divisor: 28.99, statistic: 'group-median',
     canonical: value => value / .1401, high: 10, outsideAge: 18 },
   { id: 'inhibin_b', hormone: 'inhb', name: 'Inhibina B', raw: '80', unit: 'pg/mL',
-    profile: 'borelli2025-female-inhb-age-8-20',
+    profile: 'borelli2025-female-inhb-age-5p6-20',
     median: 44, medianInput: 44, divisor: 52.474, statistic: 'median',
     canonical: value => value, high: 1000, outsideAge: 21 },
 ];
@@ -27,7 +27,7 @@ async function patient(page, years = 15, sex = 'F') {
   }, { years, sex });
 }
 
-async function open(page, width = 1440) {
+async function open(page, width = 1440, seedShared = true) {
   await page.setViewportSize({ width, height: 1000 });
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -42,7 +42,7 @@ async function open(page, width = 1440) {
   await page.waitForFunction(() => window.VildaHormoneLifespanRuntime && window.VildaHormoneLifespanReference && window.VildaLabPubertyRuntime);
   const consent = page.locator('#consent-decline');
   if (await consent.isVisible()) await consent.click();
-  await patient(page);
+  if (seedShared) await patient(page);
 }
 
 async function choose(page, example, raw = '') {
@@ -95,7 +95,118 @@ async function expectSourcePoint(page, example, inputValue, inputUnit = example.
       ? 'Mediana grupy ≈2,96 ng/mL' : 'Mediana grupy ≈21,1 pmol/L');
     await expect(group).toHaveAccessibleName(/Mediana grupy 15.*18[,.]9/);
     await expect(group.locator('[data-dot-label="result"]')).toContainText(inputUnit);
-  } else await expect(group.locator('[data-dot-label="median"]')).toHaveText('Mediana ≈44 pg/mL');
+  } else await expect(group.locator('[data-dot-label="median"]')).toHaveText(`Mediana ≈${example.median} pg/mL`);
+}
+
+// Exercise the actual main-form bridge and a fresh fictional saved identity.
+// No Tanner stage, cycle, assay, specimen or birth history is manufactured.
+async function prepareMainPatient(page, width = 1440, age = 6, months = 0) {
+  await open(page, width, false);
+  await page.evaluate(() => window.VildaSession.ensureAuthLoaded());
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await page.evaluate(() => window.VildaVault.createUser('E2e#InhibinReference!2026', {
+    label: 'Fikcyjny sejf odniesienia inhibiny B', iterations: 10000,
+  }));
+  await openMainForm(page);
+  const id = await page.evaluate(async ({ age, months }) => {
+    const user = { name: 'Fikcyjna Pacjentka inhibiny B', lastName: 'Fikcyjna', firstName: 'Pacjentka inhibiny B',
+      sex: 'F', age, ageMonths: months, weight: 20, height: 115 };
+    const saved = await window.VildaVault.savePatient({ name: user.name, user, puberty: {} }, { dedup: false });
+    const record = await window.VildaVault.getPatient(saved.patientId);
+    window.applyLoadedData(record.snapshots[0].payload);
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: {
+      patientId: saved.patientId, savedAtISO: record.snapshots[0].savedAtISO, snapshotCount: 1, source: 'pick',
+    } }));
+    return saved.patientId;
+  }, { age, months });
+  await expect(page.locator('#vildaLcmNew')).toBeVisible();
+  await page.locator('#vildaLcmNew').click();
+  await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  await fillMainAge(page, age, months);
+  await mainConverter(page, id);
+  return id;
+}
+
+async function openMainForm(page) {
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaDobAge &&
+    typeof window.applyLoadedData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => {
+    const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
+    return !state || !state.hasPendingSaveTimer && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer;
+  });
+}
+
+async function fillMainAge(page, age, months) {
+  for (const [key, value] of Object.entries({ age, ageMonths: months, weight: 20, height: 115 })) {
+    await page.locator(`#${key}`).fill(String(value));
+    await page.locator(`#${key}`).dispatchEvent('change');
+  }
+  await expect.poll(() => page.evaluate(() => {
+    const shared = window.VildaPersistence.readShared();
+    return ['age', 'ageMonths', 'weight', 'height'].every(key => String(shared[key] ?? '') === document.getElementById(key).value);
+  })).toBe(true);
+}
+
+async function mainConverter(page, id) {
+  await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaLabPubertyRuntime && window.VildaHormoneLifespanRuntime);
+  await expect.poll(() => page.evaluate(id => window.VildaPubertySource.kontekstPacjenta(id).status, id)).toBe('ready');
+}
+
+const childInhibin = { ...examples[1], raw: '33', median: 11, medianInput: 11 };
+
+for (const width of [1440, 320]) {
+  test(`F6 inhibin B 33 uses the main-form age and source median 11 with unchanged curves at ${width}px`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await prepareMainPatient(page, width);
+    await choose(page, childInhibin);
+    const shape = await geometry(page, childInhibin);
+    expect(shape.length).toBeGreaterThan(0);
+    for (const raw of ['33', '', '11', '33']) {
+      await page.locator('#labValue').fill(raw);
+      if (raw) await expectSourcePoint(page, childInhibin, Number(raw));
+      else await expect(point(page, childInhibin)).toHaveCount(0);
+      await expect.poll(() => geometry(page, childInhibin)).toEqual(shape);
+    }
+    await expect(point(page, childInhibin)).toHaveAttribute('data-age-lower', '6');
+    await expect(point(page, childInhibin)).toHaveAttribute('data-age-upper', String(6 + 1 / 12));
+    await expect(panel(page).locator('input, select, textarea')).toHaveCount(0);
+    const before = await state(page);
+    expect(before.assessment.evaluation.input.age).toMatchObject({ years: 6, months: 0, precision: 'month' });
+    await capture(page, `${width}-inhibin-b-age6-life`);
+    await panel(page).locator('.vhl-expand').click();
+    await expect(page.locator('dialog.vhl-fullscreen-dialog')).toBeVisible();
+    await expectSourcePoint(page, childInhibin, 33);
+    expect(await page.locator('dialog.vhl-fullscreen-dialog').evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth + 1)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('dialog.vhl-fullscreen-dialog')).toHaveCount(0);
+    expect(await state(page)).toEqual(before);
+    await expect.poll(() => geometry(page, childInhibin)).toEqual(shape);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });
+}
+
+for (const boundary of [
+  { age: 5, months: 7, eligible: false, title: '5y7m straddles the lower bound and stays unavailable' },
+  { age: 5, months: 8, eligible: true, title: '5y8m lies inside the source coverage' },
+  { age: 6, months: '', eligible: true, title: '6 years without months does not require invented precision' },
+]) {
+  test(`ordinary inhibin B main-form boundary: ${boundary.title}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await prepareMainPatient(page, 1440, boundary.age, boundary.months);
+    await choose(page, childInhibin);
+    const shape = await geometry(page, childInhibin);
+    await page.locator('#labValue').fill('33');
+    if (boundary.eligible) await expectSourcePoint(page, childInhibin, 33);
+    else {
+      await expect(point(page, childInhibin)).toHaveCount(0);
+      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toHaveText('Dla tego wieku nie udostępniono mediany źródłowej. Linia pokazuje ogólny przebieg zmian.');
+    }
+    expect((await state(page)).assessment.evaluation.input.age).toMatchObject({ years: boundary.age,
+      months: boundary.months === '' ? null : boundary.months, precision: boundary.months === '' ? 'year' : 'month' });
+    await expect.poll(() => geometry(page, childInhibin)).toEqual(shape);
+  });
 }
 
 async function capture(page, name) {
@@ -231,7 +342,7 @@ test('new ordinary female AMH sources never activate a quantitative puberty sex 
 
 test.describe('female source points offline', () => {
   test.use({ serviceWorkers: 'allow' });
-  test('the installed worker preserves both F15 source points after an offline reload', async ({ page, context }) => {
+  test('the installed worker preserves F15 and the extended F6 source point after an offline reload', async ({ page, context }) => {
     test.setTimeout(180_000);
     await page.goto('/tests/fixtures/service-worker-runner.html');
     await page.evaluate(async () => {
@@ -244,10 +355,16 @@ test.describe('female source points offline', () => {
       await choose(page, example, example.raw);
       await expectSourcePoint(page, example, Number(example.raw));
     }
+    await patient(page, 6);
+    await choose(page, childInhibin, '33');
+    await expectSourcePoint(page, childInhibin, 33);
     await context.setOffline(true);
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => Boolean(window.VildaHormoneLifespanRuntime));
     expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+    await choose(page, childInhibin, '33');
+    await expectSourcePoint(page, childInhibin, 33);
+    await patient(page, 15);
     for (const example of examples) {
       await choose(page, example, example.raw);
       await expectSourcePoint(page, example, Number(example.raw));
