@@ -478,9 +478,21 @@ granicę źródeł lub grup otrzymuje krótki powód braku jednej mediany.
 
 **Inhibina B:** Borelli-Kjær 2025, ryc. 1, przybliżona mediana GAMLSS
 surowicy Gen II, dotychczas dostępna wyłącznie w porównaniu płci,
-działa także w zwykłych widokach 8–20 lat włącznie. Całe 24 węzły
-5,6–47 lat nadal wyznaczają PCHIP, bez rozszerzania kwalifikacji.
-Dokładnie 15 lat daje ≈44 pg/mL; nieprecyzyjny wiek zachowuje
+działa także w zwykłych widokach **5,6–20 lat włącznie**. Początkowe
+okno 8–20 z PR #651 odziedziczono po porównaniu pokwitania. Właściciel
+13 października zaakceptował poszerzenie zwykłego odniesienia po zgłoszeniu
+F6/33 pg/mL: wynik otrzymuje punkt i przybliżoną medianę ≈11 pg/mL.
+To dostępne dane ryc. 1, nie liczba z mostu ani nowa norma. Kohorta
+648 dziewcząt obejmowała wiek 5,6–20,2; żeńskie oznaczenia Gen II miały
+LOD 3 pg/mL. Odczyt ≈11 jest powyżej LOD, a oszacowanie digitalizacji
+±2 pg/mL nie jest przedziałem ufności ani granicą referencyjną.
+Całe 24 węzły 5,6–47 nadal wyznaczają PCHIP; geometria i skale pozostają
+niezmienione. Luka >1–<5,6 pozostaje bez liczbowego odniesienia, a porównanie
+płci zachowuje okno 8–20. Nie trzeba nowej publikacji ani pól formularza.
+Profil `borelli2025-female-inhb-age-5p6-20` i polityka/dane punktu
+`2026-10-13.2` zastępują zwykłe ID `borelli2025-female-inhb-age-8-20`;
+pięć profili AMH zachowuje własny routing `2026-10-13.1`.
+Dokładnie 15 lat daje nadal ≈44 pg/mL; nieprecyzyjny wiek zachowuje
 dotychczasowy przedział odniesienia. Krótki komentarz przypomina,
 że jest to przybliżenie i że cykl oraz antykoncepcja wpływają na wynik.
 
@@ -610,8 +622,9 @@ wszystkie 24 źródłowe węzły 5,6–47 lat, aby granice widoku nie zmieniały
 stycznych. W wieku 8/12/13/20 lat żeńskie mediany wynoszą około
 14/43/47/34 pg/mL. Przed 8 i po 20 latach nie dodajemy tego punktu;
 W zwykłych widokach te same mediany udostępnia odrębne rozszerzenie
-z 13 października. Źródło nie daje tu parametrów
-L/S, SDS ani nowych percentyli. Fazy cyklu nie standaryzowano,
+z 13 października, poszerzone następnie do 5,6–20 lat. Źródło nie daje
+w zachowanych materiałach numerycznych parametrów L/S; nie wyliczamy
+SDS ani nowych percentyli. Fazy cyklu nie standaryzowano,
 a antykoncepcja doustna wpływa na stężenia; nie dodajemy formularza
 ani norm dostosowanych do tych okoliczności.
 
@@ -976,7 +989,8 @@ analitów nie otrzymują automatycznie nowych polityk tych porównań.
 - **Pokwitanie, inhibina B:** stałe modele Borelli-Kjær obu płci,
   8–20 lat i ta sama liniowa oś 0–400 pg/mL; osobno zaakceptowane
   żeńskie odniesienie pacjentki. Od 13 października te same mediany
-  8–20 lat są dostępne również w zwykłych widokach na ich własnej skali.
+  są dostępne również w zwykłych widokach na ich własnej skali;
+  uzupełnienie po zgłoszeniu 6-latki poszerza tylko zwykły profil do 5,6–20.
 - **LH/FSH:** mediany obu płci, minipuberty 0,02–<1 roku / 0–6 IU/L
   i pokwitanie 6–16 lat / 0–8 IU/L, bez osobnej normalizacji płci.
 - **Pokwitanie, AMH:** na wspólnej osi wieku
