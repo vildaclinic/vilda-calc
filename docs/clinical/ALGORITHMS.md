@@ -3848,7 +3848,7 @@ Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany
 **Czego nie zmieniono.** Bez zmian zostają `vilda_zrodla_pacjenta.js`, `vilda_sync_integration.js`, źródła DS i okołoporodowe, harmonogram synchronizacji i format rekordu.
 
 **Ustalenia poza zakresem (do decyzji właściciela).**
-1. Karta „Porównanie z poprzednim pomiarem” ma własnego słuchacza `vilda:sync-status-changed` (`vilda_summary_cards.js`, plik zminifikowany). Nadal przebudowuje się przy każdej zmianie stanu synchronizacji: w pomiarze 456 → 276 mutacji karty na trzy wymiany, bo zostaje część niezależna od źródła pokwitania.
+1. Karta „Porównanie z poprzednim pomiarem” ma własnego słuchacza `vilda:sync-status-changed` (`vilda_summary_cards.js`, plik zminifikowany). Nadal przebudowuje się przy każdej zmianie stanu synchronizacji: w pomiarze 456 → 276 mutacji karty na trzy wymiany, bo zostaje część niezależna od źródła pokwitania. *(Rozstrzygnięte poleceniem właściciela 2026-10-13: P-POROWNANIE-W-TLE — wpis niżej.)*
 2. Po pobraniu „up-to-date” `vilda_sync.js` stosuje delty z `/changes` asynchronicznie, już po zdarzeniu `ok`. Ogłasza je tylko przez `vilda:sync-merged`, a żadne z trzech źródeł pacjenta tego zdarzenia nie słucha. W powłoce tak samo trafia do ramek scalenie wykonane przez dokument powłoki. Zmiana z delty dociera więc do źródeł dopiero przy następnym wyzwalaczu. Ustalone z lektury kodu, niezmierzone.
 
 **Testy.**
@@ -3868,6 +3868,66 @@ Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany
   - Na starym module padają trzy pierwsze; test bezpieczeństwa przechodzi na obu wersjach.
 
 **Wersje.** `vilda_puberty_source.js` 11; SW 1.1.250 → 1.1.251 (numery 1.1.248, 1.1.249 i 1.1.250 nadały równolegle #643, #647 i #649).
+
+### P-POROWNANIE-W-TLE — karta porównania nie jest przebudowywana przy synchronizacji bez zmiany rekordu (SW 1.1.260, 2026-10-13, polecenie właściciela)
+
+**Polecenie właściciela.** „Ogranicz przebudowę karty porównania przy synchronizacji” — ustalenie poza zakresem nr 1 z P-POKWITANIE-W-TLE. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
+
+**Co było.** Słuchacz `Z` w `vilda_summary_cards.js` reaguje na `vilda:sync-status-changed` i `vilda:auth-hidden`. Gdy karta należy do bieżącego pacjenta, a sejf jest odblokowany, woła `Y(pid, true)`. `Y` czyta pacjenta z sejfu i wybiera poprzedni pomiar (migawka-kotwica). `Se()` liczy z niego centyle, BMI i Cole'a i buduje kartę od nowa (`vildaAppSetTrustedHtml` na `#prevSummaryContent`). Potem kolumny „Dziś” i „Zmiana” są trzy razy zerowane i wypełniane od nowa (`updatePrevSummaryDiff`: z `Se()`, przez `updateProfessionalSummaryCard` → Podsumowanie wyników i z `Y`). Działo się tak przy każdym zdarzeniu, także przy niezmienionym rekordzie. Strona otwarta samodzielnie dostaje takie zdarzenia co ok. 20 s.
+
+**Pomiar przed zmianą** (`audyt` f22c280, Chromium, tryb profesjonalny; fikcyjny pacjent z dwoma pomiarami w sejfie, wczytany z Karty pacjenta jako „Nowy pomiar”):
+- powłoka, ramka Start, trzy wymiany synchronizacji (6 zdarzeń): 885 mutacji DOM. Z tego 804 pochodzi z wypełniania kolumn (18 wywołań), a 6 to pełne przebudowy tabeli;
+- `index.html` bez powłoki, trzy wymiany i `vilda:auth-hidden`: 994 mutacje samej karty;
+- na ekranie bez różnicy: w każdej malowanej klatce ten sam tekst i ta sama wysokość karty (691 px).
+
+**Co jest.** Odświeżenie z `Z` jest oznaczone jako odświeżenie w tle (`Y(pid, true, {tlo: true})`). `Se()` zapamiętuje wzór zbudowanej karty: jej HTML i poprzedni pomiar (`q(payload)`). Przy odświeżeniu w tle `Se()` niczego nie przebudowuje, gdy jednocześnie:
+- wzór nowej karty równa się zapamiętanemu;
+- `window.prevMeasurementInfo` równa się poprzedniemu pomiarowi z rekordu;
+- karta jest widoczna, załadowana i ma tabelę.
+
+Wtedy `Y` nie wypełnia też ponownie kolumn „Dziś”/„Zmiana”, bo te utrzymuje `update()` (przez `vilda_update_prep.js`) i Podsumowanie wyników (`vilda_patient_report.js`). Klucze karty w `sessionStorage` są ustawiane jak dotąd.
+
+Kartę buduje się jak dotąd:
+- przy każdym wywołaniu jawnym: wczytanie pacjenta, `vilda:measurement-changed`, `vilda:therapy-points-changed`, odtworzenie sesji (`vilda_persist_runtime.js` woła `__renderPrevSummary(null, true)` bez znacznika tła);
+- gdy karta jest schowana albo wyczyszczona (`G()`, `clearAllData()`, reset w `vilda_persist_runtime.js`);
+- gdy rekord się zmienił: poprawka masy albo daty pomiaru, nowa kotwica;
+- gdy karta wyszłaby inna z innego powodu. Przykład: kartę z wczytania pacjenta (`vilda:patient-loaded`, `source: 'pick'`) buduje odczyt z sejfu, a datę urodzenia formularz dostaje ok. 200 ms później. Kto wygra, zależy od tempa maszyny. Centyl wzrostu w kolumnie „Poprzednio” liczy się bez daty z pełnych miesięcy, a z datą z dokładnego wieku (ustalenie niżej). Pierwsze odświeżenie w tle buduje taką kartę raz (w teście 39 → 38 centyl), następne już nie. Na bazie ta sama zmiana pokazywała się przy pierwszej synchronizacji, a przebudowa powtarzała się przy każdej kolejnej.
+
+**Pomiar po zmianie** (te same scenariusze):
+
+| Scenariusz | Przed | Po |
+|---|---|---|
+| powłoka, ramka Start, 3 wymiany: mutacje DOM całej strony | 885 | 21 (ikona synchronizacji `#vildaSyncBtn` i chip pacjenta `#vildaPatientChip`; z karty 0) |
+| — w tym wywołania `updatePrevSummaryDiff` / przebudowy tabeli | 18 / 6 | 0 / 0 |
+| — czas układu (`LayoutDuration`) | ok. 10 ms | ok. 1 ms |
+| `index.html`, 3 wymiany + `vilda:auth-hidden`: mutacje karty | 994 | 0 |
+| poprawka poprzedniego pomiaru w sejfie (masa 40 → 39,5 kg) → wymiana | karta odświeżona (284 mutacje) | karta odświeżona (142 mutacje — jedna przebudowa zamiast dwóch) |
+
+Czas skryptu (`ScriptDuration`) wynosi 13–15 ms na trzy wymiany w obu wariantach, w granicach szumu. Czas zadań wątku głównego zjadają stale biegnące animacje (obracający się obrys, pulsowania), więc zysk to brak zbędnej przebudowy DOM i układu, a nie odczuwalne milisekundy procesora. Rekord nadal jest czytany z sejfu przy każdym zdarzeniu: karta musi wiedzieć, czy się zmienił.
+
+**Czego nie zmieniono.** Bez zmian zostają wybór kotwicy, treść karty, obliczenia poprzedniego pomiaru (centyle, BMI, Cole, talia/biodra), `updatePrevSummaryDiff`, `vilda_sync_integration.js` i odczyty z sejfu. Zostaje też ustalenie nr 2 z P-POKWITANIE-W-TLE: zmiana z delty `/changes` scalona po zdarzeniu `ok` (`vilda:sync-merged`) dociera do karty dopiero przy następnym wyzwalaczu, tak jak dotąd.
+
+**Testy.** `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` (2, `index.html`; czeka na koniec odczytów z sejfu, nie na upływ czasu). Przygotowanie:
+- czeka na impuls z `custom-fixes.js`. Po każdym `vilda:patient-loaded` ten moduł wysyła po 3,2 s `change` na polach formularza, a wywołane tym `update()` wypełnia kolumny karty od nowa (ok. 2000 mutacji) bez udziału synchronizacji. Rozpoznajemy go po `change` na `#ageMonths` co najmniej 3 s po ostatnim wczytaniu;
+- gdy data urodzenia jest już w formularzu, buduje kartę jawnie (`vilda:measurement-changed`, jak po edycji pomiaru) i czeka na 1,5 s ciszy w karcie. Pomiar zaczyna się więc od karty zgodnej z bieżącym stanem, niezależnie od wyścigu opisanego wyżej.
+
+Dwa przebiegi CI padły na teście 1 ze 142 mutacjami, czyli dokładnie jedną przebudową (994 = 7 × 142). Przy pierwszym (`0467f71`) przyczynę przypisałem impulsowi z `custom-fixes.js` i dodałem oczekiwanie na niego. Ta diagnoza była błędna: okno pomiaru sztucznie wydłużone o 3 s dawało 2154 mutacje, a nie 142. Przy drugim (`0792c50`) trace z CI pokazał, że pierwsza synchronizacja zmienia centyl wzrostu w kolumnie „Poprzednio” z 39 na 38. To karta zbudowana przed datą urodzenia. Lokalnie poprzednia wersja testu padała tak samo w 2 z 6 przebiegów. Obecna przeszła 12/12 bez obciążenia i 16/16 przy czterech przebiegach równoległych. Przeszła też z odczytami z sejfu opóźnionymi o 400 ms, gdy karta powstaje już po dacie.
+
+1. Trzy wymiany synchronizacji i `vilda:auth-hidden` przy niezmienionym rekordzie: 0 mutacji karty, a „Poprzednio” 40,0 kg, „Dziś” 41,0 kg, „Zmiana” i `prevMeasurementInfo` bez zmian. Jawne `vilda:measurement-changed` nadal buduje kartę.
+2. Poprawka w sejfie, jak z innego urządzenia:
+   - masa poprzedniego pomiaru 40 → 39,5 kg: po najbliższej wymianie „Poprzednio” 39,5 kg, a „Zmiana” liczona od nowej masy;
+   - sama data pomiaru (`measuredAtISO`, zmienia tylko HTML): żeton „Poprzedni pomiar: 5 marca 2026”;
+   - kolejna wymiana bez zmian: 0 mutacji;
+   - karta schowana zdarzeniem `storage` wraca przy najbliższej wymianie.
+
+Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywraca co najmniej jeden test:
+- bez znacznika tła w `Z`: oba testy;
+- bez sprawdzenia widoczności karty i `prevMeasurementInfo`: schowana karta nie wraca;
+- bez porównania HTML: poprawiona data się nie pokazuje.
+
+**Ustalenie poza zakresem (do decyzji właściciela; zmiana kliniczna).** Centyl wzrostu poprzedniego pomiaru (`Se()` → `calcPercentileStats(…, "HT")` w `app.js`) przechodzi przez `lmsNiemowleWiek()`. Gdy formularz ma datę urodzenia, a pełne miesiące wieku dziś zgadzają się z pełnymi miesiącami poprzedniego pomiaru, silnik `vilda_sds_wzrostu.js` dostaje dokładny wiek z dzisiejszej daty (`VildaDobAge.readExactAge()`), a nie z dnia poprzedniego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek jest więc zawyżony o te tygodnie. Bez daty w formularzu silnik liczy z pełnych miesięcy. Ta sama karta pokazuje więc inny centyl zależnie od chwili budowy (w teście 39 albo 38). Zachowanie jest sprzed tej zmiany i ta zmiana go nie dotyka. Poprawka, np. dokładny wiek z daty poprzedniego pomiaru, zmienia wynik kliniczny i wymaga decyzji właściciela.
+
+**Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
