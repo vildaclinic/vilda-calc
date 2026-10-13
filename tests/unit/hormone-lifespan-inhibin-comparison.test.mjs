@@ -26,13 +26,17 @@ describe('Fixed inhibin B sex comparison — production model', () => {
     expect(data.inhibinComparisonPolicy).toEqual(readable('inhibin-comparison-policy.json'));
     expect(data.inhibinComparisonReferenceData).toEqual(readable('inhibin-comparison-reference-data.json'));
     expect(data.patientPointData).toEqual(readable('population-reference-data.json'));
-    // Preserve the full original bundle; exclude only the later three male AMH gap profiles.
+    // Preserve the full original bundle; exclude only the explicit later AMH additions.
     const laterMaleIds = JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/male-amh-reference-policy.json', import.meta.url), 'utf8'))
       .profiles.map(p => p.id);
+    const laterFemaleIds = JSON.parse(readFileSync(new URL(
+      '../../docs/clinical/hormone-lifespan/female-adult-amh-reference-policy.json', import.meta.url), 'utf8'))
+      .profiles.map(p => p.id);
     const original = { ...data.patientPointData, version: '2026-10-13.2',
-      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id)) };
+      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id)) };
     expect(laterMaleIds).toHaveLength(3);
+    expect(laterFemaleIds).toHaveLength(5);
     expect(original.profiles).toHaveLength(66);
     expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     const female = data.inhibinComparisonReferenceData.profiles[0];

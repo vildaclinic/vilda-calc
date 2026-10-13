@@ -12,6 +12,7 @@ const read = name => JSON.parse(readFileSync(new URL(
 const policy = read('male-amh-reference-policy.json');
 const data = runtime.patientPointData;
 const newIds = policy.profiles.map(p => p.id);
+const laterFemaleIds = read('female-adult-amh-reference-policy.json').profiles.map(p => p.id);
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const context = (ageYears, extra = {}) => ({ analyte: 'amh', sex: 'male', ageYears,
   measurement: { value: 5, unit: 'ng/mL' }, ...extra });
@@ -30,9 +31,10 @@ const groups = [
 describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilustracji', () => {
   it('dodaje tylko trzy rozłączne profile, zachowując wszystkie 66 wcześniejszych profili i przeliczenia', () => {
     expect(newIds).toEqual(groups.map(g => g.id));
-    expect(data.profiles).toHaveLength(69);
+    expect(data.profiles).toHaveLength(74);
+    expect(laterFemaleIds).toHaveLength(5);
     const original = { ...data, version: '2026-10-13.2',
-      profiles: data.profiles.filter(p => !newIds.includes(p.id)) };
+      profiles: data.profiles.filter(p => !newIds.includes(p.id) && !laterFemaleIds.includes(p.id)) };
     expect(original.profiles).toHaveLength(66);
     expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     expect(data).toEqual(read('population-reference-data.json'));
@@ -128,7 +130,8 @@ describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilu
     }
     expect(evaluate(12, { sex: 'female' }).referenceValue).toBe(17.87);
     expect(evaluate(15, { sex: 'female' }).referenceValue).toBe(21.14);
-    expect(evaluate(25, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+    expect(evaluate(25, { sex: 'female' })).toMatchObject({ status: 'ready', referenceValue: 25.7,
+      profile: { id: 'fda2017-female-amh-age-18-under26' } });
   });
 
   it.each(groups)('zachowuje blokady i jednostki oraz wybór niezależny od wartości wyniku: $label', group => {

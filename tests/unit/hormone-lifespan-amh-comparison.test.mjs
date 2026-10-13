@@ -22,13 +22,17 @@ describe('Fixed infant AMH sex comparison — production model', () => {
       new URL('../../docs/clinical/hormone-lifespan/amh-comparison-policy.json', import.meta.url), 'utf8')));
     expect(data.patientPointData).toEqual(JSON.parse(readFileSync(
       new URL('../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
-    // Preserve the full original bundle; exclude only the later three male AMH gap profiles.
+    // Preserve the full original bundle; exclude only the explicit later AMH additions.
     const laterMaleIds = JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/male-amh-reference-policy.json', import.meta.url), 'utf8'))
       .profiles.map(p => p.id);
+    const laterFemaleIds = JSON.parse(readFileSync(new URL(
+      '../../docs/clinical/hormone-lifespan/female-adult-amh-reference-policy.json', import.meta.url), 'utf8'))
+      .profiles.map(p => p.id);
     const original = { ...data.patientPointData, version: '2026-10-13.2',
-      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id)) };
+      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id)) };
     expect(laterMaleIds).toHaveLength(3);
+    expect(laterFemaleIds).toHaveLength(5);
     expect(original.profiles).toHaveLength(66);
     expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     const model = display.buildAmhInfantComparison(data, engine);

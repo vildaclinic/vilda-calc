@@ -142,6 +142,14 @@ for (const width of [1440, 320]) {
     await panel(page).screenshot({ path: test.info().outputPath(`female-amh-source-off-curve-${width}.png`) });
     const sourceShape = await geometry(page);
     await update(page, { ageYears: 19.668, ageLabel: '19,668 roku', measurement: { value: 25, unit: 'pmol/L' } });
+    // The later FDA extension adds a serum group reference without moving
+    // the approved plasma-based illustration or its fixed scale.
+    await expect(point(page)).toHaveCount(1);
+    await expect(point(page)).toHaveAttribute('data-profile', 'fda2017-female-amh-age-18-under26');
+    await expect(point(page)).toHaveAttribute('data-reference-value', '25.7');
+    await expect(point(page)).toHaveAttribute('data-reference-statistic', 'group-median');
+    expect(await geometry(page)).toEqual(sourceShape);
+    await update(page, { ageYears: 46, ageLabel: '46 lat', measurement: { value: 25, unit: 'pmol/L' } });
     await expect(point(page)).toHaveCount(0);
     expect(await geometry(page)).toEqual(sourceShape);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
