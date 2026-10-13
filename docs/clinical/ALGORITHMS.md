@@ -12522,7 +12522,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## Pierwsze pobranie danych na „Komputerze prywatnym” z oknem postępu (P-NOWE-URZADZENIE etap 2, SW 1.1.254, `vilda_nowe_urzadzenie.js` 2, `vilda_sync.js` 39, `vilda_sync_integration.js` 49, 2026-10-13)
+## Pierwsze pobranie danych na „Komputerze prywatnym” z oknem postępu (P-NOWE-URZADZENIE etap 2, SW 1.1.255, `vilda_nowe_urzadzenie.js` 2, `vilda_sync.js` 39, `vilda_sync_integration.js` 49, 2026-10-13)
 
 **Skąd.** Etap 2 planu z wpisu niżej (zgłoszenie właściciela z 2026-10-12). Właściciel zaakceptował 2026-10-13 makietę (komputer i telefon) i cztery propozycje:
 1. W oknie pobierania na „Komputerze prywatnym” nie ma przycisku rezygnacji. Synchronizację wyłącza się w Ustawieniach → Synchronizacja.
@@ -12587,7 +12587,7 @@ Testy: `tests/unit/nowe-urzadzenie-pobieranie.test.mjs` (prawdziwe `vilda_sync.j
 
 **Źródło kodu.** `vilda_sync.js` i `vilda_sync_integration.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
 
-**Wersje.** `vilda_nowe_urzadzenie.js` 1 → 2, `vilda_sync.js` 38 → 39, `vilda_sync_integration.js` 48 → 49, `vilda_auth_ui.css` 77 → 78. Wstrzykujące `vilda_chrome.js` 130 → 131 i `vilda_session_bridge.js` 54 → 55 podbił `npm run podbij-wersje`. `SW_VERSION` 1.1.253 → 1.1.254 (numer 1.1.253 nadał równolegle #651).
+**Wersje.** `vilda_nowe_urzadzenie.js` 1 → 2, `vilda_sync.js` 38 → 39, `vilda_sync_integration.js` 48 → 49, `vilda_auth_ui.css` 77 → 78. Wstrzykujące `vilda_chrome.js` 130 → 131 i `vilda_session_bridge.js` 54 → 55 podbił `npm run podbij-wersje`. `SW_VERSION` 1.1.254 → 1.1.255 (numery 1.1.253 i 1.1.254 nadały równolegle #651 i #653).
 
 **Ryzyko resztkowe.**
 - Po „Pobierz później” integracja ponawia pobranie w tle co około 12 s, a każde pobiera cały blob, dopóki pierwsze się nie uda (jak dotąd na każdym urządzeniu z włączoną synchronizacją i nieudanym pierwszym pobraniem). Na wolnym łączu oznacza to transfer.
