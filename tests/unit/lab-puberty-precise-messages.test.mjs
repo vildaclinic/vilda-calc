@@ -16,7 +16,8 @@ const age = (years, months = 0) => ({ years, months, precision: 'month' });
 const puberty = (stage = 1, kind = 'G') => ({ kind, stage, appliesToCurrentContext: true, source: 'current-patient' });
 const noTreatment = { context: 'none', gnrha: 'no', sexSteroids: 'no' };
 function evaluate(overrides = {}, reference = data) {
-  return engine.evaluate({ analyte: 'fsh', value: '0.1', unit: 'IU/L', sex: 'M', age: age(0, 3),
+  // This suite targets the broad Mayo infant range, outside Johannsen's 2–5 months.
+  return engine.evaluate({ analyte: 'fsh', value: '0.1', unit: 'IU/L', sex: 'M', age: age(0, 1),
     contextBasis: 'current-patient', referenceSelection: 'automatic', specimen: 'unknown', measurementKind: 'unknown',
     assay: { confirmation: 'unknown' }, preterm: 'no', puberty: {},
     treatment: { context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' }, ...overrides }, reference);

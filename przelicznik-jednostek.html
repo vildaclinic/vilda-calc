@@ -68,7 +68,7 @@
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=55"></script>
+  <script src="vilda_session_bridge.js?v=56"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -105,7 +105,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=131"></script>
+  <script src="vilda_chrome.js?v=132"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -440,17 +440,17 @@
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=36"></script>
   <script src="lab_unit_converter.js?v=4"></script>
-  <script src="vilda_lab_puberty_data.js?v=6"></script>
-  <script src="vilda_lab_puberty.js?v=7"></script>
+  <script src="vilda_lab_puberty_data.js?v=7"></script>
+  <script src="vilda_lab_puberty.js?v=8"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
   <script src="vilda_lab_inhibin_b.js?v=1"></script>
-  <script src="vilda_lab_snapshot.js?v=6"></script>
-  <script src="vilda_lab_assessment_ui.js?v=14"></script>
+  <script src="vilda_lab_snapshot.js?v=7"></script>
+  <script src="vilda_lab_assessment_ui.js?v=15"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=15"></script>
+  <script src="vilda_lab_puberty_ui.js?v=16"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=11"></script>
-  <script src="vilda_lab_neonatal_context.js?v=1"></script>
+  <script src="vilda_lab_neonatal_context.js?v=2"></script>
   <script src="vilda_hormone_lifespan_data.js?v=20"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=5"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
@@ -625,8 +625,10 @@
       ['progression', 'growthAcceleration', 'cnsSymptoms', 'regression'].forEach(function (key) {
         history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
       });
+      var includeMinipubertyDays = typeof currentSubstance !== 'undefined' && currentSubstance
+        && ['lh', 'fsh'].includes(currentSubstance.id);
       var neonatalAge = window.VildaLabNeonatalContext
-        ? window.VildaLabNeonatalContext.read(shared, identity, source) : null;
+        ? window.VildaLabNeonatalContext.read(shared, identity, source, { includeMinipuberty: !!includeMinipubertyDays }) : null;
       var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
         && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
       var context = {
