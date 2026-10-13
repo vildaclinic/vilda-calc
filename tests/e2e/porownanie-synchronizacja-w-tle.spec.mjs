@@ -73,6 +73,20 @@ async function pacjentZPorownaniem(page) {
   await expect.poll(() => liczbaMigawek(page, pid), { timeout: 15000 }).toBe(2);
 
   await page.evaluate(() => window.clearAllData());
+  // custom-fixes.js po każdym vilda:patient-loaded nastawia od nowa zegar 3,2 s i wysyła potem `change` na polach formularza
+  // (age, ageMonths, weight, height, sex). Wywołane tym update() wypełnia kolumny karty od nowa (ok. 2000 mutacji), także
+  // bez żadnej synchronizacji. Na CI ten impuls trafił w okno pomiaru, więc przygotowanie czeka na niego i na uspokojenie
+  // karty. `change` na #ageMonths (test go nie wpisuje) co najmniej 3 s po ostatnim wczytaniu to właśnie ten impuls.
+  await page.evaluate(() => {
+    const W = { ostatnieWczytanie: 0, impuls: 0, mutacjaKarty: 0 };
+    window.__wczytanie = W;
+    document.addEventListener('vilda:patient-loaded', () => { W.ostatnieWczytanie = performance.now(); }, true);
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.id === 'ageMonths' && W.ostatnieWczytanie && performance.now() - W.ostatnieWczytanie >= 3000) W.impuls = performance.now();
+    }, true);
+    new MutationObserver(() => { W.mutacjaKarty = performance.now(); })
+      .observe(document.getElementById('prevSummaryContent'), { childList: true, subtree: true, characterData: true, attributes: true });
+  });
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytaj = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await wczytaj.waitFor({ state: 'visible', timeout: 20000 });
@@ -84,6 +98,10 @@ async function pacjentZPorownaniem(page) {
   await wpisz(page, { weight: '41', height: '136' });
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg', { timeout: 15000 });
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg', { timeout: 15000 });
+  await page.waitForFunction(() => window.__wczytanie.impuls > 0, null, { timeout: 20000 });
+  await page.waitForFunction(() => performance.now() - window.__wczytanie.mutacjaKarty > 1500, null, { timeout: 20000 });
+  await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg');
+  await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg');
   return pid;
 }
 

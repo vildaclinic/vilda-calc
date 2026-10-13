@@ -3828,7 +3828,7 @@ Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany
 
 **Wersje.** `vilda_puberty_source.js` 11; SW 1.1.250 → 1.1.251 (numery 1.1.248, 1.1.249 i 1.1.250 nadały równolegle #643, #647 i #649).
 
-### P-POROWNANIE-W-TLE — karta porównania nie jest przebudowywana przy synchronizacji bez zmiany rekordu (SW 1.1.258, 2026-10-13, polecenie właściciela)
+### P-POROWNANIE-W-TLE — karta porównania nie jest przebudowywana przy synchronizacji bez zmiany rekordu (SW 1.1.259, 2026-10-13, polecenie właściciela)
 
 **Polecenie właściciela.** „Ogranicz przebudowę karty porównania przy synchronizacji” — ustalenie poza zakresem nr 1 z P-POKWITANIE-W-TLE. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
 
@@ -3865,7 +3865,7 @@ Czas skryptu (`ScriptDuration`) wynosi 13–15 ms na trzy wymiany w obu warianta
 
 **Czego nie zmieniono.** Bez zmian zostają wybór kotwicy, treść karty, obliczenia poprzedniego pomiaru (centyle, BMI, Cole, talia/biodra), `updatePrevSummaryDiff`, `vilda_sync_integration.js` i odczyty z sejfu. Zostaje też ustalenie nr 2 z P-POKWITANIE-W-TLE: zmiana z delty `/changes` scalona po zdarzeniu `ok` (`vilda:sync-merged`) dociera do karty dopiero przy następnym wyzwalaczu, tak jak dotąd.
 
-**Testy.** `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` (2, `index.html`; czeka na koniec odczytów z sejfu, nie na upływ czasu):
+**Testy.** `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` (2, `index.html`; czeka na koniec odczytów z sejfu, nie na upływ czasu). Przygotowanie czeka na impuls z `custom-fixes.js`: po każdym `vilda:patient-loaded` ten moduł wysyła po 3,2 s `change` na polach formularza, a wywołane tym `update()` wypełnia kolumny karty od nowa (ok. 2000 mutacji) bez udziału synchronizacji. Rozpoznajemy go po `change` na `#ageMonths` co najmniej 3 s po ostatnim wczytaniu. Potem test czeka na 1,5 s ciszy w karcie. Pierwsza wersja testu nie czekała i na CI padła (142 mutacje), bo dłuższe okno pomiaru objęło ten impuls; po wydłużeniu okna o 3 s padała tak samo lokalnie, a wersja z oczekiwaniem przechodzi.
 1. Trzy wymiany synchronizacji i `vilda:auth-hidden` przy niezmienionym rekordzie: 0 mutacji karty, a „Poprzednio” 40,0 kg, „Dziś” 41,0 kg, „Zmiana” i `prevMeasurementInfo` bez zmian. Jawne `vilda:measurement-changed` nadal buduje kartę.
 2. Poprawka w sejfie, jak z innego urządzenia:
    - masa poprzedniego pomiaru 40 → 39,5 kg: po najbliższej wymianie „Poprzednio” 39,5 kg, a „Zmiana” liczona od nowej masy;
@@ -3878,7 +3878,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 - bez sprawdzenia widoczności karty i `prevMeasurementInfo`: schowana karta nie wraca;
 - bez porównania HTML: poprawiona data się nie pokazuje.
 
-**Wersje.** `vilda_summary_cards.js` 58; SW 1.1.257 → 1.1.258.
+**Wersje.** `vilda_summary_cards.js` 58; SW 1.1.258 → 1.1.259 (numer 1.1.258 nadał równolegle #658).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
