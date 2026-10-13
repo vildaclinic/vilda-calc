@@ -32,6 +32,57 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 
 ## Długi walidacyjne o najwyższym priorytecie
 
+### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
+
+**Wpływ kliniczny: tak.** Pierwszy krok po przeglądzie dostępności median
+AMH/inhibiny B naprawia laboratoryjne porównanie AMH, zanim zostanie
+rozszerzony zbiór liczbowych odniesień wykresu. Pełny katalog Mayo AMH1,
+test 608824, odczyt HTML i Test Setup PDF 13.10.2026, podaje 16 grup
+wieku/płci dla Roche Elecsys AMH ECLIA w surowicy, ng/mL. Dane są jawnie
+oddzielone od selektora. [AMH.md](AMH.md) opisuje źródło, wszystkie liczby,
+operatory wieku, nieustaloną charakterystykę populacji i polityki aplikacji.
+
+Usunięto ogólny zakres dorosłej kobiety dla braku kontekstu oraz blokadę
+AMH po 45. roku życia. Brak wieku/płci, znana niezgodna metoda/materiał,
+znany przeciwwskazujący kontekst i znane wcześniactwo w 1. roku życia
+nie dostają zastępczej normy. Ostatnia blokada jest ostrożnościową decyzją
+aplikacji: Mayo nie definiuje norm wcześniaczych. Nieznana metoda pozwala
+wyłącznie na opisane porównanie orientacyjne z katalogiem; nie potwierdza
+oznaczenia próbki. Wiek nie rozpoznaje menopauzy. Z tabeli AMH usunięto
+uniwersalne progi PCOS/IVF i nieprawidłowe przypisanie danych CALIPER.
+
+Przykłady produkcyjnego selektora i evaluatora: F15/0,45 ng/mL → poniżej
+0,62–7,8; M13/13 ng/mL → powyżej ścisłej granicy <13, bez dolnej granicy;
+F45/2,6 → powyżej <2,6; F51/0,88 → powyżej <0,88;
+F56/0,03 → powyżej <0,03. Brak płci lub wieku → konwersja pozostaje,
+porównanie niedostępne. Znany wcześniak/120 dni → brak zakresu katalogowego
+i brak punktu w modelu donoszonych. Cały przedział niepewności wieku
+musi mieścić się w jednej grupie.
+
+AMH odczytuje istniejący, chroniony tożsamością karty kontekst dni
+minipuberty. Nie zmieniono producenta cache ani innych hormonów.
+F/120 dni z karty daje źródłowe odniesienie około 19,05 pmol/L zamiast
+około 17,00 przy dawnym wejściu 3 miesięcy. Modele i krzywe pozostają
+te same; zmienia się dokładność wejścia. Brak kwalifikacji niemowlęcia
+do modelu donoszonej populacji otrzymuje krótki komunikat.
+
+Historia nie przelicza dawnych AMH według aktualnej tabeli: zachowuje
+wartości, jednostki i jawny zapisany `lab.norm`. Nie tworzymy snapshotu
+AMH ani nie usuwamy serii liczbowych. To ograniczenie dotyczy też nowych
+zapisów bez własnej utrwalonej oceny. LH/FSH/inhibina B zachowują ich
+dotychczasowe snapshoty.
+
+Regresje: `lab-amh-ranges.test.mjs`, `lab-amh-history-no-reassessment.test.mjs`,
+adapter wykresu i neonatal context; E2E `lab-amh-ranges.spec.mjs`,
+`hormone-lifespan-amh-age-context.spec.mjs`,
+`hormone-lifespan-amh-qualification-message.spec.mjs` obejmują rzeczywiste
+funkcje, kartę, formularz, desktop i 320 px. Akceptacja kliniczna należy
+do właściciela przy przeglądzie PR; testy nie nadają walidacji klinicznej.
+
+Przesłany artykuł Xu 2026 i XLSX są przeanalizowane i zapisane jako
+dowód dla następnego etapu, bez aktywacji nowego profilu. Kolejność i
+nierozstrzygnięte kwestie: [AMH_REFERENCE_PLAN.md](AMH_REFERENCE_PLAN.md).
+
 ### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
 
 **Status: przygotowanie do integracji, bez zmiany wyników w aplikacji.** Moduły nie są ładowane przez HTML ani service worker. Silnik `1.0.0` przyjmuje jawny zestaw danych `2026-10-03.1` i zwraca osobno porównanie biochemiczne względem wieku/stadium oraz ocenę czasu rozwoju. Nie modyfikuje obecnego przelicznika, przypiętych wyników ani zapisów pacjentów. Pełny kontrakt, populacje, jednostki, ograniczenia i zakres faktycznego odczytu źródeł: [LH_FSH.md](LH_FSH.md).

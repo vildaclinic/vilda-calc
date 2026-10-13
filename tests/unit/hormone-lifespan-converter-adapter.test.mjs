@@ -14,6 +14,7 @@ const html = readFileSync(new URL('../../przelicznik-jednostek.html', import.met
 // Execute the actual converter adapter, including identity invalidation and the
 // shared age resolver. The fixtures below are fictional, not clinical ranges.
 const source = html.slice(html.indexOf('    function currentPatientIdentity()'), html.indexOf('    // ID substancji,'));
+const patientReader = html.slice(html.indexOf('    function readPubertyPatientContext()'), html.indexOf('    var pubertyUI ='));
 
 function adapter(extra = {}) {
   const updates = [];
@@ -43,6 +44,35 @@ function evaluated(raw, unit = 'IU/L', input = {}) {
   const data = { sex: 'M', preterm: 'no', age: { years: 0, months: 3, precision: 'month' }, ...input };
   const parse = ['pg/mL', 'ng/L'].includes(unit) ? inhibin.parseMeasurement : puberty.parseMeasurement;
   return { input: data, ageAtSample: puberty.resolveAge(data), measurement: parse(raw, unit) };
+}
+
+// Run both production adapters and the real cache reader, including its identity,
+// form, visit-mode and freshness checks. The cache contains derived days, no DOB.
+function infantAdapter() {
+  const id = 'fictional-amh-infant';
+  const storage = new Map([['vildaCurrentPatientId', id]]);
+  const shared = { sex: 'F', age: '0', ageMonths: '3', weight: '5.5', height: '60' };
+  const cached = { version: 1, identityKey: id, mode: ':', form: { ...shared }, liveDay: null,
+    minipubertyOnly: true, postnatalDays: { lower: 119, upper: 120, source: 'main-calendar-dates' } };
+  const record = { patientId: id, status: 'ready', sourceSex: 'F',
+    neonatalAge: { gestationalDays: { lower: 280, upper: 280, source: 'record-gestational-days' } } };
+  const persistence = { readShared: () => shared, readJSON: () => cached };
+  const app = adapter({
+    identity: id, localOverrideIdentity: id, persistence,
+    sessionStorage: { getItem: key => storage.get(key) || '' },
+    currentSubstance: { id: 'amh' }, effectivePatient: { sex: 'F', age: .25 },
+    unitEl: { value: 'ng/mL' }, extractTannerFromAny: () => null,
+  });
+  Object.assign(app.context.window, {
+    sessionStorage: app.context.sessionStorage, VildaPersistence: persistence,
+    VildaSession: { getPatient: () => app.context.effectivePatient },
+    VildaPubertySource: { kontekstPacjenta: () => record },
+    VildaVault: { isUnlocked: () => true },
+  });
+  loadBrowserScript('vilda_lab_neonatal_context.js', app.context.window);
+  vm.runInContext(patientReader, app.context);
+  return { ...app, storage, shared, cached, record,
+    calculate: () => app.update({ id: 'amh' }, null, { ok: true, siValue: .45, siUnit: 'ng/mL' }) };
 }
 
 describe('Hormone lifespan converter adapter — current result only', () => {
@@ -119,6 +149,93 @@ describe('Hormone lifespan converter adapter — current result only', () => {
       if (canonicalValue == null) canonicalValue = reference.value;
       expect(reference.value).toBeCloseTo(canonicalValue, 12);
     }
+  });
+
+  it('uses already known calendar days for infant AMH without narrowing their uncertainty or changing other analytes', () => {
+    const app = infantAdapter();
+    app.calculate();
+    expect(app.last()).toMatchObject({ ageYears: 119 / 366, ageUpperYears: 121 / 365,
+      ageUpperInclusive: false, ageLabel: '119–120 dni', preterm: 'no',
+      measurement: { value: .45, unit: 'ng/mL', operator: '=' } });
+    expect(lifespanReference.evaluate(lifespanData, app.last())).toMatchObject({
+      status: 'ready', profile: { id: 'ljubicic2022-female-amh' },
+    });
+    expect(lifespanReference.evaluate(lifespanData, app.last()).referenceValue).toBeCloseTo(19.04589987344793, 10);
+    expect(app.context.readPubertyPatientContext().neonatalAge.postnatalDays)
+      .toEqual({ lower: 119, upper: 120, source: 'main-calendar-dates' });
+    for (const id of ['testosterone_total', 'estradiol', 'inhibin_b']) {
+      app.context.currentSubstance = { id };
+      expect(app.context.readPubertyPatientContext().neonatalAge.postnatalDays).toBeNull();
+    }
+    for (const id of ['testosterone_total', 'estradiol']) {
+      app.context.currentSubstance = { id };
+      app.update({ id });
+      expect(app.last()).toMatchObject({ ageYears: .25, ageUpperYears: 1 / 3, ageLabel: '3 mies.' });
+    }
+    app.context.currentSubstance = { id: 'amh' };
+    app.calculate();
+    expect(app.last().ageYears).toBe(119 / 366);
+  });
+
+  it('lets a local AMH age correction supersede calendar days without changing the main patient', () => {
+    const app = infantAdapter();
+    app.calculate();
+    app.context.localOverride.age = .5;
+    app.context.overrideAgeEl.value = '0';
+    app.context.overrideAgeMonthsEl.value = '6';
+    app.calculate();
+    expect(app.last()).toMatchObject({ ageYears: .5, ageUpperYears: 7 / 12, ageLabel: '6 mies.' });
+    expect(app.shared.ageMonths).toBe('3');
+    expect(app.cached.postnatalDays).toEqual({ lower: 119, upper: 120, source: 'main-calendar-dates' });
+    app.context.localOverride.age = null;
+    app.calculate();
+    expect(app.last().ageYears).toBe(119 / 366);
+  });
+
+  it('does not use stale infant AMH days after form, identity, visit mode or cache freshness changes', () => {
+    const mutations = [
+      app => { app.shared.ageMonths = '4'; },
+      app => { app.shared.weight = '6'; },
+      app => { app.cached.identityKey = 'fictional-other-infant'; },
+      app => { app.storage.set('vildaLoadChoiceV1', 'restore'); },
+      app => { app.cached.liveDay = '1900-1-1'; },
+      app => { app.cached.postnatalDays.source = 'unknown-source'; },
+    ];
+    for (const mutate of mutations) {
+      const app = infantAdapter();
+      app.calculate();
+      expect(app.last().ageLabel).toBe('119–120 dni');
+      mutate(app);
+      app.calculate();
+      const months = Number(app.shared.ageMonths);
+      expect(app.last()).toMatchObject({ ageYears: months / 12, ageLabel: `${months} mies.` });
+      expect(app.last().ageUpperYears).toBeCloseTo((months + 1) / 12, 14);
+    }
+    const app = infantAdapter();
+    app.calculate();
+    app.storage.set('vildaCurrentPatientId', 'fictional-next-infant');
+    app.calculate();
+    expect(app.last()).toMatchObject({ sourceStatus: 'unavailable', ageYears: null, measurement: null });
+    expect(app.context.valueEl.value).toBe('');
+    app.record.patientId = 'fictional-next-infant';
+    app.calculate();
+    expect(app.last()).toMatchObject({ sourceStatus: 'ready', ageYears: .25, ageLabel: '3 mies.' });
+  });
+
+  it('retains completed months for AMH when there is no qualified postnatal age or the source is locked/loading', () => {
+    const app = infantAdapter();
+    app.cached.postnatalDays = null;
+    app.calculate();
+    expect(app.last()).toMatchObject({ ageYears: .25, ageUpperYears: 1 / 3, ageLabel: '3 mies.' });
+    expect(lifespanReference.evaluate(lifespanData, app.last()).referenceValue).toBe(16.999);
+    app.cached.postnatalDays = { lower: 119, upper: 120, source: 'main-calendar-dates' };
+    app.record.status = 'loading';
+    app.calculate();
+    expect(app.last()).toMatchObject({ sourceStatus: 'loading', ageYears: null, measurement: null });
+    app.record.status = 'ready';
+    app.context.window.VildaVault.isUnlocked = () => false;
+    app.calculate();
+    expect(app.last()).toMatchObject({ sourceStatus: 'unavailable', ageYears: null, measurement: null });
   });
 
   it('retains year/month/day uncertainty using the existing resolver, including local overrides', () => {

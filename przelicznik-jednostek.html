@@ -68,7 +68,7 @@
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=56"></script>
+  <script src="vilda_session_bridge.js?v=57"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -105,7 +105,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=132"></script>
+  <script src="vilda_chrome.js?v=133"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -438,8 +438,8 @@
   <script src="ios26-ui.js?v=45" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=36"></script>
-  <script src="lab_unit_converter.js?v=4"></script>
+  <script src="lab_units_data.js?v=37"></script>
+  <script src="lab_unit_converter.js?v=5"></script>
   <script src="vilda_lab_puberty_data.js?v=7"></script>
   <script src="vilda_lab_puberty.js?v=8"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
@@ -455,7 +455,7 @@
   <script src="vilda_hormone_lifespan_reference.js?v=5"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=13"></script>
-  <script src="vilda_hormone_lifespan.js?v=28"></script>
+  <script src="vilda_hormone_lifespan.js?v=29"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -626,7 +626,7 @@
         history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
       });
       var includeMinipubertyDays = typeof currentSubstance !== 'undefined' && currentSubstance
-        && ['lh', 'fsh'].includes(currentSubstance.id);
+        && ['lh', 'fsh', 'amh'].includes(currentSubstance.id);
       var neonatalAge = window.VildaLabNeonatalContext
         ? window.VildaLabNeonatalContext.read(shared, identity, source, { includeMinipuberty: !!includeMinipubertyDays }) : null;
       var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
@@ -1303,6 +1303,18 @@
       // Stadium z danych pacjenta i to, czy je tu nadpisano — dla opisu i noty.
       p._shared_tanner = (typeof shared.tanner === 'number' && isFinite(shared.tanner)) ? shared.tanner : null;
       p._tanner_overridden = (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner));
+      if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
+        var amhSource = readPubertyPatientContext();
+        var amhAge = lifespanLegacyAge(amhSource).resolved;
+        p.preterm = amhSource.preterm || 'unknown';
+        p.amh_contraindication = amhSource.sourceStatus !== 'ready'
+          ? 'context-unavailable' : lifespanContraindicated(amhSource, null, p);
+        if (amhAge && amhAge.status === 'known') {
+          p.age = amhAge.lowerYears;
+          p.ageUpperYears = amhAge.upperYears;
+          p.ageUpperInclusive = amhAge.upperInclusive === true;
+        }
+      }
       return p;
     }
 
@@ -1337,6 +1349,9 @@
 
     function describePatient(p) {
       if (!p || (!p.sex && p.age == null && p.tanner == null)) {
+        if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
+          return { text: 'Uzupełnij wiek i płeć pacjenta', missing: true };
+        }
         return { text: 'Brak danych pacjenta — zakres ogólny dorosły', missing: true };
       }
       var bits = [];
@@ -2826,6 +2841,21 @@
 
     function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
+    function hasReferenceBounds(range) {
+      return !!range && !range.no_interpretation && Number.isFinite(range.high)
+        && (Number.isFinite(range.low) || range.amh_reference === true && range.low === null);
+    }
+
+    function isAboveReference(value, range) {
+      return value > range.high || range.high_exclusive === true && value === range.high;
+    }
+
+    function referenceBoundsText(range, factor, precision) {
+      var high = Conv.formatNumber(range.high / factor, precision);
+      if (range.low === null) return (range.high_exclusive ? '<' : '≤') + high;
+      return Conv.formatNumber(range.low / factor, precision) + '–' + high;
+    }
+
     /**
      * Buduje element paska-skali dla substancji, dla aktualnie wpisanej
      * wartości w SI, dobierając zakres referencyjny do kontekstu pacjenta.
@@ -2846,6 +2876,10 @@
       if (range.no_interpretation) {
         var warn = document.createElement('div');
         warn.className = 'lab-range-empty';
+        if (range.amh_reference) {
+          warn.textContent = range.context_pl;
+          return { element: warn, rangeInfo: range };
+        }
         warn.style.borderLeft = '4px solid #c75d00';
         warn.style.background = 'rgba(199, 93, 0, 0.05)';
         warn.style.padding = '0.6rem 0.8rem';
@@ -2854,7 +2888,9 @@
         warn.innerHTML = '<strong>⚠ Pomiar nieinterpretowalny diagnostycznie:</strong> ' + safeEsc(range.context_pl);
         return { element: warn, rangeInfo: range };
       }
-      var low = range.low, high = range.high;
+      // Zero is only the physical axis origin for a one-sided range.
+      // The source's absent lower bound stays null in data and assessment.
+      var low = range.low === null ? 0 : range.low, high = range.high;
       var siUnit = substance.canonical_si;
       var precision = substance.precision || 3;
 
@@ -2866,7 +2902,7 @@
       header.className = 'lab-range-header';
       var title = document.createElement('span');
       title.className = 'lab-range-title';
-      title.textContent = 'Norma referencyjna';
+      title.textContent = range.amh_reference ? 'Zakres dla wieku' : 'Norma referencyjna';
       header.appendChild(title);
 
       // Faza 17c — klasyfikacja stanu wyniku (5 stanów):
@@ -2875,8 +2911,12 @@
       var resultState = 'is-normal';
       var statusText = '';
       if (siValueOrNull == null || !isFinite(siValueOrNull)) {
-        statusText = Conv.formatNumber(low, precision) + '–' + Conv.formatNumber(high, precision) + ' ' + siUnit;
+        statusText = referenceBoundsText(range, 1, precision) + ' ' + siUnit;
         resultState = 'is-normal';
+      } else if (range.amh_reference) {
+        var amhClassification = classifyResultState(siValueOrNull, range);
+        statusText = amhClassification.text;
+        resultState = amhClassification.state;
       } else if (siValueOrNull > high * 2) {
         statusText = '⚠ Uwaga — znacznie powyżej normy';
         resultState = 'is-uwaga-high';
@@ -2886,7 +2926,7 @@
       } else if (siValueOrNull < low) {
         statusText = '↓ poniżej normy';
         resultState = 'is-below';
-      } else if (siValueOrNull > high) {
+      } else if (isAboveReference(siValueOrNull, range)) {
         statusText = '↑ powyżej normy';
         resultState = 'is-above';
       } else {
@@ -3079,17 +3119,24 @@
       function statusForRow(unitSym, value) {
         if (!currentRange || value == null || !isFinite(value)) return null;
         if (currentRange.no_interpretation) return null;
-        if (currentRange.low == null || currentRange.high == null) return null;
+        if (!hasReferenceBounds(currentRange)) return null;
         // Odwracamy konwersję SI → docelowa jednostka: target_value = si / factor_to_si
         var unitDef = null;
         for (var x = 0; x < substance.units.length; x++) {
           if (substance.units[x].symbol === unitSym) { unitDef = substance.units[x]; break; }
         }
         if (!unitDef) return null;
-        var lowInUnit  = currentRange.low  / unitDef.factor_to_si;
-        var highInUnit = currentRange.high / unitDef.factor_to_si;
-        if (value < lowInUnit)  return 'below';
-        if (value > highInUnit) return 'above';
+        if (currentRange.amh_reference) {
+          var amhStatus = Conv.compareAmhReference(value * unitDef.factor_to_si, currentRange);
+          if (amhStatus === 'below' || amhStatus === 'far_below') return 'below';
+          if (amhStatus === 'above' || amhStatus === 'far_above') return 'above';
+          return amhStatus === 'within' ? 'normal' : null;
+        } else {
+          var lowInUnit = currentRange.low / unitDef.factor_to_si;
+          var highInUnit = currentRange.high / unitDef.factor_to_si;
+          if (value < lowInUnit) return 'below';
+          if (value > highInUnit) return 'above';
+        }
         return 'normal';
       }
 
@@ -3136,14 +3183,14 @@
       // Pokaż aktualny zakres normy nad paskiem — żeby zmiana kontekstu
       // (pora pobrania, DST, faza cyklu, Tanner) była widoczna od razu w tekście.
       // Pomijamy gdy range ma flagę no_interpretation (pasek normy też się nie rysuje).
-      if (currentRange && !currentRange.no_interpretation &&
-          currentRange.low != null && currentRange.high != null) {
+      if (hasReferenceBounds(currentRange)) {
         metaParts.push('<strong>Aktualny zakres:</strong> ' +
-          safeEsc(Conv.formatNumber(currentRange.low, precision)) + '–' +
-          safeEsc(Conv.formatNumber(currentRange.high, precision)) + ' ' +
+          safeEsc(referenceBoundsText(currentRange, 1, precision)) + ' ' +
           safeEsc(substance.canonical_si));
       } else if (currentRange && currentRange.no_interpretation) {
-        metaParts.push('<strong style="color:#b04500;">⚠ Brak zakresu dla tej pory</strong>');
+        metaParts.push(currentRange.amh_reference
+          ? safeEsc(currentRange.context_pl)
+          : '<strong style="color:#b04500;">⚠ Brak zakresu dla tej pory</strong>');
       }
       metaParts.push('<strong>SI:</strong> ' + safeEsc(substance.canonical_si));
       if (substance.biologic_units || substance.mw == null) {
@@ -3572,14 +3619,24 @@
      * Zwraca { state, text } lub { state: '', text: '' } gdy brak interpretacji.
      */
     function classifyResultState(siValue, range) {
-      if (!range || range.no_interpretation || range.low == null || range.high == null) {
+      if (!hasReferenceBounds(range)) {
         return { state: '', text: '' };
       }
       if (siValue == null || !isFinite(siValue)) return { state: '', text: '' };
+      if (range.amh_reference) {
+        var amhStates = {
+          far_above: { state: 'is-uwaga-high', text: '⚠ Uwaga — znacznie powyżej normy' },
+          far_below: { state: 'is-uwaga-low', text: '⚠ Uwaga — znacznie poniżej normy' },
+          below: { state: 'is-below', text: '↓ poniżej zakresu' },
+          above: { state: 'is-above', text: '↑ powyżej zakresu' },
+          within: { state: 'is-normal', text: range.low === null ? 'Poniżej górnej granicy' : '✓ w zakresie dla wieku' }
+        };
+        return amhStates[Conv.compareAmhReference(siValue, range)] || { state: '', text: '' };
+      }
       if (siValue > range.high * 2) return { state: 'is-uwaga-high', text: '⚠ Uwaga — znacznie powyżej normy' };
       if (range.low > 0 && siValue < range.low * 0.5) return { state: 'is-uwaga-low', text: '⚠ Uwaga — znacznie poniżej normy' };
-      if (siValue < range.low)  return { state: 'is-below', text: '↓ poniżej normy' };
-      if (siValue > range.high) return { state: 'is-above', text: '↑ powyżej normy' };
+      if (range.low != null && siValue < range.low) return { state: 'is-below', text: '↓ poniżej normy' };
+      if (isAboveReference(siValue, range)) return { state: 'is-above', text: '↑ powyżej normy' };
       return { state: 'is-normal', text: '✓ w zakresie normy' };
     }
 
@@ -3727,7 +3784,7 @@
           pill.textContent = cls.text;
         }
         resultStatusEl.appendChild(pill);
-      } else if (range && range.no_interpretation) {
+      } else if (range && range.no_interpretation && !range.amh_reference) {
         var warn = document.createElement('span');
         warn.className = 'lab-range-status is-above';
         warn.textContent = '⚠ Brak interpretacji dla tej pory';
@@ -3737,16 +3794,12 @@
       // Faza 18-fix2: tylko zakres normy w wybranej jednostce docelowej.
       // Wartość źródłowa, współczynnik konwersji i MW idą do rozwijanej tabeli
       // "Pokaż wszystkie konwersje" — sekcja wyniku ma być czysta.
-      if (range && !range.no_interpretation && range.low != null && range.high != null) {
+      if (hasReferenceBounds(range)) {
         // Przelicz granice SI → jednostka docelowa
-        var lowInTarget = (targetUnitObj && targetUnitObj.factor_to_si) ?
-          range.low / targetUnitObj.factor_to_si : range.low;
-        var highInTarget = (targetUnitObj && targetUnitObj.factor_to_si) ?
-          range.high / targetUnitObj.factor_to_si : range.high;
-        resultSourceLineEl.innerHTML = '<strong>zakres:</strong> ' +
-          safeEsc(Conv.formatNumber(lowInTarget, precision)) + '–' +
-          safeEsc(Conv.formatNumber(highInTarget, precision)) + ' ' +
-          safeEsc(targetSym);
+        var targetFactor = targetUnitObj && targetUnitObj.factor_to_si || 1;
+        resultSourceLineEl.innerHTML = '<strong>' + (range.low === null ? 'górna granica:' : 'zakres:') + '</strong> ' +
+          safeEsc(referenceBoundsText(range, targetFactor, precision)) + ' ' + safeEsc(targetSym) +
+          (range.amh_reference ? '<br><small>Porównanie orientacyjne · Mayo · Roche Elecsys AMH, surowica</small>' : '');
       } else {
         resultSourceLineEl.innerHTML = '';
       }
