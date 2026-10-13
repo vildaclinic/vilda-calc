@@ -50,6 +50,30 @@ Addytywne `labResult.assessment` przenosi wersjonowaną kopię wyniku PR1 przez 
 
 **Wpływ kliniczny: bez zmiany norm, silnika PR1 i obecnego przelicznika.** Nowe UI i producent ocen pozostają wyłączone do PR3. Regresje wywołują rzeczywiste API modelu/sejfu i ścieżki przeglądarkowe na syntetycznych danych: M6/G4/LH2 zachowuje kontekst po zmianie aktualnego pacjenta; zmiana komentarza zachowuje ocenę, zmiana liczby/daty ją unieważnia; `<0,02` nie staje się punktem `0,02`; wpis starszego formatu nie otrzymuje domniemanej metody ani stadium. Szczegóły kontraktu i ograniczenia zgodności z wcześniejszymi wersjami aplikacji: [LH_FSH.md](LH_FSH.md#pr2--transport-historycznej-oceny).
 
+#### LAB-PUBERTY — jednostronne zakresy i komunikat G1, 2026-10-13
+
+F2/F3: renderer nazywa zapisane `within` LH/FSH bez dolnego minimum
+„Nie przekracza górnej granicy” (`≤`) lub „Poniżej górnej granicy” (`<`).
+Jedna krótka notka wskazuje, że zakresy jednostronne nie oceniają zbyt niskiego
+stężenia. Prawdziwa dolna granica innej osi, nierówności, statusy, zakresy,
+metody i zapis pozostają bez zmian. M3 mies. / FSH 0,1 → nie przekracza ≤3,3;
+3,31 → `above`; M14 / G1 / FSH 1,49 → poniżej <1,5, dokładnie 1,5 → `above`.
+
+Silnik `1.5.1` precyzuje nagłówek istniejącego `limited/treatment_context`
+dla chłopca z używalnym G1 od granicy wieku profilu (obecnie 14 lat), gdy leczenie
+jest nieznane, bez znanej terapii, regresji lub wcześniejszego początku.
+Nowy tekst: „Brak aktualnych cech dojrzewania w tym wieku wymaga oceny klinicznej.”
+Nie nadaje nowej diagnozy. Historyczne oceny zachowują zapisany tekst kliniczny.
+
+Źródła: pełne kopie Mayo 62999/602753 z audytu 12.10.2026, sekcje referencyjne
+(AnshLite LH CLIA / Roche Elecsys FSH ECLIA, surowica, IU/L), oraz pełny tekst
+ENDO-ERN 2021, DOI 10.1007/s12020-021-02626-z. Populacje, ograniczenia i przypadki
+opisano w [LH_FSH.md](LH_FSH.md#jednostronne-zakresy-i-komunikat-g1--13102026).
+Zmiana interpretacyjna dotyczy precyzji przekazu; nie zmienia norm ani
+kwalifikacji do profili i nie uruchamia Johannsen. Właściciel zaakceptował
+zakres; testy rzeczywistych funkcji, formularza, historii, mobile i offline
+nie są walidacją kliniczną.
+
 #### LAB-PUBERTY — osie i statusy wariantów wieku, 2026-10-12
 
 Naprawa prezentacji po audycie, zaakceptowana przez właściciela. Przy wieku

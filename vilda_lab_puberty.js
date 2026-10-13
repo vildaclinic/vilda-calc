@@ -9,7 +9,7 @@
   if (root) root.VildaLabPuberty = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  var VERSION = '1.5.0';
+  var VERSION = '1.5.1';
   var DAY_MS = 86400000;
   function finite(value) { return typeof value === 'number' && Number.isFinite(value); }
   function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max || 160) : ''; }
@@ -358,7 +358,11 @@
       if ([ageTest(onsetAge, profile.infantAgeYears), ageTest(onsetAge, profile.earlyAgeYears[sex]), ageTest(onsetAge, { operator: '>', value: profile.absentOnsetAgeYears[sex].value })].includes('indeterminate')) return result('limited', 'onset_context_uncertain', 'Czas początku wymaga doprecyzowania', 'Podany przedział wieku początku przecina granicę interpretacji.', ['onset_precision_crosses_clinical_boundary']);
     }
     if (absent && late === 'within') {
-      if (!untreated(t) || flag(history.regression) === 'yes' || onsetKnown) return result('limited', 'treatment_context', 'Brak cech wymaga uwzględnienia wywiadu', 'Leczenie, wcześniejszy początek lub regresja mogą zmieniać interpretację. Nie rozpoznajemy nowego opóźnienia z samego aktualnego stadium.', ['treatment_or_previous_onset_context']);
+      if (!untreated(t) || flag(history.regression) === 'yes' || onsetKnown) {
+        var unknownTreatmentG1 = sex === 'M' && p.usable && p.stage === 1 && !untreated(t) &&
+          t.context !== 'hormonal' && t.gnrha !== 'yes' && t.sexSteroids !== 'yes' && !onsetKnown && flag(history.regression) !== 'yes';
+        return result('limited', 'treatment_context', unknownTreatmentG1 ? 'Brak aktualnych cech dojrzewania w tym wieku wymaga oceny klinicznej.' : 'Brak cech wymaga uwzględnienia wywiadu', 'Leczenie, wcześniejszy początek lub regresja mogą zmieniać interpretację. Nie rozpoznajemy nowego opóźnienia z samego aktualnego stadium.', ['treatment_or_previous_onset_context']);
+      }
       return result('warning', 'absent_onset', 'Brak początku dojrzewania — wymaga oceny', sex === 'F' ? 'Brak rozwoju gruczołów sutkowych do granicy wieku. Pojedyncze LH/FSH nie ustala przyczyny.' : 'Brak początku rozwoju narządów płciowych lub powiększenia jąder do kryterium początku w granicznym wieku. Pojedyncze LH/FSH nie ustala przyczyny.', ['absent_onset']);
     }
     if ((present && early === 'indeterminate') || (absent && late === 'indeterminate')) return result('limited', 'missing_age', 'Niewystarczająca dokładność wieku', 'Podany przedział wieku przecina kliniczną granicę decyzji.', ['age_precision_crosses_clinical_boundary']);

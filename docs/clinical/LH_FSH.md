@@ -1,6 +1,59 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 12 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+Stan dokumentu: 13 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+
+## Jednostronne zakresy i komunikat G1 — 13.10.2026
+
+Naprawy F2/F3 po audycie chłopców i mężczyzn, zaakceptowane przez właściciela.
+LH/FSH z zapisanym statusem `within` i poprawną osią bez fizjologicznej dolnej
+granicy otrzymują „Nie przekracza górnej granicy” dla `≤` albo „Poniżej górnej
+granicy” dla `<`. Dotyczy to także dostępnych osi stadium i wariantów wieku,
+obu płci oraz zapisanej cenzurowanej dolnej granicy oznaczalności. Ta ostatnia
+nie staje się minimum fizjologicznym. Status liczbowy, granice, punkt i efekty
+odchyleń pozostają niezmienione; wyniki z operatorem nadal nie mają dokładnego punktu.
+
+Jedna notka pod osiami wyjaśnia: „Zakresy z samą górną granicą nie pozwalają
+ocenić, czy wynik jest za niski.” Pojawia się przy takim porównaniu `within`;
+nie podważa drugiej osi, jeśli ta ma rzeczywistą dolną granicę. Niedostępne,
+niejednoznaczne i podwyższone wyniki zachowują dotychczasowy opis. Prezentacja
+inhibiny B i alternatywy faz cyklu pozostają bez zmian.
+
+Silnik `1.5.1` zmienia wyłącznie nagłówek istniejącej oceny chłopca z G1,
+który osiągnął granicę braku początku z profilu klinicznego (obecnie ≥14 lat),
+przy nieznanym leczeniu: „Brak aktualnych cech dojrzewania w tym wieku wymaga
+oceny klinicznej.” Nadal jest to `limited` / `treatment_context`, z zachowanym
+opisem ograniczeń; nie jest to nowe rozpoznanie opóźnionego dojrzewania.
+Znane leczenie hormonalne, wcześniejszy początek lub regresja zachowują dawny
+komunikat. Nie dodajemy pól ani nie zmieniamy kryteriów kwalifikacji.
+
+**Źródła i wpływ kliniczny:** ponownie odczytano pełne kopie katalogów Mayo
+[LH pediatryczne 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999)
+i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753),
+pozyskane podczas audytu 12.10.2026, oraz pełny tekst
+[ENDO-ERN 2021, DOI 10.1007/s12020-021-02626-z](https://pmc.ncbi.nlm.nih.gov/articles/PMC8016789/).
+Sekcje *Reference Values / Males* Mayo: LH <1 roku `<0,02–5,0`, FSH <1 roku
+`≤3,3` i FSH Tanner I `<1,5 IU/L`. Metody: odpowiednio AnshLite LH CLIA
+i Roche Elecsys FSH ECLIA; surowica, IU/L = mIU/mL. Są to zakresy konkretnego
+źródła/metody, bez miesięcznej oceny niskich stężeń w minipuberty. ENDO-ERN
+uzasadnia ocenę braku początku dojrzewania od 14 lat z uwzględnieniem wywiadu
+i badania; sam hormon nie ustala przyczyny. Nie zmieniamy tabel, danych,
+polityki automatycznego doboru profilu ani progów klinicznych. Johannsen nie
+zostaje aktywowany. Testy nie stanowią walidacji klinicznej.
+
+**Zapis i regresje:** stare snapshoty zachowują własne `clinical.title/text`,
+wersję, statusy i granice; renderer może dokładniej nazwać zapisane porównanie
+jednostronne, ale nie przelicza oceny dzisiejszym silnikiem. Nowe oceny
+utrwalają tekst z wersji `1.5.1`.
+
+| Syntetyczne wejście | Oczekiwane zachowanie |
+|---|---|
+| M3 mies., LH 0,01 lub FSH 0,1 IU/L | „Nie przekracza górnej granicy”; brak oceny dolnego minimum. |
+| M3 mies., FSH 3,3 / 3,31 IU/L | Odpowiednio `within` / `above`; nie zmieniamy nierówności. |
+| M14/G1, FSH 1,49 / 1,5 IU/L | Stadium: „Poniżej górnej granicy” / `above`; wiek nadal ma dolną granicę 0,6. |
+| M14/G1, nieznane leczenie | Konkretny komunikat potrzeby oceny, nadal `limited`; brak nowej diagnozy. |
+| M13 lat 11 mies./G1, M14/G2, znane leczenie albo regresja | Nowy nagłówek nie jest stosowany. |
+| F3 mies., FSH 0,1 IU/L | Zachowana ocena `below` względem rzeczywistej granicy 1,2. |
+| `<LOD`, `<0,02`, stary zapis kliniczny, ponowne otwarcie offline | Brak wymyślonego punktu i ponownego liczenia; zachowany kontekst zapisu. |
 
 ## Osobne osie wariantów wieku — 12.10.2026
 
