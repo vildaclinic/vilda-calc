@@ -122,6 +122,7 @@ async function prepareMainPatient(page, width = 1440, age = 6, months = 0) {
   await expect(page.locator('#vildaLcmNew')).toBeVisible();
   await page.locator('#vildaLcmNew').click();
   await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  await waitForMainSettled(page);
   await fillMainAge(page, age, months);
   await mainConverter(page, id);
   return id;
@@ -131,9 +132,16 @@ async function openMainForm(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaDobAge &&
     typeof window.applyLoadedData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked'));
+  await waitForMainSettled(page);
+}
+
+async function waitForMainSettled(page) {
+  // Let the fictional visit finish restoring and saving before entering data
+  // or leaving the main form; a closed dialog alone does not establish that.
   await page.waitForFunction(() => {
     const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
-    return !state || !state.hasPendingSaveTimer && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer;
+    return !window.__vildaPersistRestoring && (!state || !state.hasPendingSaveTimer &&
+      !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
   });
 }
 
@@ -142,10 +150,12 @@ async function fillMainAge(page, age, months) {
     await page.locator(`#${key}`).fill(String(value));
     await page.locator(`#${key}`).dispatchEvent('change');
   }
-  await expect.poll(() => page.evaluate(() => {
+  await waitForMainSettled(page);
+  await expect.poll(() => page.evaluate(({ age, months }) => {
     const shared = window.VildaPersistence.readShared();
-    return ['age', 'ageMonths', 'weight', 'height'].every(key => String(shared[key] ?? '') === document.getElementById(key).value);
-  })).toBe(true);
+    return Object.entries({ sex: 'F', age, ageMonths: months, weight: 20, height: 115 })
+      .every(([key, value]) => String(shared[key] ?? '') === String(value) && document.getElementById(key).value === String(value));
+  }, { age, months })).toBe(true);
 }
 
 async function mainConverter(page, id) {
