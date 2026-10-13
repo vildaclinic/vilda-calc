@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-13",
+  "status": "candidate-source-reviewed; not-active; not-ready-for-automatic-broad-clinical-use",
+  "scope": "Retain newly supplied female AMH evidence for a future source-specific educational reference. No new clinical normal range, patient reference, interpolation or display geometry is activated.",
+  "authorization": "The owner supplied the requested article and supplement and authorized work according to the plan. This review records source facts; it does not approve an unspecified new clinical profile.",
+  "citation": {
+    "authors": "Keyan Xu, Yehuan Yang et al.",
+    "title": "Age-specific anti-Müllerian hormone reference values using an ultrasensitive assay: Associations with ovarian aging and menopausal transition symptoms",
+    "journal": "Chinese Medical Journal",
+    "year": 2026,
+    "onlineDate": "2026-08-17",
+    "doi": "10.1097/CM9.0000000000004161",
+    "url": "https://doi.org/10.1097/CM9.0000000000004161",
+    "pmid": "42608648",
+    "publicationStatus": "Publisher-formatted original article, online publication; supplied PDF retains XX(XX) volume/issue placeholders."
+  },
+  "provenance": {
+    "primaryFileName": "age-specific-anti-mllerian-hormone-reference-values-using-an.pdf",
+    "primarySha256": "270a6f433274e00a5d1f7dd80c3cd82ee2fd7dd3eced6c8d64df95005552413e",
+    "supplementFileName": "CM9_2026_8_13_Guo_CMJ-2025-2620R1_SDC2.xlsx",
+    "supplementSha256": "2d0724c3f610bddea1a9386d8b82ca30aa6c70ad583dfc1eda7b4f4bdc1d6c1b",
+    "reviewBasis": "Read the complete supplied article; independently inspected workbook structure, published aggregate tables and embedded percentile figure. No refitting, new digitization or participant-level calculation.",
+    "sourceLoci": [
+      "PDF pages 2–3: reference population, exclusions, assay, model and menopause definition",
+      "PDF page 4: Table 1 cohort ages and reference-model description",
+      "XLSX worksheet 2, Supplementary Table 1, A2:H7: five published percentile-estimate rows",
+      "XLSX supplementary figure 1: continuous percentile curves; embedded image labelled Figure 2",
+      "PDF pages 6–8 and XLSX Tables 9–10: separate menopausal-status analysis and unresolved inconsistencies"
+    ],
+    "sourceFilesIncludedInRepository": false,
+    "workbookClassification": "Ten published aggregate tables and three embedded figures; no individual participant records, patient identifiers, LMS coefficients or model object."
+  },
+  "referencePopulation": {
+    "sex": "female",
+    "country": "China",
+    "design": "Community-based cross-sectional study; multistage stratified cluster sampling across 26 districts/counties in 12 provinces.",
+    "initialN": 11227,
+    "referenceN": 10543,
+    "reportedReferenceAgeYears": [35, 55],
+    "reportedObservedAgeYears": [34, 56],
+    "outsideReferenceAgeCounts": {
+      "under35": 4,
+      "over55": 42
+    },
+    "menopauseStatus": "Premenopausal. A separate 422-woman natural-postmenopause group was used for diagnostic comparison, not to construct the main age-reference curve.",
+    "cycleSampling": "Random day of the menstrual cycle.",
+    "exclusions": [
+      "Previous bilateral oophorectomy",
+      "History of chemotherapy or radiotherapy",
+      "Oral contraceptive use or hormonal drug treatment in the preceding 30 days",
+      "AMH outlier more than 5 SD from the age-specific mean"
+    ],
+    "notEstablished": [
+      "This is not an explicitly PCOS-free cohort.",
+      "Rare observed ages 34 and 56 do not establish a numerical reference beyond the published 35–55 model.",
+      "Unknown menopause or treatment status must not be recoded as meeting the reference exclusions."
+    ],
+    "separateLongitudinalCohort": "The 2521-woman infertility cohort used conventional Kangrun AMH (LOD 0.01 ng/mL) and serial samples, not the HS-AMH population reference. Keep its eligibility and results separate."
+  },
+  "assay": {
+    "name": "Diagnostic Kit for HS-AMH, Kangrun Biotech, Guangdong, China",
+    "technology": "Ultrasensitive chemiluminescence immunoassay",
+    "specimen": "serum",
+    "unit": "ng/mL",
+    "limitOfDetection": 0.003,
+    "upperLinearRange": 30,
+    "limitOfQuantification": "Not reported separately in the supplied article/workbook; LOD must not be treated as LOQ.",
+    "lowConcentrationPrecision": "No numerical analytical CV or uncertainty near LOD supplied.",
+    "belowLODModelHandling": "No explicit substitution, exclusion or censored-likelihood procedure reported for GAMLSS fitting.",
+    "crossMethodTransfer": "No validated conversion to Access, Elecsys or other AMH platforms is established by this paper."
+  },
+  "publishedReference": {
+    "statistic": "Author-published GAMLSS percentile estimates; p50 is a model median, not an arithmetic mean or a median recalculated from participant records.",
+    "unit": "ng/mL",
+    "tableHeading": "Age-specific AMH percentile reference values by 5-year age bands (35–55 years)",
+    "medianRows": [
+      { "sourceAgeLabelYears": 35, "p50": 2.589388343 },
+      { "sourceAgeLabelYears": 40, "p50": 1.479539998 },
+      { "sourceAgeLabelYears": 45, "p50": 0.365121103 },
+      { "sourceAgeLabelYears": 50, "p50": 0.045923937 },
+      { "sourceAgeLabelYears": 55, "p50": 0.005234022 }
+    ],
+    "ageSemantics": "The heading says age bands, but AGE contains five scalar labels without interval boundaries/operators. The continuous source figure is consistent with model anchors at those age coordinates. Do not turn AGE 50 into a published constant median for ages 50–54.",
+    "modelDetailsAvailable": "GAMLSS, stepwise comparison, AIC penalty k=2, R 4.3.3.",
+    "modelDetailsMissing": [
+      "Selected distribution family and complete age-dependent coefficients",
+      "Single-year numerical table or executable author model",
+      "Explicit interpretation of the age-band wording",
+      "Detailed handling of measurements below LOD"
+    ],
+    "censoredPercentiles": [
+      { "sourceAgeLabelYears": 50, "percentiles": [2.5, 10], "value": "<0.003" },
+      { "sourceAgeLabelYears": 55, "percentiles": [2.5, 10, 25], "value": "<0.003" }
+    ],
+    "precisionPolicy": "Retain source decimals in evidence only. They do not imply equivalent clinical precision, especially p50 near LOD at age 55.",
+    "interpolationStatus": "None implemented. A future interpolation through the five published anchors would be an explicitly reviewed application approximation, not a reconstruction of the unpublished full GAMLSS formula."
+  },
+  "unresolvedSourceIssues": [
+    {
+      "issue": "Subtotal and age population",
+      "finding": "Supplementary Table 2 group counts sum to 10497, while Total is 10543. The difference 46 equals the 4+42 participants outside 35–55 in the main table. This is a plausible explanation, not a confirmed reconstruction."
+    },
+    {
+      "issue": "Premenopausal comparison denominator",
+      "finding": "Supplementary Tables 9–10 contain 1346 premenopausal women aged 50–55, versus 1305 in main Table 1; the 41-person difference is unexplained."
+    },
+    {
+      "issue": "Below-LOD labels and reported postmenopausal median",
+      "finding": "The no/yes labels in Supplementary Tables 9–10 run opposite to the main text and Figure 4. The figure depicts most postmenopausal values as undetectable, but text reports median 0.043 ng/mL above LOD 0.003 without saying whether the median excludes undetectable results. Do not swap labels or activate a postmenopausal median by assumption."
+    },
+    {
+      "issue": "Detection statistic",
+      "finding": "Secondary arithmetic from the four published Table 10 counts gives uncorrected Pearson chi-square about 196.787, whereas the article reports 38.6. The population/coding distinction is unresolved; no correction is inferred."
+    },
+    {
+      "issue": "Table numbering and diagnostic prose",
+      "finding": "Main Tables 2 and 3 duplicate longitudinal cohort characteristics, despite a model-table cross-reference. Results say AMH alone is insufficient for diagnosing menopause, while stronger wording appears in the discussion. Neither supplies missing model parameters or validates a diagnostic feature."
+    }
+  ],
+  "recommendation": {
+    "candidateScope": "A future separate educational reference for premenopausal women aged 35–55, particularly the current gap after 45, with the source population and HS-AMH method stated.",
+    "beforeActivation": [
+      "Resolve or explicitly qualify source age labels and application interpolation.",
+      "Define premenopausal and treatment eligibility without inferring menopause from age.",
+      "Clarify censoring and quantitative precision near LOD, particularly for the older-age endpoint.",
+      "Preserve the source median independently of the illustrative line and laboratory normal ranges."
+    ],
+    "notSupported": [
+      "Automatic laboratory-normal-range replacement on other assays",
+      "A universal mixed pre/postmenopausal profile",
+      "Menopause diagnosis from AMH alone",
+      "Numerical extrapolation beyond age 55 or to late old age",
+      "An exact numerical patient marker for a result reported below LOD"
+    ],
+    "materialsStatus": "Main article and SDC2 are now available; do not request them again. Author model tables/coefficients and clarification of censoring would resolve the remaining source gaps."
+  }
+}

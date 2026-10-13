@@ -127,6 +127,9 @@ test('granica dorosłości 18 lat na karcie; Cole i mediana przy Palczewskiej z 
 // (bmiSDS ±x,xx)"), a centyl BMI w schowku jest tym samym centylem, co na karcie głównej.
 // Mini‑podsumowanie paska bocznego żyje tylko w powłoce app.html — jego mapowanie koloru
 // z kategorii silnika pilnuje tests/unit/bmi-wyjscia-tekstowe.test.mjs.
+// P-SCHOWEK-HIS (2026-10-13): schowek trafia do systemu szpitalnego, który przepuszcza tekst przez
+// stronę kodową Windows-1250, więc w SCHOWKU „kg/m2" i zwykły minus („-0,66"); karta główna
+// (koniec testu) zostaje przy „kg/m²" i „−" z decyzji 10.
 test('etap 2: „Kopiuj podsumowanie" (PRO) liczbami silnika, format „BMI: … kg/m²", „bmiSDS"', async ({ page }) => {
   test.setTimeout(120_000);
   await openIndex(page);
@@ -147,14 +150,14 @@ test('etap 2: „Kopiuj podsumowanie" (PRO) liczbami silnika, format „BMI: …
   await page.waitForFunction(() => typeof window.__schowek === 'string' && window.__schowek.includes('BMI'));
   r.karta = await page.evaluate(() => window.__schowek);
   expect(r.pro, 'tryb PRO włączony prawdziwym przełącznikiem').toBe(true);
-  expect(r.karta).toContain(`BMI: 18,3 kg/m² – ${Math.round(r.centyl)} centyl (bmiSDS ${r.sds})`);
+  expect(r.karta).toContain(`BMI: 18,3 kg/m2 – ${Math.round(r.centyl)} centyl (bmiSDS ${r.sds.replace('\u2212', '-')})`);
   // P-RAPORT rata R: twarda spacja przed znakiem procentu („149,1 %”), schowek może ją znormalizować do zwykłej.
   expect(r.karta).toMatch(new RegExp(`Wskaźnik Cole’a: ${r.cole.toFixed(1).replace('.', ',')}[ \\u00A0]%`));
   expect(r.karta, 'centyl BMI karty = centyl karty głównej').toContain(`${Math.round(k.centylKarty)} centyl`);
   expect(k.centylKarty).toBeCloseTo(r.centyl, 6);
   // P-WSDS: masa mówi „wSDS" jak wzrost „hSDS" i BMI „bmiSDS" — w schowku i na karcie głównej.
-  expect(r.karta).toMatch(/Waga:[^\n]*\(wSDS [−+]?\d,\d\d\)/);
-  expect(r.karta).toMatch(/Wzrost:[^\n]*\(hSDS [−+]?\d,\d\d\)/);
+  expect(r.karta).toMatch(/Waga:[^\n]*\(wSDS [-+]?\d,\d\d\)/);
+  expect(r.karta).toMatch(/Wzrost:[^\n]*\(hSDS [-+]?\d,\d\d\)/);
   expect(r.karta, 'koniec „Z‑score" przy masie').not.toMatch(/Waga:[^\n]*Z.score/);
   // Liczba na karcie dolicza się animacją (animateValue w app.js), więc czekamy na wartość ustaloną.
   await expect.poll(
