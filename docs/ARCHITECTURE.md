@@ -58,6 +58,8 @@ Skrypty są globalne i zależne od kolejności ładowania. Publiczne obiekty `wi
 
 **Źródła pacjenta odświeżane w tle (P-POKWITANIE-W-TLE, 2026-10-12, decyzja właściciela).** Moduł źródła, który na zdarzenie w tle (synchronizacja, sesja, panel konta, `storage`) czyta rekord z sejfu od nowa, nie ogłasza stanu pustego dla tego samego pacjenta. Ostatni potwierdzony rekord zostaje do końca odczytu, a `vilda_zrodla_pacjenta.js` zamawia przeliczenie tylko przy różnicy. Od razu czyszczą: jawne wczytanie pacjenta, zmiana pacjenta, wylogowanie, `vilda:user-state-cleared`, blokada i inna instancja sejfu; błąd odczytu też czyści. Tak działa `vilda_puberty_source.js`; źródła DS i okołoporodowe od początku nie czyściły pamięci przy ponownym odczycie. W powłoce okresową synchronizację wykonuje dokument `app.html`, a ramki nie dostają jej zdarzeń `vilda:sync-status-changed`. Opis i pomiary: wpis P-POKWITANIE-W-TLE w `docs/clinical/ALGORITHMS.md`.
 
+**Data urodzenia po wczytaniu pacjenta (P-POROWNANIE-DATA, 2026-10-13).** `vilda_dob_age.js` wpisuje datę urodzenia z rekordu do formularza w osobnym zadaniu po zdarzeniu wczytania (`vilda:patient-loaded`, `vilda:state-restored`, `vilda:persist-restored`). Do tego czasu `VildaDobAge.restorePending()` zwraca `true`, a koniec ogłasza zdarzenie `vilda:dob-restored`. Wiek dokładny (`readExactAge`, `lmsNiemowleWiek`) wcześniej nie jest jeszcze znany. Kod, który przy wczytaniu liczy z wieku i buduje widok, który potem sam się nie przelicza, czeka na to zdarzenie, jak karta porównania (`Sd_poDacie` w `vilda_summary_cards.js`). Opis: wpis P-POROWNANIE-DATA w `docs/clinical/ALGORITHMS.md`.
+
 ### 2. Obliczenia i dane domenowe
 
 Do tej warstwy należą m.in.:

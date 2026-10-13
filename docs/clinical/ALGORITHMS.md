@@ -3993,7 +3993,7 @@ Kartę buduje się jak dotąd:
 - przy każdym wywołaniu jawnym: wczytanie pacjenta, `vilda:measurement-changed`, `vilda:therapy-points-changed`, odtworzenie sesji (`vilda_persist_runtime.js` woła `__renderPrevSummary(null, true)` bez znacznika tła);
 - gdy karta jest schowana albo wyczyszczona (`G()`, `clearAllData()`, reset w `vilda_persist_runtime.js`);
 - gdy rekord się zmienił: poprawka masy albo daty pomiaru, nowa kotwica;
-- gdy karta wyszłaby inna z innego powodu. Przykład: kartę z wczytania pacjenta (`vilda:patient-loaded`, `source: 'pick'`) buduje odczyt z sejfu, a datę urodzenia formularz dostaje ok. 200 ms później. Kto wygra, zależy od tempa maszyny. Centyl wzrostu w kolumnie „Poprzednio” liczy się bez daty z pełnych miesięcy, a z datą z dokładnego wieku (ustalenie niżej). Pierwsze odświeżenie w tle buduje taką kartę raz (w teście 39 → 38 centyl), następne już nie. Na bazie ta sama zmiana pokazywała się przy pierwszej synchronizacji, a przebudowa powtarzała się przy każdej kolejnej. *(Od P-POROWNANIE-WIEK centyl wzrostu liczy się z doby pomiaru zapisanej w rekordzie i ten wyścig go już nie zmienia — wpis niżej.)*
+- gdy karta wyszłaby inna z innego powodu. Przykład: kartę z wczytania pacjenta (`vilda:patient-loaded`, `source: 'pick'`) buduje odczyt z sejfu, a datę urodzenia formularz dostaje ok. 200 ms później. Kto wygra, zależy od tempa maszyny. Centyl wzrostu w kolumnie „Poprzednio” liczy się bez daty z pełnych miesięcy, a z datą z dokładnego wieku (ustalenie niżej). Pierwsze odświeżenie w tle buduje taką kartę raz (w teście 39 → 38 centyl), następne już nie. Na bazie ta sama zmiana pokazywała się przy pierwszej synchronizacji, a przebudowa powtarzała się przy każdej kolejnej. *(Od P-POROWNANIE-DATA karta z wczytania czeka na datę urodzenia, więc ten przypadek już nie zachodzi. Od P-POROWNANIE-WIEK centyl wzrostu i tak liczy się z doby pomiaru zapisanej w rekordzie, niezależnie od formularza — wpisy niżej.)*
 
 **Pomiar po zmianie** (te same scenariusze):
 
@@ -4027,7 +4027,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 - bez sprawdzenia widoczności karty i `prevMeasurementInfo`: schowana karta nie wraca;
 - bez porównania HTML: poprawiona data się nie pokazuje.
 
-**Ustalenie poza zakresem (do decyzji właściciela; zmiana kliniczna).** Centyl wzrostu poprzedniego pomiaru (`Se()` → `calcPercentileStats(…, "HT")` w `app.js`) przechodzi przez `lmsNiemowleWiek()`. Gdy formularz ma datę urodzenia, a pełne miesiące wieku dziś zgadzają się z pełnymi miesiącami poprzedniego pomiaru, silnik `vilda_sds_wzrostu.js` dostaje dokładny wiek z dzisiejszej daty (`VildaDobAge.readExactAge()`), a nie z dnia poprzedniego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek jest więc zawyżony o te tygodnie. Bez daty w formularzu silnik liczy z pełnych miesięcy. Ta sama karta pokazuje więc inny centyl zależnie od chwili budowy (w teście 39 albo 38). Zachowanie jest sprzed tej zmiany i ta zmiana go nie dotyka. Poprawka, np. dokładny wiek z daty poprzedniego pomiaru, zmienia wynik kliniczny i wymaga decyzji właściciela. *(Rozstrzygnięte poleceniem właściciela 2026-10-13: P-POROWNANIE-WIEK — wpis niżej.)*
+**Ustalenie poza zakresem (do decyzji właściciela; zmiana kliniczna).** Centyl wzrostu poprzedniego pomiaru (`Se()` → `calcPercentileStats(…, "HT")` w `app.js`) przechodzi przez `lmsNiemowleWiek()`. Gdy formularz ma datę urodzenia, a pełne miesiące wieku dziś zgadzają się z pełnymi miesiącami poprzedniego pomiaru, silnik `vilda_sds_wzrostu.js` dostaje dokładny wiek z dzisiejszej daty (`VildaDobAge.readExactAge()`), a nie z dnia poprzedniego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek jest więc zawyżony o te tygodnie. Bez daty w formularzu silnik liczy z pełnych miesięcy. Ta sama karta pokazuje więc inny centyl zależnie od chwili budowy (w teście 39 albo 38). Zachowanie jest sprzed tej zmiany i ta zmiana go nie dotyka. Poprawka, np. dokładny wiek z daty poprzedniego pomiaru, zmienia wynik kliniczny i wymaga decyzji właściciela. *(Wyścig rozstrzygnięty poleceniem właściciela 2026-10-13: P-POROWNANIE-DATA niżej. Doprecyzowanie wieku dzisiejszą datą dla pomiaru z tego samego miesiąca życia rozstrzygnięte poleceniem właściciela tego samego dnia: P-POROWNANIE-WIEK niżej.)*
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
@@ -4056,7 +4056,63 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Wersje.** `vilda_auth_ui.js` 485 → 486; `vilda_chrome.js` 134 i `vilda_session_bridge.js` 58 (tylko nowy `?v=` wstrzykiwanego `vilda_auth_ui.js`); SW 1.1.262 → 1.1.263 (numer 1.1.262 nadał równolegle #663).
 
-### P-POROWNANIE-WIEK — kolumna „Poprzednio” karty porównania: centyle w wieku z doby tamtego pomiaru (SW 1.1.265, 2026-10-13, polecenie właściciela; zmiana kliniczna)
+### P-POROWNANIE-DATA — karta porównania czeka na datę urodzenia: centyl „Poprzednio” od pierwszej klatki taki jak po synchronizacji (SW 1.1.265, 2026-10-13, polecenie właściciela)
+
+**Polecenie właściciela.** „Napraw wyścig z datą urodzenia w osobnym PR” — ustalenie z P-POROWNANIE-W-TLE.
+
+**Co było.** Każda droga wczytania pacjenta woła `applyLoadedData` i zaraz potem wysyła zdarzenie. Dotyczy to Karty Pacjenta, listy, skoku z monitora GH i przywrócenia wersji (`vilda:patient-loaded`), a w powłoce także odtworzenia stanu (`vilda:persist-restored`). Na to zdarzenie:
+- `vilda_summary_cards.js` (`Y`) czyta pacjenta z sejfu, asynchronicznie, i buduje kartę „Porównanie z poprzednim pomiarem” (`Se`);
+- `vilda_dob_age.js` wpisuje do formularza datę urodzenia z rekordu, ale w osobnym zadaniu (`setTimeout(0)`).
+
+Kto był pierwszy, zależało od tempa maszyny. Centyl wzrostu poprzedniego pomiaru (`calcPercentileStats(…, "HT")` → `lmsNiemowleWiek`) bez daty w formularzu liczy się z pełnych miesięcy. Z datą liczy się z wieku dokładnego, gdy pełne miesiące się zgadzają (DOB-AGE-4). Karta zbudowana przed datą pokazywała więc inną liczbę niż ta sama karta po dacie. Trzymała ją do następnej przebudowy, czyli zwykle do najbliższej synchronizacji (co ok. 20 s). Przykład z CI #659 (chłopiec 9 lat 1 mies., 135 cm, pomiar z dziś): 39. zamiast 38. centyla. Lokalnie wyścig przegrywał co kilka przebiegów, na CI za każdym razem.
+
+**Co jest.**
+- `vilda_dob_age.js` (wersja 10) liczy przyjęcia daty w toku: licznik rośnie przy zdarzeniu wczytania, a maleje po wpisie. `VildaDobAge.restorePending()` mówi, czy przyjęcie trwa. Koniec ogłasza zdarzenie `vilda:dob-restored` (`detail.iso`), po ostatnim przyjęciu. Gdy zaplanowanie przyjęcia się nie uda, licznik od razu wraca. Sam wpis daty jest bez zmian.
+- `vilda_summary_cards.js` (`Sd_poDacie` w `Y`): po odczycie z sejfu, gdy przyjęcie daty trwa, budowa karty czeka na `vilda:dob-restored`, najdłużej 1,5 s. To bezpiecznik, gdyby zdarzenie nie przyszło. Bez przyjęcia w toku karta buduje się od razu, w tym samym zadaniu, jak dotąd. Kontrola epoki „Odtwórz zapis” (P-POWLOKA-WYSCIG) i pozostałe warunki działają w chwili budowy. Błąd budowy po oczekiwaniu chowa kartę, jak `.catch` odczytu z sejfu.
+
+**Czego nie zmieniono.** Bez zmian zostają:
+- wzory i siatki, `lmsNiemowleWiek`, `calcPercentileStats` oraz reguła doprecyzowania wieku (DOB-AGE-4);
+- wybór kotwicy i treść karty;
+- kolumny „Dziś”/„Zmiana”, które odświeża każde `update()`, także po wpisie daty;
+- zapis i synchronizacja.
+
+W stanie ustalonym karta pokazuje te same liczby co dotąd, tyle że od pierwszej klatki.
+
+**Wpływ kliniczny.** Wzory, progi i wynik w stanie ustalonym się nie zmieniają. Znika stan przejściowy: na wolnej maszynie, po wczytaniu pacjenta z datą urodzenia, kolumna „Poprzednio” pokazywała centyl wzrostu z pełnych miesięcy. Był on inny niż po pierwszej synchronizacji, zwykle o 1 punkt centylowy (w teście 39 → 38). Zmiana do akceptacji właściciela.
+
+**Przypadki** (zegar testów 2026-06-17; dane fikcyjne):
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| chłopiec 9 lat 1 mies. 12 dni (data urodzenia 5 maja 2017 w rekordzie), dwa pomiary z dziś: 38 kg / 133 cm i 40 kg / 135 cm. „Wyczyść”, wczytanie z Karty Pacjenta jako „Nowy pomiar”, przyjęcie daty opóźnione o 400 ms | w każdej klatce z kartą, od pierwszej, „Poprzednio” i dopisek „było …” pokazują 38. centyl wzrostu (wiek dokładny 109,4 mies.). Z pełnych miesięcy (109) byłby 39. centyl |
+| to samo bez opóźnienia | jak wyżej |
+| telefon (iPhone 15 Pro), z opóźnieniem | dopisek „było …” jak wyżej (kolumna „Poprzednio” jest tu ukryta); bez poziomego przewijania |
+| rekord bez daty urodzenia | karta jak dotąd (pełne miesiące); budowa czeka najwyżej do najbliższego zadania modułu daty |
+| przyjęcie daty nie ogłasza końca (błąd) | karta po 1,5 s, jak dotąd z pełnych miesięcy *(od P-POROWNANIE-WIEK: z doby pomiaru, gdy rekord ma datę urodzenia)* |
+
+**Testy.**
+- `tests/unit/porownanie-data-urodzenia.test.mjs` (9). Prawdziwy `vilda_dob_age.js` na atrapie DOM:
+  - `restorePending()` od zdarzenia wczytania do wpisu daty, potem jedno `vilda:dob-restored`;
+  - licznik przy dwóch zdarzeniach, rekord bez daty, nieudane zaplanowanie.
+
+  Prawdziwa funkcja `Sd_poDacie`, wycięta ze źródła karty:
+  - bez oczekiwania budowa od razu, bez timera;
+  - z oczekiwaniem budowa po zdarzeniu albo po 1,5 s, zawsze raz;
+  - błąd budowy wywołuje `G`.
+
+  Do tego strażnik źródła `Y`. Na bazie pada 9/9.
+- `tests/e2e/porownanie-data-urodzenia.spec.mjs` (2, desktop) i `tests/e2e/porownanie-data-urodzenia-mobile.spec.mjs` (1, telefon), wspólne kroki w `tests/support/porownanie-data-urodzenia.mjs`. Test działa na prawdziwym `index.html`, a próbnik sprawdza każdą klatkę z kartą. Kontrola: centyle z pełnych miesięcy i z wieku dokładnego muszą się różnić, inaczej test niczego nie rozstrzyga. Wyścig wymusza opóźnienie przyjęcia daty o 400 ms, rozpoznane po nazwie funkcji przekazanej do `setTimeout`. Asercje czekają na warunek, nie na upływ czasu. Na bazie testy z wymuszonym wyścigiem padają 4/4: pierwsze klatki pokazują 39. centyl. Z poprawką przechodzą 6/6.
+- `tests/unit/odtworzenie-na-zywo.test.mjs`: pin wersji modułu daty 9 → 10.
+
+**Ustalenia poza zakresem (do decyzji właściciela; zmiana kliniczna).**
+1. `lmsNiemowleWiek` doprecyzowuje wiek dzisiejszym wiekiem dokładnym z formularza w każdym wywołaniu o tych samych pełnych miesiącach. Dotyczy to też poprzedniego pomiaru sprzed kilku tygodni w tym samym miesiącu życia: jego wiek jest zawyżony o te tygodnie. To ustalenie z P-POROWNANIE-W-TLE i nadal jest aktualne. *(Dla karty porównania rozstrzygnięte poleceniem właściciela 2026-10-13: P-POROWNANIE-WIEK — wpis niżej.)*
+2. Z lektury kodu, niezmierzone: z tego samego powodu Karta Pacjenta (`vilda_auth_ui.js`) liczy centyle wzrostu historycznych pomiarów z daty urodzenia pacjenta wczytanego w formularzu. Dzieje się tak także wtedy, gdy przegląda innego pacjenta — wystarczy zgodność pełnych miesięcy.
+
+Kierunek naprawy obu: wiek dokładny pomiaru liczony z daty urodzenia i daty pomiaru zapisanych w rekordzie (`VildaDobAge.ageAtMeasurement`, ta sama reguła co „Odtwórz zapis” w P-ODTWORZ-WIEK). Ten wiek trzeba przekazać do siatek jawnie, zamiast odczytywać go z formularza.
+
+**Wersje.** `vilda_dob_age.js` 10, `vilda_summary_cards.js` 59; SW 1.1.264 → 1.1.265 (numery 1.1.261–1.1.264 nadały równolegle #661, #663, #664 i #666).
+
+### P-POROWNANIE-WIEK — kolumna „Poprzednio” karty porównania: centyle w wieku z doby tamtego pomiaru (SW 1.1.266, 2026-10-13, polecenie właściciela; zmiana kliniczna)
 
 **Polecenie właściciela.** „Napraw to”: centyl wzrostu poprzedniego pomiaru liczył się z dzisiejszego dokładnego wieku, gdy pełne miesiące wieku się zgadzały, a nie z dnia tamtego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek był więc zawyżony. To ustalenie poza zakresem z P-POROWNANIE-W-TLE i część „znanego ograniczenia” z P-ODTWORZ-WIEK. Zmiana kliniczna: zmienia wynik pokazywany lekarzowi.
 
@@ -4064,7 +4120,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 - wzrost zawsze (silnik `vilda_sds_wzrostu.js`);
 - masa poniżej 36 mies. (tablice niemowlęce WHO).
 
-`lmsNiemowleWiek()` brało `VildaDobAge.readExactAge()`, czyli dokładny wiek na dziś z daty urodzenia w formularzu. Strażnik sprawdzał tylko pełne miesiące. Pomiar zapisany wcześniej w tym samym miesiącu życia dostawał więc dzisiejszy wiek. Bez daty w formularzu liczył się z wiersza pełnego miesiąca. Ta sama karta pokazywała więc inny centyl zależnie od tego, czy formularz zdążył dostać datę (wyścig przy wczytaniu pacjenta, P-POROWNANIE-W-TLE).
+`lmsNiemowleWiek()` brało `VildaDobAge.readExactAge()`, czyli dokładny wiek na dziś z daty urodzenia w formularzu. Strażnik sprawdzał tylko pełne miesiące. Pomiar zapisany wcześniej w tym samym miesiącu życia dostawał więc dzisiejszy wiek. Bez daty w formularzu liczył się z wiersza pełnego miesiąca. Ta sama karta pokazywała więc inny centyl zależnie od tego, czy formularz zdążył dostać datę (wyścig przy wczytaniu pacjenta, P-POROWNANIE-W-TLE). Sam wyścig usuwa P-POROWNANIE-DATA (karta czeka na datę urodzenia), ale wtedy centyl liczy się z dzisiejszego wieku z formularza; to jest ustalenie nr 1 z P-POROWNANIE-DATA.
 
 **Reguła po zmianie.** Ta sama, co dla odtworzonej wizyty (P-ODTWORZ-WIEK; Karta Pacjenta, Rata B, P3, decyzja właściciela): wzrost i masę znamy wyłącznie z chwili pomiaru, więc liczymy je w wieku z tamtej chwili.
 - Wiek pomiaru daje `VildaDobAge.ageAtMeasurement(rekord, data urodzenia z rekordu)`: zapisany wiek rekordu, a doba pomiaru z `user.measuredAtISO`, inaczej z `timestampISO`.
@@ -4094,7 +4150,7 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 **Wpływ kliniczny.** Zmienia się wyłącznie centyl wzrostu oraz centyl masy poniżej 36 mies. w kolumnie „Poprzednio” karty porównania. Dzieje się tak tylko wtedy, gdy poprzedni pomiar przypada w tym samym pełnym miesiącu życia, co dzisiejsza wizyta, a rekord ma datę urodzenia.
 - U dziecka w wieku szkolnym różnica wynosi zwykle 0–1 centyla.
 - U niemowlęcia kilka tygodni to dużo. Przed zmianą prawidłowo rosnąca dziewczynka miała w kolumnie „Poprzednio” 11.–12. centyl zamiast 47./41. Obok dzisiejszego pomiaru mogło to wyglądać jak przyspieszenie wzrastania.
-- Karta nie zależy już od tego, czy formularz miał datę urodzenia w chwili jej budowy.
+- Centyl poprzedniego pomiaru nie zależy już od formularza: ani od chwili budowy karty, ani od tego, czy oczekiwanie z P-POROWNANIE-DATA skończyło się datą, czy limitem 1,5 s.
 
 Kolumna „Dziś”, karta główna i odtworzona wizyta bez zmian. Przy odtworzonej wizycie karta porównania jest i tak schowana.
 
@@ -4106,14 +4162,14 @@ Kolumna „Dziś”, karta główna i odtworzona wizyta bez zmian. Przy odtworzo
 - `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` sprawdza, że centyl wzrostu „Poprzednio” przy wczytaniu równa się temu po wpisaniu daty urodzenia w formularz. Bez tej zmiany asercja pada tylko przy niekorzystnym wyniku wyścigu; przy kontroli lokalnej wypadł korzystnie 6 razy na 6. Błąd deterministycznie łapie test jednostkowy.
 
 **Ustalenia poza zakresem (do decyzji właściciela; zmiany kliniczne).** Ten sam mechanizm mają inni odbiorcy, którzy liczą centyl wzrostu zapisanych pomiarów przez `calcPercentileStats(…, "HT")`. Pomiar z tego samego pełnego miesiąca życia co dziś dostaje tam dzisiejszy dokładny wiek z formularza:
-- Karta Pacjenta (`vilda_auth_ui.js`, wiersze migawek);
+- Karta Pacjenta (`vilda_auth_ui.js`, wiersze migawek; także przy przeglądaniu innego pacjenta niż wczytany — ustalenie nr 2 z P-POROWNANIE-DATA);
 - monitor terapii GH (`gh_therapy_monitor.js`, punkty historii);
 - moduł nadciśnienia (`hypertension_therapy.js`);
 - moduł profesjonalny (`vilda_professional_module.js`).
 
 Odczytane z kodu, nie sprawdzone na stronie. Każdy z nich może skorzystać z tego samego kontekstu `window.__vildaWiekPomiaru`.
 
-**Wersje.** `app.js` 233 → 234; `vilda_summary_cards.js` 58 → 59; SW 1.1.264 → 1.1.265 (numery 1.1.261–1.1.264 nadały równolegle #661, #663, #664 i #666).
+**Wersje.** `app.js` 233 → 234; `vilda_summary_cards.js` 59 → 60; SW 1.1.265 → 1.1.266 (numery SW 1.1.261–1.1.265 nadały równolegle #661, #663, #664, #666 i #662; `vilda_summary_cards.js` 59 nadał #662).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
