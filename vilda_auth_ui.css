@@ -2110,7 +2110,7 @@ body.vilda-modal-alert-open #scrollTopBtn {
 }
 
 #vilda-restore-overlay .vilda-restore-panel {
-  max-width: 420px;
+  max-width: 440px;
   width: 100%;
   text-align: center
 }
@@ -2169,4 +2169,306 @@ body.vilda-modal-alert-open #scrollTopBtn {
   cursor: pointer;
   text-decoration: underline;
   padding: var(--space-0-4)
+}
+
+/* P-NOWE-URZADZENIE etap 2 (decyzja właściciela 2026-10-12, makieta zaakceptowana 2026-10-13): pierwsze
+   pobranie na „Komputerze prywatnym” w tym samym oknie — kroki, pasek postępu, „Gotowe”, błąd — oraz
+   przypomnienie po „Pobierz później”. Przyciski jak na ekranach logowania (vilda-auth-btn-primary / -ghost):
+   swoistość od #vilda-restore-… z !important wygrywa ze skórką .liquid-ios26 button (tło, ramka, kolor, cień,
+   rozmycie). Pasek to natywny <progress>, więc szerokości nie ustawia skrypt. */
+#vilda-restore-overlay .vilda-restore-tytul:focus {
+  outline: none
+}
+
+#vilda-restore-overlay .vilda-restore-etykieta strong {
+  color: var(--text, #1c1c1e)
+}
+
+#vilda-restore-overlay .vilda-restore-ikona.is-gotowe {
+  color: #fff;
+  font-size: 2.1rem;
+  font-weight: 700
+}
+
+#vilda-restore-overlay .vilda-restore-ikona.is-blad {
+  position: relative;
+  background: #fde8eb
+}
+
+#vilda-restore-overlay .vilda-restore-odznaka {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-circle);
+  background: #9a213a;
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 700;
+  line-height: 26px;
+  text-align: center;
+  box-shadow: 0 0 0 3px var(--bg, #f5f5f7)
+}
+
+#vilda-restore-overlay .vilda-restore-kroki {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6px);
+  list-style: none;
+  margin: var(--space-1-25) 0 var(--space-1);
+  padding: 0
+}
+
+#vilda-restore-overlay .vilda-restore-krok {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6px);
+  padding: var(--space-4px) var(--space-10px) var(--space-4px) var(--space-4px);
+  border-radius: var(--radius-pill);
+  background: #eef2f3;
+  color: #6e7a80;
+  font-size: .82rem;
+  font-weight: 600
+}
+
+#vilda-restore-overlay .vilda-restore-krok-nr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-circle);
+  background: #dfe6e8;
+  color: #6e7a80;
+  font-size: .72rem;
+  font-weight: 700
+}
+
+#vilda-restore-overlay .vilda-restore-krok.is-aktywny {
+  background: var(--primary, #00838d);
+  color: #fff
+}
+
+#vilda-restore-overlay .vilda-restore-krok.is-aktywny .vilda-restore-krok-nr {
+  background: #fff;
+  color: var(--primary, #00838d)
+}
+
+#vilda-restore-overlay .vilda-restore-krok.is-zrobiony {
+  background: #e9f5f6;
+  color: #00666e
+}
+
+#vilda-restore-overlay .vilda-restore-krok.is-zrobiony .vilda-restore-krok-nr {
+  background: var(--primary, #00838d);
+  color: #fff
+}
+
+#vilda-restore-overlay .vilda-restore-postep {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin: 0 0 var(--space-0-5);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: #e3eaec;
+  color: var(--primary, #00838d);
+  overflow: hidden;
+  -webkit-appearance: none;
+  appearance: none
+}
+
+#vilda-restore-overlay .vilda-restore-postep::-webkit-progress-bar {
+  background: #e3eaec;
+  border-radius: var(--radius-pill)
+}
+
+#vilda-restore-overlay .vilda-restore-postep::-webkit-progress-value {
+  background: linear-gradient(90deg,#00838d,#14a3ad);
+  border-radius: var(--radius-pill);
+  transition: width .2s ease
+}
+
+#vilda-restore-overlay .vilda-restore-postep::-moz-progress-bar {
+  background: linear-gradient(90deg,#00838d,#14a3ad);
+  border-radius: var(--radius-pill)
+}
+
+#vilda-restore-overlay .vilda-restore-postep-wiersz {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-0-75);
+  margin: 0 0 var(--space-1-5);
+  font-size: .88rem;
+  color: #6e6e73;
+  text-align: left
+}
+
+#vilda-restore-overlay .vilda-restore-postep-wiersz strong {
+  color: var(--text, #1c1c1e)
+}
+
+#vilda-restore-overlay .vilda-restore-procent {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--primary, #00838d);
+  font-variant-numeric: tabular-nums
+}
+
+#vilda-restore-overlay .vilda-restore-uwaga {
+  margin: var(--space-1) 0 0;
+  font-size: .78rem;
+  color: #8a8a8e;
+  line-height: 1.45
+}
+
+#vilda-restore-overlay .vilda-restore-podsumowanie {
+  margin: 0 0 var(--space-1-25);
+  font-size: .95rem;
+  color: #6e6e73;
+  line-height: 1.5
+}
+
+#vilda-restore-overlay .vilda-restore-podsumowanie strong {
+  color: var(--text, #1c1c1e)
+}
+
+#vilda-restore-overlay .vilda-restore-info {
+  margin: 0 0 var(--space-1-5);
+  padding: var(--space-12px) var(--space-14px);
+  border: var(--border-hairline) solid #c3e3e6;
+  border-radius: var(--radius-12);
+  background: #e9f5f6;
+  color: #0f3d42;
+  font-size: .88rem;
+  line-height: 1.5;
+  text-align: left
+}
+
+#vilda-restore-overlay .vilda-restore-szczegoly {
+  margin: 0 0 var(--space-1-5);
+  padding: var(--space-10px) var(--space-14px);
+  border: var(--border-hairline) solid #f5b3bb;
+  border-radius: var(--radius-10);
+  background: #fef2f3;
+  color: #9a213a;
+  font-size: .8rem;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere
+}
+
+#vilda-restore-overlay .vilda-restore-akcje {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-6)
+}
+
+#vilda-restore-overlay .vilda-restore-akcje .vilda-restore-pobierz {
+  margin-bottom: 0
+}
+
+#vilda-restore-overlay .vilda-restore-pozniej {
+  display: block;
+  width: 100%;
+  padding: var(--space-0-9) var(--space-1-5);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer
+}
+
+#vilda-restore-overlay .vilda-restore-pobierz,
+#vilda-restore-reminder .vilda-restore-teraz {
+  background: var(--primary)!important;
+  color: #fff!important;
+  border: 1.5px solid var(--primary)!important;
+  border-radius: var(--radius-12)!important;
+  box-shadow: 0 6px 18px #00838d38!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important
+}
+
+#vilda-restore-overlay .vilda-restore-pobierz:hover,
+#vilda-restore-reminder .vilda-restore-teraz:hover {
+  background: #006d75!important;
+  border-color: #006d75!important
+}
+
+#vilda-restore-overlay .vilda-restore-pobierz:disabled {
+  opacity: .7;
+  cursor: default
+}
+
+#vilda-restore-overlay .vilda-restore-pozniej {
+  background: #fff!important;
+  color: #08202c!important;
+  border: 1.5px solid #d6dde0!important;
+  border-radius: var(--radius-12)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important
+}
+
+#vilda-restore-overlay .vilda-restore-pozniej:hover {
+  border-color: var(--primary)!important;
+  color: var(--primary)!important
+}
+
+/* Przypomnienie po „Pobierz później” — bez zamykania. Nad dockiem (--vilda-dol-wolny, jak dymki), pod oknami
+   modalnymi (--z-modal), żeby nie zasłaniało ich przycisków. */
+#vilda-restore-reminder {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px);
+  transform: translateX(-50%);
+  z-index: var(--z-save-popover);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12px);
+  width: min(640px,calc(100% - 32px));
+  box-sizing: border-box;
+  padding: var(--space-10px) var(--space-14px);
+  border: var(--border-hairline) solid #c3e3e6;
+  border-radius: var(--radius-14);
+  background: #fff;
+  box-shadow: 0 10px 30px #08202c26;
+  color: var(--text, #1c1c1e)
+}
+
+#vilda-restore-reminder .vilda-restore-przypomnienie-ikona {
+  flex: 0 0 auto;
+  font-size: 1.35rem
+}
+
+#vilda-restore-reminder .vilda-restore-przypomnienie-tekst {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: .9rem;
+  line-height: 1.35;
+  text-align: left
+}
+
+#vilda-restore-reminder .vilda-restore-przypomnienie-tekst strong {
+  display: block;
+  font-weight: 500
+}
+
+#vilda-restore-reminder .vilda-restore-przypomnienie-data {
+  display: block;
+  font-size: .78rem;
+  color: #6e6e73
+}
+
+/* width i margin: na wąskim ekranie style.css daje każdemu przyciskowi width:100%. */
+#vilda-restore-reminder .vilda-restore-teraz {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  padding: var(--space-10px) var(--space-16px);
+  font-size: .9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer
 }
