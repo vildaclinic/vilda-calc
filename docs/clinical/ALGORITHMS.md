@@ -3073,7 +3073,7 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
-### P-COLE-RESET — Cole i rodzina BMI poprzedniego pacjenta nie przechodzą na następnego (SW 1.1.263, `vilda_update_prep.js` 96, `vilda_data_import_export.js` 103, 2026-10-13, polecenie właściciela)
+### P-COLE-RESET — Cole i rodzina BMI poprzedniego pacjenta nie przechodzą na następnego (SW 1.1.264, `vilda_update_prep.js` 96, `vilda_data_import_export.js` 103, 2026-10-13, polecenie właściciela)
 
 **Objaw.** Punkt z listy P-SPOZYCIE-PETLA („nieaktualny Cole między pacjentami”), polecenie właściciela: „zajmij się resetem Cola między pacjentami”. Po pacjencie z Cole ≥ 110% karta „Szacowane spożycie energii” rozwijała się u następnego dziecka. Decyzja zapadała na wskaźniku poprzedniego pacjenta. Do opuszczenia pola rekord (`collectUserData()`) i sesja karty niosły wtedy `intake.history`.
 
