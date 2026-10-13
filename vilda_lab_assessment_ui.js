@@ -406,6 +406,9 @@
       var visualLabel = state === 'is-uwaga-high' ? 'Znacznie powyżej normy' : state === 'is-uwaga-low' ? 'Znacznie poniżej normy' : ({ above: 'Powyżej zakresu', below: 'Poniżej zakresu', within: 'W zakresie', indeterminate: 'Porównanie niejednoznaczne', unavailable: 'Brak dopasowanej oceny' })[status];
       var upperOnly = inhibin && range.bounds && !range.bounds.lower && !!range.bounds.upper;
       if (upperOnly && status === 'within') visualLabel = 'Nie przekracza górnej granicy';
+      var upperOnlyLabel = !inhibin && limits && limits.lower === null && limits.upper !== null && status === 'within'
+        ? range.bounds.upper.operator === '<' ? 'Poniżej górnej granicy' : 'Nie przekracza górnej granicy' : '';
+      if (upperOnlyLabel) visualLabel = upperOnlyLabel;
       if (automatic) visualLabel = visualLabel.replace('normy', 'zakresu referencyjnego');
       var variant = item[3], adultTitle = input.sex === 'M' ? 'Dla mężczyzn' : REPRODUCTIVE_CONTEXT[input.reproductiveContext] || 'Dla kobiet';
       var ageTitle = pretermProfile ? 'Dla wcześniaka' : adultProfile ? adultTitle : inhibin && range.basis === 'infant-broad' ? 'Ogólny zakres dla niemowląt' : inhibin && range.basis === 'infant-curve' ? 'Minipuberty' : 'Dla wieku';
@@ -426,7 +429,7 @@
         variantId: variant ? text(variant.id) : '', reproductiveContext: variant ? variant.reproductiveContext : null,
         visualState: state, visualLabel: visualLabel + (conditional && !automatic ? ' · warunkowo' : ''),
         axis: limits && maximum ? { min: 0, max: maximum, lower: limits.lower, upper: limits.upper, value: point, unit: analyte.unit } : null,
-        label: upperOnly && status === 'within' ? 'Nie przekracza górnej granicy' + (automatic ? ' — orientacyjnie' : '') : conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + (automatic ? ' — orientacyjnie' : ' — warunkowo') : STATUS[status], rangeText: formatRange(c.range),
+        label: upperOnlyLabel ? upperOnlyLabel + (conditional ? automatic ? ' — orientacyjnie' : ' — warunkowo' : '') : upperOnly && status === 'within' ? 'Nie przekracza górnej granicy' + (automatic ? ' — orientacyjnie' : '') : conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + (automatic ? ' — orientacyjnie' : ' — warunkowo') : STATUS[status], rangeText: formatRange(c.range),
         primary: b.primary === item[0], method: range.method ? methodName(range.method.id, range.method.name) : '',
         population: text(range.population && range.population.label), source: c.range ? sourceView(range.source) : null,
         referenceVersion: text(range.profileVersion),
@@ -510,7 +513,9 @@
         note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
       clinical: { title: text(e.clinical.title), text: text(e.clinical.text), status: text(e.clinical.status), code: text(e.clinical.code) },
       summary: { title: text(e.summary.title), status: e.summary.status }, comparisons: comparisons, conditionNote: conditionNote,
-      upperOnlyNote: inhibin && input.sex === 'F' && rawComparisons.some(function (item) {
+      upperOnlyNote: !inhibin && comparisons.some(function (comparison) {
+        return comparison.status === 'within' && comparison.axis && comparison.axis.lower === null && comparison.axis.upper !== null;
+      }) ? 'Zakresy z samą górną granicą nie pozwalają ocenić, czy wynik jest za niski.' : inhibin && input.sex === 'F' && rawComparisons.some(function (item) {
         var range = item[2] && item[2].range;
         return range && range.basis === 'infant-curve' && range.bounds && !range.bounds.lower && range.bounds.upper;
       }) ? 'Źródło podaje tylko górną granicę — nie pozwala ocenić, czy wynik jest za niski.' : '',
