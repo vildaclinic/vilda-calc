@@ -2818,9 +2818,71 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
+### P-SPOZYCIE-PETLA — „Odtwórz zapis” nie wpada w rekurencję karty „Szacowane spożycie energii” (SW 1.1.250, `app.js` 233, `gh_therapy_monitor.js` 58, 2026-10-13, zgłoszenie właściciela)
+
+**Objaw.** Po P-WZRASTANIE-PRZEBUDOWA (#638) właściciel zgłosił, że u tej samej pacjentki „nic to nie dało”. Pacjentka jest leczona GH. Ścieżka „Wczytaj tego pacjenta” → „Odtwórz zapis” trwa nadal kilkanaście sekund, a „Nowy pomiar” działa prawidłowo. Warunki pracy: powłoka `app.html`, Chrome/Edge na komputerze. Pacjentka ma datę urodzenia, wiele wizyt, punkty z monitora GH i badania.
+
+**Czy to pojedynczy przypadek.** Nie. Błąd jest ogólny i wymaga dwóch warunków naraz:
+1. Bieżący pomiar ma własny punkt terapii GH. Tak jest typowo, gdy na tej wizycie w DocPro kliknięto „Włączenie” albo „Kontynuacja leczenia”.
+2. Karta „Szacowane spożycie energii” rozwija się sama (`shouldAutoExpandEstimatedIntakeCard`). Dzieje się tak przy:
+   - BMI dziecka w kategorii „Nadwaga” albo „Otyłość”;
+   - Cole ≥ 110%, także NIEAKTUALNYM, pozostałym po pacjencie otwartym wcześniej w tej samej karcie;
+   - alercie spożycia, np. spadku masy.
+
+Dotyczy to więc także pacjentki z prawidłową masą, jeśli tuż przed nią otwarto pacjenta z nadwagą. Bez któregokolwiek warunku pętli nie ma.
+
+**Przyczyna (zmierzona: profil CPU, liczniki wywołań, pokrycie V8 per ramka; dane fikcyjne).** „Odtwórz zapis” (`restoreLoadedState`) przelicza kartę zaawansowaną. Na końcu przeliczenia `calculateGrowthAdvanced` woła `refreshEstimatedIntakeVisibility` (`l()`), a ta przy rozwiniętej karcie woła `i()` (`setupEstimatedIntake` w `app.js`). `i()` paruje tabelę spożycia z historią (`vildaEnsureAdvancedIntakePairing` → `on()` w `vilda_advanced_growth.js`). Parowanie dobudowuje brakujący wiersz spożycia i znów przelicza kartę zaawansowaną, a to przeliczenie znów woła `l()` → `i()` → parowanie. Gdy bieżący pomiar ma punkt GH, ten łańcuch się nie stabilizuje. Przycinanie duplikatów bieżącego pomiaru (`_pruneDuplicateCurrentHistoryRows`, test `Qa`) usuwa wiersz-lustro punktu w tabeli spożycia. Jego odpowiednik dla tabeli zaawansowanej (`er`) wyłącza takie wiersze, a `Qa` nie. Parowanie dobudowuje więc lustro, przycinanie je usuwa i tak na zmianę. Rekurencja kończyła się dopiero przepełnieniem stosu: ok. 3,3–4,7 tys. parowań i pełnych przeliczeń, kilkaset połkniętych `RangeError`, a stan końcowy bywał niedeterministyczny (osierocony pusty wiersz). „Nowy pomiar” jest odporny, bo czyści bieżący pomiar: `l()` kończy się, zanim karta się rozwinie. Pętla występuje tylko w ramce Start. DocPro i kalkulator klirensu nie mają karty spożycia. P-WZRASTANIE-PRZEBUDOWA nie mogła tego usunąć, bo ten kod nie zależy od `growth-basic-module.js`.
+
+| Scenariusz (Chromium, dane fikcyjne) | Przed zmianą (`audyt` d002f96) | Po zmianie |
+|---|---|---|
+| `index.html`, 12 l., 150 cm, 52 kg (Cole 128%), 3 pomiary ręczne + 5 punktów GH, ostatni na bieżącej wizycie, „Odtwórz zapis” | 4578 parowań, 4567 przeliczeń, kliknięcie 42 s | 22 parowania, 12 przeliczeń, 0,36 s |
+| to samo, 46 kg (Cole 113%) | 4573 / 4560, 42 s | 22 / 12, 0,45 s |
+| to samo, 40 kg ze spadkiem z 49 kg (alert spożycia) | 4672 / 4659, 63 s | 22 / 12, 0,37 s |
+| kontrola: 40 kg bez spadku (Cole 98%) | 3 / 4, 0,24 s | bez zmian |
+| kontrola: 52 kg, ostatni punkt GH NIE na bieżącej wizycie | 21 / 2, 0,24 s | bez zmian |
+| powłoka `app.html`: data urodzenia, 10 wizyt, 17–41 punktów z prawdziwego monitora GH, badania przypięte w „Jednostkach laboratoryjnych”, Cole 130% albo spadek masy; także pacjentka z prawidłową masą zaraz po pacjentce z nadwagą | pętla w 4 z 7 „Odtwórz zapis”, 70–91 s, 2384–3318 przeliczeń | 11–12 przeliczeń, długie zadania łącznie 0,8–2,5 s, najdłuższe 1,6 s |
+| „Nowy pomiar” (wszystkie powyższe) | 0,02–0,4 s | bez zmian |
+
+**Zmiana.**
+1. `app.js` 232 → 233, `setupEstimatedIntake`: `i()` ma strażnika ponownego wejścia (`Pip_w`, zdejmowany w `finally`). Zagnieżdżone `i()` wywołane z przeliczenia uruchomionego przez parowanie wewnątrz zewnętrznego `i()` jest pomijane. Zewnętrzne `i()` i tak kończy się `calcEstimatedIntake()` na stanie końcowym. Strażnik blokuje wyłącznie synchroniczne ponowne wejście; wywołania z mikrozadań i timerów przechodzą normalnie.
+2. `gh_therapy_monitor.js` 57 → 58, `ue()`: lustro punktów GH w ukrytej karcie zaawansowanej DocPro dodaje wiersze z `{ skipInitialRecalc: true }`. `ue()` i tak kończy się jednym `calculateGrowthAdvanced()`. Dotąd każdy punkt dawał pełne przeliczenie: przy 18 punktach 19 przeliczeń na odświeżenie monitora, teraz 1; wejście do DocPro w powłoce 79 → 25. W powłoce ta praca szła w tle, na wspólnym wątku ze Start.
+
+**Wpływ kliniczny.** Brak. Wzory, progi, dane, zapis i synchronizacja bez zmian. Dowód (zrzut stanu końcowego pole po polu: tabele zaawansowana, podstawowa i spożycia z `data-gh-id`/`data-gh-sync`, `advancedGrowthData`, `basicGrowthData`, `#advResults`, `#results`, `#basicGrowthResults`, `#intakeResults`, `generateMetabolicSummary()`, rekord `collectUserData()`, sesja `vildaMainSessionV1`, widoczność karty spożycia i przycisku „Odtwórz zapisany stan”, `hasUserModifiedAfterLoad`):
+- scenariusze bez pętli w `index.html` i w powłoce (Start, DocPro, klirens; zapis, „Odtwórz zapis”, „Nowy pomiar”, F5, wejście do DocPro, odświeżenie monitora): stan IDENTYCZNY z bazą. Jedyne różnice to wyścigi, które występują także między przebiegami samej bazy: ostatni zapisujący do wspólnej sesji, moment włączenia trybu PRO w uprzęży i odczyt etapu Tannera w klirensie.
+- scenariusze z pętlą: baza kończy się przepełnieniem stosu i bywa niedeterministyczna. Stan po zmianie jest identyczny ze stanem naprawy u źródła (wariant B poniżej, mierzony tylko do porównania) i wiersz w wiersz równy stanowi sprzed zapisu.
+- przegląd adwersaryjny strażnika: 45 zablokowanych wywołań w zmierzonych ścieżkach. Wszystkie pochodziły z parowania, przy widocznej karcie i istniejących wierszach spożycia (zagnieżdżone `i()` nie uruchomiłoby `intakeAutofill`). Żadne nie pochodziło z wnętrza `calcEstimatedIntake`. Wyjątek w ciele `i()` nie zostawia strażnika ustawionego.
+
+Klasyfikacja: refaktoryzacja (AGENTS.md § 2).
+
+**Niezmiennik strażnika (do pilnowania przy przyszłych zmianach).** Zablokowane `i()` pomija też gałąź `recalcIfOpen` w `l()`. Jest to bezpieczne, dopóki żadna ścieżka z wnętrza `calcEstimatedIntake()` nie prowadzi do `refreshEstimatedIntakeVisibility`/`calculateGrowthAdvanced` po zmianie stanu. Dziś taka ścieżka nie istnieje (zmierzone i wyczytane).
+
+**Przypadek syntetyczny (wejście → oczekiwany wynik, dane fikcyjne).** Dziewczynka 12 l. 0 m., 150 cm, 52 kg. Pomiary ręczne w 96, 102 i 108 mies. Punkty GH w 120, 126, 132, 138 i 144 mies.; ostatni = bieżący pomiar (150 cm, 52 kg). Zapis, „Wczytaj tego pacjenta”, „Odtwórz zapis” → karta spożycia rozwinięta, tabela karty zaawansowanej taka sama jak przed zapisem, ≤ 60 parowań i ≤ 30 pełnych przeliczeń (dotąd ok. 4600).
+
+**Strażnicy.** `tests/e2e/spozycie-petla-odtworz.spec.mjs` (nowy, 3):
+- dwa testy pętli: nadwaga (Cole ≥ 110%) i spadek masy (alert spożycia). Każdy sprawdza liczniki parowań i przeliczeń, warunek scenariusza (karta rozwinięta), tabelę jak przed zapisem i „Nowy pomiar” bez zmian.
+- test monitora GH w DocPro: liczba przeliczeń na jedno odświeżenie; wartości wierszy lustra równe punktom; tabela, `#advResults` i `advancedGrowthData` bez zmian po odświeżeniu.
+
+**Zmierzone czerwone** na `audyt` d002f96: **3 z 3** (4582 i 4653 parowań; 5 przeliczeń przy odświeżeniu monitora). Mutacje: bez strażnika → czerwone oba testy pętli (4583, 4637 parowań); bez zmiany w monitorze → czerwony test DocPro (5).
+
+**Czego ta zmiana NIE robi (do decyzji właściciela, wszystko zmierzone w tej analizie).**
+- **(B) naprawa u źródła braku zbieżności parowania.** `Qa` i `_intakeHistoryRowDuplicatesCurrentBasics` mogłyby pomijać wiersze-lustra GH symetrycznie do `er()`. W scenariuszach z pętlą daje to ten sam stan co strażnik, ale zmienia, które wiersze spożycia są przycinane, także poza odtwarzaniem.
+- **Nieaktualny Cole między pacjentami.** `window.colePercentValue`, `coleCatValue` i `coleKluczValue` przeżywają `clearAllData` i wczytanie innego pacjenta. Decyzja o rozwinięciu karty spożycia zapada wtedy na wskaźniku poprzedniego pacjenta; po „Nowym pomiarze” wpływa to też na to, co trafia do zapisu wizyty. To zmiana funkcjonalna.
+- **Mostek punktów GH w Start bez przeliczenia po każdym wierszu** (`importTherapyPointsToAdvancedGrowth`, faza „Wczytaj tego pacjenta”, F5, rozgłoszenia). Daje 9–21 → 2–4 przeliczenia. Przegląd zmierzył jednak dwie różnice w nietypowych ścieżkach:
+  - pusty wiersz dodany przez lekarza nie jest już przy imporcie „przypadkiem” usuwany;
+  - przy sztucznie usuniętych wierszach GH nieaktualne lustro spożycia nie odświeża się przy okazji (kcal/d inne).
+  
+  Dlatego nie wchodzi tu jako refaktoryzacja.
+- **Fala odświeżenia pól z `custom-fixes.js` 3,2 s po `vilda:state-restored`.** Daje drugą, krótszą blokadę po „Odtwórz zapis”. W powłoce DocPro dostaje odtworzone pola dopiero z timerami 1,0, 2,6 i 3,2 s i w tym czasie może pokazywać wiek na dziś i puste pola.
+- **Lustro punktu GH w tabeli spożycia nie podąża za edycją punktu w monitorze.** Po F5 albo w powłoce traci `data-gh-id` i karta spożycia liczy Δ masy z dawnej masy. Błąd sprzed tej zmiany, identyczny w bazie; zmiana z wpływem na wynik (kcal/d) — tryb z § 3.
+- Pozostały koszt „Odtwórz zapis” u długo leczonej pacjentki to zwykła praca odtwarzania, nie pętla: ok. 1–2 s w środowisku testowym, w tym `document.getAnimations()` w `vildaPulsWspolnaFaza` (170–250 ms).
+
+**Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
+
 ### P-WZRASTANIE-PRZEBUDOWA — wczytanie pacjenta leczonego GH nie przebudowuje tabeli historii w kółko (SW 1.1.240, `growth-basic-module.js` 20, 2026-10-12, zgłoszenie właściciela)
 
 **Objaw.** U pacjentki leczonej hormonem wzrostu „Wczytaj tego pacjenta" → „Odtwórz zapis" trwało znacząco dłużej niż u innych pacjentów: strona nie reagowała przez kilka do kilkunastu sekund. „Nowy pomiar" działał prawidłowo.
+
+*(Aktualizacja 2026-10-13: ta zmiana nie usunęła objawu u właściciela. Fikcyjna pacjentka z tej analizy nie miała punktu GH na bieżącej wizycie ani karty spożycia rozwijającej się sama, a to wyzwala główną przyczynę — rekurencję karty „Szacowane spożycie energii”. Opis i poprawka: wpis wyżej, P-SPOZYCIE-PETLA. Ta zmiana pozostaje słuszna: usuwa osobną, mniejszą pętlę przebudowy tabeli.)*
 
 **Czy to pojedynczy przypadek.** Nie. Dane pacjentki są poprawne, a błąd jest ogólny. Dotyczy każdego pacjenta z punktami terapii GH, który ma w historii pomiar ręczny późniejszy niż pierwszy punkt terapii. Wystarczy kontrola wpisana ręcznie w trakcie leczenia albo bieżąca wizyta przeniesiona do historii przez „Nowy pomiar". Koszt rośnie z kwadratem liczby wierszy, więc najmocniej odczuwają go pacjenci leczeni od lat. Pacjent bez punktów GH nie jest dotknięty: odtworzenie układa jego wiersze ręczne chronologicznie, także gdy wpisano je nie po kolei (zmierzone: 2 przeliczenia).
 
