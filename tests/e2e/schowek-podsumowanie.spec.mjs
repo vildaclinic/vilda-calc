@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { spozaWindows1250 } from '../support/windows1250.mjs';
 
 // P-IOS-SCHOWEK na PRAWDZIWEJ stronie i PRAWDZIWYM schowku systemowym.
 //
@@ -21,16 +22,6 @@ test.use({ serviceWorkers: 'block', permissions: ['clipboard-read', 'clipboard-w
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 '
   + '(KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1';
 
-const WIN1250 = (() => {
-  const dekoder = new TextDecoder('windows-1250');
-  const znaki = new Set();
-  for (let bajt = 0; bajt < 256; bajt += 1) {
-    const znak = dekoder.decode(new Uint8Array([bajt]));
-    if (znak !== '\uFFFD') znaki.add(znak);
-  }
-  return znaki;
-})();
-const spozaWindows1250 = (tekst) => [...tekst].filter((z) => !WIN1250.has(z));
 
 const ZNACZNIK = 'POPRZEDNIA-ZAWARTOSC-SCHOWKA-1234';
 const HASLO = 'E2e#Schowek!26a';
@@ -211,7 +202,7 @@ test.describe('na iPhonie (identyfikator przeglądarki iPhone’a)', () => {
   });
 });
 
-test('P-SCHOWEK-HIS: norma tempa wzrastania trafia do schowka jako „>=", a karta dalej pokazuje „≥"', async ({ page }) => {
+test('P-SCHOWEK-HIS: norma tempa wzrastania trafia do schowka słownie („co najmniej"), a karta dalej pokazuje „≥"', async ({ page }) => {
   // Chłopiec 12;6, 146 cm, 36 kg; rok wcześniej 140 cm, 33 kg; wiek kostny 11,5 roku; rodzice
   // 164 i 178 cm. Dane FIKCYJNE. Tempo 6,0 cm/rok z normą okołopokwitaniową „≥4 cm/rok" i ujemne SDS
   // („−") — dokładnie te znaki, które w zgłoszeniu wracały z HIS-u jako „?".
@@ -262,7 +253,8 @@ test('P-SCHOWEK-HIS: norma tempa wzrastania trafia do schowka jako „>=", a kar
   const wklejone = await wklejZeSchowka(page);
 
   expect(wklejone, 'schowek nie może zostać z poprzednią zawartością').not.toContain(ZNACZNIK);
-  expect(wklejone, 'norma tempa zapisana znakami ASCII').toMatch(/Tempo wzrastania: [^\n]*norma >=\d/);
+  // P-SCHOWEK-HIS-2 (decyzja właściciela 2026-10-13): słownie, nie „>="
+  expect(wklejone, 'norma tempa zapisana słownie').toMatch(/Tempo wzrastania: [^\n]*norma co najmniej \d/);
   expect(wklejone, 'żadnego „≥", które HIS zamienia w „?"').not.toContain('\u2265');
   expect(wklejone, 'ujemne SDS ze zwykłym minusem').toMatch(/hSDS -\d/);
   expect(spozaWindows1250(wklejone), 'każdy znak przeżyje stronę kodową Windows-1250').toEqual([]);
