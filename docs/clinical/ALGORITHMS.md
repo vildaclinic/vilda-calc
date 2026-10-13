@@ -3980,6 +3980,31 @@ Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywrac
 
 **Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
+### P-PRZYPOMNIENIA-ECHO — karta „Przypomnienia” nie przebudowuje się od własnego pingu licznika (SW 1.1.263, 2026-10-13, polecenie właściciela)
+
+**Skąd.** Test „„⋮” przy pozycji ma rozmiar jak w widoku pełnoekranowym i otwiera to samo okno z akcjami” (`tests/e2e/przypomnienia-karta-akcje.spec.mjs`) padał w CI (m.in. na #652), a lokalnie przechodził: `boundingBox()` przycisku „⋮” dawał `null`, choć na zrzucie przycisk był widoczny. Na #652 ustalono, że karta przebudowuje się w całości chwilę po pierwszym renderze, także na czystym `audyt`. Właściciel polecił naprawę 2026-10-13 („napraw niestabilny test przypomnień”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Co było.** Po każdym renderze z wpisami karta (`#remindersInline`, `vilda_auth_ui.js`; w artefakcie `Br` → `Tr(p)`) porównuje liczbę swoich pozycji z licznikiem paska w `sessionStorage` (`vilda-reminders-count-v1`, zapisuje go `vilda_chrome.js`). Gdy się różnią, odświeża przycisk przypomnień i wysyła ping samonaprawy `{type: "note-changed", sender: "rem-inline-selfheal", action: "recount"}` kanałem `BroadcastChannel("vilda-notes")` i pingiem w `localStorage`. Dzięki temu odświeżają się inne karty przeglądarki i ramki powłoki. Karta wysyłała jednak ping jednym obiektem kanału (`kn`), a nasłuchiwała na drugim (w `Wr()`). Własny ping wracał więc do niej i przebudowywał ją w całości z tą samą treścią: `xe()`, ponowne pobranie wpisów, wyczyszczenie kontenera i nowa treść. Działo się tak przy otwarciu strony zawsze, gdy licznik paska nie nadążał za kartą, np. po włączeniu PRO albo po zmianie wpisów. Pomiar (`audyt` ddb060d, Chromium): pierwszy render z 2 wierszami w 1314 ms, własny ping z kanału w 1341 ms, przebudowa z tymi samymi 2 wierszami w 1437 ms. Przy spowolnionym procesorze odstęp rósł do ok. 1 s. Każde odwołanie do elementu karty w tej chwili trafiało w element już odłączony: pomiar w teście, fokus, klik wciśnięty przed przebudową i puszczony po niej.
+
+**Co jest.** Karta nasłuchuje na tym samym obiekcie kanału, którym wysyła ping (`var n=kn||new BroadcastChannel("vilda-notes")`). `BroadcastChannel` nie doręcza komunikatu obiektowi, który go wysłał (HTML Living Standard, `postMessage()`: „Remove source from destinations”), więc własny ping nie wraca już do karty. Ping nadal dociera do innych dokumentów i do paska w tym samym dokumencie. Karta odświeża się jak dotąd po komunikatach sejfu (`vilda_vault.js`), `vilda_chrome.js` i innych dokumentów, po pingu w `localStorage` i po pozostałych zdarzeniach.
+
+**Wpływ kliniczny.** Brak.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| karta z 2 wpisami, licznik paska inny niż 2 (karta wysyła ping samonaprawy) | karta wypełnia się raz, własny ping jej nie przebudowuje, przycisk „⋮” daje się zmierzyć |
+| ten sam ping z innego obiektu kanału (inna karta przeglądarki, ramka powłoki) | karta przebudowuje się raz, wpisy bez zmian |
+| licznik paska równy liczbie pozycji | bez pingu, jak dotąd |
+| zmiana wpisu w innym dokumencie (komunikat sejfu, ping w `localStorage`) | karta odświeża się jak dotąd |
+
+**Testy.** `tests/e2e/przypomnienia-karta-akcje.spec.mjs`: nowy test „własny ping licznika nie przebudowuje karty; ping z innej karty lub ramki nadal ją odświeża”. Licznik paska jest kasowany i nie może trafić do `sessionStorage`, więc karta za każdym razem wysyła ping. Test czeka na odbiór pingu i na koniec pobrań wpisów, bez stałych opóźnień. Potem sprawdza, że karta wypełniła się raz i nie była przebudowana. Kontrola: ping z innego obiektu kanału przebudowuje kartę. Bez poprawki test pada 12/12, z poprawką przechodzi 36/36 (6 przebiegów równolegle na 4 rdzeniach). Testy przypomnień i karty (`przypomnienia-*.spec.mjs`, `reminders-*.spec.mjs`, `powloka-sidebar-po-karcie`, `porownanie-uklad-mobile`) przechodzą 34/34.
+
+**Ustalenie poza zakresem (do decyzji właściciela).** Po akcji w oknie pozycji, np. „Zrobione”, karta przebudowuje się dwa razy w odstępie kilku milisekund. Raz z samej akcji (`remOdswiez()` → `Rr()`), drugi raz z powiadomienia sejfu o zmianie wpisu (`onPatientNoteChanged` → `xe()`). Komunikat sejfu z kanału wpada w tę samą klatkę. Obie przebudowy mają tę samą treść, a testy tego nie wywracają, bo dalsze kroki czekają na elementy. Ta zmiana tego nie dotyka.
+
+**Wersje.** `vilda_auth_ui.js` 485 → 486; `vilda_chrome.js` 134 i `vilda_session_bridge.js` 58 (tylko nowy `?v=` wstrzykiwanego `vilda_auth_ui.js`); SW 1.1.262 → 1.1.263 (numer 1.1.262 nadał równolegle #663).
+
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
 **Zgłoszenie właściciela.** Po P-DYMKI: „sprawdź, czy wyskakujące modale, np. od Terminarza i inne, nie wchodzą w konflikt z dockiem i strzałką nawigacyjną".
