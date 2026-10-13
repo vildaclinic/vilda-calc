@@ -239,7 +239,9 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(zapiszPanel).toContain('e.vildaSession.saveNow({force:!0})');
     // panel docelowy: odtworzenie tylko przy zmianie odcisku, odświeżenie podsumowania po dwu klatkach zawsze
     expect(sh).toContain('var r=Gp_s();if(r!==e.sessionStamp){e.sessionStamp=r;');
-    expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}\}Gp_u\(n\)\}/);
+    // P-SPOZYCIE-POWROT: po sesji (i przy każdym pokazaniu) panel kończy od razu zaległy krok odtworzenia stanu,
+    // dopiero potem odświeżenie podsumowania po dwu klatkach
+    expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}\}\/\* P-SPOZYCIE-POWROT [^*]*\*\/try\{typeof n\.vildaPersistRestoreFinishNow=="function"&&n\.vildaPersistRestoreFinishNow\(\)\}catch\{\}Gp_u\(n\)\}/);
     expect(sh).toContain('function Gp_u(n){try{if(!n||typeof n.requestAnimationFrame!="function")return;n.requestAnimationFrame(function(){n.requestAnimationFrame(function(){try{typeof n.updateProfessionalSummaryCard=="function"&&n.updateProfessionalSummaryCard()}catch{}})})}catch{}}');
     const zaladujRamke = sh.match(/r\.addEventListener\("load",function\(\)\{([\s\S]*?)\}\),r\.src=/)?.[1] || '';
     expect(zaladujRamke).toContain('if(!bt(r)){Tt(t,n);return}');

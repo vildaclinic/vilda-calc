@@ -328,7 +328,7 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         }
         // INHB uses the same fixed concentration axis for both periods. The
         // scoped female puberty source must be available after a real offline
-        // reload without adding it to the ordinary patient reference registry.
+        // reload and remain separate from the ordinary age-8–20 source below.
         await page.reload({ waitUntil: 'load' });
         await page.waitForFunction(() => window.VildaHormoneLifespanRuntime &&
           window.VildaHormoneLifespanDisplay?.buildInhibinComparison);
@@ -367,10 +367,38 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
         }));
         await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(1);
         await wykres.locator('[data-view="life"]').click();
-        await expect(wykres.locator('[data-patient-concentration="inhb"]')).toHaveCount(0);
-        expect(await page.evaluate(() => window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
-          analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
-        }).status)).toBe('unavailable');
+        const ordinaryInhibin = wykres.locator('[data-patient-concentration="inhb"]');
+        await expect(ordinaryInhibin).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-20');
+        await expect(ordinaryInhibin).toHaveAttribute('data-value', '40');
+        await expect(ordinaryInhibin).toHaveAttribute('data-reference-value', '46');
+        await expect(ordinaryInhibin).toHaveAttribute('data-divisor', '52.474');
+        await expect(ordinaryInhibin).toHaveAttribute('data-ceiling', '1');
+        await expect(ordinaryInhibin.locator('[data-median-point]')).toHaveCount(1);
+        await expect(ordinaryInhibin.locator('[data-result-point]')).toHaveCount(1);
+        await expect(ordinaryInhibin.locator('[data-result-overflow]')).toHaveCount(0);
+        expect(await page.evaluate(() => {
+          const result = window.VildaHormoneLifespanReference.evaluate(window.VildaHormoneLifespanData, {
+            analyte: 'inhibin_b', sex: 'female', ageYears: 14, measurement: { value: 40, unit: 'pg/mL' },
+          });
+          return { status: result.status, profile: result.profile?.id, value: result.value, reference: result.referenceValue };
+        })).toEqual({ status: 'ready', profile: 'borelli2025-female-inhb-age-5p6-20', value: 40, reference: 46 });
+        const ordinaryInhibinLines = wykres.locator('[data-female-stable-line="inhb"]');
+        const ordinaryInhibinPaths = await ordinaryInhibinLines.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
+        expect(ordinaryInhibinPaths.length).toBeGreaterThan(0);
+        await page.evaluate(() => window.VildaHormoneLifespanRuntime.update({
+          analyte: 'inhibin_b', sex: 'female', ageYears: 14, sourceStatus: 'ready',
+          identityKey: 'fictional-offline-inhibin-comparison', measurement: { value: 80, unit: 'pg/mL' },
+        }));
+        await expect(ordinaryInhibin).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-20');
+        await expect(ordinaryInhibin).toHaveAttribute('data-value', '80');
+        await expect(ordinaryInhibin).toHaveAttribute('data-reference-value', '46');
+        await expect(ordinaryInhibin).toHaveAttribute('data-divisor', '52.474');
+        await expect(ordinaryInhibin).toHaveAttribute('data-ceiling', '1');
+        await expect(ordinaryInhibin.locator('[data-median-point]')).toHaveCount(1);
+        await expect(ordinaryInhibin.locator('[data-result-point]')).toHaveCount(0);
+        await expect(ordinaryInhibin.locator('[data-result-overflow]')).toHaveAttribute('data-result-overflow', 'above');
+        await expect.poll(() => ordinaryInhibinLines.evaluateAll(paths => paths.map(path => path.getAttribute('d'))))
+          .toEqual(ordinaryInhibinPaths);
         // The female longitudinal mean is packaged locally too. An offline
         // result never calibrates this unitless model into a concentration.
         await page.reload({ waitUntil: 'load' });

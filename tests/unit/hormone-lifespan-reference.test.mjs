@@ -24,7 +24,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     expect(data.notClinicalReference).toBe(true);
-    expect(data.profiles).toHaveLength(60);
+    expect(data.profiles).toHaveLength(66);
     expect(data.profiles.every(item => item.sourceLabel && item.url && item.method && item.population)).toBe(true);
   });
 
@@ -99,7 +99,9 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
       status: 'ready', profile: { id: 'ljubicic2022-female-amh' }
     });
     for (const age of [1.01, 5, 11, 13, 14]) {
-      expect(evaluate('amh', age, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+      expect(evaluate('amh', age, { sex: 'female' })).toMatchObject({
+        status: 'ready', profile: { sex: 'female', statistic: 'group-median' }
+      });
     }
   });
 
@@ -370,7 +372,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(evaluate('lh', 7 / 365.25).status).toBe('ready');
     expect(evaluate('lh', 6).status).toBe('ready');
     expect(evaluate('lh', 16).status).toBe('ready');
-    expect(evaluate('inhb', 12, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+    expect(evaluate('inhb', 5.59, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
     expect(evaluate('lh', .019, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
     expect(evaluate('lh', .02, { sex: 'female' }).status).toBe('ready');
   });
@@ -461,7 +463,8 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     for (const source of data.profiles) {
       const sampled = engine.sampleProfile(source, 80);
       expect(sampled).toHaveLength(80);
-      expect(sampled[0].ageYears).toBe(source.minAge);
+      if (source.minAgeExclusive) expect(sampled[0].ageYears).toBeGreaterThan(source.minAge);
+      else expect(sampled[0].ageYears).toBe(source.minAge);
       expect(sampled.at(-1).ageYears).toBeLessThanOrEqual(source.maxAge);
       if (source.maxAgeExclusive) expect(sampled.at(-1).ageYears).toBeLessThan(source.maxAge);
       expect(engine.referenceAt(source, source.minAge - 1e-6)).toBeNull();

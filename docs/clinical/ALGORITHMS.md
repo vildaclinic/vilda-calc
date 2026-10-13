@@ -28,7 +28,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | OTHER-RX | Grypa, nadciśnienie i tarczyca | `flu_therapy.js`, `hypertension_therapy.js`, `thyroid_cancer_kids.js` | kontrola składni; brak dedykowanej regresji dawkowania | źródło do weryfikacji per moduł |
 | STEROIDS | Konwersje GKS/AAS i model HPTA | `steroidy.html` | kontrola składni; brak dedykowanego E2E lub regresji wyników | zinwentaryzowane; część HPTA ma charakter edukacyjny |
 | DIABETES | Kalkulatory diabetologiczne | `cukrzyca.html`, `cukrzyca.js` | kontrola składni; brak dedykowanego E2E lub regresji wyników | źródło do weryfikacji |
-| SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; akceptacja kliniczna właściciela przed scaleniem |
+| SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; P-PLEC-IMIE-2 (2026-10-13): także kolejny nowy pacjent po „Wyczyść”; akceptacja kliniczna właściciela 2026-10-13 (progi 99 % / 20, ostrzeżenia i kolor notek bez zmian) |
 
 ## Długi walidacyjne o najwyższym priorytecie
 
@@ -36,7 +36,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 
 **Status: przygotowanie do integracji, bez zmiany wyników w aplikacji.** Moduły nie są ładowane przez HTML ani service worker. Silnik `1.0.0` przyjmuje jawny zestaw danych `2026-10-03.1` i zwraca osobno porównanie biochemiczne względem wieku/stadium oraz ocenę czasu rozwoju. Nie modyfikuje obecnego przelicznika, przypiętych wyników ani zapisów pacjentów. Pełny kontrakt, populacje, jednostki, ograniczenia i zakres faktycznego odczytu źródeł: [LH_FSH.md](LH_FSH.md).
 
-Źródła liczbowe to katalogi Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) (AnshLite LH CLIA) i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) (Roche Elecsys FSH ECLIA), odczytane 2026-10-03, surowica, IU/L (równoważne liczbowo mIU/mL). **To zakresy konkretnych metod Mayo, nie uniwersalne normy polskiej populacji.** Dane niosą źródło, wersję, populację, metodę, granice z operatorami i ograniczenia. Kandydaci Johannsen 2018 dla minipuberty pozostają nieaktywni: dokładne brzegi wieku i LOD nie zostały rozstrzygnięte. Brak normy nie uruchamia zakresu dorosłych ani interpolacji.
+Źródła liczbowe to katalogi Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) (AnshLite LH CLIA) i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) (Roche Elecsys FSH ECLIA), odczytane 2026-10-03, surowica, IU/L (równoważne liczbowo mIU/mL). **To zakresy konkretnych metod Mayo, nie uniwersalne normy polskiej populacji.** Dane niosą źródło, wersję, populację, metodę, granice z operatorami i ograniczenia. W PR1 kandydaci Johannsen 2018 pozostawali nieaktywni z powodu nierozstrzygniętych brzegów wieku i LOD; pełny tekst i zaakceptowana aktywacja nowych profili z 13.10.2026 opisane są w późniejszym wpisie poniżej. Brak normy nie uruchamia zakresu dorosłych ani interpolacji.
 
 Kryteria czasu rozwoju: Th≥2 przed 8 lat / G≥2 lub objętość jąder ≥4 mL orchidometrem Pradera przed 9 lat; ocena braku początku od 13/14 lat, z wywiadem i leczeniem. Źródła: Endocrine Society 2026 ([PMID 42287186](https://pubmed.ncbi.nlm.nih.gov/42287186/), oficjalne rekomendacje), ENDO-ERN 2021 ([PMID 33512657](https://pubmed.ncbi.nlm.nih.gov/33512657/)) i przegląd diagnostyki 2025 ([PMID 39911767](https://pubmed.ncbi.nlm.nih.gov/39911767/)). Minipuberty ma odrębny kontekst, nie automatyczne wyłączenie ostrzeżeń; zakres odczytanej literatury i wtórnych tabel opisano w dokumencie modułu. P/Ax i nieokreślony numer Tannera nie są podstawiane jako Th/G.
 
@@ -49,6 +49,94 @@ Wpływ docelowy: zgodność ze stadium nie będzie kasować niezgodności z wiek
 Addytywne `labResult.assessment` przenosi wersjonowaną kopię wyniku PR1 przez przypięcie do wizyty, szyfrowany sejf, import/synchronizację, historię i serie. Czytelny `vilda_lab_snapshot.js` weryfikuje strukturę i zachowuje operatory, wiek w chwili pobrania, pochodzenie norm oraz osobne oceny biochemiczne i kliniczne. Kotwica wizyty pozostaje odrębna od kontekstu próbki. Komentarz nie zmienia oceny; edycja wyniku lub daty unieważnia poprzednią ocenę. Nieznany schemat jest jawnie niedostępny. Brak backfill starszych zapisów; brak wywołania starego silnika trendów dla wpisu z jawną oceną; brak dokładnego punktu dla `<LOD` lub `<x`.
 
 **Wpływ kliniczny: bez zmiany norm, silnika PR1 i obecnego przelicznika.** Nowe UI i producent ocen pozostają wyłączone do PR3. Regresje wywołują rzeczywiste API modelu/sejfu i ścieżki przeglądarkowe na syntetycznych danych: M6/G4/LH2 zachowuje kontekst po zmianie aktualnego pacjenta; zmiana komentarza zachowuje ocenę, zmiana liczby/daty ją unieważnia; `<0,02` nie staje się punktem `0,02`; wpis starszego formatu nie otrzymuje domniemanej metody ani stadium. Szczegóły kontraktu i ograniczenia zgodności z wcześniejszymi wersjami aplikacji: [LH_FSH.md](LH_FSH.md#pr2--transport-historycznej-oceny).
+
+#### LAB-PUBERTY — jednostronne zakresy i komunikat G1, 2026-10-13
+
+F2/F3: renderer nazywa zapisane `within` LH/FSH bez dolnego minimum
+„Nie przekracza górnej granicy” (`≤`) lub „Poniżej górnej granicy” (`<`).
+Jedna krótka notka wskazuje, że zakresy jednostronne nie oceniają zbyt niskiego
+stężenia. Prawdziwa dolna granica innej osi, nierówności, statusy, zakresy,
+metody i zapis pozostają bez zmian. Przy właściwym profilu Mayo: M3 mies. / FSH 0,1 → nie przekracza ≤3,3;
+3,31 → `above`; M14 / G1 / FSH 1,49 → poniżej <1,5, dokładnie 1,5 → `above`.
+
+Silnik `1.5.1` precyzuje nagłówek istniejącego `limited/treatment_context`
+dla chłopca z używalnym G1 od granicy wieku profilu (obecnie 14 lat), gdy leczenie
+jest nieznane, bez znanej terapii, regresji lub wcześniejszego początku.
+Nowy tekst: „Brak aktualnych cech dojrzewania w tym wieku wymaga oceny klinicznej.”
+Nie nadaje nowej diagnozy. Historyczne oceny zachowują zapisany tekst kliniczny.
+
+Źródła: pełne kopie Mayo 62999/602753 z audytu 12.10.2026, sekcje referencyjne
+(AnshLite LH CLIA / Roche Elecsys FSH ECLIA, surowica, IU/L), oraz pełny tekst
+ENDO-ERN 2021, DOI 10.1007/s12020-021-02626-z. Populacje, ograniczenia i przypadki
+opisano w [LH_FSH.md](LH_FSH.md#jednostronne-zakresy-i-komunikat-g1--13102026).
+Zmiana interpretacyjna dotyczy precyzji przekazu; nie zmienia norm ani
+kwalifikacji do profili i sama nie uruchamiała Johannsen; późniejsza aktywacja
+ma odrębny wpis poniżej. Właściciel zaakceptował
+zakres; testy rzeczywistych funkcji, formularza, historii, mobile i offline
+nie są walidacją kliniczną.
+
+#### LAB-PUBERTY — Johannsen 2018 w minipuberty, 2026-10-13
+
+**Wpływ kliniczny: tak.** Właściciel zaakceptował propozycję i makietę
+13.10.2026 („ok, jest dobrze, koduj”). Silnik `1.6.0`, dane/profile
+`2026-10-13.1` dodają automatyczny, orientacyjny wybór źródła
+`johannsen-minipuberty-lh` / `johannsen-minipuberty-fsh` dla bazalnych LH/FSH.
+Pełny zachowany HTML Johannsen TH i wsp., JCEM 2018;103(8):3028–3037,
+[DOI 10.1210/jc.2018-00482](https://doi.org/10.1210/jc.2018-00482),
+[PMID 29917083](https://pubmed.ncbi.nlm.nih.gov/29917083/), odczytano
+niezależnie: populacja, metody, statystyka, tabela 1, ograniczenia.
+Poprzednia blokada kandydata z PR1 nie opisuje już tych nowych profili.
+Fakty i hash: [johannsen2018-evidence.json](lh-fsh/johannsen2018-evidence.json);
+pełny kontrakt i osiem wierszy: [LH_FSH.md](LH_FSH.md).
+
+Populacja: 1840 zdrowych niemowląt z trzech duńskich kohort, GA
+37+0–41+6 tyg. (259–293 dni włącznie), jedna próbka na dziecko;
+27 pacjentów z DSD to osobna grupa. AutoDELFIA / PerkinElmer, surowica,
+IU/L, LOD obu hormonów 0,05. Tabela 1 podaje P2,5–P97,5 i średnie
+geometryczne, **nie mediany**. Nominalne grupy to [2;3,5) oraz [3,5;5]
+mies.; faktycznie obserwowano M2,1–5,0 / F2,3–5,0, według zaokrąglonego
+wieku źródłowego. Zakresy LH dziewczynek mają dolny percentyl <LOD:
+porównuje się tylko do górnej granicy 0,98/1,25; nie tworzy się minimum
+0,025 lub 0,05 ani dokładnego punktu z wyniku z operatorem.
+
+Polityka `johannsen-minipuberty-applicability/2026-10-13.1` zachowuje
+nominalne grupy autorów. Publikacja nie definiuje przeliczenia dni na
+miesiące: zaakceptowana **konwencja aplikacji** mapuje dostarczony przedział
+dni `[dMin,dMax]` na `[dMin/31,dMax/28]`, zachowując operatory, bez drugiego
+dodania dnia niepewności. Dozwolone pochodzenie dostarczonych dni:
+`main-calendar-dates`, `main-completed-weeks`, `manual-completed-days`,
+`sample-calendar-dates`; tylko pojedyncze ukończone dni `[d,d]` rozszerza się
+na `[d,d+1)`. Nierozpoznane źródło dni nie kwalifikuje do Johannsen;
+pozostaje wyłącznie Mayo spełniający dotychczasowe warunki. Cały przedział
+musi mieścić się w 2–5 mies.; przecięcie 3,5 daje osobne osie/statusy,
+bez średniej lub wspólnego werdyktu.
+Ręczne 3 mies. pozostaje [3,4). Dla kalendarzowego wejścia 105 dni
+([104,105] dni) LH3,6 u chłopca jest `within` wobec 0,62–4,08 i `above`
+wobec 0,54–3,32. To nie dzienne progi biologiczne ani zmiana kryteriów
+oceny rozwoju.
+
+Znana właściwa metoda Mayo zachowuje Mayo; brak znanej rzeczywistej metody
+pozwala jedynie na orientacyjny wybór źródła. Znana niezgodność metody,
+materiału, leczenie/stymulacja i sprzeczny kontekst nie są pomijane.
+Znane wcześniactwo zachowuje ograniczenia Greaves. Przy nieznanym GA
+oraz odpowiedzi „nie” na wcześniactwo porównanie jest warunkowe z notką
+„Zakres dla urodzonych w 37+0–41+6 tyg. ciąży.” Nie dopisuje się GA.
+Nieznane wcześniactwo i GA albo znane GA poza populacją nie uruchamiają
+Johannsen. Poza oknem wieku pozostaje tylko Mayo spełniający pozostałe warunki,
+z dotychczasowymi ograniczeniami; nie tworzy się zastępczej normy.
+
+Oczekiwane zmiany przy kwalifikującym automatycznym kontekście:
+M120 dni/LH3,6 → `above` 0,54–3,32 (Mayo: nie przekracza 5,0);
+F90 dni/FSH15 → `within` 1,23–17,4 (Mayo: powyżej 12,5);
+M90 dni/LH0,1 → `below` 0,62–4,08 (Mayo: brak dolnego minimum).
+Dni w tych przykładach pochodzą z kalendarza formularza głównego,
+z istniejącym przedziałem [dni−1,dni] włącznie. Dobór źródła nie zależy
+od stężenia. Nie dodaje się pól, diagnoz CHH/DSD/CPP, progów rozróżniania
+płci, ilorazu LH/FSH ani zmian wykresu życia. Snapshot zachowuje źródło,
+operatory i pochodzenie polityki; historia nie jest przeliczana.
+Regresje obejmują osiem wierszy, granice i precyzję wieku, kwalifikację,
+cenzurowanie oraz historię/offline. Są wymaganiami technicznymi,
+nie deklaracją walidacji klinicznej.
 
 #### LAB-PUBERTY — osie i statusy wariantów wieku, 2026-10-12
 
@@ -1292,10 +1380,11 @@ materiałów lub populacji i nie tworzy zwalidowanej trajektorii życia.
 **Wpływ kliniczny:** zmienia się wizualna relacja wyniku i okresów życia,
 dlatego zmianę opisano klinicznie. Wszystkie liczby źródłowe, profile,
 warunki kwalifikacji, normy laboratoryjne, konwersje, interpretacje i
-zapis pacjenta pozostają bez zmian. Jedyny zwykły żeński profil AMH
+zapis pacjenta pozostają bez zmian. Jedyny w chwili tej naprawy żeński profil AMH
 `ljubicic2022-female-amh` nadal obejmuje 0,02–1 roku. Starsza ilustracja
 nie aktywuje punktów w wieku 19,668 lub 35 lat. Porównanie płci, męskie
-AMH i pozostałe hormony zachowują wcześniejsze kontrakty.
+AMH i pozostałe hormony zachowują wcześniejsze kontrakty. Zakres punktów
+żeńskich rozszerza osobna zmiana `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10.
 
 **Syntetyczne wejście → oczekiwane zachowanie:**
 
@@ -1316,6 +1405,112 @@ ograniczenia, hash zatwierdzonej makiety i zakres jej przeglądu:
 [audyt żeńskiego AMH](hormone-lifespan/evidence/female-amh-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną
 całego połączonego wykresu.
+
+### HORMONE-FEMALE-REFERENCE-POINTS — mediany AMH i inhibiny B, 2026-10-13
+
+**Problem i zgoda właściciela:** 15-latka z AMH 0,45 ng/mL lub inhibiną B
+w zwykłym widoku otrzymywała linię i wiek, lecz brak mediany. Właściciel
+zaakceptował udostępnienie źródłowych odniesień z krótkimi komentarzami
+granicznymi, bez nowych pól. Zmiana rozszerza wcześniejszy kontrakt
+punktów opisany historycznie w sekcjach z 11–12 października.
+
+**Źródła i kwalifikacja:** ponownie odczytano dostępne pełne teksty
+Jopling 2018, DOI `10.1002/edm2.21`, oraz Borelli-Kjær 2025, DOI
+`10.1210/clinem/dgae439`. Hashe, liczby, populacje i ograniczenia zawiera
+[przegląd źródłowy](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
+
+- Jopling, tabela 1: osocze litowo-heparynowe, Access AMH, pozostałości
+  próbek szpitalnych po wykluczeniu podejrzanych endokrynopatii/DSD,
+  brak Tannera. Mediany pełnych grup: 14,58/11,44/20,42/17,87/21,14 pmol/L,
+  N=42/42/47/33/30. Routing `(1,5)`, `[5,8)`, `[8,12)`, `[12,15)`,
+  `[15,18)` jest jawną konwencją aplikacji bez luk 4,9–5 itd.
+  Oryginalne etykiety 1–4,9 … 15–18,9 i N pozostają. Autorzy podali wiek
+  w dniach i ogólny zakres do 18 lat, ale nie regułę zaokrągleń ani
+  najstarszy rzeczywisty wiek. Cap <18 jest konserwatywny; mediany są
+  stałymi wartościami grup, nie p50 dokładnego wieku ani stadium.
+- Dokładnie 1 rok nadal należy do Ljubicic. Pierwszy Jopling ma
+  `minAgeExclusive`; nieprecyzyjny wiek przecinający źródła lub grupy
+  nie otrzymuje mediany wybranej ze środka. FDA nie jest aktywowane.
+- Borelli, ryc. 1: surowica Gen II ELISA, 648 dziewcząt 5,6–20,2 lat
+  w większym żeńskim zbiorze. Zwykły profil początkowo miał kwalifikację
+  8–20; uzupełnienie po zgłoszeniu 6-latki, opisane poniżej, rozszerza ją
+  do 5,6–20 włącznie. Wszystkie 24 przybliżone węzły 5,6–47 pozostają
+  w PCHIP, a odrębne porównanie płci zachowuje okno 8–20. ±2 pg/mL
+  oznacza digitalizację, nie przedział ufności. Cyklu nie standaryzowano, dane antykoncepcji były
+  niepełne; nie jest to mediana konkretnej fazy lub wyłącznie bez leczenia.
+
+`compatibleSpecimenIds` pozwala odróżnić osocze Jopling od surowiczych
+profili. Nieznane metoda/materiał dopuszczają porównanie edukacyjne
+z komentarzem pochodzenia; nie potwierdzają zgodności próbki. Znana
+niezgodność i przeciwwskazania blokują punkt. Pozostałe profile zachowują
+dotychczasową domyślną politykę materiału.
+
+**Wpływ kliniczny:** nowe odniesienia mogą pokazać relację stężenia do
+mediany w starszym wieku. Nie zmieniają laboratoryjnych norm, progów,
+statusów, konwersji, zapisu, geometrii ani skal. Wynik poniżej mediany
+nie oznacza automatycznie „poniżej normy”. Jasny znacznik nie jest
+przyciągany do linii; AMH jest podpisane jako mediana grupy, a inhibina B
+jako przybliżone odniesienie wieku.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistych funkcji:**
+
+- F15, AMH 0,45 ng/mL, nieznane metoda/materiał → mediana grupy
+  15–18,9: 21,14 pmol/L ≈2,96 ng/mL; wynik 0,45, bez werdyktu normy.
+- F4,99/F5/F14,99/F15 → 14,58/11,44/17,87/21,14 pmol/L; bez luk.
+- F dokładnie 1 rok → Ljubicic; `[1,1+1/12)` lub `[14.99,15.01]`
+  → brak jednej mediany; F18 → brak Jopling/FDA.
+- F15, AMH, jawnie surowica lub niezgodna metoda → brak punktu,
+  zachowana krzywa i wiek, krótki powód.
+- F dokładnie 8/15/20 lat, inhibina B → ≈14/44/34 pg/mL;
+  `[15,16)` → przedział median około 40–44; >20 → brak tego profilu.
+- Pusty/cenzurowany wynik, zmiana jednostki, zero/ponadskalowy wynik,
+  zmiana osoby/analitu, zbliżenie, telefon i pełny ekran zachowują
+  wcześniejsze reguły; wpisanie i wyczyszczenie nie zmieniają linii.
+
+Kontrole obejmują silnik produkcyjny, generator danych, renderer i
+rzeczywisty formularz. Status wykonania należy do raportu implementacji;
+te przypadki nie deklarują zaliczonych testów ani walidacji klinicznej.
+Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
+
+#### Uzupełnienie — inhibina B od 5,6 roku, 2026-10-13
+
+**Problem i akceptacja:** dla dziewczynki 6 lat z wynikiem 33 pg/mL silnik
+zwracał `unsupported-age`, mimo dostępnej krzywej i źródła liczbowego.
+Dolne 8 lat w PR #651 pochodziło z wcześniej udostępnionego porównania
+pokwitania, nie z granicy obserwacji Borelli. Właściciel zaakceptował
+poszerzenie zwykłego profilu do **5,6–20 lat włącznie**, bez zmiany
+geometrii, norm i bez dodatkowych pól.
+
+Ponownie odczytano zachowany pełny artykuł Borelli-Kjær 2025,
+[DOI 10.1210/clinem/dgae439](https://doi.org/10.1210/clinem/dgae439),
+ryc. 1, kohorty, metody i ograniczenia oraz zachowany suplement walidacji
+Gen II [DOI 10.6084/m9.figshare.26056558.v1](https://doi.org/10.6084/m9.figshare.26056558.v1).
+Kohorta obejmuje 648 dziewcząt 5,6–20,2 lat; żeńskie próbki: surowica,
+Beckman Coulter Inhibin B Gen II ELISA, LOD 3 ng/L = 3 pg/mL.
+Odczyt mediany GAMLSS przy 6 latach wynosi około **11 pg/mL**
+(zachowana digitalizacja 10,74, zaokrąglona do 11). Około ±2 pg/mL
+jest oszacowaniem odczytu ryciny, nie przedziałem ufności ani normą.
+Wartość centralna jest ponad LOD; nie imputujemy wyniku pacjentki.
+Suplement nie zawiera numerycznych parametrów LMS. Nie dodajemy nowych
+publikacji, pomiarów, odczytów ani współczynników między metodami.
+
+Profil `borelli2025-female-inhb-age-5p6-20`, polityka i dane punktu
+`2026-10-13.2`; silnik, wszystkie 24 węzły PCHIP 5,6–47, pięć profili
+AMH i ich routing `2026-10-13.1` pozostają niezmienione. Nowy zakres
+jest zwykłym odniesieniem wieku, bez wymogu Th1. Cały nieprecyzyjny wiek
+musi mieścić się w profilu; luka >1–<5,6, wiek >20, niezgodna metoda
+lub materiał, znane przeciwwskazania oraz wyniki cenzurowane zachowują
+ograniczenia. Porównanie płci w pokwitaniu nadal obejmuje 8–20.
+
+**Wpływ i przypadki:** F6/33 pg/mL → punkt 33 i mediana ≈11; F5,6 → ≈11;
+przedział `[6,6+1/12)` kwalifikuje się; wiek 5,59–5,61 przecina dolną granicę
+i nie otrzymuje mediany wybranej ze środka. F15 → nadal ≈44.
+Bycie powyżej mediany nie jest wyjściem poza normę. Krzywa i skala pozostają
+identyczne przed wpisaniem i po wyczyszczeniu; normy laboratoryjne,
+werdykty i zapis nie zmieniają się. Są to przypadki do weryfikacji rzeczywistych
+funkcji i formularza, nie deklaracja wykonanych testów ani walidacji klinicznej.
+Źródłowy ślad i akceptacja dopisane do istniejącego
+[przeglądu odniesień](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
 
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
@@ -1461,8 +1656,11 @@ osobnych modeli nie harmonizuje ich populacji lub wpływu cyklu.
 się. Zwykły profil `ljubicic2022-female-inhb` pozostaje ograniczony
 do donoszonych dziewczynek 0,02–1 roku, obie granice włącznie. Odrębny
 profil porównania płci `borelli2025-female-inhb-puberty-comparison`
-nadal działa tylko w tym porównaniu, 8–20 lat. Nie trafia do globalnego
-`patientPointData`. Inne hormony i wykresy męskie zachowują swój kontrakt.
+w tej historycznej naprawie działał tylko w tym porównaniu, 8–20 lat. Nie trafił do globalnego
+`patientPointData` w tej historycznej naprawie. Osobne rozszerzenie
+`HORMONE-FEMALE-REFERENCE-POINTS` z 13.10 udostępnia te same mediany
+w zwykłym widoku, po uzupełnieniu dla dzieci w wieku 5,6–20 lat.
+Inne hormony i wykresy męskie zachowują swój kontrakt.
 
 **Syntetyczne wejście → oczekiwane zachowanie:**
 
@@ -1472,8 +1670,10 @@ nadal działa tylko w tym porównaniu, 8–20 lat. Nie trafia do globalnego
   krzywa i skala. Wynik 80 ng/L daje to samo; 0 pg/mL jest na osi.
 - Pusty/wyczyszczony/cenzurowany wynik → ta sama linia, bez nowej kropki.
 - Wiek 0,02/1 roku → p50 odpowiednio 30,583/16,329 pg/mL. Wiek
-  <0,02 lub >1 roku, wcześniactwo, nieznane donoszenie albo znana
-  niezgodna metoda nie otrzymują zastępczego odniesienia liczbowego.
+  <0,02 lub >1 roku nie kwalifikuje do tego profilu niemowlęcego;
+  późniejsze rozszerzenie Borelli, obecnie 5,6–20, opisano powyżej. Wcześniactwo,
+  nieznane donoszenie albo znana niezgodna metoda nie otrzymują
+  zastępczego odniesienia niemowlęcego.
 - Dołączenie LH/FSH, zbliżenie, pełny ekran i 320 px → ta sama
   kanoniczna krzywa i stała skala; bez przenoszenia mediany na ilustrację.
 
@@ -1778,7 +1978,8 @@ Ten zapis określa oczekiwany kontrakt, nie wynik testów ani walidację klinicz
 
 **Decyzja właściciela:** wdrożyć zaakceptowane makiety porównania płci
 inhibiny B w minipuberty i pokwitaniu, wraz z osobno zaakceptowanym
-odniesieniem wyniku dziewcząt 8–20 lat wyłącznie w porównaniu pokwitania.
+odniesieniem wyniku dziewcząt 8–20 lat, w tej historycznej zmianie
+wyłącznie w porównaniu pokwitania. Zwykłe widoki rozszerzono osobno 13.10.
 To zmiana prezentacji oraz rozszerzenie kwalifikacji edukacyjnego punktu,
 nie refaktoryzacja bez wpływu na wynik. Nie zmienia norm laboratoryjnych,
 oceny stadium, diagnozy, zapisu ani historii.
@@ -1829,7 +2030,10 @@ w `inhibin-comparison-reference-data.json` / `inhibinComparisonReferenceData`,
 poza globalnym `patientPointData`. Wszystkie 24 dotychczasowe węzły
 ryc. 1 z wieku 5,6–47 lat pozostają w PCHIP, ale kwalifikacja obejmuje
 wyłącznie 8–20 lat włącznie w tym porównaniu. Nie aktywuje to punktu
-w zwykłych widokach ani poza tym wiekiem. Istniejący `evaluate`
+w zwykłych widokach w ramach tej historycznej zmiany ani poza tym wiekiem.
+Osobne rozszerzenie `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10 udostępnia
+te same mediany także w zwykłym widoku, po uzupełnieniu w wieku 5,6–20.
+Istniejący `evaluate`
 kwalifikuje własną płeć z zachowaniem reguł wieku, metody, materiału,
 jednostki i znanych przeciwwskazań; metoda drugiej płci nie blokuje
 własnego zgodnego odniesienia. Panele obserwacji Kuiri-Hänninen,
@@ -3460,9 +3664,9 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 - bez odtwarzania: (1) nawigacja z celem, np. sekcja konta w Ustawieniach albo wskazanie w Jednostkach lab., także Wstecz do takiego wpisu. `P()` i `Sn_historyEvent` wpisują cel do historii (`shellHref`) przed `w()`, a `Sn_setTarget` doręcza go po `w()`, więc `Pp_odtworz` rozpoznaje cel z `history.state` — cel ma pierwszeństwo. (2) Nowy dokument w ramce: przeładowany panel (`B`, `Gp5_przeladuj`, `stale`) startuje od góry, a `load` porzuca zapamiętaną pozycję;
 - lista i karta pacjenta (`Sn_openPatient`) bez wyjątku: Start pod listą wraca na zapamiętane miejsce, a lista ma własne przewijanie.
 
-**Dlaczego przed `Gp_p`.** Pierwszy powrót do Start po wpisaniu pacjenta zawsze odtwarza sesję (`Gp_p`), bo odcisk sesji zmienił się od wczytania ramki. `vildaPersistRestoreAll()` przebudowuje wtedy `#intakeMeasurements` bez wiersza historii (telefon: 487 → 235 px; desktop: −143 px), a wiersz wraca dopiero w następnym zadaniu. Pierwsza wersja odtwarzała przewinięcie w mikrozadaniu po `Gp_p`, więc trafiała w skrócony dokument. Na telefonie w oknie tuż pod kartą cały widok stał wtedy 252 px dalej, także po oknie powrotu, bo zakotwiczenie przewinięcia utrwalało przesunięty widok. Przewinięcie ustawione przed `Gp_p` przeglądarka trzyma przy treści: gdy karta nad oknem chwilowo się skraca, `scrollY` przesuwa się razem z nią. Na dole strony telefonu pierwsza klatka ma `scrollY` 7408 zamiast 7660, ale te same elementy stoją w tych samych miejscach, a po powrocie wiersza `scrollY` wraca do 7660.
+**Dlaczego przed `Gp_p`.** Pierwszy powrót do Start po wpisaniu pacjenta zawsze odtwarza sesję (`Gp_p`), bo odcisk sesji zmienił się od wczytania ramki. `vildaPersistRestoreAll()` przebudowuje wtedy `#intakeMeasurements` bez wiersza historii (telefon: 487 → 235 px; desktop: −143 px), a wiersz wraca dopiero w następnym zadaniu (od P-SPOZYCIE-POWROT — w mikrozadaniu po `Gp_p`, przed pierwszą klatką). Pierwsza wersja odtwarzała przewinięcie w mikrozadaniu po `Gp_p`, więc trafiała w skrócony dokument. Na telefonie w oknie tuż pod kartą cały widok stał wtedy 252 px dalej, także po oknie powrotu, bo zakotwiczenie przewinięcia utrwalało przesunięty widok. Przewinięcie ustawione przed `Gp_p` przeglądarka trzyma przy treści: gdy karta nad oknem chwilowo się skraca, `scrollY` przesuwa się razem z nią. Na dole strony telefonu pierwsza klatka ma `scrollY` 7408 zamiast 7660, ale te same elementy stoją w tych samych miejscach, a po powrocie wiersza `scrollY` wraca do 7660.
 
-**Ustalenie poza zakresem (do decyzji właściciela).** Dwuetapową przebudowę karty „Szacowane spożycie energii” w `Gp_p` widać, gdy karta jest w oknie w chwili powrotu. Przez jedną klatkę karta nie ma wiersza historii: na desktopie treść pod kartą podnosi się o 143 px, a na samym dole strony desktopu, gdzie karta zawsze jest w oknie, treść nad kartą obniża się o 143 px. W następnej klatce wszystko wraca na miejsce. Dawniej panel wracał na górę, więc tego nie było widać. Przyczyną jest odtwarzanie wierszy karty, nie przewinięcie: `vilda_persist_runtime.js` odtwarza wiersz bieżący, a wiersze historii dopisuje później synchronizacja z pomiarami zaawansowanymi. Naprawa wymaga zmiany w modułach spożycia i persistence, więc nie jest częścią tej zmiany.
+**Ustalenie poza zakresem (do decyzji właściciela).** Dwuetapową przebudowę karty „Szacowane spożycie energii” w `Gp_p` widać, gdy karta jest w oknie w chwili powrotu. Przez jedną klatkę karta nie ma wiersza historii: na desktopie treść pod kartą podnosi się o 143 px, a na samym dole strony desktopu, gdzie karta zawsze jest w oknie, treść nad kartą obniża się o 143 px. W następnej klatce wszystko wraca na miejsce. Dawniej panel wracał na górę, więc tego nie było widać. Przyczyną jest odtwarzanie wierszy karty, nie przewinięcie: `vilda_persist_runtime.js` odtwarza wiersz bieżący, a wiersze historii dopisuje później synchronizacja z pomiarami zaawansowanymi. Naprawa wymaga zmiany w modułach spożycia i persistence, więc nie jest częścią tej zmiany. *Rozstrzygnięte poleceniem właściciela 2026-10-13: wpis P-SPOZYCIE-POWROT niżej. Poprawka nie zmienia modułów spożycia ani zapisu, tylko chwilę wykonania kroku końcowego odtworzenia.*
 
 **Czego nie zmieniono.** Ukrywanie paneli (`display:none`) i P-PANEL-POWROT (klasa `vilda-panel-powrot` nadal przed pokazaniem). Pierwsze otwarcie panelu startuje od góry, jak dotąd; mobilna korekta `ios26-ui.js` działa tylko na samej górze strony, więc nie nadpisze odtworzonej pozycji. Poziome przewinięcie nie jest odtwarzane. Przewijanie wewnątrz ramki (`.vilda-auth-root`, przewijane listy) zachowuje przeglądarka. Playwright nie ma tu WebKita, więc zachowanie w Safari na iPhonie i iPadzie do potwierdzenia przez właściciela. Bez zakotwiczenia przewinięcia przebudowa nad oknem może tam przesunąć widok na jedną klatkę.
 
@@ -3471,6 +3675,71 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 - `tests/e2e/powloka-przewiniecie-panelu.spec.mjs` (3, desktop) i `tests/e2e/powloka-przewiniecie-panelu-mobile.spec.mjs` (1, telefon) — prawdziwa powłoka. Elementy w całości widoczne przed wyjściem stoją w oknie w tych samych miejscach w każdej widocznej klatce po powrocie, od pierwszej, a po oknie powrotu `scrollY` równa się zapamiętanemu. Ukryta ramka czyta 0 (kontrola przyczyny), a przycisk „na górę” powłoki jest widoczny. Desktop: Start 679 px; cel konta w Ustawieniach — sekcja otwarta i w oknie, zapamiętane miejsce nie pojawia się w żadnej klatce, a zwykły powrót odtwarza; lista pacjentów otwierana z DocPro — Start pod listą i po jej zamknięciu na zapamiętanym miejscu. Telefon: okno tuż pod kartą szacowanego spożycia (pierwszy powrót, z przebudową), 513 px i dół strony; dock widoczny, bez poziomego przewijania. Asercje czekają na warunek (minięcie okna powrotu, liczba klatek), nie na upływ czasu. Na bazie padają wszystkie 4; przy odtworzeniu po `Gp_p` pada wariant „tuż pod kartą”.
 
 **Wersje.** `vilda_shell.js` 62; SW 1.1.244 → 1.1.245 (numer 1.1.244 nadał równolegle #641).
+
+### P-USTAWIENIA-CEL — sekcja celu w Ustawieniach od pierwszej klatki, bez mignięcia poprzedniego miejsca (SW 1.1.257, 2026-10-13, polecenie właściciela)
+
+**Skąd.** Test „cel nawigacji ma pierwszeństwo” z P-PANEL-PRZEWINIECIE padał tylko w CI, i to raz po raz. Padł na PR #652 (etap 2 P-NOWE-URZADZENIE; wcześniej dwa razy na #643) i w pierwszym podejściu CI #653, które kodu #652 nie miało. Lokalnie nie padał nigdy. Za każdym razem pierwsza widoczna klatka ramki Ustawień pokazywała miejsce sprzed wyjścia z panelu (1010 px), a dopiero następne — sekcję konta (2250 px). Właściciel polecił poprawkę 2026-10-13 („zrób to”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Co było.** Powłoka doręcza cel nawigacji (`vilda:shell-navigate-target`, np. awatar konta w nagłówku → `ustawienia.html#settings-section-account`) w tym samym zadaniu, w którym pokazuje ramkę. P-PANEL-PRZEWINIECIE nie odtwarza wtedy zapamiętanego przewinięcia, bo cel ma pierwszeństwo. Ustawienia otwierały jednak sekcję i przewijały do niej dopiero w `setTimeout(0)`. Ten odstęp jest potrzebny przy pierwszym wczytaniu strony z haszem (kłódki sekcji ustawia następny słuchacz `DOMContentLoaded`), ale został użyty także dla celu z powłoki. Każda klatka namalowana przed tym zadaniem pokazywała panel tam, gdzie akurat był. W Chromium 141 była to góra strony (ukryta ramka zeruje przewinięcie; zmierzone lokalnie). W Chromium 149 w CI było to miejsce sprzed wyjścia, przypuszczalnie dlatego, że ta wersja nie zeruje przewinięcia ukrytej ramki. Nie da się tego sprawdzić bez Chromium 149. Na wolnym lub zajętym komputerze użytkownik widział więc przez chwilę niewłaściwe miejsce, zanim strona skoczyła do sekcji.
+
+**Co jest** (`ustawienia.html`, skrypt deep-linków): cel z powłoki otwiera sekcję i przewija do niej od razu, w tym samym zadaniu, w którym powłoka pokazuje ramkę, czyli przed pierwszym malowaniem. To bezpieczne, bo powłoka doręcza cel dopiero po `load` ramki, a wtedy wszystkie słuchacze `DOMContentLoaded`, w tym kłódki, już zadziałały. Sekcja zablokowana kłódką czeka na odblokowanie jak dotąd. Wspólna funkcja `openPendingSection()` zastępuje treść dawnego `setTimeout`, a zwykły deep-link (pierwsze wczytanie z haszem, `hashchange`) nadal idzie przez `setTimeout(0)`.
+
+**Wpływ kliniczny.** Brak.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| powłoka: Ustawienia przewinięte na połowę, Start, potem cel `#settings-section-account`; zadania ramki opóźnione o 250 ms (zajęty procesor) | w każdej widocznej klatce, od pierwszej, sekcja konta jest otwarta, a jej nagłówek w oknie; zapamiętane miejsce nie pojawia się w żadnej klatce |
+| to samo bez opóźnienia | jak wyżej (dawny test, dotąd niestabilny w CI) |
+| zwykły powrót do Ustawień bez celu | zapamiętane miejsce, jak w P-PANEL-PRZEWINIECIE |
+| sekcja celu zablokowana kłódką | sekcja czeka na odblokowanie, jak dotąd |
+| samodzielne `ustawienia.html#…` (pierwsze wczytanie, `hashchange`) | bez zmian: sekcja otwiera się w następnym zadaniu |
+
+**Testy.** `tests/e2e/powloka-przewiniecie-panelu.spec.mjs`: nowy test „cel nawigacji przy zajętej ramce”. Opóźnia zadania `setTimeout` w ramce Ustawień o 250 ms, więc wyścig zachodzi za każdym razem, i w każdej widocznej klatce sprawdza otwartą sekcję konta z nagłówkiem w oknie. Bez poprawki pada 2/2 (pierwsze klatki: `scrollY` 0, sekcja zamknięta, poza oknem), z poprawką przechodzi 3/3. Dawne testy tego pliku, `powloka-przewiniecie-panelu-mobile.spec.mjs`, `powloka-konto-stan-narzedzi.spec.mjs` i `ustawienia-*.spec.mjs` przechodzą bez zmian.
+
+**Wersje.** `ustawienia.html` (strona z pamięci SW, bez `?v=`); SW 1.1.256 → 1.1.257.
+
+### P-SPOZYCIE-POWROT — karta „Szacowane spożycie energii” po powrocie do panelu bez klatki bez wiersza historii (SW 1.1.259, 2026-10-13, polecenie właściciela)
+
+**Skąd.** Ustalenie poza zakresem z P-PANEL-PRZEWINIECIE. Właściciel polecił poprawkę w osobnym PR 2026-10-13 („napraw migotanie kart spożycia w osobnym PR”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych ani treści zapisu (JSON, persistence, autosave) czy synchronizacji. Zmienia się tylko chwila wykonania kroku końcowego odtworzenia przy pokazaniu panelu.
+
+**Pomiar przed zmianą** (Playwright z Chromium 141 w środowisku agenta; prawdziwa powłoka `app.html`; konto sejfu z fikcyjnym hasłem; fikcyjny pacjent: chłopiec 9 lat, 135 cm, 40 kg, tryb profesjonalny; Start → DocPro → Start; stan `#intakeMeasurements` w każdej widocznej klatce ramki Start):
+- pierwsza widoczna klatka po powrocie miała wiersz bieżący bez wiersza historii (1 wiersz, 0 historii zamiast 2 i 1). `#intakeMeasurements` było niższe o 143 px na desktopie 1440×1000 (269 → 126 px) i o 252 px na telefonie, iPhone 15 Pro (487 → 235 px). Wiersz wracał w następnej klatce, a treść pod kartą podskakiwała w górę i z powrotem;
+- to samo po zmianie masy w DocPro i powrocie do Start;
+- pacjent z punktami terapii GH i pacjent z wpisanymi pomiarami historycznymi — bez migotania. Wiersze historii z danymi odtwarzają się synchronicznie razem z kartą.
+
+**Przyczyna.** Przy powrocie powłoka odtwarza w panelu stan wspólny i sesję (`Gp_p`: `vildaPersistRestoreAll`, `vildaSession.restore`), gdy zmienił się odcisk sesji. `vildaPersistRestoreAll` (`vilda_persist_runtime.js`) przebudowuje wiersze karty synchronicznie, z zapisanych wierszy (`intakeRowsUI`) albo z historii (`intakeHistory`). Pusty wiersz historii nie jest zapisywany. To afordancja „co najmniej jeden wiersz historii”, którą dorabia dopiero parowanie wierszy zaawansowane↔spożycie (`vildaEnsureAdvancedIntakePairing`) w kroku końcowym odtworzenia. Ten krok to import punktów GH, zdjęcie flag zawieszenia synchronizacji, parowanie, uzgodnienie historii wzrastania, `calculateBasicGrowth()` i zaplanowanie zapisu. Szedł w `setTimeout(0)`, więc przeglądarka malowała co najmniej jedną klatkę pomiędzy.
+
+**Rozwiązanie.**
+- `vilda_persist_runtime.js`: krok końcowy idzie przez kolejkę (`Sp_odloz`), nadal z `setTimeout(0)`. Nowe `window.vildaPersistRestoreFinishNow()` (`Sp_dokoncz`) wykonuje od razu kroki zaległe w chwili wywołania, w kolejności ich powstania. Każdy krok wykonuje się raz: timer po wykonaniu nic nie robi. Treść kroku jest bez zmian.
+- `vilda_shell.js` (`Gp_p`): przy każdym pokazaniu panelu powłoka woła `vildaPersistRestoreFinishNow()` po odtworzeniu sesji, a przed odświeżeniem podsumowania (`Gp_u`). Kolejność zostaje jak dotąd: stan wspólny, sesja, krok końcowy. Import punktów GH rusza od razu, a parowanie i przeliczenie kończą się w mikrozadaniu, przed pierwszym malowaniem. Wywołanie stoi poza warunkiem zmiany odcisku sesji, więc kończy też krok zaległy po odświeżeniu panelu w tle (`It`), gdy panel zostaje pokazany przed timerem.
+
+**Czego nie zmieniono.** Treść i kolejność operacji kroku końcowego, flagi zawieszenia synchronizacji i zdarzenie `vilda:persist-restored` (nadal na końcu `vildaPersistRestoreAll`, przed krokiem końcowym). Bez zmian zostają JSON, persistence, autosave i synchronizacja. Start strony i odświeżanie ukrytych paneli w tle zostają przy `setTimeout(0)`. Moduły spożycia (`vilda_estimated_intake*.js`) i parowanie (`vilda_advanced_growth.js`) się nie zmieniają. Pierwsza klatka po powrocie z odtworzeniem przychodzi później o czas kroku końcowego; dotąd ten czas przypadał na klatkę po pierwszej. Od polecenia nawigacji do pierwszej klatki zmierzono: prosty pacjent 168–192 ms w bazie wobec 213–229 ms po zmianie (raz 294 ms przy równoległych testach), masa zmieniona w DocPro 189–190 wobec 195–223 ms.
+
+**Parytet stanu** (Playwright, desktop; baza, prototyp i wersja końcowa, każda po dwa przebiegi). Migawka 2,5 s po oknie powrotu obejmowała: wiersze tabel spożycia i zaawansowanej (wartości, blokady, `data-gh-id`), teksty wyników, `collectUserData()`, sesję główną, stan wspólny, `intakeHistory`, `advancedGrowthData`, punkty GH, kcal i flagi. Dla powrotu do DocPro i Klirensu: tekst panelu, wszystkie pola, rekord, sesję, stan wspólny i flagi.
+- Prosty pacjent, historia pomiarów (dwa powroty), masa zmieniona w DocPro, DocPro, Klirens: 0 różnic baza ↔ poprawka. Różnią się tylko czas pierwszej klatki i jej zawartość, czyli to, co poprawka naprawia.
+- Punkty terapii GH (dwa powroty): migawki różnią się między przebiegami także w samej bazie. Jedna różnica to wyścig wczytywania tabel Bayley-Pinneau i RWT (`missing-dataset` zamiast `missing-input` w `advancedGrowthData`). Druga to to, czy przed migawką sesję główną zapisała jeszcze ramka Start, czy ostatni był zapis DocPro. Dziennik zapisów sesji głównej (3 przebiegi bazy i 3 poprawki, te same warunki) był w obu wariantach identyczny: te same ramki, w tej samej kolejności, z tą samą treścią.
+
+**Wpływ kliniczny.** Brak: te same wartości, wiersze, wyniki i zapis.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| powłoka, desktop 1440×1000: chłopiec 9 lat, 135 cm, 40 kg, tryb profesjonalny, karta spożycia w oknie; Start → DocPro → Start; zadania `setTimeout` w ramce Start opóźnione o 250 ms (zajęty procesor) | w każdej widocznej klatce, od pierwszej, `#intakeMeasurements` ma wiersz historii i wysokość sprzed wyjścia (269 px); po powrocie karta jak przed wyjściem |
+| to samo na telefonie (iPhone 15 Pro) | jak wyżej, 487 px; dock widoczny, bez poziomego przewijania |
+| `vildaPersistRestoreAll()` bez `vildaPersistRestoreFinishNow()` (start strony, odświeżanie w tle) | krok końcowy w `setTimeout(0)`, jak dotąd |
+| `vildaPersistRestoreAll()`, potem `vildaPersistRestoreFinishNow()` | import punktów GH od razu; parowanie, historia wzrastania i przeliczenie w mikrozadaniach, bez timera; timer potem nic nie robi |
+| dwa zaległe odtworzenia, potem `vildaPersistRestoreFinishNow()` | oba kroki, w kolejności; timery nic nie dokładają |
+| `vildaPersistRestoreFinishNow()` przy pustej kolejce | nic |
+
+**Testy.**
+- `tests/unit/spozycie-powrot.test.mjs` (6) — prawdziwy `vilda_persist_runtime.js` na atrapie okna z ręcznie sterowanymi timerami. Sprawdza: bez `FinishNow` krok czeka na timer; z `FinishNow` kończy się w mikrozadaniach, raz; kilka zaległych kroków idzie w kolejności; pusta kolejka niczego nie robi. Kontrola negatywna: krok wprost w `setTimeout(0)`, jak przed poprawką — `FinishNow` niczego nie przyspiesza. Strażnik źródła powłoki pilnuje kolejności w `Gp_p` i braku wywołania w `It`. Na bazie pada 5 z 6.
+- `tests/e2e/spozycie-powrot-powloka.spec.mjs` (desktop) i `tests/e2e/spozycie-powrot-powloka-mobile.spec.mjs` (telefon), wspólne kroki w `tests/support/spozycie-powrot.mjs` — prawdziwa powłoka. Zadania z `setTimeout` w ramce Start są na czas powrotu opóźnione o 250 ms, jak w P-USTAWIENIA-CEL, więc krok oparty na timerze zawsze przegrywa z pierwszą klatką. Próbnik w każdej widocznej klatce sprawdza wiersz historii i wysokość karty. Kontrola: powrót odtworzył stan wspólny (`vilda:persist-restored`). Asercje czekają na warunek (minięcie okna powrotu, zakończony krok końcowy, liczba klatek), nie na upływ czasu. Na bazie pada 4/4: pierwsze klatki mają 0 wierszy historii i 126 px zamiast 269 px na desktopie, a 235 px zamiast 487 px na telefonie. Z poprawką przechodzi 8/8 przy 4 workerach.
+- `tests/unit/sesja-glowna-po-wczytaniu.test.mjs`: strażnik `Gp_p` uzupełniony o wywołanie po sesji. W `tests/e2e/powloka-przewiniecie-panelu-mobile.spec.mjs` zmieniono tylko komentarz.
+
+**Wersje.** `vilda_persist_runtime.js` 21, `vilda_shell.js` 63; SW 1.1.258 → 1.1.259 (numer 1.1.258 nadał równolegle #658).
 
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
@@ -3502,6 +3771,8 @@ Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczen
 
 **Ustalenie poza zakresem (do decyzji właściciela).** `vilda_puberty_source.js` przy każdym ponownym odczycie tego samego pacjenta ogłasza `loading` bez danych, a potem `ready`. Daje to zbędne pełne przeliczenia na każde zdarzenie synchronizacji, sesji i `storage`, a przy synchronizacji co ok. 20 s. Po tej zmianie ich nie widać, ale kosztują pracę procesora i baterię. Komentarz w module opisuje czyszczenie przy ponownym odczycie jako celowe: wynik starszej generacji odczytu nie potwierdza bieżącego rekordu. Zmiana, np. zachowanie danych do czasu odczytu przy tym samym `patientId`, wymaga więc decyzji właściciela.
 
+*(Uzupełnienie 2026-10-12: rozstrzygnięte decyzją właściciela w P-POKWITANIE-W-TLE — wpis niżej.)*
+
 **Testy.** `tests/e2e/wyniki-przeliczenie-w-tle.spec.mjs` (2, prawdziwa powłoka, desktop):
 1. Wpisany pacjent, dwa `update()` z rzędu. `#results` ani razu nie ma `display:none` (obserwator stylu z `oldValue`). Nowy `#bmiResult` w chwili wstawienia ma `opacity` 1, nie ma `animate-in` ani biegnącej animacji. Nie startuje żadna z animacji `fadeSlideUp`, `ios-enter`, `pulseBG`, `rotateSummaryBorder`. Obrys „Podsumowania wyników” to ta sama animacja (`getAnimations()`), a położenie przycisków i karty się nie zmienia. Odtworzone pulsowania mają fazę poprzednika (±2 ms, odczyt po `Animation.ready`), a liczba BMI ma tylko wartość „21,9”. Po zmianie masy na 41 kg nowy wynik wjeżdża od `opacity` 0 z `fadeSlideUp`.
 2. Pacjent zapisany w sejfie i wczytany jak z listy, potem cykl synchronizacji w kształcie z `vilda_sync_integration.js` i `vilda:auth-hidden`. Sprawdzane są te same warunki.
@@ -3509,6 +3780,154 @@ Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczen
 Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (bez `zostawWyniki`, bez porównania treści kafelka, bez wspólnej fazy pulsowania) wywraca oba testy na właściwej asercji. `tests/e2e/powloka-powrot-bez-animacji.spec.mjs` jest bez zmian i przechodzi. Playwright nie ma tu WebKita, więc zachowanie w Safari do potwierdzenia przez właściciela.
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
+
+### P-POKWITANIE-W-TLE — ponowny odczyt pokwitania w tle bez „loading” i bez zbędnych przeliczeń (SW 1.1.251, 2026-10-12, decyzja właściciela)
+
+**Zgłoszenie i decyzja.** Ustalenie poza zakresem z P-WYNIKI-SPOKOJ. Przedstawiono cztery warianty, właściciel wybrał A:
+- A — ciche odświeżenie tego samego pacjenta;
+- B — pomijanie odczytu, gdy rekord się nie zmienił;
+- C — bez zmian;
+- D — odczyt po synchronizacji tylko przy `vilda:sync-merged`.
+
+B odpadł, bo sejf nie ma taniego znacznika wersji pacjenta: `listPatients()` odszyfrowuje nagłówki wszystkich pacjentów. Samo sprawdzenie byłoby też asynchroniczne, więc i tak potrzebowałoby semantyki A.
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów, tabel, jednostek i wyników po zakończonym odczycie. Zmienia się przepływ danych pacjenta i kontrakt źródła z `LH_FSH.md` („Spójność źródła danych pacjenta”). Przez czas odczytu w tle tego samego pacjenta konsumenci widzą ostatni potwierdzony rekord tego pacjenta zamiast pustego kontekstu. Wpływ na ocenę LH/FSH opisuje akapit „Ciche odświeżenie w tle” w `LH_FSH.md`.
+
+**Co było (pomiar na `audyt` b38803b).** Warunki pomiaru:
+- prawdziwy Chromium z prawdziwymi `vilda_sync.js` i `vilda_sync_integration.js`;
+- serwer synchronizacji jako atrapa w stanie ustalonym: każde pobranie kończy się „up-to-date”;
+- fikcyjna pacjentka z danymi pokwitania w rekordzie (start 9,5 r., Tanner 3, dwa pomiary);
+- trzy wymiany wymuszone `VildaSyncIntegration.pullNow()`. Każda wymiana to `syncing` → `ok`, a na każde zdarzenie `vilda_puberty_source.js` ogłaszał `loading`, potem `ready`.
+
+| Scenariusz | Ogłoszenia źródła | Pełne `update()` | Mutacje DOM | Skrypt / czas zadań wątku głównego |
+|---|---|---|---|---|
+| `index.html`, tryb profesjonalny, „Nowy pomiar” | 12 | 6 | 936 (408 w `update()`) | ok. 45 / 135 ms |
+| `docpro.html` | 12 | 10 | 909 | 113 / 185 ms |
+| `index.html`, naturalny rytm 65 s (4 wymiany) | 16 | 8 | 1175 | 205 / 577 ms |
+
+Pierwsze `update()` każdej wymiany liczyło stronę w stanie `loading`, czyli bez danych pokwitania z rekordu. Przy sztucznie spowolnionym odczycie (1,5 s) trwało to 1,5 s w każdej wymianie. W sprawdzonych kartach tekst się przy tym nie zmieniał. W przeliczniku LH/FSH każde takie odświeżenie usuwało importy z karty, zerowało ocenę i importowało je ponownie.
+
+W powłoce `app.html` (adres startowy PWA) okresowe pobrania wykonuje dokument powłoki, a ramki nie dostają ich zdarzeń. Trzy wymiany dały 0 zdarzeń i 0 `update()` w ramce Start. W ramce koszt pojawiał się przy jej własnej wysyłce (60 s po zapisie: 2 `update()`), przy `vilda:auth-hidden`, `vilda:session-changed` i `storage`. Rytm „co 20 s” dotyczy więc stron otwartych samodzielnie.
+
+**Co jest.** `vilda_puberty_source.js` (wersja 10 → 11) rozróżnia dwa rodzaje odczytu.
+- **Jawny:** `vilda:patient-loaded`, inny pacjent, odczyt jeszcze niezakończony, inna instancja sejfu. Pamięć jest czyszczona od razu (`loading`/`unavailable`), jak dotąd.
+- **W tle:** `odswiez()` po synchronizacji, zmianie sesji, zamknięciu panelu konta, `storage` lub `auth-loaded`. Dotyczy tego samego pacjenta z tego samego odblokowanego sejfu, gdy pamięć niesie udany odczyt (`ready`).
+  - Ostatni potwierdzony rekord zostaje do końca odczytu, a nowy go podmienia.
+  - `vilda_zrodla_pacjenta.js` (bez zmian) zamawia przeliczenie tylko przy różnicy odcisku.
+  - Błąd odczytu czyści jak dotąd: odrzucenie, brak rekordu, migawki albo payloadu, zablokowany sejf, zmiana tożsamości w trakcie.
+
+Dane innego pacjenta nie przechodzą żadną drogą:
+- zmiana pacjenta, wylogowanie, `vilda:user-state-cleared`, blokada i inna instancja sejfu czyszczą od razu;
+- spóźnioną odpowiedź wcześniejszego odczytu odrzuca licznik generacji;
+- gettery przy każdym odczycie sprawdzają tożsamość sesji karty i sejf (`pamiecBiezaca`, `kontekstPacjenta`).
+
+**Pomiar po zmianie.** Te same scenariusze:
+
+| Scenariusz | Ogłoszenia źródła | Pełne `update()` | Mutacje DOM | Skrypt / czas zadań wątku głównego |
+|---|---|---|---|---|
+| `index.html`, tryb profesjonalny, „Nowy pomiar” | 0 | 0 | 312 (0 w `update()`) | ok. 11 / 90 ms |
+| `docpro.html` | 0 | 0 | 49 | 14 / 59 ms |
+| `index.html`, naturalny rytm 65 s (4 wymiany) | 0 | 0 | 226 | 52 / 300 ms |
+| powłoka, ramka Start, własna wysyłka | 0 | 0 (przed: 2) | — | — |
+
+Rekord nadal jest czytany po każdym zdarzeniu: 24 odczyty sejfu na trzy wymiany przed zmianą i po niej (źródła pokwitania, DS i okołoporodowe). Zmiana rekordu tego samego pacjenta daje jedno ogłoszenie i jedno przeliczenie z nowymi danymi, bez `loading`. Czasy pochodzą z szybkiego procesora serwera (`Performance.getMetrics`). Na telefonie i starszym laptopie należy oczekiwać wielokrotności.
+
+**Przypadki syntetyczne (prawdziwy moduł, wejście → oczekiwany wynik).**
+
+| Stan → zdarzenie | Oczekiwany wynik |
+|---|---|
+| A gotowy → trzy wymiany synchronizacji, rekord bez zmian | przy każdym zdarzeniu `ready` z danymi A (start 9,5); rekord czytany 6 razy; 0 ogłoszeń, 0 przeliczeń strony (przed zmianą: 4 ogłoszenia i 2 przeliczenia na wymianę) |
+| A gotowy → `session-changed` / `auth-hidden` / `auth-loaded` / `storage` (klucz pacjenta albo `key=null`) | jak wyżej: dane do końca odczytu, bez ogłoszenia |
+| A gotowy → zdarzenie w tle, rekord zmieniony (start 10,5, GnRHa „w trakcie”, Tanner 4) | do końca odczytu dane poprzednie, potem nowe; 1 ogłoszenie, 1 przeliczenie |
+| A gotowy → zdarzenie w tle, odczyt odrzucony / bez rekordu / bez migawek / bez payloadu | `unavailable`, gettery `null`; poprzedni wynik nie wraca; kolejne zdarzenie czyta z `loading` |
+| A gotowy, odczyt w tle w toku → wczytanie B | od razu A `unavailable`, B `loading`, gettery `null`; spóźnione A odrzucone; kolejna wymiana czyta już tylko B |
+| A gotowy, odczyt w tle w toku → B w innej ramce (`storage`), usunięcie tożsamości karty, `vilda:user-state-cleared`, blokada sejfu z powiadomieniem i bez, nowa instancja sejfu | dane A niedostępne od razu; późna odpowiedź ich nie przywraca |
+| A w trakcie pierwszego odczytu → zdarzenie w tle | nadal `loading`; starszy wynik nie nadpisuje nowszego |
+| A gotowy → `vilda:patient-loaded` tego samego A | `loading`, dane wyczyszczone (jak dotąd) |
+
+**Czego nie zmieniono.** Bez zmian zostają `vilda_zrodla_pacjenta.js`, `vilda_sync_integration.js`, źródła DS i okołoporodowe, harmonogram synchronizacji i format rekordu.
+
+**Ustalenia poza zakresem (do decyzji właściciela).**
+1. Karta „Porównanie z poprzednim pomiarem” ma własnego słuchacza `vilda:sync-status-changed` (`vilda_summary_cards.js`, plik zminifikowany). Nadal przebudowuje się przy każdej zmianie stanu synchronizacji: w pomiarze 456 → 276 mutacji karty na trzy wymiany, bo zostaje część niezależna od źródła pokwitania. *(Rozstrzygnięte poleceniem właściciela 2026-10-13: P-POROWNANIE-W-TLE — wpis niżej.)*
+2. Po pobraniu „up-to-date” `vilda_sync.js` stosuje delty z `/changes` asynchronicznie, już po zdarzeniu `ok`. Ogłasza je tylko przez `vilda:sync-merged`, a żadne z trzech źródeł pacjenta tego zdarzenia nie słucha. W powłoce tak samo trafia do ramek scalenie wykonane przez dokument powłoki. Zmiana z delty dociera więc do źródeł dopiero przy następnym wyzwalaczu. Ustalone z lektury kodu, niezmierzone.
+
+**Testy.**
+- `tests/unit/pokwitanie-odswiezenie-w-tle.test.mjs` (21): prawdziwe `vilda_zrodla_pacjenta.js` i `vilda_puberty_source.js` na atrapie okna i sejfu, z zegarem zdarzeń w kolejności z przeglądarki (zamówienie przeliczenia przed rozstrzygnięciem odczytu).
+  - Na starym module pada 9 testów zachowania w tle. Testy bezpieczeństwa przechodzą na obu wersjach.
+  - Każda z mutacji warunku cichego odświeżenia (bez rozróżnienia jawny/w tle, bez porównania pacjenta, bez warunku udanego odczytu, bez warunku sejfu) wywraca co najmniej jeden test tego pliku albo `pokwitanie-zrodlo-pacjent.test.mjs`.
+- `tests/unit/pokwitanie-zrodlo-pacjent.test.mjs`: dwa testy przypinały czyszczenie przy ponownym odczycie przez zdarzenie synchronizacji. Teraz sprawdzają je przez jawne `vilda:patient-loaded`; zachowanie tej drogi się nie zmieniło.
+- Stary kontrakt przypinało też sześć testów e2e LH/FSH. Przy przedstawianiu wariantów podano tylko dwa testy jednostkowe; resztę wykazało CI. Każdy z sześciu sprawdza teraz nowy kontrakt, a asercje końcowe zostały bez zmian.
+  - `tests/e2e/lab-puberty-context.spec.mjs` (3): w trakcie odczytu w tle obowiązuje ostatni potwierdzony rekord (GnRHa, importy formularza), a po odczycie zmieniony rekord jest stosowany automatycznie. Rekord niezmieniony nie rusza formularza. Ręczna korekta wieku z czasu odczytu zostaje.
+  - `tests/e2e/lab-puberty-sex-aware.spec.mjs` (3): obserwacje G/Th zostają w trakcie odczytu w tle tej samej płci. Płeć F z formularza odrzuca je od razu i nie wracają po powrocie do M. Wczytanie innego pacjenta czyści je przed spóźnioną odpowiedzią.
+  - Nowe testy w obu plikach pilnują ścieżki, która nadal zawiesza: po nieudanym odczycie kolejne odświeżenie idzie przez `loading`, importy i obserwacje są wyłączone do końca odczytu i wracają przy tej samej płci.
+  - Na starym module padają zaktualizowane testy; nowe testy ścieżki z `loading` przechodzą na obu wersjach.
+- `tests/e2e/pokwitanie-odswiezenie-w-tle.spec.mjs` (4): prawdziwy Chromium z prawdziwą synchronizacją i atrapą serwera. Pomiar rusza po 4 s bez `update()`, bo `custom-fixes.js` po `vilda:patient-loaded` wysyła jeszcze `change` na polach formularza po 3,2 s. To przeliczenie nie zależy od synchronizacji.
+  - `index.html` i `docpro.html`, trzy wymiany bez zmian: bez `loading`, 0 ogłoszeń, 0 `update()`.
+  - Zmiana rekordu tego samego pacjenta: jedno ogłoszenie i przeliczenie z nowym startem pokwitania.
+  - Zmiana pacjenta, synchronizacja, `clearAllData()` (→ `vilda:user-state-cleared`) i blokada sejfu: u Jana nigdy dane Anny.
+  - Na starym module padają trzy pierwsze; test bezpieczeństwa przechodzi na obu wersjach.
+
+**Wersje.** `vilda_puberty_source.js` 11; SW 1.1.250 → 1.1.251 (numery 1.1.248, 1.1.249 i 1.1.250 nadały równolegle #643, #647 i #649).
+
+### P-POROWNANIE-W-TLE — karta porównania nie jest przebudowywana przy synchronizacji bez zmiany rekordu (SW 1.1.260, 2026-10-13, polecenie właściciela)
+
+**Polecenie właściciela.** „Ogranicz przebudowę karty porównania przy synchronizacji” — ustalenie poza zakresem nr 1 z P-POKWITANIE-W-TLE. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
+
+**Co było.** Słuchacz `Z` w `vilda_summary_cards.js` reaguje na `vilda:sync-status-changed` i `vilda:auth-hidden`. Gdy karta należy do bieżącego pacjenta, a sejf jest odblokowany, woła `Y(pid, true)`. `Y` czyta pacjenta z sejfu i wybiera poprzedni pomiar (migawka-kotwica). `Se()` liczy z niego centyle, BMI i Cole'a i buduje kartę od nowa (`vildaAppSetTrustedHtml` na `#prevSummaryContent`). Potem kolumny „Dziś” i „Zmiana” są trzy razy zerowane i wypełniane od nowa (`updatePrevSummaryDiff`: z `Se()`, przez `updateProfessionalSummaryCard` → Podsumowanie wyników i z `Y`). Działo się tak przy każdym zdarzeniu, także przy niezmienionym rekordzie. Strona otwarta samodzielnie dostaje takie zdarzenia co ok. 20 s.
+
+**Pomiar przed zmianą** (`audyt` f22c280, Chromium, tryb profesjonalny; fikcyjny pacjent z dwoma pomiarami w sejfie, wczytany z Karty pacjenta jako „Nowy pomiar”):
+- powłoka, ramka Start, trzy wymiany synchronizacji (6 zdarzeń): 885 mutacji DOM. Z tego 804 pochodzi z wypełniania kolumn (18 wywołań), a 6 to pełne przebudowy tabeli;
+- `index.html` bez powłoki, trzy wymiany i `vilda:auth-hidden`: 994 mutacje samej karty;
+- na ekranie bez różnicy: w każdej malowanej klatce ten sam tekst i ta sama wysokość karty (691 px).
+
+**Co jest.** Odświeżenie z `Z` jest oznaczone jako odświeżenie w tle (`Y(pid, true, {tlo: true})`). `Se()` zapamiętuje wzór zbudowanej karty: jej HTML i poprzedni pomiar (`q(payload)`). Przy odświeżeniu w tle `Se()` niczego nie przebudowuje, gdy jednocześnie:
+- wzór nowej karty równa się zapamiętanemu;
+- `window.prevMeasurementInfo` równa się poprzedniemu pomiarowi z rekordu;
+- karta jest widoczna, załadowana i ma tabelę.
+
+Wtedy `Y` nie wypełnia też ponownie kolumn „Dziś”/„Zmiana”, bo te utrzymuje `update()` (przez `vilda_update_prep.js`) i Podsumowanie wyników (`vilda_patient_report.js`). Klucze karty w `sessionStorage` są ustawiane jak dotąd.
+
+Kartę buduje się jak dotąd:
+- przy każdym wywołaniu jawnym: wczytanie pacjenta, `vilda:measurement-changed`, `vilda:therapy-points-changed`, odtworzenie sesji (`vilda_persist_runtime.js` woła `__renderPrevSummary(null, true)` bez znacznika tła);
+- gdy karta jest schowana albo wyczyszczona (`G()`, `clearAllData()`, reset w `vilda_persist_runtime.js`);
+- gdy rekord się zmienił: poprawka masy albo daty pomiaru, nowa kotwica;
+- gdy karta wyszłaby inna z innego powodu. Przykład: kartę z wczytania pacjenta (`vilda:patient-loaded`, `source: 'pick'`) buduje odczyt z sejfu, a datę urodzenia formularz dostaje ok. 200 ms później. Kto wygra, zależy od tempa maszyny. Centyl wzrostu w kolumnie „Poprzednio” liczy się bez daty z pełnych miesięcy, a z datą z dokładnego wieku (ustalenie niżej). Pierwsze odświeżenie w tle buduje taką kartę raz (w teście 39 → 38 centyl), następne już nie. Na bazie ta sama zmiana pokazywała się przy pierwszej synchronizacji, a przebudowa powtarzała się przy każdej kolejnej.
+
+**Pomiar po zmianie** (te same scenariusze):
+
+| Scenariusz | Przed | Po |
+|---|---|---|
+| powłoka, ramka Start, 3 wymiany: mutacje DOM całej strony | 885 | 21 (ikona synchronizacji `#vildaSyncBtn` i chip pacjenta `#vildaPatientChip`; z karty 0) |
+| — w tym wywołania `updatePrevSummaryDiff` / przebudowy tabeli | 18 / 6 | 0 / 0 |
+| — czas układu (`LayoutDuration`) | ok. 10 ms | ok. 1 ms |
+| `index.html`, 3 wymiany + `vilda:auth-hidden`: mutacje karty | 994 | 0 |
+| poprawka poprzedniego pomiaru w sejfie (masa 40 → 39,5 kg) → wymiana | karta odświeżona (284 mutacje) | karta odświeżona (142 mutacje — jedna przebudowa zamiast dwóch) |
+
+Czas skryptu (`ScriptDuration`) wynosi 13–15 ms na trzy wymiany w obu wariantach, w granicach szumu. Czas zadań wątku głównego zjadają stale biegnące animacje (obracający się obrys, pulsowania), więc zysk to brak zbędnej przebudowy DOM i układu, a nie odczuwalne milisekundy procesora. Rekord nadal jest czytany z sejfu przy każdym zdarzeniu: karta musi wiedzieć, czy się zmienił.
+
+**Czego nie zmieniono.** Bez zmian zostają wybór kotwicy, treść karty, obliczenia poprzedniego pomiaru (centyle, BMI, Cole, talia/biodra), `updatePrevSummaryDiff`, `vilda_sync_integration.js` i odczyty z sejfu. Zostaje też ustalenie nr 2 z P-POKWITANIE-W-TLE: zmiana z delty `/changes` scalona po zdarzeniu `ok` (`vilda:sync-merged`) dociera do karty dopiero przy następnym wyzwalaczu, tak jak dotąd.
+
+**Testy.** `tests/e2e/porownanie-synchronizacja-w-tle.spec.mjs` (2, `index.html`; czeka na koniec odczytów z sejfu, nie na upływ czasu). Przygotowanie:
+- czeka na impuls z `custom-fixes.js`. Po każdym `vilda:patient-loaded` ten moduł wysyła po 3,2 s `change` na polach formularza, a wywołane tym `update()` wypełnia kolumny karty od nowa (ok. 2000 mutacji) bez udziału synchronizacji. Rozpoznajemy go po `change` na `#ageMonths` co najmniej 3 s po ostatnim wczytaniu;
+- gdy data urodzenia jest już w formularzu, buduje kartę jawnie (`vilda:measurement-changed`, jak po edycji pomiaru) i czeka na 1,5 s ciszy w karcie. Pomiar zaczyna się więc od karty zgodnej z bieżącym stanem, niezależnie od wyścigu opisanego wyżej.
+
+Dwa przebiegi CI padły na teście 1 ze 142 mutacjami, czyli dokładnie jedną przebudową (994 = 7 × 142). Przy pierwszym (`0467f71`) przyczynę przypisałem impulsowi z `custom-fixes.js` i dodałem oczekiwanie na niego. Ta diagnoza była błędna: okno pomiaru sztucznie wydłużone o 3 s dawało 2154 mutacje, a nie 142. Przy drugim (`0792c50`) trace z CI pokazał, że pierwsza synchronizacja zmienia centyl wzrostu w kolumnie „Poprzednio” z 39 na 38. To karta zbudowana przed datą urodzenia. Lokalnie poprzednia wersja testu padała tak samo w 2 z 6 przebiegów. Obecna przeszła 12/12 bez obciążenia i 16/16 przy czterech przebiegach równoległych. Przeszła też z odczytami z sejfu opóźnionymi o 400 ms, gdy karta powstaje już po dacie.
+
+1. Trzy wymiany synchronizacji i `vilda:auth-hidden` przy niezmienionym rekordzie: 0 mutacji karty, a „Poprzednio” 40,0 kg, „Dziś” 41,0 kg, „Zmiana” i `prevMeasurementInfo` bez zmian. Jawne `vilda:measurement-changed` nadal buduje kartę.
+2. Poprawka w sejfie, jak z innego urządzenia:
+   - masa poprzedniego pomiaru 40 → 39,5 kg: po najbliższej wymianie „Poprzednio” 39,5 kg, a „Zmiana” liczona od nowej masy;
+   - sama data pomiaru (`measuredAtISO`, zmienia tylko HTML): żeton „Poprzedni pomiar: 5 marca 2026”;
+   - kolejna wymiana bez zmian: 0 mutacji;
+   - karta schowana zdarzeniem `storage` wraca przy najbliższej wymianie.
+
+Na bazie oba testy padają (994 i 284 mutacje). Każda z mutacji poprawki wywraca co najmniej jeden test:
+- bez znacznika tła w `Z`: oba testy;
+- bez sprawdzenia widoczności karty i `prevMeasurementInfo`: schowana karta nie wraca;
+- bez porównania HTML: poprawiona data się nie pokazuje.
+
+**Ustalenie poza zakresem (do decyzji właściciela; zmiana kliniczna).** Centyl wzrostu poprzedniego pomiaru (`Se()` → `calcPercentileStats(…, "HT")` w `app.js`) przechodzi przez `lmsNiemowleWiek()`. Gdy formularz ma datę urodzenia, a pełne miesiące wieku dziś zgadzają się z pełnymi miesiącami poprzedniego pomiaru, silnik `vilda_sds_wzrostu.js` dostaje dokładny wiek z dzisiejszej daty (`VildaDobAge.readExactAge()`), a nie z dnia poprzedniego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek jest więc zawyżony o te tygodnie. Bez daty w formularzu silnik liczy z pełnych miesięcy. Ta sama karta pokazuje więc inny centyl zależnie od chwili budowy (w teście 39 albo 38). Zachowanie jest sprzed tej zmiany i ta zmiana go nie dotyka. Poprawka, np. dokładny wiek z daty poprzedniego pomiaru, zmienia wynik kliniczny i wymaga decyzji właściciela.
+
+**Wersje.** `vilda_summary_cards.js` 58; SW 1.1.259 → 1.1.260 (numery 1.1.258 i 1.1.259 nadały równolegle #658 i #660).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
@@ -4015,7 +4434,30 @@ Otwarte (poza planem): precyzja mediany OLAF BMI do 0,1 kg/m² (audyt, znalezisk
 
 *Strażnicy:* `tests/unit/plec-z-imienia.test.mjs` — prawdziwy `vilda_plec_z_imienia.js`: klucz imienia, progi 99 % / 20 na granicy (syntetyczny słownik), indeks bez polskich znaków, źródło domyślne z rejestru, końcówki nazwisk i człony, pierwszeństwo imienia, wszystkie treści notki; formularz na atrapie DOM (tylko `change` lekarza, wybór lekarza wygrywa, F5 i lustro nietykalne, zdarzenia programowe bez flag nie są „zewnętrzne”, „Wyczyść”, blokada tożsamości, strona bez pól); generator na syntetycznych CSV (oba formaty, pomylone pliki, próg, determinizm); plik danych (metadane, klucze jak w silniku, **plik = wynik generatora z plików CSV w repozytorium**, przypadki z prawdziwego słownika); okablowanie obu stron i SW, brak modułu na stronie klirensu. `tests/e2e/plec-z-imienia.spec.mjs` (index: nazwisko i imię, zapis i blokada; wybór lekarza, F5, „Wyczyść”; docpro: sprzeczne nazwisko, imię spoza słownika) i `tests/e2e/plec-z-imienia-mobile.spec.mjs` (notka na ekranie telefonu, bez poziomego przewijania).
 
-**Do decyzji właściciela.** (1) Akceptacja kliniczna. (2) Progi: 99 % jednej płci i co najmniej 20 nosicieli imienia (przykłady tuż pod progiem wyżej: Barnaba, Alex, Noah, Ala). (3) Ostrzeżenie o rozbieżności także po ręcznym wyborze lekarza (nie zmienia płci, znika po zapisie). (4) Notki ostrzegawcze w kolorze błędu daty urodzenia (bez nowego stylu). (5) Pliki źródłowe CSV w repozytorium (ok. 1,6 MB) — dzięki nim CI sprawdza, że słownik jest dokładnie wynikiem generatora. (6) Odświeżanie: zbiór jest aktualizowany co rok; nowy stan = nowe pliki, generator, `podbij-wersje`, przegląd przypadków granicznych.
+**Decyzje właściciela (2026-10-13).** (1) Akceptacja kliniczna P-PLEC-IMIE i P-PLEC-IMIE-2 — tak. Akceptacja właściciela nie oznacza walidacji klinicznej algorytmu. (2) Progi bez zmian: co najmniej 99 % jednej płci i co najmniej 20 nosicieli imienia. Imiona tuż pod progiem (np. Barnaba, Alex, Noah, Ala) dostają tylko notkę „Sprawdź płeć”. Próg 98 % włączyłby automat dla kolejnych 97 imion (ok. 57 tys. osób). (3) Ostrzeżenie o rozbieżności po ręcznym wyborze lekarza zostaje. Nie zmienia płci i znika po zapisie. (4) Kolor notek ostrzegawczych bez zmian — jak błąd daty urodzenia (`vild-dob-error`), bez nowego stylu.
+
+**Otwarte.** (5) Pliki źródłowe CSV w repozytorium (ok. 1,6 MB) zostają. Dzięki nim CI sprawdza, że słownik jest dokładnie wynikiem generatora. (6) Odświeżanie: zbiór jest aktualizowany co rok. Nowy stan oznacza nowe pliki, generator, `podbij-wersje` i przegląd przypadków granicznych. Wykonawca i termin są do ustalenia.
+
+### P-PLEC-IMIE-2 — kolejny nowy pacjent po „Odrzuć dane i wyczyść” też dostaje płeć z imienia (SW 1.1.254, 2026-10-13, zgłoszenie właściciela)
+
+**Zgłoszenie.** Pierwszy nowy pacjent „Nowak Anna” dostawał „Kobieta”. Po „Wyczyść” → „Odrzuć dane i wyczyść” ten sam wpis zostawiał „Mężczyzna” z notką „Sprawdź płeć: imię „Anna” jest zwykle żeńskie.”. Po twardym odświeżeniu przeglądarki pierwszy wpis znów działał, kolejny — już nie.
+
+**Przyczyna (zmierzona sondą na prawdziwych stronach: `index.html`, powłoka `app.html` z ramką Start, także z otwartym DocPro).** Kliknięcie „Wyczyść” (`#clearAllDataBtn`/`#clearBtn`, jeszcze przed oknem strażnika), `vilda:patient-loaded` i `vilda:state-restored` uruchamiają w `custom-fixes.js` ponowienie zdarzenia `change` na polach lustra formularza (`#name`, `#age`, `#ageMonths`, `#weight`, `#height`, `#sex`) po 3,2 s — bez zmiany wartości i bez flag odtworzenia. P-PLEC-IMIE brał każde programowe `change` na `#sex` przy wpisanej tożsamości za płeć wpisaną z zewnątrz (stan `zewnetrzna`). Lekarz, który w tych 3,2 s zdążył wpisać nazwisko, wyłączał w ten sposób automat, a imię dawało już tylko ostrzeżenie. Pierwszy pacjent po starcie strony nie ma tego ponowienia (nie było kliknięcia „Wyczyść”), stąd „po twardym odświeżeniu działa”. Test e2e odtwarzający zgłoszenie był czerwony na kodzie sprzed poprawki (płeć `M`).
+
+**Poprawka** (`vilda_plec_z_imienia.js`, ?v 1 → 2). Wpis „z zewnątrz” to zdarzenie programowe, które **zmienia** wartość płci albo tożsamości (nazwisko i imię, bez wielkości liter i nadmiarowych spacji). Moduł pamięta ostatnio widziane wartości. Aktualizują je wpis lekarza, własna decyzja automatu, wczytanie i odtworzenie, a „Wyczyść” (`vilda:user-state-cleared`) ustawia stan wyjściowy: pusta tożsamość i „M”. Powiadomienie z tą samą wartością niczego nie przestawia. Ta sama reguła obejmuje tę samą tożsamość ponowioną z flagą odtworzenia albo lustra oraz `vilda:persist-restored` (odtworzenie „na żywo” w panelu powłoki). Dotąd przy wpisanej tożsamości zawsze wyłączały one automat. Teraz robią to tylko wtedy, gdy coś zmieniły — razem z tożsamością albo z płcią inną niż domyślne „M”, jak przy polu płci. Wczytanie, zapis, odtworzenie zapisu, import i odświeżenie bazy działają jak dotąd (rekord z kartoteki). Słownik, progi, reguła nazwiska, pierwszeństwo wyboru lekarza i treści notek — bez zmian.
+
+**Przypadek syntetyczny (prawdziwa strona, dane fikcyjne).**
+
+| Wejście | Przed poprawką | Po poprawce |
+|---|---|---|
+| „Fikcyjna” + „Anna” → „Wyczyść” → „Odrzuć dane i wyczyść” → „Fikcyjna”, po 3,6 s „Anna” | Mężczyzna, notka „Sprawdź płeć: imię „Anna” jest zwykle żeńskie.” | Kobieta, notka „Płeć ustawiona na podstawie imienia „Anna” — sprawdź.” |
+| programowa ZMIANA płci przy wpisanej tożsamości (np. lustro innej strony) | płeć z zewnątrz, automat jej nie rusza | bez zmian |
+
+**Wpływ kliniczny.** Przywraca zachowanie P-PLEC-IMIE dla każdego kolejnego nowego pacjenta w tej samej karcie. Bez poprawki drugi i dalszy nowy pacjent po „Wyczyść” mógł być liczony jako mężczyzna mimo żeńskiego imienia (z ostrzeżeniem w notce). Wzory, progi, tabele i format rekordu — bez zmian.
+
+**Ograniczenie poza poprawką (do decyzji właściciela; rekomendacja: zostawić).** Dotyczy imienia i nazwiska wpisanych w dwóch panelach powłoki, np. nazwiska na Start i imienia w DocPro. Sprawdzone sondą na prawdziwej powłoce, z danymi fikcyjnymi. Lustro formularza wnosi tożsamość do drugiego panelu „z zewnątrz”, więc automat tam nie działa. Płeć zostaje „M”, a oba panele pokazują notkę „Sprawdź płeć: imię „Anna” jest zwykle żeńskie.”. Naprawa wymagałaby wspólnego stanu automatu dla paneli albo osłabienia reguły „płeć z zewnątrz razem z tożsamością”. Osłabienie reguły mogłoby przestawić płeć wybraną przez lekarza w innym panelu.
+
+*Strażnicy:* `tests/unit/plec-z-imienia.test.mjs` (+3, prawdziwy moduł na atrapie DOM): ponowione powiadomienie bez zmiany płci nie wyłącza automatu (kontrola: programowa ZMIANA płci przy wpisanej tożsamości nadal jest „z zewnątrz”); ta sama tożsamość z flagą odtworzenia nie wyłącza automatu, inna — wyłącza; `vilda:persist-restored` bez zmian w polach nie przestawia stanu, ze zmianą — przestawia (także „Kobieta” bez nazwiska odtworzona po cichu). `tests/e2e/plec-z-imienia.spec.mjs` (+1): prawdziwe kliknięcie „Wyczyść” → okno strażnika → „Odrzuć dane i wyczyść” → nazwisko, 3,6 s przerwy, imię → „Kobieta”, stan `automat`.
 
 ### P-TOZSAMOSC-2 — podpowiedź pacjenta milczy przy zablokowanym polu tożsamości (SW 1.0.957, 2026-09-15, zgłoszenie właściciela)
 
@@ -12315,6 +12757,84 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 **Wersje.** `vilda_version_history_ui.js` 14 → 15 (8 stron), precache (append-only), `SW_VERSION` 1.1.179 → 1.1.180 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt` (`2dbd48a`). „Do decyzji”: brak.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
+
+## Pierwsze pobranie danych na „Komputerze prywatnym” z oknem postępu (P-NOWE-URZADZENIE etap 2, SW 1.1.255, `vilda_nowe_urzadzenie.js` 2, `vilda_sync.js` 39, `vilda_sync_integration.js` 49, 2026-10-13)
+
+**Skąd.** Etap 2 planu z wpisu niżej (zgłoszenie właściciela z 2026-10-12). Właściciel zaakceptował 2026-10-13 makietę (komputer i telefon) i cztery propozycje:
+1. W oknie pobierania na „Komputerze prywatnym” nie ma przycisku rezygnacji. Synchronizację wyłącza się w Ustawieniach → Synchronizacja.
+2. Ekran „Gotowe” czeka na kliknięcie „Przejdź do aplikacji” i nie zamyka się sam.
+3. Na czas pobierania aplikacja jest zablokowana (okno na całym ekranie), żeby nie powstał pacjent, który za chwilę przyjdzie z serwera jako duplikat.
+4. Przypomnienia po „Pobierz później” nie da się zamknąć. Znika po pobraniu albo po wyłączeniu synchronizacji w Ustawieniach.
+
+**Co było.**
+- Na nowym urządzeniu aplikacja pytała „Pobierz dane z serwera” także wtedy, gdy przy logowaniu wybrano „Komputer prywatny”, czyli pełną kopię pacjentów na dysku.
+- „Pobierz” uruchamiało `syncFull` w tle. Przycisk zmieniał się na „Pobieranie…”, nie było postępu, a przy błędzie okno znikało i zostawała tylko czerwona ikona synchronizacji.
+- Przeładowanie w trakcie wznawiało pobieranie już bez okna. Slot jest rejestrowany przed pobraniem bloba, więc po przeładowaniu sonda widziała „to nie jest nowe urządzenie”.
+- Ciało bloba nie miało limitu czasu. Limit `f()` w `vilda_sync.js` kończy się z nagłówkami odpowiedzi, a `arrayBuffer()` na zerwanym połączeniu mógł czekać bez końca. Bez okna było to niewidoczne, ale z oknem, które blokuje aplikację, byłoby nie do przyjęcia.
+
+**Co jest.**
+- *Kiedy rusza samo.* Gdy integracja zgłosi nowe urządzenie (`vilda:new-device-restore-available`), `vilda_nowe_urzadzenie.js` nie pyta, jeśli spełnione są trzy warunki: sejf jest lokalny (nie chmurowy i nie efemeryczny), synchronizacji nie wyłączono celowo (`vilda-sync-enabled-v1` ≠ `"false"`) i w tej przeglądarce nie ma innych kont (`VildaVault.listUsers()`; przełącznik synchronizacji jest dziś jeden dla przeglądarki, a flaga per konto to etap 3). Moduł wtedy zapisuje znacznik pierwszego pobrania, włącza synchronizację (jak „Pobierz” w etapie 1) i otwiera okno.
+- *Okno pobierania.* Kroki Pobieranie → Odszyfrowanie → Pacjenci. Pasek to natywny `<progress>`, a licznik pokazuje „Pobrano 1,8 z 3,6 MB” (poniżej 1 MB w kB), potem „Wczytano 120 z 248 pacjentów”. Dane o postępie przychodzą ze zdarzeń `vilda:sync-download-progress` (nowe, z `vilda_sync.js`) i `vilda:vault-merge-progress` (jak dotąd). Pobranie idzie przez nowe `VildaSyncIntegration.pullForNewDevice()`: `syncPull` pod flagą pobierania integracji. Interwał integracji nie rusza w tym czasie równoległego pobrania, a samo pobranie czeka, aż skończy się już trwające. Wysyłka nie wchodzi w okno: rusza jak dotąd przy zmianach i przy następnym logowaniu.
+- *Wynik.* Udane pobranie to `merged`, `up-to-date`, `no-remote-blob` albo `not-registered` z 404 (serwer nie ma slotu). Wtedy pokazuje się „Gotowe — dane są na tym urządzeniu”: liczba pacjentów (`listPatients`) i notatek (`listNotes`) na urządzeniu, data stanu z serwera i informacja, że synchronizacja jest włączona (albo wyłączona, jeśli wyłączono ją w innej karcie w trakcie). Okno czeka na „Przejdź do aplikacji”. Inny wynik albo błąd daje „Nie udało się pobrać danych”: powód zwykłym językiem, ramkę „Szczegóły: … (KOD, HTTP n) · pobrano X z Y MB” oraz przyciski „Spróbuj ponownie” i „Pobierz później”.
+- *Znaczniki.* Pierwsze pobranie w toku: `vilda-new-device-download-v1:<userId>` w `localStorage` (`{v, od, lastModified}`, bez danych pacjentów). Znacznik powstaje przed pierwszym zapytaniem i znika po udanym pobraniu, także pobraniu w tle przez integrację, albo po celowym wyłączeniu synchronizacji. Wybór „Pobierz później” w tej karcie: `vilda-new-device-download-later-v1` w `sessionStorage`; blokada sejfu go czyści.
+- *Wznowienie.* Start synchronizacji po odblokowaniu (`vilda_sync_integration.js`) najpierw pyta moduł (`VildaNoweUrzadzenie.przejmujeStart()`). Gdy dla tego konta czeka niedokończone pierwsze pobranie, moduł przejmuje start: integracja nie sonduje i nie uruchamia `syncFull`, a moduł pobiera z oknem. Jeśli w tej karcie wybrano „Pobierz później”, pokazuje tylko przypomnienie. Bez modułu albo bez znacznika start idzie jak dotąd. Dzięki temu przeładowanie w trakcie i następne logowanie wznawiają pobieranie z oknem.
+- *„Pobierz później”.* Okno znika, a na dole ekranu zostaje przypomnienie bez przycisku zamknięcia: „Twoje dane z serwera nie są jeszcze na tym urządzeniu”, data stanu i „Pobierz teraz”. Stoi nad dockiem (`--vilda-dol-wolny`, jak dymki) i pod oknami modalnymi. Synchronizacja zostaje włączona, więc integracja może dokończyć pobranie w tle (interwał co 10 s; wysyłka po zmianie lokalnej najpierw pobiera). Każde udane pobranie zdejmuje znacznik i przypomnienie, a ekran błędu zamienia w „Gotowe”. Dlatego tekst pod przyciskami różni się od makiety: „Pobieranie ponowi się samo w tle i przy następnym logowaniu; możesz je też uruchomić przypomnieniem na dole ekranu”. Wyłączenie synchronizacji w Ustawieniach zdejmuje znacznik i przypomnienie. W tym samym dokumencie sygnałem jest zdarzenie `vilda:sync-status-changed` (`disabled`), a z ramki powłoki i innej karty zdarzenie `storage`. Następne logowanie już nie pobiera.
+- *`vilda_sync.js`.* Blob jest czytany strumieniem (`body.getReader`). Zdarzenie `{phase: "download", loaded, total}` idzie na starcie, co najmniej co 100 ms i na końcu; `total` pochodzi z `Content-Length`, a bez niego z `size` w `/status`. Przed odszyfrowaniem idzie `{phase: "decrypt"}`. Brak kolejnej porcji przez 30 s przerywa czytanie błędem `TIMEOUT` z `loaded` i `total`. Bez strumieni działa `arrayBuffer()` jak dotąd i idzie jedno zdarzenie. `not-registered` niesie `httpStatus` z `/status`. Bajty, odszyfrowanie, rozpakowanie i scalanie się nie zmieniają.
+- *Wyłączność pierwszego pobrania* (czerwony E2E odłamek 1/3 w CI tego PR). Pierwsze pobranie od razu włącza synchronizację, więc w trakcie budziły się inne pobrania i ściągały ten sam blob równolegle. Arkusz przypomnień 3 s po odblokowaniu (`vilda_auth_ui.js`) woła `syncPull` z pominięciem flagi integracji, a panele powłoki ładowane w tle (Start, Terminarz) pobierają we własnej ramce. Zmierzone w e2e przy blobie wstrzymanym na 7 s: cztery równoległe pobrania tego samego bloba, w tym dwa w dokumencie okna. Zdarzenia postępu obu pobrań szły do jednego dokumentu, więc pasek i kroki skakałyby między nimi. Teraz `pullForNewDevice` woła `syncPull({pierwszePobranie: true})`, a `vilda_sync.js` trzyma wtedy blokadę Web Locks `vilda-sync-pierwsze-pobranie-v1` w trybie wyłącznym. Każde inne pobranie, także w `syncFull`, w wysyłce i w `restorePrevBlob`, najpierw bierze i od razu oddaje tę blokadę w trybie współdzielonym. Czeka więc tylko na trwające pierwsze pobranie, we wszystkich ramkach i kartach profilu. Potem widzi zapisany ETag i kończy się „up-to-date” bez bloba. Zwykłe pobrania nie czekają na siebie nawzajem, jak dotąd. Bez Web Locks albo przy błędzie blokady wyłączność obejmuje sam dokument. Po błędzie pierwszego pobrania blokada jest zwolniona i czekające pobranie rusza samo (zgodnie z tekstem ekranu błędu).
+- *Pytanie z etapu 1 zostaje* przy „Obcym komputerze” (bez zmian, „Pobierz” uruchamia `syncFull` w tle), przy „Komputerze prywatnym” z synchronizacją wyłączoną celowo i w przeglądarce z innymi kontami. W dwóch ostatnich przypadkach „Pobierz dane z serwera” prowadzi do okna pobierania. „Komputer w pracy” ma własne okno w `vilda_chrome.js`, bez zmian.
+- *Wygląd.* Przyciski wyglądają jak na ekranach logowania: główny w kolorze `--primary`, drugi biały z szarą ramką. Są odporne na skórkę `.liquid-ios26 button`, co dotyczy też „Pobierz dane z serwera” w pytaniu. Panel ma 440 px jak na makiecie (było 420 px, także w pytaniu). Fokus trafia na tytuł każdego widoku.
+- *Bramka banera aktualizacji* (`ios26-ui.js`) bez zmian. `czyAktywne()` obejmuje każdy stan okna: pytanie, pobieranie, „Gotowe” i błąd. Przypomnienie banera nie wstrzymuje.
+- *`index.html`*: okno zostaje w znacznikach (`he` w `vilda_chrome.js`), a moduł wypełnia jego panel. Na pozostałych stronach okno zbudowane przez moduł znika z dokumentu po zamknięciu; dotąd zostawało ukryte do przeładowania.
+
+**Czego ta rata nie zmienia.** Reguł scalania, wysyłki, formatu bloba i rejestracji slotu; trybów „Komputer w pracy” i „Obcy komputer”; znaczenia `vilda-sync-enabled-v1`; PRO. Flaga per konto, synchronizacja domyślna przy PRO i jej wyłączanie po wygaśnięciu PRO to etap 3 (czeka na synchronizację przyrostową).
+
+**Wpływ kliniczny.** Brak. Wyniki, jednostki, progi, dane i scalanie się nie zmieniają. Zmienia się sposób i moment pierwszego pobrania danych na nowe urządzenie oraz to, co widzi użytkownik.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| „Komputer prywatny”, jedno konto, slot w chmurze, odblokowanie (powłoka `app.html`) | bez pytania: okno „Pobieranie Twoich danych z serwera”, krok 1 aktywny, „Łączenie z serwerem…”, bez przycisków; synchronizacja włączona, znacznik zapisany |
+| jak wyżej, blob z 3 fikcyjnymi pacjentami i 2 notatkami | „Gotowe”: „3 pacjentów i 2 notatki ze stanu z 11 października 2026”; znacznik usunięty; okno otwarte po 3,5 s, baner wstrzymany; po „Przejdź do aplikacji” zamknięte, 3 pacjentów w sejfie |
+| blob: 503 | „Nie udało się pobrać danych”, „Szczegóły: błąd serwera (DOWNLOAD_FAILED, HTTP 503)”; „Spróbuj ponownie” pobiera ponownie |
+| „Pobierz później” | przypomnienie z jedynym przyciskiem „Pobierz teraz”; baner aktualizacji nie czeka; synchronizacja i znacznik zostają |
+| przeładowanie po „Pobierz później” | przypomnienie zamiast okna |
+| „Pobierz teraz”, serwer odpowiada | okno pobierania, potem „Gotowe”; przypomnienie znika |
+| przeładowanie w trakcie pobierania | po przeładowaniu znowu okno pobierania (bez pytania) i pobieranie od nowa, potem „Gotowe” |
+| blokada sejfu po „Pobierz później”, ponowne logowanie | przypomnienie znika przy blokadzie; po logowaniu pobieranie z oknem rusza samo |
+| synchronizacja wyłączona celowo (`index.html`) | pytanie z etapu 1, nic się nie pobiera; „Pobierz dane z serwera” → okno pobierania → „Gotowe”, synchronizacja włączona; okno w znacznikach `index.html` zostaje |
+| po „Pobierz później” wyłączenie synchronizacji w Ustawieniach (ramka powłoki → `storage`) | przypomnienie i znacznik znikają; następne logowanie: ani okna, ani pobierania |
+| to samo w tym samym dokumencie (`setSyncEnabled(false)`) | przypomnienie i znacznik znikają |
+| inne konto w tej przeglądarce | pytanie z etapu 1, nic się nie pobiera, synchronizacja się nie włącza; „Pobierz” → okno pobierania → „Gotowe: 2 pacjentów…” |
+| telefon (powłoka) | okno na całym ekranie, kroki i przyciski w szerokości ekranu, przypomnienie nad dockiem, brak przewijania w poziomie |
+| blob czytany porcjami (`vilda_sync.js`) | postęp 0 → całość (z `Content-Length`, bez niego z `size`), potem `decrypt`, potem pacjenci; scalony ten sam ładunek |
+| zerwane połączenie w trakcie ciała | po 30 s bez porcji `TIMEOUT` z `loaded` i `total`, czytnik anulowany, nic nie scalone |
+| `/status` 404 albo 503 na urządzeniu bez slotu | `{action: "not-registered", httpStatus}` |
+| moduł przejmuje start po odblokowaniu | integracja nie sonduje i nie pobiera; bez modułu, z `false` albo z wyjątkiem: jak dotąd |
+| `pullForNewDevice` przy trwającym pobraniu w tle | czeka na nie, potem pobiera; w trakcie interwał tła nie rusza kolejnego; po błędzie interwał wraca; `syncPull` dostaje `{pierwszePobranie: true}` |
+| powłoka, blob wstrzymany: arkusz przypomnień, panele Start i Terminarz oraz `VildaSync.syncPull()` w dokumencie okna w trakcie pierwszego pobrania | jedno pobranie bloba; pobrania z ramek czekają na blokadę, z dokumentu okna na koniec pierwszego; po „Gotowe” wszystkie „up-to-date”, nadal jedno pobranie bloba |
+| pierwsze pobranie w toku, zwykłe pobranie w tym samym dokumencie, bez Web Locks (`vilda_sync.js`) | zwykłe nie pyta nawet o `/status`, dopóki trwa pierwsze; potem „up-to-date”; blob raz |
+| to samo w drugiej ramce, z Web Locks | pierwsze trzyma blokadę wyłączną, druga ramka czeka na współdzieloną; potem „up-to-date”; blob raz |
+| dwa zwykłe pobrania w dwóch ramkach | oba pytają o `/status` naraz, żadna blokada nie jest trzymana (jak dotąd) |
+| błąd blokady (np. `SecurityError`) | pierwsze pobranie rusza raz; zwykłe w tym dokumencie czeka na jego koniec |
+| pierwsze pobranie kończy się błędem (blob 503) | blokada zwolniona; czekające pobranie z drugiej ramki rusza i samo scala dane |
+
+Testy: `tests/unit/nowe-urzadzenie-pobieranie.test.mjs` (prawdziwe `vilda_sync.js` i `vilda_sync_integration.js`; testy wyłączności — cztery z pięciu padają na `vilda_sync.js` bez łatki), `tests/e2e/nowe-urzadzenie-pobieranie.spec.mjs` (blob wstrzymany, aż inne pobranie zacznie czekać na blokadę), `tests/e2e/nowe-urzadzenie-pobieranie-mobile.spec.mjs`. Testy etapu 1 (`nowe-urzadzenie-pytanie*.spec.mjs`, `baner-aktualizacji-bramka.spec.mjs`) sprawdzają pytanie przy synchronizacji wyłączonej celowo, a bramkę banera na oknie pierwszego pobrania. Testy silnika synchronizacji z własną atrapą, w której slot zawsze jest w chmurze (`sync-kompresja-most.spec.mjs`, `synchronizacja-straznik.spec.mjs`), zaczynają od synchronizacji wyłączonej celowo. Bez tego samo pobieranie z etapu 2 ruszałoby równolegle z wywołaniami `VildaSync` z testu; wyłączenie celowe daje warunki sprzed etapu 2. Atrapa serwera (`tests/support/atrapa-synchronizacji.mjs`) umie teraz oddać prawdziwy zaszyfrowany blob konta i wymusić kod odpowiedzi.
+
+**Źródło kodu.** `vilda_sync.js` i `vilda_sync_integration.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
+
+**Wersje.** `vilda_nowe_urzadzenie.js` 1 → 2, `vilda_sync.js` 38 → 39, `vilda_sync_integration.js` 48 → 49, `vilda_auth_ui.css` 77 → 78. Wstrzykujące `vilda_chrome.js` 130 → 131 i `vilda_session_bridge.js` 54 → 55 podbił `npm run podbij-wersje`. `SW_VERSION` 1.1.254 → 1.1.255 (numery 1.1.253 i 1.1.254 nadały równolegle #651 i #653).
+
+**Ryzyko resztkowe.**
+- Po „Pobierz później” integracja ponawia pobranie w tle co około 12 s, a każde pobiera cały blob, dopóki pierwsze się nie uda (jak dotąd na każdym urządzeniu z włączoną synchronizacją i nieudanym pierwszym pobraniem). Na wolnym łączu oznacza to transfer.
+- Limit 30 s bez postępu przerywa też łącze, które stoi dłużej, ale potem by ruszyło. Wtedy pojawia się ekran błędu z „Spróbuj ponownie”.
+- Dwie karty otwarte na nowym urządzeniu nie pobierają już bloba równolegle: pierwsze pobranie drugiej karty czeka na blokadę i kończy się bez bloba. Przeglądarka bez Web Locks (Safari przed 15.4) zostaje przy dawnym zachowaniu poza dokumentem okna; scalanie jest odporne na powtórzenie.
+- Zwykłe pobranie, które ruszyło przed pierwszym pobraniem, kończy się równolegle z nim (blokadę bierze się na starcie pobrania). Po starcie aplikacji zwykłe pobrania czekają na włączenie synchronizacji, więc w praktyce dotyczy to tylko innej, już zsynchronizowanej karty.
+- Gdyby przeglądarka zamroziła w tle kartę z trwającym pierwszym pobraniem, zwykłe pobrania w innych kartach tego profilu czekają, aż karta wróci albo zostanie zamknięta. Pierwsze pobranie trwa przy oknie, które blokuje aplikację na pierwszym planie.
+- Baner zgody na analitykę (pierwsza wizyta) zasłania przypomnienie, dopóki użytkownik na niego nie odpowie. Okno pobierania leży nad nim.
+- Przy innych kontach w przeglądarce zostaje pytanie, a nie samo pobieranie, do czasu flagi synchronizacji per konto (etap 3).
+
+**Co pozostaje decyzją właściciela.** Scalenie, które uruchamia wdrożenie GitHub Pages. Tekst pod przyciskami ekranu błędu różni się od makiety, bo pobieranie ponawia się też w tle; do akceptacji albo zmiany. Etap 3.
 
 ## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.248, `vilda_sync_integration.js` 48, `vilda_sync.js` 38, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
 

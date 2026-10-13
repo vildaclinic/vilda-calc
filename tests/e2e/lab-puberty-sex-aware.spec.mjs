@@ -105,9 +105,9 @@ async function installPendingSource(page) {
       ['sex-source-b', { name: 'Fikcyjny odczyt B', sex: 'M', age: 6, ageMonths: 0, tannerStage: '1' }],
     ].map(([id, user]) => [id, { patientId: id, snapshots: [{ payload: { user, puberty: {} } }] }]));
     window.VildaVault.getPatient = (id) => Object.hasOwn(records, id)
-      ? new Promise((resolve) => {
+      ? new Promise((resolve, reject) => {
         if (!pending.has(id)) pending.set(id, []);
-        pending.get(id).push(resolve);
+        pending.get(id).push({ resolve, reject });
       }) : original(id);
     window.__sexSource = {
       load(id) {
@@ -125,7 +125,13 @@ async function installPendingSource(page) {
         const waiting = pending.get(id) || [];
         if (!waiting.length) throw new Error('No production source read is pending for ' + id);
         pending.delete(id);
-        waiting.forEach((resolve) => resolve(structuredClone(records[id])));
+        waiting.forEach(({ resolve }) => resolve(structuredClone(records[id])));
+      },
+      fail(id) {
+        const waiting = pending.get(id) || [];
+        if (!waiting.length) throw new Error('No production source read is pending for ' + id);
+        pending.delete(id);
+        waiting.forEach(({ reject }) => reject(new Error('Fictional record unavailable')));
       },
     };
     window.VildaPubertySource.zapomnij();
@@ -272,10 +278,36 @@ test('current context keeps sex restrictions after age and source changes, witho
   expect(after.evaluation.input).toEqual(before.evaluation.input);
 });
 
-test('a pending same-patient refresh excludes manual observations until the same male sex is confirmed again', async ({ page }) => {
+// P-POKWITANIE-W-TLE (decyzja właściciela 2026-10-12): odczyt w tle tego samego pacjenta nie przechodzi przez
+// „loading” — ostatni potwierdzony rekord nadal potwierdza płeć, więc ręczne obserwacje nie są zawieszane.
+// Zawieszenie zostaje dla odczytu z „loading” (jawne wczytanie, odczyt po błędzie, odblokowanie sejfu).
+const zrodloA = (page) => page.evaluate(() => window.VildaPubertySource.kontekstPacjenta('sex-source-a'));
+
+test('a pending same-patient background refresh keeps the confirmed male sex and manual observations', async ({ page }) => {
   await open(page);
   await installPendingSource(page);
   await page.evaluate(() => window.__sexSource.refresh('sex-source-a'));
+  expect(await zrodloA(page)).toMatchObject({ status: 'ready', sourceSex: 'M' });
+  await expect(page.locator('#labPubertySex')).toHaveValue('M');
+  await expect(page.locator('#labPubertyKind')).toHaveValue('G');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('3');
+  expect((await snapshot(page)).evaluation.input).toMatchObject({ sex: 'M', puberty: { kind: 'G', stage: 3 }, testicularVolume: { value: null, method: '' } });
+  await completeSource(page, 'sex-source-a');
+  await expect(page.locator('#labPubertySex')).toHaveValue('M');
+  await expect(page.locator('#labPubertyKind')).toHaveValue('G');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('3');
+  await expectNoVolume(page);
+  expect((await snapshot(page)).evaluation.input).toMatchObject({ sex: 'M', puberty: { kind: 'G', stage: 3 }, testicularVolume: { value: null, method: '' } });
+});
+
+test('after a failed read the next same-patient refresh excludes manual observations until the same male sex is confirmed again', async ({ page }) => {
+  await open(page);
+  await installPendingSource(page);
+  await page.evaluate(() => window.__sexSource.refresh('sex-source-a'));
+  await page.evaluate(() => window.__sexSource.fail('sex-source-a'));
+  await expect.poll(() => zrodloA(page).then((k) => k.status)).toBe('unavailable');
+  await page.evaluate(() => window.__sexSource.refresh('sex-source-a'));
+  expect((await zrodloA(page)).status).toBe('loading');
   await expectPendingExcluded(page);
   await completeSource(page, 'sex-source-a');
   await expect(page.locator('#labPubertySex')).toHaveValue('M');
@@ -285,12 +317,18 @@ test('a pending same-patient refresh excludes manual observations until the same
   expect((await snapshot(page)).evaluation.input).toMatchObject({ sex: 'M', puberty: { kind: 'G', stage: 3 }, testicularVolume: { value: null, method: '' } });
 });
 
-test('a completed refresh with female sex discards suspended male observations and they cannot return on a later male refresh', async ({ page }) => {
+test('a background refresh with female sex discards male observations and they cannot return on a later male refresh', async ({ page }) => {
   await open(page);
   await installPendingSource(page);
   await page.evaluate(() => window.__sexSource.refresh('sex-source-a', { sex: 'F' }));
-  await expectPendingExcluded(page);
+  // Płeć formularza głównego (F) obowiązuje od razu: męskie obserwacje odpadają jako niezgodne, zanim odczyt się skończy;
+  // płeć źródła pozostaje ostatnią potwierdzoną (M) do końca odczytu.
+  expect(await zrodloA(page)).toMatchObject({ status: 'ready', sourceSex: 'M' });
+  const pending = await snapshot(page);
+  expect(pending.evaluation.input).toMatchObject({ sex: 'F', puberty: { kind: 'unspecified', stage: null }, testicularVolume: { value: null, method: '' } });
+  expect(pending.evaluation.biochemical.byStage.status).toBe('unavailable');
   await completeSource(page, 'sex-source-a');
+  expect(await zrodloA(page)).toMatchObject({ status: 'ready', sourceSex: 'F' });
   await expectChoices(page, 'F');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
@@ -304,12 +342,17 @@ test('a completed refresh with female sex discards suspended male observations a
   expect((await snapshot(page)).evaluation.input.testicularVolume.value).toBeNull();
 });
 
-test('another patient and a late source response cannot inherit observations suspended during the preceding patient refresh', async ({ page }) => {
+test('another patient and a late source response cannot inherit observations from the preceding patient refresh', async ({ page }) => {
   await open(page);
   await installPendingSource(page);
   await page.evaluate(() => window.__sexSource.refresh('sex-source-a'));
-  await expectPendingExcluded(page);
+  // W trakcie odczytu w tle obserwacje A zostają przy A …
+  await expect(page.locator('#labPubertyKind')).toHaveValue('G');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('3');
+  // … a wczytanie B czyści je od razu, zanim spóźniony odczyt A się rozstrzygnie.
   await page.evaluate(() => window.__sexSource.load('sex-source-b'));
+  expect(await zrodloA(page)).toMatchObject({ status: 'unavailable', sourceSex: null, puberty: null, state: null });
+  await expect(page.locator('#labPubertyKind')).not.toHaveValue('G');
   await completeSource(page, 'sex-source-b');
   await page.evaluate(() => window.__sexSource.complete('sex-source-a'));
   await expect(page.locator('#labPubertySex')).toHaveValue('M');

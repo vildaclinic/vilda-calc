@@ -193,8 +193,8 @@ describe('Pediatria i wcześniactwo nie tracą ograniczeń ani ostrzeżeń', () 
     blocked(evaluate({ age: age(0, 3), preterm: 'yes' }, reference), 'neonatal_postnatal_age_missing');
     expect(evaluate({ age: age(0, 3), preterm: 'yes' }, reference).referenceSelection.reasonCodes).not.toContain('preterm_age_window_exceeded');
   });
-  it('donoszone niemowlę korzysta z szerokiego RI, niewiadome wcześniactwo nie zostaje donoszeniem', () => {
-    expect(axis(evaluate({ age: age(0, 2), preterm: 'no' })).range.id).toBe('lh-m-age-under1');
+  it('donoszone niemowlę korzysta ze źródła minipuberty, niewiadome wcześniactwo nie zostaje donoszeniem', () => {
+    expect(axis(evaluate({ age: age(0, 2), preterm: 'no' })).range.id).toBe('johannsen-lh-m-early');
     blocked(evaluate({ age: age(0, 2), preterm: 'unknown' }), 'infant_gestational_context_missing');
   });
   it('starszy wcześniak nie zostaje ponownie zakwalifikowany do noworodkowego profilu', () => {

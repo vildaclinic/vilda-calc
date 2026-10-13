@@ -1,6 +1,208 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 12 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+Stan dokumentu: 13 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`. Sekcje z wcześniejszymi datami dokumentują kolejne wersje; aktualny zakres formularza opisano poniżej.
+
+## Johannsen 2018 — zakresy LH/FSH w minipuberty, 13.10.2026
+
+**Wpływ kliniczny: tak.** Właściciel zaakceptował propozycję kliniczną i makietę
+na komputerze i telefonie 13.10.2026: „ok, jest dobrze, koduj”. Automatyczny
+dobór może teraz użyć węższej wiekowo referencji Johannsen zamiast szerokiego
+wiersza Mayo dla niemowląt. Może to zmienić ocenę stężenia. Jest to orientacyjne
+porównanie bazalnego wyniku; nie rozpoznaje CHH, DSD ani CPP i nie potwierdza
+metody rzeczywistej próbki. Nie dodaje pól, nie zmienia kryteriów rozwoju,
+edukacyjnych krzywych życia ani ich znaczników mediany.
+
+Silnik `1.6.0`, dane i nowe profile `2026-10-13.1`: `johannsen-minipuberty-lh`
+i `johannsen-minipuberty-fsh`; źródło `johannsen-minipuberty-2018`, wersja
+`2018-primary-table1-read-2026-10-13`; metoda `autodelfia-johannsen-2018`.
+Reguły kwalifikacji mają osobny identyfikator
+`johannsen-minipuberty-applicability`, wersję `2026-10-13.1`. Dawne ID
+`*-candidate` pozostają nieaktywnymi kandydatami; nie zmienia się ich w zapisach
+historycznych w nowe aktywne profile.
+
+### Zweryfikowane źródło i osiem zakresów
+
+Ponownie i niezależnie odczytano zachowany pełny HTML wydawcy:
+Johannsen TH i wsp., *Sex Differences in Reproductive Hormones During
+Mini-Puberty in Infants With Normal and Disordered Sex Development*,
+JCEM 2018;103(8):3028–3037,
+[DOI 10.1210/jc.2018-00482](https://doi.org/10.1210/jc.2018-00482),
+[PMID 29917083](https://pubmed.ncbi.nlm.nih.gov/29917083/).
+Sprawdzono populację, metody, analizę statystyczną, tabelę 1 i ograniczenia;
+nie deklarujemy nowego pobrania ani harmonizacji z innymi analizatorami.
+Hash kopii i niewielki zestaw faktów, bez pełnego tekstu publikacji:
+[johannsen2018-evidence.json](lh-fsh/johannsen2018-evidence.json).
+
+Badanie obejmuje 1840 zdrowych niemowląt (1041 chłopców, 799 dziewczynek)
+z trzech duńskich kohort, urodzonych **37+0–41+6 tyg. ciąży**, czyli
+**259–293 dni włącznie**. Każde dziecko dostarczyło jedną próbkę surowicy,
+pobraną bez wymogu bycia na czczo między 08:00 a 18:00; przechowywanie do
+5 lat w −20°C. To analiza przekrojowa, głównie duńskiej populacji, a nie
+codzienne ani podłużne krzywe tego samego niemowlęcia. Osobnych 27 pacjentów
+z DSD nie wchodzi do zdrowych grup referencyjnych. Rzeczywisty wiek obserwacji
+podano z jednym miejscem po przecinku: M **2,1–5,0 mies.**, F **2,3–5,0 mies.**;
+średni wiek obu grup wynosił 3,3 mies.
+
+LH i FSH oznaczano **AutoDELFIA / PerkinElmer**, metodą fluoroimmunoanalizy
+z rozdziałem czasowym, w surowicy; **IU/L** (liczbowo równoważne mIU/mL).
+LOD obu hormonów wynosi **0,05 IU/L**, międzyseryjny CV <6%; odrębnego LOQ
+nie ustalono w odczytanym artykule. Autorzy podają P2,5–P97,5 i średnie
+geometryczne po transformacji logarytmicznej i transformacji odwrotnej.
+**Średnia geometryczna nie jest medianą.** Liczebność jest swoista dla
+hormonu i grupy; suma wynosi 1289 dla każdego z LH i FSH.
+
+| Płeć | Wiek źródłowy [mies.] | Hormon | n | Średnia geometryczna [IU/L] | P2,5–P97,5 [IU/L] |
+|---|---|---|---:|---:|---:|
+| M | 2,0 ≤ wiek <3,5 | LH | 581 | 1,71 | 0,62–4,08 |
+| M | 3,5 ≤ wiek ≤5,0 | LH | 166 | 1,40 | 0,54–3,32 |
+| F | 2,0 ≤ wiek <3,5 | LH | 432 | <LOD | <LOD–0,98 |
+| F | 3,5 ≤ wiek ≤5,0 | LH | 110 | <LOD | <LOD–1,25 |
+| M | 2,0 ≤ wiek <3,5 | FSH | 578 | 1,19 | 0,41–3,02 |
+| M | 3,5 ≤ wiek ≤5,0 | FSH | 165 | 1,11 | 0,42–2,68 |
+| F | 2,0 ≤ wiek <3,5 | FSH | 435 | 3,98 | 1,23–17,4 |
+| F | 3,5 ≤ wiek ≤5,0 | FSH | 111 | 3,93 | 1,30–17,7 |
+
+Metody i tytuł tabeli 1 rozstrzygają skrócone etykiety wieku: dokładnie
+3,5 mies. należy do starszej grupy; 5,0 to włączony koniec przedziału.
+Stosujemy opublikowane nominalne grupy 2–5 mies., ujawniając zaokrąglone
+zakresy faktycznych obserwacji w szczegółach źródła. Nie tworzymy nowych
+biologicznych progów 2,1/2,3 ani referencji poza nominalnym okresem badania.
+
+U dziewczynek P2,5 LH jest **<LOD**, a nie znaną liczbową dolną granicą
+fizjologiczną. Ocena dotyczy wyłącznie górnej granicy 0,98 albo 1,25 IU/L.
+Użycie przez autorów LOD/2 w analizie statystycznej nie uprawnia do nadania
+wynikowi pacjentki wartości 0,025 ani do ustanowienia minimum 0,025/0,05.
+`<0,05` zachowuje operator i nie dostaje dokładnego punktu; samo `<LOD`
+nie zyskuje liczby z LOD badania. Nie wdrażamy progów rozróżniania płci ani
+ilorazu LH/FSH z publikacji jako progów choroby.
+
+### Dobór populacji, metody i wieku
+
+Dobór źródła zależy od kontekstu, **nigdy od wartości wyniku**. Znana zgodna
+rzeczywista metoda Mayo zachowuje właściwy profil Mayo. Znane AutoDELFIA
+może korzystać z Johannsen przy pozostałych spełnionych warunkach. Przy
+nieznanej rzeczywistej metodzie automatyczny wybór źródła Johannsen pozostaje
+porównaniem orientacyjnym i nie dopisuje jej potwierdzenia. Znana niezgodna
+metoda, materiał, leczenie lub stymulacja zachowują ograniczenia; wybór
+profilu ich nie omija.
+
+Znane GA musi mieścić się w 259–293 dniach. Gdy podano „urodzenie przedwczesne:
+nie”, lecz GA jest nieznane, dopuszczamy **warunkowe porównanie źródłowe**
+z jedną notką: „Zakres dla urodzonych w 37+0–41+6 tyg. ciąży.” Szczegóły
+wskazują nieustalone GA; odpowiedź „nie” nie dowodzi górnej granicy 41+6.
+Nieznane wcześniactwo i GA, znane GA poza populacją albo sprzeczny kontekst
+nie kwalifikują do Johannsen. Znane wcześniactwo zachowuje kwalifikację
+Greaves i jej ograniczenia; brak normy wcześniaczej nie włącza normy donoszonej.
+Nie używamy wieku skorygowanego ani postmenstrualnego.
+
+Publikacja **nie definiuje długości miesiąca ani przeliczenia z dni**.
+Zaakceptowana konwencja aplikacji przekształca już istniejący przedział
+chronologicznego wieku `[dMin,dMax]` na `[dMin/31,dMax/28]` miesięcy,
+z zachowaniem operatorów końców. Jest to obwiednia niepewności konwencji,
+a nie reguła autorów. Nie dodajemy ponownie dnia, jeśli rekord już zawiera
+niepewność. Przykład z kalendarzowego wieku głównego formularza: wyświetlane
+90 dni niesie `[89,90]` dni włącznie. Osobne wejście oznaczające jawnie
+ukończone dni ma `[d,d+1)`; nie wolno pomylić tych sposobów zapisu.
+
+Reguły przyjmują wyłącznie rozpoznane źródła przedziału dni:
+`main-calendar-dates`, `main-completed-weeks`, `manual-completed-days`
+i `sample-calendar-dates`. Daty i ukończone tygodnie przenoszą już gotową
+niepewność; tylko pojedyncze `[d,d]` z `manual-completed-days` rozszerza się
+na `[d,d+1)`. Przedział o różniących się końcach z takim znacznikiem jest
+sprzecznym kontekstem. Nierozpoznane pochodzenie dostarczonych dni nie
+uruchamia Johannsen i nie jest zastępowane wygodniejszym zapisem wieku;
+automatyczny wybór może zachować jedynie Mayo spełniający dotychczasowe
+warunki. Brak przedziału dni nadal pozwala użyć poprawnego wieku z pozostałych
+obsługiwanych zapisów. Ręczne 3 mies. zachowuje `[3,4)`, zamiast udawać
+dokładnie 3,0 mies.
+Precyzja dla kwalifikacji źródła jest oddzielna od wieku używanego przez
+niezmienione reguły oceny rozwoju.
+
+Cały możliwy wiek musi mieścić się w 2–5 mies. Przy przecięciu wewnętrznej
+granicy 3,5 pokazujemy oba źródłowe zakresy, osobne osie i statusy:
+„Podany wiek obejmuje dwie grupy badania — pokazano oba zakresy.” Nie ma
+średniej z granic, wyboru środka wieku ani wspólnego werdyktu. Dla powyższych
+kalendarzowych rekordów 90 i 97 dni przypadają na pierwszą grupę, 98–109 dni
+przecinają obie, 110 i 120 dni — tylko drugą. Te przykłady nie są nowymi
+biologicznymi granicami. Przy wyjściu poza 2–5 lub przecięciu ich krańca
+pozostaje wyłącznie dotychczasowy profil Mayo spełniający pozostałe warunki,
+z jego ograniczeniami i krótkim powodem niewykorzystania węższej referencji.
+Brak kwalifikacji do żadnego profilu nie tworzy zastępczej normy.
+
+### Przypadki zmiany oceny i zapis
+
+Poniżej oczekiwane zachowanie automatycznej, orientacyjnej ścieżki przy
+kwalifikującym kontekście i nieznanej rzeczywistej metodzie. Dni oznaczają
+kalendarzowe rekordy głównego formularza opisane wyżej. Wskazana poprzednia
+ocena Mayo zakłada jej właściwą kwalifikację, nie równoważność metod.
+
+| Przypadek | Johannsen | Poprzedni szeroki zakres Mayo |
+|---|---|---|
+| M120 dni, LH 3,6 IU/L | `above`, 0,54–3,32 | Nie przekracza górnej granicy 5,0. |
+| F90 dni, FSH 15 IU/L | `within`, 1,23–17,4 | `above`, 1,2–12,5. |
+| M90 dni, LH 0,1 IU/L | `below`, 0,62–4,08 | Brak liczbowej dolnej granicy fizjologicznej; bez oceny zbyt niskiego wyniku. |
+| M105 dni, LH 3,6 IU/L | Osobno `within` 0,62–4,08 i `above` 0,54–3,32; bez wspólnego werdyktu. | Nie zastępuje się obu zakresów jednym szerokim zakresem. |
+| F90 dni, LH 0,01 IU/L | Nie przekracza górnej granicy 0,98; bez oceny dolnego minimum. | Jednostronność pozostaje zależna od konkretnego źródła. |
+
+Zapis utrwala wybraną referencję, źródło, granice i operatory oraz pochodzenie
+polityki kwalifikacji. Historyczne oceny i dawne profile Mayo nie są przeliczane.
+Regresje mają sprawdzić wszystkie osiem wierszy, granice i precyzję wieku,
+sprzeczne GA, metodę/materiał/leczenie, cenzurowane wyniki, historię i offline.
+Opis przypadków ani testy techniczne nie stanowią walidacji klinicznej.
+
+## Jednostronne zakresy i komunikat G1 — 13.10.2026
+
+Naprawy F2/F3 po audycie chłopców i mężczyzn, zaakceptowane przez właściciela.
+LH/FSH z zapisanym statusem `within` i poprawną osią bez fizjologicznej dolnej
+granicy otrzymują „Nie przekracza górnej granicy” dla `≤` albo „Poniżej górnej
+granicy” dla `<`. Dotyczy to także dostępnych osi stadium i wariantów wieku,
+obu płci oraz zapisanej cenzurowanej dolnej granicy oznaczalności. Ta ostatnia
+nie staje się minimum fizjologicznym. Status liczbowy, granice, punkt i efekty
+odchyleń pozostają niezmienione; wyniki z operatorem nadal nie mają dokładnego punktu.
+
+Jedna notka pod osiami wyjaśnia: „Zakresy z samą górną granicą nie pozwalają
+ocenić, czy wynik jest za niski.” Pojawia się przy takim porównaniu `within`;
+nie podważa drugiej osi, jeśli ta ma rzeczywistą dolną granicę. Niedostępne,
+niejednoznaczne i podwyższone wyniki zachowują dotychczasowy opis. Prezentacja
+inhibiny B i alternatywy faz cyklu pozostają bez zmian.
+
+Silnik `1.5.1` zmienia wyłącznie nagłówek istniejącej oceny chłopca z G1,
+który osiągnął granicę braku początku z profilu klinicznego (obecnie ≥14 lat),
+przy nieznanym leczeniu: „Brak aktualnych cech dojrzewania w tym wieku wymaga
+oceny klinicznej.” Nadal jest to `limited` / `treatment_context`, z zachowanym
+opisem ograniczeń; nie jest to nowe rozpoznanie opóźnionego dojrzewania.
+Znane leczenie hormonalne, wcześniejszy początek lub regresja zachowują dawny
+komunikat. Nie dodajemy pól ani nie zmieniamy kryteriów kwalifikacji.
+
+**Źródła i wpływ kliniczny:** ponownie odczytano pełne kopie katalogów Mayo
+[LH pediatryczne 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999)
+i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753),
+pozyskane podczas audytu 12.10.2026, oraz pełny tekst
+[ENDO-ERN 2021, DOI 10.1007/s12020-021-02626-z](https://pmc.ncbi.nlm.nih.gov/articles/PMC8016789/).
+Sekcje *Reference Values / Males* Mayo: LH <1 roku `<0,02–5,0`, FSH <1 roku
+`≤3,3` i FSH Tanner I `<1,5 IU/L`. Metody: odpowiednio AnshLite LH CLIA
+i Roche Elecsys FSH ECLIA; surowica, IU/L = mIU/mL. Są to zakresy konkretnego
+źródła/metody, bez miesięcznej oceny niskich stężeń w minipuberty. ENDO-ERN
+uzasadnia ocenę braku początku dojrzewania od 14 lat z uwzględnieniem wywiadu
+i badania; sam hormon nie ustala przyczyny. Nie zmieniamy tabel, danych,
+polityki automatycznego doboru profilu ani progów klinicznych w tej naprawie
+F2/F3. Johannsen nie był przez nią aktywowany; późniejszą, odrębnie zaakceptowaną
+aktywację opisuje sekcja powyżej. Testy nie stanowią walidacji klinicznej.
+
+**Zapis i regresje:** stare snapshoty zachowują własne `clinical.title/text`,
+wersję, statusy i granice; renderer może dokładniej nazwać zapisane porównanie
+jednostronne, ale nie przelicza oceny dzisiejszym silnikiem. Nowe oceny
+utrwalają tekst z wersji `1.5.1`.
+
+| Syntetyczne wejście | Oczekiwane zachowanie |
+|---|---|
+| M3 mies., właściwy profil Mayo, LH 0,01 lub FSH 0,1 IU/L | „Nie przekracza górnej granicy”; brak oceny dolnego minimum. |
+| M3 mies., profil Mayo FSH, 3,3 / 3,31 IU/L | Odpowiednio `within` / `above`; nie zmieniamy nierówności. |
+| M14/G1, FSH 1,49 / 1,5 IU/L | Stadium: „Poniżej górnej granicy” / `above`; wiek nadal ma dolną granicę 0,6. |
+| M14/G1, nieznane leczenie | Konkretny komunikat potrzeby oceny, nadal `limited`; brak nowej diagnozy. |
+| M13 lat 11 mies./G1, M14/G2, znane leczenie albo regresja | Nowy nagłówek nie jest stosowany. |
+| F3 mies., profil Mayo FSH, 0,1 IU/L | Zachowana ocena `below` względem rzeczywistej granicy 1,2. |
+| `<LOD`, `<0,02`, stary zapis kliniczny, ponowne otwarcie offline | Brak wymyślonego punktu i ponownego liczenia; zachowany kontekst zapisu. |
 
 ## Osobne osie wariantów wieku — 12.10.2026
 
@@ -699,13 +901,13 @@ W obu profilach `stageAgeMinYears:1` oznacza politykę wyboru wyłącznie zakres
 
 To osobny kontekst fizjologiczny, nie diagnoza z wysokiego LH/FSH i nie automatyczne wyłączenie ostrzeżeń. Zaawansowane/postępujące cechy Th/G nadal wymagają oceny. Izolowane Th2 w niemowlęctwie ma odrębny komunikat kontekstowy. Szeroki katalogowy przedział `<1 rok` może być użyty wyłącznie z właściwą metodą i jawnym opisem rozdzielczości; nie zastępuje krzywej kolejnych dni/miesięcy [M1].
 
-**Johannsen 2018 pozostaje kandydatem zablokowanym do automatycznej interpretacji.** Wiek źródłowy 2–5 miesięcy, dokładne zaliczenie 2,0/3,5/5,0 miesięcy, LOD i przeniesienie na lokalny assay nie są dopowiadane. Poniższe przedziały odczytano wtórnie z tabeli 1 Rohayem 2024; metoda AutoDELFIA/PerkinElmer i statystyka P2,5–P97,5 po transformacji logarytmicznej są opisane w tabeli 2 Olthof 2026 [M1,M2,M4]. Nie są aktywną alternatywą Mayo.
+**Status zmieniony 13.10.2026:** w PR1 Johannsen 2018 pozostawał kandydatem nieaktywnym, opartym na wtórnych tabelach [M1,M4]. Odczyt pełnego pierwotnego artykułu [M2] rozstrzygnął granicę 3,5 mies., LOD 0,05 IU/L i populację 37+0–41+6 tyg. ciąży. Zaakceptowana aktywacja nowych profili obejmuje osiem wierszy tabeli 1, według warunków w sekcji na początku dokumentu. Nie oznacza przeniesienia walidacji na dowolny lokalny assay. Statystyka to P2,5–P97,5; wartości centralne w źródle są średnimi geometrycznymi, nie medianami.
 
 | Płeć i wiek raportowany | LH, P2,5–P97,5 IU/L (n) | FSH, P2,5–P97,5 IU/L (n) |
 |---|---:|---:|
-| M, 2,0–3,5 mies. | 0,62–4,08 (581) | 0,41–3,02 (578) |
+| M, 2,0–<3,5 mies. | 0,62–4,08 (581) | 0,41–3,02 (578) |
 | M, 3,5–5,0 mies. | 0,54–3,32 (166) | 0,42–2,68 (165) |
-| F, 2,0–3,5 mies. | <LOD–0,98 (432) | 1,23–17,4 (435) |
+| F, 2,0–<3,5 mies. | <LOD–0,98 (432) | 1,23–17,4 (435) |
 | F, 3,5–5,0 mies. | <LOD–1,25 (110) | 1,30–17,7 (111) |
 
 Nie rozszerzać tych danych na 0–2/5–12 miesięcy, nie interpolować między analizatorami ani nie stosować ich do moczu lub wcześniaków. Przy wcześniactwie potrzebna jest właściwa źródłowa oś wieku, a nie samodzielna zamiana wieku chronologicznego na skorygowany. Definicja WHO w profilu danych to urodzenie przed ukończeniem 37 tygodni (`<37`), nie `≤37` [K6]. Definicja ta nie jest normą gonadotropin ani zgodą na automatyczne przeliczanie wieku próbki.
@@ -744,7 +946,9 @@ Przypięcie przechwytuje kopię bieżącej oceny. Dialog pokazuje jej podgląd i
 
 `VildaPubertySource.kontekstPacjenta(patientId)` zwraca status `ready`, `loading` albo `unavailable` wraz z kontekstem powiązanym z tym pacjentem. Import z karty jest dostępny wyłącznie dla zgodnego, zakończonego odczytu. Każde nowe żądanie oraz blokada lub wyczyszczenie sesji unieważniają wcześniejsze odczyty. Identyfikator w `sessionStorage` ma pierwszeństwo przed lokalnym stanem ramki.
 
-Zmiana kontekstu usuwa wartości nadal pochodzące z poprzedniego importu i wymaga ponownego potwierdzenia ich przydatności. Podczas ponownego odczytu dane importowane są wyłączone z oceny. Mogą wrócić po zakończeniu odczytu wyłącznie przy identycznym kontekście; nie nadpisują ręcznych zmian dokonanych w tym czasie. Ręczna korekta pola oznacza niezależne dane próbki i nie jest nadpisywana przez późniejszy odczyt karty. Aktualność źródła jest sprawdzana również bezpośrednio przed importem oraz utworzeniem nowej oceny. Niedostępność karty pozwala wpisać dane próbki ręcznie; nie oznacza braku leczenia. Ta poprawka nie zmienia reguł klinicznych ani utrwalonych ocen.
+Zmiana kontekstu usuwa wartości nadal pochodzące z poprzedniego importu i wymaga ponownego potwierdzenia ich przydatności. Podczas jawnego ponownego odczytu (status `loading`) dane importowane są wyłączone z oceny. Mogą wrócić po zakończeniu odczytu wyłącznie przy identycznym kontekście; nie nadpisują ręcznych zmian dokonanych w tym czasie. Ręczna korekta pola oznacza niezależne dane próbki i nie jest nadpisywana przez późniejszy odczyt karty. Aktualność źródła jest sprawdzana również bezpośrednio przed importem oraz utworzeniem nowej oceny. Niedostępność karty pozwala wpisać dane próbki ręcznie; nie oznacza braku leczenia. Ta poprawka nie zmienia reguł klinicznych ani utrwalonych ocen.
+
+**Ciche odświeżenie w tle (P-POKWITANIE-W-TLE, decyzja właściciela 2026-10-12).** Ponowny odczyt tego samego pacjenta z tego samego, odblokowanego sejfu po zdarzeniu w tle (synchronizacja, zmiana sesji, zamknięcie panelu konta, `storage`, `auth-loaded`) nie zmienia statusu. Do końca odczytu kontekst pozostaje `ready` z ostatnim zakończonym odczytem tego pacjenta; w pomiarze odczyt trwał kilka–kilkadziesiąt milisekund, przy dużym sejfie dłużej. Nowy wynik zastępuje go tylko wtedy, gdy rekord się różni. Formularz dostaje wtedy jeden sygnał zmiany i stosuje regułę z poprzedniego akapitu: usuwa importy, importuje ponownie i nie nadpisuje ręcznych korekt. Błąd odczytu przełącza kontekst na `unavailable`. Jawne wczytanie pacjenta (`vilda:patient-loaded`), zmiana pacjenta, blokada sejfu, wylogowanie i wyczyszczenie sesji nadal czyszczą kontekst od razu, a dane innego pacjenta nie są dostępne w żadnym stanie. Ręczne obserwacje zależne od płci nie są na czas odczytu w tle zawieszane, bo ostatni potwierdzony rekord nadal potwierdza płeć. Płeć z formularza głównego obowiązuje od razu, więc obserwacje niezgodne z nową płcią odpadają jak dotąd i nie wracają. Zawieszenie z poprzedniego akapitu dotyczy odczytu ze statusem `loading`/`unavailable`, np. po nieudanym odczycie albo odblokowaniu sejfu. **Wpływ:** ocena utworzona w czasie trwania odczytu w tle korzysta z ostatniego potwierdzonego rekordu tego samego pacjenta zamiast z pustego kontekstu. Wcześniej każde takie zdarzenie na moment wyłączało dane karty z oceny i zerowało ją, choć rekord się nie zmienił. Reguły kliniczne, tabele i utrwalone oceny bez zmian; opis i pomiary — `ALGORITHMS.md`, wpis P-POKWITANIE-W-TLE.
 
 ## PR2 — transport historycznej oceny
 
@@ -792,7 +996,7 @@ To wymagania dla testów rzeczywistych funkcji produkcyjnych, nie deklaracja wyk
 | F10 lat, znany początek Th w wieku 7 lat | Zachowana historia wczesnego początku mimo obecnego wieku. |
 | P3 lub Ax bez Th/G; legacy „Tanner 3” | Bez automatycznego podstawienia gonadalnego stadium i bez domyślnego stadium I. |
 | M3 mies., LH2, zgodne LHPED | Porównanie do szerokiego `<1 rok`, jawny kontekst minipuberty; nie uniwersalny próg LH0,3. |
-| F3 mies., FSH12, kandydat Johannsen | Kandydat pozostaje zablokowany; nieaktywny przedział 1,23–17,4 nie staje się automatyczną normą. |
+| F90 dni z kalendarza formularza głównego, FSH15, kontekst kwalifikujący do Johannsen | Nowy aktywny profil: `within` wobec 1,23–17,4; zapisuje źródło i warunki. Ręczne 3 mies. oznacza [3,4) i wymaga dwóch wariantów. |
 | FSH M stadium I, wynik dokładnie 1,5 | Nie spełnia górnego ograniczenia `<1,5`; operator nie jest zamieniany na `≤`. |
 | Nieprecyzyjny wiek przecina granicę RI lub kryterium klinicznego | Jawna niejednoznaczność; bez zaokrąglenia do wygodnego wiersza. |
 | Późniejsza ocena G4 przy dawnym pobraniu | Brak automatycznego zastosowania przyszłej obserwacji. |
@@ -813,6 +1017,6 @@ Katalogi odczytano 2–3.10.2026. Rozdzielono odczyt oryginału, abstraktu i wt�
 - **K5:** Rosenfield RL. *Normal and Premature Adrenarche.* Endocr Rev 2021. [PMID 33788946](https://pubmed.ncbi.nlm.nih.gov/33788946/), DOI 10.1210/endrev/bnab009, [pełny tekst PMC8599200](https://pmc.ncbi.nlm.nih.gov/articles/PMC8599200/). Źródło odrębności adrenarche/gonadarche; nie źródło automatycznego wykluczenia CPP niskim LH.
 - **K6:** World Health Organization. *Preterm birth*, fact sheet 10.05.2023, [oficjalna strona](https://www.who.int/news-room/fact-sheets/detail/preterm-birth). Odczytano `Overview`, definicję urodzenia przed 37 ukończonymi tygodniami ciąży; dostęp 3.10.2026. Źródło definicji wcześniactwa, nie tabel LH/FSH ani reguł przenoszenia norm między osiami wieku.
 - **M1:** Rohayem J, Alexander EC, Heger S, Nordenström A, Howard SR. *Mini-Puberty, Physiological and Disordered: Consequences, and Potential for Therapeutic Replacement.* Endocr Rev 2024. [PMID 38436980](https://pubmed.ncbi.nlm.nih.gov/38436980/), DOI 10.1210/endrev/bnae003, [pełny tekst PMC11244267](https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/). Odczytano pełne części merytoryczne; tabela 1 jest wtórnym źródłem liczb M2/M3, z zachowaniem ich różnych statystyk.
-- **M2:** Johannsen TH i wsp. *Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development.* JCEM 2018. [PMID 29917083](https://pubmed.ncbi.nlm.nih.gov/29917083/), DOI 10.1210/jc.2018-00482. Odczytany abstrakt i metadane: 1840 zdrowych niemowląt oraz 27 dzieci z DSD, wiek 2–5 miesięcy. Pełny oryginał niedostępny; liczby zdrowych grup odczytano z M1, metodę/statystykę z M4.
+- **M2:** Johannsen TH i wsp. *Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development.* JCEM 2018;103(8):3028–3037. [PMID 29917083](https://pubmed.ncbi.nlm.nih.gov/29917083/), [DOI 10.1210/jc.2018-00482](https://doi.org/10.1210/jc.2018-00482). Status dostępu uzupełniony 13.10.2026: niezależnie odczytano pełny zachowany HTML wydawcy, w tym Healthy infants, Hormone analyses, Statistical analyses, tabelę 1 i ograniczenia. Źródło pierwotne ośmiu wierszy, granic wieku, LOD i populacji zdrowych niemowląt; 27 pacjentów z DSD to osobna grupa. Wcześniejszy odczyt ograniczał się do abstraktu/metadanych i wtórnych tabel M1/M4. Nie deklarujemy nowego pobrania. Hash i fakty: [evidence](lh-fsh/johannsen2018-evidence.json).
 - **M3:** Andersson AM i wsp. *Longitudinal reproductive hormone profiles in infants: peak of inhibin B levels in infant boys exceeds levels in adult men.* JCEM 1998;83(2):675–681. [PMID 9467591](https://pubmed.ncbi.nlm.nih.gov/9467591/), DOI 10.1210/jcem.83.2.4603. Zweryfikowane metadane i abstrakt; pełny oryginał niedostępny. Zakresy obserwowane odczytano wtórnie z M1, nie przekształcono ich w RI.
 - **M4:** Olthof A i wsp. *A literature overview of age- and Tanner stage-specific reference intervals for sex hormones for children aged 0–18 years.* J Mol Endocrinol 2026;77(2). [PMID 42554720](https://pubmed.ncbi.nlm.nih.gov/42554720/), DOI 10.1530/JME-26-0037, [pełny tekst PMC13506540](https://pmc.ncbi.nlm.nih.gov/articles/PMC13506540/). Odczytano Methods, Results, Discussion i tabele 1–2; suplement PDF niedostępny. Heterogeniczność populacji, metod, ocen stadium i statystyk ogranicza łączenie danych.

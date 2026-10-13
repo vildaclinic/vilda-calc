@@ -737,6 +737,7 @@
       updateInsight();
       explainUnavailablePoint();
       updateGonadotropinPresentation();
+      updateSourcePointNote();
       updateSources();
     }
     function drawAgeMarker(
@@ -903,6 +904,7 @@
       if (!engine || patientPoint?.status !== "ready" ||
           !canShowAgeMarker() || patientAgeYears < minAge || patientAgeYears > maxAge ||
           (compare ? compareHormone !== id : !selected.has(id))) return null;
+      if (compare && patientPoint.profile.ordinaryOnly) return null;
       let profiles = [patientPoint.profile];
       const stableDisplay = !compare ? (sex === "male" ? stableCurves.get(id)?.display
         : sex === "female" && id === "amh" ? femaleAmhStable?.display
@@ -921,6 +923,7 @@
           puberty: null,
         });
         if (other.status !== "ready" || other.profile.unit !== profiles[0].unit ||
+            other.profile.ordinaryOnly ||
             other.profile.requiredGonadalStage != null ||
             !Number.isFinite(engine.referenceAt(other.profile, patientAgeYears))) return null;
         profiles.push(other.profile);
@@ -1065,7 +1068,17 @@
       const fraction = model.valueFraction || ((value) => value / model.divisor / model.ceiling);
       const py = offscale ? top + 5 : y(fraction(model.value));
       const my = y(fraction(model.referenceValue));
-      const unit = model.profile.unit;
+      // New grouped/age references keep source units for geometry, while the
+      // two labels use the same unit as the entered result. No assay or
+      // specimen conversion is implied by this ordinary unit conversion.
+      const enteredUnit = patientContext?.displayUnit || patientContext?.measurement?.unit;
+      const conversions = data.patientPointData.unitConversions[model.id];
+      const enteredFactor = model.profile.patientNote && conversions?.unit === model.profile.unit &&
+        Object.prototype.hasOwnProperty.call(conversions.factors || {}, enteredUnit)
+        ? conversions.factors[enteredUnit] : null;
+      const labelFactor = Number.isFinite(enteredFactor) && enteredFactor > 0 ? enteredFactor : 1;
+      const unit = Number.isFinite(enteredFactor) && enteredFactor > 0 ? enteredUnit : model.profile.unit;
+      const labelValue = model.value / labelFactor, labelReference = model.referenceValue / labelFactor;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
       const groupMean = model.profile.statistic === "group-mean";
       // This profile is a graph reading with an approximately 8.5% source
@@ -1076,13 +1089,14 @@
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "Mediana dla wieku";
-      const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") + `Wynik ${person}: ${pointNumber(model.value)} ${unit}. ${medianContext}: około ${pointNumber(model.referenceValue, referenceDigits)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
+      const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") + `Wynik ${person}: ${pointNumber(labelValue)} ${unit}. ${medianContext}: około ${pointNumber(labelReference, referenceDigits)} ${unit}. Czerwony punkt oznacza wynik, nie jego klasyfikację.`;
       const dot = el("g", {
         "data-patient-concentration": model.id, "data-value": model.value,
         "data-median": model.referenceValue, "data-profile": model.profile.id,
         // Keep the legacy numeric attribute for existing integrations; the
         // statistic is explicit and must never be inferred from that name.
         "data-reference-value": model.referenceValue, "data-reference-statistic": model.profile.statistic,
+        "data-label-unit": unit,
         "data-divisor": model.divisor, "data-ceiling": model.ceiling,
         ...(model.scaleTransform ? { "data-scale-transform": model.scaleTransform } : {}),
         "data-plot-top": top, "data-plot-bottom": bottom,
@@ -1155,8 +1169,8 @@
       const personLabel = sex === "female"
         ? (patientAgeYears < 18 ? "Dziewczynka" : "Kobieta")
         : (patientAgeYears < 18 ? "Chłopiec" : "Mężczyzna");
-      label(`${compare ? personLabel + " · " : ""}${offscale ? "↑ " : ""}${pointNumber(model.value)} ${unit}`, resultTop, "#b51e33", 700, "result");
-      label(`${medianLabel} ≈${pointNumber(model.referenceValue, referenceDigits)} ${unit}`, medianTop, "#365b66", 550, "median");
+      label(`${compare ? personLabel + " · " : ""}${offscale ? "↑ " : ""}${pointNumber(labelValue)} ${unit}`, resultTop, "#b51e33", 700, "result");
+      label(`${medianLabel} ≈${pointNumber(labelReference, referenceDigits)} ${unit}`, medianTop, "#365b66", 550, "median");
       group.append(dot);
       model.a11y = a11y;
     }
@@ -1207,6 +1221,17 @@
         panel.querySelector(".vhl-chart-caption").hidden = true;
       }
     }
+    function updateSourcePointNote() {
+      const model = renderedPoint, note = model?.profile.patientNote;
+      if (!note) return;
+      const caption = byId("scale-note");
+      if (femaleGonadotropinsActive()) caption.textContent += " " + note;
+      else caption.textContent = "Kropka: wynik; jasny znacznik: mediana. " + note +
+        " Linia jest poglądowa." +
+        (patientPointAboveScale(model) ? " ↑ Wynik powyżej skali." : "") +
+        (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
+      caption.setAttribute("data-current-source", model.profile.id);
+    }
     function explainUnavailablePoint() {
       if (amhInfantComparisonActive() || inhibinComparisonActive() || gonadotropinComparisonActive()) return;
       if (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(analyteHormones[currentAnalyte])) return;
@@ -1244,9 +1269,16 @@
         "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
       };
-      const message = (adultTestosterone && adultMessages[patientPoint?.reason]) || messages[patientPoint?.reason];
+      const femaleSource = sex === "female" && ["amh", "inhb"].includes(id) && patientAgeYears >= 1;
+      const femaleMessages = {
+        "ambiguous-age": "Podany przedział wieku obejmuje granicę źródeł lub grup wieku — nie wybieramy jednej mediany.",
+        "unsupported-age": "Dla tego wieku nie udostępniono mediany źródłowej. Linia pokazuje ogólny przebieg zmian.",
+      };
+      const message = (femaleSource && femaleMessages[patientPoint?.reason]) ||
+        (adultTestosterone && adultMessages[patientPoint?.reason]) || messages[patientPoint?.reason];
       if (message) byId("scale-note").textContent = (femaleGonadotropinsActive()
-        ? byId("scale-note").textContent + " " : "") + message + " Krzywe pozostają poglądowe.";
+        ? byId("scale-note").textContent + " " : "") + message +
+        (femaleSource && patientPoint?.reason === "unsupported-age" ? "" : " Krzywe pozostają poglądowe.");
     }
 
     function clearFemalePeriodMetadata() {
@@ -2801,7 +2833,10 @@
         const groupMean = renderedPoint.profile.statistic === "group-mean";
         title = groupMean ? "Wynik na tle średniej grupy wieku" : renderedPoint.profile.statistic === "group-median"
           ? "Wynik na tle mediany grupy" : "Wynik na tle mediany dla wieku";
-        copy = (groupMean ? `Średnia opisuje badaną grupę ${renderedPoint.profile.ageGroup.label}.` : "Mediana opisuje populację z badania.") +
+        copy = (groupMean ? `Średnia opisuje badaną grupę ${renderedPoint.profile.ageGroup.label}.`
+          : renderedPoint.profile.statistic === "group-median"
+            ? `Mediana opisuje badaną grupę ${renderedPoint.profile.ageGroup.label}, nie dokładny wiek pacjenta.`
+            : "Mediana opisuje populację z badania.") +
           " Wynik konkretnej osoby ocenia się z zakresem referencyjnym i kontekstem klinicznym.";
       }
       if (stableAmhVisible() && selected.size === 1 && insightMode === "hormone") {
@@ -3185,7 +3220,15 @@
             paragraph("Odniesienie wyniku AMH: " + [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
               .filter(Boolean).join(" · ") + ".");
             if (profile.url) links.push([profile.sourceLabel || "Źródło odniesienia AMH", profile.url]);
+            if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
+            if (profile.ageGroup?.n) paragraph(`Liczebność grupy źródłowej: ${profile.ageGroup.n}.`);
           }
+        }
+        if (renderedPoint?.stableDisplay?.kind === "female-inhibin-life" && renderedPoint.profile.patientNote) {
+          const profile = renderedPoint.profile;
+          paragraph("Odniesienie wyniku inhibiny B: " + [profile.sourceLabel, profile.method, profile.population]
+            .filter(Boolean).join(" · ") + ".");
+          if (profile.url) links.push([profile.sourceLabel || "Źródło odniesienia inhibiny B", profile.url]);
         }
         paragraph(
           "Minipuberty: mediany GAMLSS Ljubicic 2022, od około 7,3 dnia do 1 roku. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; mediany przeskalowano do prezentacji względnej. Dane dotyczą donoszonych dziewczynek.",
@@ -3368,7 +3411,9 @@
           );
           if (selected.size > 0 && !candidate) return;
           compareHormone = candidate || null;
-          if (view !== "puberty") view = "mini";
+          if (view === "life") view = sex === "female" &&
+            ["amh", "inhb"].includes(analyteHormones[currentAnalyte]) && patientAgeYears >= 8
+            ? "puberty" : "mini";
         }
         compare = !compare;
         rebuildControls();
@@ -3500,6 +3545,7 @@
         ageUpperYears: next.ageUpperYears, preterm,
         ageUpperInclusive: next.ageUpperInclusive,
         measurement: next.measurement ? { ...next.measurement } : null,
+        displayUnit: next.displayUnit,
         contraindicated: next.contraindicated === true,
         puberty: next.puberty && typeof next.puberty === "object"
           ? { kind: next.puberty.kind, stage: next.puberty.stage } : null,

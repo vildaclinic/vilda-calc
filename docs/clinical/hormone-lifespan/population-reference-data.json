@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-11.1",
+  "version": "2026-10-13.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -19858,6 +19858,534 @@
         "Do not label these median lines as the biphasic mean curves from Figure 3.",
         "The female cohort and the paired 2018 comparison use different assays for AMH and inhibin B; do not merge their numbers into one continuous series."
       ]
+    },
+    {
+      "id": "jopling2018-female-amh-age-1-under5",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 1,
+      "maxAge": 5,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 14.58
+        },
+        {
+          "ageYears": 5,
+          "value": 14.58
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH",
+      "population": "Pozostałości próbek szpitalnych; wykluczono diagnostykę DSD i innych endokrynopatii. Nie jest to prospektywna kohorta zdrowych dziewcząt.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": true,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 1–4,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "1–4,9 lat",
+        "minAge": 1,
+        "maxAge": 4.9,
+        "n": 42,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 14.58,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy wieku; nie jest modelem dokładnego wieku ani stadium Tannera."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "table": 1,
+        "readableSource": "evidence/amh-access-groups.json#pediatric",
+        "sourceReview": "evidence/female-reference-points-2026-10-13.json",
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 42,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
+        "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.",
+        "Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.",
+        "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania."
+      ]
+    },
+    {
+      "id": "jopling2018-female-amh-age-5-under8",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 5,
+      "maxAge": 8,
+      "points": [
+        {
+          "ageYears": 5,
+          "value": 11.44
+        },
+        {
+          "ageYears": 8,
+          "value": 11.44
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH",
+      "population": "Pozostałości próbek szpitalnych; wykluczono diagnostykę DSD i innych endokrynopatii. Nie jest to prospektywna kohorta zdrowych dziewcząt.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": false,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 5–7,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "5–7,9 lat",
+        "minAge": 5,
+        "maxAge": 7.9,
+        "n": 42,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 11.44,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy wieku; nie jest modelem dokładnego wieku ani stadium Tannera."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "table": 1,
+        "readableSource": "evidence/amh-access-groups.json#pediatric",
+        "sourceReview": "evidence/female-reference-points-2026-10-13.json",
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 42,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
+        "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.",
+        "Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.",
+        "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania."
+      ]
+    },
+    {
+      "id": "jopling2018-female-amh-age-8-under12",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 8,
+      "maxAge": 12,
+      "points": [
+        {
+          "ageYears": 8,
+          "value": 20.42
+        },
+        {
+          "ageYears": 12,
+          "value": 20.42
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH",
+      "population": "Pozostałości próbek szpitalnych; wykluczono diagnostykę DSD i innych endokrynopatii. Nie jest to prospektywna kohorta zdrowych dziewcząt.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": false,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 8–11,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "8–11,9 lat",
+        "minAge": 8,
+        "maxAge": 11.9,
+        "n": 47,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 20.42,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy wieku; nie jest modelem dokładnego wieku ani stadium Tannera."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "table": 1,
+        "readableSource": "evidence/amh-access-groups.json#pediatric",
+        "sourceReview": "evidence/female-reference-points-2026-10-13.json",
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 47,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
+        "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.",
+        "Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.",
+        "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania."
+      ]
+    },
+    {
+      "id": "jopling2018-female-amh-age-12-under15",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 12,
+      "maxAge": 15,
+      "points": [
+        {
+          "ageYears": 12,
+          "value": 17.87
+        },
+        {
+          "ageYears": 15,
+          "value": 17.87
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH",
+      "population": "Pozostałości próbek szpitalnych; wykluczono diagnostykę DSD i innych endokrynopatii. Nie jest to prospektywna kohorta zdrowych dziewcząt.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": false,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 12–14,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "12–14,9 lat",
+        "minAge": 12,
+        "maxAge": 14.9,
+        "n": 33,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 17.87,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy wieku; nie jest modelem dokładnego wieku ani stadium Tannera."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "table": 1,
+        "readableSource": "evidence/amh-access-groups.json#pediatric",
+        "sourceReview": "evidence/female-reference-points-2026-10-13.json",
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 33,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
+        "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.",
+        "Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.",
+        "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania."
+      ]
+    },
+    {
+      "id": "jopling2018-female-amh-age-15-under18",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 15,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 15,
+          "value": 21.14
+        },
+        {
+          "ageYears": 18,
+          "value": 21.14
+        }
+      ],
+      "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "method": "Beckman Coulter Access AMH",
+      "population": "Pozostałości próbek szpitalnych; wykluczono diagnostykę DSD i innych endokrynopatii. Nie jest to prospektywna kohorta zdrowych dziewcząt.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": false,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": [
+        "plasma_li_heparin",
+        "lithium-heparin-plasma",
+        "li-heparin-plasma",
+        "lithium-heparin plasma",
+        "osocze z heparyną litową"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "patientNote": "Grupa 15–18,9 lat · Access AMH, osocze.",
+      "ageGroup": {
+        "label": "15–18,9 lat",
+        "minAge": 15,
+        "maxAge": 18.9,
+        "n": 30,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 21.14,
+        "boundaryPolicy": "published-label-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy wieku; nie jest modelem dokładnego wieku ani stadium Tannera."
+      },
+      "provenance": {
+        "authors": "Jopling et al.",
+        "year": 2018,
+        "doi": "10.1002/edm2.21",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+        "table": 1,
+        "readableSource": "evidence/amh-access-groups.json#pediatric",
+        "sourceReview": "evidence/female-reference-points-2026-10-13.json",
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "groupParticipants": 30,
+        "sourceSpecimen": "lithium-heparin plasma",
+        "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
+        "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
+        "routingVersion": "2026-10-13.1"
+      },
+      "limitations": [
+        "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
+        "Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.",
+        "Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.",
+        "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+        "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania."
+      ]
+    },
+    {
+      "id": "borelli2025-female-inhb-age-5p6-20",
+      "analyte": "inhb",
+      "sex": "female",
+      "minAge": 5.6,
+      "maxAge": 20,
+      "maxAgeExclusive": false,
+      "points": [
+        {
+          "ageYears": 5.6,
+          "value": 11
+        },
+        {
+          "ageYears": 6,
+          "value": 11
+        },
+        {
+          "ageYears": 7,
+          "value": 12
+        },
+        {
+          "ageYears": 8,
+          "value": 14
+        },
+        {
+          "ageYears": 9,
+          "value": 18
+        },
+        {
+          "ageYears": 10,
+          "value": 27
+        },
+        {
+          "ageYears": 11,
+          "value": 36
+        },
+        {
+          "ageYears": 12,
+          "value": 43
+        },
+        {
+          "ageYears": 13,
+          "value": 47
+        },
+        {
+          "ageYears": 14,
+          "value": 46
+        },
+        {
+          "ageYears": 15,
+          "value": 44
+        },
+        {
+          "ageYears": 16,
+          "value": 40
+        },
+        {
+          "ageYears": 17,
+          "value": 37
+        },
+        {
+          "ageYears": 18,
+          "value": 36
+        },
+        {
+          "ageYears": 20,
+          "value": 34
+        },
+        {
+          "ageYears": 25,
+          "value": 32
+        },
+        {
+          "ageYears": 30,
+          "value": 30
+        },
+        {
+          "ageYears": 35,
+          "value": 29
+        },
+        {
+          "ageYears": 40,
+          "value": 28
+        },
+        {
+          "ageYears": 42,
+          "value": 26
+        },
+        {
+          "ageYears": 44,
+          "value": 23
+        },
+        {
+          "ageYears": 45,
+          "value": 20
+        },
+        {
+          "ageYears": 46,
+          "value": 17
+        },
+        {
+          "ageYears": 47,
+          "value": 11
+        }
+      ],
+      "sourceLabel": "Borelli-Kjær 2025 · inhibina B · model wieku",
+      "url": "https://doi.org/10.1210/clinem/dgae439",
+      "method": "Beckman Coulter Inhibin B Gen II ELISA",
+      "specimen": "serum",
+      "population": "Zdrowe dziewczynki i kobiety; kohorty duńskie. Kohorta wieku 5,6–20,2 lat: 648 dziewcząt.",
+      "statistic": "median",
+      "approximate": true,
+      "unit": "pg/mL",
+      "interpolation": "pchip",
+      "compatibleAssayMethodIds": [
+        "inhibin-b-gen-ii",
+        "beckman-inhibin-b-gen-ii"
+      ],
+      "provenance": {
+        "doi": "10.1210/clinem/dgae439",
+        "figure": 1,
+        "digitizationTolerancePgMl": 2,
+        "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+        "originalUnit": "ng/L",
+        "unitFactor": 1,
+        "fullSourceKnotDomain": [
+          5.6,
+          47
+        ],
+        "readableSource": "evidence/inhb-digitized-median.json",
+        "qualificationScope": "ordinary-female-inhibin-b-age-5p6-20",
+        "sourceProfileId": "borelli2025-female-inhb-puberty-comparison",
+        "routingVersion": "2026-10-13.2"
+      },
+      "limitations": [
+        "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
+        "Zwykły wykres udostępnia odniesienie od 5,6 do 20 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano wszystkie 24 węzły źródłowe do interpolacji. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku brak liczbowego odniesienia.",
+        "Wiek nie wyznacza stadium Tannera. W kohorcie nie standaryzowano fazy cyklu; antykoncepcja doustna wpływa na stężenia.",
+        "Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń."
+      ],
+      "ordinaryOnly": true,
+      "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie."
     },
     {
       "id": "laurentino2020-male-lh-18-under25",

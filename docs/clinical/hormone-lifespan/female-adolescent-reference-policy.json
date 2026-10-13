@@ -1,0 +1,85 @@
+{
+  "version": "2026-10-13.2",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "scope": "Female AMH grouped references in childhood and adolescence; female inhibin B age-model reference at 5.6–20 years. Ordinary lifespan and puberty views only; no clinical reference intervals.",
+  "amh": {
+    "source": "evidence/amh-access-groups.json#pediatric",
+    "specimen": "lithium-heparin-plasma",
+    "compatibleSpecimenIds": [
+      "plasma_li_heparin",
+      "lithium-heparin-plasma",
+      "li-heparin-plasma",
+      "lithium-heparin plasma",
+      "osocze z heparyną litową"
+    ],
+    "compatibleAssayMethodIds": [
+      "access-amh",
+      "beckman-access-amh",
+      "access-2",
+      "beckman-access-2"
+    ],
+    "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
+    "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
+    "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
+    "profiles": [
+      {
+        "id": "jopling2018-female-amh-age-1-under5",
+        "sourceGroupMinAge": 1,
+        "minAge": 1,
+        "maxAge": 5,
+        "minAgeExclusive": true,
+        "maxAgeExclusive": true,
+        "sourceGroupLabel": "1–4,9 lat"
+      },
+      {
+        "id": "jopling2018-female-amh-age-5-under8",
+        "sourceGroupMinAge": 5,
+        "minAge": 5,
+        "maxAge": 8,
+        "minAgeExclusive": false,
+        "maxAgeExclusive": true,
+        "sourceGroupLabel": "5–7,9 lat"
+      },
+      {
+        "id": "jopling2018-female-amh-age-8-under12",
+        "sourceGroupMinAge": 8,
+        "minAge": 8,
+        "maxAge": 12,
+        "minAgeExclusive": false,
+        "maxAgeExclusive": true,
+        "sourceGroupLabel": "8–11,9 lat"
+      },
+      {
+        "id": "jopling2018-female-amh-age-12-under15",
+        "sourceGroupMinAge": 12,
+        "minAge": 12,
+        "maxAge": 15,
+        "minAgeExclusive": false,
+        "maxAgeExclusive": true,
+        "sourceGroupLabel": "12–14,9 lat"
+      },
+      {
+        "id": "jopling2018-female-amh-age-15-under18",
+        "sourceGroupMinAge": 15,
+        "minAge": 15,
+        "maxAge": 18,
+        "minAgeExclusive": false,
+        "maxAgeExclusive": true,
+        "sourceGroupLabel": "15–18,9 lat"
+      }
+    ],
+    "version": "2026-10-13.1"
+  },
+  "inhb": {
+    "source": "inhibin-comparison-reference-data.json#borelli2025-female-inhb-puberty-comparison",
+    "id": "borelli2025-female-inhb-age-5p6-20",
+    "minAge": 5.6,
+    "maxAge": 20,
+    "maxAgeExclusive": false,
+    "retainAllSourcePoints": true,
+    "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie.",
+    "ageRouting": "Zwykły wykres udostępnia odniesienie od 5,6 do 20 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano wszystkie 24 węzły źródłowe do interpolacji. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku brak liczbowego odniesienia.",
+    "qualificationScope": "ordinary-female-inhibin-b-age-5p6-20"
+  }
+}

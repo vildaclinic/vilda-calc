@@ -24,7 +24,7 @@ function adapter(extra = {}) {
     localOverride: { sex: null, age: null, tanner: null, cycle_phase: null },
     overrideSexEl: { value: '' }, overrideAgeEl: { value: '' }, overrideAgeMonthsEl: { value: '' },
     overrideCycleEl: { value: '' }, overrideTannerEl: { value: '' },
-    valueEl: { value: '40' }, currentSubstance: { id: 'testosterone_total' },
+    valueEl: { value: '40' }, unitEl: { value: 'ng/dL' }, currentSubstance: { id: 'testosterone_total' },
     sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'M', ageYears: 12, ageMonths: 0 },
     effectivePatient: { sex: 'M', age: 12 },
     lifespanUI: { update: (value) => updates.push(value), clear: () => updates.push(null) },
@@ -53,9 +53,11 @@ describe('Hormone lifespan converter adapter — current result only', () => {
       ['inhibin_b', '0', 'pg/mL', 0, 'pg/mL'],
     ]) {
       const app = adapter();
+      app.context.unitEl.value = unit;
       app.update({ id }, evaluated(raw, unit));
       expect(app.last()).toMatchObject({ measurement: { value, unit: expectedUnit, operator: '=' },
-        ageYears: 0.25, ageUpperYears: 1 / 3, ageUpperInclusive: false, ageLabel: '3 mies.', preterm: 'no' });
+        displayUnit: unit, ageYears: 0.25, ageUpperYears: 1 / 3, ageUpperInclusive: false,
+        ageLabel: '3 mies.', preterm: 'no' });
     }
   });
 
@@ -84,11 +86,39 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     ]) {
       const result = win.LabUnitConverter.convertAll({ substanceId: id, value, fromUnit: unit });
       expect(result.ok).toBe(true);
+      app.context.unitEl.value = unit;
       app.update({ id }, null, result);
       expect(app.last().measurement).toEqual({ value: result.siValue, unit: result.siUnit, operator: '=' });
+      expect(app.last().displayUnit).toBe(unit);
     }
     app.update({ id: 'amh' }, null, null);
     expect(app.last().measurement).toBeNull();
+  });
+
+  it('keeps AMH measurement in converter SI while the source-unit selector independently changes marker labels', () => {
+    const win = {};
+    loadBrowserScript('lab_units_data.js', win);
+    loadBrowserScript('lab_unit_converter.js', win);
+    const app = adapter({
+      sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'F', ageYears: 15, ageMonths: 0 },
+      effectivePatient: { sex: 'F', age: 15 },
+    });
+    let canonicalValue;
+    for (const [value, fromUnit] of [[.45, 'ng/mL'], [.45 / .1401, 'pmol/L'], [.45, 'ng/mL']]) {
+      app.context.unitEl.value = fromUnit;
+      const conversion = win.LabUnitConverter.convertAll({ substanceId: 'amh', value, fromUnit });
+      expect(conversion.ok).toBe(true);
+      app.update({ id: 'amh' }, null, conversion);
+      const context = app.last();
+      expect(context.displayUnit).toBe(fromUnit);
+      expect(context.measurement).toEqual({ value: conversion.siValue, unit: 'ng/mL', operator: '=' });
+      expect(context.measurement.value).toBeCloseTo(.45, 12);
+      const reference = lifespanReference.evaluate(lifespanData, context);
+      expect(reference).toMatchObject({ status: 'ready', referenceValue: 21.14,
+        profile: { id: 'jopling2018-female-amh-age-15-under18' } });
+      if (canonicalValue == null) canonicalValue = reference.value;
+      expect(reference.value).toBeCloseTo(canonicalValue, 12);
+    }
   });
 
   it('retains year/month/day uncertainty using the existing resolver, including local overrides', () => {

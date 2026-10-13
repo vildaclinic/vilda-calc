@@ -80,10 +80,10 @@ function expectHeights(actual, expected) {
   const error = Math.max(0, ...actual.map((p, i) => Math.abs(p.height - expected[i].height)));
   expect(error).toBeLessThan(.00002);
 }
-async function expectSourcePoint(page, value, median, overflow = false) {
+async function expectSourcePoint(page, value, median, overflow = false, profile = 'ljubicic2022-female-inhb') {
   const group = point(page);
   await expect(group).toHaveCount(1);
-  await expect(group).toHaveAttribute('data-profile', 'ljubicic2022-female-inhb');
+  await expect(group).toHaveAttribute('data-profile', profile);
   await expect(group).toHaveAttribute('data-divisor', '52.474');
   await expect(group).toHaveAttribute('data-ceiling', '1');
   await expect(group).toHaveAttribute('data-reference-statistic', 'median');
@@ -152,7 +152,8 @@ for (const width of [1440, 320]) {
     const sourceShape = await geometry(page);
     for (const ageYears of [3, 14, 35, 65]) {
       await update(page, { ageYears, ageLabel: `${ageYears} lat`, measurement: { value: 50, unit: 'pg/mL' } });
-      await expect(point(page)).toHaveCount(0);
+      if (ageYears === 14) await expectSourcePoint(page, 50, 46, false, 'borelli2025-female-inhb-age-5p6-20');
+      else await expect(point(page)).toHaveCount(0);
       expect(await geometry(page)).toEqual(sourceShape);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -224,7 +225,7 @@ test('female INHB keeps its line while enforcing source-age, term-birth and meas
 });
 
 
-test('ordinary female INHB never inherits the separate comparison scale or puberty reference', async ({ page }) => {
+test('ordinary female INHB keeps its own source profile and scale across sex-comparison switches', async ({ page }) => {
   await openComponent(page, 1440);
   const chart = panel(page).locator('[data-lifespan="chart"]');
   for (const [view, ageYears, median, profile] of [
@@ -235,7 +236,7 @@ test('ordinary female INHB never inherits the separate comparison scale or puber
     await update(page, { ageYears, measurement: { value: 40, unit: 'pg/mL' } });
     const ordinary = await geometry(page, ages[view]);
     if (view === 'mini') await expectSourcePoint(page, 40, median);
-    else await expect(point(page)).toHaveCount(0);
+    else await expectSourcePoint(page, 40, median, false, 'borelli2025-female-inhb-age-5p6-20');
     await panel(page).locator('.vhl-compare-toggle').click();
     await expect(chart).toHaveAttribute('data-comparison-scale', 'linear');
     await expect(chart).toHaveAttribute('data-comparison-max', '400');
@@ -259,6 +260,6 @@ test('ordinary female INHB never inherits the separate comparison scale or puber
     await expect(chart).not.toHaveAttribute('data-comparison-max');
     expect(await geometry(page, ages[view])).toEqual(ordinary);
     if (view === 'mini') await expectSourcePoint(page, 500, median, true);
-    else await expect(point(page)).toHaveCount(0);
+    else await expectSourcePoint(page, 500, median, true, 'borelli2025-female-inhb-age-5p6-20');
   }
 });

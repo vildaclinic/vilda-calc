@@ -1,0 +1,437 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-13",
+  "status": "implementation-authorized-by-owner; educational-reference-extension-not-clinical-validation",
+  "approval": {
+    "date": "2026-10-13",
+    "scope": "Ordinary female AMH group medians and inhibin B adolescent medians, concise source/eligibility comments, existing form only.",
+    "baseCommit": "dfa65c20",
+    "geometryChangeAuthorized": false,
+    "newLaboratoryNormsAuthorized": false,
+    "initialOrdinaryInhibinDomainYears": [
+      8,
+      20
+    ]
+  },
+  "reviewBasis": "Cached complete primary texts reread for Table 1 Jopling and Figure 1/methods/cohorts/limitations Borelli. No fresh source download or independent redigitization claimed.",
+  "sources": [
+    {
+      "id": "jopling2018",
+      "doi": "10.1002/edm2.21",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+      "evidence": {
+        "sha256": "05447bbac6afa104c930f2a1a279c17662a8ef286217e27b576a63ddc3e8e618",
+        "review": "Read cached primary full text (no fresh download claimed).",
+        "fileName": "jopling2018.txt"
+      },
+      "table": 1,
+      "assay": "Beckman Coulter Access AMH",
+      "matrix": "lithium-heparin plasma",
+      "statistic": "published age-group median, not exact-age model median",
+      "population": "Residual samples from Royal Manchester Children’s Hospital; investigated DSD or other endocrinopathy excluded. Health assumed; no Tanner-stage data.",
+      "sourceGroup": "15–18.9 years",
+      "n": 30,
+      "medianPmolL": 21.14,
+      "medianNgMlUsingCurrentAppConversion": 2.9617139999999997,
+      "sourceAgePrecision": "Samples labelled with age in days; article describes 1 day–18years and calculates continuous model 0–18. Table 1 has final label 15–18.9. No rounding rule or exact maximum age reported.",
+      "sourceGroups": [
+        {
+          "ageMinYears": 1,
+          "ageMaxYears": 4.9,
+          "n": 42,
+          "median": 14.58,
+          "illustrationMidpointYears": 2.95
+        },
+        {
+          "ageMinYears": 5,
+          "ageMaxYears": 7.9,
+          "n": 42,
+          "median": 11.44,
+          "illustrationMidpointYears": 6.45
+        },
+        {
+          "ageMinYears": 8,
+          "ageMaxYears": 11.9,
+          "n": 47,
+          "median": 20.42,
+          "illustrationMidpointYears": 9.95
+        },
+        {
+          "ageMinYears": 12,
+          "ageMaxYears": 14.9,
+          "n": 33,
+          "median": 17.87,
+          "illustrationMidpointYears": 13.45
+        },
+        {
+          "ageMinYears": 15,
+          "ageMaxYears": 18.9,
+          "n": 30,
+          "median": 21.14,
+          "illustrationMidpointYears": 16.95
+        }
+      ],
+      "limitations": [
+        "Small cross-sectional hospital groups; health assumed after exclusion of suspected endocrinopathy/DSD.",
+        "No Tanner-stage information; group medians must not become exact-age or stage medians.",
+        "No source-derived plasma–serum or cross-assay conversion.",
+        "AMH is described as relatively stable across menstrual cycle, not universally invariant.",
+        "Graphical midpoint ages and smoothed curves are not source population reference values.",
+        "FDA adult groups are not activated by this implementation."
+      ]
+    },
+    {
+      "id": "borelli2025",
+      "doi": "10.1210/clinem/dgae439",
+      "url": "https://doi.org/10.1210/clinem/dgae439",
+      "evidence": {
+        "sha256": "24535550594842841a4814d2e38bcfcc2f70cd9ac2e5b27989b6ded5c1961d90",
+        "review": "Read cached primary full text (no fresh download claimed).",
+        "fileName": "borelli2025-fulltext.txt"
+      },
+      "figure": 1,
+      "assay": "Beckman Coulter Inhibin B Gen II ELISA",
+      "matrix": "serum",
+      "statistic": "Approximate digitization of GAMLSS 0 SD/median",
+      "femaleCohorts": {
+        "totalParticipants": 889,
+        "totalSamples": 1005,
+        "girls": {
+          "n": 648,
+          "ageYears": [
+            5.6,
+            20.2
+          ]
+        },
+        "adults": {
+          "n": 149,
+          "ageYears": [
+            20,
+            69
+          ]
+        }
+      },
+      "retainedDigitizationDomainYears": [
+        5.6,
+        47
+      ],
+      "approxMedianAt15PgMl": 44,
+      "rawDigitizedAt15PgMl": 43.82,
+      "graphicalReadingTolerancePgMl": 2,
+      "limits": [
+        "Graphical reading tolerance is not confidence interval or reference interval.",
+        "Menstrual phase not standardized.",
+        "OC use incompletely recorded; included adolescent users 59 ages 14.8–19.9 and nonusers 81 ages 14.8–19.8.",
+        "OC subgroup median 8 ng/L vs55 ng/L in nonusers, not personalized adjustment.",
+        "Age median must not substitute Tanner median; paper givesB1=15, B2=26, B3=46, B4=55, B5=34 ng/L.",
+        "No observed 1.08–5.6-year cohort; no numerical extension through graphical bridge.",
+        "No new values after 47 from qualitative tail."
+      ],
+      "approxMedianAt6PgMl": 11,
+      "rawDigitizedAt6PgMl": 10.74,
+      "femaleAssayDetectionLimitPgMl": 3,
+      "supplementReview": {
+        "doi": "10.6084/m9.figshare.26056558.v1",
+        "access": "Reread retained full Supplementary Data_Johannsen et al text; no new download.",
+        "scope": "Gen II assay validation: assay comparison, stability, interference and external quality control. No numerical age-model LMS coefficients or median table."
+      }
+    }
+  ],
+  "sourceFiles": [
+    {
+      "file": "evidence/amh-access-groups.json",
+      "sha256": "4ca3ec5cdf4e2574a22277b933038ef4fa6554c5493ff7ef1297d30276766494"
+    },
+    {
+      "file": "evidence/inhb-digitized-median.json",
+      "sha256": "1a9c250deb7a1eb23e1c89fbce04399b936ca0134bf509cc38d3b2c13f8ea961"
+    },
+    {
+      "file": "inhibin-comparison-reference-data.json",
+      "sha256": "00f556f1f93522ddb80b0d30551263a319b03a9e5fe609ecec852a7e1883cf37"
+    }
+  ],
+  "qualificationPolicy": {
+    "amhRoutes": [
+      {
+        "minAge": 1,
+        "minAgeExclusive": true,
+        "maxAge": 5,
+        "maxAgeExclusive": true,
+        "sourceLabel": "1–4.9 years",
+        "medianPmolL": 14.58,
+        "n": 42
+      },
+      {
+        "minAge": 5,
+        "maxAge": 8,
+        "maxAgeExclusive": true,
+        "sourceLabel": "5–7.9 years",
+        "medianPmolL": 11.44,
+        "n": 42
+      },
+      {
+        "minAge": 8,
+        "maxAge": 12,
+        "maxAgeExclusive": true,
+        "sourceLabel": "8–11.9 years",
+        "medianPmolL": 20.42,
+        "n": 47
+      },
+      {
+        "minAge": 12,
+        "maxAge": 15,
+        "maxAgeExclusive": true,
+        "sourceLabel": "12–14.9 years",
+        "medianPmolL": 17.87,
+        "n": 33
+      },
+      {
+        "minAge": 15,
+        "maxAge": 18,
+        "maxAgeExclusive": true,
+        "sourceLabel": "15–18.9 years",
+        "medianPmolL": 21.14,
+        "n": 30
+      }
+    ],
+    "ageRoutingMeaning": "Explicit contiguous application routing avoids artificial 0.1-year gaps between table labels. Not a recovered author age-rounding algorithm. Upper cap <18 is conservative pediatric scope; source group labels, medians and N are not rewritten.",
+    "firstBirthday": "Exactly 1 year retains existing Ljubicic. A range starting at 1 and extending above 1 crosses sources and remains unavailable; never route using midpoint.",
+    "inhb": {
+      "ordinaryDomainYears": [
+        5.6,
+        20
+      ],
+      "bothEndpointsInclusive": true,
+      "fitDomainYears": [
+        5.6,
+        47
+      ],
+      "sourceNodes": 24,
+      "interpolation": "pchip",
+      "comparisonPolicyUnchanged": true,
+      "profileId": "borelli2025-female-inhb-age-5p6-20",
+      "policyAndPatientPointDataVersion": "2026-10-13.2",
+      "comparisonDomainYears": [
+        8,
+        20
+      ]
+    },
+    "qualification": "Unknown/absent assay or specimen allows explicitly educational comparison without claiming compatibility. Known incompatible assay/specimen or contraindication blocks patient/reference points. Source-specific compatibleSpecimenIds preserve the existing default serum policy of other profiles.",
+    "geometry": "Existing curves, normalization maxima, zoom projections and source marker independence remain unchanged. New ordinary profiles do not activate puberty sex-comparison points.",
+    "laboratoryNorms": "No reference interval, threshold, classification, diagnostic verdict, unit conversion or snapshot change."
+  },
+  "syntheticCases": [
+    {
+      "input": {
+        "sex": "female",
+        "ageYears": 15,
+        "analyte": "amh",
+        "value": 0.45,
+        "unit": "ng/mL",
+        "specimen": "unknown",
+        "method": "unknown"
+      },
+      "expected": {
+        "referenceStatistic": "group-median",
+        "sourceGroup": "15–18.9 years",
+        "medianPmolL": 21.14,
+        "medianNgMl": 2.961714,
+        "patientValueUnchanged": 0.45,
+        "normalityVerdict": null
+      }
+    },
+    {
+      "input": {
+        "analyte": "amh",
+        "sex": "female",
+        "exactAgesYears": [
+          4.99,
+          5,
+          14.99,
+          15
+        ]
+      },
+      "expectedMedianPmolL": [
+        14.58,
+        11.44,
+        17.87,
+        21.14
+      ]
+    },
+    {
+      "input": {
+        "analyte": "amh",
+        "sex": "female",
+        "exactAgeYears": 1
+      },
+      "expected": "Existing Ljubicic profile and term-birth qualification retained."
+    },
+    {
+      "input": {
+        "analyte": "amh",
+        "sex": "female",
+        "ageSpanYears": [
+          1,
+          1.0833333333333333
+        ]
+      },
+      "expected": "No single source reference; concise ambiguous-age explanation."
+    },
+    {
+      "input": {
+        "analyte": "amh",
+        "sex": "female",
+        "ageSpanYears": [
+          14.99,
+          15.01
+        ]
+      },
+      "expected": "No single group reference; no midpoint routing."
+    },
+    {
+      "input": {
+        "analyte": "amh",
+        "sex": "female",
+        "exactAgeYears": 18
+      },
+      "expected": "No new Jopling or FDA reference."
+    },
+    {
+      "input": {
+        "analyte": "amh",
+        "sex": "female",
+        "exactAgeYears": 15,
+        "specimen": "serum"
+      },
+      "expected": "Jopling point unavailable; line and age marker retained."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgesYears": [
+          8,
+          15,
+          20
+        ]
+      },
+      "expectedMedianPgMl": [
+        14,
+        44,
+        34
+      ]
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "ageSpanYears": [
+          15,
+          16
+        ],
+        "upperInclusive": false
+      },
+      "expected": "Existing uncertain-age handling; median range approximately 40–44 pg/mL, not falsely exact 44."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 20.01
+      },
+      "expected": "No ordinary adolescent reference despite retained fit nodes to 47."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 6,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expectedMedianPgMl": 11,
+      "expected": "Ordinary patient and approximate source-median markers; no laboratory verdict from relation to median."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "ageSpanYears": [
+          6,
+          6.083333333333333
+        ],
+        "upperInclusive": false,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expected": "Entire interval eligible; retained source model near 11 pg/mL across this span."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 5.6
+      },
+      "expectedMedianPgMl": 11
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "ageSpanYears": [
+          5.59,
+          5.61
+        ]
+      },
+      "expected": "No ordinary reference; whole possible age crosses the source lower boundary."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 5.59
+      },
+      "expected": "No ordinary reference from illustrative bridge."
+    }
+  ],
+  "testExecution": "Expected cases only. Actual production test execution and GitHub status belong to current implementation reports.",
+  "ordinaryInhibinChildhoodExtension": {
+    "approvalDate": "2026-10-13",
+    "implementationBase": "f22c280e",
+    "ownerAuthorized": "Extend ordinary female inhibin B educational reference to 5.6–20 years using existing source data; no new geometry, laboratory norms or form fields.",
+    "trigger": {
+      "sex": "female",
+      "ageYears": 6,
+      "value": 33,
+      "unit": "pg/mL",
+      "previousResult": "unsupported-age"
+    },
+    "whyEightWasNotASourceLimit": "PR #651 reused the already approved puberty-comparison window 8–20. Source COPUS II girls were observed at 5.6–20.2 years.",
+    "sourceReview": "Reread the retained complete primary article, Figure 1 and assay-validation supplement; no new paper, numerical data or independent redigitization.",
+    "currentProfileId": "borelli2025-female-inhb-age-5p6-20",
+    "previousOrdinaryProfileId": "borelli2025-female-inhb-age-8-20",
+    "ordinaryDomainYears": [
+      5.6,
+      20
+    ],
+    "endpointsInclusive": true,
+    "preserved": [
+      "All 24 source knots and their PCHIP fit",
+      "Infant reference and >1 to <5.6-year gap",
+      "Puberty sex comparison 8–20 years",
+      "AMH profiles with routingVersion 2026-10-13.1",
+      "Geometry, scales, assay/specimen/contraindication/censoring gates",
+      "Laboratory norms, classifications, unit conversions and persistence"
+    ],
+    "numericMeaning": "Source median at age 6 is approximately 11 pg/mL. A result of 33 lies above that median; this alone is not an above-reference-range classification.",
+    "limitations": [
+      "Female Gen II LOD 3 pg/mL; median ~11 is not a sub-LOD or LOD/2 value.",
+      "Approximately ±2 pg/mL is graphical reading tolerance, not a confidence interval or clinical reference interval.",
+      "Dense red observations obscure some early-childhood curve pixels. Existing approximate digitization is retained; no independent high-precision re-extraction claimed.",
+      "Age-specific sample counts and original numerical LMS coefficients are not supplied by retained materials.",
+      "Whole possible age must lie in the active domain; no midpoint selection across a boundary.",
+      "Chronological age does not determine Tanner stage and this age-model profile does not require Th1."
+    ]
+  }
+}

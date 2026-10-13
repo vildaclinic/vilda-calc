@@ -84,7 +84,7 @@ nie obejmowała pokwitania ani innych hormonów.
 
 Kolejna zatwierdzona makieta obejmuje inhibinę B: wspólną liniową oś
 stężenia w minipuberty i pokwitaniu. Właściciel zaakceptował również
-punkt dziewcząt według modelu Borelli-Kjær 2025, wyłącznie w porównaniu
+punkt dziewcząt według modelu Borelli-Kjær 2025, początkowo wyłącznie w porównaniu
 płci inhibiny B w wieku 8–20 lat. To ograniczone rozszerzenie odniesienia
 edukacyjnego, bez zmiany norm laboratoryjnych lub zwykłych widoków.
 
@@ -99,6 +99,11 @@ AMH i polecił jej implementację („ok, koduj to”). Naprawa zachowuje
 dotychczasowy przebieg całego życia, usuwa jego zastępowanie i skalowanie
 po wpisaniu wyniku oraz przenosi tę samą geometrię do zbliżeń. Nie dodaje
 źródeł liczbowego punktu, norm ani kalibracji między badaniami.
+
+13 października 2026 właściciel zaakceptował udostępnienie median AMH
+i inhibiny B starszym dziewczynkom w zwykłych widokach. To opisane niżej
+rozszerzenie liczbowe uzupełnia wcześniejsze naprawy geometrii; nie zmienia
+laboratoryjnych norm ani kontraktów porównania płci.
 
 ## Cel i granice
 
@@ -315,13 +320,16 @@ płodnością, Access 2). Sowers 2008 wspiera jakościowy spadek wokół
 ostatniej miesiączki. Połączenie nie harmonizuje surowicy, osocza ani
 populacji i nie tworzy jednego zwalidowanego modelu życia.
 
-Jedyny dotychczasowy żeński profil liczbowy AMH w zwykłym widoku,
+Jedyny w chwili tej naprawy żeński profil liczbowy AMH w zwykłym widoku,
 `ljubicic2022-female-amh`, zachowuje okno 0,02–1 roku, kwalifikację
 donoszenia, metody, materiału i wyniku. W wieku 19,668 lub 35 lat
 poglądowa linia nie uprawnia do dopisania mediany ani punktu stężenia.
 Męskie AMH, porównanie płci i pozostałe hormony mają odrębne, niezmienione
 kontrakty. Laboratoryjne normy, wyniki, jednostki wejściowe i zapis
 pacjenta pozostają bez zmian.
+
+Powyższy zakres historycznej naprawy rozszerza sekcja odniesień
+z 13 października poniżej: Jopling działa po 1. i przed 18. urodzinami.
 
 Przypadki syntetyczne: dziewczynka donoszona, 0,25 roku, AMH
 10 pmol/L → mediana 16,999 pmol/L, oba znaczniki na stałej skali 28,99;
@@ -430,8 +438,10 @@ bez osobnego LOQ; nie podstawiamy pacjentce wartości LOD/2.
 
 Zwykły profil `ljubicic2022-female-inhb` nadal obejmuje 0,02–1 roku
 włącznie i donoszone dziewczynki. Porównanie płci ma osobny profil
-żeńskich median 8–20 lat, poza globalnym `patientPointData`; nie
-aktywuje on starszego punktu w zwykłych widokach. Normy laboratoryjne,
+żeńskich median 8–20 lat, poza globalnym `patientPointData`; w tej
+historycznej naprawie nie aktywował starszego punktu w zwykłych widokach.
+Rozszerzenie z 13 października udostępnia te same mediany również tam.
+Normy laboratoryjne,
 źródła liczbowe, kwalifikacja, zapis i męska krzywa pozostają bez zmian.
 
 Przypadek syntetyczny: dziewczynka donoszona, 0,25 roku, 30 pg/mL
@@ -440,6 +450,59 @@ bez zmiany mediany, krzywej lub skali. 90 dni daje inne p50, około
 49,4718 pg/mL: 0,25 roku nie jest dokładnie równe 90 dniom.
 Źródła i decyzję utrwala
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
+
+### Mediany AMH i inhibiny B starszych dziewcząt — 13 października 2026
+
+W zwykłych widokach brakowało odniesień, mimo dostępnej linii stężenia.
+Właściciel zaakceptował ich dodanie bez kolejnych pól formularza.
+Dotychczasowe krzywe, stałe skale, źródła niemowlęce i interpretacje
+laboratoryjne pozostają bez zmian. Jasny znacznik wskazuje liczbę ze
+źródła, także wtedy, gdy nie leży na wygładzonej ilustracji.
+
+**AMH:** pięć median grup Jopling 2018, tabela 1, Access AMH w osoczu
+litowo-heparynowym. Dla grupy 15–18,9 lat mediana wynosi 21,14 pmol/L,
+czyli około 2,96 ng/mL według istniejącej konwersji aplikacji. To mediana
+grupy 30 dziewcząt, nie model dokładnie 15. roku życia. Podpis wyróżnia
+grupę wieku; krótki komentarz podaje metodę i materiał źródła. Wiek
+chronologiczny nie ustala Tannera. Źródło opiera się na próbkach
+szpitalnych, z wykluczeniem podejrzanych endokrynopatii i DSD.
+
+Routing `(1,5)`, `[5,8)`, `[8,12)`, `[12,15)`, `[15,18)` jest jawną
+konwencją aplikacji dla sąsiednich grup tabeli, bez sztucznych przerw
+4,9–5 itd. Oryginalne etykiety, N i mediany pozostają zachowane.
+Źródło podaje wiek w dniach i ogólny zakres do 18 lat, ale nie regułę
+zaokrągleń ani rzeczywisty najstarszy wiek; cap <18 jest konserwatywną
+polityką tej partii. FDA dla dorosłych pozostaje poza aktywnymi profilami.
+Dokładnie 1 rok nadal korzysta z Ljubicic. Przedział wieku przecinający
+granicę źródeł lub grup otrzymuje krótki powód braku jednej mediany.
+
+**Inhibina B:** Borelli-Kjær 2025, ryc. 1, przybliżona mediana GAMLSS
+surowicy Gen II, dotychczas dostępna wyłącznie w porównaniu płci,
+działa także w zwykłych widokach **5,6–20 lat włącznie**. Początkowe
+okno 8–20 z PR #651 odziedziczono po porównaniu pokwitania. Właściciel
+13 października zaakceptował poszerzenie zwykłego odniesienia po zgłoszeniu
+F6/33 pg/mL: wynik otrzymuje punkt i przybliżoną medianę ≈11 pg/mL.
+To dostępne dane ryc. 1, nie liczba z mostu ani nowa norma. Kohorta
+648 dziewcząt obejmowała wiek 5,6–20,2; żeńskie oznaczenia Gen II miały
+LOD 3 pg/mL. Odczyt ≈11 jest powyżej LOD, a oszacowanie digitalizacji
+±2 pg/mL nie jest przedziałem ufności ani granicą referencyjną.
+Całe 24 węzły 5,6–47 nadal wyznaczają PCHIP; geometria i skale pozostają
+niezmienione. Luka >1–<5,6 pozostaje bez liczbowego odniesienia, a porównanie
+płci zachowuje okno 8–20. Nie trzeba nowej publikacji ani pól formularza.
+Profil `borelli2025-female-inhb-age-5p6-20` i polityka/dane punktu
+`2026-10-13.2` zastępują zwykłe ID `borelli2025-female-inhb-age-8-20`;
+pięć profili AMH zachowuje własny routing `2026-10-13.1`.
+Dokładnie 15 lat daje nadal ≈44 pg/mL; nieprecyzyjny wiek zachowuje
+dotychczasowy przedział odniesienia. Krótki komentarz przypomina,
+że jest to przybliżenie i że cykl oraz antykoncepcja wpływają na wynik.
+
+Nieznane metoda lub materiał nie są potwierdzeniem zgodności próbki;
+pozwalają na edukacyjne zestawienie. Znana niezgodność blokuje punkt.
+Materiał Jopling musi zachować pochodzenie osoczowe; nie przemianowujemy
+go na surowicę. Liczba poniżej mediany nie nadaje statusu „poniżej normy”.
+Przypadki, szczegóły granic i źródła:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026)
+i [przegląd źródłowy](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
 
 ### Stała linia męskiego AMH
 
@@ -558,8 +621,10 @@ Kwalifikacja obejmuje 8–20 lat włącznie, natomiast PCHIP zachowuje
 wszystkie 24 źródłowe węzły 5,6–47 lat, aby granice widoku nie zmieniały
 stycznych. W wieku 8/12/13/20 lat żeńskie mediany wynoszą około
 14/43/47/34 pg/mL. Przed 8 i po 20 latach nie dodajemy tego punktu;
-nie pojawia się też w zwykłych widokach. Źródło nie daje tu parametrów
-L/S, SDS ani nowych percentyli. Fazy cyklu nie standaryzowano,
+W zwykłych widokach te same mediany udostępnia odrębne rozszerzenie
+z 13 października, poszerzone następnie do 5,6–20 lat. Źródło nie daje
+w zachowanych materiałach numerycznych parametrów L/S; nie wyliczamy
+SDS ani nowych percentyli. Fazy cyklu nie standaryzowano,
 a antykoncepcja doustna wpływa na stężenia; nie dodajemy formularza
 ani norm dostosowanych do tych okoliczności.
 
@@ -923,7 +988,9 @@ analitów nie otrzymują automatycznie nowych polityk tych porównań.
   geometrii po wpisaniu wyniku lub powiększeniu.
 - **Pokwitanie, inhibina B:** stałe modele Borelli-Kjær obu płci,
   8–20 lat i ta sama liniowa oś 0–400 pg/mL; osobno zaakceptowane
-  żeńskie odniesienie pacjentki tylko w tym porównaniu.
+  żeńskie odniesienie pacjentki. Od 13 października te same mediany
+  są dostępne również w zwykłych widokach na ich własnej skali;
+  uzupełnienie po zgłoszeniu 6-latki poszerza tylko zwykły profil do 5,6–20.
 - **LH/FSH:** mediany obu płci, minipuberty 0,02–<1 roku / 0–6 IU/L
   i pokwitanie 6–16 lat / 0–8 IU/L, bez osobnej normalizacji płci.
 - **Pokwitanie, AMH:** na wspólnej osi wieku

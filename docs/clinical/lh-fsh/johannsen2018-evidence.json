@@ -1,0 +1,530 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-13",
+  "status": "primary_source_verified_implementation_authorized",
+  "clinicalValidationClaimed": false,
+  "approval": {
+    "date": "2026-10-13",
+    "by": "application owner",
+    "scope": "Accepted clinical proposal and desktop/mobile mockup for orientative basal LH/FSH comparison; no additional form fields.",
+    "ownerMessage": "ok, jest dobrze, koduj",
+    "implementationBase": "caf10f29"
+  },
+  "source": {
+    "authors": "Johannsen TH et al.",
+    "title": "Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development",
+    "doi": "10.1210/jc.2018-00482",
+    "pmid": "29917083",
+    "url": "https://academic.oup.com/jcem/article/103/8/3028/5037960",
+    "publication": "JCEM 2018;103(8):3028–3037",
+    "sha256": "58f117a94ad1b37de4dfd5f649c0af12b6198bff89a287bbd8cdfe9ff708415b",
+    "access": "Independently reread complete retained publisher HTML; no live re-download claimed. Primary methods, population, statistical analysis, Table 1 and discussion checked. Prior review was consulted separately."
+  },
+  "sourceLocations": [
+    "Healthy infants",
+    "Hormone analyses",
+    "Statistical analyses",
+    "Table 1: LH and FSH rows",
+    "Discussion: limitations"
+  ],
+  "population": {
+    "design": "Cross-sectional analysis of three pooled prospective Danish mother-child cohorts",
+    "healthyTotal": 1840,
+    "male": 1041,
+    "female": 799,
+    "cohorts": [
+      {
+        "n": 1278,
+        "boys": 733,
+        "girls": 545,
+        "location": "Copenhagen",
+        "recruitment": "1997–2002"
+      },
+      {
+        "n": 117,
+        "boys": 64,
+        "girls": 53,
+        "location": "Funen/Odense",
+        "recruitment": "1996–2001",
+        "note": "Mothers working in greenhouses; source cohort context retained, not an additional independent validation cohort."
+      },
+      {
+        "n": 445,
+        "boys": 244,
+        "girls": 201,
+        "location": "Odense",
+        "recruitment": "2010–2012"
+      }
+    ],
+    "birthGestationalAgeDays": {
+      "min": 259,
+      "minInclusive": true,
+      "max": 293,
+      "maxInclusive": true
+    },
+    "birthGestationalAgeText": "37 weeks +0 days to 41 weeks +6 days",
+    "observedAgeMonths": {
+      "M": {
+        "minReported": 2.1,
+        "maxReported": 5.0,
+        "meanReported": 3.3,
+        "p2_5": 2.5,
+        "p97_5": 4.7
+      },
+      "F": {
+        "minReported": 2.3,
+        "maxReported": 5.0,
+        "meanReported": 3.3,
+        "p2_5": 2.5,
+        "p97_5": 4.6
+      }
+    },
+    "nominalReferenceDomainMonths": [
+      2,
+      5
+    ],
+    "sampling": "One nonfasting venous serum sample per infant, 08:00–18:00. Serum stored at −20°C for up to 5 years before analysis.",
+    "DSD": {
+      "separateComparisonPatients": 27,
+      "partOfHealthyReferenceRows": false
+    },
+    "ethnicityLimitation": "Primarily Danish infants; transfer to other populations requires caution."
+  },
+  "assay": {
+    "analytes": [
+      "LH",
+      "FSH"
+    ],
+    "method": "Time-resolved fluoroimmunoassay, AutoDELFIA, PerkinElmer, Turku, Finland",
+    "specimen": "serum",
+    "unit": "IU/L",
+    "LOD": {
+      "LH": 0.05,
+      "FSH": 0.05
+    },
+    "interassayCV": "<6% for LH and FSH",
+    "belowLODStatisticalHandling": "Authors substituted hormone-specific LOD/2 for statistical calculations. Not permission to replace a patient result or define a lower physiological normal limit.",
+    "LOQ": "Separate LOQ not established in reviewed article."
+  },
+  "statistics": {
+    "referenceBounds": "Back-transformed P2.5–P97.5 after logarithmic transformation",
+    "centralStatistic": "geometric mean, NOT median",
+    "ageStratification": "Chosen after visual inspection of change across the observed age range",
+    "dailyCurve": false,
+    "sexSeparationCutoffs": "Table cutoffs LH 0.73, FSH 1.92, LH/FSH 0.32 classify sex in the studied setting, not disease or normality thresholds; outside proposed activation."
+  },
+  "ageBins": [
+    {
+      "id": "early",
+      "minMonths": 2,
+      "minInclusive": true,
+      "maxMonths": 3.5,
+      "maxInclusive": false,
+      "primaryText": "aged 2.0 to <3.5 months",
+      "tableLabel": "2.0–3.5",
+      "operatorEvidence": "Statistical analyses and Table 1 title override shorthand age column."
+    },
+    {
+      "id": "late",
+      "minMonths": 3.5,
+      "minInclusive": true,
+      "maxMonths": 5,
+      "maxInclusive": true,
+      "primaryText": "3.5 to 5.0 months",
+      "tableLabel": "3.5–5.0",
+      "operatorEvidence": "Text contrasts below 3.5 with 3.5 or above; upper 5.0 is reported endpoint including observed maximum, not written as <5."
+    }
+  ],
+  "referenceRows": [
+    {
+      "sex": "M",
+      "analyte": "LH",
+      "ageBinId": "early",
+      "n": 581,
+      "geometricMean": 1.71,
+      "geometricMeanCensor": null,
+      "p2_5": 0.62,
+      "p2_5Censor": null,
+      "p97_5": 4.08,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "M",
+      "analyte": "LH",
+      "ageBinId": "late",
+      "n": 166,
+      "geometricMean": 1.4,
+      "geometricMeanCensor": null,
+      "p2_5": 0.54,
+      "p2_5Censor": null,
+      "p97_5": 3.32,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "F",
+      "analyte": "LH",
+      "ageBinId": "early",
+      "n": 432,
+      "geometricMean": null,
+      "geometricMeanCensor": {
+        "operator": "<",
+        "threshold": 0.05,
+        "reported": "<LOD"
+      },
+      "p2_5": null,
+      "p2_5Censor": {
+        "operator": "<",
+        "threshold": 0.05,
+        "reported": "<LOD",
+        "numericLowerReferenceLimitKnown": false
+      },
+      "p97_5": 0.98,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "F",
+      "analyte": "LH",
+      "ageBinId": "late",
+      "n": 110,
+      "geometricMean": null,
+      "geometricMeanCensor": {
+        "operator": "<",
+        "threshold": 0.05,
+        "reported": "<LOD"
+      },
+      "p2_5": null,
+      "p2_5Censor": {
+        "operator": "<",
+        "threshold": 0.05,
+        "reported": "<LOD",
+        "numericLowerReferenceLimitKnown": false
+      },
+      "p97_5": 1.25,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "M",
+      "analyte": "FSH",
+      "ageBinId": "early",
+      "n": 578,
+      "geometricMean": 1.19,
+      "geometricMeanCensor": null,
+      "p2_5": 0.41,
+      "p2_5Censor": null,
+      "p97_5": 3.02,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "M",
+      "analyte": "FSH",
+      "ageBinId": "late",
+      "n": 165,
+      "geometricMean": 1.11,
+      "geometricMeanCensor": null,
+      "p2_5": 0.42,
+      "p2_5Censor": null,
+      "p97_5": 2.68,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "F",
+      "analyte": "FSH",
+      "ageBinId": "early",
+      "n": 435,
+      "geometricMean": 3.98,
+      "geometricMeanCensor": null,
+      "p2_5": 1.23,
+      "p2_5Censor": null,
+      "p97_5": 17.4,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    },
+    {
+      "sex": "F",
+      "analyte": "FSH",
+      "ageBinId": "late",
+      "n": 111,
+      "geometricMean": 3.93,
+      "geometricMeanCensor": null,
+      "p2_5": 1.3,
+      "p2_5Censor": null,
+      "p97_5": 17.7,
+      "unit": "IU/L",
+      "sourceLocation": "Table 1"
+    }
+  ],
+  "remainingSourceLimits": [
+    "No source definition of month length or exact days-to-months conversion.",
+    "Observed ages reported to one decimal; no exact source-age minima/maxima in days.",
+    "Different patient assays are not cross-calibrated by this paper.",
+    "A report of no prematurity does not independently establish gestation ≤41+6.",
+    "No individual Tanner, therapy/stimulation or DSD-specific adjusted normal ranges proposed."
+  ],
+  "applicationPolicy": {
+    "id": "johannsen-minipuberty-applicability",
+    "version": "2026-10-13.1",
+    "runtimeLocation": "vilda_lab_puberty_data.js: minipubertyEligibilityPolicy",
+    "sourceIds": [
+      "johannsen-minipuberty-2018"
+    ],
+    "profileIds": [
+      "johannsen-minipuberty-lh",
+      "johannsen-minipuberty-fsh"
+    ],
+    "methodId": "autodelfia-johannsen-2018",
+    "engineVersion": "1.6.0",
+    "dataVersion": "2026-10-13.1",
+    "profileVersion": "2026-10-13.1",
+    "referenceDomain": "Use author-defined nominal 2–5 month groups. Observed minima of 2.1 months in boys and 2.3 in girls are reported to one decimal and disclosed, not promoted to separate biological thresholds. No extrapolation outside 2–5 months.",
+    "dayConvention": {
+      "sourceDefined": false,
+      "rule": "For an existing chronological age interval [dMin,dMax], lowerMonths=dMin/31 and upperMonths=dMax/28; preserve endpoint inclusivity. Never expand already-normalized uncertainty by another day.",
+      "purpose": "A conservative application envelope for unknown source month convention, not a daily physiological model.",
+      "mainCalendarExample": "Displayed 90 days -> supplied inclusive day interval [89,90] -> months [89/31,90/28].",
+      "completedDays": "Only a supplied singleton [d,d] with source manual-completed-days expands to [d,d+1). A non-singleton interval carrying that source is conflicting context. Calendar and completed-week intervals already contain uncertainty and are not expanded.",
+      "reportedMonths": "3 months retains [3,4), not an exact age of 3.0 months.",
+      "acceptedPostnatalDaySources": [
+        "main-calendar-dates",
+        "main-completed-weeks",
+        "manual-completed-days",
+        "sample-calendar-dates"
+      ],
+      "unknownDaySource": "A supplied postnatal-day interval with unrecognized provenance does not qualify Johannsen and is not bypassed using another convenient age representation. Automatic selection retains only an otherwise eligible existing Mayo profile, with unchanged gates.",
+      "noSuppliedDays": "If no postnatal-day interval is supplied, valid supported chronological age is preserved; sample dates derive their own sample-calendar-dates interval and reported completed months retain their interval."
+    },
+    "ageQualification": "Entire possible age must lie within 2–5 months. An internal 3.5-month crossing yields separate source axes/statuses, never a merged range, averaged limits, midpoint choice or global verdict. An outer crossing retains only an otherwise eligible Mayo source with its existing gates.",
+    "gestationQualification": "Known 259–293 days is eligible. preterm=no with unknown GA permits a conditional source comparison and the short population note; it does not establish an upper GA bound. Unknown preterm plus unknown GA, known GA outside the population, or contradictory flags/intervals do not qualify Johannsen. Known prematurity preserves the existing Greaves qualification, never term fallback.",
+    "termPopulationNote": "Zakres dla urodzonych w 37+0–41+6 tyg. ciąży.",
+    "methodPriority": "Known actual compatible Mayo method retains Mayo; known AutoDELFIA may select Johannsen when context qualifies. Unknown actual assay may use orientative automatic source selection, without confirming the actual assay. Known incompatible assay, specimen, therapy or stimulation does not gain permission from the automatic profile.",
+    "resultIndependent": true,
+    "femaleLh": "Censored lower percentile <LOD 0.05 remains no numerical physiological lower limit. Compare only to the upper bound. No replacement of patient <LOD by 0.025 or 0.05 and no exact point for inequalities.",
+    "storage": "Snapshot the source, ranges, operators and policy provenance. Existing historical assessments are not recalculated.",
+    "excluded": [
+      "new required fields",
+      "clinical LH/FSH ratio",
+      "sex classification",
+      "CHH/DSD/CPP diagnosis",
+      "daily interpolation",
+      "educational lifespan curve changes",
+      "median markers from geometric means"
+    ],
+    "sourceVersion": "2018-primary-table1-read-2026-10-13"
+  },
+  "clinicalImpactExamples": [
+    {
+      "sex": "M",
+      "mainCalendarDisplayedDays": 120,
+      "analyte": "LH",
+      "value": 3.6,
+      "unit": "IU/L",
+      "johannsenRange": [
+        0.54,
+        3.32
+      ],
+      "expectedStatus": "above",
+      "previousOtherwiseEligibleMayoComparison": "Does not exceed upper 5.0; different assessment is an intended clinical effect of selecting the age-specific source."
+    },
+    {
+      "sex": "F",
+      "mainCalendarDisplayedDays": 90,
+      "analyte": "FSH",
+      "value": 15,
+      "unit": "IU/L",
+      "johannsenRange": [
+        1.23,
+        17.4
+      ],
+      "expectedStatus": "within",
+      "previousOtherwiseEligibleMayoComparison": "Above Mayo 1.2–12.5."
+    },
+    {
+      "sex": "M",
+      "mainCalendarDisplayedDays": 90,
+      "analyte": "LH",
+      "value": 0.1,
+      "unit": "IU/L",
+      "johannsenRange": [
+        0.62,
+        4.08
+      ],
+      "expectedStatus": "below",
+      "previousOtherwiseEligibleMayoComparison": "Mayo infant LH has no physiological lower bound; a low-result classification was unavailable."
+    },
+    {
+      "sex": "M",
+      "mainCalendarDisplayedDays": 105,
+      "analyte": "LH",
+      "value": 3.6,
+      "unit": "IU/L",
+      "expectedStatuses": {
+        "early": "within",
+        "late": "above"
+      },
+      "globalVerdict": null
+    },
+    {
+      "sex": "F",
+      "mainCalendarDisplayedDays": 90,
+      "analyte": "LH",
+      "value": 0.01,
+      "unit": "IU/L",
+      "expectedUpperBound": 0.98,
+      "expectedStatus": "within",
+      "wording": "Does not exceed upper limit; no inference about being too low."
+    }
+  ],
+  "dayBoundaryExamples": [
+    {
+      "displayedDays": 90,
+      "inputRecordDays": {
+        "min": 89,
+        "max": 90,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 2.870967741935484,
+        "max": 3.2142857142857144,
+        "maxInclusive": true
+      },
+      "bin": "early"
+    },
+    {
+      "displayedDays": 95,
+      "inputRecordDays": {
+        "min": 94,
+        "max": 95,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.032258064516129,
+        "max": 3.392857142857143,
+        "maxInclusive": true
+      },
+      "bin": "early"
+    },
+    {
+      "displayedDays": 96,
+      "inputRecordDays": {
+        "min": 95,
+        "max": 96,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.064516129032258,
+        "max": 3.4285714285714284,
+        "maxInclusive": true
+      },
+      "bin": "early"
+    },
+    {
+      "displayedDays": 97,
+      "inputRecordDays": {
+        "min": 96,
+        "max": 97,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.096774193548387,
+        "max": 3.4642857142857144,
+        "maxInclusive": true
+      },
+      "bin": "early"
+    },
+    {
+      "displayedDays": 98,
+      "inputRecordDays": {
+        "min": 97,
+        "max": 98,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.129032258064516,
+        "max": 3.5,
+        "maxInclusive": true
+      },
+      "bin": "both"
+    },
+    {
+      "displayedDays": 105,
+      "inputRecordDays": {
+        "min": 104,
+        "max": 105,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.3548387096774195,
+        "max": 3.75,
+        "maxInclusive": true
+      },
+      "bin": "both"
+    },
+    {
+      "displayedDays": 108,
+      "inputRecordDays": {
+        "min": 107,
+        "max": 108,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.4516129032258065,
+        "max": 3.857142857142857,
+        "maxInclusive": true
+      },
+      "bin": "both"
+    },
+    {
+      "displayedDays": 109,
+      "inputRecordDays": {
+        "min": 108,
+        "max": 109,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.4838709677419355,
+        "max": 3.892857142857143,
+        "maxInclusive": true
+      },
+      "bin": "both"
+    },
+    {
+      "displayedDays": 110,
+      "inputRecordDays": {
+        "min": 109,
+        "max": 110,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.5161290322580645,
+        "max": 3.9285714285714284,
+        "maxInclusive": true
+      },
+      "bin": "late"
+    },
+    {
+      "displayedDays": 120,
+      "inputRecordDays": {
+        "min": 119,
+        "max": 120,
+        "maxInclusive": true
+      },
+      "envelopeMonths": {
+        "min": 3.838709677419355,
+        "max": 4.285714285714286,
+        "maxInclusive": true
+      },
+      "bin": "late"
+    }
+  ],
+  "dayBoundaryExamplesProvenance": "Main-calendar supplied inclusive interval [displayedDays-1,displayedDays]. Thus 97 days is early only, 98 and 109 intersect both, 110 is late only. Explicitly completed days have different interval endpoints; do not reuse these examples for that provenance.",
+  "verification": {
+    "source": "All eight Table 1 rows independently checked. LH N sums 1289 and FSH N sums 1289, matching Hormone analyses.",
+    "applicationTests": "Specified clinical cases are requirements for implementation verification; this source evidence does not assert that code tests passed.",
+    "copyright": "Factual extraction and short bibliographic references only; retained full publisher HTML is not redistributed in this repository."
+  }
+}

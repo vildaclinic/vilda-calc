@@ -9,7 +9,7 @@
   if (root) root.VildaLabPuberty = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  var VERSION = '1.5.0';
+  var VERSION = '1.6.0';
   var DAY_MS = 86400000;
   function finite(value) { return typeof value === 'number' && Number.isFinite(value); }
   function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max || 160) : ''; }
@@ -358,7 +358,11 @@
       if ([ageTest(onsetAge, profile.infantAgeYears), ageTest(onsetAge, profile.earlyAgeYears[sex]), ageTest(onsetAge, { operator: '>', value: profile.absentOnsetAgeYears[sex].value })].includes('indeterminate')) return result('limited', 'onset_context_uncertain', 'Czas początku wymaga doprecyzowania', 'Podany przedział wieku początku przecina granicę interpretacji.', ['onset_precision_crosses_clinical_boundary']);
     }
     if (absent && late === 'within') {
-      if (!untreated(t) || flag(history.regression) === 'yes' || onsetKnown) return result('limited', 'treatment_context', 'Brak cech wymaga uwzględnienia wywiadu', 'Leczenie, wcześniejszy początek lub regresja mogą zmieniać interpretację. Nie rozpoznajemy nowego opóźnienia z samego aktualnego stadium.', ['treatment_or_previous_onset_context']);
+      if (!untreated(t) || flag(history.regression) === 'yes' || onsetKnown) {
+        var unknownTreatmentG1 = sex === 'M' && p.usable && p.stage === 1 && !untreated(t) &&
+          t.context !== 'hormonal' && t.gnrha !== 'yes' && t.sexSteroids !== 'yes' && !onsetKnown && flag(history.regression) !== 'yes';
+        return result('limited', 'treatment_context', unknownTreatmentG1 ? 'Brak aktualnych cech dojrzewania w tym wieku wymaga oceny klinicznej.' : 'Brak cech wymaga uwzględnienia wywiadu', 'Leczenie, wcześniejszy początek lub regresja mogą zmieniać interpretację. Nie rozpoznajemy nowego opóźnienia z samego aktualnego stadium.', ['treatment_or_previous_onset_context']);
+      }
       return result('warning', 'absent_onset', 'Brak początku dojrzewania — wymaga oceny', sex === 'F' ? 'Brak rozwoju gruczołów sutkowych do granicy wieku. Pojedyncze LH/FSH nie ustala przyczyny.' : 'Brak początku rozwoju narządów płciowych lub powiększenia jąder do kryterium początku w granicznym wieku. Pojedyncze LH/FSH nie ustala przyczyny.', ['absent_onset']);
     }
     if ((present && early === 'indeterminate') || (absent && late === 'indeterminate')) return result('limited', 'missing_age', 'Niewystarczająca dokładność wieku', 'Podany przedział wieku przecina kliniczną granicę decyzji.', ['age_precision_crosses_clinical_boundary']);
@@ -521,7 +525,85 @@
     } else if (Object.prototype.hasOwnProperty.call(input, 'reproductiveContext')) normalized.reproductiveContext = text(input.reproductiveContext, 32) || 'unknown';
     return normalized;
   }
-  function evaluateExplicit(input, data, automaticProfile) {
+  function minipubertyProfile(profile, data) {
+    var policy = data.minipubertyEligibilityPolicy;
+    return !!(profile && (profile.scope && profile.scope.agePolicy === 'source-month-envelope' || policy && policy.profileIds && policy.profileIds[profile.analyte] === profile.id));
+  }
+  function minipubertyContext(input, data, chronological, neonatal) {
+    var policy = data.minipubertyEligibilityPolicy;
+    var metadata = { status: 'unknown', lowerMonths: null, upperMonths: null, upperInclusive: false, source: null,
+      policyId: policy && policy.id || null, policyVersion: policy && policy.version || null, gestationStatus: 'unknown' };
+    var result = { metadata: metadata, age: chronological, eligible: false, blockedReasons: [], notes: [] };
+    var monthDays = policy && policy.daysPerMonth;
+    if (!policy || !policy.id || !policy.version || !policy.profileIds || !Array.isArray(policy.sourceIds) ||
+        !Array.isArray(policy.postnatalDaySources) || !policy.postnatalDaySources.length ||
+        !boundsInterval(policy.ageMonths) || !policy.ageMonths.lower || !policy.ageMonths.upper ||
+        !boundsInterval(policy.gestationalAgeDays) || !policy.gestationalAgeDays.lower || !policy.gestationalAgeDays.upper ||
+        !monthDays || !finite(monthDays.lower) || !finite(monthDays.upper) || monthDays.lower <= 0 || monthDays.upper < monthDays.lower) {
+      metadata.status = 'invalid'; result.blockedReasons.push('invalid_johannsen_eligibility_policy'); return result;
+    }
+    var supplied = input.neonatalAge, pna = neonatal.postnatalDays, ga = neonatal.gestationalDays;
+    if (supplied != null && (Object.prototype.toString.call(supplied) !== '[object Object]' ||
+        supplied.postnatalDays != null && !pna || supplied.gestationalDays != null && !ga)) {
+      metadata.status = 'invalid'; result.blockedReasons.push('johannsen_context_conflict'); return result;
+    }
+    if (pna && !policy.postnatalDaySources.includes(pna.source)) {
+      metadata.source = pna.source; result.notes.push('johannsen_day_source_unrecognized'); return result;
+    }
+    var legacy = input.gestationalAgeWeeks;
+    if (legacy != null && legacy !== '') {
+      if (!finite(legacy) || legacy < 0) {
+        metadata.status = 'invalid'; metadata.gestationStatus = 'conflict'; result.blockedReasons.push('johannsen_context_conflict'); return result;
+      }
+      var legacyRange = { lower: Math.floor(legacy * 7), upper: Number.isInteger(legacy) ? Math.floor(legacy * 7) + 6 : Math.ceil(legacy * 7) };
+      if (ga && (ga.upper < legacyRange.lower || ga.lower > legacyRange.upper)) {
+        metadata.status = 'invalid'; metadata.gestationStatus = 'conflict'; result.blockedReasons.push('johannsen_context_conflict'); return result;
+      }
+      if (!ga) ga = legacyRange;
+    }
+    if (pna && chronological.status === 'known' && chronological.source !== 'neonatal-days') {
+      var overlaps = chronological.source === 'dates'
+        ? pna.upper >= Math.max(0, chronological.ageDays - 1) && pna.lower <= chronological.ageDays
+        : relation(interval(pna.lower / monthDays.upper / 12, pna.upper / monthDays.lower / 12, true, true), ageInterval(chronological));
+      if (overlaps === false || overlaps === 'below' || overlaps === 'above') {
+        metadata.status = 'invalid'; result.blockedReasons.push('johannsen_age_context_mismatch'); return result;
+      }
+    }
+    if (!pna && chronological.status === 'known' && chronological.source === 'dates') {
+      pna = { lower: Math.max(0, chronological.ageDays - 1), upper: chronological.ageDays, source: 'sample-calendar-dates' };
+    }
+    if (pna) {
+      var upperDays = pna.upper;
+      var inclusive = true;
+      // Only this explicitly completed-day contract adds the unobserved fraction
+      // of its final day. Dates and completed-week ranges already carry uncertainty.
+      if (pna.source === 'manual-completed-days') {
+        if (pna.lower !== pna.upper) { metadata.status = 'invalid'; result.blockedReasons.push('johannsen_context_conflict'); return result; }
+        upperDays += 1; inclusive = false;
+      }
+      metadata.lowerMonths = pna.lower / monthDays.upper;
+      metadata.upperMonths = upperDays / monthDays.lower;
+      metadata.upperInclusive = inclusive; metadata.source = pna.source;
+    } else if (chronological.status === 'known') {
+      metadata.lowerMonths = chronological.lowerYears * 12; metadata.upperMonths = chronological.upperYears * 12;
+      metadata.upperInclusive = chronological.upperInclusive; metadata.source = chronological.source;
+    } else return result;
+    result.age = { status: 'known', lowerYears: metadata.lowerMonths / 12, upperYears: metadata.upperMonths / 12, upperInclusive: metadata.upperInclusive };
+    var ageMatch = relation(interval(metadata.lowerMonths, metadata.upperMonths, true, metadata.upperInclusive), boundsInterval(policy.ageMonths));
+    metadata.status = ageMatch === 'within' ? 'eligible' : 'outside';
+    if (ageMatch === 'indeterminate') result.notes.push('johannsen_age_envelope_crosses_scope');
+    var gaMatch = ga ? dayRelation(ga, policy.gestationalAgeDays) : 'unknown';
+    var preterm = flag(input.preterm);
+    var termMinimum = boundsInterval(policy.gestationalAgeDays).low;
+    if (ga && (preterm === 'yes' && ga.lower >= termMinimum || preterm === 'no' && ga.upper < termMinimum)) {
+      metadata.status = 'invalid'; metadata.gestationStatus = 'conflict'; result.blockedReasons.push('johannsen_context_conflict'); return result;
+    }
+    metadata.gestationStatus = gaMatch === 'within' ? 'confirmed' : ga ? 'outside' : preterm === 'no' ? 'conditional' : 'unknown';
+    if (ga && gaMatch !== 'within' && ['within', 'indeterminate'].includes(ageMatch)) result.notes.push('johannsen_gestational_age_outside_scope');
+    result.eligible = metadata.status === 'eligible' && ['confirmed', 'conditional'].includes(metadata.gestationStatus) && preterm !== 'yes';
+    return result;
+  }
+  function evaluateExplicit(input, data, automaticProfile, automaticContext) {
     input = input || {}; data = data || {};
     var automatic = input.referenceSelection === 'automatic';
     var normalized = normalizedInput(input), measurement = parseMeasurement(input.value, input.unit), age = resolveAge(input), puberty = pubertyAtSample(input);
@@ -529,9 +611,11 @@
     var clinicalAttention = appendClinicalContext(input, data.clinicalProfile, clinical, age, puberty);
     var bio = { status: 'unavailable', primary: null, byAge: unavailable('no_matching_profile'), byStage: unavailable('no_matching_profile'), local: unavailable('no_local_reference'), reasonCodes: [] };
     var profile = automatic ? automaticProfile || null : Array.isArray(data.profiles) ? data.profiles.find(function (p) { return p && p.id === (input.assay || {}).profileId; }) : null;
-    var isPretermProfile = pretermProfile(profile);
+    var isPretermProfile = pretermProfile(profile), isMinipubertyProfile = minipubertyProfile(profile, data);
     var neonatal = isPretermProfile || Object.prototype.hasOwnProperty.call(input, 'neonatalAge') ? resolveNeonatalAge(input) : null;
-    var gates = [], assay = input.assay || {}, t = therapy(input), biochemicalPolicy = data.biochemicalPolicy;
+    var mini = automaticContext || (isMinipubertyProfile ? minipubertyContext(input, data, age, resolveNeonatalAge(input)) : null);
+    var referenceAge = isMinipubertyProfile && mini ? mini.age : age;
+    var gates = mini ? mini.blockedReasons.slice() : [], assay = input.assay || {}, t = therapy(input), biochemicalPolicy = data.biochemicalPolicy;
     if (!['lh', 'fsh'].includes(input.analyte)) gates.push('unsupported_analyte');
     if (measurement.status !== 'valid') gates.push('invalid_measurement');
     if (age.status !== 'known') gates.push.apply(gates, age.reasonCodes);
@@ -542,9 +626,16 @@
     if (!untreated(t)) gates.push(t.context === 'hormonal' || t.gnrha === 'yes' || t.sexSteroids === 'yes' ? 'treatment_requires_separate_profile' : 'treatment_context_unknown');
     if (!biochemicalPolicy || !biochemicalPolicy.id || !biochemicalPolicy.version || ageTest({ status: 'known', lowerYears: 0, upperYears: 0, upperInclusive: true }, biochemicalPolicy.infantAgeYears) === 'unknown' || ageTest({ status: 'known', lowerYears: 0, upperYears: 0, upperInclusive: true }, biochemicalPolicy.pretermGestationalWeeks) === 'unknown') gates.push('biochemical_policy_missing');
     else if (!isPretermProfile && age.status === 'known' && ageTest(age, biochemicalPolicy.infantAgeYears) !== 'above') {
-      if (flag(input.preterm) !== 'no') gates.push(flag(input.preterm) === 'yes' ? 'preterm_reference_not_established' : 'infant_gestational_context_missing');
+      if (flag(input.preterm) !== 'no' && !(isMinipubertyProfile && mini && mini.eligible)) gates.push(flag(input.preterm) === 'yes' ? 'preterm_reference_not_established' : 'infant_gestational_context_missing');
       if (finite(input.gestationalAgeWeeks) && ageTest({ status: 'known', lowerYears: input.gestationalAgeWeeks, upperYears: input.gestationalAgeWeeks, upperInclusive: true }, biochemicalPolicy.pretermGestationalWeeks) === 'within') gates.push('preterm_reference_not_established');
       if (neonatal && neonatal.gestationalDays && ageTest({ status: 'known', lowerYears: neonatal.gestationalDays.lower / 7, upperYears: neonatal.gestationalDays.upper / 7, upperInclusive: true }, biochemicalPolicy.pretermGestationalWeeks) !== 'above') gates.push('preterm_reference_not_established');
+    }
+    if (isMinipubertyProfile && mini) {
+      var miniPolicy = data.minipubertyEligibilityPolicy;
+      var expectedAge = miniPolicy && miniPolicy.ageMonths && miniPolicy.ageMonths.lower && miniPolicy.ageMonths.upper && { lower: { operator: miniPolicy.ageMonths.lower.operator, value: miniPolicy.ageMonths.lower.value / 12 }, upper: { operator: miniPolicy.ageMonths.upper.operator, value: miniPolicy.ageMonths.upper.value / 12 } };
+      if (!miniPolicy || !profile.scope || profile.scope.policyId !== miniPolicy.id || profile.scope.policyVersion !== miniPolicy.version || !Array.isArray(miniPolicy.sourceIds) || !miniPolicy.sourceIds.includes(profile.sourceId) || !sameBounds(profile.scope.age, expectedAge) || !sameBounds(profile.scope.gestationalAgeDays, miniPolicy.gestationalAgeDays)) gates.push('invalid_johannsen_eligibility_policy');
+      if (!mini.eligible) gates.push.apply(gates, mini.notes.length ? mini.notes : ['johannsen_population_or_age_unavailable']);
+      else if (mini.metadata.gestationStatus === 'conditional') gates.push('johannsen_term_population_conditional');
     }
     if (isPretermProfile) {
       neonatal.reasonCodes = pretermEligibility(input, profile, data, neonatal, age);
@@ -565,31 +656,31 @@
       if (!automatic && assay.confirmation === 'configured' && (!assay.profileVersion || assay.profileVersion !== profile.version)) profileGates.push('configured_profile_version_mismatch');
       if (profile.material !== input.specimen && !(automatic && profile.material === 'serum' && [undefined, null, '', 'unknown'].includes(input.specimen))) profileGates.push('profile_material_mismatch');
       if (!isPretermProfile) {
-        var scope = ageMatches(age, profile.scope && profile.scope.age);
+        var scope = ageMatches(referenceAge, profile.scope && profile.scope.age);
         if (scope !== 'within' && !(automatic && scope === 'indeterminate')) profileGates.push(scope === 'indeterminate' ? 'age_precision_crosses_scope' : 'age_outside_profile');
       }
     }
     if (!automatic && !profileGates.length) {
-      bio.byAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false, neonatal, normalized.reproductiveContext);
-      bio.byStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true, neonatal, normalized.reproductiveContext);
+      bio.byAge = selectComparison(measurement, profile, data, referenceAge, input.sex, puberty, false, neonatal, normalized.reproductiveContext);
+      bio.byStage = selectComparison(measurement, profile, data, referenceAge, input.sex, puberty, true, neonatal, normalized.reproductiveContext);
     } else { bio.byAge = unavailable(profileGates); bio.byStage = unavailable(profileGates); }
     bio.primary = bio.local.status !== 'unavailable' ? 'local' : bio.byStage.status !== 'unavailable' ? 'stage' : bio.byAge.status !== 'unavailable' ? 'age' : null;
     bio.status = bio.primary ? 'available' : 'unavailable';
     bio.reasonCodes = bio.primary === 'local' ? bio.local.reasonCodes.slice() : unique(gates.concat(profileGates, input.localReference ? bio.local.reasonCodes : [], bio.byAge.reasonCodes, bio.byStage.reasonCodes));
     if (bio.primary === 'local' && [bio.byAge, bio.byStage].some(function (c) { return ['within', 'above', 'below'].includes(c.status) && c.status !== bio.local.status; })) bio.reasonCodes.push('source_reference_disagreement');
     var preview = null;
-    var unknownContextReasons = ['non_basal_or_unknown_measurement', 'treatment_context_unknown'];
+    var unknownContextReasons = ['non_basal_or_unknown_measurement', 'treatment_context_unknown', 'johannsen_term_population_conditional'];
     var previewReasons = unique(profileGates.filter(function (reason) { return unknownContextReasons.includes(reason); }));
     if (!automatic && previewReasons.length && profile && profile.examinationType === 'basal' && previewContextValid(input, t) &&
         profileGates.every(function (reason) { return unknownContextReasons.includes(reason) || reason === 'profile_measurement_kind_mismatch'; })) {
-      var previewAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false, neonatal, normalized.reproductiveContext);
-      var previewStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true, neonatal, normalized.reproductiveContext);
+      var previewAge = selectComparison(measurement, profile, data, referenceAge, input.sex, puberty, false, neonatal, normalized.reproductiveContext);
+      var previewStage = selectComparison(measurement, profile, data, referenceAge, input.sex, puberty, true, neonatal, normalized.reproductiveContext);
       if (previewAge.status !== 'unavailable' || previewStage.status !== 'unavailable') {
         preview = { kind: 'conditional-basal-untreated', reasonCodes: previewReasons, byAge: previewAge, byStage: previewStage };
       }
     }
     if (automatic) {
-      var automaticReasons = ['specimen_unconfirmed', 'non_basal_or_unknown_measurement', 'treatment_context_unknown', 'source_method_unconfirmed', 'profile_measurement_kind_mismatch'];
+      var automaticReasons = ['specimen_unconfirmed', 'non_basal_or_unknown_measurement', 'treatment_context_unknown', 'source_method_unconfirmed', 'profile_measurement_kind_mismatch', 'johannsen_term_population_conditional'];
       var reproductive = normalized.reproductiveContext;
       if (input.reproductiveContext != null && typeof input.reproductiveContext !== 'string') profileGates.push('invalid_reproductive_context');
       if (input.assay != null && (Object.prototype.toString.call(input.assay) !== '[object Object]' || ![undefined, null, '', 'unknown', 'configured', 'reported'].includes(input.assay.confirmation))) profileGates.push('method_not_confirmed');
@@ -599,7 +690,7 @@
       else if (!policy.reproductiveContexts.includes(reproductive)) profileGates.push('invalid_reproductive_context');
       else if (reproductive !== 'unknown' && (input.sex !== 'F' || ((!profile || profile.referenceContext !== 'adult') && !automaticProfileIsPartial(profile, age)))) profileGates.push('reproductive_context_not_applicable');
       if (profile && previewContextValid(input, t) && profileGates.every(function (reason) { return automaticReasons.includes(reason); })) {
-        var autoCompared = automaticComparisons(measurement, profile, data, age, input.sex, puberty, neonatal, reproductive);
+        var autoCompared = automaticComparisons(measurement, profile, data, referenceAge, input.sex, puberty, neonatal, reproductive);
         if (autoCompared.byAge.range || autoCompared.byStage.range || autoCompared.variants) {
           preview = { kind: 'automatic-source-reference', reasonCodes: unique(profileGates.filter(function (reason) { return reason !== 'profile_measurement_kind_mismatch'; }).concat(autoCompared.reasonCodes)),
             byAge: autoCompared.byAge, byStage: autoCompared.byStage };
@@ -641,11 +732,12 @@
     var limitations = unique(clinical.reasonCodes.concat(bio.reasonCodes, measurement.reasonCodes, reported ? reported.reasonCodes : []));
     if (preview) limitations.push.apply(limitations, ['conditional_reference_comparison'].concat(preview.byAge.reasonCodes, preview.byStage.reasonCodes));
     if (reportedDisagreement) limitations.push('reported_range_reference_disagreement');
-    if (!isPretermProfile && (bio.primary || preview) && age.status === 'known' && biochemicalPolicy && ageTest(age, biochemicalPolicy.infantAgeYears) === 'within') limitations.push('broad_infant_reference_not_full_minipuberty_assessment');
+    if (!isPretermProfile && !isMinipubertyProfile && (bio.primary || preview) && age.status === 'known' && biochemicalPolicy && ageTest(age, biochemicalPolicy.infantAgeYears) === 'within') limitations.push('broad_infant_reference_not_full_minipuberty_assessment');
     var evaluation = { schemaVersion: 1, engineVersion: VERSION, dataVersion: data.dataVersion || null, analyte: normalized.analyte,
       input: copy(normalized), measurement: measurement, ageAtSample: age, biochemical: bio, clinical: clinical, summary: summary,
       provenance: { clinicalProfileId: data.clinicalProfile && data.clinicalProfile.id || null, clinicalProfileVersion: data.clinicalProfile && data.clinicalProfile.version || null, biochemicalPolicyId: biochemicalPolicy && biochemicalPolicy.id || null, biochemicalPolicyVersion: biochemicalPolicy && biochemicalPolicy.version || null, profileId: profile && profile.id || null, profileVersion: profile && profile.version || null,
         sourceIds: unique(clinical.sourceIds.concat(biochemicalPolicy && biochemicalPolicy.sourceIds || [], numericComparisons.filter(function (c) { return c.range; }).map(function (c) { return c.range.sourceId; }))) }, limitations: unique(limitations) };
+    if (mini) evaluation.referenceAge = copy(mini.metadata);
     if (reported) evaluation.reportedRange = reported;
     if (preview) evaluation.referencePreview = preview;
     if (neonatal) evaluation.neonatalAge = copy(neonatal);
@@ -706,6 +798,7 @@
     var preterm = flag(input.preterm) === 'yes' || ga && pretermBound && ageTest({ status: 'known', lowerYears: ga.lower / 7, upperYears: ga.upper / 7, upperInclusive: true }, pretermBound) !== 'above';
     var ids = policy && policy.profileIds && policy.profileIds[input.analyte];
     var policyValid = policy && policy.id && policy.version && Array.isArray(ids) && policy.pretermProfileIds && Array.isArray(policy.reproductiveContexts);
+    var mini = infant && !preterm ? minipubertyContext(input, data, age, neonatal) : null;
     var selected = [];
     if (policyValid && age.status === 'known') {
       if (infant && preterm) selected = profiles.filter(function (profile) { return profile.id === policy.pretermProfileIds[input.analyte]; });
@@ -713,7 +806,14 @@
         return profile && ['within', 'indeterminate'].includes(ageMatches(age, profile.scope && profile.scope.age));
       });
     }
-    var results = (selected.length ? selected : [null]).map(function (profile) { return evaluateExplicit(input, data, profile); });
+    if (mini && mini.eligible && !(infant && preterm)) {
+      var miniId = data.minipubertyEligibilityPolicy.profileIds[input.analyte];
+      var miniProfile = profiles.find(function (profile) { return profile.id === miniId; });
+      var reportedMethod = input.assay && input.assay.confirmation === 'reported';
+      if (!miniProfile) mini.blockedReasons.push('invalid_reference_profile');
+      if (miniProfile && (!reportedMethod || miniProfile.method && input.assay.methodId === miniProfile.method.id)) selected = [miniProfile];
+    }
+    var results = (selected.length ? selected : [null]).map(function (profile) { return evaluateExplicit(input, data, profile, mini); });
     var result = results[0], previews = results.filter(function (item) { return item.referencePreview; });
     var codes = unique(results.flatMap(function (item) { return item.biochemical.reasonCodes; }));
     if (!policyValid) codes.push('automatic_reference_policy_missing');
@@ -742,6 +842,10 @@
     result.provenance.selectionPolicyVersion = policyValid ? policy.version : null;
     result.provenance.sourceIds = unique(results.flatMap(function (item) { return item.provenance.sourceIds; }));
     result.limitations = unique(results.flatMap(function (item) { return item.limitations; }).concat(result.referenceSelection.reasonCodes));
+    if (mini && mini.notes.length) {
+      result.referenceSelection.reasonCodes = unique(result.referenceSelection.reasonCodes.concat(mini.notes));
+      result.limitations = unique(result.limitations.concat(mini.notes));
+    }
     result.biochemical.reasonCodes = unique(codes);
     if (result.summary.status !== 'attention' && result.summary.code !== 'unsupported_analyte' && result.measurement.status === 'valid') result.summary = {
       status: 'limited', code: status === 'variants' ? 'reference_variants_available' : available ? 'automatic_reference_comparison' : 'limited_interpretation',

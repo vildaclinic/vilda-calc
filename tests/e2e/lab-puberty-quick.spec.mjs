@@ -392,8 +392,16 @@ test('infant prematurity remains in Patient and changes applicability without in
   await select(page, 'Preterm', 'no');
   const term = await snapshot(page);
   expect(term.evaluation.input.preterm).toBe('no');
-  expect(term.evaluation.referencePreview).toMatchObject({ kind: 'automatic-source-reference', byAge: { status: 'within' } });
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  // Three completed months spans both published Johannsen bins. Each
+  // comparison remains available after the explicit term-birth answer.
+  expect(term.evaluation.referenceSelection).toMatchObject({ status: 'variants', profileIds: ['johannsen-minipuberty-lh'] });
+  expect(term.evaluation.referencePreview.kind).toBe('automatic-source-reference');
+  expect(term.evaluation.referencePreview.variants.map((item) => item.comparison.status)).toEqual(['within', 'within']);
+  const variants = assessment(page).locator('[data-comparison="variant"]');
+  await expect(variants).toHaveCount(2);
+  for (const row of await variants.all()) await expect(row).toHaveAttribute('data-status', 'within');
+  await expect(variants.nth(0).locator('.vilda-lab-axis')).toHaveAttribute('data-range-lower', '0.62');
+  await expect(variants.nth(1).locator('.vilda-lab-axis')).toHaveAttribute('data-range-upper', '3.32');
   await fill(page, 'AgeYears', '1');
   await expect(page.locator('#labPubertyPreterm')).toBeHidden();
 });

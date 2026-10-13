@@ -222,7 +222,7 @@ test('G1 at fourteen retains the missing-history limitation without diagnosing n
   await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'source-reference');
   await expect(clinical(page)).toHaveAttribute('data-status', 'limited');
   await expect(clinical(page)).toHaveAttribute('data-clinical-code', 'treatment_context');
-  await expect(clinical(page)).toContainText('Brak cech wymaga uwzględnienia wywiadu');
+  await expect(clinical(page)).toContainText('Brak aktualnych cech dojrzewania w tym wieku wymaga oceny klinicznej.');
   await expect(clinical(page)).toContainText('Nie rozpoznajemy nowego opóźnienia');
   const saved = await snapshot(page);
   expect(saved.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'unknown', sexSteroids: 'unknown' });

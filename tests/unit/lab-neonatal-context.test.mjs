@@ -5,7 +5,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const html = readFileSync(new URL('../../przelicznik-jednostek.html', import.meta.url), 'utf8');
 const start = html.indexOf('    function readPubertyPatientContext() {');
 const end = html.indexOf('    var pubertyUI =', start);
-const makeReader = new Function('window', 'sessionStorage', 'persistence', 'extractTannerFromAny',
+const makeReader = new Function('window', 'sessionStorage', 'persistence', 'extractTannerFromAny', 'currentSubstance',
   `${html.slice(start, end)}; return readPubertyPatientContext;`);
 const storageListener = html.match(/window\.addEventListener\('storage', function \(e\) \{[\s\S]*?refreshPatientContext\(\);[\s\S]*?\}\);/);
 if (!storageListener) throw new Error('Missing production LH/FSH storage listener');
@@ -56,6 +56,55 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 9, 9, 12)
 afterEach(() => vi.useRealTimers());
 
 describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
+  it.each([['2026-06-26', 105], ['2026-06-11', 120], ['2026-04-22', 170]])(
+    'przekazuje znane dni z daty %s po trzecim miesiącu tylko odbiorcy LH/FSH', (iso, days) => {
+      const h = harness(); h.dob(iso);
+      expect(h.api.publish()).toBe(true);
+      expect(h.api.readCache()).toMatchObject({ minipubertyOnly: true });
+      expect(h.w.VildaDobAge.readWeeks()).toBeNull();
+      expect(h.api.read(h.shared, '', null)).toBeNull();
+      expect(h.api.read(h.shared, '', null, { includeMinipuberty: true })).toEqual({
+        postnatalDays: { lower: days - 1, upper: days, source: 'main-calendar-dates' }, gestationalDays: null,
+      });
+      expect(JSON.stringify(h.api.readCache())).not.toContain(iso);
+      expect(h.writeShared).not.toHaveBeenCalled();
+      expect(h.w.hasUserModifiedAfterLoad).toBe(false);
+    },
+  );
+
+  it('nowy transport dni kończy się przy sześciu miesiącach i nie tworzy dni z ukrytych tygodni', () => {
+    const h = harness(); h.dob('2026-04-10');
+    expect(h.api.readForm()).toMatchObject({ minipubertyOnly: true });
+    h.dob('2026-04-09');
+    expect(h.api.readForm()).toBeNull();
+    h.fields.dobInput.value = ''; h.fields.age.value = '0'; h.fields.ageMonths.value = '3'; h.fields.ageWeeks.value = '15';
+    expect(h.api.readForm()).toBeNull();
+    h.fields.dobInput.value = '31-02-2026';
+    expect(h.api.readForm()).toBeNull();
+  });
+
+  it('dokładniejsze dni minipuberty zachowują strażnika osoby, formularza i daty pomiaru', () => {
+    const h = harness(); h.dob('2026-06-11'); h.api.publish();
+    const options = { includeMinipuberty: true };
+    expect(h.api.read(h.shared, '', null, options).postnatalDays.upper).toBe(120);
+    expect(h.api.read(h.shared, 'fictional-other', { patientId: 'fictional-other', status: 'ready' }, options)).toBeNull();
+    expect(h.api.read({ ...h.shared, ageMonths: '4' }, '', null, options)).toBeNull();
+    vi.setSystemTime(new Date(2026, 9, 10, 12));
+    expect(h.api.read(h.shared, '', null, options)).toBeNull();
+    h.api.publish();
+    expect(h.api.read(h.shared, '', null, options).postnatalDays.upper).toBe(121);
+  });
+
+  it.each(['lh', 'fsh', 'inhibin_b', 'amh', 'estradiol', 'testosterone_total'])(
+    'adapter dla %s wybiera rozszerzony transport bez zmiany wieku pozostałych analitów', id => {
+      const h = harness(); h.dob('2026-06-11'); h.api.publish();
+      const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, { id });
+      if (['lh', 'fsh'].includes(id)) {
+        expect(reader()).toMatchObject({ neonatalAge: { postnatalDays: { lower: 119, upper: 120 } } });
+      } else expect(reader()).not.toHaveProperty('neonatalAge');
+    },
+  );
+
   it('przenosi 43 dni kalendarzowe jako 42–43 ukończone dni, bez daty urodzenia i bez zmiany rekordu', () => {
     const h = harness(); h.dob('2026-08-27');
     expect(h.api.publish()).toBe(true);
