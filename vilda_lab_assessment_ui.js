@@ -56,6 +56,14 @@
     invalid_reproductive_context: 'Sprawdź wybrany kontekst cyklu lub menopauzy.',
     invalid_reported_range: 'Nie można odczytać podanego zakresu. Użyj dwóch granic albo pojedynczego progu z operatorem.',
     invalid_sample_date: 'Data pobrania jest nieprawidłowa.',
+    johannsen_term_population_conditional: 'Zakres dla urodzonych w 37+0–41+6 tyg. ciąży.',
+    johannsen_age_envelope_crosses_scope: 'Podany przedział wieku wykracza poza 2–5 mies. objęte badaniem Johannsen 2018.',
+    johannsen_gestational_age_outside_scope: 'Wiek ciążowy przy urodzeniu jest poza 37+0–41+6 tyg. objętymi badaniem Johannsen 2018.',
+    johannsen_context_conflict: 'Wiek ciążowy i informacja o wcześniactwie są niespójne. Sprawdź dane.',
+    johannsen_age_context_mismatch: 'Wiek w dniach nie zgadza się z wiekiem pacjenta. Sprawdź dane.',
+    johannsen_day_source_unrecognized: 'Nie ustalono sposobu zapisu wieku w dniach; nie zastosowano szczegółowego zakresu minipuberty.',
+    johannsen_population_or_age_unavailable: 'Brak danych pozwalających zastosować zakres dla minipuberty do wieku i populacji pacjenta.',
+    invalid_johannsen_eligibility_policy: 'Nie można potwierdzić zasad zastosowania zakresu dla minipuberty.',
     late_onset_history: 'Późny początek w wywiadzie pozostaje istotny mimo obecnego stadium.',
     local_reference_context_mismatch: 'Zakres laboratorium nie odpowiada analitowi, jednostce lub materiałowi próbki.',
     local_reference_method_not_confirmed: 'Nie potwierdzono zgodności metody oznaczenia z zakresem laboratorium.',
@@ -165,7 +173,8 @@
     'mayo-fsh-602753': ['Mayo Clinic Laboratories — FSH 602753', 'https://www.mayocliniclabs.com/test-catalog/Overview/602753'],
     'mayo-fsh-adult-602753': ['Mayo Clinic Laboratories — FSH 602753, dorośli', 'https://www.mayocliniclabs.com/test-catalog/Overview/602753'],
     'mayo-lh-602752': ['Mayo Clinic Laboratories — LH 602752', 'https://www.mayocliniclabs.com/test-catalog/Overview/602752'],
-    'greaves-preterm-2015': ['Greaves i wsp., 2015 — tabela 4', 'https://pubmed.ncbi.nlm.nih.gov/25562509/']
+    'greaves-preterm-2015': ['Greaves i wsp., 2015 — tabela 4', 'https://pubmed.ncbi.nlm.nih.gov/25562509/'],
+    'johannsen-minipuberty-2018': ['Johannsen i wsp., 2018 — tabela 1', 'https://doi.org/10.1210/jc.2018-00482']
   };
 
   function record(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
@@ -202,9 +211,20 @@
     var op = ({ '>=': '≥', '<=': '≤', '>': '>', '<': '<' })[value.operator];
     return op && numeric(value.value) ? op + number(value.value) : '';
   }
+  function johannsenRange(range) {
+    return !!range && range.sourceId === 'johannsen-minipuberty-2018' &&
+      ['johannsen-minipuberty-lh', 'johannsen-minipuberty-fsh'].includes(range.profileId);
+  }
   function formatRange(range) {
     var limits = range && range.bounds;
     if (!limits) return '';
+    if (johannsenRange(range)) {
+      var unit = range.unit ? ' ' + text(range.unit) : '';
+      if (!limits.lower && limits.upper) return 'Górna granica: ' + bound(limits.upper) + unit;
+      if (limits.lower && limits.upper && limits.lower.operator === '>=' && limits.upper.operator === '<=') {
+        return 'Zakres referencyjny: ' + number(limits.lower.value) + '–' + number(limits.upper.value) + unit;
+      }
+    }
     if (range.basis === 'infant-curve' && !limits.lower && limits.upper && numeric(limits.upper.value)) {
       return 'Górna granica modelu: ≈' + limits.upper.value.toFixed(1).replace('.', ',') + (range.unit ? ' ' + text(range.unit) : '');
     }
@@ -392,6 +412,7 @@
     var rawComparisons = [['age', 'Względem wieku', preview ? preview.byAge : b.byAge], ['stage', 'Względem stadium', preview ? preview.byStage : b.byStage], ['local', 'Zakres laboratorium', b.local]];
     if (automatic && preview && Array.isArray(preview.variants)) rawComparisons = rawComparisons.concat(preview.variants.map(function (variant) { return ['variant', text(variant.label), variant.comparison, variant]; }));
     if (automatic && rawComparisons.some(function (item) { return item[2] && item[2].range && item[2].range.basis === 'adult'; })) adultProfile = true;
+    var johannsenProfile = rawComparisons.some(function (item) { return item[2] && johannsenRange(item[2].range); });
     var ageVariantMode = !!automatic && sameInfantCurveVariants(e, preview, analyte.unit);
     var ageReferenceVariantMode = !!automatic && ageReferenceVariants(e, preview);
     var point = m.status === 'valid' && m.isExact === true && numeric(m.plotValue) && m.plotValue >= 0 ? m.plotValue : null;
@@ -412,8 +433,10 @@
       if (automatic) visualLabel = visualLabel.replace('normy', 'zakresu referencyjnego');
       var variant = item[3], adultTitle = input.sex === 'M' ? 'Dla mężczyzn' : REPRODUCTIVE_CONTEXT[input.reproductiveContext] || 'Dla kobiet';
       var ageTitle = pretermProfile ? 'Dla wcześniaka' : adultProfile ? adultTitle : inhibin && range.basis === 'infant-broad' ? 'Ogólny zakres dla niemowląt' : inhibin && range.basis === 'infant-curve' ? 'Minipuberty' : 'Dla wieku';
-      var title = item[0] === 'age' && (inhibin || pretermProfile || adultProfile) ? ageTitle : item[1];
+      if (johannsenRange(range) && range.age && text(range.age.sourceText)) ageTitle = 'Minipuberty · ' + text(range.age.sourceText);
+      var title = item[0] === 'age' && (inhibin || pretermProfile || adultProfile || johannsenRange(range)) ? ageTitle : item[1];
       var variantTitle = variant && variant.reproductiveContext ? REPRODUCTIVE_CONTEXT[variant.reproductiveContext] : variant ? referenceAgeText(range.age, inhibin ? range.basis : '') : '';
+      if (variant && johannsenRange(range) && range.age && text(range.age.sourceText)) variantTitle = 'Dla wieku ' + text(range.age.sourceText);
       if (ageReferenceVariantMode && variant) title = variantTitle;
       if (ageVariantMode && variant) {
         variantTitle = limits.upper === Math.min.apply(null, axisLimits.filter(Boolean).map(function (entry) { return entry.upper; })) ? 'Najniższa górna granica' : 'Najwyższa górna granica';
@@ -446,7 +469,18 @@
       conditionNote = (preview ? [sourceLabels.join(' / '), methods.join(' / ')].filter(Boolean).join(' · ') + ' — porównanie orientacyjne' + (applicability ? '; ' : '.') : '') + applicability;
       if (inhibin && applicability) conditionNote = applicability;
       conditionNote = conditionNote.charAt(0).toUpperCase() + conditionNote.slice(1);
+      if (preview && johannsenProfile) conditionNote = 'Johannsen 2018 · AutoDELFIA · porównanie orientacyjne. Zakres dla oznaczeń bazalnych w surowicy, bez leczenia hormonalnego.';
     }
+    var referenceCodes = unique(previewReasons.concat(codeList(e.referenceSelection && e.referenceSelection.reasonCodes), codeList(e.limitations)));
+    var populationNote = johannsenProfile && referenceCodes.includes('johannsen_term_population_conditional') ? REASONS.johannsen_term_population_conditional : '';
+    var fallbackCode = !johannsenProfile && preview && referenceCodes.find(function (code) {
+      return ['johannsen_age_envelope_crosses_scope', 'johannsen_gestational_age_outside_scope'].includes(code);
+    });
+    var fallbackNote = fallbackCode ? REASONS[fallbackCode] : '';
+    if (fallbackCode === 'johannsen_age_envelope_crosses_scope' && rawComparisons.some(function (item) {
+      var range = item[2] && item[2].range;
+      return range && ['mayo-lh-pediatric', 'mayo-fsh-pediatric'].includes(range.profileId);
+    })) fallbackNote = 'Pokazano szerszy zakres Mayo; podany wiek wykracza poza szczegółowe dane minipuberty.';
     var provenance = e.provenance || {};
     (Array.isArray(provenance.sourceIds) ? provenance.sourceIds : []).forEach(function (id) {
       if (sourceIds.includes(id)) return;
@@ -508,6 +542,7 @@
     var ageVariantConsensus = ageVariantMode ? infantCurveConsensus(comparisons) : null;
     var emphasis = ageVariantConsensus || resultEmphasis(comparisons);
     var view = { valid: true, analyte: analyte.label, analyteKey: e.analyte, pretermProfile: pretermProfile, automatic: !!automatic, adultProfile: adultProfile,
+      johannsenProfile: johannsenProfile, populationNote: populationNote, referenceFallbackNote: fallbackNote, referenceFallbackCode: fallbackCode || '',
       result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), empty: !text(m.raw), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
         visualState: emphasis.visualState, visualAlert: emphasis.visualAlert,
         note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
@@ -541,6 +576,7 @@
   function automaticBlock(e) {
     var codes = unique(codeList(e.referenceSelection && e.referenceSelection.reasonCodes).concat(codeList(e.biochemical.reasonCodes)));
     var priority = ['invalid_reproductive_context', 'reproductive_context_not_applicable', 'missing_age', 'invalid_age', 'missing_sex',
+      'johannsen_context_conflict', 'johannsen_age_context_mismatch', 'invalid_johannsen_eligibility_policy', 'johannsen_population_or_age_unavailable',
       'infant_birth_context_missing', 'term_birth_unconfirmed', 'gestational_age_precision_crosses_scope', 'gestational_age_outside_profile', 'invalid_gestational_eligibility_policy', 'age_precision_crosses_scope',
       'treatment_requires_separate_profile', 'unsupported_or_unknown_specimen', 'profile_material_mismatch', 'method_not_confirmed',
       'automatic_reference_policy_missing', 'no_matching_reference_range', 'age_outside_profile'];
@@ -617,6 +653,9 @@
     // remain visible even when their main clinical warning is above the axes.
     var covered = ['early_development', 'early_thelarche', 'early_onset_history', 'late_onset_history', 'absent_onset', 'inconsistent_puberty_context', 'missing_age', 'missing_sex', 'missing_puberty_assessment', 'ambiguous_puberty_kind'];
     function message(code) {
+      if (view.johannsenProfile && code === 'broad_infant_reference_not_full_minipuberty_assessment') return '';
+      if (view.populationNote && code === 'johannsen_term_population_conditional') return '';
+      if (view.referenceFallbackNote && view.referenceFallbackCode === code) return '';
       if (view.analyteKey === 'inhibin_b' && code === 'stage_reference_not_established') return '';
       if (inhibin && code === 'preterm_reference_not_established') return 'Brak zweryfikowanego zakresu inhibiny B dla wcześniaków.';
       if (inhibin && code === 'infant_birth_context_missing' && codes.includes('preterm_reference_not_established')) return '';
@@ -796,11 +835,12 @@
     if (view.reportedRangeConflict && !incomplete) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
     if (!incomplete && view.pretermBlock) add(parent, 'p', 'vilda-lab-preterm-block', view.pretermBlock).setAttribute('data-preterm-block', 'true');
     if (!incomplete && view.automaticBlock) add(parent, 'p', 'vilda-lab-preterm-block', view.automaticBlock).setAttribute('data-reference-block', 'true');
+    if (!incomplete && view.referenceFallbackNote) add(parent, 'p', 'vilda-lab-note', view.referenceFallbackNote).setAttribute('data-reference-fallback', 'true');
     if (!incomplete && view.ageVariantConsensus) {
       var consensus = add(parent, 'p', 'vilda-lab-variants-lead');
       consensus.setAttribute('data-age-variant-consensus', view.ageVariantConsensus.status);
       add(consensus, 'strong', '', view.ageVariantConsensus.label);
-    } else if (!incomplete && view.variantMode) add(parent, 'p', 'vilda-lab-variants-lead', view.comparisons.some(function (comparison) { return comparison.reproductiveContext; }) ? 'Wybierz znaną fazę lub porównaj dostępne zakresy.' : 'Podany wiek obejmuje różne zakresy odniesienia.');
+    } else if (!incomplete && view.variantMode) add(parent, 'p', 'vilda-lab-variants-lead', view.comparisons.some(function (comparison) { return comparison.reproductiveContext; }) ? 'Wybierz znaną fazę lub porównaj dostępne zakresy.' : view.johannsenProfile ? 'Podany wiek obejmuje dwie grupy badania — pokazano oba zakresy.' : 'Podany wiek obejmuje różne zakresy odniesienia.');
     var comparisons = incomplete || view.pretermBlock || view.automaticBlock ? null : add(parent, 'div', 'vilda-lab-comparisons');
     var visibleComparisons = incomplete || view.pretermBlock || view.automaticBlock ? [] : view.comparisons.filter(function (comparison) {
       return (!(view.pretermProfile || view.adultProfile) || comparison.key !== 'stage') && (!view.automatic || comparison.status !== 'unavailable');
@@ -833,6 +873,7 @@
     });
     if (!incomplete && view.upperOnlyNote) add(parent, 'p', 'vilda-lab-note', view.upperOnlyNote).setAttribute('data-upper-only-note', 'true');
     if (!incomplete) renderLegend(parent, visibleComparisons);
+    if (!incomplete && view.populationNote) add(parent, 'p', 'vilda-lab-note', view.populationNote).setAttribute('data-reference-population', 'true');
     if (view.conditionNote && !incomplete) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', view.referenceMode);
     var more = details(parent, 'Szczegóły i źródła');
     if (view.ageVariantMode && !incomplete) add(more, 'p', 'vilda-lab-note', 'Osie pokazują skrajne górne granice tej samej krzywej w całym podanym przedziale wieku. Nie tworzą jednego zakresu prawidłowych stężeń.');

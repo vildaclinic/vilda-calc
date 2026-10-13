@@ -105,9 +105,50 @@
       policyId: pretermPolicy.id, policyVersion: pretermPolicy.version };
   }
 
+  // Źródłowe grupy wieku i jawna konwencja aplikacji; nie są medianami ani
+  // modelem dziennego przebiegu minipuberty.
+  var minipubertyPolicy = {
+    id: 'johannsen-minipuberty-applicability', version: '2026-10-13.1',
+    sourceIds: ['johannsen-minipuberty-2018'],
+    profileIds: { lh: 'johannsen-minipuberty-lh', fsh: 'johannsen-minipuberty-fsh' },
+    ageMonths: { lower: bound('>=', 2), upper: bound('<=', 5) },
+    gestationalAgeDays: { lower: bound('>=', 259), upper: bound('<=', 293) },
+    daysPerMonth: { lower: 28, upper: 31 },
+    postnatalDaySources: ['main-calendar-dates', 'main-completed-weeks', 'manual-completed-days', 'sample-calendar-dates'],
+    ageSemantics: 'Whole chronological-age envelope must fit. Existing day intervals map to lower/31…upper/28 months, retaining inclusivity; only manual-completed-days [d,d] expands to [d,d+1). Reported completed months retain [m,m+1). This conversion is an application convention, not an author-defined formula.',
+    populationNote: 'Zakres dla urodzonych w 37+0–41+6 tyg. ciąży.'
+  };
+  function minipubertyProfile(analyte, values) {
+    var sourceAge = age(bound('>=', 2 / 12), bound('<=', 5 / 12), '2–5 mies.', 'nominal-published-month-groups');
+    return {
+      id: minipubertyPolicy.profileIds[analyte], version: '2026-10-13.1', active: true, analyte: analyte,
+      sourceId: 'johannsen-minipuberty-2018',
+      method: { id: 'autodelfia-johannsen-2018', name: 'AutoDELFIA / PerkinElmer', description: 'Time-resolved fluoroimmunoassay; serum LH and FSH detection limit 0.05 IU/L.' },
+      material: 'serum', unit: 'IU/L', examinationType: 'basal', stageAgeMinYears: 1,
+      population: { label: 'Zdrowe donoszone niemowlęta, GA 37+0–41+6, Johannsen 2018',
+        statistics: { kind: 'percentiles', lowerPercentile: 2.5, upperPercentile: 97.5, transformation: 'logarithmic-and-back-transformed' } },
+      scope: { age: sourceAge, agePolicy: 'source-month-envelope', policyId: minipubertyPolicy.id, policyVersion: minipubertyPolicy.version,
+        gestationalAgeDays: minipubertyPolicy.gestationalAgeDays },
+      knownLimitations: ['Zakresy grup wieku 2–<3,5 oraz 3,5–5 miesięcy; nie są dzienną krzywą hormonów ani progami rozpoznania CHH, DSD lub CPP.',
+        'Środkowe wartości w tabeli źródłowej są średnimi geometrycznymi, nie medianami.',
+        'Nominalne grupy autorów; zaobserwowany wiek wynosił 2,1–5 mies. u chłopców i 2,3–5 mies. u dziewczynek.',
+        'Nieznany wiek ciążowy przy zadeklarowanym braku wcześniactwa pozwala wyłącznie na warunkowe porównanie z populacją źródłową.'],
+      rows: values.map(function (value) {
+        var early = value[1] === 'early';
+        var row = ageRow('johannsen-' + analyte + '-' + value[0].toLowerCase() + '-' + value[1], value[0],
+          age(bound('>=', (early ? 2 : 3.5) / 12), bound(early ? '<' : '<=', (early ? 3.5 : 5) / 12), early ? '2–<3,5 mies.' : '3,5–5 mies.', 'nominal-published-month-groups'),
+          range(value[2] == null ? null : bound('>=', value[2]), bound('<=', value[3]),
+            (value[2] == null ? '<LOD' : String(value[2])) + '–' + value[3] + ' IU/L', value[2] == null ? bound('<', 0.05) : null));
+        row.statistics = { sampleSize: value[4], centralStatistic: 'geometricMean', geometricMean: value[5],
+          geometricMeanReportedAs: value[5] == null ? '<LOD' : String(value[5]), detectionLimit: 0.05 };
+        return row;
+      })
+    };
+  }
+
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-09.4',
+    dataVersion: '2026-10-13.1',
     implementationStatus: 'active-in-ui',
     unit: 'IU/L',
     knownLimitations: [
@@ -384,24 +425,20 @@
         ]
       },
       'johannsen-minipuberty-2018': {
-        id: 'johannsen-minipuberty-2018',
-        version: '2018-secondary-table-read-2026-10-03',
+        id: 'johannsen-minipuberty-2018', version: '2018-primary-table1-read-2026-10-13',
         title: 'Sex Differences in Reproductive Hormones During Mini-Puberty in Infants With Normal and Disordered Sex Development',
-        pmid: '29917083',
-        doi: '10.1210/jc.2018-00482',
-        url: 'https://pubmed.ncbi.nlm.nih.gov/29917083/',
-        doiUrl: 'https://doi.org/10.1210/jc.2018-00482',
-        accessedOn: '2026-10-03',
-        readScope: 'Original abstract and metadata; numeric reference intervals read from Rohayem 2024 Table 1, method/statistics from Olthof 2026 Table 2.',
-        secondarySources: [
-          { pmid: '38436980', doi: '10.1210/endrev/bnae003', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/', section: 'Table 1' },
-          { pmid: '42554720', doi: '10.1530/JME-26-0037', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC13506540/', section: 'Table 2' }
-        ],
+        pmid: '29917083', doi: '10.1210/jc.2018-00482',
+        url: 'https://academic.oup.com/jcem/article/103/8/3028/5037960',
+        pubmedUrl: 'https://pubmed.ncbi.nlm.nih.gov/29917083/', doiUrl: 'https://doi.org/10.1210/jc.2018-00482',
+        accessedOn: '2026-10-13',
+        readScope: 'Retained full primary publisher HTML: population, methods, statistics, Table 1 and discussion. Healthy cohort only (1840 infants; 1041 boys, 799 girls), not the 27 DSD patients.',
+        primaryHtmlSha256: '58f117a94ad1b37de4dfd5f649c0af12b6198bff89a287bbd8cdfe9ff708415b',
         knownLimitations: [
-          'Pełny tekst oryginału nie był dostępny.',
-          'Nie rozstrzygnięto zaliczania dokładnych granic 2.0, 3.5 i 5.0 miesięcy.',
-          'Nie potwierdzono liczbowego LOD dla cenzurowanych dolnych granic dziewczynek.',
-          'Przedziały kandydackie nie są aktywne i nie obejmują wieku poza źródłowymi 2–5 miesiącami.'
+          'Jednorazowe próbki surowicy od zdrowych donoszonych niemowląt (GA 37+0–41+6); trzy prospektywne duńskie kohorty.',
+          'Nominalne grupy [2,0;3,5) i [3,5;5,0] mies.; zaobserwowany wiek chłopców 2,1–5,0, dziewczynek 2,3–5,0 mies. Autorzy nie określili długości miesiąca.',
+          'P2,5–P97,5 po log-transformacji i transformacji odwrotnej; wartości środkowe to średnie geometryczne, nie mediany.',
+          'AutoDELFIA: LOD 0,05 IU/L dla LH i FSH. <LOD dolnej granicy LH dziewczynek nie oznacza zera ani fizjologicznego minimum 0,05.',
+          'Nie przenosimy statystycznej imputacji LOD/2 na wynik pacjenta, nie stosujemy ilorazu LH/FSH do klasyfikacji płci ani progów diagnostycznych.'
         ]
       }
     },
@@ -415,8 +452,9 @@
       pretermGestationalWeeks: bound('<', 37)
     },
     pretermEligibilityPolicy: pretermPolicy,
+    minipubertyEligibilityPolicy: minipubertyPolicy,
     automaticReferencePolicy: {
-      id: 'lh-fsh-demographic-reference-selection', version: '2026-10-09.4',
+      id: 'lh-fsh-demographic-reference-selection', version: '2026-10-13.1',
       description: 'Source-population selection only; assay method remains unconfirmed unless explicitly reported for this sample.',
       reproductiveContexts: ['unknown', 'follicular', 'ovulation', 'luteal', 'postmenopause'],
       pretermProfileIds: { lh: 'greaves-preterm-lh-candidate', fsh: 'greaves-preterm-fsh-candidate' },
@@ -597,6 +635,14 @@
           stageRow('fsh-f-th5', 'F', 'Th', 5, range(bound('>=', 0.4), bound('<=', 8.6), '0.4–8.6 IU/L'))
         ]
       },
+      minipubertyProfile('lh', [
+        ['M', 'early', 0.62, 4.08, 581, 1.71], ['M', 'late', 0.54, 3.32, 166, 1.40],
+        ['F', 'early', null, 0.98, 432, null], ['F', 'late', null, 1.25, 110, null]
+      ]),
+      minipubertyProfile('fsh', [
+        ['M', 'early', 0.41, 3.02, 578, 1.19], ['M', 'late', 0.42, 2.68, 165, 1.11],
+        ['F', 'early', 1.23, 17.4, 435, 3.98], ['F', 'late', 1.30, 17.7, 111, 3.93]
+      ]),
       {
         id: 'johannsen-minipuberty-lh-candidate',
         version: '2026-10-03.1',

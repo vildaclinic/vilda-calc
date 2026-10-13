@@ -625,8 +625,10 @@
       ['progression', 'growthAcceleration', 'cnsSymptoms', 'regression'].forEach(function (key) {
         history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
       });
+      var includeMinipubertyDays = typeof currentSubstance !== 'undefined' && currentSubstance
+        && ['lh', 'fsh'].includes(currentSubstance.id);
       var neonatalAge = window.VildaLabNeonatalContext
-        ? window.VildaLabNeonatalContext.read(shared, identity, source) : null;
+        ? window.VildaLabNeonatalContext.read(shared, identity, source, { includeMinipuberty: !!includeMinipubertyDays }) : null;
       var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
         && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
       var context = {
