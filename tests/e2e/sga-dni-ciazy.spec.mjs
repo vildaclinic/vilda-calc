@@ -115,8 +115,9 @@ test('docpro: „Dane okołoporodowe" 34+2 tc wypełniają kartę SGA jako 34+2 
   await expect.poll(() => wiekWKarcie(page), { timeout: 10000 }).toBe('34+2');
   await page.waitForTimeout(2000); // dwa cykle sprawdzania widocznej karty przez moduł rozbieżności
   expect(await tekstOstrzezenia(page), 'karta i Karta Pacjenta zgodne — bez ostrzeżenia').toBeNull();
+  // P-SCHOWEK-HIS-2: ściąga B.64 idzie przez schowek — w nim zwykły minus (vilda_schowek.js)
   expect(await b64Kryterium1(page)).toBe(
-    '1. Masa lub długość urodzeniowa < −2 SD dla wieku ciążowego — SPEŁNIONE | masa −3,13 SD; długość −3,48 SD; 34+2 tc; wg Niklasson / Albertsson-Wikland');
+    '1. Masa lub długość urodzeniowa < -2 SD dla wieku ciążowego — SPEŁNIONE | masa -3,13 SD; długość -3,48 SD; 34+2 tc; wg Niklasson / Albertsson-Wikland');
 });
 
 test('kontrola: karta z wiekiem ciążowym z sekcji `birth` (34+0) zostaje nietknięta — rozbieżność pokazuje ostrzeżenie', async ({ page }) => {

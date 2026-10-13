@@ -4302,9 +4302,40 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 **Poza zakresem.** Pozostałe przyciski kopiowania (m.in. „Kopiuj opis pacjenta", epikryza, zalecenia dietetyczne i antybiotykoterapii, ściąga B.64, dawki GH) piszą do schowka własnym kodem i nadal kopiują „≥", „−", „Δ"… Przejście przez `VildaSchowek.kopiuj()` dałoby im to samo zabezpieczenie — osobna decyzja.
 
-**Decyzje właściciela.** (1) Zapis „>=" zamiast „≥" (alternatywa: słownie „co najmniej"). (2) Zamiana także „−", „²" i „‑", które tablica Windows już dziś zamienia po cichu na „-", „2" i „-" — w schowku odstępstwo od formatu decyzji 10 i P-WSDS; rekomendacja: zostawić, bo nie znamy konwersji każdego systemu, a bez „najlepszego dopasowania" minus staje się „?". (3) Rozszerzenie na pozostałe przyciski kopiowania.
+**Decyzje właściciela.** (1) Zapis „>=" zamiast „≥" (alternatywa: słownie „co najmniej"). **Rozstrzygnięte 2026-10-13: słownie — P-SCHOWEK-HIS-2 niżej.** (2) Zamiana także „−", „²" i „‑", które tablica Windows już dziś zamienia po cichu na „-", „2" i „-" — w schowku odstępstwo od formatu decyzji 10 i P-WSDS; rekomendacja: zostawić, bo nie znamy konwersji każdego systemu, a bez „najlepszego dopasowania" minus staje się „?". (3) Rozszerzenie na pozostałe przyciski kopiowania.
 
 **Pliki.** `vilda_schowek.js` 4; SW 1.1.261 → 1.1.262 (numery nadane `npm run podbij-wersje` po scaleniu #661, które wzięło 1.1.261).
+
+### P-SCHOWEK-HIS-2 — wszystkie przyciski kopiowania tekstu klinicznego bez „?" w systemie szpitalnym; porównania słownie (SW 1.1.267, 2026-10-13)
+
+**Zlecenie właściciela (2026-10-13), po P-SCHOWEK-HIS:** „zrób to samo dla pozostałych przycisków kopiowania, wolałbym wszędzie słownie »co najmniej«".
+
+#### Co się zmienia
+
+1. **Porównania słownie** (`vilda_schowek.js`, `znakiSlownie()`): „≥" → „co najmniej" (decyzja właściciela), a w tym samym duchu „≤" → „co najwyżej", „≈" → „ok.", „Δ" → „zmiana", „↑" → „wzrost", „↓" → „spadek". Spacja dochodzi tam, gdzie słowo styka się z treścią („≥P95" → „co najmniej P95", „SBP≈123" → „SBP ok. 123"), a nie po nawiasie i cudzysłowie otwierającym ani przed interpunkcją. **Zapis odwrotny** — liczba przed znakiem, nazwa wielkości po nim („18,5 ≤ BMI") — dostaje zapis z ASCII („18,5 <= BMI"), bo słowo odwróciłoby sens („18,5 co najwyżej BMI"). W tekstach kopiowanych przez aplikację takiego zapisu dziś nie ma (przegląd źródeł wszystkich modułów z przyciskami); to zabezpieczenie.
+2. **Tabela zamian uzupełniona o znaki z pozostałych przycisków:** „α"/„β"/„γ" → „alfa"/„beta"/„gamma" („β‑laktamy" → „beta-laktamy"), „【…】" → „[…]". Znaki już obsługiwane w P-SCHOWEK-HIS (minus, łączniki, indeksy, ułamki, „μ" → „µ", odstępy i znaki niewidoczne) obejmują resztę: „¹³¹I" → „131I", „¹⁸F‑FDG" → „18F-FDG", „μIU/mL" → „µIU/mL".
+3. **Przyciski** — zamiana stoi przy wejściu do drogi kopiowania (Clipboard API i pole zapasowe), sam sposób kopiowania każdego przycisku bez zmian:
+   - zalecenia: antybiotykoterapia (`antibiotic_therapy.js`, także pole „do ręcznego skopiowania"), leczenie otyłości (`obesity_therapy.js`), hormon wzrostu / IGF-1 (`gh_igf_therapy.js`), rak tarczycy u dzieci (`thyroid_cancer_kids.js`), nadciśnienie (`hypertension_therapy.js`), zalecenia dietetyczne (`vilda_diet_recommendations.js`), grypa i ospa wietrzna (`flu_therapy.js` — tylko tekst w schowku, wynik na ekranie bez zmian);
+   - epikryza „Kopiuj tekst" (`vilda_epicrisis_ui.js`; droga zapasowa bez Clipboard API kładzie na chwilę w polu tekst po zamianie i oddaje lekarzowi jego treść), opis pacjenta (`vilda_patient_narrative_ui.js`), ściąga B.64 (`vilda_b64_checklist_ui.js`), historia obliczeń wzrostowych (`app.js`, `copyAdvancedGrowthHistoryText`), Karta pacjenta „Skopiuj podsumowanie wyników" (`vilda_auth_ui.js`, `Il`), notatki „Kopiuj" (`inline_notatki_00.js`), przelicznik jednostek (`przelicznik-jednostek.html`);
+   - **bez zmian, celowo:** klucz odzyskiwania i token parowania (`vilda_auth_ui.js`), kod synchronizacji i odcisk (`inline_ustawienia_04.js`) — to dane techniczne, nie tekst dla człowieka; zapytanie do AI w kalkulatorze klirensu (`inline_kalkulator_klirens_04.js`) — trafia do czatu AI, nie do HIS.
+4. **Moduł schowka na kolejnych stronach** (`vilda_schowek.js?v=…`): `app.html`, `notatki.html`, `subskrypcja.html`, `terminarz.html`, `ustawienia.html` (Karta pacjenta z przyciskiem podsumowania) i `przelicznik-jednostek.html`. Bez modułu przyciski kopiują tekst bez zmian, jak dotąd.
+
+**Wpływ kliniczny.** Brak zmiany wartości, progów, jednostek, zaokrągleń i treści zaleceń. Zmienia się wyłącznie zapis znaków w tekstach kopiowanych do schowka; ekran bez zmian. Sonda na prawdziwej stronie: zalecenia antybiotykoterapii (14 wskazań × wszystkie leki, wiek 2 mies., 8, 14 i 30 lat, ze wszystkimi dodatkami) już dziś mieszczą się w Windows-1250 — „≥12 lat", „β‑laktamy", „(≤5 kg)" stoją w notach dla lekarza na ekranie, nie w tekście dla pacjenta; zamiana jest tam zabezpieczeniem. Opis pacjenta, epikryza, ściąga B.64, Karta pacjenta, notatki i przelicznik niosą znaki spoza Windows-1250 w zwykłych przypadkach.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne):
+- opis pacjenta: „…w kanale <3 c. (ΔhSDS −0,13)… (norma ≥6 cm/rok)… kg/m²" → „…(zmiana hSDS -0,13)… (norma co najmniej 6 cm/rok)… kg/m2";
+- ściąga B.64: „Masa lub długość urodzeniowa < −2 SD… masa −3,13 SD" → „< -2 SD… masa -3,13 SD";
+- rak tarczycy: „Tg niestymulowana ≤ 1 ng/ml" → „Tg niestymulowana co najwyżej 1 ng/ml"; „leczenie ¹³¹I" → „leczenie 131I";
+- nadciśnienie: „nadciśnienie ≥P95; II stopień ~≥P99 + 5 mm Hg" → „nadciśnienie co najmniej P95; II stopień ~co najmniej P99 + 5 mm Hg"; „(P90≈110, P95≈115 mm Hg)" → „(P90 ok. 110, P95 ok. 115 mm Hg)";
+- notatka: „Tempo wzrastania ≥4 cm/rok; hSDS −1,20 (ΔhSDS −0,10); TSH 2,1 μIU/mL; BMI 17,2 kg/m²." → „Tempo wzrastania co najmniej 4 cm/rok; hSDS -1,20 (zmiana hSDS -0,10); TSH 2,1 µIU/mL; BMI 17,2 kg/m2.";
+- przelicznik: „11 μmol/L" → „11 µmol/L";
+- podsumowanie wyników (P-SCHOWEK-HIS): „norma ≥4 cm/rok" → „norma co najmniej 4 cm/rok" (dotąd „>=4").
+
+*Strażnicy:* `tests/unit/schowek.test.mjs` (31, +3) — porównania słownie ze spacjami (11 zdań z prawdziwych przycisków), zapis odwrotny symbolem z kontrolą, znaki z pozostałych przycisków (11 par, każda w Windows-1250). `tests/unit/schowek-his-przyciski.test.mjs` (18) — zamiana stoi przy wejściu do drogi kopiowania w 13 miejscach; grypa i ospa: dwa zapisy do schowka z zamianą, ekran bez niej; droga zapasowa epikryzy; dane techniczne bez zamiany; każda strona z takim przyciskiem ładuje `vilda_schowek.js` (z kontrolą, że strażnik obejrzał 9 stron). `tests/e2e/schowek-his-przyciski.spec.mjs` (3: notatki, Karta pacjenta na `terminarz.html`, przelicznik) — prawdziwy przycisk klikany dwa razy: z modułem i po jego zdjęciu; kontrola dodatnia (surowy tekst ma znaki spoza Windows-1250), relacja dokładna `schowek = dlaSystemuSzpitalnego(surowy)`, wynik w Windows-1250. Kontrola ujemna: bez zamiany w `inline_notatki_00.js` test notatek czerwony („≥4", „−1,20", „ΔhSDS", „μIU", „m²"). Zaktualizowane oczekiwania: `podsumowanie-opis-schowek`, `b64-sciaga-przycisk`, `sga-dni-ciazy` (zwykły minus, a w opisie i ściądze cały tekst w Windows-1250), `schowek-podsumowanie` („co najmniej"). Wspólna wyrocznia: `tests/support/windows1250.mjs`.
+
+**Decyzje właściciela.** (1) „≥" słownie — podjęta 2026-10-13. (2) To samo dla „≤" („co najwyżej"), „≈" („ok."), „Δ" („zmiana"), „↑"/„↓" („wzrost"/„spadek") i liter greckich („alfa", „beta", „gamma") — rozszerzenie tej decyzji do potwierdzenia. (3) Zapytanie do AI w kalkulatorze klirensu zostaje bez zamiany.
+
+**Pliki.** `vilda_schowek.js`, `antibiotic_therapy.js`, `obesity_therapy.js`, `gh_igf_therapy.js`, `thyroid_cancer_kids.js`, `hypertension_therapy.js`, `vilda_diet_recommendations.js`, `flu_therapy.js`, `vilda_epicrisis_ui.js`, `vilda_patient_narrative_ui.js`, `vilda_b64_checklist_ui.js`, `app.js`, `vilda_auth_ui.js`, `inline_notatki_00.js`, `przelicznik-jednostek.html`; strony z nowym `<script>`: `app.html`, `notatki.html`, `subskrypcja.html`, `terminarz.html`, `ustawienia.html`. Wersje (nadane `npm run podbij-wersje`): `antibiotic_therapy.js` 14, `app.js` 234, `flu_therapy.js` 9, `gh_igf_therapy.js` 33, `hypertension_therapy.js` 11, `inline_notatki_00.js` 9, `obesity_therapy.js` 12, `thyroid_cancer_kids.js` 5, `vilda_auth_ui.js` 487 (a za nim wstrzykujące go `vilda_chrome.js` 135 i `vilda_session_bridge.js` 59), `vilda_b64_checklist_ui.js` 4, `vilda_diet_recommendations.js` 70, `vilda_epicrisis_ui.js` 29, `vilda_patient_narrative_ui.js` 12, `vilda_schowek.js` 5; SW 1.1.266 → 1.1.267 (1.1.265 i 1.1.266 nadały równolegle #662 i #665).
 
 ### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
 
@@ -5618,7 +5649,7 @@ Zmierzone przy okazji, bez zmian kodu: wskaźnik zapisu po poprawce w Karcie pok
 3. Panele-rodzeństwo w powłoce odświeżają bazę po zmianie w miejscu i wpisują dokładnie pola wpisane przez panel, w którym pracuje lekarz.
 4. Znacznik `promoted` w powiadomieniu sejfu o zmianie w miejscu (nowe pole powiadomienia, bez zmiany formatu rekordu).
 
-### P-WIEK-POMIARU — pomiar zapisany liczy się w swoim wieku, nie w dokładnym wieku dziecka z formularza (SW 1.1.266, 2026-10-13, polecenie właściciela)
+### P-WIEK-POMIARU — pomiar zapisany liczy się w swoim wieku, nie w dokładnym wieku dziecka z formularza (SW 1.1.268, 2026-10-13, polecenie właściciela)
 
 **Polecenie właściciela.** „Napraw ustalenia poza zakresem w osobnym PR”. Chodzi o oba ustalenia z P-POROWNANIE-DATA (#662); pierwsze zanotowano już w P-POROWNANIE-W-TLE.
 
@@ -5655,7 +5686,7 @@ Od 3. roku życia różnica wieku w obrębie miesiąca zmienia hSDS najwyżej o 
 W jednym widoku wszystkie liczby z siatek jednego pomiaru liczą się w tym samym wieku: centyle masy i wzrostu, BMI, Cole, granice 3./97. centyla, „kg do granicy normy” oraz hSDS − mpSDS.
 
 **Co jest.**
-- **`app.js` (?v 234).** Opcjonalny, jawnie podany wiek pomiaru w miesiącach: `calcPercentileStats(wartość, płeć, wiekLat, param, w)`, `getChildLMS(płeć, wiekLat, param, w)`, `lmsNiemowle(t, a, w)` i `lmsNiemowleWiek(a, w)`.
+- **`app.js` (?v 235).** Opcjonalny, jawnie podany wiek pomiaru w miesiącach: `calcPercentileStats(wartość, płeć, wiekLat, param, w)`, `getChildLMS(płeć, wiekLat, param, w)`, `lmsNiemowle(t, a, w)` i `lmsNiemowleWiek(a, w)`.
   - Liczba: ten wiek. Silnik wzrostu dostaje go wprost, a masa niemowlęca interpoluje L, M i S w tym wieku.
   - `null`: pełne miesiące.
   - Brak argumentu: pomiar z formularza, bramka DOB-AGE-4 jak dotąd.
@@ -5663,7 +5694,7 @@ W jednym widoku wszystkie liczby z siatek jednego pomiaru liczą się w tym samy
   - Gałęzie siatek (36 mies., 216 mies.) i populacja z zespołem Downa decydują jak dotąd — po pełnych miesiącach.
 - **Wiek z rekordu:**
   - karta porównania: `Se()` w `vilda_summary_cards.js` (?v 60);
-  - kafelki Karty: `vilda_auth_ui.js` (?v 487);
+  - kafelki Karty: `vilda_auth_ui.js` (?v 488);
   - schowek: `vilda_patient_summary_copy.js` (?v 15).
 
   Rekord liczony na Palczewskiej zostaje przy pełnych miesiącach — jej ścieżka masy nie zna wieku ułamkowego.
@@ -5706,7 +5737,7 @@ Populacja i jednostki jak w tych wpisach: długość i wzrost w cm, masa w kg, w
 
 | Wejście | Oczekiwany wynik |
 |---|---|
-| Chłopiec ur. 2026-06-02. Pomiar z 2026-06-07 (5. doba) na medianie WHO zapisany z datą urodzenia i datą pomiaru. Wczytany jako „Nowy pomiar” 2026-06-17 (15. doba) | „Poprzednio” — długość i masa: 50 centyl w każdej klatce z kartą, także przed wpisem daty do formularza. Przed zmianą: 67 (pełne miesiące, karta zbudowana przed wpisem daty) albo 21 (15. doba z formularza) |
+| Chłopiec ur. 2026-06-02. Pomiar z 2026-06-07 (5. doba) na medianie WHO zapisany z datą urodzenia i datą pomiaru. Wczytany jako „Nowy pomiar” 2026-06-17 (15. doba) | „Poprzednio” — długość i masa: 50 centyl w każdej klatce z kartą, także przed wpisem daty do formularza. Przed zmianą: 21 (15. doba z formularza); przed P-POROWNANIE-DATA także 67 (pełne miesiące), zależnie od wyścigu z datą urodzenia |
 | Jak wyżej, telefon (iPhone 15 Pro) | dopisek „było …”: 50 centyl, bez poziomego przewijania |
 | W formularzu chłopiec ur. 2026-05-23 (25. doba). Otwarta Karta innego chłopca, ur. 2026-06-14, zmierzonego 2026-06-17 (3. doba) na medianie | kafelek „Wzrost”: 51. centyl (mediana zaokrąglona do 0,1 cm), „Waga”: jego centyl w 3. dobie. Przed zmianą: 4. centyl długości |
 | Rekord bez doby pomiaru albo z dobą, która nie daje zapisanego wieku | pełne miesiące, bez formularza |
@@ -5724,7 +5755,7 @@ Populacja i jednostki jak w tych wpisach: długość i wzrost w cm, masa w kg, w
   - strażnik źródła w każdym miejscu wołającym;
   - schowek: jeden wiek dla wszystkich liczb, `null` bez wieku dokładnego, Palczewska.
 - `tests/e2e/wiek-pomiaru-z-rekordu.spec.mjs` (2: karta porównania z próbnikiem klatek i Karta innego chłopca) oraz `…-mobile.spec.mjs` (1).
-- **Kontrola ujemna na kodzie `audyt` cdfa0a6.** Testy e2e padają 3/3 na samym zachowaniu: „Poprzednio” 67 na desktopie i 21 na telefonie zamiast 50; kafelek 4. zamiast 51. centyla. Test unit pada 30/30 (wymaga nowej funkcji).
+- **Kontrola ujemna na kodzie `audyt` 8c2006b.** Testy e2e padają 3/3 na samym zachowaniu: „Poprzednio” 21 zamiast 50 (desktop i telefon), kafelek drugiego chłopca 4. zamiast 51. centyla. Na kodzie sprzed P-POROWNANIE-DATA (cdfa0a6) desktop pokazywał 67 — karta wygrywała wyścig z datą urodzenia. Test unit pada 29/29 (wymaga nowej funkcji).
 - Zaktualizowane dosłowne fragmenty w pięciu strażnikach źródła; liczba asercji bez zmian:
   - `bmi-karta-monitor`, `bmi-wyjscia-tekstowe` — wiek BMI i Cole;
   - `sds-cisnienie-i-wsad` — `Ce` dla masy wsadu;
@@ -5736,7 +5767,7 @@ Populacja i jednostki jak w tych wpisach: długość i wzrost w cm, masa w kg, w
 2. **ΔSDS karty porównania.** Liczy oba pomiary w pełnych miesiącach. Dla dwóch pomiarów niemowlęcia z tego samego miesiąca życia pomija więc tygodnie między nimi i może pokazać pozorny przyrost SDS.
 3. **Oś wieku kostnego w karcie zaawansowanej (`heightSdsForBoneAge`).** Gdy wiek kostny w pełnych miesiącach równa się kalendarzowemu, liczy się w dokładnym wieku kalendarzowym z formularza. Dotyczy tego samego pacjenta; różnica jest mniejsza niż miesiąc wieku.
 
-**Wersje.** `app.js` 234, `vilda_summary_cards.js` 60, `vilda_auth_ui.js` 487 (wstrzykiwany: `vilda_chrome.js` 135, `vilda_session_bridge.js` 59), `vilda_patient_summary_copy.js` 15, `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.265 → 1.1.266 (1.1.265 wydał #662).
+**Wersje.** `app.js` 235, `vilda_summary_cards.js` 60, `vilda_auth_ui.js` 488 (wstrzykiwany: `vilda_chrome.js` 136, `vilda_session_bridge.js` 60), `vilda_patient_summary_copy.js` 15, `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.267 → 1.1.268 (numery 1.1.265–1.1.267 wydały #662, #665 i #668).
 
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 

@@ -173,12 +173,10 @@
      „–", „—", „’", „„", „”", „…", „±", „×", „°", „µ", spacja nierozdzielająca) zostają. Liczby,
      jednostki, progi, kolejność i podział wierszy — bez zmian. Znaku spoza tabel moduł nie zgaduje:
      zostaje taki, jaki był. Karta na ekranie nadal pokazuje „≥" — zmienia się tylko tekst
-     w schowku. */
+     w schowku. Od P-SCHOWEK-HIS-2 porównania idą słownie („co najmniej") — opis przy
+     `znakiSlownie()`. */
   var ZAMIANY = {
-    /* porównania: bez tego „norma ≥4 cm/rok" staje się w HIS „norma ?4 cm/rok" */
-    '\u2265': '>=',
-    '\u2264': '<=',
-    '\u2248': '~',
+    /* porównania („≥", „≤", „≈") idą słownie — osobno, niżej, bo potrzebują spacji i kontekstu */
     /* minus i łączniki: „hSDS −0,84" i „Z‑score" — zwykły łącznik-minus z ASCII */
     '\u2212': '-',
     '\u2010': '-',
@@ -190,6 +188,13 @@
     '\u2194': '<->',
     /* grecka litera mi w jednostkach („μg") — Windows-1250 ma znak mikro „µ" */
     '\u03BC': '\u00B5',
+    /* litery greckie w nazwach leków i badań — polska pisownia („β‑laktamy" → „beta-laktamy") */
+    '\u03B1': 'alfa',
+    '\u03B2': 'beta',
+    '\u03B3': 'gamma',
+    /* nawiasy z zaleceń antybiotykoterapii („【…】") */
+    '\u3010': '[',
+    '\u3011': ']',
     /* indeksy dolne: „CO₂" → „CO2" */
     '\u2080': '0', '\u2081': '1', '\u2082': '2', '\u2083': '3', '\u2084': '4',
     '\u2085': '5', '\u2086': '6', '\u2087': '7', '\u2088': '8', '\u2089': '9',
@@ -211,6 +216,52 @@
      cały moduł, czyli kopiowanie. Cyfrę przed wykładnikiem łapie opcjonalna grupa. */
   var GORNE_CIAG = /(\d?)([\u2070\u00B9\u00B2\u00B3\u2074-\u207B]+)/g;
 
+  /* P-SCHOWEK-HIS-2 — porównania SŁOWNIE (decyzja właściciela 2026-10-13: „wolałbym wszędzie słownie
+     »co najmniej«"). Bez tego „norma ≥4 cm/rok" stawało się w HIS „norma ?4 cm/rok"; od P-SCHOWEK-HIS
+     do 2026-10-13 schowek dawał „>=". Teraz: „≥" → „co najmniej", a w tym samym duchu „≤" → „co najwyżej"
+     i „≈" → „ok.".
+
+     Słowo czyta się poprawnie, gdy znak stoi przed liczbą („≥4 cm/rok", „Tg ≤ 1 ng/ml", „(≈ 45 mg/kg)")
+     albo po nazwie wielkości („BMI ≥ 30"). W zapisie ODWROTNYM — liczba przed znakiem, nazwa wielkości po
+     nim („18,5 ≤ BMI") — słowo odwróciłoby sens („18,5 co najwyżej BMI"), więc tam zostaje zapis z ASCII
+     („18,5 <= BMI"). W tekstach kopiowanych przez aplikację takiego zapisu dziś nie ma; to zabezpieczenie.
+
+     Tak samo słownie idą „Δ" → „zmiana" („ΔhSDS −0,06" → „zmiana hSDS -0,06" w opisie pacjenta,
+     „ΔSDS" w epikryzie) i strzałki pionowe „↑" → „wzrost", „↓" → „spadek" („kreatynina ↑" w zaleceniach
+     przy nadciśnieniu). Strzałki poziome zostają znakami: „→" → „->" (tabela wyżej).
+
+     Spacje: słowo dostaje spację przed sobą, gdy styka się z literą, cyfrą albo znakiem domykającym
+     („SBP≈123" → „SBP ok. 123"), i spację za sobą, gdy dotyka dalszej treści („≥P95" → „co najmniej P95").
+     Nawias, cudzysłów otwierający i znak „~" przed słowem oraz interpunkcja po nim spacji nie dostają. */
+  var SLOWNIE = {
+    '\u2265': 'co najmniej', '\u2264': 'co najwy\u017Cej', '\u2248': 'ok.',
+    '\u0394': 'zmiana', '\u2191': 'wzrost', '\u2193': 'spadek'
+  };
+  /* Tylko porównania mają kierunek — tylko one dostają zapis z ASCII w zapisie odwrotnym. */
+  var ODWROTNIE = { '\u2265': '>=', '\u2264': '<=', '\u2248': '~' };
+  var ZNAK_SLOWNY = /[\u2248\u2264\u2265\u0394\u2191\u2193]/g;
+  var LITERA = /[A-Za-z\u00C0-\u024F]/;
+  var BEZ_SPACJI_PRZED = '([{\u201E"\u00AB\u2039/~';
+  var BEZ_SPACJI_PO = ')]}.,;:!?"\u201D\u00BB\u203A';
+
+  function znakiSlownie(t) {
+    return t.replace(ZNAK_SLOWNY, function (znak, i, calosc) {
+      var j = i - 1;
+      while (j >= 0 && /\s/.test(calosc.charAt(j))) j -= 1;
+      var k = i + 1;
+      while (k < calosc.length && /\s/.test(calosc.charAt(k))) k += 1;
+      if (ODWROTNIE[znak] && j >= 0 && /\d/.test(calosc.charAt(j)) && k < calosc.length && LITERA.test(calosc.charAt(k))) {
+        return ODWROTNIE[znak];
+      }
+      var tuzPrzed = i > 0 ? calosc.charAt(i - 1) : '';
+      var tuzPo = i + 1 < calosc.length ? calosc.charAt(i + 1) : '';
+      var slowo = SLOWNIE[znak];
+      if (tuzPrzed && !/\s/.test(tuzPrzed) && BEZ_SPACJI_PRZED.indexOf(tuzPrzed) < 0) slowo = ' ' + slowo;
+      if (tuzPo && !/\s/.test(tuzPo) && BEZ_SPACJI_PO.indexOf(tuzPo) < 0) slowo += ' ';
+      return slowo;
+    });
+  }
+
   /* Ułamki zwykłe: „½" → „1/2", a „1½" → „1 1/2" (nie „11/2"). Tablica Windows dałaby „1". */
   var ULAMKI = { '\u00BC': '1/4', '\u00BD': '1/2', '\u00BE': '3/4' };
   var ULAMKI_CIAG = /(\d?)([\u00BC-\u00BE])/g;
@@ -225,6 +276,7 @@
     t = t.replace(ULAMKI_CIAG, function (_, cyfra, ulamek) {
       return cyfra ? cyfra + ' ' + ULAMKI[ulamek] : ULAMKI[ulamek];
     });
+    t = znakiSlownie(t);
     var wynik = '';
     for (var j = 0; j < t.length; j += 1) {
       var znak = t.charAt(j);

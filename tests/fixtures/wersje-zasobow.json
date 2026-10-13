@@ -8,12 +8,12 @@
   "sha256": "78afa169456282e3e7b86d06dea95d389737a19cd403374a36c1e010ba062003"
  },
  "antibiotic_therapy.js": {
-  "v": 13,
-  "sha256": "b52fd3ace2e4d73edea28097d5ad246f047227fa66195b18aa8e06103fe62c4b"
+  "v": 14,
+  "sha256": "6624660899db6991454988feee6bfaa15a7aae3b91185c8acca15a67e7971815"
  },
  "app.js": {
-  "v": 234,
-  "sha256": "4c173f46ce80db0bea0107121d0e95a578ee812ee8b8777cd94126bc65336629"
+  "v": 235,
+  "sha256": "58064286f22bc3395561ce48c562d0f6a98ae4b1a48e1a329daf51085c70f590"
  },
  "bisphos_therapy.js": {
   "v": 8,
@@ -72,12 +72,12 @@
   "sha256": "2de940309b9eb995273bea340f9e66e8318b6fd77de02329ba68d3f4b7f001ff"
  },
  "flu_therapy.js": {
-  "v": 8,
-  "sha256": "4aba850313fe73ba4c08cbd18cda0288c6314e0b92641bcec421eb986c0b8eae"
+  "v": 9,
+  "sha256": "76594e926e789122ca1283e0cc98d25e76ea5e84f5606515e01ba425ea4af7b9"
  },
  "gh_igf_therapy.js": {
-  "v": 32,
-  "sha256": "71b425aa71804cb0463418d6abb2cfe11c1204d11c862daace55e4a9bc47bffb"
+  "v": 33,
+  "sha256": "52437f60c96f5e56b92c4e54e379bb30b3295f024dc4e3e3197a384aae046216"
  },
  "gh_therapy_monitor.js": {
   "v": 59,
@@ -108,8 +108,8 @@
   "sha256": "a5ba70683f7bba5590a7d399b108f04548146b84729932fe96c496ca5a8e0279"
  },
  "hypertension_therapy.js": {
-  "v": 10,
-  "sha256": "625097a85d3b79a951e340809e3cffa5b0c3289eb2470feef6a74412321e5bc0"
+  "v": 11,
+  "sha256": "db8af221d017aba73b2f56c2fdeb59097c5084a8deb307a8aebd6268c3895060"
  },
  "inline_cukrzyca_00.css": {
   "v": 1,
@@ -244,8 +244,8 @@
   "sha256": "6eb1aa3c6fbadb03b82b4ca3536fa0369f0c71d9692ef302a8e7d40751dadf58"
  },
  "inline_notatki_00.js": {
-  "v": 8,
-  "sha256": "a2a90085501dab4a19469d186fc9351a926ff0acb8a3fbcdfbd1894adbfa2d7f"
+  "v": 9,
+  "sha256": "c7937914cdb521fa76c845277fee42e9efac415982bc008b9c980bce1d96ac97"
  },
  "inline_o_aplikacji_00.css": {
   "v": 1,
@@ -376,8 +376,8 @@
   "sha256": "83f957da87132df95c7d165a7bc601e23d06cbfe6d3c4a22772514b5fa453e20"
  },
  "obesity_therapy.js": {
-  "v": 11,
-  "sha256": "3ac8c37920899e4c286031807d4308f9d860a00cc007e67b8add65d092563884"
+  "v": 12,
+  "sha256": "36d31d75d7d03d356d8cc37c087b42b05202af649999c01bf8e17862cc788f3b"
  },
  "obesity_therapy_monitor.js": {
   "v": 27,
@@ -416,8 +416,8 @@
   "sha256": "b9ca734e4ae37643a7bff90a0ae677ab50c873fd2a553f3261ece22ebd86fbaf"
  },
  "thyroid_cancer_kids.js": {
-  "v": 4,
-  "sha256": "13e3ceeca6f5ee5eef59243c373633bcdd09bfb650f84acfada9643b24c433a4"
+  "v": 5,
+  "sha256": "f348b4a8a396692ed9cf26f7d33f5cd9f6f0b17a7c06adb9d5f51563b2b8130e"
  },
  "tutorial.js": {
   "v": 8,
@@ -464,16 +464,16 @@
   "sha256": "61e900c1cb9fbae0a5b13cb850dee317318237c727192c65fc32a71da30a758b"
  },
  "vilda_auth_ui.js": {
-  "v": 487,
-  "sha256": "bab3488de1c0c67c103c275c8bb11436c87ca1e330bec3640844be62ab0871f7"
+  "v": 488,
+  "sha256": "f7d017d79e8089ba366008a100149193897db550e713d4b4fd37e451c125dc93"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
   "sha256": "3b426f90db0ba3863c2b8e59c7b8b6c97e47a9beeaa57faa08251d35c8612955"
  },
  "vilda_b64_checklist_ui.js": {
-  "v": 3,
-  "sha256": "5d7800a2ca54d5fd61b84eb99a9024834d708e7300e894b95cb238c6998b267c"
+  "v": 4,
+  "sha256": "b902988fe29903ec61e7e0944138ea9f0af1bf02711a83cdcbfc7348689df0e5"
  },
  "vilda_baseline_pacjenta.js": {
   "v": 4,
@@ -512,8 +512,8 @@
   "sha256": "b8eff7e716de0492d8a7596e372800afa2205b5433fd1c8c3ccee18a797cb4be"
  },
  "vilda_chrome.js": {
-  "v": 135,
-  "sha256": "15442c8c9d1b40798147572aa9caaa07a383686ece29e10a897c16c507d15053"
+  "v": 136,
+  "sha256": "c2033096ec804b2c3cdf5074190ce6982d2214f282b3d61528d1ef8d7fd4532c"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -548,8 +548,8 @@
   "sha256": "7ca4dc72f2886e34eeeb829897d3264cadbb8b0aca4131aaf89c61e25aa11bd0"
  },
  "vilda_diet_recommendations.js": {
-  "v": 69,
-  "sha256": "192eca6778965abb383d7266d05456e315d085712583b4654f96448f1e9ad966"
+  "v": 70,
+  "sha256": "f227761d1de9d59f63f6739b2b7084ebdf5a2d94dec95ffc0bfdab9c291fb088"
  },
  "vilda_dob_age.js": {
   "v": 10,
@@ -576,8 +576,8 @@
   "sha256": "018cbca2291c955f39383ab147d721f5ac97f1c15a41ac27a467f06a0f96c6a8"
  },
  "vilda_epicrisis_ui.js": {
-  "v": 28,
-  "sha256": "e34dd928d6a50a54caf0e35d05dbcbee525415df5ec264977580cfc19dbe35cc"
+  "v": 29,
+  "sha256": "ffa67b2b4ff9f33563fb9ac954cd53b1622308f22a2adaf00e4ae4d1870a0a0d"
  },
  "vilda_estimated_intake.js": {
   "v": 3,
@@ -820,8 +820,8 @@
   "sha256": "986f00a3813dc27bf5e730c3137f1c2489b15f06caa52f4723a308ab23050c5c"
  },
  "vilda_patient_narrative_ui.js": {
-  "v": 11,
-  "sha256": "0ccfb98619d48e7d97ae5904b6c699e33423451d54483aad2687d46fafa9af14"
+  "v": 12,
+  "sha256": "7c8b1623decba3d07ebbef6449fcc2f80dd71edaa8455aa6de588985b404b307"
  },
  "vilda_patient_report.js": {
   "v": 47,
@@ -932,16 +932,16 @@
   "sha256": "ca2da96c5da1f4ddb7e2ab847a9f52915ee45c00940f3ceef90d94712513c346"
  },
  "vilda_schowek.js": {
-  "v": 4,
-  "sha256": "f849ca7a5b2a75e2ca794a2333855e661317ef8a53a8141bd52993a99ef1a1b8"
+  "v": 5,
+  "sha256": "0edc8744ee779f1a48a97e7ea8c588d9250c76d4d1ac875c6a47a90b51761813"
  },
  "vilda_sds_wzrostu.js": {
   "v": 4,
   "sha256": "10902bf33b86f2fe48b86468ab5188d751fa810da777736a89bf939d17e8cbba"
  },
  "vilda_session_bridge.js": {
-  "v": 59,
-  "sha256": "7a3afd1938ce3e33edde34edf742c3b412ddc3dff211cf9bb8ad27f0b7d21ee0"
+  "v": 60,
+  "sha256": "263ad67a70a8b1c5ac9afd02d084dd6193392790a778dcb578fb4cbfa60c4ea2"
  },
  "vilda_sga_catchup.js": {
   "v": 2,

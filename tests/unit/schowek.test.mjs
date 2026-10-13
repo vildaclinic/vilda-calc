@@ -224,7 +224,7 @@ const PODSUMOWANIE_DLA_HIS = [
   'Pow. cia\u0142a: 1,32 m2',
   'Wska\u017Anik Cole\u2019a: 95,0 %',
   'Proporcja masy do wysoko\u015Bci: 40 centyl (Z-score = -0,25)',
-  'Tempo wzrastania: 6,1 cm/rok (z 13 mies.) \u2014 w normie, norma >=4 cm/rok \u2014 wg wieku kostnego 12 lat (okres oko\u0142opokwitaniowy)',
+  'Tempo wzrastania: 6,1 cm/rok (z 13 mies.) \u2014 w normie, norma co najmniej 4 cm/rok \u2014 wg wieku kostnego 12 lat (okres oko\u0142opokwitaniowy)',
   'SDS tempa: -0,3 (38 centyl) \u2014 wg Duran i wsp., J Pediatr Endocrinol Metab 2025',
 ].join('\n');
 
@@ -298,7 +298,7 @@ describe('P-SCHOWEK-HIS — dlaSystemuSzpitalnego(): tekst w repertuarze Windows
     expect(WIN1250.size).toBeGreaterThan(240);
   });
 
-  it('podsumowanie (dane fikcyjne): „≥", „−", „²" i „‑" zamienione, reszta bez zmian', () => {
+  it('podsumowanie (dane fikcyjne): „≥" słownie, „−", „²" i „‑" zamienione, reszta bez zmian', () => {
     expect(spozaWindows1250(PODSUMOWANIE), 'kontrola: przed zamianą są znaki spoza Windows-1250')
       .toEqual(['\u2212', '\u2212', '\u00B2', '\u2212', '\u00B2', '\u2011', '\u2265', '\u2212']);
     const wynik = dlaHis(PODSUMOWANIE);
@@ -315,9 +315,10 @@ describe('P-SCHOWEK-HIS — dlaSystemuSzpitalnego(): tekst w repertuarze Windows
 
   it('pojedyncze zamiany — znaczenie bez zmian', () => {
     for (const [we, wy] of [
-      ['norma \u22654 cm/rok', 'norma >=4 cm/rok'],
-      ['\u2264 3. centyla', '<= 3. centyla'],
-      ['\u2248 5 kg', '~ 5 kg'],
+      // P-SCHOWEK-HIS-2: porównania słownie (decyzja właściciela 2026-10-13)
+      ['norma \u22654 cm/rok', 'norma co najmniej 4 cm/rok'],
+      ['\u2264 3. centyla', 'co najwy\u017Cej 3. centyla'],
+      ['\u2248 5 kg', 'ok. 5 kg'],
       ['hSDS \u22121,44', 'hSDS -1,44'],
       ['Z\u2011score', 'Z-score'],
       ['beta\u2010hCG', 'beta-hCG'],
@@ -347,6 +348,36 @@ describe('P-SCHOWEK-HIS — dlaSystemuSzpitalnego(): tekst w repertuarze Windows
     }
   });
 
+  it('P-SCHOWEK-HIS-2: porównania słownie — spacje tam, gdzie słowo dotyka treści', () => {
+    // Zdania z prawdziwych przycisków (antybiotyki, nadciśnienie, rak tarczycy, opis pacjenta, grypa).
+    for (const [we, wy] of [
+      ['nadci\u015Bnienie \u2265P95; II stopie\u0144 ~\u2265P99 + 5 mm Hg', 'nadci\u015Bnienie co najmniej P95; II stopie\u0144 ~co najmniej P99 + 5 mm Hg'],
+      ['(P90\u2248110, P95\u2248115 mm Hg)', '(P90 ok. 110, P95 ok. 115 mm Hg)'],
+      ['Tg niestymulowana \u2264 1 ng/ml lub Tg stymulowana \u2264 2 ng/ml', 'Tg niestymulowana co najwy\u017Cej 1 ng/ml lub Tg stymulowana co najwy\u017Cej 2 ng/ml'],
+      ['(\u22645 kg)', '(co najwy\u017Cej 5 kg)'],
+      ['w paśmie nadwagi (\u226585c)', 'w paśmie nadwagi (co najmniej 85c)'],
+      ['(\u2248 45 mg/kg mc./dob\u0119)', '(ok. 45 mg/kg mc./dob\u0119)'],
+      ['(\u22485\u20137 ml syropu)', '(ok. 5\u20137 ml syropu)'],
+      ['w\u00A0wieku\u00A0\u2265\u00A01\u00A0roku', 'w\u00A0wieku\u00A0co najmniej\u00A01\u00A0roku'], // twarde spacje zostają
+      ['\u201E\u2264 1000 kcal\u201D', '\u201Eco najwy\u017Cej 1000 kcal\u201D'],
+      ['SDS\u2265\u22122', 'SDS co najmniej -2'],
+      ['norma \u2265 4 cm/rok', 'norma co najmniej 4 cm/rok'], // spacja już jest — bez podwójnej
+    ]) {
+      expect(dlaHis(we), JSON.stringify(we)).toBe(wy);
+    }
+  });
+
+  it('P-SCHOWEK-HIS-2: zapis odwrotny („18,5 ≤ BMI") zostaje symbolem — słowo odwróciłoby sens', () => {
+    // „18,5 co najwyżej BMI" czytałoby się odwrotnie. Liczba przed znakiem i nazwa wielkości po nim
+    // dostają zapis z ASCII, który zachowuje kierunek nierówności.
+    expect(dlaHis('18,5 \u2264 BMI < 25')).toBe('18,5 <= BMI < 25');
+    expect(dlaHis('85 \u2264 centyl < 97')).toBe('85 <= centyl < 97');
+    expect(dlaHis('5 \u2265 x')).toBe('5 >= x');
+    expect(dlaHis('3 \u2248 x')).toBe('3 ~ x');
+    // kontrola: ta sama para znaków, ale z liczbą po znaku — zwykły zapis słowny
+    expect(dlaHis('BMI \u2265 30')).toBe('BMI co najmniej 30');
+  });
+
   it('znaki z Windows-1250 i ASCII zostają bit w bit', () => {
     let ascii = '';
     for (let k = 0x20; k < 0x7F; k += 1) ascii += String.fromCharCode(k);
@@ -361,6 +392,7 @@ describe('P-SCHOWEK-HIS — dlaSystemuSzpitalnego(): tekst w repertuarze Windows
 
   it('każdy znak z tabel modułu kończy w Windows-1250, a druga zamiana niczego już nie zmienia', () => {
     const wszystkie = '\u2265\u2264\u2248\u2212\u2010\u2011\u2012\u2192\u2190\u2194\u03BC'
+      + '\u0394\u2191\u2193\u03B1\u03B2\u03B3\u3010\u3011'
       + '\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089'
       + '\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F'
       + '\u200B\u200C\u200D\u2060\uFEFF'
@@ -374,11 +406,35 @@ describe('P-SCHOWEK-HIS — dlaSystemuSzpitalnego(): tekst w repertuarze Windows
   });
 
   it('znak spoza tabel zostaje — moduł nie zgaduje znaczenia', () => {
-    // Greka poza „mi" i symbole nie występują w kopiowanym podsumowaniu; o ich zapisie zdecyduje
-    // właściciel, gdy się pojawią (strażnik e2e wskaże je w podsumowaniu).
-    expect(dlaHis('\u03B2-hCG')).toBe('\u03B2-hCG');
-    expect(dlaHis('\u0394hSDS')).toBe('\u0394hSDS');
+    // Symbole bez ustalonego zapisu nie występują w kopiowanych tekstach klinicznych; decyzja o ich
+    // zapisie należy do właściciela, gdy się pojawią (strażnik e2e wskaże je w schowku).
     expect(dlaHis('\u26A0 uwaga')).toBe('\u26A0 uwaga');
+    expect(dlaHis('\u03B4 i \u03A9')).toBe('\u03B4 i \u03A9');
+    expect(dlaHis('\u2713 gotowe')).toBe('\u2713 gotowe');
+  });
+
+  it('P-SCHOWEK-HIS-2: znaki z pozostałych przycisków kopiowania (opis, epikryza, zalecenia)', () => {
+    for (const [we, wy] of [
+      // opis pacjenta i epikryza: „Δ" słownie, minus zwykły
+      ['kanale 10\u201325 c. (\u0394hSDS \u22120,06)', 'kanale 10\u201325 c. (zmiana hSDS -0,06)'],
+      ['obserwowano spadek (\u0394SDS = \u22120,5).', 'obserwowano spadek (zmiana SDS = -0,5).'],
+      // antybiotykoterapia: litery greckie w polskiej pisowni
+      ['przy nietolerancji \u03B2\u2011laktam\u00F3w', 'przy nietolerancji beta-laktam\u00F3w'],
+      ['\u03B1-fetoproteina, \u03B3-GT', 'alfa-fetoproteina, gamma-GT'],
+      ['\u3010Uwaga\u3011 tekst', '[Uwaga] tekst'],
+      // nadciśnienie: strzałki pionowe słownie, poziome jako „->"
+      ['spadek eGFR/kreatynina \u2191) lub', 'spadek eGFR/kreatynina wzrost) lub'],
+      ['eGFR \u2193', 'eGFR spadek'],
+      ['w USG \u2192 rozwa\u017C BACC', 'w USG -> rozwa\u017C BACC'],
+      // rak tarczycy: izotopy zapisem ASCII (wykładnik przy literze, nie przy liczbie)
+      ['leczenie \u00B9\u00B3\u00B9I', 'leczenie 131I'],
+      ['PET\u2011TK z \u00B9\u2078F\u2011FDG', 'PET-TK z 18F-FDG'],
+      // epikryza: insulina w µIU/mL
+      ['insulina 12 \u03BCIU/mL', 'insulina 12 \u00B5IU/mL'],
+    ]) {
+      expect(dlaHis(we), JSON.stringify(we)).toBe(wy);
+      expect(spozaWindows1250(dlaHis(we)), 'wynik w Windows-1250').toEqual([]);
+    }
   });
 
   it('wejście niebędące tekstem', () => {

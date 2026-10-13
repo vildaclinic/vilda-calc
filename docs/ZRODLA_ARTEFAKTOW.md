@@ -736,7 +736,7 @@ nasluch.onmessage = (e) => {                                            // bez z
 };
 ```
 
-## Łatka P-WIEK-POMIARU (`app.js` 233 → 234 i wołający, 2026-10-13)
+## Łatka P-WIEK-POMIARU (`app.js` 234 → 235 i wołający, 2026-10-13)
 
 Zmiana wprost w artefaktach. Rdzeń dostaje opcjonalny, jawnie podany wiek pomiaru, a każde miejsce liczące pomiar zapisany, innego pacjenta albo krzywą odniesienia go podaje. Rejestr: `docs/clinical/ALGORITHMS.md`, P-WIEK-POMIARU.
 
@@ -769,8 +769,8 @@ Wołający (nazwy z artefaktów):
 | Plik | Miejsce | Wiek |
 |---|---|---|
 | `vilda_summary_cards.js` 60 | `Se()` — „Poprzednio”: `calcPercentileStats` wzrostu i masy, `T0.ocen`/`T0.cole`, `ee()` (kg do normy) | `wP = vildaWiekPomiaruMies(payload, l, null)`; Palczewska bez zmian |
-| `vilda_auth_ui.js` 487 | `En(t,a,n,r,o,w)`; kafelki w `showPatientCard` (`En`, `Tb.ocen`, `Tb.cole`) | `wP = vildaWiekPomiaruMies(s, I, null)` poza rekordem na Palczewskiej |
-| `vilda_auth_ui.js` 487 | `ci()` (żetony hSDS panelu GH), MPH `En(rt,S,18,…)`, `getLms` wykresów | `null` |
+| `vilda_auth_ui.js` 488 | `En(t,a,n,r,o,w)`; kafelki w `showPatientCard` (`En`, `Tb.ocen`, `Tb.cole`) | `wP = vildaWiekPomiaruMies(s, I, null)` poza rekordem na Palczewskiej |
+| `vilda_auth_ui.js` 488 | `ci()` (żetony hSDS panelu GH), MPH `En(rt,S,18,…)`, `getLms` wykresów | `null` |
 | `vilda_patient_summary_copy.js` 15 | `I(…, w)`, `x(…, w)`, BMI/Cole, hSDS − mpSDS w `We()` | `wP = vildaWiekPomiaruMies(e, N, null)` poza Palczewską |
 | `gh_therapy_monitor.js` 59 | `r(u,c,f)` — punkty GH | `null` |
 | `vilda_growth_prediction_validation_model.js` 4 | `hSds()` | `null` |
