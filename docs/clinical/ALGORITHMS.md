@@ -1432,10 +1432,11 @@ Jopling 2018, DOI `10.1002/edm2.21`, oraz Borelli-Kjær 2025, DOI
   `minAgeExclusive`; nieprecyzyjny wiek przecinający źródła lub grupy
   nie otrzymuje mediany wybranej ze środka. FDA nie jest aktywowane.
 - Borelli, ryc. 1: surowica Gen II ELISA, 648 dziewcząt 5,6–20,2 lat
-  w większym żeńskim zbiorze. Zwykły profil zachowuje kwalifikację 8–20
-  włącznie i wszystkie 24 przybliżone węzły 5,6–47 do PCHIP, tak jak
-  dotychczasowe porównanie płci. ±2 pg/mL oznacza digitalizację, nie
-  przedział ufności. Cyklu nie standaryzowano, dane antykoncepcji były
+  w większym żeńskim zbiorze. Zwykły profil początkowo miał kwalifikację
+  8–20; uzupełnienie po zgłoszeniu 6-latki, opisane poniżej, rozszerza ją
+  do 5,6–20 włącznie. Wszystkie 24 przybliżone węzły 5,6–47 pozostają
+  w PCHIP, a odrębne porównanie płci zachowuje okno 8–20. ±2 pg/mL
+  oznacza digitalizację, nie przedział ufności. Cyklu nie standaryzowano, dane antykoncepcji były
   niepełne; nie jest to mediana konkretnej fazy lub wyłącznie bez leczenia.
 
 `compatibleSpecimenIds` pozwala odróżnić osocze Jopling od surowiczych
@@ -1470,6 +1471,46 @@ Kontrole obejmują silnik produkcyjny, generator danych, renderer i
 rzeczywisty formularz. Status wykonania należy do raportu implementacji;
 te przypadki nie deklarują zaliczonych testów ani walidacji klinicznej.
 Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
+
+#### Uzupełnienie — inhibina B od 5,6 roku, 2026-10-13
+
+**Problem i akceptacja:** dla dziewczynki 6 lat z wynikiem 33 pg/mL silnik
+zwracał `unsupported-age`, mimo dostępnej krzywej i źródła liczbowego.
+Dolne 8 lat w PR #651 pochodziło z wcześniej udostępnionego porównania
+pokwitania, nie z granicy obserwacji Borelli. Właściciel zaakceptował
+poszerzenie zwykłego profilu do **5,6–20 lat włącznie**, bez zmiany
+geometrii, norm i bez dodatkowych pól.
+
+Ponownie odczytano zachowany pełny artykuł Borelli-Kjær 2025,
+[DOI 10.1210/clinem/dgae439](https://doi.org/10.1210/clinem/dgae439),
+ryc. 1, kohorty, metody i ograniczenia oraz zachowany suplement walidacji
+Gen II [DOI 10.6084/m9.figshare.26056558.v1](https://doi.org/10.6084/m9.figshare.26056558.v1).
+Kohorta obejmuje 648 dziewcząt 5,6–20,2 lat; żeńskie próbki: surowica,
+Beckman Coulter Inhibin B Gen II ELISA, LOD 3 ng/L = 3 pg/mL.
+Odczyt mediany GAMLSS przy 6 latach wynosi około **11 pg/mL**
+(zachowana digitalizacja 10,74, zaokrąglona do 11). Około ±2 pg/mL
+jest oszacowaniem odczytu ryciny, nie przedziałem ufności ani normą.
+Wartość centralna jest ponad LOD; nie imputujemy wyniku pacjentki.
+Suplement nie zawiera numerycznych parametrów LMS. Nie dodajemy nowych
+publikacji, pomiarów, odczytów ani współczynników między metodami.
+
+Profil `borelli2025-female-inhb-age-5p6-20`, polityka i dane punktu
+`2026-10-13.2`; silnik, wszystkie 24 węzły PCHIP 5,6–47, pięć profili
+AMH i ich routing `2026-10-13.1` pozostają niezmienione. Nowy zakres
+jest zwykłym odniesieniem wieku, bez wymogu Th1. Cały nieprecyzyjny wiek
+musi mieścić się w profilu; luka >1–<5,6, wiek >20, niezgodna metoda
+lub materiał, znane przeciwwskazania oraz wyniki cenzurowane zachowują
+ograniczenia. Porównanie płci w pokwitaniu nadal obejmuje 8–20.
+
+**Wpływ i przypadki:** F6/33 pg/mL → punkt 33 i mediana ≈11; F5,6 → ≈11;
+przedział `[6,6+1/12)` kwalifikuje się; wiek 5,59–5,61 przecina dolną granicę
+i nie otrzymuje mediany wybranej ze środka. F15 → nadal ≈44.
+Bycie powyżej mediany nie jest wyjściem poza normę. Krzywa i skala pozostają
+identyczne przed wpisaniem i po wyczyszczeniu; normy laboratoryjne,
+werdykty i zapis nie zmieniają się. Są to przypadki do weryfikacji rzeczywistych
+funkcji i formularza, nie deklaracja wykonanych testów ani walidacji klinicznej.
+Źródłowy ślad i akceptacja dopisane do istniejącego
+[przeglądu odniesień](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
 
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
@@ -1618,7 +1659,8 @@ profil porównania płci `borelli2025-female-inhb-puberty-comparison`
 w tej historycznej naprawie działał tylko w tym porównaniu, 8–20 lat. Nie trafił do globalnego
 `patientPointData` w tej historycznej naprawie. Osobne rozszerzenie
 `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10 udostępnia te same mediany
-8–20 lat w zwykłym widoku. Inne hormony i wykresy męskie zachowują swój kontrakt.
+w zwykłym widoku, po uzupełnieniu dla dzieci w wieku 5,6–20 lat.
+Inne hormony i wykresy męskie zachowują swój kontrakt.
 
 **Syntetyczne wejście → oczekiwane zachowanie:**
 
@@ -1629,7 +1671,7 @@ w tej historycznej naprawie działał tylko w tym porównaniu, 8–20 lat. Nie t
 - Pusty/wyczyszczony/cenzurowany wynik → ta sama linia, bez nowej kropki.
 - Wiek 0,02/1 roku → p50 odpowiednio 30,583/16,329 pg/mL. Wiek
   <0,02 lub >1 roku nie kwalifikuje do tego profilu niemowlęcego;
-  późniejsze rozszerzenie Borelli 8–20 opisano powyżej. Wcześniactwo,
+  późniejsze rozszerzenie Borelli, obecnie 5,6–20, opisano powyżej. Wcześniactwo,
   nieznane donoszenie albo znana niezgodna metoda nie otrzymują
   zastępczego odniesienia niemowlęcego.
 - Dołączenie LH/FSH, zbliżenie, pełny ekran i 320 px → ta sama
@@ -1990,7 +2032,8 @@ ryc. 1 z wieku 5,6–47 lat pozostają w PCHIP, ale kwalifikacja obejmuje
 wyłącznie 8–20 lat włącznie w tym porównaniu. Nie aktywuje to punktu
 w zwykłych widokach w ramach tej historycznej zmiany ani poza tym wiekiem.
 Osobne rozszerzenie `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10 udostępnia
-te same mediany także w zwykłym widoku. Istniejący `evaluate`
+te same mediany także w zwykłym widoku, po uzupełnieniu w wieku 5,6–20.
+Istniejący `evaluate`
 kwalifikuje własną płeć z zachowaniem reguł wieku, metody, materiału,
 jednostki i znanych przeciwwskazań; metoda drugiej płci nie blokuje
 własnego zgodnego odniesienia. Panele obserwacji Kuiri-Hänninen,
