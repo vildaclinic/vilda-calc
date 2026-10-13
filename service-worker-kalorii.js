@@ -2713,6 +2713,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_schowek.js?v=1',
   '/vilda_schowek.js?v=2',
   '/vilda_schowek.js?v=3',
+  '/vilda_schowek.js?v=4',
   '/vilda_patient_summary_copy.js?v=4',
   '/vilda_patient_summary_copy.js?v=5',
   '/vilda_patient_summary_copy.js?v=6',
