@@ -34,6 +34,42 @@ const liczbaMigawek = (page, pid) => page.evaluate(async (id) => {
   return p && Array.isArray(p.snapshots) ? p.snapshots.length : 0;
 }, pid);
 
+// Licznik mutacji karty porównania i odczytów pacjenta z sejfu (wszyscy odbiorcy zdarzeń czytają getPatient).
+const wlaczLicznik = (page) => page.evaluate(() => {
+  if (window.__porownanie) window.__porownanie.mo.disconnect();
+  const R = { mutacje: 0, odczyty: [], mo: null };
+  R.mo = new MutationObserver((m) => { R.mutacje += m.length; });
+  R.mo.observe(document.getElementById('prevSummaryContent'), { childList: true, subtree: true, characterData: true, attributes: true });
+  const V = window.VildaVault;
+  if (!V.__e2eLicznikOdczytow) {
+    const odczyt = V.getPatient.bind(V);
+    V.getPatient = function () {
+      const p = odczyt.apply(null, arguments);
+      try { window.__porownanie.odczyty.push(p); } catch (_) { /* licznik wyłączony */ }
+      return p;
+    };
+    V.__e2eLicznikOdczytow = true;
+  }
+  window.__porownanie = R;
+});
+
+// Zdarzenia [typ, detail] w kształcie z vilda_sync_integration.js i vilda_auth_ui.js. Zwraca liczbę odczytów z sejfu,
+// które wywołały, i czeka, aż wszystkie się zakończą: kontynuacja w vilda_summary_cards.js jest podpięta pod tę samą
+// obietnicę wcześniej niż nasze oczekiwanie, więc po nim karta jest już po ewentualnej przebudowie.
+const zdarzenia = (page, nazwy) => page.evaluate(async (lista) => {
+  const R = window.__porownanie;
+  const przed = R.odczyty.length;
+  lista.forEach(([typ, detail]) => {
+    document.dispatchEvent(new CustomEvent(typ, detail ? { detail } : undefined));
+  });
+  await Promise.allSettled(R.odczyty.slice(przed));
+  await new Promise((r) => { setTimeout(r, 0); });
+  return R.odczyty.length - przed;
+}, nazwy);
+
+const CYKL_SYNCHRONIZACJI = [['vilda:sync-status-changed', { state: 'syncing' }], ['vilda:sync-status-changed', { state: 'ok' }]];
+const mutacjeKarty = (page) => page.evaluate(() => window.__porownanie.mutacje);
+
 // Chłopiec 9 lat: zapisane pomiary 38 kg / 133 cm i 40 kg / 135 cm, potem wczytanie z Karty pacjenta jako „Nowy pomiar”
 // z masą 41 kg — karta porównania pokazuje „Poprzednio” 40,0 kg i „Dziś” 41,0 kg.
 async function pacjentZPorownaniem(page) {
@@ -75,8 +111,8 @@ async function pacjentZPorownaniem(page) {
   await page.evaluate(() => window.clearAllData());
   // custom-fixes.js po każdym vilda:patient-loaded nastawia od nowa zegar 3,2 s i wysyła potem `change` na polach formularza
   // (age, ageMonths, weight, height, sex). Wywołane tym update() wypełnia kolumny karty od nowa (ok. 2000 mutacji), także
-  // bez żadnej synchronizacji. Na CI ten impuls trafił w okno pomiaru, więc przygotowanie czeka na niego i na uspokojenie
-  // karty. `change` na #ageMonths (test go nie wpisuje) co najmniej 3 s po ostatnim wczytaniu to właśnie ten impuls.
+  // bez żadnej synchronizacji. Okno pomiaru nie może go objąć, więc przygotowanie czeka na niego i na uspokojenie karty.
+  // `change` na #ageMonths (test go nie wpisuje) co najmniej 3 s po ostatnim wczytaniu to właśnie ten impuls.
   await page.evaluate(() => {
     const W = { ostatnieWczytanie: 0, impuls: 0, mutacjaKarty: 0 };
     window.__wczytanie = W;
@@ -99,47 +135,22 @@ async function pacjentZPorownaniem(page) {
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg', { timeout: 15000 });
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg', { timeout: 15000 });
   await page.waitForFunction(() => window.__wczytanie.impuls > 0, null, { timeout: 20000 });
+  // Kartę z wczytania (vilda:patient-loaded, source 'pick') buduje odczyt z sejfu, a datę urodzenia formularz dostaje
+  // ok. 200 ms później. Kto wygra, zależy od tempa maszyny. Centyl wzrostu w kolumnie „Poprzednio” liczy się bez daty
+  // z pełnych miesięcy, a z datą — z dokładnego wieku (lmsNiemowleWiek → VildaDobAge.readExactAge), tu 39 → 38 centyl.
+  // Karta zbudowana przed datą słusznie powstaje więc od nowa przy pierwszej synchronizacji (na CI 142 mutacje, jedna
+  // przebudowa). Tu, po dacie w formularzu, karta jest budowana jawnie, jak po edycji pomiaru — pomiar zaczyna się od
+  // karty zgodnej z bieżącym stanem, niezależnie od wyścigu.
+  await expect(page.locator('#dobInput')).toHaveValue(dob);
+  await wlaczLicznik(page);
+  expect(await zdarzenia(page, [['vilda:measurement-changed', { patientId: pid, action: 'edit' }]]),
+    'jawna przebudowa czyta pacjenta z sejfu').toBeGreaterThan(0);
+  expect(await mutacjeKarty(page), 'jawne zdarzenie buduje kartę od nowa').toBeGreaterThan(0);
   await page.waitForFunction(() => performance.now() - window.__wczytanie.mutacjaKarty > 1500, null, { timeout: 20000 });
   await expect(page.locator(MASA_POPRZEDNIO)).toHaveText('40,0 kg');
   await expect(page.locator(MASA_DZIS)).toHaveText('41,0 kg');
   return pid;
 }
-
-// Licznik mutacji karty porównania i odczytów pacjenta z sejfu (wszyscy odbiorcy zdarzeń czytają getPatient).
-const wlaczLicznik = (page) => page.evaluate(() => {
-  if (window.__porownanie) window.__porownanie.mo.disconnect();
-  const R = { mutacje: 0, odczyty: [], mo: null };
-  R.mo = new MutationObserver((m) => { R.mutacje += m.length; });
-  R.mo.observe(document.getElementById('prevSummaryContent'), { childList: true, subtree: true, characterData: true, attributes: true });
-  const V = window.VildaVault;
-  if (!V.__e2eLicznikOdczytow) {
-    const odczyt = V.getPatient.bind(V);
-    V.getPatient = function () {
-      const p = odczyt.apply(null, arguments);
-      try { window.__porownanie.odczyty.push(p); } catch (_) { /* licznik wyłączony */ }
-      return p;
-    };
-    V.__e2eLicznikOdczytow = true;
-  }
-  window.__porownanie = R;
-});
-
-// Zdarzenia w kształcie z vilda_sync_integration.js. Zwraca liczbę odczytów z sejfu, które wywołały, i czeka, aż
-// wszystkie się zakończą: kontynuacja w vilda_summary_cards.js jest podpięta pod tę samą obietnicę wcześniej niż
-// nasze oczekiwanie, więc po nim karta jest już po ewentualnej przebudowie.
-const zdarzenia = (page, nazwy) => page.evaluate(async (lista) => {
-  const R = window.__porownanie;
-  const przed = R.odczyty.length;
-  lista.forEach(([typ, stan]) => {
-    document.dispatchEvent(new CustomEvent(typ, stan ? { detail: { state: stan }, bubbles: false } : undefined));
-  });
-  await Promise.allSettled(R.odczyty.slice(przed));
-  await new Promise((r) => { setTimeout(r, 0); });
-  return R.odczyty.length - przed;
-}, nazwy);
-
-const CYKL_SYNCHRONIZACJI = [['vilda:sync-status-changed', 'syncing'], ['vilda:sync-status-changed', 'ok']];
-const mutacjeKarty = (page) => page.evaluate(() => window.__porownanie.mutacje);
 
 test('synchronizacja i zamknięcie panelu konta bez zmiany rekordu nie przebudowują karty porównania', async ({ page }) => {
   test.setTimeout(150_000);
