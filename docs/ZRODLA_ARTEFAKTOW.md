@@ -723,6 +723,19 @@ window.VildaServiceWorkerClientLifecycle.updateBannerGateReasons = powodyWstrzym
 zglosBaner(() => showUpdateBanner(() => postSkipWaiting(registration, reason), { reason, notes }, onDismissShowIndicator));
 ```
 
+## Łatka P-PRZYPOMNIENIA-ECHO (`vilda_auth_ui.js` 485 → 486, 2026-10-13)
+
+Zmiana wprost w artefakcie, jedno wyrażenie w funkcji podpinającej kartę „Przypomnienia” (w artefakcie `Wr()`). Nasłuch kanału `vilda-notes` używa obiektu, którym karta wysyła ping samonaprawy licznika. Nazwy z artefaktu: `kn` — kanał nadawczy modułu, `Tr` — ping samonaprawy po renderze, `xe` — przebudowa karty w następnej klatce. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-PRZYPOMNIENIA-ECHO.
+
+```js
+// P-PRZYPOMNIENIA-ECHO, w Wr():
+// było: const nasluch = new BroadcastChannel('vilda-notes');
+const nasluch = kanalNadawczy || new BroadcastChannel('vilda-notes');   // kn: ten sam obiekt, którym Tr() wysyła ping
+nasluch.onmessage = (e) => {                                            // bez zmian
+  if (e && e.data && e.data.type === 'note-changed') przebudujWNastepnejKlatce();   // xe()
+};
+```
+
 ## Jak odtworzyć
 
 ```bash
