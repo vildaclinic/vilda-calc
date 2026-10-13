@@ -12,9 +12,10 @@ test('telefon: powrót na Start stoi tam, gdzie go zostawiono, od pierwszej wido
   test.setTimeout(150_000);
   const start = await otworzPowloke(page, HASLO);
   await pacjentNaStart(start);
-  // Pierwszy powrót po wpisaniu pacjenta zawsze odtwarza sesję w Start (Gp_p), a ta na jedno zadanie usuwa wiersz
-  // historii z karty szacowanego spożycia (−252 px). Okno tuż pod kartą: odtworzenie musi wyprzedzić tę przebudowę —
-  // ustawione po niej trafiało w skrócony dokument i cały widok stał 252 px dalej, także po oknie powrotu.
+  // Pierwszy powrót po wpisaniu pacjenta zawsze odtwarza sesję w Start (Gp_p), a ta przebudowuje kartę szacowanego
+  // spożycia: na czas odtworzenia bez wiersza historii (−252 px; od P-SPOZYCIE-POWROT wiersz wraca przed pierwszą
+  // klatką). Okno tuż pod kartą: odtworzenie przewinięcia musi wyprzedzić tę przebudowę — ustawione po niej trafiało
+  // w skrócony dokument i cały widok stał 252 px dalej, także po oknie powrotu.
   const podKarta = await start.evaluate(() => {
     const karta = document.getElementById('intakeSection').getBoundingClientRect();
     return Math.round(karta.bottom + window.scrollY + 40);
