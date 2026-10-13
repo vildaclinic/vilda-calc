@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { spozaWindows1250 } from '../support/windows1250.mjs';
 
 // Etap 2 silnika opisu (decyzja właściciela 2026-09-07): w karcie „Podsumowanie wyników"
 // nad „Raport PDF dla pacjenta" stoi przycisk, który składa opis pacjenta i kopiuje go
@@ -293,7 +294,10 @@ test.describe('SGA bez catch-upu — łańcuch bez karty SGA na stronie', () => 
 
     expect(t).toMatch(/urodzon[ae] jako SGA/);
     expect(t).toMatch(/39 tc/);
-    expect(t).toMatch(/poniżej progu −2,0 SD/);
+    // P-SCHOWEK-HIS-2: w schowku zwykły minus, „Δ" i „≥" słownie — cały opis przeżyje Windows-1250 (HIS)
+    expect(t).toMatch(/poniżej progu -2,0 SD/);
+    expect(t).toMatch(/\(zmiana hSDS [-+]\d/);
+    expect(spozaWindows1250(t), 'opis w schowku bez znaków spoza Windows-1250').toEqual([]);
     expect(t).toMatch(/konsensus międzynarodowy z 2023 roku/);
   });
 });
@@ -366,7 +370,7 @@ test.describe('Dane okołoporodowe z Karty Pacjenta zasilają opis', () => {
 
     expect(t).toMatch(/urodzon[ae] jako SGA/);
     expect(t).toMatch(/39 tc/);
-    expect(t).toMatch(/poniżej progu −2,0 SD/);
+    expect(t).toMatch(/poniżej progu -2,0 SD/); // P-SCHOWEK-HIS-2: zwykły minus w schowku
   });
 });
 

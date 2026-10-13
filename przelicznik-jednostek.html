@@ -67,8 +67,9 @@
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
+  <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=58"></script>
+  <script src="vilda_session_bridge.js?v=59"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -105,7 +106,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=134"></script>
+  <script src="vilda_chrome.js?v=135"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -909,8 +910,16 @@
     //  Schowek + toast
     // ────────────────────────────────────────────────────────────────
 
+    // P-SCHOWEK-HIS-2: wynik trafia do dokumentacji w systemie szpitalnym, który przepuszcza tekst
+    // przez stronę kodową Windows-1250 — znak spoza niej wracał jako „?". Zamiana w jednym miejscu
+    // (vilda_schowek.js); bez modułu tekst idzie bez zmian, jak dotąd.
+    function tekstDlaHis(str) {
+      var S = window.VildaSchowek;
+      return S && typeof S.dlaSystemuSzpitalnego === 'function' ? S.dlaSystemuSzpitalnego(str) : str;
+    }
+
     function copyTextToClipboard(text) {
-      var str = String(text == null ? '' : text);
+      var str = tekstDlaHis(String(text == null ? '' : text));
       // Preferowany async API – wymaga secure context (https / localhost).
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
         try { return navigator.clipboard.writeText(str); } catch (_) { /* spadnij niżej */ }

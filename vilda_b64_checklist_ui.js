@@ -223,7 +223,16 @@
     return ok;
   }
 
+  /* P-SCHOWEK-HIS-2: tekst trafia do dokumentacji w systemie szpitalnym, który przepuszcza go przez
+     stronę kodową Windows-1250 — znak spoza niej wracał jako „?". Zamiana w jednym miejscu
+     (vilda_schowek.js); bez modułu tekst idzie bez zmian, jak dotąd. */
+  function tekstDlaHis(t) {
+    var S = w.VildaSchowek;
+    return S && typeof S.dlaSystemuSzpitalnego === 'function' ? S.dlaSystemuSzpitalnego(t) : t;
+  }
+
   function kopiuj(t) {
+    t = tekstDlaHis(t);
     var nav = w.navigator;
     if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
       return nav.clipboard.writeText(t).then(function () { return true; }, function () {
