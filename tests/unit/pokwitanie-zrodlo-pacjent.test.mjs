@@ -51,7 +51,8 @@ describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
     context.sourceSex = 'F';
     expect(h.source.kontekstPacjenta(A).sourceSex).toBe('M');
     expect(h.source.kontekstPacjenta(B).sourceSex).toBeNull();
-    h.emitDocument('vilda:sync-status-changed');
+    // Jawne ponowne wczytanie czyści; ciche odświeżenie w tle: pokwitanie-odswiezenie-w-tle.test.mjs.
+    h.load(A);
     expect(h.source.kontekstPacjenta(A)).toMatchObject({ status: 'loading', sourceSex: null });
     const updated = record();
     updated.snapshots[0].payload.user.sex = 'F';
@@ -117,10 +118,10 @@ describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
     expect(h.source.kontekstPacjenta(A)).toEqual(before);
   });
 
-  it('nowszy odczyt tego samego pacjenta czyści dane; odrzucenie nie przywraca poprzedniego wyniku', async () => {
+  it('jawne ponowne wczytanie tego samego pacjenta czyści dane; odrzucenie nie przywraca poprzedniego wyniku', async () => {
     const h = harness();
     h.load(A); await h.resolve(0);
-    h.emitDocument('vilda:sync-status-changed');
+    h.load(A);
     expect(h.source.kontekstPacjenta(A).status).toBe('loading');
     expect(h.source.biezace()).toBeNull();
     await h.reject(1);
