@@ -4063,7 +4063,7 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 *Zmiana 2026-10-13 (P-SCHOWEK-HIS, niżej):* łącznik dokładany już tylko na iPhonie i iPadzie — w systemie szpitalnym pod Windows wracał jako „?" przed pierwszym wierszem.
 
-### P-SCHOWEK-HIS — „≥" i pierwszy znak podsumowania wracały z systemu szpitalnego jako „?" (SW 1.1.261, 2026-10-13)
+### P-SCHOWEK-HIS — „≥" i pierwszy znak podsumowania wracały z systemu szpitalnego jako „?" (SW 1.1.262, 2026-10-13)
 
 **Zgłoszenie właściciela.** Tekst z przycisku „Podsumowanie wyników — kliknij i skopiuj" po wklejeniu do Eskulapa (HIS) wygląda dobrze, ale w PDF-ie tworzonym przez Eskulapa i w dokumencie wysłanym na platformę P1 zamiast „≥" stoi „?" (np. „norma ?4 cm/rok"). Już po wklejeniu pierwszym znakiem tekstu jest „?".
 
@@ -4104,7 +4104,7 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 **Decyzje właściciela.** (1) Zapis „>=" zamiast „≥" (alternatywa: słownie „co najmniej"). (2) Zamiana także „−", „²" i „‑", które tablica Windows już dziś zamienia po cichu na „-", „2" i „-" — w schowku odstępstwo od formatu decyzji 10 i P-WSDS; rekomendacja: zostawić, bo nie znamy konwersji każdego systemu, a bez „najlepszego dopasowania" minus staje się „?". (3) Rozszerzenie na pozostałe przyciski kopiowania.
 
-**Pliki.** `vilda_schowek.js` 4; SW 1.1.260 → 1.1.261 (numery nadane `npm run podbij-wersje`).
+**Pliki.** `vilda_schowek.js` 4; SW 1.1.261 → 1.1.262 (numery nadane `npm run podbij-wersje` po scaleniu #661, które wzięło 1.1.261).
 
 ### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
 
