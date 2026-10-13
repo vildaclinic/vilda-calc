@@ -27,6 +27,9 @@ const bloby = (zadania) => zadania.filter((z) => z === 'GET /v1/slots/<slot>/blo
 const czyAktywne = (page) => page.evaluate(() => window.VildaNoweUrzadzenie.czyAktywne());
 const przelacznik = (page) => page.evaluate((k) => localStorage.getItem(k), PRZELACZNIK);
 const znaczniki = (page) => page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('vilda-new-device-download-v1:')).length);
+/** Ile pobrań (we wszystkich ramkach profilu) czeka na blokadę pierwszego pobrania (vilda_sync.js, Web Locks). */
+const czekajaceNaPierwsze = (page) => page.evaluate(async () => (await navigator.locks.query()).pending
+  .filter((l) => l.name === 'vilda-sync-pierwsze-pobranie-v1').length);
 
 /** Konto lokalne bez slotu w chmurze, potem blob konta w atrapie — następne odblokowanie widzi nowe urządzenie. */
 async function kontoZDanymiWChmurze(page, context, opcje, { adres = '/app.html#/start', pacjenci = 3, notatki = 2 } = {}) {
@@ -76,17 +79,26 @@ test('Komputer prywatny (powłoka PWA): pobieranie rusza samo, bez pytania; krok
   expect(ramka).toMatchObject({ x: 0, y: 0, height: ekran.height });
   expect(ramka.width).toBeGreaterThanOrEqual(ekran.width - 20);
 
+  // Pierwsze pobranie ma wyłączność (czerwony E2E odłamek 1/3 w CI #652): włączona przez nie synchronizacja budzi
+  // inne pobrania — arkusz przypomnień 3 s po odblokowaniu (ten dokument), panele powłoki ładowane w tle (Start,
+  // Terminarz — swoje ramki). Dotąd każde z nich pobierało ten sam blob równolegle; teraz czekają, a blob idzie raz.
+  const zwyklePobranie = page.evaluate(() => window.VildaSync.syncPull().then((w) => w.action));
+  await expect.poll(() => czekajaceNaPierwsze(page), { message: 'pobranie w ramce panelu czeka na blokadę', timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  expect(bloby(zadania), 'w trakcie — jedno pobranie bloba').toBe(1);
+
   blob.otworz();
   await expect(naglowek(page, 'Gotowe — dane są na tym urządzeniu')).toBeVisible({ timeout: 20_000 });
   await expect(okno(page).locator('.vilda-restore-podsumowanie')).toHaveText('3 pacjentów i 2 notatki ze stanu z 11 października 2026');
   await expect(okno(page).locator('.vilda-restore-info')).toContainText('Synchronizacja jest włączona na tym urządzeniu.');
-  expect(bloby(zadania)).toBe(1);
   expect(await znaczniki(page), 'po udanym pobraniu znacznik znika').toBe(0);
 
   // „Gotowe” nie zamyka się samo i wstrzymuje baner aktualizacji.
   await page.waitForTimeout(3500);
   await expect(okno(page)).toBeVisible();
   expect(await czyAktywne(page)).toBe(true);
+  expect(await zwyklePobranie, 'zwykłe pobranie w tym dokumencie czekało na pierwsze').toBe('up-to-date');
+  expect(bloby(zadania), 'czekające pobrania widzą zapisany ETag — bez drugiego bloba').toBe(1);
+  expect(await czekajaceNaPierwsze(page)).toBe(0);
   await okno(page).getByRole('button', { name: 'Przejdź do aplikacji' }).click();
   await expect(okno(page)).toBeHidden();
   expect(await czyAktywne(page)).toBe(false);

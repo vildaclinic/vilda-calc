@@ -973,11 +973,11 @@
  },
  "vilda_sync.js": {
   "v": 39,
-  "sha256": "97d2c25d304de9e0ed572d3af54d893ff8eb949e19e854cc360e4ad2a2e97733"
+  "sha256": "e79271a48ca6cbd612b48e188c7f394955c58caf7f656d4e1b6eebb517346878"
  },
  "vilda_sync_integration.js": {
   "v": 49,
-  "sha256": "907bddd253a8d764d710c87104fb490cbdb6261b5f02c24622491a54fd467596"
+  "sha256": "8b148cfa640b84da0f7f81c57adec72f846d88fa289b41e2bf9a78787d2d9ad4"
  },
  "vilda_tab_guard.js": {
   "v": 5,

@@ -588,6 +588,41 @@ zglosPostep({ phase: 'decrypt' });
 // dalej bez zmian: odszyfrowanie, rozpakowanie gzip, JSON, mergeSyncPayload z vilda:vault-merge-progress
 ```
 
+Wyłączność pierwszego pobrania (czerwony E2E odłamek 1/3 w CI #652). Dawne ciało `Y()` przeszło bez zmian do `Bpw_pull()`, a `Y` (eksport `syncPull`, wołane też przez `syncFull`, wysyłkę i `restorePrevBlob`) jest teraz opakowaniem. Kolejność kroków samego pobrania się nie zmienia.
+
+```js
+const NAZWA = 'vilda-sync-pierwsze-pobranie-v1';                // Bpw_N
+let pierwszeWDokumencie = null;                                 // Bpw_w: obietnica trwającego pierwszego pobrania
+function blokady() {                                            // Bpw_lk: Web Locks albo null
+  try { const l = window.navigator && window.navigator.locks; return l && typeof l.request === 'function' ? l : null; } catch { return null; }
+}
+function wylacznie(pobierz) {                                   // Bpw_wylacznie
+  const l = blokady();
+  let ruszylo = false;
+  const start = () => { ruszylo = true; return pobierz(); };
+  const p = Promise.resolve(l
+    ? Promise.resolve().then(() => l.request(NAZWA, { mode: 'exclusive' }, start))
+      .catch((e) => { if (ruszylo) throw e; return pobierz(); }) // błąd samej blokady: pobranie i tak rusza
+    : start());
+  pierwszeWDokumencie = p;
+  const sprzataj = () => { if (pierwszeWDokumencie === p) pierwszeWDokumencie = null; };
+  p.then(sprzataj, sprzataj);
+  return p;
+}
+function bariera(l) {                                           // Bpw_bariera: czeka tylko na pierwsze pobranie
+  const tutaj = pierwszeWDokumencie ? pierwszeWDokumencie.then(() => {}, () => {}) : Promise.resolve();
+  return l ? tutaj.then(() => l.request(NAZWA, { mode: 'shared' }, () => {})).then(() => {}, () => {}) : tutaj;
+}
+function syncPull(opcje) {                                      // Y
+  if (opcje && opcje.pierwszePobranie === true) return wylacznie(pobierzTeraz);
+  const l = blokady();
+  return !pierwszeWDokumencie && !l ? pobierzTeraz() : bariera(l).then(pobierzTeraz);
+}
+async function pobierzTeraz() { /* Bpw_pull: dawne ciało Y() bez zmian */ }
+```
+
+W integracji `pullForNewDevice` (niżej) woła `sync.syncPull({ pierwszePobranie: true })` zamiast `sync.syncPull()`.
+
 ## Łatka P-NOWE-URZADZENIE etap 2 w integracji (`vilda_sync_integration.js` 48 → 49, 2026-10-13)
 
 Zmiana wprost w artefakcie. Start po odblokowaniu (w artefakcie wewnętrzne `r()` w `G()`) najpierw pyta moduł nowego urządzenia, a eksport dostaje `pullForNewDevice`. Nazwy z artefaktu: `n` — okno, `h()` — `VildaSync`, `p` — flaga trwającego pobrania integracji (sprawdzają ją `U()`, `S()` i `ot()`), `O` — czas ostatniego pobrania (interwał tła pobiera najwcześniej 12 s po nim), `c` — wstrzymanie po błędzie uwierzytelnienia, `y()` — pozostały odstęp po 429. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE etap 2.
@@ -610,7 +645,9 @@ function pullForNewDevice() {                                    // Qd0
     (function sprobuj() {
       if (pobieranieWToku) { setTimeout(sprobuj, 250); return; } // czeka na pobranie integracji już w toku (p)
       pobieranieWToku = true; ostatniePobranie = Date.now();     // p = true, O = teraz: U/S/ot nie pobierają równolegle
-      Promise.resolve().then(() => sync.syncPull()).then(
+      // { pierwszePobranie: true }: vilda_sync.js trzyma blokadę wyłączną — inne pobrania (arkusz przypomnień,
+      // ramki paneli, inne karty) czekają na koniec tego pobrania.
+      Promise.resolve().then(() => sync.syncPull({ pierwszePobranie: true })).then(
         (w) => { pobieranieWToku = false; ostatniePobranie = Date.now(); ok(w); },
         (e) => { pobieranieWToku = false; ostatniePobranie = Date.now(); blad(e); },
       );
