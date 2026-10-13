@@ -3633,6 +3633,30 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 **Wersje.** `vilda_shell.js` 62; SW 1.1.244 → 1.1.245 (numer 1.1.244 nadał równolegle #641).
 
+### P-USTAWIENIA-CEL — sekcja celu w Ustawieniach od pierwszej klatki, bez mignięcia poprzedniego miejsca (SW 1.1.257, 2026-10-13, polecenie właściciela)
+
+**Skąd.** Test „cel nawigacji ma pierwszeństwo” z P-PANEL-PRZEWINIECIE padał tylko w CI, i to raz po raz. Padł na PR #652 (etap 2 P-NOWE-URZADZENIE; wcześniej dwa razy na #643) i w pierwszym podejściu CI #653, które kodu #652 nie miało. Lokalnie nie padał nigdy. Za każdym razem pierwsza widoczna klatka ramki Ustawień pokazywała miejsce sprzed wyjścia z panelu (1010 px), a dopiero następne — sekcję konta (2250 px). Właściciel polecił poprawkę 2026-10-13 („zrób to”). Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Co było.** Powłoka doręcza cel nawigacji (`vilda:shell-navigate-target`, np. awatar konta w nagłówku → `ustawienia.html#settings-section-account`) w tym samym zadaniu, w którym pokazuje ramkę. P-PANEL-PRZEWINIECIE nie odtwarza wtedy zapamiętanego przewinięcia, bo cel ma pierwszeństwo. Ustawienia otwierały jednak sekcję i przewijały do niej dopiero w `setTimeout(0)`. Ten odstęp jest potrzebny przy pierwszym wczytaniu strony z haszem (kłódki sekcji ustawia następny słuchacz `DOMContentLoaded`), ale został użyty także dla celu z powłoki. Każda klatka namalowana przed tym zadaniem pokazywała panel tam, gdzie akurat był. W Chromium 141 była to góra strony (ukryta ramka zeruje przewinięcie; zmierzone lokalnie). W Chromium 149 w CI było to miejsce sprzed wyjścia, przypuszczalnie dlatego, że ta wersja nie zeruje przewinięcia ukrytej ramki. Nie da się tego sprawdzić bez Chromium 149. Na wolnym lub zajętym komputerze użytkownik widział więc przez chwilę niewłaściwe miejsce, zanim strona skoczyła do sekcji.
+
+**Co jest** (`ustawienia.html`, skrypt deep-linków): cel z powłoki otwiera sekcję i przewija do niej od razu, w tym samym zadaniu, w którym powłoka pokazuje ramkę, czyli przed pierwszym malowaniem. To bezpieczne, bo powłoka doręcza cel dopiero po `load` ramki, a wtedy wszystkie słuchacze `DOMContentLoaded`, w tym kłódki, już zadziałały. Sekcja zablokowana kłódką czeka na odblokowanie jak dotąd. Wspólna funkcja `openPendingSection()` zastępuje treść dawnego `setTimeout`, a zwykły deep-link (pierwsze wczytanie z haszem, `hashchange`) nadal idzie przez `setTimeout(0)`.
+
+**Wpływ kliniczny.** Brak.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| powłoka: Ustawienia przewinięte na połowę, Start, potem cel `#settings-section-account`; zadania ramki opóźnione o 250 ms (zajęty procesor) | w każdej widocznej klatce, od pierwszej, sekcja konta jest otwarta, a jej nagłówek w oknie; zapamiętane miejsce nie pojawia się w żadnej klatce |
+| to samo bez opóźnienia | jak wyżej (dawny test, dotąd niestabilny w CI) |
+| zwykły powrót do Ustawień bez celu | zapamiętane miejsce, jak w P-PANEL-PRZEWINIECIE |
+| sekcja celu zablokowana kłódką | sekcja czeka na odblokowanie, jak dotąd |
+| samodzielne `ustawienia.html#…` (pierwsze wczytanie, `hashchange`) | bez zmian: sekcja otwiera się w następnym zadaniu |
+
+**Testy.** `tests/e2e/powloka-przewiniecie-panelu.spec.mjs`: nowy test „cel nawigacji przy zajętej ramce”. Opóźnia zadania `setTimeout` w ramce Ustawień o 250 ms, więc wyścig zachodzi za każdym razem, i w każdej widocznej klatce sprawdza otwartą sekcję konta z nagłówkiem w oknie. Bez poprawki pada 2/2 (pierwsze klatki: `scrollY` 0, sekcja zamknięta, poza oknem), z poprawką przechodzi 3/3. Dawne testy tego pliku, `powloka-przewiniecie-panelu-mobile.spec.mjs`, `powloka-konto-stan-narzedzi.spec.mjs` i `ustawienia-*.spec.mjs` przechodzą bez zmian.
+
+**Wersje.** `ustawienia.html` (strona z pamięci SW, bez `?v=`); SW 1.1.256 → 1.1.257.
+
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
