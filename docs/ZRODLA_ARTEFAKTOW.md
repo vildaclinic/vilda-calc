@@ -530,6 +530,103 @@ async function probeNewDevice() {
 }
 ```
 
+## Łatka P-NOWE-URZADZENIE etap 2 w pobieraniu (`vilda_sync.js` 38 → 39, 2026-10-13)
+
+Zmiana wprost w artefakcie, w `syncPull` (w artefakcie `Y()`) i nowych funkcjach pomocniczych przed nim (`Bnd_*`). Blob jest czytany strumieniem z postępem i limitem czasu bez postępu, a wynik `not-registered` niesie kod HTTP. Bajty, odszyfrowanie, rozpakowanie i scalanie się nie zmieniają. Nazwy z artefaktu: `o` — okno, `Mt` — 30 000 ms, `A` — odpowiedź `GET /blob`, `w` — JSON z `/status`, `ut` — odszyfrowanie, `l` — odpowiedź `/status` urządzenia bez slotu, `P()` — znacznik pobrania w sesji. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE etap 2.
+
+```js
+function zglosPostep(detail) {                                  // Bnd_zglos
+  document.dispatchEvent(new CustomEvent('vilda:sync-download-progress', { detail, bubbles: false }));
+}
+function opisBajtow(n) {                                        // Bnd_mb (jak komunikat TIMEOUT w f())
+  return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.ceil(n / 1024) + ' kB';
+}
+function nastepnaPorcja(czytnik, pobrano, razem) {              // Bnd_krok: limit bez postępu = Mt (30 s)
+  return new Promise((ok, blad) => {
+    const zegar = setTimeout(() => {
+      czytnik.cancel().catch(() => {});
+      const e = new Error(`VildaSync: timeout pobierania danych — brak postępu przez 30 s (pobrano ${opisBajtow(pobrano)}${razem > 0 ? ' z ' + opisBajtow(razem) : ''}).`);
+      e.code = 'TIMEOUT'; e.loaded = pobrano; e.total = razem;
+      blad(e);
+    }, 30000);
+    czytnik.read().then((r) => { clearTimeout(zegar); ok(r); }, (e) => { clearTimeout(zegar); blad(e); });
+  });
+}
+async function czytajBlob(odpowiedz, rozmiarZeStatusu) {         // Bnd_czytaj
+  let razem;
+  try { razem = parseInt(odpowiedz.headers.get('Content-Length'), 10) || 0; } catch { razem = 0; }
+  if (!(razem > 0)) razem = rozmiarZeStatusu > 0 ? rozmiarZeStatusu : 0;
+  let czytnik;
+  try { czytnik = odpowiedz.body && typeof odpowiedz.body.getReader === 'function' ? odpowiedz.body.getReader() : null; } catch { czytnik = null; }
+  if (!czytnik) {                                               // bez strumieni: jak dotąd
+    const caly = await odpowiedz.arrayBuffer();
+    zglosPostep({ phase: 'download', loaded: caly.byteLength, total: Math.max(razem, caly.byteLength) });
+    return caly;
+  }
+  const porcje = []; let pobrano = 0, ostatnio = 0;
+  zglosPostep({ phase: 'download', loaded: 0, total: razem });
+  for (;;) {
+    const { done, value } = await nastepnaPorcja(czytnik, pobrano, razem);
+    if (done) break;
+    if (!value || !value.byteLength) continue;
+    porcje.push(value); pobrano += value.byteLength;
+    if (Date.now() - ostatnio >= 100) { ostatnio = Date.now(); zglosPostep({ phase: 'download', loaded: pobrano, total: Math.max(razem, pobrano) }); }
+  }
+  zglosPostep({ phase: 'download', loaded: pobrano, total: Math.max(razem, pobrano) });
+  const wynik = new Uint8Array(pobrano); let przesuniecie = 0;
+  for (const p of porcje) { wynik.set(p, przesuniecie); przesuniecie += p.byteLength; }
+  return wynik.buffer;
+}
+
+// w syncPull, urządzenie bez slotu, /status !ok:
+//   DAWNIEJ: { action: 'not-registered' }
+const wynik = { action: 'not-registered', httpStatus: odpowiedzStatusu.status };
+// w syncPull, po sprawdzeniu odpowiedzi GET /blob:
+//   DAWNIEJ: const bajty = await odpowiedzBloba.arrayBuffer();
+const bajty = await czytajBlob(odpowiedzBloba, typeof stanSlotu.size === 'number' ? stanSlotu.size : 0);
+zglosPostep({ phase: 'decrypt' });
+// dalej bez zmian: odszyfrowanie, rozpakowanie gzip, JSON, mergeSyncPayload z vilda:vault-merge-progress
+```
+
+## Łatka P-NOWE-URZADZENIE etap 2 w integracji (`vilda_sync_integration.js` 48 → 49, 2026-10-13)
+
+Zmiana wprost w artefakcie. Start po odblokowaniu (w artefakcie wewnętrzne `r()` w `G()`) najpierw pyta moduł nowego urządzenia, a eksport dostaje `pullForNewDevice`. Nazwy z artefaktu: `n` — okno, `h()` — `VildaSync`, `p` — flaga trwającego pobrania integracji (sprawdzają ją `U()`, `S()` i `ot()`), `O` — czas ostatniego pobrania (interwał tła pobiera najwcześniej 12 s po nim), `c` — wstrzymanie po błędzie uwierzytelnienia, `y()` — pozostały odstęp po 429. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE etap 2.
+
+```js
+function modulPrzejmujeStart() {                                 // Qd2
+  try {
+    const m = window.VildaNoweUrzadzenie;
+    return !!(m && typeof m.przejmujeStart === 'function' && m.przejmujeStart());
+  } catch { return false; }                                      // wyjątek modułu: start jak dotąd
+}
+
+function pullForNewDevice() {                                    // Qd0
+  const sync = window.VildaSync;
+  if (!sync || typeof sync.syncPull !== 'function') {
+    const e = new Error('Moduł synchronizacji niedostępny.'); e.code = 'SYNC_NO_API';
+    return Promise.reject(e);
+  }
+  return new Promise((ok, blad) => {
+    (function sprobuj() {
+      if (pobieranieWToku) { setTimeout(sprobuj, 250); return; } // czeka na pobranie integracji już w toku (p)
+      pobieranieWToku = true; ostatniePobranie = Date.now();     // p = true, O = teraz: U/S/ot nie pobierają równolegle
+      Promise.resolve().then(() => sync.syncPull()).then(
+        (w) => { pobieranieWToku = false; ostatniePobranie = Date.now(); ok(w); },
+        (e) => { pobieranieWToku = false; ostatniePobranie = Date.now(); blad(e); },
+      );
+    })();
+  });
+}
+
+// w słuchaczu odblokowania (tryb lokalny, dokument najwyższego poziomu), w setTimeout(…, 600):
+if (!authFailed) {
+  if (modulPrzejmujeStart()) return;            // NOWE: czeka pierwsze pobranie tego konta — sondę i syncFull pomija
+  /* … dalej bez zmian: odstęp po 429, znacznik odpowiedzi, znacznik sondy, sonda, syncFull … */
+}
+
+// eksport: VildaSyncIntegration.pullForNewDevice = pullForNewDevice
+```
+
 ## Łatka P-AKTUALIZACJA-BRAMKA (`ios26-ui.js` 44 → 45, 2026-10-12)
 
 Zmiana wprost w artefakcie. W funkcji, która pokazuje baner czekającego SW (w artefakcie `Mt(registration, worker, reason)`), wywołanie banera (`zn(...)`) idzie przez bramkę; reszta bez zmian. Nazwy z artefaktu: `D()` — stan `window.__vildaServiceWorkerClientLifecycle`, `zn` — budowa banera, `At` — `SKIP_WAITING`. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-NOWE-URZADZENIE.

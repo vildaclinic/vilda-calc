@@ -23,6 +23,11 @@ async function regulamin(page) {
     try {
       window.localStorage.setItem('vilda-terms-accepted-v1',
         JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+      // P-NOWE-URZADZENIE etap 2: atrapa zawsze zgłasza slot w chmurze, więc na „Komputerze prywatnym” po
+      // zalogowaniu ruszyłoby samo pierwsze pobranie (vilda_nowe_urzadzenie.js) — równolegle z wywołaniami
+      // VildaSync z testu. Synchronizacja wyłączona celowo daje stan sprzed etapu 2: okno tylko pyta, nic się nie
+      // pobiera, a integracja w tle i tak nic nie robi (synchronizacja nie jest włączona, jak dotąd).
+      window.localStorage.setItem('vilda-sync-enabled-v1', 'false');
     } catch (_) { /* brak storage — pomiń */ }
   });
 }

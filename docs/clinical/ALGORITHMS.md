@@ -12430,6 +12430,75 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Pierwsze pobranie danych na „Komputerze prywatnym” z oknem postępu (P-NOWE-URZADZENIE etap 2, SW 1.1.253, `vilda_nowe_urzadzenie.js` 2, `vilda_sync.js` 39, `vilda_sync_integration.js` 49, 2026-10-13)
+
+**Skąd.** Etap 2 planu z wpisu niżej (zgłoszenie właściciela z 2026-10-12). Właściciel zaakceptował 2026-10-13 makietę (komputer i telefon) i cztery propozycje:
+1. W oknie pobierania na „Komputerze prywatnym” nie ma przycisku rezygnacji. Synchronizację wyłącza się w Ustawieniach → Synchronizacja.
+2. Ekran „Gotowe” czeka na kliknięcie „Przejdź do aplikacji” i nie zamyka się sam.
+3. Na czas pobierania aplikacja jest zablokowana (okno na całym ekranie), żeby nie powstał pacjent, który za chwilę przyjdzie z serwera jako duplikat.
+4. Przypomnienia po „Pobierz później” nie da się zamknąć. Znika po pobraniu albo po wyłączeniu synchronizacji w Ustawieniach.
+
+**Co było.**
+- Na nowym urządzeniu aplikacja pytała „Pobierz dane z serwera” także wtedy, gdy przy logowaniu wybrano „Komputer prywatny”, czyli pełną kopię pacjentów na dysku.
+- „Pobierz” uruchamiało `syncFull` w tle. Przycisk zmieniał się na „Pobieranie…”, nie było postępu, a przy błędzie okno znikało i zostawała tylko czerwona ikona synchronizacji.
+- Przeładowanie w trakcie wznawiało pobieranie już bez okna. Slot jest rejestrowany przed pobraniem bloba, więc po przeładowaniu sonda widziała „to nie jest nowe urządzenie”.
+- Ciało bloba nie miało limitu czasu. Limit `f()` w `vilda_sync.js` kończy się z nagłówkami odpowiedzi, a `arrayBuffer()` na zerwanym połączeniu mógł czekać bez końca. Bez okna było to niewidoczne, ale z oknem, które blokuje aplikację, byłoby nie do przyjęcia.
+
+**Co jest.**
+- *Kiedy rusza samo.* Gdy integracja zgłosi nowe urządzenie (`vilda:new-device-restore-available`), `vilda_nowe_urzadzenie.js` nie pyta, jeśli spełnione są trzy warunki: sejf jest lokalny (nie chmurowy i nie efemeryczny), synchronizacji nie wyłączono celowo (`vilda-sync-enabled-v1` ≠ `"false"`) i w tej przeglądarce nie ma innych kont (`VildaVault.listUsers()`; przełącznik synchronizacji jest dziś jeden dla przeglądarki, a flaga per konto to etap 3). Moduł wtedy zapisuje znacznik pierwszego pobrania, włącza synchronizację (jak „Pobierz” w etapie 1) i otwiera okno.
+- *Okno pobierania.* Kroki Pobieranie → Odszyfrowanie → Pacjenci. Pasek to natywny `<progress>`, a licznik pokazuje „Pobrano 1,8 z 3,6 MB” (poniżej 1 MB w kB), potem „Wczytano 120 z 248 pacjentów”. Dane o postępie przychodzą ze zdarzeń `vilda:sync-download-progress` (nowe, z `vilda_sync.js`) i `vilda:vault-merge-progress` (jak dotąd). Pobranie idzie przez nowe `VildaSyncIntegration.pullForNewDevice()`: `syncPull` pod flagą pobierania integracji. Interwał integracji nie rusza w tym czasie równoległego pobrania, a samo pobranie czeka, aż skończy się już trwające. Wysyłka nie wchodzi w okno: rusza jak dotąd przy zmianach i przy następnym logowaniu.
+- *Wynik.* Udane pobranie to `merged`, `up-to-date`, `no-remote-blob` albo `not-registered` z 404 (serwer nie ma slotu). Wtedy pokazuje się „Gotowe — dane są na tym urządzeniu”: liczba pacjentów (`listPatients`) i notatek (`listNotes`) na urządzeniu, data stanu z serwera i informacja, że synchronizacja jest włączona (albo wyłączona, jeśli wyłączono ją w innej karcie w trakcie). Okno czeka na „Przejdź do aplikacji”. Inny wynik albo błąd daje „Nie udało się pobrać danych”: powód zwykłym językiem, ramkę „Szczegóły: … (KOD, HTTP n) · pobrano X z Y MB” oraz przyciski „Spróbuj ponownie” i „Pobierz później”.
+- *Znaczniki.* Pierwsze pobranie w toku: `vilda-new-device-download-v1:<userId>` w `localStorage` (`{v, od, lastModified}`, bez danych pacjentów). Znacznik powstaje przed pierwszym zapytaniem i znika po udanym pobraniu, także pobraniu w tle przez integrację, albo po celowym wyłączeniu synchronizacji. Wybór „Pobierz później” w tej karcie: `vilda-new-device-download-later-v1` w `sessionStorage`; blokada sejfu go czyści.
+- *Wznowienie.* Start synchronizacji po odblokowaniu (`vilda_sync_integration.js`) najpierw pyta moduł (`VildaNoweUrzadzenie.przejmujeStart()`). Gdy dla tego konta czeka niedokończone pierwsze pobranie, moduł przejmuje start: integracja nie sonduje i nie uruchamia `syncFull`, a moduł pobiera z oknem. Jeśli w tej karcie wybrano „Pobierz później”, pokazuje tylko przypomnienie. Bez modułu albo bez znacznika start idzie jak dotąd. Dzięki temu przeładowanie w trakcie i następne logowanie wznawiają pobieranie z oknem.
+- *„Pobierz później”.* Okno znika, a na dole ekranu zostaje przypomnienie bez przycisku zamknięcia: „Twoje dane z serwera nie są jeszcze na tym urządzeniu”, data stanu i „Pobierz teraz”. Stoi nad dockiem (`--vilda-dol-wolny`, jak dymki) i pod oknami modalnymi. Synchronizacja zostaje włączona, więc integracja może dokończyć pobranie w tle (interwał co 10 s; wysyłka po zmianie lokalnej najpierw pobiera). Każde udane pobranie zdejmuje znacznik i przypomnienie, a ekran błędu zamienia w „Gotowe”. Dlatego tekst pod przyciskami różni się od makiety: „Pobieranie ponowi się samo w tle i przy następnym logowaniu; możesz je też uruchomić przypomnieniem na dole ekranu”. Wyłączenie synchronizacji w Ustawieniach zdejmuje znacznik i przypomnienie. W tym samym dokumencie sygnałem jest zdarzenie `vilda:sync-status-changed` (`disabled`), a z ramki powłoki i innej karty zdarzenie `storage`. Następne logowanie już nie pobiera.
+- *`vilda_sync.js`.* Blob jest czytany strumieniem (`body.getReader`). Zdarzenie `{phase: "download", loaded, total}` idzie na starcie, co najmniej co 100 ms i na końcu; `total` pochodzi z `Content-Length`, a bez niego z `size` w `/status`. Przed odszyfrowaniem idzie `{phase: "decrypt"}`. Brak kolejnej porcji przez 30 s przerywa czytanie błędem `TIMEOUT` z `loaded` i `total`. Bez strumieni działa `arrayBuffer()` jak dotąd i idzie jedno zdarzenie. `not-registered` niesie `httpStatus` z `/status`. Bajty, odszyfrowanie, rozpakowanie i scalanie się nie zmieniają.
+- *Pytanie z etapu 1 zostaje* przy „Obcym komputerze” (bez zmian, „Pobierz” uruchamia `syncFull` w tle), przy „Komputerze prywatnym” z synchronizacją wyłączoną celowo i w przeglądarce z innymi kontami. W dwóch ostatnich przypadkach „Pobierz dane z serwera” prowadzi do okna pobierania. „Komputer w pracy” ma własne okno w `vilda_chrome.js`, bez zmian.
+- *Wygląd.* Przyciski wyglądają jak na ekranach logowania: główny w kolorze `--primary`, drugi biały z szarą ramką. Są odporne na skórkę `.liquid-ios26 button`, co dotyczy też „Pobierz dane z serwera” w pytaniu. Panel ma 440 px jak na makiecie (było 420 px, także w pytaniu). Fokus trafia na tytuł każdego widoku.
+- *Bramka banera aktualizacji* (`ios26-ui.js`) bez zmian. `czyAktywne()` obejmuje każdy stan okna: pytanie, pobieranie, „Gotowe” i błąd. Przypomnienie banera nie wstrzymuje.
+- *`index.html`*: okno zostaje w znacznikach (`he` w `vilda_chrome.js`), a moduł wypełnia jego panel. Na pozostałych stronach okno zbudowane przez moduł znika z dokumentu po zamknięciu; dotąd zostawało ukryte do przeładowania.
+
+**Czego ta rata nie zmienia.** Reguł scalania, wysyłki, formatu bloba i rejestracji slotu; trybów „Komputer w pracy” i „Obcy komputer”; znaczenia `vilda-sync-enabled-v1`; PRO. Flaga per konto, synchronizacja domyślna przy PRO i jej wyłączanie po wygaśnięciu PRO to etap 3 (czeka na synchronizację przyrostową).
+
+**Wpływ kliniczny.** Brak. Wyniki, jednostki, progi, dane i scalanie się nie zmieniają. Zmienia się sposób i moment pierwszego pobrania danych na nowe urządzenie oraz to, co widzi użytkownik.
+
+**Przypadki.**
+
+| Wejście | Oczekiwany wynik |
+|---|---|
+| „Komputer prywatny”, jedno konto, slot w chmurze, odblokowanie (powłoka `app.html`) | bez pytania: okno „Pobieranie Twoich danych z serwera”, krok 1 aktywny, „Łączenie z serwerem…”, bez przycisków; synchronizacja włączona, znacznik zapisany |
+| jak wyżej, blob z 3 fikcyjnymi pacjentami i 2 notatkami | „Gotowe”: „3 pacjentów i 2 notatki ze stanu z 11 października 2026”; znacznik usunięty; okno otwarte po 3,5 s, baner wstrzymany; po „Przejdź do aplikacji” zamknięte, 3 pacjentów w sejfie |
+| blob: 503 | „Nie udało się pobrać danych”, „Szczegóły: błąd serwera (DOWNLOAD_FAILED, HTTP 503)”; „Spróbuj ponownie” pobiera ponownie |
+| „Pobierz później” | przypomnienie z jedynym przyciskiem „Pobierz teraz”; baner aktualizacji nie czeka; synchronizacja i znacznik zostają |
+| przeładowanie po „Pobierz później” | przypomnienie zamiast okna |
+| „Pobierz teraz”, serwer odpowiada | okno pobierania, potem „Gotowe”; przypomnienie znika |
+| przeładowanie w trakcie pobierania | po przeładowaniu znowu okno pobierania (bez pytania) i pobieranie od nowa, potem „Gotowe” |
+| blokada sejfu po „Pobierz później”, ponowne logowanie | przypomnienie znika przy blokadzie; po logowaniu pobieranie z oknem rusza samo |
+| synchronizacja wyłączona celowo (`index.html`) | pytanie z etapu 1, nic się nie pobiera; „Pobierz dane z serwera” → okno pobierania → „Gotowe”, synchronizacja włączona; okno w znacznikach `index.html` zostaje |
+| po „Pobierz później” wyłączenie synchronizacji w Ustawieniach (ramka powłoki → `storage`) | przypomnienie i znacznik znikają; następne logowanie: ani okna, ani pobierania |
+| to samo w tym samym dokumencie (`setSyncEnabled(false)`) | przypomnienie i znacznik znikają |
+| inne konto w tej przeglądarce | pytanie z etapu 1, nic się nie pobiera, synchronizacja się nie włącza; „Pobierz” → okno pobierania → „Gotowe: 2 pacjentów…” |
+| telefon (powłoka) | okno na całym ekranie, kroki i przyciski w szerokości ekranu, przypomnienie nad dockiem, brak przewijania w poziomie |
+| blob czytany porcjami (`vilda_sync.js`) | postęp 0 → całość (z `Content-Length`, bez niego z `size`), potem `decrypt`, potem pacjenci; scalony ten sam ładunek |
+| zerwane połączenie w trakcie ciała | po 30 s bez porcji `TIMEOUT` z `loaded` i `total`, czytnik anulowany, nic nie scalone |
+| `/status` 404 albo 503 na urządzeniu bez slotu | `{action: "not-registered", httpStatus}` |
+| moduł przejmuje start po odblokowaniu | integracja nie sonduje i nie pobiera; bez modułu, z `false` albo z wyjątkiem: jak dotąd |
+| `pullForNewDevice` przy trwającym pobraniu w tle | czeka na nie, potem pobiera; w trakcie interwał tła nie rusza kolejnego; po błędzie interwał wraca |
+
+Testy: `tests/unit/nowe-urzadzenie-pobieranie.test.mjs` (prawdziwe `vilda_sync.js` i `vilda_sync_integration.js`), `tests/e2e/nowe-urzadzenie-pobieranie.spec.mjs`, `tests/e2e/nowe-urzadzenie-pobieranie-mobile.spec.mjs`. Testy etapu 1 (`nowe-urzadzenie-pytanie*.spec.mjs`, `baner-aktualizacji-bramka.spec.mjs`) sprawdzają pytanie przy synchronizacji wyłączonej celowo, a bramkę banera na oknie pierwszego pobrania. Testy silnika synchronizacji z własną atrapą, w której slot zawsze jest w chmurze (`sync-kompresja-most.spec.mjs`, `synchronizacja-straznik.spec.mjs`), zaczynają od synchronizacji wyłączonej celowo. Bez tego samo pobieranie z etapu 2 ruszałoby równolegle z wywołaniami `VildaSync` z testu; wyłączenie celowe daje warunki sprzed etapu 2. Atrapa serwera (`tests/support/atrapa-synchronizacji.mjs`) umie teraz oddać prawdziwy zaszyfrowany blob konta i wymusić kod odpowiedzi.
+
+**Źródło kodu.** `vilda_sync.js` i `vilda_sync_integration.js` są zminifikowane; zmiana weszła wprost w artefakty. Czytelne łatki: `docs/ZRODLA_ARTEFAKTOW.md`. `vilda_nowe_urzadzenie.js` jest czytelny.
+
+**Wersje.** `vilda_nowe_urzadzenie.js` 1 → 2, `vilda_sync.js` 38 → 39, `vilda_sync_integration.js` 48 → 49, `vilda_auth_ui.css` 77 → 78. Wstrzykujące `vilda_chrome.js` 130 → 131 i `vilda_session_bridge.js` 54 → 55 podbił `npm run podbij-wersje`. `SW_VERSION` 1.1.252 → 1.1.253.
+
+**Ryzyko resztkowe.**
+- Po „Pobierz później” integracja ponawia pobranie w tle co około 12 s, a każde pobiera cały blob, dopóki pierwsze się nie uda (jak dotąd na każdym urządzeniu z włączoną synchronizacją i nieudanym pierwszym pobraniem). Na wolnym łączu oznacza to transfer.
+- Limit 30 s bez postępu przerywa też łącze, które stoi dłużej, ale potem by ruszyło. Wtedy pojawia się ekran błędu z „Spróbuj ponownie”.
+- Dwie karty otwarte na nowym urządzeniu mogą pobierać równolegle; scalanie jest odporne na powtórzenie.
+- Baner zgody na analitykę (pierwsza wizyta) zasłania przypomnienie, dopóki użytkownik na niego nie odpowie. Okno pobierania leży nad nim.
+- Przy innych kontach w przeglądarce zostaje pytanie, a nie samo pobieranie, do czasu flagi synchronizacji per konto (etap 3).
+
+**Co pozostaje decyzją właściciela.** Scalenie, które uruchamia wdrożenie GitHub Pages. Tekst pod przyciskami ekranu błędu różni się od makiety, bo pobieranie ponawia się też w tle; do akceptacji albo zmiany. Etap 3.
+
 ## Pytanie „Pobierz dane z serwera” po przeładowaniu i w powłoce; baner aktualizacji czeka na koniec logowania (P-NOWE-URZADZENIE, P-AKTUALIZACJA-BRAMKA, SW 1.1.248, `vilda_sync_integration.js` 48, `vilda_sync.js` 38, `ios26-ui.js` 45, `vilda_nowe_urzadzenie.js` 1, 2026-10-12)
 
 **Skąd.** Zgłoszenie właściciela z 2026-10-12. Użytkowniczka z kontem PRO (dane z telefonu w chmurze) logowała się pierwszy raz na komputerze w pracy. Na pytaniu „Pobierz dane z serwera” wyskoczył baner „Dostępna nowa wersja aplikacji”. Kliknęła „Aktualizuj”, karta się przeładowała i pytanie zniknęło. Baza pacjentów się nie pobrała, a synchronizacja na tym komputerze została wyłączona, bez żadnego komunikatu. To etap 1 z trzech; decyzje do kolejnych etapów są niżej.
