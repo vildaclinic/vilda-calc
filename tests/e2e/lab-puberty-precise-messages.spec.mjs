@@ -5,11 +5,12 @@ import { quickFill, quickSelect, closePatientEditor, expectAutomaticReference } 
 
 // Fictional patients. Exercise the production form, engine, axes and saved
 // assessment; an upper-only reference must not certify a low concentration.
+// Six months is outside the detailed Johannsen 2–5-month source population.
 test.use({ serviceWorkers: 'block' });
 const UPPER_LABEL = 'Nie przekracza górnej granicy';
 const UPPER_NOTE = 'Zakresy z samą górną granicą nie pozwalają ocenić, czy wynik jest za niski.';
 const ABSENT_TITLE = 'Brak aktualnych cech dojrzewania w tym wieku wymaga oceny klinicznej.';
-const patient = (years = 0, months = 3) => ({ name: 'Fikcyjny audyt komunikatów LH FSH', sex: 'M', age: years, ageMonths: months });
+const patient = (years = 0, months = 6) => ({ name: 'Fikcyjny audyt komunikatów LH FSH', sex: 'M', age: years, ageMonths: months });
 const assessment = (page) => page.locator('#labPubertyAssessment .vilda-lab-assessment');
 const ageComparison = (host) => host.locator('[data-comparison="age"]');
 const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment());
@@ -95,7 +96,7 @@ async function capture(page, name) {
 }
 
 for (const example of [{ analyte: 'lh', value: '0.01', upper: 5 }, { analyte: 'fsh', value: '0.1', upper: 3.3 }]) {
-  test(`M3mo ${example.analyte.toUpperCase()} ${example.value}: the upper reference does not judge low concentrations`, async ({ page }) => {
+  test(`M6mo ${example.analyte.toUpperCase()} ${example.value}: the upper reference does not judge low concentrations`, async ({ page }) => {
     await open(page);
     await choose(page, example.analyte, example.value);
     await expectUpperOnly(assessment(page), example.upper, Number(example.value));
@@ -106,7 +107,7 @@ for (const example of [{ analyte: 'lh', value: '0.01', upper: 5 }, { analyte: 'f
       bounds: { lower: null, upper: { operator: '<=', value: example.upper } },
     } });
     expect(saved.evaluation.biochemical).toMatchObject({ status: 'unavailable', primary: null });
-    await capture(page, `desktop-m3mo-${example.analyte}`);
+    await capture(page, `desktop-m6mo-${example.analyte}`);
   });
 }
 
@@ -209,7 +210,7 @@ test.describe('precise messages at 320 px', () => {
     const axis = await ageComparison(assessment(page)).getByRole('img').boundingBox();
     expect(axis.width).toBeGreaterThan(150);
     expect(axis.x + axis.width).toBeLessThanOrEqual(321);
-    await capture(page, 'mobile-320-m3mo-fsh');
+    await capture(page, 'mobile-320-m6mo-fsh');
   });
   test('the G1 concern remains visible beside the normal age comparison', async ({ page }) => {
     await open(page, patient(14, 0));

@@ -34,7 +34,7 @@
   var ageBounds = { axis: 'text', lower: bound, upper: bound, sourceText: 'text', interpretation: 'text' };
   var source = {
     id: 'text', label: 'text', version: 'text', title: 'text', organization: 'text', url: 'url',
-    accessedOn: 'text', accessTimeZone: 'text', readScope: 'text', evidenceSha256: 'text',
+    accessedOn: 'text', accessTimeZone: 'text', readScope: 'text', evidenceSha256: 'text', primaryHtmlSha256: 'text',
     methodDocumentVersion: 'text', knownLimitations: ['text'], pmid: 'text', doi: 'text',
     pubmedUrl: 'url', doiUrl: 'url', definition: 'text',
     intervalEvidence: { kind: 'text', version: 'text', url: 'url', table: 'text', page: 'number', verification: 'text' }
@@ -79,6 +79,12 @@
       ageDays: 'number', reasonCodes: ['text'], anniversaryPolicy: 'text'
     },
     neonatalAge: neonatalAge,
+    // Preserve the recorded month envelope separately from clinical age. It is
+    // never reconstructed from dates or today's reference policy on read.
+    referenceAge: {
+      status: 'text', lowerMonths: 'number', upperMonths: 'number', upperInclusive: 'boolean',
+      source: 'text', policyId: 'text', policyVersion: 'text', gestationStatus: 'text'
+    },
     referenceSelection: { mode: 'text', status: 'text', profileIds: ['text'], reasonCodes: ['text'] },
     biochemical: { status: 'text', primary: 'text', byAge: comparison, byStage: comparison, local: comparison, reasonCodes: ['text'] },
     clinical: { status: 'text', code: 'text', title: 'text', text: 'text', reasonCodes: ['text'], sourceIds: ['text'] },
@@ -313,8 +319,19 @@
       ranges.every(function (range) { return range.profileVersion === evaluation.provenance.profileVersion; });
     return evaluation.provenance.profileId === null && evaluation.provenance.profileVersion === null;
   }
+  function validReferenceAge(value) {
+    if (!required(value, Object.keys(evaluationSchema.referenceAge)) ||
+      !contains(value.status, ['eligible', 'outside', 'invalid', 'unknown']) ||
+      !contains(value.gestationStatus, ['confirmed', 'conditional', 'outside', 'unknown', 'conflict']) ||
+      typeof value.upperInclusive !== 'boolean') return false;
+    if (!['source', 'policyId', 'policyVersion'].every(function (key) { return value[key] === null || typeof value[key] === 'string' && !!value[key]; })) return false;
+    var known = finite(value.lowerMonths) && finite(value.upperMonths);
+    if (known ? value.lowerMonths < 0 || value.upperMonths < value.lowerMonths : value.lowerMonths !== null || value.upperMonths !== null) return false;
+    return value.status !== 'eligible' || known && !!value.source && !!value.policyId && !!value.policyVersion;
+  }
   function validEvaluation(value) {
-    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection']); })) || value.schemaVersion !== 1 || !value.engineVersion || !own(analytes, value.analyte)) return false;
+    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection', 'referenceAge']); })) || value.schemaVersion !== 1 || !value.engineVersion || !own(analytes, value.analyte)) return false;
+    if (own(value, 'referenceAge') && !validReferenceAge(value.referenceAge)) return false;
     if (value.analyte === 'inhibin_b' && (!value.input || value.input.referenceSelection !== 'automatic')) return false;
     if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;
     if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) {

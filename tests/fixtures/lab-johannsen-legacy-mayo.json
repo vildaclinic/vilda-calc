@@ -1,0 +1,285 @@
+{
+  "base": "caf10f29",
+  "description": "Synthetic 3-month boy, FSH 0.2 IU/L; actual pre-Johannsen engine and snapshot output.",
+  "assessment": {
+    "schemaVersion": 1,
+    "status": "recorded",
+    "reasonCodes": [],
+    "evaluation": {
+      "schemaVersion": 1,
+      "engineVersion": "1.5.1",
+      "dataVersion": "2026-10-09.4",
+      "analyte": "fsh",
+      "input": {
+        "analyte": "fsh",
+        "value": "0.2",
+        "unit": "IU/L",
+        "sex": "M",
+        "sampleDateISO": null,
+        "birthDateISO": null,
+        "age": {
+          "years": 0,
+          "months": 3,
+          "days": null,
+          "precision": "month"
+        },
+        "contextBasis": "current-patient",
+        "referenceSelection": "automatic",
+        "reproductiveContext": "unknown",
+        "specimen": "unknown",
+        "measurementKind": "unknown",
+        "assay": {
+          "profileId": "",
+          "methodId": "",
+          "confirmation": "unknown"
+        },
+        "puberty": {
+          "kind": "unspecified",
+          "stage": null,
+          "assessedAtISO": null,
+          "appliesToSample": false,
+          "source": "provided"
+        },
+        "testicularVolume": {
+          "value": null,
+          "unit": "",
+          "method": "",
+          "assessedAtISO": null,
+          "appliesToSample": false
+        },
+        "onset": {
+          "kind": "unspecified",
+          "dateISO": null,
+          "age": null,
+          "confirmedPubertalOnset": false
+        },
+        "history": {
+          "progression": "unknown",
+          "growthAcceleration": "unknown",
+          "cnsSymptoms": "unknown",
+          "regression": "unknown"
+        },
+        "treatment": {
+          "gnrha": "unknown",
+          "sexSteroids": "unknown",
+          "context": "unknown"
+        },
+        "preterm": "no",
+        "gestationalAgeWeeks": null,
+        "localReference": null
+      },
+      "measurement": {
+        "status": "valid",
+        "raw": "0.2",
+        "operator": "=",
+        "value": 0.2,
+        "unit": "IU/L",
+        "sourceValue": 0.2,
+        "sourceUnit": "IU/L",
+        "isExact": true,
+        "plotValue": 0.2,
+        "limitKind": null,
+        "reasonCodes": []
+      },
+      "ageAtSample": {
+        "status": "known",
+        "precision": "month",
+        "source": "reported-age",
+        "lowerYears": 0.25,
+        "upperYears": 0.3333333333333333,
+        "upperInclusive": false,
+        "ageDays": null,
+        "reasonCodes": []
+      },
+      "referenceSelection": {
+        "mode": "automatic",
+        "status": "selected",
+        "profileIds": [
+          "mayo-fsh-pediatric"
+        ],
+        "reasonCodes": [
+          "specimen_unconfirmed",
+          "non_basal_or_unknown_measurement",
+          "treatment_context_unknown",
+          "source_method_unconfirmed"
+        ]
+      },
+      "biochemical": {
+        "status": "unavailable",
+        "primary": null,
+        "byAge": {
+          "status": "unavailable",
+          "reasonCodes": [
+            "automatic_reference_only"
+          ],
+          "range": null
+        },
+        "byStage": {
+          "status": "unavailable",
+          "reasonCodes": [
+            "automatic_reference_only"
+          ],
+          "range": null
+        },
+        "local": {
+          "status": "unavailable",
+          "reasonCodes": [
+            "no_local_reference"
+          ],
+          "range": null
+        },
+        "reasonCodes": [
+          "automatic_reference_only",
+          "specimen_unconfirmed",
+          "non_basal_or_unknown_measurement",
+          "treatment_context_unknown",
+          "profile_measurement_kind_mismatch",
+          "source_method_unconfirmed"
+        ]
+      },
+      "clinical": {
+        "status": "notice",
+        "code": "infant_context",
+        "title": "Wiek niemowlęcy — odrębna interpretacja",
+        "text": "Minipuberty wymaga właściwych norm wieku, płci i metody. Samo stężenie LH/FSH nie potwierdza fizjologicznego przebiegu.",
+        "reasonCodes": [
+          "missing_puberty_stage",
+          "infant_context"
+        ],
+        "sourceIds": [
+          "endocrine-society-cpp-2026",
+          "endo-ern-delay-2021",
+          "delayed-puberty-review-2024",
+          "cpp-laboratory-review-2025",
+          "puberty-hormones-review-2021",
+          "minipuberty-review-2024"
+        ]
+      },
+      "summary": {
+        "status": "attention",
+        "code": "infant_context",
+        "title": "Wiek niemowlęcy — odrębna interpretacja"
+      },
+      "provenance": {
+        "clinicalProfileId": "puberty-timing-pediatric",
+        "clinicalProfileVersion": "2026-10-04.1",
+        "biochemicalPolicyId": "pediatric-basal-eligibility",
+        "biochemicalPolicyVersion": "2026-10-03.1",
+        "profileId": "mayo-fsh-pediatric",
+        "profileVersion": "2026-10-03.1",
+        "sourceIds": [
+          "endocrine-society-cpp-2026",
+          "endo-ern-delay-2021",
+          "delayed-puberty-review-2024",
+          "cpp-laboratory-review-2025",
+          "puberty-hormones-review-2021",
+          "minipuberty-review-2024",
+          "mayo-lhped-62999",
+          "mayo-fsh-602753",
+          "who-preterm-birth-2023"
+        ],
+        "selectionPolicyId": "lh-fsh-demographic-reference-selection",
+        "selectionPolicyVersion": "2026-10-09.4"
+      },
+      "limitations": [
+        "missing_puberty_stage",
+        "infant_context",
+        "automatic_reference_only",
+        "specimen_unconfirmed",
+        "non_basal_or_unknown_measurement",
+        "treatment_context_unknown",
+        "profile_measurement_kind_mismatch",
+        "source_method_unconfirmed",
+        "conditional_reference_comparison",
+        "missing_typed_stage_at_sample",
+        "broad_infant_reference_not_full_minipuberty_assessment"
+      ],
+      "referencePreview": {
+        "kind": "automatic-source-reference",
+        "reasonCodes": [
+          "specimen_unconfirmed",
+          "non_basal_or_unknown_measurement",
+          "treatment_context_unknown",
+          "source_method_unconfirmed"
+        ],
+        "byAge": {
+          "status": "within",
+          "reasonCodes": [],
+          "range": {
+            "id": "fsh-m-age-under1",
+            "profileId": "mayo-fsh-pediatric",
+            "profileVersion": "2026-10-03.1",
+            "dataVersion": "2026-10-09.4",
+            "sourceId": "mayo-fsh-602753",
+            "source": {
+              "id": "mayo-fsh-602753",
+              "version": "catalog-snapshot-2026-10-03",
+              "title": "Follicle-Stimulating Hormone (FSH), Serum",
+              "organization": "Mayo Clinic Laboratories",
+              "url": "https://www.mayocliniclabs.com/test-catalog/Overview/602753",
+              "accessedOn": "2026-10-03",
+              "accessTimeZone": "Europe/Warsaw",
+              "readScope": "Full catalog: Reference Values, Specimen Type, Method Description, Cautions.",
+              "evidenceSha256": "018f2cb1f28137b7093bee2d3607628af324c8c71eafd1e6b18d06ed1bad5091",
+              "methodDocumentVersion": "Elecsys FSH package insert 09/2021, as cited by the catalog",
+              "knownLimitations": [
+                "Zakresy Mayo-derived; liczebność i szczegółowa charakterystyka próby oraz statystyka przedziału nie są podane w katalogu.",
+                "Progi wieku >5, >10 i >15 stosuje się dosłownie do wieku metrykalnego, bez zaokrąglania do pełnych lat.",
+                "Strict < dla męskich stadiów I/II różni się od <= w jednostronnych zakresach wieku.",
+                "Szeroki zakres <12 miesięcy nie opisuje dokładnie dynamiki minipuberty."
+              ]
+            },
+            "population": {
+              "label": "Pediatryczne zakresy Mayo Clinic Laboratories",
+              "sourceDescription": "Mayo-derived reference intervals; characteristics of the reference sample are not reported in the catalog.",
+              "statistics": {
+                "kind": "referenceInterval",
+                "coveragePercent": null,
+                "sampleSize": null
+              }
+            },
+            "method": {
+              "id": "roche-elecsys-fsh-eclia",
+              "name": "Roche Elecsys FSH ECLIA",
+              "description": "Electrochemiluminescence sandwich immunoassay; package insert 09/2021 cited by Mayo."
+            },
+            "material": "serum",
+            "unit": "IU/L",
+            "sex": "M",
+            "age": {
+              "axis": "chronologicalYears",
+              "lower": {
+                "operator": ">=",
+                "value": 0
+              },
+              "upper": {
+                "operator": "<",
+                "value": 1
+              },
+              "sourceText": "<12 months",
+              "interpretation": "literal-age-operators"
+            },
+            "stage": null,
+            "bounds": {
+              "lower": null,
+              "upper": {
+                "operator": "<=",
+                "value": 3.3
+              },
+              "censoredLower": null,
+              "sourceText": "< or =3.3 IU/L"
+            }
+          }
+        },
+        "byStage": {
+          "status": "unavailable",
+          "reasonCodes": [
+            "missing_puberty_stage",
+            "missing_typed_stage_at_sample"
+          ],
+          "range": null
+        }
+      }
+    }
+  }
+}

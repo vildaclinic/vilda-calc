@@ -270,9 +270,12 @@
       return true;
     }
     function preferInfantDays(values, neonatal) {
-      if (!isInhibin() || !knownDays(neonatal.postnatalDays) || !engine || typeof engine.resolveAge !== 'function') return false;
+      if (!knownDays(neonatal.postnatalDays) || !engine || typeof engine.resolveAge !== 'function') return false;
+      var rule = data && data.biochemicalPolicy && data.biochemicalPolicy.infantAgeYears;
+      var limit = isInhibin() ? infantAgeLimit() : ['lh', 'fsh'].includes(analyte) && rule && rule.value;
+      if (!Number.isFinite(limit)) return false;
       var coarse = engine.resolveAge({ age: age(values, 'age') });
-      return !age(values, 'age') || coarse.status === 'known' && coarse.lowerYears < infantAgeLimit();
+      return !age(values, 'age') || coarse.status === 'known' && coarse.lowerYears < limit;
     }
     function readFields() {
       var values = {};
@@ -392,10 +395,11 @@
       var adult = adultAgeState(resolvedAge);
       var neonatalMode = neonatalContext(), neonatal = neonatalValues();
       var inhibinInfant = isInhibin() && resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < infantAgeLimit();
+      var infantDays = input.age === null && knownDays(neonatal.postnatalDays);
       if (neonatalMode) ageLabel = knownDays(neonatal.postnatalDays) ? intervalLabel(neonatal.postnatalDays) + (neonatal.postnatalDays.lower === 1 && neonatal.postnatalDays.upper === 1 ? ' ukończony dzień' : ' dni życia') : 'wiek do uzupełnienia';
-      else if (isInhibin() && input.age === null && knownDays(neonatal.postnatalDays)) ageLabel = intervalLabel(neonatal.postnatalDays) + ' dni życia';
+      else if (infantDays) ageLabel = intervalLabel(neonatal.postnatalDays) + ' dni życia';
       else if (!years && knownDays(neonatal.postnatalDays)) ageLabel = intervalLabel(neonatal.postnatalDays) + ' dni życia';
-      patientSummary.textContent = (adult.definite ? { M: 'Mężczyzna', F: 'Kobieta' } : neonatalMode || inhibinInfant ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
+      patientSummary.textContent = (adult.definite ? { M: 'Mężczyzna', F: 'Kobieta' } : neonatalMode || inhibinInfant || infantDays ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
       if (!['M', 'F'].includes(fields.sex.value)) patientSummary.textContent = 'Płeć niepodana · ' + ageLabel;
       var kind = fields.kind.value, stageValue = fields.stage.value;
       stageSummary.textContent = kind === 'Ax' ? 'Ax — owłosienie pachowe' : stageValue ? (kind === 'unspecified' ? 'Tanner ' + ['', 'I', 'II', 'III', 'IV', 'V'][Number(stageValue)] + ' — rodzaj niepodany' : kind + stageValue) : 'Stadium niepodane';
@@ -607,7 +611,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.12.0', buildInput: buildInput, parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
+  var api = { version: '1.13.0', buildInput: buildInput, parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

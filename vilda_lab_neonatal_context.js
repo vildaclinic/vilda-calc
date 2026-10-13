@@ -4,6 +4,9 @@
 (function (w) {
   'use strict';
   var KEY = 'vildaLabNeonatalAgeV1';
+  // Keep the existing weeks editor unchanged. The LH/FSH consumer can also
+  // reuse known calendar days across the 2–5 month reference window.
+  var CALENDAR_MONTH_LIMIT = 6;
   var pending = null;
   var boundVault = null;
 
@@ -47,13 +50,14 @@
     if (!field('dobInput') || !field('age') || !api || integer(form.age) !== 0) return null;
     var months = integer(form.ageMonths);
     if (months == null) months = 0;
-    if (months >= api.WEEKS_MONTH_LIMIT) return null;
+    if (months >= CALENDAR_MONTH_LIMIT) return null;
     var exact = typeof api.readExactAge === 'function' ? api.readExactAge() : null;
     var result, liveDay = null;
     if (exact && integer(exact.days) != null && exact.totalMonths === months) {
       result = interval(Math.max(0, exact.days - 1), exact.days, 'main-calendar-dates');
       if (!(api.showsSavedMeasurement && api.showsSavedMeasurement())) liveDay = day();
     } else {
+      if (months >= api.WEEKS_MONTH_LIMIT) return null;
       // An invalid birth date must not lend precision to leftover weeks.
       var dob = field('dobInput');
       if (dob && text(dob.value) && !(api.readISO && api.readISO())) return null;
@@ -61,8 +65,10 @@
       if (integer(weeks) == null) return null;
       result = interval(weeks * 7, weeks * 7 + 6, 'main-completed-weeks');
     }
-    return { version: 1, identityKey: identity(), mode: mode(), form: form,
+    var record = { version: 1, identityKey: identity(), mode: mode(), form: form,
       liveDay: liveDay, postnatalDays: result };
+    if (months >= api.WEEKS_MONTH_LIMIT) record.minipubertyOnly = true;
+    return record;
   }
   function currentPanel() {
     try {
@@ -95,12 +101,13 @@
         ? w.VildaPersistence.removeKey('session', KEY) : false;
     } catch (_) { return false; }
   }
-  function read(shared, patientId, source) {
+  function read(shared, patientId, source, options) {
     shared = shared && typeof shared === 'object' ? shared : {};
     if (text(patientId) && (!source || source.patientId !== text(patientId) || source.status !== 'ready')) return null;
     var saved = readCache(), postnatal = null, gestational = null;
     if (saved && saved.version === 1 && saved.identityKey === text(patientId)
       && saved.mode === mode() && sameForm(saved.form || {}, shared)
+      && (!saved.minipubertyOnly || options && options.includeMinipuberty === true)
       && (!saved.liveDay || saved.liveDay === day())) {
       var p = saved.postnatalDays;
       if (p && integer(p.lower) != null && integer(p.upper) != null && p.lower <= p.upper
