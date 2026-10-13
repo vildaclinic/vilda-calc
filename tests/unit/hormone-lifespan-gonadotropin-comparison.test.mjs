@@ -30,8 +30,8 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
     expect(data.gonadotropinComparisonPolicy).toEqual(readable('gonadotropin-comparison-policy.json'));
     expect(data.gonadotropinComparisonReferenceData).toEqual(readable('gonadotropin-comparison-reference-data.json'));
     expect(data.patientPointData).toEqual(readable('population-reference-data.json'));
-    // The full original bundles at approved audit base 51720135; a comparison must not silently change norms/routing.
-    expect(digest(data.patientPointData)).toBe('9d5c86ac8f47e822c5768c8ac68e7987e6e46cafdfe37c0a8c776f9cd3e88dff');
+    // Current reference bundle; the original female LH/FSH display models remain byte-for-byte unchanged.
+    expect(digest(data.patientPointData)).toBe('2b59a6eb7cf2503fe61259e87dcb811f0ac6c5785e6907b23681738b63e19869');
     expect(digest(data.femaleGonadotropinData)).toBe('16f3df99ba8518e5145091abedda0b74cb33ef9db5ea7f3f108f1052ac0b8148');
     expect(digest(data.femaleGonadotropinPolicy)).toBe('08b2e92c570e90d392839dde7440c99bf23944aff414384a4988410b0e363487');
     for (const p of data.gonadotropinComparisonReferenceData.profiles) {

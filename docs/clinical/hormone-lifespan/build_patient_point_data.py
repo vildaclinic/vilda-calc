@@ -292,6 +292,76 @@ def build():
             provenance={**infant['source'],'table':hormone['supplementTable'],
                         'participants':98,'samples':266},limitations=infant['displayNotes'])
 
+    # Source medians stay separate from the approved smoothed lifespan geometry.
+    # Group labels and the narrower patient-routing domains are distinct facts.
+    female_policy = json.loads((ROOT/'female-adolescent-reference-policy.json').read_text(encoding='utf-8'))
+    assert female_policy['kind'] == 'educational-source-selection'
+    assert female_policy['ordinaryOnly'] is True
+    jopling = json.loads((ROOT/'evidence'/'amh-access-groups.json').read_text(encoding='utf-8'))['pediatric']
+    assert (jopling['unit'], jopling['matrix']) == ('pmol/L', 'lithium-heparin plasma')
+    amh_policy = female_policy['amh']
+    source_groups = {row['ageMinYears']: row for row in jopling['groups']}
+    assert len(source_groups) == len(amh_policy['profiles']) == 5
+    for route in amh_policy['profiles']:
+        row = source_groups[route['sourceGroupMinAge']]
+        minimum, maximum = route['minAge'], route['maxAge']
+        median = row['median']
+        label = route['sourceGroupLabel']
+        assert minimum == row['ageMinYears'] and maximum <= 18
+        add(route['id'], 'amh', 'female',
+            [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+            minimum, maximum, 'Jopling 2018 · AMH · grupa wieku', jopling['url'],
+            jopling['assay'],
+            'Pozostałości próbek szpitalnych; wykluczono diagnostykę DSD i innych endokrynopatii. Nie jest to prospektywna kohorta zdrowych dziewcząt.',
+            'group-median', interpolation='constant',
+            ordinaryOnly=female_policy['ordinaryOnly'],
+            minAgeExclusive=route['minAgeExclusive'], maxAgeExclusive=route['maxAgeExclusive'],
+            specimen=amh_policy['specimen'],
+            compatibleSpecimenIds=amh_policy['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=amh_policy['compatibleAssayMethodIds'],
+            patientNote='Grupa ' + label + ' · Access AMH, osocze.',
+            ageGroup={'label':label, 'minAge':row['ageMinYears'], 'maxAge':row['ageMaxYears'],
+                      'n':row['n'], 'sourceUnit':jopling['unit'], 'sourceMedian':median,
+                      'boundaryPolicy':'published-label-with-separate-conservative-application-routing',
+                      'description':'Mediana całej grupy wieku; nie jest modelem dokładnego wieku ani stadium Tannera.'},
+            provenance={'authors':'Jopling et al.', 'year':2018, 'doi':jopling['doi'],
+                        'url':jopling['url'], 'table':1,
+                        'readableSource':'evidence/amh-access-groups.json#pediatric',
+                        'sourceReview':'evidence/female-reference-points-2026-10-13.json',
+                        'sourceUnit':jopling['unit'], 'sourceToCanonicalFactor':1,
+                        'groupParticipants':row['n'],
+                        'sourceSpecimen':jopling['matrix'],
+                        'ageRouting':amh_policy['ageRouting'],
+                        'specimenPolicy':amh_policy['specimenPolicy'],
+                        'assayPolicy':amh_policy['assayPolicy'],
+                        'routingVersion':female_policy['version']},
+            limitations=[
+                'Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.',
+                'Access AMH w osoczu z heparyną litową; nie jest przeliczeniem między metodami ani między surowicą i osoczem.',
+                'Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.',
+                amh_policy['ageRouting'],
+                'Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania.'
+            ])
+
+    inhibin_comparison = json.loads((ROOT/'inhibin-comparison-reference-data.json').read_text(encoding='utf-8'))
+    source_profile = next(p for p in inhibin_comparison['profiles']
+                          if p['id'] == 'borelli2025-female-inhb-puberty-comparison')
+    inhb_policy = female_policy['inhb']
+    assert inhb_policy['retainAllSourcePoints'] and len(source_profile['points']) == 24
+    assert (inhb_policy['minAge'], inhb_policy['maxAge']) == (source_profile['minAge'], source_profile['maxAge'])
+    ordinary = {**source_profile, 'id':inhb_policy['id'],
+                'ordinaryOnly':female_policy['ordinaryOnly'],
+                'sourceLabel':'Borelli-Kjær 2025 · inhibina B · model wieku',
+                'patientNote':inhb_policy['patientNote'],
+                'provenance':{**source_profile['provenance'],
+                              'sourceProfileId':source_profile['id'],
+                              'qualificationScope':'ordinary-female-inhibin-b-age-8-20',
+                              'routingVersion':female_policy['version']},
+                'limitations':[source_profile['limitations'][0], inhb_policy['ageRouting'],
+                               source_profile['limitations'][2],
+                               'Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń.']}
+    profiles.append(ordinary)
+
     # Adult LH/FSH central observations remain separate from the educational
     # display curve and laboratory reference intervals. A constant profile is
     # the published whole-group statistic, never an interpolated exact-age p50.
@@ -383,7 +453,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-11.1','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-13.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

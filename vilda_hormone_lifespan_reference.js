@@ -38,7 +38,8 @@
 
   function inDomain(profile, age) {
     return finite(age) && finite(profile.minAge) && finite(profile.maxAge) &&
-      age >= profile.minAge && (profile.maxAgeExclusive ? age < profile.maxAge : age <= profile.maxAge);
+      (profile.minAgeExclusive ? age > profile.minAge : age >= profile.minAge) &&
+      (profile.maxAgeExclusive ? age < profile.maxAge : age <= profile.maxAge);
   }
 
   function termBirth(value) {
@@ -78,7 +79,9 @@
           puberty.stage !== profile.requiredGonadalStage) return unavailable('incompatible-puberty-stage');
     }
     var specimen = typeof context.specimen === 'string' ? context.specimen.trim().toLowerCase() : '';
-    if (specimen && specimen !== 'unknown' && specimen !== 'serum' && specimen !== 'surowica') {
+    var compatibleSpecimens = Array.isArray(profile.compatibleSpecimenIds) ? profile.compatibleSpecimenIds :
+      ['serum', 'surowica'];
+    if (specimen && specimen !== 'unknown' && compatibleSpecimens.indexOf(specimen) < 0) {
       return unavailable('incompatible-specimen');
     }
     var method = typeof context.assayMethodId === 'string' ? context.assayMethodId.trim().toLowerCase() : '';
@@ -165,11 +168,12 @@
   function sampleProfile(profile, count) {
     if (!profile || !finite(profile.minAge) || !finite(profile.maxAge)) return [];
     count = finite(count) ? Math.max(2, Math.min(2000, Math.floor(count))) : 200;
+    var start = profile.minAgeExclusive ? profile.minAge + 1e-10 : profile.minAge;
     var end = profile.maxAgeExclusive ? profile.maxAge - 1e-10 : profile.maxAge;
-    if (!(end > profile.minAge)) return [];
+    if (!(end > start)) return [];
     var points = [];
     for (var i = 0; i < count; i++) {
-      var age = profile.minAge + (end - profile.minAge) * i / (count - 1);
+      var age = start + (end - start) * i / (count - 1);
       var value = referenceAt(profile, age);
       if (value == null) return [];
       points.push({ ageYears: age, value: value });
@@ -225,6 +229,6 @@
     return { status: 'ready', profile: profile, value: value, referenceValue: referenceValue };
   }
 
-  return { version: '1.2.0', evaluate: evaluate, selectProfile: selected,
+  return { version: '1.3.0', evaluate: evaluate, selectProfile: selected,
     referenceAt: referenceAt, sampleProfile: sampleProfile };
 });
