@@ -142,8 +142,12 @@ lub okresów. Wymagałoby to osobnej weryfikacji.
 - Wang nie zawiera median Tannera. Nie ustalaj stadium z wieku ani
   początku pokwitania z miejsca spadku linii. Access 2 i zmodyfikowany
   Gen II nie otrzymały kalibracji przez samo połączenie rysunku.
-- Zachowaj 15 profili i luki przed 7. dniem, 12–<13 lat, 15–<30 lat
-  oraz >70 lat. Krzywa przez lukę nie uprawnia do dodania źródłowej liczby.
+- Zachowaj 15 pierwotnych profili. W tej historycznej zmianie luki
+  obejmowały przed 7. dniem, 12–<13, 15–<30 oraz >70 lat. Osobne
+  rozszerzenie z 13.10.2026 dodaje źródłowe mediany Jopling 12–<13
+  i 15–<18 oraz Benderradji 20–<30, według
+  `male-amh-reference-policy.json`, bez zmiany geometrii. Krzywa przez
+  pozostałą lukę 18–<20 nie uprawnia do dodania źródłowej liczby.
   Po 70 latach wygaszony płaski ogon oznacza koniec danych, nie biologiczne
   plateau. Normy laboratoryjne i porównanie płci mają odrębne kontrakty.
 

@@ -545,10 +545,37 @@ nie są przez to skalibrowane. Źródła i granice opisuje
 
 Jasny znacznik nadal wskazuje źródłową medianę; przy 11,5 roku wynosi ona
 20,70 ng/mL, choć uproszczona linia odpowiada około 25,01. Zachowano
-wszystkie 15 profili, bramkę donoszenia oraz luki: przed 7. dniem,
-12–<13 lat, 15–<30 i >70 lat. Ciągłość obrazu nie daje nowych median,
-norm ani interpretacji. Porównanie płci ma odrębną politykę; dla AMH
+wszystkie 15 wcześniejszych profili i bramkę donoszenia. Rozszerzenie
+z 13.10.2026 dodaje trzy osobne mediany grupowe w dawnych lukach:
+Jopling w wieku 12–<13 i 15–<18 oraz Benderradji 20–<30 lat.
+Pozostają luki przed 7. dniem, 18–<20 i >70 lat. Ciągłość obrazu
+nie daje nowych median, norm ani interpretacji. Porównanie płci ma odrębną politykę; dla AMH
 w minipuberty obowiązuje poniższy wyjątek.
+
+### Męskie mediany AMH w brakujących przedziałach — 13 października 2026
+
+Nowa [polityka doboru](hormone-lifespan/male-amh-reference-policy.json)
+uzupełnia wyłącznie odniesienie punktu w zwykłych widokach. Jopling 2018,
+tabela 1: mediana całej grupy 12–14,9 lat wynosi 64,66 pmol/L (N=36),
+a 15–18,9 lat 55,61 pmol/L (N=48). Wykorzystujemy je odpowiednio
+w wieku `[12,13)` i `[15,18)`. To osocze Li-heparynowe, Access AMH,
+pozostałości próbek szpitalnych, bez stadiów Tannera; nie nowe normy.
+Przedziały aplikacji nie są podgrupami ponownie obliczonymi przez autora.
+
+Benderradji 2022, tabela 1, dostarcza 43,8 pmol/L dla całej grupy
+20–39 lat. Używamy tej jednej mediany w wieku `[20,30)`, pozostawiając
+Tehrani od 30 lat. Źródło obejmuje wyselekcjonowanych normozoospermicznych
+partnerów par z obniżoną płodnością; surowica, DxI Access AMH. Liczba
+578 dotyczy całej kohorty, nie grupy 20–39. Nie zastępujemy medianą norm
+Mayo ani nie przypisujemy pacjentowi potwierdzonej metody źródłowej.
+
+Podpis brzmi „Mediana grupy”; informacja o grupie i ograniczeniu źródła
+korzysta z istniejącej krótkiej notki i rozwijanych szczegółów. Nie ma
+nowych pól, zmian gładkiej linii, osi, wcześniejszych profili ani
+aktywacji ilościowego porównania płci AMH w pokwitaniu. Cały możliwy
+wiek musi mieścić się w jednej domenie. Znana niezgodna metoda/materiał,
+leczenie lub cenzurowany wynik nadal blokują punkt. Szczegóły i przypadki:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
 
 ### AMH w minipuberty — wspólna skala porównania płci
 

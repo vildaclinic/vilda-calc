@@ -3033,14 +3033,18 @@
       if (stableAmhVisible()) {
         paragraph("Linia AMH jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę po wpisaniu wyniku. Pozostałe hormony mają własne skale.");
         paragraph("Minipuberty opiera się na medianie modelu Busch u donoszonych chłopców. Dalszy przebieg łączy mediany rocznych grup Wang z dorosłymi Tehrani. Grupy wieku nie są stadiami Tannera; różne populacje i metody oznaczeń nie są wymienne. Okres płodowy i łagodne połączenia są ilustracyjne.");
-        paragraph("Dla AMH jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia AMH: przed 7. dniem, w grupie 12–<13 lat, od 15 do <30 lat oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
+        paragraph("Dla AMH jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia AMH: przed 7. dniem, od 18 do <20 lat oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
+        const amhSources = new Set();
         if (renderedPoint?.id === "amh") {
           const profile = renderedPoint.profile;
           paragraph("Odniesienie dla wyniku: " +
             [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population].filter(Boolean).join(" · ") + ".");
           if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
+          if (profile.url) {
+            amhSources.add(profile.url);
+            links.push([profile.sourceLabel || "Źródło", profile.url]);
+          }
         }
-        const amhSources = new Set();
         for (const profile of amhDisplay.profiles) {
           const sourceKey = profile.url || profile.sourceLabel;
           if (amhSources.has(sourceKey)) continue;

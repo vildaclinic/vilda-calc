@@ -26,8 +26,15 @@ describe('Fixed inhibin B sex comparison — production model', () => {
     expect(data.inhibinComparisonPolicy).toEqual(readable('inhibin-comparison-policy.json'));
     expect(data.inhibinComparisonReferenceData).toEqual(readable('inhibin-comparison-reference-data.json'));
     expect(data.patientPointData).toEqual(readable('population-reference-data.json'));
-    // Entire source bundle, including the six separately scoped ordinary-view references.
-    expect(digest(data.patientPointData)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
+    // Preserve the full original bundle; exclude only the later three male AMH gap profiles.
+    const laterMaleIds = JSON.parse(readFileSync(new URL(
+      '../../docs/clinical/hormone-lifespan/male-amh-reference-policy.json', import.meta.url), 'utf8'))
+      .profiles.map(p => p.id);
+    const original = { ...data.patientPointData, version: '2026-10-13.2',
+      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id)) };
+    expect(laterMaleIds).toHaveLength(3);
+    expect(original.profiles).toHaveLength(66);
+    expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     const female = data.inhibinComparisonReferenceData.profiles[0];
     const source = readable('evidence/inhb-digitized-median.json');
     expect(female.points).toEqual(source.points.map(point => ({ ageYears: point.ageYears, value: point.approxMedianPgMl })));

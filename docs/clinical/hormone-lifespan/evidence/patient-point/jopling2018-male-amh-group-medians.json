@@ -1,0 +1,67 @@
+{
+  "version": "2026-10-13.1",
+  "purpose": "Published source-group medians for educational comparison, not clinical reference intervals.",
+  "sex": "male",
+  "unit": "pmol/L",
+  "statistic": "group-median",
+  "sourceLabel": "Jopling 2018 · AMH · grupa wieku",
+  "source": {
+    "authors": "Jopling et al.",
+    "year": 2018,
+    "doi": "10.1002/edm2.21",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6354749/",
+    "title": "Paediatric Anti-Müllerian Hormone measurement: Male and female reference intervals established using the automated Beckman Coulter Access AMH assay",
+    "sourceLocator": "Table 1, PDF page 4 of 8; Methods 2.1 / Results page 3; population limitations page 6",
+    "license": "CC BY-NC 4.0; cite numerical facts; do not commit source images or PDFs",
+    "table": 1,
+    "reviewDate": "2026-10-13",
+    "reviewBasis": "Full primary article and Table 1 reread; table PDF page visually checked.",
+    "sourceSha256": "c4b63200a31deeabbdc1b92811650226751c16a96215eab3409f5254ce29925f",
+    "sourceFormat": "PDF",
+    "sourceQuantification": {
+      "loqAsPrintedPmolPerL": 0.036,
+      "loqProvenance": "Manufacturer figure quoted in Methods 2.1; not independently revalidated; source male dilution means no patient-result detection policy inferred",
+      "lod": null,
+      "sourceReportedLinearRangeUpperPmolPerL": 181,
+      "intermediatePrecision": "CV <5% at 7, 34 and 103 pmol/L"
+    }
+  },
+  "assay": "Beckman Coulter Access AMH automated assay; all male samples diluted offline 1:10 in manufacturer diluent",
+  "matrix": "lithium-heparin plasma",
+  "population": "Pozostałości próbek szpitalnych chłopców; Manchester, Wielka Brytania. Wykluczono podejrzenie DSD lub innej endokrynopatii; zdrowie przyjęto na podstawie kwalifikacji, bez danych o stadium Tannera.",
+  "participants": 469,
+  "observedMinAge": 0.0027378507871321013,
+  "observedMaxAge": 18,
+  "groups": [
+    {
+      "id": "12-14p9",
+      "label": "12–14,9 lat",
+      "minAge": 12,
+      "maxAge": 14.9,
+      "n": 36,
+      "median": 64.66
+    },
+    {
+      "id": "15-18p9",
+      "label": "15–18,9 lat",
+      "minAge": 15,
+      "maxAge": 18.9,
+      "n": 48,
+      "median": 55.61
+    }
+  ],
+  "sourceInconsistencies": [
+    "Abstract reports 702 specimens, 465 male/237 female; body, Table 1 and Figure 4 report 704, 469 male/235 female. Use verified body/table counts.",
+    "Main study maximum described as 18 years while final bin label ends 18.9. Do not claim observed coverage through 18.9; <18 is explicit conservative application policy.",
+    "Table caption says 95% confidence intervals while column headers say 90% CI; only exact median columns are proposed, no CI activation."
+  ],
+  "limitations": [
+    "Przekrojowa grupa pozostałości próbek szpitalnych, nie podłużna trajektoria ani losowa próba zdrowej populacji.",
+    "Mediana obejmuje całą opublikowaną grupę wieku; nie jest medianą węższego przedziału używanego przez aplikację ani dokładnego wieku lub stadium Tannera.",
+    "Access AMH w osoczu z heparyną litową; wszystkie męskie próbki rozcieńczono poza analizatorem 1:10. Nie przeliczamy osocza na surowicę ani metod oznaczenia.",
+    "Dane stosowane tylko w lukach 12–<13 oraz 15–<18 lat. Od 13 do <15 lat pozostają dotychczasowe profile Wang.",
+    "Metody opisują wiek do 18 lat, chociaż etykieta ostatniej grupy sięga 18,9. Granica poniżej 18 lat jest ostrożnościową polityką aplikacji.",
+    "Brak danych o stadium nie blokuje porównania wieku; wcześniactwo w wywiadzie starszego dziecka nie kwalifikuje ani nie wyklucza tej grupy.",
+    "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania; źródłowy znacznik nie jest przesuwany na poglądową linię."
+  ]
+}

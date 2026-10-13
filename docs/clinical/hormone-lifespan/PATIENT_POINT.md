@@ -57,6 +57,8 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Męska inhibina B; 1–<6,1 roku | [Kelsey 2016](https://doi.org/10.1371/journal.pone.0153843), tabela 4, opublikowane węzły p50 | Cztery badania, 709 obserwowanych par wiek–stężenie; surowica, historyczne dwumiejscowe ELISA | Pełna tabela 0–17 lat pozostaje dowodem, wybrany odcinek jest polityką aplikacji. Nie używać rocznej tabeli do minipuberty. Nie odtwarzać modelu zaokrąglonymi współczynnikami z tabeli 2. |
 | Męska inhibina B; 6,1–80 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 2, męska linia 0 SD | Dania, 1818 uczestników/2007 próbek łącznie; surowica; mieszane Oxford Bio-innovation i Gen II ELISA | Digitalizacja około ±5 pg/mL, nie dokładna funkcja autora ani kalkulator SDS. `ng/L = pg/mL`. Nie przeliczać dowolnej metody współczynnikiem różnicy Oxford/Gen II. Nie łączyć z Kelsey jako jednym modelem odniesienia pacjenta; wygładzona wspólna linia jest wyłącznie prezentacją. |
 | Męskie AMH; osobne roczne grupy 1–11, 13 i 14 | [Wang 2020](https://doi.org/10.1016/j.cca.2020.03.028), tabele 1 i 2, str. 156/PDF 3; zgodne mediany obu tabel | 2009 zdrowych chłopców, Wuhan, Chiny; badanie przekrojowe, szpital i pięć szkół; surowica pobierana 08:00–10:00, Beckman Coulter Access 2 | 13 zgodnych median grupowych, nie ciągły model ani mediany Tannera. Grupy 0 i 12 wyłączone z powodu sprzecznych median. Przypisanie etykiety N do `[N,N+1)` jest jawną konwencją aplikacji; autorzy nie podali reguły zaokrąglania wieku ani maksymalnego obserwowanego wieku. Brak interpolacji między grupami. |
+| Męskie AMH; 12–<13 i 15–<18 lat | [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1: grupy 12–14,9 / 15–18,9 lat, p50 64,66 / 55,61 pmol/L, N=36 / 48 | Pozostałości próbek szpitalnych chłopców, Manchester; wykluczono podejrzenie DSD/endokrynopatii, bez Tannera; osocze Li-heparynowe, Access AMH, rozcieńczenie próbek męskich 1:10 | Mediany pełnych grup, nie nowych węższych podgrup aplikacji. Zachowane Wang 13–<15; konserwatywny koniec <18. Nie potwierdza zdrowia ani metody próbki pacjenta. |
+| Męskie AMH; 20–<30 lat | [Benderradji 2022](https://doi.org/10.1210/clinem/dgac218), tabela 1: p50 43,8 pmol/L całej grupy 20–39 lat | Normozoospermiczni partnerzy par z obniżoną płodnością, Lille; prawidłowe FSH/LH/T/inhibina B, bez stymulacji; surowica 08:00–10:00, bez wymogu bycia na czczo, DxI Access AMH | Wyselekcjonowana kohorta: 578 mężczyzn po usunięciu 29 odstających AMH, wiek 20–62; N grupy 20–39 nie podano. Nie mediana dokładnego wieku ani norma populacji ogólnej. Nie aktywujemy starszej grupy. |
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
 | Żeńskie AMH; grupy po 1. i przed 18. urodzinami | [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1 | Osocze litowo-heparynowe, Beckman Coulter Access AMH; pozostałości próbek szpitalnych, wykluczone podejrzenie endokrynopatii i DSD | Pięć stałych median całych grup, nie model dokładnego wieku ani Tannera. Routing i granice opisano poniżej. Nie harmonizujemy osocza z surowicą niemowląt; dorosłe FDA pozostaje poza aktywnymi profilami. |
@@ -74,6 +76,64 @@ osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
+
+### Męskie AMH — uzupełnienie median grupowych, 13 października 2026
+
+Po scaleniu podstawy AMH (#661) właściciel polecił następny mały krok
+planu: liczby odniesienia w brakujących przedziałach męskiego AMH.
+Trzy profile `ordinaryOnly`, `group-median`, `interpolation: constant`
+uzupełniają zwykłe widoki bez modyfikacji norm Mayo, geometrii i skali.
+Podpis „Mediana grupy” korzysta z jednostki wybranej przez lekarza;
+krótka notka zachowuje pełną grupę źródłową. To nie mediana dokładnego
+wieku ani stadium Tannera. Jasny znacznik może leżeć poza linią.
+
+| Źródło i pełna grupa | Mediana pmol/L | Ta sama mediana ng/mL | Domena aplikacji |
+| --- | ---: | ---: | --- |
+| Jopling 12–14,9 lat, N=36 | 64,66 | 9,058866 | `[12,13)` |
+| Jopling 15–18,9 lat, N=48 | 55,61 | 7,790961 | `[15,18)` |
+| Benderradji 20–39 lat, N niepodane | 43,8 | 6,13638 | `[20,30)` |
+
+Przeliczenie `1 pmol/L = 0,1401 ng/mL` jest dotychczasowym przeliczeniem
+jednostki, nie harmonizacją metod. Pełne teksty i tabele sprawdzono
+w PDF, Jopling również w HTML, Benderradji w XML. Odczytane fakty,
+pochodzenie i hashe są w `evidence/patient-point/jopling2018-male-amh-group-medians.json`
+i `benderradji2022-male-amh-group-medians.json`. Polityka wyboru jest
+osobnym plikiem `male-amh-reference-policy.json`; silnik pozostaje ogólny.
+
+Węższe domeny wybrano wyłącznie do uzupełnienia luk: Jopling nie zastępuje
+Wang 13–<15, Benderradji nie zastępuje Tehrani od 30 lat. Zachowano
+wszystkie 66 poprzednich profili. Nie ma fallbacku do innej metody,
+wyboru najkorzystniejszej mediany ani interpolacji między źródłami.
+Pełny możliwy przedział wieku musi mieścić się w jednej domenie;
+`[12,13)` jest dopuszczalny, `[12,13]` nie. Luka `[18,20)` pozostaje,
+bo Jopling opisuje maksimum wieku 18 lat pomimo etykiety tabeli 18,9,
+a rzeczywiste obserwacje Benderradji zaczynają się od 20 lat.
+
+Jopling jest badaniem pozostałości próbek szpitalnych, nie prospektywną
+kohortą zdrowych dzieci. Liczby 469 chłopców / 235 dziewcząt pochodzą
+z Methods i tabeli; abstrakt ma inne sumy. Stadium Tannera nie jest
+dostępne. Znana surowica, ogólne osocze bez antykoagulantu lub EDTA
+nie kwalifikują się do profilu osocza Li-heparynowego. Identyfikatory
+metody zgodne z Access/Access 2 zachowują dotychczasową konwencję Jopling.
+
+Benderradji jest retrospektywnym badaniem wyselekcjonowanych mężczyzn
+z kliniki andrologicznej, nie normą wszystkich zdrowych mężczyzn.
+N=578 dotyczy pełnej kohorty po wyłączeniu odstających AMH; nie
+podajemy fikcyjnego N grupy. Znane metoda/materiał muszą odpowiadać
+DxI Access/surowicy. Nie uznajemy automatycznie Access 2, Elecsys ani
+Gen II za metodę tego badania. Brak danych umożliwia jedynie jawne
+edukacyjne odniesienie, bez potwierdzania metody lub materiału pacjenta.
+
+Znane przeciwwskazanie (np. leczenie), nierówność wyniku i niepewny wiek
+przecinający granicę nadal blokują punkt. Nie wymagamy dodatkowego
+wywiadu, stadium czy badania nasienia; ograniczenie populacji opisujemy
+przy odniesieniu. Profile nie trafiają do porównania płci AMH w pokwitaniu.
+Nie zmieniają zapisu wizyty/historii, źródłowych RI, progów ani diagnoz.
+
+Przypadki: M12/8 ng/mL → mediana grupy ≈9,06; M17/4 → ≈7,79;
+M25/4 → ≈6,14. M13 i M14 zachowują Wang, M30 zachowuje Tehrani.
+M18/M19 i wiek >70 → brak nowego odniesienia. Niski, wysoki i wyczyszczony
+wynik oraz przełączanie widoków nie zmieniają istniejącej linii.
 
 ### Żeńskie AMH i inhibina B — rozszerzenie 13 października 2026
 
@@ -543,8 +603,9 @@ Makieta zatwierdzona przez właściciela 11 października 2026 zastępuje
 zależną od wyniku prezentację męskiego AMH jedną linią edukacyjną.
 Polityka `amh-display-policy.json`, eksport `amhDisplayPolicy` i funkcja
 `VildaHormoneLifespanDisplay.buildMaleAmh` wyznaczają jej geometrię.
-15 profili liczbowych — Busch, 13 grup Wang i Tehrani — pozostaje
-bez zmian. Zbliżenia próbkują tę samą kanoniczną krzywą.
+15 pierwotnych profili liczbowych — Busch, 13 grup Wang i Tehrani —
+pozostaje bez zmian. Trzy dodatkowe profile z 13.10.2026 służą wyłącznie
+znacznikom, nie budowaniu linii. Zbliżenia próbkują tę samą kanoniczną krzywą.
 
 Dzielnik 1335,592934 pmol/L oraz zapas 1,25 nie zależą od wyniku ani
 wieku pacjenta. Źródłowy odczyt mediany Busch zostaje zachowany od 7.
@@ -562,11 +623,12 @@ obok. Nie wolno przyciągać znacznika do krzywej. Wang nie określa stadium
 Tannera. Przeliczenie jednostek nie harmonizuje Access 2 i zmodyfikowanego
 Gen II ani odmiennych populacji.
 
-Przed 7. dniem, w grupie 12–<13 lat, w wieku 15–<30 i po 70 latach nadal
-brak źródłowego odniesienia. Tak samo pozostaje bramka donoszenia Busch.
+Przed 7. dniem, w wieku 18–<20 i po 70 latach nadal brak źródłowego
+odniesienia. Tak samo pozostaje bramka donoszenia Busch.
 W tych przypadkach obecność ilustracji nie tworzy punktu pacjenta z jej
-wysokości. Odmienne źródła rozważone w audycie, m.in. Jopling,
-Benderradji i Chong, nie są nowymi profilami. Przebieg porównania płci
+wysokości. Odrębne rozszerzenie z 13.10.2026 korzysta z Jopling
+i Benderradji w wymienionych wcześniej lukach; Chong pozostaje
+poza aktywnymi profilami. Przebieg porównania płci
 oraz laboratoryjne normy mają odrębne kontrakty.
 
 ### Wspólne osie LH/FSH i żeńskie odniesienie tylko w porównaniu
@@ -759,7 +821,7 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Mężczyzna 20 lat, LH lub FSH, niezgodna metoda albo materiał / kontekst zgodny | Brak punktu opisany neutralną „wartością odniesienia” / źródłowa średnia Laurentino 3,0 IU/L nadal podpisana jako średnia. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
 | FSH dokładnie 80 / >80; LH dokładnie 89 / >89 | Odpowiednio ≈8,4 / brak oraz 5,22 / brak, bez przedłużania źródła wygaszonym ogonem. |
-| LH `<0,05 IU/L`, męskie AMH w wieku 15–<30 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
+| LH `<0,05 IU/L`, męskie AMH w wieku 18–<20 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
 
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki
@@ -770,7 +832,8 @@ poprawnym, błędnym i cenzurowanym wyniku oraz płynność stycznych przy
 zmianie źródła i w pasach wygładzenia osi. Należy sprawdzić, że zbliżenia
 LH, FSH, T i AMH pokazują tę samą kanoniczną krzywą również poza wiekiem pacjenta.
 Dla AMH sprawdzić szeroki niemowlęcy szczyt i monotoniczny spadek po nim,
-ciągłość stycznych na połączeniach oraz niezmienione 15 profili i luki.
+ciągłość stycznych na połączeniach, niezmienione 15 pierwotnych profili
+oraz kwalifikację trzech dodatkowych median grupowych i pozostałych luk.
 Korekta testosteronu wymaga ciągłości przy końcach wszystkich połączeń,
 monotonicznego dzieciństwa po 212. dniu, braku sztucznego maksimum 17–18 lat
 i łagodnego, monotonicznego łuku dorosłości. Średnie Walravens pozostają
