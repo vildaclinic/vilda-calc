@@ -4238,7 +4238,7 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 **Pliki.** `vilda_schowek.js` 4; SW 1.1.261 → 1.1.262 (numery nadane `npm run podbij-wersje` po scaleniu #661, które wzięło 1.1.261).
 
-### P-SCHOWEK-HIS-2 — wszystkie przyciski kopiowania tekstu klinicznego bez „?" w systemie szpitalnym; porównania słownie (SW 1.1.265, 2026-10-13)
+### P-SCHOWEK-HIS-2 — wszystkie przyciski kopiowania tekstu klinicznego bez „?" w systemie szpitalnym; porównania słownie (SW 1.1.266, 2026-10-13)
 
 **Zlecenie właściciela (2026-10-13), po P-SCHOWEK-HIS:** „zrób to samo dla pozostałych przycisków kopiowania, wolałbym wszędzie słownie »co najmniej«".
 
@@ -4267,7 +4267,7 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 **Decyzje właściciela.** (1) „≥" słownie — podjęta 2026-10-13. (2) To samo dla „≤" („co najwyżej"), „≈" („ok."), „Δ" („zmiana"), „↑"/„↓" („wzrost"/„spadek") i liter greckich („alfa", „beta", „gamma") — rozszerzenie tej decyzji do potwierdzenia. (3) Zapytanie do AI w kalkulatorze klirensu zostaje bez zamiany.
 
-**Pliki.** `vilda_schowek.js`, `antibiotic_therapy.js`, `obesity_therapy.js`, `gh_igf_therapy.js`, `thyroid_cancer_kids.js`, `hypertension_therapy.js`, `vilda_diet_recommendations.js`, `flu_therapy.js`, `vilda_epicrisis_ui.js`, `vilda_patient_narrative_ui.js`, `vilda_b64_checklist_ui.js`, `app.js`, `vilda_auth_ui.js`, `inline_notatki_00.js`, `przelicznik-jednostek.html`; strony z nowym `<script>`: `app.html`, `notatki.html`, `subskrypcja.html`, `terminarz.html`, `ustawienia.html`. Wersje (nadane `npm run podbij-wersje`): `antibiotic_therapy.js` 14, `app.js` 234, `flu_therapy.js` 9, `gh_igf_therapy.js` 33, `hypertension_therapy.js` 11, `inline_notatki_00.js` 9, `obesity_therapy.js` 12, `thyroid_cancer_kids.js` 5, `vilda_auth_ui.js` 487 (a za nim wstrzykujące go `vilda_chrome.js` 135 i `vilda_session_bridge.js` 59), `vilda_b64_checklist_ui.js` 4, `vilda_diet_recommendations.js` 70, `vilda_epicrisis_ui.js` 29, `vilda_patient_narrative_ui.js` 12, `vilda_schowek.js` 5; SW 1.1.264 → 1.1.265.
+**Pliki.** `vilda_schowek.js`, `antibiotic_therapy.js`, `obesity_therapy.js`, `gh_igf_therapy.js`, `thyroid_cancer_kids.js`, `hypertension_therapy.js`, `vilda_diet_recommendations.js`, `flu_therapy.js`, `vilda_epicrisis_ui.js`, `vilda_patient_narrative_ui.js`, `vilda_b64_checklist_ui.js`, `app.js`, `vilda_auth_ui.js`, `inline_notatki_00.js`, `przelicznik-jednostek.html`; strony z nowym `<script>`: `app.html`, `notatki.html`, `subskrypcja.html`, `terminarz.html`, `ustawienia.html`. Wersje (nadane `npm run podbij-wersje`): `antibiotic_therapy.js` 14, `app.js` 234, `flu_therapy.js` 9, `gh_igf_therapy.js` 33, `hypertension_therapy.js` 11, `inline_notatki_00.js` 9, `obesity_therapy.js` 12, `thyroid_cancer_kids.js` 5, `vilda_auth_ui.js` 487 (a za nim wstrzykujące go `vilda_chrome.js` 135 i `vilda_session_bridge.js` 59), `vilda_b64_checklist_ui.js` 4, `vilda_diet_recommendations.js` 70, `vilda_epicrisis_ui.js` 29, `vilda_patient_narrative_ui.js` 12, `vilda_schowek.js` 5; SW 1.1.265 → 1.1.266 (1.1.265 nadał równolegle #662).
 
 ### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
 
