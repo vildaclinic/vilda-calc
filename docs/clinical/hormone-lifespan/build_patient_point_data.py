@@ -281,6 +281,52 @@ def build():
                     'license':tehrani['license'],'participants':831,'sourceUnit':'ng/mL',
                     'sourceToCanonicalFactor':1/0.1401},limitations=tehrani['notes'])
 
+    # Additional group medians fill only explicitly uncovered age intervals.
+    # Keep their source groups distinct from the narrower application domains;
+    # the unchanged AMH display policy continues to select its original sources.
+    male_amh_policy = json.loads((ROOT/'male-amh-reference-policy.json').read_text(encoding='utf-8'))
+    assert male_amh_policy['kind'] == 'educational-source-selection'
+    assert (male_amh_policy['analyte'], male_amh_policy['sex'], male_amh_policy['unit']) == ('amh', 'male', 'pmol/L')
+    assert male_amh_policy['ordinaryOnly'] is True
+    for route in male_amh_policy['profiles']:
+        source = read(route['sourceFile'])
+        assert (source['sex'], source['unit'], source['statistic']) == ('male', 'pmol/L', 'group-median')
+        groups = [row for row in source['groups'] if row['id'] == route['sourceGroupId']]
+        assert len(groups) == 1
+        row = groups[0]
+        minimum, maximum, median = route['minAge'], route['maxAge'], row['median']
+        assert row['minAge'] <= minimum < maximum <= row['maxAge']
+        assert route['maxAgeExclusive'] is True
+        assert source['observedMinAge'] <= minimum < maximum <= source['observedMaxAge']
+        # The reference engine deliberately rejects overlapping profiles. No
+        # implicit assay/matrix fallback or patient-dependent preference exists.
+        assert all(max(minimum, existing['minAge']) >= min(maximum, existing['maxAge'])
+                   for existing in profiles if existing['analyte'] == 'amh' and existing['sex'] == 'male')
+        add(route['id'], 'amh', 'male',
+            [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+            minimum, maximum, source['sourceLabel'], source['source']['url'],
+            source['assay'], source['population'], 'group-median',
+            interpolation='constant', ordinaryOnly=male_amh_policy['ordinaryOnly'],
+            maxAgeExclusive=route['maxAgeExclusive'], specimen=route['specimen'],
+            compatibleSpecimenIds=route['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=route['compatibleAssayMethodIds'],
+            patientNote=route['patientNote'],
+            ageGroup={'label':row['label'], 'minAge':row['minAge'], 'maxAge':row['maxAge'],
+                      'n':row['n'], 'sourceUnit':source['unit'], 'sourceMedian':median,
+                      'boundaryPolicy':'published-label-with-separate-conservative-application-routing',
+                      'description':'Mediana całej opublikowanej grupy wieku; nie jest medianą dokładnego wieku ani stadium Tannera. Węższy przedział wyboru w aplikacji nie zmienia grupy źródłowej.'},
+            provenance={**source['source'], 'participants':source['participants'],
+                        'groupParticipants':row['n'], 'sourceUnit':source['unit'],
+                        'sourceToCanonicalFactor':1, 'sourceSpecimen':source['matrix'],
+                        'readableSource':'evidence/patient-point/' + route['sourceFile'],
+                        'sourceGroupId':row['id'],
+                        'ageRouting':male_amh_policy['agePolicy'],
+                        'selectionPolicy':male_amh_policy['selectionPolicy'],
+                        'specimenPolicy':male_amh_policy['specimenPolicy'],
+                        'assayPolicy':male_amh_policy['assayPolicy'],
+                        'routingVersion':male_amh_policy['version']},
+            limitations=source['limitations'])
+
     infant=json.loads((ROOT/'female-reference-data.json').read_text())['femaleInfantMedians']
     for analyte,hormone in infant['hormones'].items():
         add('ljubicic2022-female-'+analyte,analyte,'female',
@@ -459,7 +505,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-13.2','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-13.3','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

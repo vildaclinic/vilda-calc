@@ -1893,6 +1893,74 @@ pełny ekran, desktop i 320 px, ciągłość stycznych, nieujemność, brak
 odbicia po szczycie oraz brak ekstrapolacji profili. Zestawienie audytu:
 [`amh-lifespan-display-audit-2026-10-11.json`](hormone-lifespan/evidence/patient-point/amh-lifespan-display-audit-2026-10-11.json).
 
+### HORMONE-MALE-AMH-REFERENCE-GAPS — mediany grup w lukach wieku, 2026-10-13
+
+**Problem i zakres:** po scaleniu #661 właściciel polecił kolejny krok
+planu dostępności odniesień AMH: liczbową medianę dla chłopców
+12–<13 i 15–<18 lat oraz młodych dorosłych. Obecność gładkiej linii
+nie uprawniała wcześniej do wyznaczenia mediany. Dodano trzy odrębne
+źródłowe profile, bez nowego formularza, geometrii, norm lub progów.
+
+**Pełne źródła i populacje:**
+
+- Jopling 2018, [DOI 10.1002/edm2.21](https://doi.org/10.1002/edm2.21),
+  tabela 1, PDF strona 4: 12–14,9 lat N=36, p50=64,66 pmol/L;
+  15–18,9 N=48, p50=55,61. Access AMH, osocze Li-heparynowe,
+  próbki męskie rozcieńczone 1:10. Pozostałości szpitalnych próbek
+  z Manchesteru, wykluczono podejrzenie DSD/endokrynopatii, bez Tannera.
+  N=469 chłopców pochodzi z metod i tabel, nie rozbieżnego abstraktu.
+- Benderradji 2022, [DOI 10.1210/clinem/dgac218](https://doi.org/10.1210/clinem/dgac218),
+  tabela 1, strona 1881/PDF 4: grupa 20–39 lat, p50=43,8 pmol/L,
+  N grupy niepodane. Cała kohorta to 578 normozoospermicznych partnerów
+  par z obniżoną płodnością, Lille, wiek 20–62, prawidłowe inne hormony;
+  po wyłączeniu 29 odstających AMH. Surowica 08:00–10:00, bez wymogu
+  bycia na czczo, DxI Access AMH. To wyselekcjonowane odniesienie
+  edukacyjne, nie norma populacji ogólnej ani mediana osobnej grupy <30.
+
+Tabele i metody sprawdzono w pełnych PDF oraz HTML/XML; fakty i hashe
+zapisano w `evidence/patient-point/jopling2018-male-amh-group-medians.json`
+i `benderradji2022-male-amh-group-medians.json`. Nie przepisano rycin,
+źródłowych RI, LOQ jako progu pacjenta ani nowych krzywych ciągłych.
+
+**Reguła:** `male-amh-reference-policy.json` dobiera Jopling tylko
+w `[12,13)` i `[15,18)`, Benderradji w `[20,30)`. Zachowuje wszystkie
+66 wcześniejszych profili, w tym Wang 13–<15 i Tehrani 30–70.
+Granice są polityką aplikacji, nie nowo obliczonymi grupami źródła.
+Tekst Jopling podaje maksimum wieku 18 przy etykiecie tabeli 18,9;
+konserwatywny cap <18 zachowuje lukę `[18,20)`. Pełny możliwy wiek
+musi należeć do jednej domeny. Nie ma interpolacji między medianami,
+fallbacku do niezgodnej metody ani wyboru profilu na podstawie wyniku.
+
+Generator `build_patient_point_data.py` tworzy profile `group-median`,
+`constant`, `ordinaryOnly`. Silnik przyjmuje dane i zwraca profil
+z populacją, źródłem i oryginalną grupą. Nieznane metoda/materiał
+pozwalają wyłącznie na orientacyjne porównanie; znana niezgodność
+blokuje punkt. Jopling wymaga zgodnej rodziny Access i osocza
+Li-heparynowego, Benderradji DxI Access i surowicy. Nie potwierdzamy
+tych danych dla próbki automatycznie. Zachowano przeciwwskazania,
+cenzurowanie, jednostki oraz niezależność od stadium starszego dziecka.
+
+**Prezentacja i wpływ kliniczny:** nowe jasne znaczniki wskazują medianę
+grupy, bez nadawania wynikom statusu prawidłowych. Oba podpisy używają
+wybranej jednostki (dotychczasowe 1 pmol/L = 0,1401 ng/mL). Krótka
+notka podaje pełną grupę/metodę/materiał, u dorosłych normozoospermię;
+szczegóły pokazują populację i link. Gładkie linie, skale, inne hormony,
+porównania płci, normy Mayo, diagnozy i zapis historii pozostają bez zmian.
+Znacznik nie jest przyciągany do linii. Techniczne testy nie są walidacją
+kliniczną; przegląd nowych odniesień przez właściciela następuje w PR.
+
+**Przypadki syntetyczne i regresje:** M12/8 ng/mL → p50 grupy
+64,66 pmol/L ≈9,06 ng/mL; M17/4 →55,61 ≈7,79; M25/4 →43,8 ≈6,14.
+M13/M14 zachowują Wang, M30 Tehrani. M18/M19/>70 bez nowego p50.
+`[12,13)` mieści się w profilu, `[12,13]` przecina granicę i nie
+otrzymuje arbitralnej mediany. Znana surowica dla Jopling, osocze dla
+Benderradji, niezgodna metoda, leczenie i wynik `<` nie tworzą punktu.
+Testy wywołują rzeczywisty silnik i formularz; sprawdzają zachowanie
+66 wcześniejszych profili, stałość geometrii/skali, jednostki, źródła,
+całe życie/pokwitanie, pełny ekran i szerokość 320 px.
+
+Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
+
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć zatwierdzoną makietę porównania płci

@@ -5,7 +5,7 @@ pacjenta. Nie utożsamia płynnej krzywej edukacyjnej z medianą, a mediany
 z granicami referencyjnymi. Obowiązują [zasady krzywych](HORMONE_CURVE_AGENT_GUIDE.md)
 i [zasady interpretacji badań](LAB_INTERPRETATION_AGENT_GUIDE.md).
 
-## 1. Podstawa AMH — bieżący mały PR
+## 1. Podstawa AMH — zakończone, PR #661
 
 - Zastąpienie nieaktualnej tabeli laboratoryjnej pełnym, sprawdzonym katalogiem
   Mayo AMH1/608824: 16 przedziałów wieku/płci, Roche Elecsys AMH, surowica.
@@ -32,9 +32,12 @@ Przed każdym rozszerzeniem sprawdzić pełny przedział wieku, metodę,
 materiał, populację, statystykę i pierwszeństwo nakładających się źródeł.
 Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
 
-1. Męskie AMH: brakujące odcinki grup Jopling 2018 w wieku 12–<13
-   i 15–<18 lat; następnie młodzi dorośli z Benderradji, z ograniczeniami
-   wyselekcjonowanej populacji normozoospermicznych partnerów.
+1. **Bieżący PR — męskie AMH:** brakujące odcinki grup Jopling 2018
+   w wieku 12–<13 i 15–<18 lat oraz Benderradji w wieku 20–<30 lat,
+   z ograniczeniami wyselekcjonowanej populacji normozoospermicznych
+   partnerów. To trzy mediany całych grup 12–14,9, 15–18,9 i 20–39,
+   bez interpolacji, zmiany krzywych lub norm; luka 18–<20 pozostaje.
+   Pełne źródła i polityka: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
 2. Żeńskie AMH: grupowe mediany FDA/Access w dorosłości, z jednoznaczną
    polityką granic oraz wyborem osobnej tabeli surowicy albo osocza.
 3. Inhibina B obu płci: ponowna macierz dostępności; kobiety >20–47 lat

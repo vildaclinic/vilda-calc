@@ -1,0 +1,51 @@
+{
+  "version": "2026-10-13.1",
+  "kind": "educational-source-selection",
+  "analyte": "amh",
+  "sex": "male",
+  "unit": "pmol/L",
+  "ordinaryOnly": true,
+  "scope": "Three source-group medians fill gaps in ordinary male AMH views. They do not alter the approved illustration, laboratory reference intervals or sex comparisons.",
+  "selectionPolicy": "Disjoint routing intervals preserve every existing Busch, Wang and Tehrani reference. Source choice is fixed by age and sex, never by the result, desired classification or assay fallback. The entire possible age interval must fit one routing domain. A known incompatible source context blocks the point rather than selecting another source.",
+  "agePolicy": "Jopling 12–14.9 is used only in the uncovered 12–<13 interval, preserving Wang from age 13; Jopling 15–18.9 is conservatively restricted below 18 because the methods state a study maximum of 18 years. Benderradji 20–39 is used only from 20 to <30, preserving Tehrani from age 30. These narrower routing intervals do not redefine the source groups or their medians. The gap 18–<20 remains unavailable.",
+  "specimenPolicy": "Missing/unknown specimen permits an orientational educational comparison without asserting the patient specimen. Known Jopling specimen must be lithium-heparin plasma; known Benderradji specimen must be serum. No conversion between matrices is implied.",
+  "assayPolicy": "Missing/unknown assay permits an orientational educational comparison without confirmation of the patient's assay. Known assay must match the source-specific identifiers. Unit conversion is not assay calibration.",
+  "profiles": [
+    {
+      "id": "jopling2018-male-amh-age-12-under13",
+      "sourceFile": "jopling2018-male-amh-group-medians.json",
+      "sourceGroupId": "12-14p9",
+      "minAge": 12,
+      "maxAge": 13,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": ["plasma_li_heparin", "lithium-heparin-plasma", "li-heparin-plasma", "lithium-heparin plasma", "osocze z heparyną litową"],
+      "compatibleAssayMethodIds": ["access-amh", "beckman-access-amh", "access-2", "beckman-access-2"],
+      "patientNote": "Grupa 12–14,9 lat · Access AMH, osocze."
+    },
+    {
+      "id": "jopling2018-male-amh-age-15-under18",
+      "sourceFile": "jopling2018-male-amh-group-medians.json",
+      "sourceGroupId": "15-18p9",
+      "minAge": 15,
+      "maxAge": 18,
+      "maxAgeExclusive": true,
+      "specimen": "lithium-heparin-plasma",
+      "compatibleSpecimenIds": ["plasma_li_heparin", "lithium-heparin-plasma", "li-heparin-plasma", "lithium-heparin plasma", "osocze z heparyną litową"],
+      "compatibleAssayMethodIds": ["access-amh", "beckman-access-amh", "access-2", "beckman-access-2"],
+      "patientNote": "Grupa 15–18,9 lat · Access AMH, osocze."
+    },
+    {
+      "id": "benderradji2022-male-amh-age-20-under30",
+      "sourceFile": "benderradji2022-male-amh-group-medians.json",
+      "sourceGroupId": "20-39",
+      "minAge": 20,
+      "maxAge": 30,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": ["serum", "surowica"],
+      "compatibleAssayMethodIds": ["dxi-access-amh", "beckman-dxi-access-amh"],
+      "patientNote": "Grupa 20–39 lat · normozoospermia · DxI Access AMH, surowica."
+    }
+  ]
+}

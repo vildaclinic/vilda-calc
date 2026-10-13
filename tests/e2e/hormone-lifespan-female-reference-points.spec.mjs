@@ -326,12 +326,11 @@ test('new ordinary female AMH sources never activate a quantitative puberty sex 
   for (const age of [12, 13]) for (const sex of ['F', 'M']) {
     await patient(page, age, sex);
     await choose(page, examples[0], '0.45');
-    // At thirteen both sexes have an ordinary source. At twelve the known
-    // male source gap remains; neither situation licenses a new comparison.
-    if (age === 13 || sex === 'F') {
-      await expect(point(page, examples[0])).toHaveCount(1);
-      await expect(point(page, examples[0])).toHaveAttribute('data-profile', sex === 'F' ? /^jopling2018-female/ : /^wang2020-male/);
-    } else await expect(point(page, examples[0])).toHaveCount(0);
+    // Both ages now have ordinary sources; the male age-twelve Jopling group
+    // does not provide a new calibrated sex comparison either.
+    await expect(point(page, examples[0])).toHaveCount(1);
+    await expect(point(page, examples[0])).toHaveAttribute('data-profile', sex === 'F'
+      ? /^jopling2018-female/ : age === 12 ? /^jopling2018-male/ : /^wang2020-male/);
     await panel(page).locator('[data-view="puberty"]').click();
     await panel(page).locator('.vhl-compare-toggle').click();
     await expect(panel(page).locator('[data-view="puberty"]')).toHaveAttribute('aria-pressed', 'true');
