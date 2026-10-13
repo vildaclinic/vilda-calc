@@ -29,6 +29,12 @@
  *   2026-09-09: normy jako dane, nie założenie w silniku), a wynik niesie identyfikator, nazwę
  *   i stan źródła. Bez pliku danych działa tylko reguła nazwiska, bez ostrzeżeń o imieniu.
  *
+ * P-PLEC-IMIE-2 (zgłoszenie właściciela 2026-10-13)
+ *   Wpis „z zewnątrz” to zdarzenie programowe, które ZMIENIA wartość płci albo tożsamości. Samo
+ *   powiadomienie bez zmiany (custom-fixes.js ponawia `change` na polach lustra ~3,2 s po „Wyczyść”
+ *   i po wczytaniu) nie wyłącza automatu — dotąd drugi nowy pacjent po „Odrzuć dane i wyczyść”
+ *   zostawał przy „M”, gdy lekarz zdążył wpisać nazwisko przed tym powiadomieniem.
+ *
  * BEZPIECZNIKI
  *   Strona bez pól imienia i płci: moduł nic nie robi. Niczego nie zapisuje sam, nie liczy,
  *   żadna funkcja nie rzuca na zewnątrz. Rejestr: docs/clinical/ALGORITHMS.md, P-PLEC-IMIE.
@@ -39,7 +45,7 @@
   if (!d || typeof d.getElementById !== 'function') return;
   if (w.VildaPlecZImienia && w.VildaPlecZImienia.__init) return;
 
-  var VERSION = '1';
+  var VERSION = '2';
   var ID = { imie: 'firstName', nazwisko: 'lastName', kanon: 'name', plec: 'sex', notka: 'plecZImieniaNote' };
 
   /* Imię rozstrzyga, gdy nosi je co najmniej 20 osób i co najmniej 99% z nich ma jedną płeć.
@@ -283,6 +289,10 @@
 
   var stan = STAN.DOMYSLNA;
   var wlasne = false;
+  /* Ostatnio widziane wartości: tożsamość (lekarz pisze albo przyszła z zewnątrz) i płeć w polu.
+     Zdarzenie programowe, które ich nie zmienia, jest tylko powiadomieniem, a nie wpisem. */
+  var PO_WYCZYSZCZENIU = { tozsamosc: '|', plec: 'M' };
+  var widziane = { tozsamosc: PO_WYCZYSZCZENIU.tozsamosc, plec: PO_WYCZYSZCZENIU.plec };
 
   function pole(id) {
     try { return d.getElementById(id); } catch (e) { return null; }
@@ -295,6 +305,22 @@
 
   function tozsamoscPusta() {
     return !wartosc(ID.imie).trim() && !wartosc(ID.nazwisko).trim();
+  }
+
+  function kluczTozsamosci() {
+    return [wartosc(ID.nazwisko), wartosc(ID.imie)].map(function (v) {
+      return malymi(v.replace(/\s+/g, ' ').trim());
+    }).join('|');
+  }
+
+  function biezacaPlec() {
+    var p = pole(ID.plec);
+    return p && typeof p.value === 'string' ? p.value : '';
+  }
+
+  function zapamietaj() {
+    widziane.tozsamosc = kluczTozsamosci();
+    widziane.plec = biezacaPlec();
   }
 
   /* Pacjent z kartoteki albo pola zablokowane przez kogokolwiek — moduł nie ma tu nic do roboty. */
@@ -363,6 +389,7 @@
     var el = pole(ID.plec);
     if (!el || el.value === plec) return false;
     el.value = plec;
+    widziane.plec = plec;
     wlasne = true;
     try {
       /* Jak wybór z listy: input, potem change (przeliczenia, autozapis, lustro formularza). */
@@ -408,23 +435,33 @@
       /* Zaufana zmiana = wybór lekarza. Programowa (odtworzenie, lustro, import, inne moduły):
          płeć przyszła z zewnątrz, gdy idzie razem z tożsamością albo gdy nie jest domyślnym „M”
          (formularz bez nazwiska z „Kobietą” po F5). Samo „M” przy pustej tożsamości to stan
-         wyjściowy — tak kończy się „Wyczyść”. */
+         wyjściowy — tak kończy się „Wyczyść”. P-PLEC-IMIE-2: liczy się tylko zdarzenie, które
+         zmieniło wartość; ponowione powiadomienie z tą samą płcią niczego nie przestawia. */
       if (e.isTrusted) stan = STAN.LEKARZ;
-      else if (!tozsamoscPusta() || (t.value && t.value !== 'M')) stan = STAN.ZEWNETRZNA;
-      else stan = STAN.DOMYSLNA;
+      else if (t.value !== widziane.plec) {
+        if (!tozsamoscPusta() || (t.value && t.value !== 'M')) stan = STAN.ZEWNETRZNA;
+        else stan = STAN.DOMYSLNA;
+      }
+      widziane.plec = t.value;
       zaplanujNotke();
       return;
     }
     if (id !== ID.imie && id !== ID.nazwisko && id !== ID.kanon) return;
     if (e.isTrusted) {
+      if (id !== ID.kanon) widziane.tozsamosc = kluczTozsamosci();
       if (e.type === 'change' && id !== ID.kanon) rozstrzygnij();
       return;
     }
     /* Zdarzenia programowe na nazwie: P-SPLIT przepisuje #name przy każdym znaku lekarza (bez
        znaczenia), a odtworzenie i lustro wpisują tożsamość z zewnątrz — wtedy płeć przyszła razem
-       z nią i jest nietykalna. */
+       z nią i jest nietykalna. Ta sama tożsamość ponowiona z zewnątrz (odtworzenie „na żywo”
+       w panelu powłoki) niczego nie zmienia. */
     if (wpisZZewnatrz()) {
-      if (!tozsamoscPusta()) stan = STAN.ZEWNETRZNA;
+      var teraz = kluczTozsamosci();
+      if (teraz !== widziane.tozsamosc) {
+        if (!tozsamoscPusta()) stan = STAN.ZEWNETRZNA;
+        widziane.tozsamosc = teraz;
+      }
       zaplanujNotke();
     }
   }
@@ -432,11 +469,31 @@
   function naCyklZycia(e) {
     var typ = e && e.type;
     if (typ === 'vilda:user-state-cleared') {
+      /* Stan po „Wyczyść” wpisujemy wprost: zdarzenie bywa wysłane, zanim pola zostaną opróżnione. */
       stan = STAN.DOMYSLNA;
+      widziane.tozsamosc = PO_WYCZYSZCZENIU.tozsamosc;
+      widziane.plec = PO_WYCZYSZCZENIU.plec;
       pokaz(null);
       return;
     }
-    if (typ !== 'vilda:tozsamosc-zmiana' && !tozsamoscPusta()) stan = STAN.ZEWNETRZNA;
+    if (typ === 'vilda:tozsamosc-zmiana') {
+      zaplanujNotke();
+      return;
+    }
+    if (typ === 'vilda:persist-restored') {
+      /* Odtworzenie przy starcie strony i „na żywo” w panelu powłoki: z zewnątrz tylko wtedy, gdy
+         coś faktycznie zmieniło w tożsamości albo płci — i jak przy polu płci: razem z tożsamością
+         albo płeć inna niż domyślne „M”. */
+      var odtworzona = biezacaPlec();
+      var zmiana = kluczTozsamosci() !== widziane.tozsamosc || odtworzona !== widziane.plec;
+      if (zmiana && (!tozsamoscPusta() || (odtworzona && odtworzona !== 'M'))) stan = STAN.ZEWNETRZNA;
+      zapamietaj();
+      zaplanujNotke();
+      return;
+    }
+    /* Wczytanie, zapis, odtworzenie zapisu, import, odświeżenie bazy: rekord z kartoteki. */
+    if (!tozsamoscPusta()) stan = STAN.ZEWNETRZNA;
+    zapamietaj();
     zaplanujNotke();
   }
 
@@ -457,6 +514,7 @@
     podepnij();
     /* Formularz z tożsamością już przy starcie przyszedł z zewnątrz (odtworzenie). */
     if (!tozsamoscPusta()) stan = STAN.ZEWNETRZNA;
+    zapamietaj();
     odswiezNotke();
   }
 
