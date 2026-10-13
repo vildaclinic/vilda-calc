@@ -7,7 +7,11 @@
     "scope": "Ordinary female AMH group medians and inhibin B adolescent medians, concise source/eligibility comments, existing form only.",
     "baseCommit": "dfa65c20",
     "geometryChangeAuthorized": false,
-    "newLaboratoryNormsAuthorized": false
+    "newLaboratoryNormsAuthorized": false,
+    "initialOrdinaryInhibinDomainYears": [
+      8,
+      20
+    ]
   },
   "reviewBasis": "Cached complete primary texts reread for Table 1 Jopling and Figure 1/methods/cohorts/limitations Borelli. No fresh source download or independent redigitization claimed.",
   "sources": [
@@ -122,7 +126,15 @@
         "Age median must not substitute Tanner median; paper givesB1=15, B2=26, B3=46, B4=55, B5=34 ng/L.",
         "No observed 1.08–5.6-year cohort; no numerical extension through graphical bridge.",
         "No new values after 47 from qualitative tail."
-      ]
+      ],
+      "approxMedianAt6PgMl": 11,
+      "rawDigitizedAt6PgMl": 10.74,
+      "femaleAssayDetectionLimitPgMl": 3,
+      "supplementReview": {
+        "doi": "10.6084/m9.figshare.26056558.v1",
+        "access": "Reread retained full Supplementary Data_Johannsen et al text; no new download.",
+        "scope": "Gen II assay validation: assay comparison, stability, interference and external quality control. No numerical age-model LMS coefficients or median table."
+      }
     }
   ],
   "sourceFiles": [
@@ -187,7 +199,7 @@
     "firstBirthday": "Exactly 1 year retains existing Ljubicic. A range starting at 1 and extending above 1 crosses sources and remains unavailable; never route using midpoint.",
     "inhb": {
       "ordinaryDomainYears": [
-        8,
+        5.6,
         20
       ],
       "bothEndpointsInclusive": true,
@@ -197,7 +209,13 @@
       ],
       "sourceNodes": 24,
       "interpolation": "pchip",
-      "comparisonPolicyUnchanged": true
+      "comparisonPolicyUnchanged": true,
+      "profileId": "borelli2025-female-inhb-age-5p6-20",
+      "policyAndPatientPointDataVersion": "2026-10-13.2",
+      "comparisonDomainYears": [
+        8,
+        20
+      ]
     },
     "qualification": "Unknown/absent assay or specimen allows explicitly educational comparison without claiming compatibility. Known incompatible assay/specimen or contraindication blocks patient/reference points. Source-specific compatibleSpecimenIds preserve the existing default serum policy of other profiles.",
     "geometry": "Existing curves, normalization maxima, zoom projections and source marker independence remain unchanged. New ordinary profiles do not activate puberty sex-comparison points.",
@@ -323,7 +341,97 @@
         "exactAgeYears": 20.01
       },
       "expected": "No ordinary adolescent reference despite retained fit nodes to 47."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 6,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expectedMedianPgMl": 11,
+      "expected": "Ordinary patient and approximate source-median markers; no laboratory verdict from relation to median."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "ageSpanYears": [
+          6,
+          6.083333333333333
+        ],
+        "upperInclusive": false,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expected": "Entire interval eligible; retained source model near 11 pg/mL across this span."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 5.6
+      },
+      "expectedMedianPgMl": 11
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "ageSpanYears": [
+          5.59,
+          5.61
+        ]
+      },
+      "expected": "No ordinary reference; whole possible age crosses the source lower boundary."
+    },
+    {
+      "input": {
+        "analyte": "inhb",
+        "sex": "female",
+        "exactAgeYears": 5.59
+      },
+      "expected": "No ordinary reference from illustrative bridge."
     }
   ],
-  "testExecution": "Expected cases only. Actual production test execution and GitHub status belong to current implementation reports."
+  "testExecution": "Expected cases only. Actual production test execution and GitHub status belong to current implementation reports.",
+  "ordinaryInhibinChildhoodExtension": {
+    "approvalDate": "2026-10-13",
+    "implementationBase": "f22c280e",
+    "ownerAuthorized": "Extend ordinary female inhibin B educational reference to 5.6–20 years using existing source data; no new geometry, laboratory norms or form fields.",
+    "trigger": {
+      "sex": "female",
+      "ageYears": 6,
+      "value": 33,
+      "unit": "pg/mL",
+      "previousResult": "unsupported-age"
+    },
+    "whyEightWasNotASourceLimit": "PR #651 reused the already approved puberty-comparison window 8–20. Source COPUS II girls were observed at 5.6–20.2 years.",
+    "sourceReview": "Reread the retained complete primary article, Figure 1 and assay-validation supplement; no new paper, numerical data or independent redigitization.",
+    "currentProfileId": "borelli2025-female-inhb-age-5p6-20",
+    "previousOrdinaryProfileId": "borelli2025-female-inhb-age-8-20",
+    "ordinaryDomainYears": [
+      5.6,
+      20
+    ],
+    "endpointsInclusive": true,
+    "preserved": [
+      "All 24 source knots and their PCHIP fit",
+      "Infant reference and >1 to <5.6-year gap",
+      "Puberty sex comparison 8–20 years",
+      "AMH profiles with routingVersion 2026-10-13.1",
+      "Geometry, scales, assay/specimen/contraindication/censoring gates",
+      "Laboratory norms, classifications, unit conversions and persistence"
+    ],
+    "numericMeaning": "Source median at age 6 is approximately 11 pg/mL. A result of 33 lies above that median; this alone is not an above-reference-range classification.",
+    "limitations": [
+      "Female Gen II LOD 3 pg/mL; median ~11 is not a sub-LOD or LOD/2 value.",
+      "Approximately ±2 pg/mL is graphical reading tolerance, not a confidence interval or clinical reference interval.",
+      "Dense red observations obscure some early-childhood curve pixels. Existing approximate digitization is retained; no independent high-precision re-extraction claimed.",
+      "Age-specific sample counts and original numerical LMS coefficients are not supplied by retained materials.",
+      "Whole possible age must lie in the active domain; no midpoint selection across a boundary.",
+      "Chronological age does not determine Tanner stage and this age-model profile does not require Th1."
+    ]
+  }
 }

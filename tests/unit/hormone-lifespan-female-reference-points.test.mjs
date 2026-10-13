@@ -135,7 +135,7 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
     const result = evaluate('inhb');
     const comparison = runtime.inhibinComparisonReferenceData.profiles[0];
     expect(result).toMatchObject({ status: 'ready', referenceValue: 44,
-      profile: { id: 'borelli2025-female-inhb-age-8-20', minAge: 8, maxAge: 20,
+      profile: { id: 'borelli2025-female-inhb-age-5p6-20', minAge: 5.6, maxAge: 20,
         statistic: 'median', approximate: true, interpolation: 'pchip', specimen: 'serum',
         provenance: { doi: '10.1210/clinem/dgae439', digitizationTolerancePgMl: 2 } }
     });
@@ -147,10 +147,77 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
       expect(evaluate('inhb', age).referenceValue).toBe(engine.referenceAt(comparison, age));
     }
     expect(evaluate('inhb', 15, { ageUpperYears: 16, ageUpperInclusive: false }).referenceValue).toBe(44);
-    for (const age of [1.01, 5.6, 7.9999, 20.0001, 47]) {
+    for (const age of [1.01, 5.5999, 20.0001, 47]) {
       expect(evaluate('inhb', age)).toEqual(unavailable('unsupported-age'));
     }
     expect(evaluate('inhb', 20, { ageUpperYears: 21, ageUpperInclusive: false })).toEqual(unavailable('ambiguous-age'));
+  });
+
+  it('F6/33 pg/mL otrzymuje źródłową medianę około 11 przy miesiącach 0 i przy podaniu samych lat', () => {
+    const core = require('../../vilda_lab_puberty.js');
+    for (const age of [{ years: 6, months: 0, precision: 'month' }, { years: 6, precision: 'year' }]) {
+      const resolved = core.resolveAge({ age });
+      for (const unit of ['pg/mL', 'ng/L']) {
+        const result = evaluate('inhb', resolved.lowerYears, { ageUpperYears: resolved.upperYears,
+          ageUpperInclusive: resolved.upperInclusive, measurement: { value: 33, unit } });
+        expect(result).toMatchObject({ status: 'ready', value: 33, referenceValue: 11,
+          profile: { id: 'borelli2025-female-inhb-age-5p6-20', minAge: 5.6, maxAge: 20,
+            statistic: 'median', approximate: true, ordinaryOnly: true } });
+      }
+    }
+  });
+
+  it('kwalifikuje cały możliwy wiek od 5,6 i zachowuje lukę źródłową oraz górny brzeg 20', () => {
+    expect(evaluate('inhb', 5.6)).toMatchObject({ status: 'ready', referenceValue: 11 });
+    for (const [low, high] of [[1.08, 1.09], [5, 6], [5.59, 5.61], [5 + 7 / 12, 5 + 8 / 12]]) {
+      expect(evaluate('inhb', low, { ageUpperYears: high, ageUpperInclusive: false }))
+        .toEqual(unavailable('unsupported-age'));
+    }
+    expect(evaluate('inhb', 5 + 8 / 12, { ageUpperYears: 5 + 9 / 12, ageUpperInclusive: false }).referenceValue)
+      .toBeCloseTo(11, 10);
+    expect(evaluate('inhb', 7, { ageUpperYears: 8, ageUpperInclusive: false }).referenceValue).toBe(12);
+    expect(evaluate('inhb', 15).referenceValue).toBe(44);
+    expect(evaluate('inhb', 20).referenceValue).toBe(34);
+    expect(evaluate('inhb', 20, { ageUpperYears: 20.01 })).toEqual(unavailable('ambiguous-age'));
+  });
+
+  it('rozszerzenie źródła nie zmienia 65 pozostałych profili, żadnej geometrii ani odrębnego porównania 8–20', () => {
+    const unchangedProfiles = data.profiles.filter(p => p.id !== policy.inhb.id);
+    expect(unchangedProfiles).toHaveLength(65);
+    expect(createHash('sha256').update(JSON.stringify(unchangedProfiles)).digest('hex'))
+      .toBe('6ec13e2cb5556a6a5e57df7bba1e3032007215b713c6937cccabbe7368ade1f4');
+    const unchangedRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'patientPointData'));
+    expect(createHash('sha256').update(JSON.stringify(unchangedRuntime)).digest('hex'))
+      .toBe('380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d');
+    expect(data.profiles.some(p => p.id === 'borelli2025-female-inhb-age-8-20')).toBe(false);
+    const model = display.buildInhibinComparison(runtime, engine, 'puberty');
+    expect(model).not.toBeNull();
+    const context = { analyte: 'inhb', sex: 'female', ageYears: 6, measurement: { value: 33, unit: 'pg/mL' } };
+    expect(engine.evaluate(model.referenceData, context)).toEqual(unavailable('unsupported-age'));
+    expect(engine.evaluate(model.referenceData, { ...context, ageYears: 8 })).toMatchObject({
+      status: 'ready', referenceValue: 14, profile: { id: 'borelli2025-female-inhb-puberty-comparison' } });
+  });
+
+  it('mediana wykresu nie zmienia laboratoryjnego porównania F6/33 z zakresem Labcorp poniżej 129', () => {
+    const lab = require('../../vilda_lab_inhibin_b.js');
+    const labData = require('../../vilda_lab_inhibin_b_data.js');
+    const result = lab.evaluate({ analyte: 'inhibin_b', referenceSelection: 'automatic', sex: 'F',
+      age: { years: 6, months: 0, precision: 'month' }, value: '33', unit: 'pg/mL' }, labData);
+    expect(result.referencePreview.byAge).toMatchObject({ status: 'within', range: {
+      id: 'labcorp-f-6-9', profileId: 'labcorp-inhibin-b-children',
+      bounds: { lower: null, upper: { operator: '<', value: 129 } } } });
+    const plot = evaluate('inhb', 6, { measurement: { value: 33, unit: 'pg/mL' } });
+    expect(plot.referenceValue).toBe(11);
+    expect(plot).not.toHaveProperty('classification');
+  });
+
+  it('nowo pokryty wiek 6 lat zachowuje bramki materiału, metody, leczenia i wyniku cenzurowanego', () => {
+    expect(evaluate('inhb', 6, { specimen: 'plasma' })).toEqual(unavailable('incompatible-specimen'));
+    expect(evaluate('inhb', 6, { assayMethodId: 'access-amh' })).toEqual(unavailable('incompatible-assay'));
+    expect(evaluate('inhb', 6, { contraindicated: true })).toEqual(unavailable('contraindicated'));
+    expect(evaluate('inhb', 6, { measurement: { value: 33, unit: 'pg/mL', operator: '<' } }))
+      .toEqual(unavailable('censored-result'));
+    expect(evaluate('inhb', 6, { specimen: 'serum', assayMethodId: 'inhibin-b-gen-ii' }).status).toBe('ready');
   });
 
   it('zachowuje osobny profil porównania płci bez nakładania z nowym profilem zwykłego widoku', () => {
@@ -161,7 +228,7 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
     expect(result).toMatchObject({ status: 'ready', referenceValue: 44,
       profile: { id: 'borelli2025-female-inhb-puberty-comparison' } });
     expect(engine.evaluate(runtime, patient)).toMatchObject({ status: 'ready', referenceValue: 44,
-      profile: { id: 'borelli2025-female-inhb-age-8-20' } });
+      profile: { id: 'borelli2025-female-inhb-age-5p6-20' } });
     expect(model.referenceData.patientPointData.profiles.some(p => p.id === policy.inhb.id)).toBe(false);
     expect(data.profiles.some(p => p.id === policy.inhb.id)).toBe(true);
   });
