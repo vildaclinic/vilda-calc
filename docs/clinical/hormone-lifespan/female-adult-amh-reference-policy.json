@@ -1,0 +1,74 @@
+{
+  "version": "2026-10-13.4",
+  "kind": "educational-source-selection",
+  "analyte": "amh",
+  "sex": "female",
+  "unit": "pmol/L",
+  "ordinaryOnly": true,
+  "scope": "Five FDA Access AMH serum group medians in ordinary female views, without changing display curves, laboratory ranges, forms or sex comparisons.",
+  "sourceFile": "fda2017-female-amh-group-medians.json",
+  "selectionPolicy": "Fixed source selection by sex and age, never by patient result or preferred classification. The entire possible age interval must fit one group. Known incompatible context blocks the reference rather than selecting another matrix or publication.",
+  "agePolicy": "The document gives integer age-group labels without defining continuous boundaries. The application explicitly interprets them as completed years: [18,26), [26,31), [31,36), [36,41), [41,46). This is an application convention, not a recovered author definition or proof of actual observations at fractional upper ages. Published group labels and medians remain unchanged; no extrapolation from age 46 onward.",
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "specimenPolicy": "Use the published serum table only. Missing or unknown patient specimen permits a labelled orientational educational comparison without asserting patient material. Known plasma or another non-serum specimen blocks these profiles; the separate plasma table is not silently substituted.",
+  "compatibleAssayMethodIds": [
+    "access-amh",
+    "beckman-access-amh",
+    "access-2",
+    "beckman-access-2"
+  ],
+  "assayPolicy": "Access AMH on Access 2 is the documented source assay. Missing or unknown assay permits an orientational comparison; known incompatible Elecsys, Gen II or DxI identifiers do not match. Unit conversion is not assay calibration.",
+  "excludedCyclePhases": [
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "reproductiveContextPolicy": "Known pregnancy or postmenopause excludes only these new profiles. An unknown reproductive context permits a labelled educational comparison and is not confirmed regular cycling or proven fertility. Do not add new fields, infer menopause from age, or claim documented contraception exclusion. Existing treatment and stimulation restrictions remain separate application safeguards.",
+  "profiles": [
+    {
+      "id": "fda2017-female-amh-age-18-under26",
+      "sourceGroupId": "18-25",
+      "minAge": 18,
+      "maxAge": 26,
+      "maxAgeExclusive": true,
+      "patientNote": "Grupa 18–25 lat · regularne cykle · Access AMH, surowica."
+    },
+    {
+      "id": "fda2017-female-amh-age-26-under31",
+      "sourceGroupId": "26-30",
+      "minAge": 26,
+      "maxAge": 31,
+      "maxAgeExclusive": true,
+      "patientNote": "Grupa 26–30 lat · regularne cykle · Access AMH, surowica."
+    },
+    {
+      "id": "fda2017-female-amh-age-31-under36",
+      "sourceGroupId": "31-35",
+      "minAge": 31,
+      "maxAge": 36,
+      "maxAgeExclusive": true,
+      "patientNote": "Grupa 31–35 lat · regularne cykle · Access AMH, surowica."
+    },
+    {
+      "id": "fda2017-female-amh-age-36-under41",
+      "sourceGroupId": "36-40",
+      "minAge": 36,
+      "maxAge": 41,
+      "maxAgeExclusive": true,
+      "patientNote": "Grupa 36–40 lat · regularne cykle · Access AMH, surowica."
+    },
+    {
+      "id": "fda2017-female-amh-age-41-under46",
+      "sourceGroupId": "41-45",
+      "minAge": 41,
+      "maxAge": 46,
+      "maxAgeExclusive": true,
+      "patientNote": "Grupa 41–45 lat · regularne cykle · Access AMH, surowica."
+    }
+  ]
+}

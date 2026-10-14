@@ -13,7 +13,7 @@ LH, FSH, AMH, inhibina B i testosteron całkowity mają osobno opisane niżej
 płynne prezentacje wielu źródeł.
 W zależności od źródła jest to opublikowane p50 lub odczytana
 z ryciny krzywa 0 SD, z odpowiednią informacją o przybliżeniu. Przy grupach
-wieku Wang, Zec i Jopling odniesienie pozostaje stałą medianą jednej grupy;
+wieku Wang, Zec, Jopling i FDA odniesienie pozostaje stałą medianą jednej grupy;
 nie jest to p50 dokładnego wieku. Żeńskie FSH Zec pokazuje lokalny poziomy
 odcinek, a zwykłe męskie FSH i AMH osobne ciągłe ilustracje. Określenie
 „średnia” nie zastępuje mediany. Osobny dorosły profil testosteronu
@@ -61,7 +61,8 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Męskie AMH; 20–<30 lat | [Benderradji 2022](https://doi.org/10.1210/clinem/dgac218), tabela 1: p50 43,8 pmol/L całej grupy 20–39 lat | Normozoospermiczni partnerzy par z obniżoną płodnością, Lille; prawidłowe FSH/LH/T/inhibina B, bez stymulacji; surowica 08:00–10:00, bez wymogu bycia na czczo, DxI Access AMH | Wyselekcjonowana kohorta: 578 mężczyzn po usunięciu 29 odstających AMH, wiek 20–62; N grupy 20–39 nie podano. Nie mediana dokładnego wieku ani norma populacji ogólnej. Nie aktywujemy starszej grupy. |
 | Męskie AMH; 30–70 lat | [Tehrani 2017](https://doi.org/10.1371/journal.pone.0179634), tabela 2, 41 rocznych p50 | 831 zdrowych mężczyzn z Tehran Lipid and Glucose Study; surowica, zmodyfikowany AMH Gen II EIA, na czczo 07:00–09:00 | Mediany swoiste dla wieku; pomiędzy nimi interpolacja. Nie zamieniać na osocze Access ani nie przedłużać przed 30. i po 70. roku. |
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
-| Żeńskie AMH; grupy po 1. i przed 18. urodzinami | [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1 | Osocze litowo-heparynowe, Beckman Coulter Access AMH; pozostałości próbek szpitalnych, wykluczone podejrzenie endokrynopatii i DSD | Pięć stałych median całych grup, nie model dokładnego wieku ani Tannera. Routing i granice opisano poniżej. Nie harmonizujemy osocza z surowicą niemowląt; dorosłe FDA pozostaje poza aktywnymi profilami. |
+| Żeńskie AMH; grupy po 1. i przed 18. urodzinami | [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1 | Osocze litowo-heparynowe, Beckman Coulter Access AMH; pozostałości próbek szpitalnych, wykluczone podejrzenie endokrynopatii i DSD | Pięć stałych median całych grup, nie model dokładnego wieku ani Tannera. Routing i granice opisano poniżej. Nie harmonizujemy osocza z surowicą niemowląt ani dorosłych. |
+| Żeńskie AMH; 18–<46 lat, wyłącznie zwykłe widoki | [FDA K170524](https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf), PDF str. 14/wewn. 10, tabela surowicy | Access AMH, Access 2; pięć ośrodków, pozornie zdrowe nieciężarne kobiety z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; 620 próbek w tabeli | Pięć stałych median grup; konwencja ukończonych lat jest polityką aplikacji, nie opisaną regułą autora. Osocze z PDF str. 15 pozostaje odrębnym źródłem ilustracji. Brak norm, rozpoznania płodności i ekstrapolacji od 46 lat. |
 | Żeńska inhibina B; zwykłe widoki 5,6–20 lat, porównanie płci 8–20 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, przybliżona mediana GAMLSS (0 SD) | Surowica, Beckman Coulter Gen II ELISA; żeńska kohorta 5,6–20,2 lat obejmuje 648 dziewcząt | Od 13.10.2026 zwykły profil uzupełnia odrębne dane porównania. Wszystkie 24 węzły 5,6–47 lat zachowane do PCHIP; zwykły profil 5,6–20 włącznie, porównanie pokwitania nadal 8–20. Digitalizacja około ±2 pg/mL, bez SDS i norm. Wiek nie zastępuje Tannera; faz cyklu nie standaryzowano. |
 
 INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
@@ -71,7 +72,7 @@ Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
 nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec,
-AMH Jopling, inhibiną B 5,6–20 i zaakceptowanym porównaniem LH/FSH 6–16 oraz niepokryte fragmenty
+AMH Jopling/FDA, inhibiną B 5,6–20 i zaakceptowanym porównaniem LH/FSH 6–16 oraz niepokryte fragmenty
 osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
@@ -171,8 +172,9 @@ Pierwszy nowy profil ma `minAgeExclusive` przy 1 roku. Dokładnie 1 rok
 zachowuje dotychczasowe Ljubicic i bramkę donoszenia. Przedział zaczynający
 się przy 1, np. `[1,1+1/12)`, albo obejmujący granicę dwóch grup pozostaje
 bez jednej mediany; krótki komunikat wyjaśnia niejednoznaczny wiek.
-Nie wybieramy źródła po środku przedziału. Nie aktywujemy FDA, dorosłego
-modelu Jopling ani median Tannera.
+Nie wybieramy źródła po środku przedziału. Ta pediatryczna partia nie
+aktywowała FDA, dorosłego modelu Jopling ani median Tannera; osobne
+rozszerzenie FDA opisano poniżej.
 
 Materiał Jopling to osocze litowo-heparynowe, metoda Access AMH.
 `compatibleSpecimenIds` dobiera akceptowane oznaczenia materiału dla
@@ -218,6 +220,65 @@ i materiał → wartość wyniku 3,212 pmol/L oraz mediana grupy 21,14 pmol/L
 „poniżej normy”. Krzywa pozostaje identyczna po wyczyszczeniu wyniku.
 Pełne pochodzenie, hashe i przypadki graniczne:
 [przegląd źródeł](evidence/female-reference-points-2026-10-13.json).
+
+### Żeńskie AMH — mediany dorosłych FDA, 13 października 2026
+
+Pięć profili `ordinaryOnly`, `group-median`, `interpolation: constant`
+udostępnia źródłowe mediany surowicy w zwykłych widokach. Pełny
+[FDA K170524](https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf),
+przygotowany 09.11.2017, podaje odrębne tabele surowicy na stronie
+PDF 14/wewnętrznej 10 i osocza Li-heparynowego na PDF 15/wewnętrznej 11.
+Nie mieszamy ich ani nie odczytujemy mediany z istniejącej krzywej.
+
+| Grupa źródłowa | N | Mediana surowicy pmol/L | Mediana ng/mL wydrukowana w źródle | Domena aplikacji |
+| --- | ---: | ---: | ---: | --- |
+| 18–25 | 120 | 25,7 | 3,60 | `[18,26)` |
+| 26–30 | 131 | 27,27 | 3,82 | `[26,31)` |
+| 31–35 | 120 | 17,64 | 2,47 | `[31,36)` |
+| 36–40 | 123 | 12,21 | 1,71 | `[36,41)` |
+| 41–45 | 126 | 3,86 | 0,54 | `[41,46)` |
+
+Dokument nie określa ciągłych granic ani zaokrąglania wieku. Przedziały
+aplikacji jawnie odczytują etykiety jako ukończone lata; nie dowodzą
+obserwacji osoby w wieku 45,999 roku. Cały możliwy wiek musi należeć
+do jednej grupy: `[25,26)` kwalifikuje się, `[25,26]` ani przedział
+przecinający granicę nie. Dokładnie 46 lat nie otrzymuje odniesienia.
+Nie ma interpolacji między grupami, wyboru mediany ze środka przedziału
+ani zmiany pediatrycznego Jopling przed 18 lat.
+
+Źródło obejmuje próbki pozornie zdrowych, nieciężarnych kobiet z pięciu
+ośrodków, z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną
+płodnością. Suma N wynosi 620 dla każdej tabeli materiału, nie 1240
+niezależnych kobiet. Dnia cyklu i stosowania antykoncepcji dla tej
+populacji nie określono. Nie przenosimy kryteriów odrębnej kohorty
+klinicznej N=164 (np. dzień 2–4, wykluczenie PCOS) do tych median.
+
+Znane metoda i materiał muszą odpowiadać Access AMH/Access 2 i surowicy.
+Nie uznajemy DxI, Elecsys, Gen II ani osocza za zgodne na podstawie
+jednostki. Nieznane metoda, materiał, cykl lub płodność dopuszczają
+edukacyjne zestawienie, bez potwierdzania kwalifikacji pacjentki i bez
+nowych pól. Znana ciąża lub stan po menopauzie blokują wyłącznie te
+nowe profile; dotychczasowa blokada GnRHa oraz pozostałe bramki silnika
+pozostają. Nie dodajemy z FDA nowego progu LOD/LOQ dla wyniku pacjentki.
+
+Kanoniczne są wydrukowane mediany pmol/L. Globalne przeliczenie
+`1 pmol/L = 0,1401 ng/mL` pozostaje bez zmian; oddzielnie zachowane
+zaokrąglone liczby ng/mL dokumentują źródło, nie drugi wariant obliczeń.
+F28, wynik 1 ng/mL → mediana grupy 26–30: 27,27 pmol/L
+(3,820527 ng/mL, podpis ≈3,82), bez werdyktu „poniżej normy”.
+
+Jasny znacznik „Mediana grupy” zachowuje liczbę surowicy także poza
+poglądową linią, której dorosłe kotwice pochodzą z osocza. Oba znaczniki
+używają istniejącej skali i wybranej jednostki; źródłowe ograniczenia
+trafiają do krótkiej notki i rozwijanych szczegółów. Linie, skale,
+porównania płci, normy Mayo, historia i inne profile nie zmieniają się.
+Nie wyznaczamy płodności, PCOS, rezerwy jajnikowej, odpowiedzi na IVF
+ani wieku menopauzy na podstawie odległości od mediany. Xu 2026 pozostaje
+nieaktywne; weryfikacja techniczna nie oznacza walidacji klinicznej.
+
+Pochodzenie i mediany z obu tabel:
+[dane FDA](evidence/patient-point/fda2017-female-amh-group-medians.json);
+reguły zastosowania: [polityka dorosłych kobiet](female-adult-amh-reference-policy.json).
 
 ### INSL3: ilustracja bez liczbowego odniesienia — 11 października 2026
 

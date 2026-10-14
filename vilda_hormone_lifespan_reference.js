@@ -68,6 +68,13 @@
     if (!inDomain(profile, upper) && !(exclusiveEnd && upper === profile.maxAge)) {
       return unavailable('ambiguous-age');
     }
+    // Only a source's explicit population policy can exclude a known context.
+    // Missing context is not confirmation of any reproductive state.
+    var cyclePhase = typeof context.cyclePhase === 'string' ? context.cyclePhase.trim().toLowerCase() : '';
+    if (cyclePhase && Array.isArray(profile.excludedCyclePhases) &&
+        profile.excludedCyclePhases.indexOf(cyclePhase) >= 0) {
+      return unavailable('incompatible-reproductive-context');
+    }
     if (profile.termOnly && !termBirth(context.preterm)) return unavailable('preterm-context');
     if (profile.requiredGonadalStage != null) {
       var puberty = context.puberty;
