@@ -90,7 +90,9 @@ describe('LAB-HISTORIA — jednostki i przeliczenie', () => {
     expect(converted.value).toBeCloseTo(15.4, 10);
     expect(converter.convertAll({ substanceId: 'ft4', value: 1.2, fromUnit: 'ng/dL' }).results.find((r) => r.unit === 'pmol/L').value).toBeCloseTo(15.444, 10);
     expect(converted).toMatchObject({ converted: true, flag: null, status: null, display: '15,4 pmol/L', raw: '1,2 ng/dL', norm: '0,8–1,8 ng/dL' });
-    expect(ft4.chart.points[0]).toMatchObject({ conv: true, norm: null, v: 15.4, ageMonths: null });
+    // Na wykresie wartość bez zaokrąglenia (renderer formatuje sam); w tabeli i różnicy — wyświetlana.
+    expect(ft4.chart.points[0]).toMatchObject({ conv: true, norm: null, ageMonths: null });
+    expect(ft4.chart.points[0].v).toBeCloseTo(15.444, 10);
     expect(ft4.chart.points[1]).toMatchObject({ norm: '12–22 pmol/L', v: 17 });
     expect(ft4.chart.points[1]).not.toHaveProperty('conv');
     // Różnica z wartości wyświetlanych: 17 − 15,4 = 1,6, po 99 dniach.
@@ -325,5 +327,104 @@ describe('LAB-HISTORIA — oczekujące, bieżący wynik, panele i kategorie', ()
     expect(history.formatDelta({ available: true, value: 0, unit: 'mIU/L', days: 3 })).toBe('0 mIU/L · po 3 dniach');
     expect(history.formatDelta(null)).toBe('');
     expect(history.normalizeUnit('  µIU / mL ')).toBe('μIU / mL');
+  });
+});
+
+describe('LAB-HISTORIA — poprawki po przeglądzie modelu', () => {
+  it('wynik tekstowy z listy edytora bez testKey trafia do serii badania z konwertera (dokładna etykieta), nie do „Inne”', () => {
+    const text = result('Inhibina B', null, '<10 pg/mL', null, null, '2026-09-12');
+    text.skipSeries = true;
+    const view = build([result('Inhibina B', 'inhibin_b', '85', 85, 'pg/mL', '2026-03-12'), text]);
+    expect(view.panels.map((p) => [p.id, p.series.map((s) => s.key)])).toEqual([['gonadal', ['inhibin_b']]]);
+    const inhibin = seriesView(view, 'inhibin_b');
+    expect(inhibin.entries.map((e) => e.kind)).toEqual(['exact', 'text']);
+    // Ostatnim wynikiem jest nowszy, nieoznaczalny wpis — nie starsze 85 pg/mL.
+    expect(inhibin.last).toMatchObject({ kind: 'text', display: '<10 pg/mL' });
+  });
+
+  it('nieznana metoda to nie „ta sama metoda”: różnica ze stopką; „różne metody” tylko przy dwóch znanych', () => {
+    const unknown = (value, date) => {
+      const item = lhResult(value, date);
+      const envelope = structuredClone(item.note.labResult.assessment);
+      envelope.evaluation.input.assay = { profileId: 'mayo-lh-pediatric', methodId: '', confirmation: 'unknown' };
+      envelope.evaluation.input.specimen = 'unknown';
+      item.note.labResult.assessment = envelope;
+      item.point.assessment = envelope;
+      return item;
+    };
+    const both = seriesView(build([unknown('2', '2026-06-01'), unknown('3', '2026-09-01')]), 'lh');
+    expect(both.delta).toMatchObject({ available: true, methodChecked: false });
+    expect(both.methodFootnote).toBe(true);
+    const mixed = seriesView(build([lhResult('2', '2026-06-01'), unknown('3', '2026-09-01')]), 'lh');
+    expect(mixed.delta).toMatchObject({ available: true, methodChecked: false });
+  });
+
+  it('notatka „Badanie” bez wartości i bez terminu to opis, nie wynik oczekujący; z terminem albo dniami kontroli — oczekujący', () => {
+    const note = (extra) => ({ note: { id: `opis-${++counter}`, patientId: 'fikcyjny-pacjent', category: 'wynik-badania', title: 'USG tarczycy', body: 'Fikcyjny opis', ...extra } });
+    const description = note({ clinicalDateISO: '2026-09-12' }), named = note({ labResult: { test: 'TSH (tyreotropina)' } });
+    const ordered = note({ recheckDays: 30 }), dated = note({ dueDateISO: '2026-11-02' });
+    const view = build([description, named, ordered, dated]);
+    expect(view.pending.map((p) => p.noteId).sort()).toEqual([ordered.note.id, dated.note.id].sort());
+  });
+
+  it('seria spoza konwertera: wynik bez jednostki nie przestawia serii; seria w całości bez jednostek jest porównywalna', () => {
+    const mixed = seriesView(build([
+      result('Ferrytyna', 'ferrytyna', '20', 20, 'ng/mL', '2026-03-01'),
+      result('Ferrytyna', 'ferrytyna', '35', 35, 'ng/mL', '2026-06-01'),
+      result('Ferrytyna', 'ferrytyna', '41', 41, null, '2026-09-01'),
+    ]), 'ferrytyna');
+    expect(mixed.unit).toBe('ng/mL');
+    expect(mixed.entries.map((e) => [e.kind, e.reason])).toEqual([['exact', null], ['exact', null], ['other-unit', 'unit_missing']]);
+    const unitless = seriesView(build([result('Wskaźnik', 'wskaznik', '1,2', 1.2, null, '2026-03-01'), result('Wskaźnik', 'wskaznik', '1,5', 1.5, null, '2026-06-01')]), 'wskaznik');
+    expect(unitless.entries.map((e) => e.kind)).toEqual(['exact', 'exact']);
+    expect(unitless.delta).toMatchObject({ available: true, text: '+0,3 · po 92 dniach' });
+  });
+
+  it('bieżący wynik z oceną innej metody niż ostatni zapisany: bez różnicy', () => {
+    const view = build([lhResult('2', '2026-06-01')], { current: { testKey: 'lh', value: '6', valueNum: 6, unit: 'IU/L', assessment: lhEnvelope('6', '2026-10-01', 'elecsys-lh-eclia') } });
+    expect(view.preview.delta).toMatchObject({ available: false, reason: 'method_mismatch' });
+  });
+
+  it('wykres: przerwy w miejscu wyników bez liczby; wartość bez zaokrąglenia zgodna ze strzałką; nazwa serii dla aria-label', () => {
+    const view = build([
+      lhResult('2', '2026-06-01'), lhResult('<0.02', '2026-07-01'), lhResult('3', '2026-09-01'),
+      result('TSH', 'tsh', '4,804', 4.804, 'mIU/L', '2026-09-12', { norm: '0,6–4,8' }),
+    ]);
+    expect(seriesView(view, 'lh').chart.gaps).toEqual([{ dateISO: '2026-07-01', kind: 'censored', noteId: expect.any(String) }]);
+    const tsh = seriesView(view, 'tsh');
+    expect(tsh.entries[0]).toMatchObject({ value: 4.8, flag: '↑' });
+    expect(tsh.chart.points[0]).toMatchObject({ v: 4.804, norm: '0,6–4,8' });
+    expect(Dl(tsh.chart.points[0].norm).hi).toBeLessThan(tsh.chart.points[0].v);
+    expect(tsh.test).toBe('TSH (tyreotropina)');
+  });
+
+  it('data z terminu zlecenia to „termin”, nie data badania; poprzedni wynik pomija rodzeństwo z tego samego dnia', () => {
+    const due = result('TSH', 'tsh', '9', 9, 'mIU/L', null);
+    due.note.dueDateISO = '2026-09-01';
+    due.point.dateISO = '2026-09-01';
+    const tsh = seriesView(build([
+      result('TSH', 'tsh', '2', 2, 'mIU/L', '2026-06-10'),
+      result('TSH', 'tsh', '3', 3, 'mIU/L', '2026-09-12'),
+      result('TSH', 'tsh', '4', 4, 'mIU/L', '2026-09-12'),
+      due,
+    ]), 'tsh');
+    expect(tsh.entries.find((e) => e.noteId === due.note.id)).toMatchObject({ dateSource: 'termin', dateISO: '2026-09-01' });
+    expect(tsh.previous).toMatchObject({ value: 2, dateISO: '2026-06-10' });
+    expect(tsh.delta).toMatchObject({ available: false, reason: 'same_day' });
+  });
+
+  it('powód „wymaga przeliczenia” ma tekst; brak notesById to błąd wołającego, a punkt bez notatki jest policzony', () => {
+    const { history, converter } = model();
+    expect(() => history.buildHistoryView([], { converter })).toThrow(TypeError);
+    const item = result('TSH', 'tsh', '2', 2, 'mIU/L', '2026-06-10');
+    const view = history.buildHistoryView(series(item), { converter, notesById: {} });
+    expect(view.summary).toMatchObject({ results: 0, missingNotes: 1 });
+    const changed = lhResult('2', '2026-06-01');
+    const envelope = structuredClone(changed.note.labResult.assessment);
+    envelope.status = 'invalidated';
+    envelope.reasonCodes = ['assessment_requires_recalculation'];
+    changed.point.assessment = envelope;
+    changed.point.valueNum = null;
+    expect(seriesView(build([changed]), 'lh').entries[0].status.detail).toEqual(['zmieniono dane wyniku']);
   });
 });

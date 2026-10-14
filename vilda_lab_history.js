@@ -38,7 +38,8 @@
     result_or_clinical_date_changed: 'zmieniono wynik lub datę badania',
     assessment_result_mismatch: 'ocena dotyczy innej wartości, jednostki lub analitu',
     assessment_sample_date_mismatch: 'data pobrania w ocenie nie odpowiada dacie badania',
-    assessment_binding_mismatch: 'ocena nie odpowiada obecnym polom wyniku'
+    assessment_binding_mismatch: 'ocena nie odpowiada obecnym polom wyniku',
+    assessment_requires_recalculation: 'zmieniono dane wyniku'
   };
   var CHART_KINDS = ['exact', 'legacy'];
 
@@ -55,6 +56,15 @@
     try { slug = slug.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (_) { /* bez normalize: jak w sejfie */ }
     slug = slug.replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '');
     return slug.substring(0, 40) || null;
+  }
+  // Badanie z listy edytora karty ma etykietę konwertera, ale edytor zapisuje testKey tylko przy
+  // wartości liczbowej (ft() w vilda_auth_ui.js). Wpis tekstowy z tej samej listy dostaje więc klucz
+  // po dokładnej etykiecie, jak zrobiłby to edytor, a dopiero potem skrót nazwy jak w sejfie.
+  function labelKey(test, labels) {
+    var wanted = text(test);
+    if (!wanted) return null;
+    for (var i = 0; i < labels.length; i++) if (labels[i].label === wanted) return labels[i].id;
+    return null;
   }
   // Kategoria notatki jak w karcie pacjenta (Yr w vilda_auth_ui.js): jawny klirens, potem lek, potem wynik.
   function noteCategory(note) {
@@ -176,14 +186,17 @@
 
   // Wpis z punktu serii sejfu albo z notatki tekstowej. Wartość w jednostce wyświetlania
   // ustala drugi przebieg (resolveUnits), gdy znana jest jednostka serii.
+  // Źródło daty: data badania; bez niej termin zlecenia (sejf bierze go, gdy już minął) albo data wpisu.
+  // Tylko data badania czyni wynik „ostatnim” lub „poprzednim” i stawia go na osi wykresu.
   function baseEntry(point, note, lab) {
-    var clinical = note ? isoDate(note.clinicalDateISO) : null;
+    var clinical = note ? isoDate(note.clinicalDateISO) : null, date = clinical || isoDate(point.dateISO) || null;
+    var due = note ? isoDate(note.dueDateISO) : null;
     return {
       kind: null, noteId: point.noteId || (note && note.id) || null,
-      dateISO: clinical || isoDate(point.dateISO) || null, dateSource: clinical ? 'badanie' : 'wpis',
+      dateISO: date, dateSource: clinical ? 'badanie' : due && due === date ? 'termin' : 'wpis',
       ageMonths: finite(point.ageMonths) ? point.ageMonths : null,
       recordedValue: null, recordedUnit: normalizeUnit(point.unit != null ? point.unit : lab && lab.unit),
-      raw: '', value: null, unit: '', converted: false, display: '',
+      raw: '', value: null, exactValue: null, unit: '', converted: false, display: '',
       norm: text(lab && lab.norm) || text(point.norm) || null, normAccepted: false, flag: null, status: null,
       comment: note ? text(note.body) : '', legacy: false, delta: null, reason: null
     };
@@ -216,9 +229,11 @@
   }
   // Ręczny wpis z wartością, której sejf nie umie odczytać jako liczby (np. „<0,02 IU/L”):
   // wiersz tekstowy bez punktu i bez zera (K13).
-  function textEntry(note) {
-    var lab = note.labResult;
-    var entry = baseEntry({ noteId: note.id, dateISO: isoDate(note.clinicalDateISO) || isoDate(note.createdAtISO), unit: lab.unit }, note, lab);
+  function textEntry(note, nowISO) {
+    var lab = note.labResult, due = isoDate(note.dueDateISO);
+    // Jak Cr() w sejfie: termin zlecenia tylko wtedy, gdy już minął; bez „dziś” od wołającego — data wpisu.
+    var date = isoDate(note.clinicalDateISO) || (due && nowISO && due <= nowISO ? due : isoDate(note.createdAtISO));
+    var entry = baseEntry({ noteId: note.id, dateISO: date, unit: lab.unit }, note, lab);
     entry.kind = 'text';
     entry.raw = rawText(lab);
     entry.display = entry.raw;
@@ -243,8 +258,11 @@
   function resolveUnits(series, entries, options) {
     var converter = options.converter, sub = series.sub, precision = sub && sub.precision || 3;
     var numeric = entries.filter(function (entry) { return entry.kind === 'exact' || entry.kind === 'legacy'; });
+    // Seria spoza konwertera: wynik bez jednostki porównuje się z innymi tylko wtedy, gdy żaden wynik
+    // serii nie ma jednostki; inaczej to „brak jednostki”, a nie nowa jednostka serii.
+    var unitsPresent = numeric.some(function (entry) { return !!entry.recordedUnit; });
     numeric.forEach(function (entry) {
-      entry.canonicalUnit = sub ? knownUnit(sub, entry.recordedUnit) : entry.recordedUnit;
+      entry.canonicalUnit = sub ? knownUnit(sub, entry.recordedUnit) : unitsPresent ? entry.recordedUnit || null : '';
     });
     var requested = options.unitBy && own(options.unitBy, series.key) ? options.unitBy[series.key] : null;
     var display = requested != null ? (sub ? knownUnit(sub, requested) : normalizeUnit(requested)) : null;
@@ -265,6 +283,7 @@
         entry.display = entry.raw;
         return;
       }
+      entry.exactValue = value;
       entry.value = roundSignificant(value, precision);
       entry.unit = display || '';
       entry.converted = entry.canonicalUnit !== display;
@@ -283,9 +302,18 @@
     return display || '';
   }
 
-  function methodOf(entry) {
-    var input = entry.assessment && entry.assessment.evaluation && entry.assessment.evaluation.input;
-    return record(input) ? { methodId: text(input.assay && input.assay.methodId) || null, specimen: text(input.specimen) || null } : null;
+  // Metoda i materiał z koperty oceny; null, gdy nieznane (brak metody, potwierdzenie „unknown”,
+  // materiał nieznany lub „inny”). Nieznana metoda nie jest „tą samą metodą”.
+  function methodOf(assessment) {
+    var input = assessment && assessment.evaluation && assessment.evaluation.input;
+    if (!record(input)) return null;
+    var assay = record(input.assay) ? input.assay : {}, methodId = text(assay.methodId), specimen = text(input.specimen);
+    if (!methodId || assay.confirmation === 'unknown' || !specimen || specimen === 'unknown' || specimen === 'other') return null;
+    return { methodId: methodId, specimen: specimen };
+  }
+  function methodComparison(key, before, after) {
+    if (ENVELOPE_ANALYTES.indexOf(key) === -1 || !before || !after) return 'unknown';
+    return before.methodId === after.methodId && before.specimen === after.specimen ? 'same' : 'different';
   }
   // Różnica tylko między dwoma kolejnymi wynikami dokładnymi z datą badania, w jednostce
   // wyświetlania: liczba ze znakiem i dni; bez procentu, koloru, progu i oceny kierunku (6.10).
@@ -293,15 +321,12 @@
     if (!previous || !current) return null;
     if (previous.dateISO === current.dateISO) return { available: false, reason: 'same_day', text: '' };
     if (previous.kind !== 'exact' || current.kind !== 'exact') return { available: false, reason: 'not_comparable', text: '' };
-    var envelope = ENVELOPE_ANALYTES.indexOf(series.key) !== -1, before = methodOf(previous), after = methodOf(current);
-    var methodKnown = envelope && !!before && !!after;
-    if (methodKnown && (before.methodId !== after.methodId || before.specimen !== after.specimen)) {
-      return { available: false, reason: 'method_mismatch', text: formatDelta({ available: false, reason: 'method_mismatch' }) };
-    }
+    var method = methodComparison(series.key, methodOf(previous.assessment), methodOf(current.assessment));
+    if (method === 'different') return { available: false, reason: 'method_mismatch', text: formatDelta({ available: false, reason: 'method_mismatch' }) };
     var precision = series.sub && series.sub.precision || 3;
     var value = roundSignificant(current.value - previous.value, precision);
     if (Math.abs(value) < 1e-12) value = 0;
-    var delta = { available: true, value: value, unit: current.unit, days: daysBetween(previous.dateISO, current.dateISO), methodChecked: methodKnown, precision: precision };
+    var delta = { available: true, value: value, unit: current.unit, days: daysBetween(previous.dateISO, current.dateISO), methodChecked: method === 'same', precision: precision };
     delta.text = formatDelta(delta, options.converter);
     return delta;
   }
@@ -315,20 +340,27 @@
   }
 
   function chartFor(entries, unit) {
-    var points = [], skippedByReason = {};
+    var points = [], skippedByReason = {}, gaps = [];
     entries.forEach(function (entry) {
       var reason = CHART_KINDS.indexOf(entry.kind) === -1 ? entry.kind : entry.dateSource !== 'badanie' ? 'no_sample_date' : null;
-      if (reason) { skippedByReason[reason] = (skippedByReason[reason] || 0) + 1; return; }
+      if (reason) {
+        skippedByReason[reason] = (skippedByReason[reason] || 0) + 1;
+        // Wynik z datą badania poza wykresem (np. „<0,02”): renderer może zaznaczyć przerwę zamiast
+        // prowadzić linię przez dzień, w którym wynik nie był liczbą.
+        if (entry.dateSource === 'badanie' && entry.dateISO) gaps.push({ dateISO: entry.dateISO, kind: entry.kind, noteId: entry.noteId });
+        return;
+      }
       // Kształt wyjścia yi() dla rendera Nl: oś daty badania (ageMonths: null), punkt przeliczony
       // bez normy (decyzja 6.2). Norma tylko wtedy, gdy model przyjął ją jako jeden zakres
       // w jednostce wyniku — inaczej mi() z luźnym Dl dałoby strzałkę, której model nie uznał.
-      var point = { noteId: entry.noteId, dateISO: entry.dateISO, ageMonths: null, v: entry.value, norm: entry.normAccepted ? entry.norm : null };
+      // v bez zaokrąglenia: mi() porówna z normą tę samą wartość, z której model liczył strzałkę.
+      var point = { noteId: entry.noteId, dateISO: entry.dateISO, ageMonths: null, v: entry.exactValue, norm: entry.normAccepted ? entry.norm : null };
       if (entry.converted) point.conv = true;
       if (entry.assessment) point.assessment = entry.assessment;
       points.push(point);
     });
     var skipped = Object.keys(skippedByReason).reduce(function (sum, key) { return sum + skippedByReason[key]; }, 0);
-    return { unit: unit, points: points, skipped: skipped, skippedByReason: skippedByReason };
+    return { unit: unit, points: points, skipped: skipped, skippedByReason: skippedByReason, gaps: gaps };
   }
 
   function buildSeries(series, options) {
@@ -339,9 +371,11 @@
     for (var i = 1; i < dated.length; i++) dated[i].delta = deltaBetween(dated[i - 1], dated[i], series, options);
     var last = dated.length ? dated[dated.length - 1] : null;
     var computed = dated.filter(function (entry) { return entry.delta && entry.delta.available; });
+    // Poprzedni wynik: ostatni z wcześniejszą datą badania (nie wynik z tego samego dnia co ostatni).
+    var earlier = last ? dated.filter(function (entry) { return entry.dateISO < last.dateISO; }) : [];
     var view = {
-      key: series.key, testKey: series.sub ? series.key : null, label: series.label, unit: unit,
-      entries: entries, last: last, previous: dated.length > 1 ? dated[dated.length - 2] : null,
+      key: series.key, testKey: series.sub ? series.key : null, label: series.label, test: series.label, unit: unit,
+      entries: entries, last: last, previous: earlier.length ? earlier[earlier.length - 1] : null,
       lastDateEntries: last ? dated.filter(function (entry) { return entry.dateISO === last.dateISO; }) : [],
       delta: last ? last.delta : null, chart: chartFor(entries, unit), pending: [],
       // Stopka dla różnic bez potwierdzonej zgodności metody (K10).
@@ -360,9 +394,12 @@
     var matches = labels.filter(function (item) { return item.label === wanted; });
     return matches.length === 1 ? matches[0].id : null;
   }
+  // Oczekujący wynik = zlecenie z Terminarza (termin albo liczba dni do kontroli), bez wartości,
+  // niezakończone i bez niestawienia. Notatka „Badanie” bez wartości i bez terminu to opis, nie zlecenie.
   function isPending(note) {
     var lab = record(note.labResult) ? note.labResult : null;
-    return (!lab || !text(lab.value) && !finite(lab.valueNum)) && !note.completedAtISO && !note.noShowAtISO;
+    var ordered = !!isoDate(note.dueDateISO) || finite(note.recheckDays);
+    return ordered && (!lab || !text(lab.value) && !finite(lab.valueNum)) && !note.completedAtISO && !note.noShowAtISO;
   }
 
   function previewView(current, seriesView, options) {
@@ -381,10 +418,14 @@
         var last = seriesView && seriesView.last;
         // Bieżący wynik nie ma daty próbki (data pada w oknie przypięcia), więc bez liczby dni (K8).
         if (last && last.kind === 'exact' && last.unit === to) {
-          var delta = { available: true, value: roundSignificant(preview.value - last.value, precision), unit: to, days: null, precision: precision };
-          if (Math.abs(delta.value) < 1e-12) delta.value = 0;
-          delta.text = formatDelta(delta, converter);
-          preview.delta = delta;
+          var method = methodComparison(key, methodOf(last.assessment), methodOf(record(current.assessment) ? current.assessment : null));
+          if (method === 'different') preview.delta = { available: false, reason: 'method_mismatch', text: formatDelta({ available: false, reason: 'method_mismatch' }) };
+          else {
+            var delta = { available: true, value: roundSignificant(preview.value - last.value, precision), unit: to, days: null, methodChecked: method === 'same', precision: precision };
+            if (Math.abs(delta.value) < 1e-12) delta.value = 0;
+            delta.text = formatDelta(delta, converter);
+            preview.delta = delta;
+          }
         }
       }
     }
@@ -399,11 +440,13 @@
    */
   function buildHistoryView(seriesList, options) {
     options = Object.assign({ categoryFilter: ['wynik-badania'], panels: HISTORY_PANELS }, options || {});
-    var converter = options.converter, notesById = record(options.notesById) ? options.notesById : null;
+    // Bez notatek nie da się ustalić kategorii, daty badania ani komentarza — błąd wołającego, nie pusty widok.
+    if (!record(options.notesById)) throw new TypeError('VildaLabHistory.buildHistoryView: wymagane notesById (listPatientNotesForPatient).');
+    var converter = options.converter, notesById = options.notesById, missingNotes = 0;
     var filter = Array.isArray(options.categoryFilter) ? options.categoryFilter : ['wynik-badania'];
     var nowISO = isoDate(options.nowISO);
     var ctx = Object.assign({}, options, { nowDay: nowISO ? dayNumber(nowISO) : null });
-    var accepted = function (note) { return !notesById || !!note && filter.indexOf(noteCategory(note)) !== -1; };
+    var accepted = function (note) { return !!note && filter.indexOf(noteCategory(note)) !== -1; };
     var byKey = {}, order = [], seen = {};
     function seriesFor(key, test) {
       if (!own(byKey, key)) {
@@ -417,8 +460,10 @@
       if (!record(raw) || !text(raw.testKey)) return;
       (Array.isArray(raw.points) ? raw.points : []).forEach(function (point) {
         if (!record(point)) return;
-        var note = notesById && point.noteId ? notesById[point.noteId] : null;
+        var note = point.noteId && own(notesById, point.noteId) ? notesById[point.noteId] : null;
         if (point.noteId) seen[point.noteId] = true;
+        // Punkt bez notatki (odczyt z innej chwili niż notatki) nie znika po cichu: liczy się w podsumowaniu.
+        if (!note) { missingNotes++; return; }
         if (!accepted(note)) return;
         var entry = entryFromPoint(point, note);
         if (entry) seriesFor(text(raw.testKey), raw.test).entries.push(entry);
@@ -429,13 +474,13 @@
     if (converter && typeof converter.list === 'function') {
       try { labels = (converter.list() || []).map(function (item) { return { id: item.id, label: text(item.label) }; }); } catch (_) { labels = []; }
     }
-    Object.keys(notesById || {}).forEach(function (id) {
+    Object.keys(notesById).forEach(function (id) {
       var note = notesById[id];
       if (!record(note) || seen[note.id || id] || !accepted(note)) return;
       var lab = record(note.labResult) ? note.labResult : null;
       if (lab && text(lab.value) && !finite(lab.valueNum) && !own(lab, 'assessment')) {
-        var key = text(lab.testKey) || seriesSlug(lab.test);
-        if (key) seriesFor(key, lab.test).entries.push(textEntry(Object.assign({ id: id }, note)));
+        var key = text(lab.testKey) || labelKey(lab.test, labels) || seriesSlug(lab.test);
+        if (key) seriesFor(key, lab.test).entries.push(textEntry(Object.assign({ id: id }, note), nowISO));
         return;
       }
       if (isPending(note)) {
@@ -480,7 +525,7 @@
     });
     var currentKey = record(options.current) ? text(options.current.testKey) : '';
     return {
-      summary: { results: resultCount, analytes: views.filter(function (view) { return view.entries.length; }).length, lastDateISO: lastDateISO, pending: pending.length },
+      summary: { results: resultCount, analytes: views.filter(function (view) { return view.entries.length; }).length, lastDateISO: lastDateISO, pending: pending.length, missingNotes: missingNotes },
       panels: panels, pending: pending, treatment: treatmentRows,
       preview: previewView(options.current, currentKey && own(viewByKey, currentKey) ? viewByKey[currentKey] : null, ctx)
     };

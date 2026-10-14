@@ -174,8 +174,10 @@ silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
 
 **Reguły:**
 
-- Zakres: notatki „wynik-badania” według reguły karty pacjenta; klirens
-  i notatka z lekiem są poza historią (decyzja 6.13).
+- Zakres: notatki „wynik-badania” według reguły kategorii karty pacjenta
+  (`Yr`): klirens poza historią (decyzja 6.13), notatka z lekiem należy do
+  leczenia. Wołający musi podać notatki (`notesById`); punkt serii bez
+  notatki nie znika po cichu, tylko liczy się w `summary.missingNotes`.
 - Rodzaje wpisów: dokładny; legacy (liczba odczytana z tekstu, przypis †);
   cenzorowany (wynik z operatorem: surowy zapis, bez liczby i bez zera);
   ocena nieaktualna; ocena niedostępna; tekst (ręczny wpis bez liczby, np.
@@ -187,9 +189,13 @@ silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
   Jednostka wyświetlania: z formularza przelicznika, inaczej jednostka
   ostatniego po dacie wyniku liczbowego. Jednostki, której konwerter nie
   zna, model nie przelicza: wartość w oryginale, poza wykresem i różnicą.
-- Data: data badania (`clinicalDateISO`). Wpis bez niej ma „datę wpisu”:
+  W serii spoza konwertera wynik bez jednostki porównuje się z innymi tylko
+  wtedy, gdy żaden wynik serii nie ma jednostki.
+- Data: data badania (`clinicalDateISO`). Bez niej wpis ma termin zlecenia
+  (gdy sejf wziął datę z terminu, który minął) albo datę wpisu; taki wpis
   nie jest ostatnim ani poprzednim wynikiem, nie wchodzi do różnicy ani na
-  wykres (oś wykresu to data badania).
+  wykres (oś wykresu to data badania). Poprzedni wynik to ostatni z datą
+  badania wcześniejszą niż ostatni wynik, nie wynik z tego samego dnia.
 - Strzałka ↑/↓ wyłącznie z zapisu: z normy tekstowej wpisu, gdy tekst jest
   jednym zakresem „lo–hi [jednostka]”, jednostka normy (jeśli podana) równa
   się jednostce wyniku, wynik nie był przeliczany i nie ma koperty oceny.
@@ -197,7 +203,10 @@ silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
   w zakresie nie ma strzałki ani pigułki. Punkt przeliczony nie ma strzałki
   (decyzja 6.2); wpis bez normy jest neutralny (decyzja 6.1). Na wykres
   norma trafia tylko w zakresie przyjętym przez model, więc `mi()` nie
-  odczyta luźno tekstu wielozakresowego.
+  odczyta luźno tekstu wielozakresowego. Punkt wykresu niesie wartość bez
+  zaokrąglenia, więc `mi()` porówna z normą tę samą liczbę co model;
+  wyniki z datą badania, które nie są liczbą (np. „<0,02”), model podaje
+  jako przerwy (`chart.gaps`), żeby renderer nie prowadził linii przez nie.
 - Zapisana ocena LH/FSH/inhibiny B: pigułka cytuje dosłownie tytuł
   podsumowania koperty (`summary.title`), a przy ostrzeżeniu klinicznym
   (`clinical.status = "warning"`) tytuł ostrzeżenia, w tonie ostrzegawczym.
@@ -208,19 +217,27 @@ silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
   w jednostce wyświetlania, z wartości zaokrąglonych do wyświetlanych cyfr
   znaczących (15,4 → 17 = +1,6, nie +1,556); liczba ze znakiem i liczba dni,
   bez procentu, koloru i progu (decyzja 6.10). Bez różnicy: ten sam dzień,
-  wpis niedokładny lub legacy, różna metoda albo materiał w kopertach
-  LH/FSH/inhibiny B („— · różne metody oznaczenia”). Gdy metody nie da się
-  porównać, seria dostaje stopkę o możliwej innej metodzie. Bieżący wynik:
-  różnica bez liczby dni, bo datę próbki podaje dopiero okno przypięcia.
-- Wynik oczekujący: notatka bez wartości, niezakończona i bez niestawienia;
-  badanie przypisane tylko po `testKey` albo po tytule „Wynik: …” równym
-  dokładnie jednej etykiecie konwertera.
+  wpis niedokładny lub legacy, różna metoda albo materiał w dwóch kopertach
+  LH/FSH/inhibiny B ze znaną metodą („— · różne metody oznaczenia”). Metoda
+  nieznana (brak identyfikatora, potwierdzenie „unknown”, materiał nieznany
+  lub inny) nie jest „tą samą metodą”: różnica zostaje, a seria dostaje
+  stopkę o możliwej innej metodzie. Bieżący wynik: różnica bez liczby dni,
+  bo datę próbki podaje dopiero okno przypięcia; przy kopercie bieżącej
+  oceny obowiązuje ta sama reguła metody.
+- Wynik oczekujący: zlecenie z Terminarza (termin albo liczba dni do
+  kontroli) bez wartości, niezakończone i bez niestawienia. Notatka
+  „Badanie” bez wartości i bez terminu to opis, nie zlecenie. Badanie
+  przypisane tylko po `testKey` albo po tytule „Wynik: …” równym dokładnie
+  jednej etykiecie konwertera.
 - Panele jako dane (`HISTORY_PANELS`): Tarczyca; Oś gonadalna (z progesteronem);
   Oś GH–IGF-1; Inne (prolaktyna, badania spoza konwertera). Pusty panel
   ukryty (decyzja 6.5).
-- Wpis tekstowy nie trafia do serii sejfu, więc model nadaje mu klucz serii
-  tak jak sejf (`testKey` albo skrót nazwy badania); zgodność z sejfem
-  sprawdza test na prawdziwym sejfie.
+- Wpis tekstowy nie trafia do serii sejfu, więc model nadaje mu klucz:
+  `testKey`, potem identyfikator konwertera o dokładnie tej etykiecie (tak
+  robi edytor karty, który przy wartości nieliczbowej nie zapisuje
+  `testKey`), na końcu skrót nazwy jak w sejfie. Dzięki temu „<10 pg/mL”
+  wybrane z listy jako „Inhibina B” stoi w serii inhibiny B, a nie
+  w „Inne”. Zgodność z sejfem sprawdza test na prawdziwym sejfie.
 
 **Odstępstwo od planu, do decyzji właściciela:** plan 3.1 (a) każe cytować
 `clinical.title`, gdy `summary.status = "attention"`. Na prawdziwej kopercie
@@ -248,12 +265,14 @@ są identyczne.
 - Ręczny wpis LH „<0,02 IU/L” bez oceny → wiersz tekstowy w serii LH,
   nie wynik oczekujący.
 
-**Testy:** `tests/unit/lab-history-view.test.mjs` (24 przypadki: prawdziwy
+**Testy:** `tests/unit/lab-history-view.test.mjs` (32 przypadki: prawdziwy
 konwerter i plik danych jednostek, prawdziwe koperty LH z osobnego okna,
 `Dl` wycięte z `vilda_auth_ui.js`) i `tests/unit/lab-history-vault.test.mjs`
 (prawdziwy sejf: zapis notatek, serie, notatki i okresy leczenia →
 `buildHistoryView`; szpieg na `evaluate`, pułapka na silnik pokwitania,
-zgodność klucza serii z sejfem, unieważnienie oceny przez zmianę daty).
+zgodność klucza serii z sejfem, wynik tekstowy „Inhibina B” bez `testKey`,
+unieważnienie oceny przez zmianę daty). Osiem przypadków dopisano po
+niezależnym przeglądzie modelu; na wersji sprzed poprawek padają.
 Zielone testy nie są walidacją kliniczną.
 
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13

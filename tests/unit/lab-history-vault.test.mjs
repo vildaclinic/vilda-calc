@@ -71,7 +71,7 @@ describe('LAB-HISTORIA — model na prawdziwym sejfie', () => {
     const v = await view(dev, { nowISO: '2026-10-14' });
     expect(evaluate).not.toHaveBeenCalled();
     expect(v.panels.map((panel) => [panel.id, panel.series.map((s) => s.key)])).toEqual([['thyroid', ['tsh', 'ft4']], ['gonadal', ['lh']]]);
-    expect(v.summary).toEqual({ results: 7, analytes: 3, lastDateISO: '2026-09-12', pending: 1 });
+    expect(v.summary).toEqual({ results: 7, analytes: 3, lastDateISO: '2026-09-12', pending: 1, missingNotes: 0 });
 
     const tsh = seriesView(v, 'tsh');
     expect(tsh).toMatchObject({ unit: 'μIU/mL', label: 'TSH (tyreotropina)', daysSinceLast: 32 });
@@ -84,6 +84,7 @@ describe('LAB-HISTORIA — model na prawdziwym sejfie', () => {
     expect(ft4.unit).toBe('pmol/L');
     expect(ft4.entries[0]).toMatchObject({ converted: true, value: 15.4, flag: null, display: '15,4 pmol/L' });
     expect(ft4.chart.points[0]).toMatchObject({ conv: true, norm: null });
+    expect(ft4.chart.points[0].v).toBeCloseTo(15.444, 10);
 
     const lh = seriesView(v, 'lh');
     expect(lh.entries.map((e) => e.kind)).toEqual(['exact', 'text', 'censored']);
@@ -105,6 +106,16 @@ describe('LAB-HISTORIA — model na prawdziwym sejfie', () => {
     expect(vaultSeries.map((s) => s.testKey)).toEqual(['zelazo']);
     const other = seriesView(await view(dev), 'zelazo');
     expect(other.entries.map((e) => [e.kind, e.noteId === text.id])).toEqual([['exact', false], ['text', true]]);
+  });
+
+  it('wynik tekstowy wybrany z listy edytora („Inhibina B”, bez testKey) stoi w tej samej serii co liczbowy z kluczem', async () => {
+    const dev = await card();
+    const save = (fields) => dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania', title: 'Fikcyjny wynik', ...fields });
+    await save({ clinicalDateISO: '2026-03-12', labResult: { test: 'Inhibina B', testKey: 'inhibin_b', value: '85 pg/mL', valueNum: 85, unit: 'pg/mL' } });
+    const text = await save({ clinicalDateISO: '2026-09-12', labResult: { test: 'Inhibina B', value: '<10 pg/mL' } });
+    const v = await view(dev);
+    expect(v.panels.map((panel) => [panel.id, panel.series.map((s) => s.key)])).toEqual([['gonadal', ['inhibin_b']]]);
+    expect(seriesView(v, 'inhibin_b').last).toMatchObject({ noteId: text.id, kind: 'text', display: '<10 pg/mL' });
   });
 
   it('ocena unieważniona przez zmianę daty w sejfie: ostatni wynik zostaje ostatnim, bez punktu i bez różnicy', async () => {
