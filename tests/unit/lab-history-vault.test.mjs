@@ -118,6 +118,17 @@ describe('LAB-HISTORIA — model na prawdziwym sejfie', () => {
     expect(seriesView(v, 'inhibin_b').last).toMatchObject({ noteId: text.id, kind: 'text', display: '<10 pg/mL' });
   });
 
+  it('starszy wpis bez valueNum i bez jednostki w tekście: pełna liczba w historii i na wykresie (P-LAB-WARTOSC-BEZ-JEDNOSTKI)', async () => {
+    const dev = await card();
+    const save = (fields) => dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania', title: 'Fikcyjny wynik', ...fields });
+    await save({ clinicalDateISO: '2026-06-10', labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '4,2', valueNum: 4.2, unit: 'mIU/L' } });
+    const legacy = await save({ clinicalDateISO: '2026-09-12', labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '15', unit: 'mIU/L' } });
+    const tsh = seriesView(await view(dev), 'tsh');
+    expect(tsh.entries.map((e) => [e.kind, e.value])).toEqual([['exact', 4.2], ['legacy', 15]]);   // przed łatką: ['legacy', 1]
+    expect(tsh.last).toMatchObject({ noteId: legacy.id, display: '15\u00a0mIU/L' });
+    expect(tsh.chart.points.map((p) => p.v)).toEqual([4.2, 15]);
+  });
+
   it('ocena unieważniona przez zmianę daty w sejfie: ostatni wynik zostaje ostatnim, bez punktu i bez różnicy', async () => {
     const dev = await card();
     await dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania', title: 'Fikcyjne LH', clinicalDateISO: '2026-06-01', labResult: lhLab('2', '2026-06-01') });

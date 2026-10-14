@@ -900,6 +900,24 @@ Druga: znacznik pokolenia na kontenerze w `Kl()` (nakładki na siatki, kontener 
 //             czyli po `} catch { z = null }`, przed listą .vilda-patient-timeline-list: ten sam warunek
 ```
 
+## Łatka P-LAB-WARTOSC-BEZ-JEDNOSTKI (`vilda_vault.js` 211 → 212, 2026-10-14)
+
+Zmiana wprost w artefakcie: funkcja `vo()`, która w `listPatientLabSeries` (w artefakcie `Po()`) czyta liczbę i jednostkę z tekstu `labResult.value` notatki bez `valueNum` (punkt `legacy: true`). W artefakcie stoi teraz w czytelnej postaci z komentarzem, tuż przed `Cr()`. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-LAB-WARTOSC-BEZ-JEDNOSTKI.
+
+```js
+// było: var e = /^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/.exec(String(t || ""));   // „15” → 1 i „5”
+//       … return { num: n, unit: e[2] };
+function vo(t) {
+  var tekst = String(t || "");
+  var liczba = /^\s*(\d+(?:[.,]\d+)?)/.exec(tekst);                     // zachłannie: cała liczba, bez cofania
+  if (!liczba) return null;
+  var n = parseFloat(liczba[1].replace(",", "."));
+  if (!isFinite(n) || n < 0) return null;
+  var jednostka = /^\s*([^\s=]*)/.exec(tekst.slice(liczba[0].length))[1];   // może być pusta
+  return { num: n, unit: jednostka || null };                              // Po(): unit = lab.unit || parsed.unit (bez zmian)
+}
+```
+
 ## Jak odtworzyć
 
 ```bash

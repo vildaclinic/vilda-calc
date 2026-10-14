@@ -275,6 +275,79 @@ unieważnienie oceny przez zmianę daty). Osiem przypadków dopisano po
 niezależnym przeglądzie modelu; na wersji sprzed poprawek padają.
 Zielone testy nie są walidacją kliniczną.
 
+### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
+
+**Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla
+starszych i importowanych notatek, które mają tylko tekst `labResult.value`
+(bez `valueNum` i bez koperty oceny), gdy w tym tekście za liczbą nie ma
+jednostki. Nie ma nowych norm, współczynników, progów, jednostek ani
+zaokrągleń. Źródło medyczne: nie dotyczy (poprawka odczytu zapisanej
+wartości). Błąd zgłoszono przy PR1 planu `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`
+(„poza zakresem PR1”).
+
+**Problem:** `listPatientLabSeries` (w artefakcie `Po()`) czyta liczbę
+takich wpisów funkcją `vo()` i oznacza punkt `legacy: true`. Dawne wyrażenie
+`/^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/` wymagało co najmniej jednego znaku
+jednostki, więc przy wartości bez jednostki cofało się w cyfrach: „15” → 1
+z jednostką „5”, „25,5” → 25 z jednostką „,5”, „15 = …” → 1 z „5”. Wartość
+jednocyfrowa („5”) w ogóle nie trafiała do serii. Gdy jednostka była zapisana
+osobno (`lab.unit`), punkt miał wiarygodnie wyglądającą, ale błędną wartość:
+„15” z `mIU/L` → 1 mIU/L. Błędna liczba trafiała do „Trendu wyników”
+w Historii karty, nakładek na siatkach centylowych, eksportu siatek do PDF
+i do modelu historii `vilda_lab_history.js` (wiersz legacy i punkt wykresu).
+Strzałki z normy wpisu i z dzisiejszego zakresu przelicznika liczyły się
+z tej błędnej liczby.
+
+**Zmiana:** liczba jest czytana osobno i w całości (`^\s*(\d+(?:[.,]\d+)?)`),
+a jednostka to tekst tuż za nią do spacji albo „=”, także pusty. Brak
+jednostki → `null`, jak w punkcie serii z pustym `lab.unit`; `Po()` jak
+dotąd bierze wtedy jednostkę z `lab.unit`, jeśli jest. Notatka w sejfie się
+nie zmienia, liczba powstaje przy odczycie serii.
+
+**Co się nie zmienia:** każda wartość, z której dawne wyrażenie odczytało
+jednostkę bez cofania się w cyfrach, daje ten sam wynik: „1,5 IU/L” → 1,5
+i „IU/L”, „1,2 ng/dL = 15,44 pmol/L” → 1,2 i „ng/dL”, także jednostka
+zaczynająca się cyfrą po spacji: „5,2 10^9/L” → 5,2 i „10^9/L”. Wynik
+z operatorem bez oceny („<0,02”) nadal nie trafia do serii. Wpisy
+z `valueNum` i wpisy z kopertą oceny (LH/FSH, inhibina B, AMH) nie
+przechodzą przez `vo()`. Tekst niejednoznaczny, np. „1 000 IU/L” z odstępem
+tysięcy, daje jak dotąd pierwszą grupę cyfr.
+
+Odstępstwo od sugestii zlecenia: proponowany warunek „jednostka nie zaczyna
+się cyfrą ani przecinkiem/kropką” zmieniłby „5,2 10^9/L” na 5,2 bez
+jednostki. Czytanie liczby osobno usuwa samo cofanie się i zostawia ten
+przypadek bez zmian.
+
+**Populacja, jednostki i ograniczenia:** wszyscy pacjenci i wszystkie
+badania zapisane jako notatka z `labResult.value` bez `valueNum` i bez
+koperty oceny. Do serii trafiają teraz także wpisy jednocyfrowe bez
+jednostki, w tym „0”. Punkt bez jednostki (ani w tekście, ani w `lab.unit`)
+ma `unit: null`: trend rysuje go tylko w serii, w której najczęstszy jest
+brak jednostki, inaczej liczy go w „pominięto”, jak każdy punkt bez
+jednostki. Model historii porównuje go z innymi tylko wtedy, gdy żaden
+wynik serii nie ma jednostki (reguła LAB-HISTORIA).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`** (notatka TSH bez `valueNum`):
+
+- „15” → 15, bez jednostki (przed łatką: 1 z jednostką „5”).
+- „25,5” → 25,5, bez jednostki (przed: 25 z „,5”).
+- „5” → 5, bez jednostki (przed: brak punktu).
+- „15” z `unit: "mIU/L"` → 15 mIU/L (przed: 1 mIU/L). W modelu historii,
+  obok wyniku dokładnego 4,2 mIU/L: wiersz legacy „15 mIU/L” i punkty
+  wykresu 4,2 i 15.
+- „1,5 mIU/L” → 1,5 mIU/L; Leukocyty „5,2 10^9/L” → 5,2 i „10^9/L”;
+  „<0,02” → brak punktu (wszystkie bez zmian).
+
+**Testy:** `tests/unit/lab-snapshot-vault.test.mjs` — prawdziwy sejf
+(szyfrowanie, zapis notatek, `listPatientLabSeries`) z przypadkami wyżej
+oraz `vo()` wycięta z artefaktu: na wszystkich napisach do 5 znaków
+z alfabetu `1 5 0 , . = m / <` i spacji wynik z jednostką jest równy wynikowi
+dawnego wyrażenia, a różni się tylko tam, gdzie dawne wyrażenie dzieliło
+liczbę albo nie dawało punktu. `tests/unit/lab-history-vault.test.mjs` — ten
+sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
+łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
+zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
+
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 
 **Wpływ kliniczny: tak.** Pierwszy krok po przeglądzie dostępności median
