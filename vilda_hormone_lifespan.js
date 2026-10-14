@@ -1259,6 +1259,7 @@
         "reference-unavailable": "W tym wieku źródło nie pozwala wiarygodnie nanieść wyniku.",
         "incompatible-specimen": "Wartość odniesienia nie dotyczy materiału tej próbki.",
         "incompatible-assay": "Brak wartości odniesienia dla potwierdzonej metody tej próbki.",
+        "incompatible-reproductive-context": "Ta mediana dotyczy kobiet nieciężarnych z regularnymi cyklami.",
         "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
         "missing-puberty-stage": "To odniesienie dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
@@ -1613,7 +1614,7 @@
         links.push({ label: "Ljubicic 2022 · mediany pozostałych hormonów", url: infant.source.url },
           { label: "Suplement GAMLSS · CC BY 4.0", url: "https://doi.org/10.6084/m9.figshare.19469555.v1" });
         if (view !== "mini" && selected.has("amh")) {
-          paragraph("AMH po niemowlęctwie: mediany grup wieku Jopling 2018 i FDA K170524, Access AMH, osocze. Grupy pediatryczne są niewielkie i szpitalne, dorosłe wybrano według regularnych cykli i płodności. Niemowlęctwo dotyczy surowicy; nie przeliczamy materiałów. Połączenia i końcowy spadek po 45 latach są poglądowe, bez nowych stężeń i wieku biologicznego maksimum.");
+          paragraph("Linia AMH po niemowlęctwie opiera się na osoczowych medianach grup wieku Jopling 2018 i FDA K170524, Access AMH. Dorosły punkt odniesienia korzysta z osobnej tabeli surowicy FDA; nie przeliczamy materiałów. Grupy pediatryczne są niewielkie i szpitalne, dorosłe wybrano według regularnych cykli i płodności. Niemowlęctwo dotyczy surowicy; nie przeliczamy materiałów. Połączenia i końcowy spadek po 45 latach są poglądowe, bez nowych stężeń i wieku biologicznego maksimum.");
           links.push({ label: "Jopling 2018 · AMH", url: "https://doi.org/10.1002/edm2.21" },
             { label: "FDA · Access AMH", url: "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf" },
             { label: "Sowers 2008 · przejście menopauzalne", url: "https://doi.org/10.1210/jc.2008-0567" });
@@ -3267,7 +3268,7 @@
           }
           if (selected.has("amh")) {
             paragraph(
-              "AMH: mediany grup wieku Jopling 2018 i FDA K170524, oznaczenie Access, po niemowlęctwie osocze. Badanie niemowlęce dotyczy surowicy; nie stosujemy niezweryfikowanego przelicznika między materiałami. Grupy pediatryczne są niewielkie i szpitalne, dorosłe wybrano według regularnych cykli i płodności. Po niemowlęctwie pokazujemy łagodne wypłaszczenie i stopniowy wzrost. Nie wymuszamy szybkiego odbicia do mediany szerokiej grupy 1–4,9 lat. Ten fragment jest schematem, bez przypisania wieku minimum. Dalszy przebieg pomija niepewne ząbki między grupami i pokazuje szerokie maksimum w młodej dorosłości, bez szczytu przypisanego do 28. roku życia. Po grupie 41–45 lat pokazujemy wyłącznie jakościowy spadek, bez wymyślonych stężeń.",
+              "Linia AMH: mediany grup wieku Jopling 2018 i FDA K170524, oznaczenie Access, po niemowlęctwie osocze. Dorosły punkt odniesienia korzysta z osobnej tabeli surowicy FDA. Badanie niemowlęce dotyczy surowicy; nie stosujemy niezweryfikowanego przelicznika między materiałami. Grupy pediatryczne są niewielkie i szpitalne, dorosłe wybrano według regularnych cykli i płodności. Po niemowlęctwie pokazujemy łagodne wypłaszczenie i stopniowy wzrost. Nie wymuszamy szybkiego odbicia do mediany szerokiej grupy 1–4,9 lat. Ten fragment jest schematem, bez przypisania wieku minimum. Dalszy przebieg pomija niepewne ząbki między grupami i pokazuje szerokie maksimum w młodej dorosłości, bez szczytu przypisanego do 28. roku życia. Po grupie 41–45 lat pokazujemy wyłącznie jakościowy spadek, bez wymyślonych stężeń.",
             );
             links.push(
               ["Jopling 2018 · AMH dzieci", "https://doi.org/10.1002/edm2.21"],
@@ -3556,6 +3557,7 @@
         measurement: next.measurement ? { ...next.measurement } : null,
         displayUnit: next.displayUnit,
         contraindicated: next.contraindicated === true,
+        cyclePhase: next.cyclePhase,
         puberty: next.puberty && typeof next.puberty === "object"
           ? { kind: next.puberty.kind, stage: next.puberty.stage } : null,
         assayMethodId: next.assayMethodId,

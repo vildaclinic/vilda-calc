@@ -181,7 +181,9 @@ Ta naprawa zwykłych widoków nie obejmuje odrębnego porównania płci.
   jakościowe, bez koncentracji, LOD lub dokładnego wieku menopauzy.
 - Przypadek kontrolny: dziewczynka donoszona 0,25 roku, wynik 10 pmol/L
   → mediana 16,999 pmol/L; 200 pmol/L → strzałka, ta sama linia i mediana.
-  Wiek 19,668 roku → brak wymyślonego odniesienia liczbowego. Prawidłowe
+  Historyczny brak odniesienia w wieku 19,668 roku uzupełniają odrębne
+  mediany surowicy FDA 18–<46 lat z 13.10.2026, opisane w kontrakcie punktu;
+  mediana grupy pozostaje niezależna od osoczowej ilustracji. Prawidłowe
   projekcje porównuj geometrycznie z tolerancją zaokrąglenia SVG, nie
   przez oczekiwanie identycznego tekstu ścieżek między różnymi osiami.
 
@@ -281,7 +283,7 @@ o ograniczeniach i bez nowych pól. Nie zmienia to norm laboratoryjnych,
   `[5,8)`, `[8,12)`, `[12,15)`, `[15,18)`; zachowaj oryginalne etykiety
   grup i liczebności. To jawna konwencja dopasowania, nie odzyskana
   reguła autora ani nowa ciągła mediana wieku. Ograniczenie do <18 lat
-  jest konserwatywną polityką pediatryczną. FDA nie jest aktywowane.
+  jest konserwatywną polityką pediatryczną. FDA dodano w osobnej partii dorosłych.
 - Dokładnie 1 rok zachowuje Ljubicic. Nieprecyzyjny wiek obejmujący
   tę granicę lub dwie grupy Jopling nie otrzymuje arbitralnej mediany;
   wystarczy krótki powód. Nie wymagaj nowych danych o stadium lub cyklu.

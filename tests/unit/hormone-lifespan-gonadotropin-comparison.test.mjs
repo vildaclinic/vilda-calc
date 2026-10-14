@@ -34,9 +34,13 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
     const laterMaleIds = JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/male-amh-reference-policy.json', import.meta.url), 'utf8'))
       .profiles.map(p => p.id);
+    const laterFemaleIds = JSON.parse(readFileSync(new URL(
+      '../../docs/clinical/hormone-lifespan/female-adult-amh-reference-policy.json', import.meta.url), 'utf8'))
+      .profiles.map(p => p.id);
     const original = { ...data.patientPointData, version: '2026-10-13.2',
-      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id)) };
+      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id)) };
     expect(laterMaleIds).toHaveLength(3);
+    expect(laterFemaleIds).toHaveLength(5);
     expect(original.profiles).toHaveLength(66);
     expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
     expect(digest(data.femaleGonadotropinData)).toBe('16f3df99ba8518e5145091abedda0b74cb33ef9db5ea7f3f108f1052ac0b8148');

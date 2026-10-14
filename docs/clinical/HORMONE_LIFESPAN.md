@@ -328,7 +328,7 @@ są jakościowe, bez liczbowych odniesień, LOD lub ustalonego wieku menopauzy.
 Źródła pozostają te same: mediana GAMLSS Ljubicic 2022 (98 donoszonych
 dziewczynek, 266 próbek surowicy, Access 2), mediany niewielkich szpitalnych
 grup Jopling 2018 (osocze litowo-heparynowe, Access AMH) oraz mediany
-osocza FDA K170524 (620 kobiet z regularnymi cyklami i potwierdzoną
+osocza FDA K170524 (620 próbek w tabeli, kobiety z regularnymi cyklami i potwierdzoną
 płodnością, Access 2). Sowers 2008 wspiera jakościowy spadek wokół
 ostatniej miesiączki. Połączenie nie harmonizuje surowicy, osocza ani
 populacji i nie tworzy jednego zwalidowanego modelu życia.
@@ -342,7 +342,8 @@ kontrakty. Laboratoryjne normy, wyniki, jednostki wejściowe i zapis
 pacjenta pozostają bez zmian.
 
 Powyższy zakres historycznej naprawy rozszerza sekcja odniesień
-z 13 października poniżej: Jopling działa po 1. i przed 18. urodzinami.
+z 13 października poniżej: Jopling działa po 1. i przed 18. urodzinami,
+a osobne mediany surowicy FDA od 18 do <46 lat. Nie zmieniają linii osocza.
 
 Przypadki syntetyczne: dziewczynka donoszona, 0,25 roku, AMH
 10 pmol/L → mediana 16,999 pmol/L, oba znaczniki na stałej skali 28,99;
@@ -485,7 +486,7 @@ konwencją aplikacji dla sąsiednich grup tabeli, bez sztucznych przerw
 4,9–5 itd. Oryginalne etykiety, N i mediany pozostają zachowane.
 Źródło podaje wiek w dniach i ogólny zakres do 18 lat, ale nie regułę
 zaokrągleń ani rzeczywisty najstarszy wiek; cap <18 jest konserwatywną
-polityką tej partii. FDA dla dorosłych pozostaje poza aktywnymi profilami.
+polityką tej partii. FDA dla dorosłych dodano w osobnej partii opisanej niżej.
 Dokładnie 1 rok nadal korzysta z Ljubicic. Przedział wieku przecinający
 granicę źródeł lub grup otrzymuje krótki powód braku jednej mediany.
 
@@ -516,6 +517,29 @@ go na surowicę. Liczba poniżej mediany nie nadaje statusu „poniżej normy”
 Przypadki, szczegóły granic i źródła:
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026)
 i [przegląd źródłowy](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
+
+### Mediany AMH dorosłych kobiet — 13 października 2026
+
+Zwykły widok dodaje jasny znacznik „Mediana grupy” z tabeli **surowicy**
+FDA K170524 (PDF str. 14/wewn. 10), Access AMH/Access 2. Pięć grup ma
+mediany 25,7/27,27/17,64/12,21/3,86 pmol/L. Aplikacja jawnie interpretuje
+etykiety 18–25/26–30/31–35/36–40/41–45 jako ukończone lata; odniesienie
+obejmuje `[18,46)`, o ile cały możliwy wiek mieści się w jednej grupie.
+To mediana grupy kobiet nieciężarnych, z regularnymi cyklami i udowodnioną
+płodnością, nie ocena płodności aktualnej pacjentki ani norma laboratoryjna.
+
+Istniejąca linia dorosłości i kotwica skali 28,99 pmol/L pochodzą
+z odrębnej tabeli **osocza** i pozostają bez zmian. Jasnego znacznika
+surowicy nie przesuwamy do tej ilustracji. Dla F28/1 ng/mL odniesienie
+wynosi 27,27 pmol/L ≈3,82 ng/mL; dotychczasowy przelicznik 0,1401
+jest zachowany. Nie zmieniamy krzywych, zbliżeń ani porównań płci.
+
+Nieznana metoda, materiał lub cykl pozwalają na edukacyjne porównanie
+z krótkim opisem źródła. Znana niezgodność, ciąża lub stan po menopauzie
+blokują te nowe profile; wcześniejsze blokady, w tym GnRHa, pozostają.
+Nie dodajemy pól, norm FDA, progów płodności, interpretacji z mediany
+ani Xu 2026. Szczegóły populacji, granic, N i niezależnego zaokrąglenia
+jednostek: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026).
 
 ### Stała linia męskiego AMH
 
@@ -1062,7 +1086,7 @@ Są to różne populacje i oznaczenia, nie jeden model całego życia.
 | LH, FSH, AMH, inhibina B, E2: 0,02–1 roku | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [suplement tabela 1](https://doi.org/10.6084/m9.figshare.19469555.v1), CC BY 4.0 | 98 donoszonych dziewczynek, 266 próbek surowicy. Mediany GAMLSS, po 99 punktów; pierwszy około 7,3 dnia, bez ekstrapolacji do urodzenia. AutoDELFIA dla LH/FSH, Access 2 dla AMH, Gen II ELISA dla inhibiny B, LC-MS/MS dla E2. Nie są to średnie z ryc. 3. |
 | LH/FSH po niemowlęctwie | [Ljubicic 2020](https://doi.org/10.1093/humrep/deaa182), tabela I | AutoDELFIA; 3273 kobiety w zdrowej części badania. Rodzaj centralnej statystyki tabeli nie jest określony: `value`, nie potwierdzona mediana. Grupa 20–<40 lat ma tylko 17 kobiet; obserwacje kończą się na 80 latach mimo etykiety 70–100. Faza cyklu nie jest ustalana z wieku. |
 | AMH: dzieciństwo/pokwitanie | [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1 | Access AMH, osocze litowo-heparynowe; małe szpitalne grupy wieku, wykluczone DSD/endokrynopatie. Mediany grup nie wyznaczają dokładnych szczytów ani dołków. Brak przelicznika surowica–osocze. |
-| AMH: dorośli | [FDA K170524](https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf), Expected Reference Intervals, str. PDF 15 (wewn. 11), osocze | Access 2, 620 nieciężarnych kobiet, regularne cykle i potwierdzona płodność. Wybrano mediany osocza; tabela surowicy jest oddzielna. Ostatnia grupa 41–45 lat; nie ma liczbowej ekstrapolacji do starości. |
+| AMH: dorośli | [FDA K170524](https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf), Expected Reference Intervals, str. PDF 15 (wewn. 11), osocze | Access 2, 620 próbek w tabeli; nieciężarne kobiety, regularne cykle i potwierdzona płodność. Ilustracja zachowuje mediany osocza; osobny znacznik grupowy z 13.10.2026 korzysta z tabeli surowicy. Ostatnia grupa 41–45 lat; nie ma liczbowej ekstrapolacji do starości. |
 | Inhibina B: 5,6–47 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, linia 0 SD | Gen II ELISA, surowica, oryginalnie ng/L = pg/mL. Odtworzenie rastra około ±2 pg/mL; kalibracja pikseli i SHA źródła w ekstrakcie. 149 dorosłych kobiet, bez standaryzacji fazy cyklu. Luka obserwacji 1,08–5,6 lat; nasz most zaczyna się przy 1 roku. Nie dopisujemy stężeń pod LOD 3 pg/mL. |
 | E2: 6–18 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [suplement LMS](https://doi.org/10.6084/m9.figshare.17153336.v1), CC BY 4.0 | BGS2/Fit Futures, LC-MS/MS, różne fazy cyklu, bez użytkowniczek antykoncepcji doustnej. Mediana = `exp(M) / 1e6`, według komórek przykładowych K36/L36, nie samo M. To model przekrojowy, nie trajektoria jednej osoby. |
 | E2: archiwum faz dorosłych | [Frederiksen 2020](https://doi.org/10.1210/clinem/dgz196), suplement tabela 8 | Surowica, izotopowe TurboFlow LC-MS/MS, 24,7–43,9 lat. Mediany 156/254/264 pmol/L dotyczą różnych faz. 156 nie jest średnią całego cyklu i nie ustala linii dorosłości. Podgrupa 303 pmol/L pokrywa się z fazą ≥15 dni; nie jest dodatkową fazą. Rozbieżność liczebności w źródle zachowano. |
