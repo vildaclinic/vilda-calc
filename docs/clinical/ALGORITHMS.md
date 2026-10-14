@@ -4464,7 +4464,74 @@ Skala błędu: produkcyjny `calcPercentileStats`; wartość pomiaru to mediana n
 
 Do tego karta porównania liczy ΔSDS i werdykt odcinka (`statFor`) dla obu punktów w pełnych miesiącach. Bramki tam nie ma, ale nie ma też dnia pomiaru.
 
+*(Uzupełnienie 2026-10-14: punkty 1–4, MPH z punktu 5 oraz krzywe odniesienia wykresów Karty i mini-podsumowanie nieaktualnej ramki domyka P-WIEK-POMIARU-2 niżej. Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania zostają do decyzji.)*
+
 **Wersje.** `app.js` 235, `vilda_auth_ui.js` 488, `vilda_patient_summary_copy.js` 15, `vilda_summary_cards.js` 60; strony i skrypty wstrzykujące (`vilda_chrome.js` 136, `vilda_session_bridge.js` 60); SW 1.1.268 → 1.1.269 (numer 1.1.268 nadał równolegle #670).
+
+### P-WIEK-POMIARU-2 — pozostałe miejsca bramki DOB-AGE-4: punkty GH, walidacja prognozy, wsad, wzrost rodziców na 18 lat, krzywe Karty i nieaktualna ramka (SW 1.1.271, 2026-10-14, polecenie właściciela)
+
+**Polecenie właściciela (2026-10-13).** „Napraw ustalenia poza zakresem w osobnym PR” — ustalenia z P-POROWNANIE-DATA. P-WIEK-POMIARU (wyżej) rozwiązał je w trzech widokach zapisanego pomiaru i wymienił pozostałe miejsca z tą samą bramką jako poza zakresem. Ten wpis je domyka tym samym kontraktem rdzenia: jawny wiek `{wiekMies}` (liczba albo `null` = pełne miesiące).
+
+**Klasyfikacja:** zmiana kliniczna (AGENTS.md § 3). Zmienia hSDS i ΔhSDS punktów GH, `heightSds` punktów walidacji prognozy i SDS masy wierszy wsadu poniżej 36 mies.
+
+**Co było** (zmierzone na `audyt` 41076ff, dane fikcyjne). Te miejsca wołały rdzeń bez obiektu, czyli tak, jakby liczyły dzisiejszy pomiar z formularza. Gdy ich pełne miesiące zgadzały się z formularzem, bramka DOB-AGE-4 podstawiała dokładny wiek dzisiejszej wizyty — także cudzy: w eksporcie kohorty walidacji i w nieaktualnej ramce powłoki formularz należy do innego pacjenta.
+
+| Miejsce | Pomiar (chłopiec) | Formularz | Było | Jest |
+|---|---|---|---|---|
+| monitor GH, Kontynuacja | 10 lat 0 mies., 138 cm | 10 lat 0 mies. 25 dni | hSDS −0,02 | +0,03 (pełne miesiące) |
+| walidacja prognozy, punkt | 10 lat 0 mies., 138 cm | 10 lat 0 mies. 25 dni | hSDS −0,02 | +0,03 |
+| walidacja prognozy, punkt | 3 mies., 61,4 cm (mediana) | 3 mies. 25 dni | hSDS −0,99 | −0,01 |
+| wsad, masa wiersza (mediana na 110. dobę) | 3,61 mies., 6,76 kg | 4 mies. 25 dni | 20,3 c. (z −0,83) | 50,0 c. |
+| wsad, ten sam wiersz bez zgodności z formularzem | 3,61 mies., 6,76 kg | — | 37,8 c. (z −0,31, wiersz 4 mies.) | 50,0 c. |
+| wsad, masa wiersza (mediana na 20. dobę) | 0,66 mies., 4,09 kg | 1 mies. 25 dni | 1,7 c. (z −2,12) | 50,0 c. |
+
+U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym miesiącu życia co dziś, a ΔhSDS od Włączenia przesuwa się o tyle samo. U niemowlęcia — do 1 SD.
+
+**Co jest.**
+- Punkty bez dnia pomiaru liczą się w pełnych miesiącach, podanych jawnie (`{wiekMies:null}`):
+  - monitor GH w DocPro (`gh_therapy_monitor.js`, `r()`): hSDS, Δ od startu i od poprzedniego punktu, hSDS − mpSDS;
+  - żetony hSDS i ΔhSDS sekcji GH Karty pacjenta (`vilda_auth_ui.js`, `ci()`);
+  - walidacja prognozy (`vilda_growth_prediction_validation_model.js`, `hSds()`), także w eksporcie kohorty.
+- Wiersz wsadu XLSX (`vilda_professional_module.js`):
+  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji;
+  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza.
+- Wiek odniesienia, nie pomiar (`{wiekMies:null}`):
+  - wzrost rodziców na 18 lat (MPH): Karta pacjenta (`En(rt,S,18,…)`) oraz karty Startu (`inline_index_04.js`, `inline_index_07.js`);
+  - krzywe odniesienia wykresów Karty pacjenta (`getChildLMS(g,E/12,…)`). Bez tego krzywa niemowlęcia miała załamanie w miesiącu życia dziecka z formularza.
+- Mini-podsumowanie powłoki (`custom-fixes.js`, `A(…, w)`): w nieaktualnej ramce (`Gq5s`, formularz innego pacjenta) pełne miesiące; w aktualnej — formularz, jak dotąd.
+
+**Czego nie zmieniono.**
+- Formularz bieżącej wizyty (DOB-AGE-4) i trzy widoki z P-WIEK-POMIARU.
+- Siatka Palczewskiej we wsadzie i w walidacji: ta ścieżka nie ma bramki i liczy pełne miesiące, jak dotąd.
+- Zapas mpSDS w monitorze GH i w schowku: wzrost docelowy na 18 lat liczony rdzeniem tylko wtedy, gdy nie ma `vildaMpSdsStats`.
+- Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania — do decyzji, jak w P-WIEK-POMIARU.
+- Dane referencyjne, wzory, zapis, synchronizacja.
+
+**Źródło i reguła.** Dane referencyjne bez zmian: WHO 2006, WHO 2007, OLAF/OLA i Palczewska (tabela źródeł wyżej). Reguła wieku pomiaru jak w P-WIEK-POMIARU (DOB-AGE-4, Rata B / KARTA-SCHOWEK-WIEK, P-ODTWORZ-WIEK): pomiar liczy się w wieku z chwili pomiaru, nigdy w dzisiejszym; bez pewnego dnia pomiaru — pełne miesiące z zapisu.
+
+**Populacja, jednostki, ograniczenia.**
+- Dzieci 0–18 lat; wiek w miesiącach (doby / 30,4375), wzrost w cm, masa w kg, SDS bez jednostki.
+- Punkty GH i punkty walidacji nie mają daty pomiaru, więc dokładnego wieku nie da się odtworzyć — zostają pełne miesiące, bez formularza.
+- Wsad: dokładny wiek wiersza tylko z daty urodzenia i daty pomiaru (albo dnia dzisiejszego) z arkusza.
+
+**Przypadki syntetyczne** (wejście → oczekiwany wynik):
+- Monitor GH: Włączenie 9 lat 0 mies., 130 cm; Kontynuacja 10 lat 0 mies., 138 cm; w formularzu ten chłopiec 10 lat 0 mies. 25 dni → hSDS Kontynuacji jak na 120 pełnych miesięcy (+0,03), ΔhSDS od Włączenia z pełnych miesięcy (było −0,02).
+- Walidacja prognozy: punkt 3 mies., 61,4 cm; formularz 3 mies. 25 dni → hSDS −0,01 (było −0,99).
+- Wsad: chłopiec, data pomiaru 110 dni po urodzeniu, masa 6,76 kg (mediana WHO na tę dobę) → SDS masy 0,00, 50. centyl (było 37,8 c., a przy formularzu w 4. mies. 25. dniu — 20,3 c.).
+
+**Testy.**
+- `tests/unit/wiek-pomiaru-pozostale-miejsca.test.mjs` (14):
+  - kontrakt rdzenia na funkcjach wyciętych z `app.js`, prawdziwym silniku wzrostu i tablicach WHO (4);
+  - prawdziwy `gh_therapy_monitor.js` w atrapie `tests/support/gh-monitor-atrapa.mjs` (nowa opcja `calcPercentileStats`: rdzeń dla hSDS) (1);
+  - prawdziwy model walidacji, `_hSds` (2);
+  - strażnicy źródła pozostałych wywołań (6);
+  - zapas wzrostu wsadu tuż po 18. urodzinach: wiek dokładny nie ma siatki, pełne miesiące liczą OLAF (1).
+- Kontrola ujemna na `audyt` 41076ff: 9 z 13 testów pada (monitor GH −0,021 zamiast +0,035; walidacja −0,99 zamiast −0,01 i −0,021 zamiast +0,035; strażnicy). Przechodzą 4 testy kontraktu rdzenia, który dał P-WIEK-POMIARU.
+- Strażnik `tests/unit/sds-cisnienie-i-wsad.test.mjs` przypina nowe wywołanie masy wsadu; liczba asercji bez zmian.
+
+**Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
+
+**Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
