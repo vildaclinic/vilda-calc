@@ -26,7 +26,14 @@ function __ds_readAgeYears() {
     const A = typeof window !== "undefined" ? window.VildaDobAge : null;
     if (A && typeof A.readExactAge === "function") {
       const w = A.readExactAge();
-      if (w && typeof w.exactMonths === "number" && isFinite(w.exactMonths)) return w.exactMonths / 12;
+      if (w && typeof w.exactMonths === "number" && isFinite(w.exactMonths)) {
+        // P-GRANICA-URODZIN (decyzja właściciela 2026-10-14): tabelę (niemowlęca poniżej 2 lat,
+        // dziecięca od 2 lat) i zakres karty (do 20 lat) wybierają PEŁNE MIESIĄCE, wiek dokładny
+        // tylko interpoluje. W dniu 2. urodzin po 730 dobach wiek dokładny to 23,98 mies. —
+        // karta brała wtedy tabelę niemowlęcą. vildaWiekDoSiatek (app.js) przycina go do granic DS.
+        const m = typeof vildaWiekDoSiatek === "function" ? vildaWiekDoSiatek(w.exactMonths, w.totalMonths, "DS") : w.exactMonths;
+        return m / 12;
+      }
     }
   } catch (e) { /* brak modulu daty urodzenia — zostaja pola wieku */ }
   const n = document.getElementById("age"), e = document.getElementById("ageMonths");
