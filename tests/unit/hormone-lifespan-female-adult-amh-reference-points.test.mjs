@@ -33,14 +33,15 @@ const addedIds = groups.map(group => group.id);
 const excludedPhases = ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmenopause'];
 
 describe('AMH dorosłych kobiet — pięć surowiczych median grup FDA/Access', () => {
-  it('dodaje dokładnie pięć profili, zachowując wszystkie 69 wcześniejszych profili i konwersje', () => {
+  it('dodaje dokładnie pięć profili, zachowując 68 pozostałych wcześniejszych profili i konwersje', () => {
     expect(data.profiles).toHaveLength(74);
     expect(data.profiles.filter(profile => addedIds.includes(profile.id)).map(profile => profile.id)).toEqual(addedIds);
     const original = { ...data, version: '2026-10-13.3',
-      profiles: data.profiles.filter(profile => !addedIds.includes(profile.id)) };
-    expect(original.profiles).toHaveLength(69);
-    // Hash of the complete patientPointData in the approved base da27cd6b.
-    expect(digest(original)).toBe('229a9ca804135fb68528469b42b5d7a0f21cce261f9b2f2a52fe4f8c2364253f');
+      profiles: data.profiles.filter(profile => !addedIds.includes(profile.id) &&
+        profile.id !== 'borelli2025-female-inhb-age-5p6-47') };
+    expect(original.profiles).toHaveLength(68);
+    // The later female inhibin extension has its own contract; preserve all other source data.
+    expect(digest(original)).toBe('1255289b15e0b5fa26136fe7271300ebc75309459be70a40792df002bc32f52f');
     expect(data).toEqual(read('population-reference-data.json'));
   });
 

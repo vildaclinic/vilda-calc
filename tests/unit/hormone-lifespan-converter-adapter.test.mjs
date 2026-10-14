@@ -7,6 +7,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 const require = createRequire(import.meta.url);
 const puberty = require('../../vilda_lab_puberty.js');
 const inhibin = require('../../vilda_lab_inhibin_b.js');
+const inhibinData = require('../../vilda_lab_inhibin_b_data.js');
 const policy = require('../../vilda_lab_puberty_data.js');
 const lifespanReference = require('../../vilda_hormone_lifespan_reference.js');
 const lifespanData = require('../../vilda_hormone_lifespan_data.js').patientPointData;
@@ -454,5 +455,128 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     app.context.sourcePatient.sourceStatus = 'loading';
     app.update({ id: 'amh' }, null, conversion);
     expect(app.last()).toMatchObject({ cyclePhase: null, measurement: null, ageYears: null });
+  });
+});
+
+describe('Inhibin B current reproductive context — existing form only', () => {
+  function currentEvaluation(extra = {}) {
+    return inhibin.evaluate({ analyte: 'inhibin_b', sex: 'F', value: 33, unit: 'pg/mL',
+      age: { years: 30, months: 0, precision: 'month' }, contextBasis: 'current-patient',
+      reproductiveContext: 'unknown', ...extra }, inhibinData);
+  }
+
+  function femaleAdapter() {
+    return adapter({
+      currentSubstance: { id: 'inhibin_b' }, unitEl: { value: 'pg/mL' },
+      sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'F', ageYears: 30, ageMonths: 0 },
+      effectivePatient: { sex: 'F', age: 30, cycle_phase: null },
+    });
+  }
+
+  it('transports normalized current postmenopause and clears it on the next unknown evaluation', () => {
+    const app = femaleAdapter();
+    const assessment = currentEvaluation({ reproductiveContext: 'postmenopause' });
+    expect(assessment.input).toMatchObject({ reproductiveContext: 'postmenopause' });
+    expect(assessment.input.cycle_phase).toBeUndefined();
+    const snapshot = JSON.stringify(assessment);
+    app.update({ id: 'inhibin_b' }, assessment);
+    expect(app.last()).toMatchObject({ cyclePhase: 'postmenopause', contraindicated: false,
+      measurement: { value: 33, unit: 'pg/mL' } });
+    expect(lifespanReference.evaluate(lifespanData, app.last()))
+      .toEqual({ status: 'unavailable', reason: 'incompatible-reproductive-context' });
+    expect(JSON.stringify(assessment)).toBe(snapshot);
+    app.update({ id: 'inhibin_b' }, currentEvaluation());
+    expect(app.last().cyclePhase).toBeNull();
+    expect(lifespanReference.evaluate(lifespanData, app.last()))
+      .toMatchObject({ status: 'ready', referenceValue: 30 });
+  });
+
+  it('reuses a known current estradiol context when inhibin context is missing or unknown', () => {
+    const app = femaleAdapter();
+    for (const cyclePhase of ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmenopause']) {
+      app.context.effectivePatient.cycle_phase = cyclePhase;
+      for (const reproductiveContext of [undefined, null, '', 'unknown']) {
+        app.update({ id: 'inhibin_b' }, currentEvaluation({ reproductiveContext }));
+        expect(app.last()).toMatchObject({ cyclePhase, contraindicated: false });
+        expect(lifespanReference.evaluate(lifespanData, app.last()))
+          .toEqual({ status: 'unavailable', reason: 'incompatible-reproductive-context' });
+      }
+    }
+    for (const cyclePhase of [null, 'unknown', 'follicular', 'ovulation', 'luteal']) {
+      app.context.effectivePatient.cycle_phase = cyclePhase;
+      app.update({ id: 'inhibin_b' }, currentEvaluation());
+      expect(lifespanReference.evaluate(lifespanData, app.last()))
+        .toMatchObject({ status: 'ready', referenceValue: 30 });
+    }
+  });
+
+  it('prefers an explicit current inhibin selection to a previous selection for another analyte', () => {
+    const app = femaleAdapter();
+    app.context.effectivePatient.cycle_phase = 'follicular';
+    app.update({ id: 'inhibin_b' }, currentEvaluation({ reproductiveContext: 'postmenopause' }));
+    expect(app.last().cyclePhase).toBe('postmenopause');
+    app.context.effectivePatient.cycle_phase = 'postmenopause';
+    for (const reproductiveContext of ['follicular', 'early_follicular', 'late_follicular', 'ovulation', 'luteal', 'mid_luteal', 'late_luteal']) {
+      app.update({ id: 'inhibin_b' }, currentEvaluation({ reproductiveContext }));
+      expect(app.last().cyclePhase).toBe(reproductiveContext);
+      expect(lifespanReference.evaluate(lifespanData, app.last())).toMatchObject({ status: 'ready' });
+    }
+  });
+
+  it('does not import current or historical reproductive context into a dated or unspecified sample', () => {
+    const app = femaleAdapter();
+    app.context.effectivePatient.cycle_phase = 'pregnancy_t1';
+    for (const input of [
+      { contextBasis: 'sample' }, { sampleDateISO: '2020-01-01' },
+    ]) {
+      app.update({ id: 'inhibin_b' }, currentEvaluation({ reproductiveContext: 'postmenopause', ...input }));
+      expect(app.last().cyclePhase).toBeNull();
+    }
+    const legacy = currentEvaluation({ reproductiveContext: 'postmenopause' });
+    delete legacy.input.contextBasis;
+    app.update({ id: 'inhibin_b' }, legacy);
+    expect(app.last().cyclePhase).toBeNull();
+  });
+
+  it('clears local context at an identity change and does not use an unavailable or opposite-sex source', () => {
+    const app = femaleAdapter();
+    app.context.getEffectivePatient = () => ({ sex: 'F', age: 30,
+      cycle_phase: app.context.localOverride.cycle_phase });
+    app.context.localOverride.cycle_phase = 'pregnancy_t2';
+    app.update({ id: 'inhibin_b' }, currentEvaluation());
+    expect(app.last().cyclePhase).toBe('pregnancy_t2');
+    app.context.identity = 'fictional-next-inhibin-patient';
+    app.context.sourcePatient.identityKey = app.context.identity;
+    app.update({ id: 'inhibin_b' }, currentEvaluation({ reproductiveContext: 'postmenopause' }));
+    expect(app.context.localOverride.cycle_phase).toBeNull();
+    expect(app.last()).toMatchObject({ cyclePhase: null, measurement: null });
+    app.update({ id: 'inhibin_b' }, currentEvaluation());
+    expect(app.last().cyclePhase).toBeNull();
+    expect(lifespanReference.evaluate(lifespanData, app.last())).toMatchObject({ status: 'ready' });
+    app.context.sourcePatient.sourceStatus = 'loading';
+    app.update({ id: 'inhibin_b' }, currentEvaluation({ reproductiveContext: 'postmenopause' }));
+    expect(app.last()).toMatchObject({ cyclePhase: null, measurement: null, ageYears: null });
+    app.context.sourcePatient.sourceStatus = 'ready';
+    app.context.getEffectivePatient = () => ({ sex: 'M', age: 30, cycle_phase: 'postmenopause' });
+    app.update({ id: 'inhibin_b' }, currentEvaluation());
+    expect(app.last().cyclePhase).toBeNull();
+    app.update({ id: 'inhibin_b' }, currentEvaluation({ sex: 'M', reproductiveContext: 'postmenopause' }));
+    expect(app.last().cyclePhase).toBeNull();
+    expect(lifespanReference.evaluate(lifespanData, app.last())).toMatchObject({ status: 'ready',
+      profile: { id: 'borelli2025-male-inhb' } });
+  });
+
+  it('does not extend the new reproductive-context transport or exclusions to LH and FSH', () => {
+    const app = femaleAdapter();
+    app.context.effectivePatient.cycle_phase = 'pregnancy_t3';
+    for (const id of ['lh', 'fsh']) {
+      app.update({ id }, evaluated('3', 'IU/L', { sex: 'F', contextBasis: 'current-patient',
+        age: { years: 15, months: 0, precision: 'month' }, reproductiveContext: 'postmenopause' }));
+      expect(app.last()).toMatchObject({ cyclePhase: null, contraindicated: false });
+      // Ordinary female puberty LH/FSH has no numerical reference; this must
+      // remain that existing scope limit, not a new reproductive exclusion.
+      expect(lifespanReference.evaluate(lifespanData, app.last()))
+        .toEqual({ status: 'unavailable', reason: 'unsupported-age' });
+    }
   });
 });

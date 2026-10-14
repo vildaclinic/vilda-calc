@@ -1259,7 +1259,9 @@
         "reference-unavailable": "W tym wieku źródło nie pozwala wiarygodnie nanieść wyniku.",
         "incompatible-specimen": "Wartość odniesienia nie dotyczy materiału tej próbki.",
         "incompatible-assay": "Brak wartości odniesienia dla potwierdzonej metody tej próbki.",
-        "incompatible-reproductive-context": "Ta mediana dotyczy kobiet nieciężarnych z regularnymi cyklami.",
+        "incompatible-reproductive-context": id === "inhb"
+          ? "Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie."
+          : "Ta mediana dotyczy kobiet nieciężarnych z regularnymi cyklami.",
         "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
         "missing-puberty-stage": "To odniesienie dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
@@ -3284,7 +3286,7 @@
           }
           if (selected.has("inhb")) {
             paragraph(
-              "Inhibina B: po niemowlęctwie mediana z ryciny 1 Borelli-Kjær 2025, odtworzona orientacyjnie z wykresu (około ±2 pg/mL). Gen II ELISA jak u niemowląt, ale odrębny model. Odcinek 1–5,6 roku jest poglądowym połączeniem modeli niemowląt i starszych dzieci. W źródle brak obserwacji między 1,08 a 5,6 roku. Pokwitaniowy garb i późniejszy łagodny spadek pozostają, ponieważ są widoczne w tym samym opublikowanym modelu. Dorosła grupa liczy 149 kobiet, bez standaryzacji fazy cyklu. Końcowy odcinek opisuje niskie lub niewykrywalne wartości, nie liczbowe stężenia poniżej granicy wykrywalności.",
+              "Inhibina B: po niemowlęctwie mediana z ryciny 1 Borelli-Kjær 2025, odtworzona orientacyjnie z wykresu (około ±2 pg/mL). Gen II ELISA w surowicy jak u niemowląt, ale odrębny model. Odcinek 1–5,6 roku jest poglądowym połączeniem modeli niemowląt i starszych dzieci. W źródle brak obserwacji między 1,08 a 5,6 roku. Pokwitaniowy garb i późniejszy łagodny spadek pozostają, ponieważ są widoczne w tym samym opublikowanym modelu. Dorosła grupa liczy 149 kobiet, bez standaryzacji fazy cyklu; dane o antykoncepcji były niepełne. To nie jest mediana konkretnej fazy cyklu ani kohorty wyłącznie bez leczenia. Liczbowe odniesienie kończy się na zweryfikowanym odczycie przy 47 latach; dalsza linia jest poglądowa, bez stężeń poniżej granicy wykrywalności.",
             );
             links.push([
               "Borelli-Kjær 2025 · inhibina B",

@@ -2,7 +2,7 @@
   "version": "2026-10-13.2",
   "kind": "educational-source-selection",
   "ordinaryOnly": true,
-  "scope": "Female AMH grouped references in childhood and adolescence; female inhibin B age-model reference at 5.6–20 years. Ordinary lifespan and puberty views only; no clinical reference intervals.",
+  "scope": "Female AMH grouped references in childhood and adolescence. Ordinary lifespan and puberty views only; no clinical reference intervals.",
   "amh": {
     "source": "evidence/amh-access-groups.json#pediatric",
     "specimen": "lithium-heparin-plasma",
@@ -70,16 +70,5 @@
       }
     ],
     "version": "2026-10-13.1"
-  },
-  "inhb": {
-    "source": "inhibin-comparison-reference-data.json#borelli2025-female-inhb-puberty-comparison",
-    "id": "borelli2025-female-inhb-age-5p6-20",
-    "minAge": 5.6,
-    "maxAge": 20,
-    "maxAgeExclusive": false,
-    "retainAllSourcePoints": true,
-    "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie.",
-    "ageRouting": "Zwykły wykres udostępnia odniesienie od 5,6 do 20 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano wszystkie 24 węzły źródłowe do interpolacji. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku brak liczbowego odniesienia.",
-    "qualificationScope": "ordinary-female-inhibin-b-age-5p6-20"
   }
 }

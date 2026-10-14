@@ -287,7 +287,7 @@ o ograniczeniach i bez nowych pól. Nie zmienia to norm laboratoryjnych,
 - Dokładnie 1 rok zachowuje Ljubicic. Nieprecyzyjny wiek obejmujący
   tę granicę lub dwie grupy Jopling nie otrzymuje arbitralnej mediany;
   wystarczy krótki powód. Nie wymagaj nowych danych o stadium lub cyklu.
-- Inhibina B: zwykłe odniesienie Borelli-Kjær obejmuje **5,6–20 lat
+- Inhibina B: historyczne rozszerzenie z 13 października obejmowało **5,6–20 lat
   włącznie**. Początkowe 8–20 z PR #651 wynikało z przejęcia okna
   porównania pokwitania; po zgłoszeniu braku punktu u 6-latki właściciel
   13 października zatwierdził rozszerzenie do początku danych źródła.
@@ -311,6 +311,33 @@ o ograniczeniach i bez nowych pól. Nie zmienia to norm laboratoryjnych,
 Źródła, granice i przypadki kontrolne:
 [przegląd odniesień](hormone-lifespan/evidence/female-reference-points-2026-10-13.json)
 oraz [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
+
+## Żeńska inhibina B — odniesienie 5,6–47 lat, 14 października 2026
+
+- `female-inhibin-reference-policy.json` jest odrębne od polityki AMH.
+  Jeden zwykły profil `borelli2025-female-inhb-age-5p6-47` zastępuje
+  poprzednie 5,6–20. Zachowaj wszystkie 24 węzły Borelli i ich PCHIP;
+  nie dopasowuj ponownie dorosłego podzbioru i nie twórz styku przy 20.
+- Wiek całym swoim możliwym przedziałem musi należeć do 5,6–47 włącznie.
+  Dokładne 47 lat daje ≈11 pg/mL; formularz 47 lat 0 miesięcy wykracza
+  poza domenę. Nie zamieniaj nieprecyzyjnego wieku na dokładny środek.
+  Źródło obejmuje dorosłe kobiety do 69 lat, ale zachowany liczbowy
+  odczyt kończy się na 47; poglądowy ogon nie dostarcza dalszych median.
+- Surowica Gen II, 149 kobiet 20–69 lat, cykl niestandaryzowany, dane
+  antykoncepcji niepełne. ±2 pg/mL to tolerancja digitalizacji, nie CI.
+  Przy dokładnym wieku 25/30/40/46/47 lat zachowaj ≈32/30/28/17/11.
+  Nie opisuj tego jako mediany fazy cyklu, normy, SDS lub oceny płodności.
+- Znana ciąża/menopauza wyłącza ten zwykły profil według konserwatywnej
+  **polityki aplikacji**, nie kryteriów wyłączenia autorów. Brak danych
+  nie potwierdza ich nieobecności; pozwala na ograniczone porównanie.
+  Nie dodawaj selektora, nie koryguj stężenia przez stosowanie antykoncepcji.
+- Geometria, skala, 73 pozostałe profile i porównanie płci 8–20 są odrębne
+  i pozostają bez zmian. Jasny znacznik ma wskazywać źródłową liczbę,
+  także gdy nie leży na ilustracji. Crofton i luka >1–<5,6 nie są aktywowane.
+
+Źródła i oczekiwane przypadki:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
+[przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
 ## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 
@@ -496,7 +523,8 @@ oraz [opis modułu](HORMONE_LIFESPAN.md#żeńskie-lhfsh--odrębne-widoki-okresó
   Dane `inhibinComparisonReferenceData` pozostają poza globalnym
   `patientPointData`. Osobne rozszerzenie z 13 października udostępnia
   te same mediany w zwykłych widokach, po zatwierdzonym uzupełnieniu
-  również 5,6–<8 lat; okno samego porównania pozostaje 8–20.
+  również 5,6–<8 lat. Partia z 14 października poszerza wyłącznie zwykły
+  profil do 5,6–47; okno samego porównania pozostaje 8–20.
 - Zachowaj wszystkie 24 żeńskie węzły ryc. 1 od 5,6 do 47 lat podczas
   PCHIP. Okno porównania płci 8–20 ogranicza wynik, nie zbiór węzłów
   potrzebnych do stycznych. Nie dopasowuj nowej krzywej z obciętej

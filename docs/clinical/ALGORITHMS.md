@@ -2008,6 +2008,85 @@ osią, usunięcie wyniku i zmiana jednostki zachowują linię i skalę.
 Pełne liczby i granice: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026),
 [zapis źródła FDA](hormone-lifespan/evidence/patient-point/fda2017-female-amh-group-medians.json).
 
+### HORMONE-FEMALE-INHB-ADULT-REFERENCE — mediana modelu do 47 lat, 2026-10-14
+
+**Problem i źródło:** zwykły widok inhibiny B kończył odniesienie kobiety
+na 20 latach, mimo zachowanego odczytu mediany do 47 lat. Ponownie
+sprawdzono pełny Borelli-Kjær i wsp., *JCEM* 2025;110:70–77,
+[DOI 10.1210/clinem/dgae439](https://doi.org/10.1210/clinem/dgae439),
+wersja składu 18.07.2024, ryc. 1, metody i ograniczenia oraz suplement
+[10.6084/m9.figshare.26056558.v1](https://doi.org/10.6084/m9.figshare.26056558.v1).
+GAMLSS 0 SD to mediana M, nie średnia. Żeńska kohorta liczy 889 osób/
+1005 próbek, w tym 648 dziewcząt 5,6–20,2 i 149 kobiet 20–69 lat.
+Surowica, Beckman Coulter Gen II ELISA, ng/L = pg/mL, LOD 3 pg/mL.
+Dorosłych obserwacji jest mało; cyklu nie standaryzowano, dane
+antykoncepcji były niepełne. Nie jest to profil potwierdzonej populacji
+nieleczonej ani odniesienie dopasowane do fazy cyklu.
+
+**Kontrakt:** jeden profil `borelli2025-female-inhb-age-5p6-47`,
+`ordinaryOnly`, obejmuje 5,6–47 włącznie i zastępuje profil 5,6–20.
+Polityka `female-inhibin-reference-policy.json` i dane punktu mają wersję
+`2026-10-14.1`. Całe 24 węzły i PCHIP są zachowane; brak nowego styku
+przy 20 latach. Wszystkie możliwe wartości wieku muszą należeć do domeny.
+Granica 47 oznacza ostatni zweryfikowany odczyt liczbowy, nie maksimum
+obserwacji, menopauzę ani prawo do przedłużenia do 69. Około ±2 pg/mL
+to dokładność digitalizacji, nie CI lub norma. Suplement nie zawiera
+numerycznych parametrów LMS ani tabeli median; nie deklarujemy ich odzyskania.
+
+**Kwalifikacja i wpływ kliniczny:** znana ciąża lub stan po menopauzie
+wyłącza wyłącznie ten zwykły profil według konserwatywnej polityki
+aplikacji, nie opublikowanego kryterium wykluczenia kohorty. Nieznany
+kontekst dopuszcza ograniczone porównanie; nie ustala braku ciąży,
+antykoncepcji lub menopauzy. Adapter przekazuje bieżące znormalizowane
+`reproductiveContext` inhibiny B do `cyclePhase` wykresu zamiast gubić
+ten stan przez sam odczyt dawnego `cycle_phase`; zachowuje granicę
+bieżącego pacjenta, płci i kontekstu próbki. Dotychczasowe bramki GnRHa,
+materiału, metody i cenzurowania pozostają. Orientacyjna mediana jest dostępna
+większej grupie kobiet; nie zmienia norm, werdyktów, jednostek, geometrii,
+skali, formularza, zapisu, 73 innych profili ani porównania płci 8–20.
+Luka >1–<5,6, wiek >47 i Crofton pozostają nieaktywne. Różnica względem
+mediany nie ocenia rezerwy jajnikowej/płodności; źródłowy punkt może
+leżeć poza wygładzoną linią. Techniczne testy nie są walidacją kliniczną.
+
+**Przypadki syntetyczne do regresji rzeczywistych funkcji:** F25/30/40/46/47
+(dokładny wiek), wynik 33 pg/mL → mediana ≈32/30/28/17/11 pg/mL,
+bez werdyktu normy. F6/33 zachowuje ≈11; F20 lat 0 miesięcy mieści cały
+przedział wieku w jednym profilu. F47 lat 0 miesięcy z formularza → brak
+punktu, ponieważ przedział przekracza 47. Granice 5,59–5,61 i 46,99–47,01
+→ brak arbitralnego odniesienia. Znana ciąża/menopauza, niezgodna
+metoda/materiał albo wynik `<` nie tworzą punktu. Brak wyniku, 0,
+wartość ponad osią, wyczyszczenie i zmiana jednostki zachowują linię/skale.
+
+**Wykonane kontrole tej partii:** oba generatory z `--check` — PASS;
+307 testów modułu hormonów oraz 28 testów adaptera — PASS. Porównanie
+przeglądarkowe przed/po: 16/16. E2E: 33 unikalne scenariusze zakończone
+powodzeniem. Pierwsza seria dała 31 PASS i 2 nieaktualne oczekiwania
+braku punktu w wieku 35 lat; zastąpiono je oczekiwaniem źródłowej mediany
+29 pg/mL, a powtórka tych przypadków dała 2/2 PASS. Wszystkie 6 nowych
+scenariuszy przeszło od pierwszego uruchomienia. Nie przedstawiamy tego
+jako jednego nieprzerwanego przebiegu 33/33 ani pełnego zestawu repozytorium.
+Wersje pierwszego przebiegu: SW `1.1.269`, renderer `vilda_hormone_lifespan.js?v=32`,
+dane `vilda_hormone_lifespan_data.js?v=24`.
+
+Pełne `npm test` zakończyło się z kodem 0: **7631 testów w 348 plikach**,
+lint, kontrola składni 973 plików JS, polityka repozytorium i testy PRO — PASS.
+
+Aktualizacja PWA 1.1.268 → 1.1.269 i pełny restart offline — PASS.
+Pierwszy pełny CI wykazał 1556 poprawnych scenariuszy i jeden błąd testu
+offline: pozostały w nim trzy oczekiwania starego ID profilu. Po aktualizacji
+ID cały test offline przeszedł bez powtórki; liczby i kod aplikacji bez zmian.
+
+Po scaleniu `audyt` z PR #671 (`41076ff0`) skrypt ustawił **SW 1.1.270**.
+Ponowne pełne `npm test`: **7653 testy / 349 plików**, lint, składnia
+975 JS, polityka repozytorium i PRO — PASS. PWA 1.1.269 → 1.1.270
+i ponowny start offline po wyłączeniu serwera — PASS; oceny laboratoryjne,
+krzywa i skala identyczne z nową bazą. Końcowy pełny E2E/CI dla
+aktualnego SHA jest raportowany w
+[PR #672](https://github.com/vildaclinic/vilda-calc/pull/672).
+Źródła, hashe i przypadki:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
+[przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
+
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć zatwierdzoną makietę porównania płci

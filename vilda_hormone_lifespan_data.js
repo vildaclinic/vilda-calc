@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-13.4",
+  "version": "2026-10-14.1",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -30141,11 +30141,11 @@ const patientPointData = {
       ]
     },
     {
-      "id": "borelli2025-female-inhb-age-5p6-20",
+      "id": "borelli2025-female-inhb-age-5p6-47",
       "analyte": "inhb",
       "sex": "female",
       "minAge": 5.6,
-      "maxAge": 20,
+      "maxAge": 47,
       "maxAgeExclusive": false,
       "points": [
         {
@@ -30249,7 +30249,7 @@ const patientPointData = {
       "url": "https://doi.org/10.1210/clinem/dgae439",
       "method": "Beckman Coulter Inhibin B Gen II ELISA",
       "specimen": "serum",
-      "population": "Zdrowe dziewczynki i kobiety; kohorty duńskie. Kohorta wieku 5,6–20,2 lat: 648 dziewcząt.",
+      "population": "Dziewczynki i kobiety z duńskich kohort: 648 osób w wieku 5,6–20,2 lat oraz 149 dorosłych kobiet w wieku 20–69 lat. Pobrania u dorosłych nie były standaryzowane względem fazy cyklu; dane o antykoncepcji doustnej były niepełne.",
       "statistic": "median",
       "approximate": true,
       "unit": "pg/mL",
@@ -30270,17 +30270,45 @@ const patientPointData = {
           47
         ],
         "readableSource": "evidence/inhb-digitized-median.json",
-        "qualificationScope": "ordinary-female-inhibin-b-age-5p6-20",
+        "qualificationScope": "ordinary-female-inhibin-b-age-5p6-47",
         "sourceProfileId": "borelli2025-female-inhb-puberty-comparison",
-        "routingVersion": "2026-10-13.2"
+        "cohorts": [
+          {
+            "n": 648,
+            "ageMinYears": 5.6,
+            "ageMaxYears": 20.2
+          },
+          {
+            "n": 149,
+            "ageMinYears": 20,
+            "ageMaxYears": 69
+          }
+        ],
+        "cohortCoverage": "Zakres 5,6–47 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47 lat wynika z ostatniego zachowanego odczytu ilościowego ryciny; nie jest granicą kohorty ani definicją menopauzy.",
+        "specimenPolicy": "Brak lub nieznany materiał pozwala na orientacyjne odniesienie bez potwierdzania materiału próbki pacjentki. Znana surowica jest zgodna; znane osocze lub inny materiał nie korzystają z tego profilu.",
+        "assayPolicy": "Metodą źródła jest Beckman Coulter Inhibin B Gen II ELISA. Brak lub nieznana metoda pozwala na orientacyjne odniesienie; znana inna metoda je blokuje. Nie jest to kalibracja między metodami.",
+        "reproductiveContextPolicy": "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
+        "routingVersion": "2026-10-14.1"
       },
       "limitations": [
         "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
-        "Zwykły wykres udostępnia odniesienie od 5,6 do 20 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano wszystkie 24 węzły źródłowe do interpolacji. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku brak liczbowego odniesienia.",
-        "Wiek nie wyznacza stadium Tannera. W kohorcie nie standaryzowano fazy cyklu; antykoncepcja doustna wpływa na stężenia.",
+        "Zwykły wykres udostępnia przybliżoną medianę modelu od 5,6 do 47 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. To jeden model z 24 niezmienionymi węzłami, więc przekroczenie wieku 20 lat nie tworzy granicy źródła ani luki odniesienia. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku oraz powyżej 47 lat brak tego liczbowego odniesienia.",
+        "Wiek nie wyznacza stadium Tannera. Fazy cyklu nie standaryzowano, a informacje o antykoncepcji doustnej były niepełne; nie jest to odniesienie fazy cyklu ani populacji bez leczenia.",
+        "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
+        "Górny wiek 47 lat wynika z końca zachowanego odczytu ryciny, nie z wieku menopauzy. Nie ekstrapolujemy do granicy wykrywalności ani nie zastępujemy jej zerem.",
         "Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń."
       ],
       "ordinaryOnly": true,
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
       "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie."
     },
     {

@@ -30,19 +30,21 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
     expect(data.gonadotropinComparisonPolicy).toEqual(readable('gonadotropin-comparison-policy.json'));
     expect(data.gonadotropinComparisonReferenceData).toEqual(readable('gonadotropin-comparison-reference-data.json'));
     expect(data.patientPointData).toEqual(readable('population-reference-data.json'));
-    // Preserve the full original bundle; the later three male AMH gap profiles have a separate contract.
+    // Preserve the original bundle except the explicit later AMH additions and female inhibin extension.
     const laterMaleIds = JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/male-amh-reference-policy.json', import.meta.url), 'utf8'))
       .profiles.map(p => p.id);
     const laterFemaleIds = JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/female-adult-amh-reference-policy.json', import.meta.url), 'utf8'))
       .profiles.map(p => p.id);
+    // The later extension of the one ordinary female inhibin profile is tested separately.
+    const revisedInhibinId = 'borelli2025-female-inhb-age-5p6-47';
     const original = { ...data.patientPointData, version: '2026-10-13.2',
-      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id)) };
+      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId) };
     expect(laterMaleIds).toHaveLength(3);
     expect(laterFemaleIds).toHaveLength(5);
-    expect(original.profiles).toHaveLength(66);
-    expect(digest(original)).toBe('cd6af38b8418fc4a834c75fbc556f6718b6f3ba47d3ff487a44d9e707aadf502');
+    expect(original.profiles).toHaveLength(65);
+    expect(digest(original)).toBe('455d2c037c96cad243db41d852a62348b6e12e615540ddc351a8499ae48d0f85');
     expect(digest(data.femaleGonadotropinData)).toBe('16f3df99ba8518e5145091abedda0b74cb33ef9db5ea7f3f108f1052ac0b8148');
     expect(digest(data.femaleGonadotropinPolicy)).toBe('08b2e92c570e90d392839dde7440c99bf23944aff414384a4988410b0e363487');
     for (const p of data.gonadotropinComparisonReferenceData.profiles) {
