@@ -61,7 +61,7 @@
   <link rel="stylesheet" href="style.css?v=88" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
-  <link href="vilda_lab_assessment_ui.css?v=10" rel="stylesheet">
+  <link href="vilda_lab_assessment_ui.css?v=11" rel="stylesheet">
   <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
 
@@ -69,7 +69,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=61"></script>
+  <script src="vilda_session_bridge.js?v=62"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -106,7 +106,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=137"></script>
+  <script src="vilda_chrome.js?v=138"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -446,6 +446,8 @@
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
   <script src="vilda_lab_inhibin_b.js?v=1"></script>
   <script src="vilda_lab_snapshot.js?v=7"></script>
+  <script src="vilda_hormone_reference_snapshot.js?v=1"></script>
+  <script src="vilda_hormone_reference_ui.js?v=1"></script>
   <script src="vilda_lab_assessment_ui.js?v=15"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
   <script src="vilda_lab_puberty_ui.js?v=16"></script>
@@ -457,7 +459,7 @@
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=13"></script>
   <script src="vilda_hormone_lifespan.js?v=33"></script>
-  <script src="lab_pin_result.js?v=6"></script>
+  <script src="lab_pin_result.js?v=7"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -690,6 +692,7 @@
     if (lifespanUI) document.getElementById('labHormoneLifespan').hidden = false;
     window.VildaHormoneLifespanRuntime = lifespanUI || null;
     var lifespanVault = null;
+    var lastLifespanContext = null;
     function currentPatientIdentity() {
       try { return sessionStorage.getItem('vildaCurrentPatientId') || ''; }
       catch (_) { return window._vildaCurrentPatientId || ''; }
@@ -707,6 +710,7 @@
       var next = currentPatientIdentity();
       if (localOverrideIdentity === next) return false;
       localOverrideIdentity = next;
+      lastLifespanContext = null;
       resetLocalPatientOverride();
       // A result belongs to the previous person even if their age or sex match.
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
@@ -717,7 +721,11 @@
       var vault = window.VildaVault;
       if (!vault || vault === lifespanVault || typeof vault.onLock !== 'function') return;
       lifespanVault = vault;
-      vault.onLock(function () { if (window.VildaVault === vault && lifespanUI) lifespanUI.clear(); });
+      vault.onLock(function () {
+        if (window.VildaVault !== vault) return;
+        lastLifespanContext = null;
+        if (lifespanUI) lifespanUI.clear();
+      });
     }
     function lifespanAgeLabel(age, input) {
       if (!age || age.status !== 'known') return '';
@@ -796,7 +804,7 @@
       // callers carrying a conversion/evaluation from the previous identity.
       if (identityChanged) { evaluation = null; conversion = null; }
       bindLifespanVault();
-      if (!substance) { lifespanUI.clear(); return; }
+      if (!substance) { lastLifespanContext = null; lifespanUI.clear(); return; }
       var source = readPubertyPatientContext();
       var status = source.sourceStatus || 'unavailable';
       var vault = window.VildaVault;
@@ -842,7 +850,7 @@
         && gestational.lower < pretermBoundary.value * 7) {
         premature = gestational.upper < pretermBoundary.value * 7 ? 'yes' : 'unknown';
       }
-      lifespanUI.update({
+      var context = {
         analyte: substance.id,
         sex: patient && patient.sex === 'F' ? 'female' : patient && patient.sex === 'M' ? 'male' : null,
         ageYears: Number.isFinite(years) && years >= 0 && years <= 120 ? years : null,
@@ -871,7 +879,40 @@
         sourceStatus: status,
         // Used in memory only to invalidate the previous person's UI state.
         identityKey: source.identityKey || ''
-      });
+      };
+      lastLifespanContext = context;
+      lifespanUI.update(context);
+    }
+
+    // Pin the ordinary patient reference, independent of the chart's selected
+    // lines, zoom or sex-comparison mode. Reuse the exact current context; the
+    // modal then owns a detached copy and never recalculates a saved reference.
+    function captureHormoneReference(result) {
+      if (!result || result.testKey !== 'amh') return;
+      var snapshot = window.VildaHormoneReferenceSnapshot;
+      var engine = window.VildaHormoneLifespanReference;
+      var data = window.VildaHormoneLifespanData;
+      if (!snapshot || !engine || !data) throw new Error('Hormone reference module unavailable');
+      renderResults(currentSubstance);
+      var context = lastLifespanContext;
+      if (!context || context.analyte !== 'amh' || !currentSubstance || currentSubstance.id !== 'amh'
+        || context.identityKey !== result.patientId || currentPatientIdentity() !== result.patientId
+        || String(valueEl.value).trim() !== result.raw || unitEl.value !== result.unit) {
+        return snapshot.unavailable('reference_context_changed');
+      }
+      var conversions = data.patientPointData.unitConversions.amh;
+      var factor = conversions.factors[result.unit];
+      var evaluation = context.sourceStatus === 'ready'
+        ? engine.evaluate(data, context) : { status: 'unavailable', reason: 'patient_context_unavailable' };
+      return snapshot.create({ evaluation: evaluation, context: context,
+        measurement: { raw: result.raw, sourceValue: Conv.parseNumber(result.raw), sourceUnit: result.unit,
+          conversionFactor: factor },
+        display: { unit: result.unit, factorFromCanonical: 1 / factor },
+        versions: { engine: engine.version, data: data.patientPointData.version, runtime: data.version },
+        capturedAtISO: new Date().toISOString() });
+    }
+    if (window.VildaLabPinResult && window.VildaLabPinResult.setHormoneReferenceProvider) {
+      window.VildaLabPinResult.setHormoneReferenceProvider(captureHormoneReference);
     }
 
     // ID substancji, dla których proponujemy link do steroidy.html
