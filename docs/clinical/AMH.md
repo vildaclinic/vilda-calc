@@ -172,3 +172,19 @@ Nie wyznaczamy mediany ze środka RI ani z górnej granicy.
 Wynik na tle mediany i wynik na tle zakresu są osobnymi porównaniami.
 Historia nie może automatycznie nadać staremu zapisowi nowych norm;
 surowy wynik i jawny zapisany zakres pozostają zachowane.
+
+Od partii z 14.10.2026 nowe przypięcie AMH zapisuje również opcjonalne
+`lab.hormoneReference`: medianę modelu lub grupy ze zwykłego odniesienia
+wykresu, użyty kontekst, jednostki, źródło, wersje i ograniczenia albo
+powód niedostępności. Kontekst zostaje zamrożony przy otwarciu istniejącego
+„Przypnij do wizyty”. Wybrana data nie potwierdza, że wiek i obserwacje
+formularza pochodzą z dnia pobrania. Historia czyta utrwalone dane;
+nie uruchamia dzisiejszego modelu ani nie korzysta z aktualnego pacjenta.
+
+To osobny zapis edukacyjnego odniesienia, nie `lab.assessment`, norma Mayo,
+ocena płodności ani kliniczna klasyfikacja. Edycja wyniku, jednostki,
+badania lub daty unieważnia odniesienie, zachowując dawny zapis i przyczynę;
+komentarz oraz niezależne `lab.norm` nie zmieniają mediany. Starsze wpisy
+bez nowego pola pozostają bez dopisanej mediany. Nie zmieniamy źródeł,
+krzywych, norm, jednostek ani formularza. Kontrakt i przypadki graniczne:
+[utrwalone odniesienie AMH](hormone-lifespan/PATIENT_POINT.md#utrwalone-odniesienie-amh--14-października-2026).

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.273';
+const SW_VERSION = '1.1.274';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -359,6 +359,8 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_snapshot.js?v=5',
   '/vilda_lab_snapshot.js?v=6',
   '/vilda_lab_snapshot.js?v=7',
+  '/vilda_hormone_reference_snapshot.js?v=1',
+  '/vilda_hormone_reference_ui.js?v=1',
   '/vilda_lab_puberty_data.js?v=1',
   '/vilda_lab_puberty_data.js?v=2',
   '/vilda_lab_puberty_data.js?v=3',
@@ -404,6 +406,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_assessment_ui.css?v=8',
   '/vilda_lab_assessment_ui.css?v=9',
   '/vilda_lab_assessment_ui.css?v=10',
+  '/vilda_lab_assessment_ui.css?v=11',
   '/vilda_lab_puberty_ui.js?v=1',
   '/vilda_lab_puberty_ui.js?v=2',
   '/vilda_lab_puberty_ui.js?v=3',
@@ -1069,6 +1072,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=136',
   '/vilda_chrome.js?v=137',
   '/vilda_chrome.js?v=138',
+  '/vilda_chrome.js?v=139',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1235,6 +1239,7 @@ const CORE_SHELL_URLS = [
   '/vilda_terminarz.js?v=191',
   '/vilda_terminarz.js?v=192',
   '/vilda_terminarz.js?v=193',
+  '/vilda_terminarz.js?v=194',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
   '/vilda_chrome.css?v=15',
@@ -2002,6 +2007,7 @@ const OPTIONAL_ASSETS = [
   '/lab_pin_result.js?v=4',
   '/lab_pin_result.js?v=5',
   '/lab_pin_result.js?v=6',
+  '/lab_pin_result.js?v=7',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -2853,6 +2859,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=208',
   '/vilda_vault.js?v=209',
   '/vilda_vault.js?v=210',
+  '/vilda_vault.js?v=211',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -3026,6 +3033,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=488',
   '/vilda_auth_ui.js?v=489',
   '/vilda_auth_ui.js?v=490',
+  '/vilda_auth_ui.js?v=491',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -3190,6 +3198,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=60',
   '/vilda_session_bridge.js?v=61',
   '/vilda_session_bridge.js?v=62',
+  '/vilda_session_bridge.js?v=63',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

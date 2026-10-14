@@ -39,6 +39,60 @@ odniesienia”. Odrębne opisy porównań median zachowują nazwę tej statystyk
 Podpis poprawnie dobranej
 wartości nadal wskazuje rzeczywistą statystykę źródła: średnią albo medianę.
 
+## Utrwalone odniesienie AMH — 14 października 2026
+
+Po scaleniu PR #673 właściciel zatwierdził zapis źródłowego odniesienia
+AMH razem z wynikiem. Dotyczy on zwykłego odniesienia bieżącego analitu,
+nie aktywnego trybu porównania płci ani wysokości poglądowej krzywej.
+Istniejące „Przypnij do wizyty” zamraża kontekst przy otwarciu okna;
+nie dodaje pól formularza. Zmiana pacjenta lub modelu przed późniejszym
+odczytem nie podmienia źródła. Data przypięcia/wizyty pozostaje odrębna
+od wieku użytego w ocenie i nie potwierdza obserwacji w dniu pobrania.
+
+Opcjonalne `lab.hormoneReference` obsługuje osobny
+`VildaHormoneReferenceSnapshot` (`vilda_hormone_reference_snapshot.js`,
+API `1.0.0`). Schemat `1` ma `kind: educational-hormone-reference`,
+`scope: ordinary-patient-reference`, `analyte: amh` oraz status
+`recorded`, `unavailable` lub `invalidated`. Zachowuje:
+
+- surowy wynik z operatorem, jednostkę wejściową, wartość w pmol/L,
+  użyty przelicznik oraz liczby i jednostkę prezentacji;
+- użyty wiek wraz z niepewnością, płeć i znany kontekst kwalifikacji;
+- źródłową liczbę, `median` albo `group-median`, pełną grupę wieku,
+  profil, metodę/materiał źródła, populację, ograniczenia i pochodzenie;
+- moment utrwalenia oraz wersje silnika, danych, runtime i profilu
+  (wersja profilu może być `null`, jeżeli źródłowy profil jej nie ma).
+
+`create` otrzymuje wynik rzeczywistego resolvera i istniejące konwersje;
+nie oblicza własnej mediany. `normalize`, `reconcile` i `forSeries`
+czytają wyłącznie zapis. Nie dobierają aktualnego profilu, nie aktualizują
+wieku i nie odtwarzają odniesienia z `lab.norm` lub krzywej. Nieznany albo
+uszkodzony schemat oznacza niedostępność, bez zastępczej mediany.
+Znany brak kwalifikacji (np. wcześniactwo, luka wieku lub wynik `<`)
+zachowuje powód; nie powstaje dokładny punkt dla wartości cenzurowanej.
+Obsługa operatorów dotyczy kontraktu transportu; ta partia nie rozszerza
+składni wyniku przyjmowanej przez formularz AMH.
+
+Powiązanie z wynikiem i datą utrwala `binding`. Po zapisie zmiana wyniku,
+jednostki, badania albo daty oznacza `invalidated`, z zachowaniem dawnego
+odniesienia i przyczyny. Komentarz, status wizyty i niezależna norma
+laboratoryjna nie zmieniają mediany. Pominięcie pola przez starszego
+klienta podczas edycji nie usuwa istniejącej migawki. Starszy wpis,
+który nigdy jej nie miał, nie otrzymuje jej automatycznie.
+
+Źródła, granice wieku i przelicznik `1 pmol/L = 0,1401 ng/mL` pozostają
+opisane w sekcjach AMH poniżej: Busch/Ljubicic, Wang, Jopling, Benderradji,
+Tehrani i FDA. Utrwalenie nie harmonizuje ich metod, nie zmienia norm
+Mayo, krzywych ani kwalifikacji i nie nadaje wynikowi werdyktu klinicznego.
+
+| Fikcyjny scenariusz | Oczekiwany zapis i odczyt |
+| --- | --- |
+| F15, AMH 0,45 ng/mL, nieznana metoda/materiał | Jopling, mediana grupy 15–18,9 lat: 21,14 pmol/L = 2,961714 ng/mL; ta sama liczba po zmianie bieżącego pacjenta i tabel. |
+| F28, AMH 1 ng/mL | FDA, mediana grupy 26–30 lat: 27,27 pmol/L = 3,820527 ng/mL; nie nowa norma. |
+| Znane wcześniactwo w minipuberty; osobno transport `<0,1 ng/mL` | Zapis powodu niedostępności, bez wymyślonej mediany i dokładnego punktu; test transportu operatora nie oznacza nowej obsługi w formularzu. |
+| Zmiana komentarza / wartości / jednostki / daty | Komentarz zachowuje zapis; pozostałe edycje unieważniają odniesienie bez ponownego obliczenia. |
+| Dawne AMH bez `hormoneReference` | Dotychczasowy wynik, jednostka i jawne `lab.norm`, bez dopisanej mediany. |
+
 ## Aktywne źródła
 
 Przedziały poniżej są polityką tego wykresu, a nie nowymi normami.

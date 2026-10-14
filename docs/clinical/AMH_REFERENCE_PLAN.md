@@ -65,7 +65,7 @@ Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
    Kuiri w dwóch wizytach pozostają podsumowaniami grup, bez dokładnego
    punktu na krzywej wieku. Poniższa kolejna partia wykorzystuje Zhou
    dla młodszych dziewczynek; nie aktywuje Crofton.
-4. **Bieżąca partia — inhibina B dziewczynek >1–<5,6 lat:** dwie stałe
+4. **Zakończone, PR #673 — inhibina B dziewczynek >1–<5,6 lat:** dwie stałe
    mediany pełnych grup Zhou 2025: 1–5 lat, N=60, **33 pg/mL** oraz
    5–10 lat, N=77, **27 pg/mL**. Surowica, Kangran CLIA na KAESER 1000,
    przekrojowa kohorta szpitalna z Wuhan. Zwykły wykres stosuje je tylko
@@ -79,9 +79,18 @@ Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
    Pozostają braki przed pierwszym żeńskim węzłem 0,02 roku, po 47 latach
    i dla wieku przecinającego granice źródeł. Dane wcześniacze i męski
    pierwszy tydzień wymagają osobnych materiałów lub decyzji.
-5. Dopiero potem rozważyć osobny snapshot bieżącego porównania AMH,
-   jeżeli ma ono być utrwalane w wizytach i historii. Brak snapshotu nie
-   upoważnia do odtwarzania dawnej interpretacji dzisiejszą tabelą.
+5. **Bieżąca partia — zapis odniesienia AMH w wizycie i historii:**
+   istniejące „Przypnij do wizyty” utrwala źródłową wartość odniesienia,
+   rodzaj statystyki, grupę, użyty wiek i kontekst, jednostki, źródło,
+   wersje oraz ograniczenia albo powód braku odniesienia. Opcjonalne
+   `lab.hormoneReference` jest odrębne od normy i oceny laboratoryjnej.
+   Odczyt korzysta wyłącznie z zapisu, bez dzisiejszego modelu lub
+   pacjenta. Edycja wyniku, jednostki lub daty unieważnia odniesienie;
+   komentarz je zachowuje. Starsze wpisy bez tego pola nie dostają
+   automatycznie nowej mediany. Bez nowych pól, norm i zmian krzywych.
+   Kontrakt: [utrwalone odniesienie AMH](hormone-lifespan/PATIENT_POINT.md#utrwalone-odniesienie-amh--14-października-2026).
+   Weryfikacja zapisu, ponownego odczytu, edycji, importu i działania
+   offline oraz kontrole GitHub pozostają warunkiem zakończenia partii.
 
 ## 3. Nowe materiały Xu 2026 — zapisane, profil jeszcze nieaktywny
 
