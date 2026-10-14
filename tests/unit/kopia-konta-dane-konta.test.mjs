@@ -624,7 +624,7 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji: listy oczekujących z magazynu,
     expect(po.timestampISO < tutaj.timestampISO).toBe(true);
     expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
     expect(PODTYTUL).not.toContain('doda tylko');
-    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii imię i nazwisko, płeć i datę urodzenia');
+    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia');
     parzystosc(r);
   });
 
@@ -682,6 +682,175 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji: listy oczekujących z magazynu,
   });
 });
 
+/* Inna karta przeglądarki albo synchronizacja zmienia magazyn W TRAKCIE scalania: wstrzyknięcie przy pierwszym odczycie
+   szablonów wołanym wprost z ramki Le (sekcja notatek — już po zapisie preferencji przez Le). Odczyty testu (migawka)
+   i podglądu nie mają ramki Le, więc nie wyzwalają zmiany. */
+function wTrakcieLe(C, zmiana) {
+  const czytaj = C.baza.listNotesForUser.bind(C.baza);
+  C.baza.listNotesForUser = async (...a) => {
+    if (!C.wstrzykniety && /\bat Le \(/.test(new Error().stack || '')) { C.wstrzykniety = true; await zmiana(); }
+    return czytaj(...a);
+  };
+}
+const etykiety = async (v) => Object.values(await v.getWaitlistLists()).map((l) => l.label).sort();
+
+describe('P-KOPIA-DANE-KONTA — uwagi recenzji (runda 2): wyścig list oczekujących, nagrobki tutaj, osoba spoza bazy', () => {
+  it('T34 [CZERWONY, recenzja: wyścig] inna karta dodaje listę oczekujących i zmienia termin w trakcie scalania: wynik liczy tylko listę z kopii', async () => {
+    const r = await przypadek({
+      przed: async (A) => {
+        await A.v.addWaitlistList('Fikcyjny zabieg A');
+        await A.v.setWaitlistSchedule('Fikcyjny zabieg A', { dateISO: '2026-12-01', time: '09:00' });
+      },
+      po: async (A, { p1 }) => { await notatka(A.v, p1, 'N-wyscig (fikcja)'); await A.v.addWaitlistList('Fikcyjny zabieg z kopii'); },
+      przedScaleniem: async (C) => {
+        wTrakcieLe(C, async () => {
+          await C.v.addWaitlistList('Fikcyjny zabieg inna karta');
+          await C.v.setWaitlistSchedule('Fikcyjny zabieg A', { dateISO: '2026-12-02', time: '08:15' });
+        });
+      },
+    });
+    expect(r.C.wstrzykniety, 'zmiana z innej karty w trakcie Le').toBe(true);
+    expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 notatka, 1 lista)', podsumowanie: 'Brak nowych zapisów · 1 nowa notatka pacjenta · 1 nowa lista oczekujących' });
+    expect([r.wynik.addedWaitlistCount, r.wynik.updatedWaitlistCount, r.wynik.deletedWaitlistCount]).toEqual([1, 0, 0]);
+    expect([r.wynik.addedWaitlistScheduleCount, r.wynik.updatedWaitlistScheduleCount, r.wynik.deletedWaitlistScheduleCount]).toEqual([0, 0, 0]);
+    expect(r.linie).toEqual(['✓ Dodano 1 notatkę pacjenta, 1 listę oczekujących']);
+    // Wyścig naprawdę zaszedł: w magazynie są obie nowe listy i nowa godzina — ekran przypisuje kopii tylko jej listę.
+    expect(await etykiety(r.C.v)).toEqual(['Fikcyjny zabieg A', 'Fikcyjny zabieg inna karta', 'Fikcyjny zabieg z kopii']);
+    expect(Object.values(await r.C.v.getWaitlistSchedules()).map((t) => `${t.dateISO} ${t.time}`)).toEqual(['2026-12-02 08:15']);
+  });
+
+  it('T35 [CZERWONY, recenzja: wyścig] inna karta usuwa listę oczekujących w trakcie scalania: „Usunięto tak jak w kopii” tylko dla listy usuniętej w kopii', async () => {
+    const r = await przypadek({
+      przed: async (A) => {
+        await A.v.addWaitlistList('Fikcyjny zabieg A');
+        await A.v.setWaitlistSchedule('Fikcyjny zabieg A', { dateISO: '2026-12-01', time: '09:00' });
+        await A.v.addWaitlistList('Fikcyjny zabieg B');
+      },
+      po: async (A, { p1 }) => { await chwila(5); await notatka(A.v, p1, 'N-wyscig (fikcja)'); await A.v.removeWaitlistList('Fikcyjny zabieg B'); },
+      przedScaleniem: async (C) => { wTrakcieLe(C, async () => { await C.v.removeWaitlistList('Fikcyjny zabieg A'); }); },
+    });
+    expect(r.C.wstrzykniety).toBe(true);
+    expect(r.podglad.deletedWaitlistCount).toBe(1);
+    expect([r.wynik.deletedWaitlistCount, r.wynik.deletedWaitlistScheduleCount], 'tylko „B” z kopii; „A” i jej termin usunęła inna karta').toEqual([1, 0]);
+    expect(r.linie).toEqual(['✓ Dodano 1 notatkę pacjenta', '⊖ Usunięto tak jak w kopii: 1 listę oczekujących']);
+    expect(await etykiety(r.C.v), 'obie listy usunięte w magazynie').toEqual([]);
+    expect(await etykiety(r.A.v), 'kopia nadal ma listę „A”').toEqual(['Fikcyjny zabieg A']);
+  });
+
+  it('T36 [kontrola, recenzja: nagrobki tutaj] notatka, szablon i lista usunięte TUTAJ po synchronizacji, kopia ich nie zmieniała: plan 0, przycisk ukryty, nic nie wraca', async () => {
+    const r = await przypadek({
+      przed: async (A, { p1 }) => {
+        await notatka(A.v, p1, 'N-usun-tutaj (fikcja)');
+        await A.v.saveNote({ title: 'Szablon-usun-tutaj', body: 'f', category: 'wlasne' });
+        await A.v.savePatientList({ name: 'Lista-usun-tutaj', memberIds: [p1] });
+      },
+      wC: async (C, { p1 }) => {
+        await chwila(5);
+        const [n] = await C.v.listPatientNotesForPatient(p1); await C.v.removePatientNote(n.id);
+        const [s] = await C.v.listNotes(); await C.v.removeNote(s.id);
+        const [l] = await C.v.listPatientLists(); await C.v.deletePatientList(l.id);
+      },
+    });
+    expect([r.przed.nagrobkiNotatek.length, r.przed.nagrobkiSzablonow.length, r.przed.nagrobkiList.length]).toEqual([1, 1, 1]);
+    expect([r.podglad.addedPatientNoteCount, r.podglad.restoredPatientNoteCount, r.podglad.addedNoteCount,
+      r.podglad.restoredNoteCount, r.podglad.addedPatientListCount, r.podglad.restoredPatientListCount]).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(r.ekran).toEqual({ przycisk: null, podsumowanie: 'Brak nowych danych — wszystko już masz' });
+    expect(r.linie).toEqual([JUZ_BYLY]);
+    expect([await r.C.v.listAllPatientNotes(), await r.C.v.listNotes(), await r.C.v.listPatientLists()]).toEqual([[], [], []]);
+    parzystosc(r);
+  });
+
+  it('T37 [kontrola, recenzja: nagrobki pozycji, których tu nie było] notatka, szablon i lista dodane i usunięte w kopii po synchronizacji: 0 usuniętych, przycisk ukryty', async () => {
+    const r = await przypadek({
+      po: async (A, { p1 }) => {
+        await notatka(A.v, p1, 'N-efemeryczna (fikcja)');
+        await A.v.saveNote({ title: 'Szablon-efemeryczny', body: 'f', category: 'wlasne' });
+        await A.v.savePatientList({ name: 'Lista-efemeryczna', memberIds: [p1] });
+        await chwila(5);
+        const [n] = await A.v.listPatientNotesForPatient(p1); await A.v.removePatientNote(n.id);
+        const [s] = await A.v.listNotes(); await A.v.removeNote(s.id);
+        const [l] = await A.v.listPatientLists(); await A.v.deletePatientList(l.id);
+      },
+    });
+    expect([r.podglad.deletedPatientNoteCount, r.podglad.deletedNoteCount, r.podglad.deletedPatientListCount]).toEqual([0, 0, 0]);
+    expect(r.ekran).toEqual({ przycisk: null, podsumowanie: 'Brak nowych danych — wszystko już masz' });
+    expect(r.po.nagrobkiNotatek, 'Le dopisuje nagrobki z kopii — to nie jest widoczna zmiana').toHaveLength(1);
+    parzystosc(r);
+  });
+
+  it('T38 [CZERWONY, recenzja: osoba spoza bazy] kontakt z kopii zastępuje późniejszy tutejszy (scalanie bez zmian); podtytuł mówi o kontakcie', async () => {
+    let pid = null, tutaj = null;
+    const osoba = (contact, patientId) => ({ ...(patientId ? { patientId } : {}), firstName: 'Fikcyjna', lastName: 'Osoba', sex: 'F', birthYear: 2019, contact });
+    const r = await przypadek({
+      przed: async (A) => { pid = (await A.v.saveExternalPatient(osoba('tel. 000 000 001 (fikcja)'))).patientId; },
+      po: async (A) => { await A.v.saveExternalPatient(osoba('tel. 000 000 002 (fikcja, A)', pid)); },
+      wC: async (C) => {
+        await chwila(5);
+        await C.v.saveExternalPatient(osoba('tel. 000 000 003 (fikcja, C później)', pid));
+        tutaj = (await C.v.listExternalPatients()).find((k) => k.patientId === pid).header;
+      },
+    });
+    const po = (await r.C.v.listExternalPatients()).find((k) => k.patientId === pid).header;
+    expect(tutaj.contact).toBe('tel. 000 000 003 (fikcja, C później)');
+    expect(po.contact, 'nagłówek z kopii, choć starszy niż tutejszy (scalanie bez zmian)').toBe('tel. 000 000 002 (fikcja, A)');
+    expect(po.timestampISO < tutaj.timestampISO).toBe(true);
+    expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
+    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia'
+      + ' i wiek, a u osoby spoza bazy także rok urodzenia i kontakt.');
+    parzystosc(r);
+  });
+});
+
+/* Losowe przebiegi ze stałym ziarnem (recenzja runda 2): operacje na A przed i po synchronizacji, na C po niej (część
+   przebiegów bez synchronizacji; w C czasem usunięcie albo scalenie pacjenta), kopia A, podgląd i scalenie w C.
+   W każdym: podgląd nie zmienia magazynu i parzystość podgląd = wynik = różnica magazynu. */
+function losowa(ziarno) { let s = ziarno >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
+const OCZEKUJACY = ['Fikcyjny zabieg 1', 'Fikcyjny zabieg 2', 'Fikcyjny zabieg 3'];
+async function losoweZmiany(v, los, ids, ile, metka) {
+  const wybierz = (t) => t[Math.floor(los() * t.length)];
+  for (let i = 0; i < ile; i += 1) {
+    const k = Math.floor(los() * 12);
+    const p = los() < 0.5 ? ids.p1 : ids.p2;
+    try {
+      if (k === 0) await notatka(v, p, `${metka}-N${i}`);
+      else if (k === 1) { const t = await v.listAllPatientNotes(); if (t.length) await v.savePatientNote({ ...wybierz(t), body: `${metka}-e${i}` }); }
+      else if (k === 2) { const t = await v.listAllPatientNotes(); if (t.length) await v.removePatientNote(wybierz(t).id); }
+      else if (k === 3) await v.saveNote({ title: `${metka}-S${i}`, body: 'f', category: 'wlasne' });
+      else if (k === 4) { const t = await v.listNotes(); if (t.length) await v.saveNote({ ...wybierz(t), body: `${metka}-e${i}` }); }
+      else if (k === 5) { const t = await v.listNotes(); if (t.length) await v.removeNote(wybierz(t).id); }
+      else if (k === 6) await v.savePatientList({ name: `${metka}-L${i}`, memberIds: [p] });
+      else if (k === 7) { const t = await v.listPatientLists(); if (t.length) { const l = wybierz(t); await v.savePatientList({ ...l, name: `${l.name}+` }); } }
+      else if (k === 8) { const t = await v.listPatientLists(); if (t.length) await v.deletePatientList(wybierz(t).id); }
+      else if (k === 9) await v.addWaitlistList(wybierz(OCZEKUJACY));
+      else if (k === 10) await v.removeWaitlistList(wybierz(OCZEKUJACY));
+      else await v.setWaitlistSchedule(wybierz(OCZEKUJACY), los() < 0.7 ? { dateISO: `2026-12-0${1 + Math.floor(los() * 8)}`, time: wybierz(['09:00', '11:30']) } : null);
+    } catch { /* operacja niedozwolona w tym stanie (np. pacjent usunięty) — przebieg idzie dalej */ }
+    await chwila(2);
+  }
+}
+describe('P-KOPIA-DANE-KONTA — losowe przebiegi (stałe ziarna)', () => {
+  for (let ziarno = 1; ziarno <= 30; ziarno += 1) {
+    it(`ziarno ${ziarno}: podgląd nie zmienia magazynu, podgląd = wynik = różnica magazynu`, async () => {
+      const los = losowa(ziarno * 7919);
+      const r = await przypadek({
+        synchronizuj: los() < 0.85,
+        przed: async (A, ids) => { await losoweZmiany(A.v, los, ids, 8, 'A0'); },
+        po: async (A, ids) => { await losoweZmiany(A.v, los, ids, 7, 'A'); },
+        wC: async (C, ids) => {
+          await chwila(3);
+          await losoweZmiany(C.v, los, ids, 4, 'C');
+          const x = los();
+          try {
+            if (x < 0.15) await C.v.removePatient(ids.p2);
+            else if (x < 0.3) await C.v.mergePatients(ids.p2, ids.p1);
+          } catch { /* jw. */ }
+        },
+      });
+      parzystosc(r);
+    }, 60000);
+  }
+});
+
 describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
   it('odmiana form 1 / 2–4 / 5+ i części etykiety (notatki pacjentów i szablony razem, listy pacjentów i oczekujących razem)', () => {
     const m = {
@@ -722,10 +891,12 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     // Uwaga recenzji (E1): listy oczekujących i terminy w wyniku z różnicy magazynu przed Le i po Le, nie z planu.
     expect(ss).toContain('const Bks_mp=await Bks_mapyOczekujacych();let h=null;try{h=await Le(');
     expect(ss).not.toContain('Bks_planDanych');
-    expect(ss).toContain('foreignSnapshotCount:Bks_k.obceId.size,...Bks_wynikDanych(h,Bks_mp,await Bks_mapyOczekujacych())}');
+    // Uwaga recenzji (wyścig, runda 2): wynik dostaje ładunek kopii, by liczyć tylko zmiany list oczekujących z kopii.
+    expect(ss).toContain('foreignSnapshotCount:Bks_k.obceId.size,...Bks_wynikDanych(h,Bks_mp,await Bks_mapyOczekujacych(),a)}');
     expect(ss, 'mergedPatientCount tylko dla kart z nowymi wersjami').toContain('lastSavedAtISO:tt||l}));y++}}else{');
-    // Plan tylko czyta: żadnego put/remove w czytelnym bloku planu.
-    const plan = src.slice(src.indexOf('function Bks_najnowsza('), src.indexOf('function Bks_wynikDanych('));
+    // Plan i wynik tylko czytają: żadnego put/remove w czytelnym bloku planu, odczytu map i wyniku.
+    const plan = src.slice(src.indexOf('function Bks_najnowsza('), src.indexOf('async function Bsl_zdejmijNagrobek('));
+    expect(plan).toContain('function Bks_wynikDanych(');
     expect(plan).not.toMatch(/\.(put|remove)[A-Za-z]*ForUser\(/);
     expect(plan).not.toMatch(/Bmk_zmien|\bLe\(/);
   });
@@ -737,10 +908,12 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     expect(uo).toContain('text:Bks_podsumowanie(m)})),s.style.display="block",Bks_pokazScal(u,m)}');
     expect(uo).toContain('Bks_linieDanych(m).concat(Bks_linie(m),Bks_koniecWyniku(m,Bks_pg)).forEach(');
     // Podtytuł: nie obiecuje już „bez usuwania ani nadpisywania”, „doda tylko” ani „nowsza poprawka z kopii zastąpi
-    // starszą” (uwagi recenzji: nagłówek karty, reguła rev); zdanie o pominiętych pacjentach bez zmian.
+    // starszą” (uwagi recenzji: nagłówek karty, reguła rev) i wymienia cały nagłówek, także kontakt osoby spoza bazy
+    // (runda 2); zdanie o pominiętych pacjentach bez zmian.
     expect(uo).not.toContain('bez usuwania ani nadpisywania');
     expect(PODTYTUL).toBe('Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której'
-      + ' dojdą zapisy, przejmie z kopii imię i nazwisko, płeć i datę urodzenia. Notatki i listy scali jak synchronizacja:'
+      + ' dojdą zapisy, przejmie z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia i wiek, a u osoby spoza bazy także'
+      + ' rok urodzenia i kontakt. Notatki i listy scali jak synchronizacja:'
       + ' wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także'
       + ' tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich'
       + ' ostatnim zapisie w kopii.');

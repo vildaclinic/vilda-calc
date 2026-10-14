@@ -133,8 +133,8 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
 
     const ekran = await podglad(page, kopia);
     await expect(ekran.getByText('Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której dojdą zapisy, przejmie'
-      + ' z kopii imię i nazwisko, płeć i datę urodzenia. Notatki i listy scali jak synchronizacja: wersja z kopii może zastąpić'
-      + ' tutejszą, nawet poprawioną tu później')).toBeVisible();
+      + ' z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia i wiek, a u osoby spoza bazy także rok urodzenia i kontakt.'
+      + ' Notatki i listy scali jak synchronizacja: wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później')).toBeVisible();
     await expect(ekran.getByText('nowsza poprawka z kopii zastąpi starszą')).toHaveCount(0);
     await expect(ekran.getByText('Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim zapisie w kopii.')).toBeVisible();
     await expect(ekran.getByText('Brak nowych zapisów · 1 nowa notatka pacjenta · 1 nowy szablon w Notatkach · 1 nowa lista pacjentów'
@@ -178,6 +178,13 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
     expect(p.scrollWidth, 'bez poziomego przewijania').toBeLessThanOrEqual(p.innerWidth);
     expect(p.lewa).toBeGreaterThanOrEqual(0);
     expect(p.prawa).toBeLessThanOrEqual(p.innerWidth);
+    // Dłuższy podtytuł (uwaga recenzji, runda 2: cały nagłówek karty, u osoby spoza bazy także kontakt) mieści się w ekranie.
+    const podtytul = ekran.getByText(/a u osoby spoza bazy także rok urodzenia i kontakt\./);
+    await expect(podtytul).toBeVisible();
+    const t = await podtytul.boundingBox();
+    expect(t.x).toBeGreaterThanOrEqual(0);
+    expect(t.x + t.width).toBeLessThanOrEqual(p.innerWidth);
+    await zrzut(page, 'podtytul-telefon-390', podtytul);
     await zrzut(page, 'podglad-telefon-390', scal);
     await scal.click();
     await expect(ekran.getByText('✓ Dodano 1 notatkę pacjenta, 1 szablon w Notatkach, 1 listę pacjentów, 1 listę oczekujących')).toBeVisible();
