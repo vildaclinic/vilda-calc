@@ -16,6 +16,8 @@ import { expect, test } from '@playwright/test';
 // usunięta razem z X.
 // Trzeci test (uwaga przeglądu końcowego do 4270ca1): przypięta wersja X i delta nagrobka z kartą Y — opis niżej.
 // Czwarty test (uwagi recenzentów do dd21d11): łańcuch „Scal pacjentów” X → Y → Z i poprawka x1 z drugiego urządzenia.
+// Piąty test (przegląd końcowy do 69e41d1): ten sam łańcuch i poprawka bieżącego pomiaru X (głowy) z nową chwilą zapisu,
+// jak okno „Edytuj pomiar” — bieżącą wersją Z zostaje głowa scalenia.
 //
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -234,6 +236,8 @@ test('przypięta x2 w X, delta Y, potem delta nagrobka X z kartą Y: x2 pod Y z 
 // chwila zapisu, późniejsza chwila zmiany). Rekord x1 pod Z jest nowszy (rev 2), więc x1 zostaje pod Z, ale jego treść
 // jest starsza: faza przeniesień, pod blokadami Web Locks obu kart, wpisuje do x1 pod Z poprawkę z ładunku (decyzja
 // „treść”, Bsw_poprawTresc; odczyt wersji po kluczu w IndexedDB). Na dd21d11 x1 zostawał z 60 mies. (poprawka ginęła).
+// Przegląd końcowy do 69e41d1: x1 z chwilą zapisu poprawki (późniejszą niż głowa scalenia) stawała się bieżącą wersją
+// Z; teraz chwila zapisu x1 pod Z bez zmian (Z wygrała przypisanie), bieżąca wersja Z = głowa scalenia.
 test('łańcuch „Scal pacjentów” X → Y → Z, poprawka x1 w X z drugiego urządzenia: x1 pod Z z poprawką (IndexedDB)', async ({ page }) => {
   await otworzSejf(page);
   const wynik = await page.evaluate(async () => {
@@ -253,7 +257,8 @@ test('łańcuch „Scal pacjentów” X → Y → Z, poprawka x1 w X z drugiego 
     const p0 = kopia(await V.exportSyncPayload());
     await V.mergePatients(X, Y);
     await czekaj(5);
-    await V.mergePatients(Y, Z);
+    const zm = (await V.mergePatients(Y, Z)).snapshotId;
+    const x1Przed = (await V.getPatient(Z)).snapshots.find((s) => s.snapshotId === x1);
     await czekaj(5);
     // Delta karty X z drugiego urządzenia: x1 poprawiona (61 mies.) z nową chwilą zapisu.
     const teraz = new Date().toISOString();
@@ -271,6 +276,8 @@ test('łańcuch „Scal pacjentów” X → Y → Z, poprawka x1 w X z drugiego 
       wersjeZ: pZ.snapshots.length,
       x1Wieki: s1 ? s1.payload.advanced.data.measurements.map((m) => m.ageMonths) : null,
       x1Rev: s1 ? s1.rev : null,
+      x1ZapisBezZmian: Boolean(s1 && s1.savedAtISO === x1Przed.savedAtISO),
+      glowaZ: pZ.snapshots[0].snapshotId === zm && (await V.getLatestSnapshot(Z)).snapshotId === zm,
       dodaneKarty: wynikScalania.addedPatientCount,
       locks: Boolean(navigator.locks && typeof navigator.locks.request === 'function'),
     };
@@ -280,8 +287,71 @@ test('łańcuch „Scal pacjentów” X → Y → Z, poprawka x1 w X z drugiego 
   expect(wynik.jestX, 'karta X nie wraca (x1 zostaje pod Z — nowszy rekord)').toBe(false);
   expect(wynik.x1Wieki, 'treść poprawki z drugiego urządzenia').toEqual([61]);
   expect(wynik.x1Rev, 'rev wyższa z dwóch').toBe(2);
+  expect(wynik.x1ZapisBezZmian, 'chwila zapisu x1 pod Z (miejsce w historii) bez zmian').toBe(true);
+  expect(wynik.glowaZ, 'bieżąca wersja Z = głowa scalenia').toBe(true);
   // Z: z1, z2, zm + wersje Y po pierwszym scaleniu (y1, y2, x1, x2, ym)
   expect(wynik.wersjeZ).toBe(8);
   expect(wynik.licznikZ).toBe(8);
+  expect(wynik.dodaneKarty).toBe(0);
+});
+
+// Przegląd końcowy do 69e41d1 (waga wysoka): trzy duplikaty X [60, 66], Y [72, 78], Z [84, 90]; „Scal pacjentów”
+// X → Y, potem Y → Z — głowa Z ma 6 pomiarów. Z drugiego urządzenia, które o scaleniach nie wiedziało, przychodzi karta
+// X z poprawionym bieżącym pomiarem (głowa x2: 66 mies. 123 → 124 cm, rev 1, nowa chwila zapisu — jak okno „Edytuj
+// pomiar”). x2 zostaje pod Z (rekord pod Z nowszy: rev 2), przyjmuje treść poprawki (decyzja „treść”, faza przeniesień
+// pod blokadami Web Locks), ale nie jej chwilę zapisu. Na 69e41d1 x2 stawała się bieżącą wersją Z („60:120,66:124” —
+// bez pomiarów Y i Z).
+test('łańcuch „Scal pacjentów” X → Y → Z, poprawka bieżącego pomiaru X z drugiego urządzenia: bieżąca wersja Z = głowa scalenia (IndexedDB)', async ({ page }) => {
+  await otworzSejf(page);
+  const wynik = await page.evaluate(async () => {
+    const V = window.VildaVault;
+    const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
+    const pomiar = (m) => ({ uid: `m-${m}`, ageMonths: m, ageYears: m / 12, height: 90 + m / 2, weight: 12 + m / 6 });
+    const rekord = (wieki) => ({
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+      advanced: { data: { measurements: wieki.map(pomiar) } },
+    });
+    const zapisz = (wieki, patientId) => V.savePatient(rekord(wieki), patientId ? { patientId, dedup: false } : { dedup: false });
+    const kopia = (x) => JSON.parse(JSON.stringify(x));
+    const karta = async (a, b) => {
+      const p = await zapisz([a]); await czekaj(5);
+      const q = await zapisz([a, b], p.patientId); await czekaj(5);
+      return { id: p.patientId, glowa: q.snapshotId };
+    };
+    const pomiary = (s) => s.payload.advanced.data.measurements.map((m) => `${m.ageMonths}:${m.height}`).join(',');
+    const x = await karta(60, 66), y = await karta(72, 78), z = await karta(84, 90);
+    const p0 = kopia(await V.exportSyncPayload());
+    const x2Zapis = p0.patients.find((p) => p.patientId === x.id).snapshots.find((s) => s.snapshotId === x.glowa).savedAtISO;
+    await V.mergePatients(x.id, y.id); await czekaj(5);
+    const zm = (await V.mergePatients(y.id, z.id)).snapshotId; await czekaj(5);
+    const przed = await V.getLatestSnapshot(z.id);
+    const teraz = new Date().toISOString();
+    const kX = kopia(p0.patients.find((p) => p.patientId === x.id));
+    kX.snapshots = kX.snapshots.map((s) => {
+      if (s.snapshotId !== x.glowa) return s;
+      const pl = kopia(s.payload);
+      pl.advanced.data.measurements[1].height = 124;
+      return Object.assign({}, s, { rev: 1, updatedAtISO: teraz, savedAtISO: teraz, payload: pl });
+    });
+    kX.lastSavedAtISO = teraz;
+    const wynikScalania = await V.mergeSyncPayload({ schemaVersion: p0.schemaVersion, patients: [kX], tombstones: [] });
+    const po = await V.getLatestSnapshot(z.id);
+    const pZ = await V.getPatient(z.id);
+    const x2 = pZ.snapshots.find((s) => s.snapshotId === x.glowa);
+    return {
+      przed: pomiary(przed), po: pomiary(po), glowaPoToZm: po.snapshotId === zm, pierwszaToZm: pZ.snapshots[0].snapshotId === zm,
+      x2: x2 ? pomiary(x2) : null, x2ZapisBezZmian: Boolean(x2 && x2.savedAtISO === x2Zapis),
+      jestX: (await V.listPatients()).some((p) => p.patientId === x.id), dodaneKarty: wynikScalania.addedPatientCount,
+    };
+  });
+
+  expect(wynik.przed).toBe('60:120,66:123,72:126,78:129,84:132,90:135');
+  expect(wynik.po, 'bieżące pomiary Z bez zmian').toBe(wynik.przed);
+  expect(wynik.glowaPoToZm, 'getLatestSnapshot(Z) = głowa scalenia').toBe(true);
+  expect(wynik.pierwszaToZm, 'getPatient(Z).snapshots[0] = głowa scalenia').toBe(true);
+  expect(wynik.x2, 'x2 pod Z z poprawką z drugiego urządzenia').toBe('60:120,66:124');
+  expect(wynik.x2ZapisBezZmian, 'chwila zapisu x2 — miejsce w historii sprzed scaleń').toBe(true);
+  expect(wynik.jestX).toBe(false);
   expect(wynik.dodaneKarty).toBe(0);
 });

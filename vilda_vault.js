@@ -897,6 +897,8 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *   - tresc wersji wspolnej dwom kartom: pozniejsza chwila zmiany (Bsw_nowszaTresc), niezaleznie od tego, ktora karta
  *     wygrala — rev liczy tez przeniesienia, wiec po kilku „Scal pacjentow” nie mowi, ktora tresc jest nowsza; wynik
  *     z wyzsza z dwoch rev (Bsw_rekord); tutejszy rekord, ktory zostaje, przyjmuje pozniejsza tresc (decyzja 'tresc');
+ *     chwila zapisu wersji (miejsce w historii karty) — ze strony, ktora wygrala przypisanie karty, wiec przeniesiona
+ *     dawna glowa scalonej karty nie wyprzedza glowy scalenia;
  *   - przeniesienie miedzy dwiema istniejacymi kartami w osobnej fazie, pod blokadami obu kart (Bsl_przeniesWersje);
  *     przechodzi tez ostatnia wersja karty, a karta bez wersji znika (bez nagrobka) — inaczej delta karty celu
  *     i osobna delta nagrobka scalonej karty gubily jej najnowsza wersje;
@@ -1039,21 +1041,29 @@ async function Bsw_decyzja(ctx, F, S) {
 }
 
 // Rekord wersji wspolnej dwom kartom pod karta `cel` ({ patientId }): karta z ladunku F („zabierz”, „przenies”) albo
-// tutejsza G („tresc”). Tresc nowsza wg Bsw_nowszaTresc — z ladunku (S, szyfr) albo tutejsza (g) — idzie razem ze swoja
-// chwila zmiany i chwila zapisu (wtedy poprawka zrobiona tu nie ginie pod starsza trescia z ladunku; przy remisie —
-// tutejsza). Rewizja wyniku = wyzsza z dwoch: wynik wygrywa wtedy z kazdym z nich regula wersji tej samej karty (rev
-// nie nizsza, a chwila zmiany tresci — najpozniejsza), wiec rozchodzi sie takze na urzadzenia, na ktorych ta wersja
-// lezy juz pod karta `cel`. Bez +1: rev, ktora rosnie bez zmiany tresci, wygrywa potem regula „najpierw rev”
+// tutejsza G („tresc”, tutejszaKarta = true). Tresc nowsza wg Bsw_nowszaTresc — z ladunku (S, szyfr) albo tutejsza
+// (g) — idzie razem ze swoja chwila zmiany (wtedy poprawka zrobiona tu nie ginie pod starsza trescia z ladunku; przy
+// remisie — tutejsza). Chwila zapisu wersji (jej miejsce w historii karty: kolejnosc yr, biezaca wersja karty) — ze
+// strony, ktora wygrala przypisanie karty: z ladunku pod F, tutejsza pod G — niezaleznie od tresci. Powod (uwaga
+// przegladu koncowego do 69e41d1): okno „Edytuj pomiar” zapisuje poprawke biezacego pomiaru z nowa chwila zapisu
+// wersji; po „Scal pacjentow” X -> Y -> Z taka poprawka glowy starej X na urzadzeniu, ktore o scaleniach nie wiedzialo,
+// przechodzila pod Z razem ze swoja chwila zapisu, pozniejsza niz glowa scalenia — biezaca wersja Z stawala sie
+// dawna glowa X (bez pomiarow Y i Z), a kolejny zapis formularza budowal sie na niej. Chwila zapisu nie bierze udzialu
+// w zadnej decyzji scalania, wiec obie strony koncza z ta sama (strona, ktora wygrala przypisanie, jest ta sama na obu
+// urzadzeniach). Rewizja wyniku = wyzsza z dwoch: wynik wygrywa wtedy z kazdym z nich regula wersji tej samej karty
+// (rev nie nizsza, a chwila zmiany tresci — najpozniejsza), wiec rozchodzi sie takze na urzadzenia, na ktorych ta
+// wersja lezy juz pod karta `cel`. Bez +1: rev, ktora rosnie bez zmiany tresci, wygrywa potem regula „najpierw rev”
 // z pozniejsza poprawka tej samej wersji w tej samej karcie (fuzz roznicowy do dd21d11: wariant z +1 gubil tak
 // poprawki, ktore zostawaly na dd21d11). Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
-function Bsw_rekord(cel, S, szyfr, teraz, g) {
+function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
   const r = Bsl_wersjaZLadunku(cel, S, szyfr, teraz);
   if (!g) return r;
   if (!Bsw_nowszaTresc(S, g)) {
     r.payloadCipher = g.payloadCipher;
     r.updatedAtISO = g.updatedAtISO || null;
-    r.savedAtISO = g.savedAtISO || r.savedAtISO;
   }
+  // Ladunek bez chwili zapisu wersji (uszkodzony) — tutejsza, jak w galezi wersji tej samej karty, a nie „teraz”.
+  if ((tutejszaKarta || !S.savedAtISO) && g.savedAtISO) r.savedAtISO = g.savedAtISO;
   r.rev = Math.max(mt(S), mt(g));
   return r;
 }
@@ -1212,20 +1222,23 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
 
 // Decyzja 'tresc' (Bsw_decyzja), pod blokadami obu kart, na swiezym odczycie: wersja nadal u G, a tresc z ladunku nadal
 // pozniejsza niz tutejsza (zmieniona tu w miedzyczasie, np. w innej karcie przegladarki — zostaje bez zmian). Rekord G
-// dostaje tresc z ladunku, jej chwile zmiany i zapisu; rev = wyzsza z dwoch (Bsw_rekord). Licznik, naglowek i chwila
-// zapisu karty G bez zmian (wersji nie przybylo; tak samo urzadzenie, ktore dostaje ten rekord jako zmiane wersji tej
-// samej karty). Zwraca null (bez zmian) albo { dodana: 0, usunieta: 0 }.
+// dostaje tresc z ladunku i jej chwile zmiany; chwila zapisu wersji (miejsce w historii G) zostaje tutejsza, bo G
+// wygrala przypisanie (Bsw_rekord z tutejszaKarta) — poprawka dawnej glowy starej karty nie staje sie biezaca wersja
+// G; rev = wyzsza z dwoch. Licznik, naglowek i chwila zapisu karty G bez zmian (wersji nie przybylo; tak samo
+// urzadzenie, ktore dostaje ten rekord jako zmiane wersji tej samej karty). Zwraca null (bez zmian) albo
+// { dodana: 0, usunieta: 0 }.
 async function Bsw_poprawTresc(p, teraz) {
   const g = (await I().listSnapshotsForUser(b, p.G)).find(function (s) { return s && s.snapshotId === p.S.snapshotId; });
   if (!g || !Bsw_nowszaTresc(p.S, g)) return null;
   if (!(await I().getPatientForUser(b, p.G))) return null;
-  await I().putSnapshotForUser(b, Object.assign(Bsw_rekord({ patientId: p.G }, p.S, p.szyfr, teraz, g), Bm1(g, p.S)));
+  await I().putSnapshotForUser(b, Object.assign(Bsw_rekord({ patientId: p.G }, p.S, p.szyfr, teraz, g, true), Bm1(g, p.S)));
   return { dodana: 0, usunieta: 0 };
 }
 
 // Jedno przeniesienie, pod blokadami obu kart, na swiezym odczycie: wersja nadal u G i w tej samej rewizji co przy
 // decyzji, a karta F istnieje albo jej nagrobek nadal przegrywa z zapisem z ladunku (wtedy F powstaje z naglowkiem
-// z ladunku). Tresc nowsza wg Bsw_nowszaTresc (z ladunku albo tutejsza; Bsw_rekord). Licznik F = liczba jej wersji.
+// z ladunku). Tresc nowsza wg Bsw_nowszaTresc (z ladunku albo tutejsza; Bsw_rekord), chwila zapisu wersji — z ladunku
+// (F wygrala przypisanie). Licznik F = liczba jej wersji.
 // Ostatnia wersja G tez przechodzi (ta sama regula wlasciciela co dla pozostalych), a pusta karta G znika — bez nagrobka.
 // Dotad ostatnia wersja zostawala przy G: delta karty Y po „Scal pacjentow” X -> Y (buildPatientDelta, bez nagrobkow)
 // przenosila spod X wszystko poza glowa X, a osobna delta nagrobka X usuwala potem X razem z ta glowa — wersja ginela
