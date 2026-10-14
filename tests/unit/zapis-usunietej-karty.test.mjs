@@ -383,11 +383,16 @@ describe('A13 — ponowienie do karty docelowej scalenia (dolaczPoScaleniu)', ()
     const d = await konto();
     const planX = { palFactor: 1.6, palWybrany: true, dietLevel: 'redukcyjna', dietaWybrana: true };
     const x = (await d.v.savePatient(Object.assign(payload([[60, 120], [66, 123]]), { plan: planX }), { dedup: false })).patientId;
-    const planPusty = { palFactor: null, palWybrany: false, dietLevel: null, dietaWybrana: false }; // jak collectUserData bez planu
+    // jak collectUserData bez planu na docpro, w kalkulatorze klirensu i na index bez wieku (index z wiekiem zapisuje PAL
+    // domyślny z palWybrany:false — ten kształt sprawdza tests/unit/scalanie-sekcje-bez-danych.test.mjs)
+    const planPusty = { palFactor: null, palWybrany: false, dietLevel: null, dietaWybrana: false };
     const y = (await d.v.savePatient(Object.assign(payload([48, 54]), { plan: planPusty, foods: { snacks: [], meals: [] } }), { dedup: false })).patientId;
     const glowaX = (await d.v.getPatient(x)).snapshots[0].payload;
     await d.v.mergePatients(x, y);
-    expect((await d.v.getPatient(y)).snapshots[0].payload.plan, 'kontrola: scalenie trzyma pusty plan karty docelowej').toEqual(planPusty);
+    // P-SCALANIE-SEKCJE (2026-10-14): dotąd ta kontrola przypinała pusty plan karty docelowej po „Scal pacjentów” (Bsc1
+    // trzymał każdą sekcję, która nie była null). Teraz niewypełniona sekcja karty docelowej jest zastępowana w całości
+    // wypełnioną sekcją starej karty — plan X jest w głowie Y już po scaleniu, a ponowienie niżej go nie rusza.
+    expect((await d.v.getPatient(y)).snapshots[0].payload.plan, 'kontrola: scalenie bierze wypełniony plan starej karty (P-SCALANIE-SEKCJE)').toEqual(planX);
     await d.v.savePatient(formularzX(glowaX), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
     expect((await d.v.getPatient(y)).snapshots[0].payload.plan, 'plan ze starej karty zostaje').toEqual(planX);
   });
