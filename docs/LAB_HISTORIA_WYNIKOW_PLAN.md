@@ -2,7 +2,7 @@
 
 Stan dokumentu: projekt do decyzji właściciela, wersja 2 z 2026-10-14 (po panelu projektowym i krytyce). Nic z tego dokumentu nie jest wdrożone. Opisuje funkcję, miejsca w interfejsie, model danych, etapy wdrożenia i decyzje, które należą do właściciela.
 
-Baza kodu: `origin/audyt` po #677 (`48f5fc0`, 2026-10-14), SW 1.1.274, `vilda_auth_ui.js?v=491`, `vilda_session_bridge.js?v=63`, `vilda_vault.js?v=211`, `lab_pin_result.js?v=7`, `vilda_lab_snapshot.js?v=7`. Numery wersji i SHA w tym dokumencie są orientacyjne: wykonawca każdego etapu odświeża `origin/audyt`, porównuje SHA (AGENTS.md § 1) i przegląda otwarte PR-y do `audyt` przed startem. W dniu pisania otwarty jest #674 (P-GRANICA-URODZIN, SW); etapy tego planu zaczynają się po jego scaleniu. Scalony tego dnia #677 (AMH: utrwalenie odniesienia przy przypięciu, pole `lab.hormoneReference`) jest precedensem dla zapisu danych odniesienia w chwili przypięcia (rozdział 1, decyzja 6.3).
+Baza kodu: `origin/audyt` po #674 (`4cd1034`, 2026-10-14), SW 1.1.275, `vilda_auth_ui.js?v=491`, `vilda_session_bridge.js?v=63`, `vilda_vault.js?v=211`, `lab_pin_result.js?v=7`, `vilda_lab_snapshot.js?v=7`. Numery wersji i SHA w tym dokumencie są orientacyjne: wykonawca każdego etapu odświeża `origin/audyt`, porównuje SHA (AGENTS.md § 1) i przegląda otwarte PR-y do `audyt` przed startem. Scalony tego dnia #674 (P-GRANICA-URODZIN, SW 1.1.275) nie dotyka modułów tego planu; w chwili pisania nie ma innych otwartych PR-ów do `audyt`. Scalony tego dnia #677 (AMH: utrwalenie odniesienia przy przypięciu, pole `lab.hormoneReference`) jest precedensem dla zapisu danych odniesienia w chwili przypięcia (rozdział 1, decyzja 6.3).
 
 Makieta desktop i mobile (AGENTS.md § 5): płótno „Historia badań — makieta” na claude.ai, https://claude.ai/artifact/2VQeLt8SmXQazscJeHcDcj (pięć tablic: karta pacjenta → zakładka „Badania” na desktopie i telefonie 390 px, przelicznik z paskiem „Poprzednie wyniki” na desktopie i telefonie, stany brzegowe). Dane w makiecie są fikcyjne, zakresy poglądowe. Makieta przedstawia wariant z wykresem w pasku przelicznika i paskiem przed wierszem przypięcia; panel projektowy rekomenduje wariant prostszy (rozdział 3.3, decyzje 6.7–6.8) — oba do wyboru właściciela.
 
@@ -178,7 +178,7 @@ Uwagi z recenzji makiety uwzględnione w opublikowanej wersji płótna: strzałk
 
 ## 5. Etapy wdrożenia
 
-Każdy etap to osobny draft PR do `audyt` z gałęzi od świeżego `origin/audyt` (po scaleniu #674), z walidacją z AGENTS.md § 7 (`npm ci`, `npm test`, `npx playwright install chromium`, `npm run test:e2e`), prawdziwym scenariuszem offline po zmianie SW i `npm run podbij-wersje` jako ostatnim krokiem. Kolejność scalania ustala właściciel; PR-y tego wątku wchodzą po kolei (AGENTS.md § 9).
+Każdy etap to osobny draft PR do `audyt` z gałęzi od świeżego `origin/audyt`, z walidacją z AGENTS.md § 7 (`npm ci`, `npm test`, `npx playwright install chromium`, `npm run test:e2e`), prawdziwym scenariuszem offline po zmianie SW i `npm run podbij-wersje` jako ostatnim krokiem. Kolejność scalania ustala właściciel; PR-y tego wątku wchodzą po kolei (AGENTS.md § 9).
 
 ### PR0 — naprawa konwersji jednostek w trendzie
 
@@ -242,7 +242,7 @@ Każdy etap to osobny draft PR do `audyt` z gałęzi od świeżego `origin/audyt
 | 6.16 | Hook `VildaLabConverterRuntime.getSubstanceId()` w czytelnym skrypcie przelicznika (zapas po etykiecie)? | Tak | Dopasowanie po etykiecie pęka przy zmianie `label_pl` |
 | 6.17 | Domyślny widok zakładki ≤480 px: „Tabela”; układ zakładek 2 kolumny + piąta na całą szerokość? | Tak | SVG 660×240 skalowany do 288 px daje etykiety ~4,6 px; 3 kolumny na 320 px ucinają „Siatki centylowe” |
 | 6.18 | Paleta: fiolet modułu lab dla historii i chipów, teal dla przycisków, segmentu i aktywnej zakładki; bez zieleni dla statusów historycznych? | Tak | Spójność z `#labPinRow`, Trendem i `Nl`; LAB guide § 6 |
-| 6.19 | Kolejność względem #674 | Wszystkie PR-y wątku po jego scaleniu | #674 podbija SW i wersje stron; dwa równoległe PR-y w tych samych liniach wersji zawsze się zderzają (AGENTS.md § 9) |
+| 6.19 | Kolejność względem #674 | Spełnione: #674 scalony 2026-10-14 (`4cd1034`), PR-y wątku zaczynają od bazy po nim | #674 podbił SW i wersje stron; dwa równoległe PR-y w tych samych liniach wersji zawsze się zderzają (AGENTS.md § 9) |
 
 ---
 
