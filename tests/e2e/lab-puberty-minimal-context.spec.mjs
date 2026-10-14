@@ -166,9 +166,10 @@ async function recordExplicitContext(page, patientId, context) {
     return { note, assessment: savedAssessment };
   }, { id: patientId, choice: context });
 }
+// LAB-HISTORIA PR2: zapisane oceny przeniosły się z „Trendu wyników” w Historii do zakładki „Badania”.
 async function openTimeline(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
 }
 const historicalAssessment = (page, id) => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
 
@@ -326,7 +327,7 @@ test('pin and history preserve the automatic preview and its unknown input after
   expect(series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === saved.id).assessment.evaluation.referencePreview)
     .toEqual(before.evaluation.referencePreview);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expectConditionalResult(recorded);
 });

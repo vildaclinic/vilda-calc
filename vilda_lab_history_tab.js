@@ -469,8 +469,9 @@
         var total = series.reduce(function (sum, serie) {
           return sum + serie.points.filter(function (point) { return own(point, 'assessment'); }).length;
         }, 0);
-        var box = add(parent, 'details', 'vilda-lab-hist-assess');
-        add(box, 'summary', '', 'Zapisane oceny (' + total + ')');
+        // Zawsze rozwinięte, jak dawniej w „Historii”: ostrzeżenia kliniczne zapisanej oceny nie mogą czekać za kliknięciem.
+        var box = add(parent, 'div', 'vilda-lab-hist-assess');
+        add(box, 'p', 'vilda-lab-hist-assess-h', 'Zapisane oceny (' + total + ')');
         series.forEach(function (serie) {
           try { trend.assessments(box, serie, openNote); } catch (_) { /* renderer oceny pokazuje własny stan błędu */ }
         });

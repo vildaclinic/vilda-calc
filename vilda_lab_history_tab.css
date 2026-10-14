@@ -330,11 +330,15 @@
   font-size: 13px
 }
 
-.vilda-lab-hist-comments summary,
-.vilda-lab-hist-assess summary {
+.vilda-lab-hist-comments summary {
   color: #534AB7;
   font-weight: 600;
   cursor: pointer
+}
+
+.vilda-lab-hist-assess-h {
+  color: #534AB7;
+  font-weight: 600
 }
 
 .vilda-lab-hist-comments ul,

@@ -329,7 +329,8 @@ LH/FSH/inhibiny B.
   pełne miesiące kalendarzowe między `input.birthDateISO` i
   `input.sampleDateISO`. Pełna ocena: „Zapisane oceny” (istniejące
   `Lh3TrendAssessments`) pod kartą LH/FSH/inhibiny B i pod tabelą osi
-  gonadalnej.
+  gonadalnej, zawsze rozwinięte, jak dawniej w „Historii”: ostrzeżenia
+  kliniczne zapisanej oceny nie czekają za kliknięciem.
 - Tabela: wiersze dat malejąco, kolumny badań panelu z jednostką
   w nagłówku, w komórce wartość bez jednostki, strzałka z zapisu i różnica
   pod wartością (względem wcześniejszego wyniku tego badania z datą badania);
@@ -391,6 +392,11 @@ i 320 px: układ 2 + 2 + 1, domyślnie Tabela, bez poziomego przewijania
 strony), `lab-trend-jednostki.spec.mjs` (przeliczenie fT4 na wykresie,
 teraz w „Badaniach”, Start i DocPro), `lab-snapshot.spec.mjs` (asercje
 Historii bez zmian, plus brak sekcji trendu, odnośnik i karta LH).
+Asercje zapisanych ocen w `lab-inhibin-b.spec.mjs` i dziesięciu plikach
+`lab-puberty-*.spec.mjs` sprawdzały dotąd wiersze „Zapisane oceny” sekcji
+trendu w „Historii”; przeniesione do zakładki „Badania” bez zmiany treści
+(w `lab-puberty-ui.spec.mjs` tytuł wpisu nadal sprawdzany na osi czasu
+„Historii”).
 Zielone testy nie są walidacją kliniczną.
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)

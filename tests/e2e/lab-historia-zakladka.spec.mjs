@@ -42,8 +42,10 @@ test('pięć zakładek; Badania: podsumowanie, panele, oczekujące, karty z wart
   const lh = badania.locator('.vilda-lab-hist-card[data-series="lh"]');
   await expect(lh.locator('.vilda-lab-hist-status.is-recorded')).toContainText('oceniono jako: dziewczynka · 12 l 2 m w dniu pobrania · Th3');
   await expect(lh.locator('.vilda-lab-hist-foot')).toHaveText('Poza wykresem: 1 (wynik z „<” lub „>”: 1)');
-  await lh.locator('details.vilda-lab-hist-assess > summary').click();
+  // Zapisane oceny są rozwinięte od razu (ostrzeżenia kliniczne nie czekają za kliknięciem).
+  await expect(lh.locator('.vilda-lab-hist-assess-h')).toHaveText('Zapisane oceny (3)');
   await expect(lh.locator('.vilda-lab-assessment-history-row')).toHaveCount(3);
+  await expect(lh.locator('.vilda-lab-assessment-history-row').first()).toBeVisible();
 
   const prl = badania.locator('.vilda-lab-hist-card[data-series="prolactin"]');
   await expect(prl).toContainText('jednostka nierozpoznana albo brak jednostki — wynik jak zapisano, bez porównania');
