@@ -430,7 +430,7 @@
     }
   ],
   "validation": {
-    "status": "Targeted controls and full npm test completed; PWA update/offline restart, full E2E and exact-head GitHub CI pending.",
+    "status": "Local checks recorded; integration revalidation after merging audyt PR671, with exact-head CI results reported in PR672.",
     "reportedDate": "2026-10-14",
     "generators": {
       "status": "PASS",
@@ -468,14 +468,12 @@
       "notClaimed": "This is not a single uninterrupted 33/33 run or completion of the full repository E2E suite."
     },
     "versions": {
-      "serviceWorker": "1.1.269",
+      "serviceWorker": "1.1.270",
       "rendererQueryVersion": 32,
       "dataQueryVersion": 24
     },
     "pending": [
-      "Real PWA update and fresh offline browser restart",
-      "Full repository E2E suite",
-      "All GitHub checks for latest exact commit"
+      "Final full repository E2E and all GitHub checks for latest exact commit; authoritative results in PR672"
     ],
     "clinicalValidationClaimed": false,
     "fullNpmTest": {
@@ -490,6 +488,49 @@
       },
       "repositoryPolicy": "PASS",
       "proTests": "PASS"
+    },
+    "initialPwa": {
+      "status": "PASS",
+      "fromServiceWorker": "1.1.268",
+      "toServiceWorker": "1.1.269",
+      "fullBrowserRestartOffline": true,
+      "serverStopped": true,
+      "unchangedLaboratoryAssessments": true,
+      "unchangedGeometryAndScale": true
+    },
+    "firstCi": {
+      "head": "9aa1eac94ecd2d0a67bb3a9f5bc32e626b69b190",
+      "browserPassed": 1556,
+      "browserFailed": 1,
+      "unitPassed": 7631,
+      "visualPassed": 64,
+      "failure": "The general offline test still expected the old 5p6-20 profile ID; actual profile, median and geometry were correct. Three assertions updated to 5p6-47; no production change.",
+      "fullOfflineTestAfterCorrection": "PASS, 1/1, without retry"
+    },
+    "integrationAfterPr671": {
+      "baseCommit": "41076ff0af67efefe4c8abc36b338c38c9d35a72",
+      "mergeConflicts": false,
+      "versioningScript": "PASS; service worker 1.1.270",
+      "fullNpmTest": {
+        "status": "PASS",
+        "exitCode": 0,
+        "testFiles": 349,
+        "testsPassed": 7653,
+        "javascriptSyntaxFiles": 975,
+        "lint": "PASS",
+        "repositoryPolicy": "PASS",
+        "proTests": "PASS"
+      },
+      "pwa": {
+        "status": "PASS",
+        "fromServiceWorker": "1.1.269",
+        "toServiceWorker": "1.1.270",
+        "fullBrowserRestartOffline": true,
+        "serverStopped": true,
+        "unchangedLaboratoryAssessments": true,
+        "unchangedGeometryAndScale": true,
+        "pageErrors": []
+      }
     }
   },
   "rights": "No source PDF, figure raster or full text is redistributed here. Brief factual extraction, limited quotations and hashes support provenance.",

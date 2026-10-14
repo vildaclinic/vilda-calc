@@ -60,6 +60,8 @@ Skrypty są globalne i zależne od kolejności ładowania. Publiczne obiekty `wi
 
 **Data urodzenia po wczytaniu pacjenta (P-POROWNANIE-DATA, 2026-10-13).** `vilda_dob_age.js` wpisuje datę urodzenia z rekordu do formularza w osobnym zadaniu po zdarzeniu wczytania (`vilda:patient-loaded`, `vilda:state-restored`, `vilda:persist-restored`). Do tego czasu `VildaDobAge.restorePending()` zwraca `true`, a koniec ogłasza zdarzenie `vilda:dob-restored`. Wiek dokładny (`readExactAge`, `lmsNiemowleWiek`) wcześniej nie jest jeszcze znany. Kod, który przy wczytaniu liczy z wieku i buduje widok, który potem sam się nie przelicza, czeka na to zdarzenie, jak karta porównania (`Sd_poDacie` w `vilda_summary_cards.js`). Opis: wpis P-POROWNANIE-DATA w `docs/clinical/ALGORITHMS.md`.
 
+**Wiek zapisanego pomiaru (P-WIEK-POMIARU, 2026-10-13, decyzja właściciela).** Rdzeń centyli (`calcPercentileStats`, `getChildLMS`, `calcPercentileStatsPal` w `app.js`) bez dodatkowego argumentu liczy pomiar formularza. Bramka DOB-AGE-4 uściśla go wtedy wiekiem dokładnym z daty urodzenia w formularzu, czyli wiekiem dzisiejszej wizyty. Widok ZAPISANEGO pomiaru podaje rdzeniowi jawny wiek `{wiekMies}` — wynik `vildaWiekPomiaruMies(rekord, …)`: dokładny wiek z dnia pomiaru albo `null` (pełne miesiące). Inaczej pomiar z tego samego miesiąca życia dostałby dzisiejszy wiek, a w Karcie pacjenta nawet wiek innego pacjenta z formularza. Tak liczą karta porównania, kafelki Karty pacjenta i schowek. Pozostałe miejsca z tą samą bramką wymienia wpis P-WIEK-POMIARU w `docs/clinical/ALGORITHMS.md`.
+
 ### 2. Obliczenia i dane domenowe
 
 Do tej warstwy należą m.in.:
