@@ -56,8 +56,9 @@ Punkt przeliczony ma znacznik `conv` (na wykresie obwódka, jak dotąd)
 i nie niesie tekstowej normy wpisu (`norm: null`), bo ta norma jest
 w jednostce zapisu, a nie w jednostce serii.
 
-Na stronach z kartą pacjenta innych niż Start konwerter ładuje się
-leniwie. Trend i nakładki na siatki budowały punkty, zanim się załadował,
+Na stronach z kartą pacjenta konwerter ładuje się leniwie, także na Start
+(w czasie bezczynności albo przy pierwszym dotknięciu; sprostowanie
+z P-LAB-TREND-CONVERT-2). Trend i nakładki na siatki budowały punkty, zanim się załadował,
 więc tam sama poprawka wywołania nic by nie zmieniła. Dlatego przy serii
 z wynikami w więcej niż jednej jednostce oba widoki czekają na konwerter,
 najwyżej 5 s; po tym czasie albo przy błędzie ładowania zostaje dawne
@@ -104,6 +105,54 @@ czekania co trend. `lab-amh-history-no-reassessment`,
 `lab-assessment-history` i `hormone-reference-ui` przechodzą bez zmian.
 Zielone testy nie są walidacją kliniczną; zmiana czeka na akceptację
 kliniczną właściciela (AGENTS.md § 3).
+
+### P-LAB-TREND-CONVERT-2 — czekanie na konwerter bez dublowania sekcji (SW 1.1.278, `vilda_auth_ui.js` 493, 2026-10-14, przegląd PR0)
+
+**Wpływ kliniczny: nie.** Wyniki, jednostki, przeliczenia, normy i strzałki
+bez zmian; punkt przeliczony nadal ma `norm: null` (decyzja 6.2). Zmienia
+się tylko to, kiedy trend i nakładki czekają na konwerter, oraz to, że
+przerysowanie karty w trakcie czekania i odczytów nie dubluje sekcji.
+
+**Problem:** czekanie z P-LAB-TREND-CONVERT (do 5 s) poszerzyło okno,
+w którym karta rysuje Historię albo nakładki na siatki drugi raz, np. po
+zapisie notatki albo zmianie zakresu wieku siatki. Drugie wywołanie
+czyściło kontener i rysowało od nowa, a pierwsze po przebudzeniu
+dopisywało swoją sekcję: dwa wiersze chipów nakładek albo dwie listy
+„Historia pacjenta”. Czekanie uruchamiały też serie, których i tak nie da
+się przeliczyć: wpis bez jednostki, wpis bez liczby i seria klirensu
+w kilku jednostkach.
+
+**Zmiana:** Historia i nakładki zapamiętują na kontenerze numer wywołania.
+Wywołanie, które po czekaniu nie jest już ostatnim na tym kontenerze,
+kończy się bez rysowania. Historia sprawdza to także po odczycie zdarzeń
+i pacjenta, bo dopiero potem dopisuje listę zdarzeń; to krótsze okno
+istniało przed P-LAB-TREND-CONVERT. Czekanie zaczyna się tylko wtedy,
+gdy seria ma dokładne wyniki (liczba skończona, niepusta jednostka)
+w więcej niż jednej jednostce, a jej klucz nie zawiera „:” (klirens
+`clcr:…`, nieznany konwerterowi).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Dwa wywołania nakładek na tym samym kontenerze, gdy konwerter jeszcze
+  się ładuje (fT4 15 pmol/L i 1,2 ng/dL) → jeden wiersz chipów „fT4 ×2”.
+  Bez znacznika pokolenia: dwa wiersze.
+- Historia przerysowana w trakcie czekania trendu albo odczytu zdarzeń
+  → starsze wywołanie kończy się bez listy zdarzeń; lista pochodzi tylko
+  z nowszego.
+- Seria fT4 tylko w pmol/L, seria LH z drugim wpisem bez liczby, seria
+  `clcr:schwartz` w dwóch jednostkach → bez czekania i bez ładowania
+  konwertera.
+
+**Testy:** `tests/unit/lab-snapshot-ui.test.mjs` uruchamia prawdziwe
+funkcje nakładek i Historii z artefaktu z atrapą DOM (dwa przypadki wyżej
+oraz kontrola: bez znacznika pokolenia nakładki dają dwa wiersze,
+a Historia niewyprzedzona dochodzi do nagłówka i listy) i funkcje czekania
+z leniwym ładowaniem podanym z zewnątrz (bez czekania przy serii jednojednostkowej, wynikach
+niedokładnych i kluczu klirensu; czekanie na odpowiedź ładowania; brak
+ładowania, gdy konwerter jest; koniec po 5 s i od razu przy błędzie). Na
+artefakcie sprzed poprawki pięć z tych testów padają, a bez strażnika po
+odczycie zdarzeń — test Historii wyprzedzonej w trakcie tego odczytu. E2E
+`lab-trend-jednostki.spec.mjs` bez zmian w asercjach.
 
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 

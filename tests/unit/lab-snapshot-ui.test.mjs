@@ -100,12 +100,17 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
 
 // P-LAB-TREND-CONVERT: ta sama funkcja z artefaktu, ale z prawdziwym konwerterem i plikiem danych
 // jednostek. Współczynnik pochodzi z lab_units_data.js (ten, którym liczy przelicznik), nie z testu.
-function trendWithConverter() {
+// `ja` (leniwe ładowanie konwertera w karcie) podajemy z zewnątrz, żeby sprawdzić czekanie.
+function trendWithConverter({ withConverter = true, ja = () => {} } = {}) {
   const win = {};
-  loadBrowserScript('lab_units_data.js', win);
-  loadBrowserScript('lab_unit_converter.js', win);
+  if (withConverter) {
+    loadBrowserScript('lab_units_data.js', win);
+    loadBrowserScript('lab_unit_converter.js', win);
+  }
+  win.setTimeout = (...args) => setTimeout(...args);
   const source = authSource.slice(authSource.indexOf('function Dl('), authSource.indexOf('function Nl('));
-  const trend = new Function('i', `${source};return {normalize:yi,flag:mi}`)(win);
+  const trend = new Function('i', 'ja',
+    `${source};return {normalize:yi,flag:mi,wait:LtcCzekajNaKonwerter,multi:LtcSeriaWielujednostkowa}`)(win, ja);
   return { win, trend };
 }
 
@@ -162,6 +167,215 @@ describe('P-LAB-TREND-CONVERT — wynik w innej jednostce trafia do trendu', () 
     expect(series.points.map((p) => p.noteId)).toEqual(['synthetic-a', 'synthetic-b']);
     expect(series.skipped).toBe(1);
     expect(convert).not.toHaveBeenCalled();
+  });
+});
+
+describe('P-LAB-TREND-CONVERT — czekanie na leniwie ładowany konwerter', () => {
+  const mixed = [{ testKey: 'ft4', points: [entry('a', 15, 'pmol/L', null, '2026-05-26'), entry('b', 1.2, 'ng/dL', null, '2026-07-07')] }];
+
+  it('seria w jednej jednostce, wyniki niedokładne i klucz spoza konwertera nie czekają', async () => {
+    const ja = vi.fn();
+    const { trend } = trendWithConverter({ withConverter: false, ja });
+    const series = [
+      { testKey: 'ft4', points: [entry('a', 15, 'pmol/L', null, '2026-05-26'), entry('b', 16, 'pmol/L', null, '2026-06-26')] },
+      { testKey: 'lh', points: [entry('c', 2, 'IU/L', null, '2026-05-26'), { ...entry('d', null, 'mIU/mL', null, '2026-06-26') }] },
+      { testKey: 'clcr:schwartz', points: [entry('e', 90, 'ml/min/1,73m²', null, '2026-05-26'), entry('f', 1.5, 'ml/s', null, '2026-06-26')] },
+    ];
+    expect(trend.multi(series)).toBe(false);
+    await trend.wait(series);
+    expect(ja).not.toHaveBeenCalled();
+  });
+
+  it('seria wielojednostkowa bez konwertera czeka na ja() i rusza po jego odpowiedzi', async () => {
+    let ready;
+    const ja = vi.fn((cb) => { ready = cb; });
+    const { trend } = trendWithConverter({ withConverter: false, ja });
+    let done = false;
+    const waiting = trend.wait(mixed).then(() => { done = true; });
+    await Promise.resolve();
+    expect(ja).toHaveBeenCalledOnce();
+    expect(done).toBe(false);
+    ready(true);
+    await waiting;
+    expect(done).toBe(true);
+  });
+
+  it('obecny konwerter z convertAll nie uruchamia ładowania', async () => {
+    const ja = vi.fn();
+    const { trend } = trendWithConverter({ ja });
+    await trend.wait(mixed);
+    expect(ja).not.toHaveBeenCalled();
+  });
+
+  it('brak odpowiedzi ja() kończy czekanie po 5 s, a wyjątek w ja() od razu', async () => {
+    vi.useFakeTimers();
+    try {
+      const { trend } = trendWithConverter({ withConverter: false, ja: () => {} });
+      let done = false;
+      const waiting = trend.wait(mixed).then(() => { done = true; });
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await waiting;
+      expect(done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+    const { trend } = trendWithConverter({ withConverter: false, ja: () => { throw new Error('fikcyjny błąd ładowania'); } });
+    await expect(trend.wait(mixed)).resolves.toBeUndefined();
+  });
+});
+
+// P-LAB-TREND-CONVERT-2: znacznik pokolenia. Prawdziwe Kl() (nakładki na siatki) i Xl() (Historia) z artefaktu
+// z minimalną atrapą DOM; wywołanie wyprzedzone w trakcie czekania na konwerter nie może już rysować.
+class FakeElement {
+  constructor(tag, attrs = {}) {
+    this.tag = tag;
+    this.children = [];
+    this.className = attrs.class || '';
+    this.textContent = attrs.text || '';
+    this.style = { setProperty() {} };
+  }
+  get firstChild() { return this.children[0] || null; }
+  appendChild(child) { this.children.push(child); return child; }
+  removeChild(child) { this.children = this.children.filter((c) => c !== child); return child; }
+  addEventListener() {}
+  querySelectorAll(selector) {
+    const found = [];
+    const walk = (node) => node.children.forEach((c) => {
+      if (selector === 'svg.vilda-patient-chart' && c.tag === 'svg') found.push(c);
+      walk(c);
+    });
+    walk(this);
+    return found;
+  }
+}
+
+const tick = () => new Promise((resolve) => { setTimeout(resolve, 0); });
+const KL_GUARD = 'if(t&&t._vildaLtcGenKl!==LtcGen)return;';
+
+function overlays({ withoutGuard = false } = {}) {
+  let source = authSource.slice(authSource.indexOf('async function Kl('), authSource.indexOf('function Vl('));
+  if (withoutGuard) {
+    expect(source).toContain(KL_GUARD);
+    source = source.replace(KL_GUARD, '');
+  }
+  const helper = authSource.slice(authSource.indexOf('function LtcSeriaWielujednostkowa('), authSource.indexOf('function Nl('));
+  let loaded = false;
+  const pending = [];
+  const stubs = {
+    i: { sessionStorage: { getItem: () => null }, setTimeout: (...args) => setTimeout(...args) },
+    // Jak ja() w artefakcie: załadowany konwerter odpowiada w następnym zadaniu, ładowany — po wczytaniu skryptów.
+    ja: (cb) => { if (loaded) setTimeout(() => cb(true), 0); else pending.push(cb); },
+    jt: () => ({
+      listPatientLabSeries: async () => [{ testKey: 'ft4', test: 'fT4', points: [
+        entry('synthetic-ft4-pmol', 15, 'pmol/L', null, '2026-05-26'),
+        entry('synthetic-ft4-ngdl', 1.2, 'ng/dL', null, '2026-07-07'),
+      ] }],
+      listPatientTreatmentPeriods: async () => [],
+    }),
+    oe: (t) => { if (t) t.children = []; },
+    yi: (t) => ({ unit: 'pmol/L', points: t.points.map((p) => ({ ...p, v: p.valueNum })), skipped: 0 }),
+    e: (tag, attrs) => new FakeElement(tag, attrs),
+    to: async () => null,
+    ao: () => '',
+    wa: (serie) => serie.test,
+    vi: () => null, mi: () => null, ga() {}, In() {}, Bl() {}, Ul: () => ({ ribs: 0, pills: 0 }), no() {}, Ta: '#5856D6',
+  };
+  const names = Object.keys(stubs);
+  const Kl = new Function(...names, `${helper};${source};return Kl;`)(...names.map((n) => stubs[n]));
+  const charts = new FakeElement('div');
+  const svg = new FakeElement('svg');
+  svg._vildaScale = { ageStart: 0, ageEnd: 240 };
+  charts.appendChild(svg);
+  const load = () => { loaded = true; pending.splice(0).forEach((cb) => cb(true)); };
+  return { Kl, charts, load, pending };
+}
+
+describe('P-LAB-TREND-CONVERT-2 — wywołanie wyprzedzone w trakcie czekania nie rysuje', () => {
+  async function overlappingOverlays(options) {
+    const { Kl, charts, load, pending } = overlays(options);
+    const host = new FakeElement('div', { class: 'vilda-siatka-overlay-host' });
+    const first = Kl(host, charts, 'fikcyjny-pacjent', () => {}, 120);
+    await tick();
+    const second = Kl(host, charts, 'fikcyjny-pacjent', () => {}, 120);
+    await tick();
+    expect(pending).toHaveLength(2);
+    load();
+    await Promise.all([first, second]);
+    await tick(); // odświeżenie strzałek zlecone przez narysowane nakładki
+    return host.children.filter((c) => c.className === 'vilda-siatka-overlay-chips');
+  }
+
+  it('nakładki: dwa wywołania na tym samym kontenerze w czasie ładowania konwertera dają jeden wiersz chipów', async () => {
+    const rows = await overlappingOverlays();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].children.map((c) => c.textContent)).toContain('fT4 ×2');
+  });
+
+  it('kontrola: bez znacznika pokolenia ten sam scenariusz daje zdublowany wiersz', async () => {
+    expect(await overlappingOverlays({ withoutGuard: true })).toHaveLength(2);
+  });
+
+  // Historia czeka kolejno na trend, zdarzenia osi czasu i pacjenta; każdy odczyt otwiera test. `stop` przerywa Xl()
+  // wyjątkiem przy pierwszym elemencie o tym tekście albo klasie, żeby nie budować atrap całej karty.
+  function history(stop) {
+    const source = authSource.slice(authSource.indexOf('async function Xl('), authSource.indexOf('function rn(){'));
+    const gates = {};
+    const gate = (name) => new Promise((resolve) => { gates[name] = resolve; });
+    const stubs = {
+      jt: () => ({ listPatientTimelineEvents: () => gate('events'), getPatient: () => gate('patient') }),
+      oe: (t) => { if (t) t.children = []; },
+      e: (tag, attrs) => {
+        if (attrs && (attrs.text === stop || attrs.class === stop)) throw new Error(`Historia rysuje: ${stop}`);
+        return new FakeElement(tag, attrs);
+      },
+      Jl: () => gate('trend'),
+      Fl: [{ id: 'all', label: 'Wszystkie' }],
+      i: { localStorage: { getItem: () => '1' } },
+    };
+    const names = Object.keys(stubs);
+    const Xl = new Function(...names, `${source};return Xl;`)(...names.map((n) => stubs[n]));
+    const open = async (name, value) => { await tick(); gates[name](value); await tick(); };
+    return { Xl, open };
+  }
+
+  it('Historia: wywołanie wyprzedzone, gdy trend jeszcze czeka, kończy się bez listy zdarzeń', async () => {
+    const { Xl, open } = history('Historia pacjenta');
+    const host = new FakeElement('div');
+    const run = Xl(host, 'fikcyjny-pacjent', () => {});
+    await tick();
+    host._vildaLtcGenXl += 1; // nowsze wywołanie Historii na tym samym kontenerze
+    await open('trend');
+    await expect(run).resolves.toBeUndefined();
+    expect(host.children.map((c) => c.className)).toEqual(['vilda-lab-trend-host']);
+  });
+
+  it('Historia: wywołanie wyprzedzone w trakcie odczytu zdarzeń nie dopisuje listy do kontenera', async () => {
+    const { Xl, open } = history('vilda-patient-timeline-list');
+    const host = new FakeElement('div');
+    const run = Xl(host, 'fikcyjny-pacjent', () => {});
+    await open('trend');
+    host._vildaLtcGenXl += 1;
+    await open('events', []);
+    await open('patient', null);
+    await expect(run).resolves.toBeUndefined();
+  });
+
+  it('kontrola: Historia niewyprzedzona dochodzi do nagłówka i do listy zdarzeń', async () => {
+    const header = history('Historia pacjenta');
+    const first = expect(header.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
+      .rejects.toThrow('Historia rysuje: Historia pacjenta');
+    await header.open('trend');
+    await first;
+
+    const list = history('vilda-patient-timeline-list');
+    const second = expect(list.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
+      .rejects.toThrow('Historia rysuje: vilda-patient-timeline-list');
+    await list.open('trend');
+    await list.open('events', []);
+    await list.open('patient', null);
+    await second;
   });
 });
 
