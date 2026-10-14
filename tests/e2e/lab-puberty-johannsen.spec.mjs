@@ -255,9 +255,13 @@ test('clearing the main-form date for the same patient removes borrowed day prec
   await expectAxes(page, [second()], 3.6);
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaDobAge && !document.documentElement.classList.contains('vilda-auth-locked'));
+  // Restoring can still suppress autosave after its queued timers finish. Wait
+  // for the form to accept edits before clearing the date and entering the age.
   await page.waitForFunction(() => {
     const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
-    return !window.__vildaPersistRestoring && (!state || !state.hasPendingSaveTimer && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
+    return !window.__vildaPersistRestoring && !window.VildaDobAge.restorePending?.()
+      && !window.VildaPersistence.isAutosaveSuppressed()
+      && (!state || !state.hasPendingSaveTimer && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
   });
   await expect(page.locator('#dobClear')).toBeVisible();
   await kliknij(page.locator('#dobClear'));

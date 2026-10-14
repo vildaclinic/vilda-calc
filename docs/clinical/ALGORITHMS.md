@@ -67,8 +67,8 @@ te same; zmienia się dokładność wejścia. Brak kwalifikacji niemowlęcia
 do modelu donoszonej populacji otrzymuje krótki komunikat.
 
 Historia nie przelicza dawnych AMH według aktualnej tabeli: zachowuje
-wartości, jednostki i jawny zapisany `lab.norm`. Nie tworzymy snapshotu
-AMH ani nie usuwamy serii liczbowych. To ograniczenie dotyczy też nowych
+wartości, jednostki i jawny zapisany `lab.norm`. W tej partii nie tworzono snapshotu
+AMH ani nie usuwano serii liczbowych. To ograniczenie dotyczy też nowych
 zapisów bez własnej utrwalonej oceny. LH/FSH/inhibina B zachowują ich
 dotychczasowe snapshoty.
 
@@ -2007,6 +2007,41 @@ osią, usunięcie wyniku i zmiana jednostki zachowują linię i skalę.
 
 Pełne liczby i granice: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026),
 [zapis źródła FDA](hormone-lifespan/evidence/patient-point/fda2017-female-amh-group-medians.json).
+
+### HORMONE-AMH-REFERENCE-SNAPSHOT — utrwalone odniesienie w wizycie i historii, 2026-10-14
+
+**Problem i wpływ:** przypięcie AMH zachowywało wynik i ewentualną normę,
+ale traciło źródłową medianę widoczną na wykresie. Nowe opcjonalne
+`lab.hormoneReference` zachowuje zwykłe odniesienie AMH i kontekst użyty
+przy otwarciu istniejącego okna przypięcia. Historia pokazuje utrwalone
+dane, bez ponownego liczenia obecnym modelem lub dla aktualnego pacjenta.
+To zmiana zapisu i prezentacji informacji klinicznej, bez nowych norm,
+źródeł, progów, konwersji, pól formularza ani geometrii krzywych.
+Mediana grupy nie staje się medianą dokładnego wieku lub dolną normą.
+
+**Kontrakt:** `VildaHormoneReferenceSnapshot` w osobnym czytelnym pliku
+`vilda_hormone_reference_snapshot.js`, API `1.0.0`, schemat `1`, jest
+odrębny od `lab.assessment` i `lab.norm`. Zachowuje surowy wynik, jednostki,
+użyty wiek/przedział i kontekst, źródłową liczbę i rodzaj statystyki,
+grupę, populację, metodę/materiał źródła, ograniczenia i wersje. Data
+wizyty nie potwierdza dnia obserwacji kontekstu. Zapis niedostępnego
+odniesienia ma powód, bez liczby zastępczej. Edycja wartości, jednostki,
+badania lub daty unieważnia odniesienie, pozostawiając dawny zapis;
+komentarz i zmiana niezależnej normy nie przeliczają mediany. Nieznany
+schemat pozostaje niedostępny. Starsze wpisy bez pola nie są uzupełniane.
+
+**Źródła i regresje:** zachowane dane AMH, ich populacje, materiał,
+granice i ograniczenia opisuje [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#utrwalone-odniesienie-amh--14-października-2026).
+Przykład F15/0,45 ng/mL zachowuje Jopling 2018, tabelę 1, medianę grupy
+15–18,9 lat 21,14 pmol/L = 2,961714 ng/mL; F28/1 ng/mL zachowuje FDA
+K170524, tabelę surowicy, grupę 26–30 z 27,27 pmol/L = 3,820527 ng/mL.
+Odczyt po zmianie pacjenta, danych referencyjnych albo restarcie offline
+ma zwrócić te same liczby. Transport `<0,1` i brak kwalifikacji zachowują
+przyczynę niedostępności; nie rozszerzamy składni wejścia formularza AMH.
+Komentarz zachowuje migawkę, edycja wyniku/daty ją
+unieważnia. Wymagane są regresje rzeczywistych funkcji, przypięcia,
+importu/synchronizacji i odczytu desktop/mobile. Wyniki kontroli są
+raportowane po ich zakończeniu w PR; testy nie nadają walidacji klinicznej.
 
 ### HORMONE-FEMALE-INHB-ADULT-REFERENCE — mediana modelu do 47 lat, 2026-10-14
 
