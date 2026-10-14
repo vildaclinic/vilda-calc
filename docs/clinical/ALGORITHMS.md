@@ -20,6 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
+| LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -153,6 +154,107 @@ niedokładnych i kluczu klirensu; czekanie na odpowiedź ładowania; brak
 artefakcie sprzed poprawki pięć z tych testów padają, a bez strażnika po
 odczycie zdarzeń — test Historii wyprzedzonej w trakcie tego odczytu. E2E
 `lab-trend-jednostki.spec.mjs` bez zmian w asercjach.
+
+### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
+
+**Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną
+stronę (bez `?v=` i precache), więc żaden widok się nie zmienia. Reguły
+prezentacji opisane niżej staną się widoczne z zakładką „Badania” (PR2)
+i paskiem „Poprzednie wyniki” w przeliczniku (PR3) i tam wchodzą do oceny
+właściciela razem z widokiem. Plan: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.1.
+
+**Zadanie:** z serii sejfu (`listPatientLabSeries`), notatek pacjenta
+(`listPatientNotesForPatient`), okresów leczenia (`listPatientTreatmentPeriods`)
+i wstrzykniętego konwertera model buduje widok historii: panele, serie,
+wpisy, tabelę dat, zdarzenia leczenia, wyniki oczekujące i bieżący wynik
+z przelicznika. Nie ma DOM, magazynu ani zegara; dzisiejszą datę podaje
+wołający (`nowISO`) tylko po to, by policzyć dni od ostatniego wyniku.
+Niczego nie ocenia od nowa: nie woła `LabUnitConverter.evaluate` ani
+silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
+
+**Reguły:**
+
+- Zakres: notatki „wynik-badania” według reguły karty pacjenta; klirens
+  i notatka z lekiem są poza historią (decyzja 6.13).
+- Rodzaje wpisów: dokładny; legacy (liczba odczytana z tekstu, przypis †);
+  cenzorowany (wynik z operatorem: surowy zapis, bez liczby i bez zera);
+  ocena nieaktualna; ocena niedostępna; tekst (ręczny wpis bez liczby, np.
+  „<0,02 IU/L”); jednostka nierozpoznana. Wynik oczekujący (zlecenie bez
+  wyniku) i bieżący wynik z przelicznika stoją poza wpisami serii.
+- Jednostki: symbol po normalizacji (przycięcie, zwinięcie spacji, znak
+  mikro U+00B5 → grecka mu U+03BC) dopasowany do jednostek konwertera;
+  przeliczenie `convertAll` tym samym współczynnikiem co przelicznik.
+  Jednostka wyświetlania: z formularza przelicznika, inaczej jednostka
+  ostatniego po dacie wyniku liczbowego. Jednostki, której konwerter nie
+  zna, model nie przelicza: wartość w oryginale, poza wykresem i różnicą.
+- Data: data badania (`clinicalDateISO`). Wpis bez niej ma „datę wpisu”:
+  nie jest ostatnim ani poprzednim wynikiem, nie wchodzi do różnicy ani na
+  wykres (oś wykresu to data badania).
+- Strzałka ↑/↓ wyłącznie z zapisu: z normy tekstowej wpisu, gdy tekst jest
+  jednym zakresem „lo–hi [jednostka]”, jednostka normy (jeśli podana) równa
+  się jednostce wyniku, wynik nie był przeliczany i nie ma koperty oceny.
+  Granice daje funkcja karty `Dl`, wstrzykiwana jako `parseNorm`. Wynik
+  w zakresie nie ma strzałki ani pigułki. Punkt przeliczony nie ma strzałki
+  (decyzja 6.2); wpis bez normy jest neutralny (decyzja 6.1). Na wykres
+  norma trafia tylko w zakresie przyjętym przez model, więc `mi()` nie
+  odczyta luźno tekstu wielozakresowego.
+- Zapisana ocena LH/FSH/inhibiny B: pigułka cytuje dosłownie tytuł
+  podsumowania koperty (`summary.title`), a przy ostrzeżeniu klinicznym
+  (`clinical.status = "warning"`) tytuł ostrzeżenia, w tonie ostrzegawczym.
+  Ocena nieaktualna: „wymaga ponownej oceny” z powodem z `reasonCodes`
+  (skróty zdań z `VildaLabAssessmentUI`); ostatni wynik nie cofa się do
+  poprzedniego.
+- Różnica: tylko między dwoma kolejnymi wynikami dokładnymi z datą badania,
+  w jednostce wyświetlania, z wartości zaokrąglonych do wyświetlanych cyfr
+  znaczących (15,4 → 17 = +1,6, nie +1,556); liczba ze znakiem i liczba dni,
+  bez procentu, koloru i progu (decyzja 6.10). Bez różnicy: ten sam dzień,
+  wpis niedokładny lub legacy, różna metoda albo materiał w kopertach
+  LH/FSH/inhibiny B („— · różne metody oznaczenia”). Gdy metody nie da się
+  porównać, seria dostaje stopkę o możliwej innej metodzie. Bieżący wynik:
+  różnica bez liczby dni, bo datę próbki podaje dopiero okno przypięcia.
+- Wynik oczekujący: notatka bez wartości, niezakończona i bez niestawienia;
+  badanie przypisane tylko po `testKey` albo po tytule „Wynik: …” równym
+  dokładnie jednej etykiecie konwertera.
+- Panele jako dane (`HISTORY_PANELS`): Tarczyca; Oś gonadalna (z progesteronem);
+  Oś GH–IGF-1; Inne (prolaktyna, badania spoza konwertera). Pusty panel
+  ukryty (decyzja 6.5).
+- Wpis tekstowy nie trafia do serii sejfu, więc model nadaje mu klucz serii
+  tak jak sejf (`testKey` albo skrót nazwy badania); zgodność z sejfem
+  sprawdza test na prawdziwym sejfie.
+
+**Odstępstwo od planu, do decyzji właściciela:** plan 3.1 (a) każe cytować
+`clinical.title`, gdy `summary.status = "attention"`. Na prawdziwej kopercie
+LH (fikcyjna dziewczynka 12 lat, Th3, LH 9 IU/L) podsumowanie brzmi „Wynik
+poza wskazanym zakresem referencyjnym”, a część kliniczna „Brak wykrytej
+niezgodności czasu dojrzewania”; reguła planu pokazałaby przy wyniku poza
+zakresem ten drugi tekst. Model cytuje tytuł podsumowania, a tytuł
+kliniczny tylko przy ostrzeżeniu klinicznym, zgodnie z paletą z tego samego
+punktu planu. W sprawdzonych kopertach z ostrzeżeniem klinicznym oba tytuły
+są identyczne.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 4,2 mIU/L z normą „0,6–4,8 mIU/L” (10.06.26) i 5,1 µIU/mL (znak
+  mikro) z normą „0,6–4,8” (12.09.26) → jedna seria w μIU/mL, oba wyniki
+  dokładne, drugi „↑ powyżej normy z wpisu”, różnica „+0,9 μIU/mL · po
+  94 dniach”.
+- fT4 1,2 ng/dL z normą „0,8–1,8 ng/dL” (26.05.26) i 17 pmol/L (02.09.26) →
+  seria w pmol/L, pierwszy wynik 15,4 pmol/L przeliczony, bez strzałki
+  i bez normy na wykresie; różnica „+1,6 pmol/L · po 99 dniach”.
+- TSH 7 mIU/L z normą „1-5 lat: 0,7–6,0” → bez strzałki (tekst nie jest
+  jednym zakresem).
+- LH 2 IU/L i 3 IU/L z kopertami o różnych metodach oznaczenia → różnica
+  niedostępna, „— · różne metody oznaczenia”.
+- Ręczny wpis LH „<0,02 IU/L” bez oceny → wiersz tekstowy w serii LH,
+  nie wynik oczekujący.
+
+**Testy:** `tests/unit/lab-history-view.test.mjs` (24 przypadki: prawdziwy
+konwerter i plik danych jednostek, prawdziwe koperty LH z osobnego okna,
+`Dl` wycięte z `vilda_auth_ui.js`) i `tests/unit/lab-history-vault.test.mjs`
+(prawdziwy sejf: zapis notatek, serie, notatki i okresy leczenia →
+`buildHistoryView`; szpieg na `evaluate`, pułapka na silnik pokwitania,
+zgodność klucza serii z sejfem, unieważnienie oceny przez zmianę daty).
+Zielone testy nie są walidacją kliniczną.
 
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 

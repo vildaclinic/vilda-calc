@@ -1,0 +1,510 @@
+/* Historia wyników badań laboratoryjnych — model porównania bez DOM, magazynu i zegara.
+ *
+ * Wejście: serie z VildaVault.listPatientLabSeries, notatki pacjenta (listPatientNotesForPatient),
+ * okresy leczenia (listPatientTreatmentPeriods) i wstrzyknięty LabUnitConverter. Model pokazuje
+ * wyniki tak, jak je zapisano: nie liczy dawnych wyników dzisiejszymi normami ani danymi bieżącego
+ * pacjenta, nie woła evaluate() ani silników ocen (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
+ * Strzałka ↑/↓ powstaje wyłącznie z zapisu: z jednej, zakotwiczonej normy tekstowej wpisu
+ * w jednostce wyniku (bez przeliczenia) albo z zamrożonej koperty oceny LH/FSH/inhibiny B.
+ * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
+ * „LAB-HISTORIA — model porównania”.
+ */
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.VildaLabHistory = api;
+})(typeof window !== 'undefined' ? window : null, function () {
+  'use strict';
+  var own = function (value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); };
+  var record = function (value) { return value !== null && typeof value === 'object' && !Array.isArray(value); };
+  var finite = function (value) { return typeof value === 'number' && isFinite(value); };
+  var text = function (value) { return typeof value === 'string' ? value.trim() : ''; };
+  var NBSP = ' ';
+  var ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
+
+  // Panele kliniczne jako dane (decyzja 6.5: progesteron w osi gonadalnej, prolaktyna w „Inne”).
+  // Seria spoza paneli i seria bez klucza przelicznika trafia do „Inne”.
+  var HISTORY_PANELS = Object.freeze([
+    Object.freeze({ id: 'thyroid', label: 'Tarczyca', analytes: Object.freeze(['tsh', 'ft4', 'ft3', 't4_total', 't3_total', 'thyroglobulin']) }),
+    Object.freeze({ id: 'gonadal', label: 'Oś gonadalna', analytes: Object.freeze(['lh', 'fsh', 'estradiol', 'progesterone', 'testosterone_total', 'testosterone_free', 'amh', 'inhibin_b', 'shbg']) }),
+    Object.freeze({ id: 'somatotropic', label: 'Oś GH–IGF-1', analytes: Object.freeze(['igf1', 'igfbp3']) })
+  ]);
+  var OTHER_PANEL = Object.freeze({ id: 'other', label: 'Inne' });
+  // Anality z kopertą oceny, która zapisuje metodę oznaczenia i materiał (vilda_lab_snapshot.js).
+  var ENVELOPE_ANALYTES = ['lh', 'fsh', 'inhibin_b'];
+  // Skróty zdań z VildaLabAssessmentUI (REASONS); pełne zdania pokazuje renderer oceny.
+  var INVALIDATION_TEXT = {
+    result_or_clinical_date_changed: 'zmieniono wynik lub datę badania',
+    assessment_result_mismatch: 'ocena dotyczy innej wartości, jednostki lub analitu',
+    assessment_sample_date_mismatch: 'data pobrania w ocenie nie odpowiada dacie badania',
+    assessment_binding_mismatch: 'ocena nie odpowiada obecnym polom wyniku'
+  };
+  var CHART_KINDS = ['exact', 'legacy'];
+
+  // Symbol jednostki po normalizacji: przycięty, spacje zwinięte, znak mikro U+00B5 → grecka mu U+03BC
+  // (konwerter używa U+03BC, klawiatura daje U+00B5).
+  function normalizeUnit(unit) {
+    return String(unit == null ? '' : unit).replace(/µ/g, 'μ').replace(/\s+/g, ' ').trim();
+  }
+  // Klucz serii jak w sejfie (listPatientLabSeries: testKey albo skrót nazwy badania). Potrzebny
+  // tylko dla wpisów tekstowych, których sejf nie umieszcza w seriach; zgodność z sejfem pilnuje
+  // tests/unit/lab-history-vault.test.mjs.
+  function seriesSlug(test) {
+    var slug = String(test || '').split('(')[0].toLowerCase();
+    try { slug = slug.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (_) { /* bez normalize: jak w sejfie */ }
+    slug = slug.replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '');
+    return slug.substring(0, 40) || null;
+  }
+  // Kategoria notatki jak w karcie pacjenta (Yr w vilda_auth_ui.js): jawny klirens, potem lek, potem wynik.
+  function noteCategory(note) {
+    if (!record(note)) return null;
+    if (note.category === 'wynik-klirens') return 'wynik-klirens';
+    if (note.medication) return 'treatment';
+    if (note.labResult) return 'wynik-badania';
+    return note.category || null;
+  }
+  function isoDate(value) { return typeof value === 'string' && ISO_DATE.test(value) ? value.slice(0, 10) : null; }
+  function formatDate(value) {
+    var iso = isoDate(value);
+    if (!iso) return '';
+    var parts = iso.split('-');
+    return parts[2] + '.' + parts[1] + '.' + parts[0].slice(2);
+  }
+  function dayNumber(iso) {
+    var parts = iso.split('-').map(Number);
+    return Math.round(Date.UTC(parts[0], parts[1] - 1, parts[2]) / 864e5);
+  }
+  function daysBetween(fromISO, toISO) {
+    var from = isoDate(fromISO), to = isoDate(toISO);
+    return from && to ? dayNumber(to) - dayNumber(from) : null;
+  }
+
+  // Liczby: zaokrąglenie do cyfr znaczących jak LabUnitConverter.formatNumber, żeby różnica
+  // liczyła się z wartości, które lekarz widzi (15,4 − 15 = 0,4, nie 0,444).
+  function roundSignificant(value, digits) {
+    if (!finite(value) || value === 0) return value;
+    var n = Math.max(1, digits | 0), scale = Math.pow(10, n - Math.ceil(Math.log10(Math.abs(value))));
+    return Math.round(value * scale) / scale;
+  }
+  function formatNumber(converter, value, precision) {
+    if (converter && typeof converter.formatNumber === 'function') {
+      try { return converter.formatNumber(value, precision); } catch (_) { /* zapas niżej */ }
+    }
+    return String(roundSignificant(value, precision)).replace('.', ',');
+  }
+  function withUnit(number, unit) { return unit ? number + NBSP + unit : number; }
+
+  function substance(converter, id) {
+    if (!converter || !id || typeof converter.find !== 'function') return null;
+    try { var found = converter.find(id); return record(found) && Array.isArray(found.units) ? found : null; } catch (_) { return null; }
+  }
+  function knownUnit(sub, unit) {
+    var wanted = normalizeUnit(unit);
+    if (!sub || !wanted) return null;
+    for (var i = 0; i < sub.units.length; i++) {
+      if (sub.units[i] && normalizeUnit(sub.units[i].symbol) === wanted) return sub.units[i].symbol;
+    }
+    return null;
+  }
+  // Ten sam współczynnik co strona „Jednostki laboratoryjne”: convertAll({substanceId, value, fromUnit}).
+  function convertValue(converter, id, value, fromSymbol, toSymbol) {
+    if (fromSymbol === toSymbol) return value;
+    if (!converter || typeof converter.convertAll !== 'function') return null;
+    try {
+      var result = converter.convertAll({ substanceId: id, value: value, fromUnit: fromSymbol });
+      if (result && result.ok && Array.isArray(result.results)) {
+        for (var i = 0; i < result.results.length; i++) {
+          if (result.results[i] && result.results[i].unit === toSymbol && finite(result.results[i].value)) return result.results[i].value;
+        }
+      }
+    } catch (_) { /* brak przeliczenia = jednostka nierozpoznana */ }
+    return null;
+  }
+
+  function rawText(lab, fallbackRaw, fallbackUnit) {
+    var raw = text(lab && lab.value) || text(fallbackRaw) || (lab && finite(lab.valueNum) ? String(lab.valueNum) : '');
+    var unit = text(lab && lab.unit) || text(fallbackUnit);
+    if (!raw) return '';
+    // Starsze notatki zapisują w value całe równanie przeliczenia albo wartość z jednostką.
+    if (!unit || raw.toLowerCase().indexOf(unit.toLowerCase()) !== -1 || /\s=\s/.test(raw)) return raw;
+    return raw + ' ' + unit;
+  }
+
+  // Strzałka z normy tekstowej wpisu (3.1 c): tekst musi być jednym zakresem „lo–hi [jednostka]”,
+  // a jednostka normy, jeśli podana, równa jednostce wyniku po normalizacji. Granice daje
+  // wstrzyknięte parseNorm (Dl z vilda_auth_ui.js), żeby nie powielać jego wyrażenia.
+  var SINGLE_RANGE = /^\s*\d+(?:[.,]\d+)?\s*[-–—]\s*\d+(?:[.,]\d+)?\s*(.*?)\s*$/;
+  function normCheck(norm, value, unit, parseNorm) {
+    var none = { accepted: false, flag: null };
+    var shape = typeof norm === 'string' ? SINGLE_RANGE.exec(norm) : null;
+    if (!shape || typeof parseNorm !== 'function' || !finite(value)) return none;
+    if (shape[1] && normalizeUnit(shape[1]) !== normalizeUnit(unit)) return none;
+    var range;
+    try { range = parseNorm(norm); } catch (_) { range = null; }
+    if (!range || !finite(range.lo) || !finite(range.hi)) return none;
+    return { accepted: true, flag: value > range.hi ? '↑' : value < range.lo ? '↓' : null };
+  }
+  function recordedStatus(envelope) {
+    var e = envelope.evaluation || {}, clinical = record(e.clinical) ? e.clinical : {}, summary = record(e.summary) ? e.summary : {};
+    // Cytat dosłowny, bez syntezy kierunku. Ostrzeżenie kliniczne koperty ma pierwszeństwo,
+    // żeby nie znikło pod tytułem porównania (K6); inaczej tytuł podsumowania oceny.
+    var warning = clinical.status === 'warning' && text(clinical.title);
+    var input = record(e.input) ? e.input : {}, puberty = record(input.puberty) ? input.puberty : {};
+    return {
+      kind: 'recorded', tone: warning ? 'warning' : 'lab', source: warning ? 'clinical' : 'summary',
+      text: warning ? text(clinical.title) : text(summary.title) || 'Ocena zapisana',
+      summaryStatus: text(summary.status) || null, clinicalStatus: text(clinical.status) || null,
+      context: {
+        sex: input.sex === 'F' || input.sex === 'M' ? input.sex : null,
+        stage: text(puberty.kind) && finite(puberty.stage) ? text(puberty.kind) + puberty.stage : null,
+        ageAtSample: record(e.ageAtSample) ? e.ageAtSample : null
+      }
+    };
+  }
+  function invalidStatus(envelope) {
+    var codes = Array.isArray(envelope.reasonCodes) ? envelope.reasonCodes.slice() : [];
+    if (envelope.status === 'invalidated') {
+      var detail = [];
+      codes.forEach(function (code) {
+        if (own(INVALIDATION_TEXT, code) && detail.indexOf(INVALIDATION_TEXT[code]) === -1) detail.push(INVALIDATION_TEXT[code]);
+      });
+      return { kind: 'invalidated', tone: 'muted', text: 'wymaga ponownej oceny', detail: detail, reasonCodes: codes };
+    }
+    return { kind: 'unavailable', tone: 'muted', text: 'ocena niedostępna', detail: [], reasonCodes: codes };
+  }
+
+  // Wpis z punktu serii sejfu albo z notatki tekstowej. Wartość w jednostce wyświetlania
+  // ustala drugi przebieg (resolveUnits), gdy znana jest jednostka serii.
+  function baseEntry(point, note, lab) {
+    var clinical = note ? isoDate(note.clinicalDateISO) : null;
+    return {
+      kind: null, noteId: point.noteId || (note && note.id) || null,
+      dateISO: clinical || isoDate(point.dateISO) || null, dateSource: clinical ? 'badanie' : 'wpis',
+      ageMonths: finite(point.ageMonths) ? point.ageMonths : null,
+      recordedValue: null, recordedUnit: normalizeUnit(point.unit != null ? point.unit : lab && lab.unit),
+      raw: '', value: null, unit: '', converted: false, display: '',
+      norm: text(lab && lab.norm) || text(point.norm) || null, normAccepted: false, flag: null, status: null,
+      comment: note ? text(note.body) : '', legacy: false, delta: null, reason: null
+    };
+  }
+  function entryFromPoint(point, note) {
+    var lab = note && record(note.labResult) ? note.labResult : {};
+    var entry = baseEntry(point, note, lab);
+    if (own(point, 'assessment') && record(point.assessment)) {
+      var envelope = point.assessment, m = envelope.evaluation && envelope.evaluation.measurement;
+      entry.assessment = envelope;
+      if (envelope.status === 'recorded') {
+        entry.status = recordedStatus(envelope);
+        if (finite(point.valueNum)) { entry.kind = 'exact'; entry.recordedValue = point.valueNum; }
+        else if (m && m.status === 'valid' && m.isExact === false) entry.kind = 'censored';
+        else { entry.kind = 'unavailable'; entry.reason = 'measurement_invalid'; }
+        entry.raw = rawText(lab, m && m.raw, m && m.sourceUnit);
+      } else {
+        entry.status = invalidStatus(envelope);
+        entry.kind = envelope.status === 'invalidated' ? 'invalidated' : 'unavailable';
+        entry.raw = rawText(lab, m && m.raw, m && m.sourceUnit);
+      }
+    } else if (finite(point.valueNum)) {
+      entry.kind = point.legacy ? 'legacy' : 'exact';
+      entry.legacy = !!point.legacy;
+      entry.recordedValue = point.valueNum;
+      entry.raw = rawText(lab, String(point.valueNum).replace('.', ','), point.unit);
+    } else return null;
+    if (own(point, 'hormoneReference')) entry.hormoneReference = point.hormoneReference;
+    return entry;
+  }
+  // Ręczny wpis z wartością, której sejf nie umie odczytać jako liczby (np. „<0,02 IU/L”):
+  // wiersz tekstowy bez punktu i bez zera (K13).
+  function textEntry(note) {
+    var lab = note.labResult;
+    var entry = baseEntry({ noteId: note.id, dateISO: isoDate(note.clinicalDateISO) || isoDate(note.createdAtISO), unit: lab.unit }, note, lab);
+    entry.kind = 'text';
+    entry.raw = rawText(lab);
+    entry.display = entry.raw;
+    return entry;
+  }
+
+  function compareEntries(left, right) {
+    if (left.dateISO === right.dateISO) return 0;
+    if (!left.dateISO) return 1;
+    if (!right.dateISO) return -1;
+    return left.dateISO < right.dateISO ? -1 : 1;
+  }
+  function stableSort(list, compare) {
+    return list.map(function (item, index) { return { item: item, index: index }; })
+      .sort(function (a, b) { return compare(a.item, b.item) || a.index - b.index; })
+      .map(function (wrapped) { return wrapped.item; });
+  }
+
+  // Jednostka wyświetlania: z formularza przelicznika (unitBy), inaczej jednostka ostatniego wyniku
+  // liczbowego serii. Wynik w innej jednostce przelicza konwerter; czego nie umie — „jednostka
+  // nierozpoznana”, wartość w oryginale, poza wykresem i różnicą (K9).
+  function resolveUnits(series, entries, options) {
+    var converter = options.converter, sub = series.sub, precision = sub && sub.precision || 3;
+    var numeric = entries.filter(function (entry) { return entry.kind === 'exact' || entry.kind === 'legacy'; });
+    numeric.forEach(function (entry) {
+      entry.canonicalUnit = sub ? knownUnit(sub, entry.recordedUnit) : entry.recordedUnit;
+    });
+    var requested = options.unitBy && own(options.unitBy, series.key) ? options.unitBy[series.key] : null;
+    var display = requested != null ? (sub ? knownUnit(sub, requested) : normalizeUnit(requested)) : null;
+    if (display == null) {
+      for (var i = numeric.length - 1; i >= 0; i--) {
+        if (numeric[i].canonicalUnit != null) { display = numeric[i].canonicalUnit; break; }
+      }
+    }
+    numeric.forEach(function (entry) {
+      var value = null;
+      if (entry.canonicalUnit != null && display != null) {
+        value = sub ? convertValue(converter, series.key, entry.recordedValue, entry.canonicalUnit, display)
+          : entry.canonicalUnit === display ? entry.recordedValue : null;
+      }
+      if (value == null) {
+        entry.kind = 'other-unit';
+        entry.reason = entry.recordedUnit ? 'unit_unrecognized' : 'unit_missing';
+        entry.display = entry.raw;
+        return;
+      }
+      entry.value = roundSignificant(value, precision);
+      entry.unit = display || '';
+      entry.converted = entry.canonicalUnit !== display;
+      entry.display = withUnit(formatNumber(converter, value, precision), entry.unit);
+      if (!entry.assessment && !entry.converted) {
+        var check = normCheck(entry.norm, entry.recordedValue, entry.recordedUnit, options.parseNorm);
+        entry.normAccepted = check.accepted;
+        entry.flag = check.flag;
+        if (entry.flag) entry.status = { kind: 'norm', tone: 'lab', flag: entry.flag, norm: entry.norm, text: entry.flag === '↑' ? 'powyżej normy z wpisu' : 'poniżej normy z wpisu' };
+      }
+    });
+    entries.forEach(function (entry) {
+      delete entry.canonicalUnit;
+      if (!entry.display) entry.display = entry.raw || '—';
+    });
+    return display || '';
+  }
+
+  function methodOf(entry) {
+    var input = entry.assessment && entry.assessment.evaluation && entry.assessment.evaluation.input;
+    return record(input) ? { methodId: text(input.assay && input.assay.methodId) || null, specimen: text(input.specimen) || null } : null;
+  }
+  // Różnica tylko między dwoma kolejnymi wynikami dokładnymi z datą badania, w jednostce
+  // wyświetlania: liczba ze znakiem i dni; bez procentu, koloru, progu i oceny kierunku (6.10).
+  function deltaBetween(previous, current, series, options) {
+    if (!previous || !current) return null;
+    if (previous.dateISO === current.dateISO) return { available: false, reason: 'same_day', text: '' };
+    if (previous.kind !== 'exact' || current.kind !== 'exact') return { available: false, reason: 'not_comparable', text: '' };
+    var envelope = ENVELOPE_ANALYTES.indexOf(series.key) !== -1, before = methodOf(previous), after = methodOf(current);
+    var methodKnown = envelope && !!before && !!after;
+    if (methodKnown && (before.methodId !== after.methodId || before.specimen !== after.specimen)) {
+      return { available: false, reason: 'method_mismatch', text: formatDelta({ available: false, reason: 'method_mismatch' }) };
+    }
+    var precision = series.sub && series.sub.precision || 3;
+    var value = roundSignificant(current.value - previous.value, precision);
+    if (Math.abs(value) < 1e-12) value = 0;
+    var delta = { available: true, value: value, unit: current.unit, days: daysBetween(previous.dateISO, current.dateISO), methodChecked: methodKnown, precision: precision };
+    delta.text = formatDelta(delta, options.converter);
+    return delta;
+  }
+  function formatDelta(delta, converter) {
+    if (!delta) return '';
+    if (!delta.available) return delta.reason === 'method_mismatch' ? '— · różne metody oznaczenia' : '';
+    var sign = delta.value > 0 ? '+' : delta.value < 0 ? '−' : '';
+    var out = withUnit(sign + formatNumber(converter, Math.abs(delta.value), delta.precision || 3), delta.unit || '');
+    if (finite(delta.days)) out += ' · po ' + delta.days + ' ' + (delta.days === 1 ? 'dniu' : 'dniach');
+    return out;
+  }
+
+  function chartFor(entries, unit) {
+    var points = [], skippedByReason = {};
+    entries.forEach(function (entry) {
+      var reason = CHART_KINDS.indexOf(entry.kind) === -1 ? entry.kind : entry.dateSource !== 'badanie' ? 'no_sample_date' : null;
+      if (reason) { skippedByReason[reason] = (skippedByReason[reason] || 0) + 1; return; }
+      // Kształt wyjścia yi() dla rendera Nl: oś daty badania (ageMonths: null), punkt przeliczony
+      // bez normy (decyzja 6.2). Norma tylko wtedy, gdy model przyjął ją jako jeden zakres
+      // w jednostce wyniku — inaczej mi() z luźnym Dl dałoby strzałkę, której model nie uznał.
+      var point = { noteId: entry.noteId, dateISO: entry.dateISO, ageMonths: null, v: entry.value, norm: entry.normAccepted ? entry.norm : null };
+      if (entry.converted) point.conv = true;
+      if (entry.assessment) point.assessment = entry.assessment;
+      points.push(point);
+    });
+    var skipped = Object.keys(skippedByReason).reduce(function (sum, key) { return sum + skippedByReason[key]; }, 0);
+    return { unit: unit, points: points, skipped: skipped, skippedByReason: skippedByReason };
+  }
+
+  function buildSeries(series, options) {
+    // Chronologicznie przed wyborem jednostki: „ostatni wynik” to ostatni po dacie, nie w kolejności sejfu.
+    var entries = stableSort(series.entries, compareEntries);
+    var unit = resolveUnits(series, entries, options);
+    var dated = entries.filter(function (entry) { return entry.dateSource === 'badanie'; });
+    for (var i = 1; i < dated.length; i++) dated[i].delta = deltaBetween(dated[i - 1], dated[i], series, options);
+    var last = dated.length ? dated[dated.length - 1] : null;
+    var computed = dated.filter(function (entry) { return entry.delta && entry.delta.available; });
+    var view = {
+      key: series.key, testKey: series.sub ? series.key : null, label: series.label, unit: unit,
+      entries: entries, last: last, previous: dated.length > 1 ? dated[dated.length - 2] : null,
+      lastDateEntries: last ? dated.filter(function (entry) { return entry.dateISO === last.dateISO; }) : [],
+      delta: last ? last.delta : null, chart: chartFor(entries, unit), pending: [],
+      // Stopka dla różnic bez potwierdzonej zgodności metody (K10).
+      methodFootnote: computed.some(function (entry) { return !entry.delta.methodChecked; })
+    };
+    if (finite(options.nowDay) && last && last.dateISO) view.daysSinceLast = options.nowDay - dayNumber(last.dateISO);
+    return view;
+  }
+
+  function pendingMatch(note, labels) {
+    var lab = record(note.labResult) ? note.labResult : null;
+    if (lab && text(lab.testKey)) return text(lab.testKey);
+    var title = text(note.title);
+    if (title.indexOf('Wynik: ') !== 0) return null;
+    var wanted = title.slice('Wynik: '.length).trim();
+    var matches = labels.filter(function (item) { return item.label === wanted; });
+    return matches.length === 1 ? matches[0].id : null;
+  }
+  function isPending(note) {
+    var lab = record(note.labResult) ? note.labResult : null;
+    return (!lab || !text(lab.value) && !finite(lab.valueNum)) && !note.completedAtISO && !note.noShowAtISO;
+  }
+
+  function previewView(current, seriesView, options) {
+    if (!record(current)) return null;
+    var key = text(current.testKey) || null, converter = options.converter, sub = substance(converter, key);
+    var preview = { kind: 'preview', testKey: key, raw: rawText(current), value: null, unit: '', display: '', delta: null };
+    var target = seriesView ? seriesView.unit : null;
+    var from = sub ? knownUnit(sub, current.unit) : normalizeUnit(current.unit);
+    if (finite(current.valueNum) && from != null) {
+      var to = target || from, value = sub ? convertValue(converter, key, current.valueNum, from, to) : from === to ? current.valueNum : null;
+      if (value != null) {
+        var precision = sub && sub.precision || 3;
+        preview.value = roundSignificant(value, precision);
+        preview.unit = to;
+        preview.display = withUnit(formatNumber(converter, value, precision), to);
+        var last = seriesView && seriesView.last;
+        // Bieżący wynik nie ma daty próbki (data pada w oknie przypięcia), więc bez liczby dni (K8).
+        if (last && last.kind === 'exact' && last.unit === to) {
+          var delta = { available: true, value: roundSignificant(preview.value - last.value, precision), unit: to, days: null, precision: precision };
+          if (Math.abs(delta.value) < 1e-12) delta.value = 0;
+          delta.text = formatDelta(delta, converter);
+          preview.delta = delta;
+        }
+      }
+    }
+    if (!preview.display) preview.display = preview.raw || '—';
+    return preview;
+  }
+
+  /**
+   * @param {Array} seriesList wynik VildaVault.listPatientLabSeries(patientId)
+   * @param {Object} options {converter, notesById, treatment, categoryFilter, panels, unitBy,
+   *   current, parseNorm, nowISO}
+   */
+  function buildHistoryView(seriesList, options) {
+    options = Object.assign({ categoryFilter: ['wynik-badania'], panels: HISTORY_PANELS }, options || {});
+    var converter = options.converter, notesById = record(options.notesById) ? options.notesById : null;
+    var filter = Array.isArray(options.categoryFilter) ? options.categoryFilter : ['wynik-badania'];
+    var nowISO = isoDate(options.nowISO);
+    var ctx = Object.assign({}, options, { nowDay: nowISO ? dayNumber(nowISO) : null });
+    var accepted = function (note) { return !notesById || !!note && filter.indexOf(noteCategory(note)) !== -1; };
+    var byKey = {}, order = [], seen = {};
+    function seriesFor(key, test) {
+      if (!own(byKey, key)) {
+        var sub = substance(converter, key);
+        byKey[key] = { key: key, sub: sub, label: sub ? text(sub.label_pl) || key : text(test) || key, entries: [] };
+        order.push(key);
+      }
+      return byKey[key];
+    }
+    (Array.isArray(seriesList) ? seriesList : []).forEach(function (raw) {
+      if (!record(raw) || !text(raw.testKey)) return;
+      (Array.isArray(raw.points) ? raw.points : []).forEach(function (point) {
+        if (!record(point)) return;
+        var note = notesById && point.noteId ? notesById[point.noteId] : null;
+        if (point.noteId) seen[point.noteId] = true;
+        if (!accepted(note)) return;
+        var entry = entryFromPoint(point, note);
+        if (entry) seriesFor(text(raw.testKey), raw.test).entries.push(entry);
+      });
+    });
+    var pending = [];
+    var labels = [];
+    if (converter && typeof converter.list === 'function') {
+      try { labels = (converter.list() || []).map(function (item) { return { id: item.id, label: text(item.label) }; }); } catch (_) { labels = []; }
+    }
+    Object.keys(notesById || {}).forEach(function (id) {
+      var note = notesById[id];
+      if (!record(note) || seen[note.id || id] || !accepted(note)) return;
+      var lab = record(note.labResult) ? note.labResult : null;
+      if (lab && text(lab.value) && !finite(lab.valueNum) && !own(lab, 'assessment')) {
+        var key = text(lab.testKey) || seriesSlug(lab.test);
+        if (key) seriesFor(key, lab.test).entries.push(textEntry(Object.assign({ id: id }, note)));
+        return;
+      }
+      if (isPending(note)) {
+        pending.push({ kind: 'pending', noteId: note.id || id, title: text(note.title), dueDateISO: isoDate(note.dueDateISO), seriesKey: pendingMatch(note, labels) });
+      }
+    });
+    pending = stableSort(pending, function (a, b) { return a.dueDateISO === b.dueDateISO ? 0 : !a.dueDateISO ? 1 : !b.dueDateISO ? -1 : a.dueDateISO < b.dueDateISO ? -1 : 1; });
+
+    var views = order.map(function (key) { return buildSeries(byKey[key], ctx); });
+    var viewByKey = {};
+    views.forEach(function (view) { viewByKey[view.key] = view; });
+    pending.forEach(function (item) { if (item.seriesKey && own(viewByKey, item.seriesKey)) viewByKey[item.seriesKey].pending.push(item); });
+
+    var treatmentRows = [];
+    (Array.isArray(options.treatment) ? options.treatment : []).forEach(function (drug) {
+      (record(drug) && Array.isArray(drug.events) ? drug.events : []).forEach(function (event) {
+        if (!record(event) || !isoDate(event.dateISO)) return;
+        treatmentRows.push({ dateISO: isoDate(event.dateISO), drugKey: drug.drugKey || null, drug: text(drug.drug) || drug.drugKey || '', action: event.action || null, dose: text(event.dose) || null, noteId: event.noteId || null });
+      });
+    });
+    treatmentRows = stableSort(treatmentRows, function (a, b) { return a.dateISO === b.dateISO ? 0 : a.dateISO < b.dateISO ? 1 : -1; });
+
+    var panels = (Array.isArray(options.panels) ? options.panels : HISTORY_PANELS).map(function (panel) {
+      return { id: panel.id, label: panel.label, series: (panel.analytes || []).filter(function (id) { return own(viewByKey, id); }).map(function (id) { return viewByKey[id]; }) };
+    });
+    var placed = {};
+    panels.forEach(function (panel) { panel.series.forEach(function (view) { placed[view.key] = true; }); });
+    var others = views.filter(function (view) { return !placed[view.key]; })
+      .sort(function (a, b) { return a.label.localeCompare(b.label, 'pl'); });
+    panels.push({ id: OTHER_PANEL.id, label: OTHER_PANEL.label, series: others });
+    panels = panels.filter(function (panel) { return panel.series.some(function (view) { return view.entries.length; }); });
+    panels.forEach(function (panel) {
+      panel.series = panel.series.filter(function (view) { return view.entries.length; });
+      panel.rows = rowsFor(panel.series);
+      panel.treatmentRows = treatmentRows;
+    });
+
+    var resultCount = 0, lastDateISO = null;
+    views.forEach(function (view) {
+      resultCount += view.entries.length;
+      if (view.last && view.last.dateISO && (!lastDateISO || view.last.dateISO > lastDateISO)) lastDateISO = view.last.dateISO;
+    });
+    var currentKey = record(options.current) ? text(options.current.testKey) : '';
+    return {
+      summary: { results: resultCount, analytes: views.filter(function (view) { return view.entries.length; }).length, lastDateISO: lastDateISO, pending: pending.length },
+      panels: panels, pending: pending, treatment: treatmentRows,
+      preview: previewView(options.current, currentKey && own(viewByKey, currentKey) ? viewByKey[currentKey] : null, ctx)
+    };
+  }
+
+  // Tabela panelu: wiersze = daty malejąco (data badania przed datą wpisu tego samego dnia),
+  // komórki = wpisy badań z tego dnia; dwa wyniki jednego badania tego dnia stoją razem.
+  function rowsFor(seriesViews) {
+    var rows = {}, keys = [];
+    seriesViews.forEach(function (view) {
+      view.entries.forEach(function (entry) {
+        var rowKey = (entry.dateISO || '') + '|' + entry.dateSource;
+        if (!own(rows, rowKey)) { rows[rowKey] = { dateISO: entry.dateISO, dateSource: entry.dateSource, cells: {} }; keys.push(rowKey); }
+        (rows[rowKey].cells[view.key] = rows[rowKey].cells[view.key] || []).push(entry);
+      });
+    });
+    return stableSort(keys.map(function (key) { return rows[key]; }), function (a, b) {
+      if (a.dateISO !== b.dateISO) return !a.dateISO ? 1 : !b.dateISO ? -1 : a.dateISO < b.dateISO ? 1 : -1;
+      return a.dateSource === b.dateSource ? 0 : a.dateSource === 'badanie' ? -1 : 1;
+    });
+  }
+
+  return Object.freeze({
+    version: '1.0.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit
+  });
+});
