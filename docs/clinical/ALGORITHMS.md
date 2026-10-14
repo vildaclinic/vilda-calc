@@ -2087,6 +2087,85 @@ aktualnego SHA jest raportowany w
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
+### HORMONE-FEMALE-INHB-CHILDHOOD-GROUPS — mediany grup Zhou w luce >1–<5,6 lat, 2026-10-14
+
+**Problem i źródło:** po PR #672 dziewczynki po dokładnym 1 roku,
+a przed 5,6 roku nadal nie miały liczbowego odniesienia zwykłego wykresu.
+Dodano dwie opublikowane mediany z pełnego Zhou i wsp., *Scientific
+Reports* 2025;15:1899, publikacja 14.01.2025,
+[DOI 10.1038/s41598-025-85551-9](https://doi.org/10.1038/s41598-025-85551-9).
+Tabela 1 (PDF str. 3): żeńskie grupy 1–5 N=60, 5–10 N=77; tabele 2/3
+(PDF str. 3/6): zgodne mediany **33/27 pg/mL**; tabela 3 podaje 90% CI
+median **30–39/24–29**, nie zakres wyników pacjentek. Suplement zawiera
+jedynie tabelę S1 modeli regresji; nie dostarcza nowych median lub
+reguły granicy 5. Regresja sześcienna nie jest aktywowana jako mediana.
+
+**Populacja i metoda:** przekrojowe próbki Wuhan Children’s Hospital,
+Chiny, styczeń–grudzień 2022, 622 dzieci/302 dziewczynki. Wykluczano
+m.in. choroby rozrodcze/endokrynne, poważne choroby przewlekłe i zakażenia
+oraz chemioterapię; autorzy dopuszczają resztkową patologię. Grupy <120,
+brak pory pobrania, powtórzonych pomiarów i Tannera/cyklu w starszym wieku.
+Surowica, Kangran Biotech double-antibody CLIA na KAESER 1000,
+LOD 7 pg/mL, CV 4,34–9,73%; brak harmonizacji Gen II/Oxford ELISA.
+Imputacja LOD/√2 w analizie autorów nie jest używana dla wyniku pacjentki.
+
+**Kontrakt i wpływ kliniczny:** polityka
+`female-inhibin-childhood-reference-policy.json`, wersja `2026-10-14.2`,
+dodaje dwa profile `ordinaryOnly`, `group-median`, `constant`:
+`zhou2025-female-inhb-age-over1-under5` w `(1,5)` i
+`zhou2025-female-inhb-age-5-under5p6` w `[5,5.6)`. Dokładne 5 lat
+przypisano drugiej grupie jako jawną konwencję aplikacji; autorzy nie
+podali inkluzywności. Pełny możliwy wiek musi mieścić się w jednym profilu.
+Dokładnie 1 zachowuje Ljubicic, od 5,6 Borelli. Mediany dotyczą pełnych
+grup źródłowych, nie dokładnego wieku lub węższej podgrupy aplikacji.
+Znana niezgodna metoda lub materiał blokuje odniesienie, nieznane dane
+pozwalają na ograniczone porównanie; bez nowego pola i bez potwierdzania
+metody próbki. Źródła nie dobiera się z wartości wyniku ani jako
+zastępstwa niezgodnego profilu sąsiedniego wieku.
+
+Jasny znacznik ma etykietę „Mediana grupy”; krótka notka podaje grupę,
+Chiny i KAESER 1000 CLIA. Położenie może odbiegać od płynnego mostu.
+Różnice 33→27 i dalej do ≈11 Borelli nie uzasadniają przerysowania linii
+lub skoku biologicznego. Dostępność odniesienia jest zmianą funkcjonalną;
+nie zmienia norm/werdyktów laboratoryjnych, krzywych, skal, jednostek,
+formularza, historii, 74 wcześniejszych profili, mężczyzn lub porównań płci.
+Crofton i normy Zhou pozostają nieaktywne. Dolna granica 1–5 wynosi 15
+w tabeli 2 i 14 w tabeli 3; nie wpływa to na zgodne 33, nie służy do
+wyboru normy. Testy nie nadają statusu walidacji klinicznej.
+
+**Przypadki syntetyczne do regresji rzeczywistych funkcji:** F3/33 pg/mL
+→ mediana grupy 1–5 =33; F5,25/33 → mediana grupy 5–10 =27; F6/33
+→ dotychczasowe Borelli ≈11. `[4,5)` kwalifikuje się do 33, ale `[4,5]`,
+`[4.99,5.01]`, `[5.59,5.61]` i `[1,1+1/12)` nie dostają jednej mediany.
+Znane Gen II, osocze, leczenie wykluczające lub wynik z operatorem `<`
+nie tworzą nowego punktu. Wpisanie/wyczyszczenie wyniku, 0 i wynik ponad
+osią nie zmieniają krzywej ani skali.
+
+**Wykonane kontrole:** testy jednostkowe modułu **327/327 w 18 plikach**;
+ukierunkowane E2E **24/24 w 3 plikach**, w tym 5 nowych scenariuszy;
+przeglądarkowe porównanie przed/po **12/12**, desktop/mobile wobec bazy
+`c8b91078`. Niezależna macierz sprawdziła 168 014 prób dokładnego wieku
+i 3124 przedziały wieku: 74 wcześniejsze profile są identyczne,
+a 576 pełnych ocen laboratoryjnych zachowało wyniki. Te kontrole nie
+nadają odniesieniu statusu walidacji klinicznej.
+
+**Zapis kontroli przed publikacją PR:** pełne `npm test` zakończyło się
+kodem 0: przed scaleniem aktualnego `audyt` **7669 testów / 350 plików**,
+a po scaleniu `2df41a883879b1f7abb84e51bc6dc531f773eeb8` — **7683 / 351**.
+Polityka repozytorium, lint, składnia 978 plików JS i testy PRO po scaleniu
+również PASS. Odrębny przegląd integracji po scaleniu: 44/44 kontrole
+oraz 9 prób wieku; źródła, normalizatory wieku i dotychczasowe wyniki
+odniesień zachowane. PWA PASS: rzeczywista aktualizacja SW
+`1.1.270` → `1.1.272`, pełny restart przeglądarki offline przy zatrzymanym
+serwerze HTTP; nie opieramy sprawdzenia na samej otwartej wcześniej karcie.
+
+To zapis wykonanych kontroli źródeł i implementacji przed publikacją,
+nie deklaracja zakończenia pełnego E2E lub GitHub CI. Końcowe wyniki
+pełnego E2E, PWA i wszystkich kontroli GitHub dla aktualnego SHA są
+raportowane w PR, bez aktualizowania plików źródłowych samymi statusami CI.
+Źródła, hashe i przypadki: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026),
+[przegląd tej partii](hormone-lifespan/evidence/female-inhibin-childhood-reference-coverage-2026-10-14.json).
+
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć zatwierdzoną makietę porównania płci
@@ -4469,7 +4548,7 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 
 **Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
 
-### P-WIEK-POMIARU-3 — karta porównania: „Zmiana” w wieku dokładnym; masa poniżej 3 lat przy OLAF na Palczewskiej w widokach zapisu; wzrost dla wieku kostnego (SW 1.1.272, 2026-10-14, polecenie i decyzja właściciela)
+### P-WIEK-POMIARU-3 — karta porównania: „Zmiana” w wieku dokładnym; masa poniżej 3 lat przy OLAF na Palczewskiej w widokach zapisu; wzrost dla wieku kostnego (SW 1.1.273, 2026-10-14, polecenie i decyzja właściciela)
 
 **Polecenie właściciela (2026-10-14).** „Zajmij się pozostałymi miejscami w osobnym PR”. Chodzi o miejsca, które P-WIEK-POMIARU wymienił jako poza zakresem, a P-WIEK-POMIARU-2 zostawił do decyzji: ΔSDS i werdykt karty porównania oraz wzrost dla wieku kostnego. Przegląd znalazł jeszcze dwie sprawy, które właściciel rozstrzygnął tego samego dnia:
 - masa poniżej 3 lat przy OLAF liczyła się w trzech widokach zapisu na innej siatce niż w formularzu — naprawić w tym PR;
@@ -4557,7 +4636,7 @@ Przegląd sprawdził też wzrost rodziców w DocPro (druga przypadkowa zgodnoś�
 - 16 mutacji poprawki (model, ścieżka trajektorii, reguła masy w trzech widokach, wiek kostny): każdą wykrywa co najmniej jeden test.
 - Strażnicy `sds-karta-i-trajektoria` (`En`) i `sds-konsumenci-rdzenia` (schowek) przypinają nowe fragmenty; liczba asercji bez zmian.
 
-**Wersje.** `app.js` 236, `vilda_advanced_growth.js` 76, `vilda_auth_ui.js` 490 (wstrzykiwany: `vilda_chrome.js` 138, `vilda_session_bridge.js` 62), `vilda_patient_summary_copy.js` 16, `vilda_summary_cards.js` 61; SW 1.1.271 → 1.1.272.
+**Wersje.** `app.js` 236, `vilda_advanced_growth.js` 76, `vilda_auth_ui.js` 490 (wstrzykiwany: `vilda_chrome.js` 138, `vilda_session_bridge.js` 62), `vilda_patient_summary_copy.js` 16, `vilda_summary_cards.js` 61; SW 1.1.272 → 1.1.273 (numer 1.1.272 nadał równolegle #673).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
