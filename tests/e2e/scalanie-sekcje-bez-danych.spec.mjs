@@ -133,3 +133,118 @@ test.describe('P-SCALANIE-SEKCJE — „Scal pacjentów” z prawdziwym zapisem 
     // z Karty pacjenta, „Nowy pomiar” i „Odtwórz zapis”). To osobna wada ścieżki wczytania, poza P-SCALANIE-SEKCJE.
   });
 });
+
+// Recenzja końcowa P-SCALANIE-SEKCJE (uwaga U1) — prawdziwy kalkulator-klirens.html. Lekarz ma w karcie przeglądarki
+// wczytaną starą kartę X z sesją klirensu (Scr 0,9 wpisana z jednostką µmol/L — pomyłka) i poprawia jednostkę na mg/dl;
+// w drugiej karcie X zostaje scalona z Y. „Zapisz” daje odmowę, drugi zapis idzie jako ponowienie do Y. Poprawiona
+// jednostka ma trafić do głowy Y (strona przy 'umol' liczy h/88,4). Test sprawdza też przesłankę reguły porównania:
+// odtworzenie zapisanej sesji na stronie zmienia w inputs tylko antropometrię karty pacjenta, a zmiana jednostki —
+// tylko ScrUnit.
+const ANTROPOMETRIA_KLIRENSU = ['fullName', 'age', 'ageMonths', 'ageDays', 'sex', 'weight', 'height'];
+
+async function gotowyKlirens(page) {
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => typeof window.saveUserData === 'function' && typeof window.collectUserData === 'function'
+    && Boolean(window.VildaAuthUI) && typeof window.applyLoadedData === 'function'
+    && typeof window.applyClcrSessionSnapshot === 'function');
+  await page.waitForTimeout(1500); // odtwarzanie sesji klirensu po starcie strony
+}
+
+const ustawPole = (page, id, wartosc) => page.evaluate(([i, w]) => {
+  const e = document.getElementById(i);
+  e.value = w;
+  e.dispatchEvent(new Event('input', { bubbles: true }));
+  e.dispatchEvent(new Event('change', { bubbles: true }));
+}, [id, wartosc]);
+
+const rozneKlucze = (a, b) => [...new Set(Object.keys(a).concat(Object.keys(b)))]
+  .filter((k) => JSON.stringify(a[k] === undefined ? null : a[k]) !== JSON.stringify(b[k] === undefined ? null : b[k]))
+  .filter((k) => !ANTROPOMETRIA_KLIRENSU.includes(k))
+  .sort();
+
+test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie zapisu po scaleniu', () => {
+  test('poprawiona jednostka Scr w formularzu starej karty trafia do karty docelowej przy ponowieniu (U1)', async ({ page, context }) => {
+    test.setTimeout(180_000);
+    await przygotujKarte(page);
+    await page.goto('/kalkulator-klirens.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => Boolean(window.VildaVault));
+    await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+    await page.reload({ waitUntil: 'load' });
+    await gotowyKlirens(page);
+
+    // X: sesja zbudowana przez prawdziwą stronę (Scr 0,9 z jednostką µmol/L); Y: to samo dziecko z index (klirens null).
+    for (const [id, w] of [['age', '4'], ['ageMonths', '6'], ['height', '104'], ['weight', '17'], ['ScrUnit', 'umol'], ['Scr', '0.9']]) {
+      await ustawPole(page, id, w);
+    }
+    await page.waitForTimeout(600);
+    const { x, y } = await page.evaluate(async () => {
+      const V = window.VildaVault;
+      const zx = window.collectUserData();
+      zx.name = 'Testowy Jan';
+      zx.user = Object.assign({}, zx.user, { lastName: 'Testowy', firstName: 'Jan', sex: 'M' });
+      zx.growthBasic = { data: { measurements: [{ ageMonths: 54, ageYears: 4.5, height: 104, weight: 17 }] } };
+      const a = await V.savePatient(zx, { dedup: false });
+      const zy = { name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 4, ageMonths: 0, height: 100, weight: 16 },
+        growthBasic: { data: { measurements: [{ ageMonths: 48, ageYears: 4, height: 100, weight: 16 }] } }, clcr: null };
+      const b = await V.savePatient(zy, { dedup: false });
+      return { x: a.patientId, y: b.patientId };
+    });
+    const sesjaX = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, x);
+    expect([sesjaX.inputs.Scr, sesjaX.inputs.ScrUnit], 'kontrola: sesja X ze strony').toEqual(['0.9', 'umol']);
+
+    // Karta A: świeża karta przeglądarki; X wczytana z Karty pacjenta, zapisana sesja odtworzona do formularza.
+    const A = await context.newPage();
+    await przygotujKarte(A);
+    await A.goto('/kalkulator-klirens.html', { waitUntil: 'load' });
+    await A.waitForFunction(() => Boolean(window.VildaVault));
+    await A.evaluate(async (pw) => {
+      const u = await window.VildaVault.listUsers();
+      await window.VildaVault.unlockUser(u[0].userId, pw);
+    }, HASLO);
+    await A.reload({ waitUntil: 'load' });
+    await gotowyKlirens(A);
+    await A.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), x);
+    await A.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+    await A.waitForTimeout(800);
+    if (await A.locator('#vildaLoadChoiceModal').count()) await A.locator('#vildaLcmNew').click();
+    await A.waitForFunction((id) => window._vildaCurrentPatientId === id, x);
+    await A.waitForTimeout(1500);
+    expect(await A.evaluate(() => window.applyClcrSessionSnapshot(window.lastLoadedData.clcr, { source: 'json-restore', update: true,
+      hideLoadedSummary: true, showPlaceholder: false, hideRestoreButton: true, dispatchEvents: false, writeSession: true })),
+    'odtworzenie zapisanej sesji X').toBe(true);
+    for (const [id, w] of [['fullName', 'Testowy Jan'], ['age', '6'], ['ageMonths', '0'], ['weight', '20'], ['height', '112']]) {
+      await ustawPole(A, id, w); // pola wymagane do zapisu
+    }
+    await A.waitForTimeout(600);
+    const poOdtworzeniu = await A.evaluate(() => window.collectUserData().clcr.inputs);
+    expect(rozneKlucze(poOdtworzeniu, sesjaX.inputs), 'odtworzona sesja różni się od zapisanej tylko antropometrią').toEqual([]);
+    await ustawPole(A, 'ScrUnit', 'mg/dl'); // lekarz poprawia jednostkę; strona nie przelicza wartości
+    await A.waitForTimeout(600);
+    const poPoprawie = await A.evaluate(() => window.collectUserData().clcr.inputs);
+    expect(rozneKlucze(poPoprawie, sesjaX.inputs), 'zmiana jednostki zmienia w sesji tylko ScrUnit').toEqual(['ScrUnit']);
+    expect([poPoprawie.Scr, poPoprawie.ScrUnit]).toEqual(['0.9', 'mg/dl']);
+
+    // Karta B: X scalona z Y — głowa Y dostaje sesję X (Y nie miała klirensu; tak samo na audyt).
+    await page.evaluate(async (ids) => window.VildaVault.mergePatients(ids.x, ids.y), { x, y });
+    expect((await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, y)).inputs.ScrUnit,
+      'kontrola: głowa Y po scaleniu').toBe('umol');
+
+    // Karta A: „Zapisz” (odmowa — karta X scalona), drugi zapis (ponowienie do Y).
+    await A.bringToFront();
+    const zapisz = () => A.evaluate(async () => {
+      try { await window.saveUserData(); return true; } catch (_) { return false; }
+    });
+    await zapisz();
+    await A.waitForTimeout(1500);
+    await zapisz();
+    await expect.poll(() => A.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots.length, y),
+      { message: 'ponowienie dopisało wersję do Y', timeout: 15000 }).toBe(4);
+    const wynik = await A.evaluate(async (id) => {
+      const V = window.VildaVault;
+      const c = (await V.getPatient(id)).snapshots[0].payload.clcr;
+      return { Scr: c.inputs.Scr, ScrUnit: c.inputs.ScrUnit, karty: (await V.listPatients()).length };
+    }, y);
+    expect(wynik, 'głowa Y po ponowieniu: poprawiona jednostka').toEqual({ Scr: '0.9', ScrUnit: 'mg/dl', karty: 1 });
+  });
+});

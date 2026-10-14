@@ -17,13 +17,16 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // lekarza) jest zastępowana W CAŁOŚCI sekcją starej karty, która ma dane; sekcji nie łączymy pole po polu. Karta
 // docelowa bez sekcji (null) — jak dotąd. W ponowieniu zapisu sekcje najwyższego poziomu porównujemy na ich danych
 // (Bsc_dane, bez wartości domyślnych strony): sekcja „bez danych” karty docelowej nie zastępuje sekcji z formularza,
-// sekcja formularza jest zmianą lekarza, gdy jej dane różnią się od kopii wczytanej, a sekcja formularza „bez danych”
+// sekcja formularza jest zmianą lekarza, gdy różni się od kopii wczytanej w rzucie porównania (Bsc_porownanie: dane,
+// a w sesji klirensu także jednostki, stany, metoda oznaczenia i status noworodka), a sekcja formularza „bez danych”
 // — tylko gdy lekarz wyczyścił w niej dane, które głowa karty docelowej ma z kopii wczytanej (uwagi recenzji, T32–T45).
 //
 // Prawdziwy vilda_vault.js na magazynie w pamięci; kształty zapisu stron z tests/fixtures/scalanie-sekcje-ksztalty.json
 // (przechwycone z collectUserData na index, docpro i kalkulator-klirens). Strażnicy porównują regułę sejfu z prawdziwym
 // vildaPalZapisuWybrany (vilda_data_import_export.js) i z polami karty pacjenta w kalkulator-klirens.html.
 // Oznaczenia: [czerwony na audyt] — nie przechodził na `audyt` 2df41a8; [kontrola] — przechodził (zachowanie bez zmian).
+// Dodatkowo: [czerwony na b24b9c13] / [czerwony na 24ba6975] — nie przechodził na pierwszej / drugiej wersji tej zmiany
+// (uwagi recenzji; T46–T53 i strażnik porównania klirensu po recenzji końcowej).
 // Dane wyłącznie FIKCYJNE.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -483,8 +486,12 @@ describe('P-SCALANIE-SEKCJE — ponowienie: sekcja formularza Z DANYMI różni s
     for (const zmien of [(p) => { p.dietLevel = 'lagodna'; }, (p) => { p.customGoalKg = null; }]) {
       const { x, y, glowaX } = await scal(zapis({ plan: planDieta }, { wiersze: [60] }), zapis({ plan: planY }, { wiersze: [48] }), v);
       const f = zmieniony(glowaX, (z) => { zmien(z.plan); });
+      // Kopia przed zapisem: savePatient uzupełnia ładunek ponowienia w miejscu (Bdo_sekcje), więc porównanie z f.plan
+      // po zapisie przechodziłoby także wtedy, gdy plan karty docelowej zostaje (uwaga recenzji końcowej).
+      const planFormularza = kopia(f.plan);
+      expect(planFormularza, 'kontrola: formularz zmienia plan').not.toEqual(planY);
       await v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
-      expect((await v.getPatient(y)).snapshots[0].payload.plan).toEqual(f.plan);
+      expect((await v.getPatient(y)).snapshots[0].payload.plan).toEqual(planFormularza);
     }
   });
 
@@ -534,6 +541,137 @@ describe('P-SCALANIE-SEKCJE — ponowienie: sekcja formularza bez danych (spoży
     const intakeY = { pal: '1.6', history: null, estKcalPerDay: 1400 };
     const { g } = await scal(zapis({ intake: intakeX }), zapis({ intake: intakeY }));
     expect(g.intake).toEqual(intakeY);
+  });
+});
+
+/* Uwagi recenzji końcowej P-SCALANIE-SEKCJE (2026-10-14). W ponowieniu zapisu „bez danych” i „zmiana lekarza” to dwa
+   różne rzuty sekcji. „Bez danych” (Bsc_dane) — jak dotąd: jednostka, stan czy metoda oznaczenia same danych nie tworzą.
+   „Zmiana lekarza” (Bsc_porownanie) w sesji klirensu porównuje wszystkie niepuste pola poza antropometrią karty pacjenta
+   i wyborami widoku: poprawiona jednostka Scr, potwierdzona stabilność kreatyniny, metoda oznaczenia i status noworodka
+   zmieniają wynik, więc przechodzą do głowy karty docelowej jak przy zwykłym zapisie tej wizyty. Na 24ba6975 (rzut
+   porównania = Bsc_dane) przepadały: Scr 0,9 wpisana z µmol/L i poprawiona na mg/dl zostawała w głowie jako µmol/L
+   (h/88,4 — 88 razy inna kreatynina u podstawy eGFR). */
+const zmienionaWizyta = (glowaX, zmien) => {
+  const f = kopia(glowaX);
+  f.advanced.data.measurements.push(pomiar(72));
+  zmien(f);
+  return f;
+};
+const glowaRekordu = async (v, id) => (await v.getPatient(id)).snapshots[0].payload;
+// Sesja klirensu X: Scr 0,9 wpisana z jednostką µmol/L (pomyłka; strona nie przelicza wartości przy zmianie jednostki).
+const clcrUmol = (() => { const s = kopia(K.klirensScrClcr); s.inputs.Scr = '0.9'; s.inputs.ScrUnit = 'umol'; return s; })();
+const nowaChwila = '2026-10-14T12:00:00.000Z';
+
+describe('P-SCALANIE-SEKCJE — ponowienie: wybory lekarza w sesji klirensu formularza starej karty (recenzja końcowa)', () => {
+  const przypadki = [
+    ['jednostka Scr µmol/L → mg/dl', 'ScrUnit', 'mg/dl'],
+    ['stan kreatyniny „nieznany” → „stabilny”', 'creatinineState', 'stable'],
+    ['metoda oznaczenia → enzymatyczna IDMS', 'ScrAssay', 'enzymatic_idms'],
+    ['status noworodka → wcześniak', 'neonatalTermStatus', 'preterm'],
+  ];
+  for (const [nazwa, pole, wartosc] of przypadki) {
+    it(`T46 (U1) [kontrola: jak na audyt i b24b9c13; czerwony na 24ba6975] ${nazwa}: Y bez klirensu (scalenie bierze sesję X), zmiana w formularzu X trafia do głowy Y — jak zwykły zapis tej wizyty`, async () => {
+      const v = await konto();
+      const zY = zapis({}, { wiersze: [48] });
+      expect(zY.clcr, 'kontrola: index zapisuje klirens jako null').toBeNull();
+      const { x, y, glowaX, g } = await scal(zapis({ clcr: clcrUmol }, { baza: K.klirensPusty, wiersze: [60] }), zY, v);
+      expect(g.clcr, 'kontrola: scalenie przenosi sesję X').toEqual(clcrUmol);
+      expect(clcrUmol.inputs[pole], 'kontrola: w sesji X inna wartość').not.toBe(wartosc);
+      const zmien = (f) => { f.clcr.inputs[pole] = wartosc; f.clcr.savedAtISO = nowaChwila; };
+      await v.savePatient(zmienionaWizyta(glowaX, zmien), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+      const c = (await glowaRekordu(v, y)).clcr;
+      expect(c.inputs[pole], 'ponowienie: zmiana lekarza w głowie Y').toBe(wartosc);
+      expect(c.inputs.Scr, 'Scr bez zmian').toBe('0.9');
+      // kontrola bez scalania: zwykły zapis tej samej wizyty do karty X
+      const z = (await v.savePatient(zapis({ clcr: clcrUmol }, { baza: K.klirensPusty, wiersze: [60] }), { dedup: false })).patientId;
+      const gz = await glowaRekordu(v, z);
+      await v.savePatient(zmienionaWizyta(gz, zmien), { patientId: z, baselinePayload: gz });
+      expect((await glowaRekordu(v, z)).clcr.inputs[pole], 'kontrola: zwykły zapis').toBe(wartosc);
+    });
+  }
+
+  it('T47 [kontrola: jak na audyt i b24b9c13; czerwony na 24ba6975] Y z własną, inną sesją (Scr 0,5): poprawiona jednostka w formularzu X to zmiana lekarza — sesja z formularza w całości', async () => {
+    const clcrY = kopia(K.klirensScrClcr);
+    clcrY.inputs.Scr = '0.5';
+    const { v, x, y, glowaX, g } = await scal(zapis({ clcr: clcrUmol }, { baza: K.klirensPusty, wiersze: [60] }), zapis({ clcr: clcrY }, { wiersze: [48] }));
+    expect(g.clcr, 'kontrola: scalenie trzyma sesję Y').toEqual(clcrY);
+    const f = zmienionaWizyta(glowaX, (z) => { z.clcr.inputs.ScrUnit = 'mg/dl'; z.clcr.savedAtISO = nowaChwila; });
+    const sesjaFormularza = kopia(f.clcr); // savePatient uzupełnia ładunek ponowienia w miejscu (Bdo_sekcje)
+    await v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await glowaRekordu(v, y)).clcr).toEqual(sesjaFormularza);
+  });
+
+  it('T48 [czerwony na audyt] sesja X odbudowana przez stronę z antropometrią z danych pacjenta (wiek, masa, wzrost, nazwisko) i innym widokiem → inna sesja karty docelowej (Scr 0,5) zostaje', async () => {
+    const clcrY = kopia(K.klirensScrClcr);
+    clcrY.inputs.Scr = '0.5';
+    clcrY.savedAtISO = '2026-10-14T10:40:00.000Z';
+    const { v, x, y, glowaX, g } = await scal(zapis({ clcr: K.klirensScrClcr }, { wiersze: [60] }), zapis({ clcr: clcrY }, { wiersze: [48] }));
+    expect(g.clcr, 'kontrola: scalenie trzyma sesję Y').toEqual(clcrY);
+    const odbudowana = (f) => {
+      Object.assign(f.clcr.inputs, { fullName: 'Testowy Jan', age: '5', ageMonths: '0', sex: 'M', weight: '19', height: '110',
+        currentVersion: 'advanced', formulaPicker: 'ckid_u25' });
+      f.clcr.currentVersion = 'advanced';
+      f.clcr.savedAtISO = nowaChwila;
+    };
+    await v.savePatient(zmienionaWizyta(glowaX, odbudowana), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await glowaRekordu(v, y)).clcr).toEqual(clcrY);
+  });
+
+  it('T53 [czerwony na audyt i 24ba6975] Y z własną sesją Scr 0,4 µmol/L (ta sama liczba, inna jednostka niż w X): skasowanie Scr w formularzu X jej nie kasuje — „głowa ma te same dane” liczy się w rzucie porównania', async () => {
+    const clcrY = kopia(K.klirensScrClcr);
+    clcrY.inputs.ScrUnit = 'umol';
+    const { v, x, y, glowaX, g } = await scal(zapis({ clcr: K.klirensScrClcr }, { baza: K.klirensPusty, wiersze: [60] }), zapis({ clcr: clcrY }, { wiersze: [48] }));
+    expect(g.clcr, 'kontrola: scalenie trzyma sesję Y').toEqual(clcrY);
+    expect(glowaX.clcr.inputs, 'kontrola: X w mg/dl').toMatchObject({ Scr: '0.4', ScrUnit: 'mg/dl' });
+    await v.savePatient(zmienionaWizyta(glowaX, (f) => { f.clcr = kopia(K.klirensAntropometriaClcr); }), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await glowaRekordu(v, y)).clcr).toEqual(clcrY);
+  });
+
+  it('T49 (RK-P) [kontrola: jak na audyt i jak zwykły zapis; na b24b9c13 Scr zostawała] kalkulator klirensu w trybie podglądu oddaje pustą sesję — w ponowieniu działa ona jak wyczyszczenie Scr, którą głowa Y dostała przy scaleniu', async () => {
+    // Po wczytaniu pacjenta z Karty pacjenta kalkulator klirensu pokazuje zapisaną ocenę jako podgląd, a collectUserData
+    // oddaje pustą sesję v2 (zmierzone w recenzji na prawdziwej stronie). Sejf nie odróżnia jej od Scr skasowanej przez
+    // lekarza (T32); naprawa należy do strony (osobne zadanie). Test przypina stan: ponowienie = zwykły zapis tej wizyty.
+    const v = await konto();
+    const { x, y, glowaX, g } = await scal(zapis({ clcr: clcrUmol }, { baza: K.klirensPusty, wiersze: [60] }), zapis({}, { wiersze: [48] }), v);
+    expect(g.clcr.inputs.Scr, 'kontrola: scalenie przenosi sesję X').toBe('0.9');
+    const podglad = (f) => {
+      f.clcr = kopia(K.klirensPusty.clcr);
+      f.clcr.savedAtISO = nowaChwila;
+      Object.assign(f.clcr.inputs, { fullName: 'Testowy Jan', age: '6', ageMonths: '0', weight: '20', height: '112' });
+    };
+    const f = zmienionaWizyta(glowaX, podglad);
+    const sesjaFormularza = kopia(f.clcr); // savePatient uzupełnia ładunek ponowienia w miejscu (Bdo_sekcje)
+    await v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await glowaRekordu(v, y)).clcr).toEqual(sesjaFormularza);
+    expect(sesjaFormularza.inputs.Scr, 'kontrola: pusta sesja strony').toBe('');
+    const z = (await v.savePatient(zapis({ clcr: clcrUmol }, { baza: K.klirensPusty, wiersze: [60] }), { dedup: false })).patientId;
+    const gz = await glowaRekordu(v, z);
+    await v.savePatient(zmienionaWizyta(gz, podglad), { patientId: z, baselinePayload: gz });
+    expect((await glowaRekordu(v, z)).clcr.inputs.Scr, 'kontrola: zwykły zapis tej wizyty też traci Scr').toBe('');
+  });
+});
+
+describe('P-SCALANIE-SEKCJE — reguły pilnowane po recenzji końcowej (RK-M1–RK-M3)', () => {
+  it('T50 (RK-M1) [kontrola: jak na audyt] sesja klirensu Y z samym wynikiem 0 (Kru 0 ml/min — pacjent anuryczny) to dane — zostaje przy „Scal pacjentów”', async () => {
+    const clcrY = kopia(K.klirensPusty.clcr);
+    clcrY.inputs.ktvKru = '0';
+    const { g } = await scal(zapis({ clcr: K.klirensScrClcr }), zapis({ clcr: clcrY }));
+    expect(g.clcr).toEqual(clcrY);
+  });
+
+  it('T51 (RK-M2) [czerwony na audyt] plan Y z celem własnym 0 kg (nie jest celem jak w vildaCelWlasnyZapisu) i PAL domyślnym jest bez danych → plan X', async () => {
+    const planY = { palFactor: 1.6, palWybrany: false, dietLevel: null, dietaWybrana: false, customGoalKg: 0 };
+    const { g } = await scal(zapis({ plan: planX }), zapis({ plan: planY }));
+    expect(g.plan).toEqual(planX);
+  });
+
+  it('T52 (RK-M3) [kontrola: jak na audyt; czerwony na b24b9c13] Y z własną sesją o TYCH SAMYCH danych (Scr 0,4, inny savedAtISO); lekarz kasuje Scr w formularzu X → usunięcie przechodzi', async () => {
+    const clcrY = kopia(K.klirensScrClcr);
+    clcrY.savedAtISO = '2026-10-14T10:40:00.000Z';
+    const { v, x, y, glowaX, g } = await scal(zapis({ clcr: K.klirensScrClcr }, { baza: K.klirensPusty, wiersze: [60] }), zapis({ clcr: clcrY }, { wiersze: [48] }));
+    expect(g.clcr, 'kontrola: scalenie trzyma sesję Y').toEqual(clcrY);
+    await v.savePatient(zmienionaWizyta(glowaX, (f) => { f.clcr = kopia(K.klirensAntropometriaClcr); }), { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+    expect((await glowaRekordu(v, y)).clcr).toEqual(K.klirensAntropometriaClcr);
   });
 });
 
@@ -621,23 +759,76 @@ describe('P-SCALANIE-SEKCJE — strażnicy zgodności z formularzem', () => {
     expect(K.klirensWzorKtvClcr.inputs).toMatchObject({ ktvToggle: true, formulaPicker: 'KTV', currentVersion: 'pro' });
 
     // Zgodność w obie strony, zachowaniem prawdziwego mergePatients: dla KAŻDEGO pola prawdziwych sesji (pustej i „sam
-    // wzór KT/V”) wartość '7' (a w polu wyboru także zaznaczenie) jest daną wtedy i tylko wtedy, gdy pole nie jest polem karty
-    // pacjenta ani wyborem widoku (currentVersion, formulaPicker, ktvToggle). Pole badania dopisane do listy sejfu albo
-    // pole widoku, którego w niej brak, daje czerwony wynik.
+    // wzór KT/V”) wartość '7' i '0' (wynik 0 to dana — np. Kru 0 ml/min, uwaga RK-M1 recenzji końcowej; a w polu wyboru
+    // także zaznaczenie) jest daną wtedy i tylko wtedy, gdy pole nie jest polem karty pacjenta ani wyborem widoku
+    // (currentVersion, formulaPicker, ktvToggle). Pole badania dopisane do listy sejfu, pole widoku, którego w niej brak,
+    // albo reguła „tylko liczba > 0” daje czerwony wynik.
     const nieDane = new Set(polaKarty.concat(['currentVersion', 'formulaPicker', 'ktvToggle']));
     const polaWyboru = new Set([...html.matchAll(/<input type="checkbox" id="([^"]+)"/g)].map((x) => x[1]));
     const klucze = [...new Set(Object.keys(pustaSesja.inputs).concat(Object.keys(K.klirensWzorKtvClcr.inputs)))];
     expect(klucze.length).toBeGreaterThan(100);
     const rozjazdy = [];
-    for (const k of klucze) {
-      for (const w of polaWyboru.has(k) ? ['7', true] : ['7']) {
+    for (const w of ['7', '0', true]) {
+      const vw = await konto(); // osobne konto na każdą wartość — lista kart konta nie rośnie ponad ok. 130
+      for (const k of klucze.filter((p) => w !== true || polaWyboru.has(p))) {
         const zY = sesja({ [k]: w });
-        const { g } = await scal(zX, zapis({ clcr: zY }), v);
+        const { g } = await scal(zX, zapis({ clcr: zY }), vw);
         const zostala = JSON.stringify(g.clcr) === JSON.stringify(zY);
         expect(zostala || JSON.stringify(g.clcr) === JSON.stringify(K.klirensScrClcr), `pole ${k}: albo zostaje, albo w całości sesja X`).toBe(true);
         if (zostala !== !nieDane.has(k)) rozjazdy.push({ pole: k, wartosc: w, sejfDana: zostala, oczekiwanaDana: !nieDane.has(k) });
       }
     }
     expect(rozjazdy).toEqual([]);
-  });
+  }, 60_000); // ok. 400 scaleń na prawdziwym sejfie — więcej niż domyślne 10 s pod obciążeniem CI
+
+  it('strażnik porównania klirensu w ponowieniu: zmiana samego pola sesji w formularzu starej karty jest zmianą lekarza dokładnie wtedy, gdy pole nie jest antropometrią karty pacjenta ani wyborem widoku (w obie strony)', async () => {
+    const html = czytaj('kalkulator-klirens.html');
+    const i = html.indexOf('<fieldset id="patientSet">');
+    expect(i, 'karta pacjenta w kalkulator-klirens.html').toBeGreaterThanOrEqual(0);
+    const karta = html.slice(i, html.indexOf('</fieldset>', i));
+    const polaKarty = [...karta.matchAll(/<(?:input|select|textarea)\b[^>]*\bid="([^"]+)"/g)].map((x) => x[1]);
+    // Status noworodka (donoszony/wcześniak) to wybór lekarza: trafia do populationContext.termStatus i decyduje o wzorze
+    // eGFR noworodka — w porównaniu zostaje. Reszta karty pacjenta to antropometria i dane osobowe.
+    expect(polaKarty).toContain('neonatalTermStatus');
+    const antropometria = polaKarty.filter((k) => k !== 'neonatalTermStatus');
+    // Pola, które strona przy odtworzeniu sesji nadpisuje danymi pacjenta (inline_kalkulator_klirens_07.js), muszą być poza
+    // porównaniem — inaczej sesja X odbudowana przez stronę zastępowałaby inny klirens karty docelowej (T48).
+    const mapa = czytaj('inline_kalkulator_klirens_07.js').match(/\{fullName:"name",[^}]*\}/);
+    expect(mapa, 'mapa pól z danych pacjenta w inline_kalkulator_klirens_07.js').not.toBeNull();
+    const zDanychPacjenta = [...mapa[0].matchAll(/(\w+):"/g)].map((x) => x[1]);
+    expect(zDanychPacjenta).toEqual(expect.arrayContaining(['fullName', 'age', 'ageMonths', 'weight', 'height', 'sex']));
+    expect(antropometria, 'każde pole z danych pacjenta jest poza porównaniem').toEqual(expect.arrayContaining(zDanychPacjenta));
+    const pozaPorownaniem = new Set(antropometria.concat(['currentVersion', 'formulaPicker', 'ktvToggle']));
+    const polaWyboru = new Set([...html.matchAll(/<input type="checkbox" id="([^"]+)"/g)].map((x) => x[1]));
+    const klucze = [...new Set(Object.keys(K.klirensPusty.clcr.inputs).concat(Object.keys(K.klirensWzorKtvClcr.inputs)))];
+    expect(klucze.length).toBeGreaterThan(100);
+    // Y z własną, inną sesją (Scr 0,5); X z sesją Scr 0,4 (kopia wczytana). Formularz X zmienia jedno pole: pole wyboru —
+    // odwrotne zaznaczenie; inne pole — liczba '7' (dana w obu rzutach) i tekst 'zmiana' (jak jednostka, stan, metoda:
+    // nie jest daną, ale jest zmianą). W Scr — jedynej danej sesji X — tylko liczba: tekst zamienia sekcję formularza
+    // w „bez danych” (gałąź „lekarz wyczyścił”, T32/T36).
+    const clcrY = kopia(K.klirensScrClcr);
+    clcrY.inputs.Scr = '0.5';
+    clcrY.savedAtISO = '2026-10-14T10:40:00.000Z';
+    const przebiegi = [
+      klucze.map((k) => [k, polaWyboru.has(k) ? !K.klirensScrClcr.inputs[k] : '7']),
+      klucze.filter((k) => !polaWyboru.has(k) && k !== 'Scr').map((k) => [k, 'zmiana']),
+    ];
+    expect(przebiegi[1].length).toBeGreaterThan(80);
+    const rozjazdy = [];
+    for (const przebieg of przebiegi) {
+      const v = await konto(); // osobne konto na przebieg — lista kart konta nie rośnie ponad ok. 130
+      for (const [k, nowa] of przebieg) {
+        const { x, y, glowaX } = await scal(zapis({ clcr: K.klirensScrClcr }, { wiersze: [60] }), zapis({ clcr: clcrY }, { wiersze: [48] }), v);
+        const f = zmienionaWizyta(glowaX, (z) => { z.clcr.inputs[k] = nowa; z.clcr.savedAtISO = nowaChwila; });
+        const sesjaFormularza = kopia(f.clcr); // savePatient uzupełnia ładunek ponowienia w miejscu (Bdo_sekcje)
+        expect(sesjaFormularza.inputs[k], `pole ${k}: formularz zmienia pole`).toEqual(nowa);
+        await v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+        const c = (await glowaRekordu(v, y)).clcr;
+        const zFormularza = JSON.stringify(c) === JSON.stringify(sesjaFormularza);
+        expect(zFormularza || JSON.stringify(c) === JSON.stringify(clcrY), `pole ${k}: albo sesja z formularza, albo sesja Y`).toBe(true);
+        if (zFormularza !== !pozaPorownaniem.has(k)) rozjazdy.push({ pole: k, wartosc: nowa, sejfZmiana: zFormularza, oczekiwanaZmiana: !pozaPorownaniem.has(k) });
+      }
+    }
+    expect(rozjazdy).toEqual([]);
+  }, 120_000); // ok. 220 scaleń z ponowieniem na prawdziwym sejfie
 });
