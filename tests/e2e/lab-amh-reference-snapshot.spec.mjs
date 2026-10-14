@@ -33,6 +33,9 @@ async function prepare(page, { width = 1440, age = 15, sex = 'F', main = false }
     !document.documentElement.classList.contains('vilda-auth-locked'));
   const consent = page.locator('#consent-decline');
   if (await consent.isVisible()) await consent.click();
+  // The synthetic record must be loaded after the main form's bootstrap
+  // restore, not merely after the vault has unlocked.
+  if (main) await settleMain(page);
   const id = await page.evaluate(async ({ age, sex, main }) => {
     const user = { name: 'Fikcyjna Osoba AMH', lastName: 'Fikcyjna', firstName: 'Osoba AMH', sex, age, ageMonths: 0, height: 160, weight: 50 };
     const saved = await window.VildaVault.savePatient({ name: user.name, user, puberty: {} }, { dedup: false });
@@ -58,7 +61,11 @@ async function prepare(page, { width = 1440, age = 15, sex = 'F', main = false }
       await page.locator(`#${field}`).dispatchEvent('change');
     }
     await settleMain(page);
-    await expect.poll(() => page.evaluate(() => Number(window.VildaPersistence.readShared().age))).toBe(age);
+    await expect(page.locator('#name')).toHaveValue('Fikcyjna Osoba AMH');
+    await expect.poll(() => page.evaluate(() => {
+      const shared = window.VildaPersistence.readShared();
+      return { age: Number(shared.age), name: shared.name };
+    })).toEqual({ age, name: 'Fikcyjna Osoba AMH' });
     await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
   }
   await page.waitForFunction(() => window.VildaHormoneLifespanRuntime && window.VildaHormoneReferenceSnapshot &&
@@ -75,9 +82,14 @@ async function prepare(page, { width = 1440, age = 15, sex = 'F', main = false }
 
 async function settleMain(page) {
   await page.waitForFunction(() => {
+    const persistence = window.VildaPersistence;
     const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
-    return !window.__vildaPersistRestoring && (!state || !state.hasPendingSaveTimer &&
-      !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
+    // Empty queues can occur during the restoration pause. Editing then lets
+    // the pending older root overwrite the new fields when navigation flushes.
+    return persistence && typeof persistence.isAutosaveSuppressed === 'function' &&
+      !persistence.isAutosaveSuppressed() && !persistence.isRestoring() &&
+      !window.VildaDobAge?.restorePending?.() && state && !state.hasPendingSaveTimer &&
+      !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer;
   });
 }
 
