@@ -894,6 +894,9 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     pozniejsza chwila zmiany — jak dla wersji tej samej karty; pelny remis — mniejszy patientId, zeby oba urzadzenia
  *     wybraly te sama karte). Wyjatek: karta, ktora w tym scalaniu przegrywa z nagrobkiem (zbior N w Le), zaraz
  *     zniknie — jej wersje przechodza zawsze (inaczej zwykle scalenie gubiloby wersje X), z nowsza trescia;
+ *   - tresc wersji wspolnej dwom kartom: pozniejsza chwila zmiany (Bsw_nowszaTresc), niezaleznie od tego, ktora karta
+ *     wygrala — rev liczy tez przeniesienia, wiec po kilku „Scal pacjentow” nie mowi, ktora tresc jest nowsza; wynik
+ *     z wyzsza z dwoch rev (Bsw_rekord); tutejszy rekord, ktory zostaje, przyjmuje pozniejsza tresc (decyzja 'tresc');
  *   - przeniesienie miedzy dwiema istniejacymi kartami w osobnej fazie, pod blokadami obu kart (Bsl_przeniesWersje);
  *     przechodzi tez ostatnia wersja karty, a karta bez wersji znika (bez nagrobka) — inaczej delta karty celu
  *     i osobna delta nagrobka scalonej karty gubily jej najnowsza wersje;
@@ -949,18 +952,31 @@ async function Bsw_deltaNagrobka(patientId, ladunek) {
 
 function Bsw_zmiana(x) { return x && typeof x.updatedAtISO === 'string' ? x.updatedAtISO : ''; }
 
-// Tresc z ladunku (S) nowsza niz lokalna (g)? Ta sama regula co dla wersji tej samej karty: najpierw rev, przy rownym
-// rev pozniejsza chwila zmiany; przy remisie zostaje lokalna.
-function Bsw_trescZLadunku(S, g) {
+// Rekord z ladunku (S) nowszy niz tutejszy (g)? Ta sama regula co dla wersji tej samej karty: najpierw rev (zmiana
+// tresci albo przeniesienie w „Scal pacjentow”), przy rownym rev pozniejsza chwila zmiany; przy remisie zostaje
+// tutejszy. Rozstrzyga o wlascicielu wersji wspolnej dwom kartom (Bsw_ladunekWygrywa).
+function Bsw_nowszyRekord(S, g) {
   const rz = mt(S), rl = mt(g);
   return rz !== rl ? rz > rl : Bsw_zmiana(S) > Bsw_zmiana(g);
+}
+
+// Tresc z ladunku (S) nowsza niz tutejsza (g) — dla wersji lezacej tu pod inna karta niz w ladunku: najpierw pozniejsza
+// chwila zmiany, przy rownej — wyzsza rev, przy remisie zostaje tutejsza. Powod (uwaga recenzenta do dd21d11): kazde
+// „Scal pacjentow” podbija rev bez zmiany tresci i chwili zmiany, wiec po dwoch scaleniach X -> Y -> Z wersja z dawna
+// trescia (rev 2) wygrywala regula „najpierw rev” z pozniejsza poprawka, przypieciem albo edycja wiersza tej wersji
+// w starej karcie na urzadzeniu, ktore o scaleniach nie wiedzialo (rev 1) — zmiana ginela na wszystkich urzadzeniach.
+// Chwili zmiany scalenie nie rusza, wiec ona mowi, ktora tresc jest pozniejsza. Wersje tej samej karty — bez zmian
+// (Bsl_scalPacjenta: najpierw rev).
+function Bsw_nowszaTresc(S, g) {
+  const zz = Bsw_zmiana(S), zl = Bsw_zmiana(g);
+  return zz !== zl ? zz > zl : mt(S) > mt(g);
 }
 
 // Wlasciciel wersji wspolnej dwom kartom: karta z ladunku F wygrywa z tutejsza G, gdy rekord z ladunku jest nowszy;
 // przy pelnym remisie (ta sama rev i chwila zmiany, np. stan sprzed tej zmiany albo dwa rownolegle scalenia) —
 // mniejszy patientId, deterministycznie na kazdym urzadzeniu.
 function Bsw_ladunekWygrywa(S, g, F, G) {
-  if (mt(S) !== mt(g) || Bsw_zmiana(S) !== Bsw_zmiana(g)) return Bsw_trescZLadunku(S, g);
+  if (mt(S) !== mt(g) || Bsw_zmiana(S) !== Bsw_zmiana(g)) return Bsw_nowszyRekord(S, g);
   return F < G;
 }
 
@@ -1009,34 +1025,46 @@ async function Bsw_wersjaLokalna(ctx, snapshotId) {
 //   'nowa'     — nie ma jej tu nigdzie (albo jej karta nie istnieje): zapis pod F jak dotad;
 //   'zabierz'  — lezy pod karta z wygrywajacym nagrobkiem (zbior N, zaraz zniknie): przechodzi pod F od razu;
 //   'przenies' — lezy pod inna istniejaca karta, a rekord z ladunku jest nowszy: przechodzi w fazie przeniesien;
-//   'pomin'    — lezy pod inna istniejaca karta, a tutejszy rekord jest nowszy: zostaje tam.
+//   'tresc'    — lezy pod inna istniejaca karta, tutejszy rekord jest nowszy (zostaje tam), ale tresc z ladunku jest
+//                pozniejsza (Bsw_nowszaTresc; typowo poprawka w starej karcie po kilku „Scal pacjentow”): tresc
+//                przechodzi do tutejszego rekordu w fazie przeniesien;
+//   'pomin'    — lezy pod inna istniejaca karta, a tutejszy rekord i jego tresc sa nowsze: zostaje tam bez zmian.
 async function Bsw_decyzja(ctx, F, S) {
   const g = await Bsw_wersjaLokalna(ctx, S.snapshotId);
   if (!g || !g.patientId || g.patientId === F.patientId) return { co: 'nowa', g: null };
   if (!(await I().getPatientForUser(b, g.patientId))) return { co: 'nowa', g: null };
   if (ctx.Bsw_N && ctx.Bsw_N.has(g.patientId)) return { co: 'zabierz', g: g };
-  return Bsw_ladunekWygrywa(S, g, F.patientId, g.patientId) ? { co: 'przenies', g: g } : { co: 'pomin', g: g };
+  if (Bsw_ladunekWygrywa(S, g, F.patientId, g.patientId)) return { co: 'przenies', g: g };
+  return Bsw_nowszaTresc(S, g) ? { co: 'tresc', g: g } : { co: 'pomin', g: g };
 }
 
-// Rekord wersji S pod karta F: tresc i rewizja nowsza — z ladunku albo tutejsza g (wtedy poprawka zrobiona tu nie ginie
-// pod starsza trescia z ladunku). Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
-function Bsw_rekord(F, S, szyfr, teraz, g) {
-  const r = Bsl_wersjaZLadunku(F, S, szyfr, teraz);
-  if (g && !Bsw_trescZLadunku(S, g)) {
+// Rekord wersji wspolnej dwom kartom pod karta `cel` ({ patientId }): karta z ladunku F („zabierz”, „przenies”) albo
+// tutejsza G („tresc”). Tresc nowsza wg Bsw_nowszaTresc — z ladunku (S, szyfr) albo tutejsza (g) — idzie razem ze swoja
+// chwila zmiany i chwila zapisu (wtedy poprawka zrobiona tu nie ginie pod starsza trescia z ladunku; przy remisie —
+// tutejsza). Rewizja wyniku = wyzsza z dwoch: wynik wygrywa wtedy z kazdym z nich regula wersji tej samej karty (rev
+// nie nizsza, a chwila zmiany tresci — najpozniejsza), wiec rozchodzi sie takze na urzadzenia, na ktorych ta wersja
+// lezy juz pod karta `cel`. Bez +1: rev, ktora rosnie bez zmiany tresci, wygrywa potem regula „najpierw rev”
+// z pozniejsza poprawka tej samej wersji w tej samej karcie (fuzz roznicowy do dd21d11: wariant z +1 gubil tak
+// poprawki, ktore zostawaly na dd21d11). Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
+function Bsw_rekord(cel, S, szyfr, teraz, g) {
+  const r = Bsl_wersjaZLadunku(cel, S, szyfr, teraz);
+  if (!g) return r;
+  if (!Bsw_nowszaTresc(S, g)) {
     r.payloadCipher = g.payloadCipher;
-    r.rev = mt(g);
     r.updatedAtISO = g.updatedAtISO || null;
     r.savedAtISO = g.savedAtISO || r.savedAtISO;
   }
+  r.rev = Math.max(mt(S), mt(g));
   return r;
 }
 
 // Przeniesienie odlozone do fazy przeniesien: dokad (F z naglowkiem z ladunku), skad (G) i w jakiej rewizji
-// widzielismy tutejszy rekord (faza przenosi tylko, gdy sie od tej chwili nie zmienil).
-function Bsw_odloz(ctx, F, naglowek, S, szyfr, g) {
+// widzielismy tutejszy rekord (faza przenosi tylko, gdy sie od tej chwili nie zmienil). tylkoTresc — decyzja 'tresc':
+// wersja zostaje pod G, przechodzi tylko tresc z ladunku (Bsw_poprawTresc).
+function Bsw_odloz(ctx, F, naglowek, S, szyfr, g, tylkoTresc) {
   (ctx.Bsw_P || (ctx.Bsw_P = [])).push({
     F: { patientId: F.patientId, createdAtISO: F.createdAtISO, lastSavedAtISO: F.lastSavedAtISO },
-    naglowek: naglowek, S: S, szyfr: szyfr, G: g.patientId, rev: mt(g), zmiana: Bsw_zmiana(g),
+    naglowek: naglowek, S: S, szyfr: szyfr, G: g.patientId, rev: mt(g), zmiana: Bsw_zmiana(g), tylkoTresc: !!tylkoTresc,
   });
 }
 
@@ -1089,7 +1117,8 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         }
         // P-SYNC-WLASCICIEL: tej wersji nie ma w karcie, ale moze lezec tu pod inna karta (klucz wspolny dla konta).
         const d = await Bsw_decyzja(ctx, F, S);
-        if (d.co === 'pomin') { w.pominiete += 1; continue; }
+        if (d.co === 'tresc') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d.g, true);
+        if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
         if (d.co === 'przenies') { Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d.g); continue; }
         await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));
         nowe += 1;
@@ -1119,7 +1148,8 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       // P-SYNC-WLASCICIEL: karta wraca (np. nagrobek scalenia przegral z nowym zapisem z innego urzadzenia) — jej
       // dawne wersje, ktore leza tu pod inna karta, nie przechodza bez porownania rekordow.
       const d = await Bsw_decyzja(ctx, F, S);
-      if (d.co === 'pomin') { w.pominiete += 1; continue; }
+      if (d.co === 'tresc') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d.g, true);
+      if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
       if (d.co === 'przenies') { Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d.g); czekaja += 1; continue; }
       await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));
       w.dodane += 1;
@@ -1156,31 +1186,46 @@ function Bsw_bezNowych(rek, ileWersji, zapisZLadunku) {
 }
 
 // P-SYNC-WLASCICIEL, faza przeniesien (Le, po petli pacjentow, przed usuwaniem kart z wygrywajacym nagrobkiem
-// i przed koncem scalania kosza): wersja wspolna dwom kartom przechodzi do karty z ladunku F pod blokadami OBU kart,
-// w kolejnosci rosnacych id — jak „Scal pacjentow”, wiec bez zakleszczen. Zwraca liczbe przeniesionych wersji oraz kart
-// zalozonych (dodane) i usunietych (usuniete) w tej fazie — Le dolicza je do wyniku scalania, bo na te liczby
-// integracja odswieza liste pacjentow (vilda:sync-merged po delcie na zywo).
+// i przed koncem scalania kosza): wersja wspolna dwom kartom przechodzi do karty z ladunku F (albo — decyzja 'tresc' —
+// zostaje pod G z trescia z ladunku) pod blokadami OBU kart, w kolejnosci rosnacych id — jak „Scal pacjentow”, wiec bez
+// zakleszczen. Zwraca liczbe przeniesionych wersji, poprawionych tresci oraz kart zalozonych (dodane) i usunietych
+// (usuniete) w tej fazie — Le dolicza karty do wyniku scalania, bo na te liczby integracja odswieza liste pacjentow
+// (vilda:sync-merged po delcie na zywo).
 async function Bsl_przeniesWersje(ctx, teraz, opcje) {
   const lista = ctx.Bsw_P || [];
   ctx.Bsw_P = [];
-  const wynik = { przeniesione: 0, dodane: 0, usuniete: 0 };
+  const wynik = { przeniesione: 0, poprawione: 0, dodane: 0, usuniete: 0 };
   for (let k = 0; k < lista.length; k += 1) {
     const p = lista[k], F = p.F.patientId, G = p.G;
     const para = F < G ? [F, G] : [G, F];
     const r = await Bsl_podBlokada(para[0], function () {
-      return Bsl_podBlokada(para[1], function () { return Bsw_przenies(p, teraz); }, opcje);
+      return Bsl_podBlokada(para[1], function () { return p.tylkoTresc ? Bsw_poprawTresc(p, teraz) : Bsw_przenies(p, teraz); }, opcje);
     }, opcje);
     if (!r) continue;
-    wynik.przeniesione += 1;
+    if (p.tylkoTresc) wynik.poprawione += 1;
+    else wynik.przeniesione += 1;
     wynik.dodane += r.dodana;
     wynik.usuniete += r.usunieta;
   }
   return wynik;
 }
 
+// Decyzja 'tresc' (Bsw_decyzja), pod blokadami obu kart, na swiezym odczycie: wersja nadal u G, a tresc z ladunku nadal
+// pozniejsza niz tutejsza (zmieniona tu w miedzyczasie, np. w innej karcie przegladarki — zostaje bez zmian). Rekord G
+// dostaje tresc z ladunku, jej chwile zmiany i zapisu; rev = wyzsza z dwoch (Bsw_rekord). Licznik, naglowek i chwila
+// zapisu karty G bez zmian (wersji nie przybylo; tak samo urzadzenie, ktore dostaje ten rekord jako zmiane wersji tej
+// samej karty). Zwraca null (bez zmian) albo { dodana: 0, usunieta: 0 }.
+async function Bsw_poprawTresc(p, teraz) {
+  const g = (await I().listSnapshotsForUser(b, p.G)).find(function (s) { return s && s.snapshotId === p.S.snapshotId; });
+  if (!g || !Bsw_nowszaTresc(p.S, g)) return null;
+  if (!(await I().getPatientForUser(b, p.G))) return null;
+  await I().putSnapshotForUser(b, Object.assign(Bsw_rekord({ patientId: p.G }, p.S, p.szyfr, teraz, g), Bm1(g, p.S)));
+  return { dodana: 0, usunieta: 0 };
+}
+
 // Jedno przeniesienie, pod blokadami obu kart, na swiezym odczycie: wersja nadal u G i w tej samej rewizji co przy
 // decyzji, a karta F istnieje albo jej nagrobek nadal przegrywa z zapisem z ladunku (wtedy F powstaje z naglowkiem
-// z ladunku). Tresc nowsza (z ladunku albo tutejsza). Licznik F = liczba jej wersji.
+// z ladunku). Tresc nowsza wg Bsw_nowszaTresc (z ladunku albo tutejsza; Bsw_rekord). Licznik F = liczba jej wersji.
 // Ostatnia wersja G tez przechodzi (ta sama regula wlasciciela co dla pozostalych), a pusta karta G znika — bez nagrobka.
 // Dotad ostatnia wersja zostawala przy G: delta karty Y po „Scal pacjentow” X -> Y (buildPatientDelta, bez nagrobkow)
 // przenosila spod X wszystko poza glowa X, a osobna delta nagrobka X usuwala potem X razem z ta glowa — wersja ginela

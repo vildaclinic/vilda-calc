@@ -15,6 +15,7 @@ import { expect, test } from '@playwright/test';
 // karty w IndexedDB kasuje wersje po indeksie karty — przeniesiona wersja jest już pod Y). Na 88f558c: Y 4/4, x2
 // usunięta razem z X.
 // Trzeci test (uwaga przeglądu końcowego do 4270ca1): przypięta wersja X i delta nagrobka z kartą Y — opis niżej.
+// Czwarty test (uwagi recenzentów do dd21d11): łańcuch „Scal pacjentów” X → Y → Z i poprawka x1 z drugiego urządzenia.
 //
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -226,4 +227,61 @@ test('przypięta x2 w X, delta Y, potem delta nagrobka X z kartą Y: x2 pod Y z 
   expect(wynik.deletedPatientCount).toBe(1);
   expect(wynik.deltaNagrobka.karty).toEqual([wynik.deltaNagrobka.Q]);
   expect(wynik.deltaNagrobka.nagrobki).toEqual([wynik.deltaNagrobka.P]);
+});
+
+// Uwagi recenzentów do dd21d11: „Scal pacjentów” X → Y, potem Y → Z na tym urządzeniu (x1 pod Z z rev 2, treść bez
+// zmian), a z drugiego urządzenia, które o scaleniach nie wiedziało, przychodzi karta X z poprawioną x1 (rev 1, nowa
+// chwila zapisu, późniejsza chwila zmiany). Rekord x1 pod Z jest nowszy (rev 2), więc x1 zostaje pod Z, ale jego treść
+// jest starsza: faza przeniesień, pod blokadami Web Locks obu kart, wpisuje do x1 pod Z poprawkę z ładunku (decyzja
+// „treść”, Bsw_poprawTresc; odczyt wersji po kluczu w IndexedDB). Na dd21d11 x1 zostawał z 60 mies. (poprawka ginęła).
+test('łańcuch „Scal pacjentów” X → Y → Z, poprawka x1 w X z drugiego urządzenia: x1 pod Z z poprawką (IndexedDB)', async ({ page }) => {
+  await otworzSejf(page);
+  const wynik = await page.evaluate(async () => {
+    const V = window.VildaVault;
+    const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
+    const pomiar = (m) => ({ uid: `m-${m}`, ageMonths: m, ageYears: m / 12, height: 90 + m / 2, weight: 12 + m / 6 });
+    const rekord = (wieki) => ({
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+      advanced: { data: { measurements: wieki.map(pomiar) } },
+    });
+    const zapisz = (wieki, patientId) => V.savePatient(rekord(wieki), patientId ? { patientId, dedup: false } : { dedup: false });
+    const kopia = (x) => JSON.parse(JSON.stringify(x));
+    const karta = async () => { const a = await zapisz([60]); await czekaj(5); await zapisz([60, 66], a.patientId); await czekaj(5); return a; };
+    const x = await karta(), y = await karta(), z = await karta();
+    const X = x.patientId, Y = y.patientId, Z = z.patientId, x1 = x.snapshotId;
+    const p0 = kopia(await V.exportSyncPayload());
+    await V.mergePatients(X, Y);
+    await czekaj(5);
+    await V.mergePatients(Y, Z);
+    await czekaj(5);
+    // Delta karty X z drugiego urządzenia: x1 poprawiona (61 mies.) z nową chwilą zapisu.
+    const teraz = new Date().toISOString();
+    const kX = kopia(p0.patients.find((p) => p.patientId === X));
+    kX.snapshots = kX.snapshots.map((s) => (s.snapshotId === x1
+      ? Object.assign({}, s, { rev: 1, updatedAtISO: teraz, savedAtISO: teraz, payload: rekord([61]) }) : s));
+    kX.lastSavedAtISO = teraz;
+    const wynikScalania = await V.mergeSyncPayload({ schemaVersion: p0.schemaVersion, patients: [kX], tombstones: [] });
+    const lista = await V.listPatients();
+    const pZ = await V.getPatient(Z);
+    const s1 = pZ.snapshots.find((s) => s.snapshotId === x1);
+    return {
+      jestX: lista.some((p) => p.patientId === X),
+      licznikZ: (lista.find((p) => p.patientId === Z) || {}).snapshotCount,
+      wersjeZ: pZ.snapshots.length,
+      x1Wieki: s1 ? s1.payload.advanced.data.measurements.map((m) => m.ageMonths) : null,
+      x1Rev: s1 ? s1.rev : null,
+      dodaneKarty: wynikScalania.addedPatientCount,
+      locks: Boolean(navigator.locks && typeof navigator.locks.request === 'function'),
+    };
+  });
+
+  expect(wynik.locks, 'prawdziwe Web Locks').toBe(true);
+  expect(wynik.jestX, 'karta X nie wraca (x1 zostaje pod Z — nowszy rekord)').toBe(false);
+  expect(wynik.x1Wieki, 'treść poprawki z drugiego urządzenia').toEqual([61]);
+  expect(wynik.x1Rev, 'rev wyższa z dwóch').toBe(2);
+  // Z: z1, z2, zm + wersje Y po pierwszym scaleniu (y1, y2, x1, x2, ym)
+  expect(wynik.wersjeZ).toBe(8);
+  expect(wynik.licznikZ).toBe(8);
+  expect(wynik.dodaneKarty).toBe(0);
 });

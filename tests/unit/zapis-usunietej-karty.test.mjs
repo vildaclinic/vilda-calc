@@ -306,6 +306,10 @@ describe('A13 — ponowienie do karty docelowej scalenia (dolaczPoScaleniu)', ()
     zX.advanced.fatherHeight = 180;
     if (bezPlciX) delete zX.user.sex;
     const x = (await d.v.savePatient(zX, { dedup: false })).patientId;
+    // Odstęp jak w karta(): od P-SYNC-WLASCICIEL „Scal pacjentów” podbija rev przeniesionych wersji, a kolejność wersji
+    // (chwila zapisu, chwila zmiany, rev, numer) przy zapisie X w tej samej milisekundzie co nowa głowa scalenia
+    // stawiała wersję X przed głową — test zależał od zegara (raz czerwony w pełnym przebiegu).
+    await chwila(5);
     const zY = Object.assign(payload([48, 54]), {
       ghTherapyPoints: [{ ageMonths: 54, dose: 0.03 }], birth: { weightG: 3200 }, doctor: { name: 'Dr Fikcyjny' }, plan: { tekst: 'plan Y' },
     });
@@ -383,6 +387,7 @@ describe('A13 — ponowienie do karty docelowej scalenia (dolaczPoScaleniu)', ()
     const d = await konto();
     const planX = { palFactor: 1.6, palWybrany: true, dietLevel: 'redukcyjna', dietaWybrana: true };
     const x = (await d.v.savePatient(Object.assign(payload([[60, 120], [66, 123]]), { plan: planX }), { dedup: false })).patientId;
+    await chwila(5); // odstęp jak w przygotujSekcje (kolejność wersji po „Scal pacjentów” w tej samej milisekundzie)
     const planPusty = { palFactor: null, palWybrany: false, dietLevel: null, dietaWybrana: false }; // jak collectUserData bez planu
     const y = (await d.v.savePatient(Object.assign(payload([48, 54]), { plan: planPusty, foods: { snacks: [], meals: [] } }), { dedup: false })).patientId;
     const glowaX = (await d.v.getPatient(x)).snapshots[0].payload;

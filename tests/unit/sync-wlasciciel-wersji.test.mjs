@@ -19,12 +19,14 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //   - poprawka pomiaru zrobiona po scaleniu na drugim urządzeniu ginęła pod starszą treścią (61 → 60 mies.);
 //   - wyścig z zapisem w innej karcie: licznik X 4 przy 2 wersjach;
 //   - licznik rozjechany raz zostawał rozjechany na zawsze (gałąź istniejącej karty liczyła przyrostowo).
-// Ten plik (203 testy) na `audyt` 2df41a8: 155 czerwonych; na pierwszej wersji tej zmiany (88f558c): 66; na drugiej
-// (4270ca1): 40 — uwagi przeglądu końcowego: zmieniona bez nowego zapisu wersja starej karty ginęła, gdy delta karty
-// celu przychodziła przed osobną deltą nagrobka; trzy urządzenia rozjeżdżały się na stałe po poprawce w starej karcie;
-// karty zakładane i usuwane w fazie przeniesień nie liczyły się w wyniku scalania (lista pacjentów bez odświeżenia).
-// Wcześniejsze stany pliku: 130 testów — na `audyt` 96 czerwonych, na 88f558c 20; 55 testów — na `audyt` 43, na
-// wariancie badacza W2e 14, na szkicu krytyka W2f 7.
+// Ten plik (232 testy) na `audyt` 2df41a8: 183 czerwone; na trzeciej wersji tej zmiany (dd21d11): 28 — uwagi
+// recenzentów do dd21d11: po łańcuchu „Scal pacjentów” X → Y → Z zmiana wersji w starej karcie na urządzeniu, które
+// o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch współbieżnych poprawek pod różnymi kartami
+// wygrywała ta z urządzenia scalającego, nie późniejsza.
+// Wcześniejsze stany pliku: 203 testy — na `audyt` 155, na 88f558c 66, na 4270ca1 40 (zmieniona bez nowego zapisu
+// wersja starej karty ginęła, gdy delta karty celu przychodziła przed osobną deltą nagrobka; trzy urządzenia
+// rozjeżdżały się na stałe; karty z fazy przeniesień nie liczyły się w wyniku scalania); 130 testów — na `audyt` 96,
+// na 88f558c 20; 55 testów — na `audyt` 43, na wariancie badacza W2e 14, na szkicu krytyka W2f 7.
 //
 // Prawdziwy vilda_vault.js i vilda_crypto.js, dwa „urządzenia” = dwa sejfy z osobnymi magazynami w pamięci, prawdziwe
 // exportSyncPayload → mergeSyncPayload. Modele synchronizacji jak vilda_sync.js: „chmura” (pobierz, scal, wyślij pełny
@@ -169,16 +171,35 @@ async function karta(v) {
   return a.patientId;
 }
 
+/* Identyfikator w kształcie UUID, większy (wiekszy = true) albo mniejszy w porządku napisów niż `inny`, za jednym
+   razem: pierwsza cyfra `inny` (poza myślnikami), która nie jest skrajna (f przy „większy”, 0 przy „mniejszy”), dostaje
+   losową cyfrę po właściwej stronie, wcześniejsze zostają, dalsze są losowe. */
+function idWzgledem(inny, wiekszy) {
+  const hex = '0123456789abcdef';
+  const los = (od, doW) => hex[od + Math.floor(Math.random() * (doW - od + 1))];
+  for (let i = 0; i < inny.length; i += 1) {
+    const c = hex.indexOf(inny[i]);
+    if (c < 0 || (wiekszy ? c === 15 : c === 0)) continue;
+    const reszta = inny.slice(i + 1).replace(/[0-9a-f]/g, () => los(0, 15));
+    return inny.slice(0, i) + (wiekszy ? los(c + 1, 15) : los(0, c - 1)) + reszta;
+  }
+  return wiekszy ? `${inny}0` : inny.slice(0, -1); // same skrajne cyfry: przedłużenie albo skrócenie napisu
+}
+
 /* Karta jak wyżej, o identyfikatorze większym (wiekszy = true) albo mniejszym niż `inny`. Remis właściciela rozstrzyga
    mniejszy patientId (losowy UUID), więc scenariusze idą w obu kolejnościach identyfikatorów: wynik testów i liczba
-   czerwonych przy mutacjach nie zależą od losowania (uwaga recenzenta do 88f558c: M1 dawało 7–13 czerwonych). Kartę
-   w złej kolejności usuwamy wprost z magazynu — przed pierwszą synchronizacją, bez nagrobka — i zakładamy od nowa. */
+   czerwonych przy mutacjach nie zależą od losowania (uwaga recenzenta do 88f558c: M1 dawało 7–13 czerwonych).
+   Identyfikator nadajemy jawnie (savePatient z patientId zakłada nieznaną kartę pod tym id). Dotąd karty zakładane
+   do skutku, aż wypadnie właściwa kolejność: przy `inny` blisko końca zakresu szansa na próbę spadała do ok. 1/3600,
+   ogon liczby prób P(N > n) = 1/(n + 1), a ok. 4% przebiegów pliku przekraczało limit 30 s (uwaga recenzenta do
+   dd21d11). */
 async function kartaWzgledem(d, inny, wiekszy) {
-  for (;;) {
-    const id = await karta(d.v);
-    if ((id > inny) === wiekszy) return id;
-    await d.baza.removePatientForUser(d.uid, id);
-  }
+  const id = idWzgledem(inny, wiekszy);
+  const a = await d.v.savePatient(zapis([60]), { patientId: id, dedup: false });
+  expect(a.patientId).toBe(id);
+  await chwila(4);
+  await d.v.savePatient(zapis([60, 66]), { patientId: id, dedup: false });
+  return id;
 }
 const KOLEJNOSCI = ['X<Y', 'X>Y'];
 
@@ -393,7 +414,8 @@ const AKCJE = {
     await c.B.v.updateSnapshotPayload(c.X, idPo(c.et, 'x1'), zapis([61]), { preserveSavedAt: false });
   },
   // A scala X → Y i poprawia x1 już pod Y (62 mies.; rev 2 = podbicie przy scaleniu + poprawka); później B poprawia x1
-  // w starej X (61 mies.; rev 1, chwila zapisu X = teraz). Scenariusz recenzenta „dwiePoprawki”.
+  // w starej X (61 mies.; rev 1, chwila zapisu X = teraz). Scenariusz recenzenta „dwiePoprawki”: dwie współbieżne
+  // poprawki tej samej wersji pod różnymi kartami — wygrywa późniejsza (61).
   async dwiePoprawki(c) {
     await chwila(5);
     const r = await c.A.v.mergePatients(c.X, c.Y); c.et[r.snapshotId] = 'ym';
@@ -501,16 +523,18 @@ describe('P-SYNC-WLASCICIEL — „Scal pacjentów” na jednym urządzeniu, now
   // (x2 była ostatnią wersją X, więc nie przechodziła; nagrobek scalenia na A znikał, bo X tam nie powstała); mutant
   // R1 (bez wczesnego powrotu w gałęzi nowej karty) zakładał na A pustą X 0/0. Na audyt dodatkowo rozjechane liczniki.
   // Teraz x2 przechodzi pod Y także na B (pusta X znika), a nagrobek scalenia zostaje na A — zbieżnie, nic nie ginie.
-  it.each(PRZYPADKI)('dwie poprawki x1 — pod Y na A i w starej X na B (%s, %s): Y [x1 x2 y1 y2 ym] na obu, nagrobek X, x1 z poprawką A', async (model, kolejnosc) => {
+  // Treść x1: [CZERWONY na dd21d11 — wszystkie 8: x1 = 62:121, bo rev 2 (podbicie przy scaleniu + poprawka) wygrywała
+  // z późniejszą poprawką w starej karcie (rev 1)] Treść wersji wspólnej dwom kartom wybiera teraz późniejsza chwila
+  // zmiany (uwagi recenzentów do dd21d11): wygrywa późniejsza poprawka z B, także w kolejnych rundach (rev wyniku =
+  // wyższa z dwóch, więc reguła tej samej karty jej nie cofa). Do akceptacji właściciela (zmiana względem dd21d11).
+  it.each(PRZYPADKI)('dwie poprawki x1 — pod Y na A i w starej X na B (%s, %s): Y [x1 x2 y1 y2 ym] na obu, nagrobek X, x1 z późniejszą poprawką (B)', async (model, kolejnosc) => {
     const { ctx, koniec, log } = await przebieg({ model, kolejnosc, akcje: AKCJE.dwiePoprawki });
     oczekujNaObu(koniec, { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, ['X']);
     expect(koniec.zbiezne).toBe(true);
     expect(utracone(log)).toEqual([]);
-    // Skutek rev + 1 przy scaleniu: poprawka zrobiona po scaleniu na urządzeniu scalającym (rev 2) wygrywa z późniejszą
-    // poprawką tej wersji w starej karcie (rev 1) — treść B (61) przepada. Przypięte, do decyzji właściciela.
     const x1 = idPo(ctx.et, 'x1');
-    expect(await trescWersji(ctx.A, ctx.Y, x1)).toBe('62:121');
-    expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('62:121');
+    expect(await trescWersji(ctx.A, ctx.Y, x1)).toBe('61:120.5');
+    expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('61:120.5');
   }, CZAS);
 
   // [CZERWONY na audyt — wszystkie 8] dwa równoległe scalenia tej samej karty z różnymi celami (A: X → Y, B: X → Z):
@@ -860,12 +884,13 @@ describe('P-SYNC-WLASCICIEL — trzy urządzenia przez chmurę', () => {
   }, 60_000);
 
   // [ZIELONY na 4270ca1 (pomiar recenzenta); CZERWONY na audyt] pozostałe scenariusze w kolejkach z C tuż przed A —
-  // te same wyniki co przy dwóch urządzeniach.
+  // te same wyniki co przy dwóch urządzeniach. dwiePoprawki: [CZERWONY na dd21d11 — x1 = 62:121 na A, B i C] późniejsza
+  // poprawka (61) na wszystkich trzech.
   const INNE = {
     XdoY: { karty: { X: karta2(1, ['x3']), Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: [] },
     korekta: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '61:120.5'] },
     korektaEdycja: { karty: { X: karta2(2, ['x1', 'x3']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) }, nagrobki: [], x1: ['X', '61:120.5'] },
-    dwiePoprawki: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '62:121'] },
+    dwiePoprawki: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '61:120.5'] },
   };
   it.each(Object.keys(INNE).flatMap((s) => ['CAB', 'BCA'].flatMap((k) => KOLEJNOSCI.map((id) => [s, k, id]))))('%s, kolejka %s (%s): zbieżnie na trzech', async (scen, kolejka, kolejnosc) => {
     const r = await trzy(AKCJE[scen], kolejka, kolejnosc);
@@ -1432,6 +1457,311 @@ describe('P-SYNC-WLASCICIEL — koszt odczytów', () => {
   }, CZAS);
 });
 
+describe('P-SYNC-WLASCICIEL — łańcuch „Scal pacjentów” a późniejsza zmiana wersji w starej karcie', () => {
+  /* Uwagi recenzentów do dd21d11 (dwie, waga wysoka). A: „Scal pacjentów” X → Y, potem Y → Z (łańcuch duplikatów).
+     B nie wie o scaleniach i zmienia x1 w X: korekta z zachowaną chwilą zapisu, korekta z nową chwilą zapisu albo
+     przypięcie (rev 1, późniejsza chwila zmiany). Każde „Scal pacjentów” podbija rev bez zmiany treści, więc na dd21d11
+     x1 pod Z miała rev 2 i wygrywała regułą „najpierw rev”: zmiana z B przepadała na obu urządzeniach, choć urządzenie
+     scalające niczego w x1 nie zmieniało. Treść wersji wspólnej dwom kartom wybiera teraz późniejsza chwila zmiany
+     (Bsw_nowszaTresc) — scalenie jej nie rusza; rev wyniku = wyższa z dwóch (Bsw_rekord). Karta, pod którą kończy x1,
+     bez zmian (nowszy rekord: po dwóch scaleniach Z; po jednym — Y, a przy nowej chwili zapisu X wraca z x1).
+     Pomiar na dd21d11: dwa scalenia — 9 z 9 czerwonych (x1 = 60:120 bez przypięcia na obu), jedno scalenie — 9 z 9
+     zielonych (kontrola). Na audyt 2df41a8: dwa scalenia — 8 z 9 czerwonych (zielony: korekta z nową chwilą zapisu,
+     chmura-BA — regres dd21d11), jedno — 8 z 9 czerwonych. */
+  const ZMIANY = {
+    'korekta z zachowaną chwilą zapisu': { zrob: (B, X, s) => B.v.updateSnapshotPayload(X, s, zapis([61]), { preserveSavedAt: true }), tresc: '61:120.5' },
+    'korekta z nową chwilą zapisu': { zrob: (B, X, s) => B.v.updateSnapshotPayload(X, s, zapis([61]), { preserveSavedAt: false }), tresc: '61:120.5' },
+    'przypięcie': { zrob: (B, X, s) => B.v.setSnapshotPinned(X, s, true), tresc: '60:120 przypięta' },
+  };
+  // Treść wersji (pomiary i przypięcie) i karta, pod którą leży — albo null.
+  async function wersjaNa(d, snapshotId, et) {
+    for (const k of await d.baza.listPatientsForUser(d.uid)) {
+      const p = await d.v.getPatient(k.patientId);
+      const s = p && p.snapshots.find((q) => q.snapshotId === snapshotId);
+      if (s) return { karta: et[k.patientId], tresc: `${pomiaryZ(s.payload)}${s.payload && s.payload._pinned ? ' przypięta' : ''}` };
+    }
+    return null;
+  }
+  async function trzyKarty(urz) {
+    const [A] = urz;
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v); await chwila(4);
+    const Z = await karta(A.v);
+    const sync = chmura();
+    for (const d of urz) await sync(d);
+    const et = await etykiety(A, { X, Y, Z });
+    return { X, Y, Z, sync, et, x1: idPo(et, 'x1') };
+  }
+  async function rundy(model, A, B, sync, n = 4) {
+    for (let i = 0; i < n; i += 1) {
+      if (model === 'krzyzowa') {
+        const pa = kopia(await A.v.exportSyncPayload()), pb = kopia(await B.v.exportSyncPayload());
+        await A.v.mergeSyncPayload(pb);
+        await B.v.mergeSyncPayload(pa);
+      } else {
+        const [p, q] = model === 'chmura-BA' ? [B, A] : [A, B];
+        await sync(p); await sync(q);
+      }
+    }
+  }
+  // Wersje widziane na starcie, których na końcu nie ma na urządzeniu (ani w karcie, ani w koszu), i liczniki niezgodne
+  // z liczbą wersji.
+  async function bezStrat(d, et, wersje) {
+    const s = await stan(d, et);
+    expect(wersje.filter((w) => !(w in s.wlasciciel) && !s.kosz.includes(w)), `utracone na ${d.nazwa}`).toEqual([]);
+    expect(Object.entries(s.karty).filter(([, c]) => c.licznik !== c.wersje.length), `liczniki na ${d.nazwa}`).toEqual([]);
+    expect(s.sieroty).toBe(0);
+    return s;
+  }
+  const WSZYSTKIE = ['x1', 'x2', 'y1', 'y2', 'z1', 'z2'];
+
+  const PRZYPADKI_LANCUCHA = [2, 1].flatMap((n) => Object.keys(ZMIANY).flatMap((z) => ['chmura-AB', 'chmura-BA', 'krzyzowa'].map((m) => [n, z, m])));
+  it.each(PRZYPADKI_LANCUCHA)('%i × „Scal pacjentów”, potem %s x1 w X na B (%s): zmiana z B na obu, ta sama karta, nic nie ginie', async (scalen, zmiana, model) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const { X, Y, Z, sync, et, x1 } = await trzyKarty([A, B]);
+    await chwila(5);
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    if (scalen === 2) { await chwila(5); et[(await A.v.mergePatients(Y, Z)).snapshotId] = 'zm'; }
+    await chwila(5);
+    await ZMIANY[zmiana].zrob(B, X, x1);
+    await rundy(model, A, B, sync);
+    const naA = await wersjaNa(A, x1, et), naB = await wersjaNa(B, x1, et);
+    const cel = scalen === 2 ? 'Z' : (zmiana === 'korekta z nową chwilą zapisu' ? 'X' : 'Y');
+    expect(naA, 'x1 na A').toEqual({ karta: cel, tresc: ZMIANY[zmiana].tresc });
+    expect(naB, 'x1 na B').toEqual({ karta: cel, tresc: ZMIANY[zmiana].tresc });
+    const wersje = [...WSZYSTKIE, 'ym', ...(scalen === 2 ? ['zm'] : [])];
+    const sA = await bezStrat(A, et, wersje), sB = await bezStrat(B, et, wersje);
+    expect(zgodne(sA, sB), 'A = B').toBe(true);
+  }, CZAS);
+
+  // [CZERWONY na dd21d11 i na audyt — x1 = 60:120 na A, B i C] Scalenia na dwóch różnych urządzeniach: A scala X → Y,
+  // C (po synchronizacji) scala Y → Z, B offline poprawia x1 w X. Synchronizacja przez chmurę w kolejce C, B, A.
+  it.each([true, false])('X → Y na A, Y → Z na C, poprawka x1 w X na B (preserveSavedAt: %s): 61 na A, B i C', async (zachowaj) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const { X, Y, Z, sync, et, x1 } = await trzyKarty([A, B, C]);
+    await chwila(5);
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    await chwila(5);
+    await sync(A); await sync(C);
+    await chwila(5);
+    et[(await C.v.mergePatients(Y, Z)).snapshotId] = 'zm';
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: zachowaj });
+    for (let i = 0; i < 4; i += 1) { await sync(C); await sync(B); await sync(A); }
+    const stany = [];
+    for (const d of [A, B, C]) {
+      expect(await wersjaNa(d, x1, et), `x1 na ${d.nazwa}`).toEqual({ karta: 'Z', tresc: '61:120.5' });
+      stany.push(await bezStrat(d, et, [...WSZYSTKIE, 'ym', 'zm']));
+    }
+    expect(zgodne(stany[0], stany[1]) && zgodne(stany[1], stany[2]), 'A = B = C').toBe(true);
+  }, CZAS);
+
+  // [CZERWONY na dd21d11 i na audyt — 62:121 na obu] A poprawia x1 (62) PRZED „Scal pacjentów” X → Y (rev 1, potem 2),
+  // B — nie wiedząc o niczym — poprawia x1 w X później (61, rev 1). Dwie współbieżne poprawki: wygrywa późniejsza, jak
+  // bez scalenia (ta sama karta: rev 1 i rev 1, późniejsza chwila zmiany). Do akceptacji właściciela.
+  it.each(['chmura-AB', 'chmura-BA', 'krzyzowa'])('poprawka na A przed scaleniem, późniejsza poprawka na B (%s): 61 na obu', async (model) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const { X, Y, sync, et, x1 } = await trzyKarty([A, B]);
+    await chwila(5);
+    await A.v.updateSnapshotPayload(X, x1, zapis([62]), { preserveSavedAt: true });
+    await chwila(5);
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: true });
+    await rundy(model, A, B, sync);
+    for (const d of [A, B]) expect(await wersjaNa(d, x1, et), `x1 na ${d.nazwa}`).toEqual({ karta: 'Y', tresc: '61:120.5' });
+  }, CZAS);
+
+  // [CZERWONY na dd21d11 i na audyt — A: x1 = 60:120] Decyzja 'tresc': tutejszy rekord x1 (pod Z, rev 2) jest nowszy, więc
+  // x1 zostaje pod Z, ale treść z ładunku (poprawka z B, późniejsza) przechodzi od razu — przy jednym scaleniu ładunku B,
+  // także gdy B już się nie zsynchronizuje (dotąd poprawka czekała na pełną synchronizację B z nowym stanem A, a do
+  // tego czasu wysyłka A zastępowała ją w chmurze). Karta X na A nie powstaje (nagrobek zostaje), liczniki zgodne.
+  it('poprawka x1 w X z nową chwilą zapisu po dwóch scaleniach: jedno scalenie ładunku B przenosi treść do x1 pod Z', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const { X, Y, Z, et, x1 } = await trzyKarty([A, B]);
+    await chwila(5);
+    await A.v.mergePatients(X, Y);
+    await chwila(5);
+    await A.v.mergePatients(Y, Z);
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: false });
+    const przed = (await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1);
+    const wynik = await A.v.mergeSyncPayload(kopia(await B.v.exportSyncPayload()));
+    const po = (await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1);
+    expect(await wersjaNa(A, x1, et)).toEqual({ karta: 'Z', tresc: '61:120.5' });
+    expect(po.rev, 'rev bez zmian (wyższa z dwóch)').toBe(przed.rev);
+    expect(po.updatedAtISO > przed.updatedAtISO, 'chwila zmiany poprawki').toBe(true);
+    expect(await A.baza.getPatientForUser(A.uid, X), 'X nie wraca').toBeFalsy();
+    expect((await A.baza.listTombstonesForUser(A.uid)).map((t) => t.patientId)).toContain(X);
+    expect((await A.baza.getPatientForUser(A.uid, Z)).snapshotCount).toBe((await A.baza.listSnapshotsForUser(A.uid, Z)).length);
+    expect(wynik.addedPatientCount).toBe(0);
+  }, CZAS);
+
+  // [CZERWONY na dd21d11 i na audyt — decyzji 'tresc' nie było (x1 = 60:120); mutant „Bsw_poprawTresc bez sprawdzenia
+  // rewizji” — czerwony] Decyzja 'tresc' zapada pod blokadą karty z ładunku; zanim faza przeniesień przeczyta x1 pod Z
+  // (w realnym przebiegu: zanim weźmie blokady — np. poprawka x1 pod Z w innej karcie przeglądarki), zapisuje się tu
+  // nowsza zmiana x1 (pułapka magazynu, zapis wprost: rev 3, późniejsza chwila zmiany). Faza widzi inną rewizję niż przy
+  // decyzji i nie nadpisuje jej treścią z ładunku.
+  it('decyzja „treść” a zmiana x1 pod Z między decyzją a fazą przeniesień: nowsza zmiana zostaje', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const { X, Y, Z, et, x1 } = await trzyKarty([A, B]);
+    await chwila(5);
+    await A.v.mergePatients(X, Y);
+    await chwila(5);
+    await A.v.mergePatients(Y, Z);
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: false });
+    const [dX] = await delty(B, [X]);
+    // Pierwszy odczyt wersji karty Z w tym scalaniu to świeży odczyt fazy przeniesień (delta niesie tylko X).
+    const p = A.pulapka('listSnapshotsForUser', (uid, pid) => pid === Z);
+    const scalanie = A.v.mergeSyncPayload(dX);
+    const krok = await Promise.race([p.osiagnieta.then(() => 'faza przeniesień'), scalanie.then(() => 'koniec scalania')]);
+    await chwila(5);
+    const wersjeZ = await A.baza.listSnapshotsForUser(A.uid, Z);
+    const w1 = wersjeZ.find((s) => s.snapshotId === x1), w2 = wersjeZ.find((s) => s.snapshotId === idPo(et, 'x2'));
+    // „Nowsza zmiana” x1: treść x2 (60, 66), rev 3, chwila zmiany = teraz (później niż poprawka z B).
+    await A.baza.putSnapshotForUser(A.uid, Object.assign({}, w1, { payloadCipher: w2.payloadCipher, rev: 3, updatedAtISO: new Date().toISOString() }));
+    p.zwolnij();
+    await scalanie;
+    expect(krok, 'x1 czekała na fazę przeniesień').toBe('faza przeniesień');
+    expect(await wersjaNa(A, x1, et)).toEqual({ karta: 'Z', tresc: '60:120,66:123' });
+    expect((await A.baza.listSnapshotsForUser(A.uid, Z)).find((s) => s.snapshotId === x1).rev).toBe(3);
+  }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — treść, chwila zmiany i chwila zapisu wersji z tej samej strony (Bsw_rekord)', () => {
+  /* Uwaga recenzenta do dd21d11 (waga średnia): mutanty MR2 (rev z ładunku przy treści tutejszej) i MR3 (chwila zapisu
+     z ładunku przy treści tutejszej) przeżywały 203 testy. Scenariusze recenzenta S2 i S3 (dane fikcyjne).
+     [CZERWONY na audyt 2df41a8 — S2: 65:122.5, S3: x1 = 60:120; ZIELONY na dd21d11; mutanty MR2/MR3 — czerwone] */
+  it('S2: A scala X → Y i poprawia x1 dwa razy, B poprawia x1 w starej X trzy razy (ostatnia najpóźniejsza) → na obu ostatnia poprawka B', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v);
+    const sync = chmura(); await sync(A); await sync(B);
+    const et = await etykiety(A, { X, Y });
+    const x1 = idPo(et, 'x1');
+    await chwila(5);
+    await A.v.mergePatients(X, Y); // x1 pod Y, rev 1
+    await chwila(5);
+    await A.v.updateSnapshotPayload(Y, x1, zapis([62]), { preserveSavedAt: true }); // A: rev 2
+    const pA = kopia(await A.v.exportSyncPayload()); // ładunek A (x1 rev 2, nagrobek X)
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([63]), { preserveSavedAt: true }); // B: rev 1
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([64]), { preserveSavedAt: true }); // B: rev 2
+    await chwila(5);
+    await A.v.updateSnapshotPayload(Y, x1, zapis([65]), { preserveSavedAt: true }); // A: rev 3
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([66]), { preserveSavedAt: true }); // B: rev 3, najpóźniejsza
+    await B.v.mergeSyncPayload(pA); // X w N: „zabierz”, treść tutejsza (późniejsza) z jej rev 3
+    expect((await B.baza.listSnapshotsForUser(B.uid, Y)).find((s) => s.snapshotId === x1).rev).toBe(3);
+    const pa = kopia(await A.v.exportSyncPayload()), pb = kopia(await B.v.exportSyncPayload());
+    await A.v.mergeSyncPayload(pb); await B.v.mergeSyncPayload(pa);
+    expect(await trescWersji(A, Y, x1)).toBe('66:123');
+    expect(await trescWersji(B, Y, x1)).toBe('66:123');
+  }, CZAS);
+
+  it('S3: B poprawia x1 w X z nową chwilą zapisu, potem A scala X → Y → x1 pod Y z treścią i chwilą zapisu poprawki na obu', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v);
+    const sync = chmura(); await sync(A); await sync(B);
+    const et = await etykiety(A, { X, Y });
+    const x1 = idPo(et, 'x1');
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: false }); // B: rev 1, chwila zapisu = teraz
+    const zapisB = (await B.baza.listSnapshotsForUser(B.uid, X)).find((s) => s.snapshotId === x1).savedAtISO;
+    const zapisA = (await A.baza.listSnapshotsForUser(A.uid, X)).find((s) => s.snapshotId === x1).savedAtISO;
+    expect(zapisB > zapisA).toBe(true);
+    await chwila(5);
+    await A.v.mergePatients(X, Y); // nagrobek X późniejszy niż zapis X na B
+    await sync(A); await sync(B); await sync(A);
+    for (const d of [A, B]) {
+      const s = (await d.baza.listSnapshotsForUser(d.uid, Y)).find((q) => q.snapshotId === x1);
+      expect(await trescWersji(d, Y, x1), `treść na ${d.nazwa}`).toBe('61:120.5');
+      expect(s.savedAtISO, `chwila zapisu na ${d.nazwa}`).toBe(zapisB);
+    }
+  }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń (znane ograniczenie)', () => {
+  /* Fuzz różnicowy do tej poprawki (400 przebiegów, trzy urządzenia): pierwsza wersja poprawki dawała wynikowi
+     rozstrzygnięcia między kartami rev o 1 wyższą niż obie (propozycja recenzenta), także gdy treść obu rekordów była
+     ta sama (ta sama chwila zmiany). Rev rosła bez zmiany treści, a później regułą tej samej karty („najpierw rev”)
+     wygrywała z późniejszą poprawką tej wersji — w 4 przebiegach gubiło to poprawki, które zostawały na dd21d11.
+     Scenariusz z przebiegu 50: B scala X → Y, C (później) scala Y → X, A poprawia x1 w X; B dostaje ładunek C — Y jest
+     w zbiorze N, x1 wraca pod X („zabierz”, treść ta sama). Potem poprawka A ma przetrwać na wszystkich.
+     [ZIELONY na dd21d11; CZERWONY na wariancie „max + 1” — x1 = 60:120 na A, B i C] */
+  it('wynik „zabierz” z tą samą treścią nie dostaje wyższej rev: późniejsza poprawka tej samej karty przetrwa', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v);
+    const sync = chmura(); await sync(A); await sync(B); await sync(C);
+    const et = await etykiety(A, { X, Y });
+    const x1 = idPo(et, 'x1');
+    await chwila(5);
+    await B.v.mergePatients(X, Y); // B: x1 pod Y, rev 1
+    await chwila(5);
+    await C.v.mergePatients(Y, X); // C: nagrobek Y późniejszy; x1 zostaje pod X (rev 0)
+    await chwila(5);
+    await A.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: true }); // A: rev 1, najpóźniejsza zmiana
+    const pb = kopia(await B.v.exportSyncPayload()), pc = kopia(await C.v.exportSyncPayload());
+    await B.v.mergeSyncPayload(pc); await C.v.mergeSyncPayload(pb);
+    const wB = (await B.baza.listSnapshotsForUser(B.uid, X)).find((s) => s.snapshotId === x1);
+    for (let i = 0; i < 3; i += 1) { await sync(A); await sync(B); await sync(C); }
+    for (const d of [A, B, C]) expect(await trescWersji(d, X, x1), `x1 na ${d.nazwa}`).toBe('61:120.5');
+    expect(wB && wB.rev, 'x1 wróciła pod X na B z rev 1 (wyższa z dwóch), nie 2').toBe(1);
+  }, CZAS);
+
+  /* ZNANE OGRANICZENIE (do decyzji właściciela; przebieg 332 fuzzu). Pętla scaleń na dwóch urządzeniach: A scala X → Y;
+     B ma nowy zapis X (X zostaje), przyjmuje scalenie A (x1 pod Y, rev 1), a potem sam scala Y → X — x1 wraca pod X
+     z rev 2 bez zmiany treści. C (bez synchronizacji od początku) poprawia x1 w X (rev 1, najpóźniejsza zmiana). Obie
+     wersje leżą pod tą samą kartą, więc rozstrzyga reguła tej samej karty z audyt — najpierw rev: wygrywa rev 2 (dwa
+     przeniesienia), poprawka C ginie na B i C. Na audyt 2df41a8 przetrwała (scalenia nie podbijały rev). Na dd21d11 tak
+     samo jak teraz. Domknięcie wymaga osobnego licznika właściciela (zmiana formatu) albo reguły „późniejsza zmiana”
+     także w tej samej karcie (zmiana zwykłej synchronizacji) — test pilnuje opisanego zachowania. */
+  it('pętla scaleń X → Y (A) i Y → X (B), poprawka x1 w X na C: wygrywa rev 2 z przeniesień — znane ograniczenie', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v);
+    const sync = chmura(); await sync(A); await sync(B); await sync(C);
+    const et = await etykiety(A, { X, Y });
+    const x1 = idPo(et, 'x1');
+    await chwila(5);
+    await A.v.mergePatients(X, Y);
+    await chwila(5);
+    await zapiszWersje(B, X, [60, 66, 72]); // X na B zapisana po scaleniu na A — zostaje
+    await sync(A); await sync(B); // B: x1, x2 pod Y (rev 1), X z nową wersją
+    await chwila(5);
+    await B.v.mergePatients(Y, X); // B: x1 z powrotem pod X, rev 2
+    expect((await B.baza.listSnapshotsForUser(B.uid, X)).find((s) => s.snapshotId === x1).rev).toBe(2);
+    await chwila(5);
+    await C.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: true }); // C: rev 1, najpóźniejsza
+    const pb = kopia(await B.v.exportSyncPayload()), pc = kopia(await C.v.exportSyncPayload());
+    await B.v.mergeSyncPayload(pc); await C.v.mergeSyncPayload(pb);
+    expect(await trescWersji(B, X, x1)).toBe('60:120');
+    expect(await trescWersji(C, X, x1)).toBe('60:120');
+  }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — pomocnik testów kartaWzgledem', () => {
+  // [CZERWONY na dd21d11 — pętla „do skutku” przy skrajnym identyfikatorze przekracza limit] Uwaga recenzenta do
+  // dd21d11 (waga średnia): identyfikator po właściwej stronie za jednym razem, także przy `inny` na końcu zakresu.
+  it('karta po właściwej stronie także przy skrajnym identyfikatorze, bez losowania do skutku', async () => {
+    const A = await urzadzenie('A');
+    const PRZYPADKI_ID = [
+      ['ffffffff-ffff-4fff-bfff-fffffffffff0', true], ['ffee0000-0000-4000-8000-000000000000', true],
+      ['00000000-0000-4000-8000-00000000000f', false], ['0045ffff-ffff-4fff-bfff-ffffffffffff', false],
+      [globalThis.crypto.randomUUID(), true], [globalThis.crypto.randomUUID(), false],
+    ];
+    for (const [inny, wiekszy] of PRZYPADKI_ID) {
+      const id = await kartaWzgledem(A, inny, wiekszy);
+      expect(id > inny, `${id} względem ${inny}`).toBe(wiekszy);
+      expect((await A.baza.listSnapshotsForUser(A.uid, id)).length).toBe(2);
+    }
+  }, 10_000);
+});
+
 // [CZERWONY na audyt — tych funkcji i wywołań nie było]
 describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
@@ -1444,8 +1774,12 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(i0).toBeGreaterThan(0);
     expect(i1).toBeGreaterThan(i0);
     expect(ip).toBeGreaterThan(i1);
-    // zapisy przeniesienia (Bsw_przenies) wołane wyłącznie z wnętrza obu blokad
+    // zapisy przeniesienia (Bsw_przenies) i poprawki treści pod kartą G (Bsw_poprawTresc, decyzja 'tresc') wołane
+    // wyłącznie z wnętrza obu blokad
+    expect(f).toContain('return p.tylkoTresc ? Bsw_poprawTresc(p, teraz) : Bsw_przenies(p, teraz);');
+    expect(f.indexOf('Bsw_poprawTresc(p, teraz)')).toBeGreaterThan(i1);
     expect(src.match(/Bsw_przenies\(/g)).toHaveLength(2);
+    expect(src.match(/Bsw_poprawTresc\(/g)).toHaveLength(2);
     // karta oddająca wersję (licznik albo usunięcie pustej karty) — tylko z Bsw_przenies, czyli pod obiema blokadami
     expect(src.match(/Bsw_poOddaniu\(/g)).toHaveLength(2);
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
