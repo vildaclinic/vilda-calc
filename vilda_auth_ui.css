@@ -1028,6 +1028,9 @@ select.vilda-auth-input {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-4px)
   }
+  .vilda-patient-tabs>.vilda-patient-tab:nth-child(5) {
+    grid-column: 1/-1
+  }
 }
 
 .vilda-patient-tab {
@@ -1048,6 +1051,15 @@ select.vilda-auth-input {
 
 .vilda-patient-tab+.vilda-patient-tab {
   margin-left: 0
+}
+
+/* LAB-HISTORIA PR2: pięć zakładek w wierszu karty o szerokości ok. 675 px (okno 1025–1200 px).
+   Równe szerokości ucinały „Siatki centylowe”; szerokość wg treści mieści wszystkie etykiety.
+   Do 1024 px zakładki stoją w siatce (reguła niżej), więc ta reguła działa tylko w wierszu. */
+@media(max-width:1200px) {
+  .vilda-patient-tab {
+    flex: 1 1 auto
+  }
 }
 
 .vilda-patient-tab-ico {
