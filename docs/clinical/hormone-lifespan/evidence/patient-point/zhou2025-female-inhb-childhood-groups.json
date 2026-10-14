@@ -1,0 +1,125 @@
+{
+  "version": "2026-10-14.2",
+  "purpose": "Published whole-age-group medians for educational patient references only. No reference intervals, curve-fit coefficients or new laboratory classifications are activated.",
+  "sex": "female",
+  "unit": "pg/mL",
+  "statistic": "group-median",
+  "sourceLabel": "Zhou 2025 · inhibina B · grupa wieku",
+  "source": {
+    "authors": "Zhou et al.",
+    "year": 2025,
+    "title": "Reference intervals of inhibin B in Chinese children on chemiluminescence analyzer",
+    "journal": "Scientific Reports",
+    "volume": 15,
+    "articleNumber": 1899,
+    "doi": "10.1038/s41598-025-85551-9",
+    "pmcid": "PMC11730302",
+    "url": "https://doi.org/10.1038/s41598-025-85551-9",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11730302/",
+    "sourceFormat": "PDF",
+    "sourceSha256": "a2b6e2ffa607540673e99a61ad1ebb3bcab1e844ab8b4fde595bcbc3127d1510",
+    "reviewDate": "2026-10-14",
+    "reviewBasis": "Complete nine-page primary article reviewed; female group sample counts from Table 1 and concordant medians from Tables 2 and 3. Supplement is not the source of these medians.",
+    "sourceLocator": {
+      "populationAndAssay": {
+        "pdfPage": 2
+      },
+      "sampleCounts": {
+        "table": 1,
+        "pdfPage": 3
+      },
+      "medians": {
+        "table": 2,
+        "pdfPage": 3
+      },
+      "medianConfidenceIntervals": {
+        "table": 3,
+        "pdfPage": 6
+      },
+      "limitations": {
+        "pdfPage": 7
+      }
+    },
+    "statisticDefinition": "Published 50th quantile of each complete age/sex group; not a model median at the patient exact age.",
+    "sourceQuantification": {
+      "lodPgMl": 7,
+      "totalCvPercent": [
+        4.34,
+        9.73
+      ],
+      "belowLodHandling": "Values below each assay LOD were replaced by LOD divided by the square root of 2 in the source analysis. This substitution is not applied to patient values.",
+      "belowLodCountsForSelectedGroups": null
+    },
+    "ageBoundaryDefinition": "Printed labels 1–5 and 5–10 years; continuous inequalities or the allocation of exact age 5 are not explicitly defined."
+  },
+  "assay": "Kangran Biotech double-antibody inhibin B CLIA · KAESER 1000",
+  "matrix": "serum",
+  "participants": 622,
+  "femaleParticipants": 302,
+  "maleParticipants": 320,
+  "collectionPeriod": "January–December 2022",
+  "population": "Dziewczynki z próbek szpitalnych w Wuhan, Chiny, po wykluczeniach chorób; badanie przekrojowe.",
+  "populationDetails": {
+    "site": "Wuhan Children’s Hospital, Wuhan, China",
+    "design": "Single-centre cross-sectional hospital-sample study, not a longitudinal trajectory or unselected community cohort.",
+    "exclusions": [
+      "Reproductive diseases, including precocious puberty and delayed sexual development",
+      "Chronic diseases, including tumour and tuberculosis",
+      "Endocrine diseases, including diabetes, hyperthyroidism and obesity",
+      "Severe liver or kidney damage",
+      "Serious trauma, infection or sepsis",
+      "Neonatal respiratory distress syndrome, jaundice or shock",
+      "Use of chemotherapy drugs"
+    ],
+    "sampleHandling": "Antecubital venous blood centrifuged after clotting; serum stored at −20°C until analysis.",
+    "samplingTimeAvailable": false,
+    "tannerStageAvailable": false,
+    "menstrualCycleAvailable": false,
+    "healthyDefinition": "Authors describe healthy participants selected using exclusions; they acknowledge possible inclusion of pathological subjects.",
+    "untreatedPopulationConfirmed": false
+  },
+  "groups": [
+    {
+      "id": "female-1-5",
+      "label": "1–5 lat",
+      "minAge": 1,
+      "maxAge": 5,
+      "n": 60,
+      "median": 33,
+      "medianConfirmation": {
+        "table2": 33,
+        "table3": 33
+      },
+      "medianCi90": [
+        30,
+        39
+      ]
+    },
+    {
+      "id": "female-5-10",
+      "label": "5–10 lat",
+      "minAge": 5,
+      "maxAge": 10,
+      "n": 77,
+      "median": 27,
+      "medianConfirmation": {
+        "table2": 27,
+        "table3": 27
+      },
+      "medianCi90": [
+        24,
+        29
+      ]
+    }
+  ],
+  "limitations": [
+    "Mediana całej opublikowanej grupy wieku, nie mediana dokładnego wieku ani stadium Tannera. Węższy zakres wyboru w aplikacji nie tworzy nowej badanej podgrupy.",
+    "Jednoośrodkowe przekrojowe badanie szpitalne w Chinach. Grupy N=60 i N=77; nie jest to międzynarodowa norma populacyjna ani kohorta prospektywna.",
+    "Kangran CLIA na KAESER 1000 w surowicy. Brak zweryfikowanej harmonizacji z Gen II ELISA, historycznym Oxford ELISA lub osoczem; zgodne jednostki nie potwierdzają zgodności metod.",
+    "Brak danych o porze pobrania oraz stadium Tannera. Wykluczenia kliniczne nie dowodzą, że każdy uczestnik był zdrowy i nieleczony.",
+    "Źródło zastępowało wyniki poniżej LOD wartością LOD/√2. Nie znamy liczby takich wyników w wybranych grupach; nie stosujemy tej imputacji do wyniku pacjentki.",
+    "90% CI dotyczy oszacowania mediany, nie rozkładu wyników pojedynczych pacjentek ani granic normy. Przedziałów referencyjnych publikacji nie aktywujemy.",
+    "Podział dokładnego wieku 5 lat jest jawną konwencją aplikacji; publikacja nie definiuje nierówności dla stykających się etykiet.",
+    "Różnice wobec Borelli-Kjær mogą wynikać z metody i populacji; nie wyznaczają spadku fizjologicznego przy 5,6 roku i nie zmieniają poglądowej krzywej."
+  ]
+}

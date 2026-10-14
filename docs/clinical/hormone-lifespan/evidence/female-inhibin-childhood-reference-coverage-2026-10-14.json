@@ -1,0 +1,491 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-14",
+  "status": "implementation-authorized; educational whole-group references, not clinical validation",
+  "implementationBase": "c8b91078",
+  "precedingMergedPr": 672,
+  "scope": {
+    "sex": "female",
+    "analyte": "inhb",
+    "newReferencesOnly": "Ordinary views, after exact age 1 and before age 5.6 years.",
+    "policyFile": "female-inhibin-childhood-reference-policy.json",
+    "policyAndPatientPointDataVersion": "2026-10-14.2",
+    "sourceGroupsFile": "evidence/patient-point/zhou2025-female-inhb-childhood-groups.json",
+    "statistic": "group-median",
+    "interpolation": "constant",
+    "ordinaryOnly": true
+  },
+  "primarySource": {
+    "authors": "Zhou et al.",
+    "title": "Reference intervals of inhibin B in Chinese children on chemiluminescence analyzer",
+    "journal": "Scientific Reports 2025;15:1899",
+    "publicationDate": "2025-01-14",
+    "doi": "10.1038/s41598-025-85551-9",
+    "pmid": "39805980",
+    "pmcid": "PMC11730302",
+    "url": "https://doi.org/10.1038/s41598-025-85551-9",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11730302/",
+    "fullPdfSha256": "a2b6e2ffa607540673e99a61ad1ebb3bcab1e844ab8b4fde595bcbc3127d1510",
+    "fullXmlSha256": "a0fdc4400ea03c7ee26c1aaf05c20f1050a6d942f6515a2801849a66560a4245",
+    "review": "Complete primary PDF and full XML independently reviewed by source agents. This evidence distinguishes the source facts from application routing.",
+    "locations": {
+      "populationAndAssay": "PDF page 2",
+      "counts": "Table 1, PDF page 3",
+      "medians": "Table 2, PDF page 3 and Table 3, PDF page 6",
+      "medianConfidenceIntervals": "Table 3, PDF page 6",
+      "limitations": "PDF page 7"
+    },
+    "supplement": {
+      "officialDownload": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11730302/supplementaryFiles",
+      "format": "DOCX from official supplementary ZIP",
+      "sha256": "49b2699d6d2ab63b8216c1dd639aafe3536cd9759db6281410c06898968f1ed0",
+      "reviewed": true,
+      "content": "Only Table S1 regression models; no additional age-group medians or definition of exact-age-5 allocation.",
+      "notActivated": "Female cubic fit R-squared 0.198 is not a median model and is not used as one."
+    }
+  },
+  "population": {
+    "country": "China",
+    "site": "Wuhan Children’s Hospital",
+    "samplePeriod": "January–December 2022",
+    "design": "Single-centre cross-sectional hospital-derived samples",
+    "participants": 622,
+    "femaleParticipants": 302,
+    "maleParticipants": 320,
+    "exclusions": [
+      "Reproductive diseases, including precocious puberty and delayed sexual development",
+      "Chronic diseases, including tumour and tuberculosis",
+      "Endocrine diseases, including diabetes, hyperthyroidism and obesity",
+      "Severe liver or kidney damage",
+      "Serious trauma, infection or sepsis",
+      "Neonatal respiratory distress syndrome, jaundice or shock",
+      "Use of chemotherapy drugs"
+    ],
+    "samplingTimeAvailable": false,
+    "tannerDataAvailable": false,
+    "repeatedMeasures": false,
+    "limitations": [
+      "Possible residual pathology despite source exclusions; not an unselected community cohort.",
+      "All age/sex groups below 120 participants; selected female groups N=60 and N=77.",
+      "No time of sampling; source notes diurnal variability.",
+      "Adolescent Tanner stage and menstrual-cycle state not identified.",
+      "No confirmation that all individuals were untreated; broad labels do not define exact observed age endpoints."
+    ]
+  },
+  "assay": {
+    "matrix": "serum",
+    "platform": "KAESER 1000",
+    "manufacturer": "Kangran Biotech, Guangzhou, China",
+    "method": "Double-antibody inhibin B chemiluminescence immunoassay",
+    "unit": "pg/mL",
+    "sameUnitAs": "ng/L",
+    "unitFactor": 1,
+    "lodPgMl": 7,
+    "totalCvPercent": [
+      4.34,
+      9.73
+    ],
+    "sourceBelowLodHandling": "LOD divided by sqrt(2); this is not applied to patient values.",
+    "belowLodCountsForSelectedGroups": null,
+    "harmonizationWithGenIiOrOxfordElisaEstablished": false,
+    "traceabilityCaution": "Source statement of traceability to WHO 96/784 does not establish a conversion to Gen II, Oxford ELISA or plasma."
+  },
+  "sourceRows": [
+    {
+      "label": "1–5 years",
+      "n": 60,
+      "medianPgMl": 33,
+      "table2Median": 33,
+      "table3Median": 33,
+      "medianCi90PgMl": [
+        30,
+        39
+      ]
+    },
+    {
+      "label": "5–10 years",
+      "n": 77,
+      "medianPgMl": 27,
+      "table2Median": 27,
+      "table3Median": 27,
+      "medianCi90PgMl": [
+        24,
+        29
+      ]
+    }
+  ],
+  "statisticMeaning": "The reported 50th quantile of the entire published group; not a median of an exact age, Tanner stage or narrower application subgroup. The 90% CI describes uncertainty in the median estimate, not the patient reference interval.",
+  "sourceDiscrepanciesNotActivated": {
+    "female1to5LowerLimit": {
+      "table2": 15,
+      "table3": 14,
+      "medianConsistent": 33,
+      "action": "No laboratory reference intervals activated; no choice between discrepant lower limits required for a median-only comparison."
+    },
+    "otherHormones": "Unrelated hormone table inconsistencies are not imported.",
+    "ageBoundaries": "Printed 1–5 and 5–10 group labels do not explicitly define inclusive/exclusive age boundaries."
+  },
+  "routing": [
+    {
+      "profileId": "zhou2025-female-inhb-age-over1-under5",
+      "publishedGroup": "1–5 years",
+      "minAge": 1,
+      "minAgeExclusive": true,
+      "maxAge": 5,
+      "maxAgeExclusive": true,
+      "medianPgMl": 33,
+      "patientNote": "Grupa 1–5 lat · Chiny · KAESER 1000 CLIA."
+    },
+    {
+      "profileId": "zhou2025-female-inhb-age-5-under5p6",
+      "publishedGroup": "5–10 years",
+      "minAge": 5,
+      "minAgeExclusive": false,
+      "maxAge": 5.6,
+      "maxAgeExclusive": true,
+      "medianPgMl": 27,
+      "patientNote": "Grupa 5–10 lat · Chiny · KAESER 1000 CLIA."
+    }
+  ],
+  "qualification": {
+    "wholePossibleAgeMustFitOneProfile": true,
+    "exactAgeFiveAssignment": "Higher group as an explicit application convention; not an author-provided endpoint rule.",
+    "exactFirstBirthday": "Existing Ljubicic reference and term-birth conditions preserved.",
+    "ageAtLeast5p6": "Existing Borelli reference preserved.",
+    "unknownAssayOrSpecimen": "Allows qualified orientational comparison without confirming compatibility.",
+    "knownCompatibleAssayIds": [
+      "kangran-kaeser-1000-inhibin-b-clia",
+      "kaeser-1000-inhibin-b-clia"
+    ],
+    "knownCompatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "knownIncompatible": "Gen II, Oxford ELISA, other platforms, generic CLIA without this assay, plasma or other material do not qualify.",
+    "otherGates": "Existing contraindication, result-censoring and unit gates remain.",
+    "tanner": "No new Tanner requirement, no inferred Th1 or CPP diagnosis from Th2.",
+    "fallback": "No use of Zhou outside its app domain as a replacement for an incompatible existing source.",
+    "selectionIndependentOfResult": true,
+    "newFormFields": false
+  },
+  "presentation": {
+    "referenceLabel": "Mediana grupy",
+    "constantPublishedValue": true,
+    "interpolateBetweenGroups": false,
+    "referencePointCanLieOffIllustrativeCurve": true,
+    "interpretation": "Changes in group reference at age 5 or source at 5.6 are not abrupt biological events. Do not reshape the smooth bridge to fit these numbers.",
+    "noNormOrFertilityVerdict": true
+  },
+  "coverageBeforeAndAfter": {
+    "beforeFemale": [
+      "Ljubicic model [0.02,1] years with infant qualification",
+      "Borelli approximate model [5.6,47] years"
+    ],
+    "afterFemale": [
+      "Ljubicic unchanged [0.02,1] years",
+      "Zhou group 1–5 median for (1,5) years",
+      "Zhou group 5–10 median for [5,5.6) years",
+      "Borelli unchanged [5.6,47] years"
+    ],
+    "remainingFemaleGaps": [
+      "Before first infant node 0.02 years",
+      "After 47 years",
+      "A possible age span crossing source/group boundaries; no midpoint selection",
+      "Known context incompatible with a source"
+    ],
+    "male": "No changes to ordinary models, separate group summaries, source boundaries or points.",
+    "sexComparisons": "No changes; new Zhou profiles are ordinaryOnly and do not enter minipuberty or puberty sex comparisons.",
+    "coverageMeaning": "Potential source availability, not universal patient eligibility or a single harmonized continuous model."
+  },
+  "preserved": [
+    "All 74 pre-existing patient-point profiles and their source numbers",
+    "Female illustrative curves, smooth childhood bridge, scales and zoom geometry",
+    "Laboratory reference intervals, interpretations, units and reference-range axes",
+    "Forms, patient fields, snapshots, histories and storage",
+    "Male references, infant source conditions and sex-comparison models"
+  ],
+  "alternativesNotActivated": {
+    "Crofton2002": {
+      "doi": "10.1046/j.0300-0664.2001.01449.x",
+      "publishedFemaleGroup": "0–6 years",
+      "n": 105,
+      "medianPgMl": 10.6,
+      "matrix": "plasma",
+      "reason": "A real broad group median, but not selected for this implementation. Do not combine or average it with Zhou or Gen II."
+    },
+    "Chada2003": "Small female arithmetic-mean groups are not converted into medians.",
+    "DeSchepper2000AndBergada2002": "Neonatal observations do not fill a childhood group.",
+    "BorelliBridge": "Graphic connection creates no source measurements.",
+    "ZhouLaboratoryIntervalsAndRegression": "Remain inactive."
+  },
+  "syntheticCases": [
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 3,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expected": {
+        "sourceGroup": "1–5 years",
+        "groupMedianPgMl": 33,
+        "newNormVerdict": null
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 5.25,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expected": {
+        "sourceGroup": "5–10 years",
+        "groupMedianPgMl": 27,
+        "newNormVerdict": null
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 5
+      },
+      "expectedGroupMedianPgMl": 27,
+      "note": "Explicit app endpoint convention."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 1
+      },
+      "expected": "Existing Ljubicic median; no Zhou override."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 5.6
+      },
+      "expected": "Existing Borelli approximate median 11 pg/mL."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "ageSpanYears": [
+          4,
+          5
+        ],
+        "upperInclusive": false
+      },
+      "expectedGroupMedianPgMl": 33
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "ageSpansYears": [
+          [
+            4,
+            5
+          ],
+          [
+            4.99,
+            5.01
+          ],
+          [
+            5.59,
+            5.61
+          ],
+          [
+            1,
+            1.0833333333333333
+          ]
+        ]
+      },
+      "expected": "No single reference because a boundary is crossed; do not choose midpoint."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "formAgeYears": 5,
+        "formAgeMonths": 3
+      },
+      "expectedGroupMedianPgMl": 27
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "formAgeYears": 5,
+        "formAgeMonths": 7
+      },
+      "expected": "No single reference: completed-month interval crosses 5.6."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "ageSpanYears": [
+          5,
+          6
+        ],
+        "upperInclusive": false
+      },
+      "expected": "No single reference: completed-year interval crosses 5.6."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 3,
+        "contexts": [
+          "known Gen II",
+          "known plasma",
+          "contraindicated treatment",
+          "censored result"
+        ]
+      },
+      "expected": "No new point; retain corresponding existing exclusion."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 3,
+        "valueSequence": [
+          "empty",
+          0,
+          33,
+          1000,
+          "cleared"
+        ]
+      },
+      "expected": "Curve and scale unchanged; eligible exact values produce only patient/reference markers or out-of-range-axis indicator."
+    }
+  ],
+  "validation": {
+    "status": "Pre-publication source and implementation verification snapshot. Completed controls are recorded below; final full E2E and exact-head GitHub CI results are reported in the pull request.",
+    "reportedDate": "2026-10-14",
+    "baseSha": "c8b91078e0b186c2e8ad9e909362b6f24f8841fc",
+    "targetedModuleUnit": {
+      "status": "PASS",
+      "passed": 327,
+      "total": 327,
+      "files": 18
+    },
+    "targetedE2E": {
+      "status": "PASS",
+      "passed": 24,
+      "total": 24,
+      "files": 3,
+      "newScenarios": 5
+    },
+    "browserBeforeAfter": {
+      "status": "PASS",
+      "passed": 12,
+      "total": 12,
+      "viewports": "desktop and mobile",
+      "baseline": "c8b91078"
+    },
+    "independentCoverage": {
+      "status": "PASS",
+      "sourceReport": "coverage/report.json in external task artifacts",
+      "counts": {
+        "checks": 4750,
+        "failures": 0,
+        "exactProbes": 168014,
+        "exactChanged": 459,
+        "ageIntervalProbes": 3124,
+        "intervalChanges": 59,
+        "newlyQualifiedIntervals": 57,
+        "oldProfileProbes": 2294,
+        "gateProbes": 125,
+        "valueProbes": 44,
+        "displayModels": 16,
+        "seniorProbes": 16,
+        "labEvaluations": 576
+      },
+      "oldProfileCountUnchanged": 74,
+      "fullLaboratoryEvaluationsUnchanged": 576,
+      "invariants": {
+        "oldProfiles": "09ae5949ce7481965a462ce9047e6124643237c87c19dafba9684bbe79f0ae5a",
+        "runtimeWithoutPatientPoint": "380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d",
+        "unitConversions": "a21c046a7b1971fa112ae25172405d9f5920702235af1595cdeb2d39ffbcff9a",
+        "labData": "0f6e369f57c1af1f3ab629aa5287d5ad520aa99908d03e05f01de2a9974db5d1"
+      },
+      "scope": "Isolated base compared against current working-tree production functions; not a claim of full browser suite or final committed-head CI success."
+    },
+    "clinicalValidationClaimed": false,
+    "fullNpmTest": {
+      "beforeMerge": {
+        "status": "PASS",
+        "exitCode": 0,
+        "testsPassed": 7669,
+        "testFiles": 350,
+        "baseSha": "c8b91078e0b186c2e8ad9e909362b6f24f8841fc"
+      },
+      "afterMerge": {
+        "status": "PASS",
+        "exitCode": 0,
+        "testsPassed": 7683,
+        "testFiles": 351,
+        "baseSha": "2df41a883879b1f7abb84e51bc6dc531f773eeb8",
+        "repositoryPolicy": "PASS",
+        "lint": "PASS",
+        "javascriptSyntax": {
+          "status": "PASS",
+          "files": 978
+        },
+        "proTests": "PASS"
+      }
+    },
+    "postMergeIntegrationReview": {
+      "status": "PASS",
+      "baseSha": "2df41a883879b1f7abb84e51bc6dc531f773eeb8",
+      "reviewedHeadSha": "140ec81414f5292f03be5b20edaa897ef4f3a8e9",
+      "checksPassed": 44,
+      "reportedAgeProbes": 9,
+      "sourceReport": "coverage/post-merge-review.json and post-merge-age-probes.json in external task artifacts",
+      "conclusion": "The new base modifies measurement-age consumers of growth calculations; it leaves laboratory age normalizers, source adapters and the converter logic byte-identical. Prior inhibin reference-age coverage conclusions remain applicable.",
+      "scope": "Read-only merge integration controls and age probes; not a second complete coverage-matrix execution or full browser suite."
+    },
+    "pwaUpdateAndOfflineRestart": {
+      "status": "PASS",
+      "fromSw": "1.1.270",
+      "toSw": "1.1.272",
+      "fullBrowserRestart": true,
+      "offline": true,
+      "httpServerStopped": true,
+      "sourceReport": "pwa/run.log and its detailed run artifacts outside repository",
+      "scope": "Actual service-worker update and fresh browser restart; not merely reuse of an already-open page."
+    },
+    "releaseValidationReporting": {
+      "location": "Pull request for the current branch and latest exact head SHA",
+      "fullE2eAndCiPassClaimedByThisSnapshot": false,
+      "required": [
+        "Complete full repository E2E",
+        "Wait for every GitHub check after each push and fix failures",
+        "Keep final PWA and CI details in pull request"
+      ],
+      "reason": "Source documentation records stable verification facts; final CI statuses are not committed merely to refresh status text and trigger another CI cycle."
+    }
+  },
+  "rights": "No PDF, figure or full source text is redistributed. Factual table extraction and cryptographic hashes support provenance.",
+  "independentImplementationReview": {
+    "date": "2026-10-14",
+    "status": "No material finding in source data, routing policy, generator or renderer diff.",
+    "reviewed": [
+      "Published source rows, N, median CI, assay and caveats match the reviewed primary source.",
+      "Constant whole-group profiles preserve original source-group labels and exclusive/ inclusive app bounds.",
+      "Generator checks non-overlap with earlier profiles, preventing fallback to new source on method mismatch.",
+      "Renderer labels group median and keeps source point separate from curve; ordinaryOnly and comparison domains prevent new sex-comparison points."
+    ],
+    "limits": "Read-only review of current working tree; no extra browser or full test execution claimed by documentation reviewer."
+  }
+}

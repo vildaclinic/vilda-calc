@@ -1225,8 +1225,10 @@
       const model = renderedPoint, note = model?.profile.patientNote;
       if (!note) return;
       const caption = byId("scale-note");
+      const basis = model.profile.statistic === "group-median" ? "mediana grupy"
+        : model.profile.statistic === "group-mean" ? "średnia grupy" : "mediana";
       if (femaleGonadotropinsActive()) caption.textContent += " " + note;
-      else caption.textContent = "Kropka: wynik; jasny znacznik: mediana. " + note +
+      else caption.textContent = "Kropka: wynik; jasny znacznik: " + basis + ". " + note +
         " Linia jest poglądowa." +
         (patientPointAboveScale(model) ? " ↑ Wynik powyżej skali." : "") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
@@ -1607,8 +1609,15 @@
         ? "LH i FSH podzielono osobno przez własne maksimum modelowanej średniej podłużnej. 100% nie oznacza konkretnego stężenia ani mediany GAMLSS. Nie przeliczamy tego modelu na IU/L. Pierwszy odczyt pochodzi z około 6. dnia, a końce linii z około 357.–360. dnia; nie dopisujemy pomiaru w chwili narodzin ani przy 12 miesiącach. Wynik LH/FSH pozostaje tekstem, a pion zaznacza tylko wiek."
         : "Kropka oznacza wynik, a jasny znacznik źródłowe odniesienie oryginalnego silnika aplikacji. Wartość źródłowa może leżeć poza poglądową linią. Wysokość ilustracji nie zmienia median, norm laboratoryjnych ani interpretacji wyniku. Strzałka zachowuje rzeczywistą liczbę ponad stałą skalą.");
       if (view === "life") paragraph("Zbliżenie minipuberty ma odrębny, względny model średniej z badania podłużnego. Zbliżenie pokwitania przedstawia model median Madsen. Te różne statystyki nie są dosłownym wycinkiem syntezy całego życia. W wieku rozrodczym kliknij „Dorosła”, aby zobaczyć codzienne mediany LH i FSH względem szczytu LH, nie stałego dnia cyklu.");
-      if (renderedPoint) paragraph("Odniesienie wyniku: " + [renderedPoint.profile.sourceLabel,
-        renderedPoint.profile.method, renderedPoint.profile.population].filter(Boolean).join(" · ") + ".");
+      if (renderedPoint) {
+        const profile = renderedPoint.profile;
+        paragraph("Odniesienie wyniku: " + [profile.sourceLabel, profile.ageGroup?.label,
+          profile.method, profile.population].filter(Boolean).join(" · ") + ".");
+        if (renderedPoint.id === "inhb" && profile.statistic === "group-median") {
+          if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
+          if (profile.ageGroup?.n) paragraph(`Liczebność grupy źródłowej: ${profile.ageGroup.n}.`);
+        }
+      }
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) paragraph("Pozostałe wybrane hormony zachowują odrębne, dotychczasowe skale. Oś LH/FSH nie opisuje ich stężeń. Ewentualny wynik innego hormonu i jego źródłowe odniesienie stosują własną skalę i oryginalną jednostkę.");
       const links = [...(period.sources || []), ...(view === "life" ? femaleGonadotropins.cycle.sources || [] : [])];
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) {
@@ -3238,9 +3247,11 @@
         }
         if (renderedPoint?.stableDisplay?.kind === "female-inhibin-life" && renderedPoint.profile.patientNote) {
           const profile = renderedPoint.profile;
-          paragraph("Odniesienie wyniku inhibiny B: " + [profile.sourceLabel, profile.method, profile.population]
+          paragraph("Odniesienie wyniku inhibiny B: " + [profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
             .filter(Boolean).join(" · ") + ".");
           if (profile.url) links.push([profile.sourceLabel || "Źródło odniesienia inhibiny B", profile.url]);
+          if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
+          if (profile.ageGroup?.n) paragraph(`Liczebność grupy źródłowej: ${profile.ageGroup.n}.`);
         }
         paragraph(
           "Minipuberty: mediany GAMLSS Ljubicic 2022, od około 7,3 dnia do 1 roku. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; mediany przeskalowano do prezentacji względnej. Dane dotyczą donoszonych dziewczynek.",

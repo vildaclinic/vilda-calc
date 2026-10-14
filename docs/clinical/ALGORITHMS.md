@@ -2087,6 +2087,85 @@ aktualnego SHA jest raportowany w
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
+### HORMONE-FEMALE-INHB-CHILDHOOD-GROUPS — mediany grup Zhou w luce >1–<5,6 lat, 2026-10-14
+
+**Problem i źródło:** po PR #672 dziewczynki po dokładnym 1 roku,
+a przed 5,6 roku nadal nie miały liczbowego odniesienia zwykłego wykresu.
+Dodano dwie opublikowane mediany z pełnego Zhou i wsp., *Scientific
+Reports* 2025;15:1899, publikacja 14.01.2025,
+[DOI 10.1038/s41598-025-85551-9](https://doi.org/10.1038/s41598-025-85551-9).
+Tabela 1 (PDF str. 3): żeńskie grupy 1–5 N=60, 5–10 N=77; tabele 2/3
+(PDF str. 3/6): zgodne mediany **33/27 pg/mL**; tabela 3 podaje 90% CI
+median **30–39/24–29**, nie zakres wyników pacjentek. Suplement zawiera
+jedynie tabelę S1 modeli regresji; nie dostarcza nowych median lub
+reguły granicy 5. Regresja sześcienna nie jest aktywowana jako mediana.
+
+**Populacja i metoda:** przekrojowe próbki Wuhan Children’s Hospital,
+Chiny, styczeń–grudzień 2022, 622 dzieci/302 dziewczynki. Wykluczano
+m.in. choroby rozrodcze/endokrynne, poważne choroby przewlekłe i zakażenia
+oraz chemioterapię; autorzy dopuszczają resztkową patologię. Grupy <120,
+brak pory pobrania, powtórzonych pomiarów i Tannera/cyklu w starszym wieku.
+Surowica, Kangran Biotech double-antibody CLIA na KAESER 1000,
+LOD 7 pg/mL, CV 4,34–9,73%; brak harmonizacji Gen II/Oxford ELISA.
+Imputacja LOD/√2 w analizie autorów nie jest używana dla wyniku pacjentki.
+
+**Kontrakt i wpływ kliniczny:** polityka
+`female-inhibin-childhood-reference-policy.json`, wersja `2026-10-14.2`,
+dodaje dwa profile `ordinaryOnly`, `group-median`, `constant`:
+`zhou2025-female-inhb-age-over1-under5` w `(1,5)` i
+`zhou2025-female-inhb-age-5-under5p6` w `[5,5.6)`. Dokładne 5 lat
+przypisano drugiej grupie jako jawną konwencję aplikacji; autorzy nie
+podali inkluzywności. Pełny możliwy wiek musi mieścić się w jednym profilu.
+Dokładnie 1 zachowuje Ljubicic, od 5,6 Borelli. Mediany dotyczą pełnych
+grup źródłowych, nie dokładnego wieku lub węższej podgrupy aplikacji.
+Znana niezgodna metoda lub materiał blokuje odniesienie, nieznane dane
+pozwalają na ograniczone porównanie; bez nowego pola i bez potwierdzania
+metody próbki. Źródła nie dobiera się z wartości wyniku ani jako
+zastępstwa niezgodnego profilu sąsiedniego wieku.
+
+Jasny znacznik ma etykietę „Mediana grupy”; krótka notka podaje grupę,
+Chiny i KAESER 1000 CLIA. Położenie może odbiegać od płynnego mostu.
+Różnice 33→27 i dalej do ≈11 Borelli nie uzasadniają przerysowania linii
+lub skoku biologicznego. Dostępność odniesienia jest zmianą funkcjonalną;
+nie zmienia norm/werdyktów laboratoryjnych, krzywych, skal, jednostek,
+formularza, historii, 74 wcześniejszych profili, mężczyzn lub porównań płci.
+Crofton i normy Zhou pozostają nieaktywne. Dolna granica 1–5 wynosi 15
+w tabeli 2 i 14 w tabeli 3; nie wpływa to na zgodne 33, nie służy do
+wyboru normy. Testy nie nadają statusu walidacji klinicznej.
+
+**Przypadki syntetyczne do regresji rzeczywistych funkcji:** F3/33 pg/mL
+→ mediana grupy 1–5 =33; F5,25/33 → mediana grupy 5–10 =27; F6/33
+→ dotychczasowe Borelli ≈11. `[4,5)` kwalifikuje się do 33, ale `[4,5]`,
+`[4.99,5.01]`, `[5.59,5.61]` i `[1,1+1/12)` nie dostają jednej mediany.
+Znane Gen II, osocze, leczenie wykluczające lub wynik z operatorem `<`
+nie tworzą nowego punktu. Wpisanie/wyczyszczenie wyniku, 0 i wynik ponad
+osią nie zmieniają krzywej ani skali.
+
+**Wykonane kontrole:** testy jednostkowe modułu **327/327 w 18 plikach**;
+ukierunkowane E2E **24/24 w 3 plikach**, w tym 5 nowych scenariuszy;
+przeglądarkowe porównanie przed/po **12/12**, desktop/mobile wobec bazy
+`c8b91078`. Niezależna macierz sprawdziła 168 014 prób dokładnego wieku
+i 3124 przedziały wieku: 74 wcześniejsze profile są identyczne,
+a 576 pełnych ocen laboratoryjnych zachowało wyniki. Te kontrole nie
+nadają odniesieniu statusu walidacji klinicznej.
+
+**Zapis kontroli przed publikacją PR:** pełne `npm test` zakończyło się
+kodem 0: przed scaleniem aktualnego `audyt` **7669 testów / 350 plików**,
+a po scaleniu `2df41a883879b1f7abb84e51bc6dc531f773eeb8` — **7683 / 351**.
+Polityka repozytorium, lint, składnia 978 plików JS i testy PRO po scaleniu
+również PASS. Odrębny przegląd integracji po scaleniu: 44/44 kontrole
+oraz 9 prób wieku; źródła, normalizatory wieku i dotychczasowe wyniki
+odniesień zachowane. PWA PASS: rzeczywista aktualizacja SW
+`1.1.270` → `1.1.272`, pełny restart przeglądarki offline przy zatrzymanym
+serwerze HTTP; nie opieramy sprawdzenia na samej otwartej wcześniej karcie.
+
+To zapis wykonanych kontroli źródeł i implementacji przed publikacją,
+nie deklaracja zakończenia pełnego E2E lub GitHub CI. Końcowe wyniki
+pełnego E2E, PWA i wszystkich kontroli GitHub dla aktualnego SHA są
+raportowane w PR, bez aktualizowania plików źródłowych samymi statusami CI.
+Źródła, hashe i przypadki: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026),
+[przegląd tej partii](hormone-lifespan/evidence/female-inhibin-childhood-reference-coverage-2026-10-14.json).
+
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
 
 **Decyzja właściciela:** wdrożyć zatwierdzoną makietę porównania płci
@@ -4366,6 +4445,7 @@ Skala błędu: produkcyjny `calcPercentileStats`; wartość pomiaru to mediana n
   - dzień zapisu nie zgadza się z zapisanym wiekiem albo tygodniami;
   - nie ma daty urodzenia.
 - Na stronach bez `app.js` i modułu daty urodzenia Karta i schowek liczą BMI i Cole z pełnych miesięcy, jak dotąd. Są to: powłoka `app.html`, terminarz, notatki, ustawienia i subskrypcja. Centyli wzrostu i masy te strony nie liczą.
+  *(Sprostowanie 2026-10-14, P-WIEK-POMIARU-3: te strony nie ładują tablic BMI (`vilda_growth_reference_data.js`, `centile_data.js`), więc silnik BMI nie ma tam siatek. Karta i schowek nie pokazują tam centyla BMI ani wskaźnika Cole’a w żadnym wieku — wiek pomiaru nie ma czego zmienić.)*
 
 **Przypadki syntetyczne** (wejście → oczekiwany wynik; zegar testów 17-06-2026):
 - Chłopiec ur. 20-05-2026, pomiar 27-05-2026 (7. doba): 51 cm, 3,61 kg, źródło WHO. Formularz trzyma tego pacjenta z datą urodzenia (dziś 28. doba).
@@ -4396,6 +4476,8 @@ Skala błędu: produkcyjny `calcPercentileStats`; wartość pomiaru to mediana n
 Do tego karta porównania liczy ΔSDS i werdykt odcinka (`statFor`) dla obu punktów w pełnych miesiącach. Bramki tam nie ma, ale nie ma też dnia pomiaru.
 
 *(Uzupełnienie 2026-10-14: punkty 1–4, MPH z punktu 5 oraz krzywe odniesienia wykresów Karty i mini-podsumowanie nieaktualnej ramki domyka P-WIEK-POMIARU-2 niżej. Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania zostają do decyzji.)*
+
+*(Uzupełnienie 2026-10-14, P-WIEK-POMIARU-3: wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania domyka P-WIEK-POMIARU-3 niżej.)*
 
 **Wersje.** `app.js` 235, `vilda_auth_ui.js` 488, `vilda_patient_summary_copy.js` 15, `vilda_summary_cards.js` 60; strony i skrypty wstrzykujące (`vilda_chrome.js` 136, `vilda_session_bridge.js` 60); SW 1.1.268 → 1.1.269 (numer 1.1.268 nadał równolegle #670).
 
@@ -4435,7 +4517,7 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 - Formularz bieżącej wizyty (DOB-AGE-4) i trzy widoki z P-WIEK-POMIARU.
 - Siatka Palczewskiej we wsadzie i w walidacji: ta ścieżka nie ma bramki i liczy pełne miesiące, jak dotąd.
 - Zapas mpSDS w monitorze GH i w schowku: wzrost docelowy na 18 lat liczony rdzeniem tylko wtedy, gdy nie ma `vildaMpSdsStats`.
-- Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania — do decyzji, jak w P-WIEK-POMIARU.
+- Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania — do decyzji, jak w P-WIEK-POMIARU. *(Domyka P-WIEK-POMIARU-3 niżej.)*
 - Dane referencyjne, wzory, zapis, synchronizacja.
 
 **Źródło i reguła.** Dane referencyjne bez zmian: WHO 2006, WHO 2007, OLAF/OLA i Palczewska (tabela źródeł wyżej). Reguła wieku pomiaru jak w P-WIEK-POMIARU (DOB-AGE-4, Rata B / KARTA-SCHOWEK-WIEK, P-ODTWORZ-WIEK): pomiar liczy się w wieku z chwili pomiaru, nigdy w dzisiejszym; bez pewnego dnia pomiaru — pełne miesiące z zapisu.
@@ -4462,7 +4544,99 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 
 **Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
 
+*(Decyzja właściciela 2026-10-14: regułę siatki w dniu urodzin rozstrzyga osobny PR po P-WIEK-POMIARU-3.)*
+
 **Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
+
+### P-WIEK-POMIARU-3 — karta porównania: „Zmiana” w wieku dokładnym; masa poniżej 3 lat przy OLAF na Palczewskiej w widokach zapisu; wzrost dla wieku kostnego (SW 1.1.273, 2026-10-14, polecenie i decyzja właściciela)
+
+**Polecenie właściciela (2026-10-14).** „Zajmij się pozostałymi miejscami w osobnym PR”. Chodzi o miejsca, które P-WIEK-POMIARU wymienił jako poza zakresem, a P-WIEK-POMIARU-2 zostawił do decyzji: ΔSDS i werdykt karty porównania oraz wzrost dla wieku kostnego. Przegląd znalazł jeszcze dwie sprawy, które właściciel rozstrzygnął tego samego dnia:
+- masa poniżej 3 lat przy OLAF liczyła się w trzech widokach zapisu na innej siatce niż w formularzu — naprawić w tym PR;
+- reguła siatki w dniu urodzin (przegląd Codex przy P-WIEK-POMIARU-2) — osobny PR po tym.
+
+**Klasyfikacja:** zmiana kliniczna (AGENTS.md § 3). Zmienia:
+- ΔSDS, werdykt i centyl „Dziś” w karcie porównania;
+- centyl masy poniżej 3 lat przy OLAF w kolumnie „Poprzednio”, na kafelku Karty pacjenta i w schowku;
+- SDS wzrostu dla wieku kostnego.
+
+**Co było** (zmierzone na `audyt` 2df41a8, dane fikcyjne).
+
+1. **Kolumna „Zmiana” karty porównania.** Model `vildaPorownanieZPoprzednim` liczył SDS obu punktów w pełnych miesiącach (`statFor`, `VildaBmi.ocen`, `VildaBmi.cole`). Tymczasem kolumna „Poprzednio” od P-WIEK-POMIARU, a „Dziś” od DOB-AGE-4 pokazują centyle w wieku dokładnym. Z modelu pochodzą ΔSDS (tryb PRO), werdykt pary i — bez trybu PRO — centyl pod wartością „Dziś”. Przykład: chłopiec na medianie WHO w 31. i 58. dobie życia, oba punkty w 1. pełnym miesiącu.
+
+   | Parametr | Było (pełne miesiące) | Jest (wiek dokładny) |
+   |---|---|---|
+   | wzrost 54,8 → 58,1 cm | ΔhSDS +1,70; „Dziś” 96. c.; „szybka zmiana w krótkim oknie — do weryfikacji pomiaru” | ΔhSDS +0,01; 50. c.; „stabilny tor wzrastania” |
+   | masa 4,49 → 5,46 kg | ΔwSDS +1,49; 94. c.; „przyrost masy w krótkim oknie — +1,0 kg (+21,6 %) w niecały mies.” | ΔwSDS −0,01; 50. c.; „stabilny tor masy ciała” |
+   | BMI | ΔbmiSDS +0,88; 80. c.; „istotne przesunięcie centylowe w górę” | ΔbmiSDS +0,03; 49. c.; „stabilny tor BMI” |
+
+   W 0. pełnym miesiącu (wiek formularza 0) kolumna „Zmiana” nie powstaje wcale — tak było i jest.
+
+2. **Masa poniżej 3 lat przy OLAF.** OLAF nie ma danych poniżej 3 lat, więc formularz (`usePal`), „Podsumowanie wyników” i epikryza liczą wtedy masę na Palczewskiej. Trzy widoki zapisu wybierały Palczewską tylko przy źródle PALCZEWSKA. Przy OLAF szły przez rdzeń na tablicę WHO 2006. W schowku granice 3. i 97. centyla tego samego wiersza były przy tym z Palczewskiej.
+
+   | Pomiar (źródło OLAF) | „Poprzednio”, Karta, schowek — było (WHO 2006) | Jest (Palczewska, jak formularz) |
+   |---|---|---|
+   | chłopiec 24 mies., 12,2 kg | 51. c. | 28. c. |
+   | dziewczynka 18 mies., 10,2 kg | 49. c. | 22. c. |
+   | chłopiec 6 mies., 7,9 kg | 48. c. | 35. c. |
+   | dziewczynka 30 mies., 13,0 kg | 57. c. | 41. c. |
+
+   Obok dzisiejszego pomiaru z formularza wyglądało to jak spadek masy o 13–27 centyli przy tej samej masie.
+
+3. **Wzrost dla wieku kostnego** (`vilda_advanced_growth.js`, `heightSdsForBoneAge`; trafia do prognozy wzrostu ostatecznego w karcie C). Rdzeń był wołany bez obiektu. Gdy wiek kostny w pełnych miesiącach równał się wiekowi z formularza, bramka DOB-AGE-4 podstawiała dokładny wiek metrykalny. Przykład: chłopiec 140 cm, wiek kostny 10,25 roku (123 mies.), formularz 10 lat 3 mies. 20 dni (123,66 mies.) → SDS −0,47 (32. c.) zamiast −0,42 (34. c.).
+
+Przegląd sprawdził też wzrost rodziców w DocPro (druga przypadkowa zgodność z P-WIEK-POMIARU). Zmiana nie jest potrzebna: DocPro ładuje wspólny `inline_index_07.js`, który P-WIEK-POMIARU-2 już poprawił. `inline_docpro_05.js` nie jest ładowany i zostaje w repo tylko dla wpisów precache.
+
+**Co jest.**
+- **Karta porównania** (`vilda_summary_cards.js`):
+  - `__pickLastMeasurement` (`q`) niesie `wiekMies`: wiek z doby poprzedniego pomiaru albo `null`. Przez tę funkcję budują `prevMeasurementInfo` wszystkie drogi wczytania. Wiek liczy `Sw_wiekPomiaru` — ta sama funkcja i te same dane, co kolumna „Poprzednio”.
+  - `updatePrevSummaryDiff` podaje modelowi dzisiejszy wiek dokładny przez `Sw_wiekDzis(A)`. To bramka DOB-AGE-4 formularza (`lmsNiemowleWiek` bez obiektu): wiek z daty urodzenia, gdy jej pełne miesiące zgadzają się z formularzem, inaczej `null`.
+  - Model liczy w tych wiekach SDS wzrostu, BMI i Cole’a. Masę — tylko na siatce WHO 0–35 mies.: pełne miesiące rozpoznają siatkę, potem liczy wiek dokładny. Tylko tam formularz interpoluje wiek dokładny; Palczewska, OLAF i DS liczą masę w pełnych miesiącach, jak formularz.
+  - Odstęp (`gapM`), tempo wzrastania, „kg/mies.” i kontekst werdyktu (kurs GH, kanał MPH, redukcja) zostają na pełnych miesiącach.
+- **Ścieżka trajektorii** (`app.js`, `advHistoryGetChildLMSForSource`). Masa WHO 0–35 mies. dla wieku ułamkowego interpoluje L, M, S między sąsiednimi wierszami tą samą funkcją, co rdzeń (`lmsNiemowle`). Wiek jest zaokrąglany do 0,001 mies., jak w silnikach wzrostu i BMI na tej ścieżce. Wiek całkowity daje ten sam wiersz, co dotąd.
+  - Bez tego karta liczyłaby masę noworodka w wieku dokładnym wierszem najbliższego miesiąca: 7. doba → wiersz urodzeniowy, 28. doba → wiersz 1. miesiąca. Pokazywałaby wtedy fałszywą „utratę masy”.
+  - Poza kartą zmiana dotyczy tylko wierszy wpisanych w miesiącach ułamkowych (karta zaawansowana i podstawowa → analiza trajektorii).
+- **Masa poniżej 3 lat przy OLAF** liczy się na Palczewskiej w pełnych miesiącach, tą samą regułą, co formularz (`usePal`) i podsumowanie (`ae`):
+  - kolumna „Poprzednio” (`Se`, `Sw_masaPal` na źródle zapisu);
+  - kafelek „Waga” Karty pacjenta (`En`; źródło zapisu, a bez niego bieżące `bmiSource` strony);
+  - schowek (`I`; ta sama reguła, co granice 3. i 97. centyla tego wiersza).
+- **Wiek kostny to wiek odniesienia, nie pomiar** — jawne `{wiekMies:null}` w `heightSdsForBoneAge`.
+
+**Czego nie zmieniono.**
+- Formularz bieżącej wizyty i DOB-AGE-4, kolumna „Poprzednio” poza masą przy OLAF poniżej 3 lat, siatki i dane referencyjne.
+- Masa na Palczewskiej w pełnych miesiącach, także w pierwszym miesiącu życia, gdzie oznacza to wiersz urodzeniowy. Tak liczy formularz; zmiana byłaby osobną decyzją kliniczną.
+- Reguła siatki w dniu urodzin — osobny PR (decyzja właściciela 2026-10-14).
+- Wykresy Karty pacjenta i ich panel porównania (punkty w pełnych miesiącach). Zmiana oznaczałaby nową geometrię wykresu, więc jest poza zakresem.
+- Strony bez `app.js` — zob. sprostowanie w P-WIEK-POMIARU: silnik BMI nie ma tam tablic, więc nie ma czego przeliczać.
+
+**Źródło i reguła.** Dane referencyjne bez zmian: WHO 2006, WHO 2007, OLAF/OLA i Palczewska (tabela źródeł wyżej).
+- Reguła wieku — jak w P-WIEK-POMIARU (DOB-AGE-4, Rata B / KARTA-SCHOWEK-WIEK, P-ODTWORZ-WIEK).
+- Reguła siatki masy poniżej 3 lat przy OLAF — ta, którą stosuje formularz. Silniki stosują ją dla wzrostu i BMI (P-SDS-1, decyzja 1; P-BMI-1, decyzja 1). Decyzja właściciela z 2026-10-14 rozciąga ją na widoki zapisu.
+
+**Populacja, jednostki, ograniczenia.**
+- Dzieci 0–18 lat. Jednostki: wiek w miesiącach (doby / 30,4375), wzrost w cm, masa w kg, BMI w kg/m², Cole w %, SDS bez jednostki.
+- Karta porównania liczy kolumnę „Zmiana” dopiero od 1. pełnego miesiąca formularza, jak dotąd.
+- Bez daty urodzenia albo bez pewnej doby pomiaru liczą się pełne miesiące, jak dotąd.
+
+**Przypadki syntetyczne** (wejście → oczekiwany wynik; zegar testów 17-06-2026):
+- Chłopiec ur. 20-04-2026, źródło WHO, tryb PRO. Pomiar 21-05-2026 (31. doba): 54,8 cm, 4,49 kg (mediany WHO). Dziś (58. doba): 58,1 cm, 5,46 kg.
+  - Jest: w kolumnie „Zmiana” „stabilny tor wzrastania”, „stabilny tor masy ciała” i „stabilny tor BMI”; |ΔhSDS| i |ΔwSDS| ≤ 0,05.
+  - Było: „szybka zmiana w krótkim oknie”, ΔhSDS +1,70.
+- Chłopiec ur. 10-06-2024, źródło OLAF, pomiar 15-06-2026 (2 lata 0 mies.): 87 cm, 12,2 kg → kafelek „Waga”, schowek i „Poprzednio”: 28. centyl (było: 51.).
+- Chłopiec 140 cm, wiek kostny 10,25 roku, formularz 10 lat 3 mies. 20 dni → SDS wzrostu dla wieku kostnego −0,42 (było −0,47).
+
+**Testy.**
+- `tests/unit/wiek-pomiaru-reszta.test.mjs` (16):
+  - model karty na prawdziwych modułach tempa, trajektorii, BMI i kart (rejestrator wieków, o które model pyta rdzeń);
+  - `advHistoryGetChildLMSForSource` wycięty z `app.js`, z prawdziwymi tablicami;
+  - `En` z `vilda_auth_ui.js` oraz `Sw_masaPal` i `Sw_wiekDzis` z `vilda_summary_cards.js`, z atrapami rdzenia;
+  - schowek na prawdziwym silniku BMI;
+  - strażnicy źródła: wiek kostny, przekazanie wieków do modelu.
+- `tests/e2e/wiek-pomiaru-reszta.spec.mjs` (2): karta porównania w trybie PRO (niemowlę w 1. miesiącu) i masa dwulatka przy OLAF (kafelek, schowek, „Poprzednio”).
+- Kontrola ujemna na `audyt` 2df41a8: pada 13 z 16 testów jednostkowych i 2 z 2 e2e — „szybka zmiana w krótkim oknie…” zamiast „stabilny tor wzrastania”, kafelek „Waga” 51 zamiast 28. Przechodzą 3 testy zgodności wstecznej.
+- 16 mutacji poprawki (model, ścieżka trajektorii, reguła masy w trzech widokach, wiek kostny): każdą wykrywa co najmniej jeden test.
+- Strażnicy `sds-karta-i-trajektoria` (`En`) i `sds-konsumenci-rdzenia` (schowek) przypinają nowe fragmenty; liczba asercji bez zmian.
+
+**Wersje.** `app.js` 236, `vilda_advanced_growth.js` 76, `vilda_auth_ui.js` 490 (wstrzykiwany: `vilda_chrome.js` 138, `vilda_session_bridge.js` 62), `vilda_patient_summary_copy.js` 16, `vilda_summary_cards.js` 61; SW 1.1.272 → 1.1.273 (numer 1.1.272 nadał równolegle #673).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
@@ -5143,7 +5317,7 @@ Etap 4 planu z P-SDS-1.
 
 Etap 3 planu z P-SDS-1.
 
-- **Karta pacjenta** (`vilda_auth_ui.js`, ?v 432 → 433): `En()` liczy wzrost zawsze przez `calcPercentileStats` (reguła siatki w silniku; masa zostaje przy Palczewskiej z rekordu); granica wieku jak w rdzeniu — 216 mies. włącznie (dotąd warstwa GH i Status ucinały już 18,0 lat, a monitor GH nie: ten sam punkt terapii miał hSDS w monitorze i „—" na Karcie); żeton „hSDS −1,23" i ΔhSDS warstwy GH z dwoma miejscami (dotąd jedno); **panel porównania** liczy wzrost przez `VildaSdsWzrostu.policz()` z płcią i źródłem siatki (`_vildaScale.sex/param`), a własny wzór LMS z lokalnym `ncdf` zostaje tylko dla masy (etap 5 go usunie); SDS panelu z dwoma miejscami, centyl wg ADV-REPORT-5 („<1", „>99"; dotąd „<3/>97").
+- **Karta pacjenta** (`vilda_auth_ui.js`, ?v 432 → 433): `En()` liczy wzrost zawsze przez `calcPercentileStats` (reguła siatki w silniku; masa zostaje przy Palczewskiej z rekordu — *od P-WIEK-POMIARU-3 (decyzja właściciela 2026-10-14) także poniżej 3 lat przy OLAF, jak w formularzu*); granica wieku jak w rdzeniu — 216 mies. włącznie (dotąd warstwa GH i Status ucinały już 18,0 lat, a monitor GH nie: ten sam punkt terapii miał hSDS w monitorze i „—" na Karcie); żeton „hSDS −1,23" i ΔhSDS warstwy GH z dwoma miejscami (dotąd jedno); **panel porównania** liczy wzrost przez `VildaSdsWzrostu.policz()` z płcią i źródłem siatki (`_vildaScale.sex/param`), a własny wzór LMS z lokalnym `ncdf` zostaje tylko dla masy (etap 5 go usunie); SDS panelu z dwoma miejscami, centyl wg ADV-REPORT-5 („<1", „>99"; dotąd „<3/>97").
 - **Trajektoria** (`vilda_trajectory_analysis.js`, ?v 24 → 25): SDS pozycji (wzrost, masa, BMI, MPH, ΔSDS odcinków, czerwona flaga) przez `fmtP` — dwa miejsca formaterem silnika (dotąd jedno; próg −1,0 liczono na dwóch miejscach, a pokazywano na jednym); **SDS tempa zostaje przy jednym miejscu** (`fmtS`, GROWTH-HV-UI4 — osobna decyzja właściciela); `fmtC` wg ADV-REPORT-5.
 - **Opis pacjenta** (`vilda_patient_narrative.js`, ?v 8 → 9): `formatSds` (hSDS, ΔhSDS, mpSDS, ΔBMI-SDS) dwa miejsca; SDS tempa, SDS urodzeniowe SGA i progi konsensusu („poniżej progu −2,0 SD") przez `fmtSds1` — jedno miejsce, bo to inne wielkości i progi czytane jako liczby całkowite z dziesiątką.
 - **Ściąga B.64** (`vilda_b64_checklist.js`, ?v 3 → 4): hSDS formaterem silnika. **Dietetyka** (`vilda_diet_plan_ui.js`, ?v 16 → 17): mediany wzrostu i masy „typowych dla wieku" ze źródła aplikacji, nie z siatki narzuconej wiekiem (`<3 lat → WHO`); regułę wieku ma silnik.
