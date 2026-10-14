@@ -1018,6 +1018,31 @@ describe('P-KOPIA-DANE-KONTA — strażniki tutejszych rekordów, pacjent bez na
     ]);
     parzystosc(r);
   });
+
+  it('T47 [czerwony na a38f42cf] nowe notatki pacjenta i szkolenie z Terminarza usunięte w kopii: „Dodano” bez „i wpisy Terminarza” (podgląd nie zapowiadał nowych wpisów), łączna nazwa tylko w „Usunięto”', async () => {
+    const r = await przypadek({
+      przed: async (A) => { await wpisTerminarza(A.v, 'Szkolenie (fikcja)', 2, 'activity'); },
+      po: async (A, { p1 }) => {
+        const [szkolenie] = (await A.v.listAllPatientNotes()).filter((n) => n.patientId === AKT);
+        await A.v.removePatientNote(szkolenie.id);
+        await notatka(A.v, p1, 'N1 (fikcja)');
+        await notatka(A.v, p1, 'N2 (fikcja)');
+      },
+    });
+    expect([r.podglad.addedActivityNoteCount, r.podglad.updatedActivityNoteCount, r.podglad.deletedActivityNoteCount], 'podgląd: część Terminarza').toEqual([0, 0, 1]);
+    expect([r.wynik.addedPatientNoteCount, r.wynik.updatedPatientNoteCount, r.wynik.deletedPatientNoteCount], 'Le: sumy').toEqual([2, 0, 1]);
+    expect(czescTerminarza(r), 'magazyn: część Terminarza').toEqual({ dodane: 0, zmienione: 0, usuniete: 1 });
+    expect(roznica(r.przed.notatkiPacjentow, r.po.notatkiPacjentow), 'magazyn: wszystkie notatki').toEqual({ dodane: 2, zmienione: 0, usuniete: 1 });
+    expect(r.ekran).toEqual({
+      przycisk: 'Scal teraz (2 notatki)',
+      podsumowanie: 'Brak nowych zapisów · 2 nowe notatki pacjentów · usunięte w kopii: 1 wpis Terminarza bez pacjenta (zostaną usunięte także tutaj)',
+    });
+    expect(r.linie).toEqual([
+      '✓ Dodano 2 notatki pacjentów',
+      '⊖ Usunięto tak jak w kopii: 1 notatkę pacjenta lub wpis Terminarza',
+    ]);
+    parzystosc(r);
+  });
 });
 
 /* Losowe przebiegi ze stałym ziarnem (recenzja runda 2): operacje na A przed i po synchronizacji, na C po niej (część
@@ -1152,6 +1177,27 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     expect(EKRAN.Bks_linieDanych(w, { ...baza, addedPatientNoteCount: 25 })).toEqual(bez);
     expect(EKRAN.Bks_linieDanych(w)).toEqual(bez);
     expect(EKRAN.Bks_daneKonta(m), 'suma danych konta bez podwójnego liczenia części Terminarza').toBe(25 + 14 + 4 + 1);
+  });
+
+  it('łączna nazwa „notatki pacjentów i wpisy Terminarza” osobno w każdej linii wyniku: tylko tam, gdzie podgląd zapowiadał wpisy Terminarza tego rodzaju', () => {
+    const baza = { totalNewSnapshots: 0, addPatients: [], skippedPatients: [] };
+    const w = { addedPatientNoteCount: 3, updatedPatientNoteCount: 2, deletedPatientNoteCount: 5 };
+    const linie = (pola) => EKRAN.Bks_linieDanych(w, { ...baza, addedPatientNoteCount: 3, updatedPatientNoteCount: 2, deletedPatientNoteCount: 5, ...pola });
+    expect(linie({ addedActivityNoteCount: 1 }), 'tylko nowe wpisy Terminarza').toEqual([
+      '✓ Dodano 3 notatki pacjentów i wpisy Terminarza',
+      '✓ Zaktualizowano 2 notatki pacjentów',
+      '⊖ Usunięto tak jak w kopii: 5 notatek pacjentów',
+    ]);
+    expect(linie({ updatedActivityNoteCount: 1 }), 'tylko poprawione wpisy Terminarza').toEqual([
+      '✓ Dodano 3 notatki pacjentów',
+      '✓ Zaktualizowano 2 notatki pacjentów i wpisy Terminarza',
+      '⊖ Usunięto tak jak w kopii: 5 notatek pacjentów',
+    ]);
+    expect(linie({ deletedActivityNoteCount: 1 }), 'tylko usunięte wpisy Terminarza').toEqual([
+      '✓ Dodano 3 notatki pacjentów',
+      '✓ Zaktualizowano 2 notatki pacjentów',
+      '⊖ Usunięto tak jak w kopii: 5 notatek pacjentów i wpisów Terminarza',
+    ]);
   });
 
   it('odmiana części o pozycjach poprawionych tutaj później, które zastąpi starsza wersja z kopii (część „poprawionych”)', () => {

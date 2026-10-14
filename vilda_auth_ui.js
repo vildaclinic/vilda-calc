@@ -857,12 +857,14 @@ function Bks_daneKonta(m){var s=0;Bks_DANE.forEach(function(d){["added","updated
 /* Uwaga recenzji galezi 44ba49f7: wpisy Terminarza bez pacjenta (nieobecnosci, wydarzenia; w sejfie notatki pacjenta
    z patientId ACTIVITY_PATIENT_ID) ekran nazywal „notatkami pacjentow”. Podglad dostaje ich czesc osobno (ActivityNote...,
    czesc PatientNote... we wszystkich pieciu polach) i pokazuje ja pod wlasna nazwa, a notatki pacjentow bez niej. Wynik
-   scalania ma tylko sumy z Le, wiec gdy podglad zapowiadal wpisy Terminarza, linie wyniku nazywaja te sumy „notatki
-   pacjentow i wpisy Terminarza” (Bks_NOTATKI_I_TERMINARZ). Bez wpisow Terminarza teksty sa takie jak dotad. */
+   scalania ma tylko sumy z Le, wiec linia wyniku (Dodano / Zaktualizowano / Usunieto), dla ktorej podglad zapowiadal
+   wpisy Terminarza tego rodzaju, nazywa sume „notatki pacjentow i wpisy Terminarza” (Bks_NOTATKI_I_TERMINARZ); pozostale
+   linie (uwaga recenzji a38f42cf) i teksty bez wpisow Terminarza sa takie jak dotad. */
 var Bks_TERMINARZ={r:"ActivityNote",m:["wpis Terminarza bez pacjenta","wpisy Terminarza bez pacjenta","wpis\u00F3w Terminarza bez pacjenta"],nowe:["nowy","nowe","nowych"],zm:["poprawiony","poprawione","poprawionych"],prz:["przywr\u00F3cony","przywr\u00F3cone","przywr\u00F3conych"],tu:["usuni\u0119ty tutaj wcze\u015Bniej","usuni\u0119te tutaj wcze\u015Bniej","usuni\u0119tych tutaj wcze\u015Bniej"],nadp:["poprawiony tutaj p\u00F3\u017Aniej zostanie zast\u0105piony starsz\u0105 wersj\u0105 z kopii","poprawione tutaj p\u00F3\u017Aniej zostan\u0105 zast\u0105pione starszymi wersjami z kopii","poprawionych tutaj p\u00F3\u017Aniej zostanie zast\u0105pionych starszymi wersjami z kopii"],etykieta:"terminarz"};
 var Bks_NOTATKI_I_TERMINARZ=["notatk\u0119 pacjenta lub wpis Terminarza","notatki pacjent\u00F3w i wpisy Terminarza","notatek pacjent\u00F3w i wpis\u00F3w Terminarza"];
-// Wpisy Terminarza bez pacjenta w podgladzie (dodane, zmienione, usuniete).
-function Bks_terminarz(m){var s=0;["added","updated","deleted"].forEach(function(co){s+=Bks_ile(m,co+"ActivityNoteCount")});return s}
+// Biernik dla linii wyniku rodzaju co (added, updated, deleted): suma notatek pacjentow z Le razem z wpisami Terminarza,
+// gdy podglad zapowiadal wpisy Terminarza bez pacjenta w tej samej linii; inaczej nazwa rodzaju.
+function Bks_biernikWyniku(d,co,podglad){return d.r==="PatientNote"&&Bks_ile(podglad,co+"ActivityNoteCount")>0?Bks_NOTATKI_I_TERMINARZ:d.b}
 // Podglad do pokazania: notatki pacjentow bez czesci Terminarza i czesc Terminarza osobno, zaraz za nimi.
 function Bks_podzial(m){
   var p=Object.assign({},m);
@@ -907,16 +909,15 @@ function Bks_podsumowanie(m){
   z>0&&x.push("pomini\u0119ci: "+z);
   return x.join(" \u00B7 ");
 }
-// Linie wyniku o danych konta (przed liniami pominietych). podglad — model podgladu: gdy zapowiadal wpisy Terminarza
-// bez pacjenta, sumy notatek pacjentow z Le nazywamy razem z nimi (Le ich nie rozdziela).
+// Linie wyniku o danych konta (przed liniami pominietych). podglad — model podgladu: sume notatek pacjentow z Le w danej
+// linii nazywamy razem z wpisami Terminarza tylko wtedy, gdy podglad zapowiadal je w tej linii (Le ich nie rozdziela).
 function Bks_linieDanych(m,podglad){
-  var y=[],dod=[],zm=[],us=[],razem=!!podglad&&Bks_terminarz(podglad)>0;
+  var y=[],dod=[],zm=[],us=[];
   Bks_DANE.forEach(function(d){
-    d.r==="PatientNote"&&razem&&(d=Object.assign({},d,{b:Bks_NOTATKI_I_TERMINARZ}));
     var a=Bks_ile(m,"added"+d.r+"Count"),u=Bks_ile(m,"updated"+d.r+"Count"),s=Bks_ile(m,"deleted"+d.r+"Count");
-    a>0&&dod.push(a+" "+Bks_forma(a,d.b));
-    u>0&&zm.push(u+" "+Bks_forma(u,d.b));
-    s>0&&us.push(s+" "+Bks_forma(s,d.b));
+    a>0&&dod.push(a+" "+Bks_forma(a,Bks_biernikWyniku(d,"added",podglad)));
+    u>0&&zm.push(u+" "+Bks_forma(u,Bks_biernikWyniku(d,"updated",podglad)));
+    s>0&&us.push(s+" "+Bks_forma(s,Bks_biernikWyniku(d,"deleted",podglad)));
   });
   dod.length&&y.push("\u2713 Dodano "+dod.join(", "));
   zm.length&&y.push("\u2713 Zaktualizowano "+zm.join(", "));

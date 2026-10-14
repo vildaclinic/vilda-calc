@@ -13624,8 +13624,11 @@ gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i sz
   `ACTIVITY_PATIENT_ID`; uwaga recenzji gałęzi `44ba49f7`: ekran nazywał je „notatkami pacjentów”): podgląd liczy ich
   część osobno — `added|restored|updated|replacedNewer|deleted ActivityNoteCount`, część odpowiednich
   `…PatientNoteCount`, te same reguły na tej części obu stron — a ekran pokazuje ją pod własną nazwą, notatki pacjentów
-  bez niej. Wynik scalania ma tylko sumy Le: gdy podgląd zapowiadał wpisy Terminarza, linie wyniku nazywają sumę
-  „notatki pacjentów i wpisy Terminarza” (`Bks_linieDanych(wynik, podgląd)`); bez nich teksty jak dotąd.
+  bez niej. Wynik scalania ma tylko sumy Le: linia wyniku (Dodano / Zaktualizowano / Usunięto), dla której podgląd
+  zapowiadał wpisy Terminarza tego rodzaju, nazywa sumę „notatki pacjentów i wpisy Terminarza”
+  (`Bks_linieDanych(wynik, podgląd)`, `Bks_biernikWyniku`); pozostałe linie i teksty bez wpisów Terminarza jak dotąd
+  (uwaga recenzji `a38f42cf`: jedna flaga dla całego wyniku dopisywała „i wpisy Terminarza” także do „Dodano”, gdy
+  podgląd zapowiadał tylko usunięty wpis Terminarza).
 - Podgląd pomija pacjenta kopii bez nagłówka, jak `ss` (kopia spreparowana; uwaga recenzji końcowej 2, S2): nie
   wymienia pacjenta, którego scalanie nie doda, a plan notatek zgadza się z Le.
 
@@ -13649,11 +13652,13 @@ gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i sz
   1 notatkę pacjenta”, „⊖ Usunięto tak jak w kopii: …”; „Brak zmian — …” tylko, gdy nic nie doszło i nie było błędu.
   Przy `accountDataMerged === false` albo gdy podgląd zapowiadał dane konta, a wynik ma 0: „Nie scalono notatek ani list
   z tej kopii — mogły dojść w międzyczasie albo zapis się nie udał. Sprawdź kopię ponownie.” „🔀 Uzupełniono zapisy
-  u N pacjentów” — N kart, do których doszły wersje. Gdy podgląd zapowiadał wpisy Terminarza: „✓ Dodano 3 notatki
-  pacjentów i wpisy Terminarza”, „✓ Zaktualizowano 1 notatkę pacjenta lub wpis Terminarza” (5+: „6 notatek pacjentów
-  i wpisów Terminarza”). Desktop 1440 i telefon 390 bez poziomego przewijania.
+  u N pacjentów” — N kart, do których doszły wersje. Gdy podgląd zapowiadał nowe i poprawione wpisy Terminarza: „✓ Dodano
+  3 notatki pacjentów i wpisy Terminarza”, „✓ Zaktualizowano 1 notatkę pacjenta lub wpis Terminarza” (5+: „6 notatek
+  pacjentów i wpisów Terminarza”); gdy zapowiadał tylko usunięty wpis Terminarza i nowe notatki pacjentów: „✓ Dodano
+  2 notatki pacjentów”, „⊖ Usunięto tak jak w kopii: 1 notatkę pacjenta lub wpis Terminarza”. Desktop 1440 i telefon
+  390 bez poziomego przewijania.
 
-**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-dane-konta.test.mjs` (91; prawdziwe
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-dane-konta.test.mjs` (93; prawdziwe
 `os`/`ss`, magazyn w pamięci; ekran — prawdziwe pomocniki `Bks_*` z `vilda_auth_ui.js`). W każdym: podgląd nie zmienia
 magazynu, a każdy licznik spełnia parzystość podgląd = wynik scalania = różnica magazynu.
 - T1 nowa notatka pacjenta → „Scal teraz (1 notatka)”, „Brak nowych zapisów · 1 nowa notatka pacjenta”, „✓ Dodano
@@ -13683,7 +13688,10 @@ magazynu, a każdy licznik spełnia parzystość podgląd = wynik scalania = ró
   wynik 1 i 0); T45 urlop (5 dni) i szkolenie tylko w kopii → „Scal teraz (6 wpisów w Terminarzu)”, „Brak nowych
   zapisów · 6 nowych wpisów Terminarza bez pacjenta”, „✓ Dodano 6 notatek pacjentów i wpisów Terminarza”; T46 notatka
   pacjenta z wpisami Terminarza nowymi, poprawionym i usuniętym → każda część pod własną nazwą (T45, T46 czerwone na
-  `44ba49f7`); odmiana części Terminarza (1 / 2–4 / 5+ / 12–14 / 22, pięć pól); 12 losowych przebiegów z wpisami
+  `44ba49f7`); T47 dwie nowe notatki pacjenta i szkolenie z Terminarza usunięte w kopii → „✓ Dodano 2 notatki
+  pacjentów” bez „i wpisy Terminarza”, łączna nazwa tylko w „Usunięto” (czerwony na `a38f42cf`); łączna nazwa osobno
+  w każdej linii wyniku (nowe / poprawione / usunięte wpisy Terminarza w podglądzie, czerwony na `a38f42cf`); odmiana
+  części Terminarza (1 / 2–4 / 5+ / 12–14 / 22, pięć pól); 12 losowych przebiegów z wpisami
   Terminarza (nowe, poprawione, usunięte). Parzystość obejmuje część Terminarza: podgląd = różnica magazynu
   ograniczona do `ACTIVITY_PATIENT_ID` (dlatego na `44ba49f7` każdy przypadek z parzystością pada na braku tych pól).
 Na `2df41a8` 70 z 73 czerwonych, ale każdy przypadek pada już na braku nowych pól — testy przypinają nowy kontrakt,
@@ -13724,7 +13732,7 @@ z kopii dane osoby i przynależność do bazy.
 - Scalenie kopii nie planuje wysyłki do chmury (dane idą przy następnej synchronizacji, jak dotąd wersje). Ustawienia
   interfejsu i klucze techniczne scalają się bez komunikatu; etykieta przycisku nie wymienia terminów ani usunięć.
 - Wpisy Terminarza bez pacjenta rozdziela tylko podgląd; wynik (sumy Le) nazywa je razem z notatkami pacjentów, a nazwę
-  bierze z podglądu — gdy synchronizacja między podglądem a scaleniem doda wpis Terminarza, którego podgląd nie
+  każdej linii bierze z podglądu — gdy synchronizacja między podglądem a scaleniem doda wpis Terminarza, którego podgląd nie
   zapowiadał, wynik nazwie go „notatką pacjenta”, jak dotąd. Rozdzielenie w wyniku wymaga zmiany Le albo różnicy
   magazynu (decyzja właściciela).
 
@@ -13734,7 +13742,8 @@ reguły planu (nagrobki kopii i tutejsze, rekord tutaj przy usunięciu, remis na
 ograniczonej do zmian z kopii, `mergedPatientCount`, `accountDataMerged`, przycisk, podsumowanie i dawne brzmienia
 podtytułu. Po uwagach recenzji gałęzi `44ba49f7`: `Bks_wygrywaData` bez `!tutaj.updatedAtISO` — T42, `Bks_trescWpisu`
 z `createdAtISO` — T43, pętla podglądu bez `||!h.header` — T44, część Terminarza zawężona do jednej kategorii — 10
-z 12 losowych przebiegów, ekran bez odjęcia części Terminarza — 3 czerwone.
+z 12 losowych przebiegów, ekran bez odjęcia części Terminarza — 3 czerwone. Po uwadze recenzji `a38f42cf`: jedna
+flaga łącznej nazwy dla trzech linii wyniku (stan sprzed poprawki) — T47 i test łącznej nazwy w każdej linii czerwone.
 
 **Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `f3fe70c`
 po LAB-HISTORIA PR2). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 494 → 495 na stronach i w adresach wstrzykiwanych
