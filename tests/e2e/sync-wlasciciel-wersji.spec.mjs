@@ -355,3 +355,69 @@ test('łańcuch „Scal pacjentów” X → Y → Z, poprawka bieżącego pomiar
   expect(wynik.jestX).toBe(false);
   expect(wynik.dodaneKarty).toBe(0);
 });
+
+// Uwaga recenzji gałęzi 44ba49f7 (U2): po „Scal pacjentów” X → Y integracja wysyła prawie jednocześnie dwie delty przez
+// navigator.sendBeacon — kartę Y (onPatientSaved) i nagrobek X (onPatientDeleted), który od P-SYNC-WLASCICIEL niesie
+// też kartę Y (Bsw_deltaNagrobka), więc ma rozmiar delty Y. Chromium ogranicza ŁĄCZNY rozmiar ciał żądań keepalive
+// w locie do 64 KiB: przy delcie Y ok. 30–60 tys. znaków i serwerze odpowiadającym z opóźnieniem drugi sendBeacon
+// zwraca false, a integracja wyniku nie sprawdzała — nagrobek X nie wychodził na żywo, a zapis z otwartej karty X na
+// innym urządzeniu wskrzeszał duplikat. [CZERWONY na 44ba49f7: serwer dostawał 1 deltę, drugi beacon false]. Po
+// poprawce odrzucona delta idzie tym samym ciałem zwykłym fetch (strona żyje — to chwila zaraz po scaleniu).
+// Serwer synchronizacji to trasa page.route na tym samym originie, z opóźnieniem odpowiedzi; materiał synchronizacji
+// podmieniony (bez prawdziwego slotu). Dane FIKCYJNE.
+test('„Scal pacjentów” z deltą Y 30–60 tys. znaków: serwer dostaje i deltę Y, i deltę nagrobka X z kartą Y (limit sendBeacon)', async ({ page }) => {
+  test.setTimeout(120_000);
+  const delty = [];
+  await page.route(/\/__e2e_sync\//, async (r) => {
+    const req = r.request();
+    if (/\/delta$/.test(req.url()) && req.method() === 'POST') delty.push((req.postDataBuffer() || Buffer.alloc(0)).toString('utf8'));
+    await new Promise((res) => { setTimeout(res, 400); });
+    await r.fulfill({ status: 503, body: 'e2e' });
+  });
+  await page.addInitScript(() => {
+    window.VILDA_SYNC_WORKER_URL = `${location.origin}/__e2e_sync`;
+    window.__beacony = [];
+    const oryg = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = function (u, d) {
+      const r = oryg(u, d);
+      window.__beacony.push({ rozmiar: d && (d.size || d.length), wynik: r });
+      return r;
+    };
+  });
+  await otworzSejf(page);
+  const wynik = await page.evaluate(async () => {
+    const V = window.VildaVault;
+    const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
+    const rekord = (n) => ({
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, height: 110, weight: 19 },
+      advanced: { data: { measurements: Array.from({ length: n }, (_, i) => ({ uid: `m-${i}`, ageMonths: 12 + i, ageYears: (12 + i) / 12, height: 70 + i / 2, weight: 9 + i / 6, note: 'pomiar kontrolny fikcyjny' })) } },
+    });
+    const x = await V.savePatient(rekord(2), { dedup: false });
+    let y = null;
+    for (let i = 0; i < 14; i += 1) { y = await V.savePatient(rekord(6 + i), y ? { patientId: y.patientId, dedup: false } : { dedup: false }); await czekaj(3); }
+    const dY = await V.buildPatientDelta(y.patientId);
+    Object.defineProperty(V, 'getSyncMaterial', { value: async () => ({ slotId: 'e2e-slot', authToken: 'e2e-token' }), configurable: true, writable: true });
+    // Synchronizacja włączona dopiero teraz: zapisy wyżej nie wysyłały delt.
+    window.__beacony.length = 0;
+    window.localStorage.setItem('vilda-sync-enabled-v1', 'true');
+    await V.mergePatients(x.patientId, y.patientId);
+    await czekaj(3000);
+    return { X: x.patientId, Y: y.patientId, dY: dY.data.length, beacony: window.__beacony.slice() };
+  });
+  expect(wynik.dY, 'delta Y w paśmie 30–60 tys. znaków (poniżej limitu delty karty integracji)').toBeGreaterThan(30_000);
+  expect(wynik.dY).toBeLessThanOrEqual(60_000);
+  await expect.poll(() => delty.length, { timeout: 10_000 }).toBe(2);
+  // Kontrola: przypadek trafia w limit (drugi beacon odrzucony) — delta doszła drogą zapasową, a nie dzięki temu, że oba beacony się zmieściły.
+  expect(wynik.beacony.map((b) => b.wynik).sort(), `beacony: ${JSON.stringify(wynik.beacony)}`).toEqual([false, true]);
+  // Treść obu delt: odszyfrowana na tej stronie (ten sam klucz konta).
+  const ladunki = await page.evaluate(async (ciala) => Promise.all(ciala.map(async (c) => {
+    const { payload } = JSON.parse(c);
+    const p = await window.VildaVault.decryptPayloadForCurrentUser(payload.iv, payload.data);
+    return { karty: (p.patients || []).map((k) => k.patientId), nagrobki: (p.tombstones || []).map((t) => t.patientId) };
+  })), delty);
+  const nagrobek = ladunki.find((l) => l.nagrobki.includes(wynik.X));
+  expect(nagrobek, `delta nagrobka X doszła do serwera (beacony: ${JSON.stringify(wynik.beacony)})`).toBeTruthy();
+  expect(nagrobek.karty, 'delta nagrobka niesie kartę Y').toEqual([wynik.Y]);
+  expect(ladunki.filter((l) => !l.nagrobki.length && l.karty.includes(wynik.Y)), 'delta karty Y doszła do serwera').toHaveLength(1);
+});

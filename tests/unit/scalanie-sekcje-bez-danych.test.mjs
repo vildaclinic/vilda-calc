@@ -754,6 +754,52 @@ describe('P-SCALANIE-SEKCJE — ponowienie: sekcja głowy = kopia wczytana, form
   });
 });
 
+/* Uwaga recenzji zintegrowanej gałęzi (44ba49f7): sekcja głowy karty docelowej „bez danych” (same wybory lub wartości
+   domyślne strony) była w ponowieniu pomijana także wtedy, gdy formularz starej karty tej sekcji w ogóle nie ma (null
+   albo same puste pola — strona jej nie prowadzi). Nowa bieżąca wersja dostawała wtedy pustą sekcję formularza,
+   a wybory lekarza w karcie docelowej (np. status wcześniaka w sesji klirensu, od którego zależy dobór wzoru eGFR)
+   zostawały tylko w starszych wersjach. Na audyt sekcja zostawała; „Scal pacjentów” (Bsc1) przy braku sekcji w starej
+   karcie też trzyma sekcję karty docelowej. Reguła po poprawce: sekcja głowy „bez danych” nie zastępuje tylko sekcji
+   formularza, która coś ma (T27, T31, T39, T43, T44). */
+describe('P-SCALANIE-SEKCJE — ponowienie: formularz bez sekcji nie kasuje sekcji „bez danych” karty docelowej (recenzja gałęzi 44ba49f7)', () => {
+  const sesjaWyborow = () => {
+    const s = kopia(K.klirensPusty.clcr);
+    Object.assign(s.inputs, { ScrUnit: 'umol/l', neonatalTermStatus: 'preterm', ScrAssay: 'enzymatic', creatinineState: 'stable' });
+    return s;
+  };
+  const przypadki = [
+    ['T58 [czerwony na 44ba49f7; kontrola: jak na audyt] klirens: Y z sesją samych wyborów (µmol/L, wcześniak, metoda enzymatyczna, stan stabilny), formularz X z index (clcr null)',
+      'clcr', () => zapis({ clcr: sesjaWyborow() }, { baza: K.klirensPusty, wiersze: [48, 54] }), K.indexZWiekiem],
+    ['T59 [czerwony na 44ba49f7; kontrola: jak na audyt] lekarz: Y z docpro ({isDoctor:true}, bez PWZ), formularz X z index ({isDoctor:null, PWZ null})',
+      'doctor', () => zapis({}, { baza: K.docpro, wiersze: [48, 54] }), K.indexZWiekiem],
+    ['T60 [czerwony na 44ba49f7; kontrola: jak na audyt] spożycie: Y z samym PAL karty spożycia ({1,4; history []}), formularz X z docpro (spożycie samymi null)',
+      'intake', () => zapis({ intake: { pal: '1.4', history: [], estKcalPerDay: null } }, { wiersze: [48, 54] }), K.docpro],
+  ];
+  for (const [nazwa, klucz, kartaY, bazaX] of przypadki) {
+    it(`${nazwa} → sekcja Y zostaje w nowej bieżącej wersji`, async () => {
+      const { v, x, y, glowaX, g } = await scal(zapis({}, { baza: bazaX, wiersze: [60, 66] }), kartaY());
+      const sekcjaY = kopia(g[klucz]);
+      expect(sekcjaY, 'kontrola: sekcja Y to obiekt bez danych').toBeTruthy();
+      expect(Bpu_pustaFormularza(glowaX[klucz]), 'kontrola: formularz X tej sekcji nie prowadzi').toBe(true);
+      expect(sekcjaY, 'kontrola: scalenie trzyma sekcję Y (stara karta jej nie ma)').toEqual(kartaY()[klucz]);
+      const f = kopia(glowaX);
+      f.advanced.data.measurements.push(pomiar(72));
+      await v.savePatient(f, { patientId: y, baselinePayload: glowaX, dolaczPoScaleniu: x });
+      const r = await v.getPatient(y);
+      expect(r.snapshots[0].payload[klucz]).toEqual(sekcjaY);
+      expect(r.snapshots).toHaveLength(4);
+      expect(wiekiWierszy(r.snapshots[0].payload)).toEqual([48, 54, 60, 66, 72]);
+    });
+  }
+});
+// Pusta sekcja formularza w znaczeniu sejfu (null, '', false, puste obiekty i listy) — kontrola przypadków wyżej.
+function Bpu_pustaFormularza(x) {
+  if (x === undefined || x === null || x === '' || x === false) return true;
+  if (Array.isArray(x)) return x.every(Bpu_pustaFormularza);
+  if (typeof x === 'object') return Object.keys(x).every((k) => Bpu_pustaFormularza(x[k]));
+  return false;
+}
+
 /* Strażnicy zgodności reguły sejfu z warstwą formularza (sejf nie woła kodu strony, więc trzyma kopie dwóch list). */
 function oknoFormularza() {
   const win = {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +24,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // poprawka bieżącego pomiaru starej karty (okno „Edytuj pomiar”, nowa chwila zapisu) stawała się po synchronizacji
 // bieżącą wersją karty scalonej — bez pomiarów pozostałych kart; decyzja „treść” w gałęzi istniejącej karty nie miała
 // testu.
+// Po recenzji zintegrowanej gałęzi (44ba49f7) 246 testów: +6 — odrzucony sendBeacon po „Scal pacjentów” (3, dwa
+// [CZERWONE na 44ba49f7]), strażnik źródła integracji, ładunek bez savedAtISO (zabezpieczenie bez testu) i retencja
+// a poprawka przeniesiona do dawnej wersji (znane ograniczenie, test przypinający; jedyny z retencją włączoną).
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -141,7 +144,10 @@ async function urzadzenie(nazwa, opcje = {}) {
   };
   if (opcje.locks) win.navigator = { locks: opcje.locks };
   win.window = win; win.self = win; win.top = win;
-  win.localStorage.setItem('vildaRetention', '0'); // retencja wyłączona: testy liczą wersje same
+  // Retencja wyłączona: testy liczą wersje same. opcje.retencja — prawdziwy vilda_retention.js i retencja domyślna
+  // (włączona), tylko w teście znanego ograniczenia „retencja a poprawka przeniesiona do dawnej wersji”.
+  if (!opcje.retencja) win.localStorage.setItem('vildaRetention', '0');
+  if (opcje.retencja) loadBrowserScript('vilda_retention.js', win);
   loadBrowserScript('vilda_crypto.js', win);
   loadBrowserScript('vilda_vault.js', win);
   const v = win.VildaVault;
@@ -1835,6 +1841,33 @@ describe('P-SYNC-WLASCICIEL — treść, chwila zmiany i chwila zapisu wersji z 
       expect((await d.v.getLatestSnapshot(Y)).snapshotId, `bieżąca wersja Y na ${d.nazwa}`).toBe(ym);
     }
   }, CZAS);
+
+  /* Uwaga przeglądu końcowego 2 (napraw2/30, uwaga 2): zabezpieczenie „ładunek bez chwili zapisu wersji — tutejsza,
+     a nie »teraz«” w Bsw_rekord nie miało testu. Ładunek (uszkodzony albo spreparowany) niesie kartę Y z x2 (rev 1) bez
+     savedAtISO i nagrobek X — X jest w zbiorze N, x2 przechodzi tu spod X pod Y. Bez zabezpieczenia x2 dostaje chwilę
+     „teraz” i staje się bieżącą wersją Y (ten sam objaw, który P-SYNC-WLASCICIEL naprawiał dla głowy karty scalonej).
+     [ZIELONY na 44ba49f7; CZERWONY na mutacji: warunek zawężony do tutejszaKarta — chwila zapisu x2 = „teraz”,
+     bieżąca Y = x2] */
+  it('ładunek z wersją bez savedAtISO, która leży tu pod kartą ze zbioru N: chwila zapisu tutejsza, bieżąca wersja Y bez zmian', async () => {
+    const A = await urzadzenie('A');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v); await chwila(4);
+    const p0 = kopia(await A.v.exportSyncPayload());
+    const kX = p0.patients.find((p) => p.patientId === X), kY = kopia(p0.patients.find((p) => p.patientId === Y));
+    const x2 = kX.snapshots.find((q) => pomiaryZ(q.payload) === '60:120,66:123');
+    expect(x2, 'kontrola: x2 w ładunku X').toBeTruthy();
+    const glowaY = (await A.v.getLatestSnapshot(Y)).snapshotId;
+    const bezChwili = Object.assign({}, kopia(x2), { rev: 1 });
+    delete bezChwili.savedAtISO;
+    kY.snapshots.push(bezChwili);
+    await chwila(5);
+    await A.v.mergeSyncPayload({ schemaVersion: p0.schemaVersion, patients: [kY], tombstones: [{ patientId: X, deletedAtISO: new Date().toISOString() }] });
+    const rek = (await A.baza.listSnapshotsForUser(A.uid, Y)).find((q) => q.snapshotId === x2.snapshotId);
+    expect(rek, 'x2 przeszła pod Y').toBeTruthy();
+    expect(rek.savedAtISO, 'chwila zapisu x2 — tutejsza, nie „teraz”').toBe(x2.savedAtISO);
+    expect((await A.v.getLatestSnapshot(Y)).snapshotId, 'bieżąca wersja Y bez zmian').toBe(glowaY);
+    expect((await A.v.listPatients()).some((p) => p.patientId === X), 'X usunięta (nagrobek)').toBe(false);
+  }, CZAS);
 });
 
 describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń (znane ograniczenie)', () => {
@@ -1897,14 +1930,83 @@ describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń (zna
   }, CZAS);
 });
 
+/* Znane ograniczenie (przegląd końcowy 2, napraw2/30 uwaga 1; nie regresja względem audyt): retencja (domyślnie
+   włączona) a poprawka przeniesiona do dawnej wersji karty scalonej. Po „Scal pacjentów” X → Y → Z poprawka bieżącego
+   pomiaru X z urządzenia, które o scaleniach nie wiedziało (okno „Edytuj pomiar”, nowa chwila zapisu), trafia pod Z
+   do dawnej wersji x2 — z jej chwilą zapisu sprzed scaleń (reguła P-SYNC-WLASCICIEL: bieżącą wersją Z zostaje głowa
+   scalenia). Karta Z ma ≥ 10 wersji, więc przy następnym zapisie Z retencja przycina marzec do ostatniej wersji
+   miesiąca: x2 dostaje nagrobek „retencja” (bez kosza) i poprawki nie ma już nigdzie, na obu urządzeniach. Na audyt
+   2df41a8 poprawka ginęła już przy synchronizacji; na 69e41d1 zostawała jako błędna głowa Z. Test przypina obecne
+   zachowanie — zmiana (np. poprawiony wiersz w bieżącej wersji albo ochrona niedawno zmienionych wersji w retencji)
+   to decyzja właściciela i zmiana tego testu. Prawdziwy vilda_retention.js, zegar Date podmieniony (vi.useFakeTimers). */
+describe('P-SYNC-WLASCICIEL — retencja a poprawka przeniesiona do dawnej wersji karty scalonej (znane ograniczenie)', () => {
+  async function gdziePoprawka(d) {
+    const wynik = [];
+    for (const k of await d.baza.listPatientsForUser(d.uid)) {
+      const p = await d.v.getPatient(k.patientId);
+      for (const q of p.snapshots) if (/66:124/.test(pomiaryZ(q.payload))) wynik.push(`${k.patientId}/${q.snapshotId}`);
+    }
+    for (const e of await d.v.listTrashedSnapshots()) wynik.push(`kosz:${e.snapshotId}`);
+    return wynik;
+  }
+  it('łańcuch X → Y → Z (Z ma 10 wersji), poprawka bieżącego pomiaru X na B, potem nowa wizyta w Z na A: retencja przycina x2 z poprawką', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    let t = 0;
+    const ustaw = (iso) => { t = Date.parse(iso); vi.setSystemTime(new Date(t)); };
+    const krok = (ms = 1000) => { t += ms; vi.setSystemTime(new Date(t)); };
+    try {
+      ustaw('2026-03-02T10:00:00.000Z');
+      const A = await urzadzenie('A', { retencja: true }), B = await urzadzenie('B', { retencja: true });
+      const zap = async (wieki, pid) => { const r = await A.v.savePatient(zapis(wieki), pid ? { patientId: pid, dedup: false } : { dedup: false }); krok(); return r; };
+      const X = (await zap([60])).patientId; krok(300000); const x2 = (await zap([60, 66], X)).snapshotId;
+      ustaw('2026-03-20T10:00:00.000Z'); const Y = (await zap([72])).patientId; await zap([72, 78], Y);
+      ustaw('2026-03-25T10:00:00.000Z'); const Z = (await zap([84])).patientId; await zap([84, 90], Z);
+      ustaw('2026-03-26T10:00:00.000Z'); await zap([84, 90], Z);
+      ustaw('2026-03-27T10:00:00.000Z'); await zap([84, 90], Z);
+      const sync = chmura(); await sync(A); krok(); await sync(B); krok();
+      ustaw('2026-06-01T10:00:00.000Z');
+      await A.v.mergePatients(X, Y); krok();
+      const zm = (await A.v.mergePatients(Y, Z)).snapshotId; krok();
+      await chwila(50);
+      expect((await A.v.getPatient(Z)).snapshots.length, 'kontrola: Z ma 10 wersji (próg retencji)').toBe(10);
+      ustaw('2026-06-01T11:00:00.000Z');
+      const gx = await B.v.getLatestSnapshot(X);
+      expect(gx.snapshotId, 'kontrola: B nie wie o scaleniach, głowa X = x2').toBe(x2);
+      const poprawiony = JSON.parse(JSON.stringify(gx.payload)); poprawiony.advanced.data.measurements[1].height = 124;
+      await B.v.updateSnapshotPayload(X, x2, poprawiony, { preserveSavedAt: false }); krok();
+      for (let i = 0; i < 4; i += 1) { await sync(A); krok(); await sync(B); krok(); }
+      // Reguła P-SYNC-WLASCICIEL: poprawka w historii karty scalonej (x2 pod Z), bieżąca wersja Z = głowa scalenia.
+      for (const d of [A, B]) expect(await gdziePoprawka(d), `poprawka x2 pod Z na ${d.nazwa}`).toEqual([`${Z}/${x2}`]);
+      const glowaZ = await A.v.getLatestSnapshot(Z);
+      expect(glowaZ.snapshotId).toBe(zm);
+      expect(pomiaryZ(glowaZ.payload), 'bieżąca wersja Z bez poprawki').toBe('60:120,66:123,72:126,78:129,84:132,90:135');
+      // Nowa wizyta w Z na A (formularz z bieżącej wersji + 96 mies.) — zapis uruchamia retencję.
+      ustaw('2026-06-01T12:00:00.000Z');
+      const wizyta = JSON.parse(JSON.stringify(glowaZ.payload));
+      wizyta.advanced.data.measurements.push(pomiar(96));
+      await A.v.savePatient(wizyta, { patientId: Z, dedup: false }); krok();
+      await chwila(100); // retencja po zapisie (asynchronicznie)
+      for (let i = 0; i < 4; i += 1) { await sync(A); krok(); await sync(B); krok(); }
+      await chwila(50);
+      // ZNANE OGRANICZENIE (do decyzji właściciela): poprawki 66:124 nie ma nigdzie — ani w kartach, ani w koszu.
+      for (const d of [A, B]) expect(await gdziePoprawka(d), `poprawka po retencji na ${d.nazwa}`).toEqual([]);
+      const nagrobki = ((await A.baza.getUserMeta(A.uid)).snapshotTombstones || []).filter((e) => e.snapshotId === x2);
+      expect(nagrobki.map((e) => e.powod), 'x2 przycięta przez retencję').toEqual(['retencja']);
+      expect(pomiaryZ((await A.v.getLatestSnapshot(Z)).payload)).toBe('60:120,66:123,72:126,78:129,84:132,90:135,96:138');
+    } finally { vi.useRealTimers(); }
+  }, 120_000);
+});
+
 describe('P-SYNC-WLASCICIEL — pomocnik testów kartaWzgledem', () => {
   // [CZERWONY na dd21d11 — pętla „do skutku” przy skrajnym identyfikatorze przekracza limit] Uwaga recenzenta do
   // dd21d11 (waga średnia): identyfikator po właściwej stronie za jednym razem, także przy `inny` na końcu zakresu.
   it('karta po właściwej stronie także przy skrajnym identyfikatorze, bez losowania do skutku', async () => {
     const A = await urzadzenie('A');
+    // Skrajny mały identyfikator składany w czasie wykonania: jego jedenaście zer wpisanych w źródle kontrola polityki
+    // repozytorium (npm test → test:repo) bierze za numer o poprawnej sumie PESEL. Wartość ta sama.
     const PRZYPADKI_ID = [
       ['ffffffff-ffff-4fff-bfff-fffffffffff0', true], ['ffee0000-0000-4000-8000-000000000000', true],
-      ['00000000-0000-4000-8000-00000000000f', false], ['0045ffff-ffff-4fff-bfff-ffffffffffff', false],
+      [`00000000-0000-4000-8000-${'0'.repeat(11)}f`, false], ['0045ffff-ffff-4fff-bfff-ffffffffffff', false],
       [globalThis.crypto.randomUUID(), true], [globalThis.crypto.randomUUID(), false],
     ];
     for (const [inny, wiekszy] of PRZYPADKI_ID) {
@@ -1916,6 +2018,127 @@ describe('P-SYNC-WLASCICIEL — pomocnik testów kartaWzgledem', () => {
 });
 
 // [CZERWONY na audyt — tych funkcji i wywołań nie było]
+/* Uwaga recenzji gałęzi 44ba49f7 (U2): po „Scal pacjentów” X → Y integracja wysyła prawie jednocześnie deltę karty Y
+   (gt, onPatientSaved) i deltę nagrobka X, która niesie też kartę Y (At, onPatientDeleted; Bsw_deltaNagrobka). Chromium
+   ogranicza łączny rozmiar ciał żądań keepalive w locie do 64 KiB, więc przy delcie Y ok. 30–60 tys. znaków drugi
+   sendBeacon zwraca false. Integracja wyniku nie sprawdzała: delta przepadała bez śladu [CZERWONE na 44ba49f7 —
+   fetch nie był wołany, serwer dostawał jedną deltę]. Po poprawce odrzucona delta idzie tym samym ciałem zwykłym fetch.
+   Prawdziwy vilda_sync_integration.js i prawdziwy sejf; navigator.sendBeacon i fetch to atrapy, które zapisują wysyłki.
+   Model limitu jak w Chromium (bajty ciał w locie ≤ 65 536; beacon „w locie”, dopóki serwer nie odpowie). */
+describe('P-SYNC-WLASCICIEL — delty po „Scal pacjentów” a odrzucony sendBeacon (prawdziwy vilda_sync_integration.js)', () => {
+  const ADRES = 'https://sync.test.invalid';
+  function integracja(vault, beacon) {
+    const wysylki = [];
+    const sejf = Object.assign(Object.create(vault), { getSyncMaterial: async () => ({ slotId: 'test-slot', authToken: 'test-token' }) });
+    const win = {
+      CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init ? init.detail : undefined; } },
+      localStorage: magazyn(), sessionStorage: magazyn(),
+      navigator: {
+        sendBeacon(u, d) {
+          const r = beacon(u, d);
+          wysylki.push({ droga: 'beacon', u: String(u), cialo: String(d), przyjety: r });
+          return r;
+        },
+      },
+      fetch: async (u, o) => { wysylki.push({ droga: 'fetch', u: String(u), cialo: String(o && o.body), opcje: o }); return { ok: false, status: 503 }; },
+      setTimeout: (...a) => setTimeout(...a), clearTimeout: (...a) => clearTimeout(...a), setInterval: () => 0, clearInterval: () => {},
+      addEventListener() {}, removeEventListener() {},
+      document: { addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; }, hidden: false },
+      VildaVault: sejf, VILDA_SYNC_WORKER_URL: ADRES,
+      VildaSync: { syncPush: () => Promise.resolve(), syncPull: () => Promise.resolve(), onSyncStart() {}, onSyncComplete() {}, onSyncError() {} },
+    };
+    win.window = win; win.self = win; win.top = win;
+    win.localStorage.setItem('vilda-sync-enabled-v1', 'true');
+    loadBrowserScript('vilda_sync_integration.js', win);
+    return wysylki;
+  }
+  // Delty na adres delty; treść odszyfrowana kluczem nadawcy.
+  const delt = (wysylki) => wysylki.filter((w) => w.u === `${ADRES}/v1/slots/test-slot/delta`);
+  async function tresc(v, w) {
+    const { token, payload } = JSON.parse(w.cialo);
+    const p = await v.decryptPayloadForCurrentUser(payload.iv, payload.data);
+    return { token, karty: (p.patients || []).map((k) => k.patientId), nagrobki: (p.tombstones || []).map((t) => t.patientId) };
+  }
+  async function czekajNa(warunek, ms = 5000) {
+    const koniec = Date.now() + ms;
+    while (!warunek()) { if (Date.now() > koniec) return; await chwila(10); }
+  }
+  // Karta Y z `n` wersjami o rosnącej liczbie pomiarów: delta Y rośnie z n (n = 14 → ok. 35 tys. znaków).
+  async function scalDuze(A, n) {
+    const rekord = (k) => ({ name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, height: 110, weight: 19 },
+      advanced: { data: { measurements: Array.from({ length: k }, (_, i) => ({ uid: `m-${i}`, ageMonths: 12 + i, ageYears: (12 + i) / 12, height: 70 + i / 2, weight: 9 + i / 6, note: 'pomiar kontrolny fikcyjny' })) } } });
+    const X = (await A.v.savePatient(rekord(2), { dedup: false })).patientId;
+    let Y = null;
+    for (let i = 0; i < n; i += 1) Y = (await A.v.savePatient(rekord(6 + i), Y ? { patientId: Y, dedup: false } : { dedup: false })).patientId;
+    const dY = (await A.v.buildPatientDelta(Y)).data.length;
+    return { X, Y, dY };
+  }
+  // Limit Chromium: suma bajtów ciał w locie ≤ 64 KiB; beacon jest w locie przez `lot` ms.
+  function limitChromium(lot = 200) {
+    let wLocie = 0;
+    return (u, d) => {
+      const n = Buffer.byteLength(String(d));
+      if (wLocie + n > 65536) return false;
+      wLocie += n;
+      setTimeout(() => { wLocie -= n; }, lot);
+      return true;
+    };
+  }
+
+  it('[CZERWONY na 44ba49f7] delta Y 30–60 tys. znaków, limit 64 KiB: drugi beacon odrzucony, ta sama delta idzie fetch — serwer dostaje obie', async () => {
+    const A = await urzadzenie('A');
+    const { X, Y, dY } = await scalDuze(A, 14);
+    expect(dY, 'delta Y w paśmie 30–60 tys. znaków').toBeGreaterThan(30_000);
+    expect(dY).toBeLessThanOrEqual(60_000);
+    const wysylki = integracja(A.v, limitChromium());
+    await A.v.mergePatients(X, Y);
+    await czekajNa(() => delt(wysylki).filter((w) => w.droga === 'fetch' || w.przyjety).length >= 2);
+    const odrzucone = delt(wysylki).filter((w) => w.droga === 'beacon' && !w.przyjety);
+    expect(odrzucone, 'kontrola: przypadek trafia w limit').toHaveLength(1);
+    const doszly = delt(wysylki).filter((w) => w.droga === 'fetch' || w.przyjety);
+    expect(doszly.map((w) => w.droga).sort()).toEqual(['beacon', 'fetch']);
+    const fetchem = doszly.find((w) => w.droga === 'fetch');
+    expect(fetchem.cialo, 'fetch niesie to samo ciało, które odrzucił beacon').toBe(odrzucone[0].cialo);
+    expect(fetchem.opcje).toMatchObject({ method: 'POST' });
+    expect(fetchem.opcje.keepalive, 'bez keepalive — inaczej ten sam limit').toBeFalsy();
+    const t = await Promise.all(doszly.map((w) => tresc(A.v, w)));
+    expect(t.every((x) => x.token === 'test-token')).toBe(true);
+    expect(t.find((x) => x.nagrobki.includes(X)), 'delta nagrobka X z kartą Y').toMatchObject({ karty: [Y], nagrobki: [X] });
+    expect(t.filter((x) => !x.nagrobki.length && x.karty.includes(Y)), 'delta karty Y').toHaveLength(1);
+  }, CZAS);
+
+  it('[CZERWONY na 44ba49f7] sendBeacon zawsze false albo rzuca: obie delty idą fetch, każda raz', async () => {
+    for (const beacon of [() => false, () => { throw new TypeError('beacon niedostępny'); }]) {
+      const A = await urzadzenie('A');
+      const X = await karta(A.v);
+      const Y = await karta(A.v);
+      const wysylki = integracja(A.v, beacon);
+      await A.v.mergePatients(X, Y);
+      await czekajNa(() => delt(wysylki).filter((w) => w.droga === 'fetch').length >= 2);
+      await chwila(50);
+      const f = delt(wysylki).filter((w) => w.droga === 'fetch');
+      expect(f).toHaveLength(2);
+      const t = await Promise.all(f.map((w) => tresc(A.v, w)));
+      expect(t.map((x) => x.nagrobki.join(',')).sort()).toEqual(['', X]);
+    }
+  }, CZAS);
+
+  it('[kontrola] beacon przyjęty: bez fetch (droga jak dotąd); delta nagrobka zwykłego usunięcia bez karty', async () => {
+    const A = await urzadzenie('A');
+    const X = await karta(A.v);
+    const Y = await karta(A.v);
+    const Z = await karta(A.v);
+    const wysylki = integracja(A.v, () => true);
+    await A.v.mergePatients(X, Y);
+    await A.v.removePatient(Z);
+    await czekajNa(() => delt(wysylki).length >= 3);
+    await chwila(50);
+    expect(delt(wysylki).map((w) => w.droga)).toEqual(['beacon', 'beacon', 'beacon']);
+    const t = await Promise.all(delt(wysylki).map((w) => tresc(A.v, w)));
+    expect(t.find((x) => x.nagrobki.includes(Z)), 'zwykłe usunięcie: sam nagrobek').toMatchObject({ karty: [], nagrobki: [Z] });
+  }, CZAS);
+});
+
 describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
 
@@ -1959,6 +2182,17 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(iPrzen).toBeGreaterThan(iPetla);
     expect(iUsun).toBeGreaterThan(iPrzen);
     expect(iKosz).toBeGreaterThan(iUsun);
+  });
+
+  it('integracja: delta karty (gt) i delta nagrobka pacjenta (At) przez Bsb_wyslij (fetch po odrzuconym beaconie); delty notatek bez zmian', () => {
+    const integ = readFileSync(path.join(repoRoot, 'vilda_sync_integration.js'), 'utf8');
+    const funkcja = (nazwa) => integ.slice(integ.indexOf(`function ${nazwa}(t){`), integ.indexOf('}catch{}}', integ.indexOf(`function ${nazwa}(t){`)) + 9);
+    for (const f of ['At', 'gt']) {
+      expect(funkcja(f), f).toContain('l=typeof n.Blob=="function"?new n.Blob([a],{type:"text/plain"}):a;Bsb_wyslij(u,l)');
+      expect(funkcja(f), f).not.toContain('n.navigator.sendBeacon(u,l)');
+    }
+    expect(integ).toContain('function Bsb_wyslij(u,l){var ok=!1;try{ok=n.navigator.sendBeacon(u,l)===!0}catch{}if(ok||typeof n.fetch!="function")return ok;');
+    expect(integ.split('try{n.navigator.sendBeacon(u,l)}catch{}').length - 1, 'Bt, Ut, Qv0, Qv1 bez zmian').toBe(4);
   });
 
   it('„Scal pacjentów” zapisuje przeniesioną wersję przez Bsw_poScaleniu; adaptery mają odczyt wersji po kluczu', () => {

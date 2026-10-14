@@ -86,8 +86,9 @@ const EKRAN = (() => {
   return new Function('na', 'e', `${kod}\nreturn { Bks_etykietaScal, Bks_podsumowanie, Bks_linieDanych, Bks_linie, Bks_koniecWyniku, Bks_daneKonta };`)(() => '', () => null);
 })();
 const ekranPodgladu = (m) => ({ przycisk: EKRAN.Bks_etykietaScal(m), podsumowanie: EKRAN.Bks_podsumowanie(m) });
-// Kolejność jak w uo: linie danych konta, linie pominiętych, linia końcowa (przypięte testem źródła niżej).
-const ekranWyniku = (w, podglad) => EKRAN.Bks_linieDanych(w).concat(EKRAN.Bks_linie(w), EKRAN.Bks_koniecWyniku(w, podglad));
+// Kolejność jak w uo: linie danych konta (z podglądem — nazwa sum notatek przy wpisach Terminarza), linie pominiętych,
+// linia końcowa (przypięte testem źródła niżej).
+const ekranWyniku = (w, podglad) => EKRAN.Bks_linieDanych(w, podglad).concat(EKRAN.Bks_linie(w), EKRAN.Bks_koniecWyniku(w, podglad));
 // Podtytuł ekranu „Scal kopię konta” ze źródła uo (sekwencje ucieczki \u i \x odkodowane).
 const PODTYTUL = (() => {
   const od = ui.indexOf('class:"vilda-auth-subtitle",text:"Podaj has');
@@ -107,9 +108,11 @@ async function migawka(s) {
   }
   return {
     karty,
-    notatkiPacjentow: new Map((await s.baza.listPatientNotesForUser(s.uid)).map((x) => [x.id, `${x.updatedAtISO}|${x.rev}|${x.patientId}`])),
-    szablony: new Map((await s.baza.listNotesForUser(s.uid)).map((x) => [x.id, String(x.updatedAtISO)])),
-    listy: new Map((await s.baza.listPatientListsForUser(s.uid)).map((x) => [x.id, `${x.updatedAtISO}|${x.rev}`])),
+    // Rekord bez updatedAtISO (stary zapis) — data pusta, nie napis 'undefined': inaczej parzystosc() liczyłaby
+    // „zastąpioną późniejszą edycję” z porównania 'undefined' > '2026-…' (uwaga recenzji końcowej 2, G1).
+    notatkiPacjentow: new Map((await s.baza.listPatientNotesForUser(s.uid)).map((x) => [x.id, `${x.updatedAtISO || ''}|${x.rev}|${x.patientId}`])),
+    szablony: new Map((await s.baza.listNotesForUser(s.uid)).map((x) => [x.id, String(x.updatedAtISO || '')])),
+    listy: new Map((await s.baza.listPatientListsForUser(s.uid)).map((x) => [x.id, `${x.updatedAtISO || ''}|${x.rev}`])),
     oczekujacy: new Map(Object.entries(await s.v.getWaitlistLists()).map(([k, x]) => [k, bezCzasu(x)])),
     terminy: new Map(Object.entries(await s.v.getWaitlistSchedules()).map(([k, x]) => [k, bezCzasu(x)])),
     nagrobkiNotatek: (await s.baza.listPatientNoteTombstonesForUser(s.uid)).map((t) => t.id).sort(),
@@ -124,6 +127,8 @@ function roznica(a, b) {
   a.forEach((v, k) => { if (!b.has(k)) usuniete += 1; });
   return { dodane, zmienione, usuniete };
 }
+const AKTYWNOSC = '__vilda_activity__';
+const tylkoTerminarz = (mapa) => new Map([...mapa].filter(([, w]) => w.endsWith(`|${AKTYWNOSC}`)));
 const RODZAJE = { PatientNote: 'notatkiPacjentow', Note: 'szablony', PatientList: 'listy', Waitlist: 'oczekujacy', WaitlistSchedule: 'terminy' };
 const NAGROBKI = { PatientNote: 'nagrobkiNotatek', Note: 'nagrobkiSzablonow', PatientList: 'nagrobkiList' };
 
@@ -145,6 +150,17 @@ function parzystosc(r) {
     const zastapione = NAGROBKI[rodzaj] ? [...r.po[klucz].keys()].filter((id) => r.przed[klucz].has(id)
       && r.przed[klucz].get(id) !== r.po[klucz].get(id) && data(r.po[klucz].get(id)) < data(r.przed[klucz].get(id))).length : 0;
     expect(r.podglad[`replacedNewer${rodzaj}Count`], `replacedNewer${rodzaj}Count`).toBe(zastapione);
+  }
+  // Część Terminarza (uwaga recenzji gałęzi 44ba49f7; tylko podgląd — Le jej nie rozdziela): wpisy Terminarza bez
+  // pacjenta = różnica magazynu notatek pacjentów ograniczona do patientId ACTIVITY_PATIENT_ID, każde z pięciu pól.
+  {
+    const a = tylkoTerminarz(r.przed.notatkiPacjentow), z = tylkoTerminarz(r.po.notatkiPacjentow), d = roznica(a, z);
+    const data = (v) => String(v).split('|')[0];
+    const przywrocone = [...z.keys()].filter((id) => !a.has(id) && r.przed.nagrobkiNotatek.includes(id) && !r.po.nagrobkiNotatek.includes(id)).length;
+    const zastapione = [...z.keys()].filter((id) => a.has(id) && a.get(id) !== z.get(id) && data(z.get(id)) < data(a.get(id))).length;
+    expect(['added', 'restored', 'updated', 'replacedNewer', 'deleted'].map((p) => r.podglad[`${p}ActivityNoteCount`]),
+      'część Terminarza w podglądzie: dodane, przywrócone, zmienione, zastąpione, usunięte (magazyn)')
+      .toEqual([d.dodane, przywrocone, d.zmienione, zastapione, d.usuniete]);
   }
   expect(r.podglad.updatedPreferenceCount, 'licznik preferencji Le: podgląd = wynik').toBe(r.wynik.updatedPreferenceCount);
   expect(r.wynik.accountDataMerged).toBe(true);
@@ -903,18 +919,128 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji końcowej: przynależność do b
   });
 });
 
+/* Uwagi recenzji końcowej 2 (2026-10-14) i recenzji zintegrowanej gałęzi 44ba49f7: strażniki planu po stronie
+   tutejszych rekordów (G1, G3), pacjent bez nagłówka w spreparowanej kopii (S2), wpisy Terminarza bez pacjenta.
+   Od uwagi o Terminarzu parzystosc() sprawdza też część Terminarza w podglądzie (pola ActivityNote…), więc na 44ba49f7
+   każdy przypadek z parzystością pada już na braku tych pól (jak opisano wyżej dla audyt 2df41a8); oznaczenia
+   [czerwony na 44ba49f7] mówią o pierwszej asercji przypadku, [kontrola] — o zachowaniu sprzed tej uwagi. */
+describe('P-KOPIA-DANE-KONTA — strażniki tutejszych rekordów, pacjent bez nagłówka, wpisy Terminarza bez pacjenta', () => {
+  it('T42 (G1) [kontrola; czerwony na mutacji Bks_wygrywaData bez „!tutaj.updatedAtISO”] tutejszy szablon bez updatedAtISO, w kopii ten sam poprawiony: plan = Le = magazyn = 1', async () => {
+    const r = await przypadek({
+      przed: async (A) => { await A.v.saveNote({ title: 'Szablon-wspolny (fikcja)', body: 'f', category: 'wlasne' }); },
+      po: async (A) => { const [n] = await A.v.listNotes(); await A.v.saveNote({ ...n, body: 'f poprawione (fikcja)' }); },
+      wC: async (C) => {
+        // Stary rekord tutaj: bez updatedAtISO (zapis wprost przez adapter, jak z dawnej wersji aplikacji).
+        for (const x of await C.baza.listNotesForUser(C.uid)) { const y = { ...x }; delete y.updatedAtISO; await C.baza.putNoteForUser(C.uid, y); }
+      },
+    });
+    expect([r.podglad.updatedNoteCount, r.wynik.updatedNoteCount], 'podgląd, Le').toEqual([1, 1]);
+    expect(roznica(r.przed.szablony, r.po.szablony), 'magazyn').toEqual({ dodane: 0, zmienione: 1, usuniete: 0 });
+    expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 notatka)', podsumowanie: 'Brak nowych zapisów · 1 poprawiony szablon w Notatkach' });
+    expect(r.linie).toEqual(['✓ Zaktualizowano 1 szablon w Notatkach']);
+    parzystosc(r);
+  });
+
+  it('T43 (G3) [kontrola; czerwony na mutacji Bks_trescWpisu z createdAtISO] ta sama lista oczekujących założona niezależnie tu (wcześniej) i w kopii (później): bez widocznej zmiany, przycisk ukryty', async () => {
+    const r = await przypadek({
+      po: async (A, ids, C) => { await C.v.addWaitlistList('Fikcyjny zabieg wspólny'); await chwila(10); await A.v.addWaitlistList('Fikcyjny zabieg wspólny'); },
+    });
+    expect([r.podglad.addedWaitlistCount, r.podglad.updatedWaitlistCount], 'podgląd').toEqual([0, 0]);
+    expect([r.wynik.addedWaitlistCount, r.wynik.updatedWaitlistCount], 'wynik').toEqual([0, 0]);
+    expect([r.podglad.updatedPreferenceCount, r.wynik.updatedPreferenceCount], 'Le zapisuje nowszy znacznik listy').toEqual([1, 1]);
+    expect(r.ekran).toEqual({ przycisk: null, podsumowanie: BRAK_NOWYCH });
+    expect(r.linie).toEqual([JUZ_BYLY]);
+    parzystosc(r);
+  });
+
+  it('T44 (S2) [czerwony na 44ba49f7] kopia spreparowana: pacjentka bez nagłówka, usunięta tutaj, z nową notatką — podgląd mówi to samo co scalanie (oba pomijają pacjenta bez nagłówka)', async () => {
+    const r = await przypadek({
+      po: async (A, { p2 }) => { await notatka(A.v, p2, 'N-p2 (fikcja)'); },
+      wC: async (C, { p2 }) => { await chwila(5); await C.v.removePatient(p2); },
+      przerobKopie: (A, C, kopia) => przerob(A, C, kopia, (d) => {
+        const p = d.patients.find((x) => x.header && x.header.lastName === 'Fikcyjna');
+        delete p.header;
+      }),
+    });
+    expect([r.podglad.addedPatientNoteCount, r.podglad.skippedPatients.length], 'podgląd: notatka, pominięci')
+      .toEqual([r.wynik.addedPatientNoteCount, r.wynik.skippedPatients.length]);
+    expect(r.podglad.addPatients.concat(r.podglad.mergePatients || []).map((p) => p.name), 'podgląd nie wymienia pacjenta bez nagłówka').not.toContain('(brak nazwy)');
+    wersjeBezZmian(r);
+    parzystosc(r);
+  });
+
+  const AKT = '__vilda_activity__';
+  const wpisTerminarza = (v, title, dzien, category = 'absence') => v.savePatientNote({ patientId: v.ACTIVITY_PATIENT_ID, externalName: '', title, category, dueDateISO: `2026-12-${String(dzien).padStart(2, '0')}`, dueTime: null });
+  const czescTerminarza = (r) => {
+    const tylko = (mapa) => new Map([...mapa].filter(([, w]) => w.endsWith(`|${AKT}`)));
+    return roznica(tylko(r.przed.notatkiPacjentow), tylko(r.po.notatkiPacjentow));
+  };
+
+  it('T45 [czerwony na 44ba49f7] urlop (5 dni) i szkolenie w Terminarzu tylko w kopii: podgląd i przycisk mówią o wpisach Terminarza bez pacjenta, nie o notatkach pacjentów', async () => {
+    const r = await przypadek({
+      po: async (A) => {
+        expect(A.v.ACTIVITY_PATIENT_ID).toBe(AKT);
+        for (let d = 1; d <= 5; d += 1) await wpisTerminarza(A.v, 'Urlop (fikcja)', d);
+        await wpisTerminarza(A.v, 'Szkolenie (fikcja)', 10, 'activity');
+      },
+    });
+    expect([r.podglad.addedPatientNoteCount, r.podglad.addedActivityNoteCount], 'część Terminarza w sumie notatek').toEqual([6, 6]);
+    expect(czescTerminarza(r), 'magazyn: same wpisy Terminarza').toEqual({ dodane: 6, zmienione: 0, usuniete: 0 });
+    expect(r.ekran).toEqual({ przycisk: 'Scal teraz (6 wpisów w Terminarzu)', podsumowanie: 'Brak nowych zapisów · 6 nowych wpisów Terminarza bez pacjenta' });
+    expect(r.linie).toEqual(['✓ Dodano 6 notatek pacjentów i wpisów Terminarza']);
+    parzystosc(r);
+  });
+
+  it('T46 [czerwony na 44ba49f7] notatka pacjenta i wpisy Terminarza razem (nowe, poprawiony, usunięty w kopii): każda część pod własną nazwą, sumy jak Le', async () => {
+    const r = await przypadek({
+      przed: async (A) => { await wpisTerminarza(A.v, 'Urlop (fikcja)', 1); await wpisTerminarza(A.v, 'Szkolenie (fikcja)', 2, 'activity'); },
+      po: async (A, { p1 }) => {
+        await notatka(A.v, p1, 'N1 (fikcja)');
+        await wpisTerminarza(A.v, 'Urlop (fikcja)', 3);
+        await wpisTerminarza(A.v, 'Urlop (fikcja)', 4);
+        const wpisy = (await A.v.listAllPatientNotes()).filter((n) => n.patientId === AKT);
+        await A.v.savePatientNote({ ...wpisy.find((n) => n.title === 'Szkolenie (fikcja)'), title: 'Szkolenie przeniesione (fikcja)' });
+        await A.v.removePatientNote(wpisy.find((n) => n.dueDateISO.startsWith('2026-12-01')).id);
+      },
+    });
+    expect([r.podglad.addedActivityNoteCount, r.podglad.updatedActivityNoteCount, r.podglad.deletedActivityNoteCount]).toEqual([2, 1, 1]);
+    expect([r.podglad.addedPatientNoteCount, r.podglad.updatedPatientNoteCount, r.podglad.deletedPatientNoteCount], 'sumy z częścią Terminarza').toEqual([3, 1, 1]);
+    expect(czescTerminarza(r), 'magazyn: część Terminarza').toEqual({ dodane: 2, zmienione: 1, usuniete: 1 });
+    expect(r.ekran).toEqual({
+      przycisk: 'Scal teraz (1 notatka, 3 wpisy w Terminarzu)',
+      podsumowanie: 'Brak nowych zapisów · 1 nowa notatka pacjenta · 2 nowe wpisy Terminarza bez pacjenta'
+        + ' · 1 poprawiony wpis Terminarza bez pacjenta · usunięte w kopii: 1 wpis Terminarza bez pacjenta (zostaną usunięte także tutaj)',
+    });
+    expect(r.linie).toEqual([
+      '✓ Dodano 3 notatki pacjentów i wpisy Terminarza',
+      '✓ Zaktualizowano 1 notatkę pacjenta lub wpis Terminarza',
+      '⊖ Usunięto tak jak w kopii: 1 notatkę pacjenta lub wpis Terminarza',
+    ]);
+    parzystosc(r);
+  });
+});
+
 /* Losowe przebiegi ze stałym ziarnem (recenzja runda 2): operacje na A przed i po synchronizacji, na C po niej (część
    przebiegów bez synchronizacji; w C czasem usunięcie albo scalenie pacjenta), kopia A, podgląd i scalenie w C.
    W każdym: podgląd nie zmienia magazynu i parzystość podgląd = wynik = różnica magazynu. */
 function losowa(ziarno) { let s = ziarno >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
 const OCZEKUJACY = ['Fikcyjny zabieg 1', 'Fikcyjny zabieg 2', 'Fikcyjny zabieg 3'];
-async function losoweZmiany(v, los, ids, ile, metka) {
+async function losoweZmiany(v, los, ids, ile, metka, zTerminarzem = false) {
   const wybierz = (t) => t[Math.floor(los() * t.length)];
   for (let i = 0; i < ile; i += 1) {
     const k = Math.floor(los() * 12);
     const p = los() < 0.5 ? ids.p1 : ids.p2;
     try {
-      if (k === 0) await notatka(v, p, `${metka}-N${i}`);
+      // zTerminarzem: co druga operacja dotyczy wpisów Terminarza bez pacjenta (nieobecność albo wydarzenie) — nowy wpis,
+      // poprawka albo usunięcie; reszta jak w zwykłych przebiegach.
+      if (zTerminarzem && los() < 0.5) {
+        const wpisy = (await v.listAllPatientNotes()).filter((n) => n.patientId === v.ACTIVITY_PATIENT_ID), x = los();
+        if (x < 0.5 || !wpisy.length) {
+          await v.savePatientNote({ patientId: v.ACTIVITY_PATIENT_ID, externalName: '', title: `${metka}-T${i} (fikcja)`,
+            category: los() < 0.5 ? 'absence' : 'activity', dueDateISO: `2026-12-${String(1 + (i % 28)).padStart(2, '0')}`, dueTime: null });
+        } else if (x < 0.8) await v.savePatientNote({ ...wybierz(wpisy), title: `${metka}-T${i} poprawiony (fikcja)` });
+        else await v.removePatientNote(wybierz(wpisy).id);
+      } else if (k === 0) await notatka(v, p, `${metka}-N${i}`);
       else if (k === 1) { const t = await v.listAllPatientNotes(); if (t.length) await v.savePatientNote({ ...wybierz(t), body: `${metka}-e${i}` }); }
       else if (k === 2) { const t = await v.listAllPatientNotes(); if (t.length) await v.removePatientNote(wybierz(t).id); }
       else if (k === 3) await v.saveNote({ title: `${metka}-S${i}`, body: 'f', category: 'wlasne' });
@@ -953,6 +1079,23 @@ describe('P-KOPIA-DANE-KONTA — losowe przebiegi (stałe ziarna)', () => {
   }
 });
 
+describe('P-KOPIA-DANE-KONTA — losowe przebiegi z wpisami Terminarza bez pacjenta (stałe ziarna)', () => {
+  // Uwaga recenzji gałęzi 44ba49f7: część Terminarza w podglądzie = różnica magazynu (parzystosc), poprawki i usunięcia
+  // wpisów na obu urządzeniach.
+  for (let ziarno = 1; ziarno <= 12; ziarno += 1) {
+    it(`ziarno T${ziarno}: część Terminarza w podglądzie = różnica magazynu, podgląd = wynik`, async () => {
+      const los = losowa(ziarno * 104729);
+      const r = await przypadek({
+        synchronizuj: los() < 0.85,
+        przed: async (A, ids) => { await losoweZmiany(A.v, los, ids, 8, 'A0', true); },
+        po: async (A, ids) => { await losoweZmiany(A.v, los, ids, 7, 'A', true); },
+        wC: async (C, ids) => { await chwila(3); await losoweZmiany(C.v, los, ids, 4, 'C', true); },
+      });
+      parzystosc(r);
+    }, 60000);
+  }
+});
+
 describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
   it('odmiana form 1 / 2–4 / 5+ i części etykiety (notatki pacjentów i szablony razem, listy pacjentów i oczekujących razem)', () => {
     const m = {
@@ -969,6 +1112,46 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
       '✓ Zaktualizowano 5 notatek pacjentów, 12 terminów list oczekujących',
       '⊖ Usunięto tak jak w kopii: 22 notatki pacjentów',
     ]);
+  });
+
+  it('wpisy Terminarza bez pacjenta (część notatek pacjentów): odmiana w etykiecie, podsumowaniu i liniach wyniku (1 / 2–4 / 5+ / 12–14 / 22)', () => {
+    const baza = { totalNewSnapshots: 0, addPatients: [], skippedPatients: [] };
+    const m1 = { ...baza, addedPatientNoteCount: 1, addedActivityNoteCount: 1 };
+    expect(EKRAN.Bks_etykietaScal(m1)).toBe('Scal teraz (1 wpis w Terminarzu)');
+    expect(EKRAN.Bks_podsumowanie(m1)).toBe('Brak nowych zapisów · 1 nowy wpis Terminarza bez pacjenta');
+    expect(EKRAN.Bks_linieDanych({ addedPatientNoteCount: 1 }, m1)).toEqual(['✓ Dodano 1 notatkę pacjenta lub wpis Terminarza']);
+    const m2 = { ...baza, updatedPatientNoteCount: 2, updatedActivityNoteCount: 2 };
+    expect(EKRAN.Bks_etykietaScal(m2)).toBe('Scal teraz (2 wpisy w Terminarzu)');
+    expect(EKRAN.Bks_podsumowanie(m2)).toBe('Brak nowych zapisów · 2 poprawione wpisy Terminarza bez pacjenta');
+    expect(EKRAN.Bks_linieDanych({ updatedPatientNoteCount: 2 }, m2)).toEqual(['✓ Zaktualizowano 2 notatki pacjentów i wpisy Terminarza']);
+    const m12 = { ...baza, addedPatientNoteCount: 12, addedActivityNoteCount: 12 };
+    expect(EKRAN.Bks_etykietaScal(m12)).toBe('Scal teraz (12 wpisów w Terminarzu)');
+    expect(EKRAN.Bks_podsumowanie(m12)).toBe('Brak nowych zapisów · 12 nowych wpisów Terminarza bez pacjenta');
+    // Wszystkie pięć pól: część Terminarza odjęta od notatek pacjentów w każdym z nich.
+    const m = {
+      ...baza,
+      addedPatientNoteCount: 25, addedActivityNoteCount: 22, restoredPatientNoteCount: 2, restoredActivityNoteCount: 2,
+      updatedPatientNoteCount: 14, updatedActivityNoteCount: 12, replacedNewerPatientNoteCount: 3, replacedNewerActivityNoteCount: 2,
+      deletedPatientNoteCount: 4, deletedActivityNoteCount: 3, addedNoteCount: 1,
+    };
+    expect(EKRAN.Bks_etykietaScal(m)).toBe('Scal teraz (6 notatek, 34 wpisy w Terminarzu)');
+    expect(EKRAN.Bks_podsumowanie(m)).toBe('Brak nowych zapisów · 3 nowe notatki pacjentów · 1 poprawiona notatka pacjenta'
+      + ' · 1 notatka pacjenta poprawiona tutaj później zostanie zastąpiona starszą wersją z kopii'
+      + ' · 20 nowych wpisów Terminarza bez pacjenta · 10 poprawionych wpisów Terminarza bez pacjenta'
+      + ' · 2 wpisy Terminarza bez pacjenta poprawione tutaj później zostaną zastąpione starszymi wersjami z kopii'
+      + ' · 2 przywrócone wpisy Terminarza bez pacjenta (usunięte tutaj wcześniej) · 1 nowy szablon w Notatkach'
+      + ' · usunięte w kopii: 1 notatka pacjenta, 3 wpisy Terminarza bez pacjenta (zostaną usunięte także tutaj)');
+    const w = { addedPatientNoteCount: 25, updatedPatientNoteCount: 14, deletedPatientNoteCount: 4, addedNoteCount: 1 };
+    expect(EKRAN.Bks_linieDanych(w, m)).toEqual([
+      '✓ Dodano 25 notatek pacjentów i wpisów Terminarza, 1 szablon w Notatkach',
+      '✓ Zaktualizowano 14 notatek pacjentów i wpisów Terminarza',
+      '⊖ Usunięto tak jak w kopii: 4 notatki pacjentów i wpisy Terminarza',
+    ]);
+    // Podgląd bez wpisów Terminarza (albo bez podglądu): teksty jak dotąd.
+    const bez = ['✓ Dodano 25 notatek pacjentów, 1 szablon w Notatkach', '✓ Zaktualizowano 14 notatek pacjentów', '⊖ Usunięto tak jak w kopii: 4 notatki pacjentów'];
+    expect(EKRAN.Bks_linieDanych(w, { ...baza, addedPatientNoteCount: 25 })).toEqual(bez);
+    expect(EKRAN.Bks_linieDanych(w)).toEqual(bez);
+    expect(EKRAN.Bks_daneKonta(m), 'suma danych konta bez podwójnego liczenia części Terminarza').toBe(25 + 14 + 4 + 1);
   });
 
   it('odmiana części o pozycjach poprawionych tutaj później, które zastąpi starsza wersja z kopii (część „poprawionych”)', () => {
@@ -1008,7 +1191,7 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     expect(uo).toContain('let Bks_pg=null;');
     expect(uo).toContain('const m=await n.previewVaultBackupMerge(t,d.value);Bks_pg=m;');
     expect(uo).toContain('text:Bks_podsumowanie(m)})),s.style.display="block",Bks_pokazScal(u,m)}');
-    expect(uo).toContain('Bks_linieDanych(m).concat(Bks_linie(m),Bks_koniecWyniku(m,Bks_pg)).forEach(');
+    expect(uo).toContain('Bks_linieDanych(m,Bks_pg).concat(Bks_linie(m),Bks_koniecWyniku(m,Bks_pg)).forEach(');
     // Podtytuł: nie obiecuje już „bez usuwania ani nadpisywania”, „doda tylko” ani „nowsza poprawka z kopii zastąpi
     // starszą” (uwagi recenzji: nagłówek karty, reguła rev) i wymienia cały nagłówek, także kontakt osoby spoza bazy
     // (runda 2) i przynależność do bazy (recenzja końcowa, T39); zdanie o pominiętych pacjentach bez zmian.

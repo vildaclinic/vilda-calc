@@ -244,4 +244,58 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
     await zrzut(page, 'k6-wynik-desktop-1440', ekran.getByText('✓ Zaktualizowano 1 notatkę pacjenta'));
     await ctxC.close();
   });
+
+  // Uwaga recenzji gałęzi 44ba49f7: urlop i szkolenie z Terminarza (wpisy bez pacjenta, patientId ACTIVITY_PATIENT_ID)
+  // ekran nazywał „notatkami pacjentów”. Podgląd pokazuje je pod własną nazwą; wynik (sumy z Le) nazywa sumę obu rodzajów.
+  test('telefon 390: urlop i szkolenie z Terminarza w kopii → podgląd mówi o wpisach Terminarza bez pacjenta, bez poziomego przewijania', async ({ browser }) => {
+    test.setTimeout(180_000);
+    const ctxA = await browser.newContext(kontekst('desktop'));
+    const pageA = await ctxA.newPage();
+    await konto(pageA, HASLO_A);
+    const a1 = await pageA.evaluate(async (r) => {
+      const V = window.VildaVault;
+      const adam = (await V.savePatient(r, { dedup: false })).patientId;
+      const l = await V.exportSyncPayload(); l.credential = null;
+      return { adam, ladunek: JSON.stringify(l) };
+    }, rekord('Testowy', 'Adam', [60]));
+    const ctxC = await browser.newContext(kontekst('telefon'));
+    const page = await ctxC.newPage();
+    await konto(page, HASLO_C);
+    await page.evaluate(async (l) => { await window.VildaVault.mergeSyncPayload(JSON.parse(l)); }, a1.ladunek);
+    const kopia = await pageA.evaluate(async ({ adam }) => {
+      const V = window.VildaVault;
+      await new Promise((r) => { setTimeout(r, 20); });
+      await V.savePatientNote({ patientId: adam, title: 'N1 (fikcja)', body: 'wynik fikcyjny', category: 'followup' });
+      await V.savePatientNote({ patientId: V.ACTIVITY_PATIENT_ID, externalName: '', title: 'Urlop (fikcja)', category: 'absence', dueDateISO: '2026-12-21', dueTime: null });
+      await V.savePatientNote({ patientId: V.ACTIVITY_PATIENT_ID, externalName: '', title: 'Szkolenie (fikcja)', category: 'activity', dueDateISO: '2026-12-10', dueTime: null });
+      const p = await V.exportVaultBackup();
+      return typeof p === 'string' ? p : JSON.stringify(p);
+    }, { adam: a1.adam });
+    await ctxA.close();
+
+    const ekran = await podglad(page, kopia);
+    await expect(ekran.getByText('Brak nowych zapisów · 1 nowa notatka pacjenta · 2 nowe wpisy Terminarza bez pacjenta')).toBeVisible();
+    const scal = page.getByRole('button', { name: /^Scal teraz/ });
+    await expect(scal).toHaveText('Scal teraz (1 notatka, 2 wpisy w Terminarzu)');
+    const p = await page.evaluate(() => {
+      const b = Array.from(document.querySelectorAll('.vilda-auth-merge button')).find((x) => /^Scal teraz/.test(x.textContent));
+      const r = b.getBoundingClientRect();
+      return { scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth, prawa: r.right, lewa: r.left };
+    });
+    expect(p.scrollWidth, 'bez poziomego przewijania').toBeLessThanOrEqual(p.innerWidth);
+    expect(p.lewa).toBeGreaterThanOrEqual(0);
+    expect(p.prawa).toBeLessThanOrEqual(p.innerWidth);
+    await zrzut(page, 'terminarz-podglad-telefon-390', scal);
+    await scal.click();
+    await expect(ekran.getByText('✓ Dodano 3 notatki pacjentów i wpisy Terminarza')).toBeVisible();
+    const s = await bezPrzewijania(page);
+    expect(s.scrollWidth).toBeLessThanOrEqual(s.innerWidth);
+    await zrzut(page, 'terminarz-wynik-telefon-390', ekran.getByText(/^✓ Dodano/));
+    const wpisy = await page.evaluate(async () => {
+      const V = window.VildaVault;
+      return (await V.listAllPatientNotes()).filter((n) => n.patientId === V.ACTIVITY_PATIENT_ID).map((n) => `${n.category}:${n.title}`).sort();
+    });
+    expect(wpisy).toEqual(['absence:Urlop (fikcja)', 'activity:Szkolenie (fikcja)']);
+    await ctxC.close();
+  });
 });
