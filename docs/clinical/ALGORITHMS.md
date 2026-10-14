@@ -4399,7 +4399,7 @@ Do tego karta porównania liczy ΔSDS i werdykt odcinka (`statFor`) dla obu punk
 
 **Wersje.** `app.js` 235, `vilda_auth_ui.js` 488, `vilda_patient_summary_copy.js` 15, `vilda_summary_cards.js` 60; strony i skrypty wstrzykujące (`vilda_chrome.js` 136, `vilda_session_bridge.js` 60); SW 1.1.268 → 1.1.269 (numer 1.1.268 nadał równolegle #670).
 
-### P-WIEK-POMIARU-2 — pozostałe miejsca bramki DOB-AGE-4: punkty GH, walidacja prognozy, wsad, wzrost rodziców na 18 lat, krzywe Karty i nieaktualna ramka (SW 1.1.270, 2026-10-14, polecenie właściciela)
+### P-WIEK-POMIARU-2 — pozostałe miejsca bramki DOB-AGE-4: punkty GH, walidacja prognozy, wsad, wzrost rodziców na 18 lat, krzywe Karty i nieaktualna ramka (SW 1.1.271, 2026-10-14, polecenie właściciela)
 
 **Polecenie właściciela (2026-10-13).** „Napraw ustalenia poza zakresem w osobnym PR” — ustalenia z P-POROWNANIE-DATA. P-WIEK-POMIARU (wyżej) rozwiązał je w trzech widokach zapisanego pomiaru i wymienił pozostałe miejsca z tą samą bramką jako poza zakresem. Ten wpis je domyka tym samym kontraktem rdzenia: jawny wiek `{wiekMies}` (liczba albo `null` = pełne miesiące).
 
@@ -4462,7 +4462,7 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 
 **Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
 
-**Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.269 → 1.1.270.
+**Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
