@@ -152,7 +152,8 @@ for (const width of [1440, 320]) {
     const sourceShape = await geometry(page);
     for (const ageYears of [3, 14, 35, 65]) {
       await update(page, { ageYears, ageLabel: `${ageYears} lat`, measurement: { value: 50, unit: 'pg/mL' } });
-      if (ageYears === 14) await expectSourcePoint(page, 50, 46, false, 'borelli2025-female-inhb-age-5p6-20');
+      if (ageYears === 14 || ageYears === 35)
+        await expectSourcePoint(page, 50, ageYears === 14 ? 46 : 29, false, 'borelli2025-female-inhb-age-5p6-47');
       else await expect(point(page)).toHaveCount(0);
       expect(await geometry(page)).toEqual(sourceShape);
     }
@@ -236,7 +237,7 @@ test('ordinary female INHB keeps its own source profile and scale across sex-com
     await update(page, { ageYears, measurement: { value: 40, unit: 'pg/mL' } });
     const ordinary = await geometry(page, ages[view]);
     if (view === 'mini') await expectSourcePoint(page, 40, median);
-    else await expectSourcePoint(page, 40, median, false, 'borelli2025-female-inhb-age-5p6-20');
+    else await expectSourcePoint(page, 40, median, false, 'borelli2025-female-inhb-age-5p6-47');
     await panel(page).locator('.vhl-compare-toggle').click();
     await expect(chart).toHaveAttribute('data-comparison-scale', 'linear');
     await expect(chart).toHaveAttribute('data-comparison-max', '400');
@@ -260,6 +261,6 @@ test('ordinary female INHB keeps its own source profile and scale across sex-com
     await expect(chart).not.toHaveAttribute('data-comparison-max');
     expect(await geometry(page, ages[view])).toEqual(ordinary);
     if (view === 'mini') await expectSourcePoint(page, 500, median, true);
-    else await expectSourcePoint(page, 500, median, true, 'borelli2025-female-inhb-age-5p6-20');
+    else await expectSourcePoint(page, 500, median, true, 'borelli2025-female-inhb-age-5p6-47');
   }
 });

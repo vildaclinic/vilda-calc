@@ -1,0 +1,671 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-14",
+  "status": "implementation-authorized-by-owner; educational-reference-extension-not-clinical-validation",
+  "scope": {
+    "baseCommit": "8b84254e",
+    "previousOrdinaryProfileId": "borelli2025-female-inhb-age-5p6-20",
+    "profileId": "borelli2025-female-inhb-age-5p6-47",
+    "policyFile": "female-inhibin-reference-policy.json",
+    "policyAndPatientPointDataVersion": "2026-10-14.1",
+    "ordinaryDomainYears": [
+      5.6,
+      47
+    ],
+    "bothEndpointsInclusive": true,
+    "sexComparisonDomainYearsUnchanged": [
+      8,
+      20
+    ],
+    "clinicalEffect": "Source-derived approximate age median becomes available above age 20 through exact 47. This is not a laboratory reference interval or a fertility assessment."
+  },
+  "primarySource": {
+    "title": "Serum Concentrations of Inhibin B in Healthy Females and Males Throughout Life",
+    "authors": "Borelli-Kjær et al.",
+    "journal": "JCEM 2025;110:70–77",
+    "doi": "10.1210/clinem/dgae439",
+    "url": "https://doi.org/10.1210/clinem/dgae439",
+    "publishedOnline": "2024-06-26",
+    "correctedAndTypeset": "2024-07-18",
+    "fullPdfSha256": "86b13b2e2cc6e7311d25df670239fd6a74cc79f47a832063d9a429bf79599f5e",
+    "reviewedInFull": true,
+    "keyLocations": {
+      "populationAndAssay": "PDF2 / printed71",
+      "figureAndModel": "PDF3 / printed72",
+      "oralContraceptiveComparison": "PDF5 / printed74",
+      "limitations": "PDF6–7 / printed75–76"
+    },
+    "supplement": {
+      "doi": "10.6084/m9.figshare.26056558.v1",
+      "url": "https://doi.org/10.6084/m9.figshare.26056558.v1",
+      "fullPdfSha256": "c9a763c851b596c99dbb337e3fe9b7f4014207a660657ed0d9e0eeb974a39972",
+      "reviewedInFull": true,
+      "contents": "Validation, method comparison, storage, interference, quality control; Figures S1–S3. No female median table or LMS/GAMLSS parameters."
+    }
+  },
+  "population": {
+    "country": "Denmark; mostly Caucasian population-based controls",
+    "allFemales": {
+      "participants": 889,
+      "samples": 1005
+    },
+    "cohorts": [
+      {
+        "name": "COPENHAGEN Minipuberty",
+        "participants": 92,
+        "samples": 208,
+        "ageYears": [
+          0.02,
+          1.08
+        ]
+      },
+      {
+        "name": "COPENHAGEN Puberty Study II",
+        "participants": 648,
+        "ageYears": [
+          5.6,
+          20.2
+        ],
+        "meanAge": 12.2
+      },
+      {
+        "name": "Health2006",
+        "participants": 149,
+        "ageYears": [
+          20,
+          69
+        ],
+        "meanAge": 42.9,
+        "sampling": "Adults from Western Copenhagen randomly selected from Danish National Personal Registry"
+      }
+    ],
+    "noObservedFemaleDataGapYears": [
+      1.08,
+      5.6
+    ],
+    "adultLimitations": [
+      "Only 149 women across 20–69 years; adult observations sparse.",
+      "Sampling was not standardized to menstrual-cycle phase.",
+      "Oral contraceptive information missing for the majority of women.",
+      "Reference data were not a confirmed untreated-only population.",
+      "No pregnancy-specific eligibility or pregnancy median model is described.",
+      "The age model does not establish individual menopause or reproductive state."
+    ]
+  },
+  "assay": {
+    "allFemaleSamples": "Beckman Coulter Inhibin B Gen II ELISA",
+    "matrix": "serum",
+    "unit": "ng/L",
+    "canonicalUnit": "pg/mL",
+    "unitFactor": 1,
+    "lodPgMl": 3,
+    "interassayCoefficientOfVariation": "below 11%",
+    "sourceBelowLodHandling": "LOD/2 for source fitting; do not impute patient results or manufacture a numeric postmenopausal point.",
+    "supplementMethodComparison": "Oxford Bio-innovation measured higher than Gen II, overall ratio 1.28. Authors did not factorize Gen II results. This is not permission to convert unknown patient methods.",
+    "compatibilityRecommendation": [
+      "serum/surowica compatible",
+      "known Gen II method IDs compatible",
+      "known Oxford or plasma should not newly become compatible for this female profile",
+      "unknown method/specimen may remain educational comparison with method limits, never evidence of confirmed compatibility"
+    ]
+  },
+  "medianEvidence": {
+    "statistic": "GAMLSS 0 SD = M, median in equation SDS=((X/M)^L−1)/(L*S)",
+    "sourceFigure": 1,
+    "existingEvidenceFile": "evidence/inhb-digitized-median.json",
+    "existingEvidenceSha256": "1a9c250deb7a1eb23e1c89fbce04399b936ca0134bf509cc38d3b2c13f8ea961",
+    "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+    "visuallyCheckedAgainstFullSource": true,
+    "independentRedigitizationClaimed": false,
+    "authorModelParametersAvailable": false,
+    "sourceMedianTableAvailable": false,
+    "retainedSourceKnots": 24,
+    "retainedFitDomainYears": [
+      5.6,
+      47
+    ],
+    "interpolation": "pchip",
+    "refittingOrKnotModification": false,
+    "directKnotExamplesPgMl": {
+      "20": 34,
+      "25": 32,
+      "30": 30,
+      "35": 29,
+      "40": 28,
+      "42": 26,
+      "44": 23,
+      "45": 20,
+      "46": 17,
+      "47": 11
+    },
+    "digitalizationTolerancePgMl": 2,
+    "toleranceMeaning": "Approximate graphical extraction uncertainty, not a statistical confidence interval.",
+    "upperBoundaryReason": "47 is the last retained, previously verified quantitative digitization knot, not maximum observed age. Do not extend to 69 using a qualitative low tail.",
+    "lowerBoundaryReason": "The existing 5.6–20 range is extended within the same source; no artificial new source boundary at 20. Compare-sexes window 8–20 remains separate.",
+    "lastKnotAboveLod": {
+      "ageYears": 47,
+      "approxMedianPgMl": 11,
+      "rawDigitizedPgMl": 11.32,
+      "lodPgMl": 3,
+      "valueAtMinusDigitizationTolerancePgMl": 9,
+      "conclusion": "11 and its approximate digitization range 9–13 are above LOD 3. This supports a source-number at 47, not postmenopausal classification or extrapolation past 47."
+    }
+  },
+  "cycleAndMedication": {
+    "sourceNoPhaseStandardization": true,
+    "ocComparison": {
+      "agesUsers": [
+        14.8,
+        19.9
+      ],
+      "usersN": 59,
+      "agesNonUsers": [
+        14.8,
+        19.8
+      ],
+      "nonUsersN": 81,
+      "usersMedianPgMl": 8,
+      "nonUsersMedianPgMl": 55,
+      "usersMedianSds": -0.88,
+      "nonUsersMedianSds": 0.35,
+      "p": "<.001"
+    },
+    "notes": [
+      "Adolescent oral-contraceptive effect is demonstrated; no phase-specific or treated-age median model is supplied.",
+      "13% of reproductive-age women 15–50 had undetectable concentrations; late-luteal nadir and oral contraception are possible explanations, so a single low value does not establish reduced ovarian function.",
+      "Do not correct patient concentrations for oral contraception or offer an invented untreated median.",
+      "Unknown cycle/OC status may remain an explicitly limited age comparison, preserving minimal input UX."
+    ],
+    "appPolicyRecommendation": {
+      "knownPregnancy": "Exclude the single ordinary 5.6–47 profile when pregnancy is already known. This is conservative app policy, not an author-reported cohort exclusion.",
+      "knownPostmenopause": "Exclude the single ordinary 5.6–47 profile when menopause is already known; no menopausal-state median model is supplied.",
+      "ordinaryCyclePhases": "Do not pick phase-specific median or require phase. Any existing ordinary phase remains same descriptive age model with limitation.",
+      "missingReproductiveContext": "Do not assume confirmed nonpregnant or premenopausal state.",
+      "newFields": false
+    },
+    "suggestedCompactPatientNote": "Przybliżona mediana dla wieku; model nie uwzględnia fazy cyklu ani antykoncepcji."
+  },
+  "qualification": {
+    "wholeAgeSpanRequired": true,
+    "noArtificialSourceBoundaryAt20": true,
+    "singleOrdinaryProfileForChildhoodAndAdulthood": true,
+    "excludedExistingCyclePhases": [
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause"
+    ],
+    "reproductiveExclusionMeaning": "Conservative application policy for this ordinary profile, not an author-reported cohort exclusion criterion; source has no pregnancy-specific or menopausal-state median model.",
+    "missingContext": "Allows explicitly limited age comparison; never confirms nonpregnant, premenopausal, untreated status or matching assay.",
+    "unchangedGates": [
+      "GnRHa and existing contraindications",
+      "known incompatible assay",
+      "known incompatible specimen",
+      "result censoring",
+      "unit validity",
+      "whole possible age qualification"
+    ],
+    "newFields": false,
+    "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie."
+  },
+  "preserved": [
+    "All 24 female Borelli knots and current PCHIP interpolation",
+    "73 other global patient-point profiles",
+    "Inhibin B puberty comparison profile and domain 8–20",
+    "All illustrative geometries, normalization scales, zoom projections and other hormones",
+    "Laboratory ranges, interpretations, conversions, snapshots and storage",
+    "Existing infant domains and term-birth requirements",
+    "Separate male group summaries and Tanner evidence"
+  ],
+  "notActivated": {
+    "femaleGapYears": {
+      "lowerExclusive": 1,
+      "upperExclusive": 5.6
+    },
+    "femaleAfterAgeYears": 47,
+    "crofton2002": {
+      "title": "Dimeric inhibins in girls from birth to adulthood: relationship with age, pubertal stage, FSH and oestradiol",
+      "doi": "10.1046/j.0300-0664.2001.01449.x",
+      "journal": "Clinical Endocrinology 2002;56:223–230",
+      "fullPdfSha256": "a1cfb39a440cb09bc15ddae664b15e80513d34b7e21aca5e2a6ccfdacf5215e9",
+      "reviewedInFull": true,
+      "table": "Table1 printed227 / PDF5",
+      "sourceGroup": {
+        "n": 105,
+        "medianPgMl": 10.6,
+        "iqrPgMl": [
+          "<8",
+          18.6
+        ],
+        "belowLodN": 37,
+        "belowLodPercent": 35,
+        "referenceRange": [
+          "<8",
+          72.7
+        ]
+      },
+      "matrix": "plasma",
+      "assay": "Historical in-house double-antibody ELISA (Groome 1996), with heat/detergent/peroxide pretreatment; not Beckman Gen II.",
+      "conservativeLodPgMl": 8,
+      "applicability": "Potential future historical whole-group reference for gap >1–<5.6 only, with explicit age 0–6 group label. It is not exact-age p50 and cannot describe minipuberty shape. N=105 is not tiny, but broad pooling, substantial censoring, different matrix/assay and convenience sampling are important limitations.",
+      "tannerCaution": "Separate staged cohort includes GH-treated girls at B1/B3–5, with B2 treated girls excluded; do not describe all Tanner data as untreated healthy girls.",
+      "decision": "Do not activate in this PR. Separate clinical decision about usefulness and known serum incompatibility needed before filling childhood gap; prefer more recent sensitive assay data if available."
+    },
+    "other": [
+      "Xu2026 AMH",
+      "New female Tanner-specific model",
+      "Numerical reference from an illustrative bridge or tail"
+    ]
+  },
+  "shortSourceQuotations": [
+    {
+      "location": "p71 / PDF2 / Population-Based Controls, Females",
+      "quote": "Samples were not collected at a definite time point during the menstrual cycle."
+    },
+    {
+      "location": "p76 / PDF7 / limitations",
+      "quote": "the number of available data points in adult females was sparse"
+    },
+    {
+      "location": "p76 / PDF7 / limitations",
+      "quote": "data on the use of OCs was missing in the majority of female controls"
+    }
+  ],
+  "syntheticCases": [
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 6,
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expected": {
+        "approxMedianPgMl": 11,
+        "oldReferencePreserved": true,
+        "newLaboratoryVerdict": null
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": [
+          20,
+          25,
+          30,
+          35,
+          40,
+          42,
+          44,
+          45,
+          46,
+          47
+        ],
+        "value": 33,
+        "unit": "pg/mL"
+      },
+      "expectedApproxMedianPgMl": [
+        34,
+        32,
+        30,
+        29,
+        28,
+        26,
+        23,
+        20,
+        17,
+        11
+      ]
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "ageSpanYears": [
+          20,
+          20.083333333333332
+        ],
+        "upperInclusive": false
+      },
+      "expected": "Entire span qualifies in one profile; preserve age uncertainty in reference presentation."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "ageSpanYears": [
+          47,
+          47.083333333333336
+        ],
+        "upperInclusive": false
+      },
+      "expected": "No point because possible age extends above 47; do not substitute exact 47."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "ageSpansYears": [
+          [
+            5.59,
+            5.61
+          ],
+          [
+            46.99,
+            47.01
+          ]
+        ]
+      },
+      "expected": "No point; each possible age crosses a profile boundary."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": [
+          1.01,
+          5.59,
+          47.01,
+          69
+        ]
+      },
+      "expected": "No ordinary female reference from an illustrative bridge/tail or nonactivated Crofton."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 30,
+        "cyclePhase": [
+          "pregnancy_t1",
+          "pregnancy_t2",
+          "pregnancy_t3",
+          "postmenopause"
+        ]
+      },
+      "expected": "Ordinary Borelli reference excluded by application policy; illustrative curve unchanged."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 30,
+        "cyclePhase": [
+          "unknown",
+          "follicular",
+          "luteal"
+        ]
+      },
+      "expected": "Same approximate age-model median; no phase-specific correction or assumption of no oral contraception."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 30,
+        "context": [
+          "known incompatible assay",
+          "known plasma",
+          "GnRHa",
+          "censored result"
+        ]
+      },
+      "expected": "Retain corresponding existing exclusion; no fabricated point."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "analyte": "inhb",
+        "exactAgeYears": 30,
+        "valueSequence": [
+          "empty",
+          0,
+          33,
+          1000,
+          "cleared"
+        ]
+      },
+      "expected": "Fixed curve and scale; point or out-of-scale indicator only when eligible. No normality verdict from median."
+    }
+  ],
+  "validation": {
+    "status": "Targeted controls and full npm test completed; PWA update/offline restart, full E2E and exact-head GitHub CI pending.",
+    "reportedDate": "2026-10-14",
+    "generators": {
+      "status": "PASS",
+      "mode": "--check",
+      "count": 2
+    },
+    "targetedTests": {
+      "hormoneModule": {
+        "passed": 307,
+        "status": "PASS"
+      },
+      "adapter": {
+        "passed": 28,
+        "status": "PASS"
+      }
+    },
+    "browserBeforeAfter": {
+      "passed": 16,
+      "total": 16,
+      "status": "PASS"
+    },
+    "targetedE2E": {
+      "uniqueScenariosPassed": 33,
+      "status": "PASS after correcting two obsolete assertions and rerunning those scenarios",
+      "firstRun": {
+        "passed": 31,
+        "failedObsoleteAssertions": 2
+      },
+      "correction": "Two existing scenarios expected no point at age 35. The new source-backed domain requires the approximate median 29 pg/mL, so expectations were updated to that source value.",
+      "rerunCorrectedScenarios": {
+        "passed": 2,
+        "total": 2
+      },
+      "newScenariosPassedOnFirstRun": 6,
+      "notClaimed": "This is not a single uninterrupted 33/33 run or completion of the full repository E2E suite."
+    },
+    "versions": {
+      "serviceWorker": "1.1.269",
+      "rendererQueryVersion": 32,
+      "dataQueryVersion": 24
+    },
+    "pending": [
+      "Real PWA update and fresh offline browser restart",
+      "Full repository E2E suite",
+      "All GitHub checks for latest exact commit"
+    ],
+    "clinicalValidationClaimed": false,
+    "fullNpmTest": {
+      "status": "PASS",
+      "exitCode": 0,
+      "testFiles": 348,
+      "testsPassed": 7631,
+      "lint": "PASS",
+      "javascriptSyntax": {
+        "status": "PASS",
+        "files": 973
+      },
+      "repositoryPolicy": "PASS",
+      "proTests": "PASS"
+    }
+  },
+  "rights": "No source PDF, figure raster or full text is redistributed here. Brief factual extraction, limited quotations and hashes support provenance.",
+  "coverageMatrix": {
+    "basis": "Read-only production-engine audit before and after ordinary female-profile extension; exact ages and complete uncertain-age spans are distinct.",
+    "ordinaryFemale": [
+      {
+        "ageDomainYears": {
+          "min": 0.02,
+          "max": 1,
+          "minExclusive": false,
+          "maxExclusive": false
+        },
+        "source": "Ljubicic2022",
+        "statistic": "model-median",
+        "requirements": "Term-birth infant qualification; no extrapolation to birth.",
+        "changed": false
+      },
+      {
+        "ageDomainYears": {
+          "min": 1,
+          "max": 5.6,
+          "minExclusive": true,
+          "maxExclusive": true
+        },
+        "source": null,
+        "decision": "Retain gap; Crofton not activated."
+      },
+      {
+        "ageDomainYears": {
+          "min": 5.6,
+          "max": 47,
+          "minExclusive": false,
+          "maxExclusive": false
+        },
+        "previousMaxAgeYears": 20,
+        "source": "Borelli-Kjær2025",
+        "statistic": "approximate-model-median",
+        "changed": true
+      },
+      {
+        "ageDomainYears": {
+          "min": 47,
+          "minExclusive": true
+        },
+        "source": null,
+        "decision": "No numeric extension from an illustrative tail."
+      }
+    ],
+    "ordinaryMale": [
+      {
+        "ageDomainYears": {
+          "min": 0.019164955509924708,
+          "max": 1,
+          "minExclusive": false,
+          "maxExclusive": true
+        },
+        "source": "Busch2022",
+        "statistic": "approximate-model-median",
+        "changed": false
+      },
+      {
+        "ageDomainYears": {
+          "min": 1,
+          "max": 6.1,
+          "minExclusive": false,
+          "maxExclusive": true
+        },
+        "source": "Kelsey2016",
+        "statistic": "model-median",
+        "changed": false
+      },
+      {
+        "ageDomainYears": {
+          "min": 6.1,
+          "max": 80,
+          "minExclusive": false,
+          "maxExclusive": false
+        },
+        "source": "Borelli-Kjær2025",
+        "statistic": "approximate-model-median",
+        "changed": false
+      }
+    ],
+    "sexComparisonsUnchanged": {
+      "minipuberty": {
+        "minAgeYears": 0.02,
+        "maxAgeYears": 1,
+        "maxExclusive": true,
+        "maleOwnPointStartDays": 7,
+        "lineDomainMeaning": "Common lines begin at0.02years; own male infant point retains eligibility from7days."
+      },
+      "puberty": {
+        "minAgeYears": 8,
+        "maxAgeYears": 20,
+        "bothEndpointsInclusive": true
+      },
+      "firstBirthday": "Neither sex has a comparison point at exact 1 year; ordinary female reference still uses Ljubicic and ordinary male reference uses Kelsey."
+    },
+    "separateGroupSummariesUnchanged": {
+      "maleSenior": {
+        "source": "Baccarelli2001",
+        "statistic": "arithmetic-mean",
+        "groups": [
+          {
+            "minAgeYears": 80,
+            "maxAgeYears": 90,
+            "maxExclusive": true,
+            "meanPgMl": 129
+          },
+          {
+            "minAgeYears": 90,
+            "maxAgeYears": 101,
+            "maxExclusive": false,
+            "meanPgMl": 78
+          }
+        ],
+        "meaning": "Separate group summary, not extension of ordinary age-model median or smooth curve."
+      },
+      "pretermInfant": "Kuiri-Hänninen panel has group medians at day 7/month 3, not an individual point on an age-median model."
+    },
+    "boundaryExamples": [
+      {
+        "input": "Female age 47 years 0 months, span [47,47+1/12)",
+        "result": "No ordinary reference; exact 47years separately qualifies."
+      },
+      {
+        "input": "Female completed age 46 years, span [46,47)",
+        "result": "Whole span fits the extended ordinary profile."
+      },
+      {
+        "input": "Male age 6 years 1 month, age span crossing 6.1",
+        "result": "No single ordinary median because two sources are crossed."
+      },
+      {
+        "input": "Male age 80 years 0 months, span [80,80+1/12)",
+        "result": "No ordinary median past 80; separate senior-group arithmetic mean may qualify."
+      }
+    ],
+    "infantGates": "Known preterm birth or unknown term-birth status excludes ordinary infant median. A history of prematurity does not itself exclude an older eligible source.",
+    "ordinaryGapsWithoutNumericalModel": {
+      "female": "Before 0.02 years, >1 to <5.6 years, and >47 years.",
+      "male": "Before 7 days and >80 years; separate group summaries do not fill the ordinary-model gap."
+    }
+  },
+  "coverageExecution": {
+    "baseSha": "8b84254e4648141091aaa70e1c71d5b005213dd3",
+    "date": "2026-10-14",
+    "type": "read-only production-engine probes on isolated base snapshot and current implementation tree",
+    "checks": {
+      "before": 107,
+      "after": 107,
+      "failures": 0,
+      "intervalsPerRevision": 4608,
+      "boundaryProbesPerRevision": 30,
+      "gateProbesPerRevision": 85,
+      "comparisonProbesPerRevision": 48,
+      "seniorProbesPerRevision": 18,
+      "oldWindowExactEqualityProbes": 1441,
+      "changedIntervalResults": 353
+    },
+    "invariants": {
+      "same24Knots": true,
+      "sourcePointsHash": "6532f5a3e059d98126981f01610e1c2d51b613691ebfdcf033a19eeadabf7fd3",
+      "other73ProfilesIdentical": true,
+      "allRuntimeOutsidePatientPointIdentical": true,
+      "runtimeOutsidePatientPointHash": "380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d",
+      "unitsIdentical": true,
+      "oldWindowAllValuesIdentical": true
+    },
+    "meaning": "These completed coverage probes do not claim complete browser, PWA, repository test or GitHub CI success. They do not constitute clinical validation."
+  },
+  "knownContextTransport": {
+    "source": "current normalized reproductiveContext for inhibin B",
+    "fallback": "already known current legacy cycle_phase when normalized value is unknown",
+    "guards": "Ignore opposite sex and historical-sample context mismatch; preserve current identity reset.",
+    "effect": "Known pregnancy/postmenopause reaches the ordinary reference gate without adding a field or changing laboratory norms."
+  }
+}
