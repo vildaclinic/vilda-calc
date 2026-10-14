@@ -1194,6 +1194,12 @@ function Bdo_dopisz(lista, zapis, baza, glowa) {
 // P-SCALANIE-SEKCJE: na najwyzszym poziomie zapisu sekcje oceniamy na ich danych (Bsc_dane — bez wartosci domyslnych
 // strony: PAL bez wyboru, PAL karty spozycia, znacznik lekarza z docpro, pola sesji klirensu bez wyniku):
 //   - sekcja glowy karty docelowej bez danych nie zastepuje sekcji z formularza (jak „Scal pacjentow”);
+//   - sekcja glowy, ktora jest DOKLADNIE kopia wczytana (karta docelowa dostala ja przy scaleniu i nie ma w niej nic
+//     wlasnego): jak zwykly zapis tej wizyty i jak przed ta zmiana — kazda niepusta roznica formularza wobec kopii
+//     wczytanej jest zmiana, takze poza rzutem porownania (uwaga recenzji koncowej 2: poprawiony wzrost i masa
+//     w kalkulatorze klirensu razem z przeliczonym BSA/eGFR w summary, wybor wzoru, isDoctor przepadaly — glowa
+//     zostawala z sesja „wzrost 140 cm, eGFR 129” obok user.height 104). Ponizsze reguly chronia tylko karte docelowa
+//     z WLASNA, inna sekcja;
 //   - sekcja formularza z danymi jest zmiana lekarza, gdy rozni sie od kopii wczytanej w rzucie porownania
 //     (Bsc_porownanie: dane sekcji, a w sesji klirensu takze jednostki, stany, metody i status noworodka) — sama roznica
 //     wartosci domyslnych (przeliczony PAL 1,6 → 1,4, PAL karty spozycia, nowy savedAtISO i summary sesji klirensu,
@@ -1237,7 +1243,10 @@ function Bdo_sekcje(zapis, baza, glowa) {
       if (k.charAt(0) === '_' || pomin.indexOf(k) >= 0 || brak(k, wGlowie[k])) return;
       const wBazieK = wBazie ? wBazie[k] : undefined;
       let zmiana = false;
-      if (wBazieK !== undefined && !brak(k, cel[k])) zmiana = inne(k, cel[k], wBazieK);
+      // Najwyzszy poziom, sekcja glowy = dokladnie kopia wczytana (karta docelowa nie ma w niej nic wlasnego, np. dostala
+      // ja przy scaleniu): jak zwykly zapis tej wizyty i jak przed P-SCALANIE-SEKCJE (opis nad BDO_PUNKTY).
+      if (wBazieK !== undefined && rzut && tekst(wGlowie[k]) === tekst(wBazieK)) zmiana = !pusta(cel[k]) && tekst(cel[k]) !== tekst(wBazieK);
+      else if (wBazieK !== undefined && !brak(k, cel[k])) zmiana = inne(k, cel[k], wBazieK);
       // Najwyzszy poziom: lekarz wyczyscil sekcje, ktorej dane glowa ma z kopii wczytanej (opis nad BDO_PUNKTY).
       else if (wBazieK !== undefined && rzut) zmiana = !pusta(cel[k]) && !brak(k, wBazieK) && !inne(k, wGlowie[k], wBazieK);
       if (!zmiana) cel[k] = kopia(wGlowie[k]);

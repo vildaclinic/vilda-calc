@@ -248,3 +248,129 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie zapisu po s
     expect(wynik, 'głowa Y po ponowieniu: poprawiona jednostka').toEqual({ Scr: '0.9', ScrUnit: 'mg/dl', karty: 1 });
   });
 });
+
+// Recenzja końcowa 2 P-SCALANIE-SEKCJE (uwaga R1) — prawdziwy kalkulator-klirens.html. Sesja X zapisana z literówką we
+// wzroście (140 cm zamiast 104): strona policzyła BSA 0,79 m² i CKiD U25 eGFRcr 129. Lekarz ma X wczytaną w karcie A
+// i poprawia wzrost na 104 cm (strona przelicza: eGFRcr 96). W karcie B X zostaje scalona z Y, która nie miała klirensu,
+// więc głowa Y ma dokładnie sesję X (tak samo na audyt). Ponowienie zapisu ma dać to samo co zwykły zapis tej wizyty:
+// głowa Y z poprawionym wzrostem i eGFR 96. Na 24ba6975 i bec4d9d1 głowa Y zostawała z sesją „140 cm, eGFR 129”
+// obok user.height 104, a karta „Ostatni pomiar (klirens/eGFR)” i „Odtwórz” pokazywały eGFR 129.
+async function kartaKlirensu(context) {
+  const karta = await context.newPage();
+  await przygotujKarte(karta);
+  await karta.goto('/kalkulator-klirens.html', { waitUntil: 'load' });
+  await karta.waitForFunction(() => Boolean(window.VildaVault));
+  await karta.evaluate(async (pw) => {
+    const u = await window.VildaVault.listUsers();
+    await window.VildaVault.unlockUser(u[0].userId, pw);
+  }, HASLO);
+  await karta.reload({ waitUntil: 'load' });
+  await gotowyKlirens(karta);
+  return karta;
+}
+
+async function wczytajZKartyPacjenta(karta, id) {
+  await karta.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid, (r) => { if (r) window.applyLoadedData(r); }, null), id);
+  await karta.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+  await karta.waitForTimeout(800);
+  if (await karta.locator('#vildaLoadChoiceModal').count()) await karta.locator('#vildaLcmNew').click();
+  await karta.waitForFunction((pid) => window._vildaCurrentPatientId === pid, id);
+  await karta.waitForTimeout(1500);
+}
+
+const odtworzSesje = (karta) => karta.evaluate(() => window.applyClcrSessionSnapshot(window.lastLoadedData.clcr, {
+  source: 'json-restore', update: true, hideLoadedSummary: true, showPlaceholder: false, hideRestoreButton: true,
+  dispatchEvents: false, writeSession: true,
+}));
+
+const EGFR_129 = 'CKiD U25 eGFRcr (2021): 129 mL/min/1,73 m²';
+const EGFR_96 = 'CKiD U25 eGFRcr (2021): 96 mL/min/1,73 m²';
+// Strona składa wynik z twardymi spacjami — porównujemy teksty ze zwykłymi spacjami.
+const tekstySummary = (sesja) => sesja.summary.clcr.map((l) => String(l.text).replace(/\s+/g, ' '));
+
+test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa karty docelowej = kopia wczytana', () => {
+  test('T56 (R1) poprawiony wzrost w formularzu starej karty trafia przy ponowieniu do karty docelowej razem z przeliczonym eGFR — jak zwykły zapis', async ({ page, context }) => {
+    test.setTimeout(180_000);
+    await przygotujKarte(page);
+    await page.goto('/kalkulator-klirens.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => Boolean(window.VildaVault));
+    await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+    await page.reload({ waitUntil: 'load' });
+    await gotowyKlirens(page);
+
+    // X: sesja zbudowana przez prawdziwą stronę ze wzrostem 140 cm (literówka), Scr 0,4 mg/dl; Y: klirens null.
+    for (const [id, w] of [['age', '4'], ['ageMonths', '6'], ['sex', 'M'], ['height', '140'], ['weight', '17'], ['Scr', '0.4']]) {
+      await ustawPole(page, id, w);
+    }
+    await page.waitForTimeout(600);
+    const { x, y } = await page.evaluate(async () => {
+      const V = window.VildaVault;
+      const zx = window.collectUserData();
+      zx.name = 'Testowy Jan';
+      zx.user = Object.assign({}, zx.user, { lastName: 'Testowy', firstName: 'Jan', sex: 'M' });
+      zx.growthBasic = { data: { measurements: [{ ageMonths: 54, ageYears: 4.5, height: 104, weight: 17 }] } };
+      const a = await V.savePatient(zx, { dedup: false });
+      const zy = { name: 'Testowy Jan', user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 4, ageMonths: 0, height: 100, weight: 16 },
+        growthBasic: { data: { measurements: [{ ageMonths: 48, ageYears: 4, height: 100, weight: 16 }] } }, clcr: null };
+      const b = await V.savePatient(zy, { dedup: false });
+      return { x: a.patientId, y: b.patientId };
+    });
+    const sesjaX = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, x);
+    expect(sesjaX.inputs.height, 'kontrola: sesja X z literówką').toBe('140');
+    expect(tekstySummary(sesjaX), 'kontrola: strona policzyła eGFR ze wzrostu 140 cm').toContain(EGFR_129);
+
+    // Karta A: X wczytana z Karty pacjenta, sesja odtworzona; lekarz poprawia wzrost na 104 cm.
+    const A = await kartaKlirensu(context);
+    await wczytajZKartyPacjenta(A, x);
+    expect(await odtworzSesje(A), 'odtworzenie zapisanej sesji X').toBe(true);
+    for (const [id, w] of [['fullName', 'Testowy Jan'], ['age', '4'], ['ageMonths', '6'], ['sex', 'M'], ['weight', '17'], ['height', '104']]) {
+      await ustawPole(A, id, w);
+    }
+    await A.waitForTimeout(800);
+    const formularz = await A.evaluate(() => window.collectUserData().clcr);
+    expect(formularz.inputs.height).toBe('104');
+    expect(tekstySummary(formularz), 'strona przeliczyła eGFR po poprawce wzrostu').toContain(EGFR_96);
+    expect(rozneKlucze(formularz.inputs, sesjaX.inputs), 'sesja formularza różni się od zapisanej tylko antropometrią').toEqual([]);
+
+    // Karta B: X scalona z Y — głowa Y ma dokładnie sesję X.
+    await page.evaluate(async (ids) => window.VildaVault.mergePatients(ids.x, ids.y), { x, y });
+    expect(await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, y),
+      'kontrola: głowa Y po scaleniu = sesja X').toEqual(sesjaX);
+
+    // Karta A: „Zapisz” (odmowa — karta X scalona), drugi zapis (ponowienie do Y).
+    await A.bringToFront();
+    const zapisz = () => A.evaluate(async () => {
+      try { await window.saveUserData(); return true; } catch (_) { return false; }
+    });
+    await zapisz();
+    await A.waitForTimeout(1500);
+    await zapisz();
+    await expect.poll(() => A.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots.length, y),
+      { message: 'ponowienie dopisało wersję do Y', timeout: 15000 }).toBe(4);
+    const glowaY = await A.evaluate(async (id) => {
+      const V = window.VildaVault;
+      const p = (await V.getPatient(id)).snapshots[0].payload;
+      return { userHeight: p.user && p.user.height, clcr: p.clcr, karty: (await V.listPatients()).length };
+    }, y);
+    expect(glowaY.karty).toBe(1);
+    expect([glowaY.userHeight, glowaY.clcr.inputs.height, glowaY.clcr.inputs.weight], 'głowa Y: poprawiony wzrost w danych i w sesji').toEqual([104, '104', '17']);
+    expect(tekstySummary(glowaY.clcr), 'głowa Y: wynik policzony z poprawionego wzrostu').toEqual(tekstySummary(formularz));
+    expect(tekstySummary(glowaY.clcr)).not.toContain(EGFR_129);
+
+    // Karta C: lekarz wczytuje Y — karta poprzedniego klirensu i „Odtwórz” pokazują eGFR z poprawionego wzrostu.
+    const C = await kartaKlirensu(context);
+    await wczytajZKartyPacjenta(C, y);
+    const poprzedni = await C.evaluate(() => {
+      const d = document.getElementById('prevClcrCard');
+      return d ? d.innerText.replace(/\s+/g, ' ') : '';
+    });
+    expect(poprzedni, 'karta „Ostatni pomiar (klirens/eGFR)”').toContain(EGFR_96);
+    expect(poprzedni).not.toContain(EGFR_129);
+    expect(await odtworzSesje(C), 'odtworzenie zapisanej sesji Y').toBe(true);
+    await C.waitForTimeout(800);
+    expect(await C.evaluate(() => document.getElementById('height').value), '„Odtwórz”: wzrost').toBe('104');
+    const wyniki = await C.evaluate(() => (document.getElementById('results') || {}).innerText.replace(/\s+/g, ' '));
+    expect(wyniki, '„Odtwórz”: wynik').toContain(EGFR_96);
+    expect(wyniki).not.toContain(EGFR_129);
+  });
+});
