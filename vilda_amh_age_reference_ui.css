@@ -124,12 +124,6 @@
 .vaar-details a {
   color: var(--primary, #00838d);
 }
-.lab-amh-censored-note {
-  margin-top: var(--space-12px);
-  color: var(--text-muted, #5d747d);
-  font-size: 12px;
-  line-height: 1.6;
-}
 @media (max-width: 640px) {
   .vilda-amh-age-reference {
     padding: var(--space-14px);
