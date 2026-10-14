@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '11';
+  var VERSION = '12';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -208,15 +208,40 @@
     var we = naWejscie(p);
     var stan = stanZPayloadu(payload);
     var neonatal = neonatalZPayloadu(payload);
-    zapamietane = (we || stan || neonatal)
+    var assessmentContext = ocenaZPayloadu(payload, status);
+    var maOcene = assessmentContext && (assessmentContext.status !== 'absent' || assessmentContext.legacy);
+    zapamietane = (we || stan || neonatal || maOcene)
       ? { we: we, stan: stan, plec: plec(payload && payload.user ? payload.user.sex : null) }
       : null;
     if (neonatal) zapamietane.neonatalAge = neonatal;
+    if (assessmentContext && zapamietane) zapamietane.assessmentContext = assessmentContext;
     zapamietanyPacjent = patientId;
     sejfPamieci = patientId ? w.VildaVault || null : null;
     statusOdczytu = status;
     oglos();
     return zapamietane;
+  }
+
+  /* Addytywny kontrakt obserwacji. Odczyt ostatniego zapisu nie potwierdza, że jego
+   * stadium opisuje bieżącą wizytę. Zachowujemy daty i płeć samej oceny; nie tworzymy
+   * G/Th ze starego numeru ani z płci rekordu. Dotychczasowy stan i konsumenci nadal
+   * mają własne API — nowa ocena nie wypełnia automatycznie `state.etap`.
+   * Starsza strona bez modelu zachowuje dotychczasowy kształt kontekstu. */
+  function ocenaZPayloadu(payload, status) {
+    var model = w.VildaPubertyAssessment;
+    if (status !== 'ready' || !model || typeof model.readUser !== 'function') return null;
+    return model.readUser(payload && payload.user);
+  }
+
+  function kopiaOceny(context) {
+    if (!context) return null;
+    var model = w.VildaPubertyAssessment;
+    if (!model || typeof model.clone !== 'function') return null;
+    return {
+      status: context.status,
+      assessment: model.clone(context.assessment),
+      legacy: context.legacy ? Object.assign({}, context.legacy) : null
+    };
   }
 
   // Same patient/vault lifecycle as puberty. Do not read the unscoped perinatal
@@ -239,7 +264,9 @@
    * automatycznie do pacjenta aktualnie wyświetlanego w innej części aplikacji. */
   function zapamietaj(payload, patientId) {
     generacjaOdczytu += 1;
-    return opublikuj(payload, identyfikator(patientId), 'ready');
+    var published = opublikuj(payload, identyfikator(patientId), 'ready');
+    return published && published.assessmentContext
+      ? Object.assign({}, published, { assessmentContext: kopiaOceny(published.assessmentContext) }) : published;
   }
 
   function zapomnij() {
@@ -265,6 +292,10 @@
     };
     if (status === 'ready' && zapamietane && zapamietane.neonatalAge) {
       context.neonatalAge = { gestationalDays: Object.assign({}, zapamietane.neonatalAge.gestationalDays) };
+    }
+    if (w.VildaPubertyAssessment) {
+      context.assessmentContext = status === 'ready'
+        ? kopiaOceny(zapamietane ? zapamietane.assessmentContext : ocenaZPayloadu(null, status)) : null;
     }
     return context;
   }

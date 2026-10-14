@@ -1001,6 +1001,54 @@ Oba leniwe stosy auth (lista `V` mostu sesji i lista `d` w `vilda_chrome.js`) do
 // w(), I() (most) i u() (chrome): … && VildaHormoneReferenceUI && VildaLabHistory && VildaLabHistoryTab && …
 ```
 
+## Łatki P-POKWITANIE-KONTRAKT (`vilda_data_import_export.js`, 2026-10-14)
+
+Logika nowego pola jest czytelna w `vilda_puberty_assessment.js` (odczyt schematu)
+i `vilda_puberty_assessment_state.js` (kopia aktywnego formularza). Artefakt nie
+został przebudowany ze starszych źródeł ani ponownie zminifikowany. Dodano siedem
+wąskich punktów integracji, bez zmiany dotychczasowych pól i funkcji obliczeń.
+
+Czytelny odpowiednik hooków (nazwy lokalne odpowiadają bieżącemu artefaktowi):
+
+```js
+// collectUserData: po zbudowaniu user=S i kontekstu wieku kostnego, przed payloadem.
+if (r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.applyToUser(S);
+
+// saveMainSessionNow: dotychczasowe Et(n,p) scala brakujące pola sesji DocPro/klirensu.
+// JSON oceny jest atomowy; stara sesja nie może uzupełnić świadomie pustego G/Th/P
+// ani przywrócić całego klucza nieobecnego w aktualnym kolektorze.
+if (r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.mergeSession(n, p, Et);
+else Et(n, p);
+
+// restoreMainSessionIfAny (Fe): po sprawdzeniu formatu sesji i wersji 1,
+// w istniejącej gałęzi early-exit dla wypełnionego formularza bez wybranego pacjenta.
+// Jednorazowo, przed rzeczywistą edycją, z niezmienionej sesji tej samej karty
+// odczytanej przy starcie. Bez wymaganego nazwiska; dostępne pola wetują sprzeczność.
+// Nie nadpisuje zainicjalizowanego carrier ani jawnego czyszczenia.
+if (r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.restoreSessionIfUninitialized(i);
+
+// clearAllData oraz początek jawnego applyLoadedData: wyczyść starą kopię
+// w tym samym miejscu co dotychczasowe dane pokwitania formularza.
+if (r.VildaPubertyAssessmentState) r.VildaPubertyAssessmentState.clear();
+
+// applyLoadedData: po odtworzeniu pól, przed kolejnym przeliczeniem.
+// m oznacza porównanie; samo oglądanie porównania nie zmienia aktywnej oceny.
+if (!m && r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.load(e, { restore: a.isSessionRestore === true });
+
+// restoreLoadedState: jawne odtworzenie zapisanej wizyty, przy hooku wieku kostnego.
+if (a.VildaPubertyAssessmentState)
+  a.VildaPubertyAssessmentState.load(u, { restore: true });
+```
+
+Należy zachować ich położenie wewnątrz rzeczywistych funkcji; samo opakowanie
+`window.collectUserData` pomijałoby wewnętrznych klientów kolektora. Nowe skrypty
+są ładowane przed importerem. Regresje wywołują produkcyjne collect/apply/restore,
+zapis sesji i odczyt w drugim panelu, także dla pustego i nieobsługiwanego JSON.
+
 ## Jak odtworzyć
 
 ```bash
