@@ -252,4 +252,17 @@ test('history retains censored and unavailable assessments without inventing num
   await expect(history).toContainText('<LOD');
   await expect(history).toContainText('Fikcyjny starszy wynik');
   await expect(history).toContainText('Fikcyjny nieczytelny kontekst');
+  // LAB-HISTORIA PR2 (decyzja 6.12): „Trend wyników” przeniósł się do zakładki „Badania”. Historia pokazuje dalej
+  // wpisy osi czasu (wyżej), a w miejscu sekcji trendu odnośnik do zakładki.
+  await expect(history.locator('.vilda-lab-trend-section')).toHaveCount(0);
+  await history.getByRole('button', { name: 'Trend i porównanie wyników są w zakładce Badania →' }).click();
+  const lab = page.locator('.vilda-patient-tab-content[data-tab="lab"]');
+  await expect(lab.locator('.vilda-lab-hist')).toHaveClass(/vilda-lab-hist-ready/);
+  const lh = lab.locator('.vilda-lab-hist-card[data-series="lh"]');
+  await expect(lh).toBeVisible();
+  // Wynik cenzorowany i ocena nieczytelna zostają w historii bez punktu na wykresie; dawny wynik bez koperty ma punkt.
+  await expect(lh.locator('.vilda-lab-hist-foot')).toHaveText('Poza wykresem: 2 (wynik z „<” lub „>”: 1 · ocena niedostępna: 1)');
+  await expect(lh.locator('.vilda-lab-hist-value')).toHaveText('<LOD');
+  await lab.getByRole('button', { name: 'Tabela' }).click();
+  await expect(lab.locator('.vilda-lab-hist-panel[data-panel="gonadal"] .vilda-lab-hist-cell-value')).toHaveText(['<LOD', '1', '4']);
 });

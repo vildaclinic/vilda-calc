@@ -317,37 +317,38 @@ describe('P-LAB-TREND-CONVERT-2 — wywołanie wyprzedzone w trakcie czekania ni
     expect(await overlappingOverlays({ withoutGuard: true })).toHaveLength(2);
   });
 
-  // Historia czeka kolejno na trend, zdarzenia osi czasu i pacjenta; każdy odczyt otwiera test. `stop` przerywa Xl()
+  // Historia czeka kolejno na zdarzenia osi czasu i pacjenta; każdy odczyt otwiera test. `stop` przerywa Xl()
   // wyjątkiem przy pierwszym elemencie o tym tekście albo klasie, żeby nie budować atrap całej karty.
+  // Od LAB-HISTORIA PR2 (P-BADANIA-TREND-HISTORIA) Xl nie rysuje „Trendu wyników” (Jl) i na niego nie czeka.
   function history(stop) {
     const source = authSource.slice(authSource.indexOf('async function Xl('), authSource.indexOf('function rn(){'));
     const gates = {};
+    const trendCalls = [];
     const gate = (name) => new Promise((resolve) => { gates[name] = resolve; });
     const stubs = {
       jt: () => ({ listPatientTimelineEvents: () => gate('events'), getPatient: () => gate('patient') }),
       oe: (t) => { if (t) t.children = []; },
-      e: (tag, attrs) => {
+      e: (tag, attrs, children) => {
         if (attrs && (attrs.text === stop || attrs.class === stop)) throw new Error(`Historia rysuje: ${stop}`);
-        return new FakeElement(tag, attrs);
+        const element = new FakeElement(tag, attrs);
+        (children || []).forEach((child) => element.appendChild(child));
+        return element;
       },
-      Jl: () => gate('trend'),
+      Jl: (...args) => { trendCalls.push(args); return gate('trend'); },
       Fl: [{ id: 'all', label: 'Wszystkie' }],
       i: { localStorage: { getItem: () => '1' } },
     };
     const names = Object.keys(stubs);
     const Xl = new Function(...names, `${source};return Xl;`)(...names.map((n) => stubs[n]));
     const open = async (name, value) => { await tick(); gates[name](value); await tick(); };
-    return { Xl, open };
+    return { Xl, open, trendCalls };
   }
 
-  it('Historia: wywołanie wyprzedzone, gdy trend jeszcze czeka, kończy się bez listy zdarzeń', async () => {
-    const { Xl, open } = history('Historia pacjenta');
+  it('Historia nie woła trendu wyników i rysuje nagłówek bez czekania na serie', async () => {
+    const { Xl, trendCalls } = history('Historia pacjenta');
     const host = new FakeElement('div');
-    const run = Xl(host, 'fikcyjny-pacjent', () => {});
-    await tick();
-    host._vildaLtcGenXl += 1; // nowsze wywołanie Historii na tym samym kontenerze
-    await open('trend');
-    await expect(run).resolves.toBeUndefined();
+    await expect(Xl(host, 'fikcyjny-pacjent', () => {})).rejects.toThrow('Historia rysuje: Historia pacjenta');
+    expect(trendCalls).toEqual([]);
     expect(host.children.map((c) => c.className)).toEqual(['vilda-lab-trend-host']);
   });
 
@@ -355,7 +356,7 @@ describe('P-LAB-TREND-CONVERT-2 — wywołanie wyprzedzone w trakcie czekania ni
     const { Xl, open } = history('vilda-patient-timeline-list');
     const host = new FakeElement('div');
     const run = Xl(host, 'fikcyjny-pacjent', () => {});
-    await open('trend');
+    await tick();
     host._vildaLtcGenXl += 1;
     await open('events', []);
     await open('patient', null);
@@ -364,18 +365,45 @@ describe('P-LAB-TREND-CONVERT-2 — wywołanie wyprzedzone w trakcie czekania ni
 
   it('kontrola: Historia niewyprzedzona dochodzi do nagłówka i do listy zdarzeń', async () => {
     const header = history('Historia pacjenta');
-    const first = expect(header.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
+    await expect(header.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
       .rejects.toThrow('Historia rysuje: Historia pacjenta');
-    await header.open('trend');
-    await first;
 
     const list = history('vilda-patient-timeline-list');
     const second = expect(list.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
       .rejects.toThrow('Historia rysuje: vilda-patient-timeline-list');
-    await list.open('trend');
     await list.open('events', []);
     await list.open('patient', null);
     await second;
+  });
+
+  // P-BADANIA-TREND-HISTORIA: w miejscu sekcji trendu odnośnik do zakładki „Badania”, tylko gdy oś czasu ma wynik
+  // badania (notatka z wynikiem, bez leku i bez klirensu).
+  async function trendHost(events) {
+    const { Xl, open } = history('vilda-patient-timeline-list');
+    const host = new FakeElement('div');
+    const run = expect(Xl(host, 'fikcyjny-pacjent', () => {})).rejects.toThrow('Historia rysuje');
+    await open('events', events);
+    await open('patient', null);
+    await run;
+    return host.children[0];
+  }
+  const note = (extra) => ({ type: 'note', noteId: 'synthetic-note', title: 'Fikcyjny wpis', ...extra });
+
+  it('Historia z wynikiem badania: odnośnik „Trend i porównanie wyników są w zakładce Badania →”', async () => {
+    const trend = await trendHost([note({ labResult: { test: 'TSH', value: '2,1 mIU/L', valueNum: 2.1 } })]);
+    expect(trend.className).toBe('vilda-lab-trend-host');
+    expect(trend.children.map((c) => c.className)).toEqual(['vilda-lab-trend-link']);
+    expect(trend.children[0].children[0].textContent).toBe('Trend i porównanie wyników są w zakładce Badania →');
+  });
+
+  it('Historia bez wyniku badania (lek, klirens, zlecenie bez wartości i nazwy) nie pokazuje odnośnika', async () => {
+    const trend = await trendHost([
+      note({ medication: { name: 'Fikcyjny lek', action: 'start' }, labResult: { test: 'TSH', value: '2' } }),
+      note({ category: 'wynik-klirens', labResult: { test: 'Klirens', value: '90' } }),
+      note({ labResult: {} }),
+      { type: 'measurement', ageMonths: 120 },
+    ]);
+    expect(trend.children).toEqual([]);
   });
 });
 

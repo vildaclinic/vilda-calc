@@ -5,8 +5,8 @@ import { expect } from '@playwright/test';
  *
  * DLACZEGO TO JEST OSOBNY MODUŁ. Sekcja „Historia" nie istnieje, dopóki lekarz nie kliknie
  * zakładki: dopiero wtedy karta woła `renderTimelineSection` (`Xl` w `vilda_auth_ui.js`).
- * Sam render jest asynchroniczny — zanim dołoży listę wpisów, czeka na trzy odczyty sejfu
- * (wykres trendu badań, `listPatientTimelineEvents`, `getPatient`). Przełączenie zakładki
+ * Sam render jest asynchroniczny — zanim dołoży listę wpisów, czeka na odczyty sejfu
+ * (`listPatientTimelineEvents`, `getPatient`; do LAB-HISTORIA PR2 także na wykres trendu badań). Przełączenie zakładki
  * jest natomiast NATYCHMIASTOWE: kontener `[data-tab="timeline"]` przestaje być ukryty od
  * razu, jeszcze pusty. Bramka postawiona na samym kontenerze przepuszcza więc odczyt DOM
  * przed renderem.
@@ -34,4 +34,19 @@ export async function czekajNaHistorie(page) {
     sekcjaHistorii(page).locator('.vilda-patient-timeline-list'),
     'Historia renderuje się leniwie — lista wpisów powstaje dopiero po odczytach sejfu',
   ).toBeVisible();
+}
+
+/** Kontener zakładki „Badania" (LAB-HISTORIA PR2) w otwartej Karcie Pacjenta. */
+export const sekcjaBadan = (page) => page.locator('.vilda-patient-tab-content[data-tab="lab"]');
+
+/**
+ * Czeka, aż zakładka „Badania" skończy odczyty sejfu (serie, notatki, leczenie, konwerter) i narysuje
+ * widok. Klasa `.vilda-lab-hist-ready` i `aria-busy="false"` pojawiają się dopiero po wszystkich odczytach,
+ * także w stanach pustym, błędu i sejfu zablokowanego (vilda_lab_history_tab.js).
+ */
+export async function czekajNaBadania(page) {
+  await expect(sekcjaBadan(page), 'zakładka Badania jest na wierzchu').toBeVisible();
+  const widok = sekcjaBadan(page).locator('.vilda-lab-hist');
+  await expect(widok, 'Badania renderują się leniwie — widok jest gotowy po odczytach sejfu').toHaveClass(/vilda-lab-hist-ready/);
+  await expect(widok).toHaveAttribute('aria-busy', 'false');
 }

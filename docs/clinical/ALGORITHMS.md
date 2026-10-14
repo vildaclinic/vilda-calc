@@ -239,7 +239,7 @@ silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
   wybrane z listy jako „Inhibina B” stoi w serii inhibiny B, a nie
   w „Inne”. Zgodność z sejfem sprawdza test na prawdziwym sejfie.
 
-**Odstępstwo od planu, do decyzji właściciela:** plan 3.1 (a) każe cytować
+**Odstępstwo od planu, przyjęte przez właściciela 2026-10-14 (decyzja 6.20, „reguła z modelu”):** plan 3.1 (a) każe cytować
 `clinical.title`, gdy `summary.status = "attention"`. Na prawdziwej kopercie
 LH (fikcyjna dziewczynka 12 lat, Th3, LH 9 IU/L) podsumowanie brzmi „Wynik
 poza wskazanym zakresem referencyjnym”, a część kliniczna „Brak wykrytej
@@ -273,6 +273,130 @@ konwerter i plik danych jednostek, prawdziwe koperty LH z osobnego okna,
 zgodność klucza serii z sejfem, wynik tekstowy „Inhibina B” bez `testKey`,
 unieważnienie oceny przez zmianę daty). Osiem przypadków dopisano po
 niezależnym przeglądzie modelu; na wersji sprzed poprawek padają.
+Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA PR2 — zakładka „Badania” w karcie pacjenta (`vilda_lab_history_tab.js` 1.0.0, `vilda_auth_ui.js` 494, SW 1.1.281, 2026-10-14)
+
+**Wpływ kliniczny: tak, w prezentacji interpretacji; bez nowego wzoru, progu,
+normy ani źródła medycznego.** Liczby, jednostki i przeliczenia są te same co
+w modelu LAB-HISTORIA (wyżej) i w dawnym „Trendzie wyników”. Zmienia się to,
+które strzałki i pasma lekarz widzi przy dawnych wynikach:
+
+- Z zakładki „Historia” znika sekcja „Trend wyników” (`Jl()`, decyzja 6.12),
+  a z nią pasmo dzisiejszych norm (przełącznik „norma”) i strzałki ↑/↓, które
+  `mi()` brało z dzisiejszej normy (`vi()`), gdy wpis nie miał własnej normy.
+  W jej miejscu odnośnik „Trend i porównanie wyników są w zakładce Badania →”,
+  pokazywany, gdy oś czasu ma notatkę z wynikiem badania (bez leku
+  i klirensu). `Jl()` zostaje w pliku bez zmian.
+- Nowa piąta zakładka „Badania” rysuje wykres tym samym rendererem (`Nl()`),
+  ale z funkcją norm zwracającą `null` i bez pasma: strzałka stoi tylko przy
+  wyniku z normą zapisaną we wpisie (jeden zakres w jednostce wyniku, wynik
+  nieprzeliczany) albo wynika z zapisanej koperty oceny. Wynik bez zapisu jest
+  neutralny (decyzja 6.1), przeliczony — bez strzałki (6.2).
+- Nakładki wyników na siatkach (`Kl()`) i eksport siatek do PDF (`Gl()`)
+  zachowują dzisiejsze zachowanie do osobnej decyzji (6.4).
+
+Akceptacja kliniczna należy do właściciela. Populacja: wszyscy pacjenci karty
+(dzieci i dorośli); dane: wyłącznie notatki „wynik-badania” pacjenta (6.13),
+w jednostkach z zapisu przeliczonych konwerterem przelicznika. Ograniczenia:
+widok nie ocenia dawnych wyników dzisiejszymi normami ani bieżącymi danymi
+pacjenta; różnica między wynikami jest liczbą i dniami, bez znaczenia
+klinicznego (6.10); metoda oznaczenia jest porównywana tylko w kopertach
+LH/FSH/inhibiny B.
+
+**Reguły widoku** (projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.2):
+
+- Nagłówek: liczba wyników i badań, data ostatniego badania; „+ Dodaj wynik”
+  i „Sprawdź nowy wynik →” (przelicznik jednostek, w powłoce przez
+  `VildaShell.navigate('lab', true)`). Chipy paneli z `aria-pressed`
+  filtrują widok; segment „Wykresy | Tabela” (`role="group"`, `aria-pressed`)
+  ma domyślnie „Tabela” do 480 px i „Wykresy” wyżej (6.17), a wybór jest
+  zapamiętany per pacjent w `sessionStorage` (`vilda-lab-hist-view-<id>`).
+- Karta badania (Wykresy): nazwa, jednostka, liczba wyników; ostatni wynik
+  z datą badania (i wiekiem wizyty, gdy wpis ma kotwicę), strzałka i pigułka
+  z modelu; „poprzednio X (data) · różnica ±Y jednostka · po N dniach”;
+  wykres `Nl()` z osią daty badania, a gdy dokładnych wyników jest mniej niż
+  dwa — „Za mało dokładnych wyników do wykresu.”; stopka „Poza wykresem: N
+  (powody)”. Wynik w jednostce nierozpoznanej, tekstowy albo cenzorowany ma
+  dopisek, że stoi bez porównania. Wynik przeliczony: „przeliczono z …”
+  z liczbą i jednostką zapisu. Czerwień wyróżnienia z `Nl()` (punkt i podpis
+  ze strzałką) zamieniona na fiolet modułu lab (6.18); kolor nie niesie
+  oceny, strzałka zostaje.
+- Pigułka zapisanej oceny: reguła z modelu (6.20) — dosłowny tytuł
+  podsumowania koperty, a przy ostrzeżeniu klinicznym tytuł ostrzeżenia
+  w tonie ostrzegawczym; pod nim „oceniono jako: płeć/wiek w dniu pobrania/
+  stadium” z koperty. Wiek: z `input.age`, a gdy ocena liczyła wiek z dat —
+  pełne miesiące kalendarzowe między `input.birthDateISO` i
+  `input.sampleDateISO`. Pełna ocena: „Zapisane oceny” (istniejące
+  `Lh3TrendAssessments`) pod kartą LH/FSH/inhibiny B i pod tabelą osi
+  gonadalnej, zawsze rozwinięte, jak dawniej w „Historii”: ostrzeżenia
+  kliniczne zapisanej oceny nie czekają za kliknięciem.
+- Tabela: wiersze dat malejąco, kolumny badań panelu z jednostką
+  w nagłówku, w komórce wartość bez jednostki, strzałka z zapisu i różnica
+  pod wartością (względem wcześniejszego wyniku tego badania z datą badania);
+  wartość przeliczona podkreślona kropkami, „*” przy jednostce nierozpoznanej
+  i wyniku tekstowym, „○” przy zapisanej ocenie; wiersze leczenia
+  (`listPatientTreatmentPeriods`) od pierwszego wyniku panelu; kolumna
+  komentarza. Na telefonie przewija się tylko tabela, kolumna daty jest
+  przyklejona.
+- Komentarz wpisu: treść notatki bez linii, które dopisuje aplikacja: „= …”
+  (równanie przypięcia z przelicznika) i „Norma: …” (szablon edytora). Norma
+  wpisu jest w pigułce i w opisie komórki.
+- Leczenie w widoku „Wykresy”: jedna lista pod panelami (od pierwszego
+  pokazanego wyniku).
+- Oczekujące wyniki (z modelu): „Wpisz wynik” otwiera edytor karty z
+  szablonem „Wynik badania” i kotwicą „Wpisz datę zdarzenia” z fokusem na
+  dacie (K7); zlecenie dopasowane do badania dostaje nazwę badania z listy
+  przelicznika, żeby edytor zapisał klucz serii. Kotwica daty zastępuje tylko
+  „Notatkę ogólną” — istniejące powiązanie z wizytą albo datą zostaje.
+  „Przypomnienia →” otwiera arkusz przypomnień i jest ukryte, gdy lista
+  przypomnień jest pusta.
+- Odświeżanie: po zapisie z zakładki i po każdej zmianie notatki tego
+  pacjenta (`onPatientNoteChanged`); odczyt wyprzedzony przez nowszy nie
+  rysuje (znacznik pokolenia), stara karta odpięta od dokumentu nie
+  odświeża się. Stany: wczytywanie (`aria-busy`), pusty, błąd z ponowieniem,
+  sejf zablokowany; po każdym `.vilda-lab-hist-ready` (bramka e2e).
+- Bez eksportu `window.__vildaLabTrend` (stary `vilda_auth_ui.js` w pamięci
+  SW) karty pokazują „Wykres niedostępny — odśwież stronę.”, a model nie
+  dostaje parsera normy, więc nie stawia strzałek.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 0,05 mIU/L (08.04.26) i 0,12 mIU/L (02.06.26), oba z normą
+  „0,27–4,2 mIU/L” → karta TSH: „0,12 ↓”, pigułka „poniżej normy z wpisu ·
+  0,27–4,2 mIU/L”, „poprzednio 0,05 mIU/L (08.04.26) · różnica +0,07 mIU/L ·
+  po 55 dniach”; w tabeli „0,12 ↓” z „+0,07” pod spodem i „0,05 ↓”.
+- fT4 1,2 ng/dL z normą „0,8–1,8 ng/dL” (08.04.26) i 17 pmol/L (02.06.26) →
+  karta w pmol/L, w tabeli 15,4 podkreślone kropkami, bez strzałki, opis
+  komórki „zapisano: 1,2 ng/dL · norma z wpisu: 0,8–1,8 ng/dL”.
+- LH z kopertą oceny (fikcyjna dziewczynka ur. 10.03.2014, pobranie 02.06.26,
+  Th3) → pigułka z dosłownym tytułem podsumowania i „oceniono jako:
+  dziewczynka · 12 l 2 m w dniu pobrania · Th3”; wynik „<0,1” z kopertą →
+  „Poza wykresem: 1 (wynik z „<” lub „>”: 1)”.
+- Prolaktyna 12 ng/mL i 250 mU/l → druga wartość „250 mU/l*”, bez różnicy,
+  z dopiskiem o jednostce nierozpoznanej.
+- Historia pacjenta z wynikiem badania → brak `.vilda-lab-trend-section`,
+  odnośnik przełącza na „Badania”; pacjent bez wyników → bez odnośnika.
+
+**Testy:** `tests/unit/lab-history-tab.test.mjs` (widok na prawdziwym
+modelu, konwerterze i `Dl` z artefaktu, atrapa DOM `tests/support/atrapa-dom-lekka.mjs`:
+strzałka tylko z normy wpisu, wykres bez pasma i bez dzisiejszej oceny,
+fiolet zamiast czerwieni, brak eksportu, tabela i komentarze, `aria-pressed`,
+`sessionStorage`, domyślna tabela na telefonie, akcje edytora, przypomnienia,
+stany, odświeżanie i pokolenie), `tests/unit/lab-history-tab-loading.test.mjs`
+(oba leniwe stosy auth ładują prawdziwe moduły w tej samej kolejności),
+`tests/unit/lab-snapshot-ui.test.mjs` (prawdziwe `Xl()`: nie woła `Jl()`,
+odnośnik tylko przy wyniku badania), e2e `lab-historia-zakladka.spec.mjs`
+(desktop i okno 1100 px), `lab-historia-zakladka-mobile.spec.mjs` (iPhone
+i 320 px: układ 2 + 2 + 1, domyślnie Tabela, bez poziomego przewijania
+strony), `lab-trend-jednostki.spec.mjs` (przeliczenie fT4 na wykresie,
+teraz w „Badaniach”, Start i DocPro), `lab-snapshot.spec.mjs` (asercje
+Historii bez zmian, plus brak sekcji trendu, odnośnik i karta LH).
+Asercje zapisanych ocen w `lab-inhibin-b.spec.mjs` i dziesięciu plikach
+`lab-puberty-*.spec.mjs` sprawdzały dotąd wiersze „Zapisane oceny” sekcji
+trendu w „Historii”; przeniesione do zakładki „Badania” bez zmiany treści
+(w `lab-puberty-ui.spec.mjs` tytuł wpisu nadal sprawdzany na osi czasu
+„Historii”).
 Zielone testy nie są walidacją kliniczną.
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)

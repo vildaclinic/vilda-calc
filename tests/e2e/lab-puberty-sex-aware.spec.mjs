@@ -408,7 +408,7 @@ test('a recorded Th onset is not relabelled after a sex correction and an alread
   const saved = await page.evaluate((id) => window.VildaVault.getPatientNote(id), notes[0].id);
   expect(saved.labResult.assessment).toEqual(notes[0].labResult.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(recorded).toContainText('Th3');
   await expect(recorded.locator('[data-clinical-code="early_onset_history"]')).toBeVisible();
