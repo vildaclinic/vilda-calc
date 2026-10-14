@@ -1398,7 +1398,7 @@ wyniku i pokazuje tę samą geometrię w zwykłych zbliżeniach.
   szpitalnych grup wieku 1–18,9 lat, osocze litowo-heparynowe,
   Access AMH. Grupy nie wyznaczają trajektorii stadiów Tannera.
 - FDA K170524, *Access AMH*, 2017, Expected Reference Intervals,
-  strona PDF 15/wewnętrzna 11: 620 kobiet z regularnymi cyklami,
+  strona PDF 15/wewnętrzna 11: 620 próbek w tabeli, kobiety z regularnymi cyklami,
   oboma jajnikami i potwierdzoną płodnością. Mediany osocza grup
   18–25/26–30/31–35/36–40/41–45 lat: 26,78/28,99/18,28/12,71/4,00
   pmol/L. Nie podstawiamy odrębnych median surowicy i nie ekstrapolujemy
@@ -1435,7 +1435,8 @@ zapis pacjenta pozostają bez zmian. Jedyny w chwili tej naprawy żeński profil
 `ljubicic2022-female-amh` nadal obejmuje 0,02–1 roku. Starsza ilustracja
 nie aktywuje punktów w wieku 19,668 lub 35 lat. Porównanie płci, męskie
 AMH i pozostałe hormony zachowują wcześniejsze kontrakty. Zakres punktów
-żeńskich rozszerza osobna zmiana `HORMONE-FEMALE-REFERENCE-POINTS` z 13.10.
+żeńskich rozszerzają osobne zmiany `HORMONE-FEMALE-REFERENCE-POINTS`
+i `HORMONE-FEMALE-AMH-ADULT-MEDIANS` z 13.10.
 
 **Syntetyczne wejście → oczekiwane zachowanie:**
 
@@ -1446,8 +1447,9 @@ AMH i pozostałe hormony zachowują wcześniejsze kontrakty. Zakres punktów
 - Ten sam kontekst, pusty/wyczyszczony/cenzurowany wynik → ta sama
   linia, bez sztucznego punktu; 0 pmol/L → punkt na osi.
 - 0,95 roku → oryginalne p50 7,747 pmol/L, również w graficznym moście.
-- 19,668 roku → ten sam przebieg w całym życiu i pokwitaniu,
-  bez dopisanego liczbowego odniesienia lub punktu.
+- 19,668 roku → ten sam przebieg w całym życiu i pokwitaniu;
+  w tej historycznej partii bez odniesienia. Osobne rozszerzenie FDA
+  z 13.10.2026 dodaje medianę surowicy, bez zmiany tej geometrii.
 
 Przypadki uruchamiają rzeczywisty renderer i silnik w
 `tests/e2e/hormone-lifespan-female-amh-stability.spec.mjs`, na desktopie,
@@ -1481,7 +1483,8 @@ Jopling 2018, DOI `10.1002/edm2.21`, oraz Borelli-Kjær 2025, DOI
   stałymi wartościami grup, nie p50 dokładnego wieku ani stadium.
 - Dokładnie 1 rok nadal należy do Ljubicic. Pierwszy Jopling ma
   `minAgeExclusive`; nieprecyzyjny wiek przecinający źródła lub grupy
-  nie otrzymuje mediany wybranej ze środka. FDA nie jest aktywowane.
+  nie otrzymuje mediany wybranej ze środka. Ta pediatryczna partia nie
+  aktywowała FDA; późniejsze rozszerzenie dorosłych opisano osobno.
 - Borelli, ryc. 1: surowica Gen II ELISA, 648 dziewcząt 5,6–20,2 lat
   w większym żeńskim zbiorze. Zwykły profil początkowo miał kwalifikację
   8–20; uzupełnienie po zgłoszeniu 6-latki, opisane poniżej, rozszerza ją
@@ -1509,7 +1512,7 @@ jako przybliżone odniesienie wieku.
   15–18,9: 21,14 pmol/L ≈2,96 ng/mL; wynik 0,45, bez werdyktu normy.
 - F4,99/F5/F14,99/F15 → 14,58/11,44/17,87/21,14 pmol/L; bez luk.
 - F dokładnie 1 rok → Ljubicic; `[1,1+1/12)` lub `[14.99,15.01]`
-  → brak jednej mediany; F18 → brak Jopling/FDA.
+  → brak jednej mediany; F18 → brak Jopling (FDA dodano w osobnej partii).
 - F15, AMH, jawnie surowica lub niezgodna metoda → brak punktu,
   zachowana krzywa i wiek, krótki powód.
 - F dokładnie 8/15/20 lat, inhibina B → ≈14/44/34 pg/mL;
@@ -1960,6 +1963,50 @@ Testy wywołują rzeczywisty silnik i formularz; sprawdzają zachowanie
 całe życie/pokwitanie, pełny ekran i szerokość 320 px.
 
 Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
+
+### HORMONE-FEMALE-AMH-ADULT-MEDIANS — mediany surowicy FDA, 2026-10-13
+
+**Problem i źródło:** dorosła kobieta miała poglądową linię AMH bez
+źródłowego punktu odniesienia. Dodano pięć median całych grup surowicy
+z pełnego [FDA K170524](https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf),
+przygotowanego 09.11.2017, PDF str. 14/wewn. 10. Osobną tabelę osocza
+na PDF str. 15/wewn. 11 zachowano jako dowód, bez aktywacji profili.
+Access AMH/Access 2; pięć ośrodków, pozornie zdrowe nieciężarne kobiety,
+regularne cykle 21–35 dni, oba jajniki i udowodniona płodność.
+Grupy 18–25/26–30/31–35/36–40/41–45 mają mediany surowicy
+25,7/27,27/17,64/12,21/3,86 pmol/L i N=120/131/120/123/126.
+Nie utożsamiamy tej populacji z odrębną kohortą kliniczną N=164
+ani nie dopisujemy dnia cyklu lub wykluczenia antykoncepcji/PCOS.
+
+**Kontrakt:** `female-adult-amh-reference-policy.json` tworzy profile
+`ordinaryOnly`, `group-median`, `constant`. Routing `[18,26)`, `[26,31)`,
+`[31,36)`, `[36,41)`, `[41,46)` jest jawną konwencją ukończonych lat
+aplikacji, nie opisaną przez autorów regułą granic. Cały możliwy wiek
+musi zmieścić się w jednej grupie. Brak interpolacji, ekstrapolacji
+od 46 lat i wyboru źródła według wyniku. Znana niezgodna metoda/materiał
+lub ciąża/stan po menopauzie blokują tylko nowe odniesienie; brak danych
+o metodzie, materiale czy cyklu nie wymaga nowych pól. Zachowano
+dotychczasowe bramki silnika, w tym GnRHa i cenzurowanie wyniku.
+
+**Prezentacja i wpływ kliniczny:** jasna „Mediana grupy” wskazuje
+surowicę, niezależnie od istniejącej ilustracji opartej na osoczu.
+Kanoniczne są opublikowane pmol/L; globalne 0,1401 pozostaje bez zmian.
+Osobno wydrukowane ng/mL zachowano w dowodach, nie jako nowy przelicznik.
+Zmiana dodaje orientacyjne odniesienie edukacyjne, bez nowych norm,
+progów płodności/IVF, diagnoz, geometrii, skal, historii i porównań płci.
+Xu 2026 pozostaje nieaktywne. Testy nie oznaczają walidacji klinicznej.
+
+**Przypadki syntetyczne do regresji rzeczywistych funkcji:** F28,
+1 ng/mL → mediana 27,27 pmol/L = 3,820527 ng/mL (≈3,82), bez werdyktu
+normy. `[25,26)` pozostaje w grupie 18–25; `[25,26]` i wiek przecinający
+granice → brak jednej mediany. F18/26/31/36/41 → kolejna właściwa grupa;
+F46 → brak nowego odniesienia. Surowica Access 2 kwalifikuje się;
+znane osocze, Elecsys, Gen II lub DxI nie. Ciąża/stan po menopauzie
+nie usuwa krzywej ani nie zmienia dawnych profili. Zero, wynik ponad
+osią, usunięcie wyniku i zmiana jednostki zachowują linię i skalę.
+
+Pełne liczby i granice: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026),
+[zapis źródła FDA](hormone-lifespan/evidence/patient-point/fda2017-female-amh-group-medians.json).
 
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
 

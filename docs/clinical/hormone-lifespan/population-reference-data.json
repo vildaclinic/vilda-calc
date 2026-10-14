@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-13.3",
+  "version": "2026-10-13.4",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -20521,6 +20521,1071 @@
         "Połączenia poglądowej linii nie zmieniają tej źródłowej mediany. Różnice między grupami nie dowodzą nagłego zdarzenia hormonalnego.",
         "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania."
+      ]
+    },
+    {
+      "id": "fda2017-female-amh-age-18-under26",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 18,
+      "maxAge": 26,
+      "points": [
+        {
+          "ageYears": 18,
+          "value": 25.7
+        },
+        {
+          "ageYears": 26,
+          "value": 25.7
+        }
+      ],
+      "sourceLabel": "FDA 2017 · Access AMH · grupa wieku",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+      "method": "Beckman Coulter Access AMH on Access 2; paramagnetic particle sandwich chemiluminescent immunoassay",
+      "population": "Pozornie zdrowe kobiety niebędące w ciąży, z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; pięć ośrodków. Krajów nie podano dla tej grupy odniesienia.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Grupa 18–25 lat · regularne cykle · Access AMH, surowica.",
+      "ageGroup": {
+        "label": "18–25 lat",
+        "minAge": 18,
+        "maxAge": 25,
+        "n": 120,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 25.7,
+        "sourceMedianNgMl": 3.6,
+        "boundaryPolicy": "published-integer-label-with-explicit-application-completed-years-convention",
+        "description": "Mediana całej opublikowanej grupy wieku, nie model dokładnego wieku. Ukończone lata są konwencją aplikacji; dokument nie definiuje ciągłych granic wieku."
+      },
+      "provenance": {
+        "authors": "Beckman Coulter, Inc.",
+        "year": 2017,
+        "documentId": "FDA-K170524",
+        "title": "Access AMH, 510(k) Summary K170524",
+        "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+        "datePrepared": "2017-11-09",
+        "clearanceLetterDate": "2017-11-13",
+        "sourceFormat": "PDF",
+        "sourceSha256": "dbc33f56880cb0f244d7c3d4c1edbc5fe69b9e6b80f90f68caeeedde86f06fe2",
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Complete primary 15-page FDA document read; serum and plasma reference tables visually reviewed.",
+        "sourceLocator": {
+          "assayAndMatrix": {
+            "pdfPage": 6,
+            "internalPage": 2
+          },
+          "assayAnalyticalRange": {
+            "pdfPage": 7,
+            "internalPage": 3
+          },
+          "lod": {
+            "pdfPage": 8,
+            "internalPage": 4
+          },
+          "loq": {
+            "pdfPage": 9,
+            "internalPage": 5
+          },
+          "matrixComparison": {
+            "pdfPages": [
+              12,
+              13
+            ],
+            "internalPages": [
+              8,
+              9
+            ]
+          },
+          "referencePopulationAndSerumTable": {
+            "pdfPage": 14,
+            "internalPage": 10
+          },
+          "plasmaTable": {
+            "pdfPage": 15,
+            "internalPage": 11
+          }
+        },
+        "referenceTable": "Expected Reference Intervals — Serum AMH, PDF page 14 / internal page 10",
+        "additionalTable": "Plasma AMH, PDF page 15 / internal page 11; reviewed and preserved as separate inactive source facts.",
+        "sampleCountPerMatrix": 620,
+        "sampleCountDerivation": "Sum of the five age-group Sample Size rows, identical counts in serum and plasma tables; do not add them as 1240 independent women.",
+        "participantCountExplicitInNarrative": null,
+        "referenceSamplePairednessExplicit": false,
+        "sourceQuantification": {
+          "measuringRange": {
+            "ngMl": [
+              0.08,
+              24
+            ],
+            "pmolL": [
+              0.57,
+              171
+            ]
+          },
+          "lob": {
+            "designUpperNgMl": 0.01,
+            "designUpperPmolL": 0.07,
+            "observedInOneStudyNgMl": 0.004,
+            "observedInOneStudyPmolL": 0.029
+          },
+          "lod": {
+            "designUpperNgMl": 0.02,
+            "designUpperPmolL": 0.14,
+            "observedInOneStudyNgMl": 0.0098,
+            "observedInOneStudyPmolL": 0.07
+          },
+          "loq": {
+            "designUpperNgMl": 0.08,
+            "designUpperPmolL": 0.57,
+            "observedInOneStudyNgMl": 0.013,
+            "observedInOneStudyPmolL": 0.093
+          },
+          "doNotActivateNewPatientFloor": true,
+          "matrixComparisonSeparateStudy": {
+            "matchedSets": 57,
+            "slopes": {
+              "lithiumHeparinVsSerumNoGel": 1.03,
+              "lithiumHeparinVsSerumGel": 1.05,
+              "serumGelVsSerumNoGel": 0.99
+            },
+            "interpretation": "Analytical matrix comparison does not authorize replacing matrix-specific reference medians or assigning specimen facts to patient."
+          }
+        },
+        "populationEligibility": {
+          "pregnancy": "non-pregnant explicitly required",
+          "menstrualCycleLengthDays": [
+            21,
+            35
+          ],
+          "regularCycles": true,
+          "bothOvariesPresent": true,
+          "provenFertility": true,
+          "fertilityDefinition": "not specified",
+          "cycleSamplingDay": "not specified for reference cohort",
+          "hormonalContraception": "use/exclusion not specified for reference cohort",
+          "otherHormonalMedication": "use/exclusion not specified for reference cohort",
+          "otherMedication": "not specified for reference cohort",
+          "pcos": "no explicit PCOS exclusion stated for reference cohort",
+          "menopause": "No formal menopause criterion or menopausal reference cohort; regular cycles required. Cannot extend source to known postmenopause.",
+          "provenFertilityNotPrediction": "Reference selection does not turn AMH alone into a test of fertility or a prediction of natural conception."
+        },
+        "separateClinicalCohortNotUsed": {
+          "n": 164,
+          "sites": 13,
+          "location": "US",
+          "purpose": "AMH association with antral follicle count at fertility clinics; device indication assessment",
+          "recruitmentAge": "≥21 and <46",
+          "observedAge": "23–45",
+          "cycleSamplingDay": "2–4 of same spontaneous cycle",
+          "pcos": "confirmed PCOS excluded",
+          "fertilityTreatmentContext": "first ovarian stimulation cycle for IVF/IVF-ICSI",
+          "doNotApplyToReferenceCohort": [
+            "n=164",
+            "13 US sites",
+            "PCOS exclusion",
+            "day 2–4 restriction",
+            "age ≥21 and <46",
+            "AFC cutoff 1.77 ng/mL"
+          ]
+        },
+        "sourceAgeDefinition": "Only integer group labels are published; no completed-years, date-of-birth rounding or exact continuous-boundary definition is given.",
+        "sourceUnits": "Table prints independent rounded ng/mL and pmol/L columns. Runtime preserves the published serum pmol/L median; the ng/mL column is retained as source provenance, not recomputed as a new median.",
+        "groupParticipants": 120,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceMedianNgMl": 3.6,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/fda2017-female-amh-group-medians.json",
+        "sourceGroupId": "18-25",
+        "ageRouting": "The document gives integer age-group labels without defining continuous boundaries. The application explicitly interprets them as completed years: [18,26), [26,31), [31,36), [36,41), [41,46). This is an application convention, not a recovered author definition or proof of actual observations at fractional upper ages. Published group labels and medians remain unchanged; no extrapolation from age 46 onward.",
+        "selectionPolicy": "Fixed source selection by sex and age, never by patient result or preferred classification. The entire possible age interval must fit one group. Known incompatible context blocks the reference rather than selecting another matrix or publication.",
+        "specimenPolicy": "Use the published serum table only. Missing or unknown patient specimen permits a labelled orientational educational comparison without asserting patient material. Known plasma or another non-serum specimen blocks these profiles; the separate plasma table is not silently substituted.",
+        "assayPolicy": "Access AMH on Access 2 is the documented source assay. Missing or unknown assay permits an orientational comparison; known incompatible Elecsys, Gen II or DxI identifiers do not match. Unit conversion is not assay calibration.",
+        "reproductiveContextPolicy": "Known pregnancy or postmenopause excludes only these new profiles. An unknown reproductive context permits a labelled educational comparison and is not confirmed regular cycling or proven fertility. Do not add new fields, infer menopause from age, or claim documented contraception exclusion. Existing treatment and stimulation restrictions remain separate application safeguards.",
+        "routingVersion": "2026-10-13.4"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie ciągły model dokładnego wieku ani norma laboratoryjna. Wynik poniżej mediany nie oznacza rozpoznania.",
+        "Wyselekcjonowana grupa pozornie zdrowych, nieciężarnych kobiet z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; nie cała populacja kobiet.",
+        "Nie podano zasad stosowania antykoncepcji, innych leków ani dnia pobrania w cyklu w grupie referencyjnej. Pobranie w dniach 2–4 i wykluczenie PCOS dotyczą odrębnego badania 164 kobiet, nie tej tabeli.",
+        "Surowica, Access AMH na Access 2. Osocze litowo-heparynowe ma osobną tabelę, której tutaj nie stosujemy; nie harmonizujemy z Elecsys, Gen II ani DxI.",
+        "Etykiety wieku 18–25, 26–30, 31–35, 36–40 i 41–45 interpretujemy w aplikacji jako ukończone lata do kolejnych urodzin. Jest to jawna konwencja aplikacji, nie opisana przez autorów definicja granic ciągłych.",
+        "Od 46. urodzin brak tego odniesienia. Znana ciąża lub stan po menopauzie wykluczają ten profil; nie ustalamy menopauzy z wieku ani wyniku.",
+        "Dane o LOD i LOQ są wyłącznie informacją o oznaczeniu źródłowym, bez nowej granicy dla wyniku pacjentki. Nie stosujemy progów AFC, rozpoznania płodności ani prognozy menopauzy.",
+        "Poglądowa linia i jej skala pozostają niezależne od mediany grupy; źródłowy znacznik nie jest przesuwany na linię."
+      ]
+    },
+    {
+      "id": "fda2017-female-amh-age-26-under31",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 26,
+      "maxAge": 31,
+      "points": [
+        {
+          "ageYears": 26,
+          "value": 27.27
+        },
+        {
+          "ageYears": 31,
+          "value": 27.27
+        }
+      ],
+      "sourceLabel": "FDA 2017 · Access AMH · grupa wieku",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+      "method": "Beckman Coulter Access AMH on Access 2; paramagnetic particle sandwich chemiluminescent immunoassay",
+      "population": "Pozornie zdrowe kobiety niebędące w ciąży, z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; pięć ośrodków. Krajów nie podano dla tej grupy odniesienia.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Grupa 26–30 lat · regularne cykle · Access AMH, surowica.",
+      "ageGroup": {
+        "label": "26–30 lat",
+        "minAge": 26,
+        "maxAge": 30,
+        "n": 131,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 27.27,
+        "sourceMedianNgMl": 3.82,
+        "boundaryPolicy": "published-integer-label-with-explicit-application-completed-years-convention",
+        "description": "Mediana całej opublikowanej grupy wieku, nie model dokładnego wieku. Ukończone lata są konwencją aplikacji; dokument nie definiuje ciągłych granic wieku."
+      },
+      "provenance": {
+        "authors": "Beckman Coulter, Inc.",
+        "year": 2017,
+        "documentId": "FDA-K170524",
+        "title": "Access AMH, 510(k) Summary K170524",
+        "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+        "datePrepared": "2017-11-09",
+        "clearanceLetterDate": "2017-11-13",
+        "sourceFormat": "PDF",
+        "sourceSha256": "dbc33f56880cb0f244d7c3d4c1edbc5fe69b9e6b80f90f68caeeedde86f06fe2",
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Complete primary 15-page FDA document read; serum and plasma reference tables visually reviewed.",
+        "sourceLocator": {
+          "assayAndMatrix": {
+            "pdfPage": 6,
+            "internalPage": 2
+          },
+          "assayAnalyticalRange": {
+            "pdfPage": 7,
+            "internalPage": 3
+          },
+          "lod": {
+            "pdfPage": 8,
+            "internalPage": 4
+          },
+          "loq": {
+            "pdfPage": 9,
+            "internalPage": 5
+          },
+          "matrixComparison": {
+            "pdfPages": [
+              12,
+              13
+            ],
+            "internalPages": [
+              8,
+              9
+            ]
+          },
+          "referencePopulationAndSerumTable": {
+            "pdfPage": 14,
+            "internalPage": 10
+          },
+          "plasmaTable": {
+            "pdfPage": 15,
+            "internalPage": 11
+          }
+        },
+        "referenceTable": "Expected Reference Intervals — Serum AMH, PDF page 14 / internal page 10",
+        "additionalTable": "Plasma AMH, PDF page 15 / internal page 11; reviewed and preserved as separate inactive source facts.",
+        "sampleCountPerMatrix": 620,
+        "sampleCountDerivation": "Sum of the five age-group Sample Size rows, identical counts in serum and plasma tables; do not add them as 1240 independent women.",
+        "participantCountExplicitInNarrative": null,
+        "referenceSamplePairednessExplicit": false,
+        "sourceQuantification": {
+          "measuringRange": {
+            "ngMl": [
+              0.08,
+              24
+            ],
+            "pmolL": [
+              0.57,
+              171
+            ]
+          },
+          "lob": {
+            "designUpperNgMl": 0.01,
+            "designUpperPmolL": 0.07,
+            "observedInOneStudyNgMl": 0.004,
+            "observedInOneStudyPmolL": 0.029
+          },
+          "lod": {
+            "designUpperNgMl": 0.02,
+            "designUpperPmolL": 0.14,
+            "observedInOneStudyNgMl": 0.0098,
+            "observedInOneStudyPmolL": 0.07
+          },
+          "loq": {
+            "designUpperNgMl": 0.08,
+            "designUpperPmolL": 0.57,
+            "observedInOneStudyNgMl": 0.013,
+            "observedInOneStudyPmolL": 0.093
+          },
+          "doNotActivateNewPatientFloor": true,
+          "matrixComparisonSeparateStudy": {
+            "matchedSets": 57,
+            "slopes": {
+              "lithiumHeparinVsSerumNoGel": 1.03,
+              "lithiumHeparinVsSerumGel": 1.05,
+              "serumGelVsSerumNoGel": 0.99
+            },
+            "interpretation": "Analytical matrix comparison does not authorize replacing matrix-specific reference medians or assigning specimen facts to patient."
+          }
+        },
+        "populationEligibility": {
+          "pregnancy": "non-pregnant explicitly required",
+          "menstrualCycleLengthDays": [
+            21,
+            35
+          ],
+          "regularCycles": true,
+          "bothOvariesPresent": true,
+          "provenFertility": true,
+          "fertilityDefinition": "not specified",
+          "cycleSamplingDay": "not specified for reference cohort",
+          "hormonalContraception": "use/exclusion not specified for reference cohort",
+          "otherHormonalMedication": "use/exclusion not specified for reference cohort",
+          "otherMedication": "not specified for reference cohort",
+          "pcos": "no explicit PCOS exclusion stated for reference cohort",
+          "menopause": "No formal menopause criterion or menopausal reference cohort; regular cycles required. Cannot extend source to known postmenopause.",
+          "provenFertilityNotPrediction": "Reference selection does not turn AMH alone into a test of fertility or a prediction of natural conception."
+        },
+        "separateClinicalCohortNotUsed": {
+          "n": 164,
+          "sites": 13,
+          "location": "US",
+          "purpose": "AMH association with antral follicle count at fertility clinics; device indication assessment",
+          "recruitmentAge": "≥21 and <46",
+          "observedAge": "23–45",
+          "cycleSamplingDay": "2–4 of same spontaneous cycle",
+          "pcos": "confirmed PCOS excluded",
+          "fertilityTreatmentContext": "first ovarian stimulation cycle for IVF/IVF-ICSI",
+          "doNotApplyToReferenceCohort": [
+            "n=164",
+            "13 US sites",
+            "PCOS exclusion",
+            "day 2–4 restriction",
+            "age ≥21 and <46",
+            "AFC cutoff 1.77 ng/mL"
+          ]
+        },
+        "sourceAgeDefinition": "Only integer group labels are published; no completed-years, date-of-birth rounding or exact continuous-boundary definition is given.",
+        "sourceUnits": "Table prints independent rounded ng/mL and pmol/L columns. Runtime preserves the published serum pmol/L median; the ng/mL column is retained as source provenance, not recomputed as a new median.",
+        "groupParticipants": 131,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceMedianNgMl": 3.82,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/fda2017-female-amh-group-medians.json",
+        "sourceGroupId": "26-30",
+        "ageRouting": "The document gives integer age-group labels without defining continuous boundaries. The application explicitly interprets them as completed years: [18,26), [26,31), [31,36), [36,41), [41,46). This is an application convention, not a recovered author definition or proof of actual observations at fractional upper ages. Published group labels and medians remain unchanged; no extrapolation from age 46 onward.",
+        "selectionPolicy": "Fixed source selection by sex and age, never by patient result or preferred classification. The entire possible age interval must fit one group. Known incompatible context blocks the reference rather than selecting another matrix or publication.",
+        "specimenPolicy": "Use the published serum table only. Missing or unknown patient specimen permits a labelled orientational educational comparison without asserting patient material. Known plasma or another non-serum specimen blocks these profiles; the separate plasma table is not silently substituted.",
+        "assayPolicy": "Access AMH on Access 2 is the documented source assay. Missing or unknown assay permits an orientational comparison; known incompatible Elecsys, Gen II or DxI identifiers do not match. Unit conversion is not assay calibration.",
+        "reproductiveContextPolicy": "Known pregnancy or postmenopause excludes only these new profiles. An unknown reproductive context permits a labelled educational comparison and is not confirmed regular cycling or proven fertility. Do not add new fields, infer menopause from age, or claim documented contraception exclusion. Existing treatment and stimulation restrictions remain separate application safeguards.",
+        "routingVersion": "2026-10-13.4"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie ciągły model dokładnego wieku ani norma laboratoryjna. Wynik poniżej mediany nie oznacza rozpoznania.",
+        "Wyselekcjonowana grupa pozornie zdrowych, nieciężarnych kobiet z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; nie cała populacja kobiet.",
+        "Nie podano zasad stosowania antykoncepcji, innych leków ani dnia pobrania w cyklu w grupie referencyjnej. Pobranie w dniach 2–4 i wykluczenie PCOS dotyczą odrębnego badania 164 kobiet, nie tej tabeli.",
+        "Surowica, Access AMH na Access 2. Osocze litowo-heparynowe ma osobną tabelę, której tutaj nie stosujemy; nie harmonizujemy z Elecsys, Gen II ani DxI.",
+        "Etykiety wieku 18–25, 26–30, 31–35, 36–40 i 41–45 interpretujemy w aplikacji jako ukończone lata do kolejnych urodzin. Jest to jawna konwencja aplikacji, nie opisana przez autorów definicja granic ciągłych.",
+        "Od 46. urodzin brak tego odniesienia. Znana ciąża lub stan po menopauzie wykluczają ten profil; nie ustalamy menopauzy z wieku ani wyniku.",
+        "Dane o LOD i LOQ są wyłącznie informacją o oznaczeniu źródłowym, bez nowej granicy dla wyniku pacjentki. Nie stosujemy progów AFC, rozpoznania płodności ani prognozy menopauzy.",
+        "Poglądowa linia i jej skala pozostają niezależne od mediany grupy; źródłowy znacznik nie jest przesuwany na linię."
+      ]
+    },
+    {
+      "id": "fda2017-female-amh-age-31-under36",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 31,
+      "maxAge": 36,
+      "points": [
+        {
+          "ageYears": 31,
+          "value": 17.64
+        },
+        {
+          "ageYears": 36,
+          "value": 17.64
+        }
+      ],
+      "sourceLabel": "FDA 2017 · Access AMH · grupa wieku",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+      "method": "Beckman Coulter Access AMH on Access 2; paramagnetic particle sandwich chemiluminescent immunoassay",
+      "population": "Pozornie zdrowe kobiety niebędące w ciąży, z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; pięć ośrodków. Krajów nie podano dla tej grupy odniesienia.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Grupa 31–35 lat · regularne cykle · Access AMH, surowica.",
+      "ageGroup": {
+        "label": "31–35 lat",
+        "minAge": 31,
+        "maxAge": 35,
+        "n": 120,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 17.64,
+        "sourceMedianNgMl": 2.47,
+        "boundaryPolicy": "published-integer-label-with-explicit-application-completed-years-convention",
+        "description": "Mediana całej opublikowanej grupy wieku, nie model dokładnego wieku. Ukończone lata są konwencją aplikacji; dokument nie definiuje ciągłych granic wieku."
+      },
+      "provenance": {
+        "authors": "Beckman Coulter, Inc.",
+        "year": 2017,
+        "documentId": "FDA-K170524",
+        "title": "Access AMH, 510(k) Summary K170524",
+        "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+        "datePrepared": "2017-11-09",
+        "clearanceLetterDate": "2017-11-13",
+        "sourceFormat": "PDF",
+        "sourceSha256": "dbc33f56880cb0f244d7c3d4c1edbc5fe69b9e6b80f90f68caeeedde86f06fe2",
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Complete primary 15-page FDA document read; serum and plasma reference tables visually reviewed.",
+        "sourceLocator": {
+          "assayAndMatrix": {
+            "pdfPage": 6,
+            "internalPage": 2
+          },
+          "assayAnalyticalRange": {
+            "pdfPage": 7,
+            "internalPage": 3
+          },
+          "lod": {
+            "pdfPage": 8,
+            "internalPage": 4
+          },
+          "loq": {
+            "pdfPage": 9,
+            "internalPage": 5
+          },
+          "matrixComparison": {
+            "pdfPages": [
+              12,
+              13
+            ],
+            "internalPages": [
+              8,
+              9
+            ]
+          },
+          "referencePopulationAndSerumTable": {
+            "pdfPage": 14,
+            "internalPage": 10
+          },
+          "plasmaTable": {
+            "pdfPage": 15,
+            "internalPage": 11
+          }
+        },
+        "referenceTable": "Expected Reference Intervals — Serum AMH, PDF page 14 / internal page 10",
+        "additionalTable": "Plasma AMH, PDF page 15 / internal page 11; reviewed and preserved as separate inactive source facts.",
+        "sampleCountPerMatrix": 620,
+        "sampleCountDerivation": "Sum of the five age-group Sample Size rows, identical counts in serum and plasma tables; do not add them as 1240 independent women.",
+        "participantCountExplicitInNarrative": null,
+        "referenceSamplePairednessExplicit": false,
+        "sourceQuantification": {
+          "measuringRange": {
+            "ngMl": [
+              0.08,
+              24
+            ],
+            "pmolL": [
+              0.57,
+              171
+            ]
+          },
+          "lob": {
+            "designUpperNgMl": 0.01,
+            "designUpperPmolL": 0.07,
+            "observedInOneStudyNgMl": 0.004,
+            "observedInOneStudyPmolL": 0.029
+          },
+          "lod": {
+            "designUpperNgMl": 0.02,
+            "designUpperPmolL": 0.14,
+            "observedInOneStudyNgMl": 0.0098,
+            "observedInOneStudyPmolL": 0.07
+          },
+          "loq": {
+            "designUpperNgMl": 0.08,
+            "designUpperPmolL": 0.57,
+            "observedInOneStudyNgMl": 0.013,
+            "observedInOneStudyPmolL": 0.093
+          },
+          "doNotActivateNewPatientFloor": true,
+          "matrixComparisonSeparateStudy": {
+            "matchedSets": 57,
+            "slopes": {
+              "lithiumHeparinVsSerumNoGel": 1.03,
+              "lithiumHeparinVsSerumGel": 1.05,
+              "serumGelVsSerumNoGel": 0.99
+            },
+            "interpretation": "Analytical matrix comparison does not authorize replacing matrix-specific reference medians or assigning specimen facts to patient."
+          }
+        },
+        "populationEligibility": {
+          "pregnancy": "non-pregnant explicitly required",
+          "menstrualCycleLengthDays": [
+            21,
+            35
+          ],
+          "regularCycles": true,
+          "bothOvariesPresent": true,
+          "provenFertility": true,
+          "fertilityDefinition": "not specified",
+          "cycleSamplingDay": "not specified for reference cohort",
+          "hormonalContraception": "use/exclusion not specified for reference cohort",
+          "otherHormonalMedication": "use/exclusion not specified for reference cohort",
+          "otherMedication": "not specified for reference cohort",
+          "pcos": "no explicit PCOS exclusion stated for reference cohort",
+          "menopause": "No formal menopause criterion or menopausal reference cohort; regular cycles required. Cannot extend source to known postmenopause.",
+          "provenFertilityNotPrediction": "Reference selection does not turn AMH alone into a test of fertility or a prediction of natural conception."
+        },
+        "separateClinicalCohortNotUsed": {
+          "n": 164,
+          "sites": 13,
+          "location": "US",
+          "purpose": "AMH association with antral follicle count at fertility clinics; device indication assessment",
+          "recruitmentAge": "≥21 and <46",
+          "observedAge": "23–45",
+          "cycleSamplingDay": "2–4 of same spontaneous cycle",
+          "pcos": "confirmed PCOS excluded",
+          "fertilityTreatmentContext": "first ovarian stimulation cycle for IVF/IVF-ICSI",
+          "doNotApplyToReferenceCohort": [
+            "n=164",
+            "13 US sites",
+            "PCOS exclusion",
+            "day 2–4 restriction",
+            "age ≥21 and <46",
+            "AFC cutoff 1.77 ng/mL"
+          ]
+        },
+        "sourceAgeDefinition": "Only integer group labels are published; no completed-years, date-of-birth rounding or exact continuous-boundary definition is given.",
+        "sourceUnits": "Table prints independent rounded ng/mL and pmol/L columns. Runtime preserves the published serum pmol/L median; the ng/mL column is retained as source provenance, not recomputed as a new median.",
+        "groupParticipants": 120,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceMedianNgMl": 2.47,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/fda2017-female-amh-group-medians.json",
+        "sourceGroupId": "31-35",
+        "ageRouting": "The document gives integer age-group labels without defining continuous boundaries. The application explicitly interprets them as completed years: [18,26), [26,31), [31,36), [36,41), [41,46). This is an application convention, not a recovered author definition or proof of actual observations at fractional upper ages. Published group labels and medians remain unchanged; no extrapolation from age 46 onward.",
+        "selectionPolicy": "Fixed source selection by sex and age, never by patient result or preferred classification. The entire possible age interval must fit one group. Known incompatible context blocks the reference rather than selecting another matrix or publication.",
+        "specimenPolicy": "Use the published serum table only. Missing or unknown patient specimen permits a labelled orientational educational comparison without asserting patient material. Known plasma or another non-serum specimen blocks these profiles; the separate plasma table is not silently substituted.",
+        "assayPolicy": "Access AMH on Access 2 is the documented source assay. Missing or unknown assay permits an orientational comparison; known incompatible Elecsys, Gen II or DxI identifiers do not match. Unit conversion is not assay calibration.",
+        "reproductiveContextPolicy": "Known pregnancy or postmenopause excludes only these new profiles. An unknown reproductive context permits a labelled educational comparison and is not confirmed regular cycling or proven fertility. Do not add new fields, infer menopause from age, or claim documented contraception exclusion. Existing treatment and stimulation restrictions remain separate application safeguards.",
+        "routingVersion": "2026-10-13.4"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie ciągły model dokładnego wieku ani norma laboratoryjna. Wynik poniżej mediany nie oznacza rozpoznania.",
+        "Wyselekcjonowana grupa pozornie zdrowych, nieciężarnych kobiet z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; nie cała populacja kobiet.",
+        "Nie podano zasad stosowania antykoncepcji, innych leków ani dnia pobrania w cyklu w grupie referencyjnej. Pobranie w dniach 2–4 i wykluczenie PCOS dotyczą odrębnego badania 164 kobiet, nie tej tabeli.",
+        "Surowica, Access AMH na Access 2. Osocze litowo-heparynowe ma osobną tabelę, której tutaj nie stosujemy; nie harmonizujemy z Elecsys, Gen II ani DxI.",
+        "Etykiety wieku 18–25, 26–30, 31–35, 36–40 i 41–45 interpretujemy w aplikacji jako ukończone lata do kolejnych urodzin. Jest to jawna konwencja aplikacji, nie opisana przez autorów definicja granic ciągłych.",
+        "Od 46. urodzin brak tego odniesienia. Znana ciąża lub stan po menopauzie wykluczają ten profil; nie ustalamy menopauzy z wieku ani wyniku.",
+        "Dane o LOD i LOQ są wyłącznie informacją o oznaczeniu źródłowym, bez nowej granicy dla wyniku pacjentki. Nie stosujemy progów AFC, rozpoznania płodności ani prognozy menopauzy.",
+        "Poglądowa linia i jej skala pozostają niezależne od mediany grupy; źródłowy znacznik nie jest przesuwany na linię."
+      ]
+    },
+    {
+      "id": "fda2017-female-amh-age-36-under41",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 36,
+      "maxAge": 41,
+      "points": [
+        {
+          "ageYears": 36,
+          "value": 12.21
+        },
+        {
+          "ageYears": 41,
+          "value": 12.21
+        }
+      ],
+      "sourceLabel": "FDA 2017 · Access AMH · grupa wieku",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+      "method": "Beckman Coulter Access AMH on Access 2; paramagnetic particle sandwich chemiluminescent immunoassay",
+      "population": "Pozornie zdrowe kobiety niebędące w ciąży, z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; pięć ośrodków. Krajów nie podano dla tej grupy odniesienia.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Grupa 36–40 lat · regularne cykle · Access AMH, surowica.",
+      "ageGroup": {
+        "label": "36–40 lat",
+        "minAge": 36,
+        "maxAge": 40,
+        "n": 123,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 12.21,
+        "sourceMedianNgMl": 1.71,
+        "boundaryPolicy": "published-integer-label-with-explicit-application-completed-years-convention",
+        "description": "Mediana całej opublikowanej grupy wieku, nie model dokładnego wieku. Ukończone lata są konwencją aplikacji; dokument nie definiuje ciągłych granic wieku."
+      },
+      "provenance": {
+        "authors": "Beckman Coulter, Inc.",
+        "year": 2017,
+        "documentId": "FDA-K170524",
+        "title": "Access AMH, 510(k) Summary K170524",
+        "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+        "datePrepared": "2017-11-09",
+        "clearanceLetterDate": "2017-11-13",
+        "sourceFormat": "PDF",
+        "sourceSha256": "dbc33f56880cb0f244d7c3d4c1edbc5fe69b9e6b80f90f68caeeedde86f06fe2",
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Complete primary 15-page FDA document read; serum and plasma reference tables visually reviewed.",
+        "sourceLocator": {
+          "assayAndMatrix": {
+            "pdfPage": 6,
+            "internalPage": 2
+          },
+          "assayAnalyticalRange": {
+            "pdfPage": 7,
+            "internalPage": 3
+          },
+          "lod": {
+            "pdfPage": 8,
+            "internalPage": 4
+          },
+          "loq": {
+            "pdfPage": 9,
+            "internalPage": 5
+          },
+          "matrixComparison": {
+            "pdfPages": [
+              12,
+              13
+            ],
+            "internalPages": [
+              8,
+              9
+            ]
+          },
+          "referencePopulationAndSerumTable": {
+            "pdfPage": 14,
+            "internalPage": 10
+          },
+          "plasmaTable": {
+            "pdfPage": 15,
+            "internalPage": 11
+          }
+        },
+        "referenceTable": "Expected Reference Intervals — Serum AMH, PDF page 14 / internal page 10",
+        "additionalTable": "Plasma AMH, PDF page 15 / internal page 11; reviewed and preserved as separate inactive source facts.",
+        "sampleCountPerMatrix": 620,
+        "sampleCountDerivation": "Sum of the five age-group Sample Size rows, identical counts in serum and plasma tables; do not add them as 1240 independent women.",
+        "participantCountExplicitInNarrative": null,
+        "referenceSamplePairednessExplicit": false,
+        "sourceQuantification": {
+          "measuringRange": {
+            "ngMl": [
+              0.08,
+              24
+            ],
+            "pmolL": [
+              0.57,
+              171
+            ]
+          },
+          "lob": {
+            "designUpperNgMl": 0.01,
+            "designUpperPmolL": 0.07,
+            "observedInOneStudyNgMl": 0.004,
+            "observedInOneStudyPmolL": 0.029
+          },
+          "lod": {
+            "designUpperNgMl": 0.02,
+            "designUpperPmolL": 0.14,
+            "observedInOneStudyNgMl": 0.0098,
+            "observedInOneStudyPmolL": 0.07
+          },
+          "loq": {
+            "designUpperNgMl": 0.08,
+            "designUpperPmolL": 0.57,
+            "observedInOneStudyNgMl": 0.013,
+            "observedInOneStudyPmolL": 0.093
+          },
+          "doNotActivateNewPatientFloor": true,
+          "matrixComparisonSeparateStudy": {
+            "matchedSets": 57,
+            "slopes": {
+              "lithiumHeparinVsSerumNoGel": 1.03,
+              "lithiumHeparinVsSerumGel": 1.05,
+              "serumGelVsSerumNoGel": 0.99
+            },
+            "interpretation": "Analytical matrix comparison does not authorize replacing matrix-specific reference medians or assigning specimen facts to patient."
+          }
+        },
+        "populationEligibility": {
+          "pregnancy": "non-pregnant explicitly required",
+          "menstrualCycleLengthDays": [
+            21,
+            35
+          ],
+          "regularCycles": true,
+          "bothOvariesPresent": true,
+          "provenFertility": true,
+          "fertilityDefinition": "not specified",
+          "cycleSamplingDay": "not specified for reference cohort",
+          "hormonalContraception": "use/exclusion not specified for reference cohort",
+          "otherHormonalMedication": "use/exclusion not specified for reference cohort",
+          "otherMedication": "not specified for reference cohort",
+          "pcos": "no explicit PCOS exclusion stated for reference cohort",
+          "menopause": "No formal menopause criterion or menopausal reference cohort; regular cycles required. Cannot extend source to known postmenopause.",
+          "provenFertilityNotPrediction": "Reference selection does not turn AMH alone into a test of fertility or a prediction of natural conception."
+        },
+        "separateClinicalCohortNotUsed": {
+          "n": 164,
+          "sites": 13,
+          "location": "US",
+          "purpose": "AMH association with antral follicle count at fertility clinics; device indication assessment",
+          "recruitmentAge": "≥21 and <46",
+          "observedAge": "23–45",
+          "cycleSamplingDay": "2–4 of same spontaneous cycle",
+          "pcos": "confirmed PCOS excluded",
+          "fertilityTreatmentContext": "first ovarian stimulation cycle for IVF/IVF-ICSI",
+          "doNotApplyToReferenceCohort": [
+            "n=164",
+            "13 US sites",
+            "PCOS exclusion",
+            "day 2–4 restriction",
+            "age ≥21 and <46",
+            "AFC cutoff 1.77 ng/mL"
+          ]
+        },
+        "sourceAgeDefinition": "Only integer group labels are published; no completed-years, date-of-birth rounding or exact continuous-boundary definition is given.",
+        "sourceUnits": "Table prints independent rounded ng/mL and pmol/L columns. Runtime preserves the published serum pmol/L median; the ng/mL column is retained as source provenance, not recomputed as a new median.",
+        "groupParticipants": 123,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceMedianNgMl": 1.71,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/fda2017-female-amh-group-medians.json",
+        "sourceGroupId": "36-40",
+        "ageRouting": "The document gives integer age-group labels without defining continuous boundaries. The application explicitly interprets them as completed years: [18,26), [26,31), [31,36), [36,41), [41,46). This is an application convention, not a recovered author definition or proof of actual observations at fractional upper ages. Published group labels and medians remain unchanged; no extrapolation from age 46 onward.",
+        "selectionPolicy": "Fixed source selection by sex and age, never by patient result or preferred classification. The entire possible age interval must fit one group. Known incompatible context blocks the reference rather than selecting another matrix or publication.",
+        "specimenPolicy": "Use the published serum table only. Missing or unknown patient specimen permits a labelled orientational educational comparison without asserting patient material. Known plasma or another non-serum specimen blocks these profiles; the separate plasma table is not silently substituted.",
+        "assayPolicy": "Access AMH on Access 2 is the documented source assay. Missing or unknown assay permits an orientational comparison; known incompatible Elecsys, Gen II or DxI identifiers do not match. Unit conversion is not assay calibration.",
+        "reproductiveContextPolicy": "Known pregnancy or postmenopause excludes only these new profiles. An unknown reproductive context permits a labelled educational comparison and is not confirmed regular cycling or proven fertility. Do not add new fields, infer menopause from age, or claim documented contraception exclusion. Existing treatment and stimulation restrictions remain separate application safeguards.",
+        "routingVersion": "2026-10-13.4"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie ciągły model dokładnego wieku ani norma laboratoryjna. Wynik poniżej mediany nie oznacza rozpoznania.",
+        "Wyselekcjonowana grupa pozornie zdrowych, nieciężarnych kobiet z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; nie cała populacja kobiet.",
+        "Nie podano zasad stosowania antykoncepcji, innych leków ani dnia pobrania w cyklu w grupie referencyjnej. Pobranie w dniach 2–4 i wykluczenie PCOS dotyczą odrębnego badania 164 kobiet, nie tej tabeli.",
+        "Surowica, Access AMH na Access 2. Osocze litowo-heparynowe ma osobną tabelę, której tutaj nie stosujemy; nie harmonizujemy z Elecsys, Gen II ani DxI.",
+        "Etykiety wieku 18–25, 26–30, 31–35, 36–40 i 41–45 interpretujemy w aplikacji jako ukończone lata do kolejnych urodzin. Jest to jawna konwencja aplikacji, nie opisana przez autorów definicja granic ciągłych.",
+        "Od 46. urodzin brak tego odniesienia. Znana ciąża lub stan po menopauzie wykluczają ten profil; nie ustalamy menopauzy z wieku ani wyniku.",
+        "Dane o LOD i LOQ są wyłącznie informacją o oznaczeniu źródłowym, bez nowej granicy dla wyniku pacjentki. Nie stosujemy progów AFC, rozpoznania płodności ani prognozy menopauzy.",
+        "Poglądowa linia i jej skala pozostają niezależne od mediany grupy; źródłowy znacznik nie jest przesuwany na linię."
+      ]
+    },
+    {
+      "id": "fda2017-female-amh-age-41-under46",
+      "analyte": "amh",
+      "sex": "female",
+      "minAge": 41,
+      "maxAge": 46,
+      "points": [
+        {
+          "ageYears": 41,
+          "value": 3.86
+        },
+        {
+          "ageYears": 46,
+          "value": 3.86
+        }
+      ],
+      "sourceLabel": "FDA 2017 · Access AMH · grupa wieku",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+      "method": "Beckman Coulter Access AMH on Access 2; paramagnetic particle sandwich chemiluminescent immunoassay",
+      "population": "Pozornie zdrowe kobiety niebędące w ciąży, z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; pięć ośrodków. Krajów nie podano dla tej grupy odniesienia.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "access-amh",
+        "beckman-access-amh",
+        "access-2",
+        "beckman-access-2"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Grupa 41–45 lat · regularne cykle · Access AMH, surowica.",
+      "ageGroup": {
+        "label": "41–45 lat",
+        "minAge": 41,
+        "maxAge": 45,
+        "n": 126,
+        "sourceUnit": "pmol/L",
+        "sourceMedian": 3.86,
+        "sourceMedianNgMl": 0.54,
+        "boundaryPolicy": "published-integer-label-with-explicit-application-completed-years-convention",
+        "description": "Mediana całej opublikowanej grupy wieku, nie model dokładnego wieku. Ukończone lata są konwencją aplikacji; dokument nie definiuje ciągłych granic wieku."
+      },
+      "provenance": {
+        "authors": "Beckman Coulter, Inc.",
+        "year": 2017,
+        "documentId": "FDA-K170524",
+        "title": "Access AMH, 510(k) Summary K170524",
+        "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf",
+        "datePrepared": "2017-11-09",
+        "clearanceLetterDate": "2017-11-13",
+        "sourceFormat": "PDF",
+        "sourceSha256": "dbc33f56880cb0f244d7c3d4c1edbc5fe69b9e6b80f90f68caeeedde86f06fe2",
+        "reviewDate": "2026-10-13",
+        "reviewBasis": "Complete primary 15-page FDA document read; serum and plasma reference tables visually reviewed.",
+        "sourceLocator": {
+          "assayAndMatrix": {
+            "pdfPage": 6,
+            "internalPage": 2
+          },
+          "assayAnalyticalRange": {
+            "pdfPage": 7,
+            "internalPage": 3
+          },
+          "lod": {
+            "pdfPage": 8,
+            "internalPage": 4
+          },
+          "loq": {
+            "pdfPage": 9,
+            "internalPage": 5
+          },
+          "matrixComparison": {
+            "pdfPages": [
+              12,
+              13
+            ],
+            "internalPages": [
+              8,
+              9
+            ]
+          },
+          "referencePopulationAndSerumTable": {
+            "pdfPage": 14,
+            "internalPage": 10
+          },
+          "plasmaTable": {
+            "pdfPage": 15,
+            "internalPage": 11
+          }
+        },
+        "referenceTable": "Expected Reference Intervals — Serum AMH, PDF page 14 / internal page 10",
+        "additionalTable": "Plasma AMH, PDF page 15 / internal page 11; reviewed and preserved as separate inactive source facts.",
+        "sampleCountPerMatrix": 620,
+        "sampleCountDerivation": "Sum of the five age-group Sample Size rows, identical counts in serum and plasma tables; do not add them as 1240 independent women.",
+        "participantCountExplicitInNarrative": null,
+        "referenceSamplePairednessExplicit": false,
+        "sourceQuantification": {
+          "measuringRange": {
+            "ngMl": [
+              0.08,
+              24
+            ],
+            "pmolL": [
+              0.57,
+              171
+            ]
+          },
+          "lob": {
+            "designUpperNgMl": 0.01,
+            "designUpperPmolL": 0.07,
+            "observedInOneStudyNgMl": 0.004,
+            "observedInOneStudyPmolL": 0.029
+          },
+          "lod": {
+            "designUpperNgMl": 0.02,
+            "designUpperPmolL": 0.14,
+            "observedInOneStudyNgMl": 0.0098,
+            "observedInOneStudyPmolL": 0.07
+          },
+          "loq": {
+            "designUpperNgMl": 0.08,
+            "designUpperPmolL": 0.57,
+            "observedInOneStudyNgMl": 0.013,
+            "observedInOneStudyPmolL": 0.093
+          },
+          "doNotActivateNewPatientFloor": true,
+          "matrixComparisonSeparateStudy": {
+            "matchedSets": 57,
+            "slopes": {
+              "lithiumHeparinVsSerumNoGel": 1.03,
+              "lithiumHeparinVsSerumGel": 1.05,
+              "serumGelVsSerumNoGel": 0.99
+            },
+            "interpretation": "Analytical matrix comparison does not authorize replacing matrix-specific reference medians or assigning specimen facts to patient."
+          }
+        },
+        "populationEligibility": {
+          "pregnancy": "non-pregnant explicitly required",
+          "menstrualCycleLengthDays": [
+            21,
+            35
+          ],
+          "regularCycles": true,
+          "bothOvariesPresent": true,
+          "provenFertility": true,
+          "fertilityDefinition": "not specified",
+          "cycleSamplingDay": "not specified for reference cohort",
+          "hormonalContraception": "use/exclusion not specified for reference cohort",
+          "otherHormonalMedication": "use/exclusion not specified for reference cohort",
+          "otherMedication": "not specified for reference cohort",
+          "pcos": "no explicit PCOS exclusion stated for reference cohort",
+          "menopause": "No formal menopause criterion or menopausal reference cohort; regular cycles required. Cannot extend source to known postmenopause.",
+          "provenFertilityNotPrediction": "Reference selection does not turn AMH alone into a test of fertility or a prediction of natural conception."
+        },
+        "separateClinicalCohortNotUsed": {
+          "n": 164,
+          "sites": 13,
+          "location": "US",
+          "purpose": "AMH association with antral follicle count at fertility clinics; device indication assessment",
+          "recruitmentAge": "≥21 and <46",
+          "observedAge": "23–45",
+          "cycleSamplingDay": "2–4 of same spontaneous cycle",
+          "pcos": "confirmed PCOS excluded",
+          "fertilityTreatmentContext": "first ovarian stimulation cycle for IVF/IVF-ICSI",
+          "doNotApplyToReferenceCohort": [
+            "n=164",
+            "13 US sites",
+            "PCOS exclusion",
+            "day 2–4 restriction",
+            "age ≥21 and <46",
+            "AFC cutoff 1.77 ng/mL"
+          ]
+        },
+        "sourceAgeDefinition": "Only integer group labels are published; no completed-years, date-of-birth rounding or exact continuous-boundary definition is given.",
+        "sourceUnits": "Table prints independent rounded ng/mL and pmol/L columns. Runtime preserves the published serum pmol/L median; the ng/mL column is retained as source provenance, not recomputed as a new median.",
+        "groupParticipants": 126,
+        "sourceUnit": "pmol/L",
+        "sourceToCanonicalFactor": 1,
+        "sourceMedianNgMl": 0.54,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/fda2017-female-amh-group-medians.json",
+        "sourceGroupId": "41-45",
+        "ageRouting": "The document gives integer age-group labels without defining continuous boundaries. The application explicitly interprets them as completed years: [18,26), [26,31), [31,36), [36,41), [41,46). This is an application convention, not a recovered author definition or proof of actual observations at fractional upper ages. Published group labels and medians remain unchanged; no extrapolation from age 46 onward.",
+        "selectionPolicy": "Fixed source selection by sex and age, never by patient result or preferred classification. The entire possible age interval must fit one group. Known incompatible context blocks the reference rather than selecting another matrix or publication.",
+        "specimenPolicy": "Use the published serum table only. Missing or unknown patient specimen permits a labelled orientational educational comparison without asserting patient material. Known plasma or another non-serum specimen blocks these profiles; the separate plasma table is not silently substituted.",
+        "assayPolicy": "Access AMH on Access 2 is the documented source assay. Missing or unknown assay permits an orientational comparison; known incompatible Elecsys, Gen II or DxI identifiers do not match. Unit conversion is not assay calibration.",
+        "reproductiveContextPolicy": "Known pregnancy or postmenopause excludes only these new profiles. An unknown reproductive context permits a labelled educational comparison and is not confirmed regular cycling or proven fertility. Do not add new fields, infer menopause from age, or claim documented contraception exclusion. Existing treatment and stimulation restrictions remain separate application safeguards.",
+        "routingVersion": "2026-10-13.4"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie ciągły model dokładnego wieku ani norma laboratoryjna. Wynik poniżej mediany nie oznacza rozpoznania.",
+        "Wyselekcjonowana grupa pozornie zdrowych, nieciężarnych kobiet z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; nie cała populacja kobiet.",
+        "Nie podano zasad stosowania antykoncepcji, innych leków ani dnia pobrania w cyklu w grupie referencyjnej. Pobranie w dniach 2–4 i wykluczenie PCOS dotyczą odrębnego badania 164 kobiet, nie tej tabeli.",
+        "Surowica, Access AMH na Access 2. Osocze litowo-heparynowe ma osobną tabelę, której tutaj nie stosujemy; nie harmonizujemy z Elecsys, Gen II ani DxI.",
+        "Etykiety wieku 18–25, 26–30, 31–35, 36–40 i 41–45 interpretujemy w aplikacji jako ukończone lata do kolejnych urodzin. Jest to jawna konwencja aplikacji, nie opisana przez autorów definicja granic ciągłych.",
+        "Od 46. urodzin brak tego odniesienia. Znana ciąża lub stan po menopauzie wykluczają ten profil; nie ustalamy menopauzy z wieku ani wyniku.",
+        "Dane o LOD i LOQ są wyłącznie informacją o oznaczeniu źródłowym, bez nowej granicy dla wyniku pacjentki. Nie stosujemy progów AFC, rozpoznania płodności ani prognozy menopauzy.",
+        "Poglądowa linia i jej skala pozostają niezależne od mediany grupy; źródłowy znacznik nie jest przesuwany na linię."
       ]
     },
     {

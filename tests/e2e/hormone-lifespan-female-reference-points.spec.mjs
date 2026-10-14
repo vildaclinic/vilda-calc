@@ -9,7 +9,7 @@ const examples = [
   { id: 'amh', hormone: 'amh', name: 'AMH', raw: '0.45', unit: 'ng/mL',
     profile: 'jopling2018-female-amh-age-15-under18',
     median: 21.14, medianInput: 21.14 * .1401, divisor: 28.99, statistic: 'group-median',
-    canonical: value => value / .1401, high: 10, outsideAge: 18 },
+    canonical: value => value / .1401, high: 10, outsideAge: 46 },
   { id: 'inhibin_b', hormone: 'inhb', name: 'Inhibina B', raw: '80', unit: 'pg/mL',
     profile: 'borelli2025-female-inhb-age-5p6-20',
     median: 44, medianInput: 44, divisor: 52.474, statistic: 'median',

@@ -452,11 +452,11 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=11"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=22"></script>
-  <script src="vilda_hormone_lifespan_reference.js?v=5"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=23"></script>
+  <script src="vilda_hormone_lifespan_reference.js?v=6"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=13"></script>
-  <script src="vilda_hormone_lifespan.js?v=30"></script>
+  <script src="vilda_hormone_lifespan.js?v=31"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -842,6 +842,9 @@
         // Display only: keep the calculated measurement in its existing unit.
         displayUnit: unitEl.value,
         contraindicated: lifespanContraindicated(source, input, patient),
+        // Reuse a known reproductive context; source-specific exclusions do
+        // not change laboratory ranges or require another field for AMH.
+        cyclePhase: patient && patient.cycle_phase || null,
         // Reuse the typed observation for the current context only. A bare
         // shared Tanner number or an observation for a dated sample is not one.
         puberty: input && input.contextBasis === 'current-patient' && !input.sampleDateISO &&

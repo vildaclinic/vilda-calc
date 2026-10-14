@@ -413,4 +413,46 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     expect(app.context.valueEl.value).toBe('');
     expect(app.last().measurement).toBeNull();
   });
+
+  it('passes already known reproductive context to the adult female AMH source without changing basal treatment context', () => {
+    const app = adapter({
+      currentSubstance: { id: 'amh' }, unitEl: { value: 'ng/mL' },
+      sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'F', ageYears: 25, ageMonths: 0 },
+      effectivePatient: { sex: 'F', age: 25, cycle_phase: null },
+    });
+    const conversion = { ok: true, siValue: .45, siUnit: 'ng/mL' };
+    for (const cyclePhase of ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmenopause']) {
+      app.context.effectivePatient.cycle_phase = cyclePhase;
+      app.update({ id: 'amh' }, null, conversion);
+      expect(app.last()).toMatchObject({ cyclePhase, contraindicated: false,
+        sex: 'female', ageYears: 25, measurement: { value: .45, unit: 'ng/mL' } });
+      expect(lifespanReference.evaluate(lifespanData, app.last()))
+        .toEqual({ status: 'unavailable', reason: 'incompatible-reproductive-context' });
+    }
+    for (const cyclePhase of [null, 'unknown', 'follicular', 'ovulation', 'luteal']) {
+      app.context.effectivePatient.cycle_phase = cyclePhase;
+      app.update({ id: 'amh' }, null, conversion);
+      expect(lifespanReference.evaluate(lifespanData, app.last())).toMatchObject({
+        status: 'ready', referenceValue: 25.7, profile: { id: 'fda2017-female-amh-age-18-under26' },
+      });
+    }
+    app.context.sourcePatient.gnrhaStatus = 'w-trakcie';
+    app.update({ id: 'amh' }, null, conversion);
+    expect(lifespanReference.evaluate(lifespanData, app.last()))
+      .toEqual({ status: 'unavailable', reason: 'contraindicated' });
+  });
+
+  it('does not retain a reproductive source context when the current patient becomes unavailable', () => {
+    const app = adapter({
+      currentSubstance: { id: 'amh' }, unitEl: { value: 'ng/mL' },
+      sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'F', ageYears: 25, ageMonths: 0 },
+      effectivePatient: { sex: 'F', age: 25, cycle_phase: 'postmenopause' },
+    });
+    const conversion = { ok: true, siValue: .45, siUnit: 'ng/mL' };
+    app.update({ id: 'amh' }, null, conversion);
+    expect(app.last().cyclePhase).toBe('postmenopause');
+    app.context.sourcePatient.sourceStatus = 'loading';
+    app.update({ id: 'amh' }, null, conversion);
+    expect(app.last()).toMatchObject({ cyclePhase: null, measurement: null, ageYears: null });
+  });
 });

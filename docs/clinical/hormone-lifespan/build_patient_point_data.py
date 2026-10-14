@@ -389,6 +389,56 @@ def build():
                 'Nie wyznacza norm laboratoryjnych, percentyli, SDS ani rozpoznania.'
             ])
 
+    # FDA serum medians are published group summaries, separate from the
+    # existing plasma-based illustration and all paediatric source profiles.
+    adult_amh_policy = json.loads((ROOT/'female-adult-amh-reference-policy.json').read_text(encoding='utf-8'))
+    assert adult_amh_policy['kind'] == 'educational-source-selection'
+    assert (adult_amh_policy['analyte'], adult_amh_policy['sex'], adult_amh_policy['unit']) == ('amh', 'female', 'pmol/L')
+    assert adult_amh_policy['ordinaryOnly'] is True
+    adult_amh_source = read(adult_amh_policy['sourceFile'])
+    assert (adult_amh_source['sex'], adult_amh_source['unit'], adult_amh_source['statistic'],
+            adult_amh_source['matrix']) == ('female', 'pmol/L', 'group-median', 'serum')
+    adult_amh_groups = {row['id']: row for row in adult_amh_source['groups']}
+    assert len(adult_amh_groups) == len(adult_amh_policy['profiles']) == 5
+    assert sum(row['n'] for row in adult_amh_groups.values()) == adult_amh_source['sampleCountPerMatrix']
+    for route in adult_amh_policy['profiles']:
+        row = adult_amh_groups[route['sourceGroupId']]
+        minimum, maximum, median = route['minAge'], route['maxAge'], row['median']
+        # Completed years are an explicit application convention: the FDA
+        # summary does not define DOB rounding or continuous age boundaries.
+        assert minimum == row['minAge'] and maximum == row['maxAge'] + 1
+        assert route['maxAgeExclusive'] is True
+        assert all(max(minimum, existing['minAge']) >= min(maximum, existing['maxAge'])
+                   for existing in profiles if existing['analyte'] == 'amh' and existing['sex'] == 'female')
+        add(route['id'], 'amh', 'female',
+            [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+            minimum, maximum, adult_amh_source['sourceLabel'], adult_amh_source['source']['url'],
+            adult_amh_source['assay'], adult_amh_source['population'], 'group-median',
+            interpolation='constant', ordinaryOnly=adult_amh_policy['ordinaryOnly'],
+            maxAgeExclusive=route['maxAgeExclusive'], specimen=adult_amh_policy['specimen'],
+            compatibleSpecimenIds=adult_amh_policy['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=adult_amh_policy['compatibleAssayMethodIds'],
+            excludedCyclePhases=adult_amh_policy['excludedCyclePhases'],
+            patientNote=route['patientNote'],
+            ageGroup={'label':row['label'], 'minAge':row['minAge'], 'maxAge':row['maxAge'],
+                      'n':row['n'], 'sourceUnit':adult_amh_source['unit'], 'sourceMedian':median,
+                      'sourceMedianNgMl':row['sourceMedianNgMl'],
+                      'boundaryPolicy':'published-integer-label-with-explicit-application-completed-years-convention',
+                      'description':'Mediana całej opublikowanej grupy wieku, nie model dokładnego wieku. Ukończone lata są konwencją aplikacji; dokument nie definiuje ciągłych granic wieku.'},
+            provenance={**adult_amh_source['source'], 'groupParticipants':row['n'],
+                        'sourceUnit':adult_amh_source['unit'], 'sourceToCanonicalFactor':1,
+                        'sourceMedianNgMl':row['sourceMedianNgMl'],
+                        'sourceSpecimen':adult_amh_source['matrix'],
+                        'readableSource':'evidence/patient-point/' + adult_amh_policy['sourceFile'],
+                        'sourceGroupId':row['id'],
+                        'ageRouting':adult_amh_policy['agePolicy'],
+                        'selectionPolicy':adult_amh_policy['selectionPolicy'],
+                        'specimenPolicy':adult_amh_policy['specimenPolicy'],
+                        'assayPolicy':adult_amh_policy['assayPolicy'],
+                        'reproductiveContextPolicy':adult_amh_policy['reproductiveContextPolicy'],
+                        'routingVersion':adult_amh_policy['version']},
+            limitations=adult_amh_source['limitations'])
+
     inhibin_comparison = json.loads((ROOT/'inhibin-comparison-reference-data.json').read_text(encoding='utf-8'))
     source_profile = next(p for p in inhibin_comparison['profiles']
                           if p['id'] == 'borelli2025-female-inhb-puberty-comparison')
@@ -505,7 +555,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-13.3','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-13.4','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,
