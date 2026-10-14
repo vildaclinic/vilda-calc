@@ -72,6 +72,11 @@ Do tej warstwy należą m.in.:
 - predykcje wzrostu: `bayley_pinneau_data.js`, `rwt_data.js`, `reinehr_cdgp_data.js`, `advanced_growth_kowd.js`;
 - SGA: `sga_birth_module.js`, `sga_intergrowth_data.js`, `sga_malewski_data.js`;
 - laboratorium i jednostki: `lab_clinical_panels.js`, `lab_units_data.js`, `lab_unit_converter.js`;
+- historia wyników laboratoryjnych: `vilda_lab_history.js` — czysty model widoku historii (bez DOM,
+  magazynu i zegara; konwerter, parser normy i „dziś” podaje wołający). Czyta tylko to, co zapisano
+  w sejfie, i nie ocenia dawnych wyników dzisiejszymi normami. Konsumenci: zakładka „Badania” karty
+  pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`); do czasu
+  zakładki moduł nie jest ładowany przez strony;
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
 
