@@ -84,8 +84,8 @@ async function settleMain(page) {
   await page.waitForFunction(() => {
     const persistence = window.VildaPersistence;
     const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
-    // Empty queues can occur during the restoration pause. Editing then lets
-    // the pending older root overwrite the new fields when navigation flushes.
+    // Empty queues can occur during the restoration pause. Wait for the full
+    // restore here so this AMH scenario starts with a settled patient context.
     return persistence && typeof persistence.isAutosaveSuppressed === 'function' &&
       !persistence.isAutosaveSuppressed() && !persistence.isRestoring() &&
       !window.VildaDobAge?.restorePending?.() && state && !state.hasPendingSaveTimer &&
@@ -130,6 +130,61 @@ async function editor(page, note) {
 async function saveEditor(page) {
   await page.getByRole('button', { name: 'Zapisz zmiany', exact: true }).click();
   await expect(page.locator('.vilda-pne')).toHaveCount(0);
+}
+
+async function prepareCalendar(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('vilda-terminarz-view-v1', 'week');
+    // Monthly recap reads another range without rendering the calendar.
+    const today = new Date();
+    localStorage.setItem(`vilda-recap-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`, '1');
+    const reads = window.__amhCalendarReads = { pending: 0, started: 0, rendered: -1 };
+    // Install before the calendar's first read, including session restoration.
+    Object.defineProperty(window, 'VildaVault', {
+      configurable: true,
+      set(vault) {
+        Object.defineProperty(window, 'VildaVault', { value: vault, writable: true, configurable: true });
+        // The reminder badge also reads overdue notes, without rendering the
+        // calendar. Track its range query; the render waits for both queries.
+        const original = vault.listPatientNotesInRange;
+        vault.listPatientNotesInRange = function (...args) {
+          reads.pending += 1;
+          reads.started += 1;
+          const delay = reads.delayNextRange;
+          delete reads.delayNextRange;
+          return Promise.resolve(original.apply(this, args))
+            .then(notes => delay ? delay(notes) : notes)
+            .finally(() => { reads.pending -= 1; });
+        };
+      },
+    });
+    new MutationObserver(records => {
+      if (records.some(record => record.target.id === 'terminarzRoot')) {
+        // A completed read can enqueue another refresh. Only the final render
+        // with no reads outstanding makes the existing event cards ready.
+        reads.rendered = reads.pending === 0 ? reads.started : -1;
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/terminarz.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaTerminarz && window.VildaHormoneReferenceUI);
+}
+
+async function settleCalendar(page) {
+  await page.evaluate(() => {
+    window.__amhCalendarReads.waiting = true;
+    delete window.__amhCalendarReads.ready;
+  });
+  await page.waitForFunction(() => {
+    const reads = window.__amhCalendarReads;
+    const idle = reads.started > 0 && reads.pending === 0 && reads.rendered === reads.started;
+    // Layout can queue a zero-delay refresh after rendering. Require the same
+    // completed range/render on the next animation frame before opening menus.
+    const ready = idle && reads.ready === reads.started;
+    reads.ready = idle ? reads.started : null;
+    return ready;
+  });
+  await page.evaluate(() => { window.__amhCalendarReads.waiting = false; });
 }
 
 async function capture(page, host, name, data) {
@@ -366,10 +421,9 @@ test('AMH calendar editor preserves the stored source on comments and invalidate
   expect(scheduled.labResult.hormoneReference.status).toBe('recorded');
   expect(scheduled.labResult.hormoneReference.binding.clinicalDateISO).toBeNull();
   expect((await readNote(page, saved.id)).labResult.hormoneReference).toEqual(saved.labResult.hormoneReference);
-  await page.goto('/terminarz.html', { waitUntil: 'load' });
-  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaTerminarz && window.VildaHormoneReferenceUI);
-  await page.evaluate(() => { window.VildaTerminarz.setView('week'); window.VildaTerminarz.refresh(); });
+  await prepareCalendar(page);
   const edit = async () => {
+    await settleCalendar(page);
     await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).waitFor({ state: 'attached' });
     await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).evaluate(el => el.click());
     await page.locator('.tz-pop button[data-pop="edit"]').evaluate(el => el.click());
@@ -378,10 +432,40 @@ test('AMH calendar editor preserves the stored source on comments and invalidate
   await edit();
   await expect(savedReference(page.locator('#tzNewTermOverlay'))).toContainText('2,96 ng/mL');
   await page.locator('#tzNtBody').fill('Nowy komentarz terminarza');
+  // Reproduce the slow refresh that used to close the popover between clicks.
+  // The old card remains attached while this real vault read is outstanding.
+  await page.evaluate(noteId => {
+    const race = window.__amhCalendarRace = { releasedByClick: false, release: null };
+    window.__amhCalendarReads.delayNextRange = notes => new Promise(resolve => {
+      const release = () => {
+        if (!race.release) return;
+        race.release = null;
+        document.removeEventListener('click', onClick);
+        resolve(notes);
+      };
+      const onClick = event => {
+        if (event.target.closest(`.tz-wb[data-note-id="${noteId}"]`)) {
+          race.releasedByClick = true;
+          release();
+        }
+      };
+      race.release = release;
+      document.addEventListener('click', onClick);
+    });
+  }, scheduled.id);
   await page.locator('#tzNtSave').evaluate(el => el.click());
   await expect(page.locator('#tzNewTermOverlay')).toHaveCount(0);
   expect((await readNote(page, scheduled.id)).labResult.hormoneReference).toEqual(scheduled.labResult.hormoneReference);
-  await edit();
+  await page.waitForFunction(() => window.__amhCalendarRace.release);
+  const editing = edit();
+  await page.waitForFunction(() => window.__amhCalendarReads.waiting);
+  expect(await page.evaluate(() => window.__amhCalendarReads.pending)).toBeGreaterThan(0);
+  await expect(page.locator('.tz-pop')).toHaveCount(0);
+  await expect(page.locator('#tzNewTermOverlay')).toHaveCount(0);
+  await page.evaluate(() => window.__amhCalendarRace.release());
+  await editing;
+  expect(await page.evaluate(() => window.__amhCalendarRace.releasedByClick)).toBe(false);
+  await expect(page.locator('#tzNtBody')).toHaveValue('Nowy komentarz terminarza');
   await page.locator('#tzNtLabNorm').fill('1–10 ng/mL');
   await expect(savedReference(page.locator('#tzNewTermOverlay'))).toHaveAttribute('data-reference-status', 'recorded');
   await page.locator('#tzNtSave').evaluate(el => el.click());
