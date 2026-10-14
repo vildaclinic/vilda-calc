@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
+const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
 const runtime = require('../../vilda_hormone_lifespan_data.js');
 const engine = require('../../vilda_hormone_lifespan_reference.js');
 const ageEngine = require('../../vilda_lab_puberty.js');
@@ -26,10 +27,10 @@ const adultNodes = [[20, 34], [25, 32], [30, 30], [35, 29], [40, 28],
 
 describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat', () => {
   it('rozszerza jeden profil i zachowuje dokładnie wszystkie 73 pozostałe profile oraz konwersje', () => {
-    expect(data.profiles).toHaveLength(74);
-    expect(data.version).toBe('2026-10-14.1');
+    expect(data.profiles).toHaveLength(76);
+    expect(data.version).toBe('2026-10-14.2');
     const unchanged = { ...data, version: '2026-10-13.4',
-      profiles: data.profiles.filter(profile => profile.id !== profileId) };
+      profiles: data.profiles.filter(profile => profile.id !== profileId && !laterChildhoodIds.includes(profile.id)) };
     expect(unchanged.profiles).toHaveLength(73);
     // Snapshot of the approved 8b84254e base excluding only the revised profile.
     expect(digest(unchanged)).toBe('f2cab3d7ea197ae8feaddcd0d0cdfea4fffcc8bba566a7101b82138865f73c5f');
@@ -114,9 +115,11 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
     expect(evaluate(resolved.lowerYears, { ageUpperYears: resolved.upperYears,
       ageUpperInclusive: resolved.upperInclusive })).toEqual(unavailable('ambiguous-age'));
     for (const age of [47.00001, 48, 60, 69, 90]) expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
-    for (const age of [1.0001, 3, 5.59]) expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
+    for (const [age, referenceValue] of [[1.0001, 33], [3, 33], [5.59, 27]]) {
+      expect(evaluate(age)).toMatchObject({ status: 'ready', referenceValue, profile: { statistic: 'group-median' } });
+    }
     expect(evaluate(5.6)).toMatchObject({ status: 'ready', referenceValue: 11 });
-    expect(evaluate(5.59, { ageUpperYears: 5.61 })).toEqual(unavailable('unsupported-age'));
+    expect(evaluate(5.59, { ageUpperYears: 5.61 })).toEqual(unavailable('ambiguous-age'));
   });
 
   it('znany stan ciąży lub menopauzy blokuje tylko ten profil; brak danych nie jest potwierdzeniem stanu rozrodczego', () => {

@@ -198,7 +198,7 @@ for (const width of [1440, 320]) {
 }
 
 for (const boundary of [
-  { age: 5, months: 7, eligible: false, title: '5y7m straddles the lower bound and stays unavailable' },
+  { age: 5, months: 7, eligible: false, title: '5y7m straddles two source profiles and stays unavailable' },
   { age: 5, months: 8, eligible: true, title: '5y8m lies inside the source coverage' },
   { age: 6, months: '', eligible: true, title: '6 years without months does not require invented precision' },
 ]) {
@@ -211,7 +211,7 @@ for (const boundary of [
     if (boundary.eligible) await expectSourcePoint(page, childInhibin, 33);
     else {
       await expect(point(page, childInhibin)).toHaveCount(0);
-      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toHaveText('Dla tego wieku nie udostępniono mediany źródłowej. Linia pokazuje ogólny przebieg zmian.');
+      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toHaveText('Podany przedział wieku obejmuje granicę źródeł lub grup wieku — nie wybieramy jednej mediany. Krzywe pozostają poglądowe.');
     }
     expect((await state(page)).assessment.evaluation.input.age).toMatchObject({ years: boundary.age,
       months: boundary.months === '' ? null : boundary.months, precision: boundary.months === '' ? 'year' : 'month' });

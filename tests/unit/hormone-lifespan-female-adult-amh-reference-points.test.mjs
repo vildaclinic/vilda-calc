@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
+const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
 const runtime = require('../../vilda_hormone_lifespan_data.js');
 const engine = require('../../vilda_hormone_lifespan_reference.js');
 const ageEngine = require('../../vilda_lab_puberty.js');
@@ -34,11 +35,11 @@ const excludedPhases = ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmen
 
 describe('AMH dorosłych kobiet — pięć surowiczych median grup FDA/Access', () => {
   it('dodaje dokładnie pięć profili, zachowując 68 pozostałych wcześniejszych profili i konwersje', () => {
-    expect(data.profiles).toHaveLength(74);
+    expect(data.profiles).toHaveLength(76);
     expect(data.profiles.filter(profile => addedIds.includes(profile.id)).map(profile => profile.id)).toEqual(addedIds);
     const original = { ...data, version: '2026-10-13.3',
       profiles: data.profiles.filter(profile => !addedIds.includes(profile.id) &&
-        profile.id !== 'borelli2025-female-inhb-age-5p6-47') };
+        profile.id !== 'borelli2025-female-inhb-age-5p6-47' && !laterChildhoodIds.includes(profile.id)) };
     expect(original.profiles).toHaveLength(68);
     // The later female inhibin extension has its own contract; preserve all other source data.
     expect(digest(original)).toBe('1255289b15e0b5fa26136fe7271300ebc75309459be70a40792df002bc32f52f');

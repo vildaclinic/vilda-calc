@@ -219,6 +219,14 @@ poszczególnych miesięcy minipuberty. Nie łączymy jego dolnej granicy z
 górną krzywą Gen II w R2 i nie uaktywniamy automatycznie drugiego profilu
 wyłącznie dlatego, że zawiera dodatnią dolną granicę.
 
+**Osobna zmiana edukacyjna z 14.10.2026:** wykres zwykły korzysta
+z opublikowanych median pełnych grup Zhou 1–5 lat (33 pg/mL) i 5–10
+(27 pg/mL), wyłącznie w luce >1–<5,6 lat, według
+[kontraktu punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026). Nie aktywuje to opisanych wyżej norm
+Zhou, dolnej granicy niemowląt ani norm grup dziecięcych. Mediana i jej
+90% CI nie stają się granicami interpretacji laboratoryjnej; metoda
+CLIA nie jest przez to harmonizowana z Gen II.
+
 Uzupełniający przegląd PubMed obejmuje van der Coelen i wsp. 2025,
 [PMID 40651522](https://pubmed.ncbi.nlm.nih.gov/40651522/),
 DOI 10.1016/j.fertnstert.2025.07.003. Tabela 2 przytacza zdrowe kontrole
