@@ -501,7 +501,8 @@ To dostępne dane ryc. 1, nie liczba z mostu ani nowa norma. Kohorta
 LOD 3 pg/mL. Odczyt ≈11 jest powyżej LOD, a oszacowanie digitalizacji
 ±2 pg/mL nie jest przedziałem ufności ani granicą referencyjną.
 Całe 24 węzły 5,6–47 nadal wyznaczają PCHIP; geometria i skale pozostają
-niezmienione. Luka >1–<5,6 pozostaje bez liczbowego odniesienia, a porównanie
+niezmienione. W tej historycznej partii luka >1–<5,6 pozostała bez liczbowego
+odniesienia, a porównanie
 płci zachowuje okno 8–20. Nie trzeba nowej publikacji ani pól formularza.
 Profil `borelli2025-female-inhb-age-5p6-20` i polityka/dane punktu
 `2026-10-13.2` zastępują zwykłe ID `borelli2025-female-inhb-age-8-20`;
@@ -540,9 +541,35 @@ orientacyjne porównanie, bez ustalania stanu pacjentki.
 
 Krzywe, skale, formularz, normy, pozostałe profile oraz porównanie płci
 8–20 pozostają bez zmian. Jasny znacznik jest medianą modelu wieku,
-nie oceną rezerwy jajnikowej ani normą fazy cyklu. Luka >1–<5,6 i ogon
->47 nie otrzymują nowych liczb. Pełny kontrakt, reguły kwalifikacji i
+nie oceną rezerwy jajnikowej ani normą fazy cyklu. W tej partii luka
+>1–<5,6 i ogon >47 nie otrzymały nowych liczb; dziecięce odniesienia
+Zhou dodano w osobnej partii opisanej poniżej. Pełny kontrakt, reguły kwalifikacji i
 ograniczenia: [punkt pacjenta](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026).
+
+### Inhibina B młodszych dziewczynek — mediany grup Zhou, 14 października 2026
+
+Dwie mediany pełnych grup z tabel 1–3 Zhou 2025, DOI
+`10.1038/s41598-025-85551-9`, uzupełniają zwykły punkt odniesienia
+w wieku **>1–<5,6 lat**. Grupa 1–5 lat (N=60) daje 33 pg/mL dla
+`(1,5)`, a grupa 5–10 (N=77) daje 27 dla `[5,5.6)`. Są to stałe
+mediany grup, nie nowy model każdego wieku. Przydział dokładnych 5 lat
+do drugiej grupy jest konwencją aplikacji, nie podaną definicją autorów.
+Cały przedział wieku musi pasować: F3 lata 0 miesięcy działa, F5 lat
+7 miesięcy przecina granicę z Borelli i nie dostaje jednej mediany.
+Dokładnie 1 rok zachowuje Ljubicic, od 5,6 pozostaje Borelli.
+
+Źródło: przekrojowa kohorta szpitalna Wuhan 2022, surowica Kangran CLIA
+na KAESER 1000, LOD 7 pg/mL; brak pory pobrania i Tannera, możliwa
+resztkowa patologia mimo wykluczeń. Nie skalibrowano metody względem
+Gen II. Znana niezgodna metoda lub materiał blokuje nowe odniesienie;
+nieznane dane pozwalają na orientacyjne porównanie bez nowego pola.
+
+„Mediana grupy” oraz krótka notka podają pełną grupę, kraj i metodę.
+Jasny punkt może być poza ilustracją; różnica między źródłami nie
+przebudowuje płynnego mostu ani nie oznacza nagłego spadku hormonu.
+Linie, skale, normy, historia i porównania płci pozostają bez zmian.
+90% CI median 30–39/24–29 nie jest normą wyniku. Szczegóły i granice:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026).
 
 ### Mediany AMH dorosłych kobiet — 13 października 2026
 

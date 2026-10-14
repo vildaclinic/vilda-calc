@@ -24,7 +24,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     expect(data.notClinicalReference).toBe(true);
-    expect(data.profiles).toHaveLength(74);
+    expect(data.profiles).toHaveLength(76);
     expect(data.profiles.every(item => item.sourceLabel && item.url && item.method && item.population)).toBe(true);
   });
 
@@ -376,7 +376,8 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(evaluate('lh', 7 / 365.25).status).toBe('ready');
     expect(evaluate('lh', 6).status).toBe('ready');
     expect(evaluate('lh', 16).status).toBe('ready');
-    expect(evaluate('inhb', 5.59, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+    expect(evaluate('inhb', 5.59, { sex: 'female' })).toMatchObject({ status: 'ready', referenceValue: 27,
+      profile: { id: 'zhou2025-female-inhb-age-5-under5p6', statistic: 'group-median' } });
     expect(evaluate('lh', .019, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
     expect(evaluate('lh', .02, { sex: 'female' }).status).toBe('ready');
   });

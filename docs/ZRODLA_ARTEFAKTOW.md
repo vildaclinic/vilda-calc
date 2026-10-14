@@ -763,6 +763,161 @@ A(masa, plec, wiekLat, 'WT', zrodlo, ramkaNieaktualna ? { wiekMies: null } : und
 calcPercentileStats(wzrostDocelowy, plec, 18, 'HT', { wiekMies: null });
 ```
 
+## Łatka P-WIEK-POMIARU-3 (karta porównania, masa poniżej 3 lat przy OLAF, wiek kostny, 2026-10-14)
+
+Zmiana wprost w artefaktach. Rejestr: `docs/clinical/ALGORITHMS.md`, P-WIEK-POMIARU-3. Nazwy z artefaktów: `q` — `__pickLastMeasurement`, `Se` — budowa kolumny „Poprzednio”, `En` — centyl kafelka Karty, `I` — centyl wiersza schowka.
+
+```js
+// vilda_summary_cards.js — karta porównania
+function q(rekord) { /* … */ info.wiekMies = Sw_wiekPomiaru(rekord, info.ageMonths); return info; }   // wiek z doby pomiaru albo null
+function Sw_wiekDzis(wiekLat) { return lmsNiemowleWiek(Math.round(wiekLat * 12)); }                  // bramka DOB-AGE-4 formularza; null = pełne miesiące
+function Sw_masaPal(wiekLat) { return bmiSource === 'PALCZEWSKA' || (bmiSource === 'OLAF' && wiekLat < OLAF_DATA_MIN_AGE); }
+masa = Sw_masaPal(r) ? calcPercentileStatsPal(kg, plec, r, 'WT') : calcPercentileStats(kg, plec, r, 'WT', { wiekMies: Pw });  // Se()
+vildaPorownanieZPoprzednim({ ...poprzedni, wiekMies: prevMeasurementInfo.wiekMies },
+  { ageMonths: A * 12, wiekMies: Sw_wiekDzis(A), /* … */ }, opt);                                     // updatePrevSummaryDiff()
+// w modelu: wA, wB = wiek dokładny albo pełne miesiące
+stat('HT', wzrost, wA); oc(bmi, wA); B.cole({ /* … */ wiekMies: wA });
+statW(masa, aM, wA);   // pełne miesiące; na siatce WHO poniżej 36 mies. — wiek dokładny
+
+// app.js — advHistoryGetChildLMSForSource(): masa WHO 0–35 mies.
+lmsNiemowle(LMS_INFANT_WEIGHT_X, Math.round(wiekLat * 12), { wiekMies: Math.round(wiekLat * 12 * 1e3) / 1e3 });  // było: wiersz [Math.round(…)]
+
+// vilda_auth_ui.js — En(); vilda_patient_summary_copy.js — I()
+var zr = zrodloZapisu || bmiSource;
+if (param !== 'HT' && (zr === 'PALCZEWSKA' || (zr === 'OLAF' && wiekLat < 3))) return calcPercentileStatsPal(wartosc, plec, wiekLat, param);
+
+// vilda_advanced_growth.js — heightSdsForBoneAge (u = calcPercentileStats)
+calcPercentileStats(wzrost, plec, wiekKostnyLat, 'HT', { wiekMies: null });
+```
+
+## Łatka P-GRANICA-URODZIN (granice pełnych miesięcy, 2026-10-14)
+
+Zmiana wprost w artefaktach `app.js` i `vilda_professional_module.js`. Silniki (`vilda_sds_wzrostu.js`, `vilda_bmi.js`: dane `GRANICE`) i karta zespołu Downa (`vilda_down_syndrome.js`) są czytelnymi źródłami i zmieniły się wprost w nich. Reguła: siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje; noworodek według dób. Rejestr: `docs/clinical/ALGORITHMS.md`, P-GRANICA-URODZIN.
+
+```js
+// app.js — nowa funkcja przed lmsNiemowleWiek (w artefakcie jedna linia)
+function vildaWiekDoSiatek(wiek, pelne, populacja) {
+  if (typeof wiek !== 'number' || !isFinite(wiek) || wiek < 0) return wiek;
+  const p = pelne == null || pelne === '' ? NaN : Number(pelne);
+  if (!isFinite(p) || p < 0 || Math.floor(p) !== p) return wiek;      // brak pełnych miesięcy: bez zmian
+  const r = wiek - p;
+  if (!(r > -0.5 && r < 1.5)) return wiek;                             // para nie z tego samego dnia: bez zmian
+  const W = typeof window !== 'undefined' ? window : globalThis;
+  let lo = -Infinity, hi = Infinity;
+  [W.VildaSdsWzrostu, W.VildaBmi].forEach(function (S) {
+    if (!S || !S.GRANICE) return;
+    let pop;
+    try { pop = populacja != null ? S.normPopulacja(populacja) : S.populacjaZOpcji({}); } catch (e) { pop = 'OGOLNA'; }
+    const g = S.GRANICE[pop];
+    if (!g) return;
+    g.od.forEach(function (b) { if (b <= p) lo = Math.max(lo, b); else hi = Math.min(hi, b - 1e-6); });
+    g.do.forEach(function (b) { if (b >= p) hi = Math.min(hi, b); });
+  });
+  return Math.min(Math.max(wiek, lo), hi);
+}
+
+// app.js — lmsNiemowleWiek(a, wp), ścieżka formularza (DOB-AGE-4); a = pełne miesiące formularza
+return t >= 0 ? (typeof vildaWiekDoSiatek === 'function' ? vildaWiekDoSiatek(t, a) : t) : null;
+
+// app.js — vildaWiekPomiaruMies(r, iso, pelne); pełne miesiące z dnia pomiaru
+return m >= 0 ? (typeof vildaWiekDoSiatek === 'function' ? vildaWiekDoSiatek(m, w.totalMonths) : m) : null;
+
+// vilda_professional_module.js — wiersz wsadu; p: data urodzenia, dpD/dpOk: data pomiaru, Ce = doby / 30,4375, re = Ce / 12
+const Pm = VildaDobAge.ageFromDobISO(lokalnaDataISO(p), dpOk ? dpD : new Date()).totalMonths;   // null bez modułu albo przy |Ce − Pm| ≥ 1,5
+const Cs = Pm != null ? vildaWiekDoSiatek(Ce, Pm, 'OGOLNA') : Ce;
+const Rp = Pm != null ? Pm / 12 : re;
+// Palczewska: masa calcPercentileStatsPal(P, r, Rp, 'WT'); wzrost Zw(ae, r, Cs / 12, 'PALCZEWSKA'),
+//             zapas calcPercentileStatsPal(ae, r, Rp, 'HT'); BMI Zb(Je, r, Cs, 'PALCZEWSKA')
+// OLAF/WHO:   masa calcPercentileStats(P, r, Rp, 'WT', { wiekMies: Cs }); wzrost Zw(ae, r, Cs / 12, t),
+//             zapas calcPercentileStats(ae, r, Rp, 'HT', { wiekMies: null }); BMI Zb(Je, r, Cs, t)
+```
+
+## Łatka P-LAB-TREND-CONVERT (`vilda_auth_ui.js` 491 → 492, 2026-10-14)
+
+Zmiana wprost w artefakcie, w funkcji, która z serii sejfu buduje punkty wykresu wyników (w artefakcie `yi()`). Wołają ją „Trend wyników” w Historii (`Jl()`), nakładki wyników na siatkach centylowych i eksport siatek do PDF (`Gl()`). Nazwy z artefaktu: `t` — seria z `listPatientLabSeries`, `r` — jednostka serii (najczęstsza w serii), `s` — `window.LabUnitConverter`, `point()` — budowa punktu wykresu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis LAB-TREND-CONVERT.
+
+```js
+// P-LAB-TREND-CONVERT, w yi(); konwerter = window.LabUnitConverter, seria = t, wpis = punkt serii
+// było: if (konwerter && seria.testKey && typeof konwerter.convert === 'function' && wpis.unit) {
+//         const wynik = konwerter.convert(seria.testKey, wpis.valueNum, wpis.unit);   // zawsze „Nie znaleziono substancji.”
+if (konwerter && seria.testKey && typeof konwerter.convertAll === 'function' && wpis.unit) {
+  const wynik = konwerter.convertAll({ substanceId: seria.testKey, value: wpis.valueNum, fromUnit: wpis.unit });
+  // dalej bez zmian: wartość z wynik.results o symbolu równym jednostce serii; brak takiej → „pominięto”
+}
+
+// point(wpis, wartosc, przeliczony)
+// było: norm: wpis.norm || null
+norm: przeliczony ? null : (wpis.norm || null),   // tekstowa norma wpisu jest w jednostce zapisu, nie serii
+```
+
+Część 2: żadna strona z kartą pacjenta nie ładuje `lab_unit_converter.js` statycznie. Start (`index.html`) doładowuje go w czasie bezczynności albo przy pierwszym dotknięciu lub klawiszu, pozostałe (DocPro, Notatki, Terminarz, Ustawienia, Klirens, Subskrypcja, powłoka) dopiero przez `ja()` (sprostowanie z P-LAB-TREND-CONVERT-2; pierwotny opis wyłączał Start). „Trend wyników” (`Jl()`) i nakładki na siatki (`Kl()`) wołały `yi()` przed jego doładowaniem, a późniejszy render odświeżał tylko strzałki, więc punkt w innej jednostce nadal znikał. Nowe funkcje stoją tuż za `yi()`; obie strony wołają `await LtcCzekajNaKonwerter(serie)` zaraz po odczycie serii z sejfu. Eksport siatek do PDF (`Yl()` → `Gl()`) czekał na `ja()` już wcześniej.
+
+```js
+// P-LAB-TREND-CONVERT, część 2 (nazwy z artefaktu: ja — leniwe ładowanie konwertera, i — window)
+function LtcSeriaWielujednostkowa(serie) {          // czy któraś seria ma wpisy w więcej niż jednej jednostce
+  return (serie || []).some((s) => new Set(((s && s.points) || []).map((p) => (p && p.unit) || '?')).size > 1);
+}
+async function LtcCzekajNaKonwerter(serie) {
+  if (!LtcSeriaWielujednostkowa(serie) || typeof ja !== 'function'
+      || (window.LabUnitConverter && typeof window.LabUnitConverter.convertAll === 'function')) return;
+  try {
+    await Promise.race([new Promise((gotowe) => ja(() => gotowe())), new Promise((gotowe) => setTimeout(gotowe, 5000))]);
+  } catch {}
+}
+// Jl(): po `o = await r.listPatientLabSeries(a)` → await LtcCzekajNaKonwerter(o);
+// Kl(): po odczycie serii i okresów leczenia → await LtcCzekajNaKonwerter(d);
+```
+
+## Łatka P-LAB-TREND-CONVERT-2 (`vilda_auth_ui.js` 492 → 493, 2026-10-14)
+
+Poprawka po scaleniu P-LAB-TREND-CONVERT (przegląd PR0); wyniki, jednostki i strzałki bez zmian. Dwie zmiany w artefakcie, opis w `docs/clinical/ALGORITHMS.md`, wpis P-LAB-TREND-CONVERT-2.
+
+Pierwsza: `LtcSeriaWielujednostkowa()` liczy jednostki tylko dokładnych wyników (skończone `valueNum`, niepusta jednostka) i pomija serie z kluczem zawierającym „:” (klirens `clcr:…`, którego konwerter nie zna). Dawniej czekanie uruchamiały też wpis bez jednostki (`'?'`), wpis bez liczby i seria klirensu w kilku jednostkach, choć `yi()` i tak by ich nie przeliczyło.
+
+```js
+// P-LAB-TREND-CONVERT-2; było: new Set(((s && s.points) || []).map((p) => (p && p.unit) || '?')).size > 1
+function LtcSeriaWielujednostkowa(serie) {   // seria z dokładnymi wynikami w więcej niż jednej jednostce
+  return (serie || []).some((s) => {
+    if (!s || String(s.testKey || '').includes(':')) return false;
+    const jednostki = new Set();
+    (s.points || []).forEach((p) => {
+      if (p && typeof p.valueNum === 'number' && isFinite(p.valueNum) && p.unit) jednostki.add(p.unit);
+    });
+    return jednostki.size > 1;
+  });
+}
+```
+
+Druga: znacznik pokolenia na kontenerze w `Kl()` (nakładki na siatki, kontener `Qt`, ponownie wołane przez `we()`) i w `Xl()` (Historia, która czeka na `Jl()`; kontener `ca`, ponownie wołane przez `Ue()`). Czekanie na konwerter (do 5 s) poszerzyło okno, w którym drugie wywołanie czyści kontener i rysuje od nowa, a pierwsze po przebudzeniu dopisywało swoją sekcję: dwa wiersze chipów nakładek albo dwie listy „Historia pacjenta”. `Xl()` sprawdza znacznik także po odczycie zdarzeń osi czasu i pacjenta, bo za nim dopisuje listę zdarzeń wprost do kontenera; to krótsze okno istniało przed P-LAB-TREND-CONVERT.
+
+```js
+// P-LAB-TREND-CONVERT-2
+// Kl(t, …): const pokolenie = t ? (t._vildaLtcGenKl = (t._vildaLtcGenKl || 0) + 1) : 0;
+//           … po await LtcCzekajNaKonwerter(d): if (t && t._vildaLtcGenKl !== pokolenie) return;
+// Xl(t, …): const pokolenie = t ? (t._vildaLtcGenXl = (t._vildaLtcGenXl || 0) + 1) : 0;
+//           … po try { await Jl(d, a, n) } catch { oe(d) }: if (t && t._vildaLtcGenXl !== pokolenie) return;
+//           … po odczycie zdarzeń (await l.listPatientTimelineEvents) i pacjenta (await l.getPatient),
+//             czyli po `} catch { z = null }`, przed listą .vilda-patient-timeline-list: ten sam warunek
+```
+
+## Łatka P-LAB-WARTOSC-BEZ-JEDNOSTKI (`vilda_vault.js` 211 → 212, 2026-10-14)
+
+Zmiana wprost w artefakcie: funkcja `vo()`, która w `listPatientLabSeries` (w artefakcie `Po()`) czyta liczbę i jednostkę z tekstu `labResult.value` notatki bez `valueNum` (punkt `legacy: true`). W artefakcie stoi teraz w czytelnej postaci z komentarzem, tuż przed `Cr()`. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-LAB-WARTOSC-BEZ-JEDNOSTKI.
+
+```js
+// było: var e = /^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/.exec(String(t || ""));   // „15” → 1 i „5”
+//       … return { num: n, unit: e[2] };
+function vo(t) {
+  var tekst = String(t || "");
+  var liczba = /^\s*(\d+(?:[.,]\d+)?)/.exec(tekst);                     // zachłannie: cała liczba, bez cofania
+  if (!liczba) return null;
+  var n = parseFloat(liczba[1].replace(",", "."));
+  if (!isFinite(n) || n < 0) return null;
+  var jednostka = /^\s*([^\s=]*)/.exec(tekst.slice(liczba[0].length))[1];   // może być pusta
+  return { num: n, unit: jednostka || null };                              // Po(): unit = lab.unit || parsed.unit (bez zmian)
+}
+```
+
 ## Jak odtworzyć
 
 ```bash

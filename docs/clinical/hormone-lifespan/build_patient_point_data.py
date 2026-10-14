@@ -492,6 +492,67 @@ def build():
                                'Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń.']}
     profiles.append(ordinary)
 
+    # Whole-group medians fill only the approved childhood gap. They do not
+    # replace the existing female illustrative bridge or fit a new age model.
+    childhood_policy = json.loads((ROOT/'female-inhibin-childhood-reference-policy.json').read_text(encoding='utf-8'))
+    assert childhood_policy['kind'] == 'educational-source-selection'
+    assert (childhood_policy['analyte'], childhood_policy['sex'], childhood_policy['unit']) == ('inhb', 'female', 'pg/mL')
+    assert childhood_policy['ordinaryOnly'] is True
+    childhood_source = read(childhood_policy['sourceFile'])
+    assert (childhood_source['sex'], childhood_source['unit'], childhood_source['statistic'],
+            childhood_source['matrix']) == ('female', 'pg/mL', 'group-median', 'serum')
+    childhood_groups = {row['id']: row for row in childhood_source['groups']}
+    assert len(childhood_groups) == len(childhood_policy['profiles']) == 2
+    for route in childhood_policy['profiles']:
+        row = childhood_groups[route['sourceGroupId']]
+        minimum, maximum, median = route['minAge'], route['maxAge'], row['median']
+        assert row['minAge'] <= minimum < maximum <= row['maxAge']
+        assert row['medianConfirmation']['table2'] == row['medianConfirmation']['table3'] == median
+        assert 1 <= minimum < maximum <= 5.6
+        assert route['maxAgeExclusive'] is True
+        # Do not overlap either source at the endpoints, including the exact
+        # first birthday that remains in Ljubicic. Method mismatch is not a
+        # reason to select another overlapping source.
+        for existing in profiles:
+            if existing['analyte'] != 'inhb' or existing['sex'] != 'female':
+                continue
+            overlap_start = max(minimum, existing['minAge'])
+            overlap_end = min(maximum, existing['maxAge'])
+            assert overlap_start >= overlap_end
+            if overlap_start == overlap_end:
+                assert ((overlap_start == minimum and route['minAgeExclusive']) or
+                        (overlap_start == maximum and route['maxAgeExclusive']) or
+                        (overlap_start == existing['minAge'] and existing.get('minAgeExclusive', False)) or
+                        (overlap_start == existing['maxAge'] and existing.get('maxAgeExclusive', False)))
+        add(route['id'], 'inhb', 'female',
+            [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+            minimum, maximum, childhood_source['sourceLabel'], childhood_source['source']['url'],
+            childhood_source['assay'], childhood_source['population'], 'group-median',
+            interpolation='constant', ordinaryOnly=childhood_policy['ordinaryOnly'],
+            minAgeExclusive=route['minAgeExclusive'], maxAgeExclusive=route['maxAgeExclusive'],
+            specimen=childhood_policy['specimen'],
+            compatibleSpecimenIds=childhood_policy['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=childhood_policy['compatibleAssayMethodIds'],
+            patientNote=route['patientNote'],
+            ageGroup={'label':row['label'], 'minAge':row['minAge'], 'maxAge':row['maxAge'],
+                      'n':row['n'], 'sourceUnit':childhood_source['unit'], 'sourceMedian':median,
+                      'sourceMedianCi90':row['medianCi90'],
+                      'boundaryPolicy':'published-label-with-separate-explicit-application-age-routing',
+                      'description':'Mediana całej opublikowanej grupy, nie dokładnego wieku ani stadium Tannera. Metoda CLIA nie została zharmonizowana z Gen II ELISA.'},
+            provenance={**childhood_source['source'],
+                        'participants':childhood_source['participants'],
+                        'femaleParticipants':childhood_source['femaleParticipants'],
+                        'groupParticipants':row['n'], 'sourceUnit':childhood_source['unit'],
+                        'sourceToCanonicalFactor':1, 'sourceSpecimen':childhood_source['matrix'],
+                        'readableSource':'evidence/patient-point/' + childhood_policy['sourceFile'],
+                        'sourceGroupId':row['id'],
+                        'ageRouting':childhood_policy['agePolicy'],
+                        'selectionPolicy':childhood_policy['selectionPolicy'],
+                        'specimenPolicy':childhood_policy['specimenPolicy'],
+                        'assayPolicy':childhood_policy['assayPolicy'],
+                        'routingVersion':childhood_policy['version']},
+            limitations=childhood_source['limitations'])
+
     # Adult LH/FSH central observations remain separate from the educational
     # display curve and laboratory reference intervals. A constant profile is
     # the published whole-group statistic, never an interpolated exact-age p50.
@@ -583,7 +644,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-14.1','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-14.2','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

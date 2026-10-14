@@ -20,6 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
+| LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -31,6 +32,321 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; P-PLEC-IMIE-2 (2026-10-13): także kolejny nowy pacjent po „Wyczyść”; akceptacja kliniczna właściciela 2026-10-13 (progi 99 % / 20, ostrzeżenia i kolor notek bez zmian) |
 
 ## Długi walidacyjne o najwyższym priorytecie
+
+### LAB-TREND-CONVERT — przeliczanie jednostek w trendzie wyników karty pacjenta (P-LAB-TREND-CONVERT, SW 1.1.277, `vilda_auth_ui.js` 492, 2026-10-14)
+
+**Wpływ kliniczny: tak.** Zmienia się prezentacja historii wyników: wynik
+zapisany w innej znanej jednostce niż reszta serii pojawia się na wykresie
+zamiast znikać. Nie ma nowych norm, współczynników, progów ani zaokrągleń.
+Etap PR0 planu `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja właściciela 6.2.
+
+**Problem:** „Trend wyników” w Historii, nakładki wyników na siatkach
+i eksport siatek do PDF rysują serię w jej najczęstszej jednostce. Wynik
+w innej jednostce miał być przeliczony, ale funkcja budująca punkty wołała
+konwerter z trzema argumentami zamiast jednego obiektu. Konwerter zawsze
+odpowiadał „Nie znaleziono substancji.”, więc punkt trafiał do stopki
+„pominięto N (inna jednostka …)”. Lekarz nie widział np. fT4 oznaczonego
+w innym laboratorium w ng/dL obok wyników w pmol/L.
+
+**Zmiana:** punkt w innej jednostce przelicza `LabUnitConverter.convertAll`
+z `{substanceId, value, fromUnit}`, czyli ta sama funkcja i ten sam
+współczynnik `factor_to_si` z `lab_units_data.js`, którymi liczy strona
+„Jednostki laboratoryjne”. Przykład: fT4 1 ng/dL = 12,87 pmol/L, współczynnik
+stechiometryczny z masy cząsteczkowej 776,87 g/mol zapisanej w danych.
+Punkt przeliczony ma znacznik `conv` (na wykresie obwódka, jak dotąd)
+i nie niesie tekstowej normy wpisu (`norm: null`), bo ta norma jest
+w jednostce zapisu, a nie w jednostce serii.
+
+Na stronach z kartą pacjenta konwerter ładuje się leniwie, także na Start
+(w czasie bezczynności albo przy pierwszym dotknięciu; sprostowanie
+z P-LAB-TREND-CONVERT-2). Trend i nakładki na siatki budowały punkty, zanim się załadował,
+więc tam sama poprawka wywołania nic by nie zmieniła. Dlatego przy serii
+z wynikami w więcej niż jednej jednostce oba widoki czekają na konwerter,
+najwyżej 5 s; po tym czasie albo przy błędzie ładowania zostaje dawne
+„pominięto”. Seria w jednej jednostce nie czeka. Eksport siatek do PDF
+czekał na konwerter już wcześniej.
+
+**Populacja, jednostki i ograniczenia:** wszyscy pacjenci; wszystkie badania
+i jednostki znane konwerterowi. Jednostką serii zostaje jej najczęstsza
+jednostka, przy remisie jednostka wpisu stojącego w serii wcześniej, jak dotąd. Symbol
+jednostki porównywany jest dosłownie: „µIU/mL” ze znakiem mikro (U+00B5)
+to dla konwertera inna jednostka niż jego „μIU/mL” z grecką literą mu
+(U+03BC), więc taki wpis nadal jest pomijany. Normalizację symboli plan
+przypisuje modelowi historii (PR1). Jednostka nieznana konwerterowi, wartość
+ujemna i seria bez klucza badania nadal dają „pominięto”.
+
+**Strzałki:** punkt przeliczony nigdy nie dostaje strzałki z tekstowej
+normy wpisu. Jak każdy punkt bez tekstowej normy w trendzie, nakładkach
+i PDF może dostać strzałkę z dzisiejszego zakresu przelicznika, liczonego
+dla wartości przeliczonej w jednostce serii. Nie dotyczy to AMH ani wpisów
+z zapisaną oceną. To dotychczasowa reguła tych trzech widoków. Zakładka
+„Badania” (PR2) jej nie użyje (decyzja 6.1), a nakładki i PDF zachowują ją
+do osobnej decyzji (6.4).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- fT4 15 pmol/L z normą „12–22 pmol/L” (26.05.26) i fT4 1,2 ng/dL z normą
+  „0,8–1,8 ng/dL” (07.07.26) → seria w pmol/L, dwa punkty: 15 i 15,444 pmol/L
+  (przeliczony, bez normy), pominięto 0, bez strzałki z tekstu normy. Przed
+  łatką: jeden punkt, pominięto 1. Gdyby punkt przeliczony zachował tekst
+  normy, 15,444 > 1,8 dałoby fałszywe „↑”.
+- TSH 0,12 i 0,05 mIU/L, 0,38 μIU/mL (U+03BC) i 0,4 µIU/mL (U+00B5) → seria
+  w mIU/L, trzy punkty (0,38 przeliczone współczynnikiem 1), pominięto 1.
+
+**Testy:** `tests/unit/lab-snapshot-ui.test.mjs` wykonuje funkcję wyciętą
+z artefaktu z prawdziwym `lab_unit_converter.js` i `lab_units_data.js`
+(oba przypadki wyżej), sprawdza argumenty wywołania `convertAll` na atrapie
+i pilnuje, że dawne wywołanie pozycyjne `convert` nie wraca. Bez łatki
+cztery z tych testów padają. E2E `tests/e2e/lab-trend-jednostki.spec.mjs`
+zapisuje w fikcyjnym sejfie fT4 15 i 17 pmol/L oraz 1,2 ng/dL i otwiera
+Historię karty na Start i w DocPro: chip „fT4 ×3”, bez „pominięto”, jeden
+punkt z obwódką i wartość 15,4. Bez łatki oba warianty pokazują „fT4 ×2”.
+Nakładek na siatki nie obejmuje osobny E2E; korzystają z tej samej funkcji
+czekania co trend. `lab-amh-history-no-reassessment`,
+`lab-assessment-history` i `hormone-reference-ui` przechodzą bez zmian.
+Zielone testy nie są walidacją kliniczną; zmiana czeka na akceptację
+kliniczną właściciela (AGENTS.md § 3).
+
+### P-LAB-TREND-CONVERT-2 — czekanie na konwerter bez dublowania sekcji (SW 1.1.278, `vilda_auth_ui.js` 493, 2026-10-14, przegląd PR0)
+
+**Wpływ kliniczny: nie.** Wyniki, jednostki, przeliczenia, normy i strzałki
+bez zmian; punkt przeliczony nadal ma `norm: null` (decyzja 6.2). Zmienia
+się tylko to, kiedy trend i nakładki czekają na konwerter, oraz to, że
+przerysowanie karty w trakcie czekania i odczytów nie dubluje sekcji.
+
+**Problem:** czekanie z P-LAB-TREND-CONVERT (do 5 s) poszerzyło okno,
+w którym karta rysuje Historię albo nakładki na siatki drugi raz, np. po
+zapisie notatki albo zmianie zakresu wieku siatki. Drugie wywołanie
+czyściło kontener i rysowało od nowa, a pierwsze po przebudzeniu
+dopisywało swoją sekcję: dwa wiersze chipów nakładek albo dwie listy
+„Historia pacjenta”. Czekanie uruchamiały też serie, których i tak nie da
+się przeliczyć: wpis bez jednostki, wpis bez liczby i seria klirensu
+w kilku jednostkach.
+
+**Zmiana:** Historia i nakładki zapamiętują na kontenerze numer wywołania.
+Wywołanie, które po czekaniu nie jest już ostatnim na tym kontenerze,
+kończy się bez rysowania. Historia sprawdza to także po odczycie zdarzeń
+i pacjenta, bo dopiero potem dopisuje listę zdarzeń; to krótsze okno
+istniało przed P-LAB-TREND-CONVERT. Czekanie zaczyna się tylko wtedy,
+gdy seria ma dokładne wyniki (liczba skończona, niepusta jednostka)
+w więcej niż jednej jednostce, a jej klucz nie zawiera „:” (klirens
+`clcr:…`, nieznany konwerterowi).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Dwa wywołania nakładek na tym samym kontenerze, gdy konwerter jeszcze
+  się ładuje (fT4 15 pmol/L i 1,2 ng/dL) → jeden wiersz chipów „fT4 ×2”.
+  Bez znacznika pokolenia: dwa wiersze.
+- Historia przerysowana w trakcie czekania trendu albo odczytu zdarzeń
+  → starsze wywołanie kończy się bez listy zdarzeń; lista pochodzi tylko
+  z nowszego.
+- Seria fT4 tylko w pmol/L, seria LH z drugim wpisem bez liczby, seria
+  `clcr:schwartz` w dwóch jednostkach → bez czekania i bez ładowania
+  konwertera.
+
+**Testy:** `tests/unit/lab-snapshot-ui.test.mjs` uruchamia prawdziwe
+funkcje nakładek i Historii z artefaktu z atrapą DOM (dwa przypadki wyżej
+oraz kontrola: bez znacznika pokolenia nakładki dają dwa wiersze,
+a Historia niewyprzedzona dochodzi do nagłówka i listy) i funkcje czekania
+z leniwym ładowaniem podanym z zewnątrz (bez czekania przy serii jednojednostkowej, wynikach
+niedokładnych i kluczu klirensu; czekanie na odpowiedź ładowania; brak
+ładowania, gdy konwerter jest; koniec po 5 s i od razu przy błędzie). Na
+artefakcie sprzed poprawki pięć z tych testów padają, a bez strażnika po
+odczycie zdarzeń — test Historii wyprzedzonej w trakcie tego odczytu. E2E
+`lab-trend-jednostki.spec.mjs` bez zmian w asercjach.
+
+### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
+
+**Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną
+stronę (bez `?v=` i precache), więc żaden widok się nie zmienia. Reguły
+prezentacji opisane niżej staną się widoczne z zakładką „Badania” (PR2)
+i paskiem „Poprzednie wyniki” w przeliczniku (PR3) i tam wchodzą do oceny
+właściciela razem z widokiem. Plan: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.1.
+
+**Zadanie:** z serii sejfu (`listPatientLabSeries`), notatek pacjenta
+(`listPatientNotesForPatient`), okresów leczenia (`listPatientTreatmentPeriods`)
+i wstrzykniętego konwertera model buduje widok historii: panele, serie,
+wpisy, tabelę dat, zdarzenia leczenia, wyniki oczekujące i bieżący wynik
+z przelicznika. Nie ma DOM, magazynu ani zegara; dzisiejszą datę podaje
+wołający (`nowISO`) tylko po to, by policzyć dni od ostatniego wyniku.
+Niczego nie ocenia od nowa: nie woła `LabUnitConverter.evaluate` ani
+silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
+
+**Reguły:**
+
+- Zakres: notatki „wynik-badania” według reguły kategorii karty pacjenta
+  (`Yr`): klirens poza historią (decyzja 6.13), notatka z lekiem należy do
+  leczenia. Wołający musi podać notatki (`notesById`); punkt serii bez
+  notatki nie znika po cichu, tylko liczy się w `summary.missingNotes`.
+- Rodzaje wpisów: dokładny; legacy (liczba odczytana z tekstu, przypis †);
+  cenzorowany (wynik z operatorem: surowy zapis, bez liczby i bez zera);
+  ocena nieaktualna; ocena niedostępna; tekst (ręczny wpis bez liczby, np.
+  „<0,02 IU/L”); jednostka nierozpoznana. Wynik oczekujący (zlecenie bez
+  wyniku) i bieżący wynik z przelicznika stoją poza wpisami serii.
+- Jednostki: symbol po normalizacji (przycięcie, zwinięcie spacji, znak
+  mikro U+00B5 → grecka mu U+03BC) dopasowany do jednostek konwertera;
+  przeliczenie `convertAll` tym samym współczynnikiem co przelicznik.
+  Jednostka wyświetlania: z formularza przelicznika, inaczej jednostka
+  ostatniego po dacie wyniku liczbowego. Jednostki, której konwerter nie
+  zna, model nie przelicza: wartość w oryginale, poza wykresem i różnicą.
+  W serii spoza konwertera wynik bez jednostki porównuje się z innymi tylko
+  wtedy, gdy żaden wynik serii nie ma jednostki.
+- Data: data badania (`clinicalDateISO`). Bez niej wpis ma termin zlecenia
+  (gdy sejf wziął datę z terminu, który minął) albo datę wpisu; taki wpis
+  nie jest ostatnim ani poprzednim wynikiem, nie wchodzi do różnicy ani na
+  wykres (oś wykresu to data badania). Poprzedni wynik to ostatni z datą
+  badania wcześniejszą niż ostatni wynik, nie wynik z tego samego dnia.
+- Strzałka ↑/↓ wyłącznie z zapisu: z normy tekstowej wpisu, gdy tekst jest
+  jednym zakresem „lo–hi [jednostka]”, jednostka normy (jeśli podana) równa
+  się jednostce wyniku, wynik nie był przeliczany i nie ma koperty oceny.
+  Granice daje funkcja karty `Dl`, wstrzykiwana jako `parseNorm`. Wynik
+  w zakresie nie ma strzałki ani pigułki. Punkt przeliczony nie ma strzałki
+  (decyzja 6.2); wpis bez normy jest neutralny (decyzja 6.1). Na wykres
+  norma trafia tylko w zakresie przyjętym przez model, więc `mi()` nie
+  odczyta luźno tekstu wielozakresowego. Punkt wykresu niesie wartość bez
+  zaokrąglenia, więc `mi()` porówna z normą tę samą liczbę co model;
+  wyniki z datą badania, które nie są liczbą (np. „<0,02”), model podaje
+  jako przerwy (`chart.gaps`), żeby renderer nie prowadził linii przez nie.
+- Zapisana ocena LH/FSH/inhibiny B: pigułka cytuje dosłownie tytuł
+  podsumowania koperty (`summary.title`), a przy ostrzeżeniu klinicznym
+  (`clinical.status = "warning"`) tytuł ostrzeżenia, w tonie ostrzegawczym.
+  Ocena nieaktualna: „wymaga ponownej oceny” z powodem z `reasonCodes`
+  (skróty zdań z `VildaLabAssessmentUI`); ostatni wynik nie cofa się do
+  poprzedniego.
+- Różnica: tylko między dwoma kolejnymi wynikami dokładnymi z datą badania,
+  w jednostce wyświetlania, z wartości zaokrąglonych do wyświetlanych cyfr
+  znaczących (15,4 → 17 = +1,6, nie +1,556); liczba ze znakiem i liczba dni,
+  bez procentu, koloru i progu (decyzja 6.10). Bez różnicy: ten sam dzień,
+  wpis niedokładny lub legacy, różna metoda albo materiał w dwóch kopertach
+  LH/FSH/inhibiny B ze znaną metodą („— · różne metody oznaczenia”). Metoda
+  nieznana (brak identyfikatora, potwierdzenie „unknown”, materiał nieznany
+  lub inny) nie jest „tą samą metodą”: różnica zostaje, a seria dostaje
+  stopkę o możliwej innej metodzie. Bieżący wynik: różnica bez liczby dni,
+  bo datę próbki podaje dopiero okno przypięcia; przy kopercie bieżącej
+  oceny obowiązuje ta sama reguła metody.
+- Wynik oczekujący: zlecenie z Terminarza (termin albo liczba dni do
+  kontroli) bez wartości, niezakończone i bez niestawienia. Notatka
+  „Badanie” bez wartości i bez terminu to opis, nie zlecenie. Badanie
+  przypisane tylko po `testKey` albo po tytule „Wynik: …” równym dokładnie
+  jednej etykiecie konwertera.
+- Panele jako dane (`HISTORY_PANELS`): Tarczyca; Oś gonadalna (z progesteronem);
+  Oś GH–IGF-1; Inne (prolaktyna, badania spoza konwertera). Pusty panel
+  ukryty (decyzja 6.5).
+- Wpis tekstowy nie trafia do serii sejfu, więc model nadaje mu klucz:
+  `testKey`, potem identyfikator konwertera o dokładnie tej etykiecie (tak
+  robi edytor karty, który przy wartości nieliczbowej nie zapisuje
+  `testKey`), na końcu skrót nazwy jak w sejfie. Dzięki temu „<10 pg/mL”
+  wybrane z listy jako „Inhibina B” stoi w serii inhibiny B, a nie
+  w „Inne”. Zgodność z sejfem sprawdza test na prawdziwym sejfie.
+
+**Odstępstwo od planu, do decyzji właściciela:** plan 3.1 (a) każe cytować
+`clinical.title`, gdy `summary.status = "attention"`. Na prawdziwej kopercie
+LH (fikcyjna dziewczynka 12 lat, Th3, LH 9 IU/L) podsumowanie brzmi „Wynik
+poza wskazanym zakresem referencyjnym”, a część kliniczna „Brak wykrytej
+niezgodności czasu dojrzewania”; reguła planu pokazałaby przy wyniku poza
+zakresem ten drugi tekst. Model cytuje tytuł podsumowania, a tytuł
+kliniczny tylko przy ostrzeżeniu klinicznym, zgodnie z paletą z tego samego
+punktu planu. W sprawdzonych kopertach z ostrzeżeniem klinicznym oba tytuły
+są identyczne.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 4,2 mIU/L z normą „0,6–4,8 mIU/L” (10.06.26) i 5,1 µIU/mL (znak
+  mikro) z normą „0,6–4,8” (12.09.26) → jedna seria w μIU/mL, oba wyniki
+  dokładne, drugi „↑ powyżej normy z wpisu”, różnica „+0,9 μIU/mL · po
+  94 dniach”.
+- fT4 1,2 ng/dL z normą „0,8–1,8 ng/dL” (26.05.26) i 17 pmol/L (02.09.26) →
+  seria w pmol/L, pierwszy wynik 15,4 pmol/L przeliczony, bez strzałki
+  i bez normy na wykresie; różnica „+1,6 pmol/L · po 99 dniach”.
+- TSH 7 mIU/L z normą „1-5 lat: 0,7–6,0” → bez strzałki (tekst nie jest
+  jednym zakresem).
+- LH 2 IU/L i 3 IU/L z kopertami o różnych metodach oznaczenia → różnica
+  niedostępna, „— · różne metody oznaczenia”.
+- Ręczny wpis LH „<0,02 IU/L” bez oceny → wiersz tekstowy w serii LH,
+  nie wynik oczekujący.
+
+**Testy:** `tests/unit/lab-history-view.test.mjs` (32 przypadki: prawdziwy
+konwerter i plik danych jednostek, prawdziwe koperty LH z osobnego okna,
+`Dl` wycięte z `vilda_auth_ui.js`) i `tests/unit/lab-history-vault.test.mjs`
+(prawdziwy sejf: zapis notatek, serie, notatki i okresy leczenia →
+`buildHistoryView`; szpieg na `evaluate`, pułapka na silnik pokwitania,
+zgodność klucza serii z sejfem, wynik tekstowy „Inhibina B” bez `testKey`,
+unieważnienie oceny przez zmianę daty). Osiem przypadków dopisano po
+niezależnym przeglądzie modelu; na wersji sprzed poprawek padają.
+Zielone testy nie są walidacją kliniczną.
+
+### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
+
+**Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla
+starszych i importowanych notatek, które mają tylko tekst `labResult.value`
+(bez `valueNum` i bez koperty oceny), gdy w tym tekście za liczbą nie ma
+jednostki. Nie ma nowych norm, współczynników, progów, jednostek ani
+zaokrągleń. Źródło medyczne: nie dotyczy (poprawka odczytu zapisanej
+wartości). Błąd zgłoszono przy PR1 planu `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`
+(„poza zakresem PR1”).
+
+**Problem:** `listPatientLabSeries` (w artefakcie `Po()`) czyta liczbę
+takich wpisów funkcją `vo()` i oznacza punkt `legacy: true`. Dawne wyrażenie
+`/^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/` wymagało co najmniej jednego znaku
+jednostki, więc przy wartości bez jednostki cofało się w cyfrach: „15” → 1
+z jednostką „5”, „25,5” → 25 z jednostką „,5”, „15 = …” → 1 z „5”. Wartość
+jednocyfrowa („5”) w ogóle nie trafiała do serii. Gdy jednostka była zapisana
+osobno (`lab.unit`), punkt miał wiarygodnie wyglądającą, ale błędną wartość:
+„15” z `mIU/L` → 1 mIU/L. Błędna liczba trafiała do „Trendu wyników”
+w Historii karty, nakładek na siatkach centylowych, eksportu siatek do PDF
+i do modelu historii `vilda_lab_history.js` (wiersz legacy i punkt wykresu).
+Strzałki z normy wpisu i z dzisiejszego zakresu przelicznika liczyły się
+z tej błędnej liczby.
+
+**Zmiana:** liczba jest czytana osobno i w całości (`^\s*(\d+(?:[.,]\d+)?)`),
+a jednostka to tekst tuż za nią do spacji albo „=”, także pusty. Brak
+jednostki → `null`, jak w punkcie serii z pustym `lab.unit`; `Po()` jak
+dotąd bierze wtedy jednostkę z `lab.unit`, jeśli jest. Notatka w sejfie się
+nie zmienia, liczba powstaje przy odczycie serii.
+
+**Co się nie zmienia:** każda wartość, z której dawne wyrażenie odczytało
+jednostkę bez cofania się w cyfrach, daje ten sam wynik: „1,5 IU/L” → 1,5
+i „IU/L”, „1,2 ng/dL = 15,44 pmol/L” → 1,2 i „ng/dL”, także jednostka
+zaczynająca się cyfrą po spacji: „5,2 10^9/L” → 5,2 i „10^9/L”. Wynik
+z operatorem bez oceny („<0,02”) nadal nie trafia do serii. Wpisy
+z `valueNum` i wpisy z kopertą oceny (LH/FSH, inhibina B, AMH) nie
+przechodzą przez `vo()`. Tekst niejednoznaczny, np. „1 000 IU/L” z odstępem
+tysięcy, daje jak dotąd pierwszą grupę cyfr.
+
+Odstępstwo od sugestii zlecenia: proponowany warunek „jednostka nie zaczyna
+się cyfrą ani przecinkiem/kropką” zmieniłby „5,2 10^9/L” na 5,2 bez
+jednostki. Czytanie liczby osobno usuwa samo cofanie się i zostawia ten
+przypadek bez zmian.
+
+**Populacja, jednostki i ograniczenia:** wszyscy pacjenci i wszystkie
+badania zapisane jako notatka z `labResult.value` bez `valueNum` i bez
+koperty oceny. Do serii trafiają teraz także wpisy jednocyfrowe bez
+jednostki, w tym „0”. Punkt bez jednostki (ani w tekście, ani w `lab.unit`)
+ma `unit: null`: trend rysuje go tylko w serii, w której najczęstszy jest
+brak jednostki, inaczej liczy go w „pominięto”, jak każdy punkt bez
+jednostki. Model historii porównuje go z innymi tylko wtedy, gdy żaden
+wynik serii nie ma jednostki (reguła LAB-HISTORIA).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`** (notatka TSH bez `valueNum`):
+
+- „15” → 15, bez jednostki (przed łatką: 1 z jednostką „5”).
+- „25,5” → 25,5, bez jednostki (przed: 25 z „,5”).
+- „5” → 5, bez jednostki (przed: brak punktu).
+- „15” z `unit: "mIU/L"` → 15 mIU/L (przed: 1 mIU/L). W modelu historii,
+  obok wyniku dokładnego 4,2 mIU/L: wiersz legacy „15 mIU/L” i punkty
+  wykresu 4,2 i 15.
+- „1,5 mIU/L” → 1,5 mIU/L; Leukocyty „5,2 10^9/L” → 5,2 i „10^9/L”;
+  „<0,02” → brak punktu (wszystkie bez zmian).
+
+**Testy:** `tests/unit/lab-snapshot-vault.test.mjs` — prawdziwy sejf
+(szyfrowanie, zapis notatek, `listPatientLabSeries`) z przypadkami wyżej
+oraz `vo()` wycięta z artefaktu: na wszystkich napisach do 5 znaków
+z alfabetu `1 5 0 , . = m / <` i spacji wynik z jednostką jest równy wynikowi
+dawnego wyrażenia, a różni się tylko tam, gdzie dawne wyrażenie dzieliło
+liczbę albo nie dawało punktu. `tests/unit/lab-history-vault.test.mjs` — ten
+sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
+łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
+zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
 
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 
@@ -67,8 +383,8 @@ te same; zmienia się dokładność wejścia. Brak kwalifikacji niemowlęcia
 do modelu donoszonej populacji otrzymuje krótki komunikat.
 
 Historia nie przelicza dawnych AMH według aktualnej tabeli: zachowuje
-wartości, jednostki i jawny zapisany `lab.norm`. Nie tworzymy snapshotu
-AMH ani nie usuwamy serii liczbowych. To ograniczenie dotyczy też nowych
+wartości, jednostki i jawny zapisany `lab.norm`. W tej partii nie tworzono snapshotu
+AMH ani nie usuwano serii liczbowych. To ograniczenie dotyczy też nowych
 zapisów bez własnej utrwalonej oceny. LH/FSH/inhibina B zachowują ich
 dotychczasowe snapshoty.
 
@@ -82,6 +398,36 @@ do właściciela przy przeglądzie PR; testy nie nadają walidacji klinicznej.
 Przesłany artykuł Xu 2026 i XLSX są przeanalizowane i zapisane jako
 dowód dla następnego etapu, bez aktywacji nowego profilu. Kolejność i
 nierozstrzygnięte kwestie: [AMH_REFERENCE_PLAN.md](AMH_REFERENCE_PLAN.md).
+
+#### LAB-AMH-DOB-CLEAR — usunięcie precyzji dni po wyczyszczeniu daty, 2026-10-14
+
+**Problem i wpływ:** przycisk `dobClear` usuwał datę programowo, bez zdarzenia
+edycji pola. Przy niezmienionych ukończonych miesiącach odbiorcy mogli zachować
+wcześniejszy cache wieku w dniach. Test AMH maskował ten brak dodatkowym
+wpisaniem masy i wzrostu, a przy odtwarzaniu sesji także te zdarzenia mogły
+trafić w blokadę publikowania. W CI po scaleniu #684 asercja usunięcia cache
+nie przeszła ani w pierwszej próbie, ani przy ponowieniu.
+
+`VildaDobAge.clear()` po rzeczywistym wyczyszczeniu edytowalnej daty zgłasza
+zwykłą edycję `input`/`change`. Istniejące nasłuchy aktualizują pochodny
+kontekst i zapis sesji. Data chroniona jako pochodząca z rekordu nadal nie
+jest czyszczona tą funkcją. Strażnicy odtwarzania, tożsamości karty oraz
+blokady sejfu pozostają obowiązujące; poprawka ich nie omija.
+
+**Przypadek syntetyczny:** ta sama fikcyjna pacjentka, 4 ukończone miesiące,
+data dająca 119–120 dni → przycisk „Wyczyść” → data pusta, nadal 4 miesiące,
+cache dni usunięty, odniesienie AMH wykorzystuje przedział 4–5 miesięcy.
+Nie dopisujemy dni do wieku podanego tylko w miesiącach. Może się zmienić
+odniesienie zależne od precyzji wieku zgodnie z dotychczasowym kontraktem;
+tabele, progi, konwersje, model Xu i zapisane wyniki nie są przeliczane.
+
+`dob-clear-neonatal-cache.test.mjs` wywołuje rzeczywiste moduły DOB
+i neonatal context, także z aktywnymi strażnikami tożsamości i odtwarzania. E2E
+`hormone-lifespan-amh-age-context.spec.mjs` wymaga usunięcia cache bez
+pomocniczej edycji masy lub wzrostu, braku daty w rzeczywistym zapisie sesji
+oraz utrzymania tego stanu po ponownym otwarciu formularza. Przed edycją czeka na inicjalizację
+odtwarzania sesji, zaplanowane klatki oraz zakończenie odtwarzania i kolejek,
+zamiast uznawać chwilowo pustą kolejkę za gotowy formularz.
 
 ### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
 
@@ -2008,6 +2354,104 @@ osią, usunięcie wyniku i zmiana jednostki zachowują linię i skalę.
 Pełne liczby i granice: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026),
 [zapis źródła FDA](hormone-lifespan/evidence/patient-point/fda2017-female-amh-group-medians.json).
 
+### HORMONE-AMH-XU-PUBLISHED-P50 — osobny blok źródłowy, 2026-10-14
+
+**Decyzja i wpływ:** właściciel zaakceptował makietę („jest ok, koduj”).
+Dodajemy osobny blok opublikowanych P50 Xu 2026 dla kobiet przed menopauzą,
+z etykietami wieku 35/40/45/50/55. To informacja o badaniu, bez nowego
+profilu pacjentki, normy, percentyla, ilorazu do P50 lub diagnozy. Wcześniejsze
+„Xu pozostaje nieaktywne” nadal dotyczy ciągłego modelu i profilu punktu;
+nie wyklucza opisanego tutaj osobnego bloku. Testy nie nadają walidacji klinicznej.
+
+**Źródło:** Xu K, Yang Y i wsp., *Chinese Medical Journal*, online
+17.08.2026, [DOI 10.1097/CM9.0000000000004161](https://doi.org/10.1097/CM9.0000000000004161).
+Pełny PDF w składzie wydawcy oraz dostarczony suplement SDC2, arkusz `2`,
+Supplementary Table 1, `E3:E7`. Zachowane P50 w ng/mL:
+2.589388343 / 1.479539998 / 0.365121103 / 0.045923937 / 0.005234022.
+Źródło dotyczy społecznościowej przekrojowej kohorty chińskiej przed
+menopauzą, surowicy i HS-AMH Kangrun; nie stanowi kalibracji Access/Elecsys.
+
+**Granica obliczenia:** sąsiednie opublikowane punkty pozostają oddzielne;
+nie są medianami pięcioletnich grup ani granicami normy. Nie interpolujemy
+lub ekstrapolujemy. Źródło nie udostępnia pełnych parametrów GAMLSS,
+obsługi wyników poniżej LOD ani oddzielnego LOQ. LOD 0,003 ng/mL nie
+uprawnia do imputacji zera lub LOD/2. Literalne `<0.003` zachowujemy jako
+nierówność. Rycina 4A używa **Mean**, a tekst **median** dla 0,187/0,043;
+tabele wykrywalności mają odwrotne etykiety niż rycina 4B. Niezgodności
+liczebności i χ² pozostają jawne, bez samodzielnego „poprawiania” źródła.
+
+**Zachowane kontrakty:** Mayo, wcześniejsze FDA/Access i pozostałe
+odniesienia pacjentki, geometria, skale, konwersje oraz `lab.hormoneReference`
+i historia pozostają odrębne. Nie zapisujemy nowego bloku jako migawki
+odniesienia pacjentki. Wynik nie zmienia wyboru źródłowych liczb.
+
+**Przypadek syntetyczny:** dokładne F47 / AMH 0,1 ng/mL → dwa źródłowe
+wiersze: 45 lat / 0.365121103 oraz 50 lat / 0.045923937 ng/mL;
+brak liczby „P50 dla 47 lat”, percentyla, ilorazu i nowego werdyktu.
+F52,5 → opublikowane 50 i 55, bez mediany interpolowanej. Wynik pusty,
+zero, ponad osią i wyczyszczony nie zmienia wcześniejszej linii ani skali.
+
+**Dobór bloku:** `evaluate(data, context)` w `vilda_amh_age_reference.js`
+przyjmuje osobne `vilda_amh_age_reference_data.js`. Dla całego `[L,U]`
+wewnątrz 35–55 wybiera opublikowane punkty ≤L i ≥U; `[45,46)` daje 45/50,
+dokładne 50 daje tylko 50. Wyjątek `terminal-anchor` dla `L = 55` oraz
+`55 < U ≤ 56` pokazuje punkt 55 jako „Ostatni opublikowany punkt wieku”,
+z notą, że nie obejmuje całego możliwego wieku. Inne wyjście poza domenę
+ukrywa blok. Nieznany cykl/metoda pozwala na informację o źródle przed
+menopauzą, bez potwierdzania stanu pacjentki. Znana menopauza, ciąża,
+leczenie hormonalne, przeciwwskazanie lub niezgodna metoda/materiał
+ukrywa blok według konserwatywnej polityki aplikacji. Docelowa jednostka
+wyniku steruje prezentacją przez dotychczasową konwersję AMH.
+
+**Nierówności i zapis:** wyłącznie wejście AMH rozszerza obsługę o
+nierówności oraz `<LOD`/`<LOQ`. Wynik zachowuje prefiks, bez nowej
+klasyfikacji i dokładnego punktu; przeliczenie liczbowej granicy nie
+zamienia jej w stężenie. Istniejące przypięcie zachowuje surowy tekst,
+`lab.valueNum = null` i brak punktu w serii liczbowej. Zwykła migawka
+odniesienia ma status `unavailable`: `measurement.sourceValue` zachowuje
+granicę liczbową albo `null` dla LOD/LOQ, a `measurement.value = null`.
+P50 Xu nie są utrwalane. Schemat oraz wcześniejsze dane historii pozostają
+bez zmian; nie zapisujemy granicy jako dokładnego pomiaru.
+
+Pełne cytowanie, wersje, hashe, populacja i ustalenia:
+[opis źródła Xu](hormone-lifespan/AMH_XU_2026.md),
+[audyt Xu](hormone-lifespan/evidence/amh-xu-2026-audit.json).
+
+### HORMONE-AMH-REFERENCE-SNAPSHOT — utrwalone odniesienie w wizycie i historii, 2026-10-14
+
+**Problem i wpływ:** przypięcie AMH zachowywało wynik i ewentualną normę,
+ale traciło źródłową medianę widoczną na wykresie. Nowe opcjonalne
+`lab.hormoneReference` zachowuje zwykłe odniesienie AMH i kontekst użyty
+przy otwarciu istniejącego okna przypięcia. Historia pokazuje utrwalone
+dane, bez ponownego liczenia obecnym modelem lub dla aktualnego pacjenta.
+To zmiana zapisu i prezentacji informacji klinicznej, bez nowych norm,
+źródeł, progów, konwersji, pól formularza ani geometrii krzywych.
+Mediana grupy nie staje się medianą dokładnego wieku lub dolną normą.
+
+**Kontrakt:** `VildaHormoneReferenceSnapshot` w osobnym czytelnym pliku
+`vilda_hormone_reference_snapshot.js`, API `1.0.0`, schemat `1`, jest
+odrębny od `lab.assessment` i `lab.norm`. Zachowuje surowy wynik, jednostki,
+użyty wiek/przedział i kontekst, źródłową liczbę i rodzaj statystyki,
+grupę, populację, metodę/materiał źródła, ograniczenia i wersje. Data
+wizyty nie potwierdza dnia obserwacji kontekstu. Zapis niedostępnego
+odniesienia ma powód, bez liczby zastępczej. Edycja wartości, jednostki,
+badania lub daty unieważnia odniesienie, pozostawiając dawny zapis;
+komentarz i zmiana niezależnej normy nie przeliczają mediany. Nieznany
+schemat pozostaje niedostępny. Starsze wpisy bez pola nie są uzupełniane.
+
+**Źródła i regresje:** zachowane dane AMH, ich populacje, materiał,
+granice i ograniczenia opisuje [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#utrwalone-odniesienie-amh--14-października-2026).
+Przykład F15/0,45 ng/mL zachowuje Jopling 2018, tabelę 1, medianę grupy
+15–18,9 lat 21,14 pmol/L = 2,961714 ng/mL; F28/1 ng/mL zachowuje FDA
+K170524, tabelę surowicy, grupę 26–30 z 27,27 pmol/L = 3,820527 ng/mL.
+Odczyt po zmianie pacjenta, danych referencyjnych albo restarcie offline
+ma zwrócić te same liczby. Transport `<0,1` i brak kwalifikacji zachowują
+przyczynę niedostępności; nie rozszerzamy składni wejścia formularza AMH.
+Komentarz zachowuje migawkę, edycja wyniku/daty ją
+unieważnia. Wymagane są regresje rzeczywistych funkcji, przypięcia,
+importu/synchronizacji i odczytu desktop/mobile. Wyniki kontroli są
+raportowane po ich zakończeniu w PR; testy nie nadają walidacji klinicznej.
+
 ### HORMONE-FEMALE-INHB-ADULT-REFERENCE — mediana modelu do 47 lat, 2026-10-14
 
 **Problem i źródło:** zwykły widok inhibiny B kończył odniesienie kobiety
@@ -2086,6 +2530,85 @@ aktualnego SHA jest raportowany w
 Źródła, hashe i przypadki:
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
+
+### HORMONE-FEMALE-INHB-CHILDHOOD-GROUPS — mediany grup Zhou w luce >1–<5,6 lat, 2026-10-14
+
+**Problem i źródło:** po PR #672 dziewczynki po dokładnym 1 roku,
+a przed 5,6 roku nadal nie miały liczbowego odniesienia zwykłego wykresu.
+Dodano dwie opublikowane mediany z pełnego Zhou i wsp., *Scientific
+Reports* 2025;15:1899, publikacja 14.01.2025,
+[DOI 10.1038/s41598-025-85551-9](https://doi.org/10.1038/s41598-025-85551-9).
+Tabela 1 (PDF str. 3): żeńskie grupy 1–5 N=60, 5–10 N=77; tabele 2/3
+(PDF str. 3/6): zgodne mediany **33/27 pg/mL**; tabela 3 podaje 90% CI
+median **30–39/24–29**, nie zakres wyników pacjentek. Suplement zawiera
+jedynie tabelę S1 modeli regresji; nie dostarcza nowych median lub
+reguły granicy 5. Regresja sześcienna nie jest aktywowana jako mediana.
+
+**Populacja i metoda:** przekrojowe próbki Wuhan Children’s Hospital,
+Chiny, styczeń–grudzień 2022, 622 dzieci/302 dziewczynki. Wykluczano
+m.in. choroby rozrodcze/endokrynne, poważne choroby przewlekłe i zakażenia
+oraz chemioterapię; autorzy dopuszczają resztkową patologię. Grupy <120,
+brak pory pobrania, powtórzonych pomiarów i Tannera/cyklu w starszym wieku.
+Surowica, Kangran Biotech double-antibody CLIA na KAESER 1000,
+LOD 7 pg/mL, CV 4,34–9,73%; brak harmonizacji Gen II/Oxford ELISA.
+Imputacja LOD/√2 w analizie autorów nie jest używana dla wyniku pacjentki.
+
+**Kontrakt i wpływ kliniczny:** polityka
+`female-inhibin-childhood-reference-policy.json`, wersja `2026-10-14.2`,
+dodaje dwa profile `ordinaryOnly`, `group-median`, `constant`:
+`zhou2025-female-inhb-age-over1-under5` w `(1,5)` i
+`zhou2025-female-inhb-age-5-under5p6` w `[5,5.6)`. Dokładne 5 lat
+przypisano drugiej grupie jako jawną konwencję aplikacji; autorzy nie
+podali inkluzywności. Pełny możliwy wiek musi mieścić się w jednym profilu.
+Dokładnie 1 zachowuje Ljubicic, od 5,6 Borelli. Mediany dotyczą pełnych
+grup źródłowych, nie dokładnego wieku lub węższej podgrupy aplikacji.
+Znana niezgodna metoda lub materiał blokuje odniesienie, nieznane dane
+pozwalają na ograniczone porównanie; bez nowego pola i bez potwierdzania
+metody próbki. Źródła nie dobiera się z wartości wyniku ani jako
+zastępstwa niezgodnego profilu sąsiedniego wieku.
+
+Jasny znacznik ma etykietę „Mediana grupy”; krótka notka podaje grupę,
+Chiny i KAESER 1000 CLIA. Położenie może odbiegać od płynnego mostu.
+Różnice 33→27 i dalej do ≈11 Borelli nie uzasadniają przerysowania linii
+lub skoku biologicznego. Dostępność odniesienia jest zmianą funkcjonalną;
+nie zmienia norm/werdyktów laboratoryjnych, krzywych, skal, jednostek,
+formularza, historii, 74 wcześniejszych profili, mężczyzn lub porównań płci.
+Crofton i normy Zhou pozostają nieaktywne. Dolna granica 1–5 wynosi 15
+w tabeli 2 i 14 w tabeli 3; nie wpływa to na zgodne 33, nie służy do
+wyboru normy. Testy nie nadają statusu walidacji klinicznej.
+
+**Przypadki syntetyczne do regresji rzeczywistych funkcji:** F3/33 pg/mL
+→ mediana grupy 1–5 =33; F5,25/33 → mediana grupy 5–10 =27; F6/33
+→ dotychczasowe Borelli ≈11. `[4,5)` kwalifikuje się do 33, ale `[4,5]`,
+`[4.99,5.01]`, `[5.59,5.61]` i `[1,1+1/12)` nie dostają jednej mediany.
+Znane Gen II, osocze, leczenie wykluczające lub wynik z operatorem `<`
+nie tworzą nowego punktu. Wpisanie/wyczyszczenie wyniku, 0 i wynik ponad
+osią nie zmieniają krzywej ani skali.
+
+**Wykonane kontrole:** testy jednostkowe modułu **327/327 w 18 plikach**;
+ukierunkowane E2E **24/24 w 3 plikach**, w tym 5 nowych scenariuszy;
+przeglądarkowe porównanie przed/po **12/12**, desktop/mobile wobec bazy
+`c8b91078`. Niezależna macierz sprawdziła 168 014 prób dokładnego wieku
+i 3124 przedziały wieku: 74 wcześniejsze profile są identyczne,
+a 576 pełnych ocen laboratoryjnych zachowało wyniki. Te kontrole nie
+nadają odniesieniu statusu walidacji klinicznej.
+
+**Zapis kontroli przed publikacją PR:** pełne `npm test` zakończyło się
+kodem 0: przed scaleniem aktualnego `audyt` **7669 testów / 350 plików**,
+a po scaleniu `2df41a883879b1f7abb84e51bc6dc531f773eeb8` — **7683 / 351**.
+Polityka repozytorium, lint, składnia 978 plików JS i testy PRO po scaleniu
+również PASS. Odrębny przegląd integracji po scaleniu: 44/44 kontrole
+oraz 9 prób wieku; źródła, normalizatory wieku i dotychczasowe wyniki
+odniesień zachowane. PWA PASS: rzeczywista aktualizacja SW
+`1.1.270` → `1.1.272`, pełny restart przeglądarki offline przy zatrzymanym
+serwerze HTTP; nie opieramy sprawdzenia na samej otwartej wcześniej karcie.
+
+To zapis wykonanych kontroli źródeł i implementacji przed publikacją,
+nie deklaracja zakończenia pełnego E2E lub GitHub CI. Końcowe wyniki
+pełnego E2E, PWA i wszystkich kontroli GitHub dla aktualnego SHA są
+raportowane w PR, bez aktualizowania plików źródłowych samymi statusami CI.
+Źródła, hashe i przypadki: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026),
+[przegląd tej partii](hormone-lifespan/evidence/female-inhibin-childhood-reference-coverage-2026-10-14.json).
 
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
 
@@ -4366,6 +4889,7 @@ Skala błędu: produkcyjny `calcPercentileStats`; wartość pomiaru to mediana n
   - dzień zapisu nie zgadza się z zapisanym wiekiem albo tygodniami;
   - nie ma daty urodzenia.
 - Na stronach bez `app.js` i modułu daty urodzenia Karta i schowek liczą BMI i Cole z pełnych miesięcy, jak dotąd. Są to: powłoka `app.html`, terminarz, notatki, ustawienia i subskrypcja. Centyli wzrostu i masy te strony nie liczą.
+  *(Sprostowanie 2026-10-14, P-WIEK-POMIARU-3: te strony nie ładują tablic BMI (`vilda_growth_reference_data.js`, `centile_data.js`), więc silnik BMI nie ma tam siatek. Karta i schowek nie pokazują tam centyla BMI ani wskaźnika Cole’a w żadnym wieku — wiek pomiaru nie ma czego zmienić.)*
 
 **Przypadki syntetyczne** (wejście → oczekiwany wynik; zegar testów 17-06-2026):
 - Chłopiec ur. 20-05-2026, pomiar 27-05-2026 (7. doba): 51 cm, 3,61 kg, źródło WHO. Formularz trzyma tego pacjenta z datą urodzenia (dziś 28. doba).
@@ -4397,6 +4921,8 @@ Do tego karta porównania liczy ΔSDS i werdykt odcinka (`statFor`) dla obu punk
 
 *(Uzupełnienie 2026-10-14: punkty 1–4, MPH z punktu 5 oraz krzywe odniesienia wykresów Karty i mini-podsumowanie nieaktualnej ramki domyka P-WIEK-POMIARU-2 niżej. Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania zostają do decyzji.)*
 
+*(Uzupełnienie 2026-10-14, P-WIEK-POMIARU-3: wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania domyka P-WIEK-POMIARU-3 niżej.)*
+
 **Wersje.** `app.js` 235, `vilda_auth_ui.js` 488, `vilda_patient_summary_copy.js` 15, `vilda_summary_cards.js` 60; strony i skrypty wstrzykujące (`vilda_chrome.js` 136, `vilda_session_bridge.js` 60); SW 1.1.268 → 1.1.269 (numer 1.1.268 nadał równolegle #670).
 
 ### P-WIEK-POMIARU-2 — pozostałe miejsca bramki DOB-AGE-4: punkty GH, walidacja prognozy, wsad, wzrost rodziców na 18 lat, krzywe Karty i nieaktualna ramka (SW 1.1.271, 2026-10-14, polecenie właściciela)
@@ -4424,8 +4950,8 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
   - żetony hSDS i ΔhSDS sekcji GH Karty pacjenta (`vilda_auth_ui.js`, `ci()`);
   - walidacja prognozy (`vilda_growth_prediction_validation_model.js`, `hSds()`), także w eksporcie kohorty.
 - Wiersz wsadu XLSX (`vilda_professional_module.js`):
-  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji;
-  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza.
+  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji *(od P-GRANICA-URODZIN niżej: pełne miesiące wiersza z kalendarza, a wiek dokładny przycięty do granic siatek)*;
+  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza. *(Sprostowanie 2026-10-14, P-GRANICA-URODZIN: „brak siatki” przy 216,016 mies. dotyczył atrapy testu bez centyli Palczewskiej. W aplikacji łańcuch schodził wtedy na Palczewską: hSDS −0,44 zamiast −0,42 na OLAF. Od P-GRANICA-URODZIN wiersz podaje 216, więc liczy OLAF.)*
 - Wiek odniesienia, nie pomiar (`{wiekMies:null}`):
   - wzrost rodziców na 18 lat (MPH): Karta pacjenta (`En(rt,S,18,…)`) oraz karty Startu (`inline_index_04.js`, `inline_index_07.js`);
   - krzywe odniesienia wykresów Karty pacjenta (`getChildLMS(g,E/12,…)`). Bez tego krzywa niemowlęcia miała załamanie w miesiącu życia dziecka z formularza.
@@ -4435,7 +4961,7 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 - Formularz bieżącej wizyty (DOB-AGE-4) i trzy widoki z P-WIEK-POMIARU.
 - Siatka Palczewskiej we wsadzie i w walidacji: ta ścieżka nie ma bramki i liczy pełne miesiące, jak dotąd.
 - Zapas mpSDS w monitorze GH i w schowku: wzrost docelowy na 18 lat liczony rdzeniem tylko wtedy, gdy nie ma `vildaMpSdsStats`.
-- Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania — do decyzji, jak w P-WIEK-POMIARU.
+- Wzrost dla wieku kostnego oraz ΔSDS i werdykt karty porównania — do decyzji, jak w P-WIEK-POMIARU. *(Domyka P-WIEK-POMIARU-3 niżej.)*
 - Dane referencyjne, wzory, zapis, synchronizacja.
 
 **Źródło i reguła.** Dane referencyjne bez zmian: WHO 2006, WHO 2007, OLAF/OLA i Palczewska (tabela źródeł wyżej). Reguła wieku pomiaru jak w P-WIEK-POMIARU (DOB-AGE-4, Rata B / KARTA-SCHOWEK-WIEK, P-ODTWORZ-WIEK): pomiar liczy się w wieku z chwili pomiaru, nigdy w dzisiejszym; bez pewnego dnia pomiaru — pełne miesiące z zapisu.
@@ -4462,7 +4988,187 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 
 **Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
 
+*(Decyzja właściciela 2026-10-14: regułę siatki w dniu urodzin rozstrzyga osobny PR po P-WIEK-POMIARU-3.)*
+
+*(Rozstrzygnięte 2026-10-14 decyzją właściciela: wpis P-GRANICA-URODZIN niżej. Sprostowanie liczb z tego akapitu, zmierzonych na atrapie bez centyli Palczewskiej: w aplikacji chłopiec 95 cm w dniu 3. urodzin szedł na siatkę Palczewskiej (hSDS −0,49, 31. centyl), nie na WHO (−0,29). Na OLAF ma −0,67 (25. centyl) w 36. miesiącu; −0,68 to wartość dla 1096 dób. Po 6575 dobach wzrost nie tracił wyniku, tylko schodził na Palczewską (−0,44 zamiast −0,42 na OLAF).)*
+
 **Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
+
+### P-WIEK-POMIARU-3 — karta porównania: „Zmiana” w wieku dokładnym; masa poniżej 3 lat przy OLAF na Palczewskiej w widokach zapisu; wzrost dla wieku kostnego (SW 1.1.273, 2026-10-14, polecenie i decyzja właściciela)
+
+**Polecenie właściciela (2026-10-14).** „Zajmij się pozostałymi miejscami w osobnym PR”. Chodzi o miejsca, które P-WIEK-POMIARU wymienił jako poza zakresem, a P-WIEK-POMIARU-2 zostawił do decyzji: ΔSDS i werdykt karty porównania oraz wzrost dla wieku kostnego. Przegląd znalazł jeszcze dwie sprawy, które właściciel rozstrzygnął tego samego dnia:
+- masa poniżej 3 lat przy OLAF liczyła się w trzech widokach zapisu na innej siatce niż w formularzu — naprawić w tym PR;
+- reguła siatki w dniu urodzin (przegląd Codex przy P-WIEK-POMIARU-2) — osobny PR po tym.
+
+**Klasyfikacja:** zmiana kliniczna (AGENTS.md § 3). Zmienia:
+- ΔSDS, werdykt i centyl „Dziś” w karcie porównania;
+- centyl masy poniżej 3 lat przy OLAF w kolumnie „Poprzednio”, na kafelku Karty pacjenta i w schowku;
+- SDS wzrostu dla wieku kostnego.
+
+**Co było** (zmierzone na `audyt` 2df41a8, dane fikcyjne).
+
+1. **Kolumna „Zmiana” karty porównania.** Model `vildaPorownanieZPoprzednim` liczył SDS obu punktów w pełnych miesiącach (`statFor`, `VildaBmi.ocen`, `VildaBmi.cole`). Tymczasem kolumna „Poprzednio” od P-WIEK-POMIARU, a „Dziś” od DOB-AGE-4 pokazują centyle w wieku dokładnym. Z modelu pochodzą ΔSDS (tryb PRO), werdykt pary i — bez trybu PRO — centyl pod wartością „Dziś”. Przykład: chłopiec na medianie WHO w 31. i 58. dobie życia, oba punkty w 1. pełnym miesiącu.
+
+   | Parametr | Było (pełne miesiące) | Jest (wiek dokładny) |
+   |---|---|---|
+   | wzrost 54,8 → 58,1 cm | ΔhSDS +1,70; „Dziś” 96. c.; „szybka zmiana w krótkim oknie — do weryfikacji pomiaru” | ΔhSDS +0,01; 50. c.; „stabilny tor wzrastania” |
+   | masa 4,49 → 5,46 kg | ΔwSDS +1,49; 94. c.; „przyrost masy w krótkim oknie — +1,0 kg (+21,6 %) w niecały mies.” | ΔwSDS −0,01; 50. c.; „stabilny tor masy ciała” |
+   | BMI | ΔbmiSDS +0,88; 80. c.; „istotne przesunięcie centylowe w górę” | ΔbmiSDS +0,03; 49. c.; „stabilny tor BMI” |
+
+   W 0. pełnym miesiącu (wiek formularza 0) kolumna „Zmiana” nie powstaje wcale — tak było i jest.
+
+2. **Masa poniżej 3 lat przy OLAF.** OLAF nie ma danych poniżej 3 lat, więc formularz (`usePal`), „Podsumowanie wyników” i epikryza liczą wtedy masę na Palczewskiej. Trzy widoki zapisu wybierały Palczewską tylko przy źródle PALCZEWSKA. Przy OLAF szły przez rdzeń na tablicę WHO 2006. W schowku granice 3. i 97. centyla tego samego wiersza były przy tym z Palczewskiej.
+
+   | Pomiar (źródło OLAF) | „Poprzednio”, Karta, schowek — było (WHO 2006) | Jest (Palczewska, jak formularz) |
+   |---|---|---|
+   | chłopiec 24 mies., 12,2 kg | 51. c. | 28. c. |
+   | dziewczynka 18 mies., 10,2 kg | 49. c. | 22. c. |
+   | chłopiec 6 mies., 7,9 kg | 48. c. | 35. c. |
+   | dziewczynka 30 mies., 13,0 kg | 57. c. | 41. c. |
+
+   Obok dzisiejszego pomiaru z formularza wyglądało to jak spadek masy o 13–27 centyli przy tej samej masie.
+
+3. **Wzrost dla wieku kostnego** (`vilda_advanced_growth.js`, `heightSdsForBoneAge`; trafia do prognozy wzrostu ostatecznego w karcie C). Rdzeń był wołany bez obiektu. Gdy wiek kostny w pełnych miesiącach równał się wiekowi z formularza, bramka DOB-AGE-4 podstawiała dokładny wiek metrykalny. Przykład: chłopiec 140 cm, wiek kostny 10,25 roku (123 mies.), formularz 10 lat 3 mies. 20 dni (123,66 mies.) → SDS −0,47 (32. c.) zamiast −0,42 (34. c.).
+
+Przegląd sprawdził też wzrost rodziców w DocPro (druga przypadkowa zgodność z P-WIEK-POMIARU). Zmiana nie jest potrzebna: DocPro ładuje wspólny `inline_index_07.js`, który P-WIEK-POMIARU-2 już poprawił. `inline_docpro_05.js` nie jest ładowany i zostaje w repo tylko dla wpisów precache.
+
+**Co jest.**
+- **Karta porównania** (`vilda_summary_cards.js`):
+  - `__pickLastMeasurement` (`q`) niesie `wiekMies`: wiek z doby poprzedniego pomiaru albo `null`. Przez tę funkcję budują `prevMeasurementInfo` wszystkie drogi wczytania. Wiek liczy `Sw_wiekPomiaru` — ta sama funkcja i te same dane, co kolumna „Poprzednio”.
+  - `updatePrevSummaryDiff` podaje modelowi dzisiejszy wiek dokładny przez `Sw_wiekDzis(A)`. To bramka DOB-AGE-4 formularza (`lmsNiemowleWiek` bez obiektu): wiek z daty urodzenia, gdy jej pełne miesiące zgadzają się z formularzem, inaczej `null`.
+  - Model liczy w tych wiekach SDS wzrostu, BMI i Cole’a. Masę — tylko na siatce WHO 0–35 mies.: pełne miesiące rozpoznają siatkę, potem liczy wiek dokładny. Tylko tam formularz interpoluje wiek dokładny; Palczewska, OLAF i DS liczą masę w pełnych miesiącach, jak formularz.
+  - Odstęp (`gapM`), tempo wzrastania, „kg/mies.” i kontekst werdyktu (kurs GH, kanał MPH, redukcja) zostają na pełnych miesiącach.
+- **Ścieżka trajektorii** (`app.js`, `advHistoryGetChildLMSForSource`). Masa WHO 0–35 mies. dla wieku ułamkowego interpoluje L, M, S między sąsiednimi wierszami tą samą funkcją, co rdzeń (`lmsNiemowle`). Wiek jest zaokrąglany do 0,001 mies., jak w silnikach wzrostu i BMI na tej ścieżce. Wiek całkowity daje ten sam wiersz, co dotąd.
+  - Bez tego karta liczyłaby masę noworodka w wieku dokładnym wierszem najbliższego miesiąca: 7. doba → wiersz urodzeniowy, 28. doba → wiersz 1. miesiąca. Pokazywałaby wtedy fałszywą „utratę masy”.
+  - Poza kartą zmiana dotyczy tylko wierszy wpisanych w miesiącach ułamkowych (karta zaawansowana i podstawowa → analiza trajektorii).
+- **Masa poniżej 3 lat przy OLAF** liczy się na Palczewskiej w pełnych miesiącach, tą samą regułą, co formularz (`usePal`) i podsumowanie (`ae`):
+  - kolumna „Poprzednio” (`Se`, `Sw_masaPal` na źródle zapisu);
+  - kafelek „Waga” Karty pacjenta (`En`; źródło zapisu, a bez niego bieżące `bmiSource` strony);
+  - schowek (`I`; ta sama reguła, co granice 3. i 97. centyla tego wiersza).
+- **Wiek kostny to wiek odniesienia, nie pomiar** — jawne `{wiekMies:null}` w `heightSdsForBoneAge`.
+
+**Czego nie zmieniono.**
+- Formularz bieżącej wizyty i DOB-AGE-4, kolumna „Poprzednio” poza masą przy OLAF poniżej 3 lat, siatki i dane referencyjne.
+- Masa na Palczewskiej w pełnych miesiącach, także w pierwszym miesiącu życia, gdzie oznacza to wiersz urodzeniowy. Tak liczy formularz; zmiana byłaby osobną decyzją kliniczną.
+- Reguła siatki w dniu urodzin — osobny PR (decyzja właściciela 2026-10-14).
+- Wykresy Karty pacjenta i ich panel porównania (punkty w pełnych miesiącach). Zmiana oznaczałaby nową geometrię wykresu, więc jest poza zakresem.
+- Strony bez `app.js` — zob. sprostowanie w P-WIEK-POMIARU: silnik BMI nie ma tam tablic, więc nie ma czego przeliczać.
+
+**Źródło i reguła.** Dane referencyjne bez zmian: WHO 2006, WHO 2007, OLAF/OLA i Palczewska (tabela źródeł wyżej).
+- Reguła wieku — jak w P-WIEK-POMIARU (DOB-AGE-4, Rata B / KARTA-SCHOWEK-WIEK, P-ODTWORZ-WIEK).
+- Reguła siatki masy poniżej 3 lat przy OLAF — ta, którą stosuje formularz. Silniki stosują ją dla wzrostu i BMI (P-SDS-1, decyzja 1; P-BMI-1, decyzja 1). Decyzja właściciela z 2026-10-14 rozciąga ją na widoki zapisu.
+
+**Populacja, jednostki, ograniczenia.**
+- Dzieci 0–18 lat. Jednostki: wiek w miesiącach (doby / 30,4375), wzrost w cm, masa w kg, BMI w kg/m², Cole w %, SDS bez jednostki.
+- Karta porównania liczy kolumnę „Zmiana” dopiero od 1. pełnego miesiąca formularza, jak dotąd.
+- Bez daty urodzenia albo bez pewnej doby pomiaru liczą się pełne miesiące, jak dotąd.
+
+**Przypadki syntetyczne** (wejście → oczekiwany wynik; zegar testów 17-06-2026):
+- Chłopiec ur. 20-04-2026, źródło WHO, tryb PRO. Pomiar 21-05-2026 (31. doba): 54,8 cm, 4,49 kg (mediany WHO). Dziś (58. doba): 58,1 cm, 5,46 kg.
+  - Jest: w kolumnie „Zmiana” „stabilny tor wzrastania”, „stabilny tor masy ciała” i „stabilny tor BMI”; |ΔhSDS| i |ΔwSDS| ≤ 0,05.
+  - Było: „szybka zmiana w krótkim oknie”, ΔhSDS +1,70.
+- Chłopiec ur. 10-06-2024, źródło OLAF, pomiar 15-06-2026 (2 lata 0 mies.): 87 cm, 12,2 kg → kafelek „Waga”, schowek i „Poprzednio”: 28. centyl (było: 51.).
+- Chłopiec 140 cm, wiek kostny 10,25 roku, formularz 10 lat 3 mies. 20 dni → SDS wzrostu dla wieku kostnego −0,42 (było −0,47).
+
+**Testy.**
+- `tests/unit/wiek-pomiaru-reszta.test.mjs` (16):
+  - model karty na prawdziwych modułach tempa, trajektorii, BMI i kart (rejestrator wieków, o które model pyta rdzeń);
+  - `advHistoryGetChildLMSForSource` wycięty z `app.js`, z prawdziwymi tablicami;
+  - `En` z `vilda_auth_ui.js` oraz `Sw_masaPal` i `Sw_wiekDzis` z `vilda_summary_cards.js`, z atrapami rdzenia;
+  - schowek na prawdziwym silniku BMI;
+  - strażnicy źródła: wiek kostny, przekazanie wieków do modelu.
+- `tests/e2e/wiek-pomiaru-reszta.spec.mjs` (2): karta porównania w trybie PRO (niemowlę w 1. miesiącu) i masa dwulatka przy OLAF (kafelek, schowek, „Poprzednio”).
+- Kontrola ujemna na `audyt` 2df41a8: pada 13 z 16 testów jednostkowych i 2 z 2 e2e — „szybka zmiana w krótkim oknie…” zamiast „stabilny tor wzrastania”, kafelek „Waga” 51 zamiast 28. Przechodzą 3 testy zgodności wstecznej.
+- 16 mutacji poprawki (model, ścieżka trajektorii, reguła masy w trzech widokach, wiek kostny): każdą wykrywa co najmniej jeden test.
+- Strażnicy `sds-karta-i-trajektoria` (`En`) i `sds-konsumenci-rdzenia` (schowek) przypinają nowe fragmenty; liczba asercji bez zmian.
+
+**Wersje.** `app.js` 236, `vilda_advanced_growth.js` 76, `vilda_auth_ui.js` 490 (wstrzykiwany: `vilda_chrome.js` 138, `vilda_session_bridge.js` 62), `vilda_patient_summary_copy.js` 16, `vilda_summary_cards.js` 61; SW 1.1.272 → 1.1.273 (numer 1.1.272 nadał równolegle #673).
+
+### P-GRANICA-URODZIN — siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje: urodziny 2, 3, 5, 18, 18,5 i 19 lat (SW 1.1.275, 2026-10-14, decyzja właściciela)
+
+**Decyzja właściciela (2026-10-14).** „Napraw granicę urodzin w osobnym PR”. Reguła: siatkę i bramki kategorii wybierają pełne miesiące kalendarzowe, a wiek dokładny (doby / 30,4375) tylko interpoluje w obrębie wybranej siatki. Granica 1. miesiąca (noworodek: WHO 2006 zamiast Palczewskiej) zostaje według dób, jak dotąd — wariant „noworodek wg dób”, wybrany przez właściciela. Wpis rozstrzyga „Do decyzji” z P-WIEK-POMIARU-2.
+
+**Klasyfikacja:** zmiana kliniczna (AGENTS.md § 3). W dniach wokół urodzin zmienia siatkę, SDS, centyl i kategorię BMI. We wsadzie XLSX zmienia też wiersz masy (punkt 4 niżej).
+
+**Co było** (zmierzone na `audyt` 2df41a8: prawdziwe silniki i tablice, dane fikcyjne). Rok bez 29 lutego ma 365 dób, a 12 × 30,4375 = 365,25. Dlatego w dniu urodzin wiek dokładny bywa mniejszy niż pełne miesiące: w dniu 3. urodzin po 1095 dobach to 35,975 mies. przy 36 pełnych. Silniki wybierały siatkę według wieku dokładnego, a formularz, rekord i widoki pokazują pełne miesiące. W dniu urodzin dziecko trafiało więc na siatkę młodszego dziecka. Odwrotny przypadek (wiek dokładny już za granicą, pełne miesiące jeszcze przed nią) zdarza się tylko na granicy półrocza, 222 mies.
+
+| Przypadek | Było | Jest |
+|---|---|---|
+| chłopiec 95 cm, OLAF, 3. urodziny po 1095 dobach (35,975 mies.) | Palczewska, siatka zastępcza („brak danych OLAF dla wieku poniżej 3 lat”): hSDS −0,49, 31. centyl | OLAF: hSDS −0,67, 25. centyl |
+| ten sam chłopiec, 14 kg (BMI 15,5) | BMI na Palczewskiej: 32. centyl | BMI na OLAF: 44. centyl |
+| dziewczynka 110 cm, 31,46 kg (BMI 26,0, BMI-SDS +3,14), 5. urodziny po 1826 dobach (59,99 mies.) | „Otyłość” — bramka 60 mies. zamknięta | „Otyłość olbrzymia” i ostrzeżenie o pilnej konsultacji |
+| BMI 31, 18. urodziny po 6574 dobach (215,98 mies.) | „Otyłość” (kategoria dziecięca, 98. centyl) | „Otyłość I stopnia” (dorosły od 216 mies.) |
+| chłopiec 176 cm, 18. urodziny po 6575 dobach (216,016 mies.) | Palczewska, siatka zastępcza („brak siatek OLAF powyżej 18 lat”): hSDS −0,44 | OLAF: hSDS −0,42 |
+| chłopiec 176 cm, ur. 1.03.2002, pomiar 31.08.2020: 221 pełnych mies., 6758 dób (222,03 mies.) | brak wyniku („wiek poza zakresem siatek (powyżej 18,5 roku)”) | Palczewska: hSDS −0,44 |
+| BMI 26, 19. urodziny po 6940 dobach (ur. 1.01.2004: 228,008 mies.) | BMI-SDS: brak siatki (powyżej 19 lat) | WHO 2007, informacyjnie; kategoria dorosłego bez zmian |
+| karta zespołu Downa, chłopiec 84 cm, 12 kg, 2. urodziny po 730 dobach (23,98 mies.) | tabele niemowlęce: „Masa do długości (WFL DS)” i „Normy BMI DS obowiązują od 2. r.ż.” | tabele dziecięce: BMI DS z centylem |
+| wsad XLSX, masa 14 kg, wiersz 35 pełnych mies. i 1081 dób (35,52 mies.) | wiek zaokrąglony 36 → OLAF, wiersz 36: SDS −0,50 (31,0 c.) | 35 pełnych → WHO 2006 w 35,52 mies.: SDS −0,10 (45,9 c.) |
+| wsad XLSX, masa 70 kg, 216 pełnych mies. (216,58 mies.) | wiek zaokrąglony 217 → brak wyniku | OLAF, wiersz 216: SDS +0,01 |
+
+**Co jest.**
+1. Silniki publikują granice siatek jako dane — `VildaSdsWzrostu.GRANICE` i `VildaBmi.GRANICE` — osobno dla populacji ogólnej i DS. Wartości pochodzą z tych samych stałych `G`, którymi silniki rozstrzygają (`od` — od tego wieku, `do` — do tego wieku włącznie):
+   - wzrost, populacja ogólna: od 36 (OLAF), do 216 (OLAF i WHO) i do 222 (Palczewska); DS: od 24 (tabela dziecięca), do 240;
+   - BMI, populacja ogólna: od 36 (OLAF), od 60 („otyłość olbrzymia”), od 216 (dorosły), do 216 (OLAF), do 222 (Palczewska) i do 228 (WHO 2007); DS: od 24 (siatka BMI DS), od 60, od 240 (dorosły), do 240.
+
+   Granicy 1. miesiąca nie ma, bo noworodek rozstrzyga się dobami. Granicami nie są też przejścia ciągłe: WHO 2006 → WHO 2007 we wzroście (35 → 36 mies.) i w BMI (60 mies., ten sam wiersz w obu tablicach).
+2. `app.js`: `vildaWiekDoSiatek(wiekMies, pelneMies, populacja)` przycina wiek dokładny tak, żeby każda granica obu silników wypadała po tej samej stronie, co pełne miesiące:
+   - granica `od` nie większa niż pełne miesiące — wiek co najmniej równy granicy;
+   - granica `od` większa niż pełne miesiące — wiek mniejszy niż granica (granica − 10⁻⁶);
+   - granica `do` nie mniejsza niż pełne miesiące — wiek nie większy niż granica.
+
+   Między granicami wiek zostaje bez zmian. Bez zmian zostaje też, gdy pełnych miesięcy brak, są niecałkowite albo nie pasują do wieku dokładnego (różnica poza przedziałem −0,5…1,5 mies.; zmierzony zakres dla dat 2000–2024 i wieku 0–20 lat: −0,10…+1,06). Populacja jest ta sama, której użyje silnik (resolver pacjenta); wsad podaje ogólną, a karta zespołu Downa — DS. Bez silników granic nie ma, a wiek zostaje bez zmian.
+3. Funkcję wołają wszyscy wytwórcy wieku dokładnego podawanego siatkom:
+   - bramka formularza `lmsNiemowleWiek` (pełne miesiące formularza): wzrost w karcie głównej i BMI w `vilda_update_prep.js` (kategoria, centyl, Cole, ostrzeżenia) — ten plik dostaje przycięty wiek bez własnej zmiany;
+   - `vildaWiekPomiaruMies` (pełne miesiące z dnia pomiaru): karta porównania, kafelki Karty pacjenta i schowek z P-WIEK-POMIARU, a od P-WIEK-POMIARU-3 także poprzedni punkt kolumny „Zmiana” (dzisiejszy bierze ją z bramki formularza, `Sw_wiekDzis`);
+   - karta zespołu Downa (`__ds_readAgeYears`): tabela niemowlęca czy dziecięca, BMI DS czy masa do długości, zakres karty do 20 lat;
+   - wiersz wsadu XLSX (`Cs`): wzrost (`Zw`), BMI (`Zb`) i masa poniżej 36 mies.
+
+   Jawny wiek, który wołający podaje rdzeniowi w `{wiekMies}`, rdzeń przyjmuje bez zmian — przycina go ten, kto go wytworzył.
+4. Wsad XLSX: pełne miesiące wiersza liczy kalendarz (`VildaDobAge.ageFromDobISO` na dzień pomiaru, jak w formularzu). Masa, siatka Palczewskiej i zapas wzrostu dostają je zamiast zaokrąglonego wieku dokładnego (`Math.round(Ce)`). Zaokrąglenie przenosiło wiersz z drugiej połowy miesiąca na następny miesiąc, także przez granicę siatki. Skutek poza granicami: od 36 mies. masa w drugiej połowie miesiąca bierze wiersz pełnych miesięcy, tak jak formularz, a nie wiersz następnego miesiąca. Przykład: 100,53 mies., 26 kg — SDS masy −0,60 → −0,55; na siatce Palczewskiej −0,40 → −0,34.
+
+**Czego nie zmieniono.**
+- Noworodek według dób (decyzja właściciela). Przykład: chłopiec ur. 1 lutego w 28. dobie (1 pełny miesiąc, 0,92 mies.) — długość na WHO 2006 z powodem „noworodek poniżej 1. miesiąca…”, jak dotąd.
+- Silniki: reguła wyboru siatki, łańcuch zastępczy i interpolacja bez zmian. Wynik się nie zmienia, gdy wiek jest całkowity albo gdy wiek dokładny leży po tej samej stronie każdej granicy, co pełne miesiące.
+- Wywołania z wiekiem w pełnych miesiącach (historia pomiarów, punkty GH, walidacja prognozy, krzywe odniesienia). Odczyt wartości pod kursorem na wykresach liczy wiek z osi, który nie ma pełnych miesięcy kalendarza.
+- Masa w formularzu: siatkę i wiersz od 36 mies. wybierały już pełne miesiące formularza.
+- Dane referencyjne, wzory, progi, zapis, synchronizacja.
+
+**Konsekwencje do świadomej akceptacji.**
+- Na granicy wiek do interpolacji przesuwa się najwyżej o 0,1 mies. (3 doby). W miesiącu 18. urodzin (216 pełnych mies.) wiek do interpolacji wynosi 216 przez cały miesiąc: tu kończy się OLAF i WHO dla wzrostu, a zaczyna dorosłość BMI. U pacjenta z DS tak samo jest w miesiącu 20. urodzin (240). Na granicach 222 i 228 mies. wiek nie przekracza granicy, czyli przesuwa się najwyżej o 1,06 mies. W tym wieku to poniżej 0,02 SD: wzrost rośnie o ok. 0,1 cm na miesiąc, BMI o ok. 0,05.
+- Granice obu silników działają razem, bo wiek z formularza trafia do obu. Granica 60 mies. (bramka „otyłości olbrzymiej”) przesuwa więc także wiek wzrostu o najwyżej 3 doby (ok. 0,05 cm).
+
+**Źródło i reguła.** Dane referencyjne bez zmian (tabela źródeł wyżej). Zakresy siatek są opisane w pełnych latach i miesiącach życia: OLAF/OLA od 3 do 18 lat (Kułaga i wsp., Eur J Pediatr 2011;170:599–609 i 2013;172:753–761), WHO 2007 do 19 lat (de Onis i wsp., Bull World Health Organ 2007;85:660–667), Palczewska do 18,5 roku (Palczewska, Niedźwiecka, Med Wieku Rozwoj 2001;5 Supl. 1:18–118), siatki DS — tabele 0–36 mies. i 2–20 lat (Zemel i wsp., Pediatrics 2015;136:e1204–e1211). Bramki kategorii BMI („otyłość olbrzymia” od 5 lat, dorosły od 18 lat, przy DS od 20 lat) to decyzje właściciela 4, 5 i D3 z P-BMI i P-DS. Wiek dokładny do interpolacji pozostaje w skali tablic WHO (DOB-AGE-4: WHO Child Growth Standards, Acta Paediatr Suppl 2006;450:76–85, wiek w dobach / 30,4375).
+
+**Populacja, jednostki, ograniczenia.**
+- Dzieci i młodzież 0–20 lat; wiek w miesiącach (pełne miesiące kalendarzowe i doby / 30,4375), wzrost w cm, masa w kg, BMI w kg/m².
+- Reguła działa tam, gdzie wiek dokładny ma pełne miesiące z tego samego dnia: formularz z datą urodzenia, zapis z datą urodzenia i dniem pomiaru, wiersz wsadu z datą urodzenia. Bez daty urodzenia wszystko liczy się, jak dotąd, w pełnych miesiącach.
+- Zgodność z kalendarzem dotyczy tylko granic siatek i bramek. Między granicami interpolacja idzie wiekiem dokładnym, jak w DOB-AGE-4.
+
+**Przypadki syntetyczne** (wejście → oczekiwany wynik):
+- Chłopiec ur. 1-03-2024, dziś 1-03-2027 (1095 dób), 95 cm, 14 kg, OLAF → karta główna: „Wzrost: 25 centyl” (OLAF, bez siatki zastępczej). Było: 31. centyl na Palczewskiej.
+- Dziewczynka ur. 17-06-2021, dziś 17-06-2026 (1826 dób), 110 cm, 31,46 kg → „BMI: 26,0 kg/m² – >99 centyla (Otyłość olbrzymia)” i ostrzeżenie. Było: „(Otyłość)”, bez ostrzeżenia o olbrzymiej.
+- Zapis: chłopiec ur. 1-03-2020, pomiar 1-03-2023 (1095 dób), 95 cm, 14 kg, OLAF → kafelki Karty pacjenta, schowek i „Poprzednio”: wzrost 25. centyl (było 31.), BMI na OLAF.
+- Karta zespołu Downa: chłopiec ur. 17-06-2024, dziś 17-06-2026 (730 dób), 84 cm, 12 kg → wiek karty 2 lata, wiersz „BMI: 17,0” z centylem DS. Było: masa do długości i „Normy BMI DS obowiązują od 2. r.ż.”.
+- Wsad: chłopiec ur. 15-03-2020, pomiar 1-03-2023, 14 kg → 35 pełnych mies., masa na WHO 2006 w 35,52 mies.: SDS −0,10 (było −0,50 na OLAF, wiersz 36).
+- Noworodek: chłopiec ur. 1-02-2027, dziś 1-03-2027 (28. doba, 1 pełny miesiąc), 54 cm → WHO 2006 z powodem „noworodek poniżej 1. miesiąca”, jak dotąd.
+
+**Testy.**
+- `tests/unit/granica-urodzin.test.mjs` (19):
+  - dane `GRANICE` obu silników wobec ich stałych `G`;
+  - 9 przypadków syntetycznych na prawdziwych silnikach;
+  - własność na ok. 310 tys. par (data urodzenia, dzień) w oknach ±45 dni wokół granic 24, 36, 60, 216, 222, 228 i 240 mies., dla obu populacji: wiek po stronie pełnych miesięcy przy każdej granicy, bez przycięć tam, gdzie nie trzeba, przesunięcie poniżej 0,1 mies. poza miesiącami 216, 222 i 228 (DS: 240);
+  - decyzje silników przy wieku do siatek takie same jak przy pełnych miesiącach (2–20 lat): siatka, zapas, powód, dorosłość, bramka 60 mies.;
+  - wytwórcy w `app.js`, karta DS i wiersz wsadu na kodzie wyciętym z produkcji;
+  - strażnicy źródła.
+- `tests/e2e/granica-urodzin.spec.mjs` (5, komputer): karta główna w dniu 5. i 3. urodzin, zapis z dnia 3. urodzin (kafelki, schowek, „Poprzednio”), karta DS w dniu 2. urodzin, noworodek według dób. `tests/e2e/granica-urodzin-mobile.spec.mjs` (1, telefon): karta główna w dniu 5. urodzin, bez poziomego przewijania. Wspólne kroki: `tests/support/granica-urodzin.mjs`.
+- Kontrola ujemna na `audyt` 2df41a8: e2e — 5 z 6 testów pada („Otyłość” zamiast „Otyłość olbrzymia”, Palczewska 31 zamiast OLAF 25, kafelek 31 zamiast 25, wiek karty DS 1,9986 zamiast 2). Przechodzi test noworodka, bo pilnuje, że granica 1. miesiąca się nie zmienia. Unit — 10 testów pada, a 9 jest pominiętych (brak `GRANICE` i funkcji).
+- Strażnicy wsadu w `sds-cisnienie-i-wsad`, `wiek-pomiaru-pozostale-miejsca` i `bmi-dieta-moduly` przypinają nowe wywołania (`Cs`, `Rp`); liczba asercji bez zmian.
+
+**Do decyzji.**
+- Masa od 36 mies. — w formularzu i we wsadzie — bierze wiersz pełnych miesięcy, bez interpolacji wiekiem dokładnym, inaczej niż wzrost i BMI. Interpolacja masy to osobna zmiana kliniczna.
+- Wsad liczy masę na siatce zespołu Downa, gdy pacjent wczytany w formularzu ma DS (`getChildLMS` → `vildaPopulacjaDs()`). Wzrost i BMI wsadu podają populację ogólną jawnie. To błąd sprzed tej zmiany (z przeglądu kodu, niezmierzony).
+
+**Wersje.** `app.js` 237, `vilda_sds_wzrostu.js` 5, `vilda_bmi.js` 10, `vilda_down_syndrome.js` 5, `vilda_professional_module.js` 13; SW 1.1.274 → 1.1.275 (numery 1.1.272, 1.1.273 i 1.1.274 nadały równolegle #673, #675 i #677, `app.js` 236 — #675).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
@@ -5143,7 +5849,7 @@ Etap 4 planu z P-SDS-1.
 
 Etap 3 planu z P-SDS-1.
 
-- **Karta pacjenta** (`vilda_auth_ui.js`, ?v 432 → 433): `En()` liczy wzrost zawsze przez `calcPercentileStats` (reguła siatki w silniku; masa zostaje przy Palczewskiej z rekordu); granica wieku jak w rdzeniu — 216 mies. włącznie (dotąd warstwa GH i Status ucinały już 18,0 lat, a monitor GH nie: ten sam punkt terapii miał hSDS w monitorze i „—" na Karcie); żeton „hSDS −1,23" i ΔhSDS warstwy GH z dwoma miejscami (dotąd jedno); **panel porównania** liczy wzrost przez `VildaSdsWzrostu.policz()` z płcią i źródłem siatki (`_vildaScale.sex/param`), a własny wzór LMS z lokalnym `ncdf` zostaje tylko dla masy (etap 5 go usunie); SDS panelu z dwoma miejscami, centyl wg ADV-REPORT-5 („<1", „>99"; dotąd „<3/>97").
+- **Karta pacjenta** (`vilda_auth_ui.js`, ?v 432 → 433): `En()` liczy wzrost zawsze przez `calcPercentileStats` (reguła siatki w silniku; masa zostaje przy Palczewskiej z rekordu — *od P-WIEK-POMIARU-3 (decyzja właściciela 2026-10-14) także poniżej 3 lat przy OLAF, jak w formularzu*); granica wieku jak w rdzeniu — 216 mies. włącznie (dotąd warstwa GH i Status ucinały już 18,0 lat, a monitor GH nie: ten sam punkt terapii miał hSDS w monitorze i „—" na Karcie); żeton „hSDS −1,23" i ΔhSDS warstwy GH z dwoma miejscami (dotąd jedno); **panel porównania** liczy wzrost przez `VildaSdsWzrostu.policz()` z płcią i źródłem siatki (`_vildaScale.sex/param`), a własny wzór LMS z lokalnym `ncdf` zostaje tylko dla masy (etap 5 go usunie); SDS panelu z dwoma miejscami, centyl wg ADV-REPORT-5 („<1", „>99"; dotąd „<3/>97").
 - **Trajektoria** (`vilda_trajectory_analysis.js`, ?v 24 → 25): SDS pozycji (wzrost, masa, BMI, MPH, ΔSDS odcinków, czerwona flaga) przez `fmtP` — dwa miejsca formaterem silnika (dotąd jedno; próg −1,0 liczono na dwóch miejscach, a pokazywano na jednym); **SDS tempa zostaje przy jednym miejscu** (`fmtS`, GROWTH-HV-UI4 — osobna decyzja właściciela); `fmtC` wg ADV-REPORT-5.
 - **Opis pacjenta** (`vilda_patient_narrative.js`, ?v 8 → 9): `formatSds` (hSDS, ΔhSDS, mpSDS, ΔBMI-SDS) dwa miejsca; SDS tempa, SDS urodzeniowe SGA i progi konsensusu („poniżej progu −2,0 SD") przez `fmtSds1` — jedno miejsce, bo to inne wielkości i progi czytane jako liczby całkowite z dziesiątką.
 - **Ściąga B.64** (`vilda_b64_checklist.js`, ?v 3 → 4): hSDS formaterem silnika. **Dietetyka** (`vilda_diet_plan_ui.js`, ?v 16 → 17): mediany wzrostu i masy „typowych dla wieku" ze źródła aplikacji, nie z siatki narzuconej wiekiem (`<3 lat → WHO`); regułę wieku ma silnik.

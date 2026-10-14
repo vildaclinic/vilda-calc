@@ -20,6 +20,8 @@
  *     (18,5 / 25 / 30 / 35 / 40), SDS i centyl nadal liczone informacyjnie, dopóki są siatki.
  *  6. Dorośli: norma < 25 (klasyfikacja); cel „normy" do redukcji = 24,9 (liczba, nie kategoria).
  *  8. Wiek jest UŁAMKOWY w miesiącach i tak trafia do interpolacji L/M/S (DOB-AGE-4 także dla BMI).
+ *     Siatkę i bramki kategorii wybierają PEŁNE MIESIĄCE (P-GRANICA-URODZIN): wytwórcy wieku
+ *     dokładnego przycinają go do granic z GRANICE (vildaWiekDoSiatek w app.js).
  * 10. Format: „BMI 17,3 kg/m²", „bmiSDS +1,20" (2 miejsca, znak, przecinek), centyl wg ADV-REPORT-5.
  * 12. POPULACJA (P-DS-1, decyzje D1–D3): zespół Downa to cecha PACJENTA, nie wybór siatki. Gdy
  *     populacja = 'DS', BMI liczy się WYŁĄCZNIE na siatce DS (Zemel 2015) — bez cichego zejścia na
@@ -91,6 +93,16 @@
     Z_P85: 1.036,          // cel normy dziecka (ENERGY-CHILD-MID2, jak Z85 w app.js)
     DS_MIN_M: 24,          // siatka BMI DS od 2 lat (poniżej: masa do długości WFL DS)
     DS_MAX_M: 240,         // siatka DS do 20 lat; decyzja D3: do tego wieku DS wygrywa z progiem dorosłego
+  });
+  /* GRANICE PEŁNYCH MIESIĘCY (P-GRANICA-URODZIN; decyzja właściciela 2026-10-14) — ta sama reguła
+     i ten sam kształt, co w vilda_sds_wzrostu.js (tam uzasadnienie): `od` — od tego wieku, `do` —
+     do tego wieku włącznie. Oprócz siatek są tu bramki kategorii: „otyłość olbrzymia" od 60 mies.
+     i dorosły od 216 mies. (DS: od 240). Brak WHO_INFANT_MAX_M: tablice WHO 2006 i 2006/2007 mają
+     w 60. miesiącu ten sam wiersz, więc przejście jest ciągłe. Brak granicy 1. miesiąca: noworodek
+     rozstrzyga się dobami. */
+  var GRANICE = Object.freeze({
+    OGOLNA: Object.freeze({ od: Object.freeze([G.OLAF_MIN_M, G.OLBRZYMIA_MIN_M, G.DOROSLY_M]), do: Object.freeze([G.OLAF_MAX_M, G.PAL_MAX_M, G.WHO_MAX_M]) }),
+    DS: Object.freeze({ od: Object.freeze([G.DS_MIN_M, G.OLBRZYMIA_MIN_M, G.DS_MAX_M]), do: Object.freeze([G.DS_MAX_M]) }),
   });
   var PROGI = Object.freeze({
     DZIECKO: Object.freeze({ NIEDOWAGA: 5, NADWAGA: 85, OTYLOSC: 97, OLBRZYMIA_SDS: 3, ALARM_NISKI: 3 }),
@@ -749,7 +761,7 @@
   }
 
   root.VildaBmi = Object.freeze({
-    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), NOTA_DS: NOTA_DS, G: G, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
+    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), NOTA_DS: NOTA_DS, G: G, GRANICE: GRANICE, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
     ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, populacjaZOpcji: populacjaZOpcji, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
     bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
     mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,

@@ -333,11 +333,40 @@ oraz [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibin
   Nie dodawaj selektora, nie koryguj stężenia przez stosowanie antykoncepcji.
 - Geometria, skala, 73 pozostałe profile i porównanie płci 8–20 są odrębne
   i pozostają bez zmian. Jasny znacznik ma wskazywać źródłową liczbę,
-  także gdy nie leży na ilustracji. Crofton i luka >1–<5,6 nie są aktywowane.
+  także gdy nie leży na ilustracji. W tej partii Crofton i luka >1–<5,6
+  nie były aktywowane; osobne rozszerzenie Zhou opisano poniżej.
 
 Źródła i oczekiwane przypadki:
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
+
+## Dziecięce mediany grup Zhou — inhibina B, 14 października 2026
+
+- Po PR #672 uzupełniamy wyłącznie zwykły żeński zakres >1–<5,6:
+  `female-inhibin-childhood-reference-policy.json`, `ordinaryOnly`,
+  `group-median`, `constant`. Grupa źródłowa 1–5, N=60, daje 33 pg/mL
+  dla `(1,5)`; grupa 5–10, N=77, daje 27 dla `[5,5.6)`. Węższy routing
+  nie tworzy mediany nowej podgrupy. Nie interpoluj między 33 i 27.
+- Granica dokładnych 5 lat jest konwencją aplikacji, bo autorzy nie
+  zdefiniowali inkluzywności. Cały możliwy wiek musi pasować; przedziały
+  przecinające 1, 5 lub 5,6 nie dostają liczby ze środka wieku. Dokładnie
+  1 zachowuje Ljubicic, od 5,6 Borelli; nie stosuj zastępczo Zhou,
+  gdy nie pasuje metoda lub kontekst tamtego profilu.
+- Surowica Kangran CLIA / KAESER 1000 nie jest skalibrowana względem
+  Gen II. Znana niezgodna metoda/materiał blokuje punkt, nieznana
+  dopuszcza orientacyjne zestawienie. Nie dodawaj kolejnych pytań
+  o metodę, Tanner lub porę pobrania. Ograniczenia szpitalnej populacji
+  chińskiej i nieznanej pory pobrania należą do źródeł.
+- Zachowaj gładki most oraz skalę. Jasny punkt to mediana całej grupy,
+  nie wysokość ilustracji. Przejścia 33→27 oraz do ≈11 Borelli nie
+  dowodzą zdarzeń biologicznych przy 5/5,6 roku; nie dopasowuj do nich
+  krzywej. 90% CI mediany nie staje się pasmem normy. Nie uruchamiaj
+  norm Zhou, regresji sześciennej, Crofton ani porównań płci przez
+  samo dodanie tych liczb. Wszystkie 74 wcześniejsze profile zachowaj.
+
+Źródło, populacja, przypadki graniczne i oczekiwane kontrole:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026),
+[przegląd tej partii](hormone-lifespan/evidence/female-inhibin-childhood-reference-coverage-2026-10-14.json).
 
 ## Uzupełnienie po audycie męskich LH/FSH, 11 października 2026
 

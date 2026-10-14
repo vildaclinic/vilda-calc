@@ -80,13 +80,13 @@ function expectHeights(actual, expected) {
   const error = Math.max(0, ...actual.map((p, i) => Math.abs(p.height - expected[i].height)));
   expect(error).toBeLessThan(.00002);
 }
-async function expectSourcePoint(page, value, median, overflow = false, profile = 'ljubicic2022-female-inhb') {
+async function expectSourcePoint(page, value, median, overflow = false, profile = 'ljubicic2022-female-inhb', statistic = 'median') {
   const group = point(page);
   await expect(group).toHaveCount(1);
   await expect(group).toHaveAttribute('data-profile', profile);
   await expect(group).toHaveAttribute('data-divisor', '52.474');
   await expect(group).toHaveAttribute('data-ceiling', '1');
-  await expect(group).toHaveAttribute('data-reference-statistic', 'median');
+  await expect(group).toHaveAttribute('data-reference-statistic', statistic);
   await expect.poll(async () => Number(await group.getAttribute('data-value'))).toBeCloseTo(value, 10);
   await expect.poll(async () => Number(await group.getAttribute('data-reference-value'))).toBeCloseTo(median, 10);
   const measured = await group.evaluate(g => {
@@ -152,7 +152,9 @@ for (const width of [1440, 320]) {
     const sourceShape = await geometry(page);
     for (const ageYears of [3, 14, 35, 65]) {
       await update(page, { ageYears, ageLabel: `${ageYears} lat`, measurement: { value: 50, unit: 'pg/mL' } });
-      if (ageYears === 14 || ageYears === 35)
+      if (ageYears === 3)
+        await expectSourcePoint(page, 50, 33, false, 'zhou2025-female-inhb-age-over1-under5', 'group-median');
+      else if (ageYears === 14 || ageYears === 35)
         await expectSourcePoint(page, 50, ageYears === 14 ? 46 : 29, false, 'borelli2025-female-inhb-age-5p6-47');
       else await expect(point(page)).toHaveCount(0);
       expect(await geometry(page)).toEqual(sourceShape);
@@ -208,8 +210,11 @@ test('female INHB keeps its line while enforcing source-age, term-birth and meas
     await expectSourcePoint(page, 50, median);
     expect(await geometry(page, ages.life)).toEqual(shape);
   }
+  await update(page, { ageYears: 1.000001, measurement: { value: 50, unit: 'pg/mL' } });
+  await expectSourcePoint(page, 50, 33, false, 'zhou2025-female-inhb-age-over1-under5', 'group-median');
+  expect(await geometry(page, ages.life)).toEqual(shape);
   const excluded = [
-    { ageYears: 0 }, { ageYears: .019999 }, { ageYears: 1.000001 },
+    { ageYears: 0 }, { ageYears: .019999 },
     { preterm: 'yes' }, { preterm: 'unknown' },
     { measurement: { value: 50, unit: 'kg' } },
     { measurement: { value: 50, unit: 'pg/mL', operator: '<' } },

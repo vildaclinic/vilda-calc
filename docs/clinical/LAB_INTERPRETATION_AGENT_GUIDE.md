@@ -127,6 +127,13 @@ ograniczeniem zakresu działania. Jeśli dodatkowa informacja jest konieczna,
 przedstaw jej rzeczywisty wpływ i najprostszy wariant obsługi. Nie dodawaj
 pól „na wszelki wypadek” ani ukrytej obowiązkowej konfiguracji.
 
+Planowany pasek „Poprzednie wyniki” w przeliczniku jest wyłącznie do odczytu:
+bez pól, bez daty pobrania, bez wyboru „porównaj z…” i bez zapisu z poziomu
+paska. Wynik trafia do karty tylko przez istniejące „Przypnij do wizyty”,
+a dawne wpisy edytuje się w karcie pacjenta. Pasek pokazuje zapisane wyniki
+bez ponownej oceny (§ 7). Decyzja właściciela z 2026-10-14, decyzja 6.6
+w [planie historii wyników](../LAB_HISTORIA_WYNIKOW_PLAN.md).
+
 Brak stadium nie blokuje dostępnej oceny według wieku. Brak wiarygodnego
 wieku może natomiast uniemożliwić kwalifikację do zakresu dla stadium.
 Każde porównanie zachowuje własne warunki dostępności.
