@@ -67,11 +67,11 @@ test('karta główna w dniu 3. urodzin (1095 dób): wzrost na siatce OLAF, nie n
   expect(wzorzec.naDoby, 'wiek dokładny 35,975 mies. trafiał na siatkę zastępczą').toEqual({ siatka: 'PALCZEWSKA', centyl: 31 });
   expect(wzorzec.naPelne).toEqual({ siatka: 'OLAF', centyl: 25 });
 
-  const rdzen = await page.evaluate(() => {
+  // Źródło siatek strona dobiera do wieku (poniżej 3 lat WHO, od 3 lat OLAF) — czekamy na stan po wpisaniu daty.
+  await expect.poll(() => page.evaluate(() => {
     const r = window.calcPercentileStats(95, 'M', 3, 'HT');
-    return { siatka: r.siatka, fallback: r.fallback, centyl: Math.round(r.percentile) };
-  });
-  expect(rdzen).toEqual({ siatka: 'OLAF', fallback: false, centyl: 25 });
+    return r ? { siatka: r.siatka, fallback: r.fallback, centyl: Math.round(r.percentile) } : null;
+  })).toEqual({ siatka: 'OLAF', fallback: false, centyl: 25 });
   await expect(page.locator('#whResult')).toContainText('Wzrost: 25 centyl', { timeout: 15000 });
 });
 
@@ -156,10 +156,17 @@ test('noworodek nadal według dób (decyzja właściciela): 28. doba urodzonego 
     const e = window.VildaDobAge.readExactAge();
     return e ? `${e.totalMonths}/${e.days}` : null;
   })).toBe('1/28');
-  const r = await page.evaluate(() => {
-    const x = window.calcPercentileStats(54, 'M', 1 / 12, 'HT');
-    return { siatka: x.siatka, powod: x.powod };
-  });
-  expect(r.siatka).toBe('WHO');
+  // Bramka formularza nie przycina 28. doby do 1. miesiąca: 1 nie jest granicą w GRANICE.
+  const wiek = await page.evaluate(() => window.lmsNiemowleWiek(1));
+  expect(wiek).toBeCloseTo(28 / DNI_W_MIES, 9);
+  // Źródło podane jawnie: poniżej 3 lat strona sama przełącza siatki na WHO (getDefaultGrowthDataSource poza
+  // trybem PRO), a tu sprawdzamy regułę przy OLAF — noworodek idzie na WHO 2006 z jawnym powodem.
+  const r = await page.evaluate((w) => {
+    const x = window.VildaSdsWzrostu.policz({ wzrost: 54, plec: 'M', wiekMies: w, zrodlo: 'OLAF' });
+    return { siatka: x.siatka, fallback: x.fallback, powod: x.powod };
+  }, wiek);
+  expect([r.siatka, r.fallback]).toEqual(['WHO', true]);
   expect(r.powod).toContain('noworodek poniżej 1. miesiąca');
+  // Rdzeń karty głównej przy dowolnym źródle strony daje tę samą siatkę WHO 2006.
+  expect(await page.evaluate(() => window.calcPercentileStats(54, 'M', 1 / 12, 'HT').siatka)).toBe('WHO');
 });
