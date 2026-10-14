@@ -8,8 +8,9 @@ import { expect, test } from '@playwright/test';
 // bez przycisku „Scal teraz” (notatek nie dało się scalić z ekranu), a X scalony tutaj z Y z poprawką notatki X w kopii
 // dawał „Brak danych do dodania · pominięci: 1”, też bez przycisku. Po zmianie podgląd wymienia te dane, przycisk jest
 // widoczny, a wynik mówi, co dodano, zaktualizowano i usunięto. Telefon 390 px: bez poziomego przewijania.
-// Uwagi recenzji (2026-10-14): podtytuł mówi o nagłówku karty i nie obiecuje „nowsza poprawka zastąpi starszą”;
-// zmieniony termin listy oczekujących idzie przez prawdziwą bazę przeglądarki (wynik z różnicy magazynu przed i po Le).
+// Uwagi recenzji (2026-10-14): podtytuł mówi o nagłówku karty (także o przynależności do bazy) i nie obiecuje
+// „nowsza poprawka zastąpi starszą”; zmieniony termin listy oczekujących idzie przez prawdziwą bazę przeglądarki
+// (wynik z różnicy magazynu przed i po Le).
 //
 // Własne, fikcyjne konta sejfu w efemerycznych profilach przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -133,7 +134,8 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
 
     const ekran = await podglad(page, kopia);
     await expect(ekran.getByText('Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której dojdą zapisy, przejmie'
-      + ' z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia i wiek, a u osoby spoza bazy także rok urodzenia i kontakt.'
+      + ' z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia i wiek, rok urodzenia i kontakt) i to, czy osoba jest w bazie:'
+      + ' osoba dodana tu do bazy może wrócić do osób spoza bazy.'
       + ' Notatki i listy scali jak synchronizacja: wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później')).toBeVisible();
     await expect(ekran.getByText('nowsza poprawka z kopii zastąpi starszą')).toHaveCount(0);
     await expect(ekran.getByText('Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim zapisie w kopii.')).toBeVisible();
@@ -178,8 +180,8 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
     expect(p.scrollWidth, 'bez poziomego przewijania').toBeLessThanOrEqual(p.innerWidth);
     expect(p.lewa).toBeGreaterThanOrEqual(0);
     expect(p.prawa).toBeLessThanOrEqual(p.innerWidth);
-    // Dłuższy podtytuł (uwaga recenzji, runda 2: cały nagłówek karty, u osoby spoza bazy także kontakt) mieści się w ekranie.
-    const podtytul = ekran.getByText(/a u osoby spoza bazy także rok urodzenia i kontakt\./);
+    // Dłuższy podtytuł (uwagi recenzji: cały nagłówek karty, także kontakt i przynależność do bazy) mieści się w ekranie.
+    const podtytul = ekran.getByText(/osoba dodana tu do bazy może wrócić do osób spoza bazy\./);
     await expect(podtytul).toBeVisible();
     const t = await podtytul.boundingBox();
     expect(t.x).toBeGreaterThanOrEqual(0);

@@ -624,7 +624,7 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji: listy oczekujących z magazynu,
     expect(po.timestampISO < tutaj.timestampISO).toBe(true);
     expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
     expect(PODTYTUL).not.toContain('doda tylko');
-    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia');
+    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia');
     parzystosc(r);
   });
 
@@ -795,8 +795,110 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji (runda 2): wyścig list oczekuj�
     expect(po.contact, 'nagłówek z kopii, choć starszy niż tutejszy (scalanie bez zmian)').toBe('tel. 000 000 002 (fikcja, A)');
     expect(po.timestampISO < tutaj.timestampISO).toBe(true);
     expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
-    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia'
-      + ' i wiek, a u osoby spoza bazy także rok urodzenia i kontakt.');
+    // Recenzja końcowa: lista pól bez „a u osoby spoza bazy także”, bo karta przejmuje też przynależność do bazy (T39).
+    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia'
+      + ' i wiek, rok urodzenia i kontakt)');
+    parzystosc(r);
+  });
+});
+
+/* Uwagi recenzji końcowej (2026-10-14): przynależność do bazy w nagłówku karty; strażniki planu dla starych
+   i niepełnych wpisów kopii (bez updatedAtISO, bez patientId) — plan musi je pomijać tak jak Le. */
+// Kopia przerobiona (spreparowana): odszyfrowanie ładunku hasłem A, zmiana, ponowne zaszyfrowanie tym samym kluczem.
+async function przerob(A, C, kopia, zmien) {
+  const VC = C.win.VildaCrypto;
+  const obj = JSON.parse(typeof kopia === 'string' ? kopia : JSON.stringify(kopia));
+  const master = await VC.unwrapMasterFromEnvelope(VC.parseEnvelope(kopia), A.haslo);
+  const dane = await VC.decryptJson(master, obj.payload.iv, obj.payload.data);
+  await zmien(dane);
+  obj.payload = await VC.encryptJson(master, dane);
+  return typeof kopia === 'string' ? JSON.stringify(obj) : obj;
+}
+const BRAK_NOWYCH = 'Brak nowych danych — wszystko już masz';
+
+describe('P-KOPIA-DANE-KONTA — uwagi recenzji końcowej: przynależność do bazy, stare i niepełne wpisy kopii', () => {
+  it('T39 [CZERWONY na podtytuł, recenzja końcowa E1] osoba dodana TUTAJ do bazy, kopia niesie jej nową wersję jako osoby spoza bazy: wraca do osób spoza bazy (scalanie bez zmian); podtytuł to mówi', async () => {
+    let pid = null, tutaj = null, wersjeTutaj = null;
+    const osoba = (contact, patientId) => ({ ...(patientId ? { patientId } : {}), firstName: 'Fikcyjna', lastName: 'Osoba', sex: 'K', birthYear: 2019, contact });
+    const r = await przypadek({
+      przed: async (A) => { pid = (await A.v.saveExternalPatient(osoba('tel. 000 000 001 (fikcja)'))).patientId; },
+      po: async (A) => { await A.v.saveExternalPatient(osoba('tel. 000 000 002 (fikcja, A)', pid)); },
+      wC: async (C) => {
+        await chwila(5);
+        await C.v.promoteExternalToBase(pid, { dobISO: '2019-03-01', sex: 'K', firstName: 'Fikcyjna', lastName: 'Osoba' });
+        tutaj = {
+          baza: (await C.v.listPatients()).some((k) => k.patientId === pid),
+          spoza: (await C.v.listExternalPatients()).some((k) => k.patientId === pid),
+          naglowek: (await C.v.listPatients()).find((k) => k.patientId === pid).header,
+        };
+        wersjeTutaj = (await C.baza.listSnapshotsForUser(C.uid, pid)).map((w) => w.snapshotId);
+      },
+    });
+    expect(tutaj.baza && !tutaj.spoza, 'przed scaleniem: pacjentka z bazy').toBe(true);
+    expect([tutaj.naglowek.sex, tutaj.naglowek.dobISO, tutaj.naglowek.external]).toEqual(['K', '2019-03-01', undefined]);
+    expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
+    expect(r.wynik.mergedPatientCount).toBe(1);
+    const baza = (await r.C.v.listPatients()).some((k) => k.patientId === pid);
+    const spoza = (await r.C.v.listExternalPatients()).find((k) => k.patientId === pid);
+    expect(baza, 'po scaleniu nie ma jej na liście pacjentów z bazy').toBe(false);
+    expect(spoza, 'wraca do osób spoza bazy').toBeTruthy();
+    expect([spoza.header.external, spoza.header.sex, spoza.header.dobISO, spoza.header.age, spoza.header.contact],
+      'nagłówek z kopii (scalanie bez zmian, jak Bsl_scalPacjenta)').toEqual([true, 'K', null, null, 'tel. 000 000 002 (fikcja, A)']);
+    expect(spoza.header.timestampISO < tutaj.naglowek.timestampISO, 'starszy niż tutejszy').toBe(true);
+    const wersjePo = (await r.C.baza.listSnapshotsForUser(r.C.uid, pid)).map((w) => w.snapshotId);
+    expect(wersjePo, 'wersja z „Dodaj do bazy” zostaje w historii').toEqual(expect.arrayContaining(wersjeTutaj));
+    expect(wersjePo).toHaveLength(wersjeTutaj.length + 1);
+    expect(PODTYTUL).toContain('i to, czy osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy.');
+    parzystosc(r);
+  });
+
+  it('T40 [kontrola, recenzja końcowa E5] stare rekordy bez updatedAtISO (notatka pacjenta, szablon, lista) w prawdziwym eksporcie: plan 0 jak Le, przycisk ukryty', async () => {
+    const r = await przypadek({
+      po: async (A, { p1 }) => {
+        await notatka(A.v, p1, 'N-stara (fikcja)');
+        await A.v.saveNote({ title: 'Szablon-stary (fikcja)', body: 'f', category: 'wlasne' });
+        await A.v.savePatientList({ name: 'Lista-stara (fikcja)', memberIds: [p1] });
+        // Rekordy jak z dawnej wersji aplikacji: bez updatedAtISO (zapis wprost przez adapter).
+        const bez = (x) => { const y = { ...x }; delete y.updatedAtISO; return y; };
+        for (const x of await A.baza.listPatientNotesForUser(A.uid)) await A.baza.putPatientNoteForUser(A.uid, bez(x));
+        for (const x of await A.baza.listNotesForUser(A.uid)) await A.baza.putNoteForUser(A.uid, bez(x));
+        for (const x of await A.baza.listPatientListsForUser(A.uid)) await A.baza.putPatientListForUser(A.uid, bez(x));
+      },
+      przerobKopie: (A, C, kopia) => przerob(A, C, kopia, (d) => {
+        // Eksport daje updatedAtISO: null — sprawdzamy, że kopia naprawdę niesie takie rekordy.
+        expect([d.patientNotes, d.notes, d.patientLists].map((t) => t.map((x) => x.updatedAtISO))).toEqual([[null], [null], [null]]);
+      }),
+    });
+    expect([r.podglad.addedPatientNoteCount, r.podglad.addedNoteCount, r.podglad.addedPatientListCount]).toEqual([0, 0, 0]);
+    expect([r.wynik.addedPatientNoteCount, r.wynik.addedNoteCount, r.wynik.addedPatientListCount], 'Le ich nie zapisuje').toEqual([0, 0, 0]);
+    expect(r.ekran).toEqual({ przycisk: null, podsumowanie: BRAK_NOWYCH });
+    expect(r.linie).toEqual([JUZ_BYLY]);
+    expect([await r.C.v.listAllPatientNotes(), await r.C.v.listNotes(), await r.C.v.listPatientLists()]).toEqual([[], [], []]);
+    parzystosc(r);
+  });
+
+  it('T41 [kontrola, recenzja końcowa E2] kopia spreparowana: notatka z pustym albo bez patientId, listy oczekujących i terminy bez updatedAtISO: plan 0 jak Le, przycisk ukryty', async () => {
+    const r = await przypadek({
+      po: async (A, { p1 }) => {
+        await notatka(A.v, p1, 'N-pusty-pacjent (fikcja)');
+        await notatka(A.v, p1, 'N-bez-pacjenta (fikcja)');
+        await A.v.addWaitlistList('Fikcyjny zabieg bez daty');
+        await A.v.setWaitlistSchedule('Fikcyjny zabieg bez daty', { dateISO: '2026-12-01', time: '09:00' });
+      },
+      przerobKopie: (A, C, kopia) => przerob(A, C, kopia, (d) => {
+        d.patientNotes.find((n) => n.title === 'N-pusty-pacjent (fikcja)').patientId = '';
+        delete d.patientNotes.find((n) => n.title === 'N-bez-pacjenta (fikcja)').patientId;
+        expect(Object.keys(d.userPreferences)).toEqual(expect.arrayContaining(['wllists', 'wlsched']));
+        delete d.userPreferences.wllists.updatedAtISO;
+        delete d.userPreferences.wlsched.updatedAtISO;
+      }),
+    });
+    expect([r.podglad.addedPatientNoteCount, r.podglad.addedWaitlistCount, r.podglad.addedWaitlistScheduleCount]).toEqual([0, 0, 0]);
+    expect([r.wynik.addedPatientNoteCount, r.wynik.addedWaitlistCount, r.wynik.addedWaitlistScheduleCount], 'Le ich nie zapisuje').toEqual([0, 0, 0]);
+    expect([r.podglad.updatedPreferenceCount, r.wynik.updatedPreferenceCount]).toEqual([0, 0]);
+    expect(r.ekran).toEqual({ przycisk: null, podsumowanie: BRAK_NOWYCH });
+    expect(r.linie).toEqual([JUZ_BYLY]);
+    expect([await r.C.v.listAllPatientNotes(), await etykiety(r.C.v)]).toEqual([[], []]);
     parzystosc(r);
   });
 });
@@ -909,11 +1011,11 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     expect(uo).toContain('Bks_linieDanych(m).concat(Bks_linie(m),Bks_koniecWyniku(m,Bks_pg)).forEach(');
     // Podtytuł: nie obiecuje już „bez usuwania ani nadpisywania”, „doda tylko” ani „nowsza poprawka z kopii zastąpi
     // starszą” (uwagi recenzji: nagłówek karty, reguła rev) i wymienia cały nagłówek, także kontakt osoby spoza bazy
-    // (runda 2); zdanie o pominiętych pacjentach bez zmian.
+    // (runda 2) i przynależność do bazy (recenzja końcowa, T39); zdanie o pominiętych pacjentach bez zmian.
     expect(uo).not.toContain('bez usuwania ani nadpisywania');
     expect(PODTYTUL).toBe('Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której'
-      + ' dojdą zapisy, przejmie z kopii dane osoby: imię i nazwisko, płeć, datę urodzenia i wiek, a u osoby spoza bazy także'
-      + ' rok urodzenia i kontakt. Notatki i listy scali jak synchronizacja:'
+      + ' dojdą zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia i wiek, rok urodzenia i kontakt)'
+      + ' i to, czy osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy. Notatki i listy scali jak synchronizacja:'
       + ' wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także'
       + ' tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich'
       + ' ostatnim zapisie w kopii.');
