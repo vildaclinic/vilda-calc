@@ -326,6 +326,36 @@ Przesłany artykuł Xu 2026 i XLSX są przeanalizowane i zapisane jako
 dowód dla następnego etapu, bez aktywacji nowego profilu. Kolejność i
 nierozstrzygnięte kwestie: [AMH_REFERENCE_PLAN.md](AMH_REFERENCE_PLAN.md).
 
+#### LAB-AMH-DOB-CLEAR — usunięcie precyzji dni po wyczyszczeniu daty, 2026-10-14
+
+**Problem i wpływ:** przycisk `dobClear` usuwał datę programowo, bez zdarzenia
+edycji pola. Przy niezmienionych ukończonych miesiącach odbiorcy mogli zachować
+wcześniejszy cache wieku w dniach. Test AMH maskował ten brak dodatkowym
+wpisaniem masy i wzrostu, a przy odtwarzaniu sesji także te zdarzenia mogły
+trafić w blokadę publikowania. W CI po scaleniu #684 asercja usunięcia cache
+nie przeszła ani w pierwszej próbie, ani przy ponowieniu.
+
+`VildaDobAge.clear()` po rzeczywistym wyczyszczeniu edytowalnej daty zgłasza
+zwykłą edycję `input`/`change`. Istniejące nasłuchy aktualizują pochodny
+kontekst i zapis sesji. Data chroniona jako pochodząca z rekordu nadal nie
+jest czyszczona tą funkcją. Strażnicy odtwarzania, tożsamości karty oraz
+blokady sejfu pozostają obowiązujące; poprawka ich nie omija.
+
+**Przypadek syntetyczny:** ta sama fikcyjna pacjentka, 4 ukończone miesiące,
+data dająca 119–120 dni → przycisk „Wyczyść” → data pusta, nadal 4 miesiące,
+cache dni usunięty, odniesienie AMH wykorzystuje przedział 4–5 miesięcy.
+Nie dopisujemy dni do wieku podanego tylko w miesiącach. Może się zmienić
+odniesienie zależne od precyzji wieku zgodnie z dotychczasowym kontraktem;
+tabele, progi, konwersje, model Xu i zapisane wyniki nie są przeliczane.
+
+`dob-clear-neonatal-cache.test.mjs` wywołuje rzeczywiste moduły DOB
+i neonatal context, także z aktywnymi strażnikami tożsamości i odtwarzania. E2E
+`hormone-lifespan-amh-age-context.spec.mjs` wymaga usunięcia cache bez
+pomocniczej edycji masy lub wzrostu, braku daty w rzeczywistym zapisie sesji
+oraz utrzymania tego stanu po ponownym otwarciu formularza. Przed edycją czeka na inicjalizację
+odtwarzania sesji, zaplanowane klatki oraz zakończenie odtwarzania i kolejek,
+zamiast uznawać chwilowo pustą kolejkę za gotowy formularz.
+
 ### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
 
 **Status: przygotowanie do integracji, bez zmiany wyników w aplikacji.** Moduły nie są ładowane przez HTML ani service worker. Silnik `1.0.0` przyjmuje jawny zestaw danych `2026-10-03.1` i zwraca osobno porównanie biochemiczne względem wieku/stadium oraz ocenę czasu rozwoju. Nie modyfikuje obecnego przelicznika, przypiętych wyników ani zapisów pacjentów. Pełny kontrakt, populacje, jednostki, ograniczenia i zakres faktycznego odczytu źródeł: [LH_FSH.md](LH_FSH.md).

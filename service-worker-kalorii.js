@@ -2588,6 +2588,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_dob_age.js?v=8',
   '/vilda_dob_age.js?v=9',
   '/vilda_dob_age.js?v=10',
+  '/vilda_dob_age.js?v=11',
   '/vilda_advanced_growth.js?v=50',
   '/vilda_advanced_growth.js?v=51',
   '/vilda_advanced_growth.js?v=52',
