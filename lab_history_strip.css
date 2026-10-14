@@ -1,0 +1,366 @@
+/* Pasek „Poprzednie wyniki pacjenta” w przeliczniku jednostek (lab_history_strip.js, LAB-HISTORIA PR3).
+   Paleta wg decyzji 6.18: fiolet modułu lab (jak wiersz przypięcia #labPinRow), bez zieleni i czerwieni
+   dla wyników historycznych. Przyciski z !important, bo skórka .liquid-ios26 nadpisuje wszystkie
+   przyciski z !important (ios26-v2.css). Wykres: kolory i podpisy w klasach SVG, geometria w atrybutach. */
+
+#labHistoryStrip {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-10px);
+  margin-top: var(--space-12px);
+  background: #F6F5FF;
+  border: .5px solid #CECBF6;
+  border-radius: var(--radius-12);
+  padding: var(--space-12px) var(--space-14px);
+  min-width: 0
+}
+
+#labHistoryStrip.is-on {
+  display: flex
+}
+
+#labHistoryStrip [hidden] {
+  display: none!important
+}
+
+#labHistoryStrip p {
+  margin: 0
+}
+
+/* style.css daje przyciskom width: 100% na telefonie; w pasku przyciski mają szerokość treści
+   (chipy w siatce i tak wypełniają kolumnę). */
+#labHistoryStrip button {
+  width: auto
+}
+
+.lab-strip-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8px);
+  flex-wrap: wrap
+}
+
+.lab-strip-titles {
+  min-width: 0
+}
+
+.lab-strip-title {
+  font-size: .86rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #26215C
+}
+
+.lab-strip-sub {
+  font-size: .74rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #534AB7;
+  margin-top: 2px
+}
+
+#labHistoryStrip button.lab-strip-link {
+  background: transparent!important;
+  color: #5856D6!important;
+  border: 0!important;
+  border-radius: var(--radius-6)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: var(--space-6px) 0;
+  font-family: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap
+}
+
+.lab-strip-chips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px);
+  flex-wrap: wrap;
+  min-width: 0
+}
+
+#labHistoryStrip .lab-strip-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 92px;
+  box-sizing: border-box;
+  border-radius: var(--radius-10);
+  padding: var(--space-6px) var(--space-10px);
+  background: #fff;
+  border: .5px solid #d7e9ec
+}
+
+#labHistoryStrip button.lab-strip-chip {
+  background: #fff!important;
+  color: var(--text-strong)!important;
+  border: .5px solid #d7e9ec!important;
+  border-radius: var(--radius-10)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer
+}
+
+#labHistoryStrip button.lab-strip-chip[aria-pressed=true] {
+  border: 1.5px solid #5856D6!important;
+  box-shadow: 0 0 0 2px #EEEDFE!important
+}
+
+#labHistoryStrip button.lab-strip-more {
+  justify-content: center;
+  min-height: 44px;
+  color: #534AB7!important;
+  font-size: .78rem;
+  font-weight: 600
+}
+
+.lab-strip-chip-d {
+  font-size: .68rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-muted)
+}
+
+.lab-strip-chip-v {
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums
+}
+
+.lab-strip-flag {
+  color: #4341B5;
+  font-size: .8rem;
+  font-weight: 700;
+  margin-left: 3px
+}
+
+.lab-strip-sep {
+  width: 1px;
+  height: 28px;
+  background: #CECBF6;
+  margin: 0 2px
+}
+
+#labHistoryStrip .lab-strip-now {
+  border: 1.5px dashed #5856D6;
+  background: #fff
+}
+
+.lab-strip-now .lab-strip-chip-d {
+  color: #4341B5
+}
+
+.lab-strip-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #fff;
+  border: .5px solid #CECBF6;
+  border-radius: var(--radius-10);
+  padding: var(--space-8px) var(--space-10px)
+}
+
+.lab-strip-detail-h {
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #26215C
+}
+
+.lab-strip-detail-norm,
+.lab-strip-detail-comment,
+.lab-strip-muted {
+  font-size: .76rem;
+  line-height: 1.4;
+  color: #534AB7
+}
+
+.lab-strip-assessment {
+  min-width: 0
+}
+
+.lab-strip-diff {
+  font-size: .8rem;
+  line-height: 1.45;
+  color: #26215C
+}
+
+.lab-strip-delta {
+  font-weight: 600
+}
+
+#labHistoryStrip button.lab-strip-toggle {
+  background: #fff!important;
+  color: #534AB7!important;
+  border: var(--border-hairline) solid #CECBF6!important;
+  border-radius: var(--radius-10)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: var(--space-6px) var(--space-10px);
+  min-height: 36px;
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 600;
+  cursor: pointer
+}
+
+.lab-strip-chart {
+  min-width: 0
+}
+
+.lab-strip-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+  border-radius: var(--radius-10)
+}
+
+.lab-strip-grid {
+  stroke: #eef2f3;
+  stroke-width: 1
+}
+
+.lab-strip-axis,
+.lab-strip-sepline {
+  stroke: #d7e3e6;
+  stroke-width: 1
+}
+
+.lab-strip-drop {
+  stroke: #c9c5ef;
+  stroke-width: 1;
+  stroke-dasharray: 2 3
+}
+
+.lab-strip-line {
+  fill: none;
+  stroke: #5856D6;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round
+}
+
+.lab-strip-pt {
+  cursor: pointer
+}
+
+.lab-strip-dot {
+  fill: #5856D6;
+  stroke: #fff;
+  stroke-width: 2
+}
+
+.lab-strip-dot.is-conv {
+  stroke: #26215C;
+  stroke-width: 1.5
+}
+
+.lab-strip-halo {
+  fill: #CECBF6;
+  opacity: var(--opacity-muted)
+}
+
+.lab-strip-hit {
+  fill: transparent
+}
+
+.lab-strip-lane {
+  fill: #F6F5FF;
+  opacity: .7
+}
+
+.lab-strip-now-dot {
+  fill: #fff;
+  stroke: #5856D6;
+  stroke-width: 2.5;
+  stroke-dasharray: 3 2
+}
+
+.lab-strip-tick,
+.lab-strip-date {
+  fill: #3a4a52;
+  font-size: 11.5px;
+  font-weight: 600
+}
+
+.lab-strip-unit,
+.lab-strip-now-sub {
+  fill: var(--text-muted);
+  font-size: 10px
+}
+
+.lab-strip-val,
+.lab-strip-now-label {
+  fill: #26215C;
+  font-size: 11px;
+  font-weight: 600
+}
+
+.lab-strip-chart-note,
+.lab-strip-foot {
+  font-size: .74rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #534AB7
+}
+
+#labHistoryStrip .lab-strip-chart-note {
+  margin-top: var(--space-4px);
+  color: #5b6672
+}
+
+.lab-strip-svg.is-narrow .lab-strip-tick {
+  font-size: 10px
+}
+
+.lab-strip-svg.is-narrow .lab-strip-date,
+.lab-strip-svg.is-narrow .lab-strip-val,
+.lab-strip-svg.is-narrow .lab-strip-now-label {
+  font-size: 10.5px
+}
+
+.lab-strip-svg.is-narrow .lab-strip-now-sub {
+  font-size: 9.5px
+}
+
+@media (max-width:560px) {
+  #labHistoryStrip .lab-strip-chips {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr))
+  }
+
+  #labHistoryStrip .lab-strip-chip {
+    min-width: 0;
+    min-height: 44px
+  }
+
+  #labHistoryStrip .lab-strip-more,
+  #labHistoryStrip .lab-strip-now {
+    grid-column: 1/-1
+  }
+
+  #labHistoryStrip .lab-strip-now {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-8px)
+  }
+
+  .lab-strip-sep {
+    display: none
+  }
+}

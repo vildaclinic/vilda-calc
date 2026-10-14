@@ -321,7 +321,10 @@ LH/FSH/inhibiny B.
   dopisek, że stoi bez porównania. Wynik przeliczony: „przeliczono z …”
   z liczbą i jednostką zapisu. Czerwień wyróżnienia z `Nl()` (punkt i podpis
   ze strzałką) zamieniona na fiolet modułu lab (6.18); kolor nie niesie
-  oceny, strzałka zostaje.
+  oceny, strzałka zostaje. *Zmienione w PR3 (decyzja 6.22, wpis niżej):
+  punkty wykresu idą do `Nl()` bez normy wpisu — bez strzałki i bez
+  wyróżnienia przy punkcie; strzałka zostaje przy wartości obok wykresu
+  i w tabeli.*
 - Pigułka zapisanej oceny: reguła z modelu (6.20) — dosłowny tytuł
   podsumowania koperty, a przy ostrzeżeniu klinicznym tytuł ostrzeżenia
   w tonie ostrzegawczym; pod nim „oceniono jako: płeć/wiek w dniu pobrania/
@@ -398,6 +401,106 @@ trendu w „Historii”; przeniesione do zakładki „Badania” bez zmiany tre�
 (w `lab-puberty-ui.spec.mjs` tytuł wpisu nadal sprawdzany na osi czasu
 „Historii”).
 Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA PR3 — pasek „Poprzednie wyniki” w przeliczniku i wykresy karty bez strzałek przy punktach (`lab_history_strip.js` 1.0.0, `vilda_lab_history_tab.js` 1.1.0, `vilda_shell.js` 64, 2026-10-14)
+
+**Wpływ kliniczny: tak, w prezentacji zapisanych wyników; bez nowego wzoru,
+progu, normy ani źródła medycznego.** Liczby, przeliczenia jednostek,
+strzałki i różnice liczy ten sam model co w zakładce „Badania” (wpisy
+„LAB-HISTORIA” wyżej). Zmienia się, gdzie lekarz je widzi:
+
+- Przelicznik jednostek: pod wierszem „Przypnij do wizyty” (decyzja 6.8)
+  pasek „Poprzednie wyniki pacjenta · <badanie> · w <jednostka formularza>”
+  z zapisanymi wynikami wybranego badania pacjenta karty. Widoczny tylko przy
+  odblokowanym sejfie, pacjencie w formularzu i co najmniej jednym wyniku tego
+  badania (6.9); tylko do odczytu — bez pól, daty i zapisu (6.6). Nie zasila
+  punktu pacjenta na wykresie hormonów (`PATIENT_POINT.md`); dla analitu
+  z krzywą stoi przed nią.
+- Wykresy w karcie (zakładka „Badania”) i w pasku: przy punkcie sama wartość,
+  bez strzałki ↑/↓ i bez wyróżnienia kolorem (decyzja 6.22). Strzałka z normy
+  zapisanej we wpisie zostaje przy wartości: ostatni wynik i tabela w karcie,
+  chipy i szczegóły w pasku.
+
+Akceptacja kliniczna należy do właściciela. Populacja i dane jak w PR2:
+pacjenci karty (dzieci i dorośli), notatki „wynik-badania” (6.13), jednostki
+z zapisu przeliczone konwerterem przelicznika. Ograniczenia: pasek nie ocenia
+dawnych wyników dzisiejszymi normami ani danymi pacjenta z formularza;
+bieżący wynik nie ma daty próbki (pada przy przypięciu), więc różnica do
+ostatniego zapisanego wyniku jest samą liczbą, bez dni, procentu, koloru
+i progu (6.10); metoda oznaczenia porównywana tylko w kopertach LH/FSH/
+inhibiny B, a bieżący wynik koperty nie ma, więc przy różnicy stoi stała
+uwaga o możliwej innej metodzie.
+
+**Reguły paska** (projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.3):
+
+- Badanie: identyfikator z `VildaLabConverterRuntime.getSubstanceId()`
+  (decyzja 6.16), zapas — dokładna etykieta pola „Substancja”. Jednostka
+  wyświetlania: jednostka formularza (`#labUnit`), gdy konwerter ją zna;
+  inaczej jednostka ostatniego wyniku serii.
+- Pacjent: identyfikator karty z `sessionStorage` (nigdy z adresu),
+  nazwisko z nagłówka rekordu sejfu tego samego pacjenta; zmiana pacjenta
+  w trakcie odczytu, blokada sejfu i reset stanu użytkownika ukrywają pasek
+  i czyszczą pamięć (pokolenie odczytu, porównanie tożsamości po odczycie).
+- Chipy: do pięciu ostatnich wyników (wcześniejsze pod „+N wcześniejsze”),
+  wartość w jednostce formularza; wynik przeliczony z innej jednostki — bez
+  strzałki (K26), zapis i norma w podpowiedzi; data badania albo „wpis/termin
+  DD.MM.RR”, gdy wpis nie ma daty badania. Chip „teraz · niezapisany”
+  z wartością formularza (tylko gdy przelicznik pokazuje wynik), osobno, bez
+  daty.
+- Szczegóły po kliknięciu chipa lub punktu: data, wartość ze strzałką
+  z zapisu, wiek wizyty (kotwica wpisu), „przeliczono z …”, zapisana ocena
+  (`VildaLabAssessmentUI.renderAssessment`, widok skrócony, historyczny),
+  „norma z wpisu: … — zakres laboratorium z dnia badania; metoda oznaczenia
+  mogła być inna” (przy strzałce „poniżej/powyżej normy z wpisu: …”),
+  komentarz bez linii „= …” i „Norma: …”, „Otwórz w karcie →”.
+- Linia porównania: „ostatni zapisany wynik: DATA (N dni temu) · X · teraz Y
+  → różnica ±Z jednostka (data bieżącej próbki ustalana przy przypięciu)”;
+  różnica tylko, gdy ostatni wynik jest dokładny i w tej samej jednostce;
+  różne metody w kopertach → „— · różne metody oznaczenia”. Po zapisie tego
+  samego wyniku (badanie, liczba, jednostka — niezależnie od daty) „teraz ·
+  już przypięty” i „ten wynik jest już przypięty (DATA)”.
+- Wykres (lekki renderer SVG, decyzja 6.21): oś Y od zera z krokiem 1–2–2,5–5,
+  punkty dokładne z datą badania na osi dat, wartość przy każdym punkcie
+  (podpisy zachodzące — zostaje nowszy), przerywana kreska od punktu do osi,
+  punkt przeliczony z obwódką, wynik z operatorem i wynik tekstowy poza
+  wykresem, bez pasma norm i bez strzałek. Bieżący wynik w osobnym pasie
+  „teraz / bez daty”, bez linii łączącej. Szerokość `viewBox` = szerokość
+  karty (180–660), na wąskim ekranie najwyżej trzy daty na osi, prostokąty
+  podpisów bez nakładania. „Ukryj wykres” zwija wykres.
+- „Badania w karcie →”: w powłoce `openPatientCardInStart(id, {activeTab:
+  'lab'})` (łatka P-POWLOKA-KARTA-ZAKLADKA), poza powłoką
+  `ensureAuthLoaded()` i `showPatientCard(id, null, null, {activeTab: 'lab'})`.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH (fikcyjna pacjentka): 0,01 μIU/mL (14.01.26), 0,02, 0,05 i 0,12 mIU/L
+  z normą „0,27–4,2 mIU/L” (25.02, 08.04, 02.06.26); formularz 0,38 mIU/L,
+  zegar 17.06.26 → chipy „0,01”, „0,02↓”, „0,05↓”, „0,12↓” (pierwszy
+  przeliczony, bez strzałki, podpowiedź „zapisano: 0,01 μIU/mL”), „teraz ·
+  niezapisany 0,38”, linia „ostatni zapisany wynik: 02.06.26 (15 dni temu) ·
+  0,12 mIU/L · teraz 0,38 → różnica +0,26 mIU/L”; na wykresie podpisy
+  „0,01”, „0,02”, „0,05”, „0,12”, „0,38” bez strzałek.
+- Ta sama seria przy jednostce formularza μIU/mL → wszystkie wyniki w mIU/L
+  przeliczone, w pasku żadnej strzałki.
+- LH „<0,1”, 1,8 i 2,4 IU/L z kopertami → chipy „<0,1”, „1,8”, „2,4”, na
+  wykresie dwa punkty; szczegóły 1,8 pokazują zapisaną ocenę.
+- Badanie bez wyników pacjenta (np. kortyzol) → pasek ukryty, bez komunikatu.
+- Zakładka „Badania”: TSH z normami wpisu → wartość obok wykresu „0,12 ↓”,
+  na wykresie podpis „0,12” bez strzałki, punkty bez czerwieni.
+
+**Testy:** `tests/unit/lab-history-strip.test.mjs` (produkcyjny moduł
+z autostartem na atrapie strony, prawdziwy model, konwerter i `Dl`: dobór
+badania, wartość bieżąca z pól, warunki widoczności, tożsamość przy zmianie
+pacjenta w trakcie odczytu, blokada i reset, chipy przeliczone bez strzałek,
+szczegóły, „już przypięty”, otwieranie karty, układ wykresu i etykiet),
+`tests/unit/powloka-karta-zakladka.test.mjs`, `tests/unit/lab-history-tab.test.mjs`
+(punkty wykresu bez normy), e2e `lab-history-strip.spec.mjs` (prawdziwy sejf:
+kolejność za przypięciem, chipy, różnica, wykres, przypięcie, zmiana
+jednostki, LH i krzywa hormonów, „Wyczyść” bez śladu w układzie, zmiana
+pacjenta, karta na zakładce „Badania”), `lab-historia-przelicznik-mobile.spec.mjs`
+(iPhone i 320 px), `lab-historia-przelicznik-offline.spec.mjs` (zimny start
+bez serwera po instalacji SW), `lab-historia-zakladka.spec.mjs` (podpis
+punktu bez strzałki). Zielone testy nie są walidacją kliniczną.
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
