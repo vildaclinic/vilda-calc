@@ -4231,7 +4231,7 @@ Kierunek naprawy obu: wiek dokładny pomiaru liczony z daty urodzenia i daty pom
 
 **Wersje.** `vilda_dob_age.js` 10, `vilda_summary_cards.js` 59; SW 1.1.264 → 1.1.265 (numery 1.1.261–1.1.264 nadały równolegle #661, #663, #664 i #666).
 
-### P-WIEK-POMIARU — zapisany pomiar liczony w wieku z dnia pomiaru: karta porównania, Karta pacjenta i schowek (SW 1.1.268, 2026-10-13, decyzja właściciela)
+### P-WIEK-POMIARU — zapisany pomiar liczony w wieku z dnia pomiaru: karta porównania, Karta pacjenta i schowek (SW 1.1.269, 2026-10-13, decyzja właściciela)
 
 **Decyzja właściciela (2026-10-13).** Rozstrzyga ustalenie z P-POROWNANIE-W-TLE i ustalenia 1–2 z P-POROWNANIE-DATA. Wybrany wariant B: zapisany pomiar liczy się w dokładnym wieku z dnia tamtego pomiaru, według reguły P-ODTWORZ-WIEK. Gdy dzień pomiaru nie jest pewny albo brak daty urodzenia, liczą się pełne miesiące z rekordu. Zakres, też wybrany przez właściciela:
 - karta „Porównanie z poprzednim pomiarem”;
@@ -4316,7 +4316,7 @@ Skala błędu: produkcyjny `calcPercentileStats`; wartość pomiaru to mediana n
 
 Do tego karta porównania liczy ΔSDS i werdykt odcinka (`statFor`) dla obu punktów w pełnych miesiącach. Bramki tam nie ma, ale nie ma też dnia pomiaru.
 
-**Wersje.** `app.js` 235, `vilda_auth_ui.js` 488, `vilda_patient_summary_copy.js` 15, `vilda_summary_cards.js` 60; strony i skrypty wstrzykujące (`vilda_chrome.js` 136, `vilda_session_bridge.js` 60); SW 1.1.267 → 1.1.268.
+**Wersje.** `app.js` 235, `vilda_auth_ui.js` 488, `vilda_patient_summary_copy.js` 15, `vilda_summary_cards.js` 60; strony i skrypty wstrzykujące (`vilda_chrome.js` 136, `vilda_session_bridge.js` 60); SW 1.1.268 → 1.1.269 (numer 1.1.268 nadał równolegle #670).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
