@@ -370,7 +370,7 @@
     }
   ],
   "validation": {
-    "status": "Targeted unit, E2E, before/after browser and independent coverage controls completed. Full npm test running; PWA, full E2E and exact-head GitHub CI pending.",
+    "status": "Pre-publication source and implementation verification snapshot. Completed controls are recorded below; final full E2E and exact-head GitHub CI results are reported in the pull request.",
     "reportedDate": "2026-10-14",
     "baseSha": "c8b91078e0b186c2e8ad9e909362b6f24f8841fc",
     "targetedModuleUnit": {
@@ -421,13 +421,60 @@
       },
       "scope": "Isolated base compared against current working-tree production functions; not a claim of full browser suite or final committed-head CI success."
     },
-    "pending": [
-      "Full npm test (running)",
-      "Real PWA update and fresh offline browser restart",
-      "Full repository E2E suite",
-      "All GitHub checks for latest exact commit"
-    ],
-    "clinicalValidationClaimed": false
+    "clinicalValidationClaimed": false,
+    "fullNpmTest": {
+      "beforeMerge": {
+        "status": "PASS",
+        "exitCode": 0,
+        "testsPassed": 7669,
+        "testFiles": 350,
+        "baseSha": "c8b91078e0b186c2e8ad9e909362b6f24f8841fc"
+      },
+      "afterMerge": {
+        "status": "PASS",
+        "exitCode": 0,
+        "testsPassed": 7683,
+        "testFiles": 351,
+        "baseSha": "2df41a883879b1f7abb84e51bc6dc531f773eeb8",
+        "repositoryPolicy": "PASS",
+        "lint": "PASS",
+        "javascriptSyntax": {
+          "status": "PASS",
+          "files": 978
+        },
+        "proTests": "PASS"
+      }
+    },
+    "postMergeIntegrationReview": {
+      "status": "PASS",
+      "baseSha": "2df41a883879b1f7abb84e51bc6dc531f773eeb8",
+      "reviewedHeadSha": "140ec81414f5292f03be5b20edaa897ef4f3a8e9",
+      "checksPassed": 44,
+      "reportedAgeProbes": 9,
+      "sourceReport": "coverage/post-merge-review.json and post-merge-age-probes.json in external task artifacts",
+      "conclusion": "The new base modifies measurement-age consumers of growth calculations; it leaves laboratory age normalizers, source adapters and the converter logic byte-identical. Prior inhibin reference-age coverage conclusions remain applicable.",
+      "scope": "Read-only merge integration controls and age probes; not a second complete coverage-matrix execution or full browser suite."
+    },
+    "pwaUpdateAndOfflineRestart": {
+      "status": "PASS",
+      "fromSw": "1.1.270",
+      "toSw": "1.1.272",
+      "fullBrowserRestart": true,
+      "offline": true,
+      "httpServerStopped": true,
+      "sourceReport": "pwa/run.log and its detailed run artifacts outside repository",
+      "scope": "Actual service-worker update and fresh browser restart; not merely reuse of an already-open page."
+    },
+    "releaseValidationReporting": {
+      "location": "Pull request for the current branch and latest exact head SHA",
+      "fullE2eAndCiPassClaimedByThisSnapshot": false,
+      "required": [
+        "Complete full repository E2E",
+        "Wait for every GitHub check after each push and fix failures",
+        "Keep final PWA and CI details in pull request"
+      ],
+      "reason": "Source documentation records stable verification facts; final CI statuses are not committed merely to refresh status text and trigger another CI cycle."
+    }
   },
   "rights": "No PDF, figure or full source text is redistributed. Factual table extraction and cryptographic hashes support provenance.",
   "independentImplementationReview": {

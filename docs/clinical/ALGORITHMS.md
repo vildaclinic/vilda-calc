@@ -2149,11 +2149,21 @@ i 3124 przedziały wieku: 74 wcześniejsze profile są identyczne,
 a 576 pełnych ocen laboratoryjnych zachowało wyniki. Te kontrole nie
 nadają odniesieniu statusu walidacji klinicznej.
 
-**Oczekujące kontrole:** pełne `npm test` jest uruchomione; prawdziwa
-aktualizacja PWA z restartem offline, pełny zestaw E2E i wszystkie kontrole
-GitHub aktualnego SHA pozostają do zakończenia. Nie przedstawiamy
-ukierunkowanych kontroli jako zakończenia pełnej walidacji. Źródła,
-hashe i przypadki: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026),
+**Zapis kontroli przed publikacją PR:** pełne `npm test` zakończyło się
+kodem 0: przed scaleniem aktualnego `audyt` **7669 testów / 350 plików**,
+a po scaleniu `2df41a883879b1f7abb84e51bc6dc531f773eeb8` — **7683 / 351**.
+Polityka repozytorium, lint, składnia 978 plików JS i testy PRO po scaleniu
+również PASS. Odrębny przegląd integracji po scaleniu: 44/44 kontrole
+oraz 9 prób wieku; źródła, normalizatory wieku i dotychczasowe wyniki
+odniesień zachowane. PWA PASS: rzeczywista aktualizacja SW
+`1.1.270` → `1.1.272`, pełny restart przeglądarki offline przy zatrzymanym
+serwerze HTTP; nie opieramy sprawdzenia na samej otwartej wcześniej karcie.
+
+To zapis wykonanych kontroli źródeł i implementacji przed publikacją,
+nie deklaracja zakończenia pełnego E2E lub GitHub CI. Końcowe wyniki
+pełnego E2E, PWA i wszystkich kontroli GitHub dla aktualnego SHA są
+raportowane w PR, bez aktualizowania plików źródłowych samymi statusami CI.
+Źródła, hashe i przypadki: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026),
 [przegląd tej partii](hormone-lifespan/evidence/female-inhibin-childhood-reference-coverage-2026-10-14.json).
 
 ### HORMONE-AMH-INFANT-COMPARISON — stała wspólna oś porównania płci, 2026-10-11
