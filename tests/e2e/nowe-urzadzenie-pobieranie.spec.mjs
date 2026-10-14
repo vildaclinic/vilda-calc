@@ -156,26 +156,26 @@ test('błąd: „Spróbuj ponownie”, potem „Pobierz później” — przypom
 
 test('przeładowanie w trakcie pobierania: znowu okno pobierania (bez pytania) i pobieranie od nowa', async ({ page, context }) => {
   await zaakceptujRegulamin(context);
-  let pierwszy = true;
-  const opcje = {
-    // Pierwsze pobranie bloba „wisi” — w tym czasie karta się przeładowuje.
-    wstrzymajBlob: async () => {
-      if (!pierwszy) return;
-      pierwszy = false;
-      await new Promise((r) => { setTimeout(r, 4000); });
-    },
-  };
-  const { zadania } = await kontoZDanymiWChmurze(page, context, opcje);
-  await przeladuj(page);
-  await expect(naglowek(page, 'Pobieranie Twoich danych z serwera')).toBeVisible({ timeout: 15_000 });
-  await expect.poll(() => bloby(zadania)).toBe(1);
+  const blob = zawor();
+  // Oba pobrania czekają na sprawdzenie odtworzonego okna. Natychmiastowa
+  // odpowiedź po reload mogła skończyć pobieranie, zanim okno się odtworzyło.
+  const opcje = { wstrzymajBlob: blob.czekaj };
+  try {
+    const { zadania } = await kontoZDanymiWChmurze(page, context, opcje);
+    await przeladuj(page);
+    await expect(naglowek(page, 'Pobieranie Twoich danych z serwera')).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => bloby(zadania)).toBe(1);
 
-  await przeladuj(page);
-  await expect(okno(page)).toBeVisible({ timeout: 15_000 });
-  await expect(okno(page).getByText('Znaleziono Twoje dane na serwerze'), 'bez pytania').toHaveCount(0);
-  await expect.poll(() => bloby(zadania), { message: 'po przeładowaniu pobieranie rusza samo', timeout: 15_000 }).toBeGreaterThanOrEqual(2);
-  await expect(naglowek(page, 'Gotowe — dane są na tym urządzeniu')).toBeVisible({ timeout: 20_000 });
-  expect(await page.evaluate(async () => (await window.VildaVault.listPatients()).length)).toBe(3);
+    await przeladuj(page);
+    await expect(okno(page)).toBeVisible({ timeout: 15_000 });
+    await expect(okno(page).getByText('Znaleziono Twoje dane na serwerze'), 'bez pytania').toHaveCount(0);
+    await expect.poll(() => bloby(zadania), { message: 'po przeładowaniu pobieranie rusza samo', timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+    blob.otworz();
+    await expect(naglowek(page, 'Gotowe — dane są na tym urządzeniu')).toBeVisible({ timeout: 20_000 });
+    expect(await page.evaluate(async () => (await window.VildaVault.listPatients()).length)).toBe(3);
+  } finally {
+    blob.otworz();
+  }
 });
 
 test('wylogowanie po „Pobierz później”: następne logowanie znowu pobiera z oknem', async ({ page, context }) => {
