@@ -844,8 +844,8 @@
   "sha256": "2ad4d7199226f590720f0ac663d2dff03a9fcb999fb2843e5f265060c97f4e56"
  },
  "vilda_persist_runtime.js": {
-  "v": 21,
-  "sha256": "aeec97f5cff5ba378394c0cb707e231acfee6093afdbcccdf2621604b028ced8"
+  "v": 22,
+  "sha256": "1056f7f583c0e1b2c51d7e6a94c08444130ebefeb5eb4eed547aa11a929b5b65"
  },
  "vilda_persistence_adapter.js": {
   "v": 30,
