@@ -490,7 +490,7 @@ polityką tej partii. FDA dla dorosłych dodano w osobnej partii opisanej niżej
 Dokładnie 1 rok nadal korzysta z Ljubicic. Przedział wieku przecinający
 granicę źródeł lub grup otrzymuje krótki powód braku jednej mediany.
 
-**Inhibina B:** Borelli-Kjær 2025, ryc. 1, przybliżona mediana GAMLSS
+**Historia inhibiny B (13.10.2026):** Borelli-Kjær 2025, ryc. 1, przybliżona mediana GAMLSS
 surowicy Gen II, dotychczas dostępna wyłącznie w porównaniu płci,
 działa także w zwykłych widokach **5,6–20 lat włącznie**. Początkowe
 okno 8–20 z PR #651 odziedziczono po porównaniu pokwitania. Właściciel
@@ -506,6 +506,8 @@ płci zachowuje okno 8–20. Nie trzeba nowej publikacji ani pól formularza.
 Profil `borelli2025-female-inhb-age-5p6-20` i polityka/dane punktu
 `2026-10-13.2` zastępują zwykłe ID `borelli2025-female-inhb-age-8-20`;
 pięć profili AMH zachowuje własny routing `2026-10-13.1`.
+Rozszerzenie z 14 października do 47 lat opisano poniżej; zastępuje
+tylko ten zwykły profil inhibiny B.
 Dokładnie 15 lat daje nadal ≈44 pg/mL; nieprecyzyjny wiek zachowuje
 dotychczasowy przedział odniesienia. Krótki komentarz przypomina,
 że jest to przybliżenie i że cykl oraz antykoncepcja wpływają na wynik.
@@ -517,6 +519,30 @@ go na surowicę. Liczba poniżej mediany nie nadaje statusu „poniżej normy”
 Przypadki, szczegóły granic i źródła:
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026)
 i [przegląd źródłowy](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
+
+### Inhibina B kobiet — odniesienie także w dorosłości, 14 października 2026
+
+Ten sam odczyt ryc. 1 Borelli-Kjær 2025 udostępniono w zwykłych widokach
+od **5,6 do 47 lat włącznie**. Jeden profil zachowuje wszystkie 24 węzły
+PCHIP; wiek 20 lat nie tworzy nowej granicy źródła. Przy dokładnym wieku
+25/30/40/46/47 lat przybliżona mediana to ≈32/30/28/17/11 pg/mL.
+Cała niepewność wieku musi mieścić się w zakresie: formularz „47 lat,
+0 miesięcy” obejmuje wiek ponad 47 i nie otrzymuje punktu, mimo że
+matematycznie dokładne 47 lat mieści się w źródłowym odczycie.
+
+Surowica Gen II ELISA, LOD 3 pg/mL; 149 dorosłych kobiet 20–69 lat,
+bez standaryzacji cyklu i z niepełnymi danymi antykoncepcji. Koniec 47
+wynika z ostatniego zweryfikowanego węzła, nie z maksimum obserwowanego
+wieku ani rozpoznania menopauzy. Tolerancja odczytu około ±2 pg/mL nie
+jest przedziałem ufności. Znana ciąża lub menopauza blokuje ten zwykły
+profil według konserwatywnej polityki aplikacji; brak danych dopuszcza
+orientacyjne porównanie, bez ustalania stanu pacjentki.
+
+Krzywe, skale, formularz, normy, pozostałe profile oraz porównanie płci
+8–20 pozostają bez zmian. Jasny znacznik jest medianą modelu wieku,
+nie oceną rezerwy jajnikowej ani normą fazy cyklu. Luka >1–<5,6 i ogon
+>47 nie otrzymują nowych liczb. Pełny kontrakt, reguły kwalifikacji i
+ograniczenia: [punkt pacjenta](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026).
 
 ### Mediany AMH dorosłych kobiet — 13 października 2026
 
@@ -686,7 +712,8 @@ wszystkie 24 źródłowe węzły 5,6–47 lat, aby granice widoku nie zmieniały
 stycznych. W wieku 8/12/13/20 lat żeńskie mediany wynoszą około
 14/43/47/34 pg/mL. Przed 8 i po 20 latach nie dodajemy tego punktu;
 W zwykłych widokach te same mediany udostępnia odrębne rozszerzenie
-z 13 października, poszerzone następnie do 5,6–20 lat. Źródło nie daje
+z 13 października, poszerzone następnie do 5,6–20, a 14 października
+do 5,6–47 lat. Źródło nie daje
 w zachowanych materiałach numerycznych parametrów L/S; nie wyliczamy
 SDS ani nowych percentyli. Fazy cyklu nie standaryzowano,
 a antykoncepcja doustna wpływa na stężenia; nie dodajemy formularza
@@ -1054,7 +1081,8 @@ analitów nie otrzymują automatycznie nowych polityk tych porównań.
   8–20 lat i ta sama liniowa oś 0–400 pg/mL; osobno zaakceptowane
   żeńskie odniesienie pacjentki. Od 13 października te same mediany
   są dostępne również w zwykłych widokach na ich własnej skali;
-  uzupełnienie po zgłoszeniu 6-latki poszerza tylko zwykły profil do 5,6–20.
+  uzupełnienie po zgłoszeniu 6-latki poszerzyło zwykły profil do 5,6–20,
+  a partia z 14 października do 5,6–47. Okno porównania nadal 8–20.
 - **LH/FSH:** mediany obu płci, minipuberty 0,02–<1 roku / 0–6 IU/L
   i pokwitanie 6–16 lat / 0–8 IU/L, bez osobnej normalizacji płci.
 - **Pokwitanie, AMH:** na wspólnej osi wieku

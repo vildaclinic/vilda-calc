@@ -442,25 +442,53 @@ def build():
     inhibin_comparison = json.loads((ROOT/'inhibin-comparison-reference-data.json').read_text(encoding='utf-8'))
     source_profile = next(p for p in inhibin_comparison['profiles']
                           if p['id'] == 'borelli2025-female-inhb-puberty-comparison')
-    inhb_policy = female_policy['inhb']
+    inhb_policy = json.loads((ROOT/'female-inhibin-reference-policy.json').read_text(encoding='utf-8'))
+    assert inhb_policy['kind'] == 'educational-source-selection'
+    assert (inhb_policy['analyte'], inhb_policy['sex'], inhb_policy['unit']) == ('inhb', 'female', 'pg/mL')
+    assert inhb_policy['ordinaryOnly'] is True
     assert inhb_policy['retainAllSourcePoints'] and len(source_profile['points']) == 24
     inhibin_source = json.loads((ROOT/'evidence'/'inhb-digitized-median.json').read_text(encoding='utf-8'))
-    assert any(cohort['ageMinYears'] <= inhb_policy['minAge'] < inhb_policy['maxAge'] <= cohort['ageMaxYears']
-               for cohort in inhibin_source['cohorts'])
-    assert source_profile['points'][0]['ageYears'] <= inhb_policy['minAge']
-    assert inhb_policy['maxAge'] <= source_profile['maxAge']
+    # The same published model spans two overlapping observed cohorts.
+    # Validate continuous coverage instead of splitting the profile at age 20
+    # or incorrectly treating the full infant-to-adult domain as observed.
+    minimum, maximum = inhb_policy['minAge'], inhb_policy['maxAge']
+    assert minimum < maximum
+    cohorts = sorted((cohort for cohort in inhibin_source['cohorts']
+                      if cohort['ageMaxYears'] >= minimum and cohort['ageMinYears'] <= maximum),
+                     key=lambda cohort: cohort['ageMinYears'])
+    covered_to = minimum
+    for cohort in cohorts:
+        assert cohort['ageMinYears'] <= covered_to
+        covered_to = max(covered_to, cohort['ageMaxYears'])
+    assert covered_to >= maximum
+    assert (inhibin_source['matrix'], inhibin_source['outputUnit']) == ('serum', 'pg/mL')
+    assert source_profile['points'] == [dict(ageYears=p['ageYears'], value=p['approxMedianPgMl'])
+                                        for p in inhibin_source['points']]
+    assert source_profile['points'][0]['ageYears'] == minimum
+    assert source_profile['points'][-1]['ageYears'] == maximum
     ordinary = {**source_profile, 'id':inhb_policy['id'],
                 'minAge':inhb_policy['minAge'], 'maxAge':inhb_policy['maxAge'],
                 'maxAgeExclusive':inhb_policy['maxAgeExclusive'],
-                'ordinaryOnly':female_policy['ordinaryOnly'],
+                'ordinaryOnly':inhb_policy['ordinaryOnly'],
+                'population':inhb_policy['population'],
+                'compatibleSpecimenIds':inhb_policy['compatibleSpecimenIds'],
+                'compatibleAssayMethodIds':inhb_policy['compatibleAssayMethodIds'],
+                'excludedCyclePhases':inhb_policy['excludedCyclePhases'],
                 'sourceLabel':'Borelli-Kjær 2025 · inhibina B · model wieku',
                 'patientNote':inhb_policy['patientNote'],
                 'provenance':{**source_profile['provenance'],
                               'sourceProfileId':source_profile['id'],
                               'qualificationScope':inhb_policy['qualificationScope'],
-                              'routingVersion':female_policy['version']},
+                              'cohorts':cohorts,
+                              'cohortCoverage':inhb_policy['cohortCoverage'],
+                              'specimenPolicy':inhb_policy['specimenPolicy'],
+                              'assayPolicy':inhb_policy['assayPolicy'],
+                              'reproductiveContextPolicy':inhb_policy['reproductiveContextPolicy'],
+                              'routingVersion':inhb_policy['version']},
                 'limitations':[source_profile['limitations'][0], inhb_policy['ageRouting'],
-                               source_profile['limitations'][2],
+                               'Wiek nie wyznacza stadium Tannera. Fazy cyklu nie standaryzowano, a informacje o antykoncepcji doustnej były niepełne; nie jest to odniesienie fazy cyklu ani populacji bez leczenia.',
+                               inhb_policy['reproductiveContextPolicy'],
+                               'Górny wiek 47 lat wynika z końca zachowanego odczytu ryciny, nie z wieku menopauzy. Nie ekstrapolujemy do granicy wykrywalności ani nie zastępujemy jej zerem.',
                                'Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń.']}
     profiles.append(ordinary)
 
@@ -555,7 +583,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-13.4','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-14.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

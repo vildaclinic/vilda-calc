@@ -1,4 +1,4 @@
-# AMH i inhibina B — odniesienia liczbowe, plan po audycie 13.10.2026
+# AMH i inhibina B — odniesienia liczbowe, plan aktualizowany 14.10.2026
 
 Plan dotyczy dostępności źródłowych median/średnich i wykorzystania danych
 pacjenta. Nie utożsamia płynnej krzywej edukacyjnej z medianą, a mediany
@@ -38,7 +38,7 @@ Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
    partnerów. To trzy mediany całych grup 12–14,9, 15–18,9 i 20–39,
    bez interpolacji, zmiany krzywych lub norm; luka 18–<20 pozostaje.
    Pełne źródła i polityka: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
-2. **Bieżąca partia — żeńskie AMH:** pięć median grup surowicy FDA
+2. **Zakończone, PR #670 — żeńskie AMH:** pięć median grup surowicy FDA
    K170524/Access 2 w zwykłych widokach. Jawna konwencja ukończonych lat:
    `[18,26)`, `[26,31)`, `[31,36)`, `[36,41)`, `[41,46)`; cały możliwy
    wiek musi mieścić się w jednej grupie. Bez interpolacji, aktywacji
@@ -47,10 +47,25 @@ Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
    ciąża lub stan po menopauzie blokują to nowe odniesienie. Zachowane
    dotychczasowe blokady, w tym GnRHa. Szczegóły i przypadek F28/1 ng/mL:
    [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026).
-3. **Następny krok — inhibina B obu płci:** ponowna macierz dostępności; kobiety >20–47 lat
-   w modelu Borelli-Kjær z ograniczeniami cyklu/antykoncepcji. Mała grupa
-   Crofton u najmłodszych dziewczynek wymaga osobnej decyzji o przydatności
-   przy historycznym oznaczeniu, osoczu i niskich stężeniach.
+3. **Bieżąca partia — inhibina B obu płci:** ponowna macierz dostępności
+   oraz rozszerzenie zwykłego żeńskiego profilu Borelli-Kjær do **5,6–47 lat
+   włącznie**. Zachowane wszystkie 24 węzły i PCHIP, bez sztucznej granicy
+   przy 20 latach. To przybliżona mediana wieku; cyklu nie standaryzowano,
+   a danych antykoncepcji brakowało u większości kobiet. Znana ciąża/menopauza wyłącza ten zwykły profil
+   jako konserwatywna polityka aplikacji, bez nowego pola i bez zmiany
+   porównania płci 8–20, krzywych lub norm. Szczegóły:
+   [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026).
+   Crofton nie jest aktywowany. Tabela grupy 0–6 lat obejmuje N=105,
+   lecz szerokie łączenie wieku, 35% wyników pod LOD, osocze i historyczna
+   metoda wymagają osobnej decyzji; nie jest to mediana dokładnego wieku
+   ani model minipuberty. Luki >1–<5,6 oraz >47 lat pozostają jawne.
+   Męskie źródła pozostają bez zmian: Busch 7 dni–<1 roku, Kelsey
+   1–<6,1 i Borelli 6,1–80 lat. Osobne średnie grup Senior do 101 lat
+   nie wypełniają luki zwykłego modelu po 80. roku. Mediany wcześniaków
+   Kuiri w dwóch wizytach pozostają podsumowaniami grup, bez dokładnego
+   punktu na krzywej wieku. Następna decyzja dotyczy użyteczności osobnego
+   historycznego odniesienia Crofton w luce młodszych dziewczynek;
+   nie deklarujemy jej rozwiązania w bieżącej partii.
 4. Dopiero potem rozważyć osobny snapshot bieżącego porównania AMH,
    jeżeli ma ono być utrwalane w wizytach i historii. Brak snapshotu nie
    upoważnia do odtwarzania dawnej interpretacji dzisiejszą tabelą.

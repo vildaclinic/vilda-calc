@@ -63,7 +63,7 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | Żeńskie LH, FSH, AMH, inhibina B, E2; 0,02–1 roku (FSH: 0,02–<1 roku) | [Ljubicic 2022](https://doi.org/10.1210/clinem/dgac363), ryc. 1 i [Supplementary Table 1](https://doi.org/10.6084/m9.figshare.19469555.v1), 99 median na hormon | 98 zdrowych donoszonych dziewczynek, 266 próbek surowicy; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS E2 | Pierwszy zachowany węzeł 0,02 roku, nie urodzenie. Mediany GAMLSS nie są średnimi podłużnymi z ryc. 3. Nie dopisywać stężeń przed pierwszym węzłem. Wyłącznie dla FSH pierwsze urodziny należą już do profilu Zec z własnym warunkiem stadium; nie stosujemy zastępczo profilu niemowlęcego. |
 | Żeńskie AMH; grupy po 1. i przed 18. urodzinami | [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1 | Osocze litowo-heparynowe, Beckman Coulter Access AMH; pozostałości próbek szpitalnych, wykluczone podejrzenie endokrynopatii i DSD | Pięć stałych median całych grup, nie model dokładnego wieku ani Tannera. Routing i granice opisano poniżej. Nie harmonizujemy osocza z surowicą niemowląt ani dorosłych. |
 | Żeńskie AMH; 18–<46 lat, wyłącznie zwykłe widoki | [FDA K170524](https://www.accessdata.fda.gov/cdrh_docs/pdf17/K170524.pdf), PDF str. 14/wewn. 10, tabela surowicy | Access AMH, Access 2; pięć ośrodków, pozornie zdrowe nieciężarne kobiety z regularnymi cyklami 21–35 dni, oboma jajnikami i udowodnioną płodnością; 620 próbek w tabeli | Pięć stałych median grup; konwencja ukończonych lat jest polityką aplikacji, nie opisaną regułą autora. Osocze z PDF str. 15 pozostaje odrębnym źródłem ilustracji. Brak norm, rozpoznania płodności i ekstrapolacji od 46 lat. |
-| Żeńska inhibina B; zwykłe widoki 5,6–20 lat, porównanie płci 8–20 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, przybliżona mediana GAMLSS (0 SD) | Surowica, Beckman Coulter Gen II ELISA; żeńska kohorta 5,6–20,2 lat obejmuje 648 dziewcząt | Od 13.10.2026 zwykły profil uzupełnia odrębne dane porównania. Wszystkie 24 węzły 5,6–47 lat zachowane do PCHIP; zwykły profil 5,6–20 włącznie, porównanie pokwitania nadal 8–20. Digitalizacja około ±2 pg/mL, bez SDS i norm. Wiek nie zastępuje Tannera; faz cyklu nie standaryzowano. |
+| Żeńska inhibina B; zwykłe widoki 5,6–47 lat, porównanie płci 8–20 lat | [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1, przybliżona mediana GAMLSS (0 SD) | Surowica, Beckman Coulter Gen II ELISA; 648 dziewcząt 5,6–20,2 lat i 149 kobiet 20–69 lat | Od 14.10.2026 jeden zwykły profil obejmuje 5,6–47 włącznie. Zachowane 24 węzły PCHIP; 47 to koniec zachowanego odczytu liczbowego, nie obserwacji. Digitalizacja około ±2 pg/mL nie jest CI. Cykl niestandaryzowany, dane antykoncepcji niepełne; znana ciąża/menopauza wyłącza zwykły profil według polityki aplikacji. Bez SDS, norm i ekstrapolacji. |
 
 INSL3 pozostaje zadaniem przyszłego kalkulatora. Zatwierdzona
 11 października 2026 przerywana linia ma osobną względną politykę
@@ -72,7 +72,7 @@ Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
 nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec,
-AMH Jopling/FDA, inhibiną B 5,6–20 i zaakceptowanym porównaniem LH/FSH 6–16 oraz niepokryte fragmenty
+AMH Jopling/FDA, inhibiną B 5,6–47 i zaakceptowanym porównaniem LH/FSH 6–16 oraz niepokryte fragmenty
 osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
@@ -186,12 +186,14 @@ małe szpitalne grupy; zdrowie założono po wykluczeniach, a stadium Tannera
 nie było dostępne. Nie traktujemy relatywnej stabilności AMH w cyklu
 jako dowodu braku wpływu każdego kontekstu klinicznego.
 
-**Borelli-Kjær 2025, ryc. 1:** zwykły profil **5,6–20 lat włącznie**
+**Historia Borelli-Kjær 2025, ryc. 1 (13.10.2026):** zwykły profil **5,6–20 lat włącznie**
 korzysta z tych samych 24 odczytanych węzłów 5,6–47 lat co porównanie płci.
 Początkowe 8–20 w PR #651 zachowywało okno pokwitania; po zgłoszeniu
 F6/33 pg/mL właściciel 13 października zatwierdził udostępnienie istniejących
 median także 5,6–<8 lat. ID to `borelli2025-female-inhb-age-5p6-20`,
 polityka i dane punktu `2026-10-13.2`; porównanie płci nadal 8–20.
+Rozszerzenie do 47 lat z 14 października opisano poniżej; zastępuje ono
+ten zwykły profil, zachowując dotychczasowe wartości.
 Cały możliwy przedział wieku musi mieścić się w profilu. Nie obcinamy PCHIP
 do zakresu kwalifikacji ani nie zmieniamy wartości, krzywej lub skali.
 Dla dokładnie 6 lat mediana wynosi ≈11 pg/mL, a wynik 33 leży powyżej niej,
@@ -220,6 +222,74 @@ i materiał → wartość wyniku 3,212 pmol/L oraz mediana grupy 21,14 pmol/L
 „poniżej normy”. Krzywa pozostaje identyczna po wyczyszczeniu wyniku.
 Pełne pochodzenie, hashe i przypadki graniczne:
 [przegląd źródeł](evidence/female-reference-points-2026-10-13.json).
+
+### Żeńska inhibina B — rozszerzenie odniesienia do 47 lat, 14 października 2026
+
+Zwykły profil `borelli2025-female-inhb-age-5p6-47` zastępuje profil
+`borelli2025-female-inhb-age-5p6-20`. Polityka
+[`female-inhibin-reference-policy.json`](female-inhibin-reference-policy.json)
+i dane punktu mają wersję `2026-10-14.1`; dawna wspólna polityka
+adolescent pozostaje dla AMH. Zmiana poszerza dostępność źródłowej liczby,
+bez nowych pól, przeliczeń, norm lub geometrii. Pozostałe 73 profile oraz
+odrębne porównanie inhibiny B 8–20 lat pozostają bez zmian.
+
+Pełny artykuł Borelli-Kjær (*JCEM* 2025;110:70–77,
+[DOI 10.1210/clinem/dgae439](https://doi.org/10.1210/clinem/dgae439),
+wersja składu 18.07.2024) i [suplement v1](https://doi.org/10.6084/m9.figshare.26056558.v1)
+sprawdzono ponownie. Ryc. 1 przedstawia medianę modelu GAMLSS (0 SD),
+a nie średnią. Łączna żeńska kohorta to 889 uczestniczek/1005 próbek,
+w tym 648 dziewcząt 5,6–20,2 lat i 149 kobiet 20–69 lat z Health2006.
+Dorosłe obserwacje są nieliczne, fazy cyklu nie standaryzowano,
+a danych o antykoncepcji brakowało u większości kobiet. Nie jest to
+potwierdzona populacja wyłącznie nieleczona ani model faz cyklu.
+
+Wszystkie żeńskie próbki oznaczano w surowicy metodą Beckman Coulter
+Inhibin B Gen II ELISA, w ng/L = pg/mL, LOD 3 pg/mL. Zachowano **24
+węzły i tę samą interpolację PCHIP**. Przy dokładnym wieku 25/30/40/46/47
+lat odczyt wynosi odpowiednio ≈32/30/28/17/11 pg/mL. Około ±2 pg/mL
+opisuje niepewność digitalizacji, nie CI, rozrzut populacji ani normę.
+Nie uzyskano oryginalnych parametrów LMS/GAMLSS; suplement waliduje
+metodę, nie dostarcza tabeli median wieku. Nie deklarujemy ponownego
+dopasowania modelu ani dokładniejszej digitalizacji.
+
+Oba końce **5,6–47** są włączone, a cały możliwy wiek musi się mieścić
+w profilu. Nie tworzymy nowego styku źródeł przy 20 latach: formularz
+„20 lat, 0 miesięcy” kwalifikuje swój cały przedział. Dokładnie 47 lat
+daje ≈11 pg/mL, ale „47 lat, 0 miesięcy” to przedział wykraczający poza
+47 i dlatego nie daje odniesienia. Nie wybieramy środka takiego wieku.
+Granica 47 wynika z ostatniego zachowanego, zweryfikowanego węzła;
+obserwowanie kobiet do 69 lat nie upoważnia do ekstrapolacji z ogona.
+Wartość 11 i jej przybliżona tolerancja odczytu 9–13 są powyżej LOD 3.
+
+Znana ciąża (`pregnancy_t1/t2/t3`) lub stan po menopauzie
+(`postmenopause`) wyłącza **ten zwykły profil**. To konserwatywna polityka
+aplikacji: autorzy nie podali modelu dla ciąży ani osobnego odniesienia
+menopauzalnego; nie przedstawiamy tej bramki jako kryterium wykluczenia
+kohorty. Brak kontekstu nie oznacza potwierdzonego braku ciąży/menopauzy
+lub antykoncepcji, lecz dopuszcza ograniczone porównanie wieku. Zwykłe
+fazy cyklu nie dobierają nowych median. Adapter przekazuje bieżące
+znormalizowane `reproductiveContext` inhibiny B do `cyclePhase` wykresu;
+nie przenosi kontekstu historycznej próbki lub innej osoby/płci. Nieznany
+stan może korzystać z już znanego bieżącego `cycle_phase`. Zachowano dotychczasowe bramki
+GnRHa, metody, materiału, cenzurowania i kwalifikacji całego wieku.
+Nieznane metoda/materiał nie potwierdzają zgodności z surowicą Gen II;
+znana niezgodność nadal blokuje punkt.
+
+Krótki komentarz pozostaje: „Cykl i antykoncepcja mogą wpływać na
+porównanie.” Szczegóły źródła podają pełne ograniczenia. Różnica median
+8 ng/L u 59 nastolatek stosujących antykoncepcję doustną i 55 ng/L
+u 81 niestosujących nie stanowi przelicznika wyniku ani progu rezerwy
+jajnikowej. Nie nadajemy statusu normy, SDS, centyla, diagnozy lub prognozy
+płodności z relacji punktu do mediany. Jasnego znacznika nie przyciągamy
+do wygładzonej linii.
+
+Luka >1–<5,6 oraz wiek >47 pozostają bez zwykłego żeńskiego odniesienia.
+Crofton 2002 (DOI `10.1046/j.0300-0664.2001.01449.x`, tabela 1) zachowano
+do osobnej decyzji: grupa 0–6 lat N=105, mediana 10,6 pg/mL, 35% pod
+LOD 8 pg/mL, osocze i historyczny ELISA. Nie aktywujemy tej mediany
+szerokiej grupy jako modelu dokładnego wieku lub minipuberty.
+Źródła, hashe, zakres audytu i oczekiwane regresje:
+[przegląd dostępności](evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
 ### Żeńskie AMH — mediany dorosłych FDA, 13 października 2026
 
@@ -788,7 +858,7 @@ odniesienia `borelli2025-female-inhb-puberty-comparison` tylko w wieku
 `inhibinComparisonReferenceData`, poza globalnym `patientPointData`.
 Ten historyczny profil nie włączał punktu w zwykłych widokach.
 Rozszerzenie z 13 października udostępnia te same mediany także tam,
-po zatwierdzonym uzupełnieniu w wieku 5,6–20. Granica 8 lat dotyczy
+po uzupełnieniu 5,6–20, a od 14 października 5,6–47. Granica 8 lat dotyczy
 nadal wyłącznie tego widoku porównania pokwitania.
 Kwalifikacja używa istniejącego `evaluate` z danymi tego porównania
 i dotyczy wyłącznie własnej płci; metoda drugiej płci nie blokuje
@@ -873,7 +943,10 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Porównanie inhibiny B w pokwitaniu lub zwykły widok, dziewczynka dokładnie 8/12/13/20 lat, zgodny kontekst | Odniesienie Borelli ≈14/43/47/34 pg/mL. PCHIP zachowuje wszystkie 24 węzły 5,6–47 lat; zwykły widok korzysta z własnej stałej skali. |
 | Zwykły widok, dziewczynka 6 lat, inhibina B 33 pg/mL, zgodny kontekst | Punkt 33 i przybliżona mediana ≈11 pg/mL; bez klasyfikacji normy, ta sama krzywa i skala. |
 | Zwykły widok, dziewczynka dokładnie 5,6 lat / przedział 5,59–5,61 | Odpowiednio mediana ≈11 / brak kwalifikacji całego przedziału; bez wybierania środka wieku. |
-| Dziewczynka >1 i <5,6 / >20 lat, inhibina B | Brak nowego odniesienia Borelli; nie przedłużamy kwalifikacji linią lub pełnym zakresem węzłów. |
+| Dziewczynka >1 i <5,6 / kobieta >47 lat, inhibina B | Brak odniesienia Borelli; poglądowy most lub ogon nie tworzy liczby. |
+| Zwykły widok, kobieta dokładnie 25/30/40/46/47 lat, inhibina B 33 pg/mL, zgodny lub nieznany kontekst | Przybliżona mediana modelu ≈32/30/28/17/11 pg/mL; bez werdyktu normy. |
+| Zwykły widok, F20 lat 0 miesięcy / F47 lat 0 miesięcy z formularza | Pierwszy przedział wieku mieści się w profilu; drugi wykracza poza 47 i nie otrzymuje punktu. Dokładne 47 lat kwalifikuje się osobno. |
+| Zwykły widok, kobieta 30 lat, znana ciąża lub stan po menopauzie | Brak punktu zwykłego profilu według konserwatywnej polityki aplikacji; krzywa i interpretacja laboratoryjna bez zmian. |
 | Porównanie pokwitania inhibiny B, chłopiec ze zgodną własną metodą, niedopasowaną do żeńskiego Gen II | Kwalifikacja wyłącznie własnego męskiego profilu; druga płeć nie blokuje punktu. |
 | Porównanie pokwitania inhibiny B, możliwy wiek 7,99–8,01 albo 19,99–20,01 lat | Brak punktu dla wieku przekraczającego granicę widoku; nie zawężamy wieku do jego środka. |
 | Porównanie inhibiny B, kwalifikujący kontekst: pusty → 0 → 400 → 1000 pg/mL → wyczyszczenie | Brak punktu → punkt na zerze → punkt na górnej granicy → strzałka w górę → brak punktu. Te same linie i skala; 400 ng/L równe 400 pg/mL. |

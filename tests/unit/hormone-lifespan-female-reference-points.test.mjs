@@ -11,7 +11,8 @@ const data = runtime.patientPointData;
 const read = name => JSON.parse(readFileSync(new URL(
   `../../docs/clinical/hormone-lifespan/${name}`, import.meta.url), 'utf8'));
 const policy = read('female-adolescent-reference-policy.json');
-const addedIds = [...policy.amh.profiles.map(p => p.id), policy.inhb.id];
+const inhibinPolicy = read('female-inhibin-reference-policy.json');
+const addedIds = [...policy.amh.profiles.map(p => p.id), inhibinPolicy.id];
 const laterMaleIds = read('male-amh-reference-policy.json').profiles.map(p => p.id);
 const laterFemaleIds = read('female-adult-amh-reference-policy.json').profiles.map(p => p.id);
 const evaluate = (analyte = 'amh', ageYears = 15, extra = {}) => engine.evaluate(data, {
@@ -141,7 +142,7 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
     const result = evaluate('inhb');
     const comparison = runtime.inhibinComparisonReferenceData.profiles[0];
     expect(result).toMatchObject({ status: 'ready', referenceValue: 44,
-      profile: { id: 'borelli2025-female-inhb-age-5p6-20', minAge: 5.6, maxAge: 20,
+      profile: { id: 'borelli2025-female-inhb-age-5p6-47', minAge: 5.6, maxAge: 47,
         statistic: 'median', approximate: true, interpolation: 'pchip', specimen: 'serum',
         provenance: { doi: '10.1210/clinem/dgae439', digitizationTolerancePgMl: 2 } }
     });
@@ -153,10 +154,10 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
       expect(evaluate('inhb', age).referenceValue).toBe(engine.referenceAt(comparison, age));
     }
     expect(evaluate('inhb', 15, { ageUpperYears: 16, ageUpperInclusive: false }).referenceValue).toBe(44);
-    for (const age of [1.01, 5.5999, 20.0001, 47]) {
+    for (const age of [1.01, 5.5999, 47.0001, 48]) {
       expect(evaluate('inhb', age)).toEqual(unavailable('unsupported-age'));
     }
-    expect(evaluate('inhb', 20, { ageUpperYears: 21, ageUpperInclusive: false })).toEqual(unavailable('ambiguous-age'));
+    expect(evaluate('inhb', 20, { ageUpperYears: 21, ageUpperInclusive: false }).referenceValue).toBe(34);
   });
 
   it('F6/33 pg/mL otrzymuje źródłową medianę około 11 przy miesiącach 0 i przy podaniu samych lat', () => {
@@ -167,13 +168,13 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
         const result = evaluate('inhb', resolved.lowerYears, { ageUpperYears: resolved.upperYears,
           ageUpperInclusive: resolved.upperInclusive, measurement: { value: 33, unit } });
         expect(result).toMatchObject({ status: 'ready', value: 33, referenceValue: 11,
-          profile: { id: 'borelli2025-female-inhb-age-5p6-20', minAge: 5.6, maxAge: 20,
+          profile: { id: 'borelli2025-female-inhb-age-5p6-47', minAge: 5.6, maxAge: 47,
             statistic: 'median', approximate: true, ordinaryOnly: true } });
       }
     }
   });
 
-  it('kwalifikuje cały możliwy wiek od 5,6 i zachowuje lukę źródłową oraz górny brzeg 20', () => {
+  it('kwalifikuje cały możliwy wiek od 5,6 i zachowuje lukę źródłową oraz górny brzeg 47', () => {
     expect(evaluate('inhb', 5.6)).toMatchObject({ status: 'ready', referenceValue: 11 });
     for (const [low, high] of [[1.08, 1.09], [5, 6], [5.59, 5.61], [5 + 7 / 12, 5 + 8 / 12]]) {
       expect(evaluate('inhb', low, { ageUpperYears: high, ageUpperInclusive: false }))
@@ -184,11 +185,12 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
     expect(evaluate('inhb', 7, { ageUpperYears: 8, ageUpperInclusive: false }).referenceValue).toBe(12);
     expect(evaluate('inhb', 15).referenceValue).toBe(44);
     expect(evaluate('inhb', 20).referenceValue).toBe(34);
-    expect(evaluate('inhb', 20, { ageUpperYears: 20.01 })).toEqual(unavailable('ambiguous-age'));
+    expect(evaluate('inhb', 20, { ageUpperYears: 20.01 }).referenceValue).toBe(34);
+    expect(evaluate('inhb', 47, { ageUpperYears: 47.01 })).toEqual(unavailable('ambiguous-age'));
   });
 
   it('rozszerzenie źródła nie zmienia 65 pozostałych profili, żadnej geometrii ani odrębnego porównania 8–20', () => {
-    const unchangedProfiles = data.profiles.filter(p => p.id !== policy.inhb.id && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id));
+    const unchangedProfiles = data.profiles.filter(p => p.id !== inhibinPolicy.id && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id));
     expect(unchangedProfiles).toHaveLength(65);
     expect(createHash('sha256').update(JSON.stringify(unchangedProfiles)).digest('hex'))
       .toBe('6ec13e2cb5556a6a5e57df7bba1e3032007215b713c6937cccabbe7368ade1f4');
@@ -234,9 +236,9 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
     expect(result).toMatchObject({ status: 'ready', referenceValue: 44,
       profile: { id: 'borelli2025-female-inhb-puberty-comparison' } });
     expect(engine.evaluate(runtime, patient)).toMatchObject({ status: 'ready', referenceValue: 44,
-      profile: { id: 'borelli2025-female-inhb-age-5p6-20' } });
-    expect(model.referenceData.patientPointData.profiles.some(p => p.id === policy.inhb.id)).toBe(false);
-    expect(data.profiles.some(p => p.id === policy.inhb.id)).toBe(true);
+      profile: { id: 'borelli2025-female-inhb-age-5p6-47' } });
+    expect(model.referenceData.patientPointData.profiles.some(p => p.id === inhibinPolicy.id)).toBe(false);
+    expect(data.profiles.some(p => p.id === inhibinPolicy.id)).toBe(true);
   });
 
   it.each(['amh', 'inhb'])('nowe odniesienie %s nie omija przeciwwskazań ani nie wyprowadza liczby z cenzurowanego wyniku', analyte => {
