@@ -164,8 +164,9 @@ describe('Pozostałe wyjścia — strażnicy źródła (te same wywołania silni
     expect(s).toContain('T0.ocen({bmi:v,plec:o,wiekMies:n*12,zrodlo:d,dorosly:!1})');
     expect(s).toContain('kg/m\\xB2`');
     expect(s).toContain('` (bmiSDS ${T0.fmtSds(r)})`');
-    expect(s, 'poprzedni pomiar: centyl/kolor/Cole na źródle zapisu').toContain('T0.ocen({bmi:p,plec:d,wiekMies:wP!=null?wP:l,zrodlo:Z0})');
-    expect(s).toContain('T0.cole({bmi:p,plec:d,wiekMies:wP!=null?wP:l,zrodlo:Z0})');
+    // P-WIEK-POMIARU (2026-10-13): wiek poprzedniego pomiaru Pm = dokładny z dnia pomiaru, a bez niego pełne miesiące (l).
+    expect(s, 'poprzedni pomiar: centyl/kolor/Cole na źródle zapisu').toContain('T0.ocen({bmi:p,plec:d,wiekMies:Pm,zrodlo:Z0})');
+    expect(s).toContain('T0.cole({bmi:p,plec:d,wiekMies:Pm,zrodlo:Z0})');
     expect(s, 'odległość od normy: P5/P85 i 18,5/24,9 z celNormy/wartoscDlaCentyla').toContain('T0.celNormy({wiekMies:w,wzrostCm:i,plec:t,zrodlo:z,dorosly:d})');
     expect(s).toContain('T0.wartoscDlaCentyla({centyl:T0.PROGI.DZIECKO.NIEDOWAGA');
     expect(s, 'kolor Cole’a i BMI dorosłego z kategorii silnika').toContain('T0.kategoriaCole(M).kolor');

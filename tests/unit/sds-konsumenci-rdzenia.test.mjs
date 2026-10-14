@@ -71,7 +71,7 @@ describe('Ręczne kopie reguły siatki zniknęły z konsumentów rdzenia', () =>
 describe('Granice 3./97. centyla i normy dorosłych przez odwrotność silnika', () => {
   it('epikryza (q), schowek (x), przygotowanie wyników (h3/h97) i raport pytają wartoscDlaSds dla wzrostu', () => {
     expect(zrodlo('vilda_epicrisis_ui.js')).toContain('wartoscDlaSds({sds:de,plec:n,wiekMies:t,zrodlo:A})');
-    expect(zrodlo('vilda_patient_summary_copy.js')).toContain('wartoscDlaSds({sds:C===3?Oe:ke,plec:f,wiekMies:typeof w=="number"&&isFinite(w)?w:o*12,zrodlo:t.bmiSource})');
+    expect(zrodlo('vilda_patient_summary_copy.js')).toContain('wartoscDlaSds({sds:C===3?Oe:ke,plec:f,wiekMies:o*12,zrodlo:t.bmiSource})');
     expect(zrodlo('vilda_update_prep.js')).toContain('Ts.wartoscDlaSds({sds:Z3,plec:t.sex,wiekMies:t.age*12,zrodlo:t.source})');
     expect(zrodlo('vilda_patient_report.js')).toContain('wq=Ts.wartoscDlaSds({sds:Ts.sdsZCentyla(Math.min(99.9,Math.max(.1,a))),plec:t,wiekMies:i*12,zrodlo:r})');
   });

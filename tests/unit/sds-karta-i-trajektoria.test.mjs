@@ -33,6 +33,7 @@ describe('Karta pacjenta (vilda_auth_ui.js) — wzrost przez rdzeń, granice i z
   const src = zrodlo('vilda_auth_ui.js');
 
   it('En(): wzrost zawsze calcPercentileStats (reguła siatki w silniku); masa zostaje przy Palczewskiej z rekordu', () => {
+    // P-WIEK-POMIARU (2026-10-13): szósty argument `w` niesie jawny wiek zapisanego pomiaru do rdzenia.
     expect(src).toContain('function En(t,a,n,r,o,w){try{if(r!=="HT"&&o==="PALCZEWSKA"&&typeof calcPercentileStatsPal=="function")return calcPercentileStatsPal(t,a,n,r);');
   });
 
