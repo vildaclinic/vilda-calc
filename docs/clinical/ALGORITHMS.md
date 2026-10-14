@@ -4227,7 +4227,7 @@ Kierunek naprawy obu: wiek dokładny pomiaru liczony z daty urodzenia i daty pom
 
 **Wersje.** `vilda_dob_age.js` 10, `vilda_summary_cards.js` 59; SW 1.1.264 → 1.1.265 (numery 1.1.261–1.1.264 nadały równolegle #661, #663, #664 i #666).
 
-### P-POROWNANIE-WIEK — kolumna „Poprzednio” karty porównania: centyle w wieku z doby tamtego pomiaru (SW 1.1.268, 2026-10-13, polecenie właściciela; zmiana kliniczna)
+### P-POROWNANIE-WIEK — kolumna „Poprzednio” karty porównania: centyle w wieku z doby tamtego pomiaru (SW 1.1.269, 2026-10-13, polecenie właściciela; zmiana kliniczna)
 
 **Polecenie właściciela.** „Napraw to”: centyl wzrostu poprzedniego pomiaru liczył się z dzisiejszego dokładnego wieku, gdy pełne miesiące wieku się zgadzały, a nie z dnia tamtego pomiaru. Dla pomiaru sprzed kilku tygodni w tym samym miesiącu życia wiek był więc zawyżony. To ustalenie poza zakresem z P-POROWNANIE-W-TLE i część „znanego ograniczenia” z P-ODTWORZ-WIEK. Zmiana kliniczna: zmienia wynik pokazywany lekarzowi.
 
@@ -4284,7 +4284,7 @@ Kolumna „Dziś”, karta główna i odtworzona wizyta bez zmian. Przy odtworzo
 
 Odczytane z kodu, nie sprawdzone na stronie. Każdy z nich może skorzystać z tego samego kontekstu `window.__vildaWiekPomiaru`.
 
-**Wersje.** `app.js` 234 → 235; `vilda_summary_cards.js` 59 → 60; SW 1.1.267 → 1.1.268 (numery SW 1.1.261–1.1.267 nadały równolegle #661, #663, #664, #666, #662, #665 i #668; `vilda_summary_cards.js` 59 nadał #662, a `app.js` 234 — #668).
+**Wersje.** `app.js` 234 → 235; `vilda_summary_cards.js` 59 → 60; SW 1.1.268 → 1.1.269 (numery SW 1.1.261–1.1.268 nadały równolegle #661, #663, #664, #666, #662, #665, #668 i #670; `vilda_summary_cards.js` 59 nadał #662, a `app.js` 234 — #668).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
