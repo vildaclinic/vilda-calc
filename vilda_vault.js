@@ -21,22 +21,28 @@ function Bsc1(t,e){const n=t&&typeof t=="object"?JSON.parse(JSON.stringify(t)):{
 // wstawia sama (collectUserData na index, docpro i kalkulatorze klirensu zapisuje niewypelnione sekcje jako obiekty,
 // nie null). „Scal pacjentow” (Bsc1) zastepuje taka sekcje karty docelowej W CALOSCI sekcja starej karty, ktora ma dane
 // (bez laczenia pol miedzy kartami); karta docelowa bez sekcji (null) — jak dotad. Ponowienie zapisu po scaleniu
-// (Bdo_sekcje) na najwyzszym poziomie nie traktuje sekcji bez danych ani jako danych karty docelowej, ani jako zmiany
-// lekarza w formularzu. Wartosci domyslne stron (nie sa danymi):
+// (Bdo_sekcje) na najwyzszym poziomie porownuje sekcje na ich danych (Bsc_dane) — szczegoly przy Bdo_sekcje. Wartosci
+// domyslne stron (nie sa danymi):
 //   plan   — PAL, ktory nie jest wyborem lekarza wedlug tej samej reguly co vildaPalZapisuWybrany przy wczytaniu
 //            (vilda_data_import_export.js: znacznik palWybrany; zapis bez znacznika — 1,4 i 1,6 to wartosci domyslne),
 //            dieta bez dietaWybrana:true (zalecenie silnika) i same znaczniki; cel wlasny (liczba > 0) jest decyzja;
-//   intake — PAL karty spozycia (po wczytaniu i tak idzie za PAL planu, P-SPOZYCIE-REE);
+//   intake — PAL karty spozycia (po wczytaniu i tak idzie za PAL planu, P-SPOZYCIE-REE); historia i szacowane kcal sa
+//            danymi;
 //   doctor — isDoctor (na docpro ukryty checkbox zaznaczony z gory);
-//   clcr   — sesja klirensu v2 (inputs): jednostki, stany, wybory tekstowe, wersja kalkulatora, wzor i pola karty
-//            pacjenta (dane osobowe, wiek, masa, wzrost — strona bierze je z danych pacjenta); dana jest liczba (takze
-//            zapisana tekstem) albo zaznaczenie w polu badania. summary, version, source i savedAtISO sie nie licza.
-//            Dawny ksztalt bez inputs — jak kazda inna sekcja.
-// Pozostale sekcje: Bpu_pusta. Lista PAL i lista pol karty pacjenta klirensu to kopie wiedzy warstwy formularza (sejf
-// nie wola kodu strony); zgodnosc pilnuja straznicy w tests/unit/scalanie-sekcje-bez-danych.test.mjs.
+//   clcr   — sesja klirensu v2 (inputs): jednostki, stany, wybory tekstowe, pola karty pacjenta (dane osobowe, wiek,
+//            masa, wzrost — strona bierze je z danych pacjenta) i wybory widoku (wersja kalkulatora, wzor, przelacznik
+//            „Pokaz zaawansowane obliczenia KT/V” — strona zaznacza go sama przy wyborze wzoru KT/V); dana jest liczba
+//            (takze zapisana tekstem) albo zaznaczenie w polu badania. summary, version, source i savedAtISO sie nie
+//            licza. Dawny ksztalt bez inputs — jak kazda inna sekcja.
+// Pozostale sekcje: Bpu_pusta. Lista PAL i listy pol sesji klirensu to kopie wiedzy warstwy formularza (sejf nie wola
+// kodu strony); zgodnosc (w obie strony) pilnuja straznicy w tests/unit/scalanie-sekcje-bez-danych.test.mjs.
 const BSC_PAL_DOMYSLNE = Object.freeze([1.4, 1.6]);
+// Pola karty pacjenta kalkulatora klirensu (<fieldset id="patientSet"> w kalkulator-klirens.html).
 const BSC_KLIRENS_POLA_PACJENTA = Object.freeze(['fullName', 'age', 'ageMonths', 'ageDays', 'neonatalTermStatus', 'sex',
-  'weight', 'height', 'currentVersion', 'formulaPicker']);
+  'weight', 'height']);
+// Wybory widoku w sesji klirensu: wersja kalkulatora i wzor (dopisuje je budowa sesji, inline_kalkulator_klirens_07.js)
+// oraz przelacznik widoku KT/V (ktvToggle; uwaga recenzji P-SCALANIE-SEKCJE — sam wybor wzoru KT/V go zaznacza).
+const BSC_KLIRENS_POLA_WIDOKU = Object.freeze(['currentVersion', 'formulaPicker', 'ktvToggle']);
 // Wartosc pusta: undefined, null, '' i false; lista albo obiekt — gdy kazdy element jest pusty. Kazda liczba (takze 0)
 // i kazdy niepusty tekst to dana. Wyniesiona bez zmian z Bdo_sekcje (P-ZAPIS-USUNIETEJ-3).
 function Bpu_pusta(x) {
@@ -63,7 +69,8 @@ function Bsc_celWlasny(x) {
 }
 // Czy pole sesji klirensu niesie wynik albo wpis lekarza: liczba (takze tekstem, z przecinkiem) albo zaznaczenie.
 function Bsc_klirensDana(k, x) {
-  if (BSC_KLIRENS_POLA_PACJENTA.indexOf(k) >= 0 || x === undefined || x === null || x === '' || x === false) return false;
+  if (BSC_KLIRENS_POLA_PACJENTA.indexOf(k) >= 0 || BSC_KLIRENS_POLA_WIDOKU.indexOf(k) >= 0) return false;
+  if (x === undefined || x === null || x === '' || x === false) return false;
   if (x === true) return true;
   if (typeof x === 'number') return isFinite(x);
   if (typeof x === 'string') {
@@ -72,16 +79,24 @@ function Bsc_klirensDana(k, x) {
   }
   return !Bpu_pusta(x);
 }
-function Bsc_bezDanych(klucz, x) {
-  if (!x || typeof x !== 'object' || Array.isArray(x)) return Bpu_pusta(x);
+// Dane sekcji kartoteki: kopia sekcji bez wartosci domyslnych strony (reguly wyzej), PAL i cel wlasny jako liczby;
+// z sesji klirensu v2 — same pola z danymi. Sluzy tylko do oceny i porownan („bez danych”, „zmiana lekarza”), nigdy
+// nie jest zapisywana.
+function Bsc_dane(klucz, x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return x;
   if (klucz === 'clcr' && x.inputs && typeof x.inputs === 'object' && !Array.isArray(x.inputs)) {
-    return !Object.keys(x.inputs).some(function (k) { return Bsc_klirensDana(k, x.inputs[k]); });
+    const wyniki = {};
+    Object.keys(x.inputs).forEach(function (k) { if (Bsc_klirensDana(k, x.inputs[k])) wyniki[k] = x.inputs[k]; });
+    return { inputs: wyniki };
   }
   const y = Object.assign({}, x);
   if (klucz === 'plan') {
-    if (!Bsc_palWybrany(y)) delete y.palFactor;
+    if (Bsc_palWybrany(y)) y.palFactor = Number(y.palFactor);
+    else delete y.palFactor;
     if (!(y.dietaWybrana === true && y.dietLevel)) delete y.dietLevel;
-    if (Bsc_celWlasny(y.customGoalKg) === null) delete y.customGoalKg;
+    const cel = Bsc_celWlasny(y.customGoalKg);
+    if (cel === null) delete y.customGoalKg;
+    else y.customGoalKg = cel;
     delete y.palWybrany;
     delete y.dietaWybrana;
   } else if (klucz === 'intake') {
@@ -89,7 +104,10 @@ function Bsc_bezDanych(klucz, x) {
   } else if (klucz === 'doctor') {
     delete y.isDoctor;
   }
-  return Bpu_pusta(y);
+  return y;
+}
+function Bsc_bezDanych(klucz, x) {
+  return Bpu_pusta(Bsc_dane(klucz, x));
 }
 async function Bsc0(t,e,Bpu_o){if(!T())throw new Error("Zaloguj się, by scalić pacjent\xF3w.");if(typeof t!="string"||!t||typeof e!="string"||!e)throw new Error("mergePatients: brak identyfikator\xF3w.");if(t===e)throw new Error("mergePatients: źr\xF3dło i cel są tym samym rekordem.");const Bpu_k=t<e?[t,e]:[e,t];return Bzw_podBlokada(Bpu_k[0],function(){return Bzw_podBlokada(Bpu_k[1],function(){return Bsc_podBlokada(t,e)},Bpu_o)},Bpu_o)}async function Bsc_podBlokada(t,e){const n=await ct(t);if(!n)throw new Error("mergePatients: brak rekordu źr\xF3dłowego.");const r=await ct(e);if(!r)throw new Error("mergePatients: brak rekordu docelowego.");if(n.header&&n.header.external||r.header&&r.header.external)throw new Error("mergePatients: rekordy spoza bazy scala mergeExternalIntoPatient.");Dn();const o=await I().listSnapshotsForUser(b,t);let a=0;for(let d=0;d<o.length;d+=1)await I().putSnapshotForUser(b,Object.assign({},o[d],{patientId:e},Bm1(o[d]))),a+=1;const s=await I().listSnapshotsForUser(b,e);s.sort(function(d,p){const w=d.savedAtISO||"",h=p.savedAtISO||"";return w<h?-1:w>h?1:(d.updatedAtISO||"")<(p.updatedAtISO||"")?-1:1});for(let d=0;d<s.length;d+=1)s[d].seq!==d+1&&await I().putSnapshotForUser(b,Object.assign({},s[d],Bm1({seq:d+1})));const i=r.snapshots.length?r.snapshots[0].payload:null,c=n.snapshots.length?n.snapshots[0].payload:null,l=Bsc1(i,c),y=await Bpz_zapis(l.payload,{patientId:e,dedup:!1,skipAdvancedAntiClobber:!0},!0);try{const Bt0=await I().listSnapshotsForUser(b,e),Bt1=await I().getPatientForUser(b,e);Bt1&&Bt1.snapshotCount!==Bt0.length&&await I().putPatientForUser(b,Object.assign({},Bt1,{snapshotCount:Bt0.length}))}catch{}const Bs=await Fn(t);let p=0;for(let d=0;d<Bs.length;d+=1){const w=Bs[d];await ie({id:w.id,patientId:e,title:w.title&&w.title.trim()?w.title:"(wpis)",body:w.body||"",category:w.category,dueDateISO:w.dueDateISO||null,externalName:null}),p+=1}let w=0;try{const d=await Rn();for(let h=0;h<d.length;h+=1){const O=d[h],u=(O.memberIds||[]).indexOf(t)>=0,f=(O.excludeIds||[]).indexOf(t)>=0;if(!u&&!f)continue;const m=(O.memberIds||[]).filter(function(_){return _!==t});u&&m.indexOf(e)<0&&m.push(e);const E=(O.excludeIds||[]).filter(function(_){return _!==t});f&&!u&&E.indexOf(e)<0&&E.push(e),await on({id:O.id,memberIds:m,excludeIds:E}),w+=1}}catch{}await Bpu_usun(t);return{targetPatientId:e,sourcePatientId:t,snapshotsMoved:a,notesMoved:p,listsUpdated:w,rowsAdded:l.stats.rows,pointsAdded:l.stats.points,snapshotId:y.snapshotId,snapshotCount:s.length+1}}
 async function $a(t,e){if(!T())throw new Error("Zaloguj si\u0119, by scali\u0107 pacjent\xF3w.");if(!t||!e)throw new Error("mergeExternalIntoPatient: brak identyfikator\xF3w.");if(t===e)throw new Error("mergeExternalIntoPatient: \u017Ar\xF3d\u0142o i cel s\u0105 tym samym rekordem.");const n=await ct(t);if(!n)throw new Error("mergeExternalIntoPatient: brak rekordu \u017Ar\xF3d\u0142owego.");if(!(n.header&&n.header.external))throw new Error("mergeExternalIntoPatient: \u017Ar\xF3d\u0142o nie jest rekordem spoza bazy.");if(!await ct(e))throw new Error("mergeExternalIntoPatient: brak pacjenta docelowego.");const o=await Fn(t);let a=0;for(let i=0;i<o.length;i+=1){const c=o[i];await ie({id:c.id,patientId:e,title:c.title&&c.title.trim()?c.title:"(wpis)",body:c.body||"",category:c.category,dueDateISO:c.dueDateISO||null,externalName:null}),a+=1}let s=0;try{const i=await Rn();for(let c=0;c<i.length;c+=1){const l=i[c],y=(l.memberIds||[]).indexOf(t)>=0,d=(l.excludeIds||[]).indexOf(t)>=0;if(!y&&!d)continue;const p=(l.memberIds||[]).filter(function(h){return h!==t});y&&p.indexOf(e)<0&&p.push(e);const w=(l.excludeIds||[]).filter(function(h){return h!==t});d&&!y&&w.indexOf(e)<0&&w.push(e),await on({id:l.id,memberIds:p,excludeIds:w}),s+=1}}catch{}return await _n(t),{notesMoved:a,targetPatientId:e,listsUpdated:s}}async function to(t,e){if(!T())throw new Error("Zaloguj si\u0119, by doda\u0107 osob\u0119 do bazy.");if(!t)throw new Error("promoteExternalToBase: brak identyfikatora.");const n=await ct(t);if(!n)throw new Error("promoteExternalToBase: brak rekordu.");if(!(n.header&&n.header.external))throw new Error("promoteExternalToBase: rekord nie jest osob\u0105 spoza bazy.");const r=e||{},o=ut(r.dobISO);if(!o)throw new Error("promoteExternalToBase: wymagana poprawna data urodzenia.");const a=n.header||{},s=typeof r.lastName=="string"&&r.lastName.trim()?r.lastName.trim().slice(0,80):a.lastName||"",i=typeof r.firstName=="string"&&r.firstName.trim()?r.firstName.trim().slice(0,80):a.firstName||"";let c;if(s||i?c=[s,i].filter(function(_){return _}).join(" "):c=a.name||"",!c)throw new Error("promoteExternalToBase: brak nazwiska.");const l=r.sex==="M"||r.sex==="K"?r.sex:a.sex==="M"||a.sex==="K"?a.sex:"";function y(_){if(_==null||_==="")return null;const A=parseFloat(String(_).replace(",","."));return isFinite(A)?A:null}const d={dobISO:o,sex:l};try{const _=En(o);_&&typeof _.years=="number"&&(d.age=_.years,d.ageMonths=typeof _.ageMonths=="number"?_.ageMonths:0)}catch{}i&&(d.firstName=i),s&&(d.lastName=s);const p=y(r.height);p!=null&&(d.height=p);const w=y(r.weight);w!=null&&(d.weight=w);const h={name:c,user:d,timestampISO:new Date().toISOString()},O={},u=y(r.motherHeight);u!=null&&(O.motherHeight=u);const f=y(r.fatherHeight);f!=null&&(O.fatherHeight=f),Object.keys(O).length&&(h.advanced=O);const m={},E=typeof r.guardianNote=="string"?r.guardianNote.trim().slice(0,2e3):a.contact&&String(a.contact).trim()?String(a.contact).trim().slice(0,2e3):"";return E&&(m.note=E),typeof r.guardianName=="string"&&r.guardianName.trim()&&(m.name=r.guardianName.trim().slice(0,120)),typeof r.guardianPhone=="string"&&r.guardianPhone.trim()&&(m.phone=r.guardianPhone.trim().slice(0,40)),typeof r.guardianEmail=="string"&&r.guardianEmail.trim()&&(m.email=r.guardianEmail.trim().slice(0,120)),Object.keys(m).length&&(h.guardian=m),_e(h,{patientId:t,dedup:!1})}function Te(t){return typeof t=="number"&&isFinite(t)}function qe(t){try{return(t&&t.data&&Array.isArray(t.data.measurements)?t.data.measurements:[]).filter(function(n){return n&&n.ghSync!==!0})}catch{return[]}}function fr(t){return!t||typeof t!="object"?!1:qe(t).length>0||Te(t.motherHeight)||Te(t.fatherHeight)||Te(t.boneAgeYears)}function eo(t){try{return(t&&t.data&&Array.isArray(t.data.measurements)?t.data.measurements:[]).some(function(n){return n&&n.ghSync===!0})}catch{return!1}}
@@ -1149,11 +1167,21 @@ function Bdo_dopisz(lista, zapis, baza, glowa) {
 // niewypelniony plan karty docelowej {palFactor:null, palWybrany:false…} zastepowal wypelniony plan starej karty). Punkty terapii — zbiorem:
 // punkty karty docelowej bez usunietych przez lekarza, plus dodane przez lekarza. Wiersze pomiarow liczy Bdo_dopisz.
 // Pola wewnetrzne („_…”, np. przypiecie wersji) nie sa przenoszone z karty docelowej.
-// P-SCALANIE-SEKCJE: na najwyzszym poziomie zapisu „pusta” znaczy „bez danych” jak w „Scal pacjentow” (Bsc_bezDanych):
-// wartosci domyslne strony (PAL bez wyboru, PAL karty spozycia, znacznik lekarza z docpro, sesja klirensu bez wyniku) nie
-// sa ani danymi karty docelowej, ani zmiana lekarza. Dotad przeliczony domyslny PAL w formularzu starej karty (np. 1,6 →
-// 1,4) liczyl sie jako zmiana i kasowal WYBRANY plan karty docelowej, a domyslny plan karty docelowej (scalenie sprzed
-// poprawki) wygrywal z planem z formularza. Poziomy user, advanced i data — bez zmian (Bpu_pusta).
+// P-SCALANIE-SEKCJE: na najwyzszym poziomie zapisu sekcje oceniamy na ich danych (Bsc_dane — bez wartosci domyslnych
+// strony: PAL bez wyboru, PAL karty spozycia, znacznik lekarza z docpro, pola sesji klirensu bez wyniku):
+//   - sekcja glowy karty docelowej bez danych nie zastepuje sekcji z formularza (jak „Scal pacjentow”);
+//   - sekcja formularza z danymi jest zmiana lekarza, gdy jej DANE roznia sie od danych kopii wczytanej — sama roznica
+//     wartosci domyslnych (przeliczony PAL 1,6 → 1,4, nowy savedAtISO sesji klirensu) zmiana nie jest. Gdy dane sa inne,
+//     sekcja z formularza przechodzi w calosci (jak dotad: inna dieta, wyczyszczony cel wlasny przy wybranej diecie);
+//   - sekcja formularza bez danych jest zmiana lekarza tylko wtedy, gdy lekarz wyczyscil w niej dane, ktore glowa karty
+//     docelowej ma z kopii wczytanej: formularz zapisal sekcje (nie null i nie same puste pola — strona, ktora sekcji nie
+//     prowadzi, zapisuje ja samymi null i jej nie czysci), kopia wczytana miala w niej dane, a glowa ma te same dane
+//     (uwaga recenzji: skasowana Scr, usuniety PWZ, wyczyszczona historia spozycia, zdjety wybor diety i cel wlasny
+//     wyczyszczony przez „Nowy pomiar” wracaly do glowy — zwykly zapis tej wizyty je usuwa). Glowa z innymi danymi
+//     (wlasna Scr karty docelowej) zostaje.
+// Dotad przeliczony domyslny PAL w formularzu starej karty liczyl sie jako zmiana i kasowal WYBRANY plan karty
+// docelowej, a domyslny plan karty docelowej (scalenie sprzed poprawki) wygrywal z planem z formularza. Poziomy user,
+// advanced i data — bez zmian (Bpu_pusta, cala wartosc).
 const BDO_PUNKTY = ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints'];
 function Bdo_sekcje(zapis, baza, glowa) {
   if (!zapis || typeof zapis !== 'object' || !glowa || typeof glowa !== 'object') return;
@@ -1170,18 +1198,23 @@ function Bdo_sekcje(zapis, baza, glowa) {
   const pusta = Bpu_pusta;
   const kopia = function (x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); };
   const obiekt = function (x) { return !!x && typeof x === 'object' && !Array.isArray(x); };
-  // Pole po polu: bez zmiany lekarza — niepusta wartosc z karty docelowej. bezDanych(k, x) — ocena „pustej” wartosci
-  // (domyslnie pusta; na najwyzszym poziomie Bsc_bezDanych).
-  const pola = function (cel, wBazie, wGlowie, pomin, bezDanych) {
-    const brak = bezDanych || function (k, x) { return pusta(x); };
+  // Pole po polu: bez zmiany lekarza — niepusta wartosc z karty docelowej. rzut(k, x) — czesc wartosci, ktora jest dana
+  // (na najwyzszym poziomie Bsc_dane; nizej cala wartosc): „pusta” = pusty rzut, „inna” = inny rzut.
+  const pola = function (cel, wBazie, wGlowie, pomin, rzut) {
+    const r = rzut || function (k, x) { return x; };
+    const brak = function (k, x) { return pusta(r(k, x)); };
+    const inne = function (k, a, b) { return tekst(r(k, a)) !== tekst(r(k, b)); };
     Object.keys(wGlowie).forEach(function (k) {
       if (k.charAt(0) === '_' || pomin.indexOf(k) >= 0 || brak(k, wGlowie[k])) return;
       const wBazieK = wBazie ? wBazie[k] : undefined;
-      const zmiana = wBazieK !== undefined && !brak(k, cel[k]) && tekst(cel[k]) !== tekst(wBazieK);
+      let zmiana = false;
+      if (wBazieK !== undefined && !brak(k, cel[k])) zmiana = inne(k, cel[k], wBazieK);
+      // Najwyzszy poziom: lekarz wyczyscil sekcje, ktorej dane glowa ma z kopii wczytanej (opis nad BDO_PUNKTY).
+      else if (wBazieK !== undefined && rzut) zmiana = !pusta(cel[k]) && !brak(k, wBazieK) && !inne(k, wGlowie[k], wBazieK);
       if (!zmiana) cel[k] = kopia(wGlowie[k]);
     });
   };
-  pola(zapis, b0, glowa, BDO_PUNKTY.concat(['user', 'advanced', 'growthBasic']), Bsc_bezDanych);
+  pola(zapis, b0, glowa, BDO_PUNKTY.concat(['user', 'advanced', 'growthBasic']), Bsc_dane);
   if (obiekt(glowa.user)) {
     if (!obiekt(zapis.user)) zapis.user = {};
     pola(zapis.user, obiekt(b0.user) ? b0.user : null, glowa.user, []);
