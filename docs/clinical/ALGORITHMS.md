@@ -3346,6 +3346,57 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
+### P-DIETA-WYCZYSC — wybór diety poprzedniego pacjenta nie przechodzi do następnego (SW 1.1.274, `vilda_data_import_export.js` 104, 2026-10-14, polecenie właściciela)
+
+**Objaw.** Punkt z listy P-COLE-RESET. „Wyczyść wszystkie pola” i blokada sejfu zostawiały w selekcie `#dietLevel` dietę poprzedniego pacjenta. U następnego pacjenta bez planu redukcji (BMI w normie) `collectUserData` zapisywał ją w `plan.dietLevel`, z `dietaWybrana=false`. Trafiała do rekordu, sesji karty, ładunku zapisu i sejfu. W powłoce `app.html` skutek był widoczny w zaleceniach. Znacznik „dieta wybrana przez lekarza” pacjenta A wracał do Start po odświeżeniu. Dieta domyślna nowej pacjentki stawała się wtedy wyborem lekarza i przestawała iść za zaleceniem silnika.
+
+**Przyczyna.**
+- `clearAllData` (`Rt` → `Bt`) zerowało znaczniki `__vildaDietLevelTouched` i `__vildaDietLevelDefault`, ale nie wartość `#dietLevel`. `identityReset` (`sa`) ją zeruje, więc wczytanie innego pacjenta z listy było czyste.
+- `Bt` zerował znaczniki diety tylko wewnątrz warunku „strona ma `#palFactor`” (dotyczy `__vildaDietStrategyTouched`, `__vildaDietGoalChoice`, `__vildaDietLevelTouched` i `__vildaDietLevelDefault`). DocPro i kalkulator klirensu nie mają tego pola.
+- DocPro i klirens nie mają też `#dietLevel`. Mimo to `vildaDietaPoWczytaniu` ustawiała w nich znacznik z rekordu bieżącego pacjenta.
+- „Wyczyść” klirensu (`#clearBtn`, także jako echo z powłoki) nie woła `clearAllData`. Przy odświeżeniu powłoki klirens zapisywał sesję karty jako ostatni. Scalanie sesji traktuje `false` jak brak wartości, więc `true` zostawało i Start je przejmował.
+
+Zmierzone na `audyt` 2df41a8 (Chromium, dane fikcyjne):
+- **index, „Wyczyść”.** Kroki: A (12 l., 150 cm, 62 kg, dieta intensywna wybrana przez lekarza albo domyślna lekka lub umiarkowana) → „Wyczyść” → B 150 cm, 40 kg. Wynik: `plan.dietLevel` = dieta A, `dietaWybrana=false`; w kontroli (świeża karta) `null`. Tak samo u dorosłej (35 l., 165 cm, 90 → 60 kg) i przy blokadzie sejfu.
+- **Skutek na samym index.** Teksty zaleceń, plan i Droga do normy są identyczne z kontrolą. Problem dotyczy tylko integralności rekordu.
+- **DocPro.** Po `clearAllData` znacznik pacjenta A zostaje: `dietaWybrana=true`.
+- **Klirens.** Wczytany zapis z wyborem lekarza → „Wyczyść” (`#clearBtn`) → `dietaWybrana=true`.
+- **Powłoka.**
+  - Kroki: A zapisana z dietą intensywną (wybór lekarza) → „Odtwórz zapis” w Start → DocPro → klirens → Start, „Wyczyść” → nowa pacjentka 12 l., 150 cm, 56 kg (nadwaga, domyślna dieta lekka) → zapis → odświeżenie powłoki.
+  - Wynik: Start ma znacznik wyboru lekarza. Po zmianie masy na 60 kg (otyłość) plan to `{light, dietaWybrana:true}`, czyli „Dieta lekka ≤ 1700 kcal” zamiast zalecanej „umiarkowanej ≤ 1550 kcal”, i tak trafia do sejfu.
+  - Kontrola (powłoka bez A): `{moderate, false}`.
+
+**Zmiana.** `vilda_data_import_export.js` 103 → 104:
+1. `Bt` zeruje znaczniki diety w każdej ramce, poza warunkiem `#palFactor`. Wartość `#dietLevel` ustawia na `""`, jak `sa`. Opcje selecta zostają, bo ich usunięcie gubi wybór lekarza przy wczytaniu zapisu tuż po „Wyczyść” (zmierzone).
+2. `vildaDietaPoWczytaniu` ustawia znacznik tylko na stronie z `#dietLevel` (tak jak `vildaPalPoWczytaniu` tylko przy `#palFactor`). Wybór lekarza dla tego samego pacjenta niesie sesja Start. Zmierzone w analizie: po odświeżeniu powłoki ten sam pacjent zachowuje `intense/true`.
+
+**Wpływ kliniczny.** Klasyfikacja: zmiana funkcjonalna z widocznym skutkiem w powłoce (AGENTS.md § 2 i § 3, ostatni punkt). Reguły doboru diety (P-DIETA-AUDYT2 A1), wzory i progi zostają bez zmian. Zmienia się:
+- (a) zawartość zapisu i sesji po „Wyczyść” i blokadzie: `plan.dietLevel` nowego pacjenta to `null`, a nie dieta poprzedniego;
+- (b) w powłoce dieta nowego pacjenta idzie za zaleceniem silnika, a nie za utrwalonym „wyborem lekarza” poprzedniego pacjenta. W przypadku wyżej daje to umiarkowaną ≤ 1550 kcal zamiast lekkiej ≤ 1700 kcal;
+- (c) w DocPro i klirensie „Wyczyść”, blokada i wczytanie innego pacjenta zerują też wybór strategii i celu diety. Wyczytane z kodu: w DocPro te flagi sterują tylko przyciskami celu, a wartość celu bierze się z `#customGoalKg`, które już było czyszczone;
+- (d) zapis z DocPro lub klirensu tego samego pacjenta ma `dietaWybrana=false`. Wersja z tych ramek i tak ma `dietLevel=null`, a wczytanie wymaga `dietLevel`.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik, dane fikcyjne).**
+- W1: 12 l., 150 cm, 62 kg, lekarz wybiera dietę intensywną → „Wyczyść” → 150 cm, 40 kg → `{dietLevel:null, dietaWybrana:false}` (dotąd `intense`).
+- W2: dorosła 35 l., 165 cm, 90 kg (domyślna umiarkowana) → „Wyczyść” → 165 cm, 60 kg → `{null, false}` (dotąd `moderate`).
+- W3, straż: po „Wyczyść” 12 l., 150 cm, 60 kg → własna dieta domyślna `{moderate, false}`.
+- W4, straż straty: „Wyczyść”, potem wczytanie zapisu `{intense, true}` → `{intense, true}`.
+- W5: DocPro, wczytanie zapisu `{intense, true}` → `clearAllData` → `dietaWybrana=false` (dotąd `true`).
+- W6: klirens, wczytanie zapisu `{intense, true}` → „Wyczyść” → `dietaWybrana=false` (dotąd `true`).
+- Powłoka: scenariusz z akapitu „Przyczyna” → po odświeżeniu brak znacznika, a po 60 kg `{moderate, false}` (dotąd `{light, true}`).
+
+**Strażnicy.** `tests/e2e/dieta-wyczysc.spec.mjs` (nowy, 7 testów). **Zmierzone czerwone** na `audyt` 2df41a8: 5 z 7 (W1, W2, W5, W6 i powłoka). W3 i W4 to straże, zielone po obu stronach. Wariant bez bramki w `vildaDietaPoWczytaniu`, zmierzony w analizie, zostawia czerwony W6 i scenariusz powłoki z nową pacjentką z nadwagą.
+
+**Czego ta zmiana NIE robi (do decyzji właściciela, zmierzone w analizie).**
+- **Wybór lekarza ginie przy pierwszym wczytaniu w karcie, w której plan nie był liczony.** Dotyczy „Odtwórz zapis”, „Nowy pomiar” i F5. Zapis `intense/true` wraca jako `moderate/true` („umiarkowana ≤ 1600” zamiast „intensywnej ≤ 1450 kcal” u 12-latki 150/62). Przy kolejnym zapisie trafia do sejfu jako wybór lekarza. Przyczyna: wartość ustawiana w selekcie, zanim ma opcje. Zmierzona poprawka (tymczasowa opcja w `vildaDietaPoWczytaniu`) zmienia wyświetlaną dietę, więc to osobny PR ze skutkiem klinicznym.
+- **PAL po „Odtwórz zapis”.** Zapis 1,6 z `palWybrany=false` wraca jako 1,4 z `palWybrany=true`. U dorosłej zalecenia spadają z 2100 do 1800 kcal/d. To regresja P-PAL-ZAPIS o tym samym mechanizmie: wartość ustawiana przed zbudowaniem opcji, a syntetyczne zdarzenie `change` jest traktowane jak wybór lekarza. Osobne zadanie.
+- **Zapis z DocPro tego samego pacjenta** ma `plan {dietLevel:null, palFactor:null}`, więc wybór lekarza i PAL znikają z najnowszej wersji. Problem istniał już wcześniej.
+- **Droga do normy.** Chipy ruchu i `dietKey` leżą w `localStorage`, wspólnym dla pacjentów i kont na urządzeniu, i trafiają do modelu PDF następnego pacjenta. Do decyzji: preferencja urządzenia czy dane pacjenta.
+- **`plan.dietLevel` bez planu redukcji.** U tego samego pacjenta po zmianie masy z nadmiernej na prawidłową dieta nadal jest zapisywana. To pytanie o semantykę zapisu.
+- **Rekordy już zapisane z obcą dietą** (`dietaWybrana=false`) nie są migrowane. Same się naprawiają przy „Odtwórz zapis”.
+
+**Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
+
 ### P-COLE-RESET — Cole i rodzina BMI poprzedniego pacjenta nie przechodzą na następnego (SW 1.1.264, `vilda_update_prep.js` 96, `vilda_data_import_export.js` 103, 2026-10-13, polecenie właściciela)
 
 **Objaw.** Punkt z listy P-SPOZYCIE-PETLA („nieaktualny Cole między pacjentami”), polecenie właściciela: „zajmij się resetem Cola między pacjentami”. Po pacjencie z Cole ≥ 110% karta „Szacowane spożycie energii” rozwijała się u następnego dziecka. Decyzja zapadała na wskaźniku poprzedniego pacjenta. Do opuszczenia pola rekord (`collectUserData()`) i sesja karty niosły wtedy `intake.history`.
@@ -3392,7 +3443,7 @@ Cole nie jest utrwalany ani synchronizowany (nie ma go w `collectUserData()` ani
 - **Epikryza** (`vilda_epicrisis_ui.js`) bierze globalny Cole także bez własnego BMI. Utwardzenie: używać go tylko przy policzonym BMI.
 - **Ten sam wzorzec, poza zakresem.** `lastWeightPercentile` i `lastHeightPercentile` czytają puls trybu PRO i ton wiersza masy w raporcie; `update()` nie nadpisuje ich u dorosłego (wyczytane z kodu, niezmierzone). Do tego `wfhPercentile`, `wfhSD` i `wfhSource`.
 - **Podsumowanie przy błędzie zakresu** (`generateMetabolicSummary`) liczy Cole samo z błędnych pól (np. „1453 %”). Tak jest też w świeżej karcie; ta zmiana tego nie rusza.
-- **`plan.dietLevel`** po „Wyczyść” przechodzi do rekordu następnego, ręcznie wpisanego pacjenta. To osobny przeciek, zmierzony w analizie.
+- **`plan.dietLevel`** po „Wyczyść” przechodzi do rekordu następnego, ręcznie wpisanego pacjenta. To osobny przeciek, zmierzony w analizie. *Załatwione 2026-10-14 w P-DIETA-WYCZYSC (razem ze znacznikiem „dieta wybrana” w DocPro i klirensie).*
 - Zerowanie przy zatrzymanym `update()` w ukrytej ramce powłoki zależy od klatki animacji (zmierzone w headless Chromium). Na Safari/iOS tego nie sprawdzano. Zerowanie w `xt()` od klatki nie zależy.
 
 **Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
