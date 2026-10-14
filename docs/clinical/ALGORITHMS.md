@@ -4675,7 +4675,7 @@ Przegląd sprawdził też wzrost rodziców w DocPro (druga przypadkowa zgodnoś�
 
 **Wersje.** `app.js` 236, `vilda_advanced_growth.js` 76, `vilda_auth_ui.js` 490 (wstrzykiwany: `vilda_chrome.js` 138, `vilda_session_bridge.js` 62), `vilda_patient_summary_copy.js` 16, `vilda_summary_cards.js` 61; SW 1.1.272 → 1.1.273 (numer 1.1.272 nadał równolegle #673).
 
-### P-GRANICA-URODZIN — siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje: urodziny 2, 3, 5, 18, 18,5 i 19 lat (SW 1.1.274, 2026-10-14, decyzja właściciela)
+### P-GRANICA-URODZIN — siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje: urodziny 2, 3, 5, 18, 18,5 i 19 lat (SW 1.1.275, 2026-10-14, decyzja właściciela)
 
 **Decyzja właściciela (2026-10-14).** „Napraw granicę urodzin w osobnym PR”. Reguła: siatkę i bramki kategorii wybierają pełne miesiące kalendarzowe, a wiek dokładny (doby / 30,4375) tylko interpoluje w obrębie wybranej siatki. Granica 1. miesiąca (noworodek: WHO 2006 zamiast Palczewskiej) zostaje według dób, jak dotąd — wariant „noworodek wg dób”, wybrany przez właściciela. Wpis rozstrzyga „Do decyzji” z P-WIEK-POMIARU-2.
 
@@ -4759,7 +4759,7 @@ Przegląd sprawdził też wzrost rodziców w DocPro (druga przypadkowa zgodnoś�
 - Masa od 36 mies. — w formularzu i we wsadzie — bierze wiersz pełnych miesięcy, bez interpolacji wiekiem dokładnym, inaczej niż wzrost i BMI. Interpolacja masy to osobna zmiana kliniczna.
 - Wsad liczy masę na siatce zespołu Downa, gdy pacjent wczytany w formularzu ma DS (`getChildLMS` → `vildaPopulacjaDs()`). Wzrost i BMI wsadu podają populację ogólną jawnie. To błąd sprzed tej zmiany (z przeglądu kodu, niezmierzony).
 
-**Wersje.** `app.js` 237, `vilda_sds_wzrostu.js` 5, `vilda_bmi.js` 10, `vilda_down_syndrome.js` 5, `vilda_professional_module.js` 13; SW 1.1.273 → 1.1.274 (numery 1.1.272 i 1.1.273 nadały równolegle #673 i #675, `app.js` 236 — #675).
+**Wersje.** `app.js` 237, `vilda_sds_wzrostu.js` 5, `vilda_bmi.js` 10, `vilda_down_syndrome.js` 5, `vilda_professional_module.js` 13; SW 1.1.274 → 1.1.275 (numery 1.1.272, 1.1.273 i 1.1.274 nadały równolegle #673, #675 i #677, `app.js` 236 — #675).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
