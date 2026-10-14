@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
+const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
 const engine = require('../../vilda_hormone_lifespan_reference.js');
 const runtime = require('../../vilda_hormone_lifespan_data.js');
 const display = require('../../vilda_hormone_lifespan_display.js');
@@ -24,10 +25,10 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', () => {
   it('zachowuje wszystkie 60 wcześniejszych profili i przeliczenia dokładnie, dodając sześć osobnych odniesień', () => {
     const original = { ...data, version: '2026-10-11.1',
-      profiles: data.profiles.filter(p => !addedIds.includes(p.id) && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id)) };
-    expect(data.profiles).toHaveLength(74);
+      profiles: data.profiles.filter(p => !addedIds.includes(p.id) && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id) && !laterChildhoodIds.includes(p.id)) };
+    expect(data.profiles).toHaveLength(76);
     expect(laterFemaleIds).toHaveLength(5);
-    expect(data.profiles.filter(p => p.ordinaryOnly && p.sex === 'female' && !laterFemaleIds.includes(p.id)).map(p => p.id)).toEqual(addedIds);
+    expect(data.profiles.filter(p => p.ordinaryOnly && p.sex === 'female' && !laterFemaleIds.includes(p.id) && !laterChildhoodIds.includes(p.id)).map(p => p.id)).toEqual(addedIds);
     expect(original.profiles).toHaveLength(60);
     expect(createHash('sha256').update(JSON.stringify(original)).digest('hex'))
       .toBe('9d5c86ac8f47e822c5768c8ac68e7987e6e46cafdfe37c0a8c776f9cd3e88dff');
@@ -154,7 +155,7 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
       expect(evaluate('inhb', age).referenceValue).toBe(engine.referenceAt(comparison, age));
     }
     expect(evaluate('inhb', 15, { ageUpperYears: 16, ageUpperInclusive: false }).referenceValue).toBe(44);
-    for (const age of [1.01, 5.5999, 47.0001, 48]) {
+    for (const age of [.019, 47.0001, 48]) {
       expect(evaluate('inhb', age)).toEqual(unavailable('unsupported-age'));
     }
     expect(evaluate('inhb', 20, { ageUpperYears: 21, ageUpperInclusive: false }).referenceValue).toBe(34);
@@ -174,12 +175,13 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
     }
   });
 
-  it('kwalifikuje cały możliwy wiek od 5,6 i zachowuje lukę źródłową oraz górny brzeg 47', () => {
+  it('kwalifikuje cały możliwy wiek od 5,6 i zachowuje granice osobnych źródeł oraz górny brzeg 47', () => {
     expect(evaluate('inhb', 5.6)).toMatchObject({ status: 'ready', referenceValue: 11 });
-    for (const [low, high] of [[1.08, 1.09], [5, 6], [5.59, 5.61], [5 + 7 / 12, 5 + 8 / 12]]) {
+    for (const [low, high] of [[5, 6], [5.59, 5.61], [5 + 7 / 12, 5 + 8 / 12]]) {
       expect(evaluate('inhb', low, { ageUpperYears: high, ageUpperInclusive: false }))
-        .toEqual(unavailable('unsupported-age'));
+        .toEqual(unavailable('ambiguous-age'));
     }
+    expect(evaluate('inhb', 1.08, { ageUpperYears: 1.09 }).referenceValue).toBe(33);
     expect(evaluate('inhb', 5 + 8 / 12, { ageUpperYears: 5 + 9 / 12, ageUpperInclusive: false }).referenceValue)
       .toBeCloseTo(11, 10);
     expect(evaluate('inhb', 7, { ageUpperYears: 8, ageUpperInclusive: false }).referenceValue).toBe(12);
@@ -190,7 +192,7 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
   });
 
   it('rozszerzenie źródła nie zmienia 65 pozostałych profili, żadnej geometrii ani odrębnego porównania 8–20', () => {
-    const unchangedProfiles = data.profiles.filter(p => p.id !== inhibinPolicy.id && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id));
+    const unchangedProfiles = data.profiles.filter(p => p.id !== inhibinPolicy.id && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id) && !laterChildhoodIds.includes(p.id));
     expect(unchangedProfiles).toHaveLength(65);
     expect(createHash('sha256').update(JSON.stringify(unchangedProfiles)).digest('hex'))
       .toBe('6ec13e2cb5556a6a5e57df7bba1e3032007215b713c6937cccabbe7368ade1f4');

@@ -47,7 +47,7 @@ Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
    ciąża lub stan po menopauzie blokują to nowe odniesienie. Zachowane
    dotychczasowe blokady, w tym GnRHa. Szczegóły i przypadek F28/1 ng/mL:
    [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026).
-3. **Bieżąca partia — inhibina B obu płci:** ponowna macierz dostępności
+3. **Zakończone, PR #672 — inhibina B obu płci:** ponowna macierz dostępności
    oraz rozszerzenie zwykłego żeńskiego profilu Borelli-Kjær do **5,6–47 lat
    włącznie**. Zachowane wszystkie 24 węzły i PCHIP, bez sztucznej granicy
    przy 20 latach. To przybliżona mediana wieku; cyklu nie standaryzowano,
@@ -58,15 +58,28 @@ Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
    Crofton nie jest aktywowany. Tabela grupy 0–6 lat obejmuje N=105,
    lecz szerokie łączenie wieku, 35% wyników pod LOD, osocze i historyczna
    metoda wymagają osobnej decyzji; nie jest to mediana dokładnego wieku
-   ani model minipuberty. Luki >1–<5,6 oraz >47 lat pozostają jawne.
+   ani model minipuberty. W tej partii luki >1–<5,6 oraz >47 lat pozostały jawne.
    Męskie źródła pozostają bez zmian: Busch 7 dni–<1 roku, Kelsey
    1–<6,1 i Borelli 6,1–80 lat. Osobne średnie grup Senior do 101 lat
    nie wypełniają luki zwykłego modelu po 80. roku. Mediany wcześniaków
    Kuiri w dwóch wizytach pozostają podsumowaniami grup, bez dokładnego
-   punktu na krzywej wieku. Następna decyzja dotyczy użyteczności osobnego
-   historycznego odniesienia Crofton w luce młodszych dziewczynek;
-   nie deklarujemy jej rozwiązania w bieżącej partii.
-4. Dopiero potem rozważyć osobny snapshot bieżącego porównania AMH,
+   punktu na krzywej wieku. Poniższa kolejna partia wykorzystuje Zhou
+   dla młodszych dziewczynek; nie aktywuje Crofton.
+4. **Bieżąca partia — inhibina B dziewczynek >1–<5,6 lat:** dwie stałe
+   mediany pełnych grup Zhou 2025: 1–5 lat, N=60, **33 pg/mL** oraz
+   5–10 lat, N=77, **27 pg/mL**. Surowica, Kangran CLIA na KAESER 1000,
+   przekrojowa kohorta szpitalna z Wuhan. Zwykły wykres stosuje je tylko
+   w `(1,5)` i `[5,5.6)`; granica 5 jest jawną konwencją aplikacji,
+   nie opisaną regułą autorów. Dokładnie 1 zachowuje Ljubicic, od 5,6
+   Borelli. Cały możliwy wiek musi pasować do jednej grupy, bez interpolacji.
+   Nieznana metoda/materiał pozwala na orientacyjne odniesienie;
+   znana niezgodność je wyklucza. Bez harmonizacji z Gen II, nowych norm,
+   krzywych, pól, historii, profili męskich lub porównań płci. Szczegóły:
+   [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026).
+   Pozostają braki przed pierwszym żeńskim węzłem 0,02 roku, po 47 latach
+   i dla wieku przecinającego granice źródeł. Dane wcześniacze i męski
+   pierwszy tydzień wymagają osobnych materiałów lub decyzji.
+5. Dopiero potem rozważyć osobny snapshot bieżącego porównania AMH,
    jeżeli ma ono być utrwalane w wizytach i historii. Brak snapshotu nie
    upoważnia do odtwarzania dawnej interpretacji dzisiejszą tabelą.
 

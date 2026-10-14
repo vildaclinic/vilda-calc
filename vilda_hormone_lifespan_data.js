@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-14.1",
+  "version": "2026-10-14.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -30310,6 +30310,250 @@ const patientPointData = {
         "postmenopause"
       ],
       "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie."
+    },
+    {
+      "id": "zhou2025-female-inhb-age-over1-under5",
+      "analyte": "inhb",
+      "sex": "female",
+      "minAge": 1,
+      "maxAge": 5,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 33
+        },
+        {
+          "ageYears": 5,
+          "value": 33
+        }
+      ],
+      "sourceLabel": "Zhou 2025 · inhibina B · grupa wieku",
+      "url": "https://doi.org/10.1038/s41598-025-85551-9",
+      "method": "Kangran Biotech double-antibody inhibin B CLIA · KAESER 1000",
+      "population": "Dziewczynki z próbek szpitalnych w Wuhan, Chiny, po wykluczeniach chorób; badanie przekrojowe.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pg/mL",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "kangran-kaeser-1000-inhibin-b-clia",
+        "kaeser-1000-inhibin-b-clia"
+      ],
+      "patientNote": "Grupa 1–5 lat · Chiny · KAESER 1000 CLIA.",
+      "ageGroup": {
+        "label": "1–5 lat",
+        "minAge": 1,
+        "maxAge": 5,
+        "n": 60,
+        "sourceUnit": "pg/mL",
+        "sourceMedian": 33,
+        "sourceMedianCi90": [
+          30,
+          39
+        ],
+        "boundaryPolicy": "published-label-with-separate-explicit-application-age-routing",
+        "description": "Mediana całej opublikowanej grupy, nie dokładnego wieku ani stadium Tannera. Metoda CLIA nie została zharmonizowana z Gen II ELISA."
+      },
+      "provenance": {
+        "authors": "Zhou et al.",
+        "year": 2025,
+        "title": "Reference intervals of inhibin B in Chinese children on chemiluminescence analyzer",
+        "journal": "Scientific Reports",
+        "volume": 15,
+        "articleNumber": 1899,
+        "doi": "10.1038/s41598-025-85551-9",
+        "pmcid": "PMC11730302",
+        "url": "https://doi.org/10.1038/s41598-025-85551-9",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11730302/",
+        "sourceFormat": "PDF",
+        "sourceSha256": "a2b6e2ffa607540673e99a61ad1ebb3bcab1e844ab8b4fde595bcbc3127d1510",
+        "reviewDate": "2026-10-14",
+        "reviewBasis": "Complete nine-page primary article reviewed; female group sample counts from Table 1 and concordant medians from Tables 2 and 3. Supplement is not the source of these medians.",
+        "sourceLocator": {
+          "populationAndAssay": {
+            "pdfPage": 2
+          },
+          "sampleCounts": {
+            "table": 1,
+            "pdfPage": 3
+          },
+          "medians": {
+            "table": 2,
+            "pdfPage": 3
+          },
+          "medianConfidenceIntervals": {
+            "table": 3,
+            "pdfPage": 6
+          },
+          "limitations": {
+            "pdfPage": 7
+          }
+        },
+        "statisticDefinition": "Published 50th quantile of each complete age/sex group; not a model median at the patient exact age.",
+        "sourceQuantification": {
+          "lodPgMl": 7,
+          "totalCvPercent": [
+            4.34,
+            9.73
+          ],
+          "belowLodHandling": "Values below each assay LOD were replaced by LOD divided by the square root of 2 in the source analysis. This substitution is not applied to patient values.",
+          "belowLodCountsForSelectedGroups": null
+        },
+        "ageBoundaryDefinition": "Printed labels 1–5 and 5–10 years; continuous inequalities or the allocation of exact age 5 are not explicitly defined.",
+        "participants": 622,
+        "femaleParticipants": 302,
+        "groupParticipants": 60,
+        "sourceUnit": "pg/mL",
+        "sourceToCanonicalFactor": 1,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/zhou2025-female-inhb-childhood-groups.json",
+        "sourceGroupId": "female-1-5",
+        "ageRouting": "W zwykłym widoku uzupełniamy wyłącznie lukę po dokładnym 1 roku i przed 5,6 roku. Wiek (1,5) korzysta z mediany pełnej grupy 1–5 lat, a [5,5.6) z mediany pełnej grupy 5–10 lat. Przypisanie dokładnych 5 lat do drugiej grupy jest jawną konwencją aplikacji, nie definicją autora. Cały możliwy przedział wieku musi mieścić się w jednym profilu. Dokładny 1 rok zachowuje Ljubicic; od 5,6 roku zachowujemy Borelli-Kjær.",
+        "selectionPolicy": "Dwa stałe odniesienia grupowe uzupełniają wyłącznie wskazaną lukę. Nie zastępują innych źródeł, nie zmieniają krzywych ani norm i nie trafiają do porównania płci. Źródła nie wybieramy według wyniku lub zgodności metody zastępczego profilu.",
+        "specimenPolicy": "Brak lub nieznany materiał pozwala na orientacyjne odniesienie bez potwierdzania materiału pacjentki. Znana surowica jest zgodna; znane osocze lub inny materiał wyklucza ten profil.",
+        "assayPolicy": "Źródło stosuje Kangran Biotech double-antibody inhibin B CLIA na KAESER 1000. Brak lub nieznana metoda pozwala na orientacyjne odniesienie. Znane Gen II, Oxford ELISA, inne platformy lub samo ogólne CLIA nie kwalifikują. Identyfikatory zgodności są nazwami tej konkretnej metody, bez harmonizacji między oznaczeniami.",
+        "routingVersion": "2026-10-14.2"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie mediana dokładnego wieku ani stadium Tannera. Węższy zakres wyboru w aplikacji nie tworzy nowej badanej podgrupy.",
+        "Jednoośrodkowe przekrojowe badanie szpitalne w Chinach. Grupy N=60 i N=77; nie jest to międzynarodowa norma populacyjna ani kohorta prospektywna.",
+        "Kangran CLIA na KAESER 1000 w surowicy. Brak zweryfikowanej harmonizacji z Gen II ELISA, historycznym Oxford ELISA lub osoczem; zgodne jednostki nie potwierdzają zgodności metod.",
+        "Brak danych o porze pobrania oraz stadium Tannera. Wykluczenia kliniczne nie dowodzą, że każdy uczestnik był zdrowy i nieleczony.",
+        "Źródło zastępowało wyniki poniżej LOD wartością LOD/√2. Nie znamy liczby takich wyników w wybranych grupach; nie stosujemy tej imputacji do wyniku pacjentki.",
+        "90% CI dotyczy oszacowania mediany, nie rozkładu wyników pojedynczych pacjentek ani granic normy. Przedziałów referencyjnych publikacji nie aktywujemy.",
+        "Podział dokładnego wieku 5 lat jest jawną konwencją aplikacji; publikacja nie definiuje nierówności dla stykających się etykiet.",
+        "Różnice wobec Borelli-Kjær mogą wynikać z metody i populacji; nie wyznaczają spadku fizjologicznego przy 5,6 roku i nie zmieniają poglądowej krzywej."
+      ]
+    },
+    {
+      "id": "zhou2025-female-inhb-age-5-under5p6",
+      "analyte": "inhb",
+      "sex": "female",
+      "minAge": 5,
+      "maxAge": 5.6,
+      "points": [
+        {
+          "ageYears": 5,
+          "value": 27
+        },
+        {
+          "ageYears": 5.6,
+          "value": 27
+        }
+      ],
+      "sourceLabel": "Zhou 2025 · inhibina B · grupa wieku",
+      "url": "https://doi.org/10.1038/s41598-025-85551-9",
+      "method": "Kangran Biotech double-antibody inhibin B CLIA · KAESER 1000",
+      "population": "Dziewczynki z próbek szpitalnych w Wuhan, Chiny, po wykluczeniach chorób; badanie przekrojowe.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pg/mL",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": false,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "kangran-kaeser-1000-inhibin-b-clia",
+        "kaeser-1000-inhibin-b-clia"
+      ],
+      "patientNote": "Grupa 5–10 lat · Chiny · KAESER 1000 CLIA.",
+      "ageGroup": {
+        "label": "5–10 lat",
+        "minAge": 5,
+        "maxAge": 10,
+        "n": 77,
+        "sourceUnit": "pg/mL",
+        "sourceMedian": 27,
+        "sourceMedianCi90": [
+          24,
+          29
+        ],
+        "boundaryPolicy": "published-label-with-separate-explicit-application-age-routing",
+        "description": "Mediana całej opublikowanej grupy, nie dokładnego wieku ani stadium Tannera. Metoda CLIA nie została zharmonizowana z Gen II ELISA."
+      },
+      "provenance": {
+        "authors": "Zhou et al.",
+        "year": 2025,
+        "title": "Reference intervals of inhibin B in Chinese children on chemiluminescence analyzer",
+        "journal": "Scientific Reports",
+        "volume": 15,
+        "articleNumber": 1899,
+        "doi": "10.1038/s41598-025-85551-9",
+        "pmcid": "PMC11730302",
+        "url": "https://doi.org/10.1038/s41598-025-85551-9",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11730302/",
+        "sourceFormat": "PDF",
+        "sourceSha256": "a2b6e2ffa607540673e99a61ad1ebb3bcab1e844ab8b4fde595bcbc3127d1510",
+        "reviewDate": "2026-10-14",
+        "reviewBasis": "Complete nine-page primary article reviewed; female group sample counts from Table 1 and concordant medians from Tables 2 and 3. Supplement is not the source of these medians.",
+        "sourceLocator": {
+          "populationAndAssay": {
+            "pdfPage": 2
+          },
+          "sampleCounts": {
+            "table": 1,
+            "pdfPage": 3
+          },
+          "medians": {
+            "table": 2,
+            "pdfPage": 3
+          },
+          "medianConfidenceIntervals": {
+            "table": 3,
+            "pdfPage": 6
+          },
+          "limitations": {
+            "pdfPage": 7
+          }
+        },
+        "statisticDefinition": "Published 50th quantile of each complete age/sex group; not a model median at the patient exact age.",
+        "sourceQuantification": {
+          "lodPgMl": 7,
+          "totalCvPercent": [
+            4.34,
+            9.73
+          ],
+          "belowLodHandling": "Values below each assay LOD were replaced by LOD divided by the square root of 2 in the source analysis. This substitution is not applied to patient values.",
+          "belowLodCountsForSelectedGroups": null
+        },
+        "ageBoundaryDefinition": "Printed labels 1–5 and 5–10 years; continuous inequalities or the allocation of exact age 5 are not explicitly defined.",
+        "participants": 622,
+        "femaleParticipants": 302,
+        "groupParticipants": 77,
+        "sourceUnit": "pg/mL",
+        "sourceToCanonicalFactor": 1,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/zhou2025-female-inhb-childhood-groups.json",
+        "sourceGroupId": "female-5-10",
+        "ageRouting": "W zwykłym widoku uzupełniamy wyłącznie lukę po dokładnym 1 roku i przed 5,6 roku. Wiek (1,5) korzysta z mediany pełnej grupy 1–5 lat, a [5,5.6) z mediany pełnej grupy 5–10 lat. Przypisanie dokładnych 5 lat do drugiej grupy jest jawną konwencją aplikacji, nie definicją autora. Cały możliwy przedział wieku musi mieścić się w jednym profilu. Dokładny 1 rok zachowuje Ljubicic; od 5,6 roku zachowujemy Borelli-Kjær.",
+        "selectionPolicy": "Dwa stałe odniesienia grupowe uzupełniają wyłącznie wskazaną lukę. Nie zastępują innych źródeł, nie zmieniają krzywych ani norm i nie trafiają do porównania płci. Źródła nie wybieramy według wyniku lub zgodności metody zastępczego profilu.",
+        "specimenPolicy": "Brak lub nieznany materiał pozwala na orientacyjne odniesienie bez potwierdzania materiału pacjentki. Znana surowica jest zgodna; znane osocze lub inny materiał wyklucza ten profil.",
+        "assayPolicy": "Źródło stosuje Kangran Biotech double-antibody inhibin B CLIA na KAESER 1000. Brak lub nieznana metoda pozwala na orientacyjne odniesienie. Znane Gen II, Oxford ELISA, inne platformy lub samo ogólne CLIA nie kwalifikują. Identyfikatory zgodności są nazwami tej konkretnej metody, bez harmonizacji między oznaczeniami.",
+        "routingVersion": "2026-10-14.2"
+      },
+      "limitations": [
+        "Mediana całej opublikowanej grupy wieku, nie mediana dokładnego wieku ani stadium Tannera. Węższy zakres wyboru w aplikacji nie tworzy nowej badanej podgrupy.",
+        "Jednoośrodkowe przekrojowe badanie szpitalne w Chinach. Grupy N=60 i N=77; nie jest to międzynarodowa norma populacyjna ani kohorta prospektywna.",
+        "Kangran CLIA na KAESER 1000 w surowicy. Brak zweryfikowanej harmonizacji z Gen II ELISA, historycznym Oxford ELISA lub osoczem; zgodne jednostki nie potwierdzają zgodności metod.",
+        "Brak danych o porze pobrania oraz stadium Tannera. Wykluczenia kliniczne nie dowodzą, że każdy uczestnik był zdrowy i nieleczony.",
+        "Źródło zastępowało wyniki poniżej LOD wartością LOD/√2. Nie znamy liczby takich wyników w wybranych grupach; nie stosujemy tej imputacji do wyniku pacjentki.",
+        "90% CI dotyczy oszacowania mediany, nie rozkładu wyników pojedynczych pacjentek ani granic normy. Przedziałów referencyjnych publikacji nie aktywujemy.",
+        "Podział dokładnego wieku 5 lat jest jawną konwencją aplikacji; publikacja nie definiuje nierówności dla stykających się etykiet.",
+        "Różnice wobec Borelli-Kjær mogą wynikać z metody i populacji; nie wyznaczają spadku fizjologicznego przy 5,6 roku i nie zmieniają poglądowej krzywej."
+      ]
     },
     {
       "id": "laurentino2020-male-lh-18-under25",
