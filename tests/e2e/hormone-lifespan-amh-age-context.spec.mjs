@@ -35,10 +35,20 @@ async function prepare(page, width = 1440) {
 async function mainForm(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaDobAge && window.VildaLabNeonatalContext
-    && typeof window.applyLoadedData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked'));
+    && typeof window.applyLoadedData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked')
+    && window.VildaInit?.isInitialized('app:main-session-restore-init'));
+  // Main-session restoration starts two animation frames after its initializer.
+  // Empty autosave queues before that callback do not mean the form is ready.
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
   await page.waitForFunction(() => {
+    const persistence = window.VildaPersistence;
+    const session = window.VildaDataImportExport;
     const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
-    return !window.__vildaPersistRestoring && (!state || !state.hasPendingSaveTimer && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
+    return persistence && !persistence.isAutosaveSuppressed() && session && !session.isMainSessionAutosavePaused()
+      && !window.VildaDobAge.restorePending() && state && !state.hasPendingSaveTimer
+      && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer;
   });
 }
 
@@ -192,12 +202,18 @@ test('clearing the same patient date removes cached AMH day precision', async ({
   await kliknij(page.locator('#dobClear'));
   await expect(page.locator('#dobInput')).toHaveValue('');
   await expect(page.locator('#ageMonths')).toHaveValue(String(months));
-  // A new fictional measurement lets the ordinary main-form collector publish.
-  await page.locator('#weight').fill('5.5');
-  await page.locator('#height').fill('60');
-  await page.locator('#height').dispatchEvent('change');
+  // Clearing the date itself must notify the age cache and the session writer.
+  // No unrelated measurement edit may be needed to remove day precision.
   await expect.poll(() => page.evaluate(() => window.VildaLabNeonatalContext.readCache())).toBeNull();
   await expect.poll(() => page.evaluate(() => String(window.VildaPersistence.readShared()?.ageMonths))).toBe(String(months));
+  await expect.poll(() => page.evaluate(() => {
+    const user = window.VildaPersistence.readMainSession()?.user;
+    return user && { dobISO: user.dobISO ?? null, ageMonths: String(user.ageMonths) };
+  })).toEqual({ dobISO: null, ageMonths: String(months) });
+  await mainForm(page);
+  await expect(page.locator('#dobInput')).toHaveValue('');
+  await expect(page.locator('#ageMonths')).toHaveValue(String(months));
+  await expect.poll(() => page.evaluate(() => window.VildaLabNeonatalContext.readCache())).toBeNull();
   await converter(page, id);
   await choose(page);
   await expectAgePoint(page, 'F', months / 12, months / 12 + 1 / 12, `${months} mies.`);
