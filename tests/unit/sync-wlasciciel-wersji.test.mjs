@@ -19,16 +19,19 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //   - poprawka pomiaru zrobiona po scaleniu na drugim urządzeniu ginęła pod starszą treścią (61 → 60 mies.);
 //   - wyścig z zapisem w innej karcie: licznik X 4 przy 2 wersjach;
 //   - licznik rozjechany raz zostawał rozjechany na zawsze (gałąź istniejącej karty liczyła przyrostowo).
-// Ten plik (130 testów) na `audyt` 2df41a8: 96 czerwonych; na pierwszej wersji tej zmiany (88f558c): 20 — uwagi
-// recenzentów: delta karty celu przed osobną deltą nagrobka gubiła ostatnią wersję scalonej karty, dwie równoległe
-// poprawki rozjeżdżały urządzenia, delta jednej karty czytała wersje całego konta (oraz strażniki źródła i koszt).
-// Pierwsza wersja pliku (55 testów) na `audyt`: 43 czerwone; na wariancie badacza W2e: 14; na szkicu krytyka W2f: 7.
+// Ten plik (203 testy) na `audyt` 2df41a8: 155 czerwonych; na pierwszej wersji tej zmiany (88f558c): 66; na drugiej
+// (4270ca1): 40 — uwagi przeglądu końcowego: zmieniona bez nowego zapisu wersja starej karty ginęła, gdy delta karty
+// celu przychodziła przed osobną deltą nagrobka; trzy urządzenia rozjeżdżały się na stałe po poprawce w starej karcie;
+// karty zakładane i usuwane w fazie przeniesień nie liczyły się w wyniku scalania (lista pacjentów bez odświeżenia).
+// Wcześniejsze stany pliku: 130 testów — na `audyt` 96 czerwonych, na 88f558c 20; 55 testów — na `audyt` 43, na
+// wariancie badacza W2e 14, na szkicu krytyka W2f 7.
 //
 // Prawdziwy vilda_vault.js i vilda_crypto.js, dwa „urządzenia” = dwa sejfy z osobnymi magazynami w pamięci, prawdziwe
 // exportSyncPayload → mergeSyncPayload. Modele synchronizacji jak vilda_sync.js: „chmura” (pobierz, scal, wyślij pełny
 // eksport; ETag szereguje wysyłki), „krzyżowa” (oba urządzenia eksportują, potem każde scala cudzy ładunek — jak
 // mijające się delty) i „delty+chmura” (runda 1: prawdziwe buildPatientDelta karty i osobno buildTombstoneDelta
-// nagrobków, jak zdarzenia vilda_sync_integration; dalej chmura). Scenariusze idą w obu kolejnościach identyfikatorów
+// nagrobków, jak zdarzenia vilda_sync_integration; dalej chmura); część scenariuszy na trzech urządzeniach i na
+// prawdziwym vilda_sync_integration.js (odświeżenie listy pacjentów). Scenariusze idą w obu kolejnościach identyfikatorów
 // X i Y (remis rozstrzyga mniejszy patientId), więc wynik nie zależy od losowania. Retencja wyłączona.
 // Dane wyłącznie FIKCYJNE („Testowy Jan”).
 
@@ -447,19 +450,18 @@ describe('P-SYNC-WLASCICIEL — „Scal pacjentów” na jednym urządzeniu, now
     expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('61:120.5');
   }, CZAS);
 
-  // [ZIELONY na audyt i na 88f558c — przypięte znane ograniczenie, bez zmian] Ten sam scenariusz, gdy delta karty Y
-  // i delta nagrobka X przychodzą osobno (delty na żywo): w chwili delty Y karta X nie jest jeszcze skazana, poprawiona
-  // x1 (nowsza treść) zostaje przy X, a delta nagrobka usuwa X razem z nią; w odwrotnej kolejności nagrobek usuwa X
-  // od razu. Treść poprawki z B ginie (jak na audyt, gdzie ginęła we wszystkich modelach), żadna wersja nie ginie.
-  // Domknięcie wymaga nagrobka X w delcie karty Y albo zmiany reguły nagrobka — decyzja właściciela.
-  it.each(KOLEJNOSCI)('poprawka pomiaru w X po scaleniu, delty osobno (delty+chmura, %s): znane ograniczenie — treść poprawki ginie, wersje nie', async (kolejnosc) => {
+  // [CZERWONY na audyt i na 4270ca1 — x1 = 60:120 na obu, treść poprawki z B ginęła] Ten sam scenariusz, gdy delta
+  // karty Y i delta nagrobka X przychodzą osobno (delty na żywo). Dotąd w chwili delty Y karta X nie była jeszcze skazana,
+  // poprawiona x1 (nowsza treść) zostawała przy X, a delta nagrobka usuwała X razem z nią. Teraz delta nagrobka X
+  // z urządzenia scalającego niesie kartę Y (Bsw_deltaNagrobka): X jest w zbiorze N, x1 przechodzi pod Y z poprawką.
+  it.each(KOLEJNOSCI)('poprawka pomiaru w X po scaleniu, delty osobno (delty+chmura, %s): x1 pod Y z poprawioną treścią na obu', async (kolejnosc) => {
     const { ctx, koniec, log } = await przebieg({ model: 'delty+chmura', kolejnosc, akcje: AKCJE.korekta });
     oczekujNaObu(koniec, { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, ['X']);
     expect(koniec.zbiezne).toBe(true);
     expect(utracone(log)).toEqual([]);
     const x1 = idPo(ctx.et, 'x1');
-    expect(await trescWersji(ctx.A, ctx.Y, x1)).toBe('60:120');
-    expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('60:120');
+    expect(await trescWersji(ctx.A, ctx.Y, x1)).toBe('61:120.5');
+    expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('61:120.5');
   }, CZAS);
 
   // [CZERWONY na audyt — wszystkie 8] poprawka x1 i nowy zapis X na B: dotąd chmura-AB 60:120 na obu (poprawka
@@ -615,14 +617,17 @@ describe('P-SYNC-WLASCICIEL — zwykłe scalenie, delty na żywo w osobnych ład
      z chmurą, w której A nie zdążył zapisać pełnego stanu (stan sprzed scalenia), a nowe urządzenie C pobiera chmurę.
      [ZIELONY na audyt] — wersje przepinane bez porównania. [CZERWONY na 88f558c] w kolejności „Y, potem nagrobek X”:
      ostatnia (najnowsza) wersja X zostawała przy X, a nagrobek X usuwał ją razem z kartą — B: Y 4/4 [x1 y1 y2 ym]
-     (X z jedną wersją: Y 3/3), kosz pusty; po synchronizacji B z chmurą to samo w chmurze i na C. */
+     (X z jedną wersją: Y 3/3), kosz pusty; po synchronizacji B z chmurą to samo w chmurze i na C.
+     Od poprawek do 4270ca1 delta nagrobka X z urządzenia scalającego niesie też kartę Y; wariant „sam nagrobek” (delta
+     ponad limit sygnału albo nadawca sprzed zmiany) pilnuje dalej drogi bez karty Y (ostatnia wersja X w fazie
+     przeniesień). */
   async function kartaN(v, n) {
     const a = await v.savePatient(zapis([60]), { dedup: false });
     for (let i = 1; i < n; i += 1) { await chwila(4); await v.savePatient(zapis([60, 60 + 6 * i]), { patientId: a.patientId, dedup: false }); }
     return a.patientId;
   }
-  const WARIANTY = ['Y, potem nagrobek X', 'nagrobek X, potem Y'].flatMap((k) => [2, 1].flatMap((n) => KOLEJNOSCI.map((id) => [k, n, id])));
-  it.each(WARIANTY)('%s, X z %i wersjami (%s): Y z wszystkimi wersjami X na B, w chmurze i na C', async (kolejnosc, nX, kolejnoscId) => {
+  const WARIANTY = ['Y, potem nagrobek X', 'nagrobek X, potem Y'].flatMap((k) => [2, 1].flatMap((n) => KOLEJNOSCI.flatMap((id) => ['nagrobek z kartą Y', 'sam nagrobek'].map((t) => [k, n, id, t]))));
+  it.each(WARIANTY)('%s, X z %i wersjami (%s, %s): Y z wszystkimi wersjami X na B, w chmurze i na C', async (kolejnosc, nX, kolejnoscId, rodzaj) => {
     const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
     const X = await kartaN(A.v, nX);
     await chwila(4);
@@ -637,6 +642,7 @@ describe('P-SYNC-WLASCICIEL — zwykłe scalenie, delty na żywo w osobnych ład
     expect(dY.patients.map((q) => q.patientId)).toEqual([Y]);
     expect(dY.tombstones).toEqual([]);
     expect(dX.tombstones.map((t) => t.patientId)).toEqual([X]);
+    if (rodzaj === 'sam nagrobek') dX.patients = [];
     for (const d of kolejnosc.startsWith('Y') ? [dY, dX] : [dX, dY]) await B.v.mergeSyncPayload(d);
     const wersjeX = Array.from({ length: nX }, (_, i) => `x${i + 1}`);
     const oczekiwane = { Y: karta2(nX + 3, [...wersjeX, 'y1', 'y2', 'ym']) };
@@ -654,6 +660,376 @@ describe('P-SYNC-WLASCICIEL — zwykłe scalenie, delty na żywo w osobnych ład
       expect(s.nagrobki, `nagrobki ${d.nazwa}`).toEqual(['X']);
       expect(s.sieroty).toBe(0);
     }
+  }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — zmiana wersji starej karty bez nowego zapisu a delty na żywo po „Scal pacjentów”', () => {
+  /* Uwaga recenzenta do 4270ca1 (waga wysoka). A robi „Scal pacjentów” X → Y i wysyła delty jak vilda_sync_integration:
+     kartę Y (buildPatientDelta), potem nagrobek X (buildTombstoneDelta). Na B użytkownik — przed scaleniem na A albo po
+     nim, bez synchronizacji — wykonuje na X zwykłą operację Karty, która podbija rev i chwilę zmiany wersji, ale nie
+     chwilę zapisu karty: edycja albo usunięcie wiersza pomiaru (updateMeasurementRow, deleteMeasurementRow — bieżąca
+     wersja x2), przypięcie x2 (setSnapshotPinned), korekta x1 z zachowaną chwilą zapisu (updateSnapshotPayload,
+     preserveSavedAt). Nagrobek X wygrywa (chwila zapisu X sprzed scalenia). Potem B synchronizuje się z chmurą, w której
+     jest jeszcze stan sprzed scalenia, a nowe urządzenie C pobiera chmurę.
+     [CZERWONY na 4270ca1] kolejność „Y, potem nagrobek X”: zmieniona wersja była na B nowszym rekordem, więc zostawała
+     przy X, a delta nagrobka usuwała ją razem z X — B, chmura i C: Y 4/4 bez niej, kosz pusty (rk-ogon5, rk-ogon4).
+     [CZERWONY na audyt] treść zmiany ginęła (Y 5/5, ale x2 bez przypięcia i z dawnym wierszem, x1 = 60:120); na
+     4270ca1 w kolejności „nagrobek X, potem Y” tak samo.
+     Teraz delta nagrobka X z urządzenia scalającego niesie też kartę Y: X jest w zbiorze N, jej wersje przechodzą pod Y
+     z nowszą treścią (wyjątek „zabierz”) w obu kolejnościach delt. */
+  const OPERACJE = {
+    'edycja wiersza': { wersja: 'x2', zrob: (B, X) => B.v.updateMeasurementRow(X, { uid: 'm-66' }, { height: 124 }) },
+    'usunięcie wiersza': { wersja: 'x2', zrob: (B, X) => B.v.deleteMeasurementRow(X, { uid: 'm-60' }) },
+    'przypięcie': { wersja: 'x2', zrob: (B, X, sid) => B.v.setSnapshotPinned(X, sid, true) },
+    'korekta z zachowaną chwilą zapisu': { wersja: 'x1', zrob: (B, X, sid) => B.v.updateSnapshotPayload(X, sid, zapis([61]), { preserveSavedAt: true }) },
+  };
+  // Treść wersji, którą zmienia operacja: pomiary (wiek:wzrost) i przypięcie.
+  async function sygnatura(d, patientId, snapshotId) {
+    const p = await d.v.getPatient(patientId);
+    const s = p && p.snapshots.find((q) => q.snapshotId === snapshotId);
+    return s ? `${pomiaryZ(s.payload)}${s.payload && s.payload._pinned ? ' przypięta' : ''}` : null;
+  }
+  async function przebiegOperacji(oper, kiedy, kolejnoscId) {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnoscId === 'X<Y');
+    const sync = chmura();
+    await sync(A); await sync(B); // w chmurze stan sprzed scalenia
+    const et = await etykiety(A, { X, Y });
+    const op = OPERACJE[oper], sid = idPo(et, op.wersja);
+    const przed = await sygnatura(B, X, sid);
+    await chwila(5);
+    if (kiedy === 'przed scaleniem') { await op.zrob(B, X, sid); await chwila(5); }
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    if (kiedy === 'po scaleniu') { await chwila(5); await op.zrob(B, X, sid); }
+    const zmieniona = await sygnatura(B, X, sid);
+    expect(zmieniona, 'operacja zmieniła treść wersji').not.toBe(przed);
+    const nagrobekX = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === X).deletedAtISO;
+    expect((await B.baza.getPatientForUser(B.uid, X)).lastSavedAtISO < nagrobekX, 'nagrobek X wygrywa').toBe(true);
+    const [dY, dX, ...reszta] = await delty(A, [Y]);
+    expect(reszta).toEqual([]);
+    return { A, B, C, X, Y, et, sid, sync, dY, dX, zmieniona };
+  }
+  const oczekiwane = { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) };
+
+  const WARIANTY = Object.keys(OPERACJE).flatMap((o) => ['po scaleniu', 'przed scaleniem'].flatMap((k) => KOLEJNOSCI.map((id) => [o, k, 'Y, potem nagrobek X', id])))
+    .concat(Object.keys(OPERACJE).flatMap((o) => KOLEJNOSCI.map((id) => [o, 'po scaleniu', 'nagrobek X, potem Y', id])));
+  it.each(WARIANTY)('%s w X (%s), delty %s (%s): B, chmura i C — Y 5/5 ze zmienioną wersją, nic nie ginie', async (oper, kiedy, kolejnoscDelt, kolejnoscId) => {
+    const p = await przebiegOperacji(oper, kiedy, kolejnoscId);
+    for (const d of kolejnoscDelt.startsWith('Y') ? [p.dY, p.dX] : [p.dX, p.dY]) await p.B.v.mergeSyncPayload(d);
+    const sB = await stan(p.B, p.et);
+    expect(sB.karty).toEqual(oczekiwane);
+    expect(sB.nagrobki).toEqual(['X']);
+    expect(sB.kosz).toEqual([]);
+    expect(sB.sieroty).toBe(0);
+    expect(await sygnatura(p.B, p.Y, p.sid), 'zmiana z B zachowana').toBe(p.zmieniona);
+    // B: pobierz nieaktualną chmurę, scal, wyślij; C: pierwsze pobranie.
+    await p.sync(p.B);
+    await p.sync(p.C);
+    for (const d of [p.B, p.C]) {
+      const s = await stan(d, p.et);
+      expect(s.karty, `urządzenie ${d.nazwa}`).toEqual(oczekiwane);
+      expect(s.nagrobki, `nagrobki ${d.nazwa}`).toEqual(['X']);
+      expect(s.sieroty).toBe(0);
+      expect(await sygnatura(d, p.Y, p.sid), `treść na ${d.nazwa}`).toBe(p.zmieniona);
+    }
+    // A po pobraniu chmury też ma zmianę z B (ta sama wersja, nowsza treść).
+    await p.sync(p.A);
+    expect((await stan(p.A, p.et)).karty).toEqual(oczekiwane);
+    expect(await sygnatura(p.A, p.Y, p.sid)).toBe(p.zmieniona);
+  }, CZAS);
+
+  // [ZIELONY na 4270ca1 — przypięte znane ograniczenie; CZERWONY na audyt, gdzie delta Y przepinała x2 bez porównania]
+  // Delta nagrobka bez karty Y po delcie Y: przypięta x2 zostaje na B przy X i ginie z nią; po synchronizacji B
+  // z nieaktualną chmurą brak jej też w chmurze i na C. Wraca (bez przypięcia) dopiero z pełnym stanem urządzenia
+  // scalającego. Urządzenie po tej zmianie wysyła deltę Y i nagrobek bez karty Y tylko razem z… niczym: gdy delta Y
+  // przekracza limit, nie idzie żadna z nich z kartą (sam nagrobek, jak na audyt). Tę drogę daje więc nadawca sprzed
+  // zmiany („Flota mieszana”); test pilnuje, że strata jest przejściowa.
+  it.each(KOLEJNOSCI)('sam nagrobek X po delcie Y, przypięcie x2 po scaleniu (%s): x2 znika do pełnej synchronizacji A — znane ograniczenie', async (kolejnoscId) => {
+    const p = await przebiegOperacji('przypięcie', 'po scaleniu', kolejnoscId);
+    p.dX.patients = [];
+    await p.B.v.mergeSyncPayload(p.dY);
+    await p.B.v.mergeSyncPayload(p.dX);
+    const bez = { Y: karta2(4, ['x1', 'y1', 'y2', 'ym']) };
+    expect((await stan(p.B, p.et)).karty).toEqual(bez);
+    await p.sync(p.B);
+    await p.sync(p.C);
+    expect((await stan(p.C, p.et)).karty).toEqual(bez);
+    await p.sync(p.A);
+    await p.sync(p.B);
+    await p.sync(p.C);
+    for (const d of [p.A, p.B, p.C]) {
+      expect((await stan(d, p.et)).karty, `urządzenie ${d.nazwa}`).toEqual(oczekiwane);
+      expect(await sygnatura(d, p.Y, p.sid), `x2 bez przypięcia na ${d.nazwa}`).not.toContain('przypięta');
+    }
+  }, CZAS);
+
+  // [CZERWONY na audyt i na 4270ca1 — delta nagrobka zawsze bez kart] Format delty nagrobka: po „Scal pacjentów” X → Y
+  // na tym urządzeniu — karta Y (ta sama co w buildPatientDelta(Y)) i nagrobek X; zwykłe usunięcie karty — sam nagrobek;
+  // karta Y, z którą delta przekroczyłaby limit sygnału (60 000 znaków szyfrogramu, jak dla delty karty w integracji) —
+  // sam nagrobek.
+  it('delta nagrobka po „Scal pacjentów” niesie kartę docelową; zwykłe usunięcie i delta ponad limit — sam nagrobek', async () => {
+    const A = await urzadzenie('A');
+    const odszyfruj = async (z) => kopia(await A.v.decryptPayloadForCurrentUser(z.iv, z.data));
+    const X = await karta(A.v), Y = await karta(A.v), Z = await karta(A.v);
+    await A.v.mergePatients(X, Y);
+    const tX = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === X);
+    const dX = await odszyfruj(await A.v.buildTombstoneDelta(X, tX.deletedAtISO));
+    const dY = await odszyfruj(await A.v.buildPatientDelta(Y));
+    expect(dX.tombstones).toEqual([{ patientId: X, deletedAtISO: tX.deletedAtISO }]);
+    expect(dX.patients).toEqual(dY.patients);
+    expect(dX.patients[0].snapshots).toHaveLength(5);
+    // zwykłe usunięcie karty — sam nagrobek, jak dotąd
+    await A.v.removePatient(Z);
+    const tZ = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === Z);
+    const dZ = await odszyfruj(await A.v.buildTombstoneDelta(Z, tZ.deletedAtISO));
+    expect(dZ.patients).toEqual([]);
+    expect(dZ.tombstones).toEqual([{ patientId: Z, deletedAtISO: tZ.deletedAtISO }]);
+    // karta docelowa ponad limit: wersja z długim opisem (dane fikcyjne)
+    const P = await karta(A.v), Q = await karta(A.v);
+    const duzy = Object.assign(zapis([60, 66, 72]), { notatkaTestowa: 'Testowy opis '.repeat(5000) });
+    await A.v.savePatient(duzy, { patientId: Q, dedup: false });
+    await A.v.mergePatients(P, Q);
+    const zQ = await A.v.buildPatientDelta(Q);
+    expect(zQ.data.length, 'delta karty Q ponad limit (integracja jej nie wysyła)').toBeGreaterThan(6e4);
+    const tP = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === P);
+    const zP = await A.v.buildTombstoneDelta(P, tP.deletedAtISO);
+    expect(zP.data.length).toBeLessThanOrEqual(6e4);
+    expect((await odszyfruj(zP)).patients).toEqual([]);
+    // Karta docelowa, której delta mieści się w limicie, a razem z nagrobkiem już nie: delta nagrobka i tak niesie kartę
+    // (to samo kryterium co dla delty karty w integracji — nie ma okna „delta Y poszła, a nagrobek bez karty Y”).
+    const R = await karta(A.v), S = await karta(A.v);
+    await A.v.mergePatients(R, S);
+    const glowaS = (await A.v.getPatient(S)).snapshots[0].snapshotId;
+    let dlugosc = 40000, rozmiar = 0;
+    for (let i = 0; i < 8; i += 1) {
+      await A.v.updateSnapshotPayload(S, glowaS, Object.assign(zapis([60, 66, 72]), { notatkaTestowa: 'x'.repeat(dlugosc) }), { preserveSavedAt: true });
+      rozmiar = (await A.v.buildPatientDelta(S)).data.length;
+      if (rozmiar <= 6e4 && rozmiar > 6e4 - 40) break;
+      dlugosc += Math.floor((6e4 - 20 - rozmiar) * 3 / 4);
+    }
+    expect(rozmiar, 'delta karty S tuż pod limitem').toBeGreaterThan(6e4 - 40);
+    expect(rozmiar).toBeLessThanOrEqual(6e4);
+    const tR = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === R);
+    const zR = await A.v.buildTombstoneDelta(R, tR.deletedAtISO);
+    expect(zR.data.length, 'z nagrobkiem ponad 60 000 znaków').toBeGreaterThan(6e4);
+    expect(zR.data.length, 'poniżej limitu sygnału 64 KiB').toBeLessThan(65536 - 1000);
+    expect((await odszyfruj(zR)).patients.map((q) => q.patientId)).toEqual([S]);
+  }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — trzy urządzenia przez chmurę', () => {
+  /* Uwaga recenzenta do 4270ca1 (waga średnia). Trzy urządzenia po pełnej synchronizacji; A scala X → Y, B poprawia x1
+     w X z nową chwilą zapisu karty (preserveSavedAt: false), C nic nie robi. Synchronizacja przez chmurę w stałej
+     kolejce, 4 rundy. Dotąd C przyjmowało poprawkę x1 jako zmianę wersji bez podniesienia chwili zapisu karty X i
+     odsyłało X z chwilą sprzed nagrobka scalenia; A pomijało ją (nagrobek wygrywał) i nigdy nie dostawało ani poprawki,
+     ani X. [CZERWONY na 4270ca1] w kolejkach, w których C synchronizuje się tuż przed A (ABC, BCA, CAB): A — Y 5/5
+     z x1 = 60:120 i nagrobek X; B i C — X 1/1 [x1] = 61:120,5 i Y 4/4, trwale. [CZERWONY na audyt] B i C — pusta X 2/0.
+     Teraz przyjęta z ładunku poprawka wersji podnosi chwilę zapisu karty do późniejszej z dwóch (Bsw_bezNowych). */
+  const KOLEJKI = ['ABC', 'ACB', 'BAC', 'BCA', 'CAB', 'CBA'];
+  async function trzy(akcja, kolejka, kolejnosc, rundy = 4) {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnosc === 'X<Y');
+    const sync = chmura();
+    await sync(A); await sync(B); await sync(C);
+    const et = await etykiety(A, { X, Y });
+    const ctx = { A, B, X, Y, et, karty: { X, Y } };
+    await akcja(ctx);
+    const U = { A, B, C };
+    for (let r = 0; r < rundy; r += 1) for (const n of kolejka) await sync(U[n]);
+    const stany = {};
+    for (const n of 'ABC') stany[n] = await stan(U[n], et);
+    return { ...ctx, C, U, stany };
+  }
+  function oczekujNaTrzech(stany, karty, nagrobki = []) {
+    for (const n of 'ABC') {
+      expect(stany[n].karty, `urządzenie ${n}`).toEqual(karty);
+      expect(stany[n].nagrobki, `nagrobki ${n}`).toEqual(nagrobki);
+      expect(stany[n].sieroty, `wersje bez karty ${n}`).toBe(0);
+    }
+  }
+
+  it.each(KOLEJKI.flatMap((k) => KOLEJNOSCI.map((id) => [k, id])))('poprawka x1 w X bez nowego zapisu, kolejka %s (%s): wszędzie X [x1] 61:120,5 i Y [x2 y1 y2 ym]', async (kolejka, kolejnosc) => {
+    const r = await trzy(AKCJE.korektaBezZapisu, kolejka, kolejnosc);
+    oczekujNaTrzech(r.stany, { X: karta2(1, ['x1']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) });
+    const x1 = idPo(r.et, 'x1');
+    for (const n of 'ABC') expect(await trescWersji(r.U[n], r.X, x1), `x1 na ${n}`).toBe('61:120.5');
+  }, 60_000);
+
+  // [ZIELONY na 4270ca1 (pomiar recenzenta); CZERWONY na audyt] pozostałe scenariusze w kolejkach z C tuż przed A —
+  // te same wyniki co przy dwóch urządzeniach.
+  const INNE = {
+    XdoY: { karty: { X: karta2(1, ['x3']), Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: [] },
+    korekta: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '61:120.5'] },
+    korektaEdycja: { karty: { X: karta2(2, ['x1', 'x3']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) }, nagrobki: [], x1: ['X', '61:120.5'] },
+    dwiePoprawki: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '62:121'] },
+  };
+  it.each(Object.keys(INNE).flatMap((s) => ['CAB', 'BCA'].flatMap((k) => KOLEJNOSCI.map((id) => [s, k, id]))))('%s, kolejka %s (%s): zbieżnie na trzech', async (scen, kolejka, kolejnosc) => {
+    const r = await trzy(AKCJE[scen], kolejka, kolejnosc);
+    oczekujNaTrzech(r.stany, INNE[scen].karty, INNE[scen].nagrobki);
+    if (INNE[scen].x1) {
+      const [gdzie, tresc] = INNE[scen].x1;
+      for (const n of 'ABC') expect(await trescWersji(r.U[n], r[gdzie], idPo(r.et, 'x1')), `x1 na ${n}`).toBe(tresc);
+    }
+  }, 60_000);
+});
+
+describe('P-SYNC-WLASCICIEL — wynik scalania i odświeżenie listy pacjentów (prawdziwy vilda_sync_integration.js)', () => {
+  /* Uwaga recenzenta do 4270ca1 (waga niska). Faza przeniesień usuwa pustą kartę albo zakłada brakującą, a wynik
+     scalania tego nie liczył. Integracja (applyDelta) odświeża listę pacjentów (vilda:sync-merged) tylko przy
+     addedPatientCount albo deletedPatientCount (oraz licznikach notatek), więc po „Scal pacjentów” na innym urządzeniu
+     lista na B dalej pokazywała nieistniejącą kartę X, a karta X założona w fazie przeniesień nie pojawiała się.
+     [CZERWONY na 4270ca1 — kolejność „Y, potem nagrobek X” (X znika już po delcie Y, 0 zdarzeń) i założenie X (0
+     zdarzeń, addedPatientCount 0)] [ZIELONY na audyt — tam X znikała dopiero z deltą nagrobka (deletedPatientCount 1),
+     a X powstawała w pętli pacjentów (addedPatientCount 1)]. */
+  function oknoIntegracji(vault) {
+    const zdarzenia = [];
+    class CustomEvent { constructor(type, init) { this.type = type; this.detail = init ? init.detail : undefined; } }
+    let ostatnie = null;
+    // Ta sama funkcja sejfu; zapamiętujemy jej obietnicę, żeby poczekać na koniec scalania przed liczeniem zdarzeń.
+    const sejf = Object.assign(Object.create(vault), { applyEncryptedDelta: (z) => (ostatnie = vault.applyEncryptedDelta(z)) });
+    const win = {
+      CustomEvent, localStorage: magazyn(), sessionStorage: magazyn(), navigator: { sendBeacon: () => true },
+      setTimeout: (...a) => setTimeout(...a), clearTimeout: (...a) => clearTimeout(...a), setInterval: () => 0, clearInterval: () => {},
+      addEventListener() {}, removeEventListener() {},
+      document: { addEventListener() {}, removeEventListener() {}, dispatchEvent(ev) { zdarzenia.push(ev.type); return true; }, hidden: false },
+      VildaVault: sejf,
+      VildaSync: { syncPush: () => Promise.resolve(), syncPull: () => Promise.resolve(), onSyncStart() {}, onSyncComplete() {}, onSyncError() {} },
+    };
+    win.window = win; win.self = win; win.top = win;
+    loadBrowserScript('vilda_sync_integration.js', win);
+    return {
+      odswiezenia: () => zdarzenia.filter((t) => t === 'vilda:sync-merged').length,
+      async zastosuj(z) {
+        win.VildaSyncIntegration.applyDelta(z);
+        const wynik = await ostatnie;
+        await chwila(5);
+        return wynik;
+      },
+    };
+  }
+  const listaKart = async (d, nazwy) => (await d.baza.listPatientsForUser(d.uid)).map((k) => nazwy[k.patientId] || '?').sort();
+
+  it.each(KOLEJNOSCI.flatMap((id) => ['Y, potem nagrobek X', 'nagrobek X, potem Y'].map((k) => [k, id])))('„Scal pacjentów” X → Y na A, delty na B (%s, %s): każda zmiana listy kart odświeża listę', async (kolejnoscDelt, kolejnoscId) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnoscId === 'X<Y');
+    const sync = chmura();
+    await sync(A); await sync(B);
+    await chwila(5);
+    await A.v.mergePatients(X, Y);
+    const [pY, pX] = await delty(A, [Y]);
+    const okno = oknoIntegracji(B.v);
+    const nazwy = { [X]: 'X', [Y]: 'Y' };
+    const delta = { Y: await B.v.encryptPayloadForCurrentUser(pY), X: await B.v.encryptPayloadForCurrentUser(pX) };
+    let usuniete = 0;
+    for (const k of kolejnoscDelt.startsWith('Y') ? ['Y', 'X'] : ['X', 'Y']) {
+      const przed = await listaKart(B, nazwy), zdarzenPrzed = okno.odswiezenia();
+      const wynik = await okno.zastosuj(delta[k]);
+      usuniete += wynik.deletedPatientCount;
+      const po = await listaKart(B, nazwy);
+      if (JSON.stringify(po) !== JSON.stringify(przed)) {
+        expect(okno.odswiezenia(), `delta ${k} zmieniła listę kart ${przed} → ${po}`).toBeGreaterThan(zdarzenPrzed);
+      }
+    }
+    expect(await listaKart(B, nazwy)).toEqual(['Y']);
+    expect(usuniete, 'karta X policzona jako usunięta').toBe(1);
+    expect(okno.odswiezenia()).toBeGreaterThanOrEqual(1);
+  }, CZAS);
+
+  it.each(KOLEJNOSCI)('poprawka x1 w starej X na B, delta X na A (%s): X założona w fazie przeniesień liczy się jako dodana i odświeża listę', async (kolejnoscId) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnoscId === 'X<Y');
+    const sync = chmura();
+    await sync(A); await sync(B);
+    const et = await etykiety(A, { X, Y });
+    await chwila(5);
+    await A.v.mergePatients(X, Y);
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, idPo(et, 'x1'), zapis([61]), { preserveSavedAt: false });
+    const [pX] = await delty(B, [X]);
+    const okno = oknoIntegracji(A.v);
+    const wynik = await okno.zastosuj(await A.v.encryptPayloadForCurrentUser(pX));
+    expect(await listaKart(A, { [X]: 'X', [Y]: 'Y' })).toEqual(['X', 'Y']);
+    expect(wynik.addedPatientCount).toBe(1);
+    expect(okno.odswiezenia()).toBe(1);
+  }, CZAS);
+});
+
+describe('P-SYNC-WLASCICIEL — faza przeniesień: chwila zapisu i nagrobek karty docelowej', () => {
+  // [ZIELONY na audyt (Y nie traciła chwili zapisu); mutant K1 recenzenta (chwila zapisu F z samego ładunku) — B traci Y
+  // z 6 wersjami] A scala X → Y, C usuwa Y, B zapisuje yB w Y później niż to usunięcie. B dostaje deltę Y z A (faza
+  // przeniesień przenosi x1 i x2 pod Y), potem nagrobek Y z C. Faza przeniesień nie może cofnąć chwili zapisu Y do
+  // chwili z ładunku: zapis yB jest późniejszy niż usunięcie na C, więc Y zostaje ze wszystkimi wersjami.
+  it.each(KOLEJNOSCI)('nagrobek Y z trzeciego urządzenia po fazie przeniesień, późniejszy zapis Y na B (%s): Y zostaje 6/6', async (kolejnoscId) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnoscId === 'X<Y');
+    const sync = chmura();
+    await sync(A); await sync(B); await sync(C);
+    const et = await etykiety(A, { X, Y });
+    await chwila(5);
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    const [dY] = await delty(A, [Y]);
+    await chwila(5);
+    await C.v.removePatient(Y);
+    const tY = (await delty(C, [])).find((d) => d.tombstones.some((t) => t.patientId === Y));
+    await chwila(5);
+    et[(await zapiszWersje(B, Y, [60, 66, 78])).snapshotId] = 'yB';
+    const zapisYPrzed = (await B.baza.getPatientForUser(B.uid, Y)).lastSavedAtISO;
+    await B.v.mergeSyncPayload(kopia(dY));
+    expect((await B.baza.getPatientForUser(B.uid, Y)).lastSavedAtISO, 'chwila zapisu Y bez cofnięcia').toBe(zapisYPrzed);
+    await B.v.mergeSyncPayload(kopia(tY));
+    const s = await stan(B, et);
+    expect(s.karty.Y).toEqual(karta2(6, ['x1', 'x2', 'y1', 'y2', 'yB', 'ym']));
+    expect(s.nagrobki).not.toContain('Y');
+  }, CZAS);
+
+  // [CZERWONY na audyt — bez fazy przeniesień: x1 i x2 przechodziły pod X od razu, X powstawała; mutant K2 recenzenta
+  // (bez sprawdzenia nagrobka F w fazie) — X powstaje od nowa mimo nowszego nagrobka] A scaliło X → Y; B poprawia x1 w X z nową chwilą zapisu.
+  // Delta X z B: x1 czeka na fazę przeniesień (X tu nie ma, jej nagrobek przegrywa z zapisem z ładunku). Zanim faza
+  // przeczyta stan (w realnym przebiegu: zanim weźmie blokady — np. delta nagrobka X z czwartego urządzenia w innej
+  // karcie przeglądarki), zapisuje się tu nagrobek X późniejszy niż zapis z ładunku. Faza nie zakłada wtedy X od nowa,
+  // x1 zostaje pod Y.
+  it.each(KOLEJNOSCI)('nagrobek karty F zapisany między decyzją a fazą przeniesień (%s): F nie powstaje, wersja zostaje pod G', async (kolejnoscId) => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnoscId === 'X<Y');
+    await B.v.mergeSyncPayload(kopia(await A.v.exportSyncPayload()));
+    const et = await etykiety(A, { X, Y });
+    const x1 = idPo(et, 'x1');
+    await chwila(5);
+    await A.v.mergePatients(X, Y);
+    await chwila(5);
+    await B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: false });
+    const [dX] = await delty(B, [X]);
+    // Pierwszy odczyt wersji karty Y w tym scalaniu to świeży odczyt fazy przeniesień (delta niesie tylko X).
+    const p = A.pulapka('listSnapshotsForUser', (uid, pid) => pid === Y);
+    const scalanie = A.v.mergeSyncPayload(dX);
+    const krok = await Promise.race([p.osiagnieta.then(() => 'faza przeniesień'), scalanie.then(() => 'koniec scalania')]);
+    await chwila(5);
+    const pozniej = new Date().toISOString();
+    expect(pozniej > dX.patients[0].lastSavedAtISO).toBe(true);
+    await A.baza.putTombstoneForUser(A.uid, { patientId: X, deletedAtISO: pozniej });
+    p.zwolnij();
+    const wynik = await scalanie;
+    expect(await A.baza.getPatientForUser(A.uid, X), 'X nie powstaje od nowa').toBeFalsy();
+    expect(await A.baza.listSnapshotsForUser(A.uid, X)).toEqual([]);
+    const wY = (await A.baza.listSnapshotsForUser(A.uid, Y)).map((s) => s.snapshotId);
+    expect(wY).toContain(x1);
+    expect(wY).toHaveLength(5);
+    expect((await A.baza.getPatientForUser(A.uid, Y)).snapshotCount).toBe(5);
+    expect((await A.baza.listTombstonesForUser(A.uid)).filter((t) => t.patientId === X).map((t) => t.deletedAtISO)).toEqual([pozniej]);
+    expect(wynik.addedPatientCount).toBe(0);
+    expect(krok, 'x1 czekała na fazę przeniesień').toBe('faza przeniesień');
   }, CZAS);
 });
 
@@ -1073,7 +1449,7 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     // karta oddająca wersję (licznik albo usunięcie pustej karty) — tylko z Bsw_przenies, czyli pod obiema blokadami
     expect(src.match(/Bsw_poOddaniu\(/g)).toHaveLength(2);
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
-    expect(fp).toContain('await Bsw_poOddaniu(G, rekG, wersjeG.length - 1);');
+    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1)');
     const fo = src.slice(src.indexOf('async function Bsw_poOddaniu('), src.indexOf('// Najnowszy lokalny nagrobek pacjenta'));
     expect(fo).toContain('else await I().removePatientForUser(b, G);');
     expect(fo).not.toContain('putTombstoneForUser');
@@ -1086,6 +1462,10 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(le).toContain(',a=await I().listPatientsForUser(b);const Bkz_S=await Bkz_scalStart(t);');
     const iPetla = le.indexOf('const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);');
     const iPrzen = le.indexOf('await Bsl_przeniesWersje(Bkz_S,i,e);');
+    // karty założone i usunięte w fazie przeniesień w wyniku scalania (addedPatientCount `l`, deletedPatientCount `w`)
+    expect(le).toContain('const Bsw_f=await Bsl_przeniesWersje(Bkz_S,i,e);l+=Bsw_f.dodane,w+=Bsw_f.usuniete;');
+    expect(le).toContain('mergedPatientCount:c,addedPatientCount:l,');
+    expect(le).toContain(',deletedPatientCount:w,');
     const iUsun = le.indexOf('w+=await Bsl_usunPacjenta(j,m[j],e)');
     const iKosz = le.indexOf('await Bkz_scalKoniec(Bkz_S,e)');
     expect(iPetla).toBeGreaterThan(0);
@@ -1096,6 +1476,9 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
 
   it('„Scal pacjentów” zapisuje przeniesioną wersję przez Bsw_poScaleniu; adaptery mają odczyt wersji po kluczu', () => {
     expect(src).toContain('await I().putSnapshotForUser(b,Object.assign({},o[d],Bsw_poScaleniu(o[d],e),Bm1(o[d])))');
+    // cel scalenia zapamiętany przed usunięciem karty źródłowej (zdarzenie onPatientDeleted -> delta nagrobka)
+    expect(src).toContain('}catch{}Bsw_zapamietajCel(t,e);await Bpu_usun(t);return{targetPatientId:e,');
+    expect(src).toContain('const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],');
     expect(src).toContain('async getSnapshotForUser(o,a){const i=(await r(o)).transaction(It,"readonly").objectStore(It);return await t(i.get(a))||null}');
     expect(src).toContain('getSnapshotForUser:function(n,r){return e.getSnapshotForUser(n,r)}');
   });

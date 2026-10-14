@@ -14,6 +14,7 @@ import { expect, test } from '@playwright/test';
 // bez nagrobków), potem osobno delta nagrobka X. Ostatnia wersja X przechodzi pod Y, a pusta X znika (usunięcie
 // karty w IndexedDB kasuje wersje po indeksie karty — przeniesiona wersja jest już pod Y). Na 88f558c: Y 4/4, x2
 // usunięta razem z X.
+// Trzeci test (uwaga przeglądu końcowego do 4270ca1): przypięta wersja X i delta nagrobka z kartą Y — opis niżej.
 //
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -153,4 +154,76 @@ test('delta karty celu „Scal pacjentów”, potem osobna delta nagrobka: żadn
   expect(wynik.wersjeY).toHaveLength(5);
   expect(wynik.wersjeY).toEqual(expect.arrayContaining([wynik.x1, wynik.x2, wynik.ym]));
   expect(wynik.licznikY).toBe(5);
+});
+
+// Uwaga przeglądu końcowego do 4270ca1: na tym urządzeniu (B) przypięcie najnowszej wersji x2 karty X — zwykła
+// operacja historii wersji, bez zmiany chwili zapisu karty — a w tym czasie na A „Scal pacjentów” X → Y. B dostaje
+// deltę karty Y, potem deltę nagrobka X. Od tej zmiany delta nagrobka z urządzenia scalającego niesie też kartę Y
+// (buildTombstoneDelta): X jest wtedy w zbiorze N, a przypięta x2 przechodzi pod Y z przypięciem. Na 4270ca1 (delta
+// nagrobka bez karty) x2 zostawała przy X i znikała razem z nią — wersjeY 4, x2 ani w Y, ani w koszu. Na końcu ta sama
+// strona wykonuje prawdziwe „Scal pacjentów” P → Q na IndexedDB i sprawdza, że jej delta nagrobka P niesie kartę Q.
+test('przypięta x2 w X, delta Y, potem delta nagrobka X z kartą Y: x2 pod Y z przypięciem; nadawca dołącza kartę celu (IndexedDB)', async ({ page }) => {
+  await otworzSejf(page);
+  const wynik = await page.evaluate(async () => {
+    const V = window.VildaVault;
+    const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
+    const pomiar = (m) => ({ uid: `m-${m}`, ageMonths: m, ageYears: m / 12, height: 90 + m / 2, weight: 12 + m / 6 });
+    const rekord = (wieki) => ({
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+      advanced: { data: { measurements: wieki.map(pomiar) } },
+    });
+    const zapisz = (wieki, patientId) => V.savePatient(rekord(wieki), patientId ? { patientId, dedup: false } : { dedup: false });
+    const kopia = (x) => JSON.parse(JSON.stringify(x));
+    const x = await zapisz([60]); await czekaj(5); const x2 = await zapisz([60, 66], x.patientId);
+    await czekaj(5);
+    const y = await zapisz([60]); await czekaj(5); await zapisz([60, 66], y.patientId);
+    const X = x.patientId, Y = y.patientId;
+    const p0 = kopia(await V.exportSyncPayload());
+    await czekaj(5);
+    await V.setSnapshotPinned(X, x2.snapshotId, true);
+    await czekaj(5);
+    // Delty urządzenia A po „Scal pacjentów” X → Y: karta Y (wersje X w rewizji podbitej przy scaleniu, nowa ym), potem
+    // nagrobek X razem z kartą Y (jak buildTombstoneDelta po scaleniu).
+    const teraz = new Date().toISOString();
+    const kX = p0.patients.find((p) => p.patientId === X), kY = kopia(p0.patients.find((p) => p.patientId === Y));
+    kX.snapshots.forEach((s) => { kY.snapshots.push(Object.assign({}, s, { rev: (s.rev || 0) + 1 })); });
+    const ym = `e2e-ym-${Math.random().toString(36).slice(2)}`;
+    kY.snapshots.push({ snapshotId: ym, savedAtISO: teraz, rev: 0, updatedAtISO: null, payload: rekord([60, 66]) });
+    kY.lastSavedAtISO = teraz;
+    kY.snapshotCount = kY.snapshots.length;
+    await V.mergeSyncPayload({ schemaVersion: p0.schemaVersion, patients: [kopia(kY)], tombstones: [] });
+    await czekaj(5);
+    const r2 = await V.mergeSyncPayload({ schemaVersion: p0.schemaVersion, patients: [kopia(kY)], tombstones: [{ patientId: X, deletedAtISO: new Date().toISOString() }] });
+    const lista = await V.listPatients();
+    const pY = await V.getPatient(Y);
+    const sx2 = pY ? pY.snapshots.find((s) => s.snapshotId === x2.snapshotId) : null;
+    const kosz = await V.listTrashedSnapshots();
+    // Nadawca: prawdziwe „Scal pacjentów” P → Q i delta nagrobka P.
+    const pp = await zapisz([48]); await czekaj(5);
+    const qq = await zapisz([50]);
+    await V.mergePatients(pp.patientId, qq.patientId);
+    const z = await V.buildTombstoneDelta(pp.patientId);
+    const d = await V.decryptPayloadForCurrentUser(z.iv, z.data);
+    return {
+      jestX: lista.some((p) => p.patientId === X),
+      wersjeY: pY ? pY.snapshots.map((s) => s.snapshotId) : [],
+      licznikY: (lista.find((p) => p.patientId === Y) || {}).snapshotCount,
+      x2wY: Boolean(sx2), x2Przypieta: Boolean(sx2 && sx2.payload && sx2.payload._pinned),
+      x2wKoszu: kosz.some((e) => e.snapshotId === x2.snapshotId),
+      x1: x.snapshotId, ym, deletedPatientCount: r2.deletedPatientCount,
+      deltaNagrobka: { karty: d.patients.map((p) => p.patientId), nagrobki: d.tombstones.map((t) => t.patientId), Q: qq.patientId, P: pp.patientId },
+    };
+  });
+
+  expect(wynik.jestX, 'karta X znika (nagrobek)').toBe(false);
+  expect(wynik.wersjeY).toHaveLength(5);
+  expect(wynik.wersjeY).toEqual(expect.arrayContaining([wynik.x1, wynik.ym]));
+  expect(wynik.x2wY, 'przypięta x2 pod Y').toBe(true);
+  expect(wynik.x2Przypieta, 'przypięcie z tego urządzenia zachowane').toBe(true);
+  expect(wynik.x2wKoszu).toBe(false);
+  expect(wynik.licznikY).toBe(5);
+  expect(wynik.deletedPatientCount).toBe(1);
+  expect(wynik.deltaNagrobka.karty).toEqual([wynik.deltaNagrobka.Q]);
+  expect(wynik.deltaNagrobka.nagrobki).toEqual([wynik.deltaNagrobka.P]);
 });
