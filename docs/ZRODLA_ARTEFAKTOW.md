@@ -918,6 +918,89 @@ function vo(t) {
 }
 ```
 
+## Łatki P-BADANIA (`vilda_auth_ui.js` 493 → 494, `vilda_auth_ui.css` 78 → 79, 2026-10-14)
+
+Piąta zakładka karty pacjenta „Badania” (LAB-HISTORIA PR2). Widok rysuje czytelny moduł `vilda_lab_history_tab.js` (+ `vilda_lab_history_tab.css`) na modelu `vilda_lab_history.js`; w artefakcie są tylko punkty wpięcia. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis „LAB-HISTORIA PR2”; projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.2. Nazwy z artefaktu: `se()` — karta pacjenta, `t` — id pacjenta, `e()` — budowa elementu, `at()` — ikona z etykietą zakładki, `ua()` — przełączenie zakładki, `ia()` — wpis nawigacji, `ga()` — edytor notatki, `Mr()` — arkusz przypomnień, `Xo`/`da()` — Notatki, `Xl`/`Ue()` — Historia, `ue`/`Ae` — flagi „narysowane”, `xa` — pamięć karty.
+
+Strażnik kolizji (plan 3.2, K16): nowe nazwy w `se()` mają prefiks `Gd`. Przed edycją żadna nie występowała w pliku:
+
+```bash
+git show origin/audyt:vilda_auth_ui.js | grep -o -w -E 'GdLabTab|GdLabHost|GdLabOnce|GdLabRender|GdIkonaKolby|GdModul|GdO|GdData|GdLista|__vildaLabTrend' | sort | uniq -c   # pusto
+```
+
+```js
+// P-BADANIA, w se(): ikona kolby i przycisk piątej zakładki, dopisane na końcu listy
+GdIkonaKolby = '<path d="M9 3h6"/>…';                          // obok ikon _t, It, Pt, Mt
+GdLabTab = e('button', { class: 'vilda-patient-tab', type: 'button', html: at(GdIkonaKolby, 'Badania'), 'data-tab': 'lab' });
+Ft = e('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [Et, Bt, pt, kt, GdLabTab]);   // było: [Et, Bt, pt, kt]
+
+// kontener i leniwy render (za Ue(), jak Notatki i Historia)
+var GdLabHost = e('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-lab-section', 'data-tab': 'lab' });
+var GdLabOnce = false;
+function GdLabRender() {
+  var modul = window.VildaLabHistoryTab;
+  if (!modul) { /* „Zakładka Badania nie jest dostępna — odśwież stronę.” */ return; }
+  modul.render(GdLabHost, t, {
+    openEditor(o) {                         // + Dodaj wynik, Wpisz wynik, klik w wartość
+      ga({ patientId: t, note: o.note || null, template: o.template, anchor: o.anchor, onSaved: o.onSaved });
+      if (o.anchor === 'date') document.querySelector('.b3-clinical-date')?.focus();   // tylko widoczne pole
+    },
+    openReminders(lista) { Mr(lista, {}); },
+    onChanged() { ue ? da() : (Ae = false); },   // Notatki od nowa; Historia przy następnym otwarciu
+  });
+}
+// ua(): [Et, Bt, pt, kt, GdLabTab] i [Nt, Ct, sa, ca, GdLabHost]
+// klik: GdLabTab → ua('lab'), ia({ screen: 'card', patientId: t, tab: 'lab' }), GdLabOnce || (GdLabOnce = true, GdLabRender())
+// r.activeTab === 'lab': render i ua('lab'); „lab” w białej liście; xa.restoreTab('lab') tak samo
+// lista dzieci karty (Cs): …, sa, ca, GdLabHost, e('div', { class: 'vilda-auth-actions vilda-patient-actions' }, …)
+```
+
+```js
+// P-BADANIA-EDYTOR, w ga(t): szablon i kotwica na życzenie wołającego (zakładka „Badania”)
+// za wyborem szablonu z zapisanej notatki (w = 'none' | 'med-…' | 'lab'):
+if (t && t.template === 'lab' && w === 'none') w = 'lab';        // szablon „Wynik badania”, kategoria Badanie
+// za wyborem kotwicy (Bt = 'date' | 'visit' | 'general'):
+if (t && t.anchor === 'date' && Bt === 'general') Bt = 'date';   // „Wpisz datę zdarzenia”; wizyta i data zostają
+```
+
+```js
+// P-BADANIA-TREND-HISTORIA, w Xl(): bez „Trendu wyników” (decyzja 6.12)
+// było: var d = e('div', { class: 'vilda-lab-trend-host' }); t.appendChild(d);
+//       try { await Jl(d, a, n) } catch { oe(d) }
+//       if (t && t._vildaLtcGenXl !== LtcGen) return;
+var d = e('div', { class: 'vilda-lab-trend-host' }); t.appendChild(d);   // bez await Jl; Jl() zostaje w pliku bez zmian
+// … po odczycie zdarzeń i pacjenta, za znacznikiem pokolenia z P-LAB-TREND-CONVERT-2:
+if ((S || []).some((f) => f && f.type === 'note' && f.labResult && (f.labResult.test || f.labResult.value) && !f.medication && f.category !== 'wynik-klirens')) {
+  d.appendChild(e('p', { class: 'vilda-lab-trend-link' }, [e('button', {
+    type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost',
+    text: 'Trend i porównanie wyników są w zakładce Badania →',
+    onclick() { document.querySelector('.vilda-auth-patient-card button[data-tab="lab"]')?.click(); },
+  })]));
+}
+```
+
+```js
+// P-BADANIA-EKSPORT, w IIFE tuż przed `i.VildaAuthUI = zs` — poza zakresami wycinanymi przez testy
+window.__vildaLabTrend = Object.freeze({ render: Nl, assessments: Lh3TrendAssessments, parseNorm: Dl, formatAge: eo, loadConverter: ja });
+// celowo bez vi() i Jl(): dzisiejsze normy nie dostają nowych konsumentów
+```
+
+Plan 3.2 wymieniał w eksporcie także `wa`, `In` i `Tl`; zakładka ich nie używa (własne chipy, data z modelu), więc eksport jest węższy.
+
+`vilda_auth_ui.css`: w `@media(max-width:1024px)` piąta zakładka zajmuje obie kolumny siatki (`.vilda-patient-tabs>.vilda-patient-tab:nth-child(5){grid-column:1/-1}`), a w `@media(max-width:1200px)` zakładki w wierszu mają szerokość wg treści (`flex:1 1 auto`). W oknie 1025–1200 px karta ma ok. 675 px i przy równych szerokościach „Siatki centylowe” się ucinały (K24); do 1024 px zakładki stoją w siatce, więc reguła działa tylko w wierszu. Bez nowego progu.
+
+## Łatki P-BADANIA-CHROME (`vilda_session_bridge.js` 66 → 67, `vilda_chrome.js` 142 → 143, 2026-10-14)
+
+Oba leniwe stosy auth (lista `V` mostu sesji i lista `d` w `vilda_chrome.js`) dostały trzy wpisy za `vilda_hormone_reference_ui.js`, a warunki „wszystko już jest” (`w()`, `I()` w moście, `u()` w chrome) — dwa globale. Strony z tagami statycznymi (osiem stron z kartą) nic nie doładowują; strona bez tagów (np. przelicznik po `ensureAuthLoaded`) dostaje moduły razem z kartą. Zgodność obu list pilnuje `tests/unit/lab-history-tab-loading.test.mjs`.
+
+```js
+// za {type:"script",src:"vilda_hormone_reference_ui.js?v=1",…}
+{ type: 'script', src: 'vilda_lab_history.js?v=1', ready: () => !!window.VildaLabHistory },
+{ type: 'css',    src: 'vilda_lab_history_tab.css?v=1', ready: () => false },
+{ type: 'script', src: 'vilda_lab_history_tab.js?v=1', ready: () => !!window.VildaLabHistoryTab },
+// w(), I() (most) i u() (chrome): … && VildaHormoneReferenceUI && VildaLabHistory && VildaLabHistoryTab && …
+```
+
 ## Jak odtworzyć
 
 ```bash

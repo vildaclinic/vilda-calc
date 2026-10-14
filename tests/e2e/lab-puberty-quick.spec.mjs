@@ -361,7 +361,7 @@ test('a previously saved dated sample retains its historical age and absent stag
   const saved = await page.evaluate((id) => window.VildaVault.getPatientNote(id), legacy.note.id);
   expect(saved.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${legacy.note.id}"] .vilda-lab-assessment`);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'above');
   await expect(recorded.locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'unavailable');
@@ -435,7 +435,7 @@ test('new pins omit a manual range while history preserves the profile and range
   const historical = await page.evaluate((id) => window.VildaVault.getPatientNote(id), legacy.note.id);
   expect(historical.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(recorded.locator('[data-comparison="reported"]')).toHaveCount(0);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
@@ -484,7 +484,7 @@ test('historical manual ranges retain limits, invalid input, censored results an
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   for (const fixture of fixtures) {
     const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), fixture.note.id);
     expect(reread.labResult.assessment).toEqual(fixture.assessment);

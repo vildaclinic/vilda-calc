@@ -98,9 +98,10 @@ async function recordLegacySample(page, patientId, fields = {}, value = '2') {
     return { note, assessment: savedAssessment };
   }, { id: patientId, overrides: fields, raw: value, sampleDate: SAMPLE_DATE });
 }
+// LAB-HISTORIA PR2: zapisane oceny przeniosły się z „Trendu wyników” w Historii do zakładki „Badania”.
 async function openTimeline(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
 }
 const historicalAssessment = (page, id) => page.locator(`.vilda-lab-assessment-history-row[data-note-id="${id}"] .vilda-lab-assessment`);
 

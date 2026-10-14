@@ -13,6 +13,8 @@ function environment(missing = [], restoredSession = false) {
   const events = new Map(), appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
+    // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
+    VildaLabHistory: {}, VildaLabHistoryTab: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

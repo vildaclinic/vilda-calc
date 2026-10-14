@@ -1,0 +1,532 @@
+/* Zakładka „Badania” w karcie pacjenta (vilda_lab_history_tab.js, LAB-HISTORIA PR2).
+   Paleta wg decyzji 6.18: fiolet modułu lab dla historii i chipów, teal dla przycisków, segmentu
+   i aktywnej zakładki; bez zieleni i czerwieni dla statusów historycznych. Przyciski z !important,
+   bo skórka .liquid-ios26 nadpisuje wszystkie przyciski z !important (ios26-v2.css). */
+
+.vilda-lab-hist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12px);
+  margin-bottom: var(--space-14px);
+  min-width: 0
+}
+
+.vilda-lab-hist [hidden] {
+  display: none!important
+}
+
+.vilda-lab-hist p {
+  margin: 0
+}
+
+.vilda-lab-hist-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  flex-wrap: wrap
+}
+
+.vilda-lab-hist-titles {
+  min-width: 0
+}
+
+.vilda-lab-hist-summary {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong)
+}
+
+.vilda-lab-hist-actions {
+  display: flex;
+  gap: var(--space-8px);
+  flex-wrap: wrap
+}
+
+.vilda-lab-hist-muted {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45
+}
+
+.vilda-lab-hist-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  flex-wrap: wrap;
+  background: #fff;
+  border: .5px solid #d7e9ec;
+  border-radius: var(--radius-12);
+  padding: var(--space-10px) var(--space-12px)
+}
+
+.vilda-lab-hist-chips {
+  display: flex;
+  gap: var(--space-6px);
+  flex-wrap: wrap;
+  min-width: 0
+}
+
+.vilda-lab-hist button.vilda-lab-hist-chip {
+  background: #EEEDFE!important;
+  color: #534AB7!important;
+  border: 0!important;
+  border-radius: var(--radius-pill)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: var(--space-6px) var(--space-12px);
+  min-height: 34px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer
+}
+
+.vilda-lab-hist button.vilda-lab-hist-chip[aria-pressed=true] {
+  background: #534AB7!important;
+  color: #fff!important
+}
+
+.vilda-lab-hist-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: #fff;
+  border: .5px solid #d7e9ec;
+  border-radius: var(--radius-10)
+}
+
+.vilda-lab-hist button.vilda-lab-hist-segment-btn {
+  background: transparent!important;
+  color: #3a4a52!important;
+  border: 0!important;
+  border-radius: var(--radius-8)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: var(--space-6px) var(--space-14px);
+  min-height: 36px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer
+}
+
+.vilda-lab-hist button.vilda-lab-hist-segment-btn[aria-pressed=true] {
+  background: var(--primary)!important;
+  color: #fff!important
+}
+
+.vilda-lab-hist button.vilda-lab-hist-link {
+  background: transparent!important;
+  color: var(--primary)!important;
+  border: 0!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: var(--space-4px) 2px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer
+}
+
+.vilda-lab-hist-pending,
+.vilda-lab-hist-state {
+  background: #fff;
+  border: .5px solid #d7e9ec;
+  border-radius: var(--radius-12);
+  padding: var(--space-10px) var(--space-14px)
+}
+
+.vilda-lab-hist-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8px);
+  color: #3a4a52;
+  font-size: 14px
+}
+
+.vilda-lab-hist-pending-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8px)
+}
+
+.vilda-lab-hist-pending-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10px);
+  flex-wrap: wrap;
+  padding: var(--space-8px) 0;
+  border-top: .5px solid #e6eef0
+}
+
+.vilda-lab-hist-tag {
+  background: #eef2f3;
+  color: #5b6672;
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-8px);
+  font-size: 12px;
+  font-weight: 600
+}
+
+.vilda-lab-hist-pending-title {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 14px
+}
+
+.vilda-lab-hist-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10px);
+  min-width: 0
+}
+
+.vilda-lab-hist-panel-h {
+  margin: var(--space-4px) 0 0;
+  color: #26215C;
+  font-size: 15px;
+  font-weight: 600
+}
+
+.vilda-lab-hist-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12px)
+}
+
+.vilda-lab-hist-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-8px) var(--space-18px);
+  min-width: 0;
+  background: #fff;
+  border: .5px solid #d7e9ec;
+  border-radius: var(--radius-12);
+  padding: var(--space-12px) var(--space-14px)
+}
+
+.vilda-lab-hist-card-info {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: var(--space-6px);
+  min-width: 0
+}
+
+.vilda-lab-hist-card-chart {
+  display: flex;
+  flex: 3 1 420px;
+  flex-direction: column;
+  gap: var(--space-4px);
+  min-width: 0
+}
+
+.vilda-lab-hist-card-extra {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--space-6px);
+  min-width: 0
+}
+
+.vilda-lab-hist-card-name {
+  color: var(--text-strong);
+  font-size: 15px;
+  font-weight: 600
+}
+
+.vilda-lab-hist-last {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8px);
+  flex-wrap: wrap
+}
+
+.vilda-lab-hist button.vilda-lab-hist-value {
+  background: transparent!important;
+  color: var(--text-strong)!important;
+  border: 0!important;
+  border-radius: var(--radius-6)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: 0 2px;
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  cursor: pointer
+}
+
+.vilda-lab-hist-flag,
+.vilda-lab-hist-mark {
+  color: #534AB7;
+  font-weight: 700
+}
+
+.vilda-lab-hist-date {
+  color: #5b6672;
+  font-size: 13px
+}
+
+.vilda-lab-hist-status {
+  display: inline-flex;
+  flex-direction: column;
+  align-self: flex-start;
+  gap: 2px;
+  background: #EEEDFE;
+  color: #3C3489;
+  border-radius: var(--radius-10);
+  padding: var(--space-4px) var(--space-10px);
+  font-size: 13px
+}
+
+.vilda-lab-hist-status.tone-warning {
+  background: var(--warning-bg);
+  color: var(--warning)
+}
+
+.vilda-lab-hist-status.tone-muted {
+  background: #eef2f3;
+  color: #5b6672
+}
+
+.vilda-lab-hist-status-context {
+  font-size: 12px;
+  opacity: .9
+}
+
+.vilda-lab-hist-prev {
+  color: #3a4a52;
+  font-size: 13px
+}
+
+.vilda-lab-hist-chart {
+  min-width: 0;
+  max-width: 660px
+}
+
+.vilda-lab-hist-no-chart {
+  padding: var(--space-18px) 0
+}
+
+.vilda-lab-hist-foot {
+  color: #8a949c;
+  font-size: 12px
+}
+
+.vilda-lab-hist-comments,
+.vilda-lab-hist-assess {
+  font-size: 13px
+}
+
+.vilda-lab-hist-comments summary {
+  color: #534AB7;
+  font-weight: 600;
+  cursor: pointer
+}
+
+.vilda-lab-hist-assess-h {
+  color: #534AB7;
+  font-weight: 600
+}
+
+.vilda-lab-hist-comments ul,
+.vilda-lab-hist-treatment ul {
+  margin: var(--space-6px) 0 0;
+  padding-left: var(--space-18px)
+}
+
+.vilda-lab-hist-assess .vilda-lab-assessment-history-title {
+  display: none
+}
+
+.vilda-lab-hist-treatment {
+  background: #f7f6fe;
+  border-radius: var(--radius-10);
+  padding: var(--space-8px) var(--space-12px);
+  color: #3C3489;
+  font-size: 13px
+}
+
+.vilda-lab-hist-treatment-h {
+  font-weight: 600
+}
+
+.vilda-lab-hist-treatment .vilda-lab-hist-date {
+  margin-right: var(--space-8px)
+}
+
+.vilda-lab-hist-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  border: .5px solid #d7e9ec;
+  border-radius: var(--radius-12)
+}
+
+.vilda-lab-hist-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px
+}
+
+.vilda-lab-hist-table th,
+.vilda-lab-hist-table td {
+  padding: var(--space-8px) var(--space-10px);
+  background: #fff;
+  color: var(--text-strong);
+  border: 0;
+  border-bottom: .5px solid #e6eef0;
+  font-size: 14px;
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap
+}
+
+.vilda-lab-hist-table tbody th {
+  font-weight: 600
+}
+
+.vilda-lab-hist-table thead th {
+  background: #f9fcfc;
+  color: #5b6672;
+  font-size: 12px;
+  font-weight: 600
+}
+
+.vilda-lab-hist-th-unit {
+  display: block;
+  color: #8a949c;
+  font-size: 11px;
+  font-weight: 400
+}
+
+.vilda-lab-hist-table .vilda-lab-hist-th-date,
+.vilda-lab-hist-table .vilda-lab-hist-td-date {
+  position: sticky;
+  left: 0;
+  z-index: var(--z-raised);
+  text-align: left;
+  box-shadow: inset -.5px 0 0 #e6eef0
+}
+
+.vilda-lab-hist-table thead .vilda-lab-hist-th-date {
+  background: #f9fcfc
+}
+
+.vilda-lab-hist-td-date .vilda-lab-hist-muted {
+  display: block;
+  font-weight: 400
+}
+
+.vilda-lab-hist-table .vilda-lab-hist-th-comment,
+.vilda-lab-hist-table .vilda-lab-hist-td-comment {
+  min-width: 180px;
+  text-align: left;
+  white-space: normal
+}
+
+.vilda-lab-hist button.vilda-lab-hist-cell {
+  display: block;
+  margin-left: auto;
+  background: transparent!important;
+  color: var(--text-strong)!important;
+  border: 0!important;
+  border-radius: var(--radius-6)!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  -webkit-backdrop-filter: none!important;
+  padding: 2px var(--space-4px);
+  min-height: 32px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+  cursor: pointer
+}
+
+.vilda-lab-hist-cell-delta {
+  display: block;
+  color: #5b6672;
+  font-size: 11.5px;
+  font-weight: 400
+}
+
+.vilda-lab-hist-cell-value.is-converted {
+  text-decoration: underline dotted #8a949c;
+  text-underline-offset: 3px
+}
+
+.vilda-lab-hist-cell-value.is-muted {
+  color: #8a949c
+}
+
+.vilda-lab-hist-table tr.is-undated th {
+  color: #8a949c
+}
+
+.vilda-lab-hist-table .vilda-lab-hist-tr-treatment th,
+.vilda-lab-hist-table .vilda-lab-hist-tr-treatment td {
+  background: #f7f6fe;
+  color: #3C3489;
+  font-size: 13px;
+  text-align: left
+}
+
+.vilda-lab-hist-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px)
+}
+
+.vilda-lab-hist-footer-main {
+  color: var(--text-strong);
+  font-size: 14px
+}
+
+@media(max-width:480px) {
+  .vilda-lab-hist-head {
+    align-items: stretch
+  }
+  .vilda-lab-hist-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%
+  }
+  .vilda-lab-hist-actions>* {
+    justify-content: center;
+    min-height: 44px
+  }
+  .vilda-lab-hist-toolbar {
+    padding: 0;
+    background: transparent;
+    border: 0
+  }
+  .vilda-lab-hist-segment {
+    width: 100%
+  }
+  .vilda-lab-hist button.vilda-lab-hist-segment-btn {
+    flex: 1;
+    min-height: 44px
+  }
+  .vilda-lab-hist button.vilda-lab-hist-chip {
+    min-height: 44px
+  }
+  .vilda-lab-hist-toolbar>.vilda-lab-hist-segment {
+    order: -1
+  }
+}

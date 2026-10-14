@@ -75,8 +75,10 @@ Do tej warstwy należą m.in.:
 - historia wyników laboratoryjnych: `vilda_lab_history.js` — czysty model widoku historii (bez DOM,
   magazynu i zegara; konwerter, parser normy i „dziś” podaje wołający). Czyta tylko to, co zapisano
   w sejfie, i nie ocenia dawnych wyników dzisiejszymi normami. Konsumenci: zakładka „Badania” karty
-  pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`); do czasu
-  zakładki moduł nie jest ładowany przez strony;
+  pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zakładkę
+  rysuje `vilda_lab_history_tab.js` (+ `.css`): tylko widok, dane z sejfu, porównanie z modelu, wykres
+  rendererem karty (`window.__vildaLabTrend`, eksport z `vilda_auth_ui.js`); oba pliki ładują strony
+  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`);
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
 

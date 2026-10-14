@@ -1,9 +1,11 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaBadania, sekcjaBadan } from '../support/karta-czekanie.mjs';
 
-// P-LAB-TREND-CONVERT: wynik zapisany w innej znanej jednostce trafia do „Trendu wyników”
-// przeliczony tym samym współczynnikiem co przelicznik. Konwerter ładuje się leniwie: Start
-// w czasie bezczynności albo przy pierwszym dotknięciu, DocPro dopiero na żądanie karty —
-// trend ma działać na obu stronach, także gdy konwerter jeszcze się ładuje.
+// P-LAB-TREND-CONVERT: wynik zapisany w innej znanej jednostce trafia na wykres przeliczony tym samym
+// współczynnikiem co przelicznik. Konwerter ładuje się leniwie: Start w czasie bezczynności albo przy
+// pierwszym dotknięciu, DocPro dopiero na żądanie karty — wykres ma działać na obu stronach, także gdy
+// konwerter jeszcze się ładuje. Od LAB-HISTORIA PR2 (decyzja 6.12) wykres trendu jest w zakładce „Badania”
+// (ten sam renderer Nl), a „Historia” go nie rysuje.
 // Każdy test zakłada świeży, fikcyjny sejf w osobnym kontekście przeglądarki.
 test.use({ serviceWorkers: 'block' });
 
@@ -47,17 +49,18 @@ async function saveFt4(page, patientId) {
 }
 
 for (const path of ['/index.html', '/docpro.html']) {
-  test(`${path}: fT4 w ng/dL trafia do trendu w pmol/L, bez „pominięto”`, async ({ page }) => {
+  test(`${path}: fT4 w ng/dL trafia na wykres w pmol/L, bez „poza wykresem”`, async ({ page }) => {
     const patientId = await openVault(page, path);
     await saveFt4(page, patientId);
     await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
-    await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
-    const trend = page.locator('.vilda-patient-tab-content[data-tab="timeline"] .vilda-lab-trend-section');
-    await expect(trend).toBeVisible();
-    await expect(trend.locator('button.vilda-lab-trend-chip:not(.vilda-trend-norm-chip)')).toHaveText(/fT4 ×3/);
-    await expect(trend.locator('.vilda-lab-trend-foot')).not.toContainText('pominięto');
+    await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
+    await czekajNaBadania(page);
+    const card = sekcjaBadan(page).locator('.vilda-lab-hist-card[data-series="ft4"]');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.vilda-lab-hist-card-h')).toHaveText(/fT4 pmol\/L · ×3/);
+    await expect(card.locator('.vilda-lab-hist-foot')).toHaveCount(0);
     // Punkt przeliczony ma na wykresie obwódkę, jak dotąd; jego wartość to 1,2 × 12,87 = 15,444 pmol/L.
-    await expect(trend.locator('svg circle[stroke="#26215C"]')).toHaveCount(1);
-    await expect(trend.locator('svg')).toContainText('15,4');
+    await expect(card.locator('svg circle[stroke="#26215C"]')).toHaveCount(1);
+    await expect(card.locator('svg')).toContainText('15,4');
   });
 }
