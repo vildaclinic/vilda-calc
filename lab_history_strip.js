@@ -174,7 +174,8 @@
       width: width, height: height, narrow: narrow, top: top, axisY: axisY, left: left, right: right,
       plotLeft: plotLeft, plotRight: plotRight, ticks: ticks, yMax: yMax, points: laid,
       dateLabels: dateLabels(laid.map(function (point) { return point.x; }), {
-        narrow: narrow, labelWidth: narrow ? 46 : 54, leftLimit: left, rightLimit: hasNow ? sepX : right
+        // Szerokość daty „DD.MM.RR” z zapasem na szerszy krój zastępczy (bez Inter); ostatecznie rozstrzyga pomiar (pruneOverlaps).
+        narrow: narrow, labelWidth: narrow ? 54 : 60, leftLimit: left, rightLimit: hasNow ? sepX : right
       }),
       now: hasNow ? { laneX: laneX, laneW: laneW, sepX: sepX, x: laneX + laneW / 2, y: y(current), v: current } : null
     };
@@ -632,27 +633,55 @@
         svgNode(group, 'title', null, null, formatDate(point.dateISO) + ' · ' + valueText(point) + (entry && entry.converted ? ' · zapisano: ' + recorded(entry) : ''));
         if (point.noteId) group.addEventListener('click', function () { select(point.noteId); });
       });
-      var charWidth = layout.narrow ? 6.2 : 6.4, rightEdge = layout.now ? layout.now.sepX : layout.right;
+      var charWidth = layout.narrow ? 6.8 : 7.0, rightEdge = layout.now ? layout.now.sepX : layout.right;
       var widthOf = function (i) { return valueText(layout.points[i]).length * charWidth; };
+      var valueNodes = [];
       valueLabelIndexes(layout.points, widthOf).forEach(function (i) {
         var point = layout.points[i], half = widthOf(i) / 2, x = point.x, anchor = 'middle';
         // Przy brzegu osi podpis wyrównany do punktu, żeby nie wchodził na podziałkę ani na pas „teraz”.
         if (x - half < layout.left) { anchor = 'start'; x -= 4; } else if (x + half > rightEdge) { anchor = 'end'; x += 4; }
-        svgNode(svg, 'text', { x: x, y: point.y - 10, 'text-anchor': anchor }, 'lab-strip-val', valueText(point));
+        valueNodes.unshift(svgNode(svg, 'text', { x: x, y: point.y - 10, 'text-anchor': anchor }, 'lab-strip-val', valueText(point)));
       });
+      var axisNodes = [];
       if (layout.now) {
         var now = layout.now;
         svgNode(svg, 'line', { x1: now.sepX, y1: layout.top, x2: now.sepX, y2: layout.axisY }, 'lab-strip-sepline');
         svgNode(svg, 'rect', { x: now.laneX, y: layout.top, width: now.laneW, height: layout.axisY - layout.top }, 'lab-strip-lane');
         svgNode(svg, 'line', { x1: now.x, y1: now.y + 7, x2: now.x, y2: layout.axisY }, 'lab-strip-drop');
         svgNode(svg, 'circle', { cx: now.x, cy: now.y, r: 7 }, 'lab-strip-now-dot');
-        svgNode(svg, 'text', { x: now.x, y: now.y - 14, 'text-anchor': 'middle' }, 'lab-strip-val', bareValue(preview, series.unit));
-        svgNode(svg, 'text', { x: now.x, y: layout.axisY + 18, 'text-anchor': 'middle' }, 'lab-strip-now-label', 'teraz');
+        valueNodes.unshift(svgNode(svg, 'text', { x: now.x, y: now.y - 14, 'text-anchor': 'middle' }, 'lab-strip-val', bareValue(preview, series.unit)));
+        axisNodes.push(svgNode(svg, 'text', { x: now.x, y: layout.axisY + 18, 'text-anchor': 'middle' }, 'lab-strip-now-label', 'teraz'));
         svgNode(svg, 'text', { x: now.x, y: layout.axisY + 31, 'text-anchor': 'middle' }, 'lab-strip-now-sub', 'bez daty');
       }
-      layout.dateLabels.forEach(function (label) {
+      // Kolejność ważności: ostatnia data, pierwsza, pośrednie (od najnowszej).
+      var dates = layout.dateLabels.map(function (label) {
         var point = layout.points[label.index];
-        svgNode(svg, 'text', { x: point.x, y: layout.axisY + 18, 'text-anchor': label.anchor }, 'lab-strip-date', formatDate(point.dateISO));
+        return { index: label.index, node: svgNode(svg, 'text', { x: point.x, y: layout.axisY + 18, 'text-anchor': label.anchor }, 'lab-strip-date', formatDate(point.dateISO)) };
+      });
+      var lastIndex = layout.points.length - 1;
+      dates.sort(function (a, b) {
+        var rank = function (d) { return d.index === lastIndex ? 0 : d.index === 0 ? 1 : 2; };
+        return rank(a) - rank(b) || b.index - a.index;
+      });
+      pruneOverlaps(axisNodes.concat(dates.map(function (d) { return d.node; })));
+      pruneOverlaps(valueNodes);
+    }
+
+    // Oszacowanie szerokości podpisów zależy od kroju; po narysowaniu mierzymy prawdziwe prostokąty
+    // i usuwamy podpis, który mimo to nachodzi na ważniejszy (kolejność listy = ważność).
+    function pruneOverlaps(nodes) {
+      var kept = [];
+      nodes.forEach(function (node) {
+        if (!node || typeof node.getBBox !== 'function') return;
+        var box;
+        try { box = node.getBBox(); } catch (_) { return; }
+        if (!box || !(box.width > 0)) return;
+        var clash = kept.some(function (other) {
+          return box.x < other.x + other.width + 4 && other.x < box.x + box.width + 4
+            && box.y < other.y + other.height && other.y < box.y + box.height;
+        });
+        if (clash) node.parentNode.removeChild(node);
+        else kept.push(box);
       });
     }
 
