@@ -763,6 +763,33 @@ A(masa, plec, wiekLat, 'WT', zrodlo, ramkaNieaktualna ? { wiekMies: null } : und
 calcPercentileStats(wzrostDocelowy, plec, 18, 'HT', { wiekMies: null });
 ```
 
+## Łatka P-WIEK-POMIARU-3 (karta porównania, masa poniżej 3 lat przy OLAF, wiek kostny, 2026-10-14)
+
+Zmiana wprost w artefaktach. Rejestr: `docs/clinical/ALGORITHMS.md`, P-WIEK-POMIARU-3. Nazwy z artefaktów: `q` — `__pickLastMeasurement`, `Se` — budowa kolumny „Poprzednio”, `En` — centyl kafelka Karty, `I` — centyl wiersza schowka.
+
+```js
+// vilda_summary_cards.js — karta porównania
+function q(rekord) { /* … */ info.wiekMies = Sw_wiekPomiaru(rekord, info.ageMonths); return info; }   // wiek z doby pomiaru albo null
+function Sw_wiekDzis(wiekLat) { return lmsNiemowleWiek(Math.round(wiekLat * 12)); }                  // bramka DOB-AGE-4 formularza; null = pełne miesiące
+function Sw_masaPal(wiekLat) { return bmiSource === 'PALCZEWSKA' || (bmiSource === 'OLAF' && wiekLat < OLAF_DATA_MIN_AGE); }
+masa = Sw_masaPal(r) ? calcPercentileStatsPal(kg, plec, r, 'WT') : calcPercentileStats(kg, plec, r, 'WT', { wiekMies: Pw });  // Se()
+vildaPorownanieZPoprzednim({ ...poprzedni, wiekMies: prevMeasurementInfo.wiekMies },
+  { ageMonths: A * 12, wiekMies: Sw_wiekDzis(A), /* … */ }, opt);                                     // updatePrevSummaryDiff()
+// w modelu: wA, wB = wiek dokładny albo pełne miesiące
+stat('HT', wzrost, wA); oc(bmi, wA); B.cole({ /* … */ wiekMies: wA });
+statW(masa, aM, wA);   // pełne miesiące; na siatce WHO poniżej 36 mies. — wiek dokładny
+
+// app.js — advHistoryGetChildLMSForSource(): masa WHO 0–35 mies.
+lmsNiemowle(LMS_INFANT_WEIGHT_X, Math.round(wiekLat * 12), { wiekMies: Math.round(wiekLat * 12 * 1e3) / 1e3 });  // było: wiersz [Math.round(…)]
+
+// vilda_auth_ui.js — En(); vilda_patient_summary_copy.js — I()
+var zr = zrodloZapisu || bmiSource;
+if (param !== 'HT' && (zr === 'PALCZEWSKA' || (zr === 'OLAF' && wiekLat < 3))) return calcPercentileStatsPal(wartosc, plec, wiekLat, param);
+
+// vilda_advanced_growth.js — heightSdsForBoneAge (u = calcPercentileStats)
+calcPercentileStats(wzrost, plec, wiekKostnyLat, 'HT', { wiekMies: null });
+```
+
 ## Jak odtworzyć
 
 ```bash
