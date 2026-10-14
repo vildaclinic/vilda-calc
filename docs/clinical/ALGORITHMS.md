@@ -5696,7 +5696,7 @@ Zmierzone przy okazji, bez zmian kodu: wskaźnik zapisu po poprawce w Karcie pok
 3. Panele-rodzeństwo w powłoce odświeżają bazę po zmianie w miejscu i wpisują dokładnie pola wpisane przez panel, w którym pracuje lekarz.
 4. Znacznik `promoted` w powiadomieniu sejfu o zmianie w miejscu (nowe pole powiadomienia, bez zmiany formatu rekordu).
 
-### P-WIEK-POMIARU — pomiar zapisany liczy się w swoim wieku, nie w dokładnym wieku dziecka z formularza (SW 1.1.268, 2026-10-13, polecenie właściciela)
+### P-WIEK-POMIARU — pomiar zapisany liczy się w swoim wieku, nie w dokładnym wieku dziecka z formularza (SW 1.1.269, 2026-10-13, polecenie właściciela)
 
 **Polecenie właściciela.** „Napraw ustalenia poza zakresem w osobnym PR”. Chodzi o oba ustalenia z P-POROWNANIE-DATA (#662); pierwsze zanotowano już w P-POROWNANIE-W-TLE.
 
@@ -5814,7 +5814,7 @@ Populacja i jednostki jak w tych wpisach: długość i wzrost w cm, masa w kg, w
 2. **ΔSDS karty porównania.** Liczy oba pomiary w pełnych miesiącach. Dla dwóch pomiarów niemowlęcia z tego samego miesiąca życia pomija więc tygodnie między nimi i może pokazać pozorny przyrost SDS.
 3. **Oś wieku kostnego w karcie zaawansowanej (`heightSdsForBoneAge`).** Gdy wiek kostny w pełnych miesiącach równa się kalendarzowemu, liczy się w dokładnym wieku kalendarzowym z formularza. Dotyczy tego samego pacjenta; różnica jest mniejsza niż miesiąc wieku.
 
-**Wersje.** `app.js` 235, `vilda_summary_cards.js` 60, `vilda_auth_ui.js` 488 (wstrzykiwany: `vilda_chrome.js` 136, `vilda_session_bridge.js` 60), `vilda_patient_summary_copy.js` 15, `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.267 → 1.1.268 (numery 1.1.265–1.1.267 wydały #662, #665 i #668).
+**Wersje.** `app.js` 235, `vilda_summary_cards.js` 60, `vilda_auth_ui.js` 488 (wstrzykiwany: `vilda_chrome.js` 136, `vilda_session_bridge.js` 60), `vilda_patient_summary_copy.js` 15, `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.268 → 1.1.269 (numery 1.1.265–1.1.268 wydały #662, #665, #668 i #670).
 
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
