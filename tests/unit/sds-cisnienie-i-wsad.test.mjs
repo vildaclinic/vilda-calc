@@ -92,10 +92,11 @@ describe('Wsad XLSX (vilda_professional_module.js)', () => {
     const src = zrodlo('vilda_professional_module.js');
     expect(src, 'P-DS-4b: wsad liczy dla wierszy arkusza, nie dla wczytanego pacjenta')
       .toContain('const q=Ts.policz({wzrost:hh,plec:pp,wiekMies:yy*12,zrodlo:zz,populacja:"OGOLNA"})');
-    expect(src).toContain('Ne=Zw(ae,r,re,"PALCZEWSKA");');
-    expect(src).toContain('Ne=Zw(ae,r,re,t);');
-    expect(src, 'masa nadal przez rdzeń (poza zakresem planu), od P-WIEK-POMIARU-2 w dokładnym wieku wiersza')
-      .toContain('const y=calcPercentileStats(P,r,re,"WT",{wiekMies:Ce});We=y?y.sd:null;');
+    // P-GRANICA-URODZIN: wiek dokładny wiersza przycięty do granic siatek (Cs, w latach Cs/12 — Zw mnoży przez 12).
+    expect(src).toContain('Ne=Zw(ae,r,Cs/12,"PALCZEWSKA");');
+    expect(src).toContain('Ne=Zw(ae,r,Cs/12,t);');
+    expect(src, 'masa przez rdzeń: od P-GRANICA-URODZIN siatkę wybierają pełne miesiące wiersza z kalendarza (Rp), wiek dokładny przycięty do granic (Cs) interpoluje')
+      .toContain('const y=calcPercentileStats(P,r,Rp,"WT",{wiekMies:Cs});We=y?y.sd:null;');
     const i = src.indexOf('const Zw=(hh,pp,yy,zz)=>');
     expect(i).toBeGreaterThan(-1);
     const log = [];

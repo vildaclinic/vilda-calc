@@ -4503,8 +4503,8 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
   - żetony hSDS i ΔhSDS sekcji GH Karty pacjenta (`vilda_auth_ui.js`, `ci()`);
   - walidacja prognozy (`vilda_growth_prediction_validation_model.js`, `hSds()`), także w eksporcie kohorty.
 - Wiersz wsadu XLSX (`vilda_professional_module.js`):
-  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji;
-  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza.
+  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji *(od P-GRANICA-URODZIN niżej: pełne miesiące wiersza z kalendarza, a wiek dokładny przycięty do granic siatek)*;
+  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza. *(Sprostowanie 2026-10-14, P-GRANICA-URODZIN: „brak siatki” przy 216,016 mies. dotyczył atrapy testu bez centyli Palczewskiej. W aplikacji łańcuch schodził wtedy na Palczewską: hSDS −0,44 zamiast −0,42 na OLAF. Od P-GRANICA-URODZIN wiersz podaje 216, więc liczy OLAF.)*
 - Wiek odniesienia, nie pomiar (`{wiekMies:null}`):
   - wzrost rodziców na 18 lat (MPH): Karta pacjenta (`En(rt,S,18,…)`) oraz karty Startu (`inline_index_04.js`, `inline_index_07.js`);
   - krzywe odniesienia wykresów Karty pacjenta (`getChildLMS(g,E/12,…)`). Bez tego krzywa niemowlęcia miała załamanie w miesiącu życia dziecka z formularza.
@@ -4541,7 +4541,95 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 
 **Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
 
+*(Rozstrzygnięte 2026-10-14 decyzją właściciela: wpis P-GRANICA-URODZIN niżej. Sprostowanie liczb z tego akapitu, zmierzonych na atrapie bez centyli Palczewskiej: w aplikacji chłopiec 95 cm w dniu 3. urodzin szedł na siatkę Palczewskiej (hSDS −0,49, 31. centyl), nie na WHO (−0,29). Na OLAF ma −0,67 (25. centyl) w 36. miesiącu; −0,68 to wartość dla 1096 dób. Po 6575 dobach wzrost nie tracił wyniku, tylko schodził na Palczewską (−0,44 zamiast −0,42 na OLAF).)*
+
 **Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
+
+### P-GRANICA-URODZIN — siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje: urodziny 2, 3, 5, 18, 18,5 i 19 lat (SW 1.1.273, 2026-10-14, decyzja właściciela)
+
+**Decyzja właściciela (2026-10-14).** „Napraw granicę urodzin w osobnym PR”. Reguła: siatkę i bramki kategorii wybierają pełne miesiące kalendarzowe, a wiek dokładny (doby / 30,4375) tylko interpoluje w obrębie wybranej siatki. Granica 1. miesiąca (noworodek: WHO 2006 zamiast Palczewskiej) zostaje według dób, jak dotąd — wariant „noworodek wg dób”, wybrany przez właściciela. Wpis rozstrzyga „Do decyzji” z P-WIEK-POMIARU-2.
+
+**Klasyfikacja:** zmiana kliniczna (AGENTS.md § 3). W dniach wokół urodzin zmienia siatkę, SDS, centyl i kategorię BMI. We wsadzie XLSX zmienia też wiersz masy (punkt 4 niżej).
+
+**Co było** (zmierzone na `audyt` 2df41a8: prawdziwe silniki i tablice, dane fikcyjne). Rok bez 29 lutego ma 365 dób, a 12 × 30,4375 = 365,25. Dlatego w dniu urodzin wiek dokładny bywa mniejszy niż pełne miesiące: w dniu 3. urodzin po 1095 dobach to 35,975 mies. przy 36 pełnych. Silniki wybierały siatkę według wieku dokładnego, a formularz, rekord i widoki pokazują pełne miesiące. W dniu urodzin dziecko trafiało więc na siatkę młodszego dziecka. Odwrotny przypadek (wiek dokładny już za granicą, pełne miesiące jeszcze przed nią) zdarza się tylko na granicy półrocza, 222 mies.
+
+| Przypadek | Było | Jest |
+|---|---|---|
+| chłopiec 95 cm, OLAF, 3. urodziny po 1095 dobach (35,975 mies.) | Palczewska, siatka zastępcza („brak danych OLAF dla wieku poniżej 3 lat”): hSDS −0,49, 31. centyl | OLAF: hSDS −0,67, 25. centyl |
+| ten sam chłopiec, 14 kg (BMI 15,5) | BMI na Palczewskiej: 32. centyl | BMI na OLAF: 44. centyl |
+| dziewczynka 110 cm, 31,46 kg (BMI 26,0, BMI-SDS +3,14), 5. urodziny po 1826 dobach (59,99 mies.) | „Otyłość” — bramka 60 mies. zamknięta | „Otyłość olbrzymia” i ostrzeżenie o pilnej konsultacji |
+| BMI 31, 18. urodziny po 6574 dobach (215,98 mies.) | „Otyłość” (kategoria dziecięca, 98. centyl) | „Otyłość I stopnia” (dorosły od 216 mies.) |
+| chłopiec 176 cm, 18. urodziny po 6575 dobach (216,016 mies.) | Palczewska, siatka zastępcza („brak siatek OLAF powyżej 18 lat”): hSDS −0,44 | OLAF: hSDS −0,42 |
+| chłopiec 176 cm, ur. 1.03.2002, pomiar 31.08.2020: 221 pełnych mies., 6758 dób (222,03 mies.) | brak wyniku („wiek poza zakresem siatek (powyżej 18,5 roku)”) | Palczewska: hSDS −0,44 |
+| BMI 26, 19. urodziny po 6940 dobach (ur. 1.01.2004: 228,008 mies.) | BMI-SDS: brak siatki (powyżej 19 lat) | WHO 2007, informacyjnie; kategoria dorosłego bez zmian |
+| karta zespołu Downa, chłopiec 84 cm, 12 kg, 2. urodziny po 730 dobach (23,98 mies.) | tabele niemowlęce: „Masa do długości (WFL DS)” i „Normy BMI DS obowiązują od 2. r.ż.” | tabele dziecięce: BMI DS z centylem |
+| wsad XLSX, masa 14 kg, wiersz 35 pełnych mies. i 1081 dób (35,52 mies.) | wiek zaokrąglony 36 → OLAF, wiersz 36: SDS −0,50 (31,0 c.) | 35 pełnych → WHO 2006 w 35,52 mies.: SDS −0,10 (45,9 c.) |
+| wsad XLSX, masa 70 kg, 216 pełnych mies. (216,58 mies.) | wiek zaokrąglony 217 → brak wyniku | OLAF, wiersz 216: SDS +0,01 |
+
+**Co jest.**
+1. Silniki publikują granice siatek jako dane — `VildaSdsWzrostu.GRANICE` i `VildaBmi.GRANICE` — osobno dla populacji ogólnej i DS. Wartości pochodzą z tych samych stałych `G`, którymi silniki rozstrzygają (`od` — od tego wieku, `do` — do tego wieku włącznie):
+   - wzrost, populacja ogólna: od 36 (OLAF), do 216 (OLAF i WHO) i do 222 (Palczewska); DS: od 24 (tabela dziecięca), do 240;
+   - BMI, populacja ogólna: od 36 (OLAF), od 60 („otyłość olbrzymia”), od 216 (dorosły), do 216 (OLAF), do 222 (Palczewska) i do 228 (WHO 2007); DS: od 24 (siatka BMI DS), od 60, od 240 (dorosły), do 240.
+
+   Granicy 1. miesiąca nie ma, bo noworodek rozstrzyga się dobami. Granicami nie są też przejścia ciągłe: WHO 2006 → WHO 2007 we wzroście (35 → 36 mies.) i w BMI (60 mies., ten sam wiersz w obu tablicach).
+2. `app.js`: `vildaWiekDoSiatek(wiekMies, pelneMies, populacja)` przycina wiek dokładny tak, żeby każda granica obu silników wypadała po tej samej stronie, co pełne miesiące:
+   - granica `od` nie większa niż pełne miesiące — wiek co najmniej równy granicy;
+   - granica `od` większa niż pełne miesiące — wiek mniejszy niż granica (granica − 10⁻⁶);
+   - granica `do` nie mniejsza niż pełne miesiące — wiek nie większy niż granica.
+
+   Między granicami wiek zostaje bez zmian. Bez zmian zostaje też, gdy pełnych miesięcy brak, są niecałkowite albo nie pasują do wieku dokładnego (różnica poza przedziałem −0,5…1,5 mies.; zmierzony zakres dla dat 2000–2024 i wieku 0–20 lat: −0,10…+1,06). Populacja jest ta sama, której użyje silnik (resolver pacjenta); wsad podaje ogólną, a karta zespołu Downa — DS. Bez silników granic nie ma, a wiek zostaje bez zmian.
+3. Funkcję wołają wszyscy wytwórcy wieku dokładnego podawanego siatkom:
+   - bramka formularza `lmsNiemowleWiek` (pełne miesiące formularza): wzrost w karcie głównej i BMI w `vilda_update_prep.js` (kategoria, centyl, Cole, ostrzeżenia) — ten plik dostaje przycięty wiek bez własnej zmiany;
+   - `vildaWiekPomiaruMies` (pełne miesiące z dnia pomiaru): karta porównania, kafelki Karty pacjenta i schowek z P-WIEK-POMIARU;
+   - karta zespołu Downa (`__ds_readAgeYears`): tabela niemowlęca czy dziecięca, BMI DS czy masa do długości, zakres karty do 20 lat;
+   - wiersz wsadu XLSX (`Cs`): wzrost (`Zw`), BMI (`Zb`) i masa poniżej 36 mies.
+
+   Jawny wiek, który wołający podaje rdzeniowi w `{wiekMies}`, rdzeń przyjmuje bez zmian — przycina go ten, kto go wytworzył.
+4. Wsad XLSX: pełne miesiące wiersza liczy kalendarz (`VildaDobAge.ageFromDobISO` na dzień pomiaru, jak w formularzu). Masa, siatka Palczewskiej i zapas wzrostu dostają je zamiast zaokrąglonego wieku dokładnego (`Math.round(Ce)`). Zaokrąglenie przenosiło wiersz z drugiej połowy miesiąca na następny miesiąc, także przez granicę siatki. Skutek poza granicami: od 36 mies. masa w drugiej połowie miesiąca bierze wiersz pełnych miesięcy, tak jak formularz, a nie wiersz następnego miesiąca. Przykład: 100,53 mies., 26 kg — SDS masy −0,60 → −0,55; na siatce Palczewskiej −0,40 → −0,34.
+
+**Czego nie zmieniono.**
+- Noworodek według dób (decyzja właściciela). Przykład: chłopiec ur. 1 lutego w 28. dobie (1 pełny miesiąc, 0,92 mies.) — długość na WHO 2006 z powodem „noworodek poniżej 1. miesiąca…”, jak dotąd.
+- Silniki: reguła wyboru siatki, łańcuch zastępczy i interpolacja bez zmian. Wynik się nie zmienia, gdy wiek jest całkowity albo gdy wiek dokładny leży po tej samej stronie każdej granicy, co pełne miesiące.
+- Wywołania z wiekiem w pełnych miesiącach (historia pomiarów, punkty GH, walidacja prognozy, krzywe odniesienia). Odczyt wartości pod kursorem na wykresach liczy wiek z osi, który nie ma pełnych miesięcy kalendarza.
+- Masa w formularzu: siatkę i wiersz od 36 mies. wybierały już pełne miesiące formularza.
+- Dane referencyjne, wzory, progi, zapis, synchronizacja.
+
+**Konsekwencje do świadomej akceptacji.**
+- Na granicy wiek do interpolacji przesuwa się najwyżej o 0,1 mies. (3 doby). W miesiącu 18. urodzin (216 pełnych mies.) wiek do interpolacji wynosi 216 przez cały miesiąc: tu kończy się OLAF i WHO dla wzrostu, a zaczyna dorosłość BMI. U pacjenta z DS tak samo jest w miesiącu 20. urodzin (240). Na granicach 222 i 228 mies. wiek nie przekracza granicy, czyli przesuwa się najwyżej o 1,06 mies. W tym wieku to poniżej 0,02 SD: wzrost rośnie o ok. 0,1 cm na miesiąc, BMI o ok. 0,05.
+- Granice obu silników działają razem, bo wiek z formularza trafia do obu. Granica 60 mies. (bramka „otyłości olbrzymiej”) przesuwa więc także wiek wzrostu o najwyżej 3 doby (ok. 0,05 cm).
+
+**Źródło i reguła.** Dane referencyjne bez zmian (tabela źródeł wyżej). Zakresy siatek są opisane w pełnych latach i miesiącach życia: OLAF/OLA od 3 do 18 lat (Kułaga i wsp., Eur J Pediatr 2011;170:599–609 i 2013;172:753–761), WHO 2007 do 19 lat (de Onis i wsp., Bull World Health Organ 2007;85:660–667), Palczewska do 18,5 roku (Palczewska, Niedźwiecka, Med Wieku Rozwoj 2001;5 Supl. 1:18–118), siatki DS — tabele 0–36 mies. i 2–20 lat (Zemel i wsp., Pediatrics 2015;136:e1204–e1211). Bramki kategorii BMI („otyłość olbrzymia” od 5 lat, dorosły od 18 lat, przy DS od 20 lat) to decyzje właściciela 4, 5 i D3 z P-BMI i P-DS. Wiek dokładny do interpolacji pozostaje w skali tablic WHO (DOB-AGE-4: WHO Child Growth Standards, Acta Paediatr Suppl 2006;450:76–85, wiek w dobach / 30,4375).
+
+**Populacja, jednostki, ograniczenia.**
+- Dzieci i młodzież 0–20 lat; wiek w miesiącach (pełne miesiące kalendarzowe i doby / 30,4375), wzrost w cm, masa w kg, BMI w kg/m².
+- Reguła działa tam, gdzie wiek dokładny ma pełne miesiące z tego samego dnia: formularz z datą urodzenia, zapis z datą urodzenia i dniem pomiaru, wiersz wsadu z datą urodzenia. Bez daty urodzenia wszystko liczy się, jak dotąd, w pełnych miesiącach.
+- Zgodność z kalendarzem dotyczy tylko granic siatek i bramek. Między granicami interpolacja idzie wiekiem dokładnym, jak w DOB-AGE-4.
+
+**Przypadki syntetyczne** (wejście → oczekiwany wynik):
+- Chłopiec ur. 1-03-2024, dziś 1-03-2027 (1095 dób), 95 cm, 14 kg, OLAF → karta główna: „Wzrost: 25 centyl” (OLAF, bez siatki zastępczej). Było: 31. centyl na Palczewskiej.
+- Dziewczynka ur. 17-06-2021, dziś 17-06-2026 (1826 dób), 110 cm, 31,46 kg → „BMI: 26,0 kg/m² – >99 centyla (Otyłość olbrzymia)” i ostrzeżenie. Było: „(Otyłość)”, bez ostrzeżenia o olbrzymiej.
+- Zapis: chłopiec ur. 1-03-2020, pomiar 1-03-2023 (1095 dób), 95 cm, 14 kg, OLAF → kafelki Karty pacjenta, schowek i „Poprzednio”: wzrost 25. centyl (było 31.), BMI na OLAF.
+- Karta zespołu Downa: chłopiec ur. 17-06-2024, dziś 17-06-2026 (730 dób), 84 cm, 12 kg → wiek karty 2 lata, wiersz „BMI: 17,0” z centylem DS. Było: masa do długości i „Normy BMI DS obowiązują od 2. r.ż.”.
+- Wsad: chłopiec ur. 15-03-2020, pomiar 1-03-2023, 14 kg → 35 pełnych mies., masa na WHO 2006 w 35,52 mies.: SDS −0,10 (było −0,50 na OLAF, wiersz 36).
+- Noworodek: chłopiec ur. 1-02-2027, dziś 1-03-2027 (28. doba, 1 pełny miesiąc), 54 cm → WHO 2006 z powodem „noworodek poniżej 1. miesiąca”, jak dotąd.
+
+**Testy.**
+- `tests/unit/granica-urodzin.test.mjs` (19):
+  - dane `GRANICE` obu silników wobec ich stałych `G`;
+  - 9 przypadków syntetycznych na prawdziwych silnikach;
+  - własność na ok. 310 tys. par (data urodzenia, dzień) w oknach ±45 dni wokół granic 24, 36, 60, 216, 222, 228 i 240 mies., dla obu populacji: wiek po stronie pełnych miesięcy przy każdej granicy, bez przycięć tam, gdzie nie trzeba, przesunięcie poniżej 0,1 mies. poza miesiącami 216, 222 i 228 (DS: 240);
+  - decyzje silników przy wieku do siatek takie same jak przy pełnych miesiącach (2–20 lat): siatka, zapas, powód, dorosłość, bramka 60 mies.;
+  - wytwórcy w `app.js`, karta DS i wiersz wsadu na kodzie wyciętym z produkcji;
+  - strażnicy źródła.
+- `tests/e2e/granica-urodzin.spec.mjs` (5, komputer): karta główna w dniu 5. i 3. urodzin, zapis z dnia 3. urodzin (kafelki, schowek, „Poprzednio”), karta DS w dniu 2. urodzin, noworodek według dób. `tests/e2e/granica-urodzin-mobile.spec.mjs` (1, telefon): karta główna w dniu 5. urodzin, bez poziomego przewijania. Wspólne kroki: `tests/support/granica-urodzin.mjs`.
+- Kontrola ujemna na `audyt` 2df41a8: e2e — 5 z 6 testów pada („Otyłość” zamiast „Otyłość olbrzymia”, Palczewska 31 zamiast OLAF 25, kafelek 31 zamiast 25, wiek karty DS 1,9986 zamiast 2). Przechodzi test noworodka, bo pilnuje, że granica 1. miesiąca się nie zmienia. Unit — 10 testów pada, a 9 jest pominiętych (brak `GRANICE` i funkcji).
+- Strażnicy wsadu w `sds-cisnienie-i-wsad`, `wiek-pomiaru-pozostale-miejsca` i `bmi-dieta-moduly` przypinają nowe wywołania (`Cs`, `Rp`); liczba asercji bez zmian.
+
+**Do decyzji.**
+- Masa od 36 mies. — w formularzu i we wsadzie — bierze wiersz pełnych miesięcy, bez interpolacji wiekiem dokładnym, inaczej niż wzrost i BMI. Interpolacja masy to osobna zmiana kliniczna.
+- Wsad liczy masę na siatce zespołu Downa, gdy pacjent wczytany w formularzu ma DS (`getChildLMS` → `vildaPopulacjaDs()`). Wzrost i BMI wsadu podają populację ogólną jawnie. To błąd sprzed tej zmiany (z przeglądu kodu, niezmierzony).
+
+**Wersje.** `app.js` 236, `vilda_sds_wzrostu.js` 5, `vilda_bmi.js` 10, `vilda_down_syndrome.js` 5, `vilda_professional_module.js` 13; SW 1.1.272 → 1.1.273 (numer 1.1.272 nadał równolegle #673).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 

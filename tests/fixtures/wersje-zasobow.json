@@ -12,8 +12,8 @@
   "sha256": "6624660899db6991454988feee6bfaa15a7aae3b91185c8acca15a67e7971815"
  },
  "app.js": {
-  "v": 235,
-  "sha256": "24ff7850387c052c5355c7bc5a44fc05ca696c2ab28217d22cacd267ebc92713"
+  "v": 236,
+  "sha256": "a322755b017621d8d17a4fed1333d216c113ebacef3ad0e1e5222207e11f620c"
  },
  "bisphos_therapy.js": {
   "v": 8,
@@ -484,8 +484,8 @@
   "sha256": "334d89bf651eafc3f35158aef12451d72a913beb069c553fe850edd3ab31d237"
  },
  "vilda_bmi.js": {
-  "v": 9,
-  "sha256": "09b31980ce7a7c73b6ad804d2c305bb2a251fb8dbafad1adcc701bcc6a4ed3d1"
+  "v": 10,
+  "sha256": "2a42d9388b57fad1b30dc1caf8ee3e7de2074f551cb53f4bcd5376fcb784ecf0"
  },
  "vilda_bmi_journey.js": {
   "v": 28,
@@ -556,8 +556,8 @@
   "sha256": "82f546228c77d6225f66c603aad4d93075f85ce09db6a62e4aac5a8a0f59d53d"
  },
  "vilda_down_syndrome.js": {
-  "v": 4,
-  "sha256": "abceffdd8dc7406b9e3674c8fe231c46d8ba3162c57e21e8f422ab0018c2f1c1"
+  "v": 5,
+  "sha256": "b1f41725e44fb40117199ff6f9244a9f5bb6fd0e545c1685157153cb25488cee"
  },
  "vilda_ds_source.js": {
   "v": 4,
@@ -880,8 +880,8 @@
   "sha256": "70e6943da0fd94496b4b60f98b1514c56addd7ce64fa29db38873d4b08b153d7"
  },
  "vilda_professional_module.js": {
-  "v": 12,
-  "sha256": "24f9b1bc3cf80905285a0ff371e2cff71c74eb665c9a58cc8b93c29164385711"
+  "v": 13,
+  "sha256": "bde5b1a750a96095b9a93e9d646f40e97c94fa235124c7121f714add7da5c0a4"
  },
  "vilda_pubertal_status.js": {
   "v": 5,
@@ -936,8 +936,8 @@
   "sha256": "0edc8744ee779f1a48a97e7ea8c588d9250c76d4d1ac875c6a47a90b51761813"
  },
  "vilda_sds_wzrostu.js": {
-  "v": 4,
-  "sha256": "10902bf33b86f2fe48b86468ab5188d751fa810da777736a89bf939d17e8cbba"
+  "v": 5,
+  "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
   "v": 61,
