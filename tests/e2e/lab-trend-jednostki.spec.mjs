@@ -1,8 +1,9 @@
 import { expect, test } from '../support/test-czas.mjs';
 
 // P-LAB-TREND-CONVERT: wynik zapisany w innej znanej jednostce trafia do „Trendu wyników”
-// przeliczony tym samym współczynnikiem co przelicznik. Start ładuje konwerter od razu,
-// DocPro doładowuje go leniwie w karcie — trend ma działać na obu stronach.
+// przeliczony tym samym współczynnikiem co przelicznik. Konwerter ładuje się leniwie: Start
+// w czasie bezczynności albo przy pierwszym dotknięciu, DocPro dopiero na żądanie karty —
+// trend ma działać na obu stronach, także gdy konwerter jeszcze się ładuje.
 // Każdy test zakłada świeży, fikcyjny sejf w osobnym kontekście przeglądarki.
 test.use({ serviceWorkers: 'block' });
 
