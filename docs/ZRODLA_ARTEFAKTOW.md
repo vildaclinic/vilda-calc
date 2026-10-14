@@ -736,6 +736,33 @@ nasluch.onmessage = (e) => {                                            // bez z
 };
 ```
 
+## Łatka P-WIEK-POMIARU-2 (wołający rdzenia centyli, 2026-10-14)
+
+Zmiana wprost w artefaktach: same wywołania rdzenia, `app.js` bez zmian. Kontrakt rdzenia dał P-WIEK-POMIARU (#671): ostatni argument `{wiekMies}` — liczba to dokładny wiek pomiaru w miesiącach, `null` to pełne miesiące, a brak obiektu oznacza pomiar z formularza (bramka DOB-AGE-4). Rejestr: `docs/clinical/ALGORITHMS.md`, P-WIEK-POMIARU-2.
+
+```js
+// gh_therapy_monitor.js — r(): hSDS punktu GH (punkt nie ma dnia pomiaru)
+calcPercentileStats(wzrost, plec, wiekLat, 'HT', { wiekMies: null });
+
+// vilda_auth_ui.js — Karta pacjenta
+En(wzrost, plec, wiekLat, 'HT', zrodlo, { wiekMies: null });            // ci(): żetony hSDS punktów GH
+En(wzrostDocelowy, plec, 18, 'HT', zrodlo, { wiekMies: null });          // MPH na 18 lat
+getChildLMS(plec, miesiac / 12, 'HT' /* i 'WT' */, { wiekMies: null });  // krzywe odniesienia wykresów
+
+// vilda_growth_prediction_validation_model.js — hSds() punktu walidacji (czytelne źródło)
+f(wzrost, plec, wiekLat, 'HT', { wiekMies: null });
+
+// vilda_professional_module.js — wiersz wsadu; Ce = doby od urodzenia do daty pomiaru wiersza / 30,4375
+calcPercentileStats(masa, plec, wiekLat, 'WT', { wiekMies: Ce });
+calcPercentileStats(wzrost, plec, wiekLat, 'HT', { wiekMies: null });   // zapas, gdy silnik nie policzy wieku dokładnego (np. 216,016 mies.)
+
+// custom-fixes.js — mini-podsumowanie powłoki; A(…, w) przekazuje w do calcPercentileStats
+A(masa, plec, wiekLat, 'WT', zrodlo, ramkaNieaktualna ? { wiekMies: null } : undefined);   // Gq5s
+
+// inline_index_04.js, inline_index_07.js — wzrost rodziców na 18 lat
+calcPercentileStats(wzrostDocelowy, plec, 18, 'HT', { wiekMies: null });
+```
+
 ## Jak odtworzyć
 
 ```bash

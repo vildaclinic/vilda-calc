@@ -748,8 +748,11 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
   let monitor;
   if (typeof zrodla['gh_therapy_monitor.js'] === 'string') monitor = kompiluj(zrodla['gh_therapy_monitor.js']);
   else monitor = monitorSkompilowany || (monitorSkompilowany = kompiluj(zrodlo('gh_therapy_monitor.js')));
+  // `opcje.calcPercentileStats` / `opcje.vildaMpSdsStats` (P-WIEK-POMIARU-2): rdzeń centyli dla hSDS punktów
+  // (np. funkcje wycięte z app.js). Bez nich — jak dotąd — monitor nie liczy hSDS.
   monitor(win, win, win, dok, sesja, lokalny, win.location, win.setTimeout, win.clearTimeout, ZdarzenieWlasne,
-    Zdarzenie, AtrapaKanalu, win.getComputedStyle, undefined, undefined, undefined, undefined, Data, Matematyka);
+    Zdarzenie, AtrapaKanalu, win.getComputedStyle, undefined, undefined, opcje.calcPercentileStats,
+    opcje.vildaMpSdsStats, Data, Matematyka);
   const dziennikStartu = dziennik.splice(0);
 
   const zdarzenieUzytkownika = (typ) => {
