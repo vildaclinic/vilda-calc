@@ -30,6 +30,7 @@ function adapter(extra = {}) {
     sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'M', ageYears: 12, ageMonths: 0 },
     effectivePatient: { sex: 'M', age: 12 },
     lifespanUI: { update: (value) => updates.push(value), clear: () => updates.push(null) },
+    amhAgeReferenceUI: null,
     showError: () => {},
     readPubertyPatientContext: () => context.sourcePatient,
     getEffectivePatient: () => context.effectivePatient,

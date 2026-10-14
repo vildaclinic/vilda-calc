@@ -1,0 +1,154 @@
+/* A separate source-information block, never a laboratory normal-range band. */
+.vilda-amh-age-reference {
+  margin: var(--space-20px) 0 0;
+  padding: var(--space-20px);
+  border: var(--border-hairline) solid var(--border-color, #d4e4e7);
+  border-radius: 17px;
+  background: var(--card-bg, #fff);
+  color: var(--text-color, #183c48);
+  font-family: inherit;
+}
+.vilda-amh-age-reference *,
+.vilda-amh-age-reference *::before,
+.vilda-amh-age-reference *::after {
+  box-sizing: border-box;
+}
+#labAmhAgeReference[hidden] {
+  display: none !important;
+}
+.vaar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-10px);
+}
+.vaar-heading h3 {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+}
+.vaar-source-label {
+  padding: var(--space-4px) var(--space-8px);
+  border: var(--border-hairline) solid #f6e1d7;
+  border-radius: var(--radius-6);
+  background: #fff4ee;
+  color: #a65443;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.vilda-amh-age-reference p {
+  margin: 0;
+  line-height: 1.65;
+}
+.vilda-amh-age-reference .vaar-context {
+  margin: var(--space-12px) 0;
+  color: var(--text-muted, #5d747d);
+  font-size: 12px;
+}
+.vaar-points {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-10px);
+}
+.vaar-points.vaar-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.vaar-point {
+  padding: var(--space-14px) var(--space-16px);
+  border: var(--border-hairline) solid var(--border-color, #e0eeee);
+  border-radius: var(--radius-11);
+  background: var(--surface-subtle, #f1f7f7);
+  min-width: 0;
+}
+.vaar-age {
+  font-size: 12px;
+  font-weight: 550;
+}
+.vaar-age::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: var(--space-8px);
+  border: 1.5px solid #ce6049;
+  border-radius: var(--radius-circle);
+  background: var(--card-bg, #fff);
+}
+.vilda-amh-age-reference .vaar-value {
+  margin-top: var(--space-6px);
+  font-size: 23px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.vaar-unit {
+  font-size: 11px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.vaar-statistic {
+  color: var(--text-muted, #5d747d);
+  font-size: 11px;
+}
+.vilda-amh-age-reference .vaar-age-note {
+  margin-top: var(--space-14px);
+  font-size: 12px;
+}
+.vilda-amh-age-reference .vaar-caption,
+.vilda-amh-age-reference .vaar-population {
+  margin-top: var(--space-6px);
+  color: var(--text-muted, #5d747d);
+  font-size: 11px;
+}
+.vaar-details {
+  margin-top: var(--space-16px);
+  border-top: var(--border-hairline) solid var(--border-color, #e0eeee);
+  color: var(--text-muted, #5d747d);
+  font-size: 12px;
+}
+.vaar-details summary {
+  padding-top: var(--space-14px);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.vaar-details summary:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary, #00838d);
+  outline-offset: var(--space-4px);
+}
+.vaar-details p {
+  margin-top: var(--space-12px);
+}
+.vaar-details a {
+  color: var(--primary, #00838d);
+}
+.lab-amh-censored-note {
+  margin-top: var(--space-12px);
+  color: var(--text-muted, #5d747d);
+  font-size: 12px;
+  line-height: 1.6;
+}
+@media (max-width: 640px) {
+  .vilda-amh-age-reference {
+    padding: var(--space-14px);
+  }
+  .vaar-point {
+    padding: var(--space-10px);
+  }
+  .vilda-amh-age-reference .vaar-value {
+    font-size: 18px;
+    white-space: nowrap;
+  }
+  .vaar-unit {
+    display: block;
+  }
+}
+@media print {
+  .vilda-amh-age-reference {
+    break-inside: avoid;
+    background: white;
+    color: black;
+  }
+}

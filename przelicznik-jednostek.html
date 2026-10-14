@@ -64,6 +64,7 @@
   <link href="vilda_lab_assessment_ui.css?v=11" rel="stylesheet">
   <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
+  <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
@@ -314,6 +315,7 @@
               </div>
             </div>
 
+            <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
 
             <button type="button" id="labClearBtn" class="lab-clear-btn">
@@ -459,6 +461,9 @@
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=13"></script>
   <script src="vilda_hormone_lifespan.js?v=33"></script>
+  <script src="vilda_amh_age_reference_data.js?v=1"></script>
+  <script src="vilda_amh_age_reference.js?v=1"></script>
+  <script src="vilda_amh_age_reference_ui.js?v=1"></script>
   <script src="lab_pin_result.js?v=7"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -691,6 +696,10 @@
     // space when unsupported or awaiting context.
     if (lifespanUI) document.getElementById('labHormoneLifespan').hidden = false;
     window.VildaHormoneLifespanRuntime = lifespanUI || null;
+    var amhAgeReferenceUI = window.VildaAmhAgeReferenceUI && window.VildaAmhAgeReferenceUI.mount({
+      host: document.getElementById('labAmhAgeReference')
+    });
+    window.VildaAmhAgeReferenceRuntime = amhAgeReferenceUI || null;
     var lifespanVault = null;
     var lastLifespanContext = null;
     function currentPatientIdentity() {
@@ -715,6 +724,7 @@
       // A result belongs to the previous person even if their age or sex match.
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
       if (lifespanUI) lifespanUI.clear();
+      if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
       return true;
     }
     function bindLifespanVault() {
@@ -725,6 +735,7 @@
         if (window.VildaVault !== vault) return;
         lastLifespanContext = null;
         if (lifespanUI) lifespanUI.clear();
+        if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
       });
     }
     function lifespanAgeLabel(age, input) {
@@ -804,7 +815,12 @@
       // callers carrying a conversion/evaluation from the previous identity.
       if (identityChanged) { evaluation = null; conversion = null; }
       bindLifespanVault();
-      if (!substance) { lastLifespanContext = null; lifespanUI.clear(); return; }
+      if (!substance) {
+        lastLifespanContext = null;
+        lifespanUI.clear();
+        if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+        return;
+      }
       var source = readPubertyPatientContext();
       var status = source.sourceStatus || 'unavailable';
       var vault = window.VildaVault;
@@ -882,6 +898,16 @@
       };
       lastLifespanContext = context;
       lifespanUI.update(context);
+      if (amhAgeReferenceUI) {
+        // Source medians use the unit of the large converted result. They are
+        // separate from the chart point and never enter its saved snapshot.
+        var amhContext = Object.assign({}, context, { displayUnit: unitTargetEl.value || unitEl.value });
+        if (substance.id === 'amh' && status === 'ready' && resolved && resolved.status === 'known') {
+          var parsedAmh = parseAmhMeasurement();
+          if (parsedAmh && parsedAmh.status === 'valid' && parsedAmh.operator !== '=') amhContext.measurement = parsedAmh;
+        }
+        amhAgeReferenceUI.update(amhContext);
+      }
     }
 
     // Pin the ordinary patient reference, independent of the chart's selected
@@ -904,8 +930,14 @@
       var factor = conversions.factors[result.unit];
       var evaluation = context.sourceStatus === 'ready'
         ? engine.evaluate(data, context) : { status: 'unavailable', reason: 'patient_context_unavailable' };
+      var measurementSourceValue = Conv.parseNumber(result.raw);
+      var parsedAmhReference = parseAmhMeasurement();
+      if (parsedAmhReference && parsedAmhReference.status === 'valid' && parsedAmhReference.operator !== '=') {
+        // This is a censoring bound, not lab.valueNum or a graph coordinate.
+        measurementSourceValue = parsedAmhReference.value;
+      }
       return snapshot.create({ evaluation: evaluation, context: context,
-        measurement: { raw: result.raw, sourceValue: Conv.parseNumber(result.raw), sourceUnit: result.unit,
+        measurement: { raw: result.raw, sourceValue: measurementSourceValue, sourceUnit: result.unit,
           conversionFactor: factor },
         display: { unit: result.unit, factorFromCanonical: 1 / factor },
         versions: { engine: engine.version, data: data.patientPointData.version, runtime: data.version },
@@ -3105,6 +3137,51 @@
      *     wiadomo, że to konwerter i jakie jednostki dostępne dla substancji.
      *   – wartość poprawna → wypełniamy szkielet liczbami.
      */
+    function parseAmhMeasurement() {
+      var engine = window.VildaAmhAgeReference;
+      return engine && engine.parseMeasurement(window.VildaAmhAgeReferenceData, valueEl.value, unitEl.value);
+    }
+    function renderCensoredAmh(substance) {
+      if (!substance || substance.id !== 'amh') return false;
+      var measurement = parseAmhMeasurement();
+      if (!measurement || measurement.status !== 'valid' || measurement.operator === '=') return false;
+      var target = unitTargetEl.value || substance.canonical_si;
+      var converted = measurement.value === null ? null : Conv.convert({ substanceId: 'amh',
+        value: measurement.value, fromUnit: measurement.unit, toUnit: target });
+      if (converted && !converted.ok) return false;
+      showError('');
+      // The inequality is the result. Its bound must never become an exact
+      // patient point, a normal-range classification or a plotted zero.
+      renderBigResult(substance, false, NaN, null);
+      renderRangeBlock(substance, false, NaN, null);
+      resultSectionEl.classList.remove('is-empty');
+      clearChildren(resultBigEl);
+      var value = document.createElement('span'); value.className = 'lab-result-big-value';
+      value.textContent = measurement.operator + (converted ? Conv.formatNumber(converted.value, substance.precision || 3) : measurement.censoring);
+      var unit = document.createElement('span'); unit.className = 'lab-result-big-unit';
+      // A symbolic LOD/LOQ has no numerical threshold to convert.
+      unit.textContent = converted ? target : measurement.unit;
+      resultBigEl.append(value, unit);
+      resultSourceLineEl.textContent = measurement.value === null
+        ? 'Nie podano liczbowej granicy z raportu. Nie przypisujemy wynikowi dokładnego stężenia.'
+        : 'Wynik jest nierównością. Nie przypisujemy mu dokładnego stężenia ani klasyfikacji względem normy.';
+      clearChildren(resultsBody);
+      if (measurement.value !== null) {
+        var all = Conv.convertAll({ substanceId: 'amh', value: measurement.value, fromUnit: measurement.unit });
+        if (all.ok) all.results.forEach(function (row) {
+          var tr = document.createElement('tr');
+          var label = document.createElement('td'); label.className = 'lab-unit'; label.textContent = row.unit;
+          var amount = document.createElement('td'); amount.className = 'lab-value';
+          amount.textContent = measurement.operator + row.formatted;
+          tr.append(label, amount); resultsBody.appendChild(tr);
+        });
+        if (showAllToggleEl) showAllToggleEl.style.display = '';
+      } else if (conversionsTableWrapEl) conversionsTableWrapEl.style.display = 'none';
+      metaEl.textContent = 'Zachowano znak nierówności z wyniku: ' + measurement.raw + ' ' + measurement.unit + '.';
+      updateLifespan(substance, { measurement: measurement });
+      updateStepStates();
+      return true;
+    }
     function renderResults(substance) {
       syncPatientIdentity();
       if (isPubertySubstance(substance)) {
@@ -3123,6 +3200,7 @@
         updateStepStates();
         return;
       }
+      if (renderCensoredAmh(substance)) return;
 
       var raw = valueEl.value;
       var hasInput = !(raw == null || String(raw).trim() === '');
@@ -3717,6 +3795,10 @@
       var hasInput = !(raw == null || String(raw).trim() === '');
       var n = hasInput ? Conv.parseNumber(raw) : NaN;
       var s2 = s1 && hasInput && isFinite(n) && n >= 0;
+      if (currentSubstance && currentSubstance.id === 'amh') {
+        var amhMeasurement = parseAmhMeasurement();
+        if (amhMeasurement && amhMeasurement.status === 'valid') s2 = true;
+      }
       if (pubertyMode) {
         var selectedEngine = currentSubstance.id === 'inhibin_b' ? window.VildaLabInhibinB : window.VildaLabPuberty;
         s2 = hasInput && !!(selectedEngine && selectedEngine.parseMeasurement(raw, unitEl.value).status === 'valid');
@@ -4412,6 +4494,7 @@
       if (pubertyUI) pubertyUI.reset();
       resetLocalPatientOverride();
       if (lifespanUI) lifespanUI.clear();
+      if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
       // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,

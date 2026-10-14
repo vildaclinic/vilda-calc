@@ -2008,6 +2008,69 @@ osią, usunięcie wyniku i zmiana jednostki zachowują linię i skalę.
 Pełne liczby i granice: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026),
 [zapis źródła FDA](hormone-lifespan/evidence/patient-point/fda2017-female-amh-group-medians.json).
 
+### HORMONE-AMH-XU-PUBLISHED-P50 — osobny blok źródłowy, 2026-10-14
+
+**Decyzja i wpływ:** właściciel zaakceptował makietę („jest ok, koduj”).
+Dodajemy osobny blok opublikowanych P50 Xu 2026 dla kobiet przed menopauzą,
+z etykietami wieku 35/40/45/50/55. To informacja o badaniu, bez nowego
+profilu pacjentki, normy, percentyla, ilorazu do P50 lub diagnozy. Wcześniejsze
+„Xu pozostaje nieaktywne” nadal dotyczy ciągłego modelu i profilu punktu;
+nie wyklucza opisanego tutaj osobnego bloku. Testy nie nadają walidacji klinicznej.
+
+**Źródło:** Xu K, Yang Y i wsp., *Chinese Medical Journal*, online
+17.08.2026, [DOI 10.1097/CM9.0000000000004161](https://doi.org/10.1097/CM9.0000000000004161).
+Pełny PDF w składzie wydawcy oraz dostarczony suplement SDC2, arkusz `2`,
+Supplementary Table 1, `E3:E7`. Zachowane P50 w ng/mL:
+2.589388343 / 1.479539998 / 0.365121103 / 0.045923937 / 0.005234022.
+Źródło dotyczy społecznościowej przekrojowej kohorty chińskiej przed
+menopauzą, surowicy i HS-AMH Kangrun; nie stanowi kalibracji Access/Elecsys.
+
+**Granica obliczenia:** sąsiednie opublikowane punkty pozostają oddzielne;
+nie są medianami pięcioletnich grup ani granicami normy. Nie interpolujemy
+lub ekstrapolujemy. Źródło nie udostępnia pełnych parametrów GAMLSS,
+obsługi wyników poniżej LOD ani oddzielnego LOQ. LOD 0,003 ng/mL nie
+uprawnia do imputacji zera lub LOD/2. Literalne `<0.003` zachowujemy jako
+nierówność. Rycina 4A używa **Mean**, a tekst **median** dla 0,187/0,043;
+tabele wykrywalności mają odwrotne etykiety niż rycina 4B. Niezgodności
+liczebności i χ² pozostają jawne, bez samodzielnego „poprawiania” źródła.
+
+**Zachowane kontrakty:** Mayo, wcześniejsze FDA/Access i pozostałe
+odniesienia pacjentki, geometria, skale, konwersje oraz `lab.hormoneReference`
+i historia pozostają odrębne. Nie zapisujemy nowego bloku jako migawki
+odniesienia pacjentki. Wynik nie zmienia wyboru źródłowych liczb.
+
+**Przypadek syntetyczny:** dokładne F47 / AMH 0,1 ng/mL → dwa źródłowe
+wiersze: 45 lat / 0.365121103 oraz 50 lat / 0.045923937 ng/mL;
+brak liczby „P50 dla 47 lat”, percentyla, ilorazu i nowego werdyktu.
+F52,5 → opublikowane 50 i 55, bez mediany interpolowanej. Wynik pusty,
+zero, ponad osią i wyczyszczony nie zmienia wcześniejszej linii ani skali.
+
+**Dobór bloku:** `evaluate(data, context)` w `vilda_amh_age_reference.js`
+przyjmuje osobne `vilda_amh_age_reference_data.js`. Dla całego `[L,U]`
+wewnątrz 35–55 wybiera opublikowane punkty ≤L i ≥U; `[45,46)` daje 45/50,
+dokładne 50 daje tylko 50. Wyjątek `terminal-anchor` dla `L = 55` oraz
+`55 < U ≤ 56` pokazuje punkt 55 jako „Ostatni opublikowany punkt wieku”,
+z notą, że nie obejmuje całego możliwego wieku. Inne wyjście poza domenę
+ukrywa blok. Nieznany cykl/metoda pozwala na informację o źródle przed
+menopauzą, bez potwierdzania stanu pacjentki. Znana menopauza, ciąża,
+leczenie hormonalne, przeciwwskazanie lub niezgodna metoda/materiał
+ukrywa blok według konserwatywnej polityki aplikacji. Docelowa jednostka
+wyniku steruje prezentacją przez dotychczasową konwersję AMH.
+
+**Nierówności i zapis:** wyłącznie wejście AMH rozszerza obsługę o
+nierówności oraz `<LOD`/`<LOQ`. Wynik zachowuje prefiks, bez nowej
+klasyfikacji i dokładnego punktu; przeliczenie liczbowej granicy nie
+zamienia jej w stężenie. Istniejące przypięcie zachowuje surowy tekst,
+`lab.valueNum = null` i brak punktu w serii liczbowej. Zwykła migawka
+odniesienia ma status `unavailable`: `measurement.sourceValue` zachowuje
+granicę liczbową albo `null` dla LOD/LOQ, a `measurement.value = null`.
+P50 Xu nie są utrwalane. Schemat oraz wcześniejsze dane historii pozostają
+bez zmian; nie zapisujemy granicy jako dokładnego pomiaru.
+
+Pełne cytowanie, wersje, hashe, populacja i ustalenia:
+[opis źródła Xu](hormone-lifespan/AMH_XU_2026.md),
+[audyt Xu](hormone-lifespan/evidence/amh-xu-2026-audit.json).
+
 ### HORMONE-AMH-REFERENCE-SNAPSHOT — utrwalone odniesienie w wizycie i historii, 2026-10-14
 
 **Problem i wpływ:** przypięcie AMH zachowywało wynik i ewentualną normę,
