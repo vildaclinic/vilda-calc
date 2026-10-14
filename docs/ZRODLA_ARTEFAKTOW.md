@@ -790,6 +790,48 @@ if (param !== 'HT' && (zr === 'PALCZEWSKA' || (zr === 'OLAF' && wiekLat < 3))) r
 calcPercentileStats(wzrost, plec, wiekKostnyLat, 'HT', { wiekMies: null });
 ```
 
+## Łatka P-GRANICA-URODZIN (granice pełnych miesięcy, 2026-10-14)
+
+Zmiana wprost w artefaktach `app.js` i `vilda_professional_module.js`. Silniki (`vilda_sds_wzrostu.js`, `vilda_bmi.js`: dane `GRANICE`) i karta zespołu Downa (`vilda_down_syndrome.js`) są czytelnymi źródłami i zmieniły się wprost w nich. Reguła: siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje; noworodek według dób. Rejestr: `docs/clinical/ALGORITHMS.md`, P-GRANICA-URODZIN.
+
+```js
+// app.js — nowa funkcja przed lmsNiemowleWiek (w artefakcie jedna linia)
+function vildaWiekDoSiatek(wiek, pelne, populacja) {
+  if (typeof wiek !== 'number' || !isFinite(wiek) || wiek < 0) return wiek;
+  const p = pelne == null || pelne === '' ? NaN : Number(pelne);
+  if (!isFinite(p) || p < 0 || Math.floor(p) !== p) return wiek;      // brak pełnych miesięcy: bez zmian
+  const r = wiek - p;
+  if (!(r > -0.5 && r < 1.5)) return wiek;                             // para nie z tego samego dnia: bez zmian
+  const W = typeof window !== 'undefined' ? window : globalThis;
+  let lo = -Infinity, hi = Infinity;
+  [W.VildaSdsWzrostu, W.VildaBmi].forEach(function (S) {
+    if (!S || !S.GRANICE) return;
+    let pop;
+    try { pop = populacja != null ? S.normPopulacja(populacja) : S.populacjaZOpcji({}); } catch (e) { pop = 'OGOLNA'; }
+    const g = S.GRANICE[pop];
+    if (!g) return;
+    g.od.forEach(function (b) { if (b <= p) lo = Math.max(lo, b); else hi = Math.min(hi, b - 1e-6); });
+    g.do.forEach(function (b) { if (b >= p) hi = Math.min(hi, b); });
+  });
+  return Math.min(Math.max(wiek, lo), hi);
+}
+
+// app.js — lmsNiemowleWiek(a, wp), ścieżka formularza (DOB-AGE-4); a = pełne miesiące formularza
+return t >= 0 ? (typeof vildaWiekDoSiatek === 'function' ? vildaWiekDoSiatek(t, a) : t) : null;
+
+// app.js — vildaWiekPomiaruMies(r, iso, pelne); pełne miesiące z dnia pomiaru
+return m >= 0 ? (typeof vildaWiekDoSiatek === 'function' ? vildaWiekDoSiatek(m, w.totalMonths) : m) : null;
+
+// vilda_professional_module.js — wiersz wsadu; p: data urodzenia, dpD/dpOk: data pomiaru, Ce = doby / 30,4375, re = Ce / 12
+const Pm = VildaDobAge.ageFromDobISO(lokalnaDataISO(p), dpOk ? dpD : new Date()).totalMonths;   // null bez modułu albo przy |Ce − Pm| ≥ 1,5
+const Cs = Pm != null ? vildaWiekDoSiatek(Ce, Pm, 'OGOLNA') : Ce;
+const Rp = Pm != null ? Pm / 12 : re;
+// Palczewska: masa calcPercentileStatsPal(P, r, Rp, 'WT'); wzrost Zw(ae, r, Cs / 12, 'PALCZEWSKA'),
+//             zapas calcPercentileStatsPal(ae, r, Rp, 'HT'); BMI Zb(Je, r, Cs, 'PALCZEWSKA')
+// OLAF/WHO:   masa calcPercentileStats(P, r, Rp, 'WT', { wiekMies: Cs }); wzrost Zw(ae, r, Cs / 12, t),
+//             zapas calcPercentileStats(ae, r, Rp, 'HT', { wiekMies: null }); BMI Zb(Je, r, Cs, t)
+```
+
 ## Jak odtworzyć
 
 ```bash

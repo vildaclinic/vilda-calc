@@ -16,6 +16,9 @@
  *  3. Źródło WHO: 0–35 mies. WHO 2006 (długość/wysokość), 36–216 mies. WHO 2007.
  *  4. Wiek jest UŁAMKOWY w miesiącach i tak trafia do interpolacji — wszędzie, także
  *     u niemowląt (DOB-AGE-4 działa dla każdej ścieżki, nie tylko dla karty głównej).
+ *     Siatkę wybierają jednak PEŁNE MIESIĄCE (P-GRANICA-URODZIN): wytwórcy wieku dokładnego
+ *     przycinają go do granic z GRANICE (vildaWiekDoSiatek w app.js), więc w dniu urodzin
+ *     dziecko trafia na siatkę swojego wieku kalendarzowego.
  *  5. Noworodek (< 1 mies.) nie ma wiersza u Palczewskiej (siatka od 1. miesiąca) — idzie
  *     na WHO 2006, z jawnym powodem.
  *  6. Powyżej 216 mies. siatki LMS milczą; Palczewska sięga 222 mies. Powyżej 222 mies.
@@ -57,6 +60,28 @@
     DS_MIN_M: 1,        // długość DS od 1. miesiąca (tabela niemowlęca Zemel)
     DS_DZIECKO_M: 24,   // od 2 lat tabela dziecięca DS
     DS_MAX_M: 240,      // siatki DS do 20 lat
+  });
+  /* GRANICE PEŁNYCH MIESIĘCY (P-GRANICA-URODZIN; decyzja właściciela 2026-10-14: „siatkę wybierają
+   * pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie").
+   *
+   * Wiek dokładny (doby / 30,4375) i pełne miesiące kalendarzowe rozjeżdżają się przy urodzinach:
+   * w dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach,
+   * a w dniu 18. urodzin po 6575 dobach — 216,016 mies. przy 216. Silnik dostaje jedną liczbę,
+   * więc przy takim wieku wybierał inną siatkę niż ta, którą wskazuje wiek z formularza
+   * (Palczewska zamiast OLAF), a na granicy 18,5 roku — żadną.
+   *
+   * Tu są granice, na których rozstrzygają pełne miesiące: `od` — siatka (lub jej tablica)
+   * obowiązuje od tego wieku, `do` — do tego wieku włącznie. Osobno dla populacji ogólnej i DS,
+   * bo granica jednej populacji nie jest granicą drugiej. Czyta je vildaWiekDoSiatek (app.js),
+   * który przycina wiek dokładny tak, żeby wypadał po tej samej stronie każdej granicy, co pełne
+   * miesiące. Między granicami wiek dokładny zostaje bez zmian.
+   *
+   * Granicy 1. miesiąca (noworodek: WHO 2006 → Palczewska, długość DS od 1. miesiąca) tu nie ma:
+   * noworodek rozstrzyga się dobami, jak dotąd (decyzja właściciela 2026-10-14). Nie ma też
+   * WHO_INFANT_MAX_M: przejście WHO 2006 → WHO 2007 jest ciągłe (interpolacja 35 → 36 w lms()). */
+  var GRANICE = Object.freeze({
+    OGOLNA: Object.freeze({ od: Object.freeze([G.OLAF_MIN_M]), do: Object.freeze([G.LMS_MAX_M, G.PAL_MAX_M]) }),
+    DS: Object.freeze({ od: Object.freeze([G.DS_DZIECKO_M]), do: Object.freeze([G.DS_MAX_M]) }),
   });
   /* ODNIESIENIE DLA DOROSŁEGO (P-STATUS-DOROSLY-OLAF; decyzja właściciela 2026-09-20).
    *
@@ -414,7 +439,7 @@
   }
 
   root.VildaSdsWzrostu = Object.freeze({
-    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, DOROSLY_ODNIESIENIE: DOROSLY_ODNIESIENIE, CENTYLE_PAL: CENTYLE_PAL.slice(),
+    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, GRANICE: GRANICE, DOROSLY_ODNIESIENIE: DOROSLY_ODNIESIENIE, CENTYLE_PAL: CENTYLE_PAL.slice(),
     ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, populacjaZOpcji: populacjaZOpcji, lms: lms, interpoluj: interpoluj,
     zLms: zLms, xLms: xLms, policz: policz, policzNaSiatce: policzNaSiatce, wartoscDlaSds: wartoscDlaSds, mediana: mediana,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,

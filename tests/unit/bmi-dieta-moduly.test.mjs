@@ -145,8 +145,9 @@ describe('Anoreksja (vilda_anorexia_risk.js) i nadciśnienie (hypertension_thera
 describe('Wsad XLSX (vilda_professional_module.js) — BMI-SDS ze źródłem wsadu i wiekiem na datę pomiaru', () => {
   it('strażnik źródła: Zb ze źródłem wiersza (WHO honorowane), kolumna „data pomiaru" liczona do wieku', () => {
     const src = zrodlo('vilda_professional_module.js');
-    expect(src).toContain('Ae=Zb(Je,r,Ce,t)}finally{bmiSource=x}');
-    expect(src).toContain('Ae=Zb(Je,r,Ce,"PALCZEWSKA")}else{');
+    // P-GRANICA-URODZIN: wiek wiersza Cs = Ce przycięty do granic siatek (pełne miesiące wybierają siatkę).
+    expect(src).toContain('Ae=Zb(Je,r,Cs,t)}finally{bmiSource=x}');
+    expect(src).toContain('Ae=Zb(Je,r,Cs,"PALCZEWSKA")}else{');
     expect(src, 'P-BMI-5: bez zapasowego bmiZscore').not.toContain('bmiZscore(');
     expect(src).toContain('dpK=ue(M[0],U,["data pomiaru","datapomiaru","data badania","data wizyty","pomiaru"])');
     expect(src).toContain('dpOk=!!(dpD&&dpD.getTime()>p.getTime()),re=((dpOk?dpD:new Date()).getTime()-p.getTime())/(365.25*24*3600*1e3)');
