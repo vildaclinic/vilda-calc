@@ -56,7 +56,9 @@ describe('Ręczne kopie reguły siatki zniknęły z konsumentów rdzenia', () =>
     expect(zrodlo('gh_therapy_monitor.js')).not.toMatch(/h==="PALCZEWSKA"\|\|h==="OLAF"&&c</);
     expect(zrodlo('vilda_epicrisis_ui.js')).toContain('ne!=="HT"&&D&&typeof s.calcPercentileStatsPal');
     expect(zrodlo('vilda_summary_cards.js')).not.toContain('_=calcPercentileStatsPal(t,o,n,"HT")');
-    expect(zrodlo('vilda_patient_summary_copy.js')).toContain('if(C!=="HT"&&n==="PALCZEWSKA"&&r("calcPercentileStatsPal"))');
+    // P-WIEK-POMIARU-3 (decyzja właściciela 2026-10-14): masa na Palczewskiej także poniżej 3 lat przy OLAF
+    // (jak granice tego wiersza i formularz); wzrost nadal przez rdzeń (C!=="HT").
+    expect(zrodlo('vilda_patient_summary_copy.js')).toContain('if(C!=="HT"&&(n==="PALCZEWSKA"||n==="OLAF"&&o<De)&&r("calcPercentileStatsPal"))');
     expect(zrodlo('custom-fixes.js')).toContain('if(m&&f!=="HT"&&typeof calcPercentileStatsPal');
   });
 

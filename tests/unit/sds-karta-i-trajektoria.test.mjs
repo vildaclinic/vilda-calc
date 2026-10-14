@@ -34,7 +34,9 @@ describe('Karta pacjenta (vilda_auth_ui.js) — wzrost przez rdzeń, granice i z
 
   it('En(): wzrost zawsze calcPercentileStats (reguła siatki w silniku); masa zostaje przy Palczewskiej z rekordu', () => {
     // P-WIEK-POMIARU (2026-10-13): szósty argument `w` niesie jawny wiek zapisanego pomiaru do rdzenia.
-    expect(src).toContain('function En(t,a,n,r,o,w){try{if(r!=="HT"&&o==="PALCZEWSKA"&&typeof calcPercentileStatsPal=="function")return calcPercentileStatsPal(t,a,n,r);');
+    // P-WIEK-POMIARU-3 (decyzja właściciela 2026-10-14): masa na Palczewskiej także poniżej 3 lat przy OLAF,
+    // jak w formularzu; wzrost nadal zawsze przez rdzeń (r!=="HT").
+    expect(src).toContain('function En(t,a,n,r,o,w){try{var zr=o||(typeof bmiSource<"u"&&bmiSource?String(bmiSource).toUpperCase():null);if(r!=="HT"&&(zr==="PALCZEWSKA"||zr==="OLAF"&&n<(typeof OLAF_DATA_MIN_AGE<"u"?OLAF_DATA_MIN_AGE:3))&&typeof calcPercentileStatsPal=="function")return calcPercentileStatsPal(t,a,n,r);');
   });
 
   it('granica 18 lat jak w rdzeniu (216 mies. włącznie): warstwa GH i Status Karty', () => {
