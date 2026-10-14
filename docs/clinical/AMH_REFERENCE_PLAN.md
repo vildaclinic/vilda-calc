@@ -32,15 +32,22 @@ Przed każdym rozszerzeniem sprawdzić pełny przedział wieku, metodę,
 materiał, populację, statystykę i pierwszeństwo nakładających się źródeł.
 Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
 
-1. **Bieżący PR — męskie AMH:** brakujące odcinki grup Jopling 2018
+1. **Zakończone, PR #665 — męskie AMH:** brakujące odcinki grup Jopling 2018
    w wieku 12–<13 i 15–<18 lat oraz Benderradji w wieku 20–<30 lat,
    z ograniczeniami wyselekcjonowanej populacji normozoospermicznych
    partnerów. To trzy mediany całych grup 12–14,9, 15–18,9 i 20–39,
    bez interpolacji, zmiany krzywych lub norm; luka 18–<20 pozostaje.
    Pełne źródła i polityka: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
-2. Żeńskie AMH: grupowe mediany FDA/Access w dorosłości, z jednoznaczną
-   polityką granic oraz wyborem osobnej tabeli surowicy albo osocza.
-3. Inhibina B obu płci: ponowna macierz dostępności; kobiety >20–47 lat
+2. **Bieżąca partia — żeńskie AMH:** pięć median grup surowicy FDA
+   K170524/Access 2 w zwykłych widokach. Jawna konwencja ukończonych lat:
+   `[18,26)`, `[26,31)`, `[31,36)`, `[36,41)`, `[41,46)`; cały możliwy
+   wiek musi mieścić się w jednej grupie. Bez interpolacji, aktywacji
+   tabeli norm FDA ani zmiany istniejącej ilustracji opartej na osoczu.
+   Nieznana metoda/materiał/cykl nie wymaga nowych pól; znana niezgodność,
+   ciąża lub stan po menopauzie blokują to nowe odniesienie. Zachowane
+   dotychczasowe blokady, w tym GnRHa. Szczegóły i przypadek F28/1 ng/mL:
+   [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026).
+3. **Następny krok — inhibina B obu płci:** ponowna macierz dostępności; kobiety >20–47 lat
    w modelu Borelli-Kjær z ograniczeniami cyklu/antykoncepcji. Mała grupa
    Crofton u najmłodszych dziewczynek wymaga osobnej decyzji o przydatności
    przy historycznym oznaczeniu, osoczu i niskich stężeniach.
