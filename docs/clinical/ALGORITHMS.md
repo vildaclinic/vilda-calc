@@ -4344,7 +4344,9 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
   - monitor GH w DocPro (`gh_therapy_monitor.js`, `r()`): hSDS, Δ od startu i od poprzedniego punktu, hSDS − mpSDS;
   - żetony hSDS i ΔhSDS sekcji GH Karty pacjenta (`vilda_auth_ui.js`, `ci()`);
   - walidacja prognozy (`vilda_growth_prediction_validation_model.js`, `hSds()`), także w eksporcie kohorty.
-- Wiersz wsadu XLSX (`vilda_professional_module.js`): masa (i zapasowy wzrost, gdy silnik wzrostu nie odpowie) w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd.
+- Wiersz wsadu XLSX (`vilda_professional_module.js`):
+  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji;
+  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza.
 - Wiek odniesienia, nie pomiar (`{wiekMies:null}`):
   - wzrost rodziców na 18 lat (MPH): Karta pacjenta (`En(rt,S,18,…)`) oraz karty Startu (`inline_index_04.js`, `inline_index_07.js`);
   - krzywe odniesienia wykresów Karty pacjenta (`getChildLMS(g,E/12,…)`). Bez tego krzywa niemowlęcia miała załamanie w miesiącu życia dziecka z formularza.
@@ -4370,13 +4372,16 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 - Wsad: chłopiec, data pomiaru 110 dni po urodzeniu, masa 6,76 kg (mediana WHO na tę dobę) → SDS masy 0,00, 50. centyl (było 37,8 c., a przy formularzu w 4. mies. 25. dniu — 20,3 c.).
 
 **Testy.**
-- `tests/unit/wiek-pomiaru-pozostale-miejsca.test.mjs` (13):
+- `tests/unit/wiek-pomiaru-pozostale-miejsca.test.mjs` (14):
   - kontrakt rdzenia na funkcjach wyciętych z `app.js`, prawdziwym silniku wzrostu i tablicach WHO (4);
   - prawdziwy `gh_therapy_monitor.js` w atrapie `tests/support/gh-monitor-atrapa.mjs` (nowa opcja `calcPercentileStats`: rdzeń dla hSDS) (1);
   - prawdziwy model walidacji, `_hSds` (2);
-  - strażnicy źródła pozostałych wywołań (6).
+  - strażnicy źródła pozostałych wywołań (6);
+  - zapas wzrostu wsadu tuż po 18. urodzinach: wiek dokładny nie ma siatki, pełne miesiące liczą OLAF (1).
 - Kontrola ujemna na `audyt` 41076ff: 9 z 13 testów pada (monitor GH −0,021 zamiast +0,035; walidacja −0,99 zamiast −0,01 i −0,021 zamiast +0,035; strażnicy). Przechodzą 4 testy kontraktu rdzenia, który dał P-WIEK-POMIARU.
 - Strażnik `tests/unit/sds-cisnienie-i-wsad.test.mjs` przypina nowe wywołanie masy wsadu; liczba asercji bez zmian.
+
+**Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
 
 **Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.269 → 1.1.270.
 

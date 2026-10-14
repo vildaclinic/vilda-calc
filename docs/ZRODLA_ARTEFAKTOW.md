@@ -754,7 +754,7 @@ f(wzrost, plec, wiekLat, 'HT', { wiekMies: null });
 
 // vilda_professional_module.js — wiersz wsadu; Ce = doby od urodzenia do daty pomiaru wiersza / 30,4375
 calcPercentileStats(masa, plec, wiekLat, 'WT', { wiekMies: Ce });
-calcPercentileStats(wzrost, plec, wiekLat, 'HT', { wiekMies: Ce });     // zapas, gdy silnik wzrostu nie odpowie
+calcPercentileStats(wzrost, plec, wiekLat, 'HT', { wiekMies: null });   // zapas, gdy silnik nie policzy wieku dokładnego (np. 216,016 mies.)
 
 // custom-fixes.js — mini-podsumowanie powłoki; A(…, w) przekazuje w do calcPercentileStats
 A(masa, plec, wiekLat, 'WT', zrodlo, ramkaNieaktualna ? { wiekMies: null } : undefined);   // Gq5s

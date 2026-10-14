@@ -55,15 +55,16 @@ const TABLICE_WZROSTU = ['LMS_INFANT_HEIGHT_BOYS', 'LMS_INFANT_HEIGHT_GIRLS', 'L
 const TABLICE = [...TABLICE_WZROSTU, 'LMS_INFANT_WEIGHT_BOYS', 'LMS_INFANT_WEIGHT_GIRLS', 'LMS_WEIGHT_WHO_BOYS',
   'LMS_WEIGHT_WHO_GIRLS', 'LMS_WEIGHT_BOYS', 'LMS_WEIGHT_GIRLS'].map(tablica).join(';\n');
 
-// Rdzeń app.js; `dzis` — formularz z datą urodzenia (atrapa VildaDobAge.readExactAge) albo brak formularza.
-function rdzen(dzis = null) {
+// Rdzeń app.js; `dzis` — formularz z datą urodzenia (atrapa VildaDobAge.readExactAge) albo brak formularza;
+// `siatki` — źródło siatek (bmiSource).
+function rdzen(dzis = null, siatki = 'WHO') {
   const win = dzis ? { VildaDobAge: { readExactAge: () => dzis } } : {};
   win.VildaWzrostLMS = {};
   for (const n of TABLICE_WZROSTU) win.VildaWzrostLMS[n] = new Function(`${tablica(n)}; return ${n};`)();
   new Function('window', 'globalThis', zrodlo('vilda_sds_wzrostu.js'))(win, win);
   return new Function('window', `
     ${TABLICE};
-    let weightUsedFallback = false; const bmiSource = 'WHO';
+    let weightUsedFallback = false; const bmiSource = ${JSON.stringify(siatki)};
     ${funkcja('erf')}
     ${funkcja('normalCDF')}
     ${funkcja('lmsNiemowleWiek')}
@@ -166,11 +167,23 @@ describe('Pozostałe wywołania podają wiek jawnie (strażnik źródła)', () =
     expect(src).not.toMatch(/getChildLMS\(g,E\/12,"(HT|WT)"\)/);
   });
 
-  it('wsad XLSX: masa i zapasowy wzrost wiersza w wieku wiersza (Ce), jak Zw i Zb', () => {
+  it('wsad XLSX: masa wiersza w wieku wiersza (Ce), jak Zw i Zb; zapasowy wzrost w pełnych miesiącach wiersza', () => {
     const src = zrodlo('vilda_professional_module.js');
     expect(src).toContain('const y=calcPercentileStats(P,r,re,"WT",{wiekMies:Ce});');
-    expect(src).toContain('const J=calcPercentileStats(ae,r,re,"HT",{wiekMies:Ce});');
+    expect(src).toContain('const J=calcPercentileStats(ae,r,re,"HT",{wiekMies:null});');
     expect(src).toContain(',re=((dpOk?dpD:new Date()).getTime()-p.getTime())/(365.25*24*3600*1e3),Ce=re*12,');
+  });
+
+  // Przegląd Codex (2026-10-14): doby / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach.
+  // Zapas wzrostu wsadu działa tylko wtedy, gdy silnik nie policzył wieku dokładnego wiersza (Zw), np. tuż
+  // po 18. urodzinach — i ma wtedy ratować wynik pełnymi miesiącami, jak przed tą zmianą.
+  it('wsad XLSX: zapas wzrostu tuż po 18. urodzinach (6575 dób = 216,016 mies.) liczy, gdzie wiek dokładny nie ma siatki', () => {
+    const r = rdzen(null, 'OLAF');
+    const Ce = 6575 / DNI_W_MIESIACU;
+    expect(r.calcPercentileStats(176, 'M', Ce / 12, 'HT', { wiekMies: Ce }), 'wiek dokładny: brak siatki').toBeNull();
+    const zapas = r.calcPercentileStats(176, 'M', Ce / 12, 'HT', { wiekMies: null });
+    expect(zapas && zapas.siatka).toBe('OLAF');
+    expect(sd(zapas)).toBeCloseTo(sd(r.calcPercentileStats(176, 'M', 18, 'HT', { wiekMies: null })), 12);
   });
 
   it('walidacja prognozy: f(…, { wiekMies: null })', () => {
