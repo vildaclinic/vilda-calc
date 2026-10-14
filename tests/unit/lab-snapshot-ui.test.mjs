@@ -36,7 +36,9 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
     const { win, trend, snapshot } = model();
     const assessment = snapshot();
     expect(assessment.status).toBe('recorded');
-    win.LabUnitConverter = { convert: vi.fn(() => ({ ok: true, results: [{ unit: 'IU/L', value: 2 }] })) };
+    // P-LAB-TREND-CONVERT: konwerter przyjmuje jeden obiekt; dawna atrapa `convert` oddawała
+    // kształt convertAll niezależnie od argumentów i przykrywała błąd wywołania.
+    win.LabUnitConverter = { convertAll: vi.fn(() => ({ ok: true, results: [{ unit: 'IU/L', value: 2 }] })) };
     const series = trend.normalize({ testKey: 'lh', points: [
       point(assessment), { ...point(assessment), noteId: 'synthetic-other' },
       { ...point(assessment), noteId: 'synthetic-converted', unit: 'mIU/mL' },
@@ -46,7 +48,10 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
     expect(series.points.map((p) => p.assessment.evaluation.clinical)).toEqual([
       assessment.evaluation.clinical, assessment.evaluation.clinical, assessment.evaluation.clinical,
     ]);
-    expect(series.points[2]).toMatchObject({ v: 2, conv: true, assessment });
+    expect(series.points[2]).toMatchObject({ v: 2, conv: true, assessment, norm: null });
+    expect(series.points[0].norm).toBe('0,1–0,5');
+    expect(win.LabUnitConverter.convertAll).toHaveBeenCalledTimes(1);
+    expect(win.LabUnitConverter.convertAll).toHaveBeenCalledWith({ substanceId: 'lh', value: 2, fromUnit: 'mIU/mL' });
   });
 
   it.each(['<0,02', '≤0,02', '>0,5', '≥0,5', '<LOD'])('nie kreśli %s jako liczby nawet przy starym valueNum', (raw) => {
@@ -90,6 +95,73 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
     expect(reference).toMatchObject({ lo: 0.1, hi: 0.5, status: 'above' });
     expect(trend.flag(normalized, reference)).toBe('↑');
     expect(win.LabUnitConverter.evaluate).toHaveBeenCalledOnce();
+  });
+});
+
+// P-LAB-TREND-CONVERT: ta sama funkcja z artefaktu, ale z prawdziwym konwerterem i plikiem danych
+// jednostek. Współczynnik pochodzi z lab_units_data.js (ten, którym liczy przelicznik), nie z testu.
+function trendWithConverter() {
+  const win = {};
+  loadBrowserScript('lab_units_data.js', win);
+  loadBrowserScript('lab_unit_converter.js', win);
+  const source = authSource.slice(authSource.indexOf('function Dl('), authSource.indexOf('function Nl('));
+  const trend = new Function('i', `${source};return {normalize:yi,flag:mi}`)(win);
+  return { win, trend };
+}
+
+const entry = (noteId, valueNum, unit, norm, dateISO) => ({ noteId, valueNum, unit, norm, dateISO, ageMonths: 400 });
+
+describe('P-LAB-TREND-CONVERT — wynik w innej jednostce trafia do trendu', () => {
+  it('fT4 15 pmol/L i 1,2 ng/dL z normą „0,8–1,8 ng/dL”: dwa punkty, drugi przeliczony bez strzałki', () => {
+    const { win, trend } = trendWithConverter();
+    const series = trend.normalize({ testKey: 'ft4', points: [
+      entry('synthetic-ft4-pmol', 15, 'pmol/L', '12–22 pmol/L', '2026-05-26'),
+      entry('synthetic-ft4-ngdl', 1.2, 'ng/dL', '0,8–1,8 ng/dL', '2026-07-07'),
+    ] });
+    expect(series.unit).toBe('pmol/L');
+    expect(series.skipped).toBe(0);
+    expect(series.points).toHaveLength(2);
+    expect(series.points[0]).toMatchObject({ noteId: 'synthetic-ft4-pmol', v: 15, norm: '12–22 pmol/L' });
+    expect(series.points[0]).not.toHaveProperty('conv');
+    const converted = series.points[1];
+    expect(converted).toMatchObject({ noteId: 'synthetic-ft4-ngdl', conv: true, norm: null, dateISO: '2026-07-07' });
+    expect(converted.v).toBeCloseTo(15.444, 6);
+    expect(converted.v).toBe(win.LabUnitConverter.convert({
+      substanceId: 'ft4', value: 1.2, fromUnit: 'ng/dL', toUnit: 'pmol/L',
+    }).value);
+    // Bez strzałki: przeliczona wartość nie jest porównywana z normą wpisu zapisaną w ng/dL.
+    expect(trend.flag(converted, null)).toBeNull();
+    // Gdyby punkt zachował tekst normy, 15,44 pmol/L > 1,8 dałoby fałszywe „↑”.
+    expect(trend.flag({ ...converted, norm: '0,8–1,8 ng/dL' }, null)).toBe('↑');
+    expect(trend.flag(series.points[0], null)).toBeNull();
+  });
+
+  it('TSH: μIU/mL (U+03BC) przelicza się na mIU/L, znak mikro µ (U+00B5) zostaje pominięty jak dotąd', () => {
+    const { trend } = trendWithConverter();
+    const series = trend.normalize({ testKey: 'tsh', points: [
+      entry('synthetic-tsh-1', 0.12, 'mIU/L', null, '2026-09-02'),
+      entry('synthetic-tsh-2', 0.05, 'mIU/L', null, '2026-07-07'),
+      entry('synthetic-tsh-greek-mu', 0.38, '\u03bcIU/mL', '0,27–4,2 \u03bcIU/mL', '2026-10-14'),
+      entry('synthetic-tsh-micro-sign', 0.4, '\u00b5IU/mL', null, '2026-10-15'),
+    ] });
+    expect(series.unit).toBe('mIU/L');
+    expect(series.points.map((p) => p.noteId)).toEqual(['synthetic-tsh-1', 'synthetic-tsh-2', 'synthetic-tsh-greek-mu']);
+    expect(series.points[2]).toMatchObject({ v: 0.38, conv: true, norm: null });
+    expect(series.skipped).toBe(1);
+  });
+
+  it('konwerter bez convertAll nie wywraca trendu i nie dostaje dawnego wywołania pozycyjnego', () => {
+    const { win, trend } = trendWithConverter();
+    const convert = vi.fn(() => ({ ok: true, results: [{ unit: 'pmol/L', value: 99 }] }));
+    win.LabUnitConverter = { convert };
+    const series = trend.normalize({ testKey: 'ft4', points: [
+      entry('synthetic-a', 15, 'pmol/L', null, '2026-05-26'),
+      entry('synthetic-b', 16, 'pmol/L', null, '2026-06-26'),
+      entry('synthetic-c', 1.2, 'ng/dL', null, '2026-07-07'),
+    ] });
+    expect(series.points.map((p) => p.noteId)).toEqual(['synthetic-a', 'synthetic-b']);
+    expect(series.skipped).toBe(1);
+    expect(convert).not.toHaveBeenCalled();
   });
 });
 

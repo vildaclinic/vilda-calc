@@ -832,6 +832,42 @@ const Rp = Pm != null ? Pm / 12 : re;
 //             zapas calcPercentileStats(ae, r, Rp, 'HT', { wiekMies: null }); BMI Zb(Je, r, Cs, t)
 ```
 
+## Łatka P-LAB-TREND-CONVERT (`vilda_auth_ui.js` 491 → 492, 2026-10-14)
+
+Zmiana wprost w artefakcie, w funkcji, która z serii sejfu buduje punkty wykresu wyników (w artefakcie `yi()`). Wołają ją „Trend wyników” w Historii (`Jl()`), nakładki wyników na siatkach centylowych i eksport siatek do PDF (`Gl()`). Nazwy z artefaktu: `t` — seria z `listPatientLabSeries`, `r` — jednostka serii (najczęstsza w serii), `s` — `window.LabUnitConverter`, `point()` — budowa punktu wykresu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis LAB-TREND-CONVERT.
+
+```js
+// P-LAB-TREND-CONVERT, w yi(); konwerter = window.LabUnitConverter, seria = t, wpis = punkt serii
+// było: if (konwerter && seria.testKey && typeof konwerter.convert === 'function' && wpis.unit) {
+//         const wynik = konwerter.convert(seria.testKey, wpis.valueNum, wpis.unit);   // zawsze „Nie znaleziono substancji.”
+if (konwerter && seria.testKey && typeof konwerter.convertAll === 'function' && wpis.unit) {
+  const wynik = konwerter.convertAll({ substanceId: seria.testKey, value: wpis.valueNum, fromUnit: wpis.unit });
+  // dalej bez zmian: wartość z wynik.results o symbolu równym jednostce serii; brak takiej → „pominięto”
+}
+
+// point(wpis, wartosc, przeliczony)
+// było: norm: wpis.norm || null
+norm: przeliczony ? null : (wpis.norm || null),   // tekstowa norma wpisu jest w jednostce zapisu, nie serii
+```
+
+Część 2: na stronach bez statycznego `lab_unit_converter.js` (wszystkie z kartą pacjenta poza Start: DocPro, Notatki, Terminarz, Ustawienia, Klirens, Subskrypcja, powłoka) konwerter doładowuje leniwie `ja()`. „Trend wyników” (`Jl()`) i nakładki na siatki (`Kl()`) wołały `yi()` przed jego doładowaniem, a późniejszy render odświeżał tylko strzałki, więc punkt w innej jednostce nadal znikał. Nowe funkcje stoją tuż za `yi()`; obie strony wołają `await LtcCzekajNaKonwerter(serie)` zaraz po odczycie serii z sejfu. Eksport siatek do PDF (`Yl()` → `Gl()`) czekał na `ja()` już wcześniej.
+
+```js
+// P-LAB-TREND-CONVERT, część 2 (nazwy z artefaktu: ja — leniwe ładowanie konwertera, i — window)
+function LtcSeriaWielujednostkowa(serie) {          // czy któraś seria ma wpisy w więcej niż jednej jednostce
+  return (serie || []).some((s) => new Set(((s && s.points) || []).map((p) => (p && p.unit) || '?')).size > 1);
+}
+async function LtcCzekajNaKonwerter(serie) {
+  if (!LtcSeriaWielujednostkowa(serie) || typeof ja !== 'function'
+      || (window.LabUnitConverter && typeof window.LabUnitConverter.convertAll === 'function')) return;
+  try {
+    await Promise.race([new Promise((gotowe) => ja(() => gotowe())), new Promise((gotowe) => setTimeout(gotowe, 5000))]);
+  } catch {}
+}
+// Jl(): po `o = await r.listPatientLabSeries(a)` → await LtcCzekajNaKonwerter(o);
+// Kl(): po odczycie serii i okresów leczenia → await LtcCzekajNaKonwerter(d);
+```
+
 ## Jak odtworzyć
 
 ```bash

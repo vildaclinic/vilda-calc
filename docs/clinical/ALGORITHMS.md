@@ -32,6 +32,79 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 
 ## Długi walidacyjne o najwyższym priorytecie
 
+### LAB-TREND-CONVERT — przeliczanie jednostek w trendzie wyników karty pacjenta (P-LAB-TREND-CONVERT, SW 1.1.277, `vilda_auth_ui.js` 492, 2026-10-14)
+
+**Wpływ kliniczny: tak.** Zmienia się prezentacja historii wyników: wynik
+zapisany w innej znanej jednostce niż reszta serii pojawia się na wykresie
+zamiast znikać. Nie ma nowych norm, współczynników, progów ani zaokrągleń.
+Etap PR0 planu `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja właściciela 6.2.
+
+**Problem:** „Trend wyników” w Historii, nakładki wyników na siatkach
+i eksport siatek do PDF rysują serię w jej najczęstszej jednostce. Wynik
+w innej jednostce miał być przeliczony, ale funkcja budująca punkty wołała
+konwerter z trzema argumentami zamiast jednego obiektu. Konwerter zawsze
+odpowiadał „Nie znaleziono substancji.”, więc punkt trafiał do stopki
+„pominięto N (inna jednostka …)”. Lekarz nie widział np. fT4 oznaczonego
+w innym laboratorium w ng/dL obok wyników w pmol/L.
+
+**Zmiana:** punkt w innej jednostce przelicza `LabUnitConverter.convertAll`
+z `{substanceId, value, fromUnit}`, czyli ta sama funkcja i ten sam
+współczynnik `factor_to_si` z `lab_units_data.js`, którymi liczy strona
+„Jednostki laboratoryjne”. Przykład: fT4 1 ng/dL = 12,87 pmol/L, współczynnik
+stechiometryczny z masy cząsteczkowej 776,87 g/mol zapisanej w danych.
+Punkt przeliczony ma znacznik `conv` (na wykresie obwódka, jak dotąd)
+i nie niesie tekstowej normy wpisu (`norm: null`), bo ta norma jest
+w jednostce zapisu, a nie w jednostce serii.
+
+Na stronach z kartą pacjenta innych niż Start konwerter ładuje się
+leniwie. Trend i nakładki na siatki budowały punkty, zanim się załadował,
+więc tam sama poprawka wywołania nic by nie zmieniła. Dlatego przy serii
+z wynikami w więcej niż jednej jednostce oba widoki czekają na konwerter,
+najwyżej 5 s; po tym czasie albo przy błędzie ładowania zostaje dawne
+„pominięto”. Seria w jednej jednostce nie czeka. Eksport siatek do PDF
+czekał na konwerter już wcześniej.
+
+**Populacja, jednostki i ograniczenia:** wszyscy pacjenci; wszystkie badania
+i jednostki znane konwerterowi. Jednostką serii zostaje jej najczęstsza
+jednostka, przy remisie jednostka wpisu stojącego w serii wcześniej, jak dotąd. Symbol
+jednostki porównywany jest dosłownie: „µIU/mL” ze znakiem mikro (U+00B5)
+to dla konwertera inna jednostka niż jego „μIU/mL” z grecką literą mu
+(U+03BC), więc taki wpis nadal jest pomijany. Normalizację symboli plan
+przypisuje modelowi historii (PR1). Jednostka nieznana konwerterowi, wartość
+ujemna i seria bez klucza badania nadal dają „pominięto”.
+
+**Strzałki:** punkt przeliczony nigdy nie dostaje strzałki z tekstowej
+normy wpisu. Jak każdy punkt bez tekstowej normy w trendzie, nakładkach
+i PDF może dostać strzałkę z dzisiejszego zakresu przelicznika, liczonego
+dla wartości przeliczonej w jednostce serii. Nie dotyczy to AMH ani wpisów
+z zapisaną oceną. To dotychczasowa reguła tych trzech widoków. Zakładka
+„Badania” (PR2) jej nie użyje (decyzja 6.1), a nakładki i PDF zachowują ją
+do osobnej decyzji (6.4).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- fT4 15 pmol/L z normą „12–22 pmol/L” (26.05.26) i fT4 1,2 ng/dL z normą
+  „0,8–1,8 ng/dL” (07.07.26) → seria w pmol/L, dwa punkty: 15 i 15,444 pmol/L
+  (przeliczony, bez normy), pominięto 0, bez strzałki z tekstu normy. Przed
+  łatką: jeden punkt, pominięto 1. Gdyby punkt przeliczony zachował tekst
+  normy, 15,444 > 1,8 dałoby fałszywe „↑”.
+- TSH 0,12 i 0,05 mIU/L, 0,38 μIU/mL (U+03BC) i 0,4 µIU/mL (U+00B5) → seria
+  w mIU/L, trzy punkty (0,38 przeliczone współczynnikiem 1), pominięto 1.
+
+**Testy:** `tests/unit/lab-snapshot-ui.test.mjs` wykonuje funkcję wyciętą
+z artefaktu z prawdziwym `lab_unit_converter.js` i `lab_units_data.js`
+(oba przypadki wyżej), sprawdza argumenty wywołania `convertAll` na atrapie
+i pilnuje, że dawne wywołanie pozycyjne `convert` nie wraca. Bez łatki
+cztery z tych testów padają. E2E `tests/e2e/lab-trend-jednostki.spec.mjs`
+zapisuje w fikcyjnym sejfie fT4 15 i 17 pmol/L oraz 1,2 ng/dL i otwiera
+Historię karty na Start i w DocPro: chip „fT4 ×3”, bez „pominięto”, jeden
+punkt z obwódką i wartość 15,4. Bez łatki oba warianty pokazują „fT4 ×2”.
+Nakładek na siatki nie obejmuje osobny E2E; korzystają z tej samej funkcji
+czekania co trend. `lab-amh-history-no-reassessment`,
+`lab-assessment-history` i `hormone-reference-ui` przechodzą bez zmian.
+Zielone testy nie są walidacją kliniczną; zmiana czeka na akceptację
+kliniczną właściciela (AGENTS.md § 3).
+
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 
 **Wpływ kliniczny: tak.** Pierwszy krok po przeglądzie dostępności median
