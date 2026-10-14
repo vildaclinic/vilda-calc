@@ -13,6 +13,9 @@ async function sprawdzPasek(page) {
   const pasek = pasekHistorii(page);
   await expect(pasek).toHaveClass(/is-on/);
   await expect(pasek.locator('svg.lab-strip-svg')).toHaveCount(1);
+  // Pasek rysuje się po wyborze jednostki i ponownie po wpisaniu wartości: czekamy na chip i pas „teraz”.
+  await expect(pasek.locator('.lab-strip-now')).toContainText('teraz · niezapisany');
+  await expect(pasek.locator('svg text.lab-strip-now-label')).toHaveText('teraz');
   const uklad = await page.evaluate(() => {
     const strip = document.getElementById('labHistoryStrip');
     const chipy = [...strip.querySelectorAll('button.lab-strip-chip[data-note-id]')].map((c) => c.getBoundingClientRect());
