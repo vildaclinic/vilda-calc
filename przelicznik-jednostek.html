@@ -62,7 +62,7 @@
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
   <link href="vilda_lab_assessment_ui.css?v=11" rel="stylesheet">
-  <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
+  <link href="vilda_lab_puberty_ui.css?v=7" rel="stylesheet">
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
   <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=1" rel="stylesheet">
@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=73"></script>
+  <script src="vilda_session_bridge.js?v=74"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=149"></script>
+  <script src="vilda_chrome.js?v=150"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -442,22 +442,25 @@
   <script src="ios26-ui.js?v=45" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=37"></script>
-  <script src="lab_unit_converter.js?v=5"></script>
+  <script src="lab_units_data.js?v=38"></script>
+  <script src="lab_unit_converter.js?v=6"></script>
   <script src="vilda_lab_puberty_data.js?v=7"></script>
   <script src="vilda_lab_puberty.js?v=8"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
   <script src="vilda_lab_inhibin_b.js?v=1"></script>
-  <script src="vilda_lab_snapshot.js?v=7"></script>
+  <script src="vilda_lab_testosterone_units.js?v=1"></script>
+  <script src="vilda_lab_testosterone_data.js?v=1"></script>
+  <script src="vilda_lab_testosterone.js?v=1"></script>
+  <script src="vilda_lab_snapshot.js?v=8"></script>
   <script src="vilda_hormone_reference_snapshot.js?v=1"></script>
   <script src="vilda_hormone_reference_ui.js?v=1"></script>
-  <script src="vilda_lab_assessment_ui.js?v=15"></script>
+  <script src="vilda_lab_assessment_ui.js?v=16"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
   <script src="vilda_puberty_assessment.js?v=2"></script>
   <script src="vilda_puberty_assessment_context.js?v=1"></script>
   <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
   <script src="vilda_puberty_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=17"></script>
+  <script src="vilda_lab_puberty_ui.js?v=18"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
@@ -469,7 +472,7 @@
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
-  <script src="lab_pin_result.js?v=7"></script>
+  <script src="lab_pin_result.js?v=8"></script>
   <script src="vilda_lab_history.js?v=2"></script>
   <script src="lab_history_strip.js?v=2"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
@@ -603,7 +606,11 @@
     // Te anality mają osobny kontekst próbki. Stary pacjent {age,tanner,life_stage}
     // pozostaje wejściem innych analitów, ale nie jest wejściem nowego silnika.
     function isPubertySubstance(substance) {
-      return !!(substance && (substance.id === 'lh' || substance.id === 'fsh' || substance.id === 'inhibin_b'));
+      return !!(substance && (substance.id === 'lh' || substance.id === 'fsh' || substance.id === 'inhibin_b' || substance.id === 'testosterone_total'));
+    }
+    function isPubertyReferenceSubstance(substance) {
+      return isPubertySubstance(substance) && !(substance.id === 'testosterone_total'
+        && pubertyUI && pubertyUI.isLegacyFemale && pubertyUI.isLegacyFemale());
     }
     function readPubertyPatientContext() {
       var shared = null, patient = null, puberty = null, pubertyState = null, source = null;
@@ -660,11 +667,18 @@
         history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
       });
       var includeMinipubertyDays = typeof currentSubstance !== 'undefined' && currentSubstance
-        && ['lh', 'fsh', 'amh'].includes(currentSubstance.id);
+        && ['lh', 'fsh', 'amh', 'testosterone_total'].includes(currentSubstance.id);
       var neonatalAge = window.VildaLabNeonatalContext
         ? window.VildaLabNeonatalContext.read(shared, identity, source, { includeMinipuberty: !!includeMinipubertyDays }) : null;
       var pretermRule = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
         && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
+      var testosteroneContext = typeof currentSubstance !== 'undefined' && currentSubstance
+        && currentSubstance.id === 'testosterone_total';
+      var testosteronePolicy = testosteroneContext
+        && window.VildaLabTestosteroneData && window.VildaLabTestosteroneData.automaticReferencePolicy;
+      var pretermLimitDays = testosteroneContext
+        ? testosteronePolicy && testosteronePolicy.pretermGestationalDaysUpperExclusive
+        : pretermRule && pretermRule.operator === '<' ? pretermRule.value * 7 : null;
       var context = {
         identityKey: identity,
         sourceStatus: 'ready',
@@ -703,9 +717,9 @@
       }
       if (neonatalAge) {
         context.neonatalAge = neonatalAge;
-        if (neonatalAge.gestationalDays && pretermRule && pretermRule.operator === '<') {
-          context.preterm = neonatalAge.gestationalDays.upper < pretermRule.value * 7 ? 'yes'
-            : neonatalAge.gestationalDays.lower >= pretermRule.value * 7 ? 'no' : 'unknown';
+        if (neonatalAge.gestationalDays && Number.isFinite(pretermLimitDays)) {
+          context.preterm = neonatalAge.gestationalDays.upper < pretermLimitDays ? 'yes'
+            : neonatalAge.gestationalDays.lower >= pretermLimitDays ? 'no' : 'unknown';
         }
       }
       return context;
@@ -714,8 +728,16 @@
       document: document,
       persistence: persistence,
       readPatientContext: readPubertyPatientContext,
+      readMeasurementContext: function (analyte) {
+        return analyte === 'testosterone_total' ? testosteroneMeasurementContext || {} : {};
+      },
       onPatientChange: function () { if (isPubertySubstance(currentSubstance)) valueEl.value = ''; },
-      onChange: function () { if (isPubertySubstance(currentSubstance)) renderResults(currentSubstance); }
+      onChange: function () {
+        if (isPubertySubstance(currentSubstance)) {
+          if (currentSubstance.id === 'testosterone_total') renderInfo(currentSubstance);
+          renderResults(currentSubstance);
+        }
+      }
     });
     window.VildaLabPubertyRuntime = pubertyUI;
     if (pubertyUI && window.VildaLabPinResult) {
@@ -768,6 +790,7 @@
       if (localOverrideIdentity === next) return false;
       localOverrideIdentity = next;
       lastLifespanContext = null;
+      testosteroneMeasurementContext = {};
       resetLocalPatientOverride();
       // A result belongs to the previous person even if their age or sex match.
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
@@ -875,9 +898,16 @@
       if (source.identityKey && vault && typeof vault.isUnlocked === 'function' && !vault.isUnlocked()) status = 'unavailable';
       var patient = null, input = null, resolved = null, years = null, upperYears = null, label = '';
       if (status === 'ready') {
-        if (isPubertySubstance(substance)) {
+        if (isPubertyReferenceSubstance(substance)) {
           input = evaluation && evaluation.input;
           resolved = evaluation && evaluation.ageAtSample;
+          if (substance.id === 'testosterone_total' && resolved && resolved.source === 'neonatal-days'
+              && window.VildaLabPuberty && typeof window.VildaLabPuberty.resolveAge === 'function') {
+            // Mayo's completed-month qualification has its own conservative
+            // calendar envelope. The existing educational diagram continues
+            // to position reported days using its original chronological age.
+            resolved = window.VildaLabPuberty.resolveAge(input);
+          }
           patient = input;
           if (resolved && resolved.status === 'known') {
             // Position denotes the completed age, never an invented birthday.
@@ -899,20 +929,24 @@
           }
         }
       }
-      var premature = isPubertySubstance(substance)
+      var premature = isPubertyReferenceSubstance(substance)
         ? input && ['yes', 'no'].includes(input.preterm) ? input.preterm : 'unknown'
         : ['yes', 'no'].includes(source.preterm) ? source.preterm : 'unknown';
-      var neonatal = isPubertySubstance(substance) ? input && input.neonatalAge : source.neonatalAge;
+      var neonatal = isPubertyReferenceSubstance(substance) ? input && input.neonatalAge : source.neonatalAge;
       var gestational = neonatal && neonatal.gestationalDays;
       var pretermBoundary = window.VildaLabPubertyData && window.VildaLabPubertyData.biochemicalPolicy
         && window.VildaLabPubertyData.biochemicalPolicy.pretermGestationalWeeks;
+      var testosteronePolicy = substance.id === 'testosterone_total' && window.VildaLabTestosteroneData
+        && window.VildaLabTestosteroneData.automaticReferencePolicy;
+      var pretermLimitDays = substance.id === 'testosterone_total'
+        ? testosteronePolicy && testosteronePolicy.pretermGestationalDaysUpperExclusive
+        : pretermBoundary && pretermBoundary.operator === '<' ? pretermBoundary.value * 7 : null;
       // A contradictory local "No" cannot turn a documented premature birth
       // into the term population used by this educational infant diagram.
       if (premature !== 'yes' && gestational && Number.isFinite(gestational.lower) && Number.isFinite(gestational.upper)
         && gestational.lower >= 0 && gestational.upper >= gestational.lower
-        && pretermBoundary && pretermBoundary.operator === '<' && Number.isFinite(pretermBoundary.value)
-        && gestational.lower < pretermBoundary.value * 7) {
-        premature = gestational.upper < pretermBoundary.value * 7 ? 'yes' : 'unknown';
+        && Number.isFinite(pretermLimitDays) && gestational.lower < pretermLimitDays) {
+        premature = gestational.upper < pretermLimitDays ? 'yes' : 'unknown';
       }
       var context = {
         analyte: substance.id,
@@ -939,7 +973,7 @@
         // Only an explicitly reported sample method can exclude a source.
         // An automatic reference choice or saved preference is not that fact.
         assayMethodId: input && input.assay && input.assay.confirmation === 'reported'
-          ? input.assay.methodId || null : !isPubertySubstance(substance) && patient && patient.method || null,
+          ? input.assay.methodId || null : !isPubertyReferenceSubstance(substance) && patient && patient.method || null,
         sourceStatus: status,
         // Used in memory only to invalidate the previous person's UI state.
         identityKey: source.identityKey || ''
@@ -1280,6 +1314,9 @@
     // Atrybuty pomiaru (osobny stan od localOverride, bo dotyczą oznaczenia,
     // nie pacjenta). Resetowane razem z polami formularza.
     var measurementCtx = { time_of_day: null, test_protocol: null, method: null };
+    // A select's default is not a reported fact about a testosterone sample.
+    // Keep this context separate from defaults used by other analytes.
+    var testosteroneMeasurementContext = {};
 
     // Lokalne nadpisania – żyją tylko w pamięci tej karty, nie idą do sharedUserData.
     var localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
@@ -1426,6 +1463,13 @@
         test_protocol: measurementCtx.test_protocol || null,
         method: measurementCtx.method || null
       };
+      if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'testosterone_total'
+          && pubertyUI && typeof pubertyUI.getLegacyPatient === 'function') {
+        var testosteronePatient = pubertyUI.getLegacyPatient();
+        p.sex = testosteronePatient.sex;
+        p.age = testosteronePatient.age;
+        p.time_of_day = testosteroneMeasurementContext.collectionTime || null;
+      }
       if (typeof p.age === 'number') {
         p.life_stage = p.age >= 18 ? 'adult' : 'pediatric';
       } else if (typeof p.tanner === 'number') {
@@ -3232,7 +3276,7 @@
     }
     function renderResults(substance) {
       syncPatientIdentity();
-      if (isPubertySubstance(substance)) {
+      if (isPubertyReferenceSubstance(substance)) {
         var pubertyEvaluation = pubertyUI && pubertyUI.render({ raw: valueEl.value, unit: unitEl.value, targetUnit: unitTargetEl && unitTargetEl.value });
         updateLifespan(substance, pubertyEvaluation);
         showError(String(valueEl.value || '').trim() && (!pubertyEvaluation || pubertyEvaluation.measurement.status !== 'valid')
@@ -3471,7 +3515,7 @@
     }
 
     function renderInfo(substance) {
-      if (isPubertySubstance(substance)) {
+      if (isPubertyReferenceSubstance(substance)) {
         infoCard.style.display = 'none';
         clearChildren(rangesEl); clearChildren(notesEl); sourcesEl.textContent = '';
         return;
@@ -3776,7 +3820,7 @@
           this.classList.add('is-active');
           // Faza 22: wywołaj renderer BEZPOŚREDNIO — w iOS dispatch syntetycznego
           // change na hidden selectie bywa zawodny. Najpewniejszy jest direct call.
-          onMeasurementChange();
+          onMeasurementChange({ type: 'change', target: measTimeEl });
         });
         measTimePillsEl.appendChild(pill);
       }
@@ -3853,7 +3897,7 @@
      * Wyniki są deduplikowane wedle tego, co użytkownik faktycznie wypełnił.
      */
     function updateStepStates() {
-      var pubertyMode = isPubertySubstance(currentSubstance);
+      var pubertyMode = isPubertyReferenceSubstance(currentSubstance);
       var s1 = !!currentSubstance;
       var raw = valueEl.value;
       var hasInput = !(raw == null || String(raw).trim() === '');
@@ -3864,7 +3908,8 @@
         if (amhMeasurement && amhMeasurement.status === 'valid') s2 = true;
       }
       if (pubertyMode) {
-        var selectedEngine = currentSubstance.id === 'inhibin_b' ? window.VildaLabInhibinB : window.VildaLabPuberty;
+        var selectedEngine = currentSubstance.id === 'testosterone_total' ? window.VildaLabTestosterone
+          : currentSubstance.id === 'inhibin_b' ? window.VildaLabInhibinB : window.VildaLabPuberty;
         s2 = hasInput && !!(selectedEngine && selectedEngine.parseMeasurement(raw, unitEl.value).status === 'valid');
       }
       var s3 = s2;  // krok 3 (jednostka docelowa) ma default = SI → done gdy s2
@@ -4067,6 +4112,7 @@
      */
     function refreshPatientContext() {
       renderPatientSummary();
+      if (currentSubstance && currentSubstance.id === 'testosterone_total') renderInfo(currentSubstance);
       if (currentSubstance) renderResults(currentSubstance);
     }
 
@@ -4153,6 +4199,7 @@
       if (measProtocolEl) measProtocolEl.value = '';
       if (measMethodEl) measMethodEl.value = '';
       measurementCtx = { time_of_day: null, test_protocol: null, method: null };
+      testosteroneMeasurementContext = {};
       userSelectedTargetUnit = null;
       showError('');
       applySubstance(null, '');
@@ -4503,7 +4550,10 @@
     if (overrideTannerEl) overrideTannerEl.addEventListener('change', onOverrideChange);
 
     // Atrybuty pomiaru
-    function onMeasurementChange() {
+    function onMeasurementChange(event) {
+      if (currentSubstance && currentSubstance.id === 'testosterone_total' && event && event.type !== 'blur') {
+        if (event.target === measTimeEl) testosteroneMeasurementContext.collectionTime = measTimeEl.value || 'unknown';
+      }
       measurementCtx.time_of_day = (measTimeEl && measTimeEl.value) || null;
       measurementCtx.test_protocol = (measProtocolEl && measProtocolEl.value) || null;
       measurementCtx.method = (measMethodEl && measMethodEl.value) || null;
@@ -4574,6 +4624,7 @@
         if (measProtocolEl) measProtocolEl.value = '';
         if (measMethodEl) measMethodEl.value = '';
         measurementCtx = { time_of_day: null, test_protocol: null, method: null };
+        testosteroneMeasurementContext = {};
         userSelectedTargetUnit = null;
         showError('');
         applySubstance(null, '');
