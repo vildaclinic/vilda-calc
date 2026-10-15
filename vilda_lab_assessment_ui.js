@@ -5,10 +5,11 @@
 (function (root, factory) {
   'use strict';
   var snapshot = typeof module === 'object' && module.exports ? require('./vilda_lab_snapshot.js') : null;
-  var api = factory(root, snapshot);
+  var testosteroneUnits = typeof module === 'object' && module.exports ? require('./vilda_lab_testosterone_units.js') : null;
+  var api = factory(root, snapshot, testosteroneUnits);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.VildaLabAssessmentUI = api;
-})(typeof window !== 'undefined' ? window : null, function (root, commonSnapshot) {
+})(typeof window !== 'undefined' ? window : null, function (root, commonSnapshot, commonTestosteroneUnits) {
   'use strict';
 
   var REASONS = {
@@ -157,7 +158,8 @@
   var ANALYTES = {
     lh: { label: 'LH', unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
     fsh: { label: 'FSH', unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
-    inhibin_b: { label: 'Inhibina B', unit: 'pg/mL', sourceUnits: ['pg/mL', 'ng/L'] }
+    inhibin_b: { label: 'Inhibina B', unit: 'pg/mL', sourceUnits: ['pg/mL', 'ng/L'] },
+    testosterone_total: { label: 'Testosteron całkowity', unit: 'nmol/L', sourceUnits: ['nmol/L', 'ng/dL', 'ng/mL', 'pg/mL'] }
   };
   // Bibliographic labels for the IDs preserved by the engine. No reference
   // values or current data file are consulted to render a historical record.
@@ -169,6 +171,10 @@
     'delayed-puberty-review-2024': ['A Current Perspective on Delayed Puberty and Its Management, 2024', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11629716/'],
     'cpp-laboratory-review-2025': ['Critical appraisal of diagnostic laboratory tests in CPP, 2025', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/'],
     'who-preterm-birth-2023': ['WHO — definicja wcześniactwa, 2023', 'https://www.who.int/news-room/fact-sheets/detail/preterm-birth'],
+    'mayo-ttst-8533': ['Mayo Clinic Laboratories — testosteron całkowity, TTST 8533', 'https://www.mayocliniclabs.com/test-catalog/Overview/8533'],
+    'endocrine-society-testosterone-2018': ['Endocrine Society — testosteron u mężczyzn, 2018', 'https://doi.org/10.1210/jc.2018-00229'],
+    'eau-male-hypogonadism-2026': ['EAU — Male Hypogonadism, 2026', 'https://uroweb.org/guidelines/sexual-and-reproductive-health/chapter/male-hypogonadism'],
+    'endocrine-society-testosterone-statement-2026': ['Endocrine Society — stanowisko dotyczące testosteronu, 2026', 'https://www.endocrine.org/news-and-advocacy/news-room/2026/statement-on-testosterone-replacement-therapy'],
     'mayo-lhped-62999': ['Mayo Clinic Laboratories — LH pediatryczne, LHPED 62999', 'https://www.mayocliniclabs.com/test-catalog/Overview/62999'],
     'mayo-fsh-602753': ['Mayo Clinic Laboratories — FSH 602753', 'https://www.mayocliniclabs.com/test-catalog/Overview/602753'],
     'mayo-fsh-adult-602753': ['Mayo Clinic Laboratories — FSH 602753, dorośli', 'https://www.mayocliniclabs.com/test-catalog/Overview/602753'],
@@ -186,6 +192,43 @@
     return unique((Array.isArray(codes) ? codes : []).map(function (code) {
       return Object.prototype.hasOwnProperty.call(REASONS, code) ? REASONS[code] : 'Zapisana ocena ma dodatkowe ograniczenie, którego ta wersja widoku nie opisuje.';
     }));
+  }
+  // TT shares the immutable mass conversion policy, never a reference table.
+  // Projection changes coordinates/text only; the supplied evaluation stays canonical.
+  function testosteroneFactor(unit) {
+    var registry = commonTestosteroneUnits || root && root.VildaLabTestosteroneUnits;
+    var factor = registry && registry.factorToCanonical && registry.factorToCanonical[unit];
+    return numeric(factor) && factor > 0 ? factor : null;
+  }
+  function projectedNumber(value) { return numeric(value) ? number(Number(value.toPrecision(10))) : ''; }
+  function testosteroneRange(range, unit, factor) {
+    var limits = range && range.bounds;
+    if (!limits) return '';
+    function endpoint(value) {
+      return value && numeric(value.value) ? ({ '>=': '≥', '<=': '≤', '>': '>', '<': '<' })[value.operator] + projectedNumber(value.value / factor) : '';
+    }
+    if (limits.lower && limits.upper && limits.lower.operator === '>=' && limits.upper.operator === '<=') {
+      return 'Zakres: ' + projectedNumber(limits.lower.value / factor) + '–' + projectedNumber(limits.upper.value / factor) + ' ' + unit;
+    }
+    return (limits.censoredLower ? endpoint(limits.censoredLower) + ' (dolny kraniec nieokreślony); ' : '') +
+      [endpoint(limits.lower), endpoint(limits.upper)].filter(Boolean).join(' i ') + ' ' + unit;
+  }
+  function testosteroneReason(code) {
+    return ({
+      unsupported_sex: 'Ten profil testosteronu całkowitego dotyczy chłopców i mężczyzn.',
+      postnatal_age_calendar_month_uncertainty: 'Wiek w dniach nie wyznacza dokładnie ukończonych miesięcy kalendarzowych; zachowano możliwy przedział wieku.',
+      postnatal_calendar_age_policy_missing: 'Brak zapisanej polityki pozwalającej odnieść wiek w dniach do miesięcy kalendarzowych.',
+      collection_time_unknown: 'Pora pobrania nie została ustalona; poranne próbki opisują zakres źródłowy.',
+      invalid_puberty_observation_date: 'Data obserwacji G jest nieprawidłowa; nie wykorzystano jej do porównania według stadium.',
+      collection_time_outside_reference: 'Podana pora pobrania nie odpowiada zakresom opracowanym dla porannych próbek.',
+      stage_age_outside_reference: 'Zakres według stadium G nie obejmuje całego podanego przedziału wieku.',
+      censored_reference_lower_limit: 'Źródło nie określa dolnego krańca zakresu; nie jest on potwierdzoną granicą wykrywalności ani oznaczalności.',
+      censored_reference_lower_bound_indeterminate: 'Nie przekracza górnej granicy; dolnego krańca nie można ocenić.',
+      missing_puberty_stage: 'Brak bieżącego stadium G — dostępne porównanie według wieku pozostaje niezależne.',
+      ambiguous_puberty_kind: 'Sam numer Tannera, P lub Ax nie zastępuje bieżącej oceny G. Nie blokuje to dostępnego porównania według wieku.',
+      puberty_kind_sex_mismatch: 'Typ oceny rozwoju nie odpowiada płci; nie wykorzystano go do porównania według stadium.',
+      puberty_not_confirmed_at_sample: 'Nie potwierdzono bieżącej oceny G; dostępne porównanie według wieku pozostaje niezależne.'
+    })[code] || '';
   }
   function date(value) {
     var s = text(value);
@@ -394,12 +437,15 @@
     var e = record(evaluation) ? evaluation : {};
     if (e.schemaVersion !== 1 || !Object.prototype.hasOwnProperty.call(ANALYTES, e.analyte) || !record(e.input) || !record(e.measurement) || !record(e.ageAtSample) || !record(e.biochemical) || !record(e.clinical) || !record(e.summary) || !['attention', 'limited', 'compared', 'invalid', 'out_of_scope'].includes(e.summary.status)) return { valid: false };
     var input = e.input, m = e.measurement, b = e.biochemical, p = input.puberty || {}, assay = input.assay || {};
-    var analyte = ANALYTES[e.analyte], inhibin = e.analyte === 'inhibin_b';
+    var analyte = ANALYTES[e.analyte], inhibin = e.analyte === 'inhibin_b', testosterone = e.analyte === 'testosterone_total';
+    var displayUnit = testosterone && analyte.sourceUnits.includes(options && options.displayUnit) ? options.displayUnit : analyte.unit;
+    var displayFactor = testosterone ? testosteroneFactor(displayUnit) : 1;
+    if (!displayFactor) return { valid: false };
     if (m.status === 'valid' && (m.unit !== analyte.unit || !analyte.sourceUnits.includes(m.sourceUnit))) return { valid: false };
     var automatic = input.referenceSelection === 'automatic' && e.referenceSelection && e.referenceSelection.mode === 'automatic';
     var adultProfile = !!automatic && codeList(e.referenceSelection.profileIds).some(function (id) { return ['mayo-lh-adult', 'mayo-fsh-adult', 'mayo-lh-standard-transition'].includes(id); });
     var pretermProfileIds = ['greaves-preterm-lh-candidate', 'greaves-preterm-fsh-candidate'];
-    var pretermProfile = !inhibin && (!!(e.provenance && e.provenance.eligibilityPolicyId) ||
+    var pretermProfile = !inhibin && !testosterone && (!!(e.provenance && e.provenance.eligibilityPolicyId) ||
       (automatic ? codeList(e.referenceSelection.profileIds).some(function (id) { return pretermProfileIds.includes(id); }) : pretermProfileIds.includes(assay.profileId)) ||
       !!(options && options.live && !options.historical && options.pretermContextMode === true));
     var preview = record(e.referencePreview) && (e.referencePreview.kind === 'conditional-basal-untreated' || automatic && e.referencePreview.kind === 'automatic-source-reference') && b.status === 'unavailable' && b.primary === null ? e.referencePreview : null;
@@ -418,11 +464,14 @@
     var point = m.status === 'valid' && m.isExact === true && numeric(m.plotValue) && m.plotValue >= 0 ? m.plotValue : null;
     var axisLimits = rawComparisons.map(function (item, index) { return index < 2 || (ageVariantMode || ageReferenceVariantMode) && item[0] === 'variant' ? axisBounds(item[2], analyte.unit) : null; });
     var maximum = axisMaximum(axisLimits, point);
+    var displayMaximum = testosterone ? axisMaximum(axisLimits.map(function (limits) {
+      return limits && { lower: limits.lower === null ? null : limits.lower / displayFactor, upper: limits.upper === null ? null : limits.upper / displayFactor };
+    }), point === null ? null : point / displayFactor) : maximum;
     var comparisons = rawComparisons.map(function (item, index) {
       var c = item[2] || {}, range = c.range || {}, status = Object.prototype.hasOwnProperty.call(STATUS, c.status) ? c.status : 'unavailable';
       var conditional = !!preview && item[0] !== 'local' && status !== 'unavailable';
       var limits = status !== 'unavailable' ? axisLimits[index] : null;
-      var state = visualState(status, limits, point);
+      var state = testosterone ? limits && point !== null ? ({ above: 'is-above', below: 'is-below', within: 'is-normal' })[status] || '' : '' : visualState(status, limits, point);
       var scope = range.stage ? stage({ kind: range.stage.kind, stage: range.stage.value }) : '';
       var visualLabel = state === 'is-uwaga-high' ? 'Znacznie powyżej normy' : state === 'is-uwaga-low' ? 'Znacznie poniżej normy' : ({ above: 'Powyżej zakresu', below: 'Poniżej zakresu', within: 'W zakresie', indeterminate: 'Porównanie niejednoznaczne', unavailable: 'Brak dopasowanej oceny' })[status];
       var upperOnly = inhibin && range.bounds && !range.bounds.lower && !!range.bounds.upper;
@@ -451,12 +500,12 @@
         shortTitle: item[0] === 'age' ? ageTitle : item[0] === 'stage' ? 'Dla stadium' + (scope ? ' ' + scope : '') : variant ? variantTitle : item[1],
         variantId: variant ? text(variant.id) : '', reproductiveContext: variant ? variant.reproductiveContext : null,
         visualState: state, visualLabel: visualLabel + (conditional && !automatic ? ' · warunkowo' : ''),
-        axis: limits && maximum ? { min: 0, max: maximum, lower: limits.lower, upper: limits.upper, value: point, unit: analyte.unit } : null,
-        label: upperOnlyLabel ? upperOnlyLabel + (conditional ? automatic ? ' — orientacyjnie' : ' — warunkowo' : '') : upperOnly && status === 'within' ? 'Nie przekracza górnej granicy' + (automatic ? ' — orientacyjnie' : '') : conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + (automatic ? ' — orientacyjnie' : ' — warunkowo') : STATUS[status], rangeText: formatRange(c.range),
+        axis: limits && maximum ? { min: 0, max: displayMaximum, displayPrecision: testosterone ? 10 : null, unknownLower: testosterone && !!(range.bounds && range.bounds.censoredLower && !range.bounds.lower), lower: limits.lower === null ? null : limits.lower / displayFactor, upper: limits.upper === null ? null : limits.upper / displayFactor, value: point === null ? null : point / displayFactor, unit: displayUnit } : null,
+        label: upperOnlyLabel ? upperOnlyLabel + (conditional ? automatic ? ' — orientacyjnie' : ' — warunkowo' : '') : upperOnly && status === 'within' ? 'Nie przekracza górnej granicy' + (automatic ? ' — orientacyjnie' : '') : conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + (automatic ? ' — orientacyjnie' : ' — warunkowo') : STATUS[status], rangeText: testosterone ? testosteroneRange(c.range, displayUnit, displayFactor) : formatRange(c.range),
         primary: b.primary === item[0], method: range.method ? methodName(range.method.id, range.method.name) : '',
         population: text(range.population && range.population.label), source: c.range ? sourceView(range.source) : null,
         referenceVersion: text(range.profileVersion),
-        scope: scope, reasons: reasons(c.reasonCodes) };
+        scope: scope, reasons: testosterone ? codeList(c.reasonCodes).map(function (code) { return testosteroneReason(code) || reasons([code])[0]; }) : reasons(c.reasonCodes) };
     });
     if (automatic) {
       var methods = unique(comparisons.map(function (comparison) { return comparison.method; }).filter(Boolean));
@@ -467,7 +516,7 @@
       var applicability = preview ? text(preview.applicabilityText) : '';
       if (!applicability && !inhibin) applicability = 'zakresy dla oznaczeń bazalnych w surowicy bez leczenia hormonalnego.';
       conditionNote = (preview ? [sourceLabels.join(' / '), methods.join(' / ')].filter(Boolean).join(' · ') + ' — porównanie orientacyjne' + (applicability ? '; ' : '.') : '') + applicability;
-      if (inhibin && applicability) conditionNote = applicability;
+      if ((inhibin || testosterone) && applicability) conditionNote = applicability;
       conditionNote = conditionNote.charAt(0).toUpperCase() + conditionNote.slice(1);
       if (preview && johannsenProfile) conditionNote = 'Johannsen 2018 · AutoDELFIA · porównanie orientacyjne. Zakres dla oznaczeń bazalnych w surowicy, bez leczenia hormonalnego.';
     }
@@ -502,9 +551,10 @@
       { label: assay.confirmation === 'configured' ? 'Metoda z konfiguracji' : 'Metoda próbki', value: methodName(assay.methodId) },
       { label: 'Potwierdzenie metody', value: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia' + (assay.profileVersion ? ' · wersja profilu: ' + text(assay.profileVersion) : ' · wersja profilu niepodana') : assay.confirmation === 'reported' ? 'Podana dla rzeczywistej próbki' : 'Niepotwierdzona' }
     ];
+    if (testosterone) context.push({ label: 'Pora pobrania', value: ({ morning: 'Rano — podano dla próbki', evening: 'Wieczorem', midnight: 'O północy' })[input.collectionTime] || 'Nie ustalono' });
     var treatment = input.treatment || {};
     if (Object.prototype.hasOwnProperty.call(treatment, 'context')) {
-      context.push({ label: 'Kontekst leczenia', value: treatment.context === 'hormonal' ? 'Leczenie hormonalne — bez określenia leku' : treatment.context === 'none' ? (treatment.gnrha === 'no' && treatment.sexSteroids === 'no' ? 'Nie zgłoszono leczenia wpływającego na interpretację LH/FSH' : 'Zadeklarowano brak leczenia; szczegóły wymagają ustalenia') : 'Nie ustalono' });
+      context.push({ label: 'Kontekst leczenia', value: treatment.context === 'hormonal' ? 'Leczenie hormonalne — bez określenia leku' : treatment.context === 'none' ? (treatment.gnrha === 'no' && treatment.sexSteroids === 'no' ? 'Nie zgłoszono leczenia wpływającego na interpretację ' + (testosterone ? 'testosteronu' : 'LH/FSH') : 'Zadeklarowano brak leczenia; szczegóły wymagają ustalenia') : 'Nie ustalono' });
       if (['yes', 'no'].includes(treatment.gnrha)) context.push({ label: 'Leczenie GnRHa', value: flag(treatment.gnrha) });
       if (['yes', 'no'].includes(treatment.sexSteroids)) context.push({ label: 'Steroidy płciowe', value: flag(treatment.sexSteroids) });
     } else {
@@ -532,7 +582,7 @@
     var suppliedStatus = suppliedRange && Object.prototype.hasOwnProperty.call(STATUS, suppliedRange.status) ? suppliedRange.status : 'unavailable';
     var limitationCodes = Array.isArray(e.limitations) ? e.limitations : [];
     if (preview) limitationCodes = limitationCodes.filter(function (code) { return !['non_basal_or_unknown_measurement', 'treatment_context_unknown', 'profile_measurement_kind_mismatch'].includes(code); });
-    var limitations = reasons(limitationCodes);
+    var limitations = testosterone ? unique(limitationCodes.map(function (code) { return testosteroneReason(code) || reasons([code])[0]; })) : reasons(limitationCodes);
     if (currentContext) limitations = limitations.map(function (message) {
       if (message === REASONS.missing_age) return 'Brak wiarygodnego wieku w formularzu głównym.';
       if (message === REASONS.missing_typed_stage_at_sample || message === REASONS.puberty_not_confirmed_at_sample) return 'Nie ustalono typowanej obserwacji rozwoju właściwej dla bieżącego kontekstu.';
@@ -541,14 +591,20 @@
     });
     var ageVariantConsensus = ageVariantMode ? infantCurveConsensus(comparisons) : null;
     var emphasis = ageVariantConsensus || resultEmphasis(comparisons);
+    var resultText = formatResult({ value: m.raw, unit: m.sourceUnit });
+    if (testosterone && m.status === 'valid' && options && options.displayUnit && displayUnit !== m.sourceUnit) {
+      var operator = ({ '>=': '≥', '<=': '≤', '=': '' })[m.operator];
+      if (operator == null) operator = m.operator || '';
+      resultText = (numeric(m.value) ? operator + projectedNumber(m.value / displayFactor) : text(m.raw)) + ' ' + displayUnit;
+    }
     var view = { valid: true, analyte: analyte.label, analyteKey: e.analyte, pretermProfile: pretermProfile, automatic: !!automatic, adultProfile: adultProfile,
       johannsenProfile: johannsenProfile, populationNote: populationNote, referenceFallbackNote: fallbackNote, referenceFallbackCode: fallbackCode || '',
-      result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), empty: !text(m.raw), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
+      result: { text: resultText, empty: !text(m.raw), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
         visualState: emphasis.visualState, visualAlert: emphasis.visualAlert,
-        note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
+        note: m.status === 'valid' && m.isExact === false ? testosterone ? 'Wynik nie jest dokładnym punktem liczbowym; na osi nie zaznaczamy go jako punktu.' : 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
       clinical: { title: text(e.clinical.title), text: text(e.clinical.text), status: text(e.clinical.status), code: text(e.clinical.code) },
       summary: { title: text(e.summary.title), status: e.summary.status }, comparisons: comparisons, conditionNote: conditionNote,
-      upperOnlyNote: !inhibin && comparisons.some(function (comparison) {
+      upperOnlyNote: testosterone && rawComparisons.some(function (item) { return item[2] && item[2].range && item[2].range.bounds && item[2].range.bounds.censoredLower; }) ? text(preview && preview.censoredLowerNote) || testosteroneReason('censored_reference_lower_limit') : !inhibin && comparisons.some(function (comparison) {
         return comparison.status === 'within' && comparison.axis && comparison.axis.lower === null && comparison.axis.upper !== null;
       }) ? 'Zakresy z samą górną granicą nie pozwalają ocenić, czy wynik jest za niski.' : inhibin && input.sex === 'F' && rawComparisons.some(function (item) {
         var range = item[2] && item[2].range;
@@ -580,6 +636,10 @@
       'infant_birth_context_missing', 'term_birth_unconfirmed', 'gestational_age_precision_crosses_scope', 'gestational_age_outside_profile', 'invalid_gestational_eligibility_policy', 'age_precision_crosses_scope',
       'treatment_requires_separate_profile', 'unsupported_or_unknown_specimen', 'profile_material_mismatch', 'method_not_confirmed',
       'automatic_reference_policy_missing', 'no_matching_reference_range', 'age_outside_profile'];
+    if (e.analyte === 'testosterone_total') {
+      var ttCode = ['unsupported_sex', 'collection_time_outside_reference', 'preterm_reference_not_established'].find(function (candidate) { return codes.includes(candidate); });
+      if (ttCode) return testosteroneReason(ttCode) || reasons([ttCode])[0];
+    }
     if (e.input.measurementKind === 'stimulated') return 'Wynik po stymulacji wymaga odrębnej interpretacji; nie stosujemy zakresów bazalnych.';
     if (e.analyte === 'inhibin_b' && codes.includes('preterm_reference_not_established')) return 'Brak zweryfikowanego zakresu inhibiny B dla wcześniaków.';
     var code = priority.find(function (candidate) { return codes.includes(candidate); });
@@ -610,7 +670,7 @@
   function presentationView(e, view) {
     var input = e.input, p = input.puberty || {}, assay = input.assay || {}, current = view.contextBasis === 'current-patient';
     var hasObservation = Number.isInteger(p.stage) && p.stage >= 1 && p.stage <= 5 || ['Th', 'G', 'P', 'Ax'].includes(p.kind) || !!p.assessedAtISO;
-    var inhibin = view.analyteKey === 'inhibin_b';
+    var inhibin = view.analyteKey === 'inhibin_b', testosterone = view.analyteKey === 'testosterone_total';
     var usesStage = view.comparisons.some(function (comparison) { return !!comparison.scope; });
     var methodOrigin = assay.confirmation === 'configured' ? 'ustawienie urządzenia' : assay.confirmation === 'reported' ? 'metoda podana dla próbki' : 'zgodność metody niepotwierdzona';
     var references = [], referenceKeys = [];
@@ -622,8 +682,8 @@
       references.push(Object.assign({}, comparison, { methodOrigin: view.automatic ? 'metoda zakresu źródłowego' : comparison.method === methodName(assay.methodId) ? methodOrigin : '' }));
     });
     var context = view.context.filter(function (row) {
-      if (inhibin && !usesStage && ['Obserwacja rozwoju', 'Data obserwacji', 'Źródło obserwacji'].includes(row.label)) return false;
-      if (inhibin && e.clinical.code === 'reference_comparison_only' && ['Początek w wywiadzie', 'Potwierdzenie trwałego początku pokwitania', 'Objętość jąder', 'Związek pomiaru jąder z próbką', 'Progresja', 'Przyspieszenie wzrastania', 'Objawy OUN', 'Regresja'].includes(row.label)) return false;
+      if ((inhibin || testosterone) && !usesStage && ['Obserwacja rozwoju', 'Data obserwacji', 'Źródło obserwacji'].includes(row.label)) return false;
+      if ((inhibin || testosterone) && e.clinical.code === 'reference_comparison_only' && ['Początek w wywiadzie', 'Potwierdzenie trwałego początku pokwitania', 'Objętość jąder', 'Związek pomiaru jąder z próbką', 'Progresja', 'Przyspieszenie wzrastania', 'Objawy OUN', 'Regresja'].includes(row.label)) return false;
       if (row.label === 'Materiał' && input.specimen && input.specimen !== 'unknown' && row.value === 'Inny lub nieznany') return true;
       if (['Nie podano', 'Nie wiadomo', 'Nie ustalono', 'Nieznany', 'Nieznana', 'Nieprawidłowy wiek', 'Inny lub nieznany', 'Nie oceniono Th/M lub G'].includes(row.value)) return false;
       if (row.label === 'Podstawa oceny' || row.label === 'Potwierdzenie metody') return false;
@@ -653,6 +713,13 @@
     // remain visible even when their main clinical warning is above the axes.
     var covered = ['early_development', 'early_thelarche', 'early_onset_history', 'late_onset_history', 'absent_onset', 'inconsistent_puberty_context', 'missing_age', 'missing_sex', 'missing_puberty_assessment', 'ambiguous_puberty_kind'];
     function message(code) {
+      if (testosterone && ['missing_puberty_stage', 'ambiguous_puberty_kind', 'puberty_not_confirmed_at_sample', 'stage_age_outside_reference'].includes(code)) {
+        if (preview && codeList(preview.byStage && preview.byStage.reasonCodes).includes('stage_age_outside_reference')) return '';
+        if (code !== 'missing_puberty_stage' && codes.includes('missing_puberty_stage')) return '';
+      }
+      if (testosterone && code === 'censored_reference_lower_limit' && view.upperOnlyNote) return '';
+      if (testosterone && code === 'censored_reference_lower_bound_indeterminate') return text(preview && preview.censoredLowerIndeterminateNote) || testosteroneReason(code);
+      if (testosterone && testosteroneReason(code)) return testosteroneReason(code);
       if (view.johannsenProfile && code === 'broad_infant_reference_not_full_minipuberty_assessment') return '';
       if (view.populationNote && code === 'johannsen_term_population_conditional') return '';
       if (view.referenceFallbackNote && view.referenceFallbackCode === code) return '';
@@ -695,7 +762,7 @@
       return citation ? { label: citation[0], version: '', organization: '', url: citation[1] } : null;
     }).filter(Boolean);
     function relevantSource(source) {
-      if (view.adultProfile && view.clinical.status !== 'warning') return references.some(function (reference) { return sourceKey(reference.source) === sourceKey(source); });
+      if (!testosterone && view.adultProfile && view.clinical.status !== 'warning') return references.some(function (reference) { return sourceKey(reference.source) === sourceKey(source); });
       if (!view.pretermProfile) return true;
       if (view.clinical.status === 'warning') return !['mayo-lhped-62999', 'mayo-fsh-602753'].some(function (id) { return source.url === CITATIONS[id][1]; });
       return ['greaves-preterm-2015', 'minipuberty-review-2024', 'who-preterm-birth-2023'].some(function (id) { return source.url === CITATIONS[id][1]; });
@@ -740,43 +807,53 @@
     var model = comparison.axis;
     if (!model) return;
     var axis = add(parent, 'div', 'vilda-lab-axis');
+    var axisNumber = model.displayPrecision ? projectedNumber : number;
     var lower = model.lower === null ? 0 : model.lower;
     var upper = model.upper === null ? model.max : model.upper;
     axis.setAttribute('data-axis-max', String(model.max));
     axis.setAttribute('data-range-lower', model.lower === null ? 'unknown' : String(model.lower));
     axis.setAttribute('data-range-upper', model.upper === null ? 'unknown' : String(model.upper));
     axis.setAttribute('data-visual-state', comparison.visualState);
+    if (model.unknownLower) axis.setAttribute('data-reference-display', 'upper-bound-only');
     var style = '--low:' + (lower / model.max * 100) + '%;--high:' + (upper / model.max * 100) + '%;';
     if (model.value !== null) {
       axis.setAttribute('data-patient-value', String(model.value));
       style += '--value:' + (model.value / model.max * 100) + '%;';
       // Reserve font-relative space at the edges; the label's width remains intrinsic.
-      style += '--label-edge:' + Math.max(2, (number(model.value) + ' ' + model.unit).length / 2) + 'em;';
+      style += '--label-edge:' + Math.max(2, (axisNumber(model.value) + ' ' + model.unit).length / 2) + 'em;';
     }
     axis.setAttribute('style', style);
     axis.setAttribute('role', 'img');
     axis.setAttribute('aria-label', comparison.title + (comparison.scope ? ' ' + comparison.scope : '') + '. ' + comparison.rangeText + '. Wynik ' + result.text + '. ' + comparison.label + '. ' + comparison.visualLabel
-      + (model.value !== null ? '. Skala liniowa od 0 do ' + number(model.max) + ' ' + model.unit + '.' : '. Brak dokładnej pozycji liczbowej wyniku.'));
-    if (model.value !== null) add(axis, 'span', 'vilda-lab-axis-value ' + comparison.status + ' ' + comparison.visualState, number(model.value) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
+      + (model.unknownLower ? '. Dolny kraniec jest nieokreślony; pokazano tylko górną granicę zakresu.' : '')
+      + (model.value !== null ? '. Skala liniowa od 0 do ' + axisNumber(model.max) + ' ' + model.unit + '.' : '. Brak dokładnej pozycji liczbowej wyniku.'));
+    if (model.value !== null) add(axis, 'span', 'vilda-lab-axis-value ' + comparison.status + ' ' + comparison.visualState, axisNumber(model.value) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
     else add(axis, 'span', 'vilda-lab-axis-no-value', 'Bez pozycji liczbowej').setAttribute('aria-hidden', 'true');
     var track = add(axis, 'div', 'vilda-lab-axis-track');
     track.setAttribute('aria-hidden', 'true');
     if (model.lower !== null && lower > 0) add(track, 'span', 'vilda-lab-axis-below');
     if (model.upper !== null) add(track, 'span', 'vilda-lab-axis-above');
-    add(track, 'span', 'vilda-lab-axis-band' + (model.lower === null ? ' is-open-lower' : '') + (model.upper === null ? ' is-open-upper' : ''));
+    // An unknown source minimum is not zero. For TT show the known upper
+    // boundary without painting an invented normal interval below it.
+    if (!model.unknownLower) add(track, 'span', 'vilda-lab-axis-band' + (model.lower === null ? ' is-open-lower' : '') + (model.upper === null ? ' is-open-upper' : ''));
     if (model.lower !== null) add(track, 'span', 'vilda-lab-axis-bound is-lower');
     if (model.upper !== null) add(track, 'span', 'vilda-lab-axis-bound is-upper');
     if (model.value !== null) add(track, 'span', 'vilda-lab-axis-marker ' + comparison.status + ' ' + comparison.visualState);
     add(axis, 'span', 'vilda-lab-axis-min', '0').setAttribute('aria-hidden', 'true');
-    add(axis, 'span', 'vilda-lab-axis-max', number(model.max) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
+    add(axis, 'span', 'vilda-lab-axis-max', axisNumber(model.max) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
   }
   function renderLegend(parent, comparisons) {
     var axes = comparisons.filter(function (comparison) { return comparison.axis; });
     if (!axes.length) return;
     var legend = add(parent, 'div', 'vilda-lab-axis-legend');
-    var band = add(legend, 'span', '');
-    add(band, 'i', 'vilda-lab-legend-band').setAttribute('aria-hidden', 'true');
-    add(band, 'span', '', 'Zakres odniesienia');
+    if (axes.some(function (comparison) { return !comparison.axis.unknownLower; })) {
+      var band = add(legend, 'span', '');
+      add(band, 'i', 'vilda-lab-legend-band').setAttribute('aria-hidden', 'true');
+      add(band, 'span', '', 'Zakres odniesienia');
+    }
+    if (axes.some(function (comparison) { return comparison.axis.unknownLower; })) {
+      add(legend, 'span', '', 'Przy nieokreślonym dolnym krańcu zaznaczono tylko górną granicę.');
+    }
     if (axes.some(function (comparison) { return comparison.axis.value !== null; })) {
       var point = add(legend, 'span', '');
       add(point, 'i', 'vilda-lab-legend-point').setAttribute('aria-hidden', 'true');
@@ -800,8 +877,8 @@
     if (view.result.note && !incomplete) add(parent, 'p', 'vilda-lab-note', view.result.note);
     if (incomplete && !live && !view.result.empty) add(parent, 'p', 'vilda-lab-note', 'Nieprawidłowy zapis wyniku lub jednostki — popraw wpis, aby porównać stężenie.');
     var quietInfantContext = view.pretermProfile && view.clinical.status !== 'warning' && ['infant_context', 'missing_age', 'missing_sex', 'missing_puberty_assessment'].includes(view.clinical.code);
-    var quietAdultContext = view.adultProfile && view.clinical.status !== 'warning';
-    var neutralReference = view.analyteKey === 'inhibin_b' && view.clinical.code === 'reference_comparison_only' && view.clinical.status === 'limited' && !view.clinical.text;
+    var quietAdultContext = view.analyteKey !== 'testosterone_total' && view.adultProfile && view.clinical.status !== 'warning';
+    var neutralReference = ['inhibin_b', 'testosterone_total'].includes(view.analyteKey) && view.clinical.code === 'reference_comparison_only' && view.clinical.status === 'limited' && !view.clinical.text;
     var clinical = quietInfantContext || quietAdultContext || neutralReference ? null : add(parent, 'div', 'vilda-lab-clinical');
     if (clinical) {
       clinical.setAttribute('data-clinical-code', /^[a-z_]+$/.test(view.clinical.code) ? view.clinical.code : 'unavailable');
@@ -809,7 +886,7 @@
     }
     var basicMissingContext = view.clinical.status === 'limited' && ['missing_age', 'missing_sex', 'missing_puberty_assessment', 'ambiguous_puberty_kind'].includes(view.clinical.code);
     if (clinical && (!basicMissingContext || !presentation.clinicalText)) {
-      add(clinical, 'h3', '', 'Rozwój płciowy');
+      add(clinical, 'h3', '', view.analyteKey === 'testosterone_total' ? 'Ocena kliniczna' : 'Rozwój płciowy');
       add(clinical, 'strong', '', view.clinical.title);
     }
     // Akapity należą do zapisanej oceny. Nie tworzymy nowych ostrzeżeń na
@@ -901,6 +978,7 @@
     var view = buildView(evaluation, options);
     if (!view.valid) return renderAssessment(container, null, options);
     var section = mount(container, 'recorded', view.summary.status, options);
+    if (section && view.analyteKey === 'testosterone_total') section.setAttribute('aria-label', 'Ocena testosteronu całkowitego');
     if (section && view.analyteKey === 'inhibin_b') section.setAttribute('aria-label', 'Ocena inhibiny B');
     if (section) renderContents(section, view, options);
     return view;
@@ -915,6 +993,7 @@
     add(section, 'p', 'vilda-lab-note', normalized.status === 'invalidated' ? 'Zmieniono dane wyniku lub kontekst badania. Poprzednia interpretacja nie opisuje bieżącego wpisu.' : 'Nie można przedstawić wiarygodnej zapisanej oceny. Nie odtwarzamy jej z aktualnych danych pacjenta.');
     list(section, reasons(normalized.reasonCodes), 'vilda-lab-reasons');
     var historical = buildView(normalized.evaluation);
+    if (historical.valid && historical.analyteKey === 'testosterone_total') section.setAttribute('aria-label', 'Stan zapisanej oceny testosteronu całkowitego');
     if (historical.valid && historical.analyteKey === 'inhibin_b') section.setAttribute('aria-label', 'Stan zapisanej oceny inhibiny B');
     if (historical.valid) {
       var old = details(section, 'Poprzednia ocena — wyłącznie historycznie');

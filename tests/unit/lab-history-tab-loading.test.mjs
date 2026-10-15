@@ -48,7 +48,7 @@ describe('stosy auth: moduły zakładki Badania', () => {
 function environment(missing) {
   const appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {}, VildaAuthUI: {}, VildaProAccess: {},
-    VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {},
+    VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     sessionStorage: { getItem: () => null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

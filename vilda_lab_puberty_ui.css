@@ -1,4 +1,9 @@
 /* Lokalny formularz kontekstu LH/FSH, bez wpływu na inne anality. */
+/* The value must remain readable beside the relatively wide TT unit selector.
+   Stack these existing fields on narrow screens instead of clipping the report. */
+@media (max-width: 480px) {
+  .lab-step.lab-testosterone-input .lab-input-row { grid-template-columns: minmax(0, 1fr); }
+}
 .lab-puberty-panel {
   margin: var(--space-0-5) 0 0;
   color: var(--text-color, #183c48);

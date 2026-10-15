@@ -9,6 +9,8 @@ const puberty = require('../../vilda_lab_puberty.js');
 const inhibin = require('../../vilda_lab_inhibin_b.js');
 const inhibinData = require('../../vilda_lab_inhibin_b_data.js');
 const policy = require('../../vilda_lab_puberty_data.js');
+const testosterone = require('../../vilda_lab_testosterone.js');
+const testosteroneData = require('../../vilda_lab_testosterone_data.js');
 const lifespanReference = require('../../vilda_hormone_lifespan_reference.js');
 const lifespanData = require('../../vilda_hormone_lifespan_data.js').patientPointData;
 const html = readFileSync(new URL('../../przelicznik-jednostek.html', import.meta.url), 'utf8');
@@ -37,6 +39,9 @@ function adapter(extra = {}) {
     isPubertySubstance: (s) => !!s && ['lh', 'fsh', 'inhibin_b'].includes(s.id),
     ...extra,
   };
+  // Existing legacy-adapter cases remain explicit; the TT-specific tests below
+  // supply the dedicated evaluation route rather than a legacy conversion.
+  context.isPubertyReferenceSubstance ||= s => context.isPubertySubstance(s);
   vm.createContext(context);
   vm.runInContext(source, context);
   return { context, updates, update: (...args) => context.updateLifespan(...args), last: () => updates.at(-1) };
@@ -78,6 +83,41 @@ function infantAdapter() {
 }
 
 describe('Hormone lifespan converter adapter — current result only', () => {
+  it('passes the real TT evaluation in canonical units with its own age, current G and censoring', () => {
+    const app = adapter({
+      isPubertyReferenceSubstance: substance => substance?.id === 'testosterone_total',
+      window: { VildaLabPuberty: puberty, VildaLabPubertyData: policy, VildaLabTestosteroneData: testosteroneData },
+    });
+    const input = { analyte: 'testosterone_total', sex: 'M', age: { years: 12, months: 0, precision: 'month' },
+      unit: 'ng/dL', puberty: { kind: 'G', stage: 3, appliesToCurrentContext: true }, contextBasis: 'current-patient' };
+    for (const [raw, operator] of [['300', '='], ['<300', '<']]) {
+      const result = testosterone.evaluate({ ...input, value: raw }, testosteroneData);
+      app.update({ id: 'testosterone_total' }, result);
+      expect(app.last()).toMatchObject({ sex: 'male', ageYears: 12, ageUpperYears: 12 + 1 / 12,
+        puberty: { kind: 'G', stage: 3 }, measurement: { value: 10.401, unit: 'nmol/L', operator } });
+      const reference = lifespanReference.evaluate(lifespanData, app.last());
+      if (operator === '=') expect(reference.status).toBe('ready');
+      else expect(reference.status).not.toBe('ready');
+    }
+  });
+
+  it('keeps the existing educational day coordinate separate from Mayo completed-month qualification', () => {
+    const input = { analyte: 'testosterone_total', sex: 'M', unit: 'ng/dL', value: '100',
+      neonatalAge: { postnatalDays: { lower: 183, upper: 183, source: 'fictional-completed-days' } } };
+    const result = testosterone.evaluate(input, testosteroneData);
+    expect(result.referenceSelection.status).toBe('unavailable');
+    const before = structuredClone(result);
+    const app = adapter({
+      isPubertyReferenceSubstance: substance => substance?.id === 'testosterone_total',
+      window: { VildaLabPuberty: puberty, VildaLabPubertyData: policy, VildaLabTestosteroneData: testosteroneData },
+    });
+    app.update({ id: 'testosterone_total' }, result);
+    const chronological = puberty.resolveAge(input);
+    expect(app.last()).toMatchObject({ ageYears: chronological.lowerYears, ageUpperYears: chronological.upperYears,
+      ageLabel: '183 dni', measurement: { value: 3.467, unit: 'nmol/L', operator: '=' } });
+    expect(result).toEqual(before);
+  });
+
   it('passes real normalized LH/Inhibin measurements, including zero, without display rounding', () => {
     for (const [id, raw, unit, value, expectedUnit] of [
       ['lh', '2,125', 'mIU/mL', 2.125, 'IU/L'],
@@ -153,7 +193,7 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     }
   });
 
-  it('uses already known calendar days for infant AMH without narrowing their uncertainty or changing other analytes', () => {
+  it('reuses known calendar days for infant AMH and TT without narrowing their uncertainty', () => {
     const app = infantAdapter();
     app.calculate();
     expect(app.last()).toMatchObject({ ageYears: 119 / 366, ageUpperYears: 121 / 365,
@@ -165,11 +205,14 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     expect(lifespanReference.evaluate(lifespanData, app.last()).referenceValue).toBeCloseTo(19.04589987344793, 10);
     expect(app.context.readPubertyPatientContext().neonatalAge.postnatalDays)
       .toEqual({ lower: 119, upper: 120, source: 'main-calendar-dates' });
-    for (const id of ['testosterone_total', 'estradiol', 'inhibin_b']) {
+    app.context.currentSubstance = { id: 'testosterone_total' };
+    expect(app.context.readPubertyPatientContext().neonatalAge.postnatalDays)
+      .toEqual({ lower: 119, upper: 120, source: 'main-calendar-dates' });
+    for (const id of ['estradiol', 'inhibin_b']) {
       app.context.currentSubstance = { id };
       expect(app.context.readPubertyPatientContext().neonatalAge.postnatalDays).toBeNull();
     }
-    for (const id of ['testosterone_total', 'estradiol']) {
+    for (const id of ['estradiol']) {
       app.context.currentSubstance = { id };
       app.update({ id });
       expect(app.last()).toMatchObject({ ageYears: .25, ageUpperYears: 1 / 3, ageLabel: '3 mies.' });
