@@ -5,7 +5,9 @@
  * wyniki tak, jak je zapisano: nie liczy dawnych wyników dzisiejszymi normami ani danymi bieżącego
  * pacjenta, nie woła evaluate() ani silników ocen (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
  * Strzałka ↑/↓ powstaje wyłącznie z zapisu: z jednej, zakotwiczonej normy tekstowej wpisu
- * w jednostce wyniku (bez przeliczenia) albo z zamrożonej koperty oceny LH/FSH/inhibiny B.
+ * w jednostce wyniku (bez przeliczenia), z zamrożonej koperty oceny LH/FSH/inhibiny B albo (od 1.2.0,
+ * decyzja 6.3) z zakresu referencyjnego zapisanego z wynikiem przy przypięciu (vilda_lab_range_snapshot.js):
+ * kategoria taka, jaką przelicznik pokazał w chwili przypięcia, bez ponownego dobierania normy.
  * Od 1.1.0 (PR5a): alias serii po dokładnej nazwie badania z listy przelicznika (decyzja 6.14) i IGF-1
  * z notatek leczenia GH w serii IGF-1, z datą kontroli, gdy brak daty badania (decyzje 6.24–6.25).
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
@@ -174,6 +176,29 @@
     if (!range || !finite(range.lo) || !finite(range.hi)) return none;
     return { accepted: true, flag: value > range.hi ? '↑' : value < range.lo ? '↓' : null };
   }
+  // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu. Kategoria i granice z zapisu (opis:
+  // VildaLabRangeSnapshot.describe); nie zależy od jednostki wyświetlania, więc obowiązuje też dla
+  // wyniku przeliczonego. Zakres nieaktualny albo bez interpretacji — bez strzałki, wyciszony.
+  function rangeHelper(options) {
+    var helper = options && options.rangeSnapshot;
+    if (!helper && typeof globalThis !== 'undefined') helper = globalThis.VildaLabRangeSnapshot;
+    return helper && typeof helper.describe === 'function' ? helper : null;
+  }
+  function applyRange(entry, options, converter, precision) {
+    var helper = rangeHelper(options), info;
+    try {
+      info = helper ? helper.describe(entry.range, { formatNumber: function (value) { return formatNumber(converter, value, precision); } }) : null;
+    } catch (_) { info = null; }
+    if (!info) return;
+    var shared = { bounds: info.bounds, population: info.population, subject: info.subject, sources: info.sources };
+    if (info.status === 'recorded') {
+      entry.flag = info.flag;
+      entry.status = Object.assign({ kind: 'range', tone: 'lab', flag: info.flag, classification: info.classification, text: info.text }, shared);
+    } else {
+      entry.status = Object.assign({ kind: info.status === 'invalidated' ? 'range-invalidated' : 'range-unavailable', tone: 'muted',
+        text: info.text, detail: info.detail }, shared);
+    }
+  }
   function recordedStatus(envelope) {
     var e = envelope.evaluation || {}, clinical = record(e.clinical) ? e.clinical : {}, summary = record(e.summary) ? e.summary : {};
     // Cytat dosłowny, bez syntezy kierunku. Ostrzeżenie kliniczne koperty ma pierwszeństwo,
@@ -245,6 +270,7 @@
       entry.raw = rawText(lab, String(point.valueNum).replace('.', ','), point.unit);
     } else return null;
     if (own(point, 'hormoneReference')) entry.hormoneReference = point.hormoneReference;
+    if (own(point, 'range') && record(point.range)) entry.range = point.range;
     return entry;
   }
   // Ręczny wpis z wartością, której sejf nie umie odczytać jako liczby (np. „<0,02 IU/L”):
@@ -339,6 +365,8 @@
         entry.flag = check.flag;
         if (entry.flag) entry.status = { kind: 'norm', tone: 'lab', flag: entry.flag, norm: entry.norm, text: entry.flag === '↑' ? 'powyżej normy z wpisu' : 'poniżej normy z wpisu' };
       }
+      // Norma wpisana ręcznie we wpisie (przyjęta przez model) ma pierwszeństwo, jak dotąd.
+      if (!entry.assessment && !entry.normAccepted && entry.range) applyRange(entry, options, converter, precision);
     });
     entries.forEach(function (entry) {
       delete entry.canonicalUnit;
@@ -483,7 +511,8 @@
   /**
    * @param {Array} seriesList wynik VildaVault.listPatientLabSeries(patientId)
    * @param {Object} options {converter, notesById, treatment, categoryFilter, panels, unitBy,
-   *   current, parseNorm, nowISO, ghIgf1}; ghIgf1: false wyłącza IGF-1 z notatek leczenia GH.
+   *   current, parseNorm, nowISO, ghIgf1, rangeSnapshot}; ghIgf1: false wyłącza IGF-1 z notatek leczenia GH.
+   *   rangeSnapshot: VildaLabRangeSnapshot (domyślnie globalny); bez niego zapisany zakres nie daje oceny.
    *   nowISO rozstrzyga też, czy termin kontroli GH już minął (bez niego IGF-1 z GH ma datę wpisu).
    */
   function buildHistoryView(seriesList, options) {
@@ -628,7 +657,7 @@
   }
 
   return Object.freeze({
-    version: '1.1.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    version: '1.2.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
     formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit
   });
 });

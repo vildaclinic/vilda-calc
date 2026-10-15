@@ -265,7 +265,10 @@ Reguła projektowa dla wszystkich nowych modułów referencyjnych:
    dopuszczalny odstęp pomiarów, metoda (LMS / centyle / wzór), cytowanie z DOI.
 3. **Populacja odniesienia jest częścią wyniku, nie przypisem.** Każdy wynik niesie nazwę
    źródła, żeby dało się je pokazać lekarzowi i zapisać w rekordzie — tak jak siatki
-   wzrostowe niosą już `source` (`PALCZEWSKA` / `OLAF` / `WHO`).
+   wzrostowe niosą już `source` (`PALCZEWSKA` / `OLAF` / `WHO`). Wynik badania przypięty
+   z przelicznika niesie kopię użytego zakresu z opisem populacji i źródłami
+   (`labResult.range`, `vilda_lab_range_snapshot.js`, LAB-HISTORIA 6.3), więc historia nie
+   zależy od tego, jakie normy będą wybrane później.
 4. **Brak polskich norm nie jest wymówką do milczenia, ale musi być nazwany.** Dla tempa
    wzrastania polskich norm nie ma (sprawdzone: monografia Palczewskiej jest przekrojowa);
    używamy najbliższej populacji i mówimy o tym wprost.

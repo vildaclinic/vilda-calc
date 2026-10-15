@@ -72,7 +72,7 @@ function srodowisko(opcje = {}) {
     sessionStorage: { getItem: (k) => (pamiec.has(k) ? pamiec.get(k) : null), setItem: (k, v) => pamiec.set(k, String(v)) },
     matchMedia: () => ({ matches: !!opcje.waski }),
   };
-  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_history.js', 'vilda_lab_history_tab.js']) loadBrowserScript(plik, win);
+  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_range_snapshot.js', 'vilda_lab_history.js', 'vilda_lab_history_tab.js']) loadBrowserScript(plik, win);
   const wykresy = [];
   const trend = opcje.bezEksportu ? null : {
     render: (serie, chart, openNote, norma, pasmo) => {
@@ -514,5 +514,52 @@ describe('zakładka Badania: zlecenie zamyka się po wpisaniu wyniku', () => {
     wywolania.edytor.forEach((o) => o.onSaved());
     await vi.waitFor(() => expect(wywolania.zmiany).toBe(2));
     expect(vault.completePatientNote).not.toHaveBeenCalled();
+  });
+});
+
+// Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu. Koperty tworzy prawdziwy przelicznik (selectRange + evaluate,
+// jak captureLabRange w przelicznik-jednostek.html) dla fikcyjnej dziewczynki 8 l; zakładka tylko je czyta.
+describe('zakładka Badania: zakres zapisany przy przypięciu (decyzja 6.3)', () => {
+  function zakres(win, raw, patient = { sex: 'F', age: 8, life_stage: 'pediatric' }) {
+    const Conv = win.LabUnitConverter, range = Conv.selectRange(Conv.find('tsh'), patient);
+    return win.VildaLabRangeSnapshot.create({ analyte: 'tsh', evaluation: Conv.evaluate('tsh', { value: raw, unit: 'mIU/L', patient }), range, patient,
+      factorToSi: 1, measurement: { raw, sourceUnit: 'mIU/L' }, sources: [{ id: 'mayo_test_tsh', label: 'Mayo Test 8939 — TSH' }],
+      versions: { engine: 'LabUnitConverter', data: 'LabUnitsData' }, capturedAtISO: '2026-06-10T10:00:00.000Z' });
+  }
+  function daneZakresu(win, ostatni) {
+    const stary = nota('tsh-a', '2026-03-02', { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '2,9', valueNum: 2.9, unit: 'mIU/L' });
+    const nowy = nota('tsh-b', '2026-06-10', { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '5,1 mIU/L = 5,1 mIU/L', valueNum: 5.1, unit: 'mIU/L' });
+    const range = win.VildaLabRangeSnapshot.reconcile(null, Object.assign({}, nowy.labResult, { range: zakres(win, '5,1') }), null, '2026-06-10').range;
+    return { series: [{ testKey: 'tsh', test: 'TSH (tyreotropina)', points: [punkt(stary), punkt(nowy, { range: ostatni ? ostatni(range) : range })] }],
+      notes: [stary, nowy], treatment: [] };
+  }
+
+  it('karta: strzałka i pigułka z zapisanego zakresu — granice, dla kogo, źródło; starszy wpis bez oceny', async () => {
+    const env = srodowisko();
+    otworz(env, sejf({ dane: daneZakresu(env.win) }));
+    await gotowe(env);
+    const karta = env.host.querySelector('.vilda-lab-hist-card[data-series="tsh"]');
+    expect(teksty(karta, '.vilda-lab-hist-last .vilda-lab-hist-flag')).toEqual(['↑']);
+    expect(txt(karta.querySelector('.vilda-lab-hist-status.is-range.tone-lab .vilda-lab-hist-status-text'))).toBe('↑ powyżej zapisanego zakresu · 0,6–4,8 mIU/L');
+    expect(teksty(karta, '.vilda-lab-hist-status-context')).toEqual(['Dzieci 6–10 lat · dziewczynka, 8 l · Mayo Test 8939 — TSH']);
+    przycisk(env, 'Tabela').click();
+    const nowa = env.host.querySelector('button.vilda-lab-hist-cell[data-note-id="tsh-b"]');
+    expect(txt(nowa).startsWith('5,1 ↑')).toBe(true);
+    expect(nowa.getAttribute('title').replace(/\u00a0/g, ' ')).toBe('TSH · 10.06.26 · zapisano: 5,1 mIU/L = 5,1 mIU/L · ↑ powyżej zapisanego zakresu 0,6–4,8 mIU/L (Dzieci 6–10 lat · dziewczynka, 8 l · Mayo Test 8939 — TSH)');
+    const stara = env.host.querySelector('button.vilda-lab-hist-cell[data-note-id="tsh-a"]');
+    expect(stara.querySelector('.vilda-lab-hist-flag')).toBeNull();
+    expect(stara.getAttribute('title').replace(/\u00a0/g, ' ')).toBe('TSH · 02.03.26 · zapisano: 2,9 mIU/L');
+    expect(teksty(env.host, '.vilda-lab-hist-foot').join(' ')).toContain('↑/↓ — poza zakresem zapisanym z wynikiem przy przypięciu albo poza normą wpisaną we wpisie; zakres i źródło w podpowiedzi');
+    expect(teksty(env.host, '.vilda-lab-hist-footer .vilda-lab-hist-muted')[0]).toContain('Wpisy bez zapisanego zakresu są bez oceny.');
+  });
+
+  it('zakres nieaktualny po zmianie wyniku: wyciszona pigułka z powodem, bez strzałki', async () => {
+    const env = srodowisko();
+    const nieaktualny = (range) => Object.assign(range, { status: 'invalidated', reasonCodes: ['result_or_clinical_date_changed'] });
+    otworz(env, sejf({ dane: daneZakresu(env.win, nieaktualny) }));
+    await gotowe(env);
+    const karta = env.host.querySelector('.vilda-lab-hist-card[data-series="tsh"]');
+    expect(karta.querySelector('.vilda-lab-hist-last .vilda-lab-hist-flag')).toBeNull();
+    expect(teksty(karta, '.vilda-lab-hist-status.is-range-invalidated.tone-muted .vilda-lab-hist-status-text')).toEqual(['zakres nieaktualny · zmieniono wynik lub datę badania']);
   });
 });

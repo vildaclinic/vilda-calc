@@ -13,6 +13,8 @@ function environment(missing = [], restoredSession = false) {
   const events = new Map(), appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
+    // Decyzja 6.3: zakres zapisany z wynikiem — moduł transportu obok odniesienia AMH.
+    VildaLabRangeSnapshot: {},
     // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
     VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
@@ -34,6 +36,7 @@ function environment(missing = [], restoredSession = false) {
         // The new modules really execute; loading placeholders would conceal an
         // incorrect global name, dependency order, or initialization failure.
         if (!['vilda_hormone_reference_snapshot.js', 'vilda_hormone_reference_ui.js'].includes(filename)
+          && !(filename === 'vilda_lab_range_snapshot.js' && missing.includes('VildaLabRangeSnapshot'))
           && !(filename === 'vilda_lab_testosterone_units.js' && missing.includes('VildaLabTestosteroneUnits'))
           && !(filename === 'vilda_lab_snapshot.js' && missing.includes('VildaLabSnapshot'))
           && !(filename === 'vilda_puberty_assessment.js' && missing.includes('VildaPubertyAssessment'))) {
@@ -94,6 +97,18 @@ for (const loader of ['session', 'chrome']) {
       expect(env.win.VildaPubertyAssessment.readUser({ tannerStage: 4 })).toMatchObject({
         status: 'absent', legacy: { kind: 'unspecified', stage: 4 },
       });
+      const loads = env.appended.length;
+      await ensure();
+      expect(env.appended).toHaveLength(loads);
+    });
+
+    it('loads the saved-range transport once when it is the only missing module (decyzja 6.3)', async () => {
+      const env = environment(['VildaLabRangeSnapshot']);
+      const ensure = start(env);
+      await ensure();
+      expect(env.appended.filter(url => /\.js\?/.test(url))).toEqual(['vilda_lab_range_snapshot.js?v=1']);
+      expect(typeof env.win.VildaLabRangeSnapshot.normalize).toBe('function');
+      expect(typeof env.win.VildaLabRangeSnapshot.reconcile).toBe('function');
       const loads = env.appended.length;
       await ensure();
       expect(env.appended).toHaveLength(loads);
