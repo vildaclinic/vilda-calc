@@ -6402,8 +6402,8 @@ Pusta komórka niesie powód **silnika**: model woła `calculateBlumIssPredictio
 
 **Sejf — `mergePatients(źródło, cel)`** (`vilda_vault.js` 181 → 182):
 
-1. **Wszystkie wersje źródła przechodzą pod cel bez zmiany treści i dat.** Magazyn wersji jest kluczowany po `snapshotId` (indeks `byPatient` jest pomocniczy), więc przepięcie to zmiana pola `patientId` w tym samym wpisie. Numeracja `seq` (P-KOLEJNOSC-WERSJI) jest nadawana od nowa w porządku `savedAtISO`, bez dziur i powtórzeń — historia wersji celu pokazuje potem obie linie chronologicznie.
-2. **Nowa głowa = głowa celu uzupełniona tym, czego w niej nie ma:** data urodzenia, części nazwiska, płeć, tygodnie; wiersze historii wzrastania obu trybów (suma po kluczu wiek|wzrost|masa, wiersze `ghSync` pomijane, sortowanie po wieku); wzrosty rodziców i wiek kostny, gdy cel ich nie ma; punkty terapii GH/otyłość/bisfosfoniany (suma bez duplikatów); sekcje kartoteki (okołoporodowe, pokwitanie, opiekun, lekarz, klirens, dieta) tylko gdy cel ich nie ma. **Bieżąca wizyta (wiek, masa, wzrost) zostaje z celu** — to rekord, który lekarz wskazał jako aktualny. Zapis idzie przez `savePatient` z pominięciem anti-clobbera (to świadome scalenie, nie zapis na nieaktualnej kopii); `snapshotCount` główki jest przeliczany z magazynu, bo `savePatient` nie zna przepiętych wersji.
+1. **Wszystkie wersje źródła przechodzą pod cel bez zmiany treści i dat.** Magazyn wersji jest kluczowany po `snapshotId` (indeks `byPatient` jest pomocniczy), więc przepięcie to zmiana pola `patientId` w tym samym wpisie (*od P-SYNC-WLASCICIEL, 2026-10-14, także `rev + 1` — przeniesienie jest nową rewizją rekordu; treść i daty bez zmian*). Numeracja `seq` (P-KOLEJNOSC-WERSJI) jest nadawana od nowa w porządku `savedAtISO`, bez dziur i powtórzeń — historia wersji celu pokazuje potem obie linie chronologicznie.
+2. **Nowa głowa = głowa celu uzupełniona tym, czego w niej nie ma:** data urodzenia, części nazwiska, płeć, tygodnie; wiersze historii wzrastania obu trybów (suma po kluczu wiek|wzrost|masa, wiersze `ghSync` pomijane, sortowanie po wieku); wzrosty rodziców i wiek kostny, gdy cel ich nie ma; punkty terapii GH/otyłość/bisfosfoniany (suma bez duplikatów); sekcje kartoteki (okołoporodowe, pokwitanie, opiekun, lekarz, klirens, dieta) tylko gdy cel ich nie ma (*od P-SCALANIE-SEKCJE, 2026-10-14: także gdy sekcja celu jest bez danych — same wartości domyślne strony; sekcja przechodzi w całości*). **Bieżąca wizyta (wiek, masa, wzrost) zostaje z celu** — to rekord, który lekarz wskazał jako aktualny. Zapis idzie przez `savePatient` z pominięciem anti-clobbera (to świadome scalenie, nie zapis na nieaktualnej kopii); `snapshotCount` główki jest przeliczany z magazynu, bo `savePatient` nie zna przepiętych wersji.
 3. **Wpisy Terminarza** źródła dostają `patientId` celu tą samą ścieżką, co przy scalaniu osoby spoza bazy (`mergeExternalIntoPatient`); **listy pacjentów** zamieniają źródło na cel w członkach i wykluczeniach.
 4. **Źródło znika jak przy `removePatient`:** nagrobek, więc synchronizacja usunie je także na innych urządzeniach (*od P-ZAPIS-USUNIETEJ, 2026-10-08, zapis do źródła po scaleniu jest odmawiany ze wskazaniem celu — źródło nie wraca*); przepięte wersje idą z deltą celu, bo `buildPatientDelta` niesie pełną listę jego wersji. Powiadomienie `onPatientSaved` odświeża otwarte widoki, a jeżeli cel jest wczytany w formularzu, `vilda_baseline_pacjenta.js` (P-ODSWIEZENIE) podciąga bazę.
 
@@ -13677,6 +13677,364 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.286, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
+
+**Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, pod
+którą kartą leżą historyczne zapisy (wersje) po „Scal pacjentów” z równoległą pracą na drugim urządzeniu, która treść
+pomiaru wygrywa po synchronizacji i ile zapisów pokazuje lista pacjentów. Wada 1 z przeglądu „trzy wady” (wariant W2f
+z raportu krytyka, decyzje koordynatora); **do akceptacji klinicznej właściciela**.
+
+**Co było** (`audyt` `2df41a8`, prawdziwy `vilda_vault.js`, dwa sejfy z magazynem w pamięci, prawdziwe
+`exportSyncPayload` → `mergeSyncPayload`). Klucz wersji (`snapshotId`) jest wspólny dla konta, a `Bsl_scalPacjenta`
+sprawdzało „nowość” wersji tylko w karcie z ładunku: wersję leżącą tu pod inną kartą `putSnapshotForUser` po cichu
+przepinało pod kartę z ładunku — bez porównania rewizji i treści, bez blokady drugiej karty i bez korekty jej licznika.
+„Scal pacjentów” przenosiło wersje bez śladu (`rev` 0 → 0). Typowo: A scala X → Y, B (jeszcze nie wie) zapisuje nową
+wersję X; nagrobek X przegrywa z tym zapisem, X wraca i zabiera spod Y dawne wersje — albo Y spod X. Wynik zależał od
+kolejności synchronizacji (chmura B→A — A: X 3/3, Y licznik 5 przy 3 wersjach); mijające się delty na żywo dawały
+„ping-pong” bez końca (16 zmian właściciela w 4 rundach, liczniki rosną o 2 na rundę); poprawka pomiaru z B ginęła pod
+starszą treścią (x1: 60 mies. / 120 cm na obu zamiast 61 / 120,5); wyścig z zapisem w innej karcie przeglądarki dawał
+licznik X 4 przy 2 wersjach; licznik liczony przyrostowo i nigdy nieprzeliczany utrwalał każdy rozjazd; dwa równoległe
+scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wersja nie ginęła, poza treścią poprawki. Zwykłe
+„Scal pacjentów” bez pracy na drugim urządzeniu działało.
+
+**Reguła po zmianie** (`vilda_vault.js`: nowe `Bsw_*` i `Bsl_przeniesWersje`; zmienione `Bsl_scalPacjenta`,
+`Bsl_usunPacjenta`, `Bsl_zdejmijNagrobek`, `mergePatients`, `mergeSyncPayload`, `buildTombstoneDelta`, adaptery magazynu).
+- „Scal pacjentów” zapisuje przeniesioną wersję jako nową rewizję rekordu (`rev + 1`, jak import wersji z kosza); treść,
+  `updatedAtISO` i `savedAtISO` bez zmian.
+- Wersja z ładunku, której karty z ładunku (F) tu nie ma, a która leży tu pod inną istniejącą kartą (G): właściciela
+  wybiera nowszy rekord — najpierw `rev`, potem późniejsza chwila zmiany, przy pełnym remisie mniejszy `patientId`
+  (deterministycznie na każdym urządzeniu). Wygrywa F — wersja przechodzi pod F; wygrywa G — zostaje (wynik liczy ją
+  jako pominiętą). Wersje karty G, która w tym scalaniu przegrywa z nagrobkiem, przechodzą pod F zawsze.
+- Treść wersji wspólnej dwom kartom wybiera późniejsza chwila zmiany (przy równej — wyższa `rev`, przy remisie —
+  tutejsza), niezależnie od tego, która karta wygrała; `rev` wyniku = wyższa z dwóch. Gdy zostaje G, a treść z ładunku
+  jest późniejsza (decyzja `'tresc'`), rekord G przyjmuje ją w fazie przeniesień. Chwila zapisu wersji (miejsce
+  w historii, bieżąca wersja karty) — ze strony, która wygrała przypisanie karty, więc synchronizacja nie stawia
+  przeniesionej wersji przed głową scalenia. Wersje tej samej karty — bez zmian (najpierw `rev`, potem chwila zmiany).
+- Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
+  kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
+  pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
+- Delta nagrobka po „Scal pacjentów”: urządzenie, które w tej sesji strony scaliło X → Y, dołącza do delty nagrobka X
+  kartę Y (pole `patients` było w formacie delty, dotąd puste) — u odbiorcy działa to jak pełna synchronizacja, w każdej
+  kolejności dwóch delt. Delta Y ponad 60 000 znaków szyfrogramu i zwykłe usunięcie karty — sam nagrobek, jak dotąd.
+  Integracja wysyła deltę Y i deltę nagrobka X prawie razem przez `navigator.sendBeacon`, a Chromium ogranicza **łączny**
+  rozmiar ciał żądań keepalive w locie do 64 KiB — przy delcie Y ok. 30–60 tys. znaków drugi beacon jest odrzucany
+  (`false`). Dlatego (uwaga recenzji gałęzi `44ba49f7`, U2) `gt` (delta karty) i `At` (delta nagrobka pacjenta)
+  w `vilda_sync_integration.js` sprawdzają wynik (`Bsb_wyslij`): deltę odrzuconą albo z wyjątkiem wysyłają tym samym
+  ciałem na ten sam adres zwykłym `fetch` (bez keepalive, więc bez tego limitu). Limitu karty w `Bsw_deltaNagrobka` nie
+  zmniejszono (w paśmie 30–60 tys. wróciłaby delta nagrobka bez karty celu). Format delt i delty notatek bez zmian.
+- Karta, której ostatnia wersja przeszła pod inną kartę, znika bez nagrobka (nie usunął jej użytkownik); wynik scalania
+  liczy karty usunięte i założone w fazie przeniesień, więc lista pacjentów odświeża się po delcie na żywo. Koniec
+  scalania nie zdejmuje lokalnego nagrobka karty, która tu nie powstała, bo jej wersje leżą tu — nowsze — pod inną kartą.
+- Licznik zapisów karty = liczba jej wersji, także naprawa rozjazdów sprzed zmiany (zapis samego licznika tylko przy
+  niezgodności); karta bez żadnej nowej wersji nie powstaje pusta. Przyjęcie z ładunku samej nowszej treści wersji
+  podnosi chwilę ostatniego zapisu karty do późniejszej z dwóch (jak nowa wersja; nagłówek bez zmian).
+- Tutejsza wersja jest czytana tylko dla wersji spoza karty z ładunku: po kluczu (nowa metoda adapterów
+  `getSnapshotForUser`), bez niej — mapa właścicieli raz na scalanie. Delta jednej karty na prawdziwym IndexedDB
+  z 1600 kartami: 27–35 ms (`2df41a8` w tym samym przebiegu 35–54 ms).
+- Bez zmian: format ładunku, delt i nagrobków, API `window.VildaVault`, import i „Scal kopię konta”,
+  `vilda_sync_integration.js` poza wysyłką delt kart i nagrobków pacjentów (wyżej). Zwykła synchronizacja — te same karty, wersje i liczniki (poza chwilą zapisu karty po
+  przyjęciu poprawki wersji); zwykłe „Scal pacjentów” — te same karty i wersje (`rev` przeniesionych o 1 wyższy).
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/sync-wlasciciel-wersji.test.mjs` (246; prawdziwy
+`mergeSyncPayload` na dwóch albo trzech sejfach; chmura A→B i B→A, wymiana krzyżowa, delty na żywo + chmura; 4 rundy;
+każdy scenariusz w obu kolejnościach id). X i Y po 2 wersje (x1, x2, y1, y2), pełna synchronizacja, potem:
+- A scala X → Y (ym), B zapisuje x3 w X → oba: X 1/1 [x3], Y 5/5 [x1 x2 y1 y2 ym], od rundy 1 bez zmian właściciela
+  (8; czerwone na `2df41a8`);
+- A scala X → Y, B poprawia x1 na 61 mies. bez zmiany chwili zapisu → oba: Y 5/5, nagrobek X, x1 = 61 / 120,5 cm —
+  w pełnych ładunkach i w deltach na żywo (8; czerwone: 60 / 120); z nową chwilą zapisu X → X 1/1 [x1] 61 / 120,5,
+  Y 4/4, także na trzech urządzeniach w każdej z 6 kolejek chmury (8 + 12; czerwone);
+- łańcuch X → Y → Z na A; B, które o scaleniach nie wie, koryguje albo przypina x1 w starej X → x1 pod Z z treścią z B,
+  liczniki zgodne, nic nie ginie (9; 8 czerwonych);
+- X [60, 66], Y [72, 78], Z [84, 90]; A scala X → Y → Z; B poprawia bieżący pomiar X jak „Edytuj pomiar” (66 mies.:
+  123 → 124 cm) → A i B: bieżąca wersja Z = głowa scalenia z 6 pomiarami, x2 pod Z z poprawką i chwilą zapisu sprzed
+  scaleń; kontrola z jednym scaleniem — X wraca z poprawioną x2 (3 + 3; czerwone);
+- A po scaleniu X → Y poprawia x1 pod Y (62 mies.), B później x1 w starej X (61 mies.) → oba: Y 5/5, nagrobek X,
+  x1 = 61 / 120,5 (późniejsza), bieżąca wersja Y = ym (8; czerwone);
+- B zmienia wersję starej X bez nowego zapisu karty (edycja albo usunięcie wiersza, przypięcie, korekta z zachowaną
+  chwilą zapisu), dostaje delty Y i nagrobka X z A w obu kolejnościach, potem nieaktualną chmurę; nowe urządzenie C
+  pobiera chmurę → A, B, C: Y 5/5 ze zmianą z B, nagrobek X, kosz pusty (24; czerwone — zmiana ginęła);
+- A scala X → Y, B scala X → Z → x1 i x2 pod kartą o mniejszym id na obu (8; czerwone); stan zastany z rozjechanymi
+  licznikami i różnymi właścicielami → po 4 rundach liczniki = liczba wersji, A = B (12; czerwone);
+- zapis x4 w X wstrzymany w innej karcie przeglądarki w trakcie scalania → X [x3 x4] licznik 2, Y 5/5 (8; czerwone:
+  licznik 4 przy 2 wersjach); „Scal pacjentów” → przeniesiona wersja `rev` 0 → 1, treść i chwile bez zmian (czerwony);
+- kontrole (zielone na `2df41a8`): bez scalania — 0 zmian właściciela; zwykłe scalenie — Y 5/5, nagrobek X; ponowne
+  pobranie bez zmian — 0 zapisów.
+- po uwagach recenzji gałęzi `44ba49f7` (+6): prawdziwy `vilda_sync_integration.js` z atrapą `sendBeacon` o limicie
+  64 KiB w locie, Y z 14 wersjami (delta Y ok. 35 tys. znaków), „Scal pacjentów” X → Y → drugi beacon odrzucony, ta
+  sama delta idzie `fetch`, serwer dostaje deltę Y i deltę nagrobka X z kartą Y; `sendBeacon` zawsze `false` albo
+  rzuca → obie delty `fetch` (2; czerwone na `44ba49f7` — jedna delta albo żadna); beacon przyjęty → bez `fetch`,
+  zwykłe usunięcie — sam nagrobek (kontrola); strażnik źródła integracji; ładunek z kartą Y, x2 (`rev` 1) bez
+  `savedAtISO` i nagrobkiem X → x2 pod Y z tutejszą chwilą zapisu, bieżąca wersja Y = y2 (kontrola zabezpieczenia
+  w `Bsw_rekord`, dotąd bez testu); retencja a poprawka przeniesiona (test przypinający, „Ograniczenia”).
+Na `2df41a8` 191 z 240 czerwonych (240 testów sprzed uwag recenzji gałęzi). `tests/e2e/sync-wlasciciel-wersji.spec.mjs`
+(prawdziwe IndexedDB i Web Locks, 6 testów; szósty — prawdziwy Chromium, serwer synchronizacji na trasie `page.route`
+z odpowiedzią po 400 ms: „Scal pacjentów” z deltą Y ok. 35 tys. znaków → serwer dostaje deltę Y i deltę nagrobka X
+z kartą Y, jeden z beaconów odrzucony; na `44ba49f7` serwer dostawał jedną deltę): ładunek z poprawioną x1 po „Scal pacjentów” X → Y → X 2/2, Y 4/4 (na `2df41a8` X 3/3); delta nagrobka X
+z kartą Y przy przypiętej x2 → Y 5/5 z przypięciem (na `2df41a8` przypięcie ginie); X → Y → Z i karta X z poprawioną
+x1 albo głową x2 → X nie wraca, poprawka pod Z, bieżąca wersja Z = głowa scalenia. W `zapis-usunietej-karty`
+i `scalanie-duplikatow` odstęp 5 ms po zapisach kart (remis milisekundy); asercje bez zmian.
+
+**Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Po „Scal pacjentów” wersje zostają pod kartą, z którą je
+scalono, na wszystkich urządzeniach, niezależnie od kolejności synchronizacji (w deltach na żywo — gdy scalało
+urządzenie po zmianie). Wyjątek: wersja poprawiona na urządzeniu, które o scaleniu nie wiedziało, z nową chwilą zapisu
+karty wraca pod starą kartę razem z poprawką — zbieżnie, bez utraty; duplikat wraca po cichu. Karta przywrócona nowym
+zapisem z drugiego urządzenia wraca tylko z zapisami po scaleniu (dotąd zabierała całą dawną historię). Poprawka pomiaru,
+przypięcie albo edycja wiersza z innego urządzenia nie giną pod starszą treścią, także po kilku scaleniach; z dwóch
+współbieżnych poprawek wersji pod różnymi kartami wygrywa późniejsza. Liczba zapisów na liście pacjentów zgadza się
+z historią (rozjazdy sprzed zmiany naprawia pierwsza synchronizacja). Bieżąca wersja karty scalonej — stan widoczny po
+otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
+
+**Ograniczenia (czego zmiana nie robi).**
+- **Utrata wersji (E1/E1b), osobna wada.** Wersja X zapisana na drugim urządzeniu przed „Scal pacjentów” (bez
+  synchronizacji) albo ze stemplem spóźnionego zegara wcześniejszym niż nagrobek scalenia: nagrobek X wygrywa i usuwa
+  X z wersjami, których urządzenie scalające nie znało — nie ma ich nigdzie, także w koszu (na `2df41a8` tak samo).
+  Tak samo poprawka starej karty wchłonięta do karty scalonej, którą wcześniej usunięto na innym urządzeniu: w części
+  kolejek ginie, bo chwila zapisu karty scalonej nie rośnie. Przyczyna: nagrobek scalenia nie niesie celu. Kierunki
+  (do decyzji): cel scalenia w nagrobku (zmiana formatu), wnioskowanie w scalaniu, chwila zapisu karty przy przyjęciu
+  późniejszej treści. Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany).
+- **Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń** zostaje w dawnej wersji w historii karty scalonej;
+  bieżąca wersja (głowa scalenia) pokazuje wartość sprzed poprawki (123 zamiast 124 cm), a następny zapis buduje się na
+  niej. Po jednym scaleniu X wraca z poprawką jako duplikat. Domknięcie (do decyzji): poprawiony wiersz w bieżącej
+  wersji (nowa wersja — zmiana kliniczna), powrót X albo sygnał w UI.
+- **Delta nagrobka bez karty celu** (wysyła ją urządzenie sprzed zmiany): gdy przychodzi po delcie Y, wersja X
+  zmieniona na odbiorcy bez nowego zapisu karty (przypięcie, edycja wiersza, korekta z zachowaną chwilą zapisu) znika
+  razem z X — także z kosza, a po synchronizacji z nieaktualną chmurą z chmury i z nowego urządzenia — i wraca, bez tej
+  zmiany, z pełnym stanem urządzenia scalającego (na `audyt` ginęła tylko zmiana; test przypięty). Przy delcie Y ponad
+  limit urządzenie po zmianie wysyła sam nagrobek — wersje wracają z pełną synchronizacją, jak na `audyt`. Cel scalenia
+  trzyma tylko pamięć strony: po przeładowaniu delta nagrobka już nie powstaje. Wysyłka zapasowa `fetch` (U2) działa,
+  dopóki strona żyje — zaraz po scaleniu tak jest; delta odrzucona przy zamykaniu karty przepada jak dotąd, a wersje
+  i nagrobek przychodzą z najbliższą pełną synchronizacją.
+- **Retencja a poprawka przeniesiona do dawnej wersji karty scalonej** (przegląd końcowy 2; nie regresja względem
+  `audyt`). Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń leży w dawnej wersji (x2) z chwilą zapisu
+  sprzed scaleń. Przy włączonej retencji (domyślnie) i karcie scalonej z co najmniej 10 wersjami następny zapis karty
+  przycina ją jak każdą starą wersję (nagrobek „retencja”, bez kosza) — poprawki nie ma wtedy nigdzie, na wszystkich
+  urządzeniach (na `2df41a8` ginęła już przy synchronizacji, na `69e41d1` zostawała jako błędna głowa karty). Test
+  przypinający w `sync-wlasciciel-wersji.test.mjs` (jedyny z prawdziwym `vilda_retention.js`). Domknięcie (do decyzji
+  właściciela): poprawiony wiersz w bieżącej wersji albo powrót X (chronią przed retencją), ochrona niedawno zmienionych
+  wersji w retencji (zmiana reguł retencji).
+- **Reguła tej samej karty a `rev + 1`.** Wersje tej samej karty rozstrzyga nadal „najpierw `rev`”, a `rev` liczy teraz
+  też przeniesienia. W pętli scaleń (A: X → Y, B z nowym zapisem X scala potem Y → X — x1 wraca pod X z `rev` 2)
+  późniejsza poprawka x1 z trzeciego urządzenia (`rev` 1) ginie na wszystkich (test przypięty; na `audyt` przetrwała);
+  dwie współbieżne zmiany, które trafią najpierw pod tę samą kartę, mogą skończyć się wcześniejszą. Fuzz różnicowy
+  (400 przebiegów, trzy urządzenia): par (wersja, urządzenie) bez najpóźniejszej zmiany `2df41a8` 1236, po zmianie 81,
+  gorzej w 6 (ta reguła), rozjazd urządzeń 0. Domknięcie (do decyzji): osobny licznik właściciela albo „późniejsza
+  zmiana wygrywa” także w tej samej karcie (zmienia zwykłą synchronizację).
+- **Remis milisekundy.** Gdy ostatni zapis źródła i głowa scalenia wypadną w tej samej milisekundzie, kolejność wersji
+  (`yr`) stawia wyżej dawną głowę źródła (`rev` 1) jako bieżącą wersję celu. Ręcznie nieosiągalne; w testach odstęp.
+- **Kosz-przed i kosz-po, osobna wada.** Wersja usunięta do kosza na jednym urządzeniu przed albo po „Scal pacjentów” na
+  drugim zostaje aktywna pod kartą docelową na urządzeniu scalającym — jak na `2df41a8`.
+- **Flota mieszana.** Urządzenie na starym kodzie dalej przepina wersje i psuje swoje liczniki; jego „Scal pacjentów”
+  nie podbija `rev`, więc gdy X ma mniejszy id, odbiorca po zmianie zostawia wersje przy X, a delta nagrobka je usuwa —
+  wracają z pełnym stanem urządzenia scalającego (trwale giną tylko, gdy zniknie ono przed wysyłką; nie mierzone).
+- **Remis i pusta karta.** Przy tej samej rewizji i chwili zmiany kartę wybiera mniejszy losowy `patientId` (bez
+  utraty). Pusta karta znika bez nagrobka; zapisana potem w innej karcie przeglądarki powstaje od nowa z tym zapisem;
+  jej notatki nie są przenoszone (P-NOTATKI-1 G5).
+- Decyzja „zapisz od razu” zapada bez blokady karty-źródła: „Scal pacjentów” w innej karcie przeglądarki dokładnie
+  między odczytem wersji a jej karty może dać przepięcie bez porównania (jak dotąd). `rev` to rewizja rekordu (treść
+  albo właściciel): okno kosza odmówi „zmieniony” dla wersji przeniesionej w trakcie; `Bkz_taSamaWersja` traktuje
+  nagrobki tej samej wersji sprzed i po przeniesieniu jak różne.
+- Poza zakresem: sygnał wskrzeszonego duplikatu w UI; import pliku karty bez strażnika właściciela; wynik scalania nie
+  liczy wersji z fazy przeniesień jako dodanych; nagłówek karty z poprawki wersji nie przechodzi na inne urządzenia;
+  kolejność blokad fazy przeniesień pilnuje tylko strażnik źródła.
+
+**Mutacje.** 50 czerwonych (kopia `vilda_vault.js`, cały plik testów), m.in. bez fazy przeniesień — 100 czerwonych
+testów, decyzja bez porównania — 69, bez `rev + 1` — 62, bez wyjątku karty z wygrywającym nagrobkiem — 45, treść między
+kartami „najpierw `rev`” — 32, delta nagrobka bez karty celu — 27, chwila zapisu wersji z treścią — 17, bez samonaprawy
+licznika — 12, przeniesienie bez blokady drugiej karty — 5; przeżywają tylko mutacje równoważne albo trudno osiągalne
+i szersza reguła chwili zapisu karty (zawsze późniejsza z dwóch). Po uwagach recenzji gałęzi `44ba49f7`: zabezpieczenie
+chwili zapisu ładunku bez `savedAtISO` zawężone do `tutejszaKarta` — 1 czerwony (dotąd przeżywał); integracja bez
+wysyłki zapasowej (`vilda_sync_integration.js` z `44ba49f7`) — 2 czerwone w unit i czerwony e2e.
+
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213, `vilda_sync_integration.js` 49 → 50 (tylko P-SYNC-WLASCICIEL)
+na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe
+adresy w precache (append-only); `SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+`tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
+## „Scal kopię konta” mówi o notatkach i listach z kopii; „Scal teraz” także wtedy, gdy dochodzą tylko one (P-KOPIA-DANE-KONTA, SW 1.1.286, `vilda_vault.js` 213, `vilda_auth_ui.js` 496, 2026-10-14)
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów, jednostek i interpretacji. Zmiana funkcjonalna ekranu „Scal kopię
+konta” (podgląd, widoczność i etykieta „Scal teraz”, podsumowanie, wynik, podtytuł) i wyniku `previewVaultBackupMerge`
+oraz `mergeVaultBackup` (nowe pola; `mergedPatientCount` liczy tylko karty z nowymi wersjami). **Dane scalane bez
+zmian:** wewnętrzne scalanie danych konta (`Le(…, Bpb_IMPORT)` w `ss`) działa jak dotąd, regułami synchronizacji —
+notatki i listy pacjentów: wyższy `rev`, przy równym nowsza data (więc wcześniejsza wersja z kopii, poprawiana tam
+więcej razy, zastępuje późniejszą edycję tutaj); szablony ze strony „Notatki” i wpisy list oczekujących: nowsza data;
+późniejsze usunięcie w kopii usuwa tutaj; nagłówek karty — niżej, „Ograniczenia”. Zmienia się to, że podgląd i wynik
+mówią o tym jawnie, a przycisk jest dostępny. **Wpływ kliniczny pośredni:** notatki pacjentów niosą treści kliniczne
+(wyniki badań, leki, IGF-1, terminy kontroli), a listy oczekujących — organizację zabiegów; dotąd bywały nieosiągalne
+z ekranu albo usuwane po cichu. Wada „Scal teraz” z przeglądu „trzy wady”, wariant (a) z raportu krytyka.
+
+**Co było** (`audyt` `2df41a8`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne; A robi kopię konta, C ją scala, C
+zsynchronizowany wcześniej z A). „Scal teraz” było widoczne tylko przy `totalNewSnapshots>0 || addPatients.length>0`;
+podgląd (`os`) zwracał dla danych konta tylko długość tablic w pliku (`backupPatientNoteCount`, `backupNoteCount`), a `ss`
+gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i szablony).
+- notatka pacjenta, szablon, lista pacjentów, lista oczekujących albo termin tylko w kopii: „Brak nowych danych —
+  wszystko już masz”, przycisk ukryty; `mergeVaultBackup` (API) je dodawał, a ekran wyniku mówił „Brak zmian — wszystkie
+  dane z tej kopii już były w Twoim koncie.”;
+- notatka, szablon albo lista oczekujących z terminem usunięte na A: przycisk ukryty, scalenie usuwało je w C po cichu;
+- 1 nowa wersja + notatka + lista: „🔀 Uzupełniono zapisy u 2 pacjentów” (wersja doszła u jednego), ani słowa o notatce
+  i liście;
+- X scalony tu z Y, w kopii poprawka notatki X: „Brak danych do dodania · pominięci: 1”, przycisk ukryty — obietnica
+  P-KOPIA-POMIJA („Poprawki jego notatek … dochodzą jak dotąd”) była prawdziwa tylko przez API;
+- na przycisk nie nadają się ani liczby z pliku (kopia z danymi, które C już ma), ani licznik preferencji Le (ta sama
+  wartość zapisana ponownie albo lista oczekujących dodana i usunięta na A — 1 zapis bez widocznej zmiany);
+- wstrzyknięty błąd zapisu notatki w C (Le połyka błąd sekcji): „Brak zmian — wszystkie dane … już były”;
+- podtytuł „… doda tylko brakujące — bez usuwania ani nadpisywania istniejących danych” był nieprawdziwy dla poprawek
+  i usunięć z kopii, reguły `rev` i nagłówka karty (to zachowanie danych jest takie samo na `2df41a8` i po zmianie).
+
+**Reguła po zmianie.**
+- Podgląd liczy plan danych konta `Bks_planDanych(kontekst, kopia)` po pętli pacjentów, na notatkach po `Bks_notatki` —
+  jak `ss` (notatki pacjentów scalonych tutaj — pod kartą docelową, pominiętych — pominięte). Tylko odczyt: bez zapisu
+  i bez Le. Te same reguły i pomocniki produkcyjne co sekcje Le (`Z`, `jr`, `Ak`, `Af`, `Ag`, `Ah`) i te same strażniki:
+  notatka bez `patientId`, lista o pustej nazwie po `Z`, pozycja i klucz preferencji z kopii bez `updatedAtISO` nie są
+  liczone; błąd sekcji = 0.
+- Kategorie: „dodane” (w tym „przywrócone” — z przegranym tu nagrobkiem), „zmienione” (w tym „zastąpione późniejsze
+  edycje”, `replacedNewer…Count` — tutejsza data późniejsza niż data wersji z kopii, wygrywającej wyższym `rev`),
+  „usunięte” (najnowszy nagrobek nie starszy niż najnowsza zmiana tu i w kopii, przy rekordzie tutaj). Listy
+  oczekujących (`wllists`) i terminy (`wlsched`): `Ak(tutaj, z kopii)` i porównanie widocznych wpisów bez znaczników
+  czasu — sam nowszy znacznik nie jest zmianą. Pozostałe preferencje — `uiPreferenceCount`, nie odsłania przycisku.
+- Nowe pola podglądu: `added|restored|updated|replacedNewer|deleted…Count` dla `PatientNote`, `Note`, `PatientList`,
+  `Waitlist`, `WaitlistSchedule`, `uiPreferenceCount`, `updatedPreferenceCount`. Wynik scalania dodatkowo:
+  `deletedPatientNoteCount`, `deletedNoteCount`, `added|updated|deletedPatientListCount` (z Le), liczniki list
+  oczekujących i terminów oraz `accountDataMerged` (`false`, gdy wewnętrzne scalanie danych konta rzuciło).
+- Liczniki list oczekujących i terminów w wyniku — z rzeczywistej różnicy magazynu ograniczonej do zmian z kopii: `ss`
+  czyta je tuż przed Le i zaraz po Le (`Bks_mapyOczekujacych`, tylko odczyt); wpis dodany albo zmieniony liczy się, gdy
+  jego treść po Le równa się stanowi oczekiwanemu `Ak(przed, z kopii)`, usunięty — gdy nie ma go ani po Le, ani w stanie
+  oczekiwanym. Zmiana z innej karty albo z synchronizacji w tym oknie nie jest przypisywana kopii; nieudany zapis — 0.
+- Ekran (`vilda_auth_ui.js`, pomocniki `Bks_*`): „Scal teraz” widoczne także przy danych konta > 0 (dodane + zmienione
+  + usunięte z pięciu rodzajów, bez `uiPreferenceCount`); przy danych konta = 0 teksty jak dotąd. Pin
+  `tests/unit/blokada-importu.test.mjs` bez zmian (dokładnie 2 × `},Bpb_IMPORT)`).
+- Wpisy Terminarza bez pacjenta (nieobecności, wydarzenia — w sejfie notatki pacjenta z `patientId`
+  `ACTIVITY_PATIENT_ID`; uwaga recenzji gałęzi `44ba49f7`: ekran nazywał je „notatkami pacjentów”): podgląd liczy ich
+  część osobno — `added|restored|updated|replacedNewer|deleted ActivityNoteCount`, część odpowiednich
+  `…PatientNoteCount`, te same reguły na tej części obu stron — a ekran pokazuje ją pod własną nazwą, notatki pacjentów
+  bez niej. Wynik scalania ma tylko sumy Le: linia wyniku (Dodano / Zaktualizowano / Usunięto), dla której podgląd
+  zapowiadał wpisy Terminarza tego rodzaju, nazywa sumę „notatki pacjentów i wpisy Terminarza”
+  (`Bks_linieDanych(wynik, podgląd)`, `Bks_biernikWyniku`); pozostałe linie i teksty bez wpisów Terminarza jak dotąd
+  (uwaga recenzji `a38f42cf`: jedna flaga dla całego wyniku dopisywała „i wpisy Terminarza” także do „Dodano”, gdy
+  podgląd zapowiadał tylko usunięty wpis Terminarza).
+- Podgląd pomija pacjenta kopii bez nagłówka, jak `ss` (kopia spreparowana; uwaga recenzji końcowej 2, S2): nie
+  wymienia pacjenta, którego scalanie nie doda, a plan notatek zgadza się z Le.
+
+**Teksty ekranu** (do akceptacji właściciela).
+- Podtytuł: „Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której dojdą
+  zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia i wiek, rok urodzenia i kontakt) i to, czy
+  osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy. Notatki i listy scali jak synchronizacja:
+  wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także
+  tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich
+  ostatnim zapisie w kopii.” („Każdą taką zmianę” dotyczy notatek i list; zmiany nagłówka podgląd nie wymienia.)
+- Przycisk: dotychczasowa część i najwyżej trzy krótkie — notatki (pacjentów i szablony), wpisy w Terminarzu (bez
+  pacjenta), listy (pacjentów i oczekujących), np. „Scal teraz (1 nowych zapisów, 1 notatka, 1 lista)”, „Scal teraz
+  (1 notatka, 2 wpisy w Terminarzu)”; same terminy albo usunięcia — „Scal teraz”.
+- Podsumowanie przy danych konta > 0 i 0 nowych zapisów zaczyna się od „Brak nowych zapisów” (zamiast „Brak nowych
+  danych — wszystko już masz” / „Brak danych do dodania”), dalej części z odmianą, np. „1 przywrócona notatka pacjenta
+  (usunięta tutaj wcześniej)”, „1 notatka pacjenta poprawiona tutaj później zostanie zastąpiona starszą wersją z kopii”,
+  „usunięte w kopii: 1 notatka pacjenta, 1 lista oczekujących, 1 termin listy oczekujących (zostaną usunięte także
+  tutaj)”; wpisy Terminarza bez pacjenta zaraz za notatkami pacjentów: „2 nowe wpisy Terminarza bez pacjenta”,
+  „1 poprawiony wpis Terminarza bez pacjenta”, „usunięte w kopii: 1 wpis Terminarza bez pacjenta …”.
+- Wynik: „✓ Dodano 1 notatkę pacjenta, 1 szablon w Notatkach, 1 listę pacjentów, 1 listę oczekujących”, „✓ Zaktualizowano
+  1 notatkę pacjenta”, „⊖ Usunięto tak jak w kopii: …”; „Brak zmian — …” tylko, gdy nic nie doszło i nie było błędu.
+  Przy `accountDataMerged === false` albo gdy podgląd zapowiadał dane konta, a wynik ma 0: „Nie scalono notatek ani list
+  z tej kopii — mogły dojść w międzyczasie albo zapis się nie udał. Sprawdź kopię ponownie.” „🔀 Uzupełniono zapisy
+  u N pacjentów” — N kart, do których doszły wersje. Gdy podgląd zapowiadał nowe i poprawione wpisy Terminarza: „✓ Dodano
+  3 notatki pacjentów i wpisy Terminarza”, „✓ Zaktualizowano 1 notatkę pacjenta lub wpis Terminarza” (5+: „6 notatek
+  pacjentów i wpisów Terminarza”); gdy zapowiadał tylko usunięty wpis Terminarza i nowe notatki pacjentów: „✓ Dodano
+  2 notatki pacjentów”, „⊖ Usunięto tak jak w kopii: 1 notatkę pacjenta lub wpis Terminarza”. Desktop 1440 i telefon
+  390 bez poziomego przewijania.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-dane-konta.test.mjs` (93; prawdziwe
+`os`/`ss`, magazyn w pamięci; ekran — prawdziwe pomocniki `Bks_*` z `vilda_auth_ui.js`). W każdym: podgląd nie zmienia
+magazynu, a każdy licznik spełnia parzystość podgląd = wynik scalania = różnica magazynu.
+- T1 nowa notatka pacjenta → „Scal teraz (1 notatka)”, „Brak nowych zapisów · 1 nowa notatka pacjenta”, „✓ Dodano
+  1 notatkę pacjenta”, `mergedPatientCount` 0; T7 notatka i lista usunięte w kopii → „⊖ Usunięto tak jak w kopii:
+  1 notatkę pacjenta, 1 listę pacjentów”, obie usunięte w C;
+- T9 1 nowa wersja + notatka + lista → „Scal teraz (1 nowych zapisów, 1 notatka, 1 lista)”, `mergedPatientCount` 1;
+- T16–T18 lista oczekujących tylko w kopii, usunięta w kopii z terminem, termin tylko w kopii → wymienione wszędzie;
+- T20 X scalony tu z Y, poprawka notatki X w kopii → „Scal teraz (1 notatka)”, „Brak nowych zapisów · 1 poprawiona
+  notatka pacjenta · pominięci: 1”, notatka pod Y poprawiona;
+- T25 błąd zapisu notatki w sekcji Le, T27 zapis meta konta rzuca przy zmianie list → wynik 0 (w T27 mimo licznika
+  preferencji Le 1), ekran „Nie scalono …”;
+- T32 notatka i lista poprawiane na A dwa razy, w C później raz → „1 notatka pacjenta poprawiona tutaj później zostanie
+  zastąpiona starszą wersją z kopii”, w C wersje z kopii;
+- T34, T35 w trakcie Le inna karta w C dodaje, zmienia albo usuwa listy oczekujących → wynik liczy tylko zmiany z kopii;
+- T31, T38, T39 nowa wersja z kopii po późniejszej tutejszej poprawce nagłówka („Testowy Adam”/M w kopii, „Poprawiona
+  Ada”/K tutaj), kontaktu osoby spoza bazy albo „Dodaj do bazy” → nagłówek z kopii ze starszym `timestampISO`, osoba
+  wraca do osób spoza bazy (scalanie bez zmian); podtytuł to mówi;
+- kontrole → plan 0, przycisk ukryty: T4 ta sama wartość preferencji, T6 dane identyczne z C, T19 lista oczekujących
+  dodana i usunięta w kopii, T22 nazwa z samych znaków zerowej szerokości, T30 ten sam termin zapisany ponownie, T36,
+  T37 nagrobki tutaj i pozycji, których tu nie było, T40, T41 stare i niepełne wpisy kopii; 30 losowych przebiegów ze
+  stałym ziarnem — parzystość;
+- po uwagach recenzji końcowej 2 i recenzji gałęzi `44ba49f7` (+18): T42 tutejszy szablon bez `updatedAtISO`, w kopii
+  poprawiony → plan = Le = magazyn = 1 (kontrola; czerwony na mutacji `Bks_wygrywaData`), T43 ta sama lista
+  oczekujących założona niezależnie tu i w kopii → przycisk ukryty (kontrola; czerwony na mutacji `Bks_trescWpisu`
+  z `createdAtISO`); `migawka` testu zapisuje brak daty jako pusty napis; T44 kopia spreparowana z pacjentką bez
+  nagłówka, usuniętą tutaj, z nową notatką → podgląd = wynik (czerwony na `44ba49f7`: podgląd 0 notatek i 1 pominięty,
+  wynik 1 i 0); T45 urlop (5 dni) i szkolenie tylko w kopii → „Scal teraz (6 wpisów w Terminarzu)”, „Brak nowych
+  zapisów · 6 nowych wpisów Terminarza bez pacjenta”, „✓ Dodano 6 notatek pacjentów i wpisów Terminarza”; T46 notatka
+  pacjenta z wpisami Terminarza nowymi, poprawionym i usuniętym → każda część pod własną nazwą (T45, T46 czerwone na
+  `44ba49f7`); T47 dwie nowe notatki pacjenta i szkolenie z Terminarza usunięte w kopii → „✓ Dodano 2 notatki
+  pacjentów” bez „i wpisy Terminarza”, łączna nazwa tylko w „Usunięto” (czerwony na `a38f42cf`); łączna nazwa osobno
+  w każdej linii wyniku (nowe / poprawione / usunięte wpisy Terminarza w podglądzie, czerwony na `a38f42cf`); odmiana
+  części Terminarza (1 / 2–4 / 5+ / 12–14 / 22, pięć pól); 12 losowych przebiegów z wpisami
+  Terminarza (nowe, poprawione, usunięte). Parzystość obejmuje część Terminarza: podgląd = różnica magazynu
+  ograniczona do `ACTIVITY_PATIENT_ID` (dlatego na `44ba49f7` każdy przypadek z parzystością pada na braku tych pól).
+Na `2df41a8` 70 z 73 czerwonych, ale każdy przypadek pada już na braku nowych pól — testy przypinają nowy kontrakt,
+zachowanie sprzed zmiany pokazują pomiary wyżej i e2e. `tests/e2e/kopia-konta-dane-konta.spec.mjs` (dwa konteksty
+przeglądarki = dwa urządzenia; Importuj pacjentów → plik kopii → „Scal z moim kontem →” → „Scal teraz”): desktop 1440 —
+nowa notatka, szablon, lista pacjentów i lista oczekujących, termin 09:00 → 11:30, usunięta notatka i usunięta lista
+oczekujących z terminem → nowy podtytuł, pełne podsumowanie, „Scal teraz (2 notatki, 2 listy)”, linie wyniku, stan C
+zgodny; telefon 390 — to samo bez poziomego przewijania; T20 na ekranie; telefon 390 — urlop i szkolenie z Terminarza
+w kopii → „Scal teraz (1 notatka, 2 wpisy w Terminarzu)”, „✓ Dodano 3 notatki pacjentów i wpisy Terminarza”, bez
+poziomego przewijania. Na `2df41a8` pierwsze trzy czerwone;
+`kopia-konta-pomija.spec.mjs` bez zmian asercji — zielony.
+
+**Wpływ kliniczny.** Wzory, progi i jednostki bez zmian; dane scalane jak dotąd. Przed scaleniem lekarz widzi notatki
+pacjentów, szablony, listy i listy oczekujących, które dojdą, zmienią się albo zostaną usunięte — także tutejsze
+poprawki, które zastąpi starsza wersja z kopii — i może je scalić, gdy kopia nie niesie nowych zapisów. Wynik nie mówi
+już „wszystko już było”, gdy coś doszło albo zapis się nie udał. Podtytuł mówi, że karta z nowymi zapisami przejmie
+z kopii dane osoby i przynależność do bazy.
+
+**Ograniczenia.**
+- Reguły sekcji Le są powtórzone w `Bks_planDanych` (wariant (a)); zmiana Le wymaga zmiany planu — pilnuje test
+  parzystości i komentarz krzyżowy. Wspólne predykaty Le i planu — ewentualny osobny krok (dotyka synchronizacji).
+- Liczniki list oczekujących w wyniku — dwa przypadki graniczne: inna karta zapisze w oknie Le ten sam wpis z tą samą
+  treścią co kopia (liczy się jako zmiana z kopii) albo nadpisze lub usunie wpis z kopii zaraz po Le (nie liczy się).
+  Nieudany odczyt daje 0.
+- Nagłówek karty: karta, do której dochodzą zapisy z kopii, przejmuje cały nagłówek z kopii (imię i nazwisko, płeć, data
+  urodzenia i wiek, u osoby spoza bazy rok urodzenia i kontakt, przynależność do bazy) także, gdy tutejszy jest nowszy,
+  a następna synchronizacja przenosi go dalej. Osoba dodana tutaj do bazy, której kopia niesie nową wersję jako osoby
+  spoza bazy, znika z listy pacjentów i traci w nagłówku datę urodzenia i wiek; odwrotnie osoba spoza bazy wchodzi do
+  bazy; późniejsze tutejsze dane zostają tylko w historii wersji. Tak samo synchronizacja (`Bsl_scalPacjenta`). Ta
+  zmiana mówi o tym tylko w podtytule; podgląd nie zapowiada zmiany nagłówka. Płeć i data urodzenia zasilają siatki
+  centylowe i normy — **decyzja właściciela, osobne zadanie**: nagłówek z kopii (i z synchronizacji) tylko, gdy nowszy
+  (`timestampISO`), bez cofania osoby z bazy albo zapowiedź w podglądzie.
+- Reguła `rev` dla notatek i list pacjentów bez zmian (zmiana Le — decyzja właściciela); wynik nie ma osobnego licznika
+  zastąpień (Le liczy je jako „zaktualizowane”), a `restored…Count` jest tylko w podglądzie. Błąd sekcji Le jest nadal
+  połykany: częściowy wynik (podgląd 2, wynik 1) nie daje „Nie scalono …”.
+- Kopia innego konta: jej dane konta scalają się jak dotąd, teraz podgląd je pokazuje i odsłania przycisk — czy je
+  scalać, decyzja właściciela.
+- Scalenie kopii nie planuje wysyłki do chmury (dane idą przy następnej synchronizacji, jak dotąd wersje). Ustawienia
+  interfejsu i klucze techniczne scalają się bez komunikatu; etykieta przycisku nie wymienia terminów ani usunięć.
+- Wpisy Terminarza bez pacjenta rozdziela tylko podgląd; wynik (sumy Le) nazywa je razem z notatkami pacjentów, a nazwę
+  każdej linii bierze z podglądu — gdy synchronizacja między podglądem a scaleniem doda wpis Terminarza, którego podgląd nie
+  zapowiadał, wynik nazwie go „notatką pacjenta”, jak dotąd. Rozdzielenie w wyniku wymaga zmiany Le albo różnicy
+  magazynu (decyzja właściciela).
+
+**Mutacje.** 32, każda czerwona (na 110 testach `kopia-konta-dane-konta`, `kopia-konta-pomija` i `blokada-importu`):
+reguły planu (nagrobki kopii i tutejsze, rekord tutaj przy usunięciu, remis nagrobka, `rev`, `Bks_notatki`, `Z` zamiast
+`trim`, strażniki starych i niepełnych wpisów), porównanie wpisów list oczekujących, wynik z różnicy magazynu
+ograniczonej do zmian z kopii, `mergedPatientCount`, `accountDataMerged`, przycisk, podsumowanie i dawne brzmienia
+podtytułu. Po uwagach recenzji gałęzi `44ba49f7`: `Bks_wygrywaData` bez `!tutaj.updatedAtISO` — T42, `Bks_trescWpisu`
+z `createdAtISO` — T43, pętla podglądu bez `||!h.header` — T44, część Terminarza zawężona do jednej kategorii — 10
+z 12 losowych przebiegów, ekran bez odjęcia części Terminarza — 3 czerwone. Po uwadze recenzji `a38f42cf`: jedna
+flaga łącznej nazwy dla trzech linii wyniku (stan sprzed poprawki) — T47 i test łącznej nazwy w każdej linii czerwone.
+
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 495 → 496 na stronach i w adresach wstrzykiwanych
+przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe adresy w precache (append-only);
+`SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`)
+— `npm run podbij-wersje`.
+
 ## Mapa właścicieli przed pierwszym zapisem także przy kartach bez nowych wersji (P-KOPIA-POMIJA-3, SW 1.1.232, `vilda_vault.js` 209, 2026-10-12)
 
 **Zmiana kliniczna: NIE** w zakresie wzorów, progów i interpretacji; integralność danych przy scalaniu kopii konta.
@@ -13781,17 +14139,24 @@ z rekomendacjami” — punkt A5d przeglądu „co dalej po #518”: pominąć t
 
 **Interfejs** (ekran „Scal kopię konta”):
 - podtytuł: „… bez usuwania ani nadpisywania istniejących danych. Nie przywraca pacjentów scalonych z inną kartą ani
-  usuniętych po ich ostatnim zapisie w kopii.”;
+  usuniętych po ich ostatnim zapisie w kopii.”; *(Aktualizacja 2026-10-14: zdanie „… bez usuwania ani nadpisywania
+  istniejących danych” było nieprawdziwe dla notatek i list (poprawki i usunięcia z kopii, reguła `rev`) oraz dla
+  nagłówka karty, do której dochodzą zapisy (przejmuje cały nagłówek z kopii, także starszy — u osoby spoza bazy także
+  kontakt — i przynależność do bazy: osoba dodana tu do bazy może wrócić do osób spoza bazy) — zastąpione,
+  P-KOPIA-DANE-KONTA; zdanie „Nie przywraca pacjentów …” bez zmian.)*
 - podgląd: sekcja „Pominięci — nie zostaną dodani (N)”: nazwisko i „scalony z kartą „Y”” albo „usunięty po ostatnim
   zapisie w kopii (3 dni temu)”, pod spodem „Tylko w pliku kopii: 2 zapisy, 1 notatka.”, gdy coś z kopii nie ma tu
   nigdzie; na końcu sekcji „Kopia konta nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim
   zapisie w kopii.”;
-  podsumowanie „… · pominięci: N”, a przy braku nowych zapisów „Brak danych do dodania”;
+  podsumowanie „… · pominięci: N”, a przy braku nowych zapisów „Brak danych do dodania”; *(Aktualizacja 2026-10-14:
+  gdy z kopii dochodzą notatki albo listy, podsumowanie zaczyna się od „Brak nowych zapisów” i je wymienia —
+  P-KOPIA-DANE-KONTA.)*
 - wynik: „⊘ Pominięto „X” — scalony z kartą „Y”” albo „… — usunięty po ostatnim zapisie w kopii (…)”, „↩ Pominięto N
   zapisów, które należą tu do innej karty”; „Brak zmian — pozostałe dane z tej kopii już były w Twoim koncie.”, gdy
   coś pominięto i nic nie doszło.
-- Widoczność „Scal teraz” bez zmian (nowe zapisy albo nowi pacjenci). Desktop (1440) i telefon (390): bez poziomego
-  przewijania.
+- Widoczność „Scal teraz” bez zmian (nowe zapisy albo nowi pacjenci). *(Aktualizacja 2026-10-14: także gdy dochodzą
+  same notatki, szablony ze strony „Notatki”, listy pacjentów, listy oczekujących albo terminy — P-KOPIA-DANE-KONTA.)*
+  Desktop (1440) i telefon (390): bez poziomego przewijania.
 
 **Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-pomija.test.mjs` (prawdziwy
 `vilda_vault.js`, magazyn w pamięci):
@@ -13846,8 +14211,10 @@ czerwony.
 **Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Pacjent usunięty albo scalony tutaj nie wraca na chwilę
 i nie zabiera wersji karcie, z którą go scalono — historia pomiarów karty docelowej zostaje cała. Dane pominiętego
 pacjenta, których tu nie ma (wersje, notatki), nie trafiają do bazy; podgląd mówi, ile ich jest, a zostają w pliku
-kopii. Poprawki jego notatek, które są już pod kartą docelową, dochodzą jak dotąd. Kopia nowsza niż usunięcie
-przywraca kartę jak dotąd. Wersje karty scalonej na innym urządzeniu nie są już zabierane tutejszej karcie.
+kopii. Poprawki jego notatek, które są już pod kartą docelową, dochodzą jak dotąd. *(Aktualizacja 2026-10-14: dotąd
+tylko przez API — gdy kopia nie niosła nowych wersji, przycisk „Scal teraz” był ukryty, a podgląd mówił „Brak danych do
+dodania · pominięci: 1”. Teraz podgląd mówi „1 poprawiona notatka pacjenta”, przycisk jest widoczny, a wynik
+„✓ Zaktualizowano 1 notatkę pacjenta” — P-KOPIA-DANE-KONTA.)* Kopia nowsza niż usunięcie przywraca kartę jak dotąd. Wersje karty scalonej na innym urządzeniu nie są już zabierane tutejszej karcie.
 
 **Czego zmiana nie robi.** Pacjenta usuniętego albo scalonego tutaj nie da się przywrócić przez „Scal kopię konta”
 (dotąd też się nie dawało — karta znikała od razu); drogą pozostaje import pliku karty (P-IMPORT-NAGROBEK). X scalony
@@ -13856,15 +14223,182 @@ pokazuje liczbę zapisów tylko w kopii. Mapa właścicieli jest budowana raz: w
 być oceniona po starym przypisaniu; usunięcie albo scalenie X w tym czasie łapie świeży nagrobek (powód „usunięty”
 zamiast „scalony”). Nagrobek nie mówi, czy pacjenta usunięto, czy scalono: X scalony tutaj z kartą Y spoza kopii
 (założoną po jej zrobieniu), gdy kopia ma zapis X nowszy niż scalenie albo nagrobek X jest przycięty, wraca jako nowy
-z wersjami, których tu nie ma (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama kradzież wersji przy nagrobku przegrywającym
-z edycją z innego urządzenia to osobna wada. Listy pacjentów z kopii wskazujące pominiętą kartę — bez zmian (jak dotąd).
-Ekran wyniku nadal nie wymienia notatek i list, a „Scal teraz” nie pojawia się, gdy kopia niesie tylko nowe notatki
-albo listy — osobne punkty.
+z wersjami, których tu nie ma (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama
+kradzież wersji przy nagrobku przegrywającym z edycją z innego urządzenia to osobna wada. *(Aktualizacja 2026-10-14:
+naprawione w P-SYNC-WLASCICIEL — nowszy rekord (najpierw `rev`) decyduje o właścicielu wersji, przeniesienia pod
+blokadami obu kart, liczniki = liczba wersji.)* Listy pacjentów z kopii wskazujące pominiętą kartę — bez zmian (jak
+dotąd). Ekran wyniku nadal nie wymienia notatek i list, a „Scal teraz” nie pojawia się, gdy kopia niesie tylko nowe
+notatki albo listy — osobne punkty. *(Aktualizacja 2026-10-14: rozwiązane w P-KOPIA-DANE-KONTA — podgląd i wynik
+wymieniają notatki pacjentów, szablony, listy pacjentów, listy oczekujących i terminy, także poprawki i usunięcia
+z kopii; „Scal teraz” jest widoczne, gdy dochodzą tylko one.)*
 
 **Wersje.** `vilda_vault.js` 205 → 206, `vilda_auth_ui.js` 481 → 482 na stronach i w adresach wstrzykiwanych przez
 `vilda_chrome.js` (114 → 115) i `vilda_session_bridge.js` (38 → 39); nowe adresy w precache (append-only);
 `SW_VERSION` 1.1.199 → 1.1.200 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) —
 `npm run podbij-wersje`.
+
+## „Scal pacjentów” i ponowienie zapisu: niewypełniona sekcja karty docelowej nie trzyma sekcji z danymi (P-SCALANIE-SEKCJE, SW 1.1.286, `vilda_vault.js` 213, 2026-10-14)
+
+**Zmiana kliniczna: możliwa** — wzory, współczynniki, progi, tabele i jednostki bez zmian; zmienia się zawartość
+bieżącej wersji (głowy) karty docelowej po „Scal pacjentów” i po ponowieniu zapisu do niej (P-ZAPIS-USUNIETEJ). Głowa
+może nieść PAL i dietę wybrane przez lekarza w karcie dołączonej zamiast PAL z reguły wieku i diety zaleconej przez
+silnik — to zmienia zalecane kcal (REE × PAL, limit diety). Wraca historia „Szacowanego spożycia”, posiłki, poprzednia
+ocena klirensu (Scr i wyniki) i numer PWZ. Populacja: każdy pacjent scalany „Scal pacjentów” albo zapisywany
+ponowieniem po odmowie „scalono z kartą …”; wiek, płeć i rozpoznanie bez znaczenia. Wada 3 z przeglądu „trzy wady”,
+wariant (c+) z raportu krytyka z decyzjami koordynatora; **wymaga akceptacji klinicznej właściciela**.
+
+**Co było** (`audyt` `2df41a8`, prawdziwy `vilda_vault.js`; kształty zapisu przechwycone z `collectUserData` na
+prawdziwych stronach — `tests/fixtures/scalanie-sekcje-ksztalty.json`). `Bsc1` przenosił sekcję kartoteki (birth,
+perinatal, puberty, guardian, doctor, clcr, intake, foods, plan) ze starej karty X tylko przy `null` w głowie karty
+docelowej Y. Strony zapisują jednak niewypełnione sekcje z wartościami domyślnymi: index z wiekiem — plan
+`{palFactor:1.6, palWybrany:false, …}`, spożycie `{pal:'1.6', history:null, …}`, posiłki `{snacks:[], meals:[]}`,
+lekarz `{isDoctor:null, pwzNumber:null}`; docpro — lekarz `{isDoctor:true, pwzNumber:null}`; kalkulator klirensu —
+zawsze pusta sesja v2 z jednostkami i stanami (sam wybór wzoru KT/V zaznacza `ktvToggle` i `formulaPicker:'KTV'`).
+Skutek: wybrany plan (PAL 1,8, dieta), historia spożycia, posiłki, PWZ, klirens z Scr 0,4 i pokwitanie X znikały po
+cichu z głowy Y (zostawały tylko w przeniesionej wersji X, którą retencja może przyciąć). Ponowienie zapisu
+(`Bdo_sekcje`) za „zmianę lekarza” brało każdą sekcję formularza różną od kopii wczytanej — także tylko wartościami
+domyślnymi: przeliczony PAL (1,6 → 1,4) zastępował wybrany plan Y, przeliczony PAL karty spożycia — spożycie Y
+z historią, pusta albo odbudowana przez stronę sesja klirensu — klirens Y z Scr, lekarz `{isDoctor:true}` z docpro
+kasował PWZ Y; domyślny plan w głowie Y wygrywał z planem X. Usunięcie danych w formularzu X przechodziło do głowy Y
+także wtedy, gdy Y miała własne, inne dane.
+
+**Reguła po zmianie** (tylko `vilda_vault.js`; czytelne funkcje pod `Bsc1` i przy `Bdo_sekcje`).
+- **Dane sekcji** (`Bsc_dane`, tylko do oceny, nigdy zapisywane) — sekcja bez wartości domyślnych strony:
+  - `plan`: PAL tylko jako wybór lekarza według tej samej reguły co `vildaPalZapisuWybrany` przy wczytaniu
+    (`palWybrany:true` — wybór, `false` — domyślny; bez znacznika 1,4 i 1,6 domyślne, inne > 0 — wybór); dieta tylko
+    przy `dietaWybrana:true`; cel własny > 0 kg (jak `vildaCelWlasnyZapisu`);
+  - `intake`: bez PAL karty spożycia, danymi są historia i szacowane kcal; `doctor`: bez `isDoctor`;
+  - `clcr` (sesja v2): tylko pola z liczbą (także tekstem, z przecinkiem; 0 to dana) albo zaznaczeniem w polu badania;
+    nie są danymi pola karty pacjenta kalkulatora (`fullName`, `age`, `ageMonths`, `ageDays`, `neonatalTermStatus`,
+    `sex`, `weight`, `height`), wybory widoku (`currentVersion`, `formulaPicker`, `ktvToggle`), jednostki, stany i inne
+    wybory tekstowe, `summary`, `savedAtISO`; dawny kształt bez `inputs` — cała sekcja;
+  - pozostałe sekcje — w całości.
+- **„Bez danych”** (`Bsc_bezDanych`): dane sekcji puste wg `Bpu_pusta` (wyniesiona bez zmian z `Bdo_sekcje`:
+  `undefined`, `null`, `''`, `false`, lista albo obiekt z samych pustych; liczba, także 0, i niepusty tekst to dana).
+- **„Scal pacjentów”** (`Bsc1`): sekcja z listy przechodzi ze starej karty w całości, gdy karta docelowa jej nie ma (jak
+  dotąd) albo gdy sekcja karty docelowej jest bez danych, a sekcja starej karty ma dane. Bez łączenia pole po polu. Obie
+  z danymi albo obie bez — sekcja karty docelowej.
+- **Ponowienie zapisu** (`Bdo_sekcje`, tylko najwyższy poziom zapisu):
+  - sekcja głowy karty docelowej bez danych nie zastępuje sekcji z formularza, która coś ma; formularz bez tej sekcji
+    (`null` albo same puste pola — strona jej nie prowadzi) dostaje ją z głowy, jak na `2df41a8` i jak w „Scal
+    pacjentów” (uwaga recenzji gałęzi `44ba49f7`: dotąd ponowienie z index kasowało np. sesję klirensu karty docelowej
+    z samymi wyborami — status wcześniaka, jednostka Scr, metoda — z nowej bieżącej wersji);
+  - sekcja głowy = dokładnie kopia wczytana (karta docelowa nie ma w niej nic własnego, np. dostała ją przy scaleniu):
+    jak na `2df41a8` i jak zwykły zapis tej wizyty — zmianą jest każda sekcja formularza różna od kopii wczytanej (także
+    antropometria w sesji klirensu z przeliczonym BSA i eGFR, wybór wzoru i wersji kalkulatora, `isDoctor`, PAL karty
+    spożycia, przeliczony PAL planu); sekcja `null` albo z samych pustych pól — nie;
+  - karta docelowa ma w sekcji coś własnego: sekcja formularza z danymi jest zmianą, gdy różni się od kopii wczytanej
+    w rzucie porównania (`Bsc_porownanie`: jak `Bsc_dane`, a w sesji klirensu wszystkie niepuste pola `inputs` poza
+    antropometrią karty pacjenta i wyborami widoku — jednostka Scr, stan kreatyniny, metoda oznaczenia i status
+    noworodka są zmianą); zmieniona sekcja przechodzi w całości. Sekcja formularza bez danych jest zmianą (usunięciem)
+    tylko, gdy formularz ją zapisał (nie `null` i nie same puste pola), kopia wczytana miała dane, a głowa ma te same
+    dane w rzucie porównania (ta sama liczba Scr w innej jednostce to inne dane); własne, inne dane karty docelowej
+    zostają;
+  - poziomy `user`, `advanced`/`growthBasic`, `data`, punkty terapii i wiersze — bez zmian.
+- Bez zmian: pola proste `user.*`, `Bsc2`, punkty terapii, sekcje wizyty spoza listy (`bp`, `adultVitals`,
+  `respiratory`, `circumference`), notatki, Terminarz, listy, format zapisu i synchronizacji.
+- Kopie wiedzy formularza w sejfie: `BSC_PAL_DOMYSLNE` = [1,4; 1,6] (kopia `PAL_DOMYSLNE_HISTORYCZNE`
+  z `vilda_data_import_export.js`), `BSC_KLIRENS_POLA_PACJENTA` (pola `patientSet` w `kalkulator-klirens.html`),
+  `BSC_KLIRENS_POLA_WIDOKU`; antropometria porównania wyliczana z pól pacjenta bez `neonatalTermStatus`. Zgodność
+  pilnują strażnicy testów: PAL — 54 kształty planu wobec prawdziwego `vildaPalZapisuWybrany`; klirens w obie strony —
+  każde ze 126 pól prawdziwych sesji z wartością '7' i '0'; porównanie w ponowieniu — zmiana każdego pola z osobna.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/scalanie-sekcje-bez-danych.test.mjs` (73;
+prawdziwe `mergePatients` i `savePatient(…, {patientId, baselinePayload, dolaczPoScaleniu})`; Y — głowa karty
+docelowej, X — stara karta, planX = `{1,8; wybrany; „redukcyjna”; wybrana; cel 18 kg}`). Na `2df41a8` 38 z 70
+czerwonych:
+- T1, T2 (czerwone) plan Y = prawdziwy zapis index z wiekiem (PAL 1,6 domyślny), docpro, kalkulatora klirensu albo
+  index bez wieku, X z planX → plan Y = planX w całości;
+- T21, T5 (czerwone) lekarz Y `{true, null}` z docpro, X z PWZ → lekarz X (kontrola: Y z PWZ zostaje); spożycie Y
+  z samym PAL, X z historią 1500 kcal → spożycie X;
+- T18, T38 (czerwone) klirens Y = pusta sesja albo sesja po samym wyborze wzoru KT/V, X z Scr 0,4 → sesja X;
+- T25 (czerwony) „Zostaw ten, scal pozostałe”: Y z planem domyślnym, X1 z PAL 1,8, X2 zapisany ostatni z PAL 1,2 → plan
+  Y = PAL 1,2, 5 wersji;
+- ponowienie po scaleniu (formularz = głowa X + wiersz 72 mies.):
+  - T26 (czerwony) Y z wybranym planem `{1,2; „lagodna”}`, w formularzu X PAL przeliczony na 1,4 → plan Y bez zmian;
+    kontrola: lekarz wybrał w formularzu PAL 1,8 → plan formularza;
+  - T41, T44, T42, T31 (czerwone) Y ze spożyciem z historią 1300 kcal, z PWZ albo z Scr 0,5 / 0,4; formularz
+    z przeliczonym PAL karty spożycia, z docpro `{true, null}`, z sesją odbudowaną przez stronę albo pustą → spożycie,
+    PWZ i klirens Y zostają;
+  - T36 (czerwony) Y z własną Scr 0,5, lekarz kasuje Scr w formularzu X (Scr 0,4) → klirens Y zostaje; T35 (kontrola,
+    jak na `2df41a8`) te same dane w obu kartach → usunięcie przechodzi do głowy Y;
+  - T46 (kontrola, jak na `2df41a8`) Y dostała przy scaleniu sesję X (Scr 0,9 µmol/L), lekarz zmienia tylko jednostkę
+    Scr, stan kreatyniny, metodę albo status noworodka → zmiana w głowie Y, Scr 0,9 bez zmian;
+  - T54 (kontrola, jak na `2df41a8`) Y bez sekcji, po scaleniu głowa = sekcja X; formularz zmienia tylko wzrost 140 →
+    104 cm i masę z przeliczonym summary (BSA 0,81 → 0,70 m², CKiD U25 eGFRcr 129 → 96), wzór, wersję kalkulatora,
+    `isDoctor`, PAL karty spożycia albo PAL planu → głowa = sekcja z formularza, jak zwykły zapis tej wizyty;
+  - T48, T57 (czerwone) Y z własną sesją klirensu (Scr 0,5 albo Scr 0,4 jak X, ale z własną antropometrią
+    i `savedAtISO`), formularz X różni się od kopii wczytanej antropometrią, wzorem, wersją albo `savedAtISO` → sesja Y
+    zostaje;
+  - T58–T60 (czerwone na `44ba49f7`, jak na `2df41a8`) Y z sekcją „bez danych” — sesja klirensu z samymi wyborami
+    (µmol/L, wcześniak, metoda enzymatyczna, stan stabilny), lekarz z docpro `{true}` bez PWZ, spożycie z samym PAL
+    karty spożycia — formularz X ze strony, która tej sekcji nie prowadzi (index, docpro) → sekcja Y w nowej bieżącej
+    wersji, 4 wersje, wiersze 48–72;
+- kontrole „Scal pacjentów” (zielone na `2df41a8`): plan Y z wybranym PAL bez diety zostaje bez diety X; dane
+  urodzeniowe Y z tygodniem 39 zostają w całości; Y bez sekcji → sekcja X, także bez danych; obie sekcje bez danych →
+  sekcja Y; spożycie Y z samym szacowanym spożyciem 1400 kcal/d i sesja Y z samym Kru 0 ml/min to dane.
+Zmieniona kontrola w `zapis-usunietej-karty.test.mjs` („niewypełniona sekcja domyślna karty docelowej…”): po „Scal
+pacjentów” głowa Y ma planX (dotąd pusty plan Y). `tests/e2e/scalanie-sekcje-bez-danych.spec.mjs`: prawdziwy index —
+Y zapisany bez dotykania planu, X z PAL 1,8 wybranym, Duplikaty → „Zostaw ten, scal pozostałe” → głowa Y = plan X
+(czerwony na `2df41a8`); prawdziwy `kalkulator-klirens.html` — po odmowie i ponowieniu jednostka Scr poprawiona na
+mg/dl i wzrost poprawiony 140 → 104 cm trafiają do głowy Y, a w świeżej karcie „Ostatni pomiar (klirens/eGFR)” pokazuje
+eGFRcr 96 (oba zielone na `2df41a8` — pilnują, by poprawka nie gubiła zmian lekarza).
+
+**Wpływ kliniczny.**
+- Po scaleniu głowa karty docelowej niesie PAL i dietę wybrane w karcie dołączonej, gdy w karcie docelowej ich nie
+  wybrano — zalecane kcal liczy się z wyboru lekarza zamiast z reguły wieku i zalecenia silnika (cel własny działa tylko
+  po „Odtwórz zapis”, P-CEL-WLASNY-ZAPIS). Wraca historia „Szacowanego spożycia”, posiłki, poprzednia ocena klirensu
+  i PWZ; sesja klirensu z samym wyborem wzoru KT/V nie blokuje już przeniesienia wyniku.
+- Ponowienie z formularza strony, która sekcji nie prowadzi, nie kasuje wyborów lekarza w sekcji „bez danych” karty
+  docelowej (np. statusu wcześniaka w sesji klirensu, od którego zależy dobór wzoru eGFR) — jak na `2df41a8`.
+- Ponowienie nie kasuje wybranego planu, historii spożycia, PWZ ani klirensu karty docelowej, gdy ma ona własne, inne
+  dane — ani wartościami domyślnymi formularza starej karty, ani usunięciem w nim (na `2df41a8` były kasowane). Gdy
+  głowa ma te same dane co kopia wczytana, usunięcie w formularzu trafia do głowy — jak przy zwykłym zapisie.
+- Gdy głowa jest dokładnie kopią wczytaną, ponowienie zapisuje sekcję jak zwykły zapis i jak `2df41a8`: poprawiony
+  w kalkulatorze klirensu wzrost i masa trafiają do zapisanej oceny z przeliczonym BSA i eGFR, a jednostka Scr, stan
+  kreatyniny, metoda IDMS i status noworodka (`populationContext.termStatus`) — do głowy karty docelowej.
+- Stary wybór z karty dołączonej może być nieaktualny: dotąd przepadał po cichu, teraz wraca po cichu (arkusz „Scalić
+  w jeden rekord?” o tym nie mówi — decyzja właściciela).
+
+**Ograniczenia.**
+- „Zostaw ten, scal pozostałe”: sekcję bez danych wypełnia najnowiej zapisany rekord z danymi w tej sekcji (liczy się
+  data zapisu rekordu, nie wiek sekcji); kolejne karty jej nie zmieniają.
+- Bez zmian: `bisphos` i `chartCreator` nie są na liście `Bsc1` i nie przechodzą nigdy, a w ponowieniu `bisphos`
+  z docpro (domyślne selecty) liczy się jak dane; retencja może przyciąć przeniesioną wersję karty dołączonej; index
+  zawsze zapisuje płeć „M”, więc reguła „płeć z dołączanej” dla kart z index praktycznie nie działa.
+- Sesja klirensu z samymi wyborami tekstowymi (metoda, wzór, odpowiedzi „Nie”/„Nie wiem”, daty zbiórki bez wyników) jest
+  przy „Scal pacjentów” „bez danych”, a w porównaniu przy ponowieniu (poza wzorem) — zmianą. Pole nieobecne w zapisanej
+  sesji (np. nowe pole strony) liczy się jako zmiana — jak na `2df41a8`.
+- **Kalkulator klirensu w trybie podglądu** (po wczytaniu z Karty pacjenta) oddaje w `collectUserData` pustą sesję;
+  sejf nie odróżnia jej od Scr skasowanej przez lekarza. Gdy głowa ma te same dane klirensu co kopia wczytana,
+  ponowienie bez odtworzenia sesji zastępuje ją pustą — jak zwykły zapis i jak na `2df41a8`; poprzednia ocena zostaje
+  w historii. Naprawa po stronie strony — osobne zadanie.
+- Gdy karta docelowa ma własną, inną sesję klirensu, antropometria i wybory widoku zmienione tylko w formularzu starej
+  karty nie są zmianą: zostaje sesja karty docelowej z jej wynikiem, a poprawiony wzrost trafia tylko do `user`
+  i wierszy (wzrost w danych pacjenta obok oceny klirensu policzonej z wzrostu karty docelowej). Za „własną” sejf
+  uznaje też sesję starej karty zapisaną ponownie w karcie docelowej po scaleniu.
+- Sekcja formularza, której dane różnią się od kopii wczytanej, przechodzi w całości — sejf nie odróżnia zmiany lekarza
+  od zmiany wprowadzonej przez formularz (zmierzone: plan z dietą „intense” i celem 45 kg po „Nowym pomiarze” wraca jako
+  „light” bez celu i zastępuje wybrany plan Y — jak na `2df41a8`). Sekcja zapisana samymi `null` albo pustymi polami
+  nie jest usunięciem.
+- Sejf trzyma kopie trzech list warstwy formularza — pilnowane strażnikami, nie wspólną stałą.
+- Osobne wady zmierzone przy okazji (poza zakresem): wybrany PAL nie wraca do `#palFactor` przy wczytaniu z Karty
+  pacjenta w świeżej karcie przeglądarki (także bez scalania) — korzyść dla PAL widać w rekordzie, a w formularzu tylko
+  tam, gdzie select ma już opcje; plan z dietą „intense” wczytuje się jako „light”; `savePatient` uzupełnia przekazany
+  ładunek w miejscu (zachowanie sprzed zmiany).
+
+**Mutacje.** 39 (dokładna podmiana na kopii lustrzanej, liczone na 96–106 testach trzech plików scalania), każda
+czerwona poza jedną równoważną (warunek najwyższego poziomu w gałęzi „głowa = kopia wczytana”): bez reguł stron —
+26 czerwonych, łączenie pole po polu — 26, reguły PAL, diety, celu własnego, spożycia, lekarza i klirensu, listy pól
+klirensu, zastępowanie sekcją źródła bez danych, klauzule usunięcia w ponowieniu, rzut porównania (jednostki, status
+noworodka, antropometria, wybory widoku), bez gałęzi „głowa = kopia wczytana” — 9. Dawny warunek pominięcia sekcji
+głowy „bez danych” (bez `!pusta(cel[k])`) — T58–T60 czerwone.
+
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213
+na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe
+adresy w precache (append-only); `SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+`tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
 ## Ponowienie zapisu: niewypełniona sekcja karty docelowej to sekcja pusta (P-ZAPIS-USUNIETEJ-3, SW 1.1.200, `vilda_vault.js` 206, 2026-10-08)
 
@@ -13876,21 +14410,32 @@ puste tylko `null`, `undefined` i `''`. Formularz zapisuje niewypełnione sekcje
 (np. plan `{palFactor:null, palWybrany:false, dietLevel:null, dietaWybrana:false}`, `foods`, `doctor`, sekcje funkcji
 życiowych). Gdy karta docelowa Y miała taki niewypełniony plan, a stara karta X wypełniony, ponowienie zastępowało plan X
 pustym planem Y. Odwrotnie: pusta sekcja w formularzu (różna od kopii wczytanej) nadpisywała wypełnioną sekcję Y.
+*(Korekta 2026-10-14, P-SCALANIE-SEKCJE: plan z `palFactor:null` zapisują docpro, kalkulator klirensu i index bez
+wieku. Index z wiekiem zapisuje PAL domyślny z reguły wieku, np. `{palFactor:1.6, palWybrany:false, …}`, a spożycie
+z PAL karty spożycia; docpro — lekarza `{isDoctor:true}`, kalkulator klirensu — pustą sesję klirensu z jednostkami
+i stanami. Takich sekcji ta reguła nie łapała — robi to P-SCALANIE-SEKCJE.)*
 
 **Reguła po zmianie.** Pusta jest też wartość złożona: obiekt albo lista bez żadnej wartości poza `null`, `''` i `false`
 (sprawdzane w głąb). Taka sekcja karty docelowej nie zastępuje sekcji ze starej karty, a taka sekcja w formularzu nie jest
 „zmianą lekarza”. Liczby i teksty są danymi. Wyczyszczenie pola w formularzu przy ponowieniu nie kasuje wartości karty
-docelowej (jak dotąd dla pól pustych).
+docelowej (jak dotąd dla pól pustych). *(Aktualizacja 2026-10-14, P-SCALANIE-SEKCJE: na najwyższym poziomie zapisu
+sekcja karty docelowej będąca dokładnie kopią wczytaną podlega tej regule bez zmian, jak zwykły zapis tej wizyty. Gdy
+karta docelowa ma w sekcji coś własnego, „bez danych” i zmianę lekarza ocenia się bez wartości domyślnych strony —
+zmianą są też jednostki, stany, metoda oznaczenia i status noworodka w sesji klirensu; sekcja formularza z samymi
+wartościami domyślnymi, w której lekarz wyczyścił dane, jakie głowa karty docelowej ma z kopii wczytanej, jest zmianą —
+jak przy zwykłym zapisie. Sekcja zapisana samymi `null` i pustymi polami zmianą nie jest, jak dotąd.)*
 
 **Przypadki syntetyczne** — `tests/unit/zapis-usunietej-karty.test.mjs`:
 - X z planem {1,6; wybrany; „redukcyjna”}, Y z pustym planem formularza → po „Scal pacjentów” głowa Y ma pusty plan
-  (kontrola); po ponowieniu z formularza X plan X;
+  (kontrola; *od P-SCALANIE-SEKCJE, 2026-10-14: głowa Y ma plan X już po scaleniu*); po ponowieniu z formularza X plan X;
 - formularz z planem {tekst: null, dieta: ''} → plan karty docelowej „plan Y” zostaje.
 Na `3676f0d` oba czerwone. Mutacje: `false` nie jest puste — 1 czerwony; bez sprawdzania w głąb — 2.
 
 **Wpływ kliniczny.** Wypełnione sekcje (plan żywieniowy, dane lekarza, funkcje życiowe) nie giną przy ponowieniu przez
 niewypełnione sekcje drugiej karty. „Scal pacjentów” (`Bsc1`) nadal trzyma sekcję karty docelowej, jeżeli nie jest
-`null` — także niewypełnioną; to zachowanie sprzed zmiany, poza zakresem tej poprawki.
+`null` — także niewypełnioną; to zachowanie sprzed zmiany, poza zakresem tej poprawki. *(Aktualizacja 2026-10-14:
+zmienione w P-SCALANIE-SEKCJE — `Bsc1` zastępuje w całości sekcję karty docelowej bez danych, także z samymi
+wartościami domyślnymi strony, sekcją starej karty z danymi.)*
 
 ## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.199, `vilda_vault.js` 205, 2026-10-08)
 
@@ -13909,7 +14454,10 @@ dopisywało do formularza tylko wiersze pomiarów karty Y, a resztę zapisu bra�
 „Scal pacjentów”: jej dane zostają, a z formularza idą tylko zmiany wpisane przez lekarza — pola różne od kopii wczytanej
 do formularza (`baselinePayload`):
 - zmiana lekarza to niepusta wartość formularza, inna niż w kopii wczytanej, w polu, które ta kopia miała (porównanie
-  niezależne od kolejności kluczy). Pole bez takiej zmiany bierze niepustą wartość karty docelowej: puste pole
+  niezależne od kolejności kluczy; *od P-SCALANIE-SEKCJE, 2026-10-14, sekcje najwyższego poziomu, w których karta
+  docelowa ma coś własnego (inne niż kopia wczytana), porównuje się bez wartości domyślnych strony — na ich danych, a w
+  sesji klirensu także na jednostkach, stanach, metodzie oznaczenia i statusie noworodka*). Pole bez takiej zmiany
+  bierze niepustą wartość karty docelowej: puste pole
   formularza (brak płci, wyzerowana wizyta po „Nowy pomiar”) i sekcja, której stara karta nie miała (formularz wstawia
   sekcje domyślne, np. pusty „lekarz”), nie nadpisują jej danych; puste pole karty docelowej nie kasuje wartości ze
   starej karty. Pole po polu w `user`, w `advanced`/`growthBasic` (poza wierszami) i w ich `data`; pozostałe sekcje
@@ -14350,7 +14898,8 @@ i scalanie synchronizacji (P-SCALANIE-BLOKADA). Każda z tych operacji to „odc
   gdy usunięcie nie jest wcześniejsze niż ostatni zapis (lokalny albo z ładunku) — wtedy nic nie wpisuje (karta nie
   liczy się jako zaktualizowana). Przegrany nagrobek znika tu, pod blokadą, a nie dopiero na końcu scalania.
 - Koniec scalania zdejmuje lokalny nagrobek tylko pod blokadą pacjenta i tylko wtedy, gdy to ten sam nagrobek (ta sama
-  chwila usunięcia) co na starcie.
+  chwila usunięcia) co na starcie. *(Aktualizacja 2026-10-14, P-SYNC-WLASCICIEL: nagrobek zostaje, gdy przegrana karta
+  tu nie powstała — jej wersje leżą tu, nowsze, pod inną kartą; zdejmuje go dopiero zapis tej karty.)*
 - `savePatient` pod blokadą czyta rekord świeżo: karta, która doszła po odczycie listy, jest traktowana jak istniejąca
   (licznik, data założenia i numer kolejny wersji liczone od niej, `isNew: false`).
 - Ekran edycji pacjenta: „Usuń pacjenta” przy zajętej blokadzie pokazuje „Czekam — ten pacjent jest zapisywany w innej
@@ -14967,7 +15516,8 @@ Dlatego decyzje zapadają pod blokadą, na świeżym odczycie.
   lokalnej nie ginie). Pominięcie zajętego pacjenta byłoby gorsze: wysyłka zastępuje cały stan w chmurze i zgubiłaby
   jego wersje z innych urządzeń.
 - Kolejność blokad jak w koszu: najpierw pacjent, potem lista nagrobków; scalanie trzyma najwyżej jedną blokadę pacjenta
-  naraz, więc nie ma zakleszczeń. Szyfrowanie treści z ładunku zostaje poza blokadą (blokada trwa milisekundy).
+  naraz, więc nie ma zakleszczeń. *(Aktualizacja 2026-10-14, P-SYNC-WLASCICIEL: wyjątkiem jest faza przeniesień wersji
+  między kartami — dwie blokady pacjenta, w kolejności rosnących id, jak „Scal pacjentów”; bez zakleszczeń.)* Szyfrowanie treści z ładunku zostaje poza blokadą (blokada trwa milisekundy).
 
 **Bez zmian.** Reguły scalania (rewizja, chwila zmiany, nagrobki pacjentów i wersji, kosz 30 dni, przypięta wersja
 wygrywa z retencją), format ładunku, liczniki wyniku, `vilda_sync.js`. Sprawdzenie wersji tuż przed usunięciem
