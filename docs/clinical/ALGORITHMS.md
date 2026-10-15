@@ -13539,7 +13539,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.283, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
+## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.284, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
 
 **Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, pod
 którą kartą leżą historyczne zapisy (wersje) po „Scal pacjentów” z równoległą pracą na drugim urządzeniu, która treść
@@ -13707,13 +13707,13 @@ i szersza reguła chwili zapisu karty (zawsze późniejsza z dwóch). Po uwagach
 chwili zapisu ładunku bez `savedAtISO` zawężone do `tutejszaKarta` — 1 czerwony (dotąd przeżywał); integracja bez
 wysyłki zapasowej (`vilda_sync_integration.js` z `44ba49f7`) — 2 czerwone w unit i czerwony e2e.
 
-**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `9b3642c`
-po LAB-HISTORIA PR3). `vilda_vault.js` 212 → 213, `vilda_sync_integration.js` 49 → 50 (tylko P-SYNC-WLASCICIEL)
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `c9f893a`
+po #687, Pokwitanie etap 1). `vilda_vault.js` 212 → 213, `vilda_sync_integration.js` 49 → 50 (tylko P-SYNC-WLASCICIEL)
 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (144 → 145) i `vilda_session_bridge.js` (68 → 69); nowe
-adresy w precache (append-only); `SW_VERSION` 1.1.282 → 1.1.283 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+adresy w precache (append-only); `SW_VERSION` 1.1.283 → 1.1.284 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
 `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
-## „Scal kopię konta” mówi o notatkach i listach z kopii; „Scal teraz” także wtedy, gdy dochodzą tylko one (P-KOPIA-DANE-KONTA, SW 1.1.283, `vilda_vault.js` 213, `vilda_auth_ui.js` 495, 2026-10-14)
+## „Scal kopię konta” mówi o notatkach i listach z kopii; „Scal teraz” także wtedy, gdy dochodzą tylko one (P-KOPIA-DANE-KONTA, SW 1.1.284, `vilda_vault.js` 213, `vilda_auth_ui.js` 495, 2026-10-14)
 
 **Zmiana kliniczna: NIE** w zakresie wzorów, progów, jednostek i interpretacji. Zmiana funkcjonalna ekranu „Scal kopię
 konta” (podgląd, widoczność i etykieta „Scal teraz”, podsumowanie, wynik, podtytuł) i wyniku `previewVaultBackupMerge`
@@ -13891,10 +13891,10 @@ z `createdAtISO` — T43, pętla podglądu bez `||!h.header` — T44, część T
 z 12 losowych przebiegów, ekran bez odjęcia części Terminarza — 3 czerwone. Po uwadze recenzji `a38f42cf`: jedna
 flaga łącznej nazwy dla trzech linii wyniku (stan sprzed poprawki) — T47 i test łącznej nazwy w każdej linii czerwone.
 
-**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `9b3642c`
-po LAB-HISTORIA PR3). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 494 → 495 na stronach i w adresach wstrzykiwanych
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `c9f893a`
+po #687, Pokwitanie etap 1). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 494 → 495 na stronach i w adresach wstrzykiwanych
 przez `vilda_chrome.js` (144 → 145) i `vilda_session_bridge.js` (68 → 69); nowe adresy w precache (append-only);
-`SW_VERSION` 1.1.282 → 1.1.283 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`)
+`SW_VERSION` 1.1.283 → 1.1.284 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`)
 — `npm run podbij-wersje`.
 
 ## Mapa właścicieli przed pierwszym zapisem także przy kartach bez nowych wersji (P-KOPIA-POMIJA-3, SW 1.1.232, `vilda_vault.js` 209, 2026-10-12)
@@ -14099,7 +14099,7 @@ z kopii; „Scal teraz” jest widoczne, gdy dochodzą tylko one.)*
 `SW_VERSION` 1.1.199 → 1.1.200 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) —
 `npm run podbij-wersje`.
 
-## „Scal pacjentów” i ponowienie zapisu: niewypełniona sekcja karty docelowej nie trzyma sekcji z danymi (P-SCALANIE-SEKCJE, SW 1.1.283, `vilda_vault.js` 213, 2026-10-14)
+## „Scal pacjentów” i ponowienie zapisu: niewypełniona sekcja karty docelowej nie trzyma sekcji z danymi (P-SCALANIE-SEKCJE, SW 1.1.284, `vilda_vault.js` 213, 2026-10-14)
 
 **Zmiana kliniczna: możliwa** — wzory, współczynniki, progi, tabele i jednostki bez zmian; zmienia się zawartość
 bieżącej wersji (głowy) karty docelowej po „Scal pacjentów” i po ponowieniu zapisu do niej (P-ZAPIS-USUNIETEJ). Głowa
@@ -14256,10 +14256,10 @@ klirensu, zastępowanie sekcją źródła bez danych, klauzule usunięcia w pono
 noworodka, antropometria, wybory widoku), bez gałęzi „głowa = kopia wczytana” — 9. Dawny warunek pominięcia sekcji
 głowy „bez danych” (bez `!pusta(cel[k])`) — T58–T60 czerwone.
 
-**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `9b3642c`
-po LAB-HISTORIA PR3). `vilda_vault.js` 212 → 213
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `c9f893a`
+po #687, Pokwitanie etap 1). `vilda_vault.js` 212 → 213
 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (144 → 145) i `vilda_session_bridge.js` (68 → 69); nowe
-adresy w precache (append-only); `SW_VERSION` 1.1.282 → 1.1.283 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+adresy w precache (append-only); `SW_VERSION` 1.1.283 → 1.1.284 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
 `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
 ## Ponowienie zapisu: niewypełniona sekcja karty docelowej to sekcja pusta (P-ZAPIS-USUNIETEJ-3, SW 1.1.200, `vilda_vault.js` 206, 2026-10-08)
