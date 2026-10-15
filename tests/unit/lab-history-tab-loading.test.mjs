@@ -31,6 +31,8 @@ describe('stosy auth: moduły zakładki Badania', () => {
       expect(at('vilda_lab_history.js')).toBeLessThan(at('vilda_lab_history_tab.js'));
       expect(at('vilda_lab_history_tab.js')).toBeLessThan(at('vilda_vault.js'));
       expect(at('vilda_lab_history_tab.js')).toBeLessThan(at('vilda_auth_ui.js'));
+      expect(at('vilda_puberty_assessment.js')).toBeGreaterThan(-1);
+      expect(at('vilda_puberty_assessment.js')).toBeLessThan(at('vilda_auth_ui.js'));
     }
   });
 
@@ -46,7 +48,7 @@ describe('stosy auth: moduły zakładki Badania', () => {
 function environment(missing) {
   const appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {}, VildaAuthUI: {}, VildaProAccess: {},
-    VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabHistory: {}, VildaLabHistoryTab: {},
+    VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {}, VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {},
     sessionStorage: { getItem: () => null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };

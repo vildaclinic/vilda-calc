@@ -327,8 +327,8 @@ test('minipuberty shows only D7 and M3 per cohort, including both sexes, without
 
 test('Crofton highlights an actual G stage but never converts P, female observations or chronological age into G', async ({ page }) => {
   await open(page, { sex: 'M', age: 12, ageMonths: 0 }, '220');
-  // The existing LH form supplies a current observation. Inhibin B does not
-  // gain a new stage input merely to control the educational diagram.
+  // One explicit G observation is shared across analytes. The independent P
+  // feature cannot replace it or supply a missing gonadal stage.
   await choose(page, 'lh', 'LH');
   await quickSelect(page, 'Kind', 'G');
   await quickSelect(page, 'Stage', '3');
@@ -347,6 +347,15 @@ test('Crofton highlights an actual G stage but never converts P, female observat
   await choose(page, 'inhibin_b', 'Inhibina B');
   await page.locator('#labValue').fill('220');
   await panel(page).locator('[data-view="puberty"]').click();
+  await expect(observations(page).locator('[data-observation-stage="3"]')).toHaveAttribute('data-observation-highlight', 'true');
+  await expect(page.locator('#labPubertyStageSummary')).toContainText('G3 · P3');
+  expect((await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment())).evaluation.input.puberty)
+    .toMatchObject({ kind: 'G', stage: 3 });
+  await page.locator('#labPubertyRefineStage').click();
+  await page.locator('#labPubertySharedEditor .vpa-segments [data-puberty-axis="G"][data-puberty-stage=""]').click();
+  await closePatientEditor(page);
+  await expect(page.locator('#labPubertyStageSummary')).toHaveText('P3');
+  expect((await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment())).evaluation.input.puberty.stage).toBeNull();
   await expect(observations(page).locator('[data-observation-highlight="true"]')).toHaveCount(0);
   await quickSelect(page, 'Sex', 'F');
   await closePatientEditor(page);

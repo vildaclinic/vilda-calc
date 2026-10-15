@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=69"></script>
+  <script src="vilda_session_bridge.js?v=70"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=145"></script>
+  <script src="vilda_chrome.js?v=146"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -453,10 +453,13 @@
   <script src="vilda_hormone_reference_ui.js?v=1"></script>
   <script src="vilda_lab_assessment_ui.js?v=15"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
-  <script src="vilda_puberty_assessment.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=16"></script>
+  <script src="vilda_puberty_assessment.js?v=2"></script>
+  <script src="vilda_puberty_assessment_context.js?v=1"></script>
+  <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
+  <script src="vilda_puberty_assessment_ui.js?v=1"></script>
+  <script src="vilda_lab_puberty_ui.js?v=17"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
-  <script src="vilda_puberty_source.js?v=12"></script>
+  <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
   <script src="vilda_hormone_lifespan_data.js?v=25"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=6"></script>
@@ -611,18 +614,37 @@
       var identity = window._vildaCurrentPatientId || '';
       // sessionStorage jest wspólne dla ramek tej karty; global ramki może być starszy.
       try { identity = sessionStorage.getItem('vildaCurrentPatientId') || ''; } catch (_) {}
+      var sex = shared.sex || patient.sex || null;
+      var ageYears = shared.age != null && shared.age !== '' ? shared.age : patient.age;
+      var ageMonths = shared.ageMonths != null && shared.ageMonths !== '' ? shared.ageMonths : patient.ageMonths;
+      var activeAssessment = null;
+      try {
+        var assessmentRuntime = window.VildaPubertyAssessmentContext;
+        if (assessmentRuntime && typeof assessmentRuntime.readActiveContext === 'function') {
+          // The live form/session owns its original age precision and visit
+          // date. A partial shared mirror must not replace either with blanks.
+          activeAssessment = assessmentRuntime.readActiveContext({ patientId: identity || null });
+        }
+      } catch (_) { /* The numerical conversion remains available. */ }
+      if (activeAssessment && activeAssessment.available && activeAssessment.demographics) {
+        sex = activeAssessment.demographics.sex;
+        ageYears = activeAssessment.demographics.ageYears;
+        ageMonths = activeAssessment.demographics.ageMonths;
+      }
       if (identity) {
         try { source = window.VildaPubertySource && window.VildaPubertySource.kontekstPacjenta
           ? window.VildaPubertySource.kontekstPacjenta(identity) : null; } catch (_) {}
-        if (!source || source.patientId !== identity || source.status !== 'ready') {
-          return { identityKey: identity, sourceStatus: source && source.patientId === identity && source.status === 'loading' ? 'loading' : 'unavailable' };
+        if ((!source || source.patientId !== identity || source.status !== 'ready') && !(activeAssessment && activeAssessment.available)) {
+          var pendingContext = { identityKey: identity, sourceStatus: source && source.patientId === identity && source.status === 'loading' ? 'loading' : 'unavailable' };
+          if (activeAssessment) pendingContext.pubertyAssessmentContext = activeAssessment;
+          return pendingContext;
         }
-        puberty = source.puberty; pubertyState = source.state;
+        if (source && source.patientId === identity && source.status === 'ready') { puberty = source.puberty; pubertyState = source.state; }
       }
-      var sex = shared.sex || patient.sex || null;
-      var suppliedPuberty = puberty || !identity && shared.puberty || {};
-      var onsetYears = puberty ? puberty.wiekStartuPokwitaniaLat : suppliedPuberty.onsetAgeYears;
-      var onsetSex = identity ? source.sourceSex : sex;
+      var activePuberty = activeAssessment && activeAssessment.available && activeAssessment.puberty;
+      var suppliedPuberty = activePuberty || puberty || !identity && shared.puberty || {};
+      var onsetYears = activePuberty ? activePuberty.onsetAgeYears : puberty ? puberty.wiekStartuPokwitaniaLat : suppliedPuberty.onsetAgeYears;
+      var onsetSex = activePuberty ? activeAssessment.sex : identity ? source && source.sourceSex : sex;
       var onset = null;
       // Pole karty oznacza początek Th2 / osiągnięcie kryterium G, nie sam
       // numer Tannera. Nie odtwarzamy daty ani pozornej dokładności z ułamka lat.
@@ -647,16 +669,38 @@
         identityKey: identity,
         sourceStatus: 'ready',
         sex: sex,
-        birthDateISO: shared.dobISO || null,
-        ageYears: shared.age != null && shared.age !== '' ? shared.age : patient.age,
-        ageMonths: shared.ageMonths != null && shared.ageMonths !== '' ? shared.ageMonths : patient.ageMonths,
+        birthDateISO: activeAssessment && activeAssessment.available && activeAssessment.demographics
+          ? activeAssessment.demographics.birthDateISO : shared.dobISO || null,
+        ageYears: ageYears,
+        ageMonths: ageMonths,
         tanner: extractTannerFromAny(shared) || pubertyState && pubertyState.etap || null,
         onset: onset,
         onsetReportedYears: onset ? onsetYears : null,
         history: history,
-        gnrhaStatus: puberty && puberty.gnrhaStatus || !identity && shared.puberty && shared.puberty.gnrhaStatus || null,
+        gnrhaStatus: suppliedPuberty.gnrhaStatus || null,
         testicularVolume: shared.advanced && shared.advanced.testicularVolume || pubertyState && pubertyState.jadra || null
       };
+      if (activeAssessment) {
+        // A record can be displayed as an earlier observation without becoming
+        // today's examination. A present invalid/future schema also blocks the
+        // old-number fallback when there is no active form carrier.
+        if (!activeAssessment.available && source && source.status === 'ready' && source.assessmentContext &&
+            source.assessmentContext.status !== 'absent') {
+          activeAssessment = Object.assign({}, activeAssessment, { assessmentContext: source.assessmentContext, axisStates: {} });
+          ['G', 'Th', 'P'].forEach(function (axis) {
+            activeAssessment.axisStates[axis] = { current: false, eligible: false, reason: 'earlier-observation' };
+          });
+        }
+        // Display a saved untyped number as such. It never becomes G/Th and
+        // cannot activate the stage comparison in the shared serializer.
+        if (!activeAssessment.available && activeAssessment.assessmentContext && activeAssessment.assessmentContext.status === 'absent' &&
+            !activeAssessment.assessmentContext.legacy && context.tanner && window.VildaPubertyAssessment) {
+          activeAssessment = Object.assign({}, activeAssessment, { assessmentContext:
+            window.VildaPubertyAssessment.readUser({ tannerStage: context.tanner }) });
+        }
+        context.pubertyAssessmentContext = activeAssessment;
+        context.gonadalObservation = activeAssessment.gonadal;
+      }
       if (neonatalAge) {
         context.neonatalAge = neonatalAge;
         if (neonatalAge.gestationalDays && pretermRule && pretermRule.operator === '<') {

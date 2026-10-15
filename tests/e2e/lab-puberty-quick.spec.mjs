@@ -266,6 +266,8 @@ test('changing the current age or patient never restores a manual range', async 
   await choose(page);
   await currentSample(page);
   await fill(page, 'AgeYears', '6');
+  expect((await snapshot(page)).evaluation.input.puberty.appliesToCurrentContext).toBe(false);
+  await select(page, 'Stage', '4');
   const changedAge = await expectNoReportedRange(page);
   expect(changedAge.evaluation.input.age.years).toBe(6);
   expect(changedAge.evaluation.clinical.code).toBe('early_development');
@@ -303,6 +305,8 @@ test('the visible age and stage define the current result even when its note is 
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
   await fill(page, 'AgeYears', '8');
+  expect((await snapshot(page)).evaluation.input.puberty.appliesToCurrentContext).toBe(false);
+  await select(page, 'Stage', '4');
   const current = await snapshot(page);
   expect(current.evaluation.input.contextBasis).toBe('current-patient');
   expect(current.evaluation.input.sampleDateISO).toBeNull();
@@ -531,6 +535,8 @@ test.describe('320 px quick form', () => {
     await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
     await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
     await fill(page, 'AgeYears', '6');
+    expect((await snapshot(page)).evaluation.input.puberty.appliesToCurrentContext).toBe(false);
+    await select(page, 'Stage', '4');
     await expectNoReportedRange(page);
     await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
     await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');

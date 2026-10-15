@@ -23,7 +23,11 @@ async function stan(page, s) {
     window.__vildaPlanPalTouched = false; window.__vildaPlanPalDefault = null; window.__vildaDietStrategyTouched = false;
     document.querySelectorAll('#advMeasurements .measure-row .remove-measure').forEach((b) => b.click());
     set('name', 'Testowy Fikcyjny'); set('sex', s.sex); set('age', s.age); set('ageMonths', 0); set('weight', s.w); set('height', s.h); set('customGoalKg', '');
-    set('tannerStage', s.tanner == null ? '' : s.tanner);
+    window.VildaPubertyAssessmentState.clear();
+    if (s.tanner != null) {
+      const typed = window.VildaPubertyAssessmentState.editObservation(s.sex === 'M' ? 'G' : 'Th', Number(s.tanner));
+      if (!typed.ok) throw new Error('Nie przyjęto jawnej oceny G/Th: ' + typed.reason);
+    }
     for (const r of s.historia || []) {
       document.getElementById('advAddMeasurementBtn').click();
       const rows = document.querySelectorAll('#advMeasurements .measure-row');

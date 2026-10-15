@@ -46,6 +46,19 @@ function harness({ model = true } = {}) {
 }
 
 describe('Źródło pokwitania — addytywna ocena typowana', () => {
+  it('aktywną ocenę deleguje do wspólnego kontekstu wizyty, niezależnie od głowy rekordu', () => {
+    const h = harness();
+    h.set(payload());
+    const options = { sex: 'M', currentAgeMonths: 144 };
+    const active = { available: true, scope: 'visit', gonadal: { kind: 'G', stage: 2 } };
+    const read = vi.fn(() => active);
+    h.w.VildaPubertyAssessmentContext = { readActiveContext: read };
+    expect(h.source.aktywnaOcena(options)).toBe(active);
+    expect(read).toHaveBeenCalledWith(options);
+    expect(h.context().assessmentContext.assessment.observations.G.stage).toBe(3);
+    delete h.w.VildaPubertyAssessmentContext;
+    expect(h.source.aktywnaOcena(options)).toBeNull();
+  });
   it('zachowuje samą ocenę G/P bez wytwarzania starego stanu lub wywiadu', () => {
     const h = harness();
     h.set(payload());

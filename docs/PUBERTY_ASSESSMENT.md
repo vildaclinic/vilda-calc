@@ -1,8 +1,9 @@
-# Wspólna ocena pokwitania — kontrakt, etap 1
+# Wspólna ocena pokwitania — panel i kontrakt
 
-Pierwszy etap przygotowuje zapis i odczyt oddzielnych G, Th i P. Nie udostępnia
-jeszcze edytora i nie zmienia wejść istniejących interpretacji, norm ani wyników.
-Następny etap obejmuje zatwierdzony panel oraz jawne adaptery jego konsumentów.
+Panel w formularzu głównym i DocPro zapisuje oddzielne G, Th i P. Laboratoria
+oraz wzrastanie korzystają ze wspólnego odczytu właściwej osi. Podstawę zapisu
+wprowadził #687; etap 2 udostępnia edycję i jawnie kwalifikuje obserwacje do
+poszczególnych zastosowań, bez nowych tabel referencyjnych lub progów.
 
 ## Zapis
 
@@ -44,9 +45,12 @@ Opcjonalne `user.pubertyAssessment` w istniejącym payloadzie wizyty:
 - `sex`: płeć źródłowej oceny `M`, `F` albo `null`. Zmiana płci w formularzu nie
   przepisuje historycznego G na Th lub odwrotnie.
 
-Każda cecha ma własne pochodzenie. Przyszła edycja P nie może aktualizować daty G.
-W etapie 1 nie ma operacji edycji stadium ani automatycznej klasyfikacji na
-podstawie objętości jąder. Dotychczasowe opcjonalne pomiary i historia menarche
+Opcjonalne `sex` pojedynczej obserwacji ma pierwszeństwo przed płcią całego
+obiektu. Podczas pierwszej edycji po zmianie płci istniejące obserwacje zachowują
+swoją wcześniejszą płeć, a nowa obserwacja dostaje bieżącą. Dotyczy to także P.
+
+Każda cecha ma własne pochodzenie. Edycja P nie aktualizuje daty G. Nie ma
+automatycznej klasyfikacji na podstawie objętości jąder. Dotychczasowe opcjonalne pomiary i historia menarche
 zachowują osobne kontrakty.
 
 ## Odczyt i zgodność
@@ -68,14 +72,14 @@ wersje, zamiast zapisywać okrojoną postać z normalizatora.
 
 `ready` oznacza poprawny format, **nie potwierdzenie aktualności lub przydatności
 klinicznej**. Odczyt zachowuje etykiety osi nawet przy niespójnej płci źródłowej;
-nie koryguje historii. Przyszły adapter kliniczny musi osobno sprawdzić właściwą
+nie koryguje historii. Adapter kliniczny musi osobno sprawdzić właściwą
 oś, płeć, wiek i pochodzenie. Samo P nie może być wejściem gonadalnego stadium.
 
 `VildaPubertySource.kontekstPacjenta()` udostępnia dodatkowe `assessmentContext`
 z powyższym wynikiem dla potwierdzonego źródła. Nadal chronią je istniejące bramki
 pacjenta, sejfu i generacji odczytu. Jest to kontekst odczytanego rekordu, bez
 obietnicy „ocena z dzisiejszej wizyty”. Dotychczasowe API pozostaje zgodne;
-starsze konsumery zostaną przepięte świadomie razem z edytorem w etapie 2.
+czytniki kliniczne korzystają z jawnego adaptera, nie ze starego numeru.
 
 ## Cykl życia
 
@@ -88,7 +92,7 @@ Jawne wczytanie zapisuje tryb transportu `loaded`, odtworzenie wizyty lub sesji 
 `restored`. Ten tryb opisuje drogę wczytania, nie potwierdzenie badania na obecnej
 wizycie; po odświeżeniu strony nie wolno z niego wyprowadzać aktualności oceny.
 Przeniesienie do nowego pomiaru zachowuje wcześniejszą datę, bez potwierdzenia
-nowej oceny. W etapie 1 takie dane nie są aktywowane w obliczeniach.
+nowej oceny. Sam transport nie kwalifikuje ich do bieżącej interpretacji.
 Zmiana pacjenta, czyszczenie lub utrata właściwego sejfu unieważniają pamięć.
 Przejście pomiędzy Start i DocPro używa istniejącej sesji, z zachowaniem pustego
 obiektu i danych nieobsługiwanej wersji.
@@ -103,10 +107,61 @@ zmiana pacjenta, nieaktualna ramka albo zmiana sesji od startu blokują tę ści
 Próba jest zużywana również przy odmowie; tymczasowa kopia sesji jest zwalniana.
 Pusty formularz nadal korzysta z normalnego pełnego odtworzenia.
 
-## Kolejny etap
+## Bieżąca wizyta i kwalifikacja
 
-Przed udostępnieniem edycji G/Th/P trzeba razem podłączyć formularz, import do
-interpretacji laboratoryjnych oraz konsumentów wzrastania. Nie wolno dopuścić,
-aby nowe G/Th i stary ogólny Tanner równolegle zasilały sprzeczne obliczenia.
-Panel i ściągi mają korzystać z zaakceptowanej makiety; ta zmiana nie dodaje
-jeszcze wartości orientacyjnych Pradera ani opisów morfologicznych do produktu.
+Opcjonalny `user.pubertyAssessmentVisit` jest znacznikiem transportu:
+`{version:1, visitId, ownerPatientId, currentAxes, reference:{sex,ageMonths,measuredAtISO}}`.
+Nie jest datą badania. Świadoma edycja oznacza wyłącznie wybraną oś jako ocenioną
+w tej wizycie; nie zmienia dat pozostałych. Kolektor może uzupełnić odniesienie
+wizyty, zachowując oryginalną datę, wiek i źródło każdej obserwacji.
+
+Ta sama wizyta po zmianie karty lub F5 zachowuje znacznik. Nowy pomiar usuwa
+bieżącą kwalifikację dawnych obserwacji. Zmiana płci odbiera niezgodnym osiom
+status bieżący również po powrocie do poprzedniej płci; historia pozostaje.
+Znacznik i ocena są kopiowane atomowo, bez uzupełniania pustych pól z wcześniejszej
+sesji. Nieobsługiwane dane zachowujemy, a edytor nie nadpisuje ich po cichu.
+
+`VildaPubertyAssessment.gonadalContext(userOrReadResult, options)` zwraca G dla M
+albo Th dla F; samo P i stary `unspecified` nigdy nie zastępują tej osi. Wynik
+niesie osobno obserwację, `current`, `usableForGrowth`, powód i kwalifikowane
+`stage` (albo `null`). `resolveAxis()` udostępnia tę samą kwalifikację dla każdej
+osi, potrzebną także do prezentacji P.
+
+- `scope:'current'`: wymaga znacznika świadomej oceny w tej wizycie, właściwej
+  płci oraz braku sprzeczności znanych dat i wieku. Brak daty nie wymusza nazwiska,
+  antropometrii ani wymyślonego dnia badania. Sama zgodność daty lub wieku nie
+  zastępuje znacznika.
+- `scope:'growth'`: oprócz bieżącej oceny dopuszcza właściwą wcześniejszą obserwację
+  zgodnie z istniejącą granicą 12 miesięcy włącznie. To polityka aplikacji, nie
+  biologiczna gwarancja ważności stadium. Przyszłe daty/wiek i sprzeczny stary
+  zegar nie kwalifikują obserwacji; nieznany czas dawnej obserwacji nie dowodzi
+  świeżości. Bez wieku dawnej oceny nie odtwarzamy czasu jej utrzymywania.
+
+`VildaPubertyAssessmentContext.readActiveContext()` wybiera chroniony żywy
+formularz, a dopiero przy jego braku potwierdzoną sesję. Kolejność działań
+formularzy Start/DocPro jest liczona wyłącznie w RAM i nie staje się datą badania.
+Pauza autosave nie pozwala starszej sesji zastąpić nowszej edycji. Lock, zmiana
+konta/pacjenta i nieaktualny panel unieważniają źródło.
+
+Podczas czyszczenia odczyt kończy się przed sprawdzeniem właściciela panelu:
+identyfikator i pola są wtedy przejściowo niespójne. Po zakończeniu obowiązuje
+zwykła ochrona pacjenta. Powtórzone syntetyczne zdarzenia z niezmienionymi polami
+nie rozsyłają ponownie zmiany kontekstu; rzeczywista zmiana wieku wyliczonego
+z daty urodzenia nadal ją rozsyła, a działanie użytkownika zachowuje priorytet
+źródła w RAM.
+
+Laboratorium może zamontować ten sam edytor bez opuszczania wyniku. Gdy nie ma
+żywego formularza, korekta ma jawny lokalny zakres i nie zapisuje pacjenta.
+Znane leczenie i wiek pobieramy z tego samego kontekstu. Osie wieku/stadium
+zachowują odrębne warunki; brak stadium nie blokuje dostępnej oceny dla wieku.
+Inhibina B nie dostaje nowych norm stadium, jeśli źródło ich nie zawiera.
+
+## Pomoc w panelu
+
+Panel ma dwie cechy dla wybranej płci, bez wyliczanego ogólnego Tannera.
+Rozwinięcie ściągi i opcjonalnego wywiadu nie jest wymagane do wyboru stadium.
+G i Th opisują budowę, P jest oceniane osobno. Pomoc G podaje orientacyjną
+objętość pojedynczego jądra mierzoną orchidometrem Pradera: około 2 / 4–6 / 8–10 /
+12–15 / 15–25 ml dla I–V. Są to wskazówki, nie granice klasyfikacji ani pełne normy;
+nie zastępują morfologii i nie przenoszą się na USG. G2 przy 3 ml nie jest
+automatycznie odrzucane. Źródła i wpływ kliniczny: `docs/clinical/ALGORITHMS.md`.

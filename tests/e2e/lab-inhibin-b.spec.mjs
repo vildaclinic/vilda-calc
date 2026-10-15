@@ -67,7 +67,7 @@ async function expectRange(page, lower, upper, status = 'within') {
   await expect(assessment(page).locator('[data-comparison="age"]')).toHaveAttribute('data-status', status);
   await expect(assessment(page).locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'source-reference');
   await expect(assessment(page).locator('[data-comparison="stage"]')).toHaveCount(0);
-  await expect(page.locator('#labPubertyRefineStage')).toBeHidden();
+  await expect(page.locator('#labPubertySharedEditor')).toHaveCount(1);
   await expect(page.locator('#labPubertyKind')).toBeHidden();
   await expect(page.locator('#labPubertyStage')).toBeHidden();
 }
@@ -472,7 +472,7 @@ test('current main-form DOB and patient-card term gestation supply infant contex
   expect(saved.evaluation.referencePreview.reasonCodes).not.toContain('term_birth_unconfirmed');
 });
 
-test('switching LH to inhibin B hides unused Tanner controls and preserves the LH stage on return', async ({ page }) => {
+test('switching LH to inhibin B retains the shared puberty summary without adding a stage reference', async ({ page }) => {
   await open(page, user('M', 2, 9));
   await choose(page, '2', 'IU/L', 'lh');
   await quickSelect(page, 'Kind', 'G');
@@ -482,7 +482,8 @@ test('switching LH to inhibin B hides unused Tanner controls and preserves the L
   await expect(assessment(page).locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'within');
   await choose(page, '100');
   await expectRange(page, 42, 268);
-  await expect(page.locator('#labPubertyStageSummary')).toBeHidden();
+  await expect(page.locator('#labPubertyStageSummary')).toHaveText('G3');
+  await expect(page.locator('#labPubertyRefineStage')).toBeVisible();
   await expect(assessment(page)).not.toContainText(/Rozwój płciowy|Cechy dojrzewania|CPP/);
   await choose(page, '2', 'IU/L', 'lh');
   await expect(page.locator('#labPubertyStageSummary')).toHaveText('G3');

@@ -39,12 +39,16 @@
     if (value.ageMonths != null && (typeof value.ageMonths !== 'number' ||
         !Number.isFinite(value.ageMonths) || value.ageMonths < 0)) return null;
     if (value.source != null && (typeof value.source !== 'string' || !value.source.trim())) return null;
-    return {
+    if (owns(value, 'sex') && value.sex !== null && value.sex !== 'M' && value.sex !== 'F') return null;
+    var normalized = {
       stage: value.stage,
       observedAtISO: value.observedAtISO == null ? null : value.observedAtISO,
       ageMonths: value.ageMonths == null ? null : value.ageMonths,
       source: value.source == null ? null : value.source
     };
+    // A later edit for another sex must not relabel an earlier independent axis.
+    if (owns(value, 'sex')) normalized.sex = value.sex;
+    return normalized;
   }
 
   function result(status, assessment, legacy) {
@@ -77,5 +81,104 @@
     return result('ready', { version: 1, sex: raw.sex == null ? null : raw.sex, observations: observations });
   }
 
-  global.VildaPubertyAssessment = { VERSION: '1', readUser: readUser, clone: clone };
+  function sexCode(value) {
+    return value === 'M' ? 'M' : value === 'F' || value === 'K' ? 'F' : null;
+  }
+
+  function finite(value) {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  function sameNumber(a, b) {
+    return a === null && b === null || finite(a) !== null && finite(b) !== null && Math.abs(a - b) < 1e-6;
+  }
+
+  // The marker records an explicit examination in this visit. A matching date,
+  // an import, a storage timestamp or 'clinician-entry' alone is insufficient.
+  function visitMatches(marker, options) {
+    if (!object(marker) || marker.version !== 1 || typeof marker.visitId !== 'string' ||
+        !marker.visitId.trim() || !Array.isArray(marker.currentAxes) || !object(marker.reference)) return false;
+    if (marker.currentAxes.some(function (axis) { return ['G', 'Th', 'P'].indexOf(axis) < 0; })) return false;
+    if (owns(options, 'patientId') && marker.ownerPatientId !== (options.patientId || null)) return false;
+    var reference = marker.reference;
+    if (reference.ageMonths !== null && finite(reference.ageMonths) === null ||
+        reference.measuredAtISO !== null && !date(reference.measuredAtISO)) return false;
+    // An absent date or age must not invent a new visit when another existing
+    // field is filled later. Known contradictions still reject the marker.
+    return reference.sex === options.sex &&
+      (!reference.measuredAtISO || !options.measuredAtISO || reference.measuredAtISO === options.measuredAtISO) &&
+      (reference.ageMonths === null || options.currentAgeMonths === null || sameNumber(reference.ageMonths, options.currentAgeMonths));
+  }
+
+  function contextOptions(input, options) {
+    var user = object(input) ? input : {};
+    var opts = Object.assign({}, options || {});
+    opts.sex = sexCode(owns(opts, 'sex') ? opts.sex : user.sex);
+    opts.currentAgeMonths = finite(opts.currentAgeMonths);
+    opts.measuredAtISO = date(opts.measuredAtISO) ? opts.measuredAtISO : null;
+    opts.visitMarker = owns(opts, 'visitMarker') ? opts.visitMarker : user.pubertyAssessmentVisit || user.visit || null;
+    return opts;
+  }
+
+  function resolveAxis(input, axis, options) {
+    var read = input && typeof input.status === 'string' && owns(input, 'assessment') ? input : readUser(input);
+    var opts = contextOptions(input, options);
+    var observation = read.status === 'ready' && read.assessment && read.assessment.observations[axis] || null;
+    var out = { kind: axis, stage: null, observation: observation ? clone(observation) : null,
+      ageMonths: observation ? observation.ageMonths : null,
+      observedAtISO: observation ? observation.observedAtISO : null,
+      source: observation ? observation.source : null,
+      current: false, usableForGrowth: false, status: read.status, reason: read.status };
+    if (!observation) {
+      if (read.status === 'ready') out.status = out.reason = 'missing';
+      return out;
+    }
+    var sourceSex = owns(observation, 'sex') ? observation.sex : read.assessment.sex;
+    if (!opts.sex || sourceSex !== opts.sex || axis === 'G' && opts.sex !== 'M' || axis === 'Th' && opts.sex !== 'F') {
+      out.status = out.reason = 'sex-mismatch';
+      return out;
+    }
+    var ageDifference = opts.currentAgeMonths !== null && observation.ageMonths !== null
+      ? opts.currentAgeMonths - observation.ageMonths : null;
+    var dated = !!(opts.measuredAtISO && observation.observedAtISO);
+    if (ageDifference !== null && ageDifference < -1e-6 || dated && observation.observedAtISO > opts.measuredAtISO) {
+      out.status = out.reason = 'future';
+      return out;
+    }
+    var marker = opts.visitMarker;
+    out.current = visitMatches(marker, opts) && marker.currentAxes.indexOf(axis) >= 0 &&
+      (ageDifference === null || Math.abs(ageDifference) < 1e-6) &&
+      (!dated || observation.observedAtISO === opts.measuredAtISO);
+    var fresh = false;
+    if (ageDifference !== null) fresh = ageDifference <= 12 + 1e-6;
+    else if (dated) {
+      var cutoff = new Date(opts.measuredAtISO + 'T00:00:00.000Z');
+      cutoff.setUTCMonth(cutoff.getUTCMonth() - 12);
+      fresh = new Date(observation.observedAtISO + 'T00:00:00.000Z').getTime() >= cutoff.getTime();
+    }
+    // Both clocks constrain an observation when available. A contradictory old
+    // calendar date cannot become fresh solely because the entered ages match.
+    if (fresh && dated) {
+      var oldest = new Date(opts.measuredAtISO + 'T00:00:00.000Z');
+      oldest.setUTCMonth(oldest.getUTCMonth() - 12);
+      fresh = new Date(observation.observedAtISO + 'T00:00:00.000Z').getTime() >= oldest.getTime();
+    }
+    out.usableForGrowth = out.current || fresh;
+    out.status = out.reason = out.current ? 'ready' : out.usableForGrowth ? 'historical'
+      : ageDifference === null && !dated ? 'unknown-time' : 'stale';
+    if (options && options.scope === 'growth' ? out.usableForGrowth : out.current) out.stage = observation.stage;
+    return out;
+  }
+
+  function gonadalContext(input, options) {
+    var opts = contextOptions(input, options);
+    var axis = opts.sex === 'M' ? 'G' : opts.sex === 'F' ? 'Th' : null;
+    if (!axis) return { kind: null, stage: null, observation: null, ageMonths: null,
+      observedAtISO: null, source: null, current: false, usableForGrowth: false,
+      status: 'sex-missing', reason: 'sex-missing' };
+    return resolveAxis(input, axis, opts);
+  }
+
+  global.VildaPubertyAssessment = { VERSION: '2', readUser: readUser, clone: clone,
+    resolveAxis: resolveAxis, gonadalContext: gonadalContext, visitMatches: visitMatches };
 })(typeof window !== 'undefined' ? window : globalThis);
