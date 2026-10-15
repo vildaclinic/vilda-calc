@@ -117,11 +117,15 @@ function RrPinRange(result, host) {
   var line = l.createElement('div');
   line.textContent = 'Zapisze się z wynikiem: ';
   var strong = l.createElement('strong');
-  strong.textContent = info.classification ? RrPinText[info.classification] + ' ' + info.bounds
+  // Decyzja 6.30: zakres ogólny (wiersz domyślny przelicznika) u dziecka — okno mówi to samo co historia: bez kategorii.
+  var general = info.status === 'general';
+  strong.textContent = general ? 'zakres ogólny ' + info.bounds + ' — bez oceny dla dziecka'
+    : info.classification ? RrPinText[info.classification] + ' ' + info.bounds
     : 'bez oceny względem zakresu (pomiar nieinterpretowalny w tych warunkach)';
   line.appendChild(strong);
   box.appendChild(line);
-  var context = [info.population, info.subject ? 'dobrano dla: ' + info.subject : '', info.sources.join(', ')].filter(Boolean);
+  var who = info.subject ? (general ? 'bez zakresu dla: ' : 'dobrano dla: ') + info.subject : '';
+  var context = [info.population, who, info.sources.join(', ')].filter(Boolean);
   if (context.length) {
     var small = l.createElement('div');
     small.className = 'vilda-lab-pin-range-context';

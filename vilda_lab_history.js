@@ -178,7 +178,8 @@
   }
   // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu. Kategoria i granice z zapisu (opis:
   // VildaLabRangeSnapshot.describe); nie zależy od jednostki wyświetlania, więc obowiązuje też dla
-  // wyniku przeliczonego. Zakres nieaktualny albo bez interpretacji — bez strzałki, wyciszony.
+  // wyniku przeliczonego. Zakres nieaktualny albo bez interpretacji — bez strzałki, wyciszony; od 1.3.0 także zakres
+  // ogólny (wiersz domyślny przelicznika) u dziecka (decyzja 6.30).
   function rangeHelper(options) {
     var helper = options && options.rangeSnapshot;
     if (!helper && typeof globalThis !== 'undefined') helper = globalThis.VildaLabRangeSnapshot;
@@ -194,6 +195,9 @@
     if (info.status === 'recorded') {
       entry.flag = info.flag;
       entry.status = Object.assign({ kind: 'range', tone: 'lab', flag: info.flag, classification: info.classification, text: info.text }, shared);
+    } else if (info.status === 'general') {
+      // Decyzja 6.30: zakres ogólny (wiersz domyślny) u dziecka — granice i populacja widoczne, bez strzałki i kategorii.
+      entry.status = Object.assign({ kind: 'range-general', tone: 'muted', text: info.text }, shared);
     } else {
       entry.status = Object.assign({ kind: info.status === 'invalidated' ? 'range-invalidated' : 'range-unavailable', tone: 'muted',
         text: info.text, detail: info.detail }, shared);
@@ -657,7 +661,7 @@
   }
 
   return Object.freeze({
-    version: '1.2.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    version: '1.3.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
     formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit
   });
 });

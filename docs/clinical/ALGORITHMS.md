@@ -794,7 +794,8 @@ dobie życia) zapisuje się jako brak oceny z opisem przelicznika.
 - Bez wieku w przeliczniku przelicznik przyjmuje dorosłego (dotychczasowa
   reguła); zapis i historia nazywają to („bez wieku w przeliczniku —
   przyjęto dorosłego”). Wiersz domyślny (np. prolaktyna u dziecka: „Dorośli,
-  zakres ogólny”) zostaje zapisany jak pokazał go przelicznik.
+  zakres ogólny”) zostaje zapisany jak pokazał go przelicznik; od 1.1.0
+  historia pokazuje go u dziecka bez oceny („LAB-HISTORIA 6.30” niżej).
 - Norma wpisana ręcznie we wpisie (pole „Norma” edytora), gdy model ją
   przyjmie, ma pierwszeństwo jak dotąd. Zapisany zakres nie zależy od
   jednostki wyświetlania: wynik przeliczony z innej jednostki zachowuje
@@ -842,6 +843,98 @@ przypięcia, sejf, pasek i zakładka; badanie bez zakresu i LH bez pola).
 **Akceptacja kliniczna:** decyzja 6.3 (2026-10-14) i jej szczegóły
 (2026-10-15); przed scaleniem — przegląd tego wpisu przez właściciela.
 Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA 6.30 — zakres ogólny u dziecka bez oceny w historii (`vilda_lab_range_snapshot.js` 1.1.0, 2026-10-15)
+
+**Wpływ kliniczny: tak** (AGENTS.md § 3: zmiana interpretacji widocznej
+w historii). Gdy przelicznik nie ma wiersza zakresu pasującego do pacjenta,
+używa wiersza domyślnego (`default: true` w `reference_ranges_si` albo
+`default_range_si`; `selectRange` zwraca `is_default: true`, `matched:
+false`). Dziś każdy wiersz domyślny, w który trafia dziecko, jest zakresem
+dorosłych („Dorośli, zakres ogólny”, „Zakres ogólny dorosły (domyślnie)”).
+Od 1.1.0 historia (zakładka „Badania”, pasek „Poprzednie wyniki”) i okno
+przypięcia nie przenoszą kategorii z takiego zakresu na dziecko: bez
+strzałki ↑/↓ i bez „powyżej / poniżej / w zapisanym zakresie”. Zostaje
+wyciszona informacja „zakres ogólny — bez oceny dla dziecka” z granicami,
+populacją z danych, „dla kogo” i źródłem. Decyzja właściciela 6.30
+(wariant 3, 2026-10-15).
+
+**Reguła (odczyt):** `VildaLabRangeSnapshot.describe` zwraca status
+`general` (zamiast `recorded`), gdy zapis ma `status: 'recorded'`,
+`range.isDefault === true` i `context.lifeStage === 'pediatric'`. Etap
+życia to ten, który przelicznik użył przy doborze (`getEffectivePatient`:
+dziecko, gdy wiek < 18 lat albo — bez wieku — Tanner < V). Koperta
+`labResult.range` (granice, kategoria z `evaluate`, populacja, kontekst,
+źródła) zapisuje się jak dotąd i nie jest zmieniana: reguła działa także dla
+wyników przypiętych przed 1.1.0. Model `VildaLabHistory` 1.3.0 mapuje
+`general` na status `range-general` (wyciszony, bez `flag`). Dorosły
+z wierszem domyślnym — bez zmian (strzałka i kategoria z zapisu, populacja
+„Dorośli, zakres ogólny” w pigułce). Wiersz dopasowany do dziecka (np. TSH
+„Dzieci 6–10 lat”) — bez zmian. Przelicznik na żywo (status i pasek normy)
+— bez zmian.
+
+**Źródło medyczne i wersja:** bez nowych norm, progów i jednostek.
+`lab_units_data.js` (`LabUnitsData` 2.0.0; wiersze domyślne, np.
+`prl_default` 2–29 ng/mL „Dorośli, zakres ogólny”, `mayo_test_prolactin` —
+Mayo Clinic Laboratories, Test 85670) i `lab_unit_converter.js`
+(`LabUnitConverter` 2.0.0, `selectRange`). Brzmienie nie zakłada
+„dorosłych” w silniku: populację podaje zapis (normy jako dane,
+`docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność”).
+
+**Zakres (dane z 2026-10-15):** wiersze domyślne trafiane przez dziecko
+z wiekiem: prolaktyna (`prl_default`), 17-OH-progesteron (`17ohp_default`),
+IGFBP-3 (`igfbp3_default`; u dziecka bez wiersza Tannera), progesteron
+(`p4_default`, np. chłopiec 14 l, dziewczyna 16 l). Dziecko bez wieku
+w przeliczniku (sam Tanner I–IV) dodatkowo m.in. TSH, fT4, fT3, T4, T3,
+tyreoglobulina, IGF-1, LH, FSH, SHBG, estradiol, estron, DHEA, DHEA-S,
+androstendion, wolny testosteron, DHT. Witamina D 25(OH) ma wiersz
+dopasowany („Optymalne”) i nie podlega regule.
+
+**Ograniczenia:**
+
+- Etap życia jest ten z przelicznika: przy znanym wieku decyduje wyłącznie
+  wiek (16 l z Tannerem V to dziecko — bez oceny), bez wieku Tanner V oznacza
+  etap dorosły i zakres ogólny ocenia się jak u dorosłego (strzałka zostaje,
+  „dla kogo”: „kobieta, bez wieku w przeliczniku — przyjęto dorosłego,
+  Tanner V”).
+- Przelicznik nadal pokazuje na żywo kategorię względem zakresu ogólnego
+  (z opisem populacji); okno przypięcia mówi, że w historii wynik będzie bez
+  oceny.
+- Brak oceny nie znaczy „w normie”: zakres dla wieku trzeba wziąć
+  z laboratorium wykonującego badanie.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Prolaktyna 35 ng/mL, dziewczynka 8 l → zapis `prl_default` 2–29 ng/mL,
+  kategoria `above`, `isDefault: true`; historia: „zakres ogólny — bez oceny
+  dla dziecka · 2–29 ng/mL”, „Dorośli, zakres ogólny · dziewczynka, 8 l ·
+  Mayo Test 85670 — Prolaktyna”, bez strzałki. To samo dla 10 (`within`),
+  1,5 (`below`), 0,5 (`far_below`) i 80 ng/mL (`far_above`).
+- TSH 5,1 mIU/L, dziewczynka bez wieku, Tanner II → `tsh_default` 0,3–4,2
+  mIU/L „Zakres ogólny dorosły (domyślnie)” → bez strzałki, „dziewczynka,
+  Tanner II”.
+- IGFBP-3 9,4 mg/L, kobieta 30 l → `igfbp3_default` → „↑ powyżej zapisanego
+  zakresu” (dorosły bez zmian).
+- 17-OH-progesteron 15 nmol/L, dziewczyna 16 l, Tanner V → `17ohp_default`
+  → bez strzałki (etap dziecięcy z wieku); ta sama wartość bez wieku,
+  Tanner V (etap dorosły w przeliczniku) → ↑ z zapisu.
+- TSH 5,1 mIU/L, dziewczynka 8 l → `tsh_6_10y` (wiersz dopasowany) → „↑
+  powyżej zapisanego zakresu” (bez zmian).
+- Przelicznik, dziewczynka 12 l 3 m, prolaktyna 35 ng/mL → okno: „Zapisze się
+  z wynikiem: zakres ogólny 2–29 ng/mL — bez oceny dla dziecka”, „Dorośli,
+  zakres ogólny · bez zakresu dla: dziewczynka, 12 l 3 m · Mayo Test 85670 —
+  Prolaktyna”.
+
+**Testy:** `tests/unit/lab-range-snapshot.test.mjs` (prawdziwy
+`LabUnitConverter.selectRange`/`evaluate` jako „producent”; prawdziwy sejf
+i model bez wywołań `evaluate`), `tests/unit/lab-history-tab.test.mjs`
+(pigułka, podpowiedź komórki, legenda i stopka), `tests/unit/lab-history-strip.test.mjs`
+(chip i szczegóły), e2e `lab-historia-zakres-zapisany.spec.mjs` (prawdziwy
+przelicznik, okno przypięcia, sejf, pasek, zakładka, 390 px).
+
+**Akceptacja kliniczna:** decyzja 6.30 (wariant 3, 2026-10-15); przed
+scaleniem — przegląd tego wpisu przez właściciela. Zielone testy nie są
+walidacją kliniczną.
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 

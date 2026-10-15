@@ -1238,6 +1238,10 @@ Wygląd linii i uwagi: klasy `vilda-lab-pin-range*` w `vilda_lab_assessment_ui.c
 
 Tag statyczny `vilda_lab_range_snapshot.js?v=1` obok `vilda_hormone_reference_snapshot.js` na ośmiu stronach z kartą i w `przelicznik-jednostek.html`; wpis precache w `service-worker-kalorii.js`. `przelicznik-jednostek.html` (czytelny skrypt strony): `captureLabRange` i `setRangeProvider` za rejestracją dostawcy odniesienia AMH. Zgodność list pilnuje `tests/unit/hormone-reference-loading.test.mjs` i `lab-history-tab-loading.test.mjs`.
 
+## Łatka LAB-HISTORIA 6.30 — zakres ogólny u dziecka bez oceny (`lab_pin_result.js` 9 → 10, 2026-10-15)
+
+Zmiana tylko w czytelnym bloku `Rr*` w `lab_pin_result.js` (`RrPinRange`): dla opisu `status: 'general'` z `VildaLabRangeSnapshot.describe` (wiersz domyślny przelicznika przy etapie życia dziecka) linia okna brzmi „Zapisze się z wynikiem: zakres ogólny {granice} — bez oceny dla dziecka”, a kontekst „bez zakresu dla: {dla kogo}” zamiast „dobrano dla: …”. Zminifikowana część bez zmian. Reguła i opis działania: `vilda_lab_range_snapshot.js` 1.1.0 (`describe`), `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.30”.
+
 ## Jak odtworzyć
 
 ```bash
