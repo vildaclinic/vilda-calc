@@ -1001,6 +1001,22 @@ Oba leniwe stosy auth (lista `V` mostu sesji i lista `d` w `vilda_chrome.js`) do
 // w(), I() (most) i u() (chrome): … && VildaHormoneReferenceUI && VildaLabHistory && VildaLabHistoryTab && …
 ```
 
+## Łatka P-POWLOKA-KARTA-ZAKLADKA (`vilda_shell.js` 63 → 64, 2026-10-14)
+
+Karta pacjenta otwierana z powłoki od razu na wskazanej zakładce (LAB-HISTORIA PR3, plan 3.4, decyzja 6.15): pasek „Poprzednie wyniki” w przeliczniku wywołuje `VildaShell.openPatientCardInStart(pid, { activeTab: 'lab' })`. Nazwy z artefaktu: `Ht` — `openPatientCardInStart`, `Sn_openPatient` — czytelny dopisek (#454) czekający na gotową ramkę Start, `win.VildaAuthUI.showPatientCard` — `se()` z `vilda_auth_ui.js` (czwarty argument `{activeTab}` istniał wcześniej; biała lista zakładek z P-BADANIA zawiera „lab”).
+
+```js
+// było: function Ht(t){if(t)Sn_openPatient("card",t)}
+function Ht(t, opts) { if (t) Sn_openPatient('card', t, null, opts && typeof opts.activeTab === 'string' && opts.activeTab ? opts.activeTab : null); }
+// Sn_openPatient(kind, id, onTimeout, tab) — nowy czwarty parametr; w retry():
+// było: showPatientCard(String(id))
+tab ? win.VildaAuthUI.showPatientCard(String(id), null, null, { activeTab: tab }) : win.VildaAuthUI.showPatientCard(String(id));
+```
+
+Wywołanie bez zakładki jest dosłownie takie jak dotąd, więc testy powłoki porównujące tablice argumentów `showPatientCard` (`powloka-intencja-historia.test.mjs`, `chip-karta-pacjenta.test.mjs`) zostają bez zmian; wariant z zakładką sprawdza `tests/unit/powloka-karta-zakladka.test.mjs`. Starsza powłoka z cache SW zignoruje drugi argument i otworzy kartę na zakładce domyślnej.
+
+Przelicznik (`przelicznik-jednostek.html`, czytelny skrypt strony) dostał w tym samym PR hook `window.VildaLabConverterRuntime = { getSubstanceId }` i zdarzenie `vilda:lab-substance-changed` z `applySubstance()` (decyzja 6.16) — poza zakresami wycinanymi przez testy (`powloka-wskazanie-kliniczne`, `lab-inhibin-b-ui`, `lab-puberty-*`, `hormone-lifespan-converter-adapter`).
+
 ## Jak odtworzyć
 
 ```bash

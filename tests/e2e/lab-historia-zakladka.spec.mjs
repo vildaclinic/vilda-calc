@@ -33,6 +33,10 @@ test('pięć zakładek; Badania: podsumowanie, panele, oczekujące, karty z wart
   await expect(tsh.locator('svg.vilda-lab-trend-chart')).toHaveCount(1);
   // Pierwszy TSH zapisany w μIU/mL: punkt przeliczony z obwódką, bez strzałki (jak w dawnym trendzie).
   await expect(tsh.locator('svg circle[stroke="#26215C"]')).toHaveCount(1);
+  // Decyzja 6.22: przy punktach same wartości, bez strzałek (strzałka wg zapisu zostaje przy wartości obok).
+  // Podpis punktu to sama liczba (ta sama liczba bywa też podziałką osi, gdy jest maksimum serii).
+  await expect(tsh.locator('svg text').filter({ hasText: /^0,12$/ }).first()).toBeVisible();
+  await expect(tsh.locator('svg text', { hasText: /[↓↑]/ })).toHaveCount(0);
 
   const ft4 = badania.locator('.vilda-lab-hist-card[data-series="ft4"]');
   await expect(ft4.locator('.vilda-lab-hist-value')).toHaveText('17,8');

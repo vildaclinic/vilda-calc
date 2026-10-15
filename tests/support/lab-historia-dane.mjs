@@ -100,3 +100,28 @@ export async function otworzBadania(page, patientId) {
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
   await czekajNaBadania(page);
 }
+
+/**
+ * LAB-HISTORIA PR3: przelicznik jednostek z odblokowanym sejfem, fikcyjną historią (zapiszHistorie)
+ * i fikcyjną pacjentką w formularzu; wybrane badanie i (opcjonalnie) wartość bieżąca.
+ * Zwraca { patientId, ids }.
+ */
+export async function otworzPrzelicznik(page, { badanie = 'tsh', szukaj = 'TSH', wartosc = '0,38' } = {}) {
+  const patientId = await otworzSejf(page, '/przelicznik-jednostek.html');
+  const ids = await zapiszHistorie(page, patientId);
+  await page.evaluate((pid) => {
+    sessionStorage.setItem('vildaCurrentPatientId', pid);
+    window.VildaPersistence.writeShared({ name: 'Fikcyjna Badaniowa', sex: 'F', age: 12, ageMonths: 3 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }));
+  }, patientId);
+  if (badanie) await wybierzBadanie(page, badanie, szukaj);
+  if (badanie && wartosc) await page.locator('#labValue').fill(wartosc);
+  return { patientId, ids };
+}
+
+export async function wybierzBadanie(page, badanie, szukaj) {
+  await page.locator('#labSubstance').fill(szukaj);
+  await page.locator(`#labSubstanceDropdown .lab-substance-option[data-id="${badanie}"]`).click();
+}
+
+export const pasekHistorii = (page) => page.locator('#labHistoryStrip');
