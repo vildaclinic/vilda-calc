@@ -5266,6 +5266,66 @@ Testy: `puberty-assessment-qualification`, `puberty-assessment-context`,
 `puberty-assessment-editor` i `lab-puberty-shared-assessment`, wraz z istniejącymi
 regresjami obliczeń, zapisu, mobile i PWA.
 
+### P-POKWITANIE-WIZYTA — oś oceniona w tej wizycie niesie wiek i datę wizyty, 2026-10-15
+
+**Zgłoszenie i decyzja właściciela.** Analiza panelu G/Th/P (2026-10-15) na
+`audyt` d373075, zmierzona w prawdziwym Chromium na `index.html` i
+`przelicznik-jednostek.html`:
+
+| Scenariusz | Zapisana obserwacja G | Kwalifikacja przed zmianą |
+|---|---|---|
+| G3 kliknięte przed wpisaniem wieku, potem wiek 12 | `ageMonths: null`, data `null`; znacznik wizyty `ageMonths: 0` | dziś „bieżąca”, do rekordu idzie badanie bez wieku; przy następnej wizycie `unknown-time`, poza prognozami |
+| wiek 12, G3, korekta wieku na 13 | `ageMonths: 144` zostaje | `historical`, napis „G3 (wcześniej)”, LH/FSH bez stadium |
+| jak wyżej, korekta na 14 | bez zmian | `stale`, prognozy wzrostu bez stadium |
+| wczytany pacjent, chip „zapisane”, klik G3 | — | chip nadal „zapisane · Snapshot #1”; dopiero zmiana wzrostu dawała „niezapisane zmiany” |
+
+Właściciel wybrał: oś oceniona świadomie w tej wizycie podąża za końcowym wiekiem
+i datą wizyty, także po korekcie wieku; osie z wcześniejszych wizyt pozostają
+nietknięte.
+
+**Zmiana kliniczna: TAK (kwalifikacja danych), bez nowych norm.** Nie zmienia się
+żaden wzór, próg, tabela, jednostka ani interpretacja. Zmienia się to, jaki wiek
+i datę niesie obserwacja z bieżącej wizyty, a więc czy LH/FSH, testosteron,
+profil pokwitaniowy i tempo wzrastania dostają stadium z dzisiejszego badania.
+Dla osi z `currentAxes` wynik jest teraz taki sam niezależnie od kolejności
+wpisu (wiek przed stadium albo po nim). Dla osi historycznych nic się nie zmienia.
+Podstawa opisowa stadiów bez zmian: Marshall i Tanner 1969/1970 (wpisy
+P-POKWITANIE-KONTRAKT i P-POKWITANIE-PANEL).
+
+**Co jest.**
+- `vilda_puberty_assessment_state.js` (2 → 3): `anchorToVisit()` przy każdym
+  `capture()` (poza blokadą edycji i odtwarzaniem) oraz w `applyToUser()` przepisuje
+  wiek i datę wizyty do obserwacji z `currentAxes` o źródle `clinician-entry`.
+  `visitContext()`/`payloadContext()` czytają też `ageWeeks`; puste lata z „0”
+  miesięcy dają wiek `null` zamiast 0 miesięcy.
+- `vilda_puberty_assessment.js` (2 → 3): ta sama wizyta to ten sam ukończony
+  miesiąc wieku (różnica < 1 miesiąca); dotąd wymagano zgodności co do 1e-6
+  miesiąca, więc wiek dokładny z daty urodzenia (146,07) dawał „wcześniejsza ocena”.
+- `vilda_save_status_indicator.js`: nasłuch `vilda:puberty-assessment-changed`
+  (powód `edit`) przelicza odcisk formularza tą samą drogą, co pole formularza.
+  Strażnik niezapisanych zmian czyta ten stan, więc pyta o zapis także po samej
+  zmianie stadium.
+
+**Czego nie zmieniono.** Granica 12 miesięcy dla wzrastania, wymóg znacznika
+świadomej oceny dla `scope:'current'`, brak odnowienia osi przez autosave, F5 i
+„Nowy pomiar”, zachowanie P i starego numeru, treść chipa (nazwisko, wiek, płeć).
+
+**Przypadki regresyjne (rzeczywiste moduły).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| G3 przed wiekiem → wiek 12 | obserwacja `ageMonths: 144`, znacznik 144, `current: true` |
+| wiek 12 → G3 → 13 → 14 | obserwacja 156 → 168, `current: true`, tempo wzrastania „formularz”, bez „(wcześniej)” |
+| puste lata, miesiące „0” | odniesienie wizyty `ageMonths: null`; 0 lat 6 mies. → 6 |
+| rekord z G z 2025 (poza `currentAxes`) → korekta wieku, edycja P | G bez zmian, P z wiekiem wizyty, `currentAxes: ['P']` |
+| obserwacja z własnym źródłem `external-dated` | bez przepisania po korekcie wieku |
+| wiek dokładny 144,07 / 144,999 wobec 144 | bieżąca; 145 i 146,5 — nie |
+| wczytany pacjent → klik G3 | chip „niezapisane zmiany” bez innej zmiany pola |
+
+Testy: `puberty-assessment-persistence` (nowe i zaktualizowane przypadki),
+`puberty-assessment-qualification`, `save-status-pokwitanie`, e2e
+`pokwitanie-wiek-wizyty.spec.mjs`.
+
 ### P-POKWITANIE-KONTRAKT — oddzielny zapis G/Th/P, etap 1, 2026-10-14
 
 **Zakres i wpływ kliniczny.** Techniczne przygotowanie wspólnej oceny pokwitania:

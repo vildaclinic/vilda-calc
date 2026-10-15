@@ -452,13 +452,78 @@ describe('typed puberty — conscious independent edits and visit intent', () =>
     const env = environment(); const original = payload(); original.user.measuredAtISO = '2025-02-03';
     original.user.pubertyAssessment.extra = { preserve: [null, false] };
     restore(env, original);
-    expect(env.state.editObservation('P', 4, { observedAtISO: '2025-02-04', ageMonths: 144.5 })).toEqual({ ok: true });
+    expect(env.state.editObservation('P', 4)).toEqual({ ok: true });
     const result = env.api.collectUserData().user;
     expect(result.pubertyAssessment.observations.G).toEqual(original.user.pubertyAssessment.observations.G);
-    expect(result.pubertyAssessment.observations.P).toEqual({ stage: 4, sex: 'M', observedAtISO: '2025-02-04', ageMonths: 144.5, source: 'clinician-entry' });
+    // P-POKWITANIE-WIZYTA: the axis examined now carries the collected visit age (12 y 0 m) and its date.
+    expect(result.pubertyAssessment.observations.P).toEqual({ stage: 4, sex: 'M', observedAtISO: result.measuredAtISO || null, ageMonths: 144, source: 'clinician-entry' });
     expect(result.pubertyAssessment.extra).toEqual(original.user.pubertyAssessment.extra);
     expect(result.pubertyAssessmentVisit.currentAxes).toEqual(['P']);
     expect(result.pubertyAssessmentVisit.visitId).toMatch(/^puberty-visit-/);
+  });
+
+  it('an explicitly dated observation with its own source keeps its values and is not re-anchored', () => {
+    const env = environment(); restore(env, payload());
+    expect(env.state.editObservation('P', 4, { observedAtISO: '2025-02-04', ageMonths: 144.5, source: 'external-dated' })).toEqual({ ok: true });
+    env.fields.get('age').value = '13';
+    env.win.document.dispatchEvent({ type: 'input', isTrusted: true, target: env.fields.get('age') });
+    expect(env.api.collectUserData().user.pubertyAssessment.observations.P)
+      .toEqual({ stage: 4, sex: 'M', observedAtISO: '2025-02-04', ageMonths: 144.5, source: 'external-dated' });
+  });
+
+  // P-POKWITANIE-WIZYTA (owner decision 2026-10-15): measured scenarios from the analysis.
+  it('a stage chosen before the age is entered receives the visit age once it is known', () => {
+    const env = environment({ patientId: null }); env.fields.get('sex').value = 'M';
+    expect(env.state.editObservation('G', 3)).toEqual({ ok: true });
+    let user = env.api.collectUserData().user;
+    expect(user.pubertyAssessment.observations.G).toMatchObject({ stage: 3, ageMonths: null, observedAtISO: null });
+    expect(user.pubertyAssessmentVisit.reference.ageMonths).toBeNull();
+    env.fields.get('age').value = '12';
+    env.win.document.dispatchEvent({ type: 'input', isTrusted: true, target: env.fields.get('age') });
+    user = env.api.collectUserData().user;
+    expect(user.pubertyAssessment.observations.G).toMatchObject({ stage: 3, ageMonths: 144 });
+    expect(user.pubertyAssessmentVisit).toMatchObject({ currentAxes: ['G'], reference: { ageMonths: 144 } });
+    expect(env.win.VildaPubertyAssessment.gonadalContext(user, { sex: 'M', currentAgeMonths: 144 }))
+      .toMatchObject({ stage: 3, current: true, ageMonths: 144 });
+  });
+
+  it('blank years with the default zero months is an unknown visit age, not a newborn', () => {
+    const env = environment({ patientId: null }); env.fields.get('sex').value = 'M';
+    // The collector fills blank months with 0 (`ageMonths: h ?? 0`); the live form field is empty.
+    env.fields.get('age').value = ''; env.fields.get('ageMonths').value = '';
+    expect(env.state.visitContext().ageMonths).toBeNull();
+    env.state.editObservation('G', 2);
+    const user = env.api.collectUserData().user;
+    expect(user.age).toBeNull(); expect(user.ageMonths).toBe(0);
+    expect(user.pubertyAssessmentVisit.reference.ageMonths).toBeNull();
+    expect(user.pubertyAssessment.observations.G.ageMonths).toBeNull();
+    env.fields.get('age').value = '0'; env.fields.get('ageMonths').value = '6';
+    expect(env.state.visitContext().ageMonths).toBe(6);
+  });
+
+  it('correcting the age after choosing a stage keeps that stage current in the same visit', () => {
+    const env = environment({ patientId: null }); env.fields.get('sex').value = 'M'; env.fields.get('age').value = '12';
+    env.state.editObservation('G', 3);
+    for (const years of ['13', '14']) {
+      env.fields.get('age').value = years;
+      env.win.document.dispatchEvent({ type: 'input', isTrusted: true, target: env.fields.get('age') });
+      const user = env.api.collectUserData().user;
+      expect(user.pubertyAssessment.observations.G.ageMonths).toBe(Number(years) * 12);
+      expect(env.win.VildaPubertyAssessment.gonadalContext(user, { sex: 'M', currentAgeMonths: Number(years) * 12 }))
+        .toMatchObject({ stage: 3, current: true, reason: 'ready' });
+    }
+  });
+
+  it('a historical axis outside the visit keeps its own age and date after an age correction', () => {
+    const env = environment(); restore(env, payload());
+    env.fields.get('age').value = '13';
+    env.win.document.dispatchEvent({ type: 'input', isTrusted: true, target: env.fields.get('age') });
+    expect(env.api.collectUserData().user.pubertyAssessment.observations.G).toEqual(examination().observations.G);
+    env.state.editObservation('P', 3);
+    const user = env.api.collectUserData().user;
+    expect(user.pubertyAssessment.observations.G).toEqual(examination().observations.G);
+    expect(user.pubertyAssessment.observations.P).toMatchObject({ stage: 3, ageMonths: 156 });
+    expect(user.pubertyAssessmentVisit.currentAxes).toEqual(['P']);
   });
 
   it('unknown date remains unknown for a conscious entry with manual age', () => {
@@ -716,14 +781,21 @@ describe('typed puberty — in-memory activity priority across same-tab forms', 
     expect(env.api.collectUserData().user.pubertyAssessmentVisit).not.toHaveProperty('activityRevision');
   });
 
-  it.each(['age', 'ageMonths', 'dobInput', 'sex'])('trusted %s intent raises source priority without renewing an observation', field => {
+  it.each(['age', 'ageMonths', 'dobInput', 'sex'])('trusted %s intent raises source priority and re-anchors only the axis examined in this visit', field => {
     const env = environment(); restore(env, payload()); env.state.editObservation('G', 3);
     const original = env.state.capture().raw; const before = env.state.getActivityRevision();
     const input = env.fields.get(field);
     input.value = { age: '13', ageMonths: '1', dobInput: '01-01-2014', sex: 'F' }[field];
     env.win.document.dispatchEvent({ type: 'input', isTrusted: true, target: input });
     expect(env.state.getActivityRevision()).toBeGreaterThan(before);
-    expect(env.state.capture().raw).toEqual(original);
+    // P-POKWITANIE-WIZYTA: the current G follows the corrected visit; a sex change revokes membership instead.
+    const expected = copy(original);
+    if (field !== 'sex') {
+      expected.observations.G.ageMonths = env.state.visitContext().ageMonths;
+      expected.observations.G.observedAtISO = env.state.visitContext().measuredAtISO;
+    }
+    expect(env.state.capture().raw).toEqual(expected);
+    expect(env.state.capture().raw.observations.P).toEqual(original.observations.P);
     expect(env.state.read().visit.currentAxes).toEqual(field === 'sex' ? [] : ['G']);
     const after = env.state.getActivityRevision(); env.api.collectUserData();
     expect(env.state.getActivityRevision()).toBe(after);

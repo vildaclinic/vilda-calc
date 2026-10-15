@@ -1105,6 +1105,30 @@ Kontrakt `buildInput` dla dawnych próbek pozostaje; tabele/silniki hormonów ni
 zostały scalone z rendererem ani zmienione. Wpływ kliniczny i źródła:
 `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-PANEL.
 
+## Łatka P-POKWITANIE-WIZYTA — ocena z tej wizyty i wskaźnik zapisu (2026-10-15)
+
+Czytelne źródła: `vilda_puberty_assessment.js` (ta sama wizyta = ten sam ukończony
+miesiąc wieku) i `vilda_puberty_assessment_state.js` (`anchorToVisit()`,
+`ageInMonths()`; obserwacje z `currentAxes` o źródle `clinician-entry` dostają wiek
+i datę wizyty przy `capture()` i w `applyToUser()`). Artefaktów nie przebudowano.
+
+Jedyna zmiana w artefakcie: `vilda_save_status_indicator.js`, funkcja `se()`
+(rejestracja nasłuchów), bezpośrednio po nasłuchu `vilda:state-restored`:
+
+```js
+n.document.addEventListener("vilda:puberty-assessment-changed", function (r) {
+  try { r && r.detail && r.detail.reason === "edit" && w({ isTrusted: !0 }); } catch {}
+});
+```
+
+`w(e)` to istniejący odroczony handler zmiany pola (400 ms → `J()` → `B()`), który
+przelicza odcisk formularza z `collectUserData()`; przekazany obiekt omija wyłącznie
+jego warunek `isTrusted === false`. Powody `load`/`clear`/`identity`/`visit-change`
+nie uruchamiają przeliczenia: wczytanie i zmiana pacjenta mają własne nasłuchy.
+Nie zmieniono strażnika niezapisanych zmian (czyta `getState()` wskaźnika) ani
+importera. Test produkcyjnego wskaźnika: `tests/unit/save-status-pokwitanie.test.mjs`.
+Wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-WIZYTA.
+
 ## Łatka P-IMPORT-STATUS — kolejność importu i wskaźnika zapisu (2026-10-15)
 
 `vilda_data_import_export.js` i `vilda_save_status_indicator.js` zachowują istniejący

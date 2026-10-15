@@ -74,6 +74,11 @@ describe('one clinical qualification of separate puberty observations', () => {
     data.pubertyAssessment.observations.G.observedAtISO = null;
     expect(api().gonadalContext(data, options())).toMatchObject({ stage: 3, current: true, observedAtISO: null });
   });
+  it.each([[144.07, true], [144.999, true], [145, false], [146.5, false]])(
+    'an exact age of %s months against 144 completed months is the same visit: %s (P-POKWITANIE-WIZYTA)', (age, current) => {
+      const data = user({ pubertyAssessmentVisit: marker() });
+      expect(api().gonadalContext(data, options({ currentAgeMonths: age }))).toMatchObject({ current, stage: current ? 3 : null });
+    });
   it('known changed visit coordinates and patient owner reject current membership', () => {
     const data = user({ pubertyAssessmentVisit: marker() });
     expect(api().gonadalContext(data, options({ currentAgeMonths: 145 })).stage).toBeNull();
