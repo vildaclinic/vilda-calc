@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=68"></script>
+  <script src="vilda_session_bridge.js?v=69"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=144"></script>
+  <script src="vilda_chrome.js?v=145"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -4570,6 +4570,42 @@
       if (!td) return;
       e.preventDefault();
       handleValueActivation(td);
+    });
+
+    // LAB-HISTORIA PR4 — deep link badania: ?badanie=<id przelicznika> (zapas #badanie=)
+    // wybiera badanie, np. z karty badania w zakładce „Badania” karty pacjenta (decyzje 6.15,
+    // 6.23). Tylko przy pustym polu wyniku: wpisanej wartości nie zmieniamy po cichu, wtedy
+    // komunikat. Nieznany klucz i to samo badanie: bez zmian (powłoka doręcza cel ponownie
+    // przy każdym jawnym wejściu, więc wywołanie musi być idempotentne). Funkcja stoi poza
+    // wycinkiem „Faza 14” wykonywanym w powloka-wskazanie-kliniczne.test.mjs.
+    function applySubstanceDeepLink(targetLocation) {
+      targetLocation = targetLocation || window.location;
+      var key = null;
+      try {
+        if (targetLocation.search) key = new URLSearchParams(targetLocation.search).get('badanie');
+        if (!key && targetLocation.hash) key = new URLSearchParams(targetLocation.hash.replace(/^#/, '')).get('badanie');
+      } catch (_) { key = null; }
+      if (!key) return;
+      var substance = null;
+      try { substance = Conv.find(String(key).trim()); } catch (_) { substance = null; }
+      if (!substance) return;
+      if (currentSubstance && currentSubstance.id === substance.id) return;
+      if (String(valueEl.value || '').trim()) {
+        showToast('Nie zmieniono badania na ' + String(substance.label_pl || substance.id).split('(')[0].trim() + ': pole wyniku nie jest puste.');
+        return;
+      }
+      selectSubstanceFromDropdown(substance);
+      try { valueEl.focus(); } catch (_) { /* noop */ }
+    }
+    applySubstanceDeepLink();
+    window.addEventListener('vilda:shell-navigate-target', function (event) {
+      var href = event && event.detail && event.detail.href;
+      if (typeof href !== 'string') return;
+      try {
+        var target = new URL(href, window.location.href);
+        if (target.origin !== window.location.origin || target.pathname !== window.location.pathname) return;
+        applySubstanceDeepLink(target);
+      } catch (_) { /* noop */ }
     });
 
     // Wstępne ustawienie focusu na wartość, jeśli substancja już jest wybrana.

@@ -502,6 +502,34 @@ pacjenta, karta na zakładce „Badania”), `lab-historia-przelicznik-mobile.sp
 bez serwera po instalacji SW), `lab-historia-zakladka.spec.mjs` (podpis
 punktu bez strzałki). Zielone testy nie są walidacją kliniczną.
 
+### LAB-HISTORIA PR4 — przelicznik z wybranym badaniem z karty (`?badanie=`, `vilda_lab_history_tab.js` 1.2.0, 2026-10-15)
+
+**Wpływ kliniczny: brak.** Zmiana nawigacji: karta badania w zakładce „Badania”
+ma odnośnik „Nowy wynik TSH w przeliczniku →” (decyzja 6.23), który otwiera
+przelicznik jednostek z tym badaniem już wybranym (`?badanie=<id przelicznika>`,
+decyzja 6.15). Wybór działa jak wybór z listy w polu „Substancja”: te same
+jednostki, zakresy i oceny, bez wpisywania wartości. Przy wpisanym wyniku
+przelicznik nie zmienia badania (komunikat), żeby wpisanej liczby nie odczytać
+w jednostkach innego badania; nieznany klucz niczego nie zmienia. Pasek
+„Poprzednie wyniki” i karta liczą jak dotąd (wpisy PR2 i PR3 wyżej).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- `przelicznik-jednostek.html?badanie=tsh`, puste pole wyniku → „Substancja”:
+  „TSH (tyreotropina)”, pole wyniku puste z kursorem.
+- Ten sam adres, w polu wyniku „4,2” → badanie bez zmian, komunikat
+  „Nie zmieniono badania na TSH: pole wyniku nie jest puste.”.
+- `?badanie=nieznane` albo `?badanie=` → formularz bez zmian.
+
+**Testy:** `tests/unit/przelicznik-deeplink-badanie.test.mjs` (produkcyjny
+fragment skryptu strony z własnymi kotwicami i prawdziwym konwerterem; cel
+z powłoki; współistnienie z `?wskazanie=`; harness powłoki: cel po `load`
+i ponownie w ciepłej ramce), `tests/unit/lab-history-tab.test.mjs` (odnośnik
+w karcie, nagłówek bez badania, trasa powłoki), e2e
+`powloka-badania-nawigacja.spec.mjs` (prawdziwa powłoka i sejf: karta → przelicznik
+z TSH, wpisany wynik z komunikatem, pasek → karta na zakładce „Badania”, strona
+samodzielna). Zielone testy nie są walidacją kliniczną.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla
