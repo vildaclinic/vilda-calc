@@ -36,15 +36,18 @@ const gotowa = async (page) => {
 
 async function zalogujPoSkokuZegara(page) {
   // Miesiąc później sesja logowania wygasła także dla nowych ramek powłoki.
-  // Logujemy fikcyjne konto w stabilnym dokumencie nadrzędnym. Callback logowania
-  // może wymienić dokumenty paneli, więc poprzedni Frame nie jest już uchwytem
-  // do dalszej pracy. Nowa powłoka odtwarza odświeżoną sesję zwykłą ścieżką boot.
+  // Najpierw usuwamy stare ramki: ich opóźniony ping wygaszenia sesji może
+  // przeładować także rodzica w trakcie unlockUser (vilda_frame_sync.js).
+  // Logujemy fikcyjne konto na samodzielnej stronie, a świeża powłoka odtwarza
+  // gotową sesję zwykłą ścieżką boot. Poprzednie uchwyty Frame już nie obowiązują.
+  await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await page.evaluate(async (pw) => {
     const [uzytkownik] = await window.VildaVault.listUsers();
     await window.VildaVault.unlockUser(uzytkownik.userId, pw);
   }, HASLO);
-  await page.reload({ waitUntil: 'load' });
+  await gotowa(page);
+  await page.goto('/app.html#/start', { waitUntil: 'load' });
   const start = await ramka(page, 'Start');
   await gotowa(start);
   return start;
