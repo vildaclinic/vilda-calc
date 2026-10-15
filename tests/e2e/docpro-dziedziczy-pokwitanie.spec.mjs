@@ -22,7 +22,11 @@ const REKORD = {
   name: 'Fikcyjny Dokprowy',
   user: {
     firstName: 'Dokprowy', lastName: 'Fikcyjny', sex: 'M',
-    age: 12, ageMonths: 0, height: 141, weight: 34, tannerStage: '3',
+    age: 12, ageMonths: 0, height: 141, weight: 34, tannerStage: '5',
+    pubertyAssessment: { version: 1, sex: 'M', observations: {
+      G: { stage: 3, observedAtISO: '2026-06-17', ageMonths: 144, source: 'fictional-exam' },
+      Th: null, P: null,
+    } },
   },
   // Sekcja faktów trwałych — rekord ma ją niezależnie od „stanu na dziś". Dzięki niej
   // testy mogą poczekać na odczyt z sejfu tym samym sposobem przed zmianą i po niej.
@@ -77,8 +81,15 @@ async function wczytajPacjenta(page) {
   // przeciw wersji sprzed tej poprawki.
   await page.waitForFunction(() => Boolean(window.VildaPubertySource
     && window.VildaPubertySource.zKartyPacjenta()));
+  if (new URL(page.url()).pathname === '/index.html') {
+    await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
+    await page.locator('#vildaLcmNew').click();
+    await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  }
   return pid;
 }
+
+const gonadal = (page, n) => page.locator('.vpa-segments [data-puberty-axis="G"][data-puberty-stage="' + (n ?? '') + '"]');
 
 function policz(page) {
   return page.evaluate(() => {
@@ -93,7 +104,7 @@ function policz(page) {
   });
 }
 
-test('docpro.html: panel pokwitaniowy jest, rekord wypełnia etap i jądra, karta liczy z pól', async ({ page }) => {
+test('docpro.html: wspólny panel zachowuje G i jądra, karta korzysta z jawnej oceny G', async ({ page }) => {
   test.setTimeout(120_000);
   await otworzZKontem(page, '/docpro.html');
 
@@ -114,7 +125,9 @@ test('docpro.html: panel pokwitaniowy jest, rekord wypełnia etap i jądra, kart
     panelOtwarty: document.getElementById('tannerStageWrap').style.display !== 'none',
     przycisk: document.getElementById('tannerToggleBtn').textContent,
   }));
-  expect(pola.etap, 'etap z rekordu trafia do pola').toBe('3');
+  expect(pola.etap, 'stary numer zachowany wyłącznie do zgodności importu').toBe('5');
+  await expect(page.locator('#tannerStage')).toBeHidden();
+  expect(await page.evaluate(() => window.VildaPubertyAssessmentState.read().assessment.observations.G.stage)).toBe(3);
   expect(pola.jadra).toBe('4to6');
   expect(pola.onset, 'fakt trwały z sekcji puberty').toBe('11');
   // P-PANEL-ZWINIETY (decyzja właściciela 2026-09-16): panel zostaje zwinięty także z danymi.
@@ -123,7 +136,7 @@ test('docpro.html: panel pokwitaniowy jest, rekord wypełnia etap i jądra, kart
 
   const status = await page.evaluate(() => window.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 }));
   expect(status.etap).toBe(3);
-  expect(status.etapZrodlo, 'źródłem jest pole, tak jak na stronie głównej').toBe('formularz');
+  expect(status.etapZrodlo, 'zapisana jawna G pozostaje wcześniejszą oceną; odczyt nie potwierdza jej na nowo').toBe('rekord');
   expect(status.jadra).toBe('4to6');
 
   const wynik = await policz(page);
@@ -144,8 +157,10 @@ test('index.html: pole opróżnione przez lekarza nadal wygrywa z rekordem', asy
 
   await wczytajPacjenta(page);
 
+  await page.locator('#tannerToggleBtn').click();
+  await gonadal(page, null).click();
   await page.evaluate(() => {
-    for (const id of ['tannerStage', 'advTesticularVolume', 'advFamilyDelayedPuberty',
+    for (const id of ['advTesticularVolume', 'advFamilyDelayedPuberty',
       'advGrowthExclusion']) {
       const el = document.getElementById(id);
       if (el) { el.value = ''; el.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -153,7 +168,9 @@ test('index.html: pole opróżnione przez lekarza nadal wygrywa z rekordem', asy
   });
 
   const status = await page.evaluate(() => window.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 }));
-  expect(status.etap, 'puste pole to odpowiedź „dziś nie oceniono", nie brak odpowiedzi').toBeNull();
+  expect(status.etap, 'nieocenione G wygrywa ze starszym rekordem i ogólnym Tannerem').toBeNull();
+  expect(await page.evaluate(() => window.collectUserData().user.pubertyAssessment.observations.G)).toBeNull();
+  await expect(page.locator('#tannerStage')).toHaveValue('5');
   expect(status.jadra).toBe('');
 
   const wynik = await policz(page);

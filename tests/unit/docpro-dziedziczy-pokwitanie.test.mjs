@@ -147,7 +147,7 @@ describe('Jedne drzwi: pole albo rekord', () => {
   });
 });
 
-describe('Formularz główny: nic się nie zmienia', () => {
+describe('Legacy formularza: numer nie staje się osią gonadalną', () => {
   it('puste pole etapu NIE wpuszcza etapu z rekordu', () => {
     const okno = zbuduj(POLA_GLOWNE);
     okno.VildaPubertySource.zapamietaj(REKORD);
@@ -162,64 +162,52 @@ describe('Formularz główny: nic się nie zmienia', () => {
     expect(okno.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 }).jadra).toBe('');
   });
 
-  it('wypełnione pole wygrywa z rekordem i jest oznaczone jako formularz', () => {
+  it('wypełniony ogólny numer i legacy rekordu nie wyznaczają G', () => {
     const okno = zbuduj({ ...POLA_GLOWNE, tannerStage: '1', advTesticularVolume: 'lt4' });
     okno.VildaPubertySource.zapamietaj(REKORD);
     const d = okno.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 });
-    expect(d.etap).toBe(1);
-    expect(d.etapZrodlo).toBe('formularz');
+    expect(d.etap).toBeNull();
+    expect(d.etapZrodlo).toBeNull();
     expect(d.jadra).toBe('lt4');
   });
 });
 
 describe('DocPro: karta liczy z tych samych danych', () => {
-  it('etap i jądra wchodzą z rekordu, z uczciwie nazwanym źródłem', () => {
+  it('kategoria jąder pozostaje dostępna, a legacy etap nie staje się G', () => {
     const okno = zbuduj({ age: '12', ageMonths: '0' });
     okno.VildaPubertySource.zapamietaj(REKORD);
     const d = okno.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 });
-    expect(d.etap).toBe(3);
-    expect(d.etapZrodlo).toBe('rekord');
+    expect(d.etap).toBeNull();
+    expect(d.etapZrodlo).toBeNull();
     expect(d.etapNieaktualny).toBe(false);
     expect(d.jadra).toBe('4to6');
   });
 
-  it('etap z rekordu przechodzi przez regułę świeżości — 12 miesięcy to granica', () => {
+  it('legacy pozostaje nieokreślone także w granicy dawnych 12 miesięcy', () => {
     const okno = zbuduj(null);
-    okno.VildaPubertySource.zapamietaj(REKORD); // wpis w 144. miesiącu życia
-    const S = okno.VildaPubertalStatus;
-    expect(S.dane({ plec: 'M', wiekLat: 13 }).etap, 'równo 12 mies. jeszcze wchodzi').toBe(3);
-    const stary = S.dane({ plec: 'M', wiekLat: 14 });
-    expect(stary.etap, 'starszy niż 12 mies. jest ignorowany').toBeNull();
-    expect(stary.etapNieaktualny).toBe(true);
-    expect(stary.etapPominiety, 'lekarz ma wiedzieć, co pominięto').toBe(3);
-  });
-
-  it('wiek bieżący bierze z pól wieku, gdy konsument go nie podał', () => {
-    const okno = zbuduj({ age: '14', ageMonths: '0' });
     okno.VildaPubertySource.zapamietaj(REKORD);
-    const d = okno.VildaPubertalStatus.dane({ plec: 'M' });
-    expect(d.etap, '168 - 144 = 24 mies. — za stare').toBeNull();
-    expect(d.etapNieaktualny).toBe(true);
+    const S = okno.VildaPubertalStatus;
+    expect(S.dane({ plec: 'M', wiekLat: 13 }).etap).toBeNull();
+    expect(S.dane({ plec: 'M', wiekLat: 14 }).etap).toBeNull();
   });
 
-  it('wartość z rekordu naprawdę wchodzi do obliczeń — wykrywa sprzeczność', () => {
+  it('sam numer nie uruchamia gonadalnych sprzeczności z wywiadem', () => {
     const okno = zbuduj(null);
     okno.VildaPubertySource.zapamietaj({
       user: { sex: 'M', age: 12, ageMonths: 0, tannerStage: '1' },
-      advanced: { testicularVolume: 'gt6' },
+      puberty: { onsetAgeYears: 11 },
     });
     const d = okno.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 });
-    expect(d.etap).toBe(1);
-    expect(d.jadra).toBe('gt6');
-    expect(d.sprzecznosci.some((t) => t.includes('Tanner I wyklucza'))).toBe(true);
+    expect(d.etap).toBeNull();
+    expect(d.sprzecznosci).toEqual([]);
   });
 
-  it('konsument może nadal podać etap wprost i to on rozstrzyga', () => {
+  it('stary scalar override konsumenta nie nadaje rodzaju cechy', () => {
     const okno = zbuduj(null);
     okno.VildaPubertySource.zapamietaj(REKORD);
     const d = okno.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12, etapFormularz: '5' });
-    expect(d.etap).toBe(5);
-    expect(d.etapZrodlo).toBe('formularz');
+    expect(d.etap).toBeNull();
+    expect(d.etapZrodlo).toBeNull();
   });
 
   it('bez wczytanego pacjenta DocPro nie zgaduje etapu', () => {

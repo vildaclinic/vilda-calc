@@ -23,7 +23,24 @@ export async function closePatientEditor(ctx) {
   }
 }
 
-export const quickSelect = async (ctx, name, value) => (await quickField(ctx, name)).selectOption(value);
+const selectedAxes = new WeakMap();
+export const quickSelect = async (ctx, name, value) => {
+  if (name === 'Sex') selectedAxes.delete(ctx);
+  const common = ctx.locator('#labPubertySharedEditor');
+  if (['Kind', 'Stage'].includes(name) && await common.count() && await common.evaluate(node => !node.hidden)) {
+    if (!await common.isVisible()) await ctx.locator('#labPubertyRefineStage').click();
+    const sex = await ctx.locator('#labPubertySex').inputValue();
+    const axis = name === 'Kind' ? value : selectedAxes.get(ctx) || (sex === 'F' ? 'Th' : 'G');
+    selectedAxes.set(ctx, axis);
+    if (!['G', 'Th', 'P'].includes(axis)) throw new Error(`The shared editor does not offer ${axis}`);
+    const stage = name === 'Stage' ? value : await ctx.locator('#labPubertyStage').inputValue();
+    if (name === 'Stage' || /^[1-5]$/.test(stage)) {
+      await common.locator(`.vpa-segments [data-puberty-axis="${axis}"][data-puberty-stage="${stage}"]`).click();
+    }
+    return;
+  }
+  return (await quickField(ctx, name)).selectOption(value);
+};
 export const quickFill = async (ctx, name, value) => (await quickField(ctx, name)).fill(value);
 
 // This helper only verifies the production auto mode; it never configures a method.

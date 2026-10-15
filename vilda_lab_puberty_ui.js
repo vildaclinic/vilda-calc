@@ -61,6 +61,20 @@
     return label(value.lower) + (value.lower === value.upper ? '' : '–' + label(value.upper));
   }
 
+  // The runtime chooses one gonadal observation under its visit/sex guards.
+  // This adapter only serializes that choice; P and legacy never acquire a
+  // gonadal label through a local form correction.
+  function sharedObservationFields(context) {
+    var source = context && context.gonadalObservation;
+    if (!source || !['G', 'Th'].includes(source.kind) || !sexAllowsKind(context.sex, source.kind) ||
+        source.stage == null && !source.observation) {
+      return { kind: 'unspecified', stage: '', assessedAt: null,
+        observationSource: null, pubertyAppliesToCurrentContext: false };
+    }
+    return { kind: source.kind, stage: source.stage, assessedAt: source.observedAtISO,
+      observationSource: source.source, pubertyAppliesToCurrentContext: source.current === true && source.stage != null };
+  }
+
   // Whitelist pól formularza, bez dat domyślnych i bez domniemanego Th/G.
   // Części wieku zachowują rzeczywistą precyzję. Silnik rozstrzyga poprawność.
   function buildInput(fields, measurement) {
@@ -108,7 +122,11 @@
       if (f.contextBasis === 'current-patient') {
         input.birthDateISO = null; input.sampleDateISO = null;
         input.puberty.appliesToSample = false; input.testicularVolume.appliesToSample = false;
-        input.puberty.appliesToCurrentContext = compatibleKind; input.testicularVolume.appliesToCurrentContext = male;
+        // Shared observations keep their own examination date. Restoring an
+        // earlier visit must not make its stage current merely by mounting the
+        // quick form. Older explicit callers retain their original contract.
+        input.puberty.appliesToCurrentContext = compatibleKind && f.pubertyAppliesToCurrentContext !== false;
+        input.testicularVolume.appliesToCurrentContext = male;
       } else {
         input.puberty.appliesToSample = compatibleKind; input.testicularVolume.appliesToSample = male;
       }
@@ -148,6 +166,7 @@
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
     var dirty = {}, imported = {}, kindOptionsSex = null, omittedSexContext = false, suspendedSexFields = null;
     var neonatalEdit = false, reproductiveSex = null;
+    var sharedEditor = null, localAssessment = null, localEditedAxes = {}, localVisitMarker = null;
     function isInhibin() { return analyte === 'inhibin_b'; }
     function units() { return isInhibin() ? ['pg/mL', 'ng/L'] : ['IU/L', 'mIU/mL']; }
     function stageReferencesAvailable() { return !(data && data.presentationPolicy && data.presentationPolicy.stageReferencesAvailable === false); }
@@ -229,16 +248,99 @@
     ['gestationalAge', 'postnatalDays'].forEach(function (key) {
       fields[key].addEventListener('blur', function () { updateView(); notify(); });
     });
-    var stage = section('stage', 'Stadium', 'Sam numer Tannera nie określa cechy. P i Ax nie zastępują rozwoju gonadalnego.');
+    var stage = section('stage', 'Ocena pokwitania', 'G lub Th oraz P są niezależnymi cechami.');
     var kindChoices = [['unspecified', 'Nie określono'], ['Th', 'Th/M — rozwój piersi'], ['G', 'G — narządy płciowe'], ['P', 'P — owłosienie łonowe'], ['Ax', 'Ax — owłosienie pachowe']];
     field(stage, 'kind', 'Rodzaj cechy', 'select', kindChoices);
     field(stage, 'stage', 'Stadium', 'select', [['', 'Nie podano'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]);
     var stageHint = element('p', 'lab-puberty-hint'); stageHint.id = 'labPubertyStageHint'; sections.stage.appendChild(stageHint);
+    var sharedEditorHost = element('div', 'vilda-puberty-panel'); sharedEditorHost.id = 'labPubertySharedEditor'; sections.stage.appendChild(sharedEditorHost);
     var reproductiveChoices = [['unknown', 'Nie ustalono'], ['follicular', 'Faza folikularna'], ['ovulation', 'Okres okołoowulacyjny'], ['luteal', 'Faza lutealna'], ['postmenopause', 'Po menopauzie']];
     field(panel, 'reproductiveContext', 'Cykl / menopauza', 'select', reproductiveChoices);
     wrappers.reproductiveContext.classList.add('lab-puberty-cycle-field'); wrappers.reproductiveContext.hidden = true;
 
     function ready() { return !!context && context.sourceStatus === 'ready'; }
+    function sharedRuntime() { return opts.pubertyContext || root.VildaPubertyAssessmentContext; }
+    function sharedVisit() {
+      var active = context && context.pubertyAssessmentContext;
+      return !!(active && active.available && active.scope === 'visit' &&
+        !dirty.sex && !dirty.ageYears && !dirty.ageMonths);
+    }
+    function sharedObservationAvailable() {
+      var active = context && context.pubertyAssessmentContext;
+      return !!(active && active.available && !localAssessment &&
+        !dirty.sex && !dirty.ageYears && !dirty.ageMonths);
+    }
+    function assessmentView() {
+      var active = context && context.pubertyAssessmentContext;
+      if (localAssessment) {
+        var read = root.VildaPubertyAssessment.readUser({ pubertyAssessment: localAssessment });
+        read.axisStates = {};
+        ['G', 'Th', 'P'].forEach(function (axis) {
+          read.axisStates[axis] = { eligible: !!localEditedAxes[axis], current: !!localEditedAxes[axis], reason: localEditedAxes[axis] ? null : 'earlier-observation' };
+        });
+        read.scope = 'local'; read.preparing = false;
+        return read;
+      }
+      return active ? Object.assign({}, active.assessmentContext, { axisStates: active.axisStates,
+        scope: sharedVisit() ? 'visit' : 'local', preparing: active.preparing === true }) :
+        { status: 'absent', assessment: null, legacy: null };
+    }
+    function localGonadalObservation() {
+      var model = root.VildaPubertyAssessment;
+      var years = number(fields.ageYears.value), months = number(fields.ageMonths.value);
+      return localAssessment && model && typeof model.gonadalContext === 'function'
+        ? model.gonadalContext({ pubertyAssessment: localAssessment, pubertyAssessmentVisit: localVisitMarker }, {
+          sex: fields.sex.value, currentAgeMonths: years == null ? null : years * 12 + (months == null ? 0 : months),
+          measuredAtISO: null, scope: 'current' }) : null;
+    }
+    function editSharedObservation(axis, stageValue) {
+      if (sharedVisit()) {
+        var runtime = sharedRuntime();
+        var result = runtime && typeof runtime.editObservation === 'function'
+          ? runtime.editObservation(axis, stageValue) : { ok: false };
+        if (result === true || result && result.ok) { refreshContext(); updateView(); notify(); }
+        return result;
+      }
+      var model = root.VildaPubertyAssessment, sex = fields.sex.value;
+      if (!model || !['M', 'F'].includes(sex) || axis === 'G' && sex !== 'M' || axis === 'Th' && sex !== 'F') return { ok: false, reason: 'sex-mismatch' };
+      var current = assessmentView();
+      if (current.status !== 'ready' && current.status !== 'absent') return { ok: false, reason: current.status };
+      if (!localAssessment && sharedObservationAvailable()) {
+        var states = context.pubertyAssessmentContext.axisStates || {};
+        ['G', 'Th', 'P'].forEach(function (existingAxis) {
+          if (states[existingAxis] && states[existingAxis].current === true) localEditedAxes[existingAxis] = true;
+        });
+      }
+      var raw = localAssessment ? model.clone(localAssessment) : current.assessment && current.assessment.sex === sex
+        ? model.clone(current.assessment) : { version: 1, sex: sex, observations: { G: null, Th: null, P: null } };
+      var years = number(fields.ageYears.value), months = number(fields.ageMonths.value);
+      raw.observations[axis] = stageValue == null ? null : { stage: stageValue, observedAtISO: null,
+        ageMonths: years == null ? null : years * 12 + (months == null ? 0 : months), source: 'lab-local' };
+      if (model.readUser({ pubertyAssessment: raw }).status !== 'ready') return { ok: false, reason: 'invalid-context' };
+      localAssessment = raw; localEditedAxes[axis] = true;
+      localVisitMarker = { version: 1, visitId: 'local-lab-context', ownerPatientId: null,
+        currentAxes: Object.keys(localEditedAxes), reference: { sex: sex,
+          ageMonths: years == null ? null : years * 12 + (months == null ? 0 : months), measuredAtISO: null } };
+      // Kept only for old serializer clients and saved-context diagnostics;
+      // these controls are hidden while the shared editor owns the input.
+      fields.kind.value = axis; fields.stage.value = stageValue == null ? '' : String(stageValue);
+      delete imported.kind; delete imported.stage; dirty.kind = true; dirty.stage = true;
+      updateView(); notify();
+      return { ok: true };
+    }
+    function updateSharedEditor() {
+      var ui = root.VildaPubertyAssessmentUI;
+      var enabled = !!(ui && typeof ui.mountEditor === 'function' && context && context.pubertyAssessmentContext);
+      sharedEditorHost.hidden = !enabled;
+      wrappers.kind.hidden = enabled;
+      wrappers.stage.hidden = enabled || fields.kind.value === 'Ax';
+      if (enabled && !sharedEditor) sharedEditor = ui.mountEditor(sharedEditorHost, {
+        read: assessmentView, sex: function () { return fields.sex.value; },
+        onEdit: editSharedObservation, idPrefix: 'labSharedPuberty'
+      });
+      if (sharedEditor) sharedEditor.render();
+      return enabled;
+    }
     function adultAgeState(value) {
       var profile = data && Array.isArray(data.profiles) && data.profiles.find(function (candidate) { return candidate.active === true && candidate.referenceContext === 'adult' && (!analyte || candidate.analyte === analyte) && (!candidate.scope || !candidate.scope.sex || candidate.scope.sex === fields.sex.value); });
       var lower = profile && profile.scope && profile.scope.age && profile.scope.age.lower;
@@ -283,6 +385,13 @@
       values.contextBasis = 'current-patient';
       values.referenceSelection = 'automatic'; values.specimen = 'unknown';
       values.observationSource = imported.stage ? 'patient-record' : 'provided';
+      if (context && context.pubertyAssessmentContext) {
+        var selected = sharedObservationAvailable() ? context.gonadalObservation : localGonadalObservation();
+        var observationFields = sharedObservationFields({ sex: fields.sex.value, gonadalObservation: selected });
+        var legacy = assessmentView().legacy;
+        if (!selected && legacy) observationFields.stage = legacy.stage;
+        Object.keys(observationFields).forEach(function (key) { values[key] = observationFields[key]; });
+      }
       values.gnrha = ready() ? ({ brak: 'no', 'w-trakcie': 'yes' }[context.gnrhaStatus] || 'unknown') : 'unknown';
       // Zakres działania modułu nie potwierdza rodzaju konkretnego oznaczenia
       // ani braku leczenia. Znane bieżące GnRHa nadal wyklucza zakresy bazalne.
@@ -359,6 +468,15 @@
         else if (key === 'kind' || key === 'stage') { delete suspendedSexFields.values.kind; delete suspendedSexFields.values.stage; }
       }
       delete imported[key]; dirty[key] = true; evaluation = null;
+      if (['sex', 'ageYears', 'ageMonths'].includes(key)) { localEditedAxes = {}; localVisitMarker = null; }
+      if (['ageYears', 'ageMonths'].includes(key) && !localAssessment && context && context.pubertyAssessmentContext) {
+        var activeRead = context.pubertyAssessmentContext.assessmentContext;
+        if (activeRead && activeRead.status === 'ready') localAssessment = root.VildaPubertyAssessment.clone(activeRead.assessment);
+      }
+      if (key === 'sex' && context && context.pubertyAssessmentContext) {
+        localAssessment = { version: 1, sex: ['M', 'F'].includes(fields.sex.value) ? fields.sex.value : null,
+          observations: { G: null, Th: null, P: null } };
+      }
       if (key === 'ageYears' || key === 'ageMonths') {
         clearField('postnatalDays'); delete imported.postnatalDays; dirty.postnatalDays = true;
         neonatalEdit = false;
@@ -377,7 +495,15 @@
       if (!ready()) return;
       importField('sex', ['M', 'F'].includes(context.sex) ? context.sex : '');
       importField('ageYears', context.ageYears); importField('ageMonths', context.ageMonths);
-      importField('stage', context.tanner); importField('kind', 'unspecified');
+      if (context.pubertyAssessmentContext && !localAssessment) {
+        // A shared edit replaces the former local kind/stage override. Cycle,
+        // neonatal and specimen corrections keep their own independent scope.
+        delete dirty.kind; delete dirty.stage;
+        var observationFields = sharedObservationFields(context);
+        var legacy = context.pubertyAssessmentContext.assessmentContext && context.pubertyAssessmentContext.assessmentContext.legacy;
+        importField('stage', observationFields.stage || legacy && legacy.stage || '');
+        importField('kind', observationFields.kind);
+      } else if (!context.pubertyAssessmentContext) { importField('stage', context.tanner); importField('kind', 'unspecified'); }
       importField('preterm', flag(context.preterm));
       var neonatal = context.neonatalAge || {}, gestational = neonatal.gestationalDays, postnatal = neonatal.postnatalDays;
       importField('gestationalAge', knownDays(gestational) ? gestational.lower === gestational.upper ? weekLabel(gestational.lower) : gestational.lower % 7 === 0 && gestational.upper === gestational.lower + 6 ? Math.floor(gestational.lower / 7) : '' : '');
@@ -402,13 +528,16 @@
       patientSummary.textContent = (adult.definite ? { M: 'Mężczyzna', F: 'Kobieta' } : neonatalMode || inhibinInfant || infantDays ? { M: 'Chłopiec', F: 'Dziewczynka' } : { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' })[fields.sex.value] + ' · ' + ageLabel;
       if (!['M', 'F'].includes(fields.sex.value)) patientSummary.textContent = 'Płeć niepodana · ' + ageLabel;
       var kind = fields.kind.value, stageValue = fields.stage.value;
-      stageSummary.textContent = kind === 'Ax' ? 'Ax — owłosienie pachowe' : stageValue ? (kind === 'unspecified' ? 'Tanner ' + ['', 'I', 'II', 'III', 'IV', 'V'][Number(stageValue)] + ' — rodzaj niepodany' : kind + stageValue) : 'Stadium niepodane';
+      var commonEditor = updateSharedEditor();
+      stageSummary.textContent = commonEditor ? root.VildaPubertyAssessmentUI.summary(assessmentView(), fields.sex.value) : kind === 'Ax' ? 'Ax — owłosienie pachowe' : stageValue ? (kind === 'unspecified' ? 'Tanner ' + ['', 'I', 'II', 'III', 'IV', 'V'][Number(stageValue)] + ' — rodzaj niepodany' : kind + stageValue) : 'Stadium niepodane';
       refineStage.textContent = details.open && !sections.stage.hidden ? 'Gotowe' : stageValue && kind === 'unspecified' ? 'Doprecyzuj' : 'Zmień stadium';
       refineStage.setAttribute('aria-expanded', String(details.open && !sections.stage.hidden));
-      stageHint.textContent = (['M', 'F'].includes(fields.sex.value) ? '' : 'Wybierz płeć, aby wskazać Th/M lub G. ') + 'Ocena dotyczy bieżącego kontekstu pacjenta.';
+      if (commonEditor) refineStage.textContent = details.open && !sections.stage.hidden ? 'Gotowe' : sharedVisit() ? 'Edytuj ocenę w tej wizycie' : 'Zmień ocenę';
+      stageHint.textContent = (['M', 'F'].includes(fields.sex.value) ? '' : 'Wybierz płeć, aby wskazać Th/M lub G. ') +
+        (commonEditor ? sharedVisit() ? 'Wspólna ocena tej wizyty — zmiany są dostępne także w formularzu głównym.' : 'Korekta tylko dla tego sprawdzenia. Nie zapisuje danych pacjenta.' : 'Ocena dotyczy bieżącego kontekstu pacjenta.');
       var infant = resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < 1;
       wrappers.preterm.hidden = !infant && !neonatalMode;
-      stageRow.hidden = neonatalMode || adult.definite || !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
+      stageRow.hidden = neonatalMode || adult.definite || !commonEditor && !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
       if (stageRow.hidden) { sections.stage.hidden = true; sectionButtons.stage.setAttribute('aria-pressed', 'false'); }
       wrappers.reproductiveContext.hidden = fields.sex.value !== 'F' || !adult.possible;
       updateNeonatalView(neonatalMode, neonatal);
@@ -508,6 +637,7 @@
     }
     function reset() {
       Object.keys(fields).forEach(clearField); dirty = {}; imported = {}; evaluation = null; contextKey = null; omittedSexContext = false; suspendedSexFields = null; neonatalEdit = false; reproductiveSex = null;
+      localAssessment = null; localEditedAxes = {}; localVisitMarker = null;
       lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' }; details.open = false;
       Object.keys(sections).forEach(function (name) { sections[name].hidden = true; sectionButtons[name].setAttribute('aria-pressed', 'false'); });
       assessment.replaceChildren(); syncSexFields();
@@ -515,6 +645,19 @@
     function setPatientContext(next) {
       next = next && typeof next === 'object' ? next : {};
       var key = JSON.stringify(next); if (contextKey === key) return;
+      var sourceSexChanged = context && !dirty.sex && ['M', 'F'].includes(next.sex) &&
+        localAssessment && localAssessment.sex !== next.sex;
+      if (sourceSexChanged) {
+        // A rejected male/female observation is an explicit empty replacement.
+        // Clearing the local carrier entirely would expose an older untyped
+        // number again on the next record refresh.
+        localAssessment = { version: 1, sex: next.sex, observations: { G: null, Th: null, P: null } };
+        localEditedAxes = {}; localVisitMarker = null;
+        clearIncompatible('kind'); clearIncompatible('stage'); omittedSexContext = true;
+      } else if (context && next.pubertyAssessmentContext && next.pubertyAssessmentContext.scope === 'visit' &&
+          JSON.stringify(context.pubertyAssessmentContext) !== JSON.stringify(next.pubertyAssessmentContext)) {
+        localAssessment = null; localEditedAxes = {}; localVisitMarker = null;
+      }
       if (context && text(context.identityKey) !== text(next.identityKey)) {
         reset(); if (typeof opts.onPatientChange === 'function') opts.onPatientChange();
       } else {
@@ -608,10 +751,15 @@
       return snapshots.create(current);
     }
     syncSexFields();
+    var runtime = sharedRuntime();
+    if (runtime && typeof runtime.subscribe === 'function') runtime.subscribe(function () {
+      if (analyte && refreshContext()) { updateView(); notify(); }
+    });
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.13.0', buildInput: buildInput, parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
+  var api = { version: '1.14.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
+    parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

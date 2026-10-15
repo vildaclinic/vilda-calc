@@ -71,14 +71,13 @@ describe('Świeżość stadium', () => {
 });
 
 describe('Sprzeczności między polami', () => {
-  it('Tanner I przy jądrach ≥ 4 ml', () => {
-    const l = S.sprzecznosci({ etap: 1, plec: 'M', jadra: 'gt6' });
-    expect(l).toHaveLength(1);
-    expect(l[0]).toMatch(/Tanner I wyklucza/);
+  it('kategoria objętości jąder nie określa morfologicznego G', () => {
+    expect(S.sprzecznosci({ etap: 1, plec: 'M', jadra: 'gt6' })).toEqual([]);
   });
 
-  it('Tanner ≥ II przy jądrach < 4 ml', () => {
-    expect(S.sprzecznosci({ etap: 3, plec: 'M', jadra: 'lt4' })[0]).toMatch(/gonadarche/);
+  it('G2 przy objętości <4 mL nie jest automatycznie odrzucane', () => {
+    expect(S.sprzecznosci({ etap: 2, plec: 'M', jadra: 'lt4' })).toEqual([]);
+    expect(S.sprzecznosci({ etap: 3, plec: 'M', jadra: 'lt4' })).toEqual([]);
   });
 
   it('jądra 4–6 ml przy Tanner II to zgodność, nie sprzeczność', () => {
@@ -143,11 +142,18 @@ describe('Objętość jąder mieszka w panelu pokwitaniowym (GROWTH-PUB-TWO)', (
     expect(pole, 'przed kartą zaawansowaną, nie w niej').toBeLessThan(karta);
   });
 
-  it('panel zna pole objętości jąder i zwija je razem ze sobą (od P-PANEL-ZWINIETY nie otwiera się sam)', () => {
-    const inline = fs.readFileSync(path.join(korzen, 'inline_index_02.js'), 'utf8');
-    expect(inline).toMatch(/var POLA = \[[^\]]*'advTesticularVolume'[^\]]*\]/);
-    expect(inline).toContain("getElementById('testicularVolumeWrap')");
-    expect(inline).toMatch(/jadraWrap\.style\.display = otwarty \? '' : 'none'/);
+  it('opcjonalne pomiary i wywiad zwijają się w tym samym panelu na obu stronach', () => {
+    for (const file of ['index.html', 'docpro.html']) {
+      const html = fs.readFileSync(path.join(korzen, file), 'utf8');
+      const details = html.indexOf('<details id="pubertyOptionalDetails"');
+      const volume = html.indexOf('id="testicularVolumeWrap"');
+      const history = html.indexOf('id="pubertyExtraWrap"');
+      const end = html.indexOf('</details>', details);
+      expect(details).toBeGreaterThan(html.indexOf('id="tannerStageWrap"'));
+      expect(volume).toBeGreaterThan(details);
+      expect(history).toBeGreaterThan(volume);
+      expect(history).toBeLessThan(end);
+    }
   });
 });
 

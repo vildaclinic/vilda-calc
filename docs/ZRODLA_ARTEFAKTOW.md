@@ -1065,6 +1065,46 @@ Wywołanie bez zakładki jest dosłownie takie jak dotąd, więc testy powłoki 
 
 Przelicznik (`przelicznik-jednostek.html`, czytelny skrypt strony) dostał w tym samym PR hook `window.VildaLabConverterRuntime = { getSubstanceId }` i zdarzenie `vilda:lab-substance-changed` z `applySubstance()` (decyzja 6.16) — poza zakresami wycinanymi przez testy (`powloka-wskazanie-kliniczne`, `lab-inhibin-b-ui`, `lab-puberty-*`, `hormone-lifespan-converter-adapter`).
 
+## Łatki P-POKWITANIE-PANEL (2026-10-15)
+
+Czytelne źródła tej partii: `vilda_puberty_assessment.js` (kwalifikacja osi),
+`vilda_puberty_assessment_state.js` (aktywny wpis i znacznik wizyty),
+`vilda_puberty_assessment_context.js` (chroniony odczyt między kartami),
+`vilda_puberty_assessment_ui.js/.css` (wspólny edytor). Nie przebudowano
+artefaktów ze starszych źródeł i nie zminifikowano ich ponownie.
+
+Wąskie punkty integracji:
+
+- `vilda_data_import_export.js`: istniejące hooki#687 przenoszą ocenę i znacznik
+  atomowo. `xe()`/`Re()` uwzględniają obecny carrier jako dane formularza/sesji;
+  wpis bez nazwiska, antropometrii i ogólnego Tannera nie ginie przy F5.
+- `inline_index_02.js`: ta sama istniejąca sekcja i przycisk; ogólny
+  `#tannerStage` pozostaje ukrytym nośnikiem legacy. Nowe osie nie są do niego
+  przepisywane. Wiersze/ściągi tworzy czytelny moduł UI, a wywiad jest opcjonalny.
+- `growth-basic-module.js`: `Bba(rows)` pobiera `VildaPubertalStatus.kontekstWzrastania()`
+  i dodaje dotychczasowy kontekstBA; usunięto dwa bezpośrednie odczyty scalara.
+- `vilda_advanced_growth.js`: `Ka()` przekazuje profilowi `etapRodzaj`, wiek
+  obserwacji oraz jawne `gonadalCurrent`; kontekst trajektorii pochodzi z tego
+  samego adaptera. Nasłuch wspólnej zmiany invaliduje istniejący cache.
+- `vilda_auth_ui.js`: w istniejącym hooku karty `_cx9` stary `parseInt(m.tannerStage)`
+  zastępuje `VildaPubertyAssessment.gonadalContext(m,{sex,currentAgeMonths,measuredAtISO,scope:'growth'})`.
+  Rodzaj i wiek są z konkretnej obserwacji, a pełne `readUser(m)` służy narracji.
+  Części edycji/scalania notatek i list pozostają w swojej dotychczasowej logice.
+- `vilda_summary_cards.js`: czytelny helper `qGonadalGrowth()` zastępuje odczyt
+  ogólnego Tannera z DOM. Jawny brak osi w produkcyjnym kontekście nie wraca do
+  `opt.tanner`. Niskopoziomowe funkcje zachowują deklarowany przez caller numer
+  dla zgodności, a jawnyP/unspecified lub niezgodna płeć są odrzucane.
+- `vilda_chrome.js` oraz `vilda_session_bridge.js`: oba leniwe stosy auth ładują
+  model przed `vilda_auth_ui.js`; odpowiadające warunki gotowości wymagają modelu.
+  Dzięki temu karta otwarta poza formularzem też czyta typowane obserwacje.
+
+Czytelne moduły statusu/profilu/tempa/trajektorii i narracji zachowują wzory,
+progi oraz dane referencyjne; zmieniono kwalifikację rodzaju i czasu obserwacji.
+Przelicznik montuje ten sam komponent edytora przez istniejące `VildaLabPubertyUI`.
+Kontrakt `buildInput` dla dawnych próbek pozostaje; tabele/silniki hormonów nie
+zostały scalone z rendererem ani zmienione. Wpływ kliniczny i źródła:
+`docs/clinical/ALGORITHMS.md`, P-POKWITANIE-PANEL.
+
 ## Jak odtworzyć
 
 ```bash

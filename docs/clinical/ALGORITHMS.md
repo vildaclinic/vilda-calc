@@ -4827,6 +4827,104 @@ Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (be
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
 
+### P-POKWITANIE-PANEL — G/Th/P wspólne dla wizyty, 2026-10-15
+
+**Decyzja i wpływ kliniczny.** Właściciel zaakceptował makietę, osobne G/P
+u chłopców i Th/P u dziewcząt, treść pomocy Pradera oraz rozszerzone opisy Th,
+a następnie polecił wdrożenie etapu 2. Panel i adaptery laboratoryjne/wzrostowe
+wchodzą razem. Jest to **zamierzona zmiana kwalifikacji danych klinicznych**:
+stary numer Tannera o nieznanym rodzaju oraz samo P nie zasilają już gonadalnych
+reguł. Pusta, wadliwa i przyszła typowana ocena nie wraca do starego numeru.
+Brak właściwej osi zachowuje dostępne porównanie według wieku. Nie dodano norm
+hormonalnych, progów wieku/stadium, przeliczeń jednostek ani wzorów wzrastania.
+Dla równoważnego prawidłowego G/Th dotychczasowe wzory zachowują wyniki.
+
+**Populacja i znaczenie stadium.** Ocena morfologiczna dzieci i młodzieży.
+G, Th(B) i P są niezależnymi kategoriami porządkowymi I–V, bez jednostki;
+nie wyliczamy ich średniej, maksimum ani ogólnego Tannera. P2 ma opis właściwy
+dla płci. P nie jest oceną rozwoju gonadalnego; zmiana płci nie przepisuje G
+na Th ani nie odnawia wcześniejszego P. Odczyt zachowuje źródłową płeć osobno
+przy każdej zachowanej osi. Dane dorosłych, cykl/menopauza, wcześniactwo,
+operator wyniku i znane leczenie zachowują osobne istniejące kontrakty.
+
+**Źródła pomocy, pełne teksty sprawdzone przy uzgodnieniu makiety.**
+
+- Marshall WA, Tanner JM. *Variations in pattern of pubertal changes in girls*.
+  Arch Dis Child. 1969;44:291–303. Definicje Th: s. 291, P: s. 292; sekwencje
+  i zmienność w dalszych tabelach. [DOI 10.1136/adc.44.235.291](https://doi.org/10.1136/adc.44.235.291),
+  [pełny tekst PMC2020314](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020314/).
+- Marshall WA, Tanner JM. *Variations in the pattern of pubertal changes in boys*.
+  Arch Dis Child. 1970;45:13–23. Definicje G/P i sekwencje morfologiczne;
+  [DOI 10.1136/adc.45.239.13](https://doi.org/10.1136/adc.45.239.13),
+  [pełny tekst PMC2020414](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020414/).
+  To historyczne obserwacje brytyjskich dzieci, nie nowe normy wieku dla Polski.
+- Krishna KB, Witchel SF. *Normal and Abnormal Puberty*. Endotext,
+  [pełny rozdział NBK279024](https://www.ncbi.nlm.nih.gov/books/NBK279024/).
+  Palpacja odróżnia pączek gruczołowy od tkanki tłuszczowej; stadium opisuje
+  budowę piersi, nie rozmiar. Th IV nie musi zostać uchwycone między wizytami.
+- Rey, Grinspon, Castro. *Clinical approach to the male with delayed puberty*.
+  Arch Endocrinol Metab., online 2025/zeszyt 2026;70(spe1).
+  [PMID 41312956](https://pubmed.ncbi.nlm.nih.gov/41312956/),
+  [DOI 10.20945/2359-4292-2025-0428](https://doi.org/10.20945/2359-4292-2025-0428).
+  Sekcja „Puberty” i ryc. 2: orientacyjne objętości pojedynczego jądra
+  w orchidometrze Pradera, bez utożsamiania z USG.
+- Agüero, Berner. *Tanner stages and Prader orchidometry in male adolescents.
+  A descriptive, cross-sectional study*. Arch Argent Pediatr. 2023;121(2).
+  [PMID 36315874](https://pubmed.ncbi.nlm.nih.gov/36315874/),
+  [DOI 10.5546/aap.2022-02717.eng](https://doi.org/10.5546/aap.2022-02717.eng).
+  Tabela 3, s. 5 PDF: 367 zdrowych Argentyńczyków w wieku 9–20 lat, morfologia oceniana
+  przed pomiarem, każda strona oddzielnie. Mediany/IQR nie są granicami normy.
+  Przegląd Rey cytuje tę pracę; nie liczymy ich jako niezależnych potwierdzeń.
+
+**Objętości w ściądze.** G1 około 2 ml; G2 około 4–6 ml; G3 około 8–10 ml;
+G4 około 12–15 ml; G5 około 15–25 ml. Etykieta „Orientacyjna objętość jądra:”.
+Są to dydaktyczne wskazówki towarzyszące morfologii, nie średnie, pełne zakresy
+referencyjne, progi diagnostyczne ani automat klasyfikacji. Nie dopisujemy
+metody Pradera do dawnego pomiaru o nieznanej metodzie. **Usunięto dwa
+kategoryczne porównania stadium z kategorią ml**; G2 przy 3 ml nie jest odrzucane,
+a wpisana objętość nie ustawia G. Nie przeliczamy wartości z USG.
+
+**Czas i zastosowanie.** Znacznik aktywnej wizyty dokumentuje świadomy wybór,
+nie datę badania. Wybór działa z ręcznym wiekiem, bez nazwiska lub antropometrii.
+Nieznana data pozostaje nieznana. F5 tej samej wizyty zachowuje wybór; nowy
+pomiar nie potwierdza dawnych osi. LH/FSH używają wyłącznie właściwego bieżącego
+G/Th, a brak stadium nie blokuje dostępnej osi wieku. Inhibina B zachowuje swoje
+istniejące pokrycie danych; panel nie tworzy dla niej brakujących norm stadium.
+Wzrost zachowuje operacyjną granicę ≤12 miesięcy (wcześniejsza decyzja aplikacji
+2026-09-09), osobną od aktualności wizyty. Przyszły albo nieznany historyczny
+czas nie dowodzi świeżości. Sama dawna data bez wieku oceny nie pozwala liczyć
+utrzymywania się Tanner II–III z dzisiejszego wieku. Wcześniejsze Th1/Th2 nie
+zaprzecza późniejszemu początkowi/menarche; komunikaty łączące stadium z tymi
+zdarzeniami wymagają bieżącej oceny. Przypięte wyniki zachowują własny kontekst
+i gotową ocenę — nie przeliczamy ich po zmianie stadium wizyty.
+
+**Odziedziczone ograniczenie tempa.** Dotychczasowa gałąź IV–V i progi pozostają.
+Nowy opis nie deklaruje, że takie stadium dowodzi zakończenia skoku wzrostowego.
+Marshall–Tanner 1970, s. 18, tab. IV: PHV chłopców przypadało głównie w G4
+(około 74%, także około 21% w G5). Gałąź jest istniejącą heurystyką aplikacji,
+nie nową normą ani nową walidacją; jej ewentualna zmiana wymaga osobnego ustalenia.
+
+**Przypadki regresyjne (rzeczywiste funkcje produkcyjne).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| M, G3/P2 lub F, Th3/P2 w aktywnej wizycie | wspólny import właściwej osi; osobne P i pochodzenie |
+| Brak G/Th lub samo P5 | bez osi gonadalnej; dostępna oś wieku i alarm niskiego tempa pozostają |
+| Dawny ogólny Tanner V | unspecified, bez wyciszenia alarmu przez typowany adapter |
+| G2 + kategoria <4 ml | brak deterministycznego odrzucenia G2, bez zmiany danych |
+| Edycja P | brak zmiany daty, wieku i źródła G/Th |
+| Zmiana M→F→M | historia zachowana, wcześniejsza kwalifikacja bieżącej oceny nie odżywa |
+| Ocena sprzed 12/ponad 12 miesięcy lub z przyszłości | zachowana granica 12 miesięcy; brak odnowienia przez autosave |
+| Dawne Th2 → późniejsza menarche | brak fałszywej sprzeczności oraz brak domysłu utrzymywania Th2 |
+| Nowsza edycja formularza podczas pauzy zapisu | starsza sesja/ramka nie zastępuje aktywnej oceny |
+| Zapisany wynik laboratoryjny G3 → zmiana wizyty G4 | zapisany wynik nadal ma pierwotne G3 i ocenę |
+
+Kontrakt i cykl życia: [PUBERTY_ASSESSMENT.md](../PUBERTY_ASSESSMENT.md).
+Testy: `puberty-assessment-qualification`, `puberty-assessment-context`,
+`puberty-assessment-persistence`, `puberty-growth-adapters`, `puberty-summary-consumers`,
+`puberty-assessment-editor` i `lab-puberty-shared-assessment`, wraz z istniejącymi
+regresjami obliczeń, zapisu, mobile i PWA.
+
 ### P-POKWITANIE-KONTRAKT — oddzielny zapis G/Th/P, etap 1, 2026-10-14
 
 **Zakres i wpływ kliniczny.** Techniczne przygotowanie wspólnej oceny pokwitania:

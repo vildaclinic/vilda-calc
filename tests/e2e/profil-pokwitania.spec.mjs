@@ -20,7 +20,12 @@ function policz(page, a) {
     set('age', a.lata); set('ageMonths', a.miesiace); set('sex', a.plec);
     set('height', a.wzrost); set('weight', a.masa);
     set('advMotherHeight', 165); set('advFatherHeight', 185); set('advBoneAge', a.ba);
-    set('tannerStage', a.tanner); set('pubertyOnsetAge', a.start); set('advTesticularVolume', a.jadra);
+    window.VildaPubertyAssessmentState.clear();
+    if (a.tanner != null && a.tanner !== '') {
+      const typed = window.VildaPubertyAssessmentState.editObservation(a.plec === 'M' ? 'G' : 'Th', Number(a.tanner));
+      if (!typed.ok) throw new Error('Nie przyjęto jawnej oceny G/Th: ' + typed.reason);
+    }
+    set('pubertyOnsetAge', a.start); set('advTesticularVolume', a.jadra);
     set('pubertyMenarcheAge', a.menarche);
     set('pubertyGnrhaStatus', a.gnrha); set('pubertyGnrhaStartAge', a.gnrhaStart); set('pubertyGnrhaStopAge', a.gnrhaStop);
     const t = document.getElementById('toggleAdvancedGrowth'); const f = document.getElementById('advancedGrowthForm');
@@ -52,7 +57,7 @@ test('dziewczynka 7 l 6 mies., Tanner II od 7,0, BA 9,5 z BA 7,5 rok wcześniej:
   expect(r.profile.etykieta).toBe('przedwczesne pokwitanie (tempo szybkie)');
   expect(r.fhp.pubertyProfile).toMatchObject({ profil: 'przedwczesne', tempo: 'szybkie' });
   expect(r.cardText).toContain('Profil predykcyjny: przedwczesne pokwitanie (tempo szybkie)');
-  expect(r.cardText).toContain('Profil pokwitaniowy: przedwczesne pokwitanie (tempo szybkie) — start pokwitania w wieku 7 l — przedwczesne (próg 8/9 l); Tanner II; tempo szybkie: wiek kostny wyprzedza metrykalny o 24 mies.');
+  expect(r.cardText).toContain('Profil pokwitaniowy: przedwczesne pokwitanie (tempo szybkie) — start pokwitania w wieku 7 l — przedwczesne (próg 8/9 l); Th2; tempo szybkie: wiek kostny wyprzedza metrykalny o 24 mies.');
   expect(r.cardText).toContain('ΔBA/ΔCA 2 z ostatnich 12 mies.');
   // GROWTH-PRED-PUB2: reguły wag w profilu
   expect(r.fhp.pubertyRulesActive).toBe(true);

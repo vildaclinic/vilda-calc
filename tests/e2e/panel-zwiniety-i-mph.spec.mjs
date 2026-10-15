@@ -90,7 +90,9 @@ test('index: po wczytaniu panel zwinięty przy „Nowy pomiar" i przy „Odtwór
 
   await page.getByRole('button', { name: '+ Dane pokwitaniowe (wpisane)', exact: true }).click();
   expect((await panel(page)).otwarty, 'klik lekarza otwiera panel').toBe(true);
-  await expect(page.locator('#tannerStage')).toBeVisible();
+  await expect(page.locator('#pubertyAssessmentEditor')).toBeVisible();
+  await expect(page.locator('#tannerStage')).toBeHidden();
+  await expect(page.locator('#pubertyAssessmentEditor [data-puberty-context-note]')).toContainText('nie określa cechy');
 });
 
 test('docpro: po wczytaniu panel zwinięty, z dopiskiem „(wpisane)"', async ({ page }) => {

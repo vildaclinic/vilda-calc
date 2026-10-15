@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '12';
+  var VERSION = '13';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -344,6 +344,15 @@
     return pamiec ? pamiec.plec : '';
   }
 
+  // The active visit is a separate source from the newest vault snapshot.
+  // A background refresh may update that snapshot without examining the child
+  // again, so it must not replace the form's G/Th/P carrier.
+  function aktywnaOcena(options) {
+    var runtime = w.VildaPubertyAssessmentContext;
+    return runtime && typeof runtime.readActiveContext === 'function'
+      ? runtime.readActiveContext(options || {}) : null;
+  }
+
   // Dane o pokwitaniu, których w tej chwili ma używać reszta aplikacji.
   function biezace() {
     var s = zKartyPacjenta();
@@ -473,6 +482,7 @@
     zapamietaj: zapamietaj,
     zapomnij: zapomnij,
     kontekstPacjenta: kontekstPacjenta,
+    aktywnaOcena: aktywnaOcena,
     zKartyPacjenta: zKartyPacjenta,
     biezace: biezace,
     ocenStart: ocenStart,

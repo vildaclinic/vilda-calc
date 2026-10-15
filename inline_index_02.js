@@ -1,7 +1,8 @@
 /* Panel „Dojrzewanie płciowe" w formularzu głównym — ujawnianie i kontrola spójności.
  *
  * Panel jest jedynym miejscem wpisu danych pokwitaniowych (decyzja właściciela 2026-09-09);
- * reszta aplikacji czyta je przez vilda_pubertal_status.js. Ten sam skrypt obsługuje panel
+ * reszta aplikacji czyta G/Th/P przez VildaPubertyAssessmentContext, a wywiad przez
+ * vilda_pubertal_status.js. Ten sam skrypt obsługuje panel
  * na index.html i docpro.html (P-TOZSAMOSC, 2026-09-15).
  *
  * P-PANEL-ZWINIETY (decyzja właściciela 2026-09-16): panel jest DOMYŚLNIE ZWINIĘTY — także
@@ -13,7 +14,6 @@
 (function () {
   var otwarty = false;
   var wrap = document.getElementById('tannerStageWrap');
-  var extra = document.getElementById('pubertyExtraWrap');
   // Objętość jąder mieszka w panelu od SW 1.0.876 (decyzja właściciela): stan na dziś,
   // obok stadium. Kontener zwija się z panelem; etykietę dla dziewcząt chowa osobno
   // updateAdvancedGrowthSexSpecificFields() (po id, jak dotąd w karcie zaawansowanej).
@@ -28,7 +28,11 @@
   function pole(id) { return document.getElementById(id); }
 
   function cokolwiekWpisane() {
-    if (select.value !== '') return true;
+    var typed = window.VildaPubertyAssessmentState;
+    var view = typed && typeof typed.read === 'function' ? typed.read() : null;
+    var observations = view && view.assessment && view.assessment.observations;
+    if (observations && (observations.G || observations.Th || observations.P)) return true;
+    if (view ? view.legacy || view.status === 'invalid' || view.status === 'unsupported' : select.value !== '') return true;
     for (var i = 0; i < POLA.length; i += 1) {
       var e = pole(POLA[i]);
       if (e && String(e.value || '').trim() !== '') return true;
@@ -69,8 +73,11 @@
     var S = window.VildaPubertalStatus;
     if (!S || typeof S.sprzecznosci !== 'function') { slot.style.display = 'none'; return; }
     var jadra = pole('advTesticularVolume');
+    var context = window.VildaPubertyAssessmentContext;
+    var gonadal = context && typeof context.gonadalForGrowth === 'function' ? context.gonadalForGrowth() : null;
     var lista = S.sprzecznosci({
-      etap: select.value,
+      etap: gonadal && gonadal.stage ? gonadal.stage : '',
+      stageIsCurrent: !!(gonadal && gonadal.current === true),
       plec: plecFormularza(),
       jadra: jadra ? jadra.value : '',
       wiekStartuLat: (pole('pubertyOnsetAge') || {}).value,
@@ -129,14 +136,13 @@
     btn.textContent = otwarty
       ? '− Dane pokwitaniowe'
       : (cokolwiekWpisane() ? '+ Dane pokwitaniowe (wpisane)' : '+ Dane pokwitaniowe');
+    btn.setAttribute('aria-expanded', String(otwarty));
   }
 
   window.updateTannerVisibility = function () {
     // Stan otwarcia zmienia tylko lekarz (przycisk) albo „Wyczyść" — wartości w polach
     // nie otwierają panelu (P-PANEL-ZWINIETY). Odświeżenie tylko rysuje bieżący stan.
     wrap.style.display = otwarty ? '' : 'none';
-    if (extra) extra.style.display = otwarty ? '' : 'none';
-    if (jadraWrap) jadraWrap.style.display = otwarty ? '' : 'none';
     pokazJadraWgPlci();
     btn.style.display = '';
     odswiezNapisPrzycisku();
@@ -148,6 +154,18 @@
    * wyjściowym, a więc także z zamkniętym panelem. */
   window.vildaZwinDanePokwitaniowe = function () {
     otwarty = false;
+    var optional = pole('pubertyOptionalDetails');
+    if (optional) optional.open = false;
+    wrap.querySelectorAll('[data-puberty-guide-toggle]').forEach(function (toggle) {
+      var guide = pole(toggle.getAttribute('aria-controls'));
+      if (guide) guide.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+    window.updateTannerVisibility();
+  };
+
+  window.vildaOtworzDanePokwitaniowe = function () {
+    otwarty = true;
     window.updateTannerVisibility();
   };
 
@@ -155,7 +173,10 @@
     otwarty = !otwarty;
     window.updateTannerVisibility();
     if (otwarty) {
-      setTimeout(function () { try { select.focus(); } catch (e) { /* brak fokusu */ } }, 30);
+      setTimeout(function () {
+        var first = wrap.querySelector('.vpa-segments button');
+        try { if (first) first.focus(); } catch (e) { /* brak fokusu */ }
+      }, 30);
     }
   });
 
@@ -180,6 +201,7 @@
     if (st) st.addEventListener('change', pokazWiekGnrha);
   }());
   select.addEventListener('change', poZmianiePola);
+  document.addEventListener('vilda:puberty-assessment-changed', poZmianiePola);
   (function () {
     var plec = document.getElementById('sex');
     if (plec) plec.addEventListener('change', function () { pokazJadraWgPlci(); pokazSprzecznosci(); });
