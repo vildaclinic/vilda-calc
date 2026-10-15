@@ -82,7 +82,9 @@ Do tej warstwy należą m.in.:
   rysuje `lab_history_strip.js` (+ `.css`, tagi tylko na `przelicznik-jednostek.html`): tylko do odczytu,
   widoczny przy odblokowanym sejfie, wybrane badanie bierze z `VildaLabConverterRuntime.getSubstanceId()`
   (czytelny skrypt strony), wykres rysuje własnym lekkim rendererem SVG, kartę otwiera przez
-  `VildaShell.openPatientCardInStart(id, {activeTab: 'lab'})`;
+  `VildaShell.openPatientCardInStart(id, {activeTab: 'lab'})`. Odwrotnie karta badania otwiera
+  przelicznik adresem `przelicznik-jednostek.html?badanie=<id>` (`applySubstanceDeepLink`
+  w skrypcie strony; w powłoce cel dochodzi zdarzeniem `vilda:shell-navigate-target`);
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
 
