@@ -143,10 +143,10 @@ test('bez płci i wieku nie pojawia się opis zakresu ogólnego dorosłych', asy
 test('przypięcie E2 zapisuje brak zakresu bez klasyfikacji; dopasowany zakres nadal zapisuje się z wynikiem', async ({ page, e2Origin }, testInfo) => {
   await open(page, e2Origin);
   await page.evaluate(() => window.VildaSession.ensureAuthLoaded());
-  await page.waitForFunction(() => window.VildaVault);
+  await page.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
   await page.evaluate(() => window.VildaVault.createUser('E2e#FikcyjneE2!2026', { label: 'Fikcyjny sejf E2', iterations: 10000 }));
   await page.reload({ waitUntil: 'load' });
-  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI && !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady() && !document.documentElement.classList.contains('vilda-auth-locked'));
   const patientId = await page.evaluate(async user => {
     const saved = await window.VildaVault.savePatient({ name: user.name, user }, { dedup: false });
     window._vildaCurrentPatientId = saved.patientId;

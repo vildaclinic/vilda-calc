@@ -28,13 +28,13 @@ async function prepare(page, width = 1440) {
   const consent = page.locator('#consent-decline');
   if (await consent.isVisible()) await consent.click();
   await page.evaluate(() => window.VildaSession.ensureAuthLoaded());
-  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await page.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
   await page.evaluate(() => window.VildaVault.createUser('E2e#AmhAge!2026', { label: 'Fikcyjny sejf wieku AMH', iterations: 10000 }));
 }
 
 async function mainForm(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
-  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaDobAge && window.VildaLabNeonatalContext
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady() && window.VildaDobAge && window.VildaLabNeonatalContext
     && typeof window.applyLoadedData === 'function' && !document.documentElement.classList.contains('vilda-auth-locked')
     && window.VildaInit?.isInitialized('app:main-session-restore-init'));
   // Main-session restoration starts two animation frames after its initializer.
