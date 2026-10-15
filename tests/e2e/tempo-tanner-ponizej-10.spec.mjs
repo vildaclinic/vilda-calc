@@ -48,8 +48,8 @@ const REKORD = {
   },
 };
 
-async function policz(page, tanner, axis = 'Th') {
-  await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), REKORD);
+async function policz(page, tanner, axis = 'Th', record = REKORD) {
+  await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), record);
   if (await page.locator('#sex').isEnabled()) await page.selectOption('#sex', 'F');
   await page.fill('#age', '9');
   await page.fill('#ageMonths', '6');
@@ -59,7 +59,6 @@ async function policz(page, tanner, axis = 'Th') {
     const pro = document.getElementById('resultsModeToggle');
     if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
     const state = window.VildaPubertyAssessmentState;
-    state.clear();
     if (ts != null) {
       const edited = state.editObservation(axis, ts);
       if (!edited.ok) throw new Error('Nie przyjęto oceny Th: ' + edited.reason);
@@ -72,6 +71,7 @@ async function policz(page, tanner, axis = 'Th') {
       polePodpiete: Boolean(state),
       wybrano: selected.assessment && selected.assessment.observations[axis] ? String(selected.assessment.observations[axis].stage) : null,
       velocity: vel,
+      status: window.VildaPubertalStatus.dane({ plec: 'F', wiekLat: 9.5 }),
       werdykt: vel ? window.VildaTrajectoryAnalysis.velocityAssessment(vel) : null,
     };
   }, { ts: tanner, axis });
@@ -132,14 +132,9 @@ test('samo P5 nie znosi alarmu niskiego tempa poniżej 10 lat', async ({ page })
 
 test('stary ogólny Tanner V nie staje się oceną Th i nie wycisza alarmu', async ({ page }) => {
   await otworz(page);
-  await policz(page, null);
-  const w = await page.evaluate((record) => {
-    const legacy = JSON.parse(JSON.stringify(record));
-    legacy.user.tannerStage = '5';
-    window.applyLoadedData(legacy);
-    window.calculateGrowthAdvanced();
-    return { status: window.VildaPubertalStatus.dane({ plec: 'F', wiekLat: 9.5 }), velocity: window.advancedGrowthTrajectory.velocity };
-  }, REKORD);
+  const legacy = structuredClone(REKORD);
+  legacy.user.tannerStage = '5';
+  const w = await policz(page, null, 'Th', legacy);
   expect(w.status.etap).toBeNull();
   expect(w.status.assessmentContext.legacy).toEqual({ kind: 'unspecified', stage: 5 });
   expect(w.velocity.cmPerYear).toBeCloseTo(3, 1);

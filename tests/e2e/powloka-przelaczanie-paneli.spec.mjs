@@ -115,6 +115,8 @@ async function pacjentkaWSejfie(page, start) {
 
 // Wczytanie z Karty pacjenta jak u lekarza: „Wczytaj tego pacjenta” → wybór w modalu.
 async function wczytajZKarty(page, start, pid, wybor) {
+  // Powrót do Start może przeładować ramkę; karta wymaga zakończonego odblokowania sejfu.
+  await gotowa(start);
   await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await start.waitForSelector('.vhv-tile', { state: 'visible' });
   await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
@@ -132,6 +134,7 @@ const opoznijOdczytPacjenta = (fr, ms) => fr.evaluate((d) => {
 }, ms);
 
 async function wczytajZKartyWolnyOdczyt(page, start, pid, wybor, ms) {
+  await gotowa(start);
   await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await start.waitForSelector('.vhv-tile', { state: 'visible' });
   await opoznijOdczytPacjenta(start, ms);
@@ -288,6 +291,7 @@ test('DocPro pokazał kartę porównania przed „Odtwórz zapis”: po wyborze 
   await page.evaluate(() => window.VildaShell.navigate('start'));
   await page.waitForTimeout(500);
 
+  await gotowa(start);
   await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   await start.waitForSelector('.vhv-tile', { state: 'visible' });
   await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();

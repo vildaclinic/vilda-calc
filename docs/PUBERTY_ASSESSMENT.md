@@ -143,6 +143,13 @@ formularzy Start/DocPro jest liczona wyłącznie w RAM i nie staje się datą ba
 Pauza autosave nie pozwala starszej sesji zastąpić nowszej edycji. Lock, zmiana
 konta/pacjenta i nieaktualny panel unieważniają źródło.
 
+Podczas czyszczenia odczyt kończy się przed sprawdzeniem właściciela panelu:
+identyfikator i pola są wtedy przejściowo niespójne. Po zakończeniu obowiązuje
+zwykła ochrona pacjenta. Powtórzone syntetyczne zdarzenia z niezmienionymi polami
+nie rozsyłają ponownie zmiany kontekstu; rzeczywista zmiana wieku wyliczonego
+z daty urodzenia nadal ją rozsyła, a działanie użytkownika zachowuje priorytet
+źródła w RAM.
+
 Laboratorium może zamontować ten sam edytor bez opuszczania wyniku. Gdy nie ma
 żywego formularza, korekta ma jawny lokalny zakres i nie zapisuje pacjenta.
 Znane leczenie i wiek pobieramy z tego samego kontekstu. Osie wieku/stadium

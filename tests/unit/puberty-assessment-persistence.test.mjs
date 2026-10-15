@@ -738,6 +738,44 @@ describe('typed puberty — in-memory activity priority across same-tab forms', 
     expect(env.state.getActivityRevision()).toBe(before);
   });
 
+  it('does not repeat clinical notifications for unchanged restore echoes, but publishes a changed derived age', () => {
+    const env = environment(); restore(env, payload());
+    const changed = vi.fn(); env.state.subscribe(changed);
+    const before = env.state.getActivityRevision();
+    for (let pass = 0; pass < 2; pass += 1) {
+      for (const id of ['age', 'ageMonths', 'height', 'weight', 'sex']) {
+        for (const type of ['input', 'change']) {
+          env.win.document.dispatchEvent({ type, isTrusted: false, target: env.fields.get(id) });
+        }
+      }
+    }
+    expect(changed).not.toHaveBeenCalled();
+    env.fields.get('ageMonths').value = '1';
+    env.win.document.dispatchEvent({ type: 'input', isTrusted: false, target: env.fields.get('ageMonths') });
+    env.win.document.dispatchEvent({ type: 'change', isTrusted: false, target: env.fields.get('ageMonths') });
+    expect(changed.mock.calls).toEqual([['visit-change']]);
+    expect(env.state.visitContext().ageMonths).toBe(145);
+    expect(env.state.getActivityRevision()).toBe(before);
+    env.win.document.dispatchEvent({ type: 'change', isTrusted: true, target: env.fields.get('ageMonths') });
+    expect(changed.mock.calls).toEqual([['visit-change'], ['visit-change']]);
+    expect(env.state.getActivityRevision()).toBeGreaterThan(before);
+  });
+
+  it('publishes a changed examination date even when visible field values have not changed', () => {
+    const env = environment(); let date = '2026-10-14';
+    env.win.VildaDobAge.readMeasuredAtISO = () => date;
+    restore(env, payload());
+    const original = env.state.capture().raw;
+    const changed = vi.fn(); env.state.subscribe(changed);
+    date = '2026-10-15';
+    for (const type of ['input', 'change']) {
+      env.win.document.dispatchEvent({ type, isTrusted: false, target: env.fields.get('age') });
+    }
+    expect(changed.mock.calls).toEqual([['visit-change']]);
+    expect(env.state.visitContext().measuredAtISO).toBe('2026-10-15');
+    expect(env.state.capture().raw).toEqual(original);
+  });
+
   it.each(['height', 'weight', 'ageWeeks', 'advTesticularVolume', 'advFamilyDelayedPuberty', 'advGrowthExclusion',
     'pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge',
     'pubertyGnrhaStatus', 'pubertyGnrhaStartAge', 'pubertyGnrhaStopAge', 'pubertyCdgp'])('trusted %s fact selects the edited form without renewing its Tanner observation', id => {

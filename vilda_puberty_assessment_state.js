@@ -16,6 +16,7 @@
   var saveTimer = null;
   var visitSequence = 0;
   var activityRevision = 0;
+  var notifiedContext = null;
   // These inputs can change the context used by another clinical card. Priority
   // follows the physician's latest form, without renewing a Tanner observation.
   var activityFields = ['sex', 'age', 'ageMonths', 'ageWeeks', 'dobInput', 'height', 'weight',
@@ -108,7 +109,15 @@
     return { version: 1, visitId: id, currentAxes: [], ownerPatientId: identity(), reference: clone(reference) };
   }
 
+  function contextFingerprint() {
+    return JSON.stringify([visitContext(), activityFields.map(function (id) {
+      var input = field(id);
+      return input ? [input.value == null ? '' : String(input.value), !!input.checked] : null;
+    })]);
+  }
+
   function notify(reason) {
+    notifiedContext = contextFingerprint();
     subscribers.slice().forEach(function (listener) {
       try { listener(reason); } catch (_) { /* One consumer cannot block the edit. */ }
     });
@@ -313,7 +322,10 @@
     if (event && event.isTrusted === true && event.target && event.target.id === 'sex' && !editBlocked()) {
       if (invalidateIncompatibleAxes(sex(event.target.value))) scheduleSave();
     }
-    if (contextField) {
+    // Restore and the delayed form refresh re-emit the same input/change events.
+    // Notify once for their actual context change, not once per replayed field.
+    // Trusted intent still selects this form even when its value is unchanged.
+    if (contextField && (event.isTrusted === true || contextFingerprint() !== notifiedContext)) {
       notify('visit-change');
     }
   }

@@ -28,8 +28,8 @@ function tab({ patientId = 'synthetic-a', unlocked = true } = {}) {
   const vault = { isUnlocked: () => open, onLock: listener => locks.push(listener) };
   const storage = { getItem: key => key === 'vildaCurrentPatientId' ? id : null };
   const persistence = { readMainSession: () => copy(saved), isClearInProgress: () => clearing };
-  const shell = { document: { ...events(), getElementById: () => null }, frames: [] };
-  function page({ main = false, sex = 'M', years = '12', months = '0' } = {}) {
+  const shell = { document: { ...events(), getElementById: () => null }, frames: [], VildaShell: { protokolPanelu: 1 } };
+  function page({ main = false, sex = 'M', years = '12', months = '0', realPanel = false } = {}) {
     const fields = new Map(Object.entries({ sex, age: years, ageMonths: months,
       pubertyGnrhaStatus: '', pubertyOnsetAge: '', pubertyMenarcheAge: '',
       pubertyMenarcheHeight: '', pubertyMenarcheBoneAge: '', pubertyCdgp: '' })
@@ -43,6 +43,11 @@ function tab({ patientId = 'synthetic-a', unlocked = true } = {}) {
       CustomEvent: class CustomEvent { constructor(type, options) { this.type = type; this.detail = options.detail; } },
       ...events() };
     shell.frames.push(win);
+    if (realPanel) {
+      delete win.VildaPanelPacjent;
+      win.VildaDataImportExport = { anyDataEntered: () => Number(fields.get('age').value) > 0 };
+      loadBrowserScript('vilda_panel_pacjent.js', win);
+    }
     loadBrowserScript('vilda_puberty_assessment.js', win);
     if (main) loadBrowserScript('vilda_puberty_assessment_state.js', win);
     loadBrowserScript('vilda_puberty_assessment_context.js', win);
@@ -70,7 +75,7 @@ function tab({ patientId = 'synthetic-a', unlocked = true } = {}) {
       const next = { isUnlocked: () => true, onLock() {} };
       shell.frames.forEach(win => { win.VildaVault = next; });
     },
-    replaceSession: value => { saved = copy(value); }, clearInProgress: () => { clearing = true; } };
+    replaceSession: value => { saved = copy(value); }, clearInProgress: (value = true) => { clearing = value; } };
 }
 
 describe('shared puberty context — active forms and same-tab session', () => {
@@ -212,6 +217,30 @@ describe('shared puberty context — patient, sex and account boundaries', () =>
     lab.stale(); expect(lab.runtime.readActiveContext().available).toBe(false);
     const current = t.page(); t.clearInProgress();
     expect(current.runtime.readActiveContext().available).toBe(false);
+  });
+
+  it('does not permanently mark the real panel stale between the clear event and identity removal', () => {
+    const t = tab(); const main = t.page({ main: true, realPanel: true });
+    main.edit('G', 3);
+    const render = vi.fn(() => main.runtime.readActiveContext());
+    main.runtime.subscribe(render);
+    t.clearInProgress();
+    // The adapter publishes this before custom-fixes removes the old patient ID.
+    // The real panel clears its known owner first, then the carrier notifies UI.
+    main.win.dispatchEvent({ type: 'vilda:user-state-cleared' });
+    expect(render).toHaveBeenCalled();
+    expect(render.mock.results.at(-1).value.available).toBe(false);
+    t.setPatient(null);
+    main.fields.get('age').value = '';
+    main.fields.get('ageMonths').value = '';
+    t.clearInProgress(false);
+    expect(main.win.VildaPanelPacjent.nieaktualny()).toBe(false);
+    expect(main.state.capture().present).toBe(false);
+    main.fields.get('age').value = '6';
+    expect(main.edit('G', 2)).toEqual({ ok: true });
+    t.setPatient('synthetic-other');
+    expect(main.win.VildaPanelPacjent.nieaktualny()).toBe(true);
+    expect(main.runtime.readActiveContext().available).toBe(false);
   });
 
   it('preserves the raw previous-sex observation without silently renewing the current selection', () => {

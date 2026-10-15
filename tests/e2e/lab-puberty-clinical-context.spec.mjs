@@ -65,7 +65,9 @@ async function sample(page, { sex = 'M', age = '14', months = '0', kind = 'G', s
   await fill(page, 'AgeYears', age);
   await fill(page, 'AgeMonths', months);
   await select(page, 'Sex', sex);
-  await select(page, 'Kind', kind);
+  // The shared editor records named axes. An absent historical kind in this
+  // fixture means explicitly leaving today's gonadal feature unassessed.
+  if (kind !== 'unspecified') await select(page, 'Kind', kind);
   await select(page, 'Stage', stage);
   await expectAutomaticReference(page);
   await page.locator('#labValue').fill(value);

@@ -26,8 +26,10 @@
   }
   function stale(view) {
     try {
-      return !!(view.VildaPanelPacjent && view.VildaPanelPacjent.nieaktualny() ||
-        view.VildaPersistence && view.VildaPersistence.isClearInProgress && view.VildaPersistence.isClearInProgress());
+      // The clear event precedes removal of the former patient ID. The panel's
+      // lazy identity check can mark itself stale, so never ask it mid-clear.
+      return !!(view.VildaPersistence && view.VildaPersistence.isClearInProgress && view.VildaPersistence.isClearInProgress() ||
+        view.VildaPanelPacjent && view.VildaPanelPacjent.nieaktualny());
     } catch (_) { return true; }
   }
   function windows() {

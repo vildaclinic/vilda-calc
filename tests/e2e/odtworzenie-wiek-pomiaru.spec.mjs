@@ -81,6 +81,9 @@ async function zapiszPacjenta(page, pola) {
 
 /* Jak u lekarza: Karta Pacjenta → „Wczytaj tego pacjenta" → okno „Co chcesz zrobić?". */
 async function otworzWybor(page, pid) {
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
+    && !document.documentElement.classList.contains('vilda-auth-locked')
+    && typeof window.applyLoadedData === 'function' && Boolean(window.VildaAuthUI));
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
@@ -402,6 +405,12 @@ test('powłoka: „Odtwórz zapis" na Start i przejście na DocPro — DocPro te
   await start.evaluate(() => window.clearAllData());
 
   await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  // Miesiąc później sesja logowania wygasła także dla nowych ramek powłoki.
+  await start.evaluate(async (pw) => {
+    const [uzytkownik] = await window.VildaVault.listUsers();
+    await window.VildaVault.unlockUser(uzytkownik.userId, pw);
+  }, HASLO);
+  await gotowa(start);
   await wczytaj(start, pid, 'odtworz');
   await expect.poll(() => start.evaluate(() => [document.getElementById('age').value, document.getElementById('ageMonths').value])).toEqual(['16', '10']);
 

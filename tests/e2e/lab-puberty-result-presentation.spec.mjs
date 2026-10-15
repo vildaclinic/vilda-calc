@@ -181,6 +181,9 @@ test('severe thresholds are strict and each axis owns its high or low state', as
 
   await fill(page, 'AgeYears', '16');
   await fill(page, 'AgeMonths', '0');
+  await expect(axis(page, 'stage')).toHaveCount(0);
+  // Renew G3 explicitly for the new age; editing age is not an examination.
+  await select(page, 'Stage', '3');
   await page.locator('#labValue').fill('15');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-above');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
