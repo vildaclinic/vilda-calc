@@ -92,6 +92,20 @@
     return { ageMonths: m, height: h };
   }
 
+  /* Niskopoziomowe API zachowuje jawnie przekazany gonadalny numer z dawnych
+   * wywołań. Typowany kontekst nigdy nie traktuje P/nieokreślonego rodzaju jako
+   * stadium narządów płciowych lub piersi; adapter runtime dostarcza G albo Th. */
+  function etapGonadalny(ctx, plec) {
+    if (!ctx || ctx.tannerStage == null) return null;
+    if (Object.prototype.hasOwnProperty.call(ctx, 'tannerKind')) {
+      var code = String(plec == null ? '' : plec).trim().toUpperCase();
+      var expected = code === 'M' ? 'G' : code === 'F' || code === 'K' ? 'Th' : null;
+      if (!expected || ctx.tannerKind !== expected) return null;
+    }
+    var t = ctx.tannerStage;
+    return typeof t === 'number' && isFinite(t) && Math.floor(t) === t && t >= 1 && t <= 5 ? t : null;
+  }
+
   // ── Wzór ──
 
   function predkosc(h0, m0, h1, m1) {
@@ -133,15 +147,19 @@
     var target = num(targetM);
     if (num(v) == null || target == null) return out;
     var thr = prog(target);
-    var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
+    var ts = etapGonadalny(ctx, plec);
+    var typed = !!(ctx && (ctx.tannerKind === 'G' || ctx.tannerKind === 'Th'));
+    var label = (typed ? ctx.tannerKind : 'Tanner') + ' ' + ['I', 'II', 'III', 'IV', 'V'][ts - 1];
     if (thr) {
       // < 10 lat: normy wg wieku metrykalnego. Tanner IV–V znosi ocenę także tutaj
       // (GROWTH-VELO-TANNER-U10, zgłoszenie właściciela).
       if (ts === 4 || ts === 5) {
         out.basis = 'tanner45';
-        out.note = 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V')
-          + ') — deceleracja fizjologiczna; norma tempa dla wieku ' + fmtAgeM(target)
-          + ' nie ma tu zastosowania';
+        out.note = typed
+          ? label + ' — bez automatycznej oceny normy tempa; samo stadium nie potwierdza zakończenia skoku wzrostowego'
+          : 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V')
+            + ') — deceleracja fizjologiczna; norma tempa dla wieku ' + fmtAgeM(target)
+            + ' nie ma tu zastosowania';
         return out;
       }
       out.threshold = thr;
@@ -159,7 +177,7 @@
     if (ts != null) {
       if (ts === 1) {
         out.basis = 'tanner1';
-        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok przed skokiem (Tanner I)';
+        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok przed skokiem (' + label + ')';
         out.slow = !!(porownuj && v < P.PUB_VELO_MIN);
         out.severity = out.slow ? 'danger' : null;
         out.alarm = out.slow;
@@ -167,13 +185,15 @@
       }
       if (ts === 2 || ts === 3) {
         out.basis = 'tanner23';
-        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok w trakcie pokwitania (Tanner ' + (ts === 2 ? 'II' : 'III') + ')';
+        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok w trakcie pokwitania (' + label + ')';
         out.slow = !!(porownuj && v < P.PUB_VELO_MIN);
         out.severity = out.slow ? 'warn' : null;
         return out;
       }
       out.basis = 'tanner45';
-      out.note = 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V') + ') — deceleracja fizjologiczna';
+      out.note = typed
+        ? label + ' — bez automatycznej oceny normy tempa; samo stadium nie potwierdza zakończenia skoku wzrostowego'
+        : 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V') + ') — deceleracja fizjologiczna';
       return out;
     }
     var ba = ctx && ctx.boneAge ? ctx.boneAge : null;

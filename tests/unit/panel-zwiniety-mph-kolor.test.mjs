@@ -13,7 +13,7 @@ const zrodlo = (plik) => fs.readFileSync(path.join(korzen, plik), 'utf8');
 // Dane wyłącznie FIKCYJNE.
 
 /* Atrapa DOM dla inline_index_02.js: panel z polami, przycisk i płeć. */
-function panel(wartosci = {}) {
+function panel(wartosci = {}, assessment = null) {
   const el = (id) => ({ id, value: wartosci[id] || '', style: {}, hidden: false, disabled: false, textContent: '',
     nasluchy: {}, addEventListener(n, f) { (this.nasluchy[n] = this.nasluchy[n] || []).push(f); },
     setAttribute() {}, removeAttribute() {}, focus() {}, querySelector() { return null; }, querySelectorAll() { return []; } });
@@ -21,9 +21,10 @@ function panel(wartosci = {}) {
   ['tannerStageWrap', 'pubertyExtraWrap', 'testicularVolumeWrap', 'tannerStage', 'tannerToggleBtn', 'sex', 'height', 'age',
     'ageMonths', 'pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge',
     'pubertyGnrhaStatus', 'pubertyGnrhaStartAge', 'pubertyGnrhaStopAge', 'pubertyCdgp', 'advTesticularVolume',
-    'pubertyConflicts', 'pubertyGnrhaAgesWrap'].forEach((id) => { pola[id] = el(id); });
+    'pubertyConflicts', 'pubertyGnrhaAgesWrap', 'pubertyOptionalDetails'].forEach((id) => { pola[id] = el(id); });
   const win = { addEventListener() {}, setTimeout: (f) => f() };
-  const document = { getElementById: (id) => pola[id] || null, querySelector: () => null };
+  if (assessment) win.VildaPubertyAssessmentState = { read: () => assessment };
+  const document = { getElementById: (id) => pola[id] || null, querySelector: () => null, addEventListener() {} };
   const src = zrodlo('inline_index_02.js');
   new Function('window', 'document', src)(win, document);
   return { pola, win };
@@ -41,13 +42,15 @@ describe('Panel pokwitaniowy domyślnie zwinięty (inline_index_02.js)', () => {
     const { pola, win } = panel({ pubertyOnsetAge: '10.5' });
     win.updateTannerVisibility();
     expect(pola.tannerStageWrap.style.display).toBe('none');
-    expect(pola.pubertyExtraWrap.style.display).toBe('none');
+    // Extra fields now live inside a second, independently collapsed details.
+    expect(pola.pubertyOptionalDetails.open).not.toBe(true);
     expect(pola.tannerToggleBtn.textContent).toBe('+ Dane pokwitaniowe (wpisane)');
     pola.tannerToggleBtn.nasluchy.click[0]();
     expect(pola.tannerStageWrap.style.display).toBe('');
     expect(pola.tannerToggleBtn.textContent).toBe('− Dane pokwitaniowe');
     win.vildaZwinDanePokwitaniowe();
     expect(pola.tannerStageWrap.style.display).toBe('none');
+    expect(pola.pubertyOptionalDetails.open).toBe(false);
     expect(pola.tannerToggleBtn.textContent).toBe('+ Dane pokwitaniowe (wpisane)');
   });
 
@@ -55,6 +58,20 @@ describe('Panel pokwitaniowy domyślnie zwinięty (inline_index_02.js)', () => {
     const { pola, win } = panel();
     win.updateTannerVisibility();
     expect(pola.tannerToggleBtn.textContent).toBe('+ Dane pokwitaniowe');
+  });
+
+  it('jawnie pusta nowa ocena nie zapala dopisku od ukrytego starego Tannera', () => {
+    const { pola } = panel({ tannerStage: '5' }, { status: 'ready', legacy: null,
+      assessment: { observations: { G: null, Th: null, P: null } } });
+    expect(pola.tannerToggleBtn.textContent).toBe('+ Dane pokwitaniowe');
+    expect(pola.tannerStage.value).toBe('5');
+  });
+
+  it('samodzielna ocena P sygnalizuje dane bez domyślnego G', () => {
+    const { pola } = panel({}, { status: 'ready', legacy: null,
+      assessment: { observations: { G: null, Th: null, P: { stage: 3 } } } });
+    expect(pola.tannerToggleBtn.textContent).toBe('+ Dane pokwitaniowe (wpisane)');
+    expect(pola.tannerStageWrap.style.display).toBe('none');
   });
 });
 

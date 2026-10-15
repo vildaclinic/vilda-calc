@@ -34,6 +34,22 @@ const gotowa = async (page) => {
   await page.waitForTimeout(1500);
 };
 
+async function zalogujPoSkokuZegara(page) {
+  // Miesiąc później sesja logowania wygasła także dla nowych ramek powłoki.
+  // Logujemy fikcyjne konto w stabilnym dokumencie nadrzędnym. Callback logowania
+  // może wymienić dokumenty paneli, więc poprzedni Frame nie jest już uchwytem
+  // do dalszej pracy. Nowa powłoka odtwarza odświeżoną sesję zwykłą ścieżką boot.
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await page.evaluate(async (pw) => {
+    const [uzytkownik] = await window.VildaVault.listUsers();
+    await window.VildaVault.unlockUser(uzytkownik.userId, pw);
+  }, HASLO);
+  await page.reload({ waitUntil: 'load' });
+  const start = await ramka(page, 'Start');
+  await gotowa(start);
+  return start;
+}
+
 const wpisz = (page, pola) => page.evaluate((p) => {
   Object.keys(p).forEach((id) => {
     const el = document.getElementById(id);
@@ -81,6 +97,9 @@ async function zapiszPacjenta(page, pola) {
 
 /* Jak u lekarza: Karta Pacjenta → „Wczytaj tego pacjenta" → okno „Co chcesz zrobić?". */
 async function otworzWybor(page, pid) {
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked()
+    && !document.documentElement.classList.contains('vilda-auth-locked')
+    && typeof window.applyLoadedData === 'function' && Boolean(window.VildaAuthUI));
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
   const wczytajBtn = page.getByRole('button', { name: 'Wczytaj tego pacjenta' });
   await expect(wczytajBtn).toBeVisible({ timeout: 15000 });
@@ -402,6 +421,7 @@ test('powłoka: „Odtwórz zapis" na Start i przejście na DocPro — DocPro te
   await start.evaluate(() => window.clearAllData());
 
   await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'odtworz');
   await expect.poll(() => start.evaluate(() => [document.getElementById('age').value, document.getElementById('ageMonths').value])).toEqual(['16', '10']);
 
@@ -665,6 +685,7 @@ test('P-ODTWORZ-WIEK-3: powłoka — poprawka w Karcie na Start dochodzi do DocP
   await start.evaluate(() => window.clearAllData());
 
   await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'odtworz');
   // DocPro otwarty przed poprawką i widoczny dłużej niż ok. 3,2 s — wtedy custom-fixes.js rozsyła
   // jego pola i własne lustro DocPro trzyma stare wartości. Dopiero w takim tempie (realnym dla
@@ -754,6 +775,7 @@ test('P-ODTWORZ-WIEK-4: powłoka — poprawka w Karcie na Start, DocPro nieodwie
   await start.evaluate(() => window.clearAllData());
 
   await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'odtworz');
   // DocPro otwarty na chwilę (jego ramka zostaje w tle ze swoją bazą), potem powrót na Start.
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
@@ -812,6 +834,7 @@ test('P-ODTWORZ-WIEK-4 (przegląd): ukryty DocPro ze starszą bazą nie nadpisuj
 
   // 10-07: „Nowy pomiar"; DocPro otwarty na chwilę (zostaje w tle z bazą A), powrót na Start.
   await page.clock.setSystemTime(new Date(MIESIAC_POZNIEJ));
+  start = await zalogujPoSkokuZegara(page);
   await wczytaj(start, pid, 'nowy');
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
   const docpro = await ramka(page, 'DocPro');

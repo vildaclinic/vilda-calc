@@ -365,7 +365,14 @@
     return Math.max(0, x1 - x0);
   }
 
-  function normalizeContext(raw) {
+  // Kontekst typowanej oceny pozostaje dostępny dla opisów również wtedy, gdy
+  // brak kwalifikującej się osi gonadalnej. Nie wyprowadzamy etapu z P ani legacy.
+  function copyAssessmentContext(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    try { return JSON.parse(JSON.stringify(raw)); } catch (e) { return null; }
+  }
+
+  function normalizeContext(raw, sex) {
     if (!raw || typeof raw !== 'object') return null;
     var mp = typeof raw.mpSds === 'number' && isFinite(raw.mpSds) ? raw.mpSds : null;
     var gh = raw.gh && raw.gh.a != null && isFinite(raw.gh.a) ? { a: raw.gh.a, b: raw.gh.b != null && isFinite(raw.gh.b) ? raw.gh.b : null } : null;
@@ -374,13 +381,23 @@
     var ghKursy = kursyZListy(raw.ghKursy, gh), redKursy = kursyZListy(raw.redKursy, red);
     var ts = num(raw.tannerStage);
     ts = ts != null && ts >= 1 && ts <= 5 ? Math.round(ts) : null;
+    // Jawny rodzaj musi oznaczać właściwą oś gonadalną; P nie zastępuje G/Th.
+    if (Object.prototype.hasOwnProperty.call(raw, 'tannerKind')) {
+      var code = String(sex == null ? '' : sex).trim().toUpperCase();
+      var expected = code === 'M' ? 'G' : code === 'F' || code === 'K' ? 'Th' : null;
+      if (!expected || raw.tannerKind !== expected || typeof raw.tannerStage !== 'number'
+        || Math.floor(raw.tannerStage) !== raw.tannerStage) ts = null;
+    }
     var tsAt = num(raw.tannerAtAgeMonths);
+    var assessmentContext = copyAssessmentContext(raw.assessmentContext);
     var ba = null;
     if (raw.boneAge && num(raw.boneAge.baMonths) != null && num(raw.boneAge.baMonths) > 0) {
       ba = { baMonths: num(raw.boneAge.baMonths), atAgeMonths: num(raw.boneAge.atAgeMonths) };
     }
-    if (mp == null && !gh && !red && ts == null && !ba) return null;
-    return { mpSds: mp, gh: gh, red: red, ghKursy: ghKursy, redKursy: redKursy, tannerStage: ts, tannerAtAgeMonths: tsAt, tannerStale: false, boneAge: ba };
+    if (mp == null && !gh && !red && ts == null && !ba && !assessmentContext) return null;
+    var out = { mpSds: mp, gh: gh, red: red, ghKursy: ghKursy, redKursy: redKursy, tannerStage: ts, tannerAtAgeMonths: tsAt, tannerStale: !!raw.tannerStale, tannerStaleStage: raw.tannerStaleStage || null, assessmentContext: assessmentContext, boneAge: ba };
+    if (Object.prototype.hasOwnProperty.call(raw, 'tannerKind')) out.tannerKind = raw.tannerKind;
+    return out;
   }
   function kursyZListy(lista, pojedynczy) {
     var out = [];
@@ -632,8 +649,11 @@
     }
     var ts = num(inp.tannerStage);
     if (ts != null) out.tannerStage = ts;
+    if (inp.tannerKind != null) out.tannerKind = inp.tannerKind;
+    if (inp.tannerAtAgeMonths != null) out.tannerAtAgeMonths = num(inp.tannerAtAgeMonths);
+    if (inp.assessmentContext) out.assessmentContext = copyAssessmentContext(inp.assessmentContext);
     if (inp.boneAge && typeof inp.boneAge === 'object') out.boneAge = inp.boneAge;
-    if (out.mpSds == null && !out.gh && !out.red && out.tannerStage == null && !out.boneAge) return null;
+    if (out.mpSds == null && !out.gh && !out.red && out.tannerStage == null && !out.boneAge && !out.assessmentContext) return null;
     return out;
   }
   // Werdykt pary w kontekscie — JEDNA sciezka dla odcinkow trajektorii, Karty pacjenta i karty
@@ -773,6 +793,7 @@
   // P0 (okno, brak aktualnego Tannera: żółty) → D (pozostałe: czerwony, treść jak dotąd). Tanner IV–V nie ma
   // własnego wariantu (decyzja właściciela: P3 pominięte) — daje R albo D.
   var TANNER_RZYM = ['I', 'II', 'III', 'IV', 'V'];
+  function axisName(ctx) { return ctx && (ctx.tannerKind === 'G' || ctx.tannerKind === 'Th') ? ctx.tannerKind : 'Tanner'; }
   function redFlagKontekst(rf, sex, ctx) {
     var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
     var wiek = rf.lastAgeMonths;
@@ -787,7 +808,7 @@
       k.fraza = 'sprzed leczenia GH — od jego startu w wieku ' + fmtAgeGen(rf.ghNadrabia.odMies) + ' wzrost nadrabia (ΔhSDS ' + fmtP(rf.ghNadrabia.dSds) + ')';
     } else if (wiek >= P.REDFLAG_POKW_OD_M && (ts === 2 || ts === 3)) {
       k.wariant = 'P2';
-      k.fraza = 'mimo cech dojrzewania (Tanner ' + TANNER_RZYM[ts - 1] + ')';
+      k.fraza = 'mimo cech dojrzewania (' + axisName(ctx) + ' ' + TANNER_RZYM[ts - 1] + ')';
     } else if (rb != null && rb >= P.REDFLAG_KU_CELOWI_BAZA && rd > P.REDFLAG_KU_CELOWI_DZIS) {
       k.wariant = 'R'; k.ton = 'warn';
       // MPH to „potencjał genetyczny wzrostu", nie „wzrost docelowy" (decyzja właściciela 2026-09-28: jedno słowo
@@ -795,7 +816,7 @@
       k.fraza = 'w kierunku potencjału genetycznego wzrostu (hSDS − mpSDS: z ' + fmtP(rb) + ' na ' + fmtP(rd) + ')';
     } else if (okno && ts === 1) {
       k.wariant = 'P1'; k.ton = 'warn';
-      k.fraza = 'w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I)';
+      k.fraza = 'w wieku okołopokwitaniowym, bez cech dojrzewania (' + axisName(ctx) + ' I)';
     } else if (okno && ts == null) {
       k.wariant = 'P0'; k.ton = 'warn';
       k.fraza = 'w wieku okołopokwitaniowym, bez ocenionego stadium dojrzewania';
@@ -1057,7 +1078,7 @@
     if (!input || typeof input !== 'object') return null;
     var sex = sexMK(input.sex);
     var source = input.source != null ? input.source : (typeof w.bmiSource !== 'undefined' ? w.bmiSource : null);
-    var ctx = normalizeContext(input.context);
+    var ctx = normalizeContext(input.context, input.sex);
     var pts = buildPoints(input);
     if (pts.length < 2) return null;
     // Świeżość etapu Tannera z rekordu pacjenta: starszy niż TANNER_FRESH_M — pomijany w ocenie
@@ -1598,7 +1619,7 @@
   function delayedPubertyHtml(model, cls) {
     if (!model || !model.delayedPuberty) return '';
     var lim = model.sex === 'M' ? '14' : '13';
-    return '<p class="' + cls + '">Tanner I w wieku powyżej ' + lim + ' lat — obraz opóźnionego dojrzewania, wskazana ocena</p>';
+    return '<p class="' + cls + '">' + axisName(model.context) + ' I w wieku powyżej ' + lim + ' lat — obraz opóźnionego dojrzewania, wskazana ocena</p>';
   }
 
   function segmentsTableHtml(model) {
@@ -1753,9 +1774,9 @@
       if (kRd.length > 1) kRd.forEach(function (k) { items.push(chipRedukcji(k)); });
       else if (ctx.red) items.push(chipRedukcji(ctx.red));
       var TROMAN = ['I', 'II', 'III', 'IV', 'V'];
-      if (ctx.tannerStage != null) items.push(mchip('Tanner', (TROMAN[ctx.tannerStage - 1] || String(ctx.tannerStage))
+      if (ctx.tannerStage != null) items.push(mchip(axisName(ctx), (TROMAN[ctx.tannerStage - 1] || String(ctx.tannerStage))
         + (ctx.tannerAtAgeMonths != null ? ' (z zapisu w wieku ' + fmtAgeM(ctx.tannerAtAgeMonths) + ')' : '')));
-      else if (ctx.tannerStale && ctx.tannerStaleStage != null) items.push(mchip('Tanner', (TROMAN[ctx.tannerStaleStage - 1] || String(ctx.tannerStaleStage))
+      else if (ctx.tannerStale && ctx.tannerStaleStage != null) items.push(mchip(axisName(ctx), (TROMAN[ctx.tannerStaleStage - 1] || String(ctx.tannerStaleStage))
         + ' (z zapisu w wieku ' + fmtAgeM(ctx.tannerAtAgeMonths) + ' — nieaktualny, pominięty w ocenie)'));
       if (ctx.boneAge) items.push(mchip('wiek kostny', fmtAgeM(ctx.boneAge.baMonths) + (ctx.boneAge.atAgeMonths != null ? ' (oznaczony w wieku ' + fmtAgeM(ctx.boneAge.atAgeMonths) + ')' : '')));
     }
@@ -1888,7 +1909,7 @@
     html += '</div>';
     html += patientVelocityRowHtml(model.velocity);
     if (model.delayedPuberty) {
-      html += '<div class="vtap-row"><span class="vtap-chip vw">Tanner I &gt;' + (model.sex === 'M' ? '14' : '13')
+      html += '<div class="vtap-row"><span class="vtap-chip vw">' + esc(axisName(model.context)) + ' I &gt;' + (model.sex === 'M' ? '14' : '13')
         + ' lat — obraz opóźnionego dojrzewania, wskazana ocena</span></div>';
     }
     html += patientSegmentsHtml(model);

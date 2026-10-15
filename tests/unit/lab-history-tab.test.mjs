@@ -251,6 +251,28 @@ describe('zakładka Badania: akcje', () => {
     expect(wywolania.edytor[0].note.id).toBe('tsh-2');
     expect(wywolania.edytor[0].template).toBeUndefined();
   });
+
+  it('karta badania prowadzi do przelicznika z tym badaniem (6.23); nagłówek bez badania; w powłoce przez jej trasę', async () => {
+    const env = srodowisko();
+    otworz(env, sejf());
+    await gotowe(env);
+    const karty = env.host.querySelectorAll('a.vilda-lab-hist-card-check');
+    expect(karty.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Nowy wynik TSH w przeliczniku →', 'przelicznik-jednostek.html?badanie=tsh'],
+      ['Nowy wynik fT4 w przeliczniku →', 'przelicznik-jednostek.html?badanie=ft4'],
+    ]);
+    const naglowek = env.host.querySelector('a.vilda-lab-hist-check');
+    expect(naglowek.getAttribute('href')).toBe('przelicznik-jednostek.html');
+    // Poza powłoką zwykły odnośnik (bez przechwycenia kliknięcia).
+    expect(karty[0].click().domyslneZatrzymane).toBe(false);
+    // W ramce powłoki: trasa „lab” z adresem badania; nagłówek — sama trasa.
+    const navigate = vi.fn();
+    env.doc.documentElement.classList.add('vilda-embedded');
+    env.win.parent = { VildaShell: { navigate } };
+    expect(karty[0].click().domyslneZatrzymane).toBe(true);
+    naglowek.click();
+    expect(navigate.mock.calls).toEqual([['lab', true, 'przelicznik-jednostek.html?badanie=tsh'], ['lab', true]]);
+  });
 });
 
 describe('zakładka Badania: stany i odświeżanie', () => {

@@ -502,6 +502,34 @@ pacjenta, karta na zakładce „Badania”), `lab-historia-przelicznik-mobile.sp
 bez serwera po instalacji SW), `lab-historia-zakladka.spec.mjs` (podpis
 punktu bez strzałki). Zielone testy nie są walidacją kliniczną.
 
+### LAB-HISTORIA PR4 — przelicznik z wybranym badaniem z karty (`?badanie=`, `vilda_lab_history_tab.js` 1.2.0, 2026-10-15)
+
+**Wpływ kliniczny: brak.** Zmiana nawigacji: karta badania w zakładce „Badania”
+ma odnośnik „Nowy wynik TSH w przeliczniku →” (decyzja 6.23), który otwiera
+przelicznik jednostek z tym badaniem już wybranym (`?badanie=<id przelicznika>`,
+decyzja 6.15). Wybór działa jak wybór z listy w polu „Substancja”: te same
+jednostki, zakresy i oceny, bez wpisywania wartości. Przy wpisanym wyniku
+przelicznik nie zmienia badania (komunikat), żeby wpisanej liczby nie odczytać
+w jednostkach innego badania; nieznany klucz niczego nie zmienia. Pasek
+„Poprzednie wyniki” i karta liczą jak dotąd (wpisy PR2 i PR3 wyżej).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- `przelicznik-jednostek.html?badanie=tsh`, puste pole wyniku → „Substancja”:
+  „TSH (tyreotropina)”, pole wyniku puste z kursorem.
+- Ten sam adres, w polu wyniku „4,2” → badanie bez zmian, komunikat
+  „Nie zmieniono badania na TSH: pole wyniku nie jest puste.”.
+- `?badanie=nieznane` albo `?badanie=` → formularz bez zmian.
+
+**Testy:** `tests/unit/przelicznik-deeplink-badanie.test.mjs` (produkcyjny
+fragment skryptu strony z własnymi kotwicami i prawdziwym konwerterem; cel
+z powłoki; współistnienie z `?wskazanie=`; harness powłoki: cel po `load`
+i ponownie w ciepłej ramce), `tests/unit/lab-history-tab.test.mjs` (odnośnik
+w karcie, nagłówek bez badania, trasa powłoki), e2e
+`powloka-badania-nawigacja.spec.mjs` (prawdziwa powłoka i sejf: karta → przelicznik
+z TSH, wpisany wynik z komunikatem, pasek → karta na zakładce „Badania”, strona
+samodzielna). Zielone testy nie są walidacją kliniczną.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla
@@ -4827,6 +4855,104 @@ Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (be
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
 
+### P-POKWITANIE-PANEL — G/Th/P wspólne dla wizyty, 2026-10-15
+
+**Decyzja i wpływ kliniczny.** Właściciel zaakceptował makietę, osobne G/P
+u chłopców i Th/P u dziewcząt, treść pomocy Pradera oraz rozszerzone opisy Th,
+a następnie polecił wdrożenie etapu 2. Panel i adaptery laboratoryjne/wzrostowe
+wchodzą razem. Jest to **zamierzona zmiana kwalifikacji danych klinicznych**:
+stary numer Tannera o nieznanym rodzaju oraz samo P nie zasilają już gonadalnych
+reguł. Pusta, wadliwa i przyszła typowana ocena nie wraca do starego numeru.
+Brak właściwej osi zachowuje dostępne porównanie według wieku. Nie dodano norm
+hormonalnych, progów wieku/stadium, przeliczeń jednostek ani wzorów wzrastania.
+Dla równoważnego prawidłowego G/Th dotychczasowe wzory zachowują wyniki.
+
+**Populacja i znaczenie stadium.** Ocena morfologiczna dzieci i młodzieży.
+G, Th(B) i P są niezależnymi kategoriami porządkowymi I–V, bez jednostki;
+nie wyliczamy ich średniej, maksimum ani ogólnego Tannera. P2 ma opis właściwy
+dla płci. P nie jest oceną rozwoju gonadalnego; zmiana płci nie przepisuje G
+na Th ani nie odnawia wcześniejszego P. Odczyt zachowuje źródłową płeć osobno
+przy każdej zachowanej osi. Dane dorosłych, cykl/menopauza, wcześniactwo,
+operator wyniku i znane leczenie zachowują osobne istniejące kontrakty.
+
+**Źródła pomocy, pełne teksty sprawdzone przy uzgodnieniu makiety.**
+
+- Marshall WA, Tanner JM. *Variations in pattern of pubertal changes in girls*.
+  Arch Dis Child. 1969;44:291–303. Definicje Th: s. 291, P: s. 292; sekwencje
+  i zmienność w dalszych tabelach. [DOI 10.1136/adc.44.235.291](https://doi.org/10.1136/adc.44.235.291),
+  [pełny tekst PMC2020314](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020314/).
+- Marshall WA, Tanner JM. *Variations in the pattern of pubertal changes in boys*.
+  Arch Dis Child. 1970;45:13–23. Definicje G/P i sekwencje morfologiczne;
+  [DOI 10.1136/adc.45.239.13](https://doi.org/10.1136/adc.45.239.13),
+  [pełny tekst PMC2020414](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020414/).
+  To historyczne obserwacje brytyjskich dzieci, nie nowe normy wieku dla Polski.
+- Krishna KB, Witchel SF. *Normal and Abnormal Puberty*. Endotext,
+  [pełny rozdział NBK279024](https://www.ncbi.nlm.nih.gov/books/NBK279024/).
+  Palpacja odróżnia pączek gruczołowy od tkanki tłuszczowej; stadium opisuje
+  budowę piersi, nie rozmiar. Th IV nie musi zostać uchwycone między wizytami.
+- Rey, Grinspon, Castro. *Clinical approach to the male with delayed puberty*.
+  Arch Endocrinol Metab., online 2025/zeszyt 2026;70(spe1).
+  [PMID 41312956](https://pubmed.ncbi.nlm.nih.gov/41312956/),
+  [DOI 10.20945/2359-4292-2025-0428](https://doi.org/10.20945/2359-4292-2025-0428).
+  Sekcja „Puberty” i ryc. 2: orientacyjne objętości pojedynczego jądra
+  w orchidometrze Pradera, bez utożsamiania z USG.
+- Agüero, Berner. *Tanner stages and Prader orchidometry in male adolescents.
+  A descriptive, cross-sectional study*. Arch Argent Pediatr. 2023;121(2).
+  [PMID 36315874](https://pubmed.ncbi.nlm.nih.gov/36315874/),
+  [DOI 10.5546/aap.2022-02717.eng](https://doi.org/10.5546/aap.2022-02717.eng).
+  Tabela 3, s. 5 PDF: 367 zdrowych Argentyńczyków w wieku 9–20 lat, morfologia oceniana
+  przed pomiarem, każda strona oddzielnie. Mediany/IQR nie są granicami normy.
+  Przegląd Rey cytuje tę pracę; nie liczymy ich jako niezależnych potwierdzeń.
+
+**Objętości w ściądze.** G1 około 2 ml; G2 około 4–6 ml; G3 około 8–10 ml;
+G4 około 12–15 ml; G5 około 15–25 ml. Etykieta „Orientacyjna objętość jądra:”.
+Są to dydaktyczne wskazówki towarzyszące morfologii, nie średnie, pełne zakresy
+referencyjne, progi diagnostyczne ani automat klasyfikacji. Nie dopisujemy
+metody Pradera do dawnego pomiaru o nieznanej metodzie. **Usunięto dwa
+kategoryczne porównania stadium z kategorią ml**; G2 przy 3 ml nie jest odrzucane,
+a wpisana objętość nie ustawia G. Nie przeliczamy wartości z USG.
+
+**Czas i zastosowanie.** Znacznik aktywnej wizyty dokumentuje świadomy wybór,
+nie datę badania. Wybór działa z ręcznym wiekiem, bez nazwiska lub antropometrii.
+Nieznana data pozostaje nieznana. F5 tej samej wizyty zachowuje wybór; nowy
+pomiar nie potwierdza dawnych osi. LH/FSH używają wyłącznie właściwego bieżącego
+G/Th, a brak stadium nie blokuje dostępnej osi wieku. Inhibina B zachowuje swoje
+istniejące pokrycie danych; panel nie tworzy dla niej brakujących norm stadium.
+Wzrost zachowuje operacyjną granicę ≤12 miesięcy (wcześniejsza decyzja aplikacji
+2026-09-09), osobną od aktualności wizyty. Przyszły albo nieznany historyczny
+czas nie dowodzi świeżości. Sama dawna data bez wieku oceny nie pozwala liczyć
+utrzymywania się Tanner II–III z dzisiejszego wieku. Wcześniejsze Th1/Th2 nie
+zaprzecza późniejszemu początkowi/menarche; komunikaty łączące stadium z tymi
+zdarzeniami wymagają bieżącej oceny. Przypięte wyniki zachowują własny kontekst
+i gotową ocenę — nie przeliczamy ich po zmianie stadium wizyty.
+
+**Odziedziczone ograniczenie tempa.** Dotychczasowa gałąź IV–V i progi pozostają.
+Nowy opis nie deklaruje, że takie stadium dowodzi zakończenia skoku wzrostowego.
+Marshall–Tanner 1970, s. 18, tab. IV: PHV chłopców przypadało głównie w G4
+(około 74%, także około 21% w G5). Gałąź jest istniejącą heurystyką aplikacji,
+nie nową normą ani nową walidacją; jej ewentualna zmiana wymaga osobnego ustalenia.
+
+**Przypadki regresyjne (rzeczywiste funkcje produkcyjne).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| M, G3/P2 lub F, Th3/P2 w aktywnej wizycie | wspólny import właściwej osi; osobne P i pochodzenie |
+| Brak G/Th lub samo P5 | bez osi gonadalnej; dostępna oś wieku i alarm niskiego tempa pozostają |
+| Dawny ogólny Tanner V | unspecified, bez wyciszenia alarmu przez typowany adapter |
+| G2 + kategoria <4 ml | brak deterministycznego odrzucenia G2, bez zmiany danych |
+| Edycja P | brak zmiany daty, wieku i źródła G/Th |
+| Zmiana M→F→M | historia zachowana, wcześniejsza kwalifikacja bieżącej oceny nie odżywa |
+| Ocena sprzed 12/ponad 12 miesięcy lub z przyszłości | zachowana granica 12 miesięcy; brak odnowienia przez autosave |
+| Dawne Th2 → późniejsza menarche | brak fałszywej sprzeczności oraz brak domysłu utrzymywania Th2 |
+| Nowsza edycja formularza podczas pauzy zapisu | starsza sesja/ramka nie zastępuje aktywnej oceny |
+| Zapisany wynik laboratoryjny G3 → zmiana wizyty G4 | zapisany wynik nadal ma pierwotne G3 i ocenę |
+
+Kontrakt i cykl życia: [PUBERTY_ASSESSMENT.md](../PUBERTY_ASSESSMENT.md).
+Testy: `puberty-assessment-qualification`, `puberty-assessment-context`,
+`puberty-assessment-persistence`, `puberty-growth-adapters`, `puberty-summary-consumers`,
+`puberty-assessment-editor` i `lab-puberty-shared-assessment`, wraz z istniejącymi
+regresjami obliczeń, zapisu, mobile i PWA.
+
 ### P-POKWITANIE-KONTRAKT — oddzielny zapis G/Th/P, etap 1, 2026-10-14
 
 **Zakres i wpływ kliniczny.** Techniczne przygotowanie wspólnej oceny pokwitania:
@@ -6507,6 +6633,18 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 **Zaobserwowane przy okazji, nietknięte:** edycja starszej wersji przesuwa ją na czoło listy, bo `updatedAtISO` jest kryterium wyższym niż numer. To reguła sprzed tej zmiany; zapisana tutaj, żeby nie wyglądała na skutek uboczny.
 
 *Strażnicy:* `tests/unit/kolejnosc-wersji.test.mjs` (9) — zachowaniowe, na prawdziwym sejfie z magazynem w pamięci: numery rosną i są osobne dla każdego pacjenta, **zamrożony zegar stawia trzy zapisy w tej samej milisekundzie** i bieżącą zostaje najnowsza, wynik jest powtarzalny w pięciu próbach, edycja nie kasuje numeru, plus spis pilnujący, że żadne z ośmiu miejsc zapisu wersji numeru nie gubi. **Zmierzona czerwień: 8 z 9** przeciwko wersji sprzed zmiany, z kolejnością wychodzącą za każdym razem inaczej.
+
+### P-IMPORT-STATUS — opóźniony import nie zmienia wczytanego pacjenta w „nowego”, 2026-10-15
+
+**Odtworzenie.** `applyLoadedData()` planuje `vilda:json-imported`, a wczytanie z kartoteki zaraz potem rozgłasza `vilda:patient-loaded`. Wskaźnik zapisu ignorował import przez 500 ms. Przy obciążeniu renderowania powiadomienie przychodziło później: mimo poprawnego PID przechodził ze stanu `saved` do `new_patient`, a rzeczywisty strażnik niezapisanych zmian zatrzymywał „Wyczyść”. Potwierdzone w obu próbach CI oraz w Chromium z sześciokrotnym spowolnieniem CPU. Sam panel pokwitaniowy nie zgłaszał nowego pacjenta ani zmiany danych.
+
+**Reguła.** Każde poprawne `applyLoadedData`, również odtworzenie sesji, zwiększa licznik operacji wyłącznie w RAM dokumentu. Istniejące `vilda:json-imported` niesie `detail.applySequence`; odtworzenie sesji nadal nie emituje tego zdarzenia. Wczytanie potwierdza konkretną operację, a kolejne „Wyczyść” lub blokada konta unieważniają oczekujące powiadomienia. Starszy import i starsze odtworzenie nie mogą odnowić referencji innego pacjenta. Rzeczywisty późniejszy import JSON ma nowy numer i nadal daje `new_patient`, również bezpośrednio po wczytaniu. Nie ma okna 500 ms ani rozpoznawania pacjenta po nazwisku.
+
+`saveUserData()` przekazuje w zdarzeniu zakończenia numer operacji uchwycony przy rozpoczęciu zapisu; opóźniony zapis nie potwierdza nowszego importu. Zwykłe powiadomienie sejfu bez takiej proweniencji zachowuje dotychczasową synchroniczną aktualizację wskaźnika, ale nie potwierdza dowolnego bieżącego importu. Odroczone publikacje wskaźnika sprawdzają generację, numer operacji i docelowy PID; PID może zostać ustawiony przez późniejszy listener tego samego wczytania.
+
+**Zakres.** Bez zmiany wzorów, interpretacji, danych referencyjnych, formatu pacjenta ani magazynów. Numer nie trafia do payloadu, JSON eksportu ani sesji. Strażnik niezapisanych zmian pozostaje czynny; test tożsamości nadal sprawdza, że nowe dziecko nie modyfikuje starej kartoteki.
+
+**Regresje.** `tests/unit/save-status-import-order.test.mjs` wykonuje rzeczywisty importer i wskaźnik z deterministyczną kolejnością zdarzeń: powiadomienie późniejsze niż 500 ms, kolejny prawdziwy import, stare zdarzenia, sesja, zapis, clear, lock, unlock i zmiana PID. `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` zachowuje wszystkie dotychczasowe asercje.
 
 ### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
 
@@ -13539,7 +13677,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.284, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
+## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.286, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
 
 **Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, pod
 którą kartą leżą historyczne zapisy (wersje) po „Scal pacjentów” z równoległą pracą na drugim urządzeniu, która treść
@@ -13707,13 +13845,13 @@ i szersza reguła chwili zapisu karty (zawsze późniejsza z dwóch). Po uwagach
 chwili zapisu ładunku bez `savedAtISO` zawężone do `tutejszaKarta` — 1 czerwony (dotąd przeżywał); integracja bez
 wysyłki zapasowej (`vilda_sync_integration.js` z `44ba49f7`) — 2 czerwone w unit i czerwony e2e.
 
-**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `c9f893a`
-po #687, Pokwitanie etap 1). `vilda_vault.js` 212 → 213, `vilda_sync_integration.js` 49 → 50 (tylko P-SYNC-WLASCICIEL)
-na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (144 → 145) i `vilda_session_bridge.js` (68 → 69); nowe
-adresy w precache (append-only); `SW_VERSION` 1.1.283 → 1.1.284 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213, `vilda_sync_integration.js` 49 → 50 (tylko P-SYNC-WLASCICIEL)
+na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe
+adresy w precache (append-only); `SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
 `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
-## „Scal kopię konta” mówi o notatkach i listach z kopii; „Scal teraz” także wtedy, gdy dochodzą tylko one (P-KOPIA-DANE-KONTA, SW 1.1.284, `vilda_vault.js` 213, `vilda_auth_ui.js` 495, 2026-10-14)
+## „Scal kopię konta” mówi o notatkach i listach z kopii; „Scal teraz” także wtedy, gdy dochodzą tylko one (P-KOPIA-DANE-KONTA, SW 1.1.286, `vilda_vault.js` 213, `vilda_auth_ui.js` 496, 2026-10-14)
 
 **Zmiana kliniczna: NIE** w zakresie wzorów, progów, jednostek i interpretacji. Zmiana funkcjonalna ekranu „Scal kopię
 konta” (podgląd, widoczność i etykieta „Scal teraz”, podsumowanie, wynik, podtytuł) i wyniku `previewVaultBackupMerge`
@@ -13891,10 +14029,10 @@ z `createdAtISO` — T43, pętla podglądu bez `||!h.header` — T44, część T
 z 12 losowych przebiegów, ekran bez odjęcia części Terminarza — 3 czerwone. Po uwadze recenzji `a38f42cf`: jedna
 flaga łącznej nazwy dla trzech linii wyniku (stan sprzed poprawki) — T47 i test łącznej nazwy w każdej linii czerwone.
 
-**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `c9f893a`
-po #687, Pokwitanie etap 1). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 494 → 495 na stronach i w adresach wstrzykiwanych
-przez `vilda_chrome.js` (144 → 145) i `vilda_session_bridge.js` (68 → 69); nowe adresy w precache (append-only);
-`SW_VERSION` 1.1.283 → 1.1.284 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`)
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 495 → 496 na stronach i w adresach wstrzykiwanych
+przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe adresy w precache (append-only);
+`SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`)
 — `npm run podbij-wersje`.
 
 ## Mapa właścicieli przed pierwszym zapisem także przy kartach bez nowych wersji (P-KOPIA-POMIJA-3, SW 1.1.232, `vilda_vault.js` 209, 2026-10-12)
@@ -14099,7 +14237,7 @@ z kopii; „Scal teraz” jest widoczne, gdy dochodzą tylko one.)*
 `SW_VERSION` 1.1.199 → 1.1.200 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) —
 `npm run podbij-wersje`.
 
-## „Scal pacjentów” i ponowienie zapisu: niewypełniona sekcja karty docelowej nie trzyma sekcji z danymi (P-SCALANIE-SEKCJE, SW 1.1.284, `vilda_vault.js` 213, 2026-10-14)
+## „Scal pacjentów” i ponowienie zapisu: niewypełniona sekcja karty docelowej nie trzyma sekcji z danymi (P-SCALANIE-SEKCJE, SW 1.1.286, `vilda_vault.js` 213, 2026-10-14)
 
 **Zmiana kliniczna: możliwa** — wzory, współczynniki, progi, tabele i jednostki bez zmian; zmienia się zawartość
 bieżącej wersji (głowy) karty docelowej po „Scal pacjentów” i po ponowieniu zapisu do niej (P-ZAPIS-USUNIETEJ). Głowa
@@ -14256,10 +14394,10 @@ klirensu, zastępowanie sekcją źródła bez danych, klauzule usunięcia w pono
 noworodka, antropometria, wybory widoku), bez gałęzi „głowa = kopia wczytana” — 9. Dawny warunek pominięcia sekcji
 głowy „bez danych” (bez `!pusta(cel[k])`) — T58–T60 czerwone.
 
-**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `c9f893a`
-po #687, Pokwitanie etap 1). `vilda_vault.js` 212 → 213
-na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (144 → 145) i `vilda_session_bridge.js` (68 → 69); nowe
-adresy w precache (append-only); `SW_VERSION` 1.1.283 → 1.1.284 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213
+na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe
+adresy w precache (append-only); `SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
 `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
 ## Ponowienie zapisu: niewypełniona sekcja karty docelowej to sekcja pusta (P-ZAPIS-USUNIETEJ-3, SW 1.1.200, `vilda_vault.js` 206, 2026-10-08)

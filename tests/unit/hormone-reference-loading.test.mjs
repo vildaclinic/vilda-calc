@@ -14,7 +14,7 @@ function environment(missing = [], restoredSession = false) {
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
     // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
-    VildaLabHistory: {}, VildaLabHistoryTab: {},
+    VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };
@@ -33,7 +33,8 @@ function environment(missing = [], restoredSession = false) {
         const filename = node.src.split('?')[0];
         // The new modules really execute; loading placeholders would conceal an
         // incorrect global name, dependency order, or initialization failure.
-        if (!['vilda_hormone_reference_snapshot.js', 'vilda_hormone_reference_ui.js'].includes(filename)) {
+        if (!['vilda_hormone_reference_snapshot.js', 'vilda_hormone_reference_ui.js'].includes(filename)
+          && !(filename === 'vilda_puberty_assessment.js' && missing.includes('VildaPubertyAssessment'))) {
           throw new Error('Unexpected reload of an already available module: ' + filename);
         }
         if (filename === 'vilda_hormone_reference_ui.js') expect(win.VildaHormoneReferenceSnapshot).toBeTruthy();
@@ -78,6 +79,21 @@ for (const loader of ['session', 'chrome']) {
       const env = environment();
       await start(env)();
       expect(env.appended).toEqual([]);
+    });
+
+    it('loads the typed puberty reader once when it is the only missing dependency', async () => {
+      const env = environment(['VildaPubertyAssessment']);
+      const ensure = start(env);
+      await ensure();
+      expect(env.appended.filter(url => /\.js\?/.test(url))).toEqual([
+        expect.stringMatching(/^vilda_puberty_assessment\.js\?v=\d+$/),
+      ]);
+      expect(env.win.VildaPubertyAssessment.readUser({ tannerStage: 4 })).toMatchObject({
+        status: 'absent', legacy: { kind: 'unspecified', stage: 4 },
+      });
+      const loads = env.appended.length;
+      await ensure();
+      expect(env.appended).toHaveLength(loads);
     });
   });
 }

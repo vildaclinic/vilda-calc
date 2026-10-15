@@ -123,7 +123,7 @@ UMD jak `vilda_lab_snapshot.js`; bez DOM, storage i zegara (`now` wstrzykiwany).
 ### 3.4 Nawigacja między kartą a przeliczarką
 
 - Przelicznik → karta: w powłoce `window.parent.VildaShell.openPatientCardInStart(pid, {activeTab: "lab"})`; łatka P-POWLOKA-KARTA-ZAKLADKA rozgałęzia wywołanie (`tab ? showPatientCard(id, null, null, {activeTab: tab}) : showPatientCard(id)`), żeby istniejące testy harnessu porównujące dokładne tablice argumentów pozostały zielone; poza powłoką `VildaSession.ensureAuthLoaded().then(() => VildaAuthUI.showPatientCard(pid, null, null, {activeTab: "lab"}))`. `pid` z `sessionStorage`, nigdy z URL.
-- Karta → przelicznik: „Sprawdź nowy wynik →” woła `VildaShell.navigate('lab', true, 'przelicznik-jednostek.html?badanie=<testKey>')` (PR4; w PR2 bez parametru). Obsługa `?badanie=` (zapas `#badanie=`) w osobnej funkcji `applySubstanceDeepLink` zdefiniowanej poza wycinkiem wykonywanym przez `powloka-wskazanie-kliniczne.test.mjs`, tylko przy pustym `#labValue` (inaczej toast); każde jawne `navigate(...)` z adresem doręcza cel ponownie (kontrakt powłoki), konsument jest idempotentny.
+- Karta → przelicznik: odnośnik z kluczem badania woła `VildaShell.navigate('lab', true, 'przelicznik-jednostek.html?badanie=<testKey>')` (PR4). Decyzja 6.23: odnośnik stoi w karcie każdego badania z kluczem przelicznika („Nowy wynik TSH w przeliczniku →”, widok „Wykresy”); „Sprawdź nowy wynik →” w nagłówku zakładki zostaje bez parametru, bo jest wspólny dla wszystkich badań. Obsługa `?badanie=` (zapas `#badanie=`) w osobnej funkcji `applySubstanceDeepLink` zdefiniowanej poza wycinkiem wykonywanym przez `powloka-wskazanie-kliniczne.test.mjs`, tylko przy pustym `#labValue` (inaczej toast); każde jawne `navigate(...)` z adresem doręcza cel ponownie (kontrakt powłoki), konsument jest idempotentny.
 
 ### 3.5 Co nie jest zmianą kliniczną, a co jest
 
@@ -209,8 +209,9 @@ Każdy etap to osobny draft PR do `audyt` z gałęzi od świeżego `origin/audyt
 
 ### PR4 — deep link `?badanie=`
 
-- `applySubstanceDeepLink` w przeliczniku (3.4); „Sprawdź nowy wynik →” z `?badanie=<testKey>`. Łatka P-BADANIA-TREND-HISTORIA przeszła do PR2 (decyzja 6.12).
+- `applySubstanceDeepLink` w przeliczniku (3.4); odnośnik z `?badanie=<testKey>` w karcie badania (decyzja 6.23), nagłówkowe „Sprawdź nowy wynik →” bez parametru. Łatka P-BADANIA-TREND-HISTORIA przeszła do PR2 (decyzja 6.12).
 - Testy: `przelicznik-deeplink-badanie.test.mjs` (własny wycinek i kotwice; `?badanie=tsh` przy pustym polu wybiera TSH; z wartością toast; nieznany klucz ignorowany), harness powłoki (doręczenie celu po `load`), e2e `powloka-badania-nawigacja.spec.mjs` (karta → przelicznik z TSH i pustą wartością; pasek → karta na zakładce „Badania”).
+- Uzupełnienie z wdrożenia (2026-10-15): odnośnik „Nowy wynik TSH w przeliczniku →” w karcie każdego badania znanego przelicznikowi (widok „Wykresy”, decyzja 6.23); nagłówkowe „Sprawdź nowy wynik →” bez zmian. `applySubstanceDeepLink` stoi za wycinkiem „Faza 14” (przed ustawieniem fokusu na końcu skryptu strony), czyta `?badanie=` i zapas `#badanie=`, wybiera badanie tą samą ścieżką co lista (`selectSubstanceFromDropdown`) i ustawia kursor w polu wyniku; przy wpisanej wartości komunikat „Nie zmieniono badania na TSH: pole wyniku nie jest puste.”; to samo badanie albo nieznany klucz — bez zmian. Powłoka ładuje ramkę przelicznika bez parametru (`?embedded=1`) i doręcza adres zdarzeniem `vilda:shell-navigate-target` po `load` oraz przy każdym jawnym `navigate` z adresem, więc w powłoce działa ścieżka zdarzenia, a adres początkowy — na stronie samodzielnej. Wyjście z trasy Start zamyka kartę pacjenta (dotychczasowe zachowanie powłoki); powrót do karty — chipem pacjenta albo „Badania w karcie →” z paska.
 
 ### PR5 — porządki za decyzjami właściciela (opcjonalny)
 
@@ -252,6 +253,7 @@ Odpowiedzi właściciela z 2026-10-14 w ostatniej kolumnie. Trzy decyzje różni
 | 6.20 | Reguła pigułki zapisanej oceny: tytuł podsumowania koperty, a tytuł kliniczny tylko przy ostrzeżeniu klinicznym (zamiast `clinical.title` przy `summary.status = "attention"`)? | Tak, reguła z modelu | Na prawdziwej kopercie LH poza zakresem reguła wersji 3 pokazałaby „Brak wykrytej niezgodności czasu dojrzewania”; ostrzeżenie kliniczne nadal ma pierwszeństwo (K6) | Tak, reguła z modelu (2026-10-14, przed PR2) |
 | 6.21 | Wykres w pasku przelicznika: lekki, osobny renderer (wariant A) czy `Nl` z modułu karty (wariant B)? | Wariant A | Osobny pas „teraz” bez daty, zaznaczenie wybranego chipa, stała wielkość podpisów na 320 px; bez zależności od zminifikowanej `Nl` | Wariant A, z dwoma elementami wariantu B: wartość przy każdym punkcie zamiast strzałek i przerywana kreska od punktu do osi dat (2026-10-14, makieta w wersji 13) |
 | 6.22 | Strzałki ↓/↑ przy punktach wykresów TSH, fT4 i fT3 w zakładce „Badania” na desktopie | — (prośba właściciela po przeglądzie makiety) | Strzałka przy punkcie dublowała etykietę wartości i wymagała objaśnień | Usunąć strzałki przy punktach wykresów w karcie (i w pasku); strzałka wg zapisu zostaje przy wartościach (ostatni wynik, tabela, chipy); wykonać w PR3 (2026-10-14, makieta w wersji 16) |
+| 6.23 | Skąd odnośnik do przelicznika z wybranym badaniem (`?badanie=`), skoro „Sprawdź nowy wynik →” w nagłówku zakładki jest wspólny dla wszystkich badań? | Odnośnik w karcie badania | Tylko karta zna jedno badanie; nagłówek nie wie, które wybrać, a zgadywanie (np. ostatnie badanie) byłoby nieprzewidywalne | Odnośnik w karcie każdego badania (widok „Wykresy”); nagłówek bez zmian (2026-10-15) |
 
 ---
 

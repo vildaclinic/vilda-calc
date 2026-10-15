@@ -311,6 +311,19 @@
   font-size: 13px
 }
 
+.vilda-lab-hist a.vilda-lab-hist-card-check {
+  align-self: flex-start;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: var(--space-4px) 0
+}
+
+.vilda-lab-hist a.vilda-lab-hist-card-check:hover {
+  text-decoration: underline
+}
+
 .vilda-lab-hist-chart {
   min-width: 0;
   max-width: 660px
@@ -524,6 +537,11 @@
     min-height: 44px
   }
   .vilda-lab-hist button.vilda-lab-hist-chip {
+    min-height: 44px
+  }
+  .vilda-lab-hist a.vilda-lab-hist-card-check {
+    display: inline-flex;
+    align-items: center;
     min-height: 44px
   }
   .vilda-lab-hist-toolbar>.vilda-lab-hist-segment {

@@ -173,6 +173,9 @@ test('female group boundaries select exact Table 2 medians and equivalent units 
   await expectPoint(page, 2, 2.57, 'zec2012-female-fsh-age-1-4');
   for (const [age, median, profile] of [[4, 1.07, 'zec2012-female-fsh-age-4-8'], [8, 1.55, 'zec2012-female-fsh-age-8-11']]) {
     await quickFill(page, 'AgeYears', String(age));
+    // A new entered age does not renew the former visit's observation.
+    // Explicitly assess Th1 for this boundary case through the shared editor.
+    await stage(page, 'Th', '1');
     await closePatientEditor(page);
     await expectPoint(page, 2, median, profile);
   }
