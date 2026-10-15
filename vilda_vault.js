@@ -1197,13 +1197,18 @@ function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
 // Przeniesienie odlozone do fazy przeniesien (decyzja d z Bsw_decyzja): dokad (F z naglowkiem z ladunku), skad (G)
 // i w jakiej rewizji widzielismy tutejszy rekord (faza przenosi tylko, gdy sie od tej chwili nie zmienil). tylkoTresc —
 // decyzja 'tresc': wersja zostaje pod G, przechodzi tylko tresc z ladunku (Bsw_poprawTresc). zabierz — decyzja
-// 'zabierz' (G w zbiorze N): wersja przechodzi takze wtedy, gdy zmieniono ja tu po decyzji (Bsw_przenies).
+// 'zabierz' (G w zbiorze N): wersja przechodzi takze wtedy, gdy zmieniono ja tu po decyzji (Bsw_przenies). gDecyzji —
+// tutejszy rekord z chwili decyzji 'zabierz' (tresc, chwila zmiany, chwila zapisu, rev): gdy wersja zniknie z G razem
+// z karta przed faza (Bsw_bezSladu), faza zapisuje pod F nowsza z dwoch tresci z tego odczytu, jak zapis od razu na
+// 32b6557 (Bsw_rekord z d.g) — a nie sama tresc z ladunku, pod ktora ginela poprawka albo przypiecie zrobione tu
+// przed synchronizacja (uwaga recenzenta do eb81091).
 function Bsw_odloz(ctx, F, naglowek, S, szyfr, d) {
   const g = d.g;
   (ctx.Bsw_P || (ctx.Bsw_P = [])).push({
     F: { patientId: F.patientId, createdAtISO: F.createdAtISO, lastSavedAtISO: F.lastSavedAtISO },
     naglowek: naglowek, S: S, szyfr: szyfr, G: g.patientId, rev: mt(g), zmiana: Bsw_zmiana(g),
     tylkoTresc: d.co === 'tresc', zabierz: d.co === 'zabierz',
+    gDecyzji: d.co === 'zabierz' ? { payloadCipher: g.payloadCipher, updatedAtISO: g.updatedAtISO || null, savedAtISO: g.savedAtISO, rev: g.rev } : null,
   });
 }
 
@@ -1414,8 +1419,9 @@ async function Bsw_poprawTresc(p, teraz) {
 // przegladarki moze zmienic F albo G. Dotad (zapis od razu, pod blokada F) wersja lezala juz pod F i dzielila jej los;
 // teraz faza odtwarza ten wynik:
 //   - wersji nie ma juz pod G i nie ma jej tu nigdzie, a nie lezy w koszu ani nie przycial jej nagrobek retencji
-//     („Usun pacjenta” G) — zapis pod F z trescia z ladunku, jak decyzja 'nowa' (Bsw_bezSladu); wersja pod inna karta
-//     („Scal pacjentow” G -> K) albo w koszu zostaje tam, gdzie jest;
+//     („Usun pacjenta” G) — zapis pod F z nowsza z dwoch tresci z chwili decyzji (z ladunku albo tutejsza, p.gDecyzji),
+//     jak zapis od razu na 32b6557 (Bsw_bezSladu); wersja pod inna karta („Scal pacjentow” G -> K) albo w koszu (pod
+//     dowolna karta) zostaje tam, gdzie jest;
 //   - F zniknela z nagrobkiem zapisanym po decyzji: „Scal pacjentow” F -> H — wersja idzie pod H, za pozostalymi
 //     wersjami F (Bsw_nastepca; kolejny wpis tej samej fazy, pod blokadami H i G); „Usun pacjenta” F (wersji F nie ma
 //     nigdzie) — wersja zostaje pod G i znika razem z nia, jak razem z F.
@@ -1425,7 +1431,7 @@ async function Bsw_przenies(p, teraz, ctx) {
   const G = p.G;
   const wersjeG = await I().listSnapshotsForUser(b, G);
   const g = wersjeG.find(function (s) { return s && s.snapshotId === p.S.snapshotId; });
-  if (!g && p.zabierz && await Bsw_bezSladu(ctx, p)) return Bsw_doF(p, teraz, ctx, null);
+  if (!g && p.zabierz && await Bsw_bezSladu(ctx, p)) return Bsw_doF(p, teraz, ctx, p.gDecyzji);
   if (!g || !p.zabierz && (mt(g) !== p.rev || Bsw_zmiana(g) !== p.zmiana)) return null;
   const rekG = await I().getPatientForUser(b, G);
   if (!rekG) return null;
@@ -1434,8 +1440,8 @@ async function Bsw_przenies(p, teraz, ctx) {
   return { dodana: r.dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1) };
 }
 
-// Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (null: wersja
-// znikla razem z G — tresc z ladunku). Karty F nie ma: nagrobek F zapisany po decyzji (usuniecie albo scalenie F
+// Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (wersja znikla
+// razem z G — rekord z chwili decyzji 'zabierz', p.gDecyzji). Karty F nie ma: nagrobek F zapisany po decyzji (usuniecie albo scalenie F
 // w innej karcie przegladarki przed wzieciem blokad tej fazy) i nie wczesniejszy niz zapis z ladunku — F nie powstaje od
 // nowa; dla 'zabierz' { dalej: H } (Bsw_nastepca), inaczej null — wersja zostaje pod G. Karta-nastepca H (p.nastepca)
 // nie powstaje nigdy, a wersja dostaje pod nia rev + 1, jak przy „Scal pacjentow” F -> H (Bsw_poScaleniu).
@@ -1476,9 +1482,14 @@ async function Bsw_doF(p, teraz, ctx, g) {
 // wersji (kosz albo retencja, takze zapisane po starcie scalania; ta sama regula co w petli — Bkz_pomin). Znikla wtedy
 // razem z karta G („Usun pacjenta” w innej karcie przegladarki miedzy decyzja a faza, bez wpisow kosza). Dotad wersja
 // lezala juz pod F, a bez tego zapisu ginela tu, w chmurze i na trzecim urzadzeniu do synchronizacji tamtego urzadzenia.
+// Swieze nagrobki tej wersji pod dowolna karta, nie tylko G (uwaga recenzenta do eb81091): „Scal pacjentow” G -> F
+// w innej karcie przegladarki i kosz tej wersji juz spod F zapisuja nagrobek z karta F, a krok F w petli odswiezyl
+// nagrobki F przed nim — bez tego faza wpisywala wersje z powrotem pod F obok wpisu kosza.
 async function Bsw_bezSladu(ctx, p) {
   if (await Bsw_wersjaLokalna(ctx, p.S.snapshotId)) return false;
-  await Bsl_odswiezNagrobki(ctx, p.G);
+  try {
+    (await Bkz_czytaj()).forEach(function (e) { if (e.snapshotId === p.S.snapshotId) Bkz_dolacz(ctx.mapa, e); });
+  } catch { /* jak Bsl_odswiezNagrobki: decyduja nagrobki znane scalaniu */ }
   return !Bkz_pomin(ctx, p.F.patientId, p.S);
 }
 

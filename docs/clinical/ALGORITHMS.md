@@ -13749,8 +13749,9 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Zmiana kliniczna: możliwa** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się to, czy poprawka
 pomiaru zrobiona w innej karcie przeglądarki w trakcie synchronizacji przetrwa (dotąd mogła zniknąć z konta), a także
-to, czy „Scal pacjentów”, „Usuń pacjenta” albo zapis karty w innej karcie przeglądarki w tym samym czasie nie gubi wersji
-ani nagłówka (uwagi recenzentów do pierwszej wersji tej poprawki, `57dd05a`). Uwaga Codex P1 do scalonego #689
+to, czy „Scal pacjentów”, „Usuń pacjenta” albo zapis karty w innej karcie przeglądarki w tym samym czasie nie gubi wersji,
+jej treści (poprawki pomiaru, przypięcia) ani nagłówka (uwagi recenzentów do pierwszej wersji tej poprawki, `57dd05a`,
+i do drugiej, `eb81091`). Uwaga Codex P1 do scalonego #689
 (P-SYNC-WLASCICIEL, decyzja `'zabierz'` w `Bsw_decyzja`); **do akceptacji klinicznej właściciela**.
 
 **Co było** (prawdziwy `vilda_vault.js`, dwa sejfy z magazynem w pamięci, atrapa Web Locks i kolejka strony; dane
@@ -13789,12 +13790,14 @@ faza odtwarza wynik z `32b6557`, gdzie wersja leżała już pod F (`Bsw_przenies
   (blokady H i G, świeży odczyt), z rev + 1 jak przy „Scal pacjentów”; nagłówek i chwila zapisu H bez zmian;
 - F zniknęła, a jej wersji nie ma nigdzie („Usuń pacjenta” F) — F nie powstaje od nowa, wersja zostaje pod G i znika
   razem z nią, tak jak na `32b6557` razem z F (zamiar użytkownika);
-- wersji nie ma już pod G ani nigdzie indziej, a nie przegrywa z nagrobkiem wersji (kosz, retencja — także zapisanymi po
-  starcie scalania, reguła `Bkz_pomin`) — znikła razem z kartą G („Usuń pacjenta” X, bez wpisów kosza): zapis pod F
-  z treścią z ładunku, jak decyzja `'nowa'`;
+- wersji nie ma już pod G ani nigdzie indziej, a nie przegrywa z nagrobkiem tej wersji pod żadną kartą (kosz, retencja —
+  także zapisanymi po starcie scalania, reguła `Bkz_pomin`) — znikła razem z kartą G („Usuń pacjenta” X, bez wpisów
+  kosza): zapis pod F z nowszą z dwóch treści z odczytu w chwili decyzji (z ładunku albo tutejszą — `Bsw_odloz`
+  zapamiętuje ten odczyt), jak zapis od razu na `32b6557`;
 - wersja w koszu albo pod inną kartą („Scal pacjentów” X → K) zostaje tam, gdzie położył ją użytkownik — **różnica wobec
   `32b6557`**, gdzie wersja leżała już pod F (kosz w X odmawiał, „Scal pacjentów” X → K jej nie brał); o właścicielu
-  wersji wspólnej K i F decyduje dalej reguła P-SYNC-WLASCICIEL, jednakowo na wszystkich urządzeniach. Bez utraty.
+  wersji wspólnej K i F decyduje dalej reguła P-SYNC-WLASCICIEL. Bez utraty wersji; kosz w X w tym oknie zostawia
+  jednak trwały rozjazd urządzeń (ograniczenie (d) niżej).
 F, której tu nie ma, faza zakłada, chyba że jej nagrobek zapisany po decyzji wygrywa z zapisem z ładunku (wtedy jak
 wyżej). Nagłówek karty z ładunku faza wpisuje tylko na karcie, którą zakłada, albo gdy zapis z ładunku nie jest starszy
 niż tutejszy (dotyczy też `'przenies'`; dotąd zawsze). Wynik scalania bez zmian: wersje „zabrane” liczą się jako dodane
@@ -13840,13 +13843,53 @@ scala ładunek [Y z x1 x2 (rev + 1) i ym, potem W „Wanda”; nagrobek X], wstr
 „Scal pacjentów” Y → Z → wynik scalania: dodane 3, usunięte karty 1; X i Y brak; Z 8/8 z x1, x2 i ym (na `57dd05a`
 czerwony: dodane 1, Z 6/6, x1 i x2 nigdzie; na `32b6557` zielony).
 
+**Uwagi recenzentów do `eb81091`** (potwierdzone na niezmienionym sejfie i fuzzem różnicowym wobec `32b6557`).
+(1) *Wysoka, regresja:* A i B zsynchronizowane, B poprawia pomiar x2 w X (66 → 71 mies.) albo przypina x2, a A robi
+„Scal pacjentów” X → Y. B scala ładunek A; po kroku Y (decyzja `'zabierz'`), przed fazą, druga karta przeglądarki B
+robi „Usuń pacjenta” X — x2 leży jeszcze pod X i znika z kartą. Faza (`Bsw_bezSladu`) zapisywała x2 pod Y z treścią
+z ładunku (60, 66, bez przypięcia), bo `Bsw_odloz` pamiętał z odczytu w chwili decyzji tylko rev i chwilę zmiany:
+poprawka albo przypięcie znikały na B, w chmurze i na A, przy zgodnych licznikach (Y 5/5). Na `32b6557` x2 trafiała pod
+Y od razu z nowszą z dwóch treści (`Bsw_rekord(F, S, …, d.g)`) — 60, 71 albo przypięta. Fuzz recenzenta: 15 z 1100
+przebiegów, oba modele blokad, obie kolejności id, pełny ładunek i delty. (2) *Średnia, regresja w oknie:* `Bsw_bezSladu`
+odświeżał nagrobki tylko karty G. „Scal pacjentów” X → Y w drugiej karcie B (to samo co na A) i kosz x1 już spod Y
+w oknie zapisywały nagrobek z kartą Y, którego scalanie nie znało (krok Y odświeżył nagrobki Y przed nim) — faza
+wpisywała x1 z powrotem pod Y obok wpisu kosza (B: x1 w Y i w koszu do następnej synchronizacji B; przypięcie albo
+poprawka x1 w tym czasie wskrzeszały ją na stałe). Na `32b6557` x1 tylko w koszu.
+
+**Poprawka** (`Bsw_odloz`, `Bsw_przenies`, `Bsw_bezSladu`; bez nowego formatu). `Bsw_odloz` zapamiętuje dla
+`'zabierz'` tutejszy rekord z chwili decyzji (treść, chwila zmiany, chwila zapisu, rev); gdy wersja zniknęła z G
+razem z kartą, faza przekazuje go do `Bsw_doF`, więc `Bsw_rekord` wybiera nowszą z dwóch treści jak na `32b6557`.
+`Bsw_bezSladu` dołącza świeże nagrobki tej wersji (po `snapshotId`) niezależnie od karty, którą niosą. Poprawka
+zrobiona po decyzji, w oknie, w drugiej karcie przeglądarki, a potem usunięta razem z X — znika (na `32b6557` też: tam
+zapis w X po przeniesieniu wpisywał wersję pod X, a usunięcie X ją kasowało).
+
+Przypadki syntetyczne (`sync-wlasciciel-wersji.test.mjs`, blok P-SYNC-WLASCICIEL-2, +20; prawdziwe `mergeSyncPayload`,
+`updateSnapshotPayload`, `setSnapshotPinned`, `removePatient`, `mergePatients`, `moveSnapshotToTrash`):
+- B poprawia x2 w X na 60, 71 mies. (`preserveSavedAt`) albo przypina x2 przed „Scal pacjentów” X → Y na A; „Usuń
+  pacjenta” X w drugiej karcie B w oknie V1 albo V2 → B, C i A: Y 5/5 [x1 x2 y1 y2 ym], x2 = 60 / 120 cm, 71 / 125,5 cm
+  albo 60, 66 przypięta (16 przypadków: kolejka strony i atrapa Web Locks × V1/V2 × obie kolejności id × poprawka
+  i przypięcie). Na `eb81091` czerwone wszystkie 16 (x2 = 60, 66 bez przypięcia); na `32b6557` czerwone 8 z V2 — tam
+  „Usuń pacjenta” X wchodzi między zapisy x1 i x2 w pętli, a decyzja dla x2 zapada już po usunięciu X (treść z ładunku);
+- „Scal pacjentów” X → Y w drugiej karcie B i x1 do kosza spod Y (V1) → B, C i A: x1 w żadnej karcie, kosz [x1],
+  liczniki zgodne, bez sierot; B: Y 5/5 [x2 y1 y2 ym ymB] (4 przypadki; na `eb81091` czerwone wszystkie 4 — B: x1 w Y
+  i w koszu; na `32b6557` zielone).
+Istniejący test „x1 do kosza w X (V1)” dostał asercję „bez utraty”: x1 w karcie albo w koszu po każdej kolejnej
+synchronizacji (C, A, B, C); stanu A z ograniczenia (d) test nie przypina. Plik: 323 testy, wszystkie zielone. Mutacje (`sync-wlasciciel-
+wersji` + `scalanie-blokada`, 341 testów): faza bez rekordu z chwili decyzji (`null`) — 16 czerwonych; rekord z chwili
+decyzji bez chwili zmiany — 16; nagrobki tylko karty G — 4. Fuzz recenzenta na kopii z tą poprawką: 15 ziaren
+regresji (1) czyste wobec `32b6557`; ziarna 2000–2149 wobec `32b6557` — 0 utraconych wersji i treści (na `eb81091`
+9), zostają 2 rozjazdy z ograniczenia (d) i te same różnice nagłówków co na `eb81091`; ziarna 0–149 wobec `eb81091` —
+żaden przebieg gorszy.
+
 **Wpływ kliniczny.** Poprawka pomiaru (także przypięcie, edycja albo usunięcie wiersza) zrobiona w jednej karcie
 przeglądarki w chwili, gdy druga synchronizuje „Scal pacjentów” z innego urządzenia, nie ginie z konta: trafia do karty
 scalonej, gdy jest późniejsza niż zmiana z innego urządzenia; wcześniejsza ustępuje późniejszej, jak w P-SYNC-WLASCICIEL.
 Synchronizacja może poczekać na skończenie poprawki w drugiej karcie (do 30 s, potem „Synchronizacja wstrzymana…”,
 jak przy pozostałych blokadach scalania). „Scal pacjentów” albo „Usuń pacjenta” w drugiej karcie w trakcie synchronizacji
 daje ten sam wynik co przed `57dd05a` (pomiary scalonego pacjenta idą razem z jego kartą, nic nie znika z konta), a nazwa
-i data urodzenia zapisane w drugiej karcie nie wracają do starszych z innego urządzenia.
+i data urodzenia zapisane w drugiej karcie nie wracają do starszych z innego urządzenia. Poprawka pomiaru albo
+przypięcie zrobione przed synchronizacją nie znikają, gdy w jej trakcie druga karta usunie scalonego pacjenta, a zapis
+wrzucony w tym czasie do kosza z karty scalonej nie wraca do niej.
 
 **Ograniczenia.** Zapis `'nowa'` dalej zapada bez blokady karty-źródła: gdy „Scal pacjentów” w innej karcie
 przeglądarki usunie kartę G dokładnie między odczytem wersji a odczytem karty G, wersja trafia pod F bez porównania
@@ -13861,6 +13904,21 @@ w fazie przeniesień tego kroku nie dotyczy; (c) karta-następca to pierwsza ist
 z wersji F — gdy ta sama synchronizacja przeniosła wcześniej wersję F pod inną kartę z ładunku (`'przenies'`), a F
 zniknęła w oknie, wersja może trafić tam zamiast do celu „Scal pacjentów” (nie ginie; wymaga sprzecznych scaleń na
 dwóch urządzeniach i trzeciej operacji w oknie).
+Uwagi recenzentów do `eb81091` bez zmiany kodu (średnie, bez utraty wersji):
+(d) kosz wersji X w drugiej karcie przeglądarki B między krokiem Y a fazą (x2 leży jeszcze pod X, więc kosz się udaje;
+faza ją pomija) — nagrobek niesie kartę X, a `Bkz_scalKoniec` szuka wersji tylko pod kartą z nagrobka; na A, gdzie x2
+leży pod Y, a karty X już nie ma, x2 zostaje w Y i jednocześnie w koszu, na B tylko w koszu — trwale, także po kolejnych
+rundach chmury (fuzz: 32 z 1100 przebiegów, zawsze kosz albo „Przywróć” na wersji X; wersja nigdzie nie ginie). Na
+`32b6557` kosz w tym oknie odmawiał („brak”), ale ten sam rozjazd powstaje tam przy koszu x2 w X przed synchronizacją B,
+więc przyczyna jest starsza: nagrobek wersji działa tylko na kartę o swoim `patientId` (tak samo „Scal pacjentów”
+X → W i kosz x1 spod W w oknie: A i B — x1 w Y i w koszu, C — tylko w koszu). Naprawa przyczyny (nagrobek odszukuje
+wersję po kluczu, niezależnie od karty) zmienia regułę kosza dla każdego scalania — osobna decyzja, poza tą poprawką;
+(e) pusta karta X znika już w fazie przeniesień (`Bsw_poOddaniu`), a nie dopiero przy usuwaniu zbioru N, więc
+„Przywróć z kosza” i „Scal pacjentów” na X w oknie faza → usuwanie N kończą się błędem („Karta tego zapisu została
+usunięta.”, „brak rekordu źródłowego”) — na `32b6557` wykonywały się na karcie, która zaraz znikała. Bez utraty: wpis
+kosza i wersje pod Y zostają bez zmian;
+(f) decyzja `'nowa'` w kroku karty F odświeża nagrobki tylko F: kosz wersji z innej karty po starcie scalania, a przed
+krokiem F, zostawia ją w F i w koszu do następnej synchronizacji (od dawna, tak samo na `32b6557`).
 
 **Mutacje** (kopia `vilda_vault.js`, `sync-wlasciciel-wersji` + `scalanie-blokada`, 281 testów). `'zabierz'` zapisuje
 od razu (stan sprzed poprawki) — 17 czerwonych; faza bez blokady G dla `'zabierz'` — 13; faza na wersji z chwili decyzji

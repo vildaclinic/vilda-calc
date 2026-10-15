@@ -32,6 +32,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Po uwagach recenzentów do tej poprawki (P-SYNC-WLASCICIEL-2) 303 testy: +40 — „Scal pacjentów”, „Usuń pacjenta”,
 // kosz i zapis karty w innej karcie przeglądarki między decyzją „zabierz” a fazą przeniesień; na 57dd05a 28 czerwonych,
 // na 32b6557 8 (kosz i „Scal pacjentów” X → W — tam inny, też poprawny wynik; opis przy bloku).
+// Po uwagach recenzentów do eb81091 323 testy: +20 — zmiana x2 na B (poprawka pomiaru, przypięcie) i „Usuń pacjenta” X
+// w oknie (16) oraz „Scal pacjentów” X → Y z koszem x1 spod Y w innej karcie (4); na eb81091 czerwone wszystkie 20, na
+// 32b6557 8 (okno V2 zmiany x2 — tam „Usuń pacjenta” X wchodzi między zapisy x1 i x2 w pętli, a decyzja dla x2 zapada
+// już po usunięciu X: x2 z treścią z ładunku).
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -1431,7 +1435,8 @@ describe('P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X mię
   //     w chmurze i na C aż do kolejnej synchronizacji A;
   //   - zapis Y (imię, data urodzenia): faza wpisywała starszy nagłówek z ładunku z nowszą chwilą zapisu karty.
   // Teraz faza odtwarza wynik z 32b6557: wersja idzie za pozostałymi wersjami Y (Bsw_nastepca, rev + 1 jak przy
-  // „Scal pacjentów”), wersja, której nie ma tu nigdzie ani w koszu, trafia pod Y (Bsw_bezSladu), a nagłówek z ładunku
+  // „Scal pacjentów”), wersja, której nie ma tu nigdzie ani w koszu (pod żadną kartą), trafia pod Y z nowszą z dwóch
+  // treści z odczytu w chwili decyzji (Bsw_bezSladu, Bsw_odloz — uwagi recenzentów do eb81091), a nagłówek z ładunku
   // wchodzi tylko wtedy, gdy zapis z ładunku nie jest starszy niż tutejszy. Okno V1: pułapka na kroku karty Z (po kroku Y,
   // przed fazą), akcja kończy się w oknie; okno V2: pułapka na zapisie x1 pod Y w fazie, akcja czeka w kolejce blokad
   // i wchodzi między wpisy x1 i x2. [Na 57dd05a czerwone 28 z 40 — oznaczone; na 32b6557 czerwone tylko testy kosza
@@ -1445,7 +1450,8 @@ describe('P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X mię
   // stan chmury. Ładunek A z kartą Y na początku (bezYm — bez nowej wersji Y, jak delta karty Y, której B ma już głowę):
   // B decyduje „zabierz” dla x1 i x2 w kroku Y. akcja(c) — inna karta przeglądarki na B, w oknie V1 albo V2. Potem B
   // wysyła pełny eksport, a C, A, B i C kolejno pobierają, scalają i wysyłają (chmura jak vilda_sync.js).
-  async function wyscig({ kolejnosc, locks, okno, akcja, bezOdczytuPoKluczu = false, bezYm = false }) {
+  // przed(c) — zmiana na B po pełnej synchronizacji, a przed „Scal pacjentów” X → Y na A (A i C jej nie znają).
+  async function wyscig({ kolejnosc, locks, okno, akcja, bezOdczytuPoKluczu = false, bezYm = false, przed = null }) {
     const A = await urzadzenie('A');
     const B = await urzadzenie('B', { locks, bezOdczytuPoKluczu });
     const C = await urzadzenie('C');
@@ -1461,6 +1467,7 @@ describe('P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X mię
     let blob = kopia(await A.v.exportSyncPayload());
     for (const d of [B, C]) { await d.v.mergeSyncPayload(kopia(blob)); blob = kopia(await d.v.exportSyncPayload()); }
     const et = await etykiety(A, { X, Y, W });
+    if (przed) await przed({ A, B, C, X, Y, W, et, x1: idPo(et, 'x1'), x2: idPo(et, 'x2') });
     await chwila(5);
     et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
     await chwila(5);
@@ -1500,6 +1507,17 @@ describe('P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X mię
   }
   const scalYdoW = async (c) => { c.et[(await c.B.v.mergePatients(c.Y, c.W)).snapshotId] = 'wmB'; };
   const usunX = (c) => c.B.v.removePatient(c.X);
+  // Zmiana x2 w X na B, zanim B dowie się o „Scal pacjentów” X → Y na A: poprawka pomiaru (66 → 71 mies.) albo przypięcie.
+  // Treść x2 z ładunku A: 60, 66, bez przypięcia.
+  const ZMIANY_X2 = [
+    ['poprawka pomiaru', (q) => q.B.v.updateSnapshotPayload(q.X, q.x2, zapis([60, 71]), { preserveSavedAt: true }), '60:120,71:125.5'],
+    ['przypięcie', (q) => q.B.v.setSnapshotPinned(q.X, q.x2, true), '60:120,66:123 przypięta'],
+  ];
+  const opisWersji = async (d, patientId, snapshotId) => {
+    const p = await d.v.getPatient(patientId);
+    const s = p && p.snapshots.find((q) => q.snapshotId === snapshotId);
+    return s ? pomiaryZ(s.payload) + (s.payload && s.payload._pinned ? ' przypięta' : '') : null;
+  };
   const rev = async (d, patientId, snapshotId) => mt((await d.baza.listSnapshotsForUser(d.uid, patientId)).find((q) => q.snapshotId === snapshotId));
   const mt = (s) => (s && typeof s.rev === 'number' ? s.rev : null);
 
@@ -1537,6 +1555,24 @@ describe('P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X mię
         }
         expect(log.wynik).toEqual([5, 4, 2, 1, 0]);
       }, CZAS);
+
+      // [CZERWONE na eb81091: x2 pod Y z treścią z ładunku (60, 66, bez przypięcia) na B, C i A — zmiana znika na
+      // wszystkich urządzeniach, liczniki zgodne (Y 5/5)] B zmienia x2 w X przed synchronizacją, a w oknie „Usuń
+      // pacjenta” X zabiera x2 razem z kartą (x2 leży jeszcze pod X — przeniesienie czeka na fazę). Na 32b6557 x2 leżała
+      // w tym oknie już pod Y z nowszą z dwóch treści z odczytu w chwili decyzji; faza zapisuje ją tak samo (treść z chwili
+      // decyzji, Bsw_odloz) — zmiana B zostaje na B, C i A.
+      for (const [nazwaZmiany, zmiana, oczekiwana] of ZMIANY_X2) {
+        it.each(KOLEJNOSCI)(`„Usuń pacjenta” X w innej karcie po zmianie x2 na B — ${nazwaZmiany} (${okno}, ${nazwaBlokad}, %s): x2 pod Y z tą zmianą na B, C i A`, async (kolejnosc) => {
+          const { c, log } = await wyscig({ kolejnosc, locks: locks(), okno, akcja: usunX, przed: zmiana });
+          expect(log.akcja).toBe('ok');
+          const oczekiwane = { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']), W: karta2(2, ['w1', 'w2']), Z: karta2(2, ['z1', 'z2']) };
+          for (const d of ['B1', 'C1', 'A2', 'B2', 'C2']) {
+            expect(log[d].karty, d).toEqual(oczekiwane);
+            expect(log[d].sieroty, `wersje bez karty ${d}`).toBe(0);
+          }
+          for (const d of [c.B, c.C, c.A]) expect(await opisWersji(d, c.Y, c.x2), `x2 na ${d.nazwa}`).toBe(oczekiwana);
+        }, CZAS);
+      }
     }
 
     // Kontrola: „Usuń pacjenta” Y w oknie V1 — x1 i x2 znikają razem z Y (zamiar użytkownika), jak na 32b6557: faza nie
@@ -1560,6 +1596,32 @@ describe('P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X mię
         expect(log[d].kosz, `kosz ${d}`).toEqual(['x1']);
         expect(log[d].sieroty).toBe(0);
       }
+      // Bez utraty na żadnym urządzeniu: x1 w karcie albo w koszu. Znane ograniczenie (uwaga recenzenta do eb81091,
+      // przyczyna starsza; ALGORITHMS.md, P-SYNC-WLASCICIEL-2, „Ograniczenia” (d)): nagrobek x1 niesie kartę X, a na A x1
+      // leży już pod Y, więc A zostaje z x1 w Y i jednocześnie w koszu — na 32b6557 tak samo przy koszu x1 w X przed
+      // synchronizacją B.
+      for (const d of ['C1', 'A2', 'B2', 'C2']) expect(jestGdzies(log[d], 'x1') || log[d].kosz.includes('x1'), `x1 nie ginie ${d}`).toBe(true);
+    }, CZAS);
+
+    // [CZERWONY na eb81091: B1 — x1 pod Y i jednocześnie w koszu] „Scal pacjentów” X → Y w innej karcie B (to samo co
+    // na A) i x1 do kosza z Y w oknie V1. Faza nie znajduje x1 pod X, a nagrobek x1 niesie kartę Y: faza sprawdza nagrobki
+    // tej wersji niezależnie od karty (Bsw_bezSladu) i x1 nie wraca pod Y. Tak samo na 32b6557 (x1 tylko w koszu).
+    it.each(KOLEJNOSCI)(`„Scal pacjentów” X → Y i x1 do kosza z Y w innej karcie (V1, ${nazwaBlokad}, %s): x1 tylko w koszu`, async (kolejnosc) => {
+      const { log } = await wyscig({
+        kolejnosc, locks: locks(), okno: 'V1',
+        akcja: async (q) => {
+          q.et[(await q.B.v.mergePatients(q.X, q.Y)).snapshotId] = 'ymB';
+          await q.B.v.moveSnapshotToTrash(q.Y, q.x1);
+        },
+      });
+      expect(log.akcja).toBe('ok');
+      for (const d of ['B1', 'C1', 'A2', 'B2', 'C2']) {
+        expect(jestGdzies(log[d], 'x1'), `x1 w karcie ${d}`).toBe(false);
+        expect(log[d].kosz, `kosz ${d}`).toEqual(['x1']);
+        expect(log[d].sieroty, `wersje bez karty ${d}`).toBe(0);
+        expect(Object.values(log[d].karty).every((k) => k.licznik === k.wersje.length), `liczniki ${d}`).toBe(true);
+      }
+      expect(log.B1.karty.Y).toEqual(karta2(5, ['x2', 'y1', 'y2', 'ym', 'ymB']));
     }, CZAS);
 
     // „Scal pacjentów” X → W w oknie V1: x1 i x2 przeszły pod W (wybór użytkownika na B, jak przy scaleniu przed
