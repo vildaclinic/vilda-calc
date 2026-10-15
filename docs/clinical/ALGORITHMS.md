@@ -20,6 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
+| LAB-TT-MAYO | Testosteron całkowity u chłopców i mężczyzn: niezależne osie wieku i G | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs` | etap 3; źródła i polityki w `TESTOSTERONE.md`; oczekuje akceptacji klinicznej właściciela |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
@@ -32,6 +33,55 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; P-PLEC-IMIE-2 (2026-10-13): także kolejny nowy pacjent po „Wyczyść”; akceptacja kliniczna właściciela 2026-10-13 (progi 99 % / 20, ostrzeżenia i kolor notek bez zmian) |
 
 ## Długi walidacyjne o najwyższym priorytecie
+
+### LAB-TT-MAYO — etap 3 po ujednoliceniu danych pokwitaniowych (2026-10-15)
+
+**Wpływ kliniczny: tak.** Zmienia się interpretacja testosteronu całkowitego
+u chłopców i mężczyzn. Osie wieku i aktualnego G korzystają z osobnego,
+wersjonowanego profilu Mayo TTST/8533 (surowica, LC-MS/MS). Nie ma wspólnego
+werdyktu z połączonych zakresów ani rozpoznawania stadium z wieku, P lub
+nieokreślonego numeru Tannera. Dane głównego formularza są wykorzystywane
+bez ponownego wywiadu. Brak wieku/płci nie uruchamia zakresu dorosłego.
+
+**Różnica względem bazy:** usunięto dawne męskie zakresy i domyślną normę
+8,6–29 nmol/L z ogólnego słownika. Publiczne dawne API TT nie interpretuje
+M/nieznanej płci; robi to wyłącznie nowy silnik. Przed zmianą 3-miesięczny
+chłopiec z TT 0,8 nmol/L dostawał sprzeczne oceny po wpisaniu starego Tannera I,
+a aktualne G i GnRHa z formularza głównego nie wpływały na ocenę TT.
+Zakres dorosłych Mayo 240–950 ng/dL zaczyna się od ukończonych 19 lat;
+17–18 lat ma nadal 300–1200 ng/dL. Nie dodano osobnego obniżenia normy seniorów.
+Dotychczasowe żeńskie wiersze i współczynniki przeliczeń pozostają.
+Nowy panel TT u F udostępnia wiek/płeć bez edycji Th/P, ponieważ ta ocena
+nie steruje wcześniejszymi żeńskimi zakresami. Nie mapuje jej na ogólny
+Tanner ani nie nadaje wcześniejszym tabelom nowej walidacji.
+
+**Ograniczenia:** zapis źródłowego minimum `<7` nie dowodzi LoD/LoQ ani
+liczbowego minimum. Np. 6 ng/dL przy źródle `<7–20` nie daje „poniżej normy”
+ani pełnego „w zakresie”. G jest dodatkową osią tylko przy bieżącej, jawnej
+obserwacji i całym możliwym wieku ≥1 i <19 lat; ten przedział kwalifikacji jest
+konserwatywną polityką aplikacji. Niepewny wiek nie skleja odrębnych grup. Nieznana metoda
+i kontekst próbki pozwalają jedynie na porównanie orientacyjne; znana
+niezgodność, stymulacja lub leczenie blokują odniesienie bazalne.
+
+**Dorośli:** krótka nota ES2018/EAU2026 pozostaje widoczna także przy wyniku
+w zakresie Mayo. Rozpoznanie wymaga objawów i potwierdzenia w powtarzanych
+porannych pobraniach na czczo. Próg diagnostyczny EAU 12 nmol/L nie zastępuje
+dolnej granicy tego katalogu. SHBG/wolny T ocenia się, gdy wskazane.
+
+**Zapis i historia:** `lab.assessment` utrwala wynik, kontekst, źródło,
+polityki i obie osie. Jednostka kanoniczna to nmol/L; snapshot waliduje
+zapisany współczynnik według małego, niezależnego rejestru konwersji.
+300 ng/dL → 10,401 nmol/L, ale seria zapisanego wpisu nadal ma 300 ng/dL.
+Nierówności i LOD/LOQ nie stają się punktami liczbowymi. Dawne TT bez koperty
+zachowuje wynik i jawną normę wpisu bez oceny według dzisiejszego pacjenta;
+nowa norma nie jest dopisywana do historycznych wizyt. Pozostała praca nad
+historią/trendem oraz dane, geometria i mediany wykresów hormonów są odrębne.
+
+Pełne tabele, granice, pochodzenie źródeł, syntetyczne przypadki i regresje:
+[TESTOSTERONE.md](TESTOSTERONE.md). Akceptacja makiety i zielone testy nie
+nadają statusu walidacji klinicznej; akceptacja kliniczna właściciela przed
+scaleniem. Ponowny przegląd przy zmianie katalogu Mayo lub wytycznych,
+najpóźniej 2027-10-15.
 
 ### LAB-TREND-CONVERT — przeliczanie jednostek w trendzie wyników karty pacjenta (P-LAB-TREND-CONVERT, SW 1.1.277, `vilda_auth_ui.js` 492, 2026-10-14)
 
@@ -13745,7 +13795,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Wersja spod karty z wygrywającym nagrobkiem przechodzi pod blokadami obu kart (P-SYNC-WLASCICIEL-2, SW 1.1.288, `vilda_vault.js` 214, 2026-10-15)
+## Wersja spod karty z wygrywającym nagrobkiem przechodzi pod blokadami obu kart (P-SYNC-WLASCICIEL-2, SW 1.1.289, `vilda_vault.js` 214, 2026-10-15)
 
 **Zmiana kliniczna: możliwa** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się to, czy poprawka
 pomiaru zrobiona w innej karcie przeglądarki w trakcie synchronizacji przetrwa (dotąd mogła zniknąć z konta), a także
@@ -13931,10 +13981,11 @@ bez świeżego odczytu nagrobków wersji — 4; bez sprawdzenia, czy wersja leż
 zapis scalenia dają ten sam wynik) i następca bez sprawdzenia, czy karta istnieje (wersja bez karty tylko w uszkodzonym
 magazynie).
 
-**Wersje.** `vilda_vault.js` 213 → 214 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (148 → 149)
-i `vilda_session_bridge.js` (72 → 73); nowe adresy w precache (append-only); `SW_VERSION` 1.1.287 → 1.1.288 (+ pin
+**Wersje.** `vilda_vault.js` 213 → 214 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (149 → 150)
+i `vilda_session_bridge.js` (73 → 74); nowe adresy w precache (append-only); `SW_VERSION` 1.1.288 → 1.1.289 (+ pin
 w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje` względem
-`audyt` `b1aeb24` (po #692).
+`audyt` `0ca8004` (po #693; wcześniej względem `b1aeb24` — 148 → 149, 72 → 73, SW 1.1.287 → 1.1.288, numery zajęte
+potem przez #693).
 
 ## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.286, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
 

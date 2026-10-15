@@ -46,7 +46,18 @@ describe('AMH history retains results without applying current laboratory refere
     expect(evaluate).not.toHaveBeenCalled();
   });
 
-  it.each(['lh', 'fsh', 'inhibin_b', 'testosterone_total'])('does not change the existing legacy path for %s', testKey => {
+  it.each(['F', 'M', null])('stored TT never acquires current references, sex %s', sex => {
+    const evaluate = vi.fn(() => { throw new Error('Historical TT must not use the current engine'); });
+    const history = hooks({ evaluate });
+    const point = historicalPoint({ v: 300, unit: 'ng/dL', norm: '240–950 ng/dL' });
+    const before = structuredClone(point);
+    expect(history.range('testosterone_total', point.v, point.unit, sex, point.ageMonths, point)).toBeNull();
+    expect(history.flag(point, null)).toBeNull();
+    expect(point).toEqual(before);
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it.each(['lh', 'fsh', 'inhibin_b'])('does not change the existing legacy path for %s', testKey => {
     const evaluate = vi.fn(() => ({ ok: true, matched: true, is_default: false,
       lowInUnit: 1, highInUnit: 4, status: 'above', context_pl: 'Fikcyjny zakres testowy', source_ids: ['fictional-source'] }));
     const history = hooks({ evaluate }), point = historicalPoint({ v: 5, ageMonths: 120, unit: 'test-unit' });
@@ -61,7 +72,7 @@ describe('AMH history retains results without applying current laboratory refere
   it('continues to leave an explicit saved assessment to the snapshot renderer', () => {
     const evaluate = vi.fn(), history = hooks({ evaluate });
     const point = historicalPoint({ assessment: { schemaVersion: 1, status: 'unavailable', reasonCodes: ['test'], evaluation: null } });
-    for (const analyte of ['amh', 'lh', 'fsh', 'inhibin_b']) {
+    for (const analyte of ['amh', 'lh', 'fsh', 'inhibin_b', 'testosterone_total']) {
       expect(history.range(analyte, point.v, point.unit, 'F', point.ageMonths, point)).toBeNull();
       expect(history.flag(point, { status: 'above' })).toBeNull();
     }

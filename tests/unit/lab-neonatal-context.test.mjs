@@ -99,7 +99,7 @@ describe('LH/FSH — pochodny wiek z istniejącego formularza', () => {
     'adapter dla %s wybiera rozszerzony transport bez zmiany wieku pozostałych analitów', id => {
       const h = harness(); h.dob('2026-06-11'); h.api.publish();
       const reader = makeReader(h.w, h.w.sessionStorage, h.w.VildaPersistence, () => null, { id });
-      if (['lh', 'fsh', 'amh'].includes(id)) {
+      if (['lh', 'fsh', 'amh', 'testosterone_total'].includes(id)) {
         expect(reader()).toMatchObject({ neonatalAge: { postnatalDays: { lower: 119, upper: 120 } } });
       } else expect(reader()).not.toHaveProperty('neonatalAge');
     },
