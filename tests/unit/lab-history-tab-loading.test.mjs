@@ -94,7 +94,7 @@ for (const loader of ['session', 'chrome']) {
     it('brak samego widoku: nie przeładowuje modelu', async () => {
       const env = environment(['VildaLabHistoryTab']);
       await start(env)();
-      expect(env.appended.filter((url) => url.endsWith('.js?v=1'))).toEqual(['vilda_lab_history_tab.js?v=1']);
+      expect(env.appended.filter((url) => /^vilda_lab_history(_tab)?\.js\?v=\d+$/.test(url))).toEqual([expect.stringMatching(/^vilda_lab_history_tab\.js\?v=\d+$/)]);
     });
 
     it('wszystko gotowe: nic nie dokłada', async () => {

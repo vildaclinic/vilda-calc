@@ -73,8 +73,6 @@ function srodowisko(opcje = {}) {
       if (chart.points.length < 2) return null;
       const svg = doc.createElement('svg');
       svg.setAttribute('class', 'vilda-lab-trend-chart');
-      const punktFlagowany = svg.appendChild(doc.createElement('circle'));
-      punktFlagowany.setAttribute('fill', '#E24B4A');
       return svg;
     },
     assessments: () => {}, parseNorm: Dl, formatAge: eo, loadConverter: (cb) => setTimeout(() => cb(true), 0),
@@ -123,7 +121,7 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
     expect(ft4.querySelector('.vilda-lab-hist-flag')).toBeNull();
   });
 
-  it('wykres: renderer karty bez pasma norm i bez dzisiejszej oceny; czerwień wyróżnienia → fiolet', async () => {
+  it('wykres: renderer karty bez pasma norm, bez dzisiejszej oceny i bez strzałek przy punktach (6.22)', async () => {
     const env = srodowisko();
     otworz(env, sejf());
     await gotowe(env);
@@ -134,7 +132,11 @@ describe('zakładka Badania: widok z zapisanych wyników', () => {
       expect(w.chart.points.every((p) => p.ageMonths === null)).toBe(true);
     }
     expect(env.wykresy[1].chart.points.map((p) => ({ conv: !!p.conv, norm: p.norm }))).toEqual([{ conv: true, norm: null }, { conv: false, norm: null }]);
-    expect(env.host.querySelectorAll('circle').map((c) => c.getAttribute('fill'))).toEqual(['#3C3489', '#3C3489']);
+    // TSH ma normy wpisu przyjęte przez model (strzałka ↓ przy ostatniej wartości), ale punkty wykresu idą bez
+    // normy: Nl nie dopisze strzałki ani czerwieni przy punkcie. Wartość obok wykresu zachowuje strzałkę.
+    expect(env.wykresy[0].chart.points.map((p) => p.norm)).toEqual([null, null]);
+    const tsh = env.host.querySelector('.vilda-lab-hist-card[data-series="tsh"]');
+    expect(tsh.querySelector('.vilda-lab-hist-flag').textContent).toBe('↓');
   });
 
   it('bez eksportu renderera (stary artefakt w cache): karty z napisem i działająca tabela', async () => {

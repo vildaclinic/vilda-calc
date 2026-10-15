@@ -65,12 +65,13 @@
   <link href="vilda_lab_puberty_ui.css?v=6" rel="stylesheet">
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
   <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
+  <link href="lab_history_strip.css?v=1" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=68"></script>
+  <script src="vilda_session_bridge.js?v=69"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -107,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=144"></script>
+  <script src="vilda_chrome.js?v=145"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -465,6 +466,8 @@
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
   <script src="lab_pin_result.js?v=7"></script>
+  <script src="vilda_lab_history.js?v=1"></script>
+  <script src="lab_history_strip.js?v=1"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -3507,6 +3510,22 @@
     // przy każdym keypress'ie w polu wartości).
     var currentSubstance = null;
 
+    // LAB-HISTORIA PR3 (decyzja 6.16): pasek „Poprzednie wyniki” (lab_history_strip.js) pyta
+    // o identyfikator wybranego badania zamiast dopasowywać etykietę pola, a zmianę badania
+    // dostaje zdarzeniem (także przy „Wyczyść” i resecie sesji).
+    var announcedSubstanceId = null;
+    window.VildaLabConverterRuntime = {
+      getSubstanceId: function () { return currentSubstance ? currentSubstance.id : null; }
+    };
+    function announceSubstance() {
+      var id = currentSubstance ? currentSubstance.id : null;
+      if (id === announcedSubstanceId) return;
+      announcedSubstanceId = id;
+      try {
+        document.dispatchEvent(new CustomEvent('vilda:lab-substance-changed', { detail: { id: id } }));
+      } catch (_) { /* noop */ }
+    }
+
     /**
      * Czyści całą prawą część widoku — tabela, meta i pasek normy idą w pusty
      * stan z placeholderem. Karta info się chowa. Karta wyników pozostaje
@@ -3967,6 +3986,7 @@
         clearResultsView();
         renderPatientSummary();   // i tak utrzymuj nagłówek kontekstu pacjenta
         updateStepStates();
+        announceSubstance();
         return;
       }
       // Faza 18-fix: każda zmiana substancji resetuje pole wartości i błędy,
@@ -3993,6 +4013,7 @@
       renderPatientSummary();    // pokaż selektor fazy cyklu, jeśli substancja cycle-aware
       renderResults(substance);
       updateStepStates();
+      announceSubstance();
     }
 
     /**

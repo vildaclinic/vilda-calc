@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.282';
+const SW_VERSION = '1.1.283';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -409,6 +409,7 @@ const CORE_SHELL_URLS = [
   '/vilda_lab_assessment_ui.css?v=11',
   '/vilda_lab_history.js?v=1',
   '/vilda_lab_history_tab.js?v=1',
+  '/vilda_lab_history_tab.js?v=2',
   '/vilda_lab_history_tab.css?v=1',
   '/vilda_lab_puberty_ui.js?v=1',
   '/vilda_lab_puberty_ui.js?v=2',
@@ -1081,6 +1082,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=142',
   '/vilda_chrome.js?v=143',
   '/vilda_chrome.js?v=144',
+  '/vilda_chrome.js?v=145',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2024,6 +2026,8 @@ const OPTIONAL_ASSETS = [
   '/lab_pin_result.js?v=5',
   '/lab_pin_result.js?v=6',
   '/lab_pin_result.js?v=7',
+  '/lab_history_strip.js?v=1',
+  '/lab_history_strip.css?v=1',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -2132,6 +2136,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=61',
   '/vilda_shell.js?v=62',
   '/vilda_shell.js?v=63',
+  '/vilda_shell.js?v=64',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -3231,6 +3236,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=66',
   '/vilda_session_bridge.js?v=67',
   '/vilda_session_bridge.js?v=68',
+  '/vilda_session_bridge.js?v=69',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

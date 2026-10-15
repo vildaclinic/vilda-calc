@@ -78,7 +78,11 @@ Do tej warstwy należą m.in.:
   pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zakładkę
   rysuje `vilda_lab_history_tab.js` (+ `.css`): tylko widok, dane z sejfu, porównanie z modelu, wykres
   rendererem karty (`window.__vildaLabTrend`, eksport z `vilda_auth_ui.js`); oba pliki ładują strony
-  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`);
+  z kartą tagami statycznymi i leniwe stosy auth (most sesji, `vilda_chrome.js`). Pasek w przeliczniku
+  rysuje `lab_history_strip.js` (+ `.css`, tagi tylko na `przelicznik-jednostek.html`): tylko do odczytu,
+  widoczny przy odblokowanym sejfie, wybrane badanie bierze z `VildaLabConverterRuntime.getSubstanceId()`
+  (czytelny skrypt strony), wykres rysuje własnym lekkim rendererem SVG, kartę otwiera przez
+  `VildaShell.openPatientCardInStart(id, {activeTab: 'lab'})`;
 - terapie: moduły GH/IGF-1, otyłości, antybiotyków, nadciśnienia, bisfosfonianów i grypy;
 - żywienie: `nutrition_norms.js`, `nutrition_micros.js`, moduły planu diety i szacowanego spożycia.
 

@@ -206,7 +206,7 @@ function Sn_historyEvent(){
     try{var clean=Object.assign({},current);delete clean.shellAuthId;delete clean.shellAuthOwner;a.history.replaceState(clean,"",a.location.href)}catch{}
   }
 }
-function Sn_openPatient(kind,id,onTimeout){
+function Sn_openPatient(kind,id,onTimeout,tab){
   var origin=c&&c!=="start"?c:Sn_request?Sn_request.origin:null;
   Sn_cancelRequest();
   var request={id:++Sn_requestSerial,origin:origin,timer:0,elapsed:0,started:false,activationReady:false};
@@ -217,7 +217,9 @@ function Sn_openPatient(kind,id,onTimeout){
     request.timer=0;
     var win=request.activationReady&&!Sn_pendingBack&&c==="start"?mt():null;
     if(win)try{
-      if(kind==="card"&&typeof win.VildaAuthUI.showPatientCard==="function")win.VildaAuthUI.showPatientCard(String(id));
+      // P-POWLOKA-KARTA-ZAKLADKA (LAB-HISTORIA PR3): karta otwierana od razu na wskazanej zakładce
+      // (pasek „Poprzednie wyniki” → „Badania”); bez zakładki wywołanie bez zmian (testy porównują argumenty).
+      if(kind==="card"&&typeof win.VildaAuthUI.showPatientCard==="function")tab?win.VildaAuthUI.showPatientCard(String(id),null,null,{activeTab:tab}):win.VildaAuthUI.showPatientCard(String(id));
       else if(kind==="list"){var document=win.document;win.VildaAuthUI.showPatientsList(function(data){
         if(Sn_request!==request||c!=="start"||!l.start||l.start.frame.contentWindow!==win||l.start.frame.contentDocument!==document)return;
         if(data)try{win.applyLoadedData(data)}catch{}
@@ -260,7 +262,7 @@ function P(t,e,href,request,options){
   Sn_setTarget(t,state,!!target);
 }
 var ht=12e3,C=150;function mt(){try{var t=l.start;if(!t||!t.loaded||!t.frame)return null;var e=t.frame.contentWindow;if(!e)return null;var r=e.VildaAuthUI&&typeof e.VildaAuthUI.showPatientsList=="function"&&typeof e.applyLoadedData=="function"&&e.VildaVault&&typeof e.VildaVault.isUnlocked=="function"&&e.VildaVault.isUnlocked();return r?e:null}catch{return null}}function xt(t){Sn_openPatient("list",null,t)}
-function Ht(t){if(t)Sn_openPatient("card",t)}
+function Ht(t,opts){if(t)Sn_openPatient("card",t,null,opts&&typeof opts.activeTab==="string"&&opts.activeTab?opts.activeTab:null)}
 function Wt(t){
   var e=t.target,r=e&&e.closest?e.closest("#mobileBottomDock .mobile-bottom-dock__item[href], .sidebar-nav a[href], .chrome-drawer-nav a[href]"):null;
   if(!r||!Sn_plainClick(t,r))return;
