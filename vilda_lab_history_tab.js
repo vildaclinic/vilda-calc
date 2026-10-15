@@ -7,7 +7,8 @@
  * Strzałka ↑/↓ i pigułka oceny pochodzą wyłącznie z modelu (zapisana norma wpisu albo koperta oceny).
  *
  * window.VildaLabHistoryTab.render(host, patientId, options) → { refresh, destroy }
- *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga)
+ *   options.openEditor({ note, template, anchor, onSaved })  edytor notatki karty (ga); po „Wpisz wynik”
+ *     z zapisaną wartością zakładka zamyka zlecenie (vault.completePatientNote, decyzja 6.11) i daje „Cofnij”
  *   options.openReminders(list)                              arkusz przypomnień (Mr)
  *   options.onChanged()                                      zapis z zakładki zmienił notatki
  *   options.vault, options.model, options.trend, options.storage, options.now — do testów
@@ -113,7 +114,7 @@
       var storage = own(options, 'storage') ? options.storage : null;
       if (!storage) { try { storage = win && win.sessionStorage; } catch (_) { storage = null; } }
       var now = typeof options.now === 'function' ? options.now : function () { return new Date(); };
-      var state = { gen: 0, destroyed: false, panel: 'all', view: null, data: null, timer: 0, retried: false, reminders: [] };
+      var state = { gen: 0, destroyed: false, panel: 'all', view: null, data: null, timer: 0, retried: false, reminders: [], notice: null };
 
       function node(tag, className, content) {
         var element = doc.createElement(tag);
@@ -278,12 +279,18 @@
           if (note) openEditor({ note: note });
         }).catch(function () { /* wpis zniknął — odświeżenie pokaże stan sejfu */ });
       }
-      function openEditor(request) {
+      function openEditor(request, afterSave) {
         if (typeof options.openEditor !== 'function') return;
         options.openEditor(Object.assign({}, request, {
           onSaved: function () {
-            schedule();
-            if (typeof options.onChanged === 'function') options.onChanged();
+            var refresh = function () {
+              schedule();
+              if (typeof options.onChanged === 'function') options.onChanged();
+            };
+            // Bez dodatkowego kroku — jak dotąd od razu; po „Wpisz wynik” dopiero po zamknięciu zlecenia.
+            var done = typeof afterSave === 'function' ? afterSave() : null;
+            if (done && typeof done.then === 'function') done.then(refresh, refresh);
+            else refresh();
           }
         }));
       }
@@ -296,8 +303,69 @@
           var copy = Object.assign({}, note);
           var label = converterLabel(item.seriesKey);
           if (label && !(note.labResult && text(note.labResult.test))) copy.labResult = Object.assign({}, note.labResult || {}, { test: label });
-          openEditor({ note: copy, template: 'lab', anchor: 'date' });
+          openEditor({ note: copy, template: 'lab', anchor: 'date' }, function () { return completeAfterResult(item.noteId, item.title || note.title); });
         }).catch(function () { /* wpis zniknął */ });
+      }
+      // Decyzja 6.11 (PR5b): zlecenie, w którym „Wpisz wynik” zapisał wartość, zamyka się jak „Wykonano”
+      // w Przypomnieniach (completePatientNote). Nie przekłada go na kolejny termin („kontrola co N dni”):
+      // następny wynik nadpisałby ten w tej samej notatce. Bez wartości, po niestawieniu albo już wykonane — bez zmian.
+      function hasValue(note) {
+        var lab = note && note.labResult;
+        return !!lab && typeof lab === 'object' && (text(lab.value) !== '' || finite(lab.valueNum));
+      }
+      // Nazwa zlecenia sprzed edycji: szablon wyniku zmienia tytuł notatki na „Badanie: wartość”.
+      function completeAfterResult(noteId, title) {
+        if (typeof vault.completePatientNote !== 'function') return null;
+        return Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
+          if (!note || !hasValue(note) || note.completedAtISO || note.noShowAtISO) return;
+          return Promise.resolve(vault.completePatientNote(noteId)).then(function () {
+            return vault.getPatientNote(noteId);
+          }).then(function (saved) {
+            // Znacznik tego zamknięcia: „Cofnij” działa tylko, dopóki zlecenie jest w tym samym stanie.
+            state.notice = { kind: 'completed', noteId: noteId, title: text(title), completedAtISO: saved && saved.completedAtISO || null };
+          });
+        }).catch(function () {
+          state.notice = { kind: 'error', noteId: noteId };
+        });
+      }
+      // uncompletePatientNote czyści też niestawienie, więc nie cofa stanu nadanego później (inna karta,
+      // synchronizacja): tylko to zamknięcie, które zrobiła zakładka, i tylko gdy nikt go nie zmienił.
+      function undoComplete(notice) {
+        if (!vault || typeof vault.uncompletePatientNote !== 'function') return;
+        var base = { noteId: notice.noteId, title: notice.title };
+        Promise.resolve(vault.getPatientNote(notice.noteId)).then(function (note) {
+          if (!note || !notice.completedAtISO || note.completedAtISO !== notice.completedAtISO || note.noShowAtISO) {
+            state.notice = Object.assign({ kind: 'undo-stale' }, base);
+            return;
+          }
+          return Promise.resolve(vault.uncompletePatientNote(notice.noteId)).then(function () {
+            state.notice = Object.assign({ kind: 'undone' }, base);
+          });
+        }).catch(function () {
+          state.notice = Object.assign({ kind: 'undo-error' }, base);
+        }).then(function () {
+          schedule();
+          if (typeof options.onChanged === 'function') options.onChanged();
+        });
+      }
+      function drawNotice() {
+        var notice = state.notice;
+        if (!notice) return;
+        var box = add(section, 'div', 'vilda-lab-hist-notice is-' + notice.kind);
+        box.setAttribute('role', 'status');
+        box.setAttribute('data-note-id', notice.noteId || '');
+        var name = notice.title ? ' „' + notice.title + '”' : '';
+        var message = {
+          completed: 'Wynik zapisany — zlecenie' + name + ' oznaczone jako wykonane w Przypomnieniach.',
+          error: 'Wynik zapisany, ale nie udało się oznaczyć zlecenia jako wykonanego — zrób to w Przypomnieniach.',
+          undone: 'Cofnięto — zlecenie' + name + ' znów jest w Przypomnieniach.',
+          'undo-error': 'Nie udało się cofnąć oznaczenia — zrób to w Przypomnieniach.',
+          'undo-stale': 'Nie cofnięto: zlecenie' + name + ' zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.'
+        }[notice.kind];
+        add(box, 'span', 'vilda-lab-hist-notice-text', message);
+        if (notice.kind === 'completed' && typeof vault.uncompletePatientNote === 'function') {
+          button(box, 'vilda-lab-hist-link vilda-lab-hist-notice-undo', 'Cofnij', function () { undoComplete(notice); });
+        }
       }
       function converterLabel(id) {
         var converter = win && win.LabUnitConverter;
@@ -335,6 +403,7 @@
         clear(section);
         remindersButton = null;
         drawHeader(view);
+        drawNotice();
         if (!view.panels.length && !view.pending.length) {
           var empty = add(section, 'div', 'vilda-lab-hist-state vilda-lab-hist-empty');
           add(empty, 'p', '', 'Brak zapisanych wyników badań.');
@@ -727,7 +796,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.3.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '1.4.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();
