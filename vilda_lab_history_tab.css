@@ -548,3 +548,11 @@
     order: -1
   }
 }
+
+/* PR5a (decyzja 6.24): znacznik źródła IGF-1 z notatki leczenia GH w tabeli — wyciszony, żeby nie
+   wyglądał jak strzałka zapisanej normy (ta sama klasa bazowa co ○). */
+.vilda-lab-hist-mark.vilda-lab-hist-mark-gh {
+  color: #5b6672;
+  font-size: 11px;
+  font-weight: 600
+}

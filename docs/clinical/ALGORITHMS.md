@@ -530,6 +530,74 @@ w karcie, nagłówek bez badania, trasa powłoki), e2e
 z TSH, wpisany wynik z komunikatem, pasek → karta na zakładce „Badania”, strona
 samodzielna). Zielone testy nie są walidacją kliniczną.
 
+### LAB-HISTORIA PR5a — alias serii po nazwie badania i IGF-1 z notatek leczenia GH (`vilda_lab_history.js` 1.1.0, `vilda_lab_history_tab.js` 1.3.0, `lab_history_strip.js` 1.1.0, 2026-10-15)
+
+**Wpływ kliniczny: tak — zmienia się prezentacja zapisanych wyników w historii
+(zakładka „Badania”, pasek „Poprzednie wyniki” w przeliczniku).** Nie ma
+nowych wzorów, współczynników, norm, progów, jednostek, zaokrągleń ani ocen.
+Zmienia się to, które zapisane wyniki należą do serii badania, a dla IGF-1 —
+od jakiej daty liczy się punkt i różnica. Źródło medyczne: nie dotyczy
+(wartości wpisane przez lekarza; przeliczenie ng/mL ↔ nmol/L tym samym
+konwerterem co dotąd, `lab_units_data.js` bez zmian). Decyzje właściciela:
+6.14, 6.24, 6.25 (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zielone testy nie są
+walidacją kliniczną.
+
+**1. Alias serii (6.14).** Wpis bez klucza przelicznika (`labResult.testKey`),
+który sejf trzyma pod skrótem nazwy (`listPatientLabSeries`, np.
+„testosteroncalkowity”), dołącza przy odczycie do serii badania z listy
+przelicznika, gdy nazwa wpisu jest **dokładnie** równa etykiecie z listy
+(„Testosteron całkowity” → `testosterone_total`) i jednostka wpisu jest
+znana przelicznikowi dla tego badania. Inna pisownia albo jednostka
+nierozpoznana — wpis zostaje w dawnej serii (bez zmian względem PR1–PR4).
+Po dołączeniu wpis przelicza się na jednostkę serii jak każdy inny (reguła
+LAB-HISTORIA), a karta ma dopisek „W tym N wpis(y) dopasowany(e) po nazwie
+badania „…”.”. Wpis odczytany z tekstu (legacy, †) stoi na wykresie bez
+różnicy, jak dotąd. Zapis w sejfie się nie zmienia.
+
+**2. IGF-1 z notatek leczenia GH (6.24, 6.25).** Źródło: pole „IGF-1 (wynik
+z kontroli)” edytora wpisu z dawką GH (`note.igf1 = { value, unit: "ng/ml" }`,
+notatki z lekiem, kategoria „treatment”). Wynik trafia do serii IGF-1 panelu
+„Oś GH–IGF-1” z dopiskiem „z notatki leczenia GH”: wartość jak zapisano,
+bez normy, oceny, strzałki i komentarza (treść notatki opisuje dawkę).
+Jednostka „ng/ml” = „ng/mL” konwertera (porównanie bez wielkości liter tylko
+dla tego źródła); brak jednostki = ng/ml, jedyna jednostka pola. Data:
+1) data badania notatki; 2) bez niej — termin kontroli, jeśli już minął
+i nie ma niestawienia (dopisek „data kontroli GH”; punkt na wykresie
+i różnica, jak na wykresie „Trend leczenia GH” w karcie); 3) inaczej data
+wpisu — wynik tylko w tabeli, bez punktu i różnicy. Ten sam dzień, wartość
+i jednostka co wynik badania IGF-1 — pokazany raz.
+
+**Ograniczenia:** termin kontroli nie jest datą pobrania krwi; dni od dawki
+nie są zapisane w notatce (są tylko w punktach monitora GH, których historia
+nie czyta — inny cykl życia danych). Populacja: pacjenci z notatkami leczenia
+GH/IGF-1 (rhGH, Increlex) z wpisanym IGF-1.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Wpis „Testosteron całkowity”, wartość „1,9 nmol/L”, bez `testKey`, obok
+  przypiętego `testosterone_total` 0,8 nmol/L → jedna seria „Testosteron
+  całkowity” z dwoma punktami (0,8; 1,9 †), dopisek „W tym 1 wpis dopasowany
+  po nazwie badania „Testosteron całkowity”.”, bez różnicy (wpis legacy).
+- Ten sam wpis z nazwą „testosteron całkowity” albo wartością „60 ng%” →
+  osobna, dawna seria (bez aliasu).
+- IGF-1 245 ng/mL z badania 04.03.26 i notatka GH z terminem kontroli
+  01.06.26 (minął, bez niestawienia), IGF-1 280 ng/ml → seria IGF-1:
+  280 ng/mL „01.06.26 (data kontroli GH)”, „z notatki leczenia GH”,
+  „poprzednio 245 ng/mL (04.03.26) · różnica +35 ng/mL · po 89 dniach”,
+  dwa punkty na wykresie, bez strzałek.
+- Notatka GH z terminem 01.12.26 (przyszłym) albo z niestawieniem → data
+  wpisu, tylko w tabeli; „Poza wykresem: brak daty badania”.
+- Notatka GH z terminem 10.05.26 i IGF-1 245 ng/ml obok wyniku badania IGF-1
+  245 ng/mL z 10.05.26 → jeden wpis (wynik badania).
+
+**Testy:** `tests/unit/lab-history-vault.test.mjs` (prawdziwy sejf: alias i jego
+granice, IGF-1 z GH z datą badania i kontroli, duplikat, wyłączenie źródła,
+przyszły termin, niestawienie, brak „dziś”, notatka bez leku),
+`tests/unit/lab-history-tab.test.mjs` (karta, tabela ze znacznikiem „GH”,
+stopka, dopisek aliasu), `tests/unit/lab-history-strip.test.mjs` (chip
+„kontrola”, podpowiedź, szczegóły), e2e `lab-historia-gh-igf1.spec.mjs`
+(prawdziwy sejf i karta pacjenta).
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

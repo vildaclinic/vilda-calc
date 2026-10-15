@@ -40,7 +40,10 @@
     censored: 'wynik poza zakresem oznaczalności — bez punktu na wykresie i bez różnicy'
   };
   var TREATMENT_ACTION = { start: 'włączono', change: 'zmiana dawki', stop: 'zakończono' };
-  var DATE_SOURCE = { termin: 'termin zlecenia', wpis: 'data wpisu' };
+  var DATE_SOURCE = { termin: 'termin zlecenia', wpis: 'data wpisu', kontrola: 'data kontroli GH' };
+  // Daty, które model stawia na osi (decyzja 6.25): data badania, a dla IGF-1 z notatki GH termin odbytej kontroli.
+  var SAMPLE_DATES = ['badanie', 'kontrola'];
+  var GH_SOURCE = 'z notatki leczenia GH';
 
   function own(value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); }
   function text(value) { return typeof value === 'string' ? value.trim() : ''; }
@@ -53,6 +56,18 @@
     return ones >= 2 && ones <= 4 && (tens < 12 || tens > 14) ? forms[1] : forms[2];
   }
   function count(n, forms) { return n + ' ' + plural(n, forms); }
+  // Dopisek dla wpisów dołączonych po nazwie badania (decyzja 6.14): ile i pod jaką nazwą je zapisano.
+  function mergedNote(mergedFrom) {
+    var total = 0, names = [];
+    (mergedFrom || []).forEach(function (item) {
+      total += item.count || 0;
+      var name = item.test ? '„' + item.test + '”' : '';
+      if (name && names.indexOf(name) === -1) names.push(name);
+    });
+    if (!total) return '';
+    return 'W tym ' + count(total, ['wpis dopasowany', 'wpisy dopasowane', 'wpisów dopasowanych']) + ' po nazwie badania'
+      + (names.length ? ' ' + names.join(', ') : '') + '.';
+  }
   function localISO(date) {
     var pad = function (v) { return (v < 10 ? '0' : '') + v; };
     return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
@@ -324,7 +339,7 @@
           var empty = add(section, 'div', 'vilda-lab-hist-state vilda-lab-hist-empty');
           add(empty, 'p', '', 'Brak zapisanych wyników badań.');
           add(empty, 'p', 'vilda-lab-hist-muted', 'Wynik dodasz przyciskiem „+ Dodaj wynik” albo przypniesz w przeliczniku jednostek.');
-          drawFooter();
+          drawFooter(view);
           return;
         }
         if (view.panels.length) drawToolbar(view);
@@ -341,7 +356,7 @@
         });
         // W widoku wykresów leczenie raz, pod wszystkimi panelami; tabela wplata je w swoje wiersze.
         if (mode !== 'table') drawTreatment(section, panels);
-        drawFooter();
+        drawFooter(view);
       }
 
       function drawHeader(view) {
@@ -508,6 +523,7 @@
           if (shown.dateSource !== 'badanie' && DATE_SOURCE[shown.dateSource]) when += ' (' + DATE_SOURCE[shown.dateSource] + ')';
           var visit = formatAge(shown.ageMonths);
           add(line, 'span', 'vilda-lab-hist-date', when + (visit ? ' · wizyta ' + visit : ''));
+          if (shown.source === 'gh-note') add(info, 'p', 'vilda-lab-hist-muted vilda-lab-hist-source', GH_SOURCE);
           if (shown.converted) add(info, 'p', 'vilda-lab-hist-muted', 'przeliczono z ' + recorded(shown));
           if (KIND_NOTE[shown.kind]) add(info, 'p', 'vilda-lab-hist-muted', KIND_NOTE[shown.kind]);
           if (view.lastDateEntries.length > 1) {
@@ -518,7 +534,7 @@
         }
         if (view.previous) {
           var previous = view.previous;
-          var parts = ['poprzednio ' + previous.display + ' (' + formatDate(previous.dateISO) + ')'];
+          var parts = ['poprzednio ' + previous.display + ' (' + formatDate(previous.dateISO) + (previous.source === 'gh-note' ? ', ' + GH_SOURCE : '') + ')'];
           var delta = view.delta;
           if (delta && delta.available) parts.push('różnica ' + model.formatDelta(delta, win && win.LabUnitConverter));
           else if (delta && delta.reason === 'method_mismatch') parts.push('różne metody oznaczenia — bez różnicy');
@@ -527,6 +543,8 @@
         view.pending.forEach(function (item) {
           add(info, 'p', 'vilda-lab-hist-muted', 'oczekuje na wynik' + (item.dueDateISO ? ' · termin ' + formatDate(item.dueDateISO) : ''));
         });
+        var merged = mergedNote(view.mergedFrom);
+        if (merged) add(info, 'p', 'vilda-lab-hist-muted vilda-lab-hist-merged', merged);
         // Decyzja 6.23: przelicznik od razu z tym badaniem (tylko badanie znane przelicznikowi);
         // przycisk w nagłówku zakładki zostaje bez badania.
         if (view.testKey) {
@@ -625,12 +643,12 @@
         add(headRow, 'th', 'vilda-lab-hist-th-comment', 'Komentarz').setAttribute('scope', 'col');
         var body = add(table, 'tbody', '');
         var treatment = treatmentFor([panel]).slice();
-        var marks = { converted: false, other: false, assessed: false };
+        var marks = { converted: false, other: false, assessed: false, gh: false };
         var columns = panel.series.length + 2;
         panel.rows.forEach(function (row) {
           // Wiersz leczenia stoi nad wierszem wyników z tą samą lub wcześniejszą datą (tabela malejąco).
           while (treatment.length && row.dateISO && treatment[0].dateISO >= row.dateISO) treatmentRow(body, treatment.shift(), columns);
-          var tr = add(body, 'tr', row.dateSource === 'badanie' ? '' : 'is-undated');
+          var tr = add(body, 'tr', SAMPLE_DATES.indexOf(row.dateSource) !== -1 ? '' : 'is-undated');
           var dateCell = add(tr, 'th', 'vilda-lab-hist-td-date', row.dateISO ? formatDate(row.dateISO) : 'bez daty');
           dateCell.setAttribute('scope', 'row');
           if (row.dateSource !== 'badanie' && DATE_SOURCE[row.dateSource]) add(dateCell, 'span', 'vilda-lab-hist-muted', DATE_SOURCE[row.dateSource]);
@@ -652,6 +670,7 @@
         if (marks.converted) legend.push('wartość podkreślona kropkami — przeliczona z innej jednostki (zapis we wpisie)');
         if (marks.other) legend.push('* — jednostka nierozpoznana albo brak jednostki; wartość jak zapisano, bez różnicy i bez wykresu');
         if (marks.assessed) legend.push('○ — zapisana ocena (szczegóły niżej, w „Zapisane oceny”)');
+        if (marks.gh) legend.push('GH — IGF-1 z notatki leczenia GH (pole „IGF-1 (wynik z kontroli)”); bez daty badania data to termin odbytej kontroli');
         if (legend.length) add(group, 'p', 'vilda-lab-hist-foot', legend.join(' · '));
         if (panel.id === 'gonadal') assessmentsBlock(group, panel.series);
       }
@@ -661,6 +680,7 @@
         cell.setAttribute('data-note-id', entry.noteId || '');
         cell.addEventListener('click', function () { openNote(entry.noteId); });
         var details = [shortLabel(view.label), entry.dateISO ? formatDate(entry.dateISO) : 'bez daty', 'zapisano: ' + (entry.converted ? recorded(entry) : entry.raw || entry.display)];
+        if (entry.source === 'gh-note') details.push(GH_SOURCE);
         if (entry.norm) details.push('norma z wpisu: ' + entry.norm);
         if (entry.status) details.push(entry.status.text);
         cell.setAttribute('title', details.join(' · '));
@@ -670,6 +690,7 @@
         if (entry.kind === 'invalidated' || entry.kind === 'unavailable') value.classList.add('is-muted');
         if (entry.flag) add(cell, 'span', 'vilda-lab-hist-flag', ' ' + entry.flag);
         if (entry.status && entry.status.kind === 'recorded') { add(cell, 'span', 'vilda-lab-hist-mark', ' ○'); marks.assessed = true; }
+        if (entry.source === 'gh-note') { add(cell, 'span', 'vilda-lab-hist-mark vilda-lab-hist-mark-gh', ' GH'); marks.gh = true; }
         if (entry.delta && entry.delta.available) add(cell, 'span', 'vilda-lab-hist-cell-delta', deltaNumber(entry.delta));
         else if (entry.delta && entry.delta.reason === 'method_mismatch') add(cell, 'span', 'vilda-lab-hist-cell-delta', 'różne metody');
       }
@@ -683,10 +704,14 @@
         else add(td, 'span', '', treatmentText(row));
       }
 
-      function drawFooter() {
+      function drawFooter(view) {
         var foot = add(section, 'div', 'vilda-lab-hist-footer');
         add(foot, 'p', 'vilda-lab-hist-footer-main', 'Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.');
         add(foot, 'p', 'vilda-lab-hist-muted', 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym w dniu badania albo z zapisaną oceną; wynik przeliczony z innej jednostki jest bez strzałki. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
+        // Decyzje 6.24–6.25: skąd IGF-1 bez daty badania ma datę na wykresie.
+        if (view && view.ghIgf1 && view.ghIgf1.shown > 0) {
+          add(foot, 'p', 'vilda-lab-hist-muted', 'IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli (tak jak na wykresie „Trend leczenia GH”); bez normy i bez strzałki.');
+        }
       }
 
       load();
@@ -702,7 +727,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.2.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel }) });
+    return Object.freeze({ version: '1.3.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

@@ -142,3 +142,103 @@ describe('LAB-HISTORIA — model na prawdziwym sejfie', () => {
     expect(lh.delta).toMatchObject({ available: false });
   });
 });
+
+// LAB-HISTORIA PR5a (decyzje 6.14, 6.24, 6.25): alias serii po dokładnej nazwie badania z listy przelicznika
+// i IGF-1 z notatek leczenia GH w serii IGF-1. Prawdziwy sejf, prawdziwy konwerter; dane fikcyjne.
+describe('LAB-HISTORIA PR5a — alias serii i IGF-1 z notatek leczenia GH', () => {
+  const nbsp = (value) => String(value).replace(/\u00a0/g, ' ');
+  const ghNote = (dev, fields) => dev.vault.savePatientNote({
+    patientId: dev.patientId, category: 'treatment', title: 'Leczenie rhGH', body: 'Kontrola leczenia hormonem wzrostu / IGF-1.\nDawka: 0,030 mg/kg/d.',
+    medication: { action: 'change', doseNum: 0.03, doseUnit: 'mg/kg/d', freq: 'dzień' }, ...fields,
+  });
+
+  it('6.14: wpis bez klucza o nazwie równej etykiecie przelicznika dołącza do serii badania; inna pisownia i nieznana jednostka zostają', async () => {
+    const dev = await card();
+    const save = (fields) => dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania', title: 'Fikcyjny wynik', ...fields });
+    const pinned = await save({ clinicalDateISO: '2026-03-10', labResult: { test: 'Testosteron całkowity', testKey: 'testosterone_total', value: '0,8', valueNum: 0.8, unit: 'nmol/L' } });
+    const legacy = await save({ clinicalDateISO: '2026-06-10', labResult: { test: 'Testosteron całkowity', value: '1,9 nmol/L' } });
+    const oddUnit = await save({ clinicalDateISO: '2026-08-10', labResult: { test: 'Testosteron całkowity', value: '60 ng%' } });
+    const otherSpelling = await save({ clinicalDateISO: '2026-09-01', labResult: { test: 'testosteron całkowity', value: '2,1', valueNum: 2.1, unit: 'nmol/L' } });
+    // Sejf trzyma wpisy bez klucza pod skrótem nazwy — alias działa tylko przy odczycie.
+    expect((await dev.vault.listPatientLabSeries(dev.patientId)).map((s) => s.testKey).sort()).toEqual(['testosteroncalkowity', 'testosterone_total']);
+
+    const v = await view(dev, { nowISO: '2026-10-15' });
+    const t = seriesView(v, 'testosterone_total');
+    expect(t.entries.map((e) => [e.noteId, e.kind, e.value, e.mergedFrom || null])).toEqual([
+      [pinned.id, 'exact', 0.8, null], [legacy.id, 'legacy', 1.9, 'testosteroncalkowity'],
+    ]);
+    expect(t.mergedFrom).toEqual([{ key: 'testosteroncalkowity', test: 'Testosteron całkowity', count: 1 }]);
+    expect(t.chart.points.map((p) => p.v)).toEqual([0.8, 1.9]);
+    // Wpis odczytany z tekstu (legacy, †) jest na wykresie, ale bez różnicy — jak przed aliasem (PR1).
+    expect(t.delta).toMatchObject({ available: false, reason: 'not_comparable' });
+    const rest = seriesView(v, 'testosteroncalkowity');
+    expect(rest.entries.map((e) => e.noteId)).toEqual([oddUnit.id, otherSpelling.id]);
+    expect(rest.mergedFrom).toEqual([]);
+    expect(v.panels.map((panel) => [panel.id, panel.series.map((s) => s.key)])).toEqual([['gonadal', ['testosterone_total']], ['other', ['testosteroncalkowity']]]);
+  });
+
+  it('6.24–6.25: IGF-1 z notatek GH w serii IGF-1 — data badania albo odbytej kontroli, ng/ml jak ng/mL, bez komentarza; ten sam wynik raz', async () => {
+    const dev = await card();
+    const lab = (date, value) => dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania', title: 'Fikcyjne IGF-1', clinicalDateISO: date,
+      labResult: { test: 'IGF-1 (insulinopodobny czynnik wzrostu 1)', testKey: 'igf1', value: String(value), valueNum: value, unit: 'ng/mL' } });
+    const lab1 = await lab('2026-05-10', 245);
+    await ghNote(dev, { dueDateISO: '2026-05-10', igf1: { value: 245, unit: 'ng/ml' } });           // ten sam wynik co lab1
+    const dated = await ghNote(dev, { clinicalDateISO: '2026-08-01', dueDateISO: '2026-08-03', igf1: { value: 310 } });   // bez jednostki
+    const control = await ghNote(dev, { dueDateISO: '2026-09-01', linkedAgeMonths: 130, igf1: { value: 280, unit: 'ng/ml' } });
+    const lab2 = await lab('2026-09-15', 260);
+
+    const v = await view(dev, { nowISO: '2026-10-15' });
+    expect(v.panels.map((panel) => [panel.id, panel.series.map((s) => s.key)])).toEqual([['somatotropic', ['igf1']]]);
+    expect(v.ghIgf1).toEqual({ shown: 2, duplicates: 1 });
+    expect(v.summary).toMatchObject({ results: 4, analytes: 1, lastDateISO: '2026-09-15' });
+    const igf1 = seriesView(v, 'igf1');
+    expect(igf1.unit).toBe('ng/mL');
+    expect(igf1.entries.map((e) => [e.noteId, e.source || 'lab', e.dateSource, e.kind, e.value, nbsp(e.display), e.converted, e.flag])).toEqual([
+      [lab1.id, 'lab', 'badanie', 'exact', 245, '245 ng/mL', false, null],
+      [dated.id, 'gh-note', 'badanie', 'exact', 310, '310 ng/mL', false, null],
+      [control.id, 'gh-note', 'kontrola', 'exact', 280, '280 ng/mL', false, null],
+      [lab2.id, 'lab', 'badanie', 'exact', 260, '260 ng/mL', false, null],
+    ]);
+    const gh = igf1.entries.filter((e) => e.source === 'gh-note');
+    expect(gh.map((e) => [e.recordedUnit, e.comment, e.norm, e.status])).toEqual([['ng/ml', '', null, null], ['ng/ml', '', null, null]]);
+    expect(gh[1]).toMatchObject({ dateISO: '2026-09-01', ageMonths: 130 });
+    expect(igf1.chart.points.map((p) => [p.dateISO, p.v])).toEqual([['2026-05-10', 245], ['2026-08-01', 310], ['2026-09-01', 280], ['2026-09-15', 260]]);
+    expect(igf1.chart.skipped).toBe(0);
+    expect(igf1.last.noteId).toBe(lab2.id);
+    expect(igf1.previous.noteId).toBe(control.id);
+    expect(nbsp(igf1.delta.text)).toBe('−20 ng/mL · po 14 dniach');
+    expect(nbsp(igf1.entries[1].delta.text)).toBe('+65 ng/mL · po 83 dniach');
+
+    // Wyłączenie źródła: tylko wyniki badań.
+    const off = await view(dev, { nowISO: '2026-10-15', ghIgf1: false });
+    expect(seriesView(off, 'igf1').entries.map((e) => e.noteId)).toEqual([lab1.id, lab2.id]);
+    expect(off.ghIgf1).toEqual({ shown: 0, duplicates: 0 });
+  });
+
+  it('IGF-1 z notatki GH bez daty badania i bez odbytej kontroli: data wpisu, tylko w tabeli; inne notatki z igf1 pomijane', async () => {
+    const dev = await card();
+    const H = dev.win.VildaLabHistory, C = dev.win.LabUnitConverter;
+    const base = { patientId: dev.patientId, title: 'Leczenie rhGH', body: '', category: 'treatment', medication: { action: 'change', doseNum: 0.03, doseUnit: 'mg/kg/d' } };
+    const notes = {
+      future: { ...base, id: 'future', dueDateISO: '2026-12-01', createdAtISO: '2026-10-01T09:00:00.000Z', igf1: { value: 300, unit: 'ng/ml' } },
+      noShow: { ...base, id: 'noShow', dueDateISO: '2026-09-01', noShowAtISO: '2026-09-01T12:00:00.000Z', createdAtISO: '2026-08-20T09:00:00.000Z', igf1: { value: 290, unit: 'ng/ml' } },
+      micro: { ...base, id: 'micro', clinicalDateISO: '2026-07-01', igf1: { value: 250, unit: 'μg/l' } },
+      general: { id: 'general', patientId: dev.patientId, title: 'Fikcyjna notatka', body: '', category: 'general', clinicalDateISO: '2026-07-02', igf1: { value: 999, unit: 'ng/ml' } },
+      badValue: { ...base, id: 'badValue', clinicalDateISO: '2026-07-03', igf1: { value: '245', unit: 'ng/ml' } },
+    };
+    const v = H.buildHistoryView([], { converter: C, notesById: notes, nowISO: '2026-10-15' });
+    const igf1 = v.panels[0].series[0];
+    // Jednostka serii z ostatniego wyniku (ng/ml → ng/mL); „μg/l” rozpoznane bez względu na wielkość liter i przeliczone.
+    expect(igf1.entries.map((e) => [e.noteId, e.dateSource, e.dateISO, e.unit, e.converted, e.value])).toEqual([
+      ['micro', 'badanie', '2026-07-01', 'ng/mL', true, 250], ['noShow', 'wpis', '2026-08-20', 'ng/mL', false, 290], ['future', 'wpis', '2026-10-01', 'ng/mL', false, 300],
+    ]);
+    expect(igf1.chart.points.map((p) => p.dateISO)).toEqual(['2026-07-01']);
+    expect(igf1.chart.skippedByReason).toEqual({ no_sample_date: 2 });
+    // Bez „dziś” od wołającego nie wiadomo, czy kontrola się odbyła: data wpisu.
+    const noToday = H.buildHistoryView([], { converter: C, notesById: { noShow: { ...notes.noShow, noShowAtISO: null } } });
+    expect(noToday.panels[0].series[0].entries[0]).toMatchObject({ dateSource: 'wpis', dateISO: '2026-08-20' });
+    // Wpis tekstowy bez klucza dopasowany po nazwie z listy przelicznika też niesie mergedFrom (skrót nazwy sejfu).
+    const text = H.buildHistoryView([], { converter: C, notesById: { t: { id: 't', category: 'wynik-badania', clinicalDateISO: '2026-09-12', labResult: { test: 'Inhibina B', value: '<10 pg/mL' } } } });
+    expect(text.panels[0].series[0]).toMatchObject({ key: 'inhibin_b', mergedFrom: [{ key: 'inhibinab', test: 'Inhibina B', count: 1 }] });
+  });
+});

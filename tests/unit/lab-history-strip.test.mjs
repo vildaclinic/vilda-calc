@@ -406,3 +406,38 @@ function loadStrip() {
   loadBrowserScript('lab_history_strip.js', win);
   return win.VildaLabHistoryStrip;
 }
+
+// LAB-HISTORIA PR5a (decyzje 6.24–6.25): IGF-1 z notatki leczenia GH w pasku — chip „kontrola”, źródło
+// w podpowiedzi i szczegółach, bez strzałki. Dane fikcyjne.
+describe('pasek: IGF-1 z notatki leczenia GH', () => {
+  function sejfIgf() {
+    const igf = nota(PID, 'igf-1', '2026-04-08', { test: 'IGF-1 (insulinopodobny czynnik wzrostu 1)', testKey: 'igf1', value: '245', valueNum: 245, unit: 'ng/mL' });
+    const gh = { id: 'gh-1', patientId: PID, title: 'Leczenie rhGH', body: 'Kontrola leczenia hormonem wzrostu / IGF-1.', category: 'treatment',
+      dueDateISO: '2026-06-01', medication: { action: 'change', doseNum: 0.03, doseUnit: 'mg/kg/d' }, igf1: { value: 280, unit: 'ng/ml' } };
+    return {
+      isUnlocked: () => true,
+      listPatientLabSeries: async () => [{ testKey: 'igf1', test: igf.labResult.test, points: [punkt(igf)] }],
+      listPatientNotesForPatient: async () => structuredClone([igf, gh]),
+      getPatient: async () => ({ patientId: PID, header: { name: 'Fikcyjna Anna' } }),
+      getPatientNote: async () => null,
+      onPatientNoteChanged: () => {}, onLock: () => {},
+    };
+  }
+
+  it('chip z datą kontroli i źródłem; szczegóły z dopiskiem; różnica do bieżącego wyniku w ng/mL', async () => {
+    const env = strona({ vault: sejfIgf(), substancja: 'igf1', jednostka: 'ng/mL', wartosc: '300' });
+    await widoczny(env);
+    const el = pasek(env);
+    expect(txt(el.querySelector('.lab-strip-title'))).toBe('Poprzednie wyniki pacjenta · IGF-1 · w ng/mL');
+    const chip = el.querySelector('button.lab-strip-chip[data-note-id="gh-1"]');
+    expect(teksty(chip, 'span').map(txtS)).toEqual(['kontrola 01.06.26', '280']);
+    expect(txtS(chip.getAttribute('title'))).toBe('data kontroli GH (brak daty badania) · z notatki leczenia GH · zapisano: 280 ng/ml');
+    expect(chip.querySelector('.lab-strip-flag')).toBeNull();
+    chip.click();
+    await vi.waitFor(() => expect(pasek(env).querySelector('.lab-strip-detail')).not.toBeNull());
+    const detail = pasek(env).querySelector('.lab-strip-detail');
+    expect(txt(detail.querySelector('.lab-strip-detail-h'))).toBe('01.06.26 (data kontroli GH) · 280 ng/mL');
+    expect(teksty(detail, '.lab-strip-muted').map(txtS)).toContain('z notatki leczenia GH (pole „IGF-1 (wynik z kontroli)”), bez normy i bez oceny');
+    expect(detail.querySelector('.lab-strip-detail-comment')).toBeNull();
+  });
+});
