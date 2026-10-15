@@ -1105,6 +1105,30 @@ Kontrakt `buildInput` dla dawnych próbek pozostaje; tabele/silniki hormonów ni
 zostały scalone z rendererem ani zmienione. Wpływ kliniczny i źródła:
 `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-PANEL.
 
+## Łatka P-IMPORT-STATUS — kolejność importu i wskaźnika zapisu (2026-10-15)
+
+`vilda_data_import_export.js` i `vilda_save_status_indicator.js` zachowują istniejący
+model globalnych skryptów. Wąska, czytelna część wskaźnika zastępuje 500 ms
+rozpoznawaniem konkretnej operacji:
+
+- `getApplyLoadedDataSequence()` zwraca rosnący licznik RAM dokumentu. Każde
+  poprawne `applyLoadedData()` zwiększa go; błędny argument nie zwiększa.
+- Istniejące asynchroniczne `vilda:json-imported` dostaje `detail.applySequence`.
+  Odtworzenie sesji zwiększa granicę operacji, ale nadal nie emituje importu JSON.
+- Istniejące `vilda:patient-loaded` z `source:'save'` dostaje numer uchwycony
+  na wejściu `saveUserData()`. Zakończenie wcześniejszego zapisu nie potwierdza
+  nowszego importu. Wczytanie z kartoteki potwierdza bieżącą operację także wtedy,
+  gdy wywołujący nie podał opcji `applyLoadedData`.
+- Wskaźnik ignoruje zdarzenia potwierdzone, unieważnione przez clear/lock albo
+  zastąpione nowszym apply. Jego odroczone publikacje wymagają zgodnej generacji,
+  numeru operacji i docelowego PID. Unlock nie potwierdza importu.
+
+Numer jest metadanymi wyłącznie zdarzenia i nie trafia do rekordu, eksportu,
+`sharedUserData`, sesji ani innego magazynu. Nie zmieniono modułu sejfu,
+autoryzacji ani strażnika niezapisanych zmian. Odtwarzalny test produkcyjnego
+importera i wskaźnika: `tests/unit/save-status-import-order.test.mjs`.
+Opis odtworzenia CI/CPU i zakresu: `docs/clinical/ALGORITHMS.md`, P-IMPORT-STATUS.
+
 ## Jak odtworzyć
 
 ```bash

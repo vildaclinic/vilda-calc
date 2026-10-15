@@ -6606,6 +6606,18 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 
 *Strażnicy:* `tests/unit/kolejnosc-wersji.test.mjs` (9) — zachowaniowe, na prawdziwym sejfie z magazynem w pamięci: numery rosną i są osobne dla każdego pacjenta, **zamrożony zegar stawia trzy zapisy w tej samej milisekundzie** i bieżącą zostaje najnowsza, wynik jest powtarzalny w pięciu próbach, edycja nie kasuje numeru, plus spis pilnujący, że żadne z ośmiu miejsc zapisu wersji numeru nie gubi. **Zmierzona czerwień: 8 z 9** przeciwko wersji sprzed zmiany, z kolejnością wychodzącą za każdym razem inaczej.
 
+### P-IMPORT-STATUS — opóźniony import nie zmienia wczytanego pacjenta w „nowego”, 2026-10-15
+
+**Odtworzenie.** `applyLoadedData()` planuje `vilda:json-imported`, a wczytanie z kartoteki zaraz potem rozgłasza `vilda:patient-loaded`. Wskaźnik zapisu ignorował import przez 500 ms. Przy obciążeniu renderowania powiadomienie przychodziło później: mimo poprawnego PID przechodził ze stanu `saved` do `new_patient`, a rzeczywisty strażnik niezapisanych zmian zatrzymywał „Wyczyść”. Potwierdzone w obu próbach CI oraz w Chromium z sześciokrotnym spowolnieniem CPU. Sam panel pokwitaniowy nie zgłaszał nowego pacjenta ani zmiany danych.
+
+**Reguła.** Każde poprawne `applyLoadedData`, również odtworzenie sesji, zwiększa licznik operacji wyłącznie w RAM dokumentu. Istniejące `vilda:json-imported` niesie `detail.applySequence`; odtworzenie sesji nadal nie emituje tego zdarzenia. Wczytanie potwierdza konkretną operację, a kolejne „Wyczyść” lub blokada konta unieważniają oczekujące powiadomienia. Starszy import i starsze odtworzenie nie mogą odnowić referencji innego pacjenta. Rzeczywisty późniejszy import JSON ma nowy numer i nadal daje `new_patient`, również bezpośrednio po wczytaniu. Nie ma okna 500 ms ani rozpoznawania pacjenta po nazwisku.
+
+`saveUserData()` przekazuje w zdarzeniu zakończenia numer operacji uchwycony przy rozpoczęciu zapisu; opóźniony zapis nie potwierdza nowszego importu. Zwykłe powiadomienie sejfu bez takiej proweniencji zachowuje dotychczasową synchroniczną aktualizację wskaźnika, ale nie potwierdza dowolnego bieżącego importu. Odroczone publikacje wskaźnika sprawdzają generację, numer operacji i docelowy PID; PID może zostać ustawiony przez późniejszy listener tego samego wczytania.
+
+**Zakres.** Bez zmiany wzorów, interpretacji, danych referencyjnych, formatu pacjenta ani magazynów. Numer nie trafia do payloadu, JSON eksportu ani sesji. Strażnik niezapisanych zmian pozostaje czynny; test tożsamości nadal sprawdza, że nowe dziecko nie modyfikuje starej kartoteki.
+
+**Regresje.** `tests/unit/save-status-import-order.test.mjs` wykonuje rzeczywisty importer i wskaźnik z deterministyczną kolejnością zdarzeń: powiadomienie późniejsze niż 500 ms, kolejny prawdziwy import, stare zdarzenia, sesja, zapis, clear, lock, unlock i zmiana PID. `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` zachowuje wszystkie dotychczasowe asercje.
+
 ### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
 
 **Stan przed zmianą.** Wszystkie komunikaty zapisu — **piętnaście** różnych zdań, od „Nie zapisano — uzupełnij…" po „Nie udało się zapisać pacjenta" — szły przez `showTooltip()`: dymek przy przycisku, gasnący po **2500 ms** i znikający z DOM bez śladu. Trzy wady naraz:

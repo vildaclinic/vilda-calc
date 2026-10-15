@@ -1574,6 +1574,7 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=25',
   '/vilda_save_status_indicator.js?v=26',
   '/vilda_save_status_indicator.js?v=27',
+  '/vilda_save_status_indicator.js?v=28',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
