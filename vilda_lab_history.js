@@ -6,6 +6,8 @@
  * pacjenta, nie woła evaluate() ani silników ocen (LAB_INTERPRETATION_AGENT_GUIDE.md § 7).
  * Strzałka ↑/↓ powstaje wyłącznie z zapisu: z jednej, zakotwiczonej normy tekstowej wpisu
  * w jednostce wyniku (bez przeliczenia) albo z zamrożonej koperty oceny LH/FSH/inhibiny B.
+ * Od 1.1.0 (PR5a): alias serii po dokładnej nazwie badania z listy przelicznika (decyzja 6.14) i IGF-1
+ * z notatek leczenia GH w serii IGF-1, z datą kontroli, gdy brak daty badania (decyzje 6.24–6.25).
  * Projekt: docs/LAB_HISTORIA_WYNIKOW_PLAN.md, 3.1; opis: docs/clinical/ALGORITHMS.md,
  * „LAB-HISTORIA — model porównania”.
  */
@@ -42,6 +44,13 @@
     assessment_requires_recalculation: 'zmieniono dane wyniku'
   };
   var CHART_KINDS = ['exact', 'legacy'];
+  // Daty, które stawiają wynik na osi wykresu i w różnicy: data badania, a dla IGF-1 z notatki leczenia GH
+  // także termin kontroli, która już się odbyła (decyzja 6.25; tak datuje IGF-1 wykres „Trend leczenia GH”).
+  var SAMPLE_DATES = ['badanie', 'kontrola'];
+  // IGF-1 z notatki leczenia GH (decyzja 6.24): pole „IGF-1 (wynik z kontroli)” edytora wpisu z dawką GH
+  // zapisuje { value, unit: "ng/ml" } w note.igf1 (Ce() w vilda_vault.js). Edytor ma stałą jednostkę ng/ml.
+  var GH_IGF1_SERIES = 'igf1';
+  var GH_IGF1_UNIT = 'ng/ml';
 
   // Symbol jednostki po normalizacji: przycięty, spacje zwinięte, znak mikro U+00B5 → grecka mu U+03BC
   // (konwerter używa U+03BC, klawiatura daje U+00B5).
@@ -74,6 +83,7 @@
     if (note.labResult) return 'wynik-badania';
     return note.category || null;
   }
+  function sampleDated(entry) { return SAMPLE_DATES.indexOf(entry.dateSource) !== -1; }
   function isoDate(value) { return typeof value === 'string' && ISO_DATE.test(value) ? value.slice(0, 10) : null; }
   function formatDate(value) {
     var iso = isoDate(value);
@@ -114,6 +124,15 @@
     if (!sub || !wanted) return null;
     for (var i = 0; i < sub.units.length; i++) {
       if (sub.units[i] && normalizeUnit(sub.units[i].symbol) === wanted) return sub.units[i].symbol;
+    }
+    return null;
+  }
+  // Tylko dla IGF-1 z notatki leczenia GH: edytor zapisuje „ng/ml”, konwerter zna „ng/mL”.
+  function knownUnitIgnoreCase(sub, unit) {
+    var wanted = normalizeUnit(unit).toLowerCase();
+    if (!sub || !wanted) return null;
+    for (var i = 0; i < sub.units.length; i++) {
+      if (sub.units[i] && normalizeUnit(sub.units[i].symbol).toLowerCase() === wanted) return sub.units[i].symbol;
     }
     return null;
   }
@@ -187,7 +206,8 @@
   // Wpis z punktu serii sejfu albo z notatki tekstowej. Wartość w jednostce wyświetlania
   // ustala drugi przebieg (resolveUnits), gdy znana jest jednostka serii.
   // Źródło daty: data badania; bez niej termin zlecenia (sejf bierze go, gdy już minął) albo data wpisu.
-  // Tylko data badania czyni wynik „ostatnim” lub „poprzednim” i stawia go na osi wykresu.
+  // Tylko data badania (a dla IGF-1 z notatki GH termin odbytej kontroli) czyni wynik „ostatnim”
+  // lub „poprzednim” i stawia go na osi wykresu.
   function baseEntry(point, note, lab) {
     var clinical = note ? isoDate(note.clinicalDateISO) : null, date = clinical || isoDate(point.dateISO) || null;
     var due = note ? isoDate(note.dueDateISO) : null;
@@ -239,6 +259,30 @@
     entry.display = entry.raw;
     return entry;
   }
+  function ghIgf1(note) {
+    return noteCategory(note) === 'treatment' && record(note.igf1) && finite(note.igf1.value);
+  }
+  // IGF-1 z notatki leczenia GH: wartość jak zapisano, bez normy, oceny i strzałki; bez komentarza, bo treść
+  // notatki opisuje dawkę, a nie wynik. Data: data badania, inaczej termin kontroli, który już minął
+  // (bez niestawienia); inaczej data wpisu — wtedy wynik jest tylko w tabeli. Brak jednostki = ng/ml edytora.
+  function ghEntry(note, nowISO) {
+    var clinical = isoDate(note.clinicalDateISO), due = isoDate(note.dueDateISO);
+    var control = !clinical && due && nowISO && due <= nowISO && !note.noShowAtISO ? due : null;
+    var unit = text(note.igf1.unit) || GH_IGF1_UNIT;
+    var entry = baseEntry({ noteId: note.id, dateISO: clinical || control || isoDate(note.createdAtISO), unit: unit, ageMonths: note.linkedAgeMonths }, note, null);
+    entry.dateSource = clinical ? 'badanie' : control ? 'kontrola' : 'wpis';
+    entry.kind = 'exact';
+    entry.source = 'gh-note';
+    entry.recordedValue = note.igf1.value;
+    entry.raw = withUnit(String(note.igf1.value).replace('.', ','), entry.recordedUnit);
+    entry.comment = '';
+    return entry;
+  }
+  // Ten sam wynik zapisany i jako wynik badania IGF-1, i w notatce GH (ten sam dzień, wartość i jednostka): raz.
+  function sameResult(a, b) {
+    return a.dateISO === b.dateISO && a.recordedValue === b.recordedValue
+      && normalizeUnit(a.recordedUnit).toLowerCase() === normalizeUnit(b.recordedUnit).toLowerCase();
+  }
 
   function compareEntries(left, right) {
     if (left.dateISO === right.dateISO) return 0;
@@ -262,7 +306,8 @@
     // serii nie ma jednostki; inaczej to „brak jednostki”, a nie nowa jednostka serii.
     var unitsPresent = numeric.some(function (entry) { return !!entry.recordedUnit; });
     numeric.forEach(function (entry) {
-      entry.canonicalUnit = sub ? knownUnit(sub, entry.recordedUnit) : unitsPresent ? entry.recordedUnit || null : '';
+      entry.canonicalUnit = sub ? knownUnit(sub, entry.recordedUnit) || (entry.source === 'gh-note' ? knownUnitIgnoreCase(sub, entry.recordedUnit) : null)
+        : unitsPresent ? entry.recordedUnit || null : '';
     });
     var requested = options.unitBy && own(options.unitBy, series.key) ? options.unitBy[series.key] : null;
     var display = requested != null ? (sub ? knownUnit(sub, requested) : normalizeUnit(requested)) : null;
@@ -342,12 +387,12 @@
   function chartFor(entries, unit) {
     var points = [], skippedByReason = {}, gaps = [];
     entries.forEach(function (entry) {
-      var reason = CHART_KINDS.indexOf(entry.kind) === -1 ? entry.kind : entry.dateSource !== 'badanie' ? 'no_sample_date' : null;
+      var reason = CHART_KINDS.indexOf(entry.kind) === -1 ? entry.kind : !sampleDated(entry) ? 'no_sample_date' : null;
       if (reason) {
         skippedByReason[reason] = (skippedByReason[reason] || 0) + 1;
         // Wynik z datą badania poza wykresem (np. „<0,02”): renderer może zaznaczyć przerwę zamiast
         // prowadzić linię przez dzień, w którym wynik nie był liczbą.
-        if (entry.dateSource === 'badanie' && entry.dateISO) gaps.push({ dateISO: entry.dateISO, kind: entry.kind, noteId: entry.noteId });
+        if (sampleDated(entry) && entry.dateISO) gaps.push({ dateISO: entry.dateISO, kind: entry.kind, noteId: entry.noteId });
         return;
       }
       // Kształt wyjścia yi() dla rendera Nl: oś daty badania (ageMonths: null), punkt przeliczony
@@ -367,7 +412,7 @@
     // Chronologicznie przed wyborem jednostki: „ostatni wynik” to ostatni po dacie, nie w kolejności sejfu.
     var entries = stableSort(series.entries, compareEntries);
     var unit = resolveUnits(series, entries, options);
-    var dated = entries.filter(function (entry) { return entry.dateSource === 'badanie'; });
+    var dated = entries.filter(sampleDated);
     for (var i = 1; i < dated.length; i++) dated[i].delta = deltaBetween(dated[i - 1], dated[i], series, options);
     var last = dated.length ? dated[dated.length - 1] : null;
     var computed = dated.filter(function (entry) { return entry.delta && entry.delta.available; });
@@ -378,6 +423,8 @@
       entries: entries, last: last, previous: earlier.length ? earlier[earlier.length - 1] : null,
       lastDateEntries: last ? dated.filter(function (entry) { return entry.dateISO === last.dateISO; }) : [],
       delta: last ? last.delta : null, chart: chartFor(entries, unit), pending: [],
+      // Decyzja 6.14: wpisy z innej serii sejfu dołączone po dokładnej nazwie badania z listy przelicznika.
+      mergedFrom: Object.keys(series.mergedFrom).map(function (key) { return series.mergedFrom[key]; }),
       // Stopka dla różnic bez potwierdzonej zgodności metody (K10).
       methodFootnote: computed.some(function (entry) { return !entry.delta.methodChecked; })
     };
@@ -436,7 +483,8 @@
   /**
    * @param {Array} seriesList wynik VildaVault.listPatientLabSeries(patientId)
    * @param {Object} options {converter, notesById, treatment, categoryFilter, panels, unitBy,
-   *   current, parseNorm, nowISO}
+   *   current, parseNorm, nowISO, ghIgf1}; ghIgf1: false wyłącza IGF-1 z notatek leczenia GH.
+   *   nowISO rozstrzyga też, czy termin kontroli GH już minął (bez niego IGF-1 z GH ma datę wpisu).
    */
   function buildHistoryView(seriesList, options) {
     options = Object.assign({ categoryFilter: ['wynik-badania'], panels: HISTORY_PANELS }, options || {});
@@ -451,10 +499,26 @@
     function seriesFor(key, test) {
       if (!own(byKey, key)) {
         var sub = substance(converter, key);
-        byKey[key] = { key: key, sub: sub, label: sub ? text(sub.label_pl) || key : text(test) || key, entries: [] };
+        byKey[key] = { key: key, sub: sub, label: sub ? text(sub.label_pl) || key : text(test) || key, entries: [], mergedFrom: {} };
         order.push(key);
       }
       return byKey[key];
+    }
+    function noteMerge(series, fromKey, test) {
+      if (!own(series.mergedFrom, fromKey)) series.mergedFrom[fromKey] = { key: fromKey, test: text(test), count: 0 };
+      series.mergedFrom[fromKey].count++;
+    }
+    var labels = [];
+    if (converter && typeof converter.list === 'function') {
+      try { labels = (converter.list() || []).map(function (item) { return { id: item.id, label: text(item.label) }; }); } catch (_) { labels = []; }
+    }
+    // Decyzja 6.14: wpis bez klucza przelicznika (sejf dał mu skrót nazwy) z nazwą równą dokładnie etykiecie
+    // badania z listy przelicznika dołącza przy odczycie do serii tego badania — tylko z jednostką, którą
+    // przelicznik zna dla tego badania (inaczej zostaje w dawnej serii, żeby nie zniknął z wykresu).
+    function aliasKey(key, note, entry) {
+      if (substance(converter, key) || (entry.kind !== 'exact' && entry.kind !== 'legacy')) return null;
+      var id = labelKey(note.labResult && note.labResult.test, labels), sub = id && id !== key ? substance(converter, id) : null;
+      return sub && knownUnit(sub, entry.recordedUnit) ? id : null;
     }
     (Array.isArray(seriesList) ? seriesList : []).forEach(function (raw) {
       if (!record(raw) || !text(raw.testKey)) return;
@@ -466,26 +530,39 @@
         if (!note) { missingNotes++; return; }
         if (!accepted(note)) return;
         var entry = entryFromPoint(point, note);
-        if (entry) seriesFor(text(raw.testKey), raw.test).entries.push(entry);
+        if (!entry) return;
+        var key = text(raw.testKey), alias = aliasKey(key, note, entry);
+        var series = seriesFor(alias || key, raw.test);
+        if (alias) { entry.mergedFrom = key; noteMerge(series, key, note.labResult.test); }
+        series.entries.push(entry);
       });
     });
-    var pending = [];
-    var labels = [];
-    if (converter && typeof converter.list === 'function') {
-      try { labels = (converter.list() || []).map(function (item) { return { id: item.id, label: text(item.label) }; }); } catch (_) { labels = []; }
-    }
+    var pending = [], gh = [];
     Object.keys(notesById).forEach(function (id) {
       var note = notesById[id];
-      if (!record(note) || seen[note.id || id] || !accepted(note)) return;
+      if (!record(note)) return;
+      if (options.ghIgf1 !== false && ghIgf1(note)) gh.push(ghEntry(Object.assign({ id: id }, note), nowISO));
+      if (seen[note.id || id] || !accepted(note)) return;
       var lab = record(note.labResult) ? note.labResult : null;
       if (lab && text(lab.value) && !finite(lab.valueNum) && !own(lab, 'assessment')) {
-        var key = text(lab.testKey) || labelKey(lab.test, labels) || seriesSlug(lab.test);
-        if (key) seriesFor(key, lab.test).entries.push(textEntry(Object.assign({ id: id }, note), nowISO));
+        var byLabel = !text(lab.testKey) && labelKey(lab.test, labels), slug = seriesSlug(lab.test);
+        var key = text(lab.testKey) || byLabel || slug;
+        if (!key) return;
+        var series = seriesFor(key, lab.test), entry = textEntry(Object.assign({ id: id }, note), nowISO);
+        // Ten sam dobór klucza co od PR1; sejf trzymałby ten wpis pod skrótem nazwy.
+        if (byLabel && slug && slug !== byLabel) { entry.mergedFrom = slug; noteMerge(series, slug, lab.test); }
+        series.entries.push(entry);
         return;
       }
       if (isPending(note)) {
         pending.push({ kind: 'pending', noteId: note.id || id, title: text(note.title), dueDateISO: isoDate(note.dueDateISO), seriesKey: pendingMatch(note, labels) });
       }
+    });
+    var ghDuplicates = 0;
+    gh.forEach(function (entry) {
+      var series = seriesFor(GH_IGF1_SERIES, null);
+      if (series.entries.some(function (other) { return other.source !== 'gh-note' && sameResult(other, entry); })) { ghDuplicates++; return; }
+      series.entries.push(entry);
     });
     pending = stableSort(pending, function (a, b) { return a.dueDateISO === b.dueDateISO ? 0 : !a.dueDateISO ? 1 : !b.dueDateISO ? -1 : a.dueDateISO < b.dueDateISO ? -1 : 1; });
 
@@ -527,11 +604,12 @@
     return {
       summary: { results: resultCount, analytes: views.filter(function (view) { return view.entries.length; }).length, lastDateISO: lastDateISO, pending: pending.length, missingNotes: missingNotes },
       panels: panels, pending: pending, treatment: treatmentRows,
+      ghIgf1: { shown: gh.length - ghDuplicates, duplicates: ghDuplicates },
       preview: previewView(options.current, currentKey && own(viewByKey, currentKey) ? viewByKey[currentKey] : null, ctx)
     };
   }
 
-  // Tabela panelu: wiersze = daty malejąco (data badania przed datą wpisu tego samego dnia),
+  // Tabela panelu: wiersze = daty malejąco (data badania lub kontroli GH przed datą wpisu tego samego dnia),
   // komórki = wpisy badań z tego dnia; dwa wyniki jednego badania tego dnia stoją razem.
   function rowsFor(seriesViews) {
     var rows = {}, keys = [];
@@ -544,12 +622,13 @@
     });
     return stableSort(keys.map(function (key) { return rows[key]; }), function (a, b) {
       if (a.dateISO !== b.dateISO) return !a.dateISO ? 1 : !b.dateISO ? -1 : a.dateISO < b.dateISO ? 1 : -1;
-      return a.dateSource === b.dateSource ? 0 : a.dateSource === 'badanie' ? -1 : 1;
+      var left = SAMPLE_DATES.indexOf(a.dateSource), right = SAMPLE_DATES.indexOf(b.dateSource);
+      return (left === -1 ? SAMPLE_DATES.length : left) - (right === -1 ? SAMPLE_DATES.length : right);
     });
   }
 
   return Object.freeze({
-    version: '1.0.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
+    version: '1.1.0', HISTORY_PANELS: HISTORY_PANELS, buildHistoryView: buildHistoryView,
     formatDelta: formatDelta, formatDate: formatDate, normalizeUnit: normalizeUnit
   });
 });

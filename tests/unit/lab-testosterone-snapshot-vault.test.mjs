@@ -130,3 +130,68 @@ describe('TT pin → encrypted note → recorded series, real production functio
     expect(point.valueNum).toBeNull();
   });
 });
+
+describe('TT snapshot → History 1.1: source units, aliases and recorded context', () => {
+  async function historyView(dev) {
+    for (const file of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_history.js']) loadBrowserScript(file, dev.win);
+    let reevaluations = 0;
+    const refuseReevaluation = () => { reevaluations++; throw new Error('Historia TT nie może oceniać wyniku ponownie'); };
+    dev.win.LabUnitConverter.evaluate = refuseReevaluation;
+    dev.win.VildaLabTestosterone = { evaluate: refuseReevaluation };
+    const notes = await dev.vault.listPatientNotesForPatient(dev.patientId);
+    const series = await dev.vault.listPatientLabSeries(dev.patientId);
+    const view = dev.win.VildaLabHistory.buildHistoryView(series, {
+      converter: dev.win.LabUnitConverter, notesById: Object.fromEntries(notes.map(note => [note.id, note])),
+      nowISO: '2040-10-15', unitBy: { testosterone_total: 'nmol/L' },
+    });
+    expect(reevaluations).toBe(0);
+    const tt = view.panels.flatMap(panel => panel.series).find(item => item.key === 'testosterone_total');
+    return { tt, notes, series };
+  }
+
+  it('keeps 300 ng/dL and its original dated reference when an exact-label legacy alias joins the SI view', async () => {
+    const dev = await device(), original = captured('300', 'ng/dL');
+    await pinThroughProduction(dev, original, '300', 'ng/dL');
+    await pinThroughProduction(dev, captured('10.401', 'nmol/L'), '10.401', 'nmol/L');
+    const legacy = await dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania',
+      title: 'Fikcyjny starszy wynik TT', clinicalDateISO: '2026-10-01',
+      labResult: { test: 'Testosteron całkowity', value: '3 ng/mL' } });
+
+    const { tt, notes, series } = await historyView(dev);
+    const pinned = notes.find(note => note.labResult.unit === 'ng/dL');
+    const point = series.find(item => item.testKey === 'testosterone_total').points.find(item => item.noteId === pinned.id);
+    expect(point).toMatchObject({ valueNum: 300, plotValue: 300, unit: 'ng/dL' });
+    expect(point.assessment.evaluation.measurement).toMatchObject({ value: 10.401, unit: 'nmol/L', sourceValue: 300, sourceUnit: 'ng/dL' });
+    const entry = tt.entries.find(item => item.noteId === pinned.id);
+    expect(entry).toMatchObject({ recordedValue: 300, recordedUnit: 'ng/dL', exactValue: 10.401,
+      unit: 'nmol/L', converted: true, raw: '300 ng/dL', dateISO: DATE, dateSource: 'badanie' });
+    expect(entry.assessment.evaluation).toEqual(original.evaluation);
+    expect(entry.assessment.binding.clinicalDateISO).toBe(DATE);
+    expect(entry.assessment.evaluation.input.age.years).toBe(12);
+    expect(entry.assessment.evaluation.referencePreview.byAge.range).toEqual(original.evaluation.referencePreview.byAge.range);
+    expect(entry.assessment.evaluation.referencePreview.byAge.range.bounds).toMatchObject({ upper: { value: 27.736 }, sourceText: '<7–800 ng/dL' });
+    expect(tt.unit).toBe('nmol/L');
+    expect(tt.entries.find(item => item.noteId === legacy.id)).toMatchObject({ kind: 'legacy', recordedValue: 3,
+      recordedUnit: 'ng/mL', exactValue: 10.401, mergedFrom: 'testosteroncalkowity' });
+    expect(tt.mergedFrom).toEqual([{ key: 'testosteroncalkowity', test: 'Testosteron całkowity', count: 1 }]);
+    expect(tt.chart.points.map(item => item.v)).toEqual([10.401, 10.401, 10.401]);
+    expect((await dev.vault.getPatientNote(pinned.id)).labResult.assessment).toEqual(entry.assessment);
+  });
+
+  it('retains <7 and <LOD in the recorded source unit without numeric points after history-unit conversion', async () => {
+    const dev = await device();
+    for (const raw of ['<7', '<LOD']) await pinThroughProduction(dev, captured(raw, 'ng/dL'), raw, 'ng/dL');
+    const { tt, notes, series } = await historyView(dev);
+    expect(tt.unit).toBe('nmol/L');
+    expect(tt.entries).toHaveLength(2);
+    expect(tt.entries.map(entry => entry.raw).sort()).toEqual(['<7 ng/dL', '<LOD ng/dL']);
+    for (const entry of tt.entries) {
+      expect(entry).toMatchObject({ kind: 'censored', recordedValue: null, exactValue: null, value: null, recordedUnit: 'ng/dL' });
+      expect(entry.assessment.evaluation.measurement).toMatchObject({ operator: '<', isExact: false, plotValue: null });
+    }
+    expect(tt.chart.points).toEqual([]);
+    expect(tt.chart.gaps).toHaveLength(2);
+    expect(series[0].points.every(point => point.valueNum === null && point.plotValue === null)).toBe(true);
+    for (const note of notes) expect((await dev.vault.getPatientNote(note.id)).labResult.assessment).toEqual(note.labResult.assessment);
+  });
+});

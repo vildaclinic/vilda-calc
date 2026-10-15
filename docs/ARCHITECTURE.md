@@ -74,7 +74,8 @@ Do tej warstwy należą m.in.:
 - laboratorium i jednostki: `lab_clinical_panels.js`, `lab_units_data.js`, `lab_unit_converter.js`;
 - historia wyników laboratoryjnych: `vilda_lab_history.js` — czysty model widoku historii (bez DOM,
   magazynu i zegara; konwerter, parser normy i „dziś” podaje wołający). Czyta tylko to, co zapisano
-  w sejfie, i nie ocenia dawnych wyników dzisiejszymi normami. Konsumenci: zakładka „Badania” karty
+  w sejfie, i nie ocenia dawnych wyników dzisiejszymi normami. Oprócz notatek „wynik-badania” czyta
+  IGF-1 z notatek leczenia GH (`note.igf1`, z dopiskiem źródła), ale nie punkty monitora GH. Konsumenci: zakładka „Badania” karty
   pacjenta i pasek „Poprzednie wyniki” w przeliczniku (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zakładkę
   rysuje `vilda_lab_history_tab.js` (+ `.css`): tylko widok, dane z sejfu, porównanie z modelu, wykres
   rendererem karty (`window.__vildaLabTrend`, eksport z `vilda_auth_ui.js`); oba pliki ładują strony
