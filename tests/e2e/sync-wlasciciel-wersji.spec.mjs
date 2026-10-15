@@ -18,6 +18,9 @@ import { expect, test } from '@playwright/test';
 // Czwarty test (uwagi recenzentów do dd21d11): łańcuch „Scal pacjentów” X → Y → Z i poprawka x1 z drugiego urządzenia.
 // Piąty test (przegląd końcowy do 69e41d1): ten sam łańcuch i poprawka bieżącego pomiaru X (głowy) z nową chwilą zapisu,
 // jak okno „Edytuj pomiar” — bieżącą wersją Z zostaje głowa scalenia.
+// Przedostatni test (uwaga Codex P1 do #689): „zabierz” w dwóch kartach przeglądarki — opis przy teście.
+// Ostatni test (uwagi recenzentów do tej poprawki, P-SYNC-WLASCICIEL-2): „Scal pacjentów” Y → Z w drugiej karcie
+// między decyzją „zabierz” a fazą przeniesień — opis przy teście.
 //
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
@@ -420,4 +423,247 @@ test('„Scal pacjentów” z deltą Y 30–60 tys. znaków: serwer dostaje i de
   expect(nagrobek, `delta nagrobka X doszła do serwera (beacony: ${JSON.stringify(wynik.beacony)})`).toBeTruthy();
   expect(nagrobek.karty, 'delta nagrobka niesie kartę Y').toEqual([wynik.Y]);
   expect(ladunki.filter((l) => !l.nagrobki.length && l.karty.includes(wynik.Y)), 'delta karty Y doszła do serwera').toHaveLength(1);
+});
+
+// Uwaga Codex P1 do #689: wersja spod karty z wygrywającym nagrobkiem („zabierz”) w dwóch kartach przeglądarki,
+// na prawdziwym IndexedDB i prawdziwych Web Locks. Karta B poprawia x1 w X (updateSnapshotPayload, blokada
+// `vilda-save-pat:X`) i stoi między odczytem x1 a zapisem — wstrzymana na szyfrowaniu treści (VildaCrypto.encryptString
+// tej karty), więc trzyma blokadę X. Karta A scala ładunek urządzenia, które zrobiło „Scal pacjentów” X → Y: Y z x1 i x2
+// w rewizji podbitej przy scaleniu, nowa ym i nagrobek X późniejszy niż ostatni zapis X (X w zbiorze N). Dotąd A
+// przenosiła x1 pod Y od razu, pod samą blokadą Y; poprawka B zapisywała x1 z powrotem pod X, a usunięcie X kasowało
+// ją razem z kartą (IndexedDB usuwa wersje po indeksie karty): Y licznik 5 przy 4 wersjach, x1 nigdzie. Teraz A
+// przenosi x1 w fazie przeniesień, pod blokadami X i Y, na świeżym odczycie — x1 pod Y z poprawką (61).
+// [CZERWONY na 32b6557: x1 pod Y już w trakcie poprawki B, na końcu x1 nigdzie, Y 5/4]. Dane FIKCYJNE.
+test('„zabierz” czeka na poprawkę x1 w drugiej karcie (blokada X): x1 pod Y z poprawką, nic nie ginie (IndexedDB, Web Locks, dwie karty)', async ({ page, context }) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem('vilda-terms-accepted-v1',
+        JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    } catch (_) { /* brak storage — pomiń */ }
+  });
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  const { userId } = await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForTimeout(1200);
+
+  const dane = await page.evaluate(async () => {
+    const V = window.VildaVault;
+    const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
+    const pomiar = (m) => ({ uid: `m-${m}`, ageMonths: m, ageYears: m / 12, height: 90 + m / 2, weight: 12 + m / 6 });
+    const rekord = (wieki) => ({
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+      advanced: { data: { measurements: wieki.map(pomiar) } },
+    });
+    const zapisz = (wieki, patientId) => V.savePatient(rekord(wieki), patientId ? { patientId, dedup: false } : { dedup: false });
+    const kopia = (x) => JSON.parse(JSON.stringify(x));
+    const x = await zapisz([60]); await czekaj(5); const x2 = await zapisz([60, 66], x.patientId);
+    await czekaj(5);
+    const y = await zapisz([60]); await czekaj(5); await zapisz([60, 66], y.patientId);
+    const X = x.patientId, Y = y.patientId;
+    const p0 = kopia(await V.exportSyncPayload());
+    await czekaj(5);
+    // Ładunek urządzenia po „Scal pacjentów” X → Y: wersje X pod Y (rev + 1), nowa głowa ym, nagrobek X.
+    const teraz = new Date().toISOString();
+    const kX = p0.patients.find((p) => p.patientId === X), kY = kopia(p0.patients.find((p) => p.patientId === Y));
+    kX.snapshots.forEach((s) => { kY.snapshots.push(Object.assign({}, s, { rev: (s.rev || 0) + 1 })); });
+    const ym = `e2e-ym-${Math.random().toString(36).slice(2)}`;
+    kY.snapshots.push({ snapshotId: ym, savedAtISO: teraz, rev: 0, updatedAtISO: null, payload: rekord([60, 66]) });
+    kY.lastSavedAtISO = teraz;
+    kY.snapshotCount = kY.snapshots.length;
+    window.__ladunek = { schemaVersion: p0.schemaVersion, patients: [kY], tombstones: [{ patientId: X, deletedAtISO: teraz }] };
+    return { X, Y, x1: x.snapshotId, x2: x2.snapshotId, ym };
+  });
+
+  // Karta B: to samo konto, poprawka x1 w X wstrzymana po odczycie x1 (na szyfrowaniu treści), z blokadą X.
+  const b = await context.newPage();
+  await b.addInitScript(() => {
+    try {
+      window.localStorage.setItem('vilda-terms-accepted-v1',
+        JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    } catch (_) { /* brak storage — pomiń */ }
+  });
+  await b.goto('/index.html', { waitUntil: 'load' });
+  await b.waitForFunction(() => Boolean(window.VildaVault));
+  await b.evaluate(async (a) => window.VildaVault.unlockUser(a.userId, a.pw), { userId, pw: HASLO });
+  await b.reload({ waitUntil: 'load' });
+  await b.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+  await b.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await b.waitForTimeout(1200);
+  await b.evaluate(({ X, x1 }) => {
+    const C = window.VildaCrypto, oryg = C.encryptString;
+    let uzbrojona = true, pusc = null;
+    const zwolnienie = new Promise((r) => { pusc = r; });
+    window.__wstrzymana = false;
+    window.__pusc = pusc;
+    C.encryptString = async function (...a) {
+      if (uzbrojona) { uzbrojona = false; window.__wstrzymana = true; await zwolnienie; }
+      return oryg.apply(this, a);
+    };
+    const pomiar = (m) => ({ uid: `m-${m}`, ageMonths: m, ageYears: m / 12, height: 90 + m / 2, weight: 12 + m / 6 });
+    window.__poprawka = window.VildaVault.updateSnapshotPayload(X, x1, {
+      name: 'Testowy Jan',
+      user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+      advanced: { data: { measurements: [pomiar(61)] } },
+    }, { preserveSavedAt: true }).then(() => 'zapisana', (e) => (e && (e.code || e.message)) || 'blad');
+  }, dane);
+  await b.waitForFunction(() => window.__wstrzymana === true);
+
+  // Karta A: scalanie ładunku, aż zgłosi czekanie na blokadę (karta B trzyma X).
+  const przed = await page.evaluate(async ({ X, Y, x1 }) => {
+    const V = window.VildaVault;
+    const zajeta = (await navigator.locks.query()).held.some((l) => l.name === `vilda-save-pat:${X}`);
+    window.__czeka = false;
+    window.__sync = V.mergeSyncPayload(window.__ladunek, { onLockWait: () => { window.__czeka = true; } })
+      .then((w) => ({ ok: true, dodane: w.addedSnapshotCount, usunieteKarty: w.deletedPatientCount }), (e) => ({ ok: false, blad: String(e && e.message) }));
+    const koniec = Date.now() + 10_000;
+    while (!window.__czeka && Date.now() < koniec) await new Promise((r) => { setTimeout(r, 20); });
+    const pY = await V.getPatient(Y);
+    return { zajeta, czeka: window.__czeka, x1PodY: Boolean(pY && pY.snapshots.some((s) => s.snapshotId === x1)) };
+  }, dane);
+  const poprawka = await b.evaluate(async () => { window.__pusc(); return window.__poprawka; });
+  const po = await page.evaluate(async ({ X, Y, x1 }) => {
+    const V = window.VildaVault;
+    const sync = await window.__sync;
+    const lista = await V.listPatients();
+    const eY = lista.find((p) => p.patientId === Y);
+    const pY = await V.getPatient(Y);
+    const s1 = pY ? pY.snapshots.find((s) => s.snapshotId === x1) : null;
+    const ladunek = await V.exportSyncPayload();
+    return {
+      sync, jestX: lista.some((p) => p.patientId === X), licznikY: eY ? eY.snapshotCount : null,
+      wersjeY: pY ? pY.snapshots.map((s) => s.snapshotId) : [],
+      x1Wieki: s1 ? s1.payload.advanced.data.measurements.map((m) => m.ageMonths) : null,
+      nagrobekX: (ladunek.tombstones || []).some((t) => t.patientId === X),
+    };
+  }, dane);
+
+  expect(przed.zajeta, 'karta B trzyma prawdziwą blokadę Web Locks karty X').toBe(true);
+  expect(przed.czeka, 'scalanie zgłasza czekanie na blokadę X').toBe(true);
+  expect(przed.x1PodY, 'x1 nie przechodzi pod Y, dopóki karta B trzyma blokadę X').toBe(false);
+  expect(poprawka).toBe('zapisana');
+  expect(po.sync).toEqual({ ok: true, dodane: 3, usunieteKarty: 1 });
+  expect(po.jestX, 'karta X znika (nagrobek)').toBe(false);
+  expect(po.nagrobekX).toBe(true);
+  expect(po.wersjeY).toHaveLength(5);
+  expect(po.wersjeY).toEqual(expect.arrayContaining([dane.x1, dane.x2, dane.ym]));
+  expect(po.licznikY).toBe(5);
+  expect(po.x1Wieki, 'x1 pod Y z poprawką z karty B').toEqual([61]);
+});
+
+// P-SYNC-WLASCICIEL-2 (uwagi recenzentów do poprawki uwagi Codex P1): „Scal pacjentów” Y → Z w drugiej karcie
+// przeglądarki między decyzją „zabierz” a fazą przeniesień, na prawdziwym IndexedDB i prawdziwych Web Locks. Karta A
+// scala ładunek urządzenia, które zrobiło „Scal pacjentów” X → Y: Y z x1 i x2 (rev + 1) i nową ym, potem karta W (Wanda),
+// nagrobek X. Decyzja „zabierz” dla x1 i x2 zapada w kroku Y; scalanie stoi na szyfrowaniu karty W (po kroku Y, przed
+// fazą), a karta B robi wtedy „Scal pacjentów” Y → Z. Na pierwszej wersji poprawki (57dd05a) faza widziała nagrobek Y,
+// zostawiała x1 i x2 pod X, a usunięcie X kasowało je razem z kartą: Z 6/6, x1 i x2 nigdzie. Teraz idą za wersjami Y
+// pod Z, jak na 32b6557 (tam leżały już pod Y i „Scal pacjentów” zabierało je razem z Y). [CZERWONY na 57dd05a]
+// Dane FIKCYJNE.
+test('„Scal pacjentów” Y → Z w drugiej karcie w trakcie synchronizacji z „zabierz”: x1 i x2 pod Z, nic nie ginie (IndexedDB, Web Locks, dwie karty)', async ({ page, context }) => {
+  test.setTimeout(90_000);
+  const regulamin = () => {
+    try {
+      window.localStorage.setItem('vilda-terms-accepted-v1',
+        JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    } catch (_) { /* brak storage — pomiń */ }
+  };
+  await page.addInitScript(regulamin);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  const { userId } = await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+  await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForTimeout(1200);
+
+  const dane = await page.evaluate(async () => {
+    const V = window.VildaVault;
+    const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
+    const pomiar = (m) => ({ uid: `m-${m}`, ageMonths: m, ageYears: m / 12, height: 90 + m / 2, weight: 12 + m / 6 });
+    const rekord = (imie, wieki) => ({
+      name: `Testowy ${imie}`,
+      user: { lastName: 'Testowy', firstName: imie, sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+      advanced: { data: { measurements: wieki.map(pomiar) } },
+    });
+    const zapisz = (imie, wieki, patientId) => V.savePatient(rekord(imie, wieki), patientId ? { patientId, dedup: false } : { dedup: false });
+    const kopia = (x) => JSON.parse(JSON.stringify(x));
+    const x = await zapisz('Jan', [60]); await czekaj(5); const x2 = await zapisz('Jan', [60, 66], x.patientId); await czekaj(5);
+    const y = await zapisz('Jan', [60]); await czekaj(5); await zapisz('Jan', [60, 66], y.patientId); await czekaj(5);
+    const z = await zapisz('Jan', [61]); await czekaj(5); await zapisz('Jan', [61, 67], z.patientId); await czekaj(5);
+    const w = await zapisz('Wanda', [50]); await czekaj(5);
+    const X = x.patientId, Y = y.patientId, Z = z.patientId, W = w.patientId;
+    const p0 = kopia(await V.exportSyncPayload());
+    await czekaj(5);
+    // Ładunek urządzenia po „Scal pacjentów” X → Y: Y z wersjami X (rev + 1) i nową głową ym, karta W, nagrobek X.
+    const teraz = new Date().toISOString();
+    const kX = p0.patients.find((p) => p.patientId === X);
+    const kY = kopia(p0.patients.find((p) => p.patientId === Y)), kW = kopia(p0.patients.find((p) => p.patientId === W));
+    kX.snapshots.forEach((s) => { kY.snapshots.push(Object.assign({}, s, { rev: (s.rev || 0) + 1 })); });
+    const ym = `e2e-ym-${Math.random().toString(36).slice(2)}`;
+    kY.snapshots.push({ snapshotId: ym, savedAtISO: teraz, rev: 0, updatedAtISO: null, payload: rekord('Jan', [60, 66]) });
+    kY.lastSavedAtISO = teraz;
+    kY.snapshotCount = kY.snapshots.length;
+    window.__ladunek = { schemaVersion: p0.schemaVersion, patients: [kY, kW], tombstones: [{ patientId: X, deletedAtISO: teraz }] };
+    return { X, Y, Z, W, x1: x.snapshotId, x2: x2.snapshotId, ym };
+  });
+
+  // Karta A: scalanie ładunku wstrzymane na szyfrowaniu karty W (po kroku Y w pętli, przed fazą przeniesień).
+  await page.evaluate(() => {
+    const C = window.VildaCrypto, oryg = C.encryptString;
+    let uzbrojona = true, pusc = null;
+    const zwolnienie = new Promise((r) => { pusc = r; });
+    window.__wstrzymana = false;
+    window.__pusc = pusc;
+    C.encryptString = async function (...a) {
+      if (uzbrojona && a.some((q) => typeof q === 'string' && q.includes('Wanda'))) {
+        uzbrojona = false;
+        window.__wstrzymana = true;
+        await zwolnienie;
+      }
+      return oryg.apply(this, a);
+    };
+    window.__sync = window.VildaVault.mergeSyncPayload(window.__ladunek)
+      .then((w) => ({ ok: true, dodane: w.addedSnapshotCount, usunieteKarty: w.deletedPatientCount }), (e) => ({ ok: false, blad: String(e && e.message) }));
+  });
+  await page.waitForFunction(() => window.__wstrzymana === true);
+
+  // Karta B: to samo konto, „Scal pacjentów” Y → Z.
+  const b = await context.newPage();
+  await b.addInitScript(regulamin);
+  await b.goto('/index.html', { waitUntil: 'load' });
+  await b.waitForFunction(() => Boolean(window.VildaVault));
+  await b.evaluate(async (a) => window.VildaVault.unlockUser(a.userId, a.pw), { userId, pw: HASLO });
+  await b.reload({ waitUntil: 'load' });
+  await b.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+  await b.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await b.waitForTimeout(800);
+  const scal = await b.evaluate(async ({ Y, Z }) => window.VildaVault.mergePatients(Y, Z)
+    .then(() => 'ok', (e) => (e && (e.code || e.message)) || 'blad'), dane);
+  await page.evaluate(() => { window.__pusc(); });
+
+  const po = await page.evaluate(async ({ X, Y, Z }) => {
+    const V = window.VildaVault;
+    const sync = await window.__sync;
+    const lista = await V.listPatients();
+    const eZ = lista.find((p) => p.patientId === Z);
+    const pZ = await V.getPatient(Z);
+    const ladunek = await V.exportSyncPayload();
+    return {
+      sync, jestX: lista.some((p) => p.patientId === X), jestY: lista.some((p) => p.patientId === Y),
+      licznikZ: eZ ? eZ.snapshotCount : null, wersjeZ: pZ ? pZ.snapshots.map((s) => s.snapshotId) : [],
+      nagrobki: (ladunek.tombstones || []).map((t) => t.patientId),
+    };
+  }, dane);
+
+  expect(scal).toBe('ok');
+  expect(po.sync).toEqual({ ok: true, dodane: 3, usunieteKarty: 1 });
+  expect([po.jestX, po.jestY], 'X i Y znikają').toEqual([false, false]);
+  expect(po.nagrobki).toEqual(expect.arrayContaining([dane.X, dane.Y]));
+  expect(po.wersjeZ, 'x1 i x2 idą za wersjami Y pod Z').toEqual(expect.arrayContaining([dane.x1, dane.x2, dane.ym]));
+  expect(po.wersjeZ).toHaveLength(8);
+  expect(po.licznikZ).toBe(8);
 });
