@@ -471,6 +471,23 @@ describe('zakładka Badania: zlecenie zamyka się po wpisaniu wyniku', () => {
     expect(komunikat(env)).toBeNull();
   });
 
+  it.each([
+    ['niestawienie oznaczone później (inna karta, synchronizacja)', { completedAtISO: null, noShowAtISO: '2026-06-17T11:00:00.000Z' }],
+    ['ponowne zamknięcie z innym czasem', { completedAtISO: '2026-06-17T12:00:00.000Z' }],
+    ['przywrócone gdzie indziej', { completedAtISO: null }],
+  ])('„Cofnij” po zmianie zlecenia gdzie indziej (%s): bez uncompletePatientNote, komunikat o zmianie', async (_, zmiana) => {
+    const { env, vault, wywolania } = await wpiszWynik();
+    await vi.waitFor(() => expect(przycisk(env, 'Cofnij')).toBeDefined());
+    vault.zmienNotatke('zlecenie-1', zmiana);
+    przycisk(env, 'Cofnij').click();
+    await vi.waitFor(() => expect(teksty(env.host, '.vilda-lab-hist-notice-text'))
+      .toEqual(['Nie cofnięto: zlecenie „Kontrola TSH” zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.']));
+    expect(vault.uncompletePatientNote).not.toHaveBeenCalled();
+    expect(komunikat(env).classList.contains('is-undo-stale')).toBe(true);
+    expect(przycisk(env, 'Cofnij')).toBeUndefined();
+    expect(wywolania.zmiany).toBe(2);
+  });
+
   it('wynik tekstowy („<0,1 mIU/L”) też zamyka zlecenie', async () => {
     const { env, vault } = await wpiszWynik({}, { labResult: { testKey: 'tsh', test: 'TSH (tyreotropina)', value: '<0,1 mIU/L' } });
     await vi.waitFor(() => expect(komunikat(env)).not.toBeNull());

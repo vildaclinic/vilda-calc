@@ -657,7 +657,8 @@ Wyniki, jednostki, normy, oceny i historia liczą się jak dotąd. Zlecenie
 z „kontrolą co N dni” też się zamyka, a nie przekłada — następny wynik
 w tej samej notatce nadpisałby ten, który właśnie trafił do historii. Bez
 wartości, po niestawieniu i przy zleceniu już wykonanym nic się nie zmienia;
-komunikat w zakładce ma „Cofnij”.
+komunikat w zakładce ma „Cofnij”, które nie cofa stanu nadanego później
+(np. niestawienia z innej karty albo synchronizacji).
 
 **Przypadki syntetyczne `wejście → oczekiwany wynik`:**
 
@@ -667,6 +668,9 @@ komunikat w zakładce ma „Cofnij”.
   „Wynik zapisany — zlecenie „Kontrola TSH” oznaczone jako wykonane
   w Przypomnieniach.”.
 - „Cofnij” → zlecenie znów w Przypomnieniach, wynik 0,4 zostaje w serii.
+- Po zamknięciu inna karta oznacza niestawienie, potem „Cofnij” → bez zmiany
+  zlecenia, komunikat „Nie cofnięto: zlecenie „Kontrola TSH” zmieniło się
+  w międzyczasie — sprawdź je w Przypomnieniach.”.
 - Ten sam przycisk, edytor zamknięty bez wartości → zlecenie bez zmian.
 
 **Testy:** `tests/unit/lab-history-tab.test.mjs` (atrapa sejfu: zamknięcie,

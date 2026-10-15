@@ -319,18 +319,30 @@
         return Promise.resolve(vault.getPatientNote(noteId)).then(function (note) {
           if (!note || !hasValue(note) || note.completedAtISO || note.noShowAtISO) return;
           return Promise.resolve(vault.completePatientNote(noteId)).then(function () {
-            state.notice = { kind: 'completed', noteId: noteId, title: text(title) };
+            return vault.getPatientNote(noteId);
+          }).then(function (saved) {
+            // Znacznik tego zamknięcia: „Cofnij” działa tylko, dopóki zlecenie jest w tym samym stanie.
+            state.notice = { kind: 'completed', noteId: noteId, title: text(title), completedAtISO: saved && saved.completedAtISO || null };
           });
         }).catch(function () {
           state.notice = { kind: 'error', noteId: noteId };
         });
       }
+      // uncompletePatientNote czyści też niestawienie, więc nie cofa stanu nadanego później (inna karta,
+      // synchronizacja): tylko to zamknięcie, które zrobiła zakładka, i tylko gdy nikt go nie zmienił.
       function undoComplete(notice) {
         if (!vault || typeof vault.uncompletePatientNote !== 'function') return;
-        Promise.resolve(vault.uncompletePatientNote(notice.noteId)).then(function () {
-          state.notice = { kind: 'undone', noteId: notice.noteId, title: notice.title };
-        }, function () {
-          state.notice = { kind: 'undo-error', noteId: notice.noteId, title: notice.title };
+        var base = { noteId: notice.noteId, title: notice.title };
+        Promise.resolve(vault.getPatientNote(notice.noteId)).then(function (note) {
+          if (!note || !notice.completedAtISO || note.completedAtISO !== notice.completedAtISO || note.noShowAtISO) {
+            state.notice = Object.assign({ kind: 'undo-stale' }, base);
+            return;
+          }
+          return Promise.resolve(vault.uncompletePatientNote(notice.noteId)).then(function () {
+            state.notice = Object.assign({ kind: 'undone' }, base);
+          });
+        }).catch(function () {
+          state.notice = Object.assign({ kind: 'undo-error' }, base);
         }).then(function () {
           schedule();
           if (typeof options.onChanged === 'function') options.onChanged();
@@ -347,7 +359,8 @@
           completed: 'Wynik zapisany — zlecenie' + name + ' oznaczone jako wykonane w Przypomnieniach.',
           error: 'Wynik zapisany, ale nie udało się oznaczyć zlecenia jako wykonanego — zrób to w Przypomnieniach.',
           undone: 'Cofnięto — zlecenie' + name + ' znów jest w Przypomnieniach.',
-          'undo-error': 'Nie udało się cofnąć oznaczenia — zrób to w Przypomnieniach.'
+          'undo-error': 'Nie udało się cofnąć oznaczenia — zrób to w Przypomnieniach.',
+          'undo-stale': 'Nie cofnięto: zlecenie' + name + ' zmieniło się w międzyczasie — sprawdź je w Przypomnieniach.'
         }[notice.kind];
         add(box, 'span', 'vilda-lab-hist-notice-text', message);
         if (notice.kind === 'completed' && typeof vault.uncompletePatientNote === 'function') {

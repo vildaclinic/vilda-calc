@@ -576,7 +576,8 @@
 }
 
 .vilda-lab-hist-notice.is-error,
-.vilda-lab-hist-notice.is-undo-error {
+.vilda-lab-hist-notice.is-undo-error,
+.vilda-lab-hist-notice.is-undo-stale {
   background: #fff8ec;
   border-color: #f0dcb4
 }
