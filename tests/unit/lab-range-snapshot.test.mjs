@@ -77,6 +77,40 @@ describe('VildaLabRangeSnapshot — kopia zakresu użytego przez przelicznik', (
     expect(snapshot.describe(range)).toMatchObject({ status: 'unavailable', flag: null, text: 'bez oceny względem zakresu w dniu przypięcia', bounds: '' });
   });
 
+  // Decyzja 6.30 (wariant 3): wiersz domyślny przelicznika (zakres ogólny) u dziecka — opis bez strzałki i bez kategorii.
+  it.each([['10', 'within'], ['1,5', 'below'], ['35', 'above'], ['0,5', 'far_below'], ['80', 'far_above']])(
+    'prolaktyna %s ng/mL, dziewczynka 8 l → wiersz domyślny prl_default: zapis z kategorią %s, opis „bez oceny dla dziecka”', (raw, classification) => {
+      const range = capture('prolactin', raw, 'ng/mL');
+      expect(range).toMatchObject({ status: 'recorded', classification, reasonCodes: [],
+        context: { sex: 'F', ageYears: 8, lifeStage: 'pediatric' },
+        range: { id: 'prl_default', low: 2, high: 29, unit: 'ng/mL', context: 'Dorośli, zakres ogólny', matched: false, isDefault: true,
+          noInterpretation: false, sourceIds: ['mayo_test_prolactin'] } });
+      expect(snapshot.describe(range, { formatNumber: producer.LabUnitConverter.formatNumber })).toEqual({
+        status: 'general', classification: null, flag: null, text: 'zakres ogólny — bez oceny dla dziecka', bounds: '2–29' + NBSP + 'ng/mL',
+        population: 'Dorośli, zakres ogólny', subject: 'dziewczynka, 8 l', sources: ['Mayo Test 85670 — Prolaktyna'], detail: [] });
+    });
+
+  it('zakres ogólny: dorosły jak dotąd; dziecko bez wieku (sam Tanner) bez oceny; decyduje etap życia z przelicznika', () => {
+    const describe = (range) => snapshot.describe(range, { formatNumber: producer.LabUnitConverter.formatNumber });
+    const adult = capture('igfbp3', '9,4', 'mg/L', { sex: 'F', age: 30, life_stage: 'adult' });
+    expect(adult.range).toMatchObject({ id: 'igfbp3_default', isDefault: true });
+    expect(describe(adult)).toMatchObject({ status: 'recorded', classification: 'above', flag: '↑', text: 'powyżej zapisanego zakresu', subject: 'kobieta, 30 l' });
+    const tannerOnly = capture('tsh', '5,1', 'mIU/L', { sex: 'F', age: null, tanner: 2, life_stage: 'pediatric' });
+    expect(tannerOnly).toMatchObject({ classification: 'above', range: { id: 'tsh_default', context: 'Zakres ogólny dorosły (domyślnie)', isDefault: true } });
+    expect(describe(tannerOnly)).toMatchObject({ status: 'general', flag: null, classification: null, bounds: '0,3–4,2' + NBSP + 'mIU/L', subject: 'dziewczynka, Tanner II' });
+    // Bez wieku Tanner V daje w przeliczniku etap dorosły (getEffectivePatient), więc zakres ogólny ocenia jak u dorosłego.
+    // Z wiekiem < 18 lat etap jest dziecięcy niezależnie od Tannera — wtedy bez oceny.
+    const tannerV = capture('oh17_progesterone', '15', 'nmol/L', { sex: 'F', age: null, tanner: 5, life_stage: 'adult' });
+    expect(tannerV).toMatchObject({ range: { id: '17ohp_default', isDefault: true }, context: { lifeStage: 'adult' } });
+    expect(describe(tannerV)).toMatchObject({ status: 'recorded', flag: '↑', subject: 'kobieta, bez wieku w przeliczniku — przyjęto dorosłego, Tanner V' });
+    const age16TannerV = capture('oh17_progesterone', '15', 'nmol/L', { sex: 'F', age: 16, tanner: 5, life_stage: 'pediatric' });
+    expect(age16TannerV.range).toMatchObject({ id: '17ohp_default', isDefault: true });
+    expect(describe(age16TannerV)).toMatchObject({ status: 'general', flag: null, subject: 'dziewczynka, 16 l, Tanner V' });
+    // Wiersz dopasowany do dziecka — jak dotąd (TSH wyżej); nieaktualny zakres ogólny — jak każdy nieaktualny.
+    const changed = snapshot.reconcile(null, { test: 'Prolaktyna', testKey: 'prolactin', value: '36', valueNum: 36, unit: 'ng/mL', range: capture('prolactin', '35', 'ng/mL') }, null, '2026-10-15');
+    expect(describe(changed.range)).toMatchObject({ status: 'invalidated', flag: null, text: 'zakres nieaktualny' });
+  });
+
   it('wiek nieznany w przeliczniku: kontekst mówi, że przyjęto dorosłego; nadpisanie lokalne jest nazwane', () => {
     const adult = capture('tsh', '2,0', 'mIU/L', { sex: 'F', age: null, life_stage: 'adult' });
     expect(snapshot.describe(adult).subject).toBe('kobieta, bez wieku w przeliczniku — przyjęto dorosłego');
@@ -224,6 +258,20 @@ describe('Zapisany zakres w prawdziwym sejfie i w modelu historii', () => {
     expect(series.entries.find((entry) => entry.recordedUnit === 'ng/dL')).toMatchObject({ converted: true, flag: '↑',
       status: { kind: 'range', bounds: '1–1,7' + NBSP + 'ng/dL' } });
     expect(series.last).toMatchObject({ converted: false, flag: null, status: null });
+  });
+
+  it('6.30: prolaktyna u dziecka z zakresem ogólnym — zapis z kategorią bez zmian, w modelu bez strzałki i bez kategorii', async () => {
+    const dev = await card();
+    const lab = { test: 'Prolaktyna', testKey: 'prolactin', value: '35 ng/mL = 35 ng/mL', valueNum: 35, unit: 'ng/mL', range: capture('prolactin', '35', 'ng/mL') };
+    const note = await dev.vault.savePatientNote({ patientId: dev.patientId, title: 'Prolaktyna: 35 ng/mL', category: 'wynik-badania', clinicalDateISO: '2026-10-15', labResult: lab });
+    expect((await dev.vault.getPatientNote(note.id)).labResult.range).toMatchObject({ status: 'recorded', classification: 'above',
+      range: { id: 'prl_default', isDefault: true, context: 'Dorośli, zakres ogólny' }, context: { lifeStage: 'pediatric' } });
+    const evaluate = vi.spyOn(dev.win.LabUnitConverter, 'evaluate');
+    const series = (await view(dev)).panels.flatMap((panel) => panel.series).find((item) => item.key === 'prolactin');
+    expect(series.last.flag).toBeNull();
+    expect(series.last.status).toEqual({ kind: 'range-general', tone: 'muted', text: 'zakres ogólny — bez oceny dla dziecka',
+      bounds: '2–29' + NBSP + 'ng/mL', population: 'Dorośli, zakres ogólny', subject: 'dziewczynka, 8 l', sources: ['Mayo Test 85670 — Prolaktyna'] });
+    expect(evaluate).not.toHaveBeenCalled();
   });
 
   it('synchronizacja niesie zakres; strona bez modułu odmawia zapisu, a odczyt bez modułu jest bez oceny', async () => {
