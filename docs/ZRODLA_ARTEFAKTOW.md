@@ -1160,6 +1160,35 @@ te hooki mają regresje wykonujące rzeczywiste funkcje produkcyjne; szczegóły
 kliniczne i syntetyczne przypadki w `docs/clinical/TESTOSTERONE.md` oraz
 `docs/clinical/ALGORITHMS.md`, LAB-TT-MAYO.
 
+## Łatki LAB-HISTORIA 6.3 — zakres zapisany przy przypięciu (`lab_pin_result.js` 8 → 9, `vilda_vault.js` 214 → 215, `vilda_session_bridge.js` 75 → 76, `vilda_chrome.js` 151 → 152, 2026-10-15)
+
+Nowy czytelny moduł `vilda_lab_range_snapshot.js` (schemat, unieważnianie, opis dla widoków) nie pochodzi z dawnego buildu. W artefaktach są tylko punkty wpięcia, wszystkie w postaci czytelnej, na wzór odniesienia AMH (#677). Opis działania: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.3”; projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, „Uzupełnienie z wdrożenia 6.3”.
+
+`lab_pin_result.js` — czytelny blok `Rr*` przed `/* PR3: modal shows the same detached assessment…`; w zminifikowanej części trzy wywołania:
+
+```js
+var RrRangeProvider = null;                     // a.VildaLabPinResult.setRangeProvider(fn) — ustawia przelicznik
+function RrCaptureRange(result) { … }           // kopia z dostawcy → result.range; result.valueNum = range.measurement.sourceValue
+function RrPinRange(result, host) { … }         // #labPinRange („Zapisze się z wynikiem: …”) i #labPinRangeDateNote (data ≠ dziś)
+// V():  Lh2CaptureAssessment(t), HrCaptureReference(t,e), RrCaptureRange(t), t.sampleDateISO = …
+// V():  … HrPinReference(t,o), RrPinRange(t,o), s.addEventListener("click", …)
+// A():  … hormoneReference …, Object.prototype.hasOwnProperty.call(t,"range") && a.VildaLabRangeSnapshot
+//         && (p.labResult.range = a.VildaLabRangeSnapshot.normalize(t.range)), …
+```
+
+Wygląd linii i uwagi: klasy `vilda-lab-pin-range*` w `vilda_lab_assessment_ui.css` (bez stylów wpisywanych na elementy).
+
+`vilda_vault.js` — czytelna część przy `LhHasAssessment`/`HrHasReference`: `RrHasRange`, `RrMissingRange`, `RrNormalizeRange`, `RrReconcileRange`; `LabReconcileSnapshots` woła kolejno ocenę, odniesienie AMH i zakres; `kt()` sanityzuje `labResult.range`; `listPatientLabSeries` kopiuje `point.range` z `forSeries`. Brak modułu przy zapisie notatki z zakresem — błąd z prośbą o odświeżenie; przy odczycie — `range_transport_unavailable` (wpis bez oceny).
+
+`vilda_session_bridge.js` (lista `V`) i `vilda_chrome.js` (lista `d`): wpis za `vilda_hormone_reference_snapshot.js`, a w warunkach „wszystko już jest” (`w()`, `I()` w moście, `u()` w chrome) — globalny `VildaLabRangeSnapshot`:
+
+```js
+{ type: 'script', src: 'vilda_lab_range_snapshot.js?v=1', ready: () => !!window.VildaLabRangeSnapshot },
+// w(), I(), u(): … && VildaHormoneReferenceSnapshot && VildaLabRangeSnapshot && VildaHormoneReferenceUI && …
+```
+
+Tag statyczny `vilda_lab_range_snapshot.js?v=1` obok `vilda_hormone_reference_snapshot.js` na ośmiu stronach z kartą i w `przelicznik-jednostek.html`; wpis precache w `service-worker-kalorii.js`. `przelicznik-jednostek.html` (czytelny skrypt strony): `captureLabRange` i `setRangeProvider` za rejestracją dostawcy odniesienia AMH. Zgodność list pilnuje `tests/unit/hormone-reference-loading.test.mjs` i `lab-history-tab-loading.test.mjs`.
+
 ## Jak odtworzyć
 
 ```bash

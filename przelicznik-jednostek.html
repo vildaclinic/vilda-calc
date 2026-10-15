@@ -61,17 +61,17 @@
   <link rel="stylesheet" href="style.css?v=88" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
-  <link href="vilda_lab_assessment_ui.css?v=11" rel="stylesheet">
+  <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
   <link href="vilda_lab_puberty_ui.css?v=7" rel="stylesheet">
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
   <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
-  <link href="lab_history_strip.css?v=1" rel="stylesheet">
+  <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=75"></script>
+  <script src="vilda_session_bridge.js?v=76"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=151"></script>
+  <script src="vilda_chrome.js?v=152"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -453,6 +453,7 @@
   <script src="vilda_lab_testosterone.js?v=1"></script>
   <script src="vilda_lab_snapshot.js?v=8"></script>
   <script src="vilda_hormone_reference_snapshot.js?v=1"></script>
+  <script src="vilda_lab_range_snapshot.js?v=1"></script>
   <script src="vilda_hormone_reference_ui.js?v=1"></script>
   <script src="vilda_lab_assessment_ui.js?v=16"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
@@ -472,9 +473,9 @@
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
-  <script src="lab_pin_result.js?v=8"></script>
-  <script src="vilda_lab_history.js?v=2"></script>
-  <script src="lab_history_strip.js?v=2"></script>
+  <script src="lab_pin_result.js?v=9"></script>
+  <script src="vilda_lab_history.js?v=3"></script>
+  <script src="lab_history_strip.js?v=3"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -1027,6 +1028,42 @@
     }
     if (window.VildaLabPinResult && window.VildaLabPinResult.setHormoneReferenceProvider) {
       window.VildaLabPinResult.setHormoneReferenceProvider(captureHormoneReference);
+    }
+
+    // Decyzja 6.3 (LAB-HISTORIA): przypięcie zapisuje zakres, którego ta strona właśnie użyła dla wyniku —
+    // te same selectRange i evaluate z tym samym kontekstem pacjenta co pasek normy i status wyniku.
+    // LH, FSH, inhibina B i testosteron mają zapis oceny, AMH — odniesienia; dla nich nic się tu nie dokłada.
+    function captureLabRange(result) {
+      var snapshot = window.VildaLabRangeSnapshot;
+      if (!result || !currentSubstance || result.testKey !== currentSubstance.id) return undefined;
+      if (isPubertySubstance(currentSubstance) || currentSubstance.id === 'amh') return undefined;
+      if (!snapshot) throw new Error('Range serializer unavailable');
+      if (String(valueEl.value).trim() !== result.raw || unitEl.value !== result.unit) {
+        return snapshot.unavailable('range_context_changed');
+      }
+      var patient = getEffectivePatient();
+      var range = Conv.selectRange(currentSubstance, patient);
+      if (!range) return undefined;
+      var unitDef = null, row = null;
+      currentSubstance.units.forEach(function (unit) { if (unit.symbol === result.unit) unitDef = unit; });
+      (currentSubstance.reference_ranges_si || []).forEach(function (item) { if (range.id && item.id === range.id) row = item; });
+      var data = window.LabUnitsData;
+      return snapshot.create({
+        analyte: currentSubstance.id,
+        evaluation: Conv.evaluate(currentSubstance.id, { value: result.raw, unit: result.unit, patient: patient }),
+        range: range, when: row ? row.when : null, patient: patient,
+        factorToSi: unitDef ? unitDef.factor_to_si : null,
+        measurement: { raw: result.raw, sourceUnit: result.unit },
+        sources: (range.source_ids || []).map(function (id) {
+          var source = Conv.findSource(id) || {};
+          return { id: id, label: source.label_short || null, citation: source.full_cite || null, url: source.url || null };
+        }),
+        versions: { engine: 'LabUnitConverter ' + Conv.version, data: 'LabUnitsData ' + (data && data.version || '') },
+        capturedAtISO: new Date().toISOString()
+      });
+    }
+    if (window.VildaLabPinResult && window.VildaLabPinResult.setRangeProvider) {
+      window.VildaLabPinResult.setRangeProvider(captureLabRange);
     }
 
     // ID substancji, dla których proponujemy link do steroidy.html

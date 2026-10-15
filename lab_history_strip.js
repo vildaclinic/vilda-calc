@@ -381,7 +381,7 @@
       var view = m.buildHistoryView(cache.series, {
         converter: converter(), notesById: cache.notesById, treatment: [], unitBy: unitBy,
         current: ctx.current, parseNorm: trend && typeof trend.parseNorm === 'function' ? trend.parseNorm : null,
-        nowISO: localISO(new Date())
+        nowISO: localISO(new Date()), rangeSnapshot: w.VildaLabRangeSnapshot || null
       });
       for (var i = 0; i < view.panels.length; i++) {
         for (var k = 0; k < view.panels[i].series.length; k++) {
@@ -526,9 +526,11 @@
       if (entry.source === 'gh-note') parts.push(GH_SOURCE);
       if (entry.raw) parts.push('zapisano: ' + recorded(entry));
       if (entry.norm) parts.push('norma z wpisu: ' + entry.norm);
+      if (entry.status && entry.status.kind === 'range') parts.push(entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : ''));
       return parts.join(' · ');
     }
 
+    var RANGE_SHORT = { within: 'w zakresie', below: 'poniżej', above: 'powyżej', far_below: 'znacznie poniżej', far_above: 'znacznie powyżej' };
     function drawDetail(entry, unit) {
       var box = add(strip, 'div', 'lab-strip-detail');
       var when = entry.dateISO ? formatDate(entry.dateISO) : 'bez daty';
@@ -549,8 +551,12 @@
           try { ui.renderAssessment(host, entry.assessment, { compact: true }); drawn = true; } catch (_) { drawn = false; }
         }
         if (!drawn) add(host, 'p', 'lab-strip-muted', '„' + status.text + '”');
-      } else if (status && (status.kind === 'invalidated' || status.kind === 'unavailable')) {
+      } else if (status && (status.kind === 'invalidated' || status.kind === 'unavailable' || status.kind === 'range-invalidated' || status.kind === 'range-unavailable')) {
         add(box, 'p', 'lab-strip-muted', status.text + (status.detail && status.detail.length ? ' · ' + status.detail.join(', ') : ''));
+      } else if (status && status.kind === 'range') {
+        // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu, nie dzisiejsza norma.
+        add(box, 'p', 'lab-strip-detail-range', 'zakres zapisany z wynikiem: ' + [status.bounds, RANGE_SHORT[status.classification],
+          status.population, status.subject].concat(status.sources || []).filter(Boolean).join(' · '));
       }
       if (entry.norm) {
         add(box, 'p', 'lab-strip-detail-norm', (status && status.kind === 'norm' ? status.text : 'norma z wpisu') + ': ' + entry.norm
@@ -736,7 +742,7 @@
 
   var instance = null;
   return Object.freeze({
-    version: '1.1.0',
+    version: '1.2.0',
     start: function () {
       if (instance || !win || !win.document) return instance;
       instance = create(win);
