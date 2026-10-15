@@ -356,16 +356,16 @@
   "sha256": "300baa8bd59f83df6a2f28494dc8b6647c8e2b2d528e1eec9504917f6a7f3009"
  },
  "lab_pin_result.js": {
-  "v": 7,
-  "sha256": "83587977e9c6343e120062c8c682b95011fe355389658b86eb31f111a16d0dcc"
+  "v": 8,
+  "sha256": "26d9406504b5b5fa76fa071ddeb7f18f58e64ebde9c5416e759669dfeb77021e"
  },
  "lab_unit_converter.js": {
-  "v": 5,
-  "sha256": "85a487a0c6118149803ff5cf1a094f68b833261948c2be57494543c460646942"
+  "v": 6,
+  "sha256": "a48a6aad437ca03e6504f76e918669fd0372869691f3efce58d1940a56d47dcf"
  },
  "lab_units_data.js": {
-  "v": 37,
-  "sha256": "b64e8700de69b369187e3b62338062d8b055b3bd20ae9e8c4389d3d4ba39b6a6"
+  "v": 38,
+  "sha256": "94d7f8f5d397f53049a85aaf44854ea9ff7dc707998ac060c34299042060587f"
  },
  "lucide.min.js": {
   "v": 1,
@@ -488,8 +488,8 @@
   "sha256": "56a45a8d3f3cc4d1428bf902d43f91350b22bbf9f590f42d7e4efe5b85b2cf01"
  },
  "vilda_auth_ui.js": {
-  "v": 495,
-  "sha256": "98df15df1967fca520a2bcd64dce38ed3f3b11ff5294cb2ba7033ba7b2fb0782"
+  "v": 497,
+  "sha256": "c58765e5dce47031766e37a338b70eec738bcabe6169547957115ea95a2f6929"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -536,8 +536,8 @@
   "sha256": "b8eff7e716de0492d8a7596e372800afa2205b5433fd1c8c3ccee18a797cb4be"
  },
  "vilda_chrome.js": {
-  "v": 146,
-  "sha256": "42a0ee31b3aad1a3a51edbff739562030db7769ba469d18f3803116a85c7deb2"
+  "v": 148,
+  "sha256": "e77040d4576d1f1e1b2220d5e7ddab9dd05a60512afdf4be3c1444a1486efe7a"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -768,8 +768,8 @@
   "sha256": "76a7608a5cba7939ba65f6a621ef69217496ac7e8ee10c626d48fd3ee846c16c"
  },
  "vilda_lab_assessment_ui.js": {
-  "v": 15,
-  "sha256": "ce4b4719227c5106105567a86012e06c3a3b8b8738c9387a294f389ccb81a58c"
+  "v": 16,
+  "sha256": "e106213b5be229cc5fdecffa2a1c31ab23efb0c0535d98bd908fe45c95aa029e"
  },
  "vilda_lab_history.js": {
   "v": 1,
@@ -808,16 +808,28 @@
   "sha256": "b3a8ff6f9883a707240dc337848533ed1c64d58c2bfe16b24b95db33ba223923"
  },
  "vilda_lab_puberty_ui.css": {
-  "v": 6,
-  "sha256": "b907a54e138832cc294889e04e360eb43a3f393dd54ab44b5ff0b13f68fadc96"
+  "v": 7,
+  "sha256": "2715ed96d8e1c4f7ccc667fdbee02664fa7bec08908d127cebe9905b508e9d7c"
  },
  "vilda_lab_puberty_ui.js": {
-  "v": 17,
-  "sha256": "8e48e9dfe901573ecf2cc63147a35d524019041622a0a92e05c3a195f8b9858f"
+  "v": 18,
+  "sha256": "a0fac7a645a57a76f26dfa3bdba10d76be51253d0a1a8146e2a972d3122acd3a"
  },
  "vilda_lab_snapshot.js": {
-  "v": 7,
-  "sha256": "8199d74b139139b4f2bc9a3cf567b7da2f7b889bc86da05b9b2369af0c778ef6"
+  "v": 8,
+  "sha256": "09c4233eedf24efc220a2b8b2f671594dd580faba2d2d062a70e1bffa09dcee7"
+ },
+ "vilda_lab_testosterone.js": {
+  "v": 1,
+  "sha256": "88f7d6d6530fe1dc71692ed76af5af7d5a8135b805f46bae0d5ed1a1af9a65bc"
+ },
+ "vilda_lab_testosterone_data.js": {
+  "v": 1,
+  "sha256": "ecfe41c5f07d68fc3309cf17b0f945b925584c283613a78db570bd561baa93e1"
+ },
+ "vilda_lab_testosterone_units.js": {
+  "v": 1,
+  "sha256": "e67b907745a2097af9d03927ee591f7f520c2c3e61a6f4ce92841cbaa17a95d4"
  },
  "vilda_logger.js": {
   "v": 2,
@@ -1004,8 +1016,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 70,
-  "sha256": "f1c64279c471c31c8992bd1641dbe858ea6fb6c69014dba59e09920f676cd33e"
+  "v": 72,
+  "sha256": "ca652552f99d62c968f2bb67de0c92dae94e0187a965406ee6defaa410af8e0c"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1040,8 +1052,8 @@
   "sha256": "e79271a48ca6cbd612b48e188c7f394955c58caf7f656d4e1b6eebb517346878"
  },
  "vilda_sync_integration.js": {
-  "v": 49,
-  "sha256": "8b148cfa640b84da0f7f81c57adec72f846d88fa289b41e2bf9a78787d2d9ad4"
+  "v": 50,
+  "sha256": "e50db0c03a11836726c96b327691fca12ec32923a757dfa18d6406649de3f61c"
  },
  "vilda_tab_guard.js": {
   "v": 5,
@@ -1088,8 +1100,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 212,
-  "sha256": "c5107f75d10cf4cb80902b5666ea65701f5fc84a442f2125730f1878ab2cdb18"
+  "v": 213,
+  "sha256": "5287a4cc7ffb7a8d3c86baf114b83a2a25ba6668526af2cc411f68acb86a8df8"
  },
  "vilda_version_history_ui.js": {
   "v": 15,

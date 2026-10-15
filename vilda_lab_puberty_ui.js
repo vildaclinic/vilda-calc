@@ -661,6 +661,8 @@
       var changedAnalyte = next !== analyte;
       if (changedAnalyte) evaluation = null;
       analyte = next; panel.hidden = !next; assessment.hidden = !next;
+      var valueStep = byId('labStep2');
+      if (valueStep) valueStep.classList.toggle('lab-testosterone-input', isTestosterone());
       engine = isTestosterone() ? opts.testosteroneEngine || root.VildaLabTestosterone : isInhibin() ? opts.inhibinEngine || root.VildaLabInhibinB : pubertyEngine;
       data = isTestosterone() ? opts.testosteroneData || root.VildaLabTestosteroneData : isInhibin() ? opts.inhibinData || root.VildaLabInhibinBData : pubertyData;
       panel.setAttribute('aria-label', isTestosterone() ? 'Pacjent — kontekst testosteronu całkowitego' : isInhibin() ? 'Pacjent — kontekst inhibiny B' : 'Pacjent — kontekst LH i FSH');

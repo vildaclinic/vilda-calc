@@ -390,6 +390,13 @@ test.describe('telefon 320 px', () => {
     await target(page, 'nmol/L');
     await expectBounds(page, 8.3208, 32.9365);
     await expectNoOverflow(page);
+    expect(await page.locator('#labValue').evaluate(input => {
+      const style = getComputedStyle(input);
+      const context = document.createElement('canvas').getContext('2d');
+      context.font = style.font;
+      const available = input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      return available >= context.measureText(input.value).width;
+    }), 'pełny wpis źródłowy 300 jest czytelny bez przewijania pola').toBe(true);
     const note = assessment(page).locator('p').filter({ hasText: /Pojedynczy wynik.*hipogonadyzmu/ });
     await expect(note).toBeVisible();
     await page.locator('#labPubertyEditPatient').click();
