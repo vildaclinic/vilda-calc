@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=77"></script>
+  <script src="vilda_session_bridge.js?v=78"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=153"></script>
+  <script src="vilda_chrome.js?v=154"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -442,8 +442,8 @@
   <script src="ios26-ui.js?v=45" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=39"></script>
-  <script src="lab_unit_converter.js?v=7"></script>
+  <script src="lab_units_data.js?v=40"></script>
+  <script src="lab_unit_converter.js?v=8"></script>
   <script src="vilda_lab_puberty_data.js?v=7"></script>
   <script src="vilda_lab_puberty.js?v=8"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
@@ -1580,6 +1580,10 @@
       if (!p || (!p.sex && p.age == null && p.tanner == null)) {
         if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
           return { text: 'Uzupełnij wiek i płeć pacjenta', missing: true };
+        }
+        if (currentSubstance && currentSubstance.reference_selection_policy &&
+            currentSubstance.reference_selection_policy.require_matched === true) {
+          return { text: 'Brak danych pacjenta — bez zakresu referencyjnego', missing: true };
         }
         return { text: 'Brak danych pacjenta — zakres ogólny dorosły', missing: true };
       }
@@ -3105,7 +3109,7 @@
       if (range.no_interpretation) {
         var warn = document.createElement('div');
         warn.className = 'lab-range-empty';
-        if (range.amh_reference) {
+        if (range.amh_reference || range.reference_unavailable) {
           warn.textContent = range.context_pl;
           return { element: warn, rangeInfo: range };
         }
@@ -3463,7 +3467,7 @@
           safeEsc(referenceBoundsText(currentRange, 1, precision)) + ' ' +
           safeEsc(substance.canonical_si));
       } else if (currentRange && currentRange.no_interpretation) {
-        metaParts.push(currentRange.amh_reference
+        metaParts.push(currentRange.amh_reference || currentRange.reference_unavailable
           ? safeEsc(currentRange.context_pl)
           : '<strong style="color:#b04500;">⚠ Brak zakresu dla tej pory</strong>');
       }
@@ -4080,7 +4084,7 @@
           pill.textContent = cls.text;
         }
         resultStatusEl.appendChild(pill);
-      } else if (range && range.no_interpretation && !range.amh_reference) {
+      } else if (range && range.no_interpretation && !range.amh_reference && !range.reference_unavailable) {
         var warn = document.createElement('span');
         warn.className = 'lab-range-status is-above';
         warn.textContent = '⚠ Brak interpretacji dla tej pory';
