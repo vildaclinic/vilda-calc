@@ -293,7 +293,9 @@
         } catch (_) { return ''; }
         return '';
       }
-      function openConverter(event) {
+      // W powłoce przelicznik otwiera jej trasa „lab” (z adresem, gdy odnośnik niesie badanie);
+      // poza powłoką działa zwykły odnośnik.
+      function openConverter(event, href) {
         var shell = null;
         try {
           var embedded = doc.documentElement.classList.contains('vilda-embedded');
@@ -301,7 +303,8 @@
         } catch (_) { /* ramka z innego źródła: zwykły odnośnik */ }
         if (shell && typeof shell.navigate === 'function') {
           if (event) event.preventDefault();
-          shell.navigate('lab', true);
+          if (href) shell.navigate('lab', true, href);
+          else shell.navigate('lab', true);
         }
       }
 
@@ -359,7 +362,7 @@
         }
         var link = add(actions, 'a', 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-primary vilda-lab-hist-check', 'Sprawdź nowy wynik →');
         link.setAttribute('href', 'przelicznik-jednostek.html');
-        link.addEventListener('click', openConverter);
+        link.addEventListener('click', function (event) { openConverter(event); });
       }
 
       function drawToolbar(view) {
@@ -524,6 +527,14 @@
         view.pending.forEach(function (item) {
           add(info, 'p', 'vilda-lab-hist-muted', 'oczekuje na wynik' + (item.dueDateISO ? ' · termin ' + formatDate(item.dueDateISO) : ''));
         });
+        // Decyzja 6.23: przelicznik od razu z tym badaniem (tylko badanie znane przelicznikowi);
+        // przycisk w nagłówku zakładki zostaje bez badania.
+        if (view.testKey) {
+          var href = 'przelicznik-jednostek.html?badanie=' + encodeURIComponent(view.testKey);
+          var check = add(info, 'a', 'vilda-lab-hist-card-check', 'Nowy wynik ' + shortLabel(view.label) + ' w przeliczniku →');
+          check.setAttribute('href', href);
+          check.addEventListener('click', function (event) { openConverter(event, href); });
+        }
         drawChart(add(card, 'div', 'vilda-lab-hist-card-chart'), view);
         var comments = view.entries.slice().reverse().map(function (entry) {
           return { entry: entry, comment: commentText(entry.comment) };
@@ -691,7 +702,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.1.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel }) });
+    return Object.freeze({ version: '1.2.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel }) });
   }
 
   return createApi();
