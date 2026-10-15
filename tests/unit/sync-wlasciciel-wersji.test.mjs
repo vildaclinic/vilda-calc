@@ -27,6 +27,8 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Po recenzji zintegrowanej gałęzi (44ba49f7) 246 testów: +6 — odrzucony sendBeacon po „Scal pacjentów” (3, dwa
 // [CZERWONE na 44ba49f7]), strażnik źródła integracji, ładunek bez savedAtISO (zabezpieczenie bez testu) i retencja
 // a poprawka przeniesiona do dawnej wersji (znane ograniczenie, test przypinający; jedyny z retencją włączoną).
+// Po uwadze Codex P1 do #689 (decyzja „zabierz” bez blokady karty-źródła) 263 testy: +17 — 16 wyścigów „zabierz”
+// z poprawką wersji w innej karcie przeglądarki (wszystkie [CZERWONE na 32b6557]) i strażnik źródła.
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -1261,6 +1263,160 @@ describe('P-SYNC-WLASCICIEL — wyścig z zapisem tej karty w innej karcie przeg
   }
 });
 
+describe('P-SYNC-WLASCICIEL — „zabierz” a poprawka wersji w innej karcie przeglądarki (uwaga Codex P1 do #689)', () => {
+  // A scala X → Y; B (inna karta przeglądarki) poprawia x1 w X. Ładunek A ma x1 pod Y i nagrobek X, który na B wygrywa
+  // (X w zbiorze N), więc decyzja dla x1 to „zabierz”. Do tej poprawki „zabierz” zapisywało x1 pod Y od razu, pod samą
+  // blokadą Y: poprawka odczytana przed przeniesieniem i zapisana po nim (blokada X) wpisywała x1 z powrotem pod X,
+  // a usunięcie X (nagrobek) kasowało x1 razem z kartą — Y licznik 5 przy 4 wersjach, x1 nigdzie. Poprawka zapisana
+  // między decyzją a przeniesieniem znikała pod treścią z ładunku (decyzja na odczycie sprzed poprawki). Teraz
+  // „zabierz” idzie fazą przeniesień: blokady X i Y w kolejności rosnących id, świeży odczyt x1, treść nowsza z dwóch
+  // (późniejsza chwila zmiany), a wersja przechodzi zawsze — X i tak znika.
+  // [CZERWONE na 32b6557 — wszystkie 16: x1 nigdzie (Y 5/4, F 2/1) albo x1 pod Y z 60.] Wada starsza niż #689: na
+  // 2df41a8 (stan sprzed #689, ten sam scenariusz na tamtym sejfie; testy wyżej używają getSnapshotForUser magazynu
+  // w pamięci, którego tam nie było) x1 ginie tak samo; poprawka zapisana „między decyzją a przeniesieniem” — tam bez
+  // decyzji, wersja szła pod Y od razu z treścią z ładunku — czekała na blokadę usunięcia X i kończyła się odmową
+  // PATIENT_DELETED, x1 pod Y z 60.
+  const BLOKADY = { 'kolejka strony': () => null, 'atrapa Web Locks': () => atrapaLocks() };
+
+  async function przygotuj(kolejnosc, locks) {
+    const A = await urzadzenie('A');
+    const B = await urzadzenie('B', { locks });
+    const X = await karta(A.v);
+    await chwila(4);
+    const Y = await kartaWzgledem(A, X, kolejnosc === 'X<Y');
+    await B.v.mergeSyncPayload(kopia(await A.v.exportSyncPayload()));
+    const et = await etykiety(B, { X, Y });
+    await chwila(5);
+    et[(await A.v.mergePatients(X, Y)).snapshotId] = 'ym';
+    await chwila(5);
+    return { A, B, X, Y, et, x1: idPo(et, 'x1') };
+  }
+  async function czekajNa(warunek, maxMs) {
+    const koniec = Date.now() + maxMs;
+    while (Date.now() < koniec) {
+      if (await warunek()) return true;
+      await chwila(5);
+    }
+    return false;
+  }
+  const gdzie = async (c, snapshotId) => ((await c.B.baza.getSnapshotForUser(c.B.uid, snapshotId)) || {}).patientId || null;
+  // Wynik scalania jak przed poprawką (zmierzone na 32b6557): ym dopisana, x1 i x2 zabrane spod X — 3 dodane wersje,
+  // y1 i y2 pominięte, Y scalona, X usunięta (w fazie przeniesień albo nagrobkiem).
+  async function sprawdzKoniec(c, wynik, tresc) {
+    expect([wynik.addedSnapshotCount, wynik.skippedSnapshotCount, wynik.updatedSnapshotCount], 'wersje: dodane, pominięte, zmienione').toEqual([3, 2, 0]);
+    expect([wynik.mergedPatientCount, wynik.addedPatientCount, wynik.deletedPatientCount], 'karty: scalone, dodane, usunięte').toEqual([1, 0, 1]);
+    const s = await stan(c.B, c.et);
+    expect(s.karty.Y, 'Y ze wszystkimi wersjami, licznik = liczba wersji').toEqual(karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']));
+    expect(s.karty.X, 'X znika (nagrobek wygrywa)').toBeUndefined();
+    expect(s.nagrobki).toEqual(['X']);
+    expect(s.sieroty, 'wersje bez karty').toBe(0);
+    expect(await trescWersji(c.B, c.Y, c.x1), 'treść x1 — późniejsza zmiana').toBe(tresc);
+  }
+
+  for (const [nazwaBlokad, locks] of Object.entries(BLOKADY)) {
+    // Poprawka x1 na B odczytała x1 pod X i stoi tuż przed zapisem, trzymając blokadę X; w tym czasie B scala ładunek A.
+    // Zwalniamy ją, gdy scalanie czeka na blokadę X (atrapa Web Locks to zgłasza) albo gdy x1 już przeszła pod Y (kod
+    // sprzed poprawki), najpóźniej po 500 ms. Do zwolnienia x1 musi leżeć pod X: przeniesienie wymaga blokady X.
+    it.each(KOLEJNOSCI)(`poprawka x1 w X odczytana przed przeniesieniem, zapisana po nim (${nazwaBlokad}, %s): x1 pod Y z poprawką, nic nie ginie`, async (kolejnosc) => {
+      const c = await przygotuj(kolejnosc, locks());
+      const ladunekA = kopia(await c.A.v.exportSyncPayload());
+      const p = c.B.pulapka('putSnapshotForUser', (uid, rek) => rek && rek.snapshotId === c.x1 && rek.patientId === c.X);
+      const poprawka = c.B.v.updateSnapshotPayload(c.X, c.x1, zapis([61]), { preserveSavedAt: true });
+      await p.osiagnieta;
+      let czeka = false;
+      const sync = c.B.v.mergeSyncPayload(ladunekA, { onLockWait: () => { czeka = true; } });
+      await czekajNa(async () => czeka || (await gdzie(c, c.x1)) === c.Y, 500);
+      const x1PrzedZwolnieniem = await gdzie(c, c.x1);
+      p.zwolnij();
+      await poprawka;
+      const wynik = await sync;
+      expect(x1PrzedZwolnieniem, 'x1 nie przechodzi pod Y, dopóki inna karta trzyma blokadę X').toBe(c.X);
+      await sprawdzKoniec(c, wynik, '61:120.5');
+    }, CZAS);
+
+    // Decyzja dla x1 przeczytała x1 pod X (rev 0, treść 60) i stoi przed odczytem rekordu karty X; w tym czasie poprawka
+    // x1 w X kończy się w całości (blokada X wolna — scalanie trzyma tylko Y). Przeniesienie musi przeczytać x1 świeżo:
+    // poprawka (61) jest późniejsza niż treść z ładunku.
+    it.each(KOLEJNOSCI)(`poprawka x1 w X zapisana między decyzją a przeniesieniem (${nazwaBlokad}, %s): świeży odczyt — x1 pod Y z poprawką`, async (kolejnosc) => {
+      const c = await przygotuj(kolejnosc, locks());
+      const ladunekA = kopia(await c.A.v.exportSyncPayload());
+      expect(ladunekA.patients.find((q) => q.patientId === c.Y).snapshots[0].snapshotId, 'x1 pierwsza w ładunku').toBe(c.x1);
+      const p = c.B.pulapka('getPatientForUser', (uid, pid) => pid === c.X);
+      const sync = c.B.v.mergeSyncPayload(ladunekA);
+      const krok = await Promise.race([p.osiagnieta.then(() => 'decyzja'), sync.then(() => 'koniec')]);
+      const poprawka = c.B.v.updateSnapshotPayload(c.X, c.x1, zapis([61]), { preserveSavedAt: true })
+        .then(() => 'zapisana', (er) => (er && er.code) || String(er));
+      await Promise.race([poprawka, chwila(500)]);
+      p.zwolnij();
+      const wynik = await sync;
+      expect(krok, 'decyzja dla x1 czyta rekord karty X').toBe('decyzja');
+      expect(await poprawka).toBe('zapisana');
+      await sprawdzKoniec(c, wynik, '61:120.5');
+    }, CZAS);
+
+    // Jak pierwszy przypadek, ale A poprawia x1 pod Y PÓŹNIEJ niż B w X (chwila zmiany poprawki B jest ustalona przed jej
+    // wstrzymaniem). Reguła treści: późniejsza chwila zmiany — wygrywa 62 z ładunku; x1 nie ginie.
+    it.each(KOLEJNOSCI)(`poprawka x1 pod Y na A późniejsza niż wstrzymana poprawka w X na B (${nazwaBlokad}, %s): wygrywa późniejsza, nic nie ginie`, async (kolejnosc) => {
+      const c = await przygotuj(kolejnosc, locks());
+      const p = c.B.pulapka('putSnapshotForUser', (uid, rek) => rek && rek.snapshotId === c.x1 && rek.patientId === c.X);
+      const poprawka = c.B.v.updateSnapshotPayload(c.X, c.x1, zapis([61]), { preserveSavedAt: true });
+      await p.osiagnieta;
+      await chwila(5);
+      await c.A.v.updateSnapshotPayload(c.Y, c.x1, zapis([62]), { preserveSavedAt: true });
+      const ladunekA = kopia(await c.A.v.exportSyncPayload());
+      let czeka = false;
+      const sync = c.B.v.mergeSyncPayload(ladunekA, { onLockWait: () => { czeka = true; } });
+      await czekajNa(async () => czeka || (await gdzie(c, c.x1)) === c.Y, 500);
+      p.zwolnij();
+      await poprawka;
+      const wynik = await sync;
+      await sprawdzKoniec(c, wynik, '62:121');
+    }, CZAS);
+
+    // Karty F z ładunku tu nie ma, a wszystkie jej wersje leżą pod X ze zbioru N (ładunek jak delta nagrobka X z kartą
+    // celu, którą to urządzenie widzi pierwszy raz). F powstaje w fazie przeniesień — jak dotąd liczona jako dodana karta —
+    // z x1 z poprawką wstrzymaną w trakcie scalania. [CZERWONY na 32b6557: F 2/1, x1 skasowana razem z X]
+    it.each(['<F', '>F'])(`karta F, której tu nie ma, zabiera x1 i x2 spod X; poprawka x1 wstrzymana (${nazwaBlokad}, X%s): F założona w fazie przeniesień z poprawką`, async (kolejnosc) => {
+      const B = await urzadzenie('B', { locks: locks() });
+      const X = await karta(B.v);
+      const p0 = kopia(await B.v.exportSyncPayload());
+      const kX = p0.patients.find((q) => q.patientId === X);
+      const [x1, x2] = kX.snapshots.map((q) => q.snapshotId);
+      const F = idWzgledem(X, kolejnosc === '<F');
+      await chwila(5);
+      const teraz = new Date().toISOString();
+      const ladunek = {
+        schemaVersion: p0.schemaVersion,
+        patients: [{
+          patientId: F, header: kX.header, createdAtISO: teraz, lastSavedAtISO: teraz, snapshotCount: 2,
+          snapshots: kX.snapshots.map((q) => Object.assign({}, q, { rev: (q.rev || 0) + 1 })),
+        }],
+        tombstones: [{ patientId: X, deletedAtISO: teraz }],
+      };
+      await chwila(5);
+      const p = B.pulapka('putSnapshotForUser', (uid, rek) => rek && rek.snapshotId === x1 && rek.patientId === X);
+      const poprawka = B.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: true });
+      await p.osiagnieta;
+      let czeka = false;
+      const sync = B.v.mergeSyncPayload(ladunek, { onLockWait: () => { czeka = true; } });
+      const polozenie = async () => ((await B.baza.getSnapshotForUser(B.uid, x1)) || {}).patientId || null;
+      await czekajNa(async () => czeka || (await polozenie()) === F, 500);
+      const x1PrzedZwolnieniem = await polozenie();
+      p.zwolnij();
+      await poprawka;
+      const wynik = await sync;
+      expect(x1PrzedZwolnieniem, 'x1 nie przechodzi pod F, dopóki inna karta trzyma blokadę X').toBe(X);
+      const et = { [X]: 'X', [F]: 'F', [x1]: 'x1', [x2]: 'x2' };
+      const s = await stan(B, et);
+      expect(s.karty).toEqual({ F: karta2(2, ['x1', 'x2']) });
+      expect(s.nagrobki).toEqual(['X']);
+      expect(s.sieroty).toBe(0);
+      expect(await trescWersji(B, F, x1)).toBe('61:120.5');
+      expect([wynik.addedSnapshotCount, wynik.mergedPatientCount, wynik.addedPatientCount, wynik.deletedPatientCount]).toEqual([2, 0, 1, 1]);
+    }, CZAS);
+  }
+});
+
 describe('P-SYNC-WLASCICIEL — liczniki i przypadki brzegowe', () => {
   // [CZERWONY na audyt — licznik 6 przy 3 wersjach] Licznik karty rozjechany wcześniej (tu: 5 przy 2 wersjach), a ta
   // sama synchronizacja dopisuje nową wersję: licznik = liczba wersji od razu, nie „dawny licznik + nowe”.
@@ -2182,6 +2338,25 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(iPrzen).toBeGreaterThan(iPetla);
     expect(iUsun).toBeGreaterThan(iPrzen);
     expect(iKosz).toBeGreaterThan(iUsun);
+  });
+
+  it('„zabierz” (uwaga Codex P1 do #689): pętla pacjentów zapisuje tylko wersję „nowa”, reszta przez fazę przeniesień; zabrane liczą się w wyniku', () => {
+    const f = src.slice(src.indexOf('async function Bsl_scalPacjenta('), src.indexOf('function Bsw_bezNowych('));
+    expect(f.length).toBeGreaterThan(100);
+    // obie gałęzie (karta istnieje / nowa karta): odłożenie decyzji 'zabierz' i zapis pod F tylko dla 'nowa'
+    const odloz = "if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);";
+    expect(f.split(odloz).length - 1).toBe(2);
+    expect(f).toContain("if (d.co !== 'nowa') continue;\n        await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));");
+    expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));");
+    expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień').toHaveLength(3);
+    // faza przeniesień: 'zabierz' nie sprawdza rewizji z chwili decyzji, ale czyta wersję świeżo pod obiema blokadami
+    const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
+    expect(fp).toContain('const wersjeG = await I().listSnapshotsForUser(b, G);');
+    expect(fp).toContain('if (!g || !p.zabierz && (mt(g) !== p.rev || Bsw_zmiana(g) !== p.zmiana)) return null;');
+    expect(fp).toContain('Bsw_rekord(p.F, p.S, p.szyfr, teraz, g)');
+    expect(src).toContain("tylkoTresc: d.co === 'tresc', zabierz: d.co === 'zabierz',");
+    const le = src.slice(src.indexOf('async function Le(t,e){'), src.indexOf('prunedSnapshotCount:Bkz_S.przyciete||0}'));
+    expect(le).toContain('l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;');
   });
 
   it('integracja: delta karty (gt) i delta nagrobka pacjenta (At) przez Bsb_wyslij (fetch po odrzuconym beaconie); delty notatek bez zmian', () => {
