@@ -84,6 +84,46 @@ test('przypięcie TSH zapisuje zakres przelicznika; pasek i zakładka „Badania
   await expect(karta.locator('.vilda-lab-hist-last .vilda-lab-hist-flag')).toHaveCount(0);
 });
 
+// Decyzja 6.30 (wariant 3): prolaktyna u fikcyjnej dziewczynki 12 l 3 m — przelicznik nie ma wiersza dla wieku i używa
+// wiersza domyślnego „Dorośli, zakres ogólny”. Zapis niesie zakres i kategorię jak dotąd; historia pokazuje je bez strzałki.
+test('prolaktyna u dziecka z zakresem ogólnym: okno i historia bez oceny, zapis bez zmian', async ({ page }) => {
+  const { patientId } = await otworzPrzelicznik(page, { badanie: 'prolactin', szukaj: 'Prolaktyna', wartosc: '' });
+  await page.locator('#labUnit').selectOption('ng/mL');
+  await page.locator('#labValue').fill('35');
+  await page.locator('#labPinResultBtn').click();
+  expect(await tekst(page.locator('#labPinRange'))).toBe('Zapisze się z wynikiem: zakres ogólny 2–29 ng/mL — bez oceny dla dziecka Dorośli, zakres ogólny · bez zakresu dla: dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
+  await page.locator('#labPinDate').fill('2026-06-17');
+  await page.locator('#labPinSave').click();
+  await expect(page.locator('#labPinOverlay')).toHaveCount(0);
+
+  const zapis = await page.evaluate(async (pid) => (await window.VildaVault.listPatientNotesForPatient(pid))
+    .find((n) => n.labResult && n.labResult.testKey === 'prolactin').labResult, patientId);
+  expect(zapis).toMatchObject({ valueNum: 35, unit: 'ng/mL', range: { status: 'recorded', classification: 'above',
+    context: { sex: 'F', ageYears: 12.25, lifeStage: 'pediatric' },
+    range: { id: 'prl_default', low: 2, high: 29, context: 'Dorośli, zakres ogólny', matched: false, isDefault: true } } });
+
+  const pasek = pasekHistorii(page);
+  const chip = pasek.locator('button.lab-strip-chip[data-note-id]').last();
+  await expect(chip.locator('.lab-strip-chip-v')).toHaveText('35');
+  await chip.click();
+  expect(await tekst(pasek.locator('.lab-strip-detail-range'))).toBe('zakres zapisany z wynikiem: 2–29 ng/mL · zakres ogólny — bez oceny dla dziecka · Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
+
+  await otworzBadania(page, patientId);
+  const karta = sekcjaBadan(page).locator('.vilda-lab-hist-card[data-series="prolactin"]');
+  await expect(karta.locator('.vilda-lab-hist-status.is-range-general.tone-muted .vilda-lab-hist-status-context')).toHaveText('Dorośli, zakres ogólny · dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
+  expect(await tekst(karta.locator('.vilda-lab-hist-status.is-range-general .vilda-lab-hist-status-text'))).toBe('zakres ogólny — bez oceny dla dziecka · 2–29 ng/mL');
+  await expect(karta.locator('.vilda-lab-hist-flag')).toHaveCount(0);
+
+  const rozmiar = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const pigulka = karta.locator('.vilda-lab-hist-status.is-range-general');
+  await expect(pigulka).toBeVisible();
+  const [boxP, boxK] = [await pigulka.boundingBox(), await karta.boundingBox()];
+  expect(boxP.x + boxP.width).toBeLessThanOrEqual(boxK.x + boxK.width + 0.5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.setViewportSize(rozmiar);
+});
+
 test('badanie bez zakresu w przeliczniku i LH z własną oceną: przypięcie bez pola zakresu', async ({ page }) => {
   const { patientId } = await otworzPrzelicznik(page, { badanie: 'vit_d3', szukaj: 'cholekalcyferol', wartosc: '' });
   await page.locator('#labValue').fill('40');

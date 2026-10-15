@@ -505,8 +505,9 @@
           if (context) add(pill, 'span', 'vilda-lab-hist-status-context', 'oceniono jako: ' + context);
         } else if (status.kind === 'norm') {
           add(pill, 'span', 'vilda-lab-hist-status-text', status.text + ' · ' + status.norm);
-        } else if (status.kind === 'range') {
+        } else if (status.kind === 'range' || status.kind === 'range-general') {
           // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu — kategoria, granice, dla kogo i źródło.
+          // Decyzja 6.30: zakres ogólny u dziecka — te same granice i kontekst, bez strzałki i kategorii (wyciszony).
           add(pill, 'span', 'vilda-lab-hist-status-text', (status.flag ? status.flag + ' ' : '') + status.text + (status.bounds ? ' · ' + status.bounds : ''));
           var where = rangeContext(status);
           if (where) add(pill, 'span', 'vilda-lab-hist-status-context', where);
@@ -762,7 +763,7 @@
         var details = [shortLabel(view.label), entry.dateISO ? formatDate(entry.dateISO) : 'bez daty', 'zapisano: ' + (entry.converted ? recorded(entry) : entry.raw || entry.display)];
         if (entry.source === 'gh-note') details.push(GH_SOURCE);
         if (entry.norm) details.push('norma z wpisu: ' + entry.norm);
-        if (entry.status && entry.status.kind === 'range') {
+        if (entry.status && (entry.status.kind === 'range' || entry.status.kind === 'range-general')) {
           var where = rangeContext(entry.status);
           details.push((entry.status.flag ? entry.status.flag + ' ' : '') + entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : '') + (where ? ' (' + where + ')' : ''));
           if (entry.status.flag) marks.range = true;
@@ -791,7 +792,7 @@
       function drawFooter(view) {
         var foot = add(section, 'div', 'vilda-lab-hist-footer');
         add(foot, 'p', 'vilda-lab-hist-footer-main', 'Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.');
-        add(foot, 'p', 'vilda-lab-hist-muted', 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym z wynikiem przy przypięciu, z normą wpisaną we wpisie albo z zapisaną oceną; norma wpisana we wpisie nie dotyczy wyniku przeliczonego z innej jednostki. Wpisy bez zapisanego zakresu są bez oceny. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
+        add(foot, 'p', 'vilda-lab-hist-muted', 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym z wynikiem przy przypięciu, z normą wpisaną we wpisie albo z zapisaną oceną; norma wpisana we wpisie nie dotyczy wyniku przeliczonego z innej jednostki. Wpisy bez zapisanego zakresu są bez oceny. Zakres ogólny przelicznika u dziecka (brak zakresu dla wieku) — bez strzałki. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
         // Decyzje 6.24–6.25: skąd IGF-1 bez daty badania ma datę na wykresie.
         if (view && view.ghIgf1 && view.ghIgf1.shown > 0) {
           add(foot, 'p', 'vilda-lab-hist-muted', 'IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli (tak jak na wykresie „Trend leczenia GH”); bez normy i bez strzałki.');
@@ -811,7 +812,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.5.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '1.6.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

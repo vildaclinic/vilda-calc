@@ -2,7 +2,9 @@
  * Kopia zakresu, którego przelicznik użył w chwili przypięcia: granice w SI i w jednostce wyniku,
  * dla kogo go dobrano, źródła i wersje danych. Odczyt nie sięga do dzisiejszych norm, silnika,
  * DOM, zegara ani pamięci. Moduł nie wybiera zakresu i nie klasyfikuje wyniku: kategorię podaje
- * LabUnitConverter.evaluate w chwili przypięcia. Wzór: vilda_hormone_reference_snapshot.js (#677). */
+ * LabUnitConverter.evaluate w chwili przypięcia. Wzór: vilda_hormone_reference_snapshot.js (#677).
+ * Od 1.1.0 (decyzja 6.30): wiersz domyślny przelicznika (zakres ogólny, użyty, bo żaden wiersz nie pasował)
+ * przy kontekście dziecka opisuje się bez strzałki i bez kategorii; zapis się nie zmienia. */
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -283,6 +285,8 @@
     return text && context.localOverride ? text + ' (ustawione w przeliczniku)' : text;
   }
   // options.formatNumber: LabUnitConverter.formatNumber albo inna funkcja liczby → tekst (domyślnie przecinek dziesiętny).
+  // status opisu: 'recorded' (kategoria i strzałka z zapisu), 'general' (zakres ogólny u dziecka, bez oceny),
+  // 'invalidated', 'unavailable' (bez interpretacji); null — nic do pokazania.
   function describe(envelope, options) {
     if (!record(envelope)) return null;
     var format = options && typeof options.formatNumber === 'function' ? options.formatNumber : plainNumber;
@@ -294,6 +298,16 @@
       bounds: display && finite(display.low) && finite(display.high) ? format(display.low) + '–' + format(display.high) + '\u00a0' + display.unit : '',
       population: record(range) && range.context || '', subject: subject(envelope.context, format), sources: sources, detail: []
     };
+    // Decyzja 6.30 (wariant 3): wiersz domyślny przelicznika to zakres ogólny, użyty, bo żaden wiersz danych nie pasował
+    // do pacjenta (dziś zawsze dorosłych, np. „Dorośli, zakres ogólny”). Dla dziecka (etap życia z przelicznika) historia
+    // nie przenosi kategorii z takiego zakresu: bez strzałki, wyciszona informacja z granicami i populacją. Reguła odczytu —
+    // koperta i kategoria zapisana przy przypięciu zostają bez zmian. Dorosły z wierszem domyślnym — jak dotąd.
+    if (envelope.status === 'recorded' && LABELS[envelope.classification] && record(range) && range.isDefault === true &&
+        record(envelope.context) && envelope.context.lifeStage === 'pediatric') {
+      base.status = 'general';
+      base.text = 'zakres ogólny — bez oceny dla dziecka';
+      return base;
+    }
     if (envelope.status === 'recorded' && LABELS[envelope.classification]) {
       base.classification = envelope.classification;
       base.flag = LABELS[envelope.classification].flag;
@@ -313,6 +327,6 @@
     }
     return null;
   }
-  return Object.freeze({ version: '1.0.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries,
+  return Object.freeze({ version: '1.1.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries,
     unavailable: unavailable, describe: describe });
 });

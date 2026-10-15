@@ -526,7 +526,7 @@
       if (entry.source === 'gh-note') parts.push(GH_SOURCE);
       if (entry.raw) parts.push('zapisano: ' + recorded(entry));
       if (entry.norm) parts.push('norma z wpisu: ' + entry.norm);
-      if (entry.status && entry.status.kind === 'range') parts.push(entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : ''));
+      if (entry.status && (entry.status.kind === 'range' || entry.status.kind === 'range-general')) parts.push(entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : ''));
       return parts.join(' · ');
     }
 
@@ -553,9 +553,11 @@
         if (!drawn) add(host, 'p', 'lab-strip-muted', '„' + status.text + '”');
       } else if (status && (status.kind === 'invalidated' || status.kind === 'unavailable' || status.kind === 'range-invalidated' || status.kind === 'range-unavailable')) {
         add(box, 'p', 'lab-strip-muted', status.text + (status.detail && status.detail.length ? ' · ' + status.detail.join(', ') : ''));
-      } else if (status && status.kind === 'range') {
-        // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu, nie dzisiejsza norma.
-        add(box, 'p', 'lab-strip-detail-range', 'zakres zapisany z wynikiem: ' + [status.bounds, RANGE_SHORT[status.classification],
+      } else if (status && (status.kind === 'range' || status.kind === 'range-general')) {
+        // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu, nie dzisiejsza norma. Decyzja 6.30: zakres ogólny
+        // u dziecka — granice i populacja z zapisu, a w miejscu kategorii „zakres ogólny — bez oceny dla dziecka”.
+        add(box, 'p', 'lab-strip-detail-range', 'zakres zapisany z wynikiem: ' + [status.bounds,
+          status.kind === 'range' ? RANGE_SHORT[status.classification] : status.text,
           status.population, status.subject].concat(status.sources || []).filter(Boolean).join(' · '));
       }
       if (entry.norm) {
@@ -742,7 +744,7 @@
 
   var instance = null;
   return Object.freeze({
-    version: '1.2.0',
+    version: '1.3.0',
     start: function () {
       if (instance || !win || !win.document) return instance;
       instance = create(win);
