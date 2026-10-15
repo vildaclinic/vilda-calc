@@ -466,4 +466,28 @@ describe('pasek: zakres zapisany przy przypięciu (decyzja 6.3)', () => {
       .toBe('zakres zapisany z wynikiem: 0,5–4,3 mIU/L · powyżej · Młodzież 11–19 lat · dziewczynka, 12 l · Mayo Test 8939 — TSH');
     expect(pasek(env).querySelector('.lab-strip-detail-norm')).toBeNull();
   });
+
+  // Decyzja 6.30: zakres ogólny (wiersz domyślny przelicznika) u dziecka — bez strzałki, granice i populacja z zapisu.
+  it('zakres ogólny u dziecka: chip bez strzałki; podpowiedź i szczegóły „zakres ogólny — bez oceny dla dziecka”', async () => {
+    const producer = {};
+    for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_range_snapshot.js']) loadBrowserScript(plik, producer);
+    const Conv = producer.LabUnitConverter, patient = { sex: 'F', age: null, tanner: 2, life_stage: 'pediatric' };
+    const note = tsh(PID, 'tsh-o', '2026-06-10', 5.1, 'mIU/L');
+    const captured = producer.VildaLabRangeSnapshot.create({ analyte: 'tsh', evaluation: Conv.evaluate('tsh', { value: '5,1', unit: 'mIU/L', patient }),
+      range: Conv.selectRange(Conv.find('tsh'), patient), patient, factorToSi: 1, measurement: { raw: '5,1', sourceUnit: 'mIU/L' },
+      sources: [{ id: 'mayo_test_tsh', label: 'Mayo Test 8939 — TSH' }], versions: { engine: 'e', data: 'd' }, capturedAtISO: '2026-06-10T10:00:00.000Z' });
+    expect(captured).toMatchObject({ classification: 'above', range: { id: 'tsh_default', isDefault: true } });
+    const range = producer.VildaLabRangeSnapshot.reconcile(null, Object.assign({}, note.labResult, { range: captured }), null, '2026-06-10').range;
+    const vault = sejf();
+    vault.dodaj(PID, note, { range });
+    const env = strona({ vault });
+    await widoczny(env);
+    const chip = pasek(env).querySelector('button.lab-strip-chip[data-note-id="tsh-o"]');
+    expect(chip.querySelector('.lab-strip-flag')).toBeNull();
+    expect(txtS(chip.getAttribute('title'))).toBe('zapisano: 5,1 mIU/L · zakres ogólny — bez oceny dla dziecka 0,3–4,2 mIU/L');
+    chip.click();
+    expect(pasek(env).querySelector('.lab-strip-detail-h .lab-strip-flag')).toBeNull();
+    expect(txt(pasek(env).querySelector('.lab-strip-detail-range')))
+      .toBe('zakres zapisany z wynikiem: 0,3–4,2 mIU/L · zakres ogólny — bez oceny dla dziecka · Zakres ogólny dorosły (domyślnie) · dziewczynka, Tanner II · Mayo Test 8939 — TSH');
+  });
 });

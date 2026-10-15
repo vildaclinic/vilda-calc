@@ -106,7 +106,7 @@ for (const loader of ['session', 'chrome']) {
       const env = environment(['VildaLabRangeSnapshot']);
       const ensure = start(env);
       await ensure();
-      expect(env.appended.filter(url => /\.js\?/.test(url))).toEqual(['vilda_lab_range_snapshot.js?v=1']);
+      expect(env.appended.filter(url => /\.js\?/.test(url))).toEqual(['vilda_lab_range_snapshot.js?v=2']);
       expect(typeof env.win.VildaLabRangeSnapshot.normalize).toBe('function');
       expect(typeof env.win.VildaLabRangeSnapshot.reconcile).toBe('function');
       const loads = env.appended.length;

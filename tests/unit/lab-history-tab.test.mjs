@@ -526,10 +526,10 @@ describe('zakładka Badania: zakres zapisany przy przypięciu (decyzja 6.3)', ()
       factorToSi: 1, measurement: { raw, sourceUnit: 'mIU/L' }, sources: [{ id: 'mayo_test_tsh', label: 'Mayo Test 8939 — TSH' }],
       versions: { engine: 'LabUnitConverter', data: 'LabUnitsData' }, capturedAtISO: '2026-06-10T10:00:00.000Z' });
   }
-  function daneZakresu(win, ostatni) {
+  function daneZakresu(win, ostatni, patient) {
     const stary = nota('tsh-a', '2026-03-02', { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '2,9', valueNum: 2.9, unit: 'mIU/L' });
     const nowy = nota('tsh-b', '2026-06-10', { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '5,1 mIU/L = 5,1 mIU/L', valueNum: 5.1, unit: 'mIU/L' });
-    const range = win.VildaLabRangeSnapshot.reconcile(null, Object.assign({}, nowy.labResult, { range: zakres(win, '5,1') }), null, '2026-06-10').range;
+    const range = win.VildaLabRangeSnapshot.reconcile(null, Object.assign({}, nowy.labResult, { range: zakres(win, '5,1', patient) }), null, '2026-06-10').range;
     return { series: [{ testKey: 'tsh', test: 'TSH (tyreotropina)', points: [punkt(stary), punkt(nowy, { range: ostatni ? ostatni(range) : range })] }],
       notes: [stary, nowy], treatment: [] };
   }
@@ -551,6 +551,24 @@ describe('zakładka Badania: zakres zapisany przy przypięciu (decyzja 6.3)', ()
     expect(stara.getAttribute('title').replace(/\u00a0/g, ' ')).toBe('TSH · 02.03.26 · zapisano: 2,9 mIU/L');
     expect(teksty(env.host, '.vilda-lab-hist-foot').join(' ')).toContain('↑/↓ — poza zakresem zapisanym z wynikiem przy przypięciu albo poza normą wpisaną we wpisie; zakres i źródło w podpowiedzi');
     expect(teksty(env.host, '.vilda-lab-hist-footer .vilda-lab-hist-muted')[0]).toContain('Wpisy bez zapisanego zakresu są bez oceny.');
+  });
+
+  // Decyzja 6.30: wiersz domyślny przelicznika (TSH bez wieku, sam Tanner II → „Zakres ogólny dorosły”) u dziecka.
+  it('zakres ogólny u dziecka: wyciszona pigułka z granicami i populacją, bez strzałki w karcie i w tabeli', async () => {
+    const env = srodowisko();
+    otworz(env, sejf({ dane: daneZakresu(env.win, null, { sex: 'F', age: null, tanner: 2, life_stage: 'pediatric' }) }));
+    await gotowe(env);
+    const karta = env.host.querySelector('.vilda-lab-hist-card[data-series="tsh"]');
+    expect(karta.querySelector('.vilda-lab-hist-flag')).toBeNull();
+    expect(karta.querySelector('.vilda-lab-hist-status.is-range')).toBeNull();
+    expect(txt(karta.querySelector('.vilda-lab-hist-status.is-range-general.tone-muted .vilda-lab-hist-status-text'))).toBe('zakres ogólny — bez oceny dla dziecka · 0,3–4,2 mIU/L');
+    expect(teksty(karta, '.vilda-lab-hist-status-context')).toEqual(['Zakres ogólny dorosły (domyślnie) · dziewczynka, Tanner II · Mayo Test 8939 — TSH']);
+    przycisk(env, 'Tabela').click();
+    const nowa = env.host.querySelector('button.vilda-lab-hist-cell[data-note-id="tsh-b"]');
+    expect(nowa.querySelector('.vilda-lab-hist-flag')).toBeNull();
+    expect(nowa.getAttribute('title').replace(/\u00a0/g, ' ')).toBe('TSH · 10.06.26 · zapisano: 5,1 mIU/L = 5,1 mIU/L · zakres ogólny — bez oceny dla dziecka 0,3–4,2 mIU/L (Zakres ogólny dorosły (domyślnie) · dziewczynka, Tanner II · Mayo Test 8939 — TSH)');
+    expect(teksty(env.host, '.vilda-lab-hist-foot').join(' ')).not.toContain('↑/↓');
+    expect(teksty(env.host, '.vilda-lab-hist-footer .vilda-lab-hist-muted')[0]).toContain('Zakres ogólny przelicznika u dziecka (brak zakresu dla wieku) — bez strzałki.');
   });
 
   it('zakres nieaktualny po zmianie wyniku: wyciszona pigułka z powodem, bez strzałki', async () => {
