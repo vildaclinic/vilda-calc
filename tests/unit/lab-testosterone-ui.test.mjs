@@ -84,6 +84,14 @@ function deepFreeze(value) {
 }
 
 describe('TT — pure presentation of canonical evaluation', () => {
+  it.each(['postmenopause', 'follicular'])('does not relabel the generic adult female age range as a %s-specific reference', reproductiveContext => {
+    const evaluated = evaluate({ sex: 'F', value: '30', age: { years: 65, months: 0, precision: 'month' }, reproductiveContext });
+    const view = renderer.buildView(evaluated);
+    expect(view.comparisons[0].shortTitle).toBe('Dla kobiet');
+    expect(evaluated.referencePreview.byAge.range.age).toMatchObject({ lower: { value: 19 }, upper: null });
+    expect(evaluated.input.reproductiveContext).toBe(reproductiveContext);
+  });
+
   it('projects the two axes into the chosen unit without changing values, bounds or statuses in the evaluation', () => {
     const evaluated = deepFreeze(evaluate());
     const saved = JSON.stringify(evaluated);

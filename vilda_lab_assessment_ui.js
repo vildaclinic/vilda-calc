@@ -490,7 +490,7 @@
         ? range.bounds.upper.operator === '<' ? 'Poniżej górnej granicy' : 'Nie przekracza górnej granicy' : '';
       if (upperOnlyLabel) visualLabel = upperOnlyLabel;
       if (automatic) visualLabel = visualLabel.replace('normy', 'zakresu referencyjnego');
-      var variant = item[3], adultTitle = input.sex === 'M' ? 'Dla mężczyzn' : REPRODUCTIVE_CONTEXT[input.reproductiveContext] || 'Dla kobiet';
+      var variant = item[3], adultTitle = input.sex === 'M' ? 'Dla mężczyzn' : testosterone ? 'Dla kobiet' : REPRODUCTIVE_CONTEXT[input.reproductiveContext] || 'Dla kobiet';
       var ageTitle = pretermProfile ? 'Dla wcześniaka' : adultProfile ? adultTitle : inhibin && range.basis === 'infant-broad' ? 'Ogólny zakres dla niemowląt' : inhibin && range.basis === 'infant-curve' ? 'Minipuberty' : 'Dla wieku';
       if (johannsenRange(range) && range.age && text(range.age.sourceText)) ageTitle = 'Minipuberty · ' + text(range.age.sourceText);
       var title = item[0] === 'age' && (inhibin || pretermProfile || adultProfile || johannsenRange(range)) ? ageTitle : item[1];
