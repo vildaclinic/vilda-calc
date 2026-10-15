@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=75"></script>
+  <script src="vilda_session_bridge.js?v=76"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=151"></script>
+  <script src="vilda_chrome.js?v=152"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -442,25 +442,25 @@
   <script src="ios26-ui.js?v=45" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=38"></script>
-  <script src="lab_unit_converter.js?v=6"></script>
+  <script src="lab_units_data.js?v=39"></script>
+  <script src="lab_unit_converter.js?v=7"></script>
   <script src="vilda_lab_puberty_data.js?v=7"></script>
   <script src="vilda_lab_puberty.js?v=8"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
   <script src="vilda_lab_inhibin_b.js?v=1"></script>
   <script src="vilda_lab_testosterone_units.js?v=1"></script>
-  <script src="vilda_lab_testosterone_data.js?v=1"></script>
-  <script src="vilda_lab_testosterone.js?v=1"></script>
-  <script src="vilda_lab_snapshot.js?v=8"></script>
+  <script src="vilda_lab_testosterone_data.js?v=2"></script>
+  <script src="vilda_lab_testosterone.js?v=2"></script>
+  <script src="vilda_lab_snapshot.js?v=9"></script>
   <script src="vilda_hormone_reference_snapshot.js?v=1"></script>
   <script src="vilda_hormone_reference_ui.js?v=1"></script>
-  <script src="vilda_lab_assessment_ui.js?v=16"></script>
+  <script src="vilda_lab_assessment_ui.js?v=17"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
   <script src="vilda_puberty_assessment.js?v=2"></script>
   <script src="vilda_puberty_assessment_context.js?v=1"></script>
   <link rel="stylesheet" href="vilda_puberty_assessment_ui.css?v=1">
   <script src="vilda_puberty_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=18"></script>
+  <script src="vilda_lab_puberty_ui.js?v=19"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
@@ -609,8 +609,7 @@
       return !!(substance && (substance.id === 'lh' || substance.id === 'fsh' || substance.id === 'inhibin_b' || substance.id === 'testosterone_total'));
     }
     function isPubertyReferenceSubstance(substance) {
-      return isPubertySubstance(substance) && !(substance.id === 'testosterone_total'
-        && pubertyUI && pubertyUI.isLegacyFemale && pubertyUI.isLegacyFemale());
+      return isPubertySubstance(substance);
     }
     function readPubertyPatientContext() {
       var shared = null, patient = null, puberty = null, pubertyState = null, source = null;
@@ -729,7 +728,17 @@
       persistence: persistence,
       readPatientContext: readPubertyPatientContext,
       readMeasurementContext: function (analyte) {
-        return analyte === 'testosterone_total' ? testosteroneMeasurementContext || {} : {};
+        if (analyte !== 'testosterone_total') return {};
+        syncPatientIdentity();
+        var known = Object.assign({}, testosteroneMeasurementContext || {});
+        // Reuse an explicit pregnancy selection made for this same patient in
+        // the existing cycle control. Do not turn an unknown history into no.
+        // Preserve a conflicting reported no so the engine can disclose it.
+        if (localOverride && /^pregnancy_t[123]$/.test(localOverride.cycle_phase || '')) {
+          known.reproductiveContext = 'pregnancy';
+          if (![true, false, 'yes', 'no'].includes(known.pregnancy)) known.pregnancy = 'yes';
+        }
+        return known;
       },
       onPatientChange: function () { if (isPubertySubstance(currentSubstance)) valueEl.value = ''; },
       onChange: function () {
@@ -1463,13 +1472,6 @@
         test_protocol: measurementCtx.test_protocol || null,
         method: measurementCtx.method || null
       };
-      if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'testosterone_total'
-          && pubertyUI && typeof pubertyUI.getLegacyPatient === 'function') {
-        var testosteronePatient = pubertyUI.getLegacyPatient();
-        p.sex = testosteronePatient.sex;
-        p.age = testosteronePatient.age;
-        p.time_of_day = testosteroneMeasurementContext.collectionTime || null;
-      }
       if (typeof p.age === 'number') {
         p.life_stage = p.age >= 18 ? 'adult' : 'pediatric';
       } else if (typeof p.tanner === 'number') {

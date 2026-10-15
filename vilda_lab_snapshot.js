@@ -59,13 +59,13 @@
   var comparison = { status: 'text', reasonCodes: ['text'], range: selectedRange };
   var input = {
     analyte: 'text', value: 'measurementInput', unit: 'text', sex: 'text', sampleDateISO: 'text', birthDateISO: 'text', age: age,
-    contextBasis: 'text', neonatalAge: neonatalAgeInput, referenceSelection: 'text', reproductiveContext: 'text',
+    contextBasis: 'text', neonatalAge: neonatalAgeInput, referenceSelection: 'text', reproductiveContext: 'text', pregnancy: 'text',
     specimen: 'text', measurementKind: 'text', collectionTime: 'text', assay: { profileId: 'text', profileVersion: 'text', methodId: 'text', confirmation: 'text' },
     puberty: { kind: 'text', stage: 'number', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean', source: 'text' },
     testicularVolume: { value: 'number', unit: 'text', method: 'text', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean' },
     onset: { kind: 'text', dateISO: 'text', age: age, confirmedPubertalOnset: 'boolean' },
     history: { progression: 'text', growthAcceleration: 'text', cnsSymptoms: 'text', regression: 'text' },
-    treatment: { gnrha: 'text', sexSteroids: 'text', context: 'text' }, preterm: 'text', gestationalAgeWeeks: 'number',
+    treatment: { gnrha: 'text', sexSteroids: 'text', context: 'text', cocp: 'text', exogenousTestosterone: 'text' }, preterm: 'text', gestationalAgeWeeks: 'number',
     reportedRange: { text: 'text', unit: 'text' },
     localReference: {
       id: 'text', version: 'text', analyte: 'text', material: 'text', unit: 'text', methodId: 'text',
@@ -111,9 +111,9 @@
   };
   // These schema-1 additions are optional. Reading an older assessment must
   // preserve its original shape and must never infer a current-form context.
-  var optionalInput = ['contextBasis', 'reportedRange', 'neonatalAge', 'referenceSelection', 'reproductiveContext', 'collectionTime'];
+  var optionalInput = ['contextBasis', 'reportedRange', 'neonatalAge', 'referenceSelection', 'reproductiveContext', 'collectionTime', 'pregnancy'];
   var conversionFields = ['conversionPolicyId', 'conversionPolicyVersion', 'conversionFactor'];
-  var optionalNestedInput = { assay: ['profileVersion'], puberty: ['appliesToCurrentContext'], testicularVolume: ['appliesToCurrentContext'], treatment: ['context'] };
+  var optionalNestedInput = { assay: ['profileVersion'], puberty: ['appliesToCurrentContext'], testicularVolume: ['appliesToCurrentContext'], treatment: ['context', 'cocp', 'exogenousTestosterone'] };
   var bindingSchema = { testKey: 'text', test: 'text', value: 'text', valueNum: 'number', unit: 'text', norm: 'text', clinicalDateISO: 'text' };
 
   function plainText(value) {
@@ -168,7 +168,7 @@
     if (measurement.sourceValue === null) return measurement.value === null;
     return measurement.sourceValue >= 0 && sameConvertedValue(measurement.value, measurement.sourceValue * factor);
   }
-  function contextsFor(analyte) { return analyte === 'inhibin_b' ? inhibinContexts : reproductiveContexts; }
+  function contextsFor(analyte) { return analyte === 'inhibin_b' ? inhibinContexts : analyte === 'testosterone_total' ? reproductiveContexts.concat(['pregnancy']) : reproductiveContexts; }
   function matchingReproductiveContext(analyte, supplied, candidate) {
     if (supplied === 'unknown' || supplied === candidate) return true;
     return analyte === 'inhibin_b' && (supplied === 'follicular' && contains(candidate, ['early_follicular', 'late_follicular']) ||
@@ -301,6 +301,8 @@
       !contains(supplied.specimen, ['serum', 'unknown']) || !contains(supplied.measurementKind, ['unknown', 'basal'])) return false;
     var treatment = supplied.treatment, assay = supplied.assay;
     if (!contains(treatment.gnrha, ['no', 'unknown']) || !contains(treatment.sexSteroids, ['no', 'unknown']) || treatment.context === 'hormonal') return false;
+    if (isTestosterone(evaluation) && (supplied.pregnancy === 'yes' || supplied.reproductiveContext === 'pregnancy' ||
+      treatment.cocp === 'yes' || treatment.exogenousTestosterone === 'yes')) return false;
     if (biochemical.status !== 'unavailable' || biochemical.primary !== null || biochemical.reasonCodes.indexOf('automatic_reference_only') === -1 ||
       !['byAge', 'byStage', 'local'].every(function (key) { return biochemical[key].status === 'unavailable'; })) return false;
     var expected = [];
@@ -321,7 +323,10 @@
       if (range.material !== 'serum' || range.sex !== supplied.sex || range.unit !== analytes[evaluation.analyte].unit || !selection.profileIds.includes(range.profileId) ||
         (assay.confirmation === 'reported' && range.method.id !== assay.methodId) ||
         (forStage ? !record(range.stage) || range.stage.kind !== supplied.puberty.kind || range.stage.value !== supplied.puberty.stage : !!range.stage)) return false;
-      if (range.basis === 'adult' && supplied.sex === 'F' && selection.status === 'selected' && (!supplied.reproductiveContext || supplied.reproductiveContext === 'unknown')) return false;
+      if (forStage && isTestosterone(evaluation) && (range.stage.kind === 'G' && supplied.sex !== 'M' || range.stage.kind === 'Th' && supplied.sex !== 'F')) return false;
+      // TT's female age range is not selected by cycle phase or menopause.
+      // Preserve the existing requirement for phase-specific LH/FSH/inhibin RI.
+      if (!isTestosterone(evaluation) && range.basis === 'adult' && supplied.sex === 'F' && selection.status === 'selected' && (!supplied.reproductiveContext || supplied.reproductiveContext === 'unknown')) return false;
       ranges.push(range);
       return true;
     }
@@ -366,6 +371,8 @@
     if (own(value.input.assay, 'profileVersion') && (typeof value.input.assay.profileVersion !== 'string' || value.input.assay.profileVersion.length > 80)) return false;
     if (!['puberty', 'testicularVolume'].every(function (key) { return !own(value.input[key], 'appliesToCurrentContext') || typeof value.input[key].appliesToCurrentContext === 'boolean'; })) return false;
     if (own(value.input.treatment, 'context') && !contains(value.input.treatment.context, ['unknown', 'none', 'hormonal'])) return false;
+    if (own(value.input, 'pregnancy') && !contains(value.input.pregnancy, ['yes', 'no', 'unknown'])) return false;
+    if (!['cocp', 'exogenousTestosterone'].every(function (key) { return !own(value.input.treatment, key) || contains(value.input.treatment[key], ['yes', 'no', 'unknown']); })) return false;
     if (own(value.input, 'reproductiveContext') && !contains(value.input.reproductiveContext, contextsFor(value.analyte)) &&
       !(value.referenceSelection && value.referenceSelection.status === 'unavailable' && Array.isArray(value.referenceSelection.reasonCodes) && value.referenceSelection.reasonCodes.includes('invalid_reproductive_context'))) return false;
     if (!validReportedRange(value)) return false;

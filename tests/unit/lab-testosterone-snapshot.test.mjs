@@ -160,6 +160,102 @@ describe('TT immutable historical assessment transport', () => {
   });
 });
 
+describe('Female TT immutable assessment transport', () => {
+  function female(extra = {}) {
+    return { sex: 'F', puberty: { kind: 'Th', stage: 3, assessedAtISO: DATE,
+      appliesToSample: false, appliesToCurrentContext: true, source: 'fictional-female-examination' }, ...extra };
+  }
+
+  it.each([12, 19, 65])('records the female age-only evaluation at %s years without requiring cycle phase or reinterpreting Th', years => {
+    const evaluation = evaluate('30', 'ng/dL', female({ age: { years, months: 0, days: null, precision: 'month' } }));
+    expect(evaluation.referenceSelection.status).toBe('selected');
+    expect(evaluation.referencePreview.byStage.status).toBe('unavailable');
+    expect(evaluation.referencePreview.byAge.range).toMatchObject({ sex: 'F', profileId: 'mayo-ttst-female',
+      sourceId: 'mayo-ttst-8533-female', basis: years >= 19 ? 'adult' : 'age' });
+    expect(evaluation.input.reproductiveContext).toBe('unknown');
+    const saved = snapshot.create(evaluation), before = clone(saved);
+    expect(saved).toMatchObject({ status: 'recorded', evaluation });
+    expect(saved.evaluation.input).toMatchObject({ pregnancy: 'unknown',
+      treatment: { gnrha: 'unknown', cocp: 'unknown', exogenousTestosterone: 'unknown' } });
+    expect(saved.evaluation.referencePreview.byAge.range.source).toEqual(evaluation.referencePreview.byAge.range.source);
+    expect(saved.evaluation.referencePreview.byAge.range.population).toEqual(evaluation.referencePreview.byAge.range.population);
+    evaluation.input.sex = 'M'; evaluation.input.age.years = 90;
+    evaluation.input.pregnancy = 'yes'; evaluation.input.treatment.cocp = 'yes';
+    evaluation.referencePreview.byAge.range.bounds.upper.value = 99999;
+    const reader = {};
+    for (const file of ['vilda_lab_testosterone_units.js', 'vilda_lab_snapshot.js']) loadBrowserScript(file, reader);
+    expect(reader).not.toHaveProperty('VildaLabTestosterone');
+    expect(reader).not.toHaveProperty('VildaLabTestosteroneData');
+    expect(reader.VildaLabSnapshot.normalize(clone(saved))).toEqual(before);
+  });
+
+  it.each([
+    ['GnRHa', { treatment: { gnrha: 'yes', sexSteroids: 'unknown', context: 'unknown' } }],
+    ['pregnancy', { pregnancy: 'yes' }],
+    ['pregnancy context', { reproductiveContext: 'pregnancy' }],
+    ['COCP', { treatment: { cocp: 'yes', gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' } }],
+    ['exogenous testosterone', { treatment: { exogenousTestosterone: 'yes', gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' } }],
+  ])('keeps known %s as a recorded unavailable reference and rejects a contradictory imported preview', (_, extra) => {
+    const evaluation = evaluate('30', 'ng/dL', female({ age: { years: 19, months: 0, days: null, precision: 'month' }, ...extra }));
+    expect(evaluation.referenceSelection.status).toBe('unavailable');
+    expect(evaluation).not.toHaveProperty('referencePreview');
+    expect(snapshot.create(evaluation)).toMatchObject({ status: 'recorded', evaluation });
+    const contradictory = evaluate('30', 'ng/dL', female({ age: { years: 19, months: 0, days: null, precision: 'month' } }));
+    if (extra.treatment) Object.assign(contradictory.input.treatment, extra.treatment);
+    else Object.assign(contradictory.input, extra);
+    expect(snapshot.create(contradictory)).toMatchObject({ status: 'unavailable', evaluation: null });
+  });
+
+  it.each(['<7', '≤7', '>150', '≥150', '<LOD', '<LOQ'])('retains female %s without an exact point', raw => {
+    const saved = bind(lab(raw, 'ng/dL', female({ age: { years: 19, months: 0, days: null, precision: 'month' } })));
+    expect(saved.assessment.status).toBe('recorded');
+    expect(saved.assessment.evaluation.measurement).toMatchObject({ raw, sourceUnit: 'ng/dL', isExact: false, plotValue: null });
+    expect(snapshot.forSeries(saved, DATE)).toMatchObject({ valueNum: null, plotValue: null, unit: 'ng/dL' });
+  });
+
+  it.each([
+    ['pregnancy', e => { e.input.pregnancy = 'probably'; }],
+    ['COCP', e => { e.input.treatment.cocp = 'probably'; }],
+    ['exogenous testosterone', e => { e.input.treatment.exogenousTestosterone = 'probably'; }],
+  ])('rejects an unreadable imported %s flag', (_, mutate) => {
+    const evaluation = evaluate('30', 'ng/dL', female()); mutate(evaluation);
+    expect(snapshot.create(evaluation)).toMatchObject({ status: 'unavailable', evaluation: null });
+  });
+
+  it.each([['F', 'G'], ['M', 'Th']])('refuses an imported %s stage comparison with the contradictory feature %s', (sex, kind) => {
+    const evaluation = evaluate('30', 'ng/dL', { sex });
+    evaluation.input.puberty.kind = kind;
+    evaluation.referencePreview.byStage = clone(evaluation.referencePreview.byAge);
+    evaluation.referencePreview.byStage.range.stage = { kind, value: 3, sourceText: 'Fikcyjna sprzeczna cecha' };
+    expect(snapshot.create(evaluation)).toMatchObject({ status: 'unavailable', evaluation: null });
+  });
+
+  it('does not add new context to older schema-1 assessments or female results without an assessment', () => {
+    const male = snapshot.create(evaluate());
+    expect(male.status).toBe('recorded');
+    expect(male.evaluation.input).not.toHaveProperty('pregnancy');
+    expect(male.evaluation.input.treatment).not.toHaveProperty('cocp');
+    expect(male.evaluation.input.treatment).not.toHaveProperty('exogenousTestosterone');
+    expect(snapshot.normalize(clone(male))).toEqual(male);
+    const legacy = { test: 'Testosteron całkowity', testKey: 'testosterone_total', value: '30', valueNum: 30,
+      unit: 'ng/dL', norm: 'Fikcyjny dawny opis zakresu' };
+    expect(snapshot.reconcile(null, legacy, null, DATE)).toEqual(legacy);
+    expect(snapshot.forSeries(legacy, DATE)).toEqual({});
+  });
+
+  it.each(['lh', 'fsh'])('still requires the recorded reproductive context for a selected adult female %s range', analyte => {
+    const pubertyEngine = require('../../vilda_lab_puberty.js'), pubertyData = require('../../vilda_lab_puberty_data.js');
+    const evaluation = pubertyEngine.evaluate({ analyte, value: '2', unit: 'IU/L', sex: 'F',
+      age: { years: 30, months: 0, days: null, precision: 'month' }, contextBasis: 'current-patient',
+      referenceSelection: 'automatic', reproductiveContext: 'follicular', specimen: 'unknown', measurementKind: 'unknown',
+      treatment: { gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' } }, pubertyData);
+    expect(evaluation.referenceSelection.status).toBe('selected');
+    expect(snapshot.create(evaluation).status).toBe('recorded');
+    evaluation.input.reproductiveContext = 'unknown';
+    expect(snapshot.create(evaluation)).toMatchObject({ status: 'unavailable', evaluation: null });
+  });
+});
+
 describe('TT production pin capture', () => {
   it.each(['300', '1 000', '<7', '<LOD'])('uses the immutable source value for %s, never parseFloat or canonical SI', raw => {
     const assessment = lab(raw).assessment;
@@ -173,7 +269,7 @@ describe('TT production pin capture', () => {
     expect(result.assessment.evaluation.input.puberty.stage).toBe(3);
   });
 
-  it('does not manufacture a TT snapshot for the unchanged female route or another analyte', () => {
+  it('does not manufacture a TT snapshot when the provider returns no assessment', () => {
     const capture = pin(() => undefined);
     const result = { testKey: 'testosterone_total', raw: '30', unitSym: 'ng/dL', valueNum: 30 };
     capture(result);

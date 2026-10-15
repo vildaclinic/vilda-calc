@@ -154,7 +154,7 @@
     'roche-cobas-e601-fsh-greaves-2015': 'Roche Cobas e601 FSH'
   };
   var REPRODUCTIVE_CONTEXT = { follicular: 'Faza folikularna', ovulation: 'Okres okołoowulacyjny', luteal: 'Faza lutealna', postmenopause: 'Po menopauzie',
-    early_follicular: 'Wczesna faza folikularna', late_follicular: 'Późna faza folikularna', mid_luteal: 'Środkowa faza lutealna', late_luteal: 'Późna faza lutealna' };
+    early_follicular: 'Wczesna faza folikularna', late_follicular: 'Późna faza folikularna', mid_luteal: 'Środkowa faza lutealna', late_luteal: 'Późna faza lutealna', pregnancy: 'Ciąża' };
   var ANALYTES = {
     lh: { label: 'LH', unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
     fsh: { label: 'FSH', unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
@@ -172,6 +172,11 @@
     'cpp-laboratory-review-2025': ['Critical appraisal of diagnostic laboratory tests in CPP, 2025', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/'],
     'who-preterm-birth-2023': ['WHO — definicja wcześniactwa, 2023', 'https://www.who.int/news-room/fact-sheets/detail/preterm-birth'],
     'mayo-ttst-8533': ['Mayo Clinic Laboratories — testosteron całkowity, TTST 8533', 'https://www.mayocliniclabs.com/test-catalog/Overview/8533'],
+    'mayo-ttst-8533-female': ['Mayo Clinic Laboratories — TTST 8533, dziewczynki i kobiety', 'https://www.mayocliniclabs.com/test-catalog/Overview/8533'],
+    'society-for-endocrinology-androgen-excess-2025': ['Society for Endocrinology — nadmiar androgenów u kobiet, 2025', 'https://doi.org/10.1111/cen.15265'],
+    'endocrine-society-androgen-therapy-women-2014': ['Endocrine Society — androgeny u kobiet, 2014', 'https://doi.org/10.1210/jc.2014-2260'],
+    'global-consensus-testosterone-women-2019': ['Global Consensus — testosteron u kobiet, 2019', 'https://doi.org/10.1210/jc.2019-01603'],
+    'pcos-international-guideline-2023': ['Międzynarodowe wytyczne PCOS, 2023', 'https://doi.org/10.1210/clinem/dgad463'],
     'endocrine-society-testosterone-2018': ['Endocrine Society — testosteron u mężczyzn, 2018', 'https://doi.org/10.1210/jc.2018-00229'],
     'eau-male-hypogonadism-2026': ['EAU — Male Hypogonadism, 2026', 'https://uroweb.org/guidelines/sexual-and-reproductive-health/chapter/male-hypogonadism'],
     'endocrine-society-testosterone-statement-2026': ['Endocrine Society — stanowisko dotyczące testosteronu, 2026', 'https://www.endocrine.org/news-and-advocacy/news-room/2026/statement-on-testosterone-replacement-therapy'],
@@ -215,7 +220,12 @@
   }
   function testosteroneReason(code) {
     return ({
-      unsupported_sex: 'Ten profil testosteronu całkowitego dotyczy chłopców i mężczyzn.',
+      unsupported_sex: 'Brak profilu testosteronu całkowitego dla podanej płci.',
+      female_stage_reference_not_established: 'Profil TT wykorzystuje wiek; nie zweryfikowano zakresów według Th.',
+      female_infant_reference_not_established: 'Brak zweryfikowanego zakresu TT dla dziewczynek przed ukończeniem 6 miesięcy.',
+      pregnancy_requires_separate_profile: 'Znana ciąża wymaga odrębnej interpretacji; dostępny zakres TT jej nie obejmuje.',
+      pregnancy_context_unknown: 'Zakres źródła nie jest odrębną normą dla ciąży; brak danych nie potwierdza jej wykluczenia.',
+      reproductive_context_conflict: 'Podane informacje o ciąży lub kontekście rozrodczym są sprzeczne.',
       postnatal_age_calendar_month_uncertainty: 'Wiek w dniach nie wyznacza dokładnie ukończonych miesięcy kalendarzowych; zachowano możliwy przedział wieku.',
       postnatal_calendar_age_policy_missing: 'Brak zapisanej polityki pozwalającej odnieść wiek w dniach do miesięcy kalendarzowych.',
       collection_time_unknown: 'Pora pobrania nie została ustalona; poranne próbki opisują zakres źródłowy.',
@@ -552,7 +562,12 @@
       { label: 'Potwierdzenie metody', value: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia' + (assay.profileVersion ? ' · wersja profilu: ' + text(assay.profileVersion) : ' · wersja profilu niepodana') : assay.confirmation === 'reported' ? 'Podana dla rzeczywistej próbki' : 'Niepotwierdzona' }
     ];
     if (testosterone) context.push({ label: 'Pora pobrania', value: ({ morning: 'Rano — podano dla próbki', evening: 'Wieczorem', midnight: 'O północy' })[input.collectionTime] || 'Nie ustalono' });
+    if (testosterone && input.sex === 'F' && ['yes', 'no'].includes(input.pregnancy)) context.push({ label: 'Ciąża', value: flag(input.pregnancy) });
     var treatment = input.treatment || {};
+    if (testosterone && input.sex === 'F') {
+      if (['yes', 'no'].includes(treatment.cocp)) context.push({ label: 'Złożona antykoncepcja hormonalna', value: flag(treatment.cocp) });
+      if (['yes', 'no'].includes(treatment.exogenousTestosterone)) context.push({ label: 'Podawanie testosteronu', value: flag(treatment.exogenousTestosterone) });
+    }
     if (Object.prototype.hasOwnProperty.call(treatment, 'context')) {
       context.push({ label: 'Kontekst leczenia', value: treatment.context === 'hormonal' ? 'Leczenie hormonalne — bez określenia leku' : treatment.context === 'none' ? (treatment.gnrha === 'no' && treatment.sexSteroids === 'no' ? 'Nie zgłoszono leczenia wpływającego na interpretację ' + (testosterone ? 'testosteronu' : 'LH/FSH') : 'Zadeklarowano brak leczenia; szczegóły wymagają ustalenia') : 'Nie ustalono' });
       if (['yes', 'no'].includes(treatment.gnrha)) context.push({ label: 'Leczenie GnRHa', value: flag(treatment.gnrha) });
@@ -631,10 +646,10 @@
 
   function automaticBlock(e) {
     var codes = unique(codeList(e.referenceSelection && e.referenceSelection.reasonCodes).concat(codeList(e.biochemical.reasonCodes)));
-    var priority = ['invalid_reproductive_context', 'reproductive_context_not_applicable', 'missing_age', 'invalid_age', 'missing_sex',
+    var priority = ['invalid_reproductive_context', 'reproductive_context_conflict', 'reproductive_context_not_applicable', 'missing_age', 'invalid_age', 'missing_sex',
       'johannsen_context_conflict', 'johannsen_age_context_mismatch', 'invalid_johannsen_eligibility_policy', 'johannsen_population_or_age_unavailable',
       'infant_birth_context_missing', 'term_birth_unconfirmed', 'gestational_age_precision_crosses_scope', 'gestational_age_outside_profile', 'invalid_gestational_eligibility_policy', 'age_precision_crosses_scope',
-      'treatment_requires_separate_profile', 'unsupported_or_unknown_specimen', 'profile_material_mismatch', 'method_not_confirmed',
+      'pregnancy_requires_separate_profile', 'treatment_requires_separate_profile', 'female_infant_reference_not_established', 'unsupported_or_unknown_specimen', 'profile_material_mismatch', 'method_not_confirmed',
       'automatic_reference_policy_missing', 'no_matching_reference_range', 'age_outside_profile'];
     if (e.analyte === 'testosterone_total') {
       var ttCode = ['unsupported_sex', 'collection_time_outside_reference', 'preterm_reference_not_established'].find(function (candidate) { return codes.includes(candidate); });
@@ -645,7 +660,7 @@
     var code = priority.find(function (candidate) { return codes.includes(candidate); });
     if (code === 'method_not_confirmed') return 'Metoda badania nie odpowiada dostępnemu zakresowi referencyjnemu.';
     if (code === 'unsupported_or_unknown_specimen' || code === 'profile_material_mismatch') return 'Zakresy referencyjne dotyczą surowicy; podano inny materiał próbki.';
-    return code ? reasons([code])[0] : 'Brak zakresu referencyjnego dla podanych danych.';
+    return code ? e.analyte === 'testosterone_total' && testosteroneReason(code) || reasons([code])[0] : 'Brak zakresu referencyjnego dla podanych danych.';
   }
 
   // This is a presentation of recorded reasons only, never a second eligibility

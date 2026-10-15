@@ -10,7 +10,7 @@
     var raw = text(value).replace(',', '.');
     return raw === '' ? null : Number(raw);
   }
-  function flag(value) { return value === 'yes' || value === 'no' ? value : 'unknown'; }
+  function flag(value) { return value === true || value === 'yes' ? 'yes' : value === false || value === 'no' ? 'no' : 'unknown'; }
   function pubertyKind(value) {
     return ({ TH: 'Th', M: 'Th', B: 'Th', G: 'G', P: 'P', PH: 'P', AX: 'Ax' })[text(value).toUpperCase()] || 'unspecified';
   }
@@ -148,6 +148,12 @@
     }
     if (input.analyte === 'testosterone_total') {
       input.collectionTime = ['morning', 'evening', 'midnight'].includes(f.collectionTime) ? f.collectionTime : 'unknown';
+      if (sex === 'F') {
+        input.pregnancy = flag(f.pregnancy);
+        input.reproductiveContext = ['follicular', 'ovulation', 'luteal', 'postmenopause', 'pregnancy'].includes(f.reproductiveContext) ? f.reproductiveContext : 'unknown';
+        input.treatment.cocp = flag(f.cocp);
+        input.treatment.exogenousTestosterone = flag(f.exogenousTestosterone);
+      }
       if (f.assay && typeof f.assay === 'object') input.assay = {
         profileId: text(f.assay.profileId), profileVersion: text(f.assay.profileVersion),
         methodId: text(f.assay.methodId), confirmation: ['reported', 'configured'].includes(f.assay.confirmation) ? f.assay.confirmation : 'unknown'
@@ -176,9 +182,12 @@
     var sharedEditor = null, localAssessment = null, localEditedAxes = {}, localVisitMarker = null;
     function isInhibin() { return analyte === 'inhibin_b'; }
     function isTestosterone() { return analyte === 'testosterone_total'; }
-    function legacyFemale() { return isTestosterone() && fields.sex.value === 'F'; }
+    function ageOnlyFemale() { return isTestosterone() && fields.sex.value === 'F' && !stageReferencesAvailable(); }
     function units() { return isTestosterone() ? ['nmol/L', 'ng/dL', 'ng/mL', 'pg/mL'] : isInhibin() ? ['pg/mL', 'ng/L'] : ['IU/L', 'mIU/mL']; }
-    function stageReferencesAvailable() { return !(data && data.presentationPolicy && data.presentationPolicy.stageReferencesAvailable === false); }
+    function stageReferencesAvailable() {
+      var policy = data && data.presentationPolicy;
+      return !(policy && (policy.stageReferencesAvailable === false || policy.stageReferencesAvailableBySex && policy.stageReferencesAvailableBySex[fields.sex.value] === false));
+    }
     function infantAgeLimit() { return data && data.presentationPolicy && data.presentationPolicy.infantAgeUpperYears; }
     function element(tag, className, content) {
       var node = doc.createElement(tag);
@@ -241,7 +250,7 @@
       var grid = element('div', 'lab-puberty-fields'); sectionNode.appendChild(grid); details.appendChild(sectionNode); sections[name] = sectionNode; return grid;
     }
     function openSection(name) {
-      if (name === 'stage' && legacyFemale()) return;
+      if (name === 'stage' && ageOnlyFemale()) return;
       details.open = !details.open || sections[name].hidden;
       Object.keys(sections).forEach(function (key) { sections[key].hidden = key !== name; sectionButtons[key].setAttribute('aria-pressed', String(key === name)); });
       updateView();
@@ -304,7 +313,7 @@
           measuredAtISO: null, scope: 'current' }) : null;
     }
     function editSharedObservation(axis, stageValue) {
-      if (legacyFemale()) return { ok: false, reason: 'legacy-female-reference' };
+      if (ageOnlyFemale()) return { ok: false, reason: 'stage-reference-not-established' };
       if (sharedVisit()) {
         var runtime = sharedRuntime();
         var result = runtime && typeof runtime.editObservation === 'function'
@@ -341,7 +350,7 @@
     }
     function updateSharedEditor() {
       var ui = root.VildaPubertyAssessmentUI;
-      var enabled = !legacyFemale() && !!(ui && typeof ui.mountEditor === 'function' && context && context.pubertyAssessmentContext);
+      var enabled = !ageOnlyFemale() && !!(ui && typeof ui.mountEditor === 'function' && context && context.pubertyAssessmentContext);
       sharedEditorHost.hidden = !enabled;
       wrappers.kind.hidden = enabled;
       wrappers.stage.hidden = enabled || fields.kind.value === 'Ax';
@@ -420,12 +429,16 @@
         values.gnrha = values.gnrha === 'yes' ? 'yes' : flag(treatment.gnrha) !== 'unknown' ? flag(treatment.gnrha) : values.gnrha;
         values.sexSteroids = flag(treatment.sexSteroids);
         values.treatmentContext = values.gnrha === 'yes' || values.sexSteroids === 'yes' ? 'hormonal' : ['none', 'hormonal'].includes(treatment.context) ? treatment.context : 'unknown';
+        values.pregnancy = flag(known.pregnancy);
+        values.cocp = flag(treatment.cocp);
+        values.exogenousTestosterone = flag(treatment.exogenousTestosterone);
+        if (text(known.reproductiveContext)) values.reproductiveContext = text(known.reproductiveContext);
       }
       var neonatal = neonatalValues();
       if (neonatalContext() || neonatal.gestationalDays || neonatal.postnatalDays) values.neonatalAge = neonatal;
       values.useNeonatalAge = neonatalContext() && knownDays(neonatal.postnatalDays) || preferInfantDays(values, neonatal);
       var chronological = { age: values.useNeonatalAge ? null : age(values, 'age'), neonatalAge: values.neonatalAge };
-      if (!engine || typeof engine.resolveAge !== 'function' || !adultAgeState(engine.resolveAge(chronological, data)).possible) values.reproductiveContext = 'unknown';
+      if (!isTestosterone() && (!engine || typeof engine.resolveAge !== 'function' || !adultAgeState(engine.resolveAge(chronological, data)).possible)) values.reproductiveContext = 'unknown';
       if (ready()) {
         var history = context.history || {};
         values.progression = flag(history.progression); values.growthAcceleration = flag(history.growthAcceleration);
@@ -562,12 +575,12 @@
         (commonEditor ? sharedVisit() ? 'Wspólna ocena tej wizyty — zmiany są dostępne także w formularzu głównym.' : 'Korekta tylko dla tego sprawdzenia. Nie zapisuje danych pacjenta.' : 'Ocena dotyczy bieżącego kontekstu pacjenta.');
       var infant = resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < 1;
       wrappers.preterm.hidden = !infant && !neonatalMode;
-      stageRow.hidden = legacyFemale() || neonatalMode || adult.definite || isTestosterone() && infant || !commonEditor && !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
-      // The female TT fallback still uses its existing legacy rows. A typed
-      // Th/P editor here would imply a relationship those rows do not establish.
-      refineStage.disabled = legacyFemale(); sectionButtons.stage.disabled = legacyFemale();
-      sections.stage.inert = legacyFemale();
-      fields.kind.disabled = legacyFemale(); fields.stage.disabled = legacyFemale() || fields.kind.value === 'Ax';
+      stageRow.hidden = ageOnlyFemale() || neonatalMode || adult.definite || isTestosterone() && infant || !commonEditor && !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
+      // The female source does not establish which Tanner feature was assessed.
+      // Preserve Th/P in the patient context without offering an unverified axis.
+      refineStage.disabled = ageOnlyFemale(); sectionButtons.stage.disabled = ageOnlyFemale();
+      sections.stage.inert = ageOnlyFemale();
+      fields.kind.disabled = ageOnlyFemale(); fields.stage.disabled = ageOnlyFemale() || fields.kind.value === 'Ax';
       if (stageRow.hidden) { sections.stage.hidden = true; sectionButtons.stage.setAttribute('aria-pressed', 'false'); }
       wrappers.reproductiveContext.hidden = isTestosterone() || fields.sex.value !== 'F' || !adult.possible;
       updateNeonatalView(neonatalMode, neonatal);
@@ -630,7 +643,6 @@
     }
     function updateContextLine(adult) {
       var parts = [];
-      if (legacyFemale()) parts.push('Testosteron u kobiet: zachowano dotychczasowe zakresy przelicznika; nie korzystają one z nowej oceny Th/P.');
       if (!ready()) parts.push(context && context.sourceStatus === 'loading' ? 'Trwa odczyt danych aktualnego pacjenta. Dane z karty są tymczasowo wyłączone z oceny.' : 'Dane z formularza głównego są niedostępne. Przeliczenie nie wymaga danych pacjenta.');
       if (ready() && context.gnrhaStatus === 'w-trakcie') {
         var treatmentText = context.gnrhaStatus === 'zakonczone' ? 'GnRHa: zakończone. Sam status nie określa leczenia ani wpływu ostatniej dawki dla wyniku; kontekst pozostaje nieznany.' : context.gnrhaStatus === 'w-trakcie' ? 'Z karty: leczenie GnRHa w trakcie.' : context.gnrhaStatus === 'brak' ? 'Z karty: brak GnRHa; nie ustala to pozostałego leczenia hormonalnego.' : '';
@@ -644,7 +656,7 @@
       contextLine.hidden = !parts.length;
     }
     function updatePresentation() {
-      var active = !!analyte, reference = active && !legacyFemale();
+      var active = !!analyte, reference = active;
       var sampleStep = byId('labStep4');
       if (sampleStep) {
         sampleStep.classList.toggle('lab-puberty-suppressed', reference);
@@ -720,22 +732,19 @@
       try { next = opts.readPatientContext(); } catch (_) { next = { identityKey: context && context.identityKey, sourceStatus: 'unavailable' }; }
       setPatientContext(next); return previousKey !== contextKey;
     }
-    // One resolver is shared by the modern TT assessment and the legacy female
-    // renderer. Reading it never triggers onChange or creates a second override.
+    // One resolver owns the complete context for both sexes. Reading it never
+    // triggers onChange or creates a second override.
     function getEffectiveContext() {
       refreshContext();
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
       return { analyte: analyte, sex: input.sex, ageYears: number(fields.ageYears.value), ageMonths: number(fields.ageMonths.value),
         age: engine && typeof engine.resolveAge === 'function' ? engine.resolveAge(input, data) : null, input: input,
-        isLegacyFemale: legacyFemale(), sourceStatus: context && context.sourceStatus || 'unavailable', identityKey: context && context.identityKey || null };
+        isLegacyFemale: false, sourceStatus: context && context.sourceStatus || 'unavailable', identityKey: context && context.identityKey || null };
     }
     function getLegacyPatient() {
       var effective = getEffectiveContext(), resolved = effective.age;
       var years = resolved && resolved.status === 'known' ? resolved.lowerYears : null;
-      // The legacy female renderer has taken ownership after onPatientChange
-      // cleared the old input; it never creates a TT engine assessment.
-      if (effective.isLegacyFemale) pendingPatientChange = false;
-      return { sex: effective.sex, age: years, life_stage: years === null ? null : years >= 18 ? 'adult' : 'pediatric' };
+      return { sex: effective.sex, age: years, life_stage: years === null ? null : years >= (isTestosterone() ? 19 : 18) ? 'adult' : 'pediatric' };
     }
     function isLegacyFemale() { return getEffectiveContext().isLegacyFemale; }
     function displayMeasurement(unit) {
@@ -757,7 +766,6 @@
       pendingPatientChange = false;
       lastMeasurement = { raw: text(measurement && measurement.raw), unit: text(measurement && measurement.unit), targetUnit: text(measurement && measurement.targetUnit) };
       updateView();
-      if (legacyFemale()) return null;
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
       var target = units().includes(lastMeasurement.targetUnit) ? lastMeasurement.targetUnit : input.unit;
       var rangeBlock = byId('labRangeBlock');
@@ -817,7 +825,7 @@
       return evaluation;
     }
     function getAssessment(result) {
-      if (!analyte || isTestosterone() && isLegacyFemale()) return undefined;
+      if (!analyte) return undefined;
       if (result && result.testKey !== analyte) return { schemaVersion: 1, status: 'unavailable', reasonCodes: ['snapshot_result_mismatch'], evaluation: null };
       // Odczyt pól przy otwarciu przypięcia zamyka również okno pomiędzy edycją
       // DOM a eventem change. Snapshot nie zależy od późniejszych zmian pól.
@@ -833,7 +841,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, getEffectiveContext: getEffectiveContext, getLegacyPatient: getLegacyPatient, isLegacyFemale: isLegacyFemale, reset: reset };
   }
 
-  var api = { version: '1.14.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
+  var api = { version: '1.15.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,
     parseGestationalAge: parseGestationalAge, parsePostnatalDays: parsePostnatalDays, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;

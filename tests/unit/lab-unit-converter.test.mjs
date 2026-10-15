@@ -35,29 +35,62 @@ describe('LabUnitConverter', () => {
   });
 
   it.each([{}, { sex: 'M' }, { sex: 'M', age: 0.25, tanner: 1, life_stage: 'pediatric' },
-    { sex: 'M', age: 12, tanner: 3, life_stage: 'pediatric' }, { sex: 'M', age: 45, life_stage: 'adult' }])(
-    'dawne API TT nie przywraca męskich norm ani domyślnego dorosłego: %j', patient => {
+    { sex: 'M', age: 12, tanner: 3, life_stage: 'pediatric' }, { sex: 'M', age: 45, life_stage: 'adult' },
+    { sex: 'F' }, { sex: 'F', age: -1, life_stage: 'adult' },
+    { sex: 'F', age: 30, life_stage: 'adult' }, { sex: 'F', age: 8, life_stage: 'pediatric' },
+    { sex: 'F', age: 0.5, tanner: 5, life_stage: 'pediatric' },
+    { sex: 'F', age: 12, tanner: 3, life_stage: 'pediatric' },
+    { sex: 'F', age: 30, life_stage: 'adult', time_of_day: 'evening' },
+    { sex: 'F', age: 70, life_stage: 'adult', cycle_phase: 'postmenopause' }])(
+    'dawne API TT nie przywraca norm wieku, Tanner ani domyślnej dorosłej: %j', patient => {
       const converter = loadConverter();
       expect(converter.selectRange(converter.find('testosterone_total'), patient)).toBeNull();
       expect(converter.evaluate('testosterone_total', { value: 10, unit: 'nmol/L', patient }))
-        .toMatchObject({ ok: true, status: 'no_range', low: null, high: null, matched: false, is_default: false });
+        .toMatchObject({ ok: true, siValue: 10, status: 'no_range', low: null, high: null,
+          source_ids: [], matched: false, is_default: false });
     }
   );
 
-  it.each([
-    [{ sex: 'F', age: 30, life_stage: 'adult' }, 0.3, 2.4],
-    [{ sex: 'F', age: 8, life_stage: 'pediatric' }, 0.17, 0.45],
-    [{ sex: 'F', age: 12, tanner: 3, life_stage: 'pediatric' }, 0.17, 1.21],
-  ])('zachowuje dotychczasowy żeński zakres TT: %j', (patient, low, high) => {
-    expect(loadConverter().evaluate('testosterone_total', { value: 1, unit: 'nmol/L', patient }))
-      .toMatchObject({ ok: true, low, high, matched: true, is_default: false });
+  it('nie wybiera legacy TT nawet z przekazanego dawnego deskryptora', () => {
+    const converter = loadConverter();
+    const staleDescriptor = {
+      id: 'testosterone_total',
+      reference_ranges_si: [
+        { id: 'old_tanner', when: { sex: 'F', tanner: 3 }, low: 0.17, high: 1.21 },
+        { id: 'old_adult', when: { sex: 'F', life_stage: 'adult' }, low: 0.3, high: 2.4 }
+      ],
+      default_range_si: { low: 0.3, high: 2.4 }
+    };
+    for (const patient of [{ sex: 'F', tanner: 3 }, { sex: 'F', life_stage: 'adult' }, {}]) {
+      expect(converter.selectRange(staleDescriptor, patient)).toBeNull();
+    }
   });
 
-  it('zachowuje dotychczasowe wyłączenie wieczornego pomiaru TT kobiet', () => {
-    expect(loadConverter().evaluate('testosterone_total', { value: 1, unit: 'nmol/L',
-      patient: { sex: 'F', age: 30, life_stage: 'adult', time_of_day: 'evening' } }))
-      .toMatchObject({ ok: true, status: 'no_interpretation', low: null, high: null });
+  it('nie udostępnia dawnych zakresów TT przez rejestr ani listę nadpisań', () => {
+    const converter = loadConverter();
+    const substance = converter.find('testosterone_total');
+    expect(substance.reference_ranges_si).toEqual([]);
+    expect(substance.default_range_si).toBeUndefined();
+    expect(substance.ranges_pl).toEqual([]);
+    expect(converter.rangesForOverride(substance)).toEqual([]);
   });
+
+  it.each(['nmol/L', 'ng/dL', 'ng/mL', 'pg/mL'])(
+    'zachowuje konwersję TT i brak legacy RI dla równoważnego wyniku w %s', unit => {
+      const converter = loadConverter();
+      const converted = converter.convert({ substanceId: 'testosterone_total', value: 100,
+        fromUnit: 'ng/dL', toUnit: unit });
+      expect(converted.ok).toBe(true);
+      expect(converted.siValue).toBeCloseTo(3.467, 12);
+      expect(converter.evaluate('testosterone_total', { value: converted.value, unit,
+        patient: { sex: 'F', age: 35, life_stage: 'adult' } }))
+        .toMatchObject({ ok: true, status: 'no_range', low: null, high: null });
+      const roundtrip = converter.convert({ substanceId: 'testosterone_total', value: converted.value,
+        fromUnit: unit, toUnit: 'ng/dL' });
+      expect(roundtrip.ok).toBe(true);
+      expect(roundtrip.value).toBeCloseTo(100, 12);
+    }
+  );
 
   it('zachowuje równoważność jednostek TSH', () => {
     const result = loadConverter().convert({

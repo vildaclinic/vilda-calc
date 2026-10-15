@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
-| LAB-TT-MAYO | Testosteron całkowity u chłopców i mężczyzn: niezależne osie wieku i G | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs` | etap 3; źródła i polityki w `TESTOSTERONE.md`; oczekuje akceptacji klinicznej właściciela |
+| LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
 | LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
@@ -50,10 +50,9 @@ chłopiec z TT 0,8 nmol/L dostawał sprzeczne oceny po wpisaniu starego Tannera 
 a aktualne G i GnRHa z formularza głównego nie wpływały na ocenę TT.
 Zakres dorosłych Mayo 240–950 ng/dL zaczyna się od ukończonych 19 lat;
 17–18 lat ma nadal 300–1200 ng/dL. Nie dodano osobnego obniżenia normy seniorów.
-Dotychczasowe żeńskie wiersze i współczynniki przeliczeń pozostają.
-Nowy panel TT u F udostępnia wiek/płeć bez edycji Th/P, ponieważ ta ocena
-nie steruje wcześniejszymi żeńskimi zakresami. Nie mapuje jej na ogólny
-Tanner ani nie nadaje wcześniejszym tabelom nowej walidacji.
+W męskim etapie żeńskie wiersze pozostały do osobnego audytu. Pierwszą
+partię żeńską po tym audycie opisano poniżej. Współczynniki przeliczeń
+i działające męskie zakresy/kwalifikacja pozostają bez zmian.
 
 **Ograniczenia:** zapis źródłowego minimum `<7` nie dowodzi LoD/LoQ ani
 liczbowego minimum. Np. 6 ng/dL przy źródle `<7–20` nie daje „poniżej normy”
@@ -63,7 +62,7 @@ konserwatywną polityką aplikacji. Niepewny wiek nie skleja odrębnych grup. Ni
 i kontekst próbki pozwalają jedynie na porównanie orientacyjne; znana
 niezgodność, stymulacja lub leczenie blokują odniesienie bazalne.
 
-**Dorośli:** krótka nota ES2018/EAU2026 pozostaje widoczna także przy wyniku
+**Dorośli mężczyźni:** krótka nota ES2018/EAU2026 pozostaje widoczna także przy wyniku
 w zakresie Mayo. Rozpoznanie wymaga objawów i potwierdzenia w powtarzanych
 porannych pobraniach na czczo. Próg diagnostyczny EAU 12 nmol/L nie zastępuje
 dolnej granicy tego katalogu. SHBG/wolny T ocenia się, gdy wskazane.
@@ -76,6 +75,80 @@ Nierówności i LOD/LOQ nie stają się punktami liczbowymi. Dawne TT bez kopert
 zachowuje wynik i jawną normę wpisu bez oceny według dzisiejszego pacjenta;
 nowa norma nie jest dopisywana do historycznych wizyt. Pozostała praca nad
 historią/trendem oraz dane, geometria i mediany wykresów hormonów są odrębne.
+
+#### Pierwsza partia żeńska po audycie TT (2026-10-15)
+
+**Wpływ kliniczny: tak.** Wersja danych `2026-10-15.2` w module `1.1.0`
+dodaje `mayo-ttst-female`; męski profil zachowuje własną wersję
+`2026-10-15.1`, wartości i noty. Wspólna polityka
+`testosterone-sex-specific-source-selection` korzysta z płci i pełnego
+możliwego wieku ze wspólnego kontekstu, niezależnie od wyniku. Brak wieku
+lub płci nie daje dorosłej normy. Przeliczenie nie wymaga nowej ankiety.
+
+**Źródło i pokrycie:** pełny katalog Mayo TTST/8533 odczytany 15.10.2026,
+[definicja testu PDF](https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=8533)
+str. 3–4/8 i [setup PDF](https://www.mayocliniclabs.com/test-catalog/setup.php?unit_code=8533&format=pdf)
+str. 2/2, surowica LC-MS/MS. Snapshot nie jest datą rewizji wytycznej.
+Aktywne oryginalne ng/dL: 6 miesięcy–9 lat `<7–20`, 10–11 `<7–44`,
+12–16 `<7–75`, 17–18 `20–75`, ≥19 `8–60`. Przejście do ostatniego
+wiersza następuje w 19. urodziny. Nie interpolujemy między grupami,
+nie łączymy norm i nie nazywamy ogólnego ≥19 normą konkretnej fazy
+cyklu/menopauzy. Katalog nie opisuje pełnej kohorty, percentyli ani
+analitycznej LoD/LoQ 7; źródłowy dolny kraniec `<7` pozostaje nieokreślony.
+
+**Różnica względem bazy:** usuwana jest dawna żeńska ścieżka nowych ocen
+z ogólnego słownika. Podstawowe liczby wieku Soldin były odtwarzalne;
+Mayo jest jawną zmianą polityki źródłowej, nie dowodem błędu każdego
+laboratoryjnego RI. Realne uchybienia to przypisanie tabel Tannera do
+Soldin mimo braku oceny stadium w artykule oraz opis 15–18 oparty na
+15–16 bez właściwej odrębnej grupy 17–18. Przykładowo F11/TT 1,6 nmol/L
+przekracza nowe 44 ng/dL, F13/TT 2 mieści się w `<7–75`, a dorosła/TT 2,2
+przekracza 60 ng/dL mimo dawnego 0,3–2,4. Są to porównania źródłowe,
+nie diagnozy. U F8 z 6 ng/dL dolnego krańca nie można ocenić; nie ma below
+ani pełnego within.
+
+**Jawne luki:** nie uruchomiono osi Th. W trzech pełnych dokumentach
+Mayo i dodatkowych katalogach TTST/TTFB nie zdefiniowano żeńskiej cechy
+Tannera jako breast/Th. Th/P i legacy Tanner nie wybierają zakresu TT.
+Pełny PRINCE 2026 z suplementem rozróżnia B/PH, ale autorzy wykluczają
+tabele stadium jako samodzielne RI; to statystyki opisowe innej metody
+CLIA. Nie przenosimy ich do Mayo LC-MS/MS.
+
+Całe **F <6 miesięcy** pozostaje bez kwalifikowanego profilu, z zachowanym
+przeliczeniem i konkretnym powodem. Niewłączone Mayo 20–80 ng/dL istotnie
+różni się od pełnego Johannsen 2018, tabela 1: dziewczynki LC-MS/MS
+`<LOD–0,21` i `<LOD–0,17` nmol/L w nominalnych grupach 2–<3,5/3,5–5 miesięcy,
+LOD 0,10; GA 37+0–41+6, faktyczny żeński wiek 2,3–5,0 miesiąca. Wymaga to
+osobnego profilu i polityki wieku/GA/metody, bez fallbacku Mayo lub normy
+dorosłej. Ljubičić 2022 nie zawiera TT. Znane wcześniactwo nie dostaje
+zastępczych norm.
+
+**Odrębne żeńskie komunikaty:** [SFE 2025](https://doi.org/10.1111/cen.15265)
+§6.2 i tabela 3 traktują **>5 nmol/L** jako próg dalszej pilnej oceny
+przyczyny w diagnostyce nadmiaru androgenów, weryfikacji LC-MS/MS
+i odpowiedniej diagnostyki obrazowej. Nie zmienia to RI Mayo i nie
+rozpoznaje guza. Automatyczną notę ograniczono do pełnego wieku ≥19
+w tej partii produktu; 19 nie pochodzi z SFE jako biologiczny próg
+stosowalności. Dokładnie 5 i `≥5` nie dowodzą ścisłego >5; `>5` oraz `≥6`
+dowodzą, `<6` i `<LOD` nie. Nie zaokrąglamy przed decyzją. Młodsza
+pacjentka nadal widzi odchylenie od własnego zakresu wieku.
+
+[ES 2014](https://doi.org/10.1210/jc.2014-2260) 1.1 i
+[Global Consensus 2019](https://doi.org/10.1210/jc.2019-01603) I(3)/Summary
+nie pozwalają rozpoznawać niedoboru androgenów/HSDD ani zalecać TRT
+z samego niskiego TT. [PCOS 2023](https://doi.org/10.1210/clinem/dgad463)
+1.2.1 i SFE §6.2–6.3 wskazują, że TT w RI nie wyklucza hiperandrogenizmu;
+SHBG/FT ocenia się przy odpowiednich wskazaniach, bez nowego kalkulatora
+i obowiązkowych pól. U młodszych nie stosujemy dorosłych kryteriów jako
+normy dojrzewania. Męskie noty Bhasin/EAU nie są odtwarzane u F.
+
+Znana ciąża, COCP, egzogenny T, steroidy płciowe, GnRHa lub stymulacja
+zachowują znaczenie i wyłączają pozorną ocenę nieleczonego profilu;
+moduł nie ma ich osobnych RI ani celów terapii. Nieznane fakty nie stają
+się ujemnym wywiadem. Historia zachowuje własną kopertę/normę, bez
+retroaktywnego Mayo lub nowej noty SFE. Regresje obejmują m.in. granicę
+6 miesięcy, 18/19, `<7`, nierówności wyniku/progu 5, jednostki, kontekst
+leczenia/ciąży i zachowanie M; ich wykonanie i wynik dokumentuje PR.
 
 Pełne tabele, granice, pochodzenie źródeł, syntetyczne przypadki i regresje:
 [TESTOSTERONE.md](TESTOSTERONE.md). Akceptacja makiety i zielone testy nie

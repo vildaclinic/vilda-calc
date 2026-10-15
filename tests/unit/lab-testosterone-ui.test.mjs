@@ -182,6 +182,62 @@ describe('TT — pure presentation of canonical evaluation', () => {
 });
 
 describe('TT — shared form and one effective patient context', () => {
+  it.each([null, -1])('keeps conversion but never chooses an adult female range for age %s', ageYears => {
+    const { ui, byId, setContext } = mount();
+    setContext({ sex: 'F', ageYears, ageMonths: null });
+    const evaluated = ui.render({ raw: '1', unit: 'nmol/L', targetUnit: 'ng/dL' });
+    expect(evaluated.referenceSelection.status).toBe('unavailable');
+    expect(evaluated).not.toHaveProperty('referencePreview');
+    expect(byId('labResultBig').textContent).toContain('ng/dL');
+    expect(descendants(byId('labPubertyAssessment'), node => node.getAttribute('data-patient-value') !== null)).toHaveLength(0);
+    expect(ui.getAssessment().status).toBe('recorded');
+  });
+
+  it('carries known female pregnancy and treatment through the real form into its saved assessment', () => {
+    const { ui, setContext } = mount({ readMeasurementContext: () => ({ pregnancy: 'yes', reproductiveContext: 'pregnancy',
+      treatment: { cocp: 'yes', exogenousTestosterone: 'yes' } }) });
+    setContext({ sex: 'F', ageYears: 35, gnrhaStatus: 'w-trakcie' });
+    const evaluated = ui.render({ raw: '6', unit: 'nmol/L', targetUnit: 'nmol/L' });
+    expect(evaluated.input).toMatchObject({ pregnancy: 'yes', reproductiveContext: 'pregnancy',
+      treatment: { gnrha: 'yes', cocp: 'yes', exogenousTestosterone: 'yes' } });
+    expect(evaluated.referenceSelection.status).toBe('unavailable');
+    expect(evaluated.clinical.code).not.toBe('female_androgen_excess_action');
+    expect(ui.getAssessment()).toMatchObject({ status: 'recorded', evaluation: { input: { pregnancy: 'yes',
+      treatment: { gnrha: 'yes', cocp: 'yes', exogenousTestosterone: 'yes' } } } });
+  });
+
+  it('preserves boolean facts supplied by existing callers instead of replacing known treatment with unknown', () => {
+    const input = form.buildInput({ sex: 'F', pregnancy: true, cocp: true, exogenousTestosterone: false },
+      { analyte: 'testosterone_total', raw: '6', unit: 'nmol/L' });
+    expect(input).toMatchObject({ pregnancy: 'yes', treatment: { cocp: 'yes', exogenousTestosterone: 'no' } });
+  });
+
+  it('shows only a source upper bound for female <7 and never places <LOD at an exact value', () => {
+    const document = documentDouble(), host = document.createElement('div');
+    const female = { sex: 'F', value: '6', puberty: { kind: 'Th', stage: 3, appliesToCurrentContext: true } };
+    renderer.renderEvaluation(host, evaluate(female), { displayUnit: 'ng/dL' });
+    expect(descendants(host, node => node.classList.contains('vilda-lab-axis-band'))).toHaveLength(0);
+    expect(descendants(host, node => node.getAttribute('data-comparison') === 'stage')).toHaveLength(0);
+    expect(host.textContent).toContain('dolnego krańca nie można ocenić');
+    renderer.renderEvaluation(host, evaluate({ ...female, value: '<LOD' }), { displayUnit: 'ng/dL' });
+    expect(descendants(host, node => node.getAttribute('data-patient-value') !== null)).toHaveLength(0);
+    expect(host.textContent).toContain('<LOD');
+  });
+
+  it.each([
+    ['1', 'reference_comparison_only', 'Society for Endocrinology'],
+    ['0.1', 'female_low_testosterone_not_diagnostic', 'Global Consensus'],
+    ['6', 'female_androgen_excess_action', 'Society for Endocrinology'],
+  ])('renders female TT %s with the proper clinical sources and without male hypogonadism notes', (value, code, citation) => {
+    const document = documentDouble(), host = document.createElement('div');
+    const view = renderer.renderEvaluation(host, evaluate({ sex: 'F', value, unit: 'nmol/L',
+      age: { years: 35, months: 0, precision: 'month' }, puberty: {} }));
+    expect(view.clinical.code).toBe(code);
+    expect(host.textContent).toContain(citation);
+    expect(host.textContent).not.toMatch(/EAU|Bhasin|hipogonadyzmu|pewny guz/);
+    expect(host.textContent).not.toContain('dodatkowe ograniczenie, którego ta wersja');
+  });
+
   it('preserves known assay, material, protocol, treatment and collection time under automatic reference selection', () => {
     const input = form.buildInput({ contextBasis: 'current-patient', referenceSelection: 'automatic', sex: 'M', ageYears: '14',
       assay: { profileId: 'known-profile', profileVersion: '1', methodId: 'known-assay', confirmation: 'reported' },
@@ -204,23 +260,22 @@ describe('TT — shared form and one effective patient context', () => {
     expect(byId('labMeta').textContent).not.toContain('liczbowo równoważne');
   });
 
-  it('changes M→F→unknown→M using the same context and never evaluates or snapshots female legacy results', () => {
+  it('changes M→F→unknown→M through one engine and records the female age comparison', () => {
     const { ui, byId, evaluateSpy, onChange } = mount();
     const measurement = { raw: '200', unit: 'ng/dL', targetUnit: 'ng/dL' };
     ui.render(measurement); expect(evaluateSpy).toHaveBeenCalledTimes(1);
     ui.getEffectiveContext(); ui.getLegacyPatient(); ui.isLegacyFemale();
     expect(onChange).not.toHaveBeenCalled();
     byId('labPubertySex').change('F');
-    expect(ui.getEffectiveContext()).toMatchObject({ sex: 'F', isLegacyFemale: true });
+    expect(ui.getEffectiveContext()).toMatchObject({ sex: 'F', isLegacyFemale: false });
     expect(ui.getLegacyPatient()).toMatchObject({ sex: 'F', age: 14, life_stage: 'pediatric' });
     expect(ui.getLegacyPatient()).not.toHaveProperty('tanner');
-    expect(ui.render(measurement)).toBeNull();
-    expect(ui.getAssessment()).toBeUndefined();
-    expect(evaluateSpy).toHaveBeenCalledTimes(1);
-    expect(byId('labPubertyAssessment').hidden).toBe(true);
-    expect(byId('labResultSourceLine').classList.contains('lab-puberty-suppressed')).toBe(false);
+    expect(ui.render(measurement).referencePreview.byAge.range).toMatchObject({ sex: 'F', bounds: { upper: { value: 75 * 0.03467 } } });
+    expect(ui.getAssessment()).toMatchObject({ status: 'recorded', evaluation: { input: { sex: 'F' } } });
+    expect(byId('labPubertyAssessment').hidden).toBe(false);
+    expect(byId('labResultSourceLine').classList.contains('lab-puberty-suppressed')).toBe(true);
     expect(byId('labStep5').classList.contains('lab-puberty-step-active')).toBe(true);
-    expect(byId('labPubertyPatientContext').textContent).toContain('dotychczasowe zakresy');
+    expect(byId('labPubertyPatientContext').textContent).not.toContain('dotychczasowe zakresy');
     byId('labPubertySex').change('');
     expect(ui.isLegacyFemale()).toBe(false);
     expect(ui.render(measurement).referenceSelection.reasonCodes).toContain('missing_sex');
@@ -230,7 +285,7 @@ describe('TT — shared form and one effective patient context', () => {
     expect(byId('labResultSourceLine').classList.contains('lab-puberty-suppressed')).toBe(true);
   });
 
-  it('disables the typed editor only for legacy female TT and restores G without changing the shared observations', () => {
+  it('keeps female Th editing unavailable for this age-only TT source and restores G without changing shared observations', () => {
     const browser = {};
     loadBrowserScript('vilda_puberty_assessment.js', browser);
     let editor;
@@ -255,8 +310,8 @@ describe('TT — shared form and one effective patient context', () => {
     expect(byId('labPubertyOpenStage').disabled).toBe(true);
     expect(byId('labPubertySharedEditor').hidden).toBe(true);
     expect(byId('labPubertySectionStage')).toMatchObject({ hidden: true, inert: true });
-    expect(byId('labPubertyPatientContext').textContent).toContain('nie korzystają one z nowej oceny Th/P');
-    expect(editor.onEdit('Th', 5)).toEqual({ ok: false, reason: 'legacy-female-reference' });
+    expect(byId('labPubertyPatientContext').textContent).not.toContain('dotychczasowe zakresy');
+    expect(editor.onEdit('Th', 5)).toEqual({ ok: false, reason: 'stage-reference-not-established' });
     expect(editObservation).not.toHaveBeenCalled();
     expect(ui.getEffectiveContext().input.puberty).toEqual(femaleInput.puberty);
     ui.setAnalyte('lh');
@@ -273,6 +328,19 @@ describe('TT — shared form and one effective patient context', () => {
     expect(byId('labPubertySectionStage').inert).toBe(false);
     expect(editor.onEdit('G', 4)).toEqual({ ok: true });
     expect(editObservation).toHaveBeenCalledWith('G', 4);
+  });
+
+  it('opens the male stage editor after switching back from the female age-only profile', () => {
+    const { ui, byId } = mount();
+    const open = () => byId('labPubertyRefineStage').listeners.click[0]();
+    expect(() => open()).not.toThrow();
+    expect(byId('labPubertySectionStage').hidden).toBe(false);
+    byId('labPubertySex').change('F');
+    expect(() => open()).not.toThrow();
+    expect(byId('labPubertySectionStage').hidden).toBe(true);
+    byId('labPubertySex').change('M');
+    expect(() => open()).not.toThrow();
+    expect(byId('labPubertySectionStage').hidden).toBe(false);
   });
 
   it('discards local sex and old measurement when the patient changes', () => {
@@ -293,6 +361,18 @@ describe('TT — shared form and one effective patient context', () => {
     const assessment = ui.getAssessment({ testKey: 'testosterone_total', raw: '200', unit: 'ng/dL' });
     expect(assessment.evaluation.measurement.status).toBe('invalid');
     expect(assessment.evaluation.measurement.raw).toBe('');
+  });
+
+  it('never lets the old female routing getters restore a value belonging to the previous patient', () => {
+    const { ui, setContext } = mount();
+    setContext({ sex: 'F', ageYears: 35 });
+    ui.render({ raw: '30', unit: 'ng/dL', targetUnit: 'ng/dL' });
+    setContext({ identityKey: 'fictional-next-girl', ageYears: 8 });
+    ui.getEffectiveContext(); ui.getLegacyPatient(); ui.isLegacyFemale();
+    const assessment = ui.getAssessment({ testKey: 'testosterone_total', raw: '30', unit: 'ng/dL' });
+    expect(assessment.evaluation.input.sex).toBe('F');
+    expect(assessment.evaluation.measurement).toMatchObject({ status: 'invalid', raw: '' });
+    expect(assessment.evaluation).not.toHaveProperty('referencePreview');
   });
 
   it('keeps completed calendar months when PNA lies near the six-month boundary', () => {

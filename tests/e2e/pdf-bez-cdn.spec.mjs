@@ -32,7 +32,7 @@ function ustawDoroslego(page) {
 
 const zrodla = (page) => page.evaluate(() => Array.from(document.querySelectorAll('script[data-vilda-pdf-lib]')).map((s) => [s.getAttribute('data-vilda-pdf-lib'), s.getAttribute('data-vilda-pdf-src'), new URL(s.src).host]));
 
-test('z zablokowanym cdnjs biblioteki idą z plików aplikacji, a raport zaleceń składa PDF', async ({ page }) => {
+test('z zablokowanym cdnjs biblioteki idą z plików aplikacji, a raport zaleceń składa PDF', async ({ page, baseURL }) => {
   test.setTimeout(180_000);
   await page.route('**cdnjs.cloudflare.com/**', (r) => r.abort());
   await otworz(page);
@@ -44,7 +44,7 @@ test('z zablokowanym cdnjs biblioteki idą z plików aplikacji, a raport zalece�
   expect(lib).toEqual({ jspdf: 'function', h2c: 'function' });
   const z = await zrodla(page);
   expect(z.map((x) => x[0]).sort()).toEqual(['html2canvas', 'jspdf']);
-  for (const [, skad, host] of z) { expect(skad).toBe('local'); expect(host).toBe('127.0.0.1:4173'); }
+  for (const [, skad, host] of z) { expect(skad).toBe('local'); expect(host).toBe(new URL(baseURL).host); }
 
   const pdf = await page.evaluate(async () => {
     const p = await window.dietRecommendationsBuildPdfPackage({ mode: 'classic' });

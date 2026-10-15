@@ -1,4 +1,4 @@
-/* Testosteron całkowity u chłopców i mężczyzn: wersjonowane dane poza silnikiem.
+/* Testosteron całkowity u dziewczynek, chłopców i dorosłych: wersjonowane dane poza silnikiem.
  * Źródła, kwalifikacja i ograniczenia: docs/clinical/TESTOSTERONE.md.
  * Warunki źródła nie są ustalonym opisem próbki pacjenta.
  */
@@ -10,13 +10,14 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
   var data = {
-  "version": "1.0.0",
-  "dataVersion": "2026-10-15.1",
+  "version": "1.1.0",
+  "dataVersion": "2026-10-15.2",
   "automaticReferencePolicy": {
-    "id": "testosterone-male-source-selection",
-    "version": "2026-10-15.1",
+    "id": "testosterone-sex-specific-source-selection",
+    "version": "2026-10-15.2",
     "profileIds": [
-      "mayo-ttst-male"
+      "mayo-ttst-male",
+      "mayo-ttst-female"
     ],
     "stageAge": {
       "axis": "chronologicalYears",
@@ -56,8 +57,34 @@
     "postnatalCalendarAge": {
       "minYearDays": 365,
       "maxYearDays": 366,
-      "minMonthSpanDays": [0, 28, 59, 89, 120, 150, 181, 212, 242, 273, 303, 334],
-      "maxMonthSpanDays": [0, 31, 62, 92, 123, 153, 184, 215, 245, 276, 306, 337],
+      "minMonthSpanDays": [
+        0,
+        28,
+        59,
+        89,
+        120,
+        150,
+        181,
+        212,
+        242,
+        273,
+        303,
+        334
+      ],
+      "maxMonthSpanDays": [
+        0,
+        31,
+        62,
+        92,
+        123,
+        153,
+        184,
+        215,
+        245,
+        276,
+        306,
+        337
+      ],
       "provenance": "Konserwatywna arytmetyka kalendarza gregoriańskiego dla wieku znanego wyłącznie w dniach; długości przesunięć kalendarzowych o 0–11 miesięcy, z ograniczeniem dnia do ostatniego dnia miesiąca. Zweryfikowano cały 400-letni cykl 1600–1999. To polityka aplikacji, nie norma ani przelicznik opublikowany przez Mayo."
     },
     "pretermQualificationProvenance": "Znane wcześniactwo w niemowlęctwie wymaga osobnego profilu GA/PNA/PMA; katalog Mayo nie podaje takiej kwalifikacji. Próg <37 tygodni określa wcześniactwo, nie normę TT.",
@@ -79,7 +106,28 @@
     "knownTherapyRequiresSeparateProfile": true,
     "knownStimulationRequiresSeparateProfile": true,
     "ageInterpretation": "Etykiety katalogowe odwzorowano na ukończone lata/miesiące. Cały możliwy wiek musi należeć do wiersza; nie interpolować i nie scalać różnych zakresów.",
-    "stageQualificationProvenance": "Typowana bieżąca cecha G i ograniczenie wieku [1,19) to jawna polityka aplikacji. Katalog podaje Tanner Stages bez szczegółowej metody oceny cechy."
+    "stageQualificationProvenance": "Typowana bieżąca cecha G i ograniczenie wieku [1,19) to jawna polityka aplikacji. Katalog podaje Tanner Stages bez szczegółowej metody oceny cechy.",
+    "femaleContext": {
+      "id": "testosterone-female-basal-context",
+      "version": "2026-10-15.2",
+      "reproductiveContexts": [
+        "unknown",
+        "follicular",
+        "ovulation",
+        "luteal",
+        "postmenopause",
+        "pregnancy"
+      ],
+      "blockedReproductiveContexts": [
+        "pregnancy"
+      ],
+      "treatmentFlags": [
+        "cocp",
+        "exogenousTestosterone"
+      ],
+      "pregnancyRequiresSeparateProfile": true,
+      "provenance": "Znana ciąża, COCP, egzogenny testosteron, steroidy płciowe i supresja GnRHa wymagają odrębnej oceny. Brak danych nie jest ujemnym wywiadem. SFE 2025 §6.1–6.2; PCOS 2023 1.2.6."
+    }
   },
   "presentationPolicy": {
     "stageReferencesAvailable": true,
@@ -87,7 +135,11 @@
     "censoredLowerNote": "Dolny kraniec zakresu źródłowego jest nieokreślony (<7 ng/dL); nie jest to potwierdzona granica wykrywalności ani oznaczalności.",
     "censoredLowerIndeterminateNote": "Nie przekracza górnej granicy; dolnego krańca nie można ocenić.",
     "sourceRangeTerm": "zakres referencyjny",
-    "noCommonAgeAndStageVerdict": true
+    "noCommonAgeAndStageVerdict": true,
+    "stageReferencesAvailableBySex": {
+      "M": true,
+      "F": false
+    }
   },
   "clinicalGuidance": {
     "adult": {
@@ -105,6 +157,80 @@
         "Progi diagnostyczne ES/EAU nie zastępują granic laboratoryjnego zakresu referencyjnego Mayo. Porównanie nie ustala rozpoznania, przyczyny ani wskazania do terapii.",
         "Wiek starszy nie uzasadnia automatycznej obniżonej normy ani automatycznego leczenia testosteronem."
       ]
+    },
+    "female": {
+      "id": "female-testosterone-clinical-context",
+      "version": "2026-10-15.2",
+      "androgenExcessAdult": {
+        "code": "female_androgen_excess_action",
+        "status": "warning",
+        "title": "Znacznie podwyższone TT",
+        "shortText": "W diagnostyce endogennego nadmiaru androgenów u kobiet wynik powyżej 5 nmol/L wymaga pilnej oceny przyczyny i weryfikacji LC-MS/MS. Samo stężenie nie rozpoznaje guza.",
+        "sourceIds": [
+          "society-for-endocrinology-androgen-excess-2025"
+        ],
+        "threshold": {
+          "operator": ">",
+          "value": 5,
+          "unit": "nmol/L"
+        },
+        "age": {
+          "axis": "chronologicalYears",
+          "lower": {
+            "operator": ">=",
+            "value": 19
+          },
+          "upper": null
+        },
+        "ageQualificationProvenance": "Pełny wiek ≥19 lat jest zakresem produktu powiązanym z dorosłym profilem Mayo; nie jest granicą biologiczną ani wiekowym progiem SFE.",
+        "allowedUnavailableReasons": [
+          "method_not_confirmed",
+          "collection_time_outside_reference"
+        ],
+        "allowedSpecimens": ["unknown", "serum"],
+        "details": [
+          "Próg działania SFE 2025 §6.2 nie zastępuje górnej granicy RI. Nie rozpoznaje guza ani PCOS.",
+          "Wskazana odpowiednia diagnostyka przyczyn jajnikowych/nadnerczowych; nie odkładać pilnej oceny objawów alarmowych do otrzymania powtórki."
+        ]
+      },
+      "lowAdult": {
+        "code": "female_low_testosterone_not_diagnostic",
+        "status": "limited",
+        "title": "Poniżej zakresu źródła",
+        "shortText": "Samo niskie TT nie rozpoznaje niedoboru androgenów ani HSDD i nie stanowi wskazania do leczenia testosteronem. Oceń wynik z objawami i wiarygodnością oznaczenia.",
+        "sourceIds": [
+          "endocrine-society-androgen-therapy-women-2014",
+          "global-consensus-testosterone-women-2019"
+        ],
+        "age": {
+          "axis": "chronologicalYears",
+          "lower": {
+            "operator": ">=",
+            "value": 19
+          },
+          "upper": null
+        }
+      },
+      "aboveReference": {
+        "code": "female_reference_above",
+        "status": "warning",
+        "title": "Powyżej zakresu źródła",
+        "shortText": "Oceń wynik razem z objawami i metodą oznaczenia. Szybka progresja lub wirylizacja wymagają pilnej oceny także bez dużego wzrostu TT. Sam wynik nie rozpoznaje przyczyny.",
+        "sourceIds": [
+          "society-for-endocrinology-androgen-excess-2025",
+          "pcos-international-guideline-2023"
+        ]
+      },
+      "withinReference": {
+        "code": "reference_comparison_only",
+        "status": "limited",
+        "title": "Porównanie ze źródłem",
+        "shortText": "Porównanie orientacyjne; uwzględnij zakres laboratorium, leki i ewentualną ciążę. TT w zakresie nie wyklucza nadmiaru androgenów przy objawach klinicznych.",
+        "sourceIds": [
+          "society-for-endocrinology-androgen-excess-2025",
+          "pcos-international-guideline-2023"
+        ]
+      }
     }
   },
   "sources": {
@@ -181,6 +307,93 @@
       "evidenceSha256": "17bc710f06300865ba66ac31bcbcdcd8b28073ccbb26526f4e38f61c5b6383ed",
       "knownLimitations": [
         "Stanowisko nie jest nową wersją CPG ani nową tabelą zakresów laboratoryjnych."
+      ]
+    },
+    "mayo-ttst-8533-female": {
+      "id": "mayo-ttst-8533-female",
+      "label": "Mayo Clinic Laboratories — TTST / 8533, dziewczynki i kobiety",
+      "title": "Testosterone, Total, Mass Spectrometry, Serum — Females",
+      "organization": "Mayo Clinic Laboratories",
+      "url": "https://www.mayocliniclabs.com/test-catalog/Overview/8533",
+      "version": "Katalog odczytany 2026-10-15; bez jawnej daty rewizji klinicznej tabeli.",
+      "accessedOn": "2026-10-15",
+      "accessTimeZone": "UTC",
+      "readScope": "Pełny HTML: Reference Values, Cautions, Supportive Data, Method Description, Specimen; setup PDF s. 2/2 oraz download-setup PDF s. 3–4, 6–7/8.",
+      "evidenceSha256": "348433dc3f97e75762ca1c83c995f2dfeea0a4b8e682400073cae76941b91e15",
+      "intervalEvidence": {
+        "kind": "laboratory-catalog-reference-interval",
+        "version": "snapshot 2026-10-15",
+        "locator": "Reference Values — Females; wyłącznie wiersze wieku od 6 miesięcy",
+        "verification": "Oryginalne ng/dL, bez interpolacji; zachowany nieokreślony dolny kraniec <7. Nie używamy żeńskiej tabeli Tanner."
+      },
+      "knownLimitations": [
+        "Katalog nie określa liczebności, rekrutacji, etniczności ani percentyli kohorty referencyjnej; nie jest to jawnie polska populacja.",
+        "Mayo podaje Tanner Stages bez definicji badanej cechy; Th, P i stary ogólny Tanner nie kwalifikują do tej oceny.",
+        "Wiersz 0–5 miesięcy odroczono z powodu nierozstrzygniętej rozbieżności z niezależnym pełnym badaniem niemowląt. Ten profil zaczyna się od 6 ukończonych miesięcy.",
+        "Dolny kraniec <7 ng/dL nie jest zerem, dokładnym minimum ani zweryfikowaną LoD/LoQ.",
+        "Poranne próbki i własna metoda Mayo LC-MS/MS opisują źródło; nie potwierdzają cech próbki pacjentki. Metody nie są automatycznie wymienne.",
+        "Ogólny przedział od 19 lat nie jest odrębną normą menopauzalną, fazy cyklu, ciąży ani celem leczenia.",
+        "Brak kwalifikacji według GA/PNA/PMA; znane wcześniactwo w niemowlęctwie wymaga odrębnego profilu."
+      ]
+    },
+    "society-for-endocrinology-androgen-excess-2025": {
+      "id": "society-for-endocrinology-androgen-excess-2025",
+      "label": "Society for Endocrinology, 2025",
+      "title": "Clinical Practice Guideline for the Evaluation of Androgen Excess in Women",
+      "url": "https://doi.org/10.1111/cen.15265",
+      "doi": "10.1111/cen.15265",
+      "version": "2025; Clinical Endocrinology; pełny XML odczytany 2026-10-15.",
+      "accessedOn": "2026-10-15",
+      "accessTimeZone": "UTC",
+      "readScope": "§5 / Tabela 3; §6.1–6.3: pobranie, metoda, TT >5 nmol/L i wolne androgeny.",
+      "evidenceSha256": "53f289d1e09ce69d78eb56f7ed12535b631b5552623f0617ad1f0d1eb49feae9",
+      "knownLimitations": [
+        "Wytyczna kliniczna nie jest dodatkowym zakresem referencyjnym Mayo ani automatycznym rozpoznaniem."
+      ]
+    },
+    "endocrine-society-androgen-therapy-women-2014": {
+      "id": "endocrine-society-androgen-therapy-women-2014",
+      "label": "Endocrine Society, 2014",
+      "title": "Androgen Therapy in Women: A Reappraisal",
+      "url": "https://doi.org/10.1210/jc.2014-2260",
+      "doi": "10.1210/jc.2014-2260",
+      "version": "JCEM 2014;99(10):3489–3510; pełny HTML odczytany 2026-10-15.",
+      "accessedOn": "2026-10-15",
+      "accessTimeZone": "UTC",
+      "readScope": "§1.1, Evidence §1.0, §3.1–3.2: brak zespołu niedoboru rozpoznawanego na podstawie samego TT.",
+      "evidenceSha256": "76c520be727983e359a47efb2d25615c4a1b00e5b0e1ad90a604530c25aa6be0",
+      "knownLimitations": [
+        "Wytyczna kliniczna nie jest dodatkowym zakresem referencyjnym Mayo ani automatycznym rozpoznaniem."
+      ]
+    },
+    "global-consensus-testosterone-women-2019": {
+      "id": "global-consensus-testosterone-women-2019",
+      "label": "Global Consensus, 2019",
+      "title": "Global Consensus Position Statement on the Use of Testosterone Therapy for Women",
+      "url": "https://doi.org/10.1210/jc.2019-01603",
+      "doi": "10.1210/jc.2019-01603",
+      "version": "JCEM 2019;104(10):4660–4666; pełny XML odczytany 2026-10-15.",
+      "accessedOn": "2026-10-15",
+      "accessTimeZone": "UTC",
+      "readScope": "I(3)c i Summary: brak stężenia TT rozpoznającego HSDD; kontekst stosowania terapii u dorosłych kobiet.",
+      "evidenceSha256": "a927314ebbba7436fa9e81570d6adfdf5b8b1a3774f6178e8c45be6e3a3a748f",
+      "knownLimitations": [
+        "Wytyczna kliniczna nie jest dodatkowym zakresem referencyjnym Mayo ani automatycznym rozpoznaniem."
+      ]
+    },
+    "pcos-international-guideline-2023": {
+      "id": "pcos-international-guideline-2023",
+      "label": "International PCOS Guideline, 2023",
+      "title": "Recommendations From the 2023 International Evidence-based Guideline for the Assessment and Management of Polycystic Ovary Syndrome",
+      "url": "https://doi.org/10.1210/clinem/dgad463",
+      "doi": "10.1210/clinem/dgad463",
+      "version": "JCEM 2023; aktualizacja nazwy PMOS w oficjalnym dokumencie 2026 nie zmienia zaleceń.",
+      "accessedOn": "2026-10-15",
+      "accessTimeZone": "UTC",
+      "readScope": "Zalecenia 1.2.1–1.2.11: metoda, COCP, wolny T, kontekst i ograniczenia zakresów.",
+      "evidenceSha256": "4f9f102155001749d33955269b60fa0c7efdb8ab5975e9928a8932ab5ee68948",
+      "knownLimitations": [
+        "Wytyczna kliniczna nie jest dodatkowym zakresem referencyjnym Mayo ani automatycznym rozpoznaniem."
       ]
     }
   },
@@ -590,6 +803,200 @@
       ],
       "applicabilityText": "Mayo TTST · surowica · LC-MS/MS · poranne próbki — porównanie orientacyjne.",
       "referenceContext": "male-age-and-gonadal-stage"
+    },
+    {
+      "id": "mayo-ttst-female",
+      "version": "2026-10-15.2",
+      "active": true,
+      "analyte": "testosterone_total",
+      "sourceId": "mayo-ttst-8533-female",
+      "method": {
+        "id": "mayo-ttst-lcmsms",
+        "name": "Mayo TTST — LC-MS/MS",
+        "description": "Własna, nieopublikowana metoda Mayo; znakowany izotopowo standard wewnętrzny, derywatyzacja hydroksyloaminą i tandemowa spektrometria mas."
+      },
+      "compatibleMethodIds": [
+        "mayo-ttst-lcmsms"
+      ],
+      "unsupportedMethodIds": [
+        "immunoassay",
+        "eclia",
+        "clia",
+        "ria",
+        "elisa"
+      ],
+      "material": "serum",
+      "specimenAliases": [
+        "serum",
+        "surowica"
+      ],
+      "unit": "ng/dL",
+      "population": {
+        "label": "Dziewczynki od 6 miesięcy i kobiety; ogólne zakresy wieku Mayo Clinic Laboratories",
+        "sourceDescription": "Mayo-derived; brak podanej liczebności, pełnej rekrutacji, etniczności i percentyli tej tabeli.",
+        "referenceSampling": "Poranne próbki; nie ustala to pory pobrania ani metody próbki pacjentki."
+      },
+      "scope": {
+        "sex": "F",
+        "age": {
+          "axis": "chronologicalYears",
+          "lower": {
+            "operator": ">=",
+            "value": 0.5
+          },
+          "upper": null,
+          "sourceText": "Females — wdrożone wiersze wieku od 6 miesięcy; wcześniejsze niemowlęctwo odroczone."
+        }
+      },
+      "rows": [
+        {
+          "id": "mayo-ttst-f-6m-9y",
+          "sex": "F",
+          "age": {
+            "axis": "chronologicalYears",
+            "lower": {
+              "operator": ">=",
+              "value": 0.5
+            },
+            "upper": {
+              "operator": "<",
+              "value": 10
+            },
+            "sourceText": "6 months–9 years"
+          },
+          "basis": "age",
+          "bounds": {
+            "lower": null,
+            "upper": {
+              "operator": "<=",
+              "value": 20
+            },
+            "censoredLower": {
+              "operator": "<",
+              "value": 7,
+              "meaning": "unspecified-source-lower-bound"
+            },
+            "sourceText": "<7–20 ng/dL"
+          }
+        },
+        {
+          "id": "mayo-ttst-f-10-11y",
+          "sex": "F",
+          "age": {
+            "axis": "chronologicalYears",
+            "lower": {
+              "operator": ">=",
+              "value": 10
+            },
+            "upper": {
+              "operator": "<",
+              "value": 12
+            },
+            "sourceText": "10–11 years"
+          },
+          "basis": "age",
+          "bounds": {
+            "lower": null,
+            "upper": {
+              "operator": "<=",
+              "value": 44
+            },
+            "censoredLower": {
+              "operator": "<",
+              "value": 7,
+              "meaning": "unspecified-source-lower-bound"
+            },
+            "sourceText": "<7–44 ng/dL"
+          }
+        },
+        {
+          "id": "mayo-ttst-f-12-16y",
+          "sex": "F",
+          "age": {
+            "axis": "chronologicalYears",
+            "lower": {
+              "operator": ">=",
+              "value": 12
+            },
+            "upper": {
+              "operator": "<",
+              "value": 17
+            },
+            "sourceText": "12–16 years"
+          },
+          "basis": "age",
+          "bounds": {
+            "lower": null,
+            "upper": {
+              "operator": "<=",
+              "value": 75
+            },
+            "censoredLower": {
+              "operator": "<",
+              "value": 7,
+              "meaning": "unspecified-source-lower-bound"
+            },
+            "sourceText": "<7–75 ng/dL"
+          }
+        },
+        {
+          "id": "mayo-ttst-f-17-18y",
+          "sex": "F",
+          "age": {
+            "axis": "chronologicalYears",
+            "lower": {
+              "operator": ">=",
+              "value": 17
+            },
+            "upper": {
+              "operator": "<",
+              "value": 19
+            },
+            "sourceText": "17–18 years"
+          },
+          "basis": "age",
+          "bounds": {
+            "lower": {
+              "operator": ">=",
+              "value": 20
+            },
+            "upper": {
+              "operator": "<=",
+              "value": 75
+            },
+            "censoredLower": null,
+            "sourceText": "20–75 ng/dL"
+          }
+        },
+        {
+          "id": "mayo-ttst-f-19plus",
+          "sex": "F",
+          "age": {
+            "axis": "chronologicalYears",
+            "lower": {
+              "operator": ">=",
+              "value": 19
+            },
+            "upper": null,
+            "sourceText": "≥19 years"
+          },
+          "basis": "adult",
+          "bounds": {
+            "lower": {
+              "operator": ">=",
+              "value": 8
+            },
+            "upper": {
+              "operator": "<=",
+              "value": 60
+            },
+            "censoredLower": null,
+            "sourceText": "8–60 ng/dL"
+          }
+        }
+      ],
+      "applicabilityText": "Mayo TTST · dziewczynki od 6 miesięcy i kobiety · surowica · LC-MS/MS · poranne próbki — porównanie orientacyjne; uwzględnij leki i ewentualną ciążę.",
+      "referenceContext": "female-age-only"
     }
   ]
 };
