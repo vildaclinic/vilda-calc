@@ -25,9 +25,6 @@
   var CONVERTER_WAIT_MS = 5000;
   var REFRESH_DELAY_MS = 150;
   var ENVELOPE_ANALYTES = ['lh', 'fsh', 'inhibin_b'];
-  // Kolory wyróżnienia z Nl (czerwień) → fiolet modułu lab (decyzja 6.18: bez czerwieni i zieleni
-  // dla statusów historycznych). Wartości w atrybutach SVG, nie w stylu elementu.
-  var CHART_RECOLOR = { '#E24B4A': '#3C3489', '#A32D2D': '#3C3489', '#efc2c2': '#c9c5ef' };
   var SKIP_REASON = {
     censored: 'wynik z „<” lub „>”',
     invalidated: 'ocena do ponowienia',
@@ -554,9 +551,10 @@
         } else {
           var svg = null;
           // Bez pasma norm i bez dzisiejszej oceny punktów: funkcja norm zwraca null, pasmo wyłączone.
-          try { svg = trend.render({ test: view.label, testKey: view.key }, chart, openNote, function () { return null; }, false); } catch (_) { /* jak brak wykresu */ }
+          // Punkty bez normy wpisu (decyzja 6.22): przy punkcie sama wartość, bez strzałki i bez czerwieni
+          // wyróżnienia z Nl; strzałka wg zapisu zostaje przy wartości obok wykresu i w tabeli.
+          try { svg = trend.render({ test: view.label, testKey: view.key }, withoutPointFlags(chart), openNote, function () { return null; }, false); } catch (_) { /* jak brak wykresu */ }
           if (svg) {
-            recolor(svg);
             host.appendChild(svg);
           } else {
             add(host, 'p', 'vilda-lab-hist-muted vilda-lab-hist-no-chart', 'Za mało dokładnych wyników do wykresu.');
@@ -570,14 +568,9 @@
           add(box, 'p', 'vilda-lab-hist-foot', 'Poza wykresem: ' + chart.skipped + ' (' + reasons.join(' · ') + ')');
         }
       }
-      function recolor(svg) {
-        if (typeof svg.querySelectorAll !== 'function') return;
-        ['fill', 'stroke'].forEach(function (attribute) {
-          Object.keys(CHART_RECOLOR).forEach(function (from) {
-            var found = svg.querySelectorAll('[' + attribute + '="' + from + '"]');
-            for (var i = 0; i < found.length; i++) found[i].setAttribute(attribute, CHART_RECOLOR[from]);
-          });
-        });
+      // Kopia danych wykresu z punktami bez normy: model widoku (tabela, ostatni wynik) zostaje nietknięty.
+      function withoutPointFlags(chart) {
+        return Object.assign({}, chart, { points: chart.points.map(function (point) { return Object.assign({}, point, { norm: null }); }) });
       }
 
       // Zdarzenia leczenia od pierwszego wyniku (z datą) pokazanych paneli wzwyż; wcześniejsze nie dotyczą tej historii.
@@ -698,7 +691,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.0.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel }) });
+    return Object.freeze({ version: '1.1.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel }) });
   }
 
   return createApi();
