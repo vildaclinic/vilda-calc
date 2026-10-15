@@ -355,3 +355,68 @@ describe('zakładka Badania: pomocnicze', () => {
     expect(shortLabel('TSH (tyreotropina)')).toBe('TSH');
   });
 });
+
+// LAB-HISTORIA PR5a (decyzje 6.14, 6.24, 6.25): dopiski źródła w karcie, tabeli i stopce; dane fikcyjne.
+describe('zakładka Badania: IGF-1 z notatek leczenia GH i wpisy dopasowane po nazwie', () => {
+  function danePr5a() {
+    const igf = nota('igf-1', '2026-04-08', { test: 'IGF-1 (insulinopodobny czynnik wzrostu 1)', testKey: 'igf1', value: '245', valueNum: 245, unit: 'ng/mL' });
+    const gh = { id: 'gh-1', patientId: PID, title: 'Leczenie rhGH', body: 'Kontrola leczenia hormonem wzrostu / IGF-1.\nDawka: 0,030 mg/kg/d.', category: 'treatment',
+      dueDateISO: '2026-06-01', medication: { action: 'change', doseNum: 0.03, doseUnit: 'mg/kg/d' }, igf1: { value: 280, unit: 'ng/ml' } };
+    const t1 = nota('t-1', '2026-03-10', { test: 'Testosteron całkowity', testKey: 'testosterone_total', value: '0,8', valueNum: 0.8, unit: 'nmol/L' });
+    const t2 = nota('t-2', '2026-05-10', { test: 'Testosteron całkowity', value: '1,9 nmol/L' });
+    return {
+      series: [
+        { testKey: 'igf1', test: 'IGF-1 (insulinopodobny czynnik wzrostu 1)', points: [punkt(igf)] },
+        { testKey: 'testosterone_total', test: 'Testosteron całkowity', points: [punkt(t1)] },
+        { testKey: 'testosteroncalkowity', test: 'Testosteron całkowity', points: [{ noteId: 't-2', dateISO: '2026-05-10', valueNum: 1.9, unit: 'nmol/L', legacy: true }] },
+      ],
+      notes: [igf, gh, t1, t2],
+      treatment: [],
+    };
+  }
+
+  it('karta: wartość z notatki GH z datą kontroli i dopiskiem źródła, bez treści notatki w komentarzach; dopisek dopasowania po nazwie', async () => {
+    const env = srodowisko();
+    otworz(env, sejf({ dane: danePr5a() }));
+    await gotowe(env);
+    expect(teksty(env.host, '.vilda-lab-hist-panel-h')).toEqual(['Oś gonadalna', 'Oś GH–IGF-1']);
+    const igf = env.host.querySelector('.vilda-lab-hist-card[data-series="igf1"]');
+    expect(igf.querySelector('.vilda-lab-hist-value').textContent).toBe('280');
+    expect(igf.querySelector('.vilda-lab-hist-value').getAttribute('data-note-id')).toBe('gh-1');
+    expect(txt(igf.querySelector('.vilda-lab-hist-date'))).toBe('01.06.26 (data kontroli GH)');
+    expect(teksty(igf, '.vilda-lab-hist-source')).toEqual(['z notatki leczenia GH']);
+    expect(txt(igf.querySelector('.vilda-lab-hist-prev'))).toBe('poprzednio 245 ng/mL (08.04.26) · różnica +35 ng/mL · po 54 dniach');
+    expect(igf.querySelector('.vilda-lab-hist-flag')).toBeNull();
+    expect(igf.querySelector('.vilda-lab-hist-comments')).toBeNull();
+    const wykres = env.wykresy.find((w) => w.serie.testKey === 'igf1');
+    expect(wykres.chart.points.map((p) => [p.dateISO, p.v, p.norm])).toEqual([['2026-04-08', 245, null], ['2026-06-01', 280, null]]);
+    expect(teksty(env.host, '.vilda-lab-hist-footer .vilda-lab-hist-muted').at(-1))
+      .toBe('IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli (tak jak na wykresie „Trend leczenia GH”); bez normy i bez strzałki.');
+
+    const t = env.host.querySelector('.vilda-lab-hist-card[data-series="testosterone_total"]');
+    expect(teksty(t, '.vilda-lab-hist-merged')).toEqual(['W tym 1 wpis dopasowany po nazwie badania „Testosteron całkowity”.']);
+    expect(env.host.querySelector('.vilda-lab-hist-card[data-series="testosteroncalkowity"]')).toBeNull();
+  });
+
+  it('tabela: wiersz z datą kontroli GH nie jest „bez daty badania”, komórka ze znacznikiem GH i źródłem w podpowiedzi, legenda', async () => {
+    const env = srodowisko({ pamiec: [[`vilda-lab-hist-view-${PID}`, 'table']] });
+    otworz(env, sejf({ dane: danePr5a() }));
+    await gotowe(env);
+    const panel = env.host.querySelector('.vilda-lab-hist-panel[data-panel="somatotropic"]');
+    const wiersze = panel.querySelectorAll('tbody tr');
+    expect(wiersze.map((tr) => [tr.children.map((c) => c.textContent), tr.getAttribute('class') || ''])).toEqual([
+      [['01.06.26data kontroli GH', '280 GH+35', ''], ''],
+      [['08.04.26', '245', ''], ''],
+    ]);
+    expect(panel.querySelector('button.vilda-lab-hist-cell[data-note-id="gh-1"]').getAttribute('title').replace(/\u00a0/g, ' '))
+      .toBe('IGF-1 · 01.06.26 · zapisano: 280 ng/ml · z notatki leczenia GH');
+    expect(teksty(panel, '.vilda-lab-hist-foot').join(' ')).toContain('GH — IGF-1 z notatki leczenia GH (pole „IGF-1 (wynik z kontroli)”); bez daty badania data to termin odbytej kontroli');
+  });
+
+  it('mergedNote: liczba mnoga i kilka nazw', () => {
+    const { mergedNote } = srodowisko().win.VildaLabHistoryTab._internal;
+    expect(mergedNote([])).toBe('');
+    expect(mergedNote([{ key: 'a', test: 'Kortyzol', count: 2 }, { key: 'b', test: 'Kortyzol', count: 3 }])).toBe('W tym 5 wpisów dopasowanych po nazwie badania „Kortyzol”.');
+    expect(mergedNote([{ key: 'a', test: 'A', count: 1 }, { key: 'b', test: 'B', count: 1 }])).toBe('W tym 2 wpisy dopasowane po nazwie badania „A”, „B”.');
+  });
+});

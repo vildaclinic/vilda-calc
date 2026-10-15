@@ -1,7 +1,8 @@
 /* Pasek „Poprzednie wyniki pacjenta” w przeliczniku jednostek (LAB-HISTORIA PR3).
  *
  * Tylko do odczytu (decyzja 6.6): bez pól, bez daty i bez zapisu. Pokazuje zapisane wyniki wybranego
- * badania pacjenta karty (serie z VildaVault.listPatientLabSeries i notatki „wynik-badania”); widok liczy
+ * badania pacjenta karty (serie z VildaVault.listPatientLabSeries i notatki „wynik-badania”, a od 1.1.0
+ * także IGF-1 z notatek leczenia GH z dopiskiem źródła — decyzje 6.24–6.25); widok liczy
  * model PR1 (VildaLabHistory.buildHistoryView) w jednostce formularza. Dawne wyniki nie są oceniane
  * dzisiejszymi normami ani danymi pacjenta z formularza: strzałka ↑/↓ stoi przy wartości tylko wtedy,
  * gdy wpis ma zapisaną normę w swojej jednostce; wykres ma przy punktach same wartości (decyzja 6.22).
@@ -33,8 +34,10 @@
     text: 'wynik tekstowy — jak zapisano, bez porównania',
     censored: 'wynik poza zakresem oznaczalności — bez punktu na wykresie i bez różnicy'
   };
-  var DATE_SOURCE = { termin: 'termin zlecenia', wpis: 'data wpisu' };
-  var DATE_PREFIX = { termin: 'termin ', wpis: 'wpis ' };
+  var DATE_SOURCE = { termin: 'termin zlecenia', wpis: 'data wpisu', kontrola: 'data kontroli GH' };
+  var DATE_PREFIX = { termin: 'termin ', wpis: 'wpis ', kontrola: 'kontrola ' };
+  // IGF-1 z notatki leczenia GH (decyzje 6.24–6.25, model VildaLabHistory 1.1.0).
+  var GH_SOURCE = 'z notatki leczenia GH';
   var FLAG_LABEL = { '↑': 'powyżej normy z wpisu', '↓': 'poniżej normy z wpisu' };
 
   function own(value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); }
@@ -520,6 +523,7 @@
     function chipTitle(entry) {
       var parts = [];
       if (entry.dateSource !== 'badanie' && DATE_SOURCE[entry.dateSource]) parts.push(DATE_SOURCE[entry.dateSource] + ' (brak daty badania)');
+      if (entry.source === 'gh-note') parts.push(GH_SOURCE);
       if (entry.raw) parts.push('zapisano: ' + recorded(entry));
       if (entry.norm) parts.push('norma z wpisu: ' + entry.norm);
       return parts.join(' · ');
@@ -533,6 +537,7 @@
       if (entry.flag) flag(head, entry.flag);
       var visit = formatAge(entry.ageMonths);
       if (visit) add(head, 'span', '', ' · wizyta ' + visit);
+      if (entry.source === 'gh-note') add(box, 'p', 'lab-strip-muted', GH_SOURCE + ' (pole „IGF-1 (wynik z kontroli)”), bez normy i bez oceny');
       if (entry.converted) add(box, 'p', 'lab-strip-muted', 'przeliczono z ' + recorded(entry));
       if (KIND_NOTE[entry.kind]) add(box, 'p', 'lab-strip-muted', KIND_NOTE[entry.kind]);
       var status = entry.status;
@@ -731,7 +736,7 @@
 
   var instance = null;
   return Object.freeze({
-    version: '1.0.0',
+    version: '1.1.0',
     start: function () {
       if (instance || !win || !win.document) return instance;
       instance = create(win);
