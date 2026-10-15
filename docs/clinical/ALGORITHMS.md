@@ -4855,6 +4855,49 @@ Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (be
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
 
+### P-POKWITANIE-KONTRAKT — oddzielny zapis G/Th/P, etap 1, 2026-10-14
+
+**Zakres i wpływ kliniczny.** Techniczne przygotowanie wspólnej oceny pokwitania:
+wersjonowane `user.pubertyAssessment`, zgodny zapis/odtworzenie oraz dodatkowy
+kontekst źródła. Brak nowego edytora, norm, progów, przeliczania objętości jąder
+na G i zmian dotychczasowych wyników. Etap 2 musi jawnie podłączyć konsumentów
+przed udostępnieniem edycji. Właściciel zaakceptował makietę i wdrożenie etapami.
+Pełny kontrakt i ograniczenia: [PUBERTY_ASSESSMENT.md](../PUBERTY_ASSESSMENT.md).
+
+**Znaczenie danych.** G, Th(B) i P są osobnymi obserwacjami. Starszy numer
+`user.tannerStage` w nowym API pozostaje `unspecified`, niezależnie od płci.
+Każda cecha przechowuje własną datę, wiek i pochodzenie; sam zapis ani wczytanie
+nie czyni jej aktualną oceną. Wersja nieobsługiwana lub jawnie pusta nie pozwala
+na powrót do starszego numeru. Oryginał JSON pozostaje zachowany przy zapisie.
+
+Podstawą rozdzielenia osi są opisy morfologiczne Marshalla i Tannera:
+- dziewczęta: *Variations in pattern of pubertal changes in girls*, Arch Dis Child
+  1969;44:291–303, [doi:10.1136/adc.44.235.291](https://doi.org/10.1136/adc.44.235.291),
+  [pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020314/);
+- chłopcy: *Variations in the pattern of pubertal changes in boys*, Arch Dis Child
+  1970;45:13–23, [doi:10.1136/adc.45.239.13](https://doi.org/10.1136/adc.45.239.13),
+  [pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020414/).
+
+Historyczne obserwacje brytyjskich dzieci opisują sekwencje morfologiczne;
+nie są tu wdrażane jako populacyjne normy wieku ani objętości. Stadium jest
+kategorią porządkową I–V, bez jednostki. Etap 1 nie wybiera klinicznie właściwej
+osi i nie określa aktualności badania na podstawie samej płci lub wieku.
+
+**Syntetyczne przypadki (rzeczywiste moduły produkcyjne).**
+
+| Wejście | Oczekiwany odczyt/zapis |
+|---|---|
+| Stary Tanner 3, chłopiec albo dziewczynka | `legacy.kind=unspecified`, bez G/Th |
+| G3 z 2026-10-01 + P2 bez znanej daty | osobne stadia i daty, brak ogólnego Tannera |
+| P3 bez G/Th | brak gonadalnego stadium |
+| Pusta v1 obok starego Tanner 3 | trzy nieocenione cechy, bez legacy fallback |
+| Nieznana wersja albo błędne stadium | brak użytecznej interpretacji; oryginalny JSON pozostaje w zapisie |
+| Odtworzenie → zapis | data i pochodzenie bez zmian |
+| A → B bez oceny / spóźniony odczyt A | brak danych A w kontekście i zapisie B |
+
+Testy: `puberty-assessment.test.mjs` oraz regresje kontekstu i zapisu; instalacja,
+aktualizacja oraz uruchomienie offline sprawdzane z produkcyjnym service workerem.
+
 ### P-POKWITANIE-W-TLE — ponowny odczyt pokwitania w tle bez „loading” i bez zbędnych przeliczeń (SW 1.1.251, 2026-10-12, decyzja właściciela)
 
 **Zgłoszenie i decyzja.** Ustalenie poza zakresem z P-WYNIKI-SPOKOJ. Przedstawiono cztery warianty, właściciel wybrał A:

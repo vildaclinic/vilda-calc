@@ -1790,7 +1790,9 @@ const CORE_SHELL_URLS = [
   '/vilda_pro_ui.js?v=2',
   '/vilda_pro_ui.js?v=3',
   '/jspdf.umd.min.js?v=1',
-  '/html2canvas.min.js?v=1'
+  '/html2canvas.min.js?v=1',
+  '/vilda_puberty_assessment.js?v=1',
+  '/vilda_puberty_assessment_state.js?v=1'
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,
@@ -2573,6 +2575,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_puberty_source.js?v=9',
   '/vilda_puberty_source.js?v=10',
   '/vilda_puberty_source.js?v=11',
+  '/vilda_puberty_source.js?v=12',
   '/inline_index_02.js?v=10',
   '/vilda_data_import_export.js?v=67',
   '/vilda_auth_ui.js?v=427',
@@ -2651,6 +2654,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=101',
   '/vilda_data_import_export.js?v=102',
   '/vilda_data_import_export.js?v=103',
+  '/vilda_data_import_export.js?v=104',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
