@@ -678,6 +678,98 @@ komunikat w zakładce ma „Cofnij”, które nie cofa stanu nadanego później
 zapisy z zakładki), e2e `lab-historia-zlecenie-wykonane.spec.mjs` (prawdziwy
 sejf, karta i edytor).
 
+### LAB-HISTORIA 6.3 — zakres referencyjny zapisany przy przypięciu (`vilda_lab_range_snapshot.js` 1.0.0, 2026-10-15)
+
+**Wpływ kliniczny: tak** (AGENTS.md § 3: nowe źródło danych oceny w historii).
+Przy „Zapisz do karty” w przeliczniku wynik dostaje kopię zakresu
+referencyjnego, którego przelicznik właśnie użył: granice w SI i w jednostce
+wyniku, identyfikator wiersza danych, opis populacji (`context_pl`), warunki
+wiersza (`when`), czy wiersz pasował do kontekstu czy był domyślny, źródła
+(`source_ids` z opisem z `LabUnitsData.findSource`), kontekst pacjenta użyty
+do doboru (płeć, wiek, etap życia, Tanner, nadpisanie lokalne z kroku 5) oraz
+kategorię, którą przelicznik pokazał (`LabUnitConverter.evaluate`: `within`,
+`below`, `above`, `far_below`, `far_above`). Historia (zakładka „Badania”,
+pasek „Poprzednie wyniki”) pokazuje strzałkę ↑/↓ i pigułkę „powyżej / poniżej /
+w zapisanym zakresie” wyłącznie z tej kopii. Odczyt nie woła `evaluate` ani
+`selectRange` i nie dobiera normy od nowa (`LAB_INTERPRETATION_AGENT_GUIDE.md`
+§ 7). Decyzje właściciela z 2026-10-15: wszystkie badania, które przelicznik
+ocenia względem zakresu; unieważnienie przy zmianie wyniku lub daty; starsze
+wpisy bez uzupełniania; pigułka ze źródłem.
+
+**Źródło medyczne i wersja:** bez nowych norm. Zakresy, progi „znacznie poza
+zakresem” (> 2 × górna granica, < 0,5 × dolna) i źródła to dotychczasowe dane
+i reguła przelicznika: `lab_units_data.js` (`LabUnitsData` 2.0.0, wiersze
+`reference_ranges_si` z `source_ids`, np. `mayo_test_tsh` — Mayo Clinic
+Laboratories, Test 8939 STSH) i `lab_unit_converter.js` (`LabUnitConverter`
+2.0.0). Zapis niesie nazwę populacji i źródła (normy jako dane,
+`docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność”).
+
+**Zakres:** badania oceniane przez `LabUnitConverter.evaluate` względem
+zakresu z obiema granicami. Bez zapisu zakresu: LH, FSH, inhibina B
+i testosteron całkowity (zapis oceny `assessment`), AMH (odniesienie
+`hormoneReference`), badania bez zakresu dla kontekstu (np. witamina D₃),
+wynik z operatorem („<0,1”). Zakres „bez interpretacji” (np. TSH w 0.–2.
+dobie życia) zapisuje się jako brak oceny z opisem przelicznika.
+
+**Ograniczenia:**
+
+- Zakres dobrano do danych pacjenta widocznych w przeliczniku w chwili
+  przypięcia (wiek z formularza), nie do wieku w dniu badania. Gdy data
+  badania w oknie przypięcia jest inna niż dzisiejsza, okno mówi o tym
+  wprost; kontekst („dobrano dla: dziewczynka, 12 l 3 m”) jest częścią zapisu
+  i podpowiedzi w historii.
+- Bez wieku w przeliczniku przelicznik przyjmuje dorosłego (dotychczasowa
+  reguła); zapis i historia nazywają to („bez wieku w przeliczniku —
+  przyjęto dorosłego”). Wiersz domyślny (np. prolaktyna u dziecka: „Dorośli,
+  zakres ogólny”) zostaje zapisany jak pokazał go przelicznik.
+- Norma wpisana ręcznie we wpisie (pole „Norma” edytora), gdy model ją
+  przyjmie, ma pierwszeństwo jak dotąd. Zapisany zakres nie zależy od
+  jednostki wyświetlania: wynik przeliczony z innej jednostki zachowuje
+  strzałkę z zapisu (granice podane w jednostce zapisu).
+- Zmiana wartości, jednostki, badania albo daty po przypięciu (edytor,
+  synchronizacja) unieważnia zapis: „zakres nieaktualny”, bez strzałki.
+  Komentarz, kotwica wizyty czy oznaczenie wykonania tego nie robią.
+- Strona bez nowego modułu (nieodświeżona po aktualizacji) odmawia zapisu
+  notatki z zakresem z prośbą o odświeżenie; odczyt bez modułu daje wpis bez
+  oceny. Starszy klient może zgubić pole przy edycji — wpis wraca do stanu
+  bez oceny, wynik zostaje.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 5,1 mIU/L, dziewczynka 8 l → zapis `tsh_6_10y` 0,6–4,8 mIU/L, „Dzieci
+  6–10 lat”, Mayo Test 8939; historia: „↑ powyżej zapisanego zakresu ·
+  0,6–4,8 mIU/L”, „Dzieci 6–10 lat · dziewczynka, 8 l · Mayo Test 8939 — TSH”.
+- Ta sama dziewczynka: TSH 2,9 → „w zapisanym zakresie” bez strzałki; 9,8 →
+  „znacznie powyżej zapisanego zakresu” ↑; 0,2 → „znacznie poniżej” ↓; 0,5 →
+  „poniżej” ↓.
+- fT4 2,0 ng/dL, dziewczynka 8 l → `ft4_6_10y` 12,9–21,9 pmol/L (1–1,7
+  ng/dL), powyżej; w serii wyświetlanej w pmol/L wynik przeliczony ze
+  strzałką ↑ z zapisu.
+- TSH 25 mIU/L, noworodek 0.–2. doba → zapis bez kategorii, „bez oceny
+  względem zakresu w dniu przypięcia”.
+- Przypięty TSH 5,1, potem w edytorze wartość 3,9 → „zakres nieaktualny ·
+  zmieniono wynik lub datę badania”, bez strzałki.
+- TSH 5,1 z ręczną normą wpisu „0,4–6,0 mIU/L” → bez strzałki (norma wpisu
+  ma pierwszeństwo).
+- Przelicznik, dziewczynka 12 l 3 m, TSH 5,1 → okno przypięcia: „Zapisze się
+  z wynikiem: powyżej zakresu 0,5–4,3 mIU/L”, „Młodzież 11–19 lat · dobrano
+  dla: dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH”; data badania inna niż
+  dziś → uwaga o doborze do danych z przelicznika.
+
+**Testy:** `tests/unit/lab-range-snapshot.test.mjs` (prawdziwy
+`LabUnitConverter.selectRange`/`evaluate` jako „producent”, prawdziwy sejf:
+szyfrowanie, `listPatientLabSeries`, edycje, synchronizacja, strona bez
+modułu; model historii bez wywołań `evaluate`/`selectRange`),
+`tests/unit/lab-history-tab.test.mjs` i `lab-history-strip.test.mjs`
+(pigułka, podpowiedź, legenda, szczegóły paska),
+`tests/unit/hormone-reference-loading.test.mjs` (leniwe ładowanie modułu),
+e2e `lab-historia-zakres-zapisany.spec.mjs` (prawdziwy przelicznik, okno
+przypięcia, sejf, pasek i zakładka; badanie bez zakresu i LH bez pola).
+
+**Akceptacja kliniczna:** decyzja 6.3 (2026-10-14) i jej szczegóły
+(2026-10-15); przed scaleniem — przegląd tego wpisu przez właściciela.
+Zielone testy nie są walidacją kliniczną.
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

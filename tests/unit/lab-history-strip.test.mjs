@@ -52,7 +52,7 @@ function sejf(opcje = {}) {
     getPatientNote: async (id) => structuredClone(Object.values(pacjenci).flatMap((p) => p.notes).find((n) => n.id === id) || null),
     onPatientNoteChanged: (fn) => nasluchy.push(fn),
     onLock: (fn) => blokady.push(fn),
-    dodaj: (pid, note) => { pacjenci[pid].notes.push(note); if (note.labResult.valueNum != null) pacjenci[pid].series[0].points.push(punkt(note)); },
+    dodaj: (pid, note, extra = {}) => { pacjenci[pid].notes.push(note); if (note.labResult.valueNum != null) pacjenci[pid].series[0].points.push(punkt(note, extra)); },
     zmiana: (zdarzenie) => nasluchy.forEach((fn) => fn(zdarzenie)),
     zablokuj: () => { vault.odblokowany = false; blokady.forEach((fn) => fn()); },
   };
@@ -92,7 +92,7 @@ function strona(opcje = {}) {
     __vildaLabTrend: { parseNorm: Dl },
   };
   win.parent = win;
-  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_history.js', 'lab_history_strip.js']) loadBrowserScript(plik, win);
+  for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_range_snapshot.js', 'vilda_lab_history.js', 'lab_history_strip.js']) loadBrowserScript(plik, win);
   return { doc, win, pola, sekcja, amh, karta, pamiec, stan };
 }
 
@@ -439,5 +439,31 @@ describe('pasek: IGF-1 z notatki leczenia GH', () => {
     expect(txt(detail.querySelector('.lab-strip-detail-h'))).toBe('01.06.26 (data kontroli GH) · 280 ng/mL');
     expect(teksty(detail, '.lab-strip-muted').map(txtS)).toContain('z notatki leczenia GH (pole „IGF-1 (wynik z kontroli)”), bez normy i bez oceny');
     expect(detail.querySelector('.lab-strip-detail-comment')).toBeNull();
+  });
+});
+
+// Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu. Kopertę tworzy prawdziwy przelicznik (selectRange + evaluate)
+// w osobnym oknie „producenta”; pasek tylko ją czyta.
+describe('pasek: zakres zapisany przy przypięciu (decyzja 6.3)', () => {
+  it('chip ze strzałką z zapisu; podpowiedź i szczegóły z granicami, dla kogo i źródłem', async () => {
+    const producer = {};
+    for (const plik of ['lab_units_data.js', 'lab_unit_converter.js', 'vilda_lab_range_snapshot.js']) loadBrowserScript(plik, producer);
+    const Conv = producer.LabUnitConverter, patient = { sex: 'F', age: 12, life_stage: 'pediatric' };
+    const note = tsh(PID, 'tsh-z', '2026-06-10', 5.1, 'mIU/L');
+    const captured = producer.VildaLabRangeSnapshot.create({ analyte: 'tsh', evaluation: Conv.evaluate('tsh', { value: '5,1', unit: 'mIU/L', patient }),
+      range: Conv.selectRange(Conv.find('tsh'), patient), patient, factorToSi: 1, measurement: { raw: '5,1', sourceUnit: 'mIU/L' },
+      sources: [{ id: 'mayo_test_tsh', label: 'Mayo Test 8939 — TSH' }], versions: { engine: 'e', data: 'd' }, capturedAtISO: '2026-06-10T10:00:00.000Z' });
+    const range = producer.VildaLabRangeSnapshot.reconcile(null, Object.assign({}, note.labResult, { range: captured }), null, '2026-06-10').range;
+    const vault = sejf();
+    vault.dodaj(PID, note, { range });
+    const env = strona({ vault });
+    await widoczny(env);
+    const chip = pasek(env).querySelector('button.lab-strip-chip[data-note-id="tsh-z"]');
+    expect(txt(chip.querySelector('.lab-strip-flag'))).toBe('↑');
+    expect(txtS(chip.getAttribute('title'))).toBe('zapisano: 5,1 mIU/L · powyżej zapisanego zakresu 0,5–4,3 mIU/L');
+    chip.click();
+    expect(txt(pasek(env).querySelector('.lab-strip-detail-range')))
+      .toBe('zakres zapisany z wynikiem: 0,5–4,3 mIU/L · powyżej · Młodzież 11–19 lat · dziewczynka, 12 l · Mayo Test 8939 — TSH');
+    expect(pasek(env).querySelector('.lab-strip-detail-norm')).toBeNull();
   });
 });

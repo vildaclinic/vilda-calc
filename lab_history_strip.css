@@ -180,6 +180,7 @@
 }
 
 .lab-strip-detail-norm,
+.lab-strip-detail-range,
 .lab-strip-detail-comment,
 .lab-strip-muted {
   font-size: .76rem;

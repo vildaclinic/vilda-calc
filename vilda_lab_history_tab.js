@@ -232,7 +232,8 @@
             notesById: notesById,
             treatment: Array.isArray(results[2]) ? results[2] : [],
             parseNorm: trend && typeof trend.parseNorm === 'function' ? trend.parseNorm : null,
-            nowISO: localISO(now())
+            nowISO: localISO(now()),
+            rangeSnapshot: win && win.VildaLabRangeSnapshot || null
           });
           // Punkt bez notatki = odczyt serii i notatek z dwóch różnych chwil (zapis w międzyczasie). Jedno ponowienie.
           if (view.summary.missingNotes > 0 && !state.retried) { state.retried = true; schedule(); }
@@ -504,9 +505,18 @@
           if (context) add(pill, 'span', 'vilda-lab-hist-status-context', 'oceniono jako: ' + context);
         } else if (status.kind === 'norm') {
           add(pill, 'span', 'vilda-lab-hist-status-text', status.text + ' · ' + status.norm);
+        } else if (status.kind === 'range') {
+          // Decyzja 6.3: zakres zapisany z wynikiem przy przypięciu — kategoria, granice, dla kogo i źródło.
+          add(pill, 'span', 'vilda-lab-hist-status-text', (status.flag ? status.flag + ' ' : '') + status.text + (status.bounds ? ' · ' + status.bounds : ''));
+          var where = rangeContext(status);
+          if (where) add(pill, 'span', 'vilda-lab-hist-status-context', where);
         } else {
           add(pill, 'span', 'vilda-lab-hist-status-text', status.text + (status.detail && status.detail.length ? ' · ' + status.detail.join(', ') : ''));
+          if (status.kind === 'range-unavailable' && status.population) add(pill, 'span', 'vilda-lab-hist-status-context', status.population);
         }
+      }
+      function rangeContext(status) {
+        return [status.population, status.subject].concat(status.sources || []).filter(Boolean).join(' · ');
       }
       // Kontekst zapisanej oceny dosłownie z koperty: płeć, wiek w dniu pobrania, stadium (3.1 a).
       function assessmentContext(entry) {
@@ -712,7 +722,7 @@
         add(headRow, 'th', 'vilda-lab-hist-th-comment', 'Komentarz').setAttribute('scope', 'col');
         var body = add(table, 'tbody', '');
         var treatment = treatmentFor([panel]).slice();
-        var marks = { converted: false, other: false, assessed: false, gh: false };
+        var marks = { converted: false, other: false, assessed: false, gh: false, range: false };
         var columns = panel.series.length + 2;
         panel.rows.forEach(function (row) {
           // Wiersz leczenia stoi nad wierszem wyników z tą samą lub wcześniejszą datą (tabela malejąco).
@@ -739,6 +749,7 @@
         if (marks.converted) legend.push('wartość podkreślona kropkami — przeliczona z innej jednostki (zapis we wpisie)');
         if (marks.other) legend.push('* — jednostka nierozpoznana albo brak jednostki; wartość jak zapisano, bez różnicy i bez wykresu');
         if (marks.assessed) legend.push('○ — zapisana ocena (szczegóły niżej, w „Zapisane oceny”)');
+        if (marks.range) legend.push('↑/↓ — poza zakresem zapisanym z wynikiem przy przypięciu albo poza normą wpisaną we wpisie; zakres i źródło w podpowiedzi');
         if (marks.gh) legend.push('GH — IGF-1 z notatki leczenia GH (pole „IGF-1 (wynik z kontroli)”); bez daty badania data to termin odbytej kontroli');
         if (legend.length) add(group, 'p', 'vilda-lab-hist-foot', legend.join(' · '));
         if (panel.id === 'gonadal') assessmentsBlock(group, panel.series);
@@ -751,7 +762,11 @@
         var details = [shortLabel(view.label), entry.dateISO ? formatDate(entry.dateISO) : 'bez daty', 'zapisano: ' + (entry.converted ? recorded(entry) : entry.raw || entry.display)];
         if (entry.source === 'gh-note') details.push(GH_SOURCE);
         if (entry.norm) details.push('norma z wpisu: ' + entry.norm);
-        if (entry.status) details.push(entry.status.text);
+        if (entry.status && entry.status.kind === 'range') {
+          var where = rangeContext(entry.status);
+          details.push((entry.status.flag ? entry.status.flag + ' ' : '') + entry.status.text + (entry.status.bounds ? ' ' + entry.status.bounds : '') + (where ? ' (' + where + ')' : ''));
+          if (entry.status.flag) marks.range = true;
+        } else if (entry.status) details.push(entry.status.text);
         cell.setAttribute('title', details.join(' · '));
         var value = add(cell, 'span', 'vilda-lab-hist-cell-value', entry.kind === 'other-unit' || entry.kind === 'text' ? (entry.raw || entry.display) + '*' : bareValue(entry, view.unit));
         if (entry.converted) { value.classList.add('is-converted'); marks.converted = true; }
@@ -776,7 +791,7 @@
       function drawFooter(view) {
         var foot = add(section, 'div', 'vilda-lab-hist-footer');
         add(foot, 'p', 'vilda-lab-hist-footer-main', 'Wyniki pokazane tak, jak je zapisano. Historia nie jest oceniana dzisiejszymi normami.');
-        add(foot, 'p', 'vilda-lab-hist-muted', 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym w dniu badania albo z zapisaną oceną; wynik przeliczony z innej jednostki jest bez strzałki. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
+        add(foot, 'p', 'vilda-lab-hist-muted', 'Strzałka ↑/↓ tylko przy wpisie z zakresem zapisanym z wynikiem przy przypięciu, z normą wpisaną we wpisie albo z zapisaną oceną; norma wpisana we wpisie nie dotyczy wyniku przeliczonego z innej jednostki. Wpisy bez zapisanego zakresu są bez oceny. Wykresy bez pasma norm. Różnica: liczba i dni między dwoma dokładnymi wynikami z datą badania, bez procentu i koloru.');
         // Decyzje 6.24–6.25: skąd IGF-1 bez daty badania ma datę na wykresie.
         if (view && view.ghIgf1 && view.ghIgf1.shown > 0) {
           add(foot, 'p', 'vilda-lab-hist-muted', 'IGF-1 z notatek leczenia GH: data badania, a gdy jej brak — termin odbytej kontroli (tak jak na wykresie „Trend leczenia GH”); bez normy i bez strzałki.');
@@ -796,7 +811,7 @@
       };
     }
 
-    return Object.freeze({ version: '1.4.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
+    return Object.freeze({ version: '1.5.0', render: render, _internal: Object.freeze({ plural: plural, commentText: commentText, shortLabel: shortLabel, mergedNote: mergedNote }) });
   }
 
   return createApi();

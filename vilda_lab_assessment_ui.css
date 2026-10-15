@@ -856,6 +856,32 @@
   line-height: 1.5;
 }
 
+/* Decyzja 6.3: zakres, który zapisze się z wynikiem (okno przypięcia w przeliczniku, lab_pin_result.js). */
+.vilda-lab-pin-range {
+  background: #f1f4f5;
+  border-radius: var(--radius-9);
+  padding: var(--space-8px) var(--space-12px);
+  margin: 0 0 var(--space-12px);
+  font-size: .84rem;
+  color: var(--text-strong);
+}
+
+.vilda-lab-pin-range-context {
+  font-size: .76rem;
+  color: #5b6672;
+  margin-top: 2px;
+}
+
+.vilda-lab-pin-range-note {
+  background: #fff8ec;
+  border: .5px solid #f0dcb4;
+  color: #6b4500;
+  border-radius: var(--radius-9);
+  padding: var(--space-8px) var(--space-12px);
+  margin: 0 0 var(--space-12px);
+  font-size: .8rem;
+}
+
 /* Frozen educational references share the readback surface, not norm colors. */
 .vilda-hormone-reference {
   margin: var(--space-8px) 0 0;
