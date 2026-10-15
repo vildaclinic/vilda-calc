@@ -1022,7 +1022,8 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     i osobna delta nagrobka scalonej karty gubily jej najnowsza wersje. Ta sama faza przenosi wersje karty ze zbioru
  *     N (decyzja 'zabierz'; uwaga Codex P1 do #689): dotad szla pod F od razu, pod sama blokada F, wiec poprawka tej
  *     wersji w innej karcie przegladarki (blokada G) odczytana przed przeniesieniem i zapisana po nim wpisywala ja
- *     z powrotem pod G, a usuniecie G kasowalo ja razem z karta;
+ *     z powrotem pod G, a usuniecie G kasowalo ja razem z karta. Gdy miedzy decyzja a faza inna karta przegladarki
+ *     scali albo usunie F lub G, faza odtwarza wynik zapisu od razu (P-SYNC-WLASCICIEL-2, Bsw_przenies);
  *   - licznik zapisow karty = liczba jej wersji, takze naprawa licznika rozjechanego wczesniej; przyjeta z ladunku
  *     poprawka wersji podnosi chwile ostatniego zapisu karty (jak nowa wersja);
  *   - delta nagrobka karty scalonej w tej sesji niesie karte docelowa (Bsw_deltaNagrobka) — u odbiorcy dziala jak
@@ -1206,6 +1207,21 @@ function Bsw_odloz(ctx, F, naglowek, S, szyfr, d) {
   });
 }
 
+// P-SYNC-WLASCICIEL-2 (uwagi recenzentow do poprawki uwagi Codex P1 do #689): wersje lezace pod karta F z ladunku po
+// jej kroku w petli (tutejsze i dopisane) oraz wersje 'zabierz' przeniesione juz pod F w fazie przeniesien — tylko dla
+// F, na ktora czeka wersja 'zabierz'. Po nich faza znajduje karte, do ktorej „Scal pacjentow” w innej karcie
+// przegladarki przenioslo F miedzy decyzja a faza (Bsw_nastepca).
+function Bsw_wersjeF(ctx, patientId) {
+  const m = ctx.Bsw_podF || (ctx.Bsw_podF = new Map());
+  if (!m.has(patientId)) m.set(patientId, []);
+  return m.get(patientId);
+}
+function Bsw_zapamietajF(ctx, patientId, ids) {
+  if (!(ctx.Bsw_P || []).some(function (p) { return p.zabierz && p.F.patientId === patientId; })) return;
+  const lista = Bsw_wersjeF(ctx, patientId);
+  ids.forEach(function (id) { lista.push(id); });
+}
+
 // Wersje i naglowek jednej karty z ladunku. Reguly jak dotad w Le; decyzje (czy karta istnieje, ktore wersje sa
 // nowsze, nagrobki) zapadaja pod blokada, na swiezym odczycie. Od P-SYNC-WLASCICIEL wersja, ktorej ta karta nie ma,
 // a ktora lezy tu pod inna karta, idzie wedlug Bsw_decyzja (wyzej), a licznik zapisow = liczba wersji karty.
@@ -1233,6 +1249,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       const lokalne = await I().listSnapshotsForUser(b, F.patientId);
       const ids = new Set(lokalne.map(function (s) { return s.snapshotId; }));
       let nowe = 0;
+      const dopisane = [];
       for (let k = 0; k < wersjeZdalne.length; k += 1) {
         const S = wersjeZdalne[k];
         if (Bkz_pomin(ctx, F.patientId, S)) continue;
@@ -1263,7 +1280,9 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));
         nowe += 1;
         w.dodane += 1;
+        dopisane.push(S.snapshotId);
       }
+      Bsw_zapamietajF(ctx, F.patientId, lokalne.map(function (s) { return s.snapshotId; }).concat(dopisane));
       if (nowe > 0) {
         const U = await I().getPatientForUser(b, F.patientId);
         const ostatniLokalny = U && U.lastSavedAtISO || '', ostatniZdalny = F.lastSavedAtISO || '';
@@ -1282,6 +1301,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
     }
     w.nowy = true;
     let zapisane = 0, czekaja = 0;
+    const dopisane = [];
     for (let k = 0; k < wersjeZdalne.length; k += 1) {
       const S = wersjeZdalne[k];
       if (Bkz_pomin(ctx, F.patientId, S)) continue;
@@ -1294,7 +1314,9 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));
       w.dodane += 1;
       zapisane += 1;
+      dopisane.push(S.snapshotId);
     }
+    Bsw_zapamietajF(ctx, F.patientId, dopisane);
     // Karta, ktorej zadna wersja tu nie doszla, bo wszystkie leza (nowsze) pod innymi kartami albo czekaja na faze
     // przeniesien, nie powstaje pusta — zalozy ja faza przeniesien, gdy jej wersje tam przejda.
     if (!zapisane && (w.pominiete || czekaja)) {
@@ -1340,8 +1362,14 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
     const p = lista[k], F = p.F.patientId, G = p.G;
     const para = F < G ? [F, G] : [G, F];
     const r = await Bsl_podBlokada(para[0], function () {
-      return Bsl_podBlokada(para[1], function () { return p.tylkoTresc ? Bsw_poprawTresc(p, teraz) : Bsw_przenies(p, teraz); }, opcje);
+      return Bsl_podBlokada(para[1], function () { return p.tylkoTresc ? Bsw_poprawTresc(p, teraz) : Bsw_przenies(p, teraz, ctx); }, opcje);
     }, opcje);
+    if (r && r.dalej) {
+      // 'zabierz': F zniknela po decyzji („Scal pacjentow” F -> H w innej karcie przegladarki) — wersja idzie za
+      // wersjami F pod H: kolejny wpis tej samej fazy, pod blokadami H i G (rosnace id), na swiezym odczycie.
+      if ((p.skok || 0) < 8) lista.push(Object.assign({}, p, { F: { patientId: r.dalej }, nastepca: true, skok: (p.skok || 0) + 1, zrodlo: p.zrodlo || F }));
+      continue;
+    }
     if (!r) continue;
     if (p.tylkoTresc) wynik.poprawione += 1;
     else wynik.przeniesione += 1;
@@ -1381,37 +1409,92 @@ async function Bsw_poprawTresc(p, teraz) {
 // Decyzja 'zabierz' (p.zabierz, G w zbiorze N — zaraz zniknie): wersja przechodzi takze wtedy, gdy zmieniono ja tu po
 // decyzji — rekord G nie moze wygrac z karta, ktora znika — z nowsza z dwoch tresci (Bsw_rekord na swiezym odczycie:
 // poprawka zrobiona w miedzyczasie w innej karcie przegladarki, pod blokada G, przechodzi pod F, o ile jest pozniejsza
-// niz tresc z ladunku). Ostatnia wersja G przechodzi tak samo, a nagrobek G stawia potem Bsl_usunPacjenta. Wersji,
-// ktorej juz pod G nie ma (kosz, retencja albo „Scal pacjentow” w innej karcie po decyzji), faza nie rusza.
-// Zwraca null (bez zmian) albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta karta G zniknela.
-async function Bsw_przenies(p, teraz) {
-  const F = p.F.patientId, G = p.G;
+// niz tresc z ladunku). Ostatnia wersja G przechodzi tak samo, a nagrobek G stawia potem Bsl_usunPacjenta.
+// P-SYNC-WLASCICIEL-2 (uwagi recenzentow do poprawki uwagi Codex P1): miedzy decyzja 'zabierz' a faza inna karta
+// przegladarki moze zmienic F albo G. Dotad (zapis od razu, pod blokada F) wersja lezala juz pod F i dzielila jej los;
+// teraz faza odtwarza ten wynik:
+//   - wersji nie ma juz pod G i nie ma jej tu nigdzie, a nie lezy w koszu ani nie przycial jej nagrobek retencji
+//     („Usun pacjenta” G) — zapis pod F z trescia z ladunku, jak decyzja 'nowa' (Bsw_bezSladu); wersja pod inna karta
+//     („Scal pacjentow” G -> K) albo w koszu zostaje tam, gdzie jest;
+//   - F zniknela z nagrobkiem zapisanym po decyzji: „Scal pacjentow” F -> H — wersja idzie pod H, za pozostalymi
+//     wersjami F (Bsw_nastepca; kolejny wpis tej samej fazy, pod blokadami H i G); „Usun pacjenta” F (wersji F nie ma
+//     nigdzie) — wersja zostaje pod G i znika razem z nia, jak razem z F.
+// Zwraca null (bez zmian), { dalej: H } albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta karta G
+// zniknela.
+async function Bsw_przenies(p, teraz, ctx) {
+  const G = p.G;
   const wersjeG = await I().listSnapshotsForUser(b, G);
   const g = wersjeG.find(function (s) { return s && s.snapshotId === p.S.snapshotId; });
+  if (!g && p.zabierz && await Bsw_bezSladu(ctx, p)) return Bsw_doF(p, teraz, ctx, null);
   if (!g || !p.zabierz && (mt(g) !== p.rev || Bsw_zmiana(g) !== p.zmiana)) return null;
   const rekG = await I().getPatientForUser(b, G);
   if (!rekG) return null;
+  const r = await Bsw_doF(p, teraz, ctx, g);
+  if (!r || r.dalej) return r;
+  return { dodana: r.dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1) };
+}
+
+// Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (null: wersja
+// znikla razem z G — tresc z ladunku). Karty F nie ma: nagrobek F zapisany po decyzji (usuniecie albo scalenie F
+// w innej karcie przegladarki przed wzieciem blokad tej fazy) i nie wczesniejszy niz zapis z ladunku — F nie powstaje od
+// nowa; dla 'zabierz' { dalej: H } (Bsw_nastepca), inaczej null — wersja zostaje pod G. Karta-nastepca H (p.nastepca)
+// nie powstaje nigdy, a wersja dostaje pod nia rev + 1, jak przy „Scal pacjentow” F -> H (Bsw_poScaleniu).
+// Naglowek z ladunku tylko na karcie, ktora tu powstaje, albo gdy zapis z ladunku nie jest starszy niz tutejszy
+// (uwaga recenzenta: zapis F w innej karcie przegladarki po jej kroku w petli tracil imie i date urodzenia na liscie
+// pacjentow, a starszy naglowek szedl dalej z nowsza chwila zapisu); naglowek, chwila zapisu karty H — bez zmian.
+async function Bsw_doF(p, teraz, ctx, g) {
+  const F = p.F.patientId;
   let rekF = await I().getPatientForUser(b, F);
   const dodana = rekF ? 0 : 1;
   if (!rekF) {
-    // Nagrobek F zapisany po decyzji (np. usuniecie albo scalenie F w innej karcie przegladarki przed wzieciem blokad
-    // tej fazy) i nie wczesniejszy niz zapis z ladunku — F nie powstaje od nowa, wersja zostaje pod G.
     const nagrobek = await Bpu_nagrobek(F);
-    if (nagrobek && (!p.F.lastSavedAtISO || nagrobek.deletedAtISO >= p.F.lastSavedAtISO)) return null;
+    if (p.nastepca || nagrobek && (!p.F.lastSavedAtISO || nagrobek.deletedAtISO >= p.F.lastSavedAtISO)) {
+      const H = p.zabierz ? await Bsw_nastepca(ctx, p) : null;
+      return H ? { dalej: H } : null;
+    }
     rekF = {
       patientId: F, headerCipher: p.naglowek, createdAtISO: p.F.createdAtISO || teraz,
       lastSavedAtISO: p.F.lastSavedAtISO || teraz, snapshotCount: 0,
     };
     if (nagrobek) await I().removeTombstoneForUser(b, F);
   }
-  await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(p.F, p.S, p.szyfr, teraz, g), Bm1(p.S)));
-  const ileF = (await I().listSnapshotsForUser(b, F)).length;
-  const ostatniLokalny = rekF.lastSavedAtISO || '', ostatniZdalny = p.F.lastSavedAtISO || '';
-  await I().putPatientForUser(b, Object.assign({}, rekF, {
-    headerCipher: p.naglowek, snapshotCount: ileF,
-    lastSavedAtISO: (ostatniLokalny > ostatniZdalny ? ostatniLokalny : ostatniZdalny) || teraz,
-  }));
-  return { dodana: dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1) };
+  const rek = Bsw_rekord(p.F, p.S, p.szyfr, teraz, g);
+  if (p.nastepca) Object.assign(rek, Bsw_poScaleniu(rek, F));
+  await I().putSnapshotForUser(b, Object.assign(rek, Bm1(p.S)));
+  if (p.zabierz) Bsw_wersjeF(ctx, p.zrodlo || F).push(p.S.snapshotId);
+  const zmiany = { snapshotCount: (await I().listSnapshotsForUser(b, F)).length };
+  if (!p.nastepca) {
+    const ostatniLokalny = rekF.lastSavedAtISO || '', ostatniZdalny = p.F.lastSavedAtISO || '';
+    zmiany.lastSavedAtISO = (ostatniLokalny > ostatniZdalny ? ostatniLokalny : ostatniZdalny) || teraz;
+    if (dodana || ostatniZdalny >= ostatniLokalny) zmiany.headerCipher = p.naglowek;
+  }
+  await I().putPatientForUser(b, Object.assign({}, rekF, zmiany));
+  return { dodana: dodana, usunieta: 0 };
+}
+
+// 'zabierz', wersji nie ma juz pod G: true, gdy nie ma jej tu nigdzie (swiezy odczyt) i nie przegrywa z nagrobkiem
+// wersji (kosz albo retencja, takze zapisane po starcie scalania; ta sama regula co w petli — Bkz_pomin). Znikla wtedy
+// razem z karta G („Usun pacjenta” w innej karcie przegladarki miedzy decyzja a faza, bez wpisow kosza). Dotad wersja
+// lezala juz pod F, a bez tego zapisu ginela tu, w chmurze i na trzecim urzadzeniu do synchronizacji tamtego urzadzenia.
+async function Bsw_bezSladu(ctx, p) {
+  if (await Bsw_wersjaLokalna(ctx, p.S.snapshotId)) return false;
+  await Bsl_odswiezNagrobki(ctx, p.G);
+  return !Bkz_pomin(ctx, p.F.patientId, p.S);
+}
+
+// 'zabierz', karty F nie ma, a jej nagrobek zapisano po decyzji: karta, pod ktora leza teraz wersje F (Bsw_wersjeF) —
+// swiezy odczyt, pierwsza istniejaca karta inna niz F i G. „Scal pacjentow” F -> H w innej karcie przegladarki przenioslo
+// je pod H; dotad wersja 'zabierz' lezala juz pod F i szla razem z nimi, a bez tego zostawala pod G i znikala z nia na
+// wszystkich urzadzeniach. Bez takiej karty (F usunieta, jej wersje znikly) — null.
+async function Bsw_nastepca(ctx, p) {
+  const ids = Bsw_wersjeF(ctx, p.zrodlo || p.F.patientId);
+  for (let k = 0; k < ids.length; k += 1) {
+    const w = await Bsw_wersjaLokalna(ctx, ids[k]);
+    const H = w && w.patientId;
+    if (!H || H === p.F.patientId || H === p.G) continue;
+    if (await I().getPatientForUser(b, H)) return H;
+  }
+  return null;
 }
 
 // Karta G po oddaniu wersji (pod blokada G): licznik = liczba pozostalych wersji, a bez wersji — karta znika (bez
