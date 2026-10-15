@@ -144,7 +144,14 @@
     if (f.referenceSelection === 'automatic') {
       input.referenceSelection = 'automatic';
       input.reproductiveContext = sex === 'F' && ['follicular', 'ovulation', 'luteal', 'postmenopause'].includes(f.reproductiveContext) ? f.reproductiveContext : 'unknown';
-      input.assay = { profileId: '', methodId: '', confirmation: 'unknown' };
+      if (input.analyte !== 'testosterone_total') input.assay = { profileId: '', methodId: '', confirmation: 'unknown' };
+    }
+    if (input.analyte === 'testosterone_total') {
+      input.collectionTime = ['morning', 'evening', 'midnight'].includes(f.collectionTime) ? f.collectionTime : 'unknown';
+      if (f.assay && typeof f.assay === 'object') input.assay = {
+        profileId: text(f.assay.profileId), profileVersion: text(f.assay.profileVersion),
+        methodId: text(f.assay.methodId), confirmation: ['reported', 'configured'].includes(f.assay.confirmation) ? f.assay.confirmation : 'unknown'
+      };
     }
     return input;
   }
@@ -162,13 +169,15 @@
     var sampleBody = byId('labStep4') && byId('labStep4').querySelector('.lab-step-body');
     if (!resultSection || !patientBody || !sampleBody) return null;
     var fields = {}, wrappers = {}, sections = {}, sectionButtons = {};
-    var analyte = null, evaluation = null, context = null, contextKey = null;
+    var analyte = null, evaluation = null, context = null, contextKey = null, pendingPatientChange = false;
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
     var dirty = {}, imported = {}, kindOptionsSex = null, omittedSexContext = false, suspendedSexFields = null;
     var neonatalEdit = false, reproductiveSex = null;
     var sharedEditor = null, localAssessment = null, localEditedAxes = {}, localVisitMarker = null;
     function isInhibin() { return analyte === 'inhibin_b'; }
-    function units() { return isInhibin() ? ['pg/mL', 'ng/L'] : ['IU/L', 'mIU/mL']; }
+    function isTestosterone() { return analyte === 'testosterone_total'; }
+    function legacyFemale() { return isTestosterone() && fields.sex.value === 'F'; }
+    function units() { return isTestosterone() ? ['nmol/L', 'ng/dL', 'ng/mL', 'pg/mL'] : isInhibin() ? ['pg/mL', 'ng/L'] : ['IU/L', 'mIU/mL']; }
     function stageReferencesAvailable() { return !(data && data.presentationPolicy && data.presentationPolicy.stageReferencesAvailable === false); }
     function infantAgeLimit() { return data && data.presentationPolicy && data.presentationPolicy.infantAgeUpperYears; }
     function element(tag, className, content) {
@@ -232,6 +241,7 @@
       var grid = element('div', 'lab-puberty-fields'); sectionNode.appendChild(grid); details.appendChild(sectionNode); sections[name] = sectionNode; return grid;
     }
     function openSection(name) {
+      if (name === 'stage' && legacyFemale()) return;
       details.open = !details.open || sections[name].hidden;
       Object.keys(sections).forEach(function (key) { sections[key].hidden = key !== name; sectionButtons[key].setAttribute('aria-pressed', String(key === name)); });
       updateView();
@@ -294,6 +304,7 @@
           measuredAtISO: null, scope: 'current' }) : null;
     }
     function editSharedObservation(axis, stageValue) {
+      if (legacyFemale()) return { ok: false, reason: 'legacy-female-reference' };
       if (sharedVisit()) {
         var runtime = sharedRuntime();
         var result = runtime && typeof runtime.editObservation === 'function'
@@ -330,7 +341,7 @@
     }
     function updateSharedEditor() {
       var ui = root.VildaPubertyAssessmentUI;
-      var enabled = !!(ui && typeof ui.mountEditor === 'function' && context && context.pubertyAssessmentContext);
+      var enabled = !legacyFemale() && !!(ui && typeof ui.mountEditor === 'function' && context && context.pubertyAssessmentContext);
       sharedEditorHost.hidden = !enabled;
       wrappers.kind.hidden = enabled;
       wrappers.stage.hidden = enabled || fields.kind.value === 'Ax';
@@ -343,7 +354,7 @@
     }
     function adultAgeState(value) {
       var profile = data && Array.isArray(data.profiles) && data.profiles.find(function (candidate) { return candidate.active === true && candidate.referenceContext === 'adult' && (!analyte || candidate.analyte === analyte) && (!candidate.scope || !candidate.scope.sex || candidate.scope.sex === fields.sex.value); });
-      var lower = profile && profile.scope && profile.scope.age && profile.scope.age.lower;
+      var lower = isTestosterone() ? data && data.automaticReferencePolicy && data.automaticReferencePolicy.adultAge && data.automaticReferencePolicy.adultAge.lower : profile && profile.scope && profile.scope.age && profile.scope.age.lower;
       if (!value || value.status !== 'known' || !lower || typeof lower.value !== 'number') return { definite: false, possible: false };
       return { definite: value.lowerYears > lower.value || lower.operator === '>=' && value.lowerYears === lower.value,
         possible: value.upperYears > lower.value || lower.operator === '>=' && value.upperInclusive && value.upperYears === lower.value };
@@ -356,7 +367,7 @@
       };
     }
     function neonatalContext() {
-      if (isInhibin()) return false;
+      if (isInhibin() || isTestosterone()) return false;
       if (fields.preterm.value !== 'yes') return false;
       var policy = data && data.pretermEligibilityPolicy;
       var maximum = policy && policy.postmenstrualAgeDays && policy.postmenstrualAgeDays.upper && policy.gestationalAgeDays && policy.gestationalAgeDays.lower ? policy.postmenstrualAgeDays.upper.value - policy.gestationalAgeDays.lower.value : null;
@@ -372,11 +383,13 @@
       return true;
     }
     function preferInfantDays(values, neonatal) {
-      if (!knownDays(neonatal.postnatalDays) || !engine || typeof engine.resolveAge !== 'function') return false;
+      // Completed calendar months outrank an approximate conversion from PNA
+      // for TT's six-month boundary. Keep both facts for the engine to qualify.
+      if (isTestosterone() || !knownDays(neonatal.postnatalDays) || !engine || typeof engine.resolveAge !== 'function') return false;
       var rule = data && data.biochemicalPolicy && data.biochemicalPolicy.infantAgeYears;
       var limit = isInhibin() ? infantAgeLimit() : ['lh', 'fsh'].includes(analyte) && rule && rule.value;
       if (!Number.isFinite(limit)) return false;
-      var coarse = engine.resolveAge({ age: age(values, 'age') });
+      var coarse = engine.resolveAge({ age: age(values, 'age') }, data);
       return !age(values, 'age') || coarse.status === 'known' && coarse.lowerYears < limit;
     }
     function readFields() {
@@ -396,11 +409,23 @@
       // Zakres działania modułu nie potwierdza rodzaju konkretnego oznaczenia
       // ani braku leczenia. Znane bieżące GnRHa nadal wyklucza zakresy bazalne.
       values.sexSteroids = 'unknown'; values.treatmentContext = values.gnrha === 'yes' ? 'hormonal' : 'unknown'; values.measurementKind = 'unknown';
+      if (isTestosterone() && typeof opts.readMeasurementContext === 'function') {
+        var known = {};
+        try { known = opts.readMeasurementContext(analyte) || {}; } catch (_) { /* No facts are inferred after a failed read. */ }
+        values.collectionTime = text(known.collectionTime) || 'unknown';
+        values.specimen = text(known.specimen) || 'unknown';
+        values.measurementKind = text(known.measurementKind) || 'unknown';
+        if (known.assay && typeof known.assay === 'object') values.assay = known.assay;
+        var treatment = known.treatment || {};
+        values.gnrha = values.gnrha === 'yes' ? 'yes' : flag(treatment.gnrha) !== 'unknown' ? flag(treatment.gnrha) : values.gnrha;
+        values.sexSteroids = flag(treatment.sexSteroids);
+        values.treatmentContext = values.gnrha === 'yes' || values.sexSteroids === 'yes' ? 'hormonal' : ['none', 'hormonal'].includes(treatment.context) ? treatment.context : 'unknown';
+      }
       var neonatal = neonatalValues();
       if (neonatalContext() || neonatal.gestationalDays || neonatal.postnatalDays) values.neonatalAge = neonatal;
       values.useNeonatalAge = neonatalContext() && knownDays(neonatal.postnatalDays) || preferInfantDays(values, neonatal);
       var chronological = { age: values.useNeonatalAge ? null : age(values, 'age'), neonatalAge: values.neonatalAge };
-      if (!engine || typeof engine.resolveAge !== 'function' || !adultAgeState(engine.resolveAge(chronological)).possible) values.reproductiveContext = 'unknown';
+      if (!engine || typeof engine.resolveAge !== 'function' || !adultAgeState(engine.resolveAge(chronological, data)).possible) values.reproductiveContext = 'unknown';
       if (ready()) {
         var history = context.history || {};
         values.progression = flag(history.progression); values.growthAcceleration = flag(history.growthAcceleration);
@@ -481,7 +506,7 @@
         clearField('postnatalDays'); delete imported.postnatalDays; dirty.postnatalDays = true;
         neonatalEdit = false;
       }
-      if (key === 'postnatalDays' && !isInhibin()) {
+      if (key === 'postnatalDays' && !isInhibin() && !isTestosterone()) {
         ['ageYears', 'ageMonths'].forEach(function (ageKey) { clearField(ageKey); delete imported[ageKey]; dirty[ageKey] = true; });
       }
       if (key === 'kind' && fields.kind.value === 'Ax') { fields.stage.value = ''; delete imported.stage; dirty.stage = true; }
@@ -517,7 +542,7 @@
       var years = text(fields.ageYears.value), months = text(fields.ageMonths.value);
       var ageLabel = years ? years + ' lat' + (months ? ' i ' + months + ' mies.' : '') : 'wiek niepodany';
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
-      var resolvedAge = engine && typeof engine.resolveAge === 'function' ? engine.resolveAge(input) : null;
+      var resolvedAge = engine && typeof engine.resolveAge === 'function' ? engine.resolveAge(input, data) : null;
       var adult = adultAgeState(resolvedAge);
       var neonatalMode = neonatalContext(), neonatal = neonatalValues();
       var inhibinInfant = isInhibin() && resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < infantAgeLimit();
@@ -537,12 +562,18 @@
         (commonEditor ? sharedVisit() ? 'Wspólna ocena tej wizyty — zmiany są dostępne także w formularzu głównym.' : 'Korekta tylko dla tego sprawdzenia. Nie zapisuje danych pacjenta.' : 'Ocena dotyczy bieżącego kontekstu pacjenta.');
       var infant = resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < 1;
       wrappers.preterm.hidden = !infant && !neonatalMode;
-      stageRow.hidden = neonatalMode || adult.definite || !commonEditor && !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
+      stageRow.hidden = legacyFemale() || neonatalMode || adult.definite || isTestosterone() && infant || !commonEditor && !stageReferencesAvailable(); sectionButtons.stage.hidden = stageRow.hidden;
+      // The female TT fallback still uses its existing legacy rows. A typed
+      // Th/P editor here would imply a relationship those rows do not establish.
+      refineStage.disabled = legacyFemale(); sectionButtons.stage.disabled = legacyFemale();
+      sections.stage.inert = legacyFemale();
+      fields.kind.disabled = legacyFemale(); fields.stage.disabled = legacyFemale() || fields.kind.value === 'Ax';
       if (stageRow.hidden) { sections.stage.hidden = true; sectionButtons.stage.setAttribute('aria-pressed', 'false'); }
-      wrappers.reproductiveContext.hidden = fields.sex.value !== 'F' || !adult.possible;
+      wrappers.reproductiveContext.hidden = isTestosterone() || fields.sex.value !== 'F' || !adult.possible;
       updateNeonatalView(neonatalMode, neonatal);
       updateInhibinInfantView(inhibinInfant, neonatal);
       updateContextLine(adult.definite || !stageReferencesAvailable());
+      updatePresentation();
     }
     function updateInhibinInfantView(infant, neonatal) {
       // Wspólne dane wieku pozostają w edycji. Inhibina nie korzysta z PMA ani
@@ -599,6 +630,7 @@
     }
     function updateContextLine(adult) {
       var parts = [];
+      if (legacyFemale()) parts.push('Testosteron u kobiet: zachowano dotychczasowe zakresy przelicznika; nie korzystają one z nowej oceny Th/P.');
       if (!ready()) parts.push(context && context.sourceStatus === 'loading' ? 'Trwa odczyt danych aktualnego pacjenta. Dane z karty są tymczasowo wyłączone z oceny.' : 'Dane z formularza głównego są niedostępne. Przeliczenie nie wymaga danych pacjenta.');
       if (ready() && context.gnrhaStatus === 'w-trakcie') {
         var treatmentText = context.gnrhaStatus === 'zakonczone' ? 'GnRHa: zakończone. Sam status nie określa leczenia ani wpływu ostatniej dawki dla wyniku; kontekst pozostaje nieznany.' : context.gnrhaStatus === 'w-trakcie' ? 'Z karty: leczenie GnRHa w trakcie.' : context.gnrhaStatus === 'brak' ? 'Z karty: brak GnRHa; nie ustala to pozostałego leczenia hormonalnego.' : '';
@@ -611,14 +643,27 @@
       contextLine.textContent = parts.join(' ');
       contextLine.hidden = !parts.length;
     }
+    function updatePresentation() {
+      var active = !!analyte, reference = active && !legacyFemale();
+      var sampleStep = byId('labStep4');
+      if (sampleStep) {
+        sampleStep.classList.toggle('lab-puberty-suppressed', reference);
+        sampleStep.classList.toggle('lab-puberty-step-active', reference);
+      }
+      resultSection.classList.toggle('lab-puberty-active', reference);
+      ['labResultSourceLine', 'labSourcesWrap', 'labInfoCard'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-suppressed', reference); });
+      var patientStep = byId('labStep5'); if (patientStep) patientStep.classList.toggle('lab-puberty-step-active', active);
+      assessment.hidden = !reference;
+      if (!reference) { evaluation = null; assessment.replaceChildren(); }
+    }
     function setAnalyte(next) {
-      next = ['lh', 'fsh', 'inhibin_b'].includes(next) ? next : null;
+      next = ['lh', 'fsh', 'inhibin_b', 'testosterone_total'].includes(next) ? next : null;
       var changedAnalyte = next !== analyte;
       if (changedAnalyte) evaluation = null;
       analyte = next; panel.hidden = !next; assessment.hidden = !next;
-      engine = isInhibin() ? opts.inhibinEngine || root.VildaLabInhibinB : pubertyEngine;
-      data = isInhibin() ? opts.inhibinData || root.VildaLabInhibinBData : pubertyData;
-      panel.setAttribute('aria-label', isInhibin() ? 'Pacjent — kontekst inhibiny B' : 'Pacjent — kontekst LH i FSH');
+      engine = isTestosterone() ? opts.testosteroneEngine || root.VildaLabTestosterone : isInhibin() ? opts.inhibinEngine || root.VildaLabInhibinB : pubertyEngine;
+      data = isTestosterone() ? opts.testosteroneData || root.VildaLabTestosteroneData : isInhibin() ? opts.inhibinData || root.VildaLabInhibinBData : pubertyData;
+      panel.setAttribute('aria-label', isTestosterone() ? 'Pacjent — kontekst testosteronu całkowitego' : isInhibin() ? 'Pacjent — kontekst inhibiny B' : 'Pacjent — kontekst LH i FSH');
       if (changedAnalyte) {
         var selectedContext = fields.reproductiveContext.value;
         var choices = data && data.presentationPolicy && data.presentationPolicy.reproductiveChoices || reproductiveChoices;
@@ -626,10 +671,6 @@
         choices.forEach(function (choice) { var option = element('option', '', choice[1]); option.value = choice[0]; fields.reproductiveContext.appendChild(option); });
         fields.reproductiveContext.value = choices.some(function (choice) { return choice[0] === selectedContext; }) ? selectedContext : 'unknown';
       }
-      var sampleStep = byId('labStep4'); if (sampleStep) sampleStep.classList.toggle('lab-puberty-suppressed', !!next);
-      resultSection.classList.toggle('lab-puberty-active', !!next);
-      ['labResultSourceLine', 'labSourcesWrap', 'labInfoCard'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-suppressed', !!next); });
-      ['labStep4', 'labStep5'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-step-active', !!next); });
       if (patientLabel && patientLabel.firstChild) patientLabel.firstChild.textContent = next ? 'Pacjent ' : originalPatientLabel;
       var valueInput = byId('labValue'); if (valueInput) valueInput.setAttribute('inputmode', next ? 'text' : 'decimal');
       if (!next) assessment.replaceChildren();
@@ -637,7 +678,7 @@
     }
     function reset() {
       Object.keys(fields).forEach(clearField); dirty = {}; imported = {}; evaluation = null; contextKey = null; omittedSexContext = false; suspendedSexFields = null; neonatalEdit = false; reproductiveSex = null;
-      localAssessment = null; localEditedAxes = {}; localVisitMarker = null;
+      localAssessment = null; localEditedAxes = {}; localVisitMarker = null; pendingPatientChange = false;
       lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' }; details.open = false;
       Object.keys(sections).forEach(function (name) { sections[name].hidden = true; sectionButtons[name].setAttribute('aria-pressed', 'false'); });
       assessment.replaceChildren(); syncSexFields();
@@ -659,7 +700,8 @@
         localAssessment = null; localEditedAxes = {}; localVisitMarker = null;
       }
       if (context && text(context.identityKey) !== text(next.identityKey)) {
-        reset(); if (typeof opts.onPatientChange === 'function') opts.onPatientChange();
+        reset(); pendingPatientChange = isTestosterone();
+        if (typeof opts.onPatientChange === 'function') opts.onPatientChange();
       } else {
         // Odczyt źródła lub nowa jego wersja usuwa wyłącznie importy. Ręczne
         // korekty tej samej osoby zostają, a loading/unavailable nie liczy starych danych.
@@ -676,22 +718,53 @@
       try { next = opts.readPatientContext(); } catch (_) { next = { identityKey: context && context.identityKey, sourceStatus: 'unavailable' }; }
       setPatientContext(next); return previousKey !== contextKey;
     }
+    // One resolver is shared by the modern TT assessment and the legacy female
+    // renderer. Reading it never triggers onChange or creates a second override.
+    function getEffectiveContext() {
+      refreshContext();
+      var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
+      return { analyte: analyte, sex: input.sex, ageYears: number(fields.ageYears.value), ageMonths: number(fields.ageMonths.value),
+        age: engine && typeof engine.resolveAge === 'function' ? engine.resolveAge(input, data) : null, input: input,
+        isLegacyFemale: legacyFemale(), sourceStatus: context && context.sourceStatus || 'unavailable', identityKey: context && context.identityKey || null };
+    }
+    function getLegacyPatient() {
+      var effective = getEffectiveContext(), resolved = effective.age;
+      var years = resolved && resolved.status === 'known' ? resolved.lowerYears : null;
+      // The legacy female renderer has taken ownership after onPatientChange
+      // cleared the old input; it never creates a TT engine assessment.
+      if (effective.isLegacyFemale) pendingPatientChange = false;
+      return { sex: effective.sex, age: years, life_stage: years === null ? null : years >= 18 ? 'adult' : 'pediatric' };
+    }
+    function isLegacyFemale() { return getEffectiveContext().isLegacyFemale; }
+    function displayMeasurement(unit) {
+      if (!isTestosterone()) return evaluation.measurement.raw;
+      if (unit === evaluation.measurement.sourceUnit) return evaluation.measurement.raw;
+      var converted = engine.convertMeasurement(evaluation.measurement.raw, evaluation.measurement.sourceUnit, unit);
+      if (!converted || converted.status !== 'valid') return '—';
+      if (converted.value === null) return converted.raw;
+      var operator = ({ '>=': '≥', '<=': '≤', '=': '' })[converted.operator];
+      if (operator == null) operator = converted.operator || '';
+      return operator + String(Number(converted.value.toPrecision(8))).replace('.', ',');
+    }
     function render(measurement) {
       if (!analyte) return null;
       var identity = context && text(context.identityKey);
       refreshContext();
       // Zmiana pacjenta może poprzedzać zdarzenie odświeżenia formularza.
-      if (identity !== (context && text(context.identityKey))) measurement = null;
+      if (pendingPatientChange || identity !== (context && text(context.identityKey))) measurement = null;
+      pendingPatientChange = false;
       lastMeasurement = { raw: text(measurement && measurement.raw), unit: text(measurement && measurement.unit), targetUnit: text(measurement && measurement.targetUnit) };
       updateView();
+      if (legacyFemale()) return null;
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
+      var target = units().includes(lastMeasurement.targetUnit) ? lastMeasurement.targetUnit : input.unit;
       var rangeBlock = byId('labRangeBlock');
       if (rangeBlock && assessment.parentNode !== rangeBlock) rangeBlock.replaceChildren(assessment);
       var big = byId('labResultBig'), status = byId('labResultStatus');
       if (status) status.replaceChildren();
       if (!engine || typeof engine.evaluate !== 'function' || !data || !renderer) {
         evaluation = null; resultSection.classList.add('is-empty');
-        if (big) big.textContent = 'Moduł oceny ' + (isInhibin() ? 'inhibiny B' : 'LH/FSH') + ' jest niedostępny. Odśwież aplikację.';
+        if (big) big.textContent = 'Moduł oceny ' + (isTestosterone() ? 'testosteronu całkowitego' : isInhibin() ? 'inhibiny B' : 'LH/FSH') + ' jest niedostępny. Odśwież aplikację.';
         assessment.replaceChildren(); return null;
       }
       evaluation = engine.evaluate(input, data);
@@ -701,17 +774,16 @@
       // Wspólny model prezentacji wyprowadza wyróżnienie z obu zapisanych
       // porównań. Formularz nie oblicza ponownie progów ani zakresów.
       var view = renderer.renderEvaluation(assessment, evaluation, {
-        compact: true, hideMeasurement: true, live: true, pretermContextMode: neonatalContext()
+        compact: true, hideMeasurement: true, live: true, pretermContextMode: neonatalContext(), displayUnit: target
       });
       if (big) {
         big.replaceChildren();
         if (valid) {
-          var target = units().includes(lastMeasurement.targetUnit) ? lastMeasurement.targetUnit : input.unit;
-          // Obie obsługiwane jednostki są liczbowo równoważne. Zachowujemy zapis
-          // operatora i LOD/LOQ, nie zaokrąglamy granicy wyniku cenzorowanego.
+          // TT uses the conversion registry via its engine; the other supported
+          // analytes retain their numerically equivalent units.
           var visualState = view && view.valid && view.result ? view.result.visualState : '';
           var allowedState = ['is-uwaga-high', 'is-uwaga-low', 'is-above', 'is-below'].includes(visualState) ? visualState : '';
-          big.appendChild(element('span', 'lab-result-big-value' + (allowedState ? ' ' + allowedState : ''), evaluation.measurement.raw));
+          big.appendChild(element('span', 'lab-result-big-value' + (allowedState ? ' ' + allowedState : ''), displayMeasurement(target)));
           big.appendChild(doc.createTextNode(' '));
           big.appendChild(element('span', 'lab-result-big-unit', target));
           var alert = view && view.valid && view.result && view.result.visualAlert;
@@ -729,20 +801,21 @@
         units().filter(function (unit) { return unit !== input.unit; }).forEach(function (unit) {
           var row = element('tr', valid ? '' : 'lab-row-placeholder');
           row.appendChild(element('td', 'lab-unit', unit));
-          var cell = element('td', 'lab-value', valid ? evaluation.measurement.raw : '—');
+          var displayValue = valid ? displayMeasurement(unit) : '—';
+          var cell = element('td', 'lab-value', displayValue);
           if (valid) {
             cell.setAttribute('role', 'button'); cell.setAttribute('tabindex', '0');
-            cell.setAttribute('aria-label', 'Skopiuj: ' + evaluation.measurement.raw + ' ' + unit);
-            cell.dataset.copyText = evaluation.measurement.raw + ' ' + unit;
+            cell.setAttribute('aria-label', 'Skopiuj: ' + displayValue + ' ' + unit);
+            cell.dataset.copyText = displayValue + ' ' + unit;
           }
           row.appendChild(cell); table.appendChild(row);
         });
       }
-      if (meta) meta.textContent = units().join(' i ') + ' są liczbowo równoważne. Równość jednostek nie potwierdza zgodności metod oznaczenia.';
+      if (meta) meta.textContent = isTestosterone() ? 'Przeliczenie jednostek nie potwierdza zgodności metod oznaczenia.' : units().join(' i ') + ' są liczbowo równoważne. Równość jednostek nie potwierdza zgodności metod oznaczenia.';
       return evaluation;
     }
     function getAssessment(result) {
-      if (!analyte) return undefined;
+      if (!analyte || isTestosterone() && isLegacyFemale()) return undefined;
       if (result && result.testKey !== analyte) return { schemaVersion: 1, status: 'unavailable', reasonCodes: ['snapshot_result_mismatch'], evaluation: null };
       // Odczyt pól przy otwarciu przypięcia zamyka również okno pomiędzy edycją
       // DOM a eventem change. Snapshot nie zależy od późniejszych zmian pól.
@@ -755,7 +828,7 @@
     if (runtime && typeof runtime.subscribe === 'function') runtime.subscribe(function () {
       if (analyte && refreshContext()) { updateView(); notify(); }
     });
-    return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
+    return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, getEffectiveContext: getEffectiveContext, getLegacyPatient: getLegacyPatient, isLegacyFemale: isLegacyFemale, reset: reset };
   }
 
   var api = { version: '1.14.0', buildInput: buildInput, sharedObservationFields: sharedObservationFields,

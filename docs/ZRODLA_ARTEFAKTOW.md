@@ -1129,6 +1129,37 @@ autoryzacji ani strażnika niezapisanych zmian. Odtwarzalny test produkcyjnego
 importera i wskaźnika: `tests/unit/save-status-import-order.test.mjs`.
 Opis odtworzenia CI/CPU i zakresu: `docs/clinical/ALGORITHMS.md`, P-IMPORT-STATUS.
 
+## Integracja LAB-TT-MAYO — testosteron całkowity, etap 3 (2026-10-15)
+
+Nowe czytelne moduły `vilda_lab_testosterone_data.js` (źródła/polityki),
+`vilda_lab_testosterone.js` (czysta ocena) i `vilda_lab_testosterone_units.js`
+(niezmienny rejestr dotychczasowych konwersji) nie pochodzą z dawnego buildu.
+Nie przebudowano z nieaktualnych źródeł żadnego artefaktu.
+
+Wąskie punkty integracji w istniejących plikach:
+
+- `lab_units_data.js`: tylko rekord `testosterone_total` jest zapisany czytelnie.
+  Usunięto męskie wiersze, ogólny męski fallback oraz dawną notę przypisującą
+  samemu progowi rozpoznanie LOH. Żeńskie wiersze i wszystkie jednostki/faktory
+  pozostają dotychczasowe. Nowe męskie tabele żyją wyłącznie w nowym module danych.
+- `lab_unit_converter.js`: `U()`/`selectRange()` zwraca brak zakresu dla TT
+  bez jawnej płci F. Pozostałe anality i konwersje nie zmieniają się.
+- `vilda_auth_ui.js`: `vi()` nie oblicza dzisiejszego zakresu dla historycznego
+  `testosterone_total`, analogicznie do istniejącego AMH. Jawna norma wpisu
+  i liczba pozostają. Nie zmieniono edycji, scalania ani układu historii/trendu.
+- `vilda_chrome.js` i `vilda_session_bridge.js`: mały rejestr Units ładuje się
+  przed Snapshot; warunki gotowości wymagają obu. Normy ani silnik TT nie są
+  zależnością odczytu historii. Statyczne entrypointy zachowują tę samą kolejność.
+
+`przelicznik-jednostek.html` kieruje M/nieznaną płeć TT do wspólnego formularza
+i nowego silnika, F do dotychczasowych zakresów. Resolver wspólnego formularza
+rozstrzyga płeć również po jej zmianie bez ponownego wyboru analitu. Zapisana
+ocena jest kanoniczna; wyświetlanie w innej jednostce projektuje osobny widok.
+Snapshot i przypięcie zachowują oryginalną parę wartość–jednostka. Wszystkie
+te hooki mają regresje wykonujące rzeczywiste funkcje produkcyjne; szczegóły
+kliniczne i syntetyczne przypadki w `docs/clinical/TESTOSTERONE.md` oraz
+`docs/clinical/ALGORITHMS.md`, LAB-TT-MAYO.
+
 ## Jak odtworzyć
 
 ```bash
