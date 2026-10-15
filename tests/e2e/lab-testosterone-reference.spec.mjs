@@ -291,7 +291,7 @@ test('wyniki <300 i <LOD zachowują operator w przeliczeniach i nie dostają dok
   }
 });
 
-test('zmiana płci bez ponownego wyboru analitu przełącza wspólny panel i dotychczasowe żeńskie normy', async ({ page }) => {
+test('zmiana płci bez ponownego wyboru analitu przełącza wspólny panel między źródłowymi zakresami Mayo dla obu płci', async ({ page }) => {
   await open(page, user({ age: 30 }));
   await choose(page, '30');
   await target(page, 'ng/dL');
@@ -300,9 +300,10 @@ test('zmiana płci bez ponownego wyboru analitu przełącza wspólny panel i dot
   await shared(page, user({ sex: 'F', age: 30 }));
   await expect(page.locator('#labPubertyPanel')).toBeVisible();
   await expect(page.locator('#labPubertySex')).toHaveValue('F');
-  await expect(assessment(page)).toHaveCount(0);
-  await expect(page.locator('#labRangeBlock')).not.toBeEmpty();
-  await expect(page.locator('#labMeta')).toContainText(/0,3.*2,4/);
+  await expectBounds(page, 8, 60);
+  expect((await saved(page)).evaluation.input.sex).toBe('F');
+  await expect(comparison(page, 'stage').locator('.vilda-lab-axis')).toHaveCount(0);
+  await expect(page.locator('#labPubertyRefineStage')).toBeHidden();
   await expect(page.locator('#labValue')).toHaveValue('30');
   await expect(page.locator('#labSubstance')).toHaveValue(chosen);
   await quickSelect(page, 'Sex', 'M');
@@ -311,9 +312,9 @@ test('zmiana płci bez ponownego wyboru analitu przełącza wspólny panel i dot
   expect((await saved(page)).evaluation.input.sex).toBe('M');
   await quickSelect(page, 'Sex', 'F');
   await closePatientEditor(page);
-  await expect(assessment(page)).toHaveCount(0);
-  await expect(page.locator('#labRangeBlock')).not.toBeEmpty();
-  await expect(page.locator('#labMeta')).toContainText(/0,3.*2,4/);
+  await expectBounds(page, 8, 60);
+  expect((await saved(page)).evaluation.input.sex).toBe('F');
+  await expect(page.locator('#labInfoCard')).toBeHidden();
   await expect(page.locator('#labValue')).toHaveValue('30');
   expect(await page.evaluate(() => window.VildaPersistence.readShared().sex)).toBe('F');
 });

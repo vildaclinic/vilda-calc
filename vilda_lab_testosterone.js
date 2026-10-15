@@ -14,7 +14,7 @@
   if (!core || typeof core.resolveAge !== 'function' || !units || !units.factorToCanonical) {
     throw new Error('Testosterone requires generic age utilities and its unit registry.');
   }
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var own = function (o, key) { return o != null && Object.prototype.hasOwnProperty.call(o, key); };
   function record(o) { return o !== null && typeof o === 'object' && !Array.isArray(o); }
   function finite(n) { return typeof n === 'number' && Number.isFinite(n); }
@@ -132,6 +132,11 @@
       preterm: flag(input.preterm), gestationalAgeWeeks: finite(input.gestationalAgeWeeks) ? input.gestationalAgeWeeks : null, localReference: null
     };
     if (own(a, 'profileVersion')) normalized.assay.profileVersion = text(a.profileVersion, 80);
+    if (input.sex === 'F' || own(input, 'pregnancy')) normalized.pregnancy = flag(input.pregnancy);
+    if (input.sex === 'F' || text(input.reproductiveContext) === 'pregnancy') normalized.reproductiveContext = text(input.reproductiveContext, 32) || 'unknown';
+    ['cocp', 'exogenousTestosterone'].forEach(function (key) {
+      if (input.sex === 'F' || own(t, key)) normalized.treatment[key] = flag(t[key]);
+    });
     if (own(input, 'neonatalAge')) normalized.neonatalAge = { postnatalDays: copy(neonatal.postnatalDays), gestationalDays: copy(neonatal.gestationalDays) };
     return normalized;
   }
@@ -209,6 +214,7 @@
   }
   function stageReasons(input, policy, requestedAge) {
     var p = input.puberty, codes = [], kind = policy && policy.stageKindBySex && policy.stageKindBySex[input.sex];
+    if (input.sex === 'F' && !kind) return ['female_stage_reference_not_established'];
     if (!Number.isInteger(p.stage) || p.stage < 1 || p.stage > 5) codes.push('missing_puberty_stage');
     if (!kind || p.kind !== kind) codes.push(p.kind === 'unspecified' ? 'ambiguous_puberty_kind' : 'puberty_kind_sex_mismatch');
     if (!contains(ageBounds(policy && policy.stageAge), requestedAge)) codes.push('stage_age_outside_reference');
@@ -227,16 +233,27 @@
     if (input.specimen === 'unknown') reasons.push('specimen_unconfirmed');
     if (input.measurementKind === 'unknown') reasons.push('non_basal_or_unknown_measurement');
     else if (input.measurementKind !== 'basal') gates.push('non_basal_or_unknown_measurement');
-    if (own(raw, 'assay') && !record(raw.assay) || record(raw.assay) && ['confirmation', 'methodId', 'profileId', 'profileVersion'].some(function (key) {
+    var invalidAssay = own(raw, 'assay') && !record(raw.assay) || record(raw.assay) && ['confirmation', 'methodId', 'profileId', 'profileVersion'].some(function (key) {
       return own(raw.assay, key) && raw.assay[key] != null && typeof raw.assay[key] !== 'string';
-    }) || !['unknown', 'configured', 'reported'].includes(input.assay.confirmation)) gates.push('method_not_confirmed');
+    }) || !['unknown', 'configured', 'reported'].includes(input.assay.confirmation);
+    if (invalidAssay) gates.push('method_not_confirmed', 'invalid_measurement_context');
     else if (input.assay.confirmation !== 'reported' || !input.assay.methodId) reasons.push('source_method_unconfirmed');
     if (own(raw, 'treatment') && !record(raw.treatment) || record(raw.treatment) && own(raw.treatment, 'context') &&
-      !['none', 'unknown', 'hormonal', null, ''].includes(raw.treatment.context) || record(raw.treatment) && ['gnrha', 'sexSteroids'].some(function (key) {
+      !['none', 'unknown', 'hormonal', null, ''].includes(raw.treatment.context) || record(raw.treatment) && ['gnrha', 'sexSteroids', 'cocp', 'exogenousTestosterone'].some(function (key) {
       return own(raw.treatment, key) && ![true, false, 'yes', 'no', 'unknown', null, ''].includes(raw.treatment[key]);
     })) gates.push('invalid_treatment_context');
-    if (t.context === 'hormonal' || t.gnrha === 'yes' || t.sexSteroids === 'yes') gates.push('treatment_requires_separate_profile');
+    if (t.context === 'hormonal' || t.gnrha === 'yes' || t.sexSteroids === 'yes' || t.cocp === 'yes' || t.exogenousTestosterone === 'yes') gates.push('treatment_requires_separate_profile');
     else if (!(t.context === 'none' && t.gnrha === 'no' && t.sexSteroids === 'no')) reasons.push('treatment_context_unknown');
+    var female = policy.femaleContext;
+    if (own(raw, 'pregnancy') && ![true, false, 'yes', 'no', 'unknown', null, ''].includes(raw.pregnancy)) gates.push('invalid_reproductive_context');
+    if (input.sex === 'F') {
+      if (own(raw, 'reproductiveContext') && raw.reproductiveContext != null && typeof raw.reproductiveContext !== 'string' ||
+        !female.reproductiveContexts.includes(input.reproductiveContext)) gates.push('invalid_reproductive_context');
+      var reproductivePregnancy = female.blockedReproductiveContexts.includes(input.reproductiveContext);
+      if (input.pregnancy === 'yes' && female.pregnancyRequiresSeparateProfile || reproductivePregnancy) gates.push('pregnancy_requires_separate_profile');
+      if (input.pregnancy === 'no' && reproductivePregnancy) gates.push('reproductive_context_conflict');
+      if (input.pregnancy === 'unknown' && !reproductivePregnancy) reasons.push('pregnancy_context_unknown');
+    } else if (input.pregnancy === 'yes' || input.reproductiveContext === 'pregnancy') gates.push('reproductive_context_conflict');
     if (!policy.allowedCollectionTimes.includes(input.collectionTime)) gates.push('invalid_collection_time');
     else if (policy.unsupportedCollectionTimes.includes(input.collectionTime)) gates.push('collection_time_outside_reference');
     else if (input.collectionTime === 'unknown') reasons.push('collection_time_unknown');
@@ -257,6 +274,25 @@
     }
     return gates;
   }
+  function femaleGuidance(input, age, measurement, byAge, data) {
+    var notes = data.clinicalGuidance && data.clinicalGuidance.female;
+    if (input.sex !== 'F' || !record(notes) || measurement.status !== 'valid' || age.status !== 'known') return null;
+    var high = notes.androgenExcessAdult, threshold = high && high.threshold;
+    var allowed = byAge.status !== 'unavailable' || high && Array.isArray(high.allowedUnavailableReasons) &&
+      byAge.reasonCodes.every(function (reason) { return high.allowedUnavailableReasons.includes(reason); });
+    // Context gates can precede profile material checks (for example evening).
+    // A non-basal source refusal must never hide an incompatible specimen.
+    allowed = allowed && high && Array.isArray(high.allowedSpecimens) && high.allowedSpecimens.includes(input.specimen);
+    if (allowed && record(threshold) && threshold.operator === '>' && finite(threshold.value) && factor(threshold.unit) &&
+      contains(ageBounds(high.age), ageInterval(age)) && measurement.value !== null && ['=', '>', '>='].includes(measurement.operator)) {
+      var compared = compare(measurement.value, threshold.value * factor(threshold.unit));
+      if (compared > 0 || compared === 0 && measurement.operator === '>') return high;
+    }
+    if (byAge.status === 'unavailable') return null;
+    if (byAge.status === 'below' && notes.lowAdult && contains(ageBounds(notes.lowAdult.age), ageInterval(age))) return notes.lowAdult;
+    if (byAge.status === 'above') return notes.aboveReference;
+    return notes.withinReference;
+  }
   function evaluate(rawInput, data) {
     var raw = record(rawInput) ? rawInput : {}; data = record(data) ? data : {};
     var neonatal = core.resolveNeonatalAge(raw), input = normalizeInput(raw, neonatal);
@@ -274,6 +310,9 @@
       finite(policy.pretermGestationalDaysUpperExclusive) && typeof policy.blockKnownPretermInInfancy === 'boolean' &&
       policy.unknownContextComparison === 'orientative-source-reference' && policy.confirmedBiochemicalAssessment === false &&
       policy.knownTherapyRequiresSeparateProfile === true && policy.knownStimulationRequiresSeparateProfile === true;
+    if (input.sex === 'F') validPolicy = validPolicy && record(policy.femaleContext) &&
+      named(policy.femaleContext.id) && named(policy.femaleContext.version) && Array.isArray(policy.femaleContext.reproductiveContexts) &&
+      Array.isArray(policy.femaleContext.blockedReproductiveContexts) && policy.femaleContext.pregnancyRequiresSeparateProfile === true;
     if (input.analyte !== 'testosterone_total') gates.push('unsupported_analyte');
     if (measurement.status !== 'valid') gates.push('invalid_measurement');
     if (age.status !== 'known') gates.push.apply(gates, age.reasonCodes);
@@ -293,7 +332,9 @@
         if (profile.unsupportedMethodIds.includes(input.assay.methodId) || input.assay.confirmation === 'reported' &&
           (!input.assay.methodId || !profile.compatibleMethodIds.includes(input.assay.methodId))) { gates.push('method_not_confirmed'); return; }
         var scope = ageBounds(profile.scope.age);
-        if (!contains(scope, requested)) { byAge = unavailable('age_precision_crosses_scope'); return; }
+        if (!contains(scope, requested)) {
+          byAge = unavailable(input.sex === 'F' && requested.hi <= scope.lo ? 'female_infant_reference_not_established' : 'age_precision_crosses_scope'); return;
+        }
         profile.rows.forEach(function (row) {
           if (!record(row) || row.sex !== input.sex) return;
           var rowAge = row.age || (row.stage ? policy.stageAge : profile.scope.age), interval = ageBounds(rowAge);
@@ -319,13 +360,13 @@
     var ids = unique(ranges.map(function (range) { return range.profileId; }));
     var selectedReasons = available ? unique(reasons) : unique(gates.concat(byAge.reasonCodes, byStage.reasonCodes));
     var adult = validPolicy && age.status === 'known' && contains(ageBounds(policy.adultAge), requested) && input.sex === 'M';
-    var guidance = adult && data.clinicalGuidance && data.clinicalGuidance.adult;
+    var guidance = adult && data.clinicalGuidance && data.clinicalGuidance.adult || femaleGuidance(input, age, measurement, byAge, data);
     var result = {
       schemaVersion: 1, engineVersion: VERSION, dataVersion: data.dataVersion || null, analyte: input.analyte,
       input: copy(input), measurement: measurement, ageAtSample: age,
       biochemical: { status: 'unavailable', primary: null, byAge: unavailable('automatic_reference_only'), byStage: unavailable('automatic_reference_only'),
         local: unavailable('no_local_reference'), reasonCodes: unique(['automatic_reference_only'].concat(gates, reasons)) },
-      clinical: { status: 'limited', code: 'reference_comparison_only', title: guidance && guidance.title || 'Porównanie ze źródłem',
+      clinical: { status: guidance && guidance.status || 'limited', code: guidance && guidance.code || 'reference_comparison_only', title: guidance && guidance.title || 'Porównanie ze źródłem',
         text: guidance && guidance.shortText || '', reasonCodes: [], sourceIds: guidance && Array.isArray(guidance.sourceIds) ? guidance.sourceIds.slice() : [] },
       summary: { status: measurement.status === 'invalid' ? 'invalid' : 'limited',
         code: measurement.status === 'invalid' ? 'invalid_measurement' : available ? 'automatic_reference_comparison' : 'limited_interpretation',

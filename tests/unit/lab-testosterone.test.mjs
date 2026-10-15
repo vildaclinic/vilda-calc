@@ -134,7 +134,7 @@ describe('TT — verified Mayo male source and independent axes', () => {
   it('does not turn missing age with G5 or missing sex into an adult fallback', () => {
     blocked(evaluate({ age: null, puberty: gonadal(5) }), 'missing_age');
     blocked(evaluate({ sex: null }), 'missing_sex');
-    blocked(evaluate({ sex: 'F' }), 'unsupported_sex');
+    expect(byAge(evaluate({ sex: 'F' })).range.profileId).toBe('mayo-ttst-female');
     blocked(evaluate({ analyte: 'testosterone_free' }), 'unsupported_analyte');
   });
   it('keeps a boundary-crossing age unavailable rather than merging infant and childhood intervals', () => {

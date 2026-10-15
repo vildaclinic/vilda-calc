@@ -82,8 +82,8 @@ describe('TT — niezależny rejestr jednostek i pochodzenie danych źródłowyc
   });
 
   it('zachowuje jeden męski profil Mayo i jawne ograniczenia metody oraz populacji', () => {
-    expect(data.profiles).toHaveLength(1);
-    expect(data.automaticReferencePolicy.profileIds).toEqual([profile.id]);
+    expect(data.profiles.filter((candidate) => candidate.scope.sex === 'M')).toEqual([profile]);
+    expect(data.automaticReferencePolicy.profileIds).toEqual([profile.id, 'mayo-ttst-female']);
     expect(profile).toMatchObject({ analyte: 'testosterone_total', sourceId: 'mayo-ttst-8533', material: 'serum', scope: { sex: 'M' } });
     expect(profile.rows.every((row) => row.sex === 'M')).toBe(true);
     const source = data.sources[profile.sourceId];
@@ -106,6 +106,46 @@ describe('TT — niezależny rejestr jednostek i pochodzenie danych źródłowyc
     expect(note.shortText).toContain('Pojedynczy wynik nie rozpoznaje ani nie wyklucza');
     expect(note.shortText).toContain('SHBG i wolny testosteron — gdy wskazane');
     expect(data.automaticReferencePolicy.confirmedBiochemicalAssessment).toBe(false);
+  });
+
+  it('dodaje wersjonowany profil żeński od 6 miesięcy bez tabeli Tanner lub zastępczej normy niemowlęcej', () => {
+    const female = data.profiles.find((candidate) => candidate.id === 'mayo-ttst-female');
+    expect(data).toMatchObject({ version: '1.1.0', dataVersion: '2026-10-15.2' });
+    expect(data.profiles).toHaveLength(2);
+    expect(profile.version).toBe('2026-10-15.1');
+    expect(female).toMatchObject({ version: '2026-10-15.2', sourceId: 'mayo-ttst-8533-female',
+      material: 'serum', unit: 'ng/dL', scope: { sex: 'F', age: { lower: { operator: '>=', value: 0.5 }, upper: null } } });
+    expect(female.rows.every((row) => row.sex === 'F' && row.age && !row.stage)).toBe(true);
+    expect(female.rows.map((row) => row.age.lower.value)).toEqual([0.5, 10, 12, 17, 19]);
+    expect(female.rows.map((row) => row.age.upper?.value ?? null)).toEqual([10, 12, 17, 19, null]);
+    expect(female.rows.map((row) => row.bounds.upper.value)).toEqual([20, 44, 75, 75, 60]);
+    expect(female.rows.map((row) => row.bounds.lower?.value ?? null)).toEqual([null, null, null, 20, 8]);
+    expect(female.rows.slice(0, 3).every((row) => row.bounds.censoredLower.operator === '<' && row.bounds.censoredLower.value === 7)).toBe(true);
+    expect(female.rows.every((row) => row.age.lower.operator === '>=' && (!row.age.upper || row.age.upper.operator === '<'))).toBe(true);
+    expect(data.automaticReferencePolicy.stageKindBySex).toEqual({ M: 'G' });
+    expect(Object.isFrozen(female.rows[0].bounds.censoredLower)).toBe(true);
+    const source = data.sources[female.sourceId];
+    expect(source.accessedOn).toBe('2026-10-15');
+    expect(source.intervalEvidence.locator).toContain('Females');
+    expect(source.evidenceSha256).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('utrzymuje żeńskie noty kliniczne i ich kwalifikację poza normami oraz silnikiem', () => {
+    const female = data.clinicalGuidance.female;
+    expect(female.androgenExcessAdult.threshold).toEqual({ operator: '>', value: 5, unit: 'nmol/L' });
+    expect(female.androgenExcessAdult.age).toMatchObject({ lower: { operator: '>=', value: 19 }, upper: null });
+    expect(female.androgenExcessAdult.ageQualificationProvenance).toContain('nie');
+    expect(female.androgenExcessAdult.allowedSpecimens).toEqual(['unknown', 'serum']);
+    expect(female.lowAdult.shortText).toContain('HSDD');
+    for (const note of [female.androgenExcessAdult, female.lowAdult, female.aboveReference, female.withinReference]) {
+      for (const id of note.sourceIds) {
+        expect(data.sources[id]).toBeDefined();
+        expect(data.sources[id].url).toMatch(/^https:\/\//);
+        expect(data.profiles.some((candidate) => candidate.sourceId === id)).toBe(false);
+      }
+    }
+    expect(data.automaticReferencePolicy.femaleContext).toMatchObject({ pregnancyRequiresSeparateProfile: true,
+      blockedReproductiveContexts: ['pregnancy'], treatmentFlags: ['cocp', 'exogenousTestosterone'] });
   });
 
   it('zachowuje konserwatywną długość kalendarzowych miesięcy dla wieku znanego tylko w dniach', () => {

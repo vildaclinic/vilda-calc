@@ -10,12 +10,12 @@ const snapshot = require('../../vilda_lab_snapshot.js');
 const DATE = '2026-10-15';
 const pinSource = readFileSync(new URL('../../lab_pin_result.js', import.meta.url), 'utf8');
 const clone = value => JSON.parse(JSON.stringify(value));
-function captured(raw = '300', unit = 'ng/dL') {
+function captured(raw = '300', unit = 'ng/dL', extra = {}) {
   const evaluation = engine.evaluate({ analyte: 'testosterone_total', value: raw, unit, sex: 'M',
     age: { years: 12, months: 0, days: null, precision: 'month' }, contextBasis: 'current-patient', referenceSelection: 'automatic',
     specimen: 'unknown', measurementKind: 'unknown', collectionTime: 'unknown',
     puberty: { kind: 'G', stage: 3, assessedAtISO: DATE, appliesToSample: false, appliesToCurrentContext: true, source: 'fictional-examination' },
-    treatment: { gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' }, preterm: 'no',
+    treatment: { gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' }, preterm: 'no', ...extra,
   }, data);
   return snapshot.create(evaluation);
 }
@@ -24,7 +24,7 @@ function storage() {
   return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)),
     removeItem: key => values.delete(key), key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
 }
-async function device() {
+async function device(patientUser = { sex: 'M', age: 12, height: 145, weight: 35 }) {
   const win = { crypto: globalThis.crypto, TextEncoder, TextDecoder, btoa: globalThis.btoa, atob: globalThis.atob,
     localStorage: storage(), sessionStorage: storage(), setTimeout, clearTimeout,
     addEventListener() {}, removeEventListener() {}, document: { addEventListener() {}, removeEventListener() {}, hidden: false } };
@@ -33,10 +33,10 @@ async function device() {
   const vault = win.VildaVault, adapter = vault.createInMemoryAdapter();
   vault.setStorageAdapter(adapter);
   await vault.createUser('Fikcyjny#TTtransport!2026', { label: 'Fikcyjny sejf TT', iterations: 10000 });
-  const patientId = (await vault.savePatient({ name: 'Fikcyjny Pacjent Transport TT', user: { sex: 'M', age: 12, height: 145, weight: 35 } })).patientId;
+  const patientId = (await vault.savePatient({ name: 'Fikcyjny Pacjent Transport TT', user: patientUser })).patientId;
   return { win, vault, adapter, patientId };
 }
-async function pinThroughProduction(dev, assessment, raw, unit, date = DATE) {
+async function pinThroughProduction(dev, assessment, raw, unit, date = DATE, ageMonths = 144) {
   const captureStart = pinSource.indexOf('var Lh2AssessmentProvider='), captureEnd = pinSource.indexOf('/* AMH educational reference', captureStart);
   const capture = new Function('a', `${pinSource.slice(captureStart, captureEnd)};return Lh2CaptureAssessment;`)(dev.win);
   dev.win.VildaLabPinResult.setAssessmentProvider(() => assessment);
@@ -47,8 +47,8 @@ async function pinThroughProduction(dev, assessment, raw, unit, date = DATE) {
   if (a < 0 || b < a) throw new Error('Missing production pin save function');
   const fields = { labPinDate: { value: date }, labPinComment: { value: 'Fikcyjny komentarz' } };
   const save = new Function('a', 'u', 'T', 'h', 'g', 'z', `${pinSource.slice(a, b)};return A;`)(dev.win,
-    id => fields[id], async () => dev.vault, message => { throw new Error(message); }, () => {}, () => '12 l');
-  await save(result, dev.patientId, 144);
+    id => fields[id], async () => dev.vault, message => { throw new Error(message); }, () => {}, () => String(ageMonths / 12) + ' l');
+  await save(result, dev.patientId, ageMonths);
   return result;
 }
 
@@ -128,6 +128,91 @@ describe('TT pin → encrypted note → recorded series, real production functio
     expect(changed.labResult.assessment.evaluation).toEqual(original.evaluation);
     const point = (await dev.vault.listPatientLabSeries(dev.patientId))[0].points.find(p => p.noteId === changed.id);
     expect(point.valueNum).toBeNull();
+  });
+});
+
+describe('Female TT production pin and immutable encrypted read', () => {
+  function female(years, extra = {}) {
+    return { sex: 'F', age: { years, months: 0, days: null, precision: 'month' },
+      puberty: { kind: 'Th', stage: 3, assessedAtISO: DATE, appliesToSample: false,
+        appliesToCurrentContext: true, source: 'fictional-female-examination' }, ...extra };
+  }
+
+  it.each([12, 19])('keeps the female source assessment saved at %s years after the current patient and engine change', async years => {
+    const dev = await device({ sex: 'F', age: years, height: 160, weight: 50 });
+    const original = captured('30', 'ng/dL', female(years)), before = clone(original.evaluation);
+    expect(original.status).toBe('recorded');
+    expect(before.referencePreview.byAge.range).toMatchObject({ profileId: 'mayo-ttst-female', sex: 'F' });
+    await pinThroughProduction(dev, original, '30', 'ng/dL', DATE, years * 12);
+    const noteId = (await dev.vault.listPatientNotesForPatient(dev.patientId))[0].id;
+    original.evaluation.input.age.years = 90;
+    original.evaluation.input.pregnancy = 'yes'; original.evaluation.input.treatment.cocp = 'yes';
+    original.evaluation.referencePreview.byAge.range.bounds.upper.value = 99999;
+    await dev.vault.savePatient({ name: 'Fikcyjny Pacjent Transport TT',
+      user: { sex: 'F', age: 65, height: 160, weight: 50 } }, { patientId: dev.patientId });
+    expect((await dev.vault.getLatestSnapshot(dev.patientId)).payload.user.age).toBe(65);
+    dev.win.VildaLabTestosteroneData = { profiles: [] };
+    let reevaluations = 0;
+    dev.win.VildaLabTestosterone = { evaluate() { reevaluations++; throw new Error('Dawna ocena TT nie może korzystać z dzisiejszego silnika'); } };
+    const note = await dev.vault.getPatientNote(noteId);
+    expect(note.labResult).toMatchObject({ value: '30', valueNum: 30, unit: 'ng/dL',
+      assessment: { status: 'recorded', binding: { clinicalDateISO: DATE } } });
+    expect(note.labResult.assessment.evaluation).toEqual(before);
+    expect(note.labResult.assessment.evaluation.input.age.years).toBe(years);
+    expect(note.labResult.assessment.evaluation.input.pregnancy).toBe('unknown');
+    expect(note.labResult.assessment.evaluation.referencePreview.byStage.status).toBe('unavailable');
+    const point = (await dev.vault.listPatientLabSeries(dev.patientId))[0].points[0];
+    expect(point).toMatchObject({ valueNum: 30, plotValue: 30, unit: 'ng/dL', ageMonths: years * 12,
+      assessment: note.labResult.assessment });
+    const encrypted = await dev.adapter.getPatientNoteForUser(dev.vault.getCurrentUser().userId, noteId);
+    expect(encrypted.bodyCipher).toBeTruthy(); expect(encrypted.labResult).toBeNull();
+    expect(JSON.stringify(encrypted)).not.toContain('fictional-female-examination');
+    expect(reevaluations).toBe(0);
+  });
+
+  it('preserves female operators and known GnRHa without introducing exact points or a current RI', async () => {
+    const dev = await device({ sex: 'F', age: 12, height: 150, weight: 40 });
+    for (const [raw, years, treatment] of [
+      ['<7', 12, { gnrha: 'yes', sexSteroids: 'unknown', context: 'unknown' }],
+      ['<LOD', 19, { gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' }],
+      ['≥150', 19, { gnrha: 'unknown', sexSteroids: 'unknown', context: 'unknown' }],
+    ]) {
+      const assessment = captured(raw, 'ng/dL', female(years, { treatment }));
+      expect(assessment.status).toBe('recorded');
+      if (raw === '<7') {
+        expect(assessment.evaluation.referenceSelection.status).toBe('unavailable');
+        expect(assessment.evaluation).not.toHaveProperty('referencePreview');
+      }
+      await pinThroughProduction(dev, assessment, raw, 'ng/dL', DATE, years * 12);
+    }
+    const notes = await dev.vault.listPatientNotesForPatient(dev.patientId);
+    const points = (await dev.vault.listPatientLabSeries(dev.patientId))[0].points;
+    expect(points).toHaveLength(3);
+    for (const point of points) {
+      expect(point.valueNum).toBeNull(); expect(point.plotValue).toBeNull();
+      const note = notes.find(item => item.id === point.noteId);
+      expect(point.assessment).toEqual(note.labResult.assessment);
+      expect(point.assessment.evaluation.measurement).toMatchObject({ raw: note.labResult.value, sourceUnit: 'ng/dL', isExact: false, plotValue: null });
+    }
+    expect(notes.find(note => note.labResult.value === '<7').labResult.assessment.evaluation.input.treatment.gnrha).toBe('yes');
+  });
+
+  it('reads a legacy female result without adding an assessment from current female norms or context', async () => {
+    const dev = await device({ sex: 'F', age: 65, height: 160, weight: 50 });
+    let reevaluations = 0;
+    dev.win.VildaLabTestosterone = { evaluate() { reevaluations++; throw new Error('Stary wynik bez oceny nie może dostać nowych norm'); } };
+    const legacy = { test: 'Testosteron całkowity', testKey: 'testosterone_total', value: '30', valueNum: 30,
+      unit: 'ng/dL', norm: 'Fikcyjny dawny opis zakresu' };
+    const saved = await dev.vault.savePatientNote({ patientId: dev.patientId, category: 'wynik-badania',
+      title: 'Fikcyjny dawny wynik TT', clinicalDateISO: '2020-01-02', labResult: legacy });
+    const note = await dev.vault.getPatientNote(saved.id);
+    expect(note.labResult).toEqual(legacy);
+    expect(note.labResult).not.toHaveProperty('assessment');
+    const point = (await dev.vault.listPatientLabSeries(dev.patientId))[0].points[0];
+    expect(point).toMatchObject({ valueNum: 30, unit: 'ng/dL', norm: legacy.norm });
+    expect(point).not.toHaveProperty('plotValue');
+    expect(point).not.toHaveProperty('assessment');
+    expect(reevaluations).toBe(0);
   });
 });
 
