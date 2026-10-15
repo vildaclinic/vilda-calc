@@ -544,6 +544,10 @@
     align-items: center;
     min-height: 44px
   }
+  .vilda-lab-hist button.vilda-lab-hist-notice-undo {
+    min-height: 44px;
+    padding: 0 var(--space-8px)
+  }
   .vilda-lab-hist-toolbar>.vilda-lab-hist-segment {
     order: -1
   }
@@ -555,4 +559,29 @@
   color: #5b6672;
   font-size: 11px;
   font-weight: 600
+}
+
+/* PR5b (decyzja 6.11): komunikat po automatycznym zamknięciu zlecenia, z „Cofnij”. */
+.vilda-lab-hist-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6px) var(--space-12px);
+  background: #f2fbf8;
+  border: .5px solid #cfe8df;
+  border-radius: var(--radius-12);
+  padding: var(--space-8px) var(--space-14px);
+  color: #1f3b38;
+  font-size: 13px
+}
+
+.vilda-lab-hist-notice.is-error,
+.vilda-lab-hist-notice.is-undo-error {
+  background: #fff8ec;
+  border-color: #f0dcb4
+}
+
+.vilda-lab-hist-notice-text {
+  flex: 1 1 220px;
+  min-width: 0
 }

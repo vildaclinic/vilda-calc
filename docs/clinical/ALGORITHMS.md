@@ -598,6 +598,32 @@ stopka, dopisek aliasu), `tests/unit/lab-history-strip.test.mjs` (chip
 „kontrola”, podpowiedź, szczegóły), e2e `lab-historia-gh-igf1.spec.mjs`
 (prawdziwy sejf i karta pacjenta).
 
+### LAB-HISTORIA PR5b — zlecenie zamyka się po wpisaniu wyniku (`vilda_lab_history_tab.js` 1.4.0, 2026-10-15)
+
+**Wpływ kliniczny: brak.** Zmiana przebiegu pracy (decyzja 6.11): po „Wpisz
+wynik” przy zleceniu z Terminarza w zakładce „Badania” zapisany wynik zamyka
+zlecenie tak samo jak „Wykonano” w Przypomnieniach (`completePatientNote`).
+Wyniki, jednostki, normy, oceny i historia liczą się jak dotąd. Zlecenie
+z „kontrolą co N dni” też się zamyka, a nie przekłada — następny wynik
+w tej samej notatce nadpisałby ten, który właśnie trafił do historii. Bez
+wartości, po niestawieniu i przy zleceniu już wykonanym nic się nie zmienia;
+komunikat w zakładce ma „Cofnij”.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Zlecenie „Kontrola TSH” z terminem 16.06.26, „Wpisz wynik”, data badania
+  16.06.26, wartość „0,4” mIU/L, „Zapisz zmiany” → wynik w serii TSH,
+  zlecenie wykonane (`completedAtISO`), znika z Przypomnień; komunikat
+  „Wynik zapisany — zlecenie „Kontrola TSH” oznaczone jako wykonane
+  w Przypomnieniach.”.
+- „Cofnij” → zlecenie znów w Przypomnieniach, wynik 0,4 zostaje w serii.
+- Ten sam przycisk, edytor zamknięty bez wartości → zlecenie bez zmian.
+
+**Testy:** `tests/unit/lab-history-tab.test.mjs` (atrapa sejfu: zamknięcie,
+„Cofnij”, brak wartości, wykonane, niestawienie, wynik tekstowy, błąd, inne
+zapisy z zakładki), e2e `lab-historia-zlecenie-wykonane.spec.mjs` (prawdziwy
+sejf, karta i edytor).
+
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
 **Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla

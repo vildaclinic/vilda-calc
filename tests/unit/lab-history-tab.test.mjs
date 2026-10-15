@@ -51,6 +51,13 @@ function sejf(opcje = {}) {
     listPatientTreatmentPeriods: async () => structuredClone(d.treatment),
     listPatientNotesDueByDate: async () => opcje.przypomnienia || [],
     getPatientNote: async (id) => structuredClone(d.notes.find((n) => n.id === id) || null),
+    // PR5b: zamknięcie i cofnięcie zlecenia jak w sejfie (completedAtISO / null); błąd na życzenie testu.
+    completePatientNote: vi.fn(async (id) => {
+      if (opcje.bladZamkniecia) throw new Error('fikcyjny błąd zapisu');
+      Object.assign(d.notes.find((n) => n.id === id), { completedAtISO: '2026-06-17T10:00:00.000Z', noShowAtISO: null });
+    }),
+    uncompletePatientNote: vi.fn(async (id) => { Object.assign(d.notes.find((n) => n.id === id), { completedAtISO: null, noShowAtISO: null }); }),
+    zmienNotatke: (id, zmiany) => Object.assign(d.notes.find((n) => n.id === id), zmiany),
     onPatientNoteChanged: (fn) => sluchacze.push(fn),
     zmiana: (zdarzenie) => sluchacze.forEach((fn) => fn(zdarzenie)),
   };
@@ -418,5 +425,77 @@ describe('zakładka Badania: IGF-1 z notatek leczenia GH i wpisy dopasowane po n
     expect(mergedNote([])).toBe('');
     expect(mergedNote([{ key: 'a', test: 'Kortyzol', count: 2 }, { key: 'b', test: 'Kortyzol', count: 3 }])).toBe('W tym 5 wpisów dopasowanych po nazwie badania „Kortyzol”.');
     expect(mergedNote([{ key: 'a', test: 'A', count: 1 }, { key: 'b', test: 'B', count: 1 }])).toBe('W tym 2 wpisy dopasowane po nazwie badania „A”, „B”.');
+  });
+});
+
+// LAB-HISTORIA PR5b (decyzja 6.11): „Wpisz wynik” z zapisaną wartością zamyka zlecenie jak „Wykonano”
+// w Przypomnieniach; komunikat z „Cofnij”. Dane fikcyjne.
+describe('zakładka Badania: zlecenie zamyka się po wpisaniu wyniku', () => {
+  async function wpiszWynik(opcjeSejfu = {}, zmiany = { labResult: { test: 'TSH (tyreotropina)', testKey: 'tsh', value: '0,4', valueNum: 0.4, unit: 'mIU/L' }, clinicalDateISO: '2026-06-16' }) {
+    const env = srodowisko();
+    const vault = sejf(opcjeSejfu);
+    const { wywolania } = otworz(env, vault);
+    await gotowe(env);
+    przycisk(env, 'Wpisz wynik').click();
+    await vi.waitFor(() => expect(wywolania.edytor).toHaveLength(1));
+    if (zmiany) vault.zmienNotatke('zlecenie-1', zmiany);   // zapis w edytorze karty
+    wywolania.edytor[0].onSaved();
+    return { env, vault, wywolania };
+  }
+  const komunikat = (env) => env.host.querySelector('.vilda-lab-hist-notice');
+
+  it('wartość zapisana: completePatientNote, komunikat, odświeżenie karty po zamknięciu; „Cofnij” przywraca zlecenie', async () => {
+    const { env, vault, wywolania } = await wpiszWynik();
+    await vi.waitFor(() => expect(komunikat(env)).not.toBeNull());
+    expect(vault.completePatientNote).toHaveBeenCalledExactlyOnceWith('zlecenie-1');
+    expect(komunikat(env).getAttribute('role')).toBe('status');
+    expect(teksty(env.host, '.vilda-lab-hist-notice-text')).toEqual(['Wynik zapisany — zlecenie „Kontrola TSH” oznaczone jako wykonane w Przypomnieniach.']);
+    await vi.waitFor(() => expect(wywolania.zmiany).toBe(1));
+    expect(env.host.querySelector('.vilda-lab-hist-pending')).toBeNull();
+    przycisk(env, 'Cofnij').click();
+    await vi.waitFor(() => expect(teksty(env.host, '.vilda-lab-hist-notice-text')).toEqual(['Cofnięto — zlecenie „Kontrola TSH” znów jest w Przypomnieniach.']));
+    expect(vault.uncompletePatientNote).toHaveBeenCalledExactlyOnceWith('zlecenie-1');
+    expect(przycisk(env, 'Cofnij')).toBeUndefined();
+    expect(wywolania.zmiany).toBe(2);
+  });
+
+  it.each([
+    ['bez wartości (zamknięty edytor albo sam opis)', null],
+    ['wartość pusta', { labResult: { testKey: 'tsh', test: 'TSH (tyreotropina)', value: '  ' } }],
+    ['zlecenie już wykonane', { labResult: { testKey: 'tsh', value: '0,4', valueNum: 0.4, unit: 'mIU/L' }, completedAtISO: '2026-06-16T08:00:00.000Z' }],
+    ['niestawienie', { labResult: { testKey: 'tsh', value: '0,4', valueNum: 0.4, unit: 'mIU/L' }, noShowAtISO: '2026-06-16T08:00:00.000Z' }],
+  ])('%s: zlecenie zostaje, bez komunikatu', async (_, zmiany) => {
+    const { env, vault, wywolania } = await wpiszWynik({}, zmiany);
+    await vi.waitFor(() => expect(wywolania.zmiany).toBe(1));
+    expect(vault.completePatientNote).not.toHaveBeenCalled();
+    expect(komunikat(env)).toBeNull();
+  });
+
+  it('wynik tekstowy („<0,1 mIU/L”) też zamyka zlecenie', async () => {
+    const { env, vault } = await wpiszWynik({}, { labResult: { testKey: 'tsh', test: 'TSH (tyreotropina)', value: '<0,1 mIU/L' } });
+    await vi.waitFor(() => expect(komunikat(env)).not.toBeNull());
+    expect(vault.completePatientNote).toHaveBeenCalledOnce();
+  });
+
+  it('błąd zamknięcia: komunikat z odesłaniem do Przypomnień, bez „Cofnij”', async () => {
+    const { env } = await wpiszWynik({ bladZamkniecia: true });
+    await vi.waitFor(() => expect(teksty(env.host, '.vilda-lab-hist-notice-text'))
+      .toEqual(['Wynik zapisany, ale nie udało się oznaczyć zlecenia jako wykonanego — zrób to w Przypomnieniach.']));
+    expect(komunikat(env).classList.contains('is-error')).toBe(true);
+    expect(przycisk(env, 'Cofnij')).toBeUndefined();
+  });
+
+  it('inne zapisy z zakładki (wartość w karcie, „+ Dodaj wynik”) nie zamykają zleceń', async () => {
+    const env = srodowisko();
+    const vault = sejf();
+    const { wywolania } = otworz(env, vault);
+    await gotowe(env);
+    env.host.querySelector('.vilda-lab-hist-card[data-series="tsh"] .vilda-lab-hist-value').click();
+    przycisk(env, '+ Dodaj wynik').click();
+    await vi.waitFor(() => expect(wywolania.edytor).toHaveLength(2));
+    vault.zmienNotatke('zlecenie-1', { labResult: { testKey: 'tsh', value: '0,4', valueNum: 0.4, unit: 'mIU/L' } });
+    wywolania.edytor.forEach((o) => o.onSaved());
+    await vi.waitFor(() => expect(wywolania.zmiany).toBe(2));
+    expect(vault.completePatientNote).not.toHaveBeenCalled();
   });
 });
