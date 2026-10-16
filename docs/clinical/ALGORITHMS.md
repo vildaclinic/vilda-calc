@@ -871,7 +871,7 @@ wyników przypiętych przed 1.1.0. Model `VildaLabHistory` 1.3.0 mapuje
 z wierszem domyślnym — bez zmian (strzałka i kategoria z zapisu, populacja
 „Dorośli, zakres ogólny” w pigułce). Wiersz dopasowany do dziecka (np. TSH
 „Dzieci 6–10 lat”) — bez zmian. Przelicznik na żywo (status i pasek normy)
-— bez zmian.
+— od 6.31 według tej samej reguły („LAB-HISTORIA 6.31” niżej).
 
 **Źródło medyczne i wersja:** bez nowych norm, progów i jednostek.
 `lab_units_data.js` (`LabUnitsData` 2.0.0; wiersze domyślne, np.
@@ -888,7 +888,10 @@ IGFBP-3 (`igfbp3_default`; u dziecka bez wiersza Tannera), progesteron
 w przeliczniku (sam Tanner I–IV) dodatkowo m.in. TSH, fT4, fT3, T4, T3,
 tyreoglobulina, IGF-1, LH, FSH, SHBG, estradiol, estron, DHEA, DHEA-S,
 androstendion, wolny testosteron, DHT. Witamina D 25(OH) ma wiersz
-dopasowany („Optymalne”) i nie podlega regule.
+dopasowany („Optymalne”) i nie podlega regule. Lista policzona bez metody
+oznaczenia; dla kontekstu takiego, jaki tworzy formularz przelicznika
+(np. 17-OHP zawsze z metodą), i po LAB-E2 aktualna lista jest we wpisie
+„LAB-HISTORIA 6.31” niżej.
 
 **Ograniczenia:**
 
@@ -897,9 +900,9 @@ dopasowany („Optymalne”) i nie podlega regule.
   etap dorosły i zakres ogólny ocenia się jak u dorosłego (strzałka zostaje,
   „dla kogo”: „kobieta, bez wieku w przeliczniku — przyjęto dorosłego,
   Tanner V”).
-- Przelicznik nadal pokazuje na żywo kategorię względem zakresu ogólnego
-  (z opisem populacji); okno przypięcia mówi, że w historii wynik będzie bez
-  oceny.
+- Do 6.31 przelicznik pokazywał na żywo kategorię względem zakresu ogólnego
+  (z opisem populacji); od 6.31 także przelicznik pokazuje wynik bez oceny
+  („LAB-HISTORIA 6.31” niżej).
 - Brak oceny nie znaczy „w normie”: zakres dla wieku trzeba wziąć
   z laboratorium wykonującego badanie.
 
@@ -935,6 +938,77 @@ przelicznik, okno przypięcia, sejf, pasek, zakładka, 390 px).
 **Akceptacja kliniczna:** decyzja 6.30 (wariant 3, 2026-10-15); przed
 scaleniem — przegląd tego wpisu przez właściciela. Zielone testy nie są
 walidacją kliniczną.
+
+### LAB-HISTORIA 6.31 — przelicznik: zakres ogólny u dziecka bez oceny (`przelicznik-jednostek.html`, 2026-10-16)
+
+**Wpływ kliniczny: tak** (AGENTS.md § 3: zmiana interpretacji wyniku
+pokazywanej na żywo). Decyzja właściciela 6.31 (2026-10-16): reguła 6.30
+obowiązuje także w samym przeliczniku. Gdy przelicznik nie ma wiersza
+zakresu pasującego do dziecka i używa wiersza domyślnego (zakres ogólny,
+dziś zawsze dorosłych), nie pokazuje kategorii: duża liczba bez koloru
+stanu, szara pigułka „zakres ogólny — bez oceny dla dziecka” (bez animacji),
+zamiast paska normy ze znacznikiem i komunikatu „Uwaga — …% górnej granicy
+normy” — karta „Zakres ogólny — bez oceny dla dziecka” („Dane przelicznika
+nie mają zakresu dla wieku dziecka. Zakres ogólny 2–29 ng/mL (Dorośli,
+zakres ogólny) — tylko do wglądu, wynik bez oceny.”), linia „zakres ogólny:
+2–29 ng/mL”, tabela przeliczeń bez kolorowania wierszy i opis „Zakres
+ogólny (bez oceny dla dziecka): …”. Przeliczenie jednostek bez zmian.
+
+**Reguła:** `isGeneralRangeForChild(range, patient)` w czytelnym skrypcie
+strony — zakres z granicami (`hasReferenceBounds`), `range.is_default ===
+true` z `LabUnitConverter.selectRange`, nie AMH, `patient.life_stage ===
+'pediatric'` z `getEffectivePatient` (wiek < 18 lat, a bez wieku Tanner
+< V). Ta sama reguła co `VildaLabRangeSnapshot.describe` (status `general`)
+w historii (6.30), więc okno przypięcia, pasek „Poprzednie wyniki”,
+zakładka „Badania” i przelicznik mówią to samo.
+
+**Bez zmian:** `LabUnitConverter` (`selectRange`, `evaluate`) i dane
+(`LabUnitsData`), zapis `labResult.range` przy przypięciu (kategoria
+z `evaluate` jak dotąd; historia jej nie pokazuje — 6.30), dorosły
+z wierszem domyślnym, dziecko z wierszem dopasowanym, karta „zakresy
+referencyjne i uwagi” (lista wierszy danych), LH, FSH, inhibina B
+i testosteron (osobna ścieżka oceny), AMH, estradiol (od LAB-E2 bez zakresu
+zastępczego).
+
+**Źródło medyczne i wersja:** bez nowych norm, progów i jednostek;
+`lab_units_data.js` i `lab_unit_converter.js` (`LabUnitConverter` 2.0.1 po
+LAB-E2), wiersze domyślne jak w 6.30 (np. `prl_default` 2–29 ng/mL,
+`mayo_test_prolactin` — Mayo Clinic Laboratories, Test 85670). Populację
+pokazuje opis wiersza z danych, nie silnik.
+
+**Zakres (dane z 2026-10-16, kontekst jak w formularzu, 17-OHP z metodą
+domyślną immunoassay PL):** dziecko z wiekiem — prolaktyna i IGFBP-3 (bez
+stadium Tannera) w całym wieku dziecięcym; progesteron od 10 lat (oraz
+pierwsze dni życia); SHBG w 9.–13. roku życia i do 6. miesiąca; DHEA-S,
+estron i IGF-1 do 6. miesiąca. Dziecko bez wieku (sam Tanner I–IV) — m.in.
+TSH, fT4, fT3, T4, T3, tyreoglobulina, 17-OHP, DHEA, progesteron,
+prolaktyna. 17-OHP z wiekiem trafia w formularzu w wiersz dopasowany do
+metody.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Prolaktyna 35 ng/mL, dziewczynka 8 l → pigułka „zakres ogólny — bez oceny
+  dla dziecka”, liczba bez koloru, karta zamiast paska, „zakres ogólny: 2–29
+  ng/mL”, tabela bez kolorowania; 80 ng/mL — bez komunikatu „Uwaga”; 10
+  ng/mL — bez „w zakresie normy”.
+- Ta sama wartość, kobieta 30 l → wiersz dopasowany „Kobiety nieciężarne”
+  → „↑ powyżej normy”, pasek ze znacznikiem (bez zmian); powrót do
+  dziewczynki — znów bez oceny.
+- IGFBP-3 9,4 mg/L, kobieta 30 l → `igfbp3_default` → „↑ powyżej normy”,
+  „zakres: 2,6–8,6 mg/L” (dorosły z wierszem domyślnym bez zmian).
+- TSH 5,1 mIU/L, dziewczynka 8 l → `tsh_6_10y` → „↑ powyżej normy”,
+  „zakres: 0,6–4,8 mIU/L” (bez zmian).
+- IGFBP-3 9,4 mg/L, dziewczynka 8 l, telefon 390 px → karta z długim opisem
+  populacji mieści się bez poziomego przewijania.
+
+**Testy:** e2e `tests/e2e/lab-zakres-ogolny-dziecko.spec.mjs` (prawdziwy
+przelicznik, osobny origin, bez sejfu; zmiana kontekstu na żywo, 390 px)
+i krok w `lab-historia-zakres-zapisany.spec.mjs` (przelicznik → okno →
+historia mówią to samo).
+
+**Akceptacja kliniczna:** decyzja 6.31 (2026-10-16); przed scaleniem —
+przegląd tego wpisu przez właściciela. Zielone testy nie są walidacją
+kliniczną.
 
 ### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
 
