@@ -2952,6 +2952,50 @@ populacyjnych nie jest referencją klinicznego ilorazu LH/FSH.
 [audyt porównania LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
 Akceptacja prezentacji i testy techniczne nie są walidacją kliniczną.
 
+### HORMONE-COMPARISON-PERIOD — domyślny okres z istniejącej osi, 2026-10-16
+
+**Problem i zakres:** wejście do „Porównaj płcie” z całego życia wybierało
+minipuberty m.in. dla LH/FSH u 12-latki, mimo dostępnego porównania Madsen
+i zakwalifikowanego punktu. Wybór okresu zależał ponadto od obliczanego
+analitu, nawet gdy lekarz zaznaczył do porównania inny hormon. To poprawka
+funkcjonalna nawigacji w `vilda_hormone_lifespan.js`, bez nowych odniesień.
+
+Tylko przy wejściu z `life` wybieramy okres według pierwszego zaznaczonego
+hormonu obsługującego porównanie, z zachowaniem kolejności `selected`.
+Znany wiek należący do istniejącej osi pokwitania otwiera `puberty`:
+LH/FSH korzystają z `gonadotropinComparisons.puberty[candidate].domain`
+(6–16 lat), a inhibina B z `inhibinComparisons.puberty.domain` (8–20).
+AMH wykorzystuje wyłącznie dotychczasową edukacyjną oś 8–20, wspólną
+z rendererem; nie staje się ona domeną liczbowego odniesienia pacjenta.
+Poza tymi osiami pozostaje dotychczasowy fallback: `mini`, z wyjątkiem
+żeńskiego AMH/inhibiny B od 8 lat (`puberty`), teraz dla zaznaczonego hormonu.
+Puste zaznaczenie nadal daje pusty `mini`, bez przywracania bieżącego analitu.
+
+Jawny wybór `mini`/`puberty`, przełączanie okresów i zakończenie porównania
+zachowują dotychczasowe zachowanie. Aktualizacja wieku lub wyniku tej samej
+osoby nie uruchamia automatycznego wyboru okresu. Zmiana tożsamości, płci
+lub analitu zachowuje dotychczasowy reset. Nie dodano pól ani selektorów.
+
+**Źródła, populacje i wpływ kliniczny:** wykorzystujemy istniejące modele
+[Madsen 2022](https://doi.org/10.1210/clinem/dgac155), suplement `Other biomarkers`,
+oraz [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1–3,
+z populacjami, jednostkami i ograniczeniami opisanymi w sekcjach
+`HORMONE-LH-FSH-SEX-COMPARISON` i `HORMONE-INHIBIN-SEX-COMPARISON`.
+Nie zmieniamy ich liczb, źródeł, domen, interpolacji, geometrii, skali ani
+kwalifikacji punktu, norm laboratoryjnych, jednostek, oceny lub historii.
+Widoczność istniejącego punktu może się poprawić przez otwarcie właściwego
+okresu. Wybór widoku nie wyznacza Tannera ani nie potwierdza kwalifikacji:
+silnik nadal sprawdza cały przedział wieku i pozostały kontekst pacjenta.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistego komponentu:**
+F12, LH 2 IU/L, `life` → porównanie `puberty`, istniejąca mediana Madsen
+0,932809 IU/L i punkt wyniku. Dokładnie 16 lat → `puberty` i zachowana
+kwalifikacja źródłowego brzegu; 16 lat 0 miesięcy (`[16,16+1/12)`) → ten
+sam okres, lecz nadal brak punktu, ponieważ cały wiek wykracza poza 16 lat.
+M12, AMH → `puberty`, wyłącznie dotychczasowe linie edukacyjne, bez nowego
+punktu. M14, obliczane LH, zaznaczone tylko AMH → ten sam widok AMH,
+bez przeniesienia punktu LH. Ręczny `mini` pozostaje `mini`.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana

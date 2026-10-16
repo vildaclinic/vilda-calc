@@ -812,6 +812,20 @@
         displayEngine?.buildGonadotropinComparison?.(data, pointEngine(), period, id)]))]));
     const gonadotropinComparisonActive = () => compare && ["lh", "fsh"].includes(compareHormone) &&
       (view === "mini" || view === "puberty");
+    // This is the existing educational AMH axis, not a patient-reference domain.
+    const amhPubertyComparisonDomain = { minAge: 8, maxAge: 20 };
+    function initialComparisonPeriod(candidate) {
+      const domain = candidate === "amh" ? amhPubertyComparisonDomain
+        : candidate === "inhb" ? inhibinComparisons.puberty?.domain
+          : gonadotropinComparisons.puberty[candidate]?.domain;
+      // Navigation uses the age marker; the point still needs its whole age interval.
+      if (domain && Number.isFinite(patientAgeYears) &&
+          patientAgeYears >= domain.minAge && patientAgeYears <= domain.maxAge)
+        return "puberty";
+      // Preserve the existing educational fallback outside the known axes.
+      return sex === "female" && ["amh", "inhb"].includes(candidate) && patientAgeYears >= 8
+        ? "puberty" : "mini";
+    }
     const insl3Display = displayEngine?.buildMaleInsl3?.(data);
     const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
     const femaleGonadotropins = displayEngine?.buildFemaleGonadotropins?.(data);
@@ -2587,8 +2601,8 @@
       const h = femaleHormones.find((h) => h.id === compareHormone),
         male = maleHormones.find((h) => h.id === compareHormone),
         puberty = view === "puberty",
-        minAge = puberty ? 8 : 0,
-        maxAge = puberty ? 20 : 1;
+        minAge = puberty ? amhPubertyComparisonDomain.minAge : 0,
+        maxAge = puberty ? amhPubertyComparisonDomain.maxAge : 1;
       const W = svg.clientWidth || 1040,
         mobile = W < 640,
         H = chartHeight(mobile ? 334 : 393),
@@ -3434,9 +3448,7 @@
           );
           if (selected.size > 0 && !candidate) return;
           compareHormone = candidate || null;
-          if (view === "life") view = sex === "female" &&
-            ["amh", "inhb"].includes(analyteHormones[currentAnalyte]) && patientAgeYears >= 8
-            ? "puberty" : "mini";
+          if (view === "life") view = initialComparisonPeriod(candidate);
         }
         compare = !compare;
         rebuildControls();
