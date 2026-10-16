@@ -452,8 +452,9 @@ Nie przenoś go na męskie wykresy, porównania płci ani inne hormony.
   a nie udostępnioną przez autorów tabelą współczynników modelu.
 - **Pokwitanie:** osobne mediany Madsen 2022, 6–16 lat, wspólna
   liniowa oś 0–8 IU/L. To odrębny model wieku, nie dokładny wycinek
-  poglądowej syntezy całego życia. Nie ustalaj Tannera z wieku i nie
-  aktywuj nowego profilu pacjentki przez samą obecność modelu.
+  poglądowej syntezy całego życia. Nie ustalaj Tannera z wieku.
+  Osobno zatwierdzone 16.10.2026 zwykłe profile wieku opisuje uzupełnienie
+  poniżej; sama geometria nadal nie jest źródłem odniesienia.
 - **Dorosłość:** osobna wstawka cyklu Stricker 2006 zachowuje 30
   dziennych median obu hormonów oraz wspólną liniową oś 0–50 IU/L.
   Dzień 0 oznacza szczyt LH w badaniu, nie zawsze 14. dzień cyklu
@@ -599,16 +600,45 @@ Stosuj `gonadotropin-comparison-policy.json` i
   Węzeł 16 jest opublikowanym brzegiem kohorty 6–<16. Fit Futures
   do 18 lat dotyczy steroidów, nie LH/FSH. Nie dopisuj 17–20 lat,
   nie ustalaj Tannera z wieku ani fazy cyklu z mediany.
-- Dwa żeńskie profile Madsen pozostają w odrębnych danych porównania,
+- Dwa żeńskie profile Madsen `*-sex-comparison` pozostają w odrębnych danych porównania,
   poza globalnym `patientPointData`. Kwalifikuj własny profil przez
   istniejący silnik; nie przekazuj kontekstu pacjenta drugiej płci.
   Zachowaj bramki wieku, metody, materiału, leczenia, donoszenia
-  i cenzurowanego wyniku. Nie aktywuj nowych zwykłych odniesień,
-  norm, SDS ani klinicznego ilorazu LH/FSH.
+  i cenzurowanego wyniku. Wdrożenie zwykłych odniesień z 16.10.2026
+  ma osobną politykę i identyfikatory. Nie dodawaj norm, SDS ani
+  klinicznego ilorazu LH/FSH.
 
 Źródła, weryfikacja 198/788/44 wartości i ograniczenia:
 [audyt porównań LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
 Zatwierdzenie ilustracji nie nadaje jej statusu walidacji klinicznej.
+
+## Żeńskie LH/FSH — zwykłe odniesienia wieku, 16 października 2026
+
+Po analizie źródeł właściciel polecił wdrożyć rekomendowany dobór:
+`female-gonadotropin-reference-policy.json`. W wieku 6–16 zwykłe LH i FSH
+używają tych samych oryginalnych 22 median Madsen co porównanie płci, ale
+pod odrębnymi identyfikatorami `*-age-6-16`. Źródłowych danych porównania,
+geometrii, skal, niemowląt i norm laboratoryjnych nie zmieniaj.
+
+- Model wieku nie wymaga Th; uzupełnienie Th1/Th2 nie przełącza mediany.
+  Osobna laboratoryjna ocena stadium i czasu pokwitania pozostaje istotna.
+- Żeńskie FSH Zec działa tylko 1–<6 przy aktualnym Th1. Okno 4–<6 nadal
+  opisuje opublikowaną grupę 4–<8, medianę 1,07 i N=156. Grupę 8–<11
+  zachowaj w dowodach. Nie zmieniaj męskiego routingu.
+- To świadoma zmiana źródła: F9/Th1/FSH 1,55 → około 1,965 IU/L.
+  Znana Roche cobas e411 nie pasuje do Madsen/IMMULITE; brak punktu nie
+  uprawnia do ukrytego powrotu do Zec ani rozszerzania zgodnych metod.
+- Cały niepewny wiek musi pasować; brak ekstrapolacji poza opublikowany
+  brzeg 16 lat. Wiek 16 lat 0 miesięcy nie oznacza dokładnego węzła 16.
+- Zachowaj znane dodatnie leczenie i jawną bieżącą ciążę po przełączeniu
+  analitu, z ochroną tożsamości/płci i bez przenoszenia faktów na dawną próbkę.
+  Brak wywiadu nie potwierdza braku leczenia; nie dodawaj nowej ankiety.
+- Żeńskie `mini` nadal pokazuje względną średnią, bez kropki stężenia.
+  Zmiana mediany odniesienia nie może przesunąć poglądowej linii.
+
+Źródła, granice i zakres ponownej weryfikacji:
+[audyt zwykłych odniesień](hormone-lifespan/evidence/female-gonadotropin-reference-audit-2026-10-16.json).
+To porównanie orientacyjne; testy nie są walidacją kliniczną.
 
 ## Co sprawdzić przed oddaniem zmiany
 

@@ -465,7 +465,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=25"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=26"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=6"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=13"></script>
@@ -782,6 +782,7 @@
     window.VildaAmhAgeReferenceRuntime = amhAgeReferenceUI || null;
     var lifespanVault = null;
     var lastLifespanContext = null;
+    var lifespanCurrentSex = null;
     function currentPatientIdentity() {
       try { return sessionStorage.getItem('vildaCurrentPatientId') || ''; }
       catch (_) { return window._vildaCurrentPatientId || ''; }
@@ -800,6 +801,7 @@
       if (localOverrideIdentity === next) return false;
       localOverrideIdentity = next;
       lastLifespanContext = null;
+      lifespanCurrentSex = null;
       testosteroneMeasurementContext = {};
       resetLocalPatientOverride();
       // A result belongs to the previous person even if their age or sex match.
@@ -869,12 +871,37 @@
       var protocol = patient && patient.test_protocol;
       var specimen = input && input.specimen;
       // false means no known exclusion, not confirmation of basal/no treatment.
-      return source.gnrhaStatus === 'w-trakcie' || treatment.context === 'hormonal'
+      return (!input || !input.sampleDateISO && input.contextBasis !== 'sample') && source.gnrhaStatus === 'w-trakcie'
+        || treatment.context === 'hormonal'
         || treatment.gnrha === 'yes' || treatment.gnrha === true
         || treatment.sexSteroids === 'yes' || treatment.sexSteroids === true
         || ![undefined, null, '', 'unknown', 'basal'].includes(kind)
         || ![undefined, null, '', 'unknown', 'basal'].includes(protocol)
         || ![undefined, null, '', 'unknown', 'serum'].includes(specimen);
+    }
+    function lifespanGonadotropinContraindicated(substance, source, input) {
+      if (!substance || !['lh', 'fsh'].includes(substance.id) || !input || input.sex !== 'F') return false;
+      function positive(value) { return value === true || value === 'yes'; }
+      function pregnancy(known) {
+        return positive(known.pregnancy) || /^pregnancy(?:_t[123])?$/.test(known.reproductiveContext || known.cycle_phase || '');
+      }
+      function hormonal(treatment) {
+        treatment = treatment || {};
+        return treatment.context === 'hormonal' || ['gnrha', 'sexSteroids', 'cocp', 'exogenousTestosterone'].some(function (key) {
+          return positive(treatment[key]);
+        });
+      }
+      // These are conservative application restrictions on the educational
+      // point. The laboratory evaluation and its saved input stay unchanged.
+      if (pregnancy(input) || hormonal(input.treatment)) return true;
+      if (source.sourceStatus !== 'ready' || source.sex !== 'F' || input.contextBasis !== 'current-patient' || input.sampleDateISO) return false;
+      var current = getEffectivePatient();
+      if (!current || current.sex !== 'F') return false;
+      // Reuse only already known facts for this current person. Do not copy a
+      // different analyte's assay, specimen, collection time or test protocol.
+      var known = testosteroneMeasurementContext || {};
+      var knownCurrent = !known.sampleDateISO && [undefined, null, '', 'current-patient'].includes(known.contextBasis);
+      return pregnancy(current) || knownCurrent && (pregnancy(known) || hormonal(known.treatment));
     }
     function lifespanCyclePhase(substance, input, patient) {
       if (!substance || substance.id !== 'inhibin_b') return patient && patient.cycle_phase || null;
@@ -939,6 +966,19 @@
           }
         }
       }
+      var currentSex = patient && patient.sex;
+      var currentContext = !isPubertyReferenceSubstance(substance)
+        || input && input.contextBasis === 'current-patient' && !input.sampleDateISO;
+      if (status === 'ready' && currentContext && ['F', 'M'].includes(currentSex)) {
+        if (lifespanCurrentSex && lifespanCurrentSex !== currentSex) {
+          // Returning to a previous sex selection must not revive a fact from
+          // the abandoned context, even when the person identifier is stable.
+          testosteroneMeasurementContext = {};
+          localOverride.cycle_phase = null;
+          if (overrideCycleEl) overrideCycleEl.value = '';
+        }
+        lifespanCurrentSex = currentSex;
+      }
       var premature = isPubertyReferenceSubstance(substance)
         ? input && ['yes', 'no'].includes(input.preterm) ? input.preterm : 'unknown'
         : ['yes', 'no'].includes(source.preterm) ? source.preterm : 'unknown';
@@ -970,7 +1010,8 @@
           ? lifespanMeasurement(evaluation, conversion) : null,
         // Display only: keep the calculated measurement in its existing unit.
         displayUnit: unitEl.value,
-        contraindicated: lifespanContraindicated(source, input, patient),
+        contraindicated: lifespanContraindicated(source, input, patient)
+          || lifespanGonadotropinContraindicated(substance, source, input),
         // Source-specific reproductive exclusions are application policy for
         // the educational point, not changes to laboratory ranges or fields.
         cyclePhase: lifespanCyclePhase(substance, input, patient),

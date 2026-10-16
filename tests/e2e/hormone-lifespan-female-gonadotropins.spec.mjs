@@ -1,7 +1,9 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { readFileSync } from 'node:fs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 const panel = page => page.locator('.vilda-hormone-lifespan');
+const sourceMedians = JSON.parse(readFileSync(new URL('../fixtures/hormone-lifespan-gonadotropin-source-medians.json', import.meta.url), 'utf8'));
 const context = { analyte: 'lh', sex: 'female', ageYears: 165 / 365.25,
   ageLabel: '5,4 mies.', preterm: 'no', sourceStatus: 'ready',
   identityKey: 'fictional-female-gonadotropin-chart' };
@@ -173,12 +175,13 @@ for (const width of [1440, 320]) {
       if (value === 100) await expect(dot.locator('[data-result-overflow]')).toHaveCount(1);
       if (value === null) await expect(dot).toHaveCount(0);
     }
-    await update(page, { analyte: 'fsh', ageYears: 6.5, puberty: { kind: 'Th', stage: 1 }, measurement: { value: 2, unit: 'IU/L' } });
+    await update(page, { analyte: 'fsh', ageYears: 6, puberty: { kind: 'Th', stage: 1 }, measurement: { value: 2, unit: 'IU/L' } });
     await panel(page).locator('[data-view="puberty"]').click();
     await expect(plot).toHaveAttribute('data-period-unit', 'IU/L');
     await expect(plot).toHaveAttribute('data-period-ceiling', '8');
-    await expect(dot).toHaveAttribute('data-profile', 'zec2012-female-fsh-age-4-8');
-    await expect(dot).toHaveAttribute('data-reference-value', '1.07');
+    await expect(dot).toHaveAttribute('data-profile', 'madsen2022-female-fsh-age-6-16');
+    const median = sourceMedians.puberty.find(row => row.sex === 'female' && row.analyte === 'fsh' && row.ageYears === 6).median;
+    await expect.poll(async () => Number(await dot.getAttribute('data-reference-value'))).toBeCloseTo(median, 8);
     await expect(panel(page).locator('[data-period-hormone="fsh"]')).toHaveAttribute('data-source-min', '6');
     await expect(panel(page).locator('[data-period-hormone="fsh"]')).toHaveAttribute('data-source-max', '16');
 

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { priorFemaleGonadotropinBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
@@ -40,8 +41,8 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
       .profiles.map(p => p.id);
     // The later extension of the one ordinary female inhibin profile is tested separately.
     const revisedInhibinId = 'borelli2025-female-inhb-age-5p6-47';
-    const original = { ...data.patientPointData, version: '2026-10-13.2',
-      profiles: data.patientPointData.profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId && !laterChildhoodIds.includes(p.id)) };
+    const original = { ...priorFemaleGonadotropinBundle(data.patientPointData), version: '2026-10-13.2',
+      profiles: priorFemaleGonadotropinBundle(data.patientPointData).profiles.filter(p => !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId && !laterChildhoodIds.includes(p.id)) };
     expect(laterMaleIds).toHaveLength(3);
     expect(laterFemaleIds).toHaveLength(5);
     expect(original.profiles).toHaveLength(65);
@@ -163,14 +164,17 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
     }
     const fsh = build('puberty', 'fsh');
     const input = patient('fsh', 9);
-    expect(engine.evaluate(data, input)).toEqual(unavailable('missing-puberty-stage'));
-    expect(engine.evaluate(data, { ...input, puberty: { kind: 'Th', stage: 1 } }).profile.id).toMatch(/^zec2012/);
+    expect(engine.evaluate(data, input)).toMatchObject({ status: 'ready', referenceValue: 1.964770298470689,
+      profile: { id: 'madsen2022-female-fsh-age-6-16' } });
+    expect(engine.evaluate(data, { ...input, puberty: { kind: 'Th', stage: 1 } }).profile.id)
+      .toBe('madsen2022-female-fsh-age-6-16');
     expect(engine.evaluate(fsh.referenceData, input)).toMatchObject({ status: 'ready',
       referenceValue: 1.964770298470689, profile: { id: fsh.profileIds.female } });
     for (const sex of ['female', 'male']) {
       expect(engine.evaluate(fsh.referenceData, { ...patient('fsh', 9, sex), puberty: { kind: 'Th', stage: 5 } }).status).toBe('ready');
     }
-    expect(engine.evaluate(data, patient('lh', 14))).toEqual(unavailable('unsupported-age'));
+    expect(engine.evaluate(data, patient('lh', 14))).toMatchObject({ status: 'ready',
+      profile: { id: 'madsen2022-female-lh-age-6-16' } });
     expect(engine.evaluate(build('puberty', 'lh').referenceData, patient('lh', 14)).status).toBe('ready');
     expect(JSON.stringify(data.patientPointData)).toBe(original);
   });

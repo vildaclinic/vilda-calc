@@ -76,18 +76,42 @@ def build():
             compatibleAssayMethodIds=['immulite-2000-xpi','siemens-immulite-2000-xpi'],
             provenance=madsen['source'],limitations=madsen['useConstraints'])
 
+    female_gonadotropin_policy = json.loads((ROOT/'female-gonadotropin-reference-policy.json').read_text(encoding='utf-8'))
+    assert female_gonadotropin_policy['kind'] == 'educational-source-selection'
+    assert female_gonadotropin_policy['ordinaryOnly'] is True
+    assert (female_gonadotropin_policy['sex'], female_gonadotropin_policy['analytes'],
+            female_gonadotropin_policy['unit']) == ('female', ['lh', 'fsh'], 'IU/L')
+    female_zec_routes = {route['id']: route for route in female_gonadotropin_policy['zecProfiles']}
+    assert len(female_zec_routes) == 2
     zec=read('zec2012-fsh-group-medians.json')
     assert sum(row['participants'] for row in zec['rows']) == zec['fshParticipants']
     for row in zec['rows']:
         if not row['active']:
             continue
         assert row['tannerStage'] == 1 and row['medianOperator'] == '=' and not row['censored']
+        identifier = 'zec2012-'+row['sex']+'-fsh-age-'+str(row['minAge'])+'-'+str(row['maxAge'])
         minimum, maximum = row['applicationMinAge'], row['applicationMaxAge']
+        source_routing = {}
+        if row['sex'] == 'female':
+            # The source extract retains its full original table and historical
+            # activation notes. Only this versioned application policy routes it.
+            if identifier not in female_zec_routes:
+                continue
+            route = female_zec_routes[identifier]
+            assert (route['sourceMinAge'], route['sourceMaxAge']) == (row['minAge'], row['maxAge'])
+            minimum, maximum = route['minAge'], route['maxAge']
+            assert route['maxAgeExclusive'] is True
+            if maximum != row['applicationMaxAge']:
+                source_routing = {'sourceRouting': {
+                    'version':female_gonadotropin_policy['version'],
+                    'policy':female_gonadotropin_policy['zecSourcePolicy'],
+                    'minAge':minimum, 'maxAge':maximum, 'maxAgeExclusive':True}}
         assert row['minAge'] <= minimum < maximum <= row['maxAge']
         median=row['medianIuL']
-        add('zec2012-'+row['sex']+'-fsh-age-'+str(row['minAge'])+'-'+str(row['maxAge']),
+        add(identifier,
             'fsh',row['sex'],
-            [dict(ageYears=minimum,value=median),dict(ageYears=maximum,value=median)],
+            [dict(ageYears=row['applicationMinAge'],value=median),
+             dict(ageYears=row['applicationMaxAge'],value=median)],
             minimum,maximum,'Zec 2012 · FSH · przed pokwitaniem',zec['source']['url'],
             zec['assay']['method'],'Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja',
             'group-median',interpolation='constant',maxAgeExclusive=True,
@@ -104,8 +128,43 @@ def build():
                         'sourceAgeBoundaryDefinition':zec['ageRouting']['sourceBoundaryDefinition'],
                         'ageRouting':zec['ageRouting']['applicationPolicy'],
                         'routingNote':row['routingNote'],
-                        'assay':zec['assay']},
+                        'assay':zec['assay'], **source_routing},
             limitations=zec['limitations'])
+
+    female_madsen = json.loads((ROOT/female_gonadotropin_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    gonadotropin_comparison = json.loads((ROOT/'gonadotropin-comparison-reference-data.json').read_text(encoding='utf-8'))
+    for route in female_gonadotropin_policy['profiles']:
+        analyte = route['analyte']
+        hormone = female_madsen['hormones'][analyte]
+        comparison = next(p for p in gonadotropin_comparison['profiles'] if p['id'] == route['sourceProfileId'])
+        assert hormone['unit'] == 'IU/L' and hormone['statistic'] == 'model_p50_median'
+        assert [p['ageYears'] for p in hormone['points']] == list(range(6,17))
+        assert all(math.isclose(p['median'], math.exp(p['M_logSIx1e6'])/1e6,
+                                rel_tol=1e-14, abs_tol=0) for p in hormone['points'])
+        points = [dict(ageYears=p['ageYears'], value=p['median']) for p in hormone['points']]
+        assert points == comparison['points']
+        assert (route['minAge'], route['maxAge'], route['maxAgeExclusive']) == (6,16,False)
+        add(route['id'], analyte, 'female', points, route['minAge'], route['maxAge'],
+            comparison['sourceLabel'], comparison['url'], comparison['method'],
+            comparison['population'], 'median', ordinaryOnly=True,
+            maxAgeExclusive=route['maxAgeExclusive'],
+            compatibleAssayMethodIds=comparison['compatibleAssayMethodIds'],
+            patientNote=female_gonadotropin_policy['patientNote'],
+            provenance={**comparison['provenance'],
+                        'sourceWorksheet':hormone['sheet'],
+                        'sourceCells':[p['sourceCells'] for p in hormone['points']],
+                        'transform':female_madsen['transform'],
+                        'lowerLimitOfQuantification':hormone['lowerLimitOfQuantification'],
+                        'sourceRouting':{'version':female_gonadotropin_policy['version'],
+                            'minAge':route['minAge'], 'maxAge':route['maxAge'],
+                            'maxAgeExclusive':route['maxAgeExclusive'],
+                            'selectionPolicy':female_gonadotropin_policy['selectionPolicy']}},
+            limitations=[*[note for note in comparison['limitations']
+                            if not note.startswith('Profil dostępny wyłącznie w porównaniu płci')],
+                female_gonadotropin_policy['interpolation'],
+                'LH w wieku 6–9 lat ma medianę około 0,105 IU/L, blisko LLOQ 0,1 IU/L; drobne różnice nie oznaczają precyzyjnej klasyfikacji klinicznej.'
+                if analyte == 'lh' else
+                'Model wieku nie jest medianą dla konkretnego stadium Th ani fazy cyklu.'])
 
     testosterone=read('testosterone-model.json')
     coefficients=testosterone['formula']['coefficients']
@@ -644,7 +703,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-14.2','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-16.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

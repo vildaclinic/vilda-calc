@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { priorFemaleGonadotropinBundle, withoutFemaleGonadotropinReferencePolicy } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
@@ -32,12 +33,12 @@ const groups = [
 describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilustracji', () => {
   it('dodaje tylko trzy rozłączne profile, zachowując 65 pozostałych wcześniejszych profili i przeliczenia', () => {
     expect(newIds).toEqual(groups.map(g => g.id));
-    expect(data.profiles).toHaveLength(76);
+    expect(data.profiles).toHaveLength(77);
     expect(laterFemaleIds).toHaveLength(5);
     // The later extension of the one ordinary female inhibin profile is tested separately.
     const revisedInhibinId = 'borelli2025-female-inhb-age-5p6-47';
-    const original = { ...data, version: '2026-10-13.2',
-      profiles: data.profiles.filter(p => !newIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId && !laterChildhoodIds.includes(p.id)) };
+    const original = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-13.2',
+      profiles: priorFemaleGonadotropinBundle(data).profiles.filter(p => !newIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId && !laterChildhoodIds.includes(p.id)) };
     expect(original.profiles).toHaveLength(65);
     expect(digest(original)).toBe('455d2c037c96cad243db41d852a62348b6e12e615540ddc351a8499ae48d0f85');
     expect(data).toEqual(read('population-reference-data.json'));
@@ -46,7 +47,7 @@ describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilu
   });
 
   it('zachowuje cały pozostały runtime i dokładnie tę samą źródłową geometrię męskiego AMH', () => {
-    expect(digest(Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'patientPointData'))))
+    expect(digest(withoutFemaleGonadotropinReferencePolicy(runtime)))
       .toBe('380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d');
     const illustration = display.buildMaleAmh(runtime, engine);
     expect(digest(illustration)).toBe('cbd1e9d72a4d993ac52e1d3050f31573f678131c14205154ea18a34bd2e96c1c');

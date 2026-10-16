@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-14.2",
+  "version": "2026-10-16.1",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -19902,7 +19902,7 @@ const patientPointData = {
       "analyte": "fsh",
       "sex": "female",
       "minAge": 4,
-      "maxAge": 8,
+      "maxAge": 6,
       "points": [
         {
           "ageYears": 4,
@@ -19976,99 +19976,13 @@ const patientPointData = {
           "sourceTable": 1,
           "journalPage": 1208,
           "pdfPage": 3
-        }
-      },
-      "limitations": [
-        "These are whole-group medians for children assessed as Tanner stage 1, not exact-age medians, continuous age trajectories or clinical reference limits.",
-        "Do not treat known pubertal children as part of the prepubertal reference cohort. Gonadal-stage eligibility must use the existing sex-specific puberty context, never inferred from age or FSH.",
-        "The boys 1–<6 application window is a source-priority policy, not a new source subgroup; median 0.48 IU/L and N=303 describe the full published 1–<8-year group.",
-        "Recruitment included pediatric outpatient and hospital visits, including acute illness; this was not a pure healthy-volunteer sample.",
-        "Serum and Li-heparin plasma were collected; the paper does not specify the matrix used for each hormone. No matrix-specific equivalence is established.",
-        "The assay belongs to the source cohort; automatic source selection does not establish the method or material of the patient sample, nor equivalence to other Roche assays or the Mayo FSH profile.",
-        "No gestational-age stratification is reported. These are not premature-infant reference data.",
-        "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
-        "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
-      ]
-    },
-    {
-      "id": "zec2012-female-fsh-age-8-11",
-      "analyte": "fsh",
-      "sex": "female",
-      "minAge": 8,
-      "maxAge": 11,
-      "points": [
-        {
-          "ageYears": 8,
-          "value": 1.55
         },
-        {
-          "ageYears": 11,
-          "value": 1.55
-        }
-      ],
-      "sourceLabel": "Zec 2012 · FSH · przed pokwitaniem",
-      "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
-      "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
-      "population": "Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja",
-      "statistic": "group-median",
-      "approximate": false,
-      "unit": "IU/L",
-      "interpolation": "constant",
-      "maxAgeExclusive": true,
-      "requiredGonadalStage": 1,
-      "compatibleAssayMethodIds": [
-        "roche-cobas-e411-fsh",
-        "roche-cobas-e-411-fsh"
-      ],
-      "ageGroup": {
-        "label": "8–<11 lat",
-        "minAge": 8,
-        "maxAge": 11,
-        "n": 107,
-        "sourceUnit": "IU/L",
-        "sourceMedian": 1.55,
-        "boundaryPolicy": "published-inclusive-lower-exclusive-upper",
-        "description": "Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku."
-      },
-      "provenance": {
-        "title": "Reference intervals for reproductive hormones in prepubertal children on the automated Roche cobas e 411 analyzer",
-        "authors": "Zec I et al.",
-        "year": 2012,
-        "journal": "Clinical Biochemistry",
-        "volume": 45,
-        "pages": "1206–1212",
-        "doi": "10.1016/j.clinbiochem.2012.05.019",
-        "pmid": "22634601",
-        "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
-        "table": 2,
-        "journalPage": 1210,
-        "pdfPage": 5,
-        "sha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
-        "access": "Full primary publication supplied by owner; Table 2 and assay/methods text checked against rendered PDF on 2026-10-10.",
-        "redistribution": "Factual FSH medians, cohort metadata and citation only; publisher PDF and figures are not included.",
-        "participants": 948,
-        "fshParticipants": 807,
-        "groupParticipants": 107,
-        "sourceUnit": "IU/L",
-        "sourceToCanonicalFactor": 1,
-        "sourceAgeBoundaryDefinition": "Exact inclusive lower and exclusive upper age boundaries in Table 2.",
-        "ageRouting": "Male 1–<6 years uses the published 1–<8-year median; preserve the existing Madsen 2022 age curve from 6 through 16 years. Female 1–<4, 4–<8 and 8–<11 years use their three separate published groups.",
-        "routingNote": "Use the exact age boundaries published in Table 2.",
-        "assay": {
-          "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
-          "material": "Serum and Li-heparin plasma collected; analyte-specific matrix assignment is not reported.",
-          "analyteSpecificMaterial": null,
-          "samplingTime": "not reported",
-          "fastingRequired": false,
-          "storage": "Measured immediately or after storage at −20°C for no more than three months.",
-          "lodIuL": 0.1,
-          "loqIuL": null,
-          "traceability": "2nd IRP WHO 78/549",
-          "withinRunCvPercent": 4.3,
-          "betweenRunCvPercent": 5.3,
-          "sourceTable": 1,
-          "journalPage": 1208,
-          "pdfPage": 3
+        "sourceRouting": {
+          "version": "2026-10-16.1",
+          "policy": "Zachowaj oryginalne etykiety, N i mediany całych grup 1–<4 oraz 4–<8 lat; okno zastosowania drugiej grupy ogranicz do 4–<6 lat. Nie twórz mediany nowej podgrupy. Grupa 8–<11 lat pozostaje dowodem źródłowym poza aktywnymi profilami zwykłego wykresu. Wszystkie profile Zec nadal wymagają aktualnego typowanego stadium gonadalnego Th1.",
+          "minAge": 4,
+          "maxAge": 6,
+          "maxAgeExclusive": true
         }
       },
       "limitations": [
@@ -20174,6 +20088,242 @@ const patientPointData = {
         "No gestational-age stratification is reported. These are not premature-infant reference data.",
         "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
         "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
+      ]
+    },
+    {
+      "id": "madsen2022-female-lh-age-6-16",
+      "analyte": "lh",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 16,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 7.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 9.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.18673993015217238
+        },
+        {
+          "ageYears": 11.0,
+          "value": 0.3899391576851016
+        },
+        {
+          "ageYears": 12.0,
+          "value": 0.932808521560225
+        },
+        {
+          "ageYears": 13.0,
+          "value": 2.0309931340891243
+        },
+        {
+          "ageYears": 14.0,
+          "value": 3.3600097374977715
+        },
+        {
+          "ageYears": 15.0,
+          "value": 4.536879278178766
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.64856591188875
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczynki",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "method": "Siemens IMMULITE 2000 XPi",
+      "population": "Bergen Growth Study 2; dziewczynki, Norwegia; bez antykoncepcji doustnej; fazy cyklu nie standaryzowano",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": false,
+      "compatibleAssayMethodIds": [
+        "immulite-2000-xpi",
+        "siemens-immulite-2000-xpi"
+      ],
+      "patientNote": "Model według wieku; faz cyklu nie standaryzowano.",
+      "provenance": {
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "authorsShort": "Madsen et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac155",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+        "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+        "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+        "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+        "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+        "retrievedDate": "2026-10-10",
+        "sourceWorksheet": "Other biomarkers",
+        "sourceCells": [
+          "B3,C3,D3,E3",
+          "B4,C4,D4,E4",
+          "B5,C5,D5,E5",
+          "B6,C6,D6,E6",
+          "B7,C7,D7,E7",
+          "B8,C8,D8,E8",
+          "B9,C9,D9,E9",
+          "B10,C10,D10,E10",
+          "B11,C11,D11,E11",
+          "B12,C12,D12,E12",
+          "B13,C13,D13,E13"
+        ],
+        "transform": {
+          "mode": "inverse_natural_log",
+          "formula": "median_SI = exp(M) / 1000000",
+          "evidence": "Workbook example cells K36=LN(I36*1000000), with median-centered z-score formula L36; other-biomarker examples K32/K33 use same transform. M is not the concentration in SI units.",
+          "model": "LMS/GAMLSS; age-specific p50 of a cross-sectional population, not longitudinal within-person trajectory."
+        },
+        "lowerLimitOfQuantification": 0.1,
+        "sourceRouting": {
+          "version": "2026-10-16.1",
+          "minAge": 6,
+          "maxAge": 16,
+          "maxAgeExclusive": false,
+          "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty."
+        }
+      },
+      "limitations": [
+        "Mediana wieku modelu BGS2, nie stadium Tannera ani norma laboratoryjna.",
+        "Dane kohorty od 6 do <16 lat; opublikowany brzeg modelu w wieku 16 lat.",
+        "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
+        "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+        "LH w wieku 6–9 lat ma medianę około 0,105 IU/L, blisko LLOQ 0,1 IU/L; drobne różnice nie oznaczają precyzyjnej klasyfikacji klinicznej."
+      ]
+    },
+    {
+      "id": "madsen2022-female-fsh-age-6-16",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 16,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 0.9328995961019171
+        },
+        {
+          "ageYears": 7.0,
+          "value": 1.1842024760702738
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.513649499646752
+        },
+        {
+          "ageYears": 9.0,
+          "value": 1.964770298470689
+        },
+        {
+          "ageYears": 10.0,
+          "value": 2.5801910640780314
+        },
+        {
+          "ageYears": 11.0,
+          "value": 3.3495190622916695
+        },
+        {
+          "ageYears": 12.0,
+          "value": 4.151220353235434
+        },
+        {
+          "ageYears": 13.0,
+          "value": 4.80572027357214
+        },
+        {
+          "ageYears": 14.0,
+          "value": 5.230782382619504
+        },
+        {
+          "ageYears": 15.0,
+          "value": 5.541214563590151
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.826063174564676
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczynki",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "method": "Siemens IMMULITE 2000 XPi",
+      "population": "Bergen Growth Study 2; dziewczynki, Norwegia; bez antykoncepcji doustnej; fazy cyklu nie standaryzowano",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": false,
+      "compatibleAssayMethodIds": [
+        "immulite-2000-xpi",
+        "siemens-immulite-2000-xpi"
+      ],
+      "patientNote": "Model według wieku; faz cyklu nie standaryzowano.",
+      "provenance": {
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "authorsShort": "Madsen et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac155",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+        "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+        "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+        "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+        "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+        "retrievedDate": "2026-10-10",
+        "sourceWorksheet": "Other biomarkers",
+        "sourceCells": [
+          "G3,H3,I3,J3",
+          "G4,H4,I4,J4",
+          "G5,H5,I5,J5",
+          "G6,H6,I6,J6",
+          "G7,H7,I7,J7",
+          "G8,H8,I8,J8",
+          "G9,H9,I9,J9",
+          "G10,H10,I10,J10",
+          "G11,H11,I11,J11",
+          "G12,H12,I12,J12",
+          "G13,H13,I13,J13"
+        ],
+        "transform": {
+          "mode": "inverse_natural_log",
+          "formula": "median_SI = exp(M) / 1000000",
+          "evidence": "Workbook example cells K36=LN(I36*1000000), with median-centered z-score formula L36; other-biomarker examples K32/K33 use same transform. M is not the concentration in SI units.",
+          "model": "LMS/GAMLSS; age-specific p50 of a cross-sectional population, not longitudinal within-person trajectory."
+        },
+        "lowerLimitOfQuantification": 0.1,
+        "sourceRouting": {
+          "version": "2026-10-16.1",
+          "minAge": 6,
+          "maxAge": 16,
+          "maxAgeExclusive": false,
+          "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty."
+        }
+      },
+      "limitations": [
+        "Mediana wieku modelu BGS2, nie stadium Tannera ani norma laboratoryjna.",
+        "Dane kohorty od 6 do <16 lat; opublikowany brzeg modelu w wieku 16 lat.",
+        "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
+        "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+        "Model wieku nie jest medianą dla konkretnego stadium Th ani fazy cyklu."
       ]
     },
     {
@@ -35307,6 +35457,61 @@ const femaleGonadotropinData = {
     }
   }
 };
+const femaleGonadotropinReferencePolicy = {
+  "version": "2026-10-16.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "sex": "female",
+  "analytes": [
+    "lh",
+    "fsh"
+  ],
+  "unit": "IU/L",
+  "sourceEvidence": "evidence/madsen2022-female-median-si.json",
+  "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty.",
+  "agePolicy": "Cały możliwy przedział wieku musi mieścić się w jednym profilu. Dokładny opublikowany węzeł 16 lat jest dostępny; wiek 16 lat 0 miesięcy wykracza poza domenę. Kohorta BGS2 obejmuje 6–<16 lat, a suplement publikuje brzeg modelu 16. Fit Futures do 18 lat dotyczy steroidów, nie LH/FSH. Bez ekstrapolacji i bez wybierania mediany ze środka niepewnego wieku.",
+  "assayPolicy": "Model Madsen dotyczy surowicy Siemens IMMULITE 2000 XPi. Metoda nieznana pozwala wyłącznie na orientacyjne odniesienie. Znana niezgodna metoda lub materiał blokują punkt bez ponownej próby z Zec. Roche cobas e411 i IMMULITE nie są skalibrowane przez sam wspólny zapis IU/L.",
+  "contextPolicy": "Nie wymagaj nowej odpowiedzi o Th lub fazie cyklu dla modelu wieku 6–16. Antykoncepcję doustną wykluczono w modelach Madsen; znane leczenie hormonalne, stymulacja i ciąża wyłączają użycie przez adapter kontekstu aplikacji. Wyłączenie znanej ciąży jest konserwatywną polityką aplikacji, nie nowym przypisanym autorom kryterium. Brak informacji nie potwierdza braku leczenia ani ciąży.",
+  "interpolation": "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+  "zecProfiles": [
+    {
+      "id": "zec2012-female-fsh-age-1-4",
+      "sourceMinAge": 1,
+      "sourceMaxAge": 4,
+      "minAge": 1,
+      "maxAge": 4,
+      "maxAgeExclusive": true
+    },
+    {
+      "id": "zec2012-female-fsh-age-4-8",
+      "sourceMinAge": 4,
+      "sourceMaxAge": 8,
+      "minAge": 4,
+      "maxAge": 6,
+      "maxAgeExclusive": true
+    }
+  ],
+  "zecSourcePolicy": "Zachowaj oryginalne etykiety, N i mediany całych grup 1–<4 oraz 4–<8 lat; okno zastosowania drugiej grupy ogranicz do 4–<6 lat. Nie twórz mediany nowej podgrupy. Grupa 8–<11 lat pozostaje dowodem źródłowym poza aktywnymi profilami zwykłego wykresu. Wszystkie profile Zec nadal wymagają aktualnego typowanego stadium gonadalnego Th1.",
+  "profiles": [
+    {
+      "id": "madsen2022-female-lh-age-6-16",
+      "analyte": "lh",
+      "sourceProfileId": "madsen2022-female-lh-sex-comparison",
+      "minAge": 6,
+      "maxAge": 16,
+      "maxAgeExclusive": false
+    },
+    {
+      "id": "madsen2022-female-fsh-age-6-16",
+      "analyte": "fsh",
+      "sourceProfileId": "madsen2022-female-fsh-sex-comparison",
+      "minAge": 6,
+      "maxAge": 16,
+      "maxAgeExclusive": false
+    }
+  ],
+  "patientNote": "Model według wieku; faz cyklu nie standaryzowano."
+};
 const gonadotropinComparisonPolicy = {
   "version": "2026-10-12.1",
   "kind": "population-model-comparison",
@@ -35605,6 +35810,7 @@ return {
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,
+  femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,
   gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
   gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData
 };

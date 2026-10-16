@@ -2945,12 +2945,87 @@ populacyjnych nie jest referencją klinicznego ilorazu LH/FSH.
 - Chłopiec 300 dni, LH → brak dokładnego punktu; dziewczynka tego
   samego wieku zachowuje własną medianę przy zgodnym kontekście.
 - Dokładnie 16 lat → opublikowany brzeg modelu; wiek [16,17) albo
-  >16 lat → brak odniesienia tego porównania. Zwykły widok nie
-  otrzymuje nowego żeńskiego profilu Madsen.
+  >16 lat → brak odniesienia tego porównania. W tej partii zwykły widok nie
+  otrzymał żeńskiego profilu Madsen; osobne rozszerzenie z 16.10.2026 opisano poniżej.
 
 Źródła, hashe, zakres zgody i ograniczenia:
 [audyt porównania LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
 Akceptacja prezentacji i testy techniczne nie są walidacją kliniczną.
+
+### HORMONE-FEMALE-GONADOTROPIN-REFERENCE — zwykłe mediany wieku, 2026-10-16
+
+**Problem i decyzja:** żeńskie mediany LH/FSH Madsen były dostępne w porównaniu
+płci i prezentacji pokwitania, ale nie w zwykłym punkcie pacjentki. Wcześniejsze
+żeńskie FSH Zec 6–<11 dotyczyło wyłącznie Th1. Po porównaniu dwóch wariantów
+właściciel polecił wdrożyć rekomendowaną politykę wieku:
+`female-gonadotropin-reference-policy.json`. Od 6 do dokładnego brzegu 16 lat
+zwykłe LH i FSH korzystają z Madsen niezależnie od Th. Zec FSH pozostaje
+1–<6 przy aktualnym Th1. Jest to wybór aplikacji dla edukacyjnego wykresu wieku,
+nie wykazana przewaga jednej metody ani zalecenie autorów o łączeniu badań.
+
+**Źródła i weryfikacja:** pełny [Madsen 2022](https://doi.org/10.1210/clinem/dgac155),
+tabela 1, metody i dyskusja oraz oficjalny [suplement v1](https://doi.org/10.6084/m9.figshare.17153336.v1),
+`Other biomarkers` B3:E13/G3:J13; 22/22 żeńskich median ponownie sprawdzono
+z oryginalnymi komórkami, bez zmiany `exp(M)/1e6`. Norwegia, BGS2 6–<16,
+601 dostępnych żeńskich próbek w tabeli kohorty, nie gwarantowana liczebność
+każdego analitu; surowica 08:00–14:00, Siemens IMMULITE 2000 XPi, LLOQ 0,1 IU/L.
+Model obejmuje różne stadia, cykl niestandaryzowany; użytkowniczki doustnej
+antykoncepcji wykluczono. PCHIP pozostaje przybliżeniem między rocznymi węzłami.
+Fit Futures do 18 lat rozszerza steroidy, nie LH/FSH. Mediany LH blisko LLOQ
+nie służą do rozpoznania początku dojrzewania.
+
+[Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210:
+korzystamy z ekstraktu pełnego PDF zweryfikowanego 10.10.2026, bez zmiany liczb;
+bieżący odczyt potwierdził bibliografię i abstrakt, pełny PDF nie był ponownie
+dostępny. Zagrzeb, Tanner I, Roche cobas e411; materiał przypisany do konkretnego
+analitu i pora pobrania pozostają nieustalone. Okno aplikacji 4–<6 nadal
+opisuje pełną źródłową grupę 4–<8, medianę 1,07 i N=156. Grupę 8–<11/1,55
+zachowujemy w dowodach, poza aktywnym zwykłym routingiem.
+
+**Wpływ kliniczny:** zmienia się źródło i mediana odniesienia, np. F9/Th1/FSH
+Zec 1,55 → Madsen 1,964770298470689 IU/L. Brak lub zmiana Th nie przełącza
+odniesienia wieku 6–16. Zmiana nie jest nową normą, SDS ani diagnozą; osobne
+laboratoryjne osie wieku/stadium i ostrzeżenia pokwitania pozostają niezmienione.
+Znana metoda Roche cobas e411, dotąd zgodna z Zec, nie pasuje do Madsen:
+brak punktu z powodem metody jest zamierzony. Nie wprowadzamy kalibracji,
+rozszerzania zgodnych metod ani ponawiania kwalifikacji na innym źródle.
+
+Zwykłe profile `madsen2022-female-{lh,fsh}-age-6-16` są odrębne od zachowanych
+`*-sex-comparison`. Dane porównania, geometrię i skale zachowujemy bez zmian.
+Względna żeńska minipuberty nadal nie rysuje punktu stężenia. Źródła niemowlęce,
+męskie, inne anality i historyczne zapisy ocen nie są przeliczane tą polityką.
+Nie rozszerzamy zapisu `hormoneReference`, który nadal dotyczy AMH.
+
+Adapter punktu zachowuje istniejące bramki leczenia, materiału, metody,
+stymulacji i cenzurowania. Dodatkowo jawna bieżąca ciąża wpisana już w przeliczniku
+nie ginie po przełączeniu na LH/FSH. Jawnie dostępne dodatnie hormonalne fakty
+również nie są ignorowane wskutek zmiany analitu. Wyłączenie przy ciąży jest
+konserwatywną polityką aplikacji; nie opisujemy go jako kryterium autorów Madsen.
+Nie deklarujemy pełnego wykrywania antykoncepcji z karty i nie zmieniamy
+nieznanego wywiadu na brak leczenia. Brak nowych pól/ankiety. Aktualne fakty
+nie przechodzą na dawną próbkę ani do innej osoby lub płci.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistego silnika:**
+
+- F12, LH 2 / FSH 2 IU/L → mediany odpowiednio 0,932808521560225 /
+  4,151220353235434, bez pytania o Th. Zmiana wyniku nie zmienia linii/skali.
+- F9, FSH 2, Th1 / Th2 / brak Th → 1,964770298470689; zwykły widok
+  i porównanie zgodne liczbowo, niezależna ocena laboratoryjna nadal własna.
+- F5/Th1/FSH → Zec 1,07, opis grupy 4–<8/N156; historyczne Th nie kwalifikuje.
+- Dokładnie 6 → Madsen; `[5,6)`/Th1 → Zec; `[5,6]` → niejednoznaczny wiek.
+  Dokładnie 16 → źródłowy brzeg; 16 lat 0 miesięcy `[16,16+1/12)` i >16 →
+  brak punktu. Nie przyjmujemy środka wieku lub sztucznej daty urodzenia.
+- F9/Th1, jawna Roche cobas e411 → niezgodna metoda, bez powrotu do Zec.
+  Nieznana metoda daje wyłącznie orientacyjne porównanie.
+- Jawna ciąża → zmiana E2 na LH/FSH → brak punktu z powodu przeciwwskazania;
+  zmiana pacjentki/płci usuwa lokalny wybór. Nie przenosimy go na dawną próbkę.
+- Wynik z operatorem, niezgodny materiał i znane leczenie → nadal bez
+  dokładnej kropki; IU/L i mIU/mL zachowują równoważność liczbową.
+
+Pełny ślad źródeł, hashe i rozróżnienie ograniczeń publikacji/polityki:
+[audyt](hormone-lifespan/evidence/female-gonadotropin-reference-audit-2026-10-16.json),
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-lhfsh--zwykłe-odniesienie-wieku-16-października-2026).
+Zgoda na wdrożenie i kontrole techniczne nie są walidacją kliniczną.
 
 ### HORMONE-COMPARISON-PERIOD — domyślny okres z istniejącej osi, 2026-10-16
 
@@ -3038,8 +3113,8 @@ M44, testosteron 13 nmol/L → `mini` wskazuje 0–12 mies., `puberty` 8–20 la
 powrót do `life` zachowuje źródłową **średnią grupy** 18,1 nmol/L.
 M6, LH z niezgodną metodą → dotychczasowa informacja o metodzie, bez
 obietnicy punktu. Pusty lub cenzurowany wynik i odznaczony bieżący hormon
-nie otrzymują nowej obietnicy widoczności. Żeńskie LH/FSH dostępne tylko
-w porównaniu nie stają się odniesieniem zwykłych widoków.
+nie otrzymują nowej obietnicy widoczności. Ta poprawka podpisu nie aktywowała
+żeńskiego Madsen; osobno opisuje to `HORMONE-FEMALE-GONADOTROPIN-REFERENCE`.
 AMH, niemowlę 3-miesięczne obu płci z nieznanym wcześniactwem → istniejąca
 przyczyna `preterm-context`; podpis o donoszeniu w `life` i `mini`, bez tego
 podpisu w `puberty`. Przywrócenie `mini` zachowuje tę samą kwalifikację.
