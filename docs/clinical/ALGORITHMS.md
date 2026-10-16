@@ -2996,6 +2996,48 @@ M12, AMH → `puberty`, wyłącznie dotychczasowe linie edukacyjne, bez nowego
 punktu. M14, obliczane LH, zaznaczone tylko AMH → ten sam widok AMH,
 bez przeniesienia punktu LH. Ręczny `mini` pozostaje `mini`.
 
+### HORMONE-POINT-OUTSIDE-VIEW — wyjaśnienie punktu poza okresem, 2026-10-16
+
+**Problem i zakres:** już zakwalifikowany wynik znikał po ręcznym
+wyborze zwykłego `mini` lub `puberty`, gdy wiek pacjenta znajdował się poza
+osią wybranego okresu. Istniejący podpis pod wykresem wyjaśnia teraz tę
+przyczynę i wskazuje dotychczasowy przycisk „Całe życie”. Ten sam tekst
+uzupełnia dostępny opis bieżącego wykresu; ponowne renderowanie lub reset
+nie kumuluje przyczyny. Nie dodano pól ani kontrolek i nie zmieniono widoku.
+
+Komunikat wymaga gotowego własnego `patientPoint`, zaznaczenia bieżącego
+hormonu i spełnienia dotychczasowych bramek prezentacji wieku. Nie zastępuje
+odrębnego gotowego punktu obserwacji inhibiny B. Nie dotyczy porównań płci
+ani względnej żeńskiej minipuberty LH/FSH, w której stężenie nie ma punktu.
+Etykieta okresu pochodzi z rzeczywistej `visibleAgeDomain()`: zwykle 0–12
+miesięcy lub 8–20 lat, a przy żeńskim mieszanym widoku pokwitania 6–16 lat.
+Granice te opisują oś, nie nowy zakres odniesienia. Dla niedostępnego źródła
+także poza osią pozostaje dotychczasowy konkretny komunikat kwalifikacji,
+np. o niezgodnej metodzie; nie obiecujemy wówczas punktu po zmianie okresu.
+
+**Źródła i wpływ kliniczny:** wykorzystujemy wyłącznie istniejące wyniki
+silnika i dane opisane w `HORMONE-LH-FSH-SEX-COMPARISON`,
+`HORMONE-INHIBIN-SEX-COMPARISON`, `HORMONE-TESTOSTERONE-STABLE-CURVE`
+oraz odpowiednich politykach źródłowych. Nie dodajemy norm ani median
+i nie zmieniamy wartości źródeł, kwalifikacji całego przedziału wieku,
+metod, materiału, jednostek, geometrii, skali, interpretacji laboratoryjnej
+lub zapisu wyniku. Zmienia się wyłącznie informacja o braku punktu na
+bieżącym wykresie. To nie ponowna walidacja medyczna źródeł.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistego komponentu:**
+M6, LH 2 IU/L → w `life` punkt z odniesieniem Madsen ≈0,119316 IU/L;
+porównanie otwiera `puberty` 6–16; jego zakończenie zostawia zwykłe
+`puberty` 8–20 bez punktu, z widocznym podpisem o wieku poza 8–20.
+„Całe życie” przywraca ten sam wynik i odniesienie. F6, inhibina B
+33 pg/mL → w zwykłym `puberty` podpis poza 8–20; dołączenie LH przełącza
+faktyczną oś na 6–16 i przywraca istniejący punkt z medianą ≈11 pg/mL.
+M44, testosteron 13 nmol/L → `mini` wskazuje 0–12 mies., `puberty` 8–20 lat;
+powrót do `life` zachowuje źródłową **średnią grupy** 18,1 nmol/L.
+M6, LH z niezgodną metodą → dotychczasowa informacja o metodzie, bez
+obietnicy punktu. Pusty lub cenzurowany wynik i odznaczony bieżący hormon
+nie otrzymują nowej obietnicy widoczności. Żeńskie LH/FSH dostępne tylko
+w porównaniu nie stają się odniesieniem zwykłych widoków.
+
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
 **Decyzja właściciela:** makieta „przed/po” AMH została zaakceptowana

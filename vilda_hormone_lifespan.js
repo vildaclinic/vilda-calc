@@ -908,6 +908,15 @@
       return view === "mini" ? [0, 1] : view === "puberty" ? [8, 20]
         : [stages()[0].min, stages()[stages().length - 1].max];
     }
+    function ordinaryPointOutsideView() {
+      const id = analyteHormones[currentAnalyte];
+      if (compare || (view !== "mini" && view !== "puberty") ||
+          renderedPoint || renderedObservation?.patientPoint?.status === "ready" ||
+          patientPoint?.status !== "ready" || !canShowAgeMarker() || !selected.has(id) ||
+          (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(id))) return false;
+      const [minAge, maxAge] = visibleAgeDomain();
+      return patientAgeYears < minAge || patientAgeYears > maxAge;
+    }
     function patientDotModel() {
       const engine = pointEngine();
       const id = analyteHormones[currentAnalyte];
@@ -1229,7 +1238,8 @@
         byId("scale-note").textContent = (offscale ? "Strzałka: wynik ponad skalą." : "Kropka: wynik.") +
           " Jasny znacznik: " + basis + "." +
           (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
-      } else if (!model && !(patientContext?.measurement && patientPoint?.status === "unavailable")) {
+      } else if (!model && !(patientContext?.measurement && patientPoint?.status === "unavailable") &&
+          !ordinaryPointOutsideView()) {
         // The persistent LH/FSH note already explains the separate scales.
         // Keep a qualification error or another analyte's point caption visible.
         panel.querySelector(".vhl-chart-caption").hidden = true;
@@ -1256,10 +1266,20 @@
       const id = analyteHormones[currentAnalyte];
       const [minAge, maxAge] = visibleAgeDomain();
       const termAmhUnavailable = !compare && id === "amh" && patientPoint?.reason === "preterm-context";
-      if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) || patientAgeYears < minAge || patientAgeYears > maxAge ||
+      if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) ||
+          (compare && (patientAgeYears < minAge || patientAgeYears > maxAge)) ||
           (compare ? compareHormone !== id : !selected.has(id)) ||
           !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
           (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;
+      if (ordinaryPointOutsideView()) {
+        const period = view === "mini"
+          ? `${fmt(minAge * 12)}–${fmt(maxAge * 12)} mies.`
+          : `${fmt(minAge)}–${fmt(maxAge)} lat`;
+        const message = `Wiek pacjenta jest poza wybranym okresem (${period}). Wynik i odniesienie zobaczysz w „Całym życiu”.`;
+        byId("scale-note").textContent = message;
+        byId("chart-desc").textContent += " " + message;
+        return;
+      }
       if (termAmhUnavailable) {
         byId("scale-note").textContent = "Te dane dotyczą niemowląt urodzonych o czasie; brak dopasowanego odniesienia dla wyniku.";
         return;
