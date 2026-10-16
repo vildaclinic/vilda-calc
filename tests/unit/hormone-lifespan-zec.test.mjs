@@ -20,10 +20,8 @@ const groups = [
     sourceMax: 8, median: 0.48, n: 303 },
   { id: 'zec2012-female-fsh-age-1-4', sex: 'female', kind: 'Th', min: 1, max: 4,
     sourceMax: 4, median: 2.57, n: 124 },
-  { id: 'zec2012-female-fsh-age-4-8', sex: 'female', kind: 'Th', min: 4, max: 8,
-    sourceMax: 8, median: 1.07, n: 156 },
-  { id: 'zec2012-female-fsh-age-8-11', sex: 'female', kind: 'Th', min: 8, max: 11,
-    sourceMax: 11, median: 1.55, n: 107 }
+  { id: 'zec2012-female-fsh-age-4-8', sex: 'female', kind: 'Th', min: 4, max: 6,
+    sourceMax: 8, median: 1.07, n: 156 }
 ];
 
 describe('Zec FSH patient point — exact group medians and current Tanner 1', () => {
@@ -45,15 +43,15 @@ describe('Zec FSH patient point — exact group medians and current Tanner 1', (
     expect(engine.sampleProfile(source, 40).every(point => point.value === group.median)).toBe(true);
   });
 
-  it('has only four active Zec groups and keeps the existing Madsen profile from age 6', () => {
-    expect(data.profiles.filter(source => source.id.startsWith('zec2012-'))).toHaveLength(4);
+  it('has only three active Zec groups and uses independent Madsen age models from age 6', () => {
+    expect(data.profiles.filter(source => source.id.startsWith('zec2012-'))).toHaveLength(3);
     for (const ageYears of [6, 8, 10.99, 11, 16]) {
       const result = evaluate({ ageYears, puberty: null });
       expect(result).toMatchObject({ status: 'ready', profile: { id: 'madsen2022-male-fsh' } });
       expect(result.referenceValue).toBe(engine.referenceAt(profile('madsen2022-male-fsh'), ageYears));
     }
     expect(evaluate({ sex: 'female', ageYears: 11, puberty: { kind: 'Th', stage: 1 } }))
-      .toEqual(unavailable('unsupported-age'));
+      .toMatchObject({ status: 'ready', profile: { id: 'madsen2022-female-fsh-age-6-16' } });
   });
 
   it('requires an explicit gonadal stage without inferring Tanner 1 from age or a bare number', () => {
@@ -147,7 +145,7 @@ describe('Zec FSH patient point — exact group medians and current Tanner 1', (
 
   it('does not activate censored childhood LH, testosterone or unsupported female ages', () => {
     for (const [analyte, ageYears, sex] of [['lh', 3, 'male'], ['lh', 3, 'female'],
-      ['t', 2, 'male'], ['fsh', 11, 'female'], ['fsh', 30, 'female']]) {
+      ['t', 2, 'male'], ['fsh', 17, 'female'], ['fsh', 30, 'female']]) {
       expect(engine.selectProfile(data, context({ analyte, ageYears, sex })))
         .toEqual(unavailable('unsupported-age'));
     }

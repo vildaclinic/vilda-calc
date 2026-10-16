@@ -24,7 +24,8 @@ function adapter(extra = {}) {
   const context = {
     window: { VildaLabPuberty: puberty, VildaLabPubertyData: policy },
     sessionStorage: { getItem: () => context.identity },
-    identity: '', localOverrideIdentity: '', lifespanVault: null,
+    identity: '', localOverrideIdentity: '', lifespanVault: null, lifespanCurrentSex: null,
+    testosteroneMeasurementContext: {},
     localOverride: { sex: null, age: null, tanner: null, cycle_phase: null },
     overrideSexEl: { value: '' }, overrideAgeEl: { value: '' }, overrideAgeMonthsEl: { value: '' },
     overrideCycleEl: { value: '' }, overrideTannerEl: { value: '' },
@@ -610,17 +611,150 @@ describe('Inhibin B current reproductive context — existing form only', () => 
       profile: { id: 'borelli2025-male-inhb' } });
   });
 
-  it('does not extend the new reproductive-context transport or exclusions to LH and FSH', () => {
+});
+
+describe('Female LH/FSH current known exclusions — educational point only', () => {
+  function currentEvaluation(analyte, extra = {}) {
+    return puberty.evaluate({ analyte, sex: 'F', value: '3', unit: 'IU/L',
+      age: { years: 12, months: 0, precision: 'month' }, contextBasis: 'current-patient',
+      referenceSelection: 'automatic', reproductiveContext: 'unknown', ...extra }, policy);
+  }
+
+  function femaleAdapter() {
+    const app = adapter({
+      currentSubstance: { id: 'lh' }, unitEl: { value: 'IU/L' },
+      sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'F', ageYears: 12, ageMonths: 0 },
+    });
+    app.context.getEffectivePatient = () => ({ sex: app.context.sourcePatient.sex, age: 12,
+      cycle_phase: app.context.localOverride.cycle_phase });
+    return app;
+  }
+
+  it('keeps explicit current pregnancy after switching from the existing estradiol control to LH/FSH', () => {
     const app = femaleAdapter();
-    app.context.effectivePatient.cycle_phase = 'pregnancy_t3';
-    for (const id of ['lh', 'fsh']) {
-      app.update({ id }, evaluated('3', 'IU/L', { sex: 'F', contextBasis: 'current-patient',
-        age: { years: 15, months: 0, precision: 'month' }, reproductiveContext: 'postmenopause' }));
-      expect(app.last()).toMatchObject({ cyclePhase: null, contraindicated: false });
-      // Ordinary female puberty LH/FSH has no numerical reference; this must
-      // remain that existing scope limit, not a new reproductive exclusion.
-      expect(lifespanReference.evaluate(lifespanData, app.last()))
-        .toEqual({ status: 'unavailable', reason: 'unsupported-age' });
+    for (const cyclePhase of ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3']) {
+      app.context.localOverride.cycle_phase = cyclePhase;
+      app.update({ id: 'estradiol' }, null, { ok: true, siValue: 100, siUnit: 'pmol/L' });
+      for (const id of ['lh', 'fsh']) {
+        const result = currentEvaluation(id);
+        const before = structuredClone(result);
+        expect(result.input.reproductiveContext).toBe('unknown');
+        expect(result.input.pregnancy).toBeUndefined();
+        app.update({ id }, result);
+        expect(app.last()).toMatchObject({ contraindicated: true, cyclePhase: null,
+          measurement: { value: 3, unit: 'IU/L', operator: '=' } });
+        expect(lifespanReference.evaluate(lifespanData, app.last()))
+          .toEqual({ status: 'unavailable', reason: 'contraindicated' });
+        expect(result).toEqual(before); // No change to laboratory axes or a saved evaluation.
+      }
     }
+    app.context.localOverride.cycle_phase = null;
+    for (const id of ['lh', 'fsh']) {
+      app.update({ id }, currentEvaluation(id));
+      expect(app.last().contraindicated).toBe(false);
+      expect(lifespanReference.evaluate(lifespanData, app.last()).status).toBe('ready');
+    }
+  });
+
+  it('preserves already reported positive hormonal facts without copying another assay or sample context', () => {
+    const app = femaleAdapter();
+    const facts = [
+      { pregnancy: 'yes' }, { pregnancy: true }, { reproductiveContext: 'pregnancy' },
+      { treatment: { context: 'hormonal' } },
+      ...['gnrha', 'sexSteroids', 'cocp', 'exogenousTestosterone'].flatMap(key =>
+        ['yes', true].map(value => ({ treatment: { [key]: value } }))),
+    ];
+    for (const known of facts) {
+      app.context.testosteroneMeasurementContext = known;
+      for (const id of ['lh', 'fsh']) {
+        app.update({ id }, currentEvaluation(id));
+        expect(app.last().contraindicated).toBe(true);
+        expect(lifespanReference.evaluate(lifespanData, app.last()))
+          .toEqual({ status: 'unavailable', reason: 'contraindicated' });
+      }
+    }
+    for (const known of [{}, { pregnancy: 'unknown', treatment: { cocp: 'unknown' } },
+      { pregnancy: 'no', treatment: { context: 'none', cocp: 'no' } },
+      { collectionTime: 'evening', specimen: 'plasma', measurementKind: 'stimulated',
+        assay: { confirmation: 'reported', methodId: 'fictional-other-assay' } }]) {
+      app.context.testosteroneMeasurementContext = known;
+      for (const id of ['lh', 'fsh']) {
+        const result = currentEvaluation(id);
+        const before = structuredClone(result);
+        app.update({ id }, result);
+        expect(app.last()).toMatchObject({ contraindicated: false, assayMethodId: null });
+        expect(lifespanReference.evaluate(lifespanData, app.last()).status).toBe('ready');
+        expect(result).toEqual(before);
+      }
+    }
+  });
+
+  it('does not import current facts into a dated, unspecified or historical sample', () => {
+    const app = femaleAdapter();
+    app.context.localOverride.cycle_phase = 'pregnancy_t2';
+    app.context.testosteroneMeasurementContext = { treatment: { cocp: 'yes' }, pregnancy: 'yes' };
+    app.context.sourcePatient.gnrhaStatus = 'w-trakcie';
+    for (const id of ['lh', 'fsh']) {
+      for (const input of [{ contextBasis: 'sample' }, { sampleDateISO: '2020-01-01' }]) {
+        app.update({ id }, currentEvaluation(id, input));
+        expect(app.last().contraindicated).toBe(false);
+        expect(lifespanReference.evaluate(lifespanData, app.last()).status).toBe('ready');
+      }
+      const unspecified = currentEvaluation(id);
+      delete unspecified.input.contextBasis;
+      app.context.sourcePatient.gnrhaStatus = null;
+      app.update({ id }, unspecified);
+      expect(app.last().contraindicated).toBe(false);
+      app.update({ id }, currentEvaluation(id, { contextBasis: 'sample', treatment: { sexSteroids: 'yes' } }));
+      expect(app.last().contraindicated).toBe(true); // Explicit sample facts remain meaningful.
+    }
+    app.context.localOverride.cycle_phase = null;
+    for (const known of [{ pregnancy: 'yes', contextBasis: 'sample' },
+      { treatment: { cocp: 'yes' }, sampleDateISO: '2020-01-01' }]) {
+      app.context.testosteroneMeasurementContext = known;
+      app.update({ id: 'lh' }, currentEvaluation('lh'));
+      expect(app.last().contraindicated).toBe(false);
+    }
+  });
+
+  it('clears known local facts on patient and sex changes rather than reviving them later', () => {
+    const app = femaleAdapter();
+    app.context.localOverride.cycle_phase = 'pregnancy_t1';
+    app.context.testosteroneMeasurementContext = { treatment: { cocp: 'yes' } };
+    app.update({ id: 'lh' }, currentEvaluation('lh'));
+    expect(app.last().contraindicated).toBe(true);
+    app.context.sourcePatient.sex = 'M';
+    app.update({ id: 'lh' }, currentEvaluation('lh', { sex: 'M' }));
+    expect(app.context.localOverride.cycle_phase).toBeNull();
+    expect(app.context.testosteroneMeasurementContext).toEqual({});
+    expect(app.last().contraindicated).toBe(false);
+    app.context.sourcePatient.sex = 'F';
+    app.update({ id: 'lh' }, currentEvaluation('lh'));
+    expect(app.last().contraindicated).toBe(false);
+    expect(lifespanReference.evaluate(lifespanData, app.last()).status).toBe('ready');
+    app.context.localOverride.cycle_phase = 'pregnancy_t3';
+    app.context.testosteroneMeasurementContext = { pregnancy: 'yes' };
+    app.context.identity = 'fictional-next-gonadotropin-patient';
+    app.context.sourcePatient.identityKey = app.context.identity;
+    app.update({ id: 'fsh' }, currentEvaluation('fsh'));
+    expect(app.last().measurement).toBeNull();
+    expect(app.context.localOverride.cycle_phase).toBeNull();
+    expect(app.context.testosteroneMeasurementContext).toEqual({});
+    app.update({ id: 'fsh' }, currentEvaluation('fsh'));
+    expect(app.last().contraindicated).toBe(false);
+    expect(lifespanReference.evaluate(lifespanData, app.last()).status).toBe('ready');
+  });
+
+  it('does not borrow a positive fact from an unavailable or opposite-sex current source', () => {
+    const app = femaleAdapter();
+    app.context.localOverride.cycle_phase = 'pregnancy_t1';
+    app.context.testosteroneMeasurementContext = { treatment: { cocp: 'yes' } };
+    app.context.sourcePatient.sourceStatus = 'loading';
+    app.update({ id: 'lh' }, currentEvaluation('lh'));
+    expect(app.last()).toMatchObject({ measurement: null, contraindicated: false });
+    app.context.sourcePatient.sourceStatus = 'ready';
+    app.context.sourcePatient.sex = 'M';
+    app.update({ id: 'lh' }, currentEvaluation('lh'));
+    expect(app.last().contraindicated).toBe(false);
   });
 });

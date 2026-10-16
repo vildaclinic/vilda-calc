@@ -1,0 +1,82 @@
+{
+  "id": "female-gonadotropin-reference-audit-2026-10-16",
+  "reviewedOn": "2026-10-16",
+  "baseCommit": "28aaa185bd77398d7d52f126bdc2ed1769f2d617",
+  "scope": "Ordinary female LH/FSH educational age reference; no laboratory RI, diagnostic category, SDS, history migration or geometric recalibration.",
+  "ownerDecision": "After reviewing the source-priority proposal, the owner requested the next recommended implementation step. Clinical validation is not asserted.",
+  "policy": "female-gonadotropin-reference-policy.json",
+  "rationale": {
+    "selected": "Age-model Madsen for both female gonadotropins from 6 through the exact published 16-year endpoint, independently of Th. Zec FSH remains from 1 to less than 6 with current typed Th1.",
+    "alternativeConsidered": "Retain Zec for current Th1 at 6–<11 and Madsen for other/missing stages. This changes population, statistic and assay reference when Th is entered or becomes historical.",
+    "basis": "Consistency of an educational age comparison and existing male FSH source routing; no evidence of numerical assay superiority or calibration between publications.",
+    "tradeoff": "F9/Th1 FSH reference changes from Zec 1.55 to Madsen 1.964770298470689 IU/L. Reported Roche cobas e411 no longer qualifies for this age profile. No hidden source fallback after method rejection."
+  },
+  "madsen2022": {
+    "doi": "10.1210/clinem/dgac155",
+    "pmid": "35299255",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+    "freshVerification": "Full article: Cohort Description, Table 1, Blood Sample Analyses, Hormone Reference Intervals, Continuous Hormone References and Discussion; official supplement version 1 reopened and all 22 existing female medians checked against original cells.",
+    "population": "Cross-sectional BGS2, Norway, approximately 90% European ancestry, mixed pubertal stages; Table 1 reports 601 available female blood samples, not per-analyte N.",
+    "observedAges": "6–<16 years; Fit Futures older participants extend steroid models, not LH/FSH.",
+    "specimen": "Serum, sampled 08:00–14:00, stored at −80 degrees C.",
+    "assay": "Siemens IMMULITE 2000 XPi",
+    "unit": "IU/L",
+    "lloq": 0.1,
+    "lod": null,
+    "sourceLimitations": [
+      "Oral-contraceptive users excluded from all female models.",
+      "Menstrual-cycle phase was not standardized; authors advise consulting additional reference intervals for menstruating girls.",
+      "Age models do not infer Tanner stage, cycle phase or an individual longitudinal trajectory.",
+      "LH medians in early childhood are near LLOQ; small numerical differences do not establish puberty onset.",
+      "No documented patient-value imputation rule permits replacing censored results with LOD/2."
+    ],
+    "supplement": {
+      "doi": "10.6084/m9.figshare.17153336.v1",
+      "file": "Supplemental_Table_1_LMS_entries.xlsx",
+      "fileId": 31716608,
+      "bytes": 53908,
+      "sha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "sheet": "Other biomarkers",
+      "femaleLhCells": "B3:E13",
+      "femaleFshCells": "G3:J13",
+      "transformation": "p50 IU/L = exp(M)/1000000; M is not a concentration in IU/L.",
+      "nodesVerified": 22,
+      "sourceValuesChanged": 0,
+      "interpolation": "Existing PCHIP between all 11 annual nodes per hormone; application approximation, not a new GAMLSS fit."
+    },
+    "endpointPolicy": "Use the published [6,16] model domain including exact node 16, matching existing male and comparison policies. The complete possible age interval must fit; [16,16+1/12) does not. Never extrapolate beyond 16."
+  },
+  "zec2012": {
+    "doi": "10.1016/j.clinbiochem.2012.05.019",
+    "pmid": "22634601",
+    "existingVerifiedExtract": "patient-point/zec2012-fsh-group-medians.json",
+    "fullPdfPreviouslyVerifiedOn": "2026-10-10",
+    "fullPdfSha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
+    "freshVerificationBoundary": "Bibliography and abstract reconfirmed. Full PDF was not accessible in this review; use the existing documented owner-supplied full-PDF extraction, with no new source numbers or eligibility claims.",
+    "location": "Table 2, journal page 1210 / PDF page 5; assay Table 1, page 1208 / PDF page 3.",
+    "population": "Zagreb, Croatia, Tanner I only; clinical hospital/outpatient recruitment, not solely healthy volunteers. Full cohort 948; FSH 807 measurements.",
+    "assay": "Roche cobas e411, sandwich ECLIA",
+    "materialLimitation": "Serum and lithium-heparin plasma collected; analyte-specific matrix not reported.",
+    "femaleSourceGroups": [
+      { "minAge": 1, "maxAgeExclusive": 4, "median": 2.57, "n": 124, "applicationMaxAgeExclusive": 4 },
+      { "minAge": 4, "maxAgeExclusive": 8, "median": 1.07, "n": 156, "applicationMaxAgeExclusive": 6 },
+      { "minAge": 8, "maxAgeExclusive": 11, "median": 1.55, "n": 107, "ordinaryActive": false }
+    ],
+    "sourceGroupPolicy": "N, median and labels continue to describe the full published group. A narrower application window is not a newly analyzed subgroup. Original evidence and male routing retained."
+  },
+  "applicationContextPolicy": {
+    "knownPregnancy": "Conservative application exclusion, not presented as a documented Madsen recruitment criterion. Reuse only explicit current same-patient pregnancy already available in the converter.",
+    "knownTreatment": "Preserve known positive hormonal treatment, GnRHa, COC, exogenous testosterone and stimulation facts where available. Do not copy assay/material/protocol belonging to a different analyte.",
+    "unknown": "Missing treatment or COC history remains unknown, not confirmed absence; no new questionnaire or claim of complete COC detection from the patient record.",
+    "identityAndTime": "Current facts must not leak across patient/sex changes or onto a dated historical specimen; local context reset preserved.",
+    "separateClinicalAssessment": "Laboratory age/stage references and development warnings retain independent eligibility and interpretation."
+  },
+  "syntheticExpectedReferencesIUperL": [
+    { "sex": "female", "ageYears": 5, "analyte": "fsh", "currentTh": 1, "reference": 1.07 },
+    { "sex": "female", "ageYears": 9, "analyte": "fsh", "currentTh": null, "reference": 1.964770298470689 },
+    { "sex": "female", "ageYears": 9, "analyte": "fsh", "currentTh": 1, "reference": 1.964770298470689 },
+    { "sex": "female", "ageYears": 12, "analyte": "lh", "reference": 0.932808521560225 },
+    { "sex": "female", "ageYears": 12, "analyte": "fsh", "reference": 4.151220353235434 }
+  ],
+  "notClinicalValidation": true
+}

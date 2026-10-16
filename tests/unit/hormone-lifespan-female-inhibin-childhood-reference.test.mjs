@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { priorFemaleGonadotropinBundle, withoutFemaleGonadotropinReferencePolicy } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -38,15 +39,15 @@ function evaluateReportedAge(input, extra) {
 
 describe('Inhibina B młodszych dziewczynek — źródłowe mediany grup Zhou 2025', () => {
   it('dodaje tylko dwa profile i zachowuje wszystkie 74 wcześniejsze profile, przeliczenia oraz pozostały runtime', () => {
-    expect(data.profiles).toHaveLength(76);
-    expect(data.version).toBe('2026-10-14.2');
-    const previous = { ...data, version: '2026-10-14.1',
-      profiles: data.profiles.filter(profile => !addedIds.includes(profile.id)) };
+    expect(data.profiles).toHaveLength(77);
+    expect(data.version).toBe('2026-10-16.1');
+    const previous = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-14.1',
+      profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => !addedIds.includes(profile.id)) };
     expect(previous.profiles).toHaveLength(74);
     // Complete patientPointData of approved c8b91078, before either addition.
     expect(digest(previous)).toBe('0da33105e49f57889794bed9bee9459169e08e950916a9ad6769ddc86ee2fca6');
     expect(digest(previous.profiles)).toBe('09ae5949ce7481965a462ce9047e6124643237c87c19dafba9684bbe79f0ae5a');
-    expect(digest(Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'patientPointData'))))
+    expect(digest(withoutFemaleGonadotropinReferencePolicy(runtime)))
       .toBe('380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d');
     expect(data).toEqual(read('population-reference-data.json'));
     expect(data.profiles.filter(profile => addedIds.includes(profile.id)).map(profile => profile.id)).toEqual(addedIds);

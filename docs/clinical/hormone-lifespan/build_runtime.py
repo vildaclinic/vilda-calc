@@ -30,6 +30,7 @@ def build():
     insl3_display_policy = json.loads((ROOT / 'insl3-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_policy = json.loads((ROOT / 'female-gonadotropin-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_data = json.loads((ROOT / 'female-gonadotropin-display-data.json').read_text(encoding='utf-8'))
+    female_gonadotropin_reference_policy = json.loads((ROOT / 'female-gonadotropin-reference-policy.json').read_text(encoding='utf-8'))
     gonadotropin_comparison_policy = json.loads((ROOT / 'gonadotropin-comparison-policy.json').read_text(encoding='utf-8'))
     gonadotropin_comparison_reference = json.loads((ROOT / 'gonadotropin-comparison-reference-data.json').read_text(encoding='utf-8'))
     reference_js = json.dumps(reference, ensure_ascii=False, indent=2)
@@ -46,6 +47,7 @@ def build():
     insl3_display_policy_js = json.dumps(insl3_display_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_policy_js = json.dumps(female_gonadotropin_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_data_js = json.dumps(female_gonadotropin_data, ensure_ascii=False, indent=2)
+    female_gonadotropin_reference_policy_js = json.dumps(female_gonadotropin_reference_policy, ensure_ascii=False, indent=2)
     gonadotropin_comparison_policy_js = json.dumps(gonadotropin_comparison_policy, ensure_ascii=False, indent=2)
     gonadotropin_comparison_reference_js = json.dumps(gonadotropin_comparison_reference, ensure_ascii=False, indent=2)
     return (
@@ -75,6 +77,7 @@ def build():
         f'const insl3DisplayPolicy = {insl3_display_policy_js};\n'
         f'const femaleGonadotropinPolicy = {female_gonadotropin_policy_js};\n'
         f'const femaleGonadotropinData = {female_gonadotropin_data_js};\n'
+        f'const femaleGonadotropinReferencePolicy = {female_gonadotropin_reference_policy_js};\n'
         f'const gonadotropinComparisonPolicy = {gonadotropin_comparison_policy_js};\n'
         f'const gonadotropinComparisonReferenceData = {gonadotropin_comparison_reference_js};\n'
         'return {\n'
@@ -96,6 +99,7 @@ def build():
         '  insl3DisplayPolicy: insl3DisplayPolicy,\n'
         '  femaleGonadotropinPolicy: femaleGonadotropinPolicy,\n'
         '  femaleGonadotropinData: femaleGonadotropinData,\n'
+        '  femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,\n'
         '  gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,\n'
         '  gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData\n'
         '};\n'

@@ -792,8 +792,10 @@ Wynik odnosi się wyłącznie do profilu własnej płci. Brak kwalifikacji
 drugiej płci nie blokuje poprawnego własnego punktu. Znana niezgodna
 metoda, materiał, leczenie, niepewny wiek, wynik cenzurowany oraz
 wcześniactwo lub nieznane donoszenie niemowlęcia zachowują znaczenie.
-Dwa żeńskie profile Madsen działają tylko w tym porównaniu; nie
-trafiają do zwykłych widoków, FSH Zec lub norm laboratoryjnych.
+Dwa profile Madsen o identyfikatorach `*-sex-comparison` działają tylko
+w tym porównaniu. Od 16.10.2026 zwykłe widoki mają odrębne profile tych
+samych median wieku, zgodnie z `female-gonadotropin-reference-policy.json`.
+Nie są to normy laboratoryjne; FSH Zec pozostało przed 6 lat przy Th1.
 
 Polityka: `gonadotropin-comparison-policy.json`; dodatkowe profile:
 `gonadotropin-comparison-reference-data.json`. Źródła, wersje,
@@ -928,7 +930,7 @@ innego hormonu nie mogą zmieniać krzywych LH/FSH w obrębie danego widoku.
 | --- | --- | --- | --- |
 | Całe życie | Synteza edukacyjna grup Schmidt 2000, Ji 2008 i Ljubicic 2020; mosty są poglądowe | Wspólna 0–70 IU/L, `log1p(C / 0.5) / log1p(70 / 0.5)` | Oryginalnie kwalifikowany wynik i źródłowe odniesienie, ta sama funkcja skali; znacznik nie jest przyciągany do ilustracji |
 | Minipuberty | Odczyt ryc. 3 Ljubicic 2022: podłużna średnia modelowana każdego hormonu / jego własne maksimum | Własny szczyt każdego hormonu = 100%; bez IU/L | Tekst wyniku w jednostce wejściowej oraz pion wieku; bez liczbowej kropki i mediany na względnej osi |
-| Pokwitanie | Osobne mediany wieku Madsen 2022, 6–16 lat | Wspólna liniowa 0–8 IU/L | Wyłącznie odniesienie kwalifikowane przez istniejący silnik; sam model żeński nie aktywuje nowego profilu |
+| Pokwitanie | Osobne mediany wieku Madsen 2022, 6–16 lat | Wspólna liniowa 0–8 IU/L | Od 16.10.2026 własne profile Madsen zwykłego LH/FSH, kwalifikowane przez istniejący silnik bez wymogu Th; cały przedział wieku i pozostałe bramki nadal obowiązują |
 | Cykl przy etapie „Dorosła” | Stricker 2006, 30 dziennych median, od −15 do +14 dni względem szczytu LH | Wspólna liniowa 0–50 IU/L | Brak punktu pacjentki i wyznaczania jej fazy cyklu |
 
 Równa wysokość LH i FSH na osi stężeń odpowiada tej samej liczbie IU/L,
