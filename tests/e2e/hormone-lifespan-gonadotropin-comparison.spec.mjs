@@ -1,11 +1,13 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect, closePatientEditor } from '../support/lab-puberty-quick.mjs';
+import { readFileSync } from 'node:fs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 const panel = page => page.locator('.vilda-hormone-lifespan');
 const chart = page => panel(page).locator('[data-lifespan="chart"]');
 const curves = (page, id) => chart(page).locator(`[data-comparison-curve="${id}"]`);
 const point = (page, id) => chart(page).locator(`[data-patient-concentration="${id}"]`);
+const sourceMedians = JSON.parse(readFileSync(new URL('../fixtures/hormone-lifespan-gonadotropin-source-medians.json', import.meta.url), 'utf8'));
 const profileId = (period, id, sex) => period === 'mini'
   ? `${sex === 'female' ? 'ljubicic' : 'busch'}2022-${sex}-${id}`
   : `madsen2022-${sex}-${id}${sex === 'female' ? '-sex-comparison' : ''}`;
@@ -196,13 +198,21 @@ for (const width of [320, 1440]) {
           }
         }
       }
-      // The female puberty comparison profile remains local to that view.
+      // The comparison profile stays local. Returning to ordinary life now
+      // uses its separate approved age profile, with the same source median.
       if (period === 'puberty') {
         expect(await page.evaluate(() => window.VildaHormoneLifespanData.patientPointData.profiles
           .some(profile => profile.id.endsWith('-sex-comparison')))).toBe(false);
+        const comparisonMedian = Number(await point(page, 'fsh').getAttribute('data-reference-value'));
         await panel(page).locator('[data-view="life"]').click();
         await expect(chart(page)).not.toHaveAttribute('data-comparison-scale');
-        await expect(point(page, 'fsh')).toHaveCount(0);
+        await expect(point(page, 'fsh')).toHaveCount(1);
+        await expect(point(page, 'fsh')).toHaveAttribute('data-profile', 'madsen2022-female-fsh-age-6-16');
+        await expect(point(page, 'fsh')).toHaveAttribute('data-reference-statistic', 'median');
+        await expect(point(page, 'fsh')).toHaveAttribute('data-value', '2');
+        const sourceMedian = sourceMedians.puberty.find(row => row.sex === 'female' && row.analyte === 'fsh' && row.ageYears === 13).median;
+        expect(comparisonMedian).toBeCloseTo(sourceMedian, 8);
+        await expect.poll(async () => Number(await point(page, 'fsh').getAttribute('data-reference-value'))).toBeCloseTo(sourceMedian, 8);
       }
     });
   }
