@@ -169,6 +169,12 @@ nie rozsyłają ponownie zmiany kontekstu; rzeczywista zmiana wieku wyliczonego
 z daty urodzenia nadal ją rozsyła, a działanie użytkownika zachowuje priorytet
 źródła w RAM.
 
+Ogólny przelicznik (tabele Tanner-zależne), HOMA-IR, kreator epikryzy i Karta
+Pacjenta czytają właściwą oś G/Th przez ten sam adapter z kwalifikacją `growth`
+(bieżąca albo wcześniejsza do 12 miesięcy, oznaczona); samo P nigdy ich nie
+zasila, a stary numer obowiązuje tylko bez typowanego zapisu
+(P-POKWITANIE-KONSUMENCI).
+
 Laboratorium może zamontować ten sam edytor bez opuszczania wyniku. Gdy nie ma
 żywego formularza, korekta ma jawny lokalny zakres i nie zapisuje pacjenta.
 Znane leczenie i wiek pobieramy z tego samego kontekstu. Osie wieku/stadium

@@ -5359,6 +5359,64 @@ Testy: `puberty-assessment-qualification`, `puberty-assessment-context`,
 `puberty-assessment-editor` i `lab-puberty-shared-assessment`, wraz z istniejącymi
 regresjami obliczeń, zapisu, mobile i PWA.
 
+### P-POKWITANIE-KONSUMENCI — stary numer Tannera w przeliczniku, HOMA-IR, epikryzie i Karcie Pacjenta, 2026-10-15
+
+**Zgłoszenie i decyzje właściciela.** Po etapie 2 (P-POKWITANIE-PANEL) ukryty
+`#tannerStage` nie jest już wypełniany, więc cztery miejsca czytające wyłącznie
+stary numer oślepły dla nowych rekordów (pomiar 2026-10-15 w Chromium: przy G3
+w panelu przelicznik pokazywał „(z danych: nieznany)” i odsyłał do panelu;
+HOMA-IR nie wypełniał etapu; kreator epikryzy nie widział G/Th/P; Karta Pacjenta
+nie pokazywała oceny poza chipami trajektorii). Decyzje właściciela:
+
+1. tabele Tanner-zależne ogólnego przelicznika (`TANNER_AWARE`: IGF-1, IGFBP-3,
+   DHEA-S, androstendion, estradiol, estron, DHT, SHBG, 17-OH-pregnenolon,
+   pregnenolon, testosteron) biorą właściwą oś G/Th z tej wizyty, a bez niej
+   wcześniejszą ocenę do 12 miesięcy, oznaczoną „wcześniejsza ocena”;
+2. HOMA-IR: G/Th 1 → „przedpokwitaniowy”, 2–4 → „pokwitanie”, 5 → „dojrzewanie
+   pełne” (jak dotąd traktowane normami dorosłych);
+3. samo P nigdy nie zasila tych miejsc;
+4. Karta Pacjenta pokazuje ostatni zapis G/Th/P z datą i wiekiem oceny.
+
+**Zmiana kliniczna: TAK (dobór zakresu i etapu z innego nośnika), bez nowych norm.**
+Tabele Mayo, progi HOMA-IR, treść epikryzy i wzory nie zmieniają się. Zmienia
+się źródło stadium: zamiast nieokreślonego starego numeru — typowana oś gonadalna
+właściwa dla płci, z kwalifikacją czasu identyczną jak w prognozach wzrostu
+(`VildaPubertyAssessmentContext.readActiveContext().growth`). Obecna typowana
+ocena (także pusta, błędna lub z nowszej wersji) nie wraca do starego numeru;
+stary `tannerStage` obowiązuje tylko bez typowanego zapisu, dla starych rekordów.
+Źródła opisowe stadiów bez zmian (P-POKWITANIE-KONTRAKT, P-POKWITANIE-PANEL).
+
+**Co jest.**
+- `przelicznik-jednostek.html`: `readTypedGonadal()` i `stageLabel()`;
+  `readPatientFromShared()` bierze typowaną oś przed starym numerem; opcja
+  domyślna selektora, opis pacjenta i nota nadpisania nazywają oś („G III”,
+  „Th II — wcześniejsza ocena”); nadpisanie lokalne bez zmian.
+- `homa-ir.html` + `custom-fixes.js`: strona ładuje `vilda_puberty_assessment.js`
+  i `vilda_puberty_assessment_context.js`; `Bhoma_etap()` mapuje oś na etap;
+  puste pole etapu dostaje ocenę także po późniejszym `vilda:auth-loaded`.
+- `vilda_epicrisis_ui.js`: `Le()` wypełnia G/Th i P kreatora z aktywnego
+  kontekstu (oś gonadalna i P kwalifikowane jak do wzrastania); stary select
+  i rekord tylko bez typowanej oceny.
+- `vilda_auth_ui.js`: sekcja „Dojrzewanie płciowe” ekranu edycji dostaje notę
+  tylko do odczytu „Ostatni zapis oceny G/Th/P: …” z datą i wiekiem oceny;
+  stadium nadal wpisuje się wyłącznie w panelu formularza.
+
+**Przypadki regresyjne (rzeczywiste strony, fikcyjne dane).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| sesja główna z G3 z tej wizyty, chłopiec 10 lat | przelicznik: „(z danych: G III)”, opis pacjenta „G III”, nadpisanie IV: „u pacjenta pozostaje G III” |
+| Th2 sprzed 6 miesięcy bez znacznika, dziewczynka | „(z danych: Th II — wcześniejsza ocena)” |
+| samo P3 obok starego `tannerStage: 2` | „(z danych: nieznany)”; stary numer nie wraca |
+| brak typowanej oceny, stary `tannerStage: 2` | „(z danych: Tanner II)” jak dotąd |
+| HOMA-IR: G3 / G5 / Th1 / samo P3 (ze starym 3) | etap `pub` / `full` / `pre` / pusty |
+| index: wiek 12, G3 i P2 → kreator epikryzy | `#epi-tanner-g` = 3, `#epi-tanner-p` = 2 |
+| rekord z Th3 (15.04.2026, 144 mies.) i P2 bez czasu | Karta: „Th3 (15.04.2026, w wieku 12 l 0 mies.) · P2 (czas oceny nieznany)” |
+
+Testy: e2e `pokwitanie-konsumenci.spec.mjs`; bez zmian przechodzą
+`jednostki-tanner-nadpisanie`, `application` (HOMA), `lab-puberty-*`,
+`chip-karta-pacjenta`, `powloka-konto-stan-narzedzi`.
+
 ### P-POKWITANIE-WIZYTA — oś oceniona w tej wizycie niesie wiek i datę wizyty, 2026-10-15
 
 **Zgłoszenie i decyzja właściciela.** Analiza panelu G/Th/P (2026-10-15) na

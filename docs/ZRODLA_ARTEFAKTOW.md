@@ -1105,6 +1105,31 @@ Kontrakt `buildInput` dla dawnych próbek pozostaje; tabele/silniki hormonów ni
 zostały scalone z rendererem ani zmienione. Wpływ kliniczny i źródła:
 `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-PANEL.
 
+## Łatki P-POKWITANIE-KONSUMENCI — konsumenci starego numeru Tannera (2026-10-15)
+
+Czytelne: `przelicznik-jednostek.html` (skrypt strony: `readTypedGonadal()`,
+`stageLabel()`, zmiany w `readPatientFromShared()`, `getEffectivePatient()`,
+`renderTannerOverrideState()`, `describePatient()`), `homa-ir.html` (dwa dodatkowe
+tagi `<script>` przed `custom-fixes.js`). Artefaktów nie przebudowano; trzy
+czytelne łatki w zminifikowanych plikach:
+
+- `custom-fixes.js`, IIFE strony HOMA-IR (po mapach `A` i `a`): funkcja
+  `Bhoma_etap(u)` — typowana oś z `VildaPubertyAssessmentContext.readActiveContext().growth`
+  (`usableForGrowth`, `kind` G/Th) mapowana mapą `a`; bez typowanej oceny stary
+  `u.tannerStage` jak dotąd. W `S(i)` wyrażenie `z=…,H=z?a[z]:""` zastąpione
+  `H=Bhoma_etap(u)`. Dodany nasłuch `vilda:auth-loaded` → `S(!1)` (wypełnia tylko
+  puste pole).
+- `vilda_epicrisis_ui.js`, `Le()`: przed dotychczasowym odczytem `#tannerStage`
+  blok `Bep_typ` — gdy `assessmentContext.status !== 'absent'`, G/Th z `growth`
+  i P z `axisStates.P.growthUsable` trafiają do `y.answers.clinical`, a stara
+  ścieżka (`t9`, `he2`) jest pomijana.
+- `vilda_auth_ui.js`, ekran edycji pacjenta, sekcja „Dojrzewanie płciowe”: zmienna
+  `Bp6` (tekst z `VildaPubertyAssessment.readUser(c.user)`) i pierwszy element
+  `Bp2` — `ve-note` tylko do odczytu. Edycja oceny nadal wyłącznie w panelu formularza.
+
+Testy: e2e `tests/e2e/pokwitanie-konsumenci.spec.mjs`. Wpływ kliniczny i decyzje:
+`docs/clinical/ALGORITHMS.md`, P-POKWITANIE-KONSUMENCI.
+
 ## Łatka P-POKWITANIE-WIZYTA — ocena z tej wizyty i wskaźnik zapisu (2026-10-15)
 
 Czytelne źródła: `vilda_puberty_assessment.js` (ta sama wizyta = ten sam ukończony

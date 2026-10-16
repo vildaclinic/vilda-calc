@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=30"></script>
-  <script src="vilda_session_bridge.js?v=79"></script>
+  <script src="vilda_session_bridge.js?v=80"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=155"></script>
+  <script src="vilda_chrome.js?v=156"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -1428,6 +1428,34 @@
       return null;
     }
 
+    /* P-POKWITANIE-KONSUMENCI (decyzja właściciela 2026-10-15): tabele Tanner-zależne
+     * (TANNER_AWARE) czytają typowaną oś gonadalną ze wspólnej oceny G/Th/P — G u chłopca,
+     * Th u dziewczynki, nigdy samo P — z tą samą kwalifikacją, co prognozy wzrostu:
+     * ocena z tej wizyty albo wcześniejsza do 12 miesięcy (oznaczona). Obecna typowana
+     * ocena (także pusta, błędna lub z nowszej wersji) nie wraca do starego numeru;
+     * stary `tannerStage` obowiązuje tylko bez typowanego zapisu. */
+    function readTypedGonadal() {
+      try {
+        var runtime = window.VildaPubertyAssessmentContext;
+        if (!runtime || typeof runtime.readActiveContext !== 'function') return null;
+        var ctx = runtime.readActiveContext({ patientId: currentPatientIdentity() || null });
+        var read = ctx && ctx.assessmentContext;
+        if (!read || read.status === 'absent') return null;
+        var growth = ctx.growth || {};
+        var usable = growth.usableForGrowth === true && (growth.kind === 'G' || growth.kind === 'Th')
+          && Number.isInteger(growth.stage);
+        return { typed: true, tanner: usable ? growth.stage : null, kind: usable ? growth.kind : null,
+          current: usable ? growth.current === true : false,
+          observedAtISO: usable ? growth.observedAtISO || null : null };
+      } catch (_) { return null; }
+    }
+
+    function stageLabel(stage, kind, current) {
+      if (!Number.isInteger(stage)) return 'nieznany';
+      var base = (kind === 'G' || kind === 'Th') ? kind + ' ' + RZYMSKIE[stage - 1] : 'Tanner ' + RZYMSKIE[stage - 1];
+      return current === false && (kind === 'G' || kind === 'Th') ? base + ' — wcześniejsza ocena' : base;
+    }
+
     function readPatientFromShared() {
       var shared = null;
 
@@ -1465,20 +1493,25 @@
       // Wyciąganie płci
       var sex = (shared.sex === 'M' || shared.sex === 'F') ? shared.sex : null;
 
-      // Wyciąganie Tannera — DEFENSYWNE z wielu pól
-      var tannerVal = extractTannerFromAny(shared);
+      // Typowana oś G/Th ze wspólnej oceny ma pierwszeństwo; stary numer tylko bez niej.
+      var typed = readTypedGonadal();
+      var tannerVal = typed ? typed.tanner : null;
+      if (!typed) {
+        // Wyciąganie Tannera — DEFENSYWNE z wielu pól (tylko stary zapis bez typowanej oceny)
+        tannerVal = extractTannerFromAny(shared);
 
-      // Faza 33: także sprawdź główny formularz w DOM jeśli jesteśmy w iframe/MPA
-      // i select #tannerStage mógł zostać wczytany przez userData.js zanim
-      // wartość trafi do localStorage.
-      if (tannerVal == null) {
-        try {
-          var tannerEl = document.getElementById('tannerStage');
-          if (tannerEl && tannerEl.value) {
-            var fromDom = parseInt(tannerEl.value, 10);
-            if (isFinite(fromDom) && fromDom >= 1 && fromDom <= 5) tannerVal = fromDom;
-          }
-        } catch (_) {}
+        // Faza 33: także sprawdź główny formularz w DOM jeśli jesteśmy w iframe/MPA
+        // i select #tannerStage mógł zostać wczytany przez userData.js zanim
+        // wartość trafi do localStorage.
+        if (tannerVal == null) {
+          try {
+            var tannerEl = document.getElementById('tannerStage');
+            if (tannerEl && tannerEl.value) {
+              var fromDom = parseInt(tannerEl.value, 10);
+              if (isFinite(fromDom) && fromDom >= 1 && fromDom <= 5) tannerVal = fromDom;
+            }
+          } catch (_) {}
+        }
       }
 
       if (sex == null && ageNum == null && tannerVal == null) return null;
@@ -1486,6 +1519,8 @@
         sex: sex,
         age: (ageNum != null && isFinite(ageNum)) ? ageNum : null,
         tanner: tannerVal,
+        tannerKind: typed ? typed.kind : null,
+        tannerCurrent: typed ? typed.current : null,
         source: 'shared'
       };
     }
@@ -1531,6 +1566,8 @@
                            localOverride.tanner != null || localOverride.cycle_phase);
       // Stadium z danych pacjenta i to, czy je tu nadpisano — dla opisu i noty.
       p._shared_tanner = (typeof shared.tanner === 'number' && isFinite(shared.tanner)) ? shared.tanner : null;
+      p._shared_tanner_kind = shared.tannerKind || null;
+      p._shared_tanner_current = shared.tannerCurrent == null ? null : shared.tannerCurrent;
       p._tanner_overridden = (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner));
       if (typeof currentSubstance !== 'undefined' && currentSubstance && currentSubstance.id === 'amh') {
         var amhSource = readPubertyPatientContext();
@@ -1555,10 +1592,9 @@
     /* Opcja domyślna selektora Tannera nazywa stadium z danych pacjenta, a wybór
      * innego dostaje notę: to nadpisanie lokalne, u pacjenta nic się nie zmienia. */
     function renderTannerOverrideState(p) {
+      var sharedLabel = stageLabel(p._shared_tanner, p._shared_tanner_kind, p._shared_tanner_current);
       if (overrideTannerDefaultEl) {
-        overrideTannerDefaultEl.textContent = (typeof p._shared_tanner === 'number')
-          ? '(z danych: Tanner ' + RZYMSKIE[p._shared_tanner - 1] + ')'
-          : '(z danych: nieznany)';
+        overrideTannerDefaultEl.textContent = '(z danych: ' + sharedLabel + ')';
       }
       if (overrideTannerWrapEl) overrideTannerWrapEl.classList.toggle('is-override', !!p._tanner_overridden);
       if (overrideTannerNoteEl) {
@@ -1566,7 +1602,7 @@
           overrideTannerNoteEl.textContent = 'Nadpisanie lokalne: Tanner ' + RZYMSKIE[p.tanner - 1]
             + ' obowiązuje tylko w tym przeliczniku i nie zapisuje się u pacjenta'
             + (typeof p._shared_tanner === 'number'
-              ? ' (u pacjenta pozostaje Tanner ' + RZYMSKIE[p._shared_tanner - 1] + ').'
+              ? ' (u pacjenta pozostaje ' + sharedLabel + ').'
               : ' (u pacjenta stadium nie jest wpisane — wpisz je w panelu „Dane pokwitaniowe" formularza głównego).');
           overrideTannerNoteEl.style.display = '';
         } else {
@@ -1591,10 +1627,11 @@
       }
       if (p.life_stage === 'pediatric') bits.push('wiek dziecięcy/młodzieńczy');
       if (typeof p.tanner === 'number') {
-        var tannerTxt = 'Tanner ' + RZYMSKIE[p.tanner - 1];
+        var tannerTxt = p._tanner_overridden ? 'Tanner ' + RZYMSKIE[p.tanner - 1]
+          : stageLabel(p.tanner, p._shared_tanner_kind, p._shared_tanner_current);
         if (p._tanner_overridden) {
-          tannerTxt += ' (nadpisanie lokalne' + (typeof p._shared_tanner === 'number'
-            ? '; u pacjenta: Tanner ' + RZYMSKIE[p._shared_tanner - 1] : '; u pacjenta: nieznany') + ')';
+          tannerTxt += ' (nadpisanie lokalne; u pacjenta: '
+            + stageLabel(p._shared_tanner, p._shared_tanner_kind, p._shared_tanner_current) + ')';
         }
         bits.push(tannerTxt);
       }
