@@ -87,7 +87,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=26" rel="stylesheet">
-<link href="style.css?v=88" rel="stylesheet">
+<link href="style.css?v=89" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 <link href="vilda_chrome.css?v=44" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=79" rel="stylesheet">
@@ -129,7 +129,7 @@
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=30"></script>
+<script defer src="vilda_persistence_adapter.js?v=31"></script>
 <script defer src="vilda_panel_pacjent.js?v=1"></script>
 <script defer src="vilda_session_bridge.js?v=81"></script>
 <script defer src="vilda_init.js?v=4"></script>
@@ -274,7 +274,7 @@
 </script>
 <script defer src="vilda_epicrisis.js?v=27"></script>
 <script defer src="vilda_epicrisis_ui.js?v=30"></script>
-<script defer src="vilda_publication_creator.js?v=20"></script>
+<script defer src="vilda_publication_creator.js?v=21"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=96" defer></script>
 
@@ -884,6 +884,15 @@
       <button type="button" id="openChartCreatorBtn" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
         Kreator siatek<sup class="pro-superscript">PRO</sup>
       </button>
+      <!-- P-PAL-POZIOM: układ PDF siatki Palczewskiej 1–18 lat. Widoczność i zaznaczenie ustawia
+           vilda_centile_landscape.js (refreshToggle, wołane z updateCentileButtons). -->
+      <div id="palPdfLayoutPicker" class="pal-pdf-layout-picker" hidden>
+        <span id="palPdfLayoutLabel" class="pal-pdf-layout-picker-label">Układ PDF</span>
+        <div class="adult-vitals-radio-group" role="radiogroup" aria-labelledby="palPdfLayoutLabel">
+          <label class="adult-vitals-radio-option"><input type="radio" name="palPdfLayout" id="palPdfLayoutPortrait" value="portrait" checked><span>2 strony A4 · pion</span></label>
+          <label class="adult-vitals-radio-option"><input type="radio" name="palPdfLayout" id="palPdfLayoutLandscape" value="landscape"><span>1 strona A4 · poziom</span></label>
+        </div>
+      </div>
     </div>
     <p style="font-size:0.9rem;margin-top:0.5rem;">
       <strong>BMI</strong> (Body Mass Index) to wskaźnik masy ciała obliczany jako
@@ -2170,7 +2179,9 @@
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_index_07.js?v=12"></script>
+  <script defer src="inline_index_07.js?v=13"></script>
+  <!-- P-PAL-POZIOM: siatka 1–18 lat na jednej stronie A4 poziomo (składanie strony, przełącznik „Układ PDF”). -->
+  <script defer src="vilda_centile_landscape.js?v=1"></script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,

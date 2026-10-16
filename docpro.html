@@ -86,7 +86,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="style.css?v=88" rel="stylesheet" />
+<link href="style.css?v=89" rel="stylesheet" />
 <link href="ios26-v2.css?v=26" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
 <link href="vilda_chrome.css?v=44" rel="stylesheet">
@@ -131,7 +131,7 @@
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=30"></script>
+<script defer src="vilda_persistence_adapter.js?v=31"></script>
 <script defer src="vilda_panel_pacjent.js?v=1"></script>
 <script defer src="vilda_session_bridge.js?v=81"></script>
 <script defer src="vilda_init.js?v=4"></script>
@@ -190,7 +190,7 @@
      isElementEnabled i adnotacje per pacjent, dzięki czemu wydruki siatek na
      docpro respektują te same ustawienia „Elementy siatki" co index.html
      (m.in. domyślnie wyłączoną ramkę podsumowania na siatce WHO). -->
-<script defer src="vilda_publication_creator.js?v=20"></script>
+<script defer src="vilda_publication_creator.js?v=21"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=35" defer></script>
 <script defer src="vilda_dymek.js?v=1"></script>
 <script defer src="vilda_app_helpers.js?v=3"></script>
@@ -2550,6 +2550,15 @@
       <button type="button" id="generatePalCentileChart" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
         Generuj siatkę Palczewska
       </button>
+      <!-- P-PAL-POZIOM: układ PDF siatki Palczewskiej 1–18 lat. Widoczność i zaznaczenie ustawia
+           vilda_centile_landscape.js (refreshToggle, wołane z updateCentileButtons). -->
+      <div id="palPdfLayoutPicker" class="pal-pdf-layout-picker" hidden>
+        <span id="palPdfLayoutLabel" class="pal-pdf-layout-picker-label">Układ PDF</span>
+        <div class="adult-vitals-radio-group" role="radiogroup" aria-labelledby="palPdfLayoutLabel">
+          <label class="adult-vitals-radio-option"><input type="radio" name="palPdfLayout" id="palPdfLayoutPortrait" value="portrait" checked><span>2 strony A4 · pion</span></label>
+          <label class="adult-vitals-radio-option"><input type="radio" name="palPdfLayout" id="palPdfLayoutLandscape" value="landscape"><span>1 strona A4 · poziom</span></label>
+        </div>
+      </div>
     </div>
 
 
@@ -3151,7 +3160,9 @@
   <!--  (z martwymi gałęziami trybu publikacyjnego) i nie jest już        -->
   <!--  ładowane; plik pozostaje w repo wyłącznie dla zgodności           -->
   <!--  wymaganego precache Service Workera (append-only).               -->
-  <script defer src="inline_index_07.js?v=12"></script>
+  <script defer src="inline_index_07.js?v=13"></script>
+  <!-- P-PAL-POZIOM: siatka 1–18 lat na jednej stronie A4 poziomo (składanie strony, przełącznik „Układ PDF”). -->
+  <script defer src="vilda_centile_landscape.js?v=1"></script>
 
   <!-- Skrypt aktywujący moduł lekarski na stronie DocPro. Po załadowaniu
        strony automatycznie zaznacza ukryty checkbox #isDoctor i wywołuje

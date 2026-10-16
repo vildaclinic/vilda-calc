@@ -701,16 +701,21 @@
       renderCtx = w.publicationCharts ? 'pub' : 'palRegular';
     }
     if (!renderCtx) return;
-    geomStore[geom.chartType] = {
+    var plotGeom = {
       plotX: geom.plotX, plotY: geom.plotY, plotW: geom.plotW, plotH: geom.plotH,
       minY: geom.minY, maxY: geom.maxY,
       ageMin: Number.isFinite(geom.ageMin) ? geom.ageMin : undefined,
       ageMax: Number.isFinite(geom.ageMax) ? geom.ageMax : undefined
     };
+    /* P-PAL-POZIOM: strona A4 poziomo rysuje wykres na mniejszym polu niż podgląd
+       kreatora. Taki render (transient) maluje adnotacje we własnej geometrii,
+       ale nie nadpisuje geometrii podglądu — inaczej klikanie w podgląd po
+       wygenerowaniu PDF trafiałoby obok punktów. */
+    if (!geom.transient) geomStore[geom.chartType] = plotGeom;
     if (suppressPainting) return;
     var adv = advForContext(w.advancedGrowthData || null, renderCtx);
     if (!adv) return;
-    var items = computeLayout(ctx, adv, geom.chartType, geomStore[geom.chartType]);
+    var items = computeLayout(ctx, adv, geom.chartType, plotGeom);
     drawItems(ctx, items);
   }
 

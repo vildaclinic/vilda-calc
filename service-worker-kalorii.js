@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.296';
+const SW_VERSION = '1.1.297';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -152,6 +152,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=86',
   '/style.css?v=87',
   '/style.css?v=88',
+  '/style.css?v=89',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -335,6 +336,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=28',
   '/vilda_persistence_adapter.js?v=29',
   '/vilda_persistence_adapter.js?v=30',
+  '/vilda_persistence_adapter.js?v=31',
   '/vilda_panel_pacjent.js?v=1',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
@@ -2261,6 +2263,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_publication_creator.js?v=18',
   '/vilda_publication_creator.js?v=19',
   '/vilda_publication_creator.js?v=20',
+  '/vilda_publication_creator.js?v=21',
   '/vilda_centile_interpolation.js',
   '/vilda_centile_interpolation.js?v=1',
   '/app.js?v=192',
@@ -2270,6 +2273,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_07.js?v=10',
   '/inline_index_07.js?v=11',
   '/inline_index_07.js?v=12',
+  '/inline_index_07.js?v=13',
   '/inline_docpro_05.js?v=2',
   '/vilda_centile_interpolation.js?v=2',
   '/inline_index_03.js?v=12',
@@ -3379,6 +3383,8 @@ const OPTIONAL_ASSETS = [
   '/inline_terminarz_01.css?v=1',
   '/inline_ustawienia_00.css?v=1',
   '/vilda_embedded.css?v=1',
+  '/vilda_centile_landscape.js',
+  '/vilda_centile_landscape.js?v=1',
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
