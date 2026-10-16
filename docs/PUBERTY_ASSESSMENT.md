@@ -40,6 +40,12 @@ Opcjonalne `user.pubertyAssessment` w istniejącym payloadzie wizyty:
   To data oceny cechy, nie znacznik czasu zapisu. Brak daty pozostaje brakiem.
 - `ageMonths`: zapisany wiek podczas oceny, nieujemna skończona liczba miesięcy
   (może być ułamkowa) albo `null`. Wiek nie wyznacza automatycznie daty oceny.
+- Oś wpisana w `currentAxes` znacznika wizyty ze źródłem `clinician-entry` niesie
+  wiek i datę **tej wizyty**: stan formularza aktualizuje je przy każdym odczycie
+  i w kolektorze, także gdy lekarz wpisał stadium przed wiekiem albo poprawił wiek
+  po kliknięciu (P-POKWITANIE-WIZYTA, decyzja właściciela 2026-10-15). Osie spoza
+  `currentAxes` są historią i nie są przepisywane. Obserwacja z innym jawnym
+  źródłem zachowuje swoje wartości.
 - `source`: niepusty tekst pochodzenia obserwacji albo `null`. Kod niczego nie
   dopowiada; brak źródła nie staje się „oceną lekarza”.
 - `sex`: płeć źródłowej oceny `M`, `F` albo `null`. Zmiana płci w formularzu nie
@@ -121,6 +127,13 @@ status bieżący również po powrocie do poprzedniej płci; historia pozostaje.
 Znacznik i ocena są kopiowane atomowo, bez uzupełniania pustych pól z wcześniejszej
 sesji. Nieobsługiwane dane zachowujemy, a edytor nie nadpisuje ich po cichu.
 
+Odniesienie wizyty liczy wiek z pól `age`, `ageMonths` i `ageWeeks`. Puste lata
+z domyślnym „0” miesięcy to wiek nieznany (`null`), nie noworodek; same miesiące
+albo tygodnie nadal opisują niemowlę. Tę samą wizytę rozpoznajemy po tym samym
+ukończonym miesiącu wieku: konsument może podać wiek dokładny (146,07 mies.),
+a formularz niesie miesiące ukończone (146); różnica poniżej jednego miesiąca nie
+odbiera ocenie statusu bieżącej.
+
 `VildaPubertyAssessment.gonadalContext(userOrReadResult, options)` zwraca G dla M
 albo Th dla F; samo P i stary `unspecified` nigdy nie zastępują tej osi. Wynik
 niesie osobno obserwację, `current`, `usableForGrowth`, powód i kwalifikowane
@@ -136,6 +149,12 @@ osi, potrzebną także do prezentacji P.
   biologiczna gwarancja ważności stadium. Przyszłe daty/wiek i sprzeczny stary
   zegar nie kwalifikują obserwacji; nieznany czas dawnej obserwacji nie dowodzi
   świeżości. Bez wieku dawnej oceny nie odtwarzamy czasu jej utrzymywania.
+
+Świadoma edycja oceny ogłasza `vilda:puberty-assessment-changed` z powodem `edit`.
+Wskaźnik stanu zapisu (`vilda_save_status_indicator.js`) przelicza po nim odcisk
+formularza tak samo, jak po polu formularza, więc chip pacjenta w nagłówku pokazuje
+niezapisane zmiany, a strażnik niezapisanych zmian pyta o zapis także po samej
+zmianie stadium.
 
 `VildaPubertyAssessmentContext.readActiveContext()` wybiera chroniony żywy
 formularz, a dopiero przy jego braku potwierdzoną sesję. Kolejność działań
