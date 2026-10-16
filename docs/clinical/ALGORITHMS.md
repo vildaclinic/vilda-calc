@@ -1009,6 +1009,54 @@ sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
 łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
 zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
 
+### LAB-E2 — brak niedopasowanego zakresu dorosłych, 2026-10-16
+
+**Wpływ kliniczny: tak.** `LabUnitsData` i `LabUnitConverter` 2.0.1:
+polityka danych `estradiol-matched-reference-only`, wersja `2026-10-16.1`,
+zatrzymuje dobór E2 po sprawdzeniu wszystkich dotychczasowych wierszy
+kontekstowych, jeżeli żaden nie pasuje. Nie uruchamia wtedy ani ogólnego
+wiersza `e2_default`, ani niezależnego `default_range_si`. Przeliczenie
+jednostek i wartość wyniku pozostają dostępne, bez zastępczej normy,
+kolorowej klasyfikacji, strzałki lub paska zakresu. Formularz nie wymaga
+nowych odpowiedzi.
+
+**Źródło i zakres weryfikacji:** pełny oficjalny katalog Mayo EEST/81816,
+[HTML](https://www.mayocliniclabs.com/test-catalog/Overview/81816) oraz
+[Test Definition PDF](https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=81816),
+7 stron, tabela Reference Values na stronie 3, odczyt 15.10.2026.
+Data generowania PDF nie jest datą rewizji zaleceń. Katalog dotyczy E2
+w surowicy, LC-MS/MS, pg/mL; oddziela dzieci i stadia Tannera od dorosłych,
+a dorosłych według płci i stanu rozrodczego. Dla 1–14 dni opisuje wysokie
+stężenia po urodzeniu i ich spadek, zamiast podawać dorosły RI. Tanner I
+ma warunek „>14 days and prepubertal”. Kolumna „Mean age” nie wyznacza
+granic wieku ani stadium. Katalog nie przedstawia kompletnej kohorty,
+pochodzenia populacji ani kwalifikacji wieku ciążowego.
+
+Weryfikacja uzasadnia odmowę użycia niedopasowanego dorosłego RI;
+nie potwierdza wszystkich dotychczasowych liczb E2. Aplikacyjne
+70–290 pmol/L pochodzi z odrębnego wpisu Tietz 2018, nie ze świeżego
+katalogu Mayo. Nie zmieniamy istniejących dopasowanych wierszy, konwersji,
+ich granic, zastępczych grup wieku/stadium ani żeńskiego 0–183 pmol/L
+w minipuberty. Ich pełna kwalifikacja źródłowa pozostaje osobnym zadaniem.
+Dotychczasowe automatyczne przyjęcie `life_stage: adult` przy nieznanym
+wieku oraz dopasowania Tannera także nie są zmieniane przez tę blokadę.
+Nie jest to ogólne rozwiązanie brakującego kontekstu E2 ani nowy profil
+laboratoryjny. Wykres, mediany i geometria edukacyjna pozostają odrębne.
+
+**Syntetyczne regresje produkcyjnego API i UI:** chłopiec 3 miesiące,
+20 pmol/L → przeliczenie zachowane, brak zakresu i oceny; przed poprawką
+`far_below` względem 70–290 pmol/L. Ten sam wiek i 20 pg/mL → zachowane
+73,42 pmol/L, bez dawnego pozornego `within`. Dziewczynka 3 miesiące
+nadal korzysta z istniejącego 0–183; dorosły mężczyzna z 40–160 pmol/L.
+Zmiana kontekstu i lokalne nadpisanie odświeżają zakres. Sprawdzane są
+oba fallbacki, zgodne wiersze, jednostki i brak wpływu na inne anality.
+
+**Zapis i historia:** obecny serializer utrwala brak porównania jako
+`unavailable`, z kontekstem i wynikiem, bez granic, klasyfikacji i strzałki.
+Nie zmieniamy modelu historii ani ponownie nie oceniamy wcześniejszych
+zapisów. Testy nie nadają normom statusu walidacji klinicznej; końcowy
+przegląd kliniczny i scalenie pozostają decyzją właściciela.
+
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 
 **Wpływ kliniczny: tak.** Pierwszy krok po przeglądzie dostępności median
@@ -5100,6 +5148,30 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 **Czego nie zmieniono.** Migawka poprzedniego pomiaru, „Od ostatniego pomiaru", układ i wygląd karty (etap 2). `expectedGainMedianHeightAware` zostaje w `app.js` (używa go `vilda_estimated_intake.js`); `medianHeightDeltaForAgeMonths` nie ma już konsumenta poza `app.js` — do sprzątania w etapie 2. Werdykt pary bez kontekstu GH/MPH/redukcji (`verdictForPairCtx`) — Karta pacjenta ma ten kontekst z rekordu, karta główna nie; przy pacjencie na GH panel Karty może dać „dobra odpowiedź na GH", a karta „stabilny tor" — do decyzji właściciela, czy dociągać kontekst z `advancedGrowthData`.
 
 *Strażnicy:* `tests/unit/ostatni-pomiar-porownanie.test.mjs` (9 — prawdziwe silniki tempa, trajektorii i BMI z produkcyjnymi tablicami w Node: zdanie tempa = `formatuj()`, werdykty = `verdictForPair`, nakładka waga↔BMI, krótki odstęp bez oceny, dorosły bez werdyktu z kategorią, Cole/talia/biodra/WHR neutralne; strażnik źródła bez starych pomocników, kontrola usuwacza komentarzy); `tests/e2e/ostatni-pomiar-porownanie.spec.mjs` (2 — prawdziwa ścieżka z modalem „Nowy pomiar": tekst sekcji zawiera zdanie tempa i werdykty policzone silnikami w tej samej stronie, brak „oczekiwania", zero alertów na trzech „stabilnych torach"; kontrola negatywna po 2 mies.: „krótki odstęp — bez oceny", bez „norma").
+
+### P-POWLOKA-AUTH-BOOT — otwieranie karty po zakończeniu startu konta, 2026-10-16
+
+**Zmiana funkcjonalna:** powłoka realizuje oczekującą intencję otwarcia karty
+dopiero po zakończeniu inicjalnego odtwarzania modułu konta. Sam eksport
+`VildaAuthUI` i odblokowanie sejfu mogły nastąpić wcześniej niż powrót
+`Ei()` z `tryRestoreSession()`. Końcowe ukrycie początkowego widoku konta
+mogło wtedy usunąć świeżo otwartą kartę pacjenta B.
+
+Wyścig ujawnił test `powloka-intencja-historia.spec.mjs` w pierwszym CI
+PR #700; odtworzono go także na poprzedniej bazie `cfec1da0`, zatrzymując
+wyłącznie koniec rzeczywistego odtwarzania sesji. Odczytowy stan
+`isBootReady()` jest gotowy po zakończeniu pierwszego startu konta;
+`mt()` używa istniejącego mechanizmu oczekiwania i ponawiania intencji.
+Nie powstaje drugi mechanizm wyboru pacjenta. Starszy moduł konta bez
+tego opcjonalnego gettera zachowuje dotychczasowy kontrakt.
+
+Regresja wykonuje rzeczywistą powłokę i moduł konta: zatrzymany retry A,
+odblokowany sejf przy niedokończonym starcie konta, nowsza intencja B,
+zwolnienie startu → karta B, późniejszy callback A → nadal karta B
+z właściwymi danymi. Nie zwiększa budżetu asercji ani liczby ponowień.
+Zmiana nie dodaje norm, progów lub interpretacji laboratoryjnych;
+dane, zapisy i identyfikatory pacjentów pozostają pod istniejącymi
+zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
 
 ### P-PANEL-POWROT — powrót do panelu powłoki bez ponownego wjazdu kart i przycisków (SW 1.1.242, 2026-10-12, zgłoszenie właściciela)
 

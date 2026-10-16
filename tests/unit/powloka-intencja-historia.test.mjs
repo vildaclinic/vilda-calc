@@ -4,6 +4,34 @@ import { describe, expect, it, vi } from 'vitest';
 import { nasluchy, powloka } from '../support/powloka-harness.mjs';
 
 describe('Powłoka: aktualna intencja listy i karty', () => {
+  it('odblokowany Start czeka na koniec auth boot i dostarcza tylko najnowszą kartę', () => {
+    const h = powloka(); h.shell.openPatientCardInStart('fikcyjny-a');
+    const starszy = [...h.timery.values()].find((x) => x.ms === 150).fn;
+    const f = h.load('start'); let ready = false;
+    f.contentWindow.VildaAuthUI.isBootReady = () => ready;
+    h.shell.openPatientCardInStart('fikcyjny-b'); h.tick(500);
+    expect(f.contentWindow.VildaAuthUI.showPatientCard).not.toHaveBeenCalled();
+    ready = true; h.tick(150); starszy();
+    expect(f.contentWindow.VildaAuthUI.showPatientCard.mock.calls).toEqual([['fikcyjny-b']]);
+  });
+  it.each(['openPatientCardInStart', 'openPatientsInStart'])('odejście w trakcie auth boot anuluje %s', metoda => {
+    const h = powloka(); h.shell[metoda]('fikcyjny-a'); const f = h.load('start');
+    let ready = false; f.contentWindow.VildaAuthUI.isBootReady = () => ready;
+    h.tick(300); h.shell.navigate('docpro'); ready = true; h.tick(500);
+    expect(f.contentWindow.VildaAuthUI.showPatientCard).not.toHaveBeenCalled();
+    expect(f.contentWindow.VildaAuthUI.showPatientsList).not.toHaveBeenCalled();
+    expect(h.win.location.hash).toBe('#/docpro');
+  });
+  it('lista oczekująca na auth boot zachowuje docelowy callback wyboru', () => {
+    const h = powloka(); h.shell.openPatientsInStart(); const f = h.load('start');
+    let ready = false; f.contentWindow.VildaAuthUI.isBootReady = () => ready;
+    h.tick(300); expect(f.contentWindow.VildaAuthUI.showPatientsList).not.toHaveBeenCalled();
+    ready = true; h.tick(150);
+    expect(f.contentWindow.VildaAuthUI.showPatientsList).toHaveBeenCalledOnce();
+    const data = { name: 'Fikcyjny wybrany po inicjalizacji' };
+    f.contentWindow.VildaAuthUI.showPatientsList.mock.calls[0][0](data);
+    expect(f.contentWindow.applyLoadedData).toHaveBeenCalledExactlyOnceWith(data);
+  });
   it('nowsza karta unieważnia nawet już zachowany callback starszego retry', () => {
     const h = powloka(); h.shell.openPatientCardInStart('fikcyjny-a');
     const starszy = [...h.timery.values()].find((x) => x.ms === 150).fn;

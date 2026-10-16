@@ -261,7 +261,7 @@ function P(t,e,href,request,options){
   if(request&&Sn_request===request){request.activationReady=true;b=request.origin}
   Sn_setTarget(t,state,!!target);
 }
-var ht=12e3,C=150;function mt(){try{var t=l.start;if(!t||!t.loaded||!t.frame)return null;var e=t.frame.contentWindow;if(!e)return null;var r=e.VildaAuthUI&&typeof e.VildaAuthUI.showPatientsList=="function"&&typeof e.applyLoadedData=="function"&&e.VildaVault&&typeof e.VildaVault.isUnlocked=="function"&&e.VildaVault.isUnlocked();return r?e:null}catch{return null}}function xt(t){Sn_openPatient("list",null,t)}
+var ht=12e3,C=150;function mt(){try{var t=l.start;if(!t||!t.loaded||!t.frame)return null;var e=t.frame.contentWindow;if(!e)return null;var r=e.VildaAuthUI&&(typeof e.VildaAuthUI.isBootReady!=="function"||e.VildaAuthUI.isBootReady())&&typeof e.VildaAuthUI.showPatientsList=="function"&&typeof e.applyLoadedData=="function"&&e.VildaVault&&typeof e.VildaVault.isUnlocked=="function"&&e.VildaVault.isUnlocked();return r?e:null}catch{return null}}function xt(t){Sn_openPatient("list",null,t)}
 function Ht(t,opts){if(t)Sn_openPatient("card",t,null,opts&&typeof opts.activeTab==="string"&&opts.activeTab?opts.activeTab:null)}
 function Wt(t){
   var e=t.target,r=e&&e.closest?e.closest("#mobileBottomDock .mobile-bottom-dock__item[href], .sidebar-nav a[href], .chrome-drawer-nav a[href]"):null;
