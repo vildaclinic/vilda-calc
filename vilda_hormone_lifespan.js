@@ -1267,7 +1267,7 @@
       const [minAge, maxAge] = visibleAgeDomain();
       const termAmhUnavailable = !compare && id === "amh" && patientPoint?.reason === "preterm-context";
       if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) ||
-          (compare && (patientAgeYears < minAge || patientAgeYears > maxAge)) ||
+          ((compare || termAmhUnavailable) && (patientAgeYears < minAge || patientAgeYears > maxAge)) ||
           (compare ? compareHormone !== id : !selected.has(id)) ||
           !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
           (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;

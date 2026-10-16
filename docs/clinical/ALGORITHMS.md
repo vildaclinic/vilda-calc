@@ -3014,6 +3014,9 @@ miesięcy lub 8–20 lat, a przy żeńskim mieszanym widoku pokwitania 6–16 la
 Granice te opisują oś, nie nowy zakres odniesienia. Dla niedostępnego źródła
 także poza osią pozostaje dotychczasowy konkretny komunikat kwalifikacji,
 np. o niezgodnej metodzie; nie obiecujemy wówczas punktu po zmianie okresu.
+Wyjątek zachowuje dotychczasowy komunikat AMH o donoszeniu: pokazuje się
+wyłącznie wtedy, gdy wiek niemowlęcia mieści się na bieżącej osi. Po wejściu
+do `puberty` nie przenosimy tego komunikatu z widoku niemowlęcego.
 
 **Źródła i wpływ kliniczny:** wykorzystujemy wyłącznie istniejące wyniki
 silnika i dane opisane w `HORMONE-LH-FSH-SEX-COMPARISON`,
@@ -3037,6 +3040,9 @@ M6, LH z niezgodną metodą → dotychczasowa informacja o metodzie, bez
 obietnicy punktu. Pusty lub cenzurowany wynik i odznaczony bieżący hormon
 nie otrzymują nowej obietnicy widoczności. Żeńskie LH/FSH dostępne tylko
 w porównaniu nie stają się odniesieniem zwykłych widoków.
+AMH, niemowlę 3-miesięczne obu płci z nieznanym wcześniactwem → istniejąca
+przyczyna `preterm-context`; podpis o donoszeniu w `life` i `mini`, bez tego
+podpisu w `puberty`. Przywrócenie `mini` zachowuje tę samą kwalifikację.
 
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
