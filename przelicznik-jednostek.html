@@ -106,7 +106,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=2" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=157"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -3120,6 +3120,16 @@
       return value > range.high || range.high_exclusive === true && value === range.high;
     }
 
+    // Decyzja 6.31 (za 6.30): wiersz domyślny przelicznika (is_default — zakres ogólny, użyty, bo żaden wiersz danych
+    // nie pasował do pacjenta; dziś zawsze dorosłych) u dziecka (life_stage z getEffectivePatient) — bez kategorii,
+    // koloru, znacznika na pasku i kolorowania tabeli. Granice i populacja zostają do wglądu. Ta sama reguła co
+    // VildaLabRangeSnapshot.describe (status 'general') w historii; LabUnitConverter.evaluate i zapis bez zmian.
+    var GENERAL_FOR_CHILD_TEXT = 'zakres ogólny — bez oceny dla dziecka';
+    function isGeneralRangeForChild(range, patient) {
+      return hasReferenceBounds(range) && range.is_default === true && !range.amh_reference &&
+        !!patient && patient.life_stage === 'pediatric';
+    }
+
     function referenceBoundsText(range, factor, precision) {
       var high = Conv.formatNumber(range.high / factor, precision);
       if (range.low === null) return (range.high_exclusive ? '<' : '≤') + high;
@@ -3157,6 +3167,20 @@
         warn.style.fontStyle = 'normal';
         warn.innerHTML = '<strong>⚠ Pomiar nieinterpretowalny diagnostycznie:</strong> ' + safeEsc(range.context_pl);
         return { element: warn, rangeInfo: range };
+      }
+      // Decyzja 6.31: zakres ogólny u dziecka — zamiast paska i znacznika wyciszona informacja z granicami i populacją.
+      if (isGeneralRangeForChild(range, patient)) {
+        var general = document.createElement('div');
+        general.className = 'lab-range-general';
+        var generalTitle = document.createElement('strong');
+        generalTitle.textContent = 'Zakres ogólny — bez oceny dla dziecka';
+        general.appendChild(generalTitle);
+        var generalText = document.createElement('span');
+        generalText.textContent = 'Dane przelicznika nie mają zakresu dla wieku dziecka. Zakres ogólny ' +
+          referenceBoundsText(range, 1, substance.precision || 3) + '\u00a0' + substance.canonical_si +
+          (range.context_pl ? ' (' + range.context_pl + ')' : '') + ' — tylko do wglądu, wynik bez oceny.';
+        general.appendChild(generalText);
+        return { element: general, rangeInfo: range };
       }
       // Zero is only the physical axis origin for a one-sided range.
       // The source's absent lower bound stays null in data and assessment.
@@ -3432,9 +3456,10 @@
       // Konwertujemy granice zakresu z SI na docelową jednostkę przez sprawdzenie
       // factor_to_si jej definicji; potem klasyfikujemy below/normal/above.
       // Gdy range ma flagę no_interpretation, zwraca null (brak kolorowania).
+      var currentGeneral = isGeneralRangeForChild(currentRange, patient);
       function statusForRow(unitSym, value) {
         if (!currentRange || value == null || !isFinite(value)) return null;
-        if (currentRange.no_interpretation) return null;
+        if (currentRange.no_interpretation || currentGeneral) return null;
         if (!hasReferenceBounds(currentRange)) return null;
         // Odwracamy konwersję SI → docelowa jednostka: target_value = si / factor_to_si
         var unitDef = null;
@@ -3500,7 +3525,7 @@
       // (pora pobrania, DST, faza cyklu, Tanner) była widoczna od razu w tekście.
       // Pomijamy gdy range ma flagę no_interpretation (pasek normy też się nie rysuje).
       if (hasReferenceBounds(currentRange)) {
-        metaParts.push('<strong>Aktualny zakres:</strong> ' +
+        metaParts.push('<strong>' + (currentGeneral ? 'Zakres ogólny (bez oceny dla dziecka):' : 'Aktualny zakres:') + '</strong> ' +
           safeEsc(referenceBoundsText(currentRange, 1, precision)) + ' ' +
           safeEsc(substance.canonical_si));
       } else if (currentRange && currentRange.no_interpretation) {
@@ -4091,7 +4116,8 @@
       // Klasyfikacja stanu (na podstawie SI vs zakres normy)
       var patient = getEffectivePatient();
       var range = Conv.selectRange(substance, patient);
-      var cls = classifyResultState(siValue, range);
+      var generalForChild = isGeneralRangeForChild(range, patient);
+      var cls = generalForChild ? { state: '', text: '' } : classifyResultState(siValue, range);
 
       // Big value
       var precision = substance.precision || 3;
@@ -4121,6 +4147,11 @@
           pill.textContent = cls.text;
         }
         resultStatusEl.appendChild(pill);
+      } else if (generalForChild) {
+        var generalPill = document.createElement('span');
+        generalPill.className = 'lab-range-status is-general';
+        generalPill.textContent = GENERAL_FOR_CHILD_TEXT;
+        resultStatusEl.appendChild(generalPill);
       } else if (range && range.no_interpretation && !range.amh_reference && !range.reference_unavailable) {
         var warn = document.createElement('span');
         warn.className = 'lab-range-status is-above';
@@ -4134,7 +4165,7 @@
       if (hasReferenceBounds(range)) {
         // Przelicz granice SI → jednostka docelowa
         var targetFactor = targetUnitObj && targetUnitObj.factor_to_si || 1;
-        resultSourceLineEl.innerHTML = '<strong>' + (range.low === null ? 'górna granica:' : 'zakres:') + '</strong> ' +
+        resultSourceLineEl.innerHTML = '<strong>' + (generalForChild ? 'zakres ogólny:' : range.low === null ? 'górna granica:' : 'zakres:') + '</strong> ' +
           safeEsc(referenceBoundsText(range, targetFactor, precision)) + ' ' + safeEsc(targetSym) +
           (range.amh_reference ? '<br><small>Porównanie orientacyjne · Mayo · Roche Elecsys AMH, surowica</small>' : '');
       } else {

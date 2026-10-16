@@ -90,6 +90,9 @@ test('prolaktyna u dziecka z zakresem ogólnym: okno i historia bez oceny, zapis
   const { patientId } = await otworzPrzelicznik(page, { badanie: 'prolactin', szukaj: 'Prolaktyna', wartosc: '' });
   await page.locator('#labUnit').selectOption('ng/mL');
   await page.locator('#labValue').fill('35');
+  // Decyzja 6.31: przelicznik na żywo też bez kategorii — ta sama informacja co okno i historia.
+  await expect(page.locator('#labResultStatus .lab-range-status.is-general')).toHaveText('zakres ogólny — bez oceny dla dziecka');
+  await expect(page.locator('#labRangeBlock .lab-range-scale')).toHaveCount(0);
   await page.locator('#labPinResultBtn').click();
   expect(await tekst(page.locator('#labPinRange'))).toBe('Zapisze się z wynikiem: zakres ogólny 2–29 ng/mL — bez oceny dla dziecka Dorośli, zakres ogólny · bez zakresu dla: dziewczynka, 12 l 3 m · Mayo Test 85670 — Prolaktyna');
   await page.locator('#labPinDate').fill('2026-06-17');

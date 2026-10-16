@@ -3377,6 +3377,7 @@ const OPTIONAL_ASSETS = [
   '/inline_o_aplikacji_00.css?v=1',
   '/inline_polityka_prywatnosci_00.css?v=1',
   '/inline_przelicznik_jednostek_00.css?v=1',
+  '/inline_przelicznik_jednostek_00.css?v=2',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',
