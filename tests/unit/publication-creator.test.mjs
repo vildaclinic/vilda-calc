@@ -863,6 +863,31 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     });
     expect(calls.filter((c) => c[0] === 'fillText').length).toBeGreaterThan(0);
   });
+
+  it('P-PAL-POZIOM: render jednorazowy (transient) maluje we własnej geometrii i nie nadpisuje geometrii podglądu', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    win.publicationCharts = true;
+    const podglad = { chartType: 'height', ...GEOM };
+    PC.drawAnnotations(fakeCtx([]), podglad);
+    const zapamietana = { ...PC._geomStore.height };
+    expect(zapamietana.plotW).toBe(GEOM.plotW);
+
+    // Wykres strony A4 poziomo: mniejsze pole rysowania niż w podglądzie kreatora.
+    const strona = { chartType: 'height', plotX: 120, plotY: 80, plotW: 1394, plotH: 1900, minY: 60, maxY: 190, transient: true };
+    const calls = [];
+    PC.drawAnnotations(fakeCtx(calls), strona);
+    expect(PC._geomStore.height, 'geometria podglądu kreatora bez zmian').toEqual(zapamietana);
+    const tekstyStrony = calls.filter((c) => c[0] === 'fillText');
+    expect(tekstyStrony.length, 'adnotacje są malowane na stronie poziomej').toBeGreaterThan(0);
+    // Pozycje liczone z geometrii strony, nie podglądu: wszystkie teksty mieszczą się w jej szerokości.
+    for (const t of tekstyStrony) expect(t[2]).toBeLessThan(strona.plotX + strona.plotW + 400);
+
+    // Ta sama geometria bez flagi (układ pionowy, transient:false) jest zapamiętywana jak dotąd.
+    PC.drawAnnotations(fakeCtx([]), { ...strona, transient: false });
+    expect(PC._geomStore.height.plotW).toBe(1394);
+  });
 });
 
 describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
@@ -889,8 +914,11 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('inline_index_07.js woła VildaPublicationCreator.drawAnnotations dla obu siatek', () => {
     expect(generatorSource).toContain(
-      'PC.drawAnnotations(e,{chartType:o,plotX:te+120,plotY:ne+80,plotW:Z-120-100,plotH:U-80-80,minY:F,maxY:R})'
+      'PC.drawAnnotations(e,{chartType:o,plotX:te+120,plotY:ne+80,plotW:Z-120-100,plotH:U-80-80,minY:F,maxY:R,transient:!!__lay})'
     );
+    // P-PAL-POZIOM: render strony A4 poziomo (Fe z layout) jest jednorazowy — nie nadpisuje
+    // geometrii podglądu kreatora; układ pionowy (bez layout) przekazuje transient:false
+    expect(generatorSource).toContain('const __lay=__layIn&&typeof __layIn=="object"&&Number.isFinite(__layIn.width)&&Number.isFinite(__layIn.height)?__layIn:null;');
     // delegacja jest poza gałęzią wyłącznie-wzrostową i BEZ bramki trybu
     // publikacji — drawAnnotations sam wybiera magazyn wg publicationCharts
     // (centralny kreator siatek: kontekst palRegular dla zwykłej siatki)
@@ -902,7 +930,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=20');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=21');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
