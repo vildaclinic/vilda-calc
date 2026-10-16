@@ -2,6 +2,8 @@
  * Conscious edits replace one observation only. A restored visit keeps
  * its exact JSON even if the patient's latest baseline refreshes in the background.
  * The full main-session payload already links Start and DocPro; no new storage.
+ * P-POKWITANIE-WIZYTA: an axis examined in this visit follows the visit's final
+ * age and date (anchorToVisit); historical axes are never redated.
  */
 (function (w) {
   'use strict';
@@ -65,9 +67,17 @@
       parsed.getUTCDate() === Number(value.slice(8, 10));
   }
 
+  // Blank years with "0" months (the field default) is an unknown age, not a
+  // newborn. Months alone or completed weeks still describe an infant.
+  function ageInMonths(years, months, weeks) {
+    if (years === null && !months && !weeks) return null;
+    return (years || 0) * 12 + (months || 0);
+  }
+
   function visitContext() {
     var years = number(field('age') && field('age').value);
     var months = number(field('ageMonths') && field('ageMonths').value);
+    var weeks = number(field('ageWeeks') && field('ageWeeks').value);
     var date = null;
     try {
       var api = w.VildaDobAge;
@@ -75,16 +85,33 @@
     } catch (_) { /* Missing examination date stays unknown. */ }
     return { sex: sex(field('sex') && field('sex').value),
       measuredAtISO: calendarDate(date) ? date : null,
-      ageMonths: years === null && months === null ? null : (years || 0) * 12 + (months || 0) };
+      ageMonths: ageInMonths(years, months, weeks) };
   }
 
   function payloadContext(payload) {
     var user = payload && payload.user || {};
-    var years = number(user.age);
-    var months = number(user.ageMonths);
     return { sex: sex(user.sex),
       measuredAtISO: calendarDate(user.measuredAtISO) ? user.measuredAtISO : null,
-      ageMonths: years === null && months === null ? null : (years || 0) * 12 + (months || 0) };
+      ageMonths: ageInMonths(number(user.age), number(user.ageMonths), number(user.ageWeeks)) };
+  }
+
+  // P-POKWITANIE-WIZYTA (owner decision 2026-10-15): an axis consciously examined
+  // in this visit (currentAxes, source 'clinician-entry') carries the age and
+  // date of this visit, also after the physician corrects the age field later.
+  // Axes outside currentAxes are history and keep their own age and date. An
+  // observation with another declared source keeps its explicit values.
+  function anchorToVisit(reference) {
+    if (!state || !state.visit || !state.raw || !state.raw.observations || !reference) return false;
+    var changed = false;
+    state.visit.currentAxes.forEach(function (axis) {
+      var observation = state.raw.observations[axis];
+      if (!observation || typeof observation !== 'object' || observation.source !== 'clinician-entry') return;
+      var age = reference.ageMonths == null ? null : reference.ageMonths;
+      var date = reference.measuredAtISO == null ? null : reference.measuredAtISO;
+      if (observation.ageMonths !== age) { observation.ageMonths = age; changed = true; }
+      if (observation.observedAtISO !== date) { observation.observedAtISO = date; changed = true; }
+    });
+    return changed;
   }
 
   function matchingReference(a, b) {
@@ -332,6 +359,14 @@
 
   function capture() {
     if (!eligible()) return { present: false, raw: null, mode: null, patientId: null, activityRevision: activityRevision };
+    // The live form is the visit: its reference and the axes examined in it follow
+    // the current fields. Fields mid-restore or a blocked edit do not redate anything.
+    if (state.visit && !editBlocked()) {
+      var live = visitContext();
+      if (!matchingReference(state.visit.reference, live)) state.visit.reference = clone(live);
+      anchorToVisit(live);
+      state.visitRaw = clone(state.visit);
+    }
     return { present: state.present, raw: state.present ? clone(state.raw) : null,
       mode: state.mode, patientId: state.patientId,
       visitPresent: state.visitPresent, visitRaw: state.visitPresent ? clone(state.visitRaw) : null,
@@ -471,8 +506,10 @@
       // back later cannot renew an examination; its historical JSON stays intact.
       invalidateIncompatibleAxes(sex(user.sex));
       // The importer may finish clearing/recalculating fields after load().
-      // Anchor transport to the final collected visit without redating an axis.
+      // Anchor transport and the axes examined in this visit to the final
+      // collected visit; historical axes keep their own date.
       state.visit.reference = payloadContext({ user: user });
+      anchorToVisit(state.visit.reference);
       state.visitRaw = clone(state.visit);
     }
     var value = capture();
@@ -564,7 +601,7 @@
   } catch (_) { /* explicit collector/restore hooks still operate */ }
   bindVault();
 
-  w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '2', load: load,
+  w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '3', load: load,
     capture: capture, applyToUser: applyToUser, clear: clear, mergeSession: mergeSession,
     read: read, subscribe: subscribe, editObservation: editObservation, visitContext: visitContext,
     getActivityRevision: getActivityRevision,

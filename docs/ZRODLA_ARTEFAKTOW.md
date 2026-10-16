@@ -1105,6 +1105,55 @@ Kontrakt `buildInput` dla dawnych próbek pozostaje; tabele/silniki hormonów ni
 zostały scalone z rendererem ani zmienione. Wpływ kliniczny i źródła:
 `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-PANEL.
 
+## Łatki P-POKWITANIE-KONSUMENCI — konsumenci starego numeru Tannera (2026-10-15)
+
+Czytelne: `przelicznik-jednostek.html` (skrypt strony: `readTypedGonadal()`,
+`stageLabel()`, zmiany w `readPatientFromShared()`, `getEffectivePatient()`,
+`renderTannerOverrideState()`, `describePatient()`), `homa-ir.html` (dwa dodatkowe
+tagi `<script>` przed `custom-fixes.js`). Artefaktów nie przebudowano; trzy
+czytelne łatki w zminifikowanych plikach:
+
+- `custom-fixes.js`, IIFE strony HOMA-IR (po mapach `A` i `a`): funkcja
+  `Bhoma_etap(u)` — typowana oś z `VildaPubertyAssessmentContext.readActiveContext().growth`
+  (`usableForGrowth`, `kind` G/Th) mapowana mapą `a`; bez typowanej oceny stary
+  `u.tannerStage` jak dotąd. W `S(i)` wyrażenie `z=…,H=z?a[z]:""` zastąpione
+  `H=Bhoma_etap(u)`. Dodany nasłuch `vilda:auth-loaded` → `S(!1)` (wypełnia tylko
+  puste pole).
+- `vilda_epicrisis_ui.js`, `Le()`: przed dotychczasowym odczytem `#tannerStage`
+  blok `Bep_typ` — gdy `assessmentContext.status !== 'absent'`, G/Th z `growth`
+  i P z `axisStates.P.growthUsable` trafiają do `y.answers.clinical`, a stara
+  ścieżka (`t9`, `he2`) jest pomijana.
+- `vilda_auth_ui.js`, ekran edycji pacjenta, sekcja „Dojrzewanie płciowe”: zmienna
+  `Bp6` (tekst z `VildaPubertyAssessment.readUser(c.user)`) i pierwszy element
+  `Bp2` — `ve-note` tylko do odczytu. Edycja oceny nadal wyłącznie w panelu formularza.
+
+Testy: e2e `tests/e2e/pokwitanie-konsumenci.spec.mjs`. Wpływ kliniczny i decyzje:
+`docs/clinical/ALGORITHMS.md`, P-POKWITANIE-KONSUMENCI.
+
+## Łatka P-POKWITANIE-WIZYTA — ocena z tej wizyty i wskaźnik zapisu (2026-10-15)
+
+Czytelne źródła: `vilda_puberty_assessment.js` (ta sama wizyta = ten sam ukończony
+miesiąc wieku) i `vilda_puberty_assessment_state.js` (`anchorToVisit()`,
+`ageInMonths()`; obserwacje z `currentAxes` o źródle `clinician-entry` dostają wiek
+i datę wizyty przy `capture()` i w `applyToUser()`). Artefaktów nie przebudowano.
+
+Jedyna zmiana w artefakcie: `vilda_save_status_indicator.js`, funkcja `se()`
+(rejestracja nasłuchów), bezpośrednio po nasłuchu `vilda:state-restored`:
+
+```js
+n.document.addEventListener("vilda:puberty-assessment-changed", function (r) {
+  try { r && r.detail && r.detail.reason === "edit" && w({ isTrusted: !0 }); } catch {}
+});
+```
+
+`w(e)` to istniejący odroczony handler zmiany pola (400 ms → `J()` → `B()`), który
+przelicza odcisk formularza z `collectUserData()`; przekazany obiekt omija wyłącznie
+jego warunek `isTrusted === false`. Powody `load`/`clear`/`identity`/`visit-change`
+nie uruchamiają przeliczenia: wczytanie i zmiana pacjenta mają własne nasłuchy.
+Nie zmieniono strażnika niezapisanych zmian (czyta `getState()` wskaźnika) ani
+importera. Test produkcyjnego wskaźnika: `tests/unit/save-status-pokwitanie.test.mjs`.
+Wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-WIZYTA.
+
 ## Łatka P-IMPORT-STATUS — kolejność importu i wskaźnika zapisu (2026-10-15)
 
 `vilda_data_import_export.js` i `vilda_save_status_indicator.js` zachowują istniejący

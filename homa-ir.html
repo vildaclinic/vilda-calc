@@ -76,7 +76,7 @@
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=30"></script>
-<script src="vilda_session_bridge.js?v=79"></script>
+<script src="vilda_session_bridge.js?v=81"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_deps.js?v=98"></script>
 <script>
@@ -115,7 +115,7 @@
        kolorystycznych z głównego arkusza (np. --primary, --secondary, --card), dzięki czemu
        narzędzie zachowuje spójny wygląd z resztą serwisu. -->
   <link href="inline_homa_ir_00.css?v=1" rel="stylesheet">
-<script src="vilda_chrome.js?v=155"></script>
+<script src="vilda_chrome.js?v=157"></script>
   <script src="lucide.min.js?v=1" defer></script>
 </head>
 
@@ -256,7 +256,9 @@
   <!-- Synchronizacja danych pacjenta ze shared storage (jednostronna: read-only).
        Wypełnia #age i #sex na podstawie VildaPersistence.sharedUserData bez
        write-backu — mapuje M/F — boy/girl specyficzne dla HOMA. -->
-  <script defer src="vilda_dymek.js?v=1"></script><script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=74" defer></script>
+  <script defer src="vilda_dymek.js?v=1"></script><script defer src="vilda_tab_guard.js?v=5"></script>
+  <!-- P-POKWITANIE-KONSUMENCI: typowana ocena G/Th z sesji głównej dla etapu dojrzewania (custom-fixes.js). -->
+  <script src="vilda_puberty_assessment.js?v=3"></script><script src="vilda_puberty_assessment_context.js?v=1"></script><script src="custom-fixes.js?v=75" defer></script>
 
   <!-- Skrypt obsługujący kalkulator HOMA‑IR. Przeniesiony z oryginalnej podstrony i
        dostosowany do nowej struktury. -->

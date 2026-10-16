@@ -5431,6 +5431,124 @@ Testy: `puberty-assessment-qualification`, `puberty-assessment-context`,
 `puberty-assessment-editor` i `lab-puberty-shared-assessment`, wraz z istniejącymi
 regresjami obliczeń, zapisu, mobile i PWA.
 
+### P-POKWITANIE-KONSUMENCI — stary numer Tannera w przeliczniku, HOMA-IR, epikryzie i Karcie Pacjenta, 2026-10-15
+
+**Zgłoszenie i decyzje właściciela.** Po etapie 2 (P-POKWITANIE-PANEL) ukryty
+`#tannerStage` nie jest już wypełniany, więc cztery miejsca czytające wyłącznie
+stary numer oślepły dla nowych rekordów (pomiar 2026-10-15 w Chromium: przy G3
+w panelu przelicznik pokazywał „(z danych: nieznany)” i odsyłał do panelu;
+HOMA-IR nie wypełniał etapu; kreator epikryzy nie widział G/Th/P; Karta Pacjenta
+nie pokazywała oceny poza chipami trajektorii). Decyzje właściciela:
+
+1. tabele Tanner-zależne ogólnego przelicznika (`TANNER_AWARE`: IGF-1, IGFBP-3,
+   DHEA-S, androstendion, estradiol, estron, DHT, SHBG, 17-OH-pregnenolon,
+   pregnenolon, testosteron) biorą właściwą oś G/Th z tej wizyty, a bez niej
+   wcześniejszą ocenę do 12 miesięcy, oznaczoną „wcześniejsza ocena”;
+2. HOMA-IR: G/Th 1 → „przedpokwitaniowy”, 2–4 → „pokwitanie”, 5 → „dojrzewanie
+   pełne” (jak dotąd traktowane normami dorosłych);
+3. samo P nigdy nie zasila tych miejsc;
+4. Karta Pacjenta pokazuje ostatni zapis G/Th/P z datą i wiekiem oceny.
+
+**Zmiana kliniczna: TAK (dobór zakresu i etapu z innego nośnika), bez nowych norm.**
+Tabele Mayo, progi HOMA-IR, treść epikryzy i wzory nie zmieniają się. Zmienia
+się źródło stadium: zamiast nieokreślonego starego numeru — typowana oś gonadalna
+właściwa dla płci, z kwalifikacją czasu identyczną jak w prognozach wzrostu
+(`VildaPubertyAssessmentContext.readActiveContext().growth`). Obecna typowana
+ocena (także pusta, błędna lub z nowszej wersji) nie wraca do starego numeru;
+stary `tannerStage` obowiązuje tylko bez typowanego zapisu, dla starych rekordów.
+Źródła opisowe stadiów bez zmian (P-POKWITANIE-KONTRAKT, P-POKWITANIE-PANEL).
+
+**Co jest.**
+- `przelicznik-jednostek.html`: `readTypedGonadal()` i `stageLabel()`;
+  `readPatientFromShared()` bierze typowaną oś przed starym numerem; opcja
+  domyślna selektora, opis pacjenta i nota nadpisania nazywają oś („G III”,
+  „Th II — wcześniejsza ocena”); nadpisanie lokalne bez zmian.
+- `homa-ir.html` + `custom-fixes.js`: strona ładuje `vilda_puberty_assessment.js`
+  i `vilda_puberty_assessment_context.js`; `Bhoma_etap()` mapuje oś na etap;
+  puste pole etapu dostaje ocenę także po późniejszym `vilda:auth-loaded`.
+- `vilda_epicrisis_ui.js`: `Le()` wypełnia G/Th i P kreatora z aktywnego
+  kontekstu (oś gonadalna i P kwalifikowane jak do wzrastania); stary select
+  i rekord tylko bez typowanej oceny.
+- `vilda_auth_ui.js`: sekcja „Dojrzewanie płciowe” ekranu edycji dostaje notę
+  tylko do odczytu „Ostatni zapis oceny G/Th/P: …” z datą i wiekiem oceny;
+  stadium nadal wpisuje się wyłącznie w panelu formularza.
+
+**Przypadki regresyjne (rzeczywiste strony, fikcyjne dane).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| sesja główna z G3 z tej wizyty, chłopiec 10 lat | przelicznik: „(z danych: G III)”, opis pacjenta „G III”, nadpisanie IV: „u pacjenta pozostaje G III” |
+| Th2 sprzed 6 miesięcy bez znacznika, dziewczynka | „(z danych: Th II — wcześniejsza ocena)” |
+| samo P3 obok starego `tannerStage: 2` | „(z danych: nieznany)”; stary numer nie wraca |
+| brak typowanej oceny, stary `tannerStage: 2` | „(z danych: Tanner II)” jak dotąd |
+| HOMA-IR: G3 / G5 / Th1 / samo P3 (ze starym 3) | etap `pub` / `full` / `pre` / pusty |
+| index: wiek 12, G3 i P2 → kreator epikryzy | `#epi-tanner-g` = 3, `#epi-tanner-p` = 2 |
+| rekord z Th3 (15.04.2026, 144 mies.) i P2 bez czasu | Karta: „Th3 (15.04.2026, w wieku 12 l 0 mies.) · P2 (czas oceny nieznany)” |
+
+Testy: e2e `pokwitanie-konsumenci.spec.mjs`; bez zmian przechodzą
+`jednostki-tanner-nadpisanie`, `application` (HOMA), `lab-puberty-*`,
+`chip-karta-pacjenta`, `powloka-konto-stan-narzedzi`.
+
+### P-POKWITANIE-WIZYTA — oś oceniona w tej wizycie niesie wiek i datę wizyty, 2026-10-15
+
+**Zgłoszenie i decyzja właściciela.** Analiza panelu G/Th/P (2026-10-15) na
+`audyt` d373075, zmierzona w prawdziwym Chromium na `index.html` i
+`przelicznik-jednostek.html`:
+
+| Scenariusz | Zapisana obserwacja G | Kwalifikacja przed zmianą |
+|---|---|---|
+| G3 kliknięte przed wpisaniem wieku, potem wiek 12 | `ageMonths: null`, data `null`; znacznik wizyty `ageMonths: 0` | dziś „bieżąca”, do rekordu idzie badanie bez wieku; przy następnej wizycie `unknown-time`, poza prognozami |
+| wiek 12, G3, korekta wieku na 13 | `ageMonths: 144` zostaje | `historical`, napis „G3 (wcześniej)”, LH/FSH bez stadium |
+| jak wyżej, korekta na 14 | bez zmian | `stale`, prognozy wzrostu bez stadium |
+| wczytany pacjent, chip „zapisane”, klik G3 | — | chip nadal „zapisane · Snapshot #1”; dopiero zmiana wzrostu dawała „niezapisane zmiany” |
+
+Właściciel wybrał: oś oceniona świadomie w tej wizycie podąża za końcowym wiekiem
+i datą wizyty, także po korekcie wieku; osie z wcześniejszych wizyt pozostają
+nietknięte.
+
+**Zmiana kliniczna: TAK (kwalifikacja danych), bez nowych norm.** Nie zmienia się
+żaden wzór, próg, tabela, jednostka ani interpretacja. Zmienia się to, jaki wiek
+i datę niesie obserwacja z bieżącej wizyty, a więc czy LH/FSH, testosteron,
+profil pokwitaniowy i tempo wzrastania dostają stadium z dzisiejszego badania.
+Dla osi z `currentAxes` wynik jest teraz taki sam niezależnie od kolejności
+wpisu (wiek przed stadium albo po nim). Dla osi historycznych nic się nie zmienia.
+Podstawa opisowa stadiów bez zmian: Marshall i Tanner 1969/1970 (wpisy
+P-POKWITANIE-KONTRAKT i P-POKWITANIE-PANEL).
+
+**Co jest.**
+- `vilda_puberty_assessment_state.js` (2 → 3): `anchorToVisit()` przy każdym
+  `capture()` (poza blokadą edycji i odtwarzaniem) oraz w `applyToUser()` przepisuje
+  wiek i datę wizyty do obserwacji z `currentAxes` o źródle `clinician-entry`.
+  `visitContext()`/`payloadContext()` czytają też `ageWeeks`; puste lata z „0”
+  miesięcy dają wiek `null` zamiast 0 miesięcy.
+- `vilda_puberty_assessment.js` (2 → 3): ta sama wizyta to ten sam ukończony
+  miesiąc wieku (różnica < 1 miesiąca); dotąd wymagano zgodności co do 1e-6
+  miesiąca, więc wiek dokładny z daty urodzenia (146,07) dawał „wcześniejsza ocena”.
+- `vilda_save_status_indicator.js`: nasłuch `vilda:puberty-assessment-changed`
+  (powód `edit`) przelicza odcisk formularza tą samą drogą, co pole formularza.
+  Strażnik niezapisanych zmian czyta ten stan, więc pyta o zapis także po samej
+  zmianie stadium.
+
+**Czego nie zmieniono.** Granica 12 miesięcy dla wzrastania, wymóg znacznika
+świadomej oceny dla `scope:'current'`, brak odnowienia osi przez autosave, F5 i
+„Nowy pomiar”, zachowanie P i starego numeru, treść chipa (nazwisko, wiek, płeć).
+
+**Przypadki regresyjne (rzeczywiste moduły).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| G3 przed wiekiem → wiek 12 | obserwacja `ageMonths: 144`, znacznik 144, `current: true` |
+| wiek 12 → G3 → 13 → 14 | obserwacja 156 → 168, `current: true`, tempo wzrastania „formularz”, bez „(wcześniej)” |
+| puste lata, miesiące „0” | odniesienie wizyty `ageMonths: null`; 0 lat 6 mies. → 6 |
+| rekord z G z 2025 (poza `currentAxes`) → korekta wieku, edycja P | G bez zmian, P z wiekiem wizyty, `currentAxes: ['P']` |
+| obserwacja z własnym źródłem `external-dated` | bez przepisania po korekcie wieku |
+| wiek dokładny 144,07 / 144,999 wobec 144 | bieżąca; 145 i 146,5 — nie |
+| wczytany pacjent → klik G3 | chip „niezapisane zmiany” bez innej zmiany pola |
+
+Testy: `puberty-assessment-persistence` (nowe i zaktualizowane przypadki),
+`puberty-assessment-qualification`, `save-status-pokwitanie`, e2e
+`pokwitanie-wiek-wizyty.spec.mjs`.
+
 ### P-POKWITANIE-KONTRAKT — oddzielny zapis G/Th/P, etap 1, 2026-10-14
 
 **Zakres i wpływ kliniczny.** Techniczne przygotowanie wspólnej oceny pokwitania:

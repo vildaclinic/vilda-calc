@@ -89,8 +89,13 @@
     return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
   }
 
+  // P-POKWITANIE-WIZYTA: the same visit means the same completed month of age.
+  // Consumers may pass an exact fractional age (146.07) while the form carries
+  // completed months (146); a difference below one month is the same visit.
+  var SAME_MONTH = 1 - 1e-9;
+
   function sameNumber(a, b) {
-    return a === null && b === null || finite(a) !== null && finite(b) !== null && Math.abs(a - b) < 1e-6;
+    return a === null && b === null || finite(a) !== null && finite(b) !== null && Math.abs(a - b) < SAME_MONTH;
   }
 
   // The marker records an explicit examination in this visit. A matching date,
@@ -147,7 +152,7 @@
     }
     var marker = opts.visitMarker;
     out.current = visitMatches(marker, opts) && marker.currentAxes.indexOf(axis) >= 0 &&
-      (ageDifference === null || Math.abs(ageDifference) < 1e-6) &&
+      (ageDifference === null || Math.abs(ageDifference) < SAME_MONTH) &&
       (!dated || observation.observedAtISO === opts.measuredAtISO);
     var fresh = false;
     if (ageDifference !== null) fresh = ageDifference <= 12 + 1e-6;
@@ -179,6 +184,6 @@
     return resolveAxis(input, axis, opts);
   }
 
-  global.VildaPubertyAssessment = { VERSION: '2', readUser: readUser, clone: clone,
+  global.VildaPubertyAssessment = { VERSION: '3', readUser: readUser, clone: clone,
     resolveAxis: resolveAxis, gonadalContext: gonadalContext, visitMatches: visitMatches };
 })(typeof window !== 'undefined' ? window : globalThis);
