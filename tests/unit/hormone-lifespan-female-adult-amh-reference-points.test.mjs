@@ -140,11 +140,12 @@ describe('AMH dorosłych kobiet — pięć surowiczych median grup FDA/Access', 
       .toEqual(unavailable('contraindicated'));
   });
 
-  it('bramka kontekstu pochodzi wyłącznie z profilu i nie zmienia dotychczasowych populacji', () => {
+  it('bramka kontekstu pochodzi wyłącznie z profilu; późniejsza polityka Jopling wyłącza tylko znaną ciążę', () => {
     const priorFemale = evaluate(15);
     const priorMale = evaluate(25, { sex: 'male' });
     for (const cyclePhase of excludedPhases) {
-      expect(evaluate(15, { cyclePhase })).toEqual(priorFemale);
+      expect(evaluate(15, { cyclePhase })).toEqual(cyclePhase === 'postmenopause'
+        ? priorFemale : unavailable('incompatible-reproductive-context'));
       expect(evaluate(25, { sex: 'male', cyclePhase })).toEqual(priorMale);
     }
     const profile = data.profiles.find(candidate => candidate.id === groups[0].id);

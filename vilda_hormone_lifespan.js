@@ -1295,9 +1295,7 @@
         "reference-unavailable": "W tym wieku źródło nie pozwala wiarygodnie nanieść wyniku.",
         "incompatible-specimen": "Wartość odniesienia nie dotyczy materiału tej próbki.",
         "incompatible-assay": "Brak wartości odniesienia dla potwierdzonej metody tej próbki.",
-        "incompatible-reproductive-context": id === "inhb"
-          ? "Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie."
-          : "Ta mediana dotyczy kobiet nieciężarnych z regularnymi cyklami.",
+        "incompatible-reproductive-context": "Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie.",
         "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
         "missing-puberty-stage": "To odniesienie dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",

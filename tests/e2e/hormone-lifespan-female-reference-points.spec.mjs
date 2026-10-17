@@ -316,6 +316,75 @@ test('the whole-life comparison opens puberty for F15 but keeps comparison sourc
   }
 });
 
+for (const width of [1440, 320]) {
+  test(`F16 AMH reuses known pregnancy from E2 without showing a source point and restores it when cleared at ${width}px`, async ({ page }) => {
+    await open(page, width);
+    await patient(page, 16);
+    const amh = examples[0];
+    const estradiol = { id: 'estradiol', hormone: 'e2', name: 'Estradiol', unit: 'pmol/L' };
+    await choose(page, amh, '1');
+    await expectSourcePoint(page, amh, 1);
+    const original = await geometry(page, amh);
+    expect(original.length).toBeGreaterThan(0);
+
+    for (const phase of ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3']) {
+      // Reuse the existing E2 context editor; AMH must not ask the clinician
+      // again for a fact already entered for the same fictional patient.
+      await choose(page, estradiol, '50');
+      await expect(point(page, estradiol)).toHaveCount(1);
+      if (!(await page.locator('#labOverrideCycle').isVisible())) await page.locator('#labPatientToggle').click();
+      await page.locator('#labOverrideCycle').selectOption(phase);
+      await expect(point(page, estradiol)).toHaveCount(0);
+      await choose(page, amh, '1');
+      await expect(page.locator('#labOverrideCycle')).toHaveValue(phase);
+      await expect(point(page, amh)).toHaveCount(0);
+      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toHaveText('Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie. Krzywe pozostają poglądowe.');
+      await expect(panel(page).locator('input, select, textarea')).toHaveCount(0);
+      await expect.poll(() => geometry(page, amh)).toEqual(original);
+      const before = await state(page);
+      await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
+      await expect(page.locator('#labValue')).toHaveValue('1');
+      await expect(point(page, amh)).toHaveCount(0);
+      expect(await state(page)).toEqual(before);
+
+      await choose(page, estradiol, '50');
+      if (!(await page.locator('#labOverrideCycle').isVisible())) await page.locator('#labPatientToggle').click();
+      await page.locator('#labOverrideCycle').selectOption('');
+      await choose(page, amh, '1');
+      await expectSourcePoint(page, amh, 1);
+      await expect.poll(() => geometry(page, amh)).toEqual(original);
+    }
+
+    // Local reproductive facts and the previous result must not follow a
+    // different identity. Unknown context keeps the existing limited source
+    // comparison available; it does not assert that pregnancy is absent.
+    await choose(page, estradiol, '50');
+    if (!(await page.locator('#labOverrideCycle').isVisible())) await page.locator('#labPatientToggle').click();
+    await page.locator('#labOverrideCycle').selectOption('pregnancy_t1');
+    await choose(page, amh, '1');
+    await expect(point(page, amh)).toHaveCount(0);
+    await page.evaluate(() => {
+      const id = 'fictional-new-female-amh-pregnancy-reference';
+      window._vildaCurrentPatientId = id;
+      sessionStorage.setItem('vildaCurrentPatientId', id);
+      document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: id } }));
+    });
+    await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+    await expect(page.locator('#labValue')).toHaveValue('');
+    await expect(point(page, amh)).toHaveCount(0);
+    await page.evaluate(() => {
+      window._vildaCurrentPatientId = null;
+      sessionStorage.removeItem('vildaCurrentPatientId');
+      document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: null } }));
+    });
+    await patient(page, 16);
+    await page.locator('#labValue').fill('1');
+    await expectSourcePoint(page, amh, 1);
+    await expect.poll(() => geometry(page, amh)).toEqual(original);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });
+}
+
 test('leaving the source age coverage removes both result and source marker instead of extending the group', async ({ page }) => {
   await open(page);
   for (const example of examples) {

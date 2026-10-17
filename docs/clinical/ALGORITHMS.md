@@ -2690,6 +2690,39 @@ rzeczywisty formularz. Status wykonania należy do raportu implementacji;
 te przypadki nie deklarują zaliczonych testów ani walidacji klinicznej.
 Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
 
+#### HORMONE-FEMALE-AMH-KNOWN-PREGNANCY — kwalifikacja Jopling, 2026-10-17
+
+**Problem i decyzja:** po wskazaniu ciąży przy E2 i przełączeniu na AMH
+16-latka nadal otrzymywała porównanie z medianą Jopling. Kontekst ciąży
+był zachowany, ale pięć pediatrycznych profili nie miało wyłączenia.
+Właściciel polecił mały PR dotyczący AMH i znanej ciąży.
+
+`female-adolescent-reference-policy.json` jawnie wyłącza `pregnancy_t1`,
+`pregnancy_t2` i `pregnancy_t3` we wszystkich pięciu żeńskich profilach
+Jopling. Generator przenosi regułę i jej pochodzenie do danych produkcyjnych;
+silnik korzysta z istniejącego mechanizmu `excludedCyclePhases`.
+To ostrożnościowa **polityka aplikacji**, nie potwierdzone kryterium
+wyłączenia autorów [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1.
+Populacja próbek szpitalnych, osocze Li-heparynowe, Access AMH, jednostki,
+oryginalne mediany i ograniczenia pozostają opisane powyżej i w źródłach.
+
+**Wpływ:** przy już znanej ciąży nie pokazujemy punktu pacjentki ani
+znacznika mediany. Zachowujemy wpisany wynik, przeliczenia i poglądową
+krzywą. Komunikat braku odniesienia nie sugeruje regularnych cykli
+w kohorcie pediatrycznej. Brak kontekstu nadal pozwala na ograniczone
+porównanie edukacyjne, bez potwierdzania nieobecności ciąży. Nie dodajemy
+pól, norm, median, wymogu cyklu ani wyłączenia menopauzy w pediatrii.
+Dotychczasowe profile FDA, niemowlęce, męskie, inne hormony, geometria,
+skale i odczyt utrwalonych historycznych ocen pozostają bez zmian.
+
+**Syntetyczne wejście → wynik:** F16, AMH 1 ng/mL, `pregnancy_t1/t2/t3`
+→ `unavailable / incompatible-reproductive-context`, bez zastępczego
+źródła. Po usunięciu lokalnego kontekstu → ta sama mediana grupy
+21,14 pmol/L = 2,961714 ng/mL. Regresje wywołują rzeczywisty silnik dla
+pięciu profili i trzech trymestrów oraz formularz E2 → AMH na desktopie
+i 320 px; obejmują odświeżenie tej samej osoby i reset po zmianie pacjenta.
+Testy nie nadają tej regule statusu walidacji klinicznej.
+
 #### Uzupełnienie — inhibina B od 5,6 roku, 2026-10-13
 
 **Problem i akceptacja:** dla dziewczynki 6 lat z wynikiem 33 pg/mL silnik

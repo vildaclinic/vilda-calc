@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { priorFemaleGonadotropinBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeAmhPregnancyPolicy, priorFemaleGonadotropinBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -25,12 +25,12 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 describe('Zwykłe żeńskie LH/FSH — jawna polityka wieku Madsen i Zec poniżej 6 lat', () => {
   it('zmienia wyłącznie dwa profile Zec i dodaje dwa osobne profile Madsen, zachowując 74 pozostałe', () => {
     expect(data.profiles).toHaveLength(78);
-    expect(data.version).toBe('2026-10-17.1');
+    expect(data.version).toBe('2026-10-17.2');
     const unchanged = data.profiles.filter(p => !changedIds.includes(p.id) &&
-      p.id !== 'madsen2022-female-e2-age-6-18');
+      p.id !== 'madsen2022-female-e2-age-6-18').map(beforeAmhPregnancyPolicy);
     expect(unchanged).toHaveLength(74);
     // Independently computed from audyt 28aaa185, excluding precisely the two
-    // approved Zec changes. This assertion uses current, unmodified profiles.
+    // approved Zec changes and restoring only the later, separately tested AMH policy.
     expect(digest(unchanged)).toBe('0261e122f72fead0a48e2f2ab6833a799bd24814b416fe4bac91c0a70fc897b2');
     expect(digest(priorFemaleGonadotropinBundle(data)))
       .toBe('aef4c62968a915c03f169befe253135c13b1538b307a9daa5e03f729e7932885');
