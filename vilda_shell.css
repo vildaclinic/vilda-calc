@@ -234,3 +234,11 @@ html.vilda-pane-modal-open #appShellScrollTop {
   visibility: hidden!important;
   pointer-events: none!important
 }
+
+/* P-KLAWIATURA: na telefonie powloka ma dokladnie wysokosc ekranu. Panel konczy sie na dolnej krawedzi ekranu, a dolne odstepy kolumn (.desktop-layout 16 px, .main-content 3,2 px) wystawaly pod nia, wiec dokument powloki dawal sie przesunac (iOS przesuwa go przy klawiaturze). */
+@media(max-width:991.98px) {
+  .vilda-shell-host .desktop-layout,
+  .vilda-shell-host .main-content {
+    padding-bottom: 0!important
+  }
+}
