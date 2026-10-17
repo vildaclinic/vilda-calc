@@ -5611,6 +5611,8 @@ zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
   - programowy fokus bez dotknięcia nie przewija, a dopiero wysunięta klawiatura stawia pole nad nią.
   
   Na bazie padają 4/4: panel do 911 zamiast 852 px, 19 px nadmiaru, waga 688 px przy linii 500 px, wzrost 761 px.
+
+  Od P-DYMEK-ZAKRESU scenariusz i programowy fokus startują z ramką na 1 px. `ios26-ui.js` (`primeMobileBrowserUiChrome`) asynchronicznie przewija stronę stojącą na samej górze o 1 px. W jednym pełnym przebiegu pod obciążeniem pomiar „przed” trafił przed tę korektę, a „po” za nią (0 → 1 px). Moduł klawiatury nic wtedy nie przewijał; 24 powtórzenia z rejestrowaniem przewinięć tego nie odtworzyły. Na pozycji 1 px korekta nie działa, a porównania zostają dokładne.
 - `tests/unit/klawiatura-pole.test.mjs` (10) — `pasWidoczny` i `przesuniecie` z pliku produkcyjnego.
 
 **Do potwierdzenia na iPhonie (PWA).** Nagłówek nie znika przy wpisywaniu. Każde dotknięte pole stoi nad klawiaturą. Formularz nie rusza się, gdy pojawiają się wyniki. Po schowaniu klawiatury na dole nie zostaje przerwa. Playwright nie ma WebKita, a podglądu PR nie ma, więc kontrola odbywa się po scaleniu albo na instalacji testowej. Jeżeli iOS mimo wszystko przesunie powłokę, następnym krokiem jest cofnięcie tego przesunięcia po wysunięciu klawiatury, bo dziś `J()` robi to dopiero po jej schowaniu.
