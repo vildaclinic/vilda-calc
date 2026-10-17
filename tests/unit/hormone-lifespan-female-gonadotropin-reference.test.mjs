@@ -24,9 +24,10 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('Zwykłe żeńskie LH/FSH — jawna polityka wieku Madsen i Zec poniżej 6 lat', () => {
   it('zmienia wyłącznie dwa profile Zec i dodaje dwa osobne profile Madsen, zachowując 74 pozostałe', () => {
-    expect(data.profiles).toHaveLength(77);
-    expect(data.version).toBe('2026-10-16.1');
-    const unchanged = data.profiles.filter(p => !changedIds.includes(p.id));
+    expect(data.profiles).toHaveLength(78);
+    expect(data.version).toBe('2026-10-17.1');
+    const unchanged = data.profiles.filter(p => !changedIds.includes(p.id) &&
+      p.id !== 'madsen2022-female-e2-age-6-18');
     expect(unchanged).toHaveLength(74);
     // Independently computed from audyt 28aaa185, excluding precisely the two
     // approved Zec changes. This assertion uses current, unmodified profiles.

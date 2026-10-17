@@ -33,7 +33,7 @@ const groups = [
 describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilustracji', () => {
   it('dodaje tylko trzy rozłączne profile, zachowując 65 pozostałych wcześniejszych profili i przeliczenia', () => {
     expect(newIds).toEqual(groups.map(g => g.id));
-    expect(data.profiles).toHaveLength(77);
+    expect(data.profiles).toHaveLength(78);
     expect(laterFemaleIds).toHaveLength(5);
     // The later extension of the one ordinary female inhibin profile is tested separately.
     const revisedInhibinId = 'borelli2025-female-inhb-age-5p6-47';

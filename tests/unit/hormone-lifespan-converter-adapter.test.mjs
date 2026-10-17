@@ -503,6 +503,143 @@ describe('Hormone lifespan converter adapter — current result only', () => {
   });
 });
 
+describe('Żeńskie E2 — aktualny kontekst bez dodatkowego formularza', () => {
+  function femaleE2Adapter(years = 12, months = 0) {
+    const app = adapter({
+      currentSubstance: { id: 'estradiol' }, unitEl: { value: 'pmol/L' },
+      sourcePatient: { identityKey: '', sourceStatus: 'ready', sex: 'F',
+        ageYears: years, ageMonths: months, preterm: 'no' },
+    });
+    app.context.getEffectivePatient = () => ({ sex: app.context.sourcePatient.sex,
+      age: years + months / 12, cycle_phase: app.context.localOverride.cycle_phase });
+    const calculate = () => app.update({ id: 'estradiol' }, null,
+      { ok: true, siValue: 50, siUnit: 'pmol/L' });
+    return { ...app, calculate, reference: () => lifespanReference.evaluate(lifespanData, app.last()) };
+  }
+
+  it('uses the known current female age and conversion without inventing a sample context or Tanner', () => {
+    const app = femaleE2Adapter();
+    app.calculate();
+    expect(app.last()).toMatchObject({ analyte: 'estradiol', sex: 'female', ageYears: 12,
+      ageUpperYears: 12 + 1 / 12, puberty: null, specimen: null, assayMethodId: null,
+      measurement: { value: 50, unit: 'pmol/L', operator: '=' }, contraindicated: false });
+    expect(app.reference()).toMatchObject({ status: 'ready', referenceValue: 52.46318409704675,
+      profile: { id: 'madsen2022-female-e2-age-6-18' } });
+  });
+
+  it('preserves known current pregnancy and hormonal facts, including for the existing infant source', () => {
+    const facts = [
+      { pregnancy: 'yes' }, { pregnancy: true }, { reproductiveContext: 'pregnancy' },
+      { treatment: { context: 'hormonal' } },
+      ...['gnrha', 'sexSteroids', 'cocp', 'exogenousTestosterone'].flatMap(key =>
+        ['yes', true].map(value => ({ treatment: { [key]: value } }))),
+    ];
+    for (const [years, months, median] of [[12, 0, 52.46318409704675], [0, 3, 21.616]]) {
+      const app = femaleE2Adapter(years, months);
+      app.calculate();
+      expect(app.reference()).toMatchObject({ status: 'ready', referenceValue: median });
+      for (const known of facts) {
+        app.context.testosteroneMeasurementContext = known;
+        const before = structuredClone(known);
+        app.calculate();
+        expect(app.last()).toMatchObject({ contraindicated: true,
+          measurement: { value: 50, unit: 'pmol/L', operator: '=' } });
+        expect(app.reference()).toEqual({ status: 'unavailable', reason: 'contraindicated' });
+        expect(known).toEqual(before);
+      }
+    }
+  });
+
+  it('keeps unknown context unknown and does not borrow a dated result, method, material or test protocol', () => {
+    for (const known of [{}, { pregnancy: 'unknown', treatment: { sexSteroids: 'unknown' } },
+      { pregnancy: 'no', treatment: { cocp: 'no' } },
+      { pregnancy: 'yes', contextBasis: 'sample' },
+      { treatment: { sexSteroids: 'yes' }, sampleDateISO: '2020-01-01' },
+      { assay: { confirmation: 'reported', methodId: 'fictional-immunoassay' },
+        specimen: 'plasma', measurementKind: 'stimulated', collectionTime: 'evening' }]) {
+      for (const [years, months] of [[12, 0], [0, 3]]) {
+        const app = femaleE2Adapter(years, months);
+        app.context.testosteroneMeasurementContext = known;
+        const before = structuredClone(known);
+        app.calculate();
+        expect(app.last()).toMatchObject({ contraindicated: false, assayMethodId: null, specimen: null });
+        expect(app.reference().status).toBe('ready');
+        expect(known).toEqual(before);
+      }
+    }
+    // A negative in another carrier must not erase an explicit current fact.
+    const app = femaleE2Adapter();
+    app.context.localOverride.cycle_phase = 'pregnancy_t2';
+    app.context.testosteroneMeasurementContext = { pregnancy: 'no', treatment: { sexSteroids: 'no' } };
+    app.calculate();
+    expect(app.last().contraindicated).toBe(true);
+  });
+
+  it('reuses a normal known cycle phase and blocks explicit pregnancy and postmenopause without changing the result', () => {
+    const app = femaleE2Adapter();
+    for (const cycle of [null, 'follicular', 'ovulation', 'luteal']) {
+      app.context.localOverride.cycle_phase = cycle;
+      app.calculate();
+      expect(app.reference()).toMatchObject({ status: 'ready', referenceValue: 52.46318409704675 });
+    }
+    for (const cycle of ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmenopause']) {
+      app.context.localOverride.cycle_phase = cycle;
+      app.calculate();
+      expect(app.reference().status).toBe('unavailable');
+      expect(app.last().measurement).toEqual({ value: 50, unit: 'pmol/L', operator: '=' });
+    }
+  });
+
+  it('clears E2 facts and the old measurement on patient changes, including a stale conversion', () => {
+    const app = femaleE2Adapter();
+    app.context.testosteroneMeasurementContext = { treatment: { cocp: 'yes' } };
+    app.context.localOverride.cycle_phase = 'pregnancy_t1';
+    app.calculate();
+    expect(app.last().contraindicated).toBe(true);
+    app.context.identity = 'fictional-next-e2-patient';
+    app.context.sourcePatient.identityKey = app.context.identity;
+    app.calculate();
+    expect(app.last().measurement).toBeNull();
+    expect(app.context.valueEl.value).toBe('');
+    expect(app.context.localOverride.cycle_phase).toBeNull();
+    expect(app.context.testosteroneMeasurementContext).toEqual({});
+    app.calculate();
+    expect(app.last().contraindicated).toBe(false);
+    expect(app.reference().status).toBe('ready');
+  });
+
+  it('does not revive positive facts after F→M→F and does not borrow them from an unavailable source', () => {
+    const app = femaleE2Adapter();
+    app.context.testosteroneMeasurementContext = { treatment: { sexSteroids: 'yes' } };
+    app.context.localOverride.cycle_phase = 'pregnancy_t3';
+    app.calculate();
+    expect(app.last().contraindicated).toBe(true);
+    app.context.sourcePatient.sex = 'M';
+    app.calculate();
+    expect(app.context.testosteroneMeasurementContext).toEqual({});
+    expect(app.context.localOverride.cycle_phase).toBeNull();
+    app.context.sourcePatient.sex = 'F';
+    app.calculate();
+    expect(app.reference().status).toBe('ready');
+    app.context.testosteroneMeasurementContext = { pregnancy: 'yes' };
+    app.context.sourcePatient.sourceStatus = 'loading';
+    app.calculate();
+    expect(app.last()).toMatchObject({ measurement: null, contraindicated: false });
+  });
+
+  it('drops a stale legacy cycle in the same update that detects M→F', () => {
+    const app = femaleE2Adapter();
+    app.context.lifespanCurrentSex = 'M';
+    app.context.localOverride.cycle_phase = 'pregnancy_t1';
+    app.context.testosteroneMeasurementContext = { pregnancy: 'yes' };
+    app.calculate();
+    expect(app.context.localOverride.cycle_phase).toBeNull();
+    expect(app.context.testosteroneMeasurementContext).toEqual({});
+    expect(app.last()).toMatchObject({ contraindicated: false, cyclePhase: null });
+    expect(app.reference().status).toBe('ready');
+  });
+});
+
 describe('Inhibin B current reproductive context — existing form only', () => {
   function currentEvaluation(extra = {}) {
     return inhibin.evaluate({ analyte: 'inhibin_b', sex: 'F', value: 33, unit: 'pg/mL',

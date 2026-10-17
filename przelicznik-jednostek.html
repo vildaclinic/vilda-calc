@@ -465,7 +465,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=26"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=27"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=6"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=13"></script>
@@ -879,8 +879,13 @@
         || ![undefined, null, '', 'unknown', 'basal'].includes(protocol)
         || ![undefined, null, '', 'unknown', 'serum'].includes(specimen);
     }
-    function lifespanGonadotropinContraindicated(substance, source, input) {
-      if (!substance || !['lh', 'fsh'].includes(substance.id) || !input || input.sex !== 'F') return false;
+    function lifespanFemaleHormoneContraindicated(substance, source, input, patient) {
+      if (!substance || !['lh', 'fsh', 'estradiol'].includes(substance.id)) return false;
+      // E2 uses the current converter context; its legacy input carries age
+      // only. Do not manufacture a sample sex/date or borrow historical facts.
+      var currentEstradiol = substance.id === 'estradiol';
+      var target = currentEstradiol ? patient : input;
+      if (!target || target.sex !== 'F') return false;
       function positive(value) { return value === true || value === 'yes'; }
       function pregnancy(known) {
         return positive(known.pregnancy) || /^pregnancy(?:_t[123])?$/.test(known.reproductiveContext || known.cycle_phase || '');
@@ -893,9 +898,10 @@
       }
       // These are conservative application restrictions on the educational
       // point. The laboratory evaluation and its saved input stay unchanged.
-      if (pregnancy(input) || hormonal(input.treatment)) return true;
-      if (source.sourceStatus !== 'ready' || source.sex !== 'F' || input.contextBasis !== 'current-patient' || input.sampleDateISO) return false;
-      var current = getEffectivePatient();
+      if (pregnancy(target) || hormonal(target.treatment)) return true;
+      if (source.sourceStatus !== 'ready' || source.sex !== 'F'
+          || !currentEstradiol && (input.contextBasis !== 'current-patient' || input.sampleDateISO)) return false;
+      var current = currentEstradiol ? patient : getEffectivePatient();
       if (!current || current.sex !== 'F') return false;
       // Reuse only already known facts for this current person. Do not copy a
       // different analyte's assay, specimen, collection time or test protocol.
@@ -976,6 +982,9 @@
           testosteroneMeasurementContext = {};
           localOverride.cycle_phase = null;
           if (overrideCycleEl) overrideCycleEl.value = '';
+          // The legacy E2 object was read before this reset. Re-read it so
+          // the same render cannot retain the abandoned reproductive state.
+          if (substance.id === 'estradiol') patient = getEffectivePatient();
         }
         lifespanCurrentSex = currentSex;
       }
@@ -1011,7 +1020,7 @@
         // Display only: keep the calculated measurement in its existing unit.
         displayUnit: unitEl.value,
         contraindicated: lifespanContraindicated(source, input, patient)
-          || lifespanGonadotropinContraindicated(substance, source, input),
+          || lifespanFemaleHormoneContraindicated(substance, source, input, patient),
         // Source-specific reproductive exclusions are application policy for
         // the educational point, not changes to laboratory ranges or fields.
         cyclePhase: lifespanCyclePhase(substance, input, patient),

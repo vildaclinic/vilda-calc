@@ -1056,6 +1056,33 @@ innego hormonu zachowuje własne kwalifikowanie, jednostkę i skalę.
 Porównania płci pozostają osobnymi trybami; ta zmiana nie przenosi do
 nich źródeł Madsen lub względnej średniej COPENHAGEN.
 
+## Żeński E2 — zwykły punkt mediany wieku, 17 października 2026
+
+Po odrębnym przeglądzie źródeł właściciel polecił uruchomić profil
+`madsen2022-female-e2-age-6-18`, opisany w
+[kontrakcie punktu](hormone-lifespan/PATIENT_POINT.md#żeński-e2--mediana-wieku-618-lat-17-października-2026).
+[Polityka danych](hormone-lifespan/female-estradiol-reference-policy.json)
+oraz [audyt źródła](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json)
+rozdzielają model wieku, normy laboratoryjne i poglądowy rysunek.
+
+13 rocznych median Madsen 2022 pochodzi z surowicy LC-MS/MS dziewcząt BGS2
+i Fit Futures; cały możliwy wiek musi mieścić się w [6,18]. Th i faza cyklu
+nie są obowiązkowymi pytaniami: model wieku obejmuje je łącznie. Dokładny
+węzeł 18 jest brzegiem suplementu, bez ekstrapolacji do 18.x. Przy 12 latach
+wynik 50 pmol/L ma odniesienie 52,46318409704675 pmol/L; przy 6 latach
+1,257681951881138, przy 18 dokładnie 185,45583618764735. Mediana nie ocenia
+prawidłowości. Znana ciąża, menopauza i leczenie hormonalne wyłączają punkt
+zgodnie z konserwatywną polityką aplikacji; OCP wykluczono w samym źródle.
+Metoda nieznana dopuszcza porównanie edukacyjne, znana niezgodna je blokuje.
+LLOQ 0,58 i 13 należą do dwóch metod; bez globalnej podłogi lub imputacji.
+
+Ta aktywacja nie zmienia krzywych, skali E2 264 pmol/L, laboratoryjnych RI,
+niemowlęcych median/domeny/donoszenia, wstawki cyklu ani porównań płci.
+Znane aktualne leczenie jest jednak teraz zachowane również dla niemowlęcego
+punktu E2 i może go wyłączyć. Fakty pozostają przypisane do tej samej pacjentki,
+płci i aktualnego kontekstu; nie stają się faktami historycznej próbki.
+Nie ma nowych pól, norm, SDS ani zmian historii. Testy nie są walidacją kliniczną.
+
 ## Stała skala i połączenia
 
 Poniższe zasady opisują bazową warstwę schematów, zwłaszcza żeńskich.

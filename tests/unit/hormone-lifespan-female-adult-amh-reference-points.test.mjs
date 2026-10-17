@@ -36,7 +36,7 @@ const excludedPhases = ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmen
 
 describe('AMH dorosłych kobiet — pięć surowiczych median grup FDA/Access', () => {
   it('dodaje dokładnie pięć profili, zachowując 68 pozostałych wcześniejszych profili i konwersje', () => {
-    expect(data.profiles).toHaveLength(77);
+    expect(data.profiles).toHaveLength(78);
     expect(data.profiles.filter(profile => addedIds.includes(profile.id)).map(profile => profile.id)).toEqual(addedIds);
     const original = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-13.3',
       profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => !addedIds.includes(profile.id) &&

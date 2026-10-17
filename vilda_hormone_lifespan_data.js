@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-16.1",
+  "version": "2026-10-17.1",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -20324,6 +20324,146 @@ const patientPointData = {
         "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
         "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
         "Model wieku nie jest medianą dla konkretnego stadium Th ani fazy cyklu."
+      ]
+    },
+    {
+      "id": "madsen2022-female-e2-age-6-18",
+      "analyte": "e2",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 1.257681951881138
+        },
+        {
+          "ageYears": 7.0,
+          "value": 2.334596749158609
+        },
+        {
+          "ageYears": 8.0,
+          "value": 4.347915883102421
+        },
+        {
+          "ageYears": 9.0,
+          "value": 8.208451767006299
+        },
+        {
+          "ageYears": 10.0,
+          "value": 15.701446074188619
+        },
+        {
+          "ageYears": 11.0,
+          "value": 29.609571335302167
+        },
+        {
+          "ageYears": 12.0,
+          "value": 52.46318409704675
+        },
+        {
+          "ageYears": 13.0,
+          "value": 83.43910795094158
+        },
+        {
+          "ageYears": 14.0,
+          "value": 116.47597538264219
+        },
+        {
+          "ageYears": 15.0,
+          "value": 144.25402291999035
+        },
+        {
+          "ageYears": 16.0,
+          "value": 163.40488572245636
+        },
+        {
+          "ageYears": 17.0,
+          "value": 175.78271306105336
+        },
+        {
+          "ageYears": 18.0,
+          "value": 185.45583618764735
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczęta",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+      "method": "LC-MS/MS; Bergen Growth Study 2 ultrasensitive assay and Fit Futures assay",
+      "population": "Bergen Growth Study 2 + Fit Futures; dziewczęta, Norwegia",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": false,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy",
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Mediana dla wieku · fazy cyklu analizowane łącznie.",
+      "provenance": {
+        "doi": "10.1210/clinem/dgac155",
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplement": "https://doi.org/10.6084/m9.figshare.17153336.v1",
+        "license": "CC BY 4.0",
+        "sourceFile": "17153336-Supplemental_Table_1_LMS_entries.xlsx",
+        "sha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "sourceWorksheet": "LCMSMS hormones",
+        "sourceCells": [
+          "AA3,AB3,AC3,AD3",
+          "AA4,AB4,AC4,AD4",
+          "AA5,AB5,AC5,AD5",
+          "AA6,AB6,AC6,AD6",
+          "AA7,AB7,AC7,AD7",
+          "AA8,AB8,AC8,AD8",
+          "AA9,AB9,AC9,AD9",
+          "AA10,AB10,AC10,AD10",
+          "AA11,AB11,AC11,AD11",
+          "AA12,AB12,AC12,AD12",
+          "AA13,AB13,AC13,AD13",
+          "AA14,AB14,AC14,AD14",
+          "AA15,AB15,AC15,AD15"
+        ],
+        "transform": {
+          "mode": "inverse_natural_log",
+          "formula": "median_SI = exp(M) / 1000000",
+          "evidence": "Workbook example cells K36=LN(I36*1000000), with median-centered z-score formula L36; other-biomarker examples K32/K33 use same transform. M is not the concentration in SI units.",
+          "model": "LMS/GAMLSS; age-specific p50 of a cross-sectional population, not longitudinal within-person trajectory."
+        },
+        "methodDetails": {
+          "BGS2_LLOQ_pmol_L": 0.58,
+          "FitFutures_LLOQ_pmol_L": 13,
+          "withinPublicationAssayBridge": "Both traceable to CRM BCR-576; parallel sample comparison R2=0.96, mean difference 1.7%, no statistically significant difference (P=0.053). This validates their internal merge, not interchangeability with every LC-MS/MS method."
+        },
+        "sourceRouting": {
+          "version": "2026-10-17.1",
+          "minAge": 6,
+          "maxAge": 18,
+          "maxAgeExclusive": false,
+          "selectionPolicy": "Jedno zwykłe odniesienie E2 dla wieku 6–18 lat z wszystkich 13 oryginalnych median Madsen. Nie wymaga Th ani fazy cyklu. Nie tworzy median w luce >1–<6, po 18 latach, w ciąży lub po menopauzie; nie zmienia niemowlęcych median Ljubicic, poglądowej geometrii, porównań płci ani norm laboratoryjnych."
+        }
+      },
+      "limitations": [
+        "Cały możliwy przedział wieku musi mieścić się w [6,18]. Dokładny węzeł 18 jest opublikowanym brzegiem modelu, nie dowodem obserwacji dokładnie w 18. urodziny ani grupą 18–<19. Wpis 18 lat 0 miesięcy obejmuje [18,18+1/12) i nie kwalifikuje. Osobna tabela nieparametrycznych RI ma grupę 15–<18; nie zastępuje domeny modelu LMS. Bez ekstrapolacji i wybierania środka niepewnego wieku.",
+        "Surowica LC-MS/MS: ultrasensitive BGS2 i intermediate-sensitivity Fit Futures, oba odniesione do CRM BCR-576. Ich porównanie wewnątrz publikacji nie harmonizuje innych metod. Nieznana metoda pozwala wyłącznie na porównanie edukacyjne; znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Ogólna kategoria LC-MS/MS nie potwierdza indywidualnej zgodności oznaczeń.",
+        "W modelach żeńskich autorzy wykluczyli antykoncepcję doustną, a fazy cyklu analizowali łącznie. Znana faza folikularna, owulacyjna lub lutealna nie zmienia mediany wieku. Znana ciąża, menopauza, leczenie hormonalne/GnRHa i stymulacja wyłączają punkt jako konserwatywna polityka aplikacji, nie przypisane autorom dodatkowe kryteria. Brak informacji nie potwierdza braku leczenia lub ciąży; bez nowej ankiety.",
+        "Źródłowe LLOQ to 0,58 pmol/L (BGS2) i 13 pmol/L (Fit Futures), nie jeden próg dla całej krzywej. Nie stosuj globalnej podłogi 13 ani nie wymyślaj reguły LLOQ/2. Źródło nie dokumentuje wystarczająco przetwarzania cenzurowanych wartości E2. Wynik pacjentki z nierównością nie staje się dokładnym punktem; dokładne zero pozostaje zerem, bez imputacji.",
+        "Zachowaj wszystkie 13 rocznych węzłów, oryginalne mediany exp(M)/1e6 i istniejący PCHIP w stężeniach. PCHIP między węzłami jest przybliżeniem aplikacji, nie ponownym dopasowaniem LMS. Nie wyznaczaj norm, SDS, stadium, fazy cyklu ani indywidualnej trajektorii z tej mediany.",
+        "Model przekrojowy różnych stadiów i faz cyklu, nie trajektoria jednej pacjentki."
       ]
     },
     {
@@ -35512,6 +35652,44 @@ const femaleGonadotropinReferencePolicy = {
   ],
   "patientNote": "Model według wieku; faz cyklu nie standaryzowano."
 };
+const femaleEstradiolReferencePolicy = {
+  "version": "2026-10-17.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "id": "madsen2022-female-e2-age-6-18",
+  "sex": "female",
+  "analyte": "e2",
+  "unit": "pmol/L",
+  "sourceEvidence": "evidence/madsen2022-female-median-si.json",
+  "minAge": 6,
+  "maxAge": 18,
+  "maxAgeExclusive": false,
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "compatibleAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "selectionPolicy": "Jedno zwykłe odniesienie E2 dla wieku 6–18 lat z wszystkich 13 oryginalnych median Madsen. Nie wymaga Th ani fazy cyklu. Nie tworzy median w luce >1–<6, po 18 latach, w ciąży lub po menopauzie; nie zmienia niemowlęcych median Ljubicic, poglądowej geometrii, porównań płci ani norm laboratoryjnych.",
+  "agePolicy": "Cały możliwy przedział wieku musi mieścić się w [6,18]. Dokładny węzeł 18 jest opublikowanym brzegiem modelu, nie dowodem obserwacji dokładnie w 18. urodziny ani grupą 18–<19. Wpis 18 lat 0 miesięcy obejmuje [18,18+1/12) i nie kwalifikuje. Osobna tabela nieparametrycznych RI ma grupę 15–<18; nie zastępuje domeny modelu LMS. Bez ekstrapolacji i wybierania środka niepewnego wieku.",
+  "assayPolicy": "Surowica LC-MS/MS: ultrasensitive BGS2 i intermediate-sensitivity Fit Futures, oba odniesione do CRM BCR-576. Ich porównanie wewnątrz publikacji nie harmonizuje innych metod. Nieznana metoda pozwala wyłącznie na porównanie edukacyjne; znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Ogólna kategoria LC-MS/MS nie potwierdza indywidualnej zgodności oznaczeń.",
+  "contextPolicy": "W modelach żeńskich autorzy wykluczyli antykoncepcję doustną, a fazy cyklu analizowali łącznie. Znana faza folikularna, owulacyjna lub lutealna nie zmienia mediany wieku. Znana ciąża, menopauza, leczenie hormonalne/GnRHa i stymulacja wyłączają punkt jako konserwatywna polityka aplikacji, nie przypisane autorom dodatkowe kryteria. Brak informacji nie potwierdza braku leczenia lub ciąży; bez nowej ankiety.",
+  "knownContextScope": "Adapter zachowuje jawne dodatnie aktualne fakty tej samej pacjentki również po zmianie analitu na E2. Ochrona dotyczy wszystkich wieków: znane aktualne leczenie hormonalne może teraz zablokować także dotychczasowy niemowlęcy punkt E2. Jego źródłowe mediany, domena i warunek donoszenia pozostają bez zmian. Nie przenoś dzisiejszych faktów na historyczną próbkę ani między pacjentami lub płciami.",
+  "lowValuePolicy": "Źródłowe LLOQ to 0,58 pmol/L (BGS2) i 13 pmol/L (Fit Futures), nie jeden próg dla całej krzywej. Nie stosuj globalnej podłogi 13 ani nie wymyślaj reguły LLOQ/2. Źródło nie dokumentuje wystarczająco przetwarzania cenzurowanych wartości E2. Wynik pacjentki z nierównością nie staje się dokładnym punktem; dokładne zero pozostaje zerem, bez imputacji.",
+  "interpolation": "Zachowaj wszystkie 13 rocznych węzłów, oryginalne mediany exp(M)/1e6 i istniejący PCHIP w stężeniach. PCHIP między węzłami jest przybliżeniem aplikacji, nie ponownym dopasowaniem LMS. Nie wyznaczaj norm, SDS, stadium, fazy cyklu ani indywidualnej trajektorii z tej mediany.",
+  "patientNote": "Mediana dla wieku · fazy cyklu analizowane łącznie."
+};
 const gonadotropinComparisonPolicy = {
   "version": "2026-10-12.1",
   "kind": "population-model-comparison",
@@ -35811,6 +35989,7 @@ return {
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,
   femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,
+  femaleEstradiolReferencePolicy: femaleEstradiolReferencePolicy,
   gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
   gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData
 };
