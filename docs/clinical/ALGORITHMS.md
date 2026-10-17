@@ -5611,11 +5611,51 @@ zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
   - programowy fokus bez dotknięcia nie przewija, a dopiero wysunięta klawiatura stawia pole nad nią.
   
   Na bazie padają 4/4: panel do 911 zamiast 852 px, 19 px nadmiaru, waga 688 px przy linii 500 px, wzrost 761 px.
+
+  Od P-DYMEK-ZAKRESU scenariusz i programowy fokus startują z ramką na 1 px. `ios26-ui.js` (`primeMobileBrowserUiChrome`) asynchronicznie przewija stronę stojącą na samej górze o 1 px. W jednym pełnym przebiegu pod obciążeniem pomiar „przed” trafił przed tę korektę, a „po” za nią (0 → 1 px). Moduł klawiatury nic wtedy nie przewijał; 24 powtórzenia z rejestrowaniem przewinięć tego nie odtworzyły. Na pozycji 1 px korekta nie działa, a porównania zostają dokładne.
 - `tests/unit/klawiatura-pole.test.mjs` (10) — `pasWidoczny` i `przesuniecie` z pliku produkcyjnego.
 
 **Do potwierdzenia na iPhonie (PWA).** Nagłówek nie znika przy wpisywaniu. Każde dotknięte pole stoi nad klawiaturą. Formularz nie rusza się, gdy pojawiają się wyniki. Po schowaniu klawiatury na dole nie zostaje przerwa. Playwright nie ma WebKita, a podglądu PR nie ma, więc kontrola odbywa się po scaleniu albo na instalacji testowej. Jeżeli iOS mimo wszystko przesunie powłokę, następnym krokiem jest cofnięcie tego przesunięcia po wysunięciu klawiatury, bo dziś `J()` robi to dopiero po jej schowaniu.
 
 **Wersje.** `vilda_shell.js` 66, `vilda_shell.css` 19, `vilda_klawiatura.js` 1 (nowy); SW 1.1.302 → 1.1.303 (numer 1.1.302 nadał równolegle #707).
+
+### P-DYMEK-ZAKRESU — dymek „poza zakresem” nie miga przy wpisywaniu (SW 1.1.304, 2026-10-17, decyzja właściciela)
+
+**Zgłoszenie.** Punkt 3 z analizy P-KLAWIATURA. Walidacja formularza głównego (`vildaUpdatePrepValidateMainInputs`) przyjmuje wzrost 40–250 cm. Każda pierwsza cyfra wzrostu jest poniżej 40, więc nad polem migał dymek „Wzrost poza zakresem (40–250 cm)”, choć lekarz niczego źle nie wpisał:
+- 100–199 cm: po „1” i „13”;
+- 45–99 cm: po „4”;
+- 200–250 cm: po „2” i „20”.
+
+Właściciel zaakceptował regułę: dymek czeka, dopóki dopisanie cyfr może jeszcze dać wartość z zakresu.
+
+**Klasyfikacja.** Zmiana interfejsu: zmienia się tylko moment pokazania dymka. Bez zmian zostają:
+- progi: wiek 0–130 lat, waga 1–500 kg, wzrost 40–250 cm;
+- walidacja i zatrzymanie wyników: dla „13” wyniki nadal się nie liczą;
+- treść dymka;
+- zachowanie po wyjściu z pola.
+
+**Rozwiązanie** (`vilda_update_prep.js`):
+- `vildaUpdatePrepApplyRangeTooltips` pokazuje dymek pola z błędem zakresu, chyba że pole ma fokus, a `vildaUpdatePrepMozeJeszczeWZakresie` potwierdza, że dopisanie 1–4 cyfr do liczby całkowitej może trafić w zakres.
+- Część dziesiętna kończy liczbę (dopisanie zmienia ją o mniej niż jedność). Wartość za duża też jest końcowa (dopisanie tylko ją zwiększa). Obie pokazują dymek od razu.
+- Przykłady: wzrost „3” (30–39 i 300+ poza zakresem), „260” albo waga „0,5” pokazują dymek od razu.
+- Granice pól podaje `vildaUpdatePrepZakresPola` (te same liczby co walidacja).
+- Ostatni wynik walidacji jest zapamiętany. `focusout` z pól wiek, waga i wzrost stosuje go ponownie po wyjściu z pola, bez ponownego liczenia, więc dymek „13” pojawia się po przejściu do innego pola, Enter albo „Gotowe”.
+- Pole czekające nie ma też `aria-invalid`, bo jego wartość jeszcze nie jest rozstrzygnięta.
+- Plik ładują Start, DocPro i Klirens; reguła działa wszędzie, gdzie są te pola.
+
+**Testy.**
+- `tests/unit/dymek-zakresu-pisanie.test.mjs` (9):
+  - granice dymka równe progom walidacji (strażnik rozjazdu, liczony prawdziwą funkcją walidacji na granicach);
+  - tabela przypadków reguły.
+- `tests/e2e/dymek-zakresu-pisanie.spec.mjs` (2, prawdziwa strona, fokus i klawiatura):
+  - 135, 45 i 205 bez dymka i bez `aria-invalid` przy każdym znaku;
+  - „13” ukrywa wyniki, a 135 daje BMI 21,9;
+  - „3” i „260” pokazują dymek od razu;
+  - „13” pokazuje go po przejściu do wagi, a dokończenie do 135 go chowa;
+  - waga „0.5” pokazuje dymek od razu.
+- Na bazie test e2e pada na „1”, „13”, „4”, „2”, „20”, a test jednostkowy na braku funkcji.
+
+**Wersje.** `vilda_update_prep.js` 97; SW 1.1.303 → 1.1.304.
 
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 

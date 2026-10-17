@@ -46,6 +46,15 @@ async function dotknij(page, start, id) {
   await expect.poll(() => start.evaluate(() => document.activeElement && document.activeElement.id)).toBe(id);
 }
 
+// Ramka na ustalonej pozycji 1 px. ios26-ui.js (primeMobileBrowserUiChrome) asynchronicznie przewija
+// stronę stojącą na samej górze o 1 px i nic nie robi, gdy już nie stoi na górze. Bez tego pomiar
+// „przed” mógł trafić przed tę korektę, a „po” — za nią (0 → 1 px w pełnym przebiegu pod obciążeniem),
+// choć moduł klawiatury niczego nie przewijał.
+async function ramkaNaPozycji(start) {
+  await start.evaluate(() => window.scrollTo({ top: 1, left: 0, behavior: 'instant' }));
+  await expect.poll(() => start.evaluate(() => window.scrollY)).toBe(1);
+}
+
 // Udawana klawiatura: visualViewport powłoki niższy o `h`, innerHeight bez zmian (jak na iOS).
 async function klawiatura(page, h) {
   await page.evaluate((wys) => {
@@ -90,6 +99,7 @@ test('wiek → waga → wzrost przy klawiaturze: pole staje nad klawiaturą, nag
   const zgoda = page.locator('#consent-decline');
   if (await zgoda.isVisible()) await zgoda.click();
   await expect(page.locator('#consent-banner')).toBeHidden();
+  await ramkaNaPozycji(start);
 
   const gornaKlawiatury = 852 - KLAWIATURA;
   const naglowek = (await powloka(page)).naglowekGora;
@@ -147,6 +157,7 @@ test('programowy fokus bez dotknięcia i bez klawiatury nie przewija ramki', asy
   test.setTimeout(150_000);
   await wciecia(page, 59, 34);
   const start = await otworzPowloke(page, HASLO);
+  await ramkaNaPozycji(start);
   const przed = await pole(start, 'height');
   await start.evaluate(() => document.getElementById('height').focus({ preventScroll: true }));
   await page.waitForTimeout(200);
