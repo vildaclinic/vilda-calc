@@ -5657,6 +5657,77 @@ Właściciel zaakceptował regułę: dymek czeka, dopóki dopisanie cyfr może j
 
 **Wersje.** `vilda_update_prep.js` 97; SW 1.1.303 → 1.1.304.
 
+### P-KLAWIATURA-2 — wzrost nad klawiaturą także przy klawiaturze otwartej przez całą ścieżkę (SW 1.1.305, 2026-10-17, zgłoszenie właściciela)
+
+**Zgłoszenie (po scaleniu P-KLAWIATURA i P-DYMEK-ZAKRESU).** iPhone, PWA. Lekarz dotyka po kolei wieku w latach, wieku w miesiącach i wagi — do tego miejsca wszystko jest w porządku. Po dotknięciu pola wzrostu pole chowa się pod klawiaturą. Objaw jest ten sam co w pierwszym zgłoszeniu P-KLAWIATURA. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Co pokazała analiza.**
+- Test P-KLAWIATURA nie sprawdzał tej ścieżki. Przed wagą chował klawiaturę („Gotowe”), a właściciel przechodzi między polami przy klawiaturze otwartej cały czas.
+- Ta sama emulacja (393×852 px, wcięcia 59/34 px, klawiatura udawana visualViewport niższym o 336 px), ścieżka właściciela na wersji 1 modułu:
+  - wiek i miesiące 427–470 px — bez ruchu;
+  - waga po dotknięciu: ramka przewinięta o 284 px, waga 361–404 px, wzrost 435–477 px.
+  
+  Wzrost formalnie stoi nad linią klawiatury (516 px), ale tylko 39 px nad dolną krawędzią visualViewport. Emulacja nie chowa go pod klawiaturę; prawdziwy iOS ma elementy, których Chromium nie ma.
+- W emulacji waga przy otwartej klawiaturze leży pod linią klawiatury (645–688 px). Skoro na iPhonie dało się ją dotknąć, iOS musiał już wcześniej przesunąć powłokę (offsetTop visualViewport). To wniosek, nie pomiar.
+- Hipotezy dla prawdziwego iOS, których nie da się tu sprawdzić. Wersja 2 zabezpiecza każdą z nich:
+  1. Pasek nad klawiaturą iOS 26 (strzałki, „Gotowe”) unosi się nad nią jako osobna kapsuła. Jeśli visualViewport go nie odlicza, pole stojące 39 px nad krawędzią visualViewport jest zasłonięte.
+  2. iOS albo powłoka cofa przesunięcie powłoki już po decyzji modułu. Pole spada wtedy o całe przesunięcie, a wersja 1 nie sprawdzała go ponownie: nie słuchała `scroll` i nie miała kontroli po czasie.
+  3. W trybie PWA innerHeight maleje razem z klawiaturą (zgłoszenia o skracaniu okna PWA po klawiaturze na iOS). Wtedy `St()` w powłoce i moduł uznałyby klawiaturę za schowaną, a `J()` cofałby przesunięcie, którym iOS odsłonił pole.
+  4. Coś przewija ramkę zaraz po fokusie, np. odsłanianie pola przez WebKit albo kotwiczenie przewijania (WebKit 267440).
+
+**Rozwiązanie** (`vilda_klawiatura.js` 2, `vilda_shell.js` 67, `vilda_shell.css` 20).
+- Wysokość bazowa okna (hipoteza 3). Otwartą klawiaturę moduł rozpoznaje względem największej wysokości okna powłoki widzianej przy tej szerokości. Bieżący innerHeight nie wystarcza (`nowaPodstawa`).
+  - visualViewport podnosi podstawę tylko wtedy, gdy żadne pole nie ma fokusu.
+  - Obrót ekranu (zmiana szerokości o więcej niż 4 px) liczy podstawę od nowa.
+  - `St()` w powłoce dostał ten sam wzorzec (`Kb_podstawa`), więc `J()` nie cofa przesunięcia powłoki, dopóki klawiatura jest otwarta. Po jej schowaniu cofa jak dotąd.
+- Margines nad zmierzoną klawiaturą 40 px zamiast 16 px (hipoteza 1).
+  - Przed pierwszym pomiarem klawiatury zostaje 16 px, bo szacunek 42% okna obejmuje już pasek. Z marginesem 40 px pierwsze dotknięcie wieku przesuwało formularz o 112 px; zmierzone i odrzucone.
+  - Wiek (dolna krawędź 470 px przy linii 516 px) nadal się mieści i nie rusza.
+- Kontrola po fokusie (hipotezy 2 i 4). Przez 1,5 s po fokusie moduł sprawdza pole ponownie:
+  - po 350 i 900 ms;
+  - po każdym przesunięciu powłoki (`scroll` visualViewport i okna powłoki).
+  
+  Kontrola tylko podnosi pole spod klawiatury i tylko przy otwartej klawiaturze. Po 1,5 s przewinięcie palcem należy do lekarza i nie jest cofane.
+- Bez opuszczania pola przy przesuniętej powłoce. Górę pasa wyznacza wtedy offsetTop visualViewport, a tego rozliczenia na iOS 26 nie da się tu sprawdzić. Lepiej zostawić pole, niż zepchnąć je pod klawiaturę.
+- Dziennik diagnostyczny dla właściciela:
+  - Włącza go ten sam przełącznik co diagnostykę docka w `ios26-ui.js`: 5 szybkich stuknięć w pasek z nazwą pod nagłówkiem (klucz `vilda-dockdiag`). Te same stuknięcia wyłączają go po następnym fokusie.
+  - U góry okna powłoki pokazuje ostatnie 10 pomiarów i decyzji modułu. Wygląd w `vilda_shell.css` (`#vildaKlawiaturaDiag`). Dziennik zostaje po schowaniu klawiatury, a przy przesuniętej powłoce panel bywa wtedy nad ekranem. Zrzut można więc zrobić po „Gotowe”. Treść: czas od fokusu, pole, zdarzenie, `innerHeight`/wysokość bazowa, visualViewport `height@offsetTop`, `scrollY` powłoki i ramki, pole i pas w ramce oraz przesunięcie.
+  - Tylko geometria i identyfikatory pól, bez wpisanych wartości. `pointer-events: none`, więc nie przeszkadza w dotykaniu.
+  - Napis „KLAWIATURA v2” w panelu potwierdza przy okazji, że telefon ma już nową wersję.
+
+**Pomiar po zmianie** (ta sama emulacja, ścieżka właściciela z klawiaturą otwartą cały czas):
+- wiek i miesiące 427–470 px — bez ruchu;
+- waga po dotknięciu: ramka przewinięta o 308 px, waga 337–380 px, wzrost 411–453 px — 63 px nad linią klawiatury (było 39 px);
+- dotknięcie wzrostu i wpisanie 135 bez żadnego ruchu, nagłówek na 59 px, `scrollY` powłoki 0.
+
+**Testy.**
+- `tests/e2e/klawiatura-otwarta-sciezka-mobile.spec.mjs` (5, telefon, wcięcia 59/34 px). Zaburzenia startują w samej stronie 100 ms po fokusie, niezależnie od opóźnień Playwrighta:
+  - ścieżka właściciela: wiek → miesiące → waga → wzrost przy otwartej klawiaturze. Każde pole i następny wiersz stoją ≥ 40 px nad linią klawiatury, wyniki niczego nie przesuwają, wartości 9/3/40/135, diagnostyka domyślnie wyłączona;
+  - iOS przesuwa powłokę o 200 px przy wadze i cofa przesunięcie po dotknięciu wzrostu. Tuż po cofnięciu wzrost jest pod klawiaturą, a kontrola go podnosi;
+  - ramka cofnięta o 250 px po fokusie: kontrola podnosi pole. Po 1,5 s przewinięcie palcem zostaje, a pole przewinięte wyżej nie jest opuszczane;
+  - innerHeight maleje razem z klawiaturą: waga staje jak przy stałym innerHeight (dolna krawędź 380 ± 2 px). Przesunięcie powłoki o 40 px zostaje przy otwartej klawiaturze, a po schowaniu klawiatury wraca do 0;
+  - dziennik: klucz `vilda-dockdiag` pokazuje panel „KLAWIATURA v2” z pomiarem `weight fokus inH852/852 vv516@0 … dy…`, `pointer-events: none`; wyłączenie zdejmuje panel.
+- Na bazie (`vilda_klawiatura.js` 1, `vilda_shell.js` 66) padają 5/5:
+  - wzrost po wadze 435–477 px;
+  - waga przy przesuniętej powłoce 444–487 px;
+  - brak kontroli po cofnięciu ramki;
+  - waga 242 zamiast 380 px przy malejącym innerHeight;
+  - brak panelu.
+  
+  Sam stary `vilda_shell.js` z nowym modułem pada na `St()`: przesunięcie powłoki 40 → 0 przy otwartej klawiaturze.
+- `tests/unit/klawiatura-pole.test.mjs` (10 → 17):
+  - margines 40/16 px;
+  - wiek mieści się, a wzrost z wersji 1 (435–477 px) wypada z pasa;
+  - `nowaPodstawa` — klawiatura, malejący innerHeight, pole aktywne, obrót.
+- `tests/e2e/powloka-klawiatura-mobile.spec.mjs` (4) bez zmian — przechodzi.
+
+**Do potwierdzenia na iPhonie (PWA).**
+- Po aktualizacji (baner „Dostępna nowa wersja aplikacji”) przejść ścieżkę wiek → miesiące → waga → wzrost przy otwartej klawiaturze.
+- Jeżeli wzrost nadal się chowa: włączyć dziennik (5 stuknięć w pasek z nazwą), powtórzyć ścieżkę i zrobić zrzut ekranu z klawiaturą otwartą nad polem wzrostu. Jeżeli panel ucieknie wtedy nad ekran, drugi zrzut po „Gotowe”: dziennik zostaje. Liczby rozstrzygną, która hipoteza obowiązuje: skąd pas, czy iOS zmienia innerHeight, ile wynosi offsetTop i gdzie naprawdę zaczyna się pasek nad klawiaturą.
+- Brak panelu „KLAWIATURA v2” po dotknięciu pola przy włączonym dzienniku znaczy, że telefon działa jeszcze na starej wersji.
+
+**Wersje.** `vilda_klawiatura.js` 2, `vilda_shell.js` 67, `vilda_shell.css` 20; SW 1.1.304 → 1.1.305.
+
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
