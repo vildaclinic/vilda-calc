@@ -5569,7 +5569,7 @@ zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
 
 **Wersje.** `vilda_persist_runtime.js` 21, `vilda_shell.js` 63; SW 1.1.258 → 1.1.259 (numer 1.1.258 nadał równolegle #658).
 
-### P-KLAWIATURA — pole formularza nad klawiaturą telefonu, powłoka na wysokość ekranu (SW 1.1.302, 2026-10-17, zgłoszenie właściciela)
+### P-KLAWIATURA — pole formularza nad klawiaturą telefonu, powłoka na wysokość ekranu (SW 1.1.303, 2026-10-17, zgłoszenie właściciela)
 
 **Zgłoszenie.** PWA na iPhonie, pusty formularz Start. Przy wpisywaniu wieku, wagi i wzrostu cały formularz skacze, gdy zaczynają pojawiać się wyniki. Już wcześniej, po wpisaniu wagi i dotknięciu pola wzrostu, pole wzrostu chowa się pod klawiaturą. Z przedstawionej propozycji właściciel polecił punkty 1–2: powłoka na wysokość ekranu oraz pole nad klawiaturą dzięki przewinięciu ramki. Punkt 3 czeka na decyzję: dymek zakresu dopiero po wyjściu z pola i brak przepisywania niezmienionego tekstu nad polami. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
 
@@ -5615,7 +5615,7 @@ zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
 
 **Do potwierdzenia na iPhonie (PWA).** Nagłówek nie znika przy wpisywaniu. Każde dotknięte pole stoi nad klawiaturą. Formularz nie rusza się, gdy pojawiają się wyniki. Po schowaniu klawiatury na dole nie zostaje przerwa. Playwright nie ma WebKita, a podglądu PR nie ma, więc kontrola odbywa się po scaleniu albo na instalacji testowej. Jeżeli iOS mimo wszystko przesunie powłokę, następnym krokiem jest cofnięcie tego przesunięcia po wysunięciu klawiatury, bo dziś `J()` robi to dopiero po jej schowaniu.
 
-**Wersje.** `vilda_shell.js` 66, `vilda_shell.css` 19, `vilda_klawiatura.js` 1 (nowy); SW 1.1.301 → 1.1.302.
+**Wersje.** `vilda_shell.js` 66, `vilda_shell.css` 19, `vilda_klawiatura.js` 1 (nowy); SW 1.1.302 → 1.1.303 (numer 1.1.302 nadał równolegle #707).
 
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
