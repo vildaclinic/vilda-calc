@@ -144,7 +144,7 @@ for (const width of [1440, 320]) {
     expect(Math.abs(source.samples[0].height - 8.521899543633126 / 264)).toBeGreaterThan(.000002);
     await panel(page).screenshot({ path: test.info().outputPath(`female-e2-source-point-${width}.png`) });
     const sourceShape = await geometry(page);
-    for (const ageYears of [3, 14, 35, 65]) {
+    for (const ageYears of [3, 5.999999, 35, 65]) {
       await update(page, { ageYears, ageLabel: `${ageYears} lat`, measurement: { value: 50, unit: 'pmol/L' } });
       await expect(point(page)).toHaveCount(0);
       expect(await geometry(page)).toEqual(sourceShape);

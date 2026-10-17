@@ -39,6 +39,41 @@ odniesienia”. Odrębne opisy porównań median zachowują nazwę tej statystyk
 Podpis poprawnie dobranej
 wartości nadal wskazuje rzeczywistą statystykę źródła: średnią albo medianę.
 
+## Żeński E2 — mediana wieku 6–18 lat, 17 października 2026
+
+Właściciel po analizie źródła polecił wdrożenie jednego zwykłego profilu
+`madsen2022-female-e2-age-6-18`. [Polityka](female-estradiol-reference-policy.json)
+wykorzystuje wszystkie 13 istniejących median Madsen, ponownie sprawdzonych
+z pełnym artykułem i oficjalnym suplementem LMS v1. Szczegóły populacji,
+metod, komórek i granic: [audyt](evidence/female-estradiol-reference-audit-2026-10-17.json).
+
+To przekrojowy model dziewcząt BGS2/Fit Futures, surowica LC-MS/MS, fazy cyklu
+analizowane łącznie. Wykorzystuje znany wiek i płeć bez wymagania Th lub nowego
+pytania o cykl. Nie jest normą, odniesieniem konkretnej fazy ani diagnozą.
+Nieznana metoda dopuszcza wyłącznie porównanie edukacyjne; znana niezgodna
+metoda/materiał wyklucza punkt bez fallbacku. Doustna antykoncepcja była
+wykluczeniem źródłowym; znana ciąża, menopauza, leczenie hormonalne i stymulacja
+są konserwatywnymi wyłączeniami aplikacji. Brak odpowiedzi pozostaje nieznany.
+
+Cały możliwy wiek musi mieścić się w [6,18]. Dokładny węzeł 18 jest brzegiem
+modelu, nie grupą 18–<19 ani dowodem próbki w dniu 18. urodzin; wpis 18 lat
+0 miesięcy nie pasuje. Odrębne nieparametryczne RI 15–<18 z tabeli 2 nie
+zmieniają domeny modelu tabeli 1. Luka >1–<6, wiek >18, dorosły cykl i menopauza
+nie otrzymują nowych median. PCHIP zachowuje wszystkie roczne węzły.
+
+LLOQ 0,58 pmol/L dotyczy BGS2, a 13 Fit Futures. Nie stosujemy progu 13
+do młodszych dziewczynek i nie odtwarzamy nieopisanej imputacji LLOQ/2.
+`<13` nie staje się dokładnym 13, 6,5 ani zerem. Przykłady rzeczywistego
+silnika: F6 → 1,25768; F12/E2 50 → mediana 52,46318; F17 → 175,78271;
+F18 dokładnie → 185,45584 pmol/L. Wynik 50 pozostaje 50; mediana jest niezależna.
+
+Geometria, stała własna skala 264 pmol/L, niemowlęce mediany, warunek donoszenia,
+wstawka cyklu, osobne porównania i normy laboratoryjne nie zmieniają się.
+Rozszerzony adapter znanych aktualnych faktów obejmuje także niemowlęcy E2:
+znane leczenie hormonalne może teraz wyłączyć jego punkt. Nie przenosi faktów
+między pacjentami/płciami ani na historyczną próbkę. To jawna zmiana kwalifikacji,
+nie zmiana źródła niemowląt. Testy nie stanowią walidacji klinicznej.
+
 ## Żeńskie LH/FSH — zwykłe odniesienie wieku, 16 października 2026
 
 Po analizie Madsen/Zec właściciel polecił wdrożenie rekomendowanej polityki:

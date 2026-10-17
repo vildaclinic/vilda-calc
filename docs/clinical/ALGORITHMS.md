@@ -1694,6 +1694,41 @@ Nie wybieramy źródła według tego, który werdykt daje dla wpisanej liczby.
 
 ### LAB-HORMONE-LIFESPAN — poglądowy przebieg hormonów w ciągu życia
 
+**2026-10-17 — żeński E2, zwykły punkt względem mediany wieku 6–18 lat.**
+Po analizie pełnego Madsen 2022 (DOI 10.1210/clinem/dgac155) i oryginalnego
+suplementu LMS v1 (DOI 10.6084/m9.figshare.17153336.v1) właściciel polecił
+wdrożyć jeden profil `madsen2022-female-e2-age-6-18`. Wszystkie 13 median
+z `LCMSMS hormones!AA3:AD15` jest zgodnych ze źródłem: `exp(M)/1e6`, pmol/L.
+Populacja: dziewczęta BGS2 6–<16 i Fit Futures 15–18, Norwegia; surowica
+LC-MS/MS, mieszane stadia i fazy cyklu, bez doustnej antykoncepcji.
+LLOQ wynosi 0,58 i 13 pmol/L w dwóch metodach; nie jest wspólną podłogą
+modelu ani podstawą imputacji wyniku `<13`. PCHIP pomiędzy wszystkimi
+rocznymi węzłami jest przybliżeniem aplikacji, nie ponownym dopasowaniem LMS.
+
+Polityka danych: `female-estradiol-reference-policy.json`, eksport
+`femaleEstradiolReferencePolicy`. Cały możliwy wiek musi mieścić się w [6,18];
+dokładny 18 jest opublikowanym brzegiem modelu, a 18 lat 0 miesięcy obejmuje
+szerszy przedział i nie kwalifikuje. Bez ekstrapolacji, Th lub nowej ankiety.
+Mediana wieku łączy fazy cyklu i nie stanowi normy konkretnej fazy. Nieznana
+metoda pozwala na porównanie edukacyjne; znana niezgodna metoda/materiał
+blokuje bez zastępczego źródła. Ciąża, menopauza i znane leczenie hormonalne
+są konserwatywnymi wyłączeniami aplikacji, odrębnymi od kryteriów autora.
+Adapter zachowuje dodatnie fakty tylko tej samej aktualnej pacjentki, z ochroną
+płci i historycznej próbki. Rozszerzona ochrona E2 obejmuje wszystkie wieki,
+więc znane aktualne leczenie hormonalne może także zablokować punkt niemowlęcia;
+jego mediany, domena i warunek donoszenia nie zmieniają się.
+
+**Wpływ kliniczny:** pojawia się orientacyjne porównanie z medianą dla wieku;
+nie powstaje klasyfikacja prawidłowości, norma laboratoryjna, SDS ani nowy zapis
+historii. Wszystkie 77 starych profili, konwersje, stała skala E2 264 pmol/L,
+geometria, wstawka cyklu i porównania płci pozostają bez zmian. Przypadki
+rzeczywistego silnika: F12/E2 50 pmol/L → mediana 52,46318409704675;
+F6 → 1,257681951881138; F18 dokładnie → 185,45583618764735;
+F3, >18 lub niepewny wiek wychodzący poza model → brak odniesienia;
+`<13` → bez fikcyjnej dokładnej kropki. Źródła, ograniczenia i hashe:
+[audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
+Testy techniczne nie są walidacją kliniczną.
+
 Wdrożenie zatwierdzonych makiet z 2026-10-09: męskie LH, FSH, testosteron
 całkowity, AMH, inhibina B i poglądowe INSL3; żeńskie LH, FSH, estradiol,
 AMH i inhibina B. Dokumentacja danych, populacji, metod i ograniczeń:
