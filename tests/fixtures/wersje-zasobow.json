@@ -764,8 +764,8 @@
   "sha256": "32d3173ec83c7de4e1530b82c8e46f99211cf241d497c2fc6695424f85b44664"
  },
  "vilda_klawiatura.js": {
-  "v": 1,
-  "sha256": "c0e652fb8335a68c61dfd0570bad5632e9175962b684fab34f95d01cc0fc3494"
+  "v": 2,
+  "sha256": "d3d985e043362cdf3139d42d9344085043fe150259b5964f2f53ae00d6b3ef35"
  },
  "vilda_kosz_zapisow.js": {
   "v": 3,
@@ -1036,12 +1036,12 @@
   "sha256": "88df01a254e7e660ef2f0394df67320ab93dda66a265b706d99d10fc04a191f8"
  },
  "vilda_shell.css": {
-  "v": 19,
-  "sha256": "10a72ebecd4d5b09459969b3089832de643bb97669235af1c27f5e1e03d43c2a"
+  "v": 20,
+  "sha256": "c530fa48fd73067dab9e538e6cb3a4ccdc12f2a4a0d770d80182fe22f5aa76e0"
  },
  "vilda_shell.js": {
-  "v": 66,
-  "sha256": "a17c88f43d3ee2752e3d7130e9761ebf36e89090598900900adf81eccb3e7fb2"
+  "v": 67,
+  "sha256": "6f6e1afa215dc11e3f6f3b375fd2b3eb682a6e2f39c606b300b8cf0506b94cb7"
  },
  "vilda_spojnosc_zapisow.js": {
   "v": 3,

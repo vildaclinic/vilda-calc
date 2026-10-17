@@ -242,3 +242,20 @@ html.vilda-pane-modal-open #appShellScrollTop {
     padding-bottom: 0!important
   }
 }
+
+/* P-KLAWIATURA-2: dziennik diagnostyczny vilda_klawiatura.js (klucz vilda-dockdiag, 5 stuknięć w pasek
+   z nazwą). Panel nad diagnostyką docka z ios26-ui.js (z-index 2147483000) i nad dymkami (--z-copy-toast); nie przechwytuje dotknięć. */
+#vildaKlawiaturaDiag {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483002;
+  background: rgba(40, 12, 28, .92);
+  color: #ffd9ea;
+  font: 10px/1.4 ui-monospace, Menlo, monospace;
+  padding: var(--space-4px) var(--space-6px);
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-all
+}
