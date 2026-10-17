@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-17.1",
+  "version": "2026-10-17.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -29021,6 +29021,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 1–4,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "1–4,9 lat",
@@ -29047,7 +29052,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -29098,6 +29104,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 5–7,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "5–7,9 lat",
@@ -29124,7 +29135,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -29175,6 +29187,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 8–11,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "8–11,9 lat",
@@ -29201,7 +29218,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -29252,6 +29270,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 12–14,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "12–14,9 lat",
@@ -29278,7 +29301,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -29329,6 +29353,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 15–18,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "15–18,9 lat",
@@ -29355,7 +29384,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
