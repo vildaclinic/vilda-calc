@@ -5534,6 +5534,54 @@ zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
 
 **Wersje.** `vilda_persist_runtime.js` 21, `vilda_shell.js` 63; SW 1.1.258 → 1.1.259 (numer 1.1.258 nadał równolegle #658).
 
+### P-KLAWIATURA — pole formularza nad klawiaturą telefonu, powłoka na wysokość ekranu (SW 1.1.302, 2026-10-17, zgłoszenie właściciela)
+
+**Zgłoszenie.** PWA na iPhonie, pusty formularz Start. Przy wpisywaniu wieku, wagi i wzrostu cały formularz skacze, gdy zaczynają pojawiać się wyniki. Już wcześniej, po wpisaniu wagi i dotknięciu pola wzrostu, pole wzrostu chowa się pod klawiaturą. Z przedstawionej propozycji właściciel polecił punkty 1–2: powłoka na wysokość ekranu oraz pole nad klawiaturą dzięki przewinięciu ramki. Punkt 3 czeka na decyzję: dymek zakresu dopiero po wyjściu z pola i brak przepisywania niezmienionego tekstu nad polami. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Pomiar przed zmianą.** Playwright z Chromium w środowisku agenta, prawdziwa powłoka `app.html` i sejf z fikcyjnym hasłem. Emulacja iPhone'a 15 Pro w PWA: 393×852 px, wcięcia 59/34 px przez `Emulation.setSafeAreaInsetsOverride`. Dane: 9 lat, 40 kg, 135 cm.
+- Nagłówek zajmuje 59–150 px, panel 150–911 px na ekranie 852 px, a dokument powłoki ma 930 px. `body` ma `padding-top: env(safe-area-inset-top)`, a `v()` w `vilda_shell.js` odejmował tylko wysokość nagłówka, nie jego dolną krawędź. Bez wcięć dokument ma 871 px: pod panelem stoją dolne odstępy `.desktop-layout` (16 px) i `.main-content` (3,2 px). Powłokę dało się więc przesunąć także bez klawiatury, a dół każdego panelu był 59 px pod ekranem i pod dockiem.
+- Pola w oknie powłoki przy nieprzewiniętej ramce: wiek 426–469 px, waga 644–687 px, wzrost 718–761 px. Linia klawiatury liczbowej (ok. 336 px) leży na 516 px, więc waga i wzrost są pod klawiaturą od razu.
+- Przy aktywnym polu `v()` celowo nie skraca panelu, więc ramka sięga pod klawiaturę. WebKit nie przewija dla pól formularza wnętrza ramki, tylko przesuwa dokument powłoki: nagłówek razem z formularzem. Powłoka cofa to przesunięcie (`J()`) dopiero po schowaniu klawiatury. To wniosek z kodu i znanych zachowań WebKit (odbijanie przy zmianie pola w ramce, WebKit 271469), nie pomiar, bo Chromium nie ma klawiatury iOS.
+- Wykluczone pomiarem:
+  - autoprzewijanie do wyników — wyłączone na stałe w `app.js`, a poniżej 700 px `scrollIntoView` nic nie robi (`custom-fixes.js`);
+  - auto-zoom iOS — pola mają 16,8 px;
+  - zmiana wysokości czegokolwiek nad polami — pole wzrostu stoi w dokumencie ramki na 568 px przez całe wpisywanie, a wyniki dochodzą pod formularzem (dokument 1472 → ok. 7800 px).
+
+**Rozwiązanie.**
+1. Powłoka na wysokość ekranu:
+   - `vilda_shell.js`, `v()`: panel ma wysokość visualViewport minus dolna krawędź nagłówka (`offsetTop` + wysokość). `offsetTop` nie zależy od przewinięcia ani od transformacji nagłówka.
+   - `vilda_shell.css`: poniżej 992 px `.vilda-shell-host .desktop-layout` i `.main-content` nie mają dolnego odstępu.
+   - Panel kończy się na dolnej krawędzi ekranu, a dokument powłoki ma wysokość okna. Odstęp docka w ramce (`vh − dock.top`) kończy treść nad dockiem.
+   - Desktop bez zmian: wysokość panelu nadaje CSS z `!important`.
+2. Pole nad klawiaturą — nowy, czytelny moduł `vilda_klawiatura.js`, ładowany w `index.html`:
+   - Kiedy działa: w ramce powłoki na telefonie (`html.vilda-embedded`, `pointer: coarse`, szerokość < 700 px). Na `focusin` pola, które otwiera klawiaturę, przewija samo okno ramki z `behavior: 'instant'`, bo `html` ma `scroll-behavior: smooth`.
+   - Których pól nie dotyka: select, checkbox, pól tylko do odczytu, pól w nakładce `fixed` ani we własnym obszarze przewijania.
+   - Pas widoczny: przy otwartej klawiaturze z visualViewport powłoki; przed otwarciem z ostatniego pomiaru; przed pierwszym pomiarem przyjmuje 42% okna.
+   - Pole w pasie nie rusza się wcale. Pole poza pasem staje dolną krawędzią 16 px nad klawiaturą, z zapasem na kolejny wiersz (96 px, najwyżej 1/3 pasa), więc po wadze widać wzrost.
+   - Przewinięcie przed otwarciem klawiatury jest celowe: iOS rozstrzyga o odsłonięciu pola po fokusie, a pole już widoczne nad klawiaturą nie wymaga przesunięcia powłoki.
+   - Przed otwarciem klawiatury moduł działa tylko po dotknięciu pola, bo programowy `focus()` bez dotyku nie otwiera klawiatury na iOS. Po wysunięciu klawiatury (`resize` visualViewport powłoki) sprawdza pole jeszcze raz.
+   - `ResizeObserver` poprawia tylko wtedy, gdy treść nad polem zmieniła jego miejsce w dokumencie. Przewinięcia palcem przy otwartej klawiaturze moduł nie cofa.
+   - Przewinięcie zachodzi w trakcie dotknięcia, więc `mouseup` może wypaść na innym elemencie. `click` idzie wtedy do wspólnego przodka (UI Events), a nie do elementu pod palcem. Test sprawdza fokus i wpisane wartości.
+
+**Pomiar po zmianie** (ta sama emulacja, klawiatura udawana przez visualViewport powłoki niższy o 336 px):
+- panel 150–852 px, dokument powłoki 852 (`scrollY` 0, nagłówek na 59 px) px;
+- wiek bez przewinięcia (427–470 px, nad linią 516 px);
+- waga po dotknięciu: ramka przewinięta o 284 px, waga 361–404 px, wzrost 435–477 px — oba nad linią klawiatury;
+- wzrost: dotknięcie i wpisanie 135 bez żadnego ruchu (435–477 px); dokument ramki 1233 → 7553 px, `scrollY` powłoki 0, nagłówek na 59 px.
+
+**Testy.**
+- `tests/e2e/powloka-klawiatura-mobile.spec.mjs` (4, telefon), z wcięciami 59/34 px albo bez:
+  - powłoka z wcięciami i bez nich;
+  - scenariusz wiek → waga → wzrost z udawaną klawiaturą: pole nad klawiaturą z marginesem, wzrost widoczny po wadze, wyniki niczego nie przesuwają, `scrollY` powłoki 0, nagłówek na miejscu, wartości 9/40/135, brak poziomego przewijania;
+  - programowy fokus bez dotknięcia nie przewija, a dopiero wysunięta klawiatura stawia pole nad nią.
+  
+  Na bazie padają 4/4: panel do 911 zamiast 852 px, 19 px nadmiaru, waga 688 px przy linii 500 px, wzrost 761 px.
+- `tests/unit/klawiatura-pole.test.mjs` (10) — `pasWidoczny` i `przesuniecie` z pliku produkcyjnego.
+
+**Do potwierdzenia na iPhonie (PWA).** Nagłówek nie znika przy wpisywaniu. Każde dotknięte pole stoi nad klawiaturą. Formularz nie rusza się, gdy pojawiają się wyniki. Po schowaniu klawiatury na dole nie zostaje przerwa. Playwright nie ma WebKita, a podglądu PR nie ma, więc kontrola odbywa się po scaleniu albo na instalacji testowej. Jeżeli iOS mimo wszystko przesunie powłokę, następnym krokiem jest cofnięcie tego przesunięcia po wysunięciu klawiatury, bo dziś `J()` robi to dopiero po jej schowaniu.
+
+**Wersje.** `vilda_shell.js` 66, `vilda_shell.css` 19, `vilda_klawiatura.js` 1 (nowy); SW 1.1.301 → 1.1.302.
+
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
