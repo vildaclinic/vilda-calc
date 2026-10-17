@@ -640,6 +640,33 @@ geometrii, skal, niemowląt i norm laboratoryjnych nie zmieniaj.
 [audyt zwykłych odniesień](hormone-lifespan/evidence/female-gonadotropin-reference-audit-2026-10-16.json).
 To porównanie orientacyjne; testy nie są walidacją kliniczną.
 
+## Żeński E2 — zwykła mediana wieku, 17 października 2026
+
+Po analizie pełnego Madsen i oryginalnego suplementu właściciel polecił
+wdrożenie `female-estradiol-reference-policy.json`. Jeden profil
+`madsen2022-female-e2-age-6-18` używa wszystkich 13 źródłowych median,
+bez Th, nowych pól i obowiązkowego pytania o cykl. Zachowaj cały przedział
+wieku w [6,18], bez ekstrapolacji po opublikowanym węźle 18; wpis 18 lat
+0 miesięcy nie jest dokładnym punktem 18. To model wieku z łącznymi fazami,
+nie norma lub mediana konkretnej fazy. Nigdy nie wyprowadzaj p50 z geometrii.
+
+- Zachowaj wszystkie 77 wcześniejszych profili i mediany, stałą skalę E2
+  264 pmol/L, krzywe, cykl, porównania płci i niezależne normy laboratoryjne.
+- LC-MS/MS dotyczy surowicy dwóch kohort. LLOQ 0,58 i 13 pmol/L nie tworzą
+  wspólnego progu; bez LLOQ/2 lub dokładnego punktu z nierówności.
+- OCP było wykluczeniem autora; ciąża, menopauza i znane leczenie/stymulacja
+  są konserwatywnymi wyłączeniami aplikacji. Brak wywiadu pozostaje nieznany.
+  Nieznana metoda pozwala wyłącznie na edukacyjne odniesienie; znana niezgodna
+  metoda/materiał blokuje bez fallbacku.
+- Adapter przekazuje znane dodatnie fakty tylko tej samej aktualnej pacjentki,
+  z ochroną płci i historycznej próbki. Obejmuje E2 wszystkich wieków: znane
+  aktualne leczenie może wyłączyć także niemowlęcą kropkę. Nie twierdź, że cała
+  jej kwalifikacja jest niezmieniona; mediany, domena i donoszenie są zachowane.
+
+Źródła, granice i przypadki produkcyjnego silnika:
+[audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
+Zgoda na wdrożenie nie nadaje modelowi statusu walidacji klinicznej.
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 
 // Preserve the existing historical hashes while applying the explicitly tested
-// 2026-10-16 ordinary female LH/FSH extension. These are frozen HEAD profiles,
+// 2026-10-16 ordinary female LH/FSH and 2026-10-17 E2 extensions. These are frozen HEAD profiles,
 // not regenerated norms or a second implementation of the reference engine.
 const priorProfiles = JSON.parse(readFileSync(new URL(
   '../fixtures/hormone-lifespan-prior-female-fsh-profiles.json', import.meta.url), 'utf8'));
-const addedIds = new Set(['madsen2022-female-lh-age-6-16', 'madsen2022-female-fsh-age-6-16']);
+const addedIds = new Set(['madsen2022-female-lh-age-6-16', 'madsen2022-female-fsh-age-6-16',
+  'madsen2022-female-e2-age-6-18']);
 
 export function priorFemaleGonadotropinBundle(data) {
   return { ...data, version: '2026-10-14.2', profiles: data.profiles.flatMap(profile => {
@@ -17,5 +18,6 @@ export function priorFemaleGonadotropinBundle(data) {
 
 export function withoutFemaleGonadotropinReferencePolicy(runtime) {
   return Object.fromEntries(Object.entries(runtime).filter(([key]) =>
-    key !== 'patientPointData' && key !== 'femaleGonadotropinReferencePolicy'));
+    key !== 'patientPointData' && key !== 'femaleGonadotropinReferencePolicy' &&
+    key !== 'femaleEstradiolReferencePolicy'));
 }

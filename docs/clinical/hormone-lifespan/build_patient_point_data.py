@@ -166,6 +166,36 @@ def build():
                 if analyte == 'lh' else
                 'Model wieku nie jest medianą dla konkretnego stadium Th ani fazy cyklu.'])
 
+    e2_policy = json.loads((ROOT/'female-estradiol-reference-policy.json').read_text(encoding='utf-8'))
+    assert e2_policy['kind'] == 'educational-source-selection' and e2_policy['ordinaryOnly'] is True
+    assert (e2_policy['analyte'], e2_policy['sex'], e2_policy['unit']) == ('e2', 'female', 'pmol/L')
+    e2_source = json.loads((ROOT/e2_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    e2 = e2_source['hormones']['e2']
+    assert e2['unit'] == e2_policy['unit'] and e2['statistic'] == 'model_p50_median'
+    assert [point['ageYears'] for point in e2['points']] == list(range(6,19))
+    assert (e2_policy['minAge'], e2_policy['maxAge'], e2_policy['maxAgeExclusive']) == (6,18,False)
+    assert all(math.isclose(point['median'], math.exp(point['M_logSIx1e6'])/1e6,
+                            rel_tol=1e-14, abs_tol=0) for point in e2['points'])
+    add(e2_policy['id'], 'e2', 'female',
+        [dict(ageYears=point['ageYears'], value=point['median']) for point in e2['points']],
+        e2_policy['minAge'], e2_policy['maxAge'], 'Madsen 2022 · dziewczęta',
+        e2_source['source']['url'], e2['assay'],
+        'Bergen Growth Study 2 + Fit Futures; dziewczęta, Norwegia', 'median',
+        ordinaryOnly=e2_policy['ordinaryOnly'], maxAgeExclusive=e2_policy['maxAgeExclusive'],
+        specimen=e2_policy['specimen'], compatibleSpecimenIds=e2_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=e2_policy['compatibleAssayMethodIds'],
+        excludedCyclePhases=e2_policy['excludedCyclePhases'], patientNote=e2_policy['patientNote'],
+        provenance={**e2_source['source'], 'sourceWorksheet':e2['sheet'],
+                    'sourceCells':[point['sourceCells'] for point in e2['points']],
+                    'transform':e2_source['transform'], 'methodDetails':e2['methodDetails'],
+                    'sourceRouting':{'version':e2_policy['version'],
+                        'minAge':e2_policy['minAge'], 'maxAge':e2_policy['maxAge'],
+                        'maxAgeExclusive':e2_policy['maxAgeExclusive'],
+                        'selectionPolicy':e2_policy['selectionPolicy']}},
+        limitations=[e2_policy['agePolicy'], e2_policy['assayPolicy'], e2_policy['contextPolicy'],
+                     e2_policy['lowValuePolicy'], e2_policy['interpolation'],
+                     'Model przekrojowy różnych stadiów i faz cyklu, nie trajektoria jednej pacjentki.'])
+
     testosterone=read('testosterone-model.json')
     coefficients=testosterone['formula']['coefficients']
     def testosterone_at(age):
@@ -703,7 +733,7 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-16.1','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-17.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

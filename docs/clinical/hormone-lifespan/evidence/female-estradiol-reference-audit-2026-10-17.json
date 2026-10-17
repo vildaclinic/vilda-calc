@@ -1,0 +1,65 @@
+{
+  "id": "female-estradiol-reference-audit-2026-10-17",
+  "reviewedOn": "2026-10-17",
+  "baseCommit": "96288b49242518993ec04ad923a587c08e2c44c8",
+  "scope": "One ordinary female E2 educational age-reference profile; no laboratory RI, normality classification, Tanner assessment, geometry, cycle panel, sex comparison or history change.",
+  "ownerDecision": "After source review and concrete minimal-PR proposal the owner requested implementation: ok, wprowadź to. This is not a clinical-validation claim.",
+  "policy": "female-estradiol-reference-policy.json",
+  "primarySource": {
+    "doi": "10.1210/clinem/dgac155",
+    "pmid": "35299255",
+    "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+    "freshVerification": "Full published article XML: cohorts, biochemical analyses, reference modelling, Table 1 and Discussion; original official Supplemental Table 1 version 1 downloaded and all 13 female E2 age/L/M/S rows verified. Separate Supplemental Table 2 version 4 and authors' generic R script also inspected for boundary and censor-processing distinctions.",
+    "population": "Norway, BGS2 population-based 2016 cohort, approximately 90% European ancestry, and Fit Futures. Table 1 lists 601 and 319 female viable samples respectively; these are cohort counts, not E2-specific N=920.",
+    "observedAgeLabels": "BGS2 6–<16 years; Fit Futures 15–18 years. Tanner stages and menstrual phases pooled for the age model; not a Th1-only cohort.",
+    "sourceExclusions": "Oral-contraceptive users excluded from all female reference models. Do not transfer cortisol-specific corticosteroid exclusions to E2.",
+    "specimen": "Venous serum, 08:00–14:00, stored at −80 degrees C.",
+    "method": "LC-MS/MS at Haukeland, ultrasensitive BGS2 and intermediate-sensitivity Fit Futures; traceable to CRM BCR-576.",
+    "lowerLimitsOfQuantificationPmolL": {"BGS2": 0.58, "FitFutures": 13},
+    "lod": null,
+    "methodLimitations": "Within-publication parallel-sample comparison R2=0.96, mean difference 1.7%, P=0.053 supports that internal unadjusted merge, not general assay interchangeability. BGS2 interassay CV evaluation starts at 1.7 pmol/L, above the age-6 model median; avoid excessive low-end precision.",
+    "censorProcessingBoundary": "The full article, LMS workbook and generic authors' R example do not establish E2-specific source censor/imputation preprocessing. Do not assert LLOQ/2, zero substitution or exclusion. Preserve published model medians; never impute an exact patient point from an inequality.",
+    "cycleLimitation": "Age-model phases pooled; authors advise consulting additional cycle-specific RI for menstruating girls. The age p50 is not phase-specific, a diagnostic threshold or an individual trajectory.",
+    "supplement": {
+      "doi": "10.6084/m9.figshare.17153336.v1",
+      "file": "Supplemental_Table_1_LMS_entries.xlsx",
+      "fileId": 31716608,
+      "bytes": 53908,
+      "sha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+      "sheet": "LCMSMS hormones",
+      "cells": "AA3:AD15",
+      "transformationEvidence": "Workbook example K36=LN(I36*1000000), L36 LMS z-score; p50 pmol/L = exp(M)/1000000. M is not a concentration.",
+      "nodesVerified": 13,
+      "sourceValuesChanged": 0,
+      "interpolation": "All annual nodes retained. Existing PCHIP in concentrations is the application approximation between nodes, not a refit of raw-data LMS."
+    },
+    "boundaryDistinction": "Supplemental Table 1 publishes model node 18. Independent nonparametric RI in Supplemental Table 2 v4 (10.6084/m9.figshare.17153369.v4) use 15–<18. These are different outputs; exact model endpoint 18 does not prove an observed 18-year birthday sample or justify any 18.x extrapolation."
+  },
+  "applicationPolicy": {
+    "age": "Entire possible age interval in [6,18], no extrapolation, midpoint selection, invented precision or gap-filling >1–<6.",
+    "method": "Unknown permits educational comparison only; generic LC-MS/MS aliases match existing infant conventions without claiming individual assay validation. Known incompatible assay/material blocks without fallback.",
+    "context": "Pregnancy, postmenopause, known sex-steroid therapy/GnRHa and nonbasal stimulation are conservative application exclusions, not additional criteria attributed to Madsen. Unknown is not confirmed absence. Known follicular/ovulatory/luteal context does not alter the pooled age model.",
+    "knownContextScope": "Same-patient current positive pregnancy/treatment facts retained across analytes. Extending the shared guard to E2 all ages deliberately also blocks the infant educational E2 point during known current hormonal treatment. Existing infant median values, source domain and term-birth gate are unchanged; its eligibility is not claimed wholly unchanged.",
+    "identityAndTime": "No current-context facts copied across patient or sex changes or onto a dated historical specimen; no assay/material from a different analyte inferred as E2 facts.",
+    "lowValues": "No uniform 13-pmol/L floor and no imputation of censored patient results. Exact zero stays zero. Low numerical differences are not evidence of puberty onset."
+  },
+  "syntheticExpectedReferencesPmolL": [
+    {"sex": "female", "ageYears": 6, "reference": 1.257681951881138},
+    {"sex": "female", "ageYears": 12, "result": 50, "reference": 52.46318409704675},
+    {"sex": "female", "ageYears": 16, "reference": 163.40488572245636},
+    {"sex": "female", "ageYears": 17, "reference": 175.78271306105336},
+    {"sex": "female", "ageYears": 18, "reference": 185.45583618764735},
+    {"sex": "female", "ageYears": 18, "ageUpperYears": 18.083333333333332, "ageUpperInclusive": false, "expected": "ambiguous-age"},
+    {"sex": "female", "ageYears": 3, "expected": "unsupported-age"},
+    {"sex": "female", "ageYears": 12, "resultOperator": "<", "result": 13, "expected": "censored-result"}
+  ],
+  "preservation": {
+    "priorProfiles": 77,
+    "priorProfilesJsonSha256": "395270be85e644ccd68ff388191fe01fea7edbef2501f15e83098cd6f4410272",
+    "priorPatientPointDataJsonSha256": "0396d69dae9c6f311632dc0c4a52a47ce1a844e7befb3d95a0fc6f9329886b91",
+    "priorRuntimeWithoutPatientPointDataJsonSha256": "d224cf4c6d3832723767f879241810550ced917b0313ac6ce0b8c0fd86377231",
+    "meaning": "Hashes use JSON.stringify at base commit; exclude only the new profile/policy and restore previous patient-data version to compare. No source curve geometry, units, RI or old source-profile edits."
+  },
+  "verificationLimits": "No raw cohort data, no original LMS refit, no independent validation of manufacturer methods or clinical deployment in other populations. Tests establish implementation contracts, not clinical validation.",
+  "notClinicalValidation": true
+}
