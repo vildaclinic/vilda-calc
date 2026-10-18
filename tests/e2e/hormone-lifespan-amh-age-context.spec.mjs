@@ -88,6 +88,23 @@ async function mainPatient(page, { sex = 'F', days = 120, months = 3, ga = 40 } 
     const shared = window.VildaPersistence.readShared();
     return ['age', 'ageMonths', 'weight', 'height'].every(key => String(shared[key]) === document.getElementById(key).value);
   })).toBe(true);
+  // The day cache and shared fields can precede the separate main-session
+  // writer. Wait for that existing channel before navigating away from this setup.
+  const expectedSession = await page.evaluate(({ id, calendarDays }) => ({
+    patientId: id, cachePatientId: calendarDays ? id : null,
+    sex: document.getElementById('sex').value,
+    age: document.getElementById('age').value,
+    ageMonths: document.getElementById('ageMonths').value,
+    dobISO: window.VildaDobAge.readISO(),
+  }), { id, calendarDays: days !== null });
+  await expect.poll(() => page.evaluate(calendarDays => {
+    const user = window.VildaPersistence.readMainSession()?.user;
+    return user && {
+      patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+      cachePatientId: calendarDays ? window.VildaLabNeonatalContext.readCache()?.identityKey ?? null : null,
+      sex: user.sex, age: String(user.age), ageMonths: String(user.ageMonths), dobISO: user.dobISO ?? null,
+    };
+  }, days !== null)).toEqual(expectedSession);
   await converter(page, id);
   return id;
 }
