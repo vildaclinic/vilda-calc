@@ -2279,6 +2279,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_publication_creator.js?v=19',
   '/vilda_publication_creator.js?v=20',
   '/vilda_publication_creator.js?v=21',
+  '/vilda_publication_creator.js?v=22',
   '/vilda_centile_interpolation.js',
   '/vilda_centile_interpolation.js?v=1',
   '/app.js?v=192',
@@ -2289,6 +2290,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_07.js?v=11',
   '/inline_index_07.js?v=12',
   '/inline_index_07.js?v=13',
+  '/inline_index_07.js?v=14',
   '/inline_docpro_05.js?v=2',
   '/vilda_centile_interpolation.js?v=2',
   '/inline_index_03.js?v=12',
@@ -3406,6 +3408,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_embedded.css?v=1',
   '/vilda_centile_landscape.js',
   '/vilda_centile_landscape.js?v=1',
+  '/vilda_centile_landscape.js?v=2',
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
