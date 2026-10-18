@@ -790,6 +790,458 @@ if (param !== 'HT' && (zr === 'PALCZEWSKA' || (zr === 'OLAF' && wiekLat < 3))) r
 calcPercentileStats(wzrost, plec, wiekKostnyLat, 'HT', { wiekMies: null });
 ```
 
+## Łatka P-GRANICA-URODZIN (granice pełnych miesięcy, 2026-10-14)
+
+Zmiana wprost w artefaktach `app.js` i `vilda_professional_module.js`. Silniki (`vilda_sds_wzrostu.js`, `vilda_bmi.js`: dane `GRANICE`) i karta zespołu Downa (`vilda_down_syndrome.js`) są czytelnymi źródłami i zmieniły się wprost w nich. Reguła: siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje; noworodek według dób. Rejestr: `docs/clinical/ALGORITHMS.md`, P-GRANICA-URODZIN.
+
+```js
+// app.js — nowa funkcja przed lmsNiemowleWiek (w artefakcie jedna linia)
+function vildaWiekDoSiatek(wiek, pelne, populacja) {
+  if (typeof wiek !== 'number' || !isFinite(wiek) || wiek < 0) return wiek;
+  const p = pelne == null || pelne === '' ? NaN : Number(pelne);
+  if (!isFinite(p) || p < 0 || Math.floor(p) !== p) return wiek;      // brak pełnych miesięcy: bez zmian
+  const r = wiek - p;
+  if (!(r > -0.5 && r < 1.5)) return wiek;                             // para nie z tego samego dnia: bez zmian
+  const W = typeof window !== 'undefined' ? window : globalThis;
+  let lo = -Infinity, hi = Infinity;
+  [W.VildaSdsWzrostu, W.VildaBmi].forEach(function (S) {
+    if (!S || !S.GRANICE) return;
+    let pop;
+    try { pop = populacja != null ? S.normPopulacja(populacja) : S.populacjaZOpcji({}); } catch (e) { pop = 'OGOLNA'; }
+    const g = S.GRANICE[pop];
+    if (!g) return;
+    g.od.forEach(function (b) { if (b <= p) lo = Math.max(lo, b); else hi = Math.min(hi, b - 1e-6); });
+    g.do.forEach(function (b) { if (b >= p) hi = Math.min(hi, b); });
+  });
+  return Math.min(Math.max(wiek, lo), hi);
+}
+
+// app.js — lmsNiemowleWiek(a, wp), ścieżka formularza (DOB-AGE-4); a = pełne miesiące formularza
+return t >= 0 ? (typeof vildaWiekDoSiatek === 'function' ? vildaWiekDoSiatek(t, a) : t) : null;
+
+// app.js — vildaWiekPomiaruMies(r, iso, pelne); pełne miesiące z dnia pomiaru
+return m >= 0 ? (typeof vildaWiekDoSiatek === 'function' ? vildaWiekDoSiatek(m, w.totalMonths) : m) : null;
+
+// vilda_professional_module.js — wiersz wsadu; p: data urodzenia, dpD/dpOk: data pomiaru, Ce = doby / 30,4375, re = Ce / 12
+const Pm = VildaDobAge.ageFromDobISO(lokalnaDataISO(p), dpOk ? dpD : new Date()).totalMonths;   // null bez modułu albo przy |Ce − Pm| ≥ 1,5
+const Cs = Pm != null ? vildaWiekDoSiatek(Ce, Pm, 'OGOLNA') : Ce;
+const Rp = Pm != null ? Pm / 12 : re;
+// Palczewska: masa calcPercentileStatsPal(P, r, Rp, 'WT'); wzrost Zw(ae, r, Cs / 12, 'PALCZEWSKA'),
+//             zapas calcPercentileStatsPal(ae, r, Rp, 'HT'); BMI Zb(Je, r, Cs, 'PALCZEWSKA')
+// OLAF/WHO:   masa calcPercentileStats(P, r, Rp, 'WT', { wiekMies: Cs }); wzrost Zw(ae, r, Cs / 12, t),
+//             zapas calcPercentileStats(ae, r, Rp, 'HT', { wiekMies: null }); BMI Zb(Je, r, Cs, t)
+```
+
+## Łatka P-LAB-TREND-CONVERT (`vilda_auth_ui.js` 491 → 492, 2026-10-14)
+
+Zmiana wprost w artefakcie, w funkcji, która z serii sejfu buduje punkty wykresu wyników (w artefakcie `yi()`). Wołają ją „Trend wyników” w Historii (`Jl()`), nakładki wyników na siatkach centylowych i eksport siatek do PDF (`Gl()`). Nazwy z artefaktu: `t` — seria z `listPatientLabSeries`, `r` — jednostka serii (najczęstsza w serii), `s` — `window.LabUnitConverter`, `point()` — budowa punktu wykresu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis LAB-TREND-CONVERT.
+
+```js
+// P-LAB-TREND-CONVERT, w yi(); konwerter = window.LabUnitConverter, seria = t, wpis = punkt serii
+// było: if (konwerter && seria.testKey && typeof konwerter.convert === 'function' && wpis.unit) {
+//         const wynik = konwerter.convert(seria.testKey, wpis.valueNum, wpis.unit);   // zawsze „Nie znaleziono substancji.”
+if (konwerter && seria.testKey && typeof konwerter.convertAll === 'function' && wpis.unit) {
+  const wynik = konwerter.convertAll({ substanceId: seria.testKey, value: wpis.valueNum, fromUnit: wpis.unit });
+  // dalej bez zmian: wartość z wynik.results o symbolu równym jednostce serii; brak takiej → „pominięto”
+}
+
+// point(wpis, wartosc, przeliczony)
+// było: norm: wpis.norm || null
+norm: przeliczony ? null : (wpis.norm || null),   // tekstowa norma wpisu jest w jednostce zapisu, nie serii
+```
+
+Część 2: żadna strona z kartą pacjenta nie ładuje `lab_unit_converter.js` statycznie. Start (`index.html`) doładowuje go w czasie bezczynności albo przy pierwszym dotknięciu lub klawiszu, pozostałe (DocPro, Notatki, Terminarz, Ustawienia, Klirens, Subskrypcja, powłoka) dopiero przez `ja()` (sprostowanie z P-LAB-TREND-CONVERT-2; pierwotny opis wyłączał Start). „Trend wyników” (`Jl()`) i nakładki na siatki (`Kl()`) wołały `yi()` przed jego doładowaniem, a późniejszy render odświeżał tylko strzałki, więc punkt w innej jednostce nadal znikał. Nowe funkcje stoją tuż za `yi()`; obie strony wołają `await LtcCzekajNaKonwerter(serie)` zaraz po odczycie serii z sejfu. Eksport siatek do PDF (`Yl()` → `Gl()`) czekał na `ja()` już wcześniej.
+
+```js
+// P-LAB-TREND-CONVERT, część 2 (nazwy z artefaktu: ja — leniwe ładowanie konwertera, i — window)
+function LtcSeriaWielujednostkowa(serie) {          // czy któraś seria ma wpisy w więcej niż jednej jednostce
+  return (serie || []).some((s) => new Set(((s && s.points) || []).map((p) => (p && p.unit) || '?')).size > 1);
+}
+async function LtcCzekajNaKonwerter(serie) {
+  if (!LtcSeriaWielujednostkowa(serie) || typeof ja !== 'function'
+      || (window.LabUnitConverter && typeof window.LabUnitConverter.convertAll === 'function')) return;
+  try {
+    await Promise.race([new Promise((gotowe) => ja(() => gotowe())), new Promise((gotowe) => setTimeout(gotowe, 5000))]);
+  } catch {}
+}
+// Jl(): po `o = await r.listPatientLabSeries(a)` → await LtcCzekajNaKonwerter(o);
+// Kl(): po odczycie serii i okresów leczenia → await LtcCzekajNaKonwerter(d);
+```
+
+## Łatka P-LAB-TREND-CONVERT-2 (`vilda_auth_ui.js` 492 → 493, 2026-10-14)
+
+Poprawka po scaleniu P-LAB-TREND-CONVERT (przegląd PR0); wyniki, jednostki i strzałki bez zmian. Dwie zmiany w artefakcie, opis w `docs/clinical/ALGORITHMS.md`, wpis P-LAB-TREND-CONVERT-2.
+
+Pierwsza: `LtcSeriaWielujednostkowa()` liczy jednostki tylko dokładnych wyników (skończone `valueNum`, niepusta jednostka) i pomija serie z kluczem zawierającym „:” (klirens `clcr:…`, którego konwerter nie zna). Dawniej czekanie uruchamiały też wpis bez jednostki (`'?'`), wpis bez liczby i seria klirensu w kilku jednostkach, choć `yi()` i tak by ich nie przeliczyło.
+
+```js
+// P-LAB-TREND-CONVERT-2; było: new Set(((s && s.points) || []).map((p) => (p && p.unit) || '?')).size > 1
+function LtcSeriaWielujednostkowa(serie) {   // seria z dokładnymi wynikami w więcej niż jednej jednostce
+  return (serie || []).some((s) => {
+    if (!s || String(s.testKey || '').includes(':')) return false;
+    const jednostki = new Set();
+    (s.points || []).forEach((p) => {
+      if (p && typeof p.valueNum === 'number' && isFinite(p.valueNum) && p.unit) jednostki.add(p.unit);
+    });
+    return jednostki.size > 1;
+  });
+}
+```
+
+Druga: znacznik pokolenia na kontenerze w `Kl()` (nakładki na siatki, kontener `Qt`, ponownie wołane przez `we()`) i w `Xl()` (Historia, która czeka na `Jl()`; kontener `ca`, ponownie wołane przez `Ue()`). Czekanie na konwerter (do 5 s) poszerzyło okno, w którym drugie wywołanie czyści kontener i rysuje od nowa, a pierwsze po przebudzeniu dopisywało swoją sekcję: dwa wiersze chipów nakładek albo dwie listy „Historia pacjenta”. `Xl()` sprawdza znacznik także po odczycie zdarzeń osi czasu i pacjenta, bo za nim dopisuje listę zdarzeń wprost do kontenera; to krótsze okno istniało przed P-LAB-TREND-CONVERT.
+
+```js
+// P-LAB-TREND-CONVERT-2
+// Kl(t, …): const pokolenie = t ? (t._vildaLtcGenKl = (t._vildaLtcGenKl || 0) + 1) : 0;
+//           … po await LtcCzekajNaKonwerter(d): if (t && t._vildaLtcGenKl !== pokolenie) return;
+// Xl(t, …): const pokolenie = t ? (t._vildaLtcGenXl = (t._vildaLtcGenXl || 0) + 1) : 0;
+//           … po try { await Jl(d, a, n) } catch { oe(d) }: if (t && t._vildaLtcGenXl !== pokolenie) return;
+//           … po odczycie zdarzeń (await l.listPatientTimelineEvents) i pacjenta (await l.getPatient),
+//             czyli po `} catch { z = null }`, przed listą .vilda-patient-timeline-list: ten sam warunek
+```
+
+## Łatka P-LAB-WARTOSC-BEZ-JEDNOSTKI (`vilda_vault.js` 211 → 212, 2026-10-14)
+
+Zmiana wprost w artefakcie: funkcja `vo()`, która w `listPatientLabSeries` (w artefakcie `Po()`) czyta liczbę i jednostkę z tekstu `labResult.value` notatki bez `valueNum` (punkt `legacy: true`). W artefakcie stoi teraz w czytelnej postaci z komentarzem, tuż przed `Cr()`. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-LAB-WARTOSC-BEZ-JEDNOSTKI.
+
+```js
+// było: var e = /^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/.exec(String(t || ""));   // „15” → 1 i „5”
+//       … return { num: n, unit: e[2] };
+function vo(t) {
+  var tekst = String(t || "");
+  var liczba = /^\s*(\d+(?:[.,]\d+)?)/.exec(tekst);                     // zachłannie: cała liczba, bez cofania
+  if (!liczba) return null;
+  var n = parseFloat(liczba[1].replace(",", "."));
+  if (!isFinite(n) || n < 0) return null;
+  var jednostka = /^\s*([^\s=]*)/.exec(tekst.slice(liczba[0].length))[1];   // może być pusta
+  return { num: n, unit: jednostka || null };                              // Po(): unit = lab.unit || parsed.unit (bez zmian)
+}
+```
+
+## Łatki P-BADANIA (`vilda_auth_ui.js` 493 → 494, `vilda_auth_ui.css` 78 → 79, 2026-10-14)
+
+Piąta zakładka karty pacjenta „Badania” (LAB-HISTORIA PR2). Widok rysuje czytelny moduł `vilda_lab_history_tab.js` (+ `vilda_lab_history_tab.css`) na modelu `vilda_lab_history.js`; w artefakcie są tylko punkty wpięcia. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis „LAB-HISTORIA PR2”; projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.2. Nazwy z artefaktu: `se()` — karta pacjenta, `t` — id pacjenta, `e()` — budowa elementu, `at()` — ikona z etykietą zakładki, `ua()` — przełączenie zakładki, `ia()` — wpis nawigacji, `ga()` — edytor notatki, `Mr()` — arkusz przypomnień, `Xo`/`da()` — Notatki, `Xl`/`Ue()` — Historia, `ue`/`Ae` — flagi „narysowane”, `xa` — pamięć karty.
+
+Strażnik kolizji (plan 3.2, K16): nowe nazwy w `se()` mają prefiks `Gd`. Przed edycją żadna nie występowała w pliku:
+
+```bash
+git show origin/audyt:vilda_auth_ui.js | grep -o -w -E 'GdLabTab|GdLabHost|GdLabOnce|GdLabRender|GdIkonaKolby|GdModul|GdO|GdData|GdLista|__vildaLabTrend' | sort | uniq -c   # pusto
+```
+
+```js
+// P-BADANIA, w se(): ikona kolby i przycisk piątej zakładki, dopisane na końcu listy
+GdIkonaKolby = '<path d="M9 3h6"/>…';                          // obok ikon _t, It, Pt, Mt
+GdLabTab = e('button', { class: 'vilda-patient-tab', type: 'button', html: at(GdIkonaKolby, 'Badania'), 'data-tab': 'lab' });
+Ft = e('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [Et, Bt, pt, kt, GdLabTab]);   // było: [Et, Bt, pt, kt]
+
+// kontener i leniwy render (za Ue(), jak Notatki i Historia)
+var GdLabHost = e('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-lab-section', 'data-tab': 'lab' });
+var GdLabOnce = false;
+function GdLabRender() {
+  var modul = window.VildaLabHistoryTab;
+  if (!modul) { /* „Zakładka Badania nie jest dostępna — odśwież stronę.” */ return; }
+  modul.render(GdLabHost, t, {
+    openEditor(o) {                         // + Dodaj wynik, Wpisz wynik, klik w wartość
+      ga({ patientId: t, note: o.note || null, template: o.template, anchor: o.anchor, onSaved: o.onSaved });
+      if (o.anchor === 'date') document.querySelector('.b3-clinical-date')?.focus();   // tylko widoczne pole
+    },
+    openReminders(lista) { Mr(lista, {}); },
+    onChanged() { ue ? da() : (Ae = false); },   // Notatki od nowa; Historia przy następnym otwarciu
+  });
+}
+// ua(): [Et, Bt, pt, kt, GdLabTab] i [Nt, Ct, sa, ca, GdLabHost]
+// klik: GdLabTab → ua('lab'), ia({ screen: 'card', patientId: t, tab: 'lab' }), GdLabOnce || (GdLabOnce = true, GdLabRender())
+// r.activeTab === 'lab': render i ua('lab'); „lab” w białej liście; xa.restoreTab('lab') tak samo
+// lista dzieci karty (Cs): …, sa, ca, GdLabHost, e('div', { class: 'vilda-auth-actions vilda-patient-actions' }, …)
+```
+
+```js
+// P-BADANIA-EDYTOR, w ga(t): szablon i kotwica na życzenie wołającego (zakładka „Badania”)
+// za wyborem szablonu z zapisanej notatki (w = 'none' | 'med-…' | 'lab'):
+if (t && t.template === 'lab' && w === 'none') w = 'lab';        // szablon „Wynik badania”, kategoria Badanie
+// za wyborem kotwicy (Bt = 'date' | 'visit' | 'general'):
+if (t && t.anchor === 'date' && Bt === 'general') Bt = 'date';   // „Wpisz datę zdarzenia”; wizyta i data zostają
+```
+
+```js
+// P-BADANIA-TREND-HISTORIA, w Xl(): bez „Trendu wyników” (decyzja 6.12)
+// było: var d = e('div', { class: 'vilda-lab-trend-host' }); t.appendChild(d);
+//       try { await Jl(d, a, n) } catch { oe(d) }
+//       if (t && t._vildaLtcGenXl !== LtcGen) return;
+var d = e('div', { class: 'vilda-lab-trend-host' }); t.appendChild(d);   // bez await Jl; Jl() zostaje w pliku bez zmian
+// … po odczycie zdarzeń i pacjenta, za znacznikiem pokolenia z P-LAB-TREND-CONVERT-2:
+if ((S || []).some((f) => f && f.type === 'note' && f.labResult && (f.labResult.test || f.labResult.value) && !f.medication && f.category !== 'wynik-klirens')) {
+  d.appendChild(e('p', { class: 'vilda-lab-trend-link' }, [e('button', {
+    type: 'button', class: 'vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost',
+    text: 'Trend i porównanie wyników są w zakładce Badania →',
+    onclick() { document.querySelector('.vilda-auth-patient-card button[data-tab="lab"]')?.click(); },
+  })]));
+}
+```
+
+```js
+// P-BADANIA-EKSPORT, w IIFE tuż przed `i.VildaAuthUI = zs` — poza zakresami wycinanymi przez testy
+window.__vildaLabTrend = Object.freeze({ render: Nl, assessments: Lh3TrendAssessments, parseNorm: Dl, formatAge: eo, loadConverter: ja });
+// celowo bez vi() i Jl(): dzisiejsze normy nie dostają nowych konsumentów
+```
+
+Plan 3.2 wymieniał w eksporcie także `wa`, `In` i `Tl`; zakładka ich nie używa (własne chipy, data z modelu), więc eksport jest węższy.
+
+`vilda_auth_ui.css`: w `@media(max-width:1024px)` piąta zakładka zajmuje obie kolumny siatki (`.vilda-patient-tabs>.vilda-patient-tab:nth-child(5){grid-column:1/-1}`), a w `@media(max-width:1200px)` zakładki w wierszu mają szerokość wg treści (`flex:1 1 auto`). W oknie 1025–1200 px karta ma ok. 675 px i przy równych szerokościach „Siatki centylowe” się ucinały (K24); do 1024 px zakładki stoją w siatce, więc reguła działa tylko w wierszu. Bez nowego progu.
+
+## Łatki P-BADANIA-CHROME (`vilda_session_bridge.js` 66 → 67, `vilda_chrome.js` 142 → 143, 2026-10-14)
+
+Oba leniwe stosy auth (lista `V` mostu sesji i lista `d` w `vilda_chrome.js`) dostały trzy wpisy za `vilda_hormone_reference_ui.js`, a warunki „wszystko już jest” (`w()`, `I()` w moście, `u()` w chrome) — dwa globale. Strony z tagami statycznymi (osiem stron z kartą) nic nie doładowują; strona bez tagów (np. przelicznik po `ensureAuthLoaded`) dostaje moduły razem z kartą. Zgodność obu list pilnuje `tests/unit/lab-history-tab-loading.test.mjs`.
+
+```js
+// za {type:"script",src:"vilda_hormone_reference_ui.js?v=1",…}
+{ type: 'script', src: 'vilda_lab_history.js?v=1', ready: () => !!window.VildaLabHistory },
+{ type: 'css',    src: 'vilda_lab_history_tab.css?v=1', ready: () => false },
+{ type: 'script', src: 'vilda_lab_history_tab.js?v=1', ready: () => !!window.VildaLabHistoryTab },
+// w(), I() (most) i u() (chrome): … && VildaHormoneReferenceUI && VildaLabHistory && VildaLabHistoryTab && …
+```
+
+## Łatki P-POKWITANIE-KONTRAKT (`vilda_data_import_export.js`, 2026-10-14)
+
+Logika nowego pola jest czytelna w `vilda_puberty_assessment.js` (odczyt schematu)
+i `vilda_puberty_assessment_state.js` (kopia aktywnego formularza). Artefakt nie
+został przebudowany ze starszych źródeł ani ponownie zminifikowany. Dodano siedem
+wąskich punktów integracji, bez zmiany dotychczasowych pól i funkcji obliczeń.
+
+Czytelny odpowiednik hooków (nazwy lokalne odpowiadają bieżącemu artefaktowi):
+
+```js
+// collectUserData: po zbudowaniu user=S i kontekstu wieku kostnego, przed payloadem.
+if (r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.applyToUser(S);
+
+// saveMainSessionNow: dotychczasowe Et(n,p) scala brakujące pola sesji DocPro/klirensu.
+// JSON oceny jest atomowy; stara sesja nie może uzupełnić świadomie pustego G/Th/P
+// ani przywrócić całego klucza nieobecnego w aktualnym kolektorze.
+if (r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.mergeSession(n, p, Et);
+else Et(n, p);
+
+// restoreMainSessionIfAny (Fe): po sprawdzeniu formatu sesji i wersji 1,
+// w istniejącej gałęzi early-exit dla wypełnionego formularza bez wybranego pacjenta.
+// Jednorazowo, przed rzeczywistą edycją, z niezmienionej sesji tej samej karty
+// odczytanej przy starcie. Bez wymaganego nazwiska; dostępne pola wetują sprzeczność.
+// Nie nadpisuje zainicjalizowanego carrier ani jawnego czyszczenia.
+if (r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.restoreSessionIfUninitialized(i);
+
+// clearAllData oraz początek jawnego applyLoadedData: wyczyść starą kopię
+// w tym samym miejscu co dotychczasowe dane pokwitania formularza.
+if (r.VildaPubertyAssessmentState) r.VildaPubertyAssessmentState.clear();
+
+// applyLoadedData: po odtworzeniu pól, przed kolejnym przeliczeniem.
+// m oznacza porównanie; samo oglądanie porównania nie zmienia aktywnej oceny.
+if (!m && r.VildaPubertyAssessmentState)
+  r.VildaPubertyAssessmentState.load(e, { restore: a.isSessionRestore === true });
+
+// restoreLoadedState: jawne odtworzenie zapisanej wizyty, przy hooku wieku kostnego.
+if (a.VildaPubertyAssessmentState)
+  a.VildaPubertyAssessmentState.load(u, { restore: true });
+```
+
+Należy zachować ich położenie wewnątrz rzeczywistych funkcji; samo opakowanie
+`window.collectUserData` pomijałoby wewnętrznych klientów kolektora. Nowe skrypty
+są ładowane przed importerem. Regresje wywołują produkcyjne collect/apply/restore,
+zapis sesji i odczyt w drugim panelu, także dla pustego i nieobsługiwanego JSON.
+
+## Łatka P-POWLOKA-KARTA-ZAKLADKA (`vilda_shell.js` 63 → 64, 2026-10-14)
+
+Karta pacjenta otwierana z powłoki od razu na wskazanej zakładce (LAB-HISTORIA PR3, plan 3.4, decyzja 6.15): pasek „Poprzednie wyniki” w przeliczniku wywołuje `VildaShell.openPatientCardInStart(pid, { activeTab: 'lab' })`. Nazwy z artefaktu: `Ht` — `openPatientCardInStart`, `Sn_openPatient` — czytelny dopisek (#454) czekający na gotową ramkę Start, `win.VildaAuthUI.showPatientCard` — `se()` z `vilda_auth_ui.js` (czwarty argument `{activeTab}` istniał wcześniej; biała lista zakładek z P-BADANIA zawiera „lab”).
+
+```js
+// było: function Ht(t){if(t)Sn_openPatient("card",t)}
+function Ht(t, opts) { if (t) Sn_openPatient('card', t, null, opts && typeof opts.activeTab === 'string' && opts.activeTab ? opts.activeTab : null); }
+// Sn_openPatient(kind, id, onTimeout, tab) — nowy czwarty parametr; w retry():
+// było: showPatientCard(String(id))
+tab ? win.VildaAuthUI.showPatientCard(String(id), null, null, { activeTab: tab }) : win.VildaAuthUI.showPatientCard(String(id));
+```
+
+Wywołanie bez zakładki jest dosłownie takie jak dotąd, więc testy powłoki porównujące tablice argumentów `showPatientCard` (`powloka-intencja-historia.test.mjs`, `chip-karta-pacjenta.test.mjs`) zostają bez zmian; wariant z zakładką sprawdza `tests/unit/powloka-karta-zakladka.test.mjs`. Starsza powłoka z cache SW zignoruje drugi argument i otworzy kartę na zakładce domyślnej.
+
+Przelicznik (`przelicznik-jednostek.html`, czytelny skrypt strony) dostał w tym samym PR hook `window.VildaLabConverterRuntime = { getSubstanceId }` i zdarzenie `vilda:lab-substance-changed` z `applySubstance()` (decyzja 6.16) — poza zakresami wycinanymi przez testy (`powloka-wskazanie-kliniczne`, `lab-inhibin-b-ui`, `lab-puberty-*`, `hormone-lifespan-converter-adapter`).
+
+## Łatki P-POKWITANIE-PANEL (2026-10-15)
+
+Czytelne źródła tej partii: `vilda_puberty_assessment.js` (kwalifikacja osi),
+`vilda_puberty_assessment_state.js` (aktywny wpis i znacznik wizyty),
+`vilda_puberty_assessment_context.js` (chroniony odczyt między kartami),
+`vilda_puberty_assessment_ui.js/.css` (wspólny edytor). Nie przebudowano
+artefaktów ze starszych źródeł i nie zminifikowano ich ponownie.
+
+Wąskie punkty integracji:
+
+- `vilda_data_import_export.js`: istniejące hooki#687 przenoszą ocenę i znacznik
+  atomowo. `xe()`/`Re()` uwzględniają obecny carrier jako dane formularza/sesji;
+  wpis bez nazwiska, antropometrii i ogólnego Tannera nie ginie przy F5.
+- `inline_index_02.js`: ta sama istniejąca sekcja i przycisk; ogólny
+  `#tannerStage` pozostaje ukrytym nośnikiem legacy. Nowe osie nie są do niego
+  przepisywane. Wiersze/ściągi tworzy czytelny moduł UI, a wywiad jest opcjonalny.
+- `growth-basic-module.js`: `Bba(rows)` pobiera `VildaPubertalStatus.kontekstWzrastania()`
+  i dodaje dotychczasowy kontekstBA; usunięto dwa bezpośrednie odczyty scalara.
+- `vilda_advanced_growth.js`: `Ka()` przekazuje profilowi `etapRodzaj`, wiek
+  obserwacji oraz jawne `gonadalCurrent`; kontekst trajektorii pochodzi z tego
+  samego adaptera. Nasłuch wspólnej zmiany invaliduje istniejący cache.
+- `vilda_auth_ui.js`: w istniejącym hooku karty `_cx9` stary `parseInt(m.tannerStage)`
+  zastępuje `VildaPubertyAssessment.gonadalContext(m,{sex,currentAgeMonths,measuredAtISO,scope:'growth'})`.
+  Rodzaj i wiek są z konkretnej obserwacji, a pełne `readUser(m)` służy narracji.
+  Części edycji/scalania notatek i list pozostają w swojej dotychczasowej logice.
+- `vilda_summary_cards.js`: czytelny helper `qGonadalGrowth()` zastępuje odczyt
+  ogólnego Tannera z DOM. Jawny brak osi w produkcyjnym kontekście nie wraca do
+  `opt.tanner`. Niskopoziomowe funkcje zachowują deklarowany przez caller numer
+  dla zgodności, a jawnyP/unspecified lub niezgodna płeć są odrzucane.
+- `vilda_chrome.js` oraz `vilda_session_bridge.js`: oba leniwe stosy auth ładują
+  model przed `vilda_auth_ui.js`; odpowiadające warunki gotowości wymagają modelu.
+  Dzięki temu karta otwarta poza formularzem też czyta typowane obserwacje.
+
+Czytelne moduły statusu/profilu/tempa/trajektorii i narracji zachowują wzory,
+progi oraz dane referencyjne; zmieniono kwalifikację rodzaju i czasu obserwacji.
+Przelicznik montuje ten sam komponent edytora przez istniejące `VildaLabPubertyUI`.
+Kontrakt `buildInput` dla dawnych próbek pozostaje; tabele/silniki hormonów nie
+zostały scalone z rendererem ani zmienione. Wpływ kliniczny i źródła:
+`docs/clinical/ALGORITHMS.md`, P-POKWITANIE-PANEL.
+
+## Łatki P-POKWITANIE-KONSUMENCI — konsumenci starego numeru Tannera (2026-10-15)
+
+Czytelne: `przelicznik-jednostek.html` (skrypt strony: `readTypedGonadal()`,
+`stageLabel()`, zmiany w `readPatientFromShared()`, `getEffectivePatient()`,
+`renderTannerOverrideState()`, `describePatient()`), `homa-ir.html` (dwa dodatkowe
+tagi `<script>` przed `custom-fixes.js`). Artefaktów nie przebudowano; trzy
+czytelne łatki w zminifikowanych plikach:
+
+- `custom-fixes.js`, IIFE strony HOMA-IR (po mapach `A` i `a`): funkcja
+  `Bhoma_etap(u)` — typowana oś z `VildaPubertyAssessmentContext.readActiveContext().growth`
+  (`usableForGrowth`, `kind` G/Th) mapowana mapą `a`; bez typowanej oceny stary
+  `u.tannerStage` jak dotąd. W `S(i)` wyrażenie `z=…,H=z?a[z]:""` zastąpione
+  `H=Bhoma_etap(u)`. Dodany nasłuch `vilda:auth-loaded` → `S(!1)` (wypełnia tylko
+  puste pole).
+- `vilda_epicrisis_ui.js`, `Le()`: przed dotychczasowym odczytem `#tannerStage`
+  blok `Bep_typ` — gdy `assessmentContext.status !== 'absent'`, G/Th z `growth`
+  i P z `axisStates.P.growthUsable` trafiają do `y.answers.clinical`, a stara
+  ścieżka (`t9`, `he2`) jest pomijana.
+- `vilda_auth_ui.js`, ekran edycji pacjenta, sekcja „Dojrzewanie płciowe”: zmienna
+  `Bp6` (tekst z `VildaPubertyAssessment.readUser(c.user)`) i pierwszy element
+  `Bp2` — `ve-note` tylko do odczytu. Edycja oceny nadal wyłącznie w panelu formularza.
+
+Testy: e2e `tests/e2e/pokwitanie-konsumenci.spec.mjs`. Wpływ kliniczny i decyzje:
+`docs/clinical/ALGORITHMS.md`, P-POKWITANIE-KONSUMENCI.
+
+## Łatka P-POKWITANIE-WIZYTA — ocena z tej wizyty i wskaźnik zapisu (2026-10-15)
+
+Czytelne źródła: `vilda_puberty_assessment.js` (ta sama wizyta = ten sam ukończony
+miesiąc wieku) i `vilda_puberty_assessment_state.js` (`anchorToVisit()`,
+`ageInMonths()`; obserwacje z `currentAxes` o źródle `clinician-entry` dostają wiek
+i datę wizyty przy `capture()` i w `applyToUser()`). Artefaktów nie przebudowano.
+
+Jedyna zmiana w artefakcie: `vilda_save_status_indicator.js`, funkcja `se()`
+(rejestracja nasłuchów), bezpośrednio po nasłuchu `vilda:state-restored`:
+
+```js
+n.document.addEventListener("vilda:puberty-assessment-changed", function (r) {
+  try { r && r.detail && r.detail.reason === "edit" && w({ isTrusted: !0 }); } catch {}
+});
+```
+
+`w(e)` to istniejący odroczony handler zmiany pola (400 ms → `J()` → `B()`), który
+przelicza odcisk formularza z `collectUserData()`; przekazany obiekt omija wyłącznie
+jego warunek `isTrusted === false`. Powody `load`/`clear`/`identity`/`visit-change`
+nie uruchamiają przeliczenia: wczytanie i zmiana pacjenta mają własne nasłuchy.
+Nie zmieniono strażnika niezapisanych zmian (czyta `getState()` wskaźnika) ani
+importera. Test produkcyjnego wskaźnika: `tests/unit/save-status-pokwitanie.test.mjs`.
+Wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, P-POKWITANIE-WIZYTA.
+
+## Łatka P-IMPORT-STATUS — kolejność importu i wskaźnika zapisu (2026-10-15)
+
+`vilda_data_import_export.js` i `vilda_save_status_indicator.js` zachowują istniejący
+model globalnych skryptów. Wąska, czytelna część wskaźnika zastępuje 500 ms
+rozpoznawaniem konkretnej operacji:
+
+- `getApplyLoadedDataSequence()` zwraca rosnący licznik RAM dokumentu. Każde
+  poprawne `applyLoadedData()` zwiększa go; błędny argument nie zwiększa.
+- Istniejące asynchroniczne `vilda:json-imported` dostaje `detail.applySequence`.
+  Odtworzenie sesji zwiększa granicę operacji, ale nadal nie emituje importu JSON.
+- Istniejące `vilda:patient-loaded` z `source:'save'` dostaje numer uchwycony
+  na wejściu `saveUserData()`. Zakończenie wcześniejszego zapisu nie potwierdza
+  nowszego importu. Wczytanie z kartoteki potwierdza bieżącą operację także wtedy,
+  gdy wywołujący nie podał opcji `applyLoadedData`.
+- Wskaźnik ignoruje zdarzenia potwierdzone, unieważnione przez clear/lock albo
+  zastąpione nowszym apply. Jego odroczone publikacje wymagają zgodnej generacji,
+  numeru operacji i docelowego PID. Unlock nie potwierdza importu.
+
+Numer jest metadanymi wyłącznie zdarzenia i nie trafia do rekordu, eksportu,
+`sharedUserData`, sesji ani innego magazynu. Nie zmieniono modułu sejfu,
+autoryzacji ani strażnika niezapisanych zmian. Odtwarzalny test produkcyjnego
+importera i wskaźnika: `tests/unit/save-status-import-order.test.mjs`.
+Opis odtworzenia CI/CPU i zakresu: `docs/clinical/ALGORITHMS.md`, P-IMPORT-STATUS.
+
+## Integracja LAB-TT-MAYO — testosteron całkowity, etap 3 (2026-10-15)
+
+Nowe czytelne moduły `vilda_lab_testosterone_data.js` (źródła/polityki),
+`vilda_lab_testosterone.js` (czysta ocena) i `vilda_lab_testosterone_units.js`
+(niezmienny rejestr dotychczasowych konwersji) nie pochodzą z dawnego buildu.
+Nie przebudowano z nieaktualnych źródeł żadnego artefaktu.
+
+Wąskie punkty integracji w istniejących plikach:
+
+- `lab_units_data.js`: tylko rekord `testosterone_total` jest zapisany czytelnie.
+  Usunięto męskie wiersze, ogólny męski fallback oraz dawną notę przypisującą
+  samemu progowi rozpoznanie LOH. Żeńskie wiersze i wszystkie jednostki/faktory
+  pozostają dotychczasowe. Nowe męskie tabele żyją wyłącznie w nowym module danych.
+- `lab_unit_converter.js`: `U()`/`selectRange()` zwraca brak zakresu dla TT
+  bez jawnej płci F. Pozostałe anality i konwersje nie zmieniają się.
+- `vilda_auth_ui.js`: `vi()` nie oblicza dzisiejszego zakresu dla historycznego
+  `testosterone_total`, analogicznie do istniejącego AMH. Jawna norma wpisu
+  i liczba pozostają. Nie zmieniono edycji, scalania ani układu historii/trendu.
+- `vilda_chrome.js` i `vilda_session_bridge.js`: mały rejestr Units ładuje się
+  przed Snapshot; warunki gotowości wymagają obu. Normy ani silnik TT nie są
+  zależnością odczytu historii. Statyczne entrypointy zachowują tę samą kolejność.
+
+`przelicznik-jednostek.html` kieruje M/nieznaną płeć TT do wspólnego formularza
+i nowego silnika, F do dotychczasowych zakresów. Resolver wspólnego formularza
+rozstrzyga płeć również po jej zmianie bez ponownego wyboru analitu. Zapisana
+ocena jest kanoniczna; wyświetlanie w innej jednostce projektuje osobny widok.
+Snapshot i przypięcie zachowują oryginalną parę wartość–jednostka. Wszystkie
+te hooki mają regresje wykonujące rzeczywiste funkcje produkcyjne; szczegóły
+kliniczne i syntetyczne przypadki w `docs/clinical/TESTOSTERONE.md` oraz
+`docs/clinical/ALGORITHMS.md`, LAB-TT-MAYO.
+
+## Łatki LAB-HISTORIA 6.3 — zakres zapisany przy przypięciu (`lab_pin_result.js` 8 → 9, `vilda_vault.js` 214 → 215, `vilda_session_bridge.js` 75 → 76, `vilda_chrome.js` 151 → 152, 2026-10-15)
+
+Nowy czytelny moduł `vilda_lab_range_snapshot.js` (schemat, unieważnianie, opis dla widoków) nie pochodzi z dawnego buildu. W artefaktach są tylko punkty wpięcia, wszystkie w postaci czytelnej, na wzór odniesienia AMH (#677). Opis działania: `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.3”; projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, „Uzupełnienie z wdrożenia 6.3”.
+
+`lab_pin_result.js` — czytelny blok `Rr*` przed `/* PR3: modal shows the same detached assessment…`; w zminifikowanej części trzy wywołania:
+
+```js
+var RrRangeProvider = null;                     // a.VildaLabPinResult.setRangeProvider(fn) — ustawia przelicznik
+function RrCaptureRange(result) { … }           // kopia z dostawcy → result.range; result.valueNum = range.measurement.sourceValue
+function RrPinRange(result, host) { … }         // #labPinRange („Zapisze się z wynikiem: …”) i #labPinRangeDateNote (data ≠ dziś)
+// V():  Lh2CaptureAssessment(t), HrCaptureReference(t,e), RrCaptureRange(t), t.sampleDateISO = …
+// V():  … HrPinReference(t,o), RrPinRange(t,o), s.addEventListener("click", …)
+// A():  … hormoneReference …, Object.prototype.hasOwnProperty.call(t,"range") && a.VildaLabRangeSnapshot
+//         && (p.labResult.range = a.VildaLabRangeSnapshot.normalize(t.range)), …
+```
+
+Wygląd linii i uwagi: klasy `vilda-lab-pin-range*` w `vilda_lab_assessment_ui.css` (bez stylów wpisywanych na elementy).
+
+`vilda_vault.js` — czytelna część przy `LhHasAssessment`/`HrHasReference`: `RrHasRange`, `RrMissingRange`, `RrNormalizeRange`, `RrReconcileRange`; `LabReconcileSnapshots` woła kolejno ocenę, odniesienie AMH i zakres; `kt()` sanityzuje `labResult.range`; `listPatientLabSeries` kopiuje `point.range` z `forSeries`. Brak modułu przy zapisie notatki z zakresem — błąd z prośbą o odświeżenie; przy odczycie — `range_transport_unavailable` (wpis bez oceny).
+
+`vilda_session_bridge.js` (lista `V`) i `vilda_chrome.js` (lista `d`): wpis za `vilda_hormone_reference_snapshot.js`, a w warunkach „wszystko już jest” (`w()`, `I()` w moście, `u()` w chrome) — globalny `VildaLabRangeSnapshot`:
+
+```js
+{ type: 'script', src: 'vilda_lab_range_snapshot.js?v=1', ready: () => !!window.VildaLabRangeSnapshot },
+// w(), I(), u(): … && VildaHormoneReferenceSnapshot && VildaLabRangeSnapshot && VildaHormoneReferenceUI && …
+```
+
+Tag statyczny `vilda_lab_range_snapshot.js?v=1` obok `vilda_hormone_reference_snapshot.js` na ośmiu stronach z kartą i w `przelicznik-jednostek.html`; wpis precache w `service-worker-kalorii.js`. `przelicznik-jednostek.html` (czytelny skrypt strony): `captureLabRange` i `setRangeProvider` za rejestracją dostawcy odniesienia AMH. Zgodność list pilnuje `tests/unit/hormone-reference-loading.test.mjs` i `lab-history-tab-loading.test.mjs`.
+
+## Łatka LAB-HISTORIA 6.30 — zakres ogólny u dziecka bez oceny (`lab_pin_result.js` 9 → 10, 2026-10-15)
+
+Zmiana tylko w czytelnym bloku `Rr*` w `lab_pin_result.js` (`RrPinRange`): dla opisu `status: 'general'` z `VildaLabRangeSnapshot.describe` (wiersz domyślny przelicznika przy etapie życia dziecka) linia okna brzmi „Zapisze się z wynikiem: zakres ogólny {granice} — bez oceny dla dziecka”, a kontekst „bez zakresu dla: {dla kogo}” zamiast „dobrano dla: …”. Zminifikowana część bez zmian. Reguła i opis działania: `vilda_lab_range_snapshot.js` 1.1.0 (`describe`), `docs/clinical/ALGORITHMS.md`, „LAB-HISTORIA 6.30”.
+
 ## Jak odtworzyć
 
 ```bash

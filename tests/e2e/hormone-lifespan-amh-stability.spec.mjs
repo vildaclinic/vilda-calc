@@ -160,8 +160,16 @@ for (const width of [320, 1440]) {
     await page.locator('#labValue').fill(String(5.77 / .1401));
     await sourcePoint(page, 5.77, 'tehrani2017-male-amh');
     await expect.poll(() => geometry(page)).toEqual(empty);
-    // The reviewed Jopling groups fill 12 and 15; 18–<20 remains unsupported.
-    for (const age of [18, 19, 70, 75]) {
+    // The new young-adult source supplies its own wide-group median while
+    // keeping this historical illustration and its fixed axis unchanged.
+    for (const age of [18, 19]) {
+      await patient(page, age);
+      await page.locator('#labValue').fill('100');
+      await sourcePoint(page, 6.3, 'woloszynek2015-male-amh-age-18-20');
+      await expect(point(page)).toHaveAttribute('data-reference-statistic', 'group-median');
+      await expect.poll(() => geometry(page)).toEqual(empty);
+    }
+    for (const age of [70, 75]) {
       await patient(page, age);
       await page.locator('#labValue').fill('100');
       await expect(point(page)).toHaveCount(0);
@@ -231,7 +239,8 @@ test('AMH term-only infant reference stays separate from the fixed life illustra
     await expect(point(page)).toHaveCount(preterm === 'no' ? 1 : 0);
   }
   await page.evaluate(() => window.amhTestChart.update({ ...window.amhTestContext, ageYears: 18 }));
-  await expect(point(page)).toHaveCount(0);
+  await sourcePoint(page, 6.3, 'woloszynek2015-male-amh-age-18-20');
+  await expect(point(page)).toHaveAttribute('data-reference-statistic', 'group-median');
   await expect.poll(() => geometry(page)).toEqual(initial);
 });
 

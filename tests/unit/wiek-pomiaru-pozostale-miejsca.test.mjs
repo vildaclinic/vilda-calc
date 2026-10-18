@@ -167,16 +167,20 @@ describe('Pozostałe wywołania podają wiek jawnie (strażnik źródła)', () =
     expect(src).not.toMatch(/getChildLMS\(g,E\/12,"(HT|WT)"\)/);
   });
 
-  it('wsad XLSX: masa wiersza w wieku wiersza (Ce), jak Zw i Zb; zapasowy wzrost w pełnych miesiącach wiersza', () => {
+  // P-GRANICA-URODZIN (2026-10-14): wiek dokładny wiersza to Cs (Ce przycięty do granic siatek), a pełne miesiące
+  // wiersza — Rp z kalendarza (VildaDobAge.ageFromDobISO), nie zaokrąglony wiek dokładny.
+  it('wsad XLSX: masa wiersza w wieku wiersza (Cs), jak Zw i Zb; zapasowy wzrost w pełnych miesiącach wiersza (Rp)', () => {
     const src = zrodlo('vilda_professional_module.js');
-    expect(src).toContain('const y=calcPercentileStats(P,r,re,"WT",{wiekMies:Ce});');
-    expect(src).toContain('const J=calcPercentileStats(ae,r,re,"HT",{wiekMies:null});');
+    expect(src).toContain('const y=calcPercentileStats(P,r,Rp,"WT",{wiekMies:Cs});');
+    expect(src).toContain('const J=calcPercentileStats(ae,r,Rp,"HT",{wiekMies:null});');
     expect(src).toContain(',re=((dpOk?dpD:new Date()).getTime()-p.getTime())/(365.25*24*3600*1e3),Ce=re*12,');
   });
 
   // Przegląd Codex (2026-10-14): doby / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach.
-  // Zapas wzrostu wsadu działa tylko wtedy, gdy silnik nie policzył wieku dokładnego wiersza (Zw), np. tuż
-  // po 18. urodzinach — i ma wtedy ratować wynik pełnymi miesiącami, jak przed tą zmianą.
+  // Zapas wzrostu wsadu działa tylko wtedy, gdy silnik nie policzył wieku dokładnego wiersza (Zw) — i ma wtedy
+  // ratować wynik pełnymi miesiącami. W tej atrapie (bez centyli Palczewskiej) wiek dokładny 216,016 nie ma
+  // siatki; w aplikacji łańcuch schodził wtedy na Palczewską. Od P-GRANICA-URODZIN wsad podaje Zw wiek
+  // przycięty do granic (216 przy 216 pełnych miesiącach, OLAF), a ten test pilnuje już tylko samego zapasu.
   it('wsad XLSX: zapas wzrostu tuż po 18. urodzinach (6575 dób = 216,016 mies.) liczy, gdzie wiek dokładny nie ma siatki', () => {
     const r = rdzen(null, 'OLAF');
     const Ce = 6575 / DNI_W_MIESIACU;

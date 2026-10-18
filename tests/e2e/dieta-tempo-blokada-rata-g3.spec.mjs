@@ -26,7 +26,11 @@ async function stan(page, s) {
     window.professionalMode = true; window.intakeHistory = null; window.lastLoadedData = null; window.hasUserModifiedAfterLoad = false;
     window.__vildaPlanPalTouched = false; window.__vildaPlanPalDefault = null; window.__vildaDietStrategyTouched = false;
     set('name', 'Testowa Fikcyjna'); set('sex', s.sex); set('age', s.age); set('ageMonths', 0); set('weight', s.w); set('height', s.h); set('customGoalKg', '');
-    set('tannerStage', s.tanner == null ? '' : s.tanner);
+    window.VildaPubertyAssessmentState.clear();
+    if (s.tanner != null) {
+      const typed = window.VildaPubertyAssessmentState.editObservation(s.sex === 'M' ? 'G' : 'Th', Number(s.tanner));
+      if (!typed.ok) throw new Error('Nie przyjęto jawnej oceny G/Th: ' + typed.reason);
+    }
     set('advMotherHeight', s.mama == null ? '' : s.mama); set('advFatherHeight', s.tata == null ? '' : s.tata);
     for (const r of s.historia || []) {
       document.getElementById('advAddMeasurementBtn').click();

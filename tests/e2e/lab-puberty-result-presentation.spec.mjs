@@ -181,6 +181,9 @@ test('severe thresholds are strict and each axis owns its high or low state', as
 
   await fill(page, 'AgeYears', '16');
   await fill(page, 'AgeMonths', '0');
+  await expect(axis(page, 'stage')).toHaveCount(0);
+  // Renew G3 explicitly for the new age; editing age is not an examination.
+  await select(page, 'Stage', '3');
   await page.locator('#labValue').fill('15');
   await expect(axis(page, 'age')).toHaveAttribute('data-visual-state', 'is-above');
   await expect(axis(page, 'stage')).toHaveAttribute('data-visual-state', 'is-uwaga-high');
@@ -345,7 +348,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   expect(await page.evaluate((id) => window.VildaVault.getPatientNote(id), saved.id)).toMatchObject({ labResult: { assessment: saved.labResult.assessment } });
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(history).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(history.locator('.vilda-lab-context, .vilda-lab-context-note, dl')).toHaveCount(0);
@@ -372,7 +375,7 @@ test('a pinned comparison keeps its stored axes after current input changes and 
   expect(invalidated.labResult.assessment.status).toBe('invalidated');
   expect(invalidated.labResult.assessment.evaluation).toEqual(saved.labResult.assessment.evaluation);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   await expect(history).toHaveAttribute('data-assessment-status', 'invalidated');
   await expect(history).toContainText('Wynik wymaga ponownej oceny');
   await expect(history.locator(':scope > .vilda-lab-severity-summary')).toHaveCount(0);

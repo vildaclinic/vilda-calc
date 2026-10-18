@@ -75,7 +75,7 @@ async function otworz(page) {
 async function rozwinPanel(page) {
   const btn = page.getByRole('button', { name: '+ Dane pokwitaniowe' });
   if (await btn.count()) await btn.click();
-  await expect(page.locator('#tannerStage')).toBeVisible();
+  await expect(page.locator('#pubertyAssessmentEditor')).toBeVisible();
 }
 
 // Dziewczynka 10 lat, 135 cm; rok wcześniej 128 cm → 7,0 cm/rok.
@@ -90,6 +90,7 @@ async function policzPacjentke(page) {
     document.getElementById('sex').value = 'F';
     document.getElementById('height').value = '135';
     document.getElementById('weight').value = '30';
+    document.getElementById('sex').dispatchEvent(new Event('change', { bubbles: true }));
     if (typeof window.update === 'function') window.update();
   });
   await page.waitForSelector(
@@ -235,9 +236,10 @@ test.describe('Wynik przelicza się na żywo', () => {
     const tempo = page.locator('#advResults .vtap-tempo');
     await expect(tempo).toContainText('w normie');
 
-    await page.locator('#tannerStage').selectOption('5');
-    await expect(tempo, 'po skoku pokwitaniowym norma tempa nie ma zastosowania')
-      .toContainText('po skoku pokwitaniowym');
+    await page.locator('#pubertyAssessmentEditor .vpa-segments [data-puberty-axis="Th"][data-puberty-stage="5"]').click();
+    await expect(tempo, 'kwalifikujące Th V zmienia podstawę oceny')
+      .toContainText('Th V');
+    await expect(tempo).toContainText('nie potwierdza zakończenia');
     await expect(tempo).not.toContainText('w normie');
   });
 
@@ -245,6 +247,7 @@ test.describe('Wynik przelicza się na żywo', () => {
     await otworz(page);
     await policzPacjentke(page);
     await rozwinPanel(page);
+    await page.locator('#pubertyOptionalDetails > summary').click();
     const kafelek = page.locator('#advResults .vtap-hvc');
     await expect(kafelek).not.toContainText('Wg czasu pokwitania');
 
@@ -257,6 +260,7 @@ test.describe('Wynik przelicza się na żywo', () => {
     await otworz(page);
     await policzPacjentke(page);
     await rozwinPanel(page);
+    await page.locator('#pubertyOptionalDetails > summary').click();
     const zdanie = () => page.evaluate(() => String(window.generateMetabolicSummary() || '')
       .split('\n').find((t) => /^SDS tempa/.test(t.trim())) || '');
     expect(await zdanie()).not.toMatch(/KOWD/);

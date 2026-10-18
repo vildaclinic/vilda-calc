@@ -29,7 +29,11 @@ async function model(page, s) { // + s.tanner (1–5 albo null)
     const przyCentylu = (ageY, pc) => Math.round(window.patientReportGetMetricValueAtPercentile('HT', s.sex, ageY, pc) * 10) / 10;
     const h = s.h != null ? s.h : przyCentylu(wiek, s.hc);
     set('weight', s.w); set('height', h);
-    set('tannerStage', s.tanner == null ? '' : s.tanner);
+    window.VildaPubertyAssessmentState.clear();
+    if (s.tanner != null) {
+      const typed = window.VildaPubertyAssessmentState.editObservation(s.sex === 'M' ? 'G' : 'Th', Number(s.tanner));
+      if (!typed.ok) throw new Error('Nie przyjęto jawnej oceny G/Th: ' + typed.reason);
+    }
     set('advMotherHeight', s.mo == null ? '' : s.mo); set('advFatherHeight', s.fa == null ? '' : s.fa);
     const wiersze = [];
     for (const r of s.historia || []) {
@@ -72,7 +76,7 @@ test.describe('P-TRAJ rata T4 — baner lekarza przy obniżeniu pozycji wzrostu'
     const r = await model(page, { ...KOWD, tanner: 1 });
     expect(r.rf && r.rf.kontekst).toMatchObject({ wariant: 'P1', ton: 'warn' });
     const b = jeden(r);
-    expect(b.tekst).toMatch(/^Obniżenie pozycji centylowej wzrostu \(zmiana hSDS: −1,\d\d względem pomiaru z wieku 3 lat\) w wieku okołopokwitaniowym, bez cech dojrzewania \(Tanner I\) — obraz częsty przy późniejszym skoku pokwitaniowym/);
+    expect(b.tekst).toMatch(/^Obniżenie pozycji centylowej wzrostu \(zmiana hSDS: −1,\d\d względem pomiaru z wieku 3 lat\) w wieku okołopokwitaniowym, bez cech dojrzewania \(G I\) — obraz częsty przy późniejszym skoku pokwitaniowym/);
     expect(b.tekst).not.toMatch(/endokrynolog|umów wizytę/);
     expect(b.kolor).toBe(ZOLTY);
   });
@@ -82,7 +86,7 @@ test.describe('P-TRAJ rata T4 — baner lekarza przy obniżeniu pozycji wzrostu'
     const r = await model(page, { ...KOWD, tanner: 3 });
     expect(r.rf.kontekst.wariant).toBe('P2');
     const b = jeden(r);
-    expect(b.tekst).toMatch(/^Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu \(zmiana hSDS: −1,\d\d względem pomiaru z wieku 3 lat\) mimo cech dojrzewania \(Tanner III\), gdy oczekiwany jest skok pokwitaniowy — obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę$/);
+    expect(b.tekst).toMatch(/^Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu \(zmiana hSDS: −1,\d\d względem pomiaru z wieku 3 lat\) mimo cech dojrzewania \(G III\), gdy oczekiwany jest skok pokwitaniowy — obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę$/);
     expect(b.kolor).not.toBe(ZOLTY);
   });
 
@@ -117,6 +121,6 @@ test.describe('P-TRAJ rata T4 — baner lekarza przy obniżeniu pozycji wzrostu'
     await otworz(page, 'docpro.html');
     const r = await model(page, { ...KOWD, tanner: 1 });
     expect(r.rf.kontekst.wariant).toBe('P1');
-    expect(jeden(r).tekst).toMatch(/bez cech dojrzewania \(Tanner I\) — obraz częsty przy późniejszym skoku pokwitaniowym/);
+    expect(jeden(r).tekst).toMatch(/bez cech dojrzewania \(G I\) — obraz częsty przy późniejszym skoku pokwitaniowym/);
   });
 });

@@ -1,0 +1,91 @@
+{
+  "id": "male-amh-18-20-reference-audit-2026-10-18",
+  "reviewedOn": "2026-10-18",
+  "baseCommit": "d2bd5ed63e1a0d499ddd5396993883357ac5237d",
+  "scope": "Add only an ordinary educational male AMH source-group median in the uncovered [18,20) age interval. No laboratory RI, SDS, patient percentile, diagnosis, new form field, curve redraw, axis rescaling or change to sex comparisons.",
+  "ownerDecision": "After the documented source review and proposal, the owner requested a small PR filling male AMH 18–<20 years. This authorizes implementation and review, not merging, deployment or a claim of clinical validation.",
+  "sourceExtract": "patient-point/woloszynek2015-male-amh-group-median.json",
+  "primarySource": {
+    "doi": "10.1177/0004563214554462",
+    "documentVersion": "Final Annals of Clinical Biochemistry 2015;52(1):67–75 publisher article, nine pages",
+    "access": "Full primary publisher PDF reread through web access on 2026-10-18; Table 2 and methods cross-checked in publisher HTML. Direct shell PDF retrieval returned HTTP 403; no local bytes, hash or independently viewed screenshot claimed.",
+    "verifiedFacts": "See the source extract: Table 2 page 72, male group 18–30, N=63, median 6.3 ng/mL; serum and the described manual Gen II ELISA protocol.",
+    "evidenceStatus": "Primary medical text is evidence, never agent instructions. Only factual extraction and application decisions are committed."
+  },
+  "statisticDecision": {
+    "statistic": "group-median",
+    "sourceGroup": "18–30 years",
+    "selectedValueNgMl": 6.3,
+    "groupN": 63,
+    "applicationWindow": "[18,20)",
+    "constantWithinWindow": true,
+    "restriction": "Keep the original 18–30 group label and N visible in source details. Do not label this p50 at 18 or 19, a median of 18–20, a Tanner median, a continuous-age model or a normal range.",
+    "noDerivedReferenceIntervals": "Only the published median is activated. Published percentiles, other age-group medians, sample extrema, sensitivity, and linearity limits do not become patient thresholds or RI."
+  },
+  "assayQualification": {
+    "compatibleAssayIds": [
+      "beckman-coulter-gen-ii-original-elisa-amh"
+    ],
+    "compatibleSpecimens": [
+      "serum"
+    ],
+    "identifierMeaning": "The narrowly scoped internal original identifier denotes only the paper's explicit plate protocol, not every kit labeled Gen II. The paper itself does not name the protocol original.",
+    "notEquivalent": [
+      "Generic Gen II without protocol",
+      "Modified or premixed Gen II",
+      "Beckman Coulter Access 2",
+      "Beckman Coulter DxI Access",
+      "Roche Elecsys",
+      "Mindray",
+      "Immunotech"
+    ],
+    "knownMismatch": "Block numerical patient comparison for a known incompatible assay or material. Do not choose an overlapping, out-of-age or supposedly compatible source as fallback.",
+    "unknownMethodOrSpecimen": "Retain the established educational-preview policy without pretending the method or specimen is confirmed and without an additional mandatory question.",
+    "quantificationPolicy": "Keep analytical and functional sensitivity as documentary facts only. Do not manufacture an LLOQ, censor exact values, replace < results by a threshold or zero, or infer laboratory interpretability from the plotting scale."
+  },
+  "ageAndSourcePolicy": {
+    "under18": "Preserve existing Jopling and Wang profiles, values, source labels, age boundaries and specimen/method qualification unchanged.",
+    "from18Until20": "Select the new Woloszynek group median only when the entire possible chronological-age interval fits [18,20). The source group is retained unchanged as 18–30.",
+    "from20": "Preserve existing Benderradji [20,30) route; the Woloszynek source's wider published age band never overrides that route.",
+    "from30": "Preserve existing Tehrani route and all original values and method limitations.",
+    "precision": "Accept exact 18, main-form 18 years 0 months and 19 years 11 months when their full half-open intervals fit. Reject intervals crossing 18 or including/crossing 20; do not use a midpoint reference or a graphical bridge.",
+    "sourceBoundary": "Switches at 18 and 20 are source-priority decisions across independent populations and methods, not sudden physiological changes. Never blend medians or adjust the educational curve to force them together."
+  },
+  "patientContextPolicy": {
+    "minimalInput": "Reuse known current sex and age from the main form; no new Tanner, testicular volume, BMI, infertility, method or specimen questionnaire.",
+    "positiveFacts": "Preserve existing known hormone treatment and stimulation exclusions, same-patient identity checks, sex consistency and historical-sample protections; absence of information is not a confirmed negative history.",
+    "sourceVersusApplication": "The source cohort eligibility is documentation. Application exclusion flags remain application policy and do not establish that this patient meets source inclusion criteria."
+  },
+  "units": {
+    "sourceUnit": "ng/mL",
+    "canonicalUnit": "pmol/L",
+    "existingConversion": "1 pmol/L = 0.1401 ng/mL",
+    "canonicalReferenceExpression": "6.3 / 0.1401",
+    "canonicalReferencePmolL": 44.9678800856531,
+    "unchangedConversion": true,
+    "sourceRoundedFactor": "Do not calculate the source with its rounded 7.14 and the patient with 1/0.1401; both use the same existing application conversion. No between-assay adjustment is applied."
+  },
+  "displayContract": {
+    "geometryAndScale": "All existing educational AMH paths, policies, axis divisors, comparison views and source anchors remain unchanged.",
+    "sourceMarker": "Use the numerical 6.3 ng/mL reference even if the existing educational line has a different height. Never project either marker onto that line.",
+    "exactAndCensoredResults": "An exact nonnegative result retains its real value, including zero or an above-axis arrow. An inequality has no exact patient point; preserve the textual result and reason.",
+    "views": "Exercise ordinary life and puberty views, fullscreen and 320-pixel mobile without changing independent period/comparison qualification."
+  },
+  "syntheticExpectedProductionCases": [
+    {"sex": "male", "ageYears": 18, "result": 6.3, "unit": "ng/mL", "expectedSource": "Woloszynek 2015", "expectedReferenceNgMl": 6.3, "expectedGroup": "18–30 lat", "expectedN": 63},
+    {"sex": "male", "ageYears": 19, "result": 44.9678800856531, "unit": "pmol/L", "expectedReferencePmolL": 44.9678800856531},
+    {"sex": "male", "ageInterval": "[18,18+1/12)", "expectedWoloszynekReference": true},
+    {"sex": "male", "ageInterval": "[19+11/12,20)", "expectedWoloszynekReference": true},
+    {"sex": "male", "ageInterval": "[17.99,18.01]", "expectedWoloszynekReference": false},
+    {"sex": "male", "ageInterval": "[19.99,20]", "expectedWoloszynekReference": false},
+    {"sex": "male", "ageYears": 17, "expectedSource": "Existing Jopling profile"},
+    {"sex": "male", "ageYears": 20, "expectedSource": "Existing Benderradji profile", "expectedReferencePmolL": 43.8},
+    {"sex": "male", "ageYears": 30, "expectedSource": "Existing Tehrani profile"},
+    {"sex": "female", "ageYears": 19, "expectedWoloszynekReference": false},
+    {"sex": "male", "ageYears": 19, "knownAssay": "Beckman Coulter Access 2", "expectedWoloszynekReference": false},
+    {"sex": "male", "ageYears": 19, "knownSpecimen": "plasma", "expectedWoloszynekReference": false},
+    {"sex": "male", "ageYears": 19, "knownHormonalTreatment": true, "expectedWoloszynekReference": false},
+    {"sex": "male", "ageYears": 19, "operator": "<", "result": 0.2, "unit": "ng/mL", "expectedExactPatientPoint": false}
+  ],
+  "notClinicalValidation": true
+}

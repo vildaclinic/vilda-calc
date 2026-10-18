@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
@@ -56,6 +56,41 @@ describe('VildaLabSnapshot — explicit versioned assessment', () => {
     expect(result.evaluation.biochemical.byStage.status).toBe('within');
     expect(result.evaluation.clinical.code).toBe('early_development');
     expect(snapshot.normalize(JSON.parse(JSON.stringify(result)))).toEqual(result);
+  });
+
+  it('pins the independent M17 laboratory source and reads history without replacing it with the new LH median', () => {
+    const require = createRequire(import.meta.url);
+    const lifespan = require('../../vilda_hormone_lifespan_reference.js');
+    const lifespanData = require('../../vilda_hormone_lifespan_data.js');
+    const educational = lifespan.evaluate(lifespanData, { analyte: 'lh', sex: 'male', ageYears: 17,
+      measurement: { value: 2, unit: 'IU/L' } });
+    expect(educational).toMatchObject({ status: 'ready',
+      profile: { id: 'wilson2023-male-lh-age-over16-under18', statistic: 'median' } });
+
+    const saved = boundLab({}, evaluate({ birthDateISO: '2009-10-03' }));
+    expect(saved.assessment).toMatchObject({ status: 'recorded', evaluation: {
+      ageAtSample: { lowerYears: 17, upperYears: 17 },
+      biochemical: { byAge: { status: 'within', range: { profileId: 'mayo-lh-pediatric',
+        sourceId: 'mayo-lhped-62999', method: { id: 'anshlite-lh-clia' },
+        bounds: { lower: { value: .8 }, upper: { value: 8.7 } } } } } } });
+    const original = JSON.parse(JSON.stringify(saved.assessment));
+    // The laboratory engine is deliberately frozen. Load the real standalone
+    // reader with throwing current-engine sentinels instead of patching it.
+    const laboratory = vi.fn(() => { throw new Error('No laboratory recalculation'); });
+    const median = vi.fn(() => { throw new Error('No educational recalculation'); });
+    const historicalBrowser = { VildaLabPuberty: { evaluate: laboratory },
+      VildaHormoneLifespanReference: { evaluate: median } };
+    loadBrowserScript('vilda_lab_snapshot.js', historicalBrowser);
+    const reader = historicalBrowser.VildaLabSnapshot;
+    expect(reader.normalize(saved.assessment)).toEqual(original);
+    expect(reader.forSeries(saved, DATE).assessment).toEqual(original);
+    expect(reader.reconcile(saved, { ...saved }, DATE, DATE).assessment).toEqual(original);
+    expect(laboratory).not.toHaveBeenCalled();
+    expect(median).not.toHaveBeenCalled();
+    // This PR adds an educational source, not a new historical LH envelope.
+    const legacy = { test: 'LH', testKey: 'lh', value: '2', valueNum: 2, unit: 'IU/L' };
+    expect(snapshot.reconcile(null, legacy, null, DATE)).toEqual(legacy);
+    expect(snapshot.forSeries(legacy, DATE)).toEqual({});
   });
 
   it('detaches every nested reference from input and reference-data versions', () => {

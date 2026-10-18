@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { priorFemaleGonadotropinBundle, withoutFemaleGonadotropinReferencePolicy } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
@@ -32,21 +33,21 @@ const groups = [
 describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilustracji', () => {
   it('dodaje tylko trzy rozłączne profile, zachowując 65 pozostałych wcześniejszych profili i przeliczenia', () => {
     expect(newIds).toEqual(groups.map(g => g.id));
-    expect(data.profiles).toHaveLength(76);
+    expect(data.profiles).toHaveLength(82);
     expect(laterFemaleIds).toHaveLength(5);
     // The later extension of the one ordinary female inhibin profile is tested separately.
     const revisedInhibinId = 'borelli2025-female-inhb-age-5p6-47';
-    const original = { ...data, version: '2026-10-13.2',
-      profiles: data.profiles.filter(p => !newIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId && !laterChildhoodIds.includes(p.id)) };
+    const original = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-13.2',
+      profiles: priorFemaleGonadotropinBundle(data).profiles.filter(p => !newIds.includes(p.id) && !laterFemaleIds.includes(p.id) && p.id !== revisedInhibinId && !laterChildhoodIds.includes(p.id)) };
     expect(original.profiles).toHaveLength(65);
     expect(digest(original)).toBe('455d2c037c96cad243db41d852a62348b6e12e615540ddc351a8499ae48d0f85');
     expect(data).toEqual(read('population-reference-data.json'));
     expect(policy).toMatchObject({ kind: 'educational-source-selection', ordinaryOnly: true });
-    expect(data.profiles.filter(p => p.sex === 'male' && p.ordinaryOnly).map(p => p.id)).toEqual(newIds);
+    expect(priorFemaleGonadotropinBundle(data).profiles.filter(p => p.sex === 'male' && p.ordinaryOnly).map(p => p.id)).toEqual(newIds);
   });
 
   it('zachowuje cały pozostały runtime i dokładnie tę samą źródłową geometrię męskiego AMH', () => {
-    expect(digest(Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'patientPointData'))))
+    expect(digest(withoutFemaleGonadotropinReferencePolicy(runtime)))
       .toBe('380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d');
     const illustration = display.buildMaleAmh(runtime, engine);
     expect(digest(illustration)).toBe('cbd1e9d72a4d993ac52e1d3050f31573f678131c14205154ea18a34bd2e96c1c');
@@ -90,15 +91,18 @@ describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilu
     expect(adult).not.toHaveProperty('minimumPatientValue');
   });
 
-  it('wybiera źródło na granicach bez nakładania, fallbacku metody i zapełniania luki 18–<20', () => {
+  it('wybiera źródło na granicach bez nakładania ani fallbacku metody, także po późniejszym uzupełnieniu 18–<20', () => {
     const expected = [
       [11.999, 'wang2020-male-amh-age-11'], [12, groups[0].id], [12.999, groups[0].id],
       [13, 'wang2020-male-amh-age-13'], [14.999, 'wang2020-male-amh-age-14'],
-      [15, groups[1].id], [17.999, groups[1].id], [20, groups[2].id], [29.999, groups[2].id],
+      [15, groups[1].id], [17.999, groups[1].id],
+      [18, 'woloszynek2015-male-amh-age-18-20'], [18.9, 'woloszynek2015-male-amh-age-18-20'],
+      [19, 'woloszynek2015-male-amh-age-18-20'], [19.999, 'woloszynek2015-male-amh-age-18-20'],
+      [20, groups[2].id], [29.999, groups[2].id],
       [30, 'tehrani2017-male-amh'], [70, 'tehrani2017-male-amh']
     ];
     for (const [age, id] of expected) expect(evaluate(age)).toMatchObject({ status: 'ready', profile: { id } });
-    for (const age of [0, 6 / 365.25, 18, 18.9, 19, 19.999, 70.001]) {
+    for (const age of [0, 6 / 365.25, 70.001]) {
       expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
     }
     // At age 13, do not silently replace Wang serum with overlapping Jopling plasma.

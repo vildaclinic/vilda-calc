@@ -1,0 +1,199 @@
+/* Shared puberty editor, scoped against the host's glass button skin. */
+.vilda-puberty-panel,
+.vilda-puberty-panel * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+.vilda-puberty-panel [hidden] {
+  display: none !important;
+}
+.vilda-puberty-panel {
+  --vpa-ink: var(--hc-text, var(--text-strong));
+  --vpa-muted: var(--hc-muted, var(--text-muted));
+  --vpa-line: var(--hc-input-border, var(--line));
+  width: 100%;
+  max-width: 100%;
+  margin: var(--space-12px) 0;
+  color: var(--vpa-ink);
+  text-align: left;
+}
+#pubertyAssessmentSummary {
+  margin: var(--space-6px) 0 0;
+  color: var(--vpa-muted, var(--text-muted));
+  font-size: .78rem;
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.vilda-puberty-panel .vpa-intro,
+.vilda-puberty-panel .vpa-context-note,
+.vilda-puberty-panel .vpa-edit-status {
+  margin: var(--space-8px) 0;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--vpa-muted, var(--text-muted));
+}
+.vilda-puberty-panel .vpa-context-note,
+.vilda-puberty-panel .vpa-edit-status {
+  padding: var(--space-8px) var(--space-10px);
+  border-radius: var(--radius-8);
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+body .vilda-puberty-panel fieldset.vpa-row {
+  position: relative;
+  margin: var(--space-16px) 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.vilda-puberty-panel .vpa-row legend {
+  display: flex;
+  position: static;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8px);
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 var(--space-10px);
+  border-radius: 0;
+  background: transparent;
+  color: var(--vpa-ink);
+  font-size: .85rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.vilda-puberty-panel button {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-8px) !important;
+  border: var(--border-hairline) solid var(--vpa-line) !important;
+  border-radius: var(--radius-8) !important;
+  background: var(--bg) !important;
+  color: var(--vpa-muted, var(--text-muted)) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  font: inherit !important;
+  font-size: .82rem !important;
+  font-weight: 550 !important;
+  line-height: 1.3 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  text-shadow: none !important;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.vilda-puberty-panel button::before,
+.vilda-puberty-panel button::after {
+  display: none !important;
+}
+.vilda-puberty-panel button:hover,
+.vilda-puberty-panel button[aria-pressed="true"] {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  background: var(--tint-teal) !important;
+}
+.vilda-puberty-panel button:focus-visible,
+.vilda-puberty-panel summary:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary) !important;
+  outline-offset: 2px;
+}
+.vilda-puberty-panel button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: default;
+}
+.vilda-puberty-panel button.vpa-guide-toggle {
+  position: static;
+  flex-shrink: 0;
+  padding: var(--space-6px) !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  font-size: .76rem !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.vilda-puberty-panel .vpa-segments {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(88px, 1.8fr);
+  gap: var(--space-4px);
+}
+.vilda-puberty-panel .vpa-segments button {
+  width: 100% !important;
+}
+.vilda-puberty-panel .vpa-definition,
+.vilda-puberty-panel .vpa-provenance {
+  margin: var(--space-8px) 0 0;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+.vilda-puberty-panel .vpa-provenance {
+  margin-top: var(--space-4px);
+  color: var(--vpa-muted, var(--text-muted));
+  font-size: .72rem;
+}
+.vilda-puberty-panel .vpa-guide {
+  margin-top: var(--space-10px);
+  padding: var(--space-10px);
+  border: var(--border-hairline) solid var(--vpa-line);
+  border-radius: var(--radius-8);
+  background: var(--card);
+}
+.vilda-puberty-panel .vpa-guide p {
+  margin: 0 0 var(--space-8px);
+  color: var(--vpa-muted, var(--text-muted));
+  font-size: .75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.vilda-puberty-panel .vpa-guide-choices {
+  display: grid;
+  gap: var(--space-6px);
+  margin-bottom: var(--space-10px);
+}
+.vilda-puberty-panel button.vpa-guide-choice {
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: var(--space-8px);
+  width: 100% !important;
+  text-align: left !important;
+  font-size: .76rem !important;
+  line-height: 1.5 !important;
+}
+.vilda-puberty-panel .vpa-volume {
+  display: block;
+  margin-top: var(--space-4px);
+  color: var(--vpa-muted, var(--text-muted));
+  font-size: .72rem;
+}
+.vilda-puberty-panel .vpa-sources summary,
+.vilda-puberty-panel #pubertyOptionalDetails > summary {
+  padding: var(--space-8px) 0;
+  color: var(--vpa-muted, var(--text-muted));
+  font-size: .76rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.vilda-puberty-panel #pubertyOptionalDetails {
+  margin-top: var(--space-12px);
+  padding-top: var(--space-4px);
+  border-top: var(--border-hairline) solid var(--vpa-line);
+}
+@media (max-width: 360px) {
+  .vilda-puberty-panel .vpa-segments {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .vilda-puberty-panel .vpa-segments button:last-child {
+    grid-column: 1 / -1;
+    min-height: 34px !important;
+  }
+}

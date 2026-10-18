@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-14.2",
+  "version": "2026-10-18.3",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -19802,7 +19802,8 @@ const patientPointData = {
         "No assay interchangeability is established by this source; Siemens IMMULITE LH/FSH differs from Mayo AnshLite LH and Roche preterm profiles.",
         "Daytime sampling broadens testosterone distributions; this is not a separate early-morning-only reference.",
         "No fetal, infant, preterm, adult or senior extrapolation from these models."
-      ]
+      ],
+      "maxAgeExclusive": true
     },
     {
       "id": "zec2012-female-fsh-age-1-4",
@@ -19902,7 +19903,7 @@ const patientPointData = {
       "analyte": "fsh",
       "sex": "female",
       "minAge": 4,
-      "maxAge": 8,
+      "maxAge": 6,
       "points": [
         {
           "ageYears": 4,
@@ -19976,99 +19977,13 @@ const patientPointData = {
           "sourceTable": 1,
           "journalPage": 1208,
           "pdfPage": 3
-        }
-      },
-      "limitations": [
-        "These are whole-group medians for children assessed as Tanner stage 1, not exact-age medians, continuous age trajectories or clinical reference limits.",
-        "Do not treat known pubertal children as part of the prepubertal reference cohort. Gonadal-stage eligibility must use the existing sex-specific puberty context, never inferred from age or FSH.",
-        "The boys 1–<6 application window is a source-priority policy, not a new source subgroup; median 0.48 IU/L and N=303 describe the full published 1–<8-year group.",
-        "Recruitment included pediatric outpatient and hospital visits, including acute illness; this was not a pure healthy-volunteer sample.",
-        "Serum and Li-heparin plasma were collected; the paper does not specify the matrix used for each hormone. No matrix-specific equivalence is established.",
-        "The assay belongs to the source cohort; automatic source selection does not establish the method or material of the patient sample, nor equivalence to other Roche assays or the Mayo FSH profile.",
-        "No gestational-age stratification is reported. These are not premature-infant reference data.",
-        "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
-        "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
-      ]
-    },
-    {
-      "id": "zec2012-female-fsh-age-8-11",
-      "analyte": "fsh",
-      "sex": "female",
-      "minAge": 8,
-      "maxAge": 11,
-      "points": [
-        {
-          "ageYears": 8,
-          "value": 1.55
         },
-        {
-          "ageYears": 11,
-          "value": 1.55
-        }
-      ],
-      "sourceLabel": "Zec 2012 · FSH · przed pokwitaniem",
-      "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
-      "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
-      "population": "Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja",
-      "statistic": "group-median",
-      "approximate": false,
-      "unit": "IU/L",
-      "interpolation": "constant",
-      "maxAgeExclusive": true,
-      "requiredGonadalStage": 1,
-      "compatibleAssayMethodIds": [
-        "roche-cobas-e411-fsh",
-        "roche-cobas-e-411-fsh"
-      ],
-      "ageGroup": {
-        "label": "8–<11 lat",
-        "minAge": 8,
-        "maxAge": 11,
-        "n": 107,
-        "sourceUnit": "IU/L",
-        "sourceMedian": 1.55,
-        "boundaryPolicy": "published-inclusive-lower-exclusive-upper",
-        "description": "Mediana całej grupy dzieci przed pokwitaniem (Tanner 1); nie opisuje zmian stężenia wewnątrz tego przedziału wieku."
-      },
-      "provenance": {
-        "title": "Reference intervals for reproductive hormones in prepubertal children on the automated Roche cobas e 411 analyzer",
-        "authors": "Zec I et al.",
-        "year": 2012,
-        "journal": "Clinical Biochemistry",
-        "volume": 45,
-        "pages": "1206–1212",
-        "doi": "10.1016/j.clinbiochem.2012.05.019",
-        "pmid": "22634601",
-        "url": "https://doi.org/10.1016/j.clinbiochem.2012.05.019",
-        "table": 2,
-        "journalPage": 1210,
-        "pdfPage": 5,
-        "sha256": "d5e5e9521f1c5c69d1e12d2794c09e5937a370c39cc0a802577f5b6f188a04db",
-        "access": "Full primary publication supplied by owner; Table 2 and assay/methods text checked against rendered PDF on 2026-10-10.",
-        "redistribution": "Factual FSH medians, cohort metadata and citation only; publisher PDF and figures are not included.",
-        "participants": 948,
-        "fshParticipants": 807,
-        "groupParticipants": 107,
-        "sourceUnit": "IU/L",
-        "sourceToCanonicalFactor": 1,
-        "sourceAgeBoundaryDefinition": "Exact inclusive lower and exclusive upper age boundaries in Table 2.",
-        "ageRouting": "Male 1–<6 years uses the published 1–<8-year median; preserve the existing Madsen 2022 age curve from 6 through 16 years. Female 1–<4, 4–<8 and 8–<11 years use their three separate published groups.",
-        "routingNote": "Use the exact age boundaries published in Table 2.",
-        "assay": {
-          "method": "Roche cobas e 411 electrochemiluminescence sandwich immunoassay",
-          "material": "Serum and Li-heparin plasma collected; analyte-specific matrix assignment is not reported.",
-          "analyteSpecificMaterial": null,
-          "samplingTime": "not reported",
-          "fastingRequired": false,
-          "storage": "Measured immediately or after storage at −20°C for no more than three months.",
-          "lodIuL": 0.1,
-          "loqIuL": null,
-          "traceability": "2nd IRP WHO 78/549",
-          "withinRunCvPercent": 4.3,
-          "betweenRunCvPercent": 5.3,
-          "sourceTable": 1,
-          "journalPage": 1208,
-          "pdfPage": 3
+        "sourceRouting": {
+          "version": "2026-10-16.1",
+          "policy": "Zachowaj oryginalne etykiety, N i mediany całych grup 1–<4 oraz 4–<8 lat; okno zastosowania drugiej grupy ogranicz do 4–<6 lat. Nie twórz mediany nowej podgrupy. Grupa 8–<11 lat pozostaje dowodem źródłowym poza aktywnymi profilami zwykłego wykresu. Wszystkie profile Zec nadal wymagają aktualnego typowanego stadium gonadalnego Th1.",
+          "minAge": 4,
+          "maxAge": 6,
+          "maxAgeExclusive": true
         }
       },
       "limitations": [
@@ -20174,6 +20089,382 @@ const patientPointData = {
         "No gestational-age stratification is reported. These are not premature-infant reference data.",
         "FSH group medians are quantifiable, but the study does not report a limit of quantification. LH and early-childhood testosterone medians are censored and are not activated by this extract.",
         "The printed LH reference-limit inconsistency in Table 2 does not alter these FSH medians; no clinical reference limits are imported."
+      ]
+    },
+    {
+      "id": "madsen2022-female-lh-age-6-16",
+      "analyte": "lh",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 16,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 7.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 9.0,
+          "value": 0.10494872221541938
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.18673993015217238
+        },
+        {
+          "ageYears": 11.0,
+          "value": 0.3899391576851016
+        },
+        {
+          "ageYears": 12.0,
+          "value": 0.932808521560225
+        },
+        {
+          "ageYears": 13.0,
+          "value": 2.0309931340891243
+        },
+        {
+          "ageYears": 14.0,
+          "value": 3.3600097374977715
+        },
+        {
+          "ageYears": 15.0,
+          "value": 4.536879278178766
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.64856591188875
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczynki",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "method": "Siemens IMMULITE 2000 XPi",
+      "population": "Bergen Growth Study 2; dziewczynki, Norwegia; bez antykoncepcji doustnej; fazy cyklu nie standaryzowano",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": false,
+      "compatibleAssayMethodIds": [
+        "immulite-2000-xpi",
+        "siemens-immulite-2000-xpi"
+      ],
+      "patientNote": "Model według wieku; faz cyklu nie standaryzowano.",
+      "provenance": {
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "authorsShort": "Madsen et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac155",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+        "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+        "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+        "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+        "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+        "retrievedDate": "2026-10-10",
+        "sourceWorksheet": "Other biomarkers",
+        "sourceCells": [
+          "B3,C3,D3,E3",
+          "B4,C4,D4,E4",
+          "B5,C5,D5,E5",
+          "B6,C6,D6,E6",
+          "B7,C7,D7,E7",
+          "B8,C8,D8,E8",
+          "B9,C9,D9,E9",
+          "B10,C10,D10,E10",
+          "B11,C11,D11,E11",
+          "B12,C12,D12,E12",
+          "B13,C13,D13,E13"
+        ],
+        "transform": {
+          "mode": "inverse_natural_log",
+          "formula": "median_SI = exp(M) / 1000000",
+          "evidence": "Workbook example cells K36=LN(I36*1000000), with median-centered z-score formula L36; other-biomarker examples K32/K33 use same transform. M is not the concentration in SI units.",
+          "model": "LMS/GAMLSS; age-specific p50 of a cross-sectional population, not longitudinal within-person trajectory."
+        },
+        "lowerLimitOfQuantification": 0.1,
+        "sourceRouting": {
+          "version": "2026-10-16.1",
+          "minAge": 6,
+          "maxAge": 16,
+          "maxAgeExclusive": false,
+          "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty."
+        }
+      },
+      "limitations": [
+        "Mediana wieku modelu BGS2, nie stadium Tannera ani norma laboratoryjna.",
+        "Dane kohorty od 6 do <16 lat; opublikowany brzeg modelu w wieku 16 lat.",
+        "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
+        "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+        "LH w wieku 6–9 lat ma medianę około 0,105 IU/L, blisko LLOQ 0,1 IU/L; drobne różnice nie oznaczają precyzyjnej klasyfikacji klinicznej."
+      ]
+    },
+    {
+      "id": "madsen2022-female-fsh-age-6-16",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 16,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 0.9328995961019171
+        },
+        {
+          "ageYears": 7.0,
+          "value": 1.1842024760702738
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.513649499646752
+        },
+        {
+          "ageYears": 9.0,
+          "value": 1.964770298470689
+        },
+        {
+          "ageYears": 10.0,
+          "value": 2.5801910640780314
+        },
+        {
+          "ageYears": 11.0,
+          "value": 3.3495190622916695
+        },
+        {
+          "ageYears": 12.0,
+          "value": 4.151220353235434
+        },
+        {
+          "ageYears": 13.0,
+          "value": 4.80572027357214
+        },
+        {
+          "ageYears": 14.0,
+          "value": 5.230782382619504
+        },
+        {
+          "ageYears": 15.0,
+          "value": 5.541214563590151
+        },
+        {
+          "ageYears": 16.0,
+          "value": 5.826063174564676
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczynki",
+      "url": "https://doi.org/10.1210/clinem/dgac155",
+      "method": "Siemens IMMULITE 2000 XPi",
+      "population": "Bergen Growth Study 2; dziewczynki, Norwegia; bez antykoncepcji doustnej; fazy cyklu nie standaryzowano",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "compatibleAssayMethodIds": [
+        "immulite-2000-xpi",
+        "siemens-immulite-2000-xpi"
+      ],
+      "patientNote": "Model według wieku; faz cyklu nie standaryzowano.",
+      "provenance": {
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "authorsShort": "Madsen et al.",
+        "year": 2022,
+        "doi": "10.1210/clinem/dgac155",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/35299255/",
+        "fullText": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplementDoi": "10.6084/m9.figshare.17153336.v1",
+        "supplementUrl": "https://ndownloader.figshare.com/files/31716608",
+        "sourceFile": "Supplemental_Table_1_LMS_entries.xlsx",
+        "sourceSha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "dataLicense": "CC BY 4.0 (Figshare dataset; verified in API metadata)",
+        "articleLicense": "CC BY-NC-ND 4.0 (article; differs from dataset license)",
+        "retrievedDate": "2026-10-10",
+        "sourceWorksheet": "Other biomarkers",
+        "sourceCells": [
+          "G3,H3,I3,J3",
+          "G4,H4,I4,J4",
+          "G5,H5,I5,J5",
+          "G6,H6,I6,J6",
+          "G7,H7,I7,J7",
+          "G8,H8,I8,J8",
+          "G9,H9,I9,J9",
+          "G10,H10,I10,J10",
+          "G11,H11,I11,J11",
+          "G12,H12,I12,J12",
+          "G13,H13,I13,J13"
+        ],
+        "transform": {
+          "mode": "inverse_natural_log",
+          "formula": "median_SI = exp(M) / 1000000",
+          "evidence": "Workbook example cells K36=LN(I36*1000000), with median-centered z-score formula L36; other-biomarker examples K32/K33 use same transform. M is not the concentration in SI units.",
+          "model": "LMS/GAMLSS; age-specific p50 of a cross-sectional population, not longitudinal within-person trajectory."
+        },
+        "lowerLimitOfQuantification": 0.1,
+        "sourceRouting": {
+          "version": "2026-10-16.1",
+          "minAge": 6,
+          "maxAge": 16,
+          "maxAgeExclusive": false,
+          "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty."
+        }
+      },
+      "limitations": [
+        "Mediana wieku modelu BGS2, nie stadium Tannera ani norma laboratoryjna.",
+        "Dane kohorty od 6 do <16 lat; opublikowany brzeg modelu w wieku 16 lat.",
+        "Fazy cyklu nie standaryzowano; wykluczono antykoncepcję doustną.",
+        "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+        "Model wieku nie jest medianą dla konkretnego stadium Th ani fazy cyklu."
+      ]
+    },
+    {
+      "id": "madsen2022-female-e2-age-6-18",
+      "analyte": "e2",
+      "sex": "female",
+      "minAge": 6,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 6.0,
+          "value": 1.257681951881138
+        },
+        {
+          "ageYears": 7.0,
+          "value": 2.334596749158609
+        },
+        {
+          "ageYears": 8.0,
+          "value": 4.347915883102421
+        },
+        {
+          "ageYears": 9.0,
+          "value": 8.208451767006299
+        },
+        {
+          "ageYears": 10.0,
+          "value": 15.701446074188619
+        },
+        {
+          "ageYears": 11.0,
+          "value": 29.609571335302167
+        },
+        {
+          "ageYears": 12.0,
+          "value": 52.46318409704675
+        },
+        {
+          "ageYears": 13.0,
+          "value": 83.43910795094158
+        },
+        {
+          "ageYears": 14.0,
+          "value": 116.47597538264219
+        },
+        {
+          "ageYears": 15.0,
+          "value": 144.25402291999035
+        },
+        {
+          "ageYears": 16.0,
+          "value": 163.40488572245636
+        },
+        {
+          "ageYears": 17.0,
+          "value": 175.78271306105336
+        },
+        {
+          "ageYears": 18.0,
+          "value": 185.45583618764735
+        }
+      ],
+      "sourceLabel": "Madsen 2022 · dziewczęta",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+      "method": "LC-MS/MS; Bergen Growth Study 2 ultrasensitive assay and Fit Futures assay",
+      "population": "Bergen Growth Study 2 + Fit Futures; dziewczęta, Norwegia",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": false,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy",
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "patientNote": "Mediana dla wieku · fazy cyklu analizowane łącznie.",
+      "provenance": {
+        "doi": "10.1210/clinem/dgac155",
+        "title": "Reference Curves for Pediatric Endocrinology: Leveraging Biomarker Z-Scores for Clinical Classifications",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9202734/",
+        "supplement": "https://doi.org/10.6084/m9.figshare.17153336.v1",
+        "license": "CC BY 4.0",
+        "sourceFile": "17153336-Supplemental_Table_1_LMS_entries.xlsx",
+        "sha256": "45cd1b63284c9f53a5936abee7ab8d8e6fce13a19025d4e2cbed0e5b3468897e",
+        "sourceWorksheet": "LCMSMS hormones",
+        "sourceCells": [
+          "AA3,AB3,AC3,AD3",
+          "AA4,AB4,AC4,AD4",
+          "AA5,AB5,AC5,AD5",
+          "AA6,AB6,AC6,AD6",
+          "AA7,AB7,AC7,AD7",
+          "AA8,AB8,AC8,AD8",
+          "AA9,AB9,AC9,AD9",
+          "AA10,AB10,AC10,AD10",
+          "AA11,AB11,AC11,AD11",
+          "AA12,AB12,AC12,AD12",
+          "AA13,AB13,AC13,AD13",
+          "AA14,AB14,AC14,AD14",
+          "AA15,AB15,AC15,AD15"
+        ],
+        "transform": {
+          "mode": "inverse_natural_log",
+          "formula": "median_SI = exp(M) / 1000000",
+          "evidence": "Workbook example cells K36=LN(I36*1000000), with median-centered z-score formula L36; other-biomarker examples K32/K33 use same transform. M is not the concentration in SI units.",
+          "model": "LMS/GAMLSS; age-specific p50 of a cross-sectional population, not longitudinal within-person trajectory."
+        },
+        "methodDetails": {
+          "BGS2_LLOQ_pmol_L": 0.58,
+          "FitFutures_LLOQ_pmol_L": 13,
+          "withinPublicationAssayBridge": "Both traceable to CRM BCR-576; parallel sample comparison R2=0.96, mean difference 1.7%, no statistically significant difference (P=0.053). This validates their internal merge, not interchangeability with every LC-MS/MS method."
+        },
+        "sourceRouting": {
+          "version": "2026-10-17.1",
+          "minAge": 6,
+          "maxAge": 18,
+          "maxAgeExclusive": false,
+          "selectionPolicy": "Jedno zwykłe odniesienie E2 dla wieku 6–18 lat z wszystkich 13 oryginalnych median Madsen. Nie wymaga Th ani fazy cyklu. Nie tworzy median w luce >1–<6, po 18 latach, w ciąży lub po menopauzie; nie zmienia niemowlęcych median Ljubicic, poglądowej geometrii, porównań płci ani norm laboratoryjnych."
+        }
+      },
+      "limitations": [
+        "Cały możliwy przedział wieku musi mieścić się w [6,18]. Dokładny węzeł 18 jest opublikowanym brzegiem modelu, nie dowodem obserwacji dokładnie w 18. urodziny ani grupą 18–<19. Wpis 18 lat 0 miesięcy obejmuje [18,18+1/12) i nie kwalifikuje. Osobna tabela nieparametrycznych RI ma grupę 15–<18; nie zastępuje domeny modelu LMS. Bez ekstrapolacji i wybierania środka niepewnego wieku.",
+        "Surowica LC-MS/MS: ultrasensitive BGS2 i intermediate-sensitivity Fit Futures, oba odniesione do CRM BCR-576. Ich porównanie wewnątrz publikacji nie harmonizuje innych metod. Nieznana metoda pozwala wyłącznie na porównanie edukacyjne; znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Ogólna kategoria LC-MS/MS nie potwierdza indywidualnej zgodności oznaczeń.",
+        "W modelach żeńskich autorzy wykluczyli antykoncepcję doustną, a fazy cyklu analizowali łącznie. Znana faza folikularna, owulacyjna lub lutealna nie zmienia mediany wieku. Znana ciąża, menopauza, leczenie hormonalne/GnRHa i stymulacja wyłączają punkt jako konserwatywna polityka aplikacji, nie przypisane autorom dodatkowe kryteria. Brak informacji nie potwierdza braku leczenia lub ciąży; bez nowej ankiety.",
+        "Źródłowe LLOQ to 0,58 pmol/L (BGS2) i 13 pmol/L (Fit Futures), nie jeden próg dla całej krzywej. Nie stosuj globalnej podłogi 13 ani nie wymyślaj reguły LLOQ/2. Źródło nie dokumentuje wystarczająco przetwarzania cenzurowanych wartości E2. Wynik pacjentki z nierównością nie staje się dokładnym punktem; dokładne zero pozostaje zerem, bez imputacji.",
+        "Zachowaj wszystkie 13 rocznych węzłów, oryginalne mediany exp(M)/1e6 i istniejący PCHIP w stężeniach. PCHIP między węzłami jest przybliżeniem aplikacji, nie ponownym dopasowaniem LMS. Nie wyznaczaj norm, SDS, stadium, fazy cyklu ani indywidualnej trajektorii z tej mediany.",
+        "Model przekrojowy różnych stadiów i faz cyklu, nie trajektoria jednej pacjentki."
       ]
     },
     {
@@ -28731,6 +29022,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 1–4,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "1–4,9 lat",
@@ -28757,7 +29053,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -28808,6 +29105,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 5–7,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "5–7,9 lat",
@@ -28834,7 +29136,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -28885,6 +29188,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 8–11,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "8–11,9 lat",
@@ -28911,7 +29219,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -28962,6 +29271,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 12–14,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "12–14,9 lat",
@@ -28988,7 +29302,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -29039,6 +29354,11 @@ const patientPointData = {
         "access-2",
         "beckman-access-2"
       ],
+      "excludedCyclePhases": [
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
       "patientNote": "Grupa 15–18,9 lat · Access AMH, osocze.",
       "ageGroup": {
         "label": "15–18,9 lat",
@@ -29065,7 +29385,8 @@ const patientPointData = {
         "ageRouting": "Published decimal group labels are mapped to completed-age bins ending at the next group lower boundary. The first boundary remains open at exactly 1 year to preserve the existing infant profile. The final group is restricted to ages below 18 because the methods report participants through 18 years despite the Table 1 label 15–18.9. The published label and median remain unchanged. These are application routing conventions, not an exact-age model.",
         "specimenPolicy": "Missing/unknown specimen permits an educational comparison without asserting the patient matrix. A known specimen must identify lithium-heparin plasma. Generic plasma with unknown anticoagulant, serum, EDTA plasma or other matrices are incompatible with this source-specific comparison.",
         "assayPolicy": "Access AMH is the source assay; Access 2 identifiers denote its assay family for this educational comparison, not proof of harmonization with other assays.",
-        "routingVersion": "2026-10-13.1"
+        "reproductiveContextPolicy": "Known pregnancy excludes these five profiles as a conservative application eligibility rule, not a documented exclusion from the Jopling publication. Unknown reproductive context still permits an educational comparison; it does not confirm absence of pregnancy. Reuse already known context without new fields, inference from age or a requirement for regular cycles.",
+        "routingVersion": "2026-10-17.1"
       },
       "limitations": [
         "Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.",
@@ -32052,6 +32373,4946 @@ const patientPointData = {
         "Przyjęty błąd graficzny około8,5% nie jest przedziałem ufności ani miarą rozrzutu biologicznego.",
         "Nie obliczać z tych odczytów z-score, centyla ani kategorii prawidłowości. Po80r.ż. brak numerycznego odniesienia.",
         "AutoDELFIA badania źródłowego nie potwierdza metody próbki pacjenta."
+      ]
+    },
+    {
+      "id": "wilson2023-male-fsh-age-16-18",
+      "analyte": "fsh",
+      "sex": "male",
+      "minAge": 16,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 1.0,
+          "value": 0.36553719082824493
+        },
+        {
+          "ageYears": 1.1,
+          "value": 0.3699141789756272
+        },
+        {
+          "ageYears": 1.2,
+          "value": 0.37429703123687513
+        },
+        {
+          "ageYears": 1.3,
+          "value": 0.3786689281336408
+        },
+        {
+          "ageYears": 1.4,
+          "value": 0.38301591231592236
+        },
+        {
+          "ageYears": 1.5,
+          "value": 0.38732431657673244
+        },
+        {
+          "ageYears": 1.6,
+          "value": 0.3915776889166573
+        },
+        {
+          "ageYears": 1.7,
+          "value": 0.3957592409410182
+        },
+        {
+          "ageYears": 1.8,
+          "value": 0.39985236173111394
+        },
+        {
+          "ageYears": 1.9,
+          "value": 0.40383927668912617
+        },
+        {
+          "ageYears": 2.0,
+          "value": 0.40769881976546796
+        },
+        {
+          "ageYears": 2.1,
+          "value": 0.4114114843127722
+        },
+        {
+          "ageYears": 2.2,
+          "value": 0.4149696089533218
+        },
+        {
+          "ageYears": 2.3,
+          "value": 0.418370661013703
+        },
+        {
+          "ageYears": 2.4,
+          "value": 0.421611311608257
+        },
+        {
+          "ageYears": 2.5,
+          "value": 0.42468682908601546
+        },
+        {
+          "ageYears": 2.6,
+          "value": 0.4275925297760777
+        },
+        {
+          "ageYears": 2.7,
+          "value": 0.43032387919702475
+        },
+        {
+          "ageYears": 2.8,
+          "value": 0.43287664046786517
+        },
+        {
+          "ageYears": 2.9,
+          "value": 0.43524604218835167
+        },
+        {
+          "ageYears": 3.0,
+          "value": 0.43742556285467393
+        },
+        {
+          "ageYears": 3.1,
+          "value": 0.43941362094778935
+        },
+        {
+          "ageYears": 3.2,
+          "value": 0.4412101698098723
+        },
+        {
+          "ageYears": 3.3,
+          "value": 0.4428087130144335
+        },
+        {
+          "ageYears": 3.4,
+          "value": 0.4442024943989336
+        },
+        {
+          "ageYears": 3.5,
+          "value": 0.4453853614165184
+        },
+        {
+          "ageYears": 3.6,
+          "value": 0.4463555682957657
+        },
+        {
+          "ageYears": 3.7,
+          "value": 0.4471180342763016
+        },
+        {
+          "ageYears": 3.8,
+          "value": 0.4476829934636052
+        },
+        {
+          "ageYears": 3.9,
+          "value": 0.4480621317749551
+        },
+        {
+          "ageYears": 4.0,
+          "value": 0.4482656289348067
+        },
+        {
+          "ageYears": 4.1,
+          "value": 0.44830346397301296
+        },
+        {
+          "ageYears": 4.2,
+          "value": 0.44818894672822124
+        },
+        {
+          "ageYears": 4.3,
+          "value": 0.4479470523214102
+        },
+        {
+          "ageYears": 4.4,
+          "value": 0.4476089631073
+        },
+        {
+          "ageYears": 4.5,
+          "value": 0.447205303044478
+        },
+        {
+          "ageYears": 4.6,
+          "value": 0.446765511860985
+        },
+        {
+          "ageYears": 4.7,
+          "value": 0.446317408479381
+        },
+        {
+          "ageYears": 4.8,
+          "value": 0.445884472591422
+        },
+        {
+          "ageYears": 4.9,
+          "value": 0.445489024693592
+        },
+        {
+          "ageYears": 5.0,
+          "value": 0.445151300750279
+        },
+        {
+          "ageYears": 5.1,
+          "value": 0.444890788640362
+        },
+        {
+          "ageYears": 5.2,
+          "value": 0.444725123899863
+        },
+        {
+          "ageYears": 5.3,
+          "value": 0.444667681656609
+        },
+        {
+          "ageYears": 5.4,
+          "value": 0.444727216273313
+        },
+        {
+          "ageYears": 5.5,
+          "value": 0.444913783278066
+        },
+        {
+          "ageYears": 5.6,
+          "value": 0.445240064664152
+        },
+        {
+          "ageYears": 5.7,
+          "value": 0.445718973240065
+        },
+        {
+          "ageYears": 5.8,
+          "value": 0.446362699021644
+        },
+        {
+          "ageYears": 5.9,
+          "value": 0.447187131322049
+        },
+        {
+          "ageYears": 6.0,
+          "value": 0.448210818338276
+        },
+        {
+          "ageYears": 6.1,
+          "value": 0.449457700666652
+        },
+        {
+          "ageYears": 6.2,
+          "value": 0.45095247359073
+        },
+        {
+          "ageYears": 6.3,
+          "value": 0.452719552368032
+        },
+        {
+          "ageYears": 6.4,
+          "value": 0.454785096444801
+        },
+        {
+          "ageYears": 6.5,
+          "value": 0.457178805714872
+        },
+        {
+          "ageYears": 6.6,
+          "value": 0.459936824018968
+        },
+        {
+          "ageYears": 6.7,
+          "value": 0.463096477305276
+        },
+        {
+          "ageYears": 6.8,
+          "value": 0.466688273548614
+        },
+        {
+          "ageYears": 6.9,
+          "value": 0.470733730340323
+        },
+        {
+          "ageYears": 7.0,
+          "value": 0.475250025118357
+        },
+        {
+          "ageYears": 7.1,
+          "value": 0.480254156720261
+        },
+        {
+          "ageYears": 7.2,
+          "value": 0.485767839635929
+        },
+        {
+          "ageYears": 7.3,
+          "value": 0.491813329264403
+        },
+        {
+          "ageYears": 7.4,
+          "value": 0.49841482826411
+        },
+        {
+          "ageYears": 7.5,
+          "value": 0.505597794964953
+        },
+        {
+          "ageYears": 7.6,
+          "value": 0.513386660418194
+        },
+        {
+          "ageYears": 7.7,
+          "value": 0.521800269456481
+        },
+        {
+          "ageYears": 7.8,
+          "value": 0.530852499319271
+        },
+        {
+          "ageYears": 7.9,
+          "value": 0.540550197598074
+        },
+        {
+          "ageYears": 8.0,
+          "value": 0.550898217332179
+        },
+        {
+          "ageYears": 8.1,
+          "value": 0.561905600811148
+        },
+        {
+          "ageYears": 8.2,
+          "value": 0.573590147184721
+        },
+        {
+          "ageYears": 8.3,
+          "value": 0.585974483607123
+        },
+        {
+          "ageYears": 8.4,
+          "value": 0.599079512900301
+        },
+        {
+          "ageYears": 8.5,
+          "value": 0.612920561201296
+        },
+        {
+          "ageYears": 8.6,
+          "value": 0.627512023045878
+        },
+        {
+          "ageYears": 8.7,
+          "value": 0.6428694077384
+        },
+        {
+          "ageYears": 8.8,
+          "value": 0.659006396445549
+        },
+        {
+          "ageYears": 8.9,
+          "value": 0.67593284249658
+        },
+        {
+          "ageYears": 9.0,
+          "value": 0.69365658871018
+        },
+        {
+          "ageYears": 9.1,
+          "value": 0.712185372003149
+        },
+        {
+          "ageYears": 9.2,
+          "value": 0.731525221795511
+        },
+        {
+          "ageYears": 9.3,
+          "value": 0.751677976016893
+        },
+        {
+          "ageYears": 9.4,
+          "value": 0.772642178260585
+        },
+        {
+          "ageYears": 9.5,
+          "value": 0.794405623404735
+        },
+        {
+          "ageYears": 9.6,
+          "value": 0.816947261156685
+        },
+        {
+          "ageYears": 9.7,
+          "value": 0.840241488340789
+        },
+        {
+          "ageYears": 9.8,
+          "value": 0.864258153485775
+        },
+        {
+          "ageYears": 9.9,
+          "value": 0.888960125253965
+        },
+        {
+          "ageYears": 10.0,
+          "value": 0.914309109033849
+        },
+        {
+          "ageYears": 10.1,
+          "value": 0.940265254247932
+        },
+        {
+          "ageYears": 10.2,
+          "value": 0.966787284514279
+        },
+        {
+          "ageYears": 10.3,
+          "value": 0.993835340672596
+        },
+        {
+          "ageYears": 10.4,
+          "value": 1.02136938323825
+        },
+        {
+          "ageYears": 10.5,
+          "value": 1.04935626639709
+        },
+        {
+          "ageYears": 10.6,
+          "value": 1.07776799840687
+        },
+        {
+          "ageYears": 10.7,
+          "value": 1.10657547398018
+        },
+        {
+          "ageYears": 10.8,
+          "value": 1.13575103788318
+        },
+        {
+          "ageYears": 10.9,
+          "value": 1.16526451174292
+        },
+        {
+          "ageYears": 11.0,
+          "value": 1.19508276974741
+        },
+        {
+          "ageYears": 11.1,
+          "value": 1.22516849476998
+        },
+        {
+          "ageYears": 11.2,
+          "value": 1.25548330690497
+        },
+        {
+          "ageYears": 11.3,
+          "value": 1.2859919030591
+        },
+        {
+          "ageYears": 11.4,
+          "value": 1.31665853697664
+        },
+        {
+          "ageYears": 11.5,
+          "value": 1.34744406106914
+        },
+        {
+          "ageYears": 11.6,
+          "value": 1.37830909429636
+        },
+        {
+          "ageYears": 11.7,
+          "value": 1.40921380864604
+        },
+        {
+          "ageYears": 11.8,
+          "value": 1.44011997179215
+        },
+        {
+          "ageYears": 11.9,
+          "value": 1.47098965091355
+        },
+        {
+          "ageYears": 12.0,
+          "value": 1.50178400971422
+        },
+        {
+          "ageYears": 12.1,
+          "value": 1.53246323567736
+        },
+        {
+          "ageYears": 12.2,
+          "value": 1.56298863551238
+        },
+        {
+          "ageYears": 12.3,
+          "value": 1.59332552992632
+        },
+        {
+          "ageYears": 12.4,
+          "value": 1.62344307582725
+        },
+        {
+          "ageYears": 12.5,
+          "value": 1.65331132926221
+        },
+        {
+          "ageYears": 12.6,
+          "value": 1.68290065798846
+        },
+        {
+          "ageYears": 12.7,
+          "value": 1.71218218483275
+        },
+        {
+          "ageYears": 12.8,
+          "value": 1.74112693949641
+        },
+        {
+          "ageYears": 12.9,
+          "value": 1.7697052658142
+        },
+        {
+          "ageYears": 13.0,
+          "value": 1.79788840152082
+        },
+        {
+          "ageYears": 13.1,
+          "value": 1.82565060384979
+        },
+        {
+          "ageYears": 13.2,
+          "value": 1.85297025559655
+        },
+        {
+          "ageYears": 13.3,
+          "value": 1.87982926628234
+        },
+        {
+          "ageYears": 13.4,
+          "value": 1.90621129765429
+        },
+        {
+          "ageYears": 13.5,
+          "value": 1.93210142086656
+        },
+        {
+          "ageYears": 13.6,
+          "value": 1.95748651994757
+        },
+        {
+          "ageYears": 13.7,
+          "value": 1.98235482128786
+        },
+        {
+          "ageYears": 13.8,
+          "value": 2.00669925174393
+        },
+        {
+          "ageYears": 13.9,
+          "value": 2.0305155668937
+        },
+        {
+          "ageYears": 14.0,
+          "value": 2.05380013857147
+        },
+        {
+          "ageYears": 14.1,
+          "value": 2.07654752544295
+        },
+        {
+          "ageYears": 14.2,
+          "value": 2.09875107440842
+        },
+        {
+          "ageYears": 14.3,
+          "value": 2.12040444185778
+        },
+        {
+          "ageYears": 14.4,
+          "value": 2.141502485294352
+        },
+        {
+          "ageYears": 14.5,
+          "value": 2.1620408141828493
+        },
+        {
+          "ageYears": 14.6,
+          "value": 2.182015547379705
+        },
+        {
+          "ageYears": 14.7,
+          "value": 2.2014278760648835
+        },
+        {
+          "ageYears": 14.8,
+          "value": 2.220283463960251
+        },
+        {
+          "ageYears": 14.9,
+          "value": 2.2385882928299066
+        },
+        {
+          "ageYears": 15.0,
+          "value": 2.2563487641113236
+        },
+        {
+          "ageYears": 15.1,
+          "value": 2.273571320267887
+        },
+        {
+          "ageYears": 15.2,
+          "value": 2.290265564348797
+        },
+        {
+          "ageYears": 15.3,
+          "value": 2.306445011490746
+        },
+        {
+          "ageYears": 15.4,
+          "value": 2.3221252932157554
+        },
+        {
+          "ageYears": 15.5,
+          "value": 2.3373215368080738
+        },
+        {
+          "ageYears": 15.6,
+          "value": 2.3520496796614996
+        },
+        {
+          "ageYears": 15.7,
+          "value": 2.366327010130419
+        },
+        {
+          "ageYears": 15.8,
+          "value": 2.3801710415784254
+        },
+        {
+          "ageYears": 15.9,
+          "value": 2.3935979578426734
+        },
+        {
+          "ageYears": 16.0,
+          "value": 2.4066234448145565
+        },
+        {
+          "ageYears": 16.1,
+          "value": 2.419262005400168
+        },
+        {
+          "ageYears": 16.2,
+          "value": 2.431525568549711
+        },
+        {
+          "ageYears": 16.3,
+          "value": 2.443426811451113
+        },
+        {
+          "ageYears": 16.4,
+          "value": 2.4549812128660613
+        },
+        {
+          "ageYears": 16.5,
+          "value": 2.4662061126585426
+        },
+        {
+          "ageYears": 16.6,
+          "value": 2.477119829837242
+        },
+        {
+          "ageYears": 16.7,
+          "value": 2.487740893568256
+        },
+        {
+          "ageYears": 16.8,
+          "value": 2.498087937512419
+        },
+        {
+          "ageYears": 16.9,
+          "value": 2.5081806452888378
+        },
+        {
+          "ageYears": 17.0,
+          "value": 2.518038228916774
+        },
+        {
+          "ageYears": 17.1,
+          "value": 2.5276787350482786
+        },
+        {
+          "ageYears": 17.2,
+          "value": 2.53712065167206
+        },
+        {
+          "ageYears": 17.3,
+          "value": 2.54638252278079
+        },
+        {
+          "ageYears": 17.4,
+          "value": 2.555481285083426
+        },
+        {
+          "ageYears": 17.5,
+          "value": 2.564432732555614
+        },
+        {
+          "ageYears": 17.6,
+          "value": 2.573251845935014
+        },
+        {
+          "ageYears": 17.7,
+          "value": 2.581951645593883
+        },
+        {
+          "ageYears": 17.8,
+          "value": 2.5905434172511734
+        },
+        {
+          "ageYears": 17.9,
+          "value": 2.599037483693666
+        },
+        {
+          "ageYears": 18.0,
+          "value": 2.607443576372793
+        },
+        {
+          "ageYears": 18.1,
+          "value": 2.615771551856339
+        },
+        {
+          "ageYears": 18.2,
+          "value": 2.6240319235066316
+        },
+        {
+          "ageYears": 18.3,
+          "value": 2.63223720055551
+        },
+        {
+          "ageYears": 18.4,
+          "value": 2.6403999874780433
+        },
+        {
+          "ageYears": 18.5,
+          "value": 2.648530088316931
+        },
+        {
+          "ageYears": 18.6,
+          "value": 2.656635442810522
+        },
+        {
+          "ageYears": 18.7,
+          "value": 2.664723135919497
+        },
+        {
+          "ageYears": 18.8,
+          "value": 2.672800587719522
+        },
+        {
+          "ageYears": 18.9,
+          "value": 2.680875205073134
+        },
+        {
+          "ageYears": 19.0,
+          "value": 2.688952159684324
+        }
+      ],
+      "sourceLabel": "Wilson 2023 · CALIPER · FSH",
+      "url": "https://doi.org/10.1515/cclm-2022-1077",
+      "method": "Abbott ARCHITECT ci2000",
+      "population": "CALIPER; zdrowe dzieci i młodzież, Greater Toronto, Kanada",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "abbott-architect-ci2000-fsh"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy",
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
+      "patientNote": "Mediana według wieku; nie jest normą dla stadium ani fazy cyklu.",
+      "provenance": {
+        "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+        "authorsShort": "Wilson et al.",
+        "year": 2023,
+        "journal": "Clinical Chemistry and Laboratory Medicine",
+        "volume": 61,
+        "issue": 6,
+        "pages": "1105–1115",
+        "doi": "10.1515/cclm-2022-1077",
+        "pmid": "36639844",
+        "url": "https://doi.org/10.1515/cclm-2022-1077",
+        "publishedOnline": "2023-01-16",
+        "sourceFile": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+        "sourceSha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b",
+        "sourceBytes": 223819,
+        "sourceVersion": "Owner-supplied final-article Supplementary Table 3; workbook bytes identified by SHA-256.",
+        "table": "Supplementary Table 3: numerical L,M,S-for-age; FSH_M and FSH_F only",
+        "readOn": "2026-10-18",
+        "access": "Full final primary article and all three owner-supplied supplementary tables reviewed.",
+        "redistribution": "Only FSH numerical facts, provenance and qualification metadata are extracted; full article, figures and source workbooks/documents are not redistributed.",
+        "sourceWorksheet": "FSH_M",
+        "sourceCells": [
+          [
+            "FSH_M!A2",
+            "FSH_M!B2",
+            "FSH_M!C2",
+            "FSH_M!D2"
+          ],
+          [
+            "FSH_M!A3",
+            "FSH_M!B3",
+            "FSH_M!C3",
+            "FSH_M!D3"
+          ],
+          [
+            "FSH_M!A4",
+            "FSH_M!B4",
+            "FSH_M!C4",
+            "FSH_M!D4"
+          ],
+          [
+            "FSH_M!A5",
+            "FSH_M!B5",
+            "FSH_M!C5",
+            "FSH_M!D5"
+          ],
+          [
+            "FSH_M!A6",
+            "FSH_M!B6",
+            "FSH_M!C6",
+            "FSH_M!D6"
+          ],
+          [
+            "FSH_M!A7",
+            "FSH_M!B7",
+            "FSH_M!C7",
+            "FSH_M!D7"
+          ],
+          [
+            "FSH_M!A8",
+            "FSH_M!B8",
+            "FSH_M!C8",
+            "FSH_M!D8"
+          ],
+          [
+            "FSH_M!A9",
+            "FSH_M!B9",
+            "FSH_M!C9",
+            "FSH_M!D9"
+          ],
+          [
+            "FSH_M!A10",
+            "FSH_M!B10",
+            "FSH_M!C10",
+            "FSH_M!D10"
+          ],
+          [
+            "FSH_M!A11",
+            "FSH_M!B11",
+            "FSH_M!C11",
+            "FSH_M!D11"
+          ],
+          [
+            "FSH_M!A12",
+            "FSH_M!B12",
+            "FSH_M!C12",
+            "FSH_M!D12"
+          ],
+          [
+            "FSH_M!A13",
+            "FSH_M!B13",
+            "FSH_M!C13",
+            "FSH_M!D13"
+          ],
+          [
+            "FSH_M!A14",
+            "FSH_M!B14",
+            "FSH_M!C14",
+            "FSH_M!D14"
+          ],
+          [
+            "FSH_M!A15",
+            "FSH_M!B15",
+            "FSH_M!C15",
+            "FSH_M!D15"
+          ],
+          [
+            "FSH_M!A16",
+            "FSH_M!B16",
+            "FSH_M!C16",
+            "FSH_M!D16"
+          ],
+          [
+            "FSH_M!A17",
+            "FSH_M!B17",
+            "FSH_M!C17",
+            "FSH_M!D17"
+          ],
+          [
+            "FSH_M!A18",
+            "FSH_M!B18",
+            "FSH_M!C18",
+            "FSH_M!D18"
+          ],
+          [
+            "FSH_M!A19",
+            "FSH_M!B19",
+            "FSH_M!C19",
+            "FSH_M!D19"
+          ],
+          [
+            "FSH_M!A20",
+            "FSH_M!B20",
+            "FSH_M!C20",
+            "FSH_M!D20"
+          ],
+          [
+            "FSH_M!A21",
+            "FSH_M!B21",
+            "FSH_M!C21",
+            "FSH_M!D21"
+          ],
+          [
+            "FSH_M!A22",
+            "FSH_M!B22",
+            "FSH_M!C22",
+            "FSH_M!D22"
+          ],
+          [
+            "FSH_M!A23",
+            "FSH_M!B23",
+            "FSH_M!C23",
+            "FSH_M!D23"
+          ],
+          [
+            "FSH_M!A24",
+            "FSH_M!B24",
+            "FSH_M!C24",
+            "FSH_M!D24"
+          ],
+          [
+            "FSH_M!A25",
+            "FSH_M!B25",
+            "FSH_M!C25",
+            "FSH_M!D25"
+          ],
+          [
+            "FSH_M!A26",
+            "FSH_M!B26",
+            "FSH_M!C26",
+            "FSH_M!D26"
+          ],
+          [
+            "FSH_M!A27",
+            "FSH_M!B27",
+            "FSH_M!C27",
+            "FSH_M!D27"
+          ],
+          [
+            "FSH_M!A28",
+            "FSH_M!B28",
+            "FSH_M!C28",
+            "FSH_M!D28"
+          ],
+          [
+            "FSH_M!A29",
+            "FSH_M!B29",
+            "FSH_M!C29",
+            "FSH_M!D29"
+          ],
+          [
+            "FSH_M!A30",
+            "FSH_M!B30",
+            "FSH_M!C30",
+            "FSH_M!D30"
+          ],
+          [
+            "FSH_M!A31",
+            "FSH_M!B31",
+            "FSH_M!C31",
+            "FSH_M!D31"
+          ],
+          [
+            "FSH_M!A32",
+            "FSH_M!B32",
+            "FSH_M!C32",
+            "FSH_M!D32"
+          ],
+          [
+            "FSH_M!A33",
+            "FSH_M!B33",
+            "FSH_M!C33",
+            "FSH_M!D33"
+          ],
+          [
+            "FSH_M!A34",
+            "FSH_M!B34",
+            "FSH_M!C34",
+            "FSH_M!D34"
+          ],
+          [
+            "FSH_M!A35",
+            "FSH_M!B35",
+            "FSH_M!C35",
+            "FSH_M!D35"
+          ],
+          [
+            "FSH_M!A36",
+            "FSH_M!B36",
+            "FSH_M!C36",
+            "FSH_M!D36"
+          ],
+          [
+            "FSH_M!A37",
+            "FSH_M!B37",
+            "FSH_M!C37",
+            "FSH_M!D37"
+          ],
+          [
+            "FSH_M!A38",
+            "FSH_M!B38",
+            "FSH_M!C38",
+            "FSH_M!D38"
+          ],
+          [
+            "FSH_M!A39",
+            "FSH_M!B39",
+            "FSH_M!C39",
+            "FSH_M!D39"
+          ],
+          [
+            "FSH_M!A40",
+            "FSH_M!B40",
+            "FSH_M!C40",
+            "FSH_M!D40"
+          ],
+          [
+            "FSH_M!A41",
+            "FSH_M!B41",
+            "FSH_M!C41",
+            "FSH_M!D41"
+          ],
+          [
+            "FSH_M!A42",
+            "FSH_M!B42",
+            "FSH_M!C42",
+            "FSH_M!D42"
+          ],
+          [
+            "FSH_M!A43",
+            "FSH_M!B43",
+            "FSH_M!C43",
+            "FSH_M!D43"
+          ],
+          [
+            "FSH_M!A44",
+            "FSH_M!B44",
+            "FSH_M!C44",
+            "FSH_M!D44"
+          ],
+          [
+            "FSH_M!A45",
+            "FSH_M!B45",
+            "FSH_M!C45",
+            "FSH_M!D45"
+          ],
+          [
+            "FSH_M!A46",
+            "FSH_M!B46",
+            "FSH_M!C46",
+            "FSH_M!D46"
+          ],
+          [
+            "FSH_M!A47",
+            "FSH_M!B47",
+            "FSH_M!C47",
+            "FSH_M!D47"
+          ],
+          [
+            "FSH_M!A48",
+            "FSH_M!B48",
+            "FSH_M!C48",
+            "FSH_M!D48"
+          ],
+          [
+            "FSH_M!A49",
+            "FSH_M!B49",
+            "FSH_M!C49",
+            "FSH_M!D49"
+          ],
+          [
+            "FSH_M!A50",
+            "FSH_M!B50",
+            "FSH_M!C50",
+            "FSH_M!D50"
+          ],
+          [
+            "FSH_M!A51",
+            "FSH_M!B51",
+            "FSH_M!C51",
+            "FSH_M!D51"
+          ],
+          [
+            "FSH_M!A52",
+            "FSH_M!B52",
+            "FSH_M!C52",
+            "FSH_M!D52"
+          ],
+          [
+            "FSH_M!A53",
+            "FSH_M!B53",
+            "FSH_M!C53",
+            "FSH_M!D53"
+          ],
+          [
+            "FSH_M!A54",
+            "FSH_M!B54",
+            "FSH_M!C54",
+            "FSH_M!D54"
+          ],
+          [
+            "FSH_M!A55",
+            "FSH_M!B55",
+            "FSH_M!C55",
+            "FSH_M!D55"
+          ],
+          [
+            "FSH_M!A56",
+            "FSH_M!B56",
+            "FSH_M!C56",
+            "FSH_M!D56"
+          ],
+          [
+            "FSH_M!A57",
+            "FSH_M!B57",
+            "FSH_M!C57",
+            "FSH_M!D57"
+          ],
+          [
+            "FSH_M!A58",
+            "FSH_M!B58",
+            "FSH_M!C58",
+            "FSH_M!D58"
+          ],
+          [
+            "FSH_M!A59",
+            "FSH_M!B59",
+            "FSH_M!C59",
+            "FSH_M!D59"
+          ],
+          [
+            "FSH_M!A60",
+            "FSH_M!B60",
+            "FSH_M!C60",
+            "FSH_M!D60"
+          ],
+          [
+            "FSH_M!A61",
+            "FSH_M!B61",
+            "FSH_M!C61",
+            "FSH_M!D61"
+          ],
+          [
+            "FSH_M!A62",
+            "FSH_M!B62",
+            "FSH_M!C62",
+            "FSH_M!D62"
+          ],
+          [
+            "FSH_M!A63",
+            "FSH_M!B63",
+            "FSH_M!C63",
+            "FSH_M!D63"
+          ],
+          [
+            "FSH_M!A64",
+            "FSH_M!B64",
+            "FSH_M!C64",
+            "FSH_M!D64"
+          ],
+          [
+            "FSH_M!A65",
+            "FSH_M!B65",
+            "FSH_M!C65",
+            "FSH_M!D65"
+          ],
+          [
+            "FSH_M!A66",
+            "FSH_M!B66",
+            "FSH_M!C66",
+            "FSH_M!D66"
+          ],
+          [
+            "FSH_M!A67",
+            "FSH_M!B67",
+            "FSH_M!C67",
+            "FSH_M!D67"
+          ],
+          [
+            "FSH_M!A68",
+            "FSH_M!B68",
+            "FSH_M!C68",
+            "FSH_M!D68"
+          ],
+          [
+            "FSH_M!A69",
+            "FSH_M!B69",
+            "FSH_M!C69",
+            "FSH_M!D69"
+          ],
+          [
+            "FSH_M!A70",
+            "FSH_M!B70",
+            "FSH_M!C70",
+            "FSH_M!D70"
+          ],
+          [
+            "FSH_M!A71",
+            "FSH_M!B71",
+            "FSH_M!C71",
+            "FSH_M!D71"
+          ],
+          [
+            "FSH_M!A72",
+            "FSH_M!B72",
+            "FSH_M!C72",
+            "FSH_M!D72"
+          ],
+          [
+            "FSH_M!A73",
+            "FSH_M!B73",
+            "FSH_M!C73",
+            "FSH_M!D73"
+          ],
+          [
+            "FSH_M!A74",
+            "FSH_M!B74",
+            "FSH_M!C74",
+            "FSH_M!D74"
+          ],
+          [
+            "FSH_M!A75",
+            "FSH_M!B75",
+            "FSH_M!C75",
+            "FSH_M!D75"
+          ],
+          [
+            "FSH_M!A76",
+            "FSH_M!B76",
+            "FSH_M!C76",
+            "FSH_M!D76"
+          ],
+          [
+            "FSH_M!A77",
+            "FSH_M!B77",
+            "FSH_M!C77",
+            "FSH_M!D77"
+          ],
+          [
+            "FSH_M!A78",
+            "FSH_M!B78",
+            "FSH_M!C78",
+            "FSH_M!D78"
+          ],
+          [
+            "FSH_M!A79",
+            "FSH_M!B79",
+            "FSH_M!C79",
+            "FSH_M!D79"
+          ],
+          [
+            "FSH_M!A80",
+            "FSH_M!B80",
+            "FSH_M!C80",
+            "FSH_M!D80"
+          ],
+          [
+            "FSH_M!A81",
+            "FSH_M!B81",
+            "FSH_M!C81",
+            "FSH_M!D81"
+          ],
+          [
+            "FSH_M!A82",
+            "FSH_M!B82",
+            "FSH_M!C82",
+            "FSH_M!D82"
+          ],
+          [
+            "FSH_M!A83",
+            "FSH_M!B83",
+            "FSH_M!C83",
+            "FSH_M!D83"
+          ],
+          [
+            "FSH_M!A84",
+            "FSH_M!B84",
+            "FSH_M!C84",
+            "FSH_M!D84"
+          ],
+          [
+            "FSH_M!A85",
+            "FSH_M!B85",
+            "FSH_M!C85",
+            "FSH_M!D85"
+          ],
+          [
+            "FSH_M!A86",
+            "FSH_M!B86",
+            "FSH_M!C86",
+            "FSH_M!D86"
+          ],
+          [
+            "FSH_M!A87",
+            "FSH_M!B87",
+            "FSH_M!C87",
+            "FSH_M!D87"
+          ],
+          [
+            "FSH_M!A88",
+            "FSH_M!B88",
+            "FSH_M!C88",
+            "FSH_M!D88"
+          ],
+          [
+            "FSH_M!A89",
+            "FSH_M!B89",
+            "FSH_M!C89",
+            "FSH_M!D89"
+          ],
+          [
+            "FSH_M!A90",
+            "FSH_M!B90",
+            "FSH_M!C90",
+            "FSH_M!D90"
+          ],
+          [
+            "FSH_M!A91",
+            "FSH_M!B91",
+            "FSH_M!C91",
+            "FSH_M!D91"
+          ],
+          [
+            "FSH_M!A92",
+            "FSH_M!B92",
+            "FSH_M!C92",
+            "FSH_M!D92"
+          ],
+          [
+            "FSH_M!A93",
+            "FSH_M!B93",
+            "FSH_M!C93",
+            "FSH_M!D93"
+          ],
+          [
+            "FSH_M!A94",
+            "FSH_M!B94",
+            "FSH_M!C94",
+            "FSH_M!D94"
+          ],
+          [
+            "FSH_M!A95",
+            "FSH_M!B95",
+            "FSH_M!C95",
+            "FSH_M!D95"
+          ],
+          [
+            "FSH_M!A96",
+            "FSH_M!B96",
+            "FSH_M!C96",
+            "FSH_M!D96"
+          ],
+          [
+            "FSH_M!A97",
+            "FSH_M!B97",
+            "FSH_M!C97",
+            "FSH_M!D97"
+          ],
+          [
+            "FSH_M!A98",
+            "FSH_M!B98",
+            "FSH_M!C98",
+            "FSH_M!D98"
+          ],
+          [
+            "FSH_M!A99",
+            "FSH_M!B99",
+            "FSH_M!C99",
+            "FSH_M!D99"
+          ],
+          [
+            "FSH_M!A100",
+            "FSH_M!B100",
+            "FSH_M!C100",
+            "FSH_M!D100"
+          ],
+          [
+            "FSH_M!A101",
+            "FSH_M!B101",
+            "FSH_M!C101",
+            "FSH_M!D101"
+          ],
+          [
+            "FSH_M!A102",
+            "FSH_M!B102",
+            "FSH_M!C102",
+            "FSH_M!D102"
+          ],
+          [
+            "FSH_M!A103",
+            "FSH_M!B103",
+            "FSH_M!C103",
+            "FSH_M!D103"
+          ],
+          [
+            "FSH_M!A104",
+            "FSH_M!B104",
+            "FSH_M!C104",
+            "FSH_M!D104"
+          ],
+          [
+            "FSH_M!A105",
+            "FSH_M!B105",
+            "FSH_M!C105",
+            "FSH_M!D105"
+          ],
+          [
+            "FSH_M!A106",
+            "FSH_M!B106",
+            "FSH_M!C106",
+            "FSH_M!D106"
+          ],
+          [
+            "FSH_M!A107",
+            "FSH_M!B107",
+            "FSH_M!C107",
+            "FSH_M!D107"
+          ],
+          [
+            "FSH_M!A108",
+            "FSH_M!B108",
+            "FSH_M!C108",
+            "FSH_M!D108"
+          ],
+          [
+            "FSH_M!A109",
+            "FSH_M!B109",
+            "FSH_M!C109",
+            "FSH_M!D109"
+          ],
+          [
+            "FSH_M!A110",
+            "FSH_M!B110",
+            "FSH_M!C110",
+            "FSH_M!D110"
+          ],
+          [
+            "FSH_M!A111",
+            "FSH_M!B111",
+            "FSH_M!C111",
+            "FSH_M!D111"
+          ],
+          [
+            "FSH_M!A112",
+            "FSH_M!B112",
+            "FSH_M!C112",
+            "FSH_M!D112"
+          ],
+          [
+            "FSH_M!A113",
+            "FSH_M!B113",
+            "FSH_M!C113",
+            "FSH_M!D113"
+          ],
+          [
+            "FSH_M!A114",
+            "FSH_M!B114",
+            "FSH_M!C114",
+            "FSH_M!D114"
+          ],
+          [
+            "FSH_M!A115",
+            "FSH_M!B115",
+            "FSH_M!C115",
+            "FSH_M!D115"
+          ],
+          [
+            "FSH_M!A116",
+            "FSH_M!B116",
+            "FSH_M!C116",
+            "FSH_M!D116"
+          ],
+          [
+            "FSH_M!A117",
+            "FSH_M!B117",
+            "FSH_M!C117",
+            "FSH_M!D117"
+          ],
+          [
+            "FSH_M!A118",
+            "FSH_M!B118",
+            "FSH_M!C118",
+            "FSH_M!D118"
+          ],
+          [
+            "FSH_M!A119",
+            "FSH_M!B119",
+            "FSH_M!C119",
+            "FSH_M!D119"
+          ],
+          [
+            "FSH_M!A120",
+            "FSH_M!B120",
+            "FSH_M!C120",
+            "FSH_M!D120"
+          ],
+          [
+            "FSH_M!A121",
+            "FSH_M!B121",
+            "FSH_M!C121",
+            "FSH_M!D121"
+          ],
+          [
+            "FSH_M!A122",
+            "FSH_M!B122",
+            "FSH_M!C122",
+            "FSH_M!D122"
+          ],
+          [
+            "FSH_M!A123",
+            "FSH_M!B123",
+            "FSH_M!C123",
+            "FSH_M!D123"
+          ],
+          [
+            "FSH_M!A124",
+            "FSH_M!B124",
+            "FSH_M!C124",
+            "FSH_M!D124"
+          ],
+          [
+            "FSH_M!A125",
+            "FSH_M!B125",
+            "FSH_M!C125",
+            "FSH_M!D125"
+          ],
+          [
+            "FSH_M!A126",
+            "FSH_M!B126",
+            "FSH_M!C126",
+            "FSH_M!D126"
+          ],
+          [
+            "FSH_M!A127",
+            "FSH_M!B127",
+            "FSH_M!C127",
+            "FSH_M!D127"
+          ],
+          [
+            "FSH_M!A128",
+            "FSH_M!B128",
+            "FSH_M!C128",
+            "FSH_M!D128"
+          ],
+          [
+            "FSH_M!A129",
+            "FSH_M!B129",
+            "FSH_M!C129",
+            "FSH_M!D129"
+          ],
+          [
+            "FSH_M!A130",
+            "FSH_M!B130",
+            "FSH_M!C130",
+            "FSH_M!D130"
+          ],
+          [
+            "FSH_M!A131",
+            "FSH_M!B131",
+            "FSH_M!C131",
+            "FSH_M!D131"
+          ],
+          [
+            "FSH_M!A132",
+            "FSH_M!B132",
+            "FSH_M!C132",
+            "FSH_M!D132"
+          ],
+          [
+            "FSH_M!A133",
+            "FSH_M!B133",
+            "FSH_M!C133",
+            "FSH_M!D133"
+          ],
+          [
+            "FSH_M!A134",
+            "FSH_M!B134",
+            "FSH_M!C134",
+            "FSH_M!D134"
+          ],
+          [
+            "FSH_M!A135",
+            "FSH_M!B135",
+            "FSH_M!C135",
+            "FSH_M!D135"
+          ],
+          [
+            "FSH_M!A136",
+            "FSH_M!B136",
+            "FSH_M!C136",
+            "FSH_M!D136"
+          ],
+          [
+            "FSH_M!A137",
+            "FSH_M!B137",
+            "FSH_M!C137",
+            "FSH_M!D137"
+          ],
+          [
+            "FSH_M!A138",
+            "FSH_M!B138",
+            "FSH_M!C138",
+            "FSH_M!D138"
+          ],
+          [
+            "FSH_M!A139",
+            "FSH_M!B139",
+            "FSH_M!C139",
+            "FSH_M!D139"
+          ],
+          [
+            "FSH_M!A140",
+            "FSH_M!B140",
+            "FSH_M!C140",
+            "FSH_M!D140"
+          ],
+          [
+            "FSH_M!A141",
+            "FSH_M!B141",
+            "FSH_M!C141",
+            "FSH_M!D141"
+          ],
+          [
+            "FSH_M!A142",
+            "FSH_M!B142",
+            "FSH_M!C142",
+            "FSH_M!D142"
+          ],
+          [
+            "FSH_M!A143",
+            "FSH_M!B143",
+            "FSH_M!C143",
+            "FSH_M!D143"
+          ],
+          [
+            "FSH_M!A144",
+            "FSH_M!B144",
+            "FSH_M!C144",
+            "FSH_M!D144"
+          ],
+          [
+            "FSH_M!A145",
+            "FSH_M!B145",
+            "FSH_M!C145",
+            "FSH_M!D145"
+          ],
+          [
+            "FSH_M!A146",
+            "FSH_M!B146",
+            "FSH_M!C146",
+            "FSH_M!D146"
+          ],
+          [
+            "FSH_M!A147",
+            "FSH_M!B147",
+            "FSH_M!C147",
+            "FSH_M!D147"
+          ],
+          [
+            "FSH_M!A148",
+            "FSH_M!B148",
+            "FSH_M!C148",
+            "FSH_M!D148"
+          ],
+          [
+            "FSH_M!A149",
+            "FSH_M!B149",
+            "FSH_M!C149",
+            "FSH_M!D149"
+          ],
+          [
+            "FSH_M!A150",
+            "FSH_M!B150",
+            "FSH_M!C150",
+            "FSH_M!D150"
+          ],
+          [
+            "FSH_M!A151",
+            "FSH_M!B151",
+            "FSH_M!C151",
+            "FSH_M!D151"
+          ],
+          [
+            "FSH_M!A152",
+            "FSH_M!B152",
+            "FSH_M!C152",
+            "FSH_M!D152"
+          ],
+          [
+            "FSH_M!A153",
+            "FSH_M!B153",
+            "FSH_M!C153",
+            "FSH_M!D153"
+          ],
+          [
+            "FSH_M!A154",
+            "FSH_M!B154",
+            "FSH_M!C154",
+            "FSH_M!D154"
+          ],
+          [
+            "FSH_M!A155",
+            "FSH_M!B155",
+            "FSH_M!C155",
+            "FSH_M!D155"
+          ],
+          [
+            "FSH_M!A156",
+            "FSH_M!B156",
+            "FSH_M!C156",
+            "FSH_M!D156"
+          ],
+          [
+            "FSH_M!A157",
+            "FSH_M!B157",
+            "FSH_M!C157",
+            "FSH_M!D157"
+          ],
+          [
+            "FSH_M!A158",
+            "FSH_M!B158",
+            "FSH_M!C158",
+            "FSH_M!D158"
+          ],
+          [
+            "FSH_M!A159",
+            "FSH_M!B159",
+            "FSH_M!C159",
+            "FSH_M!D159"
+          ],
+          [
+            "FSH_M!A160",
+            "FSH_M!B160",
+            "FSH_M!C160",
+            "FSH_M!D160"
+          ],
+          [
+            "FSH_M!A161",
+            "FSH_M!B161",
+            "FSH_M!C161",
+            "FSH_M!D161"
+          ],
+          [
+            "FSH_M!A162",
+            "FSH_M!B162",
+            "FSH_M!C162",
+            "FSH_M!D162"
+          ],
+          [
+            "FSH_M!A163",
+            "FSH_M!B163",
+            "FSH_M!C163",
+            "FSH_M!D163"
+          ],
+          [
+            "FSH_M!A164",
+            "FSH_M!B164",
+            "FSH_M!C164",
+            "FSH_M!D164"
+          ],
+          [
+            "FSH_M!A165",
+            "FSH_M!B165",
+            "FSH_M!C165",
+            "FSH_M!D165"
+          ],
+          [
+            "FSH_M!A166",
+            "FSH_M!B166",
+            "FSH_M!C166",
+            "FSH_M!D166"
+          ],
+          [
+            "FSH_M!A167",
+            "FSH_M!B167",
+            "FSH_M!C167",
+            "FSH_M!D167"
+          ],
+          [
+            "FSH_M!A168",
+            "FSH_M!B168",
+            "FSH_M!C168",
+            "FSH_M!D168"
+          ],
+          [
+            "FSH_M!A169",
+            "FSH_M!B169",
+            "FSH_M!C169",
+            "FSH_M!D169"
+          ],
+          [
+            "FSH_M!A170",
+            "FSH_M!B170",
+            "FSH_M!C170",
+            "FSH_M!D170"
+          ],
+          [
+            "FSH_M!A171",
+            "FSH_M!B171",
+            "FSH_M!C171",
+            "FSH_M!D171"
+          ],
+          [
+            "FSH_M!A172",
+            "FSH_M!B172",
+            "FSH_M!C172",
+            "FSH_M!D172"
+          ],
+          [
+            "FSH_M!A173",
+            "FSH_M!B173",
+            "FSH_M!C173",
+            "FSH_M!D173"
+          ],
+          [
+            "FSH_M!A174",
+            "FSH_M!B174",
+            "FSH_M!C174",
+            "FSH_M!D174"
+          ],
+          [
+            "FSH_M!A175",
+            "FSH_M!B175",
+            "FSH_M!C175",
+            "FSH_M!D175"
+          ],
+          [
+            "FSH_M!A176",
+            "FSH_M!B176",
+            "FSH_M!C176",
+            "FSH_M!D176"
+          ],
+          [
+            "FSH_M!A177",
+            "FSH_M!B177",
+            "FSH_M!C177",
+            "FSH_M!D177"
+          ],
+          [
+            "FSH_M!A178",
+            "FSH_M!B178",
+            "FSH_M!C178",
+            "FSH_M!D178"
+          ],
+          [
+            "FSH_M!A179",
+            "FSH_M!B179",
+            "FSH_M!C179",
+            "FSH_M!D179"
+          ],
+          [
+            "FSH_M!A180",
+            "FSH_M!B180",
+            "FSH_M!C180",
+            "FSH_M!D180"
+          ],
+          [
+            "FSH_M!A181",
+            "FSH_M!B181",
+            "FSH_M!C181",
+            "FSH_M!D181"
+          ],
+          [
+            "FSH_M!A182",
+            "FSH_M!B182",
+            "FSH_M!C182",
+            "FSH_M!D182"
+          ]
+        ],
+        "sourceModel": {
+          "family": "GAMLSS BCCG",
+          "responseScale": "native FSH IU/L; no logarithmic back-transform",
+          "parameterMapping": {
+            "nu": "L",
+            "mu": "M",
+            "sigma": "S"
+          },
+          "p50Definition": "Exact median of the positive-response, normalized BCCG distribution at each exported age node (qBCCG(0.5)), not automatically M.",
+          "quantileAlgorithm": "For L>0, Z=Phi^-1(1-0.5*Phi(1/(S*abs(L)))); for L<0, Z=Phi^-1(0.5*Phi(1/(S*abs(L)))); Y=M*(1+L*S*Z)^(1/L). For L=0 the p50 limit is M.",
+          "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+          "sourceFormulaLimitation": "The paper prints the untruncated nominal-z LMS formula, which returns M at z=0; its stated GAMLSS BCCG family normalizes a truncated normal. The exact normalized p50 independently reproduces Figure 1C; source M is preserved separately and never relabeled as the exact normalized median.",
+          "figureVerification": "Figure 1C, printed page 1108 / PDF page 4, black 50th-percentile curves. Vector checks at ages 16, 17 and 18 agree within graphical precision; these checks are diagnostics, not substituted numerical source values.",
+          "maleCode": "gamlss(hormone~cs(age, df=3), sigma.fo=~cs(age, df=2), nu.fo=~cs(age, df=2), family=BCCG, data=d)",
+          "femaleCode": "gamlss(hormone~cs(age, df=2), sigma.fo=~cs(age, df=0), nu.fo=~cs(age, df=0), family=BCCG, data=d)",
+          "sourceCodeLocation": "Supplementary Table 2, FSH male and female rows",
+          "sourceRVersion": "4.1.2",
+          "noNewClinicalFunction": "This extraction qualifies only educational age-reference medians. It does not activate BCCG-derived RI, SDS, patient percentiles, diagnosis or treatment decisions."
+        },
+        "sourceRouting": {
+          "version": "2026-10-18.1",
+          "id": "wilson2023-male-fsh-age-16-18",
+          "sex": "male",
+          "minAge": 16,
+          "maxAge": 18,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Zwykłe odniesienie FSH przełącza się w wieku 16 lat z Madsen na Wilson/CALIPER. Chłopcy korzystają z CALIPER w [16,18), dziewczęta w [16,19). Od 18 lat męskie źródła dorosłe zachowują pierwszeństwo. To jawna polityka aplikacji, nie kalibracja różnych populacji lub metod. Dobór nie zależy od wyniku."
+        }
+      },
+      "limitations": [
+        "Only FSH is imported. This source extract does not activate LH, estradiol, testosterone, AMH, inhibin B or INSL3.",
+        "A policy-defined late-adolescent window may use these data without Tanner or cycle-phase questions. It is not a Tanner- or phase-specific reference.",
+        "Do not infer an early-follicular, fasting or early-morning reference from absent restrictions.",
+        "Known incompatible patient method or specimen and known treatment/pregnancy/stimulation remain exclusions under the application policy; missing context stays unknown.",
+        "Do not average or calibrate CALIPER values with neighboring Madsen or adult-reference data, and do not move the source marker to the educational line.",
+        "The full source age grid is evidence, not authorization to replace existing infant, childhood, puberty-comparison or adult profiles.",
+        "No age uncertainty crossing a source boundary may be resolved by silently selecting the midpoint age.",
+        "Cały możliwy przedział wieku musi należeć do jednego profilu. Przełączenie od 16 pozwala porównać również wpis 16 lat 0 miesięcy. Nie uśredniaj źródeł ani nie wybieraj środka niepewnego wieku. Wiersz 19 domyka interpolację poniżej 19, nie kwalifikuje pacjentki w wieku 19 lat. Osobne porównanie płci zachowuje Madsen 6–16 włącznie.",
+        "Mediana to qBCCG(0.5) obliczone z oryginalnych L/M/S na natywnej skali IU/L z uwzględnieniem normalizacji uciętego rozkładu. Samo M nie zawsze jest dokładnym p50. Nie stosuj transformacji logarytmicznej arkuszy LH do FSH. Nie uruchamiaj norm, SDS, percentyla wyniku ani diagnozy.",
+        "Zachowaj wszystkie 181 oryginalnych węzłów 1–19 lat każdej płci i PCHIP w stężeniach p50. Wartości między węzłami co 0,1 roku są przybliżeniem tabeli, nie odzyskanym dopasowaniem autorów. Nie interpoluj przez zmianę publikacji i nie ekstrapoluj.",
+        "Surowica, Abbott ARCHITECT ci2000. Nieznana metoda dopuszcza tylko orientacyjne zestawienie. Znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Wspólna jednostka ani nazwa Abbott nie dowodzą zgodności z i1000, IMMULITE, Roche lub innymi platformami.",
+        "Model wieku i płci nie wymaga Th/G ani fazy cyklu. Nie jest medianą danego stadium lub fazy. Autorzy wykluczali aktualną ciążę, chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu i leki na receptę, w tym antykoncepcję doustną w ostatnich dwóch tygodniach. Zachowaj znane leczenie i stymulację z bieżącego kontekstu; brak wywiadu nie potwierdza ich nieobecności. Nie dodawaj nowych pytań."
+      ]
+    },
+    {
+      "id": "wilson2023-female-fsh-age-16-19",
+      "analyte": "fsh",
+      "sex": "female",
+      "minAge": 16,
+      "maxAge": 19,
+      "points": [
+        {
+          "ageYears": 1.0,
+          "value": 2.30052386026578
+        },
+        {
+          "ageYears": 1.1,
+          "value": 2.26657896860951
+        },
+        {
+          "ageYears": 1.2,
+          "value": 2.2326426328145
+        },
+        {
+          "ageYears": 1.3,
+          "value": 2.19872599752706
+        },
+        {
+          "ageYears": 1.4,
+          "value": 2.16484223623308
+        },
+        {
+          "ageYears": 1.5,
+          "value": 2.13100652678768
+        },
+        {
+          "ageYears": 1.6,
+          "value": 2.09723573389138
+        },
+        {
+          "ageYears": 1.7,
+          "value": 2.06355204340446
+        },
+        {
+          "ageYears": 1.8,
+          "value": 2.02997920195409
+        },
+        {
+          "ageYears": 1.9,
+          "value": 1.9965409569414
+        },
+        {
+          "ageYears": 2.0,
+          "value": 1.96326105576751
+        },
+        {
+          "ageYears": 2.1,
+          "value": 1.9301634458859
+        },
+        {
+          "ageYears": 2.2,
+          "value": 1.8972742565242
+        },
+        {
+          "ageYears": 2.3,
+          "value": 1.86462193167539
+        },
+        {
+          "ageYears": 2.4,
+          "value": 1.83223676460654
+        },
+        {
+          "ageYears": 2.5,
+          "value": 1.800148525983
+        },
+        {
+          "ageYears": 2.6,
+          "value": 1.76838449267962
+        },
+        {
+          "ageYears": 2.7,
+          "value": 1.73697430429128
+        },
+        {
+          "ageYears": 2.8,
+          "value": 1.70594883791812
+        },
+        {
+          "ageYears": 2.9,
+          "value": 1.67534108814339
+        },
+        {
+          "ageYears": 3.0,
+          "value": 1.64518461646288
+        },
+        {
+          "ageYears": 3.1,
+          "value": 1.61551222228118
+        },
+        {
+          "ageYears": 3.2,
+          "value": 1.58635357694176
+        },
+        {
+          "ageYears": 3.3,
+          "value": 1.55773890190771
+        },
+        {
+          "ageYears": 3.4,
+          "value": 1.52970040398459
+        },
+        {
+          "ageYears": 3.5,
+          "value": 1.50226728028786
+        },
+        {
+          "ageYears": 3.6,
+          "value": 1.47546946614185
+        },
+        {
+          "ageYears": 3.7,
+          "value": 1.44933746272871
+        },
+        {
+          "ageYears": 3.8,
+          "value": 1.42390106332463
+        },
+        {
+          "ageYears": 3.9,
+          "value": 1.39918597736979
+        },
+        {
+          "ageYears": 4.0,
+          "value": 1.37521985150084
+        },
+        {
+          "ageYears": 4.1,
+          "value": 1.35203154296487
+        },
+        {
+          "ageYears": 4.2,
+          "value": 1.32964809222345
+        },
+        {
+          "ageYears": 4.3,
+          "value": 1.30809539469585
+        },
+        {
+          "ageYears": 4.4,
+          "value": 1.287397204329
+        },
+        {
+          "ageYears": 4.5,
+          "value": 1.26757254959021
+        },
+        {
+          "ageYears": 4.6,
+          "value": 1.24863562852608
+        },
+        {
+          "ageYears": 4.7,
+          "value": 1.23060075085048
+        },
+        {
+          "ageYears": 4.8,
+          "value": 1.21348190868512
+        },
+        {
+          "ageYears": 4.9,
+          "value": 1.19729274999113
+        },
+        {
+          "ageYears": 5.0,
+          "value": 1.18204697166013
+        },
+        {
+          "ageYears": 5.1,
+          "value": 1.16775873438397
+        },
+        {
+          "ageYears": 5.2,
+          "value": 1.15444265710356
+        },
+        {
+          "ageYears": 5.3,
+          "value": 1.1421125865646
+        },
+        {
+          "ageYears": 5.4,
+          "value": 1.13078190844788
+        },
+        {
+          "ageYears": 5.5,
+          "value": 1.12046324347419
+        },
+        {
+          "ageYears": 5.6,
+          "value": 1.11116975156173
+        },
+        {
+          "ageYears": 5.7,
+          "value": 1.1029137186213
+        },
+        {
+          "ageYears": 5.8,
+          "value": 1.09570721204231
+        },
+        {
+          "ageYears": 5.9,
+          "value": 1.08956517134022
+        },
+        {
+          "ageYears": 6.0,
+          "value": 1.08450318987458
+        },
+        {
+          "ageYears": 6.1,
+          "value": 1.08054140473624
+        },
+        {
+          "ageYears": 6.2,
+          "value": 1.07770339728443
+        },
+        {
+          "ageYears": 6.3,
+          "value": 1.07601189641275
+        },
+        {
+          "ageYears": 6.4,
+          "value": 1.07548359506257
+        },
+        {
+          "ageYears": 6.5,
+          "value": 1.07613118410425
+        },
+        {
+          "ageYears": 6.6,
+          "value": 1.07797274848585
+        },
+        {
+          "ageYears": 6.7,
+          "value": 1.0810300572762
+        },
+        {
+          "ageYears": 6.8,
+          "value": 1.08532419153212
+        },
+        {
+          "ageYears": 6.9,
+          "value": 1.09087595560403
+        },
+        {
+          "ageYears": 7.0,
+          "value": 1.09770344370776
+        },
+        {
+          "ageYears": 7.1,
+          "value": 1.10582124362041
+        },
+        {
+          "ageYears": 7.2,
+          "value": 1.11524243481384
+        },
+        {
+          "ageYears": 7.3,
+          "value": 1.12597984777896
+        },
+        {
+          "ageYears": 7.4,
+          "value": 1.13804321858598
+        },
+        {
+          "ageYears": 7.5,
+          "value": 1.15143961648755
+        },
+        {
+          "ageYears": 7.6,
+          "value": 1.16617855582177
+        },
+        {
+          "ageYears": 7.7,
+          "value": 1.182266807207321
+        },
+        {
+          "ageYears": 7.8,
+          "value": 1.1997077678264556
+        },
+        {
+          "ageYears": 7.9,
+          "value": 1.2185051402749363
+        },
+        {
+          "ageYears": 8.0,
+          "value": 1.2386582808783309
+        },
+        {
+          "ageYears": 8.1,
+          "value": 1.2601595857123316
+        },
+        {
+          "ageYears": 8.2,
+          "value": 1.282999901842744
+        },
+        {
+          "ageYears": 8.3,
+          "value": 1.3071674867995149
+        },
+        {
+          "ageYears": 8.4,
+          "value": 1.3326435911145096
+        },
+        {
+          "ageYears": 8.5,
+          "value": 1.3594051347310283
+        },
+        {
+          "ageYears": 8.6,
+          "value": 1.3874251246723948
+        },
+        {
+          "ageYears": 8.7,
+          "value": 1.4166710723934535
+        },
+        {
+          "ageYears": 8.8,
+          "value": 1.4471095542632046
+        },
+        {
+          "ageYears": 8.9,
+          "value": 1.478704822570677
+        },
+        {
+          "ageYears": 9.0,
+          "value": 1.5114186761644488
+        },
+        {
+          "ageYears": 9.1,
+          "value": 1.5452128034850623
+        },
+        {
+          "ageYears": 9.2,
+          "value": 1.580047835090203
+        },
+        {
+          "ageYears": 9.3,
+          "value": 1.6158852437008346
+        },
+        {
+          "ageYears": 9.4,
+          "value": 1.6526830875075886
+        },
+        {
+          "ageYears": 9.5,
+          "value": 1.6904031412128007
+        },
+        {
+          "ageYears": 9.6,
+          "value": 1.7290090519107058
+        },
+        {
+          "ageYears": 9.7,
+          "value": 1.768461249422816
+        },
+        {
+          "ageYears": 9.8,
+          "value": 1.808718171669476
+        },
+        {
+          "ageYears": 9.9,
+          "value": 1.849733432549931
+        },
+        {
+          "ageYears": 10.0,
+          "value": 1.8914546179908949
+        },
+        {
+          "ageYears": 10.1,
+          "value": 1.93382819392804
+        },
+        {
+          "ageYears": 10.2,
+          "value": 1.9767993054183648
+        },
+        {
+          "ageYears": 10.3,
+          "value": 2.0203101849170886
+        },
+        {
+          "ageYears": 10.4,
+          "value": 2.0642989555142575
+        },
+        {
+          "ageYears": 10.5,
+          "value": 2.1087018005726588
+        },
+        {
+          "ageYears": 10.6,
+          "value": 2.1534502804611075
+        },
+        {
+          "ageYears": 10.7,
+          "value": 2.198468835441057
+        },
+        {
+          "ageYears": 10.8,
+          "value": 2.2436791817678783
+        },
+        {
+          "ageYears": 10.9,
+          "value": 2.2890040379735748
+        },
+        {
+          "ageYears": 11.0,
+          "value": 2.3343674522872604
+        },
+        {
+          "ageYears": 11.1,
+          "value": 2.3796935853644716
+        },
+        {
+          "ageYears": 11.2,
+          "value": 2.4249071889467073
+        },
+        {
+          "ageYears": 11.3,
+          "value": 2.469935248149027
+        },
+        {
+          "ageYears": 11.4,
+          "value": 2.5147094437172273
+        },
+        {
+          "ageYears": 11.5,
+          "value": 2.559167286366137
+        },
+        {
+          "ageYears": 11.6,
+          "value": 2.6032542902266753
+        },
+        {
+          "ageYears": 11.7,
+          "value": 2.6469199645884007
+        },
+        {
+          "ageYears": 11.8,
+          "value": 2.6901187516035843
+        },
+        {
+          "ageYears": 11.9,
+          "value": 2.732807177298423
+        },
+        {
+          "ageYears": 12.0,
+          "value": 2.7749418789024265
+        },
+        {
+          "ageYears": 12.1,
+          "value": 2.816481150552722
+        },
+        {
+          "ageYears": 12.2,
+          "value": 2.857387311216575
+        },
+        {
+          "ageYears": 12.3,
+          "value": 2.897627636722023
+        },
+        {
+          "ageYears": 12.4,
+          "value": 2.9371749879145925
+        },
+        {
+          "ageYears": 12.5,
+          "value": 2.976009749216049
+        },
+        {
+          "ageYears": 12.6,
+          "value": 3.0141150833657915
+        },
+        {
+          "ageYears": 12.7,
+          "value": 3.0514768354778137
+        },
+        {
+          "ageYears": 12.8,
+          "value": 3.088087021787892
+        },
+        {
+          "ageYears": 12.9,
+          "value": 3.1239436321960454
+        },
+        {
+          "ageYears": 13.0,
+          "value": 3.1590495798248797
+        },
+        {
+          "ageYears": 13.1,
+          "value": 3.193414559049099
+        },
+        {
+          "ageYears": 13.2,
+          "value": 3.2270535801753053
+        },
+        {
+          "ageYears": 13.3,
+          "value": 3.2599860971861663
+        },
+        {
+          "ageYears": 13.4,
+          "value": 3.292234546788298
+        },
+        {
+          "ageYears": 13.5,
+          "value": 3.3238217782504633
+        },
+        {
+          "ageYears": 13.6,
+          "value": 3.3547695351068403
+        },
+        {
+          "ageYears": 13.7,
+          "value": 3.3850994654296045
+        },
+        {
+          "ageYears": 13.8,
+          "value": 3.414832169550829
+        },
+        {
+          "ageYears": 13.9,
+          "value": 3.4439877874812015
+        },
+        {
+          "ageYears": 14.0,
+          "value": 3.4725862465683117
+        },
+        {
+          "ageYears": 14.1,
+          "value": 3.5006476164993816
+        },
+        {
+          "ageYears": 14.2,
+          "value": 3.5281940126924622
+        },
+        {
+          "ageYears": 14.3,
+          "value": 3.555247775600825
+        },
+        {
+          "ageYears": 14.4,
+          "value": 3.5818306178656516
+        },
+        {
+          "ageYears": 14.5,
+          "value": 3.6079642308931845
+        },
+        {
+          "ageYears": 14.6,
+          "value": 3.6336687303654935
+        },
+        {
+          "ageYears": 14.7,
+          "value": 3.658962811932065
+        },
+        {
+          "ageYears": 14.8,
+          "value": 3.6838675468963866
+        },
+        {
+          "ageYears": 14.9,
+          "value": 3.708405147336678
+        },
+        {
+          "ageYears": 15.0,
+          "value": 3.732600337646832
+        },
+        {
+          "ageYears": 15.1,
+          "value": 3.7564809986360608
+        },
+        {
+          "ageYears": 15.2,
+          "value": 3.780075025984891
+        },
+        {
+          "ageYears": 15.3,
+          "value": 3.8034083226446906
+        },
+        {
+          "ageYears": 15.4,
+          "value": 3.8265038234234705
+        },
+        {
+          "ageYears": 15.5,
+          "value": 3.849382134679151
+        },
+        {
+          "ageYears": 15.6,
+          "value": 3.872063660858778
+        },
+        {
+          "ageYears": 15.7,
+          "value": 3.894569043495987
+        },
+        {
+          "ageYears": 15.8,
+          "value": 3.916918744333683
+        },
+        {
+          "ageYears": 15.9,
+          "value": 3.9391315154143207
+        },
+        {
+          "ageYears": 16.0,
+          "value": 3.961224607974412
+        },
+        {
+          "ageYears": 16.1,
+          "value": 3.9832153399334507
+        },
+        {
+          "ageYears": 16.2,
+          "value": 4.005120542879235
+        },
+        {
+          "ageYears": 16.3,
+          "value": 4.026956210528786
+        },
+        {
+          "ageYears": 16.4,
+          "value": 4.048737849441781
+        },
+        {
+          "ageYears": 16.5,
+          "value": 4.070480479048648
+        },
+        {
+          "ageYears": 16.6,
+          "value": 4.092198577870259
+        },
+        {
+          "ageYears": 16.7,
+          "value": 4.113906212740057
+        },
+        {
+          "ageYears": 16.8,
+          "value": 4.1356167959794075
+        },
+        {
+          "ageYears": 16.9,
+          "value": 4.157342679652729
+        },
+        {
+          "ageYears": 17.0,
+          "value": 4.1790950116741366
+        },
+        {
+          "ageYears": 17.1,
+          "value": 4.20088407246306
+        },
+        {
+          "ageYears": 17.2,
+          "value": 4.22272017479219
+        },
+        {
+          "ageYears": 17.3,
+          "value": 4.244613184808495
+        },
+        {
+          "ageYears": 17.4,
+          "value": 4.2665694831305
+        },
+        {
+          "ageYears": 17.5,
+          "value": 4.288591546056412
+        },
+        {
+          "ageYears": 17.6,
+          "value": 4.3106788273145895
+        },
+        {
+          "ageYears": 17.7,
+          "value": 4.332829209004394
+        },
+        {
+          "ageYears": 17.8,
+          "value": 4.355041567845259
+        },
+        {
+          "ageYears": 17.9,
+          "value": 4.377314959770476
+        },
+        {
+          "ageYears": 18.0,
+          "value": 4.399647684355955
+        },
+        {
+          "ageYears": 18.1,
+          "value": 4.4220377902178205
+        },
+        {
+          "ageYears": 18.2,
+          "value": 4.444483361612465
+        },
+        {
+          "ageYears": 18.3,
+          "value": 4.466983130653049
+        },
+        {
+          "ageYears": 18.4,
+          "value": 4.489538733924867
+        },
+        {
+          "ageYears": 18.5,
+          "value": 4.512153207260573
+        },
+        {
+          "ageYears": 18.6,
+          "value": 4.534830200673745
+        },
+        {
+          "ageYears": 18.7,
+          "value": 4.557574057812986
+        },
+        {
+          "ageYears": 18.8,
+          "value": 4.5803866498868615
+        },
+        {
+          "ageYears": 18.9,
+          "value": 4.603267431425548
+        },
+        {
+          "ageYears": 19.0,
+          "value": 4.626214159143202
+        }
+      ],
+      "sourceLabel": "Wilson 2023 · CALIPER · FSH",
+      "url": "https://doi.org/10.1515/cclm-2022-1077",
+      "method": "Abbott ARCHITECT ci2000",
+      "population": "CALIPER; zdrowe dzieci i młodzież, Greater Toronto, Kanada",
+      "statistic": "median",
+      "approximate": false,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "abbott-architect-ci2000-fsh"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy",
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3"
+      ],
+      "patientNote": "Mediana według wieku; nie jest normą dla stadium ani fazy cyklu.",
+      "provenance": {
+        "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+        "authorsShort": "Wilson et al.",
+        "year": 2023,
+        "journal": "Clinical Chemistry and Laboratory Medicine",
+        "volume": 61,
+        "issue": 6,
+        "pages": "1105–1115",
+        "doi": "10.1515/cclm-2022-1077",
+        "pmid": "36639844",
+        "url": "https://doi.org/10.1515/cclm-2022-1077",
+        "publishedOnline": "2023-01-16",
+        "sourceFile": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+        "sourceSha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b",
+        "sourceBytes": 223819,
+        "sourceVersion": "Owner-supplied final-article Supplementary Table 3; workbook bytes identified by SHA-256.",
+        "table": "Supplementary Table 3: numerical L,M,S-for-age; FSH_M and FSH_F only",
+        "readOn": "2026-10-18",
+        "access": "Full final primary article and all three owner-supplied supplementary tables reviewed.",
+        "redistribution": "Only FSH numerical facts, provenance and qualification metadata are extracted; full article, figures and source workbooks/documents are not redistributed.",
+        "sourceWorksheet": "FSH_F",
+        "sourceCells": [
+          [
+            "FSH_F!A2",
+            "FSH_F!B2",
+            "FSH_F!C2",
+            "FSH_F!D2"
+          ],
+          [
+            "FSH_F!A3",
+            "FSH_F!B3",
+            "FSH_F!C3",
+            "FSH_F!D3"
+          ],
+          [
+            "FSH_F!A4",
+            "FSH_F!B4",
+            "FSH_F!C4",
+            "FSH_F!D4"
+          ],
+          [
+            "FSH_F!A5",
+            "FSH_F!B5",
+            "FSH_F!C5",
+            "FSH_F!D5"
+          ],
+          [
+            "FSH_F!A6",
+            "FSH_F!B6",
+            "FSH_F!C6",
+            "FSH_F!D6"
+          ],
+          [
+            "FSH_F!A7",
+            "FSH_F!B7",
+            "FSH_F!C7",
+            "FSH_F!D7"
+          ],
+          [
+            "FSH_F!A8",
+            "FSH_F!B8",
+            "FSH_F!C8",
+            "FSH_F!D8"
+          ],
+          [
+            "FSH_F!A9",
+            "FSH_F!B9",
+            "FSH_F!C9",
+            "FSH_F!D9"
+          ],
+          [
+            "FSH_F!A10",
+            "FSH_F!B10",
+            "FSH_F!C10",
+            "FSH_F!D10"
+          ],
+          [
+            "FSH_F!A11",
+            "FSH_F!B11",
+            "FSH_F!C11",
+            "FSH_F!D11"
+          ],
+          [
+            "FSH_F!A12",
+            "FSH_F!B12",
+            "FSH_F!C12",
+            "FSH_F!D12"
+          ],
+          [
+            "FSH_F!A13",
+            "FSH_F!B13",
+            "FSH_F!C13",
+            "FSH_F!D13"
+          ],
+          [
+            "FSH_F!A14",
+            "FSH_F!B14",
+            "FSH_F!C14",
+            "FSH_F!D14"
+          ],
+          [
+            "FSH_F!A15",
+            "FSH_F!B15",
+            "FSH_F!C15",
+            "FSH_F!D15"
+          ],
+          [
+            "FSH_F!A16",
+            "FSH_F!B16",
+            "FSH_F!C16",
+            "FSH_F!D16"
+          ],
+          [
+            "FSH_F!A17",
+            "FSH_F!B17",
+            "FSH_F!C17",
+            "FSH_F!D17"
+          ],
+          [
+            "FSH_F!A18",
+            "FSH_F!B18",
+            "FSH_F!C18",
+            "FSH_F!D18"
+          ],
+          [
+            "FSH_F!A19",
+            "FSH_F!B19",
+            "FSH_F!C19",
+            "FSH_F!D19"
+          ],
+          [
+            "FSH_F!A20",
+            "FSH_F!B20",
+            "FSH_F!C20",
+            "FSH_F!D20"
+          ],
+          [
+            "FSH_F!A21",
+            "FSH_F!B21",
+            "FSH_F!C21",
+            "FSH_F!D21"
+          ],
+          [
+            "FSH_F!A22",
+            "FSH_F!B22",
+            "FSH_F!C22",
+            "FSH_F!D22"
+          ],
+          [
+            "FSH_F!A23",
+            "FSH_F!B23",
+            "FSH_F!C23",
+            "FSH_F!D23"
+          ],
+          [
+            "FSH_F!A24",
+            "FSH_F!B24",
+            "FSH_F!C24",
+            "FSH_F!D24"
+          ],
+          [
+            "FSH_F!A25",
+            "FSH_F!B25",
+            "FSH_F!C25",
+            "FSH_F!D25"
+          ],
+          [
+            "FSH_F!A26",
+            "FSH_F!B26",
+            "FSH_F!C26",
+            "FSH_F!D26"
+          ],
+          [
+            "FSH_F!A27",
+            "FSH_F!B27",
+            "FSH_F!C27",
+            "FSH_F!D27"
+          ],
+          [
+            "FSH_F!A28",
+            "FSH_F!B28",
+            "FSH_F!C28",
+            "FSH_F!D28"
+          ],
+          [
+            "FSH_F!A29",
+            "FSH_F!B29",
+            "FSH_F!C29",
+            "FSH_F!D29"
+          ],
+          [
+            "FSH_F!A30",
+            "FSH_F!B30",
+            "FSH_F!C30",
+            "FSH_F!D30"
+          ],
+          [
+            "FSH_F!A31",
+            "FSH_F!B31",
+            "FSH_F!C31",
+            "FSH_F!D31"
+          ],
+          [
+            "FSH_F!A32",
+            "FSH_F!B32",
+            "FSH_F!C32",
+            "FSH_F!D32"
+          ],
+          [
+            "FSH_F!A33",
+            "FSH_F!B33",
+            "FSH_F!C33",
+            "FSH_F!D33"
+          ],
+          [
+            "FSH_F!A34",
+            "FSH_F!B34",
+            "FSH_F!C34",
+            "FSH_F!D34"
+          ],
+          [
+            "FSH_F!A35",
+            "FSH_F!B35",
+            "FSH_F!C35",
+            "FSH_F!D35"
+          ],
+          [
+            "FSH_F!A36",
+            "FSH_F!B36",
+            "FSH_F!C36",
+            "FSH_F!D36"
+          ],
+          [
+            "FSH_F!A37",
+            "FSH_F!B37",
+            "FSH_F!C37",
+            "FSH_F!D37"
+          ],
+          [
+            "FSH_F!A38",
+            "FSH_F!B38",
+            "FSH_F!C38",
+            "FSH_F!D38"
+          ],
+          [
+            "FSH_F!A39",
+            "FSH_F!B39",
+            "FSH_F!C39",
+            "FSH_F!D39"
+          ],
+          [
+            "FSH_F!A40",
+            "FSH_F!B40",
+            "FSH_F!C40",
+            "FSH_F!D40"
+          ],
+          [
+            "FSH_F!A41",
+            "FSH_F!B41",
+            "FSH_F!C41",
+            "FSH_F!D41"
+          ],
+          [
+            "FSH_F!A42",
+            "FSH_F!B42",
+            "FSH_F!C42",
+            "FSH_F!D42"
+          ],
+          [
+            "FSH_F!A43",
+            "FSH_F!B43",
+            "FSH_F!C43",
+            "FSH_F!D43"
+          ],
+          [
+            "FSH_F!A44",
+            "FSH_F!B44",
+            "FSH_F!C44",
+            "FSH_F!D44"
+          ],
+          [
+            "FSH_F!A45",
+            "FSH_F!B45",
+            "FSH_F!C45",
+            "FSH_F!D45"
+          ],
+          [
+            "FSH_F!A46",
+            "FSH_F!B46",
+            "FSH_F!C46",
+            "FSH_F!D46"
+          ],
+          [
+            "FSH_F!A47",
+            "FSH_F!B47",
+            "FSH_F!C47",
+            "FSH_F!D47"
+          ],
+          [
+            "FSH_F!A48",
+            "FSH_F!B48",
+            "FSH_F!C48",
+            "FSH_F!D48"
+          ],
+          [
+            "FSH_F!A49",
+            "FSH_F!B49",
+            "FSH_F!C49",
+            "FSH_F!D49"
+          ],
+          [
+            "FSH_F!A50",
+            "FSH_F!B50",
+            "FSH_F!C50",
+            "FSH_F!D50"
+          ],
+          [
+            "FSH_F!A51",
+            "FSH_F!B51",
+            "FSH_F!C51",
+            "FSH_F!D51"
+          ],
+          [
+            "FSH_F!A52",
+            "FSH_F!B52",
+            "FSH_F!C52",
+            "FSH_F!D52"
+          ],
+          [
+            "FSH_F!A53",
+            "FSH_F!B53",
+            "FSH_F!C53",
+            "FSH_F!D53"
+          ],
+          [
+            "FSH_F!A54",
+            "FSH_F!B54",
+            "FSH_F!C54",
+            "FSH_F!D54"
+          ],
+          [
+            "FSH_F!A55",
+            "FSH_F!B55",
+            "FSH_F!C55",
+            "FSH_F!D55"
+          ],
+          [
+            "FSH_F!A56",
+            "FSH_F!B56",
+            "FSH_F!C56",
+            "FSH_F!D56"
+          ],
+          [
+            "FSH_F!A57",
+            "FSH_F!B57",
+            "FSH_F!C57",
+            "FSH_F!D57"
+          ],
+          [
+            "FSH_F!A58",
+            "FSH_F!B58",
+            "FSH_F!C58",
+            "FSH_F!D58"
+          ],
+          [
+            "FSH_F!A59",
+            "FSH_F!B59",
+            "FSH_F!C59",
+            "FSH_F!D59"
+          ],
+          [
+            "FSH_F!A60",
+            "FSH_F!B60",
+            "FSH_F!C60",
+            "FSH_F!D60"
+          ],
+          [
+            "FSH_F!A61",
+            "FSH_F!B61",
+            "FSH_F!C61",
+            "FSH_F!D61"
+          ],
+          [
+            "FSH_F!A62",
+            "FSH_F!B62",
+            "FSH_F!C62",
+            "FSH_F!D62"
+          ],
+          [
+            "FSH_F!A63",
+            "FSH_F!B63",
+            "FSH_F!C63",
+            "FSH_F!D63"
+          ],
+          [
+            "FSH_F!A64",
+            "FSH_F!B64",
+            "FSH_F!C64",
+            "FSH_F!D64"
+          ],
+          [
+            "FSH_F!A65",
+            "FSH_F!B65",
+            "FSH_F!C65",
+            "FSH_F!D65"
+          ],
+          [
+            "FSH_F!A66",
+            "FSH_F!B66",
+            "FSH_F!C66",
+            "FSH_F!D66"
+          ],
+          [
+            "FSH_F!A67",
+            "FSH_F!B67",
+            "FSH_F!C67",
+            "FSH_F!D67"
+          ],
+          [
+            "FSH_F!A68",
+            "FSH_F!B68",
+            "FSH_F!C68",
+            "FSH_F!D68"
+          ],
+          [
+            "FSH_F!A69",
+            "FSH_F!B69",
+            "FSH_F!C69",
+            "FSH_F!D69"
+          ],
+          [
+            "FSH_F!A70",
+            "FSH_F!B70",
+            "FSH_F!C70",
+            "FSH_F!D70"
+          ],
+          [
+            "FSH_F!A71",
+            "FSH_F!B71",
+            "FSH_F!C71",
+            "FSH_F!D71"
+          ],
+          [
+            "FSH_F!A72",
+            "FSH_F!B72",
+            "FSH_F!C72",
+            "FSH_F!D72"
+          ],
+          [
+            "FSH_F!A73",
+            "FSH_F!B73",
+            "FSH_F!C73",
+            "FSH_F!D73"
+          ],
+          [
+            "FSH_F!A74",
+            "FSH_F!B74",
+            "FSH_F!C74",
+            "FSH_F!D74"
+          ],
+          [
+            "FSH_F!A75",
+            "FSH_F!B75",
+            "FSH_F!C75",
+            "FSH_F!D75"
+          ],
+          [
+            "FSH_F!A76",
+            "FSH_F!B76",
+            "FSH_F!C76",
+            "FSH_F!D76"
+          ],
+          [
+            "FSH_F!A77",
+            "FSH_F!B77",
+            "FSH_F!C77",
+            "FSH_F!D77"
+          ],
+          [
+            "FSH_F!A78",
+            "FSH_F!B78",
+            "FSH_F!C78",
+            "FSH_F!D78"
+          ],
+          [
+            "FSH_F!A79",
+            "FSH_F!B79",
+            "FSH_F!C79",
+            "FSH_F!D79"
+          ],
+          [
+            "FSH_F!A80",
+            "FSH_F!B80",
+            "FSH_F!C80",
+            "FSH_F!D80"
+          ],
+          [
+            "FSH_F!A81",
+            "FSH_F!B81",
+            "FSH_F!C81",
+            "FSH_F!D81"
+          ],
+          [
+            "FSH_F!A82",
+            "FSH_F!B82",
+            "FSH_F!C82",
+            "FSH_F!D82"
+          ],
+          [
+            "FSH_F!A83",
+            "FSH_F!B83",
+            "FSH_F!C83",
+            "FSH_F!D83"
+          ],
+          [
+            "FSH_F!A84",
+            "FSH_F!B84",
+            "FSH_F!C84",
+            "FSH_F!D84"
+          ],
+          [
+            "FSH_F!A85",
+            "FSH_F!B85",
+            "FSH_F!C85",
+            "FSH_F!D85"
+          ],
+          [
+            "FSH_F!A86",
+            "FSH_F!B86",
+            "FSH_F!C86",
+            "FSH_F!D86"
+          ],
+          [
+            "FSH_F!A87",
+            "FSH_F!B87",
+            "FSH_F!C87",
+            "FSH_F!D87"
+          ],
+          [
+            "FSH_F!A88",
+            "FSH_F!B88",
+            "FSH_F!C88",
+            "FSH_F!D88"
+          ],
+          [
+            "FSH_F!A89",
+            "FSH_F!B89",
+            "FSH_F!C89",
+            "FSH_F!D89"
+          ],
+          [
+            "FSH_F!A90",
+            "FSH_F!B90",
+            "FSH_F!C90",
+            "FSH_F!D90"
+          ],
+          [
+            "FSH_F!A91",
+            "FSH_F!B91",
+            "FSH_F!C91",
+            "FSH_F!D91"
+          ],
+          [
+            "FSH_F!A92",
+            "FSH_F!B92",
+            "FSH_F!C92",
+            "FSH_F!D92"
+          ],
+          [
+            "FSH_F!A93",
+            "FSH_F!B93",
+            "FSH_F!C93",
+            "FSH_F!D93"
+          ],
+          [
+            "FSH_F!A94",
+            "FSH_F!B94",
+            "FSH_F!C94",
+            "FSH_F!D94"
+          ],
+          [
+            "FSH_F!A95",
+            "FSH_F!B95",
+            "FSH_F!C95",
+            "FSH_F!D95"
+          ],
+          [
+            "FSH_F!A96",
+            "FSH_F!B96",
+            "FSH_F!C96",
+            "FSH_F!D96"
+          ],
+          [
+            "FSH_F!A97",
+            "FSH_F!B97",
+            "FSH_F!C97",
+            "FSH_F!D97"
+          ],
+          [
+            "FSH_F!A98",
+            "FSH_F!B98",
+            "FSH_F!C98",
+            "FSH_F!D98"
+          ],
+          [
+            "FSH_F!A99",
+            "FSH_F!B99",
+            "FSH_F!C99",
+            "FSH_F!D99"
+          ],
+          [
+            "FSH_F!A100",
+            "FSH_F!B100",
+            "FSH_F!C100",
+            "FSH_F!D100"
+          ],
+          [
+            "FSH_F!A101",
+            "FSH_F!B101",
+            "FSH_F!C101",
+            "FSH_F!D101"
+          ],
+          [
+            "FSH_F!A102",
+            "FSH_F!B102",
+            "FSH_F!C102",
+            "FSH_F!D102"
+          ],
+          [
+            "FSH_F!A103",
+            "FSH_F!B103",
+            "FSH_F!C103",
+            "FSH_F!D103"
+          ],
+          [
+            "FSH_F!A104",
+            "FSH_F!B104",
+            "FSH_F!C104",
+            "FSH_F!D104"
+          ],
+          [
+            "FSH_F!A105",
+            "FSH_F!B105",
+            "FSH_F!C105",
+            "FSH_F!D105"
+          ],
+          [
+            "FSH_F!A106",
+            "FSH_F!B106",
+            "FSH_F!C106",
+            "FSH_F!D106"
+          ],
+          [
+            "FSH_F!A107",
+            "FSH_F!B107",
+            "FSH_F!C107",
+            "FSH_F!D107"
+          ],
+          [
+            "FSH_F!A108",
+            "FSH_F!B108",
+            "FSH_F!C108",
+            "FSH_F!D108"
+          ],
+          [
+            "FSH_F!A109",
+            "FSH_F!B109",
+            "FSH_F!C109",
+            "FSH_F!D109"
+          ],
+          [
+            "FSH_F!A110",
+            "FSH_F!B110",
+            "FSH_F!C110",
+            "FSH_F!D110"
+          ],
+          [
+            "FSH_F!A111",
+            "FSH_F!B111",
+            "FSH_F!C111",
+            "FSH_F!D111"
+          ],
+          [
+            "FSH_F!A112",
+            "FSH_F!B112",
+            "FSH_F!C112",
+            "FSH_F!D112"
+          ],
+          [
+            "FSH_F!A113",
+            "FSH_F!B113",
+            "FSH_F!C113",
+            "FSH_F!D113"
+          ],
+          [
+            "FSH_F!A114",
+            "FSH_F!B114",
+            "FSH_F!C114",
+            "FSH_F!D114"
+          ],
+          [
+            "FSH_F!A115",
+            "FSH_F!B115",
+            "FSH_F!C115",
+            "FSH_F!D115"
+          ],
+          [
+            "FSH_F!A116",
+            "FSH_F!B116",
+            "FSH_F!C116",
+            "FSH_F!D116"
+          ],
+          [
+            "FSH_F!A117",
+            "FSH_F!B117",
+            "FSH_F!C117",
+            "FSH_F!D117"
+          ],
+          [
+            "FSH_F!A118",
+            "FSH_F!B118",
+            "FSH_F!C118",
+            "FSH_F!D118"
+          ],
+          [
+            "FSH_F!A119",
+            "FSH_F!B119",
+            "FSH_F!C119",
+            "FSH_F!D119"
+          ],
+          [
+            "FSH_F!A120",
+            "FSH_F!B120",
+            "FSH_F!C120",
+            "FSH_F!D120"
+          ],
+          [
+            "FSH_F!A121",
+            "FSH_F!B121",
+            "FSH_F!C121",
+            "FSH_F!D121"
+          ],
+          [
+            "FSH_F!A122",
+            "FSH_F!B122",
+            "FSH_F!C122",
+            "FSH_F!D122"
+          ],
+          [
+            "FSH_F!A123",
+            "FSH_F!B123",
+            "FSH_F!C123",
+            "FSH_F!D123"
+          ],
+          [
+            "FSH_F!A124",
+            "FSH_F!B124",
+            "FSH_F!C124",
+            "FSH_F!D124"
+          ],
+          [
+            "FSH_F!A125",
+            "FSH_F!B125",
+            "FSH_F!C125",
+            "FSH_F!D125"
+          ],
+          [
+            "FSH_F!A126",
+            "FSH_F!B126",
+            "FSH_F!C126",
+            "FSH_F!D126"
+          ],
+          [
+            "FSH_F!A127",
+            "FSH_F!B127",
+            "FSH_F!C127",
+            "FSH_F!D127"
+          ],
+          [
+            "FSH_F!A128",
+            "FSH_F!B128",
+            "FSH_F!C128",
+            "FSH_F!D128"
+          ],
+          [
+            "FSH_F!A129",
+            "FSH_F!B129",
+            "FSH_F!C129",
+            "FSH_F!D129"
+          ],
+          [
+            "FSH_F!A130",
+            "FSH_F!B130",
+            "FSH_F!C130",
+            "FSH_F!D130"
+          ],
+          [
+            "FSH_F!A131",
+            "FSH_F!B131",
+            "FSH_F!C131",
+            "FSH_F!D131"
+          ],
+          [
+            "FSH_F!A132",
+            "FSH_F!B132",
+            "FSH_F!C132",
+            "FSH_F!D132"
+          ],
+          [
+            "FSH_F!A133",
+            "FSH_F!B133",
+            "FSH_F!C133",
+            "FSH_F!D133"
+          ],
+          [
+            "FSH_F!A134",
+            "FSH_F!B134",
+            "FSH_F!C134",
+            "FSH_F!D134"
+          ],
+          [
+            "FSH_F!A135",
+            "FSH_F!B135",
+            "FSH_F!C135",
+            "FSH_F!D135"
+          ],
+          [
+            "FSH_F!A136",
+            "FSH_F!B136",
+            "FSH_F!C136",
+            "FSH_F!D136"
+          ],
+          [
+            "FSH_F!A137",
+            "FSH_F!B137",
+            "FSH_F!C137",
+            "FSH_F!D137"
+          ],
+          [
+            "FSH_F!A138",
+            "FSH_F!B138",
+            "FSH_F!C138",
+            "FSH_F!D138"
+          ],
+          [
+            "FSH_F!A139",
+            "FSH_F!B139",
+            "FSH_F!C139",
+            "FSH_F!D139"
+          ],
+          [
+            "FSH_F!A140",
+            "FSH_F!B140",
+            "FSH_F!C140",
+            "FSH_F!D140"
+          ],
+          [
+            "FSH_F!A141",
+            "FSH_F!B141",
+            "FSH_F!C141",
+            "FSH_F!D141"
+          ],
+          [
+            "FSH_F!A142",
+            "FSH_F!B142",
+            "FSH_F!C142",
+            "FSH_F!D142"
+          ],
+          [
+            "FSH_F!A143",
+            "FSH_F!B143",
+            "FSH_F!C143",
+            "FSH_F!D143"
+          ],
+          [
+            "FSH_F!A144",
+            "FSH_F!B144",
+            "FSH_F!C144",
+            "FSH_F!D144"
+          ],
+          [
+            "FSH_F!A145",
+            "FSH_F!B145",
+            "FSH_F!C145",
+            "FSH_F!D145"
+          ],
+          [
+            "FSH_F!A146",
+            "FSH_F!B146",
+            "FSH_F!C146",
+            "FSH_F!D146"
+          ],
+          [
+            "FSH_F!A147",
+            "FSH_F!B147",
+            "FSH_F!C147",
+            "FSH_F!D147"
+          ],
+          [
+            "FSH_F!A148",
+            "FSH_F!B148",
+            "FSH_F!C148",
+            "FSH_F!D148"
+          ],
+          [
+            "FSH_F!A149",
+            "FSH_F!B149",
+            "FSH_F!C149",
+            "FSH_F!D149"
+          ],
+          [
+            "FSH_F!A150",
+            "FSH_F!B150",
+            "FSH_F!C150",
+            "FSH_F!D150"
+          ],
+          [
+            "FSH_F!A151",
+            "FSH_F!B151",
+            "FSH_F!C151",
+            "FSH_F!D151"
+          ],
+          [
+            "FSH_F!A152",
+            "FSH_F!B152",
+            "FSH_F!C152",
+            "FSH_F!D152"
+          ],
+          [
+            "FSH_F!A153",
+            "FSH_F!B153",
+            "FSH_F!C153",
+            "FSH_F!D153"
+          ],
+          [
+            "FSH_F!A154",
+            "FSH_F!B154",
+            "FSH_F!C154",
+            "FSH_F!D154"
+          ],
+          [
+            "FSH_F!A155",
+            "FSH_F!B155",
+            "FSH_F!C155",
+            "FSH_F!D155"
+          ],
+          [
+            "FSH_F!A156",
+            "FSH_F!B156",
+            "FSH_F!C156",
+            "FSH_F!D156"
+          ],
+          [
+            "FSH_F!A157",
+            "FSH_F!B157",
+            "FSH_F!C157",
+            "FSH_F!D157"
+          ],
+          [
+            "FSH_F!A158",
+            "FSH_F!B158",
+            "FSH_F!C158",
+            "FSH_F!D158"
+          ],
+          [
+            "FSH_F!A159",
+            "FSH_F!B159",
+            "FSH_F!C159",
+            "FSH_F!D159"
+          ],
+          [
+            "FSH_F!A160",
+            "FSH_F!B160",
+            "FSH_F!C160",
+            "FSH_F!D160"
+          ],
+          [
+            "FSH_F!A161",
+            "FSH_F!B161",
+            "FSH_F!C161",
+            "FSH_F!D161"
+          ],
+          [
+            "FSH_F!A162",
+            "FSH_F!B162",
+            "FSH_F!C162",
+            "FSH_F!D162"
+          ],
+          [
+            "FSH_F!A163",
+            "FSH_F!B163",
+            "FSH_F!C163",
+            "FSH_F!D163"
+          ],
+          [
+            "FSH_F!A164",
+            "FSH_F!B164",
+            "FSH_F!C164",
+            "FSH_F!D164"
+          ],
+          [
+            "FSH_F!A165",
+            "FSH_F!B165",
+            "FSH_F!C165",
+            "FSH_F!D165"
+          ],
+          [
+            "FSH_F!A166",
+            "FSH_F!B166",
+            "FSH_F!C166",
+            "FSH_F!D166"
+          ],
+          [
+            "FSH_F!A167",
+            "FSH_F!B167",
+            "FSH_F!C167",
+            "FSH_F!D167"
+          ],
+          [
+            "FSH_F!A168",
+            "FSH_F!B168",
+            "FSH_F!C168",
+            "FSH_F!D168"
+          ],
+          [
+            "FSH_F!A169",
+            "FSH_F!B169",
+            "FSH_F!C169",
+            "FSH_F!D169"
+          ],
+          [
+            "FSH_F!A170",
+            "FSH_F!B170",
+            "FSH_F!C170",
+            "FSH_F!D170"
+          ],
+          [
+            "FSH_F!A171",
+            "FSH_F!B171",
+            "FSH_F!C171",
+            "FSH_F!D171"
+          ],
+          [
+            "FSH_F!A172",
+            "FSH_F!B172",
+            "FSH_F!C172",
+            "FSH_F!D172"
+          ],
+          [
+            "FSH_F!A173",
+            "FSH_F!B173",
+            "FSH_F!C173",
+            "FSH_F!D173"
+          ],
+          [
+            "FSH_F!A174",
+            "FSH_F!B174",
+            "FSH_F!C174",
+            "FSH_F!D174"
+          ],
+          [
+            "FSH_F!A175",
+            "FSH_F!B175",
+            "FSH_F!C175",
+            "FSH_F!D175"
+          ],
+          [
+            "FSH_F!A176",
+            "FSH_F!B176",
+            "FSH_F!C176",
+            "FSH_F!D176"
+          ],
+          [
+            "FSH_F!A177",
+            "FSH_F!B177",
+            "FSH_F!C177",
+            "FSH_F!D177"
+          ],
+          [
+            "FSH_F!A178",
+            "FSH_F!B178",
+            "FSH_F!C178",
+            "FSH_F!D178"
+          ],
+          [
+            "FSH_F!A179",
+            "FSH_F!B179",
+            "FSH_F!C179",
+            "FSH_F!D179"
+          ],
+          [
+            "FSH_F!A180",
+            "FSH_F!B180",
+            "FSH_F!C180",
+            "FSH_F!D180"
+          ],
+          [
+            "FSH_F!A181",
+            "FSH_F!B181",
+            "FSH_F!C181",
+            "FSH_F!D181"
+          ],
+          [
+            "FSH_F!A182",
+            "FSH_F!B182",
+            "FSH_F!C182",
+            "FSH_F!D182"
+          ]
+        ],
+        "sourceModel": {
+          "family": "GAMLSS BCCG",
+          "responseScale": "native FSH IU/L; no logarithmic back-transform",
+          "parameterMapping": {
+            "nu": "L",
+            "mu": "M",
+            "sigma": "S"
+          },
+          "p50Definition": "Exact median of the positive-response, normalized BCCG distribution at each exported age node (qBCCG(0.5)), not automatically M.",
+          "quantileAlgorithm": "For L>0, Z=Phi^-1(1-0.5*Phi(1/(S*abs(L)))); for L<0, Z=Phi^-1(0.5*Phi(1/(S*abs(L)))); Y=M*(1+L*S*Z)^(1/L). For L=0 the p50 limit is M.",
+          "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+          "sourceFormulaLimitation": "The paper prints the untruncated nominal-z LMS formula, which returns M at z=0; its stated GAMLSS BCCG family normalizes a truncated normal. The exact normalized p50 independently reproduces Figure 1C; source M is preserved separately and never relabeled as the exact normalized median.",
+          "figureVerification": "Figure 1C, printed page 1108 / PDF page 4, black 50th-percentile curves. Vector checks at ages 16, 17 and 18 agree within graphical precision; these checks are diagnostics, not substituted numerical source values.",
+          "maleCode": "gamlss(hormone~cs(age, df=3), sigma.fo=~cs(age, df=2), nu.fo=~cs(age, df=2), family=BCCG, data=d)",
+          "femaleCode": "gamlss(hormone~cs(age, df=2), sigma.fo=~cs(age, df=0), nu.fo=~cs(age, df=0), family=BCCG, data=d)",
+          "sourceCodeLocation": "Supplementary Table 2, FSH male and female rows",
+          "sourceRVersion": "4.1.2",
+          "noNewClinicalFunction": "This extraction qualifies only educational age-reference medians. It does not activate BCCG-derived RI, SDS, patient percentiles, diagnosis or treatment decisions."
+        },
+        "sourceRouting": {
+          "version": "2026-10-18.1",
+          "id": "wilson2023-female-fsh-age-16-19",
+          "sex": "female",
+          "minAge": 16,
+          "maxAge": 19,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Zwykłe odniesienie FSH przełącza się w wieku 16 lat z Madsen na Wilson/CALIPER. Chłopcy korzystają z CALIPER w [16,18), dziewczęta w [16,19). Od 18 lat męskie źródła dorosłe zachowują pierwszeństwo. To jawna polityka aplikacji, nie kalibracja różnych populacji lub metod. Dobór nie zależy od wyniku."
+        }
+      },
+      "limitations": [
+        "Only FSH is imported. This source extract does not activate LH, estradiol, testosterone, AMH, inhibin B or INSL3.",
+        "A policy-defined late-adolescent window may use these data without Tanner or cycle-phase questions. It is not a Tanner- or phase-specific reference.",
+        "Do not infer an early-follicular, fasting or early-morning reference from absent restrictions.",
+        "Known incompatible patient method or specimen and known treatment/pregnancy/stimulation remain exclusions under the application policy; missing context stays unknown.",
+        "Do not average or calibrate CALIPER values with neighboring Madsen or adult-reference data, and do not move the source marker to the educational line.",
+        "The full source age grid is evidence, not authorization to replace existing infant, childhood, puberty-comparison or adult profiles.",
+        "No age uncertainty crossing a source boundary may be resolved by silently selecting the midpoint age.",
+        "Cały możliwy przedział wieku musi należeć do jednego profilu. Przełączenie od 16 pozwala porównać również wpis 16 lat 0 miesięcy. Nie uśredniaj źródeł ani nie wybieraj środka niepewnego wieku. Wiersz 19 domyka interpolację poniżej 19, nie kwalifikuje pacjentki w wieku 19 lat. Osobne porównanie płci zachowuje Madsen 6–16 włącznie.",
+        "Mediana to qBCCG(0.5) obliczone z oryginalnych L/M/S na natywnej skali IU/L z uwzględnieniem normalizacji uciętego rozkładu. Samo M nie zawsze jest dokładnym p50. Nie stosuj transformacji logarytmicznej arkuszy LH do FSH. Nie uruchamiaj norm, SDS, percentyla wyniku ani diagnozy.",
+        "Zachowaj wszystkie 181 oryginalnych węzłów 1–19 lat każdej płci i PCHIP w stężeniach p50. Wartości między węzłami co 0,1 roku są przybliżeniem tabeli, nie odzyskanym dopasowaniem autorów. Nie interpoluj przez zmianę publikacji i nie ekstrapoluj.",
+        "Surowica, Abbott ARCHITECT ci2000. Nieznana metoda dopuszcza tylko orientacyjne zestawienie. Znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Wspólna jednostka ani nazwa Abbott nie dowodzą zgodności z i1000, IMMULITE, Roche lub innymi platformami.",
+        "Model wieku i płci nie wymaga Th/G ani fazy cyklu. Nie jest medianą danego stadium lub fazy. Autorzy wykluczali aktualną ciążę, chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu i leki na receptę, w tym antykoncepcję doustną w ostatnich dwóch tygodniach. Zachowaj znane leczenie i stymulację z bieżącego kontekstu; brak wywiadu nie potwierdza ich nieobecności. Nie dodawaj nowych pytań."
+      ]
+    },
+    {
+      "id": "woloszynek2015-male-amh-age-18-20",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 18,
+      "maxAge": 20,
+      "points": [
+        {
+          "ageYears": 18,
+          "value": 44.9678800856531
+        },
+        {
+          "ageYears": 20,
+          "value": 44.9678800856531
+        }
+      ],
+      "sourceLabel": "Woloszynek 2015 · AMH · grupa 18–30 lat",
+      "url": "https://journals.sagepub.com/doi/10.1177/0004563214554462",
+      "method": "Beckman Coulter AMH Gen II manual noncompetitive ELISA; 20 µL sample plus 100 µL buffer in plate; no preanalytical dilution",
+      "population": "Zdrowi brazylijscy mężczyźni, pracownicy ochrony zdrowia; Hospital das Clínicas, São Paulo.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "beckman-coulter-gen-ii-original-elisa-amh"
+      ],
+      "patientNote": "Grupa 18–30 lat · Gen II ELISA, surowica.",
+      "ageGroup": {
+        "label": "18–30 lat",
+        "minAge": 18,
+        "maxAge": 30,
+        "n": 63,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 6.3,
+        "boundaryPolicy": "published-group-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy 18–30 lat (N=63); nie jest medianą dokładnego wieku ani stadium Tannera. Zastosowanie wyłącznie w wieku 18–<20 lat nie tworzy nowej mediany tej podgrupy."
+      },
+      "provenance": {
+        "authors": "Woloszynek et al.",
+        "year": 2015,
+        "doi": "10.1177/0004563214554462",
+        "pmid": "25249661",
+        "url": "https://journals.sagepub.com/doi/10.1177/0004563214554462",
+        "pdfUrl": "https://journals.sagepub.com/doi/pdf/10.1177/0004563214554462",
+        "title": "Validation of an immunoassay for anti-Müllerian hormone measurements and reference intervals in healthy Brazilian subjects",
+        "journal": "Annals of Clinical Biochemistry 2015;52(1):67–75",
+        "sourceLocator": "Table 2, journal page 72 / PDF page 6 of 9; Methods pages 68–69; Table 1 page 72",
+        "table": 2,
+        "reviewDate": "2026-10-18",
+        "reviewBasis": "Complete final publisher PDF reread through web access; numerical row and methods independently checked in publisher HTML. No abstract-only qualification.",
+        "sourceFormat": "Publisher PDF and HTML",
+        "sourceSha256": null,
+        "sourceFileNote": "Direct PDF download returned HTTP 403; no local PDF bytes or file hash asserted. Full publisher document was accessible through the web tool.",
+        "redistribution": "Factual extract only; no article, figure or source PDF redistributed.",
+        "sourceQuantification": {
+          "analyticalSensitivityNgMl": 0.02,
+          "functionalSensitivityNgMl": 0.2,
+          "functionalSensitivityCriterion": "CV <20%",
+          "loq": null,
+          "terminologyNote": "Preserve the authors' analytical/functional sensitivity terminology; no independently stated LLOQ or patient-result cutoff inferred."
+        },
+        "participants": 104,
+        "groupParticipants": 63,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/woloszynek2015-male-amh-group-median.json",
+        "sourceGroupId": "18-30",
+        "sourceRouting": {
+          "version": "2026-10-18.1",
+          "minAge": 18,
+          "maxAge": 20,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Fixed disjoint age routing, independent of the result. Preserve Jopling below 18, Benderradji from 20 and Tehrani from 30. Known incompatible method or specimen blocks the reference without selecting a fallback source."
+        }
+      },
+      "limitations": [
+        "Mediana 6,3 ng/mL dotyczy całej źródłowej grupy 18–30 lat, N=63; nie jest medianą samego przedziału 18–<20 lat, dokładnego wieku ani stadium Tannera.",
+        "Zastosowanie wyłącznie do luki 18–<20 jest osobną polityką aplikacji, nie nowym podziałem tabeli. Nie interpolujemy ani nie łączymy tej mediany z innymi badaniami.",
+        "Nie wykazujemy zgodności z Access, DxI, Elecsys, Mindray, Immunotech ani zmodyfikowanym Gen II; nawet ogólna nazwa Gen II nie potwierdza opisanego protokołu.",
+        "Źródłowe wykluczenia nie są ustalonym wywiadem pacjenta. Nie dodajemy obowiązkowej ankiety; zachowujemy znaczenie znanych danych klinicznych, metody i materiału.",
+        "To orientacyjne porównanie edukacyjne, bez zakresu referencyjnego, SDS, percentyla pacjenta, oceny płodności i rozpoznania. Znacznik źródła pozostaje niezależny od poglądowej linii.",
+        "The source group is 18–30 years, N=63; 6.3 ng/mL is its whole-group median. Its use only in [18,20) is an explicit application policy, not a median of the 18–20 subgroup or a model for exact age. The whole possible patient age must fit [18,20); do not interpolate across sources or extend this profile to age 20.",
+        "Serum manual Beckman Coulter AMH Gen II ELISA using the protocol described in the paper. The narrow original-protocol identifier does not establish compatibility with modified Gen II, Access, Elecsys, Mindray or other assays. Missing assay or specimen allows only the existing educational comparison and does not confirm the patient's method or matrix.",
+        "Reuse existing current-patient contraindication, known GnRHa and test-protocol gates with identity protection. Missing history is unknown, not confirmation of untreated basal sampling. Do not infer Tanner stage, fertility, a reference interval, SDS or a patient percentile from this group median.",
+        "Constant whole-group median, no continuous-age interpolation. Convert native ng/mL with the existing canonical factor 1/0.1401, identically to the patient's result; unit conversion is not assay calibration."
+      ]
+    },
+    {
+      "id": "wilson2023-male-lh-age-over16-under18",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 16,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 10.0,
+          "value": 0.12151028791646062
+        },
+        {
+          "ageYears": 10.1,
+          "value": 0.12968436030010158
+        },
+        {
+          "ageYears": 10.2,
+          "value": 0.1384229834678491
+        },
+        {
+          "ageYears": 10.3,
+          "value": 0.14776649748355464
+        },
+        {
+          "ageYears": 10.4,
+          "value": 0.15775765759562604
+        },
+        {
+          "ageYears": 10.5,
+          "value": 0.1684425967163398
+        },
+        {
+          "ageYears": 10.6,
+          "value": 0.17987044787941864
+        },
+        {
+          "ageYears": 10.7,
+          "value": 0.1920922841891988
+        },
+        {
+          "ageYears": 10.8,
+          "value": 0.2051661366787509
+        },
+        {
+          "ageYears": 10.9,
+          "value": 0.21915303263182442
+        },
+        {
+          "ageYears": 11.0,
+          "value": 0.23411301647679617
+        },
+        {
+          "ageYears": 11.1,
+          "value": 0.2501048152651673
+        },
+        {
+          "ageYears": 11.2,
+          "value": 0.26718931887704583
+        },
+        {
+          "ageYears": 11.3,
+          "value": 0.28543322107817654
+        },
+        {
+          "ageYears": 11.4,
+          "value": 0.30490032905224296
+        },
+        {
+          "ageYears": 11.5,
+          "value": 0.32565038717393346
+        },
+        {
+          "ageYears": 11.6,
+          "value": 0.34774728123400356
+        },
+        {
+          "ageYears": 11.7,
+          "value": 0.37125940175024624
+        },
+        {
+          "ageYears": 11.8,
+          "value": 0.3962540644375463
+        },
+        {
+          "ageYears": 11.9,
+          "value": 0.42279601335176903
+        },
+        {
+          "ageYears": 12.0,
+          "value": 0.4509429044648273
+        },
+        {
+          "ageYears": 12.1,
+          "value": 0.4807455424293879
+        },
+        {
+          "ageYears": 12.2,
+          "value": 0.512249943007887
+        },
+        {
+          "ageYears": 12.3,
+          "value": 0.5454948079864972
+        },
+        {
+          "ageYears": 12.4,
+          "value": 0.5805064728631407
+        },
+        {
+          "ageYears": 12.5,
+          "value": 0.6173004800255305
+        },
+        {
+          "ageYears": 12.6,
+          "value": 0.6558782482001223
+        },
+        {
+          "ageYears": 12.7,
+          "value": 0.6962219646774953
+        },
+        {
+          "ageYears": 12.8,
+          "value": 0.7382912353808366
+        },
+        {
+          "ageYears": 12.9,
+          "value": 0.7820127621942523
+        },
+        {
+          "ageYears": 13.0,
+          "value": 0.8272795353901863
+        },
+        {
+          "ageYears": 13.1,
+          "value": 0.8739517925087842
+        },
+        {
+          "ageYears": 13.2,
+          "value": 0.9218556069472985
+        },
+        {
+          "ageYears": 13.3,
+          "value": 0.9707901382296156
+        },
+        {
+          "ageYears": 13.4,
+          "value": 1.0205461654625745
+        },
+        {
+          "ageYears": 13.5,
+          "value": 1.0709297012480308
+        },
+        {
+          "ageYears": 13.6,
+          "value": 1.1217692781059958
+        },
+        {
+          "ageYears": 13.7,
+          "value": 1.1728904509100215
+        },
+        {
+          "ageYears": 13.8,
+          "value": 1.224135584252598
+        },
+        {
+          "ageYears": 13.9,
+          "value": 1.275354274064792
+        },
+        {
+          "ageYears": 14.0,
+          "value": 1.326407592185742
+        },
+        {
+          "ageYears": 14.1,
+          "value": 1.3771458126884308
+        },
+        {
+          "ageYears": 14.2,
+          "value": 1.427421972802074
+        },
+        {
+          "ageYears": 14.3,
+          "value": 1.4770855905502822
+        },
+        {
+          "ageYears": 14.4,
+          "value": 1.5259975151851284
+        },
+        {
+          "ageYears": 14.5,
+          "value": 1.5740626802318445
+        },
+        {
+          "ageYears": 14.6,
+          "value": 1.6212128078586656
+        },
+        {
+          "ageYears": 14.7,
+          "value": 1.6673953470671936
+        },
+        {
+          "ageYears": 14.8,
+          "value": 1.7125760406997856
+        },
+        {
+          "ageYears": 14.9,
+          "value": 1.756719488809925
+        },
+        {
+          "ageYears": 15.0,
+          "value": 1.7997914516553726
+        },
+        {
+          "ageYears": 15.1,
+          "value": 1.8417470158013105
+        },
+        {
+          "ageYears": 15.2,
+          "value": 1.8825705999512432
+        },
+        {
+          "ageYears": 15.3,
+          "value": 1.9223193382912733
+        },
+        {
+          "ageYears": 15.4,
+          "value": 1.9611010154361883
+        },
+        {
+          "ageYears": 15.5,
+          "value": 1.999087972247889
+        },
+        {
+          "ageYears": 15.6,
+          "value": 2.0364970813039154
+        },
+        {
+          "ageYears": 15.7,
+          "value": 2.0735568618457156
+        },
+        {
+          "ageYears": 15.8,
+          "value": 2.1105042974333514
+        },
+        {
+          "ageYears": 15.9,
+          "value": 2.1475734679448757
+        },
+        {
+          "ageYears": 16.0,
+          "value": 2.1850115693016887
+        },
+        {
+          "ageYears": 16.1,
+          "value": 2.223086475082458
+        },
+        {
+          "ageYears": 16.2,
+          "value": 2.2620008676104293
+        },
+        {
+          "ageYears": 16.3,
+          "value": 2.301831950093544
+        },
+        {
+          "ageYears": 16.4,
+          "value": 2.3425891441464404
+        },
+        {
+          "ageYears": 16.5,
+          "value": 2.3842390972088494
+        },
+        {
+          "ageYears": 16.6,
+          "value": 2.4267356758703333
+        },
+        {
+          "ageYears": 16.7,
+          "value": 2.470004825982245
+        },
+        {
+          "ageYears": 16.8,
+          "value": 2.5139341087999822
+        },
+        {
+          "ageYears": 16.9,
+          "value": 2.5583908627246883
+        },
+        {
+          "ageYears": 17.0,
+          "value": 2.603196549069626
+        },
+        {
+          "ageYears": 17.1,
+          "value": 2.6482027077629113
+        },
+        {
+          "ageYears": 17.2,
+          "value": 2.6933038879413846
+        },
+        {
+          "ageYears": 17.3,
+          "value": 2.738445180058807
+        },
+        {
+          "ageYears": 17.4,
+          "value": 2.783660690863312
+        },
+        {
+          "ageYears": 17.5,
+          "value": 2.828956475931087
+        },
+        {
+          "ageYears": 17.6,
+          "value": 2.874242595201492
+        },
+        {
+          "ageYears": 17.7,
+          "value": 2.9193888927968468
+        },
+        {
+          "ageYears": 17.8,
+          "value": 2.9642885251627895
+        },
+        {
+          "ageYears": 17.9,
+          "value": 3.008875193452496
+        },
+        {
+          "ageYears": 18.0,
+          "value": 3.053091212441528
+        },
+        {
+          "ageYears": 18.1,
+          "value": 3.096838461232035
+        },
+        {
+          "ageYears": 18.2,
+          "value": 3.140001114048218
+        },
+        {
+          "ageYears": 18.3,
+          "value": 3.1825331646221353
+        },
+        {
+          "ageYears": 18.4,
+          "value": 3.2245790004130037
+        },
+        {
+          "ageYears": 18.5,
+          "value": 3.2662484664291584
+        },
+        {
+          "ageYears": 18.6,
+          "value": 3.307591718686753
+        },
+        {
+          "ageYears": 18.7,
+          "value": 3.348684798519747
+        },
+        {
+          "ageYears": 18.8,
+          "value": 3.3896259939564186
+        },
+        {
+          "ageYears": 18.9,
+          "value": 3.4307149824648144
+        },
+        {
+          "ageYears": 19.0,
+          "value": 3.4722279300280774
+        }
+      ],
+      "sourceLabel": "Wilson 2023 · CALIPER · LH",
+      "url": "https://doi.org/10.1515/cclm-2022-1077",
+      "method": "Abbott ARCHITECT ci2000",
+      "population": "CALIPER; zdrowi chłopcy, Greater Toronto, Kanada",
+      "statistic": "median",
+      "approximate": true,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "minAgeExclusive": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "abbott-architect-ci2000-lh"
+      ],
+      "patientNote": "Mediana odtworzona z modelu wieku; nie jest granicą normy.",
+      "provenance": {
+        "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+        "authorsShort": "Wilson et al.",
+        "year": 2023,
+        "journal": "Clinical Chemistry and Laboratory Medicine",
+        "volume": 61,
+        "issue": 6,
+        "pages": "1105–1115",
+        "doi": "10.1515/cclm-2022-1077",
+        "pmid": "36639844",
+        "url": "https://doi.org/10.1515/cclm-2022-1077",
+        "publishedOnline": "2023-01-16",
+        "sourceFile": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+        "sourceSha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b",
+        "sourceBytes": 223819,
+        "sourceVersion": "Owner-supplied final-article Supplementary Table 3; workbook bytes identified by SHA-256.",
+        "table": "Supplementary Table 3: numerical L,M,S-for-age; LH_M only, A2:D92",
+        "readOn": "2026-10-18",
+        "access": "Full final primary article and all three owner-supplied supplementary tables reviewed in the source audit; pinned coauthor method code inspected separately.",
+        "redistribution": "Only male LH numerical facts, provenance and qualification metadata are extracted; full article, figures, code and source workbooks/documents are not redistributed.",
+        "sourceWorksheet": "LH_M",
+        "sourceCells": [
+          [
+            "LH_M!A2",
+            "LH_M!B2",
+            "LH_M!C2",
+            "LH_M!D2"
+          ],
+          [
+            "LH_M!A3",
+            "LH_M!B3",
+            "LH_M!C3",
+            "LH_M!D3"
+          ],
+          [
+            "LH_M!A4",
+            "LH_M!B4",
+            "LH_M!C4",
+            "LH_M!D4"
+          ],
+          [
+            "LH_M!A5",
+            "LH_M!B5",
+            "LH_M!C5",
+            "LH_M!D5"
+          ],
+          [
+            "LH_M!A6",
+            "LH_M!B6",
+            "LH_M!C6",
+            "LH_M!D6"
+          ],
+          [
+            "LH_M!A7",
+            "LH_M!B7",
+            "LH_M!C7",
+            "LH_M!D7"
+          ],
+          [
+            "LH_M!A8",
+            "LH_M!B8",
+            "LH_M!C8",
+            "LH_M!D8"
+          ],
+          [
+            "LH_M!A9",
+            "LH_M!B9",
+            "LH_M!C9",
+            "LH_M!D9"
+          ],
+          [
+            "LH_M!A10",
+            "LH_M!B10",
+            "LH_M!C10",
+            "LH_M!D10"
+          ],
+          [
+            "LH_M!A11",
+            "LH_M!B11",
+            "LH_M!C11",
+            "LH_M!D11"
+          ],
+          [
+            "LH_M!A12",
+            "LH_M!B12",
+            "LH_M!C12",
+            "LH_M!D12"
+          ],
+          [
+            "LH_M!A13",
+            "LH_M!B13",
+            "LH_M!C13",
+            "LH_M!D13"
+          ],
+          [
+            "LH_M!A14",
+            "LH_M!B14",
+            "LH_M!C14",
+            "LH_M!D14"
+          ],
+          [
+            "LH_M!A15",
+            "LH_M!B15",
+            "LH_M!C15",
+            "LH_M!D15"
+          ],
+          [
+            "LH_M!A16",
+            "LH_M!B16",
+            "LH_M!C16",
+            "LH_M!D16"
+          ],
+          [
+            "LH_M!A17",
+            "LH_M!B17",
+            "LH_M!C17",
+            "LH_M!D17"
+          ],
+          [
+            "LH_M!A18",
+            "LH_M!B18",
+            "LH_M!C18",
+            "LH_M!D18"
+          ],
+          [
+            "LH_M!A19",
+            "LH_M!B19",
+            "LH_M!C19",
+            "LH_M!D19"
+          ],
+          [
+            "LH_M!A20",
+            "LH_M!B20",
+            "LH_M!C20",
+            "LH_M!D20"
+          ],
+          [
+            "LH_M!A21",
+            "LH_M!B21",
+            "LH_M!C21",
+            "LH_M!D21"
+          ],
+          [
+            "LH_M!A22",
+            "LH_M!B22",
+            "LH_M!C22",
+            "LH_M!D22"
+          ],
+          [
+            "LH_M!A23",
+            "LH_M!B23",
+            "LH_M!C23",
+            "LH_M!D23"
+          ],
+          [
+            "LH_M!A24",
+            "LH_M!B24",
+            "LH_M!C24",
+            "LH_M!D24"
+          ],
+          [
+            "LH_M!A25",
+            "LH_M!B25",
+            "LH_M!C25",
+            "LH_M!D25"
+          ],
+          [
+            "LH_M!A26",
+            "LH_M!B26",
+            "LH_M!C26",
+            "LH_M!D26"
+          ],
+          [
+            "LH_M!A27",
+            "LH_M!B27",
+            "LH_M!C27",
+            "LH_M!D27"
+          ],
+          [
+            "LH_M!A28",
+            "LH_M!B28",
+            "LH_M!C28",
+            "LH_M!D28"
+          ],
+          [
+            "LH_M!A29",
+            "LH_M!B29",
+            "LH_M!C29",
+            "LH_M!D29"
+          ],
+          [
+            "LH_M!A30",
+            "LH_M!B30",
+            "LH_M!C30",
+            "LH_M!D30"
+          ],
+          [
+            "LH_M!A31",
+            "LH_M!B31",
+            "LH_M!C31",
+            "LH_M!D31"
+          ],
+          [
+            "LH_M!A32",
+            "LH_M!B32",
+            "LH_M!C32",
+            "LH_M!D32"
+          ],
+          [
+            "LH_M!A33",
+            "LH_M!B33",
+            "LH_M!C33",
+            "LH_M!D33"
+          ],
+          [
+            "LH_M!A34",
+            "LH_M!B34",
+            "LH_M!C34",
+            "LH_M!D34"
+          ],
+          [
+            "LH_M!A35",
+            "LH_M!B35",
+            "LH_M!C35",
+            "LH_M!D35"
+          ],
+          [
+            "LH_M!A36",
+            "LH_M!B36",
+            "LH_M!C36",
+            "LH_M!D36"
+          ],
+          [
+            "LH_M!A37",
+            "LH_M!B37",
+            "LH_M!C37",
+            "LH_M!D37"
+          ],
+          [
+            "LH_M!A38",
+            "LH_M!B38",
+            "LH_M!C38",
+            "LH_M!D38"
+          ],
+          [
+            "LH_M!A39",
+            "LH_M!B39",
+            "LH_M!C39",
+            "LH_M!D39"
+          ],
+          [
+            "LH_M!A40",
+            "LH_M!B40",
+            "LH_M!C40",
+            "LH_M!D40"
+          ],
+          [
+            "LH_M!A41",
+            "LH_M!B41",
+            "LH_M!C41",
+            "LH_M!D41"
+          ],
+          [
+            "LH_M!A42",
+            "LH_M!B42",
+            "LH_M!C42",
+            "LH_M!D42"
+          ],
+          [
+            "LH_M!A43",
+            "LH_M!B43",
+            "LH_M!C43",
+            "LH_M!D43"
+          ],
+          [
+            "LH_M!A44",
+            "LH_M!B44",
+            "LH_M!C44",
+            "LH_M!D44"
+          ],
+          [
+            "LH_M!A45",
+            "LH_M!B45",
+            "LH_M!C45",
+            "LH_M!D45"
+          ],
+          [
+            "LH_M!A46",
+            "LH_M!B46",
+            "LH_M!C46",
+            "LH_M!D46"
+          ],
+          [
+            "LH_M!A47",
+            "LH_M!B47",
+            "LH_M!C47",
+            "LH_M!D47"
+          ],
+          [
+            "LH_M!A48",
+            "LH_M!B48",
+            "LH_M!C48",
+            "LH_M!D48"
+          ],
+          [
+            "LH_M!A49",
+            "LH_M!B49",
+            "LH_M!C49",
+            "LH_M!D49"
+          ],
+          [
+            "LH_M!A50",
+            "LH_M!B50",
+            "LH_M!C50",
+            "LH_M!D50"
+          ],
+          [
+            "LH_M!A51",
+            "LH_M!B51",
+            "LH_M!C51",
+            "LH_M!D51"
+          ],
+          [
+            "LH_M!A52",
+            "LH_M!B52",
+            "LH_M!C52",
+            "LH_M!D52"
+          ],
+          [
+            "LH_M!A53",
+            "LH_M!B53",
+            "LH_M!C53",
+            "LH_M!D53"
+          ],
+          [
+            "LH_M!A54",
+            "LH_M!B54",
+            "LH_M!C54",
+            "LH_M!D54"
+          ],
+          [
+            "LH_M!A55",
+            "LH_M!B55",
+            "LH_M!C55",
+            "LH_M!D55"
+          ],
+          [
+            "LH_M!A56",
+            "LH_M!B56",
+            "LH_M!C56",
+            "LH_M!D56"
+          ],
+          [
+            "LH_M!A57",
+            "LH_M!B57",
+            "LH_M!C57",
+            "LH_M!D57"
+          ],
+          [
+            "LH_M!A58",
+            "LH_M!B58",
+            "LH_M!C58",
+            "LH_M!D58"
+          ],
+          [
+            "LH_M!A59",
+            "LH_M!B59",
+            "LH_M!C59",
+            "LH_M!D59"
+          ],
+          [
+            "LH_M!A60",
+            "LH_M!B60",
+            "LH_M!C60",
+            "LH_M!D60"
+          ],
+          [
+            "LH_M!A61",
+            "LH_M!B61",
+            "LH_M!C61",
+            "LH_M!D61"
+          ],
+          [
+            "LH_M!A62",
+            "LH_M!B62",
+            "LH_M!C62",
+            "LH_M!D62"
+          ],
+          [
+            "LH_M!A63",
+            "LH_M!B63",
+            "LH_M!C63",
+            "LH_M!D63"
+          ],
+          [
+            "LH_M!A64",
+            "LH_M!B64",
+            "LH_M!C64",
+            "LH_M!D64"
+          ],
+          [
+            "LH_M!A65",
+            "LH_M!B65",
+            "LH_M!C65",
+            "LH_M!D65"
+          ],
+          [
+            "LH_M!A66",
+            "LH_M!B66",
+            "LH_M!C66",
+            "LH_M!D66"
+          ],
+          [
+            "LH_M!A67",
+            "LH_M!B67",
+            "LH_M!C67",
+            "LH_M!D67"
+          ],
+          [
+            "LH_M!A68",
+            "LH_M!B68",
+            "LH_M!C68",
+            "LH_M!D68"
+          ],
+          [
+            "LH_M!A69",
+            "LH_M!B69",
+            "LH_M!C69",
+            "LH_M!D69"
+          ],
+          [
+            "LH_M!A70",
+            "LH_M!B70",
+            "LH_M!C70",
+            "LH_M!D70"
+          ],
+          [
+            "LH_M!A71",
+            "LH_M!B71",
+            "LH_M!C71",
+            "LH_M!D71"
+          ],
+          [
+            "LH_M!A72",
+            "LH_M!B72",
+            "LH_M!C72",
+            "LH_M!D72"
+          ],
+          [
+            "LH_M!A73",
+            "LH_M!B73",
+            "LH_M!C73",
+            "LH_M!D73"
+          ],
+          [
+            "LH_M!A74",
+            "LH_M!B74",
+            "LH_M!C74",
+            "LH_M!D74"
+          ],
+          [
+            "LH_M!A75",
+            "LH_M!B75",
+            "LH_M!C75",
+            "LH_M!D75"
+          ],
+          [
+            "LH_M!A76",
+            "LH_M!B76",
+            "LH_M!C76",
+            "LH_M!D76"
+          ],
+          [
+            "LH_M!A77",
+            "LH_M!B77",
+            "LH_M!C77",
+            "LH_M!D77"
+          ],
+          [
+            "LH_M!A78",
+            "LH_M!B78",
+            "LH_M!C78",
+            "LH_M!D78"
+          ],
+          [
+            "LH_M!A79",
+            "LH_M!B79",
+            "LH_M!C79",
+            "LH_M!D79"
+          ],
+          [
+            "LH_M!A80",
+            "LH_M!B80",
+            "LH_M!C80",
+            "LH_M!D80"
+          ],
+          [
+            "LH_M!A81",
+            "LH_M!B81",
+            "LH_M!C81",
+            "LH_M!D81"
+          ],
+          [
+            "LH_M!A82",
+            "LH_M!B82",
+            "LH_M!C82",
+            "LH_M!D82"
+          ],
+          [
+            "LH_M!A83",
+            "LH_M!B83",
+            "LH_M!C83",
+            "LH_M!D83"
+          ],
+          [
+            "LH_M!A84",
+            "LH_M!B84",
+            "LH_M!C84",
+            "LH_M!D84"
+          ],
+          [
+            "LH_M!A85",
+            "LH_M!B85",
+            "LH_M!C85",
+            "LH_M!D85"
+          ],
+          [
+            "LH_M!A86",
+            "LH_M!B86",
+            "LH_M!C86",
+            "LH_M!D86"
+          ],
+          [
+            "LH_M!A87",
+            "LH_M!B87",
+            "LH_M!C87",
+            "LH_M!D87"
+          ],
+          [
+            "LH_M!A88",
+            "LH_M!B88",
+            "LH_M!C88",
+            "LH_M!D88"
+          ],
+          [
+            "LH_M!A89",
+            "LH_M!B89",
+            "LH_M!C89",
+            "LH_M!D89"
+          ],
+          [
+            "LH_M!A90",
+            "LH_M!B90",
+            "LH_M!C90",
+            "LH_M!D90"
+          ],
+          [
+            "LH_M!A91",
+            "LH_M!B91",
+            "LH_M!C91",
+            "LH_M!D91"
+          ],
+          [
+            "LH_M!A92",
+            "LH_M!B92",
+            "LH_M!C92",
+            "LH_M!D92"
+          ]
+        ],
+        "sourceModel": {
+          "family": "GAMLSS BCCG",
+          "responseScale": "Reconstructed natural log(LH_IU_L * 1e6); exact Wilson LH preprocessing not recovered or directly confirmed.",
+          "parameterMapping": {
+            "nu": "L",
+            "mu": "M",
+            "sigma": "S"
+          },
+          "p50Definition": "Exact median qBCCG(0.5) of the positive-response, normalized BCCG distribution on the model response scale, then reconstructed exp(q)/1e6 to IU/L; not automatically M or exp(M)/1e6.",
+          "quantileAlgorithm": "For L>0, Z=Phi^-1(1-0.5*Phi(1/(S*abs(L)))); for L<0, Z=Phi^-1(0.5*Phi(1/(S*abs(L)))); Q=M*(1+L*S*Z)^(1/L). For L=0 the p50 limit is M. The reconstructed concentration is exp(Q)/1e6 IU/L.",
+          "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+          "sourceCode": "gamlss(hormone~cs(age, df=2), sigma.fo=~cs(age, df=1), family=BCCG, data=d)",
+          "sourceCodeLocation": "Supplementary Table 2, LH male row",
+          "sourceRVersion": "4.1.2",
+          "sourcePackageVersions": null,
+          "sourceFormulaLimitation": "The paper prints an untruncated nominal-z LMS formula and states logarithmic LH response transformation. It does not specify response assignment, logarithm base, rescaling, offset or inverse code. GAMLSS parameter link functions do not themselves transform the LH response.",
+          "authorConvention": {
+            "repository": "andremadsen/LMS-reference-curve",
+            "commit": "288329c43ee238b3c8921097dfeac411d30465b9",
+            "commitDate": "2023-10-01",
+            "path": "OUS_demo.Rmd",
+            "sourceSha256": "1e1296c7fcb4be4d5d35f160c7a50309fad6546b1a1e5394022e41e80eb93ce0",
+            "url": "https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196",
+            "lineNumbers": [
+              194,
+              195,
+              196,
+              212,
+              213
+            ],
+            "quote": "log(hormone*1e6) ... exp(BootCentileMat)/1e6",
+            "evidenceRole": "Coauthor's optional logarithmic response convention supports natural log and the factor 1e6 independently of fitting the figure.",
+            "limitation": "Later October 2023 synthetic T4/TSH demonstration with commented optional transformation, not the January 2023 Wilson LH/CALIPER preprocessing or exact model pipeline. The pinned file was subsequently deleted from the repository's current tree."
+          },
+          "figureVerification": "Original Figure 1A male curves, printed page 1108 / PDF page 4: reconstructed five quantiles agree with vector curves at 89 interior ages 10.1–18.9. Maximum absolute p50 difference approximately 0.001043 IU/L; graphical diagnostic, not model uncertainty or imported figure values.",
+          "evidenceQualification": "Author-supported, reproducible reconstruction accepted by the owner for a small ordinary educational median PR. Direct LH preprocessing/model confirmation remains unavailable; do not describe it as recovered exact author code or clinically validated norms.",
+          "noNewClinicalFunction": "Only the reconstructed educational age-reference median is imported. No BCCG-derived RI, SDS, patient percentiles, diagnostic classification or treatment recommendation is activated."
+        },
+        "sourceRouting": {
+          "version": "2026-10-18.1",
+          "minAge": 16,
+          "minAgeExclusive": true,
+          "maxAge": 18,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Wyłącznie zwykłe edukacyjne odniesienie LH chłopców w (16,18). Dokładnie 16 lat zachowuje Madsen, od 18 lat dotychczasowe źródło dorosłych. Nie zastępuj istniejących odniesień ani nie dobieraj źródła według wyniku. Porównanie płci pozostaje odrębne i nie rozszerza się poza Madsen 6–16."
+        }
+      },
+      "limitations": [
+        "Only male LH is imported. Do not import female LH, whose source spreadsheet and Figure 1A remain inconsistent, or activate any other analyte from this extract.",
+        "Only the separately policy-defined ordinary educational (16,18) window is authorized; the full 10–19 grid is evidence, not permission to replace existing childhood, puberty-comparison or adult profiles.",
+        "Exact age 16 preserves existing Madsen LH; age 18 and older preserves existing adult LH. Source nodes 16 and 18 are numerical controls, not authorization to override these boundaries.",
+        "The entire possible age interval must fit (16,18). Do not resolve uncertainty crossing a source boundary by selecting its midpoint, silently rounding age or replacing the reference with a graphical bridge.",
+        "No Tanner or sampling-time question is required for this age model; do not infer a Tanner stage, basal sample or absence of treatment from missing data.",
+        "Known incompatible assay/specimen and known treatment/stimulation retain existing application exclusions. Unknown method or specimen allows only the established educational preview.",
+        "Do not calibrate or average CALIPER with neighboring Madsen or adult data, change display geometry/scales, or move the source marker to the educational line.",
+        "Cały możliwy przedział wieku musi mieścić się w otwartym (16,18). Wpis 16 lat 0 miesięcy lub 16 pełnych lat obejmuje granicę źródeł i nadal nie otrzymuje jednej mediany. Nie wybieraj środka wieku ani nie przesuwaj granicy o epsilon. Nie ekstrapoluj poza opublikowaną domenę 10–<19 lat.",
+        "Odtworzona mediana modelu: dokładny znormalizowany qBCCG(0.5) na skali odpowiedzi, następnie exp(q)/1e6 do IU/L. Samo M lub exp(M)/1e6 nie zastępuje qBCCG. Nie uruchamiaj RI, SDS, percentyli pacjenta, diagnozy lub oceny płodności.",
+        "Artykuł Wilson 2023 jawnie opisuje logarytmowanie LH. Późniejszy przypięty przykład współautora potwierdza konwencję log(hormone*1e6)/exp(...)/1e6, a wszystkie pięć męskich centyli odtwarza rycinę w precyzji rysunku. To jawna, zaakceptowana rekonstrukcja; nie odzyskany ani bezpośrednio potwierdzony skrypt LH Wilson. Nie przenoś jej na niespójny żeński arkusz.",
+        "Zachowaj wszystkie 91 węzłów LH_M 10–19 lat. PCHIP w stężeniach p50 między węzłami co 0,1 roku jest przybliżeniem tabeli, nie oryginalnym dopasowaniem GAMLSS. Węzły 16 i 18 służą interpolacji i kontroli źródła, nie zmieniają routingu na granicach. 0,1 roku nie oznacza miesiąca.",
+        "Surowica, Abbott ARCHITECT ci2000 LH. Nieznana metoda lub materiał dopuszczają tylko dotychczasowe orientacyjne porównanie. Znana niezgodność blokuje punkt bez fallbacku do Madsen, dorosłych albo innej metody Abbott. Brak harmonizacji z IMMULITE, Roche lub AutoDELFIA.",
+        "Model wieku nie wymaga G/P, pory pobrania ani nowej ankiety. Zachowaj istniejące znane leczenie, GnRHa, stymulację i ochronę bieżącego pacjenta; brak wywiadu nie potwierdza ich nieobecności. LLOQ 0,09 IU/L nie jest LOD ani podłogą wyniku, a nierówność nie tworzy dokładnego punktu."
       ]
     }
   ],
@@ -35307,8 +40568,212 @@ const femaleGonadotropinData = {
     }
   }
 };
+const femaleGonadotropinReferencePolicy = {
+  "version": "2026-10-16.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "sex": "female",
+  "analytes": [
+    "lh",
+    "fsh"
+  ],
+  "unit": "IU/L",
+  "sourceEvidence": "evidence/madsen2022-female-median-si.json",
+  "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty.",
+  "agePolicy": "Cały możliwy przedział wieku musi mieścić się w jednym profilu. Dokładny opublikowany węzeł 16 lat jest dostępny; wiek 16 lat 0 miesięcy wykracza poza domenę. Kohorta BGS2 obejmuje 6–<16 lat, a suplement publikuje brzeg modelu 16. Fit Futures do 18 lat dotyczy steroidów, nie LH/FSH. Bez ekstrapolacji i bez wybierania mediany ze środka niepewnego wieku.",
+  "assayPolicy": "Model Madsen dotyczy surowicy Siemens IMMULITE 2000 XPi. Metoda nieznana pozwala wyłącznie na orientacyjne odniesienie. Znana niezgodna metoda lub materiał blokują punkt bez ponownej próby z Zec. Roche cobas e411 i IMMULITE nie są skalibrowane przez sam wspólny zapis IU/L.",
+  "contextPolicy": "Nie wymagaj nowej odpowiedzi o Th lub fazie cyklu dla modelu wieku 6–16. Antykoncepcję doustną wykluczono w modelach Madsen; znane leczenie hormonalne, stymulacja i ciąża wyłączają użycie przez adapter kontekstu aplikacji. Wyłączenie znanej ciąży jest konserwatywną polityką aplikacji, nie nowym przypisanym autorom kryterium. Brak informacji nie potwierdza braku leczenia ani ciąży.",
+  "interpolation": "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+  "zecProfiles": [
+    {
+      "id": "zec2012-female-fsh-age-1-4",
+      "sourceMinAge": 1,
+      "sourceMaxAge": 4,
+      "minAge": 1,
+      "maxAge": 4,
+      "maxAgeExclusive": true
+    },
+    {
+      "id": "zec2012-female-fsh-age-4-8",
+      "sourceMinAge": 4,
+      "sourceMaxAge": 8,
+      "minAge": 4,
+      "maxAge": 6,
+      "maxAgeExclusive": true
+    }
+  ],
+  "zecSourcePolicy": "Zachowaj oryginalne etykiety, N i mediany całych grup 1–<4 oraz 4–<8 lat; okno zastosowania drugiej grupy ogranicz do 4–<6 lat. Nie twórz mediany nowej podgrupy. Grupa 8–<11 lat pozostaje dowodem źródłowym poza aktywnymi profilami zwykłego wykresu. Wszystkie profile Zec nadal wymagają aktualnego typowanego stadium gonadalnego Th1.",
+  "profiles": [
+    {
+      "id": "madsen2022-female-lh-age-6-16",
+      "analyte": "lh",
+      "sourceProfileId": "madsen2022-female-lh-sex-comparison",
+      "minAge": 6,
+      "maxAge": 16,
+      "maxAgeExclusive": false
+    },
+    {
+      "id": "madsen2022-female-fsh-age-6-16",
+      "analyte": "fsh",
+      "sourceProfileId": "madsen2022-female-fsh-sex-comparison",
+      "minAge": 6,
+      "maxAge": 16,
+      "maxAgeExclusive": false
+    }
+  ],
+  "patientNote": "Model według wieku; faz cyklu nie standaryzowano."
+};
+const femaleEstradiolReferencePolicy = {
+  "version": "2026-10-17.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "id": "madsen2022-female-e2-age-6-18",
+  "sex": "female",
+  "analyte": "e2",
+  "unit": "pmol/L",
+  "sourceEvidence": "evidence/madsen2022-female-median-si.json",
+  "minAge": 6,
+  "maxAge": 18,
+  "maxAgeExclusive": false,
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "compatibleAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "selectionPolicy": "Jedno zwykłe odniesienie E2 dla wieku 6–18 lat z wszystkich 13 oryginalnych median Madsen. Nie wymaga Th ani fazy cyklu. Nie tworzy median w luce >1–<6, po 18 latach, w ciąży lub po menopauzie; nie zmienia niemowlęcych median Ljubicic, poglądowej geometrii, porównań płci ani norm laboratoryjnych.",
+  "agePolicy": "Cały możliwy przedział wieku musi mieścić się w [6,18]. Dokładny węzeł 18 jest opublikowanym brzegiem modelu, nie dowodem obserwacji dokładnie w 18. urodziny ani grupą 18–<19. Wpis 18 lat 0 miesięcy obejmuje [18,18+1/12) i nie kwalifikuje. Osobna tabela nieparametrycznych RI ma grupę 15–<18; nie zastępuje domeny modelu LMS. Bez ekstrapolacji i wybierania środka niepewnego wieku.",
+  "assayPolicy": "Surowica LC-MS/MS: ultrasensitive BGS2 i intermediate-sensitivity Fit Futures, oba odniesione do CRM BCR-576. Ich porównanie wewnątrz publikacji nie harmonizuje innych metod. Nieznana metoda pozwala wyłącznie na porównanie edukacyjne; znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Ogólna kategoria LC-MS/MS nie potwierdza indywidualnej zgodności oznaczeń.",
+  "contextPolicy": "W modelach żeńskich autorzy wykluczyli antykoncepcję doustną, a fazy cyklu analizowali łącznie. Znana faza folikularna, owulacyjna lub lutealna nie zmienia mediany wieku. Znana ciąża, menopauza, leczenie hormonalne/GnRHa i stymulacja wyłączają punkt jako konserwatywna polityka aplikacji, nie przypisane autorom dodatkowe kryteria. Brak informacji nie potwierdza braku leczenia lub ciąży; bez nowej ankiety.",
+  "knownContextScope": "Adapter zachowuje jawne dodatnie aktualne fakty tej samej pacjentki również po zmianie analitu na E2. Ochrona dotyczy wszystkich wieków: znane aktualne leczenie hormonalne może teraz zablokować także dotychczasowy niemowlęcy punkt E2. Jego źródłowe mediany, domena i warunek donoszenia pozostają bez zmian. Nie przenoś dzisiejszych faktów na historyczną próbkę ani między pacjentami lub płciami.",
+  "lowValuePolicy": "Źródłowe LLOQ to 0,58 pmol/L (BGS2) i 13 pmol/L (Fit Futures), nie jeden próg dla całej krzywej. Nie stosuj globalnej podłogi 13 ani nie wymyślaj reguły LLOQ/2. Źródło nie dokumentuje wystarczająco przetwarzania cenzurowanych wartości E2. Wynik pacjentki z nierównością nie staje się dokładnym punktem; dokładne zero pozostaje zerem, bez imputacji.",
+  "interpolation": "Zachowaj wszystkie 13 rocznych węzłów, oryginalne mediany exp(M)/1e6 i istniejący PCHIP w stężeniach. PCHIP między węzłami jest przybliżeniem aplikacji, nie ponownym dopasowaniem LMS. Nie wyznaczaj norm, SDS, stadium, fazy cyklu ani indywidualnej trajektorii z tej mediany.",
+  "patientNote": "Mediana dla wieku · fazy cyklu analizowane łącznie."
+};
+const fshCaliperReferencePolicy = {
+  "version": "2026-10-18.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "analyte": "fsh",
+  "unit": "IU/L",
+  "sourceEvidence": "evidence/patient-point/wilson2023-caliper-fsh-lms.json",
+  "selectionPolicy": "Zwykłe odniesienie FSH przełącza się w wieku 16 lat z Madsen na Wilson/CALIPER. Chłopcy korzystają z CALIPER w [16,18), dziewczęta w [16,19). Od 18 lat męskie źródła dorosłe zachowują pierwszeństwo. To jawna polityka aplikacji, nie kalibracja różnych populacji lub metod. Dobór nie zależy od wyniku.",
+  "agePolicy": "Cały możliwy przedział wieku musi należeć do jednego profilu. Przełączenie od 16 pozwala porównać również wpis 16 lat 0 miesięcy. Nie uśredniaj źródeł ani nie wybieraj środka niepewnego wieku. Wiersz 19 domyka interpolację poniżej 19, nie kwalifikuje pacjentki w wieku 19 lat. Osobne porównanie płci zachowuje Madsen 6–16 włącznie.",
+  "statisticPolicy": "Mediana to qBCCG(0.5) obliczone z oryginalnych L/M/S na natywnej skali IU/L z uwzględnieniem normalizacji uciętego rozkładu. Samo M nie zawsze jest dokładnym p50. Nie stosuj transformacji logarytmicznej arkuszy LH do FSH. Nie uruchamiaj norm, SDS, percentyla wyniku ani diagnozy.",
+  "interpolation": "Zachowaj wszystkie 181 oryginalnych węzłów 1–19 lat każdej płci i PCHIP w stężeniach p50. Wartości między węzłami co 0,1 roku są przybliżeniem tabeli, nie odzyskanym dopasowaniem autorów. Nie interpoluj przez zmianę publikacji i nie ekstrapoluj.",
+  "assayPolicy": "Surowica, Abbott ARCHITECT ci2000. Nieznana metoda dopuszcza tylko orientacyjne zestawienie. Znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Wspólna jednostka ani nazwa Abbott nie dowodzą zgodności z i1000, IMMULITE, Roche lub innymi platformami.",
+  "compatibleAssayMethodIds": [
+    "abbott-architect-ci2000-fsh"
+  ],
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3"
+  ],
+  "contextPolicy": "Model wieku i płci nie wymaga Th/G ani fazy cyklu. Nie jest medianą danego stadium lub fazy. Autorzy wykluczali aktualną ciążę, chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu i leki na receptę, w tym antykoncepcję doustną w ostatnich dwóch tygodniach. Zachowaj znane leczenie i stymulację z bieżącego kontekstu; brak wywiadu nie potwierdza ich nieobecności. Nie dodawaj nowych pytań.",
+  "madsenProfiles": [
+    "madsen2022-male-fsh",
+    "madsen2022-female-fsh-age-6-16"
+  ],
+  "profiles": [
+    {
+      "id": "wilson2023-male-fsh-age-16-18",
+      "sex": "male",
+      "minAge": 16,
+      "maxAge": 18,
+      "maxAgeExclusive": true
+    },
+    {
+      "id": "wilson2023-female-fsh-age-16-19",
+      "sex": "female",
+      "minAge": 16,
+      "maxAge": 19,
+      "maxAgeExclusive": true
+    }
+  ],
+  "patientNote": "Mediana według wieku; nie jest normą dla stadium ani fazy cyklu."
+};
+const maleAmhYoungAdultReferencePolicy = {
+  "version": "2026-10-18.1",
+  "kind": "educational-source-selection",
+  "analyte": "amh",
+  "sex": "male",
+  "unit": "pmol/L",
+  "ordinaryOnly": true,
+  "id": "woloszynek2015-male-amh-age-18-20",
+  "sourceEvidence": "evidence/patient-point/woloszynek2015-male-amh-group-median.json",
+  "sourceGroupId": "18-30",
+  "minAge": 18,
+  "maxAge": 20,
+  "maxAgeExclusive": true,
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "compatibleAssayMethodIds": [
+    "beckman-coulter-gen-ii-original-elisa-amh"
+  ],
+  "scope": "One published whole-group median fills only the ordinary male AMH gap [18,20). The 80 earlier profiles, educational geometry, scales, comparisons, laboratory interpretation and historical saved assessments retain their contracts.",
+  "selectionPolicy": "Fixed disjoint age routing, independent of the result. Preserve Jopling below 18, Benderradji from 20 and Tehrani from 30. Known incompatible method or specimen blocks the reference without selecting a fallback source.",
+  "agePolicy": "The source group is 18–30 years, N=63; 6.3 ng/mL is its whole-group median. Its use only in [18,20) is an explicit application policy, not a median of the 18–20 subgroup or a model for exact age. The whole possible patient age must fit [18,20); do not interpolate across sources or extend this profile to age 20.",
+  "assayPolicy": "Serum manual Beckman Coulter AMH Gen II ELISA using the protocol described in the paper. The narrow original-protocol identifier does not establish compatibility with modified Gen II, Access, Elecsys, Mindray or other assays. Missing assay or specimen allows only the existing educational comparison and does not confirm the patient's method or matrix.",
+  "contextPolicy": "Reuse existing current-patient contraindication, known GnRHa and test-protocol gates with identity protection. Missing history is unknown, not confirmation of untreated basal sampling. Do not infer Tanner stage, fertility, a reference interval, SDS or a patient percentile from this group median.",
+  "interpolation": "Constant whole-group median, no continuous-age interpolation. Convert native ng/mL with the existing canonical factor 1/0.1401, identically to the patient's result; unit conversion is not assay calibration.",
+  "patientNote": "Grupa 18–30 lat · Gen II ELISA, surowica."
+};
+const maleLhCaliperReferencePolicy = {
+  "version": "2026-10-18.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "id": "wilson2023-male-lh-age-over16-under18",
+  "analyte": "lh",
+  "sex": "male",
+  "unit": "IU/L",
+  "sourceEvidence": "evidence/patient-point/wilson2023-caliper-male-lh-lms.json",
+  "minAge": 16,
+  "minAgeExclusive": true,
+  "maxAge": 18,
+  "maxAgeExclusive": true,
+  "selectionPolicy": "Wyłącznie zwykłe edukacyjne odniesienie LH chłopców w (16,18). Dokładnie 16 lat zachowuje Madsen, od 18 lat dotychczasowe źródło dorosłych. Nie zastępuj istniejących odniesień ani nie dobieraj źródła według wyniku. Porównanie płci pozostaje odrębne i nie rozszerza się poza Madsen 6–16.",
+  "agePolicy": "Cały możliwy przedział wieku musi mieścić się w otwartym (16,18). Wpis 16 lat 0 miesięcy lub 16 pełnych lat obejmuje granicę źródeł i nadal nie otrzymuje jednej mediany. Nie wybieraj środka wieku ani nie przesuwaj granicy o epsilon. Nie ekstrapoluj poza opublikowaną domenę 10–<19 lat.",
+  "statisticPolicy": "Odtworzona mediana modelu: dokładny znormalizowany qBCCG(0.5) na skali odpowiedzi, następnie exp(q)/1e6 do IU/L. Samo M lub exp(M)/1e6 nie zastępuje qBCCG. Nie uruchamiaj RI, SDS, percentyli pacjenta, diagnozy lub oceny płodności.",
+  "reconstructionPolicy": "Artykuł Wilson 2023 jawnie opisuje logarytmowanie LH. Późniejszy przypięty przykład współautora potwierdza konwencję log(hormone*1e6)/exp(...)/1e6, a wszystkie pięć męskich centyli odtwarza rycinę w precyzji rysunku. To jawna, zaakceptowana rekonstrukcja; nie odzyskany ani bezpośrednio potwierdzony skrypt LH Wilson. Nie przenoś jej na niespójny żeński arkusz.",
+  "interpolation": "Zachowaj wszystkie 91 węzłów LH_M 10–19 lat. PCHIP w stężeniach p50 między węzłami co 0,1 roku jest przybliżeniem tabeli, nie oryginalnym dopasowaniem GAMLSS. Węzły 16 i 18 służą interpolacji i kontroli źródła, nie zmieniają routingu na granicach. 0,1 roku nie oznacza miesiąca.",
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "compatibleAssayMethodIds": [
+    "abbott-architect-ci2000-lh"
+  ],
+  "assayPolicy": "Surowica, Abbott ARCHITECT ci2000 LH. Nieznana metoda lub materiał dopuszczają tylko dotychczasowe orientacyjne porównanie. Znana niezgodność blokuje punkt bez fallbacku do Madsen, dorosłych albo innej metody Abbott. Brak harmonizacji z IMMULITE, Roche lub AutoDELFIA.",
+  "contextPolicy": "Model wieku nie wymaga G/P, pory pobrania ani nowej ankiety. Zachowaj istniejące znane leczenie, GnRHa, stymulację i ochronę bieżącego pacjenta; brak wywiadu nie potwierdza ich nieobecności. LLOQ 0,09 IU/L nie jest LOD ani podłogą wyniku, a nierówność nie tworzy dokładnego punktu.",
+  "patientNote": "Mediana odtworzona z modelu wieku; nie jest granicą normy."
+};
 const gonadotropinComparisonPolicy = {
-  "version": "2026-10-12.1",
+  "version": "2026-10-18.1",
+  "retainSourceEndpointProfileIds": [
+    "madsen2022-male-fsh"
+  ],
   "kind": "population-model-comparison",
   "analytes": [
     "lh",
@@ -35605,6 +41070,11 @@ return {
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,
+  femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,
+  femaleEstradiolReferencePolicy: femaleEstradiolReferencePolicy,
+  fshCaliperReferencePolicy: fshCaliperReferencePolicy,
+  maleAmhYoungAdultReferencePolicy: maleAmhYoungAdultReferencePolicy,
+  maleLhCaliperReferencePolicy: maleLhCaliperReferencePolicy,
   gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
   gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData
 };

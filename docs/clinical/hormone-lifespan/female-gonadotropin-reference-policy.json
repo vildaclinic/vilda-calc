@@ -1,0 +1,24 @@
+{
+  "version": "2026-10-16.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "sex": "female",
+  "analytes": ["lh", "fsh"],
+  "unit": "IU/L",
+  "sourceEvidence": "evidence/madsen2022-female-median-si.json",
+  "selectionPolicy": "Zwykły wykres wieku od 6 do 16 lat korzysta z modelu Madsen dla LH i FSH niezależnie od obecności lub wartości Th. Nie przełącza źródła po uzupełnieniu stadium. Poniżej 6 lat zachowuje źródła niemowlęce i mediany grupowe FSH Zec przy aktualnym Th1. To polityka aplikacji, nie wykazana przewaga metody ani kalibracja między Siemens i Roche. Osobne normy laboratoryjne wieku/stadium i porównanie płci zachowują własne kontrakty.",
+  "agePolicy": "Cały możliwy przedział wieku musi mieścić się w jednym profilu. Dokładny opublikowany węzeł 16 lat jest dostępny; wiek 16 lat 0 miesięcy wykracza poza domenę. Kohorta BGS2 obejmuje 6–<16 lat, a suplement publikuje brzeg modelu 16. Fit Futures do 18 lat dotyczy steroidów, nie LH/FSH. Bez ekstrapolacji i bez wybierania mediany ze środka niepewnego wieku.",
+  "assayPolicy": "Model Madsen dotyczy surowicy Siemens IMMULITE 2000 XPi. Metoda nieznana pozwala wyłącznie na orientacyjne odniesienie. Znana niezgodna metoda lub materiał blokują punkt bez ponownej próby z Zec. Roche cobas e411 i IMMULITE nie są skalibrowane przez sam wspólny zapis IU/L.",
+  "contextPolicy": "Nie wymagaj nowej odpowiedzi o Th lub fazie cyklu dla modelu wieku 6–16. Antykoncepcję doustną wykluczono w modelach Madsen; znane leczenie hormonalne, stymulacja i ciąża wyłączają użycie przez adapter kontekstu aplikacji. Wyłączenie znanej ciąży jest konserwatywną polityką aplikacji, nie nowym przypisanym autorom kryterium. Brak informacji nie potwierdza braku leczenia ani ciąży.",
+  "interpolation": "Zachowaj wszystkie 11 rocznych węzłów każdego hormonu i istniejący PCHIP w stężeniach. exp(M)/1e6 odtwarza medianę z logarytmicznego M; PCHIP między węzłami jest przybliżeniem, nie ponownym dopasowaniem oryginalnego LMS. Nie wyznaczaj norm, SDS, stadium lub fazy cyklu z tych median.",
+  "zecProfiles": [
+    {"id": "zec2012-female-fsh-age-1-4", "sourceMinAge": 1, "sourceMaxAge": 4, "minAge": 1, "maxAge": 4, "maxAgeExclusive": true},
+    {"id": "zec2012-female-fsh-age-4-8", "sourceMinAge": 4, "sourceMaxAge": 8, "minAge": 4, "maxAge": 6, "maxAgeExclusive": true}
+  ],
+  "zecSourcePolicy": "Zachowaj oryginalne etykiety, N i mediany całych grup 1–<4 oraz 4–<8 lat; okno zastosowania drugiej grupy ogranicz do 4–<6 lat. Nie twórz mediany nowej podgrupy. Grupa 8–<11 lat pozostaje dowodem źródłowym poza aktywnymi profilami zwykłego wykresu. Wszystkie profile Zec nadal wymagają aktualnego typowanego stadium gonadalnego Th1.",
+  "profiles": [
+    {"id": "madsen2022-female-lh-age-6-16", "analyte": "lh", "sourceProfileId": "madsen2022-female-lh-sex-comparison", "minAge": 6, "maxAge": 16, "maxAgeExclusive": false},
+    {"id": "madsen2022-female-fsh-age-6-16", "analyte": "fsh", "sourceProfileId": "madsen2022-female-fsh-sex-comparison", "minAge": 6, "maxAge": 16, "maxAgeExclusive": false}
+  ],
+  "patientNote": "Model według wieku; faz cyklu nie standaryzowano."
+}

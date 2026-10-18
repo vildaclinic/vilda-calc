@@ -114,9 +114,16 @@ const secretRules = [
 
 const violations = [];
 
+// Skrót SHA-256 (64 znaki szesnastkowe, np. w tests/fixtures/wersje-zasobow.json) to wynik funkcji
+// skrótu, nie identyfikator osoby. Jego 11-cyfrowy fragment może przypadkiem mieć poprawną sumę
+// kontrolną PESEL (P-LAB-TREND-CONVERT, 2026-10-14: tak trafił skrót vilda_session_bridge.js
+// w wersji 64). Całe skróty wycinamy przed szukaniem kandydatów; każdy inny ciąg 11 cyfr,
+// także w nazwie pliku, w tekście czy w krótszym ciągu szesnastkowym, jest sprawdzany jak dotąd.
+const SKROT_SHA256 = /(?<![0-9A-Za-z])[0-9a-f]{64}(?![0-9A-Za-z])/g;
+
 function hasValidPesel(content) {
   const weights = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
-  const candidates = content.match(/(?<!\d)\d{11}(?!\d)/g) || [];
+  const candidates = content.replace(SKROT_SHA256, ' ').match(/(?<!\d)\d{11}(?!\d)/g) || [];
 
   return candidates.some((candidate) => {
     const sum = weights.reduce(

@@ -812,6 +812,20 @@
         displayEngine?.buildGonadotropinComparison?.(data, pointEngine(), period, id)]))]));
     const gonadotropinComparisonActive = () => compare && ["lh", "fsh"].includes(compareHormone) &&
       (view === "mini" || view === "puberty");
+    // This is the existing educational AMH axis, not a patient-reference domain.
+    const amhPubertyComparisonDomain = { minAge: 8, maxAge: 20 };
+    function initialComparisonPeriod(candidate) {
+      const domain = candidate === "amh" ? amhPubertyComparisonDomain
+        : candidate === "inhb" ? inhibinComparisons.puberty?.domain
+          : gonadotropinComparisons.puberty[candidate]?.domain;
+      // Navigation uses the age marker; the point still needs its whole age interval.
+      if (domain && Number.isFinite(patientAgeYears) &&
+          patientAgeYears >= domain.minAge && patientAgeYears <= domain.maxAge)
+        return "puberty";
+      // Preserve the existing educational fallback outside the known axes.
+      return sex === "female" && ["amh", "inhb"].includes(candidate) && patientAgeYears >= 8
+        ? "puberty" : "mini";
+    }
     const insl3Display = displayEngine?.buildMaleInsl3?.(data);
     const gonadotropinDisplays = displayEngine?.buildMaleGonadotropins?.(data, pointEngine()) || [];
     const femaleGonadotropins = displayEngine?.buildFemaleGonadotropins?.(data);
@@ -893,6 +907,15 @@
       }
       return view === "mini" ? [0, 1] : view === "puberty" ? [8, 20]
         : [stages()[0].min, stages()[stages().length - 1].max];
+    }
+    function ordinaryPointOutsideView() {
+      const id = analyteHormones[currentAnalyte];
+      if (compare || (view !== "mini" && view !== "puberty") ||
+          renderedPoint || renderedObservation?.patientPoint?.status === "ready" ||
+          patientPoint?.status !== "ready" || !canShowAgeMarker() || !selected.has(id) ||
+          (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(id))) return false;
+      const [minAge, maxAge] = visibleAgeDomain();
+      return patientAgeYears < minAge || patientAgeYears > maxAge;
     }
     function patientDotModel() {
       const engine = pointEngine();
@@ -1215,7 +1238,8 @@
         byId("scale-note").textContent = (offscale ? "Strzałka: wynik ponad skalą." : "Kropka: wynik.") +
           " Jasny znacznik: " + basis + "." +
           (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
-      } else if (!model && !(patientContext?.measurement && patientPoint?.status === "unavailable")) {
+      } else if (!model && !(patientContext?.measurement && patientPoint?.status === "unavailable") &&
+          !ordinaryPointOutsideView()) {
         // The persistent LH/FSH note already explains the separate scales.
         // Keep a qualification error or another analyte's point caption visible.
         panel.querySelector(".vhl-chart-caption").hidden = true;
@@ -1242,10 +1266,20 @@
       const id = analyteHormones[currentAnalyte];
       const [minAge, maxAge] = visibleAgeDomain();
       const termAmhUnavailable = !compare && id === "amh" && patientPoint?.reason === "preterm-context";
-      if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) || patientAgeYears < minAge || patientAgeYears > maxAge ||
+      if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) ||
+          ((compare || termAmhUnavailable) && (patientAgeYears < minAge || patientAgeYears > maxAge)) ||
           (compare ? compareHormone !== id : !selected.has(id)) ||
           !measurement || !Number.isFinite(measurement.value) || measurement.value < 0 ||
           (measurement.operator != null && measurement.operator !== "" && measurement.operator !== "=")) return;
+      if (ordinaryPointOutsideView()) {
+        const period = view === "mini"
+          ? `${fmt(minAge * 12)}–${fmt(maxAge * 12)} mies.`
+          : `${fmt(minAge)}–${fmt(maxAge)} lat`;
+        const message = `Wiek pacjenta jest poza wybranym okresem (${period}). Wynik i odniesienie zobaczysz w „Całym życiu”.`;
+        byId("scale-note").textContent = message;
+        byId("chart-desc").textContent += " " + message;
+        return;
+      }
       if (termAmhUnavailable) {
         byId("scale-note").textContent = "Te dane dotyczą niemowląt urodzonych o czasie; brak dopasowanego odniesienia dla wyniku.";
         return;
@@ -1261,9 +1295,7 @@
         "reference-unavailable": "W tym wieku źródło nie pozwala wiarygodnie nanieść wyniku.",
         "incompatible-specimen": "Wartość odniesienia nie dotyczy materiału tej próbki.",
         "incompatible-assay": "Brak wartości odniesienia dla potwierdzonej metody tej próbki.",
-        "incompatible-reproductive-context": id === "inhb"
-          ? "Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie."
-          : "Ta mediana dotyczy kobiet nieciężarnych z regularnymi cyklami.",
+        "incompatible-reproductive-context": "Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie.",
         "unsupported-unit": "W tej jednostce nie można nanieść wyniku na wykres.",
         "contraindicated": "Dla tego kontekstu badania nie nanosimy wyniku na wykres populacyjny.",
         "missing-puberty-stage": "To odniesienie dotyczy dzieci przed pokwitaniem. Uzupełnij stadium w danych pacjenta.",
@@ -2587,8 +2619,8 @@
       const h = femaleHormones.find((h) => h.id === compareHormone),
         male = maleHormones.find((h) => h.id === compareHormone),
         puberty = view === "puberty",
-        minAge = puberty ? 8 : 0,
-        maxAge = puberty ? 20 : 1;
+        minAge = puberty ? amhPubertyComparisonDomain.minAge : 0,
+        maxAge = puberty ? amhPubertyComparisonDomain.maxAge : 1;
       const W = svg.clientWidth || 1040,
         mobile = W < 640,
         H = chartHeight(mobile ? 334 : 393),
@@ -3045,7 +3077,7 @@
       if (stableAmhVisible()) {
         paragraph("Linia AMH jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę po wpisaniu wyniku. Pozostałe hormony mają własne skale.");
         paragraph("Minipuberty opiera się na medianie modelu Busch u donoszonych chłopców. Dalszy przebieg łączy mediany rocznych grup Wang z dorosłymi Tehrani. Grupy wieku nie są stadiami Tannera; różne populacje i metody oznaczeń nie są wymienne. Okres płodowy i łagodne połączenia są ilustracyjne.");
-        paragraph("Dla AMH jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia AMH: przed 7. dniem, od 18 do <20 lat oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
+        paragraph("Dla AMH jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia AMH: przed 7. dniem oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
         const amhSources = new Set();
         if (renderedPoint?.id === "amh") {
           const profile = renderedPoint.profile;
@@ -3086,7 +3118,12 @@
         paragraph("Linie LH i FSH pokazują poglądowy przebieg zmian, zachowując stałą geometrię i skalę przed wpisaniem wyniku i po nim. Jasny znacznik przedstawia źródłową medianę lub średnią i może leżeć poza linią. Nie są to granice normy ani iloraz LH/FSH.");
         paragraph("Okres płodowy jest wyłącznie schematem; jego wysokości nie pochodzą ze zweryfikowanych stężeń płodowych. Nie dostarcza liczbowego odniesienia pacjenta. Wczesny wierzchołek po urodzeniu również jest ilustracyjny, a nie oszacowaniem dnia szczytu mediany populacji.");
         paragraph("Minipuberty: przybliżone mediany modelu Busch 2022 dotyczą zdrowych chłopców urodzonych o czasie. Bergadá 2006 wspiera kierunek wczesnego wzrostu. Dzieciństwo i pokwitanie: Madsen 2022, model 6–16 lat; FSH przed pokwitaniem także Zec 2012, mediana grupy ze stadium G1. Niski odcinek dziecięcy nie uzupełnia brakujących lub niewiarygodnych median LH.");
-        paragraph("Dorośli: Laurentino 2020 — średnia młodej grupy stosowana w wieku 18–<25 lat; Perheentupa 2013 — mediany grup 25–74 lata. Starsi mężczyźni: Yeap 2007 dla LH, 75–89 lat; Ljubicic 2020 dla FSH, przybliżony środek modelu w wieku 75–80 lat. Luka 16–<18 lat pozostaje bez liczbowego odniesienia. Po 89 latach dla LH i po 80 latach dla FSH wygaszona linia nie dostarcza kolejnych wartości odniesienia.");
+        paragraph("Dorośli: Laurentino 2020 — średnia młodej grupy stosowana w wieku 18–<25 lat; Perheentupa 2013 — mediany grup 25–74 lata. Starsi mężczyźni: Yeap 2007 dla LH, 75–89 lat; Ljubicic 2020 dla FSH, przybliżony środek modelu w wieku 75–80 lat. Zwykłe FSH od 16 do przed 18 lat korzysta z CALIPER; LH po 16 i przed 18 lat z odtworzonej mediany CALIPER. Dokładnie 16 lat LH zachowuje Madsen, od 18 lat oba hormony zachowują źródła dorosłych. Po 89 latach dla LH i po 80 latach dla FSH wygaszona linia nie dostarcza kolejnych wartości odniesienia.");
+        if (selected.has("lh")) {
+          paragraph("LH po 16 i przed 18 lat: mediana została odtworzona z tabeli LMS Wilson 2023 po przekształceniu logarytmicznym, według konwencji z przykładowego kodu współautora. Wszystkie pięć centyli sprawdzono względem ryciny. Nie jest to odzyskany oryginalny skrypt LH autorów ani nowa norma laboratoryjna. Surowica, Abbott ARCHITECT ci2000; inne metody nie otrzymały kalibracji.");
+          links.push(["Wilson 2023 · CALIPER · LH", "https://doi.org/10.1515/cclm-2022-1077"],
+            ["Kod współautora · przykład przeliczenia (2023)", "https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196"]);
+        }
         paragraph("Badania różnią się populacją i metodą oznaczenia: AutoDELFIA/DELFIA, IMMULITE, Roche, Abbott. Nie tworzą jednej zwalidowanej krzywej referencyjnej ani trajektorii jednej osoby. Dorosły łuk FSH sprawdzono względem centralnej krzywej Ljubicic; graficzne odczyty są przybliżone. Wygładzenie nie zmienia średnich i median przy jasnym znaczniku ani norm laboratoryjnych w przeliczniku.");
         if (renderedPoint && (renderedPoint.id === "lh" || renderedPoint.id === "fsh")) {
           const profile = renderedPoint.profile;
@@ -3434,9 +3471,7 @@
           );
           if (selected.size > 0 && !candidate) return;
           compareHormone = candidate || null;
-          if (view === "life") view = sex === "female" &&
-            ["amh", "inhb"].includes(analyteHormones[currentAnalyte]) && patientAgeYears >= 8
-            ? "puberty" : "mini";
+          if (view === "life") view = initialComparisonPeriod(candidate);
         }
         compare = !compare;
         rebuildControls();

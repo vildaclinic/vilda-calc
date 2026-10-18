@@ -67,7 +67,7 @@ async function expectRange(page, lower, upper, status = 'within') {
   await expect(assessment(page).locator('[data-comparison="age"]')).toHaveAttribute('data-status', status);
   await expect(assessment(page).locator('[data-comparison="age"]')).toHaveAttribute('data-applicability', 'source-reference');
   await expect(assessment(page).locator('[data-comparison="stage"]')).toHaveCount(0);
-  await expect(page.locator('#labPubertyRefineStage')).toBeHidden();
+  await expect(page.locator('#labPubertySharedEditor')).toHaveCount(1);
   await expect(page.locator('#labPubertyKind')).toBeHidden();
   await expect(page.locator('#labPubertyStage')).toBeHidden();
 }
@@ -414,7 +414,7 @@ test('F11 months: real pin and history render the two stored curve comparisons w
   expect(point.assessment.evaluation).toEqual(original.evaluation);
   expect(point.plotValue).toBe(144);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${note.id}"] .vilda-lab-assessment`);
   await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');
   const rows = await expectCurveAgeVariants(recorded, original.evaluation, ['above', 'above'], 'above');
@@ -472,7 +472,7 @@ test('current main-form DOB and patient-card term gestation supply infant contex
   expect(saved.evaluation.referencePreview.reasonCodes).not.toContain('term_birth_unconfirmed');
 });
 
-test('switching LH to inhibin B hides unused Tanner controls and preserves the LH stage on return', async ({ page }) => {
+test('switching LH to inhibin B retains the shared puberty summary without adding a stage reference', async ({ page }) => {
   await open(page, user('M', 2, 9));
   await choose(page, '2', 'IU/L', 'lh');
   await quickSelect(page, 'Kind', 'G');
@@ -482,7 +482,8 @@ test('switching LH to inhibin B hides unused Tanner controls and preserves the L
   await expect(assessment(page).locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'within');
   await choose(page, '100');
   await expectRange(page, 42, 268);
-  await expect(page.locator('#labPubertyStageSummary')).toBeHidden();
+  await expect(page.locator('#labPubertyStageSummary')).toHaveText('G3');
+  await expect(page.locator('#labPubertyRefineStage')).toBeVisible();
   await expect(assessment(page)).not.toContainText(/Rozwój płciowy|Cechy dojrzewania|CPP/);
   await choose(page, '2', 'IU/L', 'lh');
   await expect(page.locator('#labPubertyStageSummary')).toHaveText('G3');
@@ -572,7 +573,7 @@ test('real pin, series and history retain mass units, source ranges and censored
     expect(point.plotValue).toBe(note.labResult.value === '<LOD' ? null : 123.4);
   }
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   for (const note of notes) {
     const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${note.id}"] .vilda-lab-assessment`);
     await expect(recorded).toHaveAttribute('data-assessment-status', 'recorded');

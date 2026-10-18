@@ -6,7 +6,7 @@ import { expect, test } from '../support/test-czas.mjs';
 // fizjologiczne 3 cm/rok, dostawała alarm „poniżej normy ≥5 cm/rok" — nawet gdy lekarz ręcznie
 // wpisał jej Tanner V. Zgłoszone przez właściciela 2026-09-08.
 //
-// Ten test sprawdza PRAWDZIWY łańcuch na index.html: select #tannerStage → kontekst budowany
+// Ten test sprawdza PRAWDZIWY łańcuch na index.html: ocena Th → kontekst budowany
 // przez kartę zaawansowaną → vilda_trajectory_analysis.js → werdykt widoczny dla lekarza.
 test.use({ serviceWorkers: 'block' });
 
@@ -48,31 +48,33 @@ const REKORD = {
   },
 };
 
-async function policz(page, tanner) {
-  await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), REKORD);
+async function policz(page, tanner, axis = 'Th', record = REKORD) {
+  await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), record);
   if (await page.locator('#sex').isEnabled()) await page.selectOption('#sex', 'F');
   await page.fill('#age', '9');
   await page.fill('#ageMonths', '6');
   await page.fill('#height', '135');
   await page.fill('#weight', '32');
-  return page.evaluate((ts) => {
+  return page.evaluate(({ ts, axis }) => {
     const pro = document.getElementById('resultsModeToggle');
     if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
-    const sel = document.getElementById('tannerStage');
-    if (sel) {
-      sel.value = ts == null ? '' : String(ts);
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    const state = window.VildaPubertyAssessmentState;
+    if (ts != null) {
+      const edited = state.editObservation(axis, ts);
+      if (!edited.ok) throw new Error('Nie przyjęto oceny Th: ' + edited.reason);
     }
+    const selected = state.read();
     if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
     const model = window.advancedGrowthTrajectory;
     const vel = model && model.velocity;
     return {
-      polePodpiete: Boolean(sel),
-      wybrano: sel ? sel.value : null,
+      polePodpiete: Boolean(state),
+      wybrano: selected.assessment && selected.assessment.observations[axis] ? String(selected.assessment.observations[axis].stage) : null,
       velocity: vel,
+      status: window.VildaPubertalStatus.dane({ plec: 'F', wiekLat: 9.5 }),
       werdykt: vel ? window.VildaTrajectoryAnalysis.velocityAssessment(vel) : null,
     };
-  }, tanner);
+  }, { ts: tanner, axis });
 }
 
 test('bez etapu Tannera dziewczynka 9,5 r.ż. przy 3 cm/rok nadal dostaje alarm', async ({ page }) => {
@@ -80,7 +82,7 @@ test('bez etapu Tannera dziewczynka 9,5 r.ż. przy 3 cm/rok nadal dostaje alarm'
   const w = await policz(page, null);
 
   // Kontrola pozytywna: łańcuch działa i bez Tannera zachowanie jest dokładnie jak dotąd.
-  expect(w.polePodpiete, 'select #tannerStage istnieje na index.html').toBe(true);
+  expect(w.polePodpiete, 'wspólny edytor oceny jest podpięty').toBe(true);
   expect(w.velocity, 'model policzył tempo').not.toBeNull();
   expect(w.velocity.cmPerYear).toBeCloseTo(3.0, 1);
   expect(w.velocity.basis).toBe('age');
@@ -89,7 +91,7 @@ test('bez etapu Tannera dziewczynka 9,5 r.ż. przy 3 cm/rok nadal dostaje alarm'
   expect(w.werdykt.cls).toBe('bad');
 });
 
-test('Tanner V wpisany w formularzu zdejmuje alarm i nazywa powód', async ({ page }) => {
+test('Th V wpisane w formularzu zdejmuje alarm i nazywa powód', async ({ page }) => {
   await otworz(page);
   const w = await policz(page, 5);
 
@@ -99,12 +101,13 @@ test('Tanner V wpisany w formularzu zdejmuje alarm i nazywa powód', async ({ pa
   expect(w.velocity.slow, 'deceleracja po skoku to nie „poniżej normy"').toBe(false);
   expect(w.velocity.alarm).toBe(false);
   expect(w.velocity.severity).toBeNull();
-  expect(w.velocity.note).toMatch(/deceleracja fizjologiczna/);
+  expect(w.velocity.note).toContain('Th V');
+  expect(w.velocity.note).toContain('nie potwierdza zakończenia');
   expect(w.werdykt.cls).toBe('stable');
   expect(w.werdykt.text).not.toMatch(/poniżej normy/);
 });
 
-test('Tanner II nie osłabia progu — 3 cm/rok w trakcie skoku nadal alarmuje', async ({ page }) => {
+test('Th II nie osłabia progu — 3 cm/rok w trakcie skoku nadal alarmuje', async ({ page }) => {
   await otworz(page);
   const w = await policz(page, 2);
 
@@ -114,4 +117,27 @@ test('Tanner II nie osłabia progu — 3 cm/rok w trakcie skoku nadal alarmuje',
   expect(w.velocity.severity).toBe('danger');
   expect(w.velocity.normLabel).toMatch(/5 cm\/rok/);
   expect(w.werdykt.cls).toBe('bad');
+});
+
+
+test('samo P5 nie znosi alarmu niskiego tempa poniżej 10 lat', async ({ page }) => {
+  await otworz(page);
+  const w = await policz(page, 5, 'P');
+  expect(w.wybrano).toBe('5');
+  expect(w.velocity.cmPerYear).toBeCloseTo(3, 1);
+  expect(w.velocity.basis).toBe('age');
+  expect(w.velocity.alarm).toBe(true);
+  expect(w.velocity.severity).toBe('danger');
+});
+
+test('stary ogólny Tanner V nie staje się oceną Th i nie wycisza alarmu', async ({ page }) => {
+  await otworz(page);
+  const legacy = structuredClone(REKORD);
+  legacy.user.tannerStage = '5';
+  const w = await policz(page, null, 'Th', legacy);
+  expect(w.status.etap).toBeNull();
+  expect(w.status.assessmentContext.legacy).toEqual({ kind: 'unspecified', stage: 5 });
+  expect(w.velocity.cmPerYear).toBeCloseTo(3, 1);
+  expect(w.velocity.basis).toBe('age');
+  expect(w.velocity.alarm).toBe(true);
 });

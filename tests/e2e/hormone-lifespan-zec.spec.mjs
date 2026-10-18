@@ -50,13 +50,13 @@ async function stableMaleGeometry(page) {
 }
 
 async function expectPoint(page, value, median, profile, view = 'life') {
-  // Both sexes keep the exact Zec group median separate from the educational
-  // line. Female life uses the approved log concentration map, while puberty
+  // Source medians stay separate from educational geometry. Female life
+  // uses the approved log concentration map, while puberty
   // uses a shared linear 0–8 IU/L axis. Select this contract from the expected
   // source and explicitly requested view, never from whichever DOM path exists.
   const stableMale = profile === 'zec2012-male-fsh-age-1-8';
   if (!stableMale) {
-    expect(profile).toMatch(/^zec2012-female-fsh-age-(1-4|4-8|8-11)$/);
+    expect(profile).toMatch(/^(zec2012-female-fsh-age-(1-4|4-8)|madsen2022-female-fsh-age-6-16)$/);
     expect(['life', 'puberty']).toContain(view);
     const chart = panel(page).locator('[data-lifespan="chart"]');
     await expect(chart).toHaveAttribute('data-female-gonadotropin-view', view);
@@ -67,7 +67,7 @@ async function expectPoint(page, value, median, profile, view = 'life') {
   }
   await expect(dot(page)).toHaveCount(1);
   await expect(dot(page)).toHaveAttribute('data-profile', profile);
-  await expect(dot(page)).toHaveAttribute('data-reference-statistic', 'group-median');
+  await expect(dot(page)).toHaveAttribute('data-reference-statistic', profile.startsWith('zec') ? 'group-median' : 'median');
   await expect.poll(async () => Number(await dot(page).getAttribute('data-value'))).toBeCloseTo(value, 6);
   await expect.poll(async () => Number(await dot(page).getAttribute('data-median'))).toBeCloseTo(median, 6);
   await expect.poll(async () => Number(await dot(page).getAttribute('data-reference-value'))).toBeCloseTo(median, 6);
@@ -123,9 +123,9 @@ async function expectPoint(page, value, median, profile, view = 'life') {
       .toBeCloseTo(geometry.referenceHeight, 6);
     expect((geometry.bottom - geometry.y) / (geometry.bottom - geometry.ry))
       .toBeCloseTo(geometry.resultHeight / geometry.referenceHeight, 6);
-    // These Table 2 group medians differ from the life synthesis and Madsen
-    // puberty model. Do not snap Zec's original number onto either curve.
-    expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(0.05);
+    // Table 2 medians remain separate from the life synthesis and Madsen
+    // model. The new ordinary Madsen point may match its own puberty line.
+    if (profile.startsWith('zec')) expect(Math.abs(geometry.ry - geometry.curveY)).toBeGreaterThan(0.05);
   }
   if (value < median) expect(geometry.y).toBeGreaterThan(geometry.ry);
   if (value > median) expect(geometry.y).toBeLessThan(geometry.ry);
@@ -167,20 +167,24 @@ test('Zec requires current G1; a number without a type, G2, P1 and unknown stage
   await expectPoint(page, 2, 2.57, 'zec2012-female-fsh-age-1-4');
 });
 
-test('female group boundaries select exact Table 2 medians and equivalent units retain the point', async ({ page }) => {
+test('female Zec groups retain their original medians below six and give way to the age model at six', async ({ page }) => {
   await open(page, { sex: 'F', age: 3, ageMonths: 0 });
   await stage(page, 'Th', '1');
   await expectPoint(page, 2, 2.57, 'zec2012-female-fsh-age-1-4');
-  for (const [age, median, profile] of [[4, 1.07, 'zec2012-female-fsh-age-4-8'], [8, 1.55, 'zec2012-female-fsh-age-8-11']]) {
+  for (const [age, median, profile] of [[4, 1.07, 'zec2012-female-fsh-age-4-8'], [5, 1.07, 'zec2012-female-fsh-age-4-8']]) {
     await quickFill(page, 'AgeYears', String(age));
+    // A new entered age does not renew the former visit's observation.
+    // Explicitly assess Th1 for this boundary case through the shared editor.
+    await stage(page, 'Th', '1');
     await closePatientEditor(page);
     await expectPoint(page, 2, median, profile);
   }
   await page.locator('#labUnit').selectOption('mIU/mL');
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11');
-  await quickFill(page, 'AgeYears', '11');
+  await expectPoint(page, 2, 1.07, 'zec2012-female-fsh-age-4-8');
+  await quickFill(page, 'AgeYears', '6');
   await closePatientEditor(page);
-  await expect(dot(page)).toHaveCount(0);
+  const median = sourceMedians.puberty.find(row => row.sex === 'female' && row.analyte === 'fsh' && row.ageYears === 6).median;
+  await expectPoint(page, 2, median, 'madsen2022-female-fsh-age-6-16');
   await expectClinicalAgeComparison(page);
 });
 
@@ -203,7 +207,7 @@ test('FSH point sits below, on and above its group median and cannot survive an 
   expect(await stableMaleGeometry(page)).toEqual(original);
 });
 
-test('FSH comparison keeps its own-sex Madsen median independent of Tanner and restores the ordinary Zec reference', async ({ page }) => {
+test('FSH comparison and ordinary views keep the same source median independent of Tanner', async ({ page }) => {
   const median = sourceMedians.puberty.find(row => row.sex === 'female' && row.analyte === 'fsh' && row.ageYears === 8).median;
   async function expectComparisonPoint() {
     const chart = panel(page).locator('[data-lifespan="chart"]');
@@ -252,20 +256,21 @@ test('FSH comparison keeps its own-sex Madsen median independent of Tanner and r
   const comparison = await expectComparisonPoint();
   expect(await patientState(page)).toEqual(withoutTanner);
   await panel(page).locator('.vhl-compare-toggle').click();
-  // The comparison-only Madsen profile must not supply an ordinary point.
-  await expect(dot(page)).toHaveCount(0);
+  // The ordinary and comparison profiles retain separate contracts while
+  // using the same published age median, including with no Tanner supplied.
+  await expectPoint(page, 2, median, 'madsen2022-female-fsh-age-6-16', 'puberty');
   expect(await patientState(page)).toEqual(withoutTanner);
   await stage(page, 'Th', '1');
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
+  await expectPoint(page, 2, median, 'madsen2022-female-fsh-age-6-16', 'puberty');
   const before = await patientState(page);
   await panel(page).locator('[data-view="puberty"]').click();
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
+  await expectPoint(page, 2, median, 'madsen2022-female-fsh-age-6-16', 'puberty');
   await panel(page).getByRole('button', { name: 'Porównaj płcie', exact: true }).click();
   expect(await expectComparisonPoint()).toEqual(comparison);
   await expectClinicalAgeComparison(page);
   expect(await patientState(page)).toEqual(before);
   await panel(page).locator('.vhl-compare-toggle').click();
-  await expectPoint(page, 2, 1.55, 'zec2012-female-fsh-age-8-11', 'puberty');
+  await expectPoint(page, 2, median, 'madsen2022-female-fsh-age-6-16', 'puberty');
   expect(await patientState(page)).toEqual(before);
 });
 

@@ -318,7 +318,7 @@ test('pin and history preserve preterm eligibility and the original comparison a
   const series = await page.evaluate((id) => window.VildaVault.listPatientLabSeries(id), patientId);
   expect(series.find((item) => item.testKey === 'lh').points.find((item) => item.noteId === saved.id).assessment.evaluation).toEqual(before.evaluation);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const history = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(history).toHaveAttribute('data-assessment-status', 'recorded');
   await expect(history.locator('.vilda-lab-axis')).toHaveCount(1);

@@ -141,11 +141,16 @@ test('only the visible current age and stage drive the comparison, with no earli
   await fill(page, 'AgeYears', '14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(page, 'stage')).toHaveCount(0);
+  expect((await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment())).evaluation.input.puberty)
+    .toMatchObject({ kind: 'G', stage: null, appliesToCurrentContext: false });
+  // The new age does not silently renew the former visit's G observation.
+  await select(page, 'Stage', '4');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
   await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'source-reference');
   const after = await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({ testKey: 'lh', raw: '2', unit: 'IU/L' }));
   expect(after.evaluation.input).toMatchObject({ contextBasis: 'current-patient', sampleDateISO: null, birthDateISO: null,
-    age: { years: 14, months: 0 }, puberty: { kind: 'G', stage: 4 } });
+    age: { years: 14, months: 0 }, puberty: { kind: 'G', stage: 4, appliesToCurrentContext: true } });
 });
 
 test('switching analytes, resetting and loading another patient isolate observations and select their own sources', async ({ page }) => {
@@ -241,7 +246,10 @@ test('F7 Th3 LH<LOD pins the reviewed snapshot and history preserves it across l
   await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
   const history = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
   await expect(history).toContainText('Fikcyjny starszy wynik LH');
-  const recorded = history.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] [data-assessment-status="recorded"]`);
+  // LAB-HISTORIA PR2: wpis zostaje na osi czasu Historii, a zapisana ocena jest w zakładce „Badania”.
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
+  const lab = page.locator('.vilda-patient-tab-content[data-tab="lab"]');
+  const recorded = lab.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] [data-assessment-status="recorded"]`);
   await expect(recorded).toHaveCount(1);
   await expect(recorded).toContainText('<LOD');
   await expect(recorded).toContainText('Th3');

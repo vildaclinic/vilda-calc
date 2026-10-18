@@ -1,0 +1,581 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-14",
+  "status": "implementation-authorized for a separate published-P50 information block; not clinical validation",
+  "authorization": {
+    "decision": "Owner accepted the desktop/mobile mock-up and instructed: jest ok, koduj.",
+    "scope": "Published neighbouring age/P50 entries only; no exact-age interpolation, patient percentile, patient/source ratio, new laboratory interval or source-derived patient marker."
+  },
+  "source": {
+    "authors": [
+      "Keyan Xu",
+      "Yehuan Yang",
+      "Peihao Liu",
+      "Shuxin Ma",
+      "Chunmei Zhang",
+      "Xin Liang",
+      "Xiaowei Wu",
+      "Xinyi Wu",
+      "Zifeng Cao",
+      "Yilin Yang",
+      "Fangyuan Chen",
+      "Zhongliang Li",
+      "Jiao Liu",
+      "Zhanbing Hu",
+      "Dongshan Zhu",
+      "Ruimin Zheng",
+      "Yingying Qin",
+      "Ting Guo",
+      "Zijiang Chen"
+    ],
+    "title": "Age-specific anti-Müllerian hormone reference values using an ultrasensitive assay: Associations with ovarian aging and menopausal transition symptoms",
+    "journal": "Chinese Medical Journal",
+    "year": 2026,
+    "onlineDate": "2026-08-17",
+    "doi": "10.1097/CM9.0000000000004161",
+    "url": "https://doi.org/10.1097/CM9.0000000000004161",
+    "pmid": "42608648",
+    "publicationStatus": "Publisher-formatted original article, online publication; supplied PDF retains XX(XX) volume/issue placeholders.",
+    "receivedDate": "2025-10-22",
+    "supplementLink": "http://links.lww.com/CM9/C922",
+    "version": "Publisher-formatted Original Article, online 2026-08-17, Chinese Medical Journal 2026;XX(XX), 10 PDF pages; user-supplied SDC2 workbook filename dated 2026-08-13."
+  },
+  "provenance": {
+    "primaryFileName": "age-specific-anti-mllerian-hormone-reference-values-using-an.pdf",
+    "primarySha256": "270a6f433274e00a5d1f7dd80c3cd82ee2fd7dd3eced6c8d64df95005552413e",
+    "supplementFileName": "CM9_2026_8_13_Guo_CMJ-2025-2620R1_SDC2.xlsx",
+    "supplementSha256": "2d0724c3f610bddea1a9386d8b82ca30aa6c70ad583dfc1eda7b4f4bdc1d6c1b",
+    "reviewBasis": "Full original PDF and XLSX re-read on 2026-10-14. Figures inspected visually; aggregate counts independently recomputed. No participant-level data, model refitting or clinical validation.",
+    "sourceLoci": [
+      "PDF pages 2–3: reference population, exclusions, assay, model and menopause definition",
+      "PDF page 4: Table 1 cohort ages and reference-model description",
+      "XLSX worksheet 2, Supplementary Table 1, A2:H7: five published percentile-estimate rows",
+      "XLSX supplementary figure 1: continuous percentile curves; embedded image labelled Figure 2",
+      "PDF pages 6–8 and XLSX Tables 9–10: separate menopausal-status analysis and unresolved inconsistencies"
+    ],
+    "sourceFilesIncludedInRepository": false,
+    "workbookClassification": "Ten published aggregate tables and three embedded figures; no individual participant records, patient identifiers, LMS coefficients or model object."
+  },
+  "population": {
+    "sex": "female",
+    "country": "China",
+    "design": "Community-based cross-sectional study; multistage stratified cluster sampling across 26 districts/counties in 12 provinces.",
+    "initialN": 11227,
+    "referenceN": 10543,
+    "reportedReferenceAgeYears": [
+      35,
+      55
+    ],
+    "reportedObservedAgeYears": [
+      34,
+      56
+    ],
+    "outsideReferenceAgeCounts": {
+      "under35": 4,
+      "over55": 42
+    },
+    "menopauseStatus": "Premenopausal. A separate 422-woman natural-postmenopause group was used for diagnostic comparison, not to construct the main age-reference curve.",
+    "cycleSampling": "Random day of the menstrual cycle.",
+    "exclusions": [
+      "Previous bilateral oophorectomy",
+      "History of chemotherapy or radiotherapy",
+      "Oral contraceptive use or hormonal drug treatment in the preceding 30 days",
+      "AMH outlier more than 5 SD from the age-specific mean"
+    ],
+    "notEstablished": [
+      "This is not an explicitly PCOS-free cohort.",
+      "Rare observed ages 34 and 56 do not establish a numerical reference beyond the published 35–55 model.",
+      "Unknown menopause or treatment status must not be recoded as meeting the reference exclusions."
+    ],
+    "separateLongitudinalCohort": "The 2521-woman infertility cohort used conventional Kangrun AMH (LOD 0.01 ng/mL) and serial samples, not the HS-AMH population reference. Keep its eligibility and results separate."
+  },
+  "assay": {
+    "name": "Diagnostic Kit for HS-AMH, Kangrun Biotech, Guangdong, China",
+    "technology": "Ultrasensitive chemiluminescence immunoassay",
+    "specimen": "serum",
+    "unit": "ng/mL",
+    "limitOfDetection": 0.003,
+    "upperLinearRange": 30,
+    "limitOfQuantification": "Not reported separately in the supplied article/workbook; LOD must not be treated as LOQ.",
+    "lowConcentrationPrecision": "No numerical analytical CV or uncertainty near LOD supplied.",
+    "belowLODModelHandling": "No explicit substitution, exclusion or censored-likelihood procedure reported for GAMLSS fitting.",
+    "crossMethodTransfer": "No validated conversion to Access, Elecsys or other AMH platforms is established by this paper."
+  },
+  "publishedReference": {
+    "statistic": "Author-published GAMLSS percentile estimates; p50 is a model median, not an arithmetic mean or a median recalculated from participant records.",
+    "unit": "ng/mL",
+    "tableHeading": "Age-specific AMH percentile reference values by 5-year age bands (35–55 years)",
+    "medianRows": [
+      {
+        "sourceAgeLabelYears": 35,
+        "p50": 2.589388343,
+        "worksheet": "2",
+        "ageCell": "A3",
+        "p50Cell": "E3"
+      },
+      {
+        "sourceAgeLabelYears": 40,
+        "p50": 1.479539998,
+        "worksheet": "2",
+        "ageCell": "A4",
+        "p50Cell": "E4"
+      },
+      {
+        "sourceAgeLabelYears": 45,
+        "p50": 0.365121103,
+        "worksheet": "2",
+        "ageCell": "A5",
+        "p50Cell": "E5"
+      },
+      {
+        "sourceAgeLabelYears": 50,
+        "p50": 0.045923937,
+        "worksheet": "2",
+        "ageCell": "A6",
+        "p50Cell": "E6"
+      },
+      {
+        "sourceAgeLabelYears": 55,
+        "p50": 0.005234022,
+        "worksheet": "2",
+        "ageCell": "A7",
+        "p50Cell": "E7"
+      }
+    ],
+    "ageSemantics": "The heading says age bands, but AGE contains five scalar labels without interval boundaries/operators. The continuous source figure is consistent with model anchors at those age coordinates. Do not turn AGE 50 into a published constant median for ages 50–54.",
+    "modelDetailsAvailable": "GAMLSS, stepwise comparison, AIC penalty k=2, R 4.3.3.",
+    "modelDetailsMissing": [
+      "Selected distribution family and complete age-dependent coefficients",
+      "Single-year numerical table or executable author model",
+      "Explicit interpretation of the age-band wording",
+      "Detailed handling of measurements below LOD"
+    ],
+    "censoredPercentiles": [
+      {
+        "sourceAgeLabelYears": 50,
+        "percentiles": [
+          2.5,
+          10
+        ],
+        "value": "<0.003"
+      },
+      {
+        "sourceAgeLabelYears": 55,
+        "percentiles": [
+          2.5,
+          10,
+          25
+        ],
+        "value": "<0.003"
+      }
+    ],
+    "precisionPolicy": "Retain source decimals in evidence only. They do not imply equivalent clinical precision, especially p50 near LOD at age 55.",
+    "interpolationStatus": "No interpolation implemented; display only the original age/P50 pairs selected as adjacent source entries."
+  },
+  "directAudit": {
+    "fullPdfPages": 10,
+    "xlsxSheets": 13,
+    "aggregateTables": 10,
+    "rasterFigures": 3,
+    "hiddenModelFound": false,
+    "sameHashesAsPreviousAudit": true
+  },
+  "sourceDiscrepancies": [
+    {
+      "id": "mean-median",
+      "status": "confirmed-source-conflict",
+      "locus": "PDF page 7, Figure 4A and adjacent text; abstract page 1",
+      "finding": "Figure labels Mean = 0.187 and Mean = 0.043; prose calls the same numbers medians. Figure 4B places about 78% of postmenopausal participants below the LOD, inconsistent with 0.043 as their whole-group median.",
+      "interpretation": "Likely a statistic-label error; not an author-confirmed correction. Do not invent a detectable-only subgroup."
+    },
+    {
+      "id": "lod-labels",
+      "status": "confirmed-source-conflict",
+      "locus": "XLSX Sheet1!A5:C7 (Supplementary Table 10), worksheet 10!A9:H11 (Table 9); PDF page 7, Figure 4B",
+      "tableAsPrinted": {
+        "belowLODNo": [
+          523,
+          329
+        ],
+        "belowLODYes": [
+          823,
+          93
+        ]
+      },
+      "figureMapping": {
+        "undetectable": [
+          523,
+          329
+        ],
+        "detectable": [
+          823,
+          93
+        ]
+      },
+      "interpretation": "No/Yes labels appear reversed relative to the figure and prose; no automatic source correction."
+    },
+    {
+      "id": "chi-square",
+      "status": "confirmed-non-reproduction",
+      "locus": "PDF page 7 prose; XLSX Sheet1!B6:C7",
+      "reported": 38.6,
+      "recomputedPearson": 196.78694971638112,
+      "recomputedYates": 195.2237653271118,
+      "degreesOfFreedom": 1,
+      "interpretation": "Swapping labels does not reconcile the statistic; a different test or population is unspecified."
+    },
+    {
+      "id": "count46",
+      "status": "arithmetic-explanation-strongly-supported-not-author-confirmed",
+      "locus": "PDF page 4, Table 1; XLSX worksheet 3!B3:G47 (Supplementary Table 2)",
+      "total": 10543,
+      "groupSum": 10497,
+      "outsidePublishedAgeDomainCounts": [
+        4,
+        42
+      ],
+      "interpretation": "The difference of 46 recurs across all 14 symptom blocks and equals the number outside 35–55. This does not establish the actual GAMLSS fitting sample."
+    },
+    {
+      "id": "count41",
+      "status": "unresolved",
+      "locus": "PDF page 4, Table 1 vs XLSX worksheet 10!H7 and Sheet1!B4",
+      "mainTable": 1305,
+      "supplement": 1346,
+      "difference": 41
+    },
+    {
+      "id": "duplicate-tables",
+      "status": "confirmed",
+      "locus": "PDF pages 5–6, Tables 2–3; cross-reference on page 4",
+      "finding": "The same longitudinal cohort statistics appear with small editorial and rounding differences; neither table supplies GAMLSS parameters."
+    }
+  ],
+  "implementation": {
+    "presentation": "A separate source-information block displaying published labelled ages and their P50 values. Source entries enclosing the possible age are not a normal range and do not supply a median for an intermediate patient age.",
+    "sourceStatistic": "Author-published GAMLSS P50 at five labelled ages; neither a patient percentile nor an arithmetic mean.",
+    "interpolation": "none",
+    "extrapolation": "none",
+    "laboratoryClassification": "none",
+    "patientRatio": "none",
+    "newPatientMarker": "none",
+    "newFormFields": false,
+    "unitPolicy": "Keep original ng/mL values in source data. Any displayed unit conversion uses the existing application AMH conversion; a change of units is not assay harmonization.",
+    "preserved": [
+      "Mayo laboratory ranges and assessments",
+      "Existing FDA/Access and other patient-point profiles",
+      "Educational AMH geometry and scales",
+      "Patient raw result, unit and operator",
+      "Existing reference snapshots and historical data",
+      "Other hormones and sex-comparison contracts"
+    ],
+    "nonPersistence": "The new source-information block is not inserted into lab.hormoneReference and is not reconstructed as a historical patient reference.",
+    "dataFile": "vilda_amh_age_reference_data.js",
+    "engineFile": "vilda_amh_age_reference.js",
+    "engineApi": "evaluate(data, context)",
+    "rendererFiles": [
+      "vilda_amh_age_reference_ui.js",
+      "vilda_amh_age_reference_ui.css"
+    ],
+    "agePolicy": {
+      "ordinaryDomainYears": [
+        35,
+        55
+      ],
+      "wholePossibleAge": "For a possible interval [L,U] wholly inside 35–55, display the greatest published age <= L and the least published age >= U; deduplicate equal anchors. Preserve the input interval, without selecting its midpoint.",
+      "exactPublishedAnchor": "A single ordinary anchor is selected only when L = U = a published age.",
+      "terminalAnchorException": {
+        "condition": "L = 55 and 55 < U <= 56",
+        "publishedAge": 55,
+        "label": "Ostatni opublikowany punkt wieku",
+        "meaning": "Informational display of the age-55 source point for a reported completed age of 55. It does not cover the entire possible patient age and does not supply an age-56 estimate.",
+        "requiredNote": "The source point does not cover the full possible age; no later source points are available."
+      },
+      "otherwiseOutsideDomain": "Hide the block; no extrapolation or replacement with a nearby age.",
+      "selectionMeaning": "Choosing source entries is an application presentation policy, not an author-supplied patient-age model."
+    },
+    "contextPolicy": {
+      "sex": "female",
+      "analyte": "AMH",
+      "unknownMenstrualOrMenopauseContext": "Allow informational display with explicit premenopausal source population; do not confirm the patient is premenopausal.",
+      "unknownAssayOrSpecimen": "Allow informational display without assigning the source assay or specimen to the patient.",
+      "knownPostmenopausePregnancyHormonalTreatmentOrContraindication": "Hide the source block. These conservative application gates do not assert that every condition was an explicit author exclusion.",
+      "knownMethodOrSpecimenMismatch": "Hide the source block; no cross-assay harmonization assumed.",
+      "newFormFields": false
+    },
+    "displayUnit": "Use the target unit of the displayed AMH result, through the unchanged existing conversion; source data remain ng/mL.",
+    "censoredResult": "AMH input additionally accepts numeric inequalities and symbolic <LOD/<LOQ. Preserve the prefix and convert only a numeric reporting limit when changing units; do not generate a new classification, exact patient point, percentile or ratio. Other analyte input syntax is unchanged.",
+    "apiVersion": "1.0.0",
+    "dataVersion": "2026-10-14.1",
+    "displayPrecision": {
+      "maximumSignificantDigits": 3,
+      "prefix": "≈",
+      "meaning": "Rounded presentation of the published model estimate; all original digits remain in source data. No interpolation or assertion of matching analytical precision."
+    },
+    "censoredResultPersistence": {
+      "pin": "Existing pin-to-visit flow remains available and preserves the raw text, operator and unit.",
+      "valueNum": null,
+      "numericSeries": "No numeric time-series point is created from a censored reporting limit.",
+      "ordinaryEducationalSnapshotStatus": "unavailable",
+      "ordinarySnapshotMeasurement": {
+        "raw": "Original reported text.",
+        "sourceValue": "Numeric inequality limit, or null for symbolic LOD/LOQ; not an exact measured concentration.",
+        "value": null
+      },
+      "xuP50InSnapshot": false,
+      "history": "No change to the existing history schema or historical records; no retrospective reference recalculation."
+    }
+  },
+  "belowLodPolicy": {
+    "sourceCells": {
+      "worksheet": "2",
+      "cells": [
+        "B6",
+        "C6",
+        "B7",
+        "C7",
+        "D7"
+      ],
+      "literal": "<0.003",
+      "unit": "ng/mL"
+    },
+    "substitution": "Never replace these source cells or a censored patient result with zero, LOD or LOD/2.",
+    "patientResult": "AMH-only input accepts inequalities and symbolic <LOD/<LOQ. Retain the operator and actual laboratory limit, with no exact point, percentile or ratio. Existing pinning stores raw text and valueNum = null; the ordinary educational snapshot is unavailable with measurement.value = null. Xu source P50 values are not persisted.",
+    "assaySpecificity": "LOD 0.003 ng/mL is the source HS-AMH Kangrun assay specification, not a universal AMH floor.",
+    "precision": "The age-55 P50 of 0.005234022 ng/mL is close to the reported LOD. All source digits remain in evidence but do not establish matching analytical precision or a known LOQ."
+  },
+  "modelLimitations": {
+    "ageLabels": "The heading says by 5-year age bands, but AGE contains scalar 35, 40, 45, 50 and 55 without interval operators. The continuous figure supports point estimates but does not resolve the wording. Do not turn these into constant five-year medians.",
+    "available": "GAMLSS, stepwise model comparison, AIC k=2 and R 4.3.3.",
+    "missing": [
+      "Final distribution family and age-dependent parameter formulas",
+      "Model coefficients, knots/smoothers or executable author model",
+      "Author numerical single-year age grid",
+      "Explicit handling of below-LOD measurements in GAMLSS",
+      "Separate LOQ and numerical precision near the LOD"
+    ],
+    "crossSectional": "Age differences do not provide the expected trajectory of an individual patient.",
+    "otherAnalyses": "The separate infertility cohort and postmenopausal diagnostic analysis do not calibrate the source to Roche/Beckman assays or supply a universal menopause or fertility classifier."
+  },
+  "syntheticCases": [
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "resultNgMl": 0.1
+      },
+      "expected": {
+        "publishedAgeLabels": [
+          45,
+          50
+        ],
+        "publishedP50NgMl": [
+          0.365121103,
+          0.045923937
+        ],
+        "interpolatedAge47P50": null,
+        "patientPercentile": null,
+        "patientRatio": null,
+        "newNormVerdict": null
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 52.5,
+        "resultNgMl": 0.01
+      },
+      "expected": {
+        "publishedAgeLabels": [
+          50,
+          55
+        ],
+        "publishedP50NgMl": [
+          0.045923937,
+          0.005234022
+        ],
+        "interpolatedAge52p5P50": null,
+        "patientPercentile": null,
+        "patientRatio": null
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "resultSequence": [
+          "empty",
+          0,
+          0.1,
+          1000,
+          "cleared"
+        ]
+      },
+      "expected": "Reference source numbers, existing geometry and scale do not depend on the entered AMH value."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "reportedResult": "<0.003",
+        "unit": "ng/mL"
+      },
+      "expected": "The source block creates no exact patient number or percentile and does not replace the limit with zero, 0.003 or 0.0015."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "possibleAgeYears": [
+          45,
+          46
+        ],
+        "upperInclusive": false
+      },
+      "expected": {
+        "publishedAgeLabels": [
+          45,
+          50
+        ],
+        "meaning": "Source points enclosing the full reported age, not the single point 45."
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 50
+      },
+      "expected": {
+        "publishedAgeLabels": [
+          50
+        ],
+        "publishedP50NgMl": [
+          0.045923937
+        ]
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 55
+      },
+      "expected": {
+        "publishedAgeLabels": [
+          55
+        ],
+        "publishedP50NgMl": [
+          0.005234022
+        ]
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "possibleAgeYears": [
+          55,
+          56
+        ],
+        "upperInclusive": false
+      },
+      "expected": {
+        "publishedAgeLabels": [
+          55
+        ],
+        "publishedP50NgMl": [
+          0.005234022
+        ],
+        "mode": "terminal-anchor",
+        "label": "Ostatni opublikowany punkt wieku",
+        "wholePossibleAgeCovered": false
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "possibleAgeYears": [
+          54.9,
+          55.1
+        ]
+      },
+      "expected": "Hide: interval exceeds the domain and does not satisfy the L = 55 terminal-anchor exception."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgesYears": [
+          34,
+          55.1,
+          56,
+          70
+        ]
+      },
+      "expected": "Hide: no source point is extrapolated to an out-of-domain exact age."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "menstrualOrMenopauseContext": "unknown",
+        "assay": "unknown"
+      },
+      "expected": "Allow source information, explicitly describing the study as premenopausal; do not confirm patient eligibility."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "separateKnownContexts": [
+          "postmenopause",
+          "pregnancy",
+          "hormonal treatment",
+          "contraindication",
+          "incompatible method",
+          "incompatible specimen"
+        ]
+      },
+      "expected": "Hide the source block for each known incompatible context; leave previous independent contracts unchanged."
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "reportedResult": "<0.003",
+        "unit": "ng/mL",
+        "action": "pin-to-visit"
+      },
+      "expected": {
+        "raw": "<0.003",
+        "labValueNum": null,
+        "numericSeriesPoint": false,
+        "ordinarySnapshotStatus": "unavailable",
+        "snapshotMeasurementSourceValue": 0.003,
+        "snapshotMeasurementValue": null,
+        "persistedXuP50": false
+      }
+    },
+    {
+      "input": {
+        "sex": "female",
+        "exactAgeYears": 47,
+        "reportedResult": "<LOD",
+        "unit": "ng/mL",
+        "action": "pin-to-visit"
+      },
+      "expected": {
+        "raw": "<LOD",
+        "labValueNum": null,
+        "numericSeriesPoint": false,
+        "ordinarySnapshotStatus": "unavailable",
+        "snapshotMeasurementSourceValue": null,
+        "snapshotMeasurementValue": null,
+        "persistedXuP50": false
+      }
+    }
+  ],
+  "validation": {
+    "sourceReview": "Original PDF and XLSX independently inspected; source values, table locations and file hashes verified.",
+    "implementationTests": "Completed production-function, browser, PWA/offline and latest-head CI checks are reported in the PR; this evidence file does not claim unexecuted tests.",
+    "clinicalValidationClaimed": false
+  },
+  "rights": "No source PDF, full article text, workbook or figure redistributed in the repository; factual extraction and hashes record provenance.",
+  "previousAudit": "evidence/xu2026-amh-source-review.json records the earlier inactive candidate review. This audit updates the findings and authorizes only the distinct information block described here."
+}

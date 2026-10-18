@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // Real crypto, vault, note import and synchronization; all records are fictional.
@@ -153,5 +154,67 @@ describe('LH/FSH historical context through the real vault', () => {
     await expect(dev.vault.savePatientNote({ id: note.id, patientId: note.patientId, body: 'Komentarz' })).rejects.toThrow(/modułu zapisu kontekstu/);
     dev.win.VildaLabSnapshot = helper;
     expect((await dev.vault.getPatientNote(note.id)).labResult.assessment).toEqual(note.labResult.assessment);
+  });
+});
+
+// P-LAB-WARTOSC-BEZ-JEDNOSTKI: starszy albo importowany wpis ma tylko tekst labResult.value (bez valueNum),
+// a liczbę i jednostkę czyta z niego vo() w listPatientLabSeries. Dawne wyrażenie cofało się w cyfrach,
+// gdy za liczbą nie było jednostki: „15” → 1 z jednostką „5”, „25,5” → 25 z „,5”, „5” → brak punktu.
+const vaultSource = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
+const voStart = vaultSource.indexOf('function vo(');
+const vo = new Function(`${vaultSource.slice(voStart, vaultSource.indexOf('function Cr(', voStart))};return vo;`)();
+// Wyrażenie sprzed łatki, tylko jako wyrocznia „bez zmiany wyniku dla wartości z jednostką”.
+function voBefore(t) {
+  const e = /^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/.exec(String(t || ''));
+  if (!e) return null;
+  const n = parseFloat(e[1].replace(',', '.'));
+  return !isFinite(n) || n < 0 ? null : { num: n, unit: e[2] };
+}
+
+describe('legacy text value without a unit (P-LAB-WARTOSC-BEZ-JEDNOSTKI)', () => {
+  it('reads the whole number through the real vault series; values with a unit keep their former result', async () => {
+    const dev = await device();
+    const patientId = (await dev.vault.savePatient(PATIENT)).patientId;
+    const add = async (labResult) => (await dev.vault.savePatientNote({ patientId, title: 'Fikcyjny starszy wynik', category: 'wynik-badania', clinicalDateISO: DATE, labResult })).id;
+    const ids = {
+      whole: await add({ test: 'TSH', value: '15' }),
+      decimal: await add({ test: 'TSH', value: '25,5' }),
+      digit: await add({ test: 'TSH', value: '5' }),
+      savedUnit: await add({ test: 'TSH', value: '15', unit: 'mIU/L' }),
+      withUnit: await add({ test: 'TSH', value: '1,5 mIU/L' }),
+      censored: await add({ test: 'TSH', value: '<0,02' }),
+      digitUnit: await add({ test: 'Leukocyty', value: '5,2 10^9/L' }),
+    };
+    const series = await dev.vault.listPatientLabSeries(patientId);
+    const point = (id) => series.flatMap((s) => s.points).find((p) => p.noteId === id);
+    expect(series.map((s) => [s.testKey, s.points.length])).toEqual([['tsh', 5], ['leukocyty', 1]]);
+    expect(point(ids.whole)).toMatchObject({ valueNum: 15, unit: null, legacy: true });          // było 1 i „5”
+    expect(point(ids.decimal)).toMatchObject({ valueNum: 25.5, unit: null, legacy: true });      // było 25 i „,5”
+    expect(point(ids.digit)).toMatchObject({ valueNum: 5, unit: null, legacy: true });           // było: brak punktu
+    expect(point(ids.savedUnit)).toMatchObject({ valueNum: 15, unit: 'mIU/L', legacy: true });   // było 1 mIU/L
+    expect(point(ids.withUnit)).toMatchObject({ valueNum: 1.5, unit: 'mIU/L', legacy: true });   // bez zmian
+    expect(point(ids.digitUnit)).toMatchObject({ valueNum: 5.2, unit: '10^9/L', legacy: true }); // bez zmian
+    expect(point(ids.censored)).toBeUndefined();                                                 // bez zmian
+    expect((await dev.vault.getPatientNote(ids.whole)).labResult).toEqual({ test: 'TSH', value: '15' });
+  });
+
+  it('changes only values the former expression split inside the number (all short strings)', () => {
+    const alphabet = ['1', '5', '0', ',', '.', ' ', '=', 'm', '/', '<'];
+    let strings = [''], changed = 0;
+    for (let length = 1; length <= 5; length += 1) {
+      strings = strings.flatMap((s) => alphabet.map((c) => s + c));
+      for (const s of strings) {
+        const now = vo(s), before = voBefore(s);
+        if (now && now.unit) { expect(now).toEqual(before); continue; }
+        if (!now) { expect(before).toBeNull(); continue; }
+        expect(now.num).toBe(parseFloat(/^\s*(\d+(?:[.,]\d+)?)/.exec(s)[1].replace(',', '.')));
+        if (before) expect(before.unit).toMatch(/^[\d.,]/);
+        changed += 1;
+      }
+    }
+    expect(changed).toBeGreaterThan(0);
+    expect([vo('15'), vo('25,5'), vo('1,5 IU/L'), vo('15 = 2 mg'), vo('<0,02')]).toEqual([
+      { num: 15, unit: null }, { num: 25.5, unit: null }, { num: 1.5, unit: 'IU/L' }, { num: 15, unit: null }, null,
+    ]);
   });
 });

@@ -82,10 +82,12 @@ const KLUCZE_DOKUMENTU = [
   'CENTILE_SHOW_WEIGHT_LABEL',
   'CENTILE_SHOW_BAND_REFERENCE',
   'PAL_SMOOTH_PASSES',
+  // P-PAL-POZIOM: układ PDF siatki Palczewskiej 1–18 lat (2 strony w pionie albo 1 strona w poziomie).
+  'PAL_PDF_LAYOUT',
 ];
 
 describe('ustawienia siatek centylowych jadą w chmurze', () => {
-  it('cztery ustawienia dokumentu mają klasę cloud-synced', () => {
+  it('ustawienia dokumentu siatek (także układ PDF) mają klasę cloud-synced', () => {
     const v = loadDevice();
     const P = v.__prefs;
     const nazwa = (k) => P.MODULE_KEYS[k];
@@ -114,6 +116,7 @@ describe('ustawienia siatek centylowych jadą w chmurze', () => {
     await ustawIPoczekaj(A, 'CENTILE_SHOW_HEIGHT_LABEL', 'false');
     await ustawIPoczekaj(A, 'CENTILE_SHOW_BAND_REFERENCE', 'false');
     await ustawIPoczekaj(A, 'PAL_SMOOTH_PASSES', '4');
+    await ustawIPoczekaj(A, 'PAL_PDF_LAYOUT', 'landscape');
 
     const wynik = await B.mergeSyncPayload(await A.exportSyncPayload());
     expect(wynik.updatedPreferenceCount, 'scalanie zgłasza przyjęte preferencje').toBeGreaterThan(0);
@@ -121,6 +124,7 @@ describe('ustawienia siatek centylowych jadą w chmurze', () => {
     expect(B.__prefs.readPreferenceRaw('CENTILE_SHOW_HEIGHT_LABEL', null)).toBe('false');
     expect(B.__prefs.readPreferenceRaw('CENTILE_SHOW_BAND_REFERENCE', null)).toBe('false');
     expect(B.__prefs.readPreferenceRaw('PAL_SMOOTH_PASSES', null)).toBe('4');
+    expect(B.__prefs.readPreferenceRaw('PAL_PDF_LAYOUT', null)).toBe('landscape');
   });
 
   it('wygląd aplikacji NIE podróżuje między urządzeniami', async () => {

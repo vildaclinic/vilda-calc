@@ -20,7 +20,7 @@ async function konto(page) {
   await page.addInitScript(() => localStorage.setItem('vilda-terms-accepted-v1',
     JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() })));
   await page.goto('/index.html', { waitUntil: 'load' });
-  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await page.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
   return page.evaluate(async ({ haslo, pacjenci }) => {
     await window.VildaVault.createUser(haslo,
       { label: 'Fikcyjne konto E2E intencji powłoki', iterations: 10000 });
@@ -131,6 +131,26 @@ test('zimna lista pacjentów jest anulowana zmianą trasy, bez ukrytego auth i d
 
 test('A → B przy zimnym Start: nowsza intencja wygrywa nawet gdy retry A wraca po otwarciu B', async ({ page }) => {
   const [idA, idB] = await konto(page);
+  // Odblokowany sejf nie oznacza końca startu auth: po await restore boot jeszcze
+  // zamyka ekran początkowy. Zatrzymujemy prawdziwy wynik restore, nie jego dane.
+  await page.addInitScript(() => {
+    // Powłoka może instalować skrypty inicjalizujące ramkę jeszcze w about:blank;
+    // docelowy adres sprawdzamy dopiero przy rzeczywistym restore.
+    Object.defineProperty(window, 'VildaVault', {
+      configurable: true,
+      set(vault) {
+        Object.defineProperty(window, 'VildaVault', { value: vault, writable: true, configurable: true });
+        const restore = vault.tryRestoreSession;
+        vault.tryRestoreSession = async function (...args) {
+          const restored = await restore.apply(this, args);
+          if (restored && location.pathname.endsWith('/index.html') && location.search.includes('embedded=1')) {
+            await new Promise(resolve => { window.__vildaReleaseIntentBoot = resolve; });
+          }
+          return restored;
+        };
+      },
+    });
+  });
   const zwolnij = await zimnyStart(page);
   try {
     await page.evaluate((id) => {
@@ -161,7 +181,11 @@ test('A → B przy zimnym Start: nowsza intencja wygrywa nawet gdy retry A wraca
     expect(await page.evaluate(() => window.__vildaIntentRetryCount), 'realny retry A został zatrzymany').toBeGreaterThan(0);
   } finally { zwolnij(); }
   const f = await start(page);
+  await f.waitForLoadState('load');
+  await f.waitForFunction(() => typeof window.__vildaReleaseIntentBoot === 'function');
   await page.evaluate((id) => window.VildaShell.openPatientCardInStart(id), idB);
+  await expect(f.locator('.vilda-auth-patient-card'), 'B czeka na zakończenie początkowego auth boot').toHaveCount(0);
+  await f.evaluate(() => window.__vildaReleaseIntentBoot());
   await expect(f.locator('.vilda-patient-hero-name')).toHaveText(PACJENCI[1].name);
   await page.evaluate(() => window.__vildaReleaseIntentRetry());
   await page.waitForTimeout(500);

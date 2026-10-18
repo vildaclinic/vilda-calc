@@ -834,7 +834,7 @@
   function clear() {
     var wejscie = pole(ID.dob);
     if (!wejscie || zRekordu(wejscie)) return false;
-    wejscie.value = '';
+    ustawZPowiadomieniem(wejscie, '');
     odswiez();
     try {
       wejscie.focus();

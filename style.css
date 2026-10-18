@@ -1307,7 +1307,8 @@ input[type=submit]:focus-visible {
   margin-top: 0!important
 }
 
-#generatePalCentileChart {
+#generatePalCentileChart,
+#openChartCreatorBtn {
   display: block;
   width: 100%!important;
   margin: var(--space-0-5) 0!important
@@ -2596,6 +2597,27 @@ body.professional-bg {
 .liquid-ios26 #sourcePalczewska:checked+span {
   background-color: #90f!important;
   color: #fff!important
+}
+
+.pal-pdf-layout-picker {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-0-35);
+  margin-top: var(--space-0-75)
+}
+
+.pal-pdf-layout-picker[hidden] {
+  display: none
+}
+
+.pal-pdf-layout-picker-label {
+  color: var(--text-muted);
+  font-size: .8rem
+}
+
+.pal-pdf-layout-picker .adult-vitals-radio-group {
+  justify-self: center;
+  justify-content: center
 }
 
 .liquid-ios26 #sourcePalczewska:disabled+span {
