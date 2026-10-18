@@ -172,8 +172,8 @@
   "sha256": "56c365f30d111990e14f50d77eeb85a7ebb8da43caf7df3f93d8c788cfc04eab"
  },
  "inline_index_07.js": {
-  "v": 13,
-  "sha256": "1caa10345adce1d2ac0abe2432a6e1ad16730240d44167294641fb8587087b2a"
+  "v": 14,
+  "sha256": "4a87f49db9a96a306d26923c495c615219836b2a3b34750f6c93172645f22096"
  },
  "inline_index_08.js": {
   "v": 1,
@@ -532,8 +532,8 @@
   "sha256": "0e570b5cf1c10ce483d73dfb22a3fbcb10b3f2d43caceca2fa36db0b739be00e"
  },
  "vilda_centile_landscape.js": {
-  "v": 1,
-  "sha256": "b0dc60afdf0d51160da4f43ffc294132916a428604df56537e1da164ef54d9e6"
+  "v": 2,
+  "sha256": "800f51ac799f73a73360c76eabb0c9aba1e5a2a59c3676c5c01fb2e583c74882"
  },
  "vilda_chrome.css": {
   "v": 44,
@@ -984,8 +984,8 @@
   "sha256": "a48d9761a71a29d0ff9862e7638eb0a95485fc042dcb1d1901886b0dab72608e"
  },
  "vilda_publication_creator.js": {
-  "v": 21,
-  "sha256": "6daf45ffdd189ca933a33c78db41fcc5c42d869a0d16ea282498110e7447e87a"
+  "v": 22,
+  "sha256": "26ae76c4ac9ac0e68f975e274ee2cb5322290726726637355c68f0f57bf8c5e4"
  },
  "vilda_raport_naglowek.js": {
   "v": 10,

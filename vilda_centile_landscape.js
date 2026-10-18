@@ -44,6 +44,30 @@
     footerBaselineY: 2408
   });
 
+  /* P-KREATOR-POZIOM: pole rysowania wykresu na stronie PIONOWEJ (generator bez layout:
+     płótno 2480 × 3508, pole 0,95 obszaru minus marginesy 120/100 i 80/80 px). Kreator siatek
+     przelicza ręczne przesunięcia ramek z pionu na stronę poziomą skalą pola wykresu
+     (pozioma / pionowa); test e2e pilnuje, że to są wymiary, które generator naprawdę podaje. */
+  var PORTRAIT_PLOT = Object.freeze({ width: 1946, height: 2745.1 });
+
+  /* Opis układu dla generatora (Fe w inline_index_07.js) i Kreatora: wymiary płótna jednego
+     wykresu, miejsce obu wykresów na stronie i pole wykresu pionowego jako odniesienie. */
+  function chartLayout() {
+    var g = GEOMETRY;
+    return {
+      format: LAYOUT_LANDSCAPE,
+      width: g.slotWidth,
+      height: g.slotHeight,
+      rightReserve: g.rightReserve,
+      bottomReserve: g.bottomReserve,
+      origins: {
+        height: { x: g.heightX, y: g.slotTop },
+        weight: { x: g.weightX, y: g.slotTop }
+      },
+      refPlot: { width: PORTRAIT_PLOT.width, height: PORTRAIT_PLOT.height }
+    };
+  }
+
   var FONT_TITLE = 'bold 64px sans-serif';
   var FONT_TEXT = '38px sans-serif';
   var FONT_INFO = '36px sans-serif';
@@ -77,11 +101,16 @@
   function writeLayout(value) {
     var p = persistence();
     if (!p || typeof p.writePreferenceRaw !== 'function') return false;
+    var ok;
     try {
-      return !!p.writePreferenceRaw(PREF_KEY, normalizeLayout(value), { force: true });
+      ok = !!p.writePreferenceRaw(PREF_KEY, normalizeLayout(value), { force: true });
     } catch (e) {
-      return false;
+      ok = false;
     }
+    /* Ten sam wybór zmienia też Kreator siatek PRO (P-KREATOR-POZIOM) — przełącznik pod
+       przyciskiem ma pokazywać zapisany układ. */
+    syncRadios();
+    return ok;
   }
 
   function generatorReady() {
@@ -207,12 +236,7 @@
   function buildPage(args) {
     if (!generatorReady() || !root.document || !args) return null;
     var g = GEOMETRY;
-    var charts = root.buildPalczewskaExtendedCanvases(args, {
-      width: g.slotWidth,
-      height: g.slotHeight,
-      rightReserve: g.rightReserve,
-      bottomReserve: g.bottomReserve
-    });
+    var charts = root.buildPalczewskaExtendedCanvases(args, chartLayout());
     if (!charts || charts.length < 2 || !charts[0] || !charts[1]) return null;
     var canvas = root.document.createElement('canvas');
     canvas.width = g.pageWidth;
@@ -262,6 +286,8 @@
     LAYOUT_PORTRAIT: LAYOUT_PORTRAIT,
     LAYOUT_LANDSCAPE: LAYOUT_LANDSCAPE,
     GEOMETRY: GEOMETRY,
+    PORTRAIT_PLOT: PORTRAIT_PLOT,
+    chartLayout: chartLayout,
     normalizeLayout: normalizeLayout,
     readLayout: readLayout,
     writeLayout: writeLayout,

@@ -88,3 +88,47 @@ export function orientacja(strona) {
   if (Math.abs(strona.szer - A4_PION.szer) < 0.5 && Math.abs(strona.wys - A4_PION.wys) < 0.5) return 'pion';
   return `inna ${strona.szer}×${strona.wys}`;
 }
+
+// P-KREATOR-POZIOM: Kreator siatek PRO na stronie A4 poziomo. Dane FIKCYJNE: te same pomiary chłopca
+// co wyżej, adnotacje z przesunięciami ustawionymi wcześniej w pionie (ramka, etykieta, wolna strzałka).
+export async function otworzKreator(page, { uklad = 'landscape' } = {}) {
+  await page.evaluate((uklad) => {
+    document.getElementById('name').value = 'Pacjent Testowy';
+    // Kreator przelicza dane karty przy otwarciu — tu podajemy je wprost.
+    window.calculateGrowthAdvanced = () => {};
+    window.advancedGrowthData = {
+      currentAgeMonths: 120, currentHeight: 141, currentWeight: 33, motherHeight: 164, fatherHeight: 181, targetHeight: 179,
+      measurements: [
+        { ageMonths: 48, height: 103.5, weight: 16.4 }, { ageMonths: 60, height: 110.8, weight: 18.6 },
+        { ageMonths: 72, height: 117.2, weight: 21.0 }, { ageMonths: 84, height: 123.6, weight: 23.9 },
+        { ageMonths: 96, height: 129.4, weight: 26.8 }, { ageMonths: 108, height: 135.0, weight: 29.9 },
+      ],
+    };
+    window.chartCreatorData = {
+      palRegular: {
+        shared: { a84: { txt: 'Start terapii GH' }, cur: { txt: 'Kontrola' } },
+        layout: { height: { cur: { dx: 330, dy: -420 } }, weight: {} },
+        free: {
+          height: [{ id: 1, ageMonths: 168, value: 160, txt: 'Kanał MPH', arrow: false }],
+          weight: [{ id: 2, ageMonths: 150, value: 50, txt: 'Cel', arrow: true, dx: 200, dy: -100 }],
+        },
+      },
+    };
+    window.VildaCentileLandscape.writeLayout(uklad);
+    window.VildaPublicationCreator.open({ context: 'palRegular' });
+  }, uklad);
+  await page.locator('#vilda-pub-creator-overlay').waitFor();
+}
+
+/** Nakładka aktywnego wykresu Kreatora (widoczna kanwa z adnotacjami). */
+export function nakladka(page) {
+  return page.locator('#vilda-pub-creator-overlay canvas:visible').nth(1);
+}
+
+/** Wejście ekranu odpowiadające punktowi kanwy nakładki (współrzędne strony). */
+export async function punktEkranu(page, x, y) {
+  return nakladka(page).evaluate((c, [x, y]) => {
+    const r = c.getBoundingClientRect();
+    return { x: r.left + x * (r.width / c.width), y: r.top + y * (r.height / c.height) };
+  }, [x, y]);
+}
