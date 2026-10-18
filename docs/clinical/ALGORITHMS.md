@@ -10311,6 +10311,80 @@ Zmierzone przed poprawką (odtworzenie na żywej stronie): Karta Pacjenta otwart
 
 Kontrola negatywna: po usunięciu samej bramki test pierwszy pada na asercji „arkusz nie wchodzi na otwartą Kartę", po przywróceniu przechodzi.
 
+## Dzienny arkusz przypomnień nie przerywa pisania (P-ARKUSZ-PISANIE, SW 1.1.310, 2026-10-18)
+
+**Zgłoszenie właściciela.** Pierwsze uruchomienie aplikacji. Lekarz od razu dotyka pola Nazwisko i wpisuje, więc otwiera się podpowiedź zapisanych pacjentów. W trakcie wchodzi pełnoekranowy arkusz „Przypomnienia”, a na iPhonie lista podpowiedzi przebija przez arkusz. Lekarz często zaczyna pracę, zanim arkusz się pokaże. Właściciel wybrał wariant A: arkusz czeka na przerwę w pisaniu.
+
+**Bez zmiany klinicznej.** Zmienia się wyłącznie moment pokazania arkusza oraz to, co dzieje się z polem i listą w chwili jego otwarcia. Pozostają bez zmian:
+- treść przypomnień;
+- dobór notatek (`listPatientNotesDueByDate`);
+- bramka dobowa.
+
+### Co robił arkusz (zmierzone przed zmianą)
+
+Emulacja telefonu 393×852, powłoka `app.html`, jedna zaległa kontrola i dwie fikcyjne pacjentki; czasy od gotowości panelu Start:
+- dotknięcie Nazwiska: 0,1 s;
+- lista podpowiedzi po „Fik”: 0,5 s;
+- **arkusz w powłoce: 2,4 s**.
+
+Pole zostawało z fokusem, a lista otwarta pod arkuszem. Kolejne znaki trafiały do zakrytego pola: „Fik” → „Fikcyjna” przy widocznym arkuszu.
+
+Przyczyny:
+- arkusz bramkował się datą i otwartą nakładką konta (P-ARKUSZ), a pisania nie sprawdzał;
+- przy włączonej synchronizacji arkusz ponawia próbę 800 ms po `vilda:sync-merged`, więc przy pierwszym uruchomieniu potrafi wejść jeszcze później;
+- lista `.vilda-ac-dd` jest w ramce Start (`position: fixed`, `z-index: 2147482000`), a arkusz w powłoce (`z-index: 1000001`). W Chromium arkusz ją zakrywa, na iPhonie — według zgłoszenia — lista przebija. Przyczyny po stronie iOS nie sprawdzono. Dlatego naprawa zamyka listę, a nie przestawia z-index.
+
+Przy odtwarzaniu wyszło też, że moduł działa w każdym panelu powłoki, także w ukrytym Terminarzu wczytanym w tle. Gdy powłoka odkładała arkusz, ukryty Terminarz pokazał go u siebie — niewidocznie — i zapisał znacznik „pokazano dziś”. Lekarz nie zobaczyłby go już tego dnia.
+
+### Poprawka (`vilda_auth_ui.js` 501)
+
+- **Bramka pisania** (`lekarzPisze`, wywołanie niewymuszone): arkusz czeka, gdy w powłoce albo w widocznym panelu:
+  - pole tekstowe ma fokus, albo
+  - podpowiedź pacjentów jest otwarta, albo
+  - od ostatniego wpisu albo wyjścia z pola nie minęły 3 s.
+
+  Sprawdza to co 0,5 s (`ponowArkuszPoPrzerwie`) i pokazuje arkusz przy pierwszej przerwie. Jak w P-ARKUSZ: odłóż, nie porzuć. Data „pokazano dziś” zapisuje się dopiero przy pokazaniu.
+- **Bramka patrzy z okna najwyższego** (powłoka i jej widoczne ramki), bo moduł działa w każdym panelu.
+- **Ukryty panel (`Fr()`) arkusza nie pokazuje.**
+- **Panel ustępuje powłoce**, która już czeka na przerwę (`arkuszCzekaWyzej`), więc arkusz zostaje pełnoekranowy w powłoce, jak dotąd.
+- **Tuż przed pokazaniem znacznik dnia jest sprawdzany jeszcze raz.** Między pierwszym sprawdzeniem a `Mr()` są `await`, a na przerwę może czekać kilka instancji naraz.
+- **Zabezpieczenie przy każdym otwarciu arkusza** (`zamknijPisaniePodArkuszem` w `Mr()`), także z dzwoneczka i z historii badań:
+  - zamyka podpowiedzi we wszystkich dokumentach (zdarzenie `vilda:zamknij-pisanie` → `Ua()`);
+  - zdejmuje fokus z pola.
+
+  Klawiatura się chowa, a znaki nie trafiają do zakrytego pola.
+- Wywołanie wymuszone (dzwoneczek) nadal omija bramkę: świadome kliknięcie nie przerywa pracy.
+
+**Pomiar po zmianie** (ta sama emulacja):
+- 7 s pisania w Nazwisku bez arkusza; lista i wpisywane znaki działają;
+- arkusz 3,2 s po wyjściu z pola, jeden, w powłoce;
+- wymuszone otwarcie przy otwartej liście: lista zamknięta, fokus poza polem.
+
+### Walidacja
+
+`tests/e2e/arkusz-przypomnien-pisanie-mobile.spec.mjs` (2, telefon):
+1. Pierwsze uruchomienie dnia.
+   - Test nie ściga się z zegarem arkusza (3 s po odblokowaniu): przy wczytaniu znaczniki dnia są ustawione.
+   - Gdy lekarz już pisze „Fik”, test czyści znaczniki i woła niewymuszone `maybeShowReminders()` w powłoce i we wszystkich panelach, także w ukrytym Terminarzu. To ta sama ścieżka `tn()`, którą woła zegar i `vilda:sync-merged`.
+   - Przez 7 s pisania arkusza nie ma ani w powłoce, ani w żadnej ramce.
+   - Po wyjściu z pola arkusz wchodzi nie wcześniej niż 2,9 s później. Czas jest mierzony w samej stronie.
+   - Jest dokładnie jeden arkusz, w powłoce, a nazwisko „Fikcyjna” zostaje.
+
+   Pierwsza wersja testu czekała na prawdziwy zegar i pod obciążeniem (3 procesy) arkusz wchodził przed pierwszym znakiem — zgodnie z działaniem aplikacji. Stąd obecny wariant.
+2. Wymuszone otwarcie przy otwartej liście: lista `none`, fokus poza polem, a dalsze znaki nie trafiają do pola.
+
+Na bazie (`vilda_auth_ui.js` 500) oba testy padają:
+- arkusz wchodzi w trakcie pisania, w kilku panelach naraz;
+- lista i fokus zostają pod arkuszem.
+
+Na nowym kodzie oba przechodzą 3 razy z rzędu przy 3 równoległych procesach.
+
+Istniejące testy przypomnień, podpowiedzi pacjentów, Karty, nawigacji pacjentów i Terminarza (131) — zielone.
+
+**Do potwierdzenia na iPhonie (PWA).** Pierwsze uruchomienie dnia z zaległym przypomnieniem:
+- od razu Nazwisko i pisanie — arkusz nie wchodzi;
+- po „Gotowe” arkusz pokazuje się po ok. 3 s, bez prześwitującej listy.
+
 ## Kryteria odpowiedzi sprawdzone wobec ChPL (P-CHPL, SW 1.1.10, 2026-09-19)
 
 **Skąd znalezisko.** Przy projektowaniu wizualizacji postępów leczenia otyłości u dorosłych trzeba było ustalić, skąd biorą się progi %TBWL. Właściciel udostępnił charakterystyki produktów leczniczych. Zestawienie ich z kodem ujawniło cztery rozbieżności, w tym dwie zmieniające to, co aplikacja mówi lekarzowi o **odstawieniu leku**.
