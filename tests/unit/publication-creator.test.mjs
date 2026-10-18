@@ -890,6 +890,159 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
   });
 });
 
+// P-KREATOR-POZIOM (wariant C właściciela 2026-10-18): treść adnotacji wspólna dla obu układów,
+// położenie ramek osobne. Strona pozioma bez własnego wpisu bierze przesunięcie z pionu w skali pola wykresu.
+describe('P-KREATOR-POZIOM — położenia ramek strony A4 poziomo', () => {
+  // Układ, który generator dostaje od vilda_centile_landscape.js (chartLayout), i pole wykresu w kolumnie.
+  const UKLAD = {
+    format: 'landscape', width: 1684, height: 2090, rightReserve: 70, bottomReserve: 30,
+    origins: { height: { x: 120, y: 278 }, weight: { x: 1804, y: 278 } },
+    refPlot: { width: 1946, height: 2745.1 }
+  };
+  const KOLUMNA = { plotX: 120, plotY: 80, plotW: 1394, plotH: 1900, minY: 60, maxY: 190 };
+  const SKALA = { x: 1394 / 1946, y: 1900 / 2745.1 };
+
+  function przygotuj() {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    win.chartCreatorData = {
+      palRegular: {
+        shared: { a120: { txt: 'Start' }, cur: { txt: 'Kontrola' } },
+        layout: { height: { cur: { dx: 330, dy: -420 } }, weight: {} },
+        free: {
+          height: [
+            { id: 1, ageMonths: 168, value: 160, txt: 'Kanał MPH', arrow: false, dx: 40, dy: -30 },
+            { id: 2, br: 1, a1: 120, a2: 144, txt: 'Okres', dx: 100, bdy: -120 }
+          ],
+          weight: []
+        }
+      }
+    };
+    return { win, PC, adv: () => PC._advForContext(win.advancedGrowthData, 'palRegular') };
+  }
+
+  const elem = (items, key) => items.find((it) => it.key === key);
+
+  it('drawAnnotations z układem poziomym: skala z pól wykresu, geometria strony w geomStoreL, pion nietknięty', () => {
+    const { PC } = przygotuj();
+    PC._setSuppress(true);
+    try {
+      PC.drawAnnotations(fakeCtx([]), { chartType: 'height', ...KOLUMNA, transient: true, layout: UKLAD });
+      PC.drawAnnotations(fakeCtx([]), { chartType: 'weight', ...KOLUMNA, minY: 0, maxY: 90, transient: true, layout: UKLAD });
+    } finally {
+      PC._setSuppress(false);
+    }
+    expect(PC._geomStore.height, 'geometria podglądu pionu bez zmian').toBeUndefined();
+    expect(PC._geomStoreL.height).toEqual({
+      ...KOLUMNA, ageMin: undefined, ageMax: undefined,
+      plotX: 240, plotY: 358, posScale: SKALA,
+      clip: { x: 120, y: 278, w: 1684, h: 2090 }
+    });
+    expect(PC._geomStoreL.weight.plotX).toBe(1804 + 120);
+    expect(PC._geomStoreL.weight.clip).toEqual({ x: 1804, y: 278, w: 1684, h: 2090 });
+  });
+
+  it('bez własnego wpisu strona pozioma przelicza przesunięcia z pionu (ramka, etykieta, klamra)', () => {
+    const { PC, adv } = przygotuj();
+    const pion = PC._computeLayout(fakeCtx(), adv(), 'height', KOLUMNA);
+    const poziom = PC._computeLayout(fakeCtx(), adv(), 'height', { ...KOLUMNA, posScale: SKALA });
+    const cur = elem(poziom, 'cur');
+    expect(elem(pion, 'cur').x - elem(pion, 'cur').autoX).toBe(330);
+    expect(cur.x - cur.autoX).toBeCloseTo(330 * SKALA.x, 9);
+    expect(cur.y - cur.autoY).toBeCloseTo(-420 * SKALA.y, 9);
+    expect(cur.posSource).toBe('scaled');
+    expect(cur.moved).toBe(true);
+    const etykieta = elem(poziom, 'f1');
+    expect(etykieta.x - etykieta.autoX).toBeCloseTo(40 * SKALA.x, 9);
+    expect(etykieta.y - etykieta.autoY).toBeCloseTo(-30 * SKALA.y, 9);
+    const klamra = elem(poziom, 'f2');
+    expect(klamra.bdy).toBeCloseTo(-120 * SKALA.y, 9);
+    expect(klamra.x - klamra.autoX).toBeCloseTo(100 * SKALA.x, 9);
+    // ramka bez przesunięcia w pionie zostaje automatyczna także w poziomie
+    expect(elem(poziom, 'a120').moved).toBe(false);
+    // pion nie ma pochodzenia położenia (lista Kreatora pionowego bez zmian)
+    expect(elem(pion, 'cur').posSource).toBeNull();
+  });
+
+  it('własne położenie poziomu (posL) wygrywa z przeliczeniem; pusty wpis = automatyczne; pion ignoruje posL', () => {
+    const { win, PC, adv } = przygotuj();
+    expect(win.chartCreatorData.palRegular.posL, 'odczyt nie tworzy magazynu').toBeUndefined();
+    win.chartCreatorData.palRegular.posL = { height: { cur: { dx: 50, dy: 0 }, f2: { bdy: -40 } }, weight: {} };
+    const poziom = PC._computeLayout(fakeCtx(), adv(), 'height', { ...KOLUMNA, posScale: SKALA });
+    const cur = elem(poziom, 'cur');
+    expect([cur.x - cur.autoX, cur.y - cur.autoY, cur.posSource]).toEqual([50, 0, 'own']);
+    const klamra = elem(poziom, 'f2');
+    expect([klamra.bdy, klamra.x - klamra.autoX, klamra.posSource]).toEqual([-40, 0, 'own']);
+    win.chartCreatorData.palRegular.posL.height.cur = {};
+    const zero = elem(PC._computeLayout(fakeCtx(), adv(), 'height', { ...KOLUMNA, posScale: SKALA }), 'cur');
+    expect([zero.x, zero.y, zero.moved, zero.posSource]).toEqual([zero.autoX, zero.autoY, false, 'own']);
+    const pion = elem(PC._computeLayout(fakeCtx(), adv(), 'height', KOLUMNA), 'cur');
+    expect(pion.x - pion.autoX).toBe(330);
+    expect(pion.y - pion.autoY).toBe(-420);
+  });
+
+  it('edycja w poziomie pisze tylko do posL (pierwszy zapis kopiuje przeliczone położenie), pion zostaje', () => {
+    const { win, PC } = przygotuj();
+    PC._setSuppress(true);
+    PC.drawAnnotations(fakeCtx([]), { chartType: 'height', ...KOLUMNA, transient: true, layout: UKLAD });
+    PC._setSuppress(false);
+    PC._setContext('palRegular');
+    PC._setEditLayout('landscape');
+    const reg = win.chartCreatorData.palRegular;
+    PC._setOffset('height', 'cur', 10.4, 20.6);
+    expect(reg.posL.height.cur).toEqual({ dx: 10, dy: 21 });
+    expect(reg.layout.height.cur, 'położenie pionu bez zmian').toEqual({ dx: 330, dy: -420 });
+    // przeciągnięcie samej poprzeczki klamry nie przestawia jej ramki
+    PC._updateFree('height', 2, { bdy: -50 });
+    expect(reg.posL.height.f2).toEqual({ dx: Math.round(100 * SKALA.x), bdy: -50 });
+    expect(reg.free.height[1]).toMatchObject({ dx: 100, bdy: -120 });
+    // treść jest wspólna dla obu układów — trafia do wpisu, nie do posL
+    PC._updateFree('height', 1, { txt: 'Nowa', fs: 52 });
+    expect(reg.free.height[0]).toMatchObject({ txt: 'Nowa', fs: 52, dx: 40, dy: -30 });
+    expect(reg.posL.height.f1).toBeUndefined();
+    // usunięta wolna adnotacja nie zostawia położenia dla następnej z tym samym id
+    PC._removeFree('height', 2);
+    expect(reg.posL.height.f2).toBeUndefined();
+    // w pionie zapis wraca do magazynu pionu
+    PC._setEditLayout('portrait');
+    PC._setOffset('height', 'cur', 1, 2);
+    expect(reg.layout.height.cur).toEqual({ dx: 1, dy: 2 });
+    expect(reg.posL.height.cur).toEqual({ dx: 10, dy: 21 });
+    PC._setContext('pub');
+  });
+
+  it('„Przywróć układ automatyczny” czyści położenia tylko bieżącego układu', () => {
+    const { win, PC } = przygotuj();
+    PC._setContext('palRegular');
+    const reg = win.chartCreatorData.palRegular;
+    reg.posL = { height: { cur: { dx: 10 }, a120: { dx: 5 } }, weight: { cur: { dy: 7 } } };
+    PC._setEditLayout('landscape');
+    PC._resetLayout('height');
+    // ramki przesunięte w pionie dostają zerowe własne położenie (automatyczne w poziomie)
+    expect(reg.posL.height).toEqual({ cur: {}, f1: {}, f2: {} });
+    expect(reg.posL.weight, 'druga siatka bez zmian').toEqual({ cur: { dy: 7 } });
+    expect(reg.layout.height.cur).toEqual({ dx: 330, dy: -420 });
+    expect(reg.free.height[0]).toMatchObject({ dx: 40, dy: -30 });
+    PC._setEditLayout('portrait');
+    PC._resetLayout('height');
+    expect(reg.layout.height.cur).toBeUndefined();
+    expect(reg.free.height[0].dx).toBeUndefined();
+    expect(reg.posL.height, 'reset pionu nie dotyka poziomu').toEqual({ cur: {}, f1: {}, f2: {} });
+    PC._setContext('pub');
+  });
+
+  it('kontekst publikacyjny ignoruje edycję w poziomie (siatki do publikacji zawsze w pionie)', () => {
+    const { win, PC } = przygotuj();
+    PC._setEditLayout('landscape');
+    PC._setContext('pub');
+    PC._setOffset('height', 'cur', 3, 4);
+    expect(win.advancedGrowthData.pubLayout.height.cur).toEqual({ dx: 3, dy: 4 });
+    expect(win.chartCreatorData.palRegular.posL).toBeUndefined();
+    PC._setEditLayout('portrait');
+  });
+});
+
 describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
   const generatorSource = fs.readFileSync(
     path.join(repositoryRoot, 'inline_index_07.js'),
@@ -914,7 +1067,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('inline_index_07.js woła VildaPublicationCreator.drawAnnotations dla obu siatek', () => {
     expect(generatorSource).toContain(
-      'PC.drawAnnotations(e,{chartType:o,plotX:te+120,plotY:ne+80,plotW:Z-120-100,plotH:U-80-80,minY:F,maxY:R,transient:!!__lay})'
+      'PC.drawAnnotations(e,{chartType:o,plotX:te+120,plotY:ne+80,plotW:Z-120-100,plotH:U-80-80,minY:F,maxY:R,transient:!!__lay,layout:__lay})'
     );
     // P-PAL-POZIOM: render strony A4 poziomo (Fe z layout) jest jednorazowy — nie nadpisuje
     // geometrii podglądu kreatora; układ pionowy (bez layout) przekazuje transient:false
@@ -930,7 +1083,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=21');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=22');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
