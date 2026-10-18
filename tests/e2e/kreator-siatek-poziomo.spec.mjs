@@ -207,3 +207,33 @@ test.describe('Kreator siatek PRO — strona A4 poziomo', () => {
     await expect(kreatorUi(page).getByRole('group', { name: 'Układ PDF' })).toHaveCount(0);
   });
 });
+
+// Przycisk otwierający Kreator ma szerokość przycisku generowania siatki przy każdej szerokości okna
+// (wcześniej był wąski powyżej 600 px — pełną szerokość dawała mu tylko mobilna reguła dla wszystkich przycisków).
+test('przycisk „Kreator siatek” ma szerokość i położenie przycisku generowania siatki', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworzStrone(page);
+  for (const zrodlo of ['OLAF', 'PALCZEWSKA']) {
+    await palczewskaPro(page);
+    if (zrodlo === 'OLAF') {
+      await page.evaluate(() => {
+        const olaf = document.getElementById('sourceOlaf');
+        olaf.checked = true;
+        olaf.dispatchEvent(new Event('change', { bubbles: true }));
+        window.updateCentileButtons();
+      });
+    }
+    const generuj = zrodlo === 'OLAF' ? '#generateCentileChart' : '#generatePalCentileChart';
+    await expect(page.locator(generuj)).toBeVisible();
+    for (const szer of [1440, 1100, 900, 700, 390]) {
+      await page.setViewportSize({ width: szer, height: 1000 });
+      await expect(page.locator('#openChartCreatorBtn')).toBeVisible();
+      const [g, k] = await page.evaluate((sel) => [sel, '#openChartCreatorBtn'].map((s) => {
+        const r = document.querySelector(s).getBoundingClientRect();
+        return { w: Math.round(r.width), x: Math.round(r.left) };
+      }), generuj);
+      expect(k, `${zrodlo}, okno ${szer} px`).toEqual(g);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+  }
+});

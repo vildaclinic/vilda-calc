@@ -1307,7 +1307,8 @@ input[type=submit]:focus-visible {
   margin-top: 0!important
 }
 
-#generatePalCentileChart {
+#generatePalCentileChart,
+#openChartCreatorBtn {
   display: block;
   width: 100%!important;
   margin: var(--space-0-5) 0!important
