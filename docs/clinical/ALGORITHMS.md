@@ -10355,18 +10355,24 @@ Przy odtwarzaniu wyszło też, że moduł działa w każdym panelu powłoki, tak
 
 ### Walidacja
 
-`tests/e2e/arkusz-przypomnien-pisanie-mobile.spec.mjs` (2, telefon, prawdziwy zegar arkusza):
-1. Pierwsze uruchomienie dnia; znaczniki dnia czyszczone na starcie przeładowanej strony, zanim ruszy zegar sesji zakładania konta.
-   - Przez 7 s pisania arkusza nie ma ani w powłoce, ani w żadnej ramce, także ukrytej.
+`tests/e2e/arkusz-przypomnien-pisanie-mobile.spec.mjs` (2, telefon):
+1. Pierwsze uruchomienie dnia.
+   - Test nie ściga się z zegarem arkusza (3 s po odblokowaniu): przy wczytaniu znaczniki dnia są ustawione.
+   - Gdy lekarz już pisze „Fik”, test czyści znaczniki i woła niewymuszone `maybeShowReminders()` w powłoce i we wszystkich panelach, także w ukrytym Terminarzu. To ta sama ścieżka `tn()`, którą woła zegar i `vilda:sync-merged`.
+   - Przez 7 s pisania arkusza nie ma ani w powłoce, ani w żadnej ramce.
    - Po wyjściu z pola arkusz wchodzi nie wcześniej niż 2,9 s później. Czas jest mierzony w samej stronie.
    - Jest dokładnie jeden arkusz, w powłoce, a nazwisko „Fikcyjna” zostaje.
+
+   Pierwsza wersja testu czekała na prawdziwy zegar i pod obciążeniem (3 procesy) arkusz wchodził przed pierwszym znakiem — zgodnie z działaniem aplikacji. Stąd obecny wariant.
 2. Wymuszone otwarcie przy otwartej liście: lista `none`, fokus poza polem, a dalsze znaki nie trafiają do pola.
 
 Na bazie (`vilda_auth_ui.js` 500) oba testy padają:
-- arkusz wchodzi w trakcie pisania;
+- arkusz wchodzi w trakcie pisania, w kilku panelach naraz;
 - lista i fokus zostają pod arkuszem.
 
-Istniejące testy przypomnień, podpowiedzi, Karty i Terminarza — w podzbiorze e2e opisanym w PR.
+Na nowym kodzie oba przechodzą 3 razy z rzędu przy 3 równoległych procesach.
+
+Istniejące testy przypomnień, podpowiedzi pacjentów, Karty, nawigacji pacjentów i Terminarza (131) — zielone.
 
 **Do potwierdzenia na iPhonie (PWA).** Pierwsze uruchomienie dnia z zaległym przypomnieniem:
 - od razu Nazwisko i pisanie — arkusz nie wchodzi;

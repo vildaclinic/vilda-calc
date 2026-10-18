@@ -21,25 +21,21 @@ async function ramkaStart(page) {
   return (await page.$('iframe.app-pane[title="Start"]')).contentFrame();
 }
 
-// Konto z dwiema fikcyjnymi pacjentkami i jedną zaległą kontrolą. `pierwszeUruchomienie` — po
-// przeładowaniu dzień zaczyna się bez znaczników „pokazano/zamknięto dziś” (czyszczone na starcie
-// strony, zanim ruszy jakikolwiek skrypt); inaczej oba znaczniki są ustawione i arkusz sam nie wchodzi.
-async function przygotuj(page, { pierwszeUruchomienie }) {
-  await page.addInitScript((pierwsze) => {
+// Konto z dwiema fikcyjnymi pacjentkami i jedną zaległą kontrolą. Przy każdym wczytaniu strony znaczniki
+// „pokazano/zamknięto dziś” są ustawione, więc zegar arkusza (3 s po odblokowaniu) sam go nie pokaże —
+// test nie ściga się z nim pod obciążeniem. Nowy dzień zaczyna `nowyDzien()`: od tej chwili znaczniki
+// nie wracają, także w panelu wczytywanym później (Terminarz w tle).
+async function przygotuj(page) {
+  await page.addInitScript(() => {
     try {
       window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+      if (window.sessionStorage.getItem('__e2eNowyDzien') === '1') return;
       const d = new Date(); const p = (n) => String(n).padStart(2, '0');
       const dzis = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-      if (window.sessionStorage.getItem('__e2eNowyDzien') === '1' && pierwsze) {
-        window.sessionStorage.removeItem('__e2eNowyDzien');
-        window.localStorage.removeItem('vilda-reminders-shown-v1');
-        window.localStorage.removeItem('vilda-reminders-closed-v1');
-      } else if (!pierwsze) {
-        window.localStorage.setItem('vilda-reminders-shown-v1', `${dzis}|${Date.now()}`);
-        window.localStorage.setItem('vilda-reminders-closed-v1', `${dzis}|${Date.now()}`);
-      }
+      window.localStorage.setItem('vilda-reminders-shown-v1', `${dzis}|${Date.now()}`);
+      window.localStorage.setItem('vilda-reminders-closed-v1', `${dzis}|${Date.now()}`);
     } catch (_) { /* brak storage — pomiń */ }
-  }, pierwszeUruchomienie);
+  });
   await page.route('**/*', (route) => {
     const u = route.request().url();
     return (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:')) ? route.continue() : route.abort();
@@ -53,7 +49,6 @@ async function przygotuj(page, { pierwszeUruchomienie }) {
     const anna = (await window.VildaVault.savePatient({ name: 'Fikcyjna Anna', user: { age: 8, sex: 'F' } })).patientId;
     await window.VildaVault.savePatient({ name: 'Fikcyjna Beata', user: { age: 10, sex: 'F' } });
     await window.VildaVault.savePatientNote({ patientId: anna, title: 'Kontrola wyników', body: 'Fikcyjna notatka', category: 'followup', dueDateISO: wczoraj, dueTime: null });
-    window.sessionStorage.setItem('__e2eNowyDzien', '1');
   }, HASLO);
   await page.reload({ waitUntil: 'load' });
   start = await ramkaStart(page);
@@ -62,6 +57,19 @@ async function przygotuj(page, { pierwszeUruchomienie }) {
   if (await zgoda.isVisible().catch(() => false)) await zgoda.click();
   return start;
 }
+
+// Pierwsze uruchomienie dnia, tak jak po zegarze: znaczniki dnia znikają, a każda instancja modułu
+// (powłoka i wszystkie panele, także ukryty Terminarz) dostaje niewymuszone wywołanie — tę samą
+// ścieżkę tn(), którą woła zegar po odblokowaniu i `vilda:sync-merged`.
+const nowyDzien = (page) => page.evaluate(() => {
+  window.sessionStorage.setItem('__e2eNowyDzien', '1');
+  window.localStorage.removeItem('vilda-reminders-shown-v1');
+  window.localStorage.removeItem('vilda-reminders-closed-v1');
+  const okna = [window, ...[...document.querySelectorAll('iframe')].map((f) => f.contentWindow)];
+  let wywolane = 0;
+  okna.forEach((w) => { try { if (w && w.VildaAuthUI && w.VildaAuthUI.maybeShowReminders) { w.VildaAuthUI.maybeShowReminders(); wywolane += 1; } } catch (_) { /* inna domena */ } });
+  return wywolane;
+});
 
 // Arkusze w powłoce i we WSZYSTKICH ramkach, także ukrytych (Terminarz wczytuje się w tle).
 const arkusze = (page) => page.evaluate((sel) => {
@@ -89,14 +97,19 @@ async function dotknijNazwiska(page, start) {
   await expect.poll(() => start.evaluate(() => document.activeElement && document.activeElement.id)).toBe('lastName');
 }
 
-test('pierwsze uruchomienie: arkusz czeka, aż lekarz przestanie pisać, i wchodzi raz, pełnoekranowo, ok. 3 s po wyjściu z pola', async ({ page }) => {
+test('pierwsze uruchomienie dnia: arkusz czeka, aż lekarz przestanie pisać, i wchodzi raz, pełnoekranowo, ok. 3 s po wyjściu z pola', async ({ page }) => {
   test.setTimeout(150_000);
-  const start = await przygotuj(page, { pierwszeUruchomienie: true });
+  const start = await przygotuj(page);
+  // Terminarz wczytuje się w tle ok. 1–1,5 s po starcie; to on pokazywał arkusz niewidocznie.
+  await page.waitForFunction(() => [...document.querySelectorAll('iframe')].some((f) => f.hidden && f.title === 'Terminarz'
+    && f.contentWindow && f.contentWindow.VildaAuthUI && f.contentWindow.VildaVault && f.contentWindow.VildaVault.isUnlocked()), null, { timeout: 30000 });
   await dotknijNazwiska(page, start);
   await page.keyboard.type('Fik');
   await expect.poll(async () => (await stanPola(start)).lista).toBe('block');
+  // Arkusz próbuje wejść w trakcie pisania — przed zmianą wchodził od razu.
+  expect(await nowyDzien(page), 'powłoka, Start i panele w tle').toBeGreaterThanOrEqual(3);
 
-  // Lekarz pisze przez 7 s — przed zmianą arkusz wchodził po ok. 2,4 s.
+  // Lekarz pisze dalej przez 7 s.
   for (const znak of 'cyjna') {
     await page.waitForTimeout(1400);
     expect(await arkusze(page), 'arkusz nie wchodzi w trakcie pisania').toEqual([]);
@@ -124,7 +137,7 @@ test('pierwsze uruchomienie: arkusz czeka, aż lekarz przestanie pisać, i wchod
 
 test('arkusz otwarty w trakcie pisania (dzwoneczek, wywołanie wymuszone) zamyka podpowiedź i zdejmuje fokus z pola', async ({ page }) => {
   test.setTimeout(150_000);
-  const start = await przygotuj(page, { pierwszeUruchomienie: false });
+  const start = await przygotuj(page);
   await dotknijNazwiska(page, start);
   await page.keyboard.type('Fik');
   await expect.poll(async () => (await stanPola(start)).lista).toBe('block');
