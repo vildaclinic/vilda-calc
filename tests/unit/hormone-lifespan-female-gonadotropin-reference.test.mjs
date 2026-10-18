@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { beforeAmhPregnancyPolicy, priorFemaleGonadotropinBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeAmhPregnancyPolicy, beforeFshCaliperBundle, priorFemaleGonadotropinBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -24,9 +24,9 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('Zwykłe żeńskie LH/FSH — jawna polityka wieku Madsen i Zec poniżej 6 lat', () => {
   it('zmienia wyłącznie dwa profile Zec i dodaje dwa osobne profile Madsen, zachowując 74 pozostałe', () => {
-    expect(data.profiles).toHaveLength(78);
-    expect(data.version).toBe('2026-10-17.2');
-    const unchanged = data.profiles.filter(p => !changedIds.includes(p.id) &&
+    expect(data.profiles).toHaveLength(80);
+    expect(data.version).toBe('2026-10-18.1');
+    const unchanged = beforeFshCaliperBundle(data).profiles.filter(p => !changedIds.includes(p.id) &&
       p.id !== 'madsen2022-female-e2-age-6-18').map(beforeAmhPregnancyPolicy);
     expect(unchanged).toHaveLength(74);
     // Independently computed from audyt 28aaa185, excluding precisely the two
@@ -53,7 +53,7 @@ describe('Zwykłe żeńskie LH/FSH — jawna polityka wieku Madsen i Zec poniże
       const profile = data.profiles.find(p => p.id === id);
       const comparison = runtime.gonadotropinComparisonReferenceData.profiles.find(p => p.analyte === analyte);
       expect(profile).toMatchObject({ id, analyte, sex: 'female', minAge: 6, maxAge: 16,
-        maxAgeExclusive: false, ordinaryOnly: true, unit: 'IU/L', statistic: 'median',
+        maxAgeExclusive: analyte === 'fsh', ordinaryOnly: true, unit: 'IU/L', statistic: 'median',
         interpolation: 'pchip', approximate: false,
         method: 'Siemens IMMULITE 2000 XPi',
         provenance: { sourceSha256: source.sources.madsen2022.supplementSha256,
@@ -65,11 +65,16 @@ describe('Zwykłe żeńskie LH/FSH — jawna polityka wieku Madsen i Zec poniże
       expect(comparison.id).not.toBe(id);
       expect(data.profiles.some(p => p.id === comparison.id)).toBe(false);
       for (const row of rows.filter(p => p.analyte === analyte)) {
-        expect(engine.referenceAt(profile, row.ageYears)).toBe(row.median);
-        expect(evaluate(analyte, row.ageYears)).toMatchObject({ status: 'ready',
-          referenceValue: row.median, profile: { id } });
+        // Source endpoint 16 remains in the unchanged source table, while the
+        // later ordinary FSH policy intentionally switches to CALIPER at 16.
+        expect(engine.referenceAt(comparison, row.ageYears)).toBe(row.median);
+        expect(engine.referenceAt(profile, row.ageYears)).toBe(analyte === 'fsh' && row.ageYears === 16 ? null : row.median);
+        if (analyte !== 'fsh' || row.ageYears < 16) {
+          expect(evaluate(analyte, row.ageYears)).toMatchObject({ status: 'ready',
+            referenceValue: row.median, profile: { id } });
+        }
       }
-      for (let age = 6; age <= 16; age += .0625) {
+      for (let age = 6; age < 16; age += .0625) {
         expect(engine.referenceAt(profile, age)).toBe(engine.referenceAt(comparison, age));
       }
     }
@@ -109,21 +114,24 @@ describe('Zwykłe żeńskie LH/FSH — jawna polityka wieku Madsen i Zec poniże
     expect(evaluate('lh', 5)).toEqual(unavailable('unsupported-age'));
   });
 
-  it.each(['lh', 'fsh'])('%s obejmuje tylko cały dostępny wiek i nie ekstrapoluje po opublikowanym węźle 16', analyte => {
+  it.each(['lh', 'fsh'])('%s obejmuje tylko cały dostępny wiek bez ekstrapolacji źródła Madsen', analyte => {
     expect(evaluate(analyte, 16).status).toBe('ready');
     expect(evaluate(analyte, 15, { ageUpperYears: 16, ageUpperInclusive: false }).status).toBe('ready');
-    for (const ageYears of [16.000001, 17, 18, 20]) {
+    for (const ageYears of analyte === 'lh' ? [16.000001, 17, 18, 20] : [19, 20]) {
       expect(evaluate(analyte, ageYears)).toEqual(unavailable('unsupported-age'));
     }
-    for (const [ageYears, ageUpperYears] of [[5.99, 6.01], [15.99, 16.01], [16, 16 + 1 / 12]]) {
+    for (const [ageYears, ageUpperYears] of [[5.99, 6.01], [15.99, 16.01]]) {
       const result = evaluate(analyte, ageYears, { ageUpperYears,
         ageUpperInclusive: false, puberty: { kind: 'Th', stage: 1 } });
       expect(result.status).toBe('unavailable');
     }
     const age = ageEngine.resolveAge({ age: { years: 16, months: 0, precision: 'month' } });
     expect(age.status).toBe('known');
-    expect(evaluate(analyte, age.lowerYears, { ageUpperYears: age.upperYears,
-      ageUpperInclusive: age.upperInclusive })).toEqual(unavailable('ambiguous-age'));
+    const reported = evaluate(analyte, age.lowerYears, { ageUpperYears: age.upperYears,
+      ageUpperInclusive: age.upperInclusive });
+    if (analyte === 'lh') expect(reported).toEqual(unavailable('ambiguous-age'));
+    else expect(reported).toMatchObject({ status: 'ready',
+      profile: { id: 'wilson2023-female-fsh-age-16-19' } });
     expect(evaluate('fsh', 5, { ageUpperYears: 6, ageUpperInclusive: false,
       puberty: { kind: 'Th', stage: 1 } }).referenceValue).toBe(1.07);
     expect(evaluate('fsh', 5, { ageUpperYears: 6, ageUpperInclusive: true,

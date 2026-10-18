@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { beforeFshCaliperBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -58,7 +59,7 @@ describe('AMH Jopling — znana ciąża jako ostrożnościowa reguła aplikacji'
 
   it('zmienia wyłącznie kwalifikację pięciu profili i jej metadane, zachowując wszystkie źródłowe liczby', () => {
     const previous = { ...runtime.patientPointData, version: '2026-10-17.1',
-      profiles: runtime.patientPointData.profiles.map(profile => {
+      profiles: beforeFshCaliperBundle(runtime.patientPointData).profiles.map(profile => {
         if (!policy.profiles.some(route => route.id === profile.id)) return profile;
         const { excludedCyclePhases: _pregnancy, ...prior } = profile;
         const { reproductiveContextPolicy: _policy, ...provenance } = prior.provenance;
@@ -67,6 +68,6 @@ describe('AMH Jopling — znana ciąża jako ostrożnościowa reguła aplikacji'
     // Frozen complete patientPointData on audyt 596773283e4565d08b72b9a7cb28561159bf3196.
     expect(createHash('sha256').update(JSON.stringify(previous)).digest('hex'))
       .toBe('8ec2f54935bb534e98c7b549b3270e80d4612c743882cfcbffb6c73ef1ad08db');
-    expect(runtime.patientPointData.profiles).toHaveLength(78);
+    expect(runtime.patientPointData.profiles).toHaveLength(80);
   });
 });

@@ -1,0 +1,4846 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+    "authorsShort": "Wilson et al.",
+    "year": 2023,
+    "journal": "Clinical Chemistry and Laboratory Medicine",
+    "volume": 61,
+    "issue": 6,
+    "pages": "1105–1115",
+    "doi": "10.1515/cclm-2022-1077",
+    "pmid": "36639844",
+    "url": "https://doi.org/10.1515/cclm-2022-1077",
+    "publishedOnline": "2023-01-16",
+    "sourceFile": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+    "sourceSha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b",
+    "sourceBytes": 223819,
+    "sourceVersion": "Owner-supplied final-article Supplementary Table 3; workbook bytes identified by SHA-256.",
+    "table": "Supplementary Table 3: numerical L,M,S-for-age; FSH_M and FSH_F only",
+    "readOn": "2026-10-18",
+    "access": "Full final primary article and all three owner-supplied supplementary tables reviewed.",
+    "redistribution": "Only FSH numerical facts, provenance and qualification metadata are extracted; full article, figures and source workbooks/documents are not redistributed."
+  },
+  "status": "source_extract_for_educational_age_reference_not_laboratory_ri",
+  "analyte": "fsh",
+  "unit": "IU/L",
+  "statistic": "normalized-bccg-model-median",
+  "population": {
+    "name": "CALIPER healthy Canadian children and adolescents",
+    "country": "Canada",
+    "location": "Greater Toronto Area and The Hospital for Sick Children, Toronto",
+    "design": "Cross-sectional age- and sex-specific model of previously collected CALIPER reference data",
+    "sourceCohortApproximateParticipants": 1500,
+    "numberCaution": "Approximately 1500 describes the source cohorts across the cited CALIPER studies, not an FSH, sex-specific or 16–19-year participant count. Those subgroup counts are not supplied in these four documents.",
+    "recruitment": "Schools/community clinics (0–<19 years), plus metabolically stable SickKids outpatient clinics (0–<5 years); under-1-year participants excluded from these models.",
+    "exclusions": [
+      "Chronic disease",
+      "Acute illness in the previous week",
+      "Current pregnancy",
+      "Prescribed medication, including oral contraceptives, within the preceding two weeks"
+    ],
+    "modelCovariates": [
+      "chronological age",
+      "sex"
+    ],
+    "tannerStageRestriction": null,
+    "menstrualPhaseRestriction": null,
+    "samplingTimeStandardization": null,
+    "fastingRequirement": null,
+    "unreportedContext": "The supplied documents do not state Tanner- or cycle-phase-specific FSH modeling, morning-only endocrine sampling or a fasting requirement. Missing information is not a confirmed absence in the patient."
+  },
+  "assay": {
+    "name": "Abbott ARCHITECT",
+    "platformScope": "Article reports ARCHITECT ci2000 and c8000 across all analytes; endocrine/fertility assays cite Konforte 2013 (reference 34).",
+    "specimen": "serum",
+    "handling": "Serum-separator tubes, centrifuged/aliquoted within 8 hours, stored at −80 °C until analysis.",
+    "lowerLimitOfQuantification": null,
+    "lowerLimitOfQuantificationSourceText": "--",
+    "lowerLimitOfQuantificationNote": "FSH LLOQ is not reported in Supplementary Table 1; do not substitute zero, the low QC concentration or another platform's LLOQ.",
+    "imprecision": [
+      {
+        "controlConcentration": 7.2,
+        "sd": 0.49,
+        "cvPercent": 6.8
+      },
+      {
+        "controlConcentration": 17.04,
+        "sd": 1.4,
+        "cvPercent": 8.2
+      },
+      {
+        "controlConcentration": 39.41,
+        "sd": 2.77,
+        "cvPercent": 7.0
+      }
+    ],
+    "imprecisionSource": "Supplementary Table 1, FSH row, reference 34",
+    "harmonization": "No numerical equivalence to Siemens IMMULITE, Roche cobas, AutoDELFIA or other FSH methods is established. Source selection does not establish the patient sample's assay or specimen."
+  },
+  "model": {
+    "family": "GAMLSS BCCG",
+    "responseScale": "native FSH IU/L; no logarithmic back-transform",
+    "parameterMapping": {
+      "nu": "L",
+      "mu": "M",
+      "sigma": "S"
+    },
+    "p50Definition": "Exact median of the positive-response, normalized BCCG distribution at each exported age node (qBCCG(0.5)), not automatically M.",
+    "quantileAlgorithm": "For L>0, Z=Phi^-1(1-0.5*Phi(1/(S*abs(L)))); for L<0, Z=Phi^-1(0.5*Phi(1/(S*abs(L)))); Y=M*(1+L*S*Z)^(1/L). For L=0 the p50 limit is M.",
+    "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+    "sourceFormulaLimitation": "The paper prints the untruncated nominal-z LMS formula, which returns M at z=0; its stated GAMLSS BCCG family normalizes a truncated normal. The exact normalized p50 independently reproduces Figure 1C; source M is preserved separately and never relabeled as the exact normalized median.",
+    "figureVerification": "Figure 1C, printed page 1108 / PDF page 4, black 50th-percentile curves. Vector checks at ages 16, 17 and 18 agree within graphical precision; these checks are diagnostics, not substituted numerical source values.",
+    "maleCode": "gamlss(hormone~cs(age, df=3), sigma.fo=~cs(age, df=2), nu.fo=~cs(age, df=2), family=BCCG, data=d)",
+    "femaleCode": "gamlss(hormone~cs(age, df=2), sigma.fo=~cs(age, df=0), nu.fo=~cs(age, df=0), family=BCCG, data=d)",
+    "sourceCodeLocation": "Supplementary Table 2, FSH male and female rows",
+    "sourceRVersion": "4.1.2",
+    "noNewClinicalFunction": "This extraction qualifies only educational age-reference medians. It does not activate BCCG-derived RI, SDS, patient percentiles, diagnosis or treatment decisions."
+  },
+  "interpolation": {
+    "publishedAgeStepYears": 0.1,
+    "publishedAgeStepIsOneMonth": false,
+    "sourceDomain": {
+      "minAge": 1,
+      "maxAge": 19,
+      "maxAgeExclusive": true
+    },
+    "terminalRow": "Age 19.0 is retained as a numerical interpolation endpoint only. It does not authorize a patient reference at age 19 or older.",
+    "rule": "Exact exported nodes reproduce normalized BCCG p50. Any between-node PCHIP is a separately documented application approximation, not the original fitted GAMLSS object or interpolation of L/M/S.",
+    "noExtrapolation": true
+  },
+  "useConstraints": [
+    "Only FSH is imported. This source extract does not activate LH, estradiol, testosterone, AMH, inhibin B or INSL3.",
+    "A policy-defined late-adolescent window may use these data without Tanner or cycle-phase questions. It is not a Tanner- or phase-specific reference.",
+    "Do not infer an early-follicular, fasting or early-morning reference from absent restrictions.",
+    "Known incompatible patient method or specimen and known treatment/pregnancy/stimulation remain exclusions under the application policy; missing context stays unknown.",
+    "Do not average or calibrate CALIPER values with neighboring Madsen or adult-reference data, and do not move the source marker to the educational line.",
+    "The full source age grid is evidence, not authorization to replace existing infant, childhood, puberty-comparison or adult profiles.",
+    "No age uncertainty crossing a source boundary may be resolved by silently selecting the midpoint age."
+  ],
+  "series": {
+    "male": {
+      "sheet": "FSH_M",
+      "sourceCellRange": "FSH_M!A2:D182",
+      "ageYearsMin": 1,
+      "ageYearsMax": 19,
+      "pointCount": 181,
+      "points": [
+        {
+          "ageYears": 1.0,
+          "L": 0.636760915983738,
+          "M": 0.364611906584827,
+          "S": 0.581878637733133,
+          "centralConcentration": 0.36553719082824493,
+          "sourceCells": [
+            "FSH_M!A2",
+            "FSH_M!B2",
+            "FSH_M!C2",
+            "FSH_M!D2"
+          ]
+        },
+        {
+          "ageYears": 1.1,
+          "L": 0.623469186375937,
+          "M": 0.369140772457679,
+          "S": 0.580822129541006,
+          "centralConcentration": 0.3699141789756272,
+          "sourceCells": [
+            "FSH_M!A3",
+            "FSH_M!B3",
+            "FSH_M!C3",
+            "FSH_M!D3"
+          ]
+        },
+        {
+          "ageYears": 1.2,
+          "L": 0.610182528826748,
+          "M": 0.373658394808945,
+          "S": 0.579771607152449,
+          "centralConcentration": 0.37429703123687513,
+          "sourceCells": [
+            "FSH_M!A4",
+            "FSH_M!B4",
+            "FSH_M!C4",
+            "FSH_M!D4"
+          ]
+        },
+        {
+          "ageYears": 1.3,
+          "L": 0.596906092490124,
+          "M": 0.37814845060912,
+          "S": 0.578731315783708,
+          "centralConcentration": 0.3786689281336408,
+          "sourceCells": [
+            "FSH_M!A5",
+            "FSH_M!B5",
+            "FSH_M!C5",
+            "FSH_M!D5"
+          ]
+        },
+        {
+          "ageYears": 1.4,
+          "L": 0.583645576196001,
+          "M": 0.382597686289744,
+          "S": 0.577705288742854,
+          "centralConcentration": 0.38301591231592236,
+          "sourceCells": [
+            "FSH_M!A6",
+            "FSH_M!B6",
+            "FSH_M!C6",
+            "FSH_M!D6"
+          ]
+        },
+        {
+          "ageYears": 1.5,
+          "L": 0.570406694857964,
+          "M": 0.386993339867112,
+          "S": 0.57669727675703,
+          "centralConcentration": 0.38732431657673244,
+          "sourceCells": [
+            "FSH_M!A7",
+            "FSH_M!B7",
+            "FSH_M!C7",
+            "FSH_M!D7"
+          ]
+        },
+        {
+          "ageYears": 1.6,
+          "L": 0.557194641302701,
+          "M": 0.39132004247177,
+          "S": 0.575710887822463,
+          "centralConcentration": 0.3915776889166573,
+          "sourceCells": [
+            "FSH_M!A8",
+            "FSH_M!B8",
+            "FSH_M!C8",
+            "FSH_M!D8"
+          ]
+        },
+        {
+          "ageYears": 1.7,
+          "L": 0.544014569122468,
+          "M": 0.395562224770239,
+          "S": 0.574749698926126,
+          "centralConcentration": 0.3957592409410182,
+          "sourceCells": [
+            "FSH_M!A9",
+            "FSH_M!B9",
+            "FSH_M!C9",
+            "FSH_M!D9"
+          ]
+        },
+        {
+          "ageYears": 1.8,
+          "L": 0.530871752655173,
+          "M": 0.399704592482489,
+          "S": 0.573817199537687,
+          "centralConcentration": 0.39985236173111394,
+          "sourceCells": [
+            "FSH_M!A10",
+            "FSH_M!B10",
+            "FSH_M!C10",
+            "FSH_M!D10"
+          ]
+        },
+        {
+          "ageYears": 1.9,
+          "L": 0.517771706990899,
+          "M": 0.403730744334281,
+          "S": 0.572916713423696,
+          "centralConcentration": 0.40383927668912617,
+          "sourceCells": [
+            "FSH_M!A11",
+            "FSH_M!B11",
+            "FSH_M!C11",
+            "FSH_M!D11"
+          ]
+        },
+        {
+          "ageYears": 2.0,
+          "L": 0.504719667163622,
+          "M": 0.407620901664753,
+          "S": 0.572051675163298,
+          "centralConcentration": 0.40769881976546796,
+          "sourceCells": [
+            "FSH_M!A12",
+            "FSH_M!B12",
+            "FSH_M!C12",
+            "FSH_M!D12"
+          ]
+        },
+        {
+          "ageYears": 2.1,
+          "L": 0.491720976519336,
+          "M": 0.411356914355493,
+          "S": 0.571225479912857,
+          "centralConcentration": 0.4114114843127722,
+          "sourceCells": [
+            "FSH_M!A13",
+            "FSH_M!B13",
+            "FSH_M!C13",
+            "FSH_M!D13"
+          ]
+        },
+        {
+          "ageYears": 2.2,
+          "L": 0.4787807106248,
+          "M": 0.414932408050415,
+          "S": 0.57044143032679,
+          "centralConcentration": 0.4149696089533218,
+          "sourceCells": [
+            "FSH_M!A14",
+            "FSH_M!B14",
+            "FSH_M!C14",
+            "FSH_M!D14"
+          ]
+        },
+        {
+          "ageYears": 2.3,
+          "L": 0.465903066667696,
+          "M": 0.418346036277976,
+          "S": 0.569702599233624,
+          "centralConcentration": 0.418370661013703,
+          "sourceCells": [
+            "FSH_M!A15",
+            "FSH_M!B15",
+            "FSH_M!C15",
+            "FSH_M!D15"
+          ]
+        },
+        {
+          "ageYears": 2.4,
+          "L": 0.45309211620332,
+          "M": 0.421595527851523,
+          "S": 0.569011700277217,
+          "centralConcentration": 0.421611311608257,
+          "sourceCells": [
+            "FSH_M!A16",
+            "FSH_M!B16",
+            "FSH_M!C16",
+            "FSH_M!D16"
+          ]
+        },
+        {
+          "ageYears": 2.5,
+          "L": 0.440351860278286,
+          "M": 0.424677062986249,
+          "S": 0.568371000132957,
+          "centralConcentration": 0.42468682908601546,
+          "sourceCells": [
+            "FSH_M!A17",
+            "FSH_M!B17",
+            "FSH_M!C17",
+            "FSH_M!D17"
+          ]
+        },
+        {
+          "ageYears": 2.6,
+          "L": 0.42768649706222,
+          "M": 0.427586716894003,
+          "S": 0.567782569807866,
+          "centralConcentration": 0.4275925297760777,
+          "sourceCells": [
+            "FSH_M!A18",
+            "FSH_M!B18",
+            "FSH_M!C18",
+            "FSH_M!D18"
+          ]
+        },
+        {
+          "ageYears": 2.7,
+          "L": 0.415100231608817,
+          "M": 0.430320563907231,
+          "S": 0.56724847904548,
+          "centralConcentration": 0.43032387919702475,
+          "sourceCells": [
+            "FSH_M!A19",
+            "FSH_M!B19",
+            "FSH_M!C19",
+            "FSH_M!D19"
+          ]
+        },
+        {
+          "ageYears": 2.8,
+          "L": 0.402597360998331,
+          "M": 0.432874836631337,
+          "S": 0.566770759981391,
+          "centralConcentration": 0.43287664046786517,
+          "sourceCells": [
+            "FSH_M!A20",
+            "FSH_M!B20",
+            "FSH_M!C20",
+            "FSH_M!D20"
+          ]
+        },
+        {
+          "ageYears": 2.9,
+          "L": 0.390183043472385,
+          "M": 0.435245110494228,
+          "S": 0.566351244902082,
+          "centralConcentration": 0.43524604218835167,
+          "sourceCells": [
+            "FSH_M!A21",
+            "FSH_M!B21",
+            "FSH_M!C21",
+            "FSH_M!D21"
+          ]
+        },
+        {
+          "ageYears": 3.0,
+          "L": 0.377862904852711,
+          "M": 0.43742510855994,
+          "S": 0.565991835787247,
+          "centralConcentration": 0.43742556285467393,
+          "sourceCells": [
+            "FSH_M!A22",
+            "FSH_M!B22",
+            "FSH_M!C22",
+            "FSH_M!D22"
+          ]
+        },
+        {
+          "ageYears": 3.1,
+          "L": 0.365642222475559,
+          "M": 0.439413413139362,
+          "S": 0.565694797831183,
+          "centralConcentration": 0.43941362094778935,
+          "sourceCells": [
+            "FSH_M!A23",
+            "FSH_M!B23",
+            "FSH_M!C23",
+            "FSH_M!D23"
+          ]
+        },
+        {
+          "ageYears": 3.2,
+          "L": 0.353525826558821,
+          "M": 0.441210081268496,
+          "S": 0.565462614851912,
+          "centralConcentration": 0.4412101698098723,
+          "sourceCells": [
+            "FSH_M!A24",
+            "FSH_M!B24",
+            "FSH_M!C24",
+            "FSH_M!D24"
+          ]
+        },
+        {
+          "ageYears": 3.3,
+          "L": 0.34151852638374,
+          "M": 0.442808678161342,
+          "S": 0.565297625426752,
+          "centralConcentration": 0.4428087130144335,
+          "sourceCells": [
+            "FSH_M!A25",
+            "FSH_M!B25",
+            "FSH_M!C25",
+            "FSH_M!D25"
+          ]
+        },
+        {
+          "ageYears": 3.4,
+          "L": 0.329625787934757,
+          "M": 0.444202481841279,
+          "S": 0.565201548779023,
+          "centralConcentration": 0.4442024943989336,
+          "sourceCells": [
+            "FSH_M!A26",
+            "FSH_M!B26",
+            "FSH_M!C26",
+            "FSH_M!D26"
+          ]
+        },
+        {
+          "ageYears": 3.5,
+          "L": 0.317853721406064,
+          "M": 0.445385357318864,
+          "S": 0.565175385533919,
+          "centralConcentration": 0.4453853614165184,
+          "sourceCells": [
+            "FSH_M!A27",
+            "FSH_M!B27",
+            "FSH_M!C27",
+            "FSH_M!D27"
+          ]
+        },
+        {
+          "ageYears": 3.6,
+          "L": 0.306208992210434,
+          "M": 0.446355567099409,
+          "S": 0.565219991846456,
+          "centralConcentration": 0.4463555682957657,
+          "sourceCells": [
+            "FSH_M!A28",
+            "FSH_M!B28",
+            "FSH_M!C28",
+            "FSH_M!D28"
+          ]
+        },
+        {
+          "ageYears": 3.7,
+          "L": 0.294698746713592,
+          "M": 0.447118033968071,
+          "S": 0.565336242664701,
+          "centralConcentration": 0.4471180342763016,
+          "sourceCells": [
+            "FSH_M!A29",
+            "FSH_M!B29",
+            "FSH_M!C29",
+            "FSH_M!D29"
+          ]
+        },
+        {
+          "ageYears": 3.8,
+          "L": 0.283330938023769,
+          "M": 0.447682993394626,
+          "S": 0.565524839933544,
+          "centralConcentration": 0.4476829934636052,
+          "sourceCells": [
+            "FSH_M!A30",
+            "FSH_M!B30",
+            "FSH_M!C30",
+            "FSH_M!D30"
+          ]
+        },
+        {
+          "ageYears": 3.9,
+          "L": 0.27211415055104,
+          "M": 0.448062131761787,
+          "S": 0.565786093104843,
+          "centralConcentration": 0.4480621317749551,
+          "sourceCells": [
+            "FSH_M!A31",
+            "FSH_M!B31",
+            "FSH_M!C31",
+            "FSH_M!D31"
+          ]
+        },
+        {
+          "ageYears": 4.0,
+          "L": 0.261056624435514,
+          "M": 0.448265628932707,
+          "S": 0.566120042553465,
+          "centralConcentration": 0.4482656289348067,
+          "sourceCells": [
+            "FSH_M!A32",
+            "FSH_M!B32",
+            "FSH_M!C32",
+            "FSH_M!D32"
+          ]
+        },
+        {
+          "ageYears": 4.1,
+          "L": 0.250166540548394,
+          "M": 0.44830346397274,
+          "S": 0.566526690505167,
+          "centralConcentration": 0.44830346397301296,
+          "sourceCells": [
+            "FSH_M!A33",
+            "FSH_M!B33",
+            "FSH_M!C33",
+            "FSH_M!D33"
+          ]
+        },
+        {
+          "ageYears": 4.2,
+          "L": 0.239452611997614,
+          "M": 0.448188946728193,
+          "S": 0.567005819770687,
+          "centralConcentration": 0.44818894672822124,
+          "sourceCells": [
+            "FSH_M!A34",
+            "FSH_M!B34",
+            "FSH_M!C34",
+            "FSH_M!D34"
+          ]
+        },
+        {
+          "ageYears": 4.3,
+          "L": 0.228925612427662,
+          "M": 0.447947052321408,
+          "S": 0.567556752075031,
+          "centralConcentration": 0.4479470523214102,
+          "sourceCells": [
+            "FSH_M!A35",
+            "FSH_M!B35",
+            "FSH_M!C35",
+            "FSH_M!D35"
+          ]
+        },
+        {
+          "ageYears": 4.4,
+          "L": 0.218597554947409,
+          "M": 0.4476089631073,
+          "S": 0.568178597131542,
+          "centralConcentration": 0.4476089631073,
+          "sourceCells": [
+            "FSH_M!A36",
+            "FSH_M!B36",
+            "FSH_M!C36",
+            "FSH_M!D36"
+          ]
+        },
+        {
+          "ageYears": 4.5,
+          "L": 0.208480350334942,
+          "M": 0.447205303044478,
+          "S": 0.568870226075715,
+          "centralConcentration": 0.447205303044478,
+          "sourceCells": [
+            "FSH_M!A37",
+            "FSH_M!B37",
+            "FSH_M!C37",
+            "FSH_M!D37"
+          ]
+        },
+        {
+          "ageYears": 4.6,
+          "L": 0.198585761302972,
+          "M": 0.446765511860985,
+          "S": 0.569629972971931,
+          "centralConcentration": 0.446765511860985,
+          "sourceCells": [
+            "FSH_M!A38",
+            "FSH_M!B38",
+            "FSH_M!C38",
+            "FSH_M!D38"
+          ]
+        },
+        {
+          "ageYears": 4.7,
+          "L": 0.188925129016942,
+          "M": 0.446317408479381,
+          "S": 0.570455962519196,
+          "centralConcentration": 0.446317408479381,
+          "sourceCells": [
+            "FSH_M!A39",
+            "FSH_M!B39",
+            "FSH_M!C39",
+            "FSH_M!D39"
+          ]
+        },
+        {
+          "ageYears": 4.8,
+          "L": 0.179508615211078,
+          "M": 0.445884472591422,
+          "S": 0.571345931364139,
+          "centralConcentration": 0.445884472591422,
+          "sourceCells": [
+            "FSH_M!A40",
+            "FSH_M!B40",
+            "FSH_M!C40",
+            "FSH_M!D40"
+          ]
+        },
+        {
+          "ageYears": 4.9,
+          "L": 0.170346086882069,
+          "M": 0.445489024693592,
+          "S": 0.572297445225709,
+          "centralConcentration": 0.445489024693592,
+          "sourceCells": [
+            "FSH_M!A41",
+            "FSH_M!B41",
+            "FSH_M!C41",
+            "FSH_M!D41"
+          ]
+        },
+        {
+          "ageYears": 5.0,
+          "L": 0.161446906316857,
+          "M": 0.445151300750279,
+          "S": 0.573307491507017,
+          "centralConcentration": 0.445151300750279,
+          "sourceCells": [
+            "FSH_M!A42",
+            "FSH_M!B42",
+            "FSH_M!C42",
+            "FSH_M!D42"
+          ]
+        },
+        {
+          "ageYears": 5.1,
+          "L": 0.152820253572853,
+          "M": 0.444890788640362,
+          "S": 0.574372846251921,
+          "centralConcentration": 0.444890788640362,
+          "sourceCells": [
+            "FSH_M!A43",
+            "FSH_M!B43",
+            "FSH_M!C43",
+            "FSH_M!D43"
+          ]
+        },
+        {
+          "ageYears": 5.2,
+          "L": 0.144474838642069,
+          "M": 0.444725123899863,
+          "S": 0.5754900471628,
+          "centralConcentration": 0.444725123899863,
+          "sourceCells": [
+            "FSH_M!A44",
+            "FSH_M!B44",
+            "FSH_M!C44",
+            "FSH_M!D44"
+          ]
+        },
+        {
+          "ageYears": 5.3,
+          "L": 0.136418505516754,
+          "M": 0.444667681656609,
+          "S": 0.576655323584959,
+          "centralConcentration": 0.444667681656609,
+          "sourceCells": [
+            "FSH_M!A45",
+            "FSH_M!B45",
+            "FSH_M!C45",
+            "FSH_M!D45"
+          ]
+        },
+        {
+          "ageYears": 5.4,
+          "L": 0.128658951136771,
+          "M": 0.444727216273313,
+          "S": 0.577865105334,
+          "centralConcentration": 0.444727216273313,
+          "sourceCells": [
+            "FSH_M!A46",
+            "FSH_M!B46",
+            "FSH_M!C46",
+            "FSH_M!D46"
+          ]
+        },
+        {
+          "ageYears": 5.5,
+          "L": 0.121204165033466,
+          "M": 0.444913783278066,
+          "S": 0.579115620954213,
+          "centralConcentration": 0.444913783278066,
+          "sourceCells": [
+            "FSH_M!A47",
+            "FSH_M!B47",
+            "FSH_M!C47",
+            "FSH_M!D47"
+          ]
+        },
+        {
+          "ageYears": 5.6,
+          "L": 0.114062067788347,
+          "M": 0.445240064664152,
+          "S": 0.580402824071468,
+          "centralConcentration": 0.445240064664152,
+          "sourceCells": [
+            "FSH_M!A48",
+            "FSH_M!B48",
+            "FSH_M!C48",
+            "FSH_M!D48"
+          ]
+        },
+        {
+          "ageYears": 5.7,
+          "L": 0.107240243252946,
+          "M": 0.445718973240065,
+          "S": 0.581722435730632,
+          "centralConcentration": 0.445718973240065,
+          "sourceCells": [
+            "FSH_M!A49",
+            "FSH_M!B49",
+            "FSH_M!C49",
+            "FSH_M!D49"
+          ]
+        },
+        {
+          "ageYears": 5.8,
+          "L": 0.100744818043503,
+          "M": 0.446362699021644,
+          "S": 0.5830701509545,
+          "centralConcentration": 0.446362699021644,
+          "sourceCells": [
+            "FSH_M!A50",
+            "FSH_M!B50",
+            "FSH_M!C50",
+            "FSH_M!D50"
+          ]
+        },
+        {
+          "ageYears": 5.9,
+          "L": 0.0945802864899489,
+          "M": 0.447187131322049,
+          "S": 0.584442030701544,
+          "centralConcentration": 0.447187131322049,
+          "sourceCells": [
+            "FSH_M!A51",
+            "FSH_M!B51",
+            "FSH_M!C51",
+            "FSH_M!D51"
+          ]
+        },
+        {
+          "ageYears": 6.0,
+          "L": 0.0887514061205585,
+          "M": 0.448210818338276,
+          "S": 0.585834077018282,
+          "centralConcentration": 0.448210818338276,
+          "sourceCells": [
+            "FSH_M!A52",
+            "FSH_M!B52",
+            "FSH_M!C52",
+            "FSH_M!D52"
+          ]
+        },
+        {
+          "ageYears": 6.1,
+          "L": 0.0832637363687391,
+          "M": 0.449457700666652,
+          "S": 0.587242210262001,
+          "centralConcentration": 0.449457700666652,
+          "sourceCells": [
+            "FSH_M!A53",
+            "FSH_M!B53",
+            "FSH_M!C53",
+            "FSH_M!D53"
+          ]
+        },
+        {
+          "ageYears": 6.2,
+          "L": 0.0781229215079299,
+          "M": 0.45095247359073,
+          "S": 0.588662200484168,
+          "centralConcentration": 0.45095247359073,
+          "sourceCells": [
+            "FSH_M!A54",
+            "FSH_M!B54",
+            "FSH_M!C54",
+            "FSH_M!D54"
+          ]
+        },
+        {
+          "ageYears": 6.3,
+          "L": 0.0733345584687971,
+          "M": 0.452719552368032,
+          "S": 0.590089461083081,
+          "centralConcentration": 0.452719552368032,
+          "sourceCells": [
+            "FSH_M!A55",
+            "FSH_M!B55",
+            "FSH_M!C55",
+            "FSH_M!D55"
+          ]
+        },
+        {
+          "ageYears": 6.4,
+          "L": 0.0689045923439101,
+          "M": 0.454785096444801,
+          "S": 0.591519302209202,
+          "centralConcentration": 0.454785096444801,
+          "sourceCells": [
+            "FSH_M!A56",
+            "FSH_M!B56",
+            "FSH_M!C56",
+            "FSH_M!D56"
+          ]
+        },
+        {
+          "ageYears": 6.5,
+          "L": 0.064839240954556,
+          "M": 0.457178805714872,
+          "S": 0.592947071160396,
+          "centralConcentration": 0.457178805714872,
+          "sourceCells": [
+            "FSH_M!A57",
+            "FSH_M!B57",
+            "FSH_M!C57",
+            "FSH_M!D57"
+          ]
+        },
+        {
+          "ageYears": 6.6,
+          "L": 0.0611428863693971,
+          "M": 0.459936824018968,
+          "S": 0.59436862880124,
+          "centralConcentration": 0.459936824018968,
+          "sourceCells": [
+            "FSH_M!A58",
+            "FSH_M!B58",
+            "FSH_M!C58",
+            "FSH_M!D58"
+          ]
+        },
+        {
+          "ageYears": 6.7,
+          "L": 0.0578191273913428,
+          "M": 0.463096477305276,
+          "S": 0.595779866984947,
+          "centralConcentration": 0.463096477305276,
+          "sourceCells": [
+            "FSH_M!A59",
+            "FSH_M!B59",
+            "FSH_M!C59",
+            "FSH_M!D59"
+          ]
+        },
+        {
+          "ageYears": 6.8,
+          "L": 0.0548703252927669,
+          "M": 0.466688273548614,
+          "S": 0.597176119648673,
+          "centralConcentration": 0.466688273548614,
+          "sourceCells": [
+            "FSH_M!A60",
+            "FSH_M!B60",
+            "FSH_M!C60",
+            "FSH_M!D60"
+          ]
+        },
+        {
+          "ageYears": 6.9,
+          "L": 0.0522970475964838,
+          "M": 0.470733730340323,
+          "S": 0.598551940194893,
+          "centralConcentration": 0.470733730340323,
+          "sourceCells": [
+            "FSH_M!A61",
+            "FSH_M!B61",
+            "FSH_M!C61",
+            "FSH_M!D61"
+          ]
+        },
+        {
+          "ageYears": 7.0,
+          "L": 0.0500975298647666,
+          "M": 0.475250025118357,
+          "S": 0.599901226838056,
+          "centralConcentration": 0.475250025118357,
+          "sourceCells": [
+            "FSH_M!A62",
+            "FSH_M!B62",
+            "FSH_M!C62",
+            "FSH_M!D62"
+          ]
+        },
+        {
+          "ageYears": 7.1,
+          "L": 0.0482576472013324,
+          "M": 0.480254156720261,
+          "S": 0.601218887023506,
+          "centralConcentration": 0.480254156720261,
+          "sourceCells": [
+            "FSH_M!A63",
+            "FSH_M!B63",
+            "FSH_M!C63",
+            "FSH_M!D63"
+          ]
+        },
+        {
+          "ageYears": 7.2,
+          "L": 0.0467553459805251,
+          "M": 0.485767839635929,
+          "S": 0.602501159804131,
+          "centralConcentration": 0.485767839635929,
+          "sourceCells": [
+            "FSH_M!A64",
+            "FSH_M!B64",
+            "FSH_M!C64",
+            "FSH_M!D64"
+          ]
+        },
+        {
+          "ageYears": 7.3,
+          "L": 0.045567675368078,
+          "M": 0.491813329264403,
+          "S": 0.603744432445494,
+          "centralConcentration": 0.491813329264403,
+          "sourceCells": [
+            "FSH_M!A65",
+            "FSH_M!B65",
+            "FSH_M!C65",
+            "FSH_M!D65"
+          ]
+        },
+        {
+          "ageYears": 7.4,
+          "L": 0.0446718645612919,
+          "M": 0.49841482826411,
+          "S": 0.604944850519898,
+          "centralConcentration": 0.49841482826411,
+          "sourceCells": [
+            "FSH_M!A66",
+            "FSH_M!B66",
+            "FSH_M!C66",
+            "FSH_M!D66"
+          ]
+        },
+        {
+          "ageYears": 7.5,
+          "L": 0.0440452163050035,
+          "M": 0.505597794964953,
+          "S": 0.606098085613397,
+          "centralConcentration": 0.505597794964953,
+          "sourceCells": [
+            "FSH_M!A67",
+            "FSH_M!B67",
+            "FSH_M!C67",
+            "FSH_M!D67"
+          ]
+        },
+        {
+          "ageYears": 7.6,
+          "L": 0.0436650271716605,
+          "M": 0.513386660418194,
+          "S": 0.607199709229591,
+          "centralConcentration": 0.513386660418194,
+          "sourceCells": [
+            "FSH_M!A68",
+            "FSH_M!B68",
+            "FSH_M!C68",
+            "FSH_M!D68"
+          ]
+        },
+        {
+          "ageYears": 7.7,
+          "L": 0.04350809382427,
+          "M": 0.521800269456481,
+          "S": 0.60824504304332,
+          "centralConcentration": 0.521800269456481,
+          "sourceCells": [
+            "FSH_M!A69",
+            "FSH_M!B69",
+            "FSH_M!C69",
+            "FSH_M!D69"
+          ]
+        },
+        {
+          "ageYears": 7.8,
+          "L": 0.0435523770165417,
+          "M": 0.530852499319271,
+          "S": 0.609229502739919,
+          "centralConcentration": 0.530852499319271,
+          "sourceCells": [
+            "FSH_M!A70",
+            "FSH_M!B70",
+            "FSH_M!C70",
+            "FSH_M!D70"
+          ]
+        },
+        {
+          "ageYears": 7.9,
+          "L": 0.0437832090726297,
+          "M": 0.540550197598074,
+          "S": 0.610149346265779,
+          "centralConcentration": 0.540550197598074,
+          "sourceCells": [
+            "FSH_M!A71",
+            "FSH_M!B71",
+            "FSH_M!C71",
+            "FSH_M!D71"
+          ]
+        },
+        {
+          "ageYears": 8.0,
+          "L": 0.0441870993368452,
+          "M": 0.550898217332179,
+          "S": 0.611001185215039,
+          "centralConcentration": 0.550898217332179,
+          "sourceCells": [
+            "FSH_M!A72",
+            "FSH_M!B72",
+            "FSH_M!C72",
+            "FSH_M!D72"
+          ]
+        },
+        {
+          "ageYears": 8.1,
+          "L": 0.0447491128002883,
+          "M": 0.561905600811148,
+          "S": 0.611782653948079,
+          "centralConcentration": 0.561905600811148,
+          "sourceCells": [
+            "FSH_M!A73",
+            "FSH_M!B73",
+            "FSH_M!C73",
+            "FSH_M!D73"
+          ]
+        },
+        {
+          "ageYears": 8.2,
+          "L": 0.045453123732387,
+          "M": 0.573590147184721,
+          "S": 0.612492261212992,
+          "centralConcentration": 0.573590147184721,
+          "sourceCells": [
+            "FSH_M!A74",
+            "FSH_M!B74",
+            "FSH_M!C74",
+            "FSH_M!D74"
+          ]
+        },
+        {
+          "ageYears": 8.3,
+          "L": 0.0462821960529577,
+          "M": 0.585974483607123,
+          "S": 0.613128387642063,
+          "centralConcentration": 0.585974483607123,
+          "sourceCells": [
+            "FSH_M!A75",
+            "FSH_M!B75",
+            "FSH_M!C75",
+            "FSH_M!D75"
+          ]
+        },
+        {
+          "ageYears": 8.4,
+          "L": 0.0472206352529209,
+          "M": 0.599079512900301,
+          "S": 0.613688987558063,
+          "centralConcentration": 0.599079512900301,
+          "sourceCells": [
+            "FSH_M!A76",
+            "FSH_M!B76",
+            "FSH_M!C76",
+            "FSH_M!D76"
+          ]
+        },
+        {
+          "ageYears": 8.5,
+          "L": 0.0482573169608869,
+          "M": 0.612920561201296,
+          "S": 0.614172940504407,
+          "centralConcentration": 0.612920561201296,
+          "sourceCells": [
+            "FSH_M!A77",
+            "FSH_M!B77",
+            "FSH_M!C77",
+            "FSH_M!D77"
+          ]
+        },
+        {
+          "ageYears": 8.6,
+          "L": 0.0493822483674519,
+          "M": 0.627512023045878,
+          "S": 0.61457879142791,
+          "centralConcentration": 0.627512023045878,
+          "sourceCells": [
+            "FSH_M!A78",
+            "FSH_M!B78",
+            "FSH_M!C78",
+            "FSH_M!D78"
+          ]
+        },
+        {
+          "ageYears": 8.7,
+          "L": 0.0505860995692274,
+          "M": 0.6428694077384,
+          "S": 0.614904515140347,
+          "centralConcentration": 0.6428694077384,
+          "sourceCells": [
+            "FSH_M!A79",
+            "FSH_M!B79",
+            "FSH_M!C79",
+            "FSH_M!D79"
+          ]
+        },
+        {
+          "ageYears": 8.8,
+          "L": 0.0518598416017696,
+          "M": 0.659006396445549,
+          "S": 0.615147678438897,
+          "centralConcentration": 0.659006396445549,
+          "sourceCells": [
+            "FSH_M!A80",
+            "FSH_M!B80",
+            "FSH_M!C80",
+            "FSH_M!D80"
+          ]
+        },
+        {
+          "ageYears": 8.9,
+          "L": 0.0531940877907726,
+          "M": 0.67593284249658,
+          "S": 0.615304403255148,
+          "centralConcentration": 0.67593284249658,
+          "sourceCells": [
+            "FSH_M!A81",
+            "FSH_M!B81",
+            "FSH_M!C81",
+            "FSH_M!D81"
+          ]
+        },
+        {
+          "ageYears": 9.0,
+          "L": 0.0545787495370455,
+          "M": 0.69365658871018,
+          "S": 0.615369596524047,
+          "centralConcentration": 0.69365658871018,
+          "sourceCells": [
+            "FSH_M!A82",
+            "FSH_M!B82",
+            "FSH_M!C82",
+            "FSH_M!D82"
+          ]
+        },
+        {
+          "ageYears": 9.1,
+          "L": 0.0560036877242943,
+          "M": 0.712185372003149,
+          "S": 0.615338072369588,
+          "centralConcentration": 0.712185372003149,
+          "sourceCells": [
+            "FSH_M!A83",
+            "FSH_M!B83",
+            "FSH_M!C83",
+            "FSH_M!D83"
+          ]
+        },
+        {
+          "ageYears": 9.2,
+          "L": 0.0574589762270923,
+          "M": 0.731525221795511,
+          "S": 0.615204497707908,
+          "centralConcentration": 0.731525221795511,
+          "sourceCells": [
+            "FSH_M!A84",
+            "FSH_M!B84",
+            "FSH_M!C84",
+            "FSH_M!D84"
+          ]
+        },
+        {
+          "ageYears": 9.3,
+          "L": 0.0589349907872532,
+          "M": 0.751677976016893,
+          "S": 0.614963654083564,
+          "centralConcentration": 0.751677976016893,
+          "sourceCells": [
+            "FSH_M!A85",
+            "FSH_M!B85",
+            "FSH_M!C85",
+            "FSH_M!D85"
+          ]
+        },
+        {
+          "ageYears": 9.4,
+          "L": 0.060425708354351,
+          "M": 0.772642178260585,
+          "S": 0.614610922001489,
+          "centralConcentration": 0.772642178260585,
+          "sourceCells": [
+            "FSH_M!A86",
+            "FSH_M!B86",
+            "FSH_M!C86",
+            "FSH_M!D86"
+          ]
+        },
+        {
+          "ageYears": 9.5,
+          "L": 0.061932248084953,
+          "M": 0.794405623404735,
+          "S": 0.61414397331368,
+          "centralConcentration": 0.794405623404735,
+          "sourceCells": [
+            "FSH_M!A87",
+            "FSH_M!B87",
+            "FSH_M!C87",
+            "FSH_M!D87"
+          ]
+        },
+        {
+          "ageYears": 9.6,
+          "L": 0.0634632844740646,
+          "M": 0.816947261156685,
+          "S": 0.613562938042555,
+          "centralConcentration": 0.816947261156685,
+          "sourceCells": [
+            "FSH_M!A88",
+            "FSH_M!B88",
+            "FSH_M!C88",
+            "FSH_M!D88"
+          ]
+        },
+        {
+          "ageYears": 9.7,
+          "L": 0.0650285004442709,
+          "M": 0.840241488340789,
+          "S": 0.612868153962687,
+          "centralConcentration": 0.840241488340789,
+          "sourceCells": [
+            "FSH_M!A89",
+            "FSH_M!B89",
+            "FSH_M!C89",
+            "FSH_M!D89"
+          ]
+        },
+        {
+          "ageYears": 9.8,
+          "L": 0.0666369327753724,
+          "M": 0.864258153485775,
+          "S": 0.61206009629321,
+          "centralConcentration": 0.864258153485775,
+          "sourceCells": [
+            "FSH_M!A90",
+            "FSH_M!B90",
+            "FSH_M!C90",
+            "FSH_M!D90"
+          ]
+        },
+        {
+          "ageYears": 9.9,
+          "L": 0.068296365493216,
+          "M": 0.888960125253965,
+          "S": 0.611139558749219,
+          "centralConcentration": 0.888960125253965,
+          "sourceCells": [
+            "FSH_M!A91",
+            "FSH_M!B91",
+            "FSH_M!C91",
+            "FSH_M!D91"
+          ]
+        },
+        {
+          "ageYears": 10.0,
+          "L": 0.0700148843237569,
+          "M": 0.914309109033849,
+          "S": 0.610107529802953,
+          "centralConcentration": 0.914309109033849,
+          "sourceCells": [
+            "FSH_M!A92",
+            "FSH_M!B92",
+            "FSH_M!C92",
+            "FSH_M!D92"
+          ]
+        },
+        {
+          "ageYears": 10.1,
+          "L": 0.0718027775481561,
+          "M": 0.940265254247932,
+          "S": 0.608965275929856,
+          "centralConcentration": 0.940265254247932,
+          "sourceCells": [
+            "FSH_M!A93",
+            "FSH_M!B93",
+            "FSH_M!C93",
+            "FSH_M!D93"
+          ]
+        },
+        {
+          "ageYears": 10.2,
+          "L": 0.0736705069525378,
+          "M": 0.966787284514279,
+          "S": 0.607713404757045,
+          "centralConcentration": 0.966787284514279,
+          "sourceCells": [
+            "FSH_M!A94",
+            "FSH_M!B94",
+            "FSH_M!C94",
+            "FSH_M!D94"
+          ]
+        },
+        {
+          "ageYears": 10.3,
+          "L": 0.0756279533842103,
+          "M": 0.993835340672596,
+          "S": 0.606351963070426,
+          "centralConcentration": 0.993835340672596,
+          "sourceCells": [
+            "FSH_M!A95",
+            "FSH_M!B95",
+            "FSH_M!C95",
+            "FSH_M!D95"
+          ]
+        },
+        {
+          "ageYears": 10.4,
+          "L": 0.0776827251747473,
+          "M": 1.02136938323825,
+          "S": 0.604880336616025,
+          "centralConcentration": 1.02136938323825,
+          "sourceCells": [
+            "FSH_M!A96",
+            "FSH_M!B96",
+            "FSH_M!C96",
+            "FSH_M!D96"
+          ]
+        },
+        {
+          "ageYears": 10.5,
+          "L": 0.0798360742566675,
+          "M": 1.04935626639709,
+          "S": 0.603299050965857,
+          "centralConcentration": 1.04935626639709,
+          "sourceCells": [
+            "FSH_M!A97",
+            "FSH_M!B97",
+            "FSH_M!C97",
+            "FSH_M!D97"
+          ]
+        },
+        {
+          "ageYears": 10.6,
+          "L": 0.082085872346962,
+          "M": 1.07776799840687,
+          "S": 0.601609252100428,
+          "centralConcentration": 1.07776799840687,
+          "sourceCells": [
+            "FSH_M!A98",
+            "FSH_M!B98",
+            "FSH_M!C98",
+            "FSH_M!D98"
+          ]
+        },
+        {
+          "ageYears": 10.7,
+          "L": 0.0844298320065932,
+          "M": 1.10657547398018,
+          "S": 0.59981284188837,
+          "centralConcentration": 1.10657547398018,
+          "sourceCells": [
+            "FSH_M!A99",
+            "FSH_M!B99",
+            "FSH_M!C99",
+            "FSH_M!D99"
+          ]
+        },
+        {
+          "ageYears": 10.8,
+          "L": 0.0868640223524292,
+          "M": 1.13575103788318,
+          "S": 0.597913113676736,
+          "centralConcentration": 1.13575103788318,
+          "sourceCells": [
+            "FSH_M!A100",
+            "FSH_M!B100",
+            "FSH_M!C100",
+            "FSH_M!D100"
+          ]
+        },
+        {
+          "ageYears": 10.9,
+          "L": 0.0893823629292765,
+          "M": 1.16526451174292,
+          "S": 0.595914294996014,
+          "centralConcentration": 1.16526451174292,
+          "sourceCells": [
+            "FSH_M!A101",
+            "FSH_M!B101",
+            "FSH_M!C101",
+            "FSH_M!D101"
+          ]
+        },
+        {
+          "ageYears": 11.0,
+          "L": 0.091977281016865,
+          "M": 1.19508276974741,
+          "S": 0.593823374778721,
+          "centralConcentration": 1.19508276974741,
+          "sourceCells": [
+            "FSH_M!A102",
+            "FSH_M!B102",
+            "FSH_M!C102",
+            "FSH_M!D102"
+          ]
+        },
+        {
+          "ageYears": 11.1,
+          "L": 0.0946446935042456,
+          "M": 1.22516849476998,
+          "S": 0.59164905599727,
+          "centralConcentration": 1.22516849476998,
+          "sourceCells": [
+            "FSH_M!A103",
+            "FSH_M!B103",
+            "FSH_M!C103",
+            "FSH_M!D103"
+          ]
+        },
+        {
+          "ageYears": 11.2,
+          "L": 0.0973811419297274,
+          "M": 1.25548330690497,
+          "S": 0.589400161668004,
+          "centralConcentration": 1.25548330690497,
+          "sourceCells": [
+            "FSH_M!A104",
+            "FSH_M!B104",
+            "FSH_M!C104",
+            "FSH_M!D104"
+          ]
+        },
+        {
+          "ageYears": 11.3,
+          "L": 0.100184637562051,
+          "M": 1.2859919030591,
+          "S": 0.587084876114923,
+          "centralConcentration": 1.2859919030591,
+          "sourceCells": [
+            "FSH_M!A105",
+            "FSH_M!B105",
+            "FSH_M!C105",
+            "FSH_M!D105"
+          ]
+        },
+        {
+          "ageYears": 11.4,
+          "L": 0.103055249408989,
+          "M": 1.31665853697664,
+          "S": 0.584710901113849,
+          "centralConcentration": 1.31665853697664,
+          "sourceCells": [
+            "FSH_M!A106",
+            "FSH_M!B106",
+            "FSH_M!C106",
+            "FSH_M!D106"
+          ]
+        },
+        {
+          "ageYears": 11.5,
+          "L": 0.105993796942528,
+          "M": 1.34744406106914,
+          "S": 0.582285867691405,
+          "centralConcentration": 1.34744406106914,
+          "sourceCells": [
+            "FSH_M!A107",
+            "FSH_M!B107",
+            "FSH_M!C107",
+            "FSH_M!D107"
+          ]
+        },
+        {
+          "ageYears": 11.6,
+          "L": 0.109004340135874,
+          "M": 1.37830909429636,
+          "S": 0.579817468460572,
+          "centralConcentration": 1.37830909429636,
+          "sourceCells": [
+            "FSH_M!A108",
+            "FSH_M!B108",
+            "FSH_M!C108",
+            "FSH_M!D108"
+          ]
+        },
+        {
+          "ageYears": 11.7,
+          "L": 0.11209358657029,
+          "M": 1.40921380864604,
+          "S": 0.577313432746306,
+          "centralConcentration": 1.40921380864604,
+          "sourceCells": [
+            "FSH_M!A109",
+            "FSH_M!B109",
+            "FSH_M!C109",
+            "FSH_M!D109"
+          ]
+        },
+        {
+          "ageYears": 11.8,
+          "L": 0.11527013941868,
+          "M": 1.44011997179215,
+          "S": 0.574779780191161,
+          "centralConcentration": 1.44011997179215,
+          "sourceCells": [
+            "FSH_M!A110",
+            "FSH_M!B110",
+            "FSH_M!C110",
+            "FSH_M!D110"
+          ]
+        },
+        {
+          "ageYears": 11.9,
+          "L": 0.118542791765565,
+          "M": 1.47098965091355,
+          "S": 0.572220978043823,
+          "centralConcentration": 1.47098965091355,
+          "sourceCells": [
+            "FSH_M!A111",
+            "FSH_M!B111",
+            "FSH_M!C111",
+            "FSH_M!D111"
+          ]
+        },
+        {
+          "ageYears": 12.0,
+          "L": 0.121919740097562,
+          "M": 1.50178400971422,
+          "S": 0.569640481933896,
+          "centralConcentration": 1.50178400971422,
+          "sourceCells": [
+            "FSH_M!A112",
+            "FSH_M!B112",
+            "FSH_M!C112",
+            "FSH_M!D112"
+          ]
+        },
+        {
+          "ageYears": 12.1,
+          "L": 0.125410179618253,
+          "M": 1.53246323567736,
+          "S": 0.567041158154094,
+          "centralConcentration": 1.53246323567736,
+          "sourceCells": [
+            "FSH_M!A113",
+            "FSH_M!B113",
+            "FSH_M!C113",
+            "FSH_M!D113"
+          ]
+        },
+        {
+          "ageYears": 12.2,
+          "L": 0.129024546653014,
+          "M": 1.56298863551238,
+          "S": 0.564425465706749,
+          "centralConcentration": 1.56298863551238,
+          "sourceCells": [
+            "FSH_M!A114",
+            "FSH_M!B114",
+            "FSH_M!C114",
+            "FSH_M!D114"
+          ]
+        },
+        {
+          "ageYears": 12.3,
+          "L": 0.132773988792273,
+          "M": 1.59332552992632,
+          "S": 0.561796117961305,
+          "centralConcentration": 1.59332552992632,
+          "sourceCells": [
+            "FSH_M!A115",
+            "FSH_M!B115",
+            "FSH_M!C115",
+            "FSH_M!D115"
+          ]
+        },
+        {
+          "ageYears": 12.4,
+          "L": 0.136670060737402,
+          "M": 1.62344307582725,
+          "S": 0.559155839091143,
+          "centralConcentration": 1.62344307582725,
+          "sourceCells": [
+            "FSH_M!A116",
+            "FSH_M!B116",
+            "FSH_M!C116",
+            "FSH_M!D116"
+          ]
+        },
+        {
+          "ageYears": 12.5,
+          "L": 0.14072477596732,
+          "M": 1.65331132926221,
+          "S": 0.556506374045536,
+          "centralConcentration": 1.65331132926221,
+          "sourceCells": [
+            "FSH_M!A117",
+            "FSH_M!B117",
+            "FSH_M!C117",
+            "FSH_M!D117"
+          ]
+        },
+        {
+          "ageYears": 12.6,
+          "L": 0.144949541858755,
+          "M": 1.68290065798846,
+          "S": 0.553849157040742,
+          "centralConcentration": 1.68290065798846,
+          "sourceCells": [
+            "FSH_M!A118",
+            "FSH_M!B118",
+            "FSH_M!C118",
+            "FSH_M!D118"
+          ]
+        },
+        {
+          "ageYears": 12.7,
+          "L": 0.14935119074681,
+          "M": 1.71218218483275,
+          "S": 0.551186324469579,
+          "centralConcentration": 1.71218218483275,
+          "sourceCells": [
+            "FSH_M!A119",
+            "FSH_M!B119",
+            "FSH_M!C119",
+            "FSH_M!D119"
+          ]
+        },
+        {
+          "ageYears": 12.8,
+          "L": 0.153933110301857,
+          "M": 1.74112693949641,
+          "S": 0.548519722167774,
+          "centralConcentration": 1.74112693949641,
+          "sourceCells": [
+            "FSH_M!A120",
+            "FSH_M!B120",
+            "FSH_M!C120",
+            "FSH_M!D120"
+          ]
+        },
+        {
+          "ageYears": 12.9,
+          "L": 0.158698064274538,
+          "M": 1.7697052658142,
+          "S": 0.545850318432384,
+          "centralConcentration": 1.7697052658142,
+          "sourceCells": [
+            "FSH_M!A121",
+            "FSH_M!B121",
+            "FSH_M!C121",
+            "FSH_M!D121"
+          ]
+        },
+        {
+          "ageYears": 13.0,
+          "L": 0.163648625266734,
+          "M": 1.79788840152082,
+          "S": 0.543178679451348,
+          "centralConcentration": 1.79788840152082,
+          "sourceCells": [
+            "FSH_M!A122",
+            "FSH_M!B122",
+            "FSH_M!C122",
+            "FSH_M!D122"
+          ]
+        },
+        {
+          "ageYears": 13.1,
+          "L": 0.168785778678305,
+          "M": 1.82565060384979,
+          "S": 0.540505558120265,
+          "centralConcentration": 1.82565060384979,
+          "sourceCells": [
+            "FSH_M!A123",
+            "FSH_M!B123",
+            "FSH_M!C123",
+            "FSH_M!D123"
+          ]
+        },
+        {
+          "ageYears": 13.2,
+          "L": 0.17410527044956,
+          "M": 1.85297025559655,
+          "S": 0.537832122116673,
+          "centralConcentration": 1.85297025559655,
+          "sourceCells": [
+            "FSH_M!A124",
+            "FSH_M!B124",
+            "FSH_M!C124",
+            "FSH_M!D124"
+          ]
+        },
+        {
+          "ageYears": 13.3,
+          "L": 0.179600294445868,
+          "M": 1.87982926628234,
+          "S": 0.53516069237745,
+          "centralConcentration": 1.87982926628234,
+          "sourceCells": [
+            "FSH_M!A125",
+            "FSH_M!B125",
+            "FSH_M!C125",
+            "FSH_M!D125"
+          ]
+        },
+        {
+          "ageYears": 13.4,
+          "L": 0.185265279805806,
+          "M": 1.90621129765429,
+          "S": 0.532492932893382,
+          "centralConcentration": 1.90621129765429,
+          "sourceCells": [
+            "FSH_M!A126",
+            "FSH_M!B126",
+            "FSH_M!C126",
+            "FSH_M!D126"
+          ]
+        },
+        {
+          "ageYears": 13.5,
+          "L": 0.191094950740062,
+          "M": 1.93210142086656,
+          "S": 0.52982940521395,
+          "centralConcentration": 1.93210142086656,
+          "sourceCells": [
+            "FSH_M!A127",
+            "FSH_M!B127",
+            "FSH_M!C127",
+            "FSH_M!D127"
+          ]
+        },
+        {
+          "ageYears": 13.6,
+          "L": 0.197084050328307,
+          "M": 1.95748651994757,
+          "S": 0.527170783986498,
+          "centralConcentration": 1.95748651994757,
+          "sourceCells": [
+            "FSH_M!A128",
+            "FSH_M!B128",
+            "FSH_M!C128",
+            "FSH_M!D128"
+          ]
+        },
+        {
+          "ageYears": 13.7,
+          "L": 0.203227972325702,
+          "M": 1.98235482128786,
+          "S": 0.524517775942168,
+          "centralConcentration": 1.98235482128786,
+          "sourceCells": [
+            "FSH_M!A129",
+            "FSH_M!B129",
+            "FSH_M!C129",
+            "FSH_M!D129"
+          ]
+        },
+        {
+          "ageYears": 13.8,
+          "L": 0.209522645919279,
+          "M": 2.00669925174393,
+          "S": 0.521871841997655,
+          "centralConcentration": 2.00669925174393,
+          "sourceCells": [
+            "FSH_M!A130",
+            "FSH_M!B130",
+            "FSH_M!C130",
+            "FSH_M!D130"
+          ]
+        },
+        {
+          "ageYears": 13.9,
+          "L": 0.215964508386664,
+          "M": 2.0305155668937,
+          "S": 0.519234588214402,
+          "centralConcentration": 2.0305155668937,
+          "sourceCells": [
+            "FSH_M!A131",
+            "FSH_M!B131",
+            "FSH_M!C131",
+            "FSH_M!D131"
+          ]
+        },
+        {
+          "ageYears": 14.0,
+          "L": 0.222550441934581,
+          "M": 2.05380013857147,
+          "S": 0.516607681031876,
+          "centralConcentration": 2.05380013857147,
+          "sourceCells": [
+            "FSH_M!A132",
+            "FSH_M!B132",
+            "FSH_M!C132",
+            "FSH_M!D132"
+          ]
+        },
+        {
+          "ageYears": 14.1,
+          "L": 0.22927757539092,
+          "M": 2.07654752544295,
+          "S": 0.513992934255754,
+          "centralConcentration": 2.07654752544295,
+          "sourceCells": [
+            "FSH_M!A133",
+            "FSH_M!B133",
+            "FSH_M!C133",
+            "FSH_M!D133"
+          ]
+        },
+        {
+          "ageYears": 14.2,
+          "L": 0.236142305930395,
+          "M": 2.09875107440842,
+          "S": 0.511391523680879,
+          "centralConcentration": 2.09875107440842,
+          "sourceCells": [
+            "FSH_M!A134",
+            "FSH_M!B134",
+            "FSH_M!C134",
+            "FSH_M!D134"
+          ]
+        },
+        {
+          "ageYears": 14.3,
+          "L": 0.243140911947939,
+          "M": 2.12040444185778,
+          "S": 0.508804407978017,
+          "centralConcentration": 2.12040444185778,
+          "sourceCells": [
+            "FSH_M!A135",
+            "FSH_M!B135",
+            "FSH_M!C135",
+            "FSH_M!D135"
+          ]
+        },
+        {
+          "ageYears": 14.4,
+          "L": 0.250270200819172,
+          "M": 2.14150248529435,
+          "S": 0.506232607855842,
+          "centralConcentration": 2.141502485294352,
+          "sourceCells": [
+            "FSH_M!A136",
+            "FSH_M!B136",
+            "FSH_M!C136",
+            "FSH_M!D136"
+          ]
+        },
+        {
+          "ageYears": 14.5,
+          "L": 0.257526817845262,
+          "M": 2.16204081418284,
+          "S": 0.50367715039697,
+          "centralConcentration": 2.1620408141828493,
+          "sourceCells": [
+            "FSH_M!A137",
+            "FSH_M!B137",
+            "FSH_M!C137",
+            "FSH_M!D137"
+          ]
+        },
+        {
+          "ageYears": 14.6,
+          "L": 0.264906555311912,
+          "M": 2.18201554737967,
+          "S": 0.50113894531798,
+          "centralConcentration": 2.182015547379705,
+          "sourceCells": [
+            "FSH_M!A138",
+            "FSH_M!B138",
+            "FSH_M!C138",
+            "FSH_M!D138"
+          ]
+        },
+        {
+          "ageYears": 14.7,
+          "L": 0.272404101645198,
+          "M": 2.20142787606476,
+          "S": 0.49861913208302,
+          "centralConcentration": 2.2014278760648835,
+          "sourceCells": [
+            "FSH_M!A139",
+            "FSH_M!B139",
+            "FSH_M!C139",
+            "FSH_M!D139"
+          ]
+        },
+        {
+          "ageYears": 14.8,
+          "L": 0.280014060388166,
+          "M": 2.22028346395983,
+          "S": 0.496118188579731,
+          "centralConcentration": 2.220283463960251,
+          "sourceCells": [
+            "FSH_M!A140",
+            "FSH_M!B140",
+            "FSH_M!C140",
+            "FSH_M!D140"
+          ]
+        },
+        {
+          "ageYears": 14.9,
+          "L": 0.287731364607328,
+          "M": 2.23858829282858,
+          "S": 0.493635749635459,
+          "centralConcentration": 2.2385882928299066,
+          "sourceCells": [
+            "FSH_M!A141",
+            "FSH_M!B141",
+            "FSH_M!C141",
+            "FSH_M!D141"
+          ]
+        },
+        {
+          "ageYears": 15.0,
+          "L": 0.295555634873624,
+          "M": 2.25634876410741,
+          "S": 0.491171205505053,
+          "centralConcentration": 2.2563487641113236,
+          "sourceCells": [
+            "FSH_M!A142",
+            "FSH_M!B142",
+            "FSH_M!C142",
+            "FSH_M!D142"
+          ]
+        },
+        {
+          "ageYears": 15.1,
+          "L": 0.303491747036179,
+          "M": 2.27357132025701,
+          "S": 0.488724476250304,
+          "centralConcentration": 2.273571320267887,
+          "sourceCells": [
+            "FSH_M!A143",
+            "FSH_M!B143",
+            "FSH_M!C143",
+            "FSH_M!D143"
+          ]
+        },
+        {
+          "ageYears": 15.2,
+          "L": 0.311543054435635,
+          "M": 2.29026556432021,
+          "S": 0.486296390356507,
+          "centralConcentration": 2.290265564348797,
+          "sourceCells": [
+            "FSH_M!A144",
+            "FSH_M!B144",
+            "FSH_M!C144",
+            "FSH_M!D144"
+          ]
+        },
+        {
+          "ageYears": 15.3,
+          "L": 0.319709700805155,
+          "M": 2.30644501141941,
+          "S": 0.483888777822928,
+          "centralConcentration": 2.306445011490746,
+          "sourceCells": [
+            "FSH_M!A145",
+            "FSH_M!B145",
+            "FSH_M!C145",
+            "FSH_M!D145"
+          ]
+        },
+        {
+          "ageYears": 15.4,
+          "L": 0.327989041603988,
+          "M": 2.32212529304618,
+          "S": 0.481504578600234,
+          "centralConcentration": 2.3221252932157554,
+          "sourceCells": [
+            "FSH_M!A146",
+            "FSH_M!B146",
+            "FSH_M!C146",
+            "FSH_M!D146"
+          ]
+        },
+        {
+          "ageYears": 15.5,
+          "L": 0.336378439985008,
+          "M": 2.33732153642286,
+          "S": 0.479146866154983,
+          "centralConcentration": 2.3373215368080738,
+          "sourceCells": [
+            "FSH_M!A147",
+            "FSH_M!B147",
+            "FSH_M!C147",
+            "FSH_M!D147"
+          ]
+        },
+        {
+          "ageYears": 15.6,
+          "L": 0.344875283639637,
+          "M": 2.35204967882285,
+          "S": 0.47681826726759,
+          "centralConcentration": 2.3520496796614996,
+          "sourceCells": [
+            "FSH_M!A148",
+            "FSH_M!B148",
+            "FSH_M!C148",
+            "FSH_M!D148"
+          ]
+        },
+        {
+          "ageYears": 15.7,
+          "L": 0.353476366362282,
+          "M": 2.3663270083759,
+          "S": 0.474521557529795,
+          "centralConcentration": 2.366327010130419,
+          "sourceCells": [
+            "FSH_M!A149",
+            "FSH_M!B149",
+            "FSH_M!C149",
+            "FSH_M!D149"
+          ]
+        },
+        {
+          "ageYears": 15.8,
+          "L": 0.362178711065991,
+          "M": 2.38017103804241,
+          "S": 0.472259084178201,
+          "centralConcentration": 2.3801710415784254,
+          "sourceCells": [
+            "FSH_M!A150",
+            "FSH_M!B150",
+            "FSH_M!C150",
+            "FSH_M!D150"
+          ]
+        },
+        {
+          "ageYears": 15.9,
+          "L": 0.370978379838699,
+          "M": 2.39359795096238,
+          "S": 0.470032591809298,
+          "centralConcentration": 2.3935979578426734,
+          "sourceCells": [
+            "FSH_M!A151",
+            "FSH_M!B151",
+            "FSH_M!C151",
+            "FSH_M!D151"
+          ]
+        },
+        {
+          "ageYears": 16.0,
+          "L": 0.379871035255187,
+          "M": 2.40662343186314,
+          "S": 0.467843563974966,
+          "centralConcentration": 2.4066234448145565,
+          "sourceCells": [
+            "FSH_M!A152",
+            "FSH_M!B152",
+            "FSH_M!C152",
+            "FSH_M!D152"
+          ]
+        },
+        {
+          "ageYears": 16.1,
+          "L": 0.388852014480941,
+          "M": 2.4192619817701,
+          "S": 0.465693367506012,
+          "centralConcentration": 2.419262005400168,
+          "sourceCells": [
+            "FSH_M!A153",
+            "FSH_M!B153",
+            "FSH_M!C153",
+            "FSH_M!D153"
+          ]
+        },
+        {
+          "ageYears": 16.2,
+          "L": 0.397915655974002,
+          "M": 2.43152552669192,
+          "S": 0.46358275849652,
+          "centralConcentration": 2.431525568549711,
+          "sourceCells": [
+            "FSH_M!A154",
+            "FSH_M!B154",
+            "FSH_M!C154",
+            "FSH_M!D154"
+          ]
+        },
+        {
+          "ageYears": 16.3,
+          "L": 0.407055983162803,
+          "M": 2.44342673935492,
+          "S": 0.461511655684002,
+          "centralConcentration": 2.443426811451113,
+          "sourceCells": [
+            "FSH_M!A155",
+            "FSH_M!B155",
+            "FSH_M!C155",
+            "FSH_M!D155"
+          ]
+        },
+        {
+          "ageYears": 16.4,
+          "L": 0.416268434873897,
+          "M": 2.45498109193717,
+          "S": 0.459479282371301,
+          "centralConcentration": 2.4549812128660613,
+          "sourceCells": [
+            "FSH_M!A156",
+            "FSH_M!B156",
+            "FSH_M!C156",
+            "FSH_M!D156"
+          ]
+        },
+        {
+          "ageYears": 16.5,
+          "L": 0.425549438862921,
+          "M": 2.46620591483704,
+          "S": 0.457484627182954,
+          "centralConcentration": 2.4662061126585426,
+          "sourceCells": [
+            "FSH_M!A157",
+            "FSH_M!B157",
+            "FSH_M!C157",
+            "FSH_M!D157"
+          ]
+        },
+        {
+          "ageYears": 16.6,
+          "L": 0.434895932554068,
+          "M": 2.47711951378344,
+          "S": 0.455526664791012,
+          "centralConcentration": 2.477119829837242,
+          "sourceCells": [
+            "FSH_M!A158",
+            "FSH_M!B158",
+            "FSH_M!C158",
+            "FSH_M!D158"
+          ]
+        },
+        {
+          "ageYears": 16.7,
+          "L": 0.444305240176211,
+          "M": 2.48774039973854,
+          "S": 0.453604208586031,
+          "centralConcentration": 2.487740893568256,
+          "sourceCells": [
+            "FSH_M!A159",
+            "FSH_M!B159",
+            "FSH_M!C159",
+            "FSH_M!D159"
+          ]
+        },
+        {
+          "ageYears": 16.8,
+          "L": 0.453774948523969,
+          "M": 2.49808718195363,
+          "S": 0.45171582078183,
+          "centralConcentration": 2.498087937512419,
+          "sourceCells": [
+            "FSH_M!A160",
+            "FSH_M!B160",
+            "FSH_M!C160",
+            "FSH_M!D160"
+          ]
+        },
+        {
+          "ageYears": 16.9,
+          "L": 0.463303669989963,
+          "M": 2.50817951191741,
+          "S": 0.449860274553543,
+          "centralConcentration": 2.5081806452888378,
+          "sourceCells": [
+            "FSH_M!A161",
+            "FSH_M!B161",
+            "FSH_M!C161",
+            "FSH_M!D161"
+          ]
+        },
+        {
+          "ageYears": 17.0,
+          "L": 0.472891172473599,
+          "M": 2.51803656008718,
+          "S": 0.448036300522392,
+          "centralConcentration": 2.518038228916774,
+          "sourceCells": [
+            "FSH_M!A162",
+            "FSH_M!B162",
+            "FSH_M!C162",
+            "FSH_M!D162"
+          ]
+        },
+        {
+          "ageYears": 17.1,
+          "L": 0.482536018240549,
+          "M": 2.52767632050545,
+          "S": 0.446242179039245,
+          "centralConcentration": 2.5276787350482786,
+          "sourceCells": [
+            "FSH_M!A163",
+            "FSH_M!B163",
+            "FSH_M!C163",
+            "FSH_M!D163"
+          ]
+        },
+        {
+          "ageYears": 17.2,
+          "L": 0.492235820747349,
+          "M": 2.53711721581578,
+          "S": 0.444475990536472,
+          "centralConcentration": 2.53712065167206,
+          "sourceCells": [
+            "FSH_M!A164",
+            "FSH_M!B164",
+            "FSH_M!C164",
+            "FSH_M!D164"
+          ]
+        },
+        {
+          "ageYears": 17.3,
+          "L": 0.501986711400738,
+          "M": 2.54637771047677,
+          "S": 0.442735741189689,
+          "centralConcentration": 2.54638252278079,
+          "sourceCells": [
+            "FSH_M!A165",
+            "FSH_M!B165",
+            "FSH_M!C165",
+            "FSH_M!D165"
+          ]
+        },
+        {
+          "ageYears": 17.4,
+          "L": 0.511782736640087,
+          "M": 2.55547464636576,
+          "S": 0.441019827541355,
+          "centralConcentration": 2.555481285083426,
+          "sourceCells": [
+            "FSH_M!A166",
+            "FSH_M!B166",
+            "FSH_M!C166",
+            "FSH_M!D166"
+          ]
+        },
+        {
+          "ageYears": 17.5,
+          "L": 0.521617555689509,
+          "M": 2.56442370640232,
+          "S": 0.439326476540898,
+          "centralConcentration": 2.564432732555614,
+          "sourceCells": [
+            "FSH_M!A167",
+            "FSH_M!B167",
+            "FSH_M!C167",
+            "FSH_M!D167"
+          ]
+        },
+        {
+          "ageYears": 17.6,
+          "L": 0.531484872968905,
+          "M": 2.57323974361774,
+          "S": 0.437653644411176,
+          "centralConcentration": 2.573251845935014,
+          "sourceCells": [
+            "FSH_M!A168",
+            "FSH_M!B168",
+            "FSH_M!C168",
+            "FSH_M!D168"
+          ]
+        },
+        {
+          "ageYears": 17.7,
+          "L": 0.541377928122831,
+          "M": 2.58193563444582,
+          "S": 0.435999167087345,
+          "centralConcentration": 2.581951645593883,
+          "sourceCells": [
+            "FSH_M!A169",
+            "FSH_M!B169",
+            "FSH_M!C169",
+            "FSH_M!D169"
+          ]
+        },
+        {
+          "ageYears": 17.8,
+          "L": 0.551290426812649,
+          "M": 2.59052250447404,
+          "S": 0.434361303670945,
+          "centralConcentration": 2.5905434172511734,
+          "sourceCells": [
+            "FSH_M!A170",
+            "FSH_M!B170",
+            "FSH_M!C170",
+            "FSH_M!D170"
+          ]
+        },
+        {
+          "ageYears": 17.9,
+          "L": 0.561215899121994,
+          "M": 2.59901050222058,
+          "S": 0.432738065049518,
+          "centralConcentration": 2.599037483693666,
+          "sourceCells": [
+            "FSH_M!A171",
+            "FSH_M!B171",
+            "FSH_M!C171",
+            "FSH_M!D171"
+          ]
+        },
+        {
+          "ageYears": 18.0,
+          "L": 0.57114749510292,
+          "M": 2.60740917372248,
+          "S": 0.431127081591105,
+          "centralConcentration": 2.607443576372793,
+          "sourceCells": [
+            "FSH_M!A172",
+            "FSH_M!B172",
+            "FSH_M!C172",
+            "FSH_M!D172"
+          ]
+        },
+        {
+          "ageYears": 18.1,
+          "L": 0.581078569759528,
+          "M": 2.6157281818699,
+          "S": 0.429525812538676,
+          "centralConcentration": 2.615771551856339,
+          "sourceCells": [
+            "FSH_M!A173",
+            "FSH_M!B173",
+            "FSH_M!C173",
+            "FSH_M!D173"
+          ]
+        },
+        {
+          "ageYears": 18.2,
+          "L": 0.591002551390092,
+          "M": 2.62397784204418,
+          "S": 0.427931680918112,
+          "centralConcentration": 2.6240319235066316,
+          "sourceCells": [
+            "FSH_M!A174",
+            "FSH_M!B174",
+            "FSH_M!C174",
+            "FSH_M!D174"
+          ]
+        },
+        {
+          "ageYears": 18.3,
+          "L": 0.60091154459022,
+          "M": 2.63217046699354,
+          "S": 0.426342579185653,
+          "centralConcentration": 2.63223720055551,
+          "sourceCells": [
+            "FSH_M!A175",
+            "FSH_M!B175",
+            "FSH_M!C175",
+            "FSH_M!D175"
+          ]
+        },
+        {
+          "ageYears": 18.4,
+          "L": 0.610798957522644,
+          "M": 2.64031846497308,
+          "S": 0.424757442354231,
+          "centralConcentration": 2.6403999874780433,
+          "sourceCells": [
+            "FSH_M!A176",
+            "FSH_M!B176",
+            "FSH_M!C176",
+            "FSH_M!D176"
+          ]
+        },
+        {
+          "ageYears": 18.5,
+          "L": 0.620666302068053,
+          "M": 2.64843142466293,
+          "S": 0.423177129268558,
+          "centralConcentration": 2.648530088316931,
+          "sourceCells": [
+            "FSH_M!A177",
+            "FSH_M!B177",
+            "FSH_M!C177",
+            "FSH_M!D177"
+          ]
+        },
+        {
+          "ageYears": 18.6,
+          "L": 0.630518335557952,
+          "M": 2.65651705593608,
+          "S": 0.421602705153783,
+          "centralConcentration": 2.656635442810522,
+          "sourceCells": [
+            "FSH_M!A178",
+            "FSH_M!B178",
+            "FSH_M!C178",
+            "FSH_M!D178"
+          ]
+        },
+        {
+          "ageYears": 18.7,
+          "L": 0.640359472356242,
+          "M": 2.66458220959508,
+          "S": 0.420034444922227,
+          "centralConcentration": 2.664723135919497,
+          "sourceCells": [
+            "FSH_M!A179",
+            "FSH_M!B179",
+            "FSH_M!C179",
+            "FSH_M!D179"
+          ]
+        },
+        {
+          "ageYears": 18.8,
+          "L": 0.650194040483502,
+          "M": 2.67263406943322,
+          "S": 0.418471884522553,
+          "centralConcentration": 2.672800587719522,
+          "sourceCells": [
+            "FSH_M!A180",
+            "FSH_M!B180",
+            "FSH_M!C180",
+            "FSH_M!D180"
+          ]
+        },
+        {
+          "ageYears": 18.9,
+          "L": 0.660025233894447,
+          "M": 2.68067980568812,
+          "S": 0.416914704722631,
+          "centralConcentration": 2.680875205073134,
+          "sourceCells": [
+            "FSH_M!A181",
+            "FSH_M!B181",
+            "FSH_M!C181",
+            "FSH_M!D181"
+          ]
+        },
+        {
+          "ageYears": 19.0,
+          "L": 0.669855618078971,
+          "M": 2.68872434998251,
+          "S": 0.415363183504629,
+          "centralConcentration": 2.688952159684324,
+          "sourceCells": [
+            "FSH_M!A182",
+            "FSH_M!B182",
+            "FSH_M!C182",
+            "FSH_M!D182"
+          ]
+        }
+      ]
+    },
+    "female": {
+      "sheet": "FSH_F",
+      "sourceCellRange": "FSH_F!A2:D182",
+      "ageYearsMin": 1,
+      "ageYearsMax": 19,
+      "pointCount": 181,
+      "points": [
+        {
+          "ageYears": 1.0,
+          "L": -0.210479575988707,
+          "M": 2.30052386026578,
+          "S": 0.524269971454962,
+          "centralConcentration": 2.30052386026578,
+          "sourceCells": [
+            "FSH_F!A2",
+            "FSH_F!B2",
+            "FSH_F!C2",
+            "FSH_F!D2"
+          ]
+        },
+        {
+          "ageYears": 1.1,
+          "L": -0.203852262335489,
+          "M": 2.26657896860951,
+          "S": 0.524508405293064,
+          "centralConcentration": 2.26657896860951,
+          "sourceCells": [
+            "FSH_F!A3",
+            "FSH_F!B3",
+            "FSH_F!C3",
+            "FSH_F!D3"
+          ]
+        },
+        {
+          "ageYears": 1.2,
+          "L": -0.197224948665797,
+          "M": 2.2326426328145,
+          "S": 0.524746946527277,
+          "centralConcentration": 2.2326426328145,
+          "sourceCells": [
+            "FSH_F!A4",
+            "FSH_F!B4",
+            "FSH_F!C4",
+            "FSH_F!D4"
+          ]
+        },
+        {
+          "ageYears": 1.3,
+          "L": -0.190597636803446,
+          "M": 2.19872599752706,
+          "S": 0.524985595186154,
+          "centralConcentration": 2.19872599752706,
+          "sourceCells": [
+            "FSH_F!A5",
+            "FSH_F!B5",
+            "FSH_F!C5",
+            "FSH_F!D5"
+          ]
+        },
+        {
+          "ageYears": 1.4,
+          "L": -0.183970329981308,
+          "M": 2.16484223623308,
+          "S": 0.5252243519548,
+          "centralConcentration": 2.16484223623308,
+          "sourceCells": [
+            "FSH_F!A6",
+            "FSH_F!B6",
+            "FSH_F!C6",
+            "FSH_F!D6"
+          ]
+        },
+        {
+          "ageYears": 1.5,
+          "L": -0.177343032534048,
+          "M": 2.13100652678768,
+          "S": 0.525463217797578,
+          "centralConcentration": 2.13100652678768,
+          "sourceCells": [
+            "FSH_F!A7",
+            "FSH_F!B7",
+            "FSH_F!C7",
+            "FSH_F!D7"
+          ]
+        },
+        {
+          "ageYears": 1.6,
+          "L": -0.170715749983531,
+          "M": 2.09723573389138,
+          "S": 0.52570219393882,
+          "centralConcentration": 2.09723573389138,
+          "sourceCells": [
+            "FSH_F!A8",
+            "FSH_F!B8",
+            "FSH_F!C8",
+            "FSH_F!D8"
+          ]
+        },
+        {
+          "ageYears": 1.7,
+          "L": -0.164088496305729,
+          "M": 2.06355204340446,
+          "S": 0.525941283775428,
+          "centralConcentration": 2.06355204340446,
+          "sourceCells": [
+            "FSH_F!A9",
+            "FSH_F!B9",
+            "FSH_F!C9",
+            "FSH_F!D9"
+          ]
+        },
+        {
+          "ageYears": 1.8,
+          "L": -0.157461288450886,
+          "M": 2.02997920195409,
+          "S": 0.526180491465781,
+          "centralConcentration": 2.02997920195409,
+          "sourceCells": [
+            "FSH_F!A10",
+            "FSH_F!B10",
+            "FSH_F!C10",
+            "FSH_F!D10"
+          ]
+        },
+        {
+          "ageYears": 1.9,
+          "L": -0.150834143370771,
+          "M": 1.9965409569414,
+          "S": 0.526419821176109,
+          "centralConcentration": 1.9965409569414,
+          "sourceCells": [
+            "FSH_F!A11",
+            "FSH_F!B11",
+            "FSH_F!C11",
+            "FSH_F!D11"
+          ]
+        },
+        {
+          "ageYears": 2.0,
+          "L": -0.144207078017158,
+          "M": 1.96326105576751,
+          "S": 0.526659277080144,
+          "centralConcentration": 1.96326105576751,
+          "sourceCells": [
+            "FSH_F!A12",
+            "FSH_F!B12",
+            "FSH_F!C12",
+            "FSH_F!D12"
+          ]
+        },
+        {
+          "ageYears": 2.1,
+          "L": -0.137580109230638,
+          "M": 1.9301634458859,
+          "S": 0.526898863374039,
+          "centralConcentration": 1.9301634458859,
+          "sourceCells": [
+            "FSH_F!A13",
+            "FSH_F!B13",
+            "FSH_F!C13",
+            "FSH_F!D13"
+          ]
+        },
+        {
+          "ageYears": 2.2,
+          "L": -0.130953252805613,
+          "M": 1.8972742565242,
+          "S": 0.52713858432453,
+          "centralConcentration": 1.8972742565242,
+          "sourceCells": [
+            "FSH_F!A14",
+            "FSH_F!B14",
+            "FSH_F!C14",
+            "FSH_F!D14"
+          ]
+        },
+        {
+          "ageYears": 2.3,
+          "L": -0.124326523848594,
+          "M": 1.86462193167539,
+          "S": 0.527378444119268,
+          "centralConcentration": 1.86462193167539,
+          "sourceCells": [
+            "FSH_F!A15",
+            "FSH_F!B15",
+            "FSH_F!C15",
+            "FSH_F!D15"
+          ]
+        },
+        {
+          "ageYears": 2.4,
+          "L": -0.11769993802109,
+          "M": 1.83223676460654,
+          "S": 0.527618447059014,
+          "centralConcentration": 1.83223676460654,
+          "sourceCells": [
+            "FSH_F!A16",
+            "FSH_F!B16",
+            "FSH_F!C16",
+            "FSH_F!D16"
+          ]
+        },
+        {
+          "ageYears": 2.5,
+          "L": -0.111073510504256,
+          "M": 1.800148525983,
+          "S": 0.527858597849617,
+          "centralConcentration": 1.800148525983,
+          "sourceCells": [
+            "FSH_F!A17",
+            "FSH_F!B17",
+            "FSH_F!C17",
+            "FSH_F!D17"
+          ]
+        },
+        {
+          "ageYears": 2.6,
+          "L": -0.104447255164771,
+          "M": 1.76838449267962,
+          "S": 0.528098902364661,
+          "centralConcentration": 1.76838449267962,
+          "sourceCells": [
+            "FSH_F!A18",
+            "FSH_F!B18",
+            "FSH_F!C18",
+            "FSH_F!D18"
+          ]
+        },
+        {
+          "ageYears": 2.7,
+          "L": -0.0978211872474587,
+          "M": 1.73697430429128,
+          "S": 0.528339367555284,
+          "centralConcentration": 1.73697430429128,
+          "sourceCells": [
+            "FSH_F!A19",
+            "FSH_F!B19",
+            "FSH_F!C19",
+            "FSH_F!D19"
+          ]
+        },
+        {
+          "ageYears": 2.8,
+          "L": -0.0911953219747997,
+          "M": 1.70594883791812,
+          "S": 0.528580000476053,
+          "centralConcentration": 1.70594883791812,
+          "sourceCells": [
+            "FSH_F!A20",
+            "FSH_F!B20",
+            "FSH_F!C20",
+            "FSH_F!D20"
+          ]
+        },
+        {
+          "ageYears": 2.9,
+          "L": -0.0845696736351761,
+          "M": 1.67534108814339,
+          "S": 0.528820807826911,
+          "centralConcentration": 1.67534108814339,
+          "sourceCells": [
+            "FSH_F!A21",
+            "FSH_F!B21",
+            "FSH_F!C21",
+            "FSH_F!D21"
+          ]
+        },
+        {
+          "ageYears": 3.0,
+          "L": -0.0779442562886548,
+          "M": 1.64518461646288,
+          "S": 0.52906179619049,
+          "centralConcentration": 1.64518461646288,
+          "sourceCells": [
+            "FSH_F!A22",
+            "FSH_F!B22",
+            "FSH_F!C22",
+            "FSH_F!D22"
+          ]
+        },
+        {
+          "ageYears": 3.1,
+          "L": -0.0713190834552236,
+          "M": 1.61551222228118,
+          "S": 0.529302971990368,
+          "centralConcentration": 1.61551222228118,
+          "sourceCells": [
+            "FSH_F!A23",
+            "FSH_F!B23",
+            "FSH_F!C23",
+            "FSH_F!D23"
+          ]
+        },
+        {
+          "ageYears": 3.2,
+          "L": -0.0646941694420256,
+          "M": 1.58635357694176,
+          "S": 0.529544341296805,
+          "centralConcentration": 1.58635357694176,
+          "sourceCells": [
+            "FSH_F!A24",
+            "FSH_F!B24",
+            "FSH_F!C24",
+            "FSH_F!D24"
+          ]
+        },
+        {
+          "ageYears": 3.3,
+          "L": -0.0580695283968595,
+          "M": 1.55773890190771,
+          "S": 0.529785909803811,
+          "centralConcentration": 1.55773890190771,
+          "sourceCells": [
+            "FSH_F!A25",
+            "FSH_F!B25",
+            "FSH_F!C25",
+            "FSH_F!D25"
+          ]
+        },
+        {
+          "ageYears": 3.4,
+          "L": -0.0514451735456117,
+          "M": 1.52970040398459,
+          "S": 0.530027683150475,
+          "centralConcentration": 1.52970040398459,
+          "sourceCells": [
+            "FSH_F!A26",
+            "FSH_F!B26",
+            "FSH_F!C26",
+            "FSH_F!D26"
+          ]
+        },
+        {
+          "ageYears": 3.5,
+          "L": -0.0448211191148449,
+          "M": 1.50226728028786,
+          "S": 0.530269666972937,
+          "centralConcentration": 1.50226728028786,
+          "sourceCells": [
+            "FSH_F!A27",
+            "FSH_F!B27",
+            "FSH_F!C27",
+            "FSH_F!D27"
+          ]
+        },
+        {
+          "ageYears": 3.6,
+          "L": -0.0381973788560054,
+          "M": 1.47546946614185,
+          "S": 0.530511866749028,
+          "centralConcentration": 1.47546946614185,
+          "sourceCells": [
+            "FSH_F!A28",
+            "FSH_F!B28",
+            "FSH_F!C28",
+            "FSH_F!D28"
+          ]
+        },
+        {
+          "ageYears": 3.7,
+          "L": -0.0315739662396635,
+          "M": 1.44933746272871,
+          "S": 0.530754287939087,
+          "centralConcentration": 1.44933746272871,
+          "sourceCells": [
+            "FSH_F!A29",
+            "FSH_F!B29",
+            "FSH_F!C29",
+            "FSH_F!D29"
+          ]
+        },
+        {
+          "ageYears": 3.8,
+          "L": -0.0249508900014815,
+          "M": 1.42390106332463,
+          "S": 0.530996937426412,
+          "centralConcentration": 1.42390106332463,
+          "sourceCells": [
+            "FSH_F!A30",
+            "FSH_F!B30",
+            "FSH_F!C30",
+            "FSH_F!D30"
+          ]
+        },
+        {
+          "ageYears": 3.9,
+          "L": -0.0183281500422672,
+          "M": 1.39918597736979,
+          "S": 0.53123982444459,
+          "centralConcentration": 1.39918597736979,
+          "sourceCells": [
+            "FSH_F!A31",
+            "FSH_F!B31",
+            "FSH_F!C31",
+            "FSH_F!D31"
+          ]
+        },
+        {
+          "ageYears": 4.0,
+          "L": -0.0117057440983886,
+          "M": 1.37521985150084,
+          "S": 0.531482958255746,
+          "centralConcentration": 1.37521985150084,
+          "sourceCells": [
+            "FSH_F!A32",
+            "FSH_F!B32",
+            "FSH_F!C32",
+            "FSH_F!D32"
+          ]
+        },
+        {
+          "ageYears": 4.1,
+          "L": -0.00508366798372045,
+          "M": 1.35203154296487,
+          "S": 0.531726348968684,
+          "centralConcentration": 1.35203154296487,
+          "sourceCells": [
+            "FSH_F!A33",
+            "FSH_F!B33",
+            "FSH_F!C33",
+            "FSH_F!D33"
+          ]
+        },
+        {
+          "ageYears": 4.2,
+          "L": 0.00153808441168925,
+          "M": 1.32964809222345,
+          "S": 0.53197000771687,
+          "centralConcentration": 1.32964809222345,
+          "sourceCells": [
+            "FSH_F!A34",
+            "FSH_F!B34",
+            "FSH_F!C34",
+            "FSH_F!D34"
+          ]
+        },
+        {
+          "ageYears": 4.3,
+          "L": 0.00815951883010423,
+          "M": 1.30809539469585,
+          "S": 0.532213944941977,
+          "centralConcentration": 1.30809539469585,
+          "sourceCells": [
+            "FSH_F!A35",
+            "FSH_F!B35",
+            "FSH_F!C35",
+            "FSH_F!D35"
+          ]
+        },
+        {
+          "ageYears": 4.4,
+          "L": 0.0147806399687682,
+          "M": 1.287397204329,
+          "S": 0.532458170573868,
+          "centralConcentration": 1.287397204329,
+          "sourceCells": [
+            "FSH_F!A36",
+            "FSH_F!B36",
+            "FSH_F!C36",
+            "FSH_F!D36"
+          ]
+        },
+        {
+          "ageYears": 4.5,
+          "L": 0.0214014513207512,
+          "M": 1.26757254959021,
+          "S": 0.532702694360863,
+          "centralConcentration": 1.26757254959021,
+          "sourceCells": [
+            "FSH_F!A37",
+            "FSH_F!B37",
+            "FSH_F!C37",
+            "FSH_F!D37"
+          ]
+        },
+        {
+          "ageYears": 4.6,
+          "L": 0.0280219557446162,
+          "M": 1.24863562852608,
+          "S": 0.532947526291715,
+          "centralConcentration": 1.24863562852608,
+          "sourceCells": [
+            "FSH_F!A38",
+            "FSH_F!B38",
+            "FSH_F!C38",
+            "FSH_F!D38"
+          ]
+        },
+        {
+          "ageYears": 4.7,
+          "L": 0.0346421564282335,
+          "M": 1.23060075085048,
+          "S": 0.533192675994738,
+          "centralConcentration": 1.23060075085048,
+          "sourceCells": [
+            "FSH_F!A39",
+            "FSH_F!B39",
+            "FSH_F!C39",
+            "FSH_F!D39"
+          ]
+        },
+        {
+          "ageYears": 4.8,
+          "L": 0.0412620563816593,
+          "M": 1.21348190868512,
+          "S": 0.533438152671909,
+          "centralConcentration": 1.21348190868512,
+          "sourceCells": [
+            "FSH_F!A40",
+            "FSH_F!B40",
+            "FSH_F!C40",
+            "FSH_F!D40"
+          ]
+        },
+        {
+          "ageYears": 4.9,
+          "L": 0.0478816584063932,
+          "M": 1.19729274999113,
+          "S": 0.533683965354497,
+          "centralConcentration": 1.19729274999113,
+          "sourceCells": [
+            "FSH_F!A41",
+            "FSH_F!B41",
+            "FSH_F!C41",
+            "FSH_F!D41"
+          ]
+        },
+        {
+          "ageYears": 5.0,
+          "L": 0.0545009653391862,
+          "M": 1.18204697166013,
+          "S": 0.533930123043843,
+          "centralConcentration": 1.18204697166013,
+          "sourceCells": [
+            "FSH_F!A42",
+            "FSH_F!B42",
+            "FSH_F!C42",
+            "FSH_F!D42"
+          ]
+        },
+        {
+          "ageYears": 5.1,
+          "L": 0.0611199800247695,
+          "M": 1.16775873438397,
+          "S": 0.534176634214374,
+          "centralConcentration": 1.16775873438397,
+          "sourceCells": [
+            "FSH_F!A43",
+            "FSH_F!B43",
+            "FSH_F!C43",
+            "FSH_F!D43"
+          ]
+        },
+        {
+          "ageYears": 5.2,
+          "L": 0.0677387041499353,
+          "M": 1.15444265710356,
+          "S": 0.534423506727906,
+          "centralConcentration": 1.15444265710356,
+          "sourceCells": [
+            "FSH_F!A44",
+            "FSH_F!B44",
+            "FSH_F!C44",
+            "FSH_F!D44"
+          ]
+        },
+        {
+          "ageYears": 5.3,
+          "L": 0.0743571386510755,
+          "M": 1.1421125865646,
+          "S": 0.534670748295574,
+          "centralConcentration": 1.1421125865646,
+          "sourceCells": [
+            "FSH_F!A45",
+            "FSH_F!B45",
+            "FSH_F!C45",
+            "FSH_F!D45"
+          ]
+        },
+        {
+          "ageYears": 5.4,
+          "L": 0.0809752842426541,
+          "M": 1.13078190844788,
+          "S": 0.534918366467782,
+          "centralConcentration": 1.13078190844788,
+          "sourceCells": [
+            "FSH_F!A46",
+            "FSH_F!B46",
+            "FSH_F!C46",
+            "FSH_F!D46"
+          ]
+        },
+        {
+          "ageYears": 5.5,
+          "L": 0.0875931412686976,
+          "M": 1.12046324347419,
+          "S": 0.535166368435871,
+          "centralConcentration": 1.12046324347419,
+          "sourceCells": [
+            "FSH_F!A47",
+            "FSH_F!B47",
+            "FSH_F!C47",
+            "FSH_F!D47"
+          ]
+        },
+        {
+          "ageYears": 5.6,
+          "L": 0.094210710381092,
+          "M": 1.11116975156173,
+          "S": 0.535414760995546,
+          "centralConcentration": 1.11116975156173,
+          "sourceCells": [
+            "FSH_F!A48",
+            "FSH_F!B48",
+            "FSH_F!C48",
+            "FSH_F!D48"
+          ]
+        },
+        {
+          "ageYears": 5.7,
+          "L": 0.100827991871612,
+          "M": 1.1029137186213,
+          "S": 0.535663550075157,
+          "centralConcentration": 1.1029137186213,
+          "sourceCells": [
+            "FSH_F!A49",
+            "FSH_F!B49",
+            "FSH_F!C49",
+            "FSH_F!D49"
+          ]
+        },
+        {
+          "ageYears": 5.8,
+          "L": 0.107444985029441,
+          "M": 1.09570721204231,
+          "S": 0.535912740924215,
+          "centralConcentration": 1.09570721204231,
+          "sourceCells": [
+            "FSH_F!A50",
+            "FSH_F!B50",
+            "FSH_F!C50",
+            "FSH_F!D50"
+          ]
+        },
+        {
+          "ageYears": 5.9,
+          "L": 0.11406168825942,
+          "M": 1.08956517134022,
+          "S": 0.536162338572462,
+          "centralConcentration": 1.08956517134022,
+          "sourceCells": [
+            "FSH_F!A51",
+            "FSH_F!B51",
+            "FSH_F!C51",
+            "FSH_F!D51"
+          ]
+        },
+        {
+          "ageYears": 6.0,
+          "L": 0.12067809991316,
+          "M": 1.08450318987458,
+          "S": 0.536412347774204,
+          "centralConcentration": 1.08450318987458,
+          "sourceCells": [
+            "FSH_F!A52",
+            "FSH_F!B52",
+            "FSH_F!C52",
+            "FSH_F!D52"
+          ]
+        },
+        {
+          "ageYears": 6.1,
+          "L": 0.1272942198194,
+          "M": 1.08054140473624,
+          "S": 0.536662772488801,
+          "centralConcentration": 1.08054140473624,
+          "sourceCells": [
+            "FSH_F!A53",
+            "FSH_F!B53",
+            "FSH_F!C53",
+            "FSH_F!D53"
+          ]
+        },
+        {
+          "ageYears": 6.2,
+          "L": 0.133910048935894,
+          "M": 1.07770339728443,
+          "S": 0.536913616097647,
+          "centralConcentration": 1.07770339728443,
+          "sourceCells": [
+            "FSH_F!A54",
+            "FSH_F!B54",
+            "FSH_F!C54",
+            "FSH_F!D54"
+          ]
+        },
+        {
+          "ageYears": 6.3,
+          "L": 0.140525588135749,
+          "M": 1.07601189641275,
+          "S": 0.537164880998445,
+          "centralConcentration": 1.07601189641275,
+          "sourceCells": [
+            "FSH_F!A55",
+            "FSH_F!B55",
+            "FSH_F!C55",
+            "FSH_F!D55"
+          ]
+        },
+        {
+          "ageYears": 6.4,
+          "L": 0.147140837199157,
+          "M": 1.07548359506257,
+          "S": 0.537416569279354,
+          "centralConcentration": 1.07548359506257,
+          "sourceCells": [
+            "FSH_F!A56",
+            "FSH_F!B56",
+            "FSH_F!C56",
+            "FSH_F!D56"
+          ]
+        },
+        {
+          "ageYears": 6.5,
+          "L": 0.153755795776544,
+          "M": 1.07613118410425,
+          "S": 0.537668682946347,
+          "centralConcentration": 1.07613118410425,
+          "sourceCells": [
+            "FSH_F!A57",
+            "FSH_F!B57",
+            "FSH_F!C57",
+            "FSH_F!D57"
+          ]
+        },
+        {
+          "ageYears": 6.6,
+          "L": 0.160370465699636,
+          "M": 1.07797274848585,
+          "S": 0.537921223158206,
+          "centralConcentration": 1.07797274848585,
+          "sourceCells": [
+            "FSH_F!A58",
+            "FSH_F!B58",
+            "FSH_F!C58",
+            "FSH_F!D58"
+          ]
+        },
+        {
+          "ageYears": 6.7,
+          "L": 0.166984850260618,
+          "M": 1.0810300572762,
+          "S": 0.538174190430262,
+          "centralConcentration": 1.0810300572762,
+          "sourceCells": [
+            "FSH_F!A59",
+            "FSH_F!B59",
+            "FSH_F!C59",
+            "FSH_F!D59"
+          ]
+        },
+        {
+          "ageYears": 6.8,
+          "L": 0.173598952732295,
+          "M": 1.08532419153212,
+          "S": 0.538427584935094,
+          "centralConcentration": 1.08532419153212,
+          "sourceCells": [
+            "FSH_F!A60",
+            "FSH_F!B60",
+            "FSH_F!C60",
+            "FSH_F!D60"
+          ]
+        },
+        {
+          "ageYears": 6.9,
+          "L": 0.180212776568113,
+          "M": 1.09087595560403,
+          "S": 0.538681406533626,
+          "centralConcentration": 1.09087595560403,
+          "sourceCells": [
+            "FSH_F!A61",
+            "FSH_F!B61",
+            "FSH_F!C61",
+            "FSH_F!D61"
+          ]
+        },
+        {
+          "ageYears": 7.0,
+          "L": 0.186826324803538,
+          "M": 1.09770344370776,
+          "S": 0.538935654804911,
+          "centralConcentration": 1.09770344370776,
+          "sourceCells": [
+            "FSH_F!A62",
+            "FSH_F!B62",
+            "FSH_F!C62",
+            "FSH_F!D62"
+          ]
+        },
+        {
+          "ageYears": 7.1,
+          "L": 0.193439599244162,
+          "M": 1.10582124362041,
+          "S": 0.539190328633304,
+          "centralConcentration": 1.10582124362041,
+          "sourceCells": [
+            "FSH_F!A63",
+            "FSH_F!B63",
+            "FSH_F!C63",
+            "FSH_F!D63"
+          ]
+        },
+        {
+          "ageYears": 7.2,
+          "L": 0.200052601307153,
+          "M": 1.11524243481384,
+          "S": 0.539445425845409,
+          "centralConcentration": 1.11524243481384,
+          "sourceCells": [
+            "FSH_F!A64",
+            "FSH_F!B64",
+            "FSH_F!C64",
+            "FSH_F!D64"
+          ]
+        },
+        {
+          "ageYears": 7.3,
+          "L": 0.206665332498408,
+          "M": 1.12597984777896,
+          "S": 0.539700943699107,
+          "centralConcentration": 1.12597984777896,
+          "sourceCells": [
+            "FSH_F!A65",
+            "FSH_F!B65",
+            "FSH_F!C65",
+            "FSH_F!D65"
+          ]
+        },
+        {
+          "ageYears": 7.4,
+          "L": 0.213277793567175,
+          "M": 1.13804321858598,
+          "S": 0.539956879541908,
+          "centralConcentration": 1.13804321858598,
+          "sourceCells": [
+            "FSH_F!A66",
+            "FSH_F!B66",
+            "FSH_F!C66",
+            "FSH_F!D66"
+          ]
+        },
+        {
+          "ageYears": 7.5,
+          "L": 0.219889984055335,
+          "M": 1.15143961648755,
+          "S": 0.540213230965754,
+          "centralConcentration": 1.15143961648755,
+          "sourceCells": [
+            "FSH_F!A67",
+            "FSH_F!B67",
+            "FSH_F!C67",
+            "FSH_F!D67"
+          ]
+        },
+        {
+          "ageYears": 7.6,
+          "L": 0.226501903577244,
+          "M": 1.16617855582177,
+          "S": 0.540469995876306,
+          "centralConcentration": 1.16617855582177,
+          "sourceCells": [
+            "FSH_F!A68",
+            "FSH_F!B68",
+            "FSH_F!C68",
+            "FSH_F!D68"
+          ]
+        },
+        {
+          "ageYears": 7.7,
+          "L": 0.233113552911608,
+          "M": 1.18226680720732,
+          "S": 0.540727172696637,
+          "centralConcentration": 1.182266807207321,
+          "sourceCells": [
+            "FSH_F!A69",
+            "FSH_F!B69",
+            "FSH_F!C69",
+            "FSH_F!D69"
+          ]
+        },
+        {
+          "ageYears": 7.8,
+          "L": 0.239724933323517,
+          "M": 1.19970776782645,
+          "S": 0.540984759951866,
+          "centralConcentration": 1.1997077678264556,
+          "sourceCells": [
+            "FSH_F!A70",
+            "FSH_F!B70",
+            "FSH_F!C70",
+            "FSH_F!D70"
+          ]
+        },
+        {
+          "ageYears": 7.9,
+          "L": 0.246336046750449,
+          "M": 1.21850514027491,
+          "S": 0.541242755655924,
+          "centralConcentration": 1.2185051402749363,
+          "sourceCells": [
+            "FSH_F!A71",
+            "FSH_F!B71",
+            "FSH_F!C71",
+            "FSH_F!D71"
+          ]
+        },
+        {
+          "ageYears": 8.0,
+          "L": 0.252946896407253,
+          "M": 1.23865828087821,
+          "S": 0.541501158099394,
+          "centralConcentration": 1.2386582808783309,
+          "sourceCells": [
+            "FSH_F!A72",
+            "FSH_F!B72",
+            "FSH_F!C72",
+            "FSH_F!D72"
+          ]
+        },
+        {
+          "ageYears": 8.1,
+          "L": 0.259557485358636,
+          "M": 1.26015958571184,
+          "S": 0.541759966161493,
+          "centralConcentration": 1.2601595857123316,
+          "sourceCells": [
+            "FSH_F!A73",
+            "FSH_F!B73",
+            "FSH_F!C73",
+            "FSH_F!D73"
+          ]
+        },
+        {
+          "ageYears": 8.2,
+          "L": 0.266167816526075,
+          "M": 1.28299990184093,
+          "S": 0.542019178344302,
+          "centralConcentration": 1.282999901842744,
+          "sourceCells": [
+            "FSH_F!A74",
+            "FSH_F!B74",
+            "FSH_F!C74",
+            "FSH_F!D74"
+          ]
+        },
+        {
+          "ageYears": 8.3,
+          "L": 0.272777894049651,
+          "M": 1.3071674867934,
+          "S": 0.54227879289571,
+          "centralConcentration": 1.3071674867995149,
+          "sourceCells": [
+            "FSH_F!A75",
+            "FSH_F!B75",
+            "FSH_F!C75",
+            "FSH_F!D75"
+          ]
+        },
+        {
+          "ageYears": 8.4,
+          "L": 0.279387725643279,
+          "M": 1.33264359109553,
+          "S": 0.542538809034091,
+          "centralConcentration": 1.3326435911145096,
+          "sourceCells": [
+            "FSH_F!A76",
+            "FSH_F!B76",
+            "FSH_F!C76",
+            "FSH_F!D76"
+          ]
+        },
+        {
+          "ageYears": 8.5,
+          "L": 0.285997321394151,
+          "M": 1.35940513467639,
+          "S": 0.542799226133257,
+          "centralConcentration": 1.3594051347310283,
+          "sourceCells": [
+            "FSH_F!A77",
+            "FSH_F!B77",
+            "FSH_F!C77",
+            "FSH_F!D77"
+          ]
+        },
+        {
+          "ageYears": 8.6,
+          "L": 0.292606690020834,
+          "M": 1.38742512452551,
+          "S": 0.543060043358373,
+          "centralConcentration": 1.3874251246723948,
+          "sourceCells": [
+            "FSH_F!A78",
+            "FSH_F!B78",
+            "FSH_F!C78",
+            "FSH_F!D78"
+          ]
+        },
+        {
+          "ageYears": 8.7,
+          "L": 0.299215838086145,
+          "M": 1.4166710720225,
+          "S": 0.543321259785939,
+          "centralConcentration": 1.4166710723934535,
+          "sourceCells": [
+            "FSH_F!A79",
+            "FSH_F!B79",
+            "FSH_F!C79",
+            "FSH_F!D79"
+          ]
+        },
+        {
+          "ageYears": 8.8,
+          "L": 0.305824771763803,
+          "M": 1.44710955337843,
+          "S": 0.543582874447233,
+          "centralConcentration": 1.4471095542632046,
+          "sourceCells": [
+            "FSH_F!A80",
+            "FSH_F!B80",
+            "FSH_F!C80",
+            "FSH_F!D80"
+          ]
+        },
+        {
+          "ageYears": 8.9,
+          "L": 0.312433496034275,
+          "M": 1.47870482056812,
+          "S": 0.54384488613672,
+          "centralConcentration": 1.478704822570677,
+          "sourceCells": [
+            "FSH_F!A81",
+            "FSH_F!B81",
+            "FSH_F!C81",
+            "FSH_F!D81"
+          ]
+        },
+        {
+          "ageYears": 9.0,
+          "L": 0.319042015151863,
+          "M": 1.511418671845,
+          "S": 0.54410729272335,
+          "centralConcentration": 1.5114186761644488,
+          "sourceCells": [
+            "FSH_F!A82",
+            "FSH_F!B82",
+            "FSH_F!C82",
+            "FSH_F!D82"
+          ]
+        },
+        {
+          "ageYears": 9.1,
+          "L": 0.325650333922058,
+          "M": 1.54521279457196,
+          "S": 0.544370091218785,
+          "centralConcentration": 1.5452128034850623,
+          "sourceCells": [
+            "FSH_F!A83",
+            "FSH_F!B83",
+            "FSH_F!C83",
+            "FSH_F!D83"
+          ]
+        },
+        {
+          "ageYears": 9.2,
+          "L": 0.332258456565105,
+          "M": 1.58004781743443,
+          "S": 0.544633278348772,
+          "centralConcentration": 1.580047835090203,
+          "sourceCells": [
+            "FSH_F!A84",
+            "FSH_F!B84",
+            "FSH_F!C84",
+            "FSH_F!D84"
+          ]
+        },
+        {
+          "ageYears": 9.3,
+          "L": 0.338866390222856,
+          "M": 1.61588521002199,
+          "S": 0.544896852055393,
+          "centralConcentration": 1.6158852437008346,
+          "sourceCells": [
+            "FSH_F!A85",
+            "FSH_F!B85",
+            "FSH_F!C85",
+            "FSH_F!D85"
+          ]
+        },
+        {
+          "ageYears": 9.4,
+          "L": 0.345474149662605,
+          "M": 1.65268302546844,
+          "S": 0.545160812801112,
+          "centralConcentration": 1.6526830875075886,
+          "sourceCells": [
+            "FSH_F!A86",
+            "FSH_F!B86",
+            "FSH_F!C86",
+            "FSH_F!D86"
+          ]
+        },
+        {
+          "ageYears": 9.5,
+          "L": 0.352081746981168,
+          "M": 1.69040303056959,
+          "S": 0.545425162528987,
+          "centralConcentration": 1.6904031412128007,
+          "sourceCells": [
+            "FSH_F!A87",
+            "FSH_F!B87",
+            "FSH_F!C87",
+            "FSH_F!D87"
+          ]
+        },
+        {
+          "ageYears": 9.6,
+          "L": 0.358689190012665,
+          "M": 1.72900886042138,
+          "S": 0.545689903619577,
+          "centralConcentration": 1.7290090519107058,
+          "sourceCells": [
+            "FSH_F!A88",
+            "FSH_F!B88",
+            "FSH_F!C88",
+            "FSH_F!D88"
+          ]
+        },
+        {
+          "ageYears": 9.7,
+          "L": 0.365296486030755,
+          "M": 1.7684609271348,
+          "S": 0.54595503791266,
+          "centralConcentration": 1.768461249422816,
+          "sourceCells": [
+            "FSH_F!A89",
+            "FSH_F!B89",
+            "FSH_F!C89",
+            "FSH_F!D89"
+          ]
+        },
+        {
+          "ageYears": 9.8,
+          "L": 0.371903642164056,
+          "M": 1.80871764315013,
+          "S": 0.546220566966204,
+          "centralConcentration": 1.808718171669476,
+          "sourceCells": [
+            "FSH_F!A90",
+            "FSH_F!B90",
+            "FSH_F!C90",
+            "FSH_F!D90"
+          ]
+        },
+        {
+          "ageYears": 9.9,
+          "L": 0.378510666195144,
+          "M": 1.84973258657311,
+          "S": 0.546486492503752,
+          "centralConcentration": 1.849733432549931,
+          "sourceCells": [
+            "FSH_F!A91",
+            "FSH_F!B91",
+            "FSH_F!C91",
+            "FSH_F!D91"
+          ]
+        },
+        {
+          "ageYears": 10.0,
+          "L": 0.385117567224672,
+          "M": 1.8914532941547,
+          "S": 0.546752816650801,
+          "centralConcentration": 1.8914546179908949,
+          "sourceCells": [
+            "FSH_F!A92",
+            "FSH_F!B92",
+            "FSH_F!C92",
+            "FSH_F!D92"
+          ]
+        },
+        {
+          "ageYears": 10.1,
+          "L": 0.391724355251861,
+          "M": 1.93382616565194,
+          "S": 0.547019540980149,
+          "centralConcentration": 1.93382819392804,
+          "sourceCells": [
+            "FSH_F!A93",
+            "FSH_F!B93",
+            "FSH_F!C93",
+            "FSH_F!D93"
+          ]
+        },
+        {
+          "ageYears": 10.2,
+          "L": 0.398331039786077,
+          "M": 1.97679625876561,
+          "S": 0.547286666574792,
+          "centralConcentration": 1.9767993054183648,
+          "sourceCells": [
+            "FSH_F!A94",
+            "FSH_F!B94",
+            "FSH_F!C94",
+            "FSH_F!D94"
+          ]
+        },
+        {
+          "ageYears": 10.3,
+          "L": 0.404937629424991,
+          "M": 2.02030569270798,
+          "S": 0.547554194800807,
+          "centralConcentration": 2.0203101849170886,
+          "sourceCells": [
+            "FSH_F!A95",
+            "FSH_F!B95",
+            "FSH_F!C95",
+            "FSH_F!D95"
+          ]
+        },
+        {
+          "ageYears": 10.4,
+          "L": 0.411544129539558,
+          "M": 2.06429244624128,
+          "S": 0.547822126275057,
+          "centralConcentration": 2.0642989555142575,
+          "sourceCells": [
+            "FSH_F!A96",
+            "FSH_F!B96",
+            "FSH_F!C96",
+            "FSH_F!D96"
+          ]
+        },
+        {
+          "ageYears": 10.5,
+          "L": 0.418150543767805,
+          "M": 2.10869252168599,
+          "S": 0.54809046073738,
+          "centralConcentration": 2.1087018005726588,
+          "sourceCells": [
+            "FSH_F!A97",
+            "FSH_F!B97",
+            "FSH_F!C97",
+            "FSH_F!D97"
+          ]
+        },
+        {
+          "ageYears": 10.6,
+          "L": 0.424756874284118,
+          "M": 2.15343725570707,
+          "S": 0.548359196944185,
+          "centralConcentration": 2.1534502804611075,
+          "sourceCells": [
+            "FSH_F!A98",
+            "FSH_F!B98",
+            "FSH_F!C98",
+            "FSH_F!D98"
+          ]
+        },
+        {
+          "ageYears": 10.7,
+          "L": 0.431363121518372,
+          "M": 2.19845081606537,
+          "S": 0.548628332779976,
+          "centralConcentration": 2.198468835441057,
+          "sourceCells": [
+            "FSH_F!A99",
+            "FSH_F!B99",
+            "FSH_F!C99",
+            "FSH_F!D99"
+          ]
+        },
+        {
+          "ageYears": 10.8,
+          "L": 0.437969283104108,
+          "M": 2.24365459148826,
+          "S": 0.548897865223185,
+          "centralConcentration": 2.2436791817678783,
+          "sourceCells": [
+            "FSH_F!A100",
+            "FSH_F!B100",
+            "FSH_F!C100",
+            "FSH_F!D100"
+          ]
+        },
+        {
+          "ageYears": 10.9,
+          "L": 0.444575354804315,
+          "M": 2.28897091176667,
+          "S": 0.549167790828466,
+          "centralConcentration": 2.2890040379735748,
+          "sourceCells": [
+            "FSH_F!A101",
+            "FSH_F!B101",
+            "FSH_F!C101",
+            "FSH_F!D101"
+          ]
+        },
+        {
+          "ageYears": 11.0,
+          "L": 0.451181332607734,
+          "M": 2.33432336921617,
+          "S": 0.549438105151988,
+          "centralConcentration": 2.3343674522872604,
+          "sourceCells": [
+            "FSH_F!A102",
+            "FSH_F!B102",
+            "FSH_F!C102",
+            "FSH_F!D102"
+          ]
+        },
+        {
+          "ageYears": 11.1,
+          "L": 0.457787213164944,
+          "M": 2.37963559585856,
+          "S": 0.549708802273106,
+          "centralConcentration": 2.3796935853644716,
+          "sourceCells": [
+            "FSH_F!A103",
+            "FSH_F!B103",
+            "FSH_F!C103",
+            "FSH_F!D103"
+          ]
+        },
+        {
+          "ageYears": 11.2,
+          "L": 0.46439299372316,
+          "M": 2.42483173706971,
+          "S": 0.549979875211623,
+          "centralConcentration": 2.4249071889467073,
+          "sourceCells": [
+            "FSH_F!A104",
+            "FSH_F!B104",
+            "FSH_F!C104",
+            "FSH_F!D104"
+          ]
+        },
+        {
+          "ageYears": 11.3,
+          "L": 0.470998670948752,
+          "M": 2.46983808950845,
+          "S": 0.550251317125232,
+          "centralConcentration": 2.469935248149027,
+          "sourceCells": [
+            "FSH_F!A105",
+            "FSH_F!B105",
+            "FSH_F!C105",
+            "FSH_F!D105"
+          ]
+        },
+        {
+          "ageYears": 11.4,
+          "L": 0.477604238671875,
+          "M": 2.51458555975075,
+          "S": 0.550523121150711,
+          "centralConcentration": 2.5147094437172273,
+          "sourceCells": [
+            "FSH_F!A106",
+            "FSH_F!B106",
+            "FSH_F!C106",
+            "FSH_F!D106"
+          ]
+        },
+        {
+          "ageYears": 11.5,
+          "L": 0.484209687535107,
+          "M": 2.55901079586585,
+          "S": 0.550795280819715,
+          "centralConcentration": 2.559167286366137,
+          "sourceCells": [
+            "FSH_F!A107",
+            "FSH_F!B107",
+            "FSH_F!C107",
+            "FSH_F!D107"
+          ]
+        },
+        {
+          "ageYears": 11.6,
+          "L": 0.490815005706096,
+          "M": 2.60305835890308,
+          "S": 0.551067790631644,
+          "centralConcentration": 2.6032542902266753,
+          "sourceCells": [
+            "FSH_F!A108",
+            "FSH_F!B108",
+            "FSH_F!C108",
+            "FSH_F!D108"
+          ]
+        },
+        {
+          "ageYears": 11.7,
+          "L": 0.497420182622228,
+          "M": 2.64667671400726,
+          "S": 0.551340645095752,
+          "centralConcentration": 2.6469199645884007,
+          "sourceCells": [
+            "FSH_F!A109",
+            "FSH_F!B109",
+            "FSH_F!C109",
+            "FSH_F!D109"
+          ]
+        },
+        {
+          "ageYears": 11.8,
+          "L": 0.504025209121492,
+          "M": 2.68981916833956,
+          "S": 0.551613839069813,
+          "centralConcentration": 2.6901187516035843,
+          "sourceCells": [
+            "FSH_F!A110",
+            "FSH_F!B110",
+            "FSH_F!C110",
+            "FSH_F!D110"
+          ]
+        },
+        {
+          "ageYears": 11.9,
+          "L": 0.510630076117461,
+          "M": 2.73244102377799,
+          "S": 0.551887367812538,
+          "centralConcentration": 2.732807177298423,
+          "sourceCells": [
+            "FSH_F!A111",
+            "FSH_F!B111",
+            "FSH_F!C111",
+            "FSH_F!D111"
+          ]
+        },
+        {
+          "ageYears": 12.0,
+          "L": 0.517234773246057,
+          "M": 2.77449760727307,
+          "S": 0.552161226672655,
+          "centralConcentration": 2.7749418789024265,
+          "sourceCells": [
+            "FSH_F!A112",
+            "FSH_F!B112",
+            "FSH_F!C112",
+            "FSH_F!D112"
+          ]
+        },
+        {
+          "ageYears": 12.1,
+          "L": 0.523839287590151,
+          "M": 2.81594582041278,
+          "S": 0.552435410726886,
+          "centralConcentration": 2.816481150552722,
+          "sourceCells": [
+            "FSH_F!A113",
+            "FSH_F!B113",
+            "FSH_F!C113",
+            "FSH_F!D113"
+          ]
+        },
+        {
+          "ageYears": 12.2,
+          "L": 0.530443605249416,
+          "M": 2.85674651189024,
+          "S": 0.55270991523176,
+          "centralConcentration": 2.857387311216575,
+          "sourceCells": [
+            "FSH_F!A114",
+            "FSH_F!B114",
+            "FSH_F!C114",
+            "FSH_F!D114"
+          ]
+        },
+        {
+          "ageYears": 12.3,
+          "L": 0.537047710771383,
+          "M": 2.89686541498649,
+          "S": 0.552984737017976,
+          "centralConcentration": 2.897627636722023,
+          "sourceCells": [
+            "FSH_F!A115",
+            "FSH_F!B115",
+            "FSH_F!C115",
+            "FSH_F!D115"
+          ]
+        },
+        {
+          "ageYears": 12.4,
+          "L": 0.543651591186278,
+          "M": 2.9362737817809,
+          "S": 0.553259874731571,
+          "centralConcentration": 2.9371749879145925,
+          "sourceCells": [
+            "FSH_F!A116",
+            "FSH_F!B116",
+            "FSH_F!C116",
+            "FSH_F!D116"
+          ]
+        },
+        {
+          "ageYears": 12.5,
+          "L": 0.550255235973789,
+          "M": 2.97495032779946,
+          "S": 0.553535327934552,
+          "centralConcentration": 2.976009749216049,
+          "sourceCells": [
+            "FSH_F!A117",
+            "FSH_F!B117",
+            "FSH_F!C117",
+            "FSH_F!D117"
+          ]
+        },
+        {
+          "ageYears": 12.6,
+          "L": 0.556858634954658,
+          "M": 3.01287649544577,
+          "S": 0.55381109628408,
+          "centralConcentration": 3.0141150833657915,
+          "sourceCells": [
+            "FSH_F!A118",
+            "FSH_F!B118",
+            "FSH_F!C118",
+            "FSH_F!D118"
+          ]
+        },
+        {
+          "ageYears": 12.7,
+          "L": 0.563461777251383,
+          "M": 3.05003636637548,
+          "S": 0.554087179584185,
+          "centralConcentration": 3.0514768354778137,
+          "sourceCells": [
+            "FSH_F!A119",
+            "FSH_F!B119",
+            "FSH_F!C119",
+            "FSH_F!D119"
+          ]
+        },
+        {
+          "ageYears": 12.8,
+          "L": 0.570064650569758,
+          "M": 3.08642015701334,
+          "S": 0.554363578499922,
+          "centralConcentration": 3.088087021787892,
+          "sourceCells": [
+            "FSH_F!A120",
+            "FSH_F!B120",
+            "FSH_F!C120",
+            "FSH_F!D120"
+          ]
+        },
+        {
+          "ageYears": 12.9,
+          "L": 0.576667239647892,
+          "M": 3.12202402882049,
+          "S": 0.554640295553666,
+          "centralConcentration": 3.1239436321960454,
+          "sourceCells": [
+            "FSH_F!A121",
+            "FSH_F!B121",
+            "FSH_F!C121",
+            "FSH_F!D121"
+          ]
+        },
+        {
+          "ageYears": 13.0,
+          "L": 0.583269528253567,
+          "M": 3.15684904588843,
+          "S": 0.554917335290217,
+          "centralConcentration": 3.1590495798248797,
+          "sourceCells": [
+            "FSH_F!A122",
+            "FSH_F!B122",
+            "FSH_F!C122",
+            "FSH_F!D122"
+          ]
+        },
+        {
+          "ageYears": 13.1,
+          "L": 0.589871497333559,
+          "M": 3.19090303894718,
+          "S": 0.555194704482711,
+          "centralConcentration": 3.193414559049099,
+          "sourceCells": [
+            "FSH_F!A123",
+            "FSH_F!B123",
+            "FSH_F!C123",
+            "FSH_F!D123"
+          ]
+        },
+        {
+          "ageYears": 13.2,
+          "L": 0.596473125738963,
+          "M": 3.22419914737984,
+          "S": 0.555472410657831,
+          "centralConcentration": 3.2270535801753053,
+          "sourceCells": [
+            "FSH_F!A124",
+            "FSH_F!B124",
+            "FSH_F!C124",
+            "FSH_F!D124"
+          ]
+        },
+        {
+          "ageYears": 13.3,
+          "L": 0.603074394659506,
+          "M": 3.25675495358636,
+          "S": 0.555750460841117,
+          "centralConcentration": 3.2599860971861663,
+          "sourceCells": [
+            "FSH_F!A125",
+            "FSH_F!B125",
+            "FSH_F!C125",
+            "FSH_F!D125"
+          ]
+        },
+        {
+          "ageYears": 13.4,
+          "L": 0.609675288454104,
+          "M": 3.28859102913251,
+          "S": 0.556028860899927,
+          "centralConcentration": 3.292234546788298,
+          "sourceCells": [
+            "FSH_F!A126",
+            "FSH_F!B126",
+            "FSH_F!C126",
+            "FSH_F!D126"
+          ]
+        },
+        {
+          "ageYears": 13.5,
+          "L": 0.616275791922129,
+          "M": 3.31972837342981,
+          "S": 0.556307615615934,
+          "centralConcentration": 3.3238217782504633,
+          "sourceCells": [
+            "FSH_F!A127",
+            "FSH_F!B127",
+            "FSH_F!C127",
+            "FSH_F!D127"
+          ]
+        },
+        {
+          "ageYears": 13.6,
+          "L": 0.622875890558834,
+          "M": 3.35018690407129,
+          "S": 0.556586727991354,
+          "centralConcentration": 3.3547695351068403,
+          "sourceCells": [
+            "FSH_F!A128",
+            "FSH_F!B128",
+            "FSH_F!C128",
+            "FSH_F!D128"
+          ]
+        },
+        {
+          "ageYears": 13.7,
+          "L": 0.629475570450399,
+          "M": 3.37998647263876,
+          "S": 0.556866200285868,
+          "centralConcentration": 3.3850994654296045,
+          "sourceCells": [
+            "FSH_F!A129",
+            "FSH_F!B129",
+            "FSH_F!C129",
+            "FSH_F!D129"
+          ]
+        },
+        {
+          "ageYears": 13.8,
+          "L": 0.636074816641794,
+          "M": 3.40914592014555,
+          "S": 0.557146034241352,
+          "centralConcentration": 3.414832169550829,
+          "sourceCells": [
+            "FSH_F!A130",
+            "FSH_F!B130",
+            "FSH_F!C130",
+            "FSH_F!D130"
+          ]
+        },
+        {
+          "ageYears": 13.9,
+          "L": 0.642673614514194,
+          "M": 3.43768366962985,
+          "S": 0.557426231102545,
+          "centralConcentration": 3.4439877874812015,
+          "sourceCells": [
+            "FSH_F!A131",
+            "FSH_F!B131",
+            "FSH_F!C131",
+            "FSH_F!D131"
+          ]
+        },
+        {
+          "ageYears": 14.0,
+          "L": 0.649271954982787,
+          "M": 3.46561797808473,
+          "S": 0.557706793431514,
+          "centralConcentration": 3.4725862465683117,
+          "sourceCells": [
+            "FSH_F!A132",
+            "FSH_F!B132",
+            "FSH_F!C132",
+            "FSH_F!D132"
+          ]
+        },
+        {
+          "ageYears": 14.1,
+          "L": 0.655869833767316,
+          "M": 3.49296729529906,
+          "S": 0.557987724761183,
+          "centralConcentration": 3.5006476164993816,
+          "sourceCells": [
+            "FSH_F!A133",
+            "FSH_F!B133",
+            "FSH_F!C133",
+            "FSH_F!D133"
+          ]
+        },
+        {
+          "ageYears": 14.2,
+          "L": 0.662467248002481,
+          "M": 3.51975216682096,
+          "S": 0.558269028650627,
+          "centralConcentration": 3.5281940126924622,
+          "sourceCells": [
+            "FSH_F!A134",
+            "FSH_F!B134",
+            "FSH_F!C134",
+            "FSH_F!D134"
+          ]
+        },
+        {
+          "ageYears": 14.3,
+          "L": 0.669064194907558,
+          "M": 3.5459934193914,
+          "S": 0.558550708402144,
+          "centralConcentration": 3.555247775600825,
+          "sourceCells": [
+            "FSH_F!A135",
+            "FSH_F!B135",
+            "FSH_F!C135",
+            "FSH_F!D135"
+          ]
+        },
+        {
+          "ageYears": 14.4,
+          "L": 0.675660671788112,
+          "M": 3.57171131297156,
+          "S": 0.558832766373719,
+          "centralConcentration": 3.5818306178656516,
+          "sourceCells": [
+            "FSH_F!A136",
+            "FSH_F!B136",
+            "FSH_F!C136",
+            "FSH_F!D136"
+          ]
+        },
+        {
+          "ageYears": 14.5,
+          "L": 0.682256676480586,
+          "M": 3.59692614805175,
+          "S": 0.55911520483573,
+          "centralConcentration": 3.6079642308931845,
+          "sourceCells": [
+            "FSH_F!A137",
+            "FSH_F!B137",
+            "FSH_F!C137",
+            "FSH_F!D137"
+          ]
+        },
+        {
+          "ageYears": 14.6,
+          "L": 0.688852205522199,
+          "M": 3.62165671821139,
+          "S": 0.559398025262087,
+          "centralConcentration": 3.6336687303654935,
+          "sourceCells": [
+            "FSH_F!A138",
+            "FSH_F!B138",
+            "FSH_F!C138",
+            "FSH_F!D138"
+          ]
+        },
+        {
+          "ageYears": 14.7,
+          "L": 0.695447256001235,
+          "M": 3.64592046838646,
+          "S": 0.559681227002615,
+          "centralConcentration": 3.658962811932065,
+          "sourceCells": [
+            "FSH_F!A139",
+            "FSH_F!B139",
+            "FSH_F!C139",
+            "FSH_F!D139"
+          ]
+        },
+        {
+          "ageYears": 14.8,
+          "L": 0.702041824332755,
+          "M": 3.66973727848589,
+          "S": 0.559964809232356,
+          "centralConcentration": 3.6838675468963866,
+          "sourceCells": [
+            "FSH_F!A140",
+            "FSH_F!B140",
+            "FSH_F!C140",
+            "FSH_F!D140"
+          ]
+        },
+        {
+          "ageYears": 14.9,
+          "L": 0.70863590699372,
+          "M": 3.69312823052292,
+          "S": 0.560248770938637,
+          "centralConcentration": 3.708405147336678,
+          "sourceCells": [
+            "FSH_F!A141",
+            "FSH_F!B141",
+            "FSH_F!C141",
+            "FSH_F!D141"
+          ]
+        },
+        {
+          "ageYears": 15.0,
+          "L": 0.715229502481585,
+          "M": 3.71611697131763,
+          "S": 0.560533112554355,
+          "centralConcentration": 3.732600337646832,
+          "sourceCells": [
+            "FSH_F!A142",
+            "FSH_F!B142",
+            "FSH_F!C142",
+            "FSH_F!D142"
+          ]
+        },
+        {
+          "ageYears": 15.1,
+          "L": 0.721822610170665,
+          "M": 3.73873034871755,
+          "S": 0.560817835838831,
+          "centralConcentration": 3.7564809986360608,
+          "sourceCells": [
+            "FSH_F!A143",
+            "FSH_F!B143",
+            "FSH_F!C143",
+            "FSH_F!D143"
+          ]
+        },
+        {
+          "ageYears": 15.2,
+          "L": 0.728415230862026,
+          "M": 3.76099527944918,
+          "S": 0.561102941624777,
+          "centralConcentration": 3.780075025984891,
+          "sourceCells": [
+            "FSH_F!A144",
+            "FSH_F!B144",
+            "FSH_F!C144",
+            "FSH_F!D144"
+          ]
+        },
+        {
+          "ageYears": 15.3,
+          "L": 0.735007367321763,
+          "M": 3.78293674988898,
+          "S": 0.561388429003468,
+          "centralConcentration": 3.8034083226446906,
+          "sourceCells": [
+            "FSH_F!A145",
+            "FSH_F!B145",
+            "FSH_F!C145",
+            "FSH_F!D145"
+          ]
+        },
+        {
+          "ageYears": 15.4,
+          "L": 0.741599026313475,
+          "M": 3.8045768465325,
+          "S": 0.561674295065185,
+          "centralConcentration": 3.8265038234234705,
+          "sourceCells": [
+            "FSH_F!A146",
+            "FSH_F!B146",
+            "FSH_F!C146",
+            "FSH_F!D146"
+          ]
+        },
+        {
+          "ageYears": 15.5,
+          "L": 0.748190214488872,
+          "M": 3.8259353946699,
+          "S": 0.561960535936737,
+          "centralConcentration": 3.849382134679151,
+          "sourceCells": [
+            "FSH_F!A147",
+            "FSH_F!B147",
+            "FSH_F!C147",
+            "FSH_F!D147"
+          ]
+        },
+        {
+          "ageYears": 15.6,
+          "L": 0.754780938742773,
+          "M": 3.84703207247856,
+          "S": 0.562247147321406,
+          "centralConcentration": 3.872063660858778,
+          "sourceCells": [
+            "FSH_F!A148",
+            "FSH_F!B148",
+            "FSH_F!C148",
+            "FSH_F!D148"
+          ]
+        },
+        {
+          "ageYears": 15.7,
+          "L": 0.761371207257624,
+          "M": 3.8678868444369,
+          "S": 0.562534124275905,
+          "centralConcentration": 3.894569043495987,
+          "sourceCells": [
+            "FSH_F!A149",
+            "FSH_F!B149",
+            "FSH_F!C149",
+            "FSH_F!D149"
+          ]
+        },
+        {
+          "ageYears": 15.8,
+          "L": 0.76796102888815,
+          "M": 3.88851954402525,
+          "S": 0.562821461390329,
+          "centralConcentration": 3.916918744333683,
+          "sourceCells": [
+            "FSH_F!A150",
+            "FSH_F!B150",
+            "FSH_F!C150",
+            "FSH_F!D150"
+          ]
+        },
+        {
+          "ageYears": 15.9,
+          "L": 0.774550412227415,
+          "M": 3.90894835256215,
+          "S": 0.563109153581373,
+          "centralConcentration": 3.9391315154143207,
+          "sourceCells": [
+            "FSH_F!A151",
+            "FSH_F!B151",
+            "FSH_F!C151",
+            "FSH_F!D151"
+          ]
+        },
+        {
+          "ageYears": 16.0,
+          "L": 0.781139365154156,
+          "M": 3.92919000648392,
+          "S": 0.563397196641088,
+          "centralConcentration": 3.961224607974412,
+          "sourceCells": [
+            "FSH_F!A152",
+            "FSH_F!B152",
+            "FSH_F!C152",
+            "FSH_F!D152"
+          ]
+        },
+        {
+          "ageYears": 16.1,
+          "L": 0.787727894245371,
+          "M": 3.94926135173772,
+          "S": 0.563685586615531,
+          "centralConcentration": 3.9832153399334507,
+          "sourceCells": [
+            "FSH_F!A153",
+            "FSH_F!B153",
+            "FSH_F!C153",
+            "FSH_F!D153"
+          ]
+        },
+        {
+          "ageYears": 16.2,
+          "L": 0.794316008055979,
+          "M": 3.96917879141691,
+          "S": 0.563974319882494,
+          "centralConcentration": 4.005120542879235,
+          "sourceCells": [
+            "FSH_F!A154",
+            "FSH_F!B154",
+            "FSH_F!C154",
+            "FSH_F!D154"
+          ]
+        },
+        {
+          "ageYears": 16.3,
+          "L": 0.800903718654597,
+          "M": 3.9889579347956,
+          "S": 0.564263392963794,
+          "centralConcentration": 4.026956210528786,
+          "sourceCells": [
+            "FSH_F!A155",
+            "FSH_F!B155",
+            "FSH_F!C155",
+            "FSH_F!D155"
+          ]
+        },
+        {
+          "ageYears": 16.4,
+          "L": 0.80749103997197,
+          "M": 4.00861394392855,
+          "S": 0.564552801371097,
+          "centralConcentration": 4.048737849441781,
+          "sourceCells": [
+            "FSH_F!A156",
+            "FSH_F!B156",
+            "FSH_F!C156",
+            "FSH_F!D156"
+          ]
+        },
+        {
+          "ageYears": 16.5,
+          "L": 0.814077986356768,
+          "M": 4.02816153168693,
+          "S": 0.564842539984252,
+          "centralConcentration": 4.070480479048648,
+          "sourceCells": [
+            "FSH_F!A157",
+            "FSH_F!B157",
+            "FSH_F!C157",
+            "FSH_F!D157"
+          ]
+        },
+        {
+          "ageYears": 16.6,
+          "L": 0.820664571996195,
+          "M": 4.04761490644903,
+          "S": 0.565132603314556,
+          "centralConcentration": 4.092198577870259,
+          "sourceCells": [
+            "FSH_F!A158",
+            "FSH_F!B158",
+            "FSH_F!C158",
+            "FSH_F!D158"
+          ]
+        },
+        {
+          "ageYears": 16.7,
+          "L": 0.827250811617746,
+          "M": 4.06698789775996,
+          "S": 0.565422985349295,
+          "centralConcentration": 4.113906212740057,
+          "sourceCells": [
+            "FSH_F!A159",
+            "FSH_F!B159",
+            "FSH_F!C159",
+            "FSH_F!D159"
+          ]
+        },
+        {
+          "ageYears": 16.8,
+          "L": 0.833836719634066,
+          "M": 4.0862937141947,
+          "S": 0.56571367999554,
+          "centralConcentration": 4.1356167959794075,
+          "sourceCells": [
+            "FSH_F!A160",
+            "FSH_F!B160",
+            "FSH_F!C160",
+            "FSH_F!D160"
+          ]
+        },
+        {
+          "ageYears": 16.9,
+          "L": 0.84042230983311,
+          "M": 4.10554454135499,
+          "S": 0.566004680877252,
+          "centralConcentration": 4.157342679652729,
+          "sourceCells": [
+            "FSH_F!A161",
+            "FSH_F!B161",
+            "FSH_F!C161",
+            "FSH_F!D161"
+          ]
+        },
+        {
+          "ageYears": 17.0,
+          "L": 0.847007595225787,
+          "M": 4.12475139970227,
+          "S": 0.566295981205001,
+          "centralConcentration": 4.1790950116741366,
+          "sourceCells": [
+            "FSH_F!A162",
+            "FSH_F!B162",
+            "FSH_F!C162",
+            "FSH_F!D162"
+          ]
+        },
+        {
+          "ageYears": 17.1,
+          "L": 0.85359258911773,
+          "M": 4.14392447687215,
+          "S": 0.566587573383267,
+          "centralConcentration": 4.20088407246306,
+          "sourceCells": [
+            "FSH_F!A163",
+            "FSH_F!B163",
+            "FSH_F!C163",
+            "FSH_F!D163"
+          ]
+        },
+        {
+          "ageYears": 17.2,
+          "L": 0.860177306343096,
+          "M": 4.1630740139317,
+          "S": 0.566879449126232,
+          "centralConcentration": 4.22272017479219,
+          "sourceCells": [
+            "FSH_F!A164",
+            "FSH_F!B164",
+            "FSH_F!C164",
+            "FSH_F!D164"
+          ]
+        },
+        {
+          "ageYears": 17.3,
+          "L": 0.866761763576972,
+          "M": 4.18220983017997,
+          "S": 0.567171599896888,
+          "centralConcentration": 4.244613184808495,
+          "sourceCells": [
+            "FSH_F!A165",
+            "FSH_F!B165",
+            "FSH_F!C165",
+            "FSH_F!D165"
+          ]
+        },
+        {
+          "ageYears": 17.4,
+          "L": 0.873345977501765,
+          "M": 4.20133832975039,
+          "S": 0.567464017083855,
+          "centralConcentration": 4.2665694831305,
+          "sourceCells": [
+            "FSH_F!A166",
+            "FSH_F!B166",
+            "FSH_F!C166",
+            "FSH_F!D166"
+          ]
+        },
+        {
+          "ageYears": 17.5,
+          "L": 0.879929963533256,
+          "M": 4.22046209751483,
+          "S": 0.567756692252919,
+          "centralConcentration": 4.288591546056412,
+          "sourceCells": [
+            "FSH_F!A167",
+            "FSH_F!B167",
+            "FSH_F!C167",
+            "FSH_F!D167"
+          ]
+        },
+        {
+          "ageYears": 17.6,
+          "L": 0.886513736854933,
+          "M": 4.23958077625925,
+          "S": 0.568049616099682,
+          "centralConcentration": 4.3106788273145895,
+          "sourceCells": [
+            "FSH_F!A168",
+            "FSH_F!B168",
+            "FSH_F!C168",
+            "FSH_F!D168"
+          ]
+        },
+        {
+          "ageYears": 17.7,
+          "L": 0.893097312261726,
+          "M": 4.25869249910671,
+          "S": 0.56834278028532,
+          "centralConcentration": 4.332829209004394,
+          "sourceCells": [
+            "FSH_F!A169",
+            "FSH_F!B169",
+            "FSH_F!C169",
+            "FSH_F!D169"
+          ]
+        },
+        {
+          "ageYears": 17.8,
+          "L": 0.899680702564642,
+          "M": 4.2777964131629,
+          "S": 0.5686361787834,
+          "centralConcentration": 4.355041567845259,
+          "sourceCells": [
+            "FSH_F!A170",
+            "FSH_F!B170",
+            "FSH_F!C170",
+            "FSH_F!D170"
+          ]
+        },
+        {
+          "ageYears": 17.9,
+          "L": 0.906263920987779,
+          "M": 4.29689187526721,
+          "S": 0.568929805493271,
+          "centralConcentration": 4.377314959770476,
+          "sourceCells": [
+            "FSH_F!A171",
+            "FSH_F!B171",
+            "FSH_F!C171",
+            "FSH_F!D171"
+          ]
+        },
+        {
+          "ageYears": 18.0,
+          "L": 0.91284698240628,
+          "M": 4.31597753250857,
+          "S": 0.569223653183357,
+          "centralConcentration": 4.399647684355955,
+          "sourceCells": [
+            "FSH_F!A172",
+            "FSH_F!B172",
+            "FSH_F!C172",
+            "FSH_F!D172"
+          ]
+        },
+        {
+          "ageYears": 18.1,
+          "L": 0.919429902145312,
+          "M": 4.33505181860902,
+          "S": 0.569517714287446,
+          "centralConcentration": 4.4220377902178205,
+          "sourceCells": [
+            "FSH_F!A173",
+            "FSH_F!B173",
+            "FSH_F!C173",
+            "FSH_F!D173"
+          ]
+        },
+        {
+          "ageYears": 18.2,
+          "L": 0.926012696619143,
+          "M": 4.35411323389622,
+          "S": 0.569811980936853,
+          "centralConcentration": 4.444483361612465,
+          "sourceCells": [
+            "FSH_F!A174",
+            "FSH_F!B174",
+            "FSH_F!C174",
+            "FSH_F!D174"
+          ]
+        },
+        {
+          "ageYears": 18.3,
+          "L": 0.932595384410425,
+          "M": 4.37316094286302,
+          "S": 0.570106444847634,
+          "centralConcentration": 4.466983130653049,
+          "sourceCells": [
+            "FSH_F!A175",
+            "FSH_F!B175",
+            "FSH_F!C175",
+            "FSH_F!D175"
+          ]
+        },
+        {
+          "ageYears": 18.4,
+          "L": 0.939177983962424,
+          "M": 4.39219697826973,
+          "S": 0.570401098524018,
+          "centralConcentration": 4.489538733924867,
+          "sourceCells": [
+            "FSH_F!A176",
+            "FSH_F!B176",
+            "FSH_F!C176",
+            "FSH_F!D176"
+          ]
+        },
+        {
+          "ageYears": 18.5,
+          "L": 0.945760514196919,
+          "M": 4.41122475847052,
+          "S": 0.570695934682004,
+          "centralConcentration": 4.512153207260573,
+          "sourceCells": [
+            "FSH_F!A177",
+            "FSH_F!B177",
+            "FSH_F!C177",
+            "FSH_F!D177"
+          ]
+        },
+        {
+          "ageYears": 18.6,
+          "L": 0.952342993767763,
+          "M": 4.43024831430897,
+          "S": 0.57099094632557,
+          "centralConcentration": 4.534830200673745,
+          "sourceCells": [
+            "FSH_F!A178",
+            "FSH_F!B178",
+            "FSH_F!C178",
+            "FSH_F!D178"
+          ]
+        },
+        {
+          "ageYears": 18.7,
+          "L": 0.95892544016313,
+          "M": 4.44927236301276,
+          "S": 0.571286127099355,
+          "centralConcentration": 4.557574057812986,
+          "sourceCells": [
+            "FSH_F!A179",
+            "FSH_F!B179",
+            "FSH_F!C179",
+            "FSH_F!D179"
+          ]
+        },
+        {
+          "ageYears": 18.8,
+          "L": 0.96550786825741,
+          "M": 4.46829921675006,
+          "S": 0.57158147071961,
+          "centralConcentration": 4.5803866498868615,
+          "sourceCells": [
+            "FSH_F!A180",
+            "FSH_F!B180",
+            "FSH_F!C180",
+            "FSH_F!D180"
+          ]
+        },
+        {
+          "ageYears": 18.9,
+          "L": 0.97209028721717,
+          "M": 4.48732884423486,
+          "S": 0.571876972539143,
+          "centralConcentration": 4.603267431425548,
+          "sourceCells": [
+            "FSH_F!A181",
+            "FSH_F!B181",
+            "FSH_F!C181",
+            "FSH_F!D181"
+          ]
+        },
+        {
+          "ageYears": 19.0,
+          "L": 0.978672703582445,
+          "M": 4.50635957775915,
+          "S": 0.572172628707444,
+          "centralConcentration": 4.626214159143202,
+          "sourceCells": [
+            "FSH_F!A182",
+            "FSH_F!B182",
+            "FSH_F!C182",
+            "FSH_F!D182"
+          ]
+        }
+      ]
+    }
+  }
+}

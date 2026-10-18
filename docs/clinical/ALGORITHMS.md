@@ -2934,6 +2934,76 @@ Regresja wywołuje rzeczywisty renderer i silnik:
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną.
 
+### HORMONE-FSH-CALIPER-REFERENCE — odniesienie wieku od 16 lat, 2026-10-18
+
+**Problem i decyzja:** po analizie czterech oryginalnych plików Wilson 2023
+właściciel polecił pierwszy mały PR z FSH. Zwykły wykres przełącza źródło
+na CALIPER od 16. urodzin: chłopcy `[16,18)`, dziewczęta `[16,19)`.
+Madsen pozostaje w `[6,16)` ze wszystkimi oryginalnymi węzłami; męskie
+źródła dorosłe działają nadal od 18. Brak nowych pytań o Tanner, cykl
+lub metodę. LH i pozostałe anality, normy laboratoryjne, geometria oraz
+utrwalone oceny historyczne nie są przeliczane tą zmianą.
+
+**Źródło:** [Wilson i wsp. 2023](https://doi.org/10.1515/cclm-2022-1077),
+CCLM 61(6):1105–1115, PMID 36639844; pełny artykuł i Supplemental Tables
+1–3 dostarczone przez właściciela. Tabela 3, arkusze `FSH_M` i `FSH_F`,
+`A2:D182`: po 181 węzłów L/M/S co 0,1 roku, nie co miesiąc. Surowica,
+Abbott ARCHITECT; zdrowa kanadyjska kohorta CALIPER, Greater Toronto.
+Około 1500 opisuje kohorty źródłowe, nie N oznaczenia ani N podgrupy
+16–19. Wykluczono chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu,
+aktualną ciążę i leki na receptę, w tym antykoncepcję doustną w ostatnich
+dwóch tygodniach. Nie podano specyficznej fazy cyklu, stadium Tannera,
+porannego pobrania ani LLOQ FSH; brak LLOQ nie oznacza zera.
+
+**Odtwarzanie mediany:** natywna skala FSH to IU/L. Dla każdego węzła
+wyznaczono `qBCCG(0.5)` z normalizacją uciętego rozkładu, zgodnie
+z rodziną GAMLSS z suplementu i kodem `gamlss.dist`. Nie kopiujemy M
+jako dokładnego p50: F18 ma M=4,3159775325, ale p50=4,3996476844.
+Odtworzone p50 zgadzają się z czarnymi krzywymi ryc. 1C w granicach
+precyzji rysunku; odczyt ryciny jest kontrolą, nie źródłem nowych liczb.
+Ekstraktor `extract_wilson2023_caliper_fsh.py` używa biblioteki standardowej,
+sprawdza SHA-256 oryginału i zachowuje wszystkie 362 wiersze z adresami
+komórek. Pełnych dokumentów ani arkuszy nie publikujemy w repozytorium.
+
+**Polityka:** [fsh-caliper-reference-policy.json](hormone-lifespan/fsh-caliper-reference-policy.json).
+PCHIP w stężeniach pomiędzy węzłami jest przybliżeniem tabeli, nie
+odzyskanym modelem GAMLSS. Wiersz 19 domyka interpolację poniżej 19;
+nie daje odniesienia dla pacjentki w wieku 19 lat. Cały niepewny wiek
+musi pasować do jednego profilu. Nie wybieramy jego środka ani nie
+uśredniamy różnych źródeł. Nieznana metoda pozwala na orientacyjne
+zestawienie; znana niezgodna metoda lub materiał blokują punkt bez
+fallbacku. Alias źródła dotyczy wyłącznie `abbott-architect-ci2000-fsh`,
+nie stanowi kalibracji z i1000, IMMULITE, Roche lub AutoDELFIA.
+
+Przy 16 latach zwykłe odniesienie zmienia się jawnie: M4,1606515393 →
+2,4066234448; F5,8260631746 → 3,9612246080 IU/L. Te różnice kohort i metod
+nie tworzą nowego wydarzenia w poglądowej linii. Osobne porównanie płci
+zachowuje Madsen 6–16 włącznie. Własna polityka porównania zachowuje
+opublikowany węzeł męskiego FSH 16 w kopii profilu ograniczonej do tego
+widoku; nie przywraca go jako zwykłego fallbacku ani nie zmienia globalnych
+profili. Znane leczenie, stymulacja i ciąża zachowują dotychczasowe bramki.
+
+**Przypadki wejście → wynik produkcyjnego silnika:** FSH, surowica lub
+nieznany materiał/metoda, wynik 2 IU/L lub 2 mIU/mL:
+
+- M16 → p50 2,4066234448145565; M17 → 2,518038228916774 IU/L;
+- F16 → 3,961224607974412; F17 → 4,1790950116741366;
+  F18 → 4,399647684355955 IU/L;
+- wpis 16 lat 0 miesięcy → CALIPER, bez wymagania Th/G;
+- M18 → dotychczasowa średnia grupy Laurentino 3,0, nie CALIPER;
+- F19 → brak odniesienia, bez ekstrapolacji;
+- niepewny wiek przecinający 16, M18 lub F19 → brak arbitralnej mediany;
+- znana ciąża, przeciwwskazanie, cenzurowany wynik lub niezgodna metoda →
+  brak punktu, bez zmiany linii i bez nowej normy laboratoryjnej;
+- porównanie płci dokładnie przy 16 → oryginalne p50 Madsen obu płci.
+
+Regresje wywołują rzeczywiste funkcje produkcyjne:
+`hormone-lifespan-fsh-caliper-reference.test.mjs` i
+`hormone-lifespan-fsh-caliper-reference.spec.mjs`. Źródła, granice,
+hashe i kontrola ryciny:
+[audyt FSH CALIPER](hormone-lifespan/evidence/fsh-caliper-reference-audit-2026-10-18.json).
+Zgoda na wdrożenie i zielone testy nie nadają statusu walidacji klinicznej.
+
 ### HORMONE-LH-FSH-SEX-COMPARISON — wspólne stężenia obu płci, 2026-10-12
 
 **Problem i decyzja:** dotychczasowe pokwitaniowe porównanie LH/FSH

@@ -735,7 +735,42 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-17.2','purpose':'educational-population-central-comparison',
+    fsh_policy = json.loads((ROOT/'fsh-caliper-reference-policy.json').read_text(encoding='utf-8'))
+    assert (fsh_policy['kind'], fsh_policy['ordinaryOnly'], fsh_policy['analyte'],
+            fsh_policy['unit']) == ('educational-source-selection', True, 'fsh', 'IU/L')
+    fsh_source = json.loads((ROOT/fsh_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    # The ordinary source switch includes age 16 (also completed-month age).
+    # Retain every Madsen source node; the separate sex comparison still uses
+    # its original, published inclusive year-16 endpoint.
+    for identifier in fsh_policy['madsenProfiles']:
+        existing = next(profile for profile in profiles if profile['id'] == identifier)
+        assert existing['analyte'] == 'fsh' and existing['maxAge'] == 16
+        existing['maxAgeExclusive'] = True
+    for route in fsh_policy['profiles']:
+        series = fsh_source['series'][route['sex']]
+        points = series['points']
+        assert len(points) == 181 and [point['ageYears'] for point in points] == [i/10 for i in range(10,191)]
+        assert route['minAge'] == 16 and route['maxAgeExclusive'] is True
+        assert route['maxAge'] == (18 if route['sex'] == 'male' else 19)
+        add(route['id'], 'fsh', route['sex'],
+            [dict(ageYears=point['ageYears'], value=point['centralConcentration']) for point in points],
+            route['minAge'], route['maxAge'], 'Wilson 2023 · CALIPER · FSH',
+            'https://doi.org/10.1515/cclm-2022-1077', 'Abbott ARCHITECT ci2000',
+            'CALIPER; zdrowe dzieci i młodzież, Greater Toronto, Kanada', 'median',
+            ordinaryOnly=True, maxAgeExclusive=True, specimen=fsh_policy['specimen'],
+            compatibleSpecimenIds=fsh_policy['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=fsh_policy['compatibleAssayMethodIds'],
+            excludedCyclePhases=fsh_policy['excludedCyclePhases'], patientNote=fsh_policy['patientNote'],
+            provenance={**fsh_source['source'], 'sourceWorksheet':series['sheet'],
+                        'sourceCells':[point['sourceCells'] for point in points],
+                        'sourceModel':fsh_source['model'],
+                        'sourceRouting':{'version':fsh_policy['version'], **route,
+                            'selectionPolicy':fsh_policy['selectionPolicy']}},
+            limitations=[*fsh_source['useConstraints'], fsh_policy['agePolicy'],
+                         fsh_policy['statisticPolicy'], fsh_policy['interpolation'],
+                         fsh_policy['assayPolicy'], fsh_policy['contextPolicy']])
+
+    return {'version':'2026-10-18.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,
