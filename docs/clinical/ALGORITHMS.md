@@ -5041,7 +5041,7 @@ Cole nie jest utrwalany ani synchronizowany (nie ma go w `collectUserData()` ani
 
 **Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
 
-### P-CENTYLE-RESET — centyle masy i wzrostu poprzedniego pacjenta nie przechodzą na następnego; WFH zmierzone bez widocznego przecieku (SW 1.1.275, `vilda_update_prep.js` 97, 2026-10-14, polecenie właściciela)
+### P-CENTYLE-RESET — centyle masy i wzrostu poprzedniego pacjenta nie przechodzą na następnego; WFH zmierzone bez widocznego przecieku (SW 1.1.313, `vilda_update_prep.js` 98, 2026-10-14, polecenie właściciela)
 
 **Objaw.** Punkt z listy P-COLE-RESET („ten sam wzorzec, poza zakresem”). `window.lastWeightPercentile` i `window.lastHeightPercentile` zostawały po poprzednim dziecku we wszystkich badanych ścieżkach:
 - lista pacjentów („Nowy pomiar”, „Odtwórz zapis”);
@@ -5071,7 +5071,7 @@ Zmierzone na `audyt` 2df41a8 (Chromium, dane fikcyjne; A: dziewczynka 10 l., 125
 - Te same skutki występują w DocPro, w ramce Start powłoki i po blokadzie sejfu (zmierzone w weryfikacji).
 - HTML raportu PDF jest identyczny z kontrolą także w stanie błędu zakresu. Różnią się tylko `highlights` modelu, których nikt nie renderuje.
 
-**Zmiana.** `vilda_update_prep.js` 96 → 97:
+**Zmiana.** `vilda_update_prep.js` 97 → 98:
 1. Nowa lista `VILDA_UPDATE_PREP_POCHODNE_CENTYLE` (`lastWeightPercentile`, `lastHeightPercentile`). Zeruje ją `vildaUpdatePrepZerujPochodneBmi` razem z rodziną BMI: przy zatrzymanym `update()` i w `xt()`. Nazwa funkcji zostaje, bo woła ją `xt()` przez `window`; `vilda_data_import_export.js` się nie zmienia.
 2. `vildaUpdatePrepApplyWeightHeightCentileGlobals` bez statystyk ustawia `null` (z tym samym strażnikiem `!= null`), zamiast zostawiać poprzednią wartość.
 
