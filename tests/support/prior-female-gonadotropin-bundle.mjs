@@ -9,6 +9,18 @@ const addedIds = new Set(['madsen2022-female-lh-age-6-16', 'madsen2022-female-fs
   'madsen2022-female-e2-age-6-18']);
 const fshCaliperIds = new Set(['wilson2023-male-fsh-age-16-18', 'wilson2023-female-fsh-age-16-19']);
 
+// Isolate the later, ordinary-only young-adult AMH addition. This restores
+// the complete FSH CALIPER-era bundle without rewriting any older evidence.
+export function beforeMaleAmhYoungAdultBundle(data) {
+  return { ...data, version: '2026-10-18.1', profiles: data.profiles
+    .filter(profile => profile.id !== 'woloszynek2015-male-amh-age-18-20') };
+}
+
+export function beforeMaleAmhYoungAdultRuntime(runtime) {
+  const { maleAmhYoungAdultReferencePolicy: _youngAdult, ...prior } = runtime;
+  return prior;
+}
+
 // Reconstruct only the two explicitly superseded ordinary FSH endpoints.
 // The original male key was absent; the female key was explicitly false.
 // Never regenerate source points or erase other later clinical changes here.
@@ -22,12 +34,12 @@ export function beforeFshCaliperProfile(profile) {
 }
 
 export function beforeFshCaliperBundle(data) {
-  return { ...data, version: '2026-10-17.2', profiles: data.profiles
+  return { ...data, version: '2026-10-17.2', profiles: beforeMaleAmhYoungAdultBundle(data).profiles
     .filter(profile => !fshCaliperIds.has(profile.id)).map(beforeFshCaliperProfile) };
 }
 
 export function beforeFshCaliperRuntime(runtime) {
-  const { fshCaliperReferencePolicy: _caliper, ...prior } = runtime;
+  const { fshCaliperReferencePolicy: _caliper, ...prior } = beforeMaleAmhYoungAdultRuntime(runtime);
   const { retainSourceEndpointProfileIds: _endpoints, ...comparison } = prior.gonadotropinComparisonPolicy;
   return { ...prior, gonadotropinComparisonPolicy: { ...comparison, version: '2026-10-12.1' } };
 }

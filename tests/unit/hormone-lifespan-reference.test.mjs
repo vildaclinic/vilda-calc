@@ -24,7 +24,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     expect(data.notClinicalReference).toBe(true);
-    expect(data.profiles).toHaveLength(80);
+    expect(data.profiles).toHaveLength(81);
     expect(data.profiles.every(item => item.sourceLabel && item.url && item.method && item.population)).toBe(true);
   });
 
@@ -84,7 +84,9 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
 
   it('AMH uzupełnia wyłącznie zatwierdzone luki, zachowując minipuberty, dorosłych oraz osobne grupy obu płci', () => {
     for (const age of [18, 18.5, 19, 19.99]) {
-      expect(evaluate('amh', age)).toEqual(unavailable('unsupported-age'));
+      expect(evaluate('amh', age)).toMatchObject({ status: 'ready', referenceValue: 6.3 / .1401,
+        profile: { id: 'woloszynek2015-male-amh-age-18-20', statistic: 'group-median',
+          ageGroup: { label: '18–30 lat', n: 63 }, ordinaryOnly: true } });
     }
     for (const [age, median] of [[12, 64.66], [12.999, 64.66], [15, 55.61], [17.999, 55.61], [20, 43.8], [29.999, 43.8]]) {
       expect(evaluate('amh', age)).toMatchObject({ status: 'ready', referenceValue: median,
@@ -369,13 +371,15 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
 
   it('nie uzupełnia luk dowodowych ani nie ekstrapoluje poza wiek źródła', () => {
     for (const [analyte, age] of [['lh', 6 / 365.25], ['lh', 1], ['lh', 5.99],
-      ['lh', 16.01], ['fsh', 80.01], ['t', 2.99], ['t', 86.01], ['amh', 19.99],
+      ['lh', 16.01], ['fsh', 80.01], ['t', 2.99], ['t', 86.01],
       ['amh', 70.01], ['inhb', 80.01], ['insl3', 12]]) {
       expect(evaluate(analyte, age)).toEqual(unavailable('unsupported-age'));
     }
     expect(evaluate('lh', 7 / 365.25).status).toBe('ready');
     expect(evaluate('lh', 6).status).toBe('ready');
     expect(evaluate('lh', 16).status).toBe('ready');
+    expect(evaluate('amh', 19.99)).toMatchObject({ status: 'ready', referenceValue: 6.3 / .1401,
+      profile: { id: 'woloszynek2015-male-amh-age-18-20', statistic: 'group-median' } });
     expect(evaluate('inhb', 5.59, { sex: 'female' })).toMatchObject({ status: 'ready', referenceValue: 27,
       profile: { id: 'zhou2025-female-inhb-age-5-under5p6', statistic: 'group-median' } });
     expect(evaluate('lh', .019, { sex: 'female' })).toEqual(unavailable('unsupported-age'));

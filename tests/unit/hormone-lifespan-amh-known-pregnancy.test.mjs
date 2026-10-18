@@ -68,6 +68,6 @@ describe('AMH Jopling — znana ciąża jako ostrożnościowa reguła aplikacji'
     // Frozen complete patientPointData on audyt 596773283e4565d08b72b9a7cb28561159bf3196.
     expect(createHash('sha256').update(JSON.stringify(previous)).digest('hex'))
       .toBe('8ec2f54935bb534e98c7b549b3270e80d4612c743882cfcbffb6c73ef1ad08db');
-    expect(runtime.patientPointData.profiles).toHaveLength(80);
+    expect(runtime.patientPointData.profiles).toHaveLength(81);
   });
 });

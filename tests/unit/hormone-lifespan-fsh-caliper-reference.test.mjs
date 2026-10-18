@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { beforeFshCaliperBundle, beforeFshCaliperRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFshCaliperBundle, beforeFshCaliperRuntime, beforeMaleAmhYoungAdultBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -32,8 +32,8 @@ const checks = {
 
 describe('FSH CALIPER — źródłowe p50 późnej adolescencji, bez nowej normy laboratoryjnej', () => {
   it('dodaje dokładnie dwa profile i zmienia wyłącznie wyłączność dwóch zwykłych końców Madsen', () => {
-    expect(data.version).toBe('2026-10-18.1');
-    expect(data.profiles).toHaveLength(80);
+    expect(data.version).toBe('2026-10-18.2');
+    expect(data.profiles).toHaveLength(81);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.fshCaliperReferencePolicy).toEqual(policy);
     expect(policy.profiles.map(item => item.id)).toEqual(Object.values(ids));
@@ -45,7 +45,8 @@ describe('FSH CALIPER — źródłowe p50 późnej adolescencji, bez nowej normy
     // unrelated profile may disappear behind the historical test adapter.
     expect(digest(beforeFshCaliperBundle(data)))
       .toBe('2eaff037ac45e7d38e56fc71e2ae29fb289c39f138663e44ffe7b441c2b1b1a8');
-    const unchanged = data.profiles.filter(item => !Object.values(ids).includes(item.id) && !madsenIds.includes(item.id));
+    const unchanged = beforeMaleAmhYoungAdultBundle(data).profiles
+      .filter(item => !Object.values(ids).includes(item.id) && !madsenIds.includes(item.id));
     expect(unchanged).toHaveLength(76);
     expect(digest(unchanged)).toBe('ae81a49a305d1b966f6e45a21edc609ef590ef22d2715e448134179641281659');
   });

@@ -85,8 +85,15 @@ describe('Stable male AMH illustration — production builder and independent re
 
   it('does not turn illustrative bridges or a completed70th year into numerical coverage', () => {
     display.buildMaleAmh(data, engine);
-    for (const ageYears of [0, 6 / 365.25, 18, 18.999, 19, 19.999, 70.001, 75, 90]) {
+    for (const ageYears of [0, 6 / 365.25, 70.001, 75, 90]) {
       expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
+    }
+    // The independently sourced ordinary AMH addition fills 18–<20; its
+    // group median must remain separate from the unchanged illustration.
+    for (const ageYears of [18, 18.999, 19, 19.999]) {
+      expect(engine.evaluate(data, patient(ageYears))).toMatchObject({ status: 'ready',
+        referenceValue: 6.3 / .1401, profile: { id: 'woloszynek2015-male-amh-age-18-20',
+          statistic: 'group-median', ordinaryOnly: true } });
     }
     expect(engine.evaluate(data, patient(70, { ageUpperYears: 70 + 1 / 12, ageUpperInclusive: false })))
       .toEqual({ status: 'unavailable', reason: 'ambiguous-age' });

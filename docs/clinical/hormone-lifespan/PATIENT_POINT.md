@@ -251,6 +251,50 @@ tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
 Dane płodowe, pępowinowe i wcześniacze nie należą do powyższych profili.
 
+### Męskie AMH 18–<20 — Woloszynek, 18 października 2026
+
+`male-amh-young-adult-reference-policy.json` uzupełnia wyłącznie zwykły
+przedział `[18,20)` jednym profilem `woloszynek2015-male-amh-age-18-20`.
+Źródło: [Woloszynek 2015](https://doi.org/10.1177/0004563214554462),
+tabela 2, s. 72/PDF 6: **mediana całej grupy 18–30 lat, N=63, 6,3 ng/mL**.
+Kohorta: brazylijscy pracownicy ochrony zdrowia, po wykluczeniach 104
+mężczyzn 18–48; N=63 dotyczy tej konkretnej grupy. Surowica, manualny
+Gen II ELISA w opisanym protokole, bez kalibracji do innych oznaczeń.
+
+Profil ma `group-median`, `constant`, `ordinaryOnly` i jawne źródłowe
+`ageGroup`: 18–30, N=63, `sourceUnit: ng/mL`, `sourceMedian: 6.3`.
+Kanoniczna mediana to `6.3 / 0.1401 = 44.9678800856531 pmol/L`.
+Przeliczenie jest identyczne jak dla pacjenta, bez zaokrąglonego 7,14
+stosowanego tylko do jednej strony porównania. Nie interpoluj stężenia
+dla dokładnego wieku i nie nazywaj tej wartości medianą podgrupy 18–20.
+
+Cały możliwy wiek musi mieścić się w `[18,20)`; formularz 18 lat 0 mies.
+i 19 lat 11 mies. kwalifikuje, przedział zawierający wiek 20 nie.
+Dotychczasowe 80 profili zachowuje wartości i warunki: przed 18 Jopling,
+od 20 Benderradji, od 30 Tehrani. Nowa polityka uzupełnia historyczny
+opis braku 18–<20 w starszych sekcjach i plikach dowodowych.
+
+Jedyny zgodny identyfikator `beckman-coulter-gen-ii-original-elisa-amh`
+oznacza wąsko opisany protokół; słowo „original” jest kwalifikatorem
+aplikacji. Ogólna nazwa Gen II ani nazwa producenta nie potwierdza jego
+zgodności. Znana inna metoda lub osocze blokuje bez fallbacku. Nieznane
+metoda/materiał pozwalają na dotychczasowe porównanie edukacyjne,
+bez automatycznego potwierdzania danych próbki. Zachowaj obsługiwane
+dodatnie GnRHa/protokół testu i ochronę tożsamości; brak wywiadu pozostaje
+nieznany. Nie dodawaj pytań o Tanner, metodę lub płodność.
+
+Jasny znacznik i źródła zachowują etykietę „Mediana grupy 18–30 lat”.
+Linia, skale i porównania płci pozostają odrębne; znacznik może leżeć
+poza linią. Nie zmieniamy laboratoryjnej interpretacji, RI, SDS ani
+utrwalonej oceny starszego wyniku. Dla M18/6,3 ng/mL wynik równa się
+medianie grupy; dla M20 wraca istniejące 43,8 pmol/L. Nierówność wyniku
+nie tworzy dokładnego punktu; zero i przepełnienie nie zmieniają odniesienia.
+
+Pełny artykuł i tabelę ponownie sprawdzono; plik faktów:
+[`woloszynek2015-male-amh-group-median.json`](evidence/patient-point/woloszynek2015-male-amh-group-median.json),
+[audyt kwalifikacji](evidence/male-amh-18-20-reference-audit-2026-10-18.json).
+Nie publikujemy pełnego artykułu ani nie deklarujemy walidacji klinicznej.
+
 ### Męskie AMH — uzupełnienie median grupowych, 13 października 2026
 
 Po scaleniu podstawy AMH (#661) właściciel polecił następny mały krok
@@ -1003,11 +1047,13 @@ obok. Nie wolno przyciągać znacznika do krzywej. Wang nie określa stadium
 Tannera. Przeliczenie jednostek nie harmonizuje Access 2 i zmodyfikowanego
 Gen II ani odmiennych populacji.
 
-Przed 7. dniem, w wieku 18–<20 i po 70 latach nadal brak źródłowego
+Przed 7. dniem i po 70 latach nadal brak źródłowego
 odniesienia. Tak samo pozostaje bramka donoszenia Busch.
 W tych przypadkach obecność ilustracji nie tworzy punktu pacjenta z jej
 wysokości. Odrębne rozszerzenie z 13.10.2026 korzysta z Jopling
-i Benderradji w wymienionych wcześniej lukach; Chong pozostaje
+i Benderradji w wymienionych wcześniej lukach. Rozszerzenie z 18.10.2026
+uzupełnia 18–<20 medianą całej grupy Woloszynek 18–30 lat, opisaną powyżej;
+Chong pozostaje
 poza aktywnymi profilami. Przebieg porównania płci
 oraz laboratoryjne normy mają odrębne kontrakty.
 
@@ -1209,7 +1255,8 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Mężczyzna 20 lat, LH lub FSH, niezgodna metoda albo materiał / kontekst zgodny | Brak punktu opisany neutralną „wartością odniesienia” / źródłowa średnia Laurentino 3,0 IU/L nadal podpisana jako średnia. |
 | Mężczyzna 75 lat, LH / FSH | LH: mediana grupy 4,44; FSH: przybliżona mediana modelu ≈7,8. Nie wymuszamy skoku linii na granicy źródła. |
 | FSH dokładnie 80 / >80; LH dokładnie 89 / >89 | Odpowiednio ≈8,4 / brak oraz 5,22 / brak, bez przedłużania źródła wygaszonym ogonem. |
-| LH `<0,05 IU/L`, męskie AMH w wieku 18–<20 lat, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
+| Męskie AMH, 18 lat 0 mies. lub 19 lat 11 mies., 6,3 ng/mL | Wynik równy medianie grupy Woloszynek 18–30 lat, N=63; około 44,9678800857 pmol/L, niezależnie od wysokości poglądowej linii. |
+| LH `<0,05 IU/L`, męskie AMH po 70 latach, wiek poza źródłem | Brak dokładnego punktu, bez punktu zastępczego na zerze lub granicy osi. |
 
 Regresje powinny objąć dzień przed/początek/koniec każdego profilu,
 granice dwóch źródeł, blokadę graficznej podłogi, nierówności, jednostki
