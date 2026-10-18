@@ -104,7 +104,7 @@ for (const width of [1440, 320]) {
   });
 }
 
-test('age-only FSH reference stays the same when current Th changes and a reported age sixteen does not extrapolate', async ({ page }) => {
+test('age-only FSH reference stays the same when current Th changes and reported sixteen switches to CALIPER', async ({ page }) => {
   await open(page, 1440, 9);
   await choose(page, 'fsh');
   await expectPoint(page, 'fsh', 9);
@@ -117,12 +117,15 @@ test('age-only FSH reference stays the same when current Th changes and a report
   await quickFill(page, 'AgeYears', '15');
   await closePatientEditor(page);
   await expectPoint(page, 'fsh', 15);
-  await quickFill(page, 'AgeYears', '16');
-  await closePatientEditor(page);
-  await expect(point(page)).toHaveCount(0);
-  await expect(note(page)).toContainText('przedział wieku');
-  await quickFill(page, 'AgeYears', '17');
-  await closePatientEditor(page);
+  for (const [age, median] of [[16, 3.961224607974412], [17, 4.1790950116741366]]) {
+    await quickFill(page, 'AgeYears', String(age));
+    await closePatientEditor(page);
+    await expect(point(page)).toHaveCount(1);
+    await expect(point(page)).toHaveAttribute('data-profile', 'wilson2023-female-fsh-age-16-19');
+    await expect.poll(async () => Number(await point(page).getAttribute('data-reference-value'))).toBeCloseTo(median, 8);
+  }
+  // FSH's new age source does not silently extend the separate LH source.
+  await choose(page, 'lh');
   await expect(point(page)).toHaveCount(0);
   await expect(note(page)).toContainText('brak wartości odniesienia');
 });

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { beforeAmhPregnancyPolicy } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeAmhPregnancyPolicy, beforeFshCaliperBundle, beforeFshCaliperRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -33,15 +33,15 @@ const medians = [
 
 describe('Zwykły żeński E2 — źródłowa mediana wieku 6–18 Madsen', () => {
   it('dodaje tylko jeden profil i politykę, zachowując wszystkie 77 profili, jednostki i pozostały runtime', () => {
-    expect(data.profiles).toHaveLength(78);
-    expect(data.version).toBe('2026-10-17.2');
+    expect(data.profiles).toHaveLength(80);
+    expect(data.version).toBe('2026-10-18.1');
     const prior = { ...data, version: '2026-10-16.1',
-      profiles: data.profiles.filter(item => item.id !== id).map(beforeAmhPregnancyPolicy) };
+      profiles: beforeFshCaliperBundle(data).profiles.filter(item => item.id !== id).map(beforeAmhPregnancyPolicy) };
     expect(prior.profiles).toHaveLength(77);
     // Frozen full-bundle hashes from audyt 96288b49 before the addition.
     expect(digest(prior.profiles)).toBe('395270be85e644ccd68ff388191fe01fea7edbef2501f15e83098cd6f4410272');
     expect(digest(prior)).toBe('0396d69dae9c6f311632dc0c4a52a47ce1a844e7befb3d95a0fc6f9329886b91');
-    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const otherRuntime = Object.fromEntries(Object.entries(beforeFshCaliperRuntime(runtime)).filter(([key]) =>
       key !== 'patientPointData' && key !== 'femaleEstradiolReferencePolicy'));
     expect(digest(otherRuntime)).toBe('d224cf4c6d3832723767f879241810550ced917b0313ac6ce0b8c0fd86377231');
     expect(data).toEqual(read('population-reference-data.json'));

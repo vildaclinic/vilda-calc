@@ -1359,7 +1359,24 @@
         scoped.profiles.filter(function (p) { return p && p.id === profile.id; }).length !== 1 ||
         source.profiles.some(function (p) { return p && p.id === profile.id; });
     })) return null;
-    var pool = source.profiles.concat(period === 'puberty' ? scoped.profiles : []);
+    var retainedEndpoints = policy.retainSourceEndpointProfileIds === undefined ? [] :
+      policy.retainSourceEndpointProfileIds;
+    if (!Array.isArray(retainedEndpoints) || new Set(retainedEndpoints).size !== retainedEndpoints.length ||
+        retainedEndpoints.some(function (id) {
+          return !policy.analytes.some(function (key) {
+            var target = puberty.profileIds[key];
+            return target && (target.male === id || target.female === id);
+          });
+        })) return null;
+    var pool = source.profiles.concat(period === 'puberty' ? scoped.profiles : []).map(function (profile) {
+      if (period !== 'puberty' || retainedEndpoints.indexOf(profile.id) < 0) return profile;
+      // An ordinary source switch must not remove the already published
+      // comparison endpoint. This scoped copy retains only that exact node;
+      // it neither extends the domain nor registers a global fallback.
+      if (profile.maxAge !== domain.maxAge || !Array.isArray(profile.points) ||
+          !profile.points.some(function (point) { return point.ageYears === domain.maxAge; })) return null;
+      return Object.assign({}, profile, { maxAgeExclusive: false });
+    });
     var sexes = ['female', 'male'];
     var profiles = sexes.map(function (sex) {
       var id = ids[sex];

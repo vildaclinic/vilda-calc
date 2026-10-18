@@ -104,7 +104,8 @@ describe('LH/FSH — actual numerical source selection, independent of the educa
 
   it('preserves source gaps, term-infant eligibility and the actual G1 requirement despite a continuous illustration', () => {
     for (const id of ['lh', 'fsh']) {
-      for (const age of [0, 6 / 365.25, 16.001, 17.99, 90]) expect(evaluate(id, age)).toEqual(unavailable('unsupported-age'));
+      for (const age of [0, 6 / 365.25, 90]) expect(evaluate(id, age)).toEqual(unavailable('unsupported-age'));
+      if (id === 'lh') for (const age of [16.001, 17.99]) expect(evaluate(id, age)).toEqual(unavailable('unsupported-age'));
       expect(evaluate(id, 90 / 365.25, { preterm: 'yes' })).toEqual(unavailable('preterm-context'));
       expect(evaluate(id, 44, { preterm: 'yes' }).status).toBe('ready');
       expect(evaluate(id, 44, { sex: 'female' }).profile?.sex).not.toBe('male');
@@ -250,7 +251,12 @@ describe('LH/FSH — approved production display builder', () => {
       expect(valueAt(model, age)).toBeCloseTo(displayed, 3);
       expect(evaluate('fsh', age).referenceValue).toBe(median);
     }
-    expect(evaluate('fsh', 16).referenceValue).toBe(4.160651539308952);
+    // Ordinary FSH now switches to CALIPER at 16; the Madsen point and the
+    // approved educational geometry remain available independently.
+    const comparison = display.buildGonadotropinComparison(data, engine, 'puberty', 'fsh');
+    expect(engine.evaluate(comparison.referenceData, { analyte: 'fsh', sex: 'male', ageYears: 16,
+      measurement: { value: 2, unit: 'IU/L' } }).referenceValue).toBe(4.160651539308952);
+    expect(evaluate('fsh', 16).referenceValue).toBe(2.4066234448145565);
     expect(valueAt(model, 16)).toBeLessThan(3.43);
     expect(valueAt(display.buildMaleLh(data, engine), 89)).toBe(5.23);
     expect(evaluate('lh', 89).referenceValue).toBe(5.22);

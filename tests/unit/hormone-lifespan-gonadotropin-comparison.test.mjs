@@ -160,7 +160,12 @@ describe('LH/FSH sex comparison — source medians on fixed concentration axes',
       ]);
       expect(model.referenceData.patientPointData.unitConversions).toBe(data.patientPointData.unitConversions);
       expect(model.referenceData.patientPointData.profiles.every(p => p.requiredGonadalStage == null)).toBe(true);
-      expect(profileFor(model, 'male')).toBe(data.patientPointData.profiles.find(p => p.id === model.profileIds.male));
+      const originalMale = data.patientPointData.profiles.find(p => p.id === model.profileIds.male);
+      if (period === 'puberty' && analyte === 'fsh') {
+        expect(profileFor(model, 'male')).not.toBe(originalMale);
+        expect(profileFor(model, 'male')).toEqual({ ...originalMale, maxAgeExclusive: false });
+        expect(profileFor(model, 'male').points).toBe(originalMale.points);
+      } else expect(profileFor(model, 'male')).toBe(originalMale);
     }
     const fsh = build('puberty', 'fsh');
     const input = patient('fsh', 9);

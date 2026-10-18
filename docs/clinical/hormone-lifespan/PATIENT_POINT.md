@@ -74,6 +74,37 @@ znane leczenie hormonalne może teraz wyłączyć jego punkt. Nie przenosi fakt�
 między pacjentami/płciami ani na historyczną próbkę. To jawna zmiana kwalifikacji,
 nie zmiana źródła niemowląt. Testy nie stanowią walidacji klinicznej.
 
+## FSH CALIPER — zwykłe odniesienie od 16 lat, 18 października 2026
+
+Aktualna [polityka FSH](fsh-caliper-reference-policy.json) zastępuje wyłącznie
+zwykłe zakończenie Madsen przy 16 latach: Madsen FSH `[6,16)`, CALIPER
+chłopcy `[16,18)`, dziewczęta `[16,19)`. Starsze opisy Madsen 6–16 poniżej
+dotyczą poprzedniego routingu oraz zachowanego porównania płci. Ten jawny
+styk pozwala obsłużyć 16 lat 0 miesięcy; nie wybieramy środka niepewnego
+wieku. Przekroczenie granicy źródła przez przedział wieku pozostaje
+niedostępne. Chłopiec od 18 lat zachowuje dotychczasowe źródło dorosłe.
+
+[Wilson 2023](https://doi.org/10.1515/cclm-2022-1077), Supplemental Table 3,
+`FSH_M`/`FSH_F`, zawiera po 181 parametrów L/M/S co 0,1 roku 1–19.
+Importujemy wyłącznie mediany FSH `qBCCG(0.5)`, z normalizacją ucięcia,
+na natywnej skali IU/L; samo M nie zawsze jest p50. Całe węzły zachowano
+do interpolacji PCHIP, także końcowy 19, bez kwalifikacji pacjentki >=19.
+Nie dopisujemy SDS, percentyla wyniku, norm ani rozpoznania.
+
+CALIPER to kanadyjska populacja, surowica Abbott ARCHITECT. Znane niezgodne
+metoda/materiał blokują punkt, nieznane pozwalają tylko na orientacyjne
+zestawienie. Nie harmonizujemy metod, nie dodajemy nowych pól i nie
+wymagamy stadium/fazy. Znane ciąża, leczenie i stymulacja zachowują
+znaczenie. Nieznane LLOQ nie jest zerem. Populacja, wyłączenia, komórki
+źródłowe, hashe i reprodukcja modelu są w
+[audycie](evidence/fsh-caliper-reference-audit-2026-10-18.json).
+
+M17/FSH 2 → mediana 2,518038228916774; F17/FSH 2 → 4,1790950116741366;
+F18 → 4,399647684355955 IU/L. Wiek 16 zmienia dotychczasowe zwykłe
+odniesienie na M2,4066234448145565/F3,961224607974412. Poglądowa linia,
+stała skala, laboratoryjne osie i dawne zapisane oceny pozostają odrębne.
+Porównanie płci nadal kończy się na 16 i używa oryginalnego Madsen.
+
 ## Żeńskie LH/FSH — zwykłe odniesienie wieku, 16 października 2026
 
 Po analizie Madsen/Zec właściciel polecił wdrożenie rekomendowanej polityki:

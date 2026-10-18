@@ -45,7 +45,7 @@ describe('Zec FSH patient point — exact group medians and current Tanner 1', (
 
   it('has only three active Zec groups and uses independent Madsen age models from age 6', () => {
     expect(data.profiles.filter(source => source.id.startsWith('zec2012-'))).toHaveLength(3);
-    for (const ageYears of [6, 8, 10.99, 11, 16]) {
+    for (const ageYears of [6, 8, 10.99, 11, 15.999999]) {
       const result = evaluate({ ageYears, puberty: null });
       expect(result).toMatchObject({ status: 'ready', profile: { id: 'madsen2022-male-fsh' } });
       expect(result.referenceValue).toBe(engine.referenceAt(profile('madsen2022-male-fsh'), ageYears));
@@ -145,7 +145,7 @@ describe('Zec FSH patient point — exact group medians and current Tanner 1', (
 
   it('does not activate censored childhood LH, testosterone or unsupported female ages', () => {
     for (const [analyte, ageYears, sex] of [['lh', 3, 'male'], ['lh', 3, 'female'],
-      ['t', 2, 'male'], ['fsh', 17, 'female'], ['fsh', 30, 'female']]) {
+      ['t', 2, 'male'], ['fsh', 19, 'female'], ['fsh', 30, 'female']]) {
       expect(engine.selectProfile(data, context({ analyte, ageYears, sex })))
         .toEqual(unavailable('unsupported-age'));
     }

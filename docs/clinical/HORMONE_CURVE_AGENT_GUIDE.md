@@ -667,6 +667,33 @@ nie norma lub mediana konkretnej fazy. Nigdy nie wyprowadzaj p50 z geometrii.
 [audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
 Zgoda na wdrożenie nie nadaje modelowi statusu walidacji klinicznej.
 
+## FSH CALIPER — zwykłe odniesienie od 16 lat, 18 października 2026
+
+Po analizie pełnego Wilson 2023 i Supplemental Tables 1–3 właściciel
+polecił mały PR z FSH. `fsh-caliper-reference-policy.json` przełącza
+zwykłe FSH od 16: chłopcy `[16,18)`, dziewczęta `[16,19)`. Madsen FSH
+zachowuje wszystkie węzły, ale zwykłe zastosowanie kończy przed 16.
+To celowa zmiana źródła także w dokładnym wieku 16, aby wpis 16 lat
+0 miesięcy nie przecinał dwóch źródeł. Nie harmonizuj metod ani nie
+uśredniaj median na styku.
+
+Mediana CALIPER to znormalizowany `qBCCG(0.5)`, nie automatycznie M;
+u dziewcząt F18 wynosi 4,3996476844 IU/L zamiast M4,3159775325.
+Nie stosuj logarytmicznej transformacji LH do natywnego FSH.
+PCHIP przybliża tabelę co 0,1 roku. Węzeł 19 służy interpolacji,
+nie kwalifikacji pacjentki >=19. Brak dodatkowych pytań o Th/G lub cykl.
+Znane niezgodna metoda/materiał, ciąża, leczenie i stymulacja zachowują
+bramki; brak informacji nie potwierdza ich nieobecności.
+
+Porównanie płci nadal ma Madsen 6–16 włącznie: jego polityka jawnie
+zachowuje opublikowany męski węzeł 16 w kopii profilu. Nie rozszerza
+zwykłej kwalifikacji ani granic porównania. Zachowaj geometrię, skale,
+LH, niemowlęta i normy. Sam suplement nie uprawnia do importu LH/E2/T;
+pozostają tam odrębne niejasności transformacji i żeńskiego LH.
+
+Źródło, reprodukcja i ograniczenia:
+[audyt FSH](hormone-lifespan/evidence/fsh-caliper-reference-audit-2026-10-18.json).
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.
