@@ -10311,7 +10311,7 @@ Zmierzone przed poprawką (odtworzenie na żywej stronie): Karta Pacjenta otwart
 
 Kontrola negatywna: po usunięciu samej bramki test pierwszy pada na asercji „arkusz nie wchodzi na otwartą Kartę", po przywróceniu przechodzi.
 
-## Dzienny arkusz przypomnień nie przerywa pisania (P-ARKUSZ-PISANIE, SW 1.1.309, 2026-10-18)
+## Dzienny arkusz przypomnień nie przerywa pisania (P-ARKUSZ-PISANIE, SW 1.1.310, 2026-10-18)
 
 **Zgłoszenie właściciela.** Pierwsze uruchomienie aplikacji. Lekarz od razu dotyka pola Nazwisko i wpisuje, więc otwiera się podpowiedź zapisanych pacjentów. W trakcie wchodzi pełnoekranowy arkusz „Przypomnienia”, a na iPhonie lista podpowiedzi przebija przez arkusz. Lekarz często zaczyna pracę, zanim arkusz się pokaże. Właściciel wybrał wariant A: arkusz czeka na przerwę w pisaniu.
 
