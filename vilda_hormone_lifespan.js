@@ -3077,7 +3077,7 @@
       if (stableAmhVisible()) {
         paragraph("Linia AMH jest poglądową syntezą badań, nie jedną medianą ani granicą normy. Zachowuje ten sam przebieg i skalę po wpisaniu wyniku. Pozostałe hormony mają własne skale.");
         paragraph("Minipuberty opiera się na medianie modelu Busch u donoszonych chłopców. Dalszy przebieg łączy mediany rocznych grup Wang z dorosłymi Tehrani. Grupy wieku nie są stadiami Tannera; różne populacje i metody oznaczeń nie są wymienne. Okres płodowy i łagodne połączenia są ilustracyjne.");
-        paragraph("Dla AMH jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia AMH: przed 7. dniem, od 18 do <20 lat oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
+        paragraph("Dla AMH jasny znacznik zachowuje medianę wybranego źródła i może leżeć obok poglądowej linii. Kropka oznacza rzeczywisty wynik; strzałka — wynik ponad stałą skalą. Kolor nie klasyfikuje wyniku. Bez liczbowego odniesienia AMH: przed 7. dniem oraz po 70 latach. Wygaszony koniec oznacza koniec danych, nie biologiczne plateau.");
         const amhSources = new Set();
         if (renderedPoint?.id === "amh") {
           const profile = renderedPoint.profile;

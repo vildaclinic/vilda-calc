@@ -625,7 +625,10 @@ Jasny znacznik nadal wskazuje źródłową medianę; przy 11,5 roku wynosi ona
 wszystkie 15 wcześniejszych profili i bramkę donoszenia. Rozszerzenie
 z 13.10.2026 dodaje trzy osobne mediany grupowe w dawnych lukach:
 Jopling w wieku 12–<13 i 15–<18 oraz Benderradji 20–<30 lat.
-Pozostają luki przed 7. dniem, 18–<20 i >70 lat. Ciągłość obrazu
+Rozszerzenie z 18.10.2026 uzupełnia 18–<20 medianą całej grupy
+18–30 lat (N=63), 6,3 ng/mL, Woloszynek 2015, tabela 2. Stosuje
+`male-amh-young-adult-reference-policy.json`; nie zmienia geometrii,
+skali ani wcześniejszych źródeł. Pozostają luki przed 7. dniem i >70 lat. Ciągłość obrazu
 nie daje nowych median, norm ani interpretacji. Porównanie płci ma odrębną politykę; dla AMH
 w minipuberty obowiązuje poniższy wyjątek.
 

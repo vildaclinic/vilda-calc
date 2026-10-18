@@ -3398,6 +3398,54 @@ całe życie/pokwitanie, pełny ekran i szerokość 320 px.
 
 Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
 
+#### HORMONE-MALE-AMH-18-20 — mediana grupy Woloszynek, 2026-10-18
+
+**Zakres i zgoda:** właściciel polecił osobny mały PR uzupełniający
+zwykłe AMH mężczyzn w `[18,20)`. Nowa polityka
+`male-amh-young-adult-reference-policy.json` dodaje jeden profil
+`woloszynek2015-male-amh-age-18-20`, bez zmiany 80 wcześniejszych
+profili. Historyczna luka opisana powyżej zostaje w tym przedziale zamknięta.
+
+**Pełne źródło:** Woloszynek i wsp., *Ann Clin Biochem* 2015;52(1):67–75,
+[DOI 10.1177/0004563214554462](https://doi.org/10.1177/0004563214554462),
+tabela 2, s. 72/PDF 6 z 9: grupa **18–30 lat, N=63, mediana 6,3 ng/mL**.
+Pełny końcowy PDF ponownie przeczytano, wiersz sprawdzono też w HTML wydawcy.
+Cała kohorta męska to 104 brazylijskich pracowników ochrony zdrowia, wiek
+18–48 lat; wykluczono przewlekłe choroby, niepłodność, orchidektomię i
+nieprawidłowe gonadotropiny/testosteron. Liczba 104 nie jest N grupy 18–30.
+Surowica, manualny Beckman Coulter AMH Gen II ELISA, opisany protokół
+20 µL próbki +100 µL buforu, bez rozcieńczania przed analizą. Wąski
+identyfikator metody nie potwierdza zgodności zmodyfikowanego Gen II,
+Access/DxI, Elecsys lub Mindray. Czułości analityczna i funkcjonalna
+pozostają odrębnymi faktami źródła; nie tworzą LLOQ ani progu pacjenta.
+
+**Reguła i wpływ kliniczny:** jest to stała mediana całej grupy 18–30,
+nie nowej podgrupy 18–20 ani dokładnego wieku. `group-median`, `constant`,
+`ordinaryOnly`; pełny możliwy wiek musi mieścić się w `[18,20)`.
+Jednostka kanoniczna: `6.3 / 0.1401 = 44.9678800856531 pmol/L`,
+z identycznym przeliczeniem wyniku pacjenta. Nie używamy zaokrąglonego
+źródłowego 7,14 do innego przeliczania samej mediany. Poniżej 18 pozostaje
+Jopling, od 20 Benderradji, od 30 Tehrani. Znana niezgodna metoda/materiał
+blokuje punkt bez zastępczego źródła; brak tych danych pozwala na istniejące
+orientacyjne porównanie. Zachowano obsługiwane blokady GnRHa, protokołu
+testu i tożsamości aktualnego pacjenta, bez nowej ankiety lub wnioskowania
+o nieobecności leczenia. Linia, skale, porównania płci, normy laboratoryjne
+i utrwalone oceny historyczne mają odrębne, niezmienione kontrakty.
+
+**Przypadki i regresje produkcyjne:** M18 lat 0 mies./6,3 ng/mL oraz
+M19 lat 11 mies./44,9678800856531 pmol/L → wynik równy medianie grupy.
+M17 lat 11 mies. → Jopling 55,61 pmol/L; dokładnie M20 → Benderradji
+43,8 pmol/L. `[18,20)` kwalifikuje, `[18,20]` lub wiek przecinający 18
+nie otrzymuje arbitralnej mediany. Nierówności wyniku nie stają się
+dokładnymi punktami; zero i przekroczenie osi zachowują prawdziwą wartość.
+Testy wywołują silnik, adapter i formularz na desktopie/320 px, obejmują
+jednostki, źródło, kontekst, zmianę pacjenta, stałą geometrię i pełny ekran.
+Nie dodano RI, SDS, percentyli, diagnozy ani oceny płodności.
+
+Fakty i kwalifikacja:
+[`male-amh-18-20-reference-audit-2026-10-18.json`](hormone-lifespan/evidence/male-amh-18-20-reference-audit-2026-10-18.json).
+Zgoda na porównanie edukacyjne i zielone testy nie są walidacją kliniczną.
+
 ### HORMONE-FEMALE-AMH-ADULT-MEDIANS — mediany surowicy FDA, 2026-10-13
 
 **Problem i źródło:** dorosła kobieta miała poglądową linię AMH bez

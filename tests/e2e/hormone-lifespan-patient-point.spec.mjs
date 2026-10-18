@@ -206,12 +206,14 @@ test('boys AMH preserves Wang at ages five and thirteen and fills age twelve wit
   await expect(dot(page)).toHaveAttribute('data-profile', 'wang2020-male-amh-age-13');
   await expect(panel(page).locator('[data-lifespan="source-copy"] p').filter({ hasText: 'Odniesienie dla wyniku:' })).toContainText('13–<14 lat');
   await expect(panel(page).locator('[data-lifespan="source-copy"]')).toContainText('13–<14 lat');
-  // The reviewed pediatric groups do not fill the remaining 18–<20 gap.
+  // The separately sourced young-adult group fills 18–<20 without extending
+  // the pediatric cohorts or deriving a number from the illustrative bridge.
   await page.evaluate(() => {
     window.VildaPersistence.writeShared({ sex: 'M', age: 18, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
   });
-  await expect(dot(page)).toHaveCount(0);
+  await expectPoint(page, 1000, 6.3 / .1401, 'group-median');
+  await expect(dot(page)).toHaveAttribute('data-profile', 'woloszynek2015-male-amh-age-18-20');
   await expect(panel(page)).toBeVisible();
 });
 
