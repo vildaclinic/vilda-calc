@@ -1,5 +1,12 @@
 # Punkt wyniku na wykresie hormonów
 
+**Aktualny stan pokrycia, 18 października 2026:**
+[rejestr audytu](REFERENCE_COVERAGE_AUDIT.md) rozdziela zwykły punkt wieku,
+osobne odniesienia fazowe/grupowe, RI i ilustracje. Poniższe datowane
+opisy zachowują historię etapów. Starsze wzmianki o luce AMH M18–<20,
+FSH M16–<18/F16–<19 i LH M>16–<18 są zastąpione nowszymi wdrożeniami.
+Xu ma osobny aktywny blok pięciu P50, nadal bez ciągłego modelu wieku.
+
 Decyzja właściciela z 10 października 2026: wdrożyć zatwierdzony czerwony
 punkt na dostępnych danych liczbowych, wykorzystując istniejący formularz.
 Zakres decyzji dotyczy orientacyjnej prezentacji edukacyjnej; nie jest
@@ -696,8 +703,9 @@ używają istniejącej skali i wybranej jednostki; źródłowe ograniczenia
 trafiają do krótkiej notki i rozwijanych szczegółów. Linie, skale,
 porównania płci, normy Mayo, historia i inne profile nie zmieniają się.
 Nie wyznaczamy płodności, PCOS, rezerwy jajnikowej, odpowiedzi na IVF
-ani wieku menopauzy na podstawie odległości od mediany. Xu 2026 pozostaje
-nieaktywne; weryfikacja techniczna nie oznacza walidacji klinicznej.
+ani wieku menopauzy na podstawie odległości od mediany. Ciągły profil
+Xu 2026 pozostaje nieaktywny; osobny blok pięciu P50 wdrożono w PR #681.
+Weryfikacja techniczna nie oznacza walidacji klinicznej.
 
 Pochodzenie i mediany z obu tabel:
 [dane FDA](evidence/patient-point/fda2017-female-amh-group-medians.json);
@@ -757,7 +765,9 @@ a różnice między metodami nie są kalibracją próbki użytkownika.
 
 Grupy mają stałe wartości, bez uśredniania między publikacjami. Wiek
 przecinający granicę profili nie kwalifikuje do jednego odniesienia.
-Luka >16–<18, FSH >80 i LH >89 pozostają bez liczbowego punktu.
+Na tym etapie luka >16–<18 pozostawała bez punktu; następnie zamknęły ją
+profile FSH Wilson oraz męskiego LH Wilson opisane wyżej. FSH >80 i LH >89
+u mężczyzn nadal nie mają zwykłego liczbowego punktu.
 Niemowlęce oraz pediatryczne źródła, w tym warunek G1 dla Zec, zachowują
 dotychczasowe ograniczenia.
 
