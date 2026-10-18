@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.311';
+const SW_VERSION = '1.1.312';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -153,6 +153,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=87',
   '/style.css?v=88',
   '/style.css?v=89',
+  '/style.css?v=90',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
