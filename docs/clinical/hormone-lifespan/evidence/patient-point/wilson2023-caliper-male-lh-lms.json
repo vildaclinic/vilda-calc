@@ -1,0 +1,1414 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+    "authorsShort": "Wilson et al.",
+    "year": 2023,
+    "journal": "Clinical Chemistry and Laboratory Medicine",
+    "volume": 61,
+    "issue": 6,
+    "pages": "1105–1115",
+    "doi": "10.1515/cclm-2022-1077",
+    "pmid": "36639844",
+    "url": "https://doi.org/10.1515/cclm-2022-1077",
+    "publishedOnline": "2023-01-16",
+    "sourceFile": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+    "sourceSha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b",
+    "sourceBytes": 223819,
+    "sourceVersion": "Owner-supplied final-article Supplementary Table 3; workbook bytes identified by SHA-256.",
+    "table": "Supplementary Table 3: numerical L,M,S-for-age; LH_M only, A2:D92",
+    "readOn": "2026-10-18",
+    "access": "Full final primary article and all three owner-supplied supplementary tables reviewed in the source audit; pinned coauthor method code inspected separately.",
+    "redistribution": "Only male LH numerical facts, provenance and qualification metadata are extracted; full article, figures, code and source workbooks/documents are not redistributed."
+  },
+  "status": "qualified_reconstruction_for_educational_age_reference_not_laboratory_ri",
+  "analyte": "lh",
+  "sex": "male",
+  "unit": "IU/L",
+  "statistic": "reconstructed-normalized-bccg-model-median",
+  "population": {
+    "name": "CALIPER healthy Canadian children and adolescents",
+    "country": "Canada",
+    "location": "Greater Toronto Area and The Hospital for Sick Children, Toronto",
+    "design": "Cross-sectional age- and sex-specific model of previously collected CALIPER reference data",
+    "sourceCohortApproximateParticipants": 1500,
+    "numberCaution": "Approximately 1500 describes the source cohorts across cited CALIPER studies, not an LH, male-specific or 16–18-year participant count. Those subgroup counts are not supplied in the four reviewed documents.",
+    "recruitment": "Schools/community clinics (0–<19 years), plus metabolically stable SickKids outpatient clinics (0–<5 years); the published LH model is restricted to 10–<19 years.",
+    "exclusions": [
+      "Chronic disease",
+      "Acute illness in the previous week",
+      "Current pregnancy",
+      "Prescribed medication, including oral contraceptives, within the preceding two weeks"
+    ],
+    "modelCovariates": [
+      "chronological age",
+      "sex"
+    ],
+    "tannerStageRestriction": null,
+    "samplingTimeStandardization": null,
+    "fastingRequirement": null,
+    "unreportedContext": "The supplied documents do not state Tanner-specific LH modeling, morning-only endocrine sampling or a fasting requirement. Missing context is unknown, not a confirmed absence in the patient."
+  },
+  "assay": {
+    "name": "Abbott ARCHITECT",
+    "platformScope": "Article page 1107 reports ARCHITECT ci2000 for endocrine/fertility assays (reference 34); c8000 is also listed for biochemical assays across the study.",
+    "specimen": "serum",
+    "handling": "Serum-separator tubes, centrifuged/aliquoted within 8 hours, stored at −80 °C until analysis.",
+    "lowerLimitOfQuantification": 0.09,
+    "lowerLimitOfQuantificationUnit": "IU/L",
+    "lowerLimitOfQuantificationSource": "Supplementary Table 1, LH row, reference 34",
+    "limitOfDetection": null,
+    "quantificationCaution": "0.09 IU/L is explicitly LLOQ, not a reported LH LOD. Source handling of zero, below-LLOQ or censored observations is not specified. Do not clip an exact patient result, create an LLOQ/2 replacement or infer an RI from this limit.",
+    "harmonization": "No numerical equivalence to Siemens IMMULITE, Roche cobas, AutoDELFIA or another LH method is established. Source selection does not establish the patient sample's assay or specimen."
+  },
+  "model": {
+    "family": "GAMLSS BCCG",
+    "responseScale": "Reconstructed natural log(LH_IU_L * 1e6); exact Wilson LH preprocessing not recovered or directly confirmed.",
+    "parameterMapping": {
+      "nu": "L",
+      "mu": "M",
+      "sigma": "S"
+    },
+    "p50Definition": "Exact median qBCCG(0.5) of the positive-response, normalized BCCG distribution on the model response scale, then reconstructed exp(q)/1e6 to IU/L; not automatically M or exp(M)/1e6.",
+    "quantileAlgorithm": "For L>0, Z=Phi^-1(1-0.5*Phi(1/(S*abs(L)))); for L<0, Z=Phi^-1(0.5*Phi(1/(S*abs(L)))); Q=M*(1+L*S*Z)^(1/L). For L=0 the p50 limit is M. The reconstructed concentration is exp(Q)/1e6 IU/L.",
+    "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+    "sourceCode": "gamlss(hormone~cs(age, df=2), sigma.fo=~cs(age, df=1), family=BCCG, data=d)",
+    "sourceCodeLocation": "Supplementary Table 2, LH male row",
+    "sourceRVersion": "4.1.2",
+    "sourcePackageVersions": null,
+    "sourceFormulaLimitation": "The paper prints an untruncated nominal-z LMS formula and states logarithmic LH response transformation. It does not specify response assignment, logarithm base, rescaling, offset or inverse code. GAMLSS parameter link functions do not themselves transform the LH response.",
+    "authorConvention": {
+      "repository": "andremadsen/LMS-reference-curve",
+      "commit": "288329c43ee238b3c8921097dfeac411d30465b9",
+      "commitDate": "2023-10-01",
+      "path": "OUS_demo.Rmd",
+      "sourceSha256": "1e1296c7fcb4be4d5d35f160c7a50309fad6546b1a1e5394022e41e80eb93ce0",
+      "url": "https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196",
+      "lineNumbers": [
+        194,
+        195,
+        196,
+        212,
+        213
+      ],
+      "quote": "log(hormone*1e6) ... exp(BootCentileMat)/1e6",
+      "evidenceRole": "Coauthor's optional logarithmic response convention supports natural log and the factor 1e6 independently of fitting the figure.",
+      "limitation": "Later October 2023 synthetic T4/TSH demonstration with commented optional transformation, not the January 2023 Wilson LH/CALIPER preprocessing or exact model pipeline. The pinned file was subsequently deleted from the repository's current tree."
+    },
+    "figureVerification": "Original Figure 1A male curves, printed page 1108 / PDF page 4: reconstructed five quantiles agree with vector curves at 89 interior ages 10.1–18.9. Maximum absolute p50 difference approximately 0.001043 IU/L; graphical diagnostic, not model uncertainty or imported figure values.",
+    "evidenceQualification": "Author-supported, reproducible reconstruction accepted by the owner for a small ordinary educational median PR. Direct LH preprocessing/model confirmation remains unavailable; do not describe it as recovered exact author code or clinically validated norms.",
+    "noNewClinicalFunction": "Only the reconstructed educational age-reference median is imported. No BCCG-derived RI, SDS, patient percentiles, diagnostic classification or treatment recommendation is activated."
+  },
+  "interpolation": {
+    "publishedAgeStepYears": 0.1,
+    "publishedAgeStepIsOneMonth": false,
+    "sourceDomain": {
+      "minAge": 10,
+      "maxAge": 19,
+      "maxAgeExclusive": true
+    },
+    "terminalRow": "Age 19.0 is retained as the original numerical interpolation endpoint only. It does not authorize a patient reference at age 19 or older.",
+    "rule": "Exact source nodes reproduce reconstructed exp(qBCCG(0.5))/1e6. Between-node PCHIP is an application approximation to this 0.1-year table, not the original fitted GAMLSS object or interpolation of L/M/S.",
+    "applicationDomain": {
+      "minAge": 16,
+      "minAgeExclusive": true,
+      "maxAge": 18,
+      "maxAgeExclusive": true
+    },
+    "noExtrapolation": true
+  },
+  "useConstraints": [
+    "Only male LH is imported. Do not import female LH, whose source spreadsheet and Figure 1A remain inconsistent, or activate any other analyte from this extract.",
+    "Only the separately policy-defined ordinary educational (16,18) window is authorized; the full 10–19 grid is evidence, not permission to replace existing childhood, puberty-comparison or adult profiles.",
+    "Exact age 16 preserves existing Madsen LH; age 18 and older preserves existing adult LH. Source nodes 16 and 18 are numerical controls, not authorization to override these boundaries.",
+    "The entire possible age interval must fit (16,18). Do not resolve uncertainty crossing a source boundary by selecting its midpoint, silently rounding age or replacing the reference with a graphical bridge.",
+    "No Tanner or sampling-time question is required for this age model; do not infer a Tanner stage, basal sample or absence of treatment from missing data.",
+    "Known incompatible assay/specimen and known treatment/stimulation retain existing application exclusions. Unknown method or specimen allows only the established educational preview.",
+    "Do not calibrate or average CALIPER with neighboring Madsen or adult data, change display geometry/scales, or move the source marker to the educational line."
+  ],
+  "series": {
+    "male": {
+      "sheet": "LH_M",
+      "sourceCellRange": "LH_M!A2:D92",
+      "ageYearsMin": 10,
+      "ageYearsMax": 19,
+      "pointCount": 91,
+      "points": [
+        {
+          "ageYears": 10.0,
+          "L": 4.39510968452181,
+          "M": 11.6983016214429,
+          "S": 0.0925463937372579,
+          "modelResponseMedian": 11.707754212387634,
+          "centralConcentration": 0.12151028791646062,
+          "sourceCells": [
+            "LH_M!A2",
+            "LH_M!B2",
+            "LH_M!C2",
+            "LH_M!D2"
+          ]
+        },
+        {
+          "ageYears": 10.1,
+          "L": 4.39510968452181,
+          "M": 11.764531129168,
+          "S": 0.0910166653781414,
+          "modelResponseMedian": 11.772858779379938,
+          "centralConcentration": 0.12968436030010158,
+          "sourceCells": [
+            "LH_M!A3",
+            "LH_M!B3",
+            "LH_M!C3",
+            "LH_M!D3"
+          ]
+        },
+        {
+          "ageYears": 10.2,
+          "L": 4.39510968452181,
+          "M": 11.8307591113634,
+          "S": 0.0895121804215182,
+          "modelResponseMedian": 11.838069373897495,
+          "centralConcentration": 0.1384229834678491,
+          "sourceCells": [
+            "LH_M!A4",
+            "LH_M!B4",
+            "LH_M!C4",
+            "LH_M!D4"
+          ]
+        },
+        {
+          "ageYears": 10.3,
+          "L": 4.39510968452181,
+          "M": 11.8969951850699,
+          "S": 0.0880325108050643,
+          "modelResponseMedian": 11.903388587130168,
+          "centralConcentration": 0.14776649748355464,
+          "sourceCells": [
+            "LH_M!A5",
+            "LH_M!B5",
+            "LH_M!C5",
+            "LH_M!D5"
+          ]
+        },
+        {
+          "ageYears": 10.4,
+          "L": 4.39510968452181,
+          "M": 11.9632454149387,
+          "S": 0.0865767931089254,
+          "modelResponseMedian": 11.968815321828323,
+          "centralConcentration": 0.15775765759562604,
+          "sourceCells": [
+            "LH_M!A6",
+            "LH_M!B6",
+            "LH_M!C6",
+            "LH_M!D6"
+          ]
+        },
+        {
+          "ageYears": 10.5,
+          "L": 4.39510968452181,
+          "M": 12.0295174324467,
+          "S": 0.0851441928198272,
+          "modelResponseMedian": 12.034350298425972,
+          "centralConcentration": 0.1684425967163398,
+          "sourceCells": [
+            "LH_M!A7",
+            "LH_M!B7",
+            "LH_M!C7",
+            "LH_M!D7"
+          ]
+        },
+        {
+          "ageYears": 10.6,
+          "L": 4.39510968452181,
+          "M": 12.0958164999542,
+          "S": 0.0837339240710098,
+          "modelResponseMedian": 12.099992136736255,
+          "centralConcentration": 0.17987044787941864,
+          "sourceCells": [
+            "LH_M!A8",
+            "LH_M!B8",
+            "LH_M!C8",
+            "LH_M!D8"
+          ]
+        },
+        {
+          "ageYears": 10.7,
+          "L": 4.39510968452181,
+          "M": 12.1621393660627,
+          "S": 0.0823451714940824,
+          "modelResponseMedian": 12.16573118235498,
+          "centralConcentration": 0.1920922841891988,
+          "sourceCells": [
+            "LH_M!A9",
+            "LH_M!B9",
+            "LH_M!C9",
+            "LH_M!D9"
+          ]
+        },
+        {
+          "ageYears": 10.8,
+          "L": 4.39510968452181,
+          "M": 12.2284999080379,
+          "S": 0.0809775626409754,
+          "modelResponseMedian": 12.231575352728461,
+          "centralConcentration": 0.2051661366787509,
+          "sourceCells": [
+            "LH_M!A10",
+            "LH_M!B10",
+            "LH_M!C10",
+            "LH_M!D10"
+          ]
+        },
+        {
+          "ageYears": 10.9,
+          "L": 4.39510968452181,
+          "M": 12.2949047522372,
+          "S": 0.0796307837725491,
+          "modelResponseMedian": 12.297525543906922,
+          "centralConcentration": 0.21915303263182442,
+          "sourceCells": [
+            "LH_M!A11",
+            "LH_M!B11",
+            "LH_M!C11",
+            "LH_M!D11"
+          ]
+        },
+        {
+          "ageYears": 11.0,
+          "L": 4.39510968452181,
+          "M": 12.3613369396757,
+          "S": 0.0783044037266621,
+          "modelResponseMedian": 12.363559254140844,
+          "centralConcentration": 0.23411301647679617,
+          "sourceCells": [
+            "LH_M!A12",
+            "LH_M!B12",
+            "LH_M!C12",
+            "LH_M!D12"
+          ]
+        },
+        {
+          "ageYears": 11.1,
+          "L": 4.39510968452181,
+          "M": 12.4277606548639,
+          "S": 0.0769979227890508,
+          "modelResponseMedian": 12.429635370039692,
+          "centralConcentration": 0.2501048152651673,
+          "sourceCells": [
+            "LH_M!A13",
+            "LH_M!B13",
+            "LH_M!C13",
+            "LH_M!D13"
+          ]
+        },
+        {
+          "ageYears": 11.2,
+          "L": 4.39510968452181,
+          "M": 12.4941397364143,
+          "S": 0.0757109495852299,
+          "modelResponseMedian": 12.495712745583083,
+          "centralConcentration": 0.26718931887704583,
+          "sourceCells": [
+            "LH_M!A14",
+            "LH_M!B14",
+            "LH_M!C14",
+            "LH_M!D14"
+          ]
+        },
+        {
+          "ageYears": 11.3,
+          "L": 4.39510968452181,
+          "M": 12.5604508098079,
+          "S": 0.0744434585873491,
+          "modelResponseMedian": 12.561763379066322,
+          "centralConcentration": 0.28543322107817654,
+          "sourceCells": [
+            "LH_M!A15",
+            "LH_M!B15",
+            "LH_M!C15",
+            "LH_M!D15"
+          ]
+        },
+        {
+          "ageYears": 11.4,
+          "L": 4.39510968452181,
+          "M": 12.6266511259111,
+          "S": 0.0731958152761282,
+          "modelResponseMedian": 12.627740212189417,
+          "centralConcentration": 0.30490032905224296,
+          "sourceCells": [
+            "LH_M!A16",
+            "LH_M!B16",
+            "LH_M!C16",
+            "LH_M!D16"
+          ]
+        },
+        {
+          "ageYears": 11.5,
+          "L": 4.39510968452181,
+          "M": 12.6926811648588,
+          "S": 0.0719684273644256,
+          "modelResponseMedian": 12.693579652900398,
+          "centralConcentration": 0.32565038717393346,
+          "sourceCells": [
+            "LH_M!A17",
+            "LH_M!B17",
+            "LH_M!C17",
+            "LH_M!D17"
+          ]
+        },
+        {
+          "ageYears": 11.6,
+          "L": 4.39510968452181,
+          "M": 12.7584943251831,
+          "S": 0.0707618140203065,
+          "modelResponseMedian": 12.759231291592664,
+          "centralConcentration": 0.34774728123400356,
+          "sourceCells": [
+            "LH_M!A18",
+            "LH_M!B18",
+            "LH_M!C18",
+            "LH_M!D18"
+          ]
+        },
+        {
+          "ageYears": 11.7,
+          "L": 4.39510968452181,
+          "M": 12.824055295587,
+          "S": 0.0695767533861937,
+          "modelResponseMedian": 12.824656293358172,
+          "centralConcentration": 0.37125940175024624,
+          "sourceCells": [
+            "LH_M!A19",
+            "LH_M!B19",
+            "LH_M!C19",
+            "LH_M!D19"
+          ]
+        },
+        {
+          "ageYears": 11.8,
+          "L": 4.39510968452181,
+          "M": 12.8893235730145,
+          "S": 0.0684137879621191,
+          "modelResponseMedian": 12.88981086137666,
+          "centralConcentration": 0.3962540644375463,
+          "sourceCells": [
+            "LH_M!A20",
+            "LH_M!B20",
+            "LH_M!C20",
+            "LH_M!D20"
+          ]
+        },
+        {
+          "ageYears": 11.9,
+          "L": 4.39510968452181,
+          "M": 12.9542522912792,
+          "S": 0.0672733267025747,
+          "modelResponseMedian": 12.954645103775224,
+          "centralConcentration": 0.42279601335176903,
+          "sourceCells": [
+            "LH_M!A21",
+            "LH_M!B21",
+            "LH_M!C21",
+            "LH_M!D21"
+          ]
+        },
+        {
+          "ageYears": 12.0,
+          "L": 4.39510968452181,
+          "M": 13.0187811899918,
+          "S": 0.0661556351958136,
+          "modelResponseMedian": 13.019096012831694,
+          "centralConcentration": 0.4509429044648273,
+          "sourceCells": [
+            "LH_M!A22",
+            "LH_M!B22",
+            "LH_M!C22",
+            "LH_M!D22"
+          ]
+        },
+        {
+          "ageYears": 12.1,
+          "L": 4.39510968452181,
+          "M": 13.0828425423964,
+          "S": 0.0650607469964033,
+          "modelResponseMedian": 13.083093391290282,
+          "centralConcentration": 0.4807455424293879,
+          "sourceCells": [
+            "LH_M!A23",
+            "LH_M!B23",
+            "LH_M!C23",
+            "LH_M!D23"
+          ]
+        },
+        {
+          "ageYears": 12.2,
+          "L": 4.39510968452181,
+          "M": 13.1463692483457,
+          "S": 0.0639886814909402,
+          "modelResponseMedian": 13.146567954842745,
+          "centralConcentration": 0.512249943007887,
+          "sourceCells": [
+            "LH_M!A24",
+            "LH_M!B24",
+            "LH_M!C24",
+            "LH_M!D24"
+          ]
+        },
+        {
+          "ageYears": 12.3,
+          "L": 4.39510968452181,
+          "M": 13.2092920818726,
+          "S": 0.062939545219331,
+          "modelResponseMedian": 13.209448566311703,
+          "centralConcentration": 0.5454948079864972,
+          "sourceCells": [
+            "LH_M!A25",
+            "LH_M!B25",
+            "LH_M!C25",
+            "LH_M!D25"
+          ]
+        },
+        {
+          "ageYears": 12.4,
+          "L": 4.39510968452181,
+          "M": 13.2715337179334,
+          "S": 0.0619132259610883,
+          "modelResponseMedian": 13.271656230554283,
+          "centralConcentration": 0.5805064728631407,
+          "sourceCells": [
+            "LH_M!A26",
+            "LH_M!B26",
+            "LH_M!C26",
+            "LH_M!D26"
+          ]
+        },
+        {
+          "ageYears": 12.5,
+          "L": 4.39510968452181,
+          "M": 13.3330158382847,
+          "S": 0.0609093570764251,
+          "modelResponseMedian": 13.333111186002826,
+          "centralConcentration": 0.6173004800255305,
+          "sourceCells": [
+            "LH_M!A27",
+            "LH_M!B27",
+            "LH_M!C27",
+            "LH_M!D27"
+          ]
+        },
+        {
+          "ageYears": 12.6,
+          "L": 4.39510968452181,
+          "M": 13.3936566953966,
+          "S": 0.0599273924889732,
+          "modelResponseMedian": 13.393730453445013,
+          "centralConcentration": 0.6558782482001223,
+          "sourceCells": [
+            "LH_M!A28",
+            "LH_M!B28",
+            "LH_M!C28",
+            "LH_M!D28"
+          ]
+        },
+        {
+          "ageYears": 12.7,
+          "L": 4.39510968452181,
+          "M": 13.453367099283,
+          "S": 0.0589666847153869,
+          "modelResponseMedian": 13.453423803240568,
+          "centralConcentration": 0.6962219646774953,
+          "sourceCells": [
+            "LH_M!A29",
+            "LH_M!B29",
+            "LH_M!C29",
+            "LH_M!D29"
+          ]
+        },
+        {
+          "ageYears": 12.8,
+          "L": 4.39510968452181,
+          "M": 13.5120503391804,
+          "S": 0.058026432370391,
+          "modelResponseMedian": 13.512093653624817,
+          "centralConcentration": 0.7382912353808366,
+          "sourceCells": [
+            "LH_M!A30",
+            "LH_M!B30",
+            "LH_M!C30",
+            "LH_M!D30"
+          ]
+        },
+        {
+          "ageYears": 12.9,
+          "L": 4.39510968452181,
+          "M": 13.5695934724475,
+          "S": 0.0571057577846549,
+          "modelResponseMedian": 13.569626339335779,
+          "centralConcentration": 0.7820127621942523,
+          "sourceCells": [
+            "LH_M!A31",
+            "LH_M!B31",
+            "LH_M!C31",
+            "LH_M!D31"
+          ]
+        },
+        {
+          "ageYears": 13.0,
+          "L": 4.39510968452181,
+          "M": 13.6258731619834,
+          "S": 0.0562037162560467,
+          "modelResponseMedian": 13.625897928247378,
+          "centralConcentration": 0.8272795353901863,
+          "sourceCells": [
+            "LH_M!A32",
+            "LH_M!B32",
+            "LH_M!C32",
+            "LH_M!D32"
+          ]
+        },
+        {
+          "ageYears": 13.1,
+          "L": 4.39510968452181,
+          "M": 13.6807619708565,
+          "S": 0.0553191176015844,
+          "modelResponseMedian": 13.680780495803848,
+          "centralConcentration": 0.8739517925087842,
+          "sourceCells": [
+            "LH_M!A33",
+            "LH_M!B33",
+            "LH_M!C33",
+            "LH_M!D33"
+          ]
+        },
+        {
+          "ageYears": 13.2,
+          "L": 4.39510968452181,
+          "M": 13.734130135669,
+          "S": 0.0544503547813838,
+          "modelResponseMedian": 13.734143881757307,
+          "centralConcentration": 0.9218556069472985,
+          "sourceCells": [
+            "LH_M!A34",
+            "LH_M!B34",
+            "LH_M!C34",
+            "LH_M!D34"
+          ]
+        },
+        {
+          "ageYears": 13.3,
+          "L": 4.39510968452181,
+          "M": 13.7858554832384,
+          "S": 0.0535956937085238,
+          "modelResponseMedian": 13.785865594387452,
+          "centralConcentration": 0.9707901382296156,
+          "sourceCells": [
+            "LH_M!A35",
+            "LH_M!B35",
+            "LH_M!C35",
+            "LH_M!D35"
+          ]
+        },
+        {
+          "ageYears": 13.4,
+          "L": 4.39510968452181,
+          "M": 13.8358411317208,
+          "S": 0.0527534894071438,
+          "modelResponseMedian": 13.835848498290721,
+          "centralConcentration": 1.0205461654625745,
+          "sourceCells": [
+            "LH_M!A36",
+            "LH_M!B36",
+            "LH_M!C36",
+            "LH_M!D36"
+          ]
+        },
+        {
+          "ageYears": 13.5,
+          "L": 4.39510968452181,
+          "M": 13.884032397226,
+          "S": 0.0519224150261432,
+          "modelResponseMedian": 13.884037708851716,
+          "centralConcentration": 1.0709297012480308,
+          "sourceCells": [
+            "LH_M!A37",
+            "LH_M!B37",
+            "LH_M!C37",
+            "LH_M!D37"
+          ]
+        },
+        {
+          "ageYears": 13.6,
+          "L": 4.39510968452181,
+          "M": 13.9304139214507,
+          "S": 0.0511017328989558,
+          "modelResponseMedian": 13.930417709432474,
+          "centralConcentration": 1.1217692781059958,
+          "sourceCells": [
+            "LH_M!A38",
+            "LH_M!B38",
+            "LH_M!C38",
+            "LH_M!D38"
+          ]
+        },
+        {
+          "ageYears": 13.7,
+          "L": 4.39510968452181,
+          "M": 13.9749790606146,
+          "S": 0.050291123470773,
+          "modelResponseMedian": 13.974981731040716,
+          "centralConcentration": 1.1728904509100215,
+          "sourceCells": [
+            "LH_M!A39",
+            "LH_M!B39",
+            "LH_M!C39",
+            "LH_M!D39"
+          ]
+        },
+        {
+          "ageYears": 13.8,
+          "L": 4.39510968452181,
+          "M": 14.0177436473691,
+          "S": 0.0494903090818446,
+          "modelResponseMedian": 14.017745507367906,
+          "centralConcentration": 1.224135584252598,
+          "sourceCells": [
+            "LH_M!A40",
+            "LH_M!B40",
+            "LH_M!C40",
+            "LH_M!D40"
+          ]
+        },
+        {
+          "ageYears": 13.9,
+          "L": 4.39510968452181,
+          "M": 14.0587332807975,
+          "S": 0.0486989181211862,
+          "modelResponseMedian": 14.058734559989766,
+          "centralConcentration": 1.275354274064792,
+          "sourceCells": [
+            "LH_M!A41",
+            "LH_M!B41",
+            "LH_M!C41",
+            "LH_M!D41"
+          ]
+        },
+        {
+          "ageYears": 14.0,
+          "L": 4.39510968452181,
+          "M": 14.0979839191591,
+          "S": 0.0479165989131778,
+          "modelResponseMedian": 14.097984787250391,
+          "centralConcentration": 1.326407592185742,
+          "sourceCells": [
+            "LH_M!A42",
+            "LH_M!B42",
+            "LH_M!C42",
+            "LH_M!D42"
+          ]
+        },
+        {
+          "ageYears": 14.1,
+          "L": 4.39510968452181,
+          "M": 14.1355230826294,
+          "S": 0.0471434897257644,
+          "modelResponseMedian": 14.135523663672164,
+          "centralConcentration": 1.3771458126884308,
+          "sourceCells": [
+            "LH_M!A43",
+            "LH_M!B43",
+            "LH_M!C43",
+            "LH_M!D43"
+          ]
+        },
+        {
+          "ageYears": 14.2,
+          "L": 4.39510968452181,
+          "M": 14.1713801754857,
+          "S": 0.0463801243934615,
+          "modelResponseMedian": 14.171380558984815,
+          "centralConcentration": 1.427421972802074,
+          "sourceCells": [
+            "LH_M!A44",
+            "LH_M!B44",
+            "LH_M!C44",
+            "LH_M!D44"
+          ]
+        },
+        {
+          "ageYears": 14.3,
+          "L": 4.39510968452181,
+          "M": 14.2055812591302,
+          "S": 0.0456275486138918,
+          "modelResponseMedian": 14.205581508751457,
+          "centralConcentration": 1.4770855905502822,
+          "sourceCells": [
+            "LH_M!A45",
+            "LH_M!B45",
+            "LH_M!C45",
+            "LH_M!D45"
+          ]
+        },
+        {
+          "ageYears": 14.4,
+          "L": 4.39510968452181,
+          "M": 14.238158702239,
+          "S": 0.0448867806694756,
+          "modelResponseMedian": 14.238158862506163,
+          "centralConcentration": 1.5259975151851284,
+          "sourceCells": [
+            "LH_M!A46",
+            "LH_M!B46",
+            "LH_M!C46",
+            "LH_M!D46"
+          ]
+        },
+        {
+          "ageYears": 14.5,
+          "L": 4.39510968452181,
+          "M": 14.2691704278954,
+          "S": 0.0441588250860041,
+          "modelResponseMedian": 14.269170529423173,
+          "centralConcentration": 1.5740626802318445,
+          "sourceCells": [
+            "LH_M!A47",
+            "LH_M!B47",
+            "LH_M!C47",
+            "LH_M!D47"
+          ]
+        },
+        {
+          "ageYears": 14.6,
+          "L": 4.39510968452181,
+          "M": 14.2986850104517,
+          "S": 0.0434446671510164,
+          "modelResponseMedian": 14.298685073938655,
+          "centralConcentration": 1.6212128078586656,
+          "sourceCells": [
+            "LH_M!A48",
+            "LH_M!B48",
+            "LH_M!C48",
+            "LH_M!D48"
+          ]
+        },
+        {
+          "ageYears": 14.7,
+          "L": 4.39510968452181,
+          "M": 14.3267732552154,
+          "S": 0.0427452333467749,
+          "modelResponseMedian": 14.326773294422907,
+          "centralConcentration": 1.6673953470671936,
+          "sourceCells": [
+            "LH_M!A49",
+            "LH_M!B49",
+            "LH_M!C49",
+            "LH_M!D49"
+          ]
+        },
+        {
+          "ageYears": 14.8,
+          "L": 4.39510968452181,
+          "M": 14.3535092275325,
+          "S": 0.0420614064022884,
+          "modelResponseMedian": 14.35350925146106,
+          "centralConcentration": 1.7125760406997856,
+          "sourceCells": [
+            "LH_M!A50",
+            "LH_M!B50",
+            "LH_M!C50",
+            "LH_M!D50"
+          ]
+        },
+        {
+          "ageYears": 14.9,
+          "L": 4.39510968452181,
+          "M": 14.3789586864856,
+          "S": 0.0413940225083107,
+          "modelResponseMedian": 14.378958700928623,
+          "centralConcentration": 1.756719488809925,
+          "sourceCells": [
+            "LH_M!A51",
+            "LH_M!B51",
+            "LH_M!C51",
+            "LH_M!D51"
+          ]
+        },
+        {
+          "ageYears": 15.0,
+          "L": 4.39510968452181,
+          "M": 14.4031813473343,
+          "S": 0.0407437111283651,
+          "modelResponseMedian": 14.403181355962623,
+          "centralConcentration": 1.7997914516553726,
+          "sourceCells": [
+            "LH_M!A52",
+            "LH_M!B52",
+            "LH_M!C52",
+            "LH_M!D52"
+          ]
+        },
+        {
+          "ageYears": 15.1,
+          "L": 4.39510968452181,
+          "M": 14.4262251391322,
+          "S": 0.0401108741785385,
+          "modelResponseMedian": 14.426225144237685,
+          "centralConcentration": 1.8417470158013105,
+          "sourceCells": [
+            "LH_M!A53",
+            "LH_M!B53",
+            "LH_M!C53",
+            "LH_M!D53"
+          ]
+        },
+        {
+          "ageYears": 15.2,
+          "L": 4.39510968452181,
+          "M": 14.4481487382526,
+          "S": 0.0394958143214096,
+          "modelResponseMedian": 14.448148741247108,
+          "centralConcentration": 1.8825705999512432,
+          "sourceCells": [
+            "LH_M!A54",
+            "LH_M!B54",
+            "LH_M!C54",
+            "LH_M!D54"
+          ]
+        },
+        {
+          "ageYears": 15.3,
+          "L": 4.39510968452181,
+          "M": 14.4690430019234,
+          "S": 0.0388989040262858,
+          "modelResponseMedian": 14.469043003666043,
+          "centralConcentration": 1.9223193382912733,
+          "sourceCells": [
+            "LH_M!A55",
+            "LH_M!B55",
+            "LH_M!C55",
+            "LH_M!D55"
+          ]
+        },
+        {
+          "ageYears": 15.4,
+          "L": 4.39510968452181,
+          "M": 14.4890166150505,
+          "S": 0.0383205791399994,
+          "modelResponseMedian": 14.489016616057889,
+          "centralConcentration": 1.9611010154361883,
+          "sourceCells": [
+            "LH_M!A56",
+            "LH_M!B56",
+            "LH_M!C56",
+            "LH_M!D56"
+          ]
+        },
+        {
+          "ageYears": 15.5,
+          "L": 4.39510968452181,
+          "M": 14.508201620063,
+          "S": 0.0377612126157886,
+          "modelResponseMedian": 14.508201620642216,
+          "centralConcentration": 1.999087972247889,
+          "sourceCells": [
+            "LH_M!A57",
+            "LH_M!B57",
+            "LH_M!C57",
+            "LH_M!D57"
+          ]
+        },
+        {
+          "ageYears": 15.6,
+          "L": 4.39510968452181,
+          "M": 14.5267417725456,
+          "S": 0.0372211228545438,
+          "modelResponseMedian": 14.526741772877294,
+          "centralConcentration": 2.0364970813039154,
+          "sourceCells": [
+            "LH_M!A58",
+            "LH_M!B58",
+            "LH_M!C58",
+            "LH_M!D58"
+          ]
+        },
+        {
+          "ageYears": 15.7,
+          "L": 4.39510968452181,
+          "M": 14.5447759812262,
+          "S": 0.0367005190778485,
+          "modelResponseMedian": 14.54477598141565,
+          "centralConcentration": 2.0735568618457156,
+          "sourceCells": [
+            "LH_M!A59",
+            "LH_M!B59",
+            "LH_M!C59",
+            "LH_M!D59"
+          ]
+        },
+        {
+          "ageYears": 15.8,
+          "L": 4.39510968452181,
+          "M": 14.5624374803103,
+          "S": 0.0361994605366609,
+          "modelResponseMedian": 14.562437480418373,
+          "centralConcentration": 2.1105042974333514,
+          "sourceCells": [
+            "LH_M!A60",
+            "LH_M!B60",
+            "LH_M!C60",
+            "LH_M!D60"
+          ]
+        },
+        {
+          "ageYears": 15.9,
+          "L": 4.39510968452181,
+          "M": 14.579849143111,
+          "S": 0.0357178784114449,
+          "modelResponseMedian": 14.579849143172655,
+          "centralConcentration": 2.1475734679448757,
+          "sourceCells": [
+            "LH_M!A61",
+            "LH_M!B61",
+            "LH_M!C61",
+            "LH_M!D61"
+          ]
+        },
+        {
+          "ageYears": 16.0,
+          "L": 4.39510968452181,
+          "M": 14.5971316813375,
+          "S": 0.0352556707082606,
+          "modelResponseMedian": 14.597131681372725,
+          "centralConcentration": 2.1850115693016887,
+          "sourceCells": [
+            "LH_M!A62",
+            "LH_M!B62",
+            "LH_M!C62",
+            "LH_M!D62"
+          ]
+        },
+        {
+          "ageYears": 16.1,
+          "L": 4.39510968452181,
+          "M": 14.6144070923416,
+          "S": 0.0348127581082243,
+          "modelResponseMedian": 14.614407092361787,
+          "centralConcentration": 2.223086475082458,
+          "sourceCells": [
+            "LH_M!A63",
+            "LH_M!B63",
+            "LH_M!C63",
+            "LH_M!D63"
+          ]
+        },
+        {
+          "ageYears": 16.2,
+          "L": 4.39510968452181,
+          "M": 14.6317603192055,
+          "S": 0.0343889723926577,
+          "modelResponseMedian": 14.631760319217117,
+          "centralConcentration": 2.2620008676104293,
+          "sourceCells": [
+            "LH_M!A64",
+            "LH_M!B64",
+            "LH_M!C64",
+            "LH_M!D64"
+          ]
+        },
+        {
+          "ageYears": 16.3,
+          "L": 4.39510968452181,
+          "M": 14.6492158638955,
+          "S": 0.0339840225730998,
+          "modelResponseMedian": 14.649215863902228,
+          "centralConcentration": 2.301831950093544,
+          "sourceCells": [
+            "LH_M!A65",
+            "LH_M!B65",
+            "LH_M!C65",
+            "LH_M!D65"
+          ]
+        },
+        {
+          "ageYears": 16.4,
+          "L": 4.39510968452181,
+          "M": 14.6667673474986,
+          "S": 0.0335975942204867,
+          "modelResponseMedian": 14.666767347502521,
+          "centralConcentration": 2.3425891441464404,
+          "sourceCells": [
+            "LH_M!A66",
+            "LH_M!B66",
+            "LH_M!C66",
+            "LH_M!D66"
+          ]
+        },
+        {
+          "ageYears": 16.5,
+          "L": 4.39510968452181,
+          "M": 14.6843905945895,
+          "S": 0.0332292336335941,
+          "modelResponseMedian": 14.684390594591802,
+          "centralConcentration": 2.3842390972088494,
+          "sourceCells": [
+            "LH_M!A67",
+            "LH_M!B67",
+            "LH_M!C67",
+            "LH_M!D67"
+          ]
+        },
+        {
+          "ageYears": 16.6,
+          "L": 4.39510968452181,
+          "M": 14.7020575689577,
+          "S": 0.0328784118794181,
+          "modelResponseMedian": 14.702057568959065,
+          "centralConcentration": 2.4267356758703333,
+          "sourceCells": [
+            "LH_M!A68",
+            "LH_M!B68",
+            "LH_M!C68",
+            "LH_M!D68"
+          ]
+        },
+        {
+          "ageYears": 16.7,
+          "L": 4.39510968452181,
+          "M": 14.7197306624404,
+          "S": 0.032544612862643,
+          "modelResponseMedian": 14.719730662441217,
+          "centralConcentration": 2.470004825982245,
+          "sourceCells": [
+            "LH_M!A69",
+            "LH_M!B69",
+            "LH_M!C69",
+            "LH_M!D69"
+          ]
+        },
+        {
+          "ageYears": 16.8,
+          "L": 4.39510968452181,
+          "M": 14.7373594580827,
+          "S": 0.0322273035192295,
+          "modelResponseMedian": 14.737359458083194,
+          "centralConcentration": 2.5139341087999822,
+          "sourceCells": [
+            "LH_M!A70",
+            "LH_M!B70",
+            "LH_M!C70",
+            "LH_M!D70"
+          ]
+        },
+        {
+          "ageYears": 16.9,
+          "L": 4.39510968452181,
+          "M": 14.7548890495748,
+          "S": 0.0319258358791774,
+          "modelResponseMedian": 14.754889049575105,
+          "centralConcentration": 2.5583908627246883,
+          "sourceCells": [
+            "LH_M!A71",
+            "LH_M!B71",
+            "LH_M!C71",
+            "LH_M!D71"
+          ]
+        },
+        {
+          "ageYears": 17.0,
+          "L": 4.39510968452181,
+          "M": 14.7722506897965,
+          "S": 0.0316394112377864,
+          "modelResponseMedian": 14.772250689796687,
+          "centralConcentration": 2.603196549069626,
+          "sourceCells": [
+            "LH_M!A72",
+            "LH_M!B72",
+            "LH_M!C72",
+            "LH_M!D72"
+          ]
+        },
+        {
+          "ageYears": 17.1,
+          "L": 4.39510968452181,
+          "M": 14.789391744379,
+          "S": 0.0313671142056862,
+          "modelResponseMedian": 14.789391744379119,
+          "centralConcentration": 2.6482027077629113,
+          "sourceCells": [
+            "LH_M!A73",
+            "LH_M!B73",
+            "LH_M!C73",
+            "LH_M!D73"
+          ]
+        },
+        {
+          "ageYears": 17.2,
+          "L": 4.39510968452181,
+          "M": 14.8062792090743,
+          "S": 0.0311080118607651,
+          "modelResponseMedian": 14.806279209074376,
+          "centralConcentration": 2.6933038879413846,
+          "sourceCells": [
+            "LH_M!A74",
+            "LH_M!B74",
+            "LH_M!C74",
+            "LH_M!D74"
+          ]
+        },
+        {
+          "ageYears": 17.3,
+          "L": 4.39510968452181,
+          "M": 14.8229008647688,
+          "S": 0.0308611166659892,
+          "modelResponseMedian": 14.82290086476885,
+          "centralConcentration": 2.738445180058807,
+          "sourceCells": [
+            "LH_M!A75",
+            "LH_M!B75",
+            "LH_M!C75",
+            "LH_M!D75"
+          ]
+        },
+        {
+          "ageYears": 17.4,
+          "L": 4.39510968452181,
+          "M": 14.8392774147268,
+          "S": 0.0306252646578696,
+          "modelResponseMedian": 14.83927741472683,
+          "centralConcentration": 2.783660690863312,
+          "sourceCells": [
+            "LH_M!A76",
+            "LH_M!B76",
+            "LH_M!C76",
+            "LH_M!D76"
+          ]
+        },
+        {
+          "ageYears": 17.5,
+          "L": 4.39510968452181,
+          "M": 14.8554184651993,
+          "S": 0.0303991942064447,
+          "modelResponseMedian": 14.85541846519932,
+          "centralConcentration": 2.828956475931087,
+          "sourceCells": [
+            "LH_M!A77",
+            "LH_M!B77",
+            "LH_M!C77",
+            "LH_M!D77"
+          ]
+        },
+        {
+          "ageYears": 17.6,
+          "L": 4.39510968452181,
+          "M": 14.8712997523585,
+          "S": 0.0301815525865983,
+          "modelResponseMedian": 14.871299752358512,
+          "centralConcentration": 2.874242595201492,
+          "sourceCells": [
+            "LH_M!A78",
+            "LH_M!B78",
+            "LH_M!C78",
+            "LH_M!D78"
+          ]
+        },
+        {
+          "ageYears": 17.7,
+          "L": 4.39510968452181,
+          "M": 14.8868848690529,
+          "S": 0.0299708825977473,
+          "modelResponseMedian": 14.88688486905291,
+          "centralConcentration": 2.9193888927968468,
+          "sourceCells": [
+            "LH_M!A79",
+            "LH_M!B79",
+            "LH_M!C79",
+            "LH_M!D79"
+          ]
+        },
+        {
+          "ageYears": 17.8,
+          "L": 4.39510968452181,
+          "M": 14.9021476038329,
+          "S": 0.029765687714174,
+          "modelResponseMedian": 14.902147603832907,
+          "centralConcentration": 2.9642885251627895,
+          "sourceCells": [
+            "LH_M!A80",
+            "LH_M!B80",
+            "LH_M!C80",
+            "LH_M!D80"
+          ]
+        },
+        {
+          "ageYears": 17.9,
+          "L": 4.39510968452181,
+          "M": 14.9170768770027,
+          "S": 0.0295645301440941,
+          "modelResponseMedian": 14.917076877002703,
+          "centralConcentration": 3.008875193452496,
+          "sourceCells": [
+            "LH_M!A81",
+            "LH_M!B81",
+            "LH_M!C81",
+            "LH_M!D81"
+          ]
+        },
+        {
+          "ageYears": 18.0,
+          "L": 4.39510968452181,
+          "M": 14.9316651476027,
+          "S": 0.0293659656798848,
+          "modelResponseMedian": 14.931665147602704,
+          "centralConcentration": 3.053091212441528,
+          "sourceCells": [
+            "LH_M!A82",
+            "LH_M!B82",
+            "LH_M!C82",
+            "LH_M!D82"
+          ]
+        },
+        {
+          "ageYears": 18.1,
+          "L": 4.39510968452181,
+          "M": 14.9458922978378,
+          "S": 0.0291685518753894,
+          "modelResponseMedian": 14.9458922978378,
+          "centralConcentration": 3.096838461232035,
+          "sourceCells": [
+            "LH_M!A83",
+            "LH_M!B83",
+            "LH_M!C83",
+            "LH_M!D83"
+          ]
+        },
+        {
+          "ageYears": 18.2,
+          "L": 4.39510968452181,
+          "M": 14.9597337126768,
+          "S": 0.028970923957242,
+          "modelResponseMedian": 14.9597337126768,
+          "centralConcentration": 3.140001114048218,
+          "sourceCells": [
+            "LH_M!A84",
+            "LH_M!B84",
+            "LH_M!C84",
+            "LH_M!D84"
+          ]
+        },
+        {
+          "ageYears": 18.3,
+          "L": 4.39510968452181,
+          "M": 14.9731880302933,
+          "S": 0.0287726107289046,
+          "modelResponseMedian": 14.9731880302933,
+          "centralConcentration": 3.1825331646221353,
+          "sourceCells": [
+            "LH_M!A85",
+            "LH_M!B85",
+            "LH_M!C85",
+            "LH_M!D85"
+          ]
+        },
+        {
+          "ageYears": 18.4,
+          "L": 4.39510968452181,
+          "M": 14.986312957183,
+          "S": 0.0285739657049703,
+          "modelResponseMedian": 14.986312957183,
+          "centralConcentration": 3.2245790004130037,
+          "sourceCells": [
+            "LH_M!A86",
+            "LH_M!B86",
+            "LH_M!C86",
+            "LH_M!D86"
+          ]
+        },
+        {
+          "ageYears": 18.5,
+          "L": 4.39510968452181,
+          "M": 14.9991526262965,
+          "S": 0.0283754879079115,
+          "modelResponseMedian": 14.9991526262965,
+          "centralConcentration": 3.2662484664291584,
+          "sourceCells": [
+            "LH_M!A87",
+            "LH_M!B87",
+            "LH_M!C87",
+            "LH_M!D87"
+          ]
+        },
+        {
+          "ageYears": 18.6,
+          "L": 4.39510968452181,
+          "M": 15.0117309051043,
+          "S": 0.0281776569480865,
+          "modelResponseMedian": 15.0117309051043,
+          "centralConcentration": 3.307591718686753,
+          "sourceCells": [
+            "LH_M!A88",
+            "LH_M!B88",
+            "LH_M!C88",
+            "LH_M!D88"
+          ]
+        },
+        {
+          "ageYears": 18.7,
+          "L": 4.39510968452181,
+          "M": 15.0240782292579,
+          "S": 0.0279808259472814,
+          "modelResponseMedian": 15.0240782292579,
+          "centralConcentration": 3.348684798519747,
+          "sourceCells": [
+            "LH_M!A89",
+            "LH_M!B89",
+            "LH_M!C89",
+            "LH_M!D89"
+          ]
+        },
+        {
+          "ageYears": 18.8,
+          "L": 4.39510968452181,
+          "M": 15.0362301470037,
+          "S": 0.0277851900240896,
+          "modelResponseMedian": 15.0362301470037,
+          "centralConcentration": 3.3896259939564186,
+          "sourceCells": [
+            "LH_M!A90",
+            "LH_M!B90",
+            "LH_M!C90",
+            "LH_M!D90"
+          ]
+        },
+        {
+          "ageYears": 18.9,
+          "L": 4.39510968452181,
+          "M": 15.0482792471177,
+          "S": 0.0275908678564643,
+          "modelResponseMedian": 15.0482792471177,
+          "centralConcentration": 3.4307149824648144,
+          "sourceCells": [
+            "LH_M!A91",
+            "LH_M!B91",
+            "LH_M!C91",
+            "LH_M!D91"
+          ]
+        },
+        {
+          "ageYears": 19.0,
+          "L": 4.39510968452181,
+          "M": 15.0603070006572,
+          "S": 0.0273978981035564,
+          "modelResponseMedian": 15.0603070006572,
+          "centralConcentration": 3.4722279300280774,
+          "sourceCells": [
+            "LH_M!A92",
+            "LH_M!B92",
+            "LH_M!C92",
+            "LH_M!D92"
+          ]
+        }
+      ]
+    }
+  }
+}

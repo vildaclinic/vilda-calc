@@ -105,7 +105,11 @@ describe('LH/FSH — actual numerical source selection, independent of the educa
   it('preserves source gaps, term-infant eligibility and the actual G1 requirement despite a continuous illustration', () => {
     for (const id of ['lh', 'fsh']) {
       for (const age of [0, 6 / 365.25, 90]) expect(evaluate(id, age)).toEqual(unavailable('unsupported-age'));
-      if (id === 'lh') for (const age of [16.001, 17.99]) expect(evaluate(id, age)).toEqual(unavailable('unsupported-age'));
+      if (id === 'lh') for (const age of [16.001, 17.99]) {
+        expect(evaluate(id, age)).toMatchObject({ status: 'ready',
+          profile: { id: 'wilson2023-male-lh-age-over16-under18', ordinaryOnly: true } });
+        expect(evaluate(id, age, { sex: 'female' })).toEqual(unavailable('unsupported-age'));
+      }
       expect(evaluate(id, 90 / 365.25, { preterm: 'yes' })).toEqual(unavailable('preterm-context'));
       expect(evaluate(id, 44, { preterm: 'yes' }).status).toBe('ready');
       expect(evaluate(id, 44, { sex: 'female' }).profile?.sex).not.toBe('male');

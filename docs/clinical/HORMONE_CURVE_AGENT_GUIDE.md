@@ -715,6 +715,39 @@ Poprzednie opisy luki 18–<20 są historyczne i zostają uzupełnione tym wpise
 Źródło i ograniczenia:
 [audyt AMH 18–<20](hormone-lifespan/evidence/male-amh-18-20-reference-audit-2026-10-18.json).
 
+## LH chłopców — odtworzona mediana w (16,18), 18 października 2026
+
+Po audycie źródłowym właściciel polecił mały PR wyłącznie dla chłopców.
+`male-lh-caliper-reference-policy.json` dodaje jeden profil `ordinaryOnly`
+ściśle w `(16,18)`, bez zmian 81 wcześniejszych profili, krzywej, skali,
+porównania płci, norm i formularza. Dokładne 16 zachowuje Madsen
+3,5142066372549756 IU/L; od 18 pozostaje Laurentino 3 IU/L. Cały możliwy
+wiek musi pasować. Wpis 16 lat 0 miesięcy lub 16 ukończonych lat nadal
+obejmuje styk źródeł i nie otrzymuje arbitralnej mediany ze środka wieku.
+
+Wilson 2023, Supplemental Table 3 `LH_M`, dostarcza 91 węzłów L/M/S
+10–19 co 0,1 roku, nie miesięcznych. Mediana to znormalizowany
+`qBCCG(0.5)`, potem `exp(q)/1e6` IU/L. To zaakceptowana rekonstrukcja:
+artykuł opisuje logarytmowanie, przypięty kod współautora
+`288329c43ee238b3c8921097dfeac411d30465b9` wspiera konwencję, a pięć
+centyli odtwarza rycinę na 89 punktach wieku. Późniejszy przykład T4/TSH
+nie jest dokładnym preprocessingiem LH Wilson. Nie nazywaj rekonstrukcji
+odzyskanym modelem ani zwalidowaną normą. Żeński arkusz pozostaje
+niespójny z ryciną i nie daje nowego profilu. Nie dodawaj RI, SDS lub
+percentyla wyniku. PCHIP przybliża stężenia z pełnej tabeli; nie refituj
+samego wycinka 16–18. Dla M17 odniesienie wynosi 2,603196549069626 IU/L.
+
+Surowica, Abbott ARCHITECT ci2000 LH; znana niezgodność metody/materiału
+blokuje bez fallbacku, nieznane dopuszczają porównanie edukacyjne.
+Zachowaj istniejące bramki leczenia, GnRHa, kanonicznej stymulacji
+i tożsamości; nie zakładaj nowego przekazywania pól dawnych protokołów.
+LLOQ 0,09 IU/L nie jest LOD ani podłogą wyniku. Edukacyjna mediana LH
+nie trafia do historii; snapshot źródłowego odniesienia pozostaje AMH-only.
+Zapisana laboratoryjna ocena LH i odczyt bez ponownego liczenia pozostają
+odrębne. Źródła i granice:
+[audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json),
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#lh-chłopców--odtworzona-mediana-w-1618-18-października-2026).
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

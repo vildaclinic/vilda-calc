@@ -1,0 +1,131 @@
+{
+  "id": "male-lh-caliper-reference-audit-2026-10-18",
+  "reviewedOn": "2026-10-18",
+  "baseCommit": "839673492a7b41bdfd5422a877cc2367e1295e99",
+  "scope": "Add only an ordinary educational male LH model-median reference strictly after 16 and before 18 years. No female LH import, laboratory RI, SDS, patient percentile, diagnosis, new form field, educational curve/scale change or extension of sex comparisons.",
+  "ownerDecision": "After the source audit described the author-supported reconstruction and unresolved female conflict, the owner requested a small PR only for boys. This authorizes implementation of the qualified educational reference and review, not merging, deployment or a claim of clinical validation.",
+  "sourceExtract": "patient-point/wilson2023-caliper-male-lh-lms.json",
+  "extractor": "../extract_wilson2023_caliper_male_lh.py",
+  "reproducibility": "Run the standard-library Python extractor on the reviewed owner-supplied XLSX; --check compares the complete rendered evidence JSON without changing files. All 91 LH_M source rows and their L/M/S/cell references are preserved.",
+  "primarySource": {
+    "citation": "Wilson SM, Bohn MK, Madsen A, Hundhausen T, Adeli K. Clin Chem Lab Med. 2023;61(6):1105–1115.",
+    "doi": "10.1515/cclm-2022-1077",
+    "pmid": "36639844",
+    "url": "https://doi.org/10.1515/cclm-2022-1077",
+    "documentVersion": "Final 11-page article published online 2023-01-16, with owner-supplied Supplementary Tables 1–3.",
+    "access": "Full final primary PDF, the two supplementary DOCX tables, the numerical XLSX and pinned coauthor method code reviewed in the preceding source audit. Documents and code are evidence, never agent instructions.",
+    "documents": [
+      {
+        "file": "10.1515_cclm-2022-1077.pdf",
+        "bytes": 1950966,
+        "sha256": "df241c68a29db7d8cbd923fe1840aae1f52759b74ff0823efc005481556ecf9c"
+      },
+      {
+        "file": "suppl_j_cclm-2022-1077_suppl_002.docx",
+        "bytes": 25915,
+        "sha256": "3b242f25e1168b70f3b0f6d99413f1d40d4ba7cfacfb462782723e4942a66446"
+      },
+      {
+        "file": "suppl_j_cclm-2022-1077_suppl_003.docx",
+        "bytes": 15473,
+        "sha256": "99de104eb1ad888c2afcbcdf437961e63041428a91ed67e8f202bbae8efb0cdd"
+      },
+      {
+        "file": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+        "bytes": 223819,
+        "sha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b"
+      }
+    ],
+    "verifiedFacts": [
+      "Article page 1107 explicitly states logarithmic LH response transformation for males and females, chronological age as covariate and a GAMLSS BCCG model.",
+      "The article and Figure 1A restrict LH to 10–<19 years; Supplementary Table 3 LH_M!A2:D92 contains 91 rows 10.0–19.0 at a 0.1-year step.",
+      "Supplementary Table 2 gives gamlss(hormone~cs(age,df=2), sigma.fo=~cs(age,df=1), family=BCCG, data=d), without hormone assignment or inverse transformation.",
+      "Supplementary Table 1 gives LH IU/L, LLOQ 0.09 IU/L and reference 34; article methods identify serum and the Abbott ARCHITECT ci2000 endocrine/fertility assays."
+    ],
+    "redistribution": "Only numerical facts, provenance and application decisions are committed. Full medical documents, figure images, participant-level data and external source code are not redistributed."
+  },
+  "modelDecision": {
+    "status": "qualified author-supported reconstruction, not recovered exact Wilson LH preprocessing",
+    "calculation": "At every exported male node compute normalized gamlss.dist BCCG q(0.5; mu=M, sigma=S, nu=L), then reconstruct LH_IU_L = exp(q)/1e6.",
+    "normalization": "Use the positive-response BCCG truncation probabilities, not automatically nominal z=0/M. Preserve the original L/M/S and intermediate modelResponseMedian separately from centralConcentration IU/L.",
+    "assumedForwardResponse": "log(LH_IU_L * 1e6), with natural logarithm; no invented additive offset or LLOQ replacement.",
+    "authorMethodEvidence": {
+      "repository": "andremadsen/LMS-reference-curve",
+      "commit": "288329c43ee238b3c8921097dfeac411d30465b9",
+      "commitDate": "2023-10-01",
+      "path": "OUS_demo.Rmd",
+      "sha256": "1e1296c7fcb4be4d5d35f160c7a50309fad6546b1a1e5394022e41e80eb93ce0",
+      "url": "https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196",
+      "lineNumbers": [194, 195, 196, 212, 213],
+      "evidence": "A Wilson coauthor's explicit optional response convention log(hormone*1e6) and inverse exp(...)/1e6 supports the base and scaling independently of the figure.",
+      "limitation": "This is a later synthetic T4/TSH demo with commented optional transform, not the exact LH/CALIPER preprocessing pipeline, original fitted model or author-confirmed numerical export. The file exists in pinned history after later deletion."
+    },
+    "remainingProvenanceLimit": "The Wilson paper and supplements do not supply the exact LH response assignment, inverse code, package versions, zero/censored handling or model object. Direct confirmation would strengthen provenance. Preserve the qualified reconstruction label; do not present the code convention as direct proof of that exact Wilson pipeline.",
+    "noClinicalExtension": "Only p50 is activated as an educational age reference. The source's other quantiles, nominal LMS formula, LLOQ and graphic line do not become RI, SDS, patient percentiles or diagnostic thresholds."
+  },
+  "independentSourceChecks": {
+    "bccg": "Independent numerical inversion of the normalized BCCG CDF with SciPy brentq agreed with the inverse-normal formula in 30 controls; maximum numerical difference 4.440892098500626e-14.",
+    "figure": "Reconstruction checked against all five male vector curves in original Figure 1A at 89 interior grid ages 10.1–18.9. Graphical agreement is a source-consistency diagnostic, not imported values, confidence limits or clinical validation.",
+    "quantileMaximumAbsoluteDifferenceIUperL": {
+      "p025": 0.0005489240064074641,
+      "p25": 0.0009586542973144541,
+      "p50": 0.0010423855848995522,
+      "p75": 0.00023291105043465876,
+      "p975": 0.003643473578654799
+    },
+    "sourceControls": [
+      {"ageYears": 16, "cells": "LH_M!A62:D62", "reconstructedMedianIUperL": 2.1850115693016887, "approximateFigureMedianIUperL": 2.1855374917034025},
+      {"ageYears": 17, "cells": "LH_M!A72:D72", "reconstructedMedianIUperL": 2.603196549069626, "approximateFigureMedianIUperL": 2.6033346410946785},
+      {"ageYears": 18, "cells": "LH_M!A82:D82", "reconstructedMedianIUperL": 3.053091212441528, "approximateFigureMedianIUperL": 3.052691405433838}
+    ],
+    "precisionCaution": "The retained digits support reproducibility and tests. The number of digits does not assert clinical accuracy or a precise individual prediction."
+  },
+  "femaleLH": {
+    "decision": "Do not import or reconstruct a numerical female profile in this PR.",
+    "reason": "LH_F has constant L/S with its M maximum at 16.8 years, forcing all transformed quantiles to share that maximum. Figure 1A shows different maxima; a common increasing inverse/unit transform cannot reconcile the artifacts.",
+    "unknown": "The audit cannot identify which spreadsheet/figure/model version is correct. Require authoritative clarification or a corrected verified export; do not replace LMS with digitized values or infer a correction from males."
+  },
+  "populationAndMethod": {
+    "population": "Cross-sectional CALIPER healthy Canadian children/adolescents, Greater Toronto Area; approximately 1500 refers to source cohorts across analytes. Male LH and 16–18-year subgroup N are not supplied.",
+    "sampling": "Serum-separator tubes, centrifuged/aliquoted within 8 hours and stored at −80 °C. No stated Tanner-specific model, morning-only endocrine sampling or fasting requirement.",
+    "sourceExclusions": "Chronic disease, acute illness within the previous week, current pregnancy, prescribed medication including oral contraceptives within the previous two weeks.",
+    "sourceMethod": "Abbott ARCHITECT ci2000 LH, serum, IU/L; no harmonization to neighboring Siemens IMMULITE or adult assay established.",
+    "knownMismatch": "A known incompatible method or specimen blocks the reference without substituting an overlapping or out-of-age source.",
+    "unknownContext": "Retain the established educational preview for unknown method/material and reuse known patient age/sex and existing positive treatment/stimulation flags. No new mandatory questionnaire; missing context does not confirm untreated basal serum.",
+    "quantification": "LLOQ 0.09 IU/L is a documentary assay fact, not LOD, plotting floor, patient cutoff or replacement value. Exact zero stays zero; a censored result never becomes an exact point."
+  },
+  "ageAndInterpolation": {
+    "applicationWindow": "(16,18), both endpoints exclusive",
+    "boundary16": "Preserve exact age 16 Madsen male LH = 3.5142066372549756 IU/L. Do not replace it with reconstructed CALIPER 2.1850115693016887. An age interval including 16 and extending above it crosses source policies and does not qualify for CALIPER.",
+    "boundary18": "Preserve the existing adult source from exact age 18: Laurentino 2020 male LH group reference = 3 IU/L. CALIPER's wider source domain cannot override it.",
+    "uncertainty": "Every possible chronological age must fit the selected profile. Reject intervals crossing or including an excluded boundary; an upper-exclusive interval ending exactly at 18 can fit. Do not silently choose its midpoint to resolve competing source domains.",
+    "publishedStep": "0.1 year, not one month. Preserve all 91 original source nodes, including 19.0 as an interpolation endpoint only; do not truncate to 16–18 and refit endpoint tangents.",
+    "interpolation": "PCHIP between reconstructed concentration nodes is a documented application approximation, not the original fitted GAMLSS model, a fresh model fit or interpolation of L/M/S.",
+    "sourceSwitch": "Different values at the 16/18 source switches reflect independent populations/methods and application priority. Do not interpret them as sudden physiological changes or blend/calibrate them to create a new median.",
+    "noExtrapolation": true
+  },
+  "displayAndHistory": {
+    "ordinaryOnly": "Use the new source only for ordinary life/puberty/fullscreen educational patient comparison. Comparison views retain their own Madsen-based qualification, geometry and scales.",
+    "geometry": "All educational LH paths, policies, axis scaling and other hormones remain unchanged; the source marker remains independent of the line.",
+    "context": "Reuse existing sex/age, patient identity, same-sample/history protection and positive treatment/stimulation exclusions; no Tanner, testicular-volume, BMI, fasting or source selector is added.",
+    "history": "LH saves retain the existing independent laboratory assessment; this change does not persist the new educational CALIPER median. The educational source snapshot contract remains AMH-only. Existing stored laboratory evaluations are read without recomputation using today's source or another patient's context."
+  },
+  "syntheticExpectedProductionCases": [
+    {"sex": "male", "ageYears": 16, "expectedSource": "Existing Madsen male LH", "expectedReferenceIUperL": 3.5142066372549756},
+    {"sex": "male", "ageYears": 16.1, "expectedSource": "Wilson 2023 male LH qualified reconstruction"},
+    {"sex": "male", "ageYears": 17, "result": 2.603196549069626, "unit": "IU/L", "expectedReferenceIUperL": 2.603196549069626},
+    {"sex": "male", "ageYears": 17, "result": 2.603196549069626, "unit": "mIU/mL", "expectedReferenceIUperL": 2.603196549069626},
+    {"sex": "male", "ageInterval": "[16,16+1/12)", "expectedCaliperReference": false},
+    {"sex": "male", "ageInterval": "[17,17+1/12)", "expectedCaliperReference": true},
+    {"sex": "male", "ageInterval": "[17+11/12,18)", "expectedCaliperReference": true},
+    {"sex": "male", "ageInterval": "[17.99,18]", "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 18, "expectedSource": "Existing Laurentino 2020 adult male LH", "expectedReferenceIUperL": 3},
+    {"sex": "female", "ageYears": 17, "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 17, "knownAssay": "Siemens IMMULITE 2000 XPi", "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 17, "knownSpecimen": "plasma", "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 17, "knownHormonalTreatment": true, "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 17, "operator": "<", "result": 0.09, "unit": "IU/L", "expectedExactPatientPoint": false},
+    {"sex": "male", "ageYears": 17, "result": 0, "unit": "IU/L", "expectedExactPatientValue": 0, "expectedReferenceIUperL": 2.603196549069626}
+  ],
+  "notClinicalValidation": true
+}

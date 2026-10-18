@@ -34,6 +34,7 @@ def build():
     female_estradiol_reference_policy = json.loads((ROOT / 'female-estradiol-reference-policy.json').read_text(encoding='utf-8'))
     fsh_caliper_reference_policy = json.loads((ROOT / 'fsh-caliper-reference-policy.json').read_text(encoding='utf-8'))
     male_amh_young_adult_reference_policy = json.loads((ROOT / 'male-amh-young-adult-reference-policy.json').read_text(encoding='utf-8'))
+    male_lh_caliper_reference_policy = json.loads((ROOT / 'male-lh-caliper-reference-policy.json').read_text(encoding='utf-8'))
     gonadotropin_comparison_policy = json.loads((ROOT / 'gonadotropin-comparison-policy.json').read_text(encoding='utf-8'))
     gonadotropin_comparison_reference = json.loads((ROOT / 'gonadotropin-comparison-reference-data.json').read_text(encoding='utf-8'))
     reference_js = json.dumps(reference, ensure_ascii=False, indent=2)
@@ -56,6 +57,7 @@ def build():
     female_estradiol_reference_policy_js = json.dumps(female_estradiol_reference_policy, ensure_ascii=False, indent=2)
     fsh_caliper_reference_policy_js = json.dumps(fsh_caliper_reference_policy, ensure_ascii=False, indent=2)
     male_amh_young_adult_reference_policy_js = json.dumps(male_amh_young_adult_reference_policy, ensure_ascii=False, indent=2)
+    male_lh_caliper_reference_policy_js = json.dumps(male_lh_caliper_reference_policy, ensure_ascii=False, indent=2)
     gonadotropin_comparison_policy_js = json.dumps(gonadotropin_comparison_policy, ensure_ascii=False, indent=2)
     gonadotropin_comparison_reference_js = json.dumps(gonadotropin_comparison_reference, ensure_ascii=False, indent=2)
     return (
@@ -89,6 +91,7 @@ def build():
         f'const femaleEstradiolReferencePolicy = {female_estradiol_reference_policy_js};\n'
         f'const fshCaliperReferencePolicy = {fsh_caliper_reference_policy_js};\n'
         f'const maleAmhYoungAdultReferencePolicy = {male_amh_young_adult_reference_policy_js};\n'
+        f'const maleLhCaliperReferencePolicy = {male_lh_caliper_reference_policy_js};\n'
         f'const gonadotropinComparisonPolicy = {gonadotropin_comparison_policy_js};\n'
         f'const gonadotropinComparisonReferenceData = {gonadotropin_comparison_reference_js};\n'
         'return {\n'
@@ -114,6 +117,7 @@ def build():
         '  femaleEstradiolReferencePolicy: femaleEstradiolReferencePolicy,\n'
         '  fshCaliperReferencePolicy: fshCaliperReferencePolicy,\n'
         '  maleAmhYoungAdultReferencePolicy: maleAmhYoungAdultReferencePolicy,\n'
+        '  maleLhCaliperReferencePolicy: maleLhCaliperReferencePolicy,\n'
         '  gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,\n'
         '  gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData\n'
         '};\n'

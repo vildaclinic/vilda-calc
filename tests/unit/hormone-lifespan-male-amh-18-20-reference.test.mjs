@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { beforeMaleLhCaliperBundle, beforeMaleLhCaliperRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -65,20 +66,20 @@ function currentForm(years = 18, months = 0) {
 
 describe('Męskie AMH 18–<20 — mediana całej grupy Woloszynek 18–30', () => {
   it('dodaje tylko jeden profil, zachowując wszystkie 80 wcześniejszych profili i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-18.2');
-    expect(data.profiles).toHaveLength(81);
+    expect(data.version).toBe('2026-10-18.3');
+    expect(data.profiles).toHaveLength(82);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.maleAmhYoungAdultReferencePolicy).toEqual(policy);
     expect(policy).toMatchObject({ id, kind: 'educational-source-selection', ordinaryOnly: true,
       minAge: 18, maxAge: 20, maxAgeExclusive: true });
-    const unchanged = data.profiles.filter(item => item.id !== id);
+    const unchanged = beforeMaleLhCaliperBundle(data).profiles.filter(item => item.id !== id);
     expect(unchanged).toHaveLength(80);
     // Frozen patientPointData on audyt d2bd5ed6: the new source must not alter
     // an existing number, boundary, specimen, assay gate or source provenance.
     expect(digest(unchanged)).toBe('eb8052ce82ca1bcab28dcb4ca318bf701386eb8dd56a0ae93da44c4df2dc70ac');
     expect(digest({ ...data, version: '2026-10-18.1', profiles: unchanged }))
       .toBe('bd130ff8eeeb9c046d1e3ef5a62d11c660f98ec0bfb2cd4ffb5a85516fa91a27');
-    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const otherRuntime = Object.fromEntries(Object.entries(beforeMaleLhCaliperRuntime(runtime)).filter(([key]) =>
       key !== 'patientPointData' && key !== 'maleAmhYoungAdultReferencePolicy'));
     expect(digest(otherRuntime)).toBe('d72999891daaa5e32b2ddf521aa29c30b400e400b037bd822096d76bcf2e37d7');
   });
