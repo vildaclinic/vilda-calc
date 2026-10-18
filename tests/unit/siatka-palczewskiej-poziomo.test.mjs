@@ -174,7 +174,15 @@ describe('P-PAL-POZIOM: składanie strony A4 poziomo', () => {
     const { win, L, calls } = okno();
     const strona = L.buildPage(ARGS);
     expect([strona.width, strona.height]).toEqual([3508, 2480]);
-    expect(win.__generator).toEqual([{ args: ARGS, layout: { width: 1684, height: 2090, rightReserve: 70, bottomReserve: 30 } }]);
+    expect(win.__generator).toEqual([{
+      args: ARGS,
+      layout: {
+        format: 'landscape', width: 1684, height: 2090, rightReserve: 70, bottomReserve: 30,
+        // P-KREATOR-POZIOM: miejsce kolumn na stronie i pole wykresu pionowego (skala położeń ramek Kreatora).
+        origins: { height: { x: 120, y: 278 }, weight: { x: 1804, y: 278 } },
+        refPlot: { width: 1946, height: 2745.1 },
+      },
+    }]);
     expect(calls.filter((c) => c[0] === 'drawImage')).toEqual([
       ['drawImage', 'wzrost', 120, 278],
       ['drawImage', 'waga', 1804, 278],
