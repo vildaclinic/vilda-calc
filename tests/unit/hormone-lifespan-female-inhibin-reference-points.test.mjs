@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { priorFemaleGonadotropinBundle, withoutFemaleGonadotropinReferencePolicy } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const laterChildhoodIds = ['zhou2025-female-inhb-age-over1-under5', 'zhou2025-female-inhb-age-5-under5p6'];
@@ -27,14 +28,14 @@ const adultNodes = [[20, 34], [25, 32], [30, 30], [35, 29], [40, 28],
 
 describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat', () => {
   it('rozszerza jeden profil i zachowuje dokładnie wszystkie 73 pozostałe profile oraz konwersje', () => {
-    expect(data.profiles).toHaveLength(76);
-    expect(data.version).toBe('2026-10-14.2');
-    const unchanged = { ...data, version: '2026-10-13.4',
-      profiles: data.profiles.filter(profile => profile.id !== profileId && !laterChildhoodIds.includes(profile.id)) };
+    expect(data.profiles).toHaveLength(82);
+    expect(data.version).toBe('2026-10-18.3');
+    const unchanged = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-13.4',
+      profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => profile.id !== profileId && !laterChildhoodIds.includes(profile.id)) };
     expect(unchanged.profiles).toHaveLength(73);
     // Snapshot of the approved 8b84254e base excluding only the revised profile.
     expect(digest(unchanged)).toBe('f2cab3d7ea197ae8feaddcd0d0cdfea4fffcc8bba566a7101b82138865f73c5f');
-    expect(digest(Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'patientPointData'))))
+    expect(digest(withoutFemaleGonadotropinReferencePolicy(runtime)))
       .toBe('380884eb2367b1c48f52d580ee3d3898441d5b204bd979e3b7a12fe8321baa3d');
     expect(data).toEqual(read('population-reference-data.json'));
     expect(data.profiles.some(profile => profile.id === 'borelli2025-female-inhb-age-5p6-20')).toBe(false);

@@ -452,8 +452,9 @@ Nie przenoś go na męskie wykresy, porównania płci ani inne hormony.
   a nie udostępnioną przez autorów tabelą współczynników modelu.
 - **Pokwitanie:** osobne mediany Madsen 2022, 6–16 lat, wspólna
   liniowa oś 0–8 IU/L. To odrębny model wieku, nie dokładny wycinek
-  poglądowej syntezy całego życia. Nie ustalaj Tannera z wieku i nie
-  aktywuj nowego profilu pacjentki przez samą obecność modelu.
+  poglądowej syntezy całego życia. Nie ustalaj Tannera z wieku.
+  Osobno zatwierdzone 16.10.2026 zwykłe profile wieku opisuje uzupełnienie
+  poniżej; sama geometria nadal nie jest źródłem odniesienia.
 - **Dorosłość:** osobna wstawka cyklu Stricker 2006 zachowuje 30
   dziennych median obu hormonów oraz wspólną liniową oś 0–50 IU/L.
   Dzień 0 oznacza szczyt LH w badaniu, nie zawsze 14. dzień cyklu
@@ -599,16 +600,153 @@ Stosuj `gonadotropin-comparison-policy.json` i
   Węzeł 16 jest opublikowanym brzegiem kohorty 6–<16. Fit Futures
   do 18 lat dotyczy steroidów, nie LH/FSH. Nie dopisuj 17–20 lat,
   nie ustalaj Tannera z wieku ani fazy cyklu z mediany.
-- Dwa żeńskie profile Madsen pozostają w odrębnych danych porównania,
+- Dwa żeńskie profile Madsen `*-sex-comparison` pozostają w odrębnych danych porównania,
   poza globalnym `patientPointData`. Kwalifikuj własny profil przez
   istniejący silnik; nie przekazuj kontekstu pacjenta drugiej płci.
   Zachowaj bramki wieku, metody, materiału, leczenia, donoszenia
-  i cenzurowanego wyniku. Nie aktywuj nowych zwykłych odniesień,
-  norm, SDS ani klinicznego ilorazu LH/FSH.
+  i cenzurowanego wyniku. Wdrożenie zwykłych odniesień z 16.10.2026
+  ma osobną politykę i identyfikatory. Nie dodawaj norm, SDS ani
+  klinicznego ilorazu LH/FSH.
 
 Źródła, weryfikacja 198/788/44 wartości i ograniczenia:
 [audyt porównań LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
 Zatwierdzenie ilustracji nie nadaje jej statusu walidacji klinicznej.
+
+## Żeńskie LH/FSH — zwykłe odniesienia wieku, 16 października 2026
+
+Po analizie źródeł właściciel polecił wdrożyć rekomendowany dobór:
+`female-gonadotropin-reference-policy.json`. W wieku 6–16 zwykłe LH i FSH
+używają tych samych oryginalnych 22 median Madsen co porównanie płci, ale
+pod odrębnymi identyfikatorami `*-age-6-16`. Źródłowych danych porównania,
+geometrii, skal, niemowląt i norm laboratoryjnych nie zmieniaj.
+
+- Model wieku nie wymaga Th; uzupełnienie Th1/Th2 nie przełącza mediany.
+  Osobna laboratoryjna ocena stadium i czasu pokwitania pozostaje istotna.
+- Żeńskie FSH Zec działa tylko 1–<6 przy aktualnym Th1. Okno 4–<6 nadal
+  opisuje opublikowaną grupę 4–<8, medianę 1,07 i N=156. Grupę 8–<11
+  zachowaj w dowodach. Nie zmieniaj męskiego routingu.
+- To świadoma zmiana źródła: F9/Th1/FSH 1,55 → około 1,965 IU/L.
+  Znana Roche cobas e411 nie pasuje do Madsen/IMMULITE; brak punktu nie
+  uprawnia do ukrytego powrotu do Zec ani rozszerzania zgodnych metod.
+- Cały niepewny wiek musi pasować; brak ekstrapolacji poza opublikowany
+  brzeg 16 lat. Wiek 16 lat 0 miesięcy nie oznacza dokładnego węzła 16.
+- Zachowaj znane dodatnie leczenie i jawną bieżącą ciążę po przełączeniu
+  analitu, z ochroną tożsamości/płci i bez przenoszenia faktów na dawną próbkę.
+  Brak wywiadu nie potwierdza braku leczenia; nie dodawaj nowej ankiety.
+- Żeńskie `mini` nadal pokazuje względną średnią, bez kropki stężenia.
+  Zmiana mediany odniesienia nie może przesunąć poglądowej linii.
+
+Źródła, granice i zakres ponownej weryfikacji:
+[audyt zwykłych odniesień](hormone-lifespan/evidence/female-gonadotropin-reference-audit-2026-10-16.json).
+To porównanie orientacyjne; testy nie są walidacją kliniczną.
+
+## Żeński E2 — zwykła mediana wieku, 17 października 2026
+
+Po analizie pełnego Madsen i oryginalnego suplementu właściciel polecił
+wdrożenie `female-estradiol-reference-policy.json`. Jeden profil
+`madsen2022-female-e2-age-6-18` używa wszystkich 13 źródłowych median,
+bez Th, nowych pól i obowiązkowego pytania o cykl. Zachowaj cały przedział
+wieku w [6,18], bez ekstrapolacji po opublikowanym węźle 18; wpis 18 lat
+0 miesięcy nie jest dokładnym punktem 18. To model wieku z łącznymi fazami,
+nie norma lub mediana konkretnej fazy. Nigdy nie wyprowadzaj p50 z geometrii.
+
+- Zachowaj wszystkie 77 wcześniejszych profili i mediany, stałą skalę E2
+  264 pmol/L, krzywe, cykl, porównania płci i niezależne normy laboratoryjne.
+- LC-MS/MS dotyczy surowicy dwóch kohort. LLOQ 0,58 i 13 pmol/L nie tworzą
+  wspólnego progu; bez LLOQ/2 lub dokładnego punktu z nierówności.
+- OCP było wykluczeniem autora; ciąża, menopauza i znane leczenie/stymulacja
+  są konserwatywnymi wyłączeniami aplikacji. Brak wywiadu pozostaje nieznany.
+  Nieznana metoda pozwala wyłącznie na edukacyjne odniesienie; znana niezgodna
+  metoda/materiał blokuje bez fallbacku.
+- Adapter przekazuje znane dodatnie fakty tylko tej samej aktualnej pacjentki,
+  z ochroną płci i historycznej próbki. Obejmuje E2 wszystkich wieków: znane
+  aktualne leczenie może wyłączyć także niemowlęcą kropkę. Nie twierdź, że cała
+  jej kwalifikacja jest niezmieniona; mediany, domena i donoszenie są zachowane.
+
+Źródła, granice i przypadki produkcyjnego silnika:
+[audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
+Zgoda na wdrożenie nie nadaje modelowi statusu walidacji klinicznej.
+
+## FSH CALIPER — zwykłe odniesienie od 16 lat, 18 października 2026
+
+Po analizie pełnego Wilson 2023 i Supplemental Tables 1–3 właściciel
+polecił mały PR z FSH. `fsh-caliper-reference-policy.json` przełącza
+zwykłe FSH od 16: chłopcy `[16,18)`, dziewczęta `[16,19)`. Madsen FSH
+zachowuje wszystkie węzły, ale zwykłe zastosowanie kończy przed 16.
+To celowa zmiana źródła także w dokładnym wieku 16, aby wpis 16 lat
+0 miesięcy nie przecinał dwóch źródeł. Nie harmonizuj metod ani nie
+uśredniaj median na styku.
+
+Mediana CALIPER to znormalizowany `qBCCG(0.5)`, nie automatycznie M;
+u dziewcząt F18 wynosi 4,3996476844 IU/L zamiast M4,3159775325.
+Nie stosuj logarytmicznej transformacji LH do natywnego FSH.
+PCHIP przybliża tabelę co 0,1 roku. Węzeł 19 służy interpolacji,
+nie kwalifikacji pacjentki >=19. Brak dodatkowych pytań o Th/G lub cykl.
+Znane niezgodna metoda/materiał, ciąża, leczenie i stymulacja zachowują
+bramki; brak informacji nie potwierdza ich nieobecności.
+
+Porównanie płci nadal ma Madsen 6–16 włącznie: jego polityka jawnie
+zachowuje opublikowany męski węzeł 16 w kopii profilu. Nie rozszerza
+zwykłej kwalifikacji ani granic porównania. Zachowaj geometrię, skale,
+LH, niemowlęta i normy. Sam suplement nie uprawnia do importu LH/E2/T;
+pozostają tam odrębne niejasności transformacji i żeńskiego LH.
+
+Źródło, reprodukcja i ograniczenia:
+[audyt FSH](hormone-lifespan/evidence/fsh-caliper-reference-audit-2026-10-18.json).
+
+## Męskie AMH — źródłowa mediana grupy w 18–<20, 18 października 2026
+
+Właściciel polecił mały PR uzupełniający wyłącznie tę lukę. Stosuj
+`male-amh-young-adult-reference-policy.json`: Woloszynek 2015, tabela 2,
+mediana **całej grupy 18–30 lat, N=63, 6,3 ng/mL**. Domena aplikacji
+`[18,20)` nie tworzy mediany nowej podgrupy ani ciągłego modelu wieku.
+Cały możliwy wiek musi pasować. `group-median`, `constant`, `ordinaryOnly`.
+Korzystaj z tego samego przeliczenia 0,1401 co dla wyniku pacjenta.
+
+Zachowaj 80 wcześniejszych profili, geometrię, skale, porównania płci,
+normy i dawne utrwalone oceny. Krzywa przez 18–20 nadal jest ilustracją;
+jasny znacznik wskazuje medianę grupy niezależnie od jej wysokości.
+Surowica, wąsko określony protokół manualnego Gen II ELISA, bez zgodności
+domniemanej dla zmodyfikowanego Gen II lub metod automatycznych.
+Znana niezgodność blokuje punkt, nie uruchamia zastępczego źródła.
+Nie dodawaj nowych pól lub wnioskowania o stadium, płodności, RI czy SDS.
+Poprzednie opisy luki 18–<20 są historyczne i zostają uzupełnione tym wpisem.
+
+Źródło i ograniczenia:
+[audyt AMH 18–<20](hormone-lifespan/evidence/male-amh-18-20-reference-audit-2026-10-18.json).
+
+## LH chłopców — odtworzona mediana w (16,18), 18 października 2026
+
+Po audycie źródłowym właściciel polecił mały PR wyłącznie dla chłopców.
+`male-lh-caliper-reference-policy.json` dodaje jeden profil `ordinaryOnly`
+ściśle w `(16,18)`, bez zmian 81 wcześniejszych profili, krzywej, skali,
+porównania płci, norm i formularza. Dokładne 16 zachowuje Madsen
+3,5142066372549756 IU/L; od 18 pozostaje Laurentino 3 IU/L. Cały możliwy
+wiek musi pasować. Wpis 16 lat 0 miesięcy lub 16 ukończonych lat nadal
+obejmuje styk źródeł i nie otrzymuje arbitralnej mediany ze środka wieku.
+
+Wilson 2023, Supplemental Table 3 `LH_M`, dostarcza 91 węzłów L/M/S
+10–19 co 0,1 roku, nie miesięcznych. Mediana to znormalizowany
+`qBCCG(0.5)`, potem `exp(q)/1e6` IU/L. To zaakceptowana rekonstrukcja:
+artykuł opisuje logarytmowanie, przypięty kod współautora
+`288329c43ee238b3c8921097dfeac411d30465b9` wspiera konwencję, a pięć
+centyli odtwarza rycinę na 89 punktach wieku. Późniejszy przykład T4/TSH
+nie jest dokładnym preprocessingiem LH Wilson. Nie nazywaj rekonstrukcji
+odzyskanym modelem ani zwalidowaną normą. Żeński arkusz pozostaje
+niespójny z ryciną i nie daje nowego profilu. Nie dodawaj RI, SDS lub
+percentyla wyniku. PCHIP przybliża stężenia z pełnej tabeli; nie refituj
+samego wycinka 16–18. Dla M17 odniesienie wynosi 2,603196549069626 IU/L.
+
+Surowica, Abbott ARCHITECT ci2000 LH; znana niezgodność metody/materiału
+blokuje bez fallbacku, nieznane dopuszczają porównanie edukacyjne.
+Zachowaj istniejące bramki leczenia, GnRHa, kanonicznej stymulacji
+i tożsamości; nie zakładaj nowego przekazywania pól dawnych protokołów.
+LLOQ 0,09 IU/L nie jest LOD ani podłogą wyniku. Edukacyjna mediana LH
+nie trafia do historii; snapshot źródłowego odniesienia pozostaje AMH-only.
+Zapisana laboratoryjna ocena LH i odczyt bez ponownego liczenia pozostają
+odrębne. Źródła i granice:
+[audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json),
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#lh-chłopców--odtworzona-mediana-w-1618-18-października-2026).
 
 ## Co sprawdzić przed oddaniem zmiany
 

@@ -27,7 +27,11 @@ async function stan(page, s) {
     window.__vildaPlanPalTouched = false; window.__vildaPlanPalDefault = null; window.__vildaDietStrategyTouched = false;
     document.querySelectorAll('#advMeasurements .measure-row .remove-measure').forEach((b) => b.click());
     set('name', 'Testowy Fikcyjny'); set('sex', s.sex); set('age', s.age); set('ageMonths', 0); set('weight', s.w); set('height', s.h); set('customGoalKg', '');
-    set('tannerStage', s.tanner == null ? '' : s.tanner);
+    window.VildaPubertyAssessmentState.clear();
+    if (s.tanner != null) {
+      const typed = window.VildaPubertyAssessmentState.editObservation(s.sex === 'M' ? 'G' : 'Th', Number(s.tanner));
+      if (!typed.ok) throw new Error('Nie przyjęto jawnej oceny G/Th: ' + typed.reason);
+    }
     const jf = document.getElementById('journeyFlag'); if (jf && !jf.checked) { jf.checked = true; jf.dispatchEvent(new Event('change', { bubbles: true })); }
     for (const r of s.historia || []) {
       const btn = document.getElementById('advAddMeasurementBtn'); if (btn) btn.click();

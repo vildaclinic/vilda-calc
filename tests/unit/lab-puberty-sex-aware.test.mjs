@@ -36,6 +36,16 @@ describe('LH/FSH — cechy dojrzewania zgodne z płcią w nowej ocenie', () => {
     },
   );
 
+  it.each([['M', 'G'], ['F', 'Th']])('wcześniejsze %s/%s zachowuje datę bez uruchamiania bieżącej osi stadium', (sex, kind) => {
+    const actual = input({ sex, kind, assessedAt: '2025-10-04', observationSource: 'clinician-entry',
+      pubertyAppliesToCurrentContext: false });
+    expect(actual.puberty).toMatchObject({ kind, stage: 3, assessedAtISO: '2025-10-04',
+      source: 'clinician-entry', appliesToSample: false, appliesToCurrentContext: false });
+    const result = win.VildaLabPuberty.evaluate(actual, win.VildaLabPubertyData);
+    expect(result.biochemical.byAge.status).not.toBe('unavailable');
+    expect(result.biochemical.byStage.status).toBe('unavailable');
+  });
+
   it.each(['M', 'F', ''])('nie domyśla rodzaju dawnego numeru Tannera przy płci %s', (sex) => {
     for (const kind of ['', 'unspecified']) {
       expect(input({ sex, kind }).puberty).toMatchObject({ kind: 'unspecified', stage: 3 });

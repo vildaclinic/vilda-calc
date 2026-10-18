@@ -1,13 +1,16 @@
-/* Historical laboratory assessment transport. No engine, reference data, DOM, storage
- * or current-date dependency. An explicit unreadable assessment stays explicit;
+/* Historical laboratory assessment transport. No engine, reference ranges, DOM, storage
+ * or current-date dependency. TT uses only its immutable unit-conversion registry.
+ * An explicit unreadable assessment stays explicit;
  * it must never fall back to an interpretation using today's patient context.
  */
 (function (root, factory) {
   'use strict';
-  var api = factory();
+  var units = typeof module === 'object' && module.exports
+    ? require('./vilda_lab_testosterone_units.js') : root && root.VildaLabTestosteroneUnits;
+  var api = factory(units);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.VildaLabSnapshot = api;
-})(typeof window !== 'undefined' ? window : null, function () {
+})(typeof window !== 'undefined' ? window : null, function (testosteroneUnits) {
   'use strict';
   var own = function (value, key) { return value != null && Object.prototype.hasOwnProperty.call(value, key); };
   var record = function (value) { return value !== null && typeof value === 'object' && !Array.isArray(value); };
@@ -15,7 +18,8 @@
   var analytes = {
     lh: { unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
     fsh: { unit: 'IU/L', sourceUnits: ['IU/L', 'mIU/mL'] },
-    inhibin_b: { unit: 'pg/mL', sourceUnits: ['pg/mL', 'ng/L'] }
+    inhibin_b: { unit: 'pg/mL', sourceUnits: ['pg/mL', 'ng/L'] },
+    testosterone_total: { unit: 'nmol/L', sourceUnits: ['nmol/L', 'ng/dL', 'ng/mL', 'pg/mL'] }
   };
   var reproductiveContexts = ['unknown', 'follicular', 'ovulation', 'luteal', 'postmenopause'];
   var inhibinContexts = reproductiveContexts.concat(['early_follicular', 'late_follicular', 'mid_luteal', 'late_luteal']);
@@ -37,10 +41,10 @@
     accessedOn: 'text', accessTimeZone: 'text', readScope: 'text', evidenceSha256: 'text', primaryHtmlSha256: 'text',
     methodDocumentVersion: 'text', knownLimitations: ['text'], pmid: 'text', doi: 'text',
     pubmedUrl: 'url', doiUrl: 'url', definition: 'text',
-    intervalEvidence: { kind: 'text', version: 'text', url: 'url', table: 'text', page: 'number', verification: 'text' }
+    intervalEvidence: { kind: 'text', version: 'text', url: 'url', table: 'text', page: 'number', locator: 'text', verification: 'text' }
   };
   var population = {
-    label: 'text', sourceDescription: 'text',
+    label: 'text', sourceDescription: 'text', referenceSampling: 'text',
     statistics: { kind: 'text', coveragePercent: 'number', sampleSize: 'number', lowerPercentile: 'number', upperPercentile: 'number', transformation: 'text' }
   };
   var method = {
@@ -55,13 +59,13 @@
   var comparison = { status: 'text', reasonCodes: ['text'], range: selectedRange };
   var input = {
     analyte: 'text', value: 'measurementInput', unit: 'text', sex: 'text', sampleDateISO: 'text', birthDateISO: 'text', age: age,
-    contextBasis: 'text', neonatalAge: neonatalAgeInput, referenceSelection: 'text', reproductiveContext: 'text',
-    specimen: 'text', measurementKind: 'text', assay: { profileId: 'text', profileVersion: 'text', methodId: 'text', confirmation: 'text' },
+    contextBasis: 'text', neonatalAge: neonatalAgeInput, referenceSelection: 'text', reproductiveContext: 'text', pregnancy: 'text',
+    specimen: 'text', measurementKind: 'text', collectionTime: 'text', assay: { profileId: 'text', profileVersion: 'text', methodId: 'text', confirmation: 'text' },
     puberty: { kind: 'text', stage: 'number', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean', source: 'text' },
     testicularVolume: { value: 'number', unit: 'text', method: 'text', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean' },
     onset: { kind: 'text', dateISO: 'text', age: age, confirmedPubertalOnset: 'boolean' },
     history: { progression: 'text', growthAcceleration: 'text', cnsSymptoms: 'text', regression: 'text' },
-    treatment: { gnrha: 'text', sexSteroids: 'text', context: 'text' }, preterm: 'text', gestationalAgeWeeks: 'number',
+    treatment: { gnrha: 'text', sexSteroids: 'text', context: 'text', cocp: 'text', exogenousTestosterone: 'text' }, preterm: 'text', gestationalAgeWeeks: 'number',
     reportedRange: { text: 'text', unit: 'text' },
     localReference: {
       id: 'text', version: 'text', analyte: 'text', material: 'text', unit: 'text', methodId: 'text',
@@ -72,7 +76,8 @@
     schemaVersion: 'number', engineVersion: 'text', dataVersion: 'text', analyte: 'text', input: input,
     measurement: {
       status: 'text', raw: 'text', operator: 'text', value: 'number', unit: 'text', sourceValue: 'number', sourceUnit: 'text',
-      isExact: 'boolean', plotValue: 'number', limitKind: 'text', reasonCodes: ['text']
+      isExact: 'boolean', plotValue: 'number', limitKind: 'text', reasonCodes: ['text'],
+      conversionPolicyId: 'text', conversionPolicyVersion: 'text', conversionFactor: 'number'
     },
     ageAtSample: {
       status: 'text', precision: 'text', source: 'text', lowerYears: 'number', upperYears: 'number', upperInclusive: 'boolean',
@@ -100,13 +105,15 @@
     // comparisons; losing the qualifier can never turn a preview into a RI.
     referencePreview: {
       kind: 'text', reasonCodes: ['text'], byAge: comparison, byStage: comparison, applicabilityText: 'text',
+      censoredLowerNote: 'text', censoredLowerIndeterminateNote: 'text',
       variants: [{ id: 'text', label: 'text', reproductiveContext: 'text', comparison: comparison }]
     }
   };
   // These schema-1 additions are optional. Reading an older assessment must
   // preserve its original shape and must never infer a current-form context.
-  var optionalInput = ['contextBasis', 'reportedRange', 'neonatalAge', 'referenceSelection', 'reproductiveContext'];
-  var optionalNestedInput = { assay: ['profileVersion'], puberty: ['appliesToCurrentContext'], testicularVolume: ['appliesToCurrentContext'], treatment: ['context'] };
+  var optionalInput = ['contextBasis', 'reportedRange', 'neonatalAge', 'referenceSelection', 'reproductiveContext', 'collectionTime', 'pregnancy'];
+  var conversionFields = ['conversionPolicyId', 'conversionPolicyVersion', 'conversionFactor'];
+  var optionalNestedInput = { assay: ['profileVersion'], puberty: ['appliesToCurrentContext'], testicularVolume: ['appliesToCurrentContext'], treatment: ['context', 'cocp', 'exogenousTestosterone'] };
   var bindingSchema = { testKey: 'text', test: 'text', value: 'text', valueNum: 'number', unit: 'text', norm: 'text', clinicalDateISO: 'text' };
 
   function plainText(value) {
@@ -144,7 +151,24 @@
     return out;
   }
   function contains(value, choices) { return choices.indexOf(value) !== -1; }
-  function contextsFor(analyte) { return analyte === 'inhibin_b' ? inhibinContexts : reproductiveContexts; }
+  function isTestosterone(value) { return value.analyte === 'testosterone_total'; }
+  function sameConvertedValue(value, expected) {
+    return finite(value) && finite(expected) && Math.abs(value - expected) <=
+      8 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(expected));
+  }
+  function validTestosteroneConversion(measurement) {
+    var units = testosteroneUnits;
+    if (!units || !record(units.factorToCanonical) || !required(measurement, conversionFields) ||
+        measurement.conversionPolicyId !== units.id || measurement.conversionPolicyVersion !== units.version) return false;
+    var known = own(units.factorToCanonical, measurement.sourceUnit);
+    var factor = known ? units.factorToCanonical[measurement.sourceUnit] : null;
+    if (measurement.conversionFactor !== factor) return false;
+    if (measurement.status !== 'valid') return true;
+    if (!known || !finite(factor) || factor <= 0 || measurement.unit !== units.canonicalUnit) return false;
+    if (measurement.sourceValue === null) return measurement.value === null;
+    return measurement.sourceValue >= 0 && sameConvertedValue(measurement.value, measurement.sourceValue * factor);
+  }
+  function contextsFor(analyte) { return analyte === 'inhibin_b' ? inhibinContexts : analyte === 'testosterone_total' ? reproductiveContexts.concat(['pregnancy']) : reproductiveContexts; }
   function matchingReproductiveContext(analyte, supplied, candidate) {
     if (supplied === 'unknown' || supplied === candidate) return true;
     return analyte === 'inhibin_b' && (supplied === 'follicular' && contains(candidate, ['early_follicular', 'late_follicular']) ||
@@ -277,6 +301,8 @@
       !contains(supplied.specimen, ['serum', 'unknown']) || !contains(supplied.measurementKind, ['unknown', 'basal'])) return false;
     var treatment = supplied.treatment, assay = supplied.assay;
     if (!contains(treatment.gnrha, ['no', 'unknown']) || !contains(treatment.sexSteroids, ['no', 'unknown']) || treatment.context === 'hormonal') return false;
+    if (isTestosterone(evaluation) && (supplied.pregnancy === 'yes' || supplied.reproductiveContext === 'pregnancy' ||
+      treatment.cocp === 'yes' || treatment.exogenousTestosterone === 'yes')) return false;
     if (biochemical.status !== 'unavailable' || biochemical.primary !== null || biochemical.reasonCodes.indexOf('automatic_reference_only') === -1 ||
       !['byAge', 'byStage', 'local'].every(function (key) { return biochemical[key].status === 'unavailable'; })) return false;
     var expected = [];
@@ -297,7 +323,10 @@
       if (range.material !== 'serum' || range.sex !== supplied.sex || range.unit !== analytes[evaluation.analyte].unit || !selection.profileIds.includes(range.profileId) ||
         (assay.confirmation === 'reported' && range.method.id !== assay.methodId) ||
         (forStage ? !record(range.stage) || range.stage.kind !== supplied.puberty.kind || range.stage.value !== supplied.puberty.stage : !!range.stage)) return false;
-      if (range.basis === 'adult' && supplied.sex === 'F' && selection.status === 'selected' && (!supplied.reproductiveContext || supplied.reproductiveContext === 'unknown')) return false;
+      if (forStage && isTestosterone(evaluation) && (range.stage.kind === 'G' && supplied.sex !== 'M' || range.stage.kind === 'Th' && supplied.sex !== 'F')) return false;
+      // TT's female age range is not selected by cycle phase or menopause.
+      // Preserve the existing requirement for phase-specific LH/FSH/inhibin RI.
+      if (!isTestosterone(evaluation) && range.basis === 'adult' && supplied.sex === 'F' && selection.status === 'selected' && (!supplied.reproductiveContext || supplied.reproductiveContext === 'unknown')) return false;
       ranges.push(range);
       return true;
     }
@@ -332,29 +361,38 @@
   function validEvaluation(value) {
     if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview', 'neonatalAge', 'referenceSelection', 'referenceAge']); })) || value.schemaVersion !== 1 || !value.engineVersion || !own(analytes, value.analyte)) return false;
     if (own(value, 'referenceAge') && !validReferenceAge(value.referenceAge)) return false;
-    if (value.analyte === 'inhibin_b' && (!value.input || value.input.referenceSelection !== 'automatic')) return false;
+    if ((value.analyte === 'inhibin_b' || isTestosterone(value)) && (!value.input || value.input.referenceSelection !== 'automatic')) return false;
     if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;
     if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) {
       return required(value.input[key], Object.keys(input[key]).filter(function (field) { return !contains(field, optionalNestedInput[key] || []); }));
     })) return false;
     if (own(value.input, 'contextBasis') && !contains(value.input.contextBasis, ['current-patient', 'sample'])) return false;
+    if (own(value.input, 'collectionTime') && !contains(value.input.collectionTime, ['unknown', 'morning', 'evening', 'midnight'])) return false;
     if (own(value.input.assay, 'profileVersion') && (typeof value.input.assay.profileVersion !== 'string' || value.input.assay.profileVersion.length > 80)) return false;
     if (!['puberty', 'testicularVolume'].every(function (key) { return !own(value.input[key], 'appliesToCurrentContext') || typeof value.input[key].appliesToCurrentContext === 'boolean'; })) return false;
     if (own(value.input.treatment, 'context') && !contains(value.input.treatment.context, ['unknown', 'none', 'hormonal'])) return false;
+    if (own(value.input, 'pregnancy') && !contains(value.input.pregnancy, ['yes', 'no', 'unknown'])) return false;
+    if (!['cocp', 'exogenousTestosterone'].every(function (key) { return !own(value.input.treatment, key) || contains(value.input.treatment[key], ['yes', 'no', 'unknown']); })) return false;
     if (own(value.input, 'reproductiveContext') && !contains(value.input.reproductiveContext, contextsFor(value.analyte)) &&
       !(value.referenceSelection && value.referenceSelection.status === 'unavailable' && Array.isArray(value.referenceSelection.reasonCodes) && value.referenceSelection.reasonCodes.includes('invalid_reproductive_context'))) return false;
     if (!validReportedRange(value)) return false;
     var m = value.measurement, b = value.biochemical, c = value.clinical;
-    if (!required(m, Object.keys(evaluationSchema.measurement)) || !contains(m.status, ['valid', 'invalid']) || typeof m.raw !== 'string' || typeof m.isExact !== 'boolean') return false;
+    if (!required(m, Object.keys(evaluationSchema.measurement).filter(function (key) { return !contains(key, conversionFields); })) || !contains(m.status, ['valid', 'invalid']) || typeof m.raw !== 'string' || typeof m.isExact !== 'boolean') return false;
+    if (isTestosterone(value) && !validTestosteroneConversion(m)) return false;
     if (m.status === 'valid' && (!contains(m.operator, ['=', '<', '<=', '>', '>=']) || m.unit !== analytes[value.analyte].unit || !contains(m.sourceUnit, analytes[value.analyte].sourceUnits))) return false;
-    if (m.status === 'valid' && (m.isExact !== (m.operator === '=') || m.sourceValue !== m.value || m.sourceUnit !== value.input.unit || m.value !== null && m.value < 0)) return false;
+    if (m.status === 'valid' && (m.isExact !== (m.operator === '=') || !isTestosterone(value) && m.sourceValue !== m.value || m.sourceUnit !== value.input.unit || m.value !== null && m.value < 0)) return false;
     if (m.status === 'valid') {
       var rawOperator = m.raw.trim().match(/^(<=|>=|<|>|=|≤|≥)/);
       var normalizedOperator = rawOperator ? ({ '≤': '<=', '≥': '>=' })[rawOperator[0]] || rawOperator[0] : '=';
       if (normalizedOperator !== m.operator) return false;
       var numericRaw = m.raw.trim().slice(rawOperator ? rawOperator[0].length : 0).trim().replace(',', '.');
       if (m.value !== null) {
-        if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(numericRaw) || Number(numericRaw) !== m.value) return false;
+        if (isTestosterone(value)) {
+          // Match the existing converter's number syntax, without loading its
+          // live clinical data. Operators remain separate from the raw number.
+          var compact = numericRaw.replace(/[\s\u00a0]/g, '');
+          if (!compact || !finite(Number(compact)) || Number(compact) !== m.sourceValue) return false;
+        } else if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(numericRaw) || Number(numericRaw) !== m.value) return false;
         if (m.limitKind !== null) return false;
       } else if (numericRaw.toUpperCase() !== m.limitKind) return false;
       var original = value.input.value;
@@ -445,8 +483,13 @@
     if (!own(lab, 'assessment')) return {};
     var assessment = reconcile(null, lab, null, dateISO).assessment;
     var m = assessment.status === 'recorded' && assessment.evaluation.measurement;
-    var value = m && m.status === 'valid' && m.isExact && m.operator === '=' ? m.plotValue : null;
-    return { assessment: assessment, valueNum: value, plotValue: value };
+    var testosterone = m && isTestosterone(assessment.evaluation);
+    // The existing series keeps lab.unit (the original unit). TT conversions
+    // are not 1:1: its canonical plotValue belongs only to the saved assessment.
+    var value = m && m.status === 'valid' && m.isExact && m.operator === '=' ? testosterone ? m.sourceValue : m.plotValue : null;
+    var result = { assessment: assessment, valueNum: value, plotValue: value };
+    if (testosterone && m.status === 'valid') result.unit = m.sourceUnit;
+    return result;
   }
-  return Object.freeze({ version: '1.4.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
+  return Object.freeze({ version: '1.5.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
 });

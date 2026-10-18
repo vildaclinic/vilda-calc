@@ -38,6 +38,19 @@
  *   fs              — rozmiar czcionki (px kanwy; domyślnie 40);
  *   dx,dy           — przesunięcie ramki (lub ogona samej strzałki) względem
  *                     pozycji automatycznej, w px kanwy.
+ *
+ * Strona A4 poziomo (P-KREATOR-POZIOM, wariant C właściciela 2026-10-18):
+ * zwykła siatka Palczewskiej 1–18 lat może mieć PDF na jednej stronie
+ * poziomej (vilda_centile_landscape.js), gdzie pole wykresu jest mniejsze.
+ * Treść adnotacji jest wspólna dla obu układów, położenie ramek — osobne:
+ *     chartCreatorData.palRegular.posL = {
+ *       height: { "<klucz adnotacji>": {dx,dy,bdy}, ... }, weight: { ... }
+ *     }
+ * Obecność wpisu = własne położenie w poziomie (także zerowe = automatyczne).
+ * Bez wpisu strona pozioma bierze przesunięcie z pionu przemnożone przez
+ * stosunek pól wykresu (dx·sx, dy·sy, bdy·sy). Magazyn powstaje dopiero przy
+ * pierwszym przesunięciu ramki w Kreatorze poziomym.
+ *
  * Wspólne pola pomiaru (arrowEnabled/arrowComment) pozostają domyślne dla OBU
  * siatek — bez nadpisań adnotacje są identyczne (jak dotychczas).
  * Klucz "a<wiekMies>" odnosi się do pomiaru o danym wieku (zaokrąglonym do
@@ -155,7 +168,31 @@
     v.pubLayout = s.layout;
     v.pubFree = s.free;
     v.pubShared = s.shared;
+    /* położenia strony poziomej — czytane bez tworzenia magazynu */
+    v.pubPosL = s.posL && typeof s.posL === 'object' ? s.posL : null;
     return v;
+  }
+
+  /*
+   * Przesunięcie ramki w układzie geometrii (P-KREATOR-POZIOM). src to
+   * przesunięcie z pionu {dx,dy,bdy}. Geometria bez posScale (pion, OLAF, WHO,
+   * 0–3, publikacja) zwraca src bez zmian. Strona pozioma: własny wpis z posL
+   * albo przesunięcie z pionu w skali pola wykresu.
+   */
+  function framePos(adv, chartType, key, geom, src) {
+    var s = geom && geom.posScale;
+    if (!s) return { dx: src.dx, dy: src.dy, bdy: src.bdy, source: null };
+    var map = adv && adv.pubPosL && adv.pubPosL[chartType];
+    var own = map && map[key];
+    if (own && typeof own === 'object') {
+      return {
+        dx: Number.isFinite(Number(own.dx)) ? Number(own.dx) : 0,
+        dy: Number.isFinite(Number(own.dy)) ? Number(own.dy) : 0,
+        bdy: Number.isFinite(Number(own.bdy)) ? Number(own.bdy) : 0,
+        source: 'own'
+      };
+    }
+    return { dx: src.dx * s.x, dy: src.dy * s.y, bdy: src.bdy * s.y, source: 'scaled' };
   }
 
   /* Wspólny (dla obu siatek) wpis adnotacji punktu pomiaru w kontekście
@@ -437,8 +474,13 @@
         boxY = tipY + drop + BOX_GAP;
       }
       var off = offsets && offsets[ar.key];
-      var dx = off && Number.isFinite(Number(off.dx)) ? Number(off.dx) : 0;
-      var dy = off && Number.isFinite(Number(off.dy)) ? Number(off.dy) : 0;
+      var pos = framePos(adv, chartType, ar.key, geom, {
+        dx: off && Number.isFinite(Number(off.dx)) ? Number(off.dx) : 0,
+        dy: off && Number.isFinite(Number(off.dy)) ? Number(off.dy) : 0,
+        bdy: 0
+      });
+      var dx = pos.dx;
+      var dy = pos.dy;
       items.push({
         kind: ar.kind,
         key: ar.key,
@@ -459,7 +501,8 @@
         y: boxY + dy,
         w: boxW,
         h: boxH,
-        moved: !!(dx || dy)
+        moved: !!(dx || dy),
+        posSource: pos.source
       });
     });
 
@@ -468,6 +511,7 @@
        wyśrodkowana na kotwicy (bez strzałki i bez kolizji — miejsce wybiera
        użytkownik). */
     free.forEach(function (fr) {
+      var fpos = framePos(adv, chartType, fr.key, geom, { dx: fr.dx, dy: fr.dy, bdy: fr.bracket ? fr.bdy : 0 });
       if (fr.bracket) {
         /* Klamra: dwie pionowe linie od punktów, pozioma spinka nad wyższym
            z nich (domyślnie) albo na wysokości wybranej przeciągnięciem
@@ -482,7 +526,7 @@
         var ay1 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val1 : val2) - geom.minY) * pxPerUnit;
         var ay2 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val2 : val1) - geom.minY) * pxPerUnit;
         var ybAuto = Math.min(ay1, ay2) - dropStep;
-        var yb = Math.max(geom.plotY, Math.min(geom.plotY + geom.plotH, ybAuto + fr.bdy));
+        var yb = Math.max(geom.plotY, Math.min(geom.plotY + geom.plotH, ybAuto + fpos.bdy));
         var midX = (ax1 + ax2) / 2;
         /* ramka po stronie poprzeczki odwróconej od punktów */
         var bBelow = yb > (ay1 + ay2) / 2;
@@ -511,18 +555,19 @@
           y2: ay2,
           yb: yb,
           ybAuto: ybAuto,
-          bdy: fr.bdy,
+          bdy: fpos.bdy,
           px: midX,
           py: yb,
           tipY: yb,
           drop: BRACKET_STUB,
           autoX: bAutoX,
           autoY: bAutoY,
-          x: bAutoX + fr.dx,
-          y: bAutoY + fr.dy,
+          x: bAutoX + fpos.dx,
+          y: bAutoY + fpos.dy,
           w: bDims.w,
           h: bDims.h,
-          moved: !!(fr.dx || fr.dy)
+          moved: !!(fpos.dx || fpos.dy),
+          posSource: fpos.source
         });
         return;
       }
@@ -541,7 +586,7 @@
       } else if (lines.length > 0) {
         autoX = px - boxW / 2;
         autoY = tipY + dropStep + BOX_GAP;
-        placed.push({ x0: autoX + fr.dx - boxBorder, y0: autoY + fr.dy - boxBorder, x1: autoX + fr.dx + boxW + boxBorder, y1: autoY + fr.dy + boxH + boxBorder });
+        placed.push({ x0: autoX + fpos.dx - boxBorder, y0: autoY + fpos.dy - boxBorder, x1: autoX + fpos.dx + boxW + boxBorder, y1: autoY + fpos.dy + boxH + boxBorder });
       } else {
         /* sama strzałka: „ogon” pionowo pod kotwicą */
         autoX = px;
@@ -564,11 +609,12 @@
         drop: dropStep,
         autoX: autoX,
         autoY: autoY,
-        x: autoX + fr.dx,
-        y: autoY + fr.dy,
+        x: autoX + fpos.dx,
+        y: autoY + fpos.dy,
         w: boxW,
         h: boxH,
-        moved: !!(fr.dx || fr.dy)
+        moved: !!(fpos.dx || fpos.dy),
+        posSource: fpos.source
       });
     });
     ctx.restore();
@@ -682,7 +728,30 @@
    * nie wyłączył malowania — rysuje adnotacje do kanwy eksportu.
    */
   var geomStore = {};
+  /* P-KREATOR-POZIOM: geometria wykresów strony poziomej we współrzędnych
+     całej strony (pole wykresu przesunięte o miejsce kolumny na stronie)
+     z prostokątem kolumny (clip) — dla podglądu Kreatora poziomego. */
+  var geomStoreL = {};
   var suppressPainting = false;
+
+  /* Geometria pola wykresu na stronie poziomej: skala przesunięć względem
+     pola wykresu w pionie (layout.refPlot) i — gdy znane jest miejsce
+     kolumny — kopia we współrzędnych strony do geomStoreL. */
+  function landscapeGeom(plotGeom, chartType, layout) {
+    var ref = layout.refPlot || {};
+    plotGeom.posScale = {
+      x: ref.width > 0 ? plotGeom.plotW / ref.width : 1,
+      y: ref.height > 0 ? plotGeom.plotH / ref.height : 1
+    };
+    var o = layout.origins && layout.origins[chartType];
+    if (!o || !Number.isFinite(o.x) || !Number.isFinite(o.y)) return;
+    var page = {};
+    Object.keys(plotGeom).forEach(function (k) { page[k] = plotGeom[k]; });
+    page.plotX = plotGeom.plotX + o.x;
+    page.plotY = plotGeom.plotY + o.y;
+    page.clip = { x: o.x, y: o.y, w: layout.width, h: layout.height };
+    geomStoreL[chartType] = page;
+  }
 
   function drawAnnotations(ctx, geom) {
     if (!ctx || !geom || !geom.chartType) return;
@@ -701,16 +770,24 @@
       renderCtx = w.publicationCharts ? 'pub' : 'palRegular';
     }
     if (!renderCtx) return;
-    geomStore[geom.chartType] = {
+    var plotGeom = {
       plotX: geom.plotX, plotY: geom.plotY, plotW: geom.plotW, plotH: geom.plotH,
       minY: geom.minY, maxY: geom.maxY,
       ageMin: Number.isFinite(geom.ageMin) ? geom.ageMin : undefined,
       ageMax: Number.isFinite(geom.ageMax) ? geom.ageMax : undefined
     };
+    /* P-PAL-POZIOM: strona A4 poziomo rysuje wykres na mniejszym polu niż podgląd
+       kreatora. Taki render (transient) maluje adnotacje we własnej geometrii,
+       ale nie nadpisuje geometrii podglądu — inaczej klikanie w podgląd po
+       wygenerowaniu PDF trafiałoby obok punktów. P-KREATOR-POZIOM: geometria
+       strony poziomej trafia do osobnego magazynu geomStoreL, a przesunięcia
+       ramek czyta z położeń poziomu (framePos). */
+    if (geom.layout && geom.layout.format === 'landscape') landscapeGeom(plotGeom, geom.chartType, geom.layout);
+    if (!geom.transient) geomStore[geom.chartType] = plotGeom;
     if (suppressPainting) return;
     var adv = advForContext(w.advancedGrowthData || null, renderCtx);
     if (!adv) return;
-    var items = computeLayout(ctx, adv, geom.chartType, geomStore[geom.chartType]);
+    var items = computeLayout(ctx, adv, geom.chartType, plotGeom);
     drawItems(ctx, items);
   }
 
@@ -835,7 +912,80 @@
     if (!Object.keys(ov).length) delete store[chartType][key];
   }
 
+  /* ── Położenia ramek strony poziomej (P-KREATOR-POZIOM, wariant C) ──
+     editLayout ustawia Kreator: 'landscape', gdy edytowana jest strona A4
+     poziomo zwykłej siatki 1–18 lat. Wtedy przeciąganie zapisuje położenie
+     tylko do posL, a pion zostaje nietknięty. */
+  var editLayout = 'portrait';
+
+  function editingLandscape() {
+    return editLayout === 'landscape' && creatorContext === 'palRegular';
+  }
+
+  function posLStore() {
+    var s = regRoot();
+    if (!s.posL || typeof s.posL !== 'object') s.posL = {};
+    if (!s.posL.height || typeof s.posL.height !== 'object') s.posL.height = {};
+    if (!s.posL.weight || typeof s.posL.weight !== 'object') s.posL.weight = {};
+    return s.posL;
+  }
+
+  /* Przesunięcie z pionu dla klucza adnotacji (punkt pomiaru albo wolna). */
+  function portraitPos(chartType, key) {
+    var out = { dx: 0, dy: 0, bdy: 0 };
+    var src = null;
+    if (key.charAt(0) === 'f') {
+      var free = freeStore();
+      var list = free && Array.isArray(free[chartType]) ? free[chartType] : [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && 'f' + String(list[i].id) === key) { src = list[i]; break; }
+      }
+    } else {
+      var store = layoutStore();
+      src = store && store[chartType] ? store[chartType][key] : null;
+    }
+    if (src && typeof src === 'object') {
+      ['dx', 'dy', 'bdy'].forEach(function (k) {
+        if (Number.isFinite(Number(src[k]))) out[k] = Number(src[k]);
+      });
+    }
+    return out;
+  }
+
+  /* Skala pól wykresu poziom/pion z geometrii strony poziomej (podgląd
+     Kreatora poziomego buduje ją przed pierwszą edycją). */
+  function landscapeScale(chartType) {
+    var g = geomStoreL[chartType];
+    return g && g.posScale ? g.posScale : { x: 1, y: 1 };
+  }
+
+  /* Zapis położenia w poziomie. Pierwszy zapis klucza kopiuje bieżące
+     (przeliczone z pionu) położenie, żeby np. przeciągnięcie samej poprzeczki
+     klamry nie przestawiło jej ramki. Wpis zostaje także z zerami — oznacza
+     „automatyczne w poziomie”, niezależnie od przesunięcia w pionie. */
+  function writePos(chartType, key, patch) {
+    var store = posLStore();
+    var cur = store[chartType][key];
+    if (!cur || typeof cur !== 'object') {
+      var p = portraitPos(chartType, key);
+      var s = landscapeScale(chartType);
+      cur = store[chartType][key] = {
+        dx: Math.round(p.dx * s.x),
+        dy: Math.round(p.dy * s.y),
+        bdy: Math.round(p.bdy * s.y)
+      };
+    }
+    Object.keys(patch).forEach(function (k) { cur[k] = patch[k]; });
+    ['dx', 'dy', 'bdy'].forEach(function (k) {
+      if (!cur[k]) delete cur[k];
+    });
+  }
+
   function setOffset(chartType, key, dx, dy) {
+    if (editingLandscape()) {
+      writePos(chartType, key, { dx: Math.round(dx), dy: Math.round(dy) });
+      return;
+    }
     updateOverride(chartType, key, { dx: Math.round(dx), dy: Math.round(dy) });
   }
 
@@ -1004,24 +1154,57 @@
       if (store[chartType][i] && store[chartType][i].id === id) { item = store[chartType][i]; break; }
     }
     if (!item) return;
+    /* w Kreatorze poziomym położenie trafia do posL, treść — do wpisu */
+    var posPatch = null;
+    if (editingLandscape()) {
+      ['dx', 'dy', 'bdy'].forEach(function (k) {
+        if (!Object.prototype.hasOwnProperty.call(patch, k)) return;
+        if (!posPatch) posPatch = {};
+        posPatch[k] = patch[k];
+      });
+    }
     Object.keys(patch).forEach(function (k) {
+      if (posPatch && Object.prototype.hasOwnProperty.call(posPatch, k)) return;
       if (patch[k] === undefined) delete item[k];
       else item[k] = patch[k];
     });
     if (!item.dx) delete item.dx;
     if (!item.dy) delete item.dy;
     if (!item.bdy) delete item.bdy;
+    if (posPatch) writePos(chartType, 'f' + String(item.id), posPatch);
   }
 
   function removeFree(chartType, id) {
     var store = freeStore();
     if (!store) return;
     store[chartType] = store[chartType].filter(function (f) { return f && f.id !== id; });
+    /* identyfikator wolnej adnotacji może wrócić przy następnym dodaniu —
+       jej położenie w poziomie nie może przejść na nową adnotację */
+    if (creatorContext !== 'pub') {
+      var posL = regRoot().posL;
+      if (posL && posL[chartType] && typeof posL[chartType] === 'object') delete posL[chartType]['f' + String(id)];
+    }
   }
 
   /* „Przywróć układ automatyczny” cofa tylko położenia ramek na aktywnej
-     siatce (także wolnych adnotacji) — ukrycia i osobne treści zostają. */
+     siatce (także wolnych adnotacji) — ukrycia i osobne treści zostają.
+     W Kreatorze poziomym cofa tylko położenia strony poziomej: każda ramka
+     dostaje własne położenie zerowe (automatyczne), pion zostaje bez zmian. */
   function resetLayout(chartType) {
+    if (editingLandscape()) {
+      var pos = posLStore();
+      pos[chartType] = {};
+      var lay = layoutStore();
+      Object.keys((lay && lay[chartType]) || {}).forEach(function (key) {
+        var ov = lay[chartType][key];
+        if (ov && (ov.dx || ov.dy)) pos[chartType][key] = {};
+      });
+      var fr = freeStore();
+      ((fr && fr[chartType]) || []).forEach(function (f) {
+        if (f && (f.dx || f.dy || f.bdy)) pos[chartType]['f' + String(f.id)] = {};
+      });
+      return;
+    }
     var store = layoutStore();
     if (!store) return;
     Object.keys(store[chartType]).forEach(function (key) {
@@ -1097,7 +1280,11 @@
       '#' + OVERLAY_ID + ' .pubc-opts{flex:0 0 auto;overflow:hidden;max-height:0;opacity:0;background:#ffffff;border-bottom:1px solid transparent;transform:translateY(-4px);transition:max-height .3s ease,opacity .22s ease,transform .3s ease,border-color .3s ease}' +
       '#' + OVERLAY_ID + ' .pubc-opts.pubc-opts-open{opacity:1;transform:translateY(0);border-bottom-color:' + COLORS.border + '}' +
       '@media (prefers-reduced-motion: reduce){#' + OVERLAY_ID + ' .pubc-opts{transition:none;transform:none}}' +
+      /* Przełącznik „Układ” (strona A4 poziomo zwykłej siatki 1–18 lat) */
+      '#' + OVERLAY_ID + ' .pubc-seg{display:inline-flex;align-items:stretch;gap:0.3rem;flex-wrap:nowrap}' +
+      '#' + OVERLAY_ID + ' .pubc-seg-label{align-self:center;font-size:0.76rem;color:' + COLORS.muted + ';margin-right:0.1rem}' +
       '@media (max-width:640px){' +
+      '#' + OVERLAY_ID + ' .pubc-long{display:none}' +
       '#' + OVERLAY_ID + ' .pubc-lrow{grid-template-columns:4.2rem 1fr auto;grid-template-areas:"age txt acts" "age type acts"}' +
       '#' + OVERLAY_ID + ' .pubc-lrow .pubc-lage{grid-area:age}' +
       '#' + OVERLAY_ID + ' .pubc-lrow .pubc-ltype{grid-area:type}' +
@@ -1196,7 +1383,25 @@
     return parent;
   }
 
-  function buildPreviewCanvases() {
+  /* Moduł strony A4 poziomo (vilda_centile_landscape.js) — gdy jest załadowany. */
+  function landscapeModule() {
+    var L = w.VildaCentileLandscape;
+    return L && typeof L.buildPage === 'function' && typeof L.readLayout === 'function' ? L : null;
+  }
+
+  /* Układ PDF zwykłej siatki 1–18 lat wybrany przez użytkownika (ten sam
+     wybór co przełącznik „Układ PDF” pod przyciskiem siatki). */
+  function preferredLayout() {
+    var L = landscapeModule();
+    if (!L) return 'portrait';
+    try {
+      return L.readLayout() === L.LAYOUT_LANDSCAPE ? 'landscape' : 'portrait';
+    } catch (e) {
+      return 'portrait';
+    }
+  }
+
+  function buildPreviewCanvases(layout) {
     var ageEl = document.getElementById('age');
     var ageMEl = document.getElementById('ageMonths');
     var sexEl = document.getElementById('sex');
@@ -1275,6 +1480,31 @@
       try { copyInf.getContext('2d').drawImage(pageInf, 0, 0); } catch (eInf2) { /* ignore */ }
       return { height: pageInf, weight: copyInf };
     }
+    if (layout === 'landscape' && creatorContext === 'palRegular') {
+      /* P-KREATOR-POZIOM: strona A4 poziomo — ta sama funkcja co PDF
+         (buildPage), więc podgląd jest WYSIWYG; obie zakładki pokazują
+         całą stronę, a geometria wykresów trafia do geomStoreL. */
+      var L = landscapeModule();
+      if (!L) return null;
+      var pinL = w.publicationCharts;
+      suppressPainting = true;
+      var pageL;
+      try {
+        w.publicationCharts = false;
+        pageL = L.buildPage({ sex: sex, userAgeMonths: months, userWeight: wt, userHeight: ht });
+      } catch (eL) {
+        pageL = null;
+      } finally {
+        suppressPainting = false;
+        w.publicationCharts = pinL;
+      }
+      if (!pageL) return null;
+      var copyL = document.createElement('canvas');
+      copyL.width = pageL.width;
+      copyL.height = pageL.height;
+      try { copyL.getContext('2d').drawImage(pageL, 0, 0); } catch (eL2) { /* ignore */ }
+      return { height: pageL, weight: copyL };
+    }
     if (typeof w.buildPalczewskaExtendedCanvases !== 'function') return null;
     /* Kontekst zwykłej siatki: podgląd renderowany w kolorowym, polskim stylu
        (publicationCharts przypięte na false na czas budowy kanw). */
@@ -1298,17 +1528,22 @@
    * siatki) z zachowaniem powiększenia i adnotacji.
    */
   function refreshPreview() {
-    if (!ui) return;
-    var canvases = buildPreviewCanvases();
-    if (!canvases) return;
+    if (!ui) return false;
+    var canvases = buildPreviewCanvases(ui.layout);
+    if (!canvases) return false;
     ['height', 'weight'].forEach(function (chart) {
       var old = ui.bases[chart];
       canvases[chart].style.cssText = old.style.cssText;
       old.parentNode.replaceChild(canvases[chart], old);
       ui.bases[chart] = canvases[chart];
+      /* nakładka ma wymiary strony podglądu (pion 2480×3508, poziom 3508×2480) */
+      var dims = overlayDims(ui.layout, canvases[chart]);
+      if (ui.overlays[chart].width !== dims.w) ui.overlays[chart].width = dims.w;
+      if (ui.overlays[chart].height !== dims.h) ui.overlays[chart].height = dims.h;
     });
     applyZoom();
     renderOverlay();
+    return true;
   }
 
   function closeCreator() {
@@ -1319,6 +1554,128 @@
     unlockBodyScroll();
     ui = null;
     creatorContext = 'pub';
+    editLayout = 'portrait';
+  }
+
+  /* ── Strona A4 poziomo w Kreatorze (P-KREATOR-POZIOM) ── */
+
+  /* Wymiary nakładki: strona pozioma — wymiary strony z budowniczego,
+     pozostałe podglądy — dotychczasowa kanwa A4 pionowo. */
+  function overlayDims(layout, base) {
+    if (layout === 'landscape' && base && base.width > 0 && base.height > 0) return { w: base.width, h: base.height };
+    return { w: CANVAS_W, h: CANVAS_H };
+  }
+
+  function isLandscapeUi() {
+    return !!ui && ui.layout === 'landscape';
+  }
+
+  /* Geometria wykresu w układzie podglądu: pion — kanwa wykresu, poziom —
+     współrzędne całej strony. */
+  function geomFor(chart) {
+    return isLandscapeUi() ? geomStoreL[chart] || null : geomStore[chart] || null;
+  }
+
+  /* Wykres strony poziomej pod punktem kanwy (kolumna wykresu) albo null. */
+  function chartAtPos(pos) {
+    if (!isLandscapeUi() || !pos) return null;
+    var charts = ['height', 'weight'];
+    for (var i = 0; i < charts.length; i++) {
+      var g = geomStoreL[charts[i]];
+      var c = g && g.clip;
+      if (c && pos.x >= c.x && pos.x < c.x + c.w && pos.y >= c.y && pos.y < c.y + c.h) return charts[i];
+    }
+    return null;
+  }
+
+  /* Na wąskim ekranie strona pozioma startuje w powiększeniu, w którym
+     aktywny wykres zajmuje całą szerokość podglądu; „Dopasuj” pokazuje całą stronę. */
+  var LANDSCAPE_NARROW_PX = 720;
+
+  /* Szerokość „Dopasuj” (100%): pion — szerokość kontenera; poziom — cała
+     strona mieści się w kontenerze w obu osiach. */
+  function computeFitWidth() {
+    var scroll = ui.scrolls[ui.active];
+    var avail = scroll.clientWidth - 16;
+    if (isLandscapeUi()) {
+      var availH = scroll.clientHeight - 16;
+      var base = ui.bases[ui.active];
+      if (availH > 100 && base.height > 0) avail = Math.min(avail, availH * (base.width / base.height));
+    }
+    return avail > 200 ? avail : ui.fitWidth;
+  }
+
+  /* „Wąski ekran” liczony z szerokości kontenera, nie z dopasowania — niskie okno
+     na komputerze ma małe dopasowanie strony poziomej, ale pokazuje ją całą. */
+  function startZoom() {
+    if (!isLandscapeUi()) return 1;
+    var scroll = ui.scrolls[ui.active];
+    return scroll && scroll.clientWidth - 16 < LANDSCAPE_NARROW_PX ? 2 : 1;
+  }
+
+  /* Przewija podgląd strony poziomej tak, by kolumna wykresu była na środku. */
+  function scrollToChart(chart) {
+    if (!isLandscapeUi()) return;
+    var g = geomStoreL[chart];
+    var scroll = ui.scrolls[chart];
+    var base = ui.bases[chart];
+    if (!g || !g.clip || !scroll || !base) return;
+    var scale = base.getBoundingClientRect().width / (base.width || 1);
+    if (!(scale > 0)) return;
+    scroll.scrollLeft = Math.max(0, 8 + (g.clip.x + g.clip.w / 2) * scale - scroll.clientWidth / 2);
+  }
+
+  /* Etykiety zależne od układu (tytuł, pomoc, przyciski stopki, przełącznik). */
+  function syncLayoutUi() {
+    if (!ui) return;
+    var land = isLandscapeUi();
+    var p = ui.layoutParts;
+    if (p.seg) {
+      p.segBtns.portrait.setAttribute('aria-pressed', land ? 'false' : 'true');
+      p.segBtns.landscape.setAttribute('aria-pressed', land ? 'true' : 'false');
+    }
+    p.titleSuffix.hidden = !land;
+    p.dragHint.textContent = land ? ' — zmień położenie w tym układzie' : ' — zmień położenie';
+    p.otherHint.hidden = !land;
+    p.resetLong.hidden = !land;
+    p.resetBtn.title = land ? 'Cofa przesunięcia ramek tylko na stronie poziomej' : '';
+    p.genPortrait.hidden = land;
+    p.genLandscape.hidden = !land;
+  }
+
+  /* Zmiana układu z paska Kreatora: zapis tego samego wyboru co pod przyciskiem
+     siatki (preferencja konta), przebudowa podglądu i odświeżenie przycisków karty. */
+  function setLayout(layout) {
+    if (!ui || creatorContext !== 'palRegular') return;
+    var L = landscapeModule();
+    if (!L || typeof L.writeLayout !== 'function') return;
+    var want = layout === 'landscape' ? 'landscape' : 'portrait';
+    if (want === ui.layout) return;
+    dismissEditor();
+    if (ui.placeMode) setPlaceMode(ui.placeMode);
+    try { L.writeLayout(want === 'landscape' ? L.LAYOUT_LANDSCAPE : L.LAYOUT_PORTRAIT); } catch (e) { /* ignore */ }
+    /* podgląd ma pokazywać to, co wygeneruje PDF — czyli zapisany wybór */
+    var prev = ui.layout;
+    ui.layout = preferredLayout();
+    if (ui.layout === prev) { syncLayoutUi(); return; }
+    editLayout = ui.layout;
+    ui.selectedKey = null;
+    if (!refreshPreview()) {
+      /* podgląd nie powstał — wróć do poprzedniego układu także w wyborze PDF */
+      try { L.writeLayout(prev === 'landscape' ? L.LAYOUT_LANDSCAPE : L.LAYOUT_PORTRAIT); } catch (e3) { /* ignore */ }
+      ui.layout = prev;
+      editLayout = prev;
+      refreshPreview();
+    }
+    ui.fitWidth = computeFitWidth();
+    ui.zoom = startZoom();
+    applyZoom();
+    syncLayoutUi();
+    renderOverlay();
+    if (isLandscapeUi()) scrollToChart(ui.active);
+    if (typeof w.updateCentileButtons === 'function') {
+      try { w.updateCentileButtons(); } catch (e2) { /* ignore */ }
+    }
   }
 
   function flashSaveNote() {
@@ -1332,7 +1689,7 @@
   }
 
   function activeGeom() {
-    return geomStore[ui.active] || null;
+    return geomFor(ui.active);
   }
 
   /* Dane karty widziane przez UI kreatora w aktywnym kontekście.
@@ -1355,20 +1712,41 @@
     var chart = ui.active;
     var overlay = ui.overlays[chart];
     var ctx = overlay.getContext('2d');
-    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-    var geom = geomStore[chart];
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    var geom = geomFor(chart);
     var adv = activeAdv() || {};
+    /* Na stronie poziomej PDF przycina adnotacje do kolumny wykresu
+       (kanwa wykresu) — podgląd przycina tak samo. */
+    function drawClipped(g, list) {
+      if (!g || !g.clip) { drawItems(ctx, list); return; }
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(g.clip.x, g.clip.y, g.clip.w, g.clip.h);
+      ctx.clip();
+      drawItems(ctx, list);
+      ctx.restore();
+    }
     /* Kontekst OLAF: oba wykresy leżą na jednej stronie, więc nakładka
        aktywnej zakładki dorysowuje też adnotacje drugiego wykresu (bez
-       interakcji) — podgląd strony jest zawsze kompletny. */
-    if (PAGE_CONTEXTS[creatorContext]) {
+       interakcji) — podgląd strony jest zawsze kompletny. Tak samo strona
+       A4 poziomo zwykłej siatki 1–18 lat. */
+    if (PAGE_CONTEXTS[creatorContext] || isLandscapeUi()) {
       var other = chart === 'height' ? 'weight' : 'height';
-      var geomOther = geomStore[other];
-      if (geomOther) drawItems(ctx, computeLayout(ctx, adv, other, geomOther));
+      var geomOther = geomFor(other);
+      if (geomOther) drawClipped(geomOther, computeLayout(ctx, adv, other, geomOther));
     }
     var items = geom ? computeLayout(ctx, adv, chart, geom) : [];
-    drawItems(ctx, items);
+    drawClipped(geom, items);
     ui.items[chart] = items;
+    /* aktywny wykres strony poziomej — przerywana ramka kolumny (tylko podgląd) */
+    if (geom && geom.clip) {
+      ctx.save();
+      ctx.strokeStyle = COLORS.primary;
+      ctx.lineWidth = 6;
+      ctx.setLineDash([24, 16]);
+      ctx.strokeRect(geom.clip.x + 6, geom.clip.y + 6, geom.clip.w - 12, geom.clip.h - 12);
+      ctx.restore();
+    }
     var points = geom ? collectPoints(adv, chart, geom) : [];
     ui.points[chart] = points;
     /* Warstwa pomocnicza podglądu (nie trafia do eksportu): turkusowe
@@ -1477,8 +1855,8 @@
       }
     }
     if (cx === undefined) return null;
-    scroll.scrollLeft = cx * (rect.width / CANVAS_W) - scroll.clientWidth / 2;
-    scroll.scrollTop = cy * (rect.height / CANVAS_H) - scroll.clientHeight / 2;
+    scroll.scrollLeft = cx * (rect.width / overlay.width) - scroll.clientWidth / 2;
+    scroll.scrollTop = cy * (rect.height / overlay.height) - scroll.clientHeight / 2;
     return { cx: cx, cy: cy };
   }
 
@@ -1487,8 +1865,8 @@
     var it = itemForKey(key);
     var overlay = ui.overlays[ui.active];
     var rect = overlay.getBoundingClientRect();
-    var sx = rect.width / CANVAS_W;
-    var sy = rect.height / CANVAS_H;
+    var sx = rect.width / overlay.width;
+    var sy = rect.height / overlay.height;
     var left;
     var top;
     if (it) {
@@ -1569,7 +1947,10 @@
       if (it.comment) txt.appendChild(document.createTextNode(it.comment));
       else append(txt, el('span', null, { class: 'pubc-lempty' },
         it.bracket ? 'klamra (bez tekstu)' : it.kind === 'free' && it.arrow ? 'sama strzałka (bez treści)' : '(bez komentarza)'));
-      if (it.moved) append(txt, el('span', 'color:' + COLORS.accent + ';', { class: 'pubc-lbadge' }, 'przesunięta'));
+      /* strona pozioma: ramka bez własnego położenia stoi tam, gdzie w pionie
+         (przesunięcie przeliczone skalą wykresu) — lista mówi to wprost */
+      if (it.moved && it.posSource === 'scaled') append(txt, el('span', 'color:' + COLORS.muted + ';', { class: 'pubc-lbadge' }, 'położenie przeliczone z pionu'));
+      else if (it.moved) append(txt, el('span', 'color:' + COLORS.accent + ';', { class: 'pubc-lbadge' }, 'przesunięta'));
       if (it.ownText) append(txt, el('span', 'color:' + COLORS.primary + ';', { class: 'pubc-lbadge' }, 'treść tej siatki'));
       if (it.fs !== FONT_PX) append(txt, el('span', 'color:' + COLORS.primary + ';', { class: 'pubc-lbadge' }, it.fs + ' px'));
       append(row, txt);
@@ -1642,9 +2023,9 @@
     var rect = overlay.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
     return {
-      x: (evt.clientX - rect.left) * (CANVAS_W / rect.width),
-      y: (evt.clientY - rect.top) * (CANVAS_H / rect.height),
-      scale: rect.width / CANVAS_W,
+      x: (evt.clientX - rect.left) * (overlay.width / rect.width),
+      y: (evt.clientY - rect.top) * (overlay.height / rect.height),
+      scale: rect.width / overlay.width,
       rect: rect
     };
   }
@@ -1787,14 +2168,27 @@
   }
 
   function setupInteractions() {
+    var downHandlers = {};
     ['height', 'weight'].forEach(function (chart) {
       var overlay = ui.overlays[chart];
       var drag = null;
       overlay.style.touchAction = 'none';
-      overlay.addEventListener('pointerdown', function (evt) {
+      function onPointerDown(evt) {
         if (ui.active !== chart) return;
         var pos = overlayCoords(evt);
         if (!pos) return;
+        /* Strona pozioma: klik w kolumnę drugiego wykresu przełącza na niego
+           zakładkę (z tym samym przewinięciem) i od razu działa jak klik na
+           tamtym wykresie — kolejne zdarzenia wskaźnika trafiają do jego nakładki. */
+        var hitChart = chartAtPos(pos);
+        if (hitChart && hitChart !== chart) {
+          ui.bracketFirst = null;
+          activateChart(hitChart, { keepScroll: true });
+          var other = ui.overlays[hitChart];
+          try { other.setPointerCapture(evt.pointerId); } catch (e0) { /* ignore */ }
+          downHandlers[hitChart](evt);
+          return;
+        }
         if (ui.placeMode) {
           dismissEditor();
           /* tryb wstawiania wolnej adnotacji: klik = miejsce kotwicy */
@@ -1855,7 +2249,9 @@
           ui.selectedKey = null;
           renderOverlay();
         }
-      });
+      }
+      downHandlers[chart] = onPointerDown;
+      overlay.addEventListener('pointerdown', onPointerDown);
       overlay.addEventListener('pointermove', function (evt) {
         if (!drag || ui.active !== chart) return;
         var pos = overlayCoords(evt);
@@ -2075,9 +2471,13 @@
     });
   }
 
-  function switchTab(chart) {
+  function switchTab(chart, opts) {
     if (!ui) return;
     dismissEditor();
+    var prev = ui.active;
+    var prevScroll = ui.scrolls[prev];
+    var keepLeft = prevScroll ? prevScroll.scrollLeft : 0;
+    var keepTop = prevScroll ? prevScroll.scrollTop : 0;
     ui.active = chart;
     ui.selectedKey = null;
     ['height', 'weight'].forEach(function (c) {
@@ -2085,7 +2485,23 @@
       /* Kolory aktywnej zakładki pochodzą z wstrzykniętego arkusza (.pubc-tab[aria-selected]) */
       ui.tabs[c].setAttribute('aria-selected', c === chart ? 'true' : 'false');
     });
+    /* Strona pozioma: obie zakładki pokazują tę samą stronę — zmiana zakładki
+       zachowuje przewinięcie w pionie i przesuwa podgląd na kolumnę wykresu
+       (klik w drugi wykres zachowuje też przewinięcie w poziomie). */
+    if (isLandscapeUi() && prev !== chart) {
+      var sc = ui.scrolls[chart];
+      sc.scrollTop = keepTop;
+      if (opts && opts.keepScroll) sc.scrollLeft = keepLeft;
+      else scrollToChart(chart);
+    }
     renderOverlay();
+  }
+
+  /* Edytor musi „podążać” za aktywną siatką */
+  function activateChart(chart, opts) {
+    if (!ui) return;
+    ui.inners[chart].appendChild(ui.editor);
+    switchTab(chart, opts);
   }
 
   function applyZoom() {
@@ -2140,8 +2556,19 @@
     }
     creatorContext = ctxId;
     ensureStyle();
-    var canvases = buildPreviewCanvases();
+    /* P-KREATOR-POZIOM: zwykła siatka 1–18 lat z wybranym PDF „1 strona A4
+       poziomo” edytuje stronę poziomą; gdy jej podgląd nie powstanie, PDF
+       też wraca do pionu (generator), więc Kreator zostaje w pionie. */
+    var layout = ctxId === 'palRegular' ? preferredLayout() : 'portrait';
+    editLayout = layout;
+    var canvases = buildPreviewCanvases(layout);
+    if (!canvases && layout === 'landscape') {
+      layout = 'portrait';
+      editLayout = layout;
+      canvases = buildPreviewCanvases(layout);
+    }
     if (!canvases) {
+      editLayout = 'portrait';
       alert('Nie uda\u0142o si\u0119 przygotowa\u0107 podgl\u0105du siatek. Uzupe\u0142nij wiek, p\u0142e\u0107, mas\u0119 i wzrost, a nast\u0119pnie spr\u00f3buj ponownie.');
       return;
     }
@@ -2166,6 +2593,9 @@
     var title = el('span', 'font-weight:700;color:' + COLORS.primary + ';font-size:0.95rem;', null, creatorTitle);
     var proSup = el('sup', 'font-size:0.62em;font-weight:800;margin-left:2px;', { class: 'pro-superscript' }, 'PRO');
     title.appendChild(proSup);
+    var titleSuffix = el('small', 'font-weight:600;color:' + COLORS.muted + ';margin-left:0.4rem;', { class: 'pubc-long' }, '· A4 poziomo');
+    titleSuffix.hidden = true;
+    title.appendChild(titleSuffix);
     var tabs = el('div', 'display:flex;gap:0.35rem;margin-left:auto;', { role: 'tablist' });
     var tabCss = BTN_BASE + 'padding:0.3rem 0.9rem;font-size:0.85rem;font-weight:600;';
     var tabH = el('button', tabCss, { type: 'button', role: 'tab', class: 'pubc-tab' }, 'Wzrost');
@@ -2189,7 +2619,27 @@
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
     var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105; poprzeczk\u0119 mo\u017cna potem przeci\u0105gn\u0105\u0107 wy\u017cej lub ni\u017cej' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
-    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
+    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn);
+    /* Przełącznik układu PDF zwykłej siatki 1–18 lat — ten sam wybór co
+       „Układ PDF” pod przyciskiem siatki (siatki do publikacji, OLAF, WHO
+       i 0–3 lata mają zawsze jedną stronę pionowo). */
+    var layoutSeg = null;
+    var segBtns = {};
+    var landMod = landscapeModule();
+    if (isRegular && landMod && typeof landMod.writeLayout === 'function') {
+      layoutSeg = el('span', null, { class: 'pubc-seg', role: 'group', 'aria-label': 'Układ PDF' });
+      /* separator w grupie — zawija się razem z przełącznikiem na wąskim ekranie */
+      append(layoutSeg, el('span', 'width:1px;align-self:stretch;background:' + COLORS.border + ';margin:0 0.3rem;'),
+        el('span', null, { class: 'pubc-seg-label' }, 'Układ'));
+      [['portrait', '2 strony · ', 'pion'], ['landscape', '1 strona · ', 'poziom']].forEach(function (d) {
+        var b = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', 'data-layout': d[0] });
+        append(b, el('span', null, { class: 'pubc-long' }, d[1]), document.createTextNode(d[2]));
+        segBtns[d[0]] = b;
+        append(layoutSeg, b);
+      });
+      append(toolbar, layoutSeg);
+    }
+    append(toolbar, saveNote);
 
     /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
        (klasa pubc-opts we wstrzykiwanym arkuszu; max-height ustawiane z JS) */
@@ -2271,8 +2721,9 @@
       var base = canvases[chart];
       base.style.cssText = 'display:block;width:900px;height:auto;background:#fff;';
       var overlay = document.createElement('canvas');
-      overlay.width = CANVAS_W;
-      overlay.height = CANVAS_H;
+      var dims = overlayDims(layout, base);
+      overlay.width = dims.w;
+      overlay.height = dims.h;
       overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;cursor:pointer;';
       append(inner, base, overlay);
       append(scroll, inner);
@@ -2285,11 +2736,15 @@
       body.appendChild(wrap);
     });
     var help = el('div', 'display:flex;gap:0.4rem 1rem;flex-wrap:wrap;font-size:0.76rem;color:' + COLORS.muted + ';margin-top:0.55rem;justify-content:center;');
-    [['Kliknij punkt', 'dodaj / edytuj komentarz'], ['Przeci\u0105gnij ramk\u0119', 'zmie\u0144 po\u0142o\u017cenie'], ['Kliknij ramk\u0119', 'edytuj / rozdziel tre\u015b\u0107 mi\u0119dzy siatki']].forEach(function (pair) {
+    var helpTexts = {};
+    [['Kliknij punkt', 'dodaj / edytuj komentarz'], ['Przeci\u0105gnij ramk\u0119', 'zmie\u0144 po\u0142o\u017cenie', 'drag'], ['Kliknij ramk\u0119', 'edytuj / rozdziel tre\u015b\u0107 mi\u0119dzy siatki'], ['Kliknij drugi wykres', 'prze\u0142\u0105cz aktywny wykres', 'other']].forEach(function (pair) {
       var s = el('span', null, null, null);
-      append(s, el('b', 'color:' + COLORS.text + ';font-weight:600;', null, pair[0]), document.createTextNode(' \u2014 ' + pair[1]));
+      var t = document.createTextNode(' \u2014 ' + pair[1]);
+      append(s, el('b', 'color:' + COLORS.text + ';font-weight:600;', null, pair[0]), t);
+      if (pair[2]) helpTexts[pair[2]] = { item: s, text: t };
       append(help, s);
     });
+    helpTexts.other.item.hidden = true;
     body.appendChild(help);
     var listEl = el('div', 'margin-top:0.55rem;', { class: 'pubc-list' });
     body.appendChild(listEl);
@@ -2344,7 +2799,15 @@
     /* Stopka */
     var foot = el('div', 'display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;padding:0.6rem 0.9rem;border-top:1px solid ' + COLORS.border + ';background:' + COLORS.card + ';flex-wrap:wrap;');
     var resetBtn = el('button', BTN_BASE + 'padding:0.5rem 0.8rem;font-size:0.85rem;font-weight:600;', { type: 'button', class: 'pubc-outline' }, 'Przywr\u00f3\u0107 uk\u0142ad automatyczny');
-    var genBtn = el('button', BTN_BASE + 'padding:0.55rem 0.9rem;font-size:0.88rem;font-weight:700;', { type: 'button', class: 'pubc-primary' }, 'Generuj siatki (PDF)');
+    var resetLong = el('span', null, null, ' (poziom)');
+    resetLong.hidden = true;
+    resetBtn.appendChild(resetLong);
+    var genBtn = el('button', BTN_BASE + 'padding:0.55rem 0.9rem;font-size:0.88rem;font-weight:700;', { type: 'button', class: 'pubc-primary' });
+    var genPortrait = el('span', null, null, 'Generuj siatki (PDF)');
+    var genLandscape = el('span', null, null, 'Generuj PDF');
+    append(genLandscape, el('span', null, { class: 'pubc-long' }, ' \u00b7 1 strona A4 poziomo'));
+    genLandscape.hidden = true;
+    append(genBtn, genPortrait, genLandscape);
     append(foot, resetBtn, genBtn);
 
     append(panel, head, toolbar, optsPanel, body, foot);
@@ -2375,6 +2838,18 @@
       editorParts: { scopeRow: scopeRow, fsRow: fsRow, fsSelect: fsSelect, hideBtn: edHide },
       items: {},
       points: {},
+      layout: layout,
+      layoutParts: {
+        seg: layoutSeg,
+        segBtns: segBtns,
+        titleSuffix: titleSuffix,
+        dragHint: helpTexts.drag.text,
+        otherHint: helpTexts.other.item,
+        resetBtn: resetBtn,
+        resetLong: resetLong,
+        genPortrait: genPortrait,
+        genLandscape: genLandscape
+      },
       onKeyDown: function (evt) {
         if (evt.key !== 'Escape') return;
         /* Escape najpierw wyłącza tryb wstawiania, dopiero potem zamyka kreator */
@@ -2382,20 +2857,19 @@
         else closeCreator();
       }
     };
-    /* Dopasowanie 100% = szeroko\u015b\u0107 kontenera przewijania (bez paddingu) */
-    var avail = scrolls.height.clientWidth - 16;
-    if (avail > 200) ui.fitWidth = avail;
+    /* Dopasowanie 100% = szeroko\u015b\u0107 kontenera przewijania (bez paddingu);
+       strona pozioma mie\u015bci si\u0119 w nim ca\u0142a, a na w\u0105skim ekranie startuje
+       w powi\u0119kszeniu z aktywnym wykresem na ca\u0142\u0105 szeroko\u015b\u0107 */
+    ui.fitWidth = computeFitWidth();
+    ui.zoom = startZoom();
     applyZoom();
+    syncLayoutUi();
+    Object.keys(segBtns).forEach(function (k) {
+      segBtns[k].addEventListener('click', function () { setLayout(k); });
+    });
 
-    tabH.addEventListener('click', function () {
-      /* Edytor musi \u201epod\u0105\u017ca\u0107\u201d za aktywn\u0105 siatk\u0105 */
-      inners.height.appendChild(editor);
-      switchTab('height');
-    });
-    tabW.addEventListener('click', function () {
-      inners.weight.appendChild(editor);
-      switchTab('weight');
-    });
+    tabH.addEventListener('click', function () { activateChart('height'); });
+    tabW.addEventListener('click', function () { activateChart('weight'); });
     closeBtn.addEventListener('click', closeCreator);
     document.addEventListener('keydown', ui.onKeyDown);
     zoomIn.addEventListener('click', function () { setZoom(ui.zoom + ZOOM_STEP); });
@@ -2443,6 +2917,7 @@
 
     setupInteractions();
     switchTab('height');
+    scrollToChart('height');
   }
 
   /* Arkusz wstrzykiwany od razu, żeby przycisk „Kreator adnotacji” w wierszu
@@ -2474,6 +2949,11 @@
     _arrowKey: arrowKey,
     _setSuppress: function (v) { suppressPainting = !!v; },
     _geomStore: geomStore,
+    _geomStoreL: geomStoreL,
+    _framePos: framePos,
+    _resetLayout: resetLayout,
+    _setOffset: setOffset,
+    _setEditLayout: function (v) { editLayout = v === 'landscape' ? 'landscape' : 'portrait'; },
     _setContext: function (c) { creatorContext = STORE_CONTEXTS[c] ? c : 'pub'; },
     _advForContext: advForContext,
     _regRoot: regRoot,

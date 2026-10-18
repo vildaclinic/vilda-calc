@@ -1,0 +1,78 @@
+{
+  "version": "2026-10-18.1",
+  "purpose": "Published source-group median for educational comparison, not a clinical reference interval.",
+  "sex": "male",
+  "unit": "ng/mL",
+  "statistic": "group-median",
+  "sourceLabel": "Woloszynek 2015 · AMH · grupa 18–30 lat",
+  "source": {
+    "authors": "Woloszynek et al.",
+    "year": 2015,
+    "doi": "10.1177/0004563214554462",
+    "pmid": "25249661",
+    "url": "https://journals.sagepub.com/doi/10.1177/0004563214554462",
+    "pdfUrl": "https://journals.sagepub.com/doi/pdf/10.1177/0004563214554462",
+    "title": "Validation of an immunoassay for anti-Müllerian hormone measurements and reference intervals in healthy Brazilian subjects",
+    "journal": "Annals of Clinical Biochemistry 2015;52(1):67–75",
+    "sourceLocator": "Table 2, journal page 72 / PDF page 6 of 9; Methods pages 68–69; Table 1 page 72",
+    "table": 2,
+    "reviewDate": "2026-10-18",
+    "reviewBasis": "Complete final publisher PDF reread through web access; numerical row and methods independently checked in publisher HTML. No abstract-only qualification.",
+    "sourceFormat": "Publisher PDF and HTML",
+    "sourceSha256": null,
+    "sourceFileNote": "Direct PDF download returned HTTP 403; no local PDF bytes or file hash asserted. Full publisher document was accessible through the web tool.",
+    "redistribution": "Factual extract only; no article, figure or source PDF redistributed.",
+    "sourceQuantification": {
+      "analyticalSensitivityNgMl": 0.02,
+      "functionalSensitivityNgMl": 0.2,
+      "functionalSensitivityCriterion": "CV <20%",
+      "loq": null,
+      "terminologyNote": "Preserve the authors' analytical/functional sensitivity terminology; no independently stated LLOQ or patient-result cutoff inferred."
+    }
+  },
+  "assay": "Beckman Coulter AMH Gen II manual noncompetitive ELISA; 20 µL sample plus 100 µL buffer in plate; no preanalytical dilution",
+  "assayId": "beckman-coulter-gen-ii-original-elisa-amh",
+  "assayIdQualification": "Application identifier restricted to this described protocol; original is a qualifier added by the application, not an author-supplied assay name.",
+  "matrix": "serum",
+  "handling": "Dry tube; centrifugation and serum separation; −20 °C for up to 3 months",
+  "population": "Zdrowi brazylijscy mężczyźni, pracownicy ochrony zdrowia; Hospital das Clínicas, São Paulo.",
+  "recruitment": {
+    "from": "2012-02",
+    "through": "2013-08",
+    "maleVolunteers": 120,
+    "excludedMales": 16,
+    "exclusions": [
+      "Chronic disease",
+      "Infertility",
+      "Orchiectomy",
+      "Gonadotropins or total testosterone outside reference ranges"
+    ]
+  },
+  "participants": 104,
+  "observedMinAge": 18,
+  "observedMaxAge": 48,
+  "groups": [
+    {
+      "id": "18-30",
+      "label": "18–30 lat",
+      "minAge": 18,
+      "maxAge": 30,
+      "n": 63,
+      "median": 6.3
+    }
+  ],
+  "conversion": {
+    "canonicalUnit": "pmol/L",
+    "ngMlPerPmolL": 0.1401,
+    "canonicalExpression": "6.3 / 0.1401",
+    "sourcePrintedPmolLPerNgMl": 7.14,
+    "decision": "Use the existing application conversion for both source and patient; do not mix it with the paper's rounded 7.14 factor or treat unit conversion as assay calibration."
+  },
+  "limitations": [
+    "Mediana 6,3 ng/mL dotyczy całej źródłowej grupy 18–30 lat, N=63; nie jest medianą samego przedziału 18–<20 lat, dokładnego wieku ani stadium Tannera.",
+    "Zastosowanie wyłącznie do luki 18–<20 jest osobną polityką aplikacji, nie nowym podziałem tabeli. Nie interpolujemy ani nie łączymy tej mediany z innymi badaniami.",
+    "Nie wykazujemy zgodności z Access, DxI, Elecsys, Mindray, Immunotech ani zmodyfikowanym Gen II; nawet ogólna nazwa Gen II nie potwierdza opisanego protokołu.",
+    "Źródłowe wykluczenia nie są ustalonym wywiadem pacjenta. Nie dodajemy obowiązkowej ankiety; zachowujemy znaczenie znanych danych klinicznych, metody i materiału.",
+    "To orientacyjne porównanie edukacyjne, bez zakresu referencyjnego, SDS, percentyla pacjenta, oceny płodności i rozpoznania. Znacznik źródła pozostaje niezależny od poglądowej linii."
+  ]
+}

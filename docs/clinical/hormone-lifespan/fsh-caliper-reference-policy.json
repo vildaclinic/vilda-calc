@@ -1,0 +1,24 @@
+{
+  "version": "2026-10-18.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "analyte": "fsh",
+  "unit": "IU/L",
+  "sourceEvidence": "evidence/patient-point/wilson2023-caliper-fsh-lms.json",
+  "selectionPolicy": "Zwykłe odniesienie FSH przełącza się w wieku 16 lat z Madsen na Wilson/CALIPER. Chłopcy korzystają z CALIPER w [16,18), dziewczęta w [16,19). Od 18 lat męskie źródła dorosłe zachowują pierwszeństwo. To jawna polityka aplikacji, nie kalibracja różnych populacji lub metod. Dobór nie zależy od wyniku.",
+  "agePolicy": "Cały możliwy przedział wieku musi należeć do jednego profilu. Przełączenie od 16 pozwala porównać również wpis 16 lat 0 miesięcy. Nie uśredniaj źródeł ani nie wybieraj środka niepewnego wieku. Wiersz 19 domyka interpolację poniżej 19, nie kwalifikuje pacjentki w wieku 19 lat. Osobne porównanie płci zachowuje Madsen 6–16 włącznie.",
+  "statisticPolicy": "Mediana to qBCCG(0.5) obliczone z oryginalnych L/M/S na natywnej skali IU/L z uwzględnieniem normalizacji uciętego rozkładu. Samo M nie zawsze jest dokładnym p50. Nie stosuj transformacji logarytmicznej arkuszy LH do FSH. Nie uruchamiaj norm, SDS, percentyla wyniku ani diagnozy.",
+  "interpolation": "Zachowaj wszystkie 181 oryginalnych węzłów 1–19 lat każdej płci i PCHIP w stężeniach p50. Wartości między węzłami co 0,1 roku są przybliżeniem tabeli, nie odzyskanym dopasowaniem autorów. Nie interpoluj przez zmianę publikacji i nie ekstrapoluj.",
+  "assayPolicy": "Surowica, Abbott ARCHITECT ci2000. Nieznana metoda dopuszcza tylko orientacyjne zestawienie. Znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Wspólna jednostka ani nazwa Abbott nie dowodzą zgodności z i1000, IMMULITE, Roche lub innymi platformami.",
+  "compatibleAssayMethodIds": ["abbott-architect-ci2000-fsh"],
+  "specimen": "serum",
+  "compatibleSpecimenIds": ["serum", "surowica"],
+  "excludedCyclePhases": ["pregnancy", "pregnancy_t1", "pregnancy_t2", "pregnancy_t3"],
+  "contextPolicy": "Model wieku i płci nie wymaga Th/G ani fazy cyklu. Nie jest medianą danego stadium lub fazy. Autorzy wykluczali aktualną ciążę, chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu i leki na receptę, w tym antykoncepcję doustną w ostatnich dwóch tygodniach. Zachowaj znane leczenie i stymulację z bieżącego kontekstu; brak wywiadu nie potwierdza ich nieobecności. Nie dodawaj nowych pytań.",
+  "madsenProfiles": ["madsen2022-male-fsh", "madsen2022-female-fsh-age-6-16"],
+  "profiles": [
+    {"id": "wilson2023-male-fsh-age-16-18", "sex": "male", "minAge": 16, "maxAge": 18, "maxAgeExclusive": true},
+    {"id": "wilson2023-female-fsh-age-16-19", "sex": "female", "minAge": 16, "maxAge": 19, "maxAgeExclusive": true}
+  ],
+  "patientNote": "Mediana według wieku; nie jest normą dla stadium ani fazy cyklu."
+}

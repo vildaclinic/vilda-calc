@@ -36,7 +36,9 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
     const { win, trend, snapshot } = model();
     const assessment = snapshot();
     expect(assessment.status).toBe('recorded');
-    win.LabUnitConverter = { convert: vi.fn(() => ({ ok: true, results: [{ unit: 'IU/L', value: 2 }] })) };
+    // P-LAB-TREND-CONVERT: konwerter przyjmuje jeden obiekt; dawna atrapa `convert` oddawała
+    // kształt convertAll niezależnie od argumentów i przykrywała błąd wywołania.
+    win.LabUnitConverter = { convertAll: vi.fn(() => ({ ok: true, results: [{ unit: 'IU/L', value: 2 }] })) };
     const series = trend.normalize({ testKey: 'lh', points: [
       point(assessment), { ...point(assessment), noteId: 'synthetic-other' },
       { ...point(assessment), noteId: 'synthetic-converted', unit: 'mIU/mL' },
@@ -46,7 +48,10 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
     expect(series.points.map((p) => p.assessment.evaluation.clinical)).toEqual([
       assessment.evaluation.clinical, assessment.evaluation.clinical, assessment.evaluation.clinical,
     ]);
-    expect(series.points[2]).toMatchObject({ v: 2, conv: true, assessment });
+    expect(series.points[2]).toMatchObject({ v: 2, conv: true, assessment, norm: null });
+    expect(series.points[0].norm).toBe('0,1–0,5');
+    expect(win.LabUnitConverter.convertAll).toHaveBeenCalledTimes(1);
+    expect(win.LabUnitConverter.convertAll).toHaveBeenCalledWith({ substanceId: 'lh', value: 2, fromUnit: 'mIU/mL' });
   });
 
   it.each(['<0,02', '≤0,02', '>0,5', '≥0,5', '<LOD'])('nie kreśli %s jako liczby nawet przy starym valueNum', (raw) => {
@@ -90,6 +95,315 @@ describe('LH/FSH PR2 — odczyt zapisanej oceny w modelu trendu', () => {
     expect(reference).toMatchObject({ lo: 0.1, hi: 0.5, status: 'above' });
     expect(trend.flag(normalized, reference)).toBe('↑');
     expect(win.LabUnitConverter.evaluate).toHaveBeenCalledOnce();
+  });
+});
+
+// P-LAB-TREND-CONVERT: ta sama funkcja z artefaktu, ale z prawdziwym konwerterem i plikiem danych
+// jednostek. Współczynnik pochodzi z lab_units_data.js (ten, którym liczy przelicznik), nie z testu.
+// `ja` (leniwe ładowanie konwertera w karcie) podajemy z zewnątrz, żeby sprawdzić czekanie.
+function trendWithConverter({ withConverter = true, ja = () => {} } = {}) {
+  const win = {};
+  if (withConverter) {
+    loadBrowserScript('lab_units_data.js', win);
+    loadBrowserScript('lab_unit_converter.js', win);
+  }
+  win.setTimeout = (...args) => setTimeout(...args);
+  const source = authSource.slice(authSource.indexOf('function Dl('), authSource.indexOf('function Nl('));
+  const trend = new Function('i', 'ja',
+    `${source};return {normalize:yi,flag:mi,wait:LtcCzekajNaKonwerter,multi:LtcSeriaWielujednostkowa}`)(win, ja);
+  return { win, trend };
+}
+
+const entry = (noteId, valueNum, unit, norm, dateISO) => ({ noteId, valueNum, unit, norm, dateISO, ageMonths: 400 });
+
+describe('P-LAB-TREND-CONVERT — wynik w innej jednostce trafia do trendu', () => {
+  it('fT4 15 pmol/L i 1,2 ng/dL z normą „0,8–1,8 ng/dL”: dwa punkty, drugi przeliczony bez strzałki', () => {
+    const { win, trend } = trendWithConverter();
+    const series = trend.normalize({ testKey: 'ft4', points: [
+      entry('synthetic-ft4-pmol', 15, 'pmol/L', '12–22 pmol/L', '2026-05-26'),
+      entry('synthetic-ft4-ngdl', 1.2, 'ng/dL', '0,8–1,8 ng/dL', '2026-07-07'),
+    ] });
+    expect(series.unit).toBe('pmol/L');
+    expect(series.skipped).toBe(0);
+    expect(series.points).toHaveLength(2);
+    expect(series.points[0]).toMatchObject({ noteId: 'synthetic-ft4-pmol', v: 15, norm: '12–22 pmol/L' });
+    expect(series.points[0]).not.toHaveProperty('conv');
+    const converted = series.points[1];
+    expect(converted).toMatchObject({ noteId: 'synthetic-ft4-ngdl', conv: true, norm: null, dateISO: '2026-07-07' });
+    expect(converted.v).toBeCloseTo(15.444, 6);
+    expect(converted.v).toBe(win.LabUnitConverter.convert({
+      substanceId: 'ft4', value: 1.2, fromUnit: 'ng/dL', toUnit: 'pmol/L',
+    }).value);
+    // Bez strzałki: przeliczona wartość nie jest porównywana z normą wpisu zapisaną w ng/dL.
+    expect(trend.flag(converted, null)).toBeNull();
+    // Gdyby punkt zachował tekst normy, 15,44 pmol/L > 1,8 dałoby fałszywe „↑”.
+    expect(trend.flag({ ...converted, norm: '0,8–1,8 ng/dL' }, null)).toBe('↑');
+    expect(trend.flag(series.points[0], null)).toBeNull();
+  });
+
+  it('TSH: μIU/mL (U+03BC) przelicza się na mIU/L, znak mikro µ (U+00B5) zostaje pominięty jak dotąd', () => {
+    const { trend } = trendWithConverter();
+    const series = trend.normalize({ testKey: 'tsh', points: [
+      entry('synthetic-tsh-1', 0.12, 'mIU/L', null, '2026-09-02'),
+      entry('synthetic-tsh-2', 0.05, 'mIU/L', null, '2026-07-07'),
+      entry('synthetic-tsh-greek-mu', 0.38, '\u03bcIU/mL', '0,27–4,2 \u03bcIU/mL', '2026-10-14'),
+      entry('synthetic-tsh-micro-sign', 0.4, '\u00b5IU/mL', null, '2026-10-15'),
+    ] });
+    expect(series.unit).toBe('mIU/L');
+    expect(series.points.map((p) => p.noteId)).toEqual(['synthetic-tsh-1', 'synthetic-tsh-2', 'synthetic-tsh-greek-mu']);
+    expect(series.points[2]).toMatchObject({ v: 0.38, conv: true, norm: null });
+    expect(series.skipped).toBe(1);
+  });
+
+  it('konwerter bez convertAll nie wywraca trendu i nie dostaje dawnego wywołania pozycyjnego', () => {
+    const { win, trend } = trendWithConverter();
+    const convert = vi.fn(() => ({ ok: true, results: [{ unit: 'pmol/L', value: 99 }] }));
+    win.LabUnitConverter = { convert };
+    const series = trend.normalize({ testKey: 'ft4', points: [
+      entry('synthetic-a', 15, 'pmol/L', null, '2026-05-26'),
+      entry('synthetic-b', 16, 'pmol/L', null, '2026-06-26'),
+      entry('synthetic-c', 1.2, 'ng/dL', null, '2026-07-07'),
+    ] });
+    expect(series.points.map((p) => p.noteId)).toEqual(['synthetic-a', 'synthetic-b']);
+    expect(series.skipped).toBe(1);
+    expect(convert).not.toHaveBeenCalled();
+  });
+});
+
+describe('P-LAB-TREND-CONVERT — czekanie na leniwie ładowany konwerter', () => {
+  const mixed = [{ testKey: 'ft4', points: [entry('a', 15, 'pmol/L', null, '2026-05-26'), entry('b', 1.2, 'ng/dL', null, '2026-07-07')] }];
+
+  it('seria w jednej jednostce, wyniki niedokładne i klucz spoza konwertera nie czekają', async () => {
+    const ja = vi.fn();
+    const { trend } = trendWithConverter({ withConverter: false, ja });
+    const series = [
+      { testKey: 'ft4', points: [entry('a', 15, 'pmol/L', null, '2026-05-26'), entry('b', 16, 'pmol/L', null, '2026-06-26')] },
+      { testKey: 'lh', points: [entry('c', 2, 'IU/L', null, '2026-05-26'), { ...entry('d', null, 'mIU/mL', null, '2026-06-26') }] },
+      { testKey: 'clcr:schwartz', points: [entry('e', 90, 'ml/min/1,73m²', null, '2026-05-26'), entry('f', 1.5, 'ml/s', null, '2026-06-26')] },
+    ];
+    expect(trend.multi(series)).toBe(false);
+    await trend.wait(series);
+    expect(ja).not.toHaveBeenCalled();
+  });
+
+  it('seria wielojednostkowa bez konwertera czeka na ja() i rusza po jego odpowiedzi', async () => {
+    let ready;
+    const ja = vi.fn((cb) => { ready = cb; });
+    const { trend } = trendWithConverter({ withConverter: false, ja });
+    let done = false;
+    const waiting = trend.wait(mixed).then(() => { done = true; });
+    await Promise.resolve();
+    expect(ja).toHaveBeenCalledOnce();
+    expect(done).toBe(false);
+    ready(true);
+    await waiting;
+    expect(done).toBe(true);
+  });
+
+  it('obecny konwerter z convertAll nie uruchamia ładowania', async () => {
+    const ja = vi.fn();
+    const { trend } = trendWithConverter({ ja });
+    await trend.wait(mixed);
+    expect(ja).not.toHaveBeenCalled();
+  });
+
+  it('brak odpowiedzi ja() kończy czekanie po 5 s, a wyjątek w ja() od razu', async () => {
+    vi.useFakeTimers();
+    try {
+      const { trend } = trendWithConverter({ withConverter: false, ja: () => {} });
+      let done = false;
+      const waiting = trend.wait(mixed).then(() => { done = true; });
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await waiting;
+      expect(done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+    const { trend } = trendWithConverter({ withConverter: false, ja: () => { throw new Error('fikcyjny błąd ładowania'); } });
+    await expect(trend.wait(mixed)).resolves.toBeUndefined();
+  });
+});
+
+// P-LAB-TREND-CONVERT-2: znacznik pokolenia. Prawdziwe Kl() (nakładki na siatki) i Xl() (Historia) z artefaktu
+// z minimalną atrapą DOM; wywołanie wyprzedzone w trakcie czekania na konwerter nie może już rysować.
+class FakeElement {
+  constructor(tag, attrs = {}) {
+    this.tag = tag;
+    this.children = [];
+    this.className = attrs.class || '';
+    this.textContent = attrs.text || '';
+    this.style = { setProperty() {} };
+  }
+  get firstChild() { return this.children[0] || null; }
+  appendChild(child) { this.children.push(child); return child; }
+  removeChild(child) { this.children = this.children.filter((c) => c !== child); return child; }
+  addEventListener() {}
+  querySelectorAll(selector) {
+    const found = [];
+    const walk = (node) => node.children.forEach((c) => {
+      if (selector === 'svg.vilda-patient-chart' && c.tag === 'svg') found.push(c);
+      walk(c);
+    });
+    walk(this);
+    return found;
+  }
+}
+
+const tick = () => new Promise((resolve) => { setTimeout(resolve, 0); });
+const KL_GUARD = 'if(t&&t._vildaLtcGenKl!==LtcGen)return;';
+
+function overlays({ withoutGuard = false } = {}) {
+  let source = authSource.slice(authSource.indexOf('async function Kl('), authSource.indexOf('function Vl('));
+  if (withoutGuard) {
+    expect(source).toContain(KL_GUARD);
+    source = source.replace(KL_GUARD, '');
+  }
+  const helper = authSource.slice(authSource.indexOf('function LtcSeriaWielujednostkowa('), authSource.indexOf('function Nl('));
+  let loaded = false;
+  const pending = [];
+  const stubs = {
+    i: { sessionStorage: { getItem: () => null }, setTimeout: (...args) => setTimeout(...args) },
+    // Jak ja() w artefakcie: załadowany konwerter odpowiada w następnym zadaniu, ładowany — po wczytaniu skryptów.
+    ja: (cb) => { if (loaded) setTimeout(() => cb(true), 0); else pending.push(cb); },
+    jt: () => ({
+      listPatientLabSeries: async () => [{ testKey: 'ft4', test: 'fT4', points: [
+        entry('synthetic-ft4-pmol', 15, 'pmol/L', null, '2026-05-26'),
+        entry('synthetic-ft4-ngdl', 1.2, 'ng/dL', null, '2026-07-07'),
+      ] }],
+      listPatientTreatmentPeriods: async () => [],
+    }),
+    oe: (t) => { if (t) t.children = []; },
+    yi: (t) => ({ unit: 'pmol/L', points: t.points.map((p) => ({ ...p, v: p.valueNum })), skipped: 0 }),
+    e: (tag, attrs) => new FakeElement(tag, attrs),
+    to: async () => null,
+    ao: () => '',
+    wa: (serie) => serie.test,
+    vi: () => null, mi: () => null, ga() {}, In() {}, Bl() {}, Ul: () => ({ ribs: 0, pills: 0 }), no() {}, Ta: '#5856D6',
+  };
+  const names = Object.keys(stubs);
+  const Kl = new Function(...names, `${helper};${source};return Kl;`)(...names.map((n) => stubs[n]));
+  const charts = new FakeElement('div');
+  const svg = new FakeElement('svg');
+  svg._vildaScale = { ageStart: 0, ageEnd: 240 };
+  charts.appendChild(svg);
+  const load = () => { loaded = true; pending.splice(0).forEach((cb) => cb(true)); };
+  return { Kl, charts, load, pending };
+}
+
+describe('P-LAB-TREND-CONVERT-2 — wywołanie wyprzedzone w trakcie czekania nie rysuje', () => {
+  async function overlappingOverlays(options) {
+    const { Kl, charts, load, pending } = overlays(options);
+    const host = new FakeElement('div', { class: 'vilda-siatka-overlay-host' });
+    const first = Kl(host, charts, 'fikcyjny-pacjent', () => {}, 120);
+    await tick();
+    const second = Kl(host, charts, 'fikcyjny-pacjent', () => {}, 120);
+    await tick();
+    expect(pending).toHaveLength(2);
+    load();
+    await Promise.all([first, second]);
+    await tick(); // odświeżenie strzałek zlecone przez narysowane nakładki
+    return host.children.filter((c) => c.className === 'vilda-siatka-overlay-chips');
+  }
+
+  it('nakładki: dwa wywołania na tym samym kontenerze w czasie ładowania konwertera dają jeden wiersz chipów', async () => {
+    const rows = await overlappingOverlays();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].children.map((c) => c.textContent)).toContain('fT4 ×2');
+  });
+
+  it('kontrola: bez znacznika pokolenia ten sam scenariusz daje zdublowany wiersz', async () => {
+    expect(await overlappingOverlays({ withoutGuard: true })).toHaveLength(2);
+  });
+
+  // Historia czeka kolejno na zdarzenia osi czasu i pacjenta; każdy odczyt otwiera test. `stop` przerywa Xl()
+  // wyjątkiem przy pierwszym elemencie o tym tekście albo klasie, żeby nie budować atrap całej karty.
+  // Od LAB-HISTORIA PR2 (P-BADANIA-TREND-HISTORIA) Xl nie rysuje „Trendu wyników” (Jl) i na niego nie czeka.
+  function history(stop) {
+    const source = authSource.slice(authSource.indexOf('async function Xl('), authSource.indexOf('function rn(){'));
+    const gates = {};
+    const trendCalls = [];
+    const gate = (name) => new Promise((resolve) => { gates[name] = resolve; });
+    const stubs = {
+      jt: () => ({ listPatientTimelineEvents: () => gate('events'), getPatient: () => gate('patient') }),
+      oe: (t) => { if (t) t.children = []; },
+      e: (tag, attrs, children) => {
+        if (attrs && (attrs.text === stop || attrs.class === stop)) throw new Error(`Historia rysuje: ${stop}`);
+        const element = new FakeElement(tag, attrs);
+        (children || []).forEach((child) => element.appendChild(child));
+        return element;
+      },
+      Jl: (...args) => { trendCalls.push(args); return gate('trend'); },
+      Fl: [{ id: 'all', label: 'Wszystkie' }],
+      i: { localStorage: { getItem: () => '1' } },
+    };
+    const names = Object.keys(stubs);
+    const Xl = new Function(...names, `${source};return Xl;`)(...names.map((n) => stubs[n]));
+    const open = async (name, value) => { await tick(); gates[name](value); await tick(); };
+    return { Xl, open, trendCalls };
+  }
+
+  it('Historia nie woła trendu wyników i rysuje nagłówek bez czekania na serie', async () => {
+    const { Xl, trendCalls } = history('Historia pacjenta');
+    const host = new FakeElement('div');
+    await expect(Xl(host, 'fikcyjny-pacjent', () => {})).rejects.toThrow('Historia rysuje: Historia pacjenta');
+    expect(trendCalls).toEqual([]);
+    expect(host.children.map((c) => c.className)).toEqual(['vilda-lab-trend-host']);
+  });
+
+  it('Historia: wywołanie wyprzedzone w trakcie odczytu zdarzeń nie dopisuje listy do kontenera', async () => {
+    const { Xl, open } = history('vilda-patient-timeline-list');
+    const host = new FakeElement('div');
+    const run = Xl(host, 'fikcyjny-pacjent', () => {});
+    await tick();
+    host._vildaLtcGenXl += 1;
+    await open('events', []);
+    await open('patient', null);
+    await expect(run).resolves.toBeUndefined();
+  });
+
+  it('kontrola: Historia niewyprzedzona dochodzi do nagłówka i do listy zdarzeń', async () => {
+    const header = history('Historia pacjenta');
+    await expect(header.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
+      .rejects.toThrow('Historia rysuje: Historia pacjenta');
+
+    const list = history('vilda-patient-timeline-list');
+    const second = expect(list.Xl(new FakeElement('div'), 'fikcyjny-pacjent', () => {}))
+      .rejects.toThrow('Historia rysuje: vilda-patient-timeline-list');
+    await list.open('events', []);
+    await list.open('patient', null);
+    await second;
+  });
+
+  // P-BADANIA-TREND-HISTORIA: w miejscu sekcji trendu odnośnik do zakładki „Badania”, tylko gdy oś czasu ma wynik
+  // badania (notatka z wynikiem, bez leku i bez klirensu).
+  async function trendHost(events) {
+    const { Xl, open } = history('vilda-patient-timeline-list');
+    const host = new FakeElement('div');
+    const run = expect(Xl(host, 'fikcyjny-pacjent', () => {})).rejects.toThrow('Historia rysuje');
+    await open('events', events);
+    await open('patient', null);
+    await run;
+    return host.children[0];
+  }
+  const note = (extra) => ({ type: 'note', noteId: 'synthetic-note', title: 'Fikcyjny wpis', ...extra });
+
+  it('Historia z wynikiem badania: odnośnik „Trend i porównanie wyników są w zakładce Badania →”', async () => {
+    const trend = await trendHost([note({ labResult: { test: 'TSH', value: '2,1 mIU/L', valueNum: 2.1 } })]);
+    expect(trend.className).toBe('vilda-lab-trend-host');
+    expect(trend.children.map((c) => c.className)).toEqual(['vilda-lab-trend-link']);
+    expect(trend.children[0].children[0].textContent).toBe('Trend i porównanie wyników są w zakładce Badania →');
+  });
+
+  it('Historia bez wyniku badania (lek, klirens, zlecenie bez wartości i nazwy) nie pokazuje odnośnika', async () => {
+    const trend = await trendHost([
+      note({ medication: { name: 'Fikcyjny lek', action: 'start' }, labResult: { test: 'TSH', value: '2' } }),
+      note({ category: 'wynik-klirens', labResult: { test: 'Klirens', value: '90' } }),
+      note({ labResult: {} }),
+      { type: 'measurement', ageMonths: 120 },
+    ]);
+    expect(trend.children).toEqual([]);
   });
 });
 

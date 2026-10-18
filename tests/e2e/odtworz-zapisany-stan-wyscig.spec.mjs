@@ -78,6 +78,15 @@ async function idZapisanegoPacjenta(page) {
   return id;
 }
 
+async function koniecCzyszczenia(page) {
+  // Odroczony callback „Wyczyść” zdejmuje flagi parowania. Gdy wykona się już po
+  // wczytaniu, może wyprzedzić opóźniony import GH i zrobić z jego lustra wiersz ręczny.
+  // Ten test bada import po wczytaniu, więc zaczyna je po zakończeniu czyszczenia.
+  await page.waitForFunction(() => !window.VildaPersistence.isClearInProgress()
+    && !window.__vildaSuspendAdvIntakeSync && !window.__vildaSuspendGrowthHistoryCrossSync
+    && !window.__vildaSuspendIntakeUserReset);
+}
+
 test('„Odtwórz zapis” w trakcie powolnego importu punktów GH: przycisk „Odtwórz zapisany stan” nie wraca', async ({ page }) => {
   test.setTimeout(120_000);
   await otworz(page);
@@ -85,6 +94,7 @@ test('„Odtwórz zapis” w trakcie powolnego importu punktów GH: przycisk „
   await page.locator('#saveDataBtnSidebar').click();
   const pid = await idZapisanegoPacjenta(page);
   await page.evaluate(() => window.clearAllData());
+  await koniecCzyszczenia(page);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
   await expect(page.locator('.vhv-tile')).toBeVisible();
 
@@ -121,6 +131,7 @@ test('kolejne wczytanie pacjenta znów proponuje wybór — zapamiętany wybór 
   const pid = await idZapisanegoPacjenta(page);
   await page.evaluate(() => window.clearAllData());
   const wczytaj = async () => {
+    await koniecCzyszczenia(page);
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
     await expect(page.locator('.vhv-tile')).toBeVisible();
     await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
@@ -153,6 +164,7 @@ test('F5 po „Odtwórz zapis” u pacjenta z punktami GH: przycisk nie wraca �
   await page.locator('#saveDataBtnSidebar').click();
   const pid = await idZapisanegoPacjenta(page);
   await page.evaluate(() => window.clearAllData());
+  await koniecCzyszczenia(page);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
   await expect(page.locator('.vhv-tile')).toBeVisible();
   await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();

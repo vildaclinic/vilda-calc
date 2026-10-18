@@ -106,7 +106,8 @@ test('comparison follows the visible selection instead of bringing back the calc
     await hormone(page, 'amh').click();
     expect((await state(page)).selected).toEqual(['amh']);
     await panel(page).locator('.vhl-compare-toggle').click();
-    await expectComparison(page, 'amh', period === 'life' ? 'mini' : 'puberty');
+    await expectComparison(page, 'amh', 'puberty');
+    await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
     await panel(page).locator('.vhl-compare-toggle').click();
     expect((await state(page)).compare).toBe(false);
     expect((await state(page)).selected).toEqual(['amh']);
@@ -115,18 +116,180 @@ test('comparison follows the visible selection instead of bringing back the calc
   }
 });
 
-test('entering comparison with no selected hormone keeps the chart empty', async ({ page }) => {
-  for (const period of ['life', 'mini', 'puberty']) {
-    await openComponent(page);
+const concentration = (page, id) => chart(page).locator(`[data-patient-concentration="${id}"]`);
+const measuredContext = (analyte = 'lh', sex = 'female', ageYears = 12, extra = {}) => ({
+  ...initialContext, analyte, sex, ageYears,
+  measurement: { value: analyte === 'inhibin_b' ? 40 : 2, unit: analyte === 'inhibin_b' ? 'pg/mL' : 'IU/L' },
+  ...extra,
+});
+async function comparisonGeometry(page) {
+  return chart(page).evaluate(svg => ({
+    viewBox: svg.getAttribute('viewBox'),
+    scale: [svg.dataset.comparisonScale, svg.dataset.comparisonMin, svg.dataset.comparisonMax],
+    curves: [...svg.querySelectorAll('[data-comparison-curve]')].map(path => ({
+      hormone: path.dataset.comparisonCurve, sex: path.dataset.comparisonSex,
+      profile: path.dataset.profile, unit: path.dataset.unit,
+      d: path.getAttribute('d'), dash: path.getAttribute('stroke-dasharray'),
+    })),
+    ticks: [...svg.querySelectorAll('[data-year-tick],[data-month-tick],[data-linear-tick]')].map(node => ({
+      year: node.dataset.yearTick, month: node.dataset.monthTick, value: node.dataset.linearTick,
+      text: node.textContent, x: node.getAttribute('x'), y: node.getAttribute('y'),
+    })),
+    points: [...svg.querySelectorAll('[data-patient-concentration]')].map(group => ({
+      profile: group.dataset.profile, age: group.dataset.age, upper: group.dataset.ageUpper,
+      value: group.dataset.value, reference: group.dataset.referenceValue,
+      result: group.querySelector('[data-result-point]')?.getAttribute('cy'),
+      median: group.querySelector('[data-median-point]')?.getAttribute('cy'),
+    })),
+  }));
+}
+
+for (const [sex, analyte, width] of [
+  ['female', 'lh', 1440], ['female', 'fsh', 1440],
+  ['male', 'lh', 1440], ['male', 'fsh', 1440], ['female', 'lh', 320],
+]) {
+  test(`${sex} age 12 ${analyte} from whole life opens the existing puberty comparison at ${width}px`, async ({ page }, testInfo) => {
+    await openComponent(page, { width, context: measuredContext(analyte, sex) });
+    await panel(page).locator('.vhl-compare-toggle').click();
+    if (sex === 'female' && analyte === 'lh') await testInfo.attach(`F12-LH-${width}`, {
+      body: await panel(page).screenshot(), contentType: 'image/png',
+    });
+    await expectComparison(page, analyte, 'puberty');
+    await expect(concentration(page, analyte)).toHaveCount(1);
+    await expect(concentration(page, analyte)).toHaveAttribute('data-profile',
+      `madsen2022-${sex}-${analyte}${sex === 'female' ? '-sex-comparison' : ''}`);
+    await expect(concentration(page, analyte)).toHaveAttribute('data-value', '2');
+    await expect(chart(page)).toHaveAttribute('data-comparison-max', '8');
+    const automatic = await comparisonGeometry(page);
+    // The default chooses the already available view; it neither fits a new
+    // curve nor changes the source marker compared with the doctor's choice.
+    await view(page, 'life').click();
+    await view(page, 'puberty').click();
+    await panel(page).locator('.vhl-compare-toggle').click();
+    await expectComparison(page, analyte, 'puberty');
+    expect(await comparisonGeometry(page)).toEqual(automatic);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });
+}
+
+for (const example of [
+  { title: 'LH at the lower source boundary of 6 years', analyte: 'lh', age: 6, point: true },
+  { title: 'LH at exactly 16 years', analyte: 'lh', age: 16, point: true },
+  { title: 'LH at 16 years and zero completed months', analyte: 'lh', age: 16, upper: 16 + 1 / 12, point: false },
+  { title: 'inhibin B at exactly 20 years', analyte: 'inhibin_b', age: 20, point: true },
+  { title: 'inhibin B at 20 years and zero completed months', analyte: 'inhibin_b', age: 20, upper: 20 + 1 / 12, point: false },
+]) {
+  test(`whole-life comparison routes ${example.title} without widening source eligibility`, async ({ page }) => {
+    const id = example.analyte === 'inhibin_b' ? 'inhb' : example.analyte;
+    await openComponent(page, { context: measuredContext(example.analyte, 'male', example.age, {
+      ageUpperYears: example.upper ?? example.age, ageUpperInclusive: example.upper === undefined,
+    }) });
+    await panel(page).locator('.vhl-compare-toggle').click();
+    await expectComparison(page, id, 'puberty');
+    await expect(concentration(page, id)).toHaveCount(example.point ? 1 : 0);
+    await expect(chart(page).locator('[data-comparison-age-marker]')).toHaveCount(1);
+    if (example.point) {
+      await expect(concentration(page, id)).toHaveAttribute('data-age-upper', String(example.age));
+      await expect(concentration(page, id)).toHaveAttribute('data-profile', id === 'lh'
+        ? 'madsen2022-male-lh' : 'borelli2025-male-inhb');
+    } else await expect(panel(page).locator('[data-lifespan="insight-text"]')).toHaveText(id === 'lh'
+      ? 'Porównanie dotyczy wieku od 6 do 16 lat.' : 'Porównanie dotyczy wieku od 8 do 20 lat.');
+  });
+}
+
+test('whole-life AMH comparison at male age 12 stays educational without a patient concentration', async ({ page }) => {
+  await openComponent(page, { context: measuredContext('amh', 'male', 12, {
+    measurement: { value: 20, unit: 'ng/mL' },
+  }) });
+  await panel(page).locator('.vhl-compare-toggle').click();
+  await expectComparison(page, 'amh', 'puberty');
+  await expect(chart(page).locator('[data-comparison-curve="amh"]')).toHaveCount(2);
+  await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+});
+
+test('the visible candidate chooses its period even when the calculated hormone has another age domain', async ({ page }) => {
+  await openComponent(page, { context: measuredContext('amh', 'female', 6, {
+    measurement: { value: 20, unit: 'ng/mL' },
+  }) });
+  await hormone(page, 'amh').click();
+  await hormone(page, 'lh').click();
+  expect((await state(page)).selected).toEqual(['lh']);
+  await panel(page).locator('.vhl-compare-toggle').click();
+  await expectComparison(page, 'lh', 'puberty');
+  // The current measurement is AMH, so it must not become an LH result.
+  await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+});
+
+test('unknown age and legacy adult fallback do not invent a comparison source', async ({ page }) => {
+  for (const example of [
+    { analyte: 'lh', sex: 'female', ageYears: null, period: 'mini' },
+    { analyte: 'lh', sex: 'male', ageYears: 44, period: 'mini' },
+    { analyte: 'amh', sex: 'male', ageYears: 44, period: 'mini' },
+    { analyte: 'amh', sex: 'female', ageYears: 44, period: 'puberty' },
+    { analyte: 'inhibin_b', sex: 'female', ageYears: 44, period: 'puberty' },
+  ]) {
+    const id = example.analyte === 'inhibin_b' ? 'inhb' : example.analyte;
+    await openComponent(page, { context: measuredContext(example.analyte, example.sex, example.ageYears, {
+      measurement: { value: 2, unit: example.analyte === 'amh' ? 'ng/mL' : example.analyte === 'lh' ? 'IU/L' : 'pg/mL' },
+    }) });
+    await panel(page).locator('.vhl-compare-toggle').click();
+    await expectComparison(page, id, example.period);
+    await expect(chart(page).locator('[data-patient-concentration]')).toHaveCount(0);
+    await expect(chart(page).locator('[data-comparison-age-marker]')).toHaveCount(0);
+  }
+});
+
+test('explicit periods and same-patient edits preserve the chosen view independently of result eligibility', async ({ page }) => {
+  const context = measuredContext('lh', 'female', 12, { measurement: null });
+  for (const period of ['mini', 'puberty']) {
+    await openComponent(page, { context });
     await view(page, period).click();
-    await hormone(page, 'lh').click();
+    await panel(page).locator('.vhl-compare-toggle').click();
+    await expectComparison(page, 'lh', period);
+    const shape = await comparisonGeometry(page);
+    for (const measurement of [null, { value: 2, unit: 'IU/L' },
+      { value: 2, unit: 'IU/L', operator: '<' }, null]) {
+      await page.evaluate(context => window.pubertyComparisonChart.update(context), { ...context, measurement });
+      await expectComparison(page, 'lh', period);
+      await expect(concentration(page, 'lh')).toHaveCount(period === 'puberty' && measurement && !measurement.operator ? 1 : 0);
+      const current = await comparisonGeometry(page);
+      expect({ ...current, points: [] }).toEqual({ ...shape, points: [] });
+    }
+    for (const ageYears of [0.25, 35, null, 12]) {
+      await page.evaluate(context => window.pubertyComparisonChart.update(context), { ...context, ageYears });
+      await expectComparison(page, 'lh', period);
+    }
+    await panel(page).locator('.vhl-compare-toggle').click();
+    expect((await state(page)).view).toBe(period);
+    expect((await state(page)).selected).toEqual(['lh']);
+  }
+});
+
+test('automatic puberty entry needs only the existing age, while measurement changes cannot reroute it', async ({ page }) => {
+  const context = measuredContext('lh', 'female', 12, { measurement: null });
+  await openComponent(page, { context });
+  await panel(page).locator('.vhl-compare-toggle').click();
+  await expectComparison(page, 'lh', 'puberty');
+  for (const measurement of [null, { value: 2, unit: 'IU/L' },
+    { value: 2, unit: 'IU/L', operator: '<' }, null]) {
+    await page.evaluate(context => window.pubertyComparisonChart.update(context), { ...context, measurement });
+    await expectComparison(page, 'lh', 'puberty');
+    await expect(concentration(page, 'lh')).toHaveCount(measurement && !measurement.operator ? 1 : 0);
+  }
+});
+
+test('entering comparison with no selected hormone keeps the chart empty', async ({ page }) => {
+  for (const context of [initialContext, measuredContext('amh', 'female', 12)]) for (const period of ['life', 'mini', 'puberty']) {
+    await openComponent(page, { context });
+    await view(page, period).click();
+    await hormone(page, context.analyte).click();
     await expectEmpty(page);
     await expect(panel(page).locator('.vhl-compare-toggle')).toBeVisible();
     await panel(page).locator('.vhl-compare-toggle').click();
     await expectEmpty(page, true);
     expect((await state(page)).compare).toBe(true);
     expect((await state(page)).view).toBe(period === 'life' ? 'mini' : period);
-    await page.evaluate(context => window.pubertyComparisonChart.update({ ...context, ageYears: 14.5 }), initialContext);
+    await page.evaluate(context => window.pubertyComparisonChart.update({ ...context, ageYears: 14.5 }), context);
     await expectEmpty(page, true);
     await panel(page).locator('.vhl-compare-toggle').click();
     expect((await state(page)).compare).toBe(false);

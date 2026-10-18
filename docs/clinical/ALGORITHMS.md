@@ -20,6 +20,8 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-INHIBIN-B | Inhibina B: wiek, minipuberty i kontekst dorosłych | `vilda_lab_inhibin_b_data.js`, `vilda_lab_inhibin_b.js`, wspólne UI i snapshot | `lab-inhibin*.test.mjs`, E2E `lab-inhibin-b.spec.mjs` | orientacyjne zakresy źródłowe; ograniczenia i polityki w `INHIBIN_B.md`; akceptacja kliniczna właściciela przed scaleniem |
+| LAB-TT-MAYO | Testosteron całkowity: M według wieku/G, F według wieku od 6 miesięcy | `vilda_lab_testosterone_data.js`, `vilda_lab_testosterone.js`, `vilda_lab_testosterone_units.js`, wspólne UI i snapshot | `lab-testosterone*.test.mjs`, E2E `lab-testosterone*.spec.mjs`; wyniki uruchomień w PR | etap 3 M i pierwsza partia F; źródła, luki i polityki w `TESTOSTERONE.md`; końcowy przegląd kliniczny właściciela przed scaleniem |
+| LAB-HISTORY | Historia i porównanie zapisanych wyników badań (model bez UI) | `vilda_lab_history.js` | `lab-history-view.test.mjs`, `lab-history-vault.test.mjs` | test regresyjny modelu; moduł jeszcze nieładowany przez strony (PR1 planu historii) |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -31,6 +33,1103 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | SEX-FROM-NAME | Podpowiedź płci nowego pacjenta z imienia i nazwiska (P-PLEC-IMIE) | `vilda_plec_z_imienia.js`, `vilda_imiona_plec_dane.js` (rejestr PESEL), generator `tests/scripts/imiona-pesel.mjs` | `tests/unit/plec-z-imienia.test.mjs`, E2E `plec-z-imienia.spec.mjs`, `plec-z-imienia-mobile.spec.mjs` | 2026-10-12; zmienia tylko domyślną płeć nowego pacjenta, z notką; P-PLEC-IMIE-2 (2026-10-13): także kolejny nowy pacjent po „Wyczyść”; akceptacja kliniczna właściciela 2026-10-13 (progi 99 % / 20, ostrzeżenia i kolor notek bez zmian) |
 
 ## Długi walidacyjne o najwyższym priorytecie
+
+### LAB-TT-MAYO — etap 3 po ujednoliceniu danych pokwitaniowych (2026-10-15)
+
+**Wpływ kliniczny: tak.** Zmienia się interpretacja testosteronu całkowitego
+u chłopców i mężczyzn. Osie wieku i aktualnego G korzystają z osobnego,
+wersjonowanego profilu Mayo TTST/8533 (surowica, LC-MS/MS). Nie ma wspólnego
+werdyktu z połączonych zakresów ani rozpoznawania stadium z wieku, P lub
+nieokreślonego numeru Tannera. Dane głównego formularza są wykorzystywane
+bez ponownego wywiadu. Brak wieku/płci nie uruchamia zakresu dorosłego.
+
+**Różnica względem bazy:** usunięto dawne męskie zakresy i domyślną normę
+8,6–29 nmol/L z ogólnego słownika. Publiczne dawne API TT nie interpretuje
+M/nieznanej płci; robi to wyłącznie nowy silnik. Przed zmianą 3-miesięczny
+chłopiec z TT 0,8 nmol/L dostawał sprzeczne oceny po wpisaniu starego Tannera I,
+a aktualne G i GnRHa z formularza głównego nie wpływały na ocenę TT.
+Zakres dorosłych Mayo 240–950 ng/dL zaczyna się od ukończonych 19 lat;
+17–18 lat ma nadal 300–1200 ng/dL. Nie dodano osobnego obniżenia normy seniorów.
+W męskim etapie żeńskie wiersze pozostały do osobnego audytu. Pierwszą
+partię żeńską po tym audycie opisano poniżej. Współczynniki przeliczeń
+i działające męskie zakresy/kwalifikacja pozostają bez zmian.
+
+**Ograniczenia:** zapis źródłowego minimum `<7` nie dowodzi LoD/LoQ ani
+liczbowego minimum. Np. 6 ng/dL przy źródle `<7–20` nie daje „poniżej normy”
+ani pełnego „w zakresie”. G jest dodatkową osią tylko przy bieżącej, jawnej
+obserwacji i całym możliwym wieku ≥1 i <19 lat; ten przedział kwalifikacji jest
+konserwatywną polityką aplikacji. Niepewny wiek nie skleja odrębnych grup. Nieznana metoda
+i kontekst próbki pozwalają jedynie na porównanie orientacyjne; znana
+niezgodność, stymulacja lub leczenie blokują odniesienie bazalne.
+
+**Dorośli mężczyźni:** krótka nota ES2018/EAU2026 pozostaje widoczna także przy wyniku
+w zakresie Mayo. Rozpoznanie wymaga objawów i potwierdzenia w powtarzanych
+porannych pobraniach na czczo. Próg diagnostyczny EAU 12 nmol/L nie zastępuje
+dolnej granicy tego katalogu. SHBG/wolny T ocenia się, gdy wskazane.
+
+**Zapis i historia:** `lab.assessment` utrwala wynik, kontekst, źródło,
+polityki i obie osie. Jednostka kanoniczna to nmol/L; snapshot waliduje
+zapisany współczynnik według małego, niezależnego rejestru konwersji.
+300 ng/dL → 10,401 nmol/L, ale seria zapisanego wpisu nadal ma 300 ng/dL.
+Nierówności i LOD/LOQ nie stają się punktami liczbowymi. Dawne TT bez koperty
+zachowuje wynik i jawną normę wpisu bez oceny według dzisiejszego pacjenta;
+nowa norma nie jest dopisywana do historycznych wizyt. Pozostała praca nad
+historią/trendem oraz dane, geometria i mediany wykresów hormonów są odrębne.
+
+#### Pierwsza partia żeńska po audycie TT (2026-10-15)
+
+**Wpływ kliniczny: tak.** Wersja danych `2026-10-15.2` w module `1.1.0`
+dodaje `mayo-ttst-female`; męski profil zachowuje własną wersję
+`2026-10-15.1`, wartości i noty. Wspólna polityka
+`testosterone-sex-specific-source-selection` korzysta z płci i pełnego
+możliwego wieku ze wspólnego kontekstu, niezależnie od wyniku. Brak wieku
+lub płci nie daje dorosłej normy. Przeliczenie nie wymaga nowej ankiety.
+
+**Źródło i pokrycie:** pełny katalog Mayo TTST/8533 odczytany 15.10.2026,
+[definicja testu PDF](https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=8533)
+str. 3–4/8 i [setup PDF](https://www.mayocliniclabs.com/test-catalog/setup.php?unit_code=8533&format=pdf)
+str. 2/2, surowica LC-MS/MS. Snapshot nie jest datą rewizji wytycznej.
+Aktywne oryginalne ng/dL: 6 miesięcy–9 lat `<7–20`, 10–11 `<7–44`,
+12–16 `<7–75`, 17–18 `20–75`, ≥19 `8–60`. Przejście do ostatniego
+wiersza następuje w 19. urodziny. Nie interpolujemy między grupami,
+nie łączymy norm i nie nazywamy ogólnego ≥19 normą konkretnej fazy
+cyklu/menopauzy. Katalog nie opisuje pełnej kohorty, percentyli ani
+analitycznej LoD/LoQ 7; źródłowy dolny kraniec `<7` pozostaje nieokreślony.
+
+**Różnica względem bazy:** usuwana jest dawna żeńska ścieżka nowych ocen
+z ogólnego słownika. Podstawowe liczby wieku Soldin były odtwarzalne;
+Mayo jest jawną zmianą polityki źródłowej, nie dowodem błędu każdego
+laboratoryjnego RI. Realne uchybienia to przypisanie tabel Tannera do
+Soldin mimo braku oceny stadium w artykule oraz opis 15–18 oparty na
+15–16 bez właściwej odrębnej grupy 17–18. Przykładowo F11/TT 1,6 nmol/L
+przekracza nowe 44 ng/dL, F13/TT 2 mieści się w `<7–75`, a dorosła/TT 2,2
+przekracza 60 ng/dL mimo dawnego 0,3–2,4. Są to porównania źródłowe,
+nie diagnozy. U F8 z 6 ng/dL dolnego krańca nie można ocenić; nie ma below
+ani pełnego within.
+
+**Jawne luki:** nie uruchomiono osi Th. W trzech pełnych dokumentach
+Mayo i dodatkowych katalogach TTST/TTFB nie zdefiniowano żeńskiej cechy
+Tannera jako breast/Th. Th/P i legacy Tanner nie wybierają zakresu TT.
+Pełny PRINCE 2026 z suplementem rozróżnia B/PH, ale autorzy wykluczają
+tabele stadium jako samodzielne RI; to statystyki opisowe innej metody
+CLIA. Nie przenosimy ich do Mayo LC-MS/MS.
+
+Całe **F <6 miesięcy** pozostaje bez kwalifikowanego profilu, z zachowanym
+przeliczeniem i konkretnym powodem. Niewłączone Mayo 20–80 ng/dL istotnie
+różni się od pełnego Johannsen 2018, tabela 1: dziewczynki LC-MS/MS
+`<LOD–0,21` i `<LOD–0,17` nmol/L w nominalnych grupach 2–<3,5/3,5–5 miesięcy,
+LOD 0,10; GA 37+0–41+6, faktyczny żeński wiek 2,3–5,0 miesiąca. Wymaga to
+osobnego profilu i polityki wieku/GA/metody, bez fallbacku Mayo lub normy
+dorosłej. Ljubičić 2022 nie zawiera TT. Znane wcześniactwo nie dostaje
+zastępczych norm.
+
+**Odrębne żeńskie komunikaty:** [SFE 2025](https://doi.org/10.1111/cen.15265)
+§6.2 i tabela 3 traktują **>5 nmol/L** jako próg dalszej pilnej oceny
+przyczyny w diagnostyce nadmiaru androgenów, weryfikacji LC-MS/MS
+i odpowiedniej diagnostyki obrazowej. Nie zmienia to RI Mayo i nie
+rozpoznaje guza. Automatyczną notę ograniczono do pełnego wieku ≥19
+w tej partii produktu; 19 nie pochodzi z SFE jako biologiczny próg
+stosowalności. Dokładnie 5 i `≥5` nie dowodzą ścisłego >5; `>5` oraz `≥6`
+dowodzą, `<6` i `<LOD` nie. Nie zaokrąglamy przed decyzją. Młodsza
+pacjentka nadal widzi odchylenie od własnego zakresu wieku.
+
+[ES 2014](https://doi.org/10.1210/jc.2014-2260) 1.1 i
+[Global Consensus 2019](https://doi.org/10.1210/jc.2019-01603) I(3)/Summary
+nie pozwalają rozpoznawać niedoboru androgenów/HSDD ani zalecać TRT
+z samego niskiego TT. [PCOS 2023](https://doi.org/10.1210/clinem/dgad463)
+1.2.1 i SFE §6.2–6.3 wskazują, że TT w RI nie wyklucza hiperandrogenizmu;
+SHBG/FT ocenia się przy odpowiednich wskazaniach, bez nowego kalkulatora
+i obowiązkowych pól. U młodszych nie stosujemy dorosłych kryteriów jako
+normy dojrzewania. Męskie noty Bhasin/EAU nie są odtwarzane u F.
+
+Znana ciąża, COCP, egzogenny T, steroidy płciowe, GnRHa lub stymulacja
+zachowują znaczenie i wyłączają pozorną ocenę nieleczonego profilu;
+moduł nie ma ich osobnych RI ani celów terapii. Nieznane fakty nie stają
+się ujemnym wywiadem. Historia zachowuje własną kopertę/normę, bez
+retroaktywnego Mayo lub nowej noty SFE. Regresje obejmują m.in. granicę
+6 miesięcy, 18/19, `<7`, nierówności wyniku/progu 5, jednostki, kontekst
+leczenia/ciąży i zachowanie M; ich wykonanie i wynik dokumentuje PR.
+
+Pełne tabele, granice, pochodzenie źródeł, syntetyczne przypadki i regresje:
+[TESTOSTERONE.md](TESTOSTERONE.md). Akceptacja makiety i zielone testy nie
+nadają statusu walidacji klinicznej; akceptacja kliniczna właściciela przed
+scaleniem. Ponowny przegląd przy zmianie katalogu Mayo lub wytycznych,
+najpóźniej 2027-10-15.
+
+### LAB-TREND-CONVERT — przeliczanie jednostek w trendzie wyników karty pacjenta (P-LAB-TREND-CONVERT, SW 1.1.277, `vilda_auth_ui.js` 492, 2026-10-14)
+
+**Wpływ kliniczny: tak.** Zmienia się prezentacja historii wyników: wynik
+zapisany w innej znanej jednostce niż reszta serii pojawia się na wykresie
+zamiast znikać. Nie ma nowych norm, współczynników, progów ani zaokrągleń.
+Etap PR0 planu `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, decyzja właściciela 6.2.
+
+**Problem:** „Trend wyników” w Historii, nakładki wyników na siatkach
+i eksport siatek do PDF rysują serię w jej najczęstszej jednostce. Wynik
+w innej jednostce miał być przeliczony, ale funkcja budująca punkty wołała
+konwerter z trzema argumentami zamiast jednego obiektu. Konwerter zawsze
+odpowiadał „Nie znaleziono substancji.”, więc punkt trafiał do stopki
+„pominięto N (inna jednostka …)”. Lekarz nie widział np. fT4 oznaczonego
+w innym laboratorium w ng/dL obok wyników w pmol/L.
+
+**Zmiana:** punkt w innej jednostce przelicza `LabUnitConverter.convertAll`
+z `{substanceId, value, fromUnit}`, czyli ta sama funkcja i ten sam
+współczynnik `factor_to_si` z `lab_units_data.js`, którymi liczy strona
+„Jednostki laboratoryjne”. Przykład: fT4 1 ng/dL = 12,87 pmol/L, współczynnik
+stechiometryczny z masy cząsteczkowej 776,87 g/mol zapisanej w danych.
+Punkt przeliczony ma znacznik `conv` (na wykresie obwódka, jak dotąd)
+i nie niesie tekstowej normy wpisu (`norm: null`), bo ta norma jest
+w jednostce zapisu, a nie w jednostce serii.
+
+Na stronach z kartą pacjenta konwerter ładuje się leniwie, także na Start
+(w czasie bezczynności albo przy pierwszym dotknięciu; sprostowanie
+z P-LAB-TREND-CONVERT-2). Trend i nakładki na siatki budowały punkty, zanim się załadował,
+więc tam sama poprawka wywołania nic by nie zmieniła. Dlatego przy serii
+z wynikami w więcej niż jednej jednostce oba widoki czekają na konwerter,
+najwyżej 5 s; po tym czasie albo przy błędzie ładowania zostaje dawne
+„pominięto”. Seria w jednej jednostce nie czeka. Eksport siatek do PDF
+czekał na konwerter już wcześniej.
+
+**Populacja, jednostki i ograniczenia:** wszyscy pacjenci; wszystkie badania
+i jednostki znane konwerterowi. Jednostką serii zostaje jej najczęstsza
+jednostka, przy remisie jednostka wpisu stojącego w serii wcześniej, jak dotąd. Symbol
+jednostki porównywany jest dosłownie: „µIU/mL” ze znakiem mikro (U+00B5)
+to dla konwertera inna jednostka niż jego „μIU/mL” z grecką literą mu
+(U+03BC), więc taki wpis nadal jest pomijany. Normalizację symboli plan
+przypisuje modelowi historii (PR1). Jednostka nieznana konwerterowi, wartość
+ujemna i seria bez klucza badania nadal dają „pominięto”.
+
+**Strzałki:** punkt przeliczony nigdy nie dostaje strzałki z tekstowej
+normy wpisu. Jak każdy punkt bez tekstowej normy w trendzie, nakładkach
+i PDF może dostać strzałkę z dzisiejszego zakresu przelicznika, liczonego
+dla wartości przeliczonej w jednostce serii. Nie dotyczy to AMH ani wpisów
+z zapisaną oceną. To dotychczasowa reguła tych trzech widoków. Zakładka
+„Badania” (PR2) jej nie użyje (decyzja 6.1), a nakładki i PDF zachowują ją
+do osobnej decyzji (6.4).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- fT4 15 pmol/L z normą „12–22 pmol/L” (26.05.26) i fT4 1,2 ng/dL z normą
+  „0,8–1,8 ng/dL” (07.07.26) → seria w pmol/L, dwa punkty: 15 i 15,444 pmol/L
+  (przeliczony, bez normy), pominięto 0, bez strzałki z tekstu normy. Przed
+  łatką: jeden punkt, pominięto 1. Gdyby punkt przeliczony zachował tekst
+  normy, 15,444 > 1,8 dałoby fałszywe „↑”.
+- TSH 0,12 i 0,05 mIU/L, 0,38 μIU/mL (U+03BC) i 0,4 µIU/mL (U+00B5) → seria
+  w mIU/L, trzy punkty (0,38 przeliczone współczynnikiem 1), pominięto 1.
+
+**Testy:** `tests/unit/lab-snapshot-ui.test.mjs` wykonuje funkcję wyciętą
+z artefaktu z prawdziwym `lab_unit_converter.js` i `lab_units_data.js`
+(oba przypadki wyżej), sprawdza argumenty wywołania `convertAll` na atrapie
+i pilnuje, że dawne wywołanie pozycyjne `convert` nie wraca. Bez łatki
+cztery z tych testów padają. E2E `tests/e2e/lab-trend-jednostki.spec.mjs`
+zapisuje w fikcyjnym sejfie fT4 15 i 17 pmol/L oraz 1,2 ng/dL i otwiera
+Historię karty na Start i w DocPro: chip „fT4 ×3”, bez „pominięto”, jeden
+punkt z obwódką i wartość 15,4. Bez łatki oba warianty pokazują „fT4 ×2”.
+Nakładek na siatki nie obejmuje osobny E2E; korzystają z tej samej funkcji
+czekania co trend. `lab-amh-history-no-reassessment`,
+`lab-assessment-history` i `hormone-reference-ui` przechodzą bez zmian.
+Zielone testy nie są walidacją kliniczną; zmiana czeka na akceptację
+kliniczną właściciela (AGENTS.md § 3).
+
+### P-LAB-TREND-CONVERT-2 — czekanie na konwerter bez dublowania sekcji (SW 1.1.278, `vilda_auth_ui.js` 493, 2026-10-14, przegląd PR0)
+
+**Wpływ kliniczny: nie.** Wyniki, jednostki, przeliczenia, normy i strzałki
+bez zmian; punkt przeliczony nadal ma `norm: null` (decyzja 6.2). Zmienia
+się tylko to, kiedy trend i nakładki czekają na konwerter, oraz to, że
+przerysowanie karty w trakcie czekania i odczytów nie dubluje sekcji.
+
+**Problem:** czekanie z P-LAB-TREND-CONVERT (do 5 s) poszerzyło okno,
+w którym karta rysuje Historię albo nakładki na siatki drugi raz, np. po
+zapisie notatki albo zmianie zakresu wieku siatki. Drugie wywołanie
+czyściło kontener i rysowało od nowa, a pierwsze po przebudzeniu
+dopisywało swoją sekcję: dwa wiersze chipów nakładek albo dwie listy
+„Historia pacjenta”. Czekanie uruchamiały też serie, których i tak nie da
+się przeliczyć: wpis bez jednostki, wpis bez liczby i seria klirensu
+w kilku jednostkach.
+
+**Zmiana:** Historia i nakładki zapamiętują na kontenerze numer wywołania.
+Wywołanie, które po czekaniu nie jest już ostatnim na tym kontenerze,
+kończy się bez rysowania. Historia sprawdza to także po odczycie zdarzeń
+i pacjenta, bo dopiero potem dopisuje listę zdarzeń; to krótsze okno
+istniało przed P-LAB-TREND-CONVERT. Czekanie zaczyna się tylko wtedy,
+gdy seria ma dokładne wyniki (liczba skończona, niepusta jednostka)
+w więcej niż jednej jednostce, a jej klucz nie zawiera „:” (klirens
+`clcr:…`, nieznany konwerterowi).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Dwa wywołania nakładek na tym samym kontenerze, gdy konwerter jeszcze
+  się ładuje (fT4 15 pmol/L i 1,2 ng/dL) → jeden wiersz chipów „fT4 ×2”.
+  Bez znacznika pokolenia: dwa wiersze.
+- Historia przerysowana w trakcie czekania trendu albo odczytu zdarzeń
+  → starsze wywołanie kończy się bez listy zdarzeń; lista pochodzi tylko
+  z nowszego.
+- Seria fT4 tylko w pmol/L, seria LH z drugim wpisem bez liczby, seria
+  `clcr:schwartz` w dwóch jednostkach → bez czekania i bez ładowania
+  konwertera.
+
+**Testy:** `tests/unit/lab-snapshot-ui.test.mjs` uruchamia prawdziwe
+funkcje nakładek i Historii z artefaktu z atrapą DOM (dwa przypadki wyżej
+oraz kontrola: bez znacznika pokolenia nakładki dają dwa wiersze,
+a Historia niewyprzedzona dochodzi do nagłówka i listy) i funkcje czekania
+z leniwym ładowaniem podanym z zewnątrz (bez czekania przy serii jednojednostkowej, wynikach
+niedokładnych i kluczu klirensu; czekanie na odpowiedź ładowania; brak
+ładowania, gdy konwerter jest; koniec po 5 s i od razu przy błędzie). Na
+artefakcie sprzed poprawki pięć z tych testów padają, a bez strażnika po
+odczycie zdarzeń — test Historii wyprzedzonej w trakcie tego odczytu. E2E
+`lab-trend-jednostki.spec.mjs` bez zmian w asercjach.
+
+### LAB-HISTORIA — model porównania zapisanych wyników (`vilda_lab_history.js` 1.0.0, PR1 planu historii wyników, 2026-10-14)
+
+**Wpływ kliniczny: brak w tym etapie.** Moduł nie jest ładowany przez żadną
+stronę (bez `?v=` i precache), więc żaden widok się nie zmienia. Reguły
+prezentacji opisane niżej staną się widoczne z zakładką „Badania” (PR2)
+i paskiem „Poprzednie wyniki” w przeliczniku (PR3) i tam wchodzą do oceny
+właściciela razem z widokiem. Plan: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.1.
+
+**Zadanie:** z serii sejfu (`listPatientLabSeries`), notatek pacjenta
+(`listPatientNotesForPatient`), okresów leczenia (`listPatientTreatmentPeriods`)
+i wstrzykniętego konwertera model buduje widok historii: panele, serie,
+wpisy, tabelę dat, zdarzenia leczenia, wyniki oczekujące i bieżący wynik
+z przelicznika. Nie ma DOM, magazynu ani zegara; dzisiejszą datę podaje
+wołający (`nowISO`) tylko po to, by policzyć dni od ostatniego wyniku.
+Niczego nie ocenia od nowa: nie woła `LabUnitConverter.evaluate` ani
+silników ocen (test ze szpiegiem i pułapką na silnik pokwitania).
+
+**Reguły:**
+
+- Zakres: notatki „wynik-badania” według reguły kategorii karty pacjenta
+  (`Yr`): klirens poza historią (decyzja 6.13), notatka z lekiem należy do
+  leczenia. Wołający musi podać notatki (`notesById`); punkt serii bez
+  notatki nie znika po cichu, tylko liczy się w `summary.missingNotes`.
+- Rodzaje wpisów: dokładny; legacy (liczba odczytana z tekstu, przypis †);
+  cenzorowany (wynik z operatorem: surowy zapis, bez liczby i bez zera);
+  ocena nieaktualna; ocena niedostępna; tekst (ręczny wpis bez liczby, np.
+  „<0,02 IU/L”); jednostka nierozpoznana. Wynik oczekujący (zlecenie bez
+  wyniku) i bieżący wynik z przelicznika stoją poza wpisami serii.
+- Jednostki: symbol po normalizacji (przycięcie, zwinięcie spacji, znak
+  mikro U+00B5 → grecka mu U+03BC) dopasowany do jednostek konwertera;
+  przeliczenie `convertAll` tym samym współczynnikiem co przelicznik.
+  Jednostka wyświetlania: z formularza przelicznika, inaczej jednostka
+  ostatniego po dacie wyniku liczbowego. Jednostki, której konwerter nie
+  zna, model nie przelicza: wartość w oryginale, poza wykresem i różnicą.
+  W serii spoza konwertera wynik bez jednostki porównuje się z innymi tylko
+  wtedy, gdy żaden wynik serii nie ma jednostki.
+- Data: data badania (`clinicalDateISO`). Bez niej wpis ma termin zlecenia
+  (gdy sejf wziął datę z terminu, który minął) albo datę wpisu; taki wpis
+  nie jest ostatnim ani poprzednim wynikiem, nie wchodzi do różnicy ani na
+  wykres (oś wykresu to data badania). Poprzedni wynik to ostatni z datą
+  badania wcześniejszą niż ostatni wynik, nie wynik z tego samego dnia.
+- Strzałka ↑/↓ wyłącznie z zapisu: z normy tekstowej wpisu, gdy tekst jest
+  jednym zakresem „lo–hi [jednostka]”, jednostka normy (jeśli podana) równa
+  się jednostce wyniku, wynik nie był przeliczany i nie ma koperty oceny.
+  Granice daje funkcja karty `Dl`, wstrzykiwana jako `parseNorm`. Wynik
+  w zakresie nie ma strzałki ani pigułki. Punkt przeliczony nie ma strzałki
+  (decyzja 6.2); wpis bez normy jest neutralny (decyzja 6.1). Na wykres
+  norma trafia tylko w zakresie przyjętym przez model, więc `mi()` nie
+  odczyta luźno tekstu wielozakresowego. Punkt wykresu niesie wartość bez
+  zaokrąglenia, więc `mi()` porówna z normą tę samą liczbę co model;
+  wyniki z datą badania, które nie są liczbą (np. „<0,02”), model podaje
+  jako przerwy (`chart.gaps`), żeby renderer nie prowadził linii przez nie.
+- Zapisana ocena LH/FSH/inhibiny B: pigułka cytuje dosłownie tytuł
+  podsumowania koperty (`summary.title`), a przy ostrzeżeniu klinicznym
+  (`clinical.status = "warning"`) tytuł ostrzeżenia, w tonie ostrzegawczym.
+  Ocena nieaktualna: „wymaga ponownej oceny” z powodem z `reasonCodes`
+  (skróty zdań z `VildaLabAssessmentUI`); ostatni wynik nie cofa się do
+  poprzedniego.
+- Różnica: tylko między dwoma kolejnymi wynikami dokładnymi z datą badania,
+  w jednostce wyświetlania, z wartości zaokrąglonych do wyświetlanych cyfr
+  znaczących (15,4 → 17 = +1,6, nie +1,556); liczba ze znakiem i liczba dni,
+  bez procentu, koloru i progu (decyzja 6.10). Bez różnicy: ten sam dzień,
+  wpis niedokładny lub legacy, różna metoda albo materiał w dwóch kopertach
+  LH/FSH/inhibiny B ze znaną metodą („— · różne metody oznaczenia”). Metoda
+  nieznana (brak identyfikatora, potwierdzenie „unknown”, materiał nieznany
+  lub inny) nie jest „tą samą metodą”: różnica zostaje, a seria dostaje
+  stopkę o możliwej innej metodzie. Bieżący wynik: różnica bez liczby dni,
+  bo datę próbki podaje dopiero okno przypięcia; przy kopercie bieżącej
+  oceny obowiązuje ta sama reguła metody.
+- Wynik oczekujący: zlecenie z Terminarza (termin albo liczba dni do
+  kontroli) bez wartości, niezakończone i bez niestawienia. Notatka
+  „Badanie” bez wartości i bez terminu to opis, nie zlecenie. Badanie
+  przypisane tylko po `testKey` albo po tytule „Wynik: …” równym dokładnie
+  jednej etykiecie konwertera.
+- Panele jako dane (`HISTORY_PANELS`): Tarczyca; Oś gonadalna (z progesteronem);
+  Oś GH–IGF-1; Inne (prolaktyna, badania spoza konwertera). Pusty panel
+  ukryty (decyzja 6.5).
+- Wpis tekstowy nie trafia do serii sejfu, więc model nadaje mu klucz:
+  `testKey`, potem identyfikator konwertera o dokładnie tej etykiecie (tak
+  robi edytor karty, który przy wartości nieliczbowej nie zapisuje
+  `testKey`), na końcu skrót nazwy jak w sejfie. Dzięki temu „<10 pg/mL”
+  wybrane z listy jako „Inhibina B” stoi w serii inhibiny B, a nie
+  w „Inne”. Zgodność z sejfem sprawdza test na prawdziwym sejfie.
+
+**Odstępstwo od planu, przyjęte przez właściciela 2026-10-14 (decyzja 6.20, „reguła z modelu”):** plan 3.1 (a) każe cytować
+`clinical.title`, gdy `summary.status = "attention"`. Na prawdziwej kopercie
+LH (fikcyjna dziewczynka 12 lat, Th3, LH 9 IU/L) podsumowanie brzmi „Wynik
+poza wskazanym zakresem referencyjnym”, a część kliniczna „Brak wykrytej
+niezgodności czasu dojrzewania”; reguła planu pokazałaby przy wyniku poza
+zakresem ten drugi tekst. Model cytuje tytuł podsumowania, a tytuł
+kliniczny tylko przy ostrzeżeniu klinicznym, zgodnie z paletą z tego samego
+punktu planu. W sprawdzonych kopertach z ostrzeżeniem klinicznym oba tytuły
+są identyczne.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 4,2 mIU/L z normą „0,6–4,8 mIU/L” (10.06.26) i 5,1 µIU/mL (znak
+  mikro) z normą „0,6–4,8” (12.09.26) → jedna seria w μIU/mL, oba wyniki
+  dokładne, drugi „↑ powyżej normy z wpisu”, różnica „+0,9 μIU/mL · po
+  94 dniach”.
+- fT4 1,2 ng/dL z normą „0,8–1,8 ng/dL” (26.05.26) i 17 pmol/L (02.09.26) →
+  seria w pmol/L, pierwszy wynik 15,4 pmol/L przeliczony, bez strzałki
+  i bez normy na wykresie; różnica „+1,6 pmol/L · po 99 dniach”.
+- TSH 7 mIU/L z normą „1-5 lat: 0,7–6,0” → bez strzałki (tekst nie jest
+  jednym zakresem).
+- LH 2 IU/L i 3 IU/L z kopertami o różnych metodach oznaczenia → różnica
+  niedostępna, „— · różne metody oznaczenia”.
+- Ręczny wpis LH „<0,02 IU/L” bez oceny → wiersz tekstowy w serii LH,
+  nie wynik oczekujący.
+
+**Testy:** `tests/unit/lab-history-view.test.mjs` (32 przypadki: prawdziwy
+konwerter i plik danych jednostek, prawdziwe koperty LH z osobnego okna,
+`Dl` wycięte z `vilda_auth_ui.js`) i `tests/unit/lab-history-vault.test.mjs`
+(prawdziwy sejf: zapis notatek, serie, notatki i okresy leczenia →
+`buildHistoryView`; szpieg na `evaluate`, pułapka na silnik pokwitania,
+zgodność klucza serii z sejfem, wynik tekstowy „Inhibina B” bez `testKey`,
+unieważnienie oceny przez zmianę daty). Osiem przypadków dopisano po
+niezależnym przeglądzie modelu; na wersji sprzed poprawek padają.
+Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA PR2 — zakładka „Badania” w karcie pacjenta (`vilda_lab_history_tab.js` 1.0.0, `vilda_auth_ui.js` 494, SW 1.1.281, 2026-10-14)
+
+**Wpływ kliniczny: tak, w prezentacji interpretacji; bez nowego wzoru, progu,
+normy ani źródła medycznego.** Liczby, jednostki i przeliczenia są te same co
+w modelu LAB-HISTORIA (wyżej) i w dawnym „Trendzie wyników”. Zmienia się to,
+które strzałki i pasma lekarz widzi przy dawnych wynikach:
+
+- Z zakładki „Historia” znika sekcja „Trend wyników” (`Jl()`, decyzja 6.12),
+  a z nią pasmo dzisiejszych norm (przełącznik „norma”) i strzałki ↑/↓, które
+  `mi()` brało z dzisiejszej normy (`vi()`), gdy wpis nie miał własnej normy.
+  W jej miejscu odnośnik „Trend i porównanie wyników są w zakładce Badania →”,
+  pokazywany, gdy oś czasu ma notatkę z wynikiem badania (bez leku
+  i klirensu). `Jl()` zostaje w pliku bez zmian.
+- Nowa piąta zakładka „Badania” rysuje wykres tym samym rendererem (`Nl()`),
+  ale z funkcją norm zwracającą `null` i bez pasma: strzałka stoi tylko przy
+  wyniku z normą zapisaną we wpisie (jeden zakres w jednostce wyniku, wynik
+  nieprzeliczany) albo wynika z zapisanej koperty oceny. Wynik bez zapisu jest
+  neutralny (decyzja 6.1), przeliczony — bez strzałki (6.2).
+- Nakładki wyników na siatkach (`Kl()`) i eksport siatek do PDF (`Gl()`)
+  zachowują dzisiejsze zachowanie do osobnej decyzji (6.4).
+
+Akceptacja kliniczna należy do właściciela. Populacja: wszyscy pacjenci karty
+(dzieci i dorośli); dane: wyłącznie notatki „wynik-badania” pacjenta (6.13),
+w jednostkach z zapisu przeliczonych konwerterem przelicznika. Ograniczenia:
+widok nie ocenia dawnych wyników dzisiejszymi normami ani bieżącymi danymi
+pacjenta; różnica między wynikami jest liczbą i dniami, bez znaczenia
+klinicznego (6.10); metoda oznaczenia jest porównywana tylko w kopertach
+LH/FSH/inhibiny B.
+
+**Reguły widoku** (projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.2):
+
+- Nagłówek: liczba wyników i badań, data ostatniego badania; „+ Dodaj wynik”
+  i „Sprawdź nowy wynik →” (przelicznik jednostek, w powłoce przez
+  `VildaShell.navigate('lab', true)`). Chipy paneli z `aria-pressed`
+  filtrują widok; segment „Wykresy | Tabela” (`role="group"`, `aria-pressed`)
+  ma domyślnie „Tabela” do 480 px i „Wykresy” wyżej (6.17), a wybór jest
+  zapamiętany per pacjent w `sessionStorage` (`vilda-lab-hist-view-<id>`).
+- Karta badania (Wykresy): nazwa, jednostka, liczba wyników; ostatni wynik
+  z datą badania (i wiekiem wizyty, gdy wpis ma kotwicę), strzałka i pigułka
+  z modelu; „poprzednio X (data) · różnica ±Y jednostka · po N dniach”;
+  wykres `Nl()` z osią daty badania, a gdy dokładnych wyników jest mniej niż
+  dwa — „Za mało dokładnych wyników do wykresu.”; stopka „Poza wykresem: N
+  (powody)”. Wynik w jednostce nierozpoznanej, tekstowy albo cenzorowany ma
+  dopisek, że stoi bez porównania. Wynik przeliczony: „przeliczono z …”
+  z liczbą i jednostką zapisu. Czerwień wyróżnienia z `Nl()` (punkt i podpis
+  ze strzałką) zamieniona na fiolet modułu lab (6.18); kolor nie niesie
+  oceny, strzałka zostaje. *Zmienione w PR3 (decyzja 6.22, wpis niżej):
+  punkty wykresu idą do `Nl()` bez normy wpisu — bez strzałki i bez
+  wyróżnienia przy punkcie; strzałka zostaje przy wartości obok wykresu
+  i w tabeli.*
+- Pigułka zapisanej oceny: reguła z modelu (6.20) — dosłowny tytuł
+  podsumowania koperty, a przy ostrzeżeniu klinicznym tytuł ostrzeżenia
+  w tonie ostrzegawczym; pod nim „oceniono jako: płeć/wiek w dniu pobrania/
+  stadium” z koperty. Wiek: z `input.age`, a gdy ocena liczyła wiek z dat —
+  pełne miesiące kalendarzowe między `input.birthDateISO` i
+  `input.sampleDateISO`. Pełna ocena: „Zapisane oceny” (istniejące
+  `Lh3TrendAssessments`) pod kartą LH/FSH/inhibiny B i pod tabelą osi
+  gonadalnej, zawsze rozwinięte, jak dawniej w „Historii”: ostrzeżenia
+  kliniczne zapisanej oceny nie czekają za kliknięciem.
+- Tabela: wiersze dat malejąco, kolumny badań panelu z jednostką
+  w nagłówku, w komórce wartość bez jednostki, strzałka z zapisu i różnica
+  pod wartością (względem wcześniejszego wyniku tego badania z datą badania);
+  wartość przeliczona podkreślona kropkami, „*” przy jednostce nierozpoznanej
+  i wyniku tekstowym, „○” przy zapisanej ocenie; wiersze leczenia
+  (`listPatientTreatmentPeriods`) od pierwszego wyniku panelu; kolumna
+  komentarza. Na telefonie przewija się tylko tabela, kolumna daty jest
+  przyklejona.
+- Komentarz wpisu: treść notatki bez linii, które dopisuje aplikacja: „= …”
+  (równanie przypięcia z przelicznika) i „Norma: …” (szablon edytora). Norma
+  wpisu jest w pigułce i w opisie komórki.
+- Leczenie w widoku „Wykresy”: jedna lista pod panelami (od pierwszego
+  pokazanego wyniku).
+- Oczekujące wyniki (z modelu): „Wpisz wynik” otwiera edytor karty z
+  szablonem „Wynik badania” i kotwicą „Wpisz datę zdarzenia” z fokusem na
+  dacie (K7); zlecenie dopasowane do badania dostaje nazwę badania z listy
+  przelicznika, żeby edytor zapisał klucz serii. Kotwica daty zastępuje tylko
+  „Notatkę ogólną” — istniejące powiązanie z wizytą albo datą zostaje.
+  „Przypomnienia →” otwiera arkusz przypomnień i jest ukryte, gdy lista
+  przypomnień jest pusta.
+- Odświeżanie: po zapisie z zakładki i po każdej zmianie notatki tego
+  pacjenta (`onPatientNoteChanged`); odczyt wyprzedzony przez nowszy nie
+  rysuje (znacznik pokolenia), stara karta odpięta od dokumentu nie
+  odświeża się. Stany: wczytywanie (`aria-busy`), pusty, błąd z ponowieniem,
+  sejf zablokowany; po każdym `.vilda-lab-hist-ready` (bramka e2e).
+- Bez eksportu `window.__vildaLabTrend` (stary `vilda_auth_ui.js` w pamięci
+  SW) karty pokazują „Wykres niedostępny — odśwież stronę.”, a model nie
+  dostaje parsera normy, więc nie stawia strzałek.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 0,05 mIU/L (08.04.26) i 0,12 mIU/L (02.06.26), oba z normą
+  „0,27–4,2 mIU/L” → karta TSH: „0,12 ↓”, pigułka „poniżej normy z wpisu ·
+  0,27–4,2 mIU/L”, „poprzednio 0,05 mIU/L (08.04.26) · różnica +0,07 mIU/L ·
+  po 55 dniach”; w tabeli „0,12 ↓” z „+0,07” pod spodem i „0,05 ↓”.
+- fT4 1,2 ng/dL z normą „0,8–1,8 ng/dL” (08.04.26) i 17 pmol/L (02.06.26) →
+  karta w pmol/L, w tabeli 15,4 podkreślone kropkami, bez strzałki, opis
+  komórki „zapisano: 1,2 ng/dL · norma z wpisu: 0,8–1,8 ng/dL”.
+- LH z kopertą oceny (fikcyjna dziewczynka ur. 10.03.2014, pobranie 02.06.26,
+  Th3) → pigułka z dosłownym tytułem podsumowania i „oceniono jako:
+  dziewczynka · 12 l 2 m w dniu pobrania · Th3”; wynik „<0,1” z kopertą →
+  „Poza wykresem: 1 (wynik z „<” lub „>”: 1)”.
+- Prolaktyna 12 ng/mL i 250 mU/l → druga wartość „250 mU/l*”, bez różnicy,
+  z dopiskiem o jednostce nierozpoznanej.
+- Historia pacjenta z wynikiem badania → brak `.vilda-lab-trend-section`,
+  odnośnik przełącza na „Badania”; pacjent bez wyników → bez odnośnika.
+
+**Testy:** `tests/unit/lab-history-tab.test.mjs` (widok na prawdziwym
+modelu, konwerterze i `Dl` z artefaktu, atrapa DOM `tests/support/atrapa-dom-lekka.mjs`:
+strzałka tylko z normy wpisu, wykres bez pasma i bez dzisiejszej oceny,
+fiolet zamiast czerwieni, brak eksportu, tabela i komentarze, `aria-pressed`,
+`sessionStorage`, domyślna tabela na telefonie, akcje edytora, przypomnienia,
+stany, odświeżanie i pokolenie), `tests/unit/lab-history-tab-loading.test.mjs`
+(oba leniwe stosy auth ładują prawdziwe moduły w tej samej kolejności),
+`tests/unit/lab-snapshot-ui.test.mjs` (prawdziwe `Xl()`: nie woła `Jl()`,
+odnośnik tylko przy wyniku badania), e2e `lab-historia-zakladka.spec.mjs`
+(desktop i okno 1100 px), `lab-historia-zakladka-mobile.spec.mjs` (iPhone
+i 320 px: układ 2 + 2 + 1, domyślnie Tabela, bez poziomego przewijania
+strony), `lab-trend-jednostki.spec.mjs` (przeliczenie fT4 na wykresie,
+teraz w „Badaniach”, Start i DocPro), `lab-snapshot.spec.mjs` (asercje
+Historii bez zmian, plus brak sekcji trendu, odnośnik i karta LH).
+Asercje zapisanych ocen w `lab-inhibin-b.spec.mjs` i dziesięciu plikach
+`lab-puberty-*.spec.mjs` sprawdzały dotąd wiersze „Zapisane oceny” sekcji
+trendu w „Historii”; przeniesione do zakładki „Badania” bez zmiany treści
+(w `lab-puberty-ui.spec.mjs` tytuł wpisu nadal sprawdzany na osi czasu
+„Historii”).
+Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA PR3 — pasek „Poprzednie wyniki” w przeliczniku i wykresy karty bez strzałek przy punktach (`lab_history_strip.js` 1.0.0, `vilda_lab_history_tab.js` 1.1.0, `vilda_shell.js` 64, 2026-10-14)
+
+**Wpływ kliniczny: tak, w prezentacji zapisanych wyników; bez nowego wzoru,
+progu, normy ani źródła medycznego.** Liczby, przeliczenia jednostek,
+strzałki i różnice liczy ten sam model co w zakładce „Badania” (wpisy
+„LAB-HISTORIA” wyżej). Zmienia się, gdzie lekarz je widzi:
+
+- Przelicznik jednostek: pod wierszem „Przypnij do wizyty” (decyzja 6.8)
+  pasek „Poprzednie wyniki pacjenta · <badanie> · w <jednostka formularza>”
+  z zapisanymi wynikami wybranego badania pacjenta karty. Widoczny tylko przy
+  odblokowanym sejfie, pacjencie w formularzu i co najmniej jednym wyniku tego
+  badania (6.9); tylko do odczytu — bez pól, daty i zapisu (6.6). Nie zasila
+  punktu pacjenta na wykresie hormonów (`PATIENT_POINT.md`); dla analitu
+  z krzywą stoi przed nią.
+- Wykresy w karcie (zakładka „Badania”) i w pasku: przy punkcie sama wartość,
+  bez strzałki ↑/↓ i bez wyróżnienia kolorem (decyzja 6.22). Strzałka z normy
+  zapisanej we wpisie zostaje przy wartości: ostatni wynik i tabela w karcie,
+  chipy i szczegóły w pasku.
+
+Akceptacja kliniczna należy do właściciela. Populacja i dane jak w PR2:
+pacjenci karty (dzieci i dorośli), notatki „wynik-badania” (6.13), jednostki
+z zapisu przeliczone konwerterem przelicznika. Ograniczenia: pasek nie ocenia
+dawnych wyników dzisiejszymi normami ani danymi pacjenta z formularza;
+bieżący wynik nie ma daty próbki (pada przy przypięciu), więc różnica do
+ostatniego zapisanego wyniku jest samą liczbą, bez dni, procentu, koloru
+i progu (6.10); metoda oznaczenia porównywana tylko w kopertach LH/FSH/
+inhibiny B, a bieżący wynik koperty nie ma, więc przy różnicy stoi stała
+uwaga o możliwej innej metodzie.
+
+**Reguły paska** (projekt: `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`, 3.3):
+
+- Badanie: identyfikator z `VildaLabConverterRuntime.getSubstanceId()`
+  (decyzja 6.16), zapas — dokładna etykieta pola „Substancja”. Jednostka
+  wyświetlania: jednostka formularza (`#labUnit`), gdy konwerter ją zna;
+  inaczej jednostka ostatniego wyniku serii.
+- Pacjent: identyfikator karty z `sessionStorage` (nigdy z adresu),
+  nazwisko z nagłówka rekordu sejfu tego samego pacjenta; zmiana pacjenta
+  w trakcie odczytu, blokada sejfu i reset stanu użytkownika ukrywają pasek
+  i czyszczą pamięć (pokolenie odczytu, porównanie tożsamości po odczycie).
+- Chipy: do pięciu ostatnich wyników (wcześniejsze pod „+N wcześniejsze”),
+  wartość w jednostce formularza; wynik przeliczony z innej jednostki — bez
+  strzałki (K26), zapis i norma w podpowiedzi; data badania albo „wpis/termin
+  DD.MM.RR”, gdy wpis nie ma daty badania. Chip „teraz · niezapisany”
+  z wartością formularza (tylko gdy przelicznik pokazuje wynik), osobno, bez
+  daty.
+- Szczegóły po kliknięciu chipa lub punktu: data, wartość ze strzałką
+  z zapisu, wiek wizyty (kotwica wpisu), „przeliczono z …”, zapisana ocena
+  (`VildaLabAssessmentUI.renderAssessment`, widok skrócony, historyczny),
+  „norma z wpisu: … — zakres laboratorium z dnia badania; metoda oznaczenia
+  mogła być inna” (przy strzałce „poniżej/powyżej normy z wpisu: …”),
+  komentarz bez linii „= …” i „Norma: …”, „Otwórz w karcie →”.
+- Linia porównania: „ostatni zapisany wynik: DATA (N dni temu) · X · teraz Y
+  → różnica ±Z jednostka (data bieżącej próbki ustalana przy przypięciu)”;
+  różnica tylko, gdy ostatni wynik jest dokładny i w tej samej jednostce;
+  różne metody w kopertach → „— · różne metody oznaczenia”. Po zapisie tego
+  samego wyniku (badanie, liczba, jednostka — niezależnie od daty) „teraz ·
+  już przypięty” i „ten wynik jest już przypięty (DATA)”.
+- Wykres (lekki renderer SVG, decyzja 6.21): oś Y od zera z krokiem 1–2–2,5–5,
+  punkty dokładne z datą badania na osi dat, wartość przy każdym punkcie
+  (podpisy zachodzące — zostaje nowszy), przerywana kreska od punktu do osi,
+  punkt przeliczony z obwódką, wynik z operatorem i wynik tekstowy poza
+  wykresem, bez pasma norm i bez strzałek. Bieżący wynik w osobnym pasie
+  „teraz / bez daty”, bez linii łączącej. Szerokość `viewBox` = szerokość
+  karty (180–660), na wąskim ekranie najwyżej trzy daty na osi, prostokąty
+  podpisów bez nakładania. „Ukryj wykres” zwija wykres.
+- „Badania w karcie →”: w powłoce `openPatientCardInStart(id, {activeTab:
+  'lab'})` (łatka P-POWLOKA-KARTA-ZAKLADKA), poza powłoką
+  `ensureAuthLoaded()` i `showPatientCard(id, null, null, {activeTab: 'lab'})`.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH (fikcyjna pacjentka): 0,01 μIU/mL (14.01.26), 0,02, 0,05 i 0,12 mIU/L
+  z normą „0,27–4,2 mIU/L” (25.02, 08.04, 02.06.26); formularz 0,38 mIU/L,
+  zegar 17.06.26 → chipy „0,01”, „0,02↓”, „0,05↓”, „0,12↓” (pierwszy
+  przeliczony, bez strzałki, podpowiedź „zapisano: 0,01 μIU/mL”), „teraz ·
+  niezapisany 0,38”, linia „ostatni zapisany wynik: 02.06.26 (15 dni temu) ·
+  0,12 mIU/L · teraz 0,38 → różnica +0,26 mIU/L”; na wykresie podpisy
+  „0,01”, „0,02”, „0,05”, „0,12”, „0,38” bez strzałek.
+- Ta sama seria przy jednostce formularza μIU/mL → wszystkie wyniki w mIU/L
+  przeliczone, w pasku żadnej strzałki.
+- LH „<0,1”, 1,8 i 2,4 IU/L z kopertami → chipy „<0,1”, „1,8”, „2,4”, na
+  wykresie dwa punkty; szczegóły 1,8 pokazują zapisaną ocenę.
+- Badanie bez wyników pacjenta (np. kortyzol) → pasek ukryty, bez komunikatu.
+- Zakładka „Badania”: TSH z normami wpisu → wartość obok wykresu „0,12 ↓”,
+  na wykresie podpis „0,12” bez strzałki, punkty bez czerwieni.
+
+**Testy:** `tests/unit/lab-history-strip.test.mjs` (produkcyjny moduł
+z autostartem na atrapie strony, prawdziwy model, konwerter i `Dl`: dobór
+badania, wartość bieżąca z pól, warunki widoczności, tożsamość przy zmianie
+pacjenta w trakcie odczytu, blokada i reset, chipy przeliczone bez strzałek,
+szczegóły, „już przypięty”, otwieranie karty, układ wykresu i etykiet),
+`tests/unit/powloka-karta-zakladka.test.mjs`, `tests/unit/lab-history-tab.test.mjs`
+(punkty wykresu bez normy), e2e `lab-history-strip.spec.mjs` (prawdziwy sejf:
+kolejność za przypięciem, chipy, różnica, wykres, przypięcie, zmiana
+jednostki, LH i krzywa hormonów, „Wyczyść” bez śladu w układzie, zmiana
+pacjenta, karta na zakładce „Badania”), `lab-historia-przelicznik-mobile.spec.mjs`
+(iPhone i 320 px), `lab-historia-przelicznik-offline.spec.mjs` (zimny start
+bez serwera po instalacji SW), `lab-historia-zakladka.spec.mjs` (podpis
+punktu bez strzałki). Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA PR4 — przelicznik z wybranym badaniem z karty (`?badanie=`, `vilda_lab_history_tab.js` 1.2.0, 2026-10-15)
+
+**Wpływ kliniczny: brak.** Zmiana nawigacji: karta badania w zakładce „Badania”
+ma odnośnik „Nowy wynik TSH w przeliczniku →” (decyzja 6.23), który otwiera
+przelicznik jednostek z tym badaniem już wybranym (`?badanie=<id przelicznika>`,
+decyzja 6.15). Wybór działa jak wybór z listy w polu „Substancja”: te same
+jednostki, zakresy i oceny, bez wpisywania wartości. Przy wpisanym wyniku
+przelicznik nie zmienia badania (komunikat), żeby wpisanej liczby nie odczytać
+w jednostkach innego badania; nieznany klucz niczego nie zmienia. Pasek
+„Poprzednie wyniki” i karta liczą jak dotąd (wpisy PR2 i PR3 wyżej).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- `przelicznik-jednostek.html?badanie=tsh`, puste pole wyniku → „Substancja”:
+  „TSH (tyreotropina)”, pole wyniku puste z kursorem.
+- Ten sam adres, w polu wyniku „4,2” → badanie bez zmian, komunikat
+  „Nie zmieniono badania na TSH: pole wyniku nie jest puste.”.
+- `?badanie=nieznane` albo `?badanie=` → formularz bez zmian.
+
+**Testy:** `tests/unit/przelicznik-deeplink-badanie.test.mjs` (produkcyjny
+fragment skryptu strony z własnymi kotwicami i prawdziwym konwerterem; cel
+z powłoki; współistnienie z `?wskazanie=`; harness powłoki: cel po `load`
+i ponownie w ciepłej ramce), `tests/unit/lab-history-tab.test.mjs` (odnośnik
+w karcie, nagłówek bez badania, trasa powłoki), e2e
+`powloka-badania-nawigacja.spec.mjs` (prawdziwa powłoka i sejf: karta → przelicznik
+z TSH, wpisany wynik z komunikatem, pasek → karta na zakładce „Badania”, strona
+samodzielna). Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA PR5a — alias serii po nazwie badania i IGF-1 z notatek leczenia GH (`vilda_lab_history.js` 1.1.0, `vilda_lab_history_tab.js` 1.3.0, `lab_history_strip.js` 1.1.0, 2026-10-15)
+
+**Wpływ kliniczny: tak — zmienia się prezentacja zapisanych wyników w historii
+(zakładka „Badania”, pasek „Poprzednie wyniki” w przeliczniku).** Nie ma
+nowych wzorów, współczynników, norm, progów, jednostek, zaokrągleń ani ocen.
+Zmienia się to, które zapisane wyniki należą do serii badania, a dla IGF-1 —
+od jakiej daty liczy się punkt i różnica. Źródło medyczne: nie dotyczy
+(wartości wpisane przez lekarza; przeliczenie ng/mL ↔ nmol/L tym samym
+konwerterem co dotąd, `lab_units_data.js` bez zmian). Decyzje właściciela:
+6.14, 6.24, 6.25 (`docs/LAB_HISTORIA_WYNIKOW_PLAN.md`). Zielone testy nie są
+walidacją kliniczną.
+
+**1. Alias serii (6.14).** Wpis bez klucza przelicznika (`labResult.testKey`),
+który sejf trzyma pod skrótem nazwy (`listPatientLabSeries`, np.
+„testosteroncalkowity”), dołącza przy odczycie do serii badania z listy
+przelicznika, gdy nazwa wpisu jest **dokładnie** równa etykiecie z listy
+(„Testosteron całkowity” → `testosterone_total`) i jednostka wpisu jest
+znana przelicznikowi dla tego badania. Inna pisownia albo jednostka
+nierozpoznana — wpis zostaje w dawnej serii (bez zmian względem PR1–PR4).
+Po dołączeniu wpis przelicza się na jednostkę serii jak każdy inny (reguła
+LAB-HISTORIA), a karta ma dopisek „W tym N wpis(y) dopasowany(e) po nazwie
+badania „…”.”. Wpis odczytany z tekstu (legacy, †) stoi na wykresie bez
+różnicy, jak dotąd. Zapis w sejfie się nie zmienia.
+
+**2. IGF-1 z notatek leczenia GH (6.24, 6.25).** Źródło: pole „IGF-1 (wynik
+z kontroli)” edytora wpisu z dawką GH (`note.igf1 = { value, unit: "ng/ml" }`,
+notatki z lekiem, kategoria „treatment”). Wynik trafia do serii IGF-1 panelu
+„Oś GH–IGF-1” z dopiskiem „z notatki leczenia GH”: wartość jak zapisano,
+bez normy, oceny, strzałki i komentarza (treść notatki opisuje dawkę).
+Jednostka „ng/ml” = „ng/mL” konwertera (porównanie bez wielkości liter tylko
+dla tego źródła); brak jednostki = ng/ml, jedyna jednostka pola. Data:
+1) data badania notatki; 2) bez niej — termin kontroli, jeśli już minął
+i nie ma niestawienia (dopisek „data kontroli GH”; punkt na wykresie
+i różnica, jak na wykresie „Trend leczenia GH” w karcie); 3) inaczej data
+wpisu — wynik tylko w tabeli, bez punktu i różnicy. Ten sam dzień, wartość
+i jednostka co wynik badania IGF-1 — pokazany raz.
+
+**Ograniczenia:** termin kontroli nie jest datą pobrania krwi; dni od dawki
+nie są zapisane w notatce (są tylko w punktach monitora GH, których historia
+nie czyta — inny cykl życia danych). Populacja: pacjenci z notatkami leczenia
+GH/IGF-1 (rhGH, Increlex) z wpisanym IGF-1.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Wpis „Testosteron całkowity”, wartość „1,9 nmol/L”, bez `testKey`, obok
+  przypiętego `testosterone_total` 0,8 nmol/L → jedna seria „Testosteron
+  całkowity” z dwoma punktami (0,8; 1,9 †), dopisek „W tym 1 wpis dopasowany
+  po nazwie badania „Testosteron całkowity”.”, bez różnicy (wpis legacy).
+- Ten sam wpis z nazwą „testosteron całkowity” albo wartością „60 ng%” →
+  osobna, dawna seria (bez aliasu).
+- IGF-1 245 ng/mL z badania 04.03.26 i notatka GH z terminem kontroli
+  01.06.26 (minął, bez niestawienia), IGF-1 280 ng/ml → seria IGF-1:
+  280 ng/mL „01.06.26 (data kontroli GH)”, „z notatki leczenia GH”,
+  „poprzednio 245 ng/mL (04.03.26) · różnica +35 ng/mL · po 89 dniach”,
+  dwa punkty na wykresie, bez strzałek.
+- Notatka GH z terminem 01.12.26 (przyszłym) albo z niestawieniem → data
+  wpisu, tylko w tabeli; „Poza wykresem: brak daty badania”.
+- Notatka GH z terminem 10.05.26 i IGF-1 245 ng/ml obok wyniku badania IGF-1
+  245 ng/mL z 10.05.26 → jeden wpis (wynik badania).
+
+**Testy:** `tests/unit/lab-history-vault.test.mjs` (prawdziwy sejf: alias i jego
+granice, IGF-1 z GH z datą badania i kontroli, duplikat, wyłączenie źródła,
+przyszły termin, niestawienie, brak „dziś”, notatka bez leku),
+`tests/unit/lab-history-tab.test.mjs` (karta, tabela ze znacznikiem „GH”,
+stopka, dopisek aliasu), `tests/unit/lab-history-strip.test.mjs` (chip
+„kontrola”, podpowiedź, szczegóły), e2e `lab-historia-gh-igf1.spec.mjs`
+(prawdziwy sejf i karta pacjenta).
+
+### LAB-HISTORIA PR5b — zlecenie zamyka się po wpisaniu wyniku (`vilda_lab_history_tab.js` 1.4.0, 2026-10-15)
+
+**Wpływ kliniczny: brak.** Zmiana przebiegu pracy (decyzja 6.11): po „Wpisz
+wynik” przy zleceniu z Terminarza w zakładce „Badania” zapisany wynik zamyka
+zlecenie tak samo jak „Wykonano” w Przypomnieniach (`completePatientNote`).
+Wyniki, jednostki, normy, oceny i historia liczą się jak dotąd. Zlecenie
+z „kontrolą co N dni” też się zamyka, a nie przekłada — następny wynik
+w tej samej notatce nadpisałby ten, który właśnie trafił do historii. Bez
+wartości, po niestawieniu i przy zleceniu już wykonanym nic się nie zmienia;
+komunikat w zakładce ma „Cofnij”, które nie cofa stanu nadanego później
+(np. niestawienia z innej karty albo synchronizacji).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Zlecenie „Kontrola TSH” z terminem 16.06.26, „Wpisz wynik”, data badania
+  16.06.26, wartość „0,4” mIU/L, „Zapisz zmiany” → wynik w serii TSH,
+  zlecenie wykonane (`completedAtISO`), znika z Przypomnień; komunikat
+  „Wynik zapisany — zlecenie „Kontrola TSH” oznaczone jako wykonane
+  w Przypomnieniach.”.
+- „Cofnij” → zlecenie znów w Przypomnieniach, wynik 0,4 zostaje w serii.
+- Po zamknięciu inna karta oznacza niestawienie, potem „Cofnij” → bez zmiany
+  zlecenia, komunikat „Nie cofnięto: zlecenie „Kontrola TSH” zmieniło się
+  w międzyczasie — sprawdź je w Przypomnieniach.”.
+- Ten sam przycisk, edytor zamknięty bez wartości → zlecenie bez zmian.
+
+**Testy:** `tests/unit/lab-history-tab.test.mjs` (atrapa sejfu: zamknięcie,
+„Cofnij”, brak wartości, wykonane, niestawienie, wynik tekstowy, błąd, inne
+zapisy z zakładki), e2e `lab-historia-zlecenie-wykonane.spec.mjs` (prawdziwy
+sejf, karta i edytor).
+
+### LAB-HISTORIA 6.3 — zakres referencyjny zapisany przy przypięciu (`vilda_lab_range_snapshot.js` 1.0.0, 2026-10-15)
+
+**Wpływ kliniczny: tak** (AGENTS.md § 3: nowe źródło danych oceny w historii).
+Przy „Zapisz do karty” w przeliczniku wynik dostaje kopię zakresu
+referencyjnego, którego przelicznik właśnie użył: granice w SI i w jednostce
+wyniku, identyfikator wiersza danych, opis populacji (`context_pl`), warunki
+wiersza (`when`), czy wiersz pasował do kontekstu czy był domyślny, źródła
+(`source_ids` z opisem z `LabUnitsData.findSource`), kontekst pacjenta użyty
+do doboru (płeć, wiek, etap życia, Tanner, nadpisanie lokalne z kroku 5) oraz
+kategorię, którą przelicznik pokazał (`LabUnitConverter.evaluate`: `within`,
+`below`, `above`, `far_below`, `far_above`). Historia (zakładka „Badania”,
+pasek „Poprzednie wyniki”) pokazuje strzałkę ↑/↓ i pigułkę „powyżej / poniżej /
+w zapisanym zakresie” wyłącznie z tej kopii. Odczyt nie woła `evaluate` ani
+`selectRange` i nie dobiera normy od nowa (`LAB_INTERPRETATION_AGENT_GUIDE.md`
+§ 7). Decyzje właściciela z 2026-10-15: wszystkie badania, które przelicznik
+ocenia względem zakresu; unieważnienie przy zmianie wyniku lub daty; starsze
+wpisy bez uzupełniania; pigułka ze źródłem.
+
+**Źródło medyczne i wersja:** bez nowych norm. Zakresy, progi „znacznie poza
+zakresem” (> 2 × górna granica, < 0,5 × dolna) i źródła to dotychczasowe dane
+i reguła przelicznika: `lab_units_data.js` (`LabUnitsData` 2.0.0, wiersze
+`reference_ranges_si` z `source_ids`, np. `mayo_test_tsh` — Mayo Clinic
+Laboratories, Test 8939 STSH) i `lab_unit_converter.js` (`LabUnitConverter`
+2.0.0). Zapis niesie nazwę populacji i źródła (normy jako dane,
+`docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność”).
+
+**Zakres:** badania oceniane przez `LabUnitConverter.evaluate` względem
+zakresu z obiema granicami. Bez zapisu zakresu: LH, FSH, inhibina B
+i testosteron całkowity (zapis oceny `assessment`), AMH (odniesienie
+`hormoneReference`), badania bez zakresu dla kontekstu (np. witamina D₃),
+wynik z operatorem („<0,1”). Zakres „bez interpretacji” (np. TSH w 0.–2.
+dobie życia) zapisuje się jako brak oceny z opisem przelicznika.
+
+**Ograniczenia:**
+
+- Zakres dobrano do danych pacjenta widocznych w przeliczniku w chwili
+  przypięcia (wiek z formularza), nie do wieku w dniu badania. Gdy data
+  badania w oknie przypięcia jest inna niż dzisiejsza, okno mówi o tym
+  wprost; kontekst („dobrano dla: dziewczynka, 12 l 3 m”) jest częścią zapisu
+  i podpowiedzi w historii.
+- Bez wieku w przeliczniku przelicznik przyjmuje dorosłego (dotychczasowa
+  reguła); zapis i historia nazywają to („bez wieku w przeliczniku —
+  przyjęto dorosłego”). Wiersz domyślny (np. prolaktyna u dziecka: „Dorośli,
+  zakres ogólny”) zostaje zapisany jak pokazał go przelicznik; od 1.1.0
+  historia pokazuje go u dziecka bez oceny („LAB-HISTORIA 6.30” niżej).
+- Norma wpisana ręcznie we wpisie (pole „Norma” edytora), gdy model ją
+  przyjmie, ma pierwszeństwo jak dotąd. Zapisany zakres nie zależy od
+  jednostki wyświetlania: wynik przeliczony z innej jednostki zachowuje
+  strzałkę z zapisu (granice podane w jednostce zapisu).
+- Zmiana wartości, jednostki, badania albo daty po przypięciu (edytor,
+  synchronizacja) unieważnia zapis: „zakres nieaktualny”, bez strzałki.
+  Komentarz, kotwica wizyty czy oznaczenie wykonania tego nie robią.
+- Strona bez nowego modułu (nieodświeżona po aktualizacji) odmawia zapisu
+  notatki z zakresem z prośbą o odświeżenie; odczyt bez modułu daje wpis bez
+  oceny. Starszy klient może zgubić pole przy edycji — wpis wraca do stanu
+  bez oceny, wynik zostaje.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- TSH 5,1 mIU/L, dziewczynka 8 l → zapis `tsh_6_10y` 0,6–4,8 mIU/L, „Dzieci
+  6–10 lat”, Mayo Test 8939; historia: „↑ powyżej zapisanego zakresu ·
+  0,6–4,8 mIU/L”, „Dzieci 6–10 lat · dziewczynka, 8 l · Mayo Test 8939 — TSH”.
+- Ta sama dziewczynka: TSH 2,9 → „w zapisanym zakresie” bez strzałki; 9,8 →
+  „znacznie powyżej zapisanego zakresu” ↑; 0,2 → „znacznie poniżej” ↓; 0,5 →
+  „poniżej” ↓.
+- fT4 2,0 ng/dL, dziewczynka 8 l → `ft4_6_10y` 12,9–21,9 pmol/L (1–1,7
+  ng/dL), powyżej; w serii wyświetlanej w pmol/L wynik przeliczony ze
+  strzałką ↑ z zapisu.
+- TSH 25 mIU/L, noworodek 0.–2. doba → zapis bez kategorii, „bez oceny
+  względem zakresu w dniu przypięcia”.
+- Przypięty TSH 5,1, potem w edytorze wartość 3,9 → „zakres nieaktualny ·
+  zmieniono wynik lub datę badania”, bez strzałki.
+- TSH 5,1 z ręczną normą wpisu „0,4–6,0 mIU/L” → bez strzałki (norma wpisu
+  ma pierwszeństwo).
+- Przelicznik, dziewczynka 12 l 3 m, TSH 5,1 → okno przypięcia: „Zapisze się
+  z wynikiem: powyżej zakresu 0,5–4,3 mIU/L”, „Młodzież 11–19 lat · dobrano
+  dla: dziewczynka, 12 l 3 m · Mayo Test 8939 — TSH”; data badania inna niż
+  dziś → uwaga o doborze do danych z przelicznika.
+
+**Testy:** `tests/unit/lab-range-snapshot.test.mjs` (prawdziwy
+`LabUnitConverter.selectRange`/`evaluate` jako „producent”, prawdziwy sejf:
+szyfrowanie, `listPatientLabSeries`, edycje, synchronizacja, strona bez
+modułu; model historii bez wywołań `evaluate`/`selectRange`),
+`tests/unit/lab-history-tab.test.mjs` i `lab-history-strip.test.mjs`
+(pigułka, podpowiedź, legenda, szczegóły paska),
+`tests/unit/hormone-reference-loading.test.mjs` (leniwe ładowanie modułu),
+e2e `lab-historia-zakres-zapisany.spec.mjs` (prawdziwy przelicznik, okno
+przypięcia, sejf, pasek i zakładka; badanie bez zakresu i LH bez pola).
+
+**Akceptacja kliniczna:** decyzja 6.3 (2026-10-14) i jej szczegóły
+(2026-10-15); przed scaleniem — przegląd tego wpisu przez właściciela.
+Zielone testy nie są walidacją kliniczną.
+
+### LAB-HISTORIA 6.30 — zakres ogólny u dziecka bez oceny w historii (`vilda_lab_range_snapshot.js` 1.1.0, 2026-10-15)
+
+**Wpływ kliniczny: tak** (AGENTS.md § 3: zmiana interpretacji widocznej
+w historii). Gdy przelicznik nie ma wiersza zakresu pasującego do pacjenta,
+używa wiersza domyślnego (`default: true` w `reference_ranges_si` albo
+`default_range_si`; `selectRange` zwraca `is_default: true`, `matched:
+false`). Dziś każdy wiersz domyślny, w który trafia dziecko, jest zakresem
+dorosłych („Dorośli, zakres ogólny”, „Zakres ogólny dorosły (domyślnie)”).
+Od 1.1.0 historia (zakładka „Badania”, pasek „Poprzednie wyniki”) i okno
+przypięcia nie przenoszą kategorii z takiego zakresu na dziecko: bez
+strzałki ↑/↓ i bez „powyżej / poniżej / w zapisanym zakresie”. Zostaje
+wyciszona informacja „zakres ogólny — bez oceny dla dziecka” z granicami,
+populacją z danych, „dla kogo” i źródłem. Decyzja właściciela 6.30
+(wariant 3, 2026-10-15).
+
+**Reguła (odczyt):** `VildaLabRangeSnapshot.describe` zwraca status
+`general` (zamiast `recorded`), gdy zapis ma `status: 'recorded'`,
+`range.isDefault === true` i `context.lifeStage === 'pediatric'`. Etap
+życia to ten, który przelicznik użył przy doborze (`getEffectivePatient`:
+dziecko, gdy wiek < 18 lat albo — bez wieku — Tanner < V). Koperta
+`labResult.range` (granice, kategoria z `evaluate`, populacja, kontekst,
+źródła) zapisuje się jak dotąd i nie jest zmieniana: reguła działa także dla
+wyników przypiętych przed 1.1.0. Model `VildaLabHistory` 1.3.0 mapuje
+`general` na status `range-general` (wyciszony, bez `flag`). Dorosły
+z wierszem domyślnym — bez zmian (strzałka i kategoria z zapisu, populacja
+„Dorośli, zakres ogólny” w pigułce). Wiersz dopasowany do dziecka (np. TSH
+„Dzieci 6–10 lat”) — bez zmian. Przelicznik na żywo (status i pasek normy)
+— od 6.31 według tej samej reguły („LAB-HISTORIA 6.31” niżej).
+
+**Źródło medyczne i wersja:** bez nowych norm, progów i jednostek.
+`lab_units_data.js` (`LabUnitsData` 2.0.0; wiersze domyślne, np.
+`prl_default` 2–29 ng/mL „Dorośli, zakres ogólny”, `mayo_test_prolactin` —
+Mayo Clinic Laboratories, Test 85670) i `lab_unit_converter.js`
+(`LabUnitConverter` 2.0.0, `selectRange`). Brzmienie nie zakłada
+„dorosłych” w silniku: populację podaje zapis (normy jako dane,
+`docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność”).
+
+**Zakres (dane z 2026-10-15):** wiersze domyślne trafiane przez dziecko
+z wiekiem: prolaktyna (`prl_default`), 17-OH-progesteron (`17ohp_default`),
+IGFBP-3 (`igfbp3_default`; u dziecka bez wiersza Tannera), progesteron
+(`p4_default`, np. chłopiec 14 l, dziewczyna 16 l). Dziecko bez wieku
+w przeliczniku (sam Tanner I–IV) dodatkowo m.in. TSH, fT4, fT3, T4, T3,
+tyreoglobulina, IGF-1, LH, FSH, SHBG, estradiol, estron, DHEA, DHEA-S,
+androstendion, wolny testosteron, DHT. Witamina D 25(OH) ma wiersz
+dopasowany („Optymalne”) i nie podlega regule. Lista policzona bez metody
+oznaczenia; dla kontekstu takiego, jaki tworzy formularz przelicznika
+(np. 17-OHP zawsze z metodą), i po LAB-E2 aktualna lista jest we wpisie
+„LAB-HISTORIA 6.31” niżej.
+
+**Ograniczenia:**
+
+- Etap życia jest ten z przelicznika: przy znanym wieku decyduje wyłącznie
+  wiek (16 l z Tannerem V to dziecko — bez oceny), bez wieku Tanner V oznacza
+  etap dorosły i zakres ogólny ocenia się jak u dorosłego (strzałka zostaje,
+  „dla kogo”: „kobieta, bez wieku w przeliczniku — przyjęto dorosłego,
+  Tanner V”).
+- Do 6.31 przelicznik pokazywał na żywo kategorię względem zakresu ogólnego
+  (z opisem populacji); od 6.31 także przelicznik pokazuje wynik bez oceny
+  („LAB-HISTORIA 6.31” niżej).
+- Brak oceny nie znaczy „w normie”: zakres dla wieku trzeba wziąć
+  z laboratorium wykonującego badanie.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Prolaktyna 35 ng/mL, dziewczynka 8 l → zapis `prl_default` 2–29 ng/mL,
+  kategoria `above`, `isDefault: true`; historia: „zakres ogólny — bez oceny
+  dla dziecka · 2–29 ng/mL”, „Dorośli, zakres ogólny · dziewczynka, 8 l ·
+  Mayo Test 85670 — Prolaktyna”, bez strzałki. To samo dla 10 (`within`),
+  1,5 (`below`), 0,5 (`far_below`) i 80 ng/mL (`far_above`).
+- TSH 5,1 mIU/L, dziewczynka bez wieku, Tanner II → `tsh_default` 0,3–4,2
+  mIU/L „Zakres ogólny dorosły (domyślnie)” → bez strzałki, „dziewczynka,
+  Tanner II”.
+- IGFBP-3 9,4 mg/L, kobieta 30 l → `igfbp3_default` → „↑ powyżej zapisanego
+  zakresu” (dorosły bez zmian).
+- 17-OH-progesteron 15 nmol/L, dziewczyna 16 l, Tanner V → `17ohp_default`
+  → bez strzałki (etap dziecięcy z wieku); ta sama wartość bez wieku,
+  Tanner V (etap dorosły w przeliczniku) → ↑ z zapisu.
+- TSH 5,1 mIU/L, dziewczynka 8 l → `tsh_6_10y` (wiersz dopasowany) → „↑
+  powyżej zapisanego zakresu” (bez zmian).
+- Przelicznik, dziewczynka 12 l 3 m, prolaktyna 35 ng/mL → okno: „Zapisze się
+  z wynikiem: zakres ogólny 2–29 ng/mL — bez oceny dla dziecka”, „Dorośli,
+  zakres ogólny · bez zakresu dla: dziewczynka, 12 l 3 m · Mayo Test 85670 —
+  Prolaktyna”.
+
+**Testy:** `tests/unit/lab-range-snapshot.test.mjs` (prawdziwy
+`LabUnitConverter.selectRange`/`evaluate` jako „producent”; prawdziwy sejf
+i model bez wywołań `evaluate`), `tests/unit/lab-history-tab.test.mjs`
+(pigułka, podpowiedź komórki, legenda i stopka), `tests/unit/lab-history-strip.test.mjs`
+(chip i szczegóły), e2e `lab-historia-zakres-zapisany.spec.mjs` (prawdziwy
+przelicznik, okno przypięcia, sejf, pasek, zakładka, 390 px).
+
+**Akceptacja kliniczna:** decyzja 6.30 (wariant 3, 2026-10-15); przed
+scaleniem — przegląd tego wpisu przez właściciela. Zielone testy nie są
+walidacją kliniczną.
+
+### LAB-HISTORIA 6.31 — przelicznik: zakres ogólny u dziecka bez oceny (`przelicznik-jednostek.html`, 2026-10-16)
+
+**Wpływ kliniczny: tak** (AGENTS.md § 3: zmiana interpretacji wyniku
+pokazywanej na żywo). Decyzja właściciela 6.31 (2026-10-16): reguła 6.30
+obowiązuje także w samym przeliczniku. Gdy przelicznik nie ma wiersza
+zakresu pasującego do dziecka i używa wiersza domyślnego (zakres ogólny,
+dziś zawsze dorosłych), nie pokazuje kategorii: duża liczba bez koloru
+stanu, szara pigułka „zakres ogólny — bez oceny dla dziecka” (bez animacji),
+zamiast paska normy ze znacznikiem i komunikatu „Uwaga — …% górnej granicy
+normy” — karta „Zakres ogólny — bez oceny dla dziecka” („Dane przelicznika
+nie mają zakresu dla wieku dziecka. Zakres ogólny 2–29 ng/mL (Dorośli,
+zakres ogólny) — tylko do wglądu, wynik bez oceny.”), linia „zakres ogólny:
+2–29 ng/mL”, tabela przeliczeń bez kolorowania wierszy i opis „Zakres
+ogólny (bez oceny dla dziecka): …”. Przeliczenie jednostek bez zmian.
+
+**Reguła:** `isGeneralRangeForChild(range, patient)` w czytelnym skrypcie
+strony — zakres z granicami (`hasReferenceBounds`), `range.is_default ===
+true` z `LabUnitConverter.selectRange`, nie AMH, `patient.life_stage ===
+'pediatric'` z `getEffectivePatient` (wiek < 18 lat, a bez wieku Tanner
+< V). Ta sama reguła co `VildaLabRangeSnapshot.describe` (status `general`)
+w historii (6.30), więc okno przypięcia, pasek „Poprzednie wyniki”,
+zakładka „Badania” i przelicznik mówią to samo.
+
+**Bez zmian:** `LabUnitConverter` (`selectRange`, `evaluate`) i dane
+(`LabUnitsData`), zapis `labResult.range` przy przypięciu (kategoria
+z `evaluate` jak dotąd; historia jej nie pokazuje — 6.30), dorosły
+z wierszem domyślnym, dziecko z wierszem dopasowanym, karta „zakresy
+referencyjne i uwagi” (lista wierszy danych), LH, FSH, inhibina B
+i testosteron (osobna ścieżka oceny), AMH, estradiol (od LAB-E2 bez zakresu
+zastępczego).
+
+**Źródło medyczne i wersja:** bez nowych norm, progów i jednostek;
+`lab_units_data.js` i `lab_unit_converter.js` (`LabUnitConverter` 2.0.1 po
+LAB-E2), wiersze domyślne jak w 6.30 (np. `prl_default` 2–29 ng/mL,
+`mayo_test_prolactin` — Mayo Clinic Laboratories, Test 85670). Populację
+pokazuje opis wiersza z danych, nie silnik.
+
+**Zakres (dane z 2026-10-16, kontekst jak w formularzu, 17-OHP z metodą
+domyślną immunoassay PL):** dziecko z wiekiem — prolaktyna i IGFBP-3 (bez
+stadium Tannera) w całym wieku dziecięcym; progesteron od 10 lat (oraz
+pierwsze dni życia); SHBG w 9.–13. roku życia i do 6. miesiąca; DHEA-S,
+estron i IGF-1 do 6. miesiąca. Dziecko bez wieku (sam Tanner I–IV) — m.in.
+TSH, fT4, fT3, T4, T3, tyreoglobulina, 17-OHP, DHEA, progesteron,
+prolaktyna. 17-OHP z wiekiem trafia w formularzu w wiersz dopasowany do
+metody.
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`:**
+
+- Prolaktyna 35 ng/mL, dziewczynka 8 l → pigułka „zakres ogólny — bez oceny
+  dla dziecka”, liczba bez koloru, karta zamiast paska, „zakres ogólny: 2–29
+  ng/mL”, tabela bez kolorowania; 80 ng/mL — bez komunikatu „Uwaga”; 10
+  ng/mL — bez „w zakresie normy”.
+- Ta sama wartość, kobieta 30 l → wiersz dopasowany „Kobiety nieciężarne”
+  → „↑ powyżej normy”, pasek ze znacznikiem (bez zmian); powrót do
+  dziewczynki — znów bez oceny.
+- IGFBP-3 9,4 mg/L, kobieta 30 l → `igfbp3_default` → „↑ powyżej normy”,
+  „zakres: 2,6–8,6 mg/L” (dorosły z wierszem domyślnym bez zmian).
+- TSH 5,1 mIU/L, dziewczynka 8 l → `tsh_6_10y` → „↑ powyżej normy”,
+  „zakres: 0,6–4,8 mIU/L” (bez zmian).
+- IGFBP-3 9,4 mg/L, dziewczynka 8 l, telefon 390 px → karta z długim opisem
+  populacji mieści się bez poziomego przewijania.
+
+**Testy:** e2e `tests/e2e/lab-zakres-ogolny-dziecko.spec.mjs` (prawdziwy
+przelicznik, osobny origin, bez sejfu; zmiana kontekstu na żywo, 390 px)
+i krok w `lab-historia-zakres-zapisany.spec.mjs` (przelicznik → okno →
+historia mówią to samo).
+
+**Akceptacja kliniczna:** decyzja 6.31 (2026-10-16); przed scaleniem —
+przegląd tego wpisu przez właściciela. Zielone testy nie są walidacją
+kliniczną.
+
+### P-LAB-WARTOSC-BEZ-JEDNOSTKI — liczba ze starszego wpisu wyniku bez jednostki (SW 1.1.279, `vilda_vault.js` 212, 2026-10-14)
+
+**Wpływ kliniczny: tak.** Zmieniają się liczby w historii wyników dla
+starszych i importowanych notatek, które mają tylko tekst `labResult.value`
+(bez `valueNum` i bez koperty oceny), gdy w tym tekście za liczbą nie ma
+jednostki. Nie ma nowych norm, współczynników, progów, jednostek ani
+zaokrągleń. Źródło medyczne: nie dotyczy (poprawka odczytu zapisanej
+wartości). Błąd zgłoszono przy PR1 planu `docs/LAB_HISTORIA_WYNIKOW_PLAN.md`
+(„poza zakresem PR1”).
+
+**Problem:** `listPatientLabSeries` (w artefakcie `Po()`) czyta liczbę
+takich wpisów funkcją `vo()` i oznacza punkt `legacy: true`. Dawne wyrażenie
+`/^\s*(\d+(?:[.,]\d+)?)\s*([^\s=]+)/` wymagało co najmniej jednego znaku
+jednostki, więc przy wartości bez jednostki cofało się w cyfrach: „15” → 1
+z jednostką „5”, „25,5” → 25 z jednostką „,5”, „15 = …” → 1 z „5”. Wartość
+jednocyfrowa („5”) w ogóle nie trafiała do serii. Gdy jednostka była zapisana
+osobno (`lab.unit`), punkt miał wiarygodnie wyglądającą, ale błędną wartość:
+„15” z `mIU/L` → 1 mIU/L. Błędna liczba trafiała do „Trendu wyników”
+w Historii karty, nakładek na siatkach centylowych, eksportu siatek do PDF
+i do modelu historii `vilda_lab_history.js` (wiersz legacy i punkt wykresu).
+Strzałki z normy wpisu i z dzisiejszego zakresu przelicznika liczyły się
+z tej błędnej liczby.
+
+**Zmiana:** liczba jest czytana osobno i w całości (`^\s*(\d+(?:[.,]\d+)?)`),
+a jednostka to tekst tuż za nią do spacji albo „=”, także pusty. Brak
+jednostki → `null`, jak w punkcie serii z pustym `lab.unit`; `Po()` jak
+dotąd bierze wtedy jednostkę z `lab.unit`, jeśli jest. Notatka w sejfie się
+nie zmienia, liczba powstaje przy odczycie serii.
+
+**Co się nie zmienia:** każda wartość, z której dawne wyrażenie odczytało
+jednostkę bez cofania się w cyfrach, daje ten sam wynik: „1,5 IU/L” → 1,5
+i „IU/L”, „1,2 ng/dL = 15,44 pmol/L” → 1,2 i „ng/dL”, także jednostka
+zaczynająca się cyfrą po spacji: „5,2 10^9/L” → 5,2 i „10^9/L”. Wynik
+z operatorem bez oceny („<0,02”) nadal nie trafia do serii. Wpisy
+z `valueNum` i wpisy z kopertą oceny (LH/FSH, inhibina B, AMH) nie
+przechodzą przez `vo()`. Tekst niejednoznaczny, np. „1 000 IU/L” z odstępem
+tysięcy, daje jak dotąd pierwszą grupę cyfr.
+
+Odstępstwo od sugestii zlecenia: proponowany warunek „jednostka nie zaczyna
+się cyfrą ani przecinkiem/kropką” zmieniłby „5,2 10^9/L” na 5,2 bez
+jednostki. Czytanie liczby osobno usuwa samo cofanie się i zostawia ten
+przypadek bez zmian.
+
+**Populacja, jednostki i ograniczenia:** wszyscy pacjenci i wszystkie
+badania zapisane jako notatka z `labResult.value` bez `valueNum` i bez
+koperty oceny. Do serii trafiają teraz także wpisy jednocyfrowe bez
+jednostki, w tym „0”. Punkt bez jednostki (ani w tekście, ani w `lab.unit`)
+ma `unit: null`: trend rysuje go tylko w serii, w której najczęstszy jest
+brak jednostki, inaczej liczy go w „pominięto”, jak każdy punkt bez
+jednostki. Model historii porównuje go z innymi tylko wtedy, gdy żaden
+wynik serii nie ma jednostki (reguła LAB-HISTORIA).
+
+**Przypadki syntetyczne `wejście → oczekiwany wynik`** (notatka TSH bez `valueNum`):
+
+- „15” → 15, bez jednostki (przed łatką: 1 z jednostką „5”).
+- „25,5” → 25,5, bez jednostki (przed: 25 z „,5”).
+- „5” → 5, bez jednostki (przed: brak punktu).
+- „15” z `unit: "mIU/L"` → 15 mIU/L (przed: 1 mIU/L). W modelu historii,
+  obok wyniku dokładnego 4,2 mIU/L: wiersz legacy „15 mIU/L” i punkty
+  wykresu 4,2 i 15.
+- „1,5 mIU/L” → 1,5 mIU/L; Leukocyty „5,2 10^9/L” → 5,2 i „10^9/L”;
+  „<0,02” → brak punktu (wszystkie bez zmian).
+
+**Testy:** `tests/unit/lab-snapshot-vault.test.mjs` — prawdziwy sejf
+(szyfrowanie, zapis notatek, `listPatientLabSeries`) z przypadkami wyżej
+oraz `vo()` wycięta z artefaktu: na wszystkich napisach do 5 znaków
+z alfabetu `1 5 0 , . = m / <` i spacji wynik z jednostką jest równy wynikowi
+dawnego wyrażenia, a różni się tylko tam, gdzie dawne wyrażenie dzieliło
+liczbę albo nie dawało punktu. `tests/unit/lab-history-vault.test.mjs` — ten
+sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
+łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
+zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
+
+### LAB-E2 — brak niedopasowanego zakresu dorosłych, 2026-10-16
+
+**Wpływ kliniczny: tak.** `LabUnitsData` i `LabUnitConverter` 2.0.1:
+polityka danych `estradiol-matched-reference-only`, wersja `2026-10-16.1`,
+zatrzymuje dobór E2 po sprawdzeniu wszystkich dotychczasowych wierszy
+kontekstowych, jeżeli żaden nie pasuje. Nie uruchamia wtedy ani ogólnego
+wiersza `e2_default`, ani niezależnego `default_range_si`. Przeliczenie
+jednostek i wartość wyniku pozostają dostępne, bez zastępczej normy,
+kolorowej klasyfikacji, strzałki lub paska zakresu. Formularz nie wymaga
+nowych odpowiedzi.
+
+**Źródło i zakres weryfikacji:** pełny oficjalny katalog Mayo EEST/81816,
+[HTML](https://www.mayocliniclabs.com/test-catalog/Overview/81816) oraz
+[Test Definition PDF](https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=81816),
+7 stron, tabela Reference Values na stronie 3, odczyt 15.10.2026.
+Data generowania PDF nie jest datą rewizji zaleceń. Katalog dotyczy E2
+w surowicy, LC-MS/MS, pg/mL; oddziela dzieci i stadia Tannera od dorosłych,
+a dorosłych według płci i stanu rozrodczego. Dla 1–14 dni opisuje wysokie
+stężenia po urodzeniu i ich spadek, zamiast podawać dorosły RI. Tanner I
+ma warunek „>14 days and prepubertal”. Kolumna „Mean age” nie wyznacza
+granic wieku ani stadium. Katalog nie przedstawia kompletnej kohorty,
+pochodzenia populacji ani kwalifikacji wieku ciążowego.
+
+Weryfikacja uzasadnia odmowę użycia niedopasowanego dorosłego RI;
+nie potwierdza wszystkich dotychczasowych liczb E2. Aplikacyjne
+70–290 pmol/L pochodzi z odrębnego wpisu Tietz 2018, nie ze świeżego
+katalogu Mayo. Nie zmieniamy istniejących dopasowanych wierszy, konwersji,
+ich granic, zastępczych grup wieku/stadium ani żeńskiego 0–183 pmol/L
+w minipuberty. Ich pełna kwalifikacja źródłowa pozostaje osobnym zadaniem.
+Dotychczasowe automatyczne przyjęcie `life_stage: adult` przy nieznanym
+wieku oraz dopasowania Tannera także nie są zmieniane przez tę blokadę.
+Nie jest to ogólne rozwiązanie brakującego kontekstu E2 ani nowy profil
+laboratoryjny. Wykres, mediany i geometria edukacyjna pozostają odrębne.
+
+**Syntetyczne regresje produkcyjnego API i UI:** chłopiec 3 miesiące,
+20 pmol/L → przeliczenie zachowane, brak zakresu i oceny; przed poprawką
+`far_below` względem 70–290 pmol/L. Ten sam wiek i 20 pg/mL → zachowane
+73,42 pmol/L, bez dawnego pozornego `within`. Dziewczynka 3 miesiące
+nadal korzysta z istniejącego 0–183; dorosły mężczyzna z 40–160 pmol/L.
+Zmiana kontekstu i lokalne nadpisanie odświeżają zakres. Sprawdzane są
+oba fallbacki, zgodne wiersze, jednostki i brak wpływu na inne anality.
+
+**Zapis i historia:** obecny serializer utrwala brak porównania jako
+`unavailable`, z kontekstem i wynikiem, bez granic, klasyfikacji i strzałki.
+Nie zmieniamy modelu historii ani ponownie nie oceniamy wcześniejszych
+zapisów. Testy nie nadają normom statusu walidacji klinicznej; końcowy
+przegląd kliniczny i scalenie pozostają decyzją właściciela.
 
 ### LAB-AMH — zakresy wieku i kontekst wykresu, 2026-10-13
 
@@ -82,6 +1181,36 @@ do właściciela przy przeglądzie PR; testy nie nadają walidacji klinicznej.
 Przesłany artykuł Xu 2026 i XLSX są przeanalizowane i zapisane jako
 dowód dla następnego etapu, bez aktywacji nowego profilu. Kolejność i
 nierozstrzygnięte kwestie: [AMH_REFERENCE_PLAN.md](AMH_REFERENCE_PLAN.md).
+
+#### LAB-AMH-DOB-CLEAR — usunięcie precyzji dni po wyczyszczeniu daty, 2026-10-14
+
+**Problem i wpływ:** przycisk `dobClear` usuwał datę programowo, bez zdarzenia
+edycji pola. Przy niezmienionych ukończonych miesiącach odbiorcy mogli zachować
+wcześniejszy cache wieku w dniach. Test AMH maskował ten brak dodatkowym
+wpisaniem masy i wzrostu, a przy odtwarzaniu sesji także te zdarzenia mogły
+trafić w blokadę publikowania. W CI po scaleniu #684 asercja usunięcia cache
+nie przeszła ani w pierwszej próbie, ani przy ponowieniu.
+
+`VildaDobAge.clear()` po rzeczywistym wyczyszczeniu edytowalnej daty zgłasza
+zwykłą edycję `input`/`change`. Istniejące nasłuchy aktualizują pochodny
+kontekst i zapis sesji. Data chroniona jako pochodząca z rekordu nadal nie
+jest czyszczona tą funkcją. Strażnicy odtwarzania, tożsamości karty oraz
+blokady sejfu pozostają obowiązujące; poprawka ich nie omija.
+
+**Przypadek syntetyczny:** ta sama fikcyjna pacjentka, 4 ukończone miesiące,
+data dająca 119–120 dni → przycisk „Wyczyść” → data pusta, nadal 4 miesiące,
+cache dni usunięty, odniesienie AMH wykorzystuje przedział 4–5 miesięcy.
+Nie dopisujemy dni do wieku podanego tylko w miesiącach. Może się zmienić
+odniesienie zależne od precyzji wieku zgodnie z dotychczasowym kontraktem;
+tabele, progi, konwersje, model Xu i zapisane wyniki nie są przeliczane.
+
+`dob-clear-neonatal-cache.test.mjs` wywołuje rzeczywiste moduły DOB
+i neonatal context, także z aktywnymi strażnikami tożsamości i odtwarzania. E2E
+`hormone-lifespan-amh-age-context.spec.mjs` wymaga usunięcia cache bez
+pomocniczej edycji masy lub wzrostu, braku daty w rzeczywistym zapisie sesji
+oraz utrzymania tego stanu po ponownym otwarciu formularza. Przed edycją czeka na inicjalizację
+odtwarzania sesji, zaplanowane klatki oraz zakończenie odtwarzania i kolejek,
+zamiast uznawać chwilowo pustą kolejkę za gotowy formularz.
 
 ### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
 
@@ -564,6 +1693,41 @@ ograniczenia zapisano w `INHIBIN_B.md`; profil Mayo pozostaje nieaktywny.
 Nie wybieramy źródła według tego, który werdykt daje dla wpisanej liczby.
 
 ### LAB-HORMONE-LIFESPAN — poglądowy przebieg hormonów w ciągu życia
+
+**2026-10-17 — żeński E2, zwykły punkt względem mediany wieku 6–18 lat.**
+Po analizie pełnego Madsen 2022 (DOI 10.1210/clinem/dgac155) i oryginalnego
+suplementu LMS v1 (DOI 10.6084/m9.figshare.17153336.v1) właściciel polecił
+wdrożyć jeden profil `madsen2022-female-e2-age-6-18`. Wszystkie 13 median
+z `LCMSMS hormones!AA3:AD15` jest zgodnych ze źródłem: `exp(M)/1e6`, pmol/L.
+Populacja: dziewczęta BGS2 6–<16 i Fit Futures 15–18, Norwegia; surowica
+LC-MS/MS, mieszane stadia i fazy cyklu, bez doustnej antykoncepcji.
+LLOQ wynosi 0,58 i 13 pmol/L w dwóch metodach; nie jest wspólną podłogą
+modelu ani podstawą imputacji wyniku `<13`. PCHIP pomiędzy wszystkimi
+rocznymi węzłami jest przybliżeniem aplikacji, nie ponownym dopasowaniem LMS.
+
+Polityka danych: `female-estradiol-reference-policy.json`, eksport
+`femaleEstradiolReferencePolicy`. Cały możliwy wiek musi mieścić się w [6,18];
+dokładny 18 jest opublikowanym brzegiem modelu, a 18 lat 0 miesięcy obejmuje
+szerszy przedział i nie kwalifikuje. Bez ekstrapolacji, Th lub nowej ankiety.
+Mediana wieku łączy fazy cyklu i nie stanowi normy konkretnej fazy. Nieznana
+metoda pozwala na porównanie edukacyjne; znana niezgodna metoda/materiał
+blokuje bez zastępczego źródła. Ciąża, menopauza i znane leczenie hormonalne
+są konserwatywnymi wyłączeniami aplikacji, odrębnymi od kryteriów autora.
+Adapter zachowuje dodatnie fakty tylko tej samej aktualnej pacjentki, z ochroną
+płci i historycznej próbki. Rozszerzona ochrona E2 obejmuje wszystkie wieki,
+więc znane aktualne leczenie hormonalne może także zablokować punkt niemowlęcia;
+jego mediany, domena i warunek donoszenia nie zmieniają się.
+
+**Wpływ kliniczny:** pojawia się orientacyjne porównanie z medianą dla wieku;
+nie powstaje klasyfikacja prawidłowości, norma laboratoryjna, SDS ani nowy zapis
+historii. Wszystkie 77 starych profili, konwersje, stała skala E2 264 pmol/L,
+geometria, wstawka cyklu i porównania płci pozostają bez zmian. Przypadki
+rzeczywistego silnika: F12/E2 50 pmol/L → mediana 52,46318409704675;
+F6 → 1,257681951881138; F18 dokładnie → 185,45583618764735;
+F3, >18 lub niepewny wiek wychodzący poza model → brak odniesienia;
+`<13` → bez fikcyjnej dokładnej kropki. Źródła, ograniczenia i hashe:
+[audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
+Testy techniczne nie są walidacją kliniczną.
 
 Wdrożenie zatwierdzonych makiet z 2026-10-09: męskie LH, FSH, testosteron
 całkowity, AMH, inhibina B i poglądowe INSL3; żeńskie LH, FSH, estradiol,
@@ -1526,6 +2690,39 @@ rzeczywisty formularz. Status wykonania należy do raportu implementacji;
 te przypadki nie deklarują zaliczonych testów ani walidacji klinicznej.
 Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibina-b--rozszerzenie-13-października-2026).
 
+#### HORMONE-FEMALE-AMH-KNOWN-PREGNANCY — kwalifikacja Jopling, 2026-10-17
+
+**Problem i decyzja:** po wskazaniu ciąży przy E2 i przełączeniu na AMH
+16-latka nadal otrzymywała porównanie z medianą Jopling. Kontekst ciąży
+był zachowany, ale pięć pediatrycznych profili nie miało wyłączenia.
+Właściciel polecił mały PR dotyczący AMH i znanej ciąży.
+
+`female-adolescent-reference-policy.json` jawnie wyłącza `pregnancy_t1`,
+`pregnancy_t2` i `pregnancy_t3` we wszystkich pięciu żeńskich profilach
+Jopling. Generator przenosi regułę i jej pochodzenie do danych produkcyjnych;
+silnik korzysta z istniejącego mechanizmu `excludedCyclePhases`.
+To ostrożnościowa **polityka aplikacji**, nie potwierdzone kryterium
+wyłączenia autorów [Jopling 2018](https://doi.org/10.1002/edm2.21), tabela 1.
+Populacja próbek szpitalnych, osocze Li-heparynowe, Access AMH, jednostki,
+oryginalne mediany i ograniczenia pozostają opisane powyżej i w źródłach.
+
+**Wpływ:** przy już znanej ciąży nie pokazujemy punktu pacjentki ani
+znacznika mediany. Zachowujemy wpisany wynik, przeliczenia i poglądową
+krzywą. Komunikat braku odniesienia nie sugeruje regularnych cykli
+w kohorcie pediatrycznej. Brak kontekstu nadal pozwala na ograniczone
+porównanie edukacyjne, bez potwierdzania nieobecności ciąży. Nie dodajemy
+pól, norm, median, wymogu cyklu ani wyłączenia menopauzy w pediatrii.
+Dotychczasowe profile FDA, niemowlęce, męskie, inne hormony, geometria,
+skale i odczyt utrwalonych historycznych ocen pozostają bez zmian.
+
+**Syntetyczne wejście → wynik:** F16, AMH 1 ng/mL, `pregnancy_t1/t2/t3`
+→ `unavailable / incompatible-reproductive-context`, bez zastępczego
+źródła. Po usunięciu lokalnego kontekstu → ta sama mediana grupy
+21,14 pmol/L = 2,961714 ng/mL. Regresje wywołują rzeczywisty silnik dla
+pięciu profili i trzech trymestrów oraz formularz E2 → AMH na desktopie
+i 320 px; obejmują odświeżenie tej samej osoby i reset po zmianie pacjenta.
+Testy nie nadają tej regule statusu walidacji klinicznej.
+
 #### Uzupełnienie — inhibina B od 5,6 roku, 2026-10-13
 
 **Problem i akceptacja:** dla dziewczynki 6 lat z wynikiem 33 pg/mL silnik
@@ -1737,6 +2934,140 @@ Regresja wywołuje rzeczywisty renderer i silnik:
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną.
 
+### HORMONE-MALE-LH-CALIPER-REFERENCE — odtworzona mediana w (16,18), 2026-10-18
+
+**Decyzja i wpływ kliniczny:** po audycie źródła właściciel polecił mały PR
+wyłącznie dla chłopców. [Polityka](hormone-lifespan/male-lh-caliper-reference-policy.json)
+dodaje jeden zwykły profil `wilson2023-male-lh-age-over16-under18`, uzupełniając
+edukacyjne odniesienie LH ściśle po 16. i przed 18. rokiem życia. Wszystkie
+81 wcześniejszych profili pozostaje bez zmian. Dokładne 16 lat zachowuje
+Madsen, 3,5142066372549756 IU/L; od 18 lat pozostaje Laurentino, 3 IU/L.
+Nie zmieniają się normy laboratoryjne, silnik oceny, geometria, skale,
+porównanie płci ani formularz. Żeńskie LH nadal wymaga wyjaśnienia
+rozbieżności między arkuszem i ryciną i nie jest importowane.
+
+**Źródło i poziom dowodu:** [Wilson 2023](https://doi.org/10.1515/cclm-2022-1077),
+CCLM 61(6):1105–1115, PMID 36639844; pełny artykuł i Supplemental Tables
+1–3 dostarczone przez właściciela. `LH_M!A2:D92` zawiera 91 węzłów 10–19
+co 0,1 roku, nie co miesiąc; opublikowana domena LH to 10–<19. Surowica,
+Abbott ARCHITECT ci2000; zdrowa kanadyjska kohorta CALIPER. Około 1500
+opisuje kohorty źródłowe wszystkich analitów, nie N chłopców 16–18 lat.
+Nie podano modelu stadium Tannera ani standaryzacji porannego pobrania.
+
+Najpierw wyznaczamy dokładny, znormalizowany `qBCCG(0.5)` na skali modelu,
+następnie `exp(q)/1e6` do IU/L. Samo M ani `exp(M)/1e6` nie zastępuje
+znormalizowanej mediany. To **jawna, zaakceptowana rekonstrukcja**, oparta
+na opisanym logarytmowaniu LH, [przypiętej konwencji współautora](https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196)
+i zgodności wszystkich pięciu męskich centyli z ryciną na 89 punktach wieku.
+Kod współautora jest późniejszym przykładem T4/TSH z października 2023,
+z zakomentowaną opcjonalną transformacją; nie odzyskano dokładnego
+preprocessingu LH Wilson. Rycina służy kontroli, nie dostarcza importowanych
+wartości. Ekstraktor standardowej biblioteki Python zachowuje L/M/S,
+pośrednie q, komórki i SHA oryginału; `--check` sprawdza reprodukcję.
+PCHIP w stężeniach zachowuje wszystkie 91 węzłów i przybliża tabelę,
+nie oryginalny dopasowany obiekt GAMLSS. Nie uruchamiamy RI, SDS,
+percentyli pacjenta ani diagnostyki z tego modelu.
+
+**Kwalifikacja:** cały możliwy wiek musi pasować do `(16,18)`. Wpis 16 lat
+0 miesięcy lub 16 ukończonych lat obejmuje granicę i nadal nie otrzymuje
+jednej mediany; nie wybieramy środka przedziału. Górny koniec 18 może być
+wyłącznie otwarty. Nieznana metoda/materiał dopuszcza dotychczasowe
+porównanie orientacyjne; znana niezgodność blokuje bez fallbacku.
+Zachowane są istniejące bramki tożsamości, płci, znanego leczenia/GnRHa
+i stymulacji; kanoniczny `measurementKind: 'stimulated'` wyłącza punkt.
+Nie deklarujemy nowego odczytywania wszystkich historycznych pól protokołu.
+LLOQ LH 0,09 IU/L nie jest LOD, progiem pacjenta ani podłogą wykresu.
+Zero pozostaje zerem, a nierówność nie tworzy dokładnego punktu.
+
+**Przypadki wejście → odniesienie:** chłopiec, LH w IU/L lub mIU/mL:
+
+- dokładny wiek 17 → 2,603196549069626 IU/L;
+- formularz 16 lat 1 miesiąc → około 2,2166851731955;
+  17 lat 11 miesięcy → około 3,01627134453025 IU/L, z PCHIP;
+- dokładne 16 → dotychczasowe 3,5142066372549756; dokładne 18 → 3 IU/L;
+- 16 lat 0 miesięcy, wiek przecinający granicę, dziewczynka 17 lat,
+  znana niezgodna metoda/materiał lub stymulacja → bez nowego punktu CALIPER.
+
+Edukacyjna mediana LH nie jest zapisywana do historii: snapshot takiego
+odniesienia pozostaje wyłącznie funkcją AMH. Zapis LH zachowuje istniejącą,
+niezależną ocenę laboratoryjną Mayo, bez przeliczania dawnych wpisów.
+Regresje rzeczywistych funkcji i interfejsu:
+[unit](../../tests/unit/hormone-lifespan-male-lh-caliper-reference.test.mjs),
+[E2E](../../tests/e2e/hormone-lifespan-male-lh-caliper-reference.spec.mjs).
+Źródła, hashe i ograniczenia:
+[audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json).
+Akceptacja rekonstrukcji nie oznacza walidacji klinicznej.
+
+### HORMONE-FSH-CALIPER-REFERENCE — odniesienie wieku od 16 lat, 2026-10-18
+
+**Problem i decyzja:** po analizie czterech oryginalnych plików Wilson 2023
+właściciel polecił pierwszy mały PR z FSH. Zwykły wykres przełącza źródło
+na CALIPER od 16. urodzin: chłopcy `[16,18)`, dziewczęta `[16,19)`.
+Madsen pozostaje w `[6,16)` ze wszystkimi oryginalnymi węzłami; męskie
+źródła dorosłe działają nadal od 18. Brak nowych pytań o Tanner, cykl
+lub metodę. LH i pozostałe anality, normy laboratoryjne, geometria oraz
+utrwalone oceny historyczne nie są przeliczane tą zmianą.
+
+**Źródło:** [Wilson i wsp. 2023](https://doi.org/10.1515/cclm-2022-1077),
+CCLM 61(6):1105–1115, PMID 36639844; pełny artykuł i Supplemental Tables
+1–3 dostarczone przez właściciela. Tabela 3, arkusze `FSH_M` i `FSH_F`,
+`A2:D182`: po 181 węzłów L/M/S co 0,1 roku, nie co miesiąc. Surowica,
+Abbott ARCHITECT; zdrowa kanadyjska kohorta CALIPER, Greater Toronto.
+Około 1500 opisuje kohorty źródłowe, nie N oznaczenia ani N podgrupy
+16–19. Wykluczono chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu,
+aktualną ciążę i leki na receptę, w tym antykoncepcję doustną w ostatnich
+dwóch tygodniach. Nie podano specyficznej fazy cyklu, stadium Tannera,
+porannego pobrania ani LLOQ FSH; brak LLOQ nie oznacza zera.
+
+**Odtwarzanie mediany:** natywna skala FSH to IU/L. Dla każdego węzła
+wyznaczono `qBCCG(0.5)` z normalizacją uciętego rozkładu, zgodnie
+z rodziną GAMLSS z suplementu i kodem `gamlss.dist`. Nie kopiujemy M
+jako dokładnego p50: F18 ma M=4,3159775325, ale p50=4,3996476844.
+Odtworzone p50 zgadzają się z czarnymi krzywymi ryc. 1C w granicach
+precyzji rysunku; odczyt ryciny jest kontrolą, nie źródłem nowych liczb.
+Ekstraktor `extract_wilson2023_caliper_fsh.py` używa biblioteki standardowej,
+sprawdza SHA-256 oryginału i zachowuje wszystkie 362 wiersze z adresami
+komórek. Pełnych dokumentów ani arkuszy nie publikujemy w repozytorium.
+
+**Polityka:** [fsh-caliper-reference-policy.json](hormone-lifespan/fsh-caliper-reference-policy.json).
+PCHIP w stężeniach pomiędzy węzłami jest przybliżeniem tabeli, nie
+odzyskanym modelem GAMLSS. Wiersz 19 domyka interpolację poniżej 19;
+nie daje odniesienia dla pacjentki w wieku 19 lat. Cały niepewny wiek
+musi pasować do jednego profilu. Nie wybieramy jego środka ani nie
+uśredniamy różnych źródeł. Nieznana metoda pozwala na orientacyjne
+zestawienie; znana niezgodna metoda lub materiał blokują punkt bez
+fallbacku. Alias źródła dotyczy wyłącznie `abbott-architect-ci2000-fsh`,
+nie stanowi kalibracji z i1000, IMMULITE, Roche lub AutoDELFIA.
+
+Przy 16 latach zwykłe odniesienie zmienia się jawnie: M4,1606515393 →
+2,4066234448; F5,8260631746 → 3,9612246080 IU/L. Te różnice kohort i metod
+nie tworzą nowego wydarzenia w poglądowej linii. Osobne porównanie płci
+zachowuje Madsen 6–16 włącznie. Własna polityka porównania zachowuje
+opublikowany węzeł męskiego FSH 16 w kopii profilu ograniczonej do tego
+widoku; nie przywraca go jako zwykłego fallbacku ani nie zmienia globalnych
+profili. Znane leczenie, stymulacja i ciąża zachowują dotychczasowe bramki.
+
+**Przypadki wejście → wynik produkcyjnego silnika:** FSH, surowica lub
+nieznany materiał/metoda, wynik 2 IU/L lub 2 mIU/mL:
+
+- M16 → p50 2,4066234448145565; M17 → 2,518038228916774 IU/L;
+- F16 → 3,961224607974412; F17 → 4,1790950116741366;
+  F18 → 4,399647684355955 IU/L;
+- wpis 16 lat 0 miesięcy → CALIPER, bez wymagania Th/G;
+- M18 → dotychczasowa średnia grupy Laurentino 3,0, nie CALIPER;
+- F19 → brak odniesienia, bez ekstrapolacji;
+- niepewny wiek przecinający 16, M18 lub F19 → brak arbitralnej mediany;
+- znana ciąża, przeciwwskazanie, cenzurowany wynik lub niezgodna metoda →
+  brak punktu, bez zmiany linii i bez nowej normy laboratoryjnej;
+- porównanie płci dokładnie przy 16 → oryginalne p50 Madsen obu płci.
+
+Regresje wywołują rzeczywiste funkcje produkcyjne:
+`hormone-lifespan-fsh-caliper-reference.test.mjs` i
+`hormone-lifespan-fsh-caliper-reference.spec.mjs`. Źródła, granice,
+hashe i kontrola ryciny:
+[audyt FSH CALIPER](hormone-lifespan/evidence/fsh-caliper-reference-audit-2026-10-18.json).
+Zgoda na wdrożenie i zielone testy nie nadają statusu walidacji klinicznej.
+
 ### HORMONE-LH-FSH-SEX-COMPARISON — wspólne stężenia obu płci, 2026-10-12
 
 **Problem i decyzja:** dotychczasowe pokwitaniowe porównanie LH/FSH
@@ -1816,12 +3147,179 @@ populacyjnych nie jest referencją klinicznego ilorazu LH/FSH.
 - Chłopiec 300 dni, LH → brak dokładnego punktu; dziewczynka tego
   samego wieku zachowuje własną medianę przy zgodnym kontekście.
 - Dokładnie 16 lat → opublikowany brzeg modelu; wiek [16,17) albo
-  >16 lat → brak odniesienia tego porównania. Zwykły widok nie
-  otrzymuje nowego żeńskiego profilu Madsen.
+  >16 lat → brak odniesienia tego porównania. W tej partii zwykły widok nie
+  otrzymał żeńskiego profilu Madsen; osobne rozszerzenie z 16.10.2026 opisano poniżej.
 
 Źródła, hashe, zakres zgody i ograniczenia:
 [audyt porównania LH/FSH](hormone-lifespan/evidence/lh-fsh-sex-comparison-audit-2026-10-12.json).
 Akceptacja prezentacji i testy techniczne nie są walidacją kliniczną.
+
+### HORMONE-FEMALE-GONADOTROPIN-REFERENCE — zwykłe mediany wieku, 2026-10-16
+
+**Problem i decyzja:** żeńskie mediany LH/FSH Madsen były dostępne w porównaniu
+płci i prezentacji pokwitania, ale nie w zwykłym punkcie pacjentki. Wcześniejsze
+żeńskie FSH Zec 6–<11 dotyczyło wyłącznie Th1. Po porównaniu dwóch wariantów
+właściciel polecił wdrożyć rekomendowaną politykę wieku:
+`female-gonadotropin-reference-policy.json`. Od 6 do dokładnego brzegu 16 lat
+zwykłe LH i FSH korzystają z Madsen niezależnie od Th. Zec FSH pozostaje
+1–<6 przy aktualnym Th1. Jest to wybór aplikacji dla edukacyjnego wykresu wieku,
+nie wykazana przewaga jednej metody ani zalecenie autorów o łączeniu badań.
+
+**Źródła i weryfikacja:** pełny [Madsen 2022](https://doi.org/10.1210/clinem/dgac155),
+tabela 1, metody i dyskusja oraz oficjalny [suplement v1](https://doi.org/10.6084/m9.figshare.17153336.v1),
+`Other biomarkers` B3:E13/G3:J13; 22/22 żeńskich median ponownie sprawdzono
+z oryginalnymi komórkami, bez zmiany `exp(M)/1e6`. Norwegia, BGS2 6–<16,
+601 dostępnych żeńskich próbek w tabeli kohorty, nie gwarantowana liczebność
+każdego analitu; surowica 08:00–14:00, Siemens IMMULITE 2000 XPi, LLOQ 0,1 IU/L.
+Model obejmuje różne stadia, cykl niestandaryzowany; użytkowniczki doustnej
+antykoncepcji wykluczono. PCHIP pozostaje przybliżeniem między rocznymi węzłami.
+Fit Futures do 18 lat rozszerza steroidy, nie LH/FSH. Mediany LH blisko LLOQ
+nie służą do rozpoznania początku dojrzewania.
+
+[Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210:
+korzystamy z ekstraktu pełnego PDF zweryfikowanego 10.10.2026, bez zmiany liczb;
+bieżący odczyt potwierdził bibliografię i abstrakt, pełny PDF nie był ponownie
+dostępny. Zagrzeb, Tanner I, Roche cobas e411; materiał przypisany do konkretnego
+analitu i pora pobrania pozostają nieustalone. Okno aplikacji 4–<6 nadal
+opisuje pełną źródłową grupę 4–<8, medianę 1,07 i N=156. Grupę 8–<11/1,55
+zachowujemy w dowodach, poza aktywnym zwykłym routingiem.
+
+**Wpływ kliniczny:** zmienia się źródło i mediana odniesienia, np. F9/Th1/FSH
+Zec 1,55 → Madsen 1,964770298470689 IU/L. Brak lub zmiana Th nie przełącza
+odniesienia wieku 6–16. Zmiana nie jest nową normą, SDS ani diagnozą; osobne
+laboratoryjne osie wieku/stadium i ostrzeżenia pokwitania pozostają niezmienione.
+Znana metoda Roche cobas e411, dotąd zgodna z Zec, nie pasuje do Madsen:
+brak punktu z powodem metody jest zamierzony. Nie wprowadzamy kalibracji,
+rozszerzania zgodnych metod ani ponawiania kwalifikacji na innym źródle.
+
+Zwykłe profile `madsen2022-female-{lh,fsh}-age-6-16` są odrębne od zachowanych
+`*-sex-comparison`. Dane porównania, geometrię i skale zachowujemy bez zmian.
+Względna żeńska minipuberty nadal nie rysuje punktu stężenia. Źródła niemowlęce,
+męskie, inne anality i historyczne zapisy ocen nie są przeliczane tą polityką.
+Nie rozszerzamy zapisu `hormoneReference`, który nadal dotyczy AMH.
+
+Adapter punktu zachowuje istniejące bramki leczenia, materiału, metody,
+stymulacji i cenzurowania. Dodatkowo jawna bieżąca ciąża wpisana już w przeliczniku
+nie ginie po przełączeniu na LH/FSH. Jawnie dostępne dodatnie hormonalne fakty
+również nie są ignorowane wskutek zmiany analitu. Wyłączenie przy ciąży jest
+konserwatywną polityką aplikacji; nie opisujemy go jako kryterium autorów Madsen.
+Nie deklarujemy pełnego wykrywania antykoncepcji z karty i nie zmieniamy
+nieznanego wywiadu na brak leczenia. Brak nowych pól/ankiety. Aktualne fakty
+nie przechodzą na dawną próbkę ani do innej osoby lub płci.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistego silnika:**
+
+- F12, LH 2 / FSH 2 IU/L → mediany odpowiednio 0,932808521560225 /
+  4,151220353235434, bez pytania o Th. Zmiana wyniku nie zmienia linii/skali.
+- F9, FSH 2, Th1 / Th2 / brak Th → 1,964770298470689; zwykły widok
+  i porównanie zgodne liczbowo, niezależna ocena laboratoryjna nadal własna.
+- F5/Th1/FSH → Zec 1,07, opis grupy 4–<8/N156; historyczne Th nie kwalifikuje.
+- Dokładnie 6 → Madsen; `[5,6)`/Th1 → Zec; `[5,6]` → niejednoznaczny wiek.
+  Dokładnie 16 → źródłowy brzeg; 16 lat 0 miesięcy `[16,16+1/12)` i >16 →
+  brak punktu. Nie przyjmujemy środka wieku lub sztucznej daty urodzenia.
+- F9/Th1, jawna Roche cobas e411 → niezgodna metoda, bez powrotu do Zec.
+  Nieznana metoda daje wyłącznie orientacyjne porównanie.
+- Jawna ciąża → zmiana E2 na LH/FSH → brak punktu z powodu przeciwwskazania;
+  zmiana pacjentki/płci usuwa lokalny wybór. Nie przenosimy go na dawną próbkę.
+- Wynik z operatorem, niezgodny materiał i znane leczenie → nadal bez
+  dokładnej kropki; IU/L i mIU/mL zachowują równoważność liczbową.
+
+Pełny ślad źródeł, hashe i rozróżnienie ograniczeń publikacji/polityki:
+[audyt](hormone-lifespan/evidence/female-gonadotropin-reference-audit-2026-10-16.json),
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-lhfsh--zwykłe-odniesienie-wieku-16-października-2026).
+Zgoda na wdrożenie i kontrole techniczne nie są walidacją kliniczną.
+
+### HORMONE-COMPARISON-PERIOD — domyślny okres z istniejącej osi, 2026-10-16
+
+**Problem i zakres:** wejście do „Porównaj płcie” z całego życia wybierało
+minipuberty m.in. dla LH/FSH u 12-latki, mimo dostępnego porównania Madsen
+i zakwalifikowanego punktu. Wybór okresu zależał ponadto od obliczanego
+analitu, nawet gdy lekarz zaznaczył do porównania inny hormon. To poprawka
+funkcjonalna nawigacji w `vilda_hormone_lifespan.js`, bez nowych odniesień.
+
+Tylko przy wejściu z `life` wybieramy okres według pierwszego zaznaczonego
+hormonu obsługującego porównanie, z zachowaniem kolejności `selected`.
+Znany wiek należący do istniejącej osi pokwitania otwiera `puberty`:
+LH/FSH korzystają z `gonadotropinComparisons.puberty[candidate].domain`
+(6–16 lat), a inhibina B z `inhibinComparisons.puberty.domain` (8–20).
+AMH wykorzystuje wyłącznie dotychczasową edukacyjną oś 8–20, wspólną
+z rendererem; nie staje się ona domeną liczbowego odniesienia pacjenta.
+Poza tymi osiami pozostaje dotychczasowy fallback: `mini`, z wyjątkiem
+żeńskiego AMH/inhibiny B od 8 lat (`puberty`), teraz dla zaznaczonego hormonu.
+Puste zaznaczenie nadal daje pusty `mini`, bez przywracania bieżącego analitu.
+
+Jawny wybór `mini`/`puberty`, przełączanie okresów i zakończenie porównania
+zachowują dotychczasowe zachowanie. Aktualizacja wieku lub wyniku tej samej
+osoby nie uruchamia automatycznego wyboru okresu. Zmiana tożsamości, płci
+lub analitu zachowuje dotychczasowy reset. Nie dodano pól ani selektorów.
+
+**Źródła, populacje i wpływ kliniczny:** wykorzystujemy istniejące modele
+[Madsen 2022](https://doi.org/10.1210/clinem/dgac155), suplement `Other biomarkers`,
+oraz [Borelli-Kjær 2025](https://doi.org/10.1210/clinem/dgae439), ryc. 1–3,
+z populacjami, jednostkami i ograniczeniami opisanymi w sekcjach
+`HORMONE-LH-FSH-SEX-COMPARISON` i `HORMONE-INHIBIN-SEX-COMPARISON`.
+Nie zmieniamy ich liczb, źródeł, domen, interpolacji, geometrii, skali ani
+kwalifikacji punktu, norm laboratoryjnych, jednostek, oceny lub historii.
+Widoczność istniejącego punktu może się poprawić przez otwarcie właściwego
+okresu. Wybór widoku nie wyznacza Tannera ani nie potwierdza kwalifikacji:
+silnik nadal sprawdza cały przedział wieku i pozostały kontekst pacjenta.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistego komponentu:**
+F12, LH 2 IU/L, `life` → porównanie `puberty`, istniejąca mediana Madsen
+0,932809 IU/L i punkt wyniku. Dokładnie 16 lat → `puberty` i zachowana
+kwalifikacja źródłowego brzegu; 16 lat 0 miesięcy (`[16,16+1/12)`) → ten
+sam okres, lecz nadal brak punktu, ponieważ cały wiek wykracza poza 16 lat.
+M12, AMH → `puberty`, wyłącznie dotychczasowe linie edukacyjne, bez nowego
+punktu. M14, obliczane LH, zaznaczone tylko AMH → ten sam widok AMH,
+bez przeniesienia punktu LH. Ręczny `mini` pozostaje `mini`.
+
+### HORMONE-POINT-OUTSIDE-VIEW — wyjaśnienie punktu poza okresem, 2026-10-16
+
+**Problem i zakres:** już zakwalifikowany wynik znikał po ręcznym
+wyborze zwykłego `mini` lub `puberty`, gdy wiek pacjenta znajdował się poza
+osią wybranego okresu. Istniejący podpis pod wykresem wyjaśnia teraz tę
+przyczynę i wskazuje dotychczasowy przycisk „Całe życie”. Ten sam tekst
+uzupełnia dostępny opis bieżącego wykresu; ponowne renderowanie lub reset
+nie kumuluje przyczyny. Nie dodano pól ani kontrolek i nie zmieniono widoku.
+
+Komunikat wymaga gotowego własnego `patientPoint`, zaznaczenia bieżącego
+hormonu i spełnienia dotychczasowych bramek prezentacji wieku. Nie zastępuje
+odrębnego gotowego punktu obserwacji inhibiny B. Nie dotyczy porównań płci
+ani względnej żeńskiej minipuberty LH/FSH, w której stężenie nie ma punktu.
+Etykieta okresu pochodzi z rzeczywistej `visibleAgeDomain()`: zwykle 0–12
+miesięcy lub 8–20 lat, a przy żeńskim mieszanym widoku pokwitania 6–16 lat.
+Granice te opisują oś, nie nowy zakres odniesienia. Dla niedostępnego źródła
+także poza osią pozostaje dotychczasowy konkretny komunikat kwalifikacji,
+np. o niezgodnej metodzie; nie obiecujemy wówczas punktu po zmianie okresu.
+Wyjątek zachowuje dotychczasowy komunikat AMH o donoszeniu: pokazuje się
+wyłącznie wtedy, gdy wiek niemowlęcia mieści się na bieżącej osi. Po wejściu
+do `puberty` nie przenosimy tego komunikatu z widoku niemowlęcego.
+
+**Źródła i wpływ kliniczny:** wykorzystujemy wyłącznie istniejące wyniki
+silnika i dane opisane w `HORMONE-LH-FSH-SEX-COMPARISON`,
+`HORMONE-INHIBIN-SEX-COMPARISON`, `HORMONE-TESTOSTERONE-STABLE-CURVE`
+oraz odpowiednich politykach źródłowych. Nie dodajemy norm ani median
+i nie zmieniamy wartości źródeł, kwalifikacji całego przedziału wieku,
+metod, materiału, jednostek, geometrii, skali, interpretacji laboratoryjnej
+lub zapisu wyniku. Zmienia się wyłącznie informacja o braku punktu na
+bieżącym wykresie. To nie ponowna walidacja medyczna źródeł.
+
+**Syntetyczne wejście → oczekiwane zachowanie rzeczywistego komponentu:**
+M6, LH 2 IU/L → w `life` punkt z odniesieniem Madsen ≈0,119316 IU/L;
+porównanie otwiera `puberty` 6–16; jego zakończenie zostawia zwykłe
+`puberty` 8–20 bez punktu, z widocznym podpisem o wieku poza 8–20.
+„Całe życie” przywraca ten sam wynik i odniesienie. F6, inhibina B
+33 pg/mL → w zwykłym `puberty` podpis poza 8–20; dołączenie LH przełącza
+faktyczną oś na 6–16 i przywraca istniejący punkt z medianą ≈11 pg/mL.
+M44, testosteron 13 nmol/L → `mini` wskazuje 0–12 mies., `puberty` 8–20 lat;
+powrót do `life` zachowuje źródłową **średnią grupy** 18,1 nmol/L.
+M6, LH z niezgodną metodą → dotychczasowa informacja o metodzie, bez
+obietnicy punktu. Pusty lub cenzurowany wynik i odznaczony bieżący hormon
+nie otrzymują nowej obietnicy widoczności. Ta poprawka podpisu nie aktywowała
+żeńskiego Madsen; osobno opisuje to `HORMONE-FEMALE-GONADOTROPIN-REFERENCE`.
+AMH, niemowlę 3-miesięczne obu płci z nieznanym wcześniactwem → istniejąca
+przyczyna `preterm-context`; podpis o donoszeniu w `life` i `mini`, bez tego
+podpisu w `puberty`. Przywrócenie `mini` zachowuje tę samą kwalifikację.
 
 ### HORMONE-AMH-STABLE-CURVE — stały męski przebieg AMH, 2026-10-11
 
@@ -1964,6 +3462,54 @@ całe życie/pokwitanie, pełny ekran i szerokość 320 px.
 
 Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
 
+#### HORMONE-MALE-AMH-18-20 — mediana grupy Woloszynek, 2026-10-18
+
+**Zakres i zgoda:** właściciel polecił osobny mały PR uzupełniający
+zwykłe AMH mężczyzn w `[18,20)`. Nowa polityka
+`male-amh-young-adult-reference-policy.json` dodaje jeden profil
+`woloszynek2015-male-amh-age-18-20`, bez zmiany 80 wcześniejszych
+profili. Historyczna luka opisana powyżej zostaje w tym przedziale zamknięta.
+
+**Pełne źródło:** Woloszynek i wsp., *Ann Clin Biochem* 2015;52(1):67–75,
+[DOI 10.1177/0004563214554462](https://doi.org/10.1177/0004563214554462),
+tabela 2, s. 72/PDF 6 z 9: grupa **18–30 lat, N=63, mediana 6,3 ng/mL**.
+Pełny końcowy PDF ponownie przeczytano, wiersz sprawdzono też w HTML wydawcy.
+Cała kohorta męska to 104 brazylijskich pracowników ochrony zdrowia, wiek
+18–48 lat; wykluczono przewlekłe choroby, niepłodność, orchidektomię i
+nieprawidłowe gonadotropiny/testosteron. Liczba 104 nie jest N grupy 18–30.
+Surowica, manualny Beckman Coulter AMH Gen II ELISA, opisany protokół
+20 µL próbki +100 µL buforu, bez rozcieńczania przed analizą. Wąski
+identyfikator metody nie potwierdza zgodności zmodyfikowanego Gen II,
+Access/DxI, Elecsys lub Mindray. Czułości analityczna i funkcjonalna
+pozostają odrębnymi faktami źródła; nie tworzą LLOQ ani progu pacjenta.
+
+**Reguła i wpływ kliniczny:** jest to stała mediana całej grupy 18–30,
+nie nowej podgrupy 18–20 ani dokładnego wieku. `group-median`, `constant`,
+`ordinaryOnly`; pełny możliwy wiek musi mieścić się w `[18,20)`.
+Jednostka kanoniczna: `6.3 / 0.1401 = 44.9678800856531 pmol/L`,
+z identycznym przeliczeniem wyniku pacjenta. Nie używamy zaokrąglonego
+źródłowego 7,14 do innego przeliczania samej mediany. Poniżej 18 pozostaje
+Jopling, od 20 Benderradji, od 30 Tehrani. Znana niezgodna metoda/materiał
+blokuje punkt bez zastępczego źródła; brak tych danych pozwala na istniejące
+orientacyjne porównanie. Zachowano obsługiwane blokady GnRHa, protokołu
+testu i tożsamości aktualnego pacjenta, bez nowej ankiety lub wnioskowania
+o nieobecności leczenia. Linia, skale, porównania płci, normy laboratoryjne
+i utrwalone oceny historyczne mają odrębne, niezmienione kontrakty.
+
+**Przypadki i regresje produkcyjne:** M18 lat 0 mies./6,3 ng/mL oraz
+M19 lat 11 mies./44,9678800856531 pmol/L → wynik równy medianie grupy.
+M17 lat 11 mies. → Jopling 55,61 pmol/L; dokładnie M20 → Benderradji
+43,8 pmol/L. `[18,20)` kwalifikuje, `[18,20]` lub wiek przecinający 18
+nie otrzymuje arbitralnej mediany. Nierówności wyniku nie stają się
+dokładnymi punktami; zero i przekroczenie osi zachowują prawdziwą wartość.
+Testy wywołują silnik, adapter i formularz na desktopie/320 px, obejmują
+jednostki, źródło, kontekst, zmianę pacjenta, stałą geometrię i pełny ekran.
+Nie dodano RI, SDS, percentyli, diagnozy ani oceny płodności.
+
+Fakty i kwalifikacja:
+[`male-amh-18-20-reference-audit-2026-10-18.json`](hormone-lifespan/evidence/male-amh-18-20-reference-audit-2026-10-18.json).
+Zgoda na porównanie edukacyjne i zielone testy nie są walidacją kliniczną.
+
 ### HORMONE-FEMALE-AMH-ADULT-MEDIANS — mediany surowicy FDA, 2026-10-13
 
 **Problem i źródło:** dorosła kobieta miała poglądową linię AMH bez
@@ -2007,6 +3553,69 @@ osią, usunięcie wyniku i zmiana jednostki zachowują linię i skalę.
 
 Pełne liczby i granice: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026),
 [zapis źródła FDA](hormone-lifespan/evidence/patient-point/fda2017-female-amh-group-medians.json).
+
+### HORMONE-AMH-XU-PUBLISHED-P50 — osobny blok źródłowy, 2026-10-14
+
+**Decyzja i wpływ:** właściciel zaakceptował makietę („jest ok, koduj”).
+Dodajemy osobny blok opublikowanych P50 Xu 2026 dla kobiet przed menopauzą,
+z etykietami wieku 35/40/45/50/55. To informacja o badaniu, bez nowego
+profilu pacjentki, normy, percentyla, ilorazu do P50 lub diagnozy. Wcześniejsze
+„Xu pozostaje nieaktywne” nadal dotyczy ciągłego modelu i profilu punktu;
+nie wyklucza opisanego tutaj osobnego bloku. Testy nie nadają walidacji klinicznej.
+
+**Źródło:** Xu K, Yang Y i wsp., *Chinese Medical Journal*, online
+17.08.2026, [DOI 10.1097/CM9.0000000000004161](https://doi.org/10.1097/CM9.0000000000004161).
+Pełny PDF w składzie wydawcy oraz dostarczony suplement SDC2, arkusz `2`,
+Supplementary Table 1, `E3:E7`. Zachowane P50 w ng/mL:
+2.589388343 / 1.479539998 / 0.365121103 / 0.045923937 / 0.005234022.
+Źródło dotyczy społecznościowej przekrojowej kohorty chińskiej przed
+menopauzą, surowicy i HS-AMH Kangrun; nie stanowi kalibracji Access/Elecsys.
+
+**Granica obliczenia:** sąsiednie opublikowane punkty pozostają oddzielne;
+nie są medianami pięcioletnich grup ani granicami normy. Nie interpolujemy
+lub ekstrapolujemy. Źródło nie udostępnia pełnych parametrów GAMLSS,
+obsługi wyników poniżej LOD ani oddzielnego LOQ. LOD 0,003 ng/mL nie
+uprawnia do imputacji zera lub LOD/2. Literalne `<0.003` zachowujemy jako
+nierówność. Rycina 4A używa **Mean**, a tekst **median** dla 0,187/0,043;
+tabele wykrywalności mają odwrotne etykiety niż rycina 4B. Niezgodności
+liczebności i χ² pozostają jawne, bez samodzielnego „poprawiania” źródła.
+
+**Zachowane kontrakty:** Mayo, wcześniejsze FDA/Access i pozostałe
+odniesienia pacjentki, geometria, skale, konwersje oraz `lab.hormoneReference`
+i historia pozostają odrębne. Nie zapisujemy nowego bloku jako migawki
+odniesienia pacjentki. Wynik nie zmienia wyboru źródłowych liczb.
+
+**Przypadek syntetyczny:** dokładne F47 / AMH 0,1 ng/mL → dwa źródłowe
+wiersze: 45 lat / 0.365121103 oraz 50 lat / 0.045923937 ng/mL;
+brak liczby „P50 dla 47 lat”, percentyla, ilorazu i nowego werdyktu.
+F52,5 → opublikowane 50 i 55, bez mediany interpolowanej. Wynik pusty,
+zero, ponad osią i wyczyszczony nie zmienia wcześniejszej linii ani skali.
+
+**Dobór bloku:** `evaluate(data, context)` w `vilda_amh_age_reference.js`
+przyjmuje osobne `vilda_amh_age_reference_data.js`. Dla całego `[L,U]`
+wewnątrz 35–55 wybiera opublikowane punkty ≤L i ≥U; `[45,46)` daje 45/50,
+dokładne 50 daje tylko 50. Wyjątek `terminal-anchor` dla `L = 55` oraz
+`55 < U ≤ 56` pokazuje punkt 55 jako „Ostatni opublikowany punkt wieku”,
+z notą, że nie obejmuje całego możliwego wieku. Inne wyjście poza domenę
+ukrywa blok. Nieznany cykl/metoda pozwala na informację o źródle przed
+menopauzą, bez potwierdzania stanu pacjentki. Znana menopauza, ciąża,
+leczenie hormonalne, przeciwwskazanie lub niezgodna metoda/materiał
+ukrywa blok według konserwatywnej polityki aplikacji. Docelowa jednostka
+wyniku steruje prezentacją przez dotychczasową konwersję AMH.
+
+**Nierówności i zapis:** wyłącznie wejście AMH rozszerza obsługę o
+nierówności oraz `<LOD`/`<LOQ`. Wynik zachowuje prefiks, bez nowej
+klasyfikacji i dokładnego punktu; przeliczenie liczbowej granicy nie
+zamienia jej w stężenie. Istniejące przypięcie zachowuje surowy tekst,
+`lab.valueNum = null` i brak punktu w serii liczbowej. Zwykła migawka
+odniesienia ma status `unavailable`: `measurement.sourceValue` zachowuje
+granicę liczbową albo `null` dla LOD/LOQ, a `measurement.value = null`.
+P50 Xu nie są utrwalane. Schemat oraz wcześniejsze dane historii pozostają
+bez zmian; nie zapisujemy granicy jako dokładnego pomiaru.
+
+Pełne cytowanie, wersje, hashe, populacja i ustalenia:
+[opis źródła Xu](hormone-lifespan/AMH_XU_2026.md),
+[audyt Xu](hormone-lifespan/evidence/amh-xu-2026-audit.json).
 
 ### HORMONE-AMH-REFERENCE-SNAPSHOT — utrwalone odniesienie w wizycie i historii, 2026-10-14
 
@@ -4082,6 +5691,30 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 *Strażnicy:* `tests/unit/ostatni-pomiar-porownanie.test.mjs` (9 — prawdziwe silniki tempa, trajektorii i BMI z produkcyjnymi tablicami w Node: zdanie tempa = `formatuj()`, werdykty = `verdictForPair`, nakładka waga↔BMI, krótki odstęp bez oceny, dorosły bez werdyktu z kategorią, Cole/talia/biodra/WHR neutralne; strażnik źródła bez starych pomocników, kontrola usuwacza komentarzy); `tests/e2e/ostatni-pomiar-porownanie.spec.mjs` (2 — prawdziwa ścieżka z modalem „Nowy pomiar": tekst sekcji zawiera zdanie tempa i werdykty policzone silnikami w tej samej stronie, brak „oczekiwania", zero alertów na trzech „stabilnych torach"; kontrola negatywna po 2 mies.: „krótki odstęp — bez oceny", bez „norma").
 
+### P-POWLOKA-AUTH-BOOT — otwieranie karty po zakończeniu startu konta, 2026-10-16
+
+**Zmiana funkcjonalna:** powłoka realizuje oczekującą intencję otwarcia karty
+dopiero po zakończeniu inicjalnego odtwarzania modułu konta. Sam eksport
+`VildaAuthUI` i odblokowanie sejfu mogły nastąpić wcześniej niż powrót
+`Ei()` z `tryRestoreSession()`. Końcowe ukrycie początkowego widoku konta
+mogło wtedy usunąć świeżo otwartą kartę pacjenta B.
+
+Wyścig ujawnił test `powloka-intencja-historia.spec.mjs` w pierwszym CI
+PR #700; odtworzono go także na poprzedniej bazie `cfec1da0`, zatrzymując
+wyłącznie koniec rzeczywistego odtwarzania sesji. Odczytowy stan
+`isBootReady()` jest gotowy po zakończeniu pierwszego startu konta;
+`mt()` używa istniejącego mechanizmu oczekiwania i ponawiania intencji.
+Nie powstaje drugi mechanizm wyboru pacjenta. Starszy moduł konta bez
+tego opcjonalnego gettera zachowuje dotychczasowy kontrakt.
+
+Regresja wykonuje rzeczywistą powłokę i moduł konta: zatrzymany retry A,
+odblokowany sejf przy niedokończonym starcie konta, nowsza intencja B,
+zwolnienie startu → karta B, późniejszy callback A → nadal karta B
+z właściwymi danymi. Nie zwiększa budżetu asercji ani liczby ponowień.
+Zmiana nie dodaje norm, progów lub interpretacji laboratoryjnych;
+dane, zapisy i identyfikatory pacjentów pozostają pod istniejącymi
+zabezpieczeniami. Wyniki pełnej walidacji i PWA są dokumentowane w PR.
+
 ### P-PANEL-POWROT — powrót do panelu powłoki bez ponownego wjazdu kart i przycisków (SW 1.1.242, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** „Często jest tak, że karta »Centyle i BMI« oraz przyciski »Podsumowanie wyników« i »Zalecenia dietetyczne« skaczą, jak się zmienia strony, i to wygląda głupio.” Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, ostrzeżeń, zapisu ani synchronizacji.
@@ -4202,6 +5835,165 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 **Wersje.** `vilda_persist_runtime.js` 21, `vilda_shell.js` 63; SW 1.1.258 → 1.1.259 (numer 1.1.258 nadał równolegle #658).
 
+### P-KLAWIATURA — pole formularza nad klawiaturą telefonu, powłoka na wysokość ekranu (SW 1.1.303, 2026-10-17, zgłoszenie właściciela)
+
+**Zgłoszenie.** PWA na iPhonie, pusty formularz Start. Przy wpisywaniu wieku, wagi i wzrostu cały formularz skacze, gdy zaczynają pojawiać się wyniki. Już wcześniej, po wpisaniu wagi i dotknięciu pola wzrostu, pole wzrostu chowa się pod klawiaturą. Z przedstawionej propozycji właściciel polecił punkty 1–2: powłoka na wysokość ekranu oraz pole nad klawiaturą dzięki przewinięciu ramki. Punkt 3 czeka na decyzję: dymek zakresu dopiero po wyjściu z pola i brak przepisywania niezmienionego tekstu nad polami. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Pomiar przed zmianą.** Playwright z Chromium w środowisku agenta, prawdziwa powłoka `app.html` i sejf z fikcyjnym hasłem. Emulacja iPhone'a 15 Pro w PWA: 393×852 px, wcięcia 59/34 px przez `Emulation.setSafeAreaInsetsOverride`. Dane: 9 lat, 40 kg, 135 cm.
+- Nagłówek zajmuje 59–150 px, panel 150–911 px na ekranie 852 px, a dokument powłoki ma 930 px. `body` ma `padding-top: env(safe-area-inset-top)`, a `v()` w `vilda_shell.js` odejmował tylko wysokość nagłówka, nie jego dolną krawędź. Bez wcięć dokument ma 871 px: pod panelem stoją dolne odstępy `.desktop-layout` (16 px) i `.main-content` (3,2 px). Powłokę dało się więc przesunąć także bez klawiatury, a dół każdego panelu był 59 px pod ekranem i pod dockiem.
+- Pola w oknie powłoki przy nieprzewiniętej ramce: wiek 426–469 px, waga 644–687 px, wzrost 718–761 px. Linia klawiatury liczbowej (ok. 336 px) leży na 516 px, więc waga i wzrost są pod klawiaturą od razu.
+- Przy aktywnym polu `v()` celowo nie skraca panelu, więc ramka sięga pod klawiaturę. WebKit nie przewija dla pól formularza wnętrza ramki, tylko przesuwa dokument powłoki: nagłówek razem z formularzem. Powłoka cofa to przesunięcie (`J()`) dopiero po schowaniu klawiatury. To wniosek z kodu i znanych zachowań WebKit (odbijanie przy zmianie pola w ramce, WebKit 271469), nie pomiar, bo Chromium nie ma klawiatury iOS.
+- Wykluczone pomiarem:
+  - autoprzewijanie do wyników — wyłączone na stałe w `app.js`, a poniżej 700 px `scrollIntoView` nic nie robi (`custom-fixes.js`);
+  - auto-zoom iOS — pola mają 16,8 px;
+  - zmiana wysokości czegokolwiek nad polami — pole wzrostu stoi w dokumencie ramki na 568 px przez całe wpisywanie, a wyniki dochodzą pod formularzem (dokument 1472 → ok. 7800 px).
+
+**Rozwiązanie.**
+1. Powłoka na wysokość ekranu:
+   - `vilda_shell.js`, `v()`: panel ma wysokość visualViewport minus dolna krawędź nagłówka (`offsetTop` + wysokość). `offsetTop` nie zależy od przewinięcia ani od transformacji nagłówka.
+   - `vilda_shell.css`: poniżej 992 px `.vilda-shell-host .desktop-layout` i `.main-content` nie mają dolnego odstępu.
+   - Panel kończy się na dolnej krawędzi ekranu, a dokument powłoki ma wysokość okna. Odstęp docka w ramce (`vh − dock.top`) kończy treść nad dockiem.
+   - Desktop bez zmian: wysokość panelu nadaje CSS z `!important`.
+2. Pole nad klawiaturą — nowy, czytelny moduł `vilda_klawiatura.js`, ładowany w `index.html`:
+   - Kiedy działa: w ramce powłoki na telefonie (`html.vilda-embedded`, `pointer: coarse`, szerokość < 700 px). Na `focusin` pola, które otwiera klawiaturę, przewija samo okno ramki z `behavior: 'instant'`, bo `html` ma `scroll-behavior: smooth`.
+   - Których pól nie dotyka: select, checkbox, pól tylko do odczytu, pól w nakładce `fixed` ani we własnym obszarze przewijania.
+   - Pas widoczny: przy otwartej klawiaturze z visualViewport powłoki; przed otwarciem z ostatniego pomiaru; przed pierwszym pomiarem przyjmuje 42% okna.
+   - Pole w pasie nie rusza się wcale. Pole poza pasem staje dolną krawędzią 16 px nad klawiaturą, z zapasem na kolejny wiersz (96 px, najwyżej 1/3 pasa), więc po wadze widać wzrost.
+   - Przewinięcie przed otwarciem klawiatury jest celowe: iOS rozstrzyga o odsłonięciu pola po fokusie, a pole już widoczne nad klawiaturą nie wymaga przesunięcia powłoki.
+   - Przed otwarciem klawiatury moduł działa tylko po dotknięciu pola, bo programowy `focus()` bez dotyku nie otwiera klawiatury na iOS. Po wysunięciu klawiatury (`resize` visualViewport powłoki) sprawdza pole jeszcze raz.
+   - `ResizeObserver` poprawia tylko wtedy, gdy treść nad polem zmieniła jego miejsce w dokumencie. Przewinięcia palcem przy otwartej klawiaturze moduł nie cofa.
+   - Przewinięcie zachodzi w trakcie dotknięcia, więc `mouseup` może wypaść na innym elemencie. `click` idzie wtedy do wspólnego przodka (UI Events), a nie do elementu pod palcem. Test sprawdza fokus i wpisane wartości.
+
+**Pomiar po zmianie** (ta sama emulacja, klawiatura udawana przez visualViewport powłoki niższy o 336 px):
+- panel 150–852 px, dokument powłoki 852 (`scrollY` 0, nagłówek na 59 px) px;
+- wiek bez przewinięcia (427–470 px, nad linią 516 px);
+- waga po dotknięciu: ramka przewinięta o 284 px, waga 361–404 px, wzrost 435–477 px — oba nad linią klawiatury;
+- wzrost: dotknięcie i wpisanie 135 bez żadnego ruchu (435–477 px); dokument ramki 1233 → 7553 px, `scrollY` powłoki 0, nagłówek na 59 px.
+
+**Testy.**
+- `tests/e2e/powloka-klawiatura-mobile.spec.mjs` (4, telefon), z wcięciami 59/34 px albo bez:
+  - powłoka z wcięciami i bez nich;
+  - scenariusz wiek → waga → wzrost z udawaną klawiaturą: pole nad klawiaturą z marginesem, wzrost widoczny po wadze, wyniki niczego nie przesuwają, `scrollY` powłoki 0, nagłówek na miejscu, wartości 9/40/135, brak poziomego przewijania;
+  - programowy fokus bez dotknięcia nie przewija, a dopiero wysunięta klawiatura stawia pole nad nią.
+  
+  Na bazie padają 4/4: panel do 911 zamiast 852 px, 19 px nadmiaru, waga 688 px przy linii 500 px, wzrost 761 px.
+
+  Od P-DYMEK-ZAKRESU scenariusz i programowy fokus startują z ramką na 1 px. `ios26-ui.js` (`primeMobileBrowserUiChrome`) asynchronicznie przewija stronę stojącą na samej górze o 1 px. W jednym pełnym przebiegu pod obciążeniem pomiar „przed” trafił przed tę korektę, a „po” za nią (0 → 1 px). Moduł klawiatury nic wtedy nie przewijał; 24 powtórzenia z rejestrowaniem przewinięć tego nie odtworzyły. Na pozycji 1 px korekta nie działa, a porównania zostają dokładne.
+- `tests/unit/klawiatura-pole.test.mjs` (10) — `pasWidoczny` i `przesuniecie` z pliku produkcyjnego.
+
+**Do potwierdzenia na iPhonie (PWA).** Nagłówek nie znika przy wpisywaniu. Każde dotknięte pole stoi nad klawiaturą. Formularz nie rusza się, gdy pojawiają się wyniki. Po schowaniu klawiatury na dole nie zostaje przerwa. Playwright nie ma WebKita, a podglądu PR nie ma, więc kontrola odbywa się po scaleniu albo na instalacji testowej. Jeżeli iOS mimo wszystko przesunie powłokę, następnym krokiem jest cofnięcie tego przesunięcia po wysunięciu klawiatury, bo dziś `J()` robi to dopiero po jej schowaniu.
+
+**Wersje.** `vilda_shell.js` 66, `vilda_shell.css` 19, `vilda_klawiatura.js` 1 (nowy); SW 1.1.302 → 1.1.303 (numer 1.1.302 nadał równolegle #707).
+
+### P-DYMEK-ZAKRESU — dymek „poza zakresem” nie miga przy wpisywaniu (SW 1.1.304, 2026-10-17, decyzja właściciela)
+
+**Zgłoszenie.** Punkt 3 z analizy P-KLAWIATURA. Walidacja formularza głównego (`vildaUpdatePrepValidateMainInputs`) przyjmuje wzrost 40–250 cm. Każda pierwsza cyfra wzrostu jest poniżej 40, więc nad polem migał dymek „Wzrost poza zakresem (40–250 cm)”, choć lekarz niczego źle nie wpisał:
+- 100–199 cm: po „1” i „13”;
+- 45–99 cm: po „4”;
+- 200–250 cm: po „2” i „20”.
+
+Właściciel zaakceptował regułę: dymek czeka, dopóki dopisanie cyfr może jeszcze dać wartość z zakresu.
+
+**Klasyfikacja.** Zmiana interfejsu: zmienia się tylko moment pokazania dymka. Bez zmian zostają:
+- progi: wiek 0–130 lat, waga 1–500 kg, wzrost 40–250 cm;
+- walidacja i zatrzymanie wyników: dla „13” wyniki nadal się nie liczą;
+- treść dymka;
+- zachowanie po wyjściu z pola.
+
+**Rozwiązanie** (`vilda_update_prep.js`):
+- `vildaUpdatePrepApplyRangeTooltips` pokazuje dymek pola z błędem zakresu, chyba że pole ma fokus, a `vildaUpdatePrepMozeJeszczeWZakresie` potwierdza, że dopisanie 1–4 cyfr do liczby całkowitej może trafić w zakres.
+- Część dziesiętna kończy liczbę (dopisanie zmienia ją o mniej niż jedność). Wartość za duża też jest końcowa (dopisanie tylko ją zwiększa). Obie pokazują dymek od razu.
+- Przykłady: wzrost „3” (30–39 i 300+ poza zakresem), „260” albo waga „0,5” pokazują dymek od razu.
+- Granice pól podaje `vildaUpdatePrepZakresPola` (te same liczby co walidacja).
+- Ostatni wynik walidacji jest zapamiętany. `focusout` z pól wiek, waga i wzrost stosuje go ponownie po wyjściu z pola, bez ponownego liczenia, więc dymek „13” pojawia się po przejściu do innego pola, Enter albo „Gotowe”.
+- Pole czekające nie ma też `aria-invalid`, bo jego wartość jeszcze nie jest rozstrzygnięta.
+- Plik ładują Start, DocPro i Klirens; reguła działa wszędzie, gdzie są te pola.
+
+**Testy.**
+- `tests/unit/dymek-zakresu-pisanie.test.mjs` (9):
+  - granice dymka równe progom walidacji (strażnik rozjazdu, liczony prawdziwą funkcją walidacji na granicach);
+  - tabela przypadków reguły.
+- `tests/e2e/dymek-zakresu-pisanie.spec.mjs` (2, prawdziwa strona, fokus i klawiatura):
+  - 135, 45 i 205 bez dymka i bez `aria-invalid` przy każdym znaku;
+  - „13” ukrywa wyniki, a 135 daje BMI 21,9;
+  - „3” i „260” pokazują dymek od razu;
+  - „13” pokazuje go po przejściu do wagi, a dokończenie do 135 go chowa;
+  - waga „0.5” pokazuje dymek od razu.
+- Na bazie test e2e pada na „1”, „13”, „4”, „2”, „20”, a test jednostkowy na braku funkcji.
+
+**Wersje.** `vilda_update_prep.js` 97; SW 1.1.303 → 1.1.304.
+
+### P-KLAWIATURA-2 — wzrost nad klawiaturą także przy klawiaturze otwartej przez całą ścieżkę (SW 1.1.305, 2026-10-17, zgłoszenie właściciela)
+
+**Zgłoszenie (po scaleniu P-KLAWIATURA i P-DYMEK-ZAKRESU).** iPhone, PWA. Lekarz dotyka po kolei wieku w latach, wieku w miesiącach i wagi — do tego miejsca wszystko jest w porządku. Po dotknięciu pola wzrostu pole chowa się pod klawiaturą. Objaw jest ten sam co w pierwszym zgłoszeniu P-KLAWIATURA. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, danych, zapisu ani synchronizacji.
+
+**Co pokazała analiza.**
+- Test P-KLAWIATURA nie sprawdzał tej ścieżki. Przed wagą chował klawiaturę („Gotowe”), a właściciel przechodzi między polami przy klawiaturze otwartej cały czas.
+- Ta sama emulacja (393×852 px, wcięcia 59/34 px, klawiatura udawana visualViewport niższym o 336 px), ścieżka właściciela na wersji 1 modułu:
+  - wiek i miesiące 427–470 px — bez ruchu;
+  - waga po dotknięciu: ramka przewinięta o 284 px, waga 361–404 px, wzrost 435–477 px.
+  
+  Wzrost formalnie stoi nad linią klawiatury (516 px), ale tylko 39 px nad dolną krawędzią visualViewport. Emulacja nie chowa go pod klawiaturę; prawdziwy iOS ma elementy, których Chromium nie ma.
+- W emulacji waga przy otwartej klawiaturze leży pod linią klawiatury (645–688 px). Skoro na iPhonie dało się ją dotknąć, iOS musiał już wcześniej przesunąć powłokę (offsetTop visualViewport). To wniosek, nie pomiar.
+- Hipotezy dla prawdziwego iOS, których nie da się tu sprawdzić. Wersja 2 zabezpiecza każdą z nich:
+  1. Pasek nad klawiaturą iOS 26 (strzałki, „Gotowe”) unosi się nad nią jako osobna kapsuła. Jeśli visualViewport go nie odlicza, pole stojące 39 px nad krawędzią visualViewport jest zasłonięte.
+  2. iOS albo powłoka cofa przesunięcie powłoki już po decyzji modułu. Pole spada wtedy o całe przesunięcie, a wersja 1 nie sprawdzała go ponownie: nie słuchała `scroll` i nie miała kontroli po czasie.
+  3. W trybie PWA innerHeight maleje razem z klawiaturą (zgłoszenia o skracaniu okna PWA po klawiaturze na iOS). Wtedy `St()` w powłoce i moduł uznałyby klawiaturę za schowaną, a `J()` cofałby przesunięcie, którym iOS odsłonił pole.
+  4. Coś przewija ramkę zaraz po fokusie, np. odsłanianie pola przez WebKit albo kotwiczenie przewijania (WebKit 267440).
+
+**Rozwiązanie** (`vilda_klawiatura.js` 2, `vilda_shell.js` 67, `vilda_shell.css` 20).
+- Wysokość bazowa okna (hipoteza 3). Otwartą klawiaturę moduł rozpoznaje względem największej wysokości okna powłoki widzianej przy tej szerokości. Bieżący innerHeight nie wystarcza (`nowaPodstawa`).
+  - visualViewport podnosi podstawę tylko wtedy, gdy żadne pole nie ma fokusu.
+  - Obrót ekranu (zmiana szerokości o więcej niż 4 px) liczy podstawę od nowa.
+  - `St()` w powłoce dostał ten sam wzorzec (`Kb_podstawa`), więc `J()` nie cofa przesunięcia powłoki, dopóki klawiatura jest otwarta. Po jej schowaniu cofa jak dotąd.
+- Margines nad zmierzoną klawiaturą 40 px zamiast 16 px (hipoteza 1).
+  - Przed pierwszym pomiarem klawiatury zostaje 16 px, bo szacunek 42% okna obejmuje już pasek. Z marginesem 40 px pierwsze dotknięcie wieku przesuwało formularz o 112 px; zmierzone i odrzucone.
+  - Wiek (dolna krawędź 470 px przy linii 516 px) nadal się mieści i nie rusza.
+- Kontrola po fokusie (hipotezy 2 i 4). Przez 1,5 s po fokusie moduł sprawdza pole ponownie:
+  - po 350 i 900 ms;
+  - po każdym przesunięciu powłoki (`scroll` visualViewport i okna powłoki).
+  
+  Kontrola tylko podnosi pole spod klawiatury i tylko przy otwartej klawiaturze. Po 1,5 s przewinięcie palcem należy do lekarza i nie jest cofane.
+- Bez opuszczania pola przy przesuniętej powłoce. Górę pasa wyznacza wtedy offsetTop visualViewport, a tego rozliczenia na iOS 26 nie da się tu sprawdzić. Lepiej zostawić pole, niż zepchnąć je pod klawiaturę.
+- Dziennik diagnostyczny dla właściciela:
+  - Włącza go ten sam przełącznik co diagnostykę docka w `ios26-ui.js`: 5 szybkich stuknięć w pasek z nazwą pod nagłówkiem (klucz `vilda-dockdiag`). Te same stuknięcia wyłączają go po następnym fokusie.
+  - U góry okna powłoki pokazuje ostatnie 10 pomiarów i decyzji modułu. Wygląd w `vilda_shell.css` (`#vildaKlawiaturaDiag`). Dziennik zostaje po schowaniu klawiatury, a przy przesuniętej powłoce panel bywa wtedy nad ekranem. Zrzut można więc zrobić po „Gotowe”. Treść: czas od fokusu, pole, zdarzenie, `innerHeight`/wysokość bazowa, visualViewport `height@offsetTop`, `scrollY` powłoki i ramki, pole i pas w ramce oraz przesunięcie.
+  - Tylko geometria i identyfikatory pól, bez wpisanych wartości. `pointer-events: none`, więc nie przeszkadza w dotykaniu.
+  - Napis „KLAWIATURA v2” w panelu potwierdza przy okazji, że telefon ma już nową wersję.
+
+**Pomiar po zmianie** (ta sama emulacja, ścieżka właściciela z klawiaturą otwartą cały czas):
+- wiek i miesiące 427–470 px — bez ruchu;
+- waga po dotknięciu: ramka przewinięta o 308 px, waga 337–380 px, wzrost 411–453 px — 63 px nad linią klawiatury (było 39 px);
+- dotknięcie wzrostu i wpisanie 135 bez żadnego ruchu, nagłówek na 59 px, `scrollY` powłoki 0.
+
+**Testy.**
+- `tests/e2e/klawiatura-otwarta-sciezka-mobile.spec.mjs` (5, telefon, wcięcia 59/34 px). Zaburzenia startują w samej stronie 100 ms po fokusie, niezależnie od opóźnień Playwrighta:
+  - ścieżka właściciela: wiek → miesiące → waga → wzrost przy otwartej klawiaturze. Każde pole i następny wiersz stoją ≥ 40 px nad linią klawiatury, wyniki niczego nie przesuwają, wartości 9/3/40/135, diagnostyka domyślnie wyłączona;
+  - iOS przesuwa powłokę o 200 px przy wadze i cofa przesunięcie po dotknięciu wzrostu. Tuż po cofnięciu wzrost jest pod klawiaturą, a kontrola go podnosi;
+  - ramka cofnięta o 250 px po fokusie: kontrola podnosi pole. Po 1,5 s przewinięcie palcem zostaje, a pole przewinięte wyżej nie jest opuszczane;
+  - innerHeight maleje razem z klawiaturą: waga staje jak przy stałym innerHeight (dolna krawędź 380 ± 2 px). Przesunięcie powłoki o 40 px zostaje przy otwartej klawiaturze, a po schowaniu klawiatury wraca do 0;
+  - dziennik: klucz `vilda-dockdiag` pokazuje panel „KLAWIATURA v2” z pomiarem `weight fokus inH852/852 vv516@0 … dy…`, `pointer-events: none`; wyłączenie zdejmuje panel.
+- Na bazie (`vilda_klawiatura.js` 1, `vilda_shell.js` 66) padają 5/5:
+  - wzrost po wadze 435–477 px;
+  - waga przy przesuniętej powłoce 444–487 px;
+  - brak kontroli po cofnięciu ramki;
+  - waga 242 zamiast 380 px przy malejącym innerHeight;
+  - brak panelu.
+  
+  Sam stary `vilda_shell.js` z nowym modułem pada na `St()`: przesunięcie powłoki 40 → 0 przy otwartej klawiaturze.
+- `tests/unit/klawiatura-pole.test.mjs` (10 → 17):
+  - margines 40/16 px;
+  - wiek mieści się, a wzrost z wersji 1 (435–477 px) wypada z pasa;
+  - `nowaPodstawa` — klawiatura, malejący innerHeight, pole aktywne, obrót.
+- `tests/e2e/powloka-klawiatura-mobile.spec.mjs` (4) bez zmian — przechodzi.
+
+**Do potwierdzenia na iPhonie (PWA).**
+- Po aktualizacji (baner „Dostępna nowa wersja aplikacji”) przejść ścieżkę wiek → miesiące → waga → wzrost przy otwartej klawiaturze.
+- Jeżeli wzrost nadal się chowa: włączyć dziennik (5 stuknięć w pasek z nazwą), powtórzyć ścieżkę i zrobić zrzut ekranu z klawiaturą otwartą nad polem wzrostu. Jeżeli panel ucieknie wtedy nad ekran, drugi zrzut po „Gotowe”: dziennik zostaje. Liczby rozstrzygną, która hipoteza obowiązuje: skąd pas, czy iOS zmienia innerHeight, ile wynosi offsetTop i gdzie naprawdę zaczyna się pasek nad klawiaturą.
+- Brak panelu „KLAWIATURA v2” po dotknięciu pola przy włączonym dzienniku znaczy, że telefon działa jeszcze na starej wersji.
+
+**Wersje.** `vilda_klawiatura.js` 2, `vilda_shell.js` 67, `vilda_shell.css` 20; SW 1.1.304 → 1.1.305.
+
 ### P-WYNIKI-SPOKOJ — przeliczenie w tle bez zmiany danych nie rusza wyników (SW 1.1.247, 2026-10-12, zgłoszenie właściciela)
 
 **Zgłoszenie właściciela.** Po P-PANEL-POWROT i P-PANEL-PRZEWINIECIE: „to migotanie/skakanie nadal jest, nawet jak strona »nic« nie robi i nie jest na pierwszym planie na macOS/Windows”. Zmiana niekliniczna: nie zmienia wyników, jednostek, progów, kategorii, ostrzeżeń, zapisu ani synchronizacji.
@@ -4241,6 +6033,265 @@ Syntetyczne `blur`, `focus` i zmiana widoczności same nie wywołały przeliczen
 Na bazie oba testy padają (`#results` chowany 2 i 5 razy). Każda z mutacji (bez `zostawWyniki`, bez porównania treści kafelka, bez wspólnej fazy pulsowania) wywraca oba testy na właściwej asercji. `tests/e2e/powloka-powrot-bez-animacji.spec.mjs` jest bez zmian i przechodzi. Playwright nie ma tu WebKita, więc zachowanie w Safari do potwierdzenia przez właściciela.
 
 **Wersje.** `app.js` 232, `vilda_update_prep.js` 95; SW 1.1.246 → 1.1.247.
+
+### P-POKWITANIE-PANEL — G/Th/P wspólne dla wizyty, 2026-10-15
+
+**Decyzja i wpływ kliniczny.** Właściciel zaakceptował makietę, osobne G/P
+u chłopców i Th/P u dziewcząt, treść pomocy Pradera oraz rozszerzone opisy Th,
+a następnie polecił wdrożenie etapu 2. Panel i adaptery laboratoryjne/wzrostowe
+wchodzą razem. Jest to **zamierzona zmiana kwalifikacji danych klinicznych**:
+stary numer Tannera o nieznanym rodzaju oraz samo P nie zasilają już gonadalnych
+reguł. Pusta, wadliwa i przyszła typowana ocena nie wraca do starego numeru.
+Brak właściwej osi zachowuje dostępne porównanie według wieku. Nie dodano norm
+hormonalnych, progów wieku/stadium, przeliczeń jednostek ani wzorów wzrastania.
+Dla równoważnego prawidłowego G/Th dotychczasowe wzory zachowują wyniki.
+
+**Populacja i znaczenie stadium.** Ocena morfologiczna dzieci i młodzieży.
+G, Th(B) i P są niezależnymi kategoriami porządkowymi I–V, bez jednostki;
+nie wyliczamy ich średniej, maksimum ani ogólnego Tannera. P2 ma opis właściwy
+dla płci. P nie jest oceną rozwoju gonadalnego; zmiana płci nie przepisuje G
+na Th ani nie odnawia wcześniejszego P. Odczyt zachowuje źródłową płeć osobno
+przy każdej zachowanej osi. Dane dorosłych, cykl/menopauza, wcześniactwo,
+operator wyniku i znane leczenie zachowują osobne istniejące kontrakty.
+
+**Źródła pomocy, pełne teksty sprawdzone przy uzgodnieniu makiety.**
+
+- Marshall WA, Tanner JM. *Variations in pattern of pubertal changes in girls*.
+  Arch Dis Child. 1969;44:291–303. Definicje Th: s. 291, P: s. 292; sekwencje
+  i zmienność w dalszych tabelach. [DOI 10.1136/adc.44.235.291](https://doi.org/10.1136/adc.44.235.291),
+  [pełny tekst PMC2020314](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020314/).
+- Marshall WA, Tanner JM. *Variations in the pattern of pubertal changes in boys*.
+  Arch Dis Child. 1970;45:13–23. Definicje G/P i sekwencje morfologiczne;
+  [DOI 10.1136/adc.45.239.13](https://doi.org/10.1136/adc.45.239.13),
+  [pełny tekst PMC2020414](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020414/).
+  To historyczne obserwacje brytyjskich dzieci, nie nowe normy wieku dla Polski.
+- Krishna KB, Witchel SF. *Normal and Abnormal Puberty*. Endotext,
+  [pełny rozdział NBK279024](https://www.ncbi.nlm.nih.gov/books/NBK279024/).
+  Palpacja odróżnia pączek gruczołowy od tkanki tłuszczowej; stadium opisuje
+  budowę piersi, nie rozmiar. Th IV nie musi zostać uchwycone między wizytami.
+- Rey, Grinspon, Castro. *Clinical approach to the male with delayed puberty*.
+  Arch Endocrinol Metab., online 2025/zeszyt 2026;70(spe1).
+  [PMID 41312956](https://pubmed.ncbi.nlm.nih.gov/41312956/),
+  [DOI 10.20945/2359-4292-2025-0428](https://doi.org/10.20945/2359-4292-2025-0428).
+  Sekcja „Puberty” i ryc. 2: orientacyjne objętości pojedynczego jądra
+  w orchidometrze Pradera, bez utożsamiania z USG.
+- Agüero, Berner. *Tanner stages and Prader orchidometry in male adolescents.
+  A descriptive, cross-sectional study*. Arch Argent Pediatr. 2023;121(2).
+  [PMID 36315874](https://pubmed.ncbi.nlm.nih.gov/36315874/),
+  [DOI 10.5546/aap.2022-02717.eng](https://doi.org/10.5546/aap.2022-02717.eng).
+  Tabela 3, s. 5 PDF: 367 zdrowych Argentyńczyków w wieku 9–20 lat, morfologia oceniana
+  przed pomiarem, każda strona oddzielnie. Mediany/IQR nie są granicami normy.
+  Przegląd Rey cytuje tę pracę; nie liczymy ich jako niezależnych potwierdzeń.
+
+**Objętości w ściądze.** G1 około 2 ml; G2 około 4–6 ml; G3 około 8–10 ml;
+G4 około 12–15 ml; G5 około 15–25 ml. Etykieta „Orientacyjna objętość jądra:”.
+Są to dydaktyczne wskazówki towarzyszące morfologii, nie średnie, pełne zakresy
+referencyjne, progi diagnostyczne ani automat klasyfikacji. Nie dopisujemy
+metody Pradera do dawnego pomiaru o nieznanej metodzie. **Usunięto dwa
+kategoryczne porównania stadium z kategorią ml**; G2 przy 3 ml nie jest odrzucane,
+a wpisana objętość nie ustawia G. Nie przeliczamy wartości z USG.
+
+**Czas i zastosowanie.** Znacznik aktywnej wizyty dokumentuje świadomy wybór,
+nie datę badania. Wybór działa z ręcznym wiekiem, bez nazwiska lub antropometrii.
+Nieznana data pozostaje nieznana. F5 tej samej wizyty zachowuje wybór; nowy
+pomiar nie potwierdza dawnych osi. LH/FSH używają wyłącznie właściwego bieżącego
+G/Th, a brak stadium nie blokuje dostępnej osi wieku. Inhibina B zachowuje swoje
+istniejące pokrycie danych; panel nie tworzy dla niej brakujących norm stadium.
+Wzrost zachowuje operacyjną granicę ≤12 miesięcy (wcześniejsza decyzja aplikacji
+2026-09-09), osobną od aktualności wizyty. Przyszły albo nieznany historyczny
+czas nie dowodzi świeżości. Sama dawna data bez wieku oceny nie pozwala liczyć
+utrzymywania się Tanner II–III z dzisiejszego wieku. Wcześniejsze Th1/Th2 nie
+zaprzecza późniejszemu początkowi/menarche; komunikaty łączące stadium z tymi
+zdarzeniami wymagają bieżącej oceny. Przypięte wyniki zachowują własny kontekst
+i gotową ocenę — nie przeliczamy ich po zmianie stadium wizyty.
+
+**Odziedziczone ograniczenie tempa.** Dotychczasowa gałąź IV–V i progi pozostają.
+Nowy opis nie deklaruje, że takie stadium dowodzi zakończenia skoku wzrostowego.
+Marshall–Tanner 1970, s. 18, tab. IV: PHV chłopców przypadało głównie w G4
+(około 74%, także około 21% w G5). Gałąź jest istniejącą heurystyką aplikacji,
+nie nową normą ani nową walidacją; jej ewentualna zmiana wymaga osobnego ustalenia.
+
+**Przypadki regresyjne (rzeczywiste funkcje produkcyjne).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| M, G3/P2 lub F, Th3/P2 w aktywnej wizycie | wspólny import właściwej osi; osobne P i pochodzenie |
+| Brak G/Th lub samo P5 | bez osi gonadalnej; dostępna oś wieku i alarm niskiego tempa pozostają |
+| Dawny ogólny Tanner V | unspecified, bez wyciszenia alarmu przez typowany adapter |
+| G2 + kategoria <4 ml | brak deterministycznego odrzucenia G2, bez zmiany danych |
+| Edycja P | brak zmiany daty, wieku i źródła G/Th |
+| Zmiana M→F→M | historia zachowana, wcześniejsza kwalifikacja bieżącej oceny nie odżywa |
+| Ocena sprzed 12/ponad 12 miesięcy lub z przyszłości | zachowana granica 12 miesięcy; brak odnowienia przez autosave |
+| Dawne Th2 → późniejsza menarche | brak fałszywej sprzeczności oraz brak domysłu utrzymywania Th2 |
+| Nowsza edycja formularza podczas pauzy zapisu | starsza sesja/ramka nie zastępuje aktywnej oceny |
+| Zapisany wynik laboratoryjny G3 → zmiana wizyty G4 | zapisany wynik nadal ma pierwotne G3 i ocenę |
+
+Kontrakt i cykl życia: [PUBERTY_ASSESSMENT.md](../PUBERTY_ASSESSMENT.md).
+Testy: `puberty-assessment-qualification`, `puberty-assessment-context`,
+`puberty-assessment-persistence`, `puberty-growth-adapters`, `puberty-summary-consumers`,
+`puberty-assessment-editor` i `lab-puberty-shared-assessment`, wraz z istniejącymi
+regresjami obliczeń, zapisu, mobile i PWA.
+
+### P-POKWITANIE-KONSUMENCI — stary numer Tannera w przeliczniku, HOMA-IR, epikryzie i Karcie Pacjenta, 2026-10-15
+
+**Zgłoszenie i decyzje właściciela.** Po etapie 2 (P-POKWITANIE-PANEL) ukryty
+`#tannerStage` nie jest już wypełniany, więc cztery miejsca czytające wyłącznie
+stary numer oślepły dla nowych rekordów (pomiar 2026-10-15 w Chromium: przy G3
+w panelu przelicznik pokazywał „(z danych: nieznany)” i odsyłał do panelu;
+HOMA-IR nie wypełniał etapu; kreator epikryzy nie widział G/Th/P; Karta Pacjenta
+nie pokazywała oceny poza chipami trajektorii). Decyzje właściciela:
+
+1. tabele Tanner-zależne ogólnego przelicznika (`TANNER_AWARE`: IGF-1, IGFBP-3,
+   DHEA-S, androstendion, estradiol, estron, DHT, SHBG, 17-OH-pregnenolon,
+   pregnenolon, testosteron) biorą właściwą oś G/Th z tej wizyty, a bez niej
+   wcześniejszą ocenę do 12 miesięcy, oznaczoną „wcześniejsza ocena”;
+2. HOMA-IR: G/Th 1 → „przedpokwitaniowy”, 2–4 → „pokwitanie”, 5 → „dojrzewanie
+   pełne” (jak dotąd traktowane normami dorosłych);
+3. samo P nigdy nie zasila tych miejsc;
+4. Karta Pacjenta pokazuje ostatni zapis G/Th/P z datą i wiekiem oceny.
+
+**Zmiana kliniczna: TAK (dobór zakresu i etapu z innego nośnika), bez nowych norm.**
+Tabele Mayo, progi HOMA-IR, treść epikryzy i wzory nie zmieniają się. Zmienia
+się źródło stadium: zamiast nieokreślonego starego numeru — typowana oś gonadalna
+właściwa dla płci, z kwalifikacją czasu identyczną jak w prognozach wzrostu
+(`VildaPubertyAssessmentContext.readActiveContext().growth`). Obecna typowana
+ocena (także pusta, błędna lub z nowszej wersji) nie wraca do starego numeru;
+stary `tannerStage` obowiązuje tylko bez typowanego zapisu, dla starych rekordów.
+Źródła opisowe stadiów bez zmian (P-POKWITANIE-KONTRAKT, P-POKWITANIE-PANEL).
+
+**Co jest.**
+- `przelicznik-jednostek.html`: `readTypedGonadal()` i `stageLabel()`;
+  `readPatientFromShared()` bierze typowaną oś przed starym numerem; opcja
+  domyślna selektora, opis pacjenta i nota nadpisania nazywają oś („G III”,
+  „Th II — wcześniejsza ocena”); nadpisanie lokalne bez zmian.
+- `homa-ir.html` + `custom-fixes.js`: strona ładuje `vilda_puberty_assessment.js`
+  i `vilda_puberty_assessment_context.js`; `Bhoma_etap()` mapuje oś na etap;
+  puste pole etapu dostaje ocenę także po późniejszym `vilda:auth-loaded`.
+- `vilda_epicrisis_ui.js`: `Le()` wypełnia G/Th i P kreatora z aktywnego
+  kontekstu (oś gonadalna i P kwalifikowane jak do wzrastania); stary select
+  i rekord tylko bez typowanej oceny.
+- `vilda_auth_ui.js`: sekcja „Dojrzewanie płciowe” ekranu edycji dostaje notę
+  tylko do odczytu „Ostatni zapis oceny G/Th/P: …” z datą i wiekiem oceny;
+  stadium nadal wpisuje się wyłącznie w panelu formularza.
+
+**Przypadki regresyjne (rzeczywiste strony, fikcyjne dane).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| sesja główna z G3 z tej wizyty, chłopiec 10 lat | przelicznik: „(z danych: G III)”, opis pacjenta „G III”, nadpisanie IV: „u pacjenta pozostaje G III” |
+| Th2 sprzed 6 miesięcy bez znacznika, dziewczynka | „(z danych: Th II — wcześniejsza ocena)” |
+| samo P3 obok starego `tannerStage: 2` | „(z danych: nieznany)”; stary numer nie wraca |
+| brak typowanej oceny, stary `tannerStage: 2` | „(z danych: Tanner II)” jak dotąd |
+| HOMA-IR: G3 / G5 / Th1 / samo P3 (ze starym 3) | etap `pub` / `full` / `pre` / pusty |
+| index: wiek 12, G3 i P2 → kreator epikryzy | `#epi-tanner-g` = 3, `#epi-tanner-p` = 2 |
+| rekord z Th3 (15.04.2026, 144 mies.) i P2 bez czasu | Karta: „Th3 (15.04.2026, w wieku 12 l 0 mies.) · P2 (czas oceny nieznany)” |
+
+Testy: e2e `pokwitanie-konsumenci.spec.mjs`; bez zmian przechodzą
+`jednostki-tanner-nadpisanie`, `application` (HOMA), `lab-puberty-*`,
+`chip-karta-pacjenta`, `powloka-konto-stan-narzedzi`.
+
+### P-POKWITANIE-WIZYTA — oś oceniona w tej wizycie niesie wiek i datę wizyty, 2026-10-15
+
+**Zgłoszenie i decyzja właściciela.** Analiza panelu G/Th/P (2026-10-15) na
+`audyt` d373075, zmierzona w prawdziwym Chromium na `index.html` i
+`przelicznik-jednostek.html`:
+
+| Scenariusz | Zapisana obserwacja G | Kwalifikacja przed zmianą |
+|---|---|---|
+| G3 kliknięte przed wpisaniem wieku, potem wiek 12 | `ageMonths: null`, data `null`; znacznik wizyty `ageMonths: 0` | dziś „bieżąca”, do rekordu idzie badanie bez wieku; przy następnej wizycie `unknown-time`, poza prognozami |
+| wiek 12, G3, korekta wieku na 13 | `ageMonths: 144` zostaje | `historical`, napis „G3 (wcześniej)”, LH/FSH bez stadium |
+| jak wyżej, korekta na 14 | bez zmian | `stale`, prognozy wzrostu bez stadium |
+| wczytany pacjent, chip „zapisane”, klik G3 | — | chip nadal „zapisane · Snapshot #1”; dopiero zmiana wzrostu dawała „niezapisane zmiany” |
+
+Właściciel wybrał: oś oceniona świadomie w tej wizycie podąża za końcowym wiekiem
+i datą wizyty, także po korekcie wieku; osie z wcześniejszych wizyt pozostają
+nietknięte.
+
+**Zmiana kliniczna: TAK (kwalifikacja danych), bez nowych norm.** Nie zmienia się
+żaden wzór, próg, tabela, jednostka ani interpretacja. Zmienia się to, jaki wiek
+i datę niesie obserwacja z bieżącej wizyty, a więc czy LH/FSH, testosteron,
+profil pokwitaniowy i tempo wzrastania dostają stadium z dzisiejszego badania.
+Dla osi z `currentAxes` wynik jest teraz taki sam niezależnie od kolejności
+wpisu (wiek przed stadium albo po nim). Dla osi historycznych nic się nie zmienia.
+Podstawa opisowa stadiów bez zmian: Marshall i Tanner 1969/1970 (wpisy
+P-POKWITANIE-KONTRAKT i P-POKWITANIE-PANEL).
+
+**Co jest.**
+- `vilda_puberty_assessment_state.js` (2 → 3): `anchorToVisit()` przy każdym
+  `capture()` (poza blokadą edycji i odtwarzaniem) oraz w `applyToUser()` przepisuje
+  wiek i datę wizyty do obserwacji z `currentAxes` o źródle `clinician-entry`.
+  `visitContext()`/`payloadContext()` czytają też `ageWeeks`; puste lata z „0”
+  miesięcy dają wiek `null` zamiast 0 miesięcy.
+- `vilda_puberty_assessment.js` (2 → 3): ta sama wizyta to ten sam ukończony
+  miesiąc wieku (różnica < 1 miesiąca); dotąd wymagano zgodności co do 1e-6
+  miesiąca, więc wiek dokładny z daty urodzenia (146,07) dawał „wcześniejsza ocena”.
+- `vilda_save_status_indicator.js`: nasłuch `vilda:puberty-assessment-changed`
+  (powód `edit`) przelicza odcisk formularza tą samą drogą, co pole formularza.
+  Strażnik niezapisanych zmian czyta ten stan, więc pyta o zapis także po samej
+  zmianie stadium.
+
+**Czego nie zmieniono.** Granica 12 miesięcy dla wzrastania, wymóg znacznika
+świadomej oceny dla `scope:'current'`, brak odnowienia osi przez autosave, F5 i
+„Nowy pomiar”, zachowanie P i starego numeru, treść chipa (nazwisko, wiek, płeć).
+
+**Przypadki regresyjne (rzeczywiste moduły).**
+
+| Wejście | Oczekiwane zachowanie |
+|---|---|
+| G3 przed wiekiem → wiek 12 | obserwacja `ageMonths: 144`, znacznik 144, `current: true` |
+| wiek 12 → G3 → 13 → 14 | obserwacja 156 → 168, `current: true`, tempo wzrastania „formularz”, bez „(wcześniej)” |
+| puste lata, miesiące „0” | odniesienie wizyty `ageMonths: null`; 0 lat 6 mies. → 6 |
+| rekord z G z 2025 (poza `currentAxes`) → korekta wieku, edycja P | G bez zmian, P z wiekiem wizyty, `currentAxes: ['P']` |
+| obserwacja z własnym źródłem `external-dated` | bez przepisania po korekcie wieku |
+| wiek dokładny 144,07 / 144,999 wobec 144 | bieżąca; 145 i 146,5 — nie |
+| wczytany pacjent → klik G3 | chip „niezapisane zmiany” bez innej zmiany pola |
+
+Testy: `puberty-assessment-persistence` (nowe i zaktualizowane przypadki),
+`puberty-assessment-qualification`, `save-status-pokwitanie`, e2e
+`pokwitanie-wiek-wizyty.spec.mjs`.
+
+### P-POKWITANIE-KONTRAKT — oddzielny zapis G/Th/P, etap 1, 2026-10-14
+
+**Zakres i wpływ kliniczny.** Techniczne przygotowanie wspólnej oceny pokwitania:
+wersjonowane `user.pubertyAssessment`, zgodny zapis/odtworzenie oraz dodatkowy
+kontekst źródła. Brak nowego edytora, norm, progów, przeliczania objętości jąder
+na G i zmian dotychczasowych wyników. Etap 2 musi jawnie podłączyć konsumentów
+przed udostępnieniem edycji. Właściciel zaakceptował makietę i wdrożenie etapami.
+Pełny kontrakt i ograniczenia: [PUBERTY_ASSESSMENT.md](../PUBERTY_ASSESSMENT.md).
+
+**Znaczenie danych.** G, Th(B) i P są osobnymi obserwacjami. Starszy numer
+`user.tannerStage` w nowym API pozostaje `unspecified`, niezależnie od płci.
+Każda cecha przechowuje własną datę, wiek i pochodzenie; sam zapis ani wczytanie
+nie czyni jej aktualną oceną. Wersja nieobsługiwana lub jawnie pusta nie pozwala
+na powrót do starszego numeru. Oryginał JSON pozostaje zachowany przy zapisie.
+
+Podstawą rozdzielenia osi są opisy morfologiczne Marshalla i Tannera:
+- dziewczęta: *Variations in pattern of pubertal changes in girls*, Arch Dis Child
+  1969;44:291–303, [doi:10.1136/adc.44.235.291](https://doi.org/10.1136/adc.44.235.291),
+  [pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020314/);
+- chłopcy: *Variations in the pattern of pubertal changes in boys*, Arch Dis Child
+  1970;45:13–23, [doi:10.1136/adc.45.239.13](https://doi.org/10.1136/adc.45.239.13),
+  [pełny tekst](https://pmc.ncbi.nlm.nih.gov/articles/PMC2020414/).
+
+Historyczne obserwacje brytyjskich dzieci opisują sekwencje morfologiczne;
+nie są tu wdrażane jako populacyjne normy wieku ani objętości. Stadium jest
+kategorią porządkową I–V, bez jednostki. Etap 1 nie wybiera klinicznie właściwej
+osi i nie określa aktualności badania na podstawie samej płci lub wieku.
+
+**Syntetyczne przypadki (rzeczywiste moduły produkcyjne).**
+
+| Wejście | Oczekiwany odczyt/zapis |
+|---|---|
+| Stary Tanner 3, chłopiec albo dziewczynka | `legacy.kind=unspecified`, bez G/Th |
+| G3 z 2026-10-01 + P2 bez znanej daty | osobne stadia i daty, brak ogólnego Tannera |
+| P3 bez G/Th | brak gonadalnego stadium |
+| Pusta v1 obok starego Tanner 3 | trzy nieocenione cechy, bez legacy fallback |
+| Nieznana wersja albo błędne stadium | brak użytecznej interpretacji; oryginalny JSON pozostaje w zapisie |
+| Odtworzenie → zapis | data i pochodzenie bez zmian |
+| A → B bez oceny / spóźniony odczyt A | brak danych A w kontekście i zapisie B |
+
+Testy: `puberty-assessment.test.mjs` oraz regresje kontekstu i zapisu; instalacja,
+aktualizacja oraz uruchomienie offline sprawdzane z produkcyjnym service workerem.
 
 ### P-POKWITANIE-W-TLE — ponowny odczyt pokwitania w tle bez „loading” i bez zbędnych przeliczeń (SW 1.1.251, 2026-10-12, decyzja właściciela)
 
@@ -4592,8 +6643,8 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
   - żetony hSDS i ΔhSDS sekcji GH Karty pacjenta (`vilda_auth_ui.js`, `ci()`);
   - walidacja prognozy (`vilda_growth_prediction_validation_model.js`, `hSds()`), także w eksporcie kohorty.
 - Wiersz wsadu XLSX (`vilda_professional_module.js`):
-  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji;
-  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza.
+  - masa w dokładnym wieku wiersza `{wiekMies:Ce}` — tym samym, w którym wiersz liczy już wzrost (`Zw`) i BMI (`Zb`). `Ce` to doby od urodzenia do daty pomiaru wiersza / 30,4375; bez daty pomiaru — na dziś, jak dotąd. Siatkę (niemowlęca poniżej 36 mies. czy dalsza) wybiera nadal zaokrąglony wiek wiersza, jak dotąd; wiek dokładny służy tylko interpolacji *(od P-GRANICA-URODZIN niżej: pełne miesiące wiersza z kalendarza, a wiek dokładny przycięty do granic siatek)*;
+  - zapasowy wzrost — liczony tylko wtedy, gdy silnik nie policzy wieku dokładnego, np. kilka dni po 18. urodzinach (6575 dób = 216,016 mies.: brak siatki) — dostaje pełne miesiące wiersza `{wiekMies:null}`. Ratuje wynik jak dotąd, ale bez wieku z formularza. *(Sprostowanie 2026-10-14, P-GRANICA-URODZIN: „brak siatki” przy 216,016 mies. dotyczył atrapy testu bez centyli Palczewskiej. W aplikacji łańcuch schodził wtedy na Palczewską: hSDS −0,44 zamiast −0,42 na OLAF. Od P-GRANICA-URODZIN wiersz podaje 216, więc liczy OLAF.)*
 - Wiek odniesienia, nie pomiar (`{wiekMies:null}`):
   - wzrost rodziców na 18 lat (MPH): Karta pacjenta (`En(rt,S,18,…)`) oraz karty Startu (`inline_index_04.js`, `inline_index_07.js`);
   - krzywe odniesienia wykresów Karty pacjenta (`getChildLMS(g,E/12,…)`). Bez tego krzywa niemowlęcia miała załamanie w miesiącu życia dziecka z formularza.
@@ -4631,6 +6682,8 @@ U dziecka 10-letniego różnica hSDS to ok. 0,06 SD na każdy punkt w tym samym 
 **Do decyzji (przegląd Codex, 2026-10-14).** Wiek dokładny w skali dób / 30,4375 i miesiące kalendarzowe rozjeżdżają się przy urodzinach. W dniu 3. urodzin po 1095 dobach wiek dokładny to 35,975 mies. przy 36 pełnych miesiącach. Przy źródle OLAF wzrost liczy się wtedy na WHO (fallback „brak danych OLAF poniżej 3 lat”): chłopiec 95 cm ma SDS −0,29 zamiast −0,68 na OLAF. W dniu 18. urodzin po 6575 dobach (216,016 mies.) wzrost nie ma siatki. Tak liczy formularz od DOB-AGE-4 i — tym samym wiekiem — trzy widoki z P-WIEK-POMIARU, więc zapisany pomiar trafia na tę samą siatkę, co w formularzu w dniu pomiaru. Reguła „siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje w jej obrębie” zmieniłaby formularz i P-WIEK-POMIARU — to decyzja kliniczna właściciela. Ten wpis zmienia tylko zapas wzrostu wsadu (wyżej), który bez tego traciłby wynik.
 
 *(Decyzja właściciela 2026-10-14: regułę siatki w dniu urodzin rozstrzyga osobny PR po P-WIEK-POMIARU-3.)*
+
+*(Rozstrzygnięte 2026-10-14 decyzją właściciela: wpis P-GRANICA-URODZIN niżej. Sprostowanie liczb z tego akapitu, zmierzonych na atrapie bez centyli Palczewskiej: w aplikacji chłopiec 95 cm w dniu 3. urodzin szedł na siatkę Palczewskiej (hSDS −0,49, 31. centyl), nie na WHO (−0,29). Na OLAF ma −0,67 (25. centyl) w 36. miesiącu; −0,68 to wartość dla 1096 dób. Po 6575 dobach wzrost nie tracił wyniku, tylko schodził na Palczewską (−0,44 zamiast −0,42 na OLAF).)*
 
 **Wersje.** `vilda_auth_ui.js` 489 (wstrzykiwany: `vilda_chrome.js` 137, `vilda_session_bridge.js` 61), `gh_therapy_monitor.js` 59, `vilda_growth_prediction_validation_model.js` 4, `vilda_professional_module.js` 12, `custom-fixes.js` 74, `inline_index_04.js` 27, `inline_index_07.js` 12; SW 1.1.270 → 1.1.271 (numer 1.1.270 nadał równolegle #672).
 
@@ -4723,6 +6776,92 @@ Przegląd sprawdził też wzrost rodziców w DocPro (druga przypadkowa zgodnoś�
 - Strażnicy `sds-karta-i-trajektoria` (`En`) i `sds-konsumenci-rdzenia` (schowek) przypinają nowe fragmenty; liczba asercji bez zmian.
 
 **Wersje.** `app.js` 236, `vilda_advanced_growth.js` 76, `vilda_auth_ui.js` 490 (wstrzykiwany: `vilda_chrome.js` 138, `vilda_session_bridge.js` 62), `vilda_patient_summary_copy.js` 16, `vilda_summary_cards.js` 61; SW 1.1.272 → 1.1.273 (numer 1.1.272 nadał równolegle #673).
+
+### P-GRANICA-URODZIN — siatkę wybierają pełne miesiące, wiek dokładny tylko interpoluje: urodziny 2, 3, 5, 18, 18,5 i 19 lat (SW 1.1.275, 2026-10-14, decyzja właściciela)
+
+**Decyzja właściciela (2026-10-14).** „Napraw granicę urodzin w osobnym PR”. Reguła: siatkę i bramki kategorii wybierają pełne miesiące kalendarzowe, a wiek dokładny (doby / 30,4375) tylko interpoluje w obrębie wybranej siatki. Granica 1. miesiąca (noworodek: WHO 2006 zamiast Palczewskiej) zostaje według dób, jak dotąd — wariant „noworodek wg dób”, wybrany przez właściciela. Wpis rozstrzyga „Do decyzji” z P-WIEK-POMIARU-2.
+
+**Klasyfikacja:** zmiana kliniczna (AGENTS.md § 3). W dniach wokół urodzin zmienia siatkę, SDS, centyl i kategorię BMI. We wsadzie XLSX zmienia też wiersz masy (punkt 4 niżej).
+
+**Co było** (zmierzone na `audyt` 2df41a8: prawdziwe silniki i tablice, dane fikcyjne). Rok bez 29 lutego ma 365 dób, a 12 × 30,4375 = 365,25. Dlatego w dniu urodzin wiek dokładny bywa mniejszy niż pełne miesiące: w dniu 3. urodzin po 1095 dobach to 35,975 mies. przy 36 pełnych. Silniki wybierały siatkę według wieku dokładnego, a formularz, rekord i widoki pokazują pełne miesiące. W dniu urodzin dziecko trafiało więc na siatkę młodszego dziecka. Odwrotny przypadek (wiek dokładny już za granicą, pełne miesiące jeszcze przed nią) zdarza się tylko na granicy półrocza, 222 mies.
+
+| Przypadek | Było | Jest |
+|---|---|---|
+| chłopiec 95 cm, OLAF, 3. urodziny po 1095 dobach (35,975 mies.) | Palczewska, siatka zastępcza („brak danych OLAF dla wieku poniżej 3 lat”): hSDS −0,49, 31. centyl | OLAF: hSDS −0,67, 25. centyl |
+| ten sam chłopiec, 14 kg (BMI 15,5) | BMI na Palczewskiej: 32. centyl | BMI na OLAF: 44. centyl |
+| dziewczynka 110 cm, 31,46 kg (BMI 26,0, BMI-SDS +3,14), 5. urodziny po 1826 dobach (59,99 mies.) | „Otyłość” — bramka 60 mies. zamknięta | „Otyłość olbrzymia” i ostrzeżenie o pilnej konsultacji |
+| BMI 31, 18. urodziny po 6574 dobach (215,98 mies.) | „Otyłość” (kategoria dziecięca, 98. centyl) | „Otyłość I stopnia” (dorosły od 216 mies.) |
+| chłopiec 176 cm, 18. urodziny po 6575 dobach (216,016 mies.) | Palczewska, siatka zastępcza („brak siatek OLAF powyżej 18 lat”): hSDS −0,44 | OLAF: hSDS −0,42 |
+| chłopiec 176 cm, ur. 1.03.2002, pomiar 31.08.2020: 221 pełnych mies., 6758 dób (222,03 mies.) | brak wyniku („wiek poza zakresem siatek (powyżej 18,5 roku)”) | Palczewska: hSDS −0,44 |
+| BMI 26, 19. urodziny po 6940 dobach (ur. 1.01.2004: 228,008 mies.) | BMI-SDS: brak siatki (powyżej 19 lat) | WHO 2007, informacyjnie; kategoria dorosłego bez zmian |
+| karta zespołu Downa, chłopiec 84 cm, 12 kg, 2. urodziny po 730 dobach (23,98 mies.) | tabele niemowlęce: „Masa do długości (WFL DS)” i „Normy BMI DS obowiązują od 2. r.ż.” | tabele dziecięce: BMI DS z centylem |
+| wsad XLSX, masa 14 kg, wiersz 35 pełnych mies. i 1081 dób (35,52 mies.) | wiek zaokrąglony 36 → OLAF, wiersz 36: SDS −0,50 (31,0 c.) | 35 pełnych → WHO 2006 w 35,52 mies.: SDS −0,10 (45,9 c.) |
+| wsad XLSX, masa 70 kg, 216 pełnych mies. (216,58 mies.) | wiek zaokrąglony 217 → brak wyniku | OLAF, wiersz 216: SDS +0,01 |
+
+**Co jest.**
+1. Silniki publikują granice siatek jako dane — `VildaSdsWzrostu.GRANICE` i `VildaBmi.GRANICE` — osobno dla populacji ogólnej i DS. Wartości pochodzą z tych samych stałych `G`, którymi silniki rozstrzygają (`od` — od tego wieku, `do` — do tego wieku włącznie):
+   - wzrost, populacja ogólna: od 36 (OLAF), do 216 (OLAF i WHO) i do 222 (Palczewska); DS: od 24 (tabela dziecięca), do 240;
+   - BMI, populacja ogólna: od 36 (OLAF), od 60 („otyłość olbrzymia”), od 216 (dorosły), do 216 (OLAF), do 222 (Palczewska) i do 228 (WHO 2007); DS: od 24 (siatka BMI DS), od 60, od 240 (dorosły), do 240.
+
+   Granicy 1. miesiąca nie ma, bo noworodek rozstrzyga się dobami. Granicami nie są też przejścia ciągłe: WHO 2006 → WHO 2007 we wzroście (35 → 36 mies.) i w BMI (60 mies., ten sam wiersz w obu tablicach).
+2. `app.js`: `vildaWiekDoSiatek(wiekMies, pelneMies, populacja)` przycina wiek dokładny tak, żeby każda granica obu silników wypadała po tej samej stronie, co pełne miesiące:
+   - granica `od` nie większa niż pełne miesiące — wiek co najmniej równy granicy;
+   - granica `od` większa niż pełne miesiące — wiek mniejszy niż granica (granica − 10⁻⁶);
+   - granica `do` nie mniejsza niż pełne miesiące — wiek nie większy niż granica.
+
+   Między granicami wiek zostaje bez zmian. Bez zmian zostaje też, gdy pełnych miesięcy brak, są niecałkowite albo nie pasują do wieku dokładnego (różnica poza przedziałem −0,5…1,5 mies.; zmierzony zakres dla dat 2000–2024 i wieku 0–20 lat: −0,10…+1,06). Populacja jest ta sama, której użyje silnik (resolver pacjenta); wsad podaje ogólną, a karta zespołu Downa — DS. Bez silników granic nie ma, a wiek zostaje bez zmian.
+3. Funkcję wołają wszyscy wytwórcy wieku dokładnego podawanego siatkom:
+   - bramka formularza `lmsNiemowleWiek` (pełne miesiące formularza): wzrost w karcie głównej i BMI w `vilda_update_prep.js` (kategoria, centyl, Cole, ostrzeżenia) — ten plik dostaje przycięty wiek bez własnej zmiany;
+   - `vildaWiekPomiaruMies` (pełne miesiące z dnia pomiaru): karta porównania, kafelki Karty pacjenta i schowek z P-WIEK-POMIARU, a od P-WIEK-POMIARU-3 także poprzedni punkt kolumny „Zmiana” (dzisiejszy bierze ją z bramki formularza, `Sw_wiekDzis`);
+   - karta zespołu Downa (`__ds_readAgeYears`): tabela niemowlęca czy dziecięca, BMI DS czy masa do długości, zakres karty do 20 lat;
+   - wiersz wsadu XLSX (`Cs`): wzrost (`Zw`), BMI (`Zb`) i masa poniżej 36 mies.
+
+   Jawny wiek, który wołający podaje rdzeniowi w `{wiekMies}`, rdzeń przyjmuje bez zmian — przycina go ten, kto go wytworzył.
+4. Wsad XLSX: pełne miesiące wiersza liczy kalendarz (`VildaDobAge.ageFromDobISO` na dzień pomiaru, jak w formularzu). Masa, siatka Palczewskiej i zapas wzrostu dostają je zamiast zaokrąglonego wieku dokładnego (`Math.round(Ce)`). Zaokrąglenie przenosiło wiersz z drugiej połowy miesiąca na następny miesiąc, także przez granicę siatki. Skutek poza granicami: od 36 mies. masa w drugiej połowie miesiąca bierze wiersz pełnych miesięcy, tak jak formularz, a nie wiersz następnego miesiąca. Przykład: 100,53 mies., 26 kg — SDS masy −0,60 → −0,55; na siatce Palczewskiej −0,40 → −0,34.
+
+**Czego nie zmieniono.**
+- Noworodek według dób (decyzja właściciela). Przykład: chłopiec ur. 1 lutego w 28. dobie (1 pełny miesiąc, 0,92 mies.) — długość na WHO 2006 z powodem „noworodek poniżej 1. miesiąca…”, jak dotąd.
+- Silniki: reguła wyboru siatki, łańcuch zastępczy i interpolacja bez zmian. Wynik się nie zmienia, gdy wiek jest całkowity albo gdy wiek dokładny leży po tej samej stronie każdej granicy, co pełne miesiące.
+- Wywołania z wiekiem w pełnych miesiącach (historia pomiarów, punkty GH, walidacja prognozy, krzywe odniesienia). Odczyt wartości pod kursorem na wykresach liczy wiek z osi, który nie ma pełnych miesięcy kalendarza.
+- Masa w formularzu: siatkę i wiersz od 36 mies. wybierały już pełne miesiące formularza.
+- Dane referencyjne, wzory, progi, zapis, synchronizacja.
+
+**Konsekwencje do świadomej akceptacji.**
+- Na granicy wiek do interpolacji przesuwa się najwyżej o 0,1 mies. (3 doby). W miesiącu 18. urodzin (216 pełnych mies.) wiek do interpolacji wynosi 216 przez cały miesiąc: tu kończy się OLAF i WHO dla wzrostu, a zaczyna dorosłość BMI. U pacjenta z DS tak samo jest w miesiącu 20. urodzin (240). Na granicach 222 i 228 mies. wiek nie przekracza granicy, czyli przesuwa się najwyżej o 1,06 mies. W tym wieku to poniżej 0,02 SD: wzrost rośnie o ok. 0,1 cm na miesiąc, BMI o ok. 0,05.
+- Granice obu silników działają razem, bo wiek z formularza trafia do obu. Granica 60 mies. (bramka „otyłości olbrzymiej”) przesuwa więc także wiek wzrostu o najwyżej 3 doby (ok. 0,05 cm).
+
+**Źródło i reguła.** Dane referencyjne bez zmian (tabela źródeł wyżej). Zakresy siatek są opisane w pełnych latach i miesiącach życia: OLAF/OLA od 3 do 18 lat (Kułaga i wsp., Eur J Pediatr 2011;170:599–609 i 2013;172:753–761), WHO 2007 do 19 lat (de Onis i wsp., Bull World Health Organ 2007;85:660–667), Palczewska do 18,5 roku (Palczewska, Niedźwiecka, Med Wieku Rozwoj 2001;5 Supl. 1:18–118), siatki DS — tabele 0–36 mies. i 2–20 lat (Zemel i wsp., Pediatrics 2015;136:e1204–e1211). Bramki kategorii BMI („otyłość olbrzymia” od 5 lat, dorosły od 18 lat, przy DS od 20 lat) to decyzje właściciela 4, 5 i D3 z P-BMI i P-DS. Wiek dokładny do interpolacji pozostaje w skali tablic WHO (DOB-AGE-4: WHO Child Growth Standards, Acta Paediatr Suppl 2006;450:76–85, wiek w dobach / 30,4375).
+
+**Populacja, jednostki, ograniczenia.**
+- Dzieci i młodzież 0–20 lat; wiek w miesiącach (pełne miesiące kalendarzowe i doby / 30,4375), wzrost w cm, masa w kg, BMI w kg/m².
+- Reguła działa tam, gdzie wiek dokładny ma pełne miesiące z tego samego dnia: formularz z datą urodzenia, zapis z datą urodzenia i dniem pomiaru, wiersz wsadu z datą urodzenia. Bez daty urodzenia wszystko liczy się, jak dotąd, w pełnych miesiącach.
+- Zgodność z kalendarzem dotyczy tylko granic siatek i bramek. Między granicami interpolacja idzie wiekiem dokładnym, jak w DOB-AGE-4.
+
+**Przypadki syntetyczne** (wejście → oczekiwany wynik):
+- Chłopiec ur. 1-03-2024, dziś 1-03-2027 (1095 dób), 95 cm, 14 kg, OLAF → karta główna: „Wzrost: 25 centyl” (OLAF, bez siatki zastępczej). Było: 31. centyl na Palczewskiej.
+- Dziewczynka ur. 17-06-2021, dziś 17-06-2026 (1826 dób), 110 cm, 31,46 kg → „BMI: 26,0 kg/m² – >99 centyla (Otyłość olbrzymia)” i ostrzeżenie. Było: „(Otyłość)”, bez ostrzeżenia o olbrzymiej.
+- Zapis: chłopiec ur. 1-03-2020, pomiar 1-03-2023 (1095 dób), 95 cm, 14 kg, OLAF → kafelki Karty pacjenta, schowek i „Poprzednio”: wzrost 25. centyl (było 31.), BMI na OLAF.
+- Karta zespołu Downa: chłopiec ur. 17-06-2024, dziś 17-06-2026 (730 dób), 84 cm, 12 kg → wiek karty 2 lata, wiersz „BMI: 17,0” z centylem DS. Było: masa do długości i „Normy BMI DS obowiązują od 2. r.ż.”.
+- Wsad: chłopiec ur. 15-03-2020, pomiar 1-03-2023, 14 kg → 35 pełnych mies., masa na WHO 2006 w 35,52 mies.: SDS −0,10 (było −0,50 na OLAF, wiersz 36).
+- Noworodek: chłopiec ur. 1-02-2027, dziś 1-03-2027 (28. doba, 1 pełny miesiąc), 54 cm → WHO 2006 z powodem „noworodek poniżej 1. miesiąca”, jak dotąd.
+
+**Testy.**
+- `tests/unit/granica-urodzin.test.mjs` (19):
+  - dane `GRANICE` obu silników wobec ich stałych `G`;
+  - 9 przypadków syntetycznych na prawdziwych silnikach;
+  - własność na ok. 310 tys. par (data urodzenia, dzień) w oknach ±45 dni wokół granic 24, 36, 60, 216, 222, 228 i 240 mies., dla obu populacji: wiek po stronie pełnych miesięcy przy każdej granicy, bez przycięć tam, gdzie nie trzeba, przesunięcie poniżej 0,1 mies. poza miesiącami 216, 222 i 228 (DS: 240);
+  - decyzje silników przy wieku do siatek takie same jak przy pełnych miesiącach (2–20 lat): siatka, zapas, powód, dorosłość, bramka 60 mies.;
+  - wytwórcy w `app.js`, karta DS i wiersz wsadu na kodzie wyciętym z produkcji;
+  - strażnicy źródła.
+- `tests/e2e/granica-urodzin.spec.mjs` (5, komputer): karta główna w dniu 5. i 3. urodzin, zapis z dnia 3. urodzin (kafelki, schowek, „Poprzednio”), karta DS w dniu 2. urodzin, noworodek według dób. `tests/e2e/granica-urodzin-mobile.spec.mjs` (1, telefon): karta główna w dniu 5. urodzin, bez poziomego przewijania. Wspólne kroki: `tests/support/granica-urodzin.mjs`.
+- Kontrola ujemna na `audyt` 2df41a8: e2e — 5 z 6 testów pada („Otyłość” zamiast „Otyłość olbrzymia”, Palczewska 31 zamiast OLAF 25, kafelek 31 zamiast 25, wiek karty DS 1,9986 zamiast 2). Przechodzi test noworodka, bo pilnuje, że granica 1. miesiąca się nie zmienia. Unit — 10 testów pada, a 9 jest pominiętych (brak `GRANICE` i funkcji).
+- Strażnicy wsadu w `sds-cisnienie-i-wsad`, `wiek-pomiaru-pozostale-miejsca` i `bmi-dieta-moduly` przypinają nowe wywołania (`Cs`, `Rp`); liczba asercji bez zmian.
+
+**Do decyzji.**
+- Masa od 36 mies. — w formularzu i we wsadzie — bierze wiersz pełnych miesięcy, bez interpolacji wiekiem dokładnym, inaczej niż wzrost i BMI. Interpolacja masy to osobna zmiana kliniczna.
+- Wsad liczy masę na siatce zespołu Downa, gdy pacjent wczytany w formularzu ma DS (`getChildLMS` → `vildaPopulacjaDs()`). Wzrost i BMI wsadu podają populację ogólną jawnie. To błąd sprzed tej zmiany (z przeglądu kodu, niezmierzony).
+
+**Wersje.** `app.js` 237, `vilda_sds_wzrostu.js` 5, `vilda_bmi.js` 10, `vilda_down_syndrome.js` 5, `vilda_professional_module.js` 13; SW 1.1.274 → 1.1.275 (numery 1.1.272, 1.1.273 i 1.1.274 nadały równolegle #673, #675 i #677, `app.js` 236 — #675).
 
 ### P-MODALE — modale a dock i strzałka: konflikt tylko w powłoce, naprawa w jednym miejscu (SW 1.0.978, 2026-09-17)
 
@@ -5560,8 +7699,8 @@ Pusta komórka niesie powód **silnika**: model woła `calculateBlumIssPredictio
 
 **Sejf — `mergePatients(źródło, cel)`** (`vilda_vault.js` 181 → 182):
 
-1. **Wszystkie wersje źródła przechodzą pod cel bez zmiany treści i dat.** Magazyn wersji jest kluczowany po `snapshotId` (indeks `byPatient` jest pomocniczy), więc przepięcie to zmiana pola `patientId` w tym samym wpisie. Numeracja `seq` (P-KOLEJNOSC-WERSJI) jest nadawana od nowa w porządku `savedAtISO`, bez dziur i powtórzeń — historia wersji celu pokazuje potem obie linie chronologicznie.
-2. **Nowa głowa = głowa celu uzupełniona tym, czego w niej nie ma:** data urodzenia, części nazwiska, płeć, tygodnie; wiersze historii wzrastania obu trybów (suma po kluczu wiek|wzrost|masa, wiersze `ghSync` pomijane, sortowanie po wieku); wzrosty rodziców i wiek kostny, gdy cel ich nie ma; punkty terapii GH/otyłość/bisfosfoniany (suma bez duplikatów); sekcje kartoteki (okołoporodowe, pokwitanie, opiekun, lekarz, klirens, dieta) tylko gdy cel ich nie ma. **Bieżąca wizyta (wiek, masa, wzrost) zostaje z celu** — to rekord, który lekarz wskazał jako aktualny. Zapis idzie przez `savePatient` z pominięciem anti-clobbera (to świadome scalenie, nie zapis na nieaktualnej kopii); `snapshotCount` główki jest przeliczany z magazynu, bo `savePatient` nie zna przepiętych wersji.
+1. **Wszystkie wersje źródła przechodzą pod cel bez zmiany treści i dat.** Magazyn wersji jest kluczowany po `snapshotId` (indeks `byPatient` jest pomocniczy), więc przepięcie to zmiana pola `patientId` w tym samym wpisie (*od P-SYNC-WLASCICIEL, 2026-10-14, także `rev + 1` — przeniesienie jest nową rewizją rekordu; treść i daty bez zmian*). Numeracja `seq` (P-KOLEJNOSC-WERSJI) jest nadawana od nowa w porządku `savedAtISO`, bez dziur i powtórzeń — historia wersji celu pokazuje potem obie linie chronologicznie.
+2. **Nowa głowa = głowa celu uzupełniona tym, czego w niej nie ma:** data urodzenia, części nazwiska, płeć, tygodnie; wiersze historii wzrastania obu trybów (suma po kluczu wiek|wzrost|masa, wiersze `ghSync` pomijane, sortowanie po wieku); wzrosty rodziców i wiek kostny, gdy cel ich nie ma; punkty terapii GH/otyłość/bisfosfoniany (suma bez duplikatów); sekcje kartoteki (okołoporodowe, pokwitanie, opiekun, lekarz, klirens, dieta) tylko gdy cel ich nie ma (*od P-SCALANIE-SEKCJE, 2026-10-14: także gdy sekcja celu jest bez danych — same wartości domyślne strony; sekcja przechodzi w całości*). **Bieżąca wizyta (wiek, masa, wzrost) zostaje z celu** — to rekord, który lekarz wskazał jako aktualny. Zapis idzie przez `savePatient` z pominięciem anti-clobbera (to świadome scalenie, nie zapis na nieaktualnej kopii); `snapshotCount` główki jest przeliczany z magazynu, bo `savePatient` nie zna przepiętych wersji.
 3. **Wpisy Terminarza** źródła dostają `patientId` celu tą samą ścieżką, co przy scalaniu osoby spoza bazy (`mergeExternalIntoPatient`); **listy pacjentów** zamieniają źródło na cel w członkach i wykluczeniach.
 4. **Źródło znika jak przy `removePatient`:** nagrobek, więc synchronizacja usunie je także na innych urządzeniach (*od P-ZAPIS-USUNIETEJ, 2026-10-08, zapis do źródła po scaleniu jest odmawiany ze wskazaniem celu — źródło nie wraca*); przepięte wersje idą z deltą celu, bo `buildPatientDelta` niesie pełną listę jego wersji. Powiadomienie `onPatientSaved` odświeża otwarte widoki, a jeżeli cel jest wczytany w formularzu, `vilda_baseline_pacjenta.js` (P-ODSWIEZENIE) podciąga bazę.
 
@@ -5791,6 +7930,18 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 **Zaobserwowane przy okazji, nietknięte:** edycja starszej wersji przesuwa ją na czoło listy, bo `updatedAtISO` jest kryterium wyższym niż numer. To reguła sprzed tej zmiany; zapisana tutaj, żeby nie wyglądała na skutek uboczny.
 
 *Strażnicy:* `tests/unit/kolejnosc-wersji.test.mjs` (9) — zachowaniowe, na prawdziwym sejfie z magazynem w pamięci: numery rosną i są osobne dla każdego pacjenta, **zamrożony zegar stawia trzy zapisy w tej samej milisekundzie** i bieżącą zostaje najnowsza, wynik jest powtarzalny w pięciu próbach, edycja nie kasuje numeru, plus spis pilnujący, że żadne z ośmiu miejsc zapisu wersji numeru nie gubi. **Zmierzona czerwień: 8 z 9** przeciwko wersji sprzed zmiany, z kolejnością wychodzącą za każdym razem inaczej.
+
+### P-IMPORT-STATUS — opóźniony import nie zmienia wczytanego pacjenta w „nowego”, 2026-10-15
+
+**Odtworzenie.** `applyLoadedData()` planuje `vilda:json-imported`, a wczytanie z kartoteki zaraz potem rozgłasza `vilda:patient-loaded`. Wskaźnik zapisu ignorował import przez 500 ms. Przy obciążeniu renderowania powiadomienie przychodziło później: mimo poprawnego PID przechodził ze stanu `saved` do `new_patient`, a rzeczywisty strażnik niezapisanych zmian zatrzymywał „Wyczyść”. Potwierdzone w obu próbach CI oraz w Chromium z sześciokrotnym spowolnieniem CPU. Sam panel pokwitaniowy nie zgłaszał nowego pacjenta ani zmiany danych.
+
+**Reguła.** Każde poprawne `applyLoadedData`, również odtworzenie sesji, zwiększa licznik operacji wyłącznie w RAM dokumentu. Istniejące `vilda:json-imported` niesie `detail.applySequence`; odtworzenie sesji nadal nie emituje tego zdarzenia. Wczytanie potwierdza konkretną operację, a kolejne „Wyczyść” lub blokada konta unieważniają oczekujące powiadomienia. Starszy import i starsze odtworzenie nie mogą odnowić referencji innego pacjenta. Rzeczywisty późniejszy import JSON ma nowy numer i nadal daje `new_patient`, również bezpośrednio po wczytaniu. Nie ma okna 500 ms ani rozpoznawania pacjenta po nazwisku.
+
+`saveUserData()` przekazuje w zdarzeniu zakończenia numer operacji uchwycony przy rozpoczęciu zapisu; opóźniony zapis nie potwierdza nowszego importu. Zwykłe powiadomienie sejfu bez takiej proweniencji zachowuje dotychczasową synchroniczną aktualizację wskaźnika, ale nie potwierdza dowolnego bieżącego importu. Odroczone publikacje wskaźnika sprawdzają generację, numer operacji i docelowy PID; PID może zostać ustawiony przez późniejszy listener tego samego wczytania.
+
+**Zakres.** Bez zmiany wzorów, interpretacji, danych referencyjnych, formatu pacjenta ani magazynów. Numer nie trafia do payloadu, JSON eksportu ani sesji. Strażnik niezapisanych zmian pozostaje czynny; test tożsamości nadal sprawdza, że nowe dziecko nie modyfikuje starej kartoteki.
+
+**Regresje.** `tests/unit/save-status-import-order.test.mjs` wykonuje rzeczywisty importer i wskaźnik z deterministyczną kolejnością zdarzeń: powiadomienie późniejsze niż 500 ms, kolejny prawdziwy import, stare zdarzenia, sesja, zapis, clear, lock, unlock i zmiana PID. `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` zachowuje wszystkie dotychczasowe asercje.
 
 ### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
 
@@ -7054,6 +9205,20 @@ Etap 3 (2026-08-11, finał konsolidacji): `docpro.html` ładuje także `inline_i
 
 Ujednolicenie bramek (2026-08-11, decyzja właściciela): `docpro.html` ładuje także `vilda_publication_creator.js` (moduł pasywny — bez przycisku i UI kreatora na tej stronie), przez co bramki `isElementEnabled` („Elementy siatki", w tym domyślnie wyłączona ramka podsumowania w kontekście WHO) oraz adnotacje zapisane z pacjentem działają identycznie na obu stronach. Regresja pikselowa: pełna naturalna parzystość index↔docpro (5/5 przypadków bitowo identycznych, bez stubów); test parzystości stron uproszczony do wariantu produkcyjnego.
 
+**P-PAL-POZIOM — siatka 1–18 lat na jednej stronie A4 w poziomie (2026-10-16, decyzja właściciela; zmiana funkcjonalna, nie kliniczna).** Pod przyciskiem siatki Palczewskiej jest przełącznik „Układ PDF”: „2 strony A4 · pion” (domyślnie, jak dotąd) albo „1 strona A4 · poziom” — wzrost po lewej, waga po prawej, jeden wspólny nagłówek (tytuł „Siatki centylowe wzrostu i wagi”, źródło, imię i nazwisko, wzrost rodziców i MPH nad siatką wzrostu) i jedna stopka. Przełącznik widać tylko wtedy, gdy przycisk wygeneruje siatkę 1–18 lat (Palczewska, wyniki PRO, wiek < 18 lat, plan inny niż sama siatka 0–3 lata) i poza trybem publikacji. Wybór jest ustawieniem dokumentu `PAL_PDF_LAYOUT` (`cloud-synced`, jak grubości linii siatek). Siatki do publikacji (angielskie, czarno-białe) zostają w pionie. Przy pomiarach sprzed 1. i po 3. r.ż. PDF ma stronę 0–3 lata w pionie i siatkę 1–18 lat w poziomie (orientacja ustalana osobno dla każdej strony z proporcji płótna). Raport pacjenta korzysta dalej z dwóch płócien pionowych.
+- *Co się nie zmienia:* dane, interpolacja, wygładzanie, krzywe centylowe, zakres osi, punkty i ścieżka pomiarów, wiek kostny, romb MPH, ramka podsumowania PRO, adnotacje Kreatora i teksty nagłówka. Oba wykresy rysuje ten sam generator (`Fe` w `inline_index_07.js`, nowy opcjonalny parametr `layout`: wymiary płótna, bez nagłówka i stopki), a teksty nagłówka liczy jedna funkcja `getPalczewskaExtendedHeaderTexts` (logika przeniesiona z `Fe` bez zmian, używana przez oba układy). Stronę składa nowy czytelny moduł `vilda_centile_landscape.js` (`window.VildaCentileLandscape`). Dowód niezmienności układu pionowego: SHA-256 PNG płócien przed/po zmianie — 18/18 identycznych (9 scenariuszy × index.html i docpro.html: bez danych, z historią pomiarów, rodzicami, wiekiem kostnym i ramką PRO, tryb publikacji, dziewczynka 30 mies., strona 0–3 lata).
+- *Co się zmienia:* fizyczna wielkość wydruku w układzie poziomym. Pole wykresu ma ok. 70% dzisiejszego liniowo (118 × 161 mm zamiast 165 × 232 mm); przy osi 70–195 cm kratka 1 cm wzrostu ma 1,29 mm zamiast 1,86 mm, rok życia 6,9 mm zamiast 9,7 mm. Opisy osi zostają tej samej wielkości (7,9 pt), bo wykres jest rysowany od nowa w docelowym rozmiarze, a nie pomniejszany. Ma to znaczenie przy odczycie wartości linijką z wydruku albo przy nakładaniu na siebie wydruków z obu układów.
+- *Kreator siatek PRO:* PDF z Kreatora (kontekst zwykłej siatki) idzie tą samą ścieżką i bierze ten sam wybór. Render strony poziomej przekazuje do `drawAnnotations` flagę `transient`: adnotacje są malowane w geometrii mniejszego pola, ale geometria podglądu Kreatora nie jest nadpisywana (inaczej klikanie w podgląd po wygenerowaniu PDF trafiałoby obok punktów). Nagłówek i stopka strony poziomej respektują bramki „Elementy siatki” (`patientName`, `parentsHeader`, `footer`) w kontekście zwykłej siatki.
+- *Przypadek syntetyczny:* chłopiec 10 lat, 141 cm, 33 kg, „1 strona A4 · poziom” → PDF z jedną stroną 841,89 × 595,28 pt (297 × 210 mm); płótno 3508 × 2480 px, wykres wzrostu w kolumnie od x = 120 px, wagi od x = 1804 px, oba od y = 278 px. Ten sam pacjent z pomiarem w 6. mies. → 2 strony: pion (0–3 lata), poziom (1–18 lat).
+- *Testy:* `tests/unit/siatka-palczewskiej-poziomo.test.mjs` (prawdziwy moduł i prawdziwy adapter preferencji: domyślny pion, zapis i normalizacja wyboru, kiedy strona pozioma i kiedy przełącznik, geometria, składanie strony, bramki Kreatora), `tests/unit/publication-creator.test.mjs` (render `transient` nie nadpisuje geometrii podglądu), `tests/unit/ustawienia-siatek-synchronizacja.test.mjs` (wybór jedzie z kontem), `tests/e2e/siatka-palczewskiej-poziomo.spec.mjs` (PDF: domyślnie 2 strony pion, po wyborze 1 strona poziom, mieszana orientacja, tryb publikacji w pionie, widoczność przełącznika, parzystość strony poziomej index↔docpro) i `tests/e2e/siatka-palczewskiej-poziomo-mobile.spec.mjs` (telefon bez poziomego przewijania).
+
+**P-KREATOR-POZIOM — Kreator siatek PRO na stronie A4 w poziomie (2026-10-18, decyzja właściciela: wariant C; zmiana funkcjonalna, nie kliniczna).** Gdy dla siatki Palczewskiej 1–18 lat wybrano „1 strona A4 · poziom”, Kreator zwykłej siatki pokazuje i edytuje stronę poziomą — tę samą, którą wygeneruje PDF (podgląd buduje `VildaCentileLandscape.buildPage`, jak generator). Widać cały arkusz: nagłówek, oba wykresy i stopkę. Zakładki „Wzrost” / „Masa ciała” wybierają aktywny wykres (przerywana ramka kolumny, tylko w podglądzie); adnotacje drugiego wykresu są widoczne bez interakcji, a klik albo dotyk w jego kolumnę przełącza zakładkę i od razu działa jak klik na tamtym wykresie. W pasku Kreatora jest przełącznik „Układ” („2 strony · pion” / „1 strona · poziom”), który zapisuje ten sam wybór `PAL_PDF_LAYOUT` co przełącznik pod przyciskiem siatki. Na telefonie podgląd startuje w powiększeniu 200% (aktywny wykres na całą szerokość), zmiana zakładki przesuwa go na drugą połowę strony, a „Dopasuj” pokazuje całą stronę. Kreator siatek do publikacji oraz Kreatory OLAF, WHO i Palczewska 0–3 lata są bez zmian (zawsze pion).
+- *Położenia ramek (wariant C):* treść adnotacji (które punkty, teksty, rozmiar czcionki, etykiety, klamry, ukrycia) jest wspólna dla obu układów, a położenie ramek jest osobne. Położenia strony poziomej leżą w `chartCreatorData.palRegular.posL = { height: { "<klucz>": {dx, dy, bdy} }, weight: {…} }` w px strony poziomej (klucze jak w `layout`: `a<wiekMies>`, `cur`, `f<id>`). Bez wpisu strona pozioma bierze przesunięcie z pionu przemnożone przez stosunek pól wykresu: `sx = 1394 / 1946 ≈ 0,7163` (dx), `sy = 1900 / 2745,1 ≈ 0,6921` (dy oraz `bdy` poprzeczki klamry). Pole wykresu pionu 1946 × 2745,1 px to `VildaCentileLandscape.PORTRAIT_PLOT` (test e2e porównuje je z geometrią, którą naprawdę podaje generator); pole kolumny poziomej to 1394 × 1900 px. Pierwsze przeciągnięcie w poziomie zakłada wpis z kopią przeliczonych wartości (przeciągnięcie samej poprzeczki klamry nie przestawia jej ramki), pusty wpis oznacza pozycję automatyczną w poziomie. Lista adnotacji odróżnia „położenie przeliczone z pionu” od „przesunięta” (własne). „Przywróć układ automatyczny (poziom)” czyści tylko położenia poziomu; reset w pionie nie usuwa wpisów `posL` (ramki bez własnego położenia poziomu podążają za pionem). Usunięcie wolnej adnotacji usuwa też jej wpis `posL` (identyfikator może wrócić przy następnym dodaniu). Magazyn `posL` powstaje dopiero przy pierwszej edycji w poziomie i jest zapisywany z pacjentem razem z całym `chartCreatorData` (głęboka kopia, bez listy dozwolonych kluczy).
+- *Co się nie zmienia:* dane, krzywe, punkty, wartości, treść i wybór adnotacji, siatki w pionie. Dowód: SHA-256 PNG płócien przed/po zmianie — 16/16 identycznych (index.html i docpro.html × pion bez adnotacji, pion z adnotacjami i przesunięciami ramek, etykiety, wolnej strzałki i klamry, tryb publikacji, strona pozioma z adnotacjami bez przesunięć, strona 0–3 lata); Kreator w pionie (zwykła siatka i publikacja, obie zakładki): kanwy podglądu, nakładki i lista adnotacji identyczne przed/po.
+- *Co się zmienia:* PDF strony poziomej z ramkami przesuniętymi ręcznie w pionie. Do tej zmiany przesunięcie z pionu było stosowane na stronie poziomej 1:1 w pikselach, więc przy mniejszym polu wykresu ramka lądowała względnie dalej od punktu i mogła nachodzić na inne elementy; teraz stoi względem punktu tam, gdzie w pionie. PDF poziomy przycina adnotacje do kolumny wykresu (płótno wykresu) — podgląd Kreatora przycina tak samo.
+- *Przypadek syntetyczny:* chłopiec 10 lat, 141 cm, 33 kg; ramka „Kontrola” przy bieżącym pomiarze przesunięta w pionie o (330, −420) px → na stronie poziomej o (236,39; −290,70) px od pozycji automatycznej, z dopiskiem „położenie przeliczone z pionu”. Po przeciągnięciu jej w Kreatorze poziomym powstaje `posL.height.cur`, a `layout.height.cur` zostaje (330, −420) i PDF w pionie jest identyczny z podglądem pionu sprzed edycji.
+- *Testy:* `tests/unit/publication-creator.test.mjs` (blok P-KREATOR-POZIOM na prawdziwym module: skala i geometria strony, przeliczenie ramki, etykiety i klamry, pierwszeństwo `posL`, zapis tylko do bieżącego układu, reset tylko bieżącego układu, publikacja bez `posL`), `tests/unit/siatka-palczewskiej-poziomo.test.mjs` (opis układu przekazywany generatorowi), `tests/e2e/kreator-siatek-poziomo.spec.mjs` (podgląd = PDF: te same współrzędne tekstów adnotacji w podglądzie i w wygenerowanym PDF; przeciągnięcie w poziomie nie zmienia pionu ani jego PDF; przełącznik „Układ” zmienia wybór pod przyciskiem; reset tylko poziomu; klik w drugi wykres; pola wykresu zgodne z `PORTRAIT_PLOT`; publikacja w pionie) i `tests/e2e/kreator-siatek-poziomo-mobile.spec.mjs` (telefon: bez poziomego przewijania, aktywny wykres na całą szerokość, przesuwanie zakładką, „Dopasuj”, dotyk w drugi wykres).
+
 ## Domyślny PAL planu redukcji wg pasma normatywnego dla wieku (2026-08-13)
 
 **Zmiana (decyzja właściciela):** domyślna wartość selektora aktywności `#palFactor` (plan redukcji / karta „Droga do normy BMI") nie jest już stałym 1,4 dla wszystkich, lecz **najniższym poziomem normatywnym pasma wieku** wg wspólnego modułu energii (`energyDefaultPlanPal`): 1–3 lata → 1,4 (jedyna wartość pasma), 4–9 lat → 1,4, **10–18 lat → 1,6**, dorośli → 1,4, niemowlęta → nie dotyczy. Jedyna grupa z realnie zmienionym domyślnym TEE to 10–18 lat: dotychczasowe domyślne 1,4 leży **poza** pasmem normatywnym Norm żywienia 2024 dla tej grupy (1,6–2,0; transkrypcja pasm zweryfikowana źródłowo przy wdrożeniu opcji klinicznej PAL 1,4 — patrz wpis o PAL 1,4 jako opcji klinicznej) i było stosowane jako cichy default trybu klinicznego.
@@ -8260,6 +10425,80 @@ Zmierzone przed poprawką (odtworzenie na żywej stronie): Karta Pacjenta otwart
 2. **kontrola:** bez otwartej Karty arkusz nadal pokazuje się sam — bez niej ciche wyłączenie funkcji przeszłoby test pierwszy.
 
 Kontrola negatywna: po usunięciu samej bramki test pierwszy pada na asercji „arkusz nie wchodzi na otwartą Kartę", po przywróceniu przechodzi.
+
+## Dzienny arkusz przypomnień nie przerywa pisania (P-ARKUSZ-PISANIE, SW 1.1.310, 2026-10-18)
+
+**Zgłoszenie właściciela.** Pierwsze uruchomienie aplikacji. Lekarz od razu dotyka pola Nazwisko i wpisuje, więc otwiera się podpowiedź zapisanych pacjentów. W trakcie wchodzi pełnoekranowy arkusz „Przypomnienia”, a na iPhonie lista podpowiedzi przebija przez arkusz. Lekarz często zaczyna pracę, zanim arkusz się pokaże. Właściciel wybrał wariant A: arkusz czeka na przerwę w pisaniu.
+
+**Bez zmiany klinicznej.** Zmienia się wyłącznie moment pokazania arkusza oraz to, co dzieje się z polem i listą w chwili jego otwarcia. Pozostają bez zmian:
+- treść przypomnień;
+- dobór notatek (`listPatientNotesDueByDate`);
+- bramka dobowa.
+
+### Co robił arkusz (zmierzone przed zmianą)
+
+Emulacja telefonu 393×852, powłoka `app.html`, jedna zaległa kontrola i dwie fikcyjne pacjentki; czasy od gotowości panelu Start:
+- dotknięcie Nazwiska: 0,1 s;
+- lista podpowiedzi po „Fik”: 0,5 s;
+- **arkusz w powłoce: 2,4 s**.
+
+Pole zostawało z fokusem, a lista otwarta pod arkuszem. Kolejne znaki trafiały do zakrytego pola: „Fik” → „Fikcyjna” przy widocznym arkuszu.
+
+Przyczyny:
+- arkusz bramkował się datą i otwartą nakładką konta (P-ARKUSZ), a pisania nie sprawdzał;
+- przy włączonej synchronizacji arkusz ponawia próbę 800 ms po `vilda:sync-merged`, więc przy pierwszym uruchomieniu potrafi wejść jeszcze później;
+- lista `.vilda-ac-dd` jest w ramce Start (`position: fixed`, `z-index: 2147482000`), a arkusz w powłoce (`z-index: 1000001`). W Chromium arkusz ją zakrywa, na iPhonie — według zgłoszenia — lista przebija. Przyczyny po stronie iOS nie sprawdzono. Dlatego naprawa zamyka listę, a nie przestawia z-index.
+
+Przy odtwarzaniu wyszło też, że moduł działa w każdym panelu powłoki, także w ukrytym Terminarzu wczytanym w tle. Gdy powłoka odkładała arkusz, ukryty Terminarz pokazał go u siebie — niewidocznie — i zapisał znacznik „pokazano dziś”. Lekarz nie zobaczyłby go już tego dnia.
+
+### Poprawka (`vilda_auth_ui.js` 501)
+
+- **Bramka pisania** (`lekarzPisze`, wywołanie niewymuszone): arkusz czeka, gdy w powłoce albo w widocznym panelu:
+  - pole tekstowe ma fokus, albo
+  - podpowiedź pacjentów jest otwarta, albo
+  - od ostatniego wpisu albo wyjścia z pola nie minęły 3 s.
+
+  Sprawdza to co 0,5 s (`ponowArkuszPoPrzerwie`) i pokazuje arkusz przy pierwszej przerwie. Jak w P-ARKUSZ: odłóż, nie porzuć. Data „pokazano dziś” zapisuje się dopiero przy pokazaniu.
+- **Bramka patrzy z okna najwyższego** (powłoka i jej widoczne ramki), bo moduł działa w każdym panelu.
+- **Ukryty panel (`Fr()`) arkusza nie pokazuje.**
+- **Panel ustępuje powłoce**, która już czeka na przerwę (`arkuszCzekaWyzej`), więc arkusz zostaje pełnoekranowy w powłoce, jak dotąd.
+- **Tuż przed pokazaniem znacznik dnia jest sprawdzany jeszcze raz.** Między pierwszym sprawdzeniem a `Mr()` są `await`, a na przerwę może czekać kilka instancji naraz.
+- **Zabezpieczenie przy każdym otwarciu arkusza** (`zamknijPisaniePodArkuszem` w `Mr()`), także z dzwoneczka i z historii badań:
+  - zamyka podpowiedzi we wszystkich dokumentach (zdarzenie `vilda:zamknij-pisanie` → `Ua()`);
+  - zdejmuje fokus z pola.
+
+  Klawiatura się chowa, a znaki nie trafiają do zakrytego pola.
+- Wywołanie wymuszone (dzwoneczek) nadal omija bramkę: świadome kliknięcie nie przerywa pracy.
+
+**Pomiar po zmianie** (ta sama emulacja):
+- 7 s pisania w Nazwisku bez arkusza; lista i wpisywane znaki działają;
+- arkusz 3,2 s po wyjściu z pola, jeden, w powłoce;
+- wymuszone otwarcie przy otwartej liście: lista zamknięta, fokus poza polem.
+
+### Walidacja
+
+`tests/e2e/arkusz-przypomnien-pisanie-mobile.spec.mjs` (2, telefon):
+1. Pierwsze uruchomienie dnia.
+   - Test nie ściga się z zegarem arkusza (3 s po odblokowaniu): przy wczytaniu znaczniki dnia są ustawione.
+   - Gdy lekarz już pisze „Fik”, test czyści znaczniki i woła niewymuszone `maybeShowReminders()` w powłoce i we wszystkich panelach, także w ukrytym Terminarzu. To ta sama ścieżka `tn()`, którą woła zegar i `vilda:sync-merged`.
+   - Przez 7 s pisania arkusza nie ma ani w powłoce, ani w żadnej ramce.
+   - Po wyjściu z pola arkusz wchodzi nie wcześniej niż 2,9 s później. Czas jest mierzony w samej stronie.
+   - Jest dokładnie jeden arkusz, w powłoce, a nazwisko „Fikcyjna” zostaje.
+
+   Pierwsza wersja testu czekała na prawdziwy zegar i pod obciążeniem (3 procesy) arkusz wchodził przed pierwszym znakiem — zgodnie z działaniem aplikacji. Stąd obecny wariant.
+2. Wymuszone otwarcie przy otwartej liście: lista `none`, fokus poza polem, a dalsze znaki nie trafiają do pola.
+
+Na bazie (`vilda_auth_ui.js` 500) oba testy padają:
+- arkusz wchodzi w trakcie pisania, w kilku panelach naraz;
+- lista i fokus zostają pod arkuszem.
+
+Na nowym kodzie oba przechodzą 3 razy z rzędu przy 3 równoległych procesach.
+
+Istniejące testy przypomnień, podpowiedzi pacjentów, Karty, nawigacji pacjentów i Terminarza (131) — zielone.
+
+**Do potwierdzenia na iPhonie (PWA).** Pierwsze uruchomienie dnia z zaległym przypomnieniem:
+- od razu Nazwisko i pisanie — arkusz nie wchodzi;
+- po „Gotowe” arkusz pokazuje się po ok. 3 s, bez prześwitującej listy.
 
 ## Kryteria odpowiedzi sprawdzone wobec ChPL (P-CHPL, SW 1.1.10, 2026-09-19)
 
@@ -12823,6 +15062,561 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wersja spod karty z wygrywającym nagrobkiem przechodzi pod blokadami obu kart (P-SYNC-WLASCICIEL-2, SW 1.1.289, `vilda_vault.js` 214, 2026-10-15)
+
+**Zmiana kliniczna: możliwa** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się to, czy poprawka
+pomiaru zrobiona w innej karcie przeglądarki w trakcie synchronizacji przetrwa (dotąd mogła zniknąć z konta), a także
+to, czy „Scal pacjentów”, „Usuń pacjenta” albo zapis karty w innej karcie przeglądarki w tym samym czasie nie gubi wersji,
+jej treści (poprawki pomiaru, przypięcia) ani nagłówka (uwagi recenzentów do pierwszej wersji tej poprawki, `57dd05a`,
+i do drugiej, `eb81091`). Uwaga Codex P1 do scalonego #689
+(P-SYNC-WLASCICIEL, decyzja `'zabierz'` w `Bsw_decyzja`); **do akceptacji klinicznej właściciela**.
+
+**Co było** (prawdziwy `vilda_vault.js`, dwa sejfy z magazynem w pamięci, atrapa Web Locks i kolejka strony; dane
+fikcyjne). A scala X → Y; na B karta przeglądarki poprawia x1 w X (`updateSnapshotPayload`, blokada X), a synchronizacja
+B scala ładunek A (x1 i x2 pod Y, nagrobek X wygrywa — X w zbiorze N). Decyzja `'zabierz'` zapisywała x1 pod Y od razu,
+pod samą blokadą Y. Poprawka odczytana przed przeniesieniem i zapisana po nim wpisywała x1 z powrotem pod X, a
+`Bsl_usunPacjenta` kasował X razem z x1: Y licznik 5 przy 4 wersjach, x1 nigdzie (ani w karcie, ani w koszu); tak samo
+przy późniejszej poprawce x1 pod Y na A (62 mies.) i przy karcie F, której B jeszcze nie miała (F 2/1). Poprawka zapisana
+w całości między decyzją a przeniesieniem znikała pod treścią z ładunku (x1 = 60 zamiast 61). Na prawdziwym IndexedDB
+w dwóch kartach Chromium — to samo (Y 5/4, x1 nigdzie). **Nie regresja #689:** na `2df41a8` (stan sprzed #689, ten
+sam scenariusz) x1 ginie tak samo — wersja spod innej karty szła wtedy pod kartę z ładunku zawsze od razu, pod jedną
+blokadą; #689 zostawił tę drogę tylko dla kart ze zbioru N. Na `2df41a8` przepadała też poprawka zapisana w całości
+przed synchronizacją (60), co naprawił już #689.
+
+**Uwagi recenzentów do pierwszej wersji (`57dd05a`, potwierdzone na prawdziwym sejfie, trzy urządzenia).** Odłożenie
+`'zabierz'` do fazy otworzyło okno między decyzją (krok karty Y w pętli pacjentów) a fazą: reszta pętli (z szyfrowaniem
+kolejnych kart) i przerwy między wpisami fazy, w które kolejka blokad wpuszcza czekające operacje. Na `32b6557` x1 i x2
+leżały w tym oknie już pod Y i dzieliły jej los. Na `57dd05a`: (1) „Scal pacjentów” Y → W w innej karcie — faza widziała
+nagrobek Y, zostawiała x1 pod X, a `Bsl_usunPacjenta(X)` kasował ją razem z kartą: x1 i x2 nigdzie (także w koszu) na B,
+w chmurze, na C i po scaleniu eksportu B na A (W 6/6; scalenie wpuszczone między wpisy fazy — bez x2, W 7/7); (2) „Usuń
+pacjenta” X (bez wpisów kosza) — faza nie znajdowała x1 pod X: Y 3/3 na B, w chmurze i na C aż do kolejnej synchronizacji
+A; (3) zapis Y (imię, data urodzenia) — faza wpisywała starszy nagłówek z ładunku z nowszą chwilą zapisu karty: lista
+pacjentów „Jan”, bez daty urodzenia, a ten nagłówek szedł dalej z eksportem. Na `32b6557`: W 8/8, Y 5/5, „Janusz”.
+
+**Reguła po zmianie** (`Bsl_scalPacjenta`, `Bsw_odloz`, `Bsl_przeniesWersje`, `Bsw_przenies`; w `mergeSyncPayload`
+dodany licznik). Pętla pacjentów zapisuje pod F (pod samą blokadą F) już tylko wersję `'nowa'` — której tu nie ma
+nigdzie. `'zabierz'` idzie fazą przeniesień, jak `'przenies'`: blokady obu kart w kolejności rosnących id, świeży
+odczyt wersji pod G. Wersja przechodzi do F zawsze (także ostatnia; zmiana zrobiona tu po decyzji nie zatrzymuje jej —
+inaczej zginęłaby z kartą), treść nowsza z dwóch (`Bsw_nowszaTresc` na świeżym odczycie, więc poprawka z innej karty
+przeglądarki przechodzi pod F, o ile jest późniejsza niż treść z ładunku), chwila zapisu z ładunku, rev wyższa z dwóch.
+Pusta G znika bez nagrobka, jak przy `'przenies'`, a nagrobek G stawia potem `Bsl_usunPacjenta` (na `32b6557` G po
+`'zabierz'` zostawała pusta do `Bsl_usunPacjenta`). Gdy między decyzją a fazą inna karta przeglądarki zmieni F albo G,
+faza odtwarza wynik z `32b6557`, gdzie wersja leżała już pod F (`Bsw_przenies`, `Bsw_doF`, `Bsw_nastepca`, `Bsw_bezSladu`):
+- F zniknęła z nagrobkiem zapisanym po decyzji, a jej wersje (leżące pod F po kroku w pętli i przeniesione pod F w tej
+  fazie) leżą pod inną istniejącą kartą H („Scal pacjentów” F → H) — wersja idzie pod H kolejnym wpisem tej samej fazy
+  (blokady H i G, świeży odczyt), z rev + 1 jak przy „Scal pacjentów”; nagłówek i chwila zapisu H bez zmian;
+- F zniknęła, a jej wersji nie ma nigdzie („Usuń pacjenta” F) — F nie powstaje od nowa, wersja zostaje pod G i znika
+  razem z nią, tak jak na `32b6557` razem z F (zamiar użytkownika);
+- wersji nie ma już pod G ani nigdzie indziej, a nie przegrywa z nagrobkiem tej wersji pod żadną kartą (kosz, retencja —
+  także zapisanymi po starcie scalania, reguła `Bkz_pomin`) — znikła razem z kartą G („Usuń pacjenta” X, bez wpisów
+  kosza): zapis pod F z nowszą z dwóch treści z odczytu w chwili decyzji (z ładunku albo tutejszą — `Bsw_odloz`
+  zapamiętuje ten odczyt), jak zapis od razu na `32b6557`;
+- wersja w koszu albo pod inną kartą („Scal pacjentów” X → K) zostaje tam, gdzie położył ją użytkownik — **różnica wobec
+  `32b6557`**, gdzie wersja leżała już pod F (kosz w X odmawiał, „Scal pacjentów” X → K jej nie brał); o właścicielu
+  wersji wspólnej K i F decyduje dalej reguła P-SYNC-WLASCICIEL. Bez utraty wersji; kosz w X w tym oknie zostawia
+  jednak trwały rozjazd urządzeń (ograniczenie (d) niżej).
+F, której tu nie ma, faza zakłada, chyba że jej nagrobek zapisany po decyzji wygrywa z zapisem z ładunku (wtedy jak
+wyżej). Nagłówek karty z ładunku faza wpisuje tylko na karcie, którą zakłada, albo gdy zapis z ładunku nie jest starszy
+niż tutejszy (dotyczy też `'przenies'`; dotąd zawsze). Wynik scalania bez zmian: wersje „zabrane” liczą się jako dodane
+(`addedSnapshotCount`) — teraz w chwili zapisu w fazie przeniesień, a nie decyzji; karta F założona w fazie liczy się
+jako dodana, usunięta X — jako usunięta. Format ładunku, delt i nagrobków bez zmian.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/sync-wlasciciel-wersji.test.mjs`, blok „„zabierz”
+a poprawka wersji w innej karcie przeglądarki” (16 przypadków: kolejka strony i atrapa Web Locks × obie kolejności id;
+prawdziwe `mergeSyncPayload` i `updateSnapshotPayload`, pułapka magazynu). X [x1 x2], Y [y1 y2], A scala X → Y (ym):
+- poprawka x1 → 61 mies. na B wstrzymana przed zapisem (trzyma blokadę X), B scala ładunek A → do zwolnienia x1 leży pod X;
+  na końcu Y 5/5 [x1 x2 y1 y2 ym], x1 = 61 / 120,5 cm, X brak, nagrobek X, bez wersji-sierot; wynik: dodane 3,
+  pominięte 2, zmienione 0, karty scalone 1 / dodane 0 / usunięte 1 (te same liczby co na `32b6557`);
+- poprawka x1 zapisana w całości między decyzją a przeniesieniem → x1 pod Y = 61 / 120,5;
+- A poprawia x1 pod Y na 62 mies. później niż wstrzymana poprawka B → x1 pod Y = 62 / 121 (późniejsza chwila zmiany);
+- karta F, której B nie ma, z x1 i x2 X (rev + 1) i nagrobek X; poprawka x1 wstrzymana → F 2/2 założona w fazie
+  przeniesień, x1 = 61; wynik: dodane wersje 2, dodane karty 1, usunięte 1.
+Na `32b6557` czerwone wszystkie 16; strażnik źródła (+1). `tests/e2e/sync-wlasciciel-wersji.spec.mjs`, przedostatni
+test: dwie karty Chromium, prawdziwe IndexedDB i Web Locks — karta B trzyma blokadę X (`navigator.locks.query`), poprawka
+wstrzymana na szyfrowaniu treści; A scala ładunek z kartą Y i nagrobkiem X → do zwolnienia x1 nie leży pod Y, potem Y 5/5,
+x1 = [61], X brak, nagrobek X (na `32b6557` czerwony: x1 pod Y już w trakcie poprawki, na końcu Y 5/4, x1 nigdzie).
+Pozostałe 246 testów pliku, `scalanie-blokada`, `kosz-zapisow`, `zapis-usunietej-karty`, `scalanie-duplikatow`,
+`kopia-konta-*` — bez zmian asercji.
+
+Uwagi recenzentów — blok „P-SYNC-WLASCICIEL-2 — inna karta przeglądarki zmienia Y albo X między decyzją „zabierz”
+a fazą przeniesień” (40 przypadków; kolejka strony i atrapa Web Locks × obie kolejności id; okno V1 — krok karty Z po
+kroku Y, akcja kończy się w oknie; V2 — akcja czeka w kolejce blokad i wchodzi między wpisy x1 i x2 fazy). A: X [x1 x2],
+Y [y1 y2], W (Wiktor) [w1 w2]; A → B → C; A scala X → Y (ym) i zakłada Z [z1 z2]; B scala ładunek A z Y na początku,
+potem B → C → A → B → C (chmura jak `vilda_sync.js`):
+- „Scal pacjentów” Y → W na B (V1, V2) → B, C i A: W 8/8 [w1 w2 wmB x1 x2 y1 y2 ym], Z 2/2, nagrobki X i Y, bez sierot;
+  wynik B: dodane 5, pominięte 4, scalone 2, dodane karty 1, usunięte 1 (jak na `32b6557`); x1 i x2 rev 2; nagłówek W
+  „Wiktor”; ładunek bez ym → W 7/7; magazyn bez odczytu wersji po kluczu → to samo;
+- „Usuń pacjenta” X (V1, V2) → Y 5/5 [x1 x2 y1 y2 ym] od razu na B i na C (chmura po B), nagrobek X; wynik 5, 4, 2, 1, 0;
+- „Usuń pacjenta” Y (kontrola) → x1 i x2 znikają razem z Y, Y nie wraca, nagrobki X i Y, bez sierot (jak na `32b6557`);
+- x1 do kosza w X (V1) → B i C: Y 4/4 [x2 y1 y2 ym], kosz [x1] (jak kosz przed synchronizacją);
+- „Scal pacjentów” X → W (V1) → B: Y 3/3, W 5/5 [w1 w2 wmB x1 x2]; dalej x1 i x2 na każdym urządzeniu, liczniki zgodne;
+- zapis Y „Janusz”, 2020-02-02 (V1) → Y 6/6, nagłówek na liście „Janusz”, 2020-02-02;
+- karta F, której B nie ma (x1 i x2 X, rev + 1; nagrobek X), „Scal pacjentów” F → W między wpisami fazy → W 5/5
+  [w1 w2 wm x1 x2], nagrobki F i X; wynik: dodane wersje 2, karty dodane 1, usunięte 1.
+Na `57dd05a` czerwone 28 z 40 (wszystkie poza kontrolą, koszem i X → W); na `32b6557` czerwone 8 — kosz i X → W (tam
+x1 leży w oknie już pod Y: kosz w X odmawia „brak”, a X → W jej nie bierze). Plik: 303 testy, wszystkie zielone.
+`tests/e2e/sync-wlasciciel-wersji.spec.mjs`, ostatni test: dwie karty Chromium, prawdziwe IndexedDB i Web Locks; karta A
+scala ładunek [Y z x1 x2 (rev + 1) i ym, potem W „Wanda”; nagrobek X], wstrzymana na szyfrowaniu karty W; karta B robi
+„Scal pacjentów” Y → Z → wynik scalania: dodane 3, usunięte karty 1; X i Y brak; Z 8/8 z x1, x2 i ym (na `57dd05a`
+czerwony: dodane 1, Z 6/6, x1 i x2 nigdzie; na `32b6557` zielony).
+
+**Uwagi recenzentów do `eb81091`** (potwierdzone na niezmienionym sejfie i fuzzem różnicowym wobec `32b6557`).
+(1) *Wysoka, regresja:* A i B zsynchronizowane, B poprawia pomiar x2 w X (66 → 71 mies.) albo przypina x2, a A robi
+„Scal pacjentów” X → Y. B scala ładunek A; po kroku Y (decyzja `'zabierz'`), przed fazą, druga karta przeglądarki B
+robi „Usuń pacjenta” X — x2 leży jeszcze pod X i znika z kartą. Faza (`Bsw_bezSladu`) zapisywała x2 pod Y z treścią
+z ładunku (60, 66, bez przypięcia), bo `Bsw_odloz` pamiętał z odczytu w chwili decyzji tylko rev i chwilę zmiany:
+poprawka albo przypięcie znikały na B, w chmurze i na A, przy zgodnych licznikach (Y 5/5). Na `32b6557` x2 trafiała pod
+Y od razu z nowszą z dwóch treści (`Bsw_rekord(F, S, …, d.g)`) — 60, 71 albo przypięta. Fuzz recenzenta: 15 z 1100
+przebiegów, oba modele blokad, obie kolejności id, pełny ładunek i delty. (2) *Średnia, regresja w oknie:* `Bsw_bezSladu`
+odświeżał nagrobki tylko karty G. „Scal pacjentów” X → Y w drugiej karcie B (to samo co na A) i kosz x1 już spod Y
+w oknie zapisywały nagrobek z kartą Y, którego scalanie nie znało (krok Y odświeżył nagrobki Y przed nim) — faza
+wpisywała x1 z powrotem pod Y obok wpisu kosza (B: x1 w Y i w koszu do następnej synchronizacji B; przypięcie albo
+poprawka x1 w tym czasie wskrzeszały ją na stałe). Na `32b6557` x1 tylko w koszu.
+
+**Poprawka** (`Bsw_odloz`, `Bsw_przenies`, `Bsw_bezSladu`; bez nowego formatu). `Bsw_odloz` zapamiętuje dla
+`'zabierz'` tutejszy rekord z chwili decyzji (treść, chwila zmiany, chwila zapisu, rev); gdy wersja zniknęła z G
+razem z kartą, faza przekazuje go do `Bsw_doF`, więc `Bsw_rekord` wybiera nowszą z dwóch treści jak na `32b6557`.
+`Bsw_bezSladu` dołącza świeże nagrobki tej wersji (po `snapshotId`) niezależnie od karty, którą niosą. Poprawka
+zrobiona po decyzji, w oknie, w drugiej karcie przeglądarki, a potem usunięta razem z X — znika (na `32b6557` też: tam
+zapis w X po przeniesieniu wpisywał wersję pod X, a usunięcie X ją kasowało).
+
+Przypadki syntetyczne (`sync-wlasciciel-wersji.test.mjs`, blok P-SYNC-WLASCICIEL-2, +20; prawdziwe `mergeSyncPayload`,
+`updateSnapshotPayload`, `setSnapshotPinned`, `removePatient`, `mergePatients`, `moveSnapshotToTrash`):
+- B poprawia x2 w X na 60, 71 mies. (`preserveSavedAt`) albo przypina x2 przed „Scal pacjentów” X → Y na A; „Usuń
+  pacjenta” X w drugiej karcie B w oknie V1 albo V2 → B, C i A: Y 5/5 [x1 x2 y1 y2 ym], x2 = 60 / 120 cm, 71 / 125,5 cm
+  albo 60, 66 przypięta (16 przypadków: kolejka strony i atrapa Web Locks × V1/V2 × obie kolejności id × poprawka
+  i przypięcie). Na `eb81091` czerwone wszystkie 16 (x2 = 60, 66 bez przypięcia); na `32b6557` czerwone 8 z V2 — tam
+  „Usuń pacjenta” X wchodzi między zapisy x1 i x2 w pętli, a decyzja dla x2 zapada już po usunięciu X (treść z ładunku);
+- „Scal pacjentów” X → Y w drugiej karcie B i x1 do kosza spod Y (V1) → B, C i A: x1 w żadnej karcie, kosz [x1],
+  liczniki zgodne, bez sierot; B: Y 5/5 [x2 y1 y2 ym ymB] (4 przypadki; na `eb81091` czerwone wszystkie 4 — B: x1 w Y
+  i w koszu; na `32b6557` zielone).
+Istniejący test „x1 do kosza w X (V1)” dostał asercję „bez utraty”: x1 w karcie albo w koszu po każdej kolejnej
+synchronizacji (C, A, B, C); stanu A z ograniczenia (d) test nie przypina. Plik: 323 testy, wszystkie zielone. Mutacje (`sync-wlasciciel-
+wersji` + `scalanie-blokada`, 341 testów): faza bez rekordu z chwili decyzji (`null`) — 16 czerwonych; rekord z chwili
+decyzji bez chwili zmiany — 16; nagrobki tylko karty G — 4. Fuzz recenzenta na kopii z tą poprawką: 15 ziaren
+regresji (1) czyste wobec `32b6557`; ziarna 2000–2149 wobec `32b6557` — 0 utraconych wersji i treści (na `eb81091`
+9), zostają 2 rozjazdy z ograniczenia (d) i te same różnice nagłówków co na `eb81091`; ziarna 0–149 wobec `eb81091` —
+żaden przebieg gorszy.
+
+**Wpływ kliniczny.** Poprawka pomiaru (także przypięcie, edycja albo usunięcie wiersza) zrobiona w jednej karcie
+przeglądarki w chwili, gdy druga synchronizuje „Scal pacjentów” z innego urządzenia, nie ginie z konta: trafia do karty
+scalonej, gdy jest późniejsza niż zmiana z innego urządzenia; wcześniejsza ustępuje późniejszej, jak w P-SYNC-WLASCICIEL.
+Synchronizacja może poczekać na skończenie poprawki w drugiej karcie (do 30 s, potem „Synchronizacja wstrzymana…”,
+jak przy pozostałych blokadach scalania). „Scal pacjentów” albo „Usuń pacjenta” w drugiej karcie w trakcie synchronizacji
+daje ten sam wynik co przed `57dd05a` (pomiary scalonego pacjenta idą razem z jego kartą, nic nie znika z konta), a nazwa
+i data urodzenia zapisane w drugiej karcie nie wracają do starszych z innego urządzenia. Poprawka pomiaru albo
+przypięcie zrobione przed synchronizacją nie znikają, gdy w jej trakcie druga karta usunie scalonego pacjenta, a zapis
+wrzucony w tym czasie do kosza z karty scalonej nie wraca do niej.
+
+**Ograniczenia.** Zapis `'nowa'` dalej zapada bez blokady karty-źródła: gdy „Scal pacjentów” w innej karcie
+przeglądarki usunie kartę G dokładnie między odczytem wersji a odczytem karty G, wersja trafia pod F bez porównania
+(jak dotąd; ręcznie praktycznie nieosiągalne). Karta G ze zbioru N, zapisana w międzyczasie w innej karcie z nową chwilą
+zapisu (czyli „wskrzeszona”), oddaje wersje z ładunku mimo to — zostaje z pozostałymi (jak dotąd przy `'zabierz'`).
+Poza zakresem (uwagi recenzentów, bez zmiany): (a) „Scal pacjentów” Y → W w innej karcie **przed** krokiem karty Y
+w pętli — krok Y widzi wygrywający nagrobek Y i niczego nie wpisuje, x1, x2 i ym zostają pod X i znikają z nią na
+wszystkich urządzeniach; tak samo na `32b6557` (rodzina E1 z P-SYNC-WLASCICIEL: nagrobek scalenia nie niesie celu);
+(b) krok karty F w pętli wpisuje nagłówek z ładunku bez porównania z tutejszym zapisem, gdy dochodzą nowe wersje, także
+gdy F zapisano tu później niż na urządzeniu nadawcy (od dawna; naprawia go kolejny zapis karty) — reguła nagłówka
+w fazie przeniesień tego kroku nie dotyczy; (c) karta-następca to pierwsza istniejąca karta, pod którą leży któraś
+z wersji F — gdy ta sama synchronizacja przeniosła wcześniej wersję F pod inną kartę z ładunku (`'przenies'`), a F
+zniknęła w oknie, wersja może trafić tam zamiast do celu „Scal pacjentów” (nie ginie; wymaga sprzecznych scaleń na
+dwóch urządzeniach i trzeciej operacji w oknie).
+Uwagi recenzentów do `eb81091` bez zmiany kodu (średnie, bez utraty wersji):
+(d) kosz wersji X w drugiej karcie przeglądarki B między krokiem Y a fazą (x2 leży jeszcze pod X, więc kosz się udaje;
+faza ją pomija) — nagrobek niesie kartę X, a `Bkz_scalKoniec` szuka wersji tylko pod kartą z nagrobka; na A, gdzie x2
+leży pod Y, a karty X już nie ma, x2 zostaje w Y i jednocześnie w koszu, na B tylko w koszu — trwale, także po kolejnych
+rundach chmury (fuzz: 32 z 1100 przebiegów, zawsze kosz albo „Przywróć” na wersji X; wersja nigdzie nie ginie). Na
+`32b6557` kosz w tym oknie odmawiał („brak”), ale ten sam rozjazd powstaje tam przy koszu x2 w X przed synchronizacją B,
+więc przyczyna jest starsza: nagrobek wersji działa tylko na kartę o swoim `patientId` (tak samo „Scal pacjentów”
+X → W i kosz x1 spod W w oknie: A i B — x1 w Y i w koszu, C — tylko w koszu). Naprawa przyczyny (nagrobek odszukuje
+wersję po kluczu, niezależnie od karty) zmienia regułę kosza dla każdego scalania — osobna decyzja, poza tą poprawką;
+(e) pusta karta X znika już w fazie przeniesień (`Bsw_poOddaniu`), a nie dopiero przy usuwaniu zbioru N, więc
+„Przywróć z kosza” i „Scal pacjentów” na X w oknie faza → usuwanie N kończą się błędem („Karta tego zapisu została
+usunięta.”, „brak rekordu źródłowego”) — na `32b6557` wykonywały się na karcie, która zaraz znikała. Bez utraty: wpis
+kosza i wersje pod Y zostają bez zmian;
+(f) decyzja `'nowa'` w kroku karty F odświeża nagrobki tylko F: kosz wersji z innej karty po starcie scalania, a przed
+krokiem F, zostawia ją w F i w koszu do następnej synchronizacji (od dawna, tak samo na `32b6557`).
+
+**Mutacje** (kopia `vilda_vault.js`, `sync-wlasciciel-wersji` + `scalanie-blokada`, 281 testów). `'zabierz'` zapisuje
+od razu (stan sprzed poprawki) — 17 czerwonych; faza bez blokady G dla `'zabierz'` — 13; faza na wersji z chwili decyzji
+(bez świeżego odczytu) — 12; `'zabierz'` sprawdza rewizję z decyzji jak `'przenies'` — 17; `mergeSyncPayload` bez
+liczenia zabranych — 17; `'zabierz'` zawsze z treścią z ładunku — 69. Po uwagach recenzentów (`sync-wlasciciel-wersji`,
+303 testy): bez karty-następcy — 16 czerwonych; bez zapisu wersji, która znikła z G — 8; zapis bez sprawdzenia kosza — 4;
+bez świeżego odczytu nagrobków wersji — 4; bez sprawdzenia, czy wersja leży gdzie indziej — 4; nagłówek zawsze z ładunku
+— 4; karta-następca bez rev + 1 — 8; wersje F bez tutejszych (same dopisane) — 4; faza nie dopisuje przeniesionych pod F
+— 4. Równoważne w praktyce (0): karta-następca traktowana jak F (nagłówek i chwila zapisu — reguła nagłówka i późniejszy
+zapis scalenia dają ten sam wynik) i następca bez sprawdzenia, czy karta istnieje (wersja bez karty tylko w uszkodzonym
+magazynie).
+
+**Wersje.** `vilda_vault.js` 213 → 214 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (149 → 150)
+i `vilda_session_bridge.js` (73 → 74); nowe adresy w precache (append-only); `SW_VERSION` 1.1.288 → 1.1.289 (+ pin
+w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje` względem
+`audyt` `0ca8004` (po #693; wcześniej względem `b1aeb24` — 148 → 149, 72 → 73, SW 1.1.287 → 1.1.288, numery zajęte
+potem przez #693).
+
+## Właściciel wersji w scalaniu synchronizacji — koniec „kradzieży wersji” (P-SYNC-WLASCICIEL, SW 1.1.286, `vilda_vault.js` 213, `vilda_sync_integration.js` 50, 2026-10-14)
+
+**Zmiana kliniczna: możliwa** — żaden wzór, próg, jednostka ani interpretacja się nie zmienia, ale zmienia się to, pod
+którą kartą leżą historyczne zapisy (wersje) po „Scal pacjentów” z równoległą pracą na drugim urządzeniu, która treść
+pomiaru wygrywa po synchronizacji i ile zapisów pokazuje lista pacjentów. Wada 1 z przeglądu „trzy wady” (wariant W2f
+z raportu krytyka, decyzje koordynatora); **do akceptacji klinicznej właściciela**.
+
+**Co było** (`audyt` `2df41a8`, prawdziwy `vilda_vault.js`, dwa sejfy z magazynem w pamięci, prawdziwe
+`exportSyncPayload` → `mergeSyncPayload`). Klucz wersji (`snapshotId`) jest wspólny dla konta, a `Bsl_scalPacjenta`
+sprawdzało „nowość” wersji tylko w karcie z ładunku: wersję leżącą tu pod inną kartą `putSnapshotForUser` po cichu
+przepinało pod kartę z ładunku — bez porównania rewizji i treści, bez blokady drugiej karty i bez korekty jej licznika.
+„Scal pacjentów” przenosiło wersje bez śladu (`rev` 0 → 0). Typowo: A scala X → Y, B (jeszcze nie wie) zapisuje nową
+wersję X; nagrobek X przegrywa z tym zapisem, X wraca i zabiera spod Y dawne wersje — albo Y spod X. Wynik zależał od
+kolejności synchronizacji (chmura B→A — A: X 3/3, Y licznik 5 przy 3 wersjach); mijające się delty na żywo dawały
+„ping-pong” bez końca (16 zmian właściciela w 4 rundach, liczniki rosną o 2 na rundę); poprawka pomiaru z B ginęła pod
+starszą treścią (x1: 60 mies. / 120 cm na obu zamiast 61 / 120,5); wyścig z zapisem w innej karcie przeglądarki dawał
+licznik X 4 przy 2 wersjach; licznik liczony przyrostowo i nigdy nieprzeliczany utrwalał każdy rozjazd; dwa równoległe
+scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wersja nie ginęła, poza treścią poprawki. Zwykłe
+„Scal pacjentów” bez pracy na drugim urządzeniu działało.
+
+**Reguła po zmianie** (`vilda_vault.js`: nowe `Bsw_*` i `Bsl_przeniesWersje`; zmienione `Bsl_scalPacjenta`,
+`Bsl_usunPacjenta`, `Bsl_zdejmijNagrobek`, `mergePatients`, `mergeSyncPayload`, `buildTombstoneDelta`, adaptery magazynu).
+- „Scal pacjentów” zapisuje przeniesioną wersję jako nową rewizję rekordu (`rev + 1`, jak import wersji z kosza); treść,
+  `updatedAtISO` i `savedAtISO` bez zmian.
+- Wersja z ładunku, której karty z ładunku (F) tu nie ma, a która leży tu pod inną istniejącą kartą (G): właściciela
+  wybiera nowszy rekord — najpierw `rev`, potem późniejsza chwila zmiany, przy pełnym remisie mniejszy `patientId`
+  (deterministycznie na każdym urządzeniu). Wygrywa F — wersja przechodzi pod F; wygrywa G — zostaje (wynik liczy ją
+  jako pominiętą). Wersje karty G, która w tym scalaniu przegrywa z nagrobkiem, przechodzą pod F zawsze.
+  *(Aktualizacja 2026-10-15, P-SYNC-WLASCICIEL-2, uwaga Codex P1 do #689: także one w fazie przeniesień, pod blokadami
+  obu kart, na świeżym odczycie — dotąd od razu, pod samą blokadą F, więc poprawka tej wersji w innej karcie przeglądarki
+  mogła zginąć razem z G. Gdy między decyzją a fazą inna karta przeglądarki scali albo usunie F lub G, faza odtwarza
+  wynik zapisu od razu: wersja idzie za wersjami F do celu „Scal pacjentów”, a wersja usunięta razem z G — pod F.)*
+- Treść wersji wspólnej dwom kartom wybiera późniejsza chwila zmiany (przy równej — wyższa `rev`, przy remisie —
+  tutejsza), niezależnie od tego, która karta wygrała; `rev` wyniku = wyższa z dwóch. Gdy zostaje G, a treść z ładunku
+  jest późniejsza (decyzja `'tresc'`), rekord G przyjmuje ją w fazie przeniesień. Chwila zapisu wersji (miejsce
+  w historii, bieżąca wersja karty) — ze strony, która wygrała przypisanie karty, więc synchronizacja nie stawia
+  przeniesionej wersji przed głową scalenia. Wersje tej samej karty — bez zmian (najpierw `rev`, potem chwila zmiany).
+- Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
+  kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
+  pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
+- Delta nagrobka po „Scal pacjentów”: urządzenie, które w tej sesji strony scaliło X → Y, dołącza do delty nagrobka X
+  kartę Y (pole `patients` było w formacie delty, dotąd puste) — u odbiorcy działa to jak pełna synchronizacja, w każdej
+  kolejności dwóch delt. Delta Y ponad 60 000 znaków szyfrogramu i zwykłe usunięcie karty — sam nagrobek, jak dotąd.
+  Integracja wysyła deltę Y i deltę nagrobka X prawie razem przez `navigator.sendBeacon`, a Chromium ogranicza **łączny**
+  rozmiar ciał żądań keepalive w locie do 64 KiB — przy delcie Y ok. 30–60 tys. znaków drugi beacon jest odrzucany
+  (`false`). Dlatego (uwaga recenzji gałęzi `44ba49f7`, U2) `gt` (delta karty) i `At` (delta nagrobka pacjenta)
+  w `vilda_sync_integration.js` sprawdzają wynik (`Bsb_wyslij`): deltę odrzuconą albo z wyjątkiem wysyłają tym samym
+  ciałem na ten sam adres zwykłym `fetch` (bez keepalive, więc bez tego limitu). Limitu karty w `Bsw_deltaNagrobka` nie
+  zmniejszono (w paśmie 30–60 tys. wróciłaby delta nagrobka bez karty celu). Format delt i delty notatek bez zmian.
+- Karta, której ostatnia wersja przeszła pod inną kartę, znika bez nagrobka (nie usunął jej użytkownik); wynik scalania
+  liczy karty usunięte i założone w fazie przeniesień, więc lista pacjentów odświeża się po delcie na żywo. Koniec
+  scalania nie zdejmuje lokalnego nagrobka karty, która tu nie powstała, bo jej wersje leżą tu — nowsze — pod inną kartą.
+- Licznik zapisów karty = liczba jej wersji, także naprawa rozjazdów sprzed zmiany (zapis samego licznika tylko przy
+  niezgodności); karta bez żadnej nowej wersji nie powstaje pusta. Przyjęcie z ładunku samej nowszej treści wersji
+  podnosi chwilę ostatniego zapisu karty do późniejszej z dwóch (jak nowa wersja; nagłówek bez zmian).
+- Tutejsza wersja jest czytana tylko dla wersji spoza karty z ładunku: po kluczu (nowa metoda adapterów
+  `getSnapshotForUser`), bez niej — mapa właścicieli raz na scalanie. Delta jednej karty na prawdziwym IndexedDB
+  z 1600 kartami: 27–35 ms (`2df41a8` w tym samym przebiegu 35–54 ms).
+- Bez zmian: format ładunku, delt i nagrobków, API `window.VildaVault`, import i „Scal kopię konta”,
+  `vilda_sync_integration.js` poza wysyłką delt kart i nagrobków pacjentów (wyżej). Zwykła synchronizacja — te same karty, wersje i liczniki (poza chwilą zapisu karty po
+  przyjęciu poprawki wersji); zwykłe „Scal pacjentów” — te same karty i wersje (`rev` przeniesionych o 1 wyższy).
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/sync-wlasciciel-wersji.test.mjs` (246; prawdziwy
+`mergeSyncPayload` na dwóch albo trzech sejfach; chmura A→B i B→A, wymiana krzyżowa, delty na żywo + chmura; 4 rundy;
+każdy scenariusz w obu kolejnościach id). X i Y po 2 wersje (x1, x2, y1, y2), pełna synchronizacja, potem:
+- A scala X → Y (ym), B zapisuje x3 w X → oba: X 1/1 [x3], Y 5/5 [x1 x2 y1 y2 ym], od rundy 1 bez zmian właściciela
+  (8; czerwone na `2df41a8`);
+- A scala X → Y, B poprawia x1 na 61 mies. bez zmiany chwili zapisu → oba: Y 5/5, nagrobek X, x1 = 61 / 120,5 cm —
+  w pełnych ładunkach i w deltach na żywo (8; czerwone: 60 / 120); z nową chwilą zapisu X → X 1/1 [x1] 61 / 120,5,
+  Y 4/4, także na trzech urządzeniach w każdej z 6 kolejek chmury (8 + 12; czerwone);
+- łańcuch X → Y → Z na A; B, które o scaleniach nie wie, koryguje albo przypina x1 w starej X → x1 pod Z z treścią z B,
+  liczniki zgodne, nic nie ginie (9; 8 czerwonych);
+- X [60, 66], Y [72, 78], Z [84, 90]; A scala X → Y → Z; B poprawia bieżący pomiar X jak „Edytuj pomiar” (66 mies.:
+  123 → 124 cm) → A i B: bieżąca wersja Z = głowa scalenia z 6 pomiarami, x2 pod Z z poprawką i chwilą zapisu sprzed
+  scaleń; kontrola z jednym scaleniem — X wraca z poprawioną x2 (3 + 3; czerwone);
+- A po scaleniu X → Y poprawia x1 pod Y (62 mies.), B później x1 w starej X (61 mies.) → oba: Y 5/5, nagrobek X,
+  x1 = 61 / 120,5 (późniejsza), bieżąca wersja Y = ym (8; czerwone);
+- B zmienia wersję starej X bez nowego zapisu karty (edycja albo usunięcie wiersza, przypięcie, korekta z zachowaną
+  chwilą zapisu), dostaje delty Y i nagrobka X z A w obu kolejnościach, potem nieaktualną chmurę; nowe urządzenie C
+  pobiera chmurę → A, B, C: Y 5/5 ze zmianą z B, nagrobek X, kosz pusty (24; czerwone — zmiana ginęła);
+- A scala X → Y, B scala X → Z → x1 i x2 pod kartą o mniejszym id na obu (8; czerwone); stan zastany z rozjechanymi
+  licznikami i różnymi właścicielami → po 4 rundach liczniki = liczba wersji, A = B (12; czerwone);
+- zapis x4 w X wstrzymany w innej karcie przeglądarki w trakcie scalania → X [x3 x4] licznik 2, Y 5/5 (8; czerwone:
+  licznik 4 przy 2 wersjach); „Scal pacjentów” → przeniesiona wersja `rev` 0 → 1, treść i chwile bez zmian (czerwony);
+- kontrole (zielone na `2df41a8`): bez scalania — 0 zmian właściciela; zwykłe scalenie — Y 5/5, nagrobek X; ponowne
+  pobranie bez zmian — 0 zapisów.
+- po uwagach recenzji gałęzi `44ba49f7` (+6): prawdziwy `vilda_sync_integration.js` z atrapą `sendBeacon` o limicie
+  64 KiB w locie, Y z 14 wersjami (delta Y ok. 35 tys. znaków), „Scal pacjentów” X → Y → drugi beacon odrzucony, ta
+  sama delta idzie `fetch`, serwer dostaje deltę Y i deltę nagrobka X z kartą Y; `sendBeacon` zawsze `false` albo
+  rzuca → obie delty `fetch` (2; czerwone na `44ba49f7` — jedna delta albo żadna); beacon przyjęty → bez `fetch`,
+  zwykłe usunięcie — sam nagrobek (kontrola); strażnik źródła integracji; ładunek z kartą Y, x2 (`rev` 1) bez
+  `savedAtISO` i nagrobkiem X → x2 pod Y z tutejszą chwilą zapisu, bieżąca wersja Y = y2 (kontrola zabezpieczenia
+  w `Bsw_rekord`, dotąd bez testu); retencja a poprawka przeniesiona (test przypinający, „Ograniczenia”).
+Na `2df41a8` 191 z 240 czerwonych (240 testów sprzed uwag recenzji gałęzi). `tests/e2e/sync-wlasciciel-wersji.spec.mjs`
+(prawdziwe IndexedDB i Web Locks, 6 testów; szósty — prawdziwy Chromium, serwer synchronizacji na trasie `page.route`
+z odpowiedzią po 400 ms: „Scal pacjentów” z deltą Y ok. 35 tys. znaków → serwer dostaje deltę Y i deltę nagrobka X
+z kartą Y, jeden z beaconów odrzucony; na `44ba49f7` serwer dostawał jedną deltę): ładunek z poprawioną x1 po „Scal pacjentów” X → Y → X 2/2, Y 4/4 (na `2df41a8` X 3/3); delta nagrobka X
+z kartą Y przy przypiętej x2 → Y 5/5 z przypięciem (na `2df41a8` przypięcie ginie); X → Y → Z i karta X z poprawioną
+x1 albo głową x2 → X nie wraca, poprawka pod Z, bieżąca wersja Z = głowa scalenia. W `zapis-usunietej-karty`
+i `scalanie-duplikatow` odstęp 5 ms po zapisach kart (remis milisekundy); asercje bez zmian.
+
+**Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Po „Scal pacjentów” wersje zostają pod kartą, z którą je
+scalono, na wszystkich urządzeniach, niezależnie od kolejności synchronizacji (w deltach na żywo — gdy scalało
+urządzenie po zmianie). Wyjątek: wersja poprawiona na urządzeniu, które o scaleniu nie wiedziało, z nową chwilą zapisu
+karty wraca pod starą kartę razem z poprawką — zbieżnie, bez utraty; duplikat wraca po cichu. Karta przywrócona nowym
+zapisem z drugiego urządzenia wraca tylko z zapisami po scaleniu (dotąd zabierała całą dawną historię). Poprawka pomiaru,
+przypięcie albo edycja wiersza z innego urządzenia nie giną pod starszą treścią, także po kilku scaleniach; z dwóch
+współbieżnych poprawek wersji pod różnymi kartami wygrywa późniejsza. Liczba zapisów na liście pacjentów zgadza się
+z historią (rozjazdy sprzed zmiany naprawia pierwsza synchronizacja). Bieżąca wersja karty scalonej — stan widoczny po
+otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
+
+**Ograniczenia (czego zmiana nie robi).**
+- **Utrata wersji (E1/E1b), osobna wada.** Wersja X zapisana na drugim urządzeniu przed „Scal pacjentów” (bez
+  synchronizacji) albo ze stemplem spóźnionego zegara wcześniejszym niż nagrobek scalenia: nagrobek X wygrywa i usuwa
+  X z wersjami, których urządzenie scalające nie znało — nie ma ich nigdzie, także w koszu (na `2df41a8` tak samo).
+  Tak samo poprawka starej karty wchłonięta do karty scalonej, którą wcześniej usunięto na innym urządzeniu: w części
+  kolejek ginie, bo chwila zapisu karty scalonej nie rośnie. Przyczyna: nagrobek scalenia nie niesie celu. Kierunki
+  (do decyzji): cel scalenia w nagrobku (zmiana formatu), wnioskowanie w scalaniu, chwila zapisu karty przy przyjęciu
+  późniejszej treści. Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany).
+- **Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń** zostaje w dawnej wersji w historii karty scalonej;
+  bieżąca wersja (głowa scalenia) pokazuje wartość sprzed poprawki (123 zamiast 124 cm), a następny zapis buduje się na
+  niej. Po jednym scaleniu X wraca z poprawką jako duplikat. Domknięcie (do decyzji): poprawiony wiersz w bieżącej
+  wersji (nowa wersja — zmiana kliniczna), powrót X albo sygnał w UI.
+- **Delta nagrobka bez karty celu** (wysyła ją urządzenie sprzed zmiany): gdy przychodzi po delcie Y, wersja X
+  zmieniona na odbiorcy bez nowego zapisu karty (przypięcie, edycja wiersza, korekta z zachowaną chwilą zapisu) znika
+  razem z X — także z kosza, a po synchronizacji z nieaktualną chmurą z chmury i z nowego urządzenia — i wraca, bez tej
+  zmiany, z pełnym stanem urządzenia scalającego (na `audyt` ginęła tylko zmiana; test przypięty). Przy delcie Y ponad
+  limit urządzenie po zmianie wysyła sam nagrobek — wersje wracają z pełną synchronizacją, jak na `audyt`. Cel scalenia
+  trzyma tylko pamięć strony: po przeładowaniu delta nagrobka już nie powstaje. Wysyłka zapasowa `fetch` (U2) działa,
+  dopóki strona żyje — zaraz po scaleniu tak jest; delta odrzucona przy zamykaniu karty przepada jak dotąd, a wersje
+  i nagrobek przychodzą z najbliższą pełną synchronizacją.
+- **Retencja a poprawka przeniesiona do dawnej wersji karty scalonej** (przegląd końcowy 2; nie regresja względem
+  `audyt`). Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń leży w dawnej wersji (x2) z chwilą zapisu
+  sprzed scaleń. Przy włączonej retencji (domyślnie) i karcie scalonej z co najmniej 10 wersjami następny zapis karty
+  przycina ją jak każdą starą wersję (nagrobek „retencja”, bez kosza) — poprawki nie ma wtedy nigdzie, na wszystkich
+  urządzeniach (na `2df41a8` ginęła już przy synchronizacji, na `69e41d1` zostawała jako błędna głowa karty). Test
+  przypinający w `sync-wlasciciel-wersji.test.mjs` (jedyny z prawdziwym `vilda_retention.js`). Domknięcie (do decyzji
+  właściciela): poprawiony wiersz w bieżącej wersji albo powrót X (chronią przed retencją), ochrona niedawno zmienionych
+  wersji w retencji (zmiana reguł retencji).
+- **Reguła tej samej karty a `rev + 1`.** Wersje tej samej karty rozstrzyga nadal „najpierw `rev`”, a `rev` liczy teraz
+  też przeniesienia. W pętli scaleń (A: X → Y, B z nowym zapisem X scala potem Y → X — x1 wraca pod X z `rev` 2)
+  późniejsza poprawka x1 z trzeciego urządzenia (`rev` 1) ginie na wszystkich (test przypięty; na `audyt` przetrwała);
+  dwie współbieżne zmiany, które trafią najpierw pod tę samą kartę, mogą skończyć się wcześniejszą. Fuzz różnicowy
+  (400 przebiegów, trzy urządzenia): par (wersja, urządzenie) bez najpóźniejszej zmiany `2df41a8` 1236, po zmianie 81,
+  gorzej w 6 (ta reguła), rozjazd urządzeń 0. Domknięcie (do decyzji): osobny licznik właściciela albo „późniejsza
+  zmiana wygrywa” także w tej samej karcie (zmienia zwykłą synchronizację).
+- **Remis milisekundy.** Gdy ostatni zapis źródła i głowa scalenia wypadną w tej samej milisekundzie, kolejność wersji
+  (`yr`) stawia wyżej dawną głowę źródła (`rev` 1) jako bieżącą wersję celu. Ręcznie nieosiągalne; w testach odstęp.
+- **Kosz-przed i kosz-po, osobna wada.** Wersja usunięta do kosza na jednym urządzeniu przed albo po „Scal pacjentów” na
+  drugim zostaje aktywna pod kartą docelową na urządzeniu scalającym — jak na `2df41a8`.
+- **Flota mieszana.** Urządzenie na starym kodzie dalej przepina wersje i psuje swoje liczniki; jego „Scal pacjentów”
+  nie podbija `rev`, więc gdy X ma mniejszy id, odbiorca po zmianie zostawia wersje przy X, a delta nagrobka je usuwa —
+  wracają z pełnym stanem urządzenia scalającego (trwale giną tylko, gdy zniknie ono przed wysyłką; nie mierzone).
+- **Remis i pusta karta.** Przy tej samej rewizji i chwili zmiany kartę wybiera mniejszy losowy `patientId` (bez
+  utraty). Pusta karta znika bez nagrobka; zapisana potem w innej karcie przeglądarki powstaje od nowa z tym zapisem;
+  jej notatki nie są przenoszone (P-NOTATKI-1 G5).
+- Decyzja „zapisz od razu” zapada bez blokady karty-źródła: „Scal pacjentów” w innej karcie przeglądarki dokładnie
+  między odczytem wersji a jej karty może dać przepięcie bez porównania (jak dotąd). *(Aktualizacja 2026-10-15,
+  P-SYNC-WLASCICIEL-2: „od razu” zapisuje już tylko wersja `'nowa'`; `'zabierz'` idzie fazą przeniesień.)* `rev` to rewizja rekordu (treść
+  albo właściciel): okno kosza odmówi „zmieniony” dla wersji przeniesionej w trakcie; `Bkz_taSamaWersja` traktuje
+  nagrobki tej samej wersji sprzed i po przeniesieniu jak różne.
+- Poza zakresem: sygnał wskrzeszonego duplikatu w UI; import pliku karty bez strażnika właściciela; wynik scalania nie
+  liczy wersji z fazy przeniesień jako dodanych; nagłówek karty z poprawki wersji nie przechodzi na inne urządzenia;
+  kolejność blokad fazy przeniesień pilnuje tylko strażnik źródła.
+
+**Mutacje.** 50 czerwonych (kopia `vilda_vault.js`, cały plik testów), m.in. bez fazy przeniesień — 100 czerwonych
+testów, decyzja bez porównania — 69, bez `rev + 1` — 62, bez wyjątku karty z wygrywającym nagrobkiem — 45, treść między
+kartami „najpierw `rev`” — 32, delta nagrobka bez karty celu — 27, chwila zapisu wersji z treścią — 17, bez samonaprawy
+licznika — 12, przeniesienie bez blokady drugiej karty — 5; przeżywają tylko mutacje równoważne albo trudno osiągalne
+i szersza reguła chwili zapisu karty (zawsze późniejsza z dwóch). Po uwagach recenzji gałęzi `44ba49f7`: zabezpieczenie
+chwili zapisu ładunku bez `savedAtISO` zawężone do `tutejszaKarta` — 1 czerwony (dotąd przeżywał); integracja bez
+wysyłki zapasowej (`vilda_sync_integration.js` z `44ba49f7`) — 2 czerwone w unit i czerwony e2e.
+
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213, `vilda_sync_integration.js` 49 → 50 (tylko P-SYNC-WLASCICIEL)
+na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe
+adresy w precache (append-only); `SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+`tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
+
+## „Scal kopię konta” mówi o notatkach i listach z kopii; „Scal teraz” także wtedy, gdy dochodzą tylko one (P-KOPIA-DANE-KONTA, SW 1.1.286, `vilda_vault.js` 213, `vilda_auth_ui.js` 496, 2026-10-14)
+
+**Zmiana kliniczna: NIE** w zakresie wzorów, progów, jednostek i interpretacji. Zmiana funkcjonalna ekranu „Scal kopię
+konta” (podgląd, widoczność i etykieta „Scal teraz”, podsumowanie, wynik, podtytuł) i wyniku `previewVaultBackupMerge`
+oraz `mergeVaultBackup` (nowe pola; `mergedPatientCount` liczy tylko karty z nowymi wersjami). **Dane scalane bez
+zmian:** wewnętrzne scalanie danych konta (`Le(…, Bpb_IMPORT)` w `ss`) działa jak dotąd, regułami synchronizacji —
+notatki i listy pacjentów: wyższy `rev`, przy równym nowsza data (więc wcześniejsza wersja z kopii, poprawiana tam
+więcej razy, zastępuje późniejszą edycję tutaj); szablony ze strony „Notatki” i wpisy list oczekujących: nowsza data;
+późniejsze usunięcie w kopii usuwa tutaj; nagłówek karty — niżej, „Ograniczenia”. Zmienia się to, że podgląd i wynik
+mówią o tym jawnie, a przycisk jest dostępny. **Wpływ kliniczny pośredni:** notatki pacjentów niosą treści kliniczne
+(wyniki badań, leki, IGF-1, terminy kontroli), a listy oczekujących — organizację zabiegów; dotąd bywały nieosiągalne
+z ekranu albo usuwane po cichu. Wada „Scal teraz” z przeglądu „trzy wady”, wariant (a) z raportu krytyka.
+
+**Co było** (`audyt` `2df41a8`, prawdziwy sejf, magazyn w pamięci, dane fikcyjne; A robi kopię konta, C ją scala, C
+zsynchronizowany wcześniej z A). „Scal teraz” było widoczne tylko przy `totalNewSnapshots>0 || addPatients.length>0`;
+podgląd (`os`) zwracał dla danych konta tylko długość tablic w pliku (`backupPatientNoteCount`, `backupNoteCount`), a `ss`
+gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i szablony).
+- notatka pacjenta, szablon, lista pacjentów, lista oczekujących albo termin tylko w kopii: „Brak nowych danych —
+  wszystko już masz”, przycisk ukryty; `mergeVaultBackup` (API) je dodawał, a ekran wyniku mówił „Brak zmian — wszystkie
+  dane z tej kopii już były w Twoim koncie.”;
+- notatka, szablon albo lista oczekujących z terminem usunięte na A: przycisk ukryty, scalenie usuwało je w C po cichu;
+- 1 nowa wersja + notatka + lista: „🔀 Uzupełniono zapisy u 2 pacjentów” (wersja doszła u jednego), ani słowa o notatce
+  i liście;
+- X scalony tu z Y, w kopii poprawka notatki X: „Brak danych do dodania · pominięci: 1”, przycisk ukryty — obietnica
+  P-KOPIA-POMIJA („Poprawki jego notatek … dochodzą jak dotąd”) była prawdziwa tylko przez API;
+- na przycisk nie nadają się ani liczby z pliku (kopia z danymi, które C już ma), ani licznik preferencji Le (ta sama
+  wartość zapisana ponownie albo lista oczekujących dodana i usunięta na A — 1 zapis bez widocznej zmiany);
+- wstrzyknięty błąd zapisu notatki w C (Le połyka błąd sekcji): „Brak zmian — wszystkie dane … już były”;
+- podtytuł „… doda tylko brakujące — bez usuwania ani nadpisywania istniejących danych” był nieprawdziwy dla poprawek
+  i usunięć z kopii, reguły `rev` i nagłówka karty (to zachowanie danych jest takie samo na `2df41a8` i po zmianie).
+
+**Reguła po zmianie.**
+- Podgląd liczy plan danych konta `Bks_planDanych(kontekst, kopia)` po pętli pacjentów, na notatkach po `Bks_notatki` —
+  jak `ss` (notatki pacjentów scalonych tutaj — pod kartą docelową, pominiętych — pominięte). Tylko odczyt: bez zapisu
+  i bez Le. Te same reguły i pomocniki produkcyjne co sekcje Le (`Z`, `jr`, `Ak`, `Af`, `Ag`, `Ah`) i te same strażniki:
+  notatka bez `patientId`, lista o pustej nazwie po `Z`, pozycja i klucz preferencji z kopii bez `updatedAtISO` nie są
+  liczone; błąd sekcji = 0.
+- Kategorie: „dodane” (w tym „przywrócone” — z przegranym tu nagrobkiem), „zmienione” (w tym „zastąpione późniejsze
+  edycje”, `replacedNewer…Count` — tutejsza data późniejsza niż data wersji z kopii, wygrywającej wyższym `rev`),
+  „usunięte” (najnowszy nagrobek nie starszy niż najnowsza zmiana tu i w kopii, przy rekordzie tutaj). Listy
+  oczekujących (`wllists`) i terminy (`wlsched`): `Ak(tutaj, z kopii)` i porównanie widocznych wpisów bez znaczników
+  czasu — sam nowszy znacznik nie jest zmianą. Pozostałe preferencje — `uiPreferenceCount`, nie odsłania przycisku.
+- Nowe pola podglądu: `added|restored|updated|replacedNewer|deleted…Count` dla `PatientNote`, `Note`, `PatientList`,
+  `Waitlist`, `WaitlistSchedule`, `uiPreferenceCount`, `updatedPreferenceCount`. Wynik scalania dodatkowo:
+  `deletedPatientNoteCount`, `deletedNoteCount`, `added|updated|deletedPatientListCount` (z Le), liczniki list
+  oczekujących i terminów oraz `accountDataMerged` (`false`, gdy wewnętrzne scalanie danych konta rzuciło).
+- Liczniki list oczekujących i terminów w wyniku — z rzeczywistej różnicy magazynu ograniczonej do zmian z kopii: `ss`
+  czyta je tuż przed Le i zaraz po Le (`Bks_mapyOczekujacych`, tylko odczyt); wpis dodany albo zmieniony liczy się, gdy
+  jego treść po Le równa się stanowi oczekiwanemu `Ak(przed, z kopii)`, usunięty — gdy nie ma go ani po Le, ani w stanie
+  oczekiwanym. Zmiana z innej karty albo z synchronizacji w tym oknie nie jest przypisywana kopii; nieudany zapis — 0.
+- Ekran (`vilda_auth_ui.js`, pomocniki `Bks_*`): „Scal teraz” widoczne także przy danych konta > 0 (dodane + zmienione
+  + usunięte z pięciu rodzajów, bez `uiPreferenceCount`); przy danych konta = 0 teksty jak dotąd. Pin
+  `tests/unit/blokada-importu.test.mjs` bez zmian (dokładnie 2 × `},Bpb_IMPORT)`).
+- Wpisy Terminarza bez pacjenta (nieobecności, wydarzenia — w sejfie notatki pacjenta z `patientId`
+  `ACTIVITY_PATIENT_ID`; uwaga recenzji gałęzi `44ba49f7`: ekran nazywał je „notatkami pacjentów”): podgląd liczy ich
+  część osobno — `added|restored|updated|replacedNewer|deleted ActivityNoteCount`, część odpowiednich
+  `…PatientNoteCount`, te same reguły na tej części obu stron — a ekran pokazuje ją pod własną nazwą, notatki pacjentów
+  bez niej. Wynik scalania ma tylko sumy Le: linia wyniku (Dodano / Zaktualizowano / Usunięto), dla której podgląd
+  zapowiadał wpisy Terminarza tego rodzaju, nazywa sumę „notatki pacjentów i wpisy Terminarza”
+  (`Bks_linieDanych(wynik, podgląd)`, `Bks_biernikWyniku`); pozostałe linie i teksty bez wpisów Terminarza jak dotąd
+  (uwaga recenzji `a38f42cf`: jedna flaga dla całego wyniku dopisywała „i wpisy Terminarza” także do „Dodano”, gdy
+  podgląd zapowiadał tylko usunięty wpis Terminarza).
+- Podgląd pomija pacjenta kopii bez nagłówka, jak `ss` (kopia spreparowana; uwaga recenzji końcowej 2, S2): nie
+  wymienia pacjenta, którego scalanie nie doda, a plan notatek zgadza się z Le.
+
+**Teksty ekranu** (do akceptacji właściciela).
+- Podtytuł: „Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której dojdą
+  zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia i wiek, rok urodzenia i kontakt) i to, czy
+  osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy. Notatki i listy scali jak synchronizacja:
+  wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także
+  tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich
+  ostatnim zapisie w kopii.” („Każdą taką zmianę” dotyczy notatek i list; zmiany nagłówka podgląd nie wymienia.)
+- Przycisk: dotychczasowa część i najwyżej trzy krótkie — notatki (pacjentów i szablony), wpisy w Terminarzu (bez
+  pacjenta), listy (pacjentów i oczekujących), np. „Scal teraz (1 nowych zapisów, 1 notatka, 1 lista)”, „Scal teraz
+  (1 notatka, 2 wpisy w Terminarzu)”; same terminy albo usunięcia — „Scal teraz”.
+- Podsumowanie przy danych konta > 0 i 0 nowych zapisów zaczyna się od „Brak nowych zapisów” (zamiast „Brak nowych
+  danych — wszystko już masz” / „Brak danych do dodania”), dalej części z odmianą, np. „1 przywrócona notatka pacjenta
+  (usunięta tutaj wcześniej)”, „1 notatka pacjenta poprawiona tutaj później zostanie zastąpiona starszą wersją z kopii”,
+  „usunięte w kopii: 1 notatka pacjenta, 1 lista oczekujących, 1 termin listy oczekujących (zostaną usunięte także
+  tutaj)”; wpisy Terminarza bez pacjenta zaraz za notatkami pacjentów: „2 nowe wpisy Terminarza bez pacjenta”,
+  „1 poprawiony wpis Terminarza bez pacjenta”, „usunięte w kopii: 1 wpis Terminarza bez pacjenta …”.
+- Wynik: „✓ Dodano 1 notatkę pacjenta, 1 szablon w Notatkach, 1 listę pacjentów, 1 listę oczekujących”, „✓ Zaktualizowano
+  1 notatkę pacjenta”, „⊖ Usunięto tak jak w kopii: …”; „Brak zmian — …” tylko, gdy nic nie doszło i nie było błędu.
+  Przy `accountDataMerged === false` albo gdy podgląd zapowiadał dane konta, a wynik ma 0: „Nie scalono notatek ani list
+  z tej kopii — mogły dojść w międzyczasie albo zapis się nie udał. Sprawdź kopię ponownie.” „🔀 Uzupełniono zapisy
+  u N pacjentów” — N kart, do których doszły wersje. Gdy podgląd zapowiadał nowe i poprawione wpisy Terminarza: „✓ Dodano
+  3 notatki pacjentów i wpisy Terminarza”, „✓ Zaktualizowano 1 notatkę pacjenta lub wpis Terminarza” (5+: „6 notatek
+  pacjentów i wpisów Terminarza”); gdy zapowiadał tylko usunięty wpis Terminarza i nowe notatki pacjentów: „✓ Dodano
+  2 notatki pacjentów”, „⊖ Usunięto tak jak w kopii: 1 notatkę pacjenta lub wpis Terminarza”. Desktop 1440 i telefon
+  390 bez poziomego przewijania.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-dane-konta.test.mjs` (93; prawdziwe
+`os`/`ss`, magazyn w pamięci; ekran — prawdziwe pomocniki `Bks_*` z `vilda_auth_ui.js`). W każdym: podgląd nie zmienia
+magazynu, a każdy licznik spełnia parzystość podgląd = wynik scalania = różnica magazynu.
+- T1 nowa notatka pacjenta → „Scal teraz (1 notatka)”, „Brak nowych zapisów · 1 nowa notatka pacjenta”, „✓ Dodano
+  1 notatkę pacjenta”, `mergedPatientCount` 0; T7 notatka i lista usunięte w kopii → „⊖ Usunięto tak jak w kopii:
+  1 notatkę pacjenta, 1 listę pacjentów”, obie usunięte w C;
+- T9 1 nowa wersja + notatka + lista → „Scal teraz (1 nowych zapisów, 1 notatka, 1 lista)”, `mergedPatientCount` 1;
+- T16–T18 lista oczekujących tylko w kopii, usunięta w kopii z terminem, termin tylko w kopii → wymienione wszędzie;
+- T20 X scalony tu z Y, poprawka notatki X w kopii → „Scal teraz (1 notatka)”, „Brak nowych zapisów · 1 poprawiona
+  notatka pacjenta · pominięci: 1”, notatka pod Y poprawiona;
+- T25 błąd zapisu notatki w sekcji Le, T27 zapis meta konta rzuca przy zmianie list → wynik 0 (w T27 mimo licznika
+  preferencji Le 1), ekran „Nie scalono …”;
+- T32 notatka i lista poprawiane na A dwa razy, w C później raz → „1 notatka pacjenta poprawiona tutaj później zostanie
+  zastąpiona starszą wersją z kopii”, w C wersje z kopii;
+- T34, T35 w trakcie Le inna karta w C dodaje, zmienia albo usuwa listy oczekujących → wynik liczy tylko zmiany z kopii;
+- T31, T38, T39 nowa wersja z kopii po późniejszej tutejszej poprawce nagłówka („Testowy Adam”/M w kopii, „Poprawiona
+  Ada”/K tutaj), kontaktu osoby spoza bazy albo „Dodaj do bazy” → nagłówek z kopii ze starszym `timestampISO`, osoba
+  wraca do osób spoza bazy (scalanie bez zmian); podtytuł to mówi;
+- kontrole → plan 0, przycisk ukryty: T4 ta sama wartość preferencji, T6 dane identyczne z C, T19 lista oczekujących
+  dodana i usunięta w kopii, T22 nazwa z samych znaków zerowej szerokości, T30 ten sam termin zapisany ponownie, T36,
+  T37 nagrobki tutaj i pozycji, których tu nie było, T40, T41 stare i niepełne wpisy kopii; 30 losowych przebiegów ze
+  stałym ziarnem — parzystość;
+- po uwagach recenzji końcowej 2 i recenzji gałęzi `44ba49f7` (+18): T42 tutejszy szablon bez `updatedAtISO`, w kopii
+  poprawiony → plan = Le = magazyn = 1 (kontrola; czerwony na mutacji `Bks_wygrywaData`), T43 ta sama lista
+  oczekujących założona niezależnie tu i w kopii → przycisk ukryty (kontrola; czerwony na mutacji `Bks_trescWpisu`
+  z `createdAtISO`); `migawka` testu zapisuje brak daty jako pusty napis; T44 kopia spreparowana z pacjentką bez
+  nagłówka, usuniętą tutaj, z nową notatką → podgląd = wynik (czerwony na `44ba49f7`: podgląd 0 notatek i 1 pominięty,
+  wynik 1 i 0); T45 urlop (5 dni) i szkolenie tylko w kopii → „Scal teraz (6 wpisów w Terminarzu)”, „Brak nowych
+  zapisów · 6 nowych wpisów Terminarza bez pacjenta”, „✓ Dodano 6 notatek pacjentów i wpisów Terminarza”; T46 notatka
+  pacjenta z wpisami Terminarza nowymi, poprawionym i usuniętym → każda część pod własną nazwą (T45, T46 czerwone na
+  `44ba49f7`); T47 dwie nowe notatki pacjenta i szkolenie z Terminarza usunięte w kopii → „✓ Dodano 2 notatki
+  pacjentów” bez „i wpisy Terminarza”, łączna nazwa tylko w „Usunięto” (czerwony na `a38f42cf`); łączna nazwa osobno
+  w każdej linii wyniku (nowe / poprawione / usunięte wpisy Terminarza w podglądzie, czerwony na `a38f42cf`); odmiana
+  części Terminarza (1 / 2–4 / 5+ / 12–14 / 22, pięć pól); 12 losowych przebiegów z wpisami
+  Terminarza (nowe, poprawione, usunięte). Parzystość obejmuje część Terminarza: podgląd = różnica magazynu
+  ograniczona do `ACTIVITY_PATIENT_ID` (dlatego na `44ba49f7` każdy przypadek z parzystością pada na braku tych pól).
+Na `2df41a8` 70 z 73 czerwonych, ale każdy przypadek pada już na braku nowych pól — testy przypinają nowy kontrakt,
+zachowanie sprzed zmiany pokazują pomiary wyżej i e2e. `tests/e2e/kopia-konta-dane-konta.spec.mjs` (dwa konteksty
+przeglądarki = dwa urządzenia; Importuj pacjentów → plik kopii → „Scal z moim kontem →” → „Scal teraz”): desktop 1440 —
+nowa notatka, szablon, lista pacjentów i lista oczekujących, termin 09:00 → 11:30, usunięta notatka i usunięta lista
+oczekujących z terminem → nowy podtytuł, pełne podsumowanie, „Scal teraz (2 notatki, 2 listy)”, linie wyniku, stan C
+zgodny; telefon 390 — to samo bez poziomego przewijania; T20 na ekranie; telefon 390 — urlop i szkolenie z Terminarza
+w kopii → „Scal teraz (1 notatka, 2 wpisy w Terminarzu)”, „✓ Dodano 3 notatki pacjentów i wpisy Terminarza”, bez
+poziomego przewijania. Na `2df41a8` pierwsze trzy czerwone;
+`kopia-konta-pomija.spec.mjs` bez zmian asercji — zielony.
+
+**Wpływ kliniczny.** Wzory, progi i jednostki bez zmian; dane scalane jak dotąd. Przed scaleniem lekarz widzi notatki
+pacjentów, szablony, listy i listy oczekujących, które dojdą, zmienią się albo zostaną usunięte — także tutejsze
+poprawki, które zastąpi starsza wersja z kopii — i może je scalić, gdy kopia nie niesie nowych zapisów. Wynik nie mówi
+już „wszystko już było”, gdy coś doszło albo zapis się nie udał. Podtytuł mówi, że karta z nowymi zapisami przejmie
+z kopii dane osoby i przynależność do bazy.
+
+**Ograniczenia.**
+- Reguły sekcji Le są powtórzone w `Bks_planDanych` (wariant (a)); zmiana Le wymaga zmiany planu — pilnuje test
+  parzystości i komentarz krzyżowy. Wspólne predykaty Le i planu — ewentualny osobny krok (dotyka synchronizacji).
+- Liczniki list oczekujących w wyniku — dwa przypadki graniczne: inna karta zapisze w oknie Le ten sam wpis z tą samą
+  treścią co kopia (liczy się jako zmiana z kopii) albo nadpisze lub usunie wpis z kopii zaraz po Le (nie liczy się).
+  Nieudany odczyt daje 0.
+- Nagłówek karty: karta, do której dochodzą zapisy z kopii, przejmuje cały nagłówek z kopii (imię i nazwisko, płeć, data
+  urodzenia i wiek, u osoby spoza bazy rok urodzenia i kontakt, przynależność do bazy) także, gdy tutejszy jest nowszy,
+  a następna synchronizacja przenosi go dalej. Osoba dodana tutaj do bazy, której kopia niesie nową wersję jako osoby
+  spoza bazy, znika z listy pacjentów i traci w nagłówku datę urodzenia i wiek; odwrotnie osoba spoza bazy wchodzi do
+  bazy; późniejsze tutejsze dane zostają tylko w historii wersji. Tak samo synchronizacja (`Bsl_scalPacjenta`). Ta
+  zmiana mówi o tym tylko w podtytule; podgląd nie zapowiada zmiany nagłówka. Płeć i data urodzenia zasilają siatki
+  centylowe i normy — **decyzja właściciela, osobne zadanie**: nagłówek z kopii (i z synchronizacji) tylko, gdy nowszy
+  (`timestampISO`), bez cofania osoby z bazy albo zapowiedź w podglądzie.
+- Reguła `rev` dla notatek i list pacjentów bez zmian (zmiana Le — decyzja właściciela); wynik nie ma osobnego licznika
+  zastąpień (Le liczy je jako „zaktualizowane”), a `restored…Count` jest tylko w podglądzie. Błąd sekcji Le jest nadal
+  połykany: częściowy wynik (podgląd 2, wynik 1) nie daje „Nie scalono …”.
+- Kopia innego konta: jej dane konta scalają się jak dotąd, teraz podgląd je pokazuje i odsłania przycisk — czy je
+  scalać, decyzja właściciela.
+- Scalenie kopii nie planuje wysyłki do chmury (dane idą przy następnej synchronizacji, jak dotąd wersje). Ustawienia
+  interfejsu i klucze techniczne scalają się bez komunikatu; etykieta przycisku nie wymienia terminów ani usunięć.
+- Wpisy Terminarza bez pacjenta rozdziela tylko podgląd; wynik (sumy Le) nazywa je razem z notatkami pacjentów, a nazwę
+  każdej linii bierze z podglądu — gdy synchronizacja między podglądem a scaleniem doda wpis Terminarza, którego podgląd nie
+  zapowiadał, wynik nazwie go „notatką pacjenta”, jak dotąd. Rozdzielenie w wyniku wymaga zmiany Le albo różnicy
+  magazynu (decyzja właściciela).
+
+**Mutacje.** 32, każda czerwona (na 110 testach `kopia-konta-dane-konta`, `kopia-konta-pomija` i `blokada-importu`):
+reguły planu (nagrobki kopii i tutejsze, rekord tutaj przy usunięciu, remis nagrobka, `rev`, `Bks_notatki`, `Z` zamiast
+`trim`, strażniki starych i niepełnych wpisów), porównanie wpisów list oczekujących, wynik z różnicy magazynu
+ograniczonej do zmian z kopii, `mergedPatientCount`, `accountDataMerged`, przycisk, podsumowanie i dawne brzmienia
+podtytułu. Po uwagach recenzji gałęzi `44ba49f7`: `Bks_wygrywaData` bez `!tutaj.updatedAtISO` — T42, `Bks_trescWpisu`
+z `createdAtISO` — T43, pętla podglądu bez `||!h.header` — T44, część Terminarza zawężona do jednej kategorii — 10
+z 12 losowych przebiegów, ekran bez odjęcia części Terminarza — 3 czerwone. Po uwadze recenzji `a38f42cf`: jedna
+flaga łącznej nazwy dla trzech linii wyniku (stan sprzed poprawki) — T47 i test łącznej nazwy w każdej linii czerwone.
+
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213, `vilda_auth_ui.js` 495 → 496 na stronach i w adresach wstrzykiwanych
+przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe adresy w precache (append-only);
+`SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`)
+— `npm run podbij-wersje`.
+
 ## Mapa właścicieli przed pierwszym zapisem także przy kartach bez nowych wersji (P-KOPIA-POMIJA-3, SW 1.1.232, `vilda_vault.js` 209, 2026-10-12)
 
 **Zmiana kliniczna: NIE** w zakresie wzorów, progów i interpretacji; integralność danych przy scalaniu kopii konta.
@@ -12927,17 +15721,24 @@ z rekomendacjami” — punkt A5d przeglądu „co dalej po #518”: pominąć t
 
 **Interfejs** (ekran „Scal kopię konta”):
 - podtytuł: „… bez usuwania ani nadpisywania istniejących danych. Nie przywraca pacjentów scalonych z inną kartą ani
-  usuniętych po ich ostatnim zapisie w kopii.”;
+  usuniętych po ich ostatnim zapisie w kopii.”; *(Aktualizacja 2026-10-14: zdanie „… bez usuwania ani nadpisywania
+  istniejących danych” było nieprawdziwe dla notatek i list (poprawki i usunięcia z kopii, reguła `rev`) oraz dla
+  nagłówka karty, do której dochodzą zapisy (przejmuje cały nagłówek z kopii, także starszy — u osoby spoza bazy także
+  kontakt — i przynależność do bazy: osoba dodana tu do bazy może wrócić do osób spoza bazy) — zastąpione,
+  P-KOPIA-DANE-KONTA; zdanie „Nie przywraca pacjentów …” bez zmian.)*
 - podgląd: sekcja „Pominięci — nie zostaną dodani (N)”: nazwisko i „scalony z kartą „Y”” albo „usunięty po ostatnim
   zapisie w kopii (3 dni temu)”, pod spodem „Tylko w pliku kopii: 2 zapisy, 1 notatka.”, gdy coś z kopii nie ma tu
   nigdzie; na końcu sekcji „Kopia konta nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim
   zapisie w kopii.”;
-  podsumowanie „… · pominięci: N”, a przy braku nowych zapisów „Brak danych do dodania”;
+  podsumowanie „… · pominięci: N”, a przy braku nowych zapisów „Brak danych do dodania”; *(Aktualizacja 2026-10-14:
+  gdy z kopii dochodzą notatki albo listy, podsumowanie zaczyna się od „Brak nowych zapisów” i je wymienia —
+  P-KOPIA-DANE-KONTA.)*
 - wynik: „⊘ Pominięto „X” — scalony z kartą „Y”” albo „… — usunięty po ostatnim zapisie w kopii (…)”, „↩ Pominięto N
   zapisów, które należą tu do innej karty”; „Brak zmian — pozostałe dane z tej kopii już były w Twoim koncie.”, gdy
   coś pominięto i nic nie doszło.
-- Widoczność „Scal teraz” bez zmian (nowe zapisy albo nowi pacjenci). Desktop (1440) i telefon (390): bez poziomego
-  przewijania.
+- Widoczność „Scal teraz” bez zmian (nowe zapisy albo nowi pacjenci). *(Aktualizacja 2026-10-14: także gdy dochodzą
+  same notatki, szablony ze strony „Notatki”, listy pacjentów, listy oczekujących albo terminy — P-KOPIA-DANE-KONTA.)*
+  Desktop (1440) i telefon (390): bez poziomego przewijania.
 
 **Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/kopia-konta-pomija.test.mjs` (prawdziwy
 `vilda_vault.js`, magazyn w pamięci):
@@ -12992,8 +15793,10 @@ czerwony.
 **Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Pacjent usunięty albo scalony tutaj nie wraca na chwilę
 i nie zabiera wersji karcie, z którą go scalono — historia pomiarów karty docelowej zostaje cała. Dane pominiętego
 pacjenta, których tu nie ma (wersje, notatki), nie trafiają do bazy; podgląd mówi, ile ich jest, a zostają w pliku
-kopii. Poprawki jego notatek, które są już pod kartą docelową, dochodzą jak dotąd. Kopia nowsza niż usunięcie
-przywraca kartę jak dotąd. Wersje karty scalonej na innym urządzeniu nie są już zabierane tutejszej karcie.
+kopii. Poprawki jego notatek, które są już pod kartą docelową, dochodzą jak dotąd. *(Aktualizacja 2026-10-14: dotąd
+tylko przez API — gdy kopia nie niosła nowych wersji, przycisk „Scal teraz” był ukryty, a podgląd mówił „Brak danych do
+dodania · pominięci: 1”. Teraz podgląd mówi „1 poprawiona notatka pacjenta”, przycisk jest widoczny, a wynik
+„✓ Zaktualizowano 1 notatkę pacjenta” — P-KOPIA-DANE-KONTA.)* Kopia nowsza niż usunięcie przywraca kartę jak dotąd. Wersje karty scalonej na innym urządzeniu nie są już zabierane tutejszej karcie.
 
 **Czego zmiana nie robi.** Pacjenta usuniętego albo scalonego tutaj nie da się przywrócić przez „Scal kopię konta”
 (dotąd też się nie dawało — karta znikała od razu); drogą pozostaje import pliku karty (P-IMPORT-NAGROBEK). X scalony
@@ -13002,15 +15805,182 @@ pokazuje liczbę zapisów tylko w kopii. Mapa właścicieli jest budowana raz: w
 być oceniona po starym przypisaniu; usunięcie albo scalenie X w tym czasie łapie świeży nagrobek (powód „usunięty”
 zamiast „scalony”). Nagrobek nie mówi, czy pacjenta usunięto, czy scalono: X scalony tutaj z kartą Y spoza kopii
 (założoną po jej zrobieniu), gdy kopia ma zapis X nowszy niż scalenie albo nagrobek X jest przycięty, wraca jako nowy
-z wersjami, których tu nie ma (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama kradzież wersji przy nagrobku przegrywającym
-z edycją z innego urządzenia to osobna wada. Listy pacjentów z kopii wskazujące pominiętą kartę — bez zmian (jak dotąd).
-Ekran wyniku nadal nie wymienia notatek i list, a „Scal teraz” nie pojawia się, gdy kopia niesie tylko nowe notatki
-albo listy — osobne punkty.
+z wersjami, których tu nie ma (wersje pod Y zostają przy Y). Synchronizacja (`Bsl_scalPacjenta`) bez zmian — ta sama
+kradzież wersji przy nagrobku przegrywającym z edycją z innego urządzenia to osobna wada. *(Aktualizacja 2026-10-14:
+naprawione w P-SYNC-WLASCICIEL — nowszy rekord (najpierw `rev`) decyduje o właścicielu wersji, przeniesienia pod
+blokadami obu kart, liczniki = liczba wersji.)* Listy pacjentów z kopii wskazujące pominiętą kartę — bez zmian (jak
+dotąd). Ekran wyniku nadal nie wymienia notatek i list, a „Scal teraz” nie pojawia się, gdy kopia niesie tylko nowe
+notatki albo listy — osobne punkty. *(Aktualizacja 2026-10-14: rozwiązane w P-KOPIA-DANE-KONTA — podgląd i wynik
+wymieniają notatki pacjentów, szablony, listy pacjentów, listy oczekujących i terminy, także poprawki i usunięcia
+z kopii; „Scal teraz” jest widoczne, gdy dochodzą tylko one.)*
 
 **Wersje.** `vilda_vault.js` 205 → 206, `vilda_auth_ui.js` 481 → 482 na stronach i w adresach wstrzykiwanych przez
 `vilda_chrome.js` (114 → 115) i `vilda_session_bridge.js` (38 → 39); nowe adresy w precache (append-only);
 `SW_VERSION` 1.1.199 → 1.1.200 (+ pin w `tests/unit/klirens-ui-model.test.mjs`, `tests/fixtures/wersje-zasobow.json`) —
 `npm run podbij-wersje`.
+
+## „Scal pacjentów” i ponowienie zapisu: niewypełniona sekcja karty docelowej nie trzyma sekcji z danymi (P-SCALANIE-SEKCJE, SW 1.1.286, `vilda_vault.js` 213, 2026-10-14)
+
+**Zmiana kliniczna: możliwa** — wzory, współczynniki, progi, tabele i jednostki bez zmian; zmienia się zawartość
+bieżącej wersji (głowy) karty docelowej po „Scal pacjentów” i po ponowieniu zapisu do niej (P-ZAPIS-USUNIETEJ). Głowa
+może nieść PAL i dietę wybrane przez lekarza w karcie dołączonej zamiast PAL z reguły wieku i diety zaleconej przez
+silnik — to zmienia zalecane kcal (REE × PAL, limit diety). Wraca historia „Szacowanego spożycia”, posiłki, poprzednia
+ocena klirensu (Scr i wyniki) i numer PWZ. Populacja: każdy pacjent scalany „Scal pacjentów” albo zapisywany
+ponowieniem po odmowie „scalono z kartą …”; wiek, płeć i rozpoznanie bez znaczenia. Wada 3 z przeglądu „trzy wady”,
+wariant (c+) z raportu krytyka z decyzjami koordynatora; **wymaga akceptacji klinicznej właściciela**.
+
+**Co było** (`audyt` `2df41a8`, prawdziwy `vilda_vault.js`; kształty zapisu przechwycone z `collectUserData` na
+prawdziwych stronach — `tests/fixtures/scalanie-sekcje-ksztalty.json`). `Bsc1` przenosił sekcję kartoteki (birth,
+perinatal, puberty, guardian, doctor, clcr, intake, foods, plan) ze starej karty X tylko przy `null` w głowie karty
+docelowej Y. Strony zapisują jednak niewypełnione sekcje z wartościami domyślnymi: index z wiekiem — plan
+`{palFactor:1.6, palWybrany:false, …}`, spożycie `{pal:'1.6', history:null, …}`, posiłki `{snacks:[], meals:[]}`,
+lekarz `{isDoctor:null, pwzNumber:null}`; docpro — lekarz `{isDoctor:true, pwzNumber:null}`; kalkulator klirensu —
+zawsze pusta sesja v2 z jednostkami i stanami (sam wybór wzoru KT/V zaznacza `ktvToggle` i `formulaPicker:'KTV'`).
+Skutek: wybrany plan (PAL 1,8, dieta), historia spożycia, posiłki, PWZ, klirens z Scr 0,4 i pokwitanie X znikały po
+cichu z głowy Y (zostawały tylko w przeniesionej wersji X, którą retencja może przyciąć). Ponowienie zapisu
+(`Bdo_sekcje`) za „zmianę lekarza” brało każdą sekcję formularza różną od kopii wczytanej — także tylko wartościami
+domyślnymi: przeliczony PAL (1,6 → 1,4) zastępował wybrany plan Y, przeliczony PAL karty spożycia — spożycie Y
+z historią, pusta albo odbudowana przez stronę sesja klirensu — klirens Y z Scr, lekarz `{isDoctor:true}` z docpro
+kasował PWZ Y; domyślny plan w głowie Y wygrywał z planem X. Usunięcie danych w formularzu X przechodziło do głowy Y
+także wtedy, gdy Y miała własne, inne dane.
+
+**Reguła po zmianie** (tylko `vilda_vault.js`; czytelne funkcje pod `Bsc1` i przy `Bdo_sekcje`).
+- **Dane sekcji** (`Bsc_dane`, tylko do oceny, nigdy zapisywane) — sekcja bez wartości domyślnych strony:
+  - `plan`: PAL tylko jako wybór lekarza według tej samej reguły co `vildaPalZapisuWybrany` przy wczytaniu
+    (`palWybrany:true` — wybór, `false` — domyślny; bez znacznika 1,4 i 1,6 domyślne, inne > 0 — wybór); dieta tylko
+    przy `dietaWybrana:true`; cel własny > 0 kg (jak `vildaCelWlasnyZapisu`);
+  - `intake`: bez PAL karty spożycia, danymi są historia i szacowane kcal; `doctor`: bez `isDoctor`;
+  - `clcr` (sesja v2): tylko pola z liczbą (także tekstem, z przecinkiem; 0 to dana) albo zaznaczeniem w polu badania;
+    nie są danymi pola karty pacjenta kalkulatora (`fullName`, `age`, `ageMonths`, `ageDays`, `neonatalTermStatus`,
+    `sex`, `weight`, `height`), wybory widoku (`currentVersion`, `formulaPicker`, `ktvToggle`), jednostki, stany i inne
+    wybory tekstowe, `summary`, `savedAtISO`; dawny kształt bez `inputs` — cała sekcja;
+  - pozostałe sekcje — w całości.
+- **„Bez danych”** (`Bsc_bezDanych`): dane sekcji puste wg `Bpu_pusta` (wyniesiona bez zmian z `Bdo_sekcje`:
+  `undefined`, `null`, `''`, `false`, lista albo obiekt z samych pustych; liczba, także 0, i niepusty tekst to dana).
+- **„Scal pacjentów”** (`Bsc1`): sekcja z listy przechodzi ze starej karty w całości, gdy karta docelowa jej nie ma (jak
+  dotąd) albo gdy sekcja karty docelowej jest bez danych, a sekcja starej karty ma dane. Bez łączenia pole po polu. Obie
+  z danymi albo obie bez — sekcja karty docelowej.
+- **Ponowienie zapisu** (`Bdo_sekcje`, tylko najwyższy poziom zapisu):
+  - sekcja głowy karty docelowej bez danych nie zastępuje sekcji z formularza, która coś ma; formularz bez tej sekcji
+    (`null` albo same puste pola — strona jej nie prowadzi) dostaje ją z głowy, jak na `2df41a8` i jak w „Scal
+    pacjentów” (uwaga recenzji gałęzi `44ba49f7`: dotąd ponowienie z index kasowało np. sesję klirensu karty docelowej
+    z samymi wyborami — status wcześniaka, jednostka Scr, metoda — z nowej bieżącej wersji);
+  - sekcja głowy = dokładnie kopia wczytana (karta docelowa nie ma w niej nic własnego, np. dostała ją przy scaleniu):
+    jak na `2df41a8` i jak zwykły zapis tej wizyty — zmianą jest każda sekcja formularza różna od kopii wczytanej (także
+    antropometria w sesji klirensu z przeliczonym BSA i eGFR, wybór wzoru i wersji kalkulatora, `isDoctor`, PAL karty
+    spożycia, przeliczony PAL planu); sekcja `null` albo z samych pustych pól — nie;
+  - karta docelowa ma w sekcji coś własnego: sekcja formularza z danymi jest zmianą, gdy różni się od kopii wczytanej
+    w rzucie porównania (`Bsc_porownanie`: jak `Bsc_dane`, a w sesji klirensu wszystkie niepuste pola `inputs` poza
+    antropometrią karty pacjenta i wyborami widoku — jednostka Scr, stan kreatyniny, metoda oznaczenia i status
+    noworodka są zmianą); zmieniona sekcja przechodzi w całości. Sekcja formularza bez danych jest zmianą (usunięciem)
+    tylko, gdy formularz ją zapisał (nie `null` i nie same puste pola), kopia wczytana miała dane, a głowa ma te same
+    dane w rzucie porównania (ta sama liczba Scr w innej jednostce to inne dane); własne, inne dane karty docelowej
+    zostają;
+  - poziomy `user`, `advanced`/`growthBasic`, `data`, punkty terapii i wiersze — bez zmian.
+- Bez zmian: pola proste `user.*`, `Bsc2`, punkty terapii, sekcje wizyty spoza listy (`bp`, `adultVitals`,
+  `respiratory`, `circumference`), notatki, Terminarz, listy, format zapisu i synchronizacji.
+- Kopie wiedzy formularza w sejfie: `BSC_PAL_DOMYSLNE` = [1,4; 1,6] (kopia `PAL_DOMYSLNE_HISTORYCZNE`
+  z `vilda_data_import_export.js`), `BSC_KLIRENS_POLA_PACJENTA` (pola `patientSet` w `kalkulator-klirens.html`),
+  `BSC_KLIRENS_POLA_WIDOKU`; antropometria porównania wyliczana z pól pacjenta bez `neonatalTermStatus`. Zgodność
+  pilnują strażnicy testów: PAL — 54 kształty planu wobec prawdziwego `vildaPalZapisuWybrany`; klirens w obie strony —
+  każde ze 126 pól prawdziwych sesji z wartością '7' i '0'; porównanie w ponowieniu — zmiana każdego pola z osobna.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/scalanie-sekcje-bez-danych.test.mjs` (73;
+prawdziwe `mergePatients` i `savePatient(…, {patientId, baselinePayload, dolaczPoScaleniu})`; Y — głowa karty
+docelowej, X — stara karta, planX = `{1,8; wybrany; „redukcyjna”; wybrana; cel 18 kg}`). Na `2df41a8` 38 z 70
+czerwonych:
+- T1, T2 (czerwone) plan Y = prawdziwy zapis index z wiekiem (PAL 1,6 domyślny), docpro, kalkulatora klirensu albo
+  index bez wieku, X z planX → plan Y = planX w całości;
+- T21, T5 (czerwone) lekarz Y `{true, null}` z docpro, X z PWZ → lekarz X (kontrola: Y z PWZ zostaje); spożycie Y
+  z samym PAL, X z historią 1500 kcal → spożycie X;
+- T18, T38 (czerwone) klirens Y = pusta sesja albo sesja po samym wyborze wzoru KT/V, X z Scr 0,4 → sesja X;
+- T25 (czerwony) „Zostaw ten, scal pozostałe”: Y z planem domyślnym, X1 z PAL 1,8, X2 zapisany ostatni z PAL 1,2 → plan
+  Y = PAL 1,2, 5 wersji;
+- ponowienie po scaleniu (formularz = głowa X + wiersz 72 mies.):
+  - T26 (czerwony) Y z wybranym planem `{1,2; „lagodna”}`, w formularzu X PAL przeliczony na 1,4 → plan Y bez zmian;
+    kontrola: lekarz wybrał w formularzu PAL 1,8 → plan formularza;
+  - T41, T44, T42, T31 (czerwone) Y ze spożyciem z historią 1300 kcal, z PWZ albo z Scr 0,5 / 0,4; formularz
+    z przeliczonym PAL karty spożycia, z docpro `{true, null}`, z sesją odbudowaną przez stronę albo pustą → spożycie,
+    PWZ i klirens Y zostają;
+  - T36 (czerwony) Y z własną Scr 0,5, lekarz kasuje Scr w formularzu X (Scr 0,4) → klirens Y zostaje; T35 (kontrola,
+    jak na `2df41a8`) te same dane w obu kartach → usunięcie przechodzi do głowy Y;
+  - T46 (kontrola, jak na `2df41a8`) Y dostała przy scaleniu sesję X (Scr 0,9 µmol/L), lekarz zmienia tylko jednostkę
+    Scr, stan kreatyniny, metodę albo status noworodka → zmiana w głowie Y, Scr 0,9 bez zmian;
+  - T54 (kontrola, jak na `2df41a8`) Y bez sekcji, po scaleniu głowa = sekcja X; formularz zmienia tylko wzrost 140 →
+    104 cm i masę z przeliczonym summary (BSA 0,81 → 0,70 m², CKiD U25 eGFRcr 129 → 96), wzór, wersję kalkulatora,
+    `isDoctor`, PAL karty spożycia albo PAL planu → głowa = sekcja z formularza, jak zwykły zapis tej wizyty;
+  - T48, T57 (czerwone) Y z własną sesją klirensu (Scr 0,5 albo Scr 0,4 jak X, ale z własną antropometrią
+    i `savedAtISO`), formularz X różni się od kopii wczytanej antropometrią, wzorem, wersją albo `savedAtISO` → sesja Y
+    zostaje;
+  - T58–T60 (czerwone na `44ba49f7`, jak na `2df41a8`) Y z sekcją „bez danych” — sesja klirensu z samymi wyborami
+    (µmol/L, wcześniak, metoda enzymatyczna, stan stabilny), lekarz z docpro `{true}` bez PWZ, spożycie z samym PAL
+    karty spożycia — formularz X ze strony, która tej sekcji nie prowadzi (index, docpro) → sekcja Y w nowej bieżącej
+    wersji, 4 wersje, wiersze 48–72;
+- kontrole „Scal pacjentów” (zielone na `2df41a8`): plan Y z wybranym PAL bez diety zostaje bez diety X; dane
+  urodzeniowe Y z tygodniem 39 zostają w całości; Y bez sekcji → sekcja X, także bez danych; obie sekcje bez danych →
+  sekcja Y; spożycie Y z samym szacowanym spożyciem 1400 kcal/d i sesja Y z samym Kru 0 ml/min to dane.
+Zmieniona kontrola w `zapis-usunietej-karty.test.mjs` („niewypełniona sekcja domyślna karty docelowej…”): po „Scal
+pacjentów” głowa Y ma planX (dotąd pusty plan Y). `tests/e2e/scalanie-sekcje-bez-danych.spec.mjs`: prawdziwy index —
+Y zapisany bez dotykania planu, X z PAL 1,8 wybranym, Duplikaty → „Zostaw ten, scal pozostałe” → głowa Y = plan X
+(czerwony na `2df41a8`); prawdziwy `kalkulator-klirens.html` — po odmowie i ponowieniu jednostka Scr poprawiona na
+mg/dl i wzrost poprawiony 140 → 104 cm trafiają do głowy Y, a w świeżej karcie „Ostatni pomiar (klirens/eGFR)” pokazuje
+eGFRcr 96 (oba zielone na `2df41a8` — pilnują, by poprawka nie gubiła zmian lekarza).
+
+**Wpływ kliniczny.**
+- Po scaleniu głowa karty docelowej niesie PAL i dietę wybrane w karcie dołączonej, gdy w karcie docelowej ich nie
+  wybrano — zalecane kcal liczy się z wyboru lekarza zamiast z reguły wieku i zalecenia silnika (cel własny działa tylko
+  po „Odtwórz zapis”, P-CEL-WLASNY-ZAPIS). Wraca historia „Szacowanego spożycia”, posiłki, poprzednia ocena klirensu
+  i PWZ; sesja klirensu z samym wyborem wzoru KT/V nie blokuje już przeniesienia wyniku.
+- Ponowienie z formularza strony, która sekcji nie prowadzi, nie kasuje wyborów lekarza w sekcji „bez danych” karty
+  docelowej (np. statusu wcześniaka w sesji klirensu, od którego zależy dobór wzoru eGFR) — jak na `2df41a8`.
+- Ponowienie nie kasuje wybranego planu, historii spożycia, PWZ ani klirensu karty docelowej, gdy ma ona własne, inne
+  dane — ani wartościami domyślnymi formularza starej karty, ani usunięciem w nim (na `2df41a8` były kasowane). Gdy
+  głowa ma te same dane co kopia wczytana, usunięcie w formularzu trafia do głowy — jak przy zwykłym zapisie.
+- Gdy głowa jest dokładnie kopią wczytaną, ponowienie zapisuje sekcję jak zwykły zapis i jak `2df41a8`: poprawiony
+  w kalkulatorze klirensu wzrost i masa trafiają do zapisanej oceny z przeliczonym BSA i eGFR, a jednostka Scr, stan
+  kreatyniny, metoda IDMS i status noworodka (`populationContext.termStatus`) — do głowy karty docelowej.
+- Stary wybór z karty dołączonej może być nieaktualny: dotąd przepadał po cichu, teraz wraca po cichu (arkusz „Scalić
+  w jeden rekord?” o tym nie mówi — decyzja właściciela).
+
+**Ograniczenia.**
+- „Zostaw ten, scal pozostałe”: sekcję bez danych wypełnia najnowiej zapisany rekord z danymi w tej sekcji (liczy się
+  data zapisu rekordu, nie wiek sekcji); kolejne karty jej nie zmieniają.
+- Bez zmian: `bisphos` i `chartCreator` nie są na liście `Bsc1` i nie przechodzą nigdy, a w ponowieniu `bisphos`
+  z docpro (domyślne selecty) liczy się jak dane; retencja może przyciąć przeniesioną wersję karty dołączonej; index
+  zawsze zapisuje płeć „M”, więc reguła „płeć z dołączanej” dla kart z index praktycznie nie działa.
+- Sesja klirensu z samymi wyborami tekstowymi (metoda, wzór, odpowiedzi „Nie”/„Nie wiem”, daty zbiórki bez wyników) jest
+  przy „Scal pacjentów” „bez danych”, a w porównaniu przy ponowieniu (poza wzorem) — zmianą. Pole nieobecne w zapisanej
+  sesji (np. nowe pole strony) liczy się jako zmiana — jak na `2df41a8`.
+- **Kalkulator klirensu w trybie podglądu** (po wczytaniu z Karty pacjenta) oddaje w `collectUserData` pustą sesję;
+  sejf nie odróżnia jej od Scr skasowanej przez lekarza. Gdy głowa ma te same dane klirensu co kopia wczytana,
+  ponowienie bez odtworzenia sesji zastępuje ją pustą — jak zwykły zapis i jak na `2df41a8`; poprzednia ocena zostaje
+  w historii. Naprawa po stronie strony — osobne zadanie.
+- Gdy karta docelowa ma własną, inną sesję klirensu, antropometria i wybory widoku zmienione tylko w formularzu starej
+  karty nie są zmianą: zostaje sesja karty docelowej z jej wynikiem, a poprawiony wzrost trafia tylko do `user`
+  i wierszy (wzrost w danych pacjenta obok oceny klirensu policzonej z wzrostu karty docelowej). Za „własną” sejf
+  uznaje też sesję starej karty zapisaną ponownie w karcie docelowej po scaleniu.
+- Sekcja formularza, której dane różnią się od kopii wczytanej, przechodzi w całości — sejf nie odróżnia zmiany lekarza
+  od zmiany wprowadzonej przez formularz (zmierzone: plan z dietą „intense” i celem 45 kg po „Nowym pomiarze” wraca jako
+  „light” bez celu i zastępuje wybrany plan Y — jak na `2df41a8`). Sekcja zapisana samymi `null` albo pustymi polami
+  nie jest usunięciem.
+- Sejf trzyma kopie trzech list warstwy formularza — pilnowane strażnikami, nie wspólną stałą.
+- Osobne wady zmierzone przy okazji (poza zakresem): wybrany PAL nie wraca do `#palFactor` przy wczytaniu z Karty
+  pacjenta w świeżej karcie przeglądarki (także bez scalania) — korzyść dla PAL widać w rekordzie, a w formularzu tylko
+  tam, gdzie select ma już opcje; plan z dietą „intense” wczytuje się jako „light”; `savePatient` uzupełnia przekazany
+  ładunek w miejscu (zachowanie sprzed zmiany).
+
+**Mutacje.** 39 (dokładna podmiana na kopii lustrzanej, liczone na 96–106 testach trzech plików scalania), każda
+czerwona poza jedną równoważną (warunek najwyższego poziomu w gałęzi „głowa = kopia wczytana”): bez reguł stron —
+26 czerwonych, łączenie pole po polu — 26, reguły PAL, diety, celu własnego, spożycia, lekarza i klirensu, listy pól
+klirensu, zastępowanie sekcją źródła bez danych, klauzule usunięcia w ponowieniu, rzut porównania (jednostki, status
+noworodka, antropometria, wybory widoku), bez gałęzi „głowa = kopia wczytana” — 9. Dawny warunek pominięcia sekcji
+głowy „bez danych” (bez `!pusta(cel[k])`) — T58–T60 czerwone.
+
+**Wersje** (jedno podbicie dla P-SYNC-WLASCICIEL, P-KOPIA-DANE-KONTA i P-SCALANIE-SEKCJE, względem `audyt` `4f6d1e7`
+po #691, Pokwitanie etap 2). `vilda_vault.js` 212 → 213
+na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (146 → 147) i `vilda_session_bridge.js` (70 → 71); nowe
+adresy w precache (append-only); `SW_VERSION` 1.1.285 → 1.1.286 (+ pin w `tests/unit/klirens-ui-model.test.mjs`,
+`tests/fixtures/wersje-zasobow.json`) — `npm run podbij-wersje`.
 
 ## Ponowienie zapisu: niewypełniona sekcja karty docelowej to sekcja pusta (P-ZAPIS-USUNIETEJ-3, SW 1.1.200, `vilda_vault.js` 206, 2026-10-08)
 
@@ -13022,21 +15992,32 @@ puste tylko `null`, `undefined` i `''`. Formularz zapisuje niewypełnione sekcje
 (np. plan `{palFactor:null, palWybrany:false, dietLevel:null, dietaWybrana:false}`, `foods`, `doctor`, sekcje funkcji
 życiowych). Gdy karta docelowa Y miała taki niewypełniony plan, a stara karta X wypełniony, ponowienie zastępowało plan X
 pustym planem Y. Odwrotnie: pusta sekcja w formularzu (różna od kopii wczytanej) nadpisywała wypełnioną sekcję Y.
+*(Korekta 2026-10-14, P-SCALANIE-SEKCJE: plan z `palFactor:null` zapisują docpro, kalkulator klirensu i index bez
+wieku. Index z wiekiem zapisuje PAL domyślny z reguły wieku, np. `{palFactor:1.6, palWybrany:false, …}`, a spożycie
+z PAL karty spożycia; docpro — lekarza `{isDoctor:true}`, kalkulator klirensu — pustą sesję klirensu z jednostkami
+i stanami. Takich sekcji ta reguła nie łapała — robi to P-SCALANIE-SEKCJE.)*
 
 **Reguła po zmianie.** Pusta jest też wartość złożona: obiekt albo lista bez żadnej wartości poza `null`, `''` i `false`
 (sprawdzane w głąb). Taka sekcja karty docelowej nie zastępuje sekcji ze starej karty, a taka sekcja w formularzu nie jest
 „zmianą lekarza”. Liczby i teksty są danymi. Wyczyszczenie pola w formularzu przy ponowieniu nie kasuje wartości karty
-docelowej (jak dotąd dla pól pustych).
+docelowej (jak dotąd dla pól pustych). *(Aktualizacja 2026-10-14, P-SCALANIE-SEKCJE: na najwyższym poziomie zapisu
+sekcja karty docelowej będąca dokładnie kopią wczytaną podlega tej regule bez zmian, jak zwykły zapis tej wizyty. Gdy
+karta docelowa ma w sekcji coś własnego, „bez danych” i zmianę lekarza ocenia się bez wartości domyślnych strony —
+zmianą są też jednostki, stany, metoda oznaczenia i status noworodka w sesji klirensu; sekcja formularza z samymi
+wartościami domyślnymi, w której lekarz wyczyścił dane, jakie głowa karty docelowej ma z kopii wczytanej, jest zmianą —
+jak przy zwykłym zapisie. Sekcja zapisana samymi `null` i pustymi polami zmianą nie jest, jak dotąd.)*
 
 **Przypadki syntetyczne** — `tests/unit/zapis-usunietej-karty.test.mjs`:
 - X z planem {1,6; wybrany; „redukcyjna”}, Y z pustym planem formularza → po „Scal pacjentów” głowa Y ma pusty plan
-  (kontrola); po ponowieniu z formularza X plan X;
+  (kontrola; *od P-SCALANIE-SEKCJE, 2026-10-14: głowa Y ma plan X już po scaleniu*); po ponowieniu z formularza X plan X;
 - formularz z planem {tekst: null, dieta: ''} → plan karty docelowej „plan Y” zostaje.
 Na `3676f0d` oba czerwone. Mutacje: `false` nie jest puste — 1 czerwony; bez sprawdzania w głąb — 2.
 
 **Wpływ kliniczny.** Wypełnione sekcje (plan żywieniowy, dane lekarza, funkcje życiowe) nie giną przy ponowieniu przez
 niewypełnione sekcje drugiej karty. „Scal pacjentów” (`Bsc1`) nadal trzyma sekcję karty docelowej, jeżeli nie jest
-`null` — także niewypełnioną; to zachowanie sprzed zmiany, poza zakresem tej poprawki.
+`null` — także niewypełnioną; to zachowanie sprzed zmiany, poza zakresem tej poprawki. *(Aktualizacja 2026-10-14:
+zmienione w P-SCALANIE-SEKCJE — `Bsc1` zastępuje w całości sekcję karty docelowej bez danych, także z samymi
+wartościami domyślnymi strony, sekcją starej karty z danymi.)*
 
 ## Ponowienie zapisu do karty docelowej scalenia zachowuje jej dane (P-ZAPIS-USUNIETEJ-2, SW 1.1.199, `vilda_vault.js` 205, 2026-10-08)
 
@@ -13055,7 +16036,10 @@ dopisywało do formularza tylko wiersze pomiarów karty Y, a resztę zapisu bra�
 „Scal pacjentów”: jej dane zostają, a z formularza idą tylko zmiany wpisane przez lekarza — pola różne od kopii wczytanej
 do formularza (`baselinePayload`):
 - zmiana lekarza to niepusta wartość formularza, inna niż w kopii wczytanej, w polu, które ta kopia miała (porównanie
-  niezależne od kolejności kluczy). Pole bez takiej zmiany bierze niepustą wartość karty docelowej: puste pole
+  niezależne od kolejności kluczy; *od P-SCALANIE-SEKCJE, 2026-10-14, sekcje najwyższego poziomu, w których karta
+  docelowa ma coś własnego (inne niż kopia wczytana), porównuje się bez wartości domyślnych strony — na ich danych, a w
+  sesji klirensu także na jednostkach, stanach, metodzie oznaczenia i statusie noworodka*). Pole bez takiej zmiany
+  bierze niepustą wartość karty docelowej: puste pole
   formularza (brak płci, wyzerowana wizyta po „Nowy pomiar”) i sekcja, której stara karta nie miała (formularz wstawia
   sekcje domyślne, np. pusty „lekarz”), nie nadpisują jej danych; puste pole karty docelowej nie kasuje wartości ze
   starej karty. Pole po polu w `user`, w `advanced`/`growthBasic` (poza wierszami) i w ich `data`; pozostałe sekcje
@@ -13496,7 +16480,8 @@ i scalanie synchronizacji (P-SCALANIE-BLOKADA). Każda z tych operacji to „odc
   gdy usunięcie nie jest wcześniejsze niż ostatni zapis (lokalny albo z ładunku) — wtedy nic nie wpisuje (karta nie
   liczy się jako zaktualizowana). Przegrany nagrobek znika tu, pod blokadą, a nie dopiero na końcu scalania.
 - Koniec scalania zdejmuje lokalny nagrobek tylko pod blokadą pacjenta i tylko wtedy, gdy to ten sam nagrobek (ta sama
-  chwila usunięcia) co na starcie.
+  chwila usunięcia) co na starcie. *(Aktualizacja 2026-10-14, P-SYNC-WLASCICIEL: nagrobek zostaje, gdy przegrana karta
+  tu nie powstała — jej wersje leżą tu, nowsze, pod inną kartą; zdejmuje go dopiero zapis tej karty.)*
 - `savePatient` pod blokadą czyta rekord świeżo: karta, która doszła po odczycie listy, jest traktowana jak istniejąca
   (licznik, data założenia i numer kolejny wersji liczone od niej, `isNew: false`).
 - Ekran edycji pacjenta: „Usuń pacjenta” przy zajętej blokadzie pokazuje „Czekam — ten pacjent jest zapisywany w innej
@@ -14113,7 +17098,8 @@ Dlatego decyzje zapadają pod blokadą, na świeżym odczycie.
   lokalnej nie ginie). Pominięcie zajętego pacjenta byłoby gorsze: wysyłka zastępuje cały stan w chmurze i zgubiłaby
   jego wersje z innych urządzeń.
 - Kolejność blokad jak w koszu: najpierw pacjent, potem lista nagrobków; scalanie trzyma najwyżej jedną blokadę pacjenta
-  naraz, więc nie ma zakleszczeń. Szyfrowanie treści z ładunku zostaje poza blokadą (blokada trwa milisekundy).
+  naraz, więc nie ma zakleszczeń. *(Aktualizacja 2026-10-14, P-SYNC-WLASCICIEL: wyjątkiem jest faza przeniesień wersji
+  między kartami — dwie blokady pacjenta, w kolejności rosnących id, jak „Scal pacjentów”; bez zakleszczeń.)* Szyfrowanie treści z ładunku zostaje poza blokadą (blokada trwa milisekundy).
 
 **Bez zmian.** Reguły scalania (rewizja, chwila zmiany, nagrobki pacjentów i wersji, kosz 30 dni, przypięta wersja
 wygrywa z retencją), format ładunku, liczniki wyniku, `vilda_sync.js`. Sprawdzenie wersji tuż przed usunięciem

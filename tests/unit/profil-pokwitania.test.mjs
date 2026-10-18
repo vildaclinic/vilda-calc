@@ -10,6 +10,74 @@ loadBrowserScript('vilda_puberty_profile.js', win);
 const P = win.VildaPubertyProfile;
 const ocen = (we) => P.ocenProfil(we);
 
+describe('Jawna oś gonadalna ze wspólnej oceny', () => {
+  it.each([['F', 'Th'], ['M', 'G']])('zachowuje reguły dla właściwego wejścia %s/%s i nazywa oś', (plec, gonadalKind) => {
+    const we = { plec, wiekLat: 7.9, etap: 3, wiekStartuLat: 7, wiekKostnyLat: 8.1 };
+    const old = ocen(we);
+    const typed = ocen({ ...we, gonadalKind, wiekEtapuMies: 7.9 * 12 });
+    expect(typed).toMatchObject({ profil: old.profil, tempo: old.tempo, kategoriaStartu: old.kategoriaStartu,
+      wiekStartuLat: old.wiekStartuLat, wskazniki: { tanner23Lata: old.wskazniki.tanner23Lata, tannerStadium: 3, gonadalKind } });
+    expect(typed.dowody.join(' | ')).toContain(gonadalKind + '3');
+    expect(typed.dowody.join(' | ')).not.toContain('Tanner III');
+  });
+
+  it.each([['F', 'G'], ['M', 'Th'], ['F', 'P'], ['M', 'P'], ['M', 'unspecified'], ['F', null]])(
+    'rodzaj %s/%s nie zasila reguły gonadalnego stadium', (plec, gonadalKind) => {
+      const r = ocen({ plec, wiekLat: 7.9, etap: 3, gonadalKind });
+      expect(r).toMatchObject({ profil: 'standardowy', wiekStartuLat: null,
+        wskazniki: { tannerStadium: null, tanner23Lata: null, gonadalKind: null } });
+    }
+  );
+
+  it('wcześniejsza obserwacja ogranicza wiek startu swoim wiekiem, bez odmładzania jej do dziś', () => {
+    const r = ocen({ plec: 'F', wiekLat: 9.2, etap: 2, gonadalKind: 'Th', wiekEtapuMies: 8.7 * 12 });
+    expect(r).toMatchObject({ profil: 'wczesne', wiekStartuLat: 8.7, zrodloStartu: 'gorna-granica' });
+  });
+
+  it('tempo stadium używa wieku obserwacji; upływ czasu po badaniu nie dowodzi utrzymywania Th2', () => {
+    const r = ocen({ plec: 'F', wiekLat: 8.5, etap: 2, gonadalKind: 'Th', wiekEtapuMies: 7.8 * 12, wiekStartuLat: 7 });
+    expect(r.wskazniki.tanner23Lata).toBeNull();
+    expect(r.tempo).toBe('nieznane');
+    const r3 = ocen({ plec: 'F', wiekLat: 8.5, etap: 3, gonadalKind: 'Th', wiekEtapuMies: 7.8 * 12, wiekStartuLat: 7 });
+    expect(r3.wskazniki.tanner23Lata).toBe(0.8);
+    expect(r3.tempo).toBe('szybkie');
+  });
+
+  it('wcześniejsza ocena tylko z datą nie podstawia dzisiejszego wieku do tempa ani granicy początku', () => {
+    loadBrowserScript('vilda_puberty_assessment.js', win);
+    const gonadal = win.VildaPubertyAssessment.gonadalContext({ pubertyAssessment: {
+      version: 1, sex: 'F', observations: { G: null, P: null,
+        Th: { stage: 2, observedAtISO: '2026-05-01', ageMonths: null, source: 'clinician-entry' } }
+    } }, { sex: 'F', currentAgeMonths: 102, measuredAtISO: '2026-10-15', scope: 'growth' });
+    expect(gonadal).toMatchObject({ usableForGrowth: true, current: false, ageMonths: null });
+    const input = { plec: 'F', wiekLat: 8.5, etap: gonadal.stage, gonadalKind: gonadal.kind,
+      wiekEtapuMies: gonadal.ageMonths, gonadalCurrent: gonadal.current };
+    const noOnset = ocen(input);
+    expect(noOnset).toMatchObject({ profil: 'nieznany', wiekStartuLat: null, zrodloStartu: null,
+      wskazniki: { tannerStadium: 2, tanner23Lata: null } });
+    const knownOnset = ocen({ ...input, wiekStartuLat: 7 });
+    expect(knownOnset.wskazniki.tanner23Lata).toBeNull();
+    expect(knownOnset.tempo).toBe('nieznane');
+    const stage3 = ocen({ ...input, etap: 3, wiekStartuLat: 8 });
+    expect(stage3.wskazniki.tanner23Lata).toBeNull();
+    expect(stage3.tempo).toBe('nieznane');
+  });
+
+  it('jawna bieżąca ocena może korzystać z wieku obecnej wizyty przy braku wieku cechy', () => {
+    const current = ocen({ plec: 'F', wiekLat: 7.9, etap: 3, gonadalKind: 'Th',
+      wiekEtapuMies: null, gonadalCurrent: true, wiekStartuLat: 7 });
+    expect(current.wskazniki.tanner23Lata).toBe(0.9);
+    expect(current.tempo).toBe('szybkie');
+    expect(ocen({ plec: 'F', wiekLat: 7.9, etap: 2, gonadalKind: 'Th', gonadalCurrent: true }))
+      .toMatchObject({ wiekStartuLat: 7.9, zrodloStartu: 'gorna-granica' });
+  });
+
+  it.each([-1, 100])('przyszły lub ujemny wiek obserwacji %s nie daje stadium', wiekEtapuMies => {
+    const r = ocen({ plec: 'F', wiekLat: 7.9, etap: 3, gonadalKind: 'Th', wiekEtapuMies });
+    expect(r.wskazniki.tannerStadium).toBeNull();
+  });
+});
+
 describe('Kategoria startu i progi', () => {
   it('dziewczęta: < 8 przedwczesne, 8–9 wczesne, ≥ 9 prawidłowe; chłopcy: < 9 / 9–10,5 / ≥ 10,5', () => {
     expect(P.kategoriaStartu('F', 7.9)).toBe('przedwczesne');

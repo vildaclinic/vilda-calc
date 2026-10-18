@@ -6,9 +6,9 @@ import { quickField, quickSelect as select, quickFill as fill, expectAutomaticRe
 test.use({ serviceWorkers: 'block' });
 
 const choices = {
-  M: ['unspecified', 'G', 'P', 'Ax'],
-  F: ['unspecified', 'Th', 'P', 'Ax'],
-  unknown: ['unspecified', 'P', 'Ax'],
+  M: ['G', 'P'],
+  F: ['Th', 'P'],
+  unknown: [],
 };
 const guest = (changes = {}) => ({
   name: 'Fikcyjny kontekst zależny od płci', sex: 'M', age: 14, ageMonths: 0, tannerStage: '3',
@@ -53,8 +53,10 @@ const snapshot = (page, analyte = 'lh') => page.evaluate((testKey) => window.Vil
 }), analyte);
 
 async function expectChoices(page, sex) {
-  const input = await quickField(page, 'Kind');
-  expect(await input.locator('option').evaluateAll((options) => options.map((option) => option.value))).toEqual(choices[sex || 'unknown']);
+  const host = page.locator('#labPubertySharedEditor');
+  if (!await host.isVisible()) await page.locator('#labPubertyRefineStage').click();
+  expect(await host.locator('[data-puberty-row]').evaluateAll(rows => rows.map(row => row.getAttribute('data-puberty-row')))).toEqual(choices[sex || 'unknown']);
+  await expect(page.locator('#labPubertyKind')).toBeHidden();
 }
 
 async function expectNoVolume(page) {
@@ -156,7 +158,7 @@ async function expectPendingExcluded(page) {
 }
 
 for (const analyte of ['lh', 'fsh']) {
-  test(`${analyte.toUpperCase()}: native choices follow sex and incompatible observations never return after switching back`, async ({ page }) => {
+  test(`${analyte.toUpperCase()}: shared axes follow sex and incompatible observations never return after switching back`, async ({ page }) => {
     await open(page);
     await choose(page, analyte);
     await expectChoices(page, '');
@@ -195,29 +197,24 @@ for (const analyte of ['lh', 'fsh']) {
   });
 }
 
-test('P remains available for both sexes and unknown sex, while Ax has no fabricated Tanner stage', async ({ page }) => {
+test('P is an independent local observation and the shared editor does not offer Ax or a gonadal fallback', async ({ page }) => {
   await open(page);
   await choose(page);
   await select(page, 'Sex', 'M');
   await fill(page, 'AgeYears', '14');
   await select(page, 'Kind', 'P');
   await select(page, 'Stage', '3');
+  const initial = await snapshot(page);
+  expect(initial.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: null });
+  expect(initial.evaluation.biochemical.byStage.status).toBe('unavailable');
+  await expect(page.locator('#labPubertyStageSummary')).toContainText('P3');
   for (const sex of ['F', '', 'M']) {
     await select(page, 'Sex', sex);
     await expectChoices(page, sex);
-    await expect(page.locator('#labPubertyKind')).toHaveValue('P');
-    await expect(page.locator('#labPubertyStage')).toHaveValue('3');
     const saved = await snapshot(page);
-    expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'P', stage: 3 });
+    expect(saved.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: null });
     expect(saved.evaluation.biochemical.byStage.status).toBe('unavailable');
-  }
-  await select(page, 'Kind', 'Ax');
-  for (const sex of ['F', '', 'M']) {
-    await select(page, 'Sex', sex);
-    await expect(page.locator('#labPubertyKind')).toHaveValue('Ax');
-    await expect(page.locator('#labPubertyStage')).toBeHidden();
-    await expect(page.locator('#labPubertyStage')).toBeDisabled();
-    expect((await snapshot(page)).evaluation.input.puberty).toMatchObject({ kind: 'Ax', stage: null });
+    await expect(page.locator('#labPubertySharedEditor [data-puberty-axis="Ax"]')).toHaveCount(0);
   }
 });
 
@@ -408,7 +405,7 @@ test('a recorded Th onset is not relabelled after a sex correction and an alread
   const saved = await page.evaluate((id) => window.VildaVault.getPatientNote(id), notes[0].id);
   expect(saved.labResult.assessment).toEqual(notes[0].labResult.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(recorded).toContainText('Th3');
   await expect(recorded.locator('[data-clinical-code="early_onset_history"]')).toBeVisible();
@@ -432,7 +429,10 @@ for (const width of [320, 390, 600]) {
       await expectReadableSummaries(page);
       await expect(page.locator('#labPubertyOpenRange, #labPubertySectionRange')).toHaveCount(0);
       for (const section of ['Stage', 'Patient']) {
-        await quickField(page, section === 'Stage' ? 'Kind' : 'Sex');
+        if (section === 'Stage') {
+          if (!await page.locator('#labPubertySharedEditor').isVisible()) await page.locator('#labPubertyRefineStage').click();
+          await expect(page.locator('#labPubertySharedEditor')).toBeVisible();
+        } else await quickField(page, 'Sex');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
       }
     });

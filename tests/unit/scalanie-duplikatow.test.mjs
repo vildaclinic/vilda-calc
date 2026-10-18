@@ -44,6 +44,15 @@ async function konto() {
 const rows = (p) => (p.advanced && p.advanced.data && p.advanced.data.measurements
   ? p.advanced.data.measurements.map((m) => m.ageMonths).sort((a, b) => a - b) : []);
 
+/* Odstęp między zapisami kart a „Scal pacjentów”. Od P-SYNC-WLASCICIEL „Scal pacjentów” podbija rev przeniesionych
+   wersji, a kolejność wersji karty (chwila zapisu, chwila zmiany, rev, numer) przy remisie tej samej milisekundy
+   stawia przeniesioną wersję (rev 1) przed wersją celu i przed nową głową scalenia (rev 0): bieżącą wersją celu
+   zostaje dawna głowa źródła, a numer nowej głowy powtarza numer innej wersji. Bez odstępu test zależał od zegara
+   (raz czerwony w pełnym przebiegu pod obciążeniem; z zegarem, który stoi, dopóki nie odpali timer — 7 przypadków
+   tego pliku czerwonych, na audyt 2df41a8 zielonych). Ręcznie remis nieosiągalny; opis w docs/clinical/ALGORITHMS.md
+   (P-SYNC-WLASCICIEL, „Remis milisekundy”). */
+const odstep = () => new Promise((r) => { setTimeout(r, 5); });
+
 /* Stary rekord bez daty (dwie wersje) i nowy z datą (jedna wersja) — klasyczny duplikat P-DUP. */
 async function paraDuplikatow(v) {
   const stary1 = await v.savePatient({
@@ -57,11 +66,13 @@ async function paraDuplikatow(v) {
       { ageMonths: 84, ageYears: 7, height: 120, weight: 22 }, { ageMonths: 96, ageYears: 8, height: 126, weight: 25 }] } },
     ghTherapyPoints: [{ id: 'gh-1', dateISO: '2025-01-10', dose: 1.0 }],
   }, { patientId: stary1.patientId, dedup: false });
+  await odstep();
   const nowy = await v.savePatient({
     name: 'Fikcyjna Ewa', user: { lastName: 'Fikcyjna', firstName: 'Ewa', sex: 'K', dobISO: '2017-03-05', age: 9, ageMonths: 4, height: 135, weight: 30.8 },
     advanced: { data: { measurements: [{ ageMonths: 106, ageYears: 106 / 12, height: 131, weight: 28 }] } },
     ghTherapyPoints: [{ id: 'gh-2', dateISO: '2026-02-01', dose: 1.2 }],
   }, { dedup: false, forceNew: true });
+  await odstep();
   expect(stary2.patientId).toBe(stary1.patientId);
   expect(nowy.patientId).not.toBe(stary1.patientId);
   return { stary: stary1.patientId, nowy: nowy.patientId, wersjeStarego: [stary1.snapshotId, stary2.snapshotId] };
@@ -113,7 +124,9 @@ describe('mergePatients — scalanie duplikatów z bazy', () => {
   it('gdy cel nie ma daty urodzenia ani części nazwiska, bierze je ze źródła', async () => {
     const v = await konto();
     const bezDaty = await v.savePatient({ name: 'Fikcyjny Jan', user: { sex: 'M', age: 5, ageMonths: 0, height: 110, weight: 19 } }, { dedup: false });
+    await odstep();
     const zData = await v.savePatient({ name: 'Fikcyjny Jan', user: { lastName: 'Fikcyjny', firstName: 'Jan', sex: 'M', dobISO: '2021-01-02', age: 5, ageMonths: 8, height: 113, weight: 20 } }, { dedup: false, forceNew: true });
+    await odstep();
     await v.mergePatients(zData.patientId, bezDaty.patientId);
     const po = await v.getPatient(bezDaty.patientId);
     expect(po.header.dobISO).toBe('2021-01-02');
@@ -192,10 +205,12 @@ async function rekordyZPunktami(v, punktyZrodla, punktyCelu) {
     name: 'Fikcyjny Adam', user: { lastName: 'Fikcyjny', firstName: 'Adam', sex: 'M', age: 9, ageMonths: 2, height: 131, weight: 28 },
     ghTherapyPoints: punktyZrodla,
   }, { dedup: false });
+  await odstep();
   const cel = await v.savePatient({
     name: 'Fikcyjny Adam', user: { lastName: 'Fikcyjny', firstName: 'Adam', sex: 'M', dobISO: '2017-06-14', age: 9, ageMonths: 3, height: 131.5, weight: 28.2 },
     ghTherapyPoints: punktyCelu,
   }, { dedup: false, forceNew: true });
+  await odstep();
   expect(cel.patientId).not.toBe(zrodlo.patientId);
   return { zrodlo: zrodlo.patientId, cel: cel.patientId };
 }

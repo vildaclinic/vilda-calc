@@ -219,7 +219,7 @@ test('known pregnancy or menopause blocks only the adult group reference and a n
     await page.locator('#labValue').fill('1');
     if (phase.startsWith('pregnancy_') || phase === 'postmenopause') {
       await expect(point(page)).toHaveCount(0);
-      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('Ta mediana dotyczy kobiet nieciężarnych z regularnymi cyklami.');
+      await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie.');
     } else await expectSourcePoint(page, profiles[1], 1);
     await expect.poll(() => geometry(page)).toEqual(original);
   }

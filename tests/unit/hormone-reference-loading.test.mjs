@@ -13,6 +13,10 @@ function environment(missing = [], restoredSession = false) {
   const events = new Map(), appended = [];
   const win = { VildaCrypto: {}, VildaLabSnapshot: {}, VildaLabAssessmentUI: {}, VildaVault: {},
     VildaAuthUI: {}, VildaProAccess: {}, VildaHormoneReferenceSnapshot: {}, VildaHormoneReferenceUI: {},
+    // Decyzja 6.3: zakres zapisany z wynikiem — moduł transportu obok odniesienia AMH.
+    VildaLabRangeSnapshot: {},
+    // LAB-HISTORIA PR2: moduły zakładki „Badania” są w tym samym stosie; tu gotowe (ich ładowanie: lab-history-tab-loading).
+    VildaLabHistory: {}, VildaLabHistoryTab: {}, VildaPubertyAssessment: {}, VildaLabTestosteroneUnits: {},
     sessionStorage: { getItem: key => key === 'vilda-vault-session-v2' && restoredSession ? 'fictional-session' : null },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   };
@@ -31,10 +35,15 @@ function environment(missing = [], restoredSession = false) {
         const filename = node.src.split('?')[0];
         // The new modules really execute; loading placeholders would conceal an
         // incorrect global name, dependency order, or initialization failure.
-        if (!['vilda_hormone_reference_snapshot.js', 'vilda_hormone_reference_ui.js'].includes(filename)) {
+        if (!['vilda_hormone_reference_snapshot.js', 'vilda_hormone_reference_ui.js'].includes(filename)
+          && !(filename === 'vilda_lab_range_snapshot.js' && missing.includes('VildaLabRangeSnapshot'))
+          && !(filename === 'vilda_lab_testosterone_units.js' && missing.includes('VildaLabTestosteroneUnits'))
+          && !(filename === 'vilda_lab_snapshot.js' && missing.includes('VildaLabSnapshot'))
+          && !(filename === 'vilda_puberty_assessment.js' && missing.includes('VildaPubertyAssessment'))) {
           throw new Error('Unexpected reload of an already available module: ' + filename);
         }
         if (filename === 'vilda_hormone_reference_ui.js') expect(win.VildaHormoneReferenceSnapshot).toBeTruthy();
+        if (filename === 'vilda_lab_snapshot.js') expect(win.VildaLabTestosteroneUnits?.id).toBe('tt-existing-mass-conversions');
         loadBrowserScript(filename, win);
       }
       node.loaded();
@@ -76,6 +85,49 @@ for (const loader of ['session', 'chrome']) {
       const env = environment();
       await start(env)();
       expect(env.appended).toEqual([]);
+    });
+
+    it('loads the typed puberty reader once when it is the only missing dependency', async () => {
+      const env = environment(['VildaPubertyAssessment']);
+      const ensure = start(env);
+      await ensure();
+      expect(env.appended.filter(url => /\.js\?/.test(url))).toEqual([
+        expect.stringMatching(/^vilda_puberty_assessment\.js\?v=\d+$/),
+      ]);
+      expect(env.win.VildaPubertyAssessment.readUser({ tannerStage: 4 })).toMatchObject({
+        status: 'absent', legacy: { kind: 'unspecified', stage: 4 },
+      });
+      const loads = env.appended.length;
+      await ensure();
+      expect(env.appended).toHaveLength(loads);
+    });
+
+    it('loads the saved-range transport once when it is the only missing module (decyzja 6.3)', async () => {
+      const env = environment(['VildaLabRangeSnapshot']);
+      const ensure = start(env);
+      await ensure();
+      expect(env.appended.filter(url => /\.js\?/.test(url))).toEqual(['vilda_lab_range_snapshot.js?v=2']);
+      expect(typeof env.win.VildaLabRangeSnapshot.normalize).toBe('function');
+      expect(typeof env.win.VildaLabRangeSnapshot.reconcile).toBe('function');
+      const loads = env.appended.length;
+      await ensure();
+      expect(env.appended).toHaveLength(loads);
+    });
+
+    it('loads the immutable TT units before the snapshot without loading clinical tables or an engine', async () => {
+      const env = environment(['VildaLabTestosteroneUnits', 'VildaLabSnapshot']);
+      const ensure = start(env);
+      await ensure();
+      expect(env.appended.filter(url => /\.js\?/.test(url)).map(url => url.split('?')[0])).toEqual([
+        'vilda_lab_testosterone_units.js', 'vilda_lab_snapshot.js',
+      ]);
+      expect(env.win.VildaLabTestosteroneUnits.factorToCanonical['ng/dL']).toBe(0.03467);
+      expect(typeof env.win.VildaLabSnapshot.normalize).toBe('function');
+      expect(env.win.VildaLabTestosteroneData).toBeUndefined();
+      expect(env.win.VildaLabTestosterone).toBeUndefined();
+      const loads = env.appended.length;
+      await ensure();
+      expect(env.appended).toHaveLength(loads);
     });
   });
 }

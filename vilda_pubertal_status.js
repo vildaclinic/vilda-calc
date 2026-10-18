@@ -1,46 +1,24 @@
-/* vilda_pubertal_status.js — jedno źródło prawdy o dojrzewaniu płciowym pacjenta.
+/* vilda_pubertal_status.js — wspólny odczyt dojrzewania dla wzrastania.
  *
- * PO CO TO JEST (zgłoszenie właściciela 2026-09-08): etap Tannera dawało się dotąd wpisać
- * w trzech niezależnych miejscach — w formularzu głównym (`#tannerStage`), pośrednio przez
- * objętość jąder w karcie „Zaawansowane obliczenia wzrostowe" i w module jednostek
- * laboratoryjnych (`#labOverrideTanner`). Żadne z nich nie widziało pozostałych, więc
- * pacjent mógł mieć jednocześnie Tanner I w formularzu, 6 ml w karcie zaawansowanej
- * i Tanner III przy normach laboratoryjnych — i nic tego nie zauważało.
+ * Etap 2 (2026-10-15): dane() wybiera wyłącznie G u chłopców i Th u dziewcząt
+ * przez VildaPubertyAssessmentContext. P i dawny nieokreślony Tanner nie
+ * zastępują osi gonadalnej. Brak oceny nie uruchamia fallbacku do rekordu.
  *
- * DECYZJA WŁAŚCICIELA 2026-09-09: miejscem wpisu jest rozwinięty panel formularza głównego,
- * a reszta aplikacji już tylko czyta. Ten moduł jest tym „czyta": zbiera etap, dane
- * pokwitaniowe z rekordu i deklarację KOWD, stosuje regułę świeżości i wykrywa sprzeczności.
+ * Świeżość: zachowana operacyjna granica 12 miesięcy od oceny (włącznie),
+ * kwalifikowana w centralnym adapterze wraz z płcią i pochodzeniem. Transport
+ * loaded/restored i autosave nie potwierdzają badania w bieżącej wizycie.
  *
- * DWA RODZAJE DANYCH, DWA MIEJSCA ZAPISU (decyzja właściciela 2026-09-09):
- *   stan na dziś  — etap Tannera, objętość jąder: zapisywane PRZY POMIARZE, z datą wpisu,
- *                   bo stadium zmienia się z wizyty na wizytę;
- *   fakt trwały   — wiek startu pokwitania, wiek menarche, wzrost i wiek kostny przy menarche,
- *                   deklaracja KOWD: zapisywane W REKORDZIE (sekcja `puberty`), bo wpisane raz już
- *                   się nie zmieniają.
- * Panel wygląda jak jedno miejsce, ale zapisuje w dwa — dlatego karta pacjenta i formularz
- * pokazują TĘ SAMĄ wartość, a nie jej kopię.
+ * Fakty trwałe (początek, menarche, GnRHa, KOWD) zachowują dotychczasowe
+ * oddzielne kontrakty. Kategorie objętości jąder nie wyznaczają G.
  *
- * ŚWIEŻOŚĆ (decyzja właściciela 2026-09-09): stadium z rekordu starsze niż 12 miesięcy jest
- * w ocenie IGNOROWANE, nie tylko oznaczane. Tak działał już strażnik TANNER_FRESH_M w karcie
- * trajektorii; tutaj ta sama reguła obowiązuje wszystkich konsumentów. Etap wpisany w bieżącym
- * formularzu nie ma daty i jest zawsze traktowany jako aktualny.
- *
- * STRONY BEZ FORMULARZA GŁÓWNEGO (zgłoszenie właściciela 2026-09-14): DocPro ma kartę
- * „Zaawansowane obliczenia wzrostowe", ale nie ma ANI JEDNEGO pola pokwitaniowego — temu
- * samemu pacjentowi dawała więc uboższy wynik niż strona główna. Zamiast powielać tam pola
- * i obliczenia, moduł bierze brakujące wartości z rekordu pacjenta, przez jedne drzwi
- * (`VildaPubertySource.zPolaLubRekordu`). Rozstrzyga OBECNOŚĆ pola, nie jego wypełnienie:
- * puste pole na stronie, która je ma, znaczy „dziś nie oceniono" i rekord go nie nadpisuje.
- * Dlatego na stronie głównej ta zmiana nie przestawia niczego.
- *
- * CZEGO TU NIE MA: żadnego zgadywania. Moduł nie podstawia etapu z wieku (opcja
- * „automatycznie z wieku" nigdy niczego nie podstawiała — etykieta obiecywała coś,
- * czego kod nie robił) i nie przelicza menarche na wiek startu pokwitania.
+ * ocenEtap() i sprzecznosci() pozostają czystym niskopoziomowym API dla
+ * wywołania, które jawnie deklaruje gonadalny etap. Nie czytają legacy JSON.
+ * Rejestr kliniczny: docs/clinical/ALGORITHMS.md, GROWTH-TRAJ / PUBERTY-ASSESSMENT.
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '5';
+  var VERSION = '6';
 
   // Ta sama liczba, co P.TANNER_FRESH_M w vilda_trajectory_analysis.js.
   var SWIEZOSC_MIES = 12;
@@ -113,13 +91,6 @@
     return wartosc(id);
   }
 
-  function wiekWpisuZRekordu() {
-    var p = zrodlo();
-    try {
-      return p && typeof p.wiekStanuMies === 'function' ? p.wiekStanuMies() : null;
-    } catch (e) { return null; }
-  }
-
   /* Wiek bieżący w miesiącach — potrzebny WYŁĄCZNIE po to, żeby dało się zmierzyć wiek
    * stadium wziętego z rekordu. Najpierw to, co podał konsument, potem pola wieku, które
    * ma i formularz główny, i DocPro. */
@@ -171,7 +142,6 @@
     var lista = [];
     var t = etapLiczbowy(i.etap);
     var plec = plecKod(i.plec);
-    var jadra = i.jadra == null ? '' : String(i.jadra);
     var start = liczba(i.wiekStartuLat);
     var menarche = liczba(i.wiekMenarcheLat);
     var wiek = liczba(i.wiekLat);
@@ -182,20 +152,14 @@
     var gStart = liczba(i.gnrhaStartLat);
     var gStop = liczba(i.gnrhaStopLat);
 
-    if (plec === 'M' && t != null) {
-      if (t === 1 && (jadra === '4to6' || jadra === 'gt6')) {
-        lista.push('Tanner I wyklucza objętość jąder ≥ 4 ml — te dwa pola mówią co innego.');
-      }
-      if (t >= 2 && jadra === 'lt4') {
-        lista.push('Tanner ' + RZYMSKIE[t] + ' przy jądrach < 4 ml — u chłopca gonadarche '
-          + 'zaczyna się od objętości 4 ml.');
-      }
-    }
-    if (t === 1 && start != null && wiek != null && start < wiek) {
+    // Kategorie objętości nie wyznaczają morfologicznego G. Orientacyjne
+    // wartości Pradera pomagają ocenić opis, ale nie pozwalają odrzucić G2 przy
+    // objętości <4 mL ani automatycznie skorygować stadium.
+    if (i.stageIsCurrent !== false && t === 1 && start != null && wiek != null && start < wiek) {
       lista.push('Wpisano start pokwitania w ' + start + ' r.ż., a etap to Tanner I — '
         + 'dziecko po starcie pokwitania nie jest przedpokwitaniowe.');
     }
-    if (menarche != null && t != null && t <= 2) {
+    if (i.stageIsCurrent !== false && menarche != null && t != null && t <= 2) {
       lista.push('Menarche przy Tanner ' + RZYMSKIE[t] + ' — pierwsza miesiączka wypada '
         + 'zwykle w stadium III–IV.');
     }
@@ -238,6 +202,36 @@
     return lista;
   }
 
+  function pustaOcenaGonadalna() {
+    return { kind: null, stage: null, observation: null, ageMonths: null,
+      observedAtISO: null, source: null, current: false, usableForGrowth: false,
+      status: 'absent', reason: 'absent' };
+  }
+
+  function aktywnaOcena(i) {
+    var opts = { sex: plecKod(i.plec || wartosc('sex')),
+      currentAgeMonths: i.wiekTerazMies != null ? i.wiekTerazMies : wiekTerazZEkranu(i) };
+    // Brak nadpisania zachowuje datę ocenianej wizyty z centralnego źródła.
+    if (Object.prototype.hasOwnProperty.call(i, 'measuredAtISO')) opts.measuredAtISO = i.measuredAtISO;
+    try {
+      var runtime = w.VildaPubertyAssessmentContext;
+      if (runtime && typeof runtime.readActiveContext === 'function') {
+        var context = runtime.readActiveContext(opts);
+        if (context && context.growth) return context;
+      }
+    } catch (e) { /* brak kwalifikującego się źródła nie staje się starym numerem */ }
+    return { assessmentContext: null, growth: pustaOcenaGonadalna() };
+  }
+
+  // Transport do istniejących czystych silników: numer ma jawnie nazwany rodzaj,
+  // a wiek obserwacji pozostaje wiekiem oceny, nie datą autosave.
+  function kontekstWzrastania(i) {
+    var d = dane(i);
+    return { tannerStage: d.etap, tannerKind: d.etapRodzaj,
+      tannerAtAgeMonths: d.wiekEtapuMies, assessmentContext: d.assessmentContext,
+      tannerStale: d.etapNieaktualny, tannerStaleStage: d.etapPominiety };
+  }
+
   // ── Odczyt bieżącego stanu aplikacji ─────────────────────────────────────────
 
   function zRekordu() {
@@ -261,24 +255,20 @@
     var gnrhaStartDom = liczba(wartosc(POLA_DOM.gnrhaStart));
     var gnrhaStopDom = liczba(wartosc(POLA_DOM.gnrhaStop));
     var kowdDom = wartosc(POLA_DOM.kowd);
-    // Etap Tannera jest „stanem na dziś", nie faktem trwałym — o tym, czy wolno sięgnąć po
-    // zapamiętany, rozstrzyga OBECNOŚĆ pola na stronie. Jest pole (formularz główny) →
-    // liczy się to, co widać, także gdy jest puste. Nie ma pola (DocPro) → wchodzi rekord,
-    // ale przez `ocenEtap`, czyli z regułą świeżości i z uczciwym `etapZrodlo: 'rekord'`.
-    var maPoleEtapu = !!el(POLA_DOM.etap);
-    var etap = ocenEtap({
-      etapFormularz: i.etapFormularz != null ? i.etapFormularz
-        : (maPoleEtapu ? wartosc(POLA_DOM.etap) : ''),
-      etapRekord: i.etapRekord != null ? i.etapRekord
-        : (maPoleEtapu ? null : stanPola(POLA_DOM.etap)),
-      wiekWpisuMies: i.wiekWpisuMies != null ? i.wiekWpisuMies : wiekWpisuZRekordu(),
-      wiekTerazMies: i.wiekTerazMies != null ? i.wiekTerazMies : wiekTerazZEkranu(i)
-    });
+    // Wyłącznie typowana oś gonadalna z aktywnej wizyty. Stary numer oraz
+    // samo P pozostają opisem danych; nie są wejściem oceny wzrastania.
+    var resolved = aktywnaOcena(i);
+    var etap = resolved.growth;
     var out = {
-      etap: etap.etap,
-      etapZrodlo: etap.zrodlo,
-      etapNieaktualny: etap.nieaktualny,
-      etapPominiety: etap.etapPominiety,
+      etap: etap.stage,
+      etapRodzaj: etap.kind,
+      wiekEtapuMies: etap.ageMonths,
+      dataEtapuISO: etap.observedAtISO,
+      etapZrodlo: etap.observation ? (etap.current ? 'formularz' : 'rekord') : null,
+      etapNieaktualny: etap.reason === 'stale',
+      etapPominiety: etap.stage == null && etap.observation ? etap.observation.stage : null,
+      etapOcena: etap,
+      assessmentContext: resolved.assessmentContext,
       wiekStartuLat: startDom != null ? startDom : (rek ? rek.wiekStartuPokwitaniaLat : null),
       wiekMenarcheLat: menarcheDom != null ? menarcheDom : (rek ? rek.wiekMenarcheLat : null),
       wzrostPrzyMenarcheCm: wzrostMenarcheDom != null ? wzrostMenarcheDom : (rek && rek.wzrostPrzyMenarcheCm != null ? rek.wzrostPrzyMenarcheCm : null),
@@ -291,6 +281,7 @@
     };
     out.sprzecznosci = sprzecznosci({
       etap: out.etap, plec: i.plec, jadra: out.jadra,
+      stageIsCurrent: out.etapOcena.current === true,
       wiekStartuLat: out.wiekStartuLat, wiekMenarcheLat: out.wiekMenarcheLat,
       wzrostPrzyMenarcheCm: out.wzrostPrzyMenarcheCm, wzrostCm: i.wzrostCm,
       wiekKostnyPrzyMenarcheLat: out.wiekKostnyPrzyMenarcheLat,
@@ -306,6 +297,7 @@
     POLA_DOM: POLA_DOM,
     ocenEtap: ocenEtap,
     sprzecznosci: sprzecznosci,
+    kontekstWzrastania: kontekstWzrastania,
     dane: dane
   };
 }(typeof window !== 'undefined' ? window : this));

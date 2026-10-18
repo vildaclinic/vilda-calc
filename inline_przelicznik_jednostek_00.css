@@ -907,6 +907,9 @@
     .lab-range-status.is-uwaga-high::before { background: #911c1c; animation: lab-marker-breath-red 0.7s ease-in-out infinite; }
     .lab-range-status.is-uwaga-low { color: #6a3a14; background: rgba(166,73,30,0.15); border: 0.5px solid rgba(166,73,30,0.30); }
     .lab-range-status.is-uwaga-low::before { background: #a6491e; animation: lab-marker-breath-amber 0.7s ease-in-out infinite; }
+    /* Decyzja 6.31: zakres ogólny u dziecka — informacja bez oceny, bez koloru stanu i bez animacji. */
+    .lab-range-status.is-general { color: var(--text-muted); background: var(--disabled-bg); }
+    .lab-range-status.is-general::before { background: var(--text-disabled); }
     .lab-range-status .lab-range-status-icon { width: 11px; height: 11px; flex-shrink: 0; }
     .lab-range-status.is-uwaga-high .lab-range-status-icon,
     .lab-range-status.is-uwaga-low .lab-range-status-icon { animation: lab-icon-blink 0.7s ease-in-out infinite; }
@@ -1045,6 +1048,20 @@
       color: #7a8587;
       font-style: italic;
     }
+    .lab-range-general {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-0-25);
+      margin-top: var(--space-1);
+      padding: var(--space-0-6) var(--space-0-8);
+      border-radius: var(--radius-9);
+      background: var(--disabled-bg);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+    .lab-range-general strong { color: var(--text-2); font-weight: 600; }
     /* Animacje — Linear Flow 5 stanów */
     @keyframes lab-marker-breath-normal { 0%, 100% { box-shadow: 0 0 0 0 rgba(29,158,117,0.5), 0 0 12px rgba(29,158,117,0.5); } 50% { box-shadow: 0 0 0 8px transparent, 0 0 20px rgba(29,158,117,0.6); } }
     @keyframes lab-marker-breath-amber  { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,90,48,0.55), 0 0 12px rgba(216,90,48,0.55); } 50% { box-shadow: 0 0 0 8px transparent, 0 0 20px rgba(216,90,48,0.65); } }

@@ -769,21 +769,61 @@
 
   // 8. Dojrzewanie — werdykt opoznionego dojrzewania pochodzi z karty. „Po ukończeniu
   //    14. roku życia" jest tu poprawne: to dokladnie 14. urodziny, bez dwuznacznosci.
+  function zapisaneCechy(model) {
+    var ctx = model && model.context, raw = ctx && ctx.assessmentContext;
+    var reader = w.VildaPubertyAssessment;
+    if (!raw || !reader || typeof reader.readUser !== 'function') return null;
+    // Re-read the typed object at the presentation boundary. Never relabel an
+    // unspecified legacy number from the patient's sex or another observation.
+    var read = raw.status === 'ready' ? reader.readUser({ pubertyAssessment: raw.assessment }) : raw;
+    if (read.status === 'absent' && read.legacy) {
+      var roman = ['', 'I', 'II', 'III', 'IV', 'V'][read.legacy.stage];
+      return roman ? 'Zapisano Tanner ' + roman + ' — rodzaj cechy nieokreślony.' : null;
+    }
+    if (read.status !== 'ready') return null;
+    var now = model.points && model.points.length ? num(model.points[model.points.length - 1].ageMonths) : null;
+    var parts = ['G', 'Th', 'P'].map(function (axis) {
+      var observation = read.assessment.observations[axis];
+      if (!observation) return null;
+      var details = [];
+      if (observation.observedAtISO) details.push('ocena ' + observation.observedAtISO);
+      if (observation.ageMonths != null) details.push('w wieku ' + wiekDop(observation.ageMonths));
+      if (now != null && observation.ageMonths != null && observation.ageMonths < now) details.push('wcześniejsza ocena');
+      if (!observation.observedAtISO && observation.ageMonths == null) details.push('czas oceny nieznany');
+      // A new edit may change the assessment's top-level sex while retaining
+      // other axes. Their own source sex, including explicit null, takes priority.
+      var sourceSex = Object.prototype.hasOwnProperty.call(observation, 'sex')
+        ? observation.sex : read.assessment.sex;
+      if (sourceSex && model.sex && sourceSex !== model.sex) {
+        details.push('zapis dla ' + (sourceSex === 'M' ? 'płci męskiej' : 'płci żeńskiej'));
+      } else if (sourceSex == null) details.push('płeć źródłowej oceny nieznana');
+      return axis + observation.stage + (details.length ? ' (' + details.join('; ') + ')' : '');
+    }).filter(Boolean);
+    if (!parts.length) return null;
+    return kropka('Ocena pokwitania: ' + parts.join(', '));
+  }
+
   function zdanieDojrzewanie(model) {
     var ctx = model && model.context;
     var o = osoba(model && model.sex);
+    var typed = zapisaneCechy(model);
     if (model && model.delayedPuberty) {
       var lim = model.sex === 'M' ? '14' : '13';
       var wiek = model.points && model.points.length
         ? model.points[model.points.length - 1].ageMonths : null;
+      var stageName = ctx && (ctx.tannerKind === 'G' || ctx.tannerKind === 'Th')
+        ? ctx.tannerKind + '1' : 'Tanner I';
       return {
         id: 'dojrzewanie',
         tone: 'warn',
         text: kropka((wiek != null ? 'W wieku ' + wiekDop(wiek) + ' ' + o.kto : duza(o.kto))
-          + ' pozostaje w stadium Tanner I, co po ukończeniu '
+          + ' ma zapisaną ocenę ' + stageName + ', co po ukończeniu '
           + lim + '. roku życia odpowiada obrazowi opóźnionego dojrzewania')
+          + (typed ? ' ' + typed : '')
       };
     }
+    if (typed) return { id: 'dojrzewanie', tone: 'plain', text: typed };
+    if (ctx && ctx.assessmentContext) return null;
     if (ctx && ctx.tannerStage != null) {
       var rzym = ['', 'I', 'II', 'III', 'IV', 'V'][ctx.tannerStage] || String(ctx.tannerStage);
       return { id: 'dojrzewanie', tone: 'plain', text: 'Dojrzewanie płciowe oceniono na stadium Tanner ' + rzym + '.' };

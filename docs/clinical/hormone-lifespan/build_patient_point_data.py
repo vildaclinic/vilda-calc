@@ -76,18 +76,42 @@ def build():
             compatibleAssayMethodIds=['immulite-2000-xpi','siemens-immulite-2000-xpi'],
             provenance=madsen['source'],limitations=madsen['useConstraints'])
 
+    female_gonadotropin_policy = json.loads((ROOT/'female-gonadotropin-reference-policy.json').read_text(encoding='utf-8'))
+    assert female_gonadotropin_policy['kind'] == 'educational-source-selection'
+    assert female_gonadotropin_policy['ordinaryOnly'] is True
+    assert (female_gonadotropin_policy['sex'], female_gonadotropin_policy['analytes'],
+            female_gonadotropin_policy['unit']) == ('female', ['lh', 'fsh'], 'IU/L')
+    female_zec_routes = {route['id']: route for route in female_gonadotropin_policy['zecProfiles']}
+    assert len(female_zec_routes) == 2
     zec=read('zec2012-fsh-group-medians.json')
     assert sum(row['participants'] for row in zec['rows']) == zec['fshParticipants']
     for row in zec['rows']:
         if not row['active']:
             continue
         assert row['tannerStage'] == 1 and row['medianOperator'] == '=' and not row['censored']
+        identifier = 'zec2012-'+row['sex']+'-fsh-age-'+str(row['minAge'])+'-'+str(row['maxAge'])
         minimum, maximum = row['applicationMinAge'], row['applicationMaxAge']
+        source_routing = {}
+        if row['sex'] == 'female':
+            # The source extract retains its full original table and historical
+            # activation notes. Only this versioned application policy routes it.
+            if identifier not in female_zec_routes:
+                continue
+            route = female_zec_routes[identifier]
+            assert (route['sourceMinAge'], route['sourceMaxAge']) == (row['minAge'], row['maxAge'])
+            minimum, maximum = route['minAge'], route['maxAge']
+            assert route['maxAgeExclusive'] is True
+            if maximum != row['applicationMaxAge']:
+                source_routing = {'sourceRouting': {
+                    'version':female_gonadotropin_policy['version'],
+                    'policy':female_gonadotropin_policy['zecSourcePolicy'],
+                    'minAge':minimum, 'maxAge':maximum, 'maxAgeExclusive':True}}
         assert row['minAge'] <= minimum < maximum <= row['maxAge']
         median=row['medianIuL']
-        add('zec2012-'+row['sex']+'-fsh-age-'+str(row['minAge'])+'-'+str(row['maxAge']),
+        add(identifier,
             'fsh',row['sex'],
-            [dict(ageYears=minimum,value=median),dict(ageYears=maximum,value=median)],
+            [dict(ageYears=row['applicationMinAge'],value=median),
+             dict(ageYears=row['applicationMaxAge'],value=median)],
             minimum,maximum,'Zec 2012 · FSH · przed pokwitaniem',zec['source']['url'],
             zec['assay']['method'],'Dzieci przed pokwitaniem (Tanner 1); Zagrzeb, Chorwacja',
             'group-median',interpolation='constant',maxAgeExclusive=True,
@@ -104,8 +128,73 @@ def build():
                         'sourceAgeBoundaryDefinition':zec['ageRouting']['sourceBoundaryDefinition'],
                         'ageRouting':zec['ageRouting']['applicationPolicy'],
                         'routingNote':row['routingNote'],
-                        'assay':zec['assay']},
+                        'assay':zec['assay'], **source_routing},
             limitations=zec['limitations'])
+
+    female_madsen = json.loads((ROOT/female_gonadotropin_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    gonadotropin_comparison = json.loads((ROOT/'gonadotropin-comparison-reference-data.json').read_text(encoding='utf-8'))
+    for route in female_gonadotropin_policy['profiles']:
+        analyte = route['analyte']
+        hormone = female_madsen['hormones'][analyte]
+        comparison = next(p for p in gonadotropin_comparison['profiles'] if p['id'] == route['sourceProfileId'])
+        assert hormone['unit'] == 'IU/L' and hormone['statistic'] == 'model_p50_median'
+        assert [p['ageYears'] for p in hormone['points']] == list(range(6,17))
+        assert all(math.isclose(p['median'], math.exp(p['M_logSIx1e6'])/1e6,
+                                rel_tol=1e-14, abs_tol=0) for p in hormone['points'])
+        points = [dict(ageYears=p['ageYears'], value=p['median']) for p in hormone['points']]
+        assert points == comparison['points']
+        assert (route['minAge'], route['maxAge'], route['maxAgeExclusive']) == (6,16,False)
+        add(route['id'], analyte, 'female', points, route['minAge'], route['maxAge'],
+            comparison['sourceLabel'], comparison['url'], comparison['method'],
+            comparison['population'], 'median', ordinaryOnly=True,
+            maxAgeExclusive=route['maxAgeExclusive'],
+            compatibleAssayMethodIds=comparison['compatibleAssayMethodIds'],
+            patientNote=female_gonadotropin_policy['patientNote'],
+            provenance={**comparison['provenance'],
+                        'sourceWorksheet':hormone['sheet'],
+                        'sourceCells':[p['sourceCells'] for p in hormone['points']],
+                        'transform':female_madsen['transform'],
+                        'lowerLimitOfQuantification':hormone['lowerLimitOfQuantification'],
+                        'sourceRouting':{'version':female_gonadotropin_policy['version'],
+                            'minAge':route['minAge'], 'maxAge':route['maxAge'],
+                            'maxAgeExclusive':route['maxAgeExclusive'],
+                            'selectionPolicy':female_gonadotropin_policy['selectionPolicy']}},
+            limitations=[*[note for note in comparison['limitations']
+                            if not note.startswith('Profil dostępny wyłącznie w porównaniu płci')],
+                female_gonadotropin_policy['interpolation'],
+                'LH w wieku 6–9 lat ma medianę około 0,105 IU/L, blisko LLOQ 0,1 IU/L; drobne różnice nie oznaczają precyzyjnej klasyfikacji klinicznej.'
+                if analyte == 'lh' else
+                'Model wieku nie jest medianą dla konkretnego stadium Th ani fazy cyklu.'])
+
+    e2_policy = json.loads((ROOT/'female-estradiol-reference-policy.json').read_text(encoding='utf-8'))
+    assert e2_policy['kind'] == 'educational-source-selection' and e2_policy['ordinaryOnly'] is True
+    assert (e2_policy['analyte'], e2_policy['sex'], e2_policy['unit']) == ('e2', 'female', 'pmol/L')
+    e2_source = json.loads((ROOT/e2_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    e2 = e2_source['hormones']['e2']
+    assert e2['unit'] == e2_policy['unit'] and e2['statistic'] == 'model_p50_median'
+    assert [point['ageYears'] for point in e2['points']] == list(range(6,19))
+    assert (e2_policy['minAge'], e2_policy['maxAge'], e2_policy['maxAgeExclusive']) == (6,18,False)
+    assert all(math.isclose(point['median'], math.exp(point['M_logSIx1e6'])/1e6,
+                            rel_tol=1e-14, abs_tol=0) for point in e2['points'])
+    add(e2_policy['id'], 'e2', 'female',
+        [dict(ageYears=point['ageYears'], value=point['median']) for point in e2['points']],
+        e2_policy['minAge'], e2_policy['maxAge'], 'Madsen 2022 · dziewczęta',
+        e2_source['source']['url'], e2['assay'],
+        'Bergen Growth Study 2 + Fit Futures; dziewczęta, Norwegia', 'median',
+        ordinaryOnly=e2_policy['ordinaryOnly'], maxAgeExclusive=e2_policy['maxAgeExclusive'],
+        specimen=e2_policy['specimen'], compatibleSpecimenIds=e2_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=e2_policy['compatibleAssayMethodIds'],
+        excludedCyclePhases=e2_policy['excludedCyclePhases'], patientNote=e2_policy['patientNote'],
+        provenance={**e2_source['source'], 'sourceWorksheet':e2['sheet'],
+                    'sourceCells':[point['sourceCells'] for point in e2['points']],
+                    'transform':e2_source['transform'], 'methodDetails':e2['methodDetails'],
+                    'sourceRouting':{'version':e2_policy['version'],
+                        'minAge':e2_policy['minAge'], 'maxAge':e2_policy['maxAge'],
+                        'maxAgeExclusive':e2_policy['maxAgeExclusive'],
+                        'selectionPolicy':e2_policy['selectionPolicy']}},
+        limitations=[e2_policy['agePolicy'], e2_policy['assayPolicy'], e2_policy['contextPolicy'],
+                     e2_policy['lowValuePolicy'], e2_policy['interpolation'],
+                     'Model przekrojowy różnych stadiów i faz cyklu, nie trajektoria jednej pacjentki.'])
 
     testosterone=read('testosterone-model.json')
     coefficients=testosterone['formula']['coefficients']
@@ -365,6 +454,7 @@ def build():
             specimen=amh_policy['specimen'],
             compatibleSpecimenIds=amh_policy['compatibleSpecimenIds'],
             compatibleAssayMethodIds=amh_policy['compatibleAssayMethodIds'],
+            excludedCyclePhases=amh_policy['excludedCyclePhases'],
             patientNote='Grupa ' + label + ' · Access AMH, osocze.',
             ageGroup={'label':label, 'minAge':row['ageMinYears'], 'maxAge':row['ageMaxYears'],
                       'n':row['n'], 'sourceUnit':jopling['unit'], 'sourceMedian':median,
@@ -380,6 +470,7 @@ def build():
                         'ageRouting':amh_policy['ageRouting'],
                         'specimenPolicy':amh_policy['specimenPolicy'],
                         'assayPolicy':amh_policy['assayPolicy'],
+                        'reproductiveContextPolicy':amh_policy['reproductiveContextPolicy'],
                         'routingVersion':amh_policy['version']},
             limitations=[
                 'Mediana małej przekrojowej grupy próbek szpitalnych, nie wartość oczekiwana dla dokładnego wieku ani stadium Tannera.',
@@ -644,7 +735,122 @@ def build():
         compatibleAssayMethodIds=presentation['compatibleAssayMethodIds'],
         provenance=ljubicic['source'], limitations=ljubicic['limitations'])
 
-    return {'version':'2026-10-14.2','purpose':'educational-population-central-comparison',
+    fsh_policy = json.loads((ROOT/'fsh-caliper-reference-policy.json').read_text(encoding='utf-8'))
+    assert (fsh_policy['kind'], fsh_policy['ordinaryOnly'], fsh_policy['analyte'],
+            fsh_policy['unit']) == ('educational-source-selection', True, 'fsh', 'IU/L')
+    fsh_source = json.loads((ROOT/fsh_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    # The ordinary source switch includes age 16 (also completed-month age).
+    # Retain every Madsen source node; the separate sex comparison still uses
+    # its original, published inclusive year-16 endpoint.
+    for identifier in fsh_policy['madsenProfiles']:
+        existing = next(profile for profile in profiles if profile['id'] == identifier)
+        assert existing['analyte'] == 'fsh' and existing['maxAge'] == 16
+        existing['maxAgeExclusive'] = True
+    for route in fsh_policy['profiles']:
+        series = fsh_source['series'][route['sex']]
+        points = series['points']
+        assert len(points) == 181 and [point['ageYears'] for point in points] == [i/10 for i in range(10,191)]
+        assert route['minAge'] == 16 and route['maxAgeExclusive'] is True
+        assert route['maxAge'] == (18 if route['sex'] == 'male' else 19)
+        add(route['id'], 'fsh', route['sex'],
+            [dict(ageYears=point['ageYears'], value=point['centralConcentration']) for point in points],
+            route['minAge'], route['maxAge'], 'Wilson 2023 · CALIPER · FSH',
+            'https://doi.org/10.1515/cclm-2022-1077', 'Abbott ARCHITECT ci2000',
+            'CALIPER; zdrowe dzieci i młodzież, Greater Toronto, Kanada', 'median',
+            ordinaryOnly=True, maxAgeExclusive=True, specimen=fsh_policy['specimen'],
+            compatibleSpecimenIds=fsh_policy['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=fsh_policy['compatibleAssayMethodIds'],
+            excludedCyclePhases=fsh_policy['excludedCyclePhases'], patientNote=fsh_policy['patientNote'],
+            provenance={**fsh_source['source'], 'sourceWorksheet':series['sheet'],
+                        'sourceCells':[point['sourceCells'] for point in points],
+                        'sourceModel':fsh_source['model'],
+                        'sourceRouting':{'version':fsh_policy['version'], **route,
+                            'selectionPolicy':fsh_policy['selectionPolicy']}},
+            limitations=[*fsh_source['useConstraints'], fsh_policy['agePolicy'],
+                         fsh_policy['statisticPolicy'], fsh_policy['interpolation'],
+                         fsh_policy['assayPolicy'], fsh_policy['contextPolicy']])
+
+    young_adult_amh_policy = json.loads((ROOT/'male-amh-young-adult-reference-policy.json').read_text(encoding='utf-8'))
+    assert young_adult_amh_policy['kind'] == 'educational-source-selection'
+    assert young_adult_amh_policy['ordinaryOnly'] is True
+    assert (young_adult_amh_policy['analyte'], young_adult_amh_policy['sex'],
+            young_adult_amh_policy['unit']) == ('amh', 'male', 'pmol/L')
+    young_adult_amh = json.loads((ROOT/young_adult_amh_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    assert (young_adult_amh['sex'], young_adult_amh['unit'],
+            young_adult_amh['statistic']) == ('male', 'ng/mL', 'group-median')
+    amh_groups = [row for row in young_adult_amh['groups']
+                  if row['id'] == young_adult_amh_policy['sourceGroupId']]
+    assert len(amh_groups) == 1
+    row = amh_groups[0]
+    minimum, maximum = young_adult_amh_policy['minAge'], young_adult_amh_policy['maxAge']
+    assert (minimum, maximum, young_adult_amh_policy['maxAgeExclusive']) == (18, 20, True)
+    assert row['minAge'] <= minimum < maximum <= row['maxAge']
+    assert young_adult_amh['observedMinAge'] <= minimum < maximum <= young_adult_amh['observedMaxAge']
+    assert all(max(minimum, existing['minAge']) >= min(maximum, existing['maxAge'])
+               for existing in profiles if existing['analyte'] == 'amh' and existing['sex'] == 'male')
+    assert young_adult_amh_policy['compatibleAssayMethodIds'] == [young_adult_amh['assayId']]
+    assert young_adult_amh['conversion']['ngMlPerPmolL'] == 0.1401
+    source_factor = 1 / young_adult_amh['conversion']['ngMlPerPmolL']
+    median = row['median'] / young_adult_amh['conversion']['ngMlPerPmolL']
+    add(young_adult_amh_policy['id'], 'amh', 'male',
+        [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+        minimum, maximum, young_adult_amh['sourceLabel'], young_adult_amh['source']['url'],
+        young_adult_amh['assay'], young_adult_amh['population'], 'group-median',
+        interpolation='constant', ordinaryOnly=True, maxAgeExclusive=True,
+        specimen=young_adult_amh_policy['specimen'],
+        compatibleSpecimenIds=young_adult_amh_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=young_adult_amh_policy['compatibleAssayMethodIds'],
+        patientNote=young_adult_amh_policy['patientNote'],
+        ageGroup={'label':row['label'], 'minAge':row['minAge'], 'maxAge':row['maxAge'],
+                  'n':row['n'], 'sourceUnit':young_adult_amh['unit'], 'sourceMedian':row['median'],
+                  'boundaryPolicy':'published-group-with-separate-conservative-application-routing',
+                  'description':f"Mediana całej grupy {row['label']} (N={row['n']}); nie jest medianą dokładnego wieku ani stadium Tannera. Zastosowanie wyłącznie w wieku 18–<20 lat nie tworzy nowej mediany tej podgrupy."},
+        provenance={**young_adult_amh['source'], 'participants':young_adult_amh['participants'],
+                    'groupParticipants':row['n'], 'sourceUnit':young_adult_amh['unit'],
+                    'sourceToCanonicalFactor':source_factor, 'sourceSpecimen':young_adult_amh['matrix'],
+                    'readableSource':young_adult_amh_policy['sourceEvidence'], 'sourceGroupId':row['id'],
+                    'sourceRouting':{'version':young_adult_amh_policy['version'],
+                        'minAge':minimum, 'maxAge':maximum, 'maxAgeExclusive':True,
+                        'selectionPolicy':young_adult_amh_policy['selectionPolicy']}},
+        limitations=[*young_adult_amh['limitations'], young_adult_amh_policy['agePolicy'],
+                     young_adult_amh_policy['assayPolicy'], young_adult_amh_policy['contextPolicy'],
+                     young_adult_amh_policy['interpolation']])
+
+    male_lh_policy = json.loads((ROOT/'male-lh-caliper-reference-policy.json').read_text(encoding='utf-8'))
+    assert (male_lh_policy['kind'], male_lh_policy['ordinaryOnly'],
+            male_lh_policy['analyte'], male_lh_policy['sex'], male_lh_policy['unit']) == (
+                'educational-source-selection', True, 'lh', 'male', 'IU/L')
+    assert (male_lh_policy['minAge'], male_lh_policy['minAgeExclusive'],
+            male_lh_policy['maxAge'], male_lh_policy['maxAgeExclusive']) == (16, True, 18, True)
+    male_lh_source = json.loads((ROOT/male_lh_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    assert (male_lh_source['analyte'], male_lh_source['sex'], male_lh_source['unit']) == ('lh', 'male', 'IU/L')
+    assert male_lh_source['status'] == 'qualified_reconstruction_for_educational_age_reference_not_laboratory_ri'
+    assert set(male_lh_source['series']) == {'male'}
+    male_lh_series = male_lh_source['series']['male']
+    male_lh_points = male_lh_series['points']
+    assert len(male_lh_points) == 91
+    assert [point['ageYears'] for point in male_lh_points] == [i/10 for i in range(100, 191)]
+    assert all(max(16, existing['minAge']) >= min(18, existing['maxAge'])
+               for existing in profiles if existing['analyte'] == 'lh' and existing['sex'] == 'male')
+    add(male_lh_policy['id'], 'lh', 'male',
+        [dict(ageYears=point['ageYears'], value=point['centralConcentration']) for point in male_lh_points],
+        16, 18, 'Wilson 2023 · CALIPER · LH', male_lh_source['source']['url'],
+        'Abbott ARCHITECT ci2000', 'CALIPER; zdrowi chłopcy, Greater Toronto, Kanada', 'median',
+        approximate=True, ordinaryOnly=True, minAgeExclusive=True, maxAgeExclusive=True,
+        specimen=male_lh_policy['specimen'], compatibleSpecimenIds=male_lh_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=male_lh_policy['compatibleAssayMethodIds'],
+        patientNote=male_lh_policy['patientNote'],
+        provenance={**male_lh_source['source'], 'sourceWorksheet':male_lh_series['sheet'],
+                    'sourceCells':[point['sourceCells'] for point in male_lh_points],
+                    'sourceModel':male_lh_source['model'],
+                    'sourceRouting':{'version':male_lh_policy['version'], 'minAge':16,
+                        'minAgeExclusive':True, 'maxAge':18, 'maxAgeExclusive':True,
+                        'selectionPolicy':male_lh_policy['selectionPolicy']}},
+        limitations=[*male_lh_source['useConstraints'], male_lh_policy['agePolicy'],
+                     male_lh_policy['statisticPolicy'], male_lh_policy['reconstructionPolicy'],
+                     male_lh_policy['interpolation'], male_lh_policy['assayPolicy'], male_lh_policy['contextPolicy']])
+
+    return {'version':'2026-10-18.3','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

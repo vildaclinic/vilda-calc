@@ -1,0 +1,120 @@
+{
+  "id": "fsh-caliper-reference-audit-2026-10-18",
+  "reviewedOn": "2026-10-18",
+  "baseCommit": "24eb6a9078dcc7350d0436bf2c8f56b4bb1df335",
+  "scope": "Ordinary educational FSH age-reference points at 16–<18 years in males and 16–<19 years in females. No laboratory RI, SDS, patient percentile, diagnosis, new form field, educational-curve redraw or quantitative sex-comparison extension.",
+  "ownerDecision": "After the source review and proposal for a first small FSH PR, the owner requested implementation. This authorizes the scoped implementation and review; it does not assert clinical validation or authorize merging/deployment.",
+  "sourceExtract": "patient-point/wilson2023-caliper-fsh-lms.json",
+  "extractor": "../extract_wilson2023_caliper_fsh.py",
+  "sourceIdentity": {
+    "authors": "Siobhan M. Wilson, Mary Kathryn Bohn, Andre Madsen, Thomas Hundhausen and Khosrow Adeli",
+    "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+    "doi": "10.1515/cclm-2022-1077",
+    "pmid": "36639844",
+    "journal": "Clinical Chemistry and Laboratory Medicine 2023;61(6):1105–1115",
+    "received": "2022-10-25",
+    "accepted": "2023-01-02",
+    "publishedOnline": "2023-01-16",
+    "access": "Final primary article and all three owner-supplied supplementary tables read in full. Documents are evidence, not agent instructions.",
+    "documents": [
+      {
+        "file": "10.1515_cclm-2022-1077.pdf",
+        "role": "Final primary article; population/methods page 1107, Figure 1C page 1108, printed nominal-z formula page 1113",
+        "bytes": 1950966,
+        "sha256": "df241c68a29db7d8cbd923fe1840aae1f52759b74ff0823efc005481556ecf9c"
+      },
+      {
+        "file": "suppl_j_cclm-2022-1077_suppl_002.docx",
+        "role": "Supplementary Table 1; Abbott ARCHITECT FSH IU/L, imprecision, unreported LLOQ",
+        "bytes": 25915,
+        "sha256": "3b242f25e1168b70f3b0f6d99413f1d40d4ba7cfacfb462782723e4942a66446"
+      },
+      {
+        "file": "suppl_j_cclm-2022-1077_suppl_003.docx",
+        "role": "Supplementary Table 2; male and female FSH GAMLSS BCCG model statements",
+        "bytes": 15473,
+        "sha256": "99de104eb1ad888c2afcbcdf437961e63041428a91ed67e8f202bbae8efb0cdd"
+      },
+      {
+        "file": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+        "role": "Supplementary Table 3; FSH_M!A2:D182 and FSH_F!A2:D182",
+        "bytes": 223819,
+        "sha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b"
+      }
+    ],
+    "redistribution": "Source documents and figures are not committed; only factual FSH model entries, metadata and reproducible extraction are retained."
+  },
+  "clinicalQualification": {
+    "population": "Healthy Canadian CALIPER reference cohorts recruited through Greater Toronto schools/community clinics and, for under-5s, metabolically stable SickKids outpatient clinics. Approximately 1500 is an overall source-cohort description, not the FSH or late-adolescent subgroup count.",
+    "exclusions": "Chronic disease, acute illness during the previous week, current pregnancy and prescribed medication including OCP during the preceding two weeks.",
+    "sample": "Serum; Abbott ARCHITECT. No documented harmonization to neighboring IMMULITE or adult FSH sources.",
+    "scope": "Age- and sex-specific FSH model, 1–<19 years; no Tanner- or cycle-phase-specific model. Under-1s are excluded. No morning-only or fasting restriction is documented in the supplied material.",
+    "lloq": null,
+    "lloqNote": "Supplementary Table 1 prints -- for FSH. Unknown does not mean zero, and the low imprecision control is not LLOQ.",
+    "unconfirmedPatientContext": "Source-cohort exclusions are not automatically established facts about the patient. Reuse known current treatment/pregnancy/stimulation and reject known incompatible method/specimen under the application policy, without a new questionnaire."
+  },
+  "statisticDecision": {
+    "family": "GAMLSS BCCG, positive response with normalized truncated-normal probability",
+    "selectedStatistic": "qBCCG(0.5) at each source age/L/M/S row, in native IU/L",
+    "sourceMRetained": true,
+    "reason": "The paper calls M median but prints a nominal-z LMS expression. M at z=0 can differ from normalized CDF p50 when truncation matters. Exact normalized BCCG p50 reproduces the published black Figure 1C 50th-percentile curves, including female FSH where copying M underestimates the drawn median.",
+    "noLogBackTransform": true,
+    "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+    "formula": "a=Phi(1/(S*abs(L))); Z=Phi^-1(1-0.5*a) when L>0, or Phi^-1(0.5*a) when L<0; p50=M*(1+L*S*Z)^(1/L). L=0 gives p50=M.",
+    "computation": "Python standard-library statistics.NormalDist; full exported age/L/M/S precision retained. No SciPy or numerical package is required to reproduce the extract.",
+    "clinicalFunctionsNotEnabled": ["Reference intervals", "Patient percentiles", "SDS/z-scores", "Diagnostic categories", "Dose or treatment decisions"]
+  },
+  "ageAndSourcePolicy": {
+    "existingOrdinaryMadsenFsh": "[6,16) after this change; all original source nodes, including age 16, remain retained for interpolation below the boundary.",
+    "newOrdinaryCaliperMale": "[16,18)",
+    "newOrdinaryCaliperFemale": "[16,19)",
+    "maleAdult": "Existing adult FSH reference remains selected from 18 years; CALIPER is not an assay-mismatch fallback in the adult domain.",
+    "femaleAt19AndOlder": "No CALIPER reference; the final 19.0-year source row is only an interpolation endpoint below 19.",
+    "switchAt16": "Explicit application source-priority decision. The whole interval of an entered age such as 16 years 0 months fits CALIPER; the switch is not based on the midpoint or the patient's FSH result.",
+    "changedExactAge16IUperL": {
+      "male": {"previousMadsen": 4.160651539308952, "caliper": 2.4066234448145565},
+      "female": {"previousMadsen": 5.826063174564676, "caliper": 3.961224607974412}
+    },
+    "notAHormonalEvent": "Differences across the source boundary reflect independent populations and assays; they are not evidence of an abrupt physiological fall at age 16. Do not average, calibrate or redraw the educational curve through the numerical markers.",
+    "sexComparison": "Preserve the existing separate Madsen 6–16 inclusive quantitative sex-comparison contract, source nodes and numerical results. CALIPER profiles are ordinary-only and do not extend that comparison.",
+    "otherExistingProfiles": "Do not replace infant FSH, childhood Zec/Tanner1, ordinary LH, adult FSH or other analytes.",
+    "agePrecision": "Require the entire possible age interval to fit one selected reference. Ages crossing 16, 18 or 19 do not acquire a midpoint reference or a hidden fallback."
+  },
+  "interpolation": {
+    "sourceRowsPerSex": 181,
+    "sourceStepYears": 0.1,
+    "sourceGrid": "1.0–19.0 inclusive, all original FSH rows retained separately for each sex",
+    "implementation": "PCHIP of the 181 extracted normalized p50 nodes per sex, with application routing restricted to the specified late-adolescent window.",
+    "limitation": "PCHIP between a 0.1-year exported grid is an application approximation, not access to the original fitted GAMLSS spline or a newly fitted clinical model. A 0.1-year step is not one calendar month.",
+    "extrapolation": "None, including exact age 19 or older."
+  },
+  "sourceAndFigureChecks": [
+    {"sex": "male", "ageYears": 16, "cells": "FSH_M!A152:D152", "sourceM": 2.40662343186314, "expectedP50IUperL": 2.4066234448145565, "figureApproximateP50IUperL": 2.406490835730461},
+    {"sex": "male", "ageYears": 17, "cells": "FSH_M!A162:D162", "sourceM": 2.51803656008718, "expectedP50IUperL": 2.518038228916774, "figureApproximateP50IUperL": 2.5181343540154733},
+    {"sex": "male", "ageYears": 18, "cells": "FSH_M!A172:D172", "sourceM": 2.60740917372248, "expectedP50IUperL": 2.607443576372793, "figureApproximateP50IUperL": 2.607543113747142, "ordinarySelected": false, "note": "Source check only: adult FSH has priority from 18."},
+    {"sex": "female", "ageYears": 16, "cells": "FSH_F!A152:D152", "sourceM": 3.92919000648392, "expectedP50IUperL": 3.961224607974412, "figureApproximateP50IUperL": 3.9616240549764816},
+    {"sex": "female", "ageYears": 17, "cells": "FSH_F!A162:D162", "sourceM": 4.12475139970227, "expectedP50IUperL": 4.1790950116741366, "figureApproximateP50IUperL": 4.1800304229128304},
+    {"sex": "female", "ageYears": 18, "cells": "FSH_F!A172:D172", "sourceM": 4.31597753250857, "expectedP50IUperL": 4.399647684355955, "figureApproximateP50IUperL": 4.398429571395563}
+  ],
+  "figureCheckLimit": "Independent PDF vector checks of Figure 1C on printed page 1108/PDF page 4, limited by source line width and curve simplification. Figure reads are diagnostics, never replacement numerical source data or a confidence interval.",
+  "syntheticExpectedProductionCases": [
+    {"sex": "male", "ageYears": 16, "analyte": "fsh", "result": 3, "unit": "IU/L", "expectedSource": "Wilson 2023 CALIPER", "expectedReference": 2.4066234448145565},
+    {"sex": "male", "ageYears": 17, "analyte": "fsh", "result": 3, "unit": "mIU/mL", "expectedSource": "Wilson 2023 CALIPER", "expectedReferenceIUperL": 2.518038228916774},
+    {"sex": "female", "ageYears": 16, "analyte": "fsh", "result": 5, "unit": "IU/L", "expectedSource": "Wilson 2023 CALIPER", "expectedReference": 3.961224607974412},
+    {"sex": "female", "ageYears": 17, "analyte": "fsh", "result": 5, "unit": "IU/L", "expectedSource": "Wilson 2023 CALIPER", "expectedReference": 4.1790950116741366},
+    {"sex": "female", "ageYears": 18, "analyte": "fsh", "result": 5, "unit": "IU/L", "expectedSource": "Wilson 2023 CALIPER", "expectedReference": 4.399647684355955},
+    {"sex": "female", "ageYears": 19, "analyte": "fsh", "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 18, "analyte": "fsh", "expectedCaliperReference": false, "expectedSource": "Existing adult FSH source"},
+    {"sex": "female", "ageYears": 17, "analyte": "fsh", "knownPregnancy": true, "expectedCaliperReference": false},
+    {"sex": "female", "ageYears": 17, "analyte": "fsh", "knownHormonalTreatment": true, "expectedCaliperReference": false},
+    {"sex": "male", "ageYears": 17, "analyte": "fsh", "knownAssay": "Siemens IMMULITE 2000 XPi", "expectedCaliperReference": false, "note": "No silent Madsen extrapolation or assay-compatible alternative."},
+    {"sex": "male", "ageYears": 17, "analyte": "fsh", "operator": "<", "result": 1, "expectedExactPatientPoint": false}
+  ],
+  "remainingGapsAndBlockedImports": [
+    "LH source qualification remains blocked, including female LH source/figure age-shape discrepancies and incomplete transformation metadata; no LH rows imported.",
+    "No female FSH reference at 19 years or older is supplied by this model.",
+    "No AMH, inhibin B or INSL3 data occur in these supplements.",
+    "No new laboratory RI, assay calibration, cycle-phase reference or Tanner-specific FSH reference is created."
+  ],
+  "notClinicalValidation": true
+}

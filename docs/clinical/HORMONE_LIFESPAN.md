@@ -105,6 +105,43 @@ i inhibiny B starszym dziewczynkom w zwykłych widokach. To opisane niżej
 rozszerzenie liczbowe uzupełnia wcześniejsze naprawy geometrii; nie zmienia
 laboratoryjnych norm ani kontraktów porównania płci.
 
+## LH chłopców — uzupełnienie odniesienia w (16,18), 18 października 2026
+
+Po oddzielnym audycie źródła właściciel zaakceptował mały PR wyłącznie
+dla chłopców. Zwykły wykres dodaje odtworzoną medianę Wilson 2023
+w otwartym `(16,18)` bez nowych pytań. Dokładne 16 pozostaje przy Madsen
+3,5142066372549756 IU/L, od 18 pozostaje Laurentino 3 IU/L. Cały możliwy
+przedział wieku musi pasować: 16 lat 0 miesięcy lub 16 ukończonych lat
+nadal przecina źródła. Dla dokładnego M17 mediana wynosi
+2,603196549069626 IU/L; formularz 16 lat 1 miesiąc / 17 lat 11 miesięcy
+daje około 2,2166851731955 / 3,01627134453025 IU/L z PCHIP.
+
+Źródłem jest pełny Wilson 2023 i suplementy, 91 węzłów `LH_M` 10–19
+co 0,1 roku, nie co miesiąc. Obliczenie to dokładny znormalizowany
+`qBCCG(0.5)` i odwrotność `exp(q)/1e6` do IU/L. Jest to jawna rekonstrukcja
+poparta logarytmowaniem opisanym w artykule, przypiętą konwencją współautora
+oraz zgodnością pięciu centyli z ryciną na 89 punktach. Kod współautora
+z października 2023 dotyczy późniejszego demonstracyjnego T4/TSH;
+nie odzyskano konkretnego preprocessingu LH Wilson. Między węzłami
+PCHIP przybliża tabelę, nie oryginalny obiekt GAMLSS.
+
+Surowica, Abbott ARCHITECT ci2000 LH; znana niezgodność metody/materiału
+blokuje punkt, nieznane pozwalają na edukacyjne zestawienie. LLOQ
+0,09 IU/L nie jest LOD ani podłogą wyniku. Pozostają istniejące bramki
+znanego leczenia/GnRHa, kanonicznej stymulacji i tożsamości pacjenta.
+Nie importujemy żeńskiego LH z niespójnego arkusza ani RI, SDS i diagnoz.
+Wszystkie 81 dotychczasowych profili, geometria, skale i porównanie płci
+są zachowane. Osobna laboratoryjna ocena LH Mayo nie zmienia się;
+edukacyjna mediana LH nie jest zapisywana w historii. Snapshot odniesienia
+pozostaje funkcją AMH, a dawne oceny odczytuje się bez ponownego liczenia.
+
+Polityka, dowody i regresje produkcyjnego silnika oraz interfejsu:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#lh-chłopców--odtworzona-mediana-w-1618-18-października-2026),
+[audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json),
+[unit](../../tests/unit/hormone-lifespan-male-lh-caliper-reference.test.mjs),
+[E2E](../../tests/e2e/hormone-lifespan-male-lh-caliper-reference.spec.mjs).
+Akceptacja edukacyjnego odniesienia nie jest walidacją kliniczną.
+
 ## Cel i granice
 
 Aktualizacja kontekstu AMH z 13.10.2026: przelicznik wykorzystuje także
@@ -625,7 +662,10 @@ Jasny znacznik nadal wskazuje źródłową medianę; przy 11,5 roku wynosi ona
 wszystkie 15 wcześniejszych profili i bramkę donoszenia. Rozszerzenie
 z 13.10.2026 dodaje trzy osobne mediany grupowe w dawnych lukach:
 Jopling w wieku 12–<13 i 15–<18 oraz Benderradji 20–<30 lat.
-Pozostają luki przed 7. dniem, 18–<20 i >70 lat. Ciągłość obrazu
+Rozszerzenie z 18.10.2026 uzupełnia 18–<20 medianą całej grupy
+18–30 lat (N=63), 6,3 ng/mL, Woloszynek 2015, tabela 2. Stosuje
+`male-amh-young-adult-reference-policy.json`; nie zmienia geometrii,
+skali ani wcześniejszych źródeł. Pozostają luki przed 7. dniem i >70 lat. Ciągłość obrazu
 nie daje nowych median, norm ani interpretacji. Porównanie płci ma odrębną politykę; dla AMH
 w minipuberty obowiązuje poniższy wyjątek.
 
@@ -792,8 +832,10 @@ Wynik odnosi się wyłącznie do profilu własnej płci. Brak kwalifikacji
 drugiej płci nie blokuje poprawnego własnego punktu. Znana niezgodna
 metoda, materiał, leczenie, niepewny wiek, wynik cenzurowany oraz
 wcześniactwo lub nieznane donoszenie niemowlęcia zachowują znaczenie.
-Dwa żeńskie profile Madsen działają tylko w tym porównaniu; nie
-trafiają do zwykłych widoków, FSH Zec lub norm laboratoryjnych.
+Dwa profile Madsen o identyfikatorach `*-sex-comparison` działają tylko
+w tym porównaniu. Od 16.10.2026 zwykłe widoki mają odrębne profile tych
+samych median wieku, zgodnie z `female-gonadotropin-reference-policy.json`.
+Nie są to normy laboratoryjne; FSH Zec pozostało przed 6 lat przy Th1.
 
 Polityka: `gonadotropin-comparison-policy.json`; dodatkowe profile:
 `gonadotropin-comparison-reference-data.json`. Źródła, wersje,
@@ -928,7 +970,7 @@ innego hormonu nie mogą zmieniać krzywych LH/FSH w obrębie danego widoku.
 | --- | --- | --- | --- |
 | Całe życie | Synteza edukacyjna grup Schmidt 2000, Ji 2008 i Ljubicic 2020; mosty są poglądowe | Wspólna 0–70 IU/L, `log1p(C / 0.5) / log1p(70 / 0.5)` | Oryginalnie kwalifikowany wynik i źródłowe odniesienie, ta sama funkcja skali; znacznik nie jest przyciągany do ilustracji |
 | Minipuberty | Odczyt ryc. 3 Ljubicic 2022: podłużna średnia modelowana każdego hormonu / jego własne maksimum | Własny szczyt każdego hormonu = 100%; bez IU/L | Tekst wyniku w jednostce wejściowej oraz pion wieku; bez liczbowej kropki i mediany na względnej osi |
-| Pokwitanie | Osobne mediany wieku Madsen 2022, 6–16 lat | Wspólna liniowa 0–8 IU/L | Wyłącznie odniesienie kwalifikowane przez istniejący silnik; sam model żeński nie aktywuje nowego profilu |
+| Pokwitanie | Osobne mediany wieku Madsen 2022, 6–16 lat | Wspólna liniowa 0–8 IU/L | Od 16.10.2026 własne profile Madsen zwykłego LH/FSH, kwalifikowane przez istniejący silnik bez wymogu Th; cały przedział wieku i pozostałe bramki nadal obowiązują |
 | Cykl przy etapie „Dorosła” | Stricker 2006, 30 dziennych median, od −15 do +14 dni względem szczytu LH | Wspólna liniowa 0–50 IU/L | Brak punktu pacjentki i wyznaczania jej fazy cyklu |
 
 Równa wysokość LH i FSH na osi stężeń odpowiada tej samej liczbie IU/L,
@@ -1053,6 +1095,33 @@ maksima LH/FSH również nie kalibrują innych analitów. Bieżący wynik
 innego hormonu zachowuje własne kwalifikowanie, jednostkę i skalę.
 Porównania płci pozostają osobnymi trybami; ta zmiana nie przenosi do
 nich źródeł Madsen lub względnej średniej COPENHAGEN.
+
+## Żeński E2 — zwykły punkt mediany wieku, 17 października 2026
+
+Po odrębnym przeglądzie źródeł właściciel polecił uruchomić profil
+`madsen2022-female-e2-age-6-18`, opisany w
+[kontrakcie punktu](hormone-lifespan/PATIENT_POINT.md#żeński-e2--mediana-wieku-618-lat-17-października-2026).
+[Polityka danych](hormone-lifespan/female-estradiol-reference-policy.json)
+oraz [audyt źródła](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json)
+rozdzielają model wieku, normy laboratoryjne i poglądowy rysunek.
+
+13 rocznych median Madsen 2022 pochodzi z surowicy LC-MS/MS dziewcząt BGS2
+i Fit Futures; cały możliwy wiek musi mieścić się w [6,18]. Th i faza cyklu
+nie są obowiązkowymi pytaniami: model wieku obejmuje je łącznie. Dokładny
+węzeł 18 jest brzegiem suplementu, bez ekstrapolacji do 18.x. Przy 12 latach
+wynik 50 pmol/L ma odniesienie 52,46318409704675 pmol/L; przy 6 latach
+1,257681951881138, przy 18 dokładnie 185,45583618764735. Mediana nie ocenia
+prawidłowości. Znana ciąża, menopauza i leczenie hormonalne wyłączają punkt
+zgodnie z konserwatywną polityką aplikacji; OCP wykluczono w samym źródle.
+Metoda nieznana dopuszcza porównanie edukacyjne, znana niezgodna je blokuje.
+LLOQ 0,58 i 13 należą do dwóch metod; bez globalnej podłogi lub imputacji.
+
+Ta aktywacja nie zmienia krzywych, skali E2 264 pmol/L, laboratoryjnych RI,
+niemowlęcych median/domeny/donoszenia, wstawki cyklu ani porównań płci.
+Znane aktualne leczenie jest jednak teraz zachowane również dla niemowlęcego
+punktu E2 i może go wyłączyć. Fakty pozostają przypisane do tej samej pacjentki,
+płci i aktualnego kontekstu; nie stają się faktami historycznej próbki.
+Nie ma nowych pól, norm, SDS ani zmian historii. Testy nie są walidacją kliniczną.
 
 ## Stała skala i połączenia
 

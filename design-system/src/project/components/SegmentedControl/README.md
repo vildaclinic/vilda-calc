@@ -5,7 +5,7 @@ Wybór jednej z dwóch–trzech opcji w rzędzie pustych pigułek: przezroczyste
 ## Kiedy używać
 
 - `.data-source-toggle`: wybór źródła danych referencyjnych (Palczewska PRO / OLAF / WHO) nad wynikami wzrostu — ukryte pola `radio` w etykietach.
-- `.adult-vitals-radio-group` + `.adult-vitals-radio-option`: krótkie pytania tak/nie w module dorosłych („Regularnie uprawia sport") oraz wybór masy do obliczeń w normach żywieniowych (`.nutrition-norms-card`).
+- `.adult-vitals-radio-group` + `.adult-vitals-radio-option`: krótkie pytania tak/nie w module dorosłych („Regularnie uprawia sport"), wybór masy do obliczeń w normach żywieniowych (`.nutrition-norms-card`) oraz „Układ PDF” siatki Palczewskiej 1–18 lat pod przyciskiem generowania (`.pal-pdf-layout-picker`, wyśrodkowana grupa).
 - `.diet-segmented-control`: przełącznik strategii w module diety („Redukcja masy" / „Stabilizacja masy") — przyciski, nie pola `radio`, stan przez `.is-active` z JS.
 - Przełączniki modułów `.module-btn.active-toggle` to stan przycisku modułu (`ModuleButton`), nie ten komponent.
 

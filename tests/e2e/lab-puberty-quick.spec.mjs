@@ -266,6 +266,8 @@ test('changing the current age or patient never restores a manual range', async 
   await choose(page);
   await currentSample(page);
   await fill(page, 'AgeYears', '6');
+  expect((await snapshot(page)).evaluation.input.puberty.appliesToCurrentContext).toBe(false);
+  await select(page, 'Stage', '4');
   const changedAge = await expectNoReportedRange(page);
   expect(changedAge.evaluation.input.age.years).toBe(6);
   expect(changedAge.evaluation.clinical.code).toBe('early_development');
@@ -303,6 +305,8 @@ test('the visible age and stage define the current result even when its note is 
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
   await fill(page, 'AgeYears', '8');
+  expect((await snapshot(page)).evaluation.input.puberty.appliesToCurrentContext).toBe(false);
+  await select(page, 'Stage', '4');
   const current = await snapshot(page);
   expect(current.evaluation.input.contextBasis).toBe('current-patient');
   expect(current.evaluation.input.sampleDateISO).toBeNull();
@@ -361,7 +365,7 @@ test('a previously saved dated sample retains its historical age and absent stag
   const saved = await page.evaluate((id) => window.VildaVault.getPatientNote(id), legacy.note.id);
   expect(saved.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${legacy.note.id}"] .vilda-lab-assessment`);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'above');
   await expect(recorded.locator('[data-comparison="stage"]')).toHaveAttribute('data-status', 'unavailable');
@@ -435,7 +439,7 @@ test('new pins omit a manual range while history preserves the profile and range
   const historical = await page.evaluate((id) => window.VildaVault.getPatientNote(id), legacy.note.id);
   expect(historical.labResult.assessment).toEqual(legacy.assessment);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   const recorded = page.locator(`.vilda-lab-assessment-history-row[data-note-id="${saved.id}"] .vilda-lab-assessment`);
   await expect(recorded.locator('[data-comparison="reported"]')).toHaveCount(0);
   await expect(recorded.locator('[data-comparison="age"]')).toHaveAttribute('data-status', 'within');
@@ -484,7 +488,7 @@ test('historical manual ranges retain limits, invalid input, censored results an
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
+  await page.locator('.vilda-patient-tab[data-tab="lab"]').click(); // LAB-HISTORIA PR2: zapisane oceny są w zakładce „Badania”
   for (const fixture of fixtures) {
     const reread = await page.evaluate((id) => window.VildaVault.getPatientNote(id), fixture.note.id);
     expect(reread.labResult.assessment).toEqual(fixture.assessment);
@@ -531,6 +535,8 @@ test.describe('320 px quick form', () => {
     await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
     await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
     await fill(page, 'AgeYears', '6');
+    expect((await snapshot(page)).evaluation.input.puberty.appliesToCurrentContext).toBe(false);
+    await select(page, 'Stage', '4');
     await expectNoReportedRange(page);
     await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
     await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
