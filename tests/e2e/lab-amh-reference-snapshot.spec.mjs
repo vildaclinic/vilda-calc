@@ -438,8 +438,14 @@ test('AMH calendar editor preserves the stored source on comments and invalidate
   const edit = async () => {
     await settleCalendar(page);
     await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).waitFor({ state: 'attached' });
-    await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).evaluate(el => el.click());
-    await page.locator('.tz-pop button[data-pop="edit"]').evaluate(el => el.click());
+    // A bootstrap refresh can close the popover between Playwright calls.
+    // The explicit delayed-read regression below remains unchanged.
+    await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).evaluate(el => {
+      el.click();
+      const editButton = document.querySelector('.tz-pop button[data-pop="edit"]');
+      if (!editButton) throw new Error('Calendar event click did not open its edit menu');
+      editButton.click();
+    });
     await expect(page.locator('#tzNewTermOverlay')).toBeVisible();
   };
   await edit();
