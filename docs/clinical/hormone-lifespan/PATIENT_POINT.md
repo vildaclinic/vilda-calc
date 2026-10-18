@@ -74,6 +74,69 @@ znane leczenie hormonalne może teraz wyłączyć jego punkt. Nie przenosi fakt�
 między pacjentami/płciami ani na historyczną próbkę. To jawna zmiana kwalifikacji,
 nie zmiana źródła niemowląt. Testy nie stanowią walidacji klinicznej.
 
+## LH chłopców — odtworzona mediana w (16,18), 18 października 2026
+
+Po źródłowym audycie właściciel polecił mały PR tylko dla chłopców.
+[Polityka](male-lh-caliper-reference-policy.json) dodaje jeden profil
+`wilson2023-male-lh-age-over16-under18`, wyłącznie w zwykłych widokach
+i ściśle po 16. i przed 18. rokiem życia. Wszystkie 81 wcześniejszych
+profili pozostaje niezmienionych. Dokładne 16 zachowuje Madsen
+3,5142066372549756 IU/L, od 18 zachowane jest Laurentino 3 IU/L.
+Nie dopasowujemy linii lub skali do tych przejść i nie rozszerzamy
+osobnej polityki porównania płci.
+
+[Wilson 2023](https://doi.org/10.1515/cclm-2022-1077), Supplemental Table 3
+`LH_M!A2:D92`, zawiera 91 węzłów 10–19 co 0,1 roku, nie miesięcznych.
+Źródłowa domena modelu to 10–<19; wiersz 19 jest technicznym końcem
+interpolacji. Zachowujemy pełne L/M/S i obliczamy znormalizowany
+`qBCCG(0.5)`, następnie `exp(q)/1e6` do IU/L. PCHIP w stężeniach
+przybliża całą tabelę, nie odtwarza oryginalnego obiektu GAMLSS.
+Samo M lub `exp(M)/1e6` nie jest ogólnie dokładną medianą.
+
+To jawna, zaakceptowana **rekonstrukcja**, nie odzyskany preprocessing
+LH Wilson. Artykuł opisuje logarytmowanie LH; [przypięty kod współautora](https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196)
+podaje konwencję `log(hormone*1e6)` / `exp(...)/1e6`, a pięć męskich
+centyli zgadza się z ryciną na 89 punktach wieku. Kod jest późniejszym
+przykładem T4/TSH z października 2023, z opcjonalną zakomentowaną
+transformacją, nie dokładnym skryptem tego badania. Żeński arkusz
+pozostaje niespójny z ryciną; nie importujemy go. Bez nowych RI, SDS,
+percentyli pacjenta, rozpoznania ani wnioskowania o stadium z wieku.
+
+Cały możliwy wiek musi mieścić się w `(16,18)`. Wpis 16 lat 0 miesięcy
+obejmuje `[16,16+1/12)`, a 16 ukończonych lat obejmuje `[16,17)`;
+oba przecinają granicę i nie dają jednej mediany. Nie wybieramy ich
+środka ani nie przesuwamy granicy o epsilon. Przedział
+`[17+11/12,18)` mieści się w profilu, a `[17.99,18]` już nie.
+
+| Syntetyczny wiek chłopca / LH w IU/L lub mIU/mL | Oczekiwane odniesienie |
+| --- | --- |
+| Dokładnie 16 lat | Madsen 3,5142066372549756 IU/L |
+| Formularz 16 lat 0 miesięcy lub 16 ukończonych lat | Brak jednej mediany; niepewny wiek obejmuje styk |
+| Formularz 16 lat 1 miesiąc | Odtworzona mediana około 2,2166851731955 IU/L z PCHIP |
+| Dokładnie 17 lat | Odtworzona mediana 2,603196549069626 IU/L |
+| Formularz 17 lat 11 miesięcy | Odtworzona mediana około 3,01627134453025 IU/L z PCHIP |
+| Dokładnie 18 lat | Dotychczasowa średnia grupy Laurentino 3 IU/L |
+
+Źródło opisuje zdrową kanadyjską populację CALIPER, surowicę i Abbott
+ARCHITECT ci2000 LH. Znana niezgodna metoda/materiał blokuje bez fallbacku;
+nieznane pozwalają na dotychczasowe porównanie orientacyjne. Brak nowych
+pytań o Tanner, metodę lub porę pobrania. Istniejące bramki tożsamości,
+płci, znanego leczenia/GnRHa i kanonicznego `measurementKind: 'stimulated'`
+pozostają; ta zmiana nie rozszerza przekazywania pól dawnych protokołów.
+LLOQ 0,09 IU/L nie jest LOD ani podłogą: dokładne zero pozostaje zerem,
+a nierówność nie tworzy dokładnego punktu.
+
+Edukacyjna mediana LH **nie trafia do historii**. Snapshot źródłowego
+odniesienia pozostaje funkcją AMH; zapis LH zachowuje niezależną
+laboratoryjną ocenę Mayo. Dawne wpisy są odczytywane bez ponownego
+liczenia dzisiejszym źródłem lub kontekstem innego pacjenta.
+Źródła, hashe i odtwarzanie:
+[audyt](evidence/male-lh-caliper-reference-audit-2026-10-18.json),
+[ekstraktor](extract_wilson2023_caliper_male_lh.py).
+Regresje rzeczywistego silnika i UI:
+[unit](../../../tests/unit/hormone-lifespan-male-lh-caliper-reference.test.mjs),
+[E2E](../../../tests/e2e/hormone-lifespan-male-lh-caliper-reference.spec.mjs).
+
 ## FSH CALIPER — zwykłe odniesienie od 16 lat, 18 października 2026
 
 Aktualna [polityka FSH](fsh-caliper-reference-policy.json) zastępuje wyłącznie

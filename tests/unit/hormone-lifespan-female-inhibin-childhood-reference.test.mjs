@@ -39,8 +39,8 @@ function evaluateReportedAge(input, extra) {
 
 describe('Inhibina B młodszych dziewczynek — źródłowe mediany grup Zhou 2025', () => {
   it('dodaje tylko dwa profile i zachowuje wszystkie 74 wcześniejsze profile, przeliczenia oraz pozostały runtime', () => {
-    expect(data.profiles).toHaveLength(81);
-    expect(data.version).toBe('2026-10-18.2');
+    expect(data.profiles).toHaveLength(82);
+    expect(data.version).toBe('2026-10-18.3');
     const previous = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-14.1',
       profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => !addedIds.includes(profile.id)) };
     expect(previous.profiles).toHaveLength(74);

@@ -184,7 +184,7 @@ for (const [sex, width] of [['M', 1440], ['F', 320]]) {
   });
 }
 
-test('FSH source boundaries do not extend LH or the independent sex-comparison model', async ({ page }) => {
+test('FSH boundaries preserve separate male/female LH routing and the independent sex-comparison model', async ({ page }) => {
   await prepare(page);
   await converter(page);
   for (const sex of ['M', 'F']) {
@@ -195,7 +195,11 @@ test('FSH source boundaries do not extend LH or the independent sex-comparison m
       await patient(page, sex, age);
       await expectPoint(page, sex, age);
       await choose(page, 'lh');
-      await expect(panel(page).locator('[data-patient-concentration="lh"]')).toHaveCount(0);
+      const lhPoint = panel(page).locator('[data-patient-concentration="lh"]');
+      if (sex === 'M' && age === 17) {
+        await expect(lhPoint).toHaveAttribute('data-profile', 'wilson2023-male-lh-age-over16-under18');
+        expect(Number(await lhPoint.getAttribute('data-reference-value'))).toBeCloseTo(2.603196549069626, 8);
+      } else await expect(lhPoint).toHaveCount(0);
       await choose(page);
       await expectPoint(page, sex, age);
     }
