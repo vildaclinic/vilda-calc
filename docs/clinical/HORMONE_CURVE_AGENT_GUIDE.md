@@ -694,6 +694,27 @@ pozostają tam odrębne niejasności transformacji i żeńskiego LH.
 Źródło, reprodukcja i ograniczenia:
 [audyt FSH](hormone-lifespan/evidence/fsh-caliper-reference-audit-2026-10-18.json).
 
+## Męskie AMH — źródłowa mediana grupy w 18–<20, 18 października 2026
+
+Właściciel polecił mały PR uzupełniający wyłącznie tę lukę. Stosuj
+`male-amh-young-adult-reference-policy.json`: Woloszynek 2015, tabela 2,
+mediana **całej grupy 18–30 lat, N=63, 6,3 ng/mL**. Domena aplikacji
+`[18,20)` nie tworzy mediany nowej podgrupy ani ciągłego modelu wieku.
+Cały możliwy wiek musi pasować. `group-median`, `constant`, `ordinaryOnly`.
+Korzystaj z tego samego przeliczenia 0,1401 co dla wyniku pacjenta.
+
+Zachowaj 80 wcześniejszych profili, geometrię, skale, porównania płci,
+normy i dawne utrwalone oceny. Krzywa przez 18–20 nadal jest ilustracją;
+jasny znacznik wskazuje medianę grupy niezależnie od jej wysokości.
+Surowica, wąsko określony protokół manualnego Gen II ELISA, bez zgodności
+domniemanej dla zmodyfikowanego Gen II lub metod automatycznych.
+Znana niezgodność blokuje punkt, nie uruchamia zastępczego źródła.
+Nie dodawaj nowych pól lub wnioskowania o stadium, płodności, RI czy SDS.
+Poprzednie opisy luki 18–<20 są historyczne i zostają uzupełnione tym wpisem.
+
+Źródło i ograniczenia:
+[audyt AMH 18–<20](hormone-lifespan/evidence/male-amh-18-20-reference-audit-2026-10-18.json).
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.

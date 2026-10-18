@@ -301,7 +301,7 @@ test('AMH pin captures an ordinary source independently of selected lines and co
   }
 });
 
-test('AMH stores model medians and explicit source gaps without replacing the measured trend value', async ({ page }) => {
+test('AMH stores model and young-adult group medians and explicit source gaps without replacing the measured trend value', async ({ page }) => {
   test.setTimeout(120_000);
   const id = await prepare(page, { age: 44, sex: 'M' });
   await choose(page, '5.77');
@@ -311,17 +311,30 @@ test('AMH stores model medians and explicit source gaps without replacing the me
     reference: { statistic: 'median', profileId: 'tehrani2017-male-amh', ageGroup: null }, display: { unit: 'ng/mL' } });
   expect(model.labResult.hormoneReference.display.referenceValue).toBeCloseTo(5.77, 8);
   await page.evaluate(() => {
-    window.VildaPersistence.writeShared({ name: 'Fikcyjny brak odniesienia AMH', sex: 'M', age: 19, ageMonths: 0 }, { force: true });
+    window.VildaPersistence.writeShared({ name: 'Fikcyjny młody dorosły AMH', sex: 'M', age: 19, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:session-changed'));
+  });
+  await page.locator('#labValue').fill('2');
+  await expect(sourcePoint(page)).toHaveAttribute('data-profile', 'woloszynek2015-male-amh-age-18-20');
+  const youngAdult = await pin(page, id);
+  expect(youngAdult.labResult.hormoneReference).toMatchObject({ status: 'recorded',
+    context: { sex: 'male', ageYears: 19 }, measurement: { raw: '2', sourceUnit: 'ng/mL' },
+    reference: { statistic: 'group-median', profileId: 'woloszynek2015-male-amh-age-18-20',
+      ageGroup: { label: '18–30 lat', n: 63 } }, display: { unit: 'ng/mL' } });
+  expect(youngAdult.labResult.hormoneReference.display.referenceValue).toBeCloseTo(6.3, 8);
+  await page.evaluate(() => {
+    window.VildaPersistence.writeShared({ name: 'Fikcyjny brak odniesienia AMH', sex: 'M', age: 71, ageMonths: 0 }, { force: true });
     document.dispatchEvent(new CustomEvent('vilda:session-changed'));
   });
   await page.locator('#labValue').fill('2');
   await expect(sourcePoint(page)).toHaveCount(0);
   const gap = await pin(page, id);
   expect(gap.labResult.hormoneReference).toMatchObject({ status: 'unavailable', reference: null,
-    context: { sex: 'male', ageYears: 19 }, measurement: { raw: '2', sourceUnit: 'ng/mL' } });
+    context: { sex: 'male', ageYears: 71 }, measurement: { raw: '2', sourceUnit: 'ng/mL' } });
   expect(gap.labResult.hormoneReference.reasonCodes.length).toBeGreaterThan(0);
   const series = await page.evaluate(pid => window.VildaVault.listPatientLabSeries(pid), id);
   expect(series.find(s => s.testKey === 'amh').points.find(p => p.noteId === gap.id)).toMatchObject({ valueNum: 2, unit: 'ng/mL' });
+  expect(series.find(s => s.testKey === 'amh').points.find(p => p.noteId === youngAdult.id)).toMatchObject({ valueNum: 2, unit: 'ng/mL' });
   const timeline = await history(page, id);
   await expect(timeline.locator('.vilda-hormone-reference[data-reference-status="unavailable"]')).toBeVisible();
 });
@@ -425,8 +438,14 @@ test('AMH calendar editor preserves the stored source on comments and invalidate
   const edit = async () => {
     await settleCalendar(page);
     await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).waitFor({ state: 'attached' });
-    await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).evaluate(el => el.click());
-    await page.locator('.tz-pop button[data-pop="edit"]').evaluate(el => el.click());
+    // A bootstrap refresh can close the popover between Playwright calls.
+    // The explicit delayed-read regression below remains unchanged.
+    await page.locator(`.tz-wb[data-note-id="${scheduled.id}"]`).evaluate(el => {
+      el.click();
+      const editButton = document.querySelector('.tz-pop button[data-pop="edit"]');
+      if (!editButton) throw new Error('Calendar event click did not open its edit menu');
+      editButton.click();
+    });
     await expect(page.locator('#tzNewTermOverlay')).toBeVisible();
   };
   await edit();

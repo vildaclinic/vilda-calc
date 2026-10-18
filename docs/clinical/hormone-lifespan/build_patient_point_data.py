@@ -770,7 +770,53 @@ def build():
                          fsh_policy['statisticPolicy'], fsh_policy['interpolation'],
                          fsh_policy['assayPolicy'], fsh_policy['contextPolicy']])
 
-    return {'version':'2026-10-18.1','purpose':'educational-population-central-comparison',
+    young_adult_amh_policy = json.loads((ROOT/'male-amh-young-adult-reference-policy.json').read_text(encoding='utf-8'))
+    assert young_adult_amh_policy['kind'] == 'educational-source-selection'
+    assert young_adult_amh_policy['ordinaryOnly'] is True
+    assert (young_adult_amh_policy['analyte'], young_adult_amh_policy['sex'],
+            young_adult_amh_policy['unit']) == ('amh', 'male', 'pmol/L')
+    young_adult_amh = json.loads((ROOT/young_adult_amh_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    assert (young_adult_amh['sex'], young_adult_amh['unit'],
+            young_adult_amh['statistic']) == ('male', 'ng/mL', 'group-median')
+    amh_groups = [row for row in young_adult_amh['groups']
+                  if row['id'] == young_adult_amh_policy['sourceGroupId']]
+    assert len(amh_groups) == 1
+    row = amh_groups[0]
+    minimum, maximum = young_adult_amh_policy['minAge'], young_adult_amh_policy['maxAge']
+    assert (minimum, maximum, young_adult_amh_policy['maxAgeExclusive']) == (18, 20, True)
+    assert row['minAge'] <= minimum < maximum <= row['maxAge']
+    assert young_adult_amh['observedMinAge'] <= minimum < maximum <= young_adult_amh['observedMaxAge']
+    assert all(max(minimum, existing['minAge']) >= min(maximum, existing['maxAge'])
+               for existing in profiles if existing['analyte'] == 'amh' and existing['sex'] == 'male')
+    assert young_adult_amh_policy['compatibleAssayMethodIds'] == [young_adult_amh['assayId']]
+    assert young_adult_amh['conversion']['ngMlPerPmolL'] == 0.1401
+    source_factor = 1 / young_adult_amh['conversion']['ngMlPerPmolL']
+    median = row['median'] / young_adult_amh['conversion']['ngMlPerPmolL']
+    add(young_adult_amh_policy['id'], 'amh', 'male',
+        [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+        minimum, maximum, young_adult_amh['sourceLabel'], young_adult_amh['source']['url'],
+        young_adult_amh['assay'], young_adult_amh['population'], 'group-median',
+        interpolation='constant', ordinaryOnly=True, maxAgeExclusive=True,
+        specimen=young_adult_amh_policy['specimen'],
+        compatibleSpecimenIds=young_adult_amh_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=young_adult_amh_policy['compatibleAssayMethodIds'],
+        patientNote=young_adult_amh_policy['patientNote'],
+        ageGroup={'label':row['label'], 'minAge':row['minAge'], 'maxAge':row['maxAge'],
+                  'n':row['n'], 'sourceUnit':young_adult_amh['unit'], 'sourceMedian':row['median'],
+                  'boundaryPolicy':'published-group-with-separate-conservative-application-routing',
+                  'description':f"Mediana całej grupy {row['label']} (N={row['n']}); nie jest medianą dokładnego wieku ani stadium Tannera. Zastosowanie wyłącznie w wieku 18–<20 lat nie tworzy nowej mediany tej podgrupy."},
+        provenance={**young_adult_amh['source'], 'participants':young_adult_amh['participants'],
+                    'groupParticipants':row['n'], 'sourceUnit':young_adult_amh['unit'],
+                    'sourceToCanonicalFactor':source_factor, 'sourceSpecimen':young_adult_amh['matrix'],
+                    'readableSource':young_adult_amh_policy['sourceEvidence'], 'sourceGroupId':row['id'],
+                    'sourceRouting':{'version':young_adult_amh_policy['version'],
+                        'minAge':minimum, 'maxAge':maximum, 'maxAgeExclusive':True,
+                        'selectionPolicy':young_adult_amh_policy['selectionPolicy']}},
+        limitations=[*young_adult_amh['limitations'], young_adult_amh_policy['agePolicy'],
+                     young_adult_amh_policy['assayPolicy'], young_adult_amh_policy['contextPolicy'],
+                     young_adult_amh_policy['interpolation']])
+
+    return {'version':'2026-10-18.2','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

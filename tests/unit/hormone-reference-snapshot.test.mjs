@@ -118,7 +118,7 @@ describe('AMH immutable educational reference transport', () => {
   });
 
   it.each([
-    [{ sex: 'male', ageYears: 19, ageUpperYears: 19 }, 'unsupported-age'],
+    [{ sex: 'male', ageYears: 71, ageUpperYears: 71 }, 'unsupported-age'],
     [{ ageYears: .25, ageUpperYears: .25, preterm: 'yes' }, 'preterm-context'],
     [{ ageYears: 17.9, ageUpperYears: 18.1 }, 'ambiguous-age'],
     [{ assayMethodId: 'elecsys-amh' }, 'incompatible-assay'],
@@ -162,7 +162,8 @@ describe('AMH saved reference binding and legacy behavior', () => {
     const legacy = { test: 'AMH', testKey: 'amh', value: '0.45', valueNum: .45, unit: 'ng/mL', norm: 'old explicit range' };
     expect(snapshot.reconcile(null, legacy, null, DATE)).toEqual(legacy);
     expect(snapshot.forSeries(legacy, DATE)).toEqual({});
-    const unavailableLab = lab(captured({ sex: 'male', ageYears: 19, ageUpperYears: 19 }));
+    const unavailableLab = lab(captured({ sex: 'male', ageYears: 71, ageUpperYears: 71 }));
+    expect(unavailableLab.hormoneReference.status).toBe('unavailable');
     const next = snapshot.reconcile(null, unavailableLab, null, DATE);
     expect(next.valueNum).toBe(.45);
     expect(snapshot.forSeries(next, DATE)).toHaveProperty('hormoneReference');

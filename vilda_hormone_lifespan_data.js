@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-18.1",
+  "version": "2026-10-18.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -36194,6 +36194,102 @@ const patientPointData = {
         "Surowica, Abbott ARCHITECT ci2000. Nieznana metoda dopuszcza tylko orientacyjne zestawienie. Znana niezgodna metoda lub materiał blokują punkt bez zastępczego źródła. Wspólna jednostka ani nazwa Abbott nie dowodzą zgodności z i1000, IMMULITE, Roche lub innymi platformami.",
         "Model wieku i płci nie wymaga Th/G ani fazy cyklu. Nie jest medianą danego stadium lub fazy. Autorzy wykluczali aktualną ciążę, chorobę przewlekłą, ostrą chorobę w poprzednim tygodniu i leki na receptę, w tym antykoncepcję doustną w ostatnich dwóch tygodniach. Zachowaj znane leczenie i stymulację z bieżącego kontekstu; brak wywiadu nie potwierdza ich nieobecności. Nie dodawaj nowych pytań."
       ]
+    },
+    {
+      "id": "woloszynek2015-male-amh-age-18-20",
+      "analyte": "amh",
+      "sex": "male",
+      "minAge": 18,
+      "maxAge": 20,
+      "points": [
+        {
+          "ageYears": 18,
+          "value": 44.9678800856531
+        },
+        {
+          "ageYears": 20,
+          "value": 44.9678800856531
+        }
+      ],
+      "sourceLabel": "Woloszynek 2015 · AMH · grupa 18–30 lat",
+      "url": "https://journals.sagepub.com/doi/10.1177/0004563214554462",
+      "method": "Beckman Coulter AMH Gen II manual noncompetitive ELISA; 20 µL sample plus 100 µL buffer in plate; no preanalytical dilution",
+      "population": "Zdrowi brazylijscy mężczyźni, pracownicy ochrony zdrowia; Hospital das Clínicas, São Paulo.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "beckman-coulter-gen-ii-original-elisa-amh"
+      ],
+      "patientNote": "Grupa 18–30 lat · Gen II ELISA, surowica.",
+      "ageGroup": {
+        "label": "18–30 lat",
+        "minAge": 18,
+        "maxAge": 30,
+        "n": 63,
+        "sourceUnit": "ng/mL",
+        "sourceMedian": 6.3,
+        "boundaryPolicy": "published-group-with-separate-conservative-application-routing",
+        "description": "Mediana całej grupy 18–30 lat (N=63); nie jest medianą dokładnego wieku ani stadium Tannera. Zastosowanie wyłącznie w wieku 18–<20 lat nie tworzy nowej mediany tej podgrupy."
+      },
+      "provenance": {
+        "authors": "Woloszynek et al.",
+        "year": 2015,
+        "doi": "10.1177/0004563214554462",
+        "pmid": "25249661",
+        "url": "https://journals.sagepub.com/doi/10.1177/0004563214554462",
+        "pdfUrl": "https://journals.sagepub.com/doi/pdf/10.1177/0004563214554462",
+        "title": "Validation of an immunoassay for anti-Müllerian hormone measurements and reference intervals in healthy Brazilian subjects",
+        "journal": "Annals of Clinical Biochemistry 2015;52(1):67–75",
+        "sourceLocator": "Table 2, journal page 72 / PDF page 6 of 9; Methods pages 68–69; Table 1 page 72",
+        "table": 2,
+        "reviewDate": "2026-10-18",
+        "reviewBasis": "Complete final publisher PDF reread through web access; numerical row and methods independently checked in publisher HTML. No abstract-only qualification.",
+        "sourceFormat": "Publisher PDF and HTML",
+        "sourceSha256": null,
+        "sourceFileNote": "Direct PDF download returned HTTP 403; no local PDF bytes or file hash asserted. Full publisher document was accessible through the web tool.",
+        "redistribution": "Factual extract only; no article, figure or source PDF redistributed.",
+        "sourceQuantification": {
+          "analyticalSensitivityNgMl": 0.02,
+          "functionalSensitivityNgMl": 0.2,
+          "functionalSensitivityCriterion": "CV <20%",
+          "loq": null,
+          "terminologyNote": "Preserve the authors' analytical/functional sensitivity terminology; no independently stated LLOQ or patient-result cutoff inferred."
+        },
+        "participants": 104,
+        "groupParticipants": 63,
+        "sourceUnit": "ng/mL",
+        "sourceToCanonicalFactor": 7.137758743754461,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/woloszynek2015-male-amh-group-median.json",
+        "sourceGroupId": "18-30",
+        "sourceRouting": {
+          "version": "2026-10-18.1",
+          "minAge": 18,
+          "maxAge": 20,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Fixed disjoint age routing, independent of the result. Preserve Jopling below 18, Benderradji from 20 and Tehrani from 30. Known incompatible method or specimen blocks the reference without selecting a fallback source."
+        }
+      },
+      "limitations": [
+        "Mediana 6,3 ng/mL dotyczy całej źródłowej grupy 18–30 lat, N=63; nie jest medianą samego przedziału 18–<20 lat, dokładnego wieku ani stadium Tannera.",
+        "Zastosowanie wyłącznie do luki 18–<20 jest osobną polityką aplikacji, nie nowym podziałem tabeli. Nie interpolujemy ani nie łączymy tej mediany z innymi badaniami.",
+        "Nie wykazujemy zgodności z Access, DxI, Elecsys, Mindray, Immunotech ani zmodyfikowanym Gen II; nawet ogólna nazwa Gen II nie potwierdza opisanego protokołu.",
+        "Źródłowe wykluczenia nie są ustalonym wywiadem pacjenta. Nie dodajemy obowiązkowej ankiety; zachowujemy znaczenie znanych danych klinicznych, metody i materiału.",
+        "To orientacyjne porównanie edukacyjne, bez zakresu referencyjnego, SDS, percentyla pacjenta, oceny płodności i rozpoznania. Znacznik źródła pozostaje niezależny od poglądowej linii.",
+        "The source group is 18–30 years, N=63; 6.3 ng/mL is its whole-group median. Its use only in [18,20) is an explicit application policy, not a median of the 18–20 subgroup or a model for exact age. The whole possible patient age must fit [18,20); do not interpolate across sources or extend this profile to age 20.",
+        "Serum manual Beckman Coulter AMH Gen II ELISA using the protocol described in the paper. The narrow original-protocol identifier does not establish compatibility with modified Gen II, Access, Elecsys, Mindray or other assays. Missing assay or specimen allows only the existing educational comparison and does not confirm the patient's method or matrix.",
+        "Reuse existing current-patient contraindication, known GnRHa and test-protocol gates with identity protection. Missing history is unknown, not confirmation of untreated basal sampling. Do not infer Tanner stage, fertility, a reference interval, SDS or a patient percentile from this group median.",
+        "Constant whole-group median, no continuous-age interpolation. Convert native ng/mL with the existing canonical factor 1/0.1401, identically to the patient's result; unit conversion is not assay calibration."
+      ]
     }
   ],
   "unitConversions": {
@@ -39590,6 +39686,35 @@ const fshCaliperReferencePolicy = {
   ],
   "patientNote": "Mediana według wieku; nie jest normą dla stadium ani fazy cyklu."
 };
+const maleAmhYoungAdultReferencePolicy = {
+  "version": "2026-10-18.1",
+  "kind": "educational-source-selection",
+  "analyte": "amh",
+  "sex": "male",
+  "unit": "pmol/L",
+  "ordinaryOnly": true,
+  "id": "woloszynek2015-male-amh-age-18-20",
+  "sourceEvidence": "evidence/patient-point/woloszynek2015-male-amh-group-median.json",
+  "sourceGroupId": "18-30",
+  "minAge": 18,
+  "maxAge": 20,
+  "maxAgeExclusive": true,
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "compatibleAssayMethodIds": [
+    "beckman-coulter-gen-ii-original-elisa-amh"
+  ],
+  "scope": "One published whole-group median fills only the ordinary male AMH gap [18,20). The 80 earlier profiles, educational geometry, scales, comparisons, laboratory interpretation and historical saved assessments retain their contracts.",
+  "selectionPolicy": "Fixed disjoint age routing, independent of the result. Preserve Jopling below 18, Benderradji from 20 and Tehrani from 30. Known incompatible method or specimen blocks the reference without selecting a fallback source.",
+  "agePolicy": "The source group is 18–30 years, N=63; 6.3 ng/mL is its whole-group median. Its use only in [18,20) is an explicit application policy, not a median of the 18–20 subgroup or a model for exact age. The whole possible patient age must fit [18,20); do not interpolate across sources or extend this profile to age 20.",
+  "assayPolicy": "Serum manual Beckman Coulter AMH Gen II ELISA using the protocol described in the paper. The narrow original-protocol identifier does not establish compatibility with modified Gen II, Access, Elecsys, Mindray or other assays. Missing assay or specimen allows only the existing educational comparison and does not confirm the patient's method or matrix.",
+  "contextPolicy": "Reuse existing current-patient contraindication, known GnRHa and test-protocol gates with identity protection. Missing history is unknown, not confirmation of untreated basal sampling. Do not infer Tanner stage, fertility, a reference interval, SDS or a patient percentile from this group median.",
+  "interpolation": "Constant whole-group median, no continuous-age interpolation. Convert native ng/mL with the existing canonical factor 1/0.1401, identically to the patient's result; unit conversion is not assay calibration.",
+  "patientNote": "Grupa 18–30 lat · Gen II ELISA, surowica."
+};
 const gonadotropinComparisonPolicy = {
   "version": "2026-10-18.1",
   "retainSourceEndpointProfileIds": [
@@ -39894,6 +40019,7 @@ return {
   femaleGonadotropinReferencePolicy: femaleGonadotropinReferencePolicy,
   femaleEstradiolReferencePolicy: femaleEstradiolReferencePolicy,
   fshCaliperReferencePolicy: fshCaliperReferencePolicy,
+  maleAmhYoungAdultReferencePolicy: maleAmhYoungAdultReferencePolicy,
   gonadotropinComparisonPolicy: gonadotropinComparisonPolicy,
   gonadotropinComparisonReferenceData: gonadotropinComparisonReferenceData
 };

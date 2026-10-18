@@ -33,7 +33,7 @@ const groups = [
 describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilustracji', () => {
   it('dodaje tylko trzy rozłączne profile, zachowując 65 pozostałych wcześniejszych profili i przeliczenia', () => {
     expect(newIds).toEqual(groups.map(g => g.id));
-    expect(data.profiles).toHaveLength(80);
+    expect(data.profiles).toHaveLength(81);
     expect(laterFemaleIds).toHaveLength(5);
     // The later extension of the one ordinary female inhibin profile is tested separately.
     const revisedInhibinId = 'borelli2025-female-inhb-age-5p6-47';
@@ -91,15 +91,18 @@ describe('Męskie AMH — źródłowe mediany w lukach wieku, niezależne od ilu
     expect(adult).not.toHaveProperty('minimumPatientValue');
   });
 
-  it('wybiera źródło na granicach bez nakładania, fallbacku metody i zapełniania luki 18–<20', () => {
+  it('wybiera źródło na granicach bez nakładania ani fallbacku metody, także po późniejszym uzupełnieniu 18–<20', () => {
     const expected = [
       [11.999, 'wang2020-male-amh-age-11'], [12, groups[0].id], [12.999, groups[0].id],
       [13, 'wang2020-male-amh-age-13'], [14.999, 'wang2020-male-amh-age-14'],
-      [15, groups[1].id], [17.999, groups[1].id], [20, groups[2].id], [29.999, groups[2].id],
+      [15, groups[1].id], [17.999, groups[1].id],
+      [18, 'woloszynek2015-male-amh-age-18-20'], [18.9, 'woloszynek2015-male-amh-age-18-20'],
+      [19, 'woloszynek2015-male-amh-age-18-20'], [19.999, 'woloszynek2015-male-amh-age-18-20'],
+      [20, groups[2].id], [29.999, groups[2].id],
       [30, 'tehrani2017-male-amh'], [70, 'tehrani2017-male-amh']
     ];
     for (const [age, id] of expected) expect(evaluate(age)).toMatchObject({ status: 'ready', profile: { id } });
-    for (const age of [0, 6 / 365.25, 18, 18.9, 19, 19.999, 70.001]) {
+    for (const age of [0, 6 / 365.25, 70.001]) {
       expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
     }
     // At age 13, do not silently replace Wang serum with overlapping Jopling plasma.

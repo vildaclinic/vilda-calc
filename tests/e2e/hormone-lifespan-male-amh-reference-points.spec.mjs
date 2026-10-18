@@ -198,12 +198,18 @@ test('ordinary male AMH respects the 13, 15, 18, 20 and 30 year source boundarie
   await page.locator('#labPatientToggle').click();
   await page.locator('#labOverrideAgeMonths').fill('0');
   for (const [age, profile] of [[13, 'wang2020-male-amh-age-13'], [15, examples[1].profile],
-    [18, null], [19, null], [20, examples[2].profile], [30, 'tehrani2017-male-amh']]) {
+    [18, 'woloszynek2015-male-amh-age-18-20'], [19, 'woloszynek2015-male-amh-age-18-20'],
+    [20, examples[2].profile], [30, 'tehrani2017-male-amh'], [71, null]]) {
     await page.locator('#labOverrideAge').fill(String(age));
     if (profile) await expect(point(page)).toHaveAttribute('data-profile', profile);
     else {
       await expect(point(page)).toHaveCount(0);
       await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText(/nie udostępniono.*mediany|brak.*odniesienia/i);
+    }
+    if (age === 18 || age === 19) {
+      await expect(point(page)).toHaveAttribute('data-reference-statistic', 'group-median');
+      await expect.poll(async () => Number(await point(page).getAttribute('data-reference-value')))
+        .toBeCloseTo(6.3 / .1401, 8);
     }
     await expect(panel(page).locator('[data-patient-age-marker]')).toHaveAttribute('data-patient-age-marker', String(age));
     await expect.poll(() => geometry(page)).toEqual(original);
