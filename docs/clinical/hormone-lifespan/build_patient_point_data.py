@@ -816,7 +816,41 @@ def build():
                      young_adult_amh_policy['assayPolicy'], young_adult_amh_policy['contextPolicy'],
                      young_adult_amh_policy['interpolation']])
 
-    return {'version':'2026-10-18.2','purpose':'educational-population-central-comparison',
+    male_lh_policy = json.loads((ROOT/'male-lh-caliper-reference-policy.json').read_text(encoding='utf-8'))
+    assert (male_lh_policy['kind'], male_lh_policy['ordinaryOnly'],
+            male_lh_policy['analyte'], male_lh_policy['sex'], male_lh_policy['unit']) == (
+                'educational-source-selection', True, 'lh', 'male', 'IU/L')
+    assert (male_lh_policy['minAge'], male_lh_policy['minAgeExclusive'],
+            male_lh_policy['maxAge'], male_lh_policy['maxAgeExclusive']) == (16, True, 18, True)
+    male_lh_source = json.loads((ROOT/male_lh_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    assert (male_lh_source['analyte'], male_lh_source['sex'], male_lh_source['unit']) == ('lh', 'male', 'IU/L')
+    assert male_lh_source['status'] == 'qualified_reconstruction_for_educational_age_reference_not_laboratory_ri'
+    assert set(male_lh_source['series']) == {'male'}
+    male_lh_series = male_lh_source['series']['male']
+    male_lh_points = male_lh_series['points']
+    assert len(male_lh_points) == 91
+    assert [point['ageYears'] for point in male_lh_points] == [i/10 for i in range(100, 191)]
+    assert all(max(16, existing['minAge']) >= min(18, existing['maxAge'])
+               for existing in profiles if existing['analyte'] == 'lh' and existing['sex'] == 'male')
+    add(male_lh_policy['id'], 'lh', 'male',
+        [dict(ageYears=point['ageYears'], value=point['centralConcentration']) for point in male_lh_points],
+        16, 18, 'Wilson 2023 · CALIPER · LH', male_lh_source['source']['url'],
+        'Abbott ARCHITECT ci2000', 'CALIPER; zdrowi chłopcy, Greater Toronto, Kanada', 'median',
+        approximate=True, ordinaryOnly=True, minAgeExclusive=True, maxAgeExclusive=True,
+        specimen=male_lh_policy['specimen'], compatibleSpecimenIds=male_lh_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=male_lh_policy['compatibleAssayMethodIds'],
+        patientNote=male_lh_policy['patientNote'],
+        provenance={**male_lh_source['source'], 'sourceWorksheet':male_lh_series['sheet'],
+                    'sourceCells':[point['sourceCells'] for point in male_lh_points],
+                    'sourceModel':male_lh_source['model'],
+                    'sourceRouting':{'version':male_lh_policy['version'], 'minAge':16,
+                        'minAgeExclusive':True, 'maxAge':18, 'maxAgeExclusive':True,
+                        'selectionPolicy':male_lh_policy['selectionPolicy']}},
+        limitations=[*male_lh_source['useConstraints'], male_lh_policy['agePolicy'],
+                     male_lh_policy['statisticPolicy'], male_lh_policy['reconstructionPolicy'],
+                     male_lh_policy['interpolation'], male_lh_policy['assayPolicy'], male_lh_policy['contextPolicy']])
+
+    return {'version':'2026-10-18.3','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

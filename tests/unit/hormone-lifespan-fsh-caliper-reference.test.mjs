@@ -32,8 +32,8 @@ const checks = {
 
 describe('FSH CALIPER — źródłowe p50 późnej adolescencji, bez nowej normy laboratoryjnej', () => {
   it('dodaje dokładnie dwa profile i zmienia wyłącznie wyłączność dwóch zwykłych końców Madsen', () => {
-    expect(data.version).toBe('2026-10-18.2');
-    expect(data.profiles).toHaveLength(81);
+    expect(data.version).toBe('2026-10-18.3');
+    expect(data.profiles).toHaveLength(82);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.fshCaliperReferencePolicy).toEqual(policy);
     expect(policy.profiles.map(item => item.id)).toEqual(Object.values(ids));
@@ -123,9 +123,9 @@ describe('FSH CALIPER — źródłowe p50 późnej adolescencji, bez nowej normy
       profile: { id: 'laurentino2020-male-fsh-18-under25', statistic: 'group-mean' } });
     expect(evaluate('female', 18.999999).profile.id).toBe(ids.female);
     expect(evaluate('female', 19)).toEqual(unavailable('unsupported-age'));
-    for (const sex of ['male', 'female']) {
-      expect(evaluate(sex, 16.001, { analyte: 'lh' })).toEqual(unavailable('unsupported-age'));
-    }
+    expect(evaluate('male', 16.001, { analyte: 'lh' })).toMatchObject({ status: 'ready',
+      profile: { id: 'wilson2023-male-lh-age-over16-under18' } });
+    expect(evaluate('female', 16.001, { analyte: 'lh' })).toEqual(unavailable('unsupported-age'));
   });
 
   it.each(['male', 'female'])('%s respektuje cały niepewny wiek oraz półotwarte granice źródeł', sex => {

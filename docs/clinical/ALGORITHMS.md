@@ -2934,6 +2934,70 @@ Regresja wywołuje rzeczywisty renderer i silnik:
 [audyt żeńskiej inhibiny B](hormone-lifespan/evidence/female-inhibin-b-display-audit-2026-10-12.json).
 Akceptacja makiety i kontrole techniczne nie są walidacją kliniczną.
 
+### HORMONE-MALE-LH-CALIPER-REFERENCE — odtworzona mediana w (16,18), 2026-10-18
+
+**Decyzja i wpływ kliniczny:** po audycie źródła właściciel polecił mały PR
+wyłącznie dla chłopców. [Polityka](hormone-lifespan/male-lh-caliper-reference-policy.json)
+dodaje jeden zwykły profil `wilson2023-male-lh-age-over16-under18`, uzupełniając
+edukacyjne odniesienie LH ściśle po 16. i przed 18. rokiem życia. Wszystkie
+81 wcześniejszych profili pozostaje bez zmian. Dokładne 16 lat zachowuje
+Madsen, 3,5142066372549756 IU/L; od 18 lat pozostaje Laurentino, 3 IU/L.
+Nie zmieniają się normy laboratoryjne, silnik oceny, geometria, skale,
+porównanie płci ani formularz. Żeńskie LH nadal wymaga wyjaśnienia
+rozbieżności między arkuszem i ryciną i nie jest importowane.
+
+**Źródło i poziom dowodu:** [Wilson 2023](https://doi.org/10.1515/cclm-2022-1077),
+CCLM 61(6):1105–1115, PMID 36639844; pełny artykuł i Supplemental Tables
+1–3 dostarczone przez właściciela. `LH_M!A2:D92` zawiera 91 węzłów 10–19
+co 0,1 roku, nie co miesiąc; opublikowana domena LH to 10–<19. Surowica,
+Abbott ARCHITECT ci2000; zdrowa kanadyjska kohorta CALIPER. Około 1500
+opisuje kohorty źródłowe wszystkich analitów, nie N chłopców 16–18 lat.
+Nie podano modelu stadium Tannera ani standaryzacji porannego pobrania.
+
+Najpierw wyznaczamy dokładny, znormalizowany `qBCCG(0.5)` na skali modelu,
+następnie `exp(q)/1e6` do IU/L. Samo M ani `exp(M)/1e6` nie zastępuje
+znormalizowanej mediany. To **jawna, zaakceptowana rekonstrukcja**, oparta
+na opisanym logarytmowaniu LH, [przypiętej konwencji współautora](https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196)
+i zgodności wszystkich pięciu męskich centyli z ryciną na 89 punktach wieku.
+Kod współautora jest późniejszym przykładem T4/TSH z października 2023,
+z zakomentowaną opcjonalną transformacją; nie odzyskano dokładnego
+preprocessingu LH Wilson. Rycina służy kontroli, nie dostarcza importowanych
+wartości. Ekstraktor standardowej biblioteki Python zachowuje L/M/S,
+pośrednie q, komórki i SHA oryginału; `--check` sprawdza reprodukcję.
+PCHIP w stężeniach zachowuje wszystkie 91 węzłów i przybliża tabelę,
+nie oryginalny dopasowany obiekt GAMLSS. Nie uruchamiamy RI, SDS,
+percentyli pacjenta ani diagnostyki z tego modelu.
+
+**Kwalifikacja:** cały możliwy wiek musi pasować do `(16,18)`. Wpis 16 lat
+0 miesięcy lub 16 ukończonych lat obejmuje granicę i nadal nie otrzymuje
+jednej mediany; nie wybieramy środka przedziału. Górny koniec 18 może być
+wyłącznie otwarty. Nieznana metoda/materiał dopuszcza dotychczasowe
+porównanie orientacyjne; znana niezgodność blokuje bez fallbacku.
+Zachowane są istniejące bramki tożsamości, płci, znanego leczenia/GnRHa
+i stymulacji; kanoniczny `measurementKind: 'stimulated'` wyłącza punkt.
+Nie deklarujemy nowego odczytywania wszystkich historycznych pól protokołu.
+LLOQ LH 0,09 IU/L nie jest LOD, progiem pacjenta ani podłogą wykresu.
+Zero pozostaje zerem, a nierówność nie tworzy dokładnego punktu.
+
+**Przypadki wejście → odniesienie:** chłopiec, LH w IU/L lub mIU/mL:
+
+- dokładny wiek 17 → 2,603196549069626 IU/L;
+- formularz 16 lat 1 miesiąc → około 2,2166851731955;
+  17 lat 11 miesięcy → około 3,01627134453025 IU/L, z PCHIP;
+- dokładne 16 → dotychczasowe 3,5142066372549756; dokładne 18 → 3 IU/L;
+- 16 lat 0 miesięcy, wiek przecinający granicę, dziewczynka 17 lat,
+  znana niezgodna metoda/materiał lub stymulacja → bez nowego punktu CALIPER.
+
+Edukacyjna mediana LH nie jest zapisywana do historii: snapshot takiego
+odniesienia pozostaje wyłącznie funkcją AMH. Zapis LH zachowuje istniejącą,
+niezależną ocenę laboratoryjną Mayo, bez przeliczania dawnych wpisów.
+Regresje rzeczywistych funkcji i interfejsu:
+[unit](../../tests/unit/hormone-lifespan-male-lh-caliper-reference.test.mjs),
+[E2E](../../tests/e2e/hormone-lifespan-male-lh-caliper-reference.spec.mjs).
+Źródła, hashe i ograniczenia:
+[audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json).
+Akceptacja rekonstrukcji nie oznacza walidacji klinicznej.
+
 ### HORMONE-FSH-CALIPER-REFERENCE — odniesienie wieku od 16 lat, 2026-10-18
 
 **Problem i decyzja:** po analizie czterech oryginalnych plików Wilson 2023

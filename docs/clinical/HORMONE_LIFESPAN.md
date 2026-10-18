@@ -105,6 +105,43 @@ i inhibiny B starszym dziewczynkom w zwykłych widokach. To opisane niżej
 rozszerzenie liczbowe uzupełnia wcześniejsze naprawy geometrii; nie zmienia
 laboratoryjnych norm ani kontraktów porównania płci.
 
+## LH chłopców — uzupełnienie odniesienia w (16,18), 18 października 2026
+
+Po oddzielnym audycie źródła właściciel zaakceptował mały PR wyłącznie
+dla chłopców. Zwykły wykres dodaje odtworzoną medianę Wilson 2023
+w otwartym `(16,18)` bez nowych pytań. Dokładne 16 pozostaje przy Madsen
+3,5142066372549756 IU/L, od 18 pozostaje Laurentino 3 IU/L. Cały możliwy
+przedział wieku musi pasować: 16 lat 0 miesięcy lub 16 ukończonych lat
+nadal przecina źródła. Dla dokładnego M17 mediana wynosi
+2,603196549069626 IU/L; formularz 16 lat 1 miesiąc / 17 lat 11 miesięcy
+daje około 2,2166851731955 / 3,01627134453025 IU/L z PCHIP.
+
+Źródłem jest pełny Wilson 2023 i suplementy, 91 węzłów `LH_M` 10–19
+co 0,1 roku, nie co miesiąc. Obliczenie to dokładny znormalizowany
+`qBCCG(0.5)` i odwrotność `exp(q)/1e6` do IU/L. Jest to jawna rekonstrukcja
+poparta logarytmowaniem opisanym w artykule, przypiętą konwencją współautora
+oraz zgodnością pięciu centyli z ryciną na 89 punktach. Kod współautora
+z października 2023 dotyczy późniejszego demonstracyjnego T4/TSH;
+nie odzyskano konkretnego preprocessingu LH Wilson. Między węzłami
+PCHIP przybliża tabelę, nie oryginalny obiekt GAMLSS.
+
+Surowica, Abbott ARCHITECT ci2000 LH; znana niezgodność metody/materiału
+blokuje punkt, nieznane pozwalają na edukacyjne zestawienie. LLOQ
+0,09 IU/L nie jest LOD ani podłogą wyniku. Pozostają istniejące bramki
+znanego leczenia/GnRHa, kanonicznej stymulacji i tożsamości pacjenta.
+Nie importujemy żeńskiego LH z niespójnego arkusza ani RI, SDS i diagnoz.
+Wszystkie 81 dotychczasowych profili, geometria, skale i porównanie płci
+są zachowane. Osobna laboratoryjna ocena LH Mayo nie zmienia się;
+edukacyjna mediana LH nie jest zapisywana w historii. Snapshot odniesienia
+pozostaje funkcją AMH, a dawne oceny odczytuje się bez ponownego liczenia.
+
+Polityka, dowody i regresje produkcyjnego silnika oraz interfejsu:
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#lh-chłopców--odtworzona-mediana-w-1618-18-października-2026),
+[audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json),
+[unit](../../tests/unit/hormone-lifespan-male-lh-caliper-reference.test.mjs),
+[E2E](../../tests/e2e/hormone-lifespan-male-lh-caliper-reference.spec.mjs).
+Akceptacja edukacyjnego odniesienia nie jest walidacją kliniczną.
+
 ## Cel i granice
 
 Aktualizacja kontekstu AMH z 13.10.2026: przelicznik wykorzystuje także

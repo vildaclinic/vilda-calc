@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-18.2",
+  "version": "2026-10-18.3",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -27737,6 +27737,1030 @@
         "Serum manual Beckman Coulter AMH Gen II ELISA using the protocol described in the paper. The narrow original-protocol identifier does not establish compatibility with modified Gen II, Access, Elecsys, Mindray or other assays. Missing assay or specimen allows only the existing educational comparison and does not confirm the patient's method or matrix.",
         "Reuse existing current-patient contraindication, known GnRHa and test-protocol gates with identity protection. Missing history is unknown, not confirmation of untreated basal sampling. Do not infer Tanner stage, fertility, a reference interval, SDS or a patient percentile from this group median.",
         "Constant whole-group median, no continuous-age interpolation. Convert native ng/mL with the existing canonical factor 1/0.1401, identically to the patient's result; unit conversion is not assay calibration."
+      ]
+    },
+    {
+      "id": "wilson2023-male-lh-age-over16-under18",
+      "analyte": "lh",
+      "sex": "male",
+      "minAge": 16,
+      "maxAge": 18,
+      "points": [
+        {
+          "ageYears": 10.0,
+          "value": 0.12151028791646062
+        },
+        {
+          "ageYears": 10.1,
+          "value": 0.12968436030010158
+        },
+        {
+          "ageYears": 10.2,
+          "value": 0.1384229834678491
+        },
+        {
+          "ageYears": 10.3,
+          "value": 0.14776649748355464
+        },
+        {
+          "ageYears": 10.4,
+          "value": 0.15775765759562604
+        },
+        {
+          "ageYears": 10.5,
+          "value": 0.1684425967163398
+        },
+        {
+          "ageYears": 10.6,
+          "value": 0.17987044787941864
+        },
+        {
+          "ageYears": 10.7,
+          "value": 0.1920922841891988
+        },
+        {
+          "ageYears": 10.8,
+          "value": 0.2051661366787509
+        },
+        {
+          "ageYears": 10.9,
+          "value": 0.21915303263182442
+        },
+        {
+          "ageYears": 11.0,
+          "value": 0.23411301647679617
+        },
+        {
+          "ageYears": 11.1,
+          "value": 0.2501048152651673
+        },
+        {
+          "ageYears": 11.2,
+          "value": 0.26718931887704583
+        },
+        {
+          "ageYears": 11.3,
+          "value": 0.28543322107817654
+        },
+        {
+          "ageYears": 11.4,
+          "value": 0.30490032905224296
+        },
+        {
+          "ageYears": 11.5,
+          "value": 0.32565038717393346
+        },
+        {
+          "ageYears": 11.6,
+          "value": 0.34774728123400356
+        },
+        {
+          "ageYears": 11.7,
+          "value": 0.37125940175024624
+        },
+        {
+          "ageYears": 11.8,
+          "value": 0.3962540644375463
+        },
+        {
+          "ageYears": 11.9,
+          "value": 0.42279601335176903
+        },
+        {
+          "ageYears": 12.0,
+          "value": 0.4509429044648273
+        },
+        {
+          "ageYears": 12.1,
+          "value": 0.4807455424293879
+        },
+        {
+          "ageYears": 12.2,
+          "value": 0.512249943007887
+        },
+        {
+          "ageYears": 12.3,
+          "value": 0.5454948079864972
+        },
+        {
+          "ageYears": 12.4,
+          "value": 0.5805064728631407
+        },
+        {
+          "ageYears": 12.5,
+          "value": 0.6173004800255305
+        },
+        {
+          "ageYears": 12.6,
+          "value": 0.6558782482001223
+        },
+        {
+          "ageYears": 12.7,
+          "value": 0.6962219646774953
+        },
+        {
+          "ageYears": 12.8,
+          "value": 0.7382912353808366
+        },
+        {
+          "ageYears": 12.9,
+          "value": 0.7820127621942523
+        },
+        {
+          "ageYears": 13.0,
+          "value": 0.8272795353901863
+        },
+        {
+          "ageYears": 13.1,
+          "value": 0.8739517925087842
+        },
+        {
+          "ageYears": 13.2,
+          "value": 0.9218556069472985
+        },
+        {
+          "ageYears": 13.3,
+          "value": 0.9707901382296156
+        },
+        {
+          "ageYears": 13.4,
+          "value": 1.0205461654625745
+        },
+        {
+          "ageYears": 13.5,
+          "value": 1.0709297012480308
+        },
+        {
+          "ageYears": 13.6,
+          "value": 1.1217692781059958
+        },
+        {
+          "ageYears": 13.7,
+          "value": 1.1728904509100215
+        },
+        {
+          "ageYears": 13.8,
+          "value": 1.224135584252598
+        },
+        {
+          "ageYears": 13.9,
+          "value": 1.275354274064792
+        },
+        {
+          "ageYears": 14.0,
+          "value": 1.326407592185742
+        },
+        {
+          "ageYears": 14.1,
+          "value": 1.3771458126884308
+        },
+        {
+          "ageYears": 14.2,
+          "value": 1.427421972802074
+        },
+        {
+          "ageYears": 14.3,
+          "value": 1.4770855905502822
+        },
+        {
+          "ageYears": 14.4,
+          "value": 1.5259975151851284
+        },
+        {
+          "ageYears": 14.5,
+          "value": 1.5740626802318445
+        },
+        {
+          "ageYears": 14.6,
+          "value": 1.6212128078586656
+        },
+        {
+          "ageYears": 14.7,
+          "value": 1.6673953470671936
+        },
+        {
+          "ageYears": 14.8,
+          "value": 1.7125760406997856
+        },
+        {
+          "ageYears": 14.9,
+          "value": 1.756719488809925
+        },
+        {
+          "ageYears": 15.0,
+          "value": 1.7997914516553726
+        },
+        {
+          "ageYears": 15.1,
+          "value": 1.8417470158013105
+        },
+        {
+          "ageYears": 15.2,
+          "value": 1.8825705999512432
+        },
+        {
+          "ageYears": 15.3,
+          "value": 1.9223193382912733
+        },
+        {
+          "ageYears": 15.4,
+          "value": 1.9611010154361883
+        },
+        {
+          "ageYears": 15.5,
+          "value": 1.999087972247889
+        },
+        {
+          "ageYears": 15.6,
+          "value": 2.0364970813039154
+        },
+        {
+          "ageYears": 15.7,
+          "value": 2.0735568618457156
+        },
+        {
+          "ageYears": 15.8,
+          "value": 2.1105042974333514
+        },
+        {
+          "ageYears": 15.9,
+          "value": 2.1475734679448757
+        },
+        {
+          "ageYears": 16.0,
+          "value": 2.1850115693016887
+        },
+        {
+          "ageYears": 16.1,
+          "value": 2.223086475082458
+        },
+        {
+          "ageYears": 16.2,
+          "value": 2.2620008676104293
+        },
+        {
+          "ageYears": 16.3,
+          "value": 2.301831950093544
+        },
+        {
+          "ageYears": 16.4,
+          "value": 2.3425891441464404
+        },
+        {
+          "ageYears": 16.5,
+          "value": 2.3842390972088494
+        },
+        {
+          "ageYears": 16.6,
+          "value": 2.4267356758703333
+        },
+        {
+          "ageYears": 16.7,
+          "value": 2.470004825982245
+        },
+        {
+          "ageYears": 16.8,
+          "value": 2.5139341087999822
+        },
+        {
+          "ageYears": 16.9,
+          "value": 2.5583908627246883
+        },
+        {
+          "ageYears": 17.0,
+          "value": 2.603196549069626
+        },
+        {
+          "ageYears": 17.1,
+          "value": 2.6482027077629113
+        },
+        {
+          "ageYears": 17.2,
+          "value": 2.6933038879413846
+        },
+        {
+          "ageYears": 17.3,
+          "value": 2.738445180058807
+        },
+        {
+          "ageYears": 17.4,
+          "value": 2.783660690863312
+        },
+        {
+          "ageYears": 17.5,
+          "value": 2.828956475931087
+        },
+        {
+          "ageYears": 17.6,
+          "value": 2.874242595201492
+        },
+        {
+          "ageYears": 17.7,
+          "value": 2.9193888927968468
+        },
+        {
+          "ageYears": 17.8,
+          "value": 2.9642885251627895
+        },
+        {
+          "ageYears": 17.9,
+          "value": 3.008875193452496
+        },
+        {
+          "ageYears": 18.0,
+          "value": 3.053091212441528
+        },
+        {
+          "ageYears": 18.1,
+          "value": 3.096838461232035
+        },
+        {
+          "ageYears": 18.2,
+          "value": 3.140001114048218
+        },
+        {
+          "ageYears": 18.3,
+          "value": 3.1825331646221353
+        },
+        {
+          "ageYears": 18.4,
+          "value": 3.2245790004130037
+        },
+        {
+          "ageYears": 18.5,
+          "value": 3.2662484664291584
+        },
+        {
+          "ageYears": 18.6,
+          "value": 3.307591718686753
+        },
+        {
+          "ageYears": 18.7,
+          "value": 3.348684798519747
+        },
+        {
+          "ageYears": 18.8,
+          "value": 3.3896259939564186
+        },
+        {
+          "ageYears": 18.9,
+          "value": 3.4307149824648144
+        },
+        {
+          "ageYears": 19.0,
+          "value": 3.4722279300280774
+        }
+      ],
+      "sourceLabel": "Wilson 2023 · CALIPER · LH",
+      "url": "https://doi.org/10.1515/cclm-2022-1077",
+      "method": "Abbott ARCHITECT ci2000",
+      "population": "CALIPER; zdrowi chłopcy, Greater Toronto, Kanada",
+      "statistic": "median",
+      "approximate": true,
+      "unit": "IU/L",
+      "interpolation": "pchip",
+      "ordinaryOnly": true,
+      "minAgeExclusive": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "abbott-architect-ci2000-lh"
+      ],
+      "patientNote": "Mediana odtworzona z modelu wieku; nie jest granicą normy.",
+      "provenance": {
+        "title": "LMS-based continuous reference percentiles for 14 laboratory parameters in the CALIPER cohort of healthy children and adolescents",
+        "authorsShort": "Wilson et al.",
+        "year": 2023,
+        "journal": "Clinical Chemistry and Laboratory Medicine",
+        "volume": 61,
+        "issue": 6,
+        "pages": "1105–1115",
+        "doi": "10.1515/cclm-2022-1077",
+        "pmid": "36639844",
+        "url": "https://doi.org/10.1515/cclm-2022-1077",
+        "publishedOnline": "2023-01-16",
+        "sourceFile": "suppl_j_cclm-2022-1077_suppl_004.xlsx",
+        "sourceSha256": "997f4998e14dd38fb73a0ac9f14f01bbe5e1f40f3100bc4e2714e4764bfeda9b",
+        "sourceBytes": 223819,
+        "sourceVersion": "Owner-supplied final-article Supplementary Table 3; workbook bytes identified by SHA-256.",
+        "table": "Supplementary Table 3: numerical L,M,S-for-age; LH_M only, A2:D92",
+        "readOn": "2026-10-18",
+        "access": "Full final primary article and all three owner-supplied supplementary tables reviewed in the source audit; pinned coauthor method code inspected separately.",
+        "redistribution": "Only male LH numerical facts, provenance and qualification metadata are extracted; full article, figures, code and source workbooks/documents are not redistributed.",
+        "sourceWorksheet": "LH_M",
+        "sourceCells": [
+          [
+            "LH_M!A2",
+            "LH_M!B2",
+            "LH_M!C2",
+            "LH_M!D2"
+          ],
+          [
+            "LH_M!A3",
+            "LH_M!B3",
+            "LH_M!C3",
+            "LH_M!D3"
+          ],
+          [
+            "LH_M!A4",
+            "LH_M!B4",
+            "LH_M!C4",
+            "LH_M!D4"
+          ],
+          [
+            "LH_M!A5",
+            "LH_M!B5",
+            "LH_M!C5",
+            "LH_M!D5"
+          ],
+          [
+            "LH_M!A6",
+            "LH_M!B6",
+            "LH_M!C6",
+            "LH_M!D6"
+          ],
+          [
+            "LH_M!A7",
+            "LH_M!B7",
+            "LH_M!C7",
+            "LH_M!D7"
+          ],
+          [
+            "LH_M!A8",
+            "LH_M!B8",
+            "LH_M!C8",
+            "LH_M!D8"
+          ],
+          [
+            "LH_M!A9",
+            "LH_M!B9",
+            "LH_M!C9",
+            "LH_M!D9"
+          ],
+          [
+            "LH_M!A10",
+            "LH_M!B10",
+            "LH_M!C10",
+            "LH_M!D10"
+          ],
+          [
+            "LH_M!A11",
+            "LH_M!B11",
+            "LH_M!C11",
+            "LH_M!D11"
+          ],
+          [
+            "LH_M!A12",
+            "LH_M!B12",
+            "LH_M!C12",
+            "LH_M!D12"
+          ],
+          [
+            "LH_M!A13",
+            "LH_M!B13",
+            "LH_M!C13",
+            "LH_M!D13"
+          ],
+          [
+            "LH_M!A14",
+            "LH_M!B14",
+            "LH_M!C14",
+            "LH_M!D14"
+          ],
+          [
+            "LH_M!A15",
+            "LH_M!B15",
+            "LH_M!C15",
+            "LH_M!D15"
+          ],
+          [
+            "LH_M!A16",
+            "LH_M!B16",
+            "LH_M!C16",
+            "LH_M!D16"
+          ],
+          [
+            "LH_M!A17",
+            "LH_M!B17",
+            "LH_M!C17",
+            "LH_M!D17"
+          ],
+          [
+            "LH_M!A18",
+            "LH_M!B18",
+            "LH_M!C18",
+            "LH_M!D18"
+          ],
+          [
+            "LH_M!A19",
+            "LH_M!B19",
+            "LH_M!C19",
+            "LH_M!D19"
+          ],
+          [
+            "LH_M!A20",
+            "LH_M!B20",
+            "LH_M!C20",
+            "LH_M!D20"
+          ],
+          [
+            "LH_M!A21",
+            "LH_M!B21",
+            "LH_M!C21",
+            "LH_M!D21"
+          ],
+          [
+            "LH_M!A22",
+            "LH_M!B22",
+            "LH_M!C22",
+            "LH_M!D22"
+          ],
+          [
+            "LH_M!A23",
+            "LH_M!B23",
+            "LH_M!C23",
+            "LH_M!D23"
+          ],
+          [
+            "LH_M!A24",
+            "LH_M!B24",
+            "LH_M!C24",
+            "LH_M!D24"
+          ],
+          [
+            "LH_M!A25",
+            "LH_M!B25",
+            "LH_M!C25",
+            "LH_M!D25"
+          ],
+          [
+            "LH_M!A26",
+            "LH_M!B26",
+            "LH_M!C26",
+            "LH_M!D26"
+          ],
+          [
+            "LH_M!A27",
+            "LH_M!B27",
+            "LH_M!C27",
+            "LH_M!D27"
+          ],
+          [
+            "LH_M!A28",
+            "LH_M!B28",
+            "LH_M!C28",
+            "LH_M!D28"
+          ],
+          [
+            "LH_M!A29",
+            "LH_M!B29",
+            "LH_M!C29",
+            "LH_M!D29"
+          ],
+          [
+            "LH_M!A30",
+            "LH_M!B30",
+            "LH_M!C30",
+            "LH_M!D30"
+          ],
+          [
+            "LH_M!A31",
+            "LH_M!B31",
+            "LH_M!C31",
+            "LH_M!D31"
+          ],
+          [
+            "LH_M!A32",
+            "LH_M!B32",
+            "LH_M!C32",
+            "LH_M!D32"
+          ],
+          [
+            "LH_M!A33",
+            "LH_M!B33",
+            "LH_M!C33",
+            "LH_M!D33"
+          ],
+          [
+            "LH_M!A34",
+            "LH_M!B34",
+            "LH_M!C34",
+            "LH_M!D34"
+          ],
+          [
+            "LH_M!A35",
+            "LH_M!B35",
+            "LH_M!C35",
+            "LH_M!D35"
+          ],
+          [
+            "LH_M!A36",
+            "LH_M!B36",
+            "LH_M!C36",
+            "LH_M!D36"
+          ],
+          [
+            "LH_M!A37",
+            "LH_M!B37",
+            "LH_M!C37",
+            "LH_M!D37"
+          ],
+          [
+            "LH_M!A38",
+            "LH_M!B38",
+            "LH_M!C38",
+            "LH_M!D38"
+          ],
+          [
+            "LH_M!A39",
+            "LH_M!B39",
+            "LH_M!C39",
+            "LH_M!D39"
+          ],
+          [
+            "LH_M!A40",
+            "LH_M!B40",
+            "LH_M!C40",
+            "LH_M!D40"
+          ],
+          [
+            "LH_M!A41",
+            "LH_M!B41",
+            "LH_M!C41",
+            "LH_M!D41"
+          ],
+          [
+            "LH_M!A42",
+            "LH_M!B42",
+            "LH_M!C42",
+            "LH_M!D42"
+          ],
+          [
+            "LH_M!A43",
+            "LH_M!B43",
+            "LH_M!C43",
+            "LH_M!D43"
+          ],
+          [
+            "LH_M!A44",
+            "LH_M!B44",
+            "LH_M!C44",
+            "LH_M!D44"
+          ],
+          [
+            "LH_M!A45",
+            "LH_M!B45",
+            "LH_M!C45",
+            "LH_M!D45"
+          ],
+          [
+            "LH_M!A46",
+            "LH_M!B46",
+            "LH_M!C46",
+            "LH_M!D46"
+          ],
+          [
+            "LH_M!A47",
+            "LH_M!B47",
+            "LH_M!C47",
+            "LH_M!D47"
+          ],
+          [
+            "LH_M!A48",
+            "LH_M!B48",
+            "LH_M!C48",
+            "LH_M!D48"
+          ],
+          [
+            "LH_M!A49",
+            "LH_M!B49",
+            "LH_M!C49",
+            "LH_M!D49"
+          ],
+          [
+            "LH_M!A50",
+            "LH_M!B50",
+            "LH_M!C50",
+            "LH_M!D50"
+          ],
+          [
+            "LH_M!A51",
+            "LH_M!B51",
+            "LH_M!C51",
+            "LH_M!D51"
+          ],
+          [
+            "LH_M!A52",
+            "LH_M!B52",
+            "LH_M!C52",
+            "LH_M!D52"
+          ],
+          [
+            "LH_M!A53",
+            "LH_M!B53",
+            "LH_M!C53",
+            "LH_M!D53"
+          ],
+          [
+            "LH_M!A54",
+            "LH_M!B54",
+            "LH_M!C54",
+            "LH_M!D54"
+          ],
+          [
+            "LH_M!A55",
+            "LH_M!B55",
+            "LH_M!C55",
+            "LH_M!D55"
+          ],
+          [
+            "LH_M!A56",
+            "LH_M!B56",
+            "LH_M!C56",
+            "LH_M!D56"
+          ],
+          [
+            "LH_M!A57",
+            "LH_M!B57",
+            "LH_M!C57",
+            "LH_M!D57"
+          ],
+          [
+            "LH_M!A58",
+            "LH_M!B58",
+            "LH_M!C58",
+            "LH_M!D58"
+          ],
+          [
+            "LH_M!A59",
+            "LH_M!B59",
+            "LH_M!C59",
+            "LH_M!D59"
+          ],
+          [
+            "LH_M!A60",
+            "LH_M!B60",
+            "LH_M!C60",
+            "LH_M!D60"
+          ],
+          [
+            "LH_M!A61",
+            "LH_M!B61",
+            "LH_M!C61",
+            "LH_M!D61"
+          ],
+          [
+            "LH_M!A62",
+            "LH_M!B62",
+            "LH_M!C62",
+            "LH_M!D62"
+          ],
+          [
+            "LH_M!A63",
+            "LH_M!B63",
+            "LH_M!C63",
+            "LH_M!D63"
+          ],
+          [
+            "LH_M!A64",
+            "LH_M!B64",
+            "LH_M!C64",
+            "LH_M!D64"
+          ],
+          [
+            "LH_M!A65",
+            "LH_M!B65",
+            "LH_M!C65",
+            "LH_M!D65"
+          ],
+          [
+            "LH_M!A66",
+            "LH_M!B66",
+            "LH_M!C66",
+            "LH_M!D66"
+          ],
+          [
+            "LH_M!A67",
+            "LH_M!B67",
+            "LH_M!C67",
+            "LH_M!D67"
+          ],
+          [
+            "LH_M!A68",
+            "LH_M!B68",
+            "LH_M!C68",
+            "LH_M!D68"
+          ],
+          [
+            "LH_M!A69",
+            "LH_M!B69",
+            "LH_M!C69",
+            "LH_M!D69"
+          ],
+          [
+            "LH_M!A70",
+            "LH_M!B70",
+            "LH_M!C70",
+            "LH_M!D70"
+          ],
+          [
+            "LH_M!A71",
+            "LH_M!B71",
+            "LH_M!C71",
+            "LH_M!D71"
+          ],
+          [
+            "LH_M!A72",
+            "LH_M!B72",
+            "LH_M!C72",
+            "LH_M!D72"
+          ],
+          [
+            "LH_M!A73",
+            "LH_M!B73",
+            "LH_M!C73",
+            "LH_M!D73"
+          ],
+          [
+            "LH_M!A74",
+            "LH_M!B74",
+            "LH_M!C74",
+            "LH_M!D74"
+          ],
+          [
+            "LH_M!A75",
+            "LH_M!B75",
+            "LH_M!C75",
+            "LH_M!D75"
+          ],
+          [
+            "LH_M!A76",
+            "LH_M!B76",
+            "LH_M!C76",
+            "LH_M!D76"
+          ],
+          [
+            "LH_M!A77",
+            "LH_M!B77",
+            "LH_M!C77",
+            "LH_M!D77"
+          ],
+          [
+            "LH_M!A78",
+            "LH_M!B78",
+            "LH_M!C78",
+            "LH_M!D78"
+          ],
+          [
+            "LH_M!A79",
+            "LH_M!B79",
+            "LH_M!C79",
+            "LH_M!D79"
+          ],
+          [
+            "LH_M!A80",
+            "LH_M!B80",
+            "LH_M!C80",
+            "LH_M!D80"
+          ],
+          [
+            "LH_M!A81",
+            "LH_M!B81",
+            "LH_M!C81",
+            "LH_M!D81"
+          ],
+          [
+            "LH_M!A82",
+            "LH_M!B82",
+            "LH_M!C82",
+            "LH_M!D82"
+          ],
+          [
+            "LH_M!A83",
+            "LH_M!B83",
+            "LH_M!C83",
+            "LH_M!D83"
+          ],
+          [
+            "LH_M!A84",
+            "LH_M!B84",
+            "LH_M!C84",
+            "LH_M!D84"
+          ],
+          [
+            "LH_M!A85",
+            "LH_M!B85",
+            "LH_M!C85",
+            "LH_M!D85"
+          ],
+          [
+            "LH_M!A86",
+            "LH_M!B86",
+            "LH_M!C86",
+            "LH_M!D86"
+          ],
+          [
+            "LH_M!A87",
+            "LH_M!B87",
+            "LH_M!C87",
+            "LH_M!D87"
+          ],
+          [
+            "LH_M!A88",
+            "LH_M!B88",
+            "LH_M!C88",
+            "LH_M!D88"
+          ],
+          [
+            "LH_M!A89",
+            "LH_M!B89",
+            "LH_M!C89",
+            "LH_M!D89"
+          ],
+          [
+            "LH_M!A90",
+            "LH_M!B90",
+            "LH_M!C90",
+            "LH_M!D90"
+          ],
+          [
+            "LH_M!A91",
+            "LH_M!B91",
+            "LH_M!C91",
+            "LH_M!D91"
+          ],
+          [
+            "LH_M!A92",
+            "LH_M!B92",
+            "LH_M!C92",
+            "LH_M!D92"
+          ]
+        ],
+        "sourceModel": {
+          "family": "GAMLSS BCCG",
+          "responseScale": "Reconstructed natural log(LH_IU_L * 1e6); exact Wilson LH preprocessing not recovered or directly confirmed.",
+          "parameterMapping": {
+            "nu": "L",
+            "mu": "M",
+            "sigma": "S"
+          },
+          "p50Definition": "Exact median qBCCG(0.5) of the positive-response, normalized BCCG distribution on the model response scale, then reconstructed exp(q)/1e6 to IU/L; not automatically M or exp(M)/1e6.",
+          "quantileAlgorithm": "For L>0, Z=Phi^-1(1-0.5*Phi(1/(S*abs(L)))); for L<0, Z=Phi^-1(0.5*Phi(1/(S*abs(L)))); Q=M*(1+L*S*Z)^(1/L). For L=0 the p50 limit is M. The reconstructed concentration is exp(Q)/1e6 IU/L.",
+          "algorithmReference": "https://rdrr.io/cran/gamlss.dist/src/R/BCCG.R",
+          "sourceCode": "gamlss(hormone~cs(age, df=2), sigma.fo=~cs(age, df=1), family=BCCG, data=d)",
+          "sourceCodeLocation": "Supplementary Table 2, LH male row",
+          "sourceRVersion": "4.1.2",
+          "sourcePackageVersions": null,
+          "sourceFormulaLimitation": "The paper prints an untruncated nominal-z LMS formula and states logarithmic LH response transformation. It does not specify response assignment, logarithm base, rescaling, offset or inverse code. GAMLSS parameter link functions do not themselves transform the LH response.",
+          "authorConvention": {
+            "repository": "andremadsen/LMS-reference-curve",
+            "commit": "288329c43ee238b3c8921097dfeac411d30465b9",
+            "commitDate": "2023-10-01",
+            "path": "OUS_demo.Rmd",
+            "sourceSha256": "1e1296c7fcb4be4d5d35f160c7a50309fad6546b1a1e5394022e41e80eb93ce0",
+            "url": "https://github.com/andremadsen/LMS-reference-curve/blob/288329c43ee238b3c8921097dfeac411d30465b9/OUS_demo.Rmd#L194-L196",
+            "lineNumbers": [
+              194,
+              195,
+              196,
+              212,
+              213
+            ],
+            "quote": "log(hormone*1e6) ... exp(BootCentileMat)/1e6",
+            "evidenceRole": "Coauthor's optional logarithmic response convention supports natural log and the factor 1e6 independently of fitting the figure.",
+            "limitation": "Later October 2023 synthetic T4/TSH demonstration with commented optional transformation, not the January 2023 Wilson LH/CALIPER preprocessing or exact model pipeline. The pinned file was subsequently deleted from the repository's current tree."
+          },
+          "figureVerification": "Original Figure 1A male curves, printed page 1108 / PDF page 4: reconstructed five quantiles agree with vector curves at 89 interior ages 10.1–18.9. Maximum absolute p50 difference approximately 0.001043 IU/L; graphical diagnostic, not model uncertainty or imported figure values.",
+          "evidenceQualification": "Author-supported, reproducible reconstruction accepted by the owner for a small ordinary educational median PR. Direct LH preprocessing/model confirmation remains unavailable; do not describe it as recovered exact author code or clinically validated norms.",
+          "noNewClinicalFunction": "Only the reconstructed educational age-reference median is imported. No BCCG-derived RI, SDS, patient percentiles, diagnostic classification or treatment recommendation is activated."
+        },
+        "sourceRouting": {
+          "version": "2026-10-18.1",
+          "minAge": 16,
+          "minAgeExclusive": true,
+          "maxAge": 18,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Wyłącznie zwykłe edukacyjne odniesienie LH chłopców w (16,18). Dokładnie 16 lat zachowuje Madsen, od 18 lat dotychczasowe źródło dorosłych. Nie zastępuj istniejących odniesień ani nie dobieraj źródła według wyniku. Porównanie płci pozostaje odrębne i nie rozszerza się poza Madsen 6–16."
+        }
+      },
+      "limitations": [
+        "Only male LH is imported. Do not import female LH, whose source spreadsheet and Figure 1A remain inconsistent, or activate any other analyte from this extract.",
+        "Only the separately policy-defined ordinary educational (16,18) window is authorized; the full 10–19 grid is evidence, not permission to replace existing childhood, puberty-comparison or adult profiles.",
+        "Exact age 16 preserves existing Madsen LH; age 18 and older preserves existing adult LH. Source nodes 16 and 18 are numerical controls, not authorization to override these boundaries.",
+        "The entire possible age interval must fit (16,18). Do not resolve uncertainty crossing a source boundary by selecting its midpoint, silently rounding age or replacing the reference with a graphical bridge.",
+        "No Tanner or sampling-time question is required for this age model; do not infer a Tanner stage, basal sample or absence of treatment from missing data.",
+        "Known incompatible assay/specimen and known treatment/stimulation retain existing application exclusions. Unknown method or specimen allows only the established educational preview.",
+        "Do not calibrate or average CALIPER with neighboring Madsen or adult data, change display geometry/scales, or move the source marker to the educational line.",
+        "Cały możliwy przedział wieku musi mieścić się w otwartym (16,18). Wpis 16 lat 0 miesięcy lub 16 pełnych lat obejmuje granicę źródeł i nadal nie otrzymuje jednej mediany. Nie wybieraj środka wieku ani nie przesuwaj granicy o epsilon. Nie ekstrapoluj poza opublikowaną domenę 10–<19 lat.",
+        "Odtworzona mediana modelu: dokładny znormalizowany qBCCG(0.5) na skali odpowiedzi, następnie exp(q)/1e6 do IU/L. Samo M lub exp(M)/1e6 nie zastępuje qBCCG. Nie uruchamiaj RI, SDS, percentyli pacjenta, diagnozy lub oceny płodności.",
+        "Artykuł Wilson 2023 jawnie opisuje logarytmowanie LH. Późniejszy przypięty przykład współautora potwierdza konwencję log(hormone*1e6)/exp(...)/1e6, a wszystkie pięć męskich centyli odtwarza rycinę w precyzji rysunku. To jawna, zaakceptowana rekonstrukcja; nie odzyskany ani bezpośrednio potwierdzony skrypt LH Wilson. Nie przenoś jej na niespójny żeński arkusz.",
+        "Zachowaj wszystkie 91 węzłów LH_M 10–19 lat. PCHIP w stężeniach p50 między węzłami co 0,1 roku jest przybliżeniem tabeli, nie oryginalnym dopasowaniem GAMLSS. Węzły 16 i 18 służą interpolacji i kontroli źródła, nie zmieniają routingu na granicach. 0,1 roku nie oznacza miesiąca.",
+        "Surowica, Abbott ARCHITECT ci2000 LH. Nieznana metoda lub materiał dopuszczają tylko dotychczasowe orientacyjne porównanie. Znana niezgodność blokuje punkt bez fallbacku do Madsen, dorosłych albo innej metody Abbott. Brak harmonizacji z IMMULITE, Roche lub AutoDELFIA.",
+        "Model wieku nie wymaga G/P, pory pobrania ani nowej ankiety. Zachowaj istniejące znane leczenie, GnRHa, stymulację i ochronę bieżącego pacjenta; brak wywiadu nie potwierdza ich nieobecności. LLOQ 0,09 IU/L nie jest LOD ani podłogą wyniku, a nierówność nie tworzy dokładnego punktu."
       ]
     }
   ],
