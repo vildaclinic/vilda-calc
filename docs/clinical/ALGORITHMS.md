@@ -16744,6 +16744,30 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Konto z kreatora bez synchronizacji nie łączy się samo z serwerem (P-KONTO-BEZ-SERWERA, SW 1.1.317, `vilda_vault.js` 216, `vilda_sync_integration.js` 51, `vilda_auth_ui.js` 504, `vilda_pro_access.js` 11, 2026-10-19)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, zapis, scalanie ani sama synchronizacja. Decyzja właściciela 2026-10-19 (przegląd ścieżki zakładania konta, punkt 3; wariant „konto z kreatora milczy”).
+
+**Co było.** Zaraz po `createUser` w kreatorze — jeszcze przed odpowiedzią w kroku 3 „Korzystasz z kilku urządzeń?” — aplikacja wysyłała do serwera synchronizacji trzy żądania ze `slotId` i tokenem `Bearer`: `GET /v1/slots/<slot>/trial` (`vilda_auth_ui.js`, po każdym zalogowaniu bez PRO), `GET …/entitlement` (`vilda_pro_access.js`, po odblokowaniu, przy powrocie do karty i co 20 minut) i `GET …/status` (sonda nowego urządzenia, `vilda_sync_integration.js`). Przy odpowiedzi „Nie, tylko to urządzenie” szły dalej przy każdym logowaniu. Danych pacjentów nie niosły, ale tekst kroku 3 sugerował, że bez synchronizacji aplikacja z serwerem się nie łączy. Dla świeżo założonego konta wszystkie trzy były zresztą bezcelowe: slot nowego klucza nie może istnieć w chmurze, a PRO nie było aktywowane.
+
+**Co jest.**
+- Kreator woła `createUser(…, { deferServerContact: true })`. Sejf zapisuje wtedy znacznik `vilda-server-deferred-v1:<userId>` (`localStorage`, wartość: data założenia) **przed** `onUnlock`, bo słuchacze odblokowania od razu sięgają po serwer.
+- `VildaSyncIntegration.serverContactAllowed()` — jeden warunek dla trzech żądań: bez znacznika `true` (jak dotąd). Ze znacznikiem `true` dopiero wtedy, gdy synchronizacja jest włączona (`vilda-sync-enabled-v1`) albo na urządzeniu jest ślad PRO tego konta (`vilda-pro-token-v1:`, `vilda-pro-ui-hint-v1:`, `vilda-pro-plan-v1:` — `setPlan` po udanym `POST /trial` w Subskrypcji); wtedy znacznik znika na stałe. Błąd odczytu `localStorage` — `true`.
+- Pod warunkiem: sonda nowego urządzenia (bez sondy start idzie dalej jak przy sondzie odhaczonej: `syncFull` tylko przy włączonej synchronizacji), `GET /trial` po zalogowaniu i automatyczne odświeżanie uprawnień (`s()` w `vilda_pro_access.js`; lokalna weryfikacja tokenu `d()` działa bez sieci). Bez modułu synchronizacji na stronie — jak dotąd.
+- Bez zmian: działania z wyboru użytkownika (aktywacja PRO i płatność w Subskrypcji, włączenie synchronizacji w Ustawieniach, logowanie QR i kodem, klucze biometryczne do logowania telefonem) oraz konta bez znacznika — istniejące, z logowania QR i kodem zapasowym, odtworzone z kopii `.wiw`.
+
+**Ograniczenia.** Przełącznik synchronizacji jest jeden dla przeglądarki (wpis P-NOWE-URZADZENIE, „Kierunek”): jeśli w tej przeglądarce synchronizację włączono dla innego konta, konto z kreatora też ją ma i od razu łączy się z serwerem — tak samo jak sama synchronizacja. Znacznik nie jest synchronizowany: to samo konto na innym urządzeniu (np. po logowaniu QR) zachowuje się jak dotąd.
+
+**Walidacja.** Nowy `tests/e2e/konto-bez-serwera.spec.mjs`, 4 testy, serwer synchronizacji jako atrapa zapisująca każde żądanie, konto fikcyjne, domyślne iteracje PBKDF2:
+- „Nie, tylko to urządzenie”: zero żądań przed odpowiedzią w kroku 3, po wejściu do aplikacji i zdarzeniach `focus`/`visibilitychange`, po wylogowaniu i zalogowaniu hasłem, po odświeżeniu z odtworzoną sesją; konto bez PRO;
+- „Tak, włącz synchronizację”: zero żądań do odpowiedzi; po ponownym zalogowaniu `/entitlement`, `/status` i `/trial` jak dotąd, znacznik zdjęty;
+- aktywacja PRO (`setPlan` jak po `POST /trial` w Subskrypcji) otwiera `/entitlement` i zdejmuje znacznik;
+- konto spoza kreatora (`createUser` bez znacznika): sonda, `/entitlement` i `/trial` jak dotąd.
+
+Kontrola negatywna: na kodzie sprzed zmiany czerwone są testy 1–3 (5 żądań przed odpowiedzią w kroku 3); test 4 zielony w obu wersjach.
+
+SW 1.1.316 → **1.1.317**; `vilda_vault.js?v=215→216`, `vilda_sync_integration.js?v=50→51`, `vilda_auth_ui.js?v=503→504`, `vilda_pro_access.js?v=10→11`, `vilda_chrome.js?v=160→161`, `vilda_session_bridge.js?v=84→85` (dwa ostatnie: wstrzykują pliki z nowym `?v=`).
+
 ## Regulamin przed ekranem logowania; „Wstecz” w kreatorze konta nie zmienia klucza odzyskiwania (P-REGULAMIN-BRAMKA, P-KREATOR-KLUCZ, SW 1.1.316, `vilda_auth_ui.js` 503, `style.css` 91, `inline_index_00.css` 3, 2026-10-19)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, zapis ani synchronizacja. Polecenie właściciela 2026-10-19, po przeglądzie ścieżki zakładania konta i pierwszego logowania.
