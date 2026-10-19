@@ -52,11 +52,17 @@ async function expectOriginalLayout(ctx) {
   const positions = await ctx.evaluate((orderedIds) => orderedIds.map((id) => {
     const node = document.getElementById(id);
     const rect = node.getBoundingClientRect();
-    return { id, top: rect.top, bottom: rect.bottom };
+    return { id, top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
   }), ids);
-  for (let i = 1; i < positions.length; i += 1) {
-    expect(positions[i].top, `${positions[i].id} follows ${positions[i - 1].id}`).toBeGreaterThanOrEqual(positions[i - 1].bottom - 1);
+  const steps = positions.slice(0, -1);
+  for (let i = 1; i < steps.length; i += 1) {
+    expect(steps[i].top, `${steps[i].id} follows ${steps[i - 1].id}`).toBeGreaterThanOrEqual(steps[i - 1].bottom - 1);
   }
+  // The result follows the last step: below it in one column, beside it in the wide-screen converter workspace
+  // (form | result from 1000px of content width, 2026-10-19) — never above it.
+  const [lastStep, result] = positions.slice(-2);
+  expect(result.top >= lastStep.bottom - 1 || result.left >= lastStep.right - 1,
+    `${result.id} follows ${lastStep.id} (below or beside)`).toBe(true);
 }
 
 
