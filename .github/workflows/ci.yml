@@ -89,9 +89,10 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
-    # Pełny odłamek potrafi zająć ok. 20 minut; limit obejmuje również instalację
-    # zależności i kończenie joba. Zachowaj zapas bez zmiany limitów pojedynczych testów.
-    timeout-minutes: 30
+    # W PR #721 wszystkie 636 testów odłamka przeszły w 29,5 min, lecz limit 30 min
+    # anulował job przy zakończeniu po doliczeniu instalacji. Zapas obejmuje także
+    # przygotowanie i zamknięcie joba; limity pojedynczych testów pozostają bez zmian.
+    timeout-minutes: 35
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4

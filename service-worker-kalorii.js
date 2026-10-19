@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.314';
+const SW_VERSION = '1.1.315';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1126,6 +1126,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=156',
   '/vilda_chrome.js?v=157',
   '/vilda_chrome.js?v=158',
+  '/vilda_chrome.js?v=159',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2087,6 +2088,7 @@ const OPTIONAL_ASSETS = [
   '/lab_units_data.js?v=38',
   '/lab_units_data.js?v=39',
   '/lab_units_data.js?v=40',
+  '/lab_units_data.js?v=41',
   '/lab_unit_converter.js',
   '/lab_unit_converter.js?v=1',
   '/lab_unit_converter.js?v=4',
@@ -2094,6 +2096,7 @@ const OPTIONAL_ASSETS = [
   '/lab_unit_converter.js?v=6',
   '/lab_unit_converter.js?v=7',
   '/lab_unit_converter.js?v=8',
+  '/lab_unit_converter.js?v=9',
   '/lab_pin_result.js?v=4',
   '/lab_pin_result.js?v=5',
   '/lab_pin_result.js?v=6',
@@ -2101,6 +2104,7 @@ const OPTIONAL_ASSETS = [
   '/lab_pin_result.js?v=8',
   '/lab_pin_result.js?v=9',
   '/lab_pin_result.js?v=10',
+  '/lab_pin_result.js?v=11',
   '/lab_history_strip.js?v=1',
   '/lab_history_strip.js?v=2',
   '/lab_history_strip.js?v=3',
@@ -3178,6 +3182,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=499',
   '/vilda_auth_ui.js?v=500',
   '/vilda_auth_ui.js?v=501',
+  '/vilda_auth_ui.js?v=502',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -3366,6 +3371,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=80',
   '/vilda_session_bridge.js?v=81',
   '/vilda_session_bridge.js?v=82',
+  '/vilda_session_bridge.js?v=83',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
