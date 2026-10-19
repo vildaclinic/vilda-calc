@@ -60,7 +60,15 @@ async function openChart(page, width) {
   await owner.locator('#labSubstanceDropdown [data-id="lh"]').click();
   await owner.locator('#labValue').fill('2');
   await expect(owner.locator('.vilda-hormone-lifespan')).toBeVisible();
-  await owner.locator('.vhl-expand').scrollIntoViewIfNeeded();
+  // Put the anchor a quarter down the frame's own viewport so the frame is always scrolled: the restoration
+  // check needs a non-zero offset. Since the wide-screen converter workspace (2026-10-19) the chart sits in
+  // the right column at 1440px and its expand button can be visible without any scrolling, where
+  // scrollIntoViewIfNeeded() is a no-op. window.scrollBy, unlike scrollIntoView, leaves the shell document
+  // alone; 'instant' bypasses the page's smooth scrolling so the snapshot never catches a scroll in flight.
+  await owner.evaluate(() => {
+    const button = document.querySelector('.vhl-expand');
+    window.scrollBy({ top: button.getBoundingClientRect().top - window.innerHeight / 4, behavior: 'instant' });
+  });
   return owner;
 }
 
