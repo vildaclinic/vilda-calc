@@ -1,115 +1,124 @@
-# AMH i inhibina B — odniesienia liczbowe, plan aktualizowany 14.10.2026
+# AMH i inhibina B — stan planu na 18.10.2026
 
-Plan dotyczy dostępności źródłowych median/średnich i wykorzystania danych
-pacjenta. Nie utożsamia płynnej krzywej edukacyjnej z medianą, a mediany
-z granicami referencyjnymi. Obowiązują [zasady krzywych](HORMONE_CURVE_AGENT_GUIDE.md)
+Aktualna [macierz pokrycia i luk](hormone-lifespan/REFERENCE_COVERAGE_AUDIT.md)
+jest wspólnym zestawieniem dostępności odniesień wszystkich hormonów.
+Poniżej zapisano zakończone etapy AMH i inhibiny B oraz ograniczenia
+pozostałych prac. Zwykły punkt pacjenta, osobna informacja o źródle,
+ilustracja edukacyjna i norma laboratoryjna mają odrębne kontrakty.
+Obowiązują [zasady krzywych](HORMONE_CURVE_AGENT_GUIDE.md)
 i [zasady interpretacji badań](LAB_INTERPRETATION_AGENT_GUIDE.md).
 
-## 1. Podstawa AMH — zakończone, PR #661
+## 1. Zakończone etapy AMH
 
-- Zastąpienie nieaktualnej tabeli laboratoryjnej pełnym, sprawdzonym katalogiem
-  Mayo AMH1/608824: 16 przedziałów wieku/płci, Roche Elecsys AMH, surowica.
-  Szczegóły, źródła, populacja i ograniczenia: [AMH.md](AMH.md).
-- Usunięcie ogólnego zakresu dorosłej kobiety przy brakujących danych,
-  nieuzasadnionej blokady po 45. roku życia i progów PCOS/IVF z tej tabeli.
-- Zachowanie jednostronnych granic jako `<`, bez fikcyjnego dolnego zera.
-  Znane wcześniactwo w 1. roku życia wstrzymuje porównanie katalogowe;
-  jest to ostrożnościowa polityka aplikacji, nie kryterium opublikowane przez Mayo.
-- Odczyt istniejącego dokładniejszego wieku minipuberty z karty także dla AMH.
-  Bez nowych pól, zmian źródeł median ani przebiegu krzywych.
-- Krótki powód braku odniesienia wykresu AMH u niemowlęcia, gdy nie można
-  zakwalifikować go do modelu donoszonej populacji.
-- Historia: zachowanie surowej wartości/jednostki i jawnego zapisanego
-  `lab.norm`; bez ponownego klasyfikowania dawnego AMH nowymi zakresami.
-  Nie dodajemy w tym kroku nowego formatu snapshotów AMH.
-- Regresje rzeczywistych funkcji i formularza, desktop/mobile, aktualizacja
-  PWA i restart offline. Draft PR do `audyt`; wszystkie kontrole GitHub
-  muszą zakończyć się dla aktualnego SHA. Scalenie należy do właściciela.
+- **PR #661 — zakresy laboratoryjne i kontekst wieku:** pełny katalog
+  Mayo AMH1/608824, 16 przedziałów wieku/płci, Roche Elecsys AMH,
+  surowica. Zachowano jednostronne granice `<`, bez fikcyjnego dolnego
+  zera, i odczyt dokładniejszego wieku z formularza. Znane wcześniactwo
+  w 1. roku wstrzymuje porównanie katalogowe jako ostrożnościowa polityka
+  aplikacji. Szczegóły: [AMH.md](AMH.md).
+- **PR #665 — mediany męskich grup:** Jopling w 12–<13 i 15–<18 lat
+  oraz Benderradji w 20–<30 lat. To mediany całych grup źródłowych
+  12–14,9, 15–18,9 i 20–39, bez interpolacji. Wyselekcjonowana populacja
+  normozoospermicznych partnerów ogranicza uogólnienie Benderradji.
+  Pozostawioną wtedy lukę 18–<20 uzupełnił później PR #713.
+- **PR #670 — żeńskie mediany dorosłych FDA/Access 2:** pięć grup
+  surowicy w `[18,26)`, `[26,31)`, `[31,36)`, `[36,41)`, `[41,46)`.
+  To jawna konwencja ukończonych lat aplikacji; cały możliwy wiek musi
+  pasować do jednej grupy. Bez interpolacji i aktywacji norm FDA.
+  Znana niezgodna metoda/materiał, ciąża lub stan po menopauzie wyklucza
+  odniesienie; brak danych nie wymaga nowych pytań. Zachowano GnRHa.
+- **PR #677 — utrwalone odniesienie AMH:** istniejące „Przypnij do
+  wizyty” zapisuje zwykłe odniesienie w opcjonalnym `lab.hormoneReference`,
+  odrębnie od normy i oceny laboratoryjnej. Zachowuje statystykę, grupę,
+  użyty wiek/kontekst, jednostki, źródło, wersje i ograniczenia albo powód
+  braku odniesienia. Odczyt używa zapisu bez przeliczania obecnym modelem;
+  zmiana wyniku, jednostki lub daty unieważnia odniesienie, komentarz
+  je zachowuje. Starsze wpisy bez migawki nie otrzymują nowej mediany.
+- **PR #711 — znana ciąża:** jawny trymestr wyłącza pięć pediatrycznych
+  żeńskich profili Jopling AMH. Jest to ostrożnościowa reguła aplikacji,
+  nie dopisane kryterium badania. Nieznany kontekst pozostaje nieznany,
+  bez dodatkowego pytania; źródłowe mediany nie zmieniają się.
+- **PR #713 — męskie AMH 18–<20:** Woloszynek 2015, tabela 2,
+  **mediana całej grupy 18–30 lat: 6,3 ng/mL, N=63**
+  (44,9678800856531 pmol/L). Zastosowanie wyłącznie w `[18,20)` jest
+  polityką aplikacji; nie tworzy mediany podgrupy 18–20 ani dokładnego
+  wieku. Surowica, opisany manualny protokół Gen II ELISA, bez kalibracji
+  do innych metod. Cały możliwy wiek musi pasować; zachowane bramki
+  metody, materiału, terapii i tożsamości pacjenta nie wymagają nowych pól.
 
-## 2. Uzupełnienie median z już zweryfikowanych źródeł
+Pełne źródła, granice i przypadki syntetyczne:
+[kontrakt punktu i migawki](hormone-lifespan/PATIENT_POINT.md).
+Zmiany nie utożsamiają mediany grupy z normą ani wysokością poglądowej
+krzywej i nie przeliczają dawnych ocen nowymi źródłami.
 
-Przed każdym rozszerzeniem sprawdzić pełny przedział wieku, metodę,
-materiał, populację, statystykę i pierwszeństwo nakładających się źródeł.
-Nie łączyć surowicy z osoczem ani średniej geometrycznej z medianą.
-
-1. **Zakończone, PR #665 — męskie AMH:** brakujące odcinki grup Jopling 2018
-   w wieku 12–<13 i 15–<18 lat oraz Benderradji w wieku 20–<30 lat,
-   z ograniczeniami wyselekcjonowanej populacji normozoospermicznych
-   partnerów. To trzy mediany całych grup 12–14,9, 15–18,9 i 20–39,
-   bez interpolacji, zmiany krzywych lub norm; luka 18–<20 pozostaje.
-   Pełne źródła i polityka: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
-2. **Zakończone, PR #670 — żeńskie AMH:** pięć median grup surowicy FDA
-   K170524/Access 2 w zwykłych widokach. Jawna konwencja ukończonych lat:
-   `[18,26)`, `[26,31)`, `[31,36)`, `[36,41)`, `[41,46)`; cały możliwy
-   wiek musi mieścić się w jednej grupie. Bez interpolacji, aktywacji
-   tabeli norm FDA ani zmiany istniejącej ilustracji opartej na osoczu.
-   Nieznana metoda/materiał/cykl nie wymaga nowych pól; znana niezgodność,
-   ciąża lub stan po menopauzie blokują to nowe odniesienie. Zachowane
-   dotychczasowe blokady, w tym GnRHa. Szczegóły i przypadek F28/1 ng/mL:
-   [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh--mediany-dorosłych-fda-13-października-2026).
-3. **Zakończone, PR #672 — inhibina B obu płci:** ponowna macierz dostępności
-   oraz rozszerzenie zwykłego żeńskiego profilu Borelli-Kjær do **5,6–47 lat
-   włącznie**. Zachowane wszystkie 24 węzły i PCHIP, bez sztucznej granicy
-   przy 20 latach. To przybliżona mediana wieku; cyklu nie standaryzowano,
-   a danych antykoncepcji brakowało u większości kobiet. Znana ciąża/menopauza wyłącza ten zwykły profil
-   jako konserwatywna polityka aplikacji, bez nowego pola i bez zmiany
-   porównania płci 8–20, krzywych lub norm. Szczegóły:
-   [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026).
-   Crofton nie jest aktywowany. Tabela grupy 0–6 lat obejmuje N=105,
-   lecz szerokie łączenie wieku, 35% wyników pod LOD, osocze i historyczna
-   metoda wymagają osobnej decyzji; nie jest to mediana dokładnego wieku
-   ani model minipuberty. W tej partii luki >1–<5,6 oraz >47 lat pozostały jawne.
-   Męskie źródła pozostają bez zmian: Busch 7 dni–<1 roku, Kelsey
-   1–<6,1 i Borelli 6,1–80 lat. Osobne średnie grup Senior do 101 lat
-   nie wypełniają luki zwykłego modelu po 80. roku. Mediany wcześniaków
-   Kuiri w dwóch wizytach pozostają podsumowaniami grup, bez dokładnego
-   punktu na krzywej wieku. Poniższa kolejna partia wykorzystuje Zhou
-   dla młodszych dziewczynek; nie aktywuje Crofton.
-4. **Zakończone, PR #673 — inhibina B dziewczynek >1–<5,6 lat:** dwie stałe
-   mediany pełnych grup Zhou 2025: 1–5 lat, N=60, **33 pg/mL** oraz
-   5–10 lat, N=77, **27 pg/mL**. Surowica, Kangran CLIA na KAESER 1000,
-   przekrojowa kohorta szpitalna z Wuhan. Zwykły wykres stosuje je tylko
-   w `(1,5)` i `[5,5.6)`; granica 5 jest jawną konwencją aplikacji,
-   nie opisaną regułą autorów. Dokładnie 1 zachowuje Ljubicic, od 5,6
-   Borelli. Cały możliwy wiek musi pasować do jednej grupy, bez interpolacji.
-   Nieznana metoda/materiał pozwala na orientacyjne odniesienie;
-   znana niezgodność je wyklucza. Bez harmonizacji z Gen II, nowych norm,
-   krzywych, pól, historii, profili męskich lub porównań płci. Szczegóły:
-   [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--mediany-grup-dziecięcych-zhou-14-października-2026).
-   Pozostają braki przed pierwszym żeńskim węzłem 0,02 roku, po 47 latach
-   i dla wieku przecinającego granice źródeł. Dane wcześniacze i męski
-   pierwszy tydzień wymagają osobnych materiałów lub decyzji.
-5. **Bieżąca partia — zapis odniesienia AMH w wizycie i historii:**
-   istniejące „Przypnij do wizyty” utrwala źródłową wartość odniesienia,
-   rodzaj statystyki, grupę, użyty wiek i kontekst, jednostki, źródło,
-   wersje oraz ograniczenia albo powód braku odniesienia. Opcjonalne
-   `lab.hormoneReference` jest odrębne od normy i oceny laboratoryjnej.
-   Odczyt korzysta wyłącznie z zapisu, bez dzisiejszego modelu lub
-   pacjenta. Edycja wyniku, jednostki lub daty unieważnia odniesienie;
-   komentarz je zachowuje. Starsze wpisy bez tego pola nie dostają
-   automatycznie nowej mediany. Bez nowych pól, norm i zmian krzywych.
-   Kontrakt: [utrwalone odniesienie AMH](hormone-lifespan/PATIENT_POINT.md#utrwalone-odniesienie-amh--14-października-2026).
-   Weryfikacja zapisu, ponownego odczytu, edycji, importu i działania
-   offline oraz kontrole GitHub pozostają warunkiem zakończenia partii.
-
-## 3. Nowe materiały Xu 2026 — zapisane, profil jeszcze nieaktywny
+## 2. Xu 2026 — osobny blok pięciu P50 wdrożony w PR #681
 
 Właściciel dostarczył pełny artykuł i suplement XLSX:
 [DOI 10.1097/CM9.0000000000004161](https://doi.org/10.1097/CM9.0000000000004161).
-Przegląd i liczby: [xu2026-amh-source-review.json](hormone-lifespan/evidence/xu2026-amh-source-review.json).
+Referencyjna kohorta obejmuje 10 543 kobiety **przed menopauzą, 35–55 lat**;
+HS-AMH Kangrun, surowica, ng/mL. Osobna grupa 422 kobiet po menopauzie
+służy analizie diagnostycznej, nie temu odniesieniu.
 
-- Referencyjna kohorta to 10 543 kobiety **przed menopauzą, 35–55 lat**,
-  metoda HS-AMH Kangrun, surowica, ng/mL. Osobna grupa 422 kobiet po
-  menopauzie służy analizie diagnostycznej, nie dopasowaniu tego zakresu.
-- Suplement zawiera tabele zbiorcze, nie indywidualne pomiary. Punkty
-  P50 dla wieku 35/40/45/50/55 nie są stałymi medianami pięcioletnich grup.
-- Przed aktywacją trzeba jawnie ustalić sposób odniesienia pomiędzy
-  punktami, postępowanie poniżej LOD i wyjaśnić rozbieżności części tabel
-  pomocniczych. Nie dopisywać pozornej rocznej dokładności.
-- Nie przenosić wyników na inne metody, wszystkie kobiety po 45. roku
-  życia, potwierdzoną menopauzę ani wiek >55 lat. Nie zastępować nimi
-  zakresów Mayo i nie zmieniać automatycznie istniejącej krzywej.
+- Blok pokazuje opublikowane pary **wiek 35/40/45/50/55 → P50**.
+  Dla wieku pośredniego przedstawia sąsiednie źródłowe wiersze, bez
+  obliczania nowej mediany. Nie są to mediany pięcioletnich grup,
+  granice normy ani przedział możliwej mediany konkretnej pacjentki.
+- **Ciągły model Xu i nowy profil punktu pacjentki pozostają nieaktywne.**
+  Blok nie wyznacza percentyla, ilorazu do P50, SDS ani diagnozy;
+  nie trafia do `lab.hormoneReference`. Wyjątek `terminal-anchor` dla
+  ukończonych 55 lat pokazuje tylko ostatni punkt, z informacją o niepełnym
+  pokryciu wieku; nie rozszerza modelu do 56 lat.
+- Brakuje pełnych parametrów GAMLSS, jawnej obsługi wartości poniżej
+  LOD i oddzielnego LOQ. Literalne `<0.003` nie staje się zerem, LOD/2
+  lub dokładnym pomiarem. Rozbieżności nazw Mean/median, etykiet LOD,
+  liczebności i χ² są opisane w audycie i pozostają ograniczeniami źródła.
+- Nie harmonizujemy Kangrun z Access, Elecsys lub Gen II. Znana
+  menopauza, ciąża, leczenie hormonalne lub niezgodna metoda/materiał
+  ukrywa blok według polityki aplikacji. Nieznany kontekst nie potwierdza
+  kwalifikacji pacjentki. Zakresy Mayo i istniejące krzywe pozostają odrębne.
 
-Po każdym kroku aktualizować ten plan i rejestr `ALGORITHMS.md`;
-nie oznaczać następnego etapu jako wdrożonego na podstawie samej analizy źródła.
+Aktualny kontrakt: [AMH_XU_2026.md](hormone-lifespan/AMH_XU_2026.md)
+i [audyt wdrożenia](hormone-lifespan/evidence/amh-xu-2026-audit.json).
+[Wcześniejszy przegląd](hormone-lifespan/evidence/xu2026-amh-source-review.json)
+zachowuje historyczny stan decyzji przed wdrożeniem osobnego bloku.
+
+## 3. Zakończone etapy inhibiny B
+
+- **PR #672 — zwykły żeński profil Borelli-Kjær 5,6–47 lat włącznie:**
+  zachowane 24 węzły i PCHIP, bez sztucznej granicy przy 20 latach.
+  To przybliżona mediana wieku; cyklu nie standaryzowano, a danych
+  antykoncepcji brakowało u większości kobiet. Znana ciąża/menopauza
+  wyłącza zwykły profil jako polityka aplikacji. Porównanie płci 8–20,
+  krzywe i normy zachowują osobne kontrakty.
+- **PR #673 — dziewczynki >1–<5,6 lat:** stałe mediany pełnych grup
+  Zhou 2025: 1–5 lat, N=60, **33 pg/mL** oraz 5–10 lat, N=77,
+  **27 pg/mL**. Surowica, Kangran CLIA/KAESER 1000, kohorta szpitalna
+  z Wuhan. Aplikacja stosuje je w `(1,5)` i `[5,5.6)`; granica 5 jest
+  jawną konwencją aplikacji. Dokładnie 1 zachowuje Ljubicic, od 5,6
+  Borelli. Cały możliwy wiek musi pasować, bez interpolacji między grupami
+  i harmonizacji z Gen II. Znana niezgodność metody/materiału blokuje
+  porównanie; brak danych nie wymaga nowego formularza.
+
+Męskie źródła: Busch 7 dni–<1 roku, Kelsey 1–<6,1 i Borelli 6,1–80 lat.
+Osobne średnie grup Senior do 101 lat nie uzupełniają zwykłego modelu
+po 80 latach. Kuiri pozostaje podsumowaniem dwóch wizyt dzieci donoszonych
+i wcześniaków. Żeńska grupa wieku Crofton 0–6 lat nie jest aktywowana:
+N=105, 35% pod LOD,
+osocze i historyczna metoda nie dają mediany dokładnego wieku ani modelu
+minipuberty. Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md).
+
+## 4. Pozostałe prace
+
+Wśród luk **zwykłego punktu AMH** pozostają mężczyźni >70 lat i kobiety
+od 46 lat. Nie oznacza to braku całej informacji w aplikacji: FDA daje
+mediany grup kobiet 18–<46, Xu osobne punkty P50 wieku 35–55, a Mayo
+odrębne zakresy laboratoryjne. Pozostałe granice wieku, niepewny wiek
+i kontekst kwalifikacji opisuje aktualna [macierz](hormone-lifespan/REFERENCE_COVERAGE_AUDIT.md).
+
+Nowe źródło wymaga sprawdzenia pełnego wieku, metody, materiału, populacji,
+statystyki i pierwszeństwa. Nie łączyć surowicy z osoczem ani średniej
+geometrycznej z medianą. Nie oznaczać etapu jako wdrożonego na podstawie
+samej analizy publikacji. Dalsze zmiany aktualizują ten plan i rejestr
+`ALGORITHMS.md`; wymagane kontrole GitHub muszą zakończyć się dla aktualnego
+SHA. Zielone testy nie nadają walidacji klinicznej; scalenie należy do właściciela.
 
