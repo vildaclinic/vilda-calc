@@ -16744,6 +16744,22 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Opis klucza sesji w polityce prywatności i w „Pozostań zalogowany” zgodny z kodem (P-KLUCZ-SESJI-OPIS, SW 1.1.319, 2026-10-19)
+
+**Zmiana kliniczna: NIE.** Zmieniają się wyłącznie teksty: `polityka-prywatnosci.html` i opis „Pozostań zalogowany na tym urządzeniu” w `ustawienia.html`. Kod, klucze storage, kryptografia i limity czasu bez zmian. Decyzja właściciela 2026-10-19 (przegląd ścieżki zakładania konta, punkt 4; wariant „poprawić teksty”).
+
+**Co było.** Polityka przeczyła sama sobie: tabela „Dane przechowywane lokalnie” wymieniała klucz sesji skarbca w `sessionStorage`, a akapit o trybie chmurowym mówił, że klucz „nigdy nie jest zapisywany na urządzeniu” i „istnieje wyłącznie w pamięci podczas odblokowanej sesji”. Opis „Pozostań zalogowany” obiecywał: „Zamknięcie przeglądarki i tak Cię wyloguje, a klucz nigdy nie jest zapisywany na dysku”. Tymczasem sejf zapisuje klucz sesji (`vilda-vault-session-v2`, klucz główny w base64 i `expiresAtISO` = teraz + czas bezczynności) w `sessionStorage`, żeby przejście na inną stronę i F5 nie wymagały hasła. Sprawdzone w Chromium (profil trwały, `--restore-last-session`): po zamknięciu przeglądarki i przywróceniu kart sesja wraca bez hasła — przy „zaufanym urządzeniu” do 7 dni, w trybie domyślnym do 20 minut od ostatniej aktywności.
+
+**Co jest.**
+- Tabela, wiersz `sessionStorage`: klucz sesji działa także po przejściu na inną stronę i odświeżeniu; znika przy wylogowaniu, automatycznej blokadzie i wraz z zamknięciem karty; przeglądarka przywracająca karty (po ponownym uruchomieniu albo „Otwórz ponownie zamkniętą kartę”) może go odtworzyć, a aplikacja przyjmuje go tylko do upływu czasu bezczynności (domyślnie 20 minut, w trybie chmurowym 10 minut; najwyżej 7 dni).
+- Akapit o trybie chmurowym: klucz „nie jest zapisywany w trwałej pamięci urządzenia (localStorage, IndexedDB)”, a na czas sesji leży w `sessionStorage` (odesłanie do tabeli).
+- „Pozostań zalogowany”: klucz tylko w pamięci karty, wylogowanie usuwa go od razu, przywrócone karty mogą przywrócić sesję bez hasła do 7 dni od ostatniej aktywności.
+- Data „Ostatnia aktualizacja” polityki: październik 2026.
+
+**Walidacja.** Nowy `tests/unit/klucz-sesji-opis.test.mjs`, 5 testów: prawdziwy `vilda_vault.js` w Node (klucz tylko w `sessionStorage`, wygaśnięcie po 20 minutach, usunięcie przy wylogowaniu, stałe 20/10 minut), stałe 7 dni w `vilda_auth_ui.js` oraz treść obu stron (brak starych obietnic, nowe zdania z limitami). Kontrola negatywna: na starych tekstach czerwone 3 testy treści, testy kodu zielone.
+
+SW 1.1.318 → **1.1.319** (zmienione dokumenty w pamięci SW: `polityka-prywatnosci.html`, `ustawienia.html`).
+
 ## Konto z kreatora bez synchronizacji nie łączy się samo z serwerem (P-KONTO-BEZ-SERWERA, SW 1.1.318, `vilda_vault.js` 216, `vilda_sync_integration.js` 51, `vilda_auth_ui.js` 504, `vilda_pro_access.js` 11, 2026-10-19)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, zapis, scalanie ani sama synchronizacja. Decyzja właściciela 2026-10-19 (przegląd ścieżki zakładania konta, punkt 3; wariant „konto z kreatora milczy”).
