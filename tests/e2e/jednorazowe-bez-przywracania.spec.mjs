@@ -40,10 +40,11 @@ test('zamknięcie przeglądarki bez wylogowania: po przywróceniu kart sesja jed
   test.setTimeout(120_000);
   const profil = fs.mkdtempSync(path.join(os.tmpdir(), 'vilda-jednorazowe-'));
   // Pełny Chromium (nie headless shell), żeby profil zapisał i przywrócił sesję przeglądarki.
+  const lo = launchOptions || {};
   const opcje = (dodatkowe = []) => ({
-    ...launchOptions,
-    channel: launchOptions.executablePath ? undefined : 'chromium',
-    args: [...(launchOptions.args || []), ...dodatkowe],
+    ...lo,
+    channel: lo.executablePath ? undefined : 'chromium',
+    args: [...(lo.args || []), ...dodatkowe],
     locale: 'pl-PL', viewport: { width: 1280, height: 900 }, serviceWorkers: 'block',
   });
   const przygotuj = async (ctx) => {
