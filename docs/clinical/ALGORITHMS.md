@@ -16744,7 +16744,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## Konto z kreatora bez synchronizacji nie łączy się samo z serwerem (P-KONTO-BEZ-SERWERA, SW 1.1.317, `vilda_vault.js` 216, `vilda_sync_integration.js` 51, `vilda_auth_ui.js` 504, `vilda_pro_access.js` 11, 2026-10-19)
+## Konto z kreatora bez synchronizacji nie łączy się samo z serwerem (P-KONTO-BEZ-SERWERA, SW 1.1.318, `vilda_vault.js` 216, `vilda_sync_integration.js` 51, `vilda_auth_ui.js` 504, `vilda_pro_access.js` 11, 2026-10-19)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, zapis, scalanie ani sama synchronizacja. Decyzja właściciela 2026-10-19 (przegląd ścieżki zakładania konta, punkt 3; wariant „konto z kreatora milczy”).
 
@@ -16766,7 +16766,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 Kontrola negatywna: na kodzie sprzed zmiany czerwone są testy 1–3 (5 żądań przed odpowiedzią w kroku 3); test 4 zielony w obu wersjach.
 
-SW 1.1.316 → **1.1.317**; `vilda_vault.js?v=215→216`, `vilda_sync_integration.js?v=50→51`, `vilda_auth_ui.js?v=503→504`, `vilda_pro_access.js?v=10→11`, `vilda_chrome.js?v=160→161`, `vilda_session_bridge.js?v=84→85` (dwa ostatnie: wstrzykują pliki z nowym `?v=`).
+SW 1.1.317 → **1.1.318**; `vilda_vault.js?v=215→216`, `vilda_sync_integration.js?v=50→51`, `vilda_auth_ui.js?v=503→504`, `vilda_pro_access.js?v=10→11`, `vilda_chrome.js?v=160→161`, `vilda_session_bridge.js?v=84→85` (dwa ostatnie: wstrzykują pliki z nowym `?v=`).
 
 ## Regulamin przed ekranem logowania; „Wstecz” w kreatorze konta nie zmienia klucza odzyskiwania (P-REGULAMIN-BRAMKA, P-KREATOR-KLUCZ, SW 1.1.316, `vilda_auth_ui.js` 503, `style.css` 91, `inline_index_00.css` 3, 2026-10-19)
 
