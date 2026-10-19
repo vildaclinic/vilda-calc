@@ -1,0 +1,77 @@
+{
+  "id": "e2-cycle-context-policy-review-2026-10-19",
+  "reviewDate": "2026-10-19",
+  "change": "Qualification of existing adult female E2 references; no new numerical RI, cutoff, conversion, median, or source attribution.",
+  "primarySources": [
+    {
+      "id": "mayo_eest_81816_context",
+      "url": "https://www.mayocliniclabs.com/test-catalog/Overview/81816",
+      "pdfUrl": "https://www.mayocliniclabs.com/test-catalog/download-setup?format=pdf&unit_code=81816",
+      "review": "Full official HTML and seven-page PDF read on 2026-10-19; generated-on date is not a revision date.",
+      "locations": [
+        "PDF p2 Clinical Information",
+        "PDF p3 Reference Values",
+        "PDF p4 Interpretation"
+      ],
+      "material": "serum",
+      "method": "LC-MS/MS",
+      "sourceUnit": "pg/mL",
+      "supports": "Menstrual-phase variation and distinct premenopausal/postmenopausal context.",
+      "limits": "Catalog does not give complete cohort demographics or verify existing Tietz numerical RI."
+    },
+    {
+      "id": "anckaert2021_context",
+      "doi": "10.1016/j.plabm.2021.e00211",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8042396/",
+      "citation": "Anckaert et al. Practical Laboratory Medicine 25 (2021) e00211.",
+      "review": "Retained full primary XML/text and original supplementary material read; live full text refresh limited by PMC challenge and publisher HTTP 403.",
+      "locations": [
+        "Methods",
+        "Table 1",
+        "Discussion",
+        "Supplementary eligibility criteria and Table S3"
+      ],
+      "population": "85 evaluable apparently healthy normo-ovulatory women, EU 18-37/US 22-37 years, one natural 24-35 day cycle; 82.4% white/Caucasian. Hormonal contraception, pregnancy and lactation excluded.",
+      "material": "serum",
+      "method": "Roche Elecsys Estradiol III, cobas e801",
+      "sourceUnit": "pmol/L",
+      "supports": "Interpretation depends on cycle phase/subphase and method.",
+      "limits": "Does not verify Tietz RI or define pregnancy, menopause or other assay references. No new numerical data imported.",
+      "retainedSourceFiles": [
+        {
+          "filename": "PMC8042396.xml",
+          "sha256": "af25809af65e14bcaf020658570f7d2cfbabe3303bddb877b3ad67314a7c63e7",
+          "bytes": 54534
+        },
+        {
+          "filename": "anckaert2021-mmc1.docx",
+          "sha256": "adf0b88a12c66fe8563717fc6e8370e0c874982f7b43dab44d71a42f7554c2cb",
+          "bytes": 151068
+        }
+      ]
+    }
+  ],
+  "legacyNumericalProvenance": {
+    "sourceId": "tietz_2018",
+    "edition": "Tietz Textbook of Clinical Chemistry and Molecular Diagnostics,6th edition, 2018",
+    "verificationStatus": "Relevant complete source table unavailable in this review; existing values retained without renewed numerical validation.",
+    "unchangedRows": [
+      "e2_female_follicular",
+      "e2_female_ovulation",
+      "e2_female_luteal",
+      "e2_female_postmeno"
+    ],
+    "endpointLimitation": "Legacy postmenopausal prose<110 pmol/L differs from numeric 0-110 row and inclusive known-context evaluation. Qualification fix does not revise that endpoint. Zero is not evidence for a lower RI, LOD or LOQ."
+  },
+  "qualificationPolicy": {
+    "scope": "Existing adult female application routing; no invented source-specific age threshold.",
+    "unknown": "Four separate labeled references; no per-variant or overall verdict, no merged envelope.",
+    "known": "Existing follicular, ovulation, luteal or postmenopausal row; no age-based inference.",
+    "adultTanner": "Retained Tanner 1-5 cannot replace adult reproductive context; known phase takes priority. Pediatric rows unchanged.",
+    "unsupported": "Known pregnancy_t1, pregnancy_t2, pregnancy_t3 or other unsupported nonempty context gives no applicable RI; not ordinary-cycle alternatives.",
+    "questions": "No new required inputs.",
+    "syntheticRegression": "F, 30 years, E2=50 pmol/L, unknown context: measurement and conversion available; four alternatives, no classification; formerly follicular 70-290/below.",
+    "history": "New unknown-context snapshot uses existing v1/unavailable with retained measurement/context and no single applied classification. Old saved assessment is replayed, not recalculated. No lab.norm or schema addition."
+  },
+  "clinicalImpact": "Removes an unsupported follicular assumption. Owner authorized implementation after explicit proposal; technical tests do not confer clinical validation and owner retains clinical review/merge decision."
+}

@@ -71,7 +71,7 @@
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_schowek.js?v=5"></script>
   <script src="vilda_persistence_adapter.js?v=31"></script>
-  <script src="vilda_session_bridge.js?v=82"></script>
+  <script src="vilda_session_bridge.js?v=83"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -108,7 +108,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=2" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=158"></script>
+  <script src="vilda_chrome.js?v=159"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -442,8 +442,8 @@
   <script src="ios26-ui.js?v=45" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=40"></script>
-  <script src="lab_unit_converter.js?v=8"></script>
+  <script src="lab_units_data.js?v=41"></script>
+  <script src="lab_unit_converter.js?v=9"></script>
   <script src="vilda_lab_puberty_data.js?v=7"></script>
   <script src="vilda_lab_puberty.js?v=8"></script>
   <script src="vilda_lab_inhibin_b_data.js?v=1"></script>
@@ -473,7 +473,7 @@
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
-  <script src="lab_pin_result.js?v=10"></script>
+  <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=4"></script>
   <script src="lab_history_strip.js?v=4"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
@@ -1781,7 +1781,9 @@
       }
       // Analogicznie dla cykl/ciąża — pokaż tylko gdy fenotyp realnie wymaga.
       if (cycleAware && patient.sex === 'F' && patient.life_stage === 'adult' && !patient.cycle_phase) {
-        hints.push('Określ fazę cyklu / ciążę w „Zmień ▼" — domyślnie pokazujemy zakres folikularny.');
+        hints.push(currentSubstance.id === 'estradiol'
+          ? 'Jeśli faza cyklu lub menopauza jest znana, wybierz ją w „Zmień ▼".'
+          : 'Określ fazę cyklu / ciążę w „Zmień ▼" — domyślnie pokazujemy zakres folikularny.');
       }
       // Hint dla testosteronu popołudniowego — ES 2018 mówi że taki pomiar
       // nie nadaje się do diagnostyki hipogonadyzmu.
@@ -1811,6 +1813,10 @@
       var cycleAware = !!(currentSubstance && CYCLE_AWARE[currentSubstance.id]);
       var sexIsMale = (p && p.sex === 'M');
       overrideCycleWrapEl.style.display = (cycleAware && !sexIsMale) ? '' : 'none';
+      if (overrideCycleEl && overrideCycleEl.options && overrideCycleEl.options[0]) {
+        overrideCycleEl.options[0].textContent = currentSubstance && currentSubstance.id === 'estradiol'
+          ? '(nieznana)' : '(domyślnie)';
+      }
       // Selektor Tannera tylko dla Tanner-aware substancji LUB dla pacjenta
       // pediatrycznego (wtedy lekarz może z dowolnym analitem doprecyzować
       // dojrzałość, a my zaczerpniemy ją do oceny life_stage).
@@ -3199,6 +3205,46 @@
         empty.className = 'lab-range-empty';
         empty.textContent = 'Brak jednolitego zakresu referencyjnego dla tej substancji – patrz uwagi poniżej.';
         return { element: empty, rangeInfo: null };
+      }
+      // A phase-dependent reference is a list of existing source ranges, not
+      // one selected range. Keep the concentration and conversions neutral.
+      if (substance.id === 'estradiol' && range.reference_context_required &&
+          Array.isArray(range.reference_variants) && range.reference_variants.length) {
+        var alternatives = document.createElement('div');
+        alternatives.className = 'vilda-lab-assessment';
+        alternatives.setAttribute('data-reference-variants', 'estradiol');
+        var lead = document.createElement('p');
+        lead.className = 'vilda-lab-variants-lead';
+        lead.textContent = range.context_pl;
+        alternatives.appendChild(lead);
+        var variantUnit = substance.canonical_si;
+        var variantFactor = 1;
+        (substance.units || []).forEach(function (unit) {
+          if (unitTargetEl && unit.symbol === unitTargetEl.value && unit.factor_to_si > 0) {
+            variantUnit = unit.symbol;
+            variantFactor = unit.factor_to_si;
+          }
+        });
+        var variantSources = [];
+        range.reference_variants.forEach(function (variant) {
+          var row = document.createElement('div');
+          row.className = 'vilda-lab-reference-variant';
+          row.setAttribute('data-variant-id', variant.id);
+          row.setAttribute('data-reproductive-context', variant.cycle_phase);
+          var label = document.createElement('span');
+          label.textContent = variant.label;
+          var bounds = document.createElement('strong');
+          bounds.textContent = referenceBoundsText(variant, variantFactor, substance.precision || 3) + '\u00a0' + variantUnit;
+          row.appendChild(label);
+          row.appendChild(bounds);
+          alternatives.appendChild(row);
+          (variant.source_ids || []).forEach(function (id) {
+            if (!variantSources.includes(id)) variantSources.push(id);
+          });
+        });
+        // Sources describe the alternatives. They never become one selected
+        // reference in the converter or the snapshot captured when pinning.
+        return { element: alternatives, rangeInfo: Object.assign({}, range, { source_ids: variantSources }) };
       }
       // Flaga no_interpretation — pomiar w warunkach poza standardem klinicznym
       // (np. testosteron popołudniowy). Pasek normy nie pokazujemy — zamiast tego
