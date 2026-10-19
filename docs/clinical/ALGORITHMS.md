@@ -1083,6 +1083,55 @@ sam wpis przez prawdziwy sejf do `buildHistoryView`. Na artefakcie sprzed
 łatki trzy nowe testy padają. Zielone testy nie są walidacją kliniczną;
 zmiana czeka na akceptację kliniczną właściciela (AGENTS.md § 3).
 
+### LAB-E2-CYCLE-CONTEXT — nieznana faza u dorosłych kobiet, 2026-10-19
+
+**Wpływ kliniczny: tak.** `LabUnitsData` i `LabUnitConverter` 2.0.2,
+polityka `estradiol-matched-reference-only` `2026-10-19.1`. U dorosłej
+kobiety nieznany kontekst cyklu daje natychmiastowe przeliczenie i cztery
+neutralne, podpisane alternatywy istniejących RI. Nie dobieramy fazy
+folikularnej, nie klasyfikujemy alternatyw i nie pokazujemy jednego
+werdyktu, koloru ani osi zakresu. Nie dochodzi pytanie wymagane do wyniku.
+Identyfikatory wierszy, etykiety i kwalifikacja są danymi; granice oraz
+źródła wariantów pochodzą z istniejących wierszy, bez kopii norm w silniku.
+
+Jawna faza lub menopauza wybiera dotychczasowy odpowiedni wiersz także
+przy zachowanym stadium Tannera dorosłej. Dorosły Tanner I–V nie może
+obejść braku kontekstu cyklu. Znana ciąża albo inny nieobsługiwany,
+niepusty kontekst dorosłej kobiety daje przeliczenie bez dopasowanego RI
+i bez wariantów zwykłego cyklu. Pediatryczne wiersze wieku/stadium,
+mężczyźni, inne anality i dotychczasowe wyznaczanie `life_stage` pozostają
+bez zmian. Nie dodajemy nowej źródłowej granicy wieku.
+
+**Źródła i ograniczenia:** pełny katalog Mayo EEST/81816 (HTML i PDF,
+odczyt 19.10.2026, surowica LC-MS/MS, pg/mL) oraz pełny tekst i suplement
+Anckaert 2021, DOI `10.1016/j.plabm.2021.e00211` (85 kobiet z naturalnym
+owulacyjnym cyklem, Roche E2 III/cobas e801, pmol/L), potwierdzają
+zależność od kontekstu. Nie potwierdzają ponownie aplikacyjnych liczb
+Tietz 2018; pełna właściwa tabela Tietz nie była dostępna. Zachowujemy
+70–290, 380–1460, 200–770 i liczbowy zapis 0–110 pmol/L, konwersje oraz
+semantykę granic znanych faz. Rozbieżność opisu postmenopauzy `<110`
+i dotychczasowej numerycznej granicy włączającej 110 pozostaje jawna
+i nierozstrzygnięta. Zero nie oznacza LOD/LOQ. Szczegóły populacji,
+źródeł i zastrzeżeń: [E2_CYCLE_CONTEXT.md](E2_CYCLE_CONTEXT.md) oraz
+[zapis przeglądu](hormone-lifespan/evidence/e2-cycle-context-policy-review-2026-10-19.json).
+Krzywe wieku, mediany i edukacyjny schemat cyklu nie zmieniają się.
+
+**Syntetyczne regresje:** F, 30 lat, 50 pmol/L, nieznana faza → wynik
+i cztery odniesienia bez klasyfikacji (wcześniej „poniżej” 70–290).
+Ten sam przypadek z Tanner V → nadal neutralne warianty. Jawna faza
+lutealna → dotychczasowe 200–770 i klasyfikacja znanego kontekstu.
+Znana ciąża → przeliczenie bez RI. Testy wywołują produkcyjne API,
+sprawdzają wszystkie jednostki, znane fazy, granice, dane źródłowe,
+izolację innych grup oraz UI na komputerze i przy 320 px. Nowe regresje
+odtwarzają błąd na artefakcie bazowym.
+
+**Zapis:** snapshot v1 nieznanego kontekstu pozostaje `unavailable`,
+z pomiarem, bez klasyfikacji, granic jednej normy i serializacji listy
+wariantów. Nie dodajemy `lab.norm` ani schematu. Wcześniejsze zapisane
+oceny, także z `e2_female_default`, są odtwarzane bez ponownej kwalifikacji.
+Właściciel zlecił tę konkretną zmianę; testy techniczne nie zastępują
+przeglądu klinicznego i akceptacji przed scaleniem.
+
 ### LAB-E2 — brak niedopasowanego zakresu dorosłych, 2026-10-16
 
 **Wpływ kliniczny: tak.** `LabUnitsData` i `LabUnitConverter` 2.0.1:

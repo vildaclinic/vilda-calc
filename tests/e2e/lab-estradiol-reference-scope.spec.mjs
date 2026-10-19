@@ -65,8 +65,8 @@ async function choose(page) {
   await page.locator('#labUnitTarget').selectOption('pmol/L');
   await page.locator('#labValue').fill('20');
 }
-async function expectUnavailable(page) {
-  await expect(page.locator('#labRangeBlock')).toContainText(unavailable);
+async function expectUnavailable(page, message = unavailable) {
+  await expect(page.locator('#labRangeBlock')).toContainText(message);
   await expect(page.locator('#labRangeBlock .lab-range-scale, #labRangeBlock .lab-range-marker, #labRangeBlock .lab-range-uwaga-note')).toHaveCount(0);
   await expect(page.locator('#labResultStatus')).not.toContainText(/w zakresie normy|poniżej normy|powyżej normy/i);
   for (const selector of ['#labMeta', '#labResultSourceLine', '#labRangeBlock']) {
@@ -81,6 +81,43 @@ async function noOverflow(page) {
 async function bounds(page, text) {
   await expect(page.locator('#labMeta')).toContainText(text);
   await expect(page.locator('#labRangeBlock .lab-range-scale')).toHaveCount(1);
+}
+
+const cycleVariants = page => page.locator('#labRangeBlock [data-reference-variants="estradiol"]');
+const cycleRows = page => cycleVariants(page).locator('[data-variant-id]');
+const cycleIds = ['e2_female_follicular', 'e2_female_ovulation', 'e2_female_luteal', 'e2_female_postmeno'];
+const cyclePhases = ['follicular', 'ovulation', 'luteal', 'postmenopause'];
+
+async function neutralResult(page) {
+  await expect(page.locator('#labRangeBlock .lab-range-scale, #labRangeBlock .lab-range-marker')).toHaveCount(0);
+  await expect(page.locator('#labResultStatus')).not.toContainText(/w zakresie normy|poniżej normy|powyżej normy/i);
+  await expect(page.locator('#labResultStatus .lab-range-status')).toHaveCount(0);
+  await expect(page.locator('#labResultBig .lab-result-big-value')).not.toHaveClass(/is-normal|is-below|is-above|is-uwaga/);
+}
+
+async function expectCycleAlternatives(page, unit = 'pmol/L') {
+  await neutralResult(page);
+  await expect(cycleVariants(page)).toBeVisible();
+  await expect(cycleRows(page)).toHaveCount(4);
+  expect(await cycleRows(page).evaluateAll(rows => rows.map(row => row.dataset.variantId))).toEqual(cycleIds);
+  expect(await cycleRows(page).evaluateAll(rows => rows.map(row => row.dataset.reproductiveContext))).toEqual(cyclePhases);
+  const expected = unit === 'pmol/L'
+    ? ['70–290', '380–1460', '200–770', '0–110']
+    : ['19,1–79', '104–398', '54,5–210', '0–30'];
+  await expect(cycleRows(page).locator('strong')).toHaveText(expected.map(text => `${text}\u00a0${unit}`));
+  await expect(cycleVariants(page)).toContainText('Faza folikularna');
+  await expect(cycleVariants(page)).toContainText('Pik owulacyjny');
+  await expect(cycleVariants(page)).toContainText('Faza lutealna');
+  await expect(cycleVariants(page)).toContainText('Po menopauzie');
+  for (const row of await cycleRows(page).all()) {
+    await expect(row).not.toContainText(/poniżej|powyżej|w normie|w zakresie normy|↑|↓/i);
+  }
+  await expect(cycleRows(page).locator('[data-status], .lab-range-status, .vilda-lab-axis')).toHaveCount(0);
+  await expect(page.locator('#labMeta')).not.toContainText('Aktualny zakres:');
+}
+
+async function openPatientEditor(page) {
+  if (await page.locator('#labPatientOverride').isHidden()) await page.locator('#labPatientToggle').click();
 }
 
 test('E2 u chłopca 3 mies.: oba przeliczenia pozostają dostępne bez normy dorosłej kobiety i alarmu', async ({ page, e2Origin }, testInfo) => {
@@ -188,4 +225,197 @@ test('przypięcie E2 zapisuje brak zakresu bez klasyfikacji; dopasowany zakres n
     range: { low: 0, high: 183, matched: true, isDefault: false }
   } });
   await testInfo.attach('E2-pinned-range-envelopes', { body: JSON.stringify(saved, null, 2), contentType: 'application/json' });
+});
+
+for (const width of [1440, 320]) {
+  test(`E2 F35 bez fazy: wynik od razu i cztery neutralne odniesienia bez dodatkowych pytań (${width} px)`, async ({ page, e2Origin }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page, e2Origin, patient({ name: 'Fikcyjna pacjentka E2 bez fazy', sex: 'F', age: 35, ageMonths: 0 }));
+    await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('20');
+    await expect(page.locator('#labResultBig .lab-result-big-unit')).toHaveText('pmol/L');
+    await expect(page.locator('#labPatientOverride')).toBeHidden();
+    await expectCycleAlternatives(page);
+    await expect(page.locator('#labClinicalHint')).not.toContainText(/domyślnie.*folikular/i);
+    const sources = await page.locator('#labSourcesList').textContent();
+    expect(sources).toContain('Tietz 2018');
+    expect(sources).toContain('PTMRiE / PTGP 2018');
+    await noOverflow(page);
+    await page.locator('#labUnitTarget').selectOption('pg/mL');
+    await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('5,45');
+    await expectCycleAlternatives(page, 'pg/mL');
+    expect(await page.locator('#labSourcesList').textContent()).toBe(sources);
+    await noOverflow(page);
+    const screenshot = testInfo.outputPath(`E2-unknown-cycle-${width}.png`);
+    await page.screenshot({ path: screenshot, fullPage: true });
+    await testInfo.attach(`E2-unknown-cycle-${width}`, { path: screenshot, contentType: 'image/png' });
+  });
+}
+
+test('znana faza lub menopauza wybiera dotychczasowe granice, zachowuje ich końce i źródła po zmianie jednostki', async ({ page, e2Origin }) => {
+  await open(page, e2Origin, patient({ sex: 'F', age: 35, ageMonths: 0 }));
+  await expectCycleAlternatives(page);
+  await openPatientEditor(page);
+  for (const [phase, low, high] of [['follicular', 70, 290], ['ovulation', 380, 1460], ['luteal', 200, 770], ['postmenopause', 0, 110]]) {
+    await page.locator('#labOverrideCycle').selectOption(phase);
+    await expect(cycleVariants(page)).toHaveCount(0);
+    await bounds(page, `${low}–${high}`);
+    await page.locator('#labValue').fill(String(low));
+    await expect(page.locator('#labResultStatus')).toContainText('w zakresie normy');
+    await page.locator('#labValue').fill(String(high));
+    await expect(page.locator('#labResultStatus')).toContainText('w zakresie normy');
+    const sources = await page.locator('#labSourcesList').textContent();
+    expect(sources).toContain('Tietz 2018');
+    if (phase === 'postmenopause') expect(sources).toContain('PTMRiE');
+    await page.locator('#labUnitTarget').selectOption('pg/mL');
+    await bounds(page, `${low}–${high}`);
+    await expect(page.locator('#labResultBig .lab-result-big-unit')).toHaveText('pg/mL');
+    await expect(page.locator('#labResultStatus')).toContainText('w zakresie normy');
+    expect(await page.locator('#labSourcesList').textContent()).toBe(sources);
+    await page.locator('#labValue').fill(String(high + 1));
+    await expect(page.locator('#labResultStatus')).toContainText('powyżej normy');
+    await page.locator('#labUnitTarget').selectOption('pmol/L');
+  }
+});
+
+test('zachowany Tanner I–V u dorosłej nie zastępuje fazy: nieznana daje alternatywy, znana wybiera zakres cyklu', async ({ page, e2Origin }) => {
+  await open(page, e2Origin, patient({ sex: 'F', age: 35, ageMonths: 0, tannerStage: '1' }));
+  await openPatientEditor(page);
+  for (let stage = 1; stage <= 5; stage += 1) {
+    await page.locator('#labOverrideCycle').selectOption('');
+    await writePatient(page, patient({ sex: 'F', age: 35, ageMonths: 0, tannerStage: String(stage) }));
+    await expectCycleAlternatives(page);
+    await page.locator('#labOverrideCycle').selectOption('ovulation');
+    await bounds(page, '380–1460');
+    await page.locator('#labValue').fill('400');
+    await expect(page.locator('#labResultStatus')).toContainText('w zakresie normy');
+  }
+});
+
+test('znana ciąża i nieobsługiwany kontekst nie pokazują czterech alternatyw dla nieznanej fazy', async ({ page, e2Origin }) => {
+  await open(page, e2Origin, patient({ sex: 'F', age: 35, ageMonths: 0, tannerStage: '5' }));
+  await openPatientEditor(page);
+  for (const phase of ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'fictional-unsupported-context']) {
+    if (phase === 'fictional-unsupported-context') await page.locator('#labOverrideCycle').evaluate(select => {
+      const option = document.createElement('option');
+      option.value = 'fictional-unsupported-context'; option.textContent = 'Fikcyjny nieobsługiwany kontekst';
+      select.appendChild(option);
+    });
+    await page.locator('#labOverrideCycle').selectOption(phase);
+    await expect(page.locator('#labOverrideCycle')).toHaveValue(phase);
+    await expectUnavailable(page, 'Brak zakresu estradiolu dla wskazanego kontekstu cyklu lub ciąży. Przeliczenie jednostek pozostaje dostępne.');
+    await expect(cycleVariants(page)).toHaveCount(0);
+    await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('20');
+  }
+});
+
+test('reset, zmiana płci i zmiana tożsamości usuwają lokalną fazę bez przenoszenia jej na inną osobę', async ({ page, e2Origin }) => {
+  await open(page, e2Origin, patient({ sex: 'F', age: 35, ageMonths: 0 }));
+  await openPatientEditor(page);
+  await page.locator('#labOverrideCycle').selectOption('luteal');
+  await bounds(page, '200–770');
+  await page.locator('#labOverrideReset').click();
+  await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+  await expectCycleAlternatives(page);
+  await page.locator('#labOverrideCycle').selectOption('follicular');
+  await bounds(page, '70–290');
+  await page.locator('#labOverrideSex').selectOption('M');
+  await bounds(page, '40–160');
+  await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+  await page.locator('#labOverrideSex').selectOption('F');
+  await expectCycleAlternatives(page);
+  await page.locator('#labOverrideCycle').selectOption('luteal');
+  await bounds(page, '200–770');
+  await page.evaluate(() => {
+    const id = 'fictional-e2-other-patient';
+    window._vildaCurrentPatientId = id;
+    sessionStorage.setItem('vildaCurrentPatientId', id);
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: id } }));
+  });
+  await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+  await expect(page.locator('#labValue')).toHaveValue('');
+  await page.evaluate(() => {
+    window._vildaCurrentPatientId = null;
+    sessionStorage.removeItem('vildaCurrentPatientId');
+    window.VildaPersistence.writeShared({ name: 'Fikcyjna inna pacjentka E2', sex: 'F', age: 35, ageMonths: 0 }, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: null } }));
+  });
+  await page.locator('#labValue').fill('20');
+  await expectCycleAlternatives(page);
+  await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+});
+
+test('nowy zapis E2 bez fazy zachowuje pomiar bez oceny, a stary zakres folikularny jest odczytywany bez ponownej klasyfikacji', async ({ page, e2Origin }, testInfo) => {
+  test.setTimeout(120_000);
+  const user = patient({ name: 'Fikcyjna pacjentka E2 historii', sex: 'F', age: 35, ageMonths: 0 });
+  await open(page, e2Origin, user);
+  await page.evaluate(() => window.VildaSession.ensureAuthLoaded());
+  await page.waitForFunction(() => window.VildaVault && window.VildaAuthUI?.isBootReady());
+  await page.evaluate(() => window.VildaVault.createUser('E2e#FikcyjnaHistoriaE2!2026', { label: 'Fikcyjny sejf fazy E2', iterations: 10000 }));
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaAuthUI?.isBootReady() && !document.documentElement.classList.contains('vilda-auth-locked'));
+  const { patientId, oldNoteId } = await page.evaluate(async data => {
+    const saved = await window.VildaVault.savePatient({ name: data.name, user: data }, { dedup: false });
+    window._vildaCurrentPatientId = saved.patientId;
+    sessionStorage.setItem('vildaCurrentPatientId', saved.patientId);
+    window.VildaPersistence.writeShared(data, { force: true });
+    document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: saved.patientId } }));
+    // Literalny zapis sprzed zmiany. Nie powstaje przez dzisiejszy dobór zakresu.
+    const oldRange = {
+      schemaVersion: 1, kind: 'laboratory-reference-range', analyte: 'estradiol', status: 'recorded', reasonCodes: [],
+      capturedAtISO: '2026-06-16T09:00:00.000Z', classification: 'below',
+      context: { sex: 'F', ageYears: 35, lifeStage: 'adult', tanner: null, cyclePhase: null, timeOfDay: null, testProtocol: null, method: null, localOverride: false },
+      measurement: { raw: '50', sourceValue: 50, sourceUnit: 'pmol/L', siValue: 50, siUnit: 'pmol/L', factorToSi: 1 },
+      range: { id: 'e2_female_default', low: 70, high: 290, unit: 'pmol/L', context: 'Kobiety dorosłe (domyślnie: faza folikularna)',
+        when: { sex: 'F', life_stage: 'adult' }, matched: true, isDefault: false, noInterpretation: false,
+        sourceIds: ['tietz_2018'], sources: [{ id: 'tietz_2018', label: 'Tietz 2018', citation: 'Fikcyjny historyczny zapis źródła Tietz 2018', url: null }] },
+      display: { unit: 'pmol/L', low: 70, high: 290 }, versions: { engine: 'LabUnitConverter 2.0.1', data: 'LabUnitsData 2.0.1' }
+    };
+    const oldNote = await window.VildaVault.savePatientNote({
+      patientId: saved.patientId, title: 'Fikcyjny historyczny E2', body: '', category: 'wynik-badania', clinicalDateISO: '2026-06-16',
+      labResult: { test: 'Estradiol', testKey: 'estradiol', value: '50 pmol/L', valueNum: 50, unit: 'pmol/L', range: oldRange }
+    });
+    return { patientId: saved.patientId, oldNoteId: oldNote.id };
+  }, user);
+  await expect.poll(() => page.evaluate(pid => window.VildaPubertySource.kontekstPacjenta(pid).status, patientId)).toBe('ready');
+  const notes = () => page.evaluate(pid => window.VildaVault.listPatientNotesForPatient(pid), patientId);
+  const oldSaved = (await notes()).find(note => note.id === oldNoteId).labResult;
+  expect(oldSaved.range).toMatchObject({ status: 'recorded', classification: 'below', range: { id: 'e2_female_default', low: 70, high: 290 } });
+  await choose(page);
+  await expectCycleAlternatives(page);
+  await page.locator('#labPinResultBtn').click();
+  await expect(page.locator('#labPinOverlay')).toContainText('bez jednej oceny względem zakresu');
+  await expect(page.locator('#labPinOverlay [data-reference-variants]')).toHaveCount(0);
+  await page.locator('#labPinComment').fill('Fikcyjny wynik E2 bez fazy');
+  await page.locator('#labPinDate').fill('2026-06-17');
+  await page.locator('#labPinSave').click();
+  await expect(page.locator('#labPinOverlay')).toHaveCount(0);
+  const saved = await notes();
+  const current = saved.find(note => note.labResult?.valueNum === 20);
+  expect(current.labResult).toMatchObject({ testKey: 'estradiol', valueNum: 20, unit: 'pmol/L', range: {
+    schemaVersion: 1, kind: 'laboratory-reference-range', status: 'unavailable', classification: null, display: null,
+    context: { sex: 'F', ageYears: 35, lifeStage: 'adult', cyclePhase: null, localOverride: false },
+    measurement: { raw: '20', sourceValue: 20, sourceUnit: 'pmol/L', siValue: 20, siUnit: 'pmol/L' },
+    range: { low: null, high: null, noInterpretation: true, sourceIds: [], sources: [] }
+  } });
+  expect(JSON.stringify(current.labResult.range)).not.toMatch(/reference_variants|referenceVariants|e2_female_follicular|e2_female_ovulation|e2_female_luteal|e2_female_postmeno/);
+  expect(saved.find(note => note.id === oldNoteId).labResult).toEqual(oldSaved);
+  // Odczyt historii musi wystarczyć sam sobie, także gdy bieżący silnik nie jest dostępny.
+  await page.evaluate(() => {
+    window.LabUnitConverter.evaluate = () => { throw new Error('Fikcyjna blokada ponownej oceny historii E2'); };
+    window.LabUnitConverter.selectRange = () => { throw new Error('Fikcyjna blokada ponownego doboru historii E2'); };
+  });
+  const strip = page.locator('#labHistoryStrip');
+  const oldChip = strip.locator(`button.lab-strip-chip[data-note-id="${oldNoteId}"]`);
+  await expect(oldChip.locator('.lab-strip-chip-v')).toHaveText('50↓');
+  await oldChip.click();
+  await expect(strip.locator('.lab-strip-detail-range')).toContainText('70–290');
+  await expect(strip.locator('.lab-strip-detail-range')).toContainText('poniżej');
+  await expect(strip.locator('.lab-strip-detail-range')).toContainText('faza folikularna');
+  const currentChip = strip.locator(`button.lab-strip-chip[data-note-id="${current.id}"]`);
+  await expect(currentChip.locator('.lab-strip-chip-v')).toHaveText('20');
+  await currentChip.click();
+  await expect(strip.locator('.lab-strip-detail .lab-strip-muted')).toContainText('bez oceny względem zakresu w dniu przypięcia');
+  await expect(strip.locator('.lab-strip-detail-range, [data-reference-variants]')).toHaveCount(0);
+  expect((await notes()).find(note => note.id === oldNoteId).labResult).toEqual(oldSaved);
+  await testInfo.attach('E2-cycle-new-and-historical-envelopes', { body: JSON.stringify(saved.map(note => note.labResult), null, 2), contentType: 'application/json' });
 });
