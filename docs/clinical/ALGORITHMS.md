@@ -5034,10 +5034,87 @@ Cole nie jest utrwalany ani synchronizowany (nie ma go w `collectUserData()` ani
 **Czego ta zmiana NIE robi (do decyzji właściciela).**
 - **Kryterium karty spożycia jest o jedno przeliczenie spóźnione.** `shouldAutoExpandEstimatedIntakeCard` czyta Cole w słuchaczu pola, przed `update()`. Przy pierwszym wpisie dziecka z Cole ≥ 110% i BMI poniżej progu nadwagi karta rozwija się dopiero na opuszczeniu pola. Tak samo jest w świeżej karcie. Naprawa to Cole liczony w kryterium z bieżących pól albo ponowna ocena po `update()`. To zmiana funkcjonalna.
 - **Epikryza** (`vilda_epicrisis_ui.js`) bierze globalny Cole także bez własnego BMI. Utwardzenie: używać go tylko przy policzonym BMI.
-- **Ten sam wzorzec, poza zakresem.** `lastWeightPercentile` i `lastHeightPercentile` czytają puls trybu PRO i ton wiersza masy w raporcie; `update()` nie nadpisuje ich u dorosłego (wyczytane z kodu, niezmierzone). Do tego `wfhPercentile`, `wfhSD` i `wfhSource`.
+- **Ten sam wzorzec, poza zakresem.** `lastWeightPercentile` i `lastHeightPercentile` czytają puls trybu PRO i ton wiersza masy w raporcie; `update()` nie nadpisuje ich u dorosłego (wyczytane z kodu, niezmierzone). Do tego `wfhPercentile`, `wfhSD` i `wfhSource`. *2026-10-14: centyle masy i wzrostu załatwione w P-CENTYLE-RESET; `wfh*` zmierzone tamże, bez widocznego przecieku i bez zmiany kodu.*
 - **Podsumowanie przy błędzie zakresu** (`generateMetabolicSummary`) liczy Cole samo z błędnych pól (np. „1453 %”). Tak jest też w świeżej karcie; ta zmiana tego nie rusza.
 - **`plan.dietLevel`** po „Wyczyść” przechodzi do rekordu następnego, ręcznie wpisanego pacjenta. To osobny przeciek, zmierzony w analizie.
 - Zerowanie przy zatrzymanym `update()` w ukrytej ramce powłoki zależy od klatki animacji (zmierzone w headless Chromium). Na Safari/iOS tego nie sprawdzano. Zerowanie w `xt()` od klatki nie zależy.
+
+**Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
+
+### P-CENTYLE-RESET — centyle masy i wzrostu poprzedniego pacjenta nie przechodzą na następnego; WFH zmierzone bez widocznego przecieku (SW 1.1.313, `vilda_update_prep.js` 98, 2026-10-14, polecenie właściciela)
+
+**Objaw.** Punkt z listy P-COLE-RESET („ten sam wzorzec, poza zakresem”). `window.lastWeightPercentile` i `window.lastHeightPercentile` zostawały po poprzednim dziecku we wszystkich badanych ścieżkach:
+- lista pacjentów („Nowy pomiar”, „Odtwórz zapis”);
+- „Wyczyść” z ręcznym wpisem;
+- autouzupełnianie nazwiska;
+- blokada sejfu;
+- zatrzymany `update()` (puste pole, błąd zakresu);
+- ten sam pacjent przy zmianie wieku z dziecięcego na dorosły.
+
+Widoczny skutek pojawia się w stanie błędu zakresu. Wiersz „Waga”/„Wzrost” nowego dziecka w karcie Podsumowania (tryb PRO, w DocPro zawsze) dostawał wtedy kolor z centyla poprzedniego. Zależnie od kierunku był to fałszywy alarm albo brak alarmu.
+
+**Przyczyna.**
+- Wartości zapisuje tylko `vildaUpdatePrepApplyWeightHeightCentileGlobals`. Woła ją karta centyli w pełnym `update()` przy gotowym BMI, i to tylko wtedy, gdy są statystyki (`statsW`, `statsH`). W praktyce oznacza to wiek ≤ 18 lat. Sonda w zakresie 0–18 lat (obie płcie, OLAF, WHO, Palczewska) nie znalazła dziecka bez statystyk; jedyny wyjątek to siatka DS w wieku 0 mies.
+- Bez statystyk funkcja nic nie robiła.
+- Kluczy nie było na liście P-COLE-RESET, więc nie zerowały ich ani `xt()` (`clearAllData`, `identityReset`), ani zatrzymany `update()`.
+- Wartości nie są utrwalane ani synchronizowane: nie ma ich w `collectUserData()`, w sesji karty ani w `localStorage` (zmierzone). Nie mają akcesora.
+
+Odbiorcy:
+- `applyProModePulse` (`app.js`, przełącznik PRO; `vilda_update_prep.js` po wstawieniu karty) pulsuje kartą `#whResult`;
+- `getProfessionalSummaryLineTone` (`vilda_patient_report.js`, P-TON-3) ustala kolor wierszy „Waga … centyl” i „Wzrost … centyl” w karcie Podsumowania oraz ton linii w modelu raportu.
+
+Zmierzone na `audyt` 2df41a8 (Chromium, dane fikcyjne; A: dziewczynka 10 l., 125 cm, 20 kg, masa 0,08 c., wzrost 0,80 c.):
+- **Dorosła po A** (lista, „Wyczyść” z ręcznym wpisem, autouzupełnianie): globale 0,08/0,80 zamiast `null`. Widoczne elementy i HTML raportu są identyczne z kontrolą, bo u dorosłego odbiorcy tych wartości nie czytają. Przeciek utajony.
+- **Ten sam pacjent 17 → 19 l.** (wpis z klawiatury): 100/100 z chwilowego wieku „1” przy 148 cm i 40 kg. Utajony.
+- **Fałszywy alarm (widoczny).** Kroki: „Wyczyść” po A → nowe dziecko 10 l., 33 kg (47 c.), wzrost z literówką 14 cm (błąd zakresu, `update()` staje). Wynik: wiersz „Waga: 33 kg, 47 centyl” w `var(--danger)`; w kontroli `var(--primary)`.
+- **Utracony alarm (widoczny).** Kroki: po dziecku w normie (140 cm, 33 kg) → „Wyczyść” → nowe dziecko 20 kg (< 1 c.) i wzrost 14 cm. Wynik: wiersze „Waga” i „Wzrost” w `var(--primary)`, bez alarmu; w kontroli `var(--danger)`.
+- Te same skutki występują w DocPro, w ramce Start powłoki i po blokadzie sejfu (zmierzone w weryfikacji).
+- HTML raportu PDF jest identyczny z kontrolą także w stanie błędu zakresu. Różnią się tylko `highlights` modelu, których nikt nie renderuje.
+
+**Zmiana.** `vilda_update_prep.js` 97 → 98:
+1. Nowa lista `VILDA_UPDATE_PREP_POCHODNE_CENTYLE` (`lastWeightPercentile`, `lastHeightPercentile`). Zeruje ją `vildaUpdatePrepZerujPochodneBmi` razem z rodziną BMI: przy zatrzymanym `update()` i w `xt()`. Nazwa funkcji zostaje, bo woła ją `xt()` przez `window`; `vilda_data_import_export.js` się nie zmienia.
+2. `vildaUpdatePrepApplyWeightHeightCentileGlobals` bez statystyk ustawia `null` (z tym samym strażnikiem `!= null`), zamiast zostawiać poprzednią wartość.
+
+Potrzebne są obie części (zmierzone osobno): (1) sama nie domyka zmiany wieku na dorosły, a (2) sama nie domyka „Wyczyść” i błędu zakresu.
+
+**Wpływ kliniczny.** Klasyfikacja: zmiana funkcjonalna bez zmiany algorytmu. Zmienia jednak prezentowaną interpretację (kolor alarmu) w stanie brzegowym (AGENTS.md § 3, ostatni punkt), więc wpływ jest opisany jawnie i wymaga akceptacji właściciela. Wzory, siatki (OLAF, Palczewska, WHO, DS), progi 3/10/90/97, `VildaMasa.kategoria` i reguła P-TON-3 się nie zmieniają. Przy kompletnym, poprawnym formularzu dziecka wartości są identyczne: zmierzone także po F5, po ponownym wczytaniu i przy zmianie źródła OLAF/WHO/Palczewska.
+
+Zmienia się:
+- (a) W stanach bez ważnych centyli bieżącego formularza globale mają wartość `null`. Dotyczy to dorosłego, pustego pola, błędu zakresu oraz stanu po „Wyczyść” i po wczytaniu innego pacjenta. Ton wierszy „Waga”/„Wzrost” bierze się wtedy z liczby w tekście wiersza (zapas P-TON-3).
+- (b) W stanie błędu zakresu kolor wiersza masy i wzrostu odpowiada centylowi w tym wierszu, a nie poprzedniemu pacjentowi (przypadki wyżej).
+- (c) Dotyczy też tego samego pacjenta przy literówce po poprawnej wartości (wzrost 140 → 1405). Dotąd wiersz „Wzrost: 1405 cm, >99 centyla” miał kolor z centyla poprawnego „140” (zwykły). Teraz ma kolor z tekstu wiersza (ostrzeżenie). Zmierzone w weryfikacji.
+- (d) Ukryta karta `#whResult` nie dostaje pulsu po przełączeniu PRO, gdy `update()` jest zatrzymany. Tego nie widać.
+
+Zapis, sesja i synchronizacja zostają bez zmian. Wartości nie są utrwalane, a hasze `collectUserData()` i sesji są identyczne.
+
+**WFH (`wfhPercentile`, `wfhSD`, `wfhSource`): zmierzone, bez zmiany kodu.** Nota w P-COLE-RESET zaliczała je bez pomiaru do tego samego wzorca. Wykonano dwa niezależne przebiegi, około 30 scenariuszy:
+- strony: index, DocPro, powłoka w obu kierunkach;
+- ścieżki: lista, „Wyczyść”, blokada sejfu, tryb gościa, zamiar wczytania, błąd zakresu, niekompletne pola, ten sam pacjent poza zakresem;
+- detektor: w każdej klatce animacji porównywał linię w karcie z wartością liczoną od nowa.
+
+Wynik: w żadnej klatce linia „Proporcja masy do wysokości” poprzedniego pacjenta nie pojawiła się w widocznym Podsumowaniu, w schowku, w liniach raportu ani w zapisie. Powody:
+- `wfh_module.js` liczy od nowa przy każdym zdarzeniu `input`/`change` pól;
+- sam czyści globale (`clearGlobals`) poza zakresem, przy pustych polach i przy błędzie;
+- jedynym czytelnikiem jest generator Podsumowania, a ten wymaga wypełnionych bieżących pól masy i wzrostu.
+
+Jedyne odstępstwo od niezmiennika: po `clearAllData()` wartość poprzedniego pacjenta trwa do zdarzeń pól wysyłanych w `setTimeout 0`. To 1–2 klatki przy ukrytej karcie, a generator odcina ten stan warunkiem pól. Zmierzona poprawka (`VildaWfh.zeruj()` w `xt()`) zamyka to odstępstwo bez zmiany wyników. Dokłada jednak metodę do publicznego API i 3 przebudowy Podsumowania na każde czyszczenie, więc nie wchodzi; decyzja należy do właściciela.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik, dane fikcyjne, zegar testów 2026-06-17).**
+- Dorosła 35 l., 170 cm, 70 kg po A: w oknie wyboru i po „Odtwórz zapis” `{null, null}` (dotąd 0,08/0,80).
+- „Wyczyść” po A → 10 l., 33 kg, 14 cm (PRO): zaraz po `clearAllData()` i przy błędzie zakresu `{null, null}`; wiersz „Waga: 33 kg, 47 centyl” w `var(--primary)` (dotąd `var(--danger)`).
+- Po dziecku w normie (140 cm, 33 kg) → „Wyczyść” → 20 kg, 14 cm: wiersz „Waga: 20 kg, <1 centyla” w `var(--danger)` (dotąd `var(--primary)`).
+- Ten sam pacjent: 17 l., 148 cm, 40 kg → 19 l.: `{null, null}`.
+- Kontrola: A po ponownym wczytaniu i po F5 ma własne centyle; po wyłączeniu i włączeniu PRO karta `#whResult` pulsuje `bmi-danger`, a wiersz „Waga” jest w `var(--danger)`.
+
+**Strażnicy.** `tests/e2e/centyle-reset-pacjent.spec.mjs` (nowy, 5 testów). **Zmierzone czerwone** na `audyt` 797500a: 4 z 5, także obie asercje koloru. Kontrola jest zielona po obu stronach.
+
+**Czego ta zmiana NIE robi (do decyzji właściciela).**
+- **Reguła P-TON-3** bierze centyl wiersza z globala. Liczenie go zawsze z wiersza albo z silnika usunęłoby całą klasę rozjazdów między globalem a tekstem. To zmiana interpretacji, więc osobna decyzja.
+- **Podsumowanie przy błędzie zakresu** pokazuje linie liczone z błędnych pól (np. BMI 1683,7; Cole 9962,6%), także w świeżej karcie. Do decyzji: czy ukrywać je tak jak karty wyników.
+- **Ukryta karta Podsumowania** trzyma w DOM treść poprzedniego pacjenta. `getCentileSummaryOverlayLines` (`inline_index_04.js`, `inline_index_07.js`, `inline_docpro_05.js`) czyta ją w trybie zapasowym. Zmierzone: po „Wyczyść” i „Nowy pomiar” zwraca wiersze Waga/Wzrost/BMI poprzedniego pacjenta. Na wykres nie trafiły, bo wykres wymaga masy i wzrostu w formularzu. Do osobnej analizy.
+- **Wybór źródła WFH** (`#wfhNormsSource`, IMiD/WHO) przeżywa „Wyczyść” i zmianę pacjenta, a nie trafia do rekordu. Następne niemowlę dostaje WHO („99,9. centyl (WHO 2006)”, kategoria „Otyłość”) zamiast IMiD („>97. centyla”). Zmiana tego zachowania byłaby kliniczna (źródło danych).
+- **Okno 18,0–~18,5 l.** `update()` nie liczy centyli (powyżej 18 l.), UI traktuje pacjenta jak dorosłego od 18 l., a model PDF od 19 l. Stan istniejący.
+- **Zerowanie w ukrytej ramce.** Zerowanie przy zatrzymanym `update()` w ukrytej ramce powłoki zależy od klatki animacji; Safari/iOS niesprawdzane. Zerowanie w `xt()` od klatki nie zależy.
 
 **Do decyzji właściciela.** Akceptacja zmiany, scalenie i wdrożenie; ewentualne osobne zadania z listy wyżej.
 
@@ -9216,7 +9293,7 @@ Wyniki mogące się zmienić po 3a: oceny obwodów dzieci 1–24 mies. z zapisan
 - **Silnik:** identyczny z modułem obwodów po naprawie etapu 1 — wiersz interpolowany liniowo po **wysokości** (nie wieku), z‑score interpolacją wartość↔z po punktach percentylowych (p3..p97 ↔ z=±1,88079; liniowa ekstrapolacja w przestrzeni z poza skrajnymi punktami), centyl = Φ(z)·100 (aproksymacja Zelen–Severo); mean/SD tabel nie wpływają na wynik. Klasyfikacja 3/10/90/97, ogony prezentowane jako „<3. centyla"/„>97. centyla".
 - **Bramki:** wiek >18,5 r. → poza populacją źródła; wiek <1 mies. → kierowanie do modułu SGA (wielkość urodzeniowa); masa poza 1–200 kg → komunikat o niewiarygodnym pomiarze; wzrost poza 50–195 cm (M) / 50–185 cm (K) → poza pokryciem tabel, **bez klamrowania** na brzegach. Wiek nieznany nie blokuje oceny (parametr z definicji niezależny od wieku metrykalnego).
 - **Adnotacje transkrypcyjne (odstępstwa od druku, udokumentowane w nagłówku modułu):** (a) Tabela 64, wiersz 75 cm — w druku kolumny p3/p10 w odwrotnej kolejności (8,0 | 7,3); przywrócono porządek rosnący 7,3 | 8,0, zgodny ze statystyką wiersza (mean 9,46, SD 0,97 → p3≈7,6, p10≈8,2) i monotonicznością sąsiadów; (b) Tabela 63, wiersz 195 cm — mean 92,70 znacznie powyżej p50=78,8 (osobliwość źródła przy skrajnym wzroście); przepisano wiernie, bez wpływu na wynik (silnik liczy z percentyli).
-- **Integracje:** linia w „Podsumowaniu wyników" (oba buildery: `vilda_summary_cards.js`, `vilda_summary_inline.js`; Z‑score w trybie PRO), ton linii i highlight raportu pacjenta w `vilda_patient_report.js` (progi 3/10/90/97, grupa „main" razem z BMI), live‑update raportu przez `wfhPercentile`/`wfhSD`.
+- **Integracje:** linia w „Podsumowaniu wyników" (oba buildery: `vilda_summary_cards.js`, `vilda_summary_inline.js`; Z‑score w trybie PRO), ton linii i highlight raportu pacjenta w `vilda_patient_report.js` (progi 3/10/90/97, grupa „main" razem z BMI), live‑update raportu przez `wfhPercentile`/`wfhSD`. *(2026-10-14: pliku `vilda_summary_inline.js` już nie ma; linię buduje `vilda_summary_cards.js`.)*
 
 **Fuzja z dawną kartą „Wskaźnik WFL" (2026-08-20, wariant A z makiety):** osobna karta WFL (WHO 2006, tylko 0–2 lata) została usunięta, a jej rolę przejął **przełącznik źródła norm** `#wfhNormsSource` w karcie proporcji masy do wysokości — dokładnie na wzór przełącznika IMiD/WHO obwodu głowy (D2 z etapu 3a). Zasady:
 - **Domyślnie IMiD**; opcja **WHO 2006 (weight‑for‑length)** widoczna tylko dla dzieci ≤2 lat (tablice LMS 45–110 cm co 0,5 cm z `vilda_growth_reference_data.js`, `WFL_DATA_BOYS/GIRLS`; z‑score wzorem LMS, centyl = Φ(z)·100). WHO wybrane poza swoim pokryciem (wiek >2 lat, długość >110 cm, dane niezaładowane) → **cichy fallback na IMiD** z uczciwą notą IMiD; długość 45–50 cm przy źródle IMiD → komunikat z podpowiedzią przełączenia na WHO.
