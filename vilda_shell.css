@@ -210,7 +210,10 @@ html.vilda-pane-auth-open .desktop-layout>.sidebar {
 }
 
 @media(min-width:1400px) {
-  html.vilda-route-terminarz .has-sidebar .desktop-layout {
+  /* trasy bez treści w kolumnie dekoracyjnej oddają jej miejsce ramce
+     (przelicznik jednostek: warsztat w dwóch i trzech kolumnach) */
+  html.vilda-route-terminarz .has-sidebar .desktop-layout,
+  html.vilda-route-lab .has-sidebar .desktop-layout {
     grid-template-columns: var(--chrome-sidebar-width) 1fr
   }
   html.vilda-route-start #vildaShellDecor,

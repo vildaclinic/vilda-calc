@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.316';
+const SW_VERSION = '1.1.317';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -155,6 +155,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=89',
   '/style.css?v=90',
   '/style.css?v=91',
+  '/style.css?v=92',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -2244,6 +2245,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.css?v=18',
   '/vilda_shell.css?v=19',
   '/vilda_shell.css?v=20',
+  '/vilda_shell.css?v=21',
   '/vilda_save_status_indicator.css?v=4',
   '/vilda_save_status_indicator.css?v=5',
   '/vilda_save_status_indicator.css?v=6',
@@ -3415,6 +3417,7 @@ const OPTIONAL_ASSETS = [
   '/inline_polityka_prywatnosci_00.css?v=1',
   '/inline_przelicznik_jednostek_00.css?v=1',
   '/inline_przelicznik_jednostek_00.css?v=2',
+  '/inline_przelicznik_jednostek_00.css?v=3',
   '/inline_regulamin_00.css?v=1',
   '/inline_steroidy_00.css?v=1',
   '/inline_subskrypcja_00.css?v=1',

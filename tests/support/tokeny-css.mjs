@@ -77,6 +77,9 @@ export const POMIJANE_TOKENY = new Set([
   'auth-card-max-width', 'auth-sheet-width', 'edu-portrait-max-width', 'icon-column-width', 'shell-scroll-top-size',
   'shell-term-fab-size', 'sidebar-legacy-width', 'thy-modal-inner-max-height',
   'measure-diab-lead', 'notes-shell-max-width', 'sub-hero-max-width', 'select-unified-width-mob',
+  // warsztat przelicznika jednostek (2026-10-19) — ta sama zasada: 480px to też arkusz konta, 1200px kontener DocPro;
+  // przelicznik używa tych tokenów jawnie przez var(), a literały innych stron zostają literałami
+  'lab-form-rail-width', 'lab-result-rail-width', 'lab-workspace-max-width', 'lab-workspace-wide-max-width',
 ]);
 
 /** Wartości, które zostają literałami niezależnie od tokenu: biel i czerń nic nie znaczą jako nazwy; zero nie jest wymiarem. */

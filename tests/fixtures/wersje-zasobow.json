@@ -256,8 +256,8 @@
   "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
-  "v": 2,
-  "sha256": "4740d60550b27b301ae0ac28b64c5dac5ae6401171567e2b6195b372c12b2093"
+  "v": 3,
+  "sha256": "21787fa41a6a69d1ce97fb3ef0e1c5feb31f6108e39d3e03807af13b6e2a8afe"
  },
  "inline_regulamin_00.css": {
   "v": 1,
@@ -420,8 +420,8 @@
   "sha256": "622ba25930dbd5376a15f95036b8b1693371433ea8747c54ff0392c5c4f1d7fb"
  },
  "style.css": {
-  "v": 91,
-  "sha256": "0083c597e7d5b58e158496518156912da7b2cd461a049730ce74f36058a8b450"
+  "v": 92,
+  "sha256": "2fcd6286e0ba26f86f6fe30eee078c7c75fd7c3c39ea55f3f87cce5015f9a538"
  },
  "thyroid_cancer_kids.js": {
   "v": 5,
@@ -1036,8 +1036,8 @@
   "sha256": "88df01a254e7e660ef2f0394df67320ab93dda66a265b706d99d10fc04a191f8"
  },
  "vilda_shell.css": {
-  "v": 20,
-  "sha256": "c530fa48fd73067dab9e538e6cb3a4ccdc12f2a4a0d770d80182fe22f5aa76e0"
+  "v": 21,
+  "sha256": "78673bb3f79d8ac341c90e64d43c2472222e8940fb046bda324bc2b38871e62d"
  },
  "vilda_shell.js": {
   "v": 67,

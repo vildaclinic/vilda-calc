@@ -159,6 +159,10 @@
   --scroll-top-size:4rem;
   --brand-logo-size:38px;
   --clcr-result-rail-width:348px;
+  --lab-form-rail-width:380px;
+  --lab-result-rail-width:480px;
+  --lab-workspace-max-width:1200px;
+  --lab-workspace-wide-max-width:1960px;
   --dialog-width:460px;
   --measure-copy:72ch;
   --measure-lead:74ch;
