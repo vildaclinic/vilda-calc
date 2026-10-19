@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.315';
+const SW_VERSION = '1.1.316';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -154,6 +154,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=88',
   '/style.css?v=89',
   '/style.css?v=90',
+  '/style.css?v=91',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -1127,6 +1128,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=157',
   '/vilda_chrome.js?v=158',
   '/vilda_chrome.js?v=159',
+  '/vilda_chrome.js?v=160',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3183,6 +3185,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=500',
   '/vilda_auth_ui.js?v=501',
   '/vilda_auth_ui.js?v=502',
+  '/vilda_auth_ui.js?v=503',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -3372,6 +3375,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=81',
   '/vilda_session_bridge.js?v=82',
   '/vilda_session_bridge.js?v=83',
+  '/vilda_session_bridge.js?v=84',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -3400,6 +3404,7 @@ const OPTIONAL_ASSETS = [
   '/inline_homa_ir_00.css?v=1',
   '/inline_index_00.css?v=1',
   '/inline_index_00.css?v=2',
+  '/inline_index_00.css?v=3',
   '/inline_index_01.css?v=1',
   '/inline_instrukcja_00.css?v=1',
   '/inline_kalkulator_klirens_00.css?v=1',

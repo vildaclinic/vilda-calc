@@ -6080,7 +6080,8 @@ body.js-loading .main-content {
   visibility: hidden
 }
 
-html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay) {
+/* P-REGULAMIN-BRAMKA: bramka regulaminu (vilda_terms_gate.js) jest spod tej reguły wyjęta, żeby pokazała się przed ekranem logowania, a nie dopiero po odblokowaniu sejfu nad krokiem 3 kreatora konta. */
+html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay):not(#vilda-terms-gate) {
   visibility: hidden!important
 }
 

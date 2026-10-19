@@ -16744,6 +16744,28 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## Regulamin przed ekranem logowania; „Wstecz” w kreatorze konta nie zmienia klucza odzyskiwania (P-REGULAMIN-BRAMKA, P-KREATOR-KLUCZ, SW 1.1.316, `vilda_auth_ui.js` 503, `style.css` 91, `inline_index_00.css` 3, 2026-10-19)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, zapis ani synchronizacja. Polecenie właściciela 2026-10-19, po przeglądzie ścieżki zakładania konta i pierwszego logowania.
+
+**Co było.**
+- *Regulamin dopiero po założeniu konta.* `vilda_terms_gate.js` dodaje okno „Zanim zaczniesz” od razu po starcie `index.html` i `app.html`. Reguła `html.vilda-auth-locked body > *:not(#vilda-auth-ui-root)…` (`style.css`, `inline_index_00.css`) chowała jednak wszystko poza nakładką logowania, także to okno (w DOM, `visibility: hidden`). Okno pokazywało się dopiero po zdjęciu blokady, czyli po `createUser` — nad krokiem 3 kreatora — albo po „Korzystaj bez logowania”. Akceptacja regulaminu wypadała więc po utworzeniu konta i po pierwszych żądaniach do serwera synchronizacji (`/trial`, `/entitlement`, `/status`).
+- *Nowy klucz odzyskiwania po „Wstecz”.* Krok 1 kreatora losował klucz przy każdym „Dalej”. „Wstecz” z kroku 2 (np. żeby poprawić imię) i ponowne „Dalej” pokazywały inny klucz bez ostrzeżenia. Plik TXT pobrany za pierwszym razem nie pasował do zakładanego konta, a pole „Zapisałem klucz odzyskiwania” użytkownik mógł zaznaczyć w przekonaniu, że klucz już ma.
+
+**Co jest.**
+- Obie kopie reguły blokady mają dodatkowo `:not(#vilda-terms-gate)`. Okno regulaminu (z-index 2147483600, nakładka logowania 999999) jest widoczne nad ekranem „Witamy” / „Kto się loguje?” i przechwytuje kliknięcia do akceptacji. Akceptacja niczego nie odblokowuje; zapis `vilda-terms-accepted-v1` bez zmian. W ramkach powłoki okna nadal nie ma (`vilda-embedded`). Swoistość reguły rośnie o jeden identyfikator; żadna inna reguła `visibility … !important` nie zmienia przez to zwycięzcy (jedyna, `#ww-tab-guard-banner` z `vilda_tab_guard.js`, przegrywała z regułą blokady już wcześniej).
+- Krok 1 losuje klucz tylko wtedy, gdy kreator go jeszcze nie ma (`ve.recoveryKey || generateRecoveryKey()`). „Wstecz” i „Dalej” pokazują ten sam klucz; nowy dopiero po „Anuluj” (stan kreatora `ve = null`) albo w nowym przebiegu kreatora. Hasło po „Wstecz” trzeba nadal wpisać ponownie, jak dotąd.
+
+**Walidacja.** Nowy `tests/e2e/kreator-konta.spec.mjs`, 5 testów, serwer synchronizacji jako atrapa, konto fikcyjne:
+- `index.html` i `app.html#/start`: przy zamkniętym sejfie okno regulaminu widoczne nad „Witamy” i zasłania „Załóż konto”; po akceptacji okno znika, sejf nadal zamknięty, kreator startuje od kroku 1;
+- zaakceptowany regulamin nie wraca;
+- „Wstecz” w kroku 2 zostawia klucz, a klucz z pierwszego przejścia odblokowuje założone konto (`unlockUserWithRecoveryKey`, domyślne iteracje PBKDF2);
+- „Anuluj” daje nowy klucz, a bez kroku 2 konto nie powstaje.
+
+Kontrola negatywna: na kodzie sprzed zmiany czerwone są testy 1, 2 i 4 (okno ukryte; inny klucz po „Wstecz”). Testy 3 i 5 pilnują zachowania, które ma zostać.
+
+SW 1.1.315 → **1.1.316**; `inline_index_00.css?v=2→3`, `style.css?v=90→91`, `vilda_auth_ui.js?v=502→503`, `vilda_chrome.js?v=159→160`, `vilda_session_bridge.js?v=83→84` (dwa ostatnie: wstrzykują pliki z nowym `?v=`).
+
 ## Pierwsze pobranie danych na „Komputerze prywatnym” z oknem postępu (P-NOWE-URZADZENIE etap 2, SW 1.1.255, `vilda_nowe_urzadzenie.js` 2, `vilda_sync.js` 39, `vilda_sync_integration.js` 49, 2026-10-13)
 
 **Skąd.** Etap 2 planu z wpisu niżej (zgłoszenie właściciela z 2026-10-12). Właściciel zaakceptował 2026-10-13 makietę (komputer i telefon) i cztery propozycje:
