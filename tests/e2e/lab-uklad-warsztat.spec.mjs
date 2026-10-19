@@ -6,8 +6,9 @@ import { expect, test } from '../support/test-czas.mjs';
 //   < 1000 px treści: jedna kolumna, karty pod przelicznikiem mają jego szerokość;
 //   ≥ 1000 px: formularz | wynik w równych kolumnach, wykres na całą szerokość pod nimi;
 //   ≥ 1560 px: formularz | wynik | wykres w proporcji 1,1 : 1 : 1,6, a bez wykresu trzecią kolumnę zajmują zakresy i uwagi.
-// Zakresy i uwagi (#labInfoCard) są sekcją panelu wyniku. Formularz jest przyklejony tylko wtedy, gdy mieści się w oknie,
-// i nie wychodzi poza swój wiersz. Pusta kolumna dekoracyjna nie zabiera miejsca. Pola wyboru mają strzałkę z odstępem
+// Zakresy i uwagi (#labInfoCard) są sekcją panelu wyniku. Formularz jest przyklejony tylko wtedy, gdy mieści się w oknie
+// i gdy karta kończy się na jego wierszu (przyklejenie ogranicza cała karta, więc nad wykresem pod spodem formularz
+// nachodziłby na wykres). Pusta kolumna dekoracyjna nie zabiera miejsca. Pola wyboru mają strzałkę z odstępem
 // od krawędzi, a przyciski sekcji wyniku — miejsce na cień. Pacjent fikcyjny; liczy prawdziwy przelicznik — test
 // sprawdza tylko geometrię, nie wyniki.
 test.use({ serviceWorkers: 'block' });
@@ -74,6 +75,13 @@ const uklad = (page) => page.evaluate(() => {
 
 const blisko = (a, b, tolerancja = 1) => Math.abs(a - b) <= tolerancja;
 
+/** Strona ma płynne przewijanie (scroll-behavior: smooth) — pomiar po przewinięciu wymaga skoku natychmiastowego. */
+const przewin = (page, y) => page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), y);
+const krawedzie = (page) => page.evaluate(() => {
+  const r = (id) => document.getElementById(id).getBoundingClientRect();
+  return { formularz: r('labFormPane'), wykres: r('labChartPane'), karta: r('labResultsCard') };
+});
+
 test('1280 px: jedna kolumna, karty pod przelicznikiem mają jego szerokość, „Wyczyść” na końcu formularza', async ({ page }) => {
   await otworz(page, { szerokosc: 1280, wysokosc: 900 });
   await inhibinaB(page);
@@ -92,7 +100,7 @@ test('1280 px: jedna kolumna, karty pod przelicznikiem mają jego szerokość, �
   expect(u.pozycja).not.toBe('sticky');
 });
 
-test('1440 px: tytuł nad równymi kolumnami formularza i wyniku, wykres na całą szerokość pod nimi', async ({ page }) => {
+test('1440 px: tytuł nad równymi kolumnami formularza i wyniku, wykres na całą szerokość pod nimi, formularz bez przyklejenia', async ({ page }) => {
   await otworz(page, { szerokosc: 1440, wysokosc: 1000 });
   await inhibinaB(page);
   await expect(page.locator('#labHormoneLifespan > .vilda-hormone-lifespan')).toBeVisible();
@@ -109,12 +117,12 @@ test('1440 px: tytuł nad równymi kolumnami formularza i wyniku, wykres na cał
   // Pełny wariant wykresu zaczyna się od 640 px (vilda_hormone_lifespan.css: @container max-width 640px).
   expect(u.szerokoscWykresu).toBeGreaterThan(640);
   expect(u.szerokoscSvg).toBeGreaterThanOrEqual(640);
+  // Formularz mieści się w oknie, ale pod nim leży wykres: przyklejony nachodziłby na wykres.
   expect(u.przyklejony).toBe(true);
-  expect(u.pozycja).toBe('sticky');
-  // Przewinięcie w głąb wykresu: przyklejony formularz zostaje w swoim wierszu i nie nachodzi na wykres.
-  await page.evaluate(() => window.scrollTo(0, document.getElementById('labChartPane').getBoundingClientRect().top + scrollY - 200));
-  expect(await page.evaluate(() => document.getElementById('labFormPane').getBoundingClientRect().bottom
-    - document.getElementById('labChartPane').getBoundingClientRect().top)).toBeLessThanOrEqual(1);
+  expect(u.pozycja).not.toBe('sticky');
+  await przewin(page, u.panelWykresu.t - 200);
+  const k = await krawedzie(page);
+  expect(k.formularz.bottom - k.wykres.top).toBeLessThanOrEqual(1);
   // Kolejność czytania i tabulacji: tytuł → formularz → wynik → wykres; „Wyczyść” w formularzu.
   expect(await page.evaluate(() => {
     const ids = ['labFormPane', 'labClearBtn', 'labResultPane', 'labResultSection', 'labChartPane', 'labHormoneLifespan'].map((id) => document.getElementById(id));
@@ -150,7 +158,8 @@ test('1440 px, TSH bez wykresu: zakresy i uwagi pod wynikiem w karcie, formularz
   // Zakresy wydłużają kolumnę wyniku; formularz zostaje przy przewijaniu pod paskiem chrome (64 px + 1rem).
   expect(u.wynik.b - u.wynik.t).toBeGreaterThan(u.formularz.b - u.formularz.t + 300);
   expect(u.przyklejony).toBe(true);
-  await page.evaluate(() => window.scrollTo(0, 300));
+  expect(u.pozycja).toBe('sticky');
+  await przewin(page, 300);
   await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('labFormPane').getBoundingClientRect().top))).toBe(80);
 });
 
@@ -200,6 +209,12 @@ test('1920 px: trzy kolumny — formularz, wynik, wykres — w proporcji 1,1 : 1
   expect(u.panelWykresu.w).toBeGreaterThanOrEqual(740 - 1);
   expect(u.szerokoscWykresu).toBeGreaterThan(640);
   expect(u.szerokoscSvg, 'SVG wykresu w pełnym wariancie').toBeGreaterThanOrEqual(640);
+  // Trzy kolumny w jednym wierszu: przyklejony formularz zostaje w karcie i nie wychodzi poza jej dół.
+  expect(u.pozycja).toBe('sticky');
+  await przewin(page, u.karta.b - 300);
+  const k = await krawedzie(page);
+  expect(k.formularz.bottom).toBeLessThanOrEqual(k.karta.bottom + 1);
+  expect(k.formularz.left).toBeLessThan(k.wykres.left);
 });
 
 test('1920 px, TSH bez wykresu: zakresy i uwagi w trzeciej kolumnie karty, obok wyniku', async ({ page }) => {

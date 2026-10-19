@@ -2425,7 +2425,7 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
     padding: var(--space-1-25) 1.7rem var(--space-1-5);
     scroll-margin-top: var(--lab-sticky-top);
   }
-  .lab-smart-card > .lab-pane--form[data-przyklejony] {
+  .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--form[data-przyklejony] {
     position: sticky;
     top: var(--lab-sticky-top);
   }
@@ -2467,6 +2467,10 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   .lab-disclaimer { max-width: var(--measure-copy); }
 }
 @container lab-warsztat (min-width: 1560px) {
+  .lab-smart-card > .lab-pane--form[data-przyklejony] {
+    position: sticky;
+    top: var(--lab-sticky-top);
+  }
   .lab-grid:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
     max-width: var(--lab-workspace-wide-max-width);
   }
