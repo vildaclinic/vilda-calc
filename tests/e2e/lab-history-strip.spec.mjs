@@ -94,8 +94,16 @@ test('zmiana #labUnit: wyniki przeliczone bez ↑/↓ (K26); badanie bez wynikó
 
 test('LH: wynik z operatorem bez punktu, zapisana ocena w szczegółach; kolejność przed wykresem hormonów; „Wyczyść” bez śladu w układzie', async ({ page }) => {
   await otworzPrzelicznik(page, { badanie: null });
-  // Pusty formularz → wynik LH → „Wyczyść”: przycisk wraca dokładnie na swoje miejsce (pasek nie zostawia odstępu).
-  const przed = await page.evaluate(() => document.getElementById('labClearBtn').getBoundingClientRect().top - document.getElementById('labResultsCard').getBoundingClientRect().top);
+  // Pusty formularz → wynik LH → „Wyczyść”: dół treści panelu wyniku wraca dokładnie na swoje miejsce (pasek nie
+  // zostawia odstępu). Mierzymy treść panelu, nie przycisk „Wyczyść”: od warsztatu na szerokim ekranie przycisk stoi
+  // w panelu formularza, przed wynikiem.
+  const dolWyniku = () => page.evaluate(() => {
+    const karta = document.getElementById('labResultsCard').getBoundingClientRect().top;
+    const dzieci = [...document.getElementById('labResultPane').children]
+      .map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 || r.height > 0);
+    return Math.max(...dzieci.map((r) => r.bottom)) - karta;
+  });
+  const przed = await dolWyniku();
   await wybierzBadanie(page, 'lh', 'LH');
   await page.locator('#labUnit').selectOption('IU/L');
   await page.locator('#labValue').fill('3,1');
@@ -116,7 +124,7 @@ test('LH: wynik z operatorem bez punktu, zapisana ocena w szczegółach; kolejno
 
   await page.locator('#labClearBtn').click();
   await expect(pasek).toBeHidden();
-  const po = await page.evaluate(() => document.getElementById('labClearBtn').getBoundingClientRect().top - document.getElementById('labResultsCard').getBoundingClientRect().top);
+  const po = await dolWyniku();
   expect(Math.abs(po - przed)).toBeLessThanOrEqual(1);
 });
 
