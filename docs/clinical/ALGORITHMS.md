@@ -16744,7 +16744,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## Regulamin przed ekranem logowania; „Wstecz” w kreatorze konta nie zmienia klucza odzyskiwania (P-REGULAMIN-BRAMKA, P-KREATOR-KLUCZ, SW @@SW@@, `vilda_auth_ui.js` @@AUTH@@, `style.css` @@STYLE@@, `inline_index_00.css` @@INLINE@@, 2026-10-19)
+## Regulamin przed ekranem logowania; „Wstecz” w kreatorze konta nie zmienia klucza odzyskiwania (P-REGULAMIN-BRAMKA, P-KREATOR-KLUCZ, SW 1.1.316, `vilda_auth_ui.js` 503, `style.css` 91, `inline_index_00.css` 3, 2026-10-19)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Nie zmieniają się format sejfu, kryptografia, zapis ani synchronizacja. Polecenie właściciela 2026-10-19, po przeglądzie ścieżki zakładania konta i pierwszego logowania.
 
@@ -16763,6 +16763,8 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 - „Anuluj” daje nowy klucz, a bez kroku 2 konto nie powstaje.
 
 Kontrola negatywna: na kodzie sprzed zmiany czerwone są testy 1, 2 i 4 (okno ukryte; inny klucz po „Wstecz”). Testy 3 i 5 pilnują zachowania, które ma zostać.
+
+SW 1.1.315 → **1.1.316**; `inline_index_00.css?v=2→3`, `style.css?v=90→91`, `vilda_auth_ui.js?v=502→503`, `vilda_chrome.js?v=159→160`, `vilda_session_bridge.js?v=83→84` (dwa ostatnie: wstrzykują pliki z nowym `?v=`).
 
 ## Pierwsze pobranie danych na „Komputerze prywatnym” z oknem postępu (P-NOWE-URZADZENIE etap 2, SW 1.1.255, `vilda_nowe_urzadzenie.js` 2, `vilda_sync.js` 39, `vilda_sync_integration.js` 49, 2026-10-13)
 
