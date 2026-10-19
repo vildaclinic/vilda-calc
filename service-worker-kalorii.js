@@ -2409,6 +2409,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_update_prep.js?v=95',
   '/vilda_update_prep.js?v=96',
   '/vilda_update_prep.js?v=97',
+  '/vilda_update_prep.js?v=98',
   '/custom-fixes.js?v=58',
   '/custom-fixes.js?v=59',
   '/custom-fixes.js?v=60',
