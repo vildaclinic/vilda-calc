@@ -4990,7 +4990,7 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
-### P-DIETA-WYCZYSC — wybór diety poprzedniego pacjenta nie przechodzi do następnego (SW 1.1.313, `vilda_data_import_export.js` 106, 2026-10-14, polecenie właściciela)
+### P-DIETA-WYCZYSC — wybór diety poprzedniego pacjenta nie przechodzi do następnego (SW 1.1.314, `vilda_data_import_export.js` 106, 2026-10-14, polecenie właściciela)
 
 **Objaw.** Punkt z listy P-COLE-RESET. „Wyczyść wszystkie pola” i blokada sejfu zostawiały w selekcie `#dietLevel` dietę poprzedniego pacjenta. U następnego pacjenta bez planu redukcji (BMI w normie) `collectUserData` zapisywał ją w `plan.dietLevel`, z `dietaWybrana=false`. Trafiała do rekordu, sesji karty, ładunku zapisu i sejfu. W powłoce `app.html` skutek był widoczny w zaleceniach. Znacznik „dieta wybrana przez lekarza” pacjenta A wracał do Start po odświeżeniu. Dieta domyślna nowej pacjentki stawała się wtedy wyborem lekarza i przestawała iść za zaleceniem silnika.
 
