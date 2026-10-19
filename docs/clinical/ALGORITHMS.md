@@ -16744,6 +16744,29 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
+## „Zaloguj jednorazowo”: po zamknięciu przeglądarki bez wylogowania nic nie wraca (P-JEDNORAZOWE-BEZ-PRZYWRACANIA, SW 1.1.320, `vilda_persistence_adapter.js` 32, 2026-10-19)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Polecenie właściciela 2026-10-19: opcja ma działać jak w opisie („Po zakończeniu pracy nic nie zostanie”), także gdy ktoś zamknie przeglądarkę bez wylogowania.
+
+**Co było.** Sesja jednorazowa (logowanie biometrią telefonu albo kodem QR w trybie efemerycznym, `setEphemeralMode(true)`) trzyma w `sessionStorage` karty klucz sesji (`vilda-vault-session-v2`), kopię sejfu (`veph:vault:adapter-v1`), stan formularzy i preferencji (`veph:s:*`, `veph:l:*`) oraz znacznik `vilda-ephemeral-session-v1` — żeby przejścia między stronami i F5 nie wymagały ponownego logowania. Przeglądarka przywracająca karty odtwarza `sessionStorage`. Zmierzone w Chromium (profil trwały, `--restore-last-session`): po zamknięciu przeglądarki i ponownym uruchomieniu przywrócona karta miała to wszystko, a `tryRestoreSession` otwierał sejf bez hasła. Restart Chromium zgłasza jako nawigację `back_forward`, tak samo jak zwykłe „Wstecz”, więc typ nawigacji tego nie rozróżnia.
+
+**Co jest.**
+- Wejście w tryb jednorazowy (`VildaPersistence.setEphemeralMode(true)`, wołane przez sejf) daje karcie znacznik: losowa wartość w `sessionStorage` (`vilda-eph-tab-v1`) i ta sama w `window.name` okna najwyższego poziomu (`vilda-eph:<znacznik>`; ramki powłoki czytają `top.name`). `window.name` przeżywa F5, przejścia i „Wstecz”, ale przeglądarka nie przywraca go po ponownym uruchomieniu (Chromium: `sessionStorage` wraca, `window.name` pusty).
+- Znak życia strony (`vilda-eph-alive-v1`): co 5 s oraz przy `pagehide`, `pageshow` i `visibilitychange`, tylko w sesji jednorazowej.
+- Przy każdym ładowaniu strony, na początku `vilda_persistence_adapter.js` (pierwszy skrypt warstwy zapisu, przed odczytem `sessionStorage` przez resztę aplikacji): jeśli karta ma sesję jednorazową, a znacznik jest niezgodny z `window.name` albo znak życia jest starszy niż 2 minuty — całe `sessionStorage` karty jest czyszczone, strona dostaje klasę `vilda-auth-locked` i wraca do ekranu logowania. Limit czasu to druga linia dla przeglądarek, które przywracają `window.name`.
+- Wyjście z trybu (wylogowanie, automatyczna blokada) zdejmuje znacznik i `window.name`.
+- Polityka prywatności, wiersz `sessionStorage`: wyjątek dla „Zaloguj jednorazowo”.
+- Bez zmian: konta zwykłe i tryb chmurowy na „Komputerze prywatnym” (przywrócona sesja jak w P-KLUCZ-SESJI-OPIS), opis opcji na ekranie logowania.
+
+**Ograniczenia.** Nowa karta, która dostaje kopię `sessionStorage` (np. okno otwarte przez `window.open`), ma puste `window.name`, więc też wymaga ponownego logowania jednorazowego. Strona wyrzucona z pamięci przez system (telefon, oszczędzanie pamięci) i przeładowana po ponad 2 minutach od ostatniego znaku życia — tak samo; zmiany, których synchronizacja nie zdążyła wysłać, mogą wtedy przepaść. W Firefoksie i Safari zachowania `window.name` przy przywracaniu sesji nie sprawdzałem; tam działa limit 2 minut.
+
+**Walidacja.**
+- `tests/unit/jednorazowe-bez-przywracania.test.mjs`, 10 testów na prawdziwym `vilda_persistence_adapter.js`: zgodny i świeży znacznik — sesja zostaje; puste lub inne `window.name` — czyszczenie i blokada; znak życia starszy niż 2 minuty — czyszczenie (granica 119/121 s); bez sesji jednorazowej nic się nie zmienia; wejście i wyjście z trybu ustawia i zdejmuje znacznik; teksty.
+- `tests/e2e/jednorazowe-bez-przywracania.spec.mjs`, 2 testy: prawdziwy restart Chromium z `--restore-last-session` (F5, przejście i „Wstecz” bez wylogowania; po przywróceniu: sejf zablokowany, brak klucza, flagi i `veph:*`, ekran „Załóż konto”) oraz panel w ramce powłoki `app.html` bez fałszywego wylogowania.
+- Kontrola negatywna: na kodzie sprzed zmiany test restartu jest czerwony (po przywróceniu `odblokowany: true`, klucz i kopia sejfu), a w teście jednostkowym 5 z 8 testów kodu.
+
+SW 1.1.319 → **1.1.320**; `vilda_persistence_adapter.js?v=31→32`.
+
 ## Opis klucza sesji w polityce prywatności i w „Pozostań zalogowany” zgodny z kodem (P-KLUCZ-SESJI-OPIS, SW 1.1.319, 2026-10-19)
 
 **Zmiana kliniczna: NIE.** Zmieniają się wyłącznie teksty: `polityka-prywatnosci.html` i opis „Pozostań zalogowany na tym urządzeniu” w `ustawienia.html`. Kod, klucze storage, kryptografia i limity czasu bez zmian. Decyzja właściciela 2026-10-19 (przegląd ścieżki zakładania konta, punkt 4; wariant „poprawić teksty”).

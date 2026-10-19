@@ -59,7 +59,7 @@
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
   <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=31"></script>
+<script src="vilda_persistence_adapter.js?v=32"></script>
 <script src="vilda_session_bridge.js?v=85"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_deps.js?v=98"></script>
@@ -182,7 +182,8 @@
                   (po ponownym uruchomieniu albo poleceniem „Otwórz ponownie zamkniętą kartę”),
                   może odtworzyć klucz razem z kartą — aplikacja przyjmuje go wtedy tylko do upływu
                   ustawionego czasu bezczynności (domyślnie 20 minut, w trybie chmurowym 10 minut;
-                  najwyżej 7 dni)</td>
+                  najwyżej 7 dni). Wyjątek: sesji „Zaloguj jednorazowo” aplikacja po przywróceniu karty
+                  nie przyjmuje — czyści całą pamięć sesji karty i wraca do ekranu logowania</td>
               </tr>
               <tr>
                 <td><strong>IndexedDB</strong></td>
