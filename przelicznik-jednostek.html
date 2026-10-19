@@ -58,7 +58,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
   <link rel="stylesheet" href="ios26-v2.css?v=26" />
-  <link rel="stylesheet" href="style.css?v=91" />
+  <link rel="stylesheet" href="style.css?v=92" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
   <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
@@ -106,7 +106,7 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
-  <link href="inline_przelicznik_jednostek_00.css?v=2" rel="stylesheet">
+  <link href="inline_przelicznik_jednostek_00.css?v=3" rel="stylesheet">
 
   <script src="vilda_chrome.js?v=161"></script>
   <script src="lucide.min.js?v=1" defer></script>
@@ -124,9 +124,13 @@
         <div class="lab-container">
          <div class="lab-grid">
 
-          <!-- ===== Karta formularza (lewa kolumna na desktop) ===== -->
-          <!-- ===== Faza 18 — Smart Form (jedna karta, jedna kolumna, 5 kroków) ===== -->
+          <!-- ===== Faza 18 — Smart Form (jedna karta, 5 kroków) ===== -->
+          <!-- Warsztat na szerokim ekranie (2026-10-19): karta zostaje jedna, a jej trzy panele
+               (formularz, wynik, wykres) od 1000 px treści stają obok siebie — reguły
+               @container w inline_przelicznik_jednostek_00.css. Kolejność DOM = kolejność
+               czytania i tabulacji na każdej szerokości. -->
           <div class="lab-card lab-full lab-smart-card" id="labResultsCard">
+           <div class="lab-pane lab-pane--form" id="labFormPane">
             <h1>Przelicznik jednostek laboratoryjnych</h1>
 
             <!-- Krok 1: Substancja -->
@@ -279,6 +283,15 @@
               </div>
             </div>
 
+            <!-- „Wyczyść” należy do formularza: na szerokim ekranie zostaje w kolumnie pól. -->
+            <button type="button" id="labClearBtn" class="lab-clear-btn">
+              <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
+            </button>
+           </div><!-- /.lab-pane--form -->
+
+           <!-- Panel wyniku. lab_pin_result.js i lab_history_strip.js wstawiają tu, za sekcją
+                wyniku, wiersz przypięcia i pasek poprzednich wyników. -->
+           <div class="lab-pane lab-pane--result" id="labResultPane">
             <!-- ===== Sekcja wyniku (jedna karta, dolna sekcja) ===== -->
             <div class="lab-result-section is-empty" id="labResultSection">
               <div class="lab-result-head">
@@ -315,17 +328,18 @@
                 <ol class="lab-sources-list" id="labSourcesList" style="display:none;"></ol>
               </div>
             </div>
+           </div><!-- /.lab-pane--result -->
 
+           <!-- Panel wykresów: AMH na tle wieku i „Hormony w ciągu życia”. Bez widocznego
+                wykresu panel znika, a karta zostaje dwukolumnowa. -->
+           <div class="lab-pane lab-pane--chart" id="labChartPane">
             <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
-
-            <button type="button" id="labClearBtn" class="lab-clear-btn">
-              <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
-            </button>
+           </div><!-- /.lab-pane--chart -->
           </div>
 
           <!-- ===== Karta zakresów referencyjnych / uwag / źródeł (full-width) ===== -->
-          <div class="lab-card lab-full" id="labInfoCard" style="display:none;">
+          <div class="lab-card lab-full" id="labInfoCard" hidden>
             <h2 id="labInfoTitle"></h2>
             <ul class="lab-list" id="labRanges"></ul>
             <div class="lab-meta" id="labNotes"></div>
@@ -3717,12 +3731,12 @@
 
     function renderInfo(substance) {
       if (isPubertyReferenceSubstance(substance)) {
-        infoCard.style.display = 'none';
+        infoCard.hidden = true;
         clearChildren(rangesEl); clearChildren(notesEl); sourcesEl.textContent = '';
         return;
       }
       if (!substance) {
-        infoCard.style.display = 'none';
+        infoCard.hidden = true;
         return;
       }
       infoTitleEl.textContent = substance.label_pl + ' — zakresy referencyjne i uwagi';
@@ -3793,7 +3807,7 @@
         sourcesEl.textContent = 'Źródła: ' + substance.sources.join('; ') + '.';
       }
       crossLinkEl.style.display = STEROID_RELATED[substance.id] ? 'flex' : 'none';
-      infoCard.style.display = '';
+      infoCard.hidden = false;
     }
 
     // Aktualnie rozpoznana substancja (cache, żeby nie szukać po ALIAS_INDEX
@@ -3829,7 +3843,7 @@
       clearChildren(unitEl);
       if (unitTargetEl) clearChildren(unitTargetEl);
       metaEl.innerHTML = '<em>Wybierz substancję powyżej, żeby zobaczyć przeliczone jednostki.</em>';
-      infoCard.style.display = 'none';
+      infoCard.hidden = true;
       // Schowaj sekcję źródeł — nie ma co cytować, gdy nic nie wybrano.
       if (sourcesWrapEl) sourcesWrapEl.style.display = 'none';
       // Faza 18: zresetuj sekcję wyniku i pigułki pora pobrania.
@@ -4913,6 +4927,26 @@
 
     // Wstępne ustawienie focusu na wartość, jeśli substancja już jest wybrana.
     try { valueEl.focus(); } catch (_) { /* noop */ }
+  })();
+  </script>
+
+  <!-- Warsztat na szerokim ekranie: formularz przykleja się (sticky) tylko wtedy, gdy mieści się
+       w oknie pod paskiem chrome. Wyższy formularz (np. rozwinięte „Zmień”) przewija się zwykle —
+       przyklejony miałby dół osiągalny dopiero na końcu karty. Odstęp od góry pochodzi z CSS
+       (scroll-margin-top panelu = top przyklejenia); w jednej kolumnie atrybut nic nie zmienia. -->
+  <script>
+  (function () {
+    var pane = document.getElementById('labFormPane');
+    if (!pane) return;
+    function update() {
+      var top = parseFloat(window.getComputedStyle(pane).scrollMarginTop) || 0;
+      var fits = pane.offsetHeight + top + 16 <= window.innerHeight;
+      if (fits) pane.setAttribute('data-przyklejony', '');
+      else pane.removeAttribute('data-przyklejony');
+    }
+    if (typeof window.ResizeObserver === 'function') new window.ResizeObserver(update).observe(pane);
+    window.addEventListener('resize', update);
+    update();
   })();
   </script>
 

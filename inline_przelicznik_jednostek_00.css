@@ -1,6 +1,7 @@
 /* Kontener – analogiczny do .homa-container i .steroids-card.
-       Na desktop/tablet powyżej 880px przechodzi w siatkę 2-kolumnową
-       (formularz lewo, wyniki prawo, info i disclaimer pod spodem). */
+       Poniżej 1000 px treści karty stoją jedna pod drugą; szerszy układ
+       (warsztat w dwóch i trzech kolumnach) opisuje sekcja „Warsztat na
+       szerokim ekranie” na końcu pliku. */
     /* Faza 38: zapobieganie layout shift gdy pojawia się/znika pionowy
        scrollbar (przy rozwijaniu Źródła, override Zmień, „Pokaż wszystkie
        konwersje" itp.). `scrollbar-gutter: stable` rezerwuje miejsce na
@@ -9,9 +10,12 @@
     html {
       scrollbar-gutter: stable;
     }
+    /* Kontener zapytań @container warsztatu: progi liczą szerokość treści, nie
+       okna, więc działają tak samo na stronie otwartej wprost i w ramce powłoki.
+       Maksymalna szerokość siedzi na .lab-grid, bo kontener nie może być węższy
+       od progu trzech kolumn. */
     .lab-container {
-      max-width: 1200px;
-      margin: 0 auto;
+      container: lab-warsztat / inline-size;
     }
     /* Faza 38: smart-card z deterministyczną szerokością — width min(720px,100%)
        gwarantuje że karta nigdy nie urośnie powyżej 720 px ale może się zwężać
@@ -27,6 +31,8 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-1-25);
+      max-width: var(--lab-workspace-max-width);
+      margin: 0 auto;
     }
 
     @media (min-width: 880px) {
@@ -37,7 +43,9 @@
         gap: var(--space-1-25) var(--space-1-5);
         align-items: start;
       }
-      /* Karty oznaczone klasą "lab-full" rozpinają się na obie kolumny. */
+      /* Karty oznaczone klasą "lab-full" rozpinają się na obie kolumny
+         (siatka zostaje dla karty zakresów, która przy 1560 px treści staje
+         obok karty przelicznika). */
       .lab-grid > .lab-full { grid-column: 1 / -1; }
     }
 
@@ -2020,4 +2028,135 @@
     body.liquid-ios26.high-contrast-level-2 .lab-range-status,
     body.liquid-ios26.high-contrast-level-3 .lab-range-status {
       border: var(--hc-card-border-width) solid currentColor;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════
+     *  WARSZTAT NA SZEROKIM EKRANIE (2026-10-19, decyzja właściciela)
+     *
+     *  Karta przelicznika zostaje jedną kartą (DS, zasada 3), a jej trzy
+     *  panele — .lab-pane--form, --result, --chart — układają się według
+     *  szerokości TREŚCI (kontener lab-warsztat), nie okna:
+     *    < 1000 px    jedna kolumna, jak dotąd (telefon, tablet, mały laptop);
+     *    ≥ 1000 px    formularz | wynik, pod nim wykres;
+     *    ≥ 1560 px    formularz | wynik | wykres, gdy jest wykres; bez wykresu
+     *                 karta zakresów i uwag staje obok karty przelicznika.
+     *  Szerokości: tokeny --lab-* w :root style.css. Kolumna wykresu przy
+     *  1440 i 1920 px okna ma ponad 640 px, więc wykres zostaje w pełnym
+     *  wariancie (vilda_hormone_lifespan.css: @container max-width 640px).
+     *  „Jest wykres” = widoczne AMH na tle wieku albo sekcja „Hormony
+     *  w ciągu życia”; bez :has() (stare przeglądarki) zostają dwie kolumny.
+     * ════════════════════════════════════════════════════════════════════ */
+    .lab-smart-card {
+      /* Odstęp przyklejonego formularza: pod paskiem chrome, w ramce powłoki
+         (bez paska) od góry ramki. */
+      --lab-sticky-top: calc(var(--chrome-strip-height, 64px) + var(--space-1));
+      --lab-pane-divider: 0.5px solid rgba(0,131,141,0.15);
+    }
+    html.vilda-embedded .lab-smart-card { --lab-sticky-top: var(--space-1); }
+    body.dark-bg-level-2 .lab-smart-card { --lab-pane-divider: 0.5px solid rgba(0,131,141,0.22); }
+    body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-smart-card {
+      --lab-pane-divider: var(--hc-card-border-width) solid var(--hc-border);
+    }
+
+    /* Pusta kolumna dekoracyjna (vilda_chrome.css, od 1400 px) nie zabiera
+       miejsca warsztatowi; w powłoce to samo robi vilda_shell.css dla trasy lab. */
+    @media (min-width: 1400px) {
+      body.has-sidebar .desktop-layout { grid-template-columns: var(--chrome-sidebar-width) 1fr; }
+      body.has-sidebar .desktop-layout > .decor-sidebar { display: none; }
+    }
+
+    @container lab-warsztat (min-width: 1000px) {
+      .lab-smart-card {
+        display: grid;
+        grid-template-columns: var(--lab-form-rail-width) minmax(0, 1fr);
+        grid-template-areas: "form result" "form chart";
+        align-items: start;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        /* hidden zrobiłby z karty kontener przewijania i wyłączył sticky;
+           clip przycina poświatę ::before tak samo (bez clip: zostaje hidden). */
+        overflow: clip;
+      }
+      .lab-smart-card > .lab-pane--form {
+        grid-area: form;
+        padding: 1.6rem var(--space-1-5) var(--space-1-4) 1.7rem;
+        /* Ten sam odstęp co top przyklejenia; skrypt strony czyta go, żeby
+           przykleić formularz tylko wtedy, gdy mieści się w oknie. */
+        scroll-margin-top: var(--lab-sticky-top);
+      }
+      .lab-smart-card > .lab-pane--form[data-przyklejony] {
+        position: sticky;
+        top: var(--lab-sticky-top);
+      }
+      .lab-smart-card .lab-pane--form h1 { text-align: left; margin-bottom: var(--space-1-1); }
+      .lab-smart-card > .lab-pane--result {
+        grid-area: result;
+        align-self: stretch;
+        padding: 1.6rem 1.7rem var(--space-1-2);
+        border-left: var(--lab-pane-divider);
+      }
+      /* Sekcja wyniku przestaje być pasem na całą szerokość karty (ujemne
+         marginesy i górna linia); rozdziela ją linia panelu. */
+      /* identyfikator: reguła wysokiego kontrastu nadaje górną linię z !important */
+      .lab-smart-card > .lab-pane--result > #labResultSection {
+        margin: 0;
+        padding: 0;
+        border-top: 0 !important;
+      }
+      body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-smart-card > .lab-pane--result {
+        background: var(--hc-result-bg);
+      }
+      body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-smart-card > .lab-pane--result > .lab-result-section {
+        background: transparent;
+      }
+      .lab-smart-card > .lab-pane--chart {
+        grid-area: chart;
+        align-self: stretch;
+        padding: 0 1.7rem 1.6rem;
+        border-left: var(--lab-pane-divider);
+      }
+      /* Bez wykresu panel znika, a wynik zajmuje całą wysokość karty. */
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) {
+        grid-template-areas: "form result";
+      }
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--chart {
+        display: none;
+      }
+      .lab-suggest-field { max-width: var(--content-narrow-max-width); }
+      .lab-disclaimer { max-width: var(--measure-copy); }
+    }
+
+    @container lab-warsztat (min-width: 1560px) {
+      .lab-grid:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
+        max-width: var(--lab-workspace-wide-max-width);
+      }
+      .lab-smart-card:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
+        grid-template-columns: var(--lab-form-rail-width) var(--lab-result-rail-width) minmax(0, 1fr);
+        grid-template-areas: "form result chart";
+      }
+      .lab-smart-card:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) > .lab-pane--chart {
+        padding-top: 1.6rem;
+      }
+      /* Pierwszy wykres w kolumnie startuje na wysokości „Wynik” (bez odstępu,
+         który pod sekcją wyniku oddziela go w jednej i dwóch kolumnach). */
+      .lab-smart-card > .lab-pane--chart > #labAmhAgeReference > :first-child,
+      .lab-smart-card > .lab-pane--chart > #labAmhAgeReference[hidden] + #labHormoneLifespan > .vilda-hormone-lifespan {
+        margin-top: 0;
+      }
+      /* Bez wykresu: karta przelicznika ma szerokość formularza i wyniku,
+         a wolną kolumnę obok zajmuje karta zakresów referencyjnych i uwag. */
+      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(> #labInfoCard:not([hidden], .lab-puberty-suppressed)) {
+        max-width: var(--lab-workspace-wide-max-width);
+        grid-template-columns: calc(var(--lab-form-rail-width) + var(--lab-result-rail-width)) minmax(0, 1fr);
+      }
+      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(> #labInfoCard:not([hidden], .lab-puberty-suppressed)) > #labResultsCard {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(> #labInfoCard:not([hidden], .lab-puberty-suppressed)) > #labInfoCard {
+        grid-column: 2;
+        grid-row: 1;
+      }
     }

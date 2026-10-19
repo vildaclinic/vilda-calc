@@ -8,6 +8,7 @@ body{margin:0;padding:16px;background:var(--bg)}
 </style></head><body class="liquid-ios26">
 <div class="lab-container">
   <div class="lab-card lab-full lab-smart-card" id="labResultsCard">
+    <div class="lab-pane lab-pane--form" id="labFormPane">
     <h1>Przelicznik jednostek laboratoryjnych</h1>
     <div class="lab-step" id="labStep1">
       <div class="lab-step-num is-done" id="labStep1Num">1</div>
@@ -52,6 +53,9 @@ body{margin:0;padding:16px;background:var(--bg)}
         <div class="lab-step-hint" id="labStep4DefaultHint" style="font-style:italic;">Dla wybranej substancji pora i protokół nie wpływają na zakres referencyjny.</div>
       </div>
     </div>
+    <button type="button" id="labClearBtn" class="lab-clear-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg> Wyczyść wszystkie pola</button>
+    </div>
+    <div class="lab-pane lab-pane--result" id="labResultPane">
     <div class="lab-result-section" id="labResultSection">
       <div class="lab-result-head">
         <span class="lab-result-title">Wynik</span>
@@ -67,7 +71,7 @@ body{margin:0;padding:16px;background:var(--bg)}
       <div class="lab-result-source" id="labResultSourceLine">Zakres referencyjny: <strong>70–99 mg/dl</strong> (3,9–5,5 mmol/l)</div>
       <button type="button" class="lab-show-all-toggle" id="labShowAllToggle" aria-expanded="false" aria-controls="labConversionsTableWrap"><span>Pokaż wszystkie konwersje</span><span class="arr">▼</span></button>
     </div>
-    <button type="button" id="labClearBtn" class="lab-clear-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg> Wyczyść wszystkie pola</button>
+    </div>
   </div>
   <div class="toast-slot"><div class="lab-toast is-visible" role="status">Skopiowano</div></div>
 </div>
