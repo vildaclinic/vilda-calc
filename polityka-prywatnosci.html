@@ -103,7 +103,7 @@
 
         <div class="privacy-card">
           <h1>Polityka prywatności</h1>
-          <p class="privacy-subtitle">Ostatnia aktualizacja: lipiec 2026 &nbsp;·&nbsp; wagaiwzrost.pl</p>
+          <p class="privacy-subtitle">Ostatnia aktualizacja: październik 2026 &nbsp;·&nbsp; wagaiwzrost.pl</p>
 
           <h2>1. Administrator danych osobowych</h2>
           <p>
@@ -175,8 +175,14 @@
               <tr>
                 <td><strong>sessionStorage</strong></td>
                 <td>Klucz sesji skarbca danych (Vilda Vault) — umożliwia odczyt zaszyfrowanych
-                  danych pacjenta w trakcie bieżącej sesji przeglądarki</td>
-                <td>Automatycznie po zamknięciu karty lub okna przeglądarki</td>
+                  danych pacjenta w trakcie bieżącej sesji przeglądarki, także po przejściu na inną
+                  stronę aplikacji lub odświeżeniu, bez ponownego wpisywania hasła</td>
+                <td>Przy wylogowaniu i automatycznej blokadzie po bezczynności, a poza tym wraz
+                  z zamknięciem karty lub okna przeglądarki. Przeglądarka, która przywraca karty
+                  (po ponownym uruchomieniu albo poleceniem „Otwórz ponownie zamkniętą kartę”),
+                  może odtworzyć klucz razem z kartą — aplikacja przyjmuje go wtedy tylko do upływu
+                  ustawionego czasu bezczynności (domyślnie 20 minut, w trybie chmurowym 10 minut;
+                  najwyżej 7 dni)</td>
               </tr>
               <tr>
                 <td><strong>IndexedDB</strong></td>
@@ -218,9 +224,10 @@
             Metadane organizacyjne notatek i wizyt (kategoria, terminy, nazwa i dawka leku, typ
             procedury) są przechowywane w postaci <strong>pseudonimizowanej</strong> — powiązane
             wyłącznie z losowym identyfikatorem rekordu, nie z danymi osobowymi pacjenta. <strong>Klucz
-            szyfrowania nigdy nie jest zapisywany na urządzeniu</strong> — jest wyprowadzany z hasła
-            lub Touch-ID (PBKDF2-SHA256, 600 000 iteracji) i istnieje wyłącznie w pamięci podczas
-            odblokowanej sesji. Do serwera synchronizacji dane wysyłane są w postaci <strong>w całości
+            szyfrowania nie jest zapisywany w trwałej pamięci urządzenia</strong> (localStorage,
+            IndexedDB) — jest wyprowadzany z hasła lub Touch-ID (PBKDF2-SHA256, 600 000 iteracji),
+            a na czas odblokowanej sesji przechowywany w pamięci sesji karty przeglądarki
+            (sessionStorage, zob. tabela wyżej). Do serwera synchronizacji dane wysyłane są w postaci <strong>w całości
             zaszyfrowanej</strong> — administrator nie ma technicznej możliwości ich odczytu. Cache jest
             odizolowany osobno dla każdego konta i zostaje <strong>automatycznie usunięty</strong> przy
             wylogowaniu („Wyloguj się") oraz przy usunięciu konta; przetrwa natomiast zablokowanie po
