@@ -7,6 +7,10 @@ Ten dokument aktualizuje rejestr pracy; **nie dodaje ani nie zatwierdza
 nowych odniesień klinicznych**. Starsze wpisy etapowe w
 [PATIENT_POINT.md](PATIENT_POINT.md) opisują stan w chwili danego wdrożenia.
 
+Uzupełnienie 19.10.2026: osobny PR kwalifikacji laboratoryjnego E2 usuwa
+opisany niżej domysł fazy folikularnej. Nie zmienia 82 profili ani zapisu
+kontroli z 18.10. Szczegóły: [E2 — kontekst cyklu](../E2_CYCLE_CONTEXT.md).
+
 ## Co oznacza „luka”
 
 Rozróżniamy zwykły liczbowy punkt na osi wieku, osobne zestawienie
@@ -62,7 +66,8 @@ do przedłużania modelu ani do użycia go w innym widoku.
   cyklu/fazy. Nie są medianą wieku chronologicznego. Nie wnioskujemy fazy,
   menopauzy ani braku ciąży z wieku lub pustego formularza.
   LH/FSH przy nieznanym kontekście pokazuje cztery warianty RI bez
-  wspólnego werdyktu. Zastany wyjątek laboratoryjnego E2 opisano niżej.
+  wspólnego werdyktu. Osobna poprawka laboratoryjnego E2, opisana niżej,
+  stosuje taką samą zasadę neutralnych alternatyw.
 - **AMH Xu:** działa osobna informacja z pięcioma źródłowymi P50 i sąsiednimi
   punktami wieku. Nie tworzy ciągłej mediany, punktu pacjentki ani
   ekstrapolacji między grupami. Szczegóły: [plan AMH](../AMH_REFERENCE_PLAN.md).
@@ -137,21 +142,22 @@ Poniższe wartości są ustaleniami audytu, **nie danymi nowego profilu**.
   mediany grupowe, ale przypisanie wieku wizyt i materiału wymaga osobnej
   polityki. Nie jest to brak wszelkich źródeł INSL3.
 
-## Osobny znaleziony problem kwalifikacji E2
+## Osobny problem kwalifikacji E2 — poprawka 19.10.2026
 
 Laboratoryjny wiersz `e2_female_default` w `lab_units_data.js` przy kobiecie
-dorosłej bez fazy nadal dobiera domyślnie fazę folikularną. Potwierdzono to
+dorosłej bez fazy na bazie audytu dobierał domyślnie fazę folikularną. Potwierdzono to
 wywołaniem produkcyjnego konwertera: F30, E2 50 pmol/L, faza nieznana →
 pojedynczy zakres 70–290 i werdykt „poniżej”. Test
-`lab-estradiol-reference-scope.test.mjs` utrwala obecnie tę politykę.
+`lab-estradiol-reference-scope.test.mjs` utrwalał tę politykę.
 To **problem interpretacji nieznanego kontekstu**, nie luka mediany wieku
 i nie dowód ustalonej fazy pacjentki.
 
-Rekomendowany osobny mały PR powinien przy nieznanej fazie pokazać jawne
-warianty odniesienia albo brak jednego dopasowanego RI, bez globalnego
-werdyktu. Powinien wykorzystać istniejący wybór fazy, zachować znane fazy,
-menopauzę oraz kwalifikację historycznej próbki. Ten audyt nie zmienia
-runtime i nie dodaje pytania do formularza.
+Po akceptacji propozycji przez właściciela osobny mały PR pokazuje cztery
+neutralne warianty istniejących RI bez globalnego werdyktu, z natychmiastowym
+przeliczeniem. Wykorzystuje istniejący wybór fazy; zachowuje znane fazy,
+menopauzę i dawne zapisane oceny. Dorosły Tanner nie zastępuje kontekstu
+cyklu. Nie dodaje pytania do formularza, liczb ani profili median wieku.
+Dokładny zakres, przypadki i ograniczenia: [E2_CYCLE_CONTEXT.md](../E2_CYCLE_CONTEXT.md).
 
 ## Kolejność pracy
 
@@ -165,8 +171,8 @@ runtime i nie dodaje pytania do formularza.
    wymaganych do zobaczenia wyniku.
 3. Oddzielnie ocenić małą grupę testosteronu Kulle i możliwość dalszego
    odczytu znanej inhibiny B oraz grupę E2/Th1. Nie łączyć ich z LH
-   w jednym wdrożeniu. Problem domyślnej fazy E2 wymaga osobnego małego PR
-   i pierwszeństwa przed rozszerzaniem interpretacji dorosłego E2.
+   w jednym wdrożeniu. Poprawka domyślnej fazy E2 ma osobny PR opisany
+   wyżej; przegląd nowych źródeł E2 pozostaje odrębnym zadaniem.
 4. Pozostałe źródła utrzymać jako obserwacyjne lub wymagające wyjaśnienia.
    Wiek poza zakresem, wynik cenzurowany i metoda niezgodna mają zachować
    uczciwy brak punktu oraz dostępną osobną interpretację.
@@ -177,6 +183,7 @@ Pozostałe końce wieku (m.in. FSH M>80, LH M>89, T M>86), męski E2
 i żeński T pozostają odrębnymi zadaniami źródłowymi; wykrycie braku
 wdrożonego profilu nie oznacza dowodu braku publikacji.
 
-Nie zmieniono generatorów, danych runtime, norm, krzywych, zapisu pacjenta
-ani zasobów PWA. Aktualizacja rejestru nie nadaje nowym kandydatom statusu
+Sam audyt z 18.10 nie zmieniał generatorów, danych runtime, norm, krzywych,
+zapisu pacjenta ani zasobów PWA. Osobna poprawka E2 zmienia kwalifikację
+laboratoryjną, nie pokrycie median. Aktualizacja rejestru nie nadaje nowym kandydatom statusu
 „zwalidowany klinicznie”.

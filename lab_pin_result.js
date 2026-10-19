@@ -121,6 +121,7 @@ function RrPinRange(result, host) {
   var general = info.status === 'general';
   strong.textContent = general ? 'zakres ogólny ' + info.bounds + ' — bez oceny dla dziecka'
     : info.classification ? RrPinText[info.classification] + ' ' + info.bounds
+    : result.testKey === 'estradiol' ? 'bez jednej oceny względem zakresu'
     : 'bez oceny względem zakresu (pomiar nieinterpretowalny w tych warunkach)';
   line.appendChild(strong);
   box.appendChild(line);
