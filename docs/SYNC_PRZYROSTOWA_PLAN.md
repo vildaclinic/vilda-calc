@@ -1,6 +1,6 @@
 # Synchronizacja przyrostowa: plan dla właściciela i specyfikacja wdrożenia
 
-Stan dokumentu: projekt do decyzji właściciela, 2026-10-07. Decyzja właściciela z tego samego dnia: najpierw rozwiązania tymczasowe, potem przebudowa według tego planu. Część etapu 0 weszła jako P-SYNC-MOST (gzip pełnej wysyłki przed szyfrowaniem, limit czasu od rozmiaru) i P-SYNC-KURSOR (kursor `/changes`, odstęp po 412); opis i zakres niżej, w „Etap 0”. Pozostałe etapy nie są wdrożone.
+Stan dokumentu: projekt z 2026-10-07; decyzje D-1 do D-11 właściciel podjął 2026-10-20 (rozdział 6). Decyzja właściciela z tego samego dnia: najpierw rozwiązania tymczasowe, potem przebudowa według tego planu. Część etapu 0 weszła jako P-SYNC-MOST (gzip pełnej wysyłki przed szyfrowaniem, limit czasu od rozmiaru) i P-SYNC-KURSOR (kursor `/changes`, odstęp po 412); opis i zakres niżej, w „Etap 0”. Pozostałe etapy nie są wdrożone.
 
 Baza kodu: `origin/audyt` po #571 (`d6c32b2`), SW 1.1.183, `vilda_vault.js?v=200`, `vilda_sync.js?v=33`, `vilda_sync_integration.js?v=47`, `vilda_realtime.js?v=7`. Worker: `vilda-source@origin/agent/canonical-vilda-sync-source:vilda-sync-worker/` (wdrożona „v36”, silnie skorelowana z tą gałęzią, bez dowodu byte-for-byte).
 
@@ -581,28 +581,30 @@ Każdy etap to osobny PR do `audyt` z gałęzi `agent/sync-…`, draft, bez scal
 
 ## 6. Decyzje właściciela
 
-| Nr | Pytanie | Rekomendacja | Skutek braku decyzji |
-|---|---|---|---|
-| D-1 | Hybryda H zamiast czystego D1 z rankingu? | tak; D1 broni danych oknami czasowymi, hybryda zamyka utratę u źródła | plan nie rusza |
-| D-2 | Etap 0 od razu, przed workerem? | tak; 2 do 3 dni i chmura odmrożona; format części punktu jest ten sam | chmura zamrożona do etapu 3 |
-| D-3 | Nagłówek karty przy zmianie w miejscu: `headerUpdatedAtISO` i zapis nagłówka także bez nowych wersji? | tak; dziś nie przenosi tego nawet pełny blob; zmiana reguły scalania, wpis ALGORITHMS, test, akceptacja | zmiana nazwiska lub daty urodzenia w miejscu nie dociera na inne urządzenia |
-| D-4 | Poprawka pomiaru, usunięcie wiersza i przypięcie podnoszą `lastSavedAtISO` karty? | tak; inaczej nagrobek z wcześniejszej godziny kasuje kartę poprawioną później | utrata poprawek przy usunięciu z innego urządzenia |
-| D-5 | `lastSavedAtISO` nigdy nie maleje po koszu najnowszej wersji? | tak | starszy nagrobek wygrywa z kartą, na której pracowano później |
-| D-6 | Kosz z innego urządzenia kontra lokalna nowsza poprawka: kosz trzyma nowszą treść lokalną? | tak | „Przywróć” oddaje starszą treść, poprawka ginie |
-| D-7 | Konflikt poprawki tej samej wersji na dwóch urządzeniach: nadpisanie jak dziś czy „wersja konfliktowa”? | zostawić LWW w tym planie, osobna decyzja później | bez zmian wobec dziś |
-| D-8 | `deleteSnapshot` wołane wewnętrznie: lokalne czy nagrobek? | lokalne z wpisem w ALGORITHMS | bez zmian wobec dziś |
-| D-9 | Klucz zdarzeń: klucz główny jak dziś czy `syncEncKey`? | klucz główny; zgodność ze starym klientem w etapach 2 i 3 | brak |
-| D-10 | Plan Cloudflare Free czy Paid; potwierdzenie limitów † | sprawdzić przed etapem 1 | zbyt duże strony lub części |
-| D-11 | Wersje iOS urządzeń; czy wymagać 16.4 dla kompresji? | sprawdzić; bez gzip zdarzenia jawne nadal działają | telefon bez kompresji pełnego stanu |
-| D-12 | Wypełnienie `_pad` do 4 KiB i akceptacja metadanych: liczba i rytm zdarzeń | włączyć | serwer rozróżnia klasę zdarzenia po rozmiarze |
-| D-13 | QR i tryb efemeryczny po rotacji: QR przesyła pęczek `dek + sis` jak kod synchronizacji? | tak | sesje QR po rotacji trafiają w usunięty slot |
-| D-14 | Tryb chmurowy: kolejka zaszyfrowana w IndexedDB, czyli dane w spoczynku do czasu wysłania? | tak | niewysłane zmiany giną z sesją |
-| D-15 | Nieczytelne zdarzenie w kwarantannie: kursor idzie dalej, punkt przy `appliedUpTo`, ręczne „Zwolnij”? | tak | urządzenie zawisa albo gubi po cichu |
-| D-16 | Retencje: kosz 30 dni w chmurze jak dziś, dziennik 30 dni po punkcie, 2 punkty w zapasie | tak | brak |
-| D-17 | Koordynator slotu: razem z v37 czy osobno? | osobno, po etapie 3 | zależność każdej partii od drugiego DO |
-| D-18 | Po etapie 5: `GET /blob` jako czytelnik `blob-v1` przez 6 miesięcy? | tak | brak |
-| D-19 | Odchudzenie zapisu z gotowych wyników, 84,5 % migawki | poza tym planem; zmiana kliniczna; kompresja daje większość zysku | brak |
-| D-20 | Kolejność i termin migracji urządzeń | komputer główny, iPhone, pozostałe; po etapie 3 | brak |
+Odpowiedzi właściciela: 2026-10-20 w rozmowie z agentem („akceptuję wszystko”) na opis D-1 i D-3 do D-9 sprawdzony na kodzie `origin/audyt` z tego dnia; D-10 i D-11 podane wprost. D-12 do D-20 zostają do decyzji przy etapach, których dotyczą.
+
+| Nr | Pytanie | Rekomendacja | Skutek braku decyzji | Decyzja właściciela |
+|---|---|---|---|---|
+| D-1 | Hybryda H zamiast czystego D1 z rankingu? | tak; D1 broni danych oknami czasowymi, hybryda zamyka utratę u źródła | plan nie rusza | **tak, hybryda H** (wariant A) |
+| D-2 | Etap 0 od razu, przed workerem? | tak; 2 do 3 dni i chmura odmrożona; format części punktu jest ten sam | chmura zamrożona do etapu 3 | **tak**; etap 0 wykonany: P-SYNC-MOST (#573), P-SYNC-MOST-STOPKA (#574), P-SYNC-KURSOR (#585) |
+| D-3 | Nagłówek karty przy zmianie w miejscu: `headerUpdatedAtISO` i zapis nagłówka także bez nowych wersji? | tak; dziś nie przenosi tego nawet pełny blob; zmiana reguły scalania, wpis ALGORITHMS, test, akceptacja | zmiana nazwiska lub daty urodzenia w miejscu nie dociera na inne urządzenia | **wariant A**: krótki opis karty (imię, nazwisko, data urodzenia, płeć) liczony zawsze z najnowszej wersji, zamiast nowego pola `headerUpdatedAtISO`; działa już przy dzisiejszej synchronizacji |
+| D-4 | Poprawka pomiaru, usunięcie wiersza i przypięcie podnoszą `lastSavedAtISO` karty? | tak; inaczej nagrobek z wcześniejszej godziny kasuje kartę poprawioną później | utrata poprawek przy usunięciu z innego urządzenia | **tak, wariant A**: także korekta nazwiska i „Przywróć” z kosza; duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia) |
+| D-5 | `lastSavedAtISO` nigdy nie maleje po koszu najnowszej wersji? | tak | starszy nagrobek wygrywa z kartą, na której pracowano później | **wariant B**: kosz liczy się jak zmiana w karcie, `lastSavedAtISO := max(stare, teraz)`, nigdy nie maleje |
+| D-6 | Kosz z innego urządzenia kontra lokalna nowsza poprawka: kosz trzyma nowszą treść lokalną? | tak | „Przywróć” oddaje starszą treść, poprawka ginie | **tak, wariant B**: w koszu obu urządzeń nowsza treść, w obu kolejnościach synchronizacji |
+| D-7 | Konflikt poprawki tej samej wersji na dwóch urządzeniach: nadpisanie jak dziś czy „wersja konfliktowa”? | zostawić LWW w tym planie, osobna decyzja później | bez zmian wobec dziś | **wariant 1** (LWW bez zmian w tym planie); osobny mały krok: zawsze wygrywa późniejsza poprawka (wariant 2) |
+| D-8 | `deleteSnapshot` wołane wewnętrznie: lokalne czy nagrobek? | lokalne z wpisem w ALGORITHMS | bez zmian wobec dziś | **wariant A**: lokalne, wpis w ALGORITHMS i test, że żaden ekran go nie woła |
+| D-9 | Klucz zdarzeń: klucz główny jak dziś czy `syncEncKey`? | klucz główny; zgodność ze starym klientem w etapach 2 i 3 | brak | **wariant A**: klucz konta jak dziś |
+| D-10 | Plan Cloudflare Free czy Paid; potwierdzenie limitów † | sprawdzić przed etapem 1 | zbyt duże strony lub części | **plan płatny** |
+| D-11 | Wersje iOS urządzeń; czy wymagać 16.4 dla kompresji? | sprawdzić; bez gzip zdarzenia jawne nadal działają | telefon bez kompresji pełnego stanu | **najnowszy iOS** na wszystkich urządzeniach; kompresja wszędzie |
+| D-12 | Wypełnienie `_pad` do 4 KiB i akceptacja metadanych: liczba i rytm zdarzeń | włączyć | serwer rozróżnia klasę zdarzenia po rozmiarze | do decyzji przy etapie |
+| D-13 | QR i tryb efemeryczny po rotacji: QR przesyła pęczek `dek + sis` jak kod synchronizacji? | tak | sesje QR po rotacji trafiają w usunięty slot | do decyzji przy etapie |
+| D-14 | Tryb chmurowy: kolejka zaszyfrowana w IndexedDB, czyli dane w spoczynku do czasu wysłania? | tak | niewysłane zmiany giną z sesją | do decyzji przy etapie |
+| D-15 | Nieczytelne zdarzenie w kwarantannie: kursor idzie dalej, punkt przy `appliedUpTo`, ręczne „Zwolnij”? | tak | urządzenie zawisa albo gubi po cichu | do decyzji przy etapie |
+| D-16 | Retencje: kosz 30 dni w chmurze jak dziś, dziennik 30 dni po punkcie, 2 punkty w zapasie | tak | brak | do decyzji przy etapie |
+| D-17 | Koordynator slotu: razem z v37 czy osobno? | osobno, po etapie 3 | zależność każdej partii od drugiego DO | do decyzji przy etapie |
+| D-18 | Po etapie 5: `GET /blob` jako czytelnik `blob-v1` przez 6 miesięcy? | tak | brak | do decyzji przy etapie |
+| D-19 | Odchudzenie zapisu z gotowych wyników, 84,5 % migawki | poza tym planem; zmiana kliniczna; kompresja daje większość zysku | brak | do decyzji przy etapie |
+| D-20 | Kolejność i termin migracji urządzeń | komputer główny, iPhone, pozostałe; po etapie 3 | brak | do decyzji przy etapie |
 
 ---
 
