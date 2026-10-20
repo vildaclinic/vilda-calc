@@ -4363,21 +4363,28 @@ Przypadki syntetyczne: TRAJ-VELO-T1 (12 lat, 3,0 cm/rok, Tanner I → alarm); TR
 
 **Dowody techniczne.** Testy jednostkowe `wiek-kostny-pochodzenie`, `wiek-kostny-zapis-wizyty`, `wiek-kostny-vault-zapis`, `wiek-kostny-normy-wizyty` i `bone-age-chart-markers` uruchamiają rzeczywiste moduły produkcyjne: zdarzenia formularza, kolektor/import, zapis i odczyt sejfu, punkty GH, silnik tempa, renderery i generatory opisów. Obejmują granice 12/13 mies., czas nieznany/przyszły, niezmieniony priorytet Tannera, równe wyniki odrębnych badań, legacy oraz odtworzenie kontekstu. `tests/e2e/wiek-kostny-kolejne-wizyty.spec.mjs` zawiera 5 scenariuszy prawdziwego zapisu fikcyjnego pacjenta, siatki, F5 i Start↔DocPro; przeciwko bazie sprzed poprawki zmierzono **5/5 czerwonych**. Są to dowody regresji technicznej i zgodności z przyjętym kontraktem, nie klinicznej trafności norm.
 
-#### GROWTH-TRAJ-PRO-BANER — tryb profesjonalny bez banera tempa w karcie zaawansowanej (decyzja właściciela 2026-10-20)
+#### GROWTH-TRAJ-PRO-BANER — tryb profesjonalny bez banerów kart wzrostowych (decyzje właściciela 2026-10-20)
 
-**Zmiana i wpływ kliniczny.** W trybie profesjonalnym (PRO: włączony przełącznik „Wyniki profesjonalne”, `professionalMode`) karta „Zaawansowane obliczenia wzrostowe” nie pokazuje czerwonego banera „Tempo wzrastania poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę (norma: …)” ani ramki alarmowej (czerwona ramka, czcionka 1,25 rem, pulsowanie) wywołanej samym alarmem tempa. Uzasadnienie właściciela: subskrypcja PRO jest przeznaczona dla lekarzy; skierowanie do endokrynologa i odnośnik „umów wizytę” to komunikat dla rodzica. Progi, wzory, normy i model tempa bez zmian: `velocity.alarm` liczy się jak dotąd, werdykt „poniżej normy dla wieku (norma …)” zostaje w wierszu „Tempo” bloku trajektorii, a podsumowanie wyników, Karta pacjenta, epikryza i raport czytają ten sam model co wcześniej.
+**Zmiana i wpływ kliniczny.** W trybie profesjonalnym (PRO: włączony przełącznik „Wyniki profesjonalne”, `professionalMode`; ten sam przełącznik w `index.html` i `docpro.html`) karty „Zaawansowane obliczenia wzrostowe” i „Obliczenia wzrostowe” nie pokazują banerów:
+- „Tempo wzrastania poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę (norma: …)”;
+- obniżenia pozycji centylowej wzrostu we wszystkich wariantach: czerwonych D/P2 („… obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę”) i żółtych R/P1/P0/G.
 
-**Zakres.** `buildCardAlertsHtml(model, { profesjonalny: true })` w `vilda_trajectory_analysis.js` pomija baner tempa. Karta zaawansowana (`vilda_advanced_growth.js`) przekazuje tę opcję z `professionalMode`. Ten sam warunek obejmuje jej zapasowy baner (gdy moduł trajektorii jest niedostępny) i ramkę alarmową. Bez zmian: baner obniżenia pozycji centylowej wzrostu (flaga pozycyjna, warianty D/P2/R/P1/P0/G) i jego ramka; karta podstawowa „Obliczenia wzrostowe”, która nie przekazuje opcji, więc pokazuje baner tempa jak dotąd; tryb zwykły w obu kartach.
+Znika też ramka alarmowa kart (czerwona ramka, czcionka 1,25 rem w karcie zaawansowanej i 1,15 rem w podstawowej, pulsowanie), którą te sygnały włączały. Uzasadnienie właściciela: subskrypcja PRO jest przeznaczona dla lekarzy; skierowanie do endokrynologa, odnośnik „umów wizytę” i wskazówki banera to komunikaty dla rodzica.
+
+Progi, wzory, normy i model bez zmian: `velocity.alarm` i `redFlag` (z wariantem kontekstu) liczą się jak dotąd. W karcie zaawansowanej lekarz nadal widzi w bloku trajektorii pozycję i zmianę centyla/SDS wzrostu z werdyktem odcinków oraz wiersz „Tempo” z werdyktem „poniżej normy dla wieku (norma …)”. Podsumowanie wyników, Karta pacjenta, epikryza i raport czytają ten sam model co wcześniej. Tryb zwykły bez zmian.
+
+**Zakres.** `buildCardAlertsHtml(model, { profesjonalny: true })` w `vilda_trajectory_analysis.js` zwraca pusty tekst. Obie karty przekazują tę opcję: zaawansowana (`vilda_advanced_growth.js`) z `professionalMode`, podstawowa (`growth-basic-module.js`) z własnego odczytu przełącznika. Ten sam warunek obejmuje w obu kartach zapasowe banery (gdy moduł trajektorii jest niedostępny) i ramkę alarmową. Bez zmian: blok trajektorii karty zaawansowanej nadal nie powtarza flagi (`hideRedFlag`), więc w trybie PRO krótka forma flagi „⚠ Istotne obniżenie pozycji centylowej…” w kartach się nie pojawia; Karta pacjenta pokazuje ją jak dotąd.
 
 **Przypadki syntetyczne (wyłącznie fikcyjne).**
 
 | Wejście | Oczekiwany wynik |
 | --- | --- |
-| Dziewczynka 9 lat, 135 cm; rok wcześniej 131 cm (4,0 cm/rok, norma ≥5 cm/rok), bez flagi pozycyjnej; tryb PRO | karta zaawansowana bez banera tempa i bez ramki alarmowej; wiersz „Tempo”: 4,0 cm/rok, „poniżej normy dla wieku”, norma ≥5 cm/rok; `advancedGrowthTrajectory.velocity.alarm === true` |
-| To samo, tryb zwykły | baner „Tempo wzrastania poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę” i czerwona ramka, jak dotąd |
-| Flaga pozycyjna (ΔhSDS −1,3 od 48 mies.) i tempo 4 cm/rok w wieku 8 lat; `profesjonalny: true` | wyłącznie baner obniżenia pozycji centylowej (identyczny z `redFlagBannerHtml`), bez banera tempa |
+| Dziewczynka 9 lat, 135 cm; rok wcześniej 131 cm (4,0 cm/rok, norma ≥5 cm/rok), bez flagi pozycyjnej; tryb PRO | obie karty bez banera tempa i bez ramki alarmowej; wiersz „Tempo” karty zaawansowanej: 4,0 cm/rok, „poniżej normy dla wieku”, norma ≥5 cm/rok; `advancedGrowthTrajectory.velocity.alarm === true` |
+| To samo, tryb zwykły | w obu kartach baner „Tempo wzrastania poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę” i czerwona ramka, jak dotąd |
+| Chłopiec 12 lat, Tanner III, 3 l. na 50. c → dziś 15. c (wariant P2); tryb PRO | obie karty bez banera obniżenia i bez ramki alarmowej; `redFlag.kontekst.wariant === 'P2'` w modelu |
+| Warianty D, P2, P1, P0, R; `profesjonalny: true` | `buildCardAlertsHtml` zwraca `''`; bez opcji — baner jak dotąd |
 
-**Dowody techniczne.** `tests/unit/trajectory-analysis.test.mjs` (rzeczywista funkcja `buildCardAlertsHtml`; czerwony przed zmianą) i `tests/e2e/pro-bez-banera-tempa.spec.mjs` (prawdziwa strona, tryb PRO i kontrola w trybie zwykłym; przeciwko artefaktowi karty sprzed zmiany czerwony).
+**Dowody techniczne.** `tests/unit/trajectory-analysis.test.mjs` (rzeczywista funkcja `buildCardAlertsHtml`, wszystkie warianty; 2 przypadki czerwone przed zmianą), `tests/e2e/pro-bez-banera-tempa.spec.mjs` (tempo, obie karty, kontrola w trybie zwykłym) i `tests/e2e/baner-spadku-rata-t4.spec.mjs` (RT4-7: spadek P2 w trybie PRO; RT4-1…6 sprawdzają treść banera w trybie zwykłym). Przeciwko artefaktom kart sprzed zmiany (zapasowe banery) oraz przeciwko modułowi sprzed zmiany testy e2e są czerwone.
 
 #### Reprezentatywne przypadki syntetyczne
 

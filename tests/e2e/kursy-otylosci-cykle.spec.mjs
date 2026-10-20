@@ -35,7 +35,7 @@ async function otworzStrone(page) {
 
 async function gotowa(page) {
   await page.waitForFunction(() => typeof window.update === 'function' && !!window.VildaTrajectoryAnalysis && !!window.VildaWerdykt
-    && window.VildaTrajectoryAnalysis.version === '33' && !!window.VildaCykleLeczenia && typeof window.calculateGrowthAdvanced === 'function');
+    && window.VildaTrajectoryAnalysis.version === '34' && !!window.VildaCykleLeczenia && typeof window.calculateGrowthAdvanced === 'function');
 }
 
 // Sejf testowy (wzorzec karta-otylosc-cykle-rata-3.spec.mjs) — dla Karty pacjenta i dla widoku karty na telefonie.

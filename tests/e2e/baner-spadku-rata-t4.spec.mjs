@@ -47,7 +47,8 @@ async function model(page, s) { // + s.tanner (1–5 albo null)
       wiersze.push({ age: r.age, months: r.months || 0, h: hh });
     }
     if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
-    if (s.pro === false) ustawTryb(false);
+    // Od 2026-10-20 (decyzja właściciela) tryb PRO nie pokazuje banerów kart — treść banera sprawdzamy w trybie zwykłym.
+    if (s.pro !== true) ustawTryb(false);
     window.update();
     await new Promise((r) => { setTimeout(r, 500); });
     const m = window.patientReportBuildModel();
@@ -56,7 +57,8 @@ async function model(page, s) { // + s.tanner (1–5 albo null)
     // banery kart wzrostowych (widoczne akapity z treścią flagi w dół) — prawdziwy DOM
     const banery = [...document.querySelectorAll('p')].filter((p) => /pozycji centylowej wzrostu \(zmiana hSDS/.test(p.textContent))
       .map((p) => ({ tekst: p.textContent.trim(), kolor: getComputedStyle(p).color, widoczny: !!p.offsetParent, gdzie: (p.closest('[id]') || {}).id || null }));
-    return { rf, h, wiersze, banery, hl: m.headline };
+    const ramki = ['basicGrowthResults', 'advResults'].map((id) => { const el = document.getElementById(id); return el ? el.style.borderColor : null; });
+    return { rf, h, wiersze, banery, ramki, hl: m.headline };
   }, s);
 }
 
@@ -115,6 +117,16 @@ test.describe('P-TRAJ rata T4 — baner lekarza przy obniżeniu pozycji wzrostu'
     const b = jeden(r);
     expect(b.tekst).toMatch(/^Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu \(zmiana hSDS: −1,\d\d względem pomiaru z wieku 4 lat\) — obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę$/);
     expect(b.kolor).not.toBe(ZOLTY);
+  });
+
+  test('RT4-7: tryb PRO (decyzja właściciela 2026-10-20) — ten sam spadek (P2, czerwony) bez banera i bez ramki alarmowej w obu kartach', async ({ page }) => {
+    await otworz(page);
+    const r = await model(page, { ...KOWD, tanner: 3, pro: true });
+    expect(r.rf.kontekst.wariant, 'flaga nadal w modelu').toBe('P2');
+    expect(r.banery, JSON.stringify(r.banery)).toEqual([]);
+    expect(r.ramki).not.toContain('var(--danger)');
+    const tekst = await page.evaluate(() => ['basicGrowthResults', 'advResults'].map((id) => document.getElementById(id)?.textContent || '').join(' '));
+    expect(tekst).not.toMatch(/umów wizytę|konsultacja endokrynologiczna/);
   });
 
   test('RT4-6: docpro — ten sam wariant P1 i ta sama treść co index', async ({ page }) => {
