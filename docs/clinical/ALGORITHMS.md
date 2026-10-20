@@ -16744,7 +16744,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; decyzje o lukach synchronizacji z raportu.
 
-## „Zaloguj jednorazowo”: po zamknięciu przeglądarki bez wylogowania nic nie wraca (P-JEDNORAZOWE-BEZ-PRZYWRACANIA, SW 1.1.320, `vilda_persistence_adapter.js` 32, 2026-10-19)
+## „Zaloguj jednorazowo”: po zamknięciu przeglądarki bez wylogowania nic nie wraca (P-JEDNORAZOWE-BEZ-PRZYWRACANIA, SW 1.1.321, `vilda_persistence_adapter.js` 32, 2026-10-19)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Polecenie właściciela 2026-10-19: opcja ma działać jak w opisie („Po zakończeniu pracy nic nie zostanie”), także gdy ktoś zamknie przeglądarkę bez wylogowania.
 
@@ -16765,7 +16765,7 @@ raporcie dla właściciela (bez zmian w kodzie synchronizacji w tym PR).
 - `tests/e2e/jednorazowe-bez-przywracania.spec.mjs`, 2 testy: prawdziwy restart Chromium z `--restore-last-session` (F5, przejście i „Wstecz” bez wylogowania; po przywróceniu: sejf zablokowany, brak klucza, flagi i `veph:*`, ekran „Załóż konto”) oraz panel w ramce powłoki `app.html` bez fałszywego wylogowania.
 - Kontrola negatywna: na kodzie sprzed zmiany test restartu jest czerwony (po przywróceniu `odblokowany: true`, klucz i kopia sejfu), a w teście jednostkowym 5 z 8 testów kodu.
 
-SW 1.1.319 → **1.1.320**; `vilda_persistence_adapter.js?v=31→32`.
+SW 1.1.320 → **1.1.321**; `vilda_persistence_adapter.js?v=31→32`.
 
 ## Opis klucza sesji w polityce prywatności i w „Pozostań zalogowany” zgodny z kodem (P-KLUCZ-SESJI-OPIS, SW 1.1.319, 2026-10-19)
 
