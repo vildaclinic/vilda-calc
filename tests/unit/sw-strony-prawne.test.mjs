@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-// P-SW-STRONY-PRAWNE (decyzja właściciela 2026-10-20): „Polityka prywatności” i „Regulamin” — linki ze stopki
-// każdej strony, z bramki regulaminu (vilda_terms_gate.js) i z banera zgody (vilda_chrome.js) — nie otwierały się
+// P-SW-STRONY-PRAWNE (zlecenie właściciela 2026-10-20): „Polityka prywatności” i „Regulamin” — linki ze stopki
+// stron, z bramki regulaminu (vilda_terms_gate.js) i z banera zgody (vilda_chrome.js, polityka) — nie otwierały się
 // offline: nie było ich w żadnej tablicy precache, więc nawigacja kończyła się Response.error() (strona błędu
 // przeglądarki). Zmierzone w prawdziwym Chromium z produkcyjnym SW i zatrzymanym serwerem.
 //
@@ -15,8 +15,9 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 // wdrożeniu nowej wersji tekstu prawnego pierwsze otwarcie pokazuje poprzednią. Dlatego dla nich najpierw sieć,
 // a pamięć dopiero przy jej braku.
 //
-// Test wykonuje PRAWDZIWY plik service workera na atrapie Cache Storage i sieci i wysyła prawdziwe zdarzenie fetch
-// nawigacji. Kontrola negatywna usuwa warunek strategii i pokazuje, że wtedy online wraca stara treść.
+// Test wykonuje PRAWDZIWY plik service workera na atrapie Cache Storage i sieci i podaje prawdziwemu nasłuchowi fetch
+// syntetyczne zdarzenie nawigacji. Kontrola negatywna usuwa warunek strategii i pokazuje, że wtedy online wraca stara
+// treść. Osobny blok: nieudany zapis do pamięci (np. QuotaExceededError) nie może unieważnić odpowiedzi z sieci.
 
 const ZRODLO_SW = fs.readFileSync(path.join(korzen, 'service-worker-kalorii.js'), 'utf8');
 const POCHODZENIE = 'https://vilda.test';
@@ -35,7 +36,8 @@ const kluczAdresu = (wejscie) => {
 };
 
 // Atrapa Cache Storage: pamięci pod nazwami, klucz to ścieżka z query (tak SW zapisuje dokumenty).
-function pamiec() {
+// `pelna` — put odrzuca jak przy wyczerpanym limicie źródła (QuotaExceededError).
+function pamiec({ pelna = false } = {}) {
   const pamieci = new Map();
   const otworz = (nazwa) => {
     if (!pamieci.has(nazwa)) pamieci.set(nazwa, new Map());
@@ -45,7 +47,11 @@ function pamiec() {
         const r = m.get(kluczAdresu(klucz));
         return r ? r.clone() : undefined;
       },
-      put: async (klucz, odpowiedz) => { m.set(kluczAdresu(klucz), odpowiedz.clone()); },
+      put: async (klucz, odpowiedz) => {
+        if (pelna) throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        m.set(kluczAdresu(klucz), odpowiedz.clone());
+      },
+      _wstaw: (klucz, odpowiedz) => { m.set(kluczAdresu(klucz), odpowiedz.clone()); },
       delete: async (klucz) => m.delete(kluczAdresu(klucz)),
       keys: async () => [...m.keys()].map((k) => new Request(POCHODZENIE + k)),
     };
@@ -79,7 +85,7 @@ return { OPTIONAL_DOCUMENTS, DOCUMENT_PATHS, INSTALL_OPTIONAL_URLS, SHELL_CACHE 
   return { ...wykonaj(self, caches, fetch), nasluchy };
 }
 
-// Prawdziwe zdarzenie nawigacji: Request z mode 'navigate' nie da się zbudować poza przeglądarką, więc obiekt
+// Syntetyczne zdarzenie nawigacji: Request z mode 'navigate' nie da się zbudować poza przeglądarką, więc obiekt
 // niesie dokładnie to, czego SW używa (url, method, mode, cache, headers, destination).
 async function nawiguj(sw, sciezka) {
   let odpowiedz;
@@ -101,17 +107,19 @@ async function nawiguj(sw, sciezka) {
 
 const tytul = async (r) => (/<title>([^<]*)<\/title>/.exec(await r.text()) || [])[1];
 
-function srodowisko(zrodlo = ZRODLO_SW, { siec = true } = {}) {
-  const caches = pamiec();
+function srodowisko(zrodlo = ZRODLO_SW, { siec = true, pelna = false } = {}) {
+  const caches = pamiec({ pelna });
   const zapytania = [];
+  const trybyPamieci = [];
   const fetch = async (req) => {
     zapytania.push(kluczAdresu(req));
+    trybyPamieci.push(req && req.cache);
     if (!siec) throw new TypeError('Failed to fetch');
     return html('nowa');
   };
   const sw = uruchomSW(zrodlo, { caches, fetch });
   const powloka = caches._otworz(sw.SHELL_CACHE);
-  return { sw, powloka, zapytania };
+  return { sw, powloka, zapytania, trybyPamieci };
 }
 
 describe('P-SW-STRONY-PRAWNE: strony prawne w precache, nawigacja najpierw do sieci', () => {
@@ -126,11 +134,12 @@ describe('P-SW-STRONY-PRAWNE: strony prawne w precache, nawigacja najpierw do si
 
   for (const s of STRONY_PRAWNE) {
     it(`${s} online: bieżący tekst z sieci, nie z pamięci; pamięć dostaje nową treść`, async () => {
-      const { sw, powloka, zapytania } = srodowisko();
+      const { sw, powloka, zapytania, trybyPamieci } = srodowisko();
       await powloka.put(s, html('stara'));
       const r = await nawiguj(sw, s);
       expect(await tytul(r)).toBe('nowa');
       expect(zapytania).toContain(s);
+      expect(trybyPamieci, 'żądanie do sieci rewaliduje pamięć HTTP przeglądarki').toContain('no-cache');
       expect(await tytul(await powloka.match(s)), 'zapas offline odświeżony').toBe('nowa');
     });
 
@@ -143,10 +152,13 @@ describe('P-SW-STRONY-PRAWNE: strony prawne w precache, nawigacja najpierw do si
     });
   }
 
-  it('adres bez .html (/regulamin) też idzie najpierw do sieci', async () => {
-    const { sw, powloka } = srodowisko();
-    await powloka.put('/regulamin.html', html('stara'));
-    expect(await tytul(await nawiguj(sw, '/regulamin'))).toBe('nowa');
+  it('adres bez .html (/regulamin): online najpierw sieć, offline strona z pamięci', async () => {
+    const online = srodowisko();
+    await online.powloka.put('/regulamin.html', html('stara'));
+    expect(await tytul(await nawiguj(online.sw, '/regulamin'))).toBe('nowa');
+    const offline = srodowisko(ZRODLO_SW, { siec: false });
+    await offline.powloka.put('/regulamin.html', html('stara'));
+    expect(await tytul(await nawiguj(offline.sw, '/regulamin'))).toBe('stara');
   });
 
   it('kontrola: pozostałe dokumenty bez zmian — z pamięci, odświeżenie w tle', async () => {
@@ -163,5 +175,29 @@ describe('P-SW-STRONY-PRAWNE: strony prawne w precache, nawigacja najpierw do si
     const { sw, powloka } = srodowisko(bezWarunku);
     await powloka.put('/regulamin.html', html('stara'));
     expect(await tytul(await nawiguj(sw, '/regulamin.html'))).toBe('stara');
+  });
+});
+
+describe('P-SW-STRONY-PRAWNE: nieudany zapis do pamięci nie unieważnia odpowiedzi z sieci', () => {
+  for (const s of STRONY_PRAWNE) {
+    it(`${s} online przy pełnej pamięci: tekst z sieci, nie stara kopia`, async () => {
+      const { sw, powloka } = srodowisko(ZRODLO_SW, { pelna: true });
+      powloka._wstaw(s, html('stara'));
+      expect(await tytul(await nawiguj(sw, s))).toBe('nowa');
+    });
+
+    it(`${s} online przy pełnej pamięci i bez kopii: tekst z sieci, nie strona błędu`, async () => {
+      const { sw } = srodowisko(ZRODLO_SW, { pelna: true });
+      const r = await nawiguj(sw, s);
+      expect(r.type).not.toBe('error');
+      expect(await tytul(r)).toBe('nowa');
+    });
+  }
+
+  it('skutek dla pozostałych dokumentów: bez kopii w pamięci i przy pełnej pamięci — odpowiedź z sieci zamiast błędu', async () => {
+    const { sw } = srodowisko(ZRODLO_SW, { pelna: true });
+    const r = await nawiguj(sw, '/kontakt.html');
+    expect(r.type).not.toBe('error');
+    expect(await tytul(r)).toBe('nowa');
   });
 });

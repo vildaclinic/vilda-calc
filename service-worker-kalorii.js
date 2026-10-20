@@ -11,7 +11,8 @@
  *    "Response served by service worker has redirections".
  *
  * Najważniejsze zmiany względem poprzedniej wersji:
- * - nawigacja używa cache-first + background refresh,
+ * - nawigacja używa cache-first + background refresh (wyjątek: strony prawne z NETWORK_FIRST_DOCUMENTS —
+ *   najpierw sieć, pamięć tylko przy jej braku; P-SW-STRONY-PRAWNE),
  * - root aplikacji jest kanonizowany do /index.html (nie precache'ujemy '/'),
  * - runtime cache NIE jest wersjonowany, więc CDN-y i inne zasoby runtime
  *   nie znikają przy każdej publikacji nowej wersji,
@@ -19,7 +20,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.324';
+const SW_VERSION = '1.1.326';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1134,6 +1135,8 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=159',
   '/vilda_chrome.js?v=160',
   '/vilda_chrome.js?v=161',
+  '/vilda_chrome.js?v=162',
+  '/vilda_chrome.js?v=163',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1876,7 +1879,7 @@ const OPTIONAL_DOCUMENTS = [
   '/terminarz.html',
   '/przelicznik-jednostek.html',
   '/app.html',
-  // P-SW-STRONY-PRAWNE: strony prawne — linki ze stopki każdej strony, z bramki regulaminu i z banera zgody.
+  // P-SW-STRONY-PRAWNE: strony prawne — linki ze stopki stron, z bramki regulaminu i z banera zgody (polityka).
   // Nawigacja do nich idzie najpierw do sieci (NETWORK_FIRST_DOCUMENTS), pamięć jest zapasem offline.
   '/polityka-prywatnosci.html',
   '/regulamin.html'
@@ -2371,6 +2374,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_name_fix.js?v=3',
   '/vilda_name_fix.js?v=4',
   '/vilda_name_fix.js?v=5',
+  '/vilda_name_fix.js?v=6',
   '/vilda_data_import_export.js?v=54',
   '/vilda_data_import_export.js?v=55',
   '/vilda_data_import_export.js?v=56',
@@ -3012,6 +3016,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=214',
   '/vilda_vault.js?v=215',
   '/vilda_vault.js?v=216',
+  '/vilda_vault.js?v=217',
+  '/vilda_vault.js?v=218',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -3396,6 +3402,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=83',
   '/vilda_session_bridge.js?v=84',
   '/vilda_session_bridge.js?v=85',
+  '/vilda_session_bridge.js?v=86',
+  '/vilda_session_bridge.js?v=87',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',
@@ -3453,8 +3461,8 @@ const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ..
 const DOCUMENT_PATHS = new Set([ROOT_DOCUMENT, ...OPTIONAL_DOCUMENTS]);
 // P-SW-STRONY-PRAWNE: dokumenty, których treść online ma być zawsze aktualna (tekst prawny, który użytkownik
 // akceptuje). Inne dokumenty idą z pamięci z odświeżeniem w tle, więc po wdrożeniu pierwsze otwarcie pokazałoby
-// poprzednią wersję. Te idą najpierw do sieci (odpowiedź zapisuje się w pamięci jak dotąd), a pamięć oddaje je
-// dopiero wtedy, gdy sieci nie ma.
+// poprzednią wersję. Te idą najpierw do sieci (odpowiedź zapisuje się w pamięci jako zapas offline — do
+// P-SW-STRONY-PRAWNE tych stron SW w ogóle nie zapisywał), a pamięć oddaje je dopiero wtedy, gdy sieci nie ma.
 const NETWORK_FIRST_DOCUMENTS = new Set(['/polityka-prywatnosci.html', '/regulamin.html']);
 const SHELL_PATHS = new Set(
   PRECACHE_URLS
@@ -3961,7 +3969,14 @@ async function updateShellFromNetwork(request) {
     const safeResponse = await makeNavigationResponseSafe(networkResponse);
 
     if (cacheKey && isCacheableResponse(safeResponse)) {
-      await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
+      // P-SW-STRONY-PRAWNE: nieudany zapis do pamięci (np. QuotaExceededError przy wyczerpanym limicie źródła) nie
+      // unieważnia odpowiedzi, która przyszła z sieci. Dotąd odrzucenie cache.put kończyło nawigację jak brak sieci:
+      // strona prawna (najpierw sieć) dostawała starą kopię z pamięci, a dokument bez kopii — Response.error().
+      try {
+        await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
+      } catch (_) {
+        void _;
+      }
     }
 
     return safeResponse;

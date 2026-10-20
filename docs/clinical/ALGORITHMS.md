@@ -15211,6 +15211,230 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Kosz przeżywa retencję starszej wersji na trzecim urządzeniu; nowa wizyta nie obniża chwili zapisu karty (P-ZMIANA-W-KARCIE-2, SW 1.1.325, `vilda_vault.js` 218, 2026-10-20)
+
+**Zmiana kliniczna: tak** — poprawki reguł z wpisu P-ZMIANA-W-KARCIE / P-KOSZ-NOWSZA-TRESC (niżej) po przeglądzie
+adwersarza, w zakresie decyzji właściciela D-5 B („chwila zapisu karty nigdy nie maleje”) i D-6 B („w koszu nowsza
+treść, ten sam nagrobek w każdej kolejności”) z 2026-10-20. Wzory, progi, jednostki, format ładunku i serwer bez zmian.
+
+**Co było** (prawdziwy `vilda_vault.js` 217 na `27055774`, sejfy w pamięci, sztuczny zegar, dane fikcyjne).
+- **Regresja P-KOSZ-NOWSZA-TRESC: retencja na trzecim urządzeniu zdejmowała wpis kosza.** „Testowy Jan” ma 12 wersji na
+  iPhonie (P), komputerze (K) i tablecie (C). Zanim się zsynchronizują: P poprawia albo przypina wersję s, K przenosi s
+  do kosza, C przycina s retencją. Po scaleniu na K nagrobek kosza niósł wersję treści z P (`rev` 1), a późniejszy
+  nagrobek retencji z C — starą wersję (`rev` 0) bez treści. `Bkz_dolacz` przenosił treść tylko przy tej samej wersji
+  albo gdy późniejszy nagrobek sam miał treść, więc wpis kosza znikał: na wszystkich trzech urządzeniach albo tylko
+  na C (trwały rozjazd, a C szyfrował przy każdej synchronizacji treść, którą potem odrzucał). Przy gwiazdce przypięty
+  zapis wracał do karty na P, K i C („nagrobek retencji przegrywa z wersją przypiętą”), a z kosza znikał. Na
+  `44256803` (przed P-KOSZ-NOWSZA-TRESC) kosz zostawał na wszystkich urządzeniach.
+- **`savePatient` obniżał chwilę zapisu karty.** Nowa wizyta ustawiała `lastSavedAtISO` = „teraz”. Gdy karta miała datę
+  z przyszłości lokalnego zegara (zmiana na urządzeniu ze spieszącym się zegarem, przyjęta przez R4), data spadała, a
+  usunięcie pacjenta na trzecim urządzeniu z chwilą pomiędzy kasowało kartę razem z nową wizytą; karta wracała potem
+  z innego urządzenia bez niej. Tak samo przed P-ZMIANA-W-KARCIE przy nowej wizycie na takim urządzeniu.
+- **Pusta karta z ładunku bez wersji.** Ładunek z kartą bez żadnej wersji (np. pusta karta ze starszej aplikacji)
+  zakładał kartę z licznikiem 0, wbrew R6.
+
+**Reguła po zmianie.**
+- `Bkz_dolacz`: gdy starszy nagrobek tej wersji niesie treść nowszej wersji zapisu niż późniejszy, kosz trzyma tę
+  treść (z jej `rev`, `updatedAtISO`, `savedAtISO`), a chwila usunięcia zostaje z późniejszego — także gdy późniejszy
+  nie ma treści (retencja). Łączenie nie zależy od tego, który nagrobek jest lokalny. Treść starsza niż wersja
+  późniejszego nagrobka (zapis przywrócony, zmieniony i ponownie przycięty) odpada jak dotąd.
+- `savePatient`: `lastSavedAtISO` = późniejsza z dwóch (dotychczasowa, chwila zapisu). Wersja dostaje chwilę zapisu
+  z lokalnego zegara jak dotąd, więc kolejność wersji w historii bez zmian. Dotyczy też „Scal pacjentów” (zapis karty
+  docelowej), „Odtwórz jako nową” i importu zwykłego pliku JSON, które idą tą drogą.
+- `Bsl_scalPacjenta`: nowa karta bez ani jednej zapisanej wersji nie powstaje (R6 dla każdego ładunku).
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik).**
+- `tests/unit/kosz-nowsza-tresc.test.mjs`, blok „trzy urządzenia, retencja starej wersji na trzecim” (10):
+  - masa 23 → 99 kg na P, kosz na K, retencja `recentHours: 0` na C, kolejności pierwszych scaleń K←P,K←C; K←C,K←P;
+    P←K,K←C; C←K,C←P; C←P,C←K, potem 3 rundy pełnej wymiany → na P, K i C zapisu nie ma w karcie, w koszu 99 kg, ten
+    sam nagrobek z `rev` 1 (5; czerwone na `27055774`: K←P,K←C, K←C,K←P, P←K,K←C);
+  - P←C, potem P←K → poprawka przegrywa z retencją jak dotąd, kosz na trzech z 23 kg, ten sam nagrobek (ograniczenie
+    sprzed zmiany, niżej);
+  - gwiazdka zamiast poprawki (K←P,K←C; K←C,K←P; C←P,C←K) → zapis nie wraca do karty na żadnym urządzeniu, w koszu
+    zapis przypięty (3; czerwone: dwie pierwsze);
+  - kontrola: zapis przywrócony z kosza, poprawiony i przycięty na C → stara treść nie wraca do kosza (zielona);
+  - strażnik źródła: warunek `Bkz_dolacz` bez wymogu treści po stronie późniejszego nagrobka.
+- `tests/unit/zmiana-w-karcie.test.mjs` (+2): zegar B 10 min do przodu, B poprawia wiersz, A przyjmuje datę B i
+  zapisuje nową wizytę → data A bez zmian; C usuwa pacjenta z chwilą pomiędzy → na A, B i C karta z 3 wersjami i tą
+  samą datą (czerwony na `27055774`); ładunek z kartą bez wersji → brak karty (czerwony); strażnik `savePatient`.
+- Pokrycie reguł z #732, którego brakowało (mutanty przeżywające w przeglądzie; zielone na `27055774`):
+  `kosz-nowsza-tresc` — obie strony poprawiły zapis (ta sama `rev`), późniejsza poprawka na P, kosz na K, 3 kolejności
+  → w koszu obu późniejsza, „Przywróć” ją oddaje (3); poprawka z nową chwilą zapisu (`preserveSavedAt: false`) → nagrobek
+  i przywrócona wersja mają chwilę zapisu poprawki (2); `zmiana-w-karcie` — kosz, gdy wersję w międzyczasie usunęło
+  scalanie → data = chwila usunięcia; zmiana w karcie po przyjęciu daty z przyszłości → data nie maleje; w testach
+  odbiorcy D-5 zegar przesunięty między koszem a scaleniem (chwila scalania ≠ chwila kosza).
+- Na `27055774` z nowych testów czerwonych jest 9 (7 zachowania, 2 strażniki).
+
+**Wpływ kliniczny.** Zapis świadomie przeniesiony do kosza nie wraca po cichu do historii pacjenta, gdy trzecie
+urządzenie przytnie tę wersję retencją, a kosz na wszystkich urządzeniach trzyma poprawkę. Nowa wizyta nie ginie pod
+usunięciem pacjenta z chwilą wcześniejszą niż ostatnia znana zmiana karty. Lista „Ostatnio zapisani” po nowej wizycie
+na urządzeniu ze spóźnionym zegarem pokazuje późniejszą datę karty (dotąd lokalną).
+
+**Ograniczenia.** Opisane w „Ograniczeniach” wpisu niżej (dopisek z 2026-10-20): zmiana sprzed scalenia przy delcie
+nagrobka bez karty celu, kosz różnych wersji na dwóch urządzeniach offline, zegar przestawiony do przodu, import bez
+podniesienia daty, „Zapisz” bez zmian, retencja scalona przed koszem na urządzeniu z poprawką.
+
+**Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 217 → 218 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (162 → 163) i
+`vilda_session_bridge.js` (86 → 87); SW 1.1.324 → **1.1.325**.
+
+## Każda zmiana w karcie liczy się jak zapis; kosz trzyma nowszą treść (P-ZMIANA-W-KARCIE, P-KOSZ-NOWSZA-TRESC, SW 1.1.324, `vilda_vault.js` 217, `vilda_name_fix.js` 6, 2026-10-20)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła scalania zapisów
+pacjenta między urządzeniami: która zmiana w karcie przetrwa usunięcie pacjenta na innym urządzeniu i jaka treść leży
+w koszu. **Akceptacja właściciela 2026-10-20** (decyzje D-4 A, D-5 B i D-6 B w `docs/SYNC_PRZYROSTOWA_PLAN.md`,
+rozdz. 6). Serwer, format ładunku, delt i nagrobków oraz API `window.VildaVault` bez zmian.
+
+**Co było** (prawdziwy `vilda_vault.js` 216, ten sam od `37fb16f6` do `44256803`; dwa albo trzy sejfy z magazynem w pamięci, chmura A→B i B→A
+oraz delty na żywo; dane fikcyjne).
+- **Zmiana w karcie bez nowej wersji nie liczyła się jak zapis (D-4).** B usuwa pacjenta, a minutę później A, które
+  o tym nie wie, zmienia jego kartę bez nowej wizyty. Chwila ostatniego zapisu karty (`lastSavedAtISO`) zostawała
+  stara, więc nagrobek pacjenta (późniejszy) wygrywał: karta i zmiana znikały na A, B i C. Dotyczyło to ośmiu dróg
+  przez `Bzw_aktualizujWersje`: poprawki wiersza historii i bieżącego pomiaru, usunięcia wiersza, przypięcia
+  i odpięcia gwiazdki, edycji starszej wersji i wpisu historycznego z okna pomiaru, korekty nazwiska
+  (`vilda_name_fix.js`), a do tego „Przywróć” z kosza (`Bkz_przywroc`). Karta znikała w 36 próbach z 36 (9 dróg ×
+  4 kolejności). Nowa wizyta (`savePatient`) i edycja bieżącej wersji z okna pomiaru (ta sama wersja z nową chwilą
+  zapisu) przeżywały; po
+  zmianie karta zostaje w 44 próbach z 44, razem z tymi kontrolami.
+- **Kosz cofał chwilę zapisu karty (D-5).** Kosz najnowszej wersji ustawiał `lastSavedAtISO` na chwilę zapisu
+  poprzedniej wersji, a kosz starszej wersji jej nie zmieniał. Usunięcie pacjenta na B przed koszem na A kończyło się
+  więc zniknięciem karty na obu urządzeniach, choć kosz był późniejszy. Przebudowa nagłówka po koszu przyjętym z innego
+  urządzenia i po „Przywróć” też mogła obniżyć datę.
+- **Kosz trzymał starszą treść (D-6).** Masa 24 kg poprawiona na 26 kg na iPhonie, a zanim urządzenia się
+  zsynchronizowały, ten sam zapis przeniesiony do kosza na komputerze. Usunięcie (późniejsze) wygrywało słusznie, ale
+  w koszu obu urządzeń leżało 24 kg i „Przywróć” oddawał 24 kg — poprawka ginęła bez śladu. Tak samo z gwiazdką.
+
+**Reguła po zmianie.**
+- **R1, zmiana w karcie (D-4 A).** Zmiana w karcie bez nowej wersji podnosi `lastSavedAtISO` karty do późniejszej
+  z dwóch: dotychczasowej i chwili zmiany. Dotyczy to wszystkich dziewięciu dróg wyżej, w tym **wpisu historycznego
+  z okna pomiaru**. Wersja dostaje `rev + 1` i nową chwilę zmiany (`updatedAtISO`) jak dotąd. Przy `preserveSavedAt` jej
+  `savedAtISO` zostaje, czyli wersja nie zmienia miejsca w historii. Kliknięcie gwiazdki bez zmiany stanu i „Przywróć”
+  zapisu, który jest już w karcie (P-KOSZ-PRZYWROC-NOWSZA), niczego nie zapisują i daty nie podnoszą.
+- **R2, kosz (D-5 B).** Przeniesienie do kosza dowolnej wersji, także najnowszej, daje `lastSavedAtISO` = późniejsza
+  z: dotychczasowej, chwili zapisu nowej najnowszej wersji i chwili usunięcia z nagrobka (`deletedAtISO`; ta sama
+  chwila, bez drugiego odczytu zegara). Także wtedy, gdy wersję w międzyczasie usunęło scalanie.
+- **R3, data nigdy nie maleje.** Usunięcie wersji (kosz, retencja, wewnętrzne `deleteSnapshot`) i przebudowa nagłówka
+  karty (kosz przyjęty z innego urządzenia, „Przywróć”) liczą późniejszą z dat. Retencja i `deleteSnapshot` daty nie
+  podnoszą (D-8 A). *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE-2: nowa wizyta też daty nie obniża — `savePatient` liczy późniejszą z dwóch.)*
+- **R4, odbiorca.** Karta z ładunku, która istnieje lokalnie i nie przynosi nowych wersji, zawsze daje
+  `lastSavedAtISO` = późniejsza z dwóch (`Bsw_bezNowych`). Dotąd działo się to tylko przy przyjętej treści wersji.
+  Chwila zmiany i kosza dochodzi do innych urządzeń rekordem karty, w pełnej wysyłce i w delcie karty. U odbiorcy
+  decyzję o nagrobku pacjenta podejmuje dotychczasowa reguła (nagrobek wygrywa, gdy usunięcie nie jest wcześniejsze niż
+  ostatni zapis karty).
+- **R5, treść kosza (D-6 B).** Gdy obie strony mają nagrobek tej samej wersji z treścią, gdy pominięta wersja
+  z ładunku jest nowsza niż treść kosza albo gdy lokalna wersja usuwana przez nagrobek z ładunku jest nowsza niż jego
+  treść, kosz trzyma nowszą z dwóch treści (`Bkz_nowszaWersja`: wyższa `rev`, przy
+  równej późniejsza chwila zmiany — ta sama reguła co dla wersji tej samej karty w scalaniu). Nagrobek niesie treść
+  razem z jej `rev`, `updatedAtISO` i `savedAtISO`; chwila usunięcia, karta i numer kolejny zostają z nagrobka. Reguła
+  „kto wygrywa” (usunięcie nie wcześniejsze niż ostatnia zmiana wersji) się nie zmienia. Nagrobek retencji i nagrobek
+  starszy niż 30 dni nie dostają treści. Oba urządzenia mają ten sam nagrobek w każdej kolejności synchronizacji.
+  *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE-2: późniejszy nagrobek retencji starszej wersji nie zdejmuje już wpisu kosza z nowszą treścią — dotąd na trzech
+  urządzeniach wpis kosza znikał, a przypięty zapis wracał do karty.)*
+- **R6, karta bez wersji.** Scalanie nie zakłada karty, której wszystkie wersje z ładunku przegrały z nagrobkami wersji
+  (dotąd powstawała pusta karta z licznikiem 0). Kartę zakłada pełny ładunek, gdy jej wersja przejdzie.
+  *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE-2: także karty z ładunku bez żadnej wersji.)*
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik).** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar
+(`vi.useFakeTimers({ toFake: ['Date'] })`).
+
+`tests/unit/zmiana-w-karcie.test.mjs` (nowy, 44). Karta: s1 [60, 66 mies.], s2 [60, 66, 72 mies.] na A; B i C mają
+komplet. B usuwa pacjenta, minutę później A robi zmianę:
+- 8 zmian × 3 kolejności (A→B potem B→A; B→A potem A→B; C dostaje deltę A, potem deltę nagrobka B) → na A
+  `lastSavedAtISO` = chwila zmiany, `savedAtISO` wersji bez zmian, `updatedAtISO` = chwila zmiany; na wszystkich
+  urządzeniach karta jest, z tą samą datą i tą zmianą, bez nagrobka pacjenta. Treść wersji: poprawka wiersza 60 mies. →
+  `60:110.8,66:113,72:116`; poprawka bieżącego 72 mies. → `72:116.5`; usunięcie wiersza 66 → `60:110,72:116`;
+  przypięcie s1 → przypięta; odpięcie → bez gwiazdki; edycja starszej s1 (masa 19,4 kg) → 19,4; wpis historyczny
+  54 mies. → `54:107` w historii; korekta nazwiska → Kamil Przykladowy (24);
+- „Przywróć” s1 po usunięciu pacjenta na B (3 kolejności) → karta zostaje, s1 wraca, data = chwila przywrócenia;
+- kontrole: kliknięcie gwiazdki bez zmiany stanu → data bez zmian, karta znika na obu; zmiana przed usunięciem
+  pacjenta → usunięcie wygrywa (obie zielone na `44256803`);
+- „Ostatnio zapisani”: poprawka pomiaru w starszej karcie → lista [Starsza Ala, Nowsza Ola] zamiast [Nowsza Ola,
+  Starsza Ala];
+- D-5 B: kosz najnowszej wersji → A i B: data = `deletedAtISO`, B ma 1 wersję; kosz starszej → to samo; usunięcie
+  pacjenta na B przed koszem na A (obie kolejności) → karta zostaje na obu z 1 wersją i datą kosza (dotąd znikała);
+  odbiorca bez wersji z kosza → data kosza; ta sama wersja do kosza na A i później na B (obie kolejności) → na obu
+  późniejsze usunięcie; urządzenie usuwające scala starą chmurę → data się nie cofa, wersja nie wraca; trzy urządzenia
+  na deltach (C usuwa pacjenta, A później robi kosz) → B po delcie A ma datę kosza i nie traci karty po delcie
+  nagrobka C; poprawka po usunięciu na C, potem kosz s1 → data nie cofa się przed usunięcie, karta na A, B i C;
+  retencja (12 wersji, kosz najstarszej, potem `pruneSnapshotsForPatient(pid, { recentHours: 0 })`) → data = chwila
+  kosza na A i B; `deleteSnapshot` → data bez zmian;
+- R6: C ma nagrobek s2, ładunek B z kartą tylko z s2 → brak pustej karty; pełny ładunek A → karta z 1 wersją;
+- strażnik źródła (kosz przekazuje chwilę usunięcia, retencja nie; rekord karty liczy późniejszą z dat).
+
+`tests/unit/kosz-nowsza-tresc.test.mjs` (nowy, 12). Jan, trzy wizyty, druga 24 kg; iPhone (P) ma komplet:
+- P poprawia masę na 26 kg, 5 min później komputer (K) przenosi zapis do kosza; kolejności P-pierwszy, K-pierwszy,
+  naraz → na obu brak zapisu w karcie, w koszu 26 kg, nagrobek identyczny, `rev` 1; „Przywróć” → 26 kg na obu (3);
+- gwiazdka zamiast poprawki (2 kolejności) → w koszu obu zapis przypięty (2);
+- kontrola: poprawka po koszu → zapis zostaje w karcie na obu, kosz pusty, jak dotąd;
+- kolejne scalenie tego samego stanu → bez ponownego zapisu listy kosza;
+- trzecie urządzenie ze starą wersją dostaje oba ładunki (2 kolejności) → kosz z poprawką (2);
+- oba kosze (wcześniejsze usunięcie poprawionej treści, późniejsze starej) → w koszu poprawka, usunięcie późniejsze;
+- zegar K 10 min do przodu → usunięcie wygrywa z poprawką, kosz trzyma poprawkę;
+- strażnik źródła: jedna miara „nowsza wersja” w czterech miejscach.
+
+Na `44256803` z 56 nowych testów czerwonych jest 52; zielone tylko 4 kontrole. Przepisane oczekiwania:
+`tests/unit/sync-wlasciciel-wersji.test.mjs` (37 przypadków, niżej we „Wpływie klinicznym”) i strażnik
+`tests/unit/retencja-nagrobki.test.mjs` (kosz przekazuje chwilę usunięcia). Mutacje: usunięcie każdego elementu
+zmiany osobno daje od 1 do 26 czerwonych testów zachowania (bez strażnika źródła).
+
+**Wpływ kliniczny.**
+- Poprawka pomiaru, usunięcie wiersza, gwiazdka, wpis historyczny, korekta nazwiska, „Przywróć” i kosz zrobione na
+  jednym urządzeniu po usunięciu pacjenta na drugim nie giną: karta zostaje na wszystkich urządzeniach, jak po nowej
+  wizycie. Kto chce usunąć pacjenta, usuwa go ponownie.
+- Po „Scal pacjentów” X → Y na jednym urządzeniu zmiana w starej karcie X na drugim (które o scaleniu nie wie)
+  przywraca X jako duplikat z tą zmianą, zamiast wchłonąć ją do Y. Do ponownego scalenia; nic nie ginie.
+- Karta po poprawce, gwiazdce, „Przywróć” albo koszu wskakuje na górę „Ostatnio zapisani” z dzisiejszą datą, choć
+  ostatnia wizyta jest starsza. Opis „ostatni zapis <data>” (pytanie o tożsamość, „Scal pacjentów”, Duplikaty) pokazuje
+  tę datę.
+- „Przywróć” z kosza oddaje ostatnią treść zapisu (poprawkę, przypięcie), także gdy kosz zrobiono na urządzeniu, które
+  poprawki jeszcze nie miało.
+- Bez zmian: wiek pomiaru i nagłówek w Karcie Pacjenta (liczone z najnowszej wersji), wskaźnik zapisu, wskaźnik
+  nieaktualnego urządzenia, kolejność wersji w historii.
+
+**Ograniczenia (czego zmiana nie robi).**
+- **E3, scalenie, kosz i poprawka.** K scala X → Y i przenosi zapis S spod Y do kosza, a P poprawia S w starej X.
+  P trzyma X z jedyną wersją S (ostatniej wersji karty nie usuwa żaden nagrobek), K nie ma X. Kosz na obu ma poprawkę.
+  Rozjazd do domknięcia osobnym PR (nagrobek wersji po `snapshotId`).
+- **E4, dwa scalenia kontra poprawka.** Wersja przeniesiona dwoma scaleniami ma `rev` 2, poprawka w starej karcie
+  `rev` 1, więc kosz trzyma treść z `rev` 2, czyli bez poprawki. Zamyka to dopiero D-7 wariant 2 (późniejsza poprawka
+  wygrywa), który musi zmienić `Bkz_nowszaWersja` razem z regułą wersji w `Bsl_scalPacjenta`.
+- **Flota mieszana.** Pełna ochrona działa po aktualizacji wszystkich urządzeń. Stara aplikacja nadal cofa datę przy
+  koszu i nie przyjmuje daty bez zmienionej wersji.
+- **Ostatnia wersja karty (E1)** dalej nie trafia do kosza; nagrobek pacjenta i scalenie bez celu w nagrobku — bez
+  zmian (P-SYNC-WLASCICIEL, „Ograniczenia”).
+- Bez zmian: automatyczna migracja nazwisk (`migratePatientNamesSplit`, daty nie podnosi), import karty i „Scal kopię
+  konta”, `savePatient`, naprawa treści wersji w scalaniu (`Bsw_poprawTresc`). *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE-2: `savePatient` liczy już
+  późniejszą z dwóch dat.)*
+- *(Dopisane 2026-10-20 po przeglądzie adwersarza, P-ZMIANA-W-KARCIE-2.)*
+  - **Zmiana sprzed scalenia i delta nagrobka bez karty celu.** Zmiana w starej X zrobiona przed „Scal pacjentów” na
+    urządzeniu, które o scaleniu nie wiedziało, ma chwilę wcześniejszą niż nagrobek scalenia. Przy delcie nagrobka bez
+    karty Y (nadawca sprzed P-SYNC-WLASCICIEL albo delta Y ponad limit) znika więc z X jak dotąd i wraca bez tej zmiany
+    z pełnym stanem urządzenia scalającego (P-SYNC-WLASCICIEL, „Ograniczenia”). Reguła R1 chroni zmianę zrobioną po
+    scaleniu.
+  - **Kosz różnych wersji na dwóch urządzeniach offline.** B przenosi s1 do kosza, A przenosi s2; ostatniej wersji karty
+    nie usuwa żaden nagrobek, więc A trzyma [s1], B trzyma [s2] (tak samo przed zmianą). Gdy B usunie przy tym
+    pacjenta, A trzyma X = [s1], a B i nowe urządzenie nie mają X, do następnej zmiany X na A. Obie treści są w koszu na
+    wszystkich urządzeniach, nic nie ginie. Domknięcie razem z E3 (deterministyczny wybór ocalałej wersji).
+  - **Zegar urządzenia przestawiony do przodu.** Zmiana w karcie albo kosz na takim urządzeniu daje chwilę zapisu
+    karty z przyszłości, która nigdy nie maleje. „Usuń pacjenta” na urządzeniu z dobrym zegarem przed tą chwilą
+    przegrywa i pacjent wraca. Tak było już dotąd przy nowej wizycie; zmiana dokłada wyzwalacze.
+  - **Import pliku karty i „Scal kopię konta”** zdejmują nagrobki importowanych wersji, ale nie podnoszą chwili zapisu
+    karty do chwili importu (jak dotąd). Wersja z kosza wrócona importem przegrywa więc z wcześniejszym usunięciem
+    pacjenta, a ta sama wersja wrócona „Przywróć” — nie. Do decyzji.
+  - **„Zapisz” bez zmian w oknie „Edytuj pomiar”** też liczy się jak zmiana w karcie (R1): podnosi datę i zachowuje kartę
+    usuniętą na innym urządzeniu. Dotąd usunięcie wygrywało.
+  - **Retencja na trzecim urządzeniu, scalona przed koszem na urządzeniu z poprawką** (P←C, potem P←K): nagrobek
+    retencji, późniejszy niż poprawka, wygrywa z nią jak dotąd (P-RETENCJA-NAGROBKI) i nie niesie treści, więc poprawka
+    przepada, a kosz na trzech urządzeniach trzyma treść sprzed poprawki (zbieżnie, jak przed zmianą).
+
+**Kod.** `vilda_vault.js`: pomocniki `Bkz_pozniejsza` i `Bkz_podniesZapis`; `Bzw_aktualizujWersje` (R1),
+`Bzw_usunWersje` i `Bkz_przebudujNaglowek` z chwilą zmiany (R2, R3), `Bkz_doKosza` i `Bkz_przywroc` (R2, R1),
+`Bsl_scalPacjenta` (R4, R6), `Bkz_nowszaWersja`, `Bkz_zTresci`, `Bkz_dolacz`, `Bkz_scalStart`, `Bkz_pomin`,
+`Bkz_scalKoniec` (R5). `vilda_name_fix.js`: tylko komentarz. `vilda_sync.js` i `vilda_sync_integration.js` bez zmian.
+
+**Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 216 → 217 na stronach i w adresach wstrzykiwanych przez
+`vilda_chrome.js` (161 → 162) i `vilda_session_bridge.js` (85 → 86); `vilda_name_fix.js` 5 → 6 (`index.html`,
+`docpro.html`); SW 1.1.323 → **1.1.324**.
+
 ## Wersja spod karty z wygrywającym nagrobkiem przechodzi pod blokadami obu kart (P-SYNC-WLASCICIEL-2, SW 1.1.289, `vilda_vault.js` 214, 2026-10-15)
 
 **Zmiana kliniczna: możliwa** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się to, czy poprawka
@@ -15457,7 +15681,7 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
   scalania nie zdejmuje lokalnego nagrobka karty, która tu nie powstała, bo jej wersje leżą tu — nowsze — pod inną kartą.
 - Licznik zapisów karty = liczba jej wersji, także naprawa rozjazdów sprzed zmiany (zapis samego licznika tylko przy
   niezgodności); karta bez żadnej nowej wersji nie powstaje pusta. Przyjęcie z ładunku samej nowszej treści wersji
-  podnosi chwilę ostatniego zapisu karty do późniejszej z dwóch (jak nowa wersja; nagłówek bez zmian).
+  podnosi chwilę ostatniego zapisu karty do późniejszej z dwóch (jak nowa wersja; nagłówek bez zmian). *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: karta bez nowych wersji dostaje późniejszą z dwóch chwil zapisu zawsze, także bez przyjętej treści; nie powstaje też karta, której wszystkie wersje przegrały z nagrobkami wersji.)*
 - Tutejsza wersja jest czytana tylko dla wersji spoza karty z ładunku: po kluczu (nowa metoda adapterów
   `getSnapshotForUser`), bez niej — mapa właścicieli raz na scalanie. Delta jednej karty na prawdziwym IndexedDB
   z 1600 kartami: 27–35 ms (`2df41a8` w tym samym przebiegu 35–54 ms).
@@ -15471,7 +15695,7 @@ każdy scenariusz w obu kolejnościach id). X i Y po 2 wersje (x1, x2, y1, y2), 
 - A scala X → Y (ym), B zapisuje x3 w X → oba: X 1/1 [x3], Y 5/5 [x1 x2 y1 y2 ym], od rundy 1 bez zmian właściciela
   (8; czerwone na `2df41a8`);
 - A scala X → Y, B poprawia x1 na 61 mies. bez zmiany chwili zapisu → oba: Y 5/5, nagrobek X, x1 = 61 / 120,5 cm —
-  w pełnych ładunkach i w deltach na żywo (8; czerwone: 60 / 120); z nową chwilą zapisu X → X 1/1 [x1] 61 / 120,5,
+  w pełnych ładunkach i w deltach na żywo (8; czerwone: 60 / 120); *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: X wraca jako duplikat, X 1/1 [x1] 61 / 120,5, Y 4/4, bez nagrobków.)* z nową chwilą zapisu X → X 1/1 [x1] 61 / 120,5,
   Y 4/4, także na trzech urządzeniach w każdej z 6 kolejek chmury (8 + 12; czerwone);
 - łańcuch X → Y → Z na A; B, które o scaleniach nie wie, koryguje albo przypina x1 w starej X → x1 pod Z z treścią z B,
   liczniki zgodne, nic nie ginie (9; 8 czerwonych);
@@ -15482,7 +15706,7 @@ każdy scenariusz w obu kolejnościach id). X i Y po 2 wersje (x1, x2, y1, y2), 
   x1 = 61 / 120,5 (późniejsza), bieżąca wersja Y = ym (8; czerwone);
 - B zmienia wersję starej X bez nowego zapisu karty (edycja albo usunięcie wiersza, przypięcie, korekta z zachowaną
   chwilą zapisu), dostaje delty Y i nagrobka X z A w obu kolejnościach, potem nieaktualną chmurę; nowe urządzenie C
-  pobiera chmurę → A, B, C: Y 5/5 ze zmianą z B, nagrobek X, kosz pusty (24; czerwone — zmiana ginęła);
+  pobiera chmurę → A, B, C: Y 5/5 ze zmianą z B, nagrobek X, kosz pusty (24; czerwone — zmiana ginęła); *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana po scaleniu → X 1/1 ze zmienioną wersją, Y 4/4, bez nagrobków; przed scaleniem bez zmian.)*
 - A scala X → Y, B scala X → Z → x1 i x2 pod kartą o mniejszym id na obu (8; czerwone); stan zastany z rozjechanymi
   licznikami i różnymi właścicielami → po 4 rundach liczniki = liczba wersji, A = B (12; czerwone);
 - zapis x4 w X wstrzymany w innej karcie przeglądarki w trakcie scalania → X [x3 x4] licznik 2, Y 5/5 (8; czerwone:
@@ -15507,7 +15731,7 @@ i `scalanie-duplikatow` odstęp 5 ms po zapisach kart (remis milisekundy); aserc
 **Wpływ kliniczny.** Wzory, progi i jednostki bez zmian. Po „Scal pacjentów” wersje zostają pod kartą, z którą je
 scalono, na wszystkich urządzeniach, niezależnie od kolejności synchronizacji (w deltach na żywo — gdy scalało
 urządzenie po zmianie). Wyjątek: wersja poprawiona na urządzeniu, które o scaleniu nie wiedziało, z nową chwilą zapisu
-karty wraca pod starą kartę razem z poprawką — zbieżnie, bez utraty; duplikat wraca po cichu. Karta przywrócona nowym
+karty wraca pod starą kartę razem z poprawką — zbieżnie, bez utraty; duplikat wraca po cichu. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: tak samo przy zmianie bez nowej chwili zapisu — poprawce z zachowaną chwilą, usunięciu wiersza, przypięciu, korekcie nazwiska; X wraca jako duplikat ze zmianą.)* Karta przywrócona nowym
 zapisem z drugiego urządzenia wraca tylko z zapisami po scaleniu (dotąd zabierała całą dawną historię). Poprawka pomiaru,
 przypięcie albo edycja wiersza z innego urządzenia nie giną pod starszą treścią, także po kilku scaleniach; z dwóch
 współbieżnych poprawek wersji pod różnymi kartami wygrywa późniejsza. Liczba zapisów na liście pacjentów zgadza się
@@ -15521,7 +15745,7 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
   Tak samo poprawka starej karty wchłonięta do karty scalonej, którą wcześniej usunięto na innym urządzeniu: w części
   kolejek ginie, bo chwila zapisu karty scalonej nie rośnie. Przyczyna: nagrobek scalenia nie niesie celu. Kierunki
   (do decyzji): cel scalenia w nagrobku (zmiana formatu), wnioskowanie w scalaniu, chwila zapisu karty przy przyjęciu
-  późniejszej treści. Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany).
+  późniejszej treści. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana w karcie podnosi teraz jej chwilę zapisu (decyzja D-4 A), a odbiorca zawsze bierze późniejszą z dwóch; cel scalenia w nagrobku — bez zmian.)* Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany).
 - **Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń** zostaje w dawnej wersji w historii karty scalonej;
   bieżąca wersja (głowa scalenia) pokazuje wartość sprzed poprawki (123 zamiast 124 cm), a następny zapis buduje się na
   niej. Po jednym scaleniu X wraca z poprawką jako duplikat. Domknięcie (do decyzji): poprawiony wiersz w bieżącej
@@ -15529,7 +15753,7 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
 - **Delta nagrobka bez karty celu** (wysyła ją urządzenie sprzed zmiany): gdy przychodzi po delcie Y, wersja X
   zmieniona na odbiorcy bez nowego zapisu karty (przypięcie, edycja wiersza, korekta z zachowaną chwilą zapisu) znika
   razem z X — także z kosza, a po synchronizacji z nieaktualną chmurą z chmury i z nowego urządzenia — i wraca, bez tej
-  zmiany, z pełnym stanem urządzenia scalającego (na `audyt` ginęła tylko zmiana; test przypięty). Przy delcie Y ponad
+  zmiany, z pełnym stanem urządzenia scalającego (na `audyt` ginęła tylko zmiana; test przypięty). *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana na odbiorcy PO scaleniu podnosi chwilę zapisu X ponad nagrobek, więc X zostaje od razu ze zmianą jako duplikat i nic nie znika; test przepisany. Zmiana zrobiona PRZED scaleniem, której urządzenie scalające nie dostało, działa jak dotąd: znika z X i wraca bez tej zmiany z pełnym stanem urządzenia scalającego; tak samo przy samym nagrobku, gdy delta Y przekracza limit.)* Przy delcie Y ponad
   limit urządzenie po zmianie wysyła sam nagrobek — wersje wracają z pełną synchronizacją, jak na `audyt`. Cel scalenia
   trzyma tylko pamięć strony: po przeładowaniu delta nagrobka już nie powstaje. Wysyłka zapasowa `fetch` (U2) działa,
   dopóki strona żyje — zaraz po scaleniu tak jest; delta odrzucona przy zamykaniu karty przepada jak dotąd, a wersje
@@ -16367,7 +16591,7 @@ synchronizacji nie pokazuje się jednocześnie w koszu.
 **Czego zmiana nie robi.** Gdy w tym samym oknie ładunek niesie PÓŹNIEJSZE usunięcie tego samego zapisu z innego urządzenia,
 nagrobek wraca do kosza na chwilę (koniec scalania nie zna chwili przywrócenia); następne scalanie rozstrzyga go jak dotąd
 po chwili zmiany zapisu, a „Przywróć” zdejmuje go bez szkody (P-KOSZ-PRZYWROC-NOWSZA). Nie zmienia reguł konfliktu kosza,
-formatu ładunku ani kolejności blokad.
+formatu ładunku ani kolejności blokad. *(Aktualizacja 2026-10-20, reguła treści kosza: P-KOSZ-NOWSZA-TRESC.)*
 
 **Wersje.** `vilda_vault.js` 202 → 203 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (110 → 111)
 i `vilda_session_bridge.js` (34 → 35); nowe adresy w precache (append-only); `SW_VERSION` 1.1.189 → 1.1.190 (+ pin
@@ -16506,7 +16730,7 @@ po cichu do stanu z chwili usunięcia.
 **Czego zmiana nie robi.** Nie zamyka samego wyścigu z końcem scalania (krok 2, po A12) — zapis może nadal na chwilę wrócić
 na listę kosza; następna synchronizacja albo „Przywróć” go zdejmuje, już bez szkody. *(Aktualizacja 2026-10-07: krok 2 zrobiony w
 P-KOSZ-SCALANIE-PRZYWROC.)* Nie zmienia reguł konfliktu kosza
-w synchronizacji ani skutków rozjazdu zegarów w samym scalaniu.
+w synchronizacji ani skutków rozjazdu zegarów w samym scalaniu. *(Aktualizacja 2026-10-20, reguła treści kosza: P-KOSZ-NOWSZA-TRESC.)*
 
 ## Import karty, kopie konta i migracja nazwisk pod blokadą pacjenta (P-BLOKADA-IMPORT, SW 1.1.179, `vilda_vault.js` 200, 2026-10-07)
 
@@ -17399,7 +17623,7 @@ lokalny nagrobek jej nie miał. Urządzenie, które było offline ze starym wpis
 poprawce → ponownym usunięciu na innym urządzeniu nie brało nowej treści; od P-RETENCJA-NAGROBKI (reguła „ta sama
 wersja”) wpis tracił wtedy treść do następnej synchronizacji. Teraz treść z ładunku jest brana także wtedy, gdy zdalne
 usunięcie jest późniejsze niż lokalne. Przy tym samym usunięciu (kolejna synchronizacja) treść nie jest szyfrowana od
-nowa, więc scalanie bez zmian nadal nie zapisuje metadanych konta.
+nowa, więc scalanie bez zmian nadal nie zapisuje metadanych konta. *(Aktualizacja 2026-10-20, P-KOSZ-NOWSZA-TRESC: treść z ładunku jest brana także przy tym samym usunięciu, gdy opisuje nowszą wersję zapisu.)*
 
 **2. Ponowne sprawdzenie przy „Usuń do kosza”** (`vilda_kosz_zapisow.js`, `moveSnapshotToTrash`). Okno oceniało obie
 karty przy otwarciu, a kliknięcie usuwało na tej ocenie — także gdy w tym czasie synchronizacja albo inna karta
@@ -17483,7 +17707,7 @@ przypiętych ani najnowszej). Próg 10 wersji i wyłącznik `localStorage.vildaR
   której nie udało się usunąć i która dalej jest w karcie, jest zdejmowany; wersja usunięta w tym czasie przez scalanie
   (scalanie nie bierze blokady pacjenta) zachowuje nagrobek.
 - Nagrobek retencji: `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, powod: 'retencja'}` — bez
-  treści, więc nie trafia do kosza (Ustawienia, historia wersji). Ważność 365 dni, jak każdy nagrobek wersji.
+  treści, więc nie trafia do kosza (Ustawienia, historia wersji). Ważność 365 dni, jak każdy nagrobek wersji. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: retencja nie zmienia chwili zapisu karty — ani jej nie podnosi, ani nie obniża.)*
 - Scalanie: te same reguły co dla kosza (późniejsza zmiana wersji wygrywa; ostatniej wersji karty nie usuwa żaden
   nagrobek), a do tego **nagrobek retencji przegrywa z wersją przypiętą** — urządzenie, które przycinało, mogło nie wiedzieć
   o przypięciu z innego urządzenia. Wersję sprawdza się w ładunku (treść jawna) albo lokalnie (po odszyfrowaniu); wersji
@@ -17569,7 +17793,7 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
 - `moveSnapshotToTrash(patientId, snapshotId, { odepnij })` — pod tą samą blokadą co zapis pacjenta (`vilda-save-pat:<id>`).
   Odmawia dla ostatniej wersji karty (`ostatni`), wersji nieczytelnej i przypiętej bez `odepnij` (`przypiety`). Najpierw
   zapisuje nagrobek z treścią i sprawdza, że jest, dopiero potem usuwa wersję (`deleteSnapshot`: nagłówek karty z
-  poprzedniej wersji, zdarzenie zapisu → synchronizacja). Po usunięciu sprawdza nagrobek jeszcze raz.
+  poprzedniej wersji, zdarzenie zapisu → synchronizacja). Po usunięciu sprawdza nagrobek jeszcze raz. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: chwila zapisu karty nie spada do poprzedniej wersji — kosz podnosi ją do chwili usunięcia.)*
 - Nagrobek `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, payloadCipher}` w metadanych konta
   (`userMeta.snapshotTombstones`, jak nagrobki kluczy dostępu); każda zmiana listy pod blokadą, na świeżym odczycie.
   Przez 30 dni niesie zaszyfrowaną treść wersji (kosz), potem treść znika, a sam nagrobek żyje 365 dni (jak nagrobek pacjenta).
@@ -17582,7 +17806,7 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
   dotkniętych kart i zwraca `trashedSnapshotCount`.
 - Reguła konfliktu jak u pacjentów: nagrobek wygrywa z wersją, której ostatnia zmiana (`updatedAtISO`, bez niej `savedAtISO`)
   nie jest późniejsza niż usunięcie. Wersja zmieniona później (przypięcie, poprawka pomiaru, przywrócenie) zostaje, a nagrobek
-  znika. Nagrobek nigdy nie usuwa ostatniej wersji karty.
+  znika. Nagrobek nigdy nie usuwa ostatniej wersji karty. *(Aktualizacja 2026-10-20, P-KOSZ-NOWSZA-TRESC: gdy obie strony usunęły ten sam zapis albo pominięta wersja jest nowsza niż treść kosza, kosz trzyma nowszą z dwóch treści — wyższa `rev`, przy równej późniejsza chwila zmiany.)*
 - Jawny import (`importPatientFromEnvelope`, scalenie kopii konta) zdejmuje nagrobki importowanych wersji i nadaje im nową
   chwilę zmiany — jak import zdejmuje nagrobek pacjenta.
 - Bez zmian: retencja i `deleteSnapshot` (bez nagrobka, jak dotąd); format zapisu pacjenta; kopia konta. Od SW 1.1.129
@@ -18080,37 +18304,64 @@ przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela 
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
-## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.324, 2026-10-20)
+## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.326, 2026-10-20)
 
 **Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (DocPro i 20 stron z precache startują
 offline: 0 nieudanych żądań własnego pochodzenia, 0 błędów strony) właściciel wybrał z listy zostających luk: strony prawne offline.
+**Strategia „najpierw sieć” (niżej) to propozycja agenta — czeka na akceptację właściciela.**
 
-**Co było.** „Polityka prywatności” i „Regulamin” nie stały w żadnej tablicy precache. Linki do nich są w stopce każdej strony,
-w bramce regulaminu (`vilda_terms_gate.js`: „Pełny regulamin →”, „Polityka prywatności →”) i w banerze zgody na analitykę
-(`vilda_chrome.js`). Nawigacja poza `DOCUMENT_PATHS` szła tylko do sieci, więc offline kończyła się `Response.error()` — strona błędu
-przeglądarki, także z banera, który prosi o zgodę. Zmierzone w Chromium z produkcyjnym SW i zatrzymanym serwerem. Zasoby obu stron
-(`inline_polityka_prywatnosci_00.css?v=1`, `inline_regulamin_00.css?v=1` i wspólne skrypty powłoki) były już w precache.
+**Co było.** „Polityka prywatności” i „Regulamin” nie stały w żadnej tablicy precache. Linki do nich są w stopce stron (19 z 22
+plików HTML; bez stopki: `app.html`, `notatki.html`, `terminarz.html`), w bramce regulaminu (`vilda_terms_gate.js`: „Pełny
+regulamin →”, „Polityka prywatności →”) i — do polityki — w banerze zgody na analitykę (`vilda_chrome.js`). Nawigacja poza
+`DOCUMENT_PATHS` szła tylko do sieci, więc offline kończyła się `Response.error()` — strona błędu przeglądarki, także z banera,
+który prosi o zgodę. Zmierzone w Chromium z produkcyjnym SW i zatrzymanym serwerem. Zasoby obu stron (`inline_polityka_prywatnosci_00.css?v=1`,
+`inline_regulamin_00.css?v=1` i wspólne skrypty powłoki) były już w precache.
 
 **Co jest.**
 - Obie strony na końcu `OPTIONAL_DOCUMENTS` (append-only): instalacja pobiera je razem z innymi dokumentami.
 - **Strategia inna niż dla reszty dokumentów.** Dokumenty idą z pamięci z odświeżeniem w tle, więc po wdrożeniu pierwsze otwarcie
   pokazuje poprzednią wersję. Dla tekstu prawnego, który użytkownik akceptuje, oznaczałoby to regres: do tej zmiany obie strony szły
-  zawsze z sieci. Dlatego `NETWORK_FIRST_DOCUMENTS` (te dwie ścieżki): nawigacja idzie najpierw do sieci (odpowiedź zapisuje się
-  w pamięci jak dotąd, `updateShellFromNetwork`), a pamięć oddaje stronę dopiero przy braku sieci — istniejącą ścieżką zapasową
-  `readDocumentFromShell`. Online zachowanie bez zmian; offline strona się otwiera (z treścią z ostatniej instalacji albo wizyty
-  online). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
-- `SW_FETCH_CACHE_STRATEGY_AUDIT.legalDocumentsNavigation = 'network-first-shell-fallback'`.
+  zawsze z sieci. Dlatego `NETWORK_FIRST_DOCUMENTS` (te dwie ścieżki): nawigacja idzie najpierw do sieci (`cache: 'no-cache'`, jak
+  dla innych dokumentów), odpowiedź zapisuje się w pamięci jako zapas offline (nowe — dotąd tych stron SW nie zapisywał), a pamięć
+  oddaje stronę dopiero przy braku sieci, istniejącą ścieżką zapasową `readDocumentFromShell`. Offline strona się otwiera (z treścią
+  z ostatniej instalacji albo wizyty online). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
+- **Zapis do pamięci nie unieważnia odpowiedzi z sieci** (`updateShellFromNetwork`). Dotąd odrzucony `cache.put` (np.
+  `QuotaExceededError` przy wyczerpanym limicie źródła) kończył nawigację jak brak sieci. Dla stron prawnych oznaczałoby to starą
+  kopię online mimo działającej sieci — zmierzone w Chromium z obniżonym limitem (CDP `Storage.overrideQuotaForOrigin`) na pierwszej
+  wersji tej zmiany. **Skutek także dla pozostałych dokumentów:** dokument bez kopii w pamięci przy pełnym limicie dostaje teraz
+  odpowiedź z sieci zamiast `Response.error()`; dokument z kopią — bez zmian (pamięć najpierw).
+- `SW_FETCH_CACHE_STRATEGY_AUDIT.legalDocumentsNavigation = 'network-first-shell-fallback'`; nagłówek SW opisuje wyjątek.
 
-**Zmiana kliniczna: NIE.** Żaden wzór, próg, dane ani tekst stron. Zmienia się wyłącznie dostępność dwóch stron bez sieci.
+**Znane ograniczenia (bez zmiany względem innych dokumentów).** Brak limitu czasu: przy zawieszonym połączeniu nawigacja czeka, aż
+przeglądarka zakończy żądanie błędem (jak przed zmianą, gdy strony szły tylko z sieci). Przekierowanie serwera na inne pochodzenie
+(`mode: 'same-origin'` w `buildNavigationNetworkRequest`) kończy żądanie błędem, więc online pokazuje się kopia z pamięci; przed
+zmianą — błąd sieci.
 
-**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` — prawdziwy plik SW na atrapie Cache Storage i sieci, prawdziwe zdarzenie
-`fetch` nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść z sieci mimo starszej w pamięci,
-pamięć dostaje nową; offline — strona z pamięci zamiast błędu; `/regulamin` bez `.html` też najpierw do sieci; kontrola: `kontakt.html`
-dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez warunku strategii — online wraca stara treść. Na SW z `audyt` test
-jest czerwony (6 z 8; dwa przypadki to kontrole). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs`
-czytają `OPTIONAL_DOCUMENTS`, więc obie strony i ich zasoby obejmuje też strażnik precache i obchód offline wszystkich stron.
+**Zmiana kliniczna: NIE.** Żaden wzór, próg, dane ani tekst stron. Zmienia się dostępność dwóch stron bez sieci i odporność
+nawigacji na nieudany zapis do pamięci.
 
-**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` (13) — prawdziwy plik SW na atrapie Cache Storage i sieci; prawdziwy nasłuch
+`fetch` dostaje syntetyczne zdarzenie nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść
+z sieci mimo starszej w pamięci, żądanie z `cache: 'no-cache'`, pamięć dostaje nową; offline — strona z pamięci zamiast błędu;
+`/regulamin` bez `.html` online i offline; kontrola: `kontakt.html` dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez
+warunku strategii — online wraca stara treść; pełna pamięć (put odrzuca) — strony prawne z kopią i bez kopii dostają tekst z sieci,
+`kontakt.html` bez kopii też. Bez `try/catch` w `updateShellFromNetwork` czerwone jest dokładnie 5 przypadków pełnej pamięci. Na SW
+z `audyt` czerwone 8 z 13; zielone zostają kontrola `kontakt.html` i 4 przypadki pełnej pamięci dla stron prawnych (na `audyt` szły
+tylko z sieci — brak regresu). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs` czytają
+`OPTIONAL_DOCUMENTS`, więc obie strony i ich zasoby obejmuje też strażnik precache i obchód offline wszystkich stron (22 strony).
+
+**Walidacja (Chromium 141, produkcyjny SW, profil trwały, brak sieci = zatrzymany serwer z sondą).** Offline: obie strony z linków
+stopki DocPro, z bramki regulaminu (index bez akceptacji) i z banera zgody; `/regulamin`, `/regulamin/`, `?x=1`; 390 × 844 bez
+poziomego przewijania; po restarcie przeglądarki; ścieżka aktualizacji SW 1.1.323 → nowy. Kontrola na `audyt`: te same kliknięcia
+— `net::ERR_FAILED`. Online: po zmianie treści na serwerze pierwsza nawigacja pokazuje nowy tekst i odświeża pamięć, a `kontakt.html`
+pokazuje starą treść do drugiej nawigacji (pamięć najpierw); kontrola z pustym `NETWORK_FIRST_DOCUMENTS` — czerwona. E2E PWA
+(`pwa-strony-offline`, `pwa`, `pwa-precache-migracja`, `pwa-pierwsza-wizyta`) i pozostałe specyfikacje zależne od SW — zielone.
+WebKit/iOS niesprawdzane (brak przeglądarki w środowisku).
+
+SW 1.1.325 → **1.1.326**.
+
+**Co pozostaje decyzją właściciela.** Akceptacja strategii „najpierw sieć” dla stron prawnych i skutku poprawki zapisu dla
+pozostałych dokumentów; scalenie i wdrożenie.
 
 ## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
 
