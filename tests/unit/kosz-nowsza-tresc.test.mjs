@@ -180,6 +180,50 @@ describe('P-KOSZ-NOWSZA-TRESC: w koszu nowsza z dwóch treści zapisu', () => {
     });
   }
 
+  // Uwaga przeglądu #732: remis rev rozstrzyga późniejsza chwila zmiany (druga część Bkz_nowszaWersja).
+  for (const kolejnosc of ['P-pierwszy', 'K-pierwszy', 'naraz']) {
+    it(`obie strony poprawiły zapis (ta sama rev), późniejsza poprawka na P, kosz na K (${kolejnosc}): w koszu obu późniejsza`, async () => {
+      sztucznyZegar();
+      const { P, K, pid, sid } = await dwaUrzadzenia();
+      przesunZegar(60e3);
+      await poprawMase(K, pid, sid, 23);
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 26);
+      przesunZegar(5 * 60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await wymiana(P, K, kolejnosc);
+      for (const [nazwa, v] of [['P', P], ['K', K]]) expect((await wKoszu(v, sid)).payload.user.weight, nazwa).toBe(26);
+      expect(await nagrobek(P, sid)).toEqual(await nagrobek(K, sid));
+      expect((await nagrobek(K, sid)).rev).toBe(1);
+      przesunZegar(60e3);
+      await K.restoreTrashedSnapshot(pid, sid);
+      expect((await wersja(K, pid, sid)).payload.user.weight).toBe(26);
+    });
+  }
+
+  // Uwaga przeglądu #732: nagrobek niesie też chwilę zapisu treści — poprawka z nową chwilą zapisu (preserveSavedAt:
+  // false) wraca po „Przywróć” w swoje miejsce historii.
+  for (const kolejnosc of ['P-pierwszy', 'K-pierwszy']) {
+    it(`poprawka z nową chwilą zapisu na P, kosz na K (${kolejnosc}): nagrobek i przywrócona wersja mają chwilę zapisu poprawki`, async () => {
+      sztucznyZegar();
+      const { P, K, pid, sid } = await dwaUrzadzenia();
+      przesunZegar(60e3);
+      const w = await wersja(P, pid, sid);
+      await P.updateSnapshotPayload(pid, sid, { ...w.payload, user: { ...w.payload.user, weight: 26 } }, { preserveSavedAt: false });
+      const zapisP = (await wersja(P, pid, sid)).savedAtISO;
+      expect(zapisP).not.toBe(w.savedAtISO);
+      przesunZegar(5 * 60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await wymiana(P, K, kolejnosc);
+      for (const [nazwa, v] of [['P', P], ['K', K]]) expect((await nagrobek(v, sid)).savedAtISO, nazwa).toBe(zapisP);
+      przesunZegar(60e3);
+      await K.restoreTrashedSnapshot(pid, sid);
+      expect((await wersja(K, pid, sid)).savedAtISO).toBe(zapisP);
+    });
+  }
+
   it('kosz na obu urządzeniach: wcześniejsze usunięcie poprawionej treści i późniejsze usunięcie starej — w koszu poprawka', async () => {
     sztucznyZegar();
     const { P, K, pid, sid } = await dwaUrzadzenia();
@@ -212,12 +256,133 @@ describe('P-KOSZ-NOWSZA-TRESC: w koszu nowsza z dwóch treści zapisu', () => {
   });
 });
 
+// Trzy urządzenia (uwagi przeglądu #732): ten sam zapis poprawiony albo przypięty na iPhonie (P), przeniesiony do kosza
+// na komputerze (K) i przycięty retencją na tablecie (C), który nie znał ani poprawki, ani kosza. Nagrobek retencji
+// (późniejszy, bez treści, stara wersja) nie może zdjąć wpisu kosza z nowszą treścią: na 27055774 wpis kosza znikał
+// (albo zostawał tylko na części urządzeń), a przypięty zapis wracał do karty na wszystkich trzech.
+async function trzyUrzadzenia() {
+  const P = await urzadzenie();
+  const K = await urzadzenie();
+  const C = await urzadzenie();
+  let pid = null;
+  const ids = [];
+  for (let i = 0; i < 12; i += 1) {
+    const r = await zapisz(K, jan(100 + i, 20 + i), pid ? { patientId: pid } : {});
+    pid = r.patientId;
+    ids.push(r.snapshotId);
+  }
+  await P.mergeSyncPayload(await K.exportSyncPayload());
+  await C.mergeSyncPayload(await K.exportSyncPayload());
+  return { P, K, C, pid, sid: ids[3] };
+}
+async function sync(z, na) { await na.mergeSyncPayload(await z.exportSyncPayload()); }
+async function rundy(P, K, C) {
+  for (let r = 0; r < 3; r += 1) {
+    await sync(K, P); await sync(P, K); await sync(K, C); await sync(C, K); await sync(P, C); await sync(C, P);
+  }
+}
+const KOLEJNOSCI_3 = ['K←P,K←C', 'K←C,K←P', 'P←K,K←C', 'C←K,C←P', 'C←P,C←K'];
+async function pierwszeScalenia(urz, kolejnosc) {
+  for (const krok of kolejnosc.split(',')) {
+    const [na, z] = krok.split('←');
+    await sync(urz[z], urz[na]);
+  }
+}
+
+describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzecim', () => {
+  for (const kolejnosc of KOLEJNOSCI_3) {
+    it(`poprawka na P, kosz na K, retencja na C (${kolejnosc}): kosz z poprawką i ten sam nagrobek na trzech`, async () => {
+      sztucznyZegar();
+      const { P, K, C, pid, sid } = await trzyUrzadzenia();
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 99);
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      const przyciete = await C.pruneSnapshotsForPatient(pid, { recentHours: 0 });
+      expect(przyciete.prunedIds, 'retencja na C przycina ten zapis').toContain(sid);
+      await pierwszeScalenia({ P, K, C }, kolejnosc);
+      await rundy(P, K, C);
+      const wzor = await nagrobek(K, sid);
+      for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+        expect(await wersja(v, pid, sid), `${nazwa}: zapis nie wraca do karty`).toBeNull();
+        const k = await wKoszu(v, sid);
+        expect(k, `${nazwa}: wpis kosza jest`).toBeTruthy();
+        expect(k.payload.user.weight, `${nazwa}: kosz trzyma poprawkę`).toBe(99);
+        expect(await nagrobek(v, sid), `${nazwa}: ten sam nagrobek`).toEqual(wzor);
+      }
+      expect(wzor.rev, 'wersja nagrobka = wersja treści').toBe(1);
+    });
+  }
+
+  // Ograniczenie sprzed zmiany (P-RETENCJA-NAGROBKI): P scala retencję C, zanim dostanie kosz K. Nagrobek retencji
+  // (późniejszy niż poprawka) wygrywa z poprawką jak dotąd i nie niesie treści, więc poprawka przepada, zanim dotrze
+  // gdziekolwiek. Kosz K przychodzi potem z treścią sprzed poprawki. Wynik zbieżny i taki sam jak na 44256803.
+  it('poprawka na P, kosz na K, retencja na C (P←C,P←K): poprawka przegrywa z retencją jak dotąd, kosz zbieżny ze starą treścią', async () => {
+    sztucznyZegar();
+    const { P, K, C, pid, sid } = await trzyUrzadzenia();
+    przesunZegar(60e3);
+    await poprawMase(P, pid, sid, 99);
+    przesunZegar(60e3);
+    await K.moveSnapshotToTrash(pid, sid);
+    przesunZegar(60e3);
+    await C.pruneSnapshotsForPatient(pid, { recentHours: 0 });
+    await pierwszeScalenia({ P, K, C }, 'P←C,P←K');
+    await rundy(P, K, C);
+    const wzor = await nagrobek(K, sid);
+    for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+      expect(await wersja(v, pid, sid), `${nazwa}: zapis nie wraca`).toBeNull();
+      expect((await wKoszu(v, sid)).payload.user.weight, `${nazwa}: kosz z treścią sprzed poprawki`).toBe(23);
+      expect(await nagrobek(v, sid), `${nazwa}: ten sam nagrobek`).toEqual(wzor);
+    }
+  });
+
+  for (const kolejnosc of ['K←P,K←C', 'K←C,K←P', 'C←P,C←K']) {
+    it(`gwiazdka na P, kosz na K, retencja na C (${kolejnosc}): zapis nie wraca do karty, w koszu obu przypięty`, async () => {
+      sztucznyZegar();
+      const { P, K, C, pid, sid } = await trzyUrzadzenia();
+      przesunZegar(60e3);
+      await P.setSnapshotPinned(pid, sid, true);
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid); // komputer nie wie o przypięciu
+      przesunZegar(60e3);
+      await C.pruneSnapshotsForPatient(pid, { recentHours: 0 });
+      await pierwszeScalenia({ P, K, C }, kolejnosc);
+      await rundy(P, K, C);
+      for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+        expect(await wersja(v, pid, sid), `${nazwa}: usunięty zapis nie wraca`).toBeNull();
+        expect((await wKoszu(v, sid)).pinned, `${nazwa}: w koszu zapis przypięty`).toBe(true);
+      }
+    });
+  }
+
+  it('kontrola: retencja wersji przywróconej i zmienionej po koszu zdejmuje starą treść kosza jak dotąd', async () => {
+    sztucznyZegar();
+    const { P, K, C, pid, sid } = await trzyUrzadzenia();
+    przesunZegar(60e3);
+    await K.moveSnapshotToTrash(pid, sid);
+    await sync(K, P);
+    await sync(K, C);
+    przesunZegar(60e3);
+    await C.restoreTrashedSnapshot(pid, sid);
+    przesunZegar(60e3);
+    await poprawMase(C, pid, sid, 31);
+    przesunZegar(60e3);
+    await C.pruneSnapshotsForPatient(pid, { recentHours: 0 });
+    await rundy(P, K, C);
+    for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+      expect(await wersja(v, pid, sid), `${nazwa}: przycięta`).toBeNull();
+      expect(await wKoszu(v, sid), `${nazwa}: stara treść nie wraca do kosza`).toBeNull();
+    }
+  });
+});
+
 describe('strażnik źródła', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
   it('jedna reguła „nowsza wersja” w łączeniu nagrobków, w treści z ładunku, w pętli wersji i na końcu scalania', () => {
     expect(src).toContain('function Bkz_nowszaWersja(x, y) {');
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
-    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('Bkz_nowszaWersja(starszy, nowszy)');
+    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('} else if (starszy.payloadCipher && Bkz_nowszaWersja(starszy, nowszy)) {');
     expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('!Bkz_nowszaWersja(e, lokalny)');
     expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bkz_nowszaWersja(zapis, e)');
     expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bkz_nowszaWersja(lokalna, e)');
