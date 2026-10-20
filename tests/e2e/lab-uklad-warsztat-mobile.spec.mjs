@@ -1,11 +1,11 @@
 import { expect, test } from '../support/test-czas.mjs';
 
 // Warsztat przelicznika (decyzja właściciela 2026-10-19) na telefonie: układ zostaje jednokolumnowy, w kolejności
-// formularz → wynik → wykres; jedyna zmiana to „Wyczyść wszystkie pola” na końcu formularza, przed wynikiem.
-// Pacjent fikcyjny; test sprawdza tylko geometrię.
+// formularz → wynik → wykres; „Wyczyść wszystkie pola” stoi na końcu formularza, przed wynikiem, a zakresy i uwagi
+// są sekcją karty przelicznika pod wynikiem. Pacjent fikcyjny; test sprawdza tylko geometrię.
 test.use({ serviceWorkers: 'block' });
 
-test('telefon: jedna kolumna, „Wyczyść” przed wynikiem, bez poziomego przewijania', async ({ page }) => {
+async function otworz(page) {
   await page.route('**/*', (route) => {
     const url = new URL(route.request().url());
     return url.hostname === '127.0.0.1' || /^(data|blob):$/.test(url.protocol) ? route.continue() : route.abort();
@@ -26,6 +26,10 @@ test('telefon: jedna kolumna, „Wyczyść” przed wynikiem, bez poziomego prze
       throw new Error('Nie zapisano fikcyjnego pacjenta');
     }
   });
+}
+
+test('telefon: jedna kolumna, „Wyczyść” przed wynikiem, bez poziomego przewijania', async ({ page }) => {
+  await otworz(page);
   await page.locator('#labSubstance').fill('Inhibina B');
   await page.locator('#labSubstanceDropdown [data-id="inhibin_b"]').click();
   await page.locator('#labUnit').selectOption('pg/mL');
@@ -47,4 +51,25 @@ test('telefon: jedna kolumna, „Wyczyść” przed wynikiem, bez poziomego prze
   // Wykres pod wynikiem, w tej samej kolumnie (sekcja wyniku ma ujemny dolny margines, więc bez porównania krawędzi).
   expect(u.wykres.t).toBeGreaterThan(u.wynik.t);
   expect(Math.abs(u.wykres.l - u.formularz.l)).toBeLessThanOrEqual(1);
+});
+
+test('telefon, TSH: zakresy i uwagi pod wynikiem w karcie przelicznika, bez poziomego przewijania', async ({ page }) => {
+  await otworz(page);
+  await page.locator('#labSubstance').fill('TSH');
+  await page.locator('#labSubstanceDropdown [data-id="tsh"]').click();
+  await page.locator('#labValue').fill('2,4');
+  await expect(page.locator('#labInfoCard')).toBeVisible();
+  const u = await page.evaluate(() => {
+    const r = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom }; };
+    return {
+      karta: r('labResultsCard'), wynik: r('labResultSection'), zakresy: r('labInfoCard'), badania: r('labSuggestCard'),
+      poziomePrzewijanie: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+  expect(u.poziomePrzewijanie).toBe(false);
+  expect(u.zakresy.t).toBeGreaterThanOrEqual(u.wynik.b - 1);
+  expect(u.zakresy.l).toBeGreaterThanOrEqual(u.karta.l);
+  expect(u.zakresy.r).toBeLessThanOrEqual(u.karta.r);
+  expect(u.zakresy.b).toBeLessThanOrEqual(u.karta.b);
+  expect(u.badania.t).toBeGreaterThanOrEqual(u.karta.b);
 });

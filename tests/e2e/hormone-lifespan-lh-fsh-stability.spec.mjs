@@ -301,7 +301,9 @@ test('FSH source joins retain a continuous tangent in the actual rendered SVG', 
       const index = stages.findIndex(stage => age >= stage.min && age <= stage.max);
       const stage = stages[index], rect = line.ownerSVGElement.querySelector(`[data-sector="${index}"]`);
       const x = Number(rect.getAttribute('x')) + Number(rect.getAttribute('width')) * (age - stage.min) / (stage.max - stage.min);
-      const beforeIndex = segments.findIndex(segment => Math.abs(segment[6] - x) < 1e-7);
+      // segmentPath serializes each coordinate to four decimals and the SVG width follows the layout, so the
+      // exact join x may carry a fifth decimal: allow half a serialization step, never a neighbouring segment.
+      const beforeIndex = segments.findIndex(segment => Math.abs(segment[6] - x) <= .00005 + 1e-9);
       if (beforeIndex < 0 || !segments[beforeIndex + 1]) throw new Error(`Missing exact SVG join at ${age}`);
       const before = segments[beforeIndex], after = segments[beforeIndex + 1];
       // Endpoint derivatives come directly from adjacent SVG cubic handles.

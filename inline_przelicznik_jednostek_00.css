@@ -43,9 +43,7 @@
         gap: var(--space-1-25) var(--space-1-5);
         align-items: start;
       }
-      /* Karty oznaczone klasą "lab-full" rozpinają się na obie kolumny
-         (siatka zostaje dla karty zakresów, która przy 1560 px treści staje
-         obok karty przelicznika). */
+      /* Karty oznaczone klasą "lab-full" rozpinają się na obie kolumny. */
       .lab-grid > .lab-full { grid-column: 1 / -1; }
     }
 
@@ -465,6 +463,25 @@
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(0,131,141,0.08);
     }
+    /* Pola wyboru przelicznika: własna strzałka z odstępem od prawej krawędzi
+       (natywna w Chromium stoi ~5 px od obrysu). Wzorzec select.vilda-auth-input:
+       Lucide chevron-down 16 px w kolorze --text-muted, 14 px od krawędzi.
+       Identyfikatory kart i !important: globalna reguła wysokiego kontrastu
+       (style.css) ustawia skrót `background … !important`, który zeruje obraz. */
+    #labResultsCard select,
+    #labSuggestCard select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      padding-right: var(--space-2-5);
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235a7274' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") !important;
+      background-repeat: no-repeat !important;
+      background-position: right .875rem center !important;
+      background-size: 16px 16px !important;
+    }
+    /* Jednostka obok wartości: bez natywnej strzałki Chromium liczy szerokość
+       pola za wąsko i ucina najdłuższą jednostkę („pg/mL”). */
+    #labResultsCard .lab-input-row select { min-width: 8.5rem; }
     .lab-step .lab-input-row {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -2031,20 +2048,28 @@
     }
 
     /* ════════════════════════════════════════════════════════════════════
-     *  WARSZTAT NA SZEROKIM EKRANIE (2026-10-19, decyzja właściciela)
+     *  WARSZTAT NA SZEROKIM EKRANIE (2026-10-19, decyzja właściciela;
+     *  dopracowanie proporcji tego samego dnia)
      *
      *  Karta przelicznika zostaje jedną kartą (DS, zasada 3), a jej trzy
      *  panele — .lab-pane--form, --result, --chart — układają się według
      *  szerokości TREŚCI (kontener lab-warsztat), nie okna:
-     *    < 1000 px    jedna kolumna, jak dotąd (telefon, tablet, mały laptop);
-     *    ≥ 1000 px    formularz | wynik, pod nim wykres;
-     *    ≥ 1560 px    formularz | wynik | wykres, gdy jest wykres; bez wykresu
-     *                 karta zakresów i uwag staje obok karty przelicznika.
-     *  Szerokości: tokeny --lab-* w :root style.css. Kolumna wykresu przy
-     *  1440 i 1920 px okna ma ponad 640 px, więc wykres zostaje w pełnym
-     *  wariancie (vilda_hormone_lifespan.css: @container max-width 640px).
-     *  „Jest wykres” = widoczne AMH na tle wieku albo sekcja „Hormony
-     *  w ciągu życia”; bez :has() (stare przeglądarki) zostają dwie kolumny.
+     *    < 1000 px    jedna kolumna (telefon, tablet, mały laptop); karty pod
+     *                 przelicznikiem mają jego szerokość;
+     *    ≥ 1000 px    tytuł nad dwiema równymi kolumnami formularz | wynik,
+     *                 wykres na całą szerokość karty pod nimi (wtedy formularz
+     *                 nie jest przyklejony — nachodziłby na wykres);
+     *    ≥ 1560 px    formularz | wynik | wykres w proporcji 1,1 : 1 : 1,6
+     *                 (wykres ≥ --lab-chart-min-width: po odjęciu wcięć panelu
+     *                 i sekcji SVG ma ≥ 640 px, więc wykres zostaje w pełnym
+     *                 wariancie — vilda_hormone_lifespan.js: mobile = W < 640,
+     *                 vilda_hormone_lifespan.css: @container max-width 640px);
+     *                 bez wykresu trzecią kolumnę zajmują zakresy i uwagi
+     *                 z panelu wyniku.
+     *  Zakresy i uwagi (#labInfoCard) są na każdej szerokości sekcją panelu
+     *  wyniku, nie osobną kartą. „Jest wykres” = widoczne AMH na tle wieku
+     *  albo sekcja „Hormony w ciągu życia”; bez :has() (stare przeglądarki)
+     *  zostają dwie kolumny i wykres pod nimi.
      * ════════════════════════════════════════════════════════════════════ */
     .lab-smart-card {
       /* Odstęp przyklejonego formularza: pod paskiem chrome, w ramce powłoki
@@ -2065,11 +2090,36 @@
       body.has-sidebar .desktop-layout > .decor-sidebar { display: none; }
     }
 
+    /* Zakresy i uwagi: sekcja panelu wyniku oddzielona linią panelu. Zdejmuje
+       wygląd karty .lab-card.lab-full także w trybach ciemnego tła, szkła
+       i wysokiego kontrastu (identyfikator przebija ich !important). Górny
+       margines znosi ujemny dolny margines pasa wyniku (1.6rem): linia leży
+       tuż pod pasem, a nie pod jego tłem (pas jest pozycjonowany, więc
+       w wysokim kontraście zasłoniłby ją). */
+    .lab-pane--result > #labInfoCard {
+      background: transparent !important;
+      border: 0 !important;
+      border-top: var(--lab-pane-divider) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      margin: 1.6rem 0 0;
+      padding: var(--space-1-25) 0 0 !important;
+    }
+    .lab-pane--result > #labInfoCard h2 { font-size: 1rem; }
+
+    /* Jedna kolumna: karty pod przelicznikiem mają jego szerokość, bez
+       poszarpanych krawędzi. */
+    @container lab-warsztat (width < 1000px) {
+      .lab-grid { max-width: var(--content-narrow-max-width); }
+    }
+
     @container lab-warsztat (min-width: 1000px) {
       .lab-smart-card {
         display: grid;
-        grid-template-columns: var(--lab-form-rail-width) minmax(0, 1fr);
-        grid-template-areas: "form result" "form chart";
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas: "title title" "form result" "chart chart";
         align-items: start;
         width: 100%;
         max-width: none;
@@ -2079,30 +2129,40 @@
            clip przycina poświatę ::before tak samo (bez clip: zostaje hidden). */
         overflow: clip;
       }
+      .lab-smart-card > h1 {
+        grid-area: title;
+        text-align: left;
+        margin: 0;
+        padding: var(--space-1-5) 1.7rem 0;
+      }
       .lab-smart-card > .lab-pane--form {
         grid-area: form;
-        padding: 1.6rem var(--space-1-5) var(--space-1-4) 1.7rem;
+        padding: var(--space-1-25) 1.7rem var(--space-1-5);
         /* Ten sam odstęp co top przyklejenia; skrypt strony czyta go, żeby
            przykleić formularz tylko wtedy, gdy mieści się w oknie. */
         scroll-margin-top: var(--lab-sticky-top);
       }
-      .lab-smart-card > .lab-pane--form[data-przyklejony] {
+      /* Przyklejenie ogranicza cała karta (kontener siatki), nie wiersz
+         formularza, więc tylko karta kończąca się na tym wierszu może mieć
+         przyklejony formularz: tu bez wykresu, w trzech kolumnach zawsze.
+         Z wykresem pod spodem formularz nachodziłby na wykres. */
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--form[data-przyklejony] {
         position: sticky;
         top: var(--lab-sticky-top);
       }
-      .lab-smart-card .lab-pane--form h1 { text-align: left; margin-bottom: var(--space-1-1); }
       .lab-smart-card > .lab-pane--result {
         grid-area: result;
         align-self: stretch;
-        padding: 1.6rem 1.7rem var(--space-1-2);
+        padding: var(--space-1-25) 1.7rem var(--space-1-5);
         border-left: var(--lab-pane-divider);
       }
-      /* Sekcja wyniku przestaje być pasem na całą szerokość karty (ujemne
-         marginesy i górna linia); rozdziela ją linia panelu. */
+      /* Sekcja wyniku przestaje być pasem na całą szerokość karty (górna linia),
+         ale zachowuje wewnętrzny margines: cienie przycisków nie są przycinane
+         na jej krawędzi (overflow: hidden dla poświaty ::before). */
       /* identyfikator: reguła wysokiego kontrastu nadaje górną linię z !important */
       .lab-smart-card > .lab-pane--result > #labResultSection {
-        margin: 0;
-        padding: 0;
+        margin: -1.25rem -1.7rem 0;
+        padding: var(--space-1-25) 1.7rem;
         border-top: 0 !important;
       }
       body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-smart-card > .lab-pane--result {
@@ -2111,15 +2171,22 @@
       body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-smart-card > .lab-pane--result > .lab-result-section {
         background: transparent;
       }
+      .lab-pane--result > #labInfoCard { margin-top: var(--space-1); }
       .lab-smart-card > .lab-pane--chart {
         grid-area: chart;
         align-self: stretch;
-        padding: 0 1.7rem 1.6rem;
-        border-left: var(--lab-pane-divider);
+        padding: var(--space-1-5) 1.7rem 1.6rem;
+        border-top: var(--lab-pane-divider);
       }
-      /* Bez wykresu panel znika, a wynik zajmuje całą wysokość karty. */
+      /* Pierwszy wykres startuje od linii panelu (bez odstępu, który w jednej
+         kolumnie oddziela go od sekcji wyniku). */
+      .lab-smart-card > .lab-pane--chart > #labAmhAgeReference > :first-child,
+      .lab-smart-card > .lab-pane--chart > #labAmhAgeReference[hidden] + #labHormoneLifespan > .vilda-hormone-lifespan {
+        margin-top: 0;
+      }
+      /* Bez wykresu panel znika, a karta kończy się na formularzu i wyniku. */
       .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) {
-        grid-template-areas: "form result";
+        grid-template-areas: "title title" "form result";
       }
       .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))) > .lab-pane--chart {
         display: none;
@@ -2129,34 +2196,61 @@
     }
 
     @container lab-warsztat (min-width: 1560px) {
+      .lab-smart-card > .lab-pane--form[data-przyklejony] {
+        position: sticky;
+        top: var(--lab-sticky-top);
+      }
+      /* Z wykresem: formularz | wynik | wykres od jednej linii pod tytułem. */
       .lab-grid:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
         max-width: var(--lab-workspace-wide-max-width);
       }
       .lab-smart-card:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) {
-        grid-template-columns: var(--lab-form-rail-width) var(--lab-result-rail-width) minmax(0, 1fr);
-        grid-template-areas: "form result chart";
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(var(--lab-chart-min-width), 1.6fr);
+        grid-template-areas: "title title title" "form result chart";
       }
       .lab-smart-card:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden]))) > .lab-pane--chart {
-        padding-top: 1.6rem;
+        border-top: 0;
+        border-left: var(--lab-pane-divider);
+        padding: var(--space-1-25) 1.7rem 1.6rem;
       }
-      /* Pierwszy wykres w kolumnie startuje na wysokości „Wynik” (bez odstępu,
-         który pod sekcją wyniku oddziela go w jednej i dwóch kolumnach). */
-      .lab-smart-card > .lab-pane--chart > #labAmhAgeReference > :first-child,
-      .lab-smart-card > .lab-pane--chart > #labAmhAgeReference[hidden] + #labHormoneLifespan > .vilda-hormone-lifespan {
-        margin-top: 0;
-      }
-      /* Bez wykresu: karta przelicznika ma szerokość formularza i wyniku,
-         a wolną kolumnę obok zajmuje karta zakresów referencyjnych i uwag. */
-      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(> #labInfoCard:not([hidden], .lab-puberty-suppressed)) {
+      /* Bez wykresu, z zakresami: te same trzy kolumny; panel wyniku zajmuje
+         drugą i trzecią, a jego subgrid dzieli je dokładnie jak karta, więc
+         linia przed zakresami leży tam, gdzie linia przed wykresem. Zakresy
+         stoją obok wyniku na całą wysokość panelu; ostatni wiersz 1fr
+         przejmuje nadmiar ich wysokości, więc wynik, przypięcie i historia
+         zostają zwarte. Wcięcie panelu (1.7rem) subgrid daje tylko skrajnym
+         krawędziom — przy linii środkowej dokładają je reguły poniżej.
+         Bez subgrid zostaje proporcja 1 : 1,6. */
+      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) {
         max-width: var(--lab-workspace-wide-max-width);
-        grid-template-columns: calc(var(--lab-form-rail-width) + var(--lab-result-rail-width)) minmax(0, 1fr);
       }
-      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(> #labInfoCard:not([hidden], .lab-puberty-suppressed)) > #labResultsCard {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) {
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(var(--lab-chart-min-width), 1.6fr);
+        grid-template-areas: "title title title" "form result result";
+      }
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+        grid-template-columns: subgrid;
+        grid-template-rows: auto auto auto 1fr;
+        column-gap: 0;
+        align-content: start;
+        align-items: start;
+      }
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > :not(#labInfoCard) {
         grid-column: 1;
-        grid-row: 1;
+        margin-right: 1.7rem;
       }
-      .lab-grid:not(:has(> .lab-smart-card > .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(> #labInfoCard:not([hidden], .lab-puberty-suppressed)) > #labInfoCard {
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > #labResultSection {
+        margin-right: 0;
+      }
+      .lab-smart-card:not(:has(> .lab-pane--chart :is(#labAmhAgeReference:not([hidden]), #labHormoneLifespan:not([hidden]) > .vilda-hormone-lifespan:not([hidden])))):has(#labInfoCard:not([hidden], .lab-puberty-suppressed)) > .lab-pane--result > #labInfoCard {
         grid-column: 2;
-        grid-row: 1;
+        grid-row: 1 / -1;
+        align-self: stretch;
+        margin: -1.25rem 0 -1.5rem;
+        padding: var(--space-1-25) 0 var(--space-1-5) 1.7rem !important;
+        border-top: 0 !important;
+        border-left: var(--lab-pane-divider) !important;
       }
     }
