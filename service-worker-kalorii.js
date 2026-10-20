@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.323';
+const SW_VERSION = '1.1.324';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -48,6 +48,7 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   latestReorganizationStep: '8Q-9-estimated-intake-dom-mount',
   readOnly: true,
   navigation: 'cache-first-background-refresh',
+  legalDocumentsNavigation: 'network-first-shell-fallback',
   shellAssets: 'cache-first-background-refresh',
   runtime: 'cache-first-background-refresh',
   install: 'required-core-precache-optional-sequential-precache',
@@ -1874,7 +1875,11 @@ const OPTIONAL_DOCUMENTS = [
   '/notatki.html',
   '/terminarz.html',
   '/przelicznik-jednostek.html',
-  '/app.html'
+  '/app.html',
+  // P-SW-STRONY-PRAWNE: strony prawne — linki ze stopki każdej strony, z bramki regulaminu i z banera zgody.
+  // Nawigacja do nich idzie najpierw do sieci (NETWORK_FIRST_DOCUMENTS), pamięć jest zapasem offline.
+  '/polityka-prywatnosci.html',
+  '/regulamin.html'
 ];
 
 const OPTIONAL_ASSETS = [
@@ -3446,6 +3451,11 @@ const OPTIONAL_ASSETS = [
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
 const DOCUMENT_PATHS = new Set([ROOT_DOCUMENT, ...OPTIONAL_DOCUMENTS]);
+// P-SW-STRONY-PRAWNE: dokumenty, których treść online ma być zawsze aktualna (tekst prawny, który użytkownik
+// akceptuje). Inne dokumenty idą z pamięci z odświeżeniem w tle, więc po wdrożeniu pierwsze otwarcie pokazałoby
+// poprzednią wersję. Te idą najpierw do sieci (odpowiedź zapisuje się w pamięci jak dotąd), a pamięć oddaje je
+// dopiero wtedy, gdy sieci nie ma.
+const NETWORK_FIRST_DOCUMENTS = new Set(['/polityka-prywatnosci.html', '/regulamin.html']);
 const SHELL_PATHS = new Set(
   PRECACHE_URLS
     .map((url) => {
@@ -4180,7 +4190,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         const requestedPath = normalizeNavigationPath(getPathname(request));
-        const cachedResponse = await readFromShellCache(request);
+        const cachedResponse = NETWORK_FIRST_DOCUMENTS.has(requestedPath)
+          ? undefined
+          : await readFromShellCache(request);
         const networkResponsePromise = updateShellFromNetwork(request);
 
         event.waitUntil(networkResponsePromise.catch(() => undefined));

@@ -16804,7 +16804,7 @@ SW 1.1.320 → **1.1.321**; `vilda_persistence_adapter.js?v=31→32`.
 
 **Walidacja.** Nowy `tests/unit/klucz-sesji-opis.test.mjs`, 5 testów: prawdziwy `vilda_vault.js` w Node (klucz tylko w `sessionStorage`, wygaśnięcie po 20 minutach, usunięcie przy wylogowaniu, stałe 20/10 minut), stałe 7 dni w `vilda_auth_ui.js` oraz treść obu stron (brak starych obietnic, nowe zdania z limitami). Kontrola negatywna: na starych tekstach czerwone 3 testy treści, testy kodu zielone.
 
-SW 1.1.318 → **1.1.319** (zmienione dokumenty w pamięci SW: `polityka-prywatnosci.html`, `ustawienia.html`).
+SW 1.1.318 → **1.1.319** (zmienione dokumenty w pamięci SW: `polityka-prywatnosci.html`, `ustawienia.html`). *(Sprostowanie 2026-10-20: `polityka-prywatnosci.html` nie była wtedy w żadnej tablicy precache — szła zawsze z sieci; do pamięci SW weszła dopiero w P-SW-STRONY-PRAWNE.)*
 
 ## Konto z kreatora bez synchronizacji nie łączy się samo z serwerem (P-KONTO-BEZ-SERWERA, SW 1.1.318, `vilda_vault.js` 216, `vilda_sync_integration.js` 51, `vilda_auth_ui.js` 504, `vilda_pro_access.js` 11, 2026-10-19)
 
@@ -18080,6 +18080,38 @@ przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela 
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
+## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.324, 2026-10-20)
+
+**Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (DocPro i 20 stron z precache startują
+offline: 0 nieudanych żądań własnego pochodzenia, 0 błędów strony) właściciel wybrał z listy zostających luk: strony prawne offline.
+
+**Co było.** „Polityka prywatności” i „Regulamin” nie stały w żadnej tablicy precache. Linki do nich są w stopce każdej strony,
+w bramce regulaminu (`vilda_terms_gate.js`: „Pełny regulamin →”, „Polityka prywatności →”) i w banerze zgody na analitykę
+(`vilda_chrome.js`). Nawigacja poza `DOCUMENT_PATHS` szła tylko do sieci, więc offline kończyła się `Response.error()` — strona błędu
+przeglądarki, także z banera, który prosi o zgodę. Zmierzone w Chromium z produkcyjnym SW i zatrzymanym serwerem. Zasoby obu stron
+(`inline_polityka_prywatnosci_00.css?v=1`, `inline_regulamin_00.css?v=1` i wspólne skrypty powłoki) były już w precache.
+
+**Co jest.**
+- Obie strony na końcu `OPTIONAL_DOCUMENTS` (append-only): instalacja pobiera je razem z innymi dokumentami.
+- **Strategia inna niż dla reszty dokumentów.** Dokumenty idą z pamięci z odświeżeniem w tle, więc po wdrożeniu pierwsze otwarcie
+  pokazuje poprzednią wersję. Dla tekstu prawnego, który użytkownik akceptuje, oznaczałoby to regres: do tej zmiany obie strony szły
+  zawsze z sieci. Dlatego `NETWORK_FIRST_DOCUMENTS` (te dwie ścieżki): nawigacja idzie najpierw do sieci (odpowiedź zapisuje się
+  w pamięci jak dotąd, `updateShellFromNetwork`), a pamięć oddaje stronę dopiero przy braku sieci — istniejącą ścieżką zapasową
+  `readDocumentFromShell`. Online zachowanie bez zmian; offline strona się otwiera (z treścią z ostatniej instalacji albo wizyty
+  online). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
+- `SW_FETCH_CACHE_STRATEGY_AUDIT.legalDocumentsNavigation = 'network-first-shell-fallback'`.
+
+**Zmiana kliniczna: NIE.** Żaden wzór, próg, dane ani tekst stron. Zmienia się wyłącznie dostępność dwóch stron bez sieci.
+
+**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` — prawdziwy plik SW na atrapie Cache Storage i sieci, prawdziwe zdarzenie
+`fetch` nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść z sieci mimo starszej w pamięci,
+pamięć dostaje nową; offline — strona z pamięci zamiast błędu; `/regulamin` bez `.html` też najpierw do sieci; kontrola: `kontakt.html`
+dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez warunku strategii — online wraca stara treść. Na SW z `audyt` test
+jest czerwony (6 z 8; dwa przypadki to kontrole). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs`
+czytają `OPTIONAL_DOCUMENTS`, więc obie strony i ich zasoby obejmuje też strażnik precache i obchód offline wszystkich stron.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28).** `docpro.html` stoi w `OPTIONAL_DOCUMENTS`, ale DocPro nie startował offline. W prawdziwym
@@ -18139,7 +18171,7 @@ w `OPTIONAL_DOCUMENTS`, więc precache zapisuje go pod kluczem dokumentu bez `?v
 nic nie da, naprawa wymaga zmiany kluczy dokumentów w SW (osobna decyzja). Plakaty `/posters/*.png` są w tablicy, ale plików nie
 ma w repozytorium (404 także online). Filmy `/videos/` SW omija z założenia. `edu-video-ui.css` jest ładowany w dwóch wersjach
 (`v4` na czterech stronach, `v7` na jednej) z nieliczbowym `?v=`, którego nie widzą strażniki `piny-wersji` i `wersje-zasobow`.
-Strony prawne (`polityka-prywatnosci.html`, `regulamin.html`) nie są w precache. Zasoby obcego pochodzenia (np. Google Fonts) nie są
+Strony prawne (`polityka-prywatnosci.html`, `regulamin.html`) nie są w precache *(aktualizacja: są od P-SW-STRONY-PRAWNE, z nawigacją najpierw do sieci — wpis wyżej)*. Zasoby obcego pochodzenia (np. Google Fonts) nie są
 częścią precache. Znany wcześniej mechanizm: dokument HTML odświeża się w tle, więc po wdrożeniu stary SW może trzymać nowy HTML,
 którego nowe adresy `?v=` wejdą do pamięci dopiero przy pierwszym użyciu online albo z instalacją nowego SW.
 
