@@ -124,10 +124,14 @@ test('age-only FSH reference stays the same when current Th changes and reported
     await expect(point(page)).toHaveAttribute('data-profile', 'wilson2023-female-fsh-age-16-19');
     await expect.poll(async () => Number(await point(page).getAttribute('data-reference-value'))).toBeCloseTo(median, 8);
   }
-  // FSH's new age source does not silently extend the separate LH source.
+  // FSH's source does not extend the separate LH median. The later,
+  // separately approved LH presentation shows only the actual result.
   await choose(page, 'lh');
-  await expect(point(page)).toHaveCount(0);
-  await expect(note(page)).toContainText('brak wartości odniesienia');
+  await expect(point(page)).toHaveCount(1);
+  await expect(point(page)).toHaveAttribute('data-result-only', 'true');
+  expect(await point(page).getAttribute('data-reference-value')).toBeNull();
+  await expect(point(page).locator('[data-median-point]')).toHaveCount(0);
+  await expect(note(page)).toContainText('Brak zweryfikowanej mediany dla tego wieku');
 });
 
 test('known pregnancy selected for E2 blocks both age references, survives same-person refresh and cannot leak to a new patient', async ({ page }) => {

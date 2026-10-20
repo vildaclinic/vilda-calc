@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-20",
+  "scope": "Female LH, strictly over 16 and under 18 years: display the actual current measurement without a population reference.",
+  "ownerDecision": "Accepted the concrete result-only proposal on 2026-10-20: no default Zhao median, no new questionnaire, retain existing laboratory assessment and patient data reuse.",
+  "clinicalImpact": "Presentation eligibility changes for a missing result point; no new reference interval, threshold, diagnosis, percentile, SDS or source median is introduced.",
+  "implementationPolicy": "../female-lh-result-only-policy.json",
+  "sourceReview": {
+    "reviewedOn": "2026-10-19",
+    "purpose": "Compare actual published central values and their population/phase/method limitations before deciding whether one can become the default for this source gap.",
+    "notSystematicReview": true,
+    "sources": [
+      {
+        "citation": "Zhao et al. 2025",
+        "doi": "10.21037/tp-24-399",
+        "url": "https://tp.amegroups.org/article/view/133602/html",
+        "supplementUrl": "https://cdn.amegroups.cn/static/public/TP-24-399-Supplementary.pdf",
+        "access": "Full final article and supplement reviewed; S2 and group counts cross-checked.",
+        "location": "Supplemental Table S2; Table 1 group counts; main Table 4 author-merged group.",
+        "population": "Chinese reference cohort recruited in Wuhan in 2022–2023; female LH subgroup >15–18 years, N=112.",
+        "specimen": "Serum",
+        "method": "Mindray CL-6000i",
+        "reportedStatistic": "Group median 7.14 mIU/mL (numerically 7.14 IU/L); not a continuous age model or a median of an isolated 16–18 subgroup.",
+        "limitations": [
+          "Cycle phase and oral contraception were not separately standardized/stratified; a generic medication exclusion does not establish an ovulatory untreated cycle for every participant.",
+          "Exact operational age assignment was not fully specified. An application interval (16,18) would be a conservative policy, not a recovered author definition.",
+          "Screening for normal laboratory findings and outlier handling limit transferability; the precise extent of hormone-based prescreening is unclear.",
+          "Main Table 4 combines >12–19 years, N=244, with median 6.79; this is a different group, not a discrepancy that can be averaged with S2."
+        ]
+      },
+      {
+        "citation": "Assens et al. 2020, Menstrual Pattern, Reproductive Hormones, and Transabdominal 3D Ultrasound in 317 Adolescent Girls",
+        "doi": "10.1210/clinem/dgaa355",
+        "url": "https://academic.oup.com/jcem/article/105/9/e3257/5854354",
+        "tableUrl": "https://academic.oup.com/view-large/324219374",
+        "access": "Publisher full HTML methods/results and direct primary Table 2 reviewed; table values independently checked. No claim of a downloaded full PDF.",
+        "location": "Methods and Table 2 with its footnotes.",
+        "population": "Danish Copenhagen Mother-Child Cohort follow-up, ages 12–18, median age 16.1. 317 participated; LH N differs by analysis group.",
+        "specimen": "Serum",
+        "method": "Delfia, PerkinElmer",
+        "reportedStatistic": "Table 2 medians in U/L: regular cycles, LH N=122, median 3.0; all measured postmenarchal participants without hormonal contraception, LH N=223, median 3.3.",
+        "limitations": [
+          "The clinical regular-cycle group has 130 participants but only 122 LH measurements. Do not use 130 as the LH N.",
+          "Sampling was intended for cycle days 2–5, but only 131 participants were sampled then; 175 on days 1–7. Do not call the entire hormone analysis uniformly early-follicular.",
+          "Regular cycles do not confirm ovulation or absence of PCOS in every participant.",
+          "No separate numerical median restricted to ages 16–18 was reported in this table.",
+          "Table 2 dispersion values are P10/P90, not P2.5/P97.5 reference intervals."
+        ]
+      },
+      {
+        "citation": "Wiedemann, Jonetz-Mentzel and Panse 1993",
+        "doi": "10.1515/cclm.1993.31.6.395",
+        "url": "https://doi.org/10.1515/cclm.1993.31.6.395",
+        "fullTextUrl": "https://edoc.hu-berlin.de/server/api/core/bitstreams/b786c46e-00db-447b-9c33-9cee50d62758/content",
+        "access": "Full primary article pages 395–401 reviewed; Table 4 visually cross-checked.",
+        "location": "Methods and Table 4.",
+        "population": "German girls aged 14–18 years, N=74.",
+        "specimen": "Serum",
+        "method": "Abbott IMx MEIA, older WHO 68/40 calibration",
+        "reportedStatistic": "Empirical group median LH 3.43 U/L.",
+        "limitations": [
+          "Samples were collected 08–10; sexually mature girls within the first 10 days of the follicular phase.",
+          "No isolated numerical median for the 16–18-year stratum was published; the reported median combines ages 14–18.",
+          "Separate oral-contraception exclusion was not verified; do not claim it.",
+          "The older method/calibration and restricted sampling context prevent direct substitution or pooling with Zhao."
+        ]
+      }
+    ],
+    "conclusion": "The differing real group medians do not establish an error in Zhao, an effect of geography alone or a universal median. Do not average them, treat them as a 3–7 normal range, harmonize assays, or infer a continuous age reference. None is imported as the default in this change."
+  },
+  "technicalContract": {
+    "data": "Keep patientPointData and all 82 source profiles unchanged. Store the separately versioned display policy in root runtime.resultOnlyPolicies.",
+    "evaluation": "Existing evaluate/selectProfile remain unchanged. evaluateResultOnly can qualify only after ordinary selection reports unsupported-age, never after a present profile's method/specimen/context rejection. Its result-only status has no profile, referenceValue or population statistic.",
+    "age": "All possible chronological ages must fit (16,18). Exact 16 retains Madsen; an interval starting at 16 does not qualify. An upper-exclusive endpoint of 18 can qualify; exact 18 or an upper-inclusive endpoint of 18 cannot. No midpoint selection or boundary shifts.",
+    "plot": "Ordinary female full-life view only; retain the fixed 0–70 IU/L log1p axis, existing educational curves and other hormone scales. No median marker, connecting line or new reference curve. Above-axis values use an arrow with the real number.",
+    "otherViews": "Puberty remains 6–16 and directs an eligible older patient to full life for the result only. No new concentration point in relative minipuberty, cycle inset or sex comparison.",
+    "measurement": "Finite nonnegative exact numeric result in an existing supported unit. Preserve zero. Never turn a censoring operator, LOD/LOQ or illustrative curve value into an exact measurement.",
+    "context": "Preserve current identity/source readiness and existing positive contraindication, pregnancy/menopause, therapy/GnRHa and stimulation guards. Known non-serum specimen is excluded by the conservative policy. Unknown context stays unknown; no new mandatory controls.",
+    "method": "Known assay identity does not need to match any publication for a result-only point, because there is no population comparison. This cannot bypass incompatibility of an existing reference and does not establish assay harmonization.",
+    "history": "Do not alter laboratory assessment or historical snapshots. Educational reference snapshots remain AMH-only; no empty LH reference snapshot is introduced."
+  },
+  "validationStatus": "Production-function unit regressions, desktop/mobile UI and real PWA lifecycle/offline checks belong to this PR. Their actual results and all GitHub checks for the final SHA are reported by the parent implementation task/PR; this evidence file does not assert a pass or clinical validation."
+}

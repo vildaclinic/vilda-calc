@@ -11,6 +11,14 @@ Uzupełnienie 19.10.2026: osobny PR kwalifikacji laboratoryjnego E2 usuwa
 opisany niżej domysł fazy folikularnej. Nie zmienia 82 profili ani zapisu
 kontroli z 18.10. Szczegóły: [E2 — kontekst cyklu](../E2_CYCLE_CONTEXT.md).
 
+Uzupełnienie 20.10.2026: po porównaniu Zhao z Assens i Wiedemann
+właściciel zaakceptował [punkt samego LH dziewcząt w `(16,18)`](PATIENT_POINT.md#lh-dziewcząt--sam-wynik-bez-mediany-20-października-2026),
+bez mediany. To zmiana prezentacji, nie nowy profil źródłowy; 82 profile
+`2026-10-18.3` pozostają zachowane. Odrębna polityka
+`female-lh-result-only-policy.json` nie rozszerza zwykłego modelu Madsen,
+porównania płci ani norm laboratoryjnych. Poniższa tabela nadal opisuje
+**dostępność odniesienia**, a nie samą możliwość zaznaczenia stężenia.
+
 ## Co oznacza „luka”
 
 Rozróżniamy zwykły liczbowy punkt na osi wieku, osobne zestawienie
@@ -31,7 +39,7 @@ wyłączają. Dzień źródłowy przeliczamy przez 365,25 dni/rok; żeńskie
 „18 lat 0 miesięcy” może oznaczać przedział, a nie dokładne 18 lat.
 Cały możliwy wiek musi pasować; nie wybieramy jego środka.
 
-## Zwykły punkt na osi wieku
+## Zwykły punkt z odniesieniem na osi wieku
 
 Zakresy poniżej opisują możliwe dopasowanie przy kwalifikującym kontekście.
 Donoszenie niemowlęcia oraz G1/Th1 wymagane przez Zec są jawnymi danymi
@@ -58,6 +66,15 @@ Zamknięte luki: FSH M [16,18), FSH F [16,19), AMH M [18,20),
 LH M (16,18). Dokładne 16 lat w męskim LH nadal należy do Madsen,
 a dokładne 18 do źródła dorosłego. Wypełnienie luki nie uprawnia
 do przedłużania modelu ani do użycia go w innym widoku.
+
+LH dziewcząt `(16,18)` nadal ma **lukę odniesienia źródłowego**. Osobny
+tryb z 20.10 pokazuje wyłącznie rzeczywisty wynik na stałej osi całego
+życia, bez jasnego znacznika mediany, łącznika ani werdyktu z krzywej.
+Cały przedział wieku musi pasować: dokładne 16 zachowuje Madsen;
+„16 lat 0 miesięcy” nie należy ściśle do `(16,18)`; `[17,18)` pasuje,
+a dokładne 18 i przedział obejmujący je włącznie nie. Zbliżenie 6–16
+odsyła do całego życia. Wynik z nierównością lub nieobsługiwaną jednostką,
+znane przeciwwskazanie i niedostępny kontekst nie dostają zastępczego punktu.
 
 ## Dostępne warstwy, których nie należy ponownie „uzupełniać”
 
@@ -113,7 +130,7 @@ Poniższe wartości są ustaleniami audytu, **nie danymi nowego profilu**.
 
 | Priorytet i źródło pierwotne | Ustalenie | Ograniczenie / możliwy następny krok |
 |---|---|---|
-| 1. LH dziewcząt — [Zhao 2025](https://doi.org/10.21037/tp-24-399), pełny tekst i suplement S2 | Rzeczywista mediana grupy >15–18: 7,14 mIU/mL, N=112; >18–19: 5,87, N=30. Surowica, Mindray CL-6000i. Autorska szersza grupa >12–19 w tabeli 4 ma p50=6,79, N=244 (suma tabeli 1). | Kandydat do małego, osobno zatwierdzonego odniesienia grupowego we wnętrzu (16,18), bez interpolacji i zastępowania dokładnego 16 Madsen. Nie opisano precyzyjnego wyliczania wieku ani fazy cyklu/OCP osobno. Selekcja wymagała prawidłowych badań; dokładne kryteria wstępnego wykluczenia wyników hormonalnych są niejasne. To chińska grupa wieku, nie LMS Wilsona ani normy fazy. Decyzja właściciela obejmuje też wybór węższej lub autorsko połączonej grupy. |
+| 1. LH dziewcząt — [Zhao 2025](https://doi.org/10.21037/tp-24-399), pełny tekst i suplement S2 | Rzeczywista mediana grupy >15–18: 7,14 mIU/mL, N=112; >18–19: 5,87, N=30. Surowica, Mindray CL-6000i. Autorska szersza grupa >12–19 w tabeli 4 ma p50=6,79, N=244 (suma tabeli 1). | Po poszerzeniu przeglądu i decyzji właściciela 20.10 nie wdrażamy jej jako domyślnej mediany. Nie opisano precyzyjnego wyliczania wieku ani fazy cyklu/OCP osobno. Selekcja wymagała prawidłowych badań; dokładne kryteria wstępnego wykluczenia wyników hormonalnych są niejasne. To chińska grupa wieku, nie LMS Wilsona ani normy fazy. Nowa ścieżka pokazuje sam wynik bez wyboru lub uśredniania median. |
 | 2. Testosteron M 1–<3 — [Kulle 2010](https://doi.org/10.1210/jc.2009-1670), tabela 3 | Grupa 1–3 lata: N=9, mediana 12 ng/dL (źródłowo zaokrąglone 0,40 nmol/L). Osocze, UPLC-MS/MS; LLOQ 0,1 nmol/L. | Mediana powyżej LLOQ, ale bardzo mała grupa, próbki pozostałe po badaniach klinicznych; pobrania 08–10. Nie uznawać automatycznie za medianę surowicy każdego małego chłopca. Ewentualny profil grupowy i granice wymagają odrębnej propozycji/akceptacji. Nie wypełnia automatycznie okresu po 212. dniu do 1 roku. |
 | 3. Inhibina B F >47 — [Borelli-Kjær](https://doi.org/10.1210/clinem/dgae439), ponowne wykorzystanie znanego źródła | Obecny odczyt ma ostatni zatwierdzony węzeł w 47 latach; publikacja obejmuje też dorosłą kohortę kobiet do 69 lat. Świeża oficjalna rycina pokazuje krótki dalszy odcinek, bez liczbowego eksportu modelu w suplementach. | Możliwy ponowny odczyt po formalnej kontroli rozdzielczości i oznaczalności. Źródło podaje LOD 3 ng/L oraz imputację LOD/2; osobnego LOQ nie znaleziono. Nie nadajemy nowej granicy wieku, nie ekstrapolujemy do 69 i nie zamieniamy cenzury na zero. |
 | 4. AMH M >70 — [Chong 2013](https://doi.org/10.1371/journal.pone.0070967), pełny tekst i tabela 1 | LiLACS: N=257, 80–90 lat, mediana całej grupy 12,1 pmol/L. | Potencjalne osobne porównanie obserwacyjne; nie ciągła mediana wieku ani rozwiązanie całego przedziału >70. Zróżnicowane zdrowie, mieszane dwa testy AMH; inne kohorty mają inne mediany. Rycina średniej geometrycznej z CI nie dostarcza p50. Sprostowanie z 2013 dotyczy nazwiska autora, nie tabel. |
@@ -142,6 +159,35 @@ Poniższe wartości są ustaleniami audytu, **nie danymi nowego profilu**.
   mediany grupowe, ale przypisanie wieku wizyt i materiału wymaga osobnej
   polityki. Nie jest to brak wszelkich źródeł INSL3.
 
+## Poszerzenie przeglądu LH dziewcząt — decyzja 20.10.2026
+
+[Assens 2020](https://doi.org/10.1210/clinem/dgaa355),
+[pierwotna tabela 2](https://academic.oup.com/view-large/324219374),
+dostarcza europejskiego porównania: duńska kohorta 12–18 lat, mediana
+wieku 16,1; wśród regularnie miesiączkujących mediana LH 3,0 U/L,
+**N oznaczeń 122**, a w całej analizowanej grupie po menarche bez
+antykoncepcji hormonalnej 3,3 U/L, N=223. Liczebność klinicznej grupy
+regularnych cykli wynosiła 130 i nie jest N oznaczeń LH. Surowica Delfia.
+Próbowano pobierać w dniach 2–5, lecz tylko 131 uczestniczek pobrano
+w tym oknie (175 w dniach 1–7). Nie opisujemy całej kohorty jako
+jednolicie folikularnej ani regularnych cykli jako potwierdzenia owulacji.
+Tabela przedstawia P10–P90 obok median, nie RI P2,5–P97,5.
+
+[Wiedemann 1993](https://doi.org/10.1515/cclm.1993.31.6.395), tabela 4,
+podaje empiryczną medianę LH **3,43 U/L** dziewcząt 14–18 lat, N=74.
+Pobrania 08–10, u dojrzałych dziewcząt w pierwszych 10 dniach fazy
+folikularnej; Abbott IMx MEIA, starsza kalibracja WHO 68/40.
+Nie opublikowano odrębnej mediany wyłącznie 16–18 lat.
+
+Niższe mediany tych grup nie dowodzą błędu Zhao ani wpływu samej
+geografii. Zakres wieku, selekcja populacji, faza i metoda są różne.
+Nie wyliczamy wspólnej mediany, „normy 3–7”, ilorazu zgodności metod
+ani ciągłej krzywej wieku. Assens i Wiedemann również nie są gotowym
+automatycznym zamiennikiem Zhao. Uzasadnia to zaakceptowaną prezentację
+samego wyniku, przy zachowaniu źródeł w rozwijanej informacji.
+Pełne źródła i zakres poprzedniego odczytu:
+[zapis decyzji](evidence/female-lh-result-only-audit-2026-10-20.json).
+
 ## Osobny problem kwalifikacji E2 — poprawka 19.10.2026
 
 Laboratoryjny wiersz `e2_female_default` w `lab_units_data.js` przy kobiecie
@@ -161,14 +207,16 @@ Dokładny zakres, przypadki i ograniczenia: [E2_CYCLE_CONTEXT.md](../E2_CYCLE_CO
 
 ## Kolejność pracy
 
-1. Przedstawić właścicielowi ograniczoną propozycję żeńskiego LH Zhao
-   dla (16,18), z rzeczywistą medianą grupy i opisem metody/populacji.
-   Wilson pozostaje niezależnie zablokowany; nowe źródło nie „naprawia”
-   sprzecznego arkusza.
-2. Po decyzji klinicznej: pojedynczy profil, istniejące dane pacjentki,
-   jawne bramki i granice, przypadki rzeczywistego silnika, PWA/offline
-   oraz wszystkie kontrole GitHub po każdym pushu. Bez nowych pytań
-   wymaganych do zobaczenia wyniku.
+1. Decyzja o żeńskim LH została podjęta 20.10: dla `(16,18)` wdrożyć
+   punkt samego wyniku bez domyślnej mediany, nowego profilu i dodatkowych
+   pytań. Propozycja automatycznego Zhao została zastąpiona tym zakresem.
+   Wilson pozostaje niezależnie zablokowany.
+2. Zweryfikować nową ścieżkę przez rzeczywiste funkcje i interfejs:
+   granice oraz niepewny wiek, jednostki, cenzurę, znane przeciwwskazania,
+   tożsamość, stałą geometrię, zachowanie niezależnej oceny i historii.
+   Do przekazania wymagane są instalacja/aktualizacja i zimny restart
+   PWA offline oraz zakończenie wszystkich kontroli GitHub dla końcowego
+   SHA po każdym pushu. Wyniki kontroli podaje opis PR.
 3. Oddzielnie ocenić małą grupę testosteronu Kulle i możliwość dalszego
    odczytu znanej inhibiny B oraz grupę E2/Th1. Nie łączyć ich z LH
    w jednym wdrożeniu. Poprawka domyślnej fazy E2 ma osobny PR opisany
