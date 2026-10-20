@@ -542,6 +542,10 @@ function Bkz_dolacz(mapa, e) {
   // Bez tresci (sam nagrobek retencji albo wpis kosza po wygasnieciu tresci) opis wersji z pozniejszego nagrobka, jak
   // dotad; przy remisie chwil z Bkz_opisPozniejszy.
   const zWersja = Bkz_ostatnie(nowszy) === Bkz_ostatnie(starszy) ? Bkz_opisPozniejszy(nowszy, starszy) : nowszy;
+  // Kosz nieaktualny: opis z nagrobka, ktorego opis wersji pokazuje zmiane po koszu — po nim nieaktualny kosz zdejmuje
+  // tez starsza aplikacja.
+  const poKoszu = [nowszy, starszy].filter(function (p) { return !!kosz && Bkz_zmiana(p) > kosz; });
+  const zWersjaRet = poKoszu.length === 2 ? Bkz_opisPozniejszy(nowszy, starszy) : poKoszu.length === 1 ? poKoszu[0] : zWersja;
   let wynik;
   if (zrodlo || (kosz && (!ret || kosz >= ret || !koszNieaktualny))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
@@ -551,7 +555,7 @@ function Bkz_dolacz(mapa, e) {
     wynik.deletedAtISO = kosz || ret;
     if (kosz && ret && ret > kosz) wynik.przycietoISO = ret;
   } else {
-    wynik = Bkz_jakoRetencja(nowszy, ret, zWersja);
+    wynik = Bkz_jakoRetencja(nowszy, ret, zWersjaRet);
   }
   mapa.set(e.snapshotId, Bkz_zeZmiana(wynik, Bkz_pozniejsza(Bkz_znanaZmiana(nowszy), Bkz_znanaZmiana(starszy))));
 }
