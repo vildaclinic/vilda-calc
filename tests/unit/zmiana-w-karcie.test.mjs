@@ -38,9 +38,10 @@ async function urzadzenie(nazwa) {
   loadBrowserScript('vilda_retention.js', win);
   loadBrowserScript('vilda_vault.js', win);
   const v = win.VildaVault;
-  v.setStorageAdapter(v.createInMemoryAdapter());
+  const pamiec = v.createInMemoryAdapter();
+  v.setStorageAdapter(pamiec);
   await v.createUser(`Zmiana#Karta!2026${licznik}aa`, { label: `${nazwa}${licznik}`, iterations: 10000 });
-  return { nazwa, v };
+  return { nazwa, v, pamiec };
 }
 let zegar = Date.parse('2026-10-20T09:00:00Z');
 function przesunZegar(ms) { zegar += ms; vi.setSystemTime(zegar); return new Date(zegar).toISOString(); }
@@ -218,6 +219,7 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
     przesunZegar(60e3);
     const r = await A.v.moveSnapshotToTrash(pid, s2.snapshotId);
     expect(await ostatni(A, pid)).toBe(r.deletedAtISO);
+    przesunZegar(60e3); // chwila scalania różna od chwili kosza: odbiorca bierze datę z ładunku, nie „teraz”
     await sync(A, B);
     expect(await ostatni(B, pid)).toBe(r.deletedAtISO);
     expect(await ileWersji(B, pid)).toBe(1);
@@ -229,6 +231,7 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
     przesunZegar(60e3);
     const r = await A.v.moveSnapshotToTrash(pid, s1.snapshotId);
     expect(await ostatni(A, pid)).toBe(r.deletedAtISO);
+    przesunZegar(60e3);
     await sync(A, B);
     expect(await ostatni(B, pid)).toBe(r.deletedAtISO);
   });
@@ -258,6 +261,7 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
     const s2 = await zapisz(A, zapis([W60, W66], W66), { patientId: s1.patientId });
     przesunZegar(60e3);
     const r = await A.v.moveSnapshotToTrash(s1.patientId, s2.snapshotId);
+    przesunZegar(60e3);
     await sync(A, B);
     expect(await ostatni(A, s1.patientId)).toBe(r.deletedAtISO);
     expect(await ostatni(B, s1.patientId)).toBe(r.deletedAtISO);
@@ -271,6 +275,7 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
       await A.v.moveSnapshotToTrash(pid, s2.snapshotId);
       przesunZegar(60e3);
       const rB = await B.v.moveSnapshotToTrash(pid, s2.snapshotId);
+      przesunZegar(60e3);
       if (kolejnosc.startsWith('A')) { await sync(A, B); await sync(B, A); } else { await sync(B, A); await sync(A, B); }
       expect(await ostatni(A, pid)).toBe(rB.deletedAtISO);
       expect(await ostatni(B, pid)).toBe(rB.deletedAtISO);
@@ -297,6 +302,7 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
     const tc = await nagrobekPacjenta(C, pid);
     przesunZegar(60e3);
     const r = await A.v.moveSnapshotToTrash(pid, s2.snapshotId);
+    przesunZegar(60e3);
     await B.v.mergeSyncPayload(await odszyfruj(A, await A.v.buildPatientDelta(pid)));
     expect(await ostatni(B, pid), 'delta karty niesie chwilę kosza (Bsw_bezNowych)').toBe(r.deletedAtISO);
     await B.v.mergeSyncPayload(await odszyfruj(C, await C.v.buildTombstoneDelta(pid, tc.deletedAtISO)));
@@ -317,11 +323,53 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
     przesunZegar(60e3);
     const r = await A.v.moveSnapshotToTrash(pid, s1.snapshotId);
     expect(await ostatni(A, pid), 'kosz podnosi, nie cofa do savedAtISO głowy').toBe(r.deletedAtISO);
+    przesunZegar(60e3);
     await sync(C, A); await sync(A, B); await sync(A, C);
     for (const d of [A, B, C]) {
       expect(await ostatni(d, pid), d.nazwa).toBe(r.deletedAtISO);
       expect(await ileWersji(d, pid), d.nazwa).toBe(1);
     }
+  });
+
+  // Uwaga przeglądu #732: gałąź „wersję w międzyczasie usunęło scalanie” (Bkz_doKosza, wynik.brak). Scalanie idzie
+  // bez blokady pacjenta, więc wersja może zniknąć między zapisem wpisu kosza a usunięciem.
+  it('kosz, gdy wersję w międzyczasie usunęło scalanie: lastSavedAtISO = deletedAtISO (R2)', async () => {
+    sztucznyZegar();
+    const A = await urzadzenie('A');
+    const s1 = await zapisz(A, zapis([W60], W60));
+    const s2 = await zapisz(A, zapis([W60, W66], W66), { patientId: s1.patientId });
+    await zapisz(A, zapis([W60, W66, W72], W72), { patientId: s1.patientId });
+    przesunZegar(60e3);
+    const oryg = A.pamiec.putUserMeta;
+    let raz = false;
+    A.pamiec.putUserMeta = async function (...x) {
+      const r = await oryg.apply(this, x);
+      if (!raz && x[1] && Array.isArray(x[1].snapshotTombstones) && x[1].snapshotTombstones.some((t) => t.snapshotId === s2.snapshotId)) {
+        raz = true;
+        await A.pamiec.removeSnapshotForUser(x[0], s2.snapshotId);
+      }
+      return r;
+    };
+    const r = await A.v.moveSnapshotToTrash(s1.patientId, s2.snapshotId);
+    A.pamiec.putUserMeta = oryg;
+    expect(raz, 'wersja zniknęła w trakcie').toBe(true);
+    expect(await ostatni(A, s1.patientId)).toBe(r.deletedAtISO);
+  });
+
+  // Uwaga przeglądu #732: data z przyszłości (zegar B 10 min do przodu) przyjęta przez R4 nie maleje przy zmianie
+  // w karcie na A (Bzw_aktualizujWersje).
+  it('zmiana w karcie po przyjęciu daty z przyszłości nie obniża daty (R3)', async () => {
+    sztucznyZegar();
+    const { A, B, pid, s1 } = await trzyUrzadzenia();
+    przesunZegar(60e3);
+    vi.setSystemTime(zegar + 10 * 60e3);
+    const r = await B.v.moveSnapshotToTrash(pid, s1.snapshotId);
+    vi.setSystemTime(zegar);
+    await sync(B, A);
+    expect(await ostatni(A, pid)).toBe(r.deletedAtISO);
+    przesunZegar(60e3);
+    await A.v.updateMeasurementRow(pid, { uid: 'm-60' }, { ageMonths: 60, height: 110.8, weight: 18 });
+    expect(await ostatni(A, pid), 'nie maleje').toBe(r.deletedAtISO);
   });
 
   it('retencja nie podnosi i nie obniża daty (także podniesionej koszem), na urządzeniu przycinającym i u odbiorcy', async () => {
@@ -376,6 +424,47 @@ describe('karta bez żadnej wersji nie powstaje ze scalania', () => {
     await sync(A, C);
     expect(await ileWersji(C, s1.patientId)).toBe(1);
   });
+
+  // [CZERWONY na 27055774: karta z 0 wersji] Uwaga przeglądu #732: ładunek bez żadnej wersji karty (np. pusta karta
+  // ze starszej aplikacji) też nie zakłada karty.
+  it('ładunek z kartą bez żadnej wersji: nie ma pustej karty', async () => {
+    sztucznyZegar();
+    const A = await urzadzenie('A'), B = await urzadzenie('B');
+    await zapisz(A, zapis([W60], W60));
+    const pusty = kopia(await A.v.exportSyncPayload());
+    pusty.patients.forEach((p) => { p.snapshots = []; });
+    await B.v.mergeSyncPayload(pusty);
+    expect(await B.v.listPatients(), 'bez karty z 0 wersji').toEqual([]);
+  });
+});
+
+describe('nowa wizyta nie obniża chwili zapisu karty (R3, savePatient)', () => {
+  // [CZERWONY na 27055774] Uwaga przeglądu #732. Zegar B spieszy się o 10 min. B poprawia wiersz, A przyjmuje datę
+  // z przyszłości (R4), potem zapisuje nową wizytę. Dotąd savePatient ustawiał „teraz”, data spadała, a usunięcie
+  // pacjenta na C z chwilą pomiędzy kasowało na A kartę razem z nową wizytą; karta wracała potem z B bez niej.
+  it('data karty po nowej wizycie = późniejsza z dwóch; usunięcie z chwilą pomiędzy nie kasuje nowej wizyty', async () => {
+    sztucznyZegar();
+    const { A, B, C, pid } = await trzyUrzadzenia();
+    przesunZegar(60e3);
+    vi.setSystemTime(zegar + 10 * 60e3);
+    await B.v.updateMeasurementRow(pid, { uid: 'm-60' }, { ageMonths: 60, height: 110.8, weight: 18 });
+    const zB = await ostatni(B, pid);
+    vi.setSystemTime(zegar);
+    przesunZegar(60e3);
+    await sync(B, A);
+    expect(await ostatni(A, pid)).toBe(zB);
+    await zapisz(A, zapis([W60, W66, W72], W72), { patientId: pid }); // nowa wizyta s3
+    expect(await ostatni(A, pid), 'data nie maleje').toBe(zB);
+    przesunZegar(60e3);
+    await C.v.removePatient(pid);
+    await sync(C, A);
+    expect(await ileWersji(A, pid), 'karta z nową wizytą zostaje na A').toBe(3);
+    for (let r = 0; r < 2; r += 1) { await sync(A, B); await sync(B, A); await sync(A, C); await sync(C, A); await sync(B, C); await sync(C, B); }
+    for (const d of [A, B, C]) {
+      expect(await ileWersji(d, pid), `${d.nazwa}: trzy wersje`).toBe(3);
+      expect(await ostatni(d, pid), `${d.nazwa}: ta sama data`).toBe(zB);
+    }
+  });
 });
 
 describe('strażniki źródła P-ZMIANA-W-KARCIE', () => {
@@ -391,5 +480,8 @@ describe('strażniki źródła P-ZMIANA-W-KARCIE', () => {
     expect(src).toContain('const zmiany = Bsw_bezNowych(Bpu_rek, lokalne.length, F.lastSavedAtISO);');
     expect(src).not.toContain('lastSavedAtISO: glowa.savedAtISO,');
     expect(src).not.toContain('lastSavedAtISO:y?p.lastSavedAtISO||d:l');
+    expect(src).toContain('lastSavedAtISO:Bkz_pozniejsza(h&&h.lastSavedAtISO,l),snapshotCount:O}');
+    expect(src).toContain('      await Bkz_podniesZapis(patientId, wpis.deletedAtISO);');
+    expect(src).not.toContain('lastSavedAtISO:l,snapshotCount:O}');
   });
 });
