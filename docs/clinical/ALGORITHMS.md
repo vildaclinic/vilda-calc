@@ -15233,9 +15233,17 @@ retencji zamiast chwili kosza i wygasał 30 dni od niej.
   wersja nie jest przypięta (`Bkz_wygrywa`; `Bkz_pomin` i `Bkz_scalKoniec`).
 - Łączenie nagrobków (`Bkz_dolacz`): późniejsza chwila kosza i późniejsza chwila przycięcia z obu. Wpis kosza zostaje
   wpisem kosza z własną chwilą, a przycięcie późniejsze niż kosz idzie do `przycietoISO`; przycięcie wcześniejsze niż
-  kosz nic już nie zmienia. Treść jak dotąd: nowsza z dwóch wersji, a treść starszego nagrobka tylko wtedy, gdy nie
-  opisuje starszej wersji niż późniejszy. Bez treści i z przycięciem późniejszym niż kosz zostaje sam nagrobek
-  retencji, jak dotąd. Chwile łączą się niezależnie od kolejności nagrobków (późniejsza z każdego rodzaju).
+  kosz nic już nie zmienia. Treść: nowsza z dwóch wersji, ale tylko treść, która nie jest nieaktualna wobec drugiego
+  nagrobka. Treść kosza jest nieaktualna, gdy drugi nagrobek opisuje nowszą wersję zmienioną po chwili tego kosza
+  (`Bkz_nieaktualny`, w obie strony). Kosz przestaje się liczyć, gdy jest nieaktualny wobec któregokolwiek
+  przycięcia późniejszego niż on; zostaje wtedy sam nagrobek retencji. Chwile łączą się niezależnie od kolejności
+  nagrobków (późniejsza z każdego rodzaju).
+- Sam nagrobek retencji pamięta opis (`rev`, chwila zmiany) najnowszej wersji, jaką zna: z łączonych nagrobków i
+  z wersji, którą pokonał w scaleniu. Dzięki temu zmiana zrobiona po koszu na jednym urządzeniu unieważnia kosz także
+  wtedy, gdy tę wersję usunęło potem przycięcie, a kosz i przycięcie dochodzą do urządzeń w różnej kolejności.
+- Wersja pokonana tylko przez przycięcie (zmieniona po koszu) nie dokłada treści do kosza. Kosz sprzed tej zmiany
+  zamienia się w sam nagrobek retencji z opisem tej wersji (`Bkz_pomin`, `Bkz_scalKoniec`). Treść wersji trafia do
+  kosza tylko wtedy, gdy wersję pokonał kosz (P-KOSZ-NOWSZA-TRESC).
 - Kosz pokazuje chwilę kosza i wygasa 30 dni od niej; sam nagrobek żyje 365 dni od późniejszej z dwóch chwil. Wpis
   kosza, który stracił treść po 30 dniach, zostaje wpisem kosza z obiema chwilami: łączenie dwóch takich samych wpisów
   nic nie zmienia (chwila kosza ginie tylko wtedy, gdy późniejsze przycięcie opisuje nowszą wersję).
@@ -15256,6 +15264,12 @@ retencji zamiast chwili kosza i wygasał 30 dni od niej.
   na `cd3a2876`, na `27055774` zapis znikał i z kosza);
 - poprawka na P, kosz na K, retencja na C → w koszu trzech urządzeń poprawka z chwilą kosza (nie retencji), ważna
   30 dni od kosza, w nagrobku `przycietoISO` późniejsze niż `deletedAtISO`, bez `powod` (czerwony na `cd3a2876`);
+- zmiana wersji po koszu, potem przycięcie (uwaga fuzz na trzech urządzeniach). Trzy warianty: poprawka na K, kosz na
+  C, poprawka na P, retencja na K; poprawka na P, kosz na K, poprawka na C, retencja na C, potem na P; to samo
+  z gwiazdką i odpięciem zamiast poprawki na C. Każdy w 8 kolejnościach pierwszych scaleń, potem 3 rundy → wizyta
+  usunięta, kosz pusty i ten sam nagrobek na P, K i C (24). Na `cd3a2876` zielone 24. Na wcześniejszej wersji tej
+  poprawki (`57e82a50`) czerwone 19: kosz trzymał treść sprzed zmiany albo treść samej zmiany z wcześniejszą chwilą
+  usunięcia;
 - dotychczasowe przypadki P-KOSZ-NOWSZA-TRESC i P-ZMIANA-W-KARCIE-2 (gwiazdka i poprawka przed koszem, retencja na
   trzecim urządzeniu, zapis przywrócony, poprawiony i przycięty) — bez zmian, zielone;
 - strażnik źródła `Bkz_dolacz`.
@@ -15264,10 +15278,9 @@ retencji zamiast chwili kosza i wygasał 30 dni od niej.
 urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokazuje chwilę, w której użytkownik usunął zapis.
 
 **Ograniczenia.**
-- Druga retencja starszej wersji na innym urządzeniu po poprawce zrobionej po koszu: gdy urządzenie scali kosz
-  z późniejszą retencją starszej wersji, zanim zobaczy retencję wersji poprawionej, kosz może trzymać treść sprzed tej
-  poprawki (tylko w koszu, nie w karcie; ta klasa była już dla tej samej wersji). Pełna łączność wymaga pamiętania
-  w nagrobku najwyższej przyciętej wersji.
+- Poprawka przed koszem przegrywa z przycięciem, zanim kosz dotrze do urządzenia z poprawką (np. P scala retencję C,
+  potem kosz K). Nagrobek retencji nie niesie treści, więc kosz trzyma treść sprzed poprawki: tylko w koszu, nie
+  w karcie, zbieżnie na wszystkich urządzeniach i tak samo jak na `44256803` (test „P←C,P←K”).
 - Flota mieszana: opis wyżej (pole `przycietoISO`). W czasie wdrażania urządzenie ze starszą aplikacją może przy
   poprawce zrobionej po koszu (i retencji na trzecim urządzeniu) trzymać tę wizytę w karcie, a nowe urządzenia w koszu,
   do aktualizacji starszego; danych nie ubywa. Gwiazdka po koszu we flocie mieszanej jest zbieżna i nie gorsza niż na

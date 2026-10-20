@@ -440,6 +440,65 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     expect(n.powod).toBeUndefined();
   });
 
+  // Uwaga fuzz v3 (P-KOSZ-RETENCJA-PO-KOSZU): wersję zmieniono na jednym urządzeniu PO koszu na drugim, a trzecie (albo
+  // to samo) przycina ją potem retencją. Zmiana po koszu unieważnia kosz, a retencja usuwa wersję, więc kosz zostaje
+  // pusty. Na 57e82a50 w części kolejności kosz trzymał treść sprzed tej zmiany (opis zmiany ginął w nagrobkach
+  // retencji, seedy G 3390, F 2016, F 2121) albo treść samej zmiany z wcześniejszą chwilą usunięcia (G 3101, G 3133).
+  const ZMIANA_PO_KOSZU = {
+    'poprawka na K, kosz na C, poprawka na P, retencja na K': async ({ P, K, C, pid, sid }) => {
+      await poprawMase(K, pid, sid, 78);
+      przesunZegar(60e3);
+      await C.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 74);
+      przesunZegar(60e3);
+      expect((await K.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+    'poprawka na P, kosz na K, poprawka na C, retencja na C, potem na P': async ({ P, K, C, pid, sid }) => {
+      await poprawMase(P, pid, sid, 78);
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await poprawMase(C, pid, sid, 74);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+      przesunZegar(60e3);
+      expect((await P.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+    'poprawka na P, kosz na K, gwiazdka i odpięcie na C, retencja na C, potem na P': async ({ P, K, C, pid, sid }) => {
+      await poprawMase(P, pid, sid, 78);
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await C.setSnapshotPinned(pid, sid, true);
+      przesunZegar(60e3);
+      await C.setSnapshotPinned(pid, sid, false);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+      przesunZegar(60e3);
+      expect((await P.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+  };
+  for (const [wariant, przebieg] of Object.entries(ZMIANA_PO_KOSZU)) {
+    for (const kolejnosc of KOLEJNOSCI_8) {
+      it(`${wariant} (${kolejnosc}): wizyta usunięta, kosz pusty, ten sam nagrobek na trzech`, async () => {
+        sztucznyZegar();
+        const u = await trzyUrzadzenia();
+        const { P, K, C, pid, sid } = u;
+        przesunZegar(60e3);
+        await przebieg(u);
+        await pierwszeScalenia({ P, K, C }, kolejnosc);
+        await rundy(P, K, C);
+        const wzor = await nagrobek(K, sid);
+        for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+          expect(await wersja(v, pid, sid), `${nazwa}: retencja usuwa wersję`).toBeNull();
+          expect(await wKoszu(v, sid), `${nazwa}: zmiana po koszu unieważnia kosz`).toBeNull();
+          expect(await nagrobek(v, sid), `${nazwa}: ten sam nagrobek`).toEqual(wzor);
+        }
+      });
+    }
+  }
+
   it('kontrola: retencja wersji przywróconej i zmienionej po koszu zdejmuje starą treść kosza jak dotąd', async () => {
     sztucznyZegar();
     const { P, K, C, pid, sid } = await trzyUrzadzenia();
@@ -466,8 +525,10 @@ describe('strażnik źródła', () => {
   it('jedna reguła „nowsza wersja” w łączeniu nagrobków, w treści z ładunku, w pętli wersji i na końcu scalania', () => {
     expect(src).toContain('function Bkz_nowszaWersja(x, y) {');
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
-    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('zrodlo = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;');
-    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('else if (starszy.payloadCipher && !Bkz_nieaktualny(starszy, nowszy)) zrodlo = starszy;');
+    const dolacz = czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(');
+    expect(dolacz).toContain('okN && okS ? (Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy)');
+    expect(dolacz).toContain('const okN = !!nowszy.payloadCipher && !Bkz_nieaktualny(nowszy, starszy);');
+    expect(dolacz).toContain('const okS = !!starszy.payloadCipher && !Bkz_nieaktualny(starszy, nowszy);');
     expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('!Bkz_nowszaWersja(e, lokalny)');
     expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bkz_nowszaWersja(zapis, e)');
     expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bkz_nowszaWersja(lokalna, e)');
