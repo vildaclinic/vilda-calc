@@ -31,6 +31,8 @@ const STRONY = Object.freeze([
   { plik: 'kalkulator-klirens.html', nazwa: 'klirens', gosc: true },
   { plik: 'kontakt.html', nazwa: 'kontakt', gosc: false },
   { plik: 'przelicznik-jednostek.html', nazwa: 'przelicznik', gosc: false },
+  // P-POLITYKA-TABELE: tabele polityki na telefonie układają się w karty, na komputerze zostają tabelą
+  { plik: 'polityka-prywatnosci.html', nazwa: 'polityka', gosc: false },
 ]);
 
 // Preferencje jak z ustawień (klucze czytane przez ios26-ui.js) i klasa body, którą muszą dać.

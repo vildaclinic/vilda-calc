@@ -509,6 +509,30 @@ th {
   }
 }
 
+/* P-STOPKA-DOCK: w trybie docka stopka sama rezerwuje miejsce pod dockiem i strzałką „na górę”
+   (zmienne z ios26-v2.css). Odstęp na body nie wystarczał: poza iOS body ma height: 100%, więc
+   jego padding nie wydłuża przewijania, a strzałka stoi nad dockiem, wyżej niż sięgał ten odstęp.
+   Na stronie ze stopką odstęp body jest zbędny — bez tego na iOS doszedłby drugi raz. */
+body.has-mobile-bottom-dock > .site-footer {
+  padding-bottom: calc(var(--mobile-dock-pinned-scroll-top-bottom) + var(--scroll-top-size) + .75rem)
+}
+
+body.has-mobile-bottom-dock.user-hides-nav-arrow > .site-footer {
+  padding-bottom: calc(var(--mobile-dock-pinned-visible-lift) + .75rem)
+}
+
+body.has-mobile-bottom-dock:has(> footer.site-footer) {
+  padding-bottom: 0!important
+}
+
+/* Dock wyłączony w Ustawieniach: strzałka zostaje w prawym dolnym rogu, na końcu stopki.
+   Do 1100 px (próg docka), więc szeroki ekran się nie zmienia; w ramce powłoki strzałki nie ma. */
+@media(max-width:1100px) {
+  html:not(.vilda-embedded) body:not(.has-mobile-bottom-dock):not(.user-hides-nav-arrow) > .site-footer {
+    padding-bottom: calc(var(--scroll-top-btn-bottom, 1rem) + var(--scroll-top-size) + .75rem)
+  }
+}
+
 @media(min-width:700px) {
   .grid-two {
     display: grid;

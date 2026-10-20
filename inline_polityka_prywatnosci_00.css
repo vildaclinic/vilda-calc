@@ -81,6 +81,16 @@
     .privacy-card tr:nth-child(even) td {
       background: rgba(244, 251, 250, 0.6);
     }
+    /* P-POLITYKA-TABELE: karta ma overflow: hidden (zaokrąglone rogi), więc tabela szersza niż karta
+       była ucinana bez możliwości przewinięcia. Tabela przewija się teraz we własnym pojemniku;
+       margines przeszedł z tabeli na pojemnik, żeby układ na komputerze się nie zmienił. */
+    .privacy-card .privacy-table-scroll {
+      overflow-x: auto;
+      margin: var(--space-0-75) 0;
+    }
+    .privacy-card .privacy-table-scroll > table {
+      margin: 0;
+    }
     .privacy-card .privacy-contact-box {
       background: rgba(0, 131, 141, 0.06);
       border: var(--border-hairline) solid rgba(0, 131, 141, 0.18);
@@ -99,5 +109,67 @@
       }
       .privacy-card table {
         font-size: 0.8rem;
+      }
+      /* nazwy kluczy i baz (ANALYTICS_CONSENT, vilda_user_<userId>) nie mają miejsc łamania
+         i rozpychały kolumnę ponad szerokość karty */
+      .privacy-card td code {
+        overflow-wrap: anywhere;
+      }
+      .privacy-card th,
+      .privacy-card td {
+        padding: var(--space-0-4) var(--space-0-5);
+      }
+    }
+    /* Telefon: trzy kolumny tekstu prawnego to kilkanaście znaków w wierszu, więc każdy wiersz
+       tabeli staje się kartą, a nazwa kolumny (data-label komórki) stoi nad jej treścią.
+       Nagłówek tabeli zostaje dla czytników ekranu, wizualnie jest ukryty. */
+    @media (max-width: 480px) {
+      .privacy-card .privacy-table-scroll > table,
+      .privacy-card .privacy-table-scroll > table > tbody,
+      .privacy-card .privacy-table-scroll > table > tbody > tr,
+      .privacy-card .privacy-table-scroll > table > tbody > tr > td {
+        display: block;
+        width: auto;
+      }
+      .privacy-card .privacy-table-scroll > table {
+        font-size: 0.88rem;
+      }
+      .privacy-card .privacy-table-scroll > table > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .privacy-card .privacy-table-scroll > table > tbody > tr {
+        border: var(--border-hairline) solid rgba(22, 76, 71, 0.14);
+        border-radius: var(--radius-12);
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.7);
+      }
+      .privacy-card .privacy-table-scroll > table > tbody > tr + tr {
+        margin-top: var(--space-0-6);
+      }
+      .privacy-card .privacy-table-scroll > table > tbody > tr > td {
+        border: 0;
+        padding: var(--space-0-5) var(--space-0-75);
+      }
+      .privacy-card .privacy-table-scroll > table > tbody > tr > td + td {
+        border-top: var(--border-hairline) solid rgba(22, 76, 71, 0.1);
+      }
+      .privacy-card .privacy-table-scroll > table > tbody > tr > td:first-child {
+        background: rgba(0, 131, 141, 0.08);
+        color: #164c47;
+      }
+      .privacy-card .privacy-table-scroll > table > tbody > tr > td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: var(--space-0-25);
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: #4a7a7a;
       }
     }
