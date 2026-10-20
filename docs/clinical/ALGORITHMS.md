@@ -15286,7 +15286,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Wizyta przypięta po koszu przeżywa retencję na trzecim urządzeniu; nagrobek trzyma chwilę kosza i chwilę przycięcia osobno (P-KOSZ-RETENCJA-PO-KOSZU, SW 1.1.326, `vilda_vault.js` 219, 2026-10-20)
+## Wizyta przypięta po koszu przeżywa retencję na trzecim urządzeniu; nagrobek trzyma chwilę kosza i chwilę przycięcia osobno (P-KOSZ-RETENCJA-PO-KOSZU, SW 1.1.327, `vilda_vault.js` 219, 2026-10-20)
 
 **Zmiana kliniczna: tak** — poprawka regresji z P-ZMIANA-W-KARCIE-2 (niżej) w regule scalania kosza, w zakresie
 decyzji właściciela D-6 B z 2026-10-20 i niezmiennych reguł P-KOSZ-ZAPISOW („wersja zmieniona po usunięciu zostaje”)
@@ -15362,7 +15362,7 @@ urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokaz
   `cd3a2876`.
 
 **Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 218 → 219 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (163 → 164) i
-`vilda_session_bridge.js` (87 → 88); SW 1.1.325 → **1.1.326**.
+`vilda_session_bridge.js` (87 → 88); SW 1.1.326 → **1.1.327**.
 
 ## Kosz przeżywa retencję starszej wersji na trzecim urządzeniu; nowa wizyta nie obniża chwili zapisu karty (P-ZMIANA-W-KARCIE-2, SW 1.1.325, `vilda_vault.js` 218, 2026-10-20)
 
