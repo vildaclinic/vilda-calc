@@ -431,6 +431,11 @@ function Bkz_czysc(lista, terazMs) {
       delete e.przycietoISO;
       zmiana = true;
     }
+    if ('zmianaISO' in e && !(typeof e.zmianaISO === 'string' && e.zmianaISO > Bkz_zmiana(e))) {
+      e = Object.assign({}, e);
+      delete e.zmianaISO;
+      zmiana = true;
+    }
     if (e.deletedAtISO < granicaKosza && (e.payloadCipher || e.payload)) {
       const bezTresci = Object.assign({}, e);
       delete bezTresci.payloadCipher;
@@ -480,13 +485,29 @@ function Bkz_chwilaRetencji(e) {
   return typeof e.przycietoISO === 'string' && e.przycietoISO ? e.przycietoISO : null;
 }
 function Bkz_ostatnie(e) { return Bkz_pozniejsza(e.deletedAtISO, e.przycietoISO); }
-// Tresc albo chwila kosza nagrobka s jest nieaktualna wobec pozniejszego nagrobka p, gdy p opisuje nowsza wersje
-// zmieniona juz po tym usunieciu (zapis przywrocono, zmieniono i usunieto albo przycieto ponownie). Poprawka zrobiona
-// przed usunieciem na innym urzadzeniu nie czyni kosza nieaktualnym.
-function Bkz_nieaktualny(s, p) {
-  if (!Bkz_nowszaWersja(p, s)) return false;
-  const zmiana = (typeof p.updatedAtISO === 'string' && p.updatedAtISO) || p.savedAtISO || '';
-  return zmiana > (Bkz_chwilaKosza(s) || '');
+// Chwila zmiany wersji (albo wersji opisanej w nagrobku).
+function Bkz_zmiana(x) { return (typeof x.updatedAtISO === 'string' && x.updatedAtISO) || x.savedAtISO || ''; }
+// Najpozniejsza zmiana wersji, jaka zna nagrobek: z opisu wersji albo z pola zmianaISO. zmianaISO niesie chwile
+// zmiany wersji pokonanej przez przyciecie, gdy opis nagrobka jej nie pokazuje. Opisu wersji w samym nagrobku retencji
+// nie przepisujemy: starsze aplikacje porownuja go z trescia kosza i zdjelyby wazny wpis kosza.
+function Bkz_znanaZmiana(e) { return Bkz_pozniejsza(Bkz_zmiana(e), e.zmianaISO) || ''; }
+// Kopia nagrobka e ze znana zmiana zn w zmianaISO — tylko gdy jest pozniejsza niz zmiana z opisu wersji.
+function Bkz_zeZmiana(e, zn) {
+  const z = Object.assign({}, e);
+  if (typeof zn === 'string' && zn > Bkz_zmiana(z)) z.zmianaISO = zn;
+  else delete z.zmianaISO;
+  return z;
+}
+// Tresc albo chwila kosza nagrobka s jest nieaktualna wobec nagrobka p, gdy p zna zmiane wersji zrobiona juz po tym
+// usunieciu (zapis przywrocono, zmieniono i usunieto albo przycieto ponownie) — ta sama regula co w Bkz_wygrywa: liczy
+// sie chwila, nie rev. Poprawka zrobiona przed usunieciem na innym urzadzeniu nie czyni kosza nieaktualnym.
+function Bkz_nieaktualny(s, p) { return Bkz_znanaZmiana(p) > (Bkz_chwilaKosza(s) || ''); }
+// Opis wersji przy remisie chwil usuniecia: z tego z dwoch, ktory zna pozniejsza zmiane (przy remisie nowsza wersje),
+// zeby wynik nie zalezal od tego, ktory nagrobek jest lokalny.
+function Bkz_opisPozniejszy(a, c) {
+  const za = Bkz_zmiana(a), zc = Bkz_zmiana(c);
+  if (za !== zc) return za > zc ? a : c;
+  return Bkz_nowszaWersja(c, a) ? c : a;
 }
 // true = nagrobek wygrywa z wersja zmieniona w chwili zmiana (przypieta: czy przypieta).
 function Bkz_wygrywa(e, zmiana, przypieta) {
@@ -518,10 +539,9 @@ function Bkz_dolacz(mapa, e) {
     const r = Bkz_chwilaRetencji(p);
     return !!r && r > kosz && Bkz_nieaktualny(zKoszem, p);
   });
-  // Bez tresci (sam nagrobek retencji albo wpis kosza po wygasnieciu tresci) opis wersji bierzemy z tego z dwoch, ktory
-  // zna nowsza wersje — inaczej informacja o zmianie po koszu ginelaby przy kolejnym laczeniu, a opis zalezalby od
-  // kolejnosci laczenia.
-  const zWersja = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;
+  // Bez tresci (sam nagrobek retencji albo wpis kosza po wygasnieciu tresci) opis wersji z pozniejszego nagrobka, jak
+  // dotad; przy remisie chwil z Bkz_opisPozniejszy.
+  const zWersja = Bkz_ostatnie(nowszy) === Bkz_ostatnie(starszy) ? Bkz_opisPozniejszy(nowszy, starszy) : nowszy;
   let wynik;
   if (zrodlo || (kosz && (!ret || kosz >= ret || !koszNieaktualny))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
@@ -533,7 +553,7 @@ function Bkz_dolacz(mapa, e) {
   } else {
     wynik = Bkz_jakoRetencja(nowszy, ret, zWersja);
   }
-  mapa.set(e.snapshotId, wynik);
+  mapa.set(e.snapshotId, Bkz_zeZmiana(wynik, Bkz_pozniejsza(Bkz_znanaZmiana(nowszy), Bkz_znanaZmiana(starszy))));
 }
 // Nagrobek e z opisem wersji w (rev, chwila zmiany, chwila zapisu), bez tresci kosza.
 function Bkz_zOpisem(e, w) {
@@ -767,6 +787,7 @@ async function Bkz_eksport() {
       if (typeof e.seq === 'number' && isFinite(e.seq)) w.seq = e.seq;
       if (e.powod === 'retencja') w.powod = 'retencja';
       else if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
+      if (typeof e.zmianaISO === 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;
       if (e.payloadCipher) {
         try { w.payload = await G(e.payloadCipher.iv, e.payloadCipher.data); } catch { /* bez tresci */ }
       }
@@ -800,6 +821,7 @@ async function Bkz_scalStart(t) {
       if (z.powod !== 'retencja' && typeof z.przycietoISO === 'string' && z.przycietoISO > z.deletedAtISO) {
         e.przycietoISO = z.przycietoISO;
       }
+      if (typeof z.zmianaISO === 'string' && z.zmianaISO > Bkz_zmiana(e)) e.zmianaISO = z.zmianaISO;
       const lokalny = ctx.mapa.get(z.snapshotId);
       // Tresc z ladunku bierzemy, gdy lokalnie jej nie ma albo gdy zdalne usuniecie jest pozniejsze (P-KOSZ-POPRAWKI):
       // lokalna tresc opisuje wtedy starsza wersje — zapis przywrocono, poprawiono i usunieto ponownie na innym
@@ -836,10 +858,12 @@ function Bkz_pomin(ctx, patientId, zapis) {
     ctx.dotknieci.add(patientId);
     const kosz = Bkz_chwilaKosza(e);
     if (!(kosz && kosz >= zmiana)) {
-      // Wersje pokonalo samo przyciecie. Kosz sprzed jej zmiany jest nieaktualny, a nagrobek retencji przejmuje opis
-      // nowszej z dwoch wersji — inaczej informacja o zmianie po koszu ginie (P-KOSZ-RETENCJA-PO-KOSZU).
-      const nowsza = Bkz_nowszaWersja(zapis, e);
-      if (kosz || nowsza) ctx.mapa.set(zapis.snapshotId, Bkz_jakoRetencja(e, Bkz_chwilaRetencji(e), nowsza ? zapis : e));
+      // Wersje pokonalo samo przyciecie: nagrobek zapamietuje chwile jej zmiany (zmianaISO), inaczej informacja
+      // o zmianie po koszu ginie (P-KOSZ-RETENCJA-PO-KOSZU). Kosz sprzed tej zmiany jest nieaktualny i staje sie
+      // nagrobkiem retencji z opisem tej wersji — wtedy zdejmuja go tez starsze aplikacje.
+      const zn = Bkz_pozniejsza(Bkz_znanaZmiana(e), zmiana);
+      if (kosz) ctx.mapa.set(zapis.snapshotId, Bkz_zeZmiana(Bkz_jakoRetencja(e, Bkz_chwilaRetencji(e), Bkz_opisPozniejszy(e, zapis)), zn));
+      else if (zn !== Bkz_znanaZmiana(e)) ctx.mapa.set(zapis.snapshotId, Bkz_zeZmiana(e, zn));
       return true;
     }
     // P-KOSZ-NOWSZA-TRESC (D-6 B): tresc tej wersji trafi do kosza w Bkz_scalKoniec, gdy jest nowsza niz jego tresc.
@@ -902,10 +926,11 @@ async function Bkz_scalKoniec(ctx, opcje) {
             // P-KOSZ-NOWSZA-TRESC (D-6 B): tresc i wersja z wersji lokalnej (nowszej niz tresc nagrobka).
             const z = Bkz_zTresci(e, lokalna, lokalna.payloadCipher);
             ctx.mapa.set(e.snapshotId, z);
-          } else if (retencja && (kosz || Bkz_nowszaWersja(lokalna, e))) {
-            // Wersje pokonalo samo przyciecie: kosz sprzed jej zmiany jest nieaktualny, a nagrobek retencji przejmuje
-            // opis nowszej z dwoch wersji (P-KOSZ-RETENCJA-PO-KOSZU).
-            ctx.mapa.set(e.snapshotId, Bkz_jakoRetencja(e, przyciecie, Bkz_nowszaWersja(lokalna, e) ? lokalna : e));
+          } else if (retencja) {
+            // Wersje pokonalo samo przyciecie: jak w Bkz_pomin (P-KOSZ-RETENCJA-PO-KOSZU).
+            const zn = Bkz_pozniejsza(Bkz_znanaZmiana(e), zmiana);
+            if (kosz) ctx.mapa.set(e.snapshotId, Bkz_zeZmiana(Bkz_jakoRetencja(e, przyciecie, Bkz_opisPozniejszy(e, lokalna)), zn));
+            else if (zn !== Bkz_znanaZmiana(e)) ctx.mapa.set(e.snapshotId, Bkz_zeZmiana(e, zn));
           }
           await I().removeSnapshotForUser(b, e.snapshotId);
           zostaje -= 1;

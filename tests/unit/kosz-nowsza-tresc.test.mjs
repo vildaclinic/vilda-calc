@@ -478,6 +478,59 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
       przesunZegar(60e3);
       expect((await P.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
     },
+    // Przegląd bbbffcc0: wersje „przecięte” (wyższa rev zmieniona wcześniej niż niższa). Zmiana po koszu liczy się
+    // chwilą, nie rev — tak samo jak w Bkz_wygrywa.
+    'dwie poprawki na P, kosz na C, poprawka na K, retencja na K': async ({ P, K, C, pid, sid }) => {
+      await poprawMase(P, pid, sid, 51);
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 52);
+      przesunZegar(60e3);
+      await C.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await poprawMase(K, pid, sid, 53);
+      przesunZegar(60e3);
+      expect((await K.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+    'dwie poprawki na K, kosz na K, poprawka na P, retencja na C': async ({ P, K, C, pid, sid }) => {
+      await poprawMase(K, pid, sid, 99);
+      przesunZegar(60e3);
+      await poprawMase(K, pid, sid, 98);
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 74);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+    'gwiazdka i odpięcie na K, kosz na K, poprawka na P, retencja na C': async ({ P, K, C, pid, sid }) => {
+      await K.setSnapshotPinned(pid, sid, true);
+      przesunZegar(60e3);
+      await K.setSnapshotPinned(pid, sid, false);
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 74);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+    // Zmiana zachowania wobec cd3a2876 (tam kosz brał chwilę retencji i zabierał treść zmiany): wersja poprawiona albo
+    // przywrócona po koszu, a potem przycięta przez urządzenie, które o niczym nie wie, znika jak każda przycięta
+    // wersja — tak samo jak bez kosza.
+    'kosz na K, poprawka na P, retencja na C': async ({ P, K, C, pid, sid }) => {
+      await K.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      await poprawMase(P, pid, sid, 61);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
+    'kosz na K, „Przywróć” na P, retencja na C': async ({ P, K, C, pid, sid }) => {
+      await K.moveSnapshotToTrash(pid, sid);
+      await sync(K, P);
+      przesunZegar(60e3);
+      await P.restoreTrashedSnapshot(pid, sid);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    },
   };
   for (const [wariant, przebieg] of Object.entries(ZMIANA_PO_KOSZU)) {
     for (const kolejnosc of KOLEJNOSCI_8) {
@@ -499,15 +552,16 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     }
   }
 
-  // Uwaga algebry fuzz v4: wpis kosza po wygaśnięciu treści (30 dni) brał opis wersji z późniejszego z dwóch
-  // nagrobków, a nagrobek retencji — z nowszej wersji. Opis wyniku zależał więc od kolejności łączenia i urządzenia
-  // zostawały na zawsze z różnymi nagrobkami tej samej wersji.
+  // Uwaga algebry fuzz v4: wpis kosza po wygaśnięciu treści (30 dni) mógł zostać na urządzeniach z różnym opisem wersji
+  // na zawsze, zależnie od kolejności łączenia. Teraz ten sam nagrobek na trzech, a zmiana poprawki zostaje w nagrobku
+  // (opis wersji albo zmianaISO).
   for (const kolejnosc of KOLEJNOSCI_8) {
     it(`poprawka na K, kosz na P, retencja na K, potem na C, treść kosza wygasa przed synchronizacją (${kolejnosc}): ten sam nagrobek na trzech`, async () => {
       sztucznyZegar();
       const { P, K, C, pid, sid } = await trzyUrzadzenia();
       przesunZegar(60e3);
       await poprawMase(K, pid, sid, 78);
+      const zmianaPoprawki = (await wersja(K, pid, sid)).updatedAtISO;
       przesunZegar(60e3);
       await P.moveSnapshotToTrash(pid, sid);
       przesunZegar(60e3);
@@ -519,17 +573,45 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
       await rundy(P, K, C);
       const pelny = async (v) => {
         const e = ((await v.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid);
-        return e ? { ...(await nagrobek(v, sid)), powod: e.powod, przycietoISO: e.przycietoISO } : null;
+        return e ? { ...(await nagrobek(v, sid)), powod: e.powod, przycietoISO: e.przycietoISO, zmianaISO: e.zmianaISO } : null;
       };
       const wzor = await pelny(K);
       expect(wzor.powod, 'kosz późniejszy niż poprawka zostaje wpisem kosza').toBeUndefined();
-      expect(wzor.rev, 'opis nowszej wersji').toBe(1);
+      expect([wzor.updatedAtISO, wzor.zmianaISO], 'nagrobek zna zmianę poprawki').toContain(zmianaPoprawki);
       for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
         expect(await wersja(v, pid, sid), `${nazwa}: wersja usunięta`).toBeNull();
         expect(await pelny(v), `${nazwa}: ten sam nagrobek`).toEqual(wzor);
       }
     });
   }
+
+  // Przegląd bbbffcc0 (flota mieszana): nowe urządzenie przepisywało opis wersji w samym nagrobku retencji na swoją,
+  // poprawioną wersję. Starsza aplikacja (cd3a2876, 44256803) czyta ten opis jako „przycięto inną wersję” i zdejmuje
+  // ważny wpis kosza z treścią — kosz znikał na wszystkich urządzeniach. Opis zostaje, zmianę niesie zmianaISO.
+  it('retencja pokonuje poprawioną wersję na P: nagrobek retencji zachowuje opis wersji, a zmianę niesie zmianaISO', async () => {
+    sztucznyZegar();
+    const { P, K, C, pid, sid } = await trzyUrzadzenia();
+    przesunZegar(60e3);
+    await poprawMase(P, pid, sid, 99);
+    const zmianaPoprawki = (await wersja(P, pid, sid)).updatedAtISO;
+    przesunZegar(60e3);
+    await K.moveSnapshotToTrash(pid, sid);
+    przesunZegar(60e3);
+    expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+    const zC = ((await C.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid);
+    await sync(C, P);
+    expect(await wersja(P, pid, sid), 'retencja usuwa poprawioną wersję na P').toBeNull();
+    const zP = ((await P.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid);
+    expect({ powod: zP.powod, rev: zP.rev, updatedAtISO: zP.updatedAtISO, savedAtISO: zP.savedAtISO }, 'opis wersji jak u C')
+      .toEqual({ powod: zC.powod, rev: zC.rev, updatedAtISO: zC.updatedAtISO, savedAtISO: zC.savedAtISO });
+    expect(zP.zmianaISO, 'zmiana poprawki w zmianaISO').toBe(zmianaPoprawki);
+    await sync(P, K);
+    await rundy(P, K, C);
+    for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+      expect(await wersja(v, pid, sid), `${nazwa}: wersja usunięta`).toBeNull();
+      expect(await wKoszu(v, sid), `${nazwa}: poprawka sprzed kosza nie unieważnia kosza`).toBeTruthy();
+    }
+  });
 
   it('kontrola: retencja wersji przywróconej i zmienionej po koszu zdejmuje starą treść kosza jak dotąd', async () => {
     sztucznyZegar();
