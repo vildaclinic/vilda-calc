@@ -15313,8 +15313,9 @@ retencji zamiast chwili kosza i wygasał 30 dni od niej.
   (`Bkz_nieaktualny`, w obie strony). Kosz przestaje się liczyć, gdy jest nieaktualny wobec któregokolwiek
   przycięcia późniejszego niż on; zostaje wtedy sam nagrobek retencji. Chwile łączą się niezależnie od kolejności
   nagrobków (późniejsza z każdego rodzaju).
-- Sam nagrobek retencji pamięta opis (`rev`, chwila zmiany) najnowszej wersji, jaką zna: z łączonych nagrobków i
-  z wersji, którą pokonał w scaleniu. Dzięki temu zmiana zrobiona po koszu na jednym urządzeniu unieważnia kosz także
+- Nagrobek bez treści (sam nagrobek retencji i wpis kosza po wygaśnięciu treści) pamięta opis (`rev`, chwila zmiany)
+  najnowszej wersji, jaką zna: z łączonych nagrobków, a nagrobek retencji także z wersji, którą pokonał w scaleniu.
+  Opis nie zależy od kolejności łączenia, więc urządzenia dochodzą do tego samego nagrobku. Dzięki temu zmiana zrobiona po koszu na jednym urządzeniu unieważnia kosz także
   wtedy, gdy tę wersję usunęło potem przycięcie, a kosz i przycięcie dochodzą do urządzeń w różnej kolejności.
 - Wersja pokonana tylko przez przycięcie (zmieniona po koszu) nie dokłada treści do kosza. Kosz sprzed tej zmiany
   zamienia się w sam nagrobek retencji z opisem tej wersji (`Bkz_pomin`, `Bkz_scalKoniec`). Treść wersji trafia do
@@ -15345,6 +15346,10 @@ retencji zamiast chwili kosza i wygasał 30 dni od niej.
   usunięta, kosz pusty i ten sam nagrobek na P, K i C (24). Na `cd3a2876` zielone 24. Na wcześniejszej wersji tej
   poprawki (`57e82a50`) czerwone 19: kosz trzymał treść sprzed zmiany albo treść samej zmiany z wcześniejszą chwilą
   usunięcia;
+- poprawka na K, kosz na P, retencja na K, potem na C, a treść kosza wygasa (31 dni) przed synchronizacją; 8 kolejności
+  → wersja usunięta, ten sam nagrobek na trzech: wpis kosza z opisem poprawionej wersji (8). Na `57e82a50` i
+  `bbbffcc0` czerwone 6 (różne opisy na różnych urządzeniach na zawsze), na `cd3a2876` czerwone 8 (kosz zamieniał się
+  w nagrobek retencji);
 - dotychczasowe przypadki P-KOSZ-NOWSZA-TRESC i P-ZMIANA-W-KARCIE-2 (gwiazdka i poprawka przed koszem, retencja na
   trzecim urządzeniu, zapis przywrócony, poprawiony i przycięty) — bez zmian, zielone;
 - strażnik źródła `Bkz_dolacz`.
@@ -15356,10 +15361,15 @@ urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokaz
 - Poprawka przed koszem przegrywa z przycięciem, zanim kosz dotrze do urządzenia z poprawką (np. P scala retencję C,
   potem kosz K). Nagrobek retencji nie niesie treści, więc kosz trzyma treść sprzed poprawki: tylko w koszu, nie
   w karcie, zbieżnie na wszystkich urządzeniach i tak samo jak na `44256803` (test „P←C,P←K”).
+- Wersje „przecięte”: niższa `rev` zmieniona później niż wyższa (np. dwa urządzenia zmieniają tę samą wersję naraz,
+  jedno dwa razy). Opis nagrobku bez treści wybiera wyższą `rev`, więc w części kolejności ginie informacja, że niższą
+  zmieniono po koszu, i kosz zostaje z treścią sprzed tej zmiany (tylko w koszu). Tak samo wybiera karta; regułę
+  wersji tej samej karty zmieni D-7 wariant 2. Fuzz tego nie trafił, algebra łączenia nagrobków: 101 z 19 344 trójek.
 - Flota mieszana: opis wyżej (pole `przycietoISO`). W czasie wdrażania urządzenie ze starszą aplikacją może przy
   poprawce zrobionej po koszu (i retencji na trzecim urządzeniu) trzymać tę wizytę w karcie, a nowe urządzenia w koszu,
   do aktualizacji starszego; danych nie ubywa. Gwiazdka po koszu we flocie mieszanej jest zbieżna i nie gorsza niż na
-  `cd3a2876`.
+  `cd3a2876`. Rzadkie rozjazdy kosza we flocie mieszanej biorą się z wady starszej aplikacji (scalony kosz brał
+  chwilę przycięcia) i ustępują po jej aktualizacji.
 
 **Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 218 → 219 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (163 → 164) i
 `vilda_session_bridge.js` (87 → 88); SW 1.1.326 → **1.1.327**.

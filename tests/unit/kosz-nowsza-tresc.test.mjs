@@ -499,6 +499,38 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     }
   }
 
+  // Uwaga algebry fuzz v4: wpis kosza po wygaśnięciu treści (30 dni) brał opis wersji z późniejszego z dwóch
+  // nagrobków, a nagrobek retencji — z nowszej wersji. Opis wyniku zależał więc od kolejności łączenia i urządzenia
+  // zostawały na zawsze z różnymi nagrobkami tej samej wersji.
+  for (const kolejnosc of KOLEJNOSCI_8) {
+    it(`poprawka na K, kosz na P, retencja na K, potem na C, treść kosza wygasa przed synchronizacją (${kolejnosc}): ten sam nagrobek na trzech`, async () => {
+      sztucznyZegar();
+      const { P, K, C, pid, sid } = await trzyUrzadzenia();
+      przesunZegar(60e3);
+      await poprawMase(K, pid, sid, 78);
+      przesunZegar(60e3);
+      await P.moveSnapshotToTrash(pid, sid);
+      przesunZegar(60e3);
+      expect((await K.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+      przesunZegar(31 * 864e5);
+      await pierwszeScalenia({ P, K, C }, kolejnosc);
+      await rundy(P, K, C);
+      const pelny = async (v) => {
+        const e = ((await v.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid);
+        return e ? { ...(await nagrobek(v, sid)), powod: e.powod, przycietoISO: e.przycietoISO } : null;
+      };
+      const wzor = await pelny(K);
+      expect(wzor.powod, 'kosz późniejszy niż poprawka zostaje wpisem kosza').toBeUndefined();
+      expect(wzor.rev, 'opis nowszej wersji').toBe(1);
+      for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+        expect(await wersja(v, pid, sid), `${nazwa}: wersja usunięta`).toBeNull();
+        expect(await pelny(v), `${nazwa}: ten sam nagrobek`).toEqual(wzor);
+      }
+    });
+  }
+
   it('kontrola: retencja wersji przywróconej i zmienionej po koszu zdejmuje starą treść kosza jak dotąd', async () => {
     sztucznyZegar();
     const { P, K, C, pid, sid } = await trzyUrzadzenia();

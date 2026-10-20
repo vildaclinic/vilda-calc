@@ -518,36 +518,38 @@ function Bkz_dolacz(mapa, e) {
     const r = Bkz_chwilaRetencji(p);
     return !!r && r > kosz && Bkz_nieaktualny(zKoszem, p);
   });
+  // Bez tresci (sam nagrobek retencji albo wpis kosza po wygasnieciu tresci) opis wersji bierzemy z tego z dwoch, ktory
+  // zna nowsza wersje — inaczej informacja o zmianie po koszu ginelaby przy kolejnym laczeniu, a opis zalezalby od
+  // kolejnosci laczenia.
+  const zWersja = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;
   let wynik;
   if (zrodlo || (kosz && (!ret || kosz >= ret || !koszNieaktualny))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
-    wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Object.assign({}, nowszy);
+    wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Bkz_zOpisem(nowszy, zWersja);
     delete wynik.powod;
     delete wynik.przycietoISO;
     wynik.deletedAtISO = kosz || ret;
     if (kosz && ret && ret > kosz) wynik.przycietoISO = ret;
   } else {
-    // Sam nagrobek retencji: opis wersji z tego z dwoch, ktory zna nowsza wersje — inaczej informacja o zmianie po
-    // koszu ginelaby przy kolejnym laczeniu.
-    const zWersja = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;
-    wynik = zWersja === nowszy ? Object.assign({}, nowszy) : Bkz_jakoRetencja(nowszy, ret, zWersja);
-    wynik.deletedAtISO = ret;
-    wynik.powod = 'retencja';
-    delete wynik.przycietoISO;
-    delete wynik.payloadCipher;
+    wynik = Bkz_jakoRetencja(nowszy, ret, zWersja);
   }
   mapa.set(e.snapshotId, wynik);
 }
-// Nagrobek e jako sam nagrobek retencji z chwila przyciecia i opisem wersji w (bez tresci kosza).
-function Bkz_jakoRetencja(e, chwila, w) {
+// Nagrobek e z opisem wersji w (rev, chwila zmiany, chwila zapisu), bez tresci kosza.
+function Bkz_zOpisem(e, w) {
   const z = Object.assign({}, e, {
-    deletedAtISO: chwila,
-    powod: 'retencja',
     rev: mt(w),
     updatedAtISO: typeof w.updatedAtISO === 'string' && w.updatedAtISO ? w.updatedAtISO : null,
   });
   if (typeof w.savedAtISO === 'string' && w.savedAtISO) z.savedAtISO = w.savedAtISO;
   delete z.payloadCipher;
+  return z;
+}
+// Nagrobek e jako sam nagrobek retencji z chwila przyciecia i opisem wersji w.
+function Bkz_jakoRetencja(e, chwila, w) {
+  const z = Bkz_zOpisem(e, w);
+  z.deletedAtISO = chwila;
+  z.powod = 'retencja';
   delete z.przycietoISO;
   return z;
 }
