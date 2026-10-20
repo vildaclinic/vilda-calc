@@ -908,8 +908,8 @@
   "sha256": "1056f7f583c0e1b2c51d7e6a94c08444130ebefeb5eb4eed547aa11a929b5b65"
  },
  "vilda_persistence_adapter.js": {
-  "v": 31,
-  "sha256": "53948f718418f6318188df2886977c3132a7e036eae223bf6b507cfcbfc955a9"
+  "v": 32,
+  "sha256": "86d51cd5cf86ec841dc76c2246814a29e23f7b1a75dc90c5fe68e6e18669b49d"
  },
  "vilda_plec_z_imienia.js": {
   "v": 2,
