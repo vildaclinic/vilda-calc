@@ -47,9 +47,11 @@ function pamiec({ pelna = false } = {}) {
         const r = m.get(kluczAdresu(klucz));
         return r ? r.clone() : undefined;
       },
+      // Jak prawdziwy Cache.put: czyta treść odpowiedzi do końca, więc błąd strumienia odrzuca zapis.
       put: async (klucz, odpowiedz) => {
         if (pelna) throw new DOMException('Quota exceeded', 'QuotaExceededError');
-        m.set(kluczAdresu(klucz), odpowiedz.clone());
+        const tresc = await odpowiedz.arrayBuffer();
+        m.set(kluczAdresu(klucz), new Response(tresc, { status: odpowiedz.status, headers: odpowiedz.headers }));
       },
       _wstaw: (klucz, odpowiedz) => { m.set(kluczAdresu(klucz), odpowiedz.clone()); },
       delete: async (klucz) => m.delete(kluczAdresu(klucz)),
@@ -107,7 +109,15 @@ async function nawiguj(sw, sciezka) {
 
 const tytul = async (r) => (/<title>([^<]*)<\/title>/.exec(await r.text()) || [])[1];
 
-function srodowisko(zrodlo = ZRODLO_SW, { siec = true, pelna = false } = {}) {
+// Odpowiedź, której strumień urywa się w połowie treści (zerwane połączenie po nagłówkach).
+const zerwana = () => new Response(new ReadableStream({
+  start(c) {
+    c.enqueue(new TextEncoder().encode('<!doctype html><title>nowa'));
+    c.error(new TypeError('network error'));
+  },
+}), { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+
+function srodowisko(zrodlo = ZRODLO_SW, { siec = true, pelna = false, odpowiedz = () => html('nowa') } = {}) {
   const caches = pamiec({ pelna });
   const zapytania = [];
   const trybyPamieci = [];
@@ -115,7 +125,7 @@ function srodowisko(zrodlo = ZRODLO_SW, { siec = true, pelna = false } = {}) {
     zapytania.push(kluczAdresu(req));
     trybyPamieci.push(req && req.cache);
     if (!siec) throw new TypeError('Failed to fetch');
-    return html('nowa');
+    return odpowiedz();
   };
   const sw = uruchomSW(zrodlo, { caches, fetch });
   const powloka = caches._otworz(sw.SHELL_CACHE);
@@ -199,5 +209,26 @@ describe('P-SW-STRONY-PRAWNE: nieudany zapis do pamięci nie unieważnia odpowie
     const r = await nawiguj(sw, '/kontakt.html');
     expect(r.type).not.toBe('error');
     expect(await tytul(r)).toBe('nowa');
+  });
+});
+
+describe('P-SW-STRONY-PRAWNE: inne błędy zapisu działają jak brak sieci', () => {
+  for (const s of STRONY_PRAWNE) {
+    it(`${s}: połączenie urwane w trakcie treści — strona z pamięci, nie pusta odpowiedź`, async () => {
+      const { sw, powloka } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana });
+      powloka._wstaw(s, html('stara'));
+      const r = await nawiguj(sw, s);
+      expect(await tytul(r)).toBe('stara');
+    });
+  }
+
+  it('kontrola negatywna: catch połykający każdy błąd zapisu zwraca uszkodzoną odpowiedź zamiast kopii', async () => {
+    const zawezony = "} catch (error) {\n        if (!error || error.name !== 'QuotaExceededError') throw error;\n      }";
+    expect(ZRODLO_SW.split(zawezony).length - 1, 'zawężony catch jest w pliku dokładnie raz').toBe(1);
+    const szeroki = ZRODLO_SW.replace(zawezony, '} catch (_) {\n        void _;\n      }');
+    const { sw, powloka } = srodowisko(szeroki, { odpowiedz: zerwana });
+    powloka._wstaw('/regulamin.html', html('stara'));
+    const r = await nawiguj(sw, '/regulamin.html');
+    await expect(r.text()).rejects.toThrow();
   });
 });

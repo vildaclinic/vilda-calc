@@ -3969,13 +3969,15 @@ async function updateShellFromNetwork(request) {
     const safeResponse = await makeNavigationResponseSafe(networkResponse);
 
     if (cacheKey && isCacheableResponse(safeResponse)) {
-      // P-SW-STRONY-PRAWNE: nieudany zapis do pamięci (np. QuotaExceededError przy wyczerpanym limicie źródła) nie
-      // unieważnia odpowiedzi, która przyszła z sieci. Dotąd odrzucenie cache.put kończyło nawigację jak brak sieci:
-      // strona prawna (najpierw sieć) dostawała starą kopię z pamięci, a dokument bez kopii — Response.error().
+      // P-SW-STRONY-PRAWNE: odrzucenie zapisu z powodu limitu pamięci źródła (QuotaExceededError) nie unieważnia
+      // odpowiedzi, która przyszła z sieci — treść jest cała, zabrakło tylko miejsca na kopię. Przed tą poprawką
+      // kończyło nawigację jak brak sieci: dokument bez kopii dostawał Response.error(), a strona prawna (najpierw
+      // sieć) dostałaby starą kopię. Każdy inny błąd zapisu idzie dalej jak dotąd: np. urwane połączenie w trakcie
+      // treści psuje też odpowiedź dla strony (obie gałęzie strumienia), więc nawigacja bierze kopię z pamięci.
       try {
         await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
-      } catch (_) {
-        void _;
+      } catch (error) {
+        if (!error || error.name !== 'QuotaExceededError') throw error;
       }
     }
 

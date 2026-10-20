@@ -18306,7 +18306,7 @@ przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela 
 
 ## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.326, 2026-10-20)
 
-**Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (DocPro i 20 stron z precache startują
+**Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (20 stron z precache, w tym DocPro, startuje
 offline: 0 nieudanych żądań własnego pochodzenia, 0 błędów strony) właściciel wybrał z listy zostających luk: strony prawne offline.
 **Strategia „najpierw sieć” (niżej) to propozycja agenta — czeka na akceptację właściciela.**
 
@@ -18325,14 +18325,21 @@ który prosi o zgodę. Zmierzone w Chromium z produkcyjnym SW i zatrzymanym serw
   dla innych dokumentów), odpowiedź zapisuje się w pamięci jako zapas offline (nowe — dotąd tych stron SW nie zapisywał), a pamięć
   oddaje stronę dopiero przy braku sieci, istniejącą ścieżką zapasową `readDocumentFromShell`. Offline strona się otwiera (z treścią
   z ostatniej instalacji albo wizyty online). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
-- **Zapis do pamięci nie unieważnia odpowiedzi z sieci** (`updateShellFromNetwork`). Dotąd odrzucony `cache.put` (np.
-  `QuotaExceededError` przy wyczerpanym limicie źródła) kończył nawigację jak brak sieci. Dla stron prawnych oznaczałoby to starą
-  kopię online mimo działającej sieci — zmierzone w Chromium z obniżonym limitem (CDP `Storage.overrideQuotaForOrigin`) na pierwszej
-  wersji tej zmiany. **Skutek także dla pozostałych dokumentów:** dokument bez kopii w pamięci przy pełnym limicie dostaje teraz
-  odpowiedź z sieci zamiast `Response.error()`; dokument z kopią — bez zmian (pamięć najpierw).
+- **Odrzucenie zapisu nawigacji z powodu limitu pamięci (`QuotaExceededError`) nie unieważnia odpowiedzi z sieci** (gałąź
+  nawigacji w `updateShellFromNetwork`). Dotąd odrzucony `cache.put` kończył nawigację jak brak sieci. Dla stron prawnych
+  oznaczałoby to starą kopię online mimo działającej sieci — zmierzone w Chromium z obniżonym limitem (CDP
+  `Storage.overrideQuotaForOrigin`) na pierwszej wersji tej zmiany. **Skutek także dla pozostałych dokumentów:** dokument bez kopii
+  w pamięci przy pełnym limicie dostaje teraz odpowiedź z sieci zamiast `Response.error()`; dokument z kopią — bez zmian (pamięć
+  najpierw). **Inne odrzucenia zapisu** (np. połączenie urwane w trakcie treści: `Cache.put` czyta kopię strumienia, a błąd psuje
+  też odpowiedź dla strony) kończą się jak brak sieci — strona z pamięci, jeśli jest kopia. Druga runda weryfikacji wykryła, że
+  pierwsza wersja tej poprawki (`catch` na każdy błąd) oddawała wtedy pustą stronę zamiast kopii (zmierzone w Chromium: serwer
+  urywa połączenie w połowie treści); `catch` jest zawężony do `QuotaExceededError`.
 - `SW_FETCH_CACHE_STRATEGY_AUDIT.legalDocumentsNavigation = 'network-first-shell-fallback'`; nagłówek SW opisuje wyjątek.
 
-**Znane ograniczenia (bez zmiany względem innych dokumentów).** Brak limitu czasu: przy zawieszonym połączeniu nawigacja czeka, aż
+**Znane ograniczenia (bez zmiany względem innych dokumentów).** Przy wyczerpanym limicie zasoby powłoki i czasu działania bez kopii
+w pamięci (gałąź zasobów `updateShellFromNetwork`, `cacheRuntimeResponse`) dalej kończą się `Response.error()` — poza zakresem tej
+zmiany. Adres ze slashem na końcu (`/regulamin/`) otwiera offline sam HTML: zasoby względne rozwiązują się pod `/regulamin/` i nie
+istnieją (online serwer odpowiada 404) — dotyczy każdego dokumentu. Brak limitu czasu: przy zawieszonym połączeniu nawigacja czeka, aż
 przeglądarka zakończy żądanie błędem (jak przed zmianą, gdy strony szły tylko z sieci). Przekierowanie serwera na inne pochodzenie
 (`mode: 'same-origin'` w `buildNavigationNetworkRequest`) kończy żądanie błędem, więc online pokazuje się kopia z pamięci; przed
 zmianą — błąd sieci.
@@ -18340,19 +18347,23 @@ zmianą — błąd sieci.
 **Zmiana kliniczna: NIE.** Żaden wzór, próg, dane ani tekst stron. Zmienia się dostępność dwóch stron bez sieci i odporność
 nawigacji na nieudany zapis do pamięci.
 
-**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` (13) — prawdziwy plik SW na atrapie Cache Storage i sieci; prawdziwy nasłuch
+**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` (16) — prawdziwy plik SW na atrapie Cache Storage (`put` czyta treść jak
+prawdziwy `Cache.put`) i sieci; prawdziwy nasłuch
 `fetch` dostaje syntetyczne zdarzenie nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść
 z sieci mimo starszej w pamięci, żądanie z `cache: 'no-cache'`, pamięć dostaje nową; offline — strona z pamięci zamiast błędu;
 `/regulamin` bez `.html` online i offline; kontrola: `kontakt.html` dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez
 warunku strategii — online wraca stara treść; pełna pamięć (put odrzuca) — strony prawne z kopią i bez kopii dostają tekst z sieci,
-`kontakt.html` bez kopii też. Bez `try/catch` w `updateShellFromNetwork` czerwone jest dokładnie 5 przypadków pełnej pamięci. Na SW
-z `audyt` czerwone 8 z 13; zielone zostają kontrola `kontakt.html` i 4 przypadki pełnej pamięci dla stron prawnych (na `audyt` szły
-tylko z sieci — brak regresu). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs` czytają
+`kontakt.html` bez kopii też; połączenie urwane w trakcie treści — strona prawna z pamięci; **kontrola negatywna** z `catch` na każdy
+błąd — uszkodzona odpowiedź. Bez `try/catch` czerwone jest 6 (5 przypadków pełnej pamięci i kontrola negatywna, która szuka
+zawężonego `catch`); z szerokim `catch` — 3 (dwa przypadki urwanego połączenia i ta kontrola). Na SW z `audyt` czerwone 11 z 16;
+zielone zostają kontrola `kontakt.html` i 4 przypadki pełnej pamięci dla stron prawnych (na `audyt` szły tylko z sieci — brak
+regresu). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs` czytają
 `OPTIONAL_DOCUMENTS`, więc obie strony i ich zasoby obejmuje też strażnik precache i obchód offline wszystkich stron (22 strony).
 
 **Walidacja (Chromium 141, produkcyjny SW, profil trwały, brak sieci = zatrzymany serwer z sondą).** Offline: obie strony z linków
-stopki DocPro, z bramki regulaminu (index bez akceptacji) i z banera zgody; `/regulamin`, `/regulamin/`, `?x=1`; 390 × 844 bez
-poziomego przewijania; po restarcie przeglądarki; ścieżka aktualizacji SW 1.1.323 → nowy. Kontrola na `audyt`: te same kliknięcia
+stopki DocPro, z bramki regulaminu (index bez akceptacji) i z banera zgody; `/regulamin`, `?x=1`; 390 × 844 bez poziomego
+przewijania; po restarcie przeglądarki; ścieżka aktualizacji SW 1.1.325 → 1.1.326. Online przy pełnym limicie (CDP) — nowy tekst
+z sieci; połączenie urwane w połowie treści — kopia z pamięci. Kontrola na `audyt`: te same kliknięcia
 — `net::ERR_FAILED`. Online: po zmianie treści na serwerze pierwsza nawigacja pokazuje nowy tekst i odświeża pamięć, a `kontakt.html`
 pokazuje starą treść do drugiej nawigacji (pamięć najpierw); kontrola z pustym `NETWORK_FIRST_DOCUMENTS` — czerwona. E2E PWA
 (`pwa-strony-offline`, `pwa`, `pwa-precache-migracja`, `pwa-pierwsza-wizyta`) i pozostałe specyfikacje zależne od SW — zielone.
