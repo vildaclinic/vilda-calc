@@ -239,6 +239,9 @@ test.describe('Cole i rodzina BMI nie przechodzą na następnego pacjenta', () =
     await wpiszPacjentke(page, A);
     const colePacjentkiA = await cole(page);
     expect(colePacjentkiA).toBeGreaterThanOrEqual(110);
+    // Index loads the patient report after the diet module; calculated Cole
+    // does not imply that this separate report API has finished loading.
+    await page.waitForFunction(() => typeof window.patientReportZbierzFaktyNaglowka === 'function');
     const faktyCole = () => page.evaluate(() => {
       const f = window.patientReportZbierzFaktyNaglowka({ cards: [], historyCount: 0 });
       return f && f.cole ? f.cole : null;

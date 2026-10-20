@@ -236,6 +236,50 @@
     return { status: 'ready', profile: profile, value: value, referenceValue: referenceValue };
   }
 
-  return { version: '1.3.0', evaluate: evaluate, selectProfile: selected,
+  function evaluateResultOnly(data, context) {
+    context = context || {};
+    // This path is an explicitly scoped display permission, never a fallback
+    // for a source profile rejected by its age, method or population gates.
+    var choice = selected(data, context);
+    if (choice.status === 'ready') return unavailable('reference-available');
+    if (choice.reason !== 'unsupported-age') return choice;
+    var source = sourceData(data);
+    // Permissions are kept outside the untouched numeric reference bundle.
+    var policies = data && data.resultOnlyPolicies;
+    var analyte = analyteId(context.analyte);
+    var candidates = Array.isArray(policies) ? policies.filter(function (policy) {
+      return policy && policy.kind === 'educational-result-only' && policy.ordinaryOnly === true &&
+        policy.analyte === analyte && policy.sex === context.sex && inDomain(policy, context.ageYears);
+    }) : [];
+    if (!candidates.length) return unavailable('unsupported-age');
+    if (candidates.length !== 1) return unavailable('ambiguous-policy');
+    var policy = candidates[0];
+    var upper = context.ageUpperYears == null ? context.ageYears : context.ageUpperYears;
+    var exclusiveEnd = context.ageUpperInclusive === false && upper > context.ageYears;
+    if (!inDomain(policy, upper) && !(exclusiveEnd && upper === policy.maxAge)) {
+      return unavailable('ambiguous-age');
+    }
+    var cyclePhase = typeof context.cyclePhase === 'string' ? context.cyclePhase.trim().toLowerCase() : '';
+    if (cyclePhase && Array.isArray(policy.excludedCyclePhases) &&
+        policy.excludedCyclePhases.indexOf(cyclePhase) >= 0) return unavailable('incompatible-reproductive-context');
+    var specimen = typeof context.specimen === 'string' ? context.specimen.trim().toLowerCase() : '';
+    if (specimen && specimen !== 'unknown' && (!Array.isArray(policy.compatibleSpecimenIds) ||
+        policy.compatibleSpecimenIds.indexOf(specimen) < 0)) return unavailable('incompatible-specimen');
+    var measurement = context.measurement;
+    if (!measurement || !finite(measurement.value) || measurement.value < 0) return unavailable('invalid-value');
+    if (measurement.operator != null && measurement.operator !== '' && measurement.operator !== '=') {
+      return unavailable('censored-result');
+    }
+    var units = source.unitConversions && source.unitConversions[analyte];
+    var factor = units && units.unit === policy.unit && typeof measurement.unit === 'string' &&
+      units.factors && Object.prototype.hasOwnProperty.call(units.factors, measurement.unit) ?
+      units.factors[measurement.unit] : null;
+    if (!finite(factor) || factor <= 0) return unavailable('unsupported-unit');
+    var value = measurement.value * factor;
+    if (!finite(value)) return unavailable('invalid-value');
+    return { status: 'result-only', policy: policy, value: value, unit: policy.unit };
+  }
+
+  return { version: '1.4.0', evaluate: evaluate, evaluateResultOnly: evaluateResultOnly, selectProfile: selected,
     referenceAt: referenceAt, sampleProfile: sampleProfile };
 });
