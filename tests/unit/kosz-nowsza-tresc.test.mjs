@@ -337,7 +337,8 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     }
   });
 
-  for (const kolejnosc of ['K←P,K←C', 'K←C,K←P', 'C←P,C←K']) {
+  // P←C,P←K: na 27055774 zapis znikał i z karty, i z kosza (nagrobek bez treści) — uwaga przeglądu #733.
+  for (const kolejnosc of ['K←P,K←C', 'K←C,K←P', 'C←P,C←K', 'P←C,P←K']) {
     it(`gwiazdka na P, kosz na K, retencja na C (${kolejnosc}): zapis nie wraca do karty, w koszu obu przypięty`, async () => {
       sztucznyZegar();
       const { P, K, C, pid, sid } = await trzyUrzadzenia();
@@ -390,6 +391,31 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
         }
       });
     }
+  }
+
+  // Uwaga weryfikacji P-KOSZ-RETENCJA-PO-KOSZU: po 30 dniach wpis kosza traci treść; scalenie dwóch takich samych wpisów
+  // nie może go zamienić w sam nagrobek retencji — inaczej wizyta przypięta PRZED koszem na urządzeniu offline wraca.
+  for (const poWygasnieciu of ['K↔C po wygaśnięciu treści', 'bez synchronizacji po wygaśnięciu']) {
+    it(`gwiazdka na P przed koszem na K, retencja na C, P offline 31 dni (${poWygasnieciu}): wizyta zostaje usunięta`, async () => {
+      sztucznyZegar();
+      const { P, K, C, pid, sid } = await trzyUrzadzenia();
+      przesunZegar(60e3);
+      await P.setSnapshotPinned(pid, sid, true); // P dalej się nie synchronizuje
+      przesunZegar(60e3);
+      await K.moveSnapshotToTrash(pid, sid, { odepnij: true });
+      przesunZegar(60e3);
+      expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+      for (let i = 0; i < 2; i += 1) { await sync(C, K); await sync(K, C); }
+      przesunZegar(31 * 864e5);
+      if (poWygasnieciu.startsWith('K↔C')) for (let i = 0; i < 2; i += 1) { await sync(C, K); await sync(K, C); }
+      await sync(K, P); await sync(P, K);
+      await rundy(P, K, C);
+      for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+        expect(await wersja(v, pid, sid), `${nazwa}: usunięta wizyta nie wraca`).toBeNull();
+      }
+      const n = ((await K.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid);
+      expect(n.powod, 'wpis kosza, nie sam nagrobek retencji').toBeUndefined();
+    });
   }
 
   it('wpis kosza scalony z późniejszą retencją pokazuje chwilę kosza, nie retencji, i wygasa od niej', async () => {

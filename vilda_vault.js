@@ -492,8 +492,8 @@ function Bkz_wygrywa(e, zmiana, przypieta) {
 // tylko wtedy, gdy nie opisuje starszej wersji niz pozniejszy — inaczej (wersje przywrocono i zmieniono, a potem
 // usunieto albo przycieto ponownie) jest nieaktualna i „Przywroc” wskrzesilby ja. Nagrobek z trescia jest wpisem
 // kosza, nawet gdy pozniejsze usuniecie przyszlo z retencji. Chwile: pozniejsze usuniecie przez uzytkownika i pozniejsze
-// przyciecie; przyciecie wczesniejsze niz kosz nic juz nie zmienia. Bez tresci i z przycieciem pozniejszym niz kosz
-// zostaje sam nagrobek retencji, jak dotad.
+// przyciecie; przyciecie wczesniejsze niz kosz nic juz nie zmienia. Gdy pozniejsze przyciecie opisuje nowsza wersje
+// niz nagrobek z chwila kosza i tresci nie ma, zostaje sam nagrobek retencji, jak dotad.
 function Bkz_dolacz(mapa, e) {
   const byl = mapa.get(e.snapshotId);
   if (!byl) { mapa.set(e.snapshotId, e); return; }
@@ -505,8 +505,13 @@ function Bkz_dolacz(mapa, e) {
   else if (starszy.payloadCipher && !Bkz_nowszaWersja(nowszy, starszy)) zrodlo = starszy;
   const kosz = Bkz_pozniejsza(Bkz_chwilaKosza(nowszy), Bkz_chwilaKosza(starszy));
   const ret = Bkz_pozniejsza(Bkz_chwilaRetencji(nowszy), Bkz_chwilaRetencji(starszy));
+  // Kosz przestaje sie liczyc tylko wtedy, gdy pozniejsze przyciecie opisuje nowsza wersje niz nagrobek z chwila kosza
+  // (zapis przywrocono, zmieniono i przycieto). Wpis kosza po wygasnieciu tresci (30 dni) zostaje wpisem kosza —
+  // laczenie dwoch takich samych wpisow nic nie zmienia.
+  const zKoszem = Bkz_chwilaKosza(nowszy) === kosz ? nowszy : starszy;
+  const zRetencja = Bkz_chwilaRetencji(nowszy) === ret ? nowszy : starszy;
   let wynik;
-  if (zrodlo || (kosz && (!ret || kosz >= ret))) {
+  if (zrodlo || (kosz && (!ret || kosz >= ret || !Bkz_nowszaWersja(zRetencja, zKoszem)))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
     wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Object.assign({}, nowszy);
     delete wynik.powod;
