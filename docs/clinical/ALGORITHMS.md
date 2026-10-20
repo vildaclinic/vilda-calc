@@ -3047,6 +3047,81 @@ Regresje rzeczywistych funkcji i interfejsu:
 [audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json).
 Akceptacja rekonstrukcji nie oznacza walidacji klinicznej.
 
+### HORMONE-FEMALE-LH-RESULT-ONLY — punkt bez mediany w (16,18), 2026-10-20
+
+**Decyzja i wpływ kliniczny:** po porównaniu Zhao 2025 z europejskimi
+badaniami Assens 2020 i Wiedemann 1993 właściciel zaakceptował pokazanie
+samego wyniku LH dziewcząt ściśle po 16. i przed 18. rokiem życia.
+Nie wybrano jednej domyślnej mediany i nie utworzono nowego profilu
+populacyjnego, normy ani werdyktu. Zmiana usuwa brak rzeczywistego punktu
+w tej grupie, zachowując jawną lukę źródłową. Dotychczasowe 82 profile,
+liczby, normy laboratoryjne, ostrzeżenia i historyczne oceny pozostają
+bez zmian. Kliniczna akceptacja dotyczy tego sposobu prezentacji;
+nie nadaje źródłom ani geometrii statusu walidacji klinicznej.
+
+**Uzasadnienie źródłowe:** [Zhao 2025](https://doi.org/10.21037/tp-24-399),
+suplement S2, podaje medianę 7,14 mIU/mL dla całej chińskiej grupy
+>15–18 lat, N=112, surowica Mindray CL-6000i, bez podziału według fazy
+cyklu. [Assens 2020](https://doi.org/10.1210/clinem/dgaa355),
+[tabela 2](https://academic.oup.com/view-large/324219374), dotyczy duńskiej
+kohorty 12–18 lat, z medianą wieku 16,1 roku: regularne cykle, N oznaczeń
+LH=122, mediana 3,0 U/L; wszystkie badane po menarche bez antykoncepcji
+hormonalnej, N=223, mediana 3,3 U/L. Delfia; próbowano pobierać w dniach
+2–5, lecz nie wszystkie próbki spełniły ten warunek. Nie jest to osobna
+mediana 16–18 lat ani grupa z potwierdzoną owulacją u każdej uczestniczki.
+[Wiedemann 1993](https://doi.org/10.1515/cclm.1993.31.6.395), tabela 4,
+podaje 3,43 U/L dla dziewcząt 14–18 lat, N=74; Abbott IMx MEIA,
+WHO 68/40, u dojrzałych dziewcząt pierwszych 10 dni fazy folikularnej.
+To różne populacje, zakresy wieku, metody i warunki pobrania. Żadna z tych
+liczb nie staje się nową medianą aplikacji; nie uśredniamy ich i nie
+przedłużamy Madsen do 18. Szczegóły dostępu i ograniczeń:
+[zapis decyzji](hormone-lifespan/evidence/female-lh-result-only-audit-2026-10-20.json).
+
+**Kontrakt:** [odrębna polityka](hormone-lifespan/female-lh-result-only-policy.json)
+trafia do `runtime.resultOnlyPolicies`, poza `patientPointData`.
+`evaluate()`/`selectProfile()` zachowują dotychczasowe odpowiedzi.
+`evaluateResultOnly(data, context)` dopuszcza wyłącznie jawny zakres
+polityki po zwykłym `unsupported-age`; zwraca osobny `status: 'result-only'`
+bez profilu, wartości odniesienia i statystyki. Nie jest fallbackiem
+po odrzuceniu dostępnego źródła z powodu metody lub materiału.
+Cały możliwy wiek musi pasować do `(16,18)`; `[17,18)` pasuje,
+`[17,18]` i „16 lat 0 miesięcy” nie. Dokładne F16 zachowuje Madsen
+5,64856591188875 IU/L. Dokładne F18 pozostaje poza nową polityką.
+
+**Prezentacja:** tylko zwykłe „Całe życie”, na niezmienionej osi LH/FSH
+0–70 IU/L z `log1p(C / 0.5) / log1p(70 / 0.5)`. Czerwony punkt pokazuje
+wynik, bez jasnego znacznika i łącznika; ponad osią strzałka z prawdziwą
+liczbą. Krótki podpis podaje brak zweryfikowanej mediany i znaczenie fazy
+cyklu/metody, a rozwijane źródła wyjaśniają wybór. Bez nowego formularza,
+obowiązkowego Th lub pytania o cykl. Pokwitanie nadal obejmuje 6–16 lat
+i odsyła do „Całego życia”; minipuberty, wstawka cyklu oraz porównanie
+płci zachowują własne kontrakty i nie otrzymują nowego punktu.
+
+**Zabezpieczenia i historia:** wyłącznie dokładny skończony nieujemny wynik
+w obsługiwanej jednostce; zero nie jest imputacją, a `<…`/`>…` nie tworzą
+punktu. Zachowujemy znane przeciwwskazania, ciążę/menopauzę,
+leczenie hormonalne/GnRHa, stymulację, materiał niesurowiczy, ochronę
+tożsamości i reset po zmianie pacjentki/płci. Nieznane fakty nie stają się
+potwierdzeniem prawidłowego kontekstu. Sam wynik nie wymaga zgodności
+metody z publikacją, ponieważ nie jest z nią porównywany; nie harmonizujemy
+oznaczeń. Nie zmieniamy adaptera zapisu, nie tworzymy snapshotu LH;
+edukacyjny snapshot odniesienia pozostaje AMH-only. Dostępna niezależna
+interpretacja laboratoryjna i odczyt dawnych ocen pozostają zachowane.
+Adapter wykresu przekazuje kanoniczny `reproductiveContext` LH, aby znana
+menopauza rzeczywiście wyłączała nowy punkt. Jawny kontekst należący do
+dawnej próbki pozostaje jej własnym faktem; nie pożyczamy dla niej dzisiejszej
+fazy. Nie zmienia to kwalifikacji istniejących median LH ani adaptera FSH.
+
+**Syntetyczne wejście → wynik:** F17/LH 2 IU/L lub 2 mIU/mL → sam punkt 2,
+bez mediany; F17/0 → zero; F17/1000 → strzałka ponad 70 i etykieta 1000,
+ta sama geometria. F16 dokładnie → dotychczasowy Madsen; F18,
+F16 lat 0 miesięcy, niepewny wiek obejmujący 18 włącznie, nierówność,
+nieobsługiwana jednostka lub znane przeciwwskazanie → brak nowego punktu.
+Pełny kontrakt: [PATIENT_POINT](hormone-lifespan/PATIENT_POINT.md#lh-dziewcząt--sam-wynik-bez-mediany-20-października-2026).
+Testy produkcyjnej funkcji, UI desktop/mobile oraz instalacji/aktualizacji
+i zimnego restartu PWA offline są częścią tej zmiany; wynik kontroli
+lokalnych i wszystkich kontroli GitHub dla końcowego SHA podaje opis PR.
+
 ### HORMONE-FSH-CALIPER-REFERENCE — odniesienie wieku od 16 lat, 2026-10-18
 
 **Problem i decyzja:** po analizie czterech oryginalnych plików Wilson 2023

@@ -199,6 +199,13 @@ test('FSH boundaries preserve separate male/female LH routing and the independen
       if (sex === 'M' && age === 17) {
         await expect(lhPoint).toHaveAttribute('data-profile', 'wilson2023-male-lh-age-over16-under18');
         expect(Number(await lhPoint.getAttribute('data-reference-value'))).toBeCloseTo(2.603196549069626, 8);
+      } else if (sex === 'F' && age === 17) {
+        await expect(lhPoint).toHaveCount(1);
+        await expect(lhPoint).toHaveAttribute('data-result-only', 'true');
+        for (const attribute of ['data-profile', 'data-reference-value', 'data-reference-statistic', 'data-median']) {
+          expect(await lhPoint.getAttribute(attribute)).toBeNull();
+        }
+        await expect(lhPoint.locator('[data-median-point], [data-dot-label="median"]')).toHaveCount(0);
       } else await expect(lhPoint).toHaveCount(0);
       await choose(page);
       await expectPoint(page, sex, age);

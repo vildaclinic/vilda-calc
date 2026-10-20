@@ -37371,6 +37371,58 @@ const patientPointData = {
     }
   }
 };
+const resultOnlyPolicies = [
+  {
+    "version": "2026-10-20.1",
+    "id": "female-lh-result-only-over16-under18",
+    "kind": "educational-result-only",
+    "ordinaryOnly": true,
+    "analyte": "lh",
+    "sex": "female",
+    "unit": "IU/L",
+    "minAge": 16,
+    "minAgeExclusive": true,
+    "maxAge": 18,
+    "maxAgeExclusive": true,
+    "compatibleSpecimenIds": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3",
+      "postmenopause",
+      "postmenopausal",
+      "menopause"
+    ],
+    "selectionPolicy": "Wyłącznie rzeczywisty wynik LH dziewcząt w otwartym (16,18), na stałej osi stężeń zwykłego widoku całego życia. To nie jest profil odniesienia, mediana, norma ani interpretacja laboratoryjna. Nie zastępuje dostępnego profilu i nie działa jako fallback po jego niezgodności.",
+    "agePolicy": "Cały możliwy przedział wieku musi mieścić się w (16,18). Dokładne 16 zachowuje Madsen; 16 lat 0 miesięcy obejmuje granicę i nie kwalifikuje. Przedział [17,18) kwalifikuje, ale [17,18] nie. Bez wybierania środka wieku, przesuwania granic i ekstrapolacji.",
+    "assayPolicy": "Nie porównujemy metody próbki z metodą żadnej publikacji i nie potwierdzamy zgodności oznaczeń. Znana metoda nie blokuje samego wyniku w zgodnej jednostce; nie tworzy to zgodności z medianą Madsen, Zhao ani innego źródła. Nie obchodzimy odrzucenia istniejącego profilu z powodu metody. Znany materiał inny niż surowica blokuje tę zachowawczą politykę; nieznany pozostaje nieznany.",
+    "contextPolicy": "Zachowaj bramki bieżącego kontekstu pacjentki, tożsamości, znanej ciąży/menopauzy, leczenia hormonalnego/GnRHa i stymulacji. Brak informacji nie potwierdza ich nieobecności. Nie dodawaj pytań i nie przypisuj dzisiejszego kontekstu historycznej próbce.",
+    "measurementPolicy": "Wyłącznie dokładny, skończony, nieujemny wynik w obsługiwanej jednostce. Zero pozostaje zerem. Nierówność nie tworzy dokładnego punktu; bez imputacji LOD/LOQ, mediany lub wysokości ilustracji. Ponad stałą skalą pokaż strzałkę z rzeczywistą liczbą.",
+    "patientNote": "Brak zweryfikowanej mediany dla tego wieku. Interpretacja zależy m.in. od fazy cyklu i metody oznaczenia.",
+    "discussion": [
+      "Badania Zhao 2025, Assens 2020 i Wiedemann 1993 dotyczą różnych grup wieku, metod i warunków pobrania. Nie wybrano jednej mediany ani nie uśredniono tych badań.",
+      "Czerwony punkt pokazuje wyłącznie wpisany wynik, bez jasnego znacznika odniesienia; poglądowa linia nie zastępuje brakującej mediany. Odrębna ocena laboratoryjna pozostaje bez zmian."
+    ],
+    "sources": [
+      {
+        "label": "Zhao 2025 · LH nastolatek",
+        "url": "https://doi.org/10.21037/tp-24-399"
+      },
+      {
+        "label": "Assens 2020 · cykle i hormony u nastolatek",
+        "url": "https://doi.org/10.1210/clinem/dgaa355"
+      },
+      {
+        "label": "Wiedemann 1993 · LH dzieci i młodzieży",
+        "url": "https://doi.org/10.1515/cclm.1993.31.6.395"
+      }
+    ]
+  }
+];
 const inhibinEvidence = {
   "version": "2026-10-10.1",
   "purpose": "educational-inhibin-b-group-observations",
@@ -41059,6 +41111,7 @@ return {
   referenceData: referenceData,
   lifespanData: lifespanData,
   patientPointData: patientPointData,
+  resultOnlyPolicies: resultOnlyPolicies,
   inhibinEvidence: inhibinEvidence,
   inhibinDisplayPolicy: inhibinDisplayPolicy,
   inhibinComparisonPolicy: inhibinComparisonPolicy,

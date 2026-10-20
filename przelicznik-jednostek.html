@@ -480,11 +480,11 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=31"></script>
-  <script src="vilda_hormone_lifespan_reference.js?v=6"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=32"></script>
+  <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=14"></script>
-  <script src="vilda_hormone_lifespan.js?v=38"></script>
+  <script src="vilda_hormone_lifespan.js?v=39"></script>
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
@@ -925,11 +925,16 @@
       return pregnancy(current) || knownCurrent && (pregnancy(known) || hormonal(known.treatment));
     }
     function lifespanCyclePhase(substance, input, patient) {
-      if (!substance || substance.id !== 'inhibin_b') return patient && patient.cycle_phase || null;
-      // The current inhibin form names this reproductiveContext; historical
-      // sample context must not acquire a current reproductive state.
-      if (!input || input.sex !== 'F' || input.contextBasis !== 'current-patient' || input.sampleDateISO) return null;
+      if (!substance || !['inhibin_b', 'lh'].includes(substance.id)) return patient && patient.cycle_phase || null;
+      // Current inhibin/LH evaluations name this reproductiveContext;
+      // historical samples must not acquire a current reproductive state.
+      if (!input || input.sex !== 'F') return null;
       var phase = typeof input.reproductiveContext === 'string' ? input.reproductiveContext.trim().toLowerCase() : '';
+      if (substance.id === 'lh' && (input.contextBasis === 'sample' || input.sampleDateISO)) {
+        // Preserve this sample's explicit fact, never a current-patient fallback.
+        return phase && phase !== 'unknown' ? phase : null;
+      }
+      if (input.contextBasis !== 'current-patient' || input.sampleDateISO) return null;
       if (phase && phase !== 'unknown') return phase;
       // Reuse an already known local context (for example pregnancy selected
       // for estradiol). Unknown is not confirmation of its absence. Identity

@@ -778,7 +778,7 @@ describe('Female LH/FSH current known exclusions — educational point only', ()
         expect(result.input.reproductiveContext).toBe('unknown');
         expect(result.input.pregnancy).toBeUndefined();
         app.update({ id }, result);
-        expect(app.last()).toMatchObject({ contraindicated: true, cyclePhase: null,
+        expect(app.last()).toMatchObject({ contraindicated: true, cyclePhase: id === 'lh' ? cyclePhase : null,
           measurement: { value: 3, unit: 'IU/L', operator: '=' } });
         expect(lifespanReference.evaluate(lifespanData, app.last()))
           .toEqual({ status: 'unavailable', reason: 'contraindicated' });
