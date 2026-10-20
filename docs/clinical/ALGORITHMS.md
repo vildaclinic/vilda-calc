@@ -15211,6 +15211,61 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wizyta przypięta po koszu przeżywa retencję na trzecim urządzeniu; nagrobek trzyma chwilę kosza i chwilę przycięcia osobno (P-KOSZ-RETENCJA-PO-KOSZU, SW 1.1.326, `vilda_vault.js` 219, 2026-10-20)
+
+**Zmiana kliniczna: tak** — poprawka regresji z P-ZMIANA-W-KARCIE-2 (niżej) w regule scalania kosza, w zakresie
+decyzji właściciela D-6 B z 2026-10-20 i niezmiennych reguł P-KOSZ-ZAPISOW („wersja zmieniona po usunięciu zostaje”)
+oraz P-RETENCJA-NAGROBKI („retencja nie usuwa wersji przypiętej”). Wzory, progi i jednostki bez zmian.
+
+**Co było** (prawdziwy `vilda_vault.js` 218 na `cd3a2876`, sejfy w pamięci, sztuczny zegar, dane fikcyjne). „Testowy
+Jan” ma 12 wersji na komputerze (K), iPhonie (P) i tablecie (C). K przenosi wersję s do kosza (t1). P, który o koszu
+nie wie, przypina s (t2 > t1). C, który dawno się nie synchronizował, przycina s retencją (t3 > t2), np. sam po zapisie
+nowej wizyty. Po scaleniu kosza K z retencją C wpis kosza brał chwilę retencji (t3) i tracił jej powód, więc
+przypięcie (t2 < t3) przegrywało z nim jak ze zwykłym koszem: przypięta wizyta znikała z karty na P, K i C w 5 z 8
+kolejności pierwszych scaleń i lądowała w koszu. Dla tej samej wersji (bez poprawki przed koszem) tak samo było już
+przed P-ZMIANA-W-KARCIE-2; P-ZMIANA-W-KARCIE-2 rozszerzyła to na różne wersje. Wpis kosza pokazywał też chwilę
+retencji zamiast chwili kosza i wygasał 30 dni od niej.
+
+**Reguła po zmianie.**
+- Nagrobek wersji niesie dwie chwile usunięcia: usunięcie przez użytkownika (kosz, `deletedAtISO`) i przycięcie
+  retencją (`deletedAtISO` przy `powod: 'retencja'`, a przy wpisie kosza nowe pole `przycietoISO`). Kosz wygrywa
+  z każdą zmianą wersji nie późniejszą niż on. Przycięcie wygrywa ze zmianą nie późniejszą niż ono, ale tylko gdy
+  wersja nie jest przypięta (`Bkz_wygrywa`; `Bkz_pomin` i `Bkz_scalKoniec`).
+- Łączenie nagrobków (`Bkz_dolacz`): późniejsza chwila kosza i późniejsza chwila przycięcia z obu. Wpis kosza zostaje
+  wpisem kosza z własną chwilą, a przycięcie późniejsze niż kosz idzie do `przycietoISO`; przycięcie wcześniejsze niż
+  kosz nic już nie zmienia. Treść jak dotąd: nowsza z dwóch wersji, a treść starszego nagrobka tylko wtedy, gdy nie
+  opisuje starszej wersji niż późniejszy. Bez treści i z przycięciem późniejszym niż kosz zostaje sam nagrobek
+  retencji, jak dotąd. Chwile łączą się niezależnie od kolejności nagrobków (późniejsza z każdego rodzaju).
+- Kosz pokazuje chwilę kosza i wygasa 30 dni od niej; sam nagrobek żyje 365 dni od późniejszej z dwóch chwil.
+  Porównania „nagrobek nie późniejszy niż ten, który przegrał” (P-SCALANIE-BLOKADA, P-KOSZ-SCALANIE-PRZYWROC,
+  P-KOSZ-PRZYWROC-NOWSZA) liczą późniejszą z dwóch chwil (`Bkz_ostatnie`).
+- Format: nowe opcjonalne pole `przycietoISO` w nagrobku wersji w ładunku synchronizacji. Starsza aplikacja go nie zna
+  i traktuje wpis jak kosz z chwilą kosza: wizyta przypięta albo zmieniona po koszu zostaje u niej w karcie, a
+  przycięcie nadrobi następna retencja.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik).** `tests/unit/kosz-nowsza-tresc.test.mjs`:
+- gwiazdka na P po koszu na K, retencja na C; warianty: ta sama wersja, poprawka na P przed koszem (K ją zna), poprawka
+  na K przed koszem; 8 kolejności pierwszych scaleń, potem 3 rundy pełnej wymiany → na P, K i C wizyta w karcie,
+  przypięta, bez wpisu kosza (24; na `cd3a2876` czerwone 15: po 5 kolejności w każdym wariancie);
+- poprawka na P, kosz na K, retencja na C → w koszu trzech urządzeń poprawka z chwilą kosza (nie retencji), ważna
+  30 dni od kosza, w nagrobku `przycietoISO` późniejsze niż `deletedAtISO`, bez `powod` (czerwony na `cd3a2876`);
+- dotychczasowe przypadki P-KOSZ-NOWSZA-TRESC i P-ZMIANA-W-KARCIE-2 (gwiazdka i poprawka przed koszem, retencja na
+  trzecim urządzeniu, zapis przywrócony, poprawiony i przycięty) — bez zmian, zielone;
+- strażnik źródła `Bkz_dolacz`.
+
+**Wpływ kliniczny.** Wizyta oznaczona gwiazdką po koszu na innym urządzeniu zostaje w historii pacjenta na wszystkich
+urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokazuje chwilę, w której użytkownik usunął zapis.
+
+**Ograniczenia.**
+- Druga retencja starszej wersji na innym urządzeniu po poprawce zrobionej po koszu: gdy urządzenie scali kosz
+  z późniejszą retencją starszej wersji, zanim zobaczy retencję wersji poprawionej, kosz może trzymać treść sprzed tej
+  poprawki (tylko w koszu, nie w karcie; ta klasa była już dla tej samej wersji). Pełna łączność wymaga pamiętania
+  w nagrobku najwyższej przyciętej wersji.
+- Flota mieszana: opis wyżej (pole `przycietoISO`).
+
+**Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 218 → 219 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (163 → 164) i
+`vilda_session_bridge.js` (87 → 88); SW 1.1.325 → **1.1.326**.
+
 ## Kosz przeżywa retencję starszej wersji na trzecim urządzeniu; nowa wizyta nie obniża chwili zapisu karty (P-ZMIANA-W-KARCIE-2, SW 1.1.325, `vilda_vault.js` 218, 2026-10-20)
 
 **Zmiana kliniczna: tak** — poprawki reguł z wpisu P-ZMIANA-W-KARCIE / P-KOSZ-NOWSZA-TRESC (niżej) po przeglądzie
@@ -15236,7 +15291,8 @@ treść, ten sam nagrobek w każdej kolejności”) z 2026-10-20. Wzory, progi, 
 **Reguła po zmianie.**
 - `Bkz_dolacz`: gdy starszy nagrobek tej wersji niesie treść nowszej wersji zapisu niż późniejszy, kosz trzyma tę
   treść (z jej `rev`, `updatedAtISO`, `savedAtISO`), a chwila usunięcia zostaje z późniejszego — także gdy późniejszy
-  nie ma treści (retencja). Łączenie nie zależy od tego, który nagrobek jest lokalny. Treść starsza niż wersja
+  nie ma treści (retencja). *(Aktualizacja 2026-10-20, P-KOSZ-RETENCJA-PO-KOSZU: wpis kosza trzyma własną chwilę, a późniejsza
+  retencja idzie do osobnego pola `przycietoISO` — inaczej wizyta przypięta po koszu przegrywała z nim.)* Łączenie nie zależy od tego, który nagrobek jest lokalny. Treść starsza niż wersja
   późniejszego nagrobka (zapis przywrócony, zmieniony i ponownie przycięty) odpada jak dotąd.
 - `savePatient`: `lastSavedAtISO` = późniejsza z dwóch (dotychczasowa, chwila zapisu). Wersja dostaje chwilę zapisu
   z lokalnego zegara jak dotąd, więc kolejność wersji w historii bez zmian. Dotyczy też „Scal pacjentów” (zapis karty

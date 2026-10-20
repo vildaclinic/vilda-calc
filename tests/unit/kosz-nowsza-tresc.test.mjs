@@ -356,6 +356,64 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
     });
   }
 
+  // P-KOSZ-RETENCJA-PO-KOSZU (uwaga przeglądu #733). Gwiazdka postawiona na P PO koszu na K (P o koszu nie wie), a C
+  // przycina tę wersję retencją jeszcze później. Przypięcie jest późniejsze niż kosz, więc wygrywa z nim, a retencja
+  // nigdy nie usuwa wersji przypiętej. Na cd3a2876 scalony nagrobek brał chwilę retencji i tracił jej powód: przypięta
+  // wizyta znikała z karty na P, K i C (w 5 z 8 kolejności), a lądowała w koszu.
+  const KOLEJNOSCI_8 = ['K←C,P←K', 'P←K,K←C', 'K←P,K←C', 'K←C,K←P', 'C←K,P←C', 'P←C,P←K', 'C←P,C←K', 'C←K,C←P'];
+  const WARIANTY_GWIAZDKI = {
+    'ta sama wersja': async () => {},
+    'poprawka na P przed koszem': async ({ P, K, pid, sid }) => { await poprawMase(P, pid, sid, 99); await sync(P, K); },
+    'poprawka na K przed koszem': async ({ K, pid, sid }) => { await poprawMase(K, pid, sid, 99); },
+  };
+  for (const [wariant, przed] of Object.entries(WARIANTY_GWIAZDKI)) {
+    for (const kolejnosc of KOLEJNOSCI_8) {
+      it(`gwiazdka na P PO koszu na K, retencja na C (${wariant}; ${kolejnosc}): wizyta zostaje przypięta w karcie na trzech`, async () => {
+        sztucznyZegar();
+        const u = await trzyUrzadzenia();
+        const { P, K, C, pid, sid } = u;
+        przesunZegar(60e3);
+        await przed(u);
+        przesunZegar(60e3);
+        await K.moveSnapshotToTrash(pid, sid);
+        przesunZegar(60e3);
+        await P.setSnapshotPinned(pid, sid, true); // P nie zna kosza
+        przesunZegar(60e3);
+        expect((await C.pruneSnapshotsForPatient(pid, { recentHours: 0 })).prunedIds).toContain(sid);
+        await pierwszeScalenia({ P, K, C }, kolejnosc);
+        await rundy(P, K, C);
+        for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+          const w = await wersja(v, pid, sid);
+          expect(w, `${nazwa}: wizyta w karcie`).toBeTruthy();
+          expect(w.pinned, `${nazwa}: przypięta`).toBe(true);
+          expect(await wKoszu(v, sid), `${nazwa}: nie w koszu`).toBeNull();
+        }
+      });
+    }
+  }
+
+  it('wpis kosza scalony z późniejszą retencją pokazuje chwilę kosza, nie retencji, i wygasa od niej', async () => {
+    sztucznyZegar();
+    const { P, K, C, pid, sid } = await trzyUrzadzenia();
+    przesunZegar(60e3);
+    await poprawMase(P, pid, sid, 99);
+    przesunZegar(60e3);
+    const r = await K.moveSnapshotToTrash(pid, sid);
+    przesunZegar(60e3);
+    await C.pruneSnapshotsForPatient(pid, { recentHours: 0 });
+    await pierwszeScalenia({ P, K, C }, 'K←P,K←C');
+    await rundy(P, K, C);
+    for (const [nazwa, v] of [['P', P], ['K', K], ['C', C]]) {
+      const k = await wKoszu(v, sid);
+      expect(k.payload.user.weight, nazwa).toBe(99);
+      expect(k.deletedAtISO, `${nazwa}: chwila kosza`).toBe(r.deletedAtISO);
+      expect(k.expiresAtISO, `${nazwa}: 30 dni od kosza`).toBe(new Date(Date.parse(r.deletedAtISO) + 30 * 864e5).toISOString());
+    }
+    const n = ((await K.exportSyncPayload()).snapshotTombstones || []).find((x) => x.snapshotId === sid);
+    expect(n.przycietoISO > n.deletedAtISO, 'chwila retencji osobno').toBe(true);
+    expect(n.powod).toBeUndefined();
+  });
+
   it('kontrola: retencja wersji przywróconej i zmienionej po koszu zdejmuje starą treść kosza jak dotąd', async () => {
     sztucznyZegar();
     const { P, K, C, pid, sid } = await trzyUrzadzenia();
@@ -382,7 +440,8 @@ describe('strażnik źródła', () => {
   it('jedna reguła „nowsza wersja” w łączeniu nagrobków, w treści z ładunku, w pętli wersji i na końcu scalania', () => {
     expect(src).toContain('function Bkz_nowszaWersja(x, y) {');
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
-    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('} else if (starszy.payloadCipher && Bkz_nowszaWersja(starszy, nowszy)) {');
+    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('zrodlo = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;');
+    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('else if (starszy.payloadCipher && !Bkz_nowszaWersja(nowszy, starszy)) zrodlo = starszy;');
     expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('!Bkz_nowszaWersja(e, lokalny)');
     expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bkz_nowszaWersja(zapis, e)');
     expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bkz_nowszaWersja(lokalna, e)');

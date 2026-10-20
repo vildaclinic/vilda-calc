@@ -421,9 +421,15 @@ function Bkz_czysc(lista, terazMs) {
   const wynik = [];
   (Array.isArray(lista) ? lista : []).forEach(function (e) {
     if (!e || typeof e.snapshotId !== 'string' || !e.snapshotId || typeof e.patientId !== 'string'
-      || typeof e.deletedAtISO !== 'string' || e.deletedAtISO < granicaNagrobka) {
+      || typeof e.deletedAtISO !== 'string' || Bkz_ostatnie(e) < granicaNagrobka) {
       zmiana = true;
       return;
+    }
+    if ('przycietoISO' in e && !(typeof e.przycietoISO === 'string' && e.przycietoISO > e.deletedAtISO
+      && e.powod !== 'retencja')) {
+      e = Object.assign({}, e);
+      delete e.przycietoISO;
+      zmiana = true;
     }
     if (e.deletedAtISO < granicaKosza && (e.payloadCipher || e.payload)) {
       const bezTresci = Object.assign({}, e);
@@ -438,11 +444,6 @@ function Bkz_czysc(lista, terazMs) {
   return { lista: wynik, zmiana: zmiana };
 }
 
-// Nagrobki opisuja te sama wersje, gdy zgadza sie rewizja i chwila zmiany wersji w chwili usuniecia.
-function Bkz_taSamaWersja(x, y) {
-  return (typeof x.rev === 'number' ? x.rev : 0) === (typeof y.rev === 'number' ? y.rev : 0)
-    && (x.updatedAtISO || null) === (y.updatedAtISO || null);
-}
 // P-KOSZ-NOWSZA-TRESC (D-6 B): x opisuje nowsza wersje tego zapisu niz y — regula wersji tej samej karty
 // (Bsl_scalPacjenta): wyzsza rev, przy rownej pozniejsza chwila zmiany. Pelny remis: ta sama wersja (false).
 function Bkz_nowszaWersja(x, y) {
@@ -468,30 +469,55 @@ function Bkz_zTresci(e, s, szyfr) {
   return z;
 }
 
-// Dwa nagrobki tej samej wersji: pozniejsze usuniecie wygrywa, tresc kosza bierzemy z tego, ktory ja ma — ale tylko
-// wtedy, gdy oba opisuja te sama wersje. Inaczej (wersje przywrocono i zmieniono, a potem usunieto albo przycieto
-// ponownie) starsza tresc jest nieaktualna i „Przywroc” wskrzesilby ja. Nagrobek z trescia jest wpisem kosza, nawet
-// gdy pozniejsze usuniecie tej samej wersji przyszlo z retencji. Gdy starszy nagrobek niesie tresc nowszej wersji
-// zapisu niz pozniejszy (P-KOSZ-NOWSZA-TRESC), kosz trzyma te tresc, a chwila usuniecia zostaje z pozniejszego
-// nagrobka — takze gdy pozniejszy nie ma tresci (retencja starszej wersji na urzadzeniu, ktore nie znalo poprawki ani
-// przypiecia): inaczej wpis kosza znikal, a przypieta wersja wygrywala potem z samym nagrobkiem retencji.
+// P-KOSZ-RETENCJA-PO-KOSZU: nagrobek niesie dwie chwile usuniecia. Usuniecie przez uzytkownika (kosz) wygrywa z kazda
+// zmiana wersji nie pozniejsza niz ono; przyciecie (retencja) — tylko z wersja nieprzypieta. Wpis kosza, ktory po
+// scaleniu z pozniejsza retencja tej wersji zostal wpisem kosza, trzyma wlasna chwile (deletedAtISO) i chwile
+// przyciecia (przycietoISO) osobno: dotad bral chwile retencji i tracil jej powod, wiec wersja przypieta PO koszu na
+// innym urzadzeniu przegrywala z nim i znikala z karty (uwaga przegladu #733).
+function Bkz_chwilaKosza(e) { return e.powod === 'retencja' ? null : e.deletedAtISO; }
+function Bkz_chwilaRetencji(e) {
+  if (e.powod === 'retencja') return e.deletedAtISO;
+  return typeof e.przycietoISO === 'string' && e.przycietoISO ? e.przycietoISO : null;
+}
+function Bkz_ostatnie(e) { return Bkz_pozniejsza(e.deletedAtISO, e.przycietoISO); }
+// true = nagrobek wygrywa z wersja zmieniona w chwili zmiana (przypieta: czy przypieta).
+function Bkz_wygrywa(e, zmiana, przypieta) {
+  const kosz = Bkz_chwilaKosza(e);
+  if (kosz && kosz >= zmiana) return true;
+  const ret = Bkz_chwilaRetencji(e);
+  return !!ret && ret >= zmiana && !przypieta;
+}
+
+// Dwa nagrobki tej samej wersji. Tresc kosza: nowsza z dwoch tresci (P-KOSZ-NOWSZA-TRESC), a tresc starszego nagrobka
+// tylko wtedy, gdy nie opisuje starszej wersji niz pozniejszy — inaczej (wersje przywrocono i zmieniono, a potem
+// usunieto albo przycieto ponownie) jest nieaktualna i „Przywroc” wskrzesilby ja. Nagrobek z trescia jest wpisem
+// kosza, nawet gdy pozniejsze usuniecie przyszlo z retencji. Chwile: pozniejsze usuniecie przez uzytkownika i pozniejsze
+// przyciecie; przyciecie wczesniejsze niz kosz nic juz nie zmienia. Bez tresci i z przycieciem pozniejszym niz kosz
+// zostaje sam nagrobek retencji, jak dotad.
 function Bkz_dolacz(mapa, e) {
   const byl = mapa.get(e.snapshotId);
   if (!byl) { mapa.set(e.snapshotId, e); return; }
-  const nowszy = e.deletedAtISO > byl.deletedAtISO ? e : byl;
+  const nowszy = Bkz_ostatnie(e) > Bkz_ostatnie(byl) ? e : byl;
   const starszy = nowszy === e ? byl : e;
-  const wynik = Object.assign({}, nowszy);
-  if (!wynik.payloadCipher && starszy.payloadCipher && Bkz_taSamaWersja(nowszy, starszy)) {
-    wynik.payloadCipher = starszy.payloadCipher;
-    ['savedAtISO', 'rev', 'updatedAtISO', 'seq'].forEach(function (k) {
-      if (wynik[k] == null && starszy[k] != null) wynik[k] = starszy[k];
-    });
-  } else if (starszy.payloadCipher && Bkz_nowszaWersja(starszy, nowszy)) {
-    // P-KOSZ-NOWSZA-TRESC (D-6 B): w koszu nowsza z dwoch tresci, skadkolwiek przyszla.
-    mapa.set(e.snapshotId, Bkz_zTresci(wynik, starszy, starszy.payloadCipher));
-    return;
+  let zrodlo = null;
+  if (nowszy.payloadCipher && starszy.payloadCipher) zrodlo = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;
+  else if (nowszy.payloadCipher) zrodlo = nowszy;
+  else if (starszy.payloadCipher && !Bkz_nowszaWersja(nowszy, starszy)) zrodlo = starszy;
+  const kosz = Bkz_pozniejsza(Bkz_chwilaKosza(nowszy), Bkz_chwilaKosza(starszy));
+  const ret = Bkz_pozniejsza(Bkz_chwilaRetencji(nowszy), Bkz_chwilaRetencji(starszy));
+  let wynik;
+  if (zrodlo || (kosz && (!ret || kosz >= ret))) {
+    // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
+    wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Object.assign({}, nowszy);
+    delete wynik.powod;
+    delete wynik.przycietoISO;
+    wynik.deletedAtISO = kosz || ret;
+    if (kosz && ret && ret > kosz) wynik.przycietoISO = ret;
+  } else {
+    wynik = Object.assign({}, nowszy, { deletedAtISO: ret, powod: 'retencja' });
+    delete wynik.przycietoISO;
+    delete wynik.payloadCipher;
   }
-  if (wynik.payloadCipher) delete wynik.powod;
   mapa.set(e.snapshotId, wynik);
 }
 
@@ -518,7 +544,7 @@ async function Bkz_zmienListe(dodaj, usun, opcje) {
       // zdjeto w trakcie scalania („Przywroc”, import, scalanie w innej karcie, wygasniecie). Mapa scalania niesie
       // jego stara kopie — nie dokladamy jej. Pozniejsze usuniecie (z ladunku) zostaje.
       const start = naStarcie && naStarcie.get(e.snapshotId);
-      if (start && !mapa.has(e.snapshotId) && e.deletedAtISO <= start) return;
+      if (start && !mapa.has(e.snapshotId) && Bkz_ostatnie(e) <= start) return;
       Bkz_dolacz(mapa, e);
     });
     // Identyfikator — zdejmujemy nagrobek tej wersji. { snapshotId, doISO } (scalanie, P-SCALANIE-BLOKADA) — tylko
@@ -528,7 +554,7 @@ async function Bkz_zmienListe(dodaj, usun, opcje) {
       if (typeof u === 'string') { mapa.delete(u); return; }
       if (!u || !u.snapshotId) return;
       const byl = mapa.get(u.snapshotId);
-      if (byl && (!u.doISO || byl.deletedAtISO <= u.doISO)) mapa.delete(u.snapshotId);
+      if (byl && (!u.doISO || Bkz_ostatnie(byl) <= u.doISO)) mapa.delete(u.snapshotId);
     });
     lista = Bkz_czysc(Array.from(mapa.values()), Date.now()).lista;
     // Bez zmiany — bez zapisu: scalanie wola to przy kazdej synchronizacji.
@@ -673,7 +699,7 @@ async function Bkz_przywroc(patientId, snapshotId) {
     if (obecna) {
       const zmianaObecnej = (typeof obecna.updatedAtISO === 'string' && obecna.updatedAtISO) || obecna.savedAtISO || '';
       if (e.deletedAtISO < zmianaObecnej || mt(obecna) > revUsuniecia) {
-        await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: e.deletedAtISO }]);
+        await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: Bkz_ostatnie(e) }]);
         return { patientId: patientId, snapshotId: snapshotId, alreadyInCard: true };
       }
     }
@@ -707,6 +733,7 @@ async function Bkz_eksport() {
       };
       if (typeof e.seq === 'number' && isFinite(e.seq)) w.seq = e.seq;
       if (e.powod === 'retencja') w.powod = 'retencja';
+      else if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
       if (e.payloadCipher) {
         try { w.payload = await G(e.payloadCipher.iv, e.payloadCipher.data); } catch { /* bez tresci */ }
       }
@@ -725,7 +752,7 @@ async function Bkz_scalStart(t) {
     (await Bkz_czytaj()).forEach(function (e) {
       Bkz_dolacz(ctx.mapa, e);
       const byl = ctx.naStarcie.get(e.snapshotId);
-      if (!byl || e.deletedAtISO > byl) ctx.naStarcie.set(e.snapshotId, e.deletedAtISO);
+      if (!byl || Bkz_ostatnie(e) > byl) ctx.naStarcie.set(e.snapshotId, Bkz_ostatnie(e));
     });
     const zdalne = Bkz_czysc(t && Array.isArray(t.snapshotTombstones) ? t.snapshotTombstones : [], Date.now()).lista;
     for (let i = 0; i < zdalne.length; i += 1) {
@@ -737,6 +764,9 @@ async function Bkz_scalStart(t) {
         updatedAtISO: typeof z.updatedAtISO === 'string' ? z.updatedAtISO : null,
       };
       if (typeof z.seq === 'number' && isFinite(z.seq)) e.seq = z.seq;
+      if (z.powod !== 'retencja' && typeof z.przycietoISO === 'string' && z.przycietoISO > z.deletedAtISO) {
+        e.przycietoISO = z.przycietoISO;
+      }
       const lokalny = ctx.mapa.get(z.snapshotId);
       // Tresc z ladunku bierzemy, gdy lokalnie jej nie ma albo gdy zdalne usuniecie jest pozniejsze (P-KOSZ-POPRAWKI):
       // lokalna tresc opisuje wtedy starsza wersje — zapis przywrocono, poprawiono i usunieto ponownie na innym
@@ -759,7 +789,7 @@ async function Bkz_scalStart(t) {
 function Bkz_przegral(ctx, e) {
   ctx.nadpisane.add(e.snapshotId);
   const bylo = ctx.przegraneDo.get(e.snapshotId);
-  if (!bylo || e.deletedAtISO > bylo) ctx.przegraneDo.set(e.snapshotId, e.deletedAtISO);
+  if (!bylo || Bkz_ostatnie(e) > bylo) ctx.przegraneDo.set(e.snapshotId, Bkz_ostatnie(e));
 }
 
 // Scalanie, w petli wersji z ladunku: true = te wersje pomijamy (nagrobek wygrywa). Nagrobek retencji przegrywa
@@ -769,8 +799,7 @@ function Bkz_pomin(ctx, patientId, zapis) {
   const e = zapis && ctx.mapa.get(zapis.snapshotId);
   if (!e) return false;
   const zmiana = (typeof zapis.updatedAtISO === 'string' && zapis.updatedAtISO) || zapis.savedAtISO || '';
-  const przypietaPrzegrywa = e.powod === 'retencja' && !!(zapis.payload && zapis.payload._pinned);
-  if (!przypietaPrzegrywa && e.deletedAtISO >= zmiana) {
+  if (Bkz_wygrywa(e, zmiana, !!(zapis.payload && zapis.payload._pinned))) {
     ctx.dotknieci.add(patientId);
     // P-KOSZ-NOWSZA-TRESC (D-6 B): tresc tej wersji trafi do kosza w Bkz_scalKoniec, gdy jest nowsza niz jego tresc.
     if (zapis.payload && typeof zapis.payload === 'object' && Bkz_nowszaWersja(zapis, e)) {
@@ -815,8 +844,12 @@ async function Bkz_scalKoniec(ctx, opcje) {
           const lokalna = wersje.find(function (s) { return s.snapshotId === e.snapshotId; });
           if (!lokalna) continue;
           const zmiana = (typeof lokalna.updatedAtISO === 'string' && lokalna.updatedAtISO) || lokalna.savedAtISO || '';
-          if (e.deletedAtISO < zmiana) { Bkz_przegral(ctx, e); ctx.mapa.delete(e.snapshotId); continue; }
-          const retencja = e.powod === 'retencja';
+          const kosz = Bkz_chwilaKosza(e), przyciecie = Bkz_chwilaRetencji(e);
+          if (!(kosz && kosz >= zmiana) && !(przyciecie && przyciecie >= zmiana)) {
+            Bkz_przegral(ctx, e); ctx.mapa.delete(e.snapshotId); continue;
+          }
+          // Usuniecie z przyciecia (sam nagrobek retencji albo przyciecie pozniejsze niz kosz): przypieta wygrywa.
+          const retencja = !(kosz && kosz >= zmiana);
           if (retencja) {
             let tresc;
             try { tresc = await G(lokalna.payloadCipher.iv, lokalna.payloadCipher.data); } catch { tresc = null; }
@@ -824,7 +857,7 @@ async function Bkz_scalKoniec(ctx, opcje) {
             if (tresc._pinned) { Bkz_przegral(ctx, e); ctx.mapa.delete(e.snapshotId); continue; }
           }
           if (zostaje <= 1) continue; // ostatniej wersji karty nigdy nie usuwamy
-          if (!retencja && e.deletedAtISO >= granicaKosza && (!e.payloadCipher || Bkz_nowszaWersja(lokalna, e))) {
+          if (e.powod !== 'retencja' && e.deletedAtISO >= granicaKosza && (!e.payloadCipher || Bkz_nowszaWersja(lokalna, e))) {
             // P-KOSZ-NOWSZA-TRESC (D-6 B): tresc i wersja z wersji lokalnej (nowszej niz tresc nagrobka).
             const z = Bkz_zTresci(e, lokalna, lokalna.payloadCipher);
             ctx.mapa.set(e.snapshotId, z);
