@@ -52,7 +52,7 @@
   <meta name="description" content="Polityka prywatności aplikacji wagaiwzrost.pl — informacje o przetwarzaniu danych osobowych, plikach cookie i analityce Google Analytics." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://wagaiwzrost.pl/polityka-prywatnosci.html" />
-  <link rel="stylesheet" href="style.css?v=93" />
+  <link rel="stylesheet" href="style.css?v=94" />
   <link rel="stylesheet" href="ios26-v2.css?v=26" />
   <link rel="stylesheet" href="sidebar.css" />
 
@@ -90,7 +90,7 @@
   })();
 </script>
 
-  <link href="inline_polityka_prywatnosci_00.css?v=1" rel="stylesheet">
+  <link href="inline_polityka_prywatnosci_00.css?v=2" rel="stylesheet">
   <script src="lucide.min.js?v=1" defer></script>
 <script src="vilda_chrome.js?v=163"></script>
 </head>
@@ -152,6 +152,7 @@
             Aplikacja korzysta z następujących mechanizmów przeglądarki, które nie przekazują
             danych do administratora:
           </p>
+          <div class="privacy-table-scroll">
           <table>
             <thead>
               <tr>
@@ -162,22 +163,22 @@
             </thead>
             <tbody>
               <tr>
-                <td><strong>Cache Storage</strong> (Service Worker)</td>
-                <td>Pliki aplikacji (HTML, CSS, JS, grafiki) — umożliwiają działanie offline</td>
-                <td>Po odinstalowaniu PWA lub ręcznym wyczyszczeniu cache</td>
+                <td data-label="Mechanizm"><strong>Cache Storage</strong> (Service Worker)</td>
+                <td data-label="Co przechowuje">Pliki aplikacji (HTML, CSS, JS, grafiki) — umożliwiają działanie offline</td>
+                <td data-label="Kiedy usuwane">Po odinstalowaniu PWA lub ręcznym wyczyszczeniu cache</td>
               </tr>
               <tr>
-                <td><strong>localStorage</strong></td>
-                <td>Preferencje UI (tryb wyników, motyw), numer PWZ (opcjonalnie, za zgodą),
+                <td data-label="Mechanizm"><strong>localStorage</strong></td>
+                <td data-label="Co przechowuje">Preferencje UI (tryb wyników, motyw), numer PWZ (opcjonalnie, za zgodą),
                   decyzja w sprawie analityki (<code>ANALYTICS_CONSENT</code>)</td>
-                <td>Po ręcznym wyczyszczeniu danych witryny</td>
+                <td data-label="Kiedy usuwane">Po ręcznym wyczyszczeniu danych witryny</td>
               </tr>
               <tr>
-                <td><strong>sessionStorage</strong></td>
-                <td>Klucz sesji skarbca danych (Vilda Vault) — umożliwia odczyt zaszyfrowanych
+                <td data-label="Mechanizm"><strong>sessionStorage</strong></td>
+                <td data-label="Co przechowuje">Klucz sesji skarbca danych (Vilda Vault) — umożliwia odczyt zaszyfrowanych
                   danych pacjenta w trakcie bieżącej sesji przeglądarki, także po przejściu na inną
                   stronę aplikacji lub odświeżeniu, bez ponownego wpisywania hasła</td>
-                <td>Przy wylogowaniu i automatycznej blokadzie po bezczynności, a poza tym wraz
+                <td data-label="Kiedy usuwane">Przy wylogowaniu i automatycznej blokadzie po bezczynności, a poza tym wraz
                   z zamknięciem karty lub okna przeglądarki. Przeglądarka, która przywraca karty
                   (po ponownym uruchomieniu albo poleceniem „Otwórz ponownie zamkniętą kartę”),
                   może odtworzyć klucz razem z kartą — aplikacja przyjmuje go wtedy tylko do upływu
@@ -186,23 +187,24 @@
                   nie przyjmuje — czyści całą pamięć sesji karty i wraca do ekranu logowania</td>
               </tr>
               <tr>
-                <td><strong>IndexedDB</strong></td>
-                <td>Zaszyfrowane dane pacjentów (baza <code>vilda_user_&lt;userId&gt;</code>)
+                <td data-label="Mechanizm"><strong>IndexedDB</strong></td>
+                <td data-label="Co przechowuje">Zaszyfrowane dane pacjentów (baza <code>vilda_user_&lt;userId&gt;</code>)
                   — wyłącznie dla zalogowanych użytkowników</td>
-                <td>Po usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
+                <td data-label="Kiedy usuwane">Po usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
               </tr>
               <tr>
-                <td><strong>IndexedDB</strong> — cache trybu chmurowego (baza <code>vilda-cloud-cache</code>)</td>
-                <td>Lokalna kopia danych pacjentów na zaufanym urządzeniu (tryb chmurowy) —
+                <td data-label="Mechanizm"><strong>IndexedDB</strong> — cache trybu chmurowego (baza <code>vilda-cloud-cache</code>)</td>
+                <td data-label="Co przechowuje">Lokalna kopia danych pacjentów na zaufanym urządzeniu (tryb chmurowy) —
                   umożliwia pracę offline i natychmiastowy start. Tożsamość pacjenta (imię, data
                   urodzenia), pomiary i treść notatek są <strong>zaszyfrowane</strong> (AES-GCM-256);
                   metadane organizacyjne (kategoria/termin wizyty, nazwa leku, procedura) są
                   pseudonimizowane — powiązane z losowym identyfikatorem, nie z nazwiskiem. Osobny
                   wpis dla każdego konta</td>
-                <td>Po wylogowaniu („Wyloguj się"), usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
+                <td data-label="Kiedy usuwane">Po wylogowaniu („Wyloguj się"), usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
               </tr>
             </tbody>
           </table>
+          </div>
           <p>
             Dane pacjentów przechowywane w IndexedDB są szyfrowane algorytmem AES-GCM-256,
             a klucz szyfrowania wyprowadzany jest z hasła użytkownika metodą PBKDF2-SHA256
@@ -268,6 +270,7 @@
           </p>
 
           <h2>5. Okres przechowywania danych</h2>
+          <div class="privacy-table-scroll">
           <table>
             <thead>
               <tr>
@@ -278,27 +281,28 @@
             </thead>
             <tbody>
               <tr>
-                <td>Dane konta użytkownika</td>
-                <td>Do usunięcia konta, nie dłużej niż 5 lat od ostatniego logowania</td>
-                <td>Uzasadniony interes / umowa</td>
+                <td data-label="Kategoria danych">Dane konta użytkownika</td>
+                <td data-label="Okres przechowywania">Do usunięcia konta, nie dłużej niż 5 lat od ostatniego logowania</td>
+                <td data-label="Podstawa">Uzasadniony interes / umowa</td>
               </tr>
               <tr>
-                <td>Korespondencja (e-mail, formularz kontaktowy)</td>
-                <td><strong>6 lat</strong> od zakończenia sprawy</td>
-                <td>Uzasadniony interes (roszczenia)</td>
+                <td data-label="Kategoria danych">Korespondencja (e-mail, formularz kontaktowy)</td>
+                <td data-label="Okres przechowywania"><strong>6 lat</strong> od zakończenia sprawy</td>
+                <td data-label="Podstawa">Uzasadniony interes (roszczenia)</td>
               </tr>
               <tr>
-                <td>Dane analityczne GA4 (surowe)</td>
-                <td><strong>2 miesiące</strong></td>
-                <td>Zgoda użytkownika</td>
+                <td data-label="Kategoria danych">Dane analityczne GA4 (surowe)</td>
+                <td data-label="Okres przechowywania"><strong>2 miesiące</strong></td>
+                <td data-label="Podstawa">Zgoda użytkownika</td>
               </tr>
               <tr>
-                <td>Dane lokalne w przeglądarce użytkownika</td>
-                <td>Do ręcznego usunięcia przez użytkownika</td>
-                <td>—</td>
+                <td data-label="Kategoria danych">Dane lokalne w przeglądarce użytkownika</td>
+                <td data-label="Okres przechowywania">Do ręcznego usunięcia przez użytkownika</td>
+                <td data-label="Podstawa">—</td>
               </tr>
             </tbody>
           </table>
+          </div>
 
           <h2>6. Prawa użytkownika (RODO)</h2>
           <p>Na podstawie RODO przysługują Ci następujące prawa:</p>
