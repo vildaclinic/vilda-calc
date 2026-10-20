@@ -179,7 +179,7 @@ for (const [age, months, width, reference] of [
   });
 }
 
-test('male CALIPER LH preserves the exact source boundaries, female gap and independent sex-comparison window', async ({ page }) => {
+test('male CALIPER LH preserves exact source boundaries, female median gap and independent sex-comparison window', async ({ page }) => {
   await prepare(page);
   await converter(page);
   await patient(page, 'M', 17);
@@ -222,8 +222,11 @@ test('male CALIPER LH preserves the exact source boundaries, female gap and inde
   await expect(point(page)).toHaveAttribute('data-profile', 'madsen2022-male-lh');
   await expect.poll(async () => Number(await point(page).getAttribute('data-reference-value'))).toBeCloseTo(3.514206637, 8);
   await patient(page, 'F', 17, 0);
-  await expect(point(page)).toHaveCount(0);
-  await expect(note(page)).toContainText('brak wartości odniesienia');
+  await expect(point(page)).toHaveCount(1);
+  await expect(point(page)).toHaveAttribute('data-result-only', 'true');
+  expect(await point(page).getAttribute('data-reference-value')).toBeNull();
+  await expect(point(page).locator('[data-median-point]')).toHaveCount(0);
+  await expect(note(page)).toContainText('Brak zweryfikowanej mediany dla tego wieku');
 });
 
 test('known active GnRHa blocks the new LH reference and a different patient clears the preceding result and local age', async ({ page }) => {

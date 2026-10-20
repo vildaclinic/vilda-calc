@@ -40,6 +40,14 @@ def build():
     reference_js = json.dumps(reference, ensure_ascii=False, indent=2)
     lifespan_js = json.dumps(lifespan, ensure_ascii=False, indent=2)
     patient_points_js = json.dumps(patient_points, ensure_ascii=False, indent=2)
+    result_only_policy = json.loads((ROOT / 'female-lh-result-only-policy.json').read_text(encoding='utf-8'))
+    assert (result_only_policy['kind'], result_only_policy['ordinaryOnly'],
+            result_only_policy['analyte'], result_only_policy['sex'], result_only_policy['unit']) == (
+                'educational-result-only', True, 'lh', 'female', 'IU/L')
+    assert (result_only_policy['minAge'], result_only_policy['minAgeExclusive'],
+            result_only_policy['maxAge'], result_only_policy['maxAgeExclusive']) == (16, True, 18, True)
+    assert not any(key in result_only_policy for key in ('points', 'statistic', 'referenceValue'))
+    result_only_policies_js = json.dumps([result_only_policy], ensure_ascii=False, indent=2)
     # Preserve this unchanged readable JSON's layout in the generated module.
     # Parsing above still verifies JSON; repacking other data must not reformat it.
     inhibin_evidence_js = (ROOT / 'inhibin-observational-data.json').read_text(encoding='utf-8').strip()
@@ -76,6 +84,7 @@ def build():
         f'const referenceData = {reference_js};\n'
         f'const lifespanData = {lifespan_js};\n'
         f'const patientPointData = {patient_points_js};\n'
+        f'const resultOnlyPolicies = {result_only_policies_js};\n'
         f'const inhibinEvidence = {inhibin_evidence_js};\n'
         f'const inhibinDisplayPolicy = {inhibin_display_policy_js};\n'
         f'const inhibinComparisonPolicy = {inhibin_comparison_policy_js};\n'
@@ -102,6 +111,7 @@ def build():
         '  referenceData: referenceData,\n'
         '  lifespanData: lifespanData,\n'
         '  patientPointData: patientPointData,\n'
+        '  resultOnlyPolicies: resultOnlyPolicies,\n'
         '  inhibinEvidence: inhibinEvidence,\n'
         '  inhibinDisplayPolicy: inhibinDisplayPolicy,\n'
         '  inhibinComparisonPolicy: inhibinComparisonPolicy,\n'

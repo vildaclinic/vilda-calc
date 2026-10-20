@@ -7,6 +7,10 @@ opisy zachowują historię etapów. Starsze wzmianki o luce AMH M18–<20,
 FSH M16–<18/F16–<19 i LH M>16–<18 są zastąpione nowszymi wdrożeniami.
 Xu ma osobny aktywny blok pięciu P50, nadal bez ciągłego modelu wieku.
 
+**Uzupełnienie 20 października 2026:** LH dziewcząt w `(16,18)` otrzymuje
+osobny [punkt samego wyniku](#lh-dziewcząt--sam-wynik-bez-mediany-20-października-2026).
+Nie powstaje 83. profil, mediana ani rozszerzenie źródła Madsen.
+
 Decyzja właściciela z 10 października 2026: wdrożyć zatwierdzony czerwony
 punkt na dostępnych danych liczbowych, wykorzystując istniejący formularz.
 Zakres decyzji dotyczy orientacyjnej prezentacji edukacyjnej; nie jest
@@ -38,13 +42,81 @@ jako dostosowanego do tego kontekstu.
 
 Dokładny punkt wymaga liczby skończonej i zgodnej jednostki. Nierówności,
 nieznane jednostki, brak wyniku/wieku/płci i brak właściwego profilu nie
-tworzą zastępczej liczby. Nie utożsamiamy testosteronu wolnego z całkowitym.
+tworzą zastępczej liczby. Osobny, jawnie zatwierdzony wyjątek LH dziewcząt
+`(16,18)` pozwala wyświetlić samo stężenie na istniejącej osi, bez wartości
+odniesienia; nie jest fallbackiem po odrzuceniu dostępnego profilu.
+Nie utożsamiamy testosteronu wolnego z całkowitym.
 Nie przypisujemy wyniku do innego hormonu po zmianie wyboru. Brak punktu
 na wykresie nie blokuje osobnej, dostępnej interpretacji laboratoryjnej.
 Ogólne komunikaty braku dopasowania stosują neutralne określenie „wartość
 odniesienia”. Odrębne opisy porównań median zachowują nazwę tej statystyki.
 Podpis poprawnie dobranej
 wartości nadal wskazuje rzeczywistą statystykę źródła: średnią albo medianę.
+
+## LH dziewcząt — sam wynik bez mediany, 20 października 2026
+
+Po porównaniu badań Zhao, Assens i Wiedemann właściciel zaakceptował
+pokazanie rzeczywistego wyniku bez wyboru jednej domyślnej mediany
+(„ok, zrób to”). [Polityka](female-lh-result-only-policy.json), wersja
+`2026-10-20.1`, jest odrębna od danych 82 dotychczasowych profili.
+`evaluate()` nadal zwraca dla F17/LH brak odniesienia; osobne
+`evaluateResultOnly(data, context)` może zwrócić `status: 'result-only'`,
+politykę, wartość i jednostkę. Nie zwraca `profile`, `referenceValue`,
+statystyki populacyjnej, RI, SDS ani percentyla.
+
+W zwykłym widoku **„Całe życie”** czerwony punkt pokazuje dokładne wpisane
+stężenie na dotychczasowej stałej osi LH/FSH **0–70 IU/L**, z istniejącym
+przekształceniem `log1p(C / 0.5) / log1p(70 / 0.5)`. Nie rysujemy jasnego
+znacznika, łącznika z medianą ani dodatkowej krzywej. Wynik powyżej osi
+ma strzałkę i prawdziwą liczbę; zero pozostaje zerem. Zmiana wyniku,
+jednostki lub zaznaczenia innych hormonów nie zmienia linii ani skali.
+Podpis: „Brak zweryfikowanej mediany dla tego wieku. Interpretacja zależy
+m.in. od fazy cyklu i metody oznaczenia.” Czerwony kolor nie klasyfikuje
+stężenia. W rozwijanych źródłach pozostaje uzasadnienie ograniczenia.
+
+Kwalifikujemy wyłącznie bieżący wynik **LH dziewczyny**, którego cały
+możliwy wiek mieści się ściśle w `(16,18)`. Nie wymagamy Th, fazy cyklu,
+wyboru publikacji ani nowego formularza. Dokładne 16 zachowuje Madsen,
+5,64856591188875 IU/L. Wiek „16 lat 0 miesięcy” obejmuje granicę 16
+i nie kwalifikuje się do nowej ścieżki. Przedział `[17,18)` pasuje,
+`[17,18]` nie; dokładne 18 pozostaje poza nową polityką. Nie wybieramy
+środka przedziału i nie przesuwamy granic o epsilon.
+
+Względna minipuberty, wstawka cyklu i porównanie płci nie otrzymują tego
+punktu. Zbliżenie „Pokwitanie” zachowuje źródłowe 6–16 i dla kwalifikującej
+się starszej dziewczyny odsyła do „Całego życia”, obiecując wyłącznie wynik,
+bez mediany. Nie przedłużamy linii Madsen do 18 lat.
+
+Osobny evaluator dopuszcza nową ścieżkę tylko wtedy, gdy zwykły wybór
+profilu zwraca `unsupported-age`. Nie omija niezgodnej metody lub materiału
+istniejącego źródła. Znana metoda próbki nie jest porównywana z żadną
+publikacją przy samym wyniku i nie oznacza harmonizacji oznaczeń.
+Zachowawcza polityka odrzuca znany materiał inny niż surowica;
+nieznany materiał nie staje się potwierdzoną surowicą. Znane przeciwwskazanie,
+ciąża/menopauza, leczenie hormonalne/GnRHa i stymulacja zachowują dotychczasowe
+bramki adaptera; brak informacji nie potwierdza ich nieobecności.
+Wynik musi być skończony, nieujemny i dokładny, w obsługiwanej jednostce.
+Nierówności, nieobsługiwane jednostki i brak kontekstu nie tworzą punktu.
+Nie imputujemy LOD/LOQ ani nie bierzemy stężenia z wysokości ilustracji.
+
+| Syntetyczne wejście | Oczekiwany wynik |
+| --- | --- |
+| F17, LH 2 IU/L lub 2 mIU/mL | Punkt 2 IU/L; brak mediany i klasyfikacji z wykresu |
+| F17, LH 0 IU/L | Punkt na zerze; bez imputacji |
+| F17, LH 1000 IU/L | Strzałka ponad 70 IU/L, etykieta 1000; ta sama linia i skala |
+| Dokładne F16, LH 2 IU/L | Dotychczasowy punkt i mediana Madsen 5,64856591188875 IU/L |
+| F16 lat 0 miesięcy; F18; wiek obejmujący 18 włącznie | Bez nowego punktu samego wyniku |
+| F17, LH <2; pusty wynik; znane przeciwwskazanie | Bez dokładnego punktu |
+
+Nie zmieniają się interpretacja laboratoryjna, jej dostępne zakresy,
+ostrzeżenia ani zapis LH. Snapshot edukacyjnego odniesienia pozostaje
+**AMH-only**; nie tworzymy pustego snapshotu LH ani nie przeliczamy dawnych
+ocen. Zmiana pacjentki/płci i niedostępny kontekst zachowują dotychczasowe
+czyszczenie stanu. Uzasadnienie źródłowe:
+[przegląd decyzji](evidence/female-lh-result-only-audit-2026-10-20.json).
+Regresje rzeczywistego silnika, interfejsu i PWA należą do tej partii;
+wyniki walidacji i CI podaje opis PR. Testy nie nadają statusu walidacji
+klinicznej medianom ani ilustracji.
 
 ## Żeński E2 — mediana wieku 6–18 lat, 17 października 2026
 

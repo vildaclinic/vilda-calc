@@ -200,7 +200,9 @@
       identityKey;
     let patientContext = null,
       patientPoint = null,
+      resultOnlyPoint = null,
       renderedPoint = null,
+      renderedResultOnlyPoint = null,
       renderedAmhComparison = null,
       renderedInhibinComparison = null,
       renderedGonadotropinComparison = null,
@@ -722,6 +724,7 @@
       reset.textContent = "Tylko " + current.name;
       svg.querySelectorAll(":scope > g").forEach((n) => n.remove());
       renderedPoint = null;
+      renderedResultOnlyPoint = null;
       renderedAmhComparison = null;
       renderedInhibinComparison = null;
       renderedGonadotropinComparison = null;
@@ -916,6 +919,10 @@
           (femaleGonadotropinsActive() && view === "mini" && ["lh", "fsh"].includes(id))) return false;
       const [minAge, maxAge] = visibleAgeDomain();
       return patientAgeYears < minAge || patientAgeYears > maxAge;
+    }
+    function resultOnlyVisible() {
+      return !compare && resultOnlyPoint?.status === "result-only" &&
+        canShowAgeMarker() && selected.has(analyteHormones[currentAnalyte]);
     }
     function patientDotModel() {
       const engine = pointEngine();
@@ -1197,6 +1204,58 @@
       group.append(dot);
       model.a11y = a11y;
     }
+    // A measurement can be plotted on an existing concentration axis without
+    // supplying a population reference. Keep it out of the comparison model:
+    // no synthetic profile, median, connector or reference metadata is created.
+    function drawResultOnlyDot(group, model, { W, mobile, left, right, top, bottom, px, y, period }) {
+      const conversions = data.patientPointData.unitConversions[model.policy.analyte];
+      const enteredUnit = patientContext.displayUnit || patientContext.measurement.unit;
+      const factor = Object.prototype.hasOwnProperty.call(conversions.factors, enteredUnit)
+        ? conversions.factors[enteredUnit] : null;
+      const labelFactor = Number.isFinite(factor) && factor > 0 ? factor : 1;
+      const unit = Number.isFinite(factor) && factor > 0 ? enteredUnit : model.unit;
+      const labelValue = model.value / labelFactor;
+      const offscale = model.value > period.scale.max;
+      const py = offscale ? top + 5 : y(period.valueFraction(model.value));
+      const a11y = (offscale ? "Wynik powyżej skali; strzałka nie oznacza dokładnego położenia stężenia. " : "") +
+        `Wynik pacjentki: ${pointNumber(labelValue)} ${unit}. ` + model.policy.patientNote +
+        " Czerwony punkt oznacza wynik, nie jego klasyfikację.";
+      const dot = el("g", {
+        "data-patient-concentration": model.policy.analyte, "data-result-only": "true",
+        "data-result-only-policy": model.policy.id, "data-value": model.value,
+        "data-label-unit": unit, "data-divisor": period.scale.max, "data-ceiling": 1,
+        "data-scale-transform": period.scale.kind, "data-plot-top": top, "data-plot-bottom": bottom,
+        "data-age-lower": patientAgeYears, "data-age-upper": patientContext.ageUpperYears ?? patientAgeYears,
+        ...(offscale ? { "data-offscale": "above" } : {}),
+        role: "img", "aria-label": a11y, class: "vhl-patient-point",
+      });
+      dot.append(el("title", {}, a11y));
+      if (offscale) dot.append(el("path", {
+        d: `M${px},${top + 16}V${top + 2}M${px - 5},${top + 7}L${px},${top + 2}L${px + 5},${top + 7}`,
+        fill: "none", stroke: "#d52d43", "stroke-width": 2.5,
+        "stroke-linecap": "round", "stroke-linejoin": "round", "data-result-overflow": "above",
+      }));
+      else dot.append(el("circle", { cx: px, cy: py, r: 11, fill: "#d52d43", opacity: 0.12 }),
+        el("circle", { cx: px, cy: py, r: mobile ? 6.5 : 7, fill: "#d52d43",
+          stroke: "white", "stroke-width": 2.5, "data-result-point": "" }));
+      const message = `${offscale ? "↑ " : ""}${pointNumber(labelValue)} ${unit}`;
+      const context = document.createElement("canvas").getContext("2d"), font = mobile ? 11 : 12;
+      if (context) context.font = `700 ${font}px system-ui, sans-serif`;
+      const measured = context ? context.measureText(message).width : message.length * font * 0.6;
+      const width = Math.min(W - left - right, measured + 16);
+      const xx = Math.max(left, Math.min(W - right - width,
+        px + 13 + width > W - right ? px - width - 13 : px + 13));
+      const yy = Math.max(top + 3, Math.min(bottom - 25, py - 27));
+      const label = el("g", { "data-dot-label": "result" });
+      label.append(el("rect", { x: xx, y: yy, width, height: 23, rx: 6,
+        fill: "white", "fill-opacity": 0.96, stroke: "#f1cbd0" }),
+      text(xx + 8, yy + 16, message, { "font-size": font, "font-weight": 700, fill: "#b51e33",
+        ...(measured > width - 16 ? { textLength: width - 16, lengthAdjust: "spacingAndGlyphs" } : {}),
+      }));
+      dot.append(label);
+      group.append(dot);
+      renderedResultOnlyPoint = { ...model, a11y, offscale };
+    }
     function pointDescription(model) {
       if (!model) return;
       renderedPoint = model;
@@ -1265,6 +1324,14 @@
       const measurement = patientContext?.measurement;
       const id = analyteHormones[currentAnalyte];
       const [minAge, maxAge] = visibleAgeDomain();
+      if (renderedResultOnlyPoint) return;
+      if (resultOnlyVisible() && view === "puberty" &&
+          (patientAgeYears < minAge || patientAgeYears > maxAge)) {
+        const message = `Wiek pacjentki jest poza wybranym okresem (${fmt(minAge)}–${fmt(maxAge)} lat). Sam wynik zobaczysz w „Całym życiu”, bez mediany.`;
+        byId("scale-note").textContent = message;
+        byId("chart-desc").textContent += " " + message;
+        return;
+      }
       const termAmhUnavailable = !compare && id === "amh" && patientPoint?.reason === "preterm-context";
       if (renderedPoint || (!canShowAgeMarker() && !termAmhUnavailable) ||
           ((compare || termAmhUnavailable) && (patientAgeYears < minAge || patientAgeYears > maxAge)) ||
@@ -1512,6 +1579,9 @@
             px: x(patientAgeYears), y: relativeY });
           renderedPoint = dotModel;
         }
+        if (life && resultOnlyVisible()) drawResultOnlyDot(g, resultOnlyPoint, {
+          W, mobile, left, right, top, bottom, px: x(patientAgeYears), y: relativeY, period,
+        });
       }
       const gonadotropinsSelected = selected.has("lh") || selected.has("fsh");
       panel.querySelector(".vhl-axis-label").textContent = mini ? "Przebieg zmian · minipuberty"
@@ -1527,6 +1597,9 @@
         (((renderedPoint.stableDisplay?.kind === "female-amh-life" || renderedPoint.stableDisplay?.kind === "female-e2-life" ||
           renderedPoint.stableDisplay?.kind === "female-inhibin-life") ? patientPointAboveScale(renderedPoint)
           : renderedPoint.stableDisplay && renderedPoint.value > period.scale.max) ? " ↑ Wynik powyżej skali." : "");
+      if (renderedResultOnlyPoint) caption += " Kropka: wynik. " + renderedResultOnlyPoint.policy.patientNote +
+        (renderedResultOnlyPoint.offscale ? " ↑ Wynik powyżej skali." : "") +
+        (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
       const measurement = patientContext?.measurement;
       if (mini && gonadotropinResult && selected.has(currentId) && measurement &&
         Number.isFinite(measurement.value) && measurement.value >= 0 && typeof measurement.unit === "string") {
@@ -1542,7 +1615,8 @@
         ? "Przybliżony odczyt ryciny 3 Ljubicic 2022: średnie modelowane podłużnie względem własnego maksimum. To nie mediana ani norma; pion zaznacza wiek, nie stężenie. "
         : life ? "Oś LH i FSH jest wspólna i nieliniowa w IU/L. Linie łączą różne badania, nie są jedną medianą populacyjną. Pierwsza grupa obejmuje dni 1–5, nie chwilę porodu. Przejście menopauzalne jest umowne. "
           : "Madsen 2022: niezależny model median 6–16 lat, nie dosłowny wycinek całego życia. Wiek nie wyznacza stadium pokwitania. ") +
-        caption + (renderedPoint ? " " + renderedPoint.a11y : "");
+        caption + (renderedPoint ? " " + renderedPoint.a11y : "") +
+        (renderedResultOnlyPoint ? " " + renderedResultOnlyPoint.a11y : "");
     }
     function updateFemaleGonadotropinInsight() {
       const messages = [
@@ -1622,7 +1696,9 @@
           "text-anchor": day === -15 ? "start" : day === 14 ? "end" : "middle", "font-size": mobile ? 10 : 11 }));
     }
     function updateFemaleGonadotropinSources() {
-      const nextKey = JSON.stringify(["female-gonadotropins", view, [...selected].sort(), renderedPoint?.profile.id, renderedObservation?.kind]);
+      const resultPolicy = resultOnlyVisible() ? resultOnlyPoint.policy : null;
+      const nextKey = JSON.stringify(["female-gonadotropins", view, [...selected].sort(), renderedPoint?.profile.id,
+        resultPolicy?.id, renderedObservation?.kind]);
       if (sourcesKey === nextKey) return;
       sourcesKey = nextKey;
       const target = byId("source-copy"), period = femaleGonadotropins[view];
@@ -1639,7 +1715,10 @@
       if (view === "life") for (const copy of femaleGonadotropins.cycle.caveats || []) paragraph(copy);
       paragraph(view === "mini"
         ? "LH i FSH podzielono osobno przez własne maksimum modelowanej średniej podłużnej. 100% nie oznacza konkretnego stężenia ani mediany GAMLSS. Nie przeliczamy tego modelu na IU/L. Pierwszy odczyt pochodzi z około 6. dnia, a końce linii z około 357.–360. dnia; nie dopisujemy pomiaru w chwili narodzin ani przy 12 miesiącach. Wynik LH/FSH pozostaje tekstem, a pion zaznacza tylko wiek."
-        : "Kropka oznacza wynik, a jasny znacznik źródłowe odniesienie oryginalnego silnika aplikacji. Wartość źródłowa może leżeć poza poglądową linią. Wysokość ilustracji nie zmienia median, norm laboratoryjnych ani interpretacji wyniku. Strzałka zachowuje rzeczywistą liczbę ponad stałą skalą.");
+        : renderedResultOnlyPoint
+          ? "Kropka przedstawia wyłącznie wpisany wynik, bez mediany, łącznika ani klasyfikacji na podstawie poglądowej linii. Strzałka zachowuje rzeczywistą liczbę ponad stałą skalą."
+          : "Kropka oznacza wynik, a jasny znacznik źródłowe odniesienie oryginalnego silnika aplikacji. Wartość źródłowa może leżeć poza poglądową linią. Wysokość ilustracji nie zmienia median, norm laboratoryjnych ani interpretacji wyniku. Strzałka zachowuje rzeczywistą liczbę ponad stałą skalą.");
+      if (resultPolicy) for (const copy of resultPolicy.discussion || []) paragraph(copy);
       if (view === "life") paragraph("Zbliżenie minipuberty ma odrębny, względny model średniej z badania podłużnego. Zbliżenie pokwitania przedstawia model median Madsen. Te różne statystyki nie są dosłownym wycinkiem syntezy całego życia. W wieku rozrodczym kliknij „Dorosła”, aby zobaczyć codzienne mediany LH i FSH względem szczytu LH, nie stałego dnia cyklu.");
       if (renderedPoint) {
         const profile = renderedPoint.profile;
@@ -1652,6 +1731,7 @@
       }
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) paragraph("Pozostałe wybrane hormony zachowują odrębne, dotychczasowe skale. Oś LH/FSH nie opisuje ich stężeń. Ewentualny wynik innego hormonu i jego źródłowe odniesienie stosują własną skalę i oryginalną jednostkę.");
       const links = [...(period.sources || []), ...(view === "life" ? femaleGonadotropins.cycle.sources || [] : [])];
+      if (resultPolicy) links.push(...(resultPolicy.sources || []));
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) {
         paragraph("Pozostałe hormony w minipuberty: mediany GAMLSS z suplementu Ljubicic 2022, około 7,3 dnia–1 rok, donoszone dziewczynki. To odrębna statystyka od dwufazowej średniej LH/FSH. Zachowują dotychczasową normalizację całego życia.");
         links.push({ label: "Ljubicic 2022 · mediany pozostałych hormonów", url: infant.source.url },
@@ -3518,7 +3598,7 @@
         activeStage =
           null;
       patientAgeLabel = "";
-      patientContext = patientPoint = renderedPoint = renderedAmhComparison = renderedInhibinComparison = renderedGonadotropinComparison = renderedObservation = null;
+      patientContext = patientPoint = resultOnlyPoint = renderedPoint = renderedResultOnlyPoint = renderedAmhComparison = renderedInhibinComparison = renderedGonadotropinComparison = renderedObservation = null;
       clearFemalePeriodMetadata();
       delete svg.dataset.comparisonScale;
       delete svg.dataset.comparisonMin;
@@ -3614,6 +3694,8 @@
       const engine = pointEngine();
       patientPoint = currentAnalyte !== "insl3" && engine && data.patientPointData
         ? engine.evaluate(data.patientPointData, patientContext) : null;
+      resultOnlyPoint = patientPoint?.reason === "unsupported-age" && engine?.evaluateResultOnly
+        ? engine.evaluateResultOnly(data, patientContext) : null;
       if (resetContext) {
         closeFullscreen(false);
         selected.clear();
