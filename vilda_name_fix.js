@@ -449,7 +449,7 @@
 
       if (typeof V.updateSnapshotPayload === 'function' && snap && snap.snapshotId) {
         // Ścieżka właściwa: aktualizacja NAJNOWSZEGO snapshotu W MIEJSCU.
-        // preserveSavedAt:true → zachowane savedAtISO i lastSavedAtISO, bez nowego snapshotu.
+        // preserveSavedAt:true → zachowane savedAtISO wersji, bez nowego snapshotu; lastSavedAtISO karty rośnie do „teraz” (P-ZMIANA-W-KARCIE, D-4 A).
         await V.updateSnapshotPayload(patientId, snap.snapshotId, corrected, { preserveSavedAt: true });
         return true;
       }

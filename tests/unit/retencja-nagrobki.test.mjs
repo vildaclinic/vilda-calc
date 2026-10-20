@@ -470,7 +470,7 @@ describe('strażniki źródła', () => {
     expect(blok.indexOf(usuwanie)).toBeGreaterThan(0);
     expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeLessThan(blok.indexOf(usuwanie));
     const pomocnik = src.slice(src.indexOf('async function Bkz_usunJesliBezZmian('), src.indexOf('async function Bkz_usunJesliBezZmian(') + 600);
-    expect(pomocnik).toContain('return Bzw_usunWersje(patientId, snapshotId);');
+    expect(pomocnik).toContain('return Bzw_usunWersje(patientId, snapshotId, zmianaISO);');
     expect(src).toContain('async function wr(t,e){return Bkz_przytnij(t,e)}');
   });
 

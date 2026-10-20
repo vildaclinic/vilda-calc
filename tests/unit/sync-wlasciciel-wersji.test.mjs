@@ -484,11 +484,11 @@ describe('P-SYNC-WLASCICIEL — „Scal pacjentów” na jednym urządzeniu, now
   // ładunku — wyjątek „zabierz” z nowszą treścią.
   it.each(PRZYPADKI.filter(([m]) => m !== 'delty+chmura'))('poprawka pomiaru w X po scaleniu (%s, %s): x1 pod Y z poprawioną treścią na obu', async (model, kolejnosc) => {
     const { ctx, koniec, log } = await przebieg({ model, kolejnosc, akcje: AKCJE.korekta });
-    oczekujNaObu(koniec, { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, ['X']);
+    oczekujNaObu(koniec, { X: karta2(1, ['x1']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) });
     expect(utracone(log)).toEqual([]);
     const x1 = idPo(ctx.et, 'x1');
-    expect(await trescWersji(ctx.A, ctx.Y, x1)).toBe('61:120.5');
-    expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('61:120.5');
+    expect(await trescWersji(ctx.A, ctx.X, x1)).toBe('61:120.5');
+    expect(await trescWersji(ctx.B, ctx.X, x1)).toBe('61:120.5');
   }, CZAS);
 
   // [CZERWONY na audyt i na 4270ca1 — x1 = 60:120 na obu, treść poprawki z B ginęła] Ten sam scenariusz, gdy delta
@@ -497,12 +497,12 @@ describe('P-SYNC-WLASCICIEL — „Scal pacjentów” na jednym urządzeniu, now
   // z urządzenia scalającego niesie kartę Y (Bsw_deltaNagrobka): X jest w zbiorze N, x1 przechodzi pod Y z poprawką.
   it.each(KOLEJNOSCI)('poprawka pomiaru w X po scaleniu, delty osobno (delty+chmura, %s): x1 pod Y z poprawioną treścią na obu', async (kolejnosc) => {
     const { ctx, koniec, log } = await przebieg({ model: 'delty+chmura', kolejnosc, akcje: AKCJE.korekta });
-    oczekujNaObu(koniec, { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, ['X']);
+    oczekujNaObu(koniec, { X: karta2(1, ['x1']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) });
     expect(koniec.zbiezne).toBe(true);
     expect(utracone(log)).toEqual([]);
     const x1 = idPo(ctx.et, 'x1');
-    expect(await trescWersji(ctx.A, ctx.Y, x1)).toBe('61:120.5');
-    expect(await trescWersji(ctx.B, ctx.Y, x1)).toBe('61:120.5');
+    expect(await trescWersji(ctx.A, ctx.X, x1)).toBe('61:120.5');
+    expect(await trescWersji(ctx.B, ctx.X, x1)).toBe('61:120.5');
   }, CZAS);
 
   // [CZERWONY na audyt — wszystkie 8] poprawka x1 i nowy zapis X na B: dotąd chmura-AB 60:120 na obu (poprawka
@@ -760,7 +760,7 @@ describe('P-SYNC-WLASCICIEL — zmiana wersji starej karty bez nowego zapisu a d
     const zmieniona = await sygnatura(B, X, sid);
     expect(zmieniona, 'operacja zmieniła treść wersji').not.toBe(przed);
     const nagrobekX = (await A.baza.listTombstonesForUser(A.uid)).find((t) => t.patientId === X).deletedAtISO;
-    expect((await B.baza.getPatientForUser(B.uid, X)).lastSavedAtISO < nagrobekX, 'nagrobek X wygrywa').toBe(true);
+    expect((await B.baza.getPatientForUser(B.uid, X)).lastSavedAtISO < nagrobekX, 'nagrobek X wygrywa').toBe(kiedy === 'przed scaleniem');
     const [dY, dX, ...reszta] = await delty(A, [Y]);
     expect(reszta).toEqual([]);
     return { A, B, C, X, Y, et, sid, sync, dY, dX, zmieniona };
@@ -771,27 +771,33 @@ describe('P-SYNC-WLASCICIEL — zmiana wersji starej karty bez nowego zapisu a d
     .concat(Object.keys(OPERACJE).flatMap((o) => KOLEJNOSCI.map((id) => [o, 'po scaleniu', 'nagrobek X, potem Y', id])));
   it.each(WARIANTY)('%s w X (%s), delty %s (%s): B, chmura i C — Y 5/5 ze zmienioną wersją, nic nie ginie', async (oper, kiedy, kolejnoscDelt, kolejnoscId) => {
     const p = await przebiegOperacji(oper, kiedy, kolejnoscId);
+    const po = kiedy === 'po scaleniu';
+    const w = OPERACJE[oper].wersja;
+    const oczekiwane = po ? { X: karta2(1, [w]), Y: karta2(4, ['x1', 'x2', 'y1', 'y2', 'ym'].filter((q) => q !== w)) } : { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) };
+    const nagr = po ? [] : ['X'];
+    const kartaZm = po ? p.X : p.Y;
     for (const d of kolejnoscDelt.startsWith('Y') ? [p.dY, p.dX] : [p.dX, p.dY]) await p.B.v.mergeSyncPayload(d);
     const sB = await stan(p.B, p.et);
     expect(sB.karty).toEqual(oczekiwane);
-    expect(sB.nagrobki).toEqual(['X']);
+    expect(sB.nagrobki).toEqual(nagr);
     expect(sB.kosz).toEqual([]);
     expect(sB.sieroty).toBe(0);
-    expect(await sygnatura(p.B, p.Y, p.sid), 'zmiana z B zachowana').toBe(p.zmieniona);
+    expect(await sygnatura(p.B, kartaZm, p.sid), 'zmiana z B zachowana').toBe(p.zmieniona);
     // B: pobierz nieaktualną chmurę, scal, wyślij; C: pierwsze pobranie.
     await p.sync(p.B);
     await p.sync(p.C);
     for (const d of [p.B, p.C]) {
       const s = await stan(d, p.et);
       expect(s.karty, `urządzenie ${d.nazwa}`).toEqual(oczekiwane);
-      expect(s.nagrobki, `nagrobki ${d.nazwa}`).toEqual(['X']);
+      expect(s.nagrobki, `nagrobki ${d.nazwa}`).toEqual(nagr);
       expect(s.sieroty).toBe(0);
-      expect(await sygnatura(d, p.Y, p.sid), `treść na ${d.nazwa}`).toBe(p.zmieniona);
+      expect(await sygnatura(d, kartaZm, p.sid), `treść na ${d.nazwa}`).toBe(p.zmieniona);
     }
     // A po pobraniu chmury też ma zmianę z B (ta sama wersja, nowsza treść).
     await p.sync(p.A);
     expect((await stan(p.A, p.et)).karty).toEqual(oczekiwane);
-    expect(await sygnatura(p.A, p.Y, p.sid)).toBe(p.zmieniona);
+    expect(await sygnatura(p.A, kartaZm, p.sid)).toBe(p.zmieniona);
+    if (po) { expect((await stan(p.A, p.et)).nagrobki, 'nagrobki A').toEqual([]); }
   }, CZAS);
 
   // [ZIELONY na 4270ca1 — przypięte znane ograniczenie; CZERWONY na audyt, gdzie delta Y przepinała x2 bez porównania]
@@ -805,17 +811,16 @@ describe('P-SYNC-WLASCICIEL — zmiana wersji starej karty bez nowego zapisu a d
     p.dX.patients = [];
     await p.B.v.mergeSyncPayload(p.dY);
     await p.B.v.mergeSyncPayload(p.dX);
-    const bez = { Y: karta2(4, ['x1', 'y1', 'y2', 'ym']) };
-    expect((await stan(p.B, p.et)).karty).toEqual(bez);
-    await p.sync(p.B);
-    await p.sync(p.C);
-    expect((await stan(p.C, p.et)).karty).toEqual(bez);
-    await p.sync(p.A);
-    await p.sync(p.B);
-    await p.sync(p.C);
+    // D-4 A (P-ZMIANA-W-KARCIE): przypięcie podniosło lastSavedAtISO X ponad nagrobek scalenia — X wraca jako
+    // duplikat z przypiętą x2 od razu na B, potem na C i A; nic nie znika nawet przejściowo.
+    const zX = { X: karta2(1, ['x2']), Y: karta2(4, ['x1', 'y1', 'y2', 'ym']) };
+    expect((await stan(p.B, p.et)).karty).toEqual(zX);
+    expect((await stan(p.B, p.et)).nagrobki).toEqual([]);
+    await p.sync(p.B); await p.sync(p.C); await p.sync(p.A); await p.sync(p.B); await p.sync(p.C);
     for (const d of [p.A, p.B, p.C]) {
-      expect((await stan(d, p.et)).karty, `urządzenie ${d.nazwa}`).toEqual(oczekiwane);
-      expect(await sygnatura(d, p.Y, p.sid), `x2 bez przypięcia na ${d.nazwa}`).not.toContain('przypięta');
+      expect((await stan(d, p.et)).karty, `urządzenie ${d.nazwa}`).toEqual(zX);
+      expect((await stan(d, p.et)).nagrobki, `nagrobki ${d.nazwa}`).toEqual([]);
+      expect(await sygnatura(d, p.X, p.sid), `x2 przypięta pod X na ${d.nazwa}`).toBe('60:120,66:123 przypięta');
     }
   }, CZAS);
 
@@ -918,7 +923,7 @@ describe('P-SYNC-WLASCICIEL — trzy urządzenia przez chmurę', () => {
   // poprawka (61) na wszystkich trzech.
   const INNE = {
     XdoY: { karty: { X: karta2(1, ['x3']), Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: [] },
-    korekta: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '61:120.5'] },
+    korekta: { karty: { X: karta2(1, ['x1']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) }, nagrobki: [], x1: ['X', '61:120.5'] },
     korektaEdycja: { karty: { X: karta2(2, ['x1', 'x3']), Y: karta2(4, ['x2', 'y1', 'y2', 'ym']) }, nagrobki: [], x1: ['X', '61:120.5'] },
     dwiePoprawki: { karty: { Y: karta2(5, ['x1', 'x2', 'y1', 'y2', 'ym']) }, nagrobki: ['X'], x1: ['Y', '61:120.5'] },
   };
@@ -2003,7 +2008,7 @@ describe('P-SYNC-WLASCICIEL — łańcuch „Scal pacjentów” a późniejsza z
     await ZMIANY[zmiana].zrob(B, X, x1);
     await rundy(model, A, B, sync);
     const naA = await wersjaNa(A, x1, et), naB = await wersjaNa(B, x1, et);
-    const cel = scalen === 2 ? 'Z' : (zmiana === 'korekta z nową chwilą zapisu' ? 'X' : 'Y');
+    const cel = scalen === 2 ? 'Z' : 'X';
     expect(naA, 'x1 na A').toEqual({ karta: cel, tresc: ZMIANY[zmiana].tresc });
     expect(naB, 'x1 na B').toEqual({ karta: cel, tresc: ZMIANY[zmiana].tresc });
     const wersje = [...WSZYSTKIE, 'ym', ...(scalen === 2 ? ['zm'] : [])];
@@ -2268,11 +2273,11 @@ describe('P-SYNC-WLASCICIEL — treść, chwila zmiany i chwila zapisu wersji z 
     await chwila(5);
     await B.v.updateSnapshotPayload(X, x1, zapis([66]), { preserveSavedAt: true }); // B: rev 3, najpóźniejsza
     await B.v.mergeSyncPayload(pA); // X w N: „zabierz”, treść tutejsza (późniejsza) z jej rev 3
-    expect((await B.baza.listSnapshotsForUser(B.uid, Y)).find((s) => s.snapshotId === x1).rev).toBe(3);
+    expect((await B.baza.listSnapshotsForUser(B.uid, X)).find((s) => s.snapshotId === x1).rev).toBe(3);
     const pa = kopia(await A.v.exportSyncPayload()), pb = kopia(await B.v.exportSyncPayload());
     await A.v.mergeSyncPayload(pb); await B.v.mergeSyncPayload(pa);
-    expect(await trescWersji(A, Y, x1)).toBe('66:123');
-    expect(await trescWersji(B, Y, x1)).toBe('66:123');
+    expect(await trescWersji(A, X, x1)).toBe('66:123');
+    expect(await trescWersji(B, X, x1)).toBe('66:123');
   }, CZAS);
 
   it('S3: B poprawia x1 w X z nową chwilą zapisu, potem A scala X → Y → x1 pod Y z treścią poprawki i chwilą zapisu sprzed scalenia (Y wygrała przypisanie) na obu', async () => {
