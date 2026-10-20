@@ -212,7 +212,10 @@ test('female LH keeps the exact source endpoint, strict result-only age interval
   await expect(point(page)).not.toHaveAttribute('data-result-only');
 });
 
-test('known pregnancy and a different patient cannot bypass the existing LH context guard', async ({ page }) => {
+for (const [phase, name, message] of [
+  ['pregnancy_t1', 'pregnancy', 'Dla tego kontekstu badania nie nanosimy wyniku'],
+  ['postmenopause', 'menopause', 'Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie'],
+]) test(`known ${name} and a different patient cannot bypass the existing LH context guard`, async ({ page }) => {
   await prepare(page, 320);
   await converter(page);
   await patient(page);
@@ -220,10 +223,10 @@ test('known pregnancy and a different patient cannot bypass the existing LH cont
   await expectResultOnly(page);
   await choose(page, 'estradiol', '200');
   await page.locator('#labPatientToggle').click();
-  await page.locator('#labOverrideCycle').selectOption('pregnancy_t1');
+  await page.locator('#labOverrideCycle').selectOption(phase);
   await choose(page);
   await expect(point(page)).toHaveCount(0);
-  await expect(note(page)).toContainText('Dla tego kontekstu badania nie nanosimy wyniku');
+  await expect(note(page)).toContainText(message);
   await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
   await expect(point(page)).toHaveCount(0);
   await page.evaluate(() => {

@@ -3107,6 +3107,10 @@ metody z publikacją, ponieważ nie jest z nią porównywany; nie harmonizujemy
 oznaczeń. Nie zmieniamy adaptera zapisu, nie tworzymy snapshotu LH;
 edukacyjny snapshot odniesienia pozostaje AMH-only. Dostępna niezależna
 interpretacja laboratoryjna i odczyt dawnych ocen pozostają zachowane.
+Adapter wykresu przekazuje kanoniczny `reproductiveContext` LH, aby znana
+menopauza rzeczywiście wyłączała nowy punkt. Jawny kontekst należący do
+dawnej próbki pozostaje jej własnym faktem; nie pożyczamy dla niej dzisiejszej
+fazy. Nie zmienia to kwalifikacji istniejących median LH ani adaptera FSH.
 
 **Syntetyczne wejście → wynik:** F17/LH 2 IU/L lub 2 mIU/mL → sam punkt 2,
 bez mediany; F17/0 → zero; F17/1000 → strzałka ponad 70 i etykieta 1000,

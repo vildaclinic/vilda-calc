@@ -262,6 +262,35 @@ for (const upgrade of [false, true]) test(`female LH without a median survives $
     }
     expect(await page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment())).toEqual(assessment);
     expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(shared);
+    // An already known reproductive state must survive an analyte switch
+    // offline. It belongs to this patient and must clear on identity change.
+    await page.locator('#labSubstance').fill('Estradiol');
+    await page.locator('#labSubstanceDropdown [data-id="estradiol"]').click();
+    await page.locator('#labUnit').selectOption('pmol/L');
+    await page.locator('#labValue').fill('200');
+    await page.locator('#labPatientToggle').click();
+    await page.locator('#labOverrideCycle').selectOption('postmenopause');
+    await selectLh(page);
+    await expect(point(page)).toHaveCount(0);
+    await expect(note(page)).toContainText('Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie');
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:session-changed')));
+    await expect(point(page)).toHaveCount(0);
+    await page.evaluate(() => {
+      const patientId = 'fictional-next-female-lh-offline';
+      window._vildaCurrentPatientId = patientId;
+      sessionStorage.setItem('vildaCurrentPatientId', patientId);
+      document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId } }));
+    });
+    await expect(page.locator('#labOverrideCycle')).toHaveValue('');
+    await expect(page.locator('#labValue')).toHaveValue('');
+    await page.evaluate(() => {
+      window._vildaCurrentPatientId = null;
+      sessionStorage.removeItem('vildaCurrentPatientId');
+      document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: null } }));
+    });
+    await writePatient(page);
+    await selectLh(page);
+    await expectResultOnly(page);
     const screenshot = testInfo.outputPath('female-lh-result-only-offline-320.png');
     await panel(page).screenshot({ path: screenshot });
     await testInfo.attach('female-LH-offline-screenshot', { path: screenshot, contentType: 'image/png' });

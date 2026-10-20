@@ -1383,8 +1383,9 @@
         "ambiguous-age": "Podany przedział wieku obejmuje granicę źródeł lub grup wieku — nie wybieramy jednej mediany.",
         "unsupported-age": "Dla tego wieku nie udostępniono mediany źródłowej. Linia pokazuje ogólny przebieg zmian.",
       };
-      const message = (femaleSource && femaleMessages[patientPoint?.reason]) ||
-        (adultTestosterone && adultMessages[patientPoint?.reason]) || messages[patientPoint?.reason];
+      const reason = resultOnlyPoint?.reason || patientPoint?.reason;
+      const message = (femaleSource && femaleMessages[reason]) ||
+        (adultTestosterone && adultMessages[reason]) || messages[reason];
       if (message) byId("scale-note").textContent = (femaleGonadotropinsActive()
         ? byId("scale-note").textContent + " " : "") + message +
         (femaleSource && patientPoint?.reason === "unsupported-age" ? "" : " Krzywe pozostają poglądowe.");

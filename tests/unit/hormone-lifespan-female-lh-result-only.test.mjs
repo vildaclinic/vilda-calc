@@ -174,7 +174,7 @@ function currentForm() {
     const evaluation = ageEngine.evaluate({ analyte: 'lh', sex: 'F', age: { years: 17, months: 0, precision: 'month' },
       contextBasis: 'current-patient', value: raw, unit: 'IU/L', ...extra }, agePolicy);
     ctx.updateLifespan({ id: 'lh' }, evaluation);
-    return { evaluation, result: engine.evaluateResultOnly(runtime, updates.at(-1)) };
+    return { evaluation, context: updates.at(-1), result: engine.evaluateResultOnly(runtime, updates.at(-1)) };
   } };
 }
 
@@ -208,5 +208,64 @@ describe('LH bez mediany — rzeczywisty adapter i niezależna ocena laboratoryj
     const switched = currentForm();
     switched.ctx.identity = 'fictional-new-person';
     expect(switched.calculate().result.status).toBe('unavailable');
+  });
+
+  it('przekazuje kanoniczną menopauzę LH, zachowując nieznany kontekst i dotychczasowe mediany', () => {
+    const menopause = currentForm().calculate({ reproductiveContext: 'postmenopause' });
+    expect(menopause.evaluation.input.reproductiveContext).toBe('postmenopause');
+    expect(menopause.context.cyclePhase).toBe('postmenopause');
+    expect(menopause.result).toEqual(unavailable('incompatible-reproductive-context'));
+    const unknown = currentForm().calculate({ reproductiveContext: 'unknown' });
+    expect(unknown.result.status).toBe('result-only');
+    for (const cyclePhase of ['unknown', 'postmenopause']) {
+      expect(engine.evaluate(data, context(12, { cyclePhase }))).toMatchObject({ status: 'ready',
+        profile: { id: 'madsen2022-female-lh-age-6-16' } });
+    }
+    // FSH is not part of the new adapter route. Its existing phase field is
+    // retained rather than replaced by LH's canonical reproductiveContext.
+    const form = currentForm();
+    expect(form.ctx.lifespanCyclePhase({ id: 'fsh' }, { sex: 'F', contextBasis: 'current-patient',
+      reproductiveContext: 'postmenopause' }, { cycle_phase: 'follicular' })).toBe('follicular');
+  });
+
+  it('nie przenosi aktualnej menopauzy na historyczną próbkę, chłopca ani inną osobę', () => {
+    const form = currentForm();
+    form.ctx.localOverride.cycle_phase = 'postmenopause';
+    form.ctx.getEffectivePatient = () => ({ ...form.ctx.effectivePatient, cycle_phase: form.ctx.localOverride.cycle_phase });
+    expect(form.calculate({ reproductiveContext: 'unknown' }).result)
+      .toEqual(unavailable('incompatible-reproductive-context'));
+    const historical = form.calculate({ reproductiveContext: 'unknown', contextBasis: 'sample', sampleDateISO: '2025-01-01' });
+    expect(historical.context.cyclePhase).toBeNull();
+    expect(historical.result.status).toBe('result-only');
+    for (const sample of [{ contextBasis: 'sample', sampleDateISO: '2025-01-01' },
+      { contextBasis: 'sample' }, { sampleDateISO: '2025-01-01' }]) {
+      const explicit = form.calculate({ reproductiveContext: 'postmenopause', ...sample });
+      expect(explicit.context.cyclePhase).toBe('postmenopause');
+      expect(explicit.result).toEqual(unavailable('incompatible-reproductive-context'));
+    }
+    expect(form.ctx.lifespanCyclePhase({ id: 'inhibin_b' }, { sex: 'F', contextBasis: 'sample',
+      sampleDateISO: '2025-01-01', reproductiveContext: 'postmenopause' }, { cycle_phase: 'postmenopause' }))
+      .toBeNull();
+    expect(form.ctx.lifespanCyclePhase({ id: 'lh' }, { sex: 'M', contextBasis: 'current-patient',
+      reproductiveContext: 'unknown' }, { cycle_phase: 'postmenopause' })).toBeNull();
+    expect(form.ctx.lifespanCyclePhase({ id: 'lh' }, { sex: 'M', contextBasis: 'sample',
+      sampleDateISO: '2025-01-01', reproductiveContext: 'postmenopause' }, { cycle_phase: 'postmenopause' }))
+      .toBeNull();
+    form.ctx.sourcePatient.sex = 'M';
+    form.ctx.effectivePatient.sex = 'M';
+    const boy = form.calculate({ sex: 'M', reproductiveContext: 'unknown' });
+    expect(boy.context.sex).toBe('male');
+    expect(boy.context.cyclePhase).toBeNull();
+    expect(form.ctx.localOverride.cycle_phase).toBeNull();
+    form.ctx.sourcePatient.sex = 'F';
+    form.ctx.effectivePatient.sex = 'F';
+    expect(form.calculate({ reproductiveContext: 'unknown' }).result.status).toBe('result-only');
+    form.ctx.localOverride.cycle_phase = 'postmenopause';
+    expect(form.calculate({ reproductiveContext: 'unknown' }).result.status).toBe('unavailable');
+    form.ctx.identity = 'fictional-next-person';
+    form.ctx.sourcePatient.identityKey = 'fictional-next-person';
+    expect(form.calculate({ reproductiveContext: 'unknown' }).result.status).toBe('unavailable');
+    expect(form.ctx.localOverride.cycle_phase).toBeNull();
+    expect(form.calculate({ reproductiveContext: 'unknown' }).result.status).toBe('result-only');
   });
 });

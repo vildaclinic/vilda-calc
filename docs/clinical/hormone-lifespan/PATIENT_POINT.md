@@ -95,6 +95,8 @@ Zachowawcza polityka odrzuca znany materiał inny niż surowica;
 nieznany materiał nie staje się potwierdzoną surowicą. Znane przeciwwskazanie,
 ciąża/menopauza, leczenie hormonalne/GnRHa i stymulacja zachowują dotychczasowe
 bramki adaptera; brak informacji nie potwierdza ich nieobecności.
+LH przekazuje kanoniczny `reproductiveContext`, także jawny kontekst należący
+do dawnej próbki; jej nieznany kontekst nie jest uzupełniany dzisiejszą fazą.
 Wynik musi być skończony, nieujemny i dokładny, w obsługiwanej jednostce.
 Nierówności, nieobsługiwane jednostki i brak kontekstu nie tworzą punktu.
 Nie imputujemy LOD/LOQ ani nie bierzemy stężenia z wysokości ilustracji.
