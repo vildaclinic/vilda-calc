@@ -3969,15 +3969,23 @@ async function updateShellFromNetwork(request) {
     const safeResponse = await makeNavigationResponseSafe(networkResponse);
 
     if (cacheKey && isCacheableResponse(safeResponse)) {
-      // P-SW-STRONY-PRAWNE: odrzucenie zapisu z powodu limitu pamięci źródła (QuotaExceededError) nie unieważnia
-      // odpowiedzi, która przyszła z sieci — treść jest cała, zabrakło tylko miejsca na kopię. Przed tą poprawką
-      // kończyło nawigację jak brak sieci: dokument bez kopii dostawał Response.error(), a strona prawna (najpierw
-      // sieć) dostałaby starą kopię. Każdy inny błąd zapisu idzie dalej jak dotąd: np. urwane połączenie w trakcie
-      // treści psuje też odpowiedź dla strony (obie gałęzie strumienia), więc nawigacja bierze kopię z pamięci.
+      // P-SW-STRONY-PRAWNE: nieudany zapis kopii nie unieważnia odpowiedzi z sieci, jeśli jej treść jest cała.
+      // Nie rozstrzygamy po nazwie błędu — silniki zgłaszają brak miejsca inaczej (Chromium: QuotaExceededError,
+      // Firefox: NS_ERROR_FILE_NO_DEVICE_SPACE, nie DOMException). Do pamięci idzie response.clone(), więc gałąź dla
+      // strony jest jeszcze nieczytana: czytamy ją do końca. Treść cała (np. zabrakło tylko miejsca) → odpowiedź
+      // z sieci. Strumień urwany w trakcie treści psuje obie gałęzie, odczyt odrzuca i nawigacja bierze kopię
+      // z pamięci jak przy braku sieci. Przed tą poprawką każdy nieudany zapis kończył nawigację jak brak sieci:
+      // dokument bez kopii dostawał Response.error(), a strona prawna (najpierw sieć) dostałaby starą kopię.
       try {
         await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
-      } catch (error) {
-        if (!error || error.name !== 'QuotaExceededError') throw error;
+      } catch (_) {
+        void _;
+        const body = await safeResponse.blob();
+        return new Response(body, {
+          status: safeResponse.status,
+          statusText: safeResponse.statusText,
+          headers: copyHeadersForSyntheticResponse(safeResponse)
+        });
       }
     }
 

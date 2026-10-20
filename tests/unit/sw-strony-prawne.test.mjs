@@ -17,7 +17,9 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 //
 // Test wykonuje PRAWDZIWY plik service workera na atrapie Cache Storage i sieci i podaje prawdziwemu nasłuchowi fetch
 // syntetyczne zdarzenie nawigacji. Kontrola negatywna usuwa warunek strategii i pokazuje, że wtedy online wraca stara
-// treść. Osobny blok: nieudany zapis do pamięci (np. QuotaExceededError) nie może unieważnić odpowiedzi z sieci.
+// treść. Osobne bloki: nieudany zapis kopii nie unieważnia odpowiedzi z sieci, jeśli jej treść jest cała — niezależnie
+// od tego, jak silnik nazywa błąd (Chromium: QuotaExceededError; Firefox: NS_ERROR_FILE_NO_DEVICE_SPACE, nie DOMException;
+// zmierzone w Chromium 141 i Firefoksie 151) — a urwany strumień działa jak brak sieci (kopia z pamięci).
 
 const ZRODLO_SW = fs.readFileSync(path.join(korzen, 'service-worker-kalorii.js'), 'utf8');
 const POCHODZENIE = 'https://vilda.test';
@@ -36,7 +38,9 @@ const kluczAdresu = (wejscie) => {
 };
 
 // Atrapa Cache Storage: pamięci pod nazwami, klucz to ścieżka z query (tak SW zapisuje dokumenty).
-// `pelna` — put odrzuca jak przy wyczerpanym limicie źródła (QuotaExceededError).
+// put — jak prawdziwy Cache.put: najpierw czyta treść do końca; urwany strumień odrzuca w formie Chromium
+// (DOMException NetworkError). `pelna` — wyczerpany limit źródła po odczycie treści: 'chromium' (DOMException
+// QuotaExceededError, kod 22) albo 'firefox' (obiekt NS_ERROR_FILE_NO_DEVICE_SPACE, nie DOMException).
 function pamiec({ pelna = false } = {}) {
   const pamieci = new Map();
   const otworz = (nazwa) => {
@@ -47,10 +51,15 @@ function pamiec({ pelna = false } = {}) {
         const r = m.get(kluczAdresu(klucz));
         return r ? r.clone() : undefined;
       },
-      // Jak prawdziwy Cache.put: czyta treść odpowiedzi do końca, więc błąd strumienia odrzuca zapis.
       put: async (klucz, odpowiedz) => {
+        let tresc;
+        try {
+          tresc = await odpowiedz.arrayBuffer();
+        } catch {
+          throw new DOMException('Cache.put() encountered a network error', 'NetworkError');
+        }
+        if (pelna === 'firefox') throw { name: 'NS_ERROR_FILE_NO_DEVICE_SPACE', result: 0x80520010, message: '' };
         if (pelna) throw new DOMException('Quota exceeded', 'QuotaExceededError');
-        const tresc = await odpowiedz.arrayBuffer();
         m.set(kluczAdresu(klucz), new Response(tresc, { status: odpowiedz.status, headers: odpowiedz.headers }));
       },
       _wstaw: (klucz, odpowiedz) => { m.set(kluczAdresu(klucz), odpowiedz.clone()); },
@@ -188,45 +197,78 @@ describe('P-SW-STRONY-PRAWNE: strony prawne w precache, nawigacja najpierw do si
   });
 });
 
-describe('P-SW-STRONY-PRAWNE: nieudany zapis do pamięci nie unieważnia odpowiedzi z sieci', () => {
-  for (const s of STRONY_PRAWNE) {
-    it(`${s} online przy pełnej pamięci: tekst z sieci, nie stara kopia`, async () => {
-      const { sw, powloka } = srodowisko(ZRODLO_SW, { pelna: true });
-      powloka._wstaw(s, html('stara'));
-      expect(await tytul(await nawiguj(sw, s))).toBe('nowa');
-    });
+// Blok catch zapisu kopii nawigacji, dokładnie jak w produkcyjnym SW — i dwie wcześniejsze, błędne wersje tej poprawki.
+const CATCH_PRODUKCJA = `      } catch (_) {
+        void _;
+        const body = await safeResponse.blob();
+        return new Response(body, {
+          status: safeResponse.status,
+          statusText: safeResponse.statusText,
+          headers: copyHeadersForSyntheticResponse(safeResponse)
+        });
+      }`;
+const CATCH_POLYKA_KAZDY = `      } catch (_) {
+        void _;
+      }`;
+const CATCH_PO_NAZWIE = `      } catch (error) {
+        if (!error || error.name !== 'QuotaExceededError') throw error;
+      }`;
+const wariant = (blok) => {
+  expect(ZRODLO_SW.split(CATCH_PRODUKCJA).length - 1, 'blok catch zapisu jest w SW dokładnie raz').toBe(1);
+  return ZRODLO_SW.replace(CATCH_PRODUKCJA, blok);
+};
 
-    it(`${s} online przy pełnej pamięci i bez kopii: tekst z sieci, nie strona błędu`, async () => {
-      const { sw } = srodowisko(ZRODLO_SW, { pelna: true });
-      const r = await nawiguj(sw, s);
+describe('P-SW-STRONY-PRAWNE: nieudany zapis kopii nie unieważnia odpowiedzi z sieci, jeśli jej treść jest cała', () => {
+  for (const silnik of ['chromium', 'firefox']) {
+    for (const s of STRONY_PRAWNE) {
+      it(`${s} online, pełny limit (${silnik}): tekst z sieci, nie stara kopia`, async () => {
+        const { sw, powloka } = srodowisko(ZRODLO_SW, { pelna: silnik });
+        powloka._wstaw(s, html('stara'));
+        expect(await tytul(await nawiguj(sw, s))).toBe('nowa');
+      });
+
+      it(`${s} online, pełny limit (${silnik}), bez kopii: tekst z sieci, nie strona błędu`, async () => {
+        const { sw } = srodowisko(ZRODLO_SW, { pelna: silnik });
+        const r = await nawiguj(sw, s);
+        expect(r.type).not.toBe('error');
+        expect(await tytul(r)).toBe('nowa');
+      });
+    }
+
+    it(`skutek dla pozostałych dokumentów (${silnik}): bez kopii i przy pełnym limicie — odpowiedź z sieci zamiast błędu`, async () => {
+      const { sw } = srodowisko(ZRODLO_SW, { pelna: silnik });
+      const r = await nawiguj(sw, '/kontakt.html');
       expect(r.type).not.toBe('error');
       expect(await tytul(r)).toBe('nowa');
     });
   }
 
-  it('skutek dla pozostałych dokumentów: bez kopii w pamięci i przy pełnej pamięci — odpowiedź z sieci zamiast błędu', async () => {
-    const { sw } = srodowisko(ZRODLO_SW, { pelna: true });
-    const r = await nawiguj(sw, '/kontakt.html');
-    expect(r.type).not.toBe('error');
-    expect(await tytul(r)).toBe('nowa');
+  it('kontrola negatywna: rozstrzyganie po nazwie błędu (QuotaExceededError) — w Firefoksie online stara kopia', async () => {
+    const { sw, powloka } = srodowisko(wariant(CATCH_PO_NAZWIE), { pelna: 'firefox' });
+    powloka._wstaw('/regulamin.html', html('stara'));
+    expect(await tytul(await nawiguj(sw, '/regulamin.html'))).toBe('stara');
   });
 });
 
-describe('P-SW-STRONY-PRAWNE: inne błędy zapisu działają jak brak sieci', () => {
+describe('P-SW-STRONY-PRAWNE: urwany strumień działa jak brak sieci', () => {
   for (const s of STRONY_PRAWNE) {
     it(`${s}: połączenie urwane w trakcie treści — strona z pamięci, nie pusta odpowiedź`, async () => {
-      const { sw, powloka } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana });
+      const { sw, powloka, zapytania } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana });
       powloka._wstaw(s, html('stara'));
       const r = await nawiguj(sw, s);
+      expect(zapytania, 'nawigacja poszła do sieci').toContain(s);
       expect(await tytul(r)).toBe('stara');
     });
   }
 
-  it('kontrola negatywna: catch połykający każdy błąd zapisu zwraca uszkodzoną odpowiedź zamiast kopii', async () => {
-    const zawezony = "} catch (error) {\n        if (!error || error.name !== 'QuotaExceededError') throw error;\n      }";
-    expect(ZRODLO_SW.split(zawezony).length - 1, 'zawężony catch jest w pliku dokładnie raz').toBe(1);
-    const szeroki = ZRODLO_SW.replace(zawezony, '} catch (_) {\n        void _;\n      }');
-    const { sw, powloka } = srodowisko(szeroki, { odpowiedz: zerwana });
+  it('urwany strumień przy pełnym limicie — też kopia z pamięci (urwanie wygrywa)', async () => {
+    const { sw, powloka } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana, pelna: 'chromium' });
+    powloka._wstaw('/regulamin.html', html('stara'));
+    expect(await tytul(await nawiguj(sw, '/regulamin.html'))).toBe('stara');
+  });
+
+  it('kontrola negatywna: catch połykający każdy błąd bez odczytu treści — uszkodzona odpowiedź zamiast kopii', async () => {
+    const { sw, powloka } = srodowisko(wariant(CATCH_POLYKA_KAZDY), { odpowiedz: zerwana });
     powloka._wstaw('/regulamin.html', html('stara'));
     const r = await nawiguj(sw, '/regulamin.html');
     await expect(r.text()).rejects.toThrow();
