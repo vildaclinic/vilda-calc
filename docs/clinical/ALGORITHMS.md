@@ -15054,6 +15054,90 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
+## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.327, 2026-10-20)
+
+**Zgłoszenie (pomiar właściciela 2026-10-20 przy weryfikacji P-SW-STRONY-PRAWNE; usterka istniała już na `audyt`).**
+W Firefoksie (Playwright Firefox 151 i Firefox 158.0.1 bez automatyzacji, limit źródła obniżony preferencją
+`dom.quotaManager.temporaryStorage.fixedLimit`), gdy źródło jest kilka bajtów do ok. 12 KB od limitu pamięci, `Cache.put`
+treści mniejszej niż 64 KiB zwykle **kończy się sukcesem, ale zapisuje 0 B** — dla każdego rodzaju treści (odpowiedź
+sieci, jej klon, Blob, ArrayBuffer, krótki tekst). W serii 2400 zapisów przy pełnym limicie: 2383 × 0 B, 7 × 1 B,
+10 odrzuconych. Treść od 64 KiB jest odrzucana zwykłym obiektem `{name: 'NS_ERROR_FILE_NO_DEVICE_SPACE'}`, nie
+`DOMException`. Skutek w `service-worker-kalorii.js`: odświeżenie w tle dokumentu cache-first (`updateShellFromNetwork`,
+gałąź nawigacji) nadpisywało dobrą kopię pustą treścią, a następna wizyta dostawała pustą stronę. `catch` nie działał,
+bo `put` się nie odrzucał.
+
+**Co zmierzono (`node tests/scripts/pomiar-pustej-kopii-sw.mjs`; profil trwały, prawdziwy SW z pełnymi tablicami,
+źródło wypełnione losowymi bajtami do granicy limitu, nowa treść `/kontakt.html` o 19 B dłuższa od kopii; brak sieci =
+zatrzymany serwer).** Wariant „przed” to SW 1.1.326 z `audyt` `189c879`.
+
+| | Firefox 151, limit źródła 40 MiB, wolne 3–7 B | Chromium 141, limit źródła 120 MiB (CDP) |
+|---|---|---|
+| zapis wypełniacza na granicy | `put` udany z inną treścią (16–17 razy), odrzucenia: `NS_ERROR_FILE_NO_DEVICE_SPACE` (zwykły obiekt) | odrzucenia: `QuotaExceededError` (`DOMException`) |
+| przed: `/kontakt.html` po odświeżeniu w tle | **wpis 0 B**; następna wizyta online, wizyta offline i offline po ponownym uruchomieniu przeglądarki — **pusta strona** (status 200, `<html><head></head><body></body></html>`) | wpis nietknięty (20 685 B), strona online i offline |
+| przed: `/index.html` bez kopii, online | strona się ładuje (wpisu nie ma) | **`net::ERR_FAILED` mimo działającej sieci** |
+| po zmianie: `/kontakt.html` po odświeżeniu w tle | wpis 20 685 B — poprzednia kopia wróciła (nowe 20 704 B się nie zmieściło); online, offline i po ponownym uruchomieniu strona z treścią | wpis nietknięty, strona online i offline |
+| po zmianie: `/index.html` bez kopii, online | strona się ładuje, wpisu nie ma | strona się ładuje (200), wpisu nie ma |
+| po zmianie, przed wypełnieniem (miejsce jest) | nowa treść zastępuje kopię (20 657 → 20 685 B) | to samo |
+
+W Firefoksie `/index.html` bez kopii offline kończy się `NS_ERROR_CONNECTION_REFUSED`, a online ładuje się także przed
+zmianą, choć zapis 149 KB jest odrzucany — wygląda na to, że Firefox po `Response.error()` w nawigacji idzie sam do sieci
+(mechanizmu nie badałem). Instalacja zajęła 14,1 MiB (Firefox) i 54,1 MiB (Chromium).
+
+**Naprawa (niekliniczna: żaden wzór, próg, jednostka, dane ani zapis pacjenta; zmienia się wyłącznie to, co service
+worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).**
+- `storeDocumentCopyVerified(cache, key, response)`: czyta do pamięci bajty, które przyszły z sieci, i poprzednią kopię
+  (przed nadpisaniem), zapisuje, a potem czyta wpis z powrotem i porównuje bajt po bajcie. Zgodny z siecią → zapis
+  udany. Zgodny z poprzednią kopią → zapis odrzucony w całości (Chromium), kopii nie rusza. Inny albo brak → wpis
+  usunięty, poprzednia kopia wstawiona z pamięci (nagłówki jak w `copyHeadersForSyntheticResponse`) i też sprawdzona;
+  gdy i to zawiedzie — wpis usunięty. Bez rozstrzygania po nazwie błędu (silniki się różnią).
+- Wywołania: nawigacja w `updateShellFromNetwork`, dokument pobrany poza nawigacją (ten sam klucz w pamięci powłoki)
+  i instalacja (`fetchAndStorePrecacheUrl`): pusta kopia nie wchodzi do nowej pamięci powłoki — dokument opcjonalny
+  zostaje bez kopii (online z sieci), wymagany `/index.html` przerywa instalację, więc zostaje poprzednia wersja SW.
+- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.326 odrzucony
+  zapis przy braku kopii kończył nawigację `Response.error()` — w Chromium strona nie otwierała się online.
+- Koszt na odświeżenie dokumentu: odczyt poprzedniej kopii i odczyt kontrolny (dokumenty mają 7–249 KB), chwilowo do
+  trzech kopii treści w pamięci SW. Przy braku kopii nawigacja czeka dodatkowo na odczyt kontrolny.
+- `SW_VERSION` 1.1.326 → **1.1.327** (`npm run podbij-wersje`); pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
+
+**Świadomie poza zakresem i ryzyko resztkowe (decyzje właściciela).**
+- **Strony prawne (network-first z P-SW-STRONY-PRAWNE).** W chwili tej zmiany P-SW-STRONY-PRAWNE nie ma na `audyt` ani
+  w otwartym PR — na `audyt` `/polityka-prywatnosci.html` i `/regulamin.html` nie są w pamięci powłoki wcale. Gałąź
+  network-first powinna zapisywać kopię przez `storeDocumentCopyVerified`; z dwóch zmian ta, która wejdzie druga,
+  podłącza wywołanie i aktualizuje „Znane ograniczenia” we wpisie P-SW-STRONY-PRAWNE.
+- **Zasoby inne niż dokumenty** (JS/CSS z `?v=`, adresy bez `?v=`, pamięć czasu działania, kopiowanie niezmiennych
+  wpisów z poprzedniej pamięci powłoki przy instalacji) zapisują się nadal bez odczytu kontrolnego. Ta sama właściwość
+  Firefoksa może zostawić pusty skrypt; wpis z `?v=` jest niezmienny (bez odświeżania w tle), więc trwałby do następnej
+  wersji SW, a kopia z poprzedniej pamięci powłoki przeniosłaby go dalej. Nie mierzone w przeglądarce. Rozszerzenie
+  odczytu kontrolnego na instalację wszystkich wpisów to ok. 24 MB dodatkowego odczytu przy każdej instalacji.
+- Gdy ponowne wstawienie poprzedniej kopii też się nie zmieści (np. inny zapis zajmie zwolnione miejsce), wpis znika:
+  offline błąd sieci zamiast strony, online strona z sieci. W pomiarze Firefoksa ponowne wstawienie się zmieściło —
+  nieudany zapis zwolnił starą treść.
+- Instalacja z granicą limitu w trakcie pobierania nie była odtworzona w przeglądarce — sprawdza ją test jednostkowy.
+- Dwa równoczesne odświeżenia tego samego dokumentu: porównanie bajtów, nie tożsamości zapisu. Przy tej samej treści
+  z serwera oba kończą się sukcesem; przy różnej może zostać starsza, dobra kopia do następnego odświeżenia (nigdy pusta).
+- Nie mierzono Safari/WebKit ani Firefoksa 158 skryptem (Playwright steruje tylko własną kompilacją Firefoksa).
+
+**Testy.**
+- `tests/unit/sw-pusta-kopia-dokumentu.test.mjs` (nowy, 12): prawdziwy plik SW, atrapa Cache Storage z limitem bajtów,
+  która przy pełnym limicie zachowuje się jak zmierzony Firefox (treść < 64 KiB → wpis 0 B, stara treść zwolniona;
+  od 64 KiB → odrzucenie zwykłym obiektem), i zdarzenia `fetch` jak w przeglądarce. Sprawdza: poprzednia kopia
+  przeżywa odświeżenie, a wizyty offline i online nie są puste; zapis z miejscem zastępuje kopię jednym zapisem; gdy
+  i ponowne wstawienie jest puste — wpis znika (online z sieci, offline błąd sieci, nie pusty dokument 200); odrzucenie
+  nie przepisuje starej kopii; bez kopii odrzucony zapis nie przerywa odpowiedzi z sieci; dokument poza nawigacją;
+  instalacja (opcjonalny bez kopii, wymagany przerywa). Kontrola negatywna: ten sam plik z zapisem bez odczytu
+  kontrolnego daje pustą stronę online i offline, pusty dokument główny po instalacji i błąd sieci przy odrzuconym
+  zapisie. Sprawdzony mutacjami SW (bez ponownego wstawienia, bez rozpoznania nietkniętej kopii, bez usunięcia po
+  nieudanym wstawieniu, instalacja bez przerwania, ścieżka zasobów bez kontroli, nawigacja bez kontroli, wyjątek `put`
+  przepuszczony dalej) — każda zapala właściwy test.
+- `tests/e2e/pwa-pelny-limit.spec.mjs` (nowy, Chromium, ok. 10 s): prawdziwy SW, limit przez CDP, źródło wypełnione do
+  granicy — `/index.html` bez kopii otwiera się online, kopia `/kontakt.html` przeżywa odświeżenie i działa przy
+  zatrzymanym serwerze. Na SW 1.1.326 z `audyt` pada na `net::ERR_FAILED`.
+- `tests/scripts/pomiar-pustej-kopii-sw.mjs` (nowy, poza `npm test`): pomiar z tabeli wyżej w Firefoksie i Chromium;
+  `--korzen` z worktree `audyt` daje wariant „przed”.
+
+**Wpływ kliniczny.** Brak — zmiana wyłącznie zapisu kopii dokumentów w pamięci service workera; wyniki, jednostki,
+progi, dane, zapis i synchronizacja bez zmian.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
