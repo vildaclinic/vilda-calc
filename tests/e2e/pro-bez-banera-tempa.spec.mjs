@@ -1,10 +1,11 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-PRO-BEZ-BANERA-TEMPA (decyzja właściciela 2026-10-20): w trybie profesjonalnym (PRO) karta
-// „Zaawansowane obliczenia wzrostowe" nie pokazuje czerwonego banera „Tempo wzrastania poniżej normy
-// dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę" ani ramki alarmowej z samego tempa.
-// Werdykt tempa zostaje w wierszu karty, a model (advancedGrowthTrajectory.velocity.alarm) — dla
-// podsumowania i Karty pacjenta — bez zmian. PRAWDZIWA strona, dane FIKCYJNE.
+// P-PRO-BEZ-BANEROW (decyzje właściciela 2026-10-20): w trybie profesjonalnym (PRO) karty
+// „Zaawansowane obliczenia wzrostowe" i „Obliczenia wzrostowe" nie pokazują banerów („Tempo wzrastania
+// poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę", obniżenie pozycji
+// centylowej — ten drugi w baner-spadku-rata-t4) ani ramki alarmowej. Werdykt tempa zostaje w wierszu
+// karty zaawansowanej, a model (advancedGrowthTrajectory.velocity.alarm) — dla podsumowania i Karty
+// pacjenta — bez zmian. PRAWDZIWA strona, dane FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#ProBezBanera!26aa';
@@ -23,7 +24,7 @@ async function otworz(page) {
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
   await page.waitForFunction(() => Boolean(window.VildaTempoWzrastania) && Boolean(window.VildaTrajectoryAnalysis)
-    && window.VildaTrajectoryAnalysis.version === '33');
+    && window.VildaTrajectoryAnalysis.version === '34');
   await page.waitForFunction(() => Boolean(window.VildaProAccess));
   await page.evaluate(() => {
     window.VildaProAccess.hasAccess = () => true;
@@ -65,11 +66,27 @@ async function policz(page) {
     if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
   });
   await page.waitForSelector('#advResults .vtap-tempo');
+  // Karta podstawowa: ten sam wiersz historii w jej własnych polach i własne przeliczenie.
+  await page.evaluate(() => {
+    if (!document.querySelector('#basicGrowthMeasurements .measure-row')
+      && typeof window.addBasicGrowthMeasurementRow === 'function') window.addBasicGrowthMeasurementRow();
+    const w = document.querySelector('#basicGrowthMeasurements .measure-row');
+    const set = (sel, v) => {
+      const e = w && w.querySelector(sel);
+      if (e) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }
+    };
+    set('.bg-age-years', '8');
+    set('.bg-height', '131');
+    set('.bg-weight', '27');
+    if (typeof window.calculateBasicGrowth === 'function') window.calculateBasicGrowth();
+  });
+  await page.waitForFunction(() => /4,0 cm\/rok/.test(document.getElementById('basicGrowthResults')?.textContent || ''));
 }
 
 async function odczyt(page) {
   return page.evaluate(() => {
     const r = document.getElementById('advResults');
+    const b = document.getElementById('basicGrowthResults');
     const t = window.advancedGrowthTrajectory || {};
     const TA = window.VildaTrajectoryAnalysis;
     return {
@@ -77,14 +94,17 @@ async function odczyt(page) {
       wiersz: (document.querySelector('#advResults .vtap-tempo')?.innerText || '').replace(/\s+/g, ' ').trim(),
       ramka: r ? r.style.borderColor : null,
       czcionka: r ? r.style.fontSize : null,
+      podstawowa: (b?.textContent || '').replace(/\s+/g, ' ').trim(),
+      ramkaPodstawowej: b ? b.style.borderColor : null,
+      czcionkaPodstawowej: b ? b.style.fontSize : null,
       alarm: !!(t.velocity && t.velocity.alarm),
       flaga: TA && typeof TA.heightRedFlagOf === 'function' ? TA.heightRedFlagOf(t) : 'brak',
     };
   });
 }
 
-test.describe('Tryb PRO — karta zaawansowana bez banera tempa ze skierowaniem', () => {
-  test('PRO: bez banera i ramki alarmowej, werdykt tempa w wierszu, model z alarmem; tryb zwykły — baner jak dotąd', async ({ page }) => {
+test.describe('Tryb PRO — karty wzrostowe bez banera tempa ze skierowaniem', () => {
+  test('PRO: obie karty bez banera i ramki alarmowej, werdykt tempa w wierszu, model z alarmem; tryb zwykły — baner jak dotąd', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     await policz(page);
@@ -98,6 +118,11 @@ test.describe('Tryb PRO — karta zaawansowana bez banera tempa ze skierowaniem'
     expect(pro.wiersz).toContain('poniżej normy');
     expect(pro.ramka).not.toBe('var(--danger)');
     expect(pro.czcionka).not.toBe('1.25rem');
+    expect(pro.podstawowa, 'karta podstawowa liczy to samo tempo').toContain('4,0 cm/rok');
+    expect(pro.podstawowa).not.toContain('Tempo wzrastania poniżej normy dla wieku');
+    expect(pro.podstawowa).not.toMatch(/umów wizytę|konsultacja endokrynologiczna/);
+    expect(pro.ramkaPodstawowej).not.toBe('var(--danger)');
+    expect(pro.czcionkaPodstawowej).not.toBe('1.15rem');
 
     // Kontrola: ta sama karta przeliczona poza trybem profesjonalnym niesie baner i ramkę jak dotąd.
     await page.evaluate(() => {
@@ -105,10 +130,13 @@ test.describe('Tryb PRO — karta zaawansowana bez banera tempa ze skierowaniem'
       tryb.checked = false;
       tryb.dispatchEvent(new Event('change', { bubbles: true }));
       if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
+      if (typeof window.calculateBasicGrowth === 'function') window.calculateBasicGrowth();
     });
     await expect(page.locator('#resultsModeToggle')).not.toBeChecked();
     const zwykly = await odczyt(page);
     expect(zwykly.karta).toContain('Tempo wzrastania poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę');
     expect(zwykly.ramka).toBe('var(--danger)');
+    expect(zwykly.podstawowa).toContain('Tempo wzrastania poniżej normy dla wieku, wskazana konsultacja endokrynologiczna, umów wizytę');
+    expect(zwykly.ramkaPodstawowej).toBe('var(--danger)');
   });
 });

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.322';
+const SW_VERSION = '1.1.323';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2859,6 +2859,7 @@ const OPTIONAL_ASSETS = [
   '/growth-basic-module.js?v=19',
   '/growth-basic-module.js?v=20',
   '/growth-basic-module.js?v=21',
+  '/growth-basic-module.js?v=22',
   '/vilda_summary_cards.js?v=33',
   '/vilda_summary_cards.js?v=34',
   '/vilda_summary_cards.js?v=35',
@@ -3026,6 +3027,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_trajectory_analysis.js?v=40',
   '/vilda_trajectory_analysis.js?v=41',
   '/vilda_trajectory_analysis.js?v=42',
+  '/vilda_trajectory_analysis.js?v=43',
   '/gh_therapy_monitor.js?v=40',
   '/gh_therapy_monitor.js?v=41',
   '/gh_therapy_monitor.js?v=42',
@@ -3244,6 +3246,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=76',
   '/vilda_advanced_growth.js?v=77',
   '/vilda_advanced_growth.js?v=78',
+  '/vilda_advanced_growth.js?v=79',
   '/vilda_adv_history_collapse.js?v=1',
   '/vilda_adv_history_collapse.js?v=2',
   '/vilda_spojnosc_zapisow.js?v=1',
