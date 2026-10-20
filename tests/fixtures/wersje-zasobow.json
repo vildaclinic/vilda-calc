@@ -452,8 +452,8 @@
   "sha256": "e3996ea1c41025aa0b02c11b932a56ccc845da164bf05324dc6e53ab5e239750"
  },
  "vilda_advanced_growth.js": {
-  "v": 77,
-  "sha256": "6b6fb34d44a329d4592fc0b03a8428baa8c50baa205c4038e3f5a48d98796e85"
+  "v": 78,
+  "sha256": "9b2673e8540aaddc854bbc1fc75b34ace0fbf6dc08ffdb66324174a0fa23edd3"
  },
  "vilda_amh_age_reference.js": {
   "v": 1,
@@ -1084,8 +1084,8 @@
   "sha256": "872eda8f28b9c101af73ddecb52ad605d15678a0d1e168745be89ef558fb470e"
  },
  "vilda_trajectory_analysis.js": {
-  "v": 41,
-  "sha256": "de3affac186844ce3c69fa80ce550fe50420ab4af7782d9d37bd3927e0cb5273"
+  "v": 42,
+  "sha256": "eea568b9b701b84b277084393a3432ad52d3e08239b7a9366083b7d0d3c49a1b"
  },
  "vilda_tw2_prediction.js": {
   "v": 4,

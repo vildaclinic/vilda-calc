@@ -780,6 +780,35 @@ describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
     expect(vta.buildCardAlertsHtml(null)).toBe('');
   });
 
+  it('buildCardAlertsHtml w trybie profesjonalnym: bez banera tempa, flaga pozycyjna i model bez zmian (decyzja właściciela 2026-10-20)', () => {
+    const vta = makeVta({ 'HT|48': 0.3, 'HT|84': -0.9, 'HT|96': -1.0 });
+    const alarmed = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 84, height: 120 }],
+      currentAgeMonths: 96,
+      currentHeight: 124,
+      sex: 'M'
+    });
+    const pro = vta.buildCardAlertsHtml(alarmed, { profesjonalny: true });
+    expect(pro).not.toContain('Tempo wzrastania poniżej normy dla wieku');
+    expect(pro).not.toContain('norma: ≥5 cm/rok');
+    expect(pro).toContain('istotne obniżenie pozycji centylowej wzrostu');
+    expect(pro).toBe(vta.redFlagBannerHtml(vta.heightRedFlagOf(alarmed)));
+    expect(alarmed.velocity.alarm, 'model tempa bez zmian dla podsumowania i Karty pacjenta').toBe(true);
+    expect(vta.buildCardAlertsHtml(alarmed, { profesjonalny: false })).toBe(vta.buildCardAlertsHtml(alarmed));
+
+    // samo tempo poniżej normy (bez flagi): w trybie profesjonalnym nic, w zwykłym baner jak dotąd
+    const tylkoTempo = vta.analyze({
+      measurements: [{ ageMonths: 84, height: 120 }],
+      currentAgeMonths: 96,
+      currentHeight: 124,
+      sex: 'M'
+    });
+    expect(vta.heightRedFlagOf(tylkoTempo)).toBeNull();
+    expect(tylkoTempo.velocity.alarm).toBe(true);
+    expect(vta.buildCardAlertsHtml(tylkoTempo, { profesjonalny: true })).toBe('');
+    expect(vta.buildCardAlertsHtml(tylkoTempo)).toContain('Tempo wzrastania poniżej normy dla wieku');
+  });
+
   it('buildHtml z hideRedFlag nie powtarza flagi (baner karty ją niesie), bez opcji — powtarza', () => {
     const vta = makeVta({ 'HT|48': 0.3, 'HT|84': -0.9, 'HT|96': -1.0 });
     const model = vta.analyze({
