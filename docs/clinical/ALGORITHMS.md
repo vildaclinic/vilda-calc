@@ -15070,7 +15070,7 @@ bo `put` się nie odrzucał.
 źródło wypełnione losowymi bajtami do granicy limitu, nowa treść `/kontakt.html` o 19 B dłuższa od kopii; brak sieci =
 zatrzymany serwer).** Wariant „przed” to SW 1.1.326 z `audyt` `189c879`.
 
-| | Firefox 151, limit źródła 40 MiB, wolne 3–7 B | Chromium 141, limit źródła 120 MiB (CDP) |
+| | Firefox 151, limit źródła 40 MiB, wolne 3–7 B | Chromium 141 i 149, limit źródła 120 MiB (CDP) |
 |---|---|---|
 | zapis wypełniacza na granicy | `put` udany z inną treścią (16–17 razy), odrzucenia: `NS_ERROR_FILE_NO_DEVICE_SPACE` (zwykły obiekt) | odrzucenia: `QuotaExceededError` (`DOMException`) |
 | przed: `/kontakt.html` po odświeżeniu w tle | **wpis 0 B**; następna wizyta online, wizyta offline i offline po ponownym uruchomieniu przeglądarki — **pusta strona** (status 200, `<html><head></head><body></body></html>`) | wpis nietknięty (20 685 B), strona online i offline |
@@ -15081,7 +15081,9 @@ zatrzymany serwer).** Wariant „przed” to SW 1.1.326 z `audyt` `189c879`.
 
 W Firefoksie `/index.html` bez kopii offline kończy się `NS_ERROR_CONNECTION_REFUSED`, a online ładuje się także przed
 zmianą, choć zapis 149 KB jest odrzucany — wygląda na to, że Firefox po `Response.error()` w nawigacji idzie sam do sieci
-(mechanizmu nie badałem). Instalacja zajęła 14,1 MiB (Firefox) i 54,1 MiB (Chromium).
+(mechanizmu nie badałem). Instalacja zajęła 14,1 MiB (Firefox) i 54,1 MiB (Chromium). Chromium 149 (wersja z CI) podaje
+w `navigator.storage.estimate()` limit równy zajętości + 10 GiB mimo limitu z CDP, choć zapisy są już odrzucane — granicę
+limitu wyznacza więc sam wypełniacz (pętla kończy się, gdy nie mieści się nawet 1 B), nie `estimate()`.
 
 **Naprawa (niekliniczna: żaden wzór, próg, jednostka, dane ani zapis pacjenta; zmienia się wyłącznie to, co service
 worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).**
@@ -15130,8 +15132,8 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
   nieudanym wstawieniu, instalacja bez przerwania, ścieżka zasobów bez kontroli, nawigacja bez kontroli, wyjątek `put`
   przepuszczony dalej) — każda zapala właściwy test.
 - `tests/e2e/pwa-pelny-limit.spec.mjs` (nowy, Chromium, ok. 10 s): prawdziwy SW, limit przez CDP, źródło wypełnione do
-  granicy — `/index.html` bez kopii otwiera się online, kopia `/kontakt.html` przeżywa odświeżenie i działa przy
-  zatrzymanym serwerze. Na SW 1.1.326 z `audyt` pada na `net::ERR_FAILED`.
+  granicy (aż nie mieści się 1 B) — `/index.html` bez kopii otwiera się online, kopia `/kontakt.html` przeżywa odświeżenie
+  i działa przy zatrzymanym serwerze. Na SW 1.1.326 z `audyt` pada na `net::ERR_FAILED` (Chromium 141 i 149).
 - `tests/scripts/pomiar-pustej-kopii-sw.mjs` (nowy, poza `npm test`): pomiar z tabeli wyżej w Firefoksie i Chromium;
   `--korzen` z worktree `audyt` daje wariant „przed”.
 

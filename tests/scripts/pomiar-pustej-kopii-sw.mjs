@@ -21,6 +21,8 @@
 // bez kopii, zatrzymanie serwera i obie strony offline, wreszcie ponowne uruchomienie przeglądarki bez serwera
 // i /kontakt.html offline.
 // Brak sieci = zatrzymany serwer (context.setOffline nie odcina niezawodnie sieci SW — tests/e2e/pwa-strony-offline.spec.mjs).
+// `wolneB` z navigator.storage.estimate() jest tylko poglądowe: Chromium 149 podaje tam zajętość + 10 GiB mimo limitu z CDP.
+// O granicy limitu świadczy wypełniacz: kończy się, gdy nie mieści się nawet 1 B.
 // Wynik: test-results/pomiar-sw/<nazwa>.json i wypis na konsolę.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';

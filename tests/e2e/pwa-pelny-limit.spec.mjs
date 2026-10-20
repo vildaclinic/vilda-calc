@@ -82,7 +82,9 @@ test('pełny limit pamięci: strona bez kopii otwiera się online, a dobra kopia
         await (await caches.open(nazwa)).delete('/index.html');
       });
 
-      // Wypełnienie źródła losowymi bajtami do granicy limitu: rozmiar połowiony po każdym nieudanym zapisie.
+      // Wypełnienie źródła losowymi bajtami do granicy limitu: rozmiar połowiony po każdym nieudanym zapisie, więc
+      // pętla kończy się dopiero, gdy nie mieści się nawet 1 B. Bez navigator.storage.estimate(): Chromium 149 (CI)
+      // podaje tam ok. 10 GiB wolnego mimo limitu z CDP, choć zapisy są już odrzucane.
       const wypelnienie = await page.evaluate(async () => {
         const c = await caches.open('wypelniacz-testu');
         const losowe = (n) => {
@@ -93,6 +95,7 @@ test('pełny limit pamięci: strona bez kopii otwiera się online, a dobra kopia
         let rozmiar = 4 << 20;
         let i = 0;
         let odrzucony = false;
+        let ostatniBajtSieZmiescil = null;
         while (rozmiar >= 1) {
           const k = `/__wypelniacz/${i}`;
           let ok = false;
@@ -103,14 +106,15 @@ test('pełny limit pamięci: strona bez kopii otwiera się online, a dobra kopia
           } catch (_) {
             odrzucony = true;
           }
+          if (rozmiar === 1) ostatniBajtSieZmiescil = ok;
           if (ok) i += 1;
           else { await c.delete(k).catch(() => {}); rozmiar = Math.floor(rozmiar / 2); }
         }
-        const e = await navigator.storage.estimate();
-        return { odrzucony, wolne: e.quota - e.usage };
+        return { odrzucony, wpisy: i, ostatniBajtSieZmiescil };
       });
       expect(wypelnienie.odrzucony, 'źródło doszło do limitu').toBe(true);
-      expect(wypelnienie.wolne, 'wolnego miejsca nie ma (z dokładnością do bajtów)').toBeLessThan(1024);
+      expect(wypelnienie.wpisy, 'wypełniacz zajął miejsce').toBeGreaterThan(0);
+      expect(wypelnienie.ostatniBajtSieZmiescil, 'nie mieści się nawet 1 B').toBe(false);
 
       // 1. Strona bez kopii: zapis się nie mieści, ale odpowiedź z sieci dochodzi do strony.
       await page.goto(`${serwer.adres}/index.html`, { waitUntil: 'load' });
