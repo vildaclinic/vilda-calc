@@ -38,10 +38,22 @@ const kluczAdresu = (wejscie) => {
 };
 
 // Atrapa Cache Storage: pamięci pod nazwami, klucz to ścieżka z query (tak SW zapisuje dokumenty).
-// put — jak prawdziwy Cache.put: najpierw czyta treść do końca; urwany strumień odrzuca w formie Chromium
-// (DOMException NetworkError). `pelna` — wyczerpany limit źródła po odczycie treści: 'chromium' (DOMException
-// QuotaExceededError, kod 22) albo 'firefox' (obiekt NS_ERROR_FILE_NO_DEVICE_SPACE, nie DOMException).
-function pamiec({ pelna = false } = {}) {
+// put — jak prawdziwy Cache.put: najpierw czyta treść do końca; urwany strumień odrzuca w formie silnika `silnik`:
+// 'chromium' (DOMException NetworkError, kod 19) albo 'firefox' (obiekt NS_ERROR_NET_PARTIAL_TRANSFER, nie DOMException).
+// `pelna` — wyczerpany limit źródła po odczycie treści, w formie 'chromium' (DOMException QuotaExceededError, kod 22)
+// albo 'firefox' (obiekt NS_ERROR_FILE_NO_DEVICE_SPACE). `limitPrzedOdczytem` — limit zgłoszony, zanim put przeczyta treść.
+// Formy błędów zmierzone w Chromium 141 i Firefoksie 151.
+const BLEDY = {
+  chromium: {
+    przerwanie: () => new DOMException('Cache.put() encountered a network error', 'NetworkError'),
+    limit: () => new DOMException('Quota exceeded', 'QuotaExceededError'),
+  },
+  firefox: {
+    przerwanie: () => ({ name: 'NS_ERROR_NET_PARTIAL_TRANSFER', result: 0x804B004C, message: '' }),
+    limit: () => ({ name: 'NS_ERROR_FILE_NO_DEVICE_SPACE', result: 0x80520010, message: '' }),
+  },
+};
+function pamiec({ pelna = false, silnik = 'chromium', limitPrzedOdczytem = false } = {}) {
   const pamieci = new Map();
   const otworz = (nazwa) => {
     if (!pamieci.has(nazwa)) pamieci.set(nazwa, new Map());
@@ -52,14 +64,14 @@ function pamiec({ pelna = false } = {}) {
         return r ? r.clone() : undefined;
       },
       put: async (klucz, odpowiedz) => {
+        if (pelna && limitPrzedOdczytem) throw BLEDY[pelna].limit();
         let tresc;
         try {
           tresc = await odpowiedz.arrayBuffer();
         } catch {
-          throw new DOMException('Cache.put() encountered a network error', 'NetworkError');
+          throw BLEDY[silnik].przerwanie();
         }
-        if (pelna === 'firefox') throw { name: 'NS_ERROR_FILE_NO_DEVICE_SPACE', result: 0x80520010, message: '' };
-        if (pelna) throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        if (pelna) throw BLEDY[pelna].limit();
         m.set(kluczAdresu(klucz), new Response(tresc, { status: odpowiedz.status, headers: odpowiedz.headers }));
       },
       _wstaw: (klucz, odpowiedz) => { m.set(kluczAdresu(klucz), odpowiedz.clone()); },
@@ -126,8 +138,10 @@ const zerwana = () => new Response(new ReadableStream({
   },
 }), { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 
-function srodowisko(zrodlo = ZRODLO_SW, { siec = true, pelna = false, odpowiedz = () => html('nowa') } = {}) {
-  const caches = pamiec({ pelna });
+function srodowisko(zrodlo = ZRODLO_SW, {
+  siec = true, pelna = false, silnik = 'chromium', limitPrzedOdczytem = false, odpowiedz = () => html('nowa'),
+} = {}) {
+  const caches = pamiec({ pelna, silnik, limitPrzedOdczytem });
   const zapytania = [];
   const trybyPamieci = [];
   const fetch = async (req) => {
@@ -251,24 +265,32 @@ describe('P-SW-STRONY-PRAWNE: nieudany zapis kopii nie unieważnia odpowiedzi z 
 });
 
 describe('P-SW-STRONY-PRAWNE: urwany strumień działa jak brak sieci', () => {
-  for (const s of STRONY_PRAWNE) {
-    it(`${s}: połączenie urwane w trakcie treści — strona z pamięci, nie pusta odpowiedź`, async () => {
-      const { sw, powloka, zapytania } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana });
-      powloka._wstaw(s, html('stara'));
-      const r = await nawiguj(sw, s);
-      expect(zapytania, 'nawigacja poszła do sieci').toContain(s);
-      expect(await tytul(r)).toBe('stara');
+  for (const silnik of ['chromium', 'firefox']) {
+    for (const s of STRONY_PRAWNE) {
+      it(`${s}: połączenie urwane w trakcie treści (${silnik}) — strona z pamięci, nie pusta odpowiedź`, async () => {
+        const { sw, powloka, zapytania } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana, silnik });
+        powloka._wstaw(s, html('stara'));
+        const r = await nawiguj(sw, s);
+        expect(zapytania, 'nawigacja poszła do sieci').toContain(s);
+        expect(await tytul(r)).toBe('stara');
+      });
+    }
+
+    it(`limit zgłoszony przed odczytem treści (${silnik}), potem urwany strumień — odczyt odrzuca, strona z pamięci`, async () => {
+      const { sw, powloka } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana, pelna: silnik, limitPrzedOdczytem: true });
+      powloka._wstaw('/regulamin.html', html('stara'));
+      expect(await tytul(await nawiguj(sw, '/regulamin.html'))).toBe('stara');
+    });
+
+    it(`limit zgłoszony przed odczytem treści (${silnik}), treść cała — tekst z sieci`, async () => {
+      const { sw, powloka } = srodowisko(ZRODLO_SW, { pelna: silnik, limitPrzedOdczytem: true });
+      powloka._wstaw('/regulamin.html', html('stara'));
+      expect(await tytul(await nawiguj(sw, '/regulamin.html'))).toBe('nowa');
     });
   }
 
-  it('urwany strumień przy pełnym limicie — też kopia z pamięci (urwanie wygrywa)', async () => {
-    const { sw, powloka } = srodowisko(ZRODLO_SW, { odpowiedz: zerwana, pelna: 'chromium' });
-    powloka._wstaw('/regulamin.html', html('stara'));
-    expect(await tytul(await nawiguj(sw, '/regulamin.html'))).toBe('stara');
-  });
-
   it('kontrola negatywna: catch połykający każdy błąd bez odczytu treści — uszkodzona odpowiedź zamiast kopii', async () => {
-    const { sw, powloka } = srodowisko(wariant(CATCH_POLYKA_KAZDY), { odpowiedz: zerwana });
+    const { sw, powloka } = srodowisko(wariant(CATCH_POLYKA_KAZDY), { odpowiedz: zerwana, silnik: 'firefox' });
     powloka._wstaw('/regulamin.html', html('stara'));
     const r = await nawiguj(sw, '/regulamin.html');
     await expect(r.text()).rejects.toThrow();

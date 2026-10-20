@@ -18379,7 +18379,7 @@ przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela 
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
-## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.326, 2026-10-20)
+## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.327, 2026-10-20)
 
 **Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (20 stron z precache, w tym DocPro, startuje
 offline: 0 nieudanych żądań własnego pochodzenia, 0 błędów strony) właściciel wybrał z listy zostających luk: strony prawne offline.
@@ -18399,14 +18399,17 @@ który prosi o zgodę. Zmierzone w Chromium z produkcyjnym SW i zatrzymanym serw
   zawsze z sieci. Dlatego `NETWORK_FIRST_DOCUMENTS` (te dwie ścieżki): nawigacja idzie najpierw do sieci (`cache: 'no-cache'`, jak
   dla innych dokumentów), odpowiedź zapisuje się w pamięci jako zapas offline (nowe — dotąd tych stron SW nie zapisywał), a pamięć
   oddaje stronę dopiero przy braku sieci, istniejącą ścieżką zapasową `readDocumentFromShell`. Offline strona się otwiera (z treścią
-  z ostatniej instalacji albo wizyty online). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
+  z ostatniej instalacji albo wizyty online) — z wyjątkiem Firefoksa przy wyczerpanym limicie źródła, gdzie wizyta online może
+  zostawić pustą kopię (niżej, „Znane ograniczenia”). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
 - **Nieudany zapis kopii nie unieważnia odpowiedzi z sieci, jeśli jej treść jest cała** (gałąź nawigacji w
   `updateShellFromNetwork`). Do pamięci idzie `response.clone()`, więc po odrzuconym `cache.put` gałąź dla strony jest jeszcze
   nieczytana: SW czyta ją do końca i oddaje jako odpowiedź syntetyczną (bez `content-length`/`content-encoding`, jak w istniejącej
   ścieżce dla odpowiedzi z przekierowaniem). Treść cała (np. zabrakło tylko miejsca) → odpowiedź z sieci. Strumień urwany w trakcie
   treści psuje obie gałęzie, odczyt odrzuca i nawigacja bierze kopię z pamięci jak przy braku sieci. **Nie rozstrzygamy po nazwie
   błędu**, bo silniki zgłaszają brak miejsca inaczej — zmierzone: Chromium 141 `QuotaExceededError` (DOMException, kod 22),
-  urwany strumień `NetworkError`; Firefox 151 `NS_ERROR_FILE_NO_DEVICE_SPACE` (nie DOMException, bez kodu); WebKit tylko ze
+  urwany strumień `NetworkError` (DOMException, kod 19); Firefox 151 `NS_ERROR_FILE_NO_DEVICE_SPACE` (nie DOMException, bez kodu),
+  urwany strumień `NS_ERROR_NET_PARTIAL_TRANSFER` (też nie DOMException; reset połączenia — `NS_ERROR_NET_RESET`), a odczyt
+  treści po urwaniu odrzuca w obu silnikach (`TypeError`; po resecie w Firefoksie `AbortError`); WebKit tylko ze
   źródeł (`QuotaExceededError`; zapis na dysk — `TypeError`), niesprawdzony. Dotąd każdy odrzucony zapis kończył nawigację jak brak
   sieci. Dla stron prawnych oznaczałoby to starą kopię online mimo działającej sieci.
   **Skutek także dla pozostałych dokumentów:** dokument bez kopii w pamięci, gdy zapis zawiedzie (np. pełny limit), dostaje teraz
@@ -18423,39 +18426,58 @@ zmiany. Adres ze slashem na końcu (`/regulamin/`) otwiera offline sam HTML: zas
 istnieją (online serwer odpowiada 404) — dotyczy każdego dokumentu. Brak limitu czasu: przy zawieszonym połączeniu nawigacja czeka, aż
 przeglądarka zakończy żądanie błędem (jak przed zmianą, gdy strony szły tylko z sieci). Przekierowanie serwera na inne pochodzenie
 (`mode: 'same-origin'` w `buildNavigationNetworkRequest`) kończy żądanie błędem, więc online pokazuje się kopia z pamięci; przed
-zmianą — błąd sieci. W Firefoksie tuż przy wyczerpanym limicie `Cache.put` odpowiedzi strumieniowej bywał rozwiązany, a zapisywał
-pustą treść (obserwacja weryfikatora, nieodtworzona systematycznie) — dotyczy każdego dokumentu i każdej wersji SW.
+zmianą — błąd sieci. **Firefox przy wyczerpanym limicie źródła zapisuje puste kopie.** Zmierzone w Firefoksie 151 (Playwright)
+i w niezautomatyzowanym Firefoksie 158.0.1, z limitem obniżonym przez `dom.quotaManager.temporaryStorage.fixedLimit`: gdy do limitu
+brakuje od kilku bajtów do ok. 12 KB, `Cache.put` treści mniejszej niż 64 KiB zwykle się rozwiązuje, a zapisuje 0 bajtów — dla
+każdego rodzaju treści (odpowiedź z sieci, jej klon, `Blob`, `ArrayBuffer`, krótki tekst); treść od 64 KiB jest odrzucana
+(`NS_ERROR_FILE_NO_DEVICE_SPACE`). W serii 2400 zapisów przy pełnym limicie: 2383 zapisało 0 B, 7 — 1 B, 10 odrzucono (parami, co
+ok. 560 zapisów). Zapis „się udaje”, więc `catch` z tej zmiany się nie uruchamia. Skutki: wizyta online na stronie prawnej pokazuje
+bieżący tekst, ale zastępuje kopię offline pustą treścią — offline strona otwiera się pusta (status 200, pusty dokument), także po
+restarcie przeglądarki, do następnej wizyty online z udanym zapisem; pozostałe dokumenty (pamięć najpierw) już przed tą zmianą
+(SW 1.1.325) po takiej wizycie pokazują pustą stronę przy następnym otwarciu online. Nowa treść od 64 KiB idzie ścieżką odpowiedzi
+syntetycznej, a stara kopia zostaje. Bez wyczerpanego limitu nie występuje. Naprawa (np. kontrola rozmiaru kopii po `put`
+i zachowanie poprzedniej) — osobne zadanie, decyzja właściciela.
 
 **Zmiana kliniczna: NIE.** Żaden wzór, próg, dane ani tekst stron. Zmienia się dostępność dwóch stron bez sieci i odporność
 nawigacji na nieudany zapis do pamięci.
 
-**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` (23) — prawdziwy plik SW na atrapie Cache Storage i sieci; atrapa `put` jak
-prawdziwy `Cache.put` najpierw czyta treść (urwany strumień odrzuca w formie Chromium: `NetworkError`), a pełny limit zgłasza
-w formie Chromium (`QuotaExceededError`) albo Firefoksa (obiekt `NS_ERROR_FILE_NO_DEVICE_SPACE`); prawdziwy nasłuch `fetch` dostaje
-syntetyczne zdarzenie nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść z sieci mimo starszej
-w pamięci, żądanie z `cache: 'no-cache'`, pamięć dostaje nową; offline — strona z pamięci zamiast błędu; `/regulamin` bez `.html`
-online i offline; kontrola: `kontakt.html` dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez warunku strategii —
-online wraca stara treść; pełny limit w obu formach — strony prawne z kopią i bez kopii dostają tekst z sieci, `kontakt.html` bez
-kopii też; urwany strumień — strona prawna z pamięci (także przy pełnym limicie); **dwie kontrole negatywne** odtwarzające
-wcześniejsze wersje poprawki: rozstrzyganie po nazwie błędu (w formie Firefoksa — stara kopia) i `catch` bez odczytu treści
-(urwany strumień — uszkodzona odpowiedź). Liczone przypadki zachowania (kontrole negatywne pinują produkcyjny blok, więc na innych
-wersjach SW są czerwone z założenia): bez `try/catch` czerwone 10 przypadków pełnego limitu; z `catch` bez odczytu treści — 3 przypadki
-urwanego strumienia; z rozstrzyganiem po nazwie — 5 przypadków pełnego limitu w formie Firefoksa. Na SW z `audyt` czerwone 14 z 23;
-zielone zostają kontrola `kontakt.html` i 8 przypadków pełnego limitu dla stron prawnych (na `audyt` szły tylko z sieci — brak
-regresu). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs` czytają
+**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` (28) — prawdziwy plik SW na atrapie Cache Storage i sieci; atrapa `put` jak
+prawdziwy `Cache.put` najpierw czyta treść, a błędy zgłasza w formach zmierzonych w Chromium 141 i Firefoksie 151: urwany strumień
+(`NetworkError` / obiekt `NS_ERROR_NET_PARTIAL_TRANSFER`), pełny limit (`QuotaExceededError` / obiekt
+`NS_ERROR_FILE_NO_DEVICE_SPACE`), także limit zgłoszony przed odczytem treści; prawdziwy nasłuch `fetch` dostaje syntetyczne zdarzenie
+nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść z sieci mimo starszej w pamięci, żądanie
+z `cache: 'no-cache'`, pamięć dostaje nową; offline — strona z pamięci zamiast błędu; `/regulamin` bez `.html` online i offline;
+kontrola: `kontakt.html` dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez warunku strategii — online wraca stara
+treść; pełny limit w obu formach — strony prawne z kopią i bez kopii dostają tekst z sieci, `kontakt.html` bez kopii też; urwany
+strumień w obu formach — strona prawna z pamięci; limit przed odczytem: treść cała — tekst z sieci, potem urwany strumień — odczyt
+odrzuca i strona z pamięci; **dwie kontrole negatywne** odtwarzające wcześniejsze wersje poprawki: rozstrzyganie po nazwie błędu
+(w formie Firefoksa — stara kopia) i `catch` bez odczytu treści (urwany strumień — uszkodzona odpowiedź). Liczone przypadki
+zachowania (kontrole negatywne pinują produkcyjny blok, więc na innych wersjach SW są czerwone z założenia): bez `try/catch` czerwone
+12; z `catch` bez odczytu treści — 6; z rozstrzyganiem po nazwie — 7; mutant „połykaj wszystko poza `NetworkError`” — 4 (urwanie
+w formie Firefoksa i oba warianty „limit przed odczytem, potem urwanie”). Na SW z `audyt` czerwone 17 z 28 (14 przypadków zachowania
+i 3 kontrole); zielone zostają kontrola `kontakt.html`, 8 przypadków pełnego limitu dla stron prawnych i 2 przypadki „limit przed
+odczytem, treść cała” (na `audyt` strony prawne szły tylko z sieci — brak regresu). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs` czytają
 `OPTIONAL_DOCUMENTS`, więc obie strony i ich zasoby obejmuje też strażnik precache i obchód offline wszystkich stron (22 strony).
 
 **Walidacja (Chromium 141, produkcyjny SW, profil trwały, brak sieci = zatrzymany serwer z sondą).** Offline: obie strony z linków
 stopki DocPro, z bramki regulaminu (index bez akceptacji) i z banera zgody; `/regulamin`, `?x=1`; 390 × 844 bez poziomego
-przewijania; po restarcie przeglądarki; ścieżka aktualizacji SW 1.1.325 → 1.1.326. Online przy pełnym limicie (CDP) — nowy tekst
-z sieci; połączenie urwane w połowie treści — kopia z pamięci (pomiary pełnego limitu i urwanego połączenia w Firefoksie 151
-— w końcowej rundzie weryfikacji). Kontrola na `audyt`: te same kliknięcia
+przewijania; po restarcie przeglądarki; ścieżka aktualizacji ze starszej wersji SW bez stron prawnych (zmierzone 1.1.325 → 1.1.326
+przed scaleniem #729; ten sam mechanizm dla 1.1.326 → 1.1.327). Online przy pełnym limicie (CDP) — nowy tekst
+z sieci; połączenie urwane w połowie treści — kopia z pamięci. Firefox 151 (limit obniżony w profilu, produkcyjny SW): pełny limit
+i nowa treść ≥ 64 KiB — `put` odrzucony (`NS_ERROR_FILE_NO_DEVICE_SPACE`), nowy tekst z sieci jako odpowiedź syntetyczna (nagłówek
+CSP działa, `content-length` usunięty, kodowanie UTF-8), stara kopia nienaruszona; kontrola na wersji z rozstrzyganiem po nazwie
+błędu (`aaaef19`) — stara kopia online; pełny limit i treść zwykłej wielkości — nowy tekst online, kopia offline pusta (ograniczenie
+wyżej); połączenie urwane w połowie treści (z `Content-Length`, `chunked`, reset) — pełna kopia z pamięci, kopia nienaruszona;
+offline obie strony z pamięci w tej samej i w nowej karcie. Chromium: treść wstrzymana na 12 s przy pełnym limicie — nawigacja
+czeka na całą treść i pokazuje nowy tekst; jedyna różnica odpowiedzi syntetycznej — `PerformanceNavigationTiming.deliveryType`
+`'cache'` zamiast `''` (aplikacja go nie czyta). Pomiary w przeglądarkach wykonano na stanie sprzed scalenia #729 (zmienia tylko
+wpisy precache hormonów i `przelicznik-jednostek.html`, bez kodu nawigacji). Kontrola na `audyt`: te same kliknięcia
 — `net::ERR_FAILED`. Online: po zmianie treści na serwerze pierwsza nawigacja pokazuje nowy tekst i odświeża pamięć, a `kontakt.html`
 pokazuje starą treść do drugiej nawigacji (pamięć najpierw); kontrola z pustym `NETWORK_FIRST_DOCUMENTS` — czerwona. E2E PWA
 (`pwa-strony-offline`, `pwa`, `pwa-precache-migracja`, `pwa-pierwsza-wizyta`) i pozostałe specyfikacje zależne od SW — zielone.
 WebKit/iOS niesprawdzane (brak przeglądarki w środowisku).
 
-SW 1.1.325 → **1.1.326**.
+SW 1.1.326 → **1.1.327** (po scaleniu #732, #733 i #729 z `audyt`; numery nadaje `npm run podbij-wersje`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja strategii „najpierw sieć” dla stron prawnych i skutku poprawki zapisu dla
 pozostałych dokumentów; scalenie i wdrożenie.
