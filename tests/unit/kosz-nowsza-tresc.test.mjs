@@ -467,7 +467,7 @@ describe('strażnik źródła', () => {
     expect(src).toContain('function Bkz_nowszaWersja(x, y) {');
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
     expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('zrodlo = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;');
-    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('else if (starszy.payloadCipher && !Bkz_nowszaWersja(nowszy, starszy)) zrodlo = starszy;');
+    expect(czesc('function Bkz_dolacz(', 'async function Bkz_czytaj(')).toContain('else if (starszy.payloadCipher && !Bkz_nieaktualny(starszy, nowszy)) zrodlo = starszy;');
     expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('!Bkz_nowszaWersja(e, lokalny)');
     expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bkz_nowszaWersja(zapis, e)');
     expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bkz_nowszaWersja(lokalna, e)');

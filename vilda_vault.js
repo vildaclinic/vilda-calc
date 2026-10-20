@@ -480,6 +480,14 @@ function Bkz_chwilaRetencji(e) {
   return typeof e.przycietoISO === 'string' && e.przycietoISO ? e.przycietoISO : null;
 }
 function Bkz_ostatnie(e) { return Bkz_pozniejsza(e.deletedAtISO, e.przycietoISO); }
+// Tresc albo chwila kosza nagrobka s jest nieaktualna wobec pozniejszego nagrobka p, gdy p opisuje nowsza wersje
+// zmieniona juz po tym usunieciu (zapis przywrocono, zmieniono i usunieto albo przycieto ponownie). Poprawka zrobiona
+// przed usunieciem na innym urzadzeniu nie czyni kosza nieaktualnym.
+function Bkz_nieaktualny(s, p) {
+  if (!Bkz_nowszaWersja(p, s)) return false;
+  const zmiana = (typeof p.updatedAtISO === 'string' && p.updatedAtISO) || p.savedAtISO || '';
+  return zmiana > (Bkz_chwilaKosza(s) || '');
+}
 // true = nagrobek wygrywa z wersja zmieniona w chwili zmiana (przypieta: czy przypieta).
 function Bkz_wygrywa(e, zmiana, przypieta) {
   const kosz = Bkz_chwilaKosza(e);
@@ -489,11 +497,10 @@ function Bkz_wygrywa(e, zmiana, przypieta) {
 }
 
 // Dwa nagrobki tej samej wersji. Tresc kosza: nowsza z dwoch tresci (P-KOSZ-NOWSZA-TRESC), a tresc starszego nagrobka
-// tylko wtedy, gdy nie opisuje starszej wersji niz pozniejszy — inaczej (wersje przywrocono i zmieniono, a potem
-// usunieto albo przycieto ponownie) jest nieaktualna i „Przywroc” wskrzesilby ja. Nagrobek z trescia jest wpisem
+// tylko wtedy, gdy nie jest nieaktualna (Bkz_nieaktualny) — inaczej „Przywroc” wskrzesilby ja. Nagrobek z trescia jest wpisem
 // kosza, nawet gdy pozniejsze usuniecie przyszlo z retencji. Chwile: pozniejsze usuniecie przez uzytkownika i pozniejsze
-// przyciecie; przyciecie wczesniejsze niz kosz nic juz nie zmienia. Gdy pozniejsze przyciecie opisuje nowsza wersje
-// niz nagrobek z chwila kosza i tresci nie ma, zostaje sam nagrobek retencji, jak dotad.
+// przyciecie; przyciecie wczesniejsze niz kosz nic juz nie zmienia. Gdy kosz jest nieaktualny wobec pozniejszego
+// przyciecia i tresci nie ma, zostaje sam nagrobek retencji, jak dotad.
 function Bkz_dolacz(mapa, e) {
   const byl = mapa.get(e.snapshotId);
   if (!byl) { mapa.set(e.snapshotId, e); return; }
@@ -502,16 +509,15 @@ function Bkz_dolacz(mapa, e) {
   let zrodlo = null;
   if (nowszy.payloadCipher && starszy.payloadCipher) zrodlo = Bkz_nowszaWersja(starszy, nowszy) ? starszy : nowszy;
   else if (nowszy.payloadCipher) zrodlo = nowszy;
-  else if (starszy.payloadCipher && !Bkz_nowszaWersja(nowszy, starszy)) zrodlo = starszy;
+  else if (starszy.payloadCipher && !Bkz_nieaktualny(starszy, nowszy)) zrodlo = starszy;
   const kosz = Bkz_pozniejsza(Bkz_chwilaKosza(nowszy), Bkz_chwilaKosza(starszy));
   const ret = Bkz_pozniejsza(Bkz_chwilaRetencji(nowszy), Bkz_chwilaRetencji(starszy));
-  // Kosz przestaje sie liczyc tylko wtedy, gdy pozniejsze przyciecie opisuje nowsza wersje niz nagrobek z chwila kosza
-  // (zapis przywrocono, zmieniono i przycieto). Wpis kosza po wygasnieciu tresci (30 dni) zostaje wpisem kosza —
-  // laczenie dwoch takich samych wpisow nic nie zmienia.
+  // Kosz przestaje sie liczyc tylko wtedy, gdy jest nieaktualny wobec pozniejszego przyciecia (Bkz_nieaktualny). Wpis
+  // kosza po wygasnieciu tresci (30 dni) zostaje wpisem kosza — laczenie dwoch takich samych wpisow nic nie zmienia.
   const zKoszem = Bkz_chwilaKosza(nowszy) === kosz ? nowszy : starszy;
   const zRetencja = Bkz_chwilaRetencji(nowszy) === ret ? nowszy : starszy;
   let wynik;
-  if (zrodlo || (kosz && (!ret || kosz >= ret || !Bkz_nowszaWersja(zRetencja, zKoszem)))) {
+  if (zrodlo || (kosz && (!ret || kosz >= ret || !Bkz_nieaktualny(zKoszem, zRetencja)))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
     wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Object.assign({}, nowszy);
     delete wynik.powod;
