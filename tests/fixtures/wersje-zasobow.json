@@ -252,8 +252,8 @@
   "sha256": "b7b7f17d7523373640c095ef7dbc31eb3e30c6f7ea10ce45285fc77bde3571cd"
  },
  "inline_polityka_prywatnosci_00.css": {
-  "v": 1,
-  "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
+  "v": 2,
+  "sha256": "c1c85da7d2589227a85106fe3b119c1279b0690d4a1c16b0a6e9e16d0310a9bd"
  },
  "inline_przelicznik_jednostek_00.css": {
   "v": 4,
@@ -420,8 +420,8 @@
   "sha256": "622ba25930dbd5376a15f95036b8b1693371433ea8747c54ff0392c5c4f1d7fb"
  },
  "style.css": {
-  "v": 93,
-  "sha256": "68eaaf7e826230abf29d30017e9ef50c2e85b9b559186cc09e50072099d89bc9"
+  "v": 94,
+  "sha256": "eade9ec97fc7e5be1b0c0b8f394e4e32a3c9360510104e687b9d8bb2805ead45"
  },
  "thyroid_cancer_kids.js": {
   "v": 5,
