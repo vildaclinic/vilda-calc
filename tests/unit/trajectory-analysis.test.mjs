@@ -780,7 +780,7 @@ describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
     expect(vta.buildCardAlertsHtml(null)).toBe('');
   });
 
-  it('buildCardAlertsHtml w trybie profesjonalnym: bez banera tempa, flaga pozycyjna i model bez zmian (decyzja właściciela 2026-10-20)', () => {
+  it('buildCardAlertsHtml w trybie profesjonalnym: bez banerów karty, model bez zmian (decyzje właściciela 2026-10-20)', () => {
     const vta = makeVta({ 'HT|48': 0.3, 'HT|84': -0.9, 'HT|96': -1.0 });
     const alarmed = vta.analyze({
       measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 84, height: 120 }],
@@ -788,11 +788,11 @@ describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
       currentHeight: 124,
       sex: 'M'
     });
-    const pro = vta.buildCardAlertsHtml(alarmed, { profesjonalny: true });
-    expect(pro).not.toContain('Tempo wzrastania poniżej normy dla wieku');
-    expect(pro).not.toContain('norma: ≥5 cm/rok');
-    expect(pro).toContain('istotne obniżenie pozycji centylowej wzrostu');
-    expect(pro).toBe(vta.redFlagBannerHtml(vta.heightRedFlagOf(alarmed)));
+    // flaga pozycyjna i tempo poniżej normy: w trybie zwykłym oba banery, w profesjonalnym żaden
+    expect(vta.buildCardAlertsHtml(alarmed)).toContain('istotne obniżenie pozycji centylowej wzrostu');
+    expect(vta.buildCardAlertsHtml(alarmed)).toContain('Tempo wzrastania poniżej normy dla wieku');
+    expect(vta.buildCardAlertsHtml(alarmed, { profesjonalny: true })).toBe('');
+    expect(vta.heightRedFlagOf(alarmed), 'flaga w modelu dla Karty pacjenta i epikryzy').not.toBeNull();
     expect(alarmed.velocity.alarm, 'model tempa bez zmian dla podsumowania i Karty pacjenta').toBe(true);
     expect(vta.buildCardAlertsHtml(alarmed, { profesjonalny: false })).toBe(vta.buildCardAlertsHtml(alarmed));
 
@@ -1558,6 +1558,20 @@ describe('kontekst flagi w dół (rata T4)', () => {
     expect(kowd(157, { tannerStage: 1 }, 'F').rf.kontekst.wariant).toBe('D');
     expect(kowd(169, null).rf.kontekst.wariant).toBe('D');
     expect(kowd(119, { tannerStage: 3 }).rf.kontekst.wariant).toBe('D'); // P2 dopiero od 10 lat
+  });
+
+  it('tryb profesjonalny: żaden wariant banera obniżenia (D, P2, P1, P0, R) nie trafia do karty (decyzja właściciela 2026-10-20)', () => {
+    const r = () => {
+      const vta = vtaZ({ 'HT|36': 1.89, 'HT|96': 0.58 });
+      const model = vta.analyze({ measurements: [{ ageMonths: 36, height: 100 }], currentAgeMonths: 96, currentHeight: 128, sex: 'M', context: { mpSds: 0 } });
+      return { vta, model, rf: vta.heightRedFlagOf(model) };
+    };
+    const przypadki = { D: kowd(144, { tannerStage: 5 }), P2: kowd(144, { tannerStage: 3 }), P1: kowd(144, { tannerStage: 1 }), P0: kowd(144, null), R: r() };
+    for (const [wariant, { vta, model, rf }] of Object.entries(przypadki)) {
+      expect(rf.kontekst.wariant).toBe(wariant);
+      expect(tekst(vta.buildCardAlertsHtml(model)), wariant).toContain('pozycji centylowej wzrostu');
+      expect(vta.buildCardAlertsHtml(model, { profesjonalny: true }), wariant).toBe('');
+    }
   });
 
   it('R: ku celowi rodziców — baza ≥ +1,0 nad mpSDS i dziś > −1,0; progi włącznie/wyłącznie', () => {

@@ -41,7 +41,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '33';
+  var VERSION = '34';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -1219,18 +1219,18 @@
     return { ton: 'warn', tekst: 'Obniżenie pozycji centylowej wzrostu ' + zm + ' ' + fr + ' — ' + zal };
   }
 
-  // opts.profesjonalny (tryb PRO, decyzja właściciela 2026-10-20): bez banera tempa. „Wskazana
-  // konsultacja endokrynologiczna, umów wizytę" to komunikat dla rodzica; lekarz ma werdykt tempa
-  // w wierszu „Tempo" bloku trajektorii, a model (velocity.alarm) zostaje bez zmian dla pozostałych odbiorców.
+  // opts.profesjonalny (tryb PRO, decyzje właściciela 2026-10-20): bez banerów kart — ani tempa, ani
+  // obniżenia pozycji centylowej (wszystkie warianty). Skierowanie („wskazana konsultacja
+  // endokrynologiczna, umów wizytę") i wskazówki banera są dla rodzica; lekarz ma werdykty w bloku
+  // trajektorii, a model (redFlag, velocity.alarm) zostaje bez zmian dla pozostałych odbiorców.
   function buildCardAlertsHtml(model, opts) {
-    if (!model) return '';
-    var o = opts || {};
+    if (!model || (opts && opts.profesjonalny)) return '';
     var out = '';
     var rf = heightRedFlagOf(model);
     if (rf) out += redFlagBannerHtml(rf);
     // Czerwony baner tempa tylko dla poziomu alarmowego (danger); poziom „czujność" (warn,
     // reguły okołopokwitaniowe) pokazują chipy bloku trajektorii i panelu — bez banera.
-    if (model.velocity && model.velocity.alarm && !o.profesjonalny) {
+    if (model.velocity && model.velocity.alarm) {
       var norm = model.velocity.normLabel
         ? ' <span style="font-weight:400;">(norma: ' + esc(model.velocity.normLabel) + ')</span>' : '';
       out += '<p style="color: var(--danger); font-weight:600;">Tempo wzrastania poniżej normy dla wieku'
