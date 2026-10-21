@@ -624,7 +624,7 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji: listy oczekujących z magazynu,
     parzystosc(r);
   });
 
-  it('T31 [CZERWONY, recenzja: nagłówek] karta, do której dochodzą zapisy z kopii, przejmuje nagłówek z kopii — także starszy niż tutejszy; podtytuł to mówi', async () => {
+  it('T31 [D-3 A, P-NAGLOWEK-NAJNOWSZEJ] karta, do której dochodzą zapisy z kopii, zostaje przy nagłówku najnowszej wersji — tutejszej, gdy jest nowsza; podtytuł to mówi', async () => {
     let tutaj = null;
     const r = await przypadek({
       po: async (A, { p1 }) => { await A.v.savePatient(zapis('Testowy', 'Adam', [60, 66, 72]), { patientId: p1, dedup: false }); },
@@ -636,11 +636,11 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji: listy oczekujących z magazynu,
     });
     const po = (await r.C.v.listPatients()).find((k) => k.patientId === r.ids.p1).header;
     expect([tutaj.name, tutaj.sex]).toEqual(['Poprawiona Ada', 'K']);
-    expect([po.name, po.sex], 'nagłówek z kopii, choć starszy niż tutejszy (scalanie bez zmian)').toEqual(['Testowy Adam', 'M']);
-    expect(po.timestampISO < tutaj.timestampISO).toBe(true);
+    expect([po.name, po.sex], 'nagłówek z najnowszej wersji (tutejszej), nie ze starszej wersji z kopii').toEqual(['Poprawiona Ada', 'K']);
     expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
     expect(PODTYTUL).not.toContain('doda tylko');
-    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia');
+    expect(PODTYTUL).not.toContain('przejmie z kopii');
+    expect(PODTYTUL).toContain('karta weźmie ze swojego najnowszego zapisu — tutejszego albo z kopii.');
     parzystosc(r);
   });
 
@@ -794,7 +794,7 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji (runda 2): wyścig list oczekuj�
     parzystosc(r);
   });
 
-  it('T38 [CZERWONY, recenzja: osoba spoza bazy] kontakt z kopii zastępuje późniejszy tutejszy (scalanie bez zmian); podtytuł mówi o kontakcie', async () => {
+  it('T38 [D-3 A, P-NAGLOWEK-NAJNOWSZEJ] kontakt z kopii nie zastępuje późniejszego tutejszego; podtytuł mówi o kontakcie', async () => {
     let pid = null, tutaj = null;
     const osoba = (contact, patientId) => ({ ...(patientId ? { patientId } : {}), firstName: 'Fikcyjna', lastName: 'Osoba', sex: 'F', birthYear: 2019, contact });
     const r = await przypadek({
@@ -808,12 +808,10 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji (runda 2): wyścig list oczekuj�
     });
     const po = (await r.C.v.listExternalPatients()).find((k) => k.patientId === pid).header;
     expect(tutaj.contact).toBe('tel. 000 000 003 (fikcja, C później)');
-    expect(po.contact, 'nagłówek z kopii, choć starszy niż tutejszy (scalanie bez zmian)').toBe('tel. 000 000 002 (fikcja, A)');
-    expect(po.timestampISO < tutaj.timestampISO).toBe(true);
+    expect(po.contact, 'nagłówek z najnowszej wersji (tutejszej), nie ze starszej wersji z kopii').toBe('tel. 000 000 003 (fikcja, C później)');
     expect(r.ekran).toEqual({ przycisk: 'Scal teraz (1 nowych zapisów)', podsumowanie: '1 nowych zapisów zostanie dodanych' });
-    // Recenzja końcowa: lista pól bez „a u osoby spoza bazy także”, bo karta przejmuje też przynależność do bazy (T39).
-    expect(PODTYTUL).toContain('karta, do której dojdą zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia'
-      + ' i wiek, rok urodzenia i kontakt)');
+    // Lista pól bez „a u osoby spoza bazy także”, bo z najnowszego zapisu idzie też przynależność do bazy (T39).
+    expect(PODTYTUL).toContain('dane osoby na liście (imię i nazwisko, płeć, data urodzenia i wiek, rok urodzenia i kontakt)');
     parzystosc(r);
   });
 });
@@ -833,7 +831,7 @@ async function przerob(A, C, kopia, zmien) {
 const BRAK_NOWYCH = 'Brak nowych danych — wszystko już masz';
 
 describe('P-KOPIA-DANE-KONTA — uwagi recenzji końcowej: przynależność do bazy, stare i niepełne wpisy kopii', () => {
-  it('T39 [CZERWONY na podtytuł, recenzja końcowa E1] osoba dodana TUTAJ do bazy, kopia niesie jej nową wersję jako osoby spoza bazy: wraca do osób spoza bazy (scalanie bez zmian); podtytuł to mówi', async () => {
+  it('T39 [D-3 A, P-NAGLOWEK-NAJNOWSZEJ] osoba dodana TUTAJ do bazy, kopia niesie jej starszą wersję jako osoby spoza bazy: zostaje w bazie (najnowsza wersja jest tutejsza); podtytuł to mówi', async () => {
     let pid = null, tutaj = null, wersjeTutaj = null;
     const osoba = (contact, patientId) => ({ ...(patientId ? { patientId } : {}), firstName: 'Fikcyjna', lastName: 'Osoba', sex: 'K', birthYear: 2019, contact });
     const r = await przypadek({
@@ -856,15 +854,15 @@ describe('P-KOPIA-DANE-KONTA — uwagi recenzji końcowej: przynależność do b
     expect(r.wynik.mergedPatientCount).toBe(1);
     const baza = (await r.C.v.listPatients()).some((k) => k.patientId === pid);
     const spoza = (await r.C.v.listExternalPatients()).find((k) => k.patientId === pid);
-    expect(baza, 'po scaleniu nie ma jej na liście pacjentów z bazy').toBe(false);
-    expect(spoza, 'wraca do osób spoza bazy').toBeTruthy();
-    expect([spoza.header.external, spoza.header.sex, spoza.header.dobISO, spoza.header.age, spoza.header.contact],
-      'nagłówek z kopii (scalanie bez zmian, jak Bsl_scalPacjenta)').toEqual([true, 'K', null, null, 'tel. 000 000 002 (fikcja, A)']);
-    expect(spoza.header.timestampISO < tutaj.naglowek.timestampISO, 'starszy niż tutejszy').toBe(true);
+    expect(baza, 'po scaleniu nadal na liście pacjentów z bazy').toBe(true);
+    expect(spoza, 'nie wraca do osób spoza bazy').toBeFalsy();
+    const poNaglowek = (await r.C.v.listPatients()).find((k) => k.patientId === pid).header;
+    expect([poNaglowek.external, poNaglowek.sex, poNaglowek.dobISO], 'nagłówek z najnowszej wersji (tutejszej, „Dodaj do bazy”)').toEqual([undefined, 'K', '2019-03-01']);
     const wersjePo = (await r.C.baza.listSnapshotsForUser(r.C.uid, pid)).map((w) => w.snapshotId);
     expect(wersjePo, 'wersja z „Dodaj do bazy” zostaje w historii').toEqual(expect.arrayContaining(wersjeTutaj));
     expect(wersjePo).toHaveLength(wersjeTutaj.length + 1);
-    expect(PODTYTUL).toContain('i to, czy osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy.');
+    expect(PODTYTUL).toContain('i to, czy osoba jest w bazie, karta weźmie ze swojego najnowszego zapisu');
+    expect(PODTYTUL).not.toContain('może wrócić do osób spoza bazy');
     parzystosc(r);
   });
 
@@ -1242,9 +1240,9 @@ describe('P-KOPIA-DANE-KONTA — odmiana i źródło', () => {
     // starszą” (uwagi recenzji: nagłówek karty, reguła rev) i wymienia cały nagłówek, także kontakt osoby spoza bazy
     // (runda 2) i przynależność do bazy (recenzja końcowa, T39); zdanie o pominiętych pacjentach bez zmian.
     expect(uo).not.toContain('bez usuwania ani nadpisywania');
-    expect(PODTYTUL).toBe('Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której'
-      + ' dojdą zapisy, przejmie z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia i wiek, rok urodzenia i kontakt)'
-      + ' i to, czy osoba jest w bazie: osoba dodana tu do bazy może wrócić do osób spoza bazy. Notatki i listy scali jak synchronizacja:'
+    expect(PODTYTUL).toBe('Podaj hasło do tej kopii. Aplikacja doda zapisy i pacjentów, których tu brakuje; dane osoby na liście'
+      + ' (imię i nazwisko, płeć, data urodzenia i wiek, rok urodzenia i kontakt) i to, czy osoba jest w bazie, karta weźmie'
+      + ' ze swojego najnowszego zapisu — tutejszego albo z kopii. Notatki i listy scali jak synchronizacja:'
       + ' wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później, a późniejsze usunięcie w kopii usunie je także'
       + ' tutaj — podgląd wymieni każdą taką zmianę. Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich'
       + ' ostatnim zapisie w kopii.');

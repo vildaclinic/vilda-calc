@@ -151,13 +151,13 @@ Serwer waliduje wyłącznie: `eid` jako UUID, `iv` i `data` jako string, `z ∈ 
 { "schemaVersion": 2,
   "event": { "kind": "snapshot.upsert", "key": "<patientId>/<snapshotId>", "atISO": "…", "dev": "<deviceId>", "full": null },
   "patients": [ { "patientId": "…", "header": {…}, "createdAtISO": "…", "lastSavedAtISO": "…", "snapshotCount": 4,
-                  "headerUpdatedAtISO": "…", "partialSince": null,
+                  "partialSince": null,
                   "snapshots": [ { "snapshotId": "…", "savedAtISO": "…", "rev": 2, "updatedAtISO": "…", "payload": {…} } ] } ],
   "tombstones": [], "passkeys": [], "passkeyTombstones": [], "userPreferences": {}, "notes": [], "noteTombstones": [],
   "patientNotes": [], "patientNoteTombstones": [], "patientLists": [], "patientListTombstones": [], "snapshotTombstones": [] }
 ```
 
-`Le` ignoruje nieznane klucze (`event`, `headerUpdatedAtISO`, `partialSince`), więc stary klient czyta zdarzenie bez zmian do czasu włączenia kompresji zdarzeń. `snapshotCount` u odbiorcy jest liczony lokalnie (`Bsl_scalPacjenta` 4304 do 4324), więc zdarzenie z jedną wersją nie psuje licznika.
+Nagłówek karty odbiorca liczy sam z najnowszej wersji (D-3 A, P-NAGLOWEK-NAJNOWSZEJ), więc zdarzenie nie niesie `headerUpdatedAtISO`. `Le` ignoruje nieznane klucze (`event`, `partialSince`), więc stary klient czyta zdarzenie bez zmian do czasu włączenia kompresji zdarzeń. `snapshotCount` u odbiorcy jest liczony lokalnie (`Bsl_scalPacjenta` 4304 do 4324), więc zdarzenie z jedną wersją nie psuje licznika.
 
 **Szyfrowanie zdarzeń.** Etapy 2 i 3: klucz główny konta przez `V()`/`G()` (`vilda_vault.js` 1609 do 1623), identycznie jak dzisiejsze delty, bez AAD. Od etapu 4: gzip przed szyfrowaniem, `z:'gzip'`, AAD = `utf8(slotId + "/" + eid)`, `aad:1`. Klucz pozostaje kluczem głównym (decyzja D-9 pozwala na `syncEncKey`).
 
@@ -267,8 +267,8 @@ Reguły scalania pozostają dokładnie regułami `Le` i `Bsl_scalPacjenta`. Zmie
 | Kosz z treścią z innego urządzenia kontra lokalna nowsza poprawka tej wersji | nagrobek wygrywa, gdy `deletedAtISO ≥ updatedAtISO`; do P-KOSZ-NOWSZA-TRESC do kosza trafiała treść z ładunku (starsza) | decyzja D-6 B (P-KOSZ-NOWSZA-TRESC): nowsza z dwóch treści (`rev`, przy równej późniejszy `updatedAtISO`), ten sam nagrobek na obu urządzeniach w każdej kolejności; wdrożone |
 | Kosz i retencja | `snapshot.tombstone` z treścią (kosz) albo bez (`powod:'retencja'`); treść kosza wg P-KOSZ-NOWSZA-TRESC (`Bkz_dolacz`, `Bkz_scalStart`, `Bkz_pomin`, `Bkz_scalKoniec`), `snapshot.tombstone` niesie treść z jej `rev`/`updatedAtISO`/`savedAtISO`; przywrócenie = `snapshot.upsert` z `rev+1` | nowość: kosz propagowany zdarzeniem, nie tylko pełnym blobem |
 | Przypięcie kontra kosz tej samej wersji na dwóch urządzeniach | obie strony czasu i obie kolejności dają ten sam wynik, zmierzone; kosz trzyma zapis przypięty (P-KOSZ-NOWSZA-TRESC) | bez zmian w hybrydzie |
-| `deleteSnapshot` bez nagrobka (wewnętrzne) | nie propaguje się nigdzie | decyzja D-8 |
-| Nagłówek karty zmieniony w miejscu | `patient.header` z `headerUpdatedAtISO`; `Bsl_scalPacjenta` zapisuje nagłówek także przy `nowe == 0`, gdy zdalny `headerUpdatedAtISO` późniejszy | decyzja D-3; dziś nie przenosi tego nawet blob |
+| `deleteSnapshot` bez nagrobka (wewnętrzne) | nie propaguje się nigdzie; wersja wraca z synchronizacji | **D-8 A, wdrożone** (P-USUN-WERSJE-LOKALNIE): lokalne, strażnik `tests/unit/usun-wersje-lokalnie.test.mjs` — żaden ekran go nie woła |
+| Nagłówek karty zmieniony w miejscu | odbiorca liczy nagłówek z najnowszej wersji po każdym `snapshot.upsert` i `snapshot.tombstone` (także przy `nowe == 0`); bez `headerUpdatedAtISO` i bez osobnego zdarzenia | **D-3 A, wdrożone** (P-NAGLOWEK-NAJNOWSZEJ); działa już przy pełnym blobie i delcie karty |
 | Notatki pacjenta, listy | rev-gated LWW + nagrobki z `rev`; pola częściowe zachowują lokalne (`hasOwnProperty`) | bez zmian; listy dostają builder |
 | Preferencje | LWW po `updatedAtISO`; mapy `wlsched`, `wllists`, `advHistoryCollapsed` per wpis (`Ak` 6600); zdarzenie niesie cały klucz | bez zmian w regule; `Aj` zaczyna emitować |
 | Klucze dostępu | nagrobek zawsze usuwa; opakowanie klucza nie opuszcza urządzenia | bez zmian |
@@ -284,10 +284,10 @@ Zasada: zdarzenie = jedna encja + klucze wersji. Każda mutacja z pomiaru M1 ma 
 | # | `kind` | `entityKey` | Sekcja sync-payload | Builder | Gdzie dopisać (dziś) | Brakująca emisja |
 |---|---|---|---|---|---|---|
 | 1 | `snap` (`snapshot.upsert`) | `patientId/snapshotId` | `patients[{nagłówek, snapshots:[jedna]}]` | `buildSnapshotEvent` nowy; `ds` zostaje dla legacy | `Bpz_zapis` 2745, `Bzw_aktualizujWersje` 4593, `Bkz_przywroc` 3329, `Bkz_poImporcie`, `restoreSnapshotAsNew`, importy | — |
-| 2 | `phdr` (`patient.header`) | `patientId` | `patients[{nagłówek, headerUpdatedAtISO, snapshots:[]}]` | `buildPatientHeaderEvent` nowy | `Bpz_zapis`, `Bzw_usunWersje` 4791, `Bkz_przebudujNaglowek`, `Ja`, `migratePatientNamesSplit` 1834, `ns/ss/as`, `Bsc_podBlokada` | `migratePatientNamesSplit`, `Ja`, `ns/ss/as` |
+| 2 | `phdr` (`patient.header`) | — | — | zbędne po D-3 A (P-NAGLOWEK-NAJNOWSZEJ): nagłówek liczy każde urządzenie z najnowszej wersji, więc nie jedzie osobnym zdarzeniem | — | — |
 | 3 | `pfull` (`patient.full`) | `patientId` | `patients[{nagłówek, snapshots:[wszystkie]}]` w porcjach, `event.full` | `buildPatientFullEvents` nowy | `onPatientTombstoneRejected`, scalanie pacjenta z `partialSince` | nowy hook |
 | 4 | `ptomb` (`patient.tombstone`) | `patientId` | `tombstones[]` | `us` istnieje | `Bpu_usun` 4855 | — |
-| 5 | `stomb` (`snapshot.tombstone`) | `snapshotId` | `snapshotTombstones[]` z `payload` dla kosza, bez dla retencji | `buildSnapshotTombstoneEvent` nowy | `Bkz_doKosza` 3108, `Bkz_przytnij` / `pruneSnapshotsForPatient`, opcjonalnie `Bzw_usunWersje` | `Bkz_doKosza` (dziś bez zdarzenia), `snapshotId` w `isSnapshotDelete` |
+| 5 | `stomb` (`snapshot.tombstone`) | `snapshotId` | `snapshotTombstones[]` z `payload` dla kosza, bez dla retencji | `buildSnapshotTombstoneEvent` nowy | `Bkz_doKosza` 3108, `Bkz_przytnij` / `pruneSnapshotsForPatient`; nie `Bzw_usunWersje` (D-8 A: `deleteSnapshot` lokalne, nagrobek tylko z kosza i retencji) | `Bkz_doKosza` (dziś bez zdarzenia), `snapshotId` w `isSnapshotDelete` |
 | 6 | `snap` (untrash) | `patientId/snapshotId` | jak 1, `rev+1` | jak 1 | `Bkz_przywroc`, `Bkz_poImporcie` | — |
 | 7 | `pnote` | `id` | `patientNotes[]` | `cs` istnieje | `Ad` 5599, `Eb` 7154, `qa`, `Bsc_podBlokada` | — |
 | 8 | `pnotetomb` | `id` | `patientNoteTombstones[]` | `ls` istnieje | `Eb` | — |
@@ -587,12 +587,12 @@ Odpowiedzi właściciela: 2026-10-20 w rozmowie z agentem („akceptuję wszystk
 |---|---|---|---|---|
 | D-1 | Hybryda H zamiast czystego D1 z rankingu? | tak; D1 broni danych oknami czasowymi, hybryda zamyka utratę u źródła | plan nie rusza | **tak, hybryda H** (wariant A) |
 | D-2 | Etap 0 od razu, przed workerem? | tak; 2 do 3 dni i chmura odmrożona; format części punktu jest ten sam | chmura zamrożona do etapu 3 | **tak**; etap 0 wykonany: P-SYNC-MOST (#573), P-SYNC-MOST-STOPKA (#574), P-SYNC-KURSOR (#585) |
-| D-3 | Nagłówek karty przy zmianie w miejscu: `headerUpdatedAtISO` i zapis nagłówka także bez nowych wersji? | tak; dziś nie przenosi tego nawet pełny blob; zmiana reguły scalania, wpis ALGORITHMS, test, akceptacja | zmiana nazwiska lub daty urodzenia w miejscu nie dociera na inne urządzenia | **wariant A**: krótki opis karty (imię, nazwisko, data urodzenia, płeć) liczony zawsze z najnowszej wersji, zamiast nowego pola `headerUpdatedAtISO`; działa już przy dzisiejszej synchronizacji |
+| D-3 | Nagłówek karty przy zmianie w miejscu: `headerUpdatedAtISO` i zapis nagłówka także bez nowych wersji? | tak; dziś nie przenosi tego nawet pełny blob; zmiana reguły scalania, wpis ALGORITHMS, test, akceptacja | zmiana nazwiska lub daty urodzenia w miejscu nie dociera na inne urządzenia | **wariant A**: krótki opis karty (imię, nazwisko, data urodzenia, płeć) liczony zawsze z najnowszej wersji, zamiast nowego pola `headerUpdatedAtISO`; działa już przy dzisiejszej synchronizacji; doprecyzowanie właściciela tego samego dnia (rekomendacje przyjęte): cały opis karty z najnowszej wersji (także wiek, przynależność do bazy, rok urodzenia, kontakt), odbiorca sprawdza opis każdej karty przy każdym scaleniu, bez jednorazowej migracji, nowy podtytuł „Scal kopię konta”, odświeżanie listy po delcie na żywo i zdanie w oknie pomiaru osobnymi PR; wdrożone (P-NAGLOWEK-NAJNOWSZEJ) |
 | D-4 | Poprawka pomiaru, usunięcie wiersza i przypięcie podnoszą `lastSavedAtISO` karty? | tak; inaczej nagrobek z wcześniejszej godziny kasuje kartę poprawioną później | utrata poprawek przy usunięciu z innego urządzenia | **tak, wariant A**: także korekta nazwiska i „Przywróć” z kosza; duplikat karty po „Scal pacjentów” na innym urządzeniu zaakceptowany (do ponownego scalenia); wdrożone (P-ZMIANA-W-KARCIE) |
 | D-5 | `lastSavedAtISO` nigdy nie maleje po koszu najnowszej wersji? | tak | starszy nagrobek wygrywa z kartą, na której pracowano później | **wariant B**: kosz liczy się jak zmiana w karcie, `lastSavedAtISO := max(stare, teraz)`, nigdy nie maleje; wdrożone (P-ZMIANA-W-KARCIE) |
 | D-6 | Kosz z innego urządzenia kontra lokalna nowsza poprawka: kosz trzyma nowszą treść lokalną? | tak | „Przywróć” oddaje starszą treść, poprawka ginie | **tak, wariant B**: w koszu obu urządzeń nowsza treść, w obu kolejnościach synchronizacji; wdrożone (P-KOSZ-NOWSZA-TRESC) |
 | D-7 | Konflikt poprawki tej samej wersji na dwóch urządzeniach: nadpisanie jak dziś czy „wersja konfliktowa”? | zostawić LWW w tym planie, osobna decyzja później | bez zmian wobec dziś | **wariant 1** (LWW bez zmian w tym planie); osobny mały krok: zawsze wygrywa późniejsza poprawka (wariant 2) |
-| D-8 | `deleteSnapshot` wołane wewnętrznie: lokalne czy nagrobek? | lokalne z wpisem w ALGORITHMS | bez zmian wobec dziś | **wariant A**: lokalne, wpis w ALGORITHMS i test, że żaden ekran go nie woła |
+| D-8 | `deleteSnapshot` wołane wewnętrznie: lokalne czy nagrobek? | lokalne z wpisem w ALGORITHMS | bez zmian wobec dziś | **wariant A**: lokalne, wpis w ALGORITHMS i test, że żaden ekran go nie woła; etykieta dziennika przycisku „Usuń pomiar” zmieniona na „deleteMeasurementRow from timeline” (strażnik bez wyjątków); wdrożone (P-USUN-WERSJE-LOKALNIE) |
 | D-9 | Klucz zdarzeń: klucz główny jak dziś czy `syncEncKey`? | klucz główny; zgodność ze starym klientem w etapach 2 i 3 | brak | **wariant A**: klucz konta jak dziś |
 | D-10 | Plan Cloudflare Free czy Paid; potwierdzenie limitów † | sprawdzić przed etapem 1 | zbyt duże strony lub części | **plan płatny** |
 | D-11 | Wersje iOS urządzeń; czy wymagać 16.4 dla kompresji? | sprawdzić; bez gzip zdarzenia jawne nadal działają | telefon bez kompresji pełnego stanu | **najnowszy iOS** na wszystkich urządzeniach; kompresja wszędzie |
