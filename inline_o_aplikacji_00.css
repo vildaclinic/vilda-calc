@@ -533,6 +533,14 @@
       color: #0f3533;
     }
 
+    /* P-O-APLIKACJI-SZEROKOSC: ciąg bez miejsc łamania w opisie źródła (DOI, adres, lista autorów
+       po twardych spacjach) wystawał poza kartę, a Chromium na telefonie poszerzał wtedy widok
+       układu do szerokości tekstu — strona przewijała się w bok, a dock i strzałka „na górę”
+       uciekały za krawędź ekranu. Taki ciąg łamie się teraz w miejscu, w którym by wystawał. */
+    .about-page #sourceList {
+      overflow-wrap: break-word;
+    }
+
     .about-page .about-link-card:hover,
     .about-page .about-quick-links a:hover,
     .about-page .about-badge:hover,
