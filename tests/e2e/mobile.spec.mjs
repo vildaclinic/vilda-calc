@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-for (const path of ['/index.html', '/app.html', '/homa-ir.html', '/kalkulator-klirens.html']) {
+for (const path of ['/index.html', '/app.html', '/homa-ir.html', '/kalkulator-klirens.html', '/o-aplikacji.html']) {
   test(`${path} nie ma poziomego przewijania w widoku telefonu`, async ({ page }) => {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
 
