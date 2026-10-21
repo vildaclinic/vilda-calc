@@ -15054,7 +15054,7 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
-## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.327, 2026-10-20)
+## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.328, 2026-10-20)
 
 **Zgłoszenie (pomiar właściciela 2026-10-20 przy weryfikacji P-SW-STRONY-PRAWNE; usterka istniała już na `audyt`).**
 W Firefoksie (Playwright Firefox 151 i Firefox 158.0.1 bez automatyzacji, limit źródła obniżony preferencją
@@ -15095,11 +15095,12 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
 - Wywołania: nawigacja w `updateShellFromNetwork`, dokument pobrany poza nawigacją (ten sam klucz w pamięci powłoki)
   i instalacja (`fetchAndStorePrecacheUrl`): pusta kopia nie wchodzi do nowej pamięci powłoki — dokument opcjonalny
   zostaje bez kopii (online z sieci), wymagany `/index.html` przerywa instalację, więc zostaje poprzednia wersja SW.
-- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.326 odrzucony
+- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.327 odrzucony
   zapis przy braku kopii kończył nawigację `Response.error()` — w Chromium strona nie otwierała się online.
 - Koszt na odświeżenie dokumentu: odczyt poprzedniej kopii i odczyt kontrolny (dokumenty mają 7–249 KB), chwilowo do
   trzech kopii treści w pamięci SW. Przy braku kopii nawigacja czeka dodatkowo na odczyt kontrolny.
-- `SW_VERSION` 1.1.326 → **1.1.327** (`npm run podbij-wersje`); pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
+- `SW_VERSION` 1.1.327 → **1.1.328** (`npm run podbij-wersje`; 1.1.327 wydało równolegle P-KOSZ-RETENCJA-PO-KOSZU, #734);
+  pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
 **Świadomie poza zakresem i ryzyko resztkowe (decyzje właściciela).**
 - **Strony prawne (network-first z P-SW-STRONY-PRAWNE).** W chwili tej zmiany P-SW-STRONY-PRAWNE nie ma na `audyt` ani
@@ -15133,7 +15134,7 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
   przepuszczony dalej) — każda zapala właściwy test.
 - `tests/e2e/pwa-pelny-limit.spec.mjs` (nowy, Chromium, ok. 10 s): prawdziwy SW, limit przez CDP, źródło wypełnione do
   granicy (aż nie mieści się 1 B) — `/index.html` bez kopii otwiera się online, kopia `/kontakt.html` przeżywa odświeżenie
-  i działa przy zatrzymanym serwerze. Na SW 1.1.326 z `audyt` pada na `net::ERR_FAILED` (Chromium 141 i 149).
+  i działa przy zatrzymanym serwerze. Na SW 1.1.326 z `audyt` `189c879` pada na `net::ERR_FAILED` (Chromium 141 i 149).
 - `tests/scripts/pomiar-pustej-kopii-sw.mjs` (nowy, poza `npm test`): pomiar z tabeli wyżej w Firefoksie i Chromium;
   `--korzen` z worktree `audyt` daje wariant „przed”.
 
