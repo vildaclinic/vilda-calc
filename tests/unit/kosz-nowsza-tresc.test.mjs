@@ -879,7 +879,8 @@ describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi
 describe('strażnik źródła', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
   it('P-REV-MAX (PD-7 b): rev treści kosza = wyższa z pary w łączeniu nagrobków, w Bkz_pomin i w Bkz_scalKoniec', () => {
-    expect(src).toContain('if (zrodlo) wynik.rev = Math.max(mt(nowszy), mt(starszy));');
+    expect(src).toContain('if (zrodlo) wynik.rev = Math.max(mt(zrodlo), Bkz_revPary(nowszy, starszy), Bkz_revPary(starszy, nowszy));');
+    expect(src).toContain("function Bkz_revPary(p, q) { return p.powod === 'retencja' || Bkz_nieaktualny(p, q) ? 0 : mt(p); }");
     expect(src).toContain('ctx.mapa.set(zapis.snapshotId, Object.assign({}, e, { rev: mt(zapis) }));');
     expect(src).toContain('z.rev = Math.max(mt(lokalna), mt(e));');
     expect(src).toContain('ctx.mapa.set(e.snapshotId, Object.assign({}, e, { rev: mt(lokalna) }));');

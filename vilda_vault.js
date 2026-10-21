@@ -539,6 +539,9 @@ function Bkz_wygrywa(e, zmiana, przypieta) {
 // kosza, nawet gdy pozniejsze usuniecie przyszlo z retencji. Chwile: pozniejsze usuniecie przez uzytkownika i pozniejsze
 // przyciecie; przyciecie wczesniejsze niz kosz nic juz nie zmienia. Gdy kosz jest nieaktualny wobec pozniejszego
 // przyciecia i tresci nie ma, zostaje sam nagrobek retencji, jak dotad.
+// P-REV-MAX (przeglad koncowy D-7, F1): rev nagrobka p do max pary — 0 dla nagrobka retencji i nagrobka nieaktualnego
+// wobec q: ich rev opisuje wersje, ktorej tresci kosz nie trzyma (starsza aplikacja bierze wtedy rev zrodla tresci).
+function Bkz_revPary(p, q) { return p.powod === 'retencja' || Bkz_nieaktualny(p, q) ? 0 : mt(p); }
 function Bkz_dolacz(mapa, e) {
   const byl = mapa.get(e.snapshotId);
   if (!byl) { mapa.set(e.snapshotId, e); return; }
@@ -567,7 +570,7 @@ function Bkz_dolacz(mapa, e) {
   if (zrodlo || (kosz && (!ret || kosz >= ret || !koszNieaktualny))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
     wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Bkz_zOpisem(nowszy, zWersja);
-    if (zrodlo) wynik.rev = Math.max(mt(nowszy), mt(starszy)); // P-REV-MAX (PD-7 b): rev tresci kosza = wyzsza z pary
+    if (zrodlo) wynik.rev = Math.max(mt(zrodlo), Bkz_revPary(nowszy, starszy), Bkz_revPary(starszy, nowszy)); // P-REV-MAX (PD-7 b)
     delete wynik.powod;
     delete wynik.przycietoISO;
     wynik.deletedAtISO = kosz || ret;
