@@ -15611,7 +15611,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Notatki pacjenta wracają z kartą przywróconą po „Usuń pacjenta” (P-NOTATKI-ZA-KARTA, SW 1.1.335, `vilda_vault.js` 223, 2026-10-21)
+## Notatki pacjenta wracają z kartą przywróconą po „Usuń pacjenta” (P-NOTATKI-ZA-KARTA, SW 1.1.336, `vilda_vault.js` 223, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła synchronizacji, która
 decyduje, czy notatki pacjenta przetrwają usunięcie pacjenta na innym urządzeniu. Notatki niosą treści kliniczne
@@ -15974,13 +15974,13 @@ Pliki pokrewne: te same 40 plików co po przeglądzie 1 oraz 18 kolejnych, któr
 `ustawienia-siatek-synchronizacja`, `usun-wersje-lokalnie`) — 58 plików, 1632 testy, każdy osobno, zielone bez zmian
 testów. `npm run lint`, `npm run test:syntax` (1113 plików), `npm run test:repo` (1748 plików) — zielone (na bazie
 `db0c2d50`). Przeniesione na `audyt` `346dd81a` (po P-POZNIEJSZA-POPRAWKA, #742): `vilda_vault.js` nałożony bez
-konfliktów, plik D-21 157 z 157; `npm test` po scaleniu `audyt` `0a8a7d66` (#747): polityka repozytorium (1758
-plików), lint, składnia (1121 plików), 413 plików testów, 10 316 z 10 316 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44.
+konfliktów, plik D-21 157 z 157; `npm test` po scaleniu `audyt` `affdeb64` (#748): polityka repozytorium (1759
+plików), lint, składnia (1122 pliki), 413 plików testów, 10 318 z 10 318 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44.
 `tests/e2e/pwa-precache-migracja.spec.mjs` padał przy stałym limicie 400 MiB: z `vilda_vault.js` większym o 30 KB
 (161 wpisów historii) rdzeń urósł z 398,8 do 403,1 MiB; po scaleniu #748 test liczy limit z rozmiaru rdzenia (opis przy
 P-SW-PRECACHE) i D-21 go nie zmienia. Wersje:
-`npm run podbij-wersje` względem `origin/audyt` `0a8a7d66` (po #747): `vilda_vault.js` 223, `vilda_chrome.js` 168,
-`vilda_session_bridge.js` 92; SW 1.1.334 → 1.1.335.
+`npm run podbij-wersje` względem `origin/audyt` `affdeb64` (po #748): `vilda_vault.js` 223, `vilda_chrome.js` 168,
+`vilda_session_bridge.js` 92; SW 1.1.335 → 1.1.336.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
