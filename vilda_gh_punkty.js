@@ -15,6 +15,7 @@
  * opcje.dawka): normalizujWiek, wiekLacznieMies, sprawdzRodzaj, dostepneRodzaje, sprawdzWartosci,
  * jednostkaDawki, dniIgf, polaZPodawanej, noweId, punkt, zmienWMiejscu, uszkodzone, bezUszkodzonych,
  * komunikatyUszkodzonych. Przyjmują liczby, jak monitor po parseFloat (polaZPodawanej parsuje pola sama).
+ * Wyjątek: noweId pamięta w module ostatnio wydane id (P-GH-NOWE-ID), żeby kolejne id nigdy się nie powtórzyło.
  * opcje.dawka (polaZPodawanej, gotowe) — jedno znaczenie: brak klucza albo true → VildaGhDawka z okna; obiekt →
  * wstrzyknięty moduł; null/false → bez modułu. Moduł liczy się tylko z funkcją preparat; to samo kryterium
  * wyznacza × 2, bezModuluDawki i brak w gotowe.
@@ -187,8 +188,23 @@
     };
   }
 
+  // Id nowego punktu (P-GH-NOWE-ID): "<Date.now()>.<trzy cyfry>", np. "1767225600000.125". Ten moduł pamięta
+  // ostatnio wydane id w tysięcznych milisekundy i każde kolejne jest od niego większe, więc dwa wywołania w tej
+  // samej milisekundzie (albo przy cofniętym zegarze) nie dają tego samego id. Dawne String(Date.now() + Math.random())
+  // miało przy dzisiejszym Date.now() tylko 4096 różnych części ułamkowych i w jednej milisekundzie powtarzało id
+  // średnio raz na ~4000 par. Pierwsze id w nowej milisekundzie zaczyna od losowej pozycji 0–499 (jak dawny składnik
+  // losowy: id z innej ramki lub urządzenia rzadko trafi w to samo); reszta zakresu czeka na kolejne wywołania w tej
+  // samej milisekundzie. Dopiero powyżej 500 id w jednej milisekundzie id wyprzedza zegar o ułamek milisekundy.
+  // Krok 0,001 jest większy od dokładności liczby zmiennoprzecinkowej przy dzisiejszym Date.now(), więc także
+  // Number(id) są różne i rosną.
+  var ostatnieId = -1;
+
   function noweId() {
-    return String(Date.now() + Math.random());
+    var teraz = Date.now() * 1000;
+    var t = teraz > ostatnieId ? teraz + Math.floor(Math.random() * 500) : ostatnieId + 1;
+    ostatnieId = t;
+    var tysieczne = t % 1000;
+    return String((t - tysieczne) / 1000) + '.' + String(1000 + tysieczne).slice(1);
   }
 
   // Rekord 15 kluczy: id na początku, doseAbs na końcu.

@@ -1724,6 +1724,7 @@ const CORE_SHELL_URLS = [
   '/vilda_gh_punkty.js?v=3',
   '/vilda_gh_punkty.js?v=4',
   '/vilda_gh_punkty.js?v=5',
+  '/vilda_gh_punkty.js?v=6',
   '/vilda_gh_programy_dane.js?v=1',
   '/vilda_gh_punkt_z_wiersza.js?v=1',
   '/vilda_gh_punkt_z_wiersza.js?v=2',
