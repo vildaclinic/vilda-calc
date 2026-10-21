@@ -15258,11 +15258,10 @@ są bez zmian.
 - `gh-punkty-api-roznicowy.test.mjs`: id zapasowe przy odmowie to `idDawneMonitora(0)`, bo porównanie idzie na monitorze
   sprzed API.
 
-**Wersje.** `gh_therapy_monitor.js` `?v=59` → `?v=60` (`docpro.html`, wpis precache), `SW_VERSION` jak w P-GH-NOWE-ID
-(1.1.331) — `npm run podbij-wersje` względem `audyt` `3b6a530`. Po scaleniu P-GH-NOWE-ID numery liczy się od nowa
-(`docs/GITHUB_WORKFLOW.md`, „Kilka wątków naraz”).
+**Wersje.** `gh_therapy_monitor.js` `?v=59` → `?v=60` (`docpro.html`, wpis precache), `SW_VERSION` 1.1.331 → 1.1.332
+— `npm run podbij-wersje` względem `audyt` `0d76443` (po scaleniu P-GH-NOWE-ID, #743).
 
-**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Zmiana stoi na P-GH-NOWE-ID i wchodzi po nim.
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
