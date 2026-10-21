@@ -15248,7 +15248,8 @@ są bez zmian.
   pierwsze przypadki są czerwone na monitorze 59.
 - `gh-punkty-monitor-tryby.test.mjs`: porównanie z monitorem sprzed API zamienia id k-tego punktu
   (`idDeterministyczne(k)` → `idDawneMonitora(k)`, to samo k, także w tekście pamięci modułu). Zrzut z id dawnej postaci
-  jest błędem. W sekwencjach wywołań API dochodzi `noweId` (karta: przed `zapisz`; wsteczny: przed `punkt`).
+  jest błędem. W sekwencjach wywołań API dochodzi `noweId` (karta: przed `zapisz`; wsteczny: przed `punkt`), tak samo
+  w e2e `tests/e2e/gh-punkty-monitor-api.spec.mjs` (prawdziwy DocPro).
 - Złota siatka (`tests/scripts/gh-punkty-wzorzec.mjs`, `gh-punkty-siatka.test.mjs`): znacznik `#nowe-id` zastępuje tylko
   postać id właściwą dla przebiegu (`'api'` — drzewo robocze, `'monitor'` — baza wzorca i wyrocznia). Trzy nowe kontrole
   negatywne (własne id monitora w karcie, we wstecznym, `noweId` z innym startem) wywracają porównanie tylko na swoich
