@@ -15140,6 +15140,68 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
+## Id nowego punktu terapii GH bez powtórzeń w tej samej milisekundzie (P-GH-NOWE-ID, `vilda_gh_punkty.js`, 2026-10-21)
+
+**Skąd.** Test `tests/unit/gh-punkty-api.test.mjs` „noweId > bez atrap: … kolejne wywołania różne” bywał czerwony
+w pełnym `npm test` (2026-10-21). `VildaGhPunkty.noweId()` zwracało `String(Date.now() + Math.random())`. Przy
+dzisiejszym `Date.now()` (≈ 1,79·10¹²) liczba zmiennoprzecinkowa ma krok 2⁻¹² ≈ 0,000244, więc część ułamkowa ma tylko
+4096 wartości. Dwa wywołania w tej samej milisekundzie dawały to samo id średnio raz na ok. 4000 par (pomiar:
+52 na 200 000 par).
+
+**Zmiana.** `noweId()` zwraca `"<Date.now()>.<trzy cyfry>"`, np. `"1767225600000.125"`. Moduł pamięta ostatnio wydane
+id w tysięcznych milisekundy, a każde kolejne jest od niego ściśle większe:
+- pierwsze id w nowej milisekundzie: losowa pozycja 0–499 (jak dawny składnik losowy; dwie kopie modułu — inna ramka,
+  inne urządzenie — rzadko trafią w tę samą);
+- kolejne w tej samej milisekundzie: +0,001;
+- powyżej 500 id w jednej milisekundzie albo przy cofniętym zegarze id wyprzedza zegar o ułamek milisekundy, ale się
+  nie powtarza.
+
+Krok 0,001 jest większy od kroku liczby zmiennoprzecinkowej (do ok. 2109 r.), więc także `Number(id)` są różne
+i rosną. Kontrakt bez zmian: napis liczbowy `/^\d+(\.\d+)?$/`, `Date.now()` przed wywołaniem ≤ `Number(id)` <
+`Date.now()` po wywołaniu + 1 (do 500 id w jednej milisekundzie), kolejne wywołania różne. `VildaGhPunkty.wersja`
+zostaje 3: wołający dostają ten sam rodzaj wartości.
+
+**Sprawdzone miejsca, które czytają id punktu.** Żadne nie liczy na id: brak `Number`/`parseFloat`, sortowania po id
+i odczytu czasu z id. Tabela monitora, segmenty, karta pacjenta i sejf sortują po wieku. Wszystkie porównują
+i indeksują po `String(id)`:
+- `VildaGhPunkty.sprawdzRodzaj` i `zmienWMiejscu`;
+- monitor: edycja, usuwanie, `data-id` przycisków, `hsdsById`, skok `vilda:gh-jump`;
+- `gh_therapy_segments.js`;
+- `vilda_auth_ui.js` (`ghPointId`, IGF-1 z notatek, oś czasu);
+- `gh_igf_therapy.js` (`ghPointId` notatki);
+- mostek `importTherapyPointsToAdvancedGrowth` i `data-gh-id`: klucz `String(id)`, `legacy:…` tylko bez id;
+- `ghId` wierszy w zapisie i odtworzeniu stanu (`vilda_data_import_export.js`, `vilda_persist_runtime.js`, `app.js`,
+  `growth-basic-module.js`).
+
+Scalanie w sejfie porównuje cały punkt jako tekst JSON (z id). Jedyna walidacja postaci to `ghPointId` notatek
+w `vilda_vault.js` (`we`: napis, najwyżej 64 znaki, `[A-Za-z0-9_.-]`). Nowe id (17 znaków) ją spełnia. Zera na końcu
+(`".250"`) niczego nie psują: nikt nie zamienia id na liczbę i z powrotem.
+
+**Przypadki `wejście → oczekiwany wynik`** (sztuczny zegar `Date.now()` = 1767225600000, dane fikcyjne):
+`Math.random()` = 0,25 → `"1767225600000.125"`, potem `"….126"`, `"….127"`; zegar stoi, `Math.random()` = 0,999999,
+2000 wywołań → `"1767225600000.499"` … `"1767225600000.999"` (501 id w [T, T+1)), potem `"1767225600001.000"` …
+`"1767225600002.498"`, wszystkie różne także jako liczby; `Math.random()` = 0, id `"1767225600005.000"`,
+`"….001"`, zegar cofnięty z T+5 na T → dalej `"1767225600005.002"`, `"….003"` (id nie wraca do wydanych milisekund).
+
+**Wpływ kliniczny.** Brak zmiany wyników klinicznych: wzory, dawki, jednostki, progi i interpretacje bez zmian. Zmiana
+integralności danych: nowy punkt nie dostaje id punktu już istniejącego. Dawne id (`"1767225600000.2502"`, liczby)
+zostają bez zmian i nadal działają.
+
+**Strażnicy.** `tests/unit/gh-punkty-api.test.mjs`, `describe('noweId')` — prawdziwe `VildaGhPunkty.noweId()`, każdy
+przypadek na świeżej kopii modułu: format i start losowy, przyczyna (dawny wzór skleja 0,25 i 0,25001 w jedno id),
+2000 wywołań przy stojącym zegarze, przepełnienie i doganianie zegara, cofnięty zegar, dwie kopie modułu. Sześć
+nowych przypadków jest czerwonych na dawnym `noweId()`. Test „bez atrap” bez zmian. Dawny przypadek „format
+`String(Date.now() + Math.random())`” zastąpił przypadek nowego formatu.
+
+**Wersje.** `vilda_gh_punkty.js` `?v=5` → `?v=6` (`index.html`, `docpro.html`, wpis precache), `SW_VERSION` 1.1.330 →
+1.1.331 — `npm run podbij-wersje` względem `audyt` `3b6a530`; pin `?v=6` w `tests/e2e/gh-punkty-api-start.spec.mjs`
+ręcznie.
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Monitor GH (`gh_therapy_monitor.js`) nadal
+nadaje id punktom z karty i z formularza wstecznego własnym `String(Date.now()+Math.random())`. Jedno kliknięcie daje
+jeden punkt, więc powtórzenie w praktyce nie występuje. Przejście monitora na `VildaGhPunkty.noweId()` zmieniłoby id
+w testach charakteryzujących (atrapa monitora podstawia `Date` i `Math` tylko monitorowi) — osobna decyzja.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
