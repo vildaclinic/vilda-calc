@@ -15420,7 +15420,10 @@ wizyta 125 cm / 24 kg).
   `null`, nie „teraz” (PD-5). Chwila zapisu wersji idzie z treścią (PD-10).
 - **R3a, `rev` po scaleniu = wyższa z dwóch (P-REV-MAX, PD-6 c, PD-7 b)**, niezależnie od tego, która treść wygrała:
   przy przyjęciu `max(rev zdalna, rev tutejsza)`; przy odrzuceniu tutejsza wersja dostaje `rev` zdalną bez zmiany treści
-  i chwil (jeden zapis; ten sam ładunek drugi raz — żadnego); w koszu `rev` treści nagrobka = wyższa z pary. Tak liczą
+  i chwil (jeden zapis; ten sam ładunek drugi raz — żadnego); w koszu `rev` treści nagrobka = wyższa z pary nagrobków,
+  których treść kosz może trzymać — bez nagrobka retencji i bez nagrobka nieaktualnego wobec drugiego (przegląd
+  końcowy: ich `rev` opisuje wersję, której treści kosz nie trzyma, a starsza aplikacja bierze wtedy `rev` źródła
+  treści; z nimi flota mieszana gubiła w koszu późniejszą poprawkę starszej aplikacji). Tak liczą
   starsze aplikacje („najpierw `rev`”, zawsze zostają przy wyższej `rev`), więc `rev` we flocie mieszanej przebiega jak
   we flocie samych starych i starsza aplikacja nie przyjmuje po `rev` wcześniejszej treści zamiast swojej późniejszej
   poprawki (S10 niżej). `rev` nie spada. O treści decyduje nadal R1. Bez `+1`: `rev` liczy poprawki i przeniesienia
@@ -15488,6 +15491,13 @@ wizyta 125 cm / 24 kg).
   wobec 325 we flocie samych starych). Bez rozjazdu przed aktualizacją i bez ping-ponga; po aktualizacji wszystkich
   urządzeń (D-11) pierwsza synchronizacja zbiega stan. Przy wydaniu: nota o aktualizacji wszystkich urządzeń tego samego
   dnia. Liczby — sekcja Walidacja.
+- **Flota mieszana przy rozjeździe zegarów (przegląd końcowy, F2).** Starsza aplikacja nie ma stempla zmiany. Gdy
+  urządzenie z zegarem do przodu (np. +10 min) poprawi wizytę, a starsza aplikacja na dobrym zegarze poprawi ją później
+  (albo „Przywróć” zapis, który nowa aplikacja usunęła ze stemplem z przyszłości), późniejsza zmiana starszej aplikacji
+  ma wcześniejszą chwilę i przegrywa — także po aktualizacji (np. 30 kg zamiast 40 kg na trzech urządzeniach;
+  „Przywróć” cofnięte, zapis w koszu). Flota jednorodna obie zachowuje (stara — przez `rev`, nowa — przez stempel).
+  Nie korygujemy chwil z przyszłości (D13). Ogranicza to aktualizacja wszystkich urządzeń tego samego dnia i poprawny
+  zegar na urządzeniach (ostrzeżenie D13).
 - **Edycja bieżącej wizyty starej karty w pętli scaleń (T9, PD-10).** Poprawka przetrwa, ale jej nowa chwila zapisu
   czyni ją bieżącą wersją scalonej karty na wszystkich urządzeniach (dawna głowa, bez późniejszych wizyt). Przy jednym
   scaleniu działo się tak już dotąd.
@@ -16443,7 +16453,7 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
   gorzej w 6 (ta reguła), rozjazd urządzeń 0. Domknięcie (do decyzji): osobny licznik właściciela albo „późniejsza
   zmiana wygrywa” także w tej samej karcie (zmienia zwykłą synchronizację). *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): zamknięte drugą drogą — w tej
   samej karcie wygrywa późniejsza zmiana; w pętli scaleń poprawka x1 z trzeciego urządzenia zostaje na A, B i C
-  z `rev` 1, test przepisany.)*
+  z `rev` 2 (P-REV-MAX), test przepisany.)*
 - **Remis milisekundy.** Gdy ostatni zapis źródła i głowa scalenia wypadną w tej samej milisekundzie, kolejność wersji
   (`yr`) stawia wyżej dawną głowę źródła (`rev` 1) jako bieżącą wersję celu. Ręcznie nieosiągalne; w testach odstęp.
 - **Kosz-przed i kosz-po, osobna wada.** Wersja usunięta do kosza na jednym urządzeniu przed albo po „Scal pacjentów” na
