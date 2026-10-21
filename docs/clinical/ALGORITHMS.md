@@ -15496,7 +15496,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.332, `vilda_vault.js` 222, 2026-10-21)
+## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła, która treść pomiaru
 zostaje po synchronizacji, gdy tę samą wizytę poprawiono na dwóch urządzeniach, i która treść trafia do kosza.
@@ -15643,8 +15643,8 @@ wizyta 125 cm / 24 kg).
   której odbiorca nie przyjmuje.
 
 **Walidacja.**
-- `npm test` (kod jak `db5acb9a`): polityka repozytorium (1754 pliki), lint, składnia (1117 plików), 410 plików testów,
-  10 116 z 10 116 zielonych; `test:pro` 43 z 43, 32 z 32, 44 z 44. CI na `db5acb9a`: lint,
+- `npm test` (po scaleniu `audyt` `21bb4e4`): polityka repozytorium (1755 plików), lint, składnia (1118 plików),
+  411 plików testów, 10 123 z 10 123 zielonych; `test:pro` 43 z 43, 32 z 32, 44 z 44. CI na `db5acb9a`: lint,
   składnia, testy jednostkowe, e2e w 3 odłamkach, testy przeglądarkowe i PWA, zrzuty wyglądu, CodeQL — zielone.
 - Pliki D-7 (`pozniejsza-poprawka`, `pozniejsza-poprawka-rev`, `pozniejsza-poprawka-mutacje`, `kosz-nowsza-tresc`,
   `kosz-przywroc-nowsza`, `sync-wlasciciel-wersji`, `zmiana-w-karcie`): 152 nowe testy; na sejfie sprzed zmiany
@@ -15667,8 +15667,8 @@ wizyta 125 cm / 24 kg).
   0 rozjazdów przed aktualizacją, 0 zapisów w kolejnych rundach, `rev` równa flocie samych starych w 109 ze 109; fuzz
   floty mieszanej 900 + 200 przebiegów (z przewagą kosza) — 0 utrat ponad flotę samych starych (przy `rev` zwycięzcy:
   11 w macierzy, 1 w fuzzie); wyjątek — rozjazd zegarów ze starszą aplikacją (ograniczenie F2 wyżej).
-- `npm run podbij-wersje` względem `origin/audyt` `0d76443`: `vilda_vault.js` 222, `vilda_chrome.js` 167,
-  `vilda_session_bridge.js` 91; SW 1.1.331 → 1.1.332.
+- `npm run podbij-wersje` względem `origin/audyt` `21bb4e4` (po scaleniu P-GH-NOWE-ID-MONITOR, #745): `vilda_vault.js`
+  222, `vilda_chrome.js` 167, `vilda_session_bridge.js` 91; SW 1.1.332 → 1.1.333.
 
 ## „Scal kopię konta” zachowuje rewizję i chwilę zmiany dopisanych wersji (P-KOPIA-REV, SW 1.1.329, `vilda_vault.js` 221, 2026-10-21)
 
