@@ -15743,7 +15743,8 @@ wejście → wynik):
   (krok „pasmo bez karty”), a sierota zostaje tylko na starym urządzeniu, do jego aktualizacji (losowy przebieg
   recenzenta, ziarno 164 floty mieszanej). Naprawa po stronie odbiorcy (notatka, której karty po fazie kart nie ma, a nagrobek
   karty jest późniejszy niż każda jej wersja, znika lokalnie bez nagrobka) zmienia regułę także dla sierot spoza D-21
-  i dla danych już zapisanych — zostawiona do decyzji właściciela (nota wydania D21-8, osobny PR).
+  i dla danych już zapisanych. Decyzja właściciela 2026-10-21 (O-1): przyjęte jako znane ograniczenie z notą
+  wydania (punkt 2 noty D21-8); naprawa po stronie odbiorcy — ewentualnie osobny PR razem z sierotami (D21-9).
 - **Stary przekaźnik po drugim usunięciu** (przegląd 2, flota Z3; test HD) — **regresja względem dziś, tylko we flocie
   mieszanej**. A usuwa pacjenta, B ratuje notatki; nieświadome D poprawia notatkę; B usuwa pacjenta ponownie (nowe
   nagrobki są późniejsze niż poprawka D); stare C dopisuje wizytę po drugim usunięciu (karta wraca), ucina pole
