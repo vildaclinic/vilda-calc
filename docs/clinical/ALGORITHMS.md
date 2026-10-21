@@ -15621,7 +15621,8 @@ wizyta 125 cm / 24 kg).
   ma wcześniejszą chwilę i przegrywa — także po aktualizacji (np. 30 kg zamiast 40 kg na trzech urządzeniach;
   „Przywróć” cofnięte, zapis w koszu). Flota jednorodna obie zachowuje (stara — przez `rev`, nowa — przez stempel).
   Nie korygujemy chwil z przyszłości (D13). Ogranicza to aktualizacja wszystkich urządzeń tego samego dnia i poprawny
-  zegar na urządzeniach (ostrzeżenie D13).
+  zegar na urządzeniach (ostrzeżenie D13). Przyjęte przez właściciela jako znane ograniczenie (wariant A, 2026-10-21),
+  z notą przy wydaniu: zaktualizować wszystkie urządzenia tego samego dnia i włączyć automatyczny czas.
 - **Edycja bieżącej wizyty starej karty w pętli scaleń (T9, PD-10).** Poprawka przetrwa, ale jej nowa chwila zapisu
   czyni ją bieżącą wersją scalonej karty na wszystkich urządzeniach (dawna głowa, bez późniejszych wizyt). Przy jednym
   scaleniu działo się tak już dotąd.
