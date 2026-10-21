@@ -70,12 +70,13 @@ test('zapisuje TYLKO wybraną formułę (eGFR dorośli) — bez Cockcrofta obok'
   // ręczny wybór formuły (jak w produkcji) → activeFormulaId = egfr
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
+  await page.locator('details.clcr-egfr-extra-data > summary').click();
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
   await page.locator('#weight').fill('80');
   await page.locator('#height').fill('180');
   await page.locator('#Scr').fill('1.0');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(1);
@@ -107,12 +108,13 @@ test('CKiD U25 u 20-latka — zapisuje tylko wybraną formułę, wyklucza panel 
 
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('ckid_u25'));
   await page.waitForTimeout(60);
+  await page.locator('details.clcr-egfr-extra-data > summary').click();
   await page.locator('#age').fill('20');
   await page.locator('#sex').selectOption('F');
   await page.locator('#weight').fill('60');
   await page.locator('#height').fill('165');
   await page.locator('#Scr').fill('0.9');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
   await page.evaluate(() => window.clcrUpdate());
 
   // silnik renderuje egfr/cg jako porównanie (otagowane), ale zapis ich pomija
@@ -188,12 +190,13 @@ test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', 
   await setupVaultPatient(page);
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
+  await page.locator('details.clcr-egfr-extra-data > summary').click();
 
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
   await page.locator('#weight').fill('80');
   await page.locator('#height').fill('180');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
 
   // wizyta 1 (Scr 1.0 → wyższy eGFR)
   await page.locator('#Scr').fill('1.0');
@@ -225,11 +228,12 @@ test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ p
   await setupVaultPatient(page);
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
+  await page.locator('details.clcr-egfr-extra-data > summary').click();
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
   await page.locator('#weight').fill('80');
   await page.locator('#height').fill('180');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
 
   await page.locator('#Scr').fill('1.0');
   await page.evaluate(() => window.clcrUpdate());

@@ -32,8 +32,8 @@
   "sha256": "a15863c1fa105c0f1d081989629918a8593db6689f565ea500fd495b53db4dc3"
  },
  "clcr_clinical_safety.js": {
-  "v": 4,
-  "sha256": "8cd5039def956b20edb88f11f5004f2b0a4c8452f7ed09827d06a1c970af8ba1"
+  "v": 5,
+  "sha256": "29e41b3234ffcad4f0536f33307658532505af35bc336bb76a1f8923cb70b37c"
  },
  "clcr_dialysis_safety.js": {
   "v": 1,
@@ -48,12 +48,12 @@
   "sha256": "6d6c4c813d70ea72e641128c0b860345fb3c91b99a6ad16f9ed6379cd2f100d5"
  },
  "clcr_ui_workflow.css": {
-  "v": 7,
-  "sha256": "669e08d7e64194ad82da4776ecb633dd8b7018c5a6dc071593911ae6201641ef"
+  "v": 8,
+  "sha256": "b87bddbe4621ac76a247a2039d80ef8c7f5c9d6b6faa4bbb7f4a428de82f7231"
  },
  "clcr_ui_workflow.js": {
-  "v": 5,
-  "sha256": "95ea540c40bd87d326431ee61ad4364f45e91ac7d684d5076940038ad3eb4fe2"
+  "v": 6,
+  "sha256": "79185234478dbc6950b1dc8422b224980b62ed5657ac6244759ad139e63e2233"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -208,8 +208,8 @@
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 7,
-  "sha256": "7c45b1f2520d2e1c62aa8e63b6ae7b93a33e8feb345610821c268c6e7924f14a"
+  "v": 8,
+  "sha256": "c1b0b3f7d52895a5c02f22d2a2bdadd42cc11ce5e4c97d9dd794f514a2222bad"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
