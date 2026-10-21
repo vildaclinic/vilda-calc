@@ -15372,6 +15372,131 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wizyta przypięta po koszu przeżywa retencję na trzecim urządzeniu; nagrobek trzyma chwilę kosza i chwilę przycięcia osobno (P-KOSZ-RETENCJA-PO-KOSZU, SW 1.1.327, `vilda_vault.js` 219, 2026-10-20)
+
+**Zmiana kliniczna: tak** — poprawka regresji z P-ZMIANA-W-KARCIE-2 (niżej) w regule scalania kosza, w zakresie
+decyzji właściciela D-6 B z 2026-10-20 i niezmiennych reguł P-KOSZ-ZAPISOW („wersja zmieniona po usunięciu zostaje”)
+oraz P-RETENCJA-NAGROBKI („retencja nie usuwa wersji przypiętej”). Wzory, progi i jednostki bez zmian.
+
+**Co było** (prawdziwy `vilda_vault.js` 218 na `cd3a2876`, sejfy w pamięci, sztuczny zegar, dane fikcyjne). „Testowy
+Jan” ma 12 wersji na komputerze (K), iPhonie (P) i tablecie (C). K przenosi wersję s do kosza (t1). P, który o koszu
+nie wie, przypina s (t2 > t1). C, który dawno się nie synchronizował, przycina s retencją (t3 > t2), np. sam po zapisie
+nowej wizyty. Po scaleniu kosza K z retencją C wpis kosza brał chwilę retencji (t3) i tracił jej powód, więc
+przypięcie (t2 < t3) przegrywało z nim jak ze zwykłym koszem: przypięta wizyta znikała z karty na P, K i C w 5 z 8
+kolejności pierwszych scaleń i lądowała w koszu. Dla tej samej wersji (bez poprawki przed koszem) tak samo było już
+przed P-ZMIANA-W-KARCIE-2; P-ZMIANA-W-KARCIE-2 rozszerzyła to na różne wersje. Wpis kosza pokazywał też chwilę
+retencji zamiast chwili kosza i wygasał 30 dni od niej.
+
+**Reguła po zmianie.**
+- Nagrobek wersji niesie dwie chwile usunięcia: usunięcie przez użytkownika (kosz, `deletedAtISO`) i przycięcie
+  retencją (`deletedAtISO` przy `powod: 'retencja'`, a przy wpisie kosza nowe pole `przycietoISO`). Kosz wygrywa
+  z każdą zmianą wersji nie późniejszą niż on. Przycięcie wygrywa ze zmianą nie późniejszą niż ono, ale tylko gdy
+  wersja nie jest przypięta (`Bkz_wygrywa`; `Bkz_pomin` i `Bkz_scalKoniec`).
+- Nagrobek pamięta najpóźniejszą zmianę wersji, jaką zna (`Bkz_znanaZmiana`): chwilę zmiany z opisu wersji (`rev`,
+  `updatedAtISO`, `savedAtISO`) albo nowe pole `zmianaISO`. `zmianaISO` dostaje nagrobek, którego przycięcie pokonało
+  wersję zmienioną później, niż pokazuje jego opis. Pole łączy się jako późniejsza z dwóch chwil, więc wynik nie zależy
+  od kolejności. Opisu wersji w samym nagrobku retencji nowa aplikacja nie przepisuje: starsza porównuje go z treścią
+  kosza i zdjęłaby ważny wpis kosza.
+- Treść albo chwila kosza jest nieaktualna, gdy któryś nagrobek zna zmianę wersji późniejszą niż chwila tego kosza
+  (`Bkz_nieaktualny`). Liczy się chwila, nie `rev`, tak samo jak w `Bkz_wygrywa`.
+- Łączenie nagrobków (`Bkz_dolacz`): późniejsza chwila kosza, późniejsza chwila przycięcia i późniejsza znana zmiana
+  z obu. Wpis kosza zostaje wpisem kosza z własną chwilą, a przycięcie późniejsze niż kosz idzie do `przycietoISO`;
+  przycięcie wcześniejsze niż kosz nic już nie zmienia. Treść: nowsza z dwóch wersji, ale tylko treść, która nie jest
+  nieaktualna wobec drugiego nagrobka. Kosz przestaje się liczyć, gdy jest nieaktualny wobec któregokolwiek przycięcia
+  późniejszego niż on; zostaje wtedy sam nagrobek retencji z opisem wersji z tego nagrobku, którego opis pokazuje
+  zmianę po koszu (po nim nieaktualny kosz zdejmuje też starsza aplikacja). Poza tym opis wersji nagrobka bez treści
+  pochodzi z późniejszego z dwóch nagrobków, jak dotąd; przy remisie chwil z tego, który zna późniejszą zmianę
+  (`Bkz_opisPozniejszy`).
+- Wersja pokonana tylko przez przycięcie (zmieniona po koszu) nie dokłada treści do kosza. Kosz sprzed tej zmiany
+  zamienia się w sam nagrobek retencji z opisem tej wersji (`Bkz_pomin`, `Bkz_scalKoniec`); taki nagrobek zdejmuje
+  nieaktualny kosz także u starszej aplikacji. Treść wersji trafia do kosza tylko wtedy, gdy wersję pokonał kosz
+  (P-KOSZ-NOWSZA-TRESC).
+- Kosz pokazuje chwilę kosza i wygasa 30 dni od niej; sam nagrobek żyje 365 dni od późniejszej z dwóch chwil. Wpis
+  kosza, który stracił treść po 30 dniach, zostaje wpisem kosza z obiema chwilami: łączenie dwóch takich samych wpisów
+  nic nie zmienia (chwila kosza ginie tylko wtedy, gdy kosz jest nieaktualny wobec późniejszego przycięcia).
+  Porównania „nagrobek nie późniejszy niż ten, który przegrał” (P-SCALANIE-BLOKADA, P-KOSZ-SCALANIE-PRZYWROC,
+  P-KOSZ-PRZYWROC-NOWSZA) liczą późniejszą z dwóch chwil (`Bkz_ostatnie`).
+- Format: dwa nowe opcjonalne pola w nagrobku wersji w ładunku synchronizacji, `przycietoISO` i `zmianaISO`. Pozostałe
+  pola mają to samo znaczenie co dotąd. Starsza aplikacja nowych pól nie zna: wpis z `przycietoISO` traktuje jak kosz
+  z chwilą kosza (wizyta przypięta albo zmieniona po koszu zostaje u niej w karcie), a `zmianaISO` pomija.
+
+**Zmiana zachowania wobec `cd3a2876`.** Wizyta poprawiona albo przywrócona z kosza po koszu na innym urządzeniu,
+a potem przycięta retencją przez urządzenie, które nie wiedziało ani o koszu, ani o zmianie, znika jak każda przycięta
+wersja i nie trafia do kosza. Na `cd3a2876` scalony kosz brał chwilę przycięcia, więc zabierał treść tej zmiany do kosza
+w większości kolejności. Zgodne z regułą: zmiana po koszu unieważnia kosz, a retencja usuwa nieprzypiętą wersję tak
+samo jak bez kosza.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik).** `tests/unit/kosz-nowsza-tresc.test.mjs`:
+- gwiazdka na P po koszu na K, retencja na C; warianty: ta sama wersja, poprawka na P przed koszem (K ją zna), poprawka
+  na K przed koszem; 8 kolejności pierwszych scaleń, potem 3 rundy pełnej wymiany → na P, K i C wizyta w karcie,
+  przypięta, bez wpisu kosza (24; na `cd3a2876` czerwone 15: po 5 kolejności w każdym wariancie);
+- gwiazdka na P przed koszem na K, retencja na C, P offline 31 dni (treść kosza wygasa), z synchronizacją K↔C po
+  wygaśnięciu i bez niej → wizyta zostaje usunięta na P, K i C, nagrobek zostaje wpisem kosza (2; zielone na
+  `cd3a2876`, czerwone na pierwszej wersji tej poprawki, uwaga weryfikacji);
+- gwiazdka na P, kosz na K, retencja na C w kolejności P←C, P←K → zapis nie wraca do karty, w koszu przypięty (zielony
+  na `cd3a2876`, na `27055774` zapis znikał i z kosza);
+- poprawka na P, kosz na K, retencja na C → w koszu trzech urządzeń poprawka z chwilą kosza (nie retencji), ważna
+  30 dni od kosza, w nagrobku `przycietoISO` późniejsze niż `deletedAtISO`, bez `powod` (czerwony na `cd3a2876`);
+- zmiana wersji po koszu, potem przycięcie; każdy wariant w 8 kolejnościach pierwszych scaleń, potem 3 rundy → wizyta
+  usunięta, kosz pusty i ten sam nagrobek na P, K i C (72):
+  - z fuzzu na trzech urządzeniach: poprawka na K, kosz na C, poprawka na P, retencja na K; poprawka na P, kosz na K,
+    poprawka na C, retencja na C, potem na P; to samo z gwiazdką i odpięciem zamiast poprawki na C (24; na `cd3a2876`
+    zielone, na `57e82a50` czerwone 19);
+  - wersje „przecięte” z przeglądu: dwie poprawki na P przed koszem na C, poprawka na K po koszu, retencja na K; dwie
+    poprawki (albo gwiazdka i odpięcie) na K, kosz na K, poprawka na P po koszu, retencja na C (24; na `42ef1733`
+    czerwone 20, na `cd3a2876` czerwone 16: tam kosz trzymał treść sprzed zmiany);
+  - zmiana zachowania: kosz na K, poprawka albo „Przywróć” na P, retencja na C (16; na `cd3a2876` czerwone 14);
+  - z fuzzu v5 (X3): poprawka na C, kosz na K, poprawka na P, retencja na P, potem na C (8; zielone także na
+    `cd3a2876` i `22fcd887`);
+- ten sam przebieg X3 w kolejności C←K, P←C → nagrobek retencji na P ma opis wersji poprawionej po koszu (czerwony na
+  `22fcd887` i `cd3a2876`: opis starej treści kosza, przy którym starsza aplikacja kosza nie zdejmuje);
+- poprawka na K, kosz na P, retencja na K, potem na C, a treść kosza wygasa (31 dni) przed synchronizacją; 8 kolejności
+  → wersja usunięta, ten sam nagrobek na trzech, wpis kosza, który zna zmianę poprawki (8). Na `bbbffcc0` czerwone 6
+  (różne opisy na różnych urządzeniach na zawsze), na `cd3a2876` czerwone 8 (kosz zamieniał się w nagrobek retencji);
+- retencja C pokonuje poprawioną wersję na P → nagrobek retencji na P ma ten sam opis wersji co na C, a chwilę
+  poprawki w `zmianaISO`; po rundach kosz K zostaje na trzech (czerwony na `42ef1733`: opis przepisany na poprawkę);
+- dotychczasowe przypadki P-KOSZ-NOWSZA-TRESC i P-ZMIANA-W-KARCIE-2 (gwiazdka i poprawka przed koszem, retencja na
+  trzecim urządzeniu, zapis przywrócony, poprawiony i przycięty) — bez zmian, zielone;
+- strażnik źródła `Bkz_dolacz`.
+
+Flota mieszana (uprząż przeglądu z kopiami `vilda_vault.js` z `cd3a2876` i `44256803`, poza repozytorium): poprawka na
+P przed koszem na K ze starszą aplikacją, retencja na C, kolejność P←C, K←P → wpis kosza zostaje na trzech w każdej
+flocie (na `bbbffcc0` i `42ef1733` znikał na wszystkich, gdy K miało starszą aplikację).
+
+**Wpływ kliniczny.** Wizyta oznaczona gwiazdką po koszu na innym urządzeniu zostaje w historii pacjenta na wszystkich
+urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokazuje chwilę, w której użytkownik usunął zapis.
+„Przywróć” nie oddaje treści sprzed zmiany zrobionej po koszu.
+
+**Ograniczenia.**
+- Poprawka przed koszem przegrywa z przycięciem, zanim kosz dotrze do urządzenia z poprawką (np. P scala retencję C,
+  potem kosz K). Nagrobek retencji nie niesie treści, więc kosz trzyma treść sprzed poprawki: tylko w koszu, nie
+  w karcie, zbieżnie na wszystkich urządzeniach i tak samo jak na `44256803` (test „P←C,P←K”).
+- Dwa kosze tej samej wizyty na różnych urządzeniach i zmiana między nimi (fuzz v5: S1, X1, X5, X6): w koszu zostaje
+  jedna z dwóch starszych treści, zależnie od kolejności synchronizacji, zbieżnie w obrębie przebiegu. Treść kosza
+  unieważnionego zmianą po nim odpada, zanim dotrze późniejszy, ważny kosz. Najbardziej widoczny przypadek X5 wygląda
+  tak: P poprawia wizytę dwa razy (78 kg) i usuwa ją; C poprawia ją raz po koszu P (74 kg); K, które o niczym nie wie,
+  usuwa ją (23 kg); C przycina. Wtedy w 4 z 8 kolejności kosz trzyma 23 kg, w pozostałych 78 kg. Na `cd3a2876`
+  i `42ef1733` było 78 kg w każdej kolejności, bo zmiana o niższej `rev` nie unieważniała treści o wyższej. Tę regułę
+  zastąpiło tu porównanie chwil, zgodne z `Bkz_wygrywa` i z kierunkiem D-7 wariant 2 („wygrywa późniejsza poprawka”).
+  Pełna łączność wymaga przebudowy łączenia nagrobków: niezależne składniki i treść kosza zachowywana także po
+  unieważnieniu. To osobny PR, razem z naprawą wizyty przypiętej niżej.
+- Istniejące przed tym PR (także na `cd3a2876`, część na `44256803`), do osobnych PR:
+  - gwiazdka na P przed koszem na K, poprawka na C po koszu, retencja na C: w 2 z 8 kolejności wizyty nie ma ani
+    w karcie, ani w koszu (w pozostałych jest przypięta w karcie albo w koszu z gwiazdką). Zgodnie z regułami
+    przypięta wizyta powinna wrócić do karty, gdy kosz okazuje się nieaktualny; to wymaga nowego mechanizmu;
+  - gwiazdka na P i równoległa poprawka tej samej wersji na C, bez kosza, retencja na K: wynik zależy od kolejności
+    (reguła wersji tej samej karty, D-7 wariant 2).
+- Flota mieszana: pola `przycietoISO` i `zmianaISO` opisane wyżej. Zmiana po koszu zrobiona na urządzeniu ze starszą
+  aplikacją nie zapisuje się w nagrobku, więc nowe urządzenia mogą trzymać w koszu treść sprzed tej zmiany, także po
+  aktualizacji starszego (tylko w koszu, nie w karcie). Odwrotnie: gdy zmianę po koszu zrobi nowe urządzenie, które
+  o koszu nie wie, a tę wersję przytnie retencja, chwila zmiany jedzie tylko w `zmianaISO`. Starsza aplikacja z tym
+  koszem go wtedy nie zdejmie. To koszt tego, że opisu wersji w nagrobku retencji nie przepisujemy (inaczej starsza
+  aplikacja zdejmowała ważny kosz). Gwiazdka po koszu we flocie mieszanej jest zbieżna i nie
+  gorsza niż na `cd3a2876`. Starsza aplikacja nadal przesuwa chwilę scalonego kosza na chwilę przycięcia.
+
+**Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 218 → 219 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (163 → 164) i
+`vilda_session_bridge.js` (87 → 88); SW 1.1.326 → **1.1.327**.
+
 ## Kosz przeżywa retencję starszej wersji na trzecim urządzeniu; nowa wizyta nie obniża chwili zapisu karty (P-ZMIANA-W-KARCIE-2, SW 1.1.325, `vilda_vault.js` 218, 2026-10-20)
 
 **Zmiana kliniczna: tak** — poprawki reguł z wpisu P-ZMIANA-W-KARCIE / P-KOSZ-NOWSZA-TRESC (niżej) po przeglądzie
@@ -15385,7 +15510,8 @@ treść, ten sam nagrobek w każdej kolejności”) z 2026-10-20. Wzory, progi, 
   nagrobek retencji z C — starą wersję (`rev` 0) bez treści. `Bkz_dolacz` przenosił treść tylko przy tej samej wersji
   albo gdy późniejszy nagrobek sam miał treść, więc wpis kosza znikał: na wszystkich trzech urządzeniach albo tylko
   na C (trwały rozjazd, a C szyfrował przy każdej synchronizacji treść, którą potem odrzucał). Przy gwiazdce przypięty
-  zapis wracał do karty na P, K i C („nagrobek retencji przegrywa z wersją przypiętą”), a z kosza znikał. Na
+  zapis wracał do karty na P, K i C („nagrobek retencji przegrywa z wersją przypiętą”), a z kosza znikał; w kolejności
+  P←C, potem P←K znikał i z karty, i z kosza. Na
   `44256803` (przed P-KOSZ-NOWSZA-TRESC) kosz zostawał na wszystkich urządzeniach.
 - **`savePatient` obniżał chwilę zapisu karty.** Nowa wizyta ustawiała `lastSavedAtISO` = „teraz”. Gdy karta miała datę
   z przyszłości lokalnego zegara (zmiana na urządzeniu ze spieszącym się zegarem, przyjęta przez R4), data spadała, a
@@ -15397,7 +15523,8 @@ treść, ten sam nagrobek w każdej kolejności”) z 2026-10-20. Wzory, progi, 
 **Reguła po zmianie.**
 - `Bkz_dolacz`: gdy starszy nagrobek tej wersji niesie treść nowszej wersji zapisu niż późniejszy, kosz trzyma tę
   treść (z jej `rev`, `updatedAtISO`, `savedAtISO`), a chwila usunięcia zostaje z późniejszego — także gdy późniejszy
-  nie ma treści (retencja). Łączenie nie zależy od tego, który nagrobek jest lokalny. Treść starsza niż wersja
+  nie ma treści (retencja). *(Aktualizacja 2026-10-20, P-KOSZ-RETENCJA-PO-KOSZU: wpis kosza trzyma własną chwilę, a późniejsza
+  retencja idzie do osobnego pola `przycietoISO` — inaczej wizyta przypięta po koszu przegrywała z nim.)* Łączenie nie zależy od tego, który nagrobek jest lokalny. Treść starsza niż wersja
   późniejszego nagrobka (zapis przywrócony, zmieniony i ponownie przycięty) odpada jak dotąd.
 - `savePatient`: `lastSavedAtISO` = późniejsza z dwóch (dotychczasowa, chwila zapisu). Wersja dostaje chwilę zapisu
   z lokalnego zegara jak dotąd, więc kolejność wersji w historii bez zmian. Dotyczy też „Scal pacjentów” (zapis karty
@@ -15421,8 +15548,8 @@ treść, ten sam nagrobek w każdej kolejności”) z 2026-10-20. Wzory, progi, 
 - Pokrycie reguł z #732, którego brakowało (mutanty przeżywające w przeglądzie; zielone na `27055774`):
   `kosz-nowsza-tresc` — obie strony poprawiły zapis (ta sama `rev`), późniejsza poprawka na P, kosz na K, 3 kolejności
   → w koszu obu późniejsza, „Przywróć” ją oddaje (3); poprawka z nową chwilą zapisu (`preserveSavedAt: false`) → nagrobek
-  i przywrócona wersja mają chwilę zapisu poprawki (2); `zmiana-w-karcie` — kosz, gdy wersję w międzyczasie usunęło
-  scalanie → data = chwila usunięcia; zmiana w karcie po przyjęciu daty z przyszłości → data nie maleje; w testach
+  i przywrócona wersja mają chwilę zapisu poprawki (2); `zmiana-w-karcie` — kosz, gdy wersja zniknęła w trakcie (inna
+  karta przeglądarki bez Web Locks albo import kopii; test podmienia zapis w adapterze) → data = chwila usunięcia; zmiana w karcie po przyjęciu daty z przyszłości → data nie maleje; w testach
   odbiorcy D-5 zegar przesunięty między koszem a scaleniem (chwila scalania ≠ chwila kosza).
 - Na `27055774` z nowych testów czerwonych jest 9 (7 zachowania, 2 strażniki).
 
@@ -15535,7 +15662,9 @@ komplet. B usuwa pacjenta, minutę później A robi zmianę:
 Na `44256803` z 56 nowych testów czerwonych jest 52; zielone tylko 4 kontrole. Przepisane oczekiwania:
 `tests/unit/sync-wlasciciel-wersji.test.mjs` (37 przypadków, niżej we „Wpływie klinicznym”) i strażnik
 `tests/unit/retencja-nagrobki.test.mjs` (kosz przekazuje chwilę usunięcia). Mutacje: usunięcie każdego elementu
-zmiany osobno daje od 1 do 26 czerwonych testów zachowania (bez strażnika źródła).
+zmiany osobno daje od 0 do 26 czerwonych testów zachowania (bez strażnika źródła): trzy elementy (gałąź „wersję
+w międzyczasie usunęło scalanie” w `Bkz_doKosza`, `savedAtISO` treści w `Bkz_zTresci`, remis `rev` w
+`Bkz_nowszaWersja`) nie miały testu zachowania — pokrycie dodał P-ZMIANA-W-KARCIE-2.
 
 **Wpływ kliniczny.**
 - Poprawka pomiaru, usunięcie wiersza, gwiazdka, wpis historyczny, korekta nazwiska, „Przywróć” i kosz zrobione na
@@ -15585,7 +15714,8 @@ zmiany osobno daje od 1 do 26 czerwonych testów zachowania (bez strażnika źr�
     usuniętą na innym urządzeniu. Dotąd usunięcie wygrywało.
   - **Retencja na trzecim urządzeniu, scalona przed koszem na urządzeniu z poprawką** (P←C, potem P←K): nagrobek
     retencji, późniejszy niż poprawka, wygrywa z nią jak dotąd (P-RETENCJA-NAGROBKI) i nie niesie treści, więc poprawka
-    przepada, a kosz na trzech urządzeniach trzyma treść sprzed poprawki (zbieżnie, jak przed zmianą).
+    przepada, a kosz na trzech urządzeniach trzyma treść sprzed poprawki (zbieżnie, jak przed zmianą). Dotyczy tylko
+    poprawki: zapis przypięty retencja omija, więc trafia do kosza z gwiazdką.
 
 **Kod.** `vilda_vault.js`: pomocniki `Bkz_pozniejsza` i `Bkz_podniesZapis`; `Bzw_aktualizujWersje` (R1),
 `Bzw_usunWersje` i `Bkz_przebudujNaglowek` z chwilą zmiany (R2, R3), `Bkz_doKosza` i `Bkz_przywroc` (R2, R1),
