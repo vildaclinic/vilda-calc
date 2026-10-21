@@ -426,6 +426,7 @@ test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje 
   ).toBe(false);
   await expect(readiness).not.toHaveClass(/clcr-readiness--error/);
 
+  await page.locator('details.clcr-egfr-extra-data > summary').click();
   await page.locator('#height').fill('999');
   await expect(page.locator('#height')).toHaveClass(/error/);
   expect(
@@ -438,7 +439,7 @@ test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje 
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill('1');
   await page.locator('#ScrAssay').selectOption('enzymatic_idms');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(readiness).not.toContainText(

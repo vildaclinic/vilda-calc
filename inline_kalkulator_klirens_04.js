@@ -1060,6 +1060,57 @@ function update() {
       const seriesAttr = Sk
         ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${w}"`
         : "";
+      if (
+        ["egfr", "ckid_u25"].includes(de) &&
+        typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
+      ) {
+        const presentation = window.ClcrClinicalSafety.egfrPresentation({
+          value: w,
+          age: t,
+          assay: populationContext.scrAssay,
+          markerPolicy: creatinineContext,
+        });
+        if (!presentation.valueVisible) return;
+        const category = presentation.category;
+        const abnormal = ["warning", "danger"].includes(presentation.tone);
+        const categoryBadge = category
+          ? `<span class="clcr-egfr-category">${clcrEscapeHtml(category.code)}</span>`
+          : "";
+        const categoryDescription = category
+          ? `<p class="clcr-egfr-category-description">Kategoria GFR wg KDIGO: ${clcrEscapeHtml(category.label)}</p>`
+          : "";
+        const reasons = presentation.reasons.map(
+          (reason) => `<p class="clcr-egfr-note">${clcrEscapeHtml(reason)}</p>`,
+        ).join("");
+        const pediatricNote = category && t >= 2 && t < 18 && w < 90
+          ? '<p class="clcr-egfr-note">eGFR &lt;90 mL/min/1,73 m² u dziecka w wieku co najmniej 2 lat jest wartością niską i wymaga oceny w pełnym kontekście klinicznym; pojedynczy wynik nie rozpoznaje CKD.</p>'
+          : "";
+        const boundary = category && gfrDisplay?.crossesCategoryBoundary
+          ? gfrDisplay.raw
+          : "";
+        S += `<div class="result-box clcr-egfr-result${abnormal ? " out-of-range" : ""}"
+          data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}
+          data-clcr-tone="${presentation.tone}"
+          data-clcr-display-value="${clcrEscapeHtml(displayValue)}"
+          data-clcr-display-unit="${clcrEscapeHtml(Z.trim())}"
+          data-clcr-display-label="${clcrEscapeHtml(r)}"
+          data-clcr-status="${clcrEscapeHtml(presentation.label)}"
+          data-clcr-category="${category ? category.code : ""}"
+          data-clcr-boundary="${clcrEscapeHtml(boundary)}">
+          <div class="clcr-egfr-result-heading">
+            <strong class="clcr-egfr-status">${clcrEscapeHtml(presentation.label)}</strong>
+            ${categoryBadge}
+          </div>
+          <div class="clcr-egfr-number">
+            <span class="clcr-egfr-value">${displayValue}</span>
+            <span class="clcr-egfr-unit">${Z.trim()}</span>
+          </div>
+          ${category ? calculationDetail : ""}
+          <div class="clcr-egfr-formula">eGFR · ${clcrEscapeHtml(r)}</div>
+          ${categoryDescription}${reasons}${pediatricNote}
+        </div>`;
+        return;
+      }
       S += `<div class="result-box${at ? "" : " out-of-range"}" data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}><strong>${r}:</strong> ${displayValue}${Z}${calculationDetail}${lt}</div>`;
     }
     function T(r = {}) {
@@ -1107,12 +1158,17 @@ function update() {
           t >= 2 &&
           spotSampleKind === "firstMorning" &&
           spotConfounders.length === 0;
-      r.includeBsa !== !1 &&
-        W &&
-        (S =
-          `<div class="result-box"${bsaFormulaId ? ` data-clcr-formula="${clcrEscapeHtml(bsaFormulaId)}"` : ""}><strong>Powierzchnia cia\u0142a (${clcrEscapeHtml(bsaMethod)})</strong> ${W.toFixed(2)}\u202Fm\xB2</div>` +
-          S);
+      if (r.includeBsa !== !1 && W) {
+        const bsaMarkup = `<div class="result-box"${bsaFormulaId ? ` data-clcr-formula="${clcrEscapeHtml(bsaFormulaId)}"` : ""}><strong>Powierzchnia cia\u0142a (${clcrEscapeHtml(bsaMethod)})</strong> ${W.toFixed(2)}\u202Fm\xB2</div>`;
+        if (["egfr", "ckid_u25"].includes(l)) {
+          S += `<details class="clcr-egfr-result-details" data-clcr-formula="${clcrEscapeHtml(bsaFormulaId)}"><summary>Powierzchnia ciała — szczegóły</summary>${bsaMarkup}</details>`;
+        } else S = bsaMarkup + S;
+      }
       validGEntries.forEach((entry) => {
+        if (
+          ["egfr", "ckid_u25"].includes(entry.formulaId) &&
+          typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
+        ) return;
         const w =
           window.ClcrClinicalSafety &&
           typeof window.ClcrClinicalSafety.kdigoGCategory == "function"
@@ -1128,7 +1184,10 @@ function update() {
       if (t >= 2 && t < 18) {
         const warnedFormulaIds = new Set();
         validGEntries
-          .filter((entry) => entry.value < 90)
+          .filter((entry) => entry.value < 90 && !(
+            ["egfr", "ckid_u25"].includes(entry.formulaId) &&
+            typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
+          ))
           .forEach((entry) => {
             const formulaId = entry.formulaId || "ckid_u25";
             if (warnedFormulaIds.has(formulaId)) return;
@@ -1775,7 +1834,9 @@ function update() {
     if (
       d &&
       creatinineEstimateShown &&
-      populationContext.scrAssay !== "enzymatic_idms"
+      populationContext.scrAssay !== "enzymatic_idms" &&
+      (!["egfr", "ckid_u25"].includes(l) ||
+        populationContext.scrAssay === "jaffe_idms")
     ) {
       const assayMessage =
         populationContext.scrAssay === "jaffe_idms"
@@ -1789,6 +1850,7 @@ function update() {
       creatinineContext.status === "unknown" &&
       d &&
       (!l || selectedCreatinineFormula) &&
+      !["egfr", "ckid_u25"].includes(l) &&
       selectedSafety.eligible
     ) {
       const r = l || (t < 18 ? "ckid_u25" : "egfr");
