@@ -615,12 +615,105 @@ describe('polaZPodawanej — wartości pól jako napisy, czytane jak w monitorze
 describe('noweId', () => {
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('format String(Date.now() + Math.random()), jak id nowego punktu w monitorze', () => {
-    vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 0, 1));
-    vi.spyOn(Math, 'random').mockReturnValue(0.25);
+  // P-GH-NOWE-ID: id pamięta moduł, więc przypadki ze sztucznym zegarem dostają własną, świeżą kopię modułu —
+  // zegar z przyszłości nie przesuwa wtedy id współdzielonego A w pozostałych testach.
+  const swiezyModul = () => loadBrowserScript('vilda_gh_punkty.js', {}).VildaGhPunkty;
+  const T = Date.UTC(2026, 0, 1); // 1767225600000
+  // Dawny generator (do 2026-10-21): String(Date.now() + Math.random()).
+  const dawneId = (ms, losowa) => String(ms + losowa);
 
-    expect(A.noweId()).toBe('1767225600000.25');
-    expect(A.noweId()).toBe(String(Date.now() + Math.random()));
+  it('format: całe ms z Date.now(), kropka, trzy cyfry; pierwsze id w milisekundzie od losowej pozycji 0–499, kolejne +0,001', () => {
+    const P = swiezyModul();
+    const zegar = vi.spyOn(Date, 'now').mockReturnValue(T);
+    const los = vi.spyOn(Math, 'random').mockReturnValue(0.25);
+
+    expect(P.noweId()).toBe('1767225600000.125');
+    expect(P.noweId()).toBe('1767225600000.126');
+    expect(P.noweId()).toBe('1767225600000.127');
+    expect(los, 'los tylko przy pierwszym id w milisekundzie').toHaveBeenCalledTimes(1);
+
+    zegar.mockReturnValue(T + 1);
+    los.mockReturnValue(0);
+    expect(P.noweId()).toBe('1767225600001.000');
+    los.mockReturnValue(0.999999);
+    zegar.mockReturnValue(T + 2);
+    expect(P.noweId()).toBe('1767225600002.499');
+    expect(P.noweId()).toBe('1767225600002.500');
+  });
+
+  it('przyczyna: dawny wzór przy dzisiejszym Date.now() skleja różne losowania w jedno id — nowy nie', () => {
+    // Liczba rzędu 1,8e12 ma krok 2^-12 ≈ 0,000244: dwa różne Math.random() dają ten sam napis.
+    expect(dawneId(T, 0.25)).toBe(dawneId(T, 0.25001));
+
+    const P = swiezyModul();
+    vi.spyOn(Date, 'now').mockReturnValue(T);
+    const los = vi.spyOn(Math, 'random').mockReturnValue(0.25);
+    const a = P.noweId();
+    los.mockReturnValue(0.25001);
+    expect(P.noweId()).not.toBe(a);
+  });
+
+  it('sztuczny zegar stoi: 2000 wywołań w tej samej milisekundzie — wszystkie różne, także jako liczby, ściśle rosnące', () => {
+    const P = swiezyModul();
+    vi.spyOn(Date, 'now').mockReturnValue(T);
+    vi.spyOn(Math, 'random').mockReturnValue(0.999999); // najgorszy start: pozycja 499
+
+    const id = Array.from({ length: 2000 }, () => P.noweId());
+
+    expect(new Set(id).size).toBe(2000);
+    expect(new Set(id.map(Number)).size).toBe(2000);
+    for (let i = 0; i < id.length; i += 1) {
+      expect(id[i], `id[${i}]`).toMatch(/^\d+\.\d{3}$/);
+      if (i > 0) expect(Number(id[i]), `id[${i}] > id[${i - 1}]`).toBeGreaterThan(Number(id[i - 1]));
+    }
+    // 501 pierwszych (pozycje 499–999) mieści się w [T, T + 1) — kontrakt z testu bez atrap.
+    expect(id[0]).toBe('1767225600000.499');
+    expect(id[500]).toBe('1767225600000.999');
+    expect(Number(id[500])).toBeLessThan(T + 1);
+    // Dopiero 502. id w tej samej milisekundzie wyprzedza zegar — nadal bez powtórzenia.
+    expect(id[501]).toBe('1767225600001.000');
+    expect(id[1999]).toBe('1767225600002.498');
+  });
+
+  it('po przepełnieniu zegar dogania licznik: kolejne id dalej rosną, żadne się nie powtarza', () => {
+    const P = swiezyModul();
+    const zegar = vi.spyOn(Date, 'now').mockReturnValue(T);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // start 250 → T+1.000 po 751 wywołaniach
+
+    const id = Array.from({ length: 751 }, () => P.noweId());
+    expect(id.at(-1)).toBe('1767225600001.000');
+
+    zegar.mockReturnValue(T + 1);
+    id.push(P.noweId(), P.noweId());
+    zegar.mockReturnValue(T + 2);
+    id.push(P.noweId());
+
+    expect(id.slice(-4)).toEqual(['1767225600001.000', '1767225600001.001', '1767225600001.002', '1767225600002.250']);
+    expect(new Set(id).size).toBe(id.length);
+  });
+
+  it('cofnięty zegar (np. korekta czasu systemu): id nie wraca do wartości już wydanych', () => {
+    const P = swiezyModul();
+    const zegar = vi.spyOn(Date, 'now').mockReturnValue(T + 5);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const id = [P.noweId(), P.noweId()];
+    zegar.mockReturnValue(T);
+    id.push(P.noweId(), P.noweId());
+
+    expect(id).toEqual(['1767225600005.000', '1767225600005.001', '1767225600005.002', '1767225600005.003']);
+  });
+
+  it('osobne kopie modułu (inne ramki) z tym samym zegarem: start losowy, jak dawny składnik losowy', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(T);
+    const los = vi.spyOn(Math, 'random');
+
+    los.mockReturnValue(0.1);
+    const a = swiezyModul().noweId();
+    los.mockReturnValue(0.7);
+    const b = swiezyModul().noweId();
+
+    expect([a, b]).toEqual(['1767225600000.050', '1767225600000.350']);
   });
 
   it('bez atrap: napis liczbowy z bieżącego czasu, kolejne wywołania różne', () => {
