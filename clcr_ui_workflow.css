@@ -1633,12 +1633,188 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo > .result-box {
   color: var(--clcr-text) !important; font-size: 14px !important; line-height: 1.5 !important;
   text-align: left !important;
 }
-html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.warn-yellow {
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.warn-yellow,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecInfo > .result-box.warn-yellow,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo > .result-box.warn-yellow {
   background: var(--clcr-warning-bg) !important; border-color: #ead6a8 !important;
   box-shadow: inset 3px 0 0 var(--clcr-warning) !important;
 }
-html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.out-of-range {
+html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.warn-yellow strong {
+  color: var(--clcr-warning) !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.out-of-range,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecInfo > .result-box.out-of-range,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo > .result-box.out-of-range {
   border-color: #ecc3c3 !important; box-shadow: inset 3px 0 0 var(--clcr-error) !important;
+}
+
+/* P-KLIRENS-EGFR-PREZENTACJA: ten sam status w liczbie, opisie i railu.
+   Selektor karty celowo zachowuje #clcrInfo i zwiększa specyficzność względem
+   neutralnego .result-box powyżej; samo !important nie usuwa turkusowego paska. */
+.clcr-egfr-result[data-clcr-tone],
+#clcrRailHead[data-clcr-tone] {
+  --clcr-status-color: #445a64;
+  --clcr-status-bg: #f0f2f4;
+  --clcr-status-border: #dce6e9;
+}
+.clcr-egfr-result[data-clcr-tone="success"],
+#clcrRailHead[data-clcr-tone="success"] {
+  --clcr-status-color: #147a64;
+  --clcr-status-bg: #eaf8f3;
+  --clcr-status-border: #b9dfd3;
+}
+.clcr-egfr-result[data-clcr-tone="warning"],
+#clcrRailHead[data-clcr-tone="warning"] {
+  --clcr-status-color: #9a5b00;
+  --clcr-status-bg: #fff7e6;
+  --clcr-status-border: #edd59d;
+}
+.clcr-egfr-result[data-clcr-tone="danger"],
+#clcrRailHead[data-clcr-tone="danger"] {
+  --clcr-status-color: #c62828;
+  --clcr-status-bg: #fff1f1;
+  --clcr-status-border: #efc4c8;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-egfr-result,
+.clcr-egfr-result,
+#clcrRailHead[data-clcr-tone] {
+  background: var(--clcr-status-bg) !important;
+  border-color: var(--clcr-status-border) !important;
+  box-shadow: inset 5px 0 0 var(--clcr-status-color) !important;
+  color: var(--text) !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-egfr-result {
+  grid-column: 1 / -1;
+  padding: var(--space-20px) 22px !important;
+}
+.clcr-egfr-result-heading,
+.clcr-rail-status {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12px);
+}
+.clcr-egfr-result .clcr-egfr-status,
+.clcr-egfr-result .clcr-egfr-value,
+.clcr-egfr-result .clcr-egfr-unit,
+#clcrRailHead[data-clcr-tone] .clcr-rail-kick,
+#clcrRailHead[data-clcr-tone] .clcr-rnum,
+#clcrRailHead[data-clcr-tone] .clcr-rnum small,
+#clcrRailHead[data-clcr-tone] .clcr-rail-status {
+  color: var(--clcr-status-color) !important;
+}
+.clcr-egfr-status,
+.clcr-rail-status {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.clcr-egfr-category,
+.clcr-rail-category {
+  display: inline-block;
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border: var(--border-hairline) solid currentColor;
+  border-radius: var(--radius-8);
+  color: var(--clcr-status-color);
+  font-size: 14px;
+  font-weight: 800;
+}
+.clcr-egfr-number {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6px);
+  margin: var(--space-14px) 0 var(--space-12px);
+}
+.clcr-egfr-value {
+  font: 700 clamp(3rem, 7vw, 4.5rem)/1 Inter, sans-serif;
+  letter-spacing: -.035em;
+}
+.clcr-egfr-unit {
+  font-size: 16px;
+  font-weight: 650;
+}
+.clcr-egfr-formula {
+  color: #445a64;
+  font-size: 13px;
+}
+.clcr-rail-boundary {
+  margin: var(--space-10px) 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.clcr-egfr-category-description,
+.clcr-egfr-note {
+  margin: var(--space-10px) 0 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.clcr-egfr-result .calculation-detail {
+  display: block;
+  margin-bottom: var(--space-10px);
+  font-size: 12px;
+}
+#clcrRailHead[data-clcr-tone] .clcr-rnum {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6px);
+  margin: var(--space-12px) 0 var(--space-6px);
+  font-size: clamp(3rem, 5vw, 4.5rem);
+}
+#clcrRailHead[data-clcr-tone] .clcr-rnum small {
+  margin-left: 0;
+  padding-bottom: 0;
+  font-size: 15px;
+}
+#clcrRailHead[data-clcr-tone] .clcr-rail-formula {
+  margin-top: var(--space-10px);
+  color: #445a64;
+  font-weight: 600;
+}
+.clcr-egfr-extra-data,
+.clcr-egfr-result-details {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: var(--space-12px) var(--space-14px);
+  border: var(--border-hairline) solid var(--clcr-border, #d0dede);
+  border-radius: var(--radius-12);
+  background: var(--clcr-surface-soft, #f5f9f9);
+  color: var(--clcr-text, #333333);
+}
+.clcr-egfr-extra-data[hidden] { display: none !important; }
+.clcr-egfr-extra-data > summary,
+.clcr-egfr-result-details > summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+}
+.clcr-egfr-extra-data__body,
+.clcr-egfr-extra-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12px);
+  margin-top: var(--space-14px);
+}
+.clcr-marker-context__note {
+  color: var(--clcr-muted, #5a7274);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.clcr-egfr-result-details .result-box {
+  margin-top: var(--space-12px);
+}
+@media (max-width: 480px) {
+  html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-egfr-result {
+    padding: var(--space-16px) !important;
+  }
+  .clcr-egfr-status,
+  .clcr-rail-status { font-size: 14px; }
+  .clcr-egfr-result-heading,
+  .clcr-rail-status { gap: var(--space-8px); }
 }
 
 /* ——— Układ B (U3): pasek „Wymagane dane X/Y" + „Zobacz pełny opis wyniku ↓" ——— */

@@ -4336,6 +4336,67 @@ Przed zmianą dawek należy:
 
 Status tego wpisu to **wdrożenie do testów**, a nie walidacja kliniczna ani regulacyjna. Reguły kwalifikacji populacji, próbki i metody oznaczenia są częścią wyniku: ostrzeżenie w interfejsie nie zastępuje blokady obliczenia.
 
+#### P-KLIRENS-EGFR-PREZENTACJA — formularz i wynik kreatyninowy, 2026-10-21
+
+**Decyzja właściciela:** wdrożyć zaakceptowaną [makietę desktop/mobile przed–po](https://chatgpt.com/space/page_9c158e2ecba08191aa5b86e992cd5bed)
+dla CKD-EPI 2021 eGFRcr i CKiD U25 eGFRcr. Każdą kolejną zmianę poprzedza
+osobna makieta do akceptacji. Ten etap nie rozszerza interpretacji wzorów cystatynowych,
+noworodkowych, Cockcrofta–Gaulta ani zmierzonego klirensu.
+
+**Wpływ kliniczny:** zmieniają się opis i wizualne oznaczenie już istniejących
+kategorii, również flaga `outOfRange` nowo zapisywanego wyniku. Równania,
+współczynniki, konwersje, zaokrąglenie liczby, progi kategorii i zakres dostępności
+pozostają bez zmian. `ClcrClinicalSafety.egfrPresentation` korzysta z obecnego
+`kdigoGCategory` dla wartości surowej; nie dodaje zakresu referencyjnego ani modelu ryzyka.
+Norma nie jest wyznaczana ponownie w CSS ani z zaokrąglonej liczby.
+Usunięto również konflikt specyficzności CSS, który nadpisywał istniejące klasy
+ostrzeżeń turkusowym paskiem neutralnej karty. Dotyczy to już nadanych klas
+`warn-yellow` i `out-of-range` w raporcie Klirensu, bez zmiany ich warunków.
+
+| Istniejąca kategoria | Ocena słowna dorosłego | Kolor prezentacji |
+|---|---|---|
+| G1 | Nieobniżony | zielony |
+| G2 | Łagodnie zmniejszony | pomarańczowy |
+| G3a | Łagodnie do umiarkowanie zmniejszony | pomarańczowy |
+| G3b | Umiarkowanie do znacznie zmniejszony | czerwony |
+| G4 | Znacznie zmniejszony | czerwony |
+| G5 | Zakres niewydolności nerek | czerwony |
+
+U dzieci od 2 do <18 lat eGFR <90 otrzymuje nagłówek „Obniżony dla wieku”
+oraz pełny opis istniejącej kategorii G; jej kolor pozostaje zgodny z tabelą.
+Przed 2. rokiem życia karta jest szara, bez kategorii G i automatycznej oceny progiem 90.
+Nieznana stabilność lub niepotwierdzone IDMS dają „Interpretacja ograniczona”,
+z każdą przyczyną i bez kategorii G. AKI lub szybko zmieniający się marker nadal
+blokują liczbę. G1 nie wyklucza uszkodzenia nerek; pojedynczy wynik nie rozpoznaje PChN.
+Kolor nie jest skalą ryzyka KDIGO G/A, oceną pilności ani zaleceniem leczenia.
+
+**Minimalne dane i zgodność sesji:** CKD-EPI potrzebuje wieku, płci i kreatyniny
+z jednostką; U25 dodatkowo wzrostu. Opcjonalna masa (oraz wzrost u dorosłego)
+zostały przeniesione do rozwinięcia, bez kopiowania/zerowania inputów. BSA
+nie wyprzedza eGFR. Jedna widoczna lista zastępuje dwa pytania o stabilność i AKI,
+zachowując oddzielnie istniejące wartości `creatinineState` i `suspectedAKI`
+oraz ich znaczenie; nie dodaje klucza do JSON sesji. Zgodności z IDMS nie zakłada się
+automatycznie ani nie przypisuje fikcyjnego profilu laboratorium. Starsze sesje
+są odtwarzane przez dotychczasowe kanoniczne pola. Historia odczytuje jawnie
+wyświetloną liczbę, zamiast wybierać najbliższą liczbę z opisu/jednostki.
+
+**Źródła:** KDIGO 2024 (Kidney Int. 105, Suppl 4S, S117–S314), tabela 2,
+PP 1.1.3.2 i PP 1.2.3.5; [pełny dokument](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf).
+[NIDDK — równania dla dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults)
+oraz [dzieci i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults),
+odczyt 2026-10-21. Źródłowe publikacje równań: Inker 2021,
+DOI 10.1056/NEJMoa2102953; Pierce 2021, DOI 10.1016/j.kint.2020.10.047.
+Populacje i ograniczenia równań oraz jednostki pozostają opisane w profilu RENAL poniżej.
+
+**Przypadki syntetyczne rzeczywistych funkcji:** przy stabilnej kreatyninie i IDMS:
+M50/Scr 1 mg/dL → 91,6915/G1/„Nieobniżony”; M50/Scr 3 → 24,5349/G4/
+„Znacznie zmniejszony”; F10/140 cm/Scr 0,6 → 82,9016/G2/„Obniżony dla wieku”.
+Przypadki prezentera: raw 59,8 → wyświetlone 60 z dopiskiem `<60`, G3a/pomarańcz;
+raw 89,8 → 90 z dopiskiem `<90`, G2/pomarańcz; wiek 1,5/raw 83 → szary bez G;
+nieznane IDMS/stabilność → szary bez G; AKI → bez liczby. Liczba i metadane
+zapisywanego wyniku pozostają zgodne z kartą. Akceptacja makiety i zielone testy
+nie nadają algorytmom statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -15140,7 +15201,7 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
-## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.334, 2026-10-20)
+## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.335, 2026-10-20)
 
 **Zgłoszenie (pomiar właściciela 2026-10-20 przy weryfikacji P-SW-STRONY-PRAWNE; usterka istniała już na `audyt`).**
 W Firefoksie (Playwright Firefox 151 i Firefox 158.0.1 bez automatyzacji, limit źródła obniżony preferencją
@@ -15181,12 +15242,12 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
 - Wywołania: nawigacja w `updateShellFromNetwork`, dokument pobrany poza nawigacją (ten sam klucz w pamięci powłoki)
   i instalacja (`fetchAndStorePrecacheUrl`): pusta kopia nie wchodzi do nowej pamięci powłoki — dokument opcjonalny
   zostaje bez kopii (online z sieci), wymagany `/index.html` przerywa instalację, więc zostaje poprzednia wersja SW.
-- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.333 odrzucony
+- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.334 odrzucony
   zapis przy braku kopii kończył nawigację `Response.error()` — w Chromium strona nie otwierała się online.
 - Koszt na odświeżenie dokumentu: odczyt poprzedniej kopii i odczyt kontrolny (dokumenty mają 7–249 KB), chwilowo do
   trzech kopii treści w pamięci SW. Przy braku kopii nawigacja czeka dodatkowo na odczyt kontrolny.
-- `SW_VERSION` 1.1.333 → **1.1.334** (`npm run podbij-wersje`; 1.1.327–1.1.333 wydały równolegle #734, #738, #741, #739,
-  #743, #745 i #742);
+- `SW_VERSION` 1.1.334 → **1.1.335** (`npm run podbij-wersje`; 1.1.327–1.1.334 wydały równolegle #734, #738, #741, #739,
+  #743, #745, #742 i #747);
   pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
 **Świadomie poza zakresem i ryzyko resztkowe (decyzje właściciela).**

@@ -47,7 +47,7 @@ async function setupPatientWithEgfrVisit(page) {
   await page.locator('#age').fill('54');
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill('1.1');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
   await page.evaluate(() => window.clcrUpdate());
   await page.locator('#clcrVisitDate').fill('2026-08-01');
   await page.locator('#clcrVisitSaveBtn').click();

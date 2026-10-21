@@ -13,7 +13,7 @@ test.use({ serviceWorkers: 'allow' });
 //
 // Firefox przy pełnym limicie „udanie” zapisuje 0 B (dobra kopia nadpisana pustą — mierzone skryptem
 // tests/scripts/pomiar-pustej-kopii-sw.mjs; tego silnika nie ma w CI). Chromium odrzuca cały zapis
-// (QuotaExceededError), a do SW 1.1.333 odrzucony zapis przerywał odpowiedź: strona bez kopii w pamięci powłoki
+// (QuotaExceededError), a do SW 1.1.334 odrzucony zapis przerywał odpowiedź: strona bez kopii w pamięci powłoki
 // nie otwierała się ONLINE (net::ERR_FAILED, zmierzone w Chromium 141). Test na prawdziwym SW i prawdziwym limicie
 // (CDP Storage.overrideQuotaForOrigin) sprawdza, że:
 //   1. strona bez kopii otwiera się online przy pełnym limicie (odpowiedź z sieci nie zależy od zapisu kopii);

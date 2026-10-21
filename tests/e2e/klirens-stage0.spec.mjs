@@ -168,19 +168,19 @@ test('nie przypisuje kategorii G bez stabilnej kreatyniny i blokuje wynik przy A
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
-  await expect(page.locator('#clcrInfo')).toContainText('Nie potwierdzono stabilności używanych markerów filtracji');
+  await expect(page.locator('#clcrInfo')).toContainText('Nie potwierdzono stabilności kreatyniny i braku podejrzenia AKI.');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
 
   await page.locator('#formulaPicker').focus();
   await expect(page.locator('#formulaPicker')).toHaveValue('egfr');
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
 
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
   await expect(page.locator('#clcrInfo')).toContainText('Kategoria GFR wg KDIGO');
   await expect(page.locator('#clcrInfo')).toContainText('G1');
   await expect(page.locator('#clcrInfo')).not.toContainText('Klasyfikacja PChN');
 
-  await zaznacz(page.locator('#suspectedAKI'));
+  await page.locator('[data-clcr-marker-context]').selectOption('aki');
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
   await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
