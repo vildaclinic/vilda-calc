@@ -1060,6 +1060,29 @@ function update() {
       const seriesAttr = Sk
         ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${w}"`
         : "";
+      if (l === "cg" && de === "cg" && Sk === "cg") {
+        const markerNote = creatinineContext.status === "unknown"
+          ? '<p class="clcr-egfr-note">Nie potwierdzono stabilności kreatyniny — wynik orientacyjny.</p>'
+          : "";
+        S += `<div class="result-box clcr-egfr-result clcr-cg-result"
+          data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}
+          data-clcr-tone="neutral"
+          data-clcr-display-value="${clcrEscapeHtml(displayValue)}"
+          data-clcr-display-unit="${clcrEscapeHtml(Z.trim())}"
+          data-clcr-display-label="Cockcroft–Gault · masa rzeczywista"
+          data-clcr-status="Oszacowany klirens kreatyniny">
+          <div class="clcr-egfr-result-heading">
+            <strong class="clcr-egfr-status">Oszacowany klirens kreatyniny</strong>
+          </div>
+          <div class="clcr-egfr-number">
+            <span class="clcr-egfr-value">${displayValue}</span>
+            <span class="clcr-egfr-unit">${Z.trim()}</span>
+          </div>
+          <div class="clcr-egfr-formula">Cockcroft–Gault · masa rzeczywista</div>
+          ${markerNote}
+        </div>`;
+        return;
+      }
       if (
         ["egfr", "ckid_u25"].includes(de) &&
         typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
@@ -1221,6 +1244,10 @@ function update() {
     function appendCgContext() {
       if (cgContextRendered) return;
       cgContextRendered = !0;
+      if (l === "cg") {
+        S += '<details class="clcr-egfr-result-details clcr-cg-limitations" data-clcr-formula="cg"><summary>Ograniczenia i źródła</summary><p>Użyto rzeczywistej masy ciała. Otyłość, niedowaga, obrzęki lub nietypowa masa mięśniowa mogą zmniejszać wiarygodność oszacowania. Wzór opracowano przed standaryzacją oznaczeń kreatyniny.</p><p><a href="https://doi.org/10.1159/000180580" target="_blank" rel="noopener noreferrer">Cockcroft i Gault, 1976</a> · <a href="https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf#page=134" target="_blank" rel="noopener noreferrer">KDIGO 2024, §4.2, S249</a></p></details>';
+        return;
+      }
       S +=
         '<div class="result-box warn-yellow" data-clcr-formula="cg"><strong>Założenie Cockcrofta–Gaulta:</strong> użyto podanej rzeczywistej masy ciała. W otyłości, niedowadze, obrzękach lub przy nietypowej masie mięśniowej potrzebna jest jawna polityka masy. To eCrCl, nie eGFR; dawkowanie należy sprawdzić w informacji o konkretnym leku i jego badanej populacji.</div>';
     }
@@ -1834,6 +1861,7 @@ function update() {
     if (
       d &&
       creatinineEstimateShown &&
+      l !== "cg" &&
       populationContext.scrAssay !== "enzymatic_idms" &&
       (!["egfr", "ckid_u25"].includes(l) ||
         populationContext.scrAssay === "jaffe_idms")
@@ -1850,7 +1878,7 @@ function update() {
       creatinineContext.status === "unknown" &&
       d &&
       (!l || selectedCreatinineFormula) &&
-      !["egfr", "ckid_u25"].includes(l) &&
+      !["egfr", "ckid_u25", "cg"].includes(l) &&
       selectedSafety.eligible
     ) {
       const r = l || (t < 18 ? "ckid_u25" : "egfr");

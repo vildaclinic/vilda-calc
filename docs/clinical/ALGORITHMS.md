@@ -4397,6 +4397,60 @@ nieznane IDMS/stabilność → szary bez G; AKI → bez liczby. Liczba i metadan
 zapisywanego wyniku pozostają zgodne z kartą. Akceptacja makiety i zielone testy
 nie nadają algorytmom statusu walidacji klinicznej.
 
+#### P-KLIRENS-CG-PREZENTACJA — nieindeksowany Cockcroft–Gault, 2026-10-21
+
+**Decyzja właściciela:** wdrożyć zaakceptowaną [makietę desktop/mobile przed–po](https://chatgpt.com/space/page_4604c063d6d88191ac08c752c1140299)
+po usunięciu wskazówki o ChPL z obu obrazów i opisu. Zakres tego etapu obejmuje
+wyłącznie wybrany nieindeksowany `cg` w mL/min. Widok `cg_norm`, wzory eGFR,
+tryb zbiorczy i ich reguły pozostają poza tym etapem.
+
+**Wpływ kliniczny:** poprawiono błędny wspólny komunikat sugerujący, że oryginalny
+Cockcroft–Gault zakłada oznaczenie kreatyniny standaryzowane do IDMS. Zamiast niego
+rozwijane ograniczenia wyjaśniają, że wzór powstał przed standaryzacją. Nie dodano
+wymogu metody oznaczenia ani nowego pytania. Główna karta i podsumowanie mają szary
+kolor oraz opis „Oszacowany klirens kreatyniny”, bez kategorii G, zakresu
+referencyjnego i automatycznej oceny prawidłowości. Równanie, współczynnik 0,85 dla
+kobiet, konwersja Scr, dotychczasowe zaokrąglenie, zakres wieku i bramki
+bezpieczeństwa pozostają bez zmian. Liczba nie jest eGFR ani pomiarem GFR.
+
+**Populacja, jednostki i ograniczenia:** obecna ścieżka aplikacji udostępnia CG
+od 18. roku życia. Minimum stanowią wiek, płeć, aktualna rzeczywista masa w kg
+i Scr w mg/dL albo µmol/L (88,4 µmol/L = 1 mg/dL). Wzrost i BSA nie są wymagane
+dla nieindeksowanego wyniku mL/min. Nie wprowadza się automatycznego podstawienia
+masy należnej/skorygowanej ani normy. Otyłość, niedowaga, obrzęki lub nietypowa
+masa mięśniowa mogą zmniejszać wiarygodność oszacowania. Nieznana stabilność
+pozwala pokazać liczbę z widocznym zastrzeżeniem „Nie potwierdzono stabilności
+kreatyniny — wynik orientacyjny”. AKI i szybko zmieniająca się kreatynina nadal
+blokują liczbę; stan stabilny nie jest zakładany domyślnie.
+
+**Uproszczenie i zgodność danych:** formularz pomija pola imienia i nazwiska,
+bez usuwania tożsamości z karty pacjenta lub sesji. Dotychczasowe mechanizmy
+wykorzystują dostępny wiek, płeć i masę pacjenta. Scr i jednostka tworzą jeden
+wiersz; jedna lista kontekstu korzysta z tych samych czterech stanów co eGFR.
+Kanoniczne `creatinineState` i `suspectedAKI`, ich znaczenie oraz format sesji
+pozostają zachowane. Usunięto licznik kompletności i deklarację „pełnej
+interpretacji”. Ograniczenia i źródła są dostępne w krótkim rozwinięciu.
+Historia odczytuje jawne metadane wyświetlonej liczby, zachowując wartość surową.
+
+**Źródła:** Cockcroft DW, Gault MH. *Prediction of creatinine clearance from
+serum creatinine*. Nephron. 1976;16:31–41,
+[DOI 10.1159/000180580](https://doi.org/10.1159/000180580).
+[KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of CKD](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf#page=134),
+Kidney Int. 2024;105(Suppl 4S):S117–S314, §4.2, S249 (PDF s. 134), opis
+opracowania CG przed standaryzacją oraz ograniczeń związanych z masą ciała.
+[National Kidney Foundation — Cockcroft-Gault](https://www.kidney.org/professionals/kdoqi/cockcroft-gault-equation-estimating-creatinine-clearance),
+informacja o pierwotnym wzorze i kreatyninie standaryzowanej do IDMS;
+odczyt 2026-10-21. Źródła nie ustanawiają nowego uniwersalnego progu oceny CG.
+
+**Syntetyczne przypadki rzeczywistego kodu produkcyjnego:** F50/70 kg/Scr
+1 mg/dL → 74,375 mL/min, wyświetlone 74; M50/70 kg/Scr 1 mg/dL → 87,5 mL/min,
+wyświetlone 88. Scr 88,4 µmol/L daje te same wartości. Brak wzrostu nie blokuje
+`cg`; wiek 17 lat blokuje. Przy nieznanej stabilności wynik pozostaje szary
+z zastrzeżeniem, a po zaznaczeniu AKI/szybkiej zmiany liczba znika. Sprawdzane są
+też odtworzenie kontekstu ze starszej sesji, przełączenie wzoru i zachowanie
+danych pacjenta. Akceptacja makiety i testy techniczne nie nadają wzorowi statusu
+walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -15369,7 +15423,7 @@ Całe precache było jednym zdarzeniem `install`, a Chromium przerywa zdarzenie 
 
 **Testy.**
 - `tests/unit/sw-precache-stron.test.mjs` (13; było 8): atrapa Cache Storage ma teraz osobne pamięci pod nazwami i jeden limit bajtów źródła. Nowe: lista instalacji to dokładnie wpisy bieżące tablic; instalacja nie pobiera żadnego adresu historycznego i mieści się w budżecie (poniżej 40 MB i 600 żądań); wpisy `?v=` z poprzedniej pamięci powłoki idą z kopii, dokumenty i adresy bez `?v=` z sieci; pamięć sprzed 1.1.66 nie jest źródłem kopii; przycięcie zostawia najwyższy `?v=` i adresy bez `?v=`, pamięci czasu działania nie rusza; przy limicie zajętym przez starą instalację (rdzeń z historią) nowa wersja się instaluje. Zmienione: test „żaden adres nie znika z instalacji” pilnuje teraz, że kolejka nadal obejmuje każdy adres tablic, a instalacja bierze z niej tylko wpisy bieżące; odwołanie strony do historycznego `?v=` jest błędem także w rdzeniu. Sprawdzony mutacjami: instalacja z historią, bez przycięcia, bez kopii, bez progu 1.1.66 — każda zapala właściwy test.
-- `tests/e2e/pwa-precache-migracja.spec.mjs` (nowy, prawdziwy Chromium): pamięć powłoki `pwa-kalorii-shell-v1.1.104` wypełniona w kolejności starej instalacji aż do QuotaExceededError (limit 400 MiB — wpisy zapisane ze strony nie dostają pamięci podręcznej kodu, więc zajmują tyle co pliki; *aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: limit = rozmiar rdzenia z historią + 70 MiB, bo serwer testowy podaje pod każdym historycznym `?v=` dzisiejszy plik i rdzeń przekroczył 400 MiB*), instalacja prawdziwego SW: aktywny, stara pamięć usunięta, żaden wpis `?v=` obecny w starej pamięci nie idzie z sieci (licznik w `tests/support/static-server.mjs`: `/__test-pobrania`), DocPro (`VildaVault`) i strona główna startują bez sieci. Sprawdzony mutacjami: bez przycięcia SW się nie instaluje, bez kopii wpisy idą z sieci.
+- `tests/e2e/pwa-precache-migracja.spec.mjs` (nowy, prawdziwy Chromium): pamięć powłoki `pwa-kalorii-shell-v1.1.104` wypełniona w kolejności starej instalacji aż do QuotaExceededError (limit 400 MiB — wpisy zapisane ze strony nie dostają pamięci podręcznej kodu, więc zajmują tyle co pliki; *aktualizacja 2026-10-21 (#748): limit liczony z rozmiaru rdzenia z historią i z rzeczywistego zajęcia źródła po jego zapisie, bo serwer testowy podaje pod każdym historycznym `?v=` dzisiejszy plik, a rdzeń z historią przekroczył 400 MiB*), instalacja prawdziwego SW: aktywny, stara pamięć usunięta, żaden wpis `?v=` obecny w starej pamięci nie idzie z sieci (licznik w `tests/support/static-server.mjs`: `/__test-pobrania`), DocPro (`VildaVault`) i strona główna startują bez sieci. Sprawdzony mutacjami: bez przycięcia SW się nie instaluje, bez kopii wpisy idą z sieci.
 - `tests/e2e/pwa-strony-offline.spec.mjs` bez zmian w logice (komentarze z liczbami sprzed zmiany).
 
 ## Test „strona główna offline” na produkcyjnym service workerze (P-PWA-TEST-SW, bez zmiany SW, 2026-09-30)
@@ -15922,9 +15976,9 @@ testów. `npm run lint`, `npm run test:syntax` (1113 plików), `npm run test:rep
 `db0c2d50`). Przeniesione na `audyt` `346dd81a` (po P-POZNIEJSZA-POPRAWKA, #742): `vilda_vault.js` nałożony bez
 konfliktów, plik D-21 157 z 157; `npm test` po scaleniu `audyt` `0a8a7d66` (#747): polityka repozytorium (1758
 plików), lint, składnia (1121 plików), 413 plików testów, 10 316 z 10 316 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44.
-`tests/e2e/pwa-precache-migracja.spec.mjs`
-dostał limit źródła liczony z rozmiaru rdzenia (+70 MiB) zamiast stałych 400 MiB: z `vilda_vault.js` większym o 30 KB
-(161 wpisów historii) rdzeń urósł z 398,8 do 403,1 MiB i przestał się mieścić (opis przy P-SW-PRECACHE). Wersje:
+`tests/e2e/pwa-precache-migracja.spec.mjs` padał przy stałym limicie 400 MiB: z `vilda_vault.js` większym o 30 KB
+(161 wpisów historii) rdzeń urósł z 398,8 do 403,1 MiB; po scaleniu #748 test liczy limit z rozmiaru rdzenia (opis przy
+P-SW-PRECACHE) i D-21 go nie zmienia. Wersje:
 `npm run podbij-wersje` względem `origin/audyt` `0a8a7d66` (po #747): `vilda_vault.js` 223, `vilda_chrome.js` 168,
 `vilda_session_bridge.js` 92; SW 1.1.334 → 1.1.335.
 

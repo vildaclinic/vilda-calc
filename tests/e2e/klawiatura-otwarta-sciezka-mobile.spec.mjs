@@ -31,8 +31,26 @@ async function przygotuj(page) {
   if (await zgoda.isVisible()) await zgoda.click();
   await expect(page.locator('#consent-banner')).toBeHidden();
   // Ramka na 1 px: ios26-ui.js (primeMobileBrowserUiChrome) przesuwa stronę stojącą na samej górze o 1 px.
-  await start.evaluate(() => window.scrollTo({ top: 1, left: 0, behavior: 'instant' }));
+  // To przygotowanie PO starcie, przed jakąkolwiek interakcją z klawiaturą. Pod obciążeniem
+  // końcowe kotwiczenie układu zmieniało 1 → 2 px po 109 ms. Ponawiamy wyłącznie ustawienie
+  // pozycji początkowej, aż pozostanie dokładnie na 1 px przez 200 ms i co najmniej 3 klatki.
+  await start.evaluate(() => {
+    window.__e2eKeyboardInitialScroll = { since: performance.now(), frames: 0 };
+    window.scrollTo({ top: 1, left: 0, behavior: 'instant' });
+  });
+  await start.waitForFunction(() => {
+    const probe = window.__e2eKeyboardInitialScroll;
+    if (window.scrollY !== 1) {
+      window.scrollTo({ top: 1, left: 0, behavior: 'instant' });
+      probe.since = performance.now();
+      probe.frames = 0;
+      return false;
+    }
+    probe.frames += 1;
+    return probe.frames >= 3 && performance.now() - probe.since >= 200;
+  }, null, { timeout: 4000 });
   await expect.poll(() => start.evaluate(() => window.scrollY)).toBe(1);
+  await start.evaluate(() => { delete window.__e2eKeyboardInitialScroll; });
   return start;
 }
 

@@ -1018,6 +1018,7 @@
       control: preservedControl,
       wrapper: label,
       labelText,
+      defaultLabelText: labelText,
       badge,
       infoButton,
       helpPanel,
@@ -1523,6 +1524,27 @@
     return !state.legacyBroad && ["egfr", "ckid_u25"].includes(state.activeFormulaId);
   }
 
+  function simplifiedCreatinineContextActive() {
+    return simplifiedCreatinineEgfrActive() ||
+      (!state.legacyBroad && state.activeFormulaId === "cg");
+  }
+
+  function renderCompactCgLabels() {
+    const compact = !state.legacyBroad && state.activeFormulaId === "cg";
+    const labels = {
+      weight: "Aktualna masa ciała (kg)",
+      Scr: "Kreatynina",
+      ScrUnit: "Jednostka",
+    };
+    Object.entries(labels).forEach(([fieldId, label]) => {
+      const view = state.fieldViews.get(fieldId);
+      if (!view) return;
+      view.labelText = compact ? label : view.defaultLabelText;
+      view.wrapper.querySelector(".clcr-field__name").textContent = view.labelText;
+      view.infoButton.setAttribute("aria-label", `Informacja: ${view.labelText}`);
+    });
+  }
+
   // Przenosimy istniejące pola, nie tworzymy ich kopii: odtworzenie pacjenta,
   // daty pomiarów i zapis sesji nadal używają tych samych kontrolek i kluczy.
   function restoreEgfrExtraData() {
@@ -1612,7 +1634,7 @@
     control.setAttribute("aria-describedby", note.id);
     wrapper.append(heading, control, note);
     markerView.wrapper.parentNode.insertBefore(wrapper, markerView.wrapper);
-    const proxy = { wrapper, control };
+    const proxy = { wrapper, control, name, badge, note };
     state.egfrMarkerContext = proxy;
     control.addEventListener("change", () => {
       const marker = markerView.control;
@@ -1646,11 +1668,17 @@
   }
 
   function renderEgfrMarkerContext() {
-    const active = simplifiedCreatinineEgfrActive();
+    const active = simplifiedCreatinineContextActive();
     const proxy = active ? ensureEgfrMarkerContext() : state.egfrMarkerContext;
     if (!proxy) return;
     proxy.wrapper.hidden = !active;
     if (active) {
+      const cg = state.activeFormulaId === "cg";
+      proxy.name.textContent = cg ? "Kontekst kreatyniny" : "Stabilność kreatyniny / AKI";
+      proxy.badge.hidden = cg;
+      proxy.note.textContent = cg
+        ? "Szybka zmiana kreatyniny lub podejrzenie AKI wykluczają raportowanie bieżącego klirensu kreatyniny."
+        : "Szybka zmiana kreatyniny lub podejrzenie AKI wykluczają raportowanie bieżącego eGFR.";
       ["creatinineState", "suspectedAKI"].forEach((fieldId) => {
         const view = state.fieldViews.get(fieldId);
         if (view) view.wrapper.hidden = true;
@@ -1663,7 +1691,7 @@
     const required = new Set(formula && Array.isArray(formula.requires) ? formula.requires : []);
     const interpretation = new Set(getContext(formula.id).interpretation || []);
     const optional = new Set(getContext(formula.id).optional || []);
-    optional.add("fullName");
+    if (formula.id !== "cg") optional.add("fullName");
 
     const module = getModuleForFormula(formula.id);
     getSharedModuleFieldIds(formula.id).forEach((fieldId) => {
@@ -1722,6 +1750,7 @@
     state.requiredFieldIds = sets.required;
     state.interpretationFieldIds = sets.interpretation;
     state.optionalFieldIds = sets.optional;
+    renderCompactCgLabels();
 
     state.fieldViews.forEach((view, fieldId) => {
       const visible = sets.active.has(fieldId);
@@ -1783,6 +1812,7 @@
     state.requiredFieldIds = new Set();
     state.interpretationFieldIds = new Set();
     state.optionalFieldIds = new Set(active);
+    renderCompactCgLabels();
     state.fieldViews.forEach((view, fieldId) => {
       view.wrapper.hidden = !active.has(fieldId);
       setFieldStatus(view, "optional");
@@ -1845,7 +1875,7 @@
 
   function focusField(fieldId) {
     if (
-      simplifiedCreatinineEgfrActive() &&
+      simplifiedCreatinineContextActive() &&
       ["creatinineState", "suspectedAKI"].includes(fieldId) &&
       state.egfrMarkerContext
     ) {
@@ -2521,6 +2551,7 @@
   function renderReadiness() {
     syncEgfrMarkerContext();
     if (!state.readiness) return;
+    state.readiness.hidden = false;
     state.readiness.replaceChildren();
     if (state.legacyBroad) {
       documentRef.documentElement.dataset.clcrReady = "true";
@@ -2583,6 +2614,12 @@
     }
     if (!readiness.interpretationReady) {
       state.readiness.className = "clcr-readiness clcr-readiness--warning";
+      if (formula.id === "cg") {
+        state.readiness.append(
+          createElement("p", "", "Nie potwierdzono stabilności kreatyniny — wynik orientacyjny."),
+        );
+        return;
+      }
       state.readiness.append(
         createElement(
           "p",
@@ -2597,6 +2634,10 @@
         });
       }
       appendReadinessList(warnings);
+      return;
+    }
+    if (formula.id === "cg") {
+      state.readiness.hidden = true;
       return;
     }
     state.readiness.className = "clcr-readiness clcr-readiness--ready";
@@ -2629,10 +2670,14 @@
     const heading = createElement(
       "h2",
       "clcr-active-panel__title",
-      formula ? formula.label : "Najpierw wybierz formułę",
+      formula?.id === "cg" ? "Cockcroft–Gault" : formula ? formula.label : "Najpierw wybierz formułę",
     );
     state.activePanel.append(eyebrow, heading);
-    if (formula && formula.note) {
+    if (formula?.id === "cg") {
+      state.activePanel.append(
+        createElement("p", "clcr-active-panel__note", "Klirens kreatyniny · masa rzeczywista"),
+      );
+    } else if (formula && formula.note) {
       state.activePanel.append(
         createElement("p", "clcr-active-panel__note", formula.note),
       );
@@ -4933,6 +4978,10 @@
   // (state.requiredFieldIds w modelu). Bez zmian w matematyce.
   function renderProgress() {
     if (!progressEl) return;
+    if (activeFormulaId() === "cg") {
+      progressEl.hidden = true;
+      return;
+    }
     let ids = null;
     try {
       const wf = global.ClcrUiWorkflow;

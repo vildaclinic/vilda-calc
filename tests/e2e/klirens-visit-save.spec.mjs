@@ -149,7 +149,7 @@ test('Faza 6: Cockcroft–Gault (cg) — zapis formuły dorosłej z masą ciała
   await page.locator('#sex').selectOption('M');
   await page.locator('#weight').fill('80');
   await page.locator('#Scr').fill('1.2');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('[data-clcr-series="cg"]')).toHaveCount(1);
