@@ -15709,9 +15709,11 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   (R = u z przyszłości, więc R > e) karta po wizycie bywa późniejsza niż `e`, a zapis poprawki — nie późniejszy niż R;
   zdjęcie zostawiało wtedy wersję z chwilą ≤ R bez nagrobka i echo starego urządzenia (nagrobek R bez pola) kasowało
   notatkę razem z poprawką wszędzie, przy żywej karcie. Teraz nagrobek zostaje na R (pole i `manualDeletedAtISO` bez
-  zmian, `rev` = max), a najbliższe scalanie ratuje poprawkę (krok 5: R + 1 ms + h). Pozostałe miejsca, które
-  zdejmują albo zapisują nagrobek z polem, tej luki nie mają: ratunek (`Bnp_ratuj`) zdejmuje nagrobek dopiero po
-  dotknięciu wersji ≤ R (R + 1 ms + h), a pętla CZEKA i odnowienie (`Bnp_odnow`) nagrobki tylko zapisują.
+  zmian, `rev` = max), a najbliższe scalanie ratuje poprawkę (krok 5: R + 1 ms + h). Ta sama reguła rozszerza na
+  kolejność „wizyta, potem poprawka” znane ograniczenie G13: ręczne usunięcie wersji uratowanej gdzie indziej może
+  przegrać z tym ratunkiem („Ograniczenia”, „Ręczne usunięcie uratowanej notatki przy G13”; test W14a). Pozostałe
+  miejsca, które zdejmują albo zapisują nagrobek z polem, tej luki nie mają: ratunek (`Bnp_ratuj`) zdejmuje nagrobek
+  dopiero po dotknięciu wersji ≤ R (R + 1 ms + h), a pętla CZEKA i odnowienie (`Bnp_odnow`) nagrobki tylko zapisują.
   W pozostałych przypadkach (inny pacjent — np. „Scal pacjentów” przepina notatkę, brak karty, karta późniejsza niż
   `e` i zapis późniejszy niż R, brak pola) nagrobek jest zdejmowany jak dotąd. Wersję z chwilą ≤ R bez nagrobka
   zostawiają jeszcze dwie ścieżki spoza tej reguły, obie z wynikiem jak na bazie i opisane w „Ograniczeniach”: gałąź
@@ -15749,14 +15751,18 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   Ręczne usunięcie notatki na starym urządzeniu przed „Usuń pacjenta” jest pamiętane tylko wtedy, gdy dotrze do nowego
   urządzenia, zanim stare pobierze usunięcie pacjenta (niżej, „Ograniczenia”). Stare urządzenie z uratowanymi notatkami
   kasuje je przy ponownym „Usuń pacjenta”, bo odnowione nagrobki są późniejsze niż u′. Stare urządzenie, które
-  dostanie przesunięty nagrobek poprawki zrobionej w stanie CZEKA, kasuje tę poprawkę (notatki i tak już nie miało);
-  jego echo z tą samą chwilą nie odbiera pola, a gdy karta okaże się późniejsza, poprawka wraca także do niego (CZ6).
+  dostanie nagrobek z polem w stanie CZEKA albo w nowej gałęzi MS2 (karta późniejsza niż `e`, zapis nie późniejszy
+  niż R; także przesunięty nagrobek poprawki), kasuje notatki pacjenta także wtedy, gdy wcześniej je miało (urządzenie
+  nieświadome usunięcia; przegląd poprawki MS2, test W11); jego echo z tą samą chwilą nie odbiera pola, a notatki
+  dostaje z powrotem po ratunku na nowym urządzeniu (CZ6, W11). Gdy urządzenie z poprawką zniknie przed ratunkiem,
+  a jego ładunek widzą tylko stare urządzenia, notatki razem z poprawką przepadają (na `12b0cd4d` przy kolejności
+  „wizyta, potem poprawka” przepadała wtedy tylko n2 — nagrobek poprawionej notatki był przy zapisie zdejmowany).
   Dwie sytuacje floty mieszanej są **gorsze niż dziś** (przegląd 2, niżej w „Ograniczeniach”): ponowne „Usuń pacjenta”
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
 
-**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 182 testy: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2
-i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 185 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
+25 z przeglądu przeniesienia na D-7 i 3 z przeglądu poprawki MS2; wejście → wynik):
 - T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
   karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
   notatek, nagrobki n1–n3);
@@ -15833,11 +15839,11 @@ i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
     odbiera pola, po wizycie poprawka wraca na A, B i O; CZ7: zapis w drugiej karcie przeglądarki między decyzją CZEKA
     a zapisem kanonu → kanon z chwilą zapisu; CZ8: nowsze nagrobki R2 zapisane w drugiej karcie w tym oknie zostają
     (czerwone na `8c70884d` także bez zapisu notatki — pętla CZEKA cofała nowszy nagrobek przy istniejącej notatce);
-    granice: CZ1r (remis `lastSavedAtISO = e` to dalej CZEKA), CZ3b (karta już późniejsza przed scaleniem → nagrobek
-    zdjęty, poprawka bez dotknięcia), CZ3c (błąd odczytu nagrobka nie wstrzymuje zdjęcia), CZ9 (G13: chwila nagrobka
-    nie cofa się, bo echo starego urządzenia o chwili R odebrałoby pole), CZ7b („Scal pacjentów” w drugiej karcie
-    w tym oknie → kanon bez chwili zapisu, przepięte notatki zostają); SP1 i EL1 (kontrole): „Scal pacjentów” w stanie
-    CZEKA przepina notatki, poprawka nieświadomego D zostaje;
+    granice: CZ1r (remis `lastSavedAtISO = e` to dalej CZEKA), CZ3b (karta już późniejsza przed scaleniem i zapis
+    późniejszy niż R → nagrobek zdjęty, poprawka bez dotknięcia), CZ3c (błąd odczytu nagrobka nie wstrzymuje
+    zdjęcia), CZ9 (G13: chwila nagrobka nie cofa się, bo echo starego urządzenia o chwili R odebrałoby pole), CZ7b
+    („Scal pacjentów” w drugiej karcie w tym oknie → kanon bez chwili zapisu, przepięte notatki zostają); SP1 i EL1
+    (kontrole): „Scal pacjentów” w stanie CZEKA przepina notatki, poprawka nieświadomego D zostaje;
   - drugie usunięcie we flocie mieszanej (poprawność zgł. 2, flota Z2 i Z3; znane ograniczenia, niżej): OD2 ze starym D,
     OD2c (chmura, stare S), OD2o (nowe S, usunięcie przez stary przekaźnik) → sieroty na każdym urządzeniu; OD2
     z nowym D (kontrola) → bez sierot; HD ze starym C → poprawka D sprzed drugiego usunięcia ginie, z nowym C
@@ -15864,8 +15870,9 @@ i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
     to P1); MS3 — remis karty z e w gałęzi zgł. 2b to CZEKA (`updated` 1), z granicami e − 1 ms (CZEKA) i e + 1 ms
     (RATUNEK już przy deltach, 0 zmian w kopii), na prawdziwych deltach; MS4 — G13 w gałęzi zgł. 2b: RATUNEK `rev` 3
     przy pierwszym ładunku B, zbieżnie ze starym O, także na prawdziwych deltach (spóźniona delta nagrobka karty niczego
-    nie zmienia); MS5 — koszt długiego CZEKA: 0 zapisów i 0 odczytów nagrobka notatki przy powtórzonym ładunku i przy
-    delcie innej karty (zwykłe nagrobki pętla U przepisuje przy każdym scaleniu, jak na `346dd81a`);
+    nie zmienia); MS5 — koszt długiego CZEKA: 0 zapisów i 0 pojedynczych odczytów nagrobka notatki przy powtórzonym
+    ładunku i przy delcie innej karty, lista nagrobków czytana raz, jak w każdym scaleniu (zwykłe nagrobki pętla U
+    przepisuje przy każdym scaleniu, jak na `346dd81a`);
   - znane ograniczenia przypięte testem: F1 (× 3: podstawowy, bez kopii A na C, bez usunięcia) — rozjazd G5 przez
     „Scal kopię konta” (A i B n1@Y, C n1@X bez karty, te same `rev` i chwila), leczony poprawką n1 na A; Z1 — H2b przy
     spóźnionym zegarze (nowe i stare urządzenie usuwające notatkę: −10 min → n1 wraca, 0 → [n2]; próg przy odstępie
@@ -15875,6 +15882,16 @@ i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
     usunięcie → notatki giną przy żywej karcie, bez importu albo z nowym O wracają;
   - E2: emulacja starej aplikacji rzuca przy kopii konta (scalanie, podgląd, odtworzenie), eksport działa; strażnik
     źródła `Bnp_poZapisie`.
+- Przegląd poprawki MS2 (2026-10-21; scenariusze adwersarza na nowej wersji i na `12b0cd4d`, fuzz różnicowy, sondy
+  dokumentacji; bez zmiany kodu):
+  - W14a i W14b (znane ograniczenie G13, „Ograniczenia”): B ratuje n1 z chwilą z przyszłości, A ręcznie usuwa
+    uratowaną wersję, D „czeka” i poprawia n1 — (a) po wizycie (reguła MS2), (b) przed wizytą — potem scala ładunek B
+    sprzed usunięcia → przy h_D > h_B ratunek D wygrywa i n1 wraca wszędzie, zbieżnie, a ponowne ręczne usunięcie
+    wygrywa; przy h_D < h_B ręczne usunięcie wygrywa od razu (na `12b0cd4d` w W14a usunięcie wygrywa przy obu
+    treściach);
+  - W11 (flota mieszana): stare nieświadome O dostaje pełny ładunek B w nowej gałęzi MS2 → O kasuje n1 i n2, które
+    miało, echo O nie odbiera pola, B ratuje, O dostaje notatki z powrotem; koniec wszędzie [n1 = poprawka B, n2] (na
+    `12b0cd4d` O traciło pośrodku tylko n2).
 
 **Ograniczenia.**
 - **Stare urządzenie z ocalałą kartą przyjmuje usunięcie pierwsze** — kasuje notatki; gdy było jedynym źródłem treści,
@@ -15920,6 +15937,8 @@ i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
   usunięcia z równoległą poprawką z urządzenia o dobrym zegarze, także bez „Usuń pacjenta”; rolę równoległej zmiany
   pełni tu ratunek ostemplowany zegarem urządzenia usuwającego. Ostrzeżenie D13 („Status synchronizacji”) pojawia się
   tylko na urządzeniu spóźnionym, po scaleniu. Kodu nie zmieniono (D13: samo ostrzeżenie, bez korekty znaczników).
+  Ten sam skutek, także przy dobrych zegarach, daje notatka zapisana wcześniej na urządzeniu ze spieszącym zegarem
+  (G13; niżej, „Ręczne usunięcie w pasmie ratunku” i „Ręczne usunięcie uratowanej notatki przy G13”).
 - **H2b we flocie mieszanej jest szerszy** (przegląd 1, flota, zgł. 1; testy R10b, R10d). Ręczne usunięcie na starym
   urządzeniu jest pamiętane tylko wtedy, gdy dotrze do nowego urządzenia, zanim stare pobierze usunięcie pacjenta:
   stare `Le` przepisuje swój ręczny nagrobek na chwilę R nagrobka z „Usuń pacjenta”, bez pola, więc chwila ręcznego
@@ -15928,10 +15947,28 @@ i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
   dawałaby trwały rozjazd z zapisami w każdej rundzie. Do noty wydania (D21-8).
 - **Ręczne usunięcie w pasmie ratunku** (przegląd 1, F2, test P1b). Ręczne usunięcie notatki na urządzeniu, które nie
   wie o „Usuń pacjenta”, wykonane w ciągu 1 s po nim, przegrywa z ratunkiem, gdy h tej notatki jest większe niż odstęp;
-  usunięcie późniejsze o ponad 1 s według zegarów urządzeń zawsze wygrywa (T9; przy spóźnionym zegarze urządzenia
-  usuwającego notatkę — wyżej, „H2b przy rozjeździe zegarów”). Wymaga dwóch osób działających na tym samym
-  pacjencie w tej samej sekundzie. Zawężenie h (np. mod 100) skróciłoby pasmo do 100 ms kosztem 10 razy częstszej
-  kolizji przy równoległych poprawkach (D21-5) — nie zmieniono.
+  usunięcie późniejsze o ponad 1 s według zegarów urządzeń wygrywa (T9), z dwoma wyjątkami: przy spóźnionym zegarze
+  urządzenia usuwającego notatkę (wyżej, „H2b przy rozjeździe zegarów”) i przy notatce z chwilą z przyszłości (G13,
+  R = u; przegląd poprawki MS2, sonda dokumentacji). W drugim ręczne usunięcie starszej wersji przed chwilą u na
+  nieświadomym urządzeniu przegrywa z ratunkiem także przy dobrych zegarach — bez „Usuń pacjenta” przegrałoby tak samo
+  z wersją z przyszłości (klasa D13/G17) — a ręczne usunięcie już uratowanej wersji może przegrać z późniejszym
+  ratunkiem innej wersji (niżej, „Ręczne usunięcie uratowanej notatki przy G13”). Wymaga dwóch osób działających na
+  tym samym pacjencie w tej samej sekundzie (poza wyjątkiem G13). Zawężenie h (np. mod 100) skróciłoby pasmo do 100 ms
+  kosztem 10 razy częstszej kolizji przy równoległych poprawkach (D21-5) — nie zmieniono.
+- **Ręczne usunięcie uratowanej notatki przy G13** (przegląd poprawki MS2; testy W14a i W14b; fuzz różnicowy floty
+  samych nowych urządzeń, ziarna 1215 i 3710). Notatka zapisana na urządzeniu ze spieszącym zegarem ma nagrobek
+  z „Usuń pacjenta” na chwili R = u > e. Gdy jedno urządzenie już ją uratowało (u_B = R + 1 ms + h_B), ręczne
+  usunięcie tej wersji — także kilka minut po „Usuń pacjenta” według każdego zegara — dostaje chwilę max(teraz, u_B)
+  = u_B. Urządzenie, które nadal ma nagrobek z polem i własną poprawkę z chwilą ≤ R (wyższy `rev`), ratuje ją później
+  na R + 1 ms + h_D (krok 2); przy h_D > h_B (około połowa treści) ta wersja wygrywa z ręcznym usunięciem i notatka
+  wraca na wszystkie urządzenia, zbieżnie i stabilnie; przy h_D < h_B usunięcie wygrywa. Okno trwa, dopóki chwila
+  uratowanej wersji jest w przyszłości (o tyle, o ile spieszył zegar zapisu; w testach 1 h). Dotyczy obu gałęzi zapisu
+  przy nagrobku z polem, w których nagrobek zostaje: poprawki w stanie CZEKA przed wizytą (tak było już przed regułą
+  MS2, W14b) i — po regule MS2 — także kolejności „wizyta, potem poprawka” (W14a; na `12b0cd4d` nagrobek był przy tym
+  zapisie zdejmowany i ręczne usunięcie wygrywało, ale przy starym urządzeniu ta sama poprawka ginęła wtedy przy żywej
+  karcie, S8b). Klasa H2b (D21-3): notatka wraca widoczna, a ponowne ręczne usunięcie wygrywa, bo nagrobków z polem
+  już nie ma (W14a, W14b). Kodu nie zmieniono (decyzja integratora zgodna z D21-3); wariant „ręczny nagrobek wersji
+  z przyszłości na u + 1 s” (`Eb`) zmieniałby regułę P-NOTATKI-1 G13.
 - **Stare urządzenie w pasmie ratunku** (F2, test P1d). Krok „pasmo bez karty → usuń” wymaga pola, a stara aplikacja go
   nie zna i ucina pole w nagrobkach, które przekazuje. Gdy drugie „Usuń pacjenta” na nieświadomym urządzeniu nastąpi
   w ciągu 1 s po pierwszym, a uratowana wersja jest późniejsza niż jego nagrobki, urządzenie, które ratowało, zostaje
@@ -16005,8 +16042,9 @@ jak dotąd; (2) jeśli karta wróci na urządzenie bez notatek, nie usuwaj jej p
 mogłyby zostać bez karty; (3) poprawka notatki zrobiona na urządzeniu,
 które nie wiedziało o usunięciu, może zginąć, gdy pacjenta usunięto dwa razy; (4) notatka usunięta ręcznie na starym
 urządzeniu tuż przed »Usuń pacjenta« może wrócić — wystarczy usunąć ją ponownie. Niezależnie od wersji: notatka
-usunięta ręcznie na urządzeniu ze źle ustawionym zegarem (ostrzeżenie o zegarze w »Statusie synchronizacji«) może
-wrócić także wtedy, gdy usunięto ją chwilę po »Usuń pacjenta« — wystarczy usunąć ją ponownie.”
+usunięta ręcznie na urządzeniu ze źle ustawionym zegarem (ostrzeżenie o zegarze w »Statusie synchronizacji«) albo
+gdy notatkę zapisano wcześniej na takim urządzeniu, może wrócić także wtedy, gdy usunięto ją chwilę po »Usuń
+pacjenta« — wystarczy usunąć ją ponownie.”
 
 Odsyłacze: P-ZMIANA-W-KARCIE (ta sama nierówność `lastSavedAtISO > deletedAtISO`); P-NOTATKI-1 G2, G6 i G13 (`rev`
 w nagrobku, `max(teraz, u)`); reguła „remis na korzyść usunięcia” w oknie współbieżności (zostaje — krok 4);
@@ -16016,8 +16054,10 @@ P-KOPIA-DANE-KONTA (notatki przy zachowanej karcie po „Scal kopię konta”); 
 (kontrole T19, T20 × 4, T21 × 2, M6, M7, trzy przypadki T15 z wynikiem jak dziś i pięć przypadków T26c — pole nieważne
 daje wynik bazy); na `8c70884d` (po przeglądzie 1) czerwonych 15: CZ1–CZ9 i CZ1r, T26c × 4 („…Zx”,
 `9999-12-31T23:59:59.999Z`, `+02:00`, bez milisekund) i strażnik źródła przeglądu 2. Etykieta „[kontrola]” przy R10c,
-R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D i HD z nowym C oznacza kontrolę wobec wariantu albo ograniczenia
-z tego samego bloku — te przypadki są na `db0c2d50` czerwone z powodu zachowania (bez ratunku notatki nie wracają).
+R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD z nowym C i T26c z zapasem (po przeglądzie przeniesienia na D-7
+także S8a, S8c i Z1 z ręcznym nagrobkiem przed ratunkiem) oznacza kontrolę wobec wariantu albo ograniczenia z tego
+samego bloku — te przypadki są na `db0c2d50` czerwone z powodu zachowania (bez ratunku notatki nie wracają; T26c —
+nagrobek bez pola).
 Na `469c9fe2` (wdrożenie przed przeglądem 1) czerwonych 16 z ówczesnych 119: P7, P7b, P7c, P1 (2 i 300 ms), P1c,
 P1d, F3, zgł. 2b (× 2), P5b, P6, T26 (× 2, daty spoza
 kalendarza) i dwa strażniki źródła. Przegląd 1: 28 mutacji kodu poprawek i luk z przeglądu testów — 27 łapią testy,
@@ -16066,27 +16106,52 @@ z połączenia D-7 i D-21. Jedna wada kodu (MS2: zapis notatki przy G13 we floci
 pozostałe to luki testów (MS1, MS3–MS5), znane ograniczenia (F1, Z1, Z3, I4) i granica emulacji (E2). Pomiary soczewek,
 z wynikiem jak na kontroli: macierz rozjazdu zegarów 540/540 i macierz stanu CZEKA z rozjazdem 1008/1008 w tej samej
 klasie; losowe przebiegi z „Scal pacjentów”, „Scal kopię konta” i importem 300/300 w tych samych klasach, podgląd =
-wynik = magazyn bez rozbieżności; flota mieszana — 1200 przebiegów różnicowych i 900 przebiegów fuzzu recenzenta
-poprawności ze stanem końcowym jak na kontroli (`c9373e0d` z prawdziwym `db0c2d50`); emulacja starej aplikacji — 1693
-z 1693 obserwacji stanu tego pliku (157 testów) jak z prawdziwym `346dd81a`. Fuzz D-7 × D-21 (600 ziaren): 11
+wynik = magazyn bez rozbieżności; flota mieszana (kontrola: `c9373e0d` z prawdziwym `db0c2d50`): `zz-fl2-fuzz`
+600 ziaren — stany końcowe identyczne z kontrolą (także z emulacją); fuzz D-7 × D-21 600 ziaren — te same czerwone
+ziarna i klasy, stany różne w 25 ziarnach (karty i kosz według reguły kart D-7; w ziarnie 192 karta usunięta, na
+kontroli zostaje); `zz-pp2-fuzz` ziarna 1–300 z prawdziwym i z emulowanym `346dd81a` — identyczne z kontrolą,
+ziarna 1001–1300 — tylko prawdziwy `346dd81a` = emulacja (bez kontroli); emulacja starej aplikacji — 1693 z 1693
+obserwacji stanu tego pliku (157 testów) jak z prawdziwym `346dd81a`. Fuzz D-7 × D-21 (600 ziaren): 11
 czerwonych, te same na kontroli — Z1 (6), ograniczenie 2 i klasa pomiaru 6 (3), fałszywy alarm (ziarno 97: późniejsze
 ręczne usunięcie wygrywa z wcześniejszą poprawką) i ziarno 253: sierota tylko na urządzeniu, do którego karta nie
 wraca — skutek rozjazdu kart po koszu i „Usuń pacjenta”, który występuje także we flocie samych `346dd81a` i samych
 `db0c2d50`, czyli spoza D-21 (do osobnego sprawdzenia: P-KOSZ, P-ZMIANA-W-KARCIE). Mutacje soczewki: 153 na pliku
-D-21, łapane 119; z 34 ocalałych 5 zabijają teraz MS1–MS5, 7 po stronie D-7 łapią pliki D-7, reszta jest równoważna,
-nieosiągalna albo poza zakresem. Po poprawkach: plik D-21 182 z 182; na `12b0cd4d` czerwone 4 (S8b, MS2, MS2r
+D-21, łapane 119; z 34 ocalałych 5 zabijają teraz MS1–MS5 (`st:pozapisie-karta-vs-R` — test MS2r i strażnik
+źródła, bo MS2 przypina odwróconą regułę), 7 po stronie D-7 łapią pliki D-7, reszta jest równoważna, nieosiągalna,
+poza zakresem albo osiągalna bez testu: `st:stan-decyzja-karta-vs-M` (G13 i ręczne usunięcie na nieświadomym
+urządzeniu między e i R; poprawny kod ratuje, mutant zostawia wieczne CZEKA, a wynik poprawnego kodu — powrót
+notatki — to znane ograniczenie G13 tej samej klasy co W14a, opisane w „Ręczne usunięcie w pasmie ratunku”, więc testu
+nie dopisano) oraz `tt2:zlacz-M-min`, `tt2:odnow-gubi-M` i `tt2:stan-stara-bez-M` (długie łańcuchy ręcznych
+usunięć). Po poprawkach: plik D-21 182 z 182; na `12b0cd4d` czerwone 4 (S8b, MS2, MS2r
 i strażnik źródła `Bnp_poZapisie`); z prawdziwym `346dd81a` zamiast emulacji 182 z 182, 2262 z 2262 obserwacji stanu
 identycznych (256 na starych urządzeniach). Mutacje (27 kodu poprawek przeglądu 2, 34 ocalałe w soczewce, z tego
 3 wspólne, i 7 nowych dla reguły MS2 — razem 65): łapane 37, ocalałe 28 — ocalałe w soczewce bez pięciu zabitych przez
 MS1–MS5 i bez przesunięcia nagrobka także bez karty, które łapie teraz tylko strażnik źródła (nieosiągalne, jak
-w przeglądzie 2); wszystkie mutacje `Bnp_poZapisie` (18) łapane, porównanie zapisu z R przez „≥” i karty z R zamiast
-z e — testem MS2r. Losowe przebiegi
+w przeglądzie 2); mutacje `Bnp_poZapisie` i jego wywołania w `Ad` (17: 16 w `Bnp_poZapisie`, jedna w `Ad`) oraz
+`Bks_kartaPo` (`p3:kartaPo-tylko-tutaj`) — 18 z 18 łapane; porównanie zapisu z R przez „≥” i karty z R zamiast z e
+łapie test MS2r. Losowe przebiegi
 `zz-pp2-fuzz` przed (`12b0cd4d`) i po: nowe urządzenia, ziarna 1–400 — zielone; flota mieszana, ziarna 1001–1300 —
 zielone; ziarna 1–300 — czerwone 115 i 164 (ograniczenie 2, O-1); stany końcowe i uwagi identyczne ziarno w ziarno
 przed i po (1000 ziaren). Pliki pokrewne, każdy osobno: te same pliki co po przeglądzie 2 (bez pliku D-21), pliki D-7
 (`pozniejsza-poprawka` × 3, `kosz-przywroc-nowsza`) i pliki czytające ten rejestr (`kursy-otylosci-cykle`,
 `postepy-doroslego-cykle`, `vital-signs`) — 64 pliki, 1729 testów, zielone bez zmian testów. `npm run lint`,
 `npm run test:syntax` (1121 plików), `npm run test:repo` (1758 plików) — zielone.
+
+Przegląd poprawki MS2 (2026-10-21; `af4f7d10`): dwie weryfikacje — kod (scenariusze adwersarza na nowej wersji i na
+`12b0cd4d`; fuzz różnicowy nowej wersji z `12b0cd4d`: 1000 ziaren z losową siecią delt i 1500 deterministycznych
+z prawdziwym `346dd81a`, 1000 floty samych nowych urządzeń, 800 z emulacją; podgląd ≠ wynik — 0, ping-pong — 0)
+i dokumentacja (sondy na `af4f7d10`, `12b0cd4d` i `346dd81a`). Kod MS2 zgodny z regułą, bez wady kodu. Zgłoszenia:
+W14a (ręczne usunięcie uratowanej notatki przy G13, fuzz: ziarna 1215 i 3710) — znane ograniczenie, bez zmiany kodu
+(decyzja integratora zgodna z D21-3, klasa H2b), opisane w „Ograniczeniach”; W11 — poprawione zdanie „Flota
+mieszana”; ręczne usunięcie starszej wersji przy G13 (sonda) — dopisek w „Ręczne usunięcie w pasmie ratunku”, przy H2b
+i w nocie wydania; komentarze przy `Bnp_poZapisie` (krok 5) i przy jego wywołaniu w `Ad`; w tym akapicie klasyfikacja
+ocalałych mutacji, mutacje `Bnp_poZapisie` i liczby floty; lista kontroli w nagłówku pliku testów i tytuły MS5. Testy:
+W14a i W14b (po dwie treści D: h_D > h_B — n1 wraca, a ponowne ręczne usunięcie wygrywa; h_D < h_B — usunięcie
+wygrywa od razu), W11 i odczyt listy nagrobków w MS5 (raz). Plik D-21 185 z 185; na `12b0cd4d` czerwone 6: S8b, MS2,
+MS2r, strażnik źródła `Bnp_poZapisie`, W14a i W11 (W14b zielony także tam); z prawdziwym `346dd81a` zamiast emulacji
+185 z 185, 2537 z 2537 obserwacji stanu identycznych (271 na starych urządzeniach). Pliki czytające ten rejestr albo
+plan synchronizacji (14 plików, 543 testy, każdy osobno), `npm run lint`, `npm run test:syntax` (1121 plików),
+`npm run test:repo` (1758 plików) — zielone.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 

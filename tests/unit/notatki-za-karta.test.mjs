@@ -11,22 +11,24 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // której lastSavedAtISO > e (RATUNEK: R + 1 ms + h, rev bez zmian), a gdy karta jest, ale nie jest późniejsza (usunięcie
 // karty jeszcze nie doszło) — notatka zostaje razem z nagrobkiem (CZEKA). Ręczne usunięcie sprzed „Usuń pacjenta” nie
 // wraca (krata M), echo starej aplikacji bez pola z tą samą chwilą nie odbiera pola.
-// Prawdziwy vilda_vault.js, sejfy w pamięci (createInMemoryAdapter; w T26 także atrapa IndexedDB), sztuczny zegar,
-// dane wyłącznie fikcyjne. Urządzenie „stare” (346dd81a, aplikacja sprzed D-21; kod notatek ten sam co w db0c2d50
-// = 54a84da3) to EMULACJA: adapter ucina pole (jak stary adapter z białą listą), a ładunek przed scaleniem traci pole
-// (stare Le go nie zna) — reszta kodu jest wspólna. Emulacja jest wierna dla scalania ładunku synchronizacji (d.scal)
-// i zapisu nagrobków przez adapter (bez pola nowa reguła daje wynik dzisiejszy, T15; przegląd przeniesienia na D-7:
-// 1693 z 1693 obserwacji stanu tego pliku jak z prawdziwym 346dd81a, po jego poprawkach 2262 z 2262, w tym 256 na
-// starych urządzeniach). NIE obejmuje kopii konta na starym urządzeniu:
-// mergeVaultBackup, previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z polem, a prawdziwa stara
-// aplikacja kasuje wtedy notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody rzucają błąd (taki test
-// wymaga prawdziwego starszego sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) — zegar urządzenia
-// przesunięty względem wspólnego (Z1).
+// Prawdziwy vilda_vault.js, sejfy w pamięci (createInMemoryAdapter; w T26 także atrapa IndexedDB), sztuczny zegar, dane
+// wyłącznie fikcyjne. Urządzenie „stare” (346dd81a, aplikacja sprzed D-21; kod notatek ten sam co w db0c2d50 =
+// 54a84da3) to EMULACJA: adapter ucina pole (jak stary adapter z białą listą), a ładunek przed scaleniem traci pole
+// (stare Le go nie zna) — reszta kodu jest wspólna. Emulacja jest wierna dla scalania ładunku synchronizacji (d.scal) i
+// zapisu nagrobków przez adapter (bez pola nowa reguła daje wynik dzisiejszy, T15; przegląd przeniesienia na D-7: 1693
+// z 1693 obserwacji stanu tego pliku jak z prawdziwym 346dd81a, po jego poprawkach 2262 z 2262 przy 182 testach, w tym
+// 256 na starych urządzeniach; po domknięciu przeglądu poprawki MS2 2537 z 2537 przy 185 testach, w tym 271). NIE
+// obejmuje kopii konta na starym urządzeniu: mergeVaultBackup, previewVaultBackupMerge i restoreVaultBackup szłyby tam
+// nowym kodem z polem, a prawdziwa stara aplikacja kasuje wtedy notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te
+// metody rzucają błąd (taki test wymaga prawdziwego starszego sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar
+// (ms) — zegar urządzenia przesunięty względem wspólnego (Z1).
 // [CZERWONY na db0c2d50] — przypadki, które na bazie dają wynik inny niż oczekiwany (lista w opisie zmiany); kod
-// notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] — przegląd przeniesienia na D-7 (MS2).
-// [kontrola] — kontrola wobec bazy (T4, T7, T19–T22, M6, M7: wynik jak dotąd) albo wobec wariantu lub znanego
-// ograniczenia z tego samego bloku (R10c, R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD z nowym C): te drugie są na db0c2d50
-// czerwone z powodu zachowania (bez ratunku notatki nie wracają). [znane ograniczenie] — test przypina opisany wynik.
+// notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] — przegląd przeniesienia na D-7 (MS2); na 12b0cd4d
+// czerwone są też W14a i W11 z domknięcia przeglądu poprawki MS2 (opis przy nich). [kontrola] — kontrola wobec bazy
+// (T4, T7, T19–T22, M6, M7: wynik jak dotąd) albo wobec wariantu lub znanego ograniczenia z tego samego bloku (R10c,
+// R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD z nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem
+// przed ratunkiem): te drugie są na db0c2d50 czerwone z powodu zachowania (bez ratunku notatki nie wracają; T26c —
+// nagrobek bez pola). [znane ograniczenie] — test przypina opisany wynik.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -1909,9 +1911,9 @@ describe('P-NOTATKI-ZA-KARTA — przegląd 2: zapis notatki w stanie „czeka”
   });
 
   // Granice Bnp_poZapisie (mutacje przeglądu 2): remis lastSavedAtISO === e to dalej CZEKA (ta sama ostra nierówność co
-  // Bnp_stan); karta już późniejsza przed scaleniem — nagrobek zdjęty jak dotąd, bez dotknięcia; błąd odczytu
-  // nagrobka nie wstrzymuje zdjęcia; G13 — chwila nagrobka nie cofa się (max), bo echo starego urządzenia o chwili R
-  // odebrałoby wtedy pole.
+  // Bnp_stan); karta już późniejsza przed scaleniem i zapis późniejszy niż R — nagrobek zdjęty jak dotąd, bez
+  // dotknięcia; błąd odczytu nagrobka nie wstrzymuje zdjęcia; G13 — chwila nagrobka nie cofa się (max), bo echo starego
+  // urządzenia o chwili R odebrałoby wtedy pole.
   it('CZ1r remis: karta B zapisana w tej samej milisekundzie co „Usuń pacjenta” (CZEKA); poprawka n1 → nagrobek z chwilą zapisu; delta nagrobka karty → bez sierot', async () => {
     const x = await przygotuj({ A: {}, B: {} });
     const { A, B } = x.urz;
@@ -2466,9 +2468,9 @@ async function trzyM() {
 }
 // G13: A zapisuje n1 z zegarem o 1 h do przodu i rozsyła ją pełnym ładunkiem — nagrobek n1 z „Usuń pacjenta” ma wtedy
 // chwilę R = u > e (Eb: max(teraz, u)).
-async function n1ZPrzyszlosci(x, kolej) {
+async function n1ZPrzyszlosci(x, kolej, tresc = 'z przyszłości') {
   vi.setSystemTime(zegar + 3600e3);
-  await x.urz.A.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'z przyszłości' });
+  await x.urz.A.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: tresc });
   vi.setSystemTime(zegar);
   await rundy(x, kolej, 1);
 }
@@ -2729,9 +2731,10 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: luki testów (M
   });
 
   // MS5 (mutacja ad:czeka-zawsze-zapis). Pętla CZEKA nie zapisuje kanonu, który już leży (ta sama chwila, pole i rev),
-  // i nie czyta wtedy nagrobka. Test utrwala optymalizację: zwykłe nagrobki notatek pętla U przepisuje przy każdym
-  // scaleniu (tak było i na 346dd81a), nagrobki w stanie CZEKA (do 365 dni) — nie. T27 liczy odczyty kart i blokady.
-  it('MS5 B „czeka”; kolejne scalenie tego samego ładunku → 0 zapisów i 0 odczytów nagrobków notatek, stan bez zmian', async () => {
+  // i nie czyta wtedy pojedynczego nagrobka; listę nagrobków notatek scalanie czyta raz, jak w każdym scaleniu
+  // (wer-dok, TEST-2). Test utrwala optymalizację: zwykłe nagrobki notatek pętla U przepisuje przy każdym scaleniu (tak
+  // było i na 346dd81a), nagrobki w stanie CZEKA (do 365 dni) — nie. T27 liczy odczyty kart i blokady.
+  it('MS5 B „czeka”; kolejne scalenie tego samego ładunku → 0 zapisów i 0 pojedynczych odczytów nagrobka notatki; lista nagrobków czytana raz; stan bez zmian', async () => {
     const x = await przygotuj({ A: {}, B: {} });
     const { A, B } = x.urz;
     nagrywaj(A, { nagrPac: true });
@@ -2743,15 +2746,15 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: luki testów (M
     const przed = await nagrobkiNotatek(B);
     B.zeruj();
     przesun(1000); await B.scal(ladunek);
-    expect([B.licz.putPatientNoteTombstoneForUser || 0, B.licz.getPatientNoteTombstoneForUser || 0], 'zapisy i odczyty nagrobka notatki').toEqual([0, 0]);
+    expect([B.licz.putPatientNoteTombstoneForUser || 0, B.licz.getPatientNoteTombstoneForUser || 0, B.licz.listPatientNoteTombstonesForUser || 0], 'zapisy i pojedyncze odczyty nagrobka notatki, odczyty listy nagrobków').toEqual([0, 0, 1]);
     expect(await nagrobkiNotatek(B)).toEqual(przed);
     expect(await stan(B, x)).toBe('karta [n1,n2] nagr[n1+pole,n2+pole]');
   });
 
   // MS5 na prawdziwych deltach (sceptyk MS5, R1): B „czeka” z delt (nagrobki notatek doszły, nagrobek karty jeszcze nie),
-  // potem delta nowej karty innego pacjenta przechodzi przez całe Le → 0 zapisów i 0 odczytów nagrobka notatki; po
-  // delcie nagrobka karty — karta i notatki znikają razem.
-  it('MS5 delty: B „czeka”, delta nowej karty innego pacjenta → 0 zapisów i 0 odczytów nagrobków notatek; po nagrobku karty BRAK', async () => {
+  // potem delta nowej karty innego pacjenta przechodzi przez całe Le → 0 zapisów i 0 pojedynczych odczytów nagrobka
+  // notatki (lista nagrobków czytana raz); po delcie nagrobka karty — karta i notatki znikają razem.
+  it('MS5 delty: B „czeka”, delta nowej karty innego pacjenta → 0 zapisów i 0 pojedynczych odczytów nagrobka notatki; lista nagrobków czytana raz; po nagrobku karty BRAK', async () => {
     const x = await przygotuj({ A: {}, B: {} });
     const { A, B } = x.urz;
     nagrywaj(A);
@@ -2763,7 +2766,7 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: luki testów (M
     await A.v.savePatient({ name: 'Testowa Ewa', user: { lastName: 'Testowa', firstName: 'Ewa', dobISO: '2017-05-20', sex: 'F', height: 118, weight: 21 } }, { dedup: false });
     B.zeruj();
     expect(await dostarcz(A, B, (t) => t === 'karta'), 'delta karty Ewy').toEqual(['karta']);
-    expect([B.licz.putPatientNoteTombstoneForUser || 0, B.licz.getPatientNoteTombstoneForUser || 0], 'zapisy i odczyty nagrobka notatki').toEqual([0, 0]);
+    expect([B.licz.putPatientNoteTombstoneForUser || 0, B.licz.getPatientNoteTombstoneForUser || 0, B.licz.listPatientNoteTombstonesForUser || 0], 'zapisy i pojedyncze odczyty nagrobka notatki, odczyty listy nagrobków').toEqual([0, 0, 1]);
     expect(await nagrobkiNotatek(B)).toEqual(przed);
     await dostarcz(A, B);
     expect(await stan(B, x), 'po nagrobku karty').toBe('BRAK [] nagr[n1+pole,n2+pole]');
@@ -2901,6 +2904,111 @@ describe('P-NOTATKI-ZA-KARTA — przegląd przeniesienia na D-7: znane ogranicze
       await expect(x.urz.S.v[m](plik, x.urz.A.haslo), m).rejects.toThrow(/emulacja starej aplikacji nie obejmuje kopii konta/);
     }
     expect(typeof (await x.urz.S.v.exportVaultBackup())).not.toBe('undefined');
+  });
+});
+
+/* ---------- przegląd poprawki MS2 (domknięcie): W14a, W14b, W11 ---------- */
+// Weryfikacja poprawki MS2 (af4f7d10): scenariusze adwersarza na nowej wersji i na 12b0cd4d, fuzz różnicowy (W14
+// znalazł sam w ziarnach 1215 i 3710 floty samych nowych urządzeń) i sondy dokumentacji. Decyzja integratora zgodna z
+// D21-3 (klasa H2b: notatka może wrócić, wystarczy usunąć ją ponownie): bez zmiany kodu, W14a i W14b przypięte jako
+// znane ograniczenie G13, W11 przypina zdanie „Flota mieszana”. Na 12b0cd4d czerwone W14a (nagrobek D zdejmowany przy
+// zapisie, ręczne usunięcie wygrywało) i W11 (stare O zachowywało n1 z poprawką B i traciło tylko n2); W14b zielony na
+// obu.
+describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy G13 (W14a, W14b) i stare nieświadome urządzenie (W11)', () => {
+  // G13 + CZEKA: n1 (treść tresc) zapisana na A z zegarem +1 h i rozesłana; A usuwa pacjenta; urządzenia z listy
+  // czekaja dostają same nagrobki notatek (ładunek A bez kart i nagrobków kart).
+  async function g13Czeka(urz, czekaja, tresc) {
+    const x = await przygotuj(urz);
+    await n1ZPrzyszlosci(x, Object.keys(urz), tresc);
+    przesun(60e3); await x.urz.A.v.removePatient(x.pid);
+    x.e = (await nagrobekKarty(x.urz.A, x.pid)).deletedAtISO;
+    x.R = (await nagrobekNotatkiM(x.urz.A, x, 'n1')).deletedAtISO;
+    expect(x.R > x.e, 'G13: R > e').toBe(true);
+    const lad = { ...kopia(await x.urz.A.v.exportSyncPayload()), patients: [], tombstones: [] };
+    for (const k of czekaja) { przesun(1000); await x.urz[k].scal(lad); }
+    return x;
+  }
+  const n1Na = async (d, x) => (await d.v.listAllPatientNotes()).find((n) => n.id === x.id('n1')) || null;
+  const po = (iso, x) => Date.parse(iso) - Date.parse(x.R) - 1;
+
+  // W14 [znane ograniczenie G13] (wer-kod, fuzz różnicowy bez sieci, ziarno 1215; flota samych nowych). B dopisuje
+  // wizytę i ratuje n1 (u_B = R + 1 ms + h_B), A dostaje tę wersję. D „czeka” i poprawia n1 (rev 3, zapis < R): (a) po
+  // wizycie — nowa gałąź MS2 (karta > e, zapis ≤ R), (b) przed wizytą — stara gałąź CZEKA; w obu nagrobek z polem
+  // zostaje na D z chwilą R. A — kilka minut po „Usuń pacjenta” według każdego zegara — ręcznie usuwa n1: nagrobek bez
+  // pola z chwilą max(teraz, u_B) = u_B, bo u_B jest z przyszłości. D scala ładunek B sprzed tego usunięcia i ratuje
+  // swoją poprawkę (wyższy rev, krok 2) na R + 1 ms + h_D. Przy h_D > h_B (około połowa treści) poprawka D wygrywa z
+  // ręcznym usunięciem: n1 wraca wszędzie, zbieżnie i stabilnie (widoczna; ponowne ręczne usunięcie — tu na B —
+  // wygrywa, bo nagrobków z polem już nie ma); przy h_D < h_B usunięcie wygrywa od razu. Gałąź (b) istniała przed MS2;
+  // MS2 rozszerza ją na kolejność „wizyta, potem poprawka” (a). Na 12b0cd4d w (a) nagrobek D był przy zapisie
+  // zdejmowany, poprawka zostawała z chwilą < R i usunięcie wygrywało — ale przy starym urządzeniu ta sama poprawka
+  // ginęła przy żywej karcie (S8b). Wariant kodu (ręczny nagrobek wersji z przyszłości na u + 1 s, Eb) zmieniałby
+  // regułę P-NOTATKI-1 G13 — nie wdrożony.
+  async function w14(kol, tresc) {
+    const x = await g13Czeka({ A: {}, B: {}, D: {} }, ['B', 'D'], 'z przyszłości 1');
+    const { A, B, D } = x.urz;
+    await wizyta(B, x);
+    await pelny(A, B); await pelny(B, A);
+    const uB = (await n1Na(A, x)).updatedAtISO;
+    if (kol === 'a') await wizyta(D, x);
+    przesun(60e3); await D.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: tresc });
+    if (kol === 'b') await wizyta(D, x);
+    const nagD = await nagrobekNotatkiM(D, x, 'n1');
+    przesun(60e3); await A.v.removePatientNote(x.id('n1'));
+    const reczny = await nagrobekNotatkiM(A, x, 'n1');
+    await pelny(B, D);
+    const nD = await n1Na(D, x);
+    const w = await rundy(x, ['A', 'B', 'D'], 4);
+    return { x, uB, nagD, reczny, nD, w };
+  }
+  for (const [kol, opis] of [['a', 'wizyta, potem poprawka n1 (nowa gałąź MS2)'], ['b', 'poprawka n1 w stanie CZEKA, potem wizyta']]) {
+    it(`W14${kol} [znane ograniczenie] G13: D „czeka”, ${opis}; A ręcznie usuwa uratowaną n1 → przy h_D > h_B ratunek D wygrywa i n1 wraca wszędzie, przy h_D < h_B usunięcie wygrywa`, async () => {
+      const hB = hTresci(trescNowej('n1', 'z przyszłości 1'), jawneNowej());
+      for (const [tresc, oczek] of [['poprawka D2', 'karta [n1=poprawka D2,n2] nagr[]'], ['poprawka D1', 'karta [n2] nagr[n1]']]) {
+        const hD = hTresci(trescNowej('n1', tresc), jawneNowej());
+        const r = await w14(kol, tresc);
+        const { x } = r;
+        expect(po(r.uB, x), 'u_B = R + 1 ms + h_B').toBe(hB);
+        expect(r.nagD && [r.nagD.deletedAtISO, r.nagD.deletedWithPatient], 'nagrobek z polem zostaje na D (chwila R)').toEqual([x.R, { patientId: x.pid, deletedAtISO: x.e }]);
+        expect([r.reczny.deletedAtISO, r.reczny.deletedWithPatient], 'ręczny nagrobek A: chwila u_B, bez pola').toEqual([r.uB, undefined]);
+        expect([r.nD.body, r.nD.rev, po(r.nD.updatedAtISO, x)], 'ratunek D: rev 3, R + 1 ms + h_D').toEqual([tresc, 3, hD]);
+        expect(r.w.zbiezne && r.w.stabilne, JSON.stringify(r.w.ost)).toBe(true);
+        expect(r.w.ost.A, `h_B = ${hB}, h_D = ${hD}`).toBe(oczek);
+        if (oczek.startsWith('karta [n1')) {
+          // H2b: wystarczy usunąć ponownie — nikt nie ma już nagrobka z polem, więc drugie ręczne usunięcie wygrywa
+          przesun(60e3); await x.urz.B.v.removePatientNote(x.id('n1'));
+          const w2 = await rundy(x, ['B', 'A', 'D'], 3, ['A', 'B', 'D']);
+          expect(w2.zbiezne && w2.stabilne, JSON.stringify(w2.ost)).toBe(true);
+          expect(w2.ost.D, 'po ponownym ręcznym usunięciu').toBe('karta [n2] nagr[n1]');
+        }
+      }
+    });
+  }
+
+  // W11 (wer-kod; „Flota mieszana”). Stare O nie widziało usunięcia i ma n1 i n2. B jest w nowej gałęzi MS2 (wizyta,
+  // potem poprawka n1; nagrobki z polem zostają). Pełny ładunek B: stara aplikacja ucina pole, R ≥ Y, więc O kasuje
+  // obie notatki, które miało. Echo O (nagrobki bez pola, te same chwile) nie odbiera pola na B, B ratuje, a O dostaje
+  // notatki z powrotem z następnym ładunkiem B. Na 12b0cd4d O traciło pośrodku tylko n2 (nagrobek n1 był przy zapisie
+  // zdejmowany); koniec ten sam.
+  it('W11 stare nieświadome O (ma n1 i n2) dostaje pełny ładunek B w nowej gałęzi MS2 → O kasuje obie notatki do ratunku na B; potem poprawka B wszędzie', async () => {
+    const x = await g13Czeka({ A: {}, B: {}, O: { stara: true } }, ['B'], 'z przyszłości');
+    const { B, O } = x.urz;
+    expect(await stan(O, x), 'O nie wie o usunięciu').toBe('karta [n1=z przyszłości,n2] nagr[]');
+    await wizyta(B, x);
+    const karta = await kartaNa(B, x);
+    expect([karta > x.e, karta < x.R], 'karta B między e i R').toEqual([true, true]);
+    const kiedy = przesun(60e3);
+    await B.v.savePatientNote({ id: x.id('n1'), patientId: x.pid, title: 'n1', body: 'poprawka B' });
+    expect(kiedy < x.R, 'zapis wcześniejszy niż R').toBe(true);
+    expect(await stan(B, x), 'nowa gałąź MS2: nagrobki zostają').toBe('karta [n1=poprawka B,n2] nagr[n1+pole,n2+pole]');
+    await pelny(B, O);
+    expect(await stan(O, x), 'O kasuje notatki, które miało').toBe('karta [] nagr[n1,n2]');
+    await pelny(O, B);
+    expect(await stan(B, x), 'echo O nie odbiera pola: ratunek').toBe('karta [n1=poprawka B,n2] nagr[]');
+    await pelny(B, O);
+    expect(await stan(O, x), 'notatki wracają do O').toBe('karta [n1=poprawka B,n2] nagr[]');
+    const w = await rundy(x, ['B', 'O', 'A'], 3);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toBe('karta [n1=poprawka B,n2] nagr[]');
   });
 });
 
