@@ -27,7 +27,7 @@ describe('Źródłowe mediany AMH i inhibiny B dziewcząt — zwykły wykres', (
   it('zachowuje wszystkie 60 wcześniejszych profili i przeliczenia dokładnie, dodając sześć osobnych odniesień', () => {
     const original = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-11.1',
       profiles: priorFemaleGonadotropinBundle(data).profiles.filter(p => !addedIds.includes(p.id) && !laterMaleIds.includes(p.id) && !laterFemaleIds.includes(p.id) && !laterChildhoodIds.includes(p.id)) };
-    expect(data.profiles).toHaveLength(82);
+    expect(data.profiles).toHaveLength(84);
     expect(laterFemaleIds).toHaveLength(5);
     expect(priorFemaleGonadotropinBundle(data).profiles.filter(p => p.ordinaryOnly && p.sex === 'female' && !laterFemaleIds.includes(p.id) && !laterChildhoodIds.includes(p.id)).map(p => p.id)).toEqual(addedIds);
     expect(original.profiles).toHaveLength(60);

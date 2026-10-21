@@ -349,7 +349,7 @@ test('testosterone population geometry stays fixed while real patient age and bi
     } else await expect(point(page)).toHaveCount(0);
   }
   // A documented premature birth does not exclude older children or adults.
-  for (const [age, median, profile] of [[2, null], [3, .3764139001167295, 'kelsey2014-male-t-childhood'],
+  for (const [age, median, profile] of [[2, .06934, 'kushnir2010-male-t-2-3-group'], [3, .3764139001167295, 'kelsey2014-male-t-childhood'],
     [6, .02393726986868612, 'madsen2022-male-t'], [12, 1.4977255724595988, 'madsen2022-male-t'],
     [18, 20.7, 'walravens2025-male-t-18-29'], [19, 20.7, 'walravens2025-male-t-18-29'],
     [40, 18.1, 'walravens2025-male-t-40-49'], [70, 17, 'walravens2025-male-t-70-79'], [82, 15.9, 'walravens2025-male-t-80-plus'], [86, null], [88, null], [89, null]]) {

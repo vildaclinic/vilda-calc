@@ -145,9 +145,14 @@ describe('Zec FSH patient point — exact group medians and current Tanner 1', (
 
   it('does not activate censored childhood LH, testosterone or unsupported female ages', () => {
     for (const [analyte, ageYears, sex] of [['lh', 3, 'male'], ['lh', 3, 'female'],
-      ['t', 2, 'male'], ['fsh', 19, 'female'], ['fsh', 30, 'female']]) {
+      ['fsh', 19, 'female'], ['fsh', 30, 'female']]) {
       expect(engine.selectProfile(data, context({ analyte, ageYears, sex })))
         .toEqual(unavailable('unsupported-age'));
     }
+    // The later, independently qualified Kushnir reference does not activate
+    // Zec's censored testosterone values or turn them into a fallback median.
+    expect(engine.selectProfile(data, context({ analyte: 't', ageYears: 2, sex: 'male' })))
+      .toMatchObject({ status: 'ready', profile: { id: 'kushnir2010-male-t-2-3-group' } });
+    expect(data.profiles.some(profile => profile.id.startsWith('zec2012-') && profile.analyte === 't')).toBe(false);
   });
 });

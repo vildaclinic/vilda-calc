@@ -24,7 +24,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
     expect(data.notClinicalReference).toBe(true);
-    expect(data.profiles).toHaveLength(82);
+    expect(data.profiles).toHaveLength(84);
     expect(data.profiles.every(item => item.sourceLabel && item.url && item.method && item.population)).toBe(true);
   });
 
@@ -279,7 +279,8 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
     expect(engine.referenceAt(profile('kelsey2014-male-t-childhood'), 6)).toBeNull();
     expect(engine.referenceAt(profile('madsen2022-male-t'), 5.999999)).toBeNull();
     expect(engine.referenceAt(profile('walravens2025-male-t-18-29'), 17.999999)).toBeNull();
-    expect(evaluate('t', 2.999999)).toEqual(unavailable('unsupported-age'));
+    expect(evaluate('t', 2.999999)).toMatchObject({ status: 'ready', referenceValue: .06934,
+      profile: { id: 'kushnir2010-male-t-2-3-group', statistic: 'group-median' } });
     expect(evaluate('t', 86.000001)).toEqual(unavailable('unsupported-age'));
   });
 
@@ -371,7 +372,7 @@ describe('Punkt pacjenta — produkcyjny silnik i ilościowe dane źródłowe', 
 
   it('nie uzupełnia luk dowodowych ani nie ekstrapoluje poza wiek źródła', () => {
     for (const [analyte, age] of [['lh', 6 / 365.25], ['lh', 1], ['lh', 5.99],
-      ['fsh', 80.01], ['t', 2.99], ['t', 86.01],
+      ['fsh', 80.01], ['t', 6 / 365.25], ['t', 86.01],
       ['amh', 70.01], ['inhb', 80.01], ['insl3', 12]]) {
       expect(evaluate(analyte, age)).toEqual(unavailable('unsupported-age'));
     }

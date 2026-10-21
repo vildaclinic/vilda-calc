@@ -1111,9 +1111,12 @@
       const labelValue = model.value / labelFactor, labelReference = model.referenceValue / labelFactor;
       const person = sex === "female" ? "pacjentki" : "pacjenta";
       const groupMean = model.profile.statistic === "group-mean";
-      // This profile is a graph reading with an approximately 8.5% source
-      // uncertainty. Do not imply three-digit precision in its visual label.
-      const referenceDigits = model.profile.id === "ljubicic2020-male-fsh-75-80-approximate" ? 2 : 3;
+      // Source readouts can require coarser labels than their exact unit
+      // conversion. This does not round the patient's result or move either dot.
+      const referenceDigits = Number.isInteger(model.profile.referenceSignificantDigits) &&
+        model.profile.referenceSignificantDigits >= 1 && model.profile.referenceSignificantDigits <= 6
+        ? model.profile.referenceSignificantDigits
+        : model.profile.id === "ljubicic2020-male-fsh-75-80-approximate" ? 2 : 3;
       const medianLabel = groupMean ? "Średnia grupy" : model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
       const medianContext = groupMean ? `Średnia w grupie ${model.profile.ageGroup.label}` : model.profile.statistic === "group-median"
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
@@ -3147,6 +3150,16 @@
         paragraph("Dorosłość pokazujemy jednym szerokim łukiem, bez wymuszania przejścia przez każdą średnią grupową. Nie jest to indywidualne tempo starzenia ani ustalenie wieku fizjologicznego maksimum. Wygaszona końcówka po 86 latach nie dostarcza wartości odniesienia.");
         paragraph("Kropka oznacza wynik, a jasny znacznik źródłową medianę lub u dorosłych średnią grupy wieku. Znacznik może nie leżeć na poglądowej linii. Strzałka oznacza wynik powyżej stałej skali; etykieta podaje rzeczywistą wartość. Średnia ani mediana nie są granicami normy. Kolor nie klasyfikuje wyniku.");
         const testosteroneSources = new Set();
+        if (renderedPoint?.id === "t" && renderedPoint.profile.ageGroup) {
+          const profile = renderedPoint.profile;
+          paragraph("Odniesienie dla wyniku: " +
+            [profile.sourceLabel, profile.ageGroup.label, profile.method, profile.population].filter(Boolean).join(" · ") + ".");
+          if (profile.ageGroup.description) paragraph(profile.ageGroup.description);
+          if (profile.url) {
+            testosteroneSources.add(profile.url);
+            links.push([profile.sourceLabel || "Źródło", profile.url]);
+          }
+        }
         for (const profile of testosteroneDisplay.profiles) {
           const sourceKey = profile.url || profile.sourceLabel;
           if (testosteroneSources.has(sourceKey)) continue;

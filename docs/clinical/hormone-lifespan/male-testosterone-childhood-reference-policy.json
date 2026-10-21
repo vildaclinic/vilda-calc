@@ -1,0 +1,39 @@
+{
+  "version": "2026-10-21.1",
+  "kind": "educational-source-selection",
+  "analyte": "t",
+  "sex": "male",
+  "unit": "nmol/L",
+  "ordinaryOnly": true,
+  "sourceEvidence": "evidence/patient-point/kushnir2010-male-testosterone-group-medians.json",
+  "profiles": [
+    {
+      "id": "kushnir2010-male-t-1-2-group",
+      "sourceGroupId": "1-2",
+      "minAge": 1,
+      "maxAge": 2,
+      "maxAgeExclusive": true,
+      "groupLabel": "1–2 lat"
+    },
+    {
+      "id": "kushnir2010-male-t-2-3-group",
+      "sourceGroupId": "2-3",
+      "minAge": 2,
+      "maxAge": 3,
+      "maxAgeExclusive": true,
+      "groupLabel": "2–3 lat"
+    }
+  ],
+  "specimen": "serum",
+  "compatibleSpecimenIds": ["serum", "surowica"],
+  "compatibleAssayMethodIds": ["lc-ms/ms", "lc-ms-ms", "lcmsms", "kushnir2010-lcmsms-total-testosterone"],
+  "referenceSignificantDigits": 1,
+  "selectionPolicy": "Fixed disjoint chronological-age routing, independent of the patient's concentration. Preserve all 82 existing profiles and Kelsey from exact age 3. A rejected context does not select a fallback study.",
+  "agePolicy": "The printed figure groups are '1 to 2 years' and '2 to 3 years'; exact author inclusivity and annual-bin counts are not reported. [1,2) and [2,3) are explicit application conventions, not recovered individual-age rules. The whole possible age must fit one group. No extrapolation into >212 days–<1 year or past the third birthday.",
+  "statisticPolicy": "Approximate medians of the two source groups read from Figure 4C. Neither is an exact-age p50, reference limit, SDS, patient percentile or a diagnostic threshold. Annual-bin N is unknown; do not borrow Table 1 counts.",
+  "interpolation": "constant",
+  "digitizationPolicy": "Use the bounding-box center of each vector triangle, rounded to 0.01 µg/L (0.03 and 0.02). Retain centroid sensitivity and approximately ±5 ng/L extraction tolerance; it is not a confidence interval. Display one significant digit for these reference labels in every selected unit, retaining full unit-conversion precision internally and the actual patient result unchanged.",
+  "assayPolicy": "Source serum used the described derivatized LC-MS/MS assay. Generic LC-MS/MS identifiers permit the existing educational comparison, not proof of between-assay calibration. Known incompatible assays or material block it; unknown values do not confirm the patient's assay or specimen. Do not apply the source LOD/LOQ to the patient's result or replace a censored result by zero or a limit.",
+  "contextPolicy": "Reuse current-patient age, sex, result and identity protection. Do not require or infer Tanner G1 or a sampling hour. Known treatment or stimulation remains contraindicated under the existing adapter. These approximate group comparisons do not change the independent Mayo laboratory RI, historical assessments, educational geometry, concentration scale or sex comparisons.",
+  "patientNote": "LC-MS/MS, surowica · odczyt przybliżony."
+}
