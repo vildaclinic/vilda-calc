@@ -15201,6 +15201,68 @@ ręcznie.
 nadaje id punktom z karty i z formularza wstecznego własnym `String(Date.now()+Math.random())`. Jedno kliknięcie daje
 jeden punkt, więc powtórzenie w praktyce nie występuje. Przejście monitora na `VildaGhPunkty.noweId()` zmieniłoby id
 w testach charakteryzujących (atrapa monitora podstawia `Date` i `Math` tylko monitorowi) — osobna decyzja.
+Rozstrzygnięte: monitor przechodzi na `noweId()` — P-GH-NOWE-ID-MONITOR niżej.
+
+## Monitor GH nadaje id nowym punktom przez `VildaGhPunkty.noweId()` (P-GH-NOWE-ID-MONITOR, `gh_therapy_monitor.js`, 2026-10-21)
+
+**Skąd.** Otwarta decyzja z P-GH-NOWE-ID: monitor nadawał id punktom z karty i z formularza wstecznego sam, dawnym
+wzorem `String(Date.now()+Math.random())` (4096 części ułamkowych na milisekundę). Właściciel zlecił 2026-10-21 przejście
+monitora na `VildaGhPunkty.noweId()`, żeby wszystkie drogi tworzenia punktu w ramce miały jeden licznik.
+
+**Zmiana.** Artefakt `gh_therapy_monitor.js` (59 → 60), dwa miejsca z komentarzem `P-GH-NOWE-ID-MONITOR`:
+- nowy punkt z karty (`He`, przyciski W/K/Z): `id: Gpk.noweId()`;
+- punkt wsteczny (`ghAddRetroPoint`): `Gpk.punkt(Gpk.noweId(), pola)`.
+
+`Gpk` to moduł z bramki `Gpa()` (VildaGhPunkty wersji 3 i moduł dawki), sprawdzonej wcześniej w obu miejscach. Bez
+modułu monitor jak dotąd odmawia zapisu (D5, D6), zanim dojdzie do id. W monitorze nie ma już `Math.random()`; jedyne
+`Date.now()` to wiek wpisu skoku z Karty pacjenta (`vilda:gh-jump`). `noweId()` wołają teraz monitor
+i `vilda_gh_punkt_z_wiersza.js` (P-GH-PUNKT-Z-WIERSZA), więc w jednej ramce każdy nowy punkt GH dostaje id z jednego
+licznika: ściśle rosnące, bez powtórzeń także w tej samej milisekundzie (P-GH-NOWE-ID). Id ma postać
+`"<Date.now()>.<trzy cyfry>"`. Miejsca czytające id sprawdził P-GH-NOWE-ID: wszystkie porównują `String(id)`. Monitor 60
+z modułem sprzed P-GH-NOWE-ID (`vilda_gh_punkty.js?v=5`, ta sama wersja API 3) dostaje id w dawnej postaci i działa
+jak dotąd.
+
+**Wpływ kliniczny.** Brak zmiany wyników klinicznych. Rekord punktu poza `id` jest bez zmian: 15 kluczy w tej samej
+kolejności, dawki, jednostki, wiek i IGF-1. Pokazują to złota siatka i porównanie z monitorem sprzed API. Zmienia się
+postać id nowych punktów i integralność danych: dwa punkty utworzone w tej samej milisekundzie (z karty i wsteczny,
+w dowolnej kolejności) nie dostaną tego samego id, więc edycja i usunięcie po id trafiają w jeden punkt. Dawne id
+zostają bez zmian.
+
+**Przypadki `wejście → oczekiwany wynik`** (zegar atrapy, dane fikcyjne; `Math.random()` = 0,25):
+- `Date.now()` = 1767225600000 + 1000·k → k-ty nowy punkt ma id `"<1767225600000 + 1000·k>.125"`, np.
+  `"1767225600000.125"`, `"1767225603000.125"`;
+- zegar stoi na 1767225600000; kolejno Włączenie z karty, Kontynuacja wsteczna, Kontynuacja z karty, Kontynuacja
+  wsteczna → `"1767225600000.125"`, `"….126"`, `"….127"`, `"….128"`. Edycja trzeciego zmienia tylko jego, usunięcie
+  drugiego zostawia trzy;
+- ta sama sytuacja z dawnym wzorem (kontrola negatywna) → cztery razy `"1767225600000.25"`, a usunięcie jednego zabiera
+  wszystkie cztery.
+
+**Testy.** Atrapa `tests/support/gh-monitor-atrapa.mjs` podaje swój zegar (`Date`, `Math`) także modułowi
+`VildaGhPunkty`, z jednym licznikiem na okno. Nowe w atrapie: opcja `krokZegara` (0 — zegar stoi) i
+`zaladujModulPunktow()` (moduł wczytany później, z tym samym zegarem). `idDeterministyczne(k)` ma teraz postać
+z `noweId()`. Dawną postać opisuje `idDawneMonitora(k)`: tak nadaje id zamrożony monitor sprzed API i monitor z bazy
+złotej siatki. Wyrocznia `tests/fixtures/gh-monitor-przed-api.js.txt` i wzorzec `tests/fixtures/gh-punkty-wzorzec.json`
+są bez zmian.
+- `tests/unit/gh-nowe-id-monitor.test.mjs` (nowy): oba miejsca w artefakcie; delegacja (id punktu = wynik `noweId()`
+  w tej chwili); stojący zegar z punktami z karty i wstecznymi na przemian; kontrola negatywna z dawnym wzorem. Trzy
+  pierwsze przypadki są czerwone na monitorze 59.
+- `gh-punkty-monitor-tryby.test.mjs`: porównanie z monitorem sprzed API zamienia id k-tego punktu
+  (`idDeterministyczne(k)` → `idDawneMonitora(k)`, to samo k, także w tekście pamięci modułu). Zrzut z id dawnej postaci
+  jest błędem. W sekwencjach wywołań API dochodzi `noweId` (karta: przed `zapisz`; wsteczny: przed `punkt`).
+- Złota siatka (`tests/scripts/gh-punkty-wzorzec.mjs`, `gh-punkty-siatka.test.mjs`): znacznik `#nowe-id` zastępuje tylko
+  postać id właściwą dla przebiegu (`'api'` — drzewo robocze, `'monitor'` — baza wzorca i wyrocznia). Trzy nowe kontrole
+  negatywne (własne id monitora w karcie, we wstecznym, `noweId` z innym startem) wywracają porównanie tylko na swoich
+  ścieżkach. `node tests/scripts/gh-punkty-wzorzec.mjs` → „wzorzec = wynik monitora z 3855858”.
+- `gh-monitor-atrapa.test.mjs`, `gh-punkty-charakterystyka-monitor.test.mjs`, `gh-punkty-uszkodzone.test.mjs`: kod testów
+  bez zmian, oczekiwane id z `idDeterministyczne(k)`.
+- `gh-punkty-api-roznicowy.test.mjs`: id zapasowe przy odmowie to `idDawneMonitora(0)`, bo porównanie idzie na monitorze
+  sprzed API.
+
+**Wersje.** `gh_therapy_monitor.js` `?v=59` → `?v=60` (`docpro.html`, wpis precache), `SW_VERSION` jak w P-GH-NOWE-ID
+(1.1.331) — `npm run podbij-wersje` względem `audyt` `3b6a530`. Po scaleniu P-GH-NOWE-ID numery liczy się od nowa
+(`docs/GITHUB_WORKFLOW.md`, „Kilka wątków naraz”).
+
+**Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Zmiana stoi na P-GH-NOWE-ID i wchodzi po nim.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 

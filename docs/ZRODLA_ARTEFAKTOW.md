@@ -441,6 +441,18 @@ function edycjaAktualna() {                     // (Gea) wołane w D() i przy za
 // Gek() — koniec edycji:                           x = null; Gep = null; odciskEdycji = null;
 ```
 
+## Łatka P-GH-NOWE-ID-MONITOR (`gh_therapy_monitor.js` 59 → 60, 2026-10-21)
+
+Id nowego punktu z `VildaGhPunkty.noweId()` (P-GH-NOWE-ID) zamiast własnego wzoru monitora, w obu miejscach tworzenia punktu. Zmiana wprost w artefakcie, miejsca mają komentarz `P-GH-NOWE-ID-MONITOR`. `A` (w artefakcie `Gpk`) to moduł z bramki `apiPunktow()` (`Gpa`), sprawdzonej wcześniej w obu miejscach. Opis działania: `docs/clinical/ALGORITHMS.md`, P-GH-NOWE-ID-MONITOR. Łatkę nakłada się na wersję 59.
+
+```js
+// He(typ) — nowy punkt z karty, rekord u (reszta rekordu bez zmian):
+const u = { id: A.noweId(), type: typ, /* … */ };              // było: id: String(Date.now() + Math.random())
+
+// ghAddRetroPoint — po polaZPodawanej(…, 'wsteczny'):
+window.ghTherapyPoints.push(A.punkt(A.noweId(), w.pola));      // było: A.punkt(String(Date.now() + Math.random()), w.pola)
+```
+
 ## Łatka P-GH-SESJA-LISTA (`vilda_data_import_export.js` 98 → 99, 2026-10-06)
 
 Zmiana wprost w artefakcie, w czytelnej postaci do przeniesienia do lokalnego źródła. W `saveMainSessionNow` (w artefakcie `oe`), zaraz po bloku scalania z poprzednią sesją (`Et`, P-SESJA-OBCA) i przed `writeMainSession`. Nazwy z artefaktu: `r` — okno, `i` — adapter `VildaPersistence`, `n` — zapisywana sesja, `l` — log połkniętego błędu. Opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.
