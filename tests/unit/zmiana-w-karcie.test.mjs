@@ -475,9 +475,9 @@ describe('strażniki źródła P-ZMIANA-W-KARCIE', () => {
     expect(src).toContain('const w = await Bkz_usunJesliBezZmian(patientId, id, nagrobki[i]);');
     expect(src).toContain('return Bzw_usunWersje(patientId, snapshotId, zmianaISO);');
     expect(src).toContain('lastSavedAtISO:Bkz_pozniejsza(c.lastSavedAtISO,a.savedAtISO,Bkz_z)');
-    expect(src).toContain('lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,l)');
+    expect(src).toContain('lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,Bpp_z)'); // P-POZNIEJSZA-POPRAWKA: stempel zmiany
     expect(src).toContain('    lastSavedAtISO: Bkz_pozniejsza(rekord.lastSavedAtISO, glowa.savedAtISO, zmianaISO),');
-    expect(src).toContain('    await Bkz_przebudujNaglowek(patientId, teraz);');
+    expect(src).toContain('    await Bkz_przebudujNaglowek(patientId, zmiana);'); // P-POZNIEJSZA-POPRAWKA: stempel przywrócenia
     expect(src).toContain('const zmiany = Bsw_bezNowych(Bpu_rek, lokalne.length, F.lastSavedAtISO);');
     expect(src).not.toContain('lastSavedAtISO: glowa.savedAtISO,');
     expect(src).not.toContain('lastSavedAtISO:y?p.lastSavedAtISO||d:l');

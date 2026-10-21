@@ -363,9 +363,10 @@ async function Bmk_zmien(uid, zmiana, opcje) {
  * zapisu karty (lastSavedAtISO) nigdy nie maleje, takze przy nowej wizycie (savePatient). Kazda zmiana w karcie bez
  * nowej wersji (poprawka, usuniecie wiersza, przypiecie, korekta nazwiska, kosz, „Przywroc”) podnosi ja do chwili
  * tej zmiany, a odbiorca bierze pozniejsza z dwoch (Bsw_bezNowych). Nagrobek pacjenta przegrywa wiec z pozniejsza
- * zmiana w karcie jak z nowa wizyta. Kosz trzyma nowsza z dwoch tresci zapisu (Bkz_nowszaWersja: wyzsza rev, przy
- * rownej pozniejsza chwila zmiany), wiec urzadzenia maja ten sam nagrobek w kazdej kolejnosci — takze gdy trzecie
- * urzadzenie przycielo te wersje retencja, nie znajac poprawki ani kosza.
+ * zmiana w karcie jak z nowa wizyta. Kosz trzyma nowsza z dwoch tresci zapisu (Bkz_nowszaWersja: pozniejsza chwila
+ * zmiany, przy rownej wyzsza rev — od P-POZNIEJSZA-POPRAWKA ta sama regula co dla wersji tej samej karty), wiec
+ * urzadzenia maja ten sam nagrobek w kazdej kolejnosci — takze gdy trzecie urzadzenie przycielo te wersje retencja,
+ * nie znajac poprawki ani kosza.
  *
  * deleteSnapshot usuwa bez nagrobka, tylko na tym urzadzeniu — synchronizacja przywraca wersje (D-8 A,
  * P-USUN-WERSJE-LOKALNIE). Zaden ekran go nie wola (straznik tests/unit/usun-wersje-lokalnie.test.mjs); kosz
@@ -451,14 +452,16 @@ function Bkz_czysc(lista, terazMs) {
   return { lista: wynik, zmiana: zmiana };
 }
 
-// P-KOSZ-NOWSZA-TRESC (D-6 B): x opisuje nowsza wersje tego zapisu niz y — regula wersji tej samej karty
-// (Bsl_scalPacjenta): wyzsza rev, przy rownej pozniejsza chwila zmiany. Pelny remis: ta sama wersja (false).
+// P-POZNIEJSZA-POPRAWKA (decyzja wlasciciela D-7 wariant 2, 2026-10-21): x opisuje nowsza wersje tego zapisu niz y.
+// Jedna regula dla wersji tej samej karty (Bsl_scalPacjenta), tresci kosza (P-KOSZ-NOWSZA-TRESC, D-6 B) i „Przywroc”
+// (Bkz_przywroc): wygrywa pozniejsza chwila zmiany (updatedAtISO, a bez niej savedAtISO — Bkz_zmiana) niezaleznie od
+// rev; przy rownej chwili wyzsza rev (ta sama tresc, rev liczy przeniesienia „Scal pacjentow”). Pelny remis: false
+// (zostaje tutejsza). Dotad: najpierw rev, wiec dwie wczesniejsze poprawki bily jedna pozniejsza. Wlasciciela wersji
+// wspolnej dwom kartom ta regula nie wybiera (Bsw_nowszyRekord: najpierw rev, celowo).
 function Bkz_nowszaWersja(x, y) {
-  const rx = mt(x), ry = mt(y);
-  if (rx !== ry) return rx > ry;
-  const zx = typeof x.updatedAtISO === 'string' ? x.updatedAtISO : '';
-  const zy = typeof y.updatedAtISO === 'string' ? y.updatedAtISO : '';
-  return !!zx && zx > zy;
+  const zx = Bkz_zmiana(x), zy = Bkz_zmiana(y);
+  if (zx !== zy) return zx > zy;
+  return mt(x) > mt(y);
 }
 // Nagrobek e z trescia wersji s (szyfr): tresc razem z jej wersja (rev, chwila zmiany, chwila zapisu); chwila
 // usuniecia, karta, numer kolejny — z nagrobka (numer z wersji, gdy nagrobek go nie ma).
@@ -489,6 +492,20 @@ function Bkz_chwilaRetencji(e) {
 function Bkz_ostatnie(e) { return Bkz_pozniejsza(e.deletedAtISO, e.przycietoISO); }
 // Chwila zmiany wersji (albo wersji opisanej w nagrobku).
 function Bkz_zmiana(x) { return (typeof x.updatedAtISO === 'string' && x.updatedAtISO) || x.savedAtISO || ''; }
+// P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): chwila zmiany wersji zmienianej w miejscu (poprawka, gwiazdka, „Przywroc”,
+// import z kosza) — „teraz”, ale zawsze pozniej niz chwile, ktore ta zmiana zna (poprawiana wersja, przy „Przywroc”
+// i imporcie takze tresc i usuniecie z kosza). Zegar spozniony dostaje chwile o 1 ms + losowo 0–999 ms pozniejsza:
+// dwa takie urzadzenia nie daja wtedy tej samej chwili i rev (pelnego remisu z inna trescia). To nie korekta zegara
+// (D13), tylko porzadek przyczynowy: poprawka zrobiona na znanej wersji wygrywa z nia takze przy rozjezdzie zegarow.
+// Ten sam wzor co nagrobek notatki (deletedAtISO = max(teraz, updatedAtISO kasowanej wersji), G13).
+function Bpp_chwilaZmiany() {
+  const t = new Date().toISOString();
+  let p = '';
+  for (let i = 0; i < arguments.length; i += 1) { const a = arguments[i]; if (typeof a === 'string' && a > p) p = a; }
+  if (!p || t > p) return t;
+  const ms = Date.parse(p);
+  return Number.isFinite(ms) ? new Date(ms + 1 + Math.floor(Math.random() * 1000)).toISOString() : t;
+}
 // Najpozniejsza zmiana wersji, jaka zna nagrobek: z opisu wersji albo z pola zmianaISO. zmianaISO niesie chwile
 // zmiany wersji pokonanej przez przyciecie, gdy opis nagrobka jej nie pokazuje. Opisu wersji w samym nagrobku retencji
 // nie przepisujemy: starsze aplikacje porownuja go z trescia kosza i zdjelyby wazny wpis kosza.
@@ -504,11 +521,9 @@ function Bkz_zeZmiana(e, zn) {
 // usunieciu (zapis przywrocono, zmieniono i usunieto albo przycieto ponownie) — ta sama regula co w Bkz_wygrywa: liczy
 // sie chwila, nie rev. Poprawka zrobiona przed usunieciem na innym urzadzeniu nie czyni kosza nieaktualnym.
 function Bkz_nieaktualny(s, p) { return Bkz_znanaZmiana(p) > (Bkz_chwilaKosza(s) || ''); }
-// Opis wersji przy remisie chwil usuniecia: z tego z dwoch, ktory zna pozniejsza zmiane (przy remisie nowsza wersje),
-// zeby wynik nie zalezal od tego, ktory nagrobek jest lokalny.
+// Opis wersji przy remisie chwil usuniecia: z tego z dwoch, ktory opisuje nowsza wersje (pozniejsza zmiana, przy
+// remisie wyzsza rev), zeby wynik nie zalezal od tego, ktory nagrobek jest lokalny. Pelny remis: a.
 function Bkz_opisPozniejszy(a, c) {
-  const za = Bkz_zmiana(a), zc = Bkz_zmiana(c);
-  if (za !== zc) return za > zc ? a : c;
   return Bkz_nowszaWersja(c, a) ? c : a;
 }
 // true = nagrobek wygrywa z wersja zmieniona w chwili zmiana (przypieta: czy przypieta).
@@ -552,6 +567,7 @@ function Bkz_dolacz(mapa, e) {
   if (zrodlo || (kosz && (!ret || kosz >= ret || !koszNieaktualny))) {
     // Wpis kosza (z trescia albo bez, gdy tresc wygasla): chwila kosza, a pozniejsze przyciecie osobno.
     wynik = zrodlo ? Bkz_zTresci(nowszy, zrodlo, zrodlo.payloadCipher) : Bkz_zOpisem(nowszy, zWersja);
+    if (zrodlo) wynik.rev = Math.max(mt(nowszy), mt(starszy)); // P-REV-MAX (PD-7 b): rev tresci kosza = wyzsza z pary
     delete wynik.powod;
     delete wynik.przycietoISO;
     wynik.deletedAtISO = kosz || ret;
@@ -775,10 +791,13 @@ async function Bkz_doKosza(patientId, snapshotId, opcje) {
     if (!tresc) throw Bkz_blad('Tego zapisu nie da się odczytać — nie trafi do kosza.', 'nieczytelny');
     const przypiety = !!tresc._pinned;
     if (przypiety && op.odepnij !== true) throw Bkz_blad('Ten zapis jest przypięty.', 'przypiety');
+    // P-POZNIEJSZA-POPRAWKA (przeglad D-7): usuniecie pozniej niz usuwana wersja (Bpp_chwilaZmiany), jak poprawka —
+    // inaczej po poprawce z chwila z przyszlosci (zegar innego urzadzenia do przodu; stempel niesie ja dalej) kosz
+    // na dobrym zegarze przegrywal z wersja i wizyta wracala do karty na wszystkich urzadzeniach.
     const wpis = Object.assign({
       patientId: patientId,
       snapshotId: snapshotId,
-      deletedAtISO: new Date().toISOString(),
+      deletedAtISO: Bpp_chwilaZmiany(Bkz_zmiana(zapis)),
       savedAtISO: zapis.savedAtISO || null,
       rev: mt(zapis),
       updatedAtISO: typeof zapis.updatedAtISO === 'string' && zapis.updatedAtISO ? zapis.updatedAtISO : null,
@@ -848,9 +867,12 @@ async function Bkz_lista() {
 // w innej karcie. Drugie
 // „Przywroc” zapisywalo wtedy tresc z chwili usuniecia z rewizja usuniecia + 1 — poprawka pomiaru albo przypiecie
 // zrobione po pierwszym przywroceniu znikaly po cichu. Teraz: gdy wersja jest w karcie i zmieniono ja po usunieciu
-// (chwila zmiany pozniejsza niz usuniecie ALBO rewizja wyzsza niz w chwili usuniecia — rewizja nie zalezy od zegarow
-// urzadzen), tresci z kosza nie zapisujemy: zdejmujemy tylko ten nieaktualny wpis kosza (nie pozniejsze usuniecie)
-// i zwracamy { alreadyInCard: true }. W pozostalych przypadkach jak dotad, z rewizja wyzsza od obu.
+// (chwila zmiany pozniejsza niz usuniecie) ALBO jest nowsza niz tresc kosza (Bkz_nowszaWersja: pozniejsza chwila
+// zmiany, przy rownej wyzsza rev — P-POZNIEJSZA-POPRAWKA; dotad: rewizja wyzsza niz w chwili usuniecia), tresci
+// z kosza nie zapisujemy: zdejmujemy tylko ten nieaktualny wpis kosza (nie pozniejsze usuniecie) i zwracamy
+// { alreadyInCard: true }. W pozostalych przypadkach jak dotad, z rewizja wyzsza od obu; chwila zmiany przywrocenia
+// jest pozniejsza niz tresc kosza, wersja w karcie i usuniecie (Bpp_chwilaZmiany), takze przy zegarze spoznionym
+// wobec urzadzenia, ktore usunelo — inaczej nagrobek z innych urzadzen znow by z nia wygral.
 async function Bkz_przywroc(patientId, snapshotId) {
   if (!T()) throw Bkz_blad('Zaloguj się, by przywrócić zapis.', 'zablokowany');
   return Ap('pat:' + patientId, async function () {
@@ -862,22 +884,23 @@ async function Bkz_przywroc(patientId, snapshotId) {
     const obecna = (await I().listSnapshotsForUser(b, patientId)).find(function (x) { return x.snapshotId === snapshotId; });
     if (obecna) {
       const zmianaObecnej = (typeof obecna.updatedAtISO === 'string' && obecna.updatedAtISO) || obecna.savedAtISO || '';
-      if (e.deletedAtISO < zmianaObecnej || mt(obecna) > revUsuniecia) {
+      if (e.deletedAtISO < zmianaObecnej || Bkz_nowszaWersja(obecna, e)) {
         await Bkz_zmienListe([], [{ snapshotId: snapshotId, doISO: Bkz_ostatnie(e) }]);
         return { patientId: patientId, snapshotId: snapshotId, alreadyInCard: true };
       }
     }
     const teraz = new Date().toISOString();
+    const zmiana = Bpp_chwilaZmiany(Bkz_znanaZmiana(e), obecna ? Bkz_zmiana(obecna) : '', Bkz_ostatnie(e));
     await I().putSnapshotForUser(b, Object.assign(Bm1(e), {
       snapshotId: snapshotId,
       patientId: patientId,
       savedAtISO: e.savedAtISO || teraz,
       rev: Math.max(revUsuniecia, obecna ? mt(obecna) : 0) + 1,
-      updatedAtISO: teraz,
+      updatedAtISO: zmiana,
       payloadCipher: e.payloadCipher,
     }));
     await Bkz_zmienListe([], [snapshotId]);
-    await Bkz_przebudujNaglowek(patientId, teraz);
+    await Bkz_przebudujNaglowek(patientId, zmiana);
     Vn({ patientId: patientId, snapshotId: snapshotId, isSnapshotRestore: true, savedAtISO: e.savedAtISO || teraz });
     return { patientId: patientId, snapshotId: snapshotId };
   }, { timeoutMs: 3e4 });
@@ -982,6 +1005,9 @@ function Bkz_pomin(ctx, patientId, zapis) {
       const nowsze = ctx.Bkz_nowsze || (ctx.Bkz_nowsze = new Map());
       const byla = nowsze.get(zapis.snapshotId);
       if (!byla || Bkz_nowszaWersja(zapis, byla)) nowsze.set(zapis.snapshotId, zapis);
+    } else if (e.payloadCipher && mt(zapis) > mt(e)) {
+      // P-REV-MAX (PD-7 b): tresc nagrobka zostaje (pozniejsza), rev = wyzsza z pary.
+      ctx.mapa.set(zapis.snapshotId, Object.assign({}, e, { rev: mt(zapis) }));
     }
     return true;
   }
@@ -1036,7 +1062,11 @@ async function Bkz_scalKoniec(ctx, opcje) {
           if (!retencja && e.deletedAtISO >= granicaKosza && (!e.payloadCipher || Bkz_nowszaWersja(lokalna, e))) {
             // P-KOSZ-NOWSZA-TRESC (D-6 B): tresc i wersja z wersji lokalnej (nowszej niz tresc nagrobka).
             const z = Bkz_zTresci(e, lokalna, lokalna.payloadCipher);
+            z.rev = Math.max(mt(lokalna), mt(e)); // P-REV-MAX (PD-7 b)
             ctx.mapa.set(e.snapshotId, z);
+          } else if (!retencja && e.payloadCipher && e.deletedAtISO >= granicaKosza && mt(lokalna) > mt(e)) {
+            // P-REV-MAX (PD-7 b): tresc nagrobka (pozniejsza) zostaje, rev = wyzsza z pary.
+            ctx.mapa.set(e.snapshotId, Object.assign({}, e, { rev: mt(lokalna) }));
           } else if (retencja) {
             // Wersje pokonalo samo przyciecie: jak w Bkz_pomin (P-KOSZ-RETENCJA-PO-KOSZU).
             const zn = Bkz_pozniejsza(Bkz_znanaZmiana(e), zmiana);
@@ -1059,8 +1089,15 @@ async function Bkz_scalKoniec(ctx, opcje) {
     for (const [id, s] of ctx.Bkz_nowsze) {
       const e = ctx.mapa.get(id);
       if (!e || e.powod === 'retencja' || e.deletedAtISO < granicaKosza) continue;
-      if (e.payloadCipher && !Bkz_nowszaWersja(s, e)) continue;
-      try { ctx.mapa.set(id, Bkz_zTresci(e, s, await V(s.payload))); } catch { /* zostaje tresc nagrobka */ }
+      if (e.payloadCipher && !Bkz_nowszaWersja(s, e)) {
+        if (mt(s) > mt(e)) ctx.mapa.set(id, Object.assign({}, e, { rev: mt(s) })); // P-REV-MAX (PD-7 b)
+        continue;
+      }
+      try {
+        const z = Bkz_zTresci(e, s, await V(s.payload));
+        z.rev = Math.max(mt(s), mt(e)); // P-REV-MAX (PD-7 b)
+        ctx.mapa.set(id, z);
+      } catch { /* zostaje tresc nagrobka */ }
     }
   }
   const przegrane = Array.from(ctx.nadpisane).map(function (id) {
@@ -1083,11 +1120,12 @@ async function Bkz_poImporcie(snapshotIds) {
     if (!ids.size) return 0;
     const trafione = (await Bkz_czytaj()).filter(function (e) { return ids.has(e.snapshotId); });
     if (!trafione.length) return 0;
-    const teraz = new Date().toISOString();
     for (let i = 0; i < trafione.length; i += 1) {
       const e = trafione[i];
       const wersja = (await I().listSnapshotsForUser(b, e.patientId)).find(function (s) { return s.snapshotId === e.snapshotId; });
-      if (wersja) await I().putSnapshotForUser(b, Object.assign(Bm1(wersja), wersja, { rev: mt(wersja) + 1, updatedAtISO: teraz }));
+      // P-POZNIEJSZA-POPRAWKA: chwila zmiany pozniejsza niz wersja, tresc i usuniecie z kosza (Bpp_chwilaZmiany).
+      const zmiana = wersja && Bpp_chwilaZmiany(wersja.updatedAtISO, wersja.savedAtISO, Bkz_znanaZmiana(e), Bkz_ostatnie(e));
+      if (wersja) await I().putSnapshotForUser(b, Object.assign(Bm1(wersja), wersja, { rev: mt(wersja) + 1, updatedAtISO: zmiana }));
     }
     await Bkz_zmienListe([], trafione.map(function (e) { return e.snapshotId; }));
     return trafione.length;
@@ -1144,6 +1182,9 @@ async function Bkz_przytnij(patientId, opcje) {
     const sa = new Set(wersje.map(function (s) { return s.snapshotId; }));
     if (!zostaja.every(function (id) { return sa.has(id); })) return { prunedCount: 0, prunedIds: [], skipped: 'plan-nieaktualny' };
     const teraz = new Date().toISOString();
+    // P-POZNIEJSZA-POPRAWKA (przeglad D-7): przyciecie pozniej niz przycinana wersja, gdy ta ma chwile z przyszlosci —
+    // jak usuniecie do kosza; zwykle wszystkie nagrobki jednej retencji maja te sama chwile „teraz”.
+    const Bpp_t = function (s) { const z = Bkz_zmiana(s); return z > teraz ? Bpp_chwilaZmiany(z) : teraz; };
     const nagrobki = [];
     doUsuniecia.forEach(function (id) {
       const s = wersje.find(function (x) { return x.snapshotId === id; });
@@ -1151,7 +1192,7 @@ async function Bkz_przytnij(patientId, opcje) {
       nagrobki.push(Object.assign({
         patientId: patientId,
         snapshotId: id,
-        deletedAtISO: teraz,
+        deletedAtISO: Bpp_t(s),
         savedAtISO: s.savedAtISO || null,
         rev: mt(s),
         updatedAtISO: typeof s.updatedAtISO === 'string' && s.updatedAtISO ? s.updatedAtISO : null,
@@ -1299,7 +1340,8 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  * Teraz:
  *   - „Scal pacjentow” podbija rev przeniesionych wersji (rev = rewizja rekordu, jak przy imporcie z kosza);
  *   - wersja z ladunku lezaca tu pod inna istniejaca karta: o wlascicielu decyduje nowszy rekord (rev, przy rownym rev
- *     pozniejsza chwila zmiany — jak dla wersji tej samej karty; pelny remis — mniejszy patientId, zeby oba urzadzenia
+ *     pozniejsza chwila zmiany — celowo inaczej niz dla wersji tej samej karty, ktora od P-POZNIEJSZA-POPRAWKA liczy
+ *     najpierw chwile, bo tu rev niesie przeniesienia; pelny remis — mniejszy patientId, zeby oba urzadzenia
  *     wybraly te sama karte). Wyjatek: karta, ktora w tym scalaniu przegrywa z nagrobkiem (zbior N w Le), zaraz
  *     zniknie — jej wersje przechodza zawsze (inaczej zwykle scalenie gubiloby wersje X), z nowsza trescia;
  *   - tresc wersji wspolnej dwom kartom: pozniejsza chwila zmiany (Bsw_nowszaTresc), niezaleznie od tego, ktora karta
@@ -1369,9 +1411,11 @@ async function Bsw_deltaNagrobka(patientId, ladunek) {
 
 function Bsw_zmiana(x) { return x && typeof x.updatedAtISO === 'string' ? x.updatedAtISO : ''; }
 
-// Rekord z ladunku (S) nowszy niz tutejszy (g)? Ta sama regula co dla wersji tej samej karty: najpierw rev (zmiana
-// tresci albo przeniesienie w „Scal pacjentow”), przy rownym rev pozniejsza chwila zmiany; przy remisie zostaje
-// tutejszy. Rozstrzyga o wlascicielu wersji wspolnej dwom kartom (Bsw_ladunekWygrywa).
+// Rekord z ladunku (S) nowszy niz tutejszy (g)? Najpierw rev (zmiana tresci albo przeniesienie w „Scal pacjentow”),
+// przy rownym rev pozniejsza chwila zmiany; przy remisie zostaje tutejszy. Rozstrzyga o wlascicielu wersji wspolnej
+// dwom kartom (Bsw_ladunekWygrywa), nie o tresci. Celowo inaczej niz dla wersji tej samej karty (P-POZNIEJSZA-
+// POPRAWKA, Bkz_nowszaWersja: najpierw chwila): rev + 1 z „Scal pacjentow” jest jedynym znakiem nowszego przypisania,
+// a chwil zmiany scalenie nie rusza.
 function Bsw_nowszyRekord(S, g) {
   const rz = mt(S), rl = mt(g);
   return rz !== rl ? rz > rl : Bsw_zmiana(S) > Bsw_zmiana(g);
@@ -1382,8 +1426,10 @@ function Bsw_nowszyRekord(S, g) {
 // „Scal pacjentow” podbija rev bez zmiany tresci i chwili zmiany, wiec po dwoch scaleniach X -> Y -> Z wersja z dawna
 // trescia (rev 2) wygrywala regula „najpierw rev” z pozniejsza poprawka, przypieciem albo edycja wiersza tej wersji
 // w starej karcie na urzadzeniu, ktore o scaleniach nie wiedzialo (rev 1) — zmiana ginela na wszystkich urzadzeniach.
-// Chwili zmiany scalenie nie rusza, wiec ona mowi, ktora tresc jest pozniejsza. Wersje tej samej karty — bez zmian
-// (Bsl_scalPacjenta: najpierw rev).
+// Chwili zmiany scalenie nie rusza, wiec ona mowi, ktora tresc jest pozniejsza. Ta sama os co dla wersji tej samej
+// karty od P-POZNIEJSZA-POPRAWKA (Bkz_nowszaWersja), ale bez savedAtISO w miejsce brakujacej chwili zmiany: Bsw_rekord
+// laczy tresc i chwile zmiany jednej strony z chwila zapisu drugiej, wiec zwyciezca bez updatedAtISO moglby dac
+// rekord, ktory przegrywa potem regula tej samej karty.
 function Bsw_nowszaTresc(S, g) {
   const zz = Bsw_zmiana(S), zl = Bsw_zmiana(g);
   return zz !== zl ? zz > zl : mt(S) > mt(g);
@@ -1468,9 +1514,10 @@ async function Bsw_decyzja(ctx, F, S) {
 // w zadnej decyzji scalania, wiec obie strony koncza z ta sama (strona, ktora wygrala przypisanie, jest ta sama na obu
 // urzadzeniach). Rewizja wyniku = wyzsza z dwoch: wynik wygrywa wtedy z kazdym z nich regula wersji tej samej karty
 // (rev nie nizsza, a chwila zmiany tresci — najpozniejsza), wiec rozchodzi sie takze na urzadzenia, na ktorych ta
-// wersja lezy juz pod karta `cel`. Bez +1: rev, ktora rosnie bez zmiany tresci, wygrywa potem regula „najpierw rev”
+// wersja lezy juz pod karta `cel`. Bez +1: rev, ktora rosnie bez zmiany tresci, wygrywala regula „najpierw rev”
 // z pozniejsza poprawka tej samej wersji w tej samej karcie (fuzz roznicowy do dd21d11: wariant z +1 gubil tak
-// poprawki, ktore zostawaly na dd21d11). Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
+// poprawki, ktore zostawaly na dd21d11). Od P-POZNIEJSZA-POPRAWKA ta karta liczy najpierw chwile, ale +1 dalej
+// szkodzi: starsze aplikacje i regula wlasciciela (Bsw_nowszyRekord) licza najpierw rev. Numer kolejny (Bm1) dokleja wolajacy, jak przy Bsl_wersjaZLadunku.
 function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
   const r = Bsl_wersjaZLadunku(cel, S, szyfr, teraz);
   if (!g) return r;
@@ -1553,16 +1600,29 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         Bng_j.set(S.snapshotId, Bng_jawna(S));
         if (ids.has(S.snapshotId)) {
           const g = lokalne.find(function (q) { return q && q.snapshotId === S.snapshotId; });
-          const revZdalna = mt(S), revLokalna = mt(g);
-          const zmianaZdalna = S && typeof S.updatedAtISO === 'string' ? S.updatedAtISO : '';
-          const zmianaLokalna = g && typeof g.updatedAtISO === 'string' ? g.updatedAtISO : '';
-          if (!(revZdalna > revLokalna || revZdalna === revLokalna && !!zmianaZdalna && zmianaZdalna > zmianaLokalna)) {
+          // P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): wygrywa pozniejsza poprawka (Bkz_nowszaWersja), a nie wyzsza rev.
+          // Zapis niesie tresc i chwile zmiany zwyciezcy, bez wymyslania chwili: kopia bez updatedAtISO dostawala tu
+          // „teraz” i bila potem kazda wczesniejsza prawdziwa poprawke.
+          // P-REV-MAX (PD-6 c, PD-7 b): rev wersji po scaleniu = wyzsza z dwoch, niezaleznie od tego, ktora tresc
+          // wygrala — tak jak w starszych aplikacjach („najpierw rev”), ktore zawsze zostaja przy wyzszej rev. rev na
+          // kazdym urzadzeniu floty mieszanej jest wtedy taka sama jak we flocie samych starszych, wiec starsza
+          // aplikacja nie przyjmie po rev wczesniejszej tresci zamiast swojej pozniejszej poprawki (S10: przy rev
+          // zdalnej ginela). Bez +1: rev liczy poprawki i przeniesienia „Scal pacjentow”, nie scalenia.
+          if (!Bkz_nowszaWersja(S, g)) {
             w.pominiete += 1;
+            if (mt(S) > mt(g)) {
+              // Tutejsza tresc wygrywa chwila, zdalna ma wyzsza rev: tutejszy rekord dostaje rev zdalna (tresc, chwile
+              // i numer kolejny bez zmian); dalej liczone jako pominiete. D-3 A: rekord do Bng_zap, a jawna tresc zdalna
+              // (Bng_jawna(S), teraz z ta sama rev) wymieniona na „bez tresci jawnej” — przy tej samej chwili (np. obie
+              // bez updatedAtISO) naglowek wzialby ja bez odszyfrowania.
+              await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, { rev: mt(S) }, Bm1(g, S)), null, g.payloadCipher));
+            }
             continue;
           }
+          const zmianaZdalna = typeof S.updatedAtISO === 'string' && S.updatedAtISO ? S.updatedAtISO : null;
           const zapis = {
             snapshotId: S.snapshotId, patientId: F.patientId, savedAtISO: S.savedAtISO || g && g.savedAtISO || teraz,
-            rev: revZdalna, updatedAtISO: zmianaZdalna || teraz, payloadCipher: szyfry[k],
+            rev: Math.max(mt(S), mt(g)), updatedAtISO: zmianaZdalna, payloadCipher: szyfry[k],
           };
           await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(zapis, Bm1(g, S)), S.payload || {}, szyfry[k]));
           w.zmienione += 1;
@@ -2497,7 +2557,7 @@ async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje) {
     return usunieta;
   }, opcje);
 }
-function yr(t,e){const n=t&&t.savedAtISO||"",r=e&&e.savedAtISO||"";if(n>r)return-1;if(n<r)return 1;const o=t&&t.updatedAtISO||"",a=e&&e.updatedAtISO||"";if(o>a)return-1;if(o<a)return 1;const s=t&&typeof t.rev=="number"?t.rev:0,i=e&&typeof e.rev=="number"?e.rev:0;if(s!==i)return i-s;const Bm2=t&&typeof t.seq=="number"&&isFinite(t.seq)?t.seq:null,Bm3=e&&typeof e.seq=="number"&&isFinite(e.seq)?e.seq:null;if(Bm2!==null&&Bm3!==null&&Bm2!==Bm3)return Bm3-Bm2;const c=t&&t.snapshotId||"",l=e&&e.snapshotId||"";return c>l?-1:c<l?1:0}async function ct(t){if(!T())throw new Error("Zaloguj si\u0119, by pobra\u0107 pacjenta.");const e=await I().getPatientForUser(b,t);if(!e)return null;const n=await G(e.headerCipher.iv,e.headerCipher.data),r=await I().listSnapshotsForUser(b,t),o=[];for(let a=0;a<r.length;a+=1){const s=r[a];let i=null;try{i=await G(s.payloadCipher.iv,s.payloadCipher.data)}catch{i=null}o.push(Object.assign({snapshotId:s.snapshotId,savedAtISO:s.savedAtISO,updatedAtISO:s.updatedAtISO||s.savedAtISO||null,rev:typeof s.rev=="number"?s.rev:0,payload:i,pinned:!!(i&&i._pinned)},Bm1(s)))}return Bzu_zapamietaj(e.patientId,o.map(function(Bzu_s){return Bzu_s.snapshotId})),o.sort(yr),{patientId:e.patientId,header:n,snapshots:o,createdAtISO:e.createdAtISO,lastSavedAtISO:e.lastSavedAtISO,snapshotCount:e.snapshotCount||o.length}}async function hr(t){const e=await ct(t);return!e||!e.snapshots.length?null:e.snapshots[0]}async function ro(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by przywr\xF3ci\u0107 wersj\u0119.");if(typeof t!="string"||!t)throw new Error("restoreSnapshotAsNew: brak patientId.");if(typeof e!="string"||!e)throw new Error("restoreSnapshotAsNew: brak snapshotId.");const r=await ct(t);if(!r)throw new Error("restoreSnapshotAsNew: nie znaleziono pacjenta.");const o=r.snapshots.filter(function(i){return i.snapshotId===e})[0];if(!o||!o.payload)throw new Error("restoreSnapshotAsNew: nie znaleziono wersji lub brak danych.");const a=JSON.parse(JSON.stringify(o.payload));try{a.advanced&&a.advanced.data&&Array.isArray(a.advanced.data.measurements)&&(a.advanced.data.measurements=a.advanced.data.measurements.filter(function(i){return!(i&&i.ghSync===!0)}))}catch{}"_pinned"in a&&delete a._pinned,a._restoredFrom={snapshotId:e,savedAtISO:o.savedAtISO};const s=await _e(a,{patientId:t,skipAdvancedAntiClobber:!0,dedup:!1,_restore:!0});return{patientId:s.patientId,newSnapshotId:s.snapshotId,restoredFromSnapshotId:e,restoredFromISO:o.savedAtISO,savedAtISO:s.savedAtISO,snapshotCount:s.snapshotCount}}async function Bzw_przypnij(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by zmieni\u0107 przypi\u0119cie wersji.");if(typeof t!="string"||!t)throw new Error("setSnapshotPinned: brak patientId.");if(typeof e!="string"||!e)throw new Error("setSnapshotPinned: brak snapshotId.");const r=n!==!1,o=await ct(t);if(!o)throw new Error("setSnapshotPinned: nie znaleziono pacjenta.");const a=o.snapshots.filter(function(c){return c.snapshotId===e})[0];if(!a||!a.payload)throw new Error("setSnapshotPinned: nie znaleziono wersji lub brak danych.");if(!!(a.payload&&a.payload._pinned)===r)return{patientId:t,snapshotId:e,pinned:r};const i=JSON.parse(JSON.stringify(a.payload));return r?i._pinned=!0:"_pinned"in i&&delete i._pinned,await Bzw_aktualizujWersje(t,e,i,{preserveSavedAt:!0}),{patientId:t,snapshotId:e,pinned:r}}/* P-RETENCJA-NAGROBKI: retencja z nagrobkiem, pod blokada pacjenta — czytelnie w Bkz_przytnij. */async function wr(t,e){return Bkz_przytnij(t,e)}function oo(t,e,n){if(!n&&typeof e=="number"&&e>=10){try{if(v&&v.localStorage&&v.localStorage.getItem("vildaRetention")==="0")return}catch{}v&&v.VildaRetention&&typeof v.VildaRetention.computeRetention=="function"&&Promise.resolve().then(function(){return wr(t)}).catch(function(r){try{typeof console<"u"&&console.warn&&console.warn("[vault] retention schedule",r)}catch{}})}}function mt(t){var e=t&&t.rev;return typeof e=="number"&&isFinite(e)&&e>=0?Math.floor(e):0}async function Bzw_aktualizujWersje(t,e,n,r){if(!T())throw new Error("Zaloguj si\u0119, by zaktualizowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateSnapshotPayload: brak patientId.");if(typeof e!="string"||!e)throw new Error("updateSnapshotPayload: brak snapshotId.");if(!n||typeof n!="object")throw new Error("updateSnapshotPayload: brak payloadu.");if(n.user&&typeof n.user=="object"){const h=ut(n.user.dobISO);h?n.user.dobISO=h:"dobISO"in n.user&&delete n.user.dobISO}const o=await I().listSnapshotsForUser(b,t),a=o.find(function(h){return h.snapshotId===e});if(!a){if(!await I().getPatientForUser(b,t)){const Bzu_e=await Bzu_odmowa(t,[e],null);if(Bzu_e)throw Bzu_e}throw new Error("updateSnapshotPayload: snapshot "+e+" nie istnieje dla pacjenta.")}const s=Nn(n);if(!s.name)throw new Error("updateSnapshotPayload: brak imienia pacjenta w payloadzie.");const i=await V(n),l=new Date().toISOString(),y=!!(r&&r.preserveSavedAt),d=y&&a.savedAtISO||l;await I().putSnapshotForUser(b,Object.assign({snapshotId:e,patientId:t,savedAtISO:d,rev:mt(a)+1,updatedAtISO:l,payloadCipher:i},Bm1(a)));/* D-3 A (P-NAGLOWEK-NAJNOWSZEJ): naglowek z najnowszej wersji po zapisie, nie z poprawianej (starsza wersja, gwiazdka). */const p=await I().getPatientForUser(b,t),Bng_h=await Bzw_naglowek(o,a,{savedAtISO:d,rev:mt(a)+1,updatedAtISO:l,payloadCipher:i},n,p),c=Bng_h.szyfr;p&&await I().putPatientForUser(b,{patientId:t,headerCipher:c,createdAtISO:p.createdAtISO||l,lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,l),snapshotCount:p.snapshotCount||o.length});const w={patientId:t,snapshotId:e,header:Bng_h.jawny,savedAtISO:d,shortHash:cn(t),isUpdate:!0};/* P-ODTWORZ-WIEK-4: usuniecie biezacego pomiaru z awansem starszej wizyty - jawny znacznik dla formularza (vilda_baseline_pacjenta.js wpisuje wtedy cala wizyte; znacznik czasu po awansie bywa pusty). */r&&r.promoted&&(w.promoted=!0);return Vn(w),w}function tn(t){return t?typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?Math.round(t.ageMonths):typeof t.ageYears=="number"&&isFinite(t.ageYears)?Math.round(t.ageYears*12):null:null}function gr(t,e,n){var r=typeof t=="number"&&isFinite(t)?Math.round(t):null;return r+"|"+(typeof e=="number"&&isFinite(e)?e.toFixed(2):"_")+"|"+(typeof n=="number"&&isFinite(n)?n.toFixed(2):"_")}function Me(t){return gr(tn(t),t&&t.height,t&&t.weight)}function mr(t){if(!t)return null;var e=null;if(typeof t.age=="number"&&isFinite(t.age)){var n=typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?t.ageMonths:0;e=Math.round(t.age*12+n)}else typeof t.ageMonths=="number"&&isFinite(t.ageMonths)&&(e=Math.round(t.ageMonths));return e==null?null:gr(e,t.height,t.weight)}function Sr(t){var e=t&&t.advanced&&t.advanced.data;if(e&&Array.isArray(e.measurements)&&e.measurements.length)return e.measurements;var n=t&&t.growthBasic&&t.growthBasic.data;return n&&Array.isArray(n.measurements)&&n.measurements.length?n.measurements:e&&Array.isArray(e.measurements)?e.measurements:n&&Array.isArray(n.measurements)?n.measurements:null}function br(t){var e=[],n=t&&t.advanced&&t.advanced.data;n&&Array.isArray(n.measurements)&&e.push(n.measurements);var r=t&&t.growthBasic&&t.growthBasic.data;return r&&Array.isArray(r.measurements)&&e.push(r.measurements),e}function Ir(t){if(Array.isArray(t))for(var e=0;e<t.length;e+=1){var n=t[e];n&&typeof n=="object"&&!(typeof n.uid=="string"&&n.uid)&&(n.uid="m-"+ne())}}function Or(t,e){if(!Array.isArray(t)||!e)return-1;if(typeof e.uid=="string"&&e.uid){for(var n=0;n<t.length;n+=1)if(t[n]&&t[n].uid===e.uid)return n}if(typeof e.key=="string"&&e.key){for(var r=0;r<t.length;r+=1)if(t[r]&&Me(t[r])===e.key)return r}return-1}function vr(t,e){e!=null&&(t.age=Math.floor(e/12),t.ageMonths=e%12)}function Pr(t){var e=t&&t.advanced&&t.advanced.data,n=t&&t.user;if(!(!e||typeof e!="object"||!n)){var r=null;if(typeof n.age=="number"&&isFinite(n.age)){var o=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?n.ageMonths:0;r=Math.round(n.age*12+o)}else typeof n.ageMonths=="number"&&isFinite(n.ageMonths)&&(r=Math.round(n.ageMonths));r!=null?e.currentAgeMonths=r:delete e.currentAgeMonths,typeof n.height=="number"&&isFinite(n.height)&&n.height>0?e.currentHeight=n.height:delete e.currentHeight,typeof n.weight=="number"&&isFinite(n.weight)&&n.weight>0?e.currentWeight=n.weight:delete e.currentWeight}}async function Bzw_edytujPomiar(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by edytowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateMeasurementRow: brak patientId.");e=e||{},n=n||{};var r=await ct(t);if(!r||!Array.isArray(r.snapshots)||!r.snapshots.length){if(!r){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("updateMeasurementRow: brak pacjenta.")}for(var o=r.snapshots[0],a=o.payload||{},s=br(a),i=mr(a.user),c=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?Math.round(n.ageMonths):null,l=typeof n.height=="number"&&isFinite(n.height)?n.height:null,y=typeof n.weight=="number"&&isFinite(n.weight)?n.weight:null,d=null,p=0;p<s.length&&!d;p+=1){Ir(s[p]);var w=Or(s[p],e);w>=0&&(d=s[p][w])}var h=!!(i&&e.key===i&&!d);if(!d&&!h)throw new Error("updateMeasurementRow: nie znaleziono wiersza pomiaru.");for(var O=d?Me(d):i,u=d&&typeof d.uid=="string"&&d.uid?d.uid:null,f=h||!!(i&&O===i),m=0;m<s.length;m+=1)for(var E=s[m],_=0;_<E.length;_+=1){var A=E[_];A&&(u&&A.uid===u||Me(A)===O)&&(c!=null&&(A.ageMonths=c,A.ageYears=c/12),l!=null&&(A.height=l),y!=null&&(A.weight=y),typeof n.boneAgeYears=="number"&&isFinite(n.boneAgeYears)&&(A.boneAgeYears=n.boneAgeYears),typeof n.dateISO=="string"&&n.dateISO&&(A.dateISO=n.dateISO))}return f&&(a.user=a.user||{},Bzw_tygodnieKorekty(a.user,c),l!=null&&(a.user.height=l),y!=null&&(a.user.weight=y),c!=null&&vr(a.user,c),typeof n.dateISO=="string"&&n.dateISO&&(a.user.measuredAtISO=n.dateISO)),Pr(a),await Bzw_aktualizujWersje(t,o.snapshotId,a,{preserveSavedAt:!0}),{patientId:t,updated:!0,wasCurrent:f}}/* P-ODTWORZ-WIEK-2 (R0, przeglad adwersaryjny po #589): po usunieciu BIEZACEGO pomiaru w user awansuje najnowszy wiersz historii, ale data pomiaru (measuredAtISO), tygodnie (ageWeeks) i timestampISO zostawaly z USUNIETEJ wizyty. Formularz glowny zapisuje dzis measuredAtISO, wiec awansowana starsza wizyta dostawala falszywa "pewna" date: Karta "+ Nowy pomiar" wpisywala ja do historii, a "Odtworz zapis" liczyl na nia dokladny wiek. Kolejnosc: data wiersza (pisze ja Karta), potem starsza wersja rekordu, w ktorej ten pomiar byl biezacy (jej measuredAtISO, ageWeeks i timestampISO); bez zadnej z nich daty nie zgadujemy - pola znikaja. */function Bzw_dataAwansu(o,A,n){var u=o.user,k=Me(A),S=null,dz=function(x){return typeof x=="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x.trim())?ut(x.trim()):null};var W=n&&Array.isArray(n.snapshots)?n.snapshots:[];for(var i=1;i<W.length&&!S;i+=1){var p=W[i]&&W[i].payload;p&&p.user&&typeof p.user=="object"&&mr(p.user)===k&&(S=p)}var d=dz(A.dateISO),sd=S?dz(S.user.measuredAtISO):null,m=d||sd,zgodna=!!S&&(!d||d===sd);m?u.measuredAtISO=m:delete u.measuredAtISO;zgodna&&S.user.ageWeeks!=null?u.ageWeeks=S.user.ageWeeks:delete u.ageWeeks;zgodna&&typeof S.timestampISO=="string"&&S.timestampISO?o.timestampISO=S.timestampISO:m?o.timestampISO=m+"T12:00:00.000Z":delete o.timestampISO}/* P-ODTWORZ-WIEK-2: korekta WIEKU biezacego pomiaru w Karcie uniewaznia zapisane tygodnie (dotad zostawaly stare i przeslanialy poprawiony wiek). Porownanie z poprzednia liczba miesiecy rekordu - okno Karty podaje ageMonths i dateISO zawsze, takze przy korekcie samej masy (uwaga Codex w #592). Sama data tygodni nie rusza: bez daty urodzenia to jedyny dokladny wiek pomiaru, a z data urodzenia i pewna doba modul daty i tak liczy tygodnie z kalendarza. */function Bzw_tygodnieKorekty(u,c){if(c==null)return;var p=typeof u.age=="number"&&isFinite(u.age)?Math.round(u.age*12+(typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?u.ageMonths:0)):typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?Math.round(u.ageMonths):null;p!==c&&delete u.ageWeeks}async function Bzw_usunPomiar(t,e){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteMeasurementRow: brak patientId.");e=e||{};var n=await ct(t);if(!n||!Array.isArray(n.snapshots)||!n.snapshots.length){if(!n){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("deleteMeasurementRow: brak pacjenta.")}for(var r=n.snapshots[0],o=r.payload||{},a=br(o),s=mr(o.user),i=null,c=0;c<a.length&&!i;c+=1){Ir(a[c]);var l=Or(a[c],e);l>=0&&(i=a[c][l])}var y=!!(s&&e.key===s&&!i);if(!i&&!y)throw new Error("deleteMeasurementRow: nie znaleziono wiersza pomiaru.");var d=i?Me(i):s,p=i&&typeof i.uid=="string"&&i.uid?i.uid:null,w=y||!!(s&&d===s);if(y){var h=Sr(o);if(!h||!h.length)throw new Error('To jedyny pomiar pacjenta \u2014 nie mo\u017Cna go usun\u0105\u0107. U\u017Cyj \u201EEdytuj", aby poprawi\u0107 warto\u015Bci, albo usu\u0144 ca\u0142ego pacjenta.')}for(var O=0;O<a.length;O+=1)for(var u=a[O],f=u.length-1;f>=0;f-=1){var m=u[f];m&&(p&&m.uid===p||Me(m)===d)&&u.splice(f,1)}var E=Sr(o),_=E?E.length:0;if(w&&_){var A=E.slice().sort(function(N,C){return(tn(C)||0)-(tn(N)||0)})[0];A&&(o.user=o.user||{},typeof A.height=="number"&&(o.user.height=A.height),typeof A.weight=="number"&&(o.user.weight=A.weight),vr(o.user,tn(A)),Bzw_dataAwansu(o,A,n))}return Pr(o),await Bzw_aktualizujWersje(t,r.snapshotId,o,{preserveSavedAt:!0,promoted:!!(w&&_)}),{patientId:t,deleted:!0,wasCurrent:w,remaining:_}}async function Bzw_usunWersje(t,e,Bkz_z){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteSnapshot: brak patientId.");if(typeof e!="string"||!e)throw new Error("deleteSnapshot: brak snapshotId.");const n=await I().listSnapshotsForUser(b,t);if(!n.find(function(l){return l.snapshotId===e}))throw new Error("deleteSnapshot: snapshot "+e+" nie istnieje dla pacjenta.");if(n.length<=1)throw new Error("deleteSnapshot: nie mo\u017Cna usun\u0105\u0107 ostatniego snapshota pacjenta \u2014 u\u017Cyj removePatient.");await I().removeSnapshotForUser(b,e);const o=await I().listSnapshotsForUser(b,t);if(o.length===0){try{await Bpu_usun(t)}catch{}return{patientId:t,snapshotId:e,remainingSnapshotCount:0}}o.sort(yr);const a=o[0];let s=null;try{s=await G(a.payloadCipher.iv,a.payloadCipher.data)}catch{s=null}const i=Bng_zTresci(s,a),c=await I().getPatientForUser(b,t);if(c){const l=i?await V(i):c.headerCipher;await I().putPatientForUser(b,{patientId:t,headerCipher:l,createdAtISO:c.createdAtISO,lastSavedAtISO:Bkz_pozniejsza(c.lastSavedAtISO,a.savedAtISO,Bkz_z),snapshotCount:o.length})}return Vn({patientId:t,snapshotId:null,isSnapshotDelete:!0,remainingSnapshotCount:o.length,savedAtISO:a.savedAtISO}),{patientId:t,snapshotId:e,remainingSnapshotCount:o.length}}/* P-BLOKADA-USUWANIE (zlecenie wlasciciela 2026-10-06, przeglad „co dalej po #518”, punkt 4: A1, A2, A11, A13).
+function yr(t,e){const n=t&&t.savedAtISO||"",r=e&&e.savedAtISO||"";if(n>r)return-1;if(n<r)return 1;const o=t&&t.updatedAtISO||"",a=e&&e.updatedAtISO||"";if(o>a)return-1;if(o<a)return 1;const s=t&&typeof t.rev=="number"?t.rev:0,i=e&&typeof e.rev=="number"?e.rev:0;if(s!==i)return i-s;const Bm2=t&&typeof t.seq=="number"&&isFinite(t.seq)?t.seq:null,Bm3=e&&typeof e.seq=="number"&&isFinite(e.seq)?e.seq:null;if(Bm2!==null&&Bm3!==null&&Bm2!==Bm3)return Bm3-Bm2;const c=t&&t.snapshotId||"",l=e&&e.snapshotId||"";return c>l?-1:c<l?1:0}async function ct(t){if(!T())throw new Error("Zaloguj si\u0119, by pobra\u0107 pacjenta.");const e=await I().getPatientForUser(b,t);if(!e)return null;const n=await G(e.headerCipher.iv,e.headerCipher.data),r=await I().listSnapshotsForUser(b,t),o=[];for(let a=0;a<r.length;a+=1){const s=r[a];let i=null;try{i=await G(s.payloadCipher.iv,s.payloadCipher.data)}catch{i=null}o.push(Object.assign({snapshotId:s.snapshotId,savedAtISO:s.savedAtISO,updatedAtISO:s.updatedAtISO||s.savedAtISO||null,rev:typeof s.rev=="number"?s.rev:0,payload:i,pinned:!!(i&&i._pinned)},Bm1(s)))}return Bzu_zapamietaj(e.patientId,o.map(function(Bzu_s){return Bzu_s.snapshotId})),o.sort(yr),{patientId:e.patientId,header:n,snapshots:o,createdAtISO:e.createdAtISO,lastSavedAtISO:e.lastSavedAtISO,snapshotCount:e.snapshotCount||o.length}}async function hr(t){const e=await ct(t);return!e||!e.snapshots.length?null:e.snapshots[0]}async function ro(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by przywr\xF3ci\u0107 wersj\u0119.");if(typeof t!="string"||!t)throw new Error("restoreSnapshotAsNew: brak patientId.");if(typeof e!="string"||!e)throw new Error("restoreSnapshotAsNew: brak snapshotId.");const r=await ct(t);if(!r)throw new Error("restoreSnapshotAsNew: nie znaleziono pacjenta.");const o=r.snapshots.filter(function(i){return i.snapshotId===e})[0];if(!o||!o.payload)throw new Error("restoreSnapshotAsNew: nie znaleziono wersji lub brak danych.");const a=JSON.parse(JSON.stringify(o.payload));try{a.advanced&&a.advanced.data&&Array.isArray(a.advanced.data.measurements)&&(a.advanced.data.measurements=a.advanced.data.measurements.filter(function(i){return!(i&&i.ghSync===!0)}))}catch{}"_pinned"in a&&delete a._pinned,a._restoredFrom={snapshotId:e,savedAtISO:o.savedAtISO};const s=await _e(a,{patientId:t,skipAdvancedAntiClobber:!0,dedup:!1,_restore:!0});return{patientId:s.patientId,newSnapshotId:s.snapshotId,restoredFromSnapshotId:e,restoredFromISO:o.savedAtISO,savedAtISO:s.savedAtISO,snapshotCount:s.snapshotCount}}async function Bzw_przypnij(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by zmieni\u0107 przypi\u0119cie wersji.");if(typeof t!="string"||!t)throw new Error("setSnapshotPinned: brak patientId.");if(typeof e!="string"||!e)throw new Error("setSnapshotPinned: brak snapshotId.");const r=n!==!1,o=await ct(t);if(!o)throw new Error("setSnapshotPinned: nie znaleziono pacjenta.");const a=o.snapshots.filter(function(c){return c.snapshotId===e})[0];if(!a||!a.payload)throw new Error("setSnapshotPinned: nie znaleziono wersji lub brak danych.");if(!!(a.payload&&a.payload._pinned)===r)return{patientId:t,snapshotId:e,pinned:r};const i=JSON.parse(JSON.stringify(a.payload));return r?i._pinned=!0:"_pinned"in i&&delete i._pinned,await Bzw_aktualizujWersje(t,e,i,{preserveSavedAt:!0}),{patientId:t,snapshotId:e,pinned:r}}/* P-RETENCJA-NAGROBKI: retencja z nagrobkiem, pod blokada pacjenta — czytelnie w Bkz_przytnij. */async function wr(t,e){return Bkz_przytnij(t,e)}function oo(t,e,n){if(!n&&typeof e=="number"&&e>=10){try{if(v&&v.localStorage&&v.localStorage.getItem("vildaRetention")==="0")return}catch{}v&&v.VildaRetention&&typeof v.VildaRetention.computeRetention=="function"&&Promise.resolve().then(function(){return wr(t)}).catch(function(r){try{typeof console<"u"&&console.warn&&console.warn("[vault] retention schedule",r)}catch{}})}}function mt(t){var e=t&&t.rev;return typeof e=="number"&&isFinite(e)&&e>=0?Math.floor(e):0}async function Bzw_aktualizujWersje(t,e,n,r){if(!T())throw new Error("Zaloguj si\u0119, by zaktualizowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateSnapshotPayload: brak patientId.");if(typeof e!="string"||!e)throw new Error("updateSnapshotPayload: brak snapshotId.");if(!n||typeof n!="object")throw new Error("updateSnapshotPayload: brak payloadu.");if(n.user&&typeof n.user=="object"){const h=ut(n.user.dobISO);h?n.user.dobISO=h:"dobISO"in n.user&&delete n.user.dobISO}const o=await I().listSnapshotsForUser(b,t),a=o.find(function(h){return h.snapshotId===e});if(!a){if(!await I().getPatientForUser(b,t)){const Bzu_e=await Bzu_odmowa(t,[e],null);if(Bzu_e)throw Bzu_e}throw new Error("updateSnapshotPayload: snapshot "+e+" nie istnieje dla pacjenta.")}const s=Nn(n);if(!s.name)throw new Error("updateSnapshotPayload: brak imienia pacjenta w payloadzie.");const i=await V(n),l=new Date().toISOString(),y=!!(r&&r.preserveSavedAt),d=y&&a.savedAtISO||l,Bpp_z=Bpp_chwilaZmiany(a.updatedAtISO,a.savedAtISO);await I().putSnapshotForUser(b,Object.assign({snapshotId:e,patientId:t,savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},Bm1(a)));/* P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): chwila zmiany (updatedAtISO, lastSavedAtISO karty) pozniejsza niz poprawiana wersja takze przy zegarze spoznionym (Bpp_chwilaZmiany); savedAtISO bez preserveSavedAt = teraz, jak dotad. */ /* D-3 A (P-NAGLOWEK-NAJNOWSZEJ): naglowek z najnowszej wersji po zapisie, nie z poprawianej (starsza wersja, gwiazdka). */const p=await I().getPatientForUser(b,t),Bng_h=await Bzw_naglowek(o,a,{savedAtISO:d,rev:mt(a)+1,updatedAtISO:Bpp_z,payloadCipher:i},n,p),c=Bng_h.szyfr;p&&await I().putPatientForUser(b,{patientId:t,headerCipher:c,createdAtISO:p.createdAtISO||l,lastSavedAtISO:Bkz_pozniejsza(p.lastSavedAtISO,Bpp_z),snapshotCount:p.snapshotCount||o.length});const w={patientId:t,snapshotId:e,header:Bng_h.jawny,savedAtISO:d,shortHash:cn(t),isUpdate:!0};/* P-ODTWORZ-WIEK-4: usuniecie biezacego pomiaru z awansem starszej wizyty - jawny znacznik dla formularza (vilda_baseline_pacjenta.js wpisuje wtedy cala wizyte; znacznik czasu po awansie bywa pusty). */r&&r.promoted&&(w.promoted=!0);return Vn(w),w}function tn(t){return t?typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?Math.round(t.ageMonths):typeof t.ageYears=="number"&&isFinite(t.ageYears)?Math.round(t.ageYears*12):null:null}function gr(t,e,n){var r=typeof t=="number"&&isFinite(t)?Math.round(t):null;return r+"|"+(typeof e=="number"&&isFinite(e)?e.toFixed(2):"_")+"|"+(typeof n=="number"&&isFinite(n)?n.toFixed(2):"_")}function Me(t){return gr(tn(t),t&&t.height,t&&t.weight)}function mr(t){if(!t)return null;var e=null;if(typeof t.age=="number"&&isFinite(t.age)){var n=typeof t.ageMonths=="number"&&isFinite(t.ageMonths)?t.ageMonths:0;e=Math.round(t.age*12+n)}else typeof t.ageMonths=="number"&&isFinite(t.ageMonths)&&(e=Math.round(t.ageMonths));return e==null?null:gr(e,t.height,t.weight)}function Sr(t){var e=t&&t.advanced&&t.advanced.data;if(e&&Array.isArray(e.measurements)&&e.measurements.length)return e.measurements;var n=t&&t.growthBasic&&t.growthBasic.data;return n&&Array.isArray(n.measurements)&&n.measurements.length?n.measurements:e&&Array.isArray(e.measurements)?e.measurements:n&&Array.isArray(n.measurements)?n.measurements:null}function br(t){var e=[],n=t&&t.advanced&&t.advanced.data;n&&Array.isArray(n.measurements)&&e.push(n.measurements);var r=t&&t.growthBasic&&t.growthBasic.data;return r&&Array.isArray(r.measurements)&&e.push(r.measurements),e}function Ir(t){if(Array.isArray(t))for(var e=0;e<t.length;e+=1){var n=t[e];n&&typeof n=="object"&&!(typeof n.uid=="string"&&n.uid)&&(n.uid="m-"+ne())}}function Or(t,e){if(!Array.isArray(t)||!e)return-1;if(typeof e.uid=="string"&&e.uid){for(var n=0;n<t.length;n+=1)if(t[n]&&t[n].uid===e.uid)return n}if(typeof e.key=="string"&&e.key){for(var r=0;r<t.length;r+=1)if(t[r]&&Me(t[r])===e.key)return r}return-1}function vr(t,e){e!=null&&(t.age=Math.floor(e/12),t.ageMonths=e%12)}function Pr(t){var e=t&&t.advanced&&t.advanced.data,n=t&&t.user;if(!(!e||typeof e!="object"||!n)){var r=null;if(typeof n.age=="number"&&isFinite(n.age)){var o=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?n.ageMonths:0;r=Math.round(n.age*12+o)}else typeof n.ageMonths=="number"&&isFinite(n.ageMonths)&&(r=Math.round(n.ageMonths));r!=null?e.currentAgeMonths=r:delete e.currentAgeMonths,typeof n.height=="number"&&isFinite(n.height)&&n.height>0?e.currentHeight=n.height:delete e.currentHeight,typeof n.weight=="number"&&isFinite(n.weight)&&n.weight>0?e.currentWeight=n.weight:delete e.currentWeight}}async function Bzw_edytujPomiar(t,e,n){if(!T())throw new Error("Zaloguj si\u0119, by edytowa\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("updateMeasurementRow: brak patientId.");e=e||{},n=n||{};var r=await ct(t);if(!r||!Array.isArray(r.snapshots)||!r.snapshots.length){if(!r){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("updateMeasurementRow: brak pacjenta.")}for(var o=r.snapshots[0],a=o.payload||{},s=br(a),i=mr(a.user),c=typeof n.ageMonths=="number"&&isFinite(n.ageMonths)?Math.round(n.ageMonths):null,l=typeof n.height=="number"&&isFinite(n.height)?n.height:null,y=typeof n.weight=="number"&&isFinite(n.weight)?n.weight:null,d=null,p=0;p<s.length&&!d;p+=1){Ir(s[p]);var w=Or(s[p],e);w>=0&&(d=s[p][w])}var h=!!(i&&e.key===i&&!d);if(!d&&!h)throw new Error("updateMeasurementRow: nie znaleziono wiersza pomiaru.");for(var O=d?Me(d):i,u=d&&typeof d.uid=="string"&&d.uid?d.uid:null,f=h||!!(i&&O===i),m=0;m<s.length;m+=1)for(var E=s[m],_=0;_<E.length;_+=1){var A=E[_];A&&(u&&A.uid===u||Me(A)===O)&&(c!=null&&(A.ageMonths=c,A.ageYears=c/12),l!=null&&(A.height=l),y!=null&&(A.weight=y),typeof n.boneAgeYears=="number"&&isFinite(n.boneAgeYears)&&(A.boneAgeYears=n.boneAgeYears),typeof n.dateISO=="string"&&n.dateISO&&(A.dateISO=n.dateISO))}return f&&(a.user=a.user||{},Bzw_tygodnieKorekty(a.user,c),l!=null&&(a.user.height=l),y!=null&&(a.user.weight=y),c!=null&&vr(a.user,c),typeof n.dateISO=="string"&&n.dateISO&&(a.user.measuredAtISO=n.dateISO)),Pr(a),await Bzw_aktualizujWersje(t,o.snapshotId,a,{preserveSavedAt:!0}),{patientId:t,updated:!0,wasCurrent:f}}/* P-ODTWORZ-WIEK-2 (R0, przeglad adwersaryjny po #589): po usunieciu BIEZACEGO pomiaru w user awansuje najnowszy wiersz historii, ale data pomiaru (measuredAtISO), tygodnie (ageWeeks) i timestampISO zostawaly z USUNIETEJ wizyty. Formularz glowny zapisuje dzis measuredAtISO, wiec awansowana starsza wizyta dostawala falszywa "pewna" date: Karta "+ Nowy pomiar" wpisywala ja do historii, a "Odtworz zapis" liczyl na nia dokladny wiek. Kolejnosc: data wiersza (pisze ja Karta), potem starsza wersja rekordu, w ktorej ten pomiar byl biezacy (jej measuredAtISO, ageWeeks i timestampISO); bez zadnej z nich daty nie zgadujemy - pola znikaja. */function Bzw_dataAwansu(o,A,n){var u=o.user,k=Me(A),S=null,dz=function(x){return typeof x=="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x.trim())?ut(x.trim()):null};var W=n&&Array.isArray(n.snapshots)?n.snapshots:[];for(var i=1;i<W.length&&!S;i+=1){var p=W[i]&&W[i].payload;p&&p.user&&typeof p.user=="object"&&mr(p.user)===k&&(S=p)}var d=dz(A.dateISO),sd=S?dz(S.user.measuredAtISO):null,m=d||sd,zgodna=!!S&&(!d||d===sd);m?u.measuredAtISO=m:delete u.measuredAtISO;zgodna&&S.user.ageWeeks!=null?u.ageWeeks=S.user.ageWeeks:delete u.ageWeeks;zgodna&&typeof S.timestampISO=="string"&&S.timestampISO?o.timestampISO=S.timestampISO:m?o.timestampISO=m+"T12:00:00.000Z":delete o.timestampISO}/* P-ODTWORZ-WIEK-2: korekta WIEKU biezacego pomiaru w Karcie uniewaznia zapisane tygodnie (dotad zostawaly stare i przeslanialy poprawiony wiek). Porownanie z poprzednia liczba miesiecy rekordu - okno Karty podaje ageMonths i dateISO zawsze, takze przy korekcie samej masy (uwaga Codex w #592). Sama data tygodni nie rusza: bez daty urodzenia to jedyny dokladny wiek pomiaru, a z data urodzenia i pewna doba modul daty i tak liczy tygodnie z kalendarza. */function Bzw_tygodnieKorekty(u,c){if(c==null)return;var p=typeof u.age=="number"&&isFinite(u.age)?Math.round(u.age*12+(typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?u.ageMonths:0)):typeof u.ageMonths=="number"&&isFinite(u.ageMonths)?Math.round(u.ageMonths):null;p!==c&&delete u.ageWeeks}async function Bzw_usunPomiar(t,e){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteMeasurementRow: brak patientId.");e=e||{};var n=await ct(t);if(!n||!Array.isArray(n.snapshots)||!n.snapshots.length){if(!n){const Bzu_e=await Bzu_odmowa(t,[],null);if(Bzu_e)throw Bzu_e}throw new Error("deleteMeasurementRow: brak pacjenta.")}for(var r=n.snapshots[0],o=r.payload||{},a=br(o),s=mr(o.user),i=null,c=0;c<a.length&&!i;c+=1){Ir(a[c]);var l=Or(a[c],e);l>=0&&(i=a[c][l])}var y=!!(s&&e.key===s&&!i);if(!i&&!y)throw new Error("deleteMeasurementRow: nie znaleziono wiersza pomiaru.");var d=i?Me(i):s,p=i&&typeof i.uid=="string"&&i.uid?i.uid:null,w=y||!!(s&&d===s);if(y){var h=Sr(o);if(!h||!h.length)throw new Error('To jedyny pomiar pacjenta \u2014 nie mo\u017Cna go usun\u0105\u0107. U\u017Cyj \u201EEdytuj", aby poprawi\u0107 warto\u015Bci, albo usu\u0144 ca\u0142ego pacjenta.')}for(var O=0;O<a.length;O+=1)for(var u=a[O],f=u.length-1;f>=0;f-=1){var m=u[f];m&&(p&&m.uid===p||Me(m)===d)&&u.splice(f,1)}var E=Sr(o),_=E?E.length:0;if(w&&_){var A=E.slice().sort(function(N,C){return(tn(C)||0)-(tn(N)||0)})[0];A&&(o.user=o.user||{},typeof A.height=="number"&&(o.user.height=A.height),typeof A.weight=="number"&&(o.user.weight=A.weight),vr(o.user,tn(A)),Bzw_dataAwansu(o,A,n))}return Pr(o),await Bzw_aktualizujWersje(t,r.snapshotId,o,{preserveSavedAt:!0,promoted:!!(w&&_)}),{patientId:t,deleted:!0,wasCurrent:w,remaining:_}}async function Bzw_usunWersje(t,e,Bkz_z){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pomiar.");if(typeof t!="string"||!t)throw new Error("deleteSnapshot: brak patientId.");if(typeof e!="string"||!e)throw new Error("deleteSnapshot: brak snapshotId.");const n=await I().listSnapshotsForUser(b,t);if(!n.find(function(l){return l.snapshotId===e}))throw new Error("deleteSnapshot: snapshot "+e+" nie istnieje dla pacjenta.");if(n.length<=1)throw new Error("deleteSnapshot: nie mo\u017Cna usun\u0105\u0107 ostatniego snapshota pacjenta \u2014 u\u017Cyj removePatient.");await I().removeSnapshotForUser(b,e);const o=await I().listSnapshotsForUser(b,t);if(o.length===0){try{await Bpu_usun(t)}catch{}return{patientId:t,snapshotId:e,remainingSnapshotCount:0}}o.sort(yr);const a=o[0];let s=null;try{s=await G(a.payloadCipher.iv,a.payloadCipher.data)}catch{s=null}const i=Bng_zTresci(s,a),c=await I().getPatientForUser(b,t);if(c){const l=i?await V(i):c.headerCipher;await I().putPatientForUser(b,{patientId:t,headerCipher:l,createdAtISO:c.createdAtISO,lastSavedAtISO:Bkz_pozniejsza(c.lastSavedAtISO,a.savedAtISO,Bkz_z),snapshotCount:o.length})}return Vn({patientId:t,snapshotId:null,isSnapshotDelete:!0,remainingSnapshotCount:o.length,savedAtISO:a.savedAtISO}),{patientId:t,snapshotId:e,remainingSnapshotCount:o.length}}/* P-BLOKADA-USUWANIE (zlecenie wlasciciela 2026-10-06, przeglad „co dalej po #518”, punkt 4: A1, A2, A11, A13).
 * removePatient i mergePatients zmienialy rekord pacjenta bez blokady, ktora od P-ZAPISY-DWIE-KARTY biora zapis, kosz,
 * poprawki i scalanie synchronizacji. Kazda z tych operacji to „odczytaj -> zdecyduj -> zapisz” z await-ami:
 *   - usuniecie w trakcie zapisu tej karty w innej karcie zostawialo pusta karte bez wersji i bez nagrobka, a zapis

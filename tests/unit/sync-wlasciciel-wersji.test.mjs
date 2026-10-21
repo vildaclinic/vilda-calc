@@ -2329,7 +2329,7 @@ describe('P-SYNC-WLASCICIEL — treść, chwila zmiany i chwila zapisu wersji z 
   }, CZAS);
 });
 
-describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń (znane ograniczenie)', () => {
+describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń', () => {
   /* Fuzz różnicowy do tej poprawki (400 przebiegów, trzy urządzenia): pierwsza wersja poprawki dawała wynikowi
      rozstrzygnięcia między kartami rev o 1 wyższą niż obie (propozycja recenzenta), także gdy treść obu rekordów była
      ta sama (ta sama chwila zmiany). Rev rosła bez zmiany treści, a później regułą tej samej karty („najpierw rev”)
@@ -2358,14 +2358,13 @@ describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń (zna
     expect(wB && wB.rev, 'x1 wróciła pod X na B z rev 1 (wyższa z dwóch), nie 2').toBe(1);
   }, CZAS);
 
-  /* ZNANE OGRANICZENIE (do decyzji właściciela; przebieg 332 fuzzu). Pętla scaleń na dwóch urządzeniach: A scala X → Y;
-     B ma nowy zapis X (X zostaje), przyjmuje scalenie A (x1 pod Y, rev 1), a potem sam scala Y → X — x1 wraca pod X
-     z rev 2 bez zmiany treści. C (bez synchronizacji od początku) poprawia x1 w X (rev 1, najpóźniejsza zmiana). Obie
-     wersje leżą pod tą samą kartą, więc rozstrzyga reguła tej samej karty z audyt — najpierw rev: wygrywa rev 2 (dwa
-     przeniesienia), poprawka C ginie na B i C. Na audyt 2df41a8 przetrwała (scalenia nie podbijały rev). Na dd21d11 tak
-     samo jak teraz. Domknięcie wymaga osobnego licznika właściciela (zmiana formatu) albo reguły „późniejsza zmiana”
-     także w tej samej karcie (zmiana zwykłej synchronizacji) — test pilnuje opisanego zachowania. */
-  it('pętla scaleń X → Y (A) i Y → X (B), poprawka x1 w X na C: wygrywa rev 2 z przeniesień — znane ograniczenie', async () => {
+  /* Pętla scaleń na dwóch urządzeniach (przebieg 332 fuzzu): A scala X → Y; B ma nowy zapis X (X zostaje), przyjmuje
+     scalenie A (x1 pod Y, rev 1), a potem sam scala Y → X — x1 wraca pod X z rev 2 bez zmiany treści. C (bez
+     synchronizacji od początku) poprawia x1 w X (rev 1, najpóźniejsza zmiana). Obie wersje leżą pod tą samą kartą,
+     więc rozstrzyga reguła tej samej karty. Do P-POZNIEJSZA-POPRAWKA (D-7 wariant 2) liczyła najpierw rev: wygrywała
+     rev 2 (dwa przeniesienia) i poprawka C ginęła na B i C (60:120, „znane ograniczenie”). Teraz wygrywa późniejsza
+     zmiana: poprawka C zostaje na A, B i C, z rev 2 = wyższa z dwóch (P-REV-MAX, PD-6 c: jak starsze aplikacje). */
+  it('pętla scaleń X → Y (A) i Y → X (B), poprawka x1 w X na C: późniejsza poprawka wygrywa z rev 2 z przeniesień (D-7 wariant 2)', async () => {
     const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
     const X = await karta(A.v); await chwila(4);
     const Y = await karta(A.v);
@@ -2384,8 +2383,59 @@ describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń (zna
     await C.v.updateSnapshotPayload(X, x1, zapis([61]), { preserveSavedAt: true }); // C: rev 1, najpóźniejsza
     const pb = kopia(await B.v.exportSyncPayload()), pc = kopia(await C.v.exportSyncPayload());
     await B.v.mergeSyncPayload(pc); await C.v.mergeSyncPayload(pb);
-    expect(await trescWersji(B, X, x1)).toBe('60:120');
-    expect(await trescWersji(C, X, x1)).toBe('60:120');
+    expect(await trescWersji(B, X, x1), 'B przyjmuje późniejszą poprawkę C').toBe('61:120.5');
+    expect(await trescWersji(C, X, x1), 'C zostaje przy swojej poprawce').toBe('61:120.5');
+    expect((await B.baza.listSnapshotsForUser(B.uid, X)).find((s) => s.snapshotId === x1).rev, 'rev = wyższa z dwóch (P-REV-MAX), nie rev zdalna').toBe(2);
+    for (let i = 0; i < 3; i += 1) { await sync(A); await sync(B); await sync(C); }
+    for (const d of [A, B, C]) expect(await trescWersji(d, X, x1), `x1 na ${d.nazwa} po rundach`).toBe('61:120.5');
+    for (const d of [A, B, C]) expect((await d.baza.listSnapshotsForUser(d.uid, X)).find((s) => s.snapshotId === x1).rev, `rev x1 na ${d.nazwa} po rundach`).toBe(2);
+  }, CZAS);
+
+  /* T7 (D-7 wariant 2, kontrola): ta sama pętla bez poprawki na C. x1 pod X na B (rev 2 z dwóch przeniesień) i pod X
+     na C (rev 0) mają tę samą chwilę zmiany (scalenie jej nie rusza), więc decyduje rev: znacznik przeniesień rozchodzi
+     się w tej samej karcie jak dotąd, treść bez zmian. */
+  it('T7 pętla scaleń bez poprawki: równa chwila zmiany, decyduje rev — x1 na C dostaje rev 2, treść ta sama', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v);
+    const sync = chmura(); await sync(A); await sync(B); await sync(C);
+    const et = await etykiety(A, { X, Y });
+    const x1 = idPo(et, 'x1');
+    await chwila(5); await A.v.mergePatients(X, Y);
+    await chwila(5); await zapiszWersje(B, X, [60, 66, 72]);
+    await sync(A); await sync(B);
+    await chwila(5); await B.v.mergePatients(Y, X);
+    const pb = kopia(await B.v.exportSyncPayload()), pc = kopia(await C.v.exportSyncPayload());
+    await B.v.mergeSyncPayload(pc); await C.v.mergeSyncPayload(pb);
+    const naC = (await C.baza.listSnapshotsForUser(C.uid, X)).find((s) => s.snapshotId === x1);
+    expect(naC && naC.rev, 'C: znacznik przeniesień (rev 2)').toBe(2);
+    for (const d of [B, C]) expect(await trescWersji(d, X, x1), `x1 na ${d.nazwa}`).toBe('60:120');
+  }, CZAS);
+
+  /* T9 (D-7 wariant 2, znane ograniczenie, PD-10): ta sama pętla, ale C edytuje bieżący pomiar starej X (x2) w oknie
+     „Edytuj pomiar” — nowa chwila zapisu wersji (preserveSavedAt: false). Poprawka przetrwa (dotąd ginęła pod rev 2),
+     a jej chwila zapisu idzie z treścią, więc x2 zostaje bieżącą wersją scalonej X na A, B i C: dawna głowa X bez
+     wersji x3 i bez scalenia. Przy jednym scaleniu Y → X dzieje się tak już przed D-7. */
+  it('T9 pętla scaleń, C edytuje bieżący pomiar starej X (nowa chwila zapisu): poprawka przetrwa, x2 bieżącą wersją X na trzech', async () => {
+    const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+    const X = await karta(A.v); await chwila(4);
+    const Y = await karta(A.v);
+    const sync = chmura(); await sync(A); await sync(B); await sync(C);
+    const et = await etykiety(A, { X, Y });
+    const x2 = idPo(et, 'x2');
+    await chwila(5); await A.v.mergePatients(X, Y);
+    await chwila(5); await zapiszWersje(B, X, [60, 66, 72]);
+    await sync(A); await sync(B);
+    await chwila(5); await B.v.mergePatients(Y, X);
+    await chwila(5);
+    await C.v.updateSnapshotPayload(X, x2, zapis([60, 67]), { preserveSavedAt: false });
+    const pb = kopia(await B.v.exportSyncPayload()), pc = kopia(await C.v.exportSyncPayload());
+    await B.v.mergeSyncPayload(pc); await C.v.mergeSyncPayload(pb);
+    for (let i = 0; i < 3; i += 1) { await sync(A); await sync(B); await sync(C); }
+    for (const d of [A, B, C]) {
+      expect(await trescWersji(d, X, x2), `x2 na ${d.nazwa}: poprawka C`).toBe('60:120,67:123.5');
+      expect((await d.v.getLatestSnapshot(X)).snapshotId, `${d.nazwa}: bieżąca wersja X = x2`).toBe(x2);
+    }
   }, CZAS);
 });
 
@@ -2652,7 +2702,9 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     // D-3 A (P-NAGLOWEK-NAJNOWSZEJ): zapisany rekord trafia też do listy wersji po zapisie (Bng_dopisz) — nagłówek z najnowszej.
     expect(f).toContain("if (d.co !== 'nowa') continue;\n        await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k]));");
     expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k]));");
-    expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień').toHaveLength(3);
+    // P-REV-MAX: czwarty zapis to podniesienie rev wersji tej samej karty przy odrzuceniu (gałąź ids.has), nie wersja spod innej karty.
+    expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień (+1: podniesienie rev, P-REV-MAX)').toHaveLength(4);
+    expect(f).toContain('await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, { rev: mt(S) }, Bm1(g, S)), null, g.payloadCipher));');
     // faza przeniesień: 'zabierz' nie sprawdza rewizji z chwili decyzji, ale czyta wersję świeżo pod obiema blokadami
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
     expect(fp).toContain('const wersjeG = await I().listSnapshotsForUser(b, G);');
