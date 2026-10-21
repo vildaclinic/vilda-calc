@@ -15193,7 +15193,9 @@ przypadek na świeżej kopii modułu: format i start losowy, przyczyna (dawny wz
 nowych przypadków jest czerwonych na dawnym `noweId()`. Test „bez atrap” bez zmian. Dawny przypadek „format
 `String(Date.now() + Math.random())`” zastąpił przypadek nowego formatu.
 
-**Wersje.** `vilda_gh_punkty.js` `?v=`, wpis precache i `SW_VERSION` — `npm run podbij-wersje`.
+**Wersje.** `vilda_gh_punkty.js` `?v=5` → `?v=6` (`index.html`, `docpro.html`, wpis precache), `SW_VERSION` 1.1.330 →
+1.1.331 — `npm run podbij-wersje` względem `audyt` `3b6a530`; pin `?v=6` w `tests/e2e/gh-punkty-api-start.spec.mjs`
+ręcznie.
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Monitor GH (`gh_therapy_monitor.js`) nadal
 nadaje id punktom z karty i z formularza wstecznego własnym `String(Date.now()+Math.random())`. Jedno kliknięcie daje
