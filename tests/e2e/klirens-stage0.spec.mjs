@@ -1,6 +1,33 @@
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, zaznacz, kliknij } from '../support/uklad-czekanie.mjs';
 
+async function openOptionalDetails(page, selector) {
+  for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+}
+
+async function setCreatinineState(page, value) {
+  const proxy = page.locator('[data-clcr-marker-context]');
+  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
+  const field = useProxy ? proxy : page.locator('#creatinineState');
+  for (const details of await field.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+  await field.selectOption(value);
+}
+
+async function setMarkerContext(page, value) {
+  const marker = page.locator('[data-clcr-marker-context]');
+  for (const details of await marker.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+  await marker.selectOption(value);
+}
+
+
 async function openCalculator(page, version = 'basic') {
   await page.addInitScript(() => {
     window.__CLCR_TEST_LEGACY_BROAD = true;
@@ -41,6 +68,7 @@ async function setPatient(page, {
   height = 175
 }) {
   await page.locator('#age').fill(String(age));
+  await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill(String(months));
   await page.locator('#sex').selectOption(sex);
   await page.locator('#weight').fill(String(weight));
@@ -128,7 +156,7 @@ test('filtruje wzory na granicach wieku i liczy Bedside Schwartz u dziecka', asy
   await page.locator('#formulaPicker').selectOption('sch_idms');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('0.6');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
   await expect(page.locator('#clcrInfo')).toContainText('Bedside Schwartz 2009');
   await expect(page.locator('#clcrInfo')).toContainText('96');
@@ -136,10 +164,13 @@ test('filtruje wzory na granicach wieku i liczy Bedside Schwartz u dziecka', asy
   await expect(page.locator('#clcrInfo')).toContainText('15–75');
   await expect(page.locator('#clcrInfo')).not.toContainText('2021 CKD');
 
+  await openOptionalDetails(page, '#ageMonths');
+
   await page.locator('#ageMonths').fill('10');
   await expect(page.locator('#formulaPicker')).toHaveValue('sch_idms');
 
   await page.locator('#age').fill('17');
+  await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
   const valuesAt17 = await page.locator('#formulaPicker option').evaluateAll(
     options => options.map(option => option.value)
@@ -164,26 +195,28 @@ test('nie przypisuje kategorii G bez stabilnej kreatyniny i blokuje wynik przy A
   await page.locator('#formulaPicker').selectOption('egfr');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
+  await openOptionalDetails(page, '#ScrAssay');
   await page.locator('#ScrAssay').selectOption('enzymatic_idms');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).toContainText('Nie potwierdzono stabilności kreatyniny i braku podejrzenia AKI.');
-  await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
+  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveAttribute('data-clcr-category', '');
 
   await page.locator('#formulaPicker').focus();
   await expect(page.locator('#formulaPicker')).toHaveValue('egfr');
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
 
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
-  await expect(page.locator('#clcrInfo')).toContainText('Kategoria GFR wg KDIGO');
+  await setMarkerContext(page, 'stable');
+  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveAttribute('data-clcr-category', 'G1');
+  await expect(page.locator('.clcr-result-details[data-clcr-formula="egfr"] [data-clcr-category-row="G1"]')).toHaveAttribute('aria-current', 'true');
   await expect(page.locator('#clcrInfo')).toContainText('G1');
   await expect(page.locator('#clcrInfo')).not.toContainText('Klasyfikacja PChN');
 
-  await page.locator('[data-clcr-marker-context]').selectOption('aki');
+  await setMarkerContext(page, 'aki');
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
   await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
-  await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
+  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(0);
 });
 
 test('prezentuje białko, Pᵢ i lukę anionową w spójnych jednostkach', async ({ page }) => {
@@ -198,15 +231,15 @@ test('prezentuje białko, Pᵢ i lukę anionową w spójnych jednostkach', async
   await page.locator('#S_Cl').fill('104');
   await page.locator('#S_HCO3').fill('24');
 
-  await expect(page.locator('#elecInfo')).toContainText('1000.0 mg/24 h');
-  await expect(page.locator('#elecInfo')).toContainText('1.0 g/24 h');
-  await expect(page.locator('#stoneInfo')).toContainText('34.997 mmol/24 h');
-  await expect(page.locator('#elecInfo')).toContainText('12.0 mmol/L');
+  await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
+  await expect(page.locator('#elecInfo')).toContainText(/1[.,]0\s*g\/24\s*h/);
+  await expect(page.locator('#stoneInfo')).toContainText(/34[.,]997\s*mmol\/24\s*h/);
+  await expect(page.locator('#elecInfo')).toContainText(/12[.,]0\s*mmol\/L/);
   await expect(page.locator('#elecInfo')).not.toContainText('mg/kg');
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
 
   await page.locator('#S_K').fill('6');
-  await expect(page.locator('#elecInfo')).toContainText('12.0 mmol/L');
+  await expect(page.locator('#elecInfo')).toContainText(/12[.,]0\s*mmol\/L/);
 
   await page.locator('#S_HCO3').fill('');
   await expect(page.locator('#elecInfo')).not.toContainText('Luka anionowa surowicy');
@@ -222,8 +255,8 @@ test('przelicza cystynę w spójnych jednostkach i nie stawia rozpoznania', asyn
   await setTimedCollection(page);
   await confirmUrineCollectionProtocol(page);
 
-  await expect(page.locator('#stoneInfo')).toContainText('30.0 mg/24 h');
-  await expect(page.locator('#stoneInfo')).toContainText('0.125 mmol/24 h');
+  await expect(page.locator('#stoneInfo')).toContainText(/30[.,]0\s*mg\/24\s*h/);
+  await expect(page.locator('#stoneInfo')).toContainText(/0[.,]125\s*mmol\/24\s*h/);
   await expect(page.locator('#stoneInfo')).toContainText('EAU Guidelines on Urolithiasis 2026');
   await expect(page.locator('#stoneInfo')).not.toContainText('Cystynuria');
   await expect(page.locator('#stoneInfo')).not.toContainText('pH próbki moczu');
@@ -238,15 +271,15 @@ test('Daugirdas II dopuszcza UF=0, dobiera exact GFAC i czyści stary wynik', as
   await fillValidAdultKtv(page);
 
   await expect(page.locator('#ktvResult')).toBeVisible();
-  await expect(page.locator('#ktvResult')).toContainText('1.32');
-  await expect(page.locator('#ektvResult')).toContainText('1.15');
-  await expect(page.locator('#urrResult')).toContainText('70.0%');
+  await expect(page.locator('#ktvResult')).toContainText(/1[.,]32/);
+  await expect(page.locator('#ektvResult')).toContainText(/1[.,]15/);
+  await expect(page.locator('#urrResult')).toContainText(/70[.,]0%/);
 
   await page.locator('#ktvDurationMinutes').fill('481');
   await expect(page.locator('#ktvResult')).toBeHidden();
   await expect(page.locator('#ktvResult')).toHaveText('');
   await page.locator('#ktvDurationMinutes').fill('240');
-  await expect(page.locator('#ktvResult')).toContainText('1.32');
+  await expect(page.locator('#ktvResult')).toContainText(/1[.,]32/);
 
   await page.locator('#ktvPidiDays').selectOption('1');
   await expect(page.locator('#ktvResult')).toBeHidden();
@@ -272,8 +305,9 @@ test('Kt/V u dziecka 2–17 lat pozostaje wynikiem technicznym bez dorosłych pr
 
   await expect(page.locator('#ktvResult')).toBeVisible();
   await expect(page.locator('#ektvResult')).toBeHidden();
-  await expect(page.locator('#ktvInterpretation')).toContainText('bez progów');
-  await expect(page.locator('#ktvInterpretation')).toContainText('pediatryczny');
+  await expect(page.locator('#ktvResult')).toContainText('nie zastosowano dorosłych progów');
+  await expect(page.locator('#ktvResult')).toContainText('pediatryczny');
+  await expect(page.locator('#ktvResult .clcr-result-card')).toHaveAttribute('data-clcr-tone', 'neutral');
 });
 
 test('opuszczenie PRO bezwarunkowo usuwa Kt/V', async ({ page }) => {

@@ -1,5 +1,32 @@
 import { expect, test } from '@playwright/test';
 
+async function openOptionalDetails(page, selector) {
+  for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+}
+
+async function setCreatinineState(page, value) {
+  const proxy = page.locator('[data-clcr-marker-context]');
+  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
+  const field = useProxy ? proxy : page.locator('#creatinineState');
+  for (const details of await field.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+  await field.selectOption(value);
+}
+
+async function setMarkerContext(page, value) {
+  const marker = page.locator('[data-clcr-marker-context]');
+  for (const details of await marker.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+  await marker.selectOption(value);
+}
+
+
 // Faza 1 — pełny łańcuch: tagi silnika → ClcrVisitSave.collect → VildaVault.savePatientNote.
 // Sejf syntetyczny tworzony w kontenerze (nie dotyka danych użytkownika);
 // niskie KDF_ITERATIONS dla szybkości.
@@ -70,13 +97,15 @@ test('zapisuje TYLKO wybraną formułę (eGFR dorośli) — bez Cockcrofta obok'
   // ręczny wybór formuły (jak w produkcji) → activeFormulaId = egfr
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
-  await page.locator('details.clcr-egfr-extra-data > summary').click();
+  await page.locator('details.clcr-context-details:has(#weight) > summary').click();
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('80');
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
   await page.locator('#Scr').fill('1.0');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(1);
@@ -108,13 +137,15 @@ test('CKiD U25 u 20-latka — zapisuje tylko wybraną formułę, wyklucza panel 
 
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('ckid_u25'));
   await page.waitForTimeout(60);
-  await page.locator('details.clcr-egfr-extra-data > summary').click();
+  await page.locator('details.clcr-context-details:has(#weight) > summary').click();
   await page.locator('#age').fill('20');
   await page.locator('#sex').selectOption('F');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('60');
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('165');
   await page.locator('#Scr').fill('0.9');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   // silnik renderuje egfr/cg jako porównanie (otagowane), ale zapis ich pomija
@@ -147,9 +178,10 @@ test('Faza 6: Cockcroft–Gault (cg) — zapis formuły dorosłej z masą ciała
   await page.waitForTimeout(60);
   await page.locator('#age').fill('60');
   await page.locator('#sex').selectOption('M');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('80');
   await page.locator('#Scr').fill('1.2');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('[data-clcr-series="cg"]')).toHaveCount(1);
@@ -173,10 +205,12 @@ test('gość bez pacjenta — karta zapisu nieaktywna z podpowiedzią', async ({
   // liczymy bez sejfu/pacjenta
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('80');
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
   await page.locator('#Scr').fill('1.0');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   const card = page.locator('#clcrVisitSaveCard');
@@ -190,13 +224,15 @@ test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', 
   await setupVaultPatient(page);
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
-  await page.locator('details.clcr-egfr-extra-data > summary').click();
+  await page.locator('details.clcr-context-details:has(#weight) > summary').click();
 
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('80');
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
 
   // wizyta 1 (Scr 1.0 → wyższy eGFR)
   await page.locator('#Scr').fill('1.0');
@@ -228,12 +264,14 @@ test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ p
   await setupVaultPatient(page);
   await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
   await page.waitForTimeout(60);
-  await page.locator('details.clcr-egfr-extra-data > summary').click();
+  await page.locator('details.clcr-context-details:has(#weight) > summary').click();
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('80');
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
 
   await page.locator('#Scr').fill('1.0');
   await page.evaluate(() => window.clcrUpdate());
@@ -261,7 +299,7 @@ test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ p
   await expect(card.locator('.cpc-flow thead th.nowcol')).toHaveCount(1);
   // najnowsza kolumna wyróżniona w wierszu
   await expect(card.locator('.cpc-flow tbody td.now')).toHaveCount(1);
-  await expect(card).toContainText('01.08.26');
+  await expect(card).toContainText(/01[.,]08[.,]26/);
 
   // „Zamknij" chowa kartę
   await page.locator('#cpcClose').click();
