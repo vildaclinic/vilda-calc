@@ -15858,7 +15858,9 @@ Pliki pokrewne: te same 40 plików co po przeglądzie 1 oraz 18 kolejnych, któr
 `ustawienia-siatek-synchronizacja`, `usun-wersje-lokalnie`) — 58 plików, 1632 testy, każdy osobno, zielone bez zmian
 testów. `npm run lint`, `npm run test:syntax` (1113 plików), `npm run test:repo` (1748 plików) — zielone (na bazie
 `db0c2d50`). Przeniesione na `audyt` `346dd81a` (po P-POZNIEJSZA-POPRAWKA, #742): `vilda_vault.js` nałożony bez
-konfliktów, plik D-21 157 z 157. Wersje: `npm run podbij-wersje` względem `origin/audyt` `346dd81a`: `vilda_vault.js`
+konfliktów, plik D-21 157 z 157; `npm test`: polityka repozytorium (1756 plików), lint, składnia (1119 plików),
+412 plików testów, 10 280 z 10 280 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44. Wersje: `npm run podbij-wersje`
+względem `origin/audyt` `346dd81a`: `vilda_vault.js`
 223, `vilda_chrome.js` 168, `vilda_session_bridge.js` 92; SW 1.1.333 → 1.1.334.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
