@@ -5781,13 +5781,13 @@ Notatka PACJENTA powiązana z wizytą: przycisk `addVisitNoteBtnSidebar` w menu 
 
 ### P-NOTATKI rata 1 — integralność i prywatność notatek pacjenta (SW 1.0.985, 2026-09-18, decyzje właściciela D1–D6)
 
-**G2 — usunięcie pacjenta zabiera jego notatki (D1: tak).** `removePatient` (`_n`) kasował pacjenta i migawki, ale nie notatki: zostawały w IndexedDB na każdym urządzeniu i w chmurze, jechały w każdym pełnym pushu, były niewidoczne w Przypomnieniach i Terminarzu i wracały w komplecie przy ponownym zapisie pacjenta o tym samym `patientId` — mimo że okno potwierdzenia obiecuje usunięcie „wraz z całą historią pomiarów i notatek". Teraz `_n` przechodzi notatki tego pacjenta i kasuje każdą przez `removePatientNote` (nagrobek `max(teraz, updatedAtISO)`), więc kasowanie propaguje się na inne urządzenia. Notatki modułów (pseudopacjenci `__vilda_activity__`, `__vilda_external__`) są nietknięte, bo mają własny `patientId`.
+**G2 — usunięcie pacjenta zabiera jego notatki (D1: tak).** `removePatient` (`_n`) kasował pacjenta i migawki, ale nie notatki: zostawały w IndexedDB na każdym urządzeniu i w chmurze, jechały w każdym pełnym pushu, były niewidoczne w Przypomnieniach i Terminarzu i wracały w komplecie przy ponownym zapisie pacjenta o tym samym `patientId` — mimo że okno potwierdzenia obiecuje usunięcie „wraz z całą historią pomiarów i notatek". Teraz `_n` przechodzi notatki tego pacjenta i kasuje każdą przez `removePatientNote` (nagrobek `max(teraz, updatedAtISO)`), więc kasowanie propaguje się na inne urządzenia. Notatki modułów (pseudopacjenci `__vilda_activity__`, `__vilda_external__`) są nietknięte, bo mają własny `patientId`. *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: nagrobki notatek z „Usuń pacjenta” niosą pole `deletedWithPatient` {patientId, chwila usunięcia karty}; gdy karta przeżyje usunięcie na innym urządzeniu, notatki wracają razem z nią, a do tego czasu czekają przy karcie.)*
 
 **D2 — notatka nie trafia do usuniętego pacjenta.** `savePatientNote` odrzuca zapis, gdy `patientId` ma wygrywający nagrobek (usunięty tu albo na innym urządzeniu); pseudopacjenci modułów (`__vilda*`) są wyłączeni z reguły. Celowo **nie** odrzucamy zapisu dla samego „braku rekordu": notatka może powstać, zanim pacjent dojedzie synchronizacją.
 
 **G3 — re-import karty `.wiw` po usunięciu.** `importPatientFromEnvelope` (`ns`) nie kasował nagrobka pacjenta, więc własne scalanie usuwało go zaraz po imporcie albo przy pierwszym pobraniu (pomiar: `isNew:true, addedSnapshots:1`, a `listPatients()` puste). Import kasuje teraz nagrobek pacjenta (jak `savePatient`; *od P-ZAPIS-USUNIETEJ, 2026-10-08, `savePatient` z id karty usuniętej albo scalonej odmawia — nagrobek zdejmuje już tylko jawny import i synchronizacja*) **oraz nagrobki importowanych notatek** — bez tego drugiego kroku, po naprawie G2, wracał sam pacjent, bez wyników i zaleceń (zmierzone regresem `tests/e2e/klirens-faza6.spec.mjs`).
 
-**G6 — wskrzeszenie notatki nie cofa wersji (D3: nowsza treść wygrywa).** Ścieżka P5 („Zostaw notatkę") zapisywała wskrzeszoną notatkę z `rev:1`, a scalanie rozstrzyga najpierw po `rev` — dopisek z urządzenia wskrzeszającego przegrywał ze starszą edycją z innego urządzenia, bez błędu (pomiar: A `rev 3` wygrywało z wskrzeszeniem 40 ms późniejszym). Nagrobek notatki niesie teraz `rev` kasowanej wersji (**oba adaptery**, IndexedDB i pamięciowy, zapisywały dotąd tylko `{id, deletedAtISO}`), `savePatientNote` startuje przy wskrzeszeniu od tego `rev`, a scalanie przenosi najwyższy znany `rev` do nagrobka. Świadomie **nie** zmieniono reguły dla ładunku bez pola `rev` (podpunkt E7 audytu — sceptyk miał do niego zastrzeżenie; zostaje do raty 2).
+**G6 — wskrzeszenie notatki nie cofa wersji (D3: nowsza treść wygrywa).** Ścieżka P5 („Zostaw notatkę") zapisywała wskrzeszoną notatkę z `rev:1`, a scalanie rozstrzyga najpierw po `rev` — dopisek z urządzenia wskrzeszającego przegrywał ze starszą edycją z innego urządzenia, bez błędu (pomiar: A `rev 3` wygrywało z wskrzeszeniem 40 ms późniejszym). Nagrobek notatki niesie teraz `rev` kasowanej wersji (**oba adaptery**, IndexedDB i pamięciowy, zapisywały dotąd tylko `{id, deletedAtISO}`), `savePatientNote` startuje przy wskrzeszeniu od tego `rev`, a scalanie przenosi najwyższy znany `rev` do nagrobka. Świadomie **nie** zmieniono reguły dla ładunku bez pola `rev` (podpunkt E7 audytu — sceptyk miał do niego zastrzeżenie; zostaje do raty 2). *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: obok `rev` oba adaptery zachowują ważne pole `deletedWithPatient` osobną instrukcją; strzeżone napisy `rev` bez zmian; chwila nagrobka `max(teraz, updatedAtISO)` (G13) bez zmian, a uratowana notatka dostaje R + 1 ms + h z tym samym `rev`.)*
 
 **G12 — nieodszyfrowalna notatka zostaje na urządzeniu (D4: tak, jak w bibliotece).** `buildNoteDelta` (`cs`) i `exportSyncPayload` (`is`) mapowały notatkę przez `Ft`, który przy nieudanym odszyfrowaniu oddaje `{title:"(błąd odczytu)", body:""}` **z oryginalnym `rev`** — atrapa nadpisywała czytelną treść na drugim urządzeniu (zmierzone: „Dobra treść" → „(błąd odczytu)"). Biblioteka szablonów miała tę bramkę od 1.0.833 (`Qb0`); notatki pacjenta dostają ją teraz w obu miejscach.
 
@@ -9655,7 +9655,7 @@ Wyniki mogące się zmienić po 3a: oceny obwodów dzieci 1–24 mies. z zapisan
   - *Metoda kontroli:* trzy niezależne klastry (trwałość i synchronizacja; transakcyjność serii, partii i kasowania; silnik dat wraz z prezentacją i statystykami) przeszły wszystkie 20 znalezisk audytu bez opierania się na opisach PR 1–4 — każdy pomiar wykonany od zera na kodzie produkcyjnym. Tor sejfowy: prawdziwe `vilda_crypto.js` + `vilda_vault.js` ładowane do osobnych obiektów okna („dwa urządzenia"), adapter in-memory, synchronizacja wyłącznie przez `exportSyncPayload → mergeSyncPayload`, awarie wstrzykiwane w adapter. Tor przeglądarkowy: realna strona `terminarz.html` w Chromium z prawdziwym `VildaVault` i IndexedDB, siecią zewnętrzną zablokowaną i awariami wstrzykiwanymi jednorazową podmianą metody `window.VildaVault`. Tor czystych funkcji: `window.VildaTerminarz.__internals` plus baterie fuzz (m.in. 504 serie „co miesiąc", 648 kombinacji przesunięć miesięcznych, ~9 tys. pozycji kursora dla trzech skal slotu, pełna doba dla końca zdarzenia, symetria etykiet względnych dla 2–400 dni). Kontrast „przed" liczony na kodzie sprzed odpowiedniej naprawy (`f8357b4` dla sejfu, stan sprzed PR 3 dla modułu), a nie na opisie. Repozytorium było w trakcie kontroli nietknięte.
   - *Wynik:* 15 z 20 znalezisk naprawionych w pełni i potwierdzonych pomiarem; żadna z napraw PR 1–4 nie wprowadziła regresji (`npm test` 32 pliki, strażnicy e2e Terminarza zielone w obu przebiegach kontroli). Przy pięciu znaleziskach kontrola wykryła niedomknięte krawędzie — wszystkie pięć naprawiono w tym PR: (1) `removePatientNote` poza kolejką zapisów sejfu, (2) `mergeSyncPayload` piszący notatki z pominięciem tej kolejki, (3) cichy błąd sprzątania w `removeWaitlistList`, (4) gubiony komunikat o braku przypomnienia „Wynik" w partii z listy oczekujących, (5) porzucane usunięcie z „Cofnij" przy nawigacji w tej samej karcie. Format danych, kształt payloadu synchronizacji i publiczne API sejfu pozostają bez zmian — zmienia się wyłącznie kolejność i serializacja operacji oraz to, na jakiej wersji rekordu scalanie podejmuje decyzję. Weryfikacja samego PR 5 wykryła jedną regresję wprowadzoną przez tę naprawę (zamknięcie karty w oknie „Cofnij" przestało domykać usunięcie) — opisana niżej, zamknięta w tym samym PR i obłożona strażnikiem.
   - *Jedna kolejka dla wszystkich pisarzy notatki (z D9 i I1):* kolejka per id notatki (mapa oczekujących promes plus, gdy dostępne, Web Locks `vilda-note-<id>` z fallbackiem na samą mapę) obejmowała wyłącznie `savePatientNote`. Pomiar: gdy zapis wystartował pierwszy, a `removePatientNote` w trakcie, notatka była wskrzeszana w 10/10 prób, a zapis kasował przy okazji jej tombstone (`removePatientNoteTombstoneForUser`), więc usunięcie znikało również z `exportSyncPayload` i nie propagowało się na inne urządzenia; przy odwrotnym przeplocie było poprawnie, czyli wynik zależał wyłącznie od kolejności. Osobno `mergeSyncPayload` pisał i kasował notatki bezpośrednio przez adapter: decyzję o nadpisaniu podejmował na migawce listy notatek zrobionej na starcie fazy notatek, a zapisywał dziesiątki–setki ms później, więc lokalny zapis wstrzelony w to okno był nadpisywany starszą wersją zdalną (10/10), a scalenie niosące tombstone potrafiło skasować notatkę w trakcie jej zapisu (8/8, z trwałym cofnięciem usunięcia na wszystkich urządzeniach po syncu). Odtąd przez tę samą kolejkę idą wszyscy pisarze rekordu: `removePatientNote` (walidacja przed kolejką, żeby błędy „Zaloguj się…" i „brak id." leciały natychmiast, reszta ciała w sekcji krytycznej) oraz `mergeSyncPayload`, który bierze blokadę osobno na każdą pojedynczą notatkę — nie na całą pętlę scalania — i wewnątrz sekcji krytycznej odczytuje rekord na świeżo (`getPatientNoteForUser`) zamiast opierać się na migawce. Odczyt jest osłonięty `try{}catch{}` z powrotem do migawki, więc adapter bez tej metody działa jak przed zmianą. Przed wzięciem blokady zostaje tania pre-selekcja na migawce: lokalny zapis może `rev`/`updatedAtISO` tylko podnieść, więc „nie nowszy od migawki" implikuje „nie nowszy od świeżego" — dzięki temu scalanie bez zmian nie bierze ani jednej blokady. Po naprawie: wskrzeszenia 0/10 i 0/8, tombstone zawsze obecny w `exportSyncPayload`, utrata zapisu z okna migawki 0/10, usunięcie nie wraca także na urządzenie, które kasowało. Koszt w Chromium: scalenie 300 notatek do zapisu 190 → 367 ms (+0,59 ms na faktycznie zapisywaną notatkę), scalenie bez zmian 8 → 8 ms; blokada jest per id i trzymana milisekundy, więc czeka wyłącznie zapis tej samej notatki. Odrzucono globalną bramkę „scalanie trwa": zatrzymywałaby każdy zapis użytkownika na czas całego scalania (sieć, deszyfrowanie, zapis wszystkich rekordów), z ryzykiem trwałego zawieszenia zapisów.
-  - *Reguła rozstrzygania w oknie współbieżności:* w wyścigu scalanie↔zapis wygrywa tombstone. Zbiór usunięć nadal wyznacza istniejąca reguła LWW liczona z migawki (remis rozstrzygany na korzyść usunięcia), a świeży odczyt służy wyłącznie temu, by usunąć również rekord zapisany w trakcie scalania — inaczej zostałaby notatka bez tombstonu. Uzasadnienie: tombstone nie ma `rev`, więc `rev` nie może arbitrażować; zapis wykonany przez urządzenie, które tombstonu jeszcze nie zastosowało, nie jest przyczynowo „po" usunięciu, więc zegar ścienny nie jest tu autorytetem i potrzebny jest deterministyczny tie-break; przy odwrotnym przeplocie `savePatientNote` i tak odrzuca zapis komunikatem „savePatientNote: notatka nie istnieje (usunięta na innym urządzeniu?)", więc wybór ten sprawia, że wynik nie zależy od przeplotu. Poza wyścigiem LWW bez zmian: edycja lokalna zakończona przed startem scalania i nowsza niż `deletedAtISO` nadal przeżywa starsze usunięcie zdalne. Świadomy koszt: szybka akcja wykonana dokładnie w trakcie scalania niosącego usunięcie przepada razem z wizytą (bez komunikatu, jeśli zapis zdążył się powieść przed usunięciem) — alternatywa „edycja wskrzesza" była mierzalnie gorsza: 8/8 trwałych cofnięć usunięcia na wszystkich urządzeniach.
+  - *Reguła rozstrzygania w oknie współbieżności:* w wyścigu scalanie↔zapis wygrywa tombstone. Zbiór usunięć nadal wyznacza istniejąca reguła LWW liczona z migawki (remis rozstrzygany na korzyść usunięcia), a świeży odczyt służy wyłącznie temu, by usunąć również rekord zapisany w trakcie scalania — inaczej zostałaby notatka bez tombstonu. Uzasadnienie: tombstone nie ma `rev`, więc `rev` nie może arbitrażować; zapis wykonany przez urządzenie, które tombstonu jeszcze nie zastosowało, nie jest przyczynowo „po" usunięciu, więc zegar ścienny nie jest tu autorytetem i potrzebny jest deterministyczny tie-break; przy odwrotnym przeplocie `savePatientNote` i tak odrzuca zapis komunikatem „savePatientNote: notatka nie istnieje (usunięta na innym urządzeniu?)", więc wybór ten sprawia, że wynik nie zależy od przeplotu. Poza wyścigiem LWW bez zmian: edycja lokalna zakończona przed startem scalania i nowsza niż `deletedAtISO` nadal przeżywa starsze usunięcie zdalne. Świadomy koszt: szybka akcja wykonana dokładnie w trakcie scalania niosącego usunięcie przepada razem z wizytą (bez komunikatu, jeśli zapis zdążył się powieść przed usunięciem) — alternatywa „edycja wskrzesza" była mierzalnie gorsza: 8/8 trwałych cofnięć usunięcia na wszystkich urządzeniach. *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: reguła zostaje, z jednym wyjątkiem — nagrobek notatki postawiony przez „Usuń pacjenta” przegrywa z kartą, która przeżyła usunięcie (`lastSavedAtISO` > chwila usunięcia karty); ręczne usunięcie nie wcześniejsze niż każda znana wersja dalej wygrywa remis.)*
   - *Cichy błąd sprzątania po usunięciu listy oczekujących (z I6):* `removeWaitlistList` opakowywało całe sprzątanie w `try{}catch{}`, więc awaria kasowania notatki-rezerwacji albo zapisu `wlsched` kończyła się sukcesem: lista znikała, a w kalendarzu zostawała osierocona rezerwacja (albo osierocony termin listy wskazujący na nieistniejącą listę) — bez komunikatu i bez drogi sprzątnięcia z interfejsu, bo przycisk „Usuń listę" już się nie renderował. Odtąd sprzątanie idzie w odwrotnej kolejności — najpierw notatka-rezerwacja, potem tombstone wpisu `wlsched`, na końcu tombstone listy w `wllists` — i żaden krok nie połyka błędu; wyjątek mówi, co się udało, a co nie: „nie udało się usunąć rezerwacji z kalendarza (…). Lista i jej termin pozostają bez zmian — spróbuj ponownie.", „rezerwację usunięto, ale nie udało się usunąć terminu listy (…). Lista pozostaje — kliknij »Usuń listę« ponownie." albo „nie udało się zapisać usunięcia listy (…). Termin listy i rezerwacja zostały już usunięte. Kliknij »Usuń listę« ponownie.". W żadnym wariancie lista nie znika przed swoim terminem i rezerwacją, więc sierota w kalendarzu nie powstaje, a stan po awarii jest naprawialny ponownym kliknięciem „Usuń listę". Handler `[data-wl-dellist]` odświeża widok po błędzie (dotąd po zamknięciu komunikatu zostawał obraz sprzed próby). Szczegół implementacyjny: preferencje użytkownika to jeden obiekt meta nadpisywany w całości przy zapisie, więc przed zapisem `wllists` meta jest czytane ponownie — inaczej zapis listy skasowałby świeżo zapisany tombstone `wlsched`. Zmiana kontraktu: `removeWaitlistList` może teraz odrzucić promesę tam, gdzie wcześniej zawsze kończyło sukcesem; jedyny wywołujący w repozytorium już to obsługuje. Pozostaje wąskie okno między usunięciem rezerwacji a zapisem `wlsched`, w którym wpis harmonogramu przez chwilę wskazuje na nieistniejącą notatkę — stan samonaprawiający się przy ponowieniu i bez ryzyka danych klinicznych (odwrotność dawnej sieroty).
   - *Gubiony komunikat o braku przypomnienia „Wynik" (z I4):* w partii z listy oczekujących `catch` od awarii procedury zerował listę pacjentów, dla których nie udało się założyć follow-upu „Wynik", więc komunikat zgłoszony wcześniej w tej samej partii przepadał. Pomiar: dwoje pacjentów, awaria follow-upu pierwszego i procedury drugiego — jedyny komunikat mówił „Nie udało się umówić (…) Umówiono 1 z 2 …" i ani słowa o pacjentce bez przypomnienia; po „Anuluj" (lekarz rezygnuje zamiast ponawiać) była ona umówiona na procedurę, bez przypomnienia o wyniku i bez jakiejkolwiek informacji — klinicznie najgroźniejszy wariant I4. Odtąd lista nieudanych follow-upów jest zerowana na starcie każdej próby „Umów" (ponowienie nie powiela nazwisk), a nie w `catch` awarii procedury, i dokleja się do komunikatu o nieudanym umówieniu: „… Ponadto nie udało się założyć przypomnienia »Wynik« dla: … — ponowne »Umów« spróbuje jeszcze raz; jeśli rezygnujesz, dodaj przypomnienie o wyniku ręcznie (termin pacjenta → Badanie → »Czekam na wynik«)." Gdy lista jest pusta, komunikat jest dokładnie taki jak dotąd; komunikat o awarii samego follow-upu (partia bez awarii procedury) bez zmian, a ponowne „Umów" nadal domyka partię bez duplikatów.
   - *Porzucane usunięcie przy nawigacji w tej samej karcie (z I8):* domykanie oczekującego usunięcia przy `pagehide` i `visibilitychange` (PR 2) pokrywa zamknięcie karty i ukrycie aplikacji, ale nie nawigację w tej samej karcie. Pomiar: klik w link aplikacji, F5 albo programowe przejście na inną podstronę w oknie 4 s odpalają `pagehide` i `removePatientNote` startuje, ale asynchroniczny łańcuch sejfu (odczyt → usunięcie → tombstone → audyt) nie kończy się przed zniszczeniem dokumentu (znacznik „wywołano" ustawiony, „zakończono" pusty) — nie z braku budżetu czasu, bo sama operacja trwa 6–11 ms. Terminarz jest jedną z wielu podstron aplikacji, więc wyjście z niego w oknie „Cofnij" przywracało „usuniętą" wizytę i replikowało ją przez synchronizację. Odtąd w chwili uzbrojenia „Cofnij" (pojawienia się komunikatu „Usunięto wpis / COFNIJ") moduł zapisuje synchronicznie zamiar usunięcia w `localStorage` pod kluczem `vilda-tz-pending-del-v1` — JSON `{id, u, s, ts}`: id notatki, id użytkownika sejfu, identyfikator karty z `sessionStorage` (`vilda-tz-tab-v1`) i znacznik czasu, bez jakiejkolwiek treści klinicznej — i dokańcza go przy najbliższym starcie modułu na odblokowanym sejfie. Zamiar jest kasowany przy „Cofnij" (synchronicznie, przed przywróceniem wiersza) oraz po rozstrzygnięciu usunięcia, zarówno po sukcesie, jak i po błędzie; kasowanie jest zawężone do id, więc domykanie poprzedniego wpisu nie rusza zamiaru świeżo uzbrojonego dla innego. Dokańczanie jest idempotentne (klucz kasowany przed wywołaniem, a `removePatientNote` w sejfie jest idempotentne dla nieistniejącego id, więc domyka też łańcuch przerwany w połowie — rekord usunięty, tombstone niezapisany) i ograniczone: do 10 minut od uzbrojenia (starszy zamiar jest kasowany, nie wykonywany; ujemna różnica czasu przy cofniętym zegarze też go odrzuca) oraz do bieżącego użytkownika sejfu (inny zalogowany go nie rusza). Zamiar uzbrojony w innej karcie jest domykany dopiero po 10 s od uzbrojenia — dopóki okno „Cofnij" tamtej karty może jeszcze trwać, nikt go nie rusza; własne, wciąż otwarte okno „Cofnij" tej samej karty jest chronione osobno (zamiar dotyczący wpisu z żywym licznikiem UNDO jest pomijany), żeby domykanie nie wyprzedziło kliknięcia „Cofnij". Semantyka „Cofnij" bez zmian: okno nadal trwa 4 s, a wpis nadal nie znika z sejfu przed jego upływem. Brak `localStorage`/`sessionStorage` degraduje moduł dokładnie do dotychczasowego zachowania — każdy dostęp jest w `try{}catch{}`. Zamiar jest sprawdzany przy starcie modułu, przez pierwsze 10 s pętli startowej ORAZ przy każdym odblokowaniu sejfu (`onUnlock`) — bez tego ostatniego haka realny scenariusz „otwieram Terminarz i dopiero wpisuję hasło" nigdy nie domknąłby zamiaru, bo hasło wpada zwykle później niż 10 s od startu modułu. Zmiana zachowania w scenariuszu, którego wcześniej nie mierzono: awaria lub zabicie karty w oknie 4 s (bez `pagehide`) również dokończy usunięcie przy następnym starcie, zamiast je porzucić.
@@ -15496,6 +15496,371 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Notatki pacjenta wracają z kartą przywróconą po „Usuń pacjenta” (P-NOTATKI-ZA-KARTA, SW 1.1.334, `vilda_vault.js` 223, 2026-10-21)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła synchronizacji, która
+decyduje, czy notatki pacjenta przetrwają usunięcie pacjenta na innym urządzeniu. Notatki niosą treści kliniczne
+(wyniki badań, leki, IGF-1, terminy kontroli, kolejka zabiegów). **Decyzja właściciela 2026-10-20** (D-21 wariant A,
+`docs/SYNC_PRZYROSTOWA_PLAN.md` rozdz. 6) i **poddecyzje 2026-10-21** (D21-1..9, przyjęte rekomendacje, „akceptuję
+wszystko”):
+- D21-1 (a): „Zapisano:” uratowanej notatki pokazuje chwilę usunięcia pacjenta (do 1 s później), ekran bez zmian;
+  kolejność uratowanych notatek bez daty klinicznej jest przypadkowa;
+- D21-2 (a): ręczne usunięcie notatki przed „Usuń pacjenta” jest pamiętane (krata `manualDeletedAtISO`), notatka
+  nie wraca;
+- D21-3 (a): wyjątek H2b akceptowany i opisany (niżej, „Ograniczenia”);
+- D21-4 (a): starsza wersja notatki (`rev` niższy niż w nagrobku) jest przywracana;
+- D21-5 (a): z równoległych poprawek zostaje jedna, ta sama na każdym urządzeniu (dotknięcie R + 1 ms + h z treści);
+- D21-6 (a): stan „czeka” — notatki widoczne, dopóki nie dojdzie usunięcie karty; wtedy znikają razem z nią;
+- D21-7 (a): nagrobek bez pola z tą samą chwilą (echo starej aplikacji) to ta sama wiadomość, nie ręczne usunięcie;
+- D21-8 (a): nota wydania o aktualizacji wszystkich urządzeń przed użyciem „Usuń pacjenta”, bez blokady na serwerze;
+- D21-9 (a): sieroty (pomiar 6 i 7) i rozjazd G5 po „Scal pacjentów” (pomiar 13) — osobne PR, poza tym wpisem.
+
+Serwer, `vilda_sync.js`, `vilda_sync_integration.js`, schemat IndexedDB (`schemaVersion` 2), interfejs i API
+`window.VildaVault` bez zmian. Format: nowe opcjonalne pole nagrobka notatki pacjenta.
+
+**Co było** (prawdziwy `vilda_vault.js` z `db0c2d50` = `54a84da3`, sejfy w pamięci, sztuczny zegar, dane fikcyjne;
+pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trzeciego urządzenia = 104 przebiegi).
+- „Usuń pacjenta” (`Bpu_usun`) stawia nagrobki notatek pacjenta (`Eb`, P-NOTATKI-1 G2) i nagrobek karty. Scalanie
+  (`Le`) usuwało notatkę, gdy jej najnowszy nagrobek nie był wcześniejszy niż najnowsza wersja (`R ≥ Y`), niezależnie
+  od losu karty. Karta przeżywa usunięcie, gdy jej `lastSavedAtISO` jest późniejsze niż usunięcie (P-ZMIANA-W-KARCIE),
+  więc wracała **bez notatek**: nowa wizyta, poprawka pomiaru, gwiazdka, kosz albo „Przywróć” na innym urządzeniu po
+  usunięciu — 40 przebiegów z 40: karta wraca, notatek 0 z 2, na każdym urządzeniu, bez komunikatu. Wizyta i poprawka
+  notatki N1 — 8 z 8: zostaje tylko N1.
+- „Scal kopię konta” z kopii urządzenia, które usunęło pacjenta: karta zostawała, a notatki były tu kasowane
+  (`deletedPatientNoteCount` 2, `added` i `updated` 0); z kopii z nowszą wizytą na urządzeniu, które usunęło pacjenta:
+  karta wracała bez notatek.
+- `buildNoteTombstoneDelta` (`ls`) składał nagrobek z argumentów (`{id, deletedAtISO}`, bez `rev`), a oba adaptery
+  zapisywały tylko `{id, deletedAtISO, rev}` — nieznane pole nagrobka ginęło przy każdym zapisie i scaleniu (mapa M4).
+- Chwila nagrobka karty powstawała **po** pętli nagrobków notatek. Dla dawnej reguły bez znaczenia (bez sierot), ale
+  z nową regułą osobne chwile (pole wcześniejsze niż nagrobek karty) dawałyby sieroty przy zmianie karty w tym odstępie
+  (przegląd 1, L1), dlatego chwila `e` jest jedna.
+
+**Reguła po zmianie.**
+- **Pole.** Nagrobek notatki postawiony przez „Usuń pacjenta” (`Bpu_usun` → `Eb(id, {patientId, deletedAtISO: e})`;
+  także „Scal pacjentów” i usunięcie osoby spoza bazy, bo idą przez `Bpu_usun`) niesie
+  `deletedWithPatient = {patientId, deletedAtISO: e, manualDeletedAtISO?}`. `e` to **ta sama chwila** co nagrobek
+  karty i zdarzenie (liczona raz, przed pętlą notatek). Chwila nagrobka notatki bez zmian: `max(teraz, updatedAtISO)`
+  (G13). Ręczne `removePatientNote` pola nie stawia. Pole jest ważne, gdy `patientId` to niepusty napis do 200 znaków,
+  obie daty mają postać `toISOString` i są datami z kalendarza (runda przez `toISOString` — `Date.parse` przyjmuje
+  „30 lutego”), `e` nie jest późniejsze niż chwila nagrobka, a `manualDeletedAtISO` jest od niej wcześniejsze; sama chwila
+  nagrobka (R) też ma postać `toISOString` i jest wcześniejsza niż `9999-12-31T23:59:58.000Z` (przegląd 2, flota Z4:
+  inaczej R + 1 ms + h nie da się porównać z R jako napis — ratunek w każdym scaleniu bez końca albo `RangeError`
+  i CZEKA na zawsze); pole nieważne = brak pola (błąd idzie w stronę usunięcia, nie wskrzeszenia). Oba adaptery
+  (IndexedDB i pamięciowy) zachowują ważne
+  pole osobną instrukcją; obce pola dalej odpadają.
+- **Krata kopii nagrobka** (`Bnp_zlacz`, lokalne i z ładunku): R = najnowsza chwila (jak dotąd), `rev` jak dotąd;
+  P = pole z kopii o chwili R (największe `P.deletedAtISO`, przy remisie mniejsze `patientId`) — kopia **bez pola**
+  o chwili R to echo starej aplikacji i pola nie odbiera (D21-7); M = najpóźniejsze ręczne usunięcie: chwile kopii bez
+  ważnego pola wcześniejsze niż R oraz `manualDeletedAtISO` każdej kopii (D21-2). Max i argmax: wynik nie zależy od
+  kolejności ani liczby urządzeń. Zapisany nagrobek niesie kanon pola (dotąd pole ginęłoby przy każdym scaleniu).
+- **Decyzja po fazie kart** (`Bnp_stan`; Y — najnowsza wersja notatki tu i w ładunku, w — wersja, która zostanie po
+  pętli przyjmowania: `rev`, potem data, `Bnp_zwyciezcy`):
+  1. brak wersji → nagrobek zostaje (jak dotąd);
+  2. Y > R → notatka wygrywa (jak dotąd), z dwoma wyjątkami przy ważnym polu (przegląd 1; karta czytana leniwie jak
+     w kroku 5):
+     - Y w pasmie ratunku (R, R + 1 s], a karty `P.patientId` tu nie ma → usuń: taka wersja może być ratunkiem
+       wcześniejszego usunięcia, a karta zginęła później (ponowne „Usuń pacjenta” albo usunięcie na nieświadomym
+       urządzeniu tuż po pierwszym) — bez tego notatka zostawała sierotą (F1, F2);
+     - zostaje wersja sprzed usunięcia (w ≤ R, np. poprawka z wyższym `rev`, której usuwający nie znał), a Y > R
+       pochodzi z ratunku innej wersji → przy karcie późniejszej niż e **RATUNEK** tej wersji, przy karcie jeszcze nie
+       późniejszej **CZEKA** (bez wyjątku wersja zostawała z chwilą ≤ R i bez nagrobka, więc echo starego urządzenia
+       kasowało ją wszędzie — flota, zgł. 2b); ręczne usunięcie M ≥ w — bez wyjątku;
+  3. brak pola P → usuń (jak dotąd: ręczne usunięcie, stare urządzenie);
+  4. M ≥ Y → usuń (ręczne usunięcie późniejsze niż każda znana wersja; remis dalej na korzyść usunięcia);
+  5. karta `P.patientId` (`getPatientForUser`, leniwie, tylko dla kandydatów, raz na pacjenta): brak → usuń;
+     `lastSavedAtISO > P.deletedAtISO` (ta sama ostra nierówność co `Bsl_usunPacjenta`) → **RATUNEK**; inaczej
+     → **CZEKA**.
+- **RATUNEK** (`Bnp_ratuj`, po pętli przyjmowania notatek, przed zapisem nagrobków): pod blokadą pacjenta (ta sama co
+  „Usuń pacjenta”; kolejność pacjent → notatka jak w „Scal pacjentów”) świeży odczyt karty, w środku pod blokadą
+  notatki świeży odczyt notatki i nagrobka. Wersja z ładunku wchodzi zwykłą regułą (`rev`, potem data). Zapisana wersja
+  z `updatedAtISO ≤ R` dostaje `updatedAtISO = R + 1 ms + h`, `rev` bez zmian (D21-4); h = FNV-1a 32 treści
+  kanonicznej mod 1000 (stała lista pól odszyfrowanych i jawnych, brak = `null`, klucze posortowane; bez `id`,
+  `patientId`, `rev` i dat; nieudane odszyfrowanie → 0). Ta sama treść daje tę samą chwilę na każdym urządzeniu, dwie
+  różne poprawki — różne chwile, więc wszędzie zostaje ta sama (D21-5). Nagrobek zdejmowany tylko, gdy zapisany nie jest
+  nowszy niż R; zdarzenie `merge` wysyła notatkę dalej (`buildNoteDelta`). `updatedPatientNoteCount` +1, gdy pętla
+  przyjmowania tej notatki nie policzyła. Blokada zajęta (`MERGE_BUSY`) albo błąd → CZEKA w tym przebiegu; rozstrzyga
+  następne scalanie (sekcja notatek nie przerywa się po cichu).
+- **CZEKA** (D21-6): karta jest, ale nie jest późniejsza od usunięcia (wiadomość o usunięciu karty jeszcze nie doszła):
+  notatka zostaje, kanon nagrobka zapisany obok niej (bez cofania nowszego nagrobka). CZEKA przechodzi w RATUNEK (karta
+  stanie się późniejsza — `lastSavedAtISO` nigdy nie maleje) albo w usunięcie (karta zostanie usunięta). „Usuń
+  pacjenta” nad nagrobkiem w stanie „czeka” przenosi jego `manualDeletedAtISO`.
+  **Zapis notatki w stanie CZEKA** (przegląd 2, poprawność zgł. 1, flota Z1; `Bnp_poZapisie` w `savePatientNote`):
+  dotąd zapis zawsze zdejmował nagrobek, więc poprawka (albo „zrobione” w Terminarzu) dostawała chwilę > R + 1 s
+  i zostawała sierotą na każdym urządzeniu, gdy dochodziło usunięcie karty — wbrew D21-6. Teraz, gdy leży nagrobek
+  z ważnym polem tego samego pacjenta, a karta jest i nie jest późniejsza niż `e`, nagrobek zostaje z chwilą
+  przesuniętą na chwilę zapisu (pole i `manualDeletedAtISO` bez zmian, `rev` = max): poprawiona wersja (Y ≤ R) znika
+  razem z kartą albo wraca z nią ratunkiem (R′ + 1 ms + h). W pozostałych przypadkach (inny pacjent — np. „Scal
+  pacjentów” przepina notatkę, brak karty, karta późniejsza niż `e`, brak pola) nagrobek jest zdejmowany jak dotąd.
+  Pętla CZEKA w scalaniu czyta świeży nagrobek zawsze (nie cofa nowszego, także przy istniejącej notatce) i przy
+  zapisie notatki w drugiej karcie przeglądarki między decyzją a swoim zapisem bierze chwilę tego zapisu — tylko gdy
+  notatka jest dalej pod tym samym pacjentem (po „Scal pacjentów” kanon zostaje i przegrywa z wersją przepiętą).
+- **Ponowne „Usuń pacjenta”** (przegląd 1, F1; `Bnp_odnow`): karta wróciła na urządzenie bez notatek (np. delta karty
+  doszła przed uratowanymi notatkami) i jest usuwana ponownie. Pętla `Bpu_usun` widzi tylko notatki obecne na
+  urządzeniu, więc stare nagrobki notatek tego pacjenta z polem (e1, chwila R) przegrywałyby z wersjami uratowanymi
+  gdzie indziej (u′ ≤ R + 1 s): sieroty na każdym urządzeniu, także starym. Teraz takie nagrobki (pole tego pacjenta,
+  notatki tu nie ma) dostają chwilę `max(teraz, R + 1 s + 1 ms)` i pole z nowym `e` (`manualDeletedAtISO` zostaje),
+  pod blokadą pacjenta i notatki, a zdarzenie `delete` rozsyła je deltą przed nagrobkiem karty. Notatka, która
+  w międzyczasie wróciła pod tego pacjenta, idzie przez `Eb`; przepięta pod innego pacjenta — bez zmian.
+- **Delta nagrobka** (`ls`): rekord czytany ze sklepu (`{id, deletedAtISO, rev, deletedWithPatient}`), gdy go brak —
+  postać dotychczasowa. Bez tego drugie urządzenie dostawało nagrobek bez pola i kasowało notatki przed pełnym ładunkiem.
+  Odczyt pojedynczego rekordu (`getPatientNoteTombstoneForUser` w adapterach IndexedDB, pamięciowym i pośredniczącym;
+  adapter bez tej metody — lista), tak samo w ratunku; „Usuń pacjenta” czyta listę nagrobków notatek raz (przegląd 1, F3).
+- **Zbieżność.** Wersje tylko rosną (u′ > R ≥ u), decyzja jest funkcją danych (krata, karta, wersje), dotknięcie —
+  funkcją R i treści; zmierzone: identyczne `(rev, updatedAtISO)` na wszystkich urządzeniach w 5 kolejnościach, zbieżność
+  przy równoległych poprawkach.
+- **Podgląd „Scal kopię konta”** (`Bks_planZbioru` z argumentem `stan`, `Bks_stanNotatek`): te same funkcje (`Bnp_zlacz`,
+  `Bnp_stan`) i karta przewidywana po pętli kart `ss` (`Bks_kartaPo`: karta tutaj z nowymi wersjami z kopii —
+  późniejsza z obu chwil; bez nowych — tutejsza; karta dodawana z kopii — z kopii; inaczej brak). RATUNEK i CZEKA nie są
+  „usunięte”; ratunek tutejszej notatki to „zmieniona” (bez „zastąpionej późniejszej edycji” — nowa chwila jest
+  późniejsza niż każda znana wersja tej treści); dodana w stanie CZEKA nie jest „przywrócona”. Stan pytany jest także
+  przy wersji nowszej od nagrobka (wyjątki z kroku 2), więc wersja z kopii w pasmie ratunku przy karcie usuniętej tutaj
+  jest „usunięta”, nie „dodana”. Podgląd = wynik = różnica magazynu (dodane, zmienione, usunięte, przywrócone).
+  „Zastąpiona późniejsza edycja” jest liczona semantycznie: przy ratunku wersji z wyższym `rev` w miejsce tutejszej
+  uratowanej wersji (zgł. 2b) mechaniczna różnica chwil zależy od h obu treści, a lekarz nie traci nowszej treści.
+- **Flota mieszana.** Stara aplikacja ucina pole bez błędu i zachowuje się jak dotąd. Pacjenta usuwa stare urządzenie
+  → nagrobki bez pola, wynik jak dziś. Nowe A ratuje z ładunku starego B (B przyjmuje, bo u′ > R). Stare urządzenie,
+  które przyjęło usunięcie, dostaje notatki po ratunku. Echo starego urządzenia przed ratunkiem nie odbiera pola.
+  Ręczne usunięcie notatki na starym urządzeniu przed „Usuń pacjenta” jest pamiętane tylko wtedy, gdy dotrze do nowego
+  urządzenia, zanim stare pobierze usunięcie pacjenta (niżej, „Ograniczenia”). Stare urządzenie z uratowanymi notatkami
+  kasuje je przy ponownym „Usuń pacjenta”, bo odnowione nagrobki są późniejsze niż u′. Stare urządzenie, które
+  dostanie przesunięty nagrobek poprawki zrobionej w stanie CZEKA, kasuje tę poprawkę (notatki i tak już nie miało);
+  jego echo z tą samą chwilą nie odbiera pola, a gdy karta okaże się późniejsza, poprawka wraca także do niego (CZ6).
+  Dwie sytuacje floty mieszanej są **gorsze niż dziś** (przegląd 2, niżej w „Ograniczeniach”): ponowne „Usuń pacjenta”
+  na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
+  (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
+
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 157 testów: 88 z wdrożenia, 31 z przeglądu 1 i 38 z przeglądu 2;
+wejście → wynik):
+- T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
+  karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
+  notatek, nagrobki n1–n3);
+- T2: poprawka pomiaru, gwiazdka, kosz, „Przywróć” na B; 4 kolejności A↔B × 2 kolejności C (32 przebiegi) → karta
+  z N1 i N2; karta i kosz jak dotąd (P-KOSZ); T3: wizyta i poprawka N1 → N1 poprawiona i N2 (dotąd tylko N1);
+- T4 (kontrola): B nic nie robi → wszystko znika, nagrobki n1, n2 z polem;
+- T5: same delty, B zmienił kartę przed deltami → [n1, n2] na A i B, delta nagrobka niesie pole;
+- T6: delty w oknie (nagrobki notatek → wizyta na B → nagrobek karty) → [n1, n2]; pośrodku B widzi notatki (CZEKA);
+- T7 (kontrola ścisłości): delta nagrobka karty ginie, karta B bez zmian → pośrodku CZEKA, potem karta i notatki znikają
+  razem, bez sierot (reguła „karta istnieje” dałaby sieroty);
+- T8 (H1): B ręcznie usuwa n1 przed „Usuń pacjenta” na A, C ma stare n1 → [n2], nagrobek n1 z `manualDeletedAtISO`;
+- T9 (H2): nieświadome C usuwa n1 ręcznie 2 min po „Usuń pacjenta” → [n2];
+- T10 (H2b): ręczne usunięcie n1 na C przed „Usuń pacjenta”, wysłane po ratunku → n1 wraca (znane ograniczenie, D21-3);
+- T11: poprawka E (`rev` 2) sprzed usunięcia, nieznana A → wszędzie poprawka E, `rev` 2;
+- T12: stare D poprawia n1 po usunięciu → [n1-D, n2, n3] (dotąd n2 i n3 giną);
+- T13 (H3): równoległe różne poprawki n1 na B i C (obie `rev` 2) → różne chwile ratunku, potem jedna i ta sama wersja
+  na A, B i C;
+- T14 (F1): A usuwa, stare O odbija nagrobki bez pola, A pobiera echo (zachowuje pole), potem B z wizytą → notatki
+  na A, O i B (T14 pilnuje formatu zapisanego nagrobka; decyzję przy echu pilnuje T14b niżej);
+- T15 (flota): A nowe / B stare w obu kolejnościach, A stare / B nowe w obu kolejnościach, powrót starego D po
+  ratunku → jak w punkcie „Flota mieszana”; zbieżnie, bez ping-ponga;
+- T16: B dopisało wizytę, scala kopię A → karta [n1, n2], `updated` 2 w podglądzie, wyniku i magazynie (dotąd 0 notatek);
+  T16b: A scala kopię B (karta dodawana z kopii) → `added` 2, `restored` 2; T17: karta B bez zmian → notatki czekają
+  (0 zmian), po synchronizacji z A znikają razem z kartą;
+- T18: odtworzenie konta z kopii w stanie „czeka” = ten sam stan co pełny ładunek; kopia starej aplikacji → karta bez
+  notatek, jak dziś;
+- T19, T20, T21 (kontrole): import karty z pliku (P-IMPORT-NAGROBEK), „Scal pacjentów” (pomiar 10–13, łącznie
+  z rozjazdem G5) i sieroty (pomiar 6 i 7) — bez zmian;
+- T22 (H5): zegar A +1 h przy usuwaniu → karta i notatki znikają, bez sierot; T23 (G13): notatka 1 h w przyszłości →
+  D = u, ratunek u′ − u ∈ [1, 1000] ms, o przeżyciu decyduje e; T24: drugie „Usuń pacjenta” po ratunku → wszystko
+  znika; T25: wersja `rev` 1 przy nagrobku `rev` 2 → wraca `rev` 1;
+- T26 (format): adapter pamięciowy i IndexedDB (atrapa) zachowują ważne pole, nieważne (`patientId` liczbą, pusty,
+  > 200 znaków, zła data, data bez milisekund, `manualDeletedAtISO ≥ D`) i obce odpadają; `removePatientNote` bez pola;
+  `Bpu_usun`: pole.`deletedAtISO` = nagrobek karty, nagrobek notatki ≥ e; `ls` niesie `rev` i pole; echo bez pola nie
+  odbiera pola, późniejsza kopia bez pola odbiera;
+- T27 (koszt): scalanie bez nagrobków z polem — 0 odczytów kart i 0 blokad pacjenta w sekcji notatek; 6 kandydatów
+  u 2 pacjentów — 4 odczyty karty (raz na pacjenta przy decyzji, raz pod blokadą) i 2 blokady;
+- T28 (wyścig z drugą kartą przeglądarki): blokada pacjenta zajęta → CZEKA bez błędu scalania, następne scalanie ratuje;
+  „Usuń pacjenta” w drugiej karcie między decyzją a ratunkiem → brak sierot, nowsze nagrobki nie cofnięte;
+- T29: „Usuń pacjenta” nad nagrobkiem w stanie „czeka” przenosi `manualDeletedAtISO`;
+- T30: strażniki mapy D-21 — M1, M2, M3 i M5 zmieniają wynik (karta wraca z notatkami), M4 przepisany na nowe pole
+  (obce pole dalej ginie), M6 i M7 bez zmian; strażniki źródła `Le`, `Bpu_usun`, `Eb`, `ls`, adapterów i podglądu.
+- Przegląd 1 (2026-10-21; każde zgłoszenie odtworzone na prawdziwym sejfie, czerwone na `469c9fe2` przed poprawkami,
+  o ile nie jest kontrolą albo znanym ograniczeniem):
+  - P7, P7b, P7c (F1): karta wraca bez notatek (delta karty), urządzenie usuwa ją ponownie → nagrobki odnowione
+    (e2, chwila > R + 1 s), bez sierot po deltach i po pełnych ładunkach, także na starym D z uratowanymi notatkami;
+    odnowienie nie rusza nagrobków innego pacjenta ani ręcznych;
+  - P1 (2, 300, 900 ms) i P1c (G13) (F2): nieświadome C usuwa pacjenta tuż po A, B zmienia kartę pomiędzy → bez sierot;
+    P1b (znane ograniczenie): ręczne usunięcie n1 na nieświadomym C 300 ms po „Usuń pacjenta” → n1 wraca; P1d (znane
+    ograniczenie): jak P1, ale B dostaje nagrobki C tylko przez stare D → sieroty na B do pierwszego ładunku nowego
+    urządzenia;
+  - F3: „Usuń pacjenta” z 6 notatkami przy 50 innych nagrobkach → jedna lista nagrobków notatek; delty `ls` —
+    pojedynczy rekord (0 list); scalanie z ratunkiem 6 notatek — jedna lista;
+  - flota: R10b i R10d ze starym przekaźnikiem (znane ograniczenia: n1 wraca), R10c i R10d z nowym (kontrole: [n2]);
+    zgł. 2b: E „czeka” z `rev` 2 sprzed usunięcia, B ratuje `rev` 1 → E ratuje `rev` 2, echo starego O jej nie kasuje;
+    to samo, gdy delty ratunku docierają do E przed kartą (`rev` 2 czeka z nagrobkiem, ratunek po karcie);
+    zgł. 2a (znane ograniczenie): E bez nagrobka → poprawka E ginie po echu wszędzie (jak na bazie);
+  - T26 rozszerzony: data spoza kalendarza w polu i w `manualDeletedAtISO`, `e` późniejsze niż nagrobek → pole nieważne;
+  - L1 (zegar biegnie w trakcie „Usuń pacjenta”; wspólne `e`), L2 (`lastSavedAtISO === e`: karta i notatki giną
+    razem), L3 (nagrobki z polem bez wersji i bez karty: 0 odczytów karty, 0 blokad), T14b (echo i pole w jednym
+    scaleniu przy żywych wersjach → ratunek), L7 (edycja w drugiej karcie przeglądarki między decyzją a ratunkiem nie
+    jest cofana), L8 (błąd odczytu karty → CZEKA);
+  - podgląd „Scal kopię konta” (= wynik = magazyn): P1 kopia z nową wizytą → `updated` 2; P2 kopia po gwiazdce (bez
+    nowych wersji) → CZEKA, 0 zmian; P3 notatki dodane w stanie CZEKA nie są „przywrócone”; P4 ratunek wyższego `rev`
+    z wcześniejszą chwilą nie jest „zastąpioną późniejszą edycją”; P5 (kontrola) i P5b: wersja z kopii w pasmie
+    ratunku przy karcie usuniętej tutaj nie jest „dodana”; P6: kopia E (zgł. 2b) → `updated` 1, `rev` 2 uratowana.
+- Przegląd 2 (2026-10-21; trzy recenzje: poprawność, flota i format, testy; każde zgłoszenie odtworzone na prawdziwym
+  sejfie):
+  - zapis w stanie CZEKA (poprawność zgł. 1, flota Z1; czerwone na `8c70884d`): CZ1 (delty, delta nagrobka karty
+    ginie), CZ2 („Scal kopię konta”) i CZ4 („zrobione” w Terminarzu) → nagrobek zostaje z chwilą zapisu, a po
+    synchronizacji karta i notatki znikają razem, bez sierot; CZ3 (kontrola): poprawka, potem wizyta → karta
+    [n1 = poprawka, n2], poprawka uratowana z `rev` 2; CZ5 (znane ograniczenie): delta poprawki dochodzi do urządzenia
+    bez karty przed pełnym ładunkiem → sierota do pełnego ładunku; CZ6: stare O kasuje poprawkę, jego echo nie
+    odbiera pola, po wizycie poprawka wraca na A, B i O; CZ7: zapis w drugiej karcie przeglądarki między decyzją CZEKA
+    a zapisem kanonu → kanon z chwilą zapisu; CZ8: nowsze nagrobki R2 zapisane w drugiej karcie w tym oknie zostają
+    (czerwone na `8c70884d` także bez zapisu notatki — pętla CZEKA cofała nowszy nagrobek przy istniejącej notatce);
+    granice: CZ1r (remis `lastSavedAtISO = e` to dalej CZEKA), CZ3b (karta już późniejsza przed scaleniem → nagrobek
+    zdjęty, poprawka bez dotknięcia), CZ3c (błąd odczytu nagrobka nie wstrzymuje zdjęcia), CZ9 (G13: chwila nagrobka
+    nie cofa się, bo echo starego urządzenia o chwili R odebrałoby pole), CZ7b („Scal pacjentów” w drugiej karcie
+    w tym oknie → kanon bez chwili zapisu, przepięte notatki zostają); SP1 i EL1 (kontrole): „Scal pacjentów” w stanie
+    CZEKA przepina notatki, poprawka nieświadomego D zostaje;
+  - drugie usunięcie we flocie mieszanej (poprawność zgł. 2, flota Z2 i Z3; znane ograniczenia, niżej): OD2 ze starym D,
+    OD2c (chmura, stare S), OD2o (nowe S, usunięcie przez stary przekaźnik) → sieroty na każdym urządzeniu; OD2
+    z nowym D (kontrola) → bez sierot; HD ze starym C → poprawka D sprzed drugiego usunięcia ginie, z nowym C
+    (kontrola) zostaje;
+  - T26c (flota Z4; czerwone na `8c70884d`): chwila nagrobka „…Zx”, bez sekund, `9999-12-31T23:59:59.999Z`, ze strefą
+    `+02:00`, bez milisekund → pole nieważne, notatki skasowane, kolejne scalania bez zapisów notatek i zdarzeń;
+    `9999-12-31T23:59:57.999Z` (kontrola) → pole ważne;
+  - luki testów (przegląd testów 2; każdy łapie mutację, która przechodziła cały plik): L9 remis M = Y w kroku 4 (G13),
+    L10 gałąź `Eb` w odnowieniu nagrobków (druga karta przeglądarki), L11 edycja uratowanej notatki przed ponownym
+    usunięciem, L12 blokada notatki w ratunku, L13 straż „nowszy nagrobek zostaje” w ratunku, L16 remis
+    `lastSavedAtISO = e` w podglądzie, L17 pola jawne w h (równoległe zmiany samego terminu), L18 „+1 ms” (h = 0,
+    stare D dostaje notatkę); L14 i L15 przypinają zdania dokumentacji (kolejność delt przy kroku „pasmo bez karty”;
+    odbiorca ratuje najwyżej własną wersję z wyższym `rev`, raz); strażnik źródła `Ad`, pętli CZEKA i `Bnp_pole`.
+
+**Ograniczenia.**
+- **Stare urządzenie z ocalałą kartą przyjmuje usunięcie pierwsze** — kasuje notatki; gdy było jedynym źródłem treści,
+  strata jest nieodwracalna, jak dziś. Pomaga tylko aktualizacja floty (D21-8, nota wydania).
+- **Ponowne „Usuń pacjenta” na urządzeniu, które nie odnawia nagrobków** (przegląd 2, poprawność zgł. 2, flota Z2;
+  testy OD2, OD2c, OD2o) — **regresja względem dziś, tylko we flocie mieszanej**. Karta wraca na urządzenie bez
+  notatek (stare urządzenie z ocalałą kartą przyjęło usunięcie pierwsze albo dostało samą deltę karty), a nowe
+  urządzenia uratowały notatki i zdjęły swoje nagrobki. Lekarz na tym urządzeniu widzi kartę bez notatek i usuwa ją
+  ponownie. Stara aplikacja nie ma `Bnp_odnow`, a nowa nie odnowi nagrobków zapisanych bez pola (przez stary adapter
+  albo przez stary przekaźnik, także gdy w chwili drugiego usunięcia wszystkie działające urządzenia są już nowe):
+  nagrobek karty e2 nie dotyka notatek, więc uratowane notatki zostają sierotami na każdym urządzeniu, trwale (jak
+  sieroty z pomiaru 6 i 7: bez karty, w każdym pełnym ładunku; wrócą z kartą o tym samym `patientId`). Na bazie
+  notatek po pierwszym usunięciu nie było wcale. Nie występuje, gdy
+  wszystkie urządzenia zaktualizowano przed pierwszym „Usuń pacjenta” (wtedy każdy nagrobek ma pole i działa
+  odnowienie — OD2 z nowym D). Gdy nowe urządzenia mają jeszcze nagrobki z polem, same kasują uratowaną wersję
+  (krok „pasmo bez karty”), a sierota zostaje tylko na starym urządzeniu, do jego aktualizacji (losowy przebieg
+  recenzenta, ziarno 164 floty mieszanej). Naprawa po stronie odbiorcy (notatka, której karty po fazie kart nie ma, a nagrobek
+  karty jest późniejszy niż każda jej wersja, znika lokalnie bez nagrobka) zmienia regułę także dla sierot spoza D-21
+  i dla danych już zapisanych — zostawiona do decyzji właściciela (nota wydania D21-8, osobny PR).
+- **Stary przekaźnik po drugim usunięciu** (przegląd 2, flota Z3; test HD) — **regresja względem dziś, tylko we flocie
+  mieszanej**. A usuwa pacjenta, B ratuje notatki; nieświadome D poprawia notatkę; B usuwa pacjenta ponownie (nowe
+  nagrobki są późniejsze niż poprawka D); stare C dopisuje wizytę po drugim usunięciu (karta wraca), ucina pole
+  i przekazuje nagrobki do D — D kasuje swoją poprawkę, a była jej jedynym źródłem. Na bazie zostaje karta
+  z poprawką D (B nie miało notatek, więc drugie usunięcie ich nie obejmowało). Z nowym C poprawka zostaje (kontrola).
+  Tańszej poprawki w kodzie nie ma (pole ginie w starym przekaźniku); nota wydania D21-8.
+- **H2b (D21-3).** Notatka usunięta ręcznie przed „Usuń pacjenta” na urządzeniu, które nie zdążyło tego wysłać, wraca,
+  jeśli ratunek nastąpi wcześniej. Widoczne i odwracalne: wystarczy usunąć ją ponownie.
+- **H2b we flocie mieszanej jest szerszy** (przegląd 1, flota, zgł. 1; testy R10b, R10d). Ręczne usunięcie na starym
+  urządzeniu jest pamiętane tylko wtedy, gdy dotrze do nowego urządzenia, zanim stare pobierze usunięcie pacjenta:
+  stare `Le` przepisuje swój ręczny nagrobek na chwilę R nagrobka z „Usuń pacjenta”, bez pola, więc chwila ręcznego
+  usunięcia ginie, a kopia bez pola o chwili R to echo (D21-7). Stary przekaźnik gubi też `manualDeletedAtISO` z nowego
+  urządzenia. Kodu nie zmieniono: echa nie da się odróżnić od tak przepisanego nagrobka, a heurystyka „u′ w pasmie”
+  dawałaby trwały rozjazd z zapisami w każdej rundzie. Do noty wydania (D21-8).
+- **Ręczne usunięcie w pasmie ratunku** (przegląd 1, F2, test P1b). Ręczne usunięcie notatki na urządzeniu, które nie
+  wie o „Usuń pacjenta”, wykonane w ciągu 1 s po nim, przegrywa z ratunkiem, gdy h tej notatki jest większe niż odstęp;
+  usunięcie późniejsze o ponad 1 s zawsze wygrywa (T9). Wymaga dwóch osób działających na tym samym pacjencie w tej samej
+  sekundzie. Zawężenie h (np. mod 100) skróciłoby pasmo do 100 ms kosztem 10 razy częstszej kolizji przy równoległych
+  poprawkach (D21-5) — nie zmieniono.
+- **Stare urządzenie w pasmie ratunku** (F2, test P1d). Krok „pasmo bez karty → usuń” wymaga pola, a stara aplikacja go
+  nie zna i ucina pole w nagrobkach, które przekazuje. Gdy drugie „Usuń pacjenta” na nieświadomym urządzeniu nastąpi
+  w ciągu 1 s po pierwszym, a uratowana wersja jest późniejsza niż jego nagrobki, urządzenie, które ratowało, zostaje
+  z sierotami, dopóki dostaje te nagrobki tylko przez stare urządzenie (po ratunku nie ma już własnego nagrobka);
+  pierwszy ładunek nowego urządzenia z polem je kasuje. Na bazie notatek nie było wcale. Wymaga dwóch usunięć tego
+  samego pacjenta w tej samej sekundzie, zmiany karty pomiędzy i starego urządzenia jako jedynego źródła.
+- **Wyższy `rev` sprzed usunięcia na urządzeniu bez nagrobka** (przegląd 1, flota, zgł. 2a, test). Urządzenie, które
+  nie widziało usunięcia, ma poprawkę z wyższym `rev` i dostaje uratowaną starszą wersję: zostaje poprawka z chwilą ≤ R
+  i bez nagrobka, rozchodzi się, a echo starego urządzenia (nagrobek bez pola, chwila R) kasuje notatkę wszędzie — jak
+  na bazie, gdzie ginie od razu, ale lekarz widzi, że wraca i znika. Naprawa wymagałaby niesienia R razem z notatką
+  (zmiana formatu notatki), poza zakresem D-21. Gdy to urządzenie ma nagrobek z polem, poprawka jest ratowana (zgł. 2b).
+- **Kolejność delt przy kroku „pasmo bez karty”.** Urządzenie bez karty, które dostanie deltę uratowanej notatki przed
+  deltą karty, kasuje ją (błąd w stronę usunięcia); notatka wraca z następnym pełnym ładunkiem, gdy karta już jest.
+- **Delta poprawki zrobionej w stanie CZEKA** (przegląd 2, test CZ5). Zdarzenie zapisu niesie samą notatkę (jedno
+  zdarzenie = jedna encja), a przesunięty nagrobek jedzie pełnym ładunkiem. Urządzenie bez karty, które dostanie tę
+  deltę wcześniej, przyjmie poprawkę jako sierotę (Y > R + 1 s, zwykła reguła „późniejsza wersja wygrywa”, jak E1)
+  i zdejmie swój nagrobek; pierwszy pełny ładunek z przesuniętym nagrobkiem ją kasuje (zapis od razu woła pełną
+  wysyłkę). W etapie 2 synchronizacji (bez pełnych ładunków) zapis w stanie CZEKA musi wysłać także zdarzenie
+  `pnotetomb` — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`.
+- **„Scal pacjentów” po ratunku** (F1, zastrzeżenie). Gdy uratowaną notatkę X przepięto pod Y na innym urządzeniu,
+  a urządzenie z samym nagrobkiem X (bez notatki) usunie X ponownie, odnowiony nagrobek skasuje ją także pod Y. Na
+  bazie ta notatka zginęła już przy pierwszym usunięciu; urządzenie, które ma przepiętą notatkę, nagrobka nie odnawia.
+- **Echo z fałszywym trafieniem.** Prawdziwe ręczne usunięcie z dokładnie tą samą chwilą co nagrobek z polem zostanie
+  wzięte za echo (wymaga tej samej wersji z `updatedAtISO` z przyszłości, G13, usuniętej na dwóch urządzeniach).
+- **Wybór między równoległymi poprawkami jest przypadkowy** (h nie zachowuje „późniejsza wygrywa”); kolizja h (1 na
+  1000) zostawia rzadki trwały rozjazd jak przed zmianą.
+- **„Zapisano:”** uratowanej notatki pokazuje chwilę usunięcia pacjenta, kolejność uratowanych notatek bez daty
+  klinicznej jest przypadkowa (D21-1); daty kliniczne bez zmian.
+- **Długi stan „czeka”.** Gdy kopia konta pochodzi z urządzenia, które już się nie synchronizuje, nagrobki leżą obok
+  notatek do 365 dni (retencja) albo do zmiany karty; stare urządzenia w tym czasie kasują notatki u siebie.
+- **Koszt.** „Usuń pacjenta” czyta listę nagrobków notatek raz (pole `Eb` i odnowienie), delta nagrobka (`ls`)
+  i ratunek — pojedynczy rekord (`getPatientNoteTombstoneForUser`); przed przeglądem 1 „Usuń pacjenta” z k notatkami
+  czytało pełną listę k razy pod blokadą pacjenta, a każda delta — jeszcze raz. Odczyt karty tylko przy polu: dla
+  kandydatów, wersji w pasmie ratunku i wersji sprzed usunięcia, raz na pacjenta (plus raz pod blokadą przy ratunku).
+- **Poza zakresem (D21-9):** sieroty z pomiaru 6 i 7 (poprawka albo nowa notatka bez zmiany karty) i rozjazd G5 po
+  „Scal pacjentów” z pomiaru 13 — testy T20 i T21 pilnują, że zostały bez zmian; „Scal pacjentów” równolegle z „Usuń
+  pacjenta” tego samego X — notatki przepięte pod Y giną jak dziś; **nowa** notatka dopisana na karcie w stanie CZEKA
+  nie ma nagrobka, więc po dojściu usunięcia karty zostaje sierotą, jak na bazie (klasa pomiaru 7; przegląd 2, flota,
+  kontrola recenzenta).
+- **Etap 2 synchronizacji** (kolejka zdarzeń): ratunek wymaga wyjątku od zasady „scalanie nie dopisuje do kolejki”,
+  builder `pnotetomb` musi czytać rekord ze sklepu, a zapis notatki w stanie CZEKA musi wysłać także `pnotetomb`
+  — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`.
+
+**Nota wydania (D21-8; do wklejenia przy wydaniu).** „Notatki pacjenta (wyniki badań, leki, terminy) wracają razem
+z kartą, którą po »Usuń pacjenta« zachowano na innym urządzeniu (nowa wizyta, poprawka, gwiazdka, kosz, »Przywróć«).
+Zanim użyjesz »Usuń pacjenta«, zaktualizuj aplikację na **wszystkich** urządzeniach (numer wersji w Ustawieniach).
+Dopóki któreś urządzenie ma starszą wersję: (1) notatki mogą zniknąć z urządzenia, które przyjmie usunięcie pierwsze,
+jak dotąd; (2) jeśli karta wróci na urządzenie bez notatek, nie usuwaj jej ponownie na tym urządzeniu — notatki
+mogłyby zostać bez karty; (3) poprawka notatki zrobiona na urządzeniu,
+które nie wiedziało o usunięciu, może zginąć, gdy pacjenta usunięto dwa razy; (4) notatka usunięta ręcznie na starym
+urządzeniu tuż przed »Usuń pacjenta« może wrócić — wystarczy usunąć ją ponownie.”
+
+Odsyłacze: P-ZMIANA-W-KARCIE (ta sama nierówność `lastSavedAtISO > deletedAtISO`); P-NOTATKI-1 G2, G6 i G13 (`rev`
+w nagrobku, `max(teraz, u)`); reguła „remis na korzyść usunięcia” w oknie współbieżności (zostaje — krok 4);
+P-KOPIA-DANE-KONTA (notatki przy zachowanej karcie po „Scal kopię konta”); P-IMPORT-NAGROBEK (bez zmian).
+
+**Walidacja.** `tests/unit/notatki-za-karta.test.mjs`: 157 z 157 zielonych; na `db0c2d50` czerwonych 140, zielonych 17
+(kontrole T19, T20 × 4, T21 × 2, M6, M7, trzy przypadki T15 z wynikiem jak dziś i pięć przypadków T26c — pole nieważne
+daje wynik bazy); na `8c70884d` (po przeglądzie 1) czerwonych 15: CZ1–CZ9 i CZ1r, T26c × 4 („…Zx”,
+`9999-12-31T23:59:59.999Z`, `+02:00`, bez milisekund) i strażnik źródła przeglądu 2. Etykieta „[kontrola]” przy R10c,
+R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D i HD z nowym C oznacza kontrolę wobec wariantu albo ograniczenia
+z tego samego bloku — te przypadki są na `db0c2d50` czerwone z powodu zachowania (bez ratunku notatki nie wracają).
+Na `469c9fe2` (wdrożenie przed przeglądem 1) czerwonych 16 z ówczesnych 119: P7, P7b, P7c, P1 (2 i 300 ms), P1c,
+P1d, F3, zgł. 2b (× 2), P5b, P6, T26 (× 2, daty spoza
+kalendarza) i dwa strażniki źródła. Przegląd 1: 28 mutacji kodu poprawek i luk z przeglądu testów — 27 łapią testy,
+jedna jest równoważna (odnowienie nagrobków bez pola kończy się wyjątkiem przechwyconym w pętli); losowe przebiegi
+recenzenta z drugim „Usuń pacjenta” (pełne ładunki i delty, stare D w ok. 30%) — 450 + 450 ziaren zielonych; testy floty
+recenzenta na prawdziwej starej aplikacji `db0c2d50` — czerwone tylko opisane ograniczenia (R10b, R10d ze starym
+przekaźnikiem, zgł. 2a). Kontrole T4 i T22 są tam czerwone
+tylko przez brak pola w nagrobku, T7 — przez stan pośrodku (bez „czeka” notatki znikały przy zachowanej karcie). Pliki
+pokrewne, każdy osobno, zielone bez zmian testów: notatki pacjenta (8 plików, 122 testy), `sync-*` (5, 395),
+`kopia-konta*` (3, 119), `zmiana-w-karcie` (48), `scalanie-*` (3, 101) oraz `blokada-importu`,
+`delta-biblioteki-szablonow`, `import-po-usunieciu`, `lab-amh-reference-vault`, `meta-konta-blokada`,
+`naglowek-najnowszej`, `vault-terminarz-sync`, `zapis-usunietej-karty`, `blokada-usuwania-scalania`,
+`kosz-scalanie-przywroc`, `retencja-nagrobki`, `rozjazd-zegarow-sync` (12, 205). Po przeglądzie 1 ponownie te same
+pliki oraz pliki czytające ten rejestr (`bmi-straznik`, `czyszczenie-pol-zdarzenie`, `ds-straznik`,
+`porownanie-data-urodzenia`, `rejestr-decyzji-karta-pacjenta`, `spozycie-powrot`, `sw-precache-stron`) — 40 plików,
+1188 testów, każdy osobno, zielone bez zmian testów. `npm run lint`, `npm run test:syntax` (1113 plików),
+`npm run test:repo` (1748 plików) — zielone. Przegląd 2: 27 mutacji (19 kodu poprawek i 8, które w przeglądzie testów
+przechodziły cały plik) — 24 łapią testy; trzy nie zmieniają wyniku: przesunięcie nagrobka także bez karty (zapis
+notatki pacjenta bez karty jest nieosiągalny z ekranu, a przy nagrobku karty zapis odmawia, D2), chwila zapisu także po
+nieudanym ratunku (jedno dodatkowe dotknięcie w następnym scaleniu) i porównanie zapisanego kanonu z R zamiast z chwilą
+zapisu (gdy nagrobek leżał od początku, zapis już go przesunął). Losowe przebiegi recenzenta poprawności
+(`zz-pp2-fuzz`, 4 urządzenia, delty przetasowane i gubione, drugie usunięcie, kopie konta): nowe urządzenia, ziarna
+1–400 — zielone; flota mieszana (stare D), ziarna 1001–1300 — zielone; ziarna 1–300 — 298 zielonych, 115 i 164
+czerwone tak samo na `8c70884d` (ponowne „Usuń pacjenta” na starym D — znane ograniczenie wyżej). Sieroty „po edycji
+w CZEKA” zostały tylko w ziarnach 267, 1163 i 1286 — poprawka na urządzeniu, które nie wiedziało o późniejszym, drugim
+usunięciu (klasa pomiaru 6, D21-9). Testy recenzentów na poprawionym sejfie (usunięte z drzewa): CZ1–CZ4, SP1, EL1,
+H-C i format (13) zielone; czerwone tylko opisane ograniczenia (H-A × 5, H-D ze starym C, OD2 i OD2n ze starym D).
+Pliki pokrewne: te same 40 plików co po przeglądzie 1 oraz 18 kolejnych, które wołają API notatek albo scalania
+(`haslo-*`, `historia-pomiarow-zwijanie`, `klirens-visit-save`, `kosz-nowsza-tresc`, `kosz-zapisow`, `lab-*` × 7,
+`nawigacja-pacjentow-odswiezanie`, `nowe-urzadzenie-pobieranie`, `synchronizacja-straznik`,
+`ustawienia-siatek-synchronizacja`, `usun-wersje-lokalnie`) — 58 plików, 1632 testy, każdy osobno, zielone bez zmian
+testów. `npm run lint`, `npm run test:syntax` (1113 plików), `npm run test:repo` (1748 plików) — zielone (na bazie
+`db0c2d50`). Przeniesione na `audyt` `346dd81a` (po P-POZNIEJSZA-POPRAWKA, #742): `vilda_vault.js` nałożony bez
+konfliktów, plik D-21 157 z 157. Wersje: `npm run podbij-wersje` względem `origin/audyt` `346dd81a`: `vilda_vault.js`
+223, `vilda_chrome.js` 168, `vilda_session_bridge.js` 92; SW 1.1.333 → 1.1.334.
+
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła, która treść pomiaru
@@ -16121,7 +16486,8 @@ oraz delty na żywo; dane fikcyjne).
   `lastSavedAtISO` = późniejsza z dwóch (`Bsw_bezNowych`). Dotąd działo się to tylko przy przyjętej treści wersji.
   Chwila zmiany i kosza dochodzi do innych urządzeń rekordem karty, w pełnej wysyłce i w delcie karty. U odbiorcy
   decyzję o nagrobku pacjenta podejmuje dotychczasowa reguła (nagrobek wygrywa, gdy usunięcie nie jest wcześniejsze niż
-  ostatni zapis karty).
+  ostatni zapis karty). *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: ta sama ostra nierówność `lastSavedAtISO >
+  deletedAtISO` decyduje teraz także o notatkach pacjenta — karta, która przeżyła usunięcie, wraca z notatkami.)*
 - **R5, treść kosza (D-6 B).** Gdy obie strony mają nagrobek tej samej wersji z treścią, gdy pominięta wersja
   z ładunku jest nowsza niż treść kosza albo gdy lokalna wersja usuwana przez nagrobek z ładunku jest nowsza niż jego
   treść, kosz trzyma nowszą z dwóch treści (`Bkz_nowszaWersja`: wyższa `rev`, przy
@@ -16663,6 +17029,10 @@ gubił pięć liczników Le (listy pacjentów, usunięte notatki pacjentów i sz
   „usunięte” (najnowszy nagrobek nie starszy niż najnowsza zmiana tu i w kopii, przy rekordzie tutaj). Listy
   oczekujących (`wllists`) i terminy (`wlsched`): `Ak(tutaj, z kopii)` i porównanie widocznych wpisów bez znaczników
   czasu — sam nowszy znacznik nie jest zmianą. Pozostałe preferencje — `uiPreferenceCount`, nie odsłania przycisku.
+  *(Aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: nagrobki notatek z „Usuń pacjenta” w stanach RATUNEK i CZEKA nie są
+  „usunięte”; po „Scal kopię konta” z kopii, w której pacjenta usunięto, notatki zostają przy zachowanej karcie (CZEKA),
+  a przy karcie późniejszej niż usunięcie są ratowane — ratunek tutejszej notatki liczy się jako „zmieniona”. Podgląd
+  liczy te stany tymi samymi funkcjami co Le, z kartą przewidywaną po pętli kart.)*
 - Nowe pola podglądu: `added|restored|updated|replacedNewer|deleted…Count` dla `PatientNote`, `Note`, `PatientList`,
   `Waitlist`, `WaitlistSchedule`, `uiPreferenceCount`, `updatedPreferenceCount`. Wynik scalania dodatkowo:
   `deletedPatientNoteCount`, `deletedNoteCount`, `added|updated|deletedPatientListCount` (z Le), liczniki list
@@ -17748,7 +18118,9 @@ synchronizacji karty nie było. Tak samo przy delcie nagrobka z kanału zmian i 
   Notatka obecna lokalnie zostaje przy swojej dacie — nowsza edycja lokalna nie przegrywa ze starszą kopią z pliku.
 - Import do **istniejącej** karty bez zmian (`lastSavedAtISO` = późniejsza z dat rekordu i pliku).
 - Reguły scalania bez zmian — działają więc tak samo na urządzeniach z poprzednią wersją aplikacji: karta z
-  `lastSavedAt` późniejszym niż nagrobek zostaje, a lokalny nagrobek jest zdejmowany.
+  `lastSavedAt` późniejszym niż nagrobek zostaje, a lokalny nagrobek jest zdejmowany. *(Aktualizacja 2026-10-21,
+  P-NOTATKI-ZA-KARTA: bez zmian — import dalej zdejmuje nagrobki importowanych notatek, także z polem
+  `deletedWithPatient`, i nadaje im chwilę przywrócenia.)*
 
 **Skutek widoczny.** Przywrócona karta ma na liście pacjentów „ostatni zapis” z dnia przywrócenia i staje na górze listy
 (sortowanie po ostatnim zapisie); daty wersji (wizyt) i wiek w wersjach bez zmian. Import nadal nie uruchamia wysyłki
