@@ -862,6 +862,8 @@
     mobileModulesExpanded: false,
     dzmQualityGroup: null,
     dzmQualityBulkUpdate: false,
+    egfrExtraData: null,
+    egfrMarkerContext: null,
     openHelp: null,
   };
 
@@ -1517,6 +1519,146 @@
     return FORMULA_CONTEXT[formulaId] || { interpretation: [], optional: [] };
   }
 
+  function simplifiedCreatinineEgfrActive() {
+    return !state.legacyBroad && ["egfr", "ckid_u25"].includes(state.activeFormulaId);
+  }
+
+  // Przenosimy istniejące pola, nie tworzymy ich kopii: odtworzenie pacjenta,
+  // daty pomiarów i zapis sesji nadal używają tych samych kontrolek i kluczy.
+  function restoreEgfrExtraData() {
+    const group = state.egfrExtraData;
+    if (!group) return;
+    group.anchors.forEach((anchor, fieldId) => {
+      const view = state.fieldViews.get(fieldId);
+      if (view && anchor.parentNode) {
+        anchor.parentNode.insertBefore(view.wrapper, anchor.nextSibling);
+      }
+    });
+    group.details.hidden = true;
+  }
+
+  function groupEgfrExtraData() {
+    if (!simplifiedCreatinineEgfrActive()) return;
+    const fieldIds = state.activeFormulaId === "egfr" ? ["weight", "height"] : ["weight"];
+    const views = fieldIds
+      .filter((fieldId) => state.optionalFieldIds.has(fieldId))
+      .map((fieldId) => state.fieldViews.get(fieldId))
+      .filter((view) => view && !view.wrapper.hidden);
+    if (!views.length) return;
+    let group = state.egfrExtraData;
+    if (!group) {
+      const parent = documentRef.getElementById("patientSet");
+      if (!parent) return;
+      const details = createElement("details", "clcr-egfr-extra-data");
+      const summary = createElement("summary", "clcr-egfr-extra-data__summary", "Dodatkowe dane (opcjonalne)");
+      const body = createElement("div", "clcr-egfr-extra-fields");
+      details.append(summary, body);
+      parent.appendChild(details);
+      group = { details, body, anchors: new Map() };
+      state.egfrExtraData = group;
+    }
+    views.forEach((view) => {
+      if (!group.anchors.has(view.control.id)) {
+        const anchor = documentRef.createComment(`clcr-egfr-${view.control.id}`);
+        view.wrapper.parentNode.insertBefore(anchor, view.wrapper);
+        group.anchors.set(view.control.id, anchor);
+      }
+      group.body.appendChild(view.wrapper);
+    });
+    group.details.hidden = false;
+  }
+
+  function syncEgfrMarkerContext() {
+    const proxy = state.egfrMarkerContext;
+    if (!proxy) return;
+    const marker = documentRef.getElementById("creatinineState");
+    const aki = documentRef.getElementById("suspectedAKI");
+    proxy.control.value = aki && aki.checked
+      ? "aki"
+      : marker && ["stable", "rapidlyChanging"].includes(marker.value)
+        ? marker.value
+        : "unknown";
+  }
+
+  function ensureEgfrMarkerContext() {
+    if (state.egfrMarkerContext) return state.egfrMarkerContext;
+    const markerView = state.fieldViews.get("creatinineState");
+    const akiView = state.fieldViews.get("suspectedAKI");
+    if (!markerView || !akiView) return null;
+    const wrapper = createElement("label", "clcr-field clcr-marker-context");
+    const heading = createElement("span", "clcr-field__heading");
+    const name = createElement("span", "clcr-field__name", "Stabilność kreatyniny / AKI");
+    const badge = createElement("span", "clcr-field__status clcr-field__status--interpretation", "Do pełnej interpretacji");
+    name.id = "clcr-label-marker-context";
+    heading.append(name, badge);
+    const control = createElement("select");
+    // Brak id/name jest celowy: to widok dwóch istniejących pól, a nie nowy
+    // klucz w collectCurrentSession()/JSON. Natywna etykieta zawiera tylko
+    // tę jedną etykietowalną kontrolkę, więc klik w nazwę daje jej fokus.
+    control.dataset.clcrMarkerContext = "1";
+    control.setAttribute("aria-labelledby", name.id);
+    [
+      ["unknown", "Nie wiadomo"],
+      ["stable", "Kreatynina stabilna, bez podejrzenia AKI"],
+      ["rapidlyChanging", "Kreatynina szybko się zmienia"],
+      ["aki", "Podejrzenie ostrego uszkodzenia nerek (AKI)"],
+    ].forEach(([value, text]) => {
+      const option = createElement("option", "", text);
+      option.value = value;
+      control.appendChild(option);
+    });
+    const note = createElement("span", "clcr-marker-context__note", "Szybka zmiana kreatyniny lub podejrzenie AKI wykluczają raportowanie bieżącego eGFR.");
+    note.id = "clcr-marker-context-note";
+    control.setAttribute("aria-describedby", note.id);
+    wrapper.append(heading, control, note);
+    markerView.wrapper.parentNode.insertBefore(wrapper, markerView.wrapper);
+    const proxy = { wrapper, control };
+    state.egfrMarkerContext = proxy;
+    control.addEventListener("change", () => {
+      const marker = markerView.control;
+      const aki = akiView.control;
+      // Ustawiamy obie wartości przed pierwszym zdarzeniem: silnik i autosave
+      // nie mogą zobaczyć przejściowej pary „stabilna + stare AKI”.
+      if (control.value === "aki") {
+        aki.checked = true;
+      } else {
+        marker.value = control.value;
+        aki.checked = false;
+      }
+      const vault = currentProtocolValueVault();
+      if (vault) {
+        vault.creatinineState = marker.value;
+        vault.suspectedAKI = aki.checked;
+      }
+      [marker, aki].forEach((canonical) => {
+        canonical.dispatchEvent(new Event("input", { bubbles: true }));
+        canonical.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      syncEgfrMarkerContext();
+      scheduleReadiness();
+    });
+    [markerView.control, akiView.control].forEach((canonical) => {
+      canonical.addEventListener("input", syncEgfrMarkerContext);
+      canonical.addEventListener("change", syncEgfrMarkerContext);
+    });
+    syncEgfrMarkerContext();
+    return proxy;
+  }
+
+  function renderEgfrMarkerContext() {
+    const active = simplifiedCreatinineEgfrActive();
+    const proxy = active ? ensureEgfrMarkerContext() : state.egfrMarkerContext;
+    if (!proxy) return;
+    proxy.wrapper.hidden = !active;
+    if (active) {
+      ["creatinineState", "suspectedAKI"].forEach((fieldId) => {
+        const view = state.fieldViews.get(fieldId);
+        if (view) view.wrapper.hidden = true;
+      });
+      syncEgfrMarkerContext();
+    }
+  }
+
   function activeSetsForFormula(formula) {
     const required = new Set(formula && Array.isArray(formula.requires) ? formula.requires : []);
     const interpretation = new Set(getContext(formula.id).interpretation || []);
@@ -1556,6 +1698,7 @@
   }
 
   function renderActiveFields() {
+    restoreEgfrExtraData();
     documentRef.documentElement.classList.remove("clcr-legacy-broad");
     const formula = formulaById(state.activeFormulaId);
     state.activeFormulaId = formula ? formula.id : "";
@@ -1601,6 +1744,8 @@
     if (accr) accr.wrapper.hidden = true;
     if (pcr) pcr.wrapper.hidden = true;
     groupCollapsibleContextFields();
+    groupEgfrExtraData();
+    renderEgfrMarkerContext();
     syncFieldPairs();
 
     const ktvToggle = documentRef.getElementById("ktvToggle");
@@ -1627,6 +1772,7 @@
   }
 
   function renderLegacyBroad(level) {
+    restoreEgfrExtraData();
     broadFormulaIds(level);
     documentRef.documentElement.classList.add("clcr-legacy-broad");
     documentRef.documentElement.classList.remove("clcr-has-active-formula");
@@ -1643,6 +1789,7 @@
     });
     restoreDzmQualityFields();
     restoreCollapsibleContextFields();
+    renderEgfrMarkerContext();
     syncFieldPairs();
     syncFieldsetVisibility();
     renderActiveHeading(null, true);
@@ -1697,6 +1844,20 @@
   }
 
   function focusField(fieldId) {
+    if (
+      simplifiedCreatinineEgfrActive() &&
+      ["creatinineState", "suspectedAKI"].includes(fieldId) &&
+      state.egfrMarkerContext
+    ) {
+      const { wrapper, control } = state.egfrMarkerContext;
+      try {
+        wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+        control.focus({ preventScroll: true });
+      } catch (_) {
+        control.focus();
+      }
+      return;
+    }
     if (fieldId === DZM_QUALITY_GROUP_FOCUS_ID && state.dzmQualityGroup) {
       const { group, confirmAll, details } = state.dzmQualityGroup;
       const answerSummary = dzmQualityAnswerSummary();
@@ -2358,6 +2519,7 @@
   }
 
   function renderReadiness() {
+    syncEgfrMarkerContext();
     if (!state.readiness) return;
     state.readiness.replaceChildren();
     if (state.legacyBroad) {
@@ -2921,6 +3083,13 @@
     if (picker) picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
     form.addEventListener("input", scheduleReadiness, true);
     form.addEventListener("change", scheduleReadiness, true);
+    form.addEventListener("reset", () => global.setTimeout(syncEgfrMarkerContext, 0));
+    ["vilda:persist-restored", "vilda:patient-loaded"].forEach((eventName) => {
+      documentRef.addEventListener(eventName, () => {
+        syncEgfrMarkerContext();
+        scheduleReadiness();
+      });
+    });
     documentRef.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeAllHelp(null);
     });
@@ -3160,6 +3329,13 @@
   // brak sensownego dopasowania (różnica > zaokrąglenie), zostawiamy surową.
   function displayedNumber(el, rawNum) {
     if (!el || !Number.isFinite(rawNum)) return rawNum;
+    const displayValue = typeof el.getAttribute === "function"
+      ? el.getAttribute("data-clcr-display-value")
+      : null;
+    if (displayValue != null && String(displayValue).trim() !== "") {
+      const displayNumber = Number(String(displayValue).trim().replace(",", "."));
+      if (Number.isFinite(displayNumber)) return displayNumber;
+    }
     const txt = el.textContent || "";
     const tokens = txt.match(/-?\d+(?:[.,]\d+)?/g);
     if (!tokens) return rawNum;
@@ -4787,6 +4963,21 @@
   // go lekarz w wynikach szczegółowych — z zaokrągleniem silnika), a nie z surowej
   // wartości data-clcr-value (ta bywa pełnoprecyzyjna, np. 79,77 vs wyświetlane 80).
   function parseDisplay(node) {
+    // Karta eGFR ma oddzielne, jawne metadane prezentacji. Jej tekst obejmuje
+    // także status, kategorię i objaśnienia — nie są one częścią jednostki.
+    const displayValue = node.getAttribute("data-clcr-display-value");
+    if (displayValue != null && displayValue !== "") {
+      const tone = node.getAttribute("data-clcr-tone") || "neutral";
+      return {
+        label: node.getAttribute("data-clcr-display-label") || "",
+        value: displayValue,
+        unit: node.getAttribute("data-clcr-display-unit") || "",
+        tone: ["success", "warning", "danger", "neutral"].includes(tone) ? tone : "neutral",
+        status: node.getAttribute("data-clcr-status") || "",
+        category: node.getAttribute("data-clcr-category") || "",
+        boundary: node.getAttribute("data-clcr-boundary") || "",
+      };
+    }
     const txt = (node.textContent || "").replace(/\s+/g, " ").trim();
     if (!txt) return null;
     const ci = txt.indexOf(":");
@@ -4804,6 +4995,10 @@
 
   function renderHead() {
     if (!head) return;
+    // Kolor poprzedniej formuły nie może przejść na nową lub niepełne dane.
+    ["data-clcr-tone", "data-clcr-status", "data-clcr-category", "data-clcr-boundary"].forEach((attribute) => {
+      head.removeAttribute(attribute);
+    });
     const id = activeFormulaId();
     let node = null;
     if (id) {
@@ -4843,13 +5038,34 @@
       unit = param && param.unit ? param.unit : "";
     }
     head.hidden = false;
+    const boundary =
+      ["egfr", "ckid_u25"].includes(id) && parsed && parsed.category &&
+      ["success", "warning", "danger"].includes(parsed.tone)
+        ? parsed.boundary
+        : "";
+    if (parsed && parsed.tone) {
+      head.setAttribute("data-clcr-tone", parsed.tone);
+      head.setAttribute("data-clcr-status", parsed.status);
+      if (parsed.category) head.setAttribute("data-clcr-category", parsed.category);
+    }
+    if (boundary) head.setAttribute("data-clcr-boundary", boundary);
     head.innerHTML =
       '<span class="clcr-rail-kick">' + escapeHtml(stateKicker()) + "</span>" +
-      (label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "") +
+      (parsed && parsed.status
+        ? '<div class="clcr-rail-status">' +
+          '<span>' + escapeHtml(parsed.status) + '</span>' +
+          (parsed.category ? '<span class="clcr-rail-category">' + escapeHtml(parsed.category) + "</span>" : "") +
+          "</div>"
+        : "") +
+      (!(parsed && parsed.status) && label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "") +
       '<div class="clcr-rnum">' +
       escapeHtml(value) +
       (unit ? "<small>" + escapeHtml(unit) + "</small>" : "") +
-      "</div>";
+      "</div>" +
+      (boundary
+        ? '<div class="clcr-rail-boundary">Przed zaokrągleniem: ' + escapeHtml(boundary) + "</div>"
+        : "") +
+      (parsed && parsed.status && label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "");
   }
   function escapeHtml(s) {
     return String(s == null ? "" : s)

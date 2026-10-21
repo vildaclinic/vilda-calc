@@ -283,8 +283,8 @@ const odtworzSesje = (karta) => karta.evaluate(() => window.applyClcrSessionSnap
   dispatchEvents: false, writeSession: true,
 }));
 
-const EGFR_129 = 'CKiD U25 eGFRcr (2021): 129 mL/min/1,73 m²';
-const EGFR_96 = 'CKiD U25 eGFRcr (2021): 96 mL/min/1,73 m²';
+const EGFR_129 = '129 mL/min/1,73 m² eGFR · CKiD U25 eGFRcr (2021)';
+const EGFR_96 = '96 mL/min/1,73 m² eGFR · CKiD U25 eGFRcr (2021)';
 // Strona składa wynik z twardymi spacjami — porównujemy teksty ze zwykłymi spacjami.
 const tekstySummary = (sesja) => sesja.summary.clcr.map((l) => String(l.text).replace(/\s+/g, ' '));
 
@@ -317,7 +317,7 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     });
     const sesjaX = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, x);
     expect(sesjaX.inputs.height, 'kontrola: sesja X z literówką').toBe('140');
-    expect(tekstySummary(sesjaX), 'kontrola: strona policzyła eGFR ze wzrostu 140 cm').toContain(EGFR_129);
+    expect(tekstySummary(sesjaX), 'kontrola: strona policzyła eGFR ze wzrostu 140 cm').toContainEqual(expect.stringContaining(EGFR_129));
 
     // Karta A: X wczytana z Karty pacjenta, sesja odtworzona; lekarz poprawia wzrost na 104 cm.
     const A = await kartaKlirensu(context);
@@ -329,7 +329,7 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     await A.waitForTimeout(800);
     const formularz = await A.evaluate(() => window.collectUserData().clcr);
     expect(formularz.inputs.height).toBe('104');
-    expect(tekstySummary(formularz), 'strona przeliczyła eGFR po poprawce wzrostu').toContain(EGFR_96);
+    expect(tekstySummary(formularz), 'strona przeliczyła eGFR po poprawce wzrostu').toContainEqual(expect.stringContaining(EGFR_96));
     expect(rozneKlucze(formularz.inputs, sesjaX.inputs), 'sesja formularza różni się od zapisanej tylko antropometrią').toEqual([]);
 
     // Karta B: X scalona z Y — głowa Y ma dokładnie sesję X.
@@ -355,7 +355,7 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     expect(glowaY.karty).toBe(1);
     expect([glowaY.userHeight, glowaY.clcr.inputs.height, glowaY.clcr.inputs.weight], 'głowa Y: poprawiony wzrost w danych i w sesji').toEqual([104, '104', '17']);
     expect(tekstySummary(glowaY.clcr), 'głowa Y: wynik policzony z poprawionego wzrostu').toEqual(tekstySummary(formularz));
-    expect(tekstySummary(glowaY.clcr)).not.toContain(EGFR_129);
+    expect(tekstySummary(glowaY.clcr)).not.toContainEqual(expect.stringContaining(EGFR_129));
 
     // Karta C: lekarz wczytuje Y — karta poprzedniego klirensu i „Odtwórz” pokazują eGFR z poprawionego wzrostu.
     const C = await kartaKlirensu(context);

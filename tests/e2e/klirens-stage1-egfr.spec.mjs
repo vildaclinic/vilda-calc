@@ -79,7 +79,7 @@ test('w wieku 18–25 lat ujawnia brak danych do drugiego równania', async ({ p
   await page.locator('#formulaPicker').selectOption('egfr');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('0.9');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).toContainText(
@@ -148,7 +148,7 @@ test('nie przypisuje kategorii G przy kreatyninie niestandaryzowanej do IDMS', a
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
   await page.locator('#ScrAssay').selectOption('not_idms');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).toContainText('Nie potwierdzono standaryzacji do IDMS');
