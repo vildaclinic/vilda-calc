@@ -1,8 +1,8 @@
 # Pokrycie odniesień hormonalnych — audyt 18 października 2026
 
-Stan po scaleniu PR [#716](https://github.com/vildaclinic/vilda-calc/pull/716),
+Pierwotny stan po scaleniu PR [#716](https://github.com/vildaclinic/vilda-calc/pull/716),
 sprawdzony na `audyt` `d3a64f232556fec6068385da00f5139b8ec17cfb`.
-Dane punktu pacjenta: **82 profile, `2026-10-18.3`**.
+Dane punktu pacjenta w audycie z 18.10: **82 profile, `2026-10-18.3`**.
 Ten dokument aktualizuje rejestr pracy; **nie dodaje ani nie zatwierdza
 nowych odniesień klinicznych**. Starsze wpisy etapowe w
 [PATIENT_POINT.md](PATIENT_POINT.md) opisują stan w chwili danego wdrożenia.
@@ -18,6 +18,14 @@ bez mediany. To zmiana prezentacji, nie nowy profil źródłowy; 82 profile
 `female-lh-result-only-policy.json` nie rozszerza zwykłego modelu Madsen,
 porównania płci ani norm laboratoryjnych. Poniższa tabela nadal opisuje
 **dostępność odniesienia**, a nie samą możliwość zaznaczenia stężenia.
+
+Uzupełnienie 21.10.2026: po poszerzonym audycie testosteronu właściciel
+zaakceptował dwa przybliżone odniesienia grupowe **Kushnir 2010** dla
+chłopców `[1,2)` i `[2,3)`. Bieżący rejestr to **84 profile,
+`2026-10-21.1`**; wcześniejsze 82 zachowano. Zaktualizowane niżej pokrycie
+nie przepisuje wyników historycznego skanu ani jego hashy z 18.10.
+Źródłowy odczyt, tolerancja i granice są opisane w
+[kontrakcie](PATIENT_POINT.md#testosteron-chłopców--przybliżone-mediany-dwóch-grup-21-października-2026).
 
 ## Co oznacza „luka”
 
@@ -52,7 +60,7 @@ metoda lub kontekst kliniczny mogą wyłączyć punkt również w tych zakresach
 | FSH | [7 dni,80 lat] | [0,02;19) lat | M >80; F ≥19. Wiek 1–<6 wymaga odpowiednio G1/Th1. Dorosłe kobiety mają osobne odniesienia fazowe/menopauzalne. |
 | AMH | [7 dni,70 lat] | [0,02;46) lat | M >70; F ≥46 nie ma zwykłej mediany wieku. Xu udostępnia odrębne punkty P50 35/40/45/50/55. |
 | Inhibina B | [7 dni,80 lat] | [0,02;47] lat | M >80 ma do 101 lat osobny aktywny panel średnich Baccarelli. F >47 to koniec zatwierdzonego odczytu numerycznego, nie dowód braku starszych kobiet w publikacji. |
-| Testosteron całkowity | [7,212] dni; [3,86] lat | Brak zwykłego profilu | M po 212. dniu do <3 lat; >86. Po 212. dniu działa blokada jakości/rozdzielczości obecnego odczytu. F ma m.in. niezależną interpretację laboratoryjną; nie dopisujemy p50 na podstawie RI. |
+| Testosteron całkowity | [7,212] dni; [1,86] lat | Brak zwykłego profilu | M po 212. dniu do <1 roku; >86. W 1–<3 są dwie odrębne przybliżone mediany grup Kushnir, nie ciągły model. Po 212. dniu do 1 roku nadal działa blokada jakości/rozdzielczości obecnego odczytu. F ma niezależną interpretację laboratoryjną; nie dopisujemy p50 na podstawie RI. |
 | Estradiol | Brak zwykłego profilu | [0,02;1] roku; [6,18] lat | F >1–<6 i >18. Dorosła faza cyklu ma własne odniesienia. M ma niezależne odniesienia laboratoryjne; brak osi wieku nie oznacza braku interpretacji. |
 | INSL3 | UI nie pokazuje liczbowego punktu | Brak zwykłego profilu | Niemowlęcy profil M istnieje wewnątrz silnika, ale UI świadomie go nie aktywuje. Względna linia nie jest stężeniem. Potrzebny osobny projekt ilościowego odniesienia. |
 
@@ -63,7 +71,8 @@ występowania hormonu. Audyt sprawdził wiek 0–120 lat; nie zakłada referencj
 poza domeną konkretnego źródła.
 
 Zamknięte luki: FSH M [16,18), FSH F [16,19), AMH M [18,20),
-LH M (16,18). Dokładne 16 lat w męskim LH nadal należy do Madsen,
+LH M (16,18), a od 21.10 także T M [1,3) przez dwie mediany grupowe.
+Dokładne 16 lat w męskim LH nadal należy do Madsen,
 a dokładne 18 do źródła dorosłego. Wypełnienie luki nie uprawnia
 do przedłużania modelu ani do użycia go w innym widoku.
 
@@ -125,13 +134,14 @@ nie kontaktowano autorów.
 
 ## Niezależne źródła i następne decyzje
 
-Poniższe wartości są ustaleniami audytu, **nie danymi nowego profilu**.
-Żadna pozycja nie jest automatycznie zaakceptowana klinicznie.
+Poniższe wartości są ustaleniami audytu, **nie danymi automatycznie
+wdrażanego profilu**. Odnotowana osobno decyzja z 21.10 dotyczy dwóch
+median Kushnir; nie zatwierdza pozostałych kandydatów ani Kulle.
 
 | Priorytet i źródło pierwotne | Ustalenie | Ograniczenie / możliwy następny krok |
 |---|---|---|
 | 1. LH dziewcząt — [Zhao 2025](https://doi.org/10.21037/tp-24-399), pełny tekst i suplement S2 | Rzeczywista mediana grupy >15–18: 7,14 mIU/mL, N=112; >18–19: 5,87, N=30. Surowica, Mindray CL-6000i. Autorska szersza grupa >12–19 w tabeli 4 ma p50=6,79, N=244 (suma tabeli 1). | Po poszerzeniu przeglądu i decyzji właściciela 20.10 nie wdrażamy jej jako domyślnej mediany. Nie opisano precyzyjnego wyliczania wieku ani fazy cyklu/OCP osobno. Selekcja wymagała prawidłowych badań; dokładne kryteria wstępnego wykluczenia wyników hormonalnych są niejasne. To chińska grupa wieku, nie LMS Wilsona ani normy fazy. Nowa ścieżka pokazuje sam wynik bez wyboru lub uśredniania median. |
-| 2. Testosteron M 1–<3 — [Kulle 2010](https://doi.org/10.1210/jc.2009-1670), tabela 3 | Grupa 1–3 lata: N=9, mediana 12 ng/dL (źródłowo zaokrąglone 0,40 nmol/L). Osocze, UPLC-MS/MS; LLOQ 0,1 nmol/L. | Mediana powyżej LLOQ, ale bardzo mała grupa, próbki pozostałe po badaniach klinicznych; pobrania 08–10. Nie uznawać automatycznie za medianę surowicy każdego małego chłopca. Ewentualny profil grupowy i granice wymagają odrębnej propozycji/akceptacji. Nie wypełnia automatycznie okresu po 212. dniu do 1 roku. |
+| 2. Testosteron M 1–<3 — [Kulle 2010](https://doi.org/10.1210/jc.2009-1670), tabela 3 | Grupa 1–3 lata: N=9, mediana 12 ng/dL (źródłowo zaokrąglone 0,40 nmol/L). Osocze, UPLC-MS/MS; LLOQ 0,1 nmol/L. | Mediana powyżej LLOQ, ale bardzo mała grupa, próbki pozostałe po badaniach klinicznych; pobrania 08–10. Nie uznawać automatycznie za medianę surowicy każdego małego chłopca. Po porównaniu źródeł 21.10 nie wybrano tej mediany do wdrożenia. Dwa odniesienia Kushnir opisano poniżej; badań nie uśredniamy. Okres po 212. dniu do 1 roku pozostaje bez mediany. |
 | 3. Inhibina B F >47 — [Borelli-Kjær](https://doi.org/10.1210/clinem/dgae439), ponowne wykorzystanie znanego źródła | Obecny odczyt ma ostatni zatwierdzony węzeł w 47 latach; publikacja obejmuje też dorosłą kohortę kobiet do 69 lat. Świeża oficjalna rycina pokazuje krótki dalszy odcinek, bez liczbowego eksportu modelu w suplementach. | Możliwy ponowny odczyt po formalnej kontroli rozdzielczości i oznaczalności. Źródło podaje LOD 3 ng/L oraz imputację LOD/2; osobnego LOQ nie znaleziono. Nie nadajemy nowej granicy wieku, nie ekstrapolujemy do 69 i nie zamieniamy cenzury na zero. |
 | 4. AMH M >70 — [Chong 2013](https://doi.org/10.1371/journal.pone.0070967), pełny tekst i tabela 1 | LiLACS: N=257, 80–90 lat, mediana całej grupy 12,1 pmol/L. | Potencjalne osobne porównanie obserwacyjne; nie ciągła mediana wieku ani rozwiązanie całego przedziału >70. Zróżnicowane zdrowie, mieszane dwa testy AMH; inne kohorty mają inne mediany. Rycina średniej geometrycznej z CI nie dostarcza p50. Sprostowanie z 2013 dotyczy nazwiska autora, nie tabel. |
 | 5. E2 F >1–<6 — [Kulle 2024](https://pubmed.ncbi.nlm.nih.gov/38652605/), pełny tekst, tabela 3 | Dziewczynki „B1 1–8 years”: N=213, mediana 15,0 pmol/L, powyżej LLOQ 11. LC-MS/MS. To rzeczywista mediana grupy wieku i stadium, nie dokładnego wieku. | Ewentualne użycie we wnętrzu luki wymaga znanego Th1 z obecnego formularza, zachowania źródeł przy 1 i 6 latach oraz osobnej polityki materiału. Tekst/roczna tabela podają 1724 osoby, tabela charakterystyki 1753 — różnica niewyjaśniona. Nie wyliczamy rocznych p50 z RI lub ryciny bez osobnego audytu. |
@@ -188,6 +198,46 @@ samego wyniku, przy zachowaniu źródeł w rozwijanej informacji.
 Pełne źródła i zakres poprzedniego odczytu:
 [zapis decyzji](evidence/female-lh-result-only-audit-2026-10-20.json).
 
+## Testosteron chłopców 1–<3 — decyzja 21.10.2026
+
+Pełny [Kushnir 2010](https://doi.org/10.1373/clinchem.2010.143222),
+ryc. **4C** na s. **1146**, zawiera mediany rocznych grup chłopców.
+Wektorowy odczyt czarnych trójkątów Te daje około **0,03/0,02 µg/L**,
+czyli **0,10401/0,06934 nmol/L**. To przybliżenia figury, nie liczby
+z tabeli i nie model dokładnego wieku. Właściciel zaakceptował użycie
+wyłącznie dwóch stałych grup `[1,2)` i `[2,3)` w zwykłych widokach.
+
+Obie mediany są ponad LOQ **10 ng/L** (LOD5) przy konwencji środka
+bounding box i centroidu. Odczyt ma tolerancję około ±5 ng/L, nie CI.
+Nie podano N dla rocznych grup ani reguły zastępowania <LOD/<LOQ;
+N123/125 z tabeli 1 ma inne grupowanie. Dzieci z młodszej kohorty
+pobierano po indukcji znieczulenia; 24 wysokie wyniki i dodanie 90% RI
+nie dowodzą korekty median. Te ograniczenia pozostają w źródłach.
+
+Porównanie alternatyw nie daje podstaw do uśredniania:
+
+- [Kulle 2010](https://doi.org/10.1210/jc.2009-1670), N9/osocze,
+  około 0,40 nmol/L: odrębna mała grupa. Zaokrąglenia 12 ng/dL i
+  0,40 nmol/L mogą współistnieć, nie dowodzą błędu jednostki.
+- [Holmes 2021](https://doi.org/10.1016/j.jmsacl.2021.10.005):
+  w źródłowych danych 26/38 M1–<3 ma T na lub poniżej 0,05 nmol/L,
+  dolnej granicy kalibracji/raportowania. Nie jest to wykazane LOD/LOQ
+  ani dowód imputacji; przed dokładnym importem modelu trzeba wyjaśnić
+  niskie wyniki. Tabela podaje predykcje w środkach grup, nie mediany grup.
+- [Goel 2025](https://doi.org/10.1016/j.jpurol.2025.01.034), 1398 chłopców,
+  surowica CMIA/GAMLSS: obiecujący kandydat, ale pełny tekst, szczegóły
+  oznaczalności i parametry numeryczne nie zostały uzyskane. Brak dostępu
+  nie oznacza odrzucenia analitycznego.
+
+Dwa nowe profile `ordinaryOnly` zachowują pozostałe 82, Kelsey od dokładnie
+3 lat, ilustrację i skalę, niezależne normy Mayo, bramki oraz dawne oceny.
+Cały możliwy wiek musi pasować do jednej grupy; niepewność przecinająca
+2 lub 3 nie tworzy mediany z połowy wieku. Nie jest wymagane G1 ani nowy
+formularz. Luka **>212 dni–<1 roku** pozostaje; nie ekstrapolujemy.
+[Ekstrakt źródła i geometrii](evidence/patient-point/kushnir2010-male-testosterone-group-medians.json)
+oraz [kontrakt punktu](PATIENT_POINT.md#testosteron-chłopców--przybliżone-mediany-dwóch-grup-21-października-2026)
+zawierają zakres akceptacji i syntetyczne kontrole produkcyjne.
+
 ## Osobny problem kwalifikacji E2 — poprawka 19.10.2026
 
 Laboratoryjny wiersz `e2_female_default` w `lab_units_data.js` przy kobiecie
@@ -217,10 +267,12 @@ Dokładny zakres, przypadki i ograniczenia: [E2_CYCLE_CONTEXT.md](../E2_CYCLE_CO
    Do przekazania wymagane są instalacja/aktualizacja i zimny restart
    PWA offline oraz zakończenie wszystkich kontroli GitHub dla końcowego
    SHA po każdym pushu. Wyniki kontroli podaje opis PR.
-3. Oddzielnie ocenić małą grupę testosteronu Kulle i możliwość dalszego
-   odczytu znanej inhibiny B oraz grupę E2/Th1. Nie łączyć ich z LH
-   w jednym wdrożeniu. Poprawka domyślnej fazy E2 ma osobny PR opisany
-   wyżej; przegląd nowych źródeł E2 pozostaje odrębnym zadaniem.
+3. Testosteron 1–<3 został osobno oceniony: decyzja z 21.10 wybiera dwa
+   przybliżone odniesienia Kushnir, bez importu Kulle lub uśredniania.
+   Kolejne odrębne etapy to możliwość dalszego odczytu znanej inhibiny B
+   oraz grupa E2/Th1. Nie łączyć ich z LH/T w jednym wdrożeniu.
+   Poprawka domyślnej fazy E2 ma osobny PR opisany wyżej; przegląd
+   nowych źródeł E2 pozostaje odrębnym zadaniem.
 4. Pozostałe źródła utrzymać jako obserwacyjne lub wymagające wyjaśnienia.
    Wiek poza zakresem, wynik cenzurowany i metoda niezgodna mają zachować
    uczciwy brak punktu oraz dostępną osobną interpretację.
@@ -234,4 +286,5 @@ wdrożonego profilu nie oznacza dowodu braku publikacji.
 Sam audyt z 18.10 nie zmieniał generatorów, danych runtime, norm, krzywych,
 zapisu pacjenta ani zasobów PWA. Osobna poprawka E2 zmienia kwalifikację
 laboratoryjną, nie pokrycie median. Aktualizacja rejestru nie nadaje nowym kandydatom statusu
-„zwalidowany klinicznie”.
+„zwalidowany klinicznie”. Dwa profile Kushnir z 21.10 są odrębnym
+wdrożeniem zaakceptowanego porównania edukacyjnego.

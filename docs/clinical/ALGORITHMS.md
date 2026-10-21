@@ -2427,7 +2427,93 @@ monotoniczność dzieciństwa i dorosłości, brak nowych ekstremów, ciągłoś
 stycznych, desktop, 320 px, pełny ekran, odznaczenie hormonów, powiększenia
 i zachowanie porównania płci. Błąd próbkowania zbliżenia mierzy się
 w pikselach; nie utożsamia z identycznością ścieżek SVG. Walidacja
-techniczna nie dowodzi prawidłowości medycznej.
+techniczna nie dowodzi prawidłowości medycznej. Opis braku punktu M2
+pochodzi ze stanu 11.10; zastępuje go osobne rozszerzenie Kushnir poniżej.
+
+### HORMONE-MALE-TESTOSTERONE-CHILDHOOD-GROUPS — przybliżone mediany 1–<3 lat, 2026-10-21
+
+**Decyzja i wpływ kliniczny:** po audycie pełnych publikacji właściciel
+zaakceptował mały PR z dwoma przybliżonymi odniesieniami edukacyjnymi
+Kushnir. Chłopiec w wieku 1–<3 lat, wcześniej bez liczbowego punktu
+z odniesieniem, otrzymuje rzeczywisty wynik i osobny jasny znacznik
+mediany grupy. Nie zmienia to laboratoryjnego RI Mayo wieku/G,
+klasyfikacji prawidłowości, zapisanych ocen, historii ani formularza.
+Nie nadajemy źródłu lub odczytowi statusu walidacji klinicznej.
+
+**Pełne źródło:** Kushnir i wsp., *Liquid Chromatography–Tandem Mass
+Spectrometry Assay for Androstenedione, Dehydroepiandrosterone, and
+Testosterone with Pediatric and Adult Reference Intervals*, Clinical
+Chemistry 2010;56:1138–1147, DOI
+[10.1373/clinchem.2010.143222](https://doi.org/10.1373/clinchem.2010.143222),
+PMID 20489135. Rycina **4C**, s. **1146**, jednoznacznie podaje mediany
+chłopców, czarne trójkąty Te. Pełny autorski PDF przeczytano; właściwy
+panel sprawdzono wizualnie i niezależnie w geometrii wektorowej. SHA256,
+kalibracja, współrzędne i ograniczenia są w
+[ekstrakcie](hormone-lifespan/evidence/patient-point/kushnir2010-male-testosterone-group-medians.json).
+Nie redystrybuujemy publikacji ani ryciny. Sprostowanie DOI
+`10.1373/clinchem.2011.167353` dotyczy DHEA Tanner IV–V, nie tych median T.
+
+| Grupa źródłowa | Polityka aplikacji | Przybliżone p50 µg/L | Po konwersji nmol/L |
+| --- | --- | ---: | ---: |
+| `1 to 2 years` | `[1,2)` | 0,03 | 0,10401 |
+| `2 to 3 years` | `[2,3)` | 0,02 | 0,06934 |
+
+Środek prostokąta obejmującego marker daje około 30,46/20,21 ng/L;
+jednolita konwencja i zaokrąglenie do 0,01 µg/L dają 30/20 ng/L.
+Centroid daje 26,09/15,69. Około ±5 ng/L jest oszacowaniem odczytu
+obejmującym tę wrażliwość i zaokrąglenie, **nie CI ani RI**. Cyfry
+0,10401/0,06934 wynikają z istniejącego `µg/L × 100 × 0,03467`;
+UI zachowuje znak ≈ i ograniczoną precyzję źródła. Nie odtwarzamy
+centyli pacjenta, percentyla, SDS lub normy z odległości od mediany.
+
+**Populacja i metoda:** surowica, stabilne izotopy, derywatyzacyjne
+2D LC-MS/MS API 4000, dzieci bez znanych chorób i leków na receptę.
+Młodszą kohortę pobierano po indukcji znieczulenia przed zabiegiem.
+Autorzy opisują 24 wyższe niż oczekiwano wyniki w całej grupie 6 mies.–6 lat
+i możliwy stres; dodane centralne 90% RI nie jest korektą median.
+N=2517 dotyczy całej pediatrycznej kohorty obu płci, nie dwóch grup T.
+Roczne N są nieznane; N=123/125 z tabeli 1 ma inne grupowanie i nie
+może zostać przypisane markerom. **LOD/LOQ T 5/10 ng/L** (s.1141);
+mediany są ponad LOQ przy obu konwencjach środka. Nie podano liczby
+wyników <LOD/<LOQ ani zastępowania, więc nie twierdzimy, że cenzury nie było.
+
+**Kontrakt:** osobna wersjonowana polityka
+`male-testosterone-childhood-reference-policy.json`, dwa profile
+`kushnir2010-male-t-1-2-group` / `kushnir2010-male-t-2-3-group`,
+`group-median`, `constant`, `approximate`, `ordinaryOnly`. Półotwarte
+granice są konwencją aplikacji, nie odzyskaną definicją autorów. Cały
+możliwy wiek musi należeć do jednej grupy; bez wyboru środka wieku,
+interpolacji grup, uśredniania badań lub ekstrapolacji. Kelsey od
+**dokładnie 3 lat** i wszystkie 82 wcześniejsze profile pozostają
+niezmienione. Luka >212 dni–<1 roku pozostaje. Krzywa i skala są stałe;
+nie wymuszamy odczytanych markerów jako kotwic ilustracji. Brak G nie
+blokuje odniesienia i nie potwierdza G1. Znane leczenie/stymulacja,
+niezgodna metoda/materiał, cenzura, jednostki i tożsamość zachowują bramki.
+Metoda surowicy źródłowej nie jest potwierdzeniem metody próbki pacjenta.
+
+**Dlaczego nie inne źródło:** Kulle 2010, tabela 3, podaje około
+0,40 nmol/L u dziewięciu chłopców w osoczu; nie uśredniamy tej wartości
+z Kushnirem. Zaokrąglone 12 ng/dL i 0,40 nmol/L nie dowodzą błędu
+konwersji w publikacji. W danych Holmes 2021 aż 26/38 wyników M1–<3
+jest na lub poniżej dolnej granicy kalibracji/raportowania 0,05 nmol/L;
+nie utożsamiamy tej granicy z LOD/LOQ ani nie zakładamy udowodnionej
+imputacji. Goel 2025, DOI `10.1016/j.jpurol.2025.01.034`, pozostaje
+obiecującym źródłem CMIA/GAMLSS, ale bez uzyskanego pełnego tekstu,
+parametrów i szczegółów niskich stężeń nie jest zaimportowany.
+Brak dostępu nie stanowi odrzucenia analitycznego.
+
+**Syntetyczne przypadki produkcyjnego silnika:** M1/0,10401 nmol/L
+→ ta sama przybliżona mediana grupy 1–2; M2/0,06934 → grupa 2–3;
+M3 → niezmienione Kelsey 0,3764139001167295; `[1,2)` i `[2,3)` →
+jedna właściwa grupa, 1,99–2,01 lub 2,99–3,01 → brak arbitralnego
+odniesienia. M2/`<0,1` → brak dokładnego punktu. Niezależna ścieżka
+Mayo dla M2 zachowuje zakres źródłowy `<7–20 ng/dL`, bez zamiany
+cenzurowanej dolnej granicy w zero. Regresje wywołują rzeczywisty
+silnik/adapter w
+`tests/unit/hormone-lifespan-male-testosterone-childhood-reference.test.mjs`.
+Weryfikacja obejmuje stałość geometrii, desktop/telefon, granice,
+jednostki i rzeczywisty scenariusz świeżej instalacji/aktualizacji PWA
+oraz zimnego restartu offline; wyniki wykonania podaje opis PR.
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 

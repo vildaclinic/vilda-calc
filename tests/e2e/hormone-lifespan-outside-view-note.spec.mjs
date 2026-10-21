@@ -193,7 +193,7 @@ test('M44 testosterone preserves its source mean and renders one explanation thr
 for (const example of [
   { name: 'incompatible LH method', data: context({ assayMethodId: 'anshlite-lh' }), reason: 'incompatible-assay', message: 'Brak wartości odniesienia dla potwierdzonej metody tej próbki.' },
   { name: 'ordinary female LH source gap', data: context({ sex: 'female', ageYears: 3, ageUpperYears: 3 }), reason: 'unsupported-age', message: 'Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.' },
-  { name: 'testosterone childhood gap', data: context({ analyte: 'testosterone_total', ageYears: 2, ageUpperYears: 2, measurement: { value: 1, unit: 'nmol/L' } }), reason: 'unsupported-age', message: 'Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.' },
+  { name: 'testosterone senior source gap', data: context({ analyte: 'testosterone_total', ageYears: 87, ageUpperYears: 87, measurement: { value: 1, unit: 'nmol/L' } }), reason: 'unsupported-age', message: 'Dla tego wieku brak wartości odniesienia pozwalającej nanieść wynik.' },
 ]) {
   test(`${example.name} keeps the qualification reason outside the view without promising a point`, async ({ page, diagramOrigin }) => {
     expect(await openComponent(page, diagramOrigin, example.data)).toEqual({ status: 'unavailable', reason: example.reason });

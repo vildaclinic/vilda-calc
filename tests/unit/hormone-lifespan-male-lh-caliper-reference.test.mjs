@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const require = createRequire(import.meta.url);
@@ -74,12 +75,12 @@ function currentForm(years = 17, months = 0) {
 
 describe('LH CALIPER chłopców — jawna rekonstrukcja mediany wyłącznie w (16,18)', () => {
   it('dodaje jeden profil i zachowuje wszystkie 81 wcześniejszych profili, konwersje i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-18.3');
-    expect(data.profiles).toHaveLength(82);
+    expect(data.version).toBe('2026-10-21.1');
+    expect(data.profiles).toHaveLength(84);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.maleLhCaliperReferencePolicy).toEqual(policy);
     expect(policy).toMatchObject({ kind: 'educational-source-selection', ordinaryOnly: true });
-    const unchanged = data.profiles.filter(item => item.id !== id);
+    const unchanged = beforeTestosteroneBoysBundle(data).profiles.filter(item => item.id !== id);
     // Frozen actual audyt 839673492a7b: this protects every earlier boundary,
     // assay/specimen gate, source statistic and provenance, not just counts.
     expect(unchanged).toHaveLength(81);

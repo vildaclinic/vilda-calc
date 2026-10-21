@@ -303,8 +303,8 @@ describe('Stable male total testosterone educational display — production buil
     expect(engine.referenceAt(infant, firstIneligibleAge)).toBe(0.164593);
     expect(engine.evaluate(data, patient(212 / 365.25)).referenceValue).toBe(0.168563);
     expect(engine.evaluate(data, patient(firstIneligibleAge))).toEqual({ status: 'unavailable', reason: 'reference-unavailable' });
-    for (const ageYears of [1, 1.5, 2, 2.999]) {
-      expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'unsupported-age' });
+    for (const ageYears of [275 / 365.25, 300 / 365.25, .9, .999999]) {
+      expect(engine.evaluate(data, patient(ageYears))).toEqual({ status: 'unavailable', reason: 'reference-unavailable' });
     }
     expect(engine.evaluate(data, patient(212 / 365.25, { ageUpperYears: 213 / 365.25 })))
       .toEqual({ status: 'unavailable', reason: 'reference-unavailable' });
