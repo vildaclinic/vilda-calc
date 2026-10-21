@@ -95,12 +95,13 @@ test('opisuje Cockcrofta–Gaulta jako eCrCl z jawną polityką masy', async ({ 
   await page.locator('#formulaPicker').selectOption('cg');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await page.locator('#creatinineState').selectOption('stable');
+  await page.locator('[data-clcr-marker-context]').selectOption('stable');
 
-  await expect(page.locator('#clcrInfo')).toContainText('eCrCl Cockcroft–Gault');
+  await expect(page.locator('#clcrInfo')).toContainText('Oszacowany klirens kreatyniny');
+  await expect(page.locator('#clcrInfo')).toContainText('Cockcroft–Gault');
   await expect(page.locator('#clcrInfo')).toContainText('masa rzeczywista');
-  await expect(page.locator('#clcrInfo')).toContainText('To eCrCl, nie eGFR');
-  await expect(page.locator('#clcrInfo')).toContainText('konkretnym leku');
+  await expect(page.locator('#clcrInfo')).toContainText('Otyłość, niedowaga, obrzęki lub nietypowa masa mięśniowa');
+  await expect(page.locator('#clcrInfo')).toContainText('Wzór opracowano przed standaryzacją oznaczeń kreatyniny');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
 });
 

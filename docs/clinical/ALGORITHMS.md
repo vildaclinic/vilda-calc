@@ -4397,6 +4397,60 @@ nieznane IDMS/stabilność → szary bez G; AKI → bez liczby. Liczba i metadan
 zapisywanego wyniku pozostają zgodne z kartą. Akceptacja makiety i zielone testy
 nie nadają algorytmom statusu walidacji klinicznej.
 
+#### P-KLIRENS-CG-PREZENTACJA — nieindeksowany Cockcroft–Gault, 2026-10-21
+
+**Decyzja właściciela:** wdrożyć zaakceptowaną [makietę desktop/mobile przed–po](https://chatgpt.com/space/page_4604c063d6d88191ac08c752c1140299)
+po usunięciu wskazówki o ChPL z obu obrazów i opisu. Zakres tego etapu obejmuje
+wyłącznie wybrany nieindeksowany `cg` w mL/min. Widok `cg_norm`, wzory eGFR,
+tryb zbiorczy i ich reguły pozostają poza tym etapem.
+
+**Wpływ kliniczny:** poprawiono błędny wspólny komunikat sugerujący, że oryginalny
+Cockcroft–Gault zakłada oznaczenie kreatyniny standaryzowane do IDMS. Zamiast niego
+rozwijane ograniczenia wyjaśniają, że wzór powstał przed standaryzacją. Nie dodano
+wymogu metody oznaczenia ani nowego pytania. Główna karta i podsumowanie mają szary
+kolor oraz opis „Oszacowany klirens kreatyniny”, bez kategorii G, zakresu
+referencyjnego i automatycznej oceny prawidłowości. Równanie, współczynnik 0,85 dla
+kobiet, konwersja Scr, dotychczasowe zaokrąglenie, zakres wieku i bramki
+bezpieczeństwa pozostają bez zmian. Liczba nie jest eGFR ani pomiarem GFR.
+
+**Populacja, jednostki i ograniczenia:** obecna ścieżka aplikacji udostępnia CG
+od 18. roku życia. Minimum stanowią wiek, płeć, aktualna rzeczywista masa w kg
+i Scr w mg/dL albo µmol/L (88,4 µmol/L = 1 mg/dL). Wzrost i BSA nie są wymagane
+dla nieindeksowanego wyniku mL/min. Nie wprowadza się automatycznego podstawienia
+masy należnej/skorygowanej ani normy. Otyłość, niedowaga, obrzęki lub nietypowa
+masa mięśniowa mogą zmniejszać wiarygodność oszacowania. Nieznana stabilność
+pozwala pokazać liczbę z widocznym zastrzeżeniem „Nie potwierdzono stabilności
+kreatyniny — wynik orientacyjny”. AKI i szybko zmieniająca się kreatynina nadal
+blokują liczbę; stan stabilny nie jest zakładany domyślnie.
+
+**Uproszczenie i zgodność danych:** formularz pomija pola imienia i nazwiska,
+bez usuwania tożsamości z karty pacjenta lub sesji. Dotychczasowe mechanizmy
+wykorzystują dostępny wiek, płeć i masę pacjenta. Scr i jednostka tworzą jeden
+wiersz; jedna lista kontekstu korzysta z tych samych czterech stanów co eGFR.
+Kanoniczne `creatinineState` i `suspectedAKI`, ich znaczenie oraz format sesji
+pozostają zachowane. Usunięto licznik kompletności i deklarację „pełnej
+interpretacji”. Ograniczenia i źródła są dostępne w krótkim rozwinięciu.
+Historia odczytuje jawne metadane wyświetlonej liczby, zachowując wartość surową.
+
+**Źródła:** Cockcroft DW, Gault MH. *Prediction of creatinine clearance from
+serum creatinine*. Nephron. 1976;16:31–41,
+[DOI 10.1159/000180580](https://doi.org/10.1159/000180580).
+[KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of CKD](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf#page=134),
+Kidney Int. 2024;105(Suppl 4S):S117–S314, §4.2, S249 (PDF s. 134), opis
+opracowania CG przed standaryzacją oraz ograniczeń związanych z masą ciała.
+[National Kidney Foundation — Cockcroft-Gault](https://www.kidney.org/professionals/kdoqi/cockcroft-gault-equation-estimating-creatinine-clearance),
+informacja o pierwotnym wzorze i kreatyninie standaryzowanej do IDMS;
+odczyt 2026-10-21. Źródła nie ustanawiają nowego uniwersalnego progu oceny CG.
+
+**Syntetyczne przypadki rzeczywistego kodu produkcyjnego:** F50/70 kg/Scr
+1 mg/dL → 74,375 mL/min, wyświetlone 74; M50/70 kg/Scr 1 mg/dL → 87,5 mL/min,
+wyświetlone 88. Scr 88,4 µmol/L daje te same wartości. Brak wzrostu nie blokuje
+`cg`; wiek 17 lat blokuje. Przy nieznanej stabilności wynik pozostaje szary
+z zastrzeżeniem, a po zaznaczeniu AKI/szybkiej zmiany liczba znika. Sprawdzane są
+też odtworzenie kontekstu ze starszej sesji, przełączenie wzoru i zachowanie
+danych pacjenta. Akceptacja makiety i testy techniczne nie nadają wzorowi statusu
+walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
@@ -15201,7 +15255,7 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
-## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.335, 2026-10-20)
+## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.336, 2026-10-20)
 
 **Zgłoszenie (pomiar właściciela 2026-10-20 przy weryfikacji P-SW-STRONY-PRAWNE; usterka istniała już na `audyt`).**
 W Firefoksie (Playwright Firefox 151 i Firefox 158.0.1 bez automatyzacji, limit źródła obniżony preferencją
@@ -15242,12 +15296,12 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
 - Wywołania: nawigacja w `updateShellFromNetwork`, dokument pobrany poza nawigacją (ten sam klucz w pamięci powłoki)
   i instalacja (`fetchAndStorePrecacheUrl`): pusta kopia nie wchodzi do nowej pamięci powłoki — dokument opcjonalny
   zostaje bez kopii (online z sieci), wymagany `/index.html` przerywa instalację, więc zostaje poprzednia wersja SW.
-- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.334 odrzucony
+- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.335 odrzucony
   zapis przy braku kopii kończył nawigację `Response.error()` — w Chromium strona nie otwierała się online.
 - Koszt na odświeżenie dokumentu: odczyt poprzedniej kopii i odczyt kontrolny (dokumenty mają 7–249 KB), chwilowo do
   trzech kopii treści w pamięci SW. Przy braku kopii nawigacja czeka dodatkowo na odczyt kontrolny.
-- `SW_VERSION` 1.1.334 → **1.1.335** (`npm run podbij-wersje`; 1.1.327–1.1.334 wydały równolegle #734, #738, #741, #739,
-  #743, #745, #742 i #747);
+- `SW_VERSION` 1.1.335 → **1.1.336** (`npm run podbij-wersje`; 1.1.327–1.1.335 wydały równolegle #734, #738, #741, #739,
+  #743, #745, #742, #747 i #748);
   pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
 **Świadomie poza zakresem i ryzyko resztkowe (decyzje właściciela).**

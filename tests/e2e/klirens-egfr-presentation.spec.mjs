@@ -246,8 +246,8 @@ test('masa i wzrost dorosłego są zwinięte, a przejście do Cockcrofta odsłan
   await expect(result(page).locator('.clcr-egfr-value')).toHaveText('25');
   await selectFormula(page, 'cg');
   await expect(page.locator('#weight')).toBeVisible();
-  await expect(page.locator('[data-clcr-marker-context]')).toBeHidden();
-  await expect(page.locator('#creatinineState')).toBeVisible();
+  await expect(page.locator('[data-clcr-marker-context]')).toBeVisible();
+  await expect(page.locator('#creatinineState')).toBeHidden();
 });
 
 test('odtworzenie starej sesji synchronizuje nowe pole bez dodawania klucza do zapisu', async ({ page }) => {

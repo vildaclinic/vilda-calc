@@ -1807,6 +1807,50 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
 .clcr-egfr-result-details .result-box {
   margin-top: var(--space-12px);
 }
+
+/* CG nie wymaga wzrostu ani danych identyfikacyjnych. Zachowujemy kontrolki
+   silnika, a układ pokazuje tylko dane potrzebne dla nieindeksowanego eCrCl. */
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] #legacyFormulaHistory,
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] #formulaNote {
+  display: none !important;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-active-panel__eyebrow {
+  display: none;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] #clcrForm #patientSet {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] #clcrForm #serumSet {
+  padding-top: var(--space-2);
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field__heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  /* Dwa wiersze etykiety przy 320 px muszą zajmować tyle samo miejsca co
+     sąsiednia krótka etykieta z przyciskiem pomocy 44 × 44 px. */
+  min-height: 44px;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field__status {
+  display: none;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] [data-clcr-field-id="weight"],
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-marker-context {
+  grid-column: 1 / -1;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field-pair[data-clcr-value-field="Scr"] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12px);
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-marker-context__note {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 480px) {
   html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-egfr-result {
     padding: var(--space-16px) !important;
