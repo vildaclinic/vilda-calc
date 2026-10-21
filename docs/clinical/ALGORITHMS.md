@@ -15297,7 +15297,7 @@ sprawdza opis każdej karty przy każdym scaleniu, bez jednorazowej migracji, no
 dziennika D-8.1; odświeżanie listy po delcie na żywo i zdanie w oknie pomiaru o korekcie starszej wersji — osobne PR). Serwer, format ładunku, delt, pliku karty i kopii konta oraz API `window.VildaVault` bez zmian; pola
 `headerUpdatedAtISO` nie ma.
 
-**Co było** (prawdziwy `vilda_vault.js` 218, `cd3a2876`; sejfy w pamięci, sztuczny zegar; dane fikcyjne).
+**Co było** (prawdziwy `vilda_vault.js` 219, `0d7b4160`; sejfy w pamięci, sztuczny zegar; dane fikcyjne).
 - Nagłówek karty (rekord `headerCipher`, z którego biorą się lista i wyszukiwanie) nie zawsze opisywał najnowszą wersję:
   - poprawka STARSZEJ wersji w oknie pomiaru i gwiazdka na starszej wersji ustawiały nagłówek z tej starszej wersji
     (`Bzw_aktualizujWersje`): lista pokazywała dawne nazwisko, datę urodzenia i wiek, Karta pacjenta — najnowsze;
@@ -15325,7 +15325,9 @@ dziennika D-8.1; odświeżanie listy po delcie na żywo i zdanie w oknie pomiaru
   konta”, odtworzenie konta. Nagłówka z ładunku, z pliku ani z poprawianej starszej wersji nie przepisujemy; nagłówek
   z ładunku i z pliku jest zapasem tylko dla karty, która powstaje.
 - **R2, nieczytelna najnowsza wersja.** Najnowsza wersja nieczytelna albo bez imienia: zostaje dotychczasowy nagłówek;
-  nie cofamy się do starszej czytelnej wersji (tak jak dotąd kosz i `deleteSnapshot`).
+  nie cofamy się do starszej czytelnej wersji. Dotyczy każdej ścieżki, także kosza, „Przywróć”, retencji, odbiorcy
+  nagrobka i `deleteSnapshot` (`Bkz_przebudujNaglowek`, `Bzw_usunWersje`): dotąd przy najnowszej wersji bez imienia
+  (dawne dane, stary klient) zerowały na liście imię i nazwisko.
 - **R3, porównanie i zapis.** Policzony nagłówek porównujemy z zapisanym po polach `name`, `firstName`, `lastName`,
   `dobISO`, `sex`, `age`, `ageMonths`, `external`, `birthYear`, `contact` — bez `timestampISO`, które `Nn` uzupełnia
   chwilą bieżącą. Odbiorca zapisuje rekord karty tylko przy różnicy, w tym samym zapisie co licznik i chwila zapisu karty.
@@ -15346,7 +15348,7 @@ dziennika D-8.1; odświeżanie listy po delcie na żywo i zdanie w oknie pomiaru
 **Przypadki syntetyczne (wejście → oczekiwany wynik).** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar
 (`vi.useFakeTimers({ toFake: ['Date'] })`). Karta: s1 (60 mies.), s2 (66 mies.) „Testowy Jan”, ur. 2020-01-01; B ma komplet.
 
-`tests/unit/naglowek-najnowszej.test.mjs` (nowy, 22):
+`tests/unit/naglowek-najnowszej.test.mjs` (nowy, 25):
 - N1 poprawka s1 (okno pomiaru, `preserveSavedAt`) na „Starszy Jan”, ur. 2019-05-05 → lista i `getPatient().header`
   „Testowy Jan|2020-01-01|5 l 6 m”, zdarzenie `onPatientSaved` z nagłówkiem „Testowy Jan” (dotąd „Starszy Jan”);
 - N2 gwiazdka na s1 z literówką „Literowka Jan”, potem odpięcie → oba razy „Testowy Jan” (dotąd „Literowka Jan”);
@@ -15355,6 +15357,9 @@ dziennika D-8.1; odświeżanie listy po delcie na żywo i zdanie w oknie pomiaru
 - N5 B z zegarem +10 min zapisuje „Zmieniony Jan”, A po synchronizacji zapisuje nową wizytę „Testowy Jan” → nagłówek
   i zdarzenie „Zmieniony Jan”, jak najnowsza wg `yr` (dotąd „Testowy Jan”);
 - N6 [kontrola] nowa wizyta z nową nazwą → nagłówek z niej;
+- N7 najnowsza wersja bez imienia (ładunek starego klienta), potem kosz, `deleteSnapshot` albo „Przywróć” innej wersji
+  (3) → nagłówek zostaje „Testowy Jan” na A i na urządzeniu C, które dostaje nagrobek (dotąd `name: null`, przegląd
+  adwersarza);
 - O1 korekta nazwiska i daty urodzenia s2 na A, pełny ładunek A → B (`updatedSnapshotCount` 1) → B: „Nowak
   Jan|2020-02-02”, `findSameNamePatients('Nowak Jan')` = ta karta, ‘Testowy Jan’ = [], zapis formularza „Nowak Jan”
   ur. 2020-02-02 bez karty → ta sama karta, `isNew` false (dotąd: stary nagłówek, 0 kart, nowa karta);
@@ -15390,8 +15395,9 @@ pusty kosz, data karty bez zmian; A → B (pełny i delta) → B ma s2; delta B 
 (`addedSnapshotCount` 1); D2 usunięcie najnowszej s3 → nagłówek z s2, po B → A z s3; D3 [kontrola] kosz s2 → nie wraca,
 B usuwa i ma w koszu.
 
-Na `cd3a2876` z 29 nowych testów czerwonych jest 16 (wszystkie przypadki D-3 poza 6 kontrolami); 7 testów D-8 jest
-zielonych (reguła już działa, strażnik ją przypina). Mutacje łatki D-3 (każdy z 14 elementów cofnięty osobno) dają od
+Na `0d7b4160` z 32 nowych testów czerwonych jest 20: 19 przypadków D-3 (wszystkie poza 6 kontrolami) i statyczny
+strażnik D-8 (etykieta „deleteSnapshot from timeline”); 6 testów zachowania D-8 jest zielonych (reguła już działa,
+testy ją przypinają). Mutacje łatki D-3 (każdy z 14 elementów cofnięty osobno) dają od
 1 do 5 czerwonych testów. Mutacje strażnika (`deleteSnapshot` w `vilda_version_history_ui.js`,
 w skrypcie inline `app.html`, zmieniona etykieta, wołanie `Ar` w sejfie) — każda daje 1 czerwony test. Przepisane
 oczekiwania: `tests/unit/kopia-konta-dane-konta.test.mjs` T31, T38, T39 i pełny podtytuł, `tests/e2e/kopia-konta-dane-konta.spec.mjs`
@@ -15432,13 +15438,18 @@ oczekiwania: `tests/unit/kopia-konta-dane-konta.test.mjs` T31, T38, T39 i pełny
   nie występuje między urządzeniami.
 - Eksport (`exportSyncPayload`, `buildPatientDelta`, plik karty, kopia konta) wysyła zapisany nagłówek, jak dotąd;
   nowy odbiorca używa go tylko dla karty, która powstaje bez czytelnej wersji. `migratePatientNamesSplit` bez zmian.
+- **Import pliku karty a wersje innej karty** (istniejące, P-SYNC-WLASCICIEL, „Poza zakresem”: import bez strażnika
+  właściciela). Na B „Scal pacjentów” X → Y i eksport pliku karty Y; A, które o scaleniu nie wie, importuje plik. Wersje
+  X przechodzą pod Y (nagłówek Y z najnowszej, R1), a karta X zostaje na liście ze starym nagłówkiem i licznikiem, bez
+  wersji albo z nagłówkiem z zabranej wersji. Pełna synchronizacja z B usuwa X nagrobkiem scalenia; trwale tylko przy
+  pracy na samych plikach. Do osobnego PR (import pomija wersje leżące pod inną kartą albo przelicza tamtą kartę).
 
 **Kod.** `vilda_vault.js`: pomocniki `Bng_klucz`, `Bng_zTresci`, `Bng_jawna`, `Bng_dopisz`, `Bng_poZapisie`,
 `Bng_naglowek`, `Bng_zmiana`, `Bzw_naglowek`, `Bpz_glowaNowsza`, `Bng_zPliku`, `Bng_zJawnych`; `Bzw_aktualizujWersje`,
 `Bpz_zapis` (savePatient), `Bsl_scalPacjenta` (obie gałęzie karty istniejącej i nowa karta), `Bsw_poprawTresc`,
 `Bsw_doF`, `Bsw_przenies`/`Bsw_poOddaniu`, `ns` (importPatientFromEnvelope), `ss` (mergeVaultBackup), `as`
 (restoreVaultBackup); komentarze przy `deleteSnapshot` i w bloku P-KOSZ-ZAPISOW. `Bkz_przebudujNaglowek` i
-`Bzw_usunWersje` bez zmian (już liczyły nagłówek z najnowszej). `vilda_auth_ui.js`: podtytuł „Scal kopię konta”
+`Bzw_usunWersje` liczą nagłówek przez `Bng_zTresci` (R2). `vilda_auth_ui.js`: podtytuł „Scal kopię konta”
 i etykieta dziennika „deleteMeasurementRow from timeline”.
 
 **Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 219 → 220, `vilda_auth_ui.js` 504 → 505 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (164 → 165) i `vilda_session_bridge.js` (88 → 89); SW 1.1.327 → **1.1.328**.

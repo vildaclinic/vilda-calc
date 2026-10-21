@@ -160,6 +160,33 @@ describe('P-NAGLOWEK-NAJNOWSZEJ: zmiany na tym urządzeniu', () => {
     expect(await naglowek(A, pid)).toBe('Poprawny Jan|Poprawny/Jan|2020-04-04|M|6l0m');
   });
 
+  // Przegląd adwersarza #738: najnowsza wersja bez imienia (z ładunku starego klienta). Scalanie zostawiało nagłówek
+  // (R2), a kosz, deleteSnapshot, „Przywróć” i odbiorca nagrobka liczyły Nn bez sprawdzenia imienia i zerowały nazwę.
+  const BEZ_IMIENIA = {
+    kosz: async (A, pid, s1) => { await A.v.moveSnapshotToTrash(pid, s1.snapshotId); },
+    deleteSnapshot: async (A, pid, s1) => { await A.v.deleteSnapshot(pid, s1.snapshotId); },
+    'Przywróć': async (A, pid, s1) => { await A.v.moveSnapshotToTrash(pid, s1.snapshotId); przesunZegar(60e3); await A.v.restoreTrashedSnapshot(pid, s1.snapshotId); },
+  };
+  for (const [droga, krok] of Object.entries(BEZ_IMIENIA)) {
+    it(`N7 najnowsza wersja bez imienia, ${droga} innej wersji: nagłówek zostaje (R2), także u odbiorcy nagrobka`, async () => {
+      sztucznyZegar();
+      const c = await dwieWersje();
+      const s3 = await zapisz(c.B, zapis('Testowy Jan', '2020-01-01', 72), { patientId: c.pid });
+      const lad = kopia(await c.B.v.exportSyncPayload());
+      delete lad.patients.find((x) => x.patientId === c.pid).snapshots.find((x) => x.snapshotId === s3.snapshotId).payload.name;
+      await c.A.v.mergeSyncPayload(lad);
+      expect((await c.A.v.getPatient(c.pid)).snapshots[0].snapshotId, 'kontrola: najnowsza to wersja bez imienia').toBe(s3.snapshotId);
+      expect(await naglowek(c.A, c.pid), 'scalanie zostawia nagłówek').toBe(JAN + '|5l6m');
+      const C = await urzadzenie('C');
+      await sync(c.A, C);
+      przesunZegar(60e3);
+      await krok(c.A, c.pid, c.s1);
+      expect(await naglowek(c.A, c.pid), droga).toBe(JAN + '|5l6m');
+      await sync(c.A, C);
+      expect(await naglowek(C, c.pid), 'odbiorca').toBe(JAN + '|5l6m');
+    });
+  }
+
   it('N5 nowa wizyta, gdy inna wersja ma późniejszą chwilę zapisu (zegar drugiego urządzenia +10 min): nagłówek z najnowszej wg yr', async () => {
     sztucznyZegar();
     const A = await urzadzenie('A'), B = await urzadzenie('B');
