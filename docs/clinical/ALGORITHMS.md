@@ -15563,6 +15563,12 @@ wizyta 125 cm / 24 kg).
 - **Edycja bieżącej wizyty starej karty w pętli scaleń (T9, PD-10).** Poprawka przetrwa, ale jej nowa chwila zapisu
   czyni ją bieżącą wersją scalonej karty na wszystkich urządzeniach (dawna głowa, bez późniejszych wizyt). Przy jednym
   scaleniu działo się tak już dotąd.
+- **„Przywróć”, gdy ta sama wersja jest w karcie (ostatnia wersja karty, której nagrobek nie usuwa) i w koszu,
+  a usunięcie z innego urządzenia jest późniejsze niż zmiana w karcie.** Wersja w karcie jest nowsza niż treść kosza,
+  więc „Przywróć” odpowiada „już w karcie” i zdejmuje wpis kosza; przy następnej synchronizacji późniejsze usunięcie
+  znów wygrywa na pozostałych urządzeniach (wersja zostaje w koszu, na tym urządzeniu — w karcie i w koszu). Treść nie
+  ginie. Dotąd „Przywróć” zapisywało wtedy starszą treść z kosza z wyższą `rev`, gubiąc późniejszą poprawkę. Domknięcie
+  (zapis wersji z karty ze stemplem zamiast „już w karcie”) — osobny PR.
 - **E4a (K6, PD-16).** Poprawka w starej karcie PRZED scaleniami, potem kosz na urządzeniu, które scaliło → poprawka
   ginie wszędzie, jak dotąd. Osobny PR.
 - **Gwiazdka a retencja (K10, PD-12).** Gwiazdka, odpięcie i gwiazdka na P (`rev` 3), późniejsza poprawka na C, retencja
@@ -15575,28 +15581,30 @@ wizyta 125 cm / 24 kg).
   której odbiorca nie przyjmuje.
 
 **Walidacja.**
-- `npm test` na `07d287de`: polityka repozytorium (1753 pliki), lint, składnia (1116 plików), 409 plików testów,
-  10 095 z 10 096 zielonych; jedyny czerwony `gh-punkty-api.test.mjs` („kolejne wywołania różne”) to istniejąca wada
-  generatora identyfikatorów punktów GH (`String(Date.now() + Math.random())`: kolizja w tej samej milisekundzie ok.
-  1 na 3600 par), niezwiązana z tą zmianą — trzy ponowne uruchomienia zielone, osobne zadanie. `test:pro` 75 z 75.
-- Pliki D-7 (`pozniejsza-poprawka`, `pozniejsza-poprawka-rev`, `kosz-nowsza-tresc`, `kosz-przywroc-nowsza`,
-  `sync-wlasciciel-wersji`, `zmiana-w-karcie`): 649 z 649; 137 nowych testów, na sejfie sprzed zmiany czerwonych 96 —
-  zielone tam są kontrole (T7, T8, T10, P1, K6, K8, K8b, P6–P8 i części kolejności K4, K9, K10).
+- `npm test` (kod jak `db5acb9a`): polityka repozytorium (1754 pliki), lint, składnia (1117 plików), 410 plików testów,
+  10 116 z 10 116 zielonych; `test:pro` 43 z 43, 32 z 32, 44 z 44. CI na `db5acb9a`: lint,
+  składnia, testy jednostkowe, e2e w 3 odłamkach, testy przeglądarkowe i PWA, zrzuty wyglądu, CodeQL — zielone.
+- Pliki D-7 (`pozniejsza-poprawka`, `pozniejsza-poprawka-rev`, `pozniejsza-poprawka-mutacje`, `kosz-nowsza-tresc`,
+  `kosz-przywroc-nowsza`, `sync-wlasciciel-wersji`, `zmiana-w-karcie`): 152 nowe testy; na sejfie sprzed zmiany
+  czerwonych jest 108 — zielone tam są kontrole (T7, T8, T10, P1, K6, K8, K8b, P6–P8, części kolejności K4, K9, K10
+  i trzy testy mutacji, w których stara aplikacja przypadkiem daje ten sam wynik).
 - e2e (desktop-chromium): kosz, właściciel wersji, korekta nazwiska, wczytany pacjent, porównanie w tle, blokada zapisu
   wersji, spójność zapisów, kopia konta — 54 z 54.
-- Mutacje (każdy element cofnięty osobno): komparator, reguła karty, `null`, stempel poprawki, losowanie, warunek
-  i stempel „Przywróć”, stempel importu, `rev` przy przyjęciu — od 1 do 69 czerwonych testów; stempel chwili ostatniego
-  zapisu karty — tylko strażnik źródła.
-- Fuzz różnicowy (prawdziwy sejf, 3 urządzenia, „Scal pacjentów”, rozjazd zegarów 0 / +10 / −5 min; 6 zestawów po 400
-  przebiegów, porównanie z `54a84da3`): par (wersja, urządzenie) bez najpóźniejszej zmiany np. 142 → 118 (zestaw
-  główny), 184 → 4 (bez rozjazdu zegarów); rozjazd urządzeń bez zmian (te same przebiegi w obu wariantach, 0 pełnych
-  remisów), 0 wyjątków; przypadki „gorzej” — wyłącznie równoległe zmiany przy rozjeździe zegarów (ograniczenie wyżej).
-  Ostateczny wariant (P-REV-MAX ze stemplem usunięcia) wobec wariantu z `rev` zwycięzcy: 0 przypadków „gorzej” w kartach,
-  koszu i rozjeździe; jedna wizyta ginąca po „Scal pacjentów” (droga znanej utraty E1) — naprawiona; mniej wizyt
-  wracających z kosza wbrew usunięciu (61 zamiast 76 par w zestawie z gęstymi poprawkami).
-- Flota mieszana (dwie kopie sejfu w jednym procesie, stara = `54a84da3`): macierz 109 scenariuszy (S7–S10b, pętla
-  scaleń, kosz z każdym urządzeniem starym, kosz i „Przywróć”) — 0 utrat ponad flotę samych starych, 0 rozjazdów przed
-  aktualizacją, 0 zapisów w kolejnych rundach; fuzz floty mieszanej 900 przebiegów — 0 (przy `rev` zwycięzcy 11 i 1).
+- Mutacje (każdy element cofnięty osobno, 39 mutacji): każdą wykrywa test zachowania albo — dla 3 równoważnych
+  i 2 niewykrywalnych zachowaniem (argument stempla „Przywróć” bez wpływu na maksimum, porządek opisu nagrobka przy
+  równej chwili retencji) — strażnik źródła; 15 testów w `pozniejsza-poprawka-mutacje` zamyka luki, które pilnował
+  wcześniej tylko strażnik.
+- Fuzz różnicowy samych nowych (prawdziwy sejf, 3 urządzenia, „Scal pacjentów”, retencja, rozjazd zegarów 0 / +10 /
+  −5 min; zestawy po 400 przebiegów, porównanie z `54a84da3`): par (wersja, urządzenie) bez najpóźniejszej zmiany
+  142 → 118 (zestaw główny), 216 → 150, 241 → 142, 304 → 238; wizyt wracających z kosza wbrew usunięciu 98 → 95,
+  61 → 53, 55 → 46, 76 → 61; rozjazd urządzeń bez zmian (te same przebiegi, 0 pełnych remisów, 0 tylko w nowej
+  wersji), 0 wyjątków; przypadki „gorzej” — wyłącznie równoległe zmiany przy rozjeździe zegarów. `rev` żadnej wersji
+  ani nagrobka nie przekracza `rev` floty samych starych.
+- Flota mieszana (dwie kopie sejfu w jednym procesie, stara = `54a84da3`, nowa = głowa PR): macierz 109 scenariuszy
+  (S7–S10b, pętla scaleń, kosz z każdym urządzeniem starym, kosz i „Przywróć”) — 0 utrat ponad flotę samych starych,
+  0 rozjazdów przed aktualizacją, 0 zapisów w kolejnych rundach, `rev` równa flocie samych starych w 109 ze 109; fuzz
+  floty mieszanej 900 + 200 przebiegów (z przewagą kosza) — 0 utrat ponad flotę samych starych (przy `rev` zwycięzcy:
+  11 w macierzy, 1 w fuzzie); wyjątek — rozjazd zegarów ze starszą aplikacją (ograniczenie F2 wyżej).
 - `npm run podbij-wersje` względem `origin/audyt` `0d76443`: `vilda_vault.js` 222, `vilda_chrome.js` 167,
   `vilda_session_bridge.js` 91; SW 1.1.331 → 1.1.332.
 
