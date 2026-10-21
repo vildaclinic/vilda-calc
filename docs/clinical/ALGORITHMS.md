@@ -15434,7 +15434,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.331, `vilda_vault.js` 222, 2026-10-21)
+## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.332, `vilda_vault.js` 222, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła, która treść pomiaru
 zostaje po synchronizacji, gdy tę samą wizytę poprawiono na dwóch urządzeniach, i która treść trafia do kosza.
@@ -15597,8 +15597,8 @@ wizyta 125 cm / 24 kg).
 - Flota mieszana (dwie kopie sejfu w jednym procesie, stara = `54a84da3`): macierz 109 scenariuszy (S7–S10b, pętla
   scaleń, kosz z każdym urządzeniem starym, kosz i „Przywróć”) — 0 utrat ponad flotę samych starych, 0 rozjazdów przed
   aktualizacją, 0 zapisów w kolejnych rundach; fuzz floty mieszanej 900 przebiegów — 0 (przy `rev` zwycięzcy 11 i 1).
-- `npm run podbij-wersje` względem `origin/audyt` `3b6a530`: `vilda_vault.js` 222, `vilda_chrome.js` 167,
-  `vilda_session_bridge.js` 91; SW 1.1.330 → 1.1.331.
+- `npm run podbij-wersje` względem `origin/audyt` `0d76443`: `vilda_vault.js` 222, `vilda_chrome.js` 167,
+  `vilda_session_bridge.js` 91; SW 1.1.331 → 1.1.332.
 
 ## „Scal kopię konta” zachowuje rewizję i chwilę zmiany dopisanych wersji (P-KOPIA-REV, SW 1.1.329, `vilda_vault.js` 221, 2026-10-21)
 
