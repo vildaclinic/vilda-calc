@@ -3065,6 +3065,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=57',
   '/gh_therapy_monitor.js?v=58',
   '/gh_therapy_monitor.js?v=59',
+  '/gh_therapy_monitor.js?v=60',
   '/gh_therapy_segments.js?v=4',
   '/gh_therapy_segments.js?v=5',
   '/vilda_gh_response_b64.js?v=2',
