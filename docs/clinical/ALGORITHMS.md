@@ -17233,7 +17233,7 @@ SW 1.1.320 → **1.1.321**; `vilda_persistence_adapter.js?v=31→32`.
 
 **Walidacja.** Nowy `tests/unit/klucz-sesji-opis.test.mjs`, 5 testów: prawdziwy `vilda_vault.js` w Node (klucz tylko w `sessionStorage`, wygaśnięcie po 20 minutach, usunięcie przy wylogowaniu, stałe 20/10 minut), stałe 7 dni w `vilda_auth_ui.js` oraz treść obu stron (brak starych obietnic, nowe zdania z limitami). Kontrola negatywna: na starych tekstach czerwone 3 testy treści, testy kodu zielone.
 
-SW 1.1.318 → **1.1.319** (zmienione dokumenty w pamięci SW: `polityka-prywatnosci.html`, `ustawienia.html`).
+SW 1.1.318 → **1.1.319** (zmienione dokumenty w pamięci SW: `polityka-prywatnosci.html`, `ustawienia.html`). *(Sprostowanie 2026-10-20: `polityka-prywatnosci.html` nie była wtedy w żadnej tablicy precache — szła zawsze z sieci; do pamięci SW weszła dopiero w P-SW-STRONY-PRAWNE.)*
 
 ## Konto z kreatora bez synchronizacji nie łączy się samo z serwerem (P-KONTO-BEZ-SERWERA, SW 1.1.318, `vilda_vault.js` 216, `vilda_sync_integration.js` 51, `vilda_auth_ui.js` 504, `vilda_pro_access.js` 11, 2026-10-19)
 
@@ -18509,6 +18509,109 @@ przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela 
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
+## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.328, 2026-10-20)
+
+**Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (20 stron z precache, w tym DocPro, startuje
+offline: 0 nieudanych żądań własnego pochodzenia, 0 błędów strony) właściciel wybrał z listy zostających luk: strony prawne offline.
+**Strategia „najpierw sieć” (niżej) to propozycja agenta — czeka na akceptację właściciela.**
+
+**Co było.** „Polityka prywatności” i „Regulamin” nie stały w żadnej tablicy precache. Linki do nich są w stopce stron (19 z 22
+plików HTML; bez stopki: `app.html`, `notatki.html`, `terminarz.html`), w bramce regulaminu (`vilda_terms_gate.js`: „Pełny
+regulamin →”, „Polityka prywatności →”) i — do polityki — w banerze zgody na analitykę (`vilda_chrome.js`). Nawigacja poza
+`DOCUMENT_PATHS` szła tylko do sieci, więc offline kończyła się `Response.error()` — strona błędu przeglądarki, także z banera,
+który prosi o zgodę. Zmierzone w Chromium z produkcyjnym SW i zatrzymanym serwerem. Zasoby obu stron (`inline_polityka_prywatnosci_00.css?v=1`,
+`inline_regulamin_00.css?v=1` i wspólne skrypty powłoki) były już w precache.
+
+**Co jest.**
+- Obie strony na końcu `OPTIONAL_DOCUMENTS` (append-only): instalacja pobiera je razem z innymi dokumentami.
+- **Strategia inna niż dla reszty dokumentów.** Dokumenty idą z pamięci z odświeżeniem w tle, więc po wdrożeniu pierwsze otwarcie
+  pokazuje poprzednią wersję. Dla tekstu prawnego, który użytkownik akceptuje, oznaczałoby to regres: do tej zmiany obie strony szły
+  zawsze z sieci. Dlatego `NETWORK_FIRST_DOCUMENTS` (te dwie ścieżki): nawigacja idzie najpierw do sieci (`cache: 'no-cache'`, jak
+  dla innych dokumentów), odpowiedź zapisuje się w pamięci jako zapas offline (nowe — dotąd tych stron SW nie zapisywał), a pamięć
+  oddaje stronę dopiero przy braku sieci, istniejącą ścieżką zapasową `readDocumentFromShell`. Offline strona się otwiera (z treścią
+  z ostatniej instalacji albo wizyty online) — z wyjątkiem Firefoksa przy wyczerpanym limicie źródła, gdzie wizyta online może
+  zostawić pustą kopię (niżej, „Znane ograniczenia”). Odpowiedź serwera z błędem HTTP online trafia do użytkownika jak dotąd.
+- **Nieudany zapis kopii nie unieważnia odpowiedzi z sieci, jeśli jej treść jest cała** (gałąź nawigacji w
+  `updateShellFromNetwork`). Do pamięci idzie `response.clone()`, więc po odrzuconym `cache.put` gałąź dla strony jest jeszcze
+  nieczytana: SW czyta ją do końca i oddaje jako odpowiedź syntetyczną (bez `content-length`/`content-encoding`, jak w istniejącej
+  ścieżce dla odpowiedzi z przekierowaniem). Treść cała (np. zabrakło tylko miejsca) → odpowiedź z sieci. Strumień urwany w trakcie
+  treści psuje obie gałęzie, odczyt odrzuca i nawigacja bierze kopię z pamięci jak przy braku sieci. **Nie rozstrzygamy po nazwie
+  błędu**, bo silniki zgłaszają brak miejsca inaczej — zmierzone: Chromium 141 `QuotaExceededError` (DOMException, kod 22),
+  urwany strumień `NetworkError` (DOMException, kod 19); Firefox 151 `NS_ERROR_FILE_NO_DEVICE_SPACE` (nie DOMException, bez kodu),
+  urwany strumień `NS_ERROR_NET_PARTIAL_TRANSFER` (też nie DOMException; reset połączenia — `NS_ERROR_NET_RESET`), a odczyt
+  treści po urwaniu odrzuca w obu silnikach (`TypeError`; po resecie w Firefoksie `AbortError`); WebKit tylko ze
+  źródeł (`QuotaExceededError`; zapis na dysk — `TypeError`), niesprawdzony. Dotąd każdy odrzucony zapis kończył nawigację jak brak
+  sieci. Dla stron prawnych oznaczałoby to starą kopię online mimo działającej sieci.
+  **Skutek także dla pozostałych dokumentów:** dokument bez kopii w pamięci, gdy zapis zawiedzie (np. pełny limit), dostaje teraz
+  odpowiedź z sieci zamiast `Response.error()`; dokument z kopią — bez zmian (pamięć najpierw).
+  **Historia tej poprawki (trzy rundy weryfikacji).** (1) `catch` na każdy błąd bez odczytu treści: przy urwanym połączeniu pusta
+  strona zamiast kopii (zmierzone w Chromium). (2) `catch` tylko dla nazwy `QuotaExceededError`: w Firefoksie przy pełnym limicie
+  stara kopia online — gorzej niż przed zmianą (zmierzone w Firefoksie 151 z obniżonym limitem). (3) Obecna postać: rozstrzyga
+  odczyt treści, nie nazwa błędu.
+- `SW_FETCH_CACHE_STRATEGY_AUDIT.legalDocumentsNavigation = 'network-first-shell-fallback'`; nagłówek SW opisuje wyjątek.
+
+**Znane ograniczenia (bez zmiany względem innych dokumentów).** Przy wyczerpanym limicie zasoby powłoki i czasu działania bez kopii
+w pamięci (gałąź zasobów `updateShellFromNetwork`, `cacheRuntimeResponse`) dalej kończą się `Response.error()` — poza zakresem tej
+zmiany. Adres ze slashem na końcu (`/regulamin/`) otwiera offline sam HTML: zasoby względne rozwiązują się pod `/regulamin/` i nie
+istnieją (online serwer odpowiada 404) — dotyczy każdego dokumentu. Brak limitu czasu: przy zawieszonym połączeniu nawigacja czeka, aż
+przeglądarka zakończy żądanie błędem (jak przed zmianą, gdy strony szły tylko z sieci). Przekierowanie serwera na inne pochodzenie
+(`mode: 'same-origin'` w `buildNavigationNetworkRequest`) kończy żądanie błędem, więc online pokazuje się kopia z pamięci; przed
+zmianą — błąd sieci. **Firefox przy wyczerpanym limicie źródła zapisuje puste kopie.** Zmierzone w Firefoksie 151 (Playwright)
+i w niezautomatyzowanym Firefoksie 158.0.1, z limitem obniżonym przez `dom.quotaManager.temporaryStorage.fixedLimit`: gdy do limitu
+brakuje od kilku bajtów do ok. 12 KB, `Cache.put` treści mniejszej niż 64 KiB zwykle się rozwiązuje, a zapisuje 0 bajtów — dla
+każdego rodzaju treści (odpowiedź z sieci, jej klon, `Blob`, `ArrayBuffer`, krótki tekst); treść od 64 KiB jest odrzucana
+(`NS_ERROR_FILE_NO_DEVICE_SPACE`). W serii 2400 zapisów przy pełnym limicie: 2383 zapisało 0 B, 7 — 1 B, 10 odrzucono (parami, co
+ok. 560 zapisów). Zapis „się udaje”, więc `catch` z tej zmiany się nie uruchamia. Skutki: wizyta online na stronie prawnej pokazuje
+bieżący tekst, ale zastępuje kopię offline pustą treścią — offline strona otwiera się pusta (status 200, pusty dokument), także po
+restarcie przeglądarki, do następnej wizyty online z udanym zapisem; pozostałe dokumenty (pamięć najpierw) już przed tą zmianą
+(SW 1.1.325) po takiej wizycie pokazują pustą stronę przy następnym otwarciu online. Nowa treść od 64 KiB idzie ścieżką odpowiedzi
+syntetycznej, a stara kopia zostaje. Bez wyczerpanego limitu nie występuje. Naprawa (np. kontrola rozmiaru kopii po `put`
+i zachowanie poprzedniej) — osobne zadanie, decyzja właściciela.
+
+**Zmiana kliniczna: NIE.** Żaden wzór, próg, dane ani tekst stron. Zmienia się dostępność dwóch stron bez sieci i odporność
+nawigacji na nieudany zapis do pamięci.
+
+**Strażnicy.** `tests/unit/sw-strony-prawne.test.mjs` (28) — prawdziwy plik SW na atrapie Cache Storage i sieci; atrapa `put` jak
+prawdziwy `Cache.put` najpierw czyta treść, a błędy zgłasza w formach zmierzonych w Chromium 141 i Firefoksie 151: urwany strumień
+(`NetworkError` / obiekt `NS_ERROR_NET_PARTIAL_TRANSFER`), pełny limit (`QuotaExceededError` / obiekt
+`NS_ERROR_FILE_NO_DEVICE_SPACE`), także limit zgłoszony przed odczytem treści; prawdziwy nasłuch `fetch` dostaje syntetyczne zdarzenie
+nawigacji: obie strony w `OPTIONAL_DOCUMENTS` i w `INSTALL_OPTIONAL_URLS`; online — treść z sieci mimo starszej w pamięci, żądanie
+z `cache: 'no-cache'`, pamięć dostaje nową; offline — strona z pamięci zamiast błędu; `/regulamin` bez `.html` online i offline;
+kontrola: `kontakt.html` dalej z pamięci z odświeżeniem w tle; **kontrola negatywna** bez warunku strategii — online wraca stara
+treść; pełny limit w obu formach — strony prawne z kopią i bez kopii dostają tekst z sieci, `kontakt.html` bez kopii też; urwany
+strumień w obu formach — strona prawna z pamięci; limit przed odczytem: treść cała — tekst z sieci, potem urwany strumień — odczyt
+odrzuca i strona z pamięci; **dwie kontrole negatywne** odtwarzające wcześniejsze wersje poprawki: rozstrzyganie po nazwie błędu
+(w formie Firefoksa — stara kopia) i `catch` bez odczytu treści (urwany strumień — uszkodzona odpowiedź). Liczone przypadki
+zachowania (kontrole negatywne pinują produkcyjny blok, więc na innych wersjach SW są czerwone z założenia): bez `try/catch` czerwone
+12; z `catch` bez odczytu treści — 6; z rozstrzyganiem po nazwie — 7; mutant „połykaj wszystko poza `NetworkError`” — 4 (urwanie
+w formie Firefoksa i oba warianty „limit przed odczytem, potem urwanie”). Na SW z `audyt` czerwone 17 z 28 (14 przypadków zachowania
+i 3 kontrole); zielone zostają kontrola `kontakt.html`, 8 przypadków pełnego limitu dla stron prawnych i 2 przypadki „limit przed
+odczytem, treść cała” (na `audyt` strony prawne szły tylko z sieci — brak regresu). `tests/unit/sw-precache-stron.test.mjs` i `tests/e2e/pwa-strony-offline.spec.mjs` czytają
+`OPTIONAL_DOCUMENTS`, więc obie strony i ich zasoby obejmuje też strażnik precache i obchód offline wszystkich stron (22 strony).
+
+**Walidacja (Chromium 141, produkcyjny SW, profil trwały, brak sieci = zatrzymany serwer z sondą).** Offline: obie strony z linków
+stopki DocPro, z bramki regulaminu (index bez akceptacji) i z banera zgody; `/regulamin`, `?x=1`; 390 × 844 bez poziomego
+przewijania; po restarcie przeglądarki; ścieżka aktualizacji ze starszej wersji SW bez stron prawnych (zmierzone 1.1.325 → 1.1.326
+przed scaleniem #729; ten sam mechanizm dla nowszych wersji). Online przy pełnym limicie (CDP) — nowy tekst
+z sieci; połączenie urwane w połowie treści — kopia z pamięci. Firefox 151 (limit obniżony w profilu, produkcyjny SW): pełny limit
+i nowa treść ≥ 64 KiB — `put` odrzucony (`NS_ERROR_FILE_NO_DEVICE_SPACE`), nowy tekst z sieci jako odpowiedź syntetyczna (nagłówek
+CSP działa, `content-length` usunięty, kodowanie UTF-8), stara kopia nienaruszona; kontrola na wersji z rozstrzyganiem po nazwie
+błędu (`aaaef19`) — stara kopia online; pełny limit i treść zwykłej wielkości — nowy tekst online, kopia offline pusta (ograniczenie
+wyżej); połączenie urwane w połowie treści (z `Content-Length`, `chunked`, reset) — pełna kopia z pamięci, kopia nienaruszona;
+offline obie strony z pamięci w tej samej i w nowej karcie. Chromium: treść wstrzymana na 12 s przy pełnym limicie — nawigacja
+czeka na całą treść i pokazuje nowy tekst; jedyna różnica odpowiedzi syntetycznej — `PerformanceNavigationTiming.deliveryType`
+`'cache'` zamiast `''` (aplikacja go nie czyta). Pomiary w przeglądarkach wykonano na stanie sprzed scalenia #729 (zmienia tylko
+wpisy precache hormonów i `przelicznik-jednostek.html`, bez kodu nawigacji). Kontrola na `audyt`: te same kliknięcia
+— `net::ERR_FAILED`. Online: po zmianie treści na serwerze pierwsza nawigacja pokazuje nowy tekst i odświeża pamięć, a `kontakt.html`
+pokazuje starą treść do drugiej nawigacji (pamięć najpierw); kontrola z pustym `NETWORK_FIRST_DOCUMENTS` — czerwona. E2E PWA
+(`pwa-strony-offline`, `pwa`, `pwa-precache-migracja`, `pwa-pierwsza-wizyta`) i pozostałe specyfikacje zależne od SW — zielone.
+WebKit/iOS niesprawdzane (brak przeglądarki w środowisku).
+
+SW 1.1.327 → **1.1.328** (po scaleniu #732, #733, #729 i #734 z `audyt`; numery nadaje `npm run podbij-wersje`).
+
+**Co pozostaje decyzją właściciela.** Akceptacja strategii „najpierw sieć” dla stron prawnych i skutku poprawki zapisu dla
+pozostałych dokumentów; scalenie i wdrożenie.
+
 ## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28).** `docpro.html` stoi w `OPTIONAL_DOCUMENTS`, ale DocPro nie startował offline. W prawdziwym
@@ -18568,7 +18671,7 @@ w `OPTIONAL_DOCUMENTS`, więc precache zapisuje go pod kluczem dokumentu bez `?v
 nic nie da, naprawa wymaga zmiany kluczy dokumentów w SW (osobna decyzja). Plakaty `/posters/*.png` są w tablicy, ale plików nie
 ma w repozytorium (404 także online). Filmy `/videos/` SW omija z założenia. `edu-video-ui.css` jest ładowany w dwóch wersjach
 (`v4` na czterech stronach, `v7` na jednej) z nieliczbowym `?v=`, którego nie widzą strażniki `piny-wersji` i `wersje-zasobow`.
-Strony prawne (`polityka-prywatnosci.html`, `regulamin.html`) nie są w precache. Zasoby obcego pochodzenia (np. Google Fonts) nie są
+Strony prawne (`polityka-prywatnosci.html`, `regulamin.html`) nie są w precache *(aktualizacja: są od P-SW-STRONY-PRAWNE, z nawigacją najpierw do sieci — wpis wyżej)*. Zasoby obcego pochodzenia (np. Google Fonts) nie są
 częścią precache. Znany wcześniej mechanizm: dokument HTML odświeża się w tle, więc po wdrożeniu stary SW może trzymać nowy HTML,
 którego nowe adresy `?v=` wejdą do pamięci dopiero przy pierwszym użyciu online albo z instalacją nowego SW.
 

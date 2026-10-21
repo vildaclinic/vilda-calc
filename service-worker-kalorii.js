@@ -11,7 +11,8 @@
  *    "Response served by service worker has redirections".
  *
  * Najważniejsze zmiany względem poprzedniej wersji:
- * - nawigacja używa cache-first + background refresh,
+ * - nawigacja używa cache-first + background refresh (wyjątek: strony prawne z NETWORK_FIRST_DOCUMENTS —
+ *   najpierw sieć, pamięć tylko przy jej braku; P-SW-STRONY-PRAWNE),
  * - root aplikacji jest kanonizowany do /index.html (nie precache'ujemy '/'),
  * - runtime cache NIE jest wersjonowany, więc CDN-y i inne zasoby runtime
  *   nie znikają przy każdej publikacji nowej wersji,
@@ -19,7 +20,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.327';
+const SW_VERSION = '1.1.328';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -48,6 +49,7 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   latestReorganizationStep: '8Q-9-estimated-intake-dom-mount',
   readOnly: true,
   navigation: 'cache-first-background-refresh',
+  legalDocumentsNavigation: 'network-first-shell-fallback',
   shellAssets: 'cache-first-background-refresh',
   runtime: 'cache-first-background-refresh',
   install: 'required-core-precache-optional-sequential-precache',
@@ -1877,7 +1879,11 @@ const OPTIONAL_DOCUMENTS = [
   '/notatki.html',
   '/terminarz.html',
   '/przelicznik-jednostek.html',
-  '/app.html'
+  '/app.html',
+  // P-SW-STRONY-PRAWNE: strony prawne — linki ze stopki stron, z bramki regulaminu i z banera zgody (polityka).
+  // Nawigacja do nich idzie najpierw do sieci (NETWORK_FIRST_DOCUMENTS), pamięć jest zapasem offline.
+  '/polityka-prywatnosci.html',
+  '/regulamin.html'
 ];
 
 const OPTIONAL_ASSETS = [
@@ -3459,6 +3465,11 @@ const OPTIONAL_ASSETS = [
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
 const DOCUMENT_PATHS = new Set([ROOT_DOCUMENT, ...OPTIONAL_DOCUMENTS]);
+// P-SW-STRONY-PRAWNE: dokumenty, których treść online ma być zawsze aktualna (tekst prawny, który użytkownik
+// akceptuje). Inne dokumenty idą z pamięci z odświeżeniem w tle, więc po wdrożeniu pierwsze otwarcie pokazałoby
+// poprzednią wersję. Te idą najpierw do sieci (odpowiedź zapisuje się w pamięci jako zapas offline — do
+// P-SW-STRONY-PRAWNE tych stron SW w ogóle nie zapisywał), a pamięć oddaje je dopiero wtedy, gdy sieci nie ma.
+const NETWORK_FIRST_DOCUMENTS = new Set(['/polityka-prywatnosci.html', '/regulamin.html']);
 const SHELL_PATHS = new Set(
   PRECACHE_URLS
     .map((url) => {
@@ -3964,7 +3975,24 @@ async function updateShellFromNetwork(request) {
     const safeResponse = await makeNavigationResponseSafe(networkResponse);
 
     if (cacheKey && isCacheableResponse(safeResponse)) {
-      await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
+      // P-SW-STRONY-PRAWNE: nieudany zapis kopii nie unieważnia odpowiedzi z sieci, jeśli jej treść jest cała.
+      // Nie rozstrzygamy po nazwie błędu — silniki zgłaszają brak miejsca inaczej (Chromium: QuotaExceededError,
+      // Firefox: NS_ERROR_FILE_NO_DEVICE_SPACE, nie DOMException). Do pamięci idzie response.clone(), więc gałąź dla
+      // strony jest jeszcze nieczytana: czytamy ją do końca. Treść cała (np. zabrakło tylko miejsca) → odpowiedź
+      // z sieci. Strumień urwany w trakcie treści psuje obie gałęzie, odczyt odrzuca i nawigacja bierze kopię
+      // z pamięci jak przy braku sieci. Przed tą poprawką każdy nieudany zapis kończył nawigację jak brak sieci:
+      // dokument bez kopii dostawał Response.error(), a strona prawna (najpierw sieć) dostałaby starą kopię.
+      try {
+        await cacheResponse(SHELL_CACHE, cacheKey, safeResponse);
+      } catch (_) {
+        void _;
+        const body = await safeResponse.blob();
+        return new Response(body, {
+          status: safeResponse.status,
+          statusText: safeResponse.statusText,
+          headers: copyHeadersForSyntheticResponse(safeResponse)
+        });
+      }
     }
 
     return safeResponse;
@@ -4193,7 +4221,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         const requestedPath = normalizeNavigationPath(getPathname(request));
-        const cachedResponse = await readFromShellCache(request);
+        const cachedResponse = NETWORK_FIRST_DOCUMENTS.has(requestedPath)
+          ? undefined
+          : await readFromShellCache(request);
         const networkResponsePromise = updateShellFromNetwork(request);
 
         event.waitUntil(networkResponsePromise.catch(() => undefined));
