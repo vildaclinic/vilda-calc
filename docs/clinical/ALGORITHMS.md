@@ -15496,6 +15496,181 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła, która treść pomiaru
+zostaje po synchronizacji, gdy tę samą wizytę poprawiono na dwóch urządzeniach, i która treść trafia do kosza.
+**Decyzja właściciela:** D-7 wariant 2 („zawsze wygrywa późniejsza poprawka”, `docs/SYNC_PRZYROSTOWA_PLAN.md` rozdz. 6)
+z poddecyzjami PD-1..PD-17 przyjętymi 2026-10-21 (rekomendacje) i dwiema zmianami tego samego dnia po pomiarach floty
+mieszanej i przeglądzie: PD-6 i PD-7 → `rev` po scaleniu zawsze wyższa z dwóch (P-REV-MAX, zamiast `rev` zwycięzcy)
+oraz stempel chwili usunięcia do kosza i przycięcia w tym samym PR (zamiast osobnego, PD-16); przy wydaniu nota
+o aktualizacji wszystkich urządzeń tego samego dnia, ostrzeżenie o starszej aplikacji na innym urządzeniu — ewentualnie
+osobno (PD-13 c). Serwer, format ładunku, delt, nagrobków, pliku karty i kopii konta oraz API `window.VildaVault` bez
+zmian; nowych pól nie ma.
+
+**Co było** (prawdziwy `vilda_vault.js` 221, `54a84da3`; sejfy w pamięci, sztuczny zegar; dane fikcyjne; „Testowy Jan”,
+wizyta 125 cm / 24 kg).
+- Wersję tej samej karty (ten sam `snapshotId`, inna treść na dwóch urządzeniach) rozstrzygało „najpierw `rev`”:
+  wyższa `rev`, przy równej późniejsza chwila zmiany. Dwie wcześniejsze poprawki biły jedną późniejszą: K poprawia masę
+  na 30 i 31 kg (`rev` 2), później P na 40 kg (`rev` 1) → 31 kg na obu. Tak samo gwiazdka: dwie poprawki masy na K,
+  później gwiazdka na P → 31 kg bez gwiazdki.
+- Kosz (D-6 B) i „Przywróć” liczyły tą samą regułą: dwie poprawki i późniejsza trzecia na innym urządzeniu, potem kosz
+  → w koszu treść sprzed ostatniej poprawki. Po „Scal pacjentów” X → Y → Z (przeniesienia podbijają `rev`) poprawka
+  w starej X przegrywała w karcie i w koszu (E4b); w pętli scaleń poprawka x1 z trzeciego urządzenia ginęła na
+  wszystkich (znane ograniczenie P-SYNC-WLASCICIEL).
+- Wersja z ładunku bez `updatedAtISO` (dawne dane, ładunek syntetyczny) dostawała u odbiorcy chwilę „teraz” i biła
+  potem każdą wcześniejszą prawdziwą poprawkę: C poprawia na 50 kg, P przyjmuje taką wersję 5 min później → 24 kg na P
+  i C.
+- „Przywróć” i import pliku karty po usunięciu do kosza na urządzeniu z zegarem 10 min do przodu: chwila przywrócenia
+  wcześniejsza niż usunięcie, więc zapis wracał do kosza przy pierwszej synchronizacji.
+
+**Reguła po zmianie.**
+- **R1, jedna reguła „nowsza wersja”** (`Bkz_nowszaWersja`). Chwila zmiany wersji = `updatedAtISO`, a bez niej
+  `savedAtISO` (PD-2). Późniejsza chwila zmiany wygrywa niezależnie od `rev`; przy równej — wyższa `rev` (ta sama
+  treść, `rev` liczy przeniesienia „Scal pacjentów”); pełny remis — zostaje tutejsza, bez zapisu (PD-3). Reguła działa
+  w scalaniu wersji tej samej karty (`Bsl_scalPacjenta`), w treści kosza (`Bkz_dolacz`, `Bkz_scalStart`, `Bkz_pomin`,
+  `Bkz_scalKoniec`, `Bkz_opisPozniejszy`) i w „Przywróć” (zapis jest już w karcie w nowszej postaci, PD-8).
+- **R2, chwila zmiany poprawki zawsze późniejsza niż poprawiana wersja** (`Bpp_chwilaZmiany`, PD-4). Zwykle „teraz”;
+  gdy zegar urządzenia jest za poprawianą wersją — o 1 ms i losowo 0–999 ms później niż ona (PD-4a; dwa takie
+  urządzenia nie dają tej samej chwili i `rev`). Dotyczy poprawki w miejscu (okno pomiaru, gwiazdka, edycja i usunięcie
+  wiersza, korekta nazwiska: `updatedAtISO` i chwila ostatniego zapisu karty), „Przywróć” i importu z kosza (także
+  wobec treści kosza i chwili usunięcia, PD-4b). Chwila zapisu wersji (`savedAtISO`) przy edycji bieżącej wizyty —
+  „teraz”, jak dotąd (PD-4c). To nie korekta zegara (D13): stempel pilnuje tylko porządku przyczynowego, jak nagrobek
+  notatki (G13). Ten sam stempel dostaje chwila usunięcia do kosza i przycięcia retencją, gdy usuwana wersja ma chwilę
+  z przyszłości (przegląd D-7): stempel niesie taką chwilę na kolejne poprawki, więc bez tego usunięcie na dobrym
+  zegarze przegrywało z wersją i wizyta wracała do karty na wszystkich urządzeniach (dotąd chwila z przyszłości znikała
+  przy pierwszej poprawce na dobrym zegarze, która wygrywała dzięki `rev`).
+- **R3, zapis zwycięzcy.** Wersja przyjęta z ładunku dostaje treść i chwilę zmiany zwycięzcy; brak `updatedAtISO` →
+  `null`, nie „teraz” (PD-5). Chwila zapisu wersji idzie z treścią (PD-10).
+- **R3a, `rev` po scaleniu = wyższa z dwóch (P-REV-MAX, PD-6 c, PD-7 b)**, niezależnie od tego, która treść wygrała:
+  przy przyjęciu `max(rev zdalna, rev tutejsza)`; przy odrzuceniu tutejsza wersja dostaje `rev` zdalną bez zmiany treści
+  i chwil (jeden zapis; ten sam ładunek drugi raz — żadnego); w koszu `rev` treści nagrobka = wyższa z pary nagrobków,
+  których treść kosz może trzymać — bez nagrobka retencji i bez nagrobka nieaktualnego wobec drugiego (przegląd
+  końcowy: ich `rev` opisuje wersję, której treści kosz nie trzyma, a starsza aplikacja bierze wtedy `rev` źródła
+  treści; z nimi flota mieszana gubiła w koszu późniejszą poprawkę starszej aplikacji). Tak liczą
+  starsze aplikacje („najpierw `rev`”, zawsze zostają przy wyższej `rev`), więc `rev` we flocie mieszanej przebiega jak
+  we flocie samych starych i starsza aplikacja nie przyjmuje po `rev` wcześniejszej treści zamiast swojej późniejszej
+  poprawki (S10 niżej). `rev` nie spada. O treści decyduje nadal R1. Bez `+1`: `rev` liczy poprawki i przeniesienia
+  „Scal pacjentów”, nie scalenia. Rekord dla nagłówka (D-3 A) przy podniesieniu — bez jawnej treści odrzuconej strony.
+- **R4, „Przywróć” i import z kosza** są najpóźniejszą zmianą zapisu: wygrywają z poprawką zrobioną na innym
+  urządzeniu po koszu, niezależnie od liczby takich poprawek (PD-9; dotąd dwie poprawki przeżywały, jedna ginęła).
+- **Bez zmian:** reguła właściciela wersji wspólnej dwom kartom (`Bsw_nowszyRekord`, najpierw `rev`, PD-1), wybór
+  treści między kartami (`Bsw_nowszaTresc`, PD-11), `rev + 1` w „Scal pacjentów”, `rev` wyniku między kartami = wyższa
+  z dwóch, kolejność wersji karty (`yr`), import pliku karty i „Scal kopię konta” dalej pomijają wersje, które już są
+  (PD-15).
+
+**Przypadki** (`tests/unit/pozniejsza-poprawka.test.mjs`, `tests/unit/kosz-nowsza-tresc.test.mjs`,
+`tests/unit/sync-wlasciciel-wersji.test.mjs`, `tests/unit/kosz-przywroc-nowsza.test.mjs`):
+- T1: K 30 → 31 kg (`rev` 2), później P 40 kg (`rev` 1), trzy kolejności → 40 kg, `rev` 2 na obu (dotąd 31 kg).
+- T1b: A dwie poprawki masy (27 kg, `rev` 2), B później wzrost 127 cm (`rev` 1) → 127 cm / 24 kg, `rev` 2 na obu:
+  poprawki A giną (LWW całej wersji).
+- T2: K (zegar +10 min) poprawia na 30, P dostaje i poprawia na 40 dobrym zegarem → 40 na obu; chwila zmiany P 1–1000 ms
+  po chwili K (bez stempla: 30 na obu).
+- T4: wersja z ładunku bez `updatedAtISO` → u odbiorcy `null`; poprawka C 50 kg zostaje na P i C (dotąd 24 kg).
+- T5: pętla scaleń X → Y (A), Y → X (B), poprawka x1 w X na C → `61:120.5` na A, B i C, `rev` 2 (dotąd `60:120`).
+- T6: dwie poprawki masy na K, później gwiazdka na P → 24 kg z gwiazdką na obu (dotąd 31 kg bez gwiazdki).
+- K1: dwie poprawki na P (78 kg, `rev` 2), później jedna na K (74 kg, `rev` 1), kosz na C, które nic nie wie, 8
+  kolejności → w koszu 74 kg na trzech (dotąd 78 kg).
+- K5 (E4b): „Scal pacjentów” X → Y → Z na K, P bez wiedzy poprawia x w starej X, K później daje x do kosza → kosz
+  z poprawką na trzech w 8 z 8 kolejności.
+- K1r: jak K1 → w koszu 74 kg z `rev` 2 (wyższa z pary) na trzech, w 8 z 8 kolejności.
+- K7: ta sama wersja w karcie (78 kg, `rev` 2, wcześniej) i w koszu (74 kg, `rev` 1, później), „Przywróć” → 74 kg,
+  `rev` 3, zbieżnie (dotąd „już w karcie”, zostawało 78 kg).
+- K11: T1b, potem kosz na A i „Przywróć” → kosz i przywrócenie 127 cm / 24 kg, przywrócenie `rev` 3.
+- S10 (`tests/unit/pozniejsza-poprawka-rev.test.mjs`): O poprawia trzy razy (32 kg, `rev` 3), N później raz (40 kg,
+  `rev` 1); N odrzuca 32 kg i dostaje `rev` 3 bez zmiany treści i chwil (1 zapis, przy powtórce 0); O2 dostaje 40 kg
+  i poprawia na 41 kg (`rev` 4) → 41 kg, `rev` 4 na O, N i O2. Przy `rev` zwycięzcy O2 miałaby 41 kg z `rev` 2, a starsza
+  aplikacja przyjęłaby potem po `rev` 32 kg od O — 41 kg ginęło na wszystkich urządzeniach, także po aktualizacji.
+- S10b: N z 32 kg (`rev` 3) przyjmuje późniejsze 40 kg z N2 (`rev` 1) → 40 kg z `rev` 3 (bez spadku); dalej jak S10.
+- S9 (wszystkie nowe): najpóźniejsza poprawka O2 (51 kg, `rev` 2) wygrywa chwilą z 40 kg `rev` 3 → 51 kg, `rev` 3
+  wszędzie; nagłówek przy podniesieniu wersji bez `updatedAtISO` — z treści zwycięskiej, nie odrzuconej.
+- P2: kosz na N, dwie poprawki na P po koszu, „Przywróć” na N → 24 kg na obu (dotąd przeżywała poprawka P).
+- P4 / P4b: usunięcie na K z zegarem +10 min, „Przywróć” albo import pliku karty na P → zapis w karcie na P, K i C
+  (dotąd wracał do kosza).
+- P5 i „Scal kopię konta”: plik albo kopia od C z późniejszą poprawką (`rev` 1) na pustym N, P z dwiema wcześniejszymi
+  (`rev` 2) → po synchronizacji 127 cm / 24 kg z pliku na obu (dotąd wygrywał P).
+- P6–P8: K (zegar +10 min) poprawia, P dobrym zegarem poprawia po niej, potem kosz albo retencja na dobrym zegarze;
+  także kosz na K, „Przywróć” i ponowne usunięcie na P → zapis usunięty na P, K i C (bez stempla usunięcia wracał do
+  karty; na `54a84da3` zielone, bo poprawka P wygrywała dzięki `rev` i niosła „teraz”).
+- Kontrole bez zmian: pełny remis (T8), pętla scaleń bez poprawki (T7: decyduje `rev`), jedna poprawka po koszu
+  i „Przywróć” (P1), poprawka po kolei przy rozjeździe zegarów w karcie i w koszu (T10, K8, K8b: dotąd chroniła `rev`,
+  teraz stempel).
+
+**Ograniczenia.**
+- **LWW całej wersji (PD-12).** Przegrana poprawka ginie bez kopii. Gwiazdka i korekta nazwiska to też poprawka całej
+  wersji: późniejsza gwiazdka na starej treści kasuje wcześniejszą poprawkę masy z innego urządzenia (T6), dotąd tylko
+  przy równej `rev`.
+- **Poprawki równoległe przy rozjeździe zegarów.** Wygrywa późniejsza według zegara ściennego; gdy oba urządzenia są
+  za poprawianą wersją — wyższy losowy stempel (T3). Ostrzeżenie o rozjeździe zegarów (D13) bez zmian.
+- **Chwila z przyszłości.** Poprawka zrobiona na zegarze do przodu przesuwa kolejne stemple tej wersji, chwilę
+  usunięcia tej wersji i chwilę ostatniego zapisu karty w przód, aż czas ją dogoni (ta sama klasa co przy D-4).
+  Nagrobek pacjenta (`removePatient`) bez stempla — bez zmian wobec dotąd.
+- **Chwila zmiany spoza formatu `toISOString()`** (np. ze strefą `+02:00` albo napis bez daty) — porównywana jako
+  napis, więc może wygrywać z późniejszymi poprawkami. Żadna ścieżka aplikacji takiej chwili nie zapisuje; dotąd
+  ratowała to wyższa `rev`. Ładunku nie normalizujemy (przegląd D-7).
+- **Flota mieszana (PD-13).** Stara aplikacja liczy dalej „najpierw `rev`”, nowa — „najpierw chwila”; dzięki R3a obie
+  widzą tę samą `rev`. Flota mieszana nie gubi poprawki, którą zachowuje flota samych starych (macierz 109 scenariuszy:
+  0, fuzz floty mieszanej 900 przebiegów: 0; przy `rev` zwycięzcy 11 i 1). Do aktualizacji starsza aplikacja może jak
+  dziś przyjąć po `rev` wcześniejszą treść zamiast swojej późniejszej poprawki (S8, S9: 16 ze 109; w fuzzie 78 par
+  wobec 325 we flocie samych starych). Bez rozjazdu przed aktualizacją i bez ping-ponga; po aktualizacji wszystkich
+  urządzeń (D-11) pierwsza synchronizacja zbiega stan. Przy wydaniu: nota o aktualizacji wszystkich urządzeń tego samego
+  dnia. Liczby — sekcja Walidacja.
+- **Flota mieszana przy rozjeździe zegarów (przegląd końcowy, F2).** Starsza aplikacja nie ma stempla zmiany. Gdy
+  urządzenie z zegarem do przodu (np. +10 min) poprawi wizytę, a starsza aplikacja na dobrym zegarze poprawi ją później
+  (albo „Przywróć” zapis, który nowa aplikacja usunęła ze stemplem z przyszłości), późniejsza zmiana starszej aplikacji
+  ma wcześniejszą chwilę i przegrywa — także po aktualizacji (np. 30 kg zamiast 40 kg na trzech urządzeniach;
+  „Przywróć” cofnięte, zapis w koszu). Flota jednorodna obie zachowuje (stara — przez `rev`, nowa — przez stempel).
+  Nie korygujemy chwil z przyszłości (D13). Ogranicza to aktualizacja wszystkich urządzeń tego samego dnia i poprawny
+  zegar na urządzeniach (ostrzeżenie D13). Przyjęte przez właściciela jako znane ograniczenie (wariant A, 2026-10-21),
+  z notą przy wydaniu: zaktualizować wszystkie urządzenia tego samego dnia i włączyć automatyczny czas.
+- **Edycja bieżącej wizyty starej karty w pętli scaleń (T9, PD-10).** Poprawka przetrwa, ale jej nowa chwila zapisu
+  czyni ją bieżącą wersją scalonej karty na wszystkich urządzeniach (dawna głowa, bez późniejszych wizyt). Przy jednym
+  scaleniu działo się tak już dotąd.
+- **„Przywróć”, gdy ta sama wersja jest w karcie (ostatnia wersja karty, której nagrobek nie usuwa) i w koszu,
+  a usunięcie z innego urządzenia jest późniejsze niż zmiana w karcie.** Wersja w karcie jest nowsza niż treść kosza,
+  więc „Przywróć” odpowiada „już w karcie” i zdejmuje wpis kosza; przy następnej synchronizacji późniejsze usunięcie
+  znów wygrywa na pozostałych urządzeniach (wersja zostaje w koszu, na tym urządzeniu — w karcie i w koszu). Treść nie
+  ginie. Dotąd „Przywróć” zapisywało wtedy starszą treść z kosza z wyższą `rev`, gubiąc późniejszą poprawkę. Domknięcie
+  (zapis wersji z karty ze stemplem zamiast „już w karcie”) — osobny PR.
+- **E4a (K6, PD-16).** Poprawka w starej karcie PRZED scaleniami, potem kosz na urządzeniu, które scaliło → poprawka
+  ginie wszędzie, jak dotąd. Osobny PR.
+- **Gwiazdka a retencja (K10, PD-12).** Gwiazdka, odpięcie i gwiazdka na P (`rev` 3), późniejsza poprawka na C, retencja
+  na K: 4 z 8 kolejności karta bez gwiazdki, 3 przypięta, 1 bez wizyty (dotąd 8 przypięta). Dwie poprawki na C przed
+  późniejszą gwiazdką na P: teraz 8 z 8 przypięta (dotąd 5 z 8 inaczej). Domknięcie: PR „przypięta wizyta / półkrata
+  łączenia nagrobków”.
+- **Dawne dane bez `updatedAtISO`** i dawna poprawka na zegarze spóźnionym, z chwilą wcześniejszą niż chwila zapisu
+  kopii z zegara szybkiego: przegrywa z niepoprawianą kopią (tylko kopie jeszcze niezbiegnięte).
+- **Manifest (plan 3.3, PD-17)** musi porównywać tą samą regułą i nie kolejkować ponownie pary (`rev`, chwila zmiany),
+  której odbiorca nie przyjmuje.
+
+**Walidacja.**
+- `npm test` (po scaleniu `audyt` `21bb4e4`): polityka repozytorium (1755 plików), lint, składnia (1118 plików),
+  411 plików testów, 10 123 z 10 123 zielonych; `test:pro` 43 z 43, 32 z 32, 44 z 44. CI na `db5acb9a`: lint,
+  składnia, testy jednostkowe, e2e w 3 odłamkach, testy przeglądarkowe i PWA, zrzuty wyglądu, CodeQL — zielone.
+- Pliki D-7 (`pozniejsza-poprawka`, `pozniejsza-poprawka-rev`, `pozniejsza-poprawka-mutacje`, `kosz-nowsza-tresc`,
+  `kosz-przywroc-nowsza`, `sync-wlasciciel-wersji`, `zmiana-w-karcie`): 152 nowe testy; na sejfie sprzed zmiany
+  czerwonych jest 108 — zielone tam są kontrole (T7, T8, T10, P1, K6, K8, K8b, P6–P8, części kolejności K4, K9, K10
+  i trzy testy mutacji, w których stara aplikacja przypadkiem daje ten sam wynik).
+- e2e (desktop-chromium): kosz, właściciel wersji, korekta nazwiska, wczytany pacjent, porównanie w tle, blokada zapisu
+  wersji, spójność zapisów, kopia konta — 54 z 54.
+- Mutacje (każdy element cofnięty osobno, 39 mutacji): każdą wykrywa test zachowania albo — dla 3 równoważnych
+  i 2 niewykrywalnych zachowaniem (argument stempla „Przywróć” bez wpływu na maksimum, porządek opisu nagrobka przy
+  równej chwili retencji) — strażnik źródła; 15 testów w `pozniejsza-poprawka-mutacje` zamyka luki, które pilnował
+  wcześniej tylko strażnik.
+- Fuzz różnicowy samych nowych (prawdziwy sejf, 3 urządzenia, „Scal pacjentów”, retencja, rozjazd zegarów 0 / +10 /
+  −5 min; zestawy po 400 przebiegów, porównanie z `54a84da3`): par (wersja, urządzenie) bez najpóźniejszej zmiany
+  142 → 118 (zestaw główny), 216 → 150, 241 → 142, 304 → 238; wizyt wracających z kosza wbrew usunięciu 98 → 95,
+  61 → 53, 55 → 46, 76 → 61; rozjazd urządzeń bez zmian (te same przebiegi, 0 pełnych remisów, 0 tylko w nowej
+  wersji), 0 wyjątków; przypadki „gorzej” — wyłącznie równoległe zmiany przy rozjeździe zegarów. `rev` żadnej wersji
+  ani nagrobka nie przekracza `rev` floty samych starych.
+- Flota mieszana (dwie kopie sejfu w jednym procesie, stara = `54a84da3`, nowa = głowa PR): macierz 109 scenariuszy
+  (S7–S10b, pętla scaleń, kosz z każdym urządzeniem starym, kosz i „Przywróć”) — 0 utrat ponad flotę samych starych,
+  0 rozjazdów przed aktualizacją, 0 zapisów w kolejnych rundach, `rev` równa flocie samych starych w 109 ze 109; fuzz
+  floty mieszanej 900 + 200 przebiegów (z przewagą kosza) — 0 utrat ponad flotę samych starych (przy `rev` zwycięzcy:
+  11 w macierzy, 1 w fuzzie); wyjątek — rozjazd zegarów ze starszą aplikacją (ograniczenie F2 wyżej).
+- `npm run podbij-wersje` względem `origin/audyt` `21bb4e4` (po scaleniu P-GH-NOWE-ID-MONITOR, #745): `vilda_vault.js`
+  222, `vilda_chrome.js` 167, `vilda_session_bridge.js` 91; SW 1.1.332 → 1.1.333.
+
 ## „Scal kopię konta” zachowuje rewizję i chwilę zmiany dopisanych wersji (P-KOPIA-REV, SW 1.1.329, `vilda_vault.js` 221, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, która treść wizyty zostaje
@@ -15813,6 +15988,7 @@ urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokaz
   usuwa ją (23 kg); C przycina. Wtedy w 4 z 8 kolejności kosz trzyma 23 kg, w pozostałych 78 kg. Na `cd3a2876`
   i `42ef1733` było 78 kg w każdej kolejności, bo zmiana o niższej `rev` nie unieważniała treści o wyższej. Tę regułę
   zastąpiło tu porównanie chwil, zgodne z `Bkz_wygrywa` i z kierunkiem D-7 wariant 2 („wygrywa późniejsza poprawka”).
+  *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA: X1 — 74 kg w 8 z 8 kolejności; X5 i S1 bez zmian.)*
   Pełna łączność wymaga przebudowy łączenia nagrobków: niezależne składniki i treść kosza zachowywana także po
   unieważnieniu. To osobny PR, razem z naprawą wizyty przypiętej niżej.
 - Istniejące przed tym PR (także na `cd3a2876`, część na `44256803`), do osobnych PR:
@@ -15820,7 +15996,10 @@ urządzeniach, także gdy trzecie urządzenie przytnie ją retencją. Kosz pokaz
     w karcie, ani w koszu (w pozostałych jest przypięta w karcie albo w koszu z gwiazdką). Zgodnie z regułami
     przypięta wizyta powinna wrócić do karty, gdy kosz okazuje się nieaktualny; to wymaga nowego mechanizmu;
   - gwiazdka na P i równoległa poprawka tej samej wersji na C, bez kosza, retencja na K: wynik zależy od kolejności
-    (reguła wersji tej samej karty, D-7 wariant 2).
+    (reguła wersji tej samej karty, D-7 wariant 2). *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): bez zmian. Dwie poprawki na C przed późniejszą gwiazdką
+    na P — teraz przypięta w 8 z 8 kolejności; gwiazdka, odpięcie i gwiazdka na P przed późniejszą poprawką na C —
+    teraz 4 × karta bez gwiazdki, 3 × przypięta, 1 × brak wizyty, dotąd 8 × przypięta. Domknięcie w PR „przypięta
+    wizyta / półkrata łączenia nagrobków”.)*
 - Flota mieszana: pola `przycietoISO` i `zmianaISO` opisane wyżej. Zmiana po koszu zrobiona na urządzeniu ze starszą
   aplikacją nie zapisuje się w nagrobku, więc nowe urządzenia mogą trzymać w koszu treść sprzed tej zmiany, także po
   aktualizacji starszego (tylko w koszu, nie w karcie). Odwrotnie: gdy zmianę po koszu zrobi nowe urządzenie, które
@@ -15946,7 +16125,9 @@ oraz delty na żywo; dane fikcyjne).
 - **R5, treść kosza (D-6 B).** Gdy obie strony mają nagrobek tej samej wersji z treścią, gdy pominięta wersja
   z ładunku jest nowsza niż treść kosza albo gdy lokalna wersja usuwana przez nagrobek z ładunku jest nowsza niż jego
   treść, kosz trzyma nowszą z dwóch treści (`Bkz_nowszaWersja`: wyższa `rev`, przy
-  równej późniejsza chwila zmiany — ta sama reguła co dla wersji tej samej karty w scalaniu). Nagrobek niesie treść
+  równej późniejsza chwila zmiany — ta sama reguła co dla wersji tej samej karty w scalaniu). *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): „nowsza” =
+  późniejsza chwila zmiany (`updatedAtISO`, bez niej `savedAtISO`), przy równej wyższa `rev` — nadal ta sama reguła co
+  dla wersji tej samej karty.)* Nagrobek niesie treść
   razem z jej `rev`, `updatedAtISO` i `savedAtISO`; chwila usunięcia, karta i numer kolejny zostają z nagrobka. Reguła
   „kto wygrywa” (usunięcie nie wcześniejsze niż ostatnia zmiana wersji) się nie zmienia. Nagrobek retencji i nagrobek
   starszy niż 30 dni nie dostają treści. Oba urządzenia mają ten sam nagrobek w każdej kolejności synchronizacji.
@@ -16021,7 +16202,10 @@ w międzyczasie usunęło scalanie” w `Bkz_doKosza`, `savedAtISO` treści w `B
   Rozjazd do domknięcia osobnym PR (nagrobek wersji po `snapshotId`).
 - **E4, dwa scalenia kontra poprawka.** Wersja przeniesiona dwoma scaleniami ma `rev` 2, poprawka w starej karcie
   `rev` 1, więc kosz trzyma treść z `rev` 2, czyli bez poprawki. Zamyka to dopiero D-7 wariant 2 (późniejsza poprawka
-  wygrywa), który musi zmienić `Bkz_nowszaWersja` razem z regułą wersji w `Bsl_scalPacjenta`.
+  wygrywa), który musi zmienić `Bkz_nowszaWersja` razem z regułą wersji w `Bsl_scalPacjenta`. *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): zamknięte E4b —
+  poprawka w starej karcie PO scaleniach: kosz z poprawką na obu urządzeniach w 8 z 8 kolejności. E4a — poprawka PRZED
+  scaleniami, potem kosz — dalej otwarte (poprawka ginie: karta z ładunku przegrywa z nagrobkiem pacjenta przed pętlą
+  wersji), osobny PR.)*
 - **Flota mieszana.** Pełna ochrona działa po aktualizacji wszystkich urządzeń. Stara aplikacja nadal cofa datę przy
   koszu i nie przyjmuje daty bez zmienionej wersji.
 - **Ostatnia wersja karty (E1)** dalej nie trafia do kosza; nagrobek pacjenta i scalenie bez celu w nagrobku — bez
@@ -16290,6 +16474,8 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
   jest późniejsza (decyzja `'tresc'`), rekord G przyjmuje ją w fazie przeniesień. Chwila zapisu wersji (miejsce
   w historii, bieżąca wersja karty) — ze strony, która wygrała przypisanie karty, więc synchronizacja nie stawia
   przeniesionej wersji przed głową scalenia. Wersje tej samej karty — bez zmian (najpierw `rev`, potem chwila zmiany).
+  *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): wersje tej samej karty — najpierw chwila zmiany, przy równej `rev`; właściciela wersji wspólnej dwom kartom
+  wybiera nadal „najpierw `rev`”.)*
 - Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
   kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
   pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
@@ -16398,7 +16584,9 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
   dwie współbieżne zmiany, które trafią najpierw pod tę samą kartę, mogą skończyć się wcześniejszą. Fuzz różnicowy
   (400 przebiegów, trzy urządzenia): par (wersja, urządzenie) bez najpóźniejszej zmiany `2df41a8` 1236, po zmianie 81,
   gorzej w 6 (ta reguła), rozjazd urządzeń 0. Domknięcie (do decyzji): osobny licznik właściciela albo „późniejsza
-  zmiana wygrywa” także w tej samej karcie (zmienia zwykłą synchronizację).
+  zmiana wygrywa” także w tej samej karcie (zmienia zwykłą synchronizację). *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): zamknięte drugą drogą — w tej
+  samej karcie wygrywa późniejsza zmiana; w pętli scaleń poprawka x1 z trzeciego urządzenia zostaje na A, B i C
+  z `rev` 2 (P-REV-MAX), test przepisany.)*
 - **Remis milisekundy.** Gdy ostatni zapis źródła i głowa scalenia wypadną w tej samej milisekundzie, kolejność wersji
   (`yr`) stawia wyżej dawną głowę źródła (`rev` 1) jako bieżącą wersję celu. Ręcznie nieosiągalne; w testach odstęp.
 - **Kosz-przed i kosz-po, osobna wada.** Wersja usunięta do kosza na jednym urządzeniu przed albo po „Scal pacjentów” na
@@ -17329,7 +17517,11 @@ tak samo, bo jej chwila zmiany była wcześniejsza niż zapisane usunięcie.
 
 **Reguła po zmianie.**
 - Gdy zapis jest w karcie i zmieniono go po usunięciu — chwila zmiany (`updatedAtISO`, bez niej `savedAtISO`) późniejsza
-  niż usunięcie **albo** rewizja wyższa niż w chwili usunięcia (rewizja nie zależy od zegarów urządzeń) — „Przywróć” nie
+  niż usunięcie **albo** rewizja wyższa niż w chwili usunięcia (rewizja nie zależy od zegarów urządzeń) *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): zamiast
+  warunku rewizji — wersja w karcie nowsza niż treść kosza według `Bkz_nowszaWersja` (późniejsza chwila zmiany, przy
+  równej wyższa `rev`); karta z `rev` 2 i wcześniejszą zmianą wobec kosza z `rev` 1 i późniejszą daje teraz przywrócenie
+  treści kosza, nie `alreadyInCard`. Przywrócenie dostaje chwilę zmiany późniejszą niż treść kosza, wersja w karcie
+  i usunięcie)* — „Przywróć” nie
   zapisuje treści z kosza. Zdejmuje tylko ten nieaktualny wpis kosza (nie późniejsze usunięcie tego zapisu) i zwraca
   `{ alreadyInCard: true }`. Karta, nagłówek i powiadomienie o zapisie bez zmian.
 - W pozostałych przypadkach jak dotąd; rewizja przywróconej wersji jest wyższa od obu (z kosza i z karty, jeśli tam jest).
@@ -17342,12 +17534,15 @@ tak samo, bo jej chwila zmiany była wcześniejsza niż zapisane usunięcie.
 konta, dokładnie jak w końcowym zapisie scalania z A10):
 - poprawka wzrostu (66 mies.: 150) i przypięcie po pierwszym przywróceniu → drugie „Przywróć”: `alreadyInCard`, wzrost 150,
   przypięty, rewizja bez zmian, zapis nie jest już w koszu;
-- usunięcie z zegarem 10 min do przodu, poprawka (chwila zmiany wcześniejsza niż usunięcie) → `alreadyInCard`, wzrost 150;
+- usunięcie z zegarem 10 min do przodu, poprawka (chwila zmiany wcześniejsza niż usunięcie) → `alreadyInCard`, wzrost 150
+  *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA: stempel daje przywróceniu i poprawce chwilę późniejszą niż usunięcie;
+  test sprawdza teraz odwrotną kolejność chwil, wynik ten sam)*;
 - drugie „Przywróć” bez zmian w karcie → `alreadyInCard`, rewizja bez zmian, treść ta sama;
 - kontrola: zwykłe przywrócenie (zapisu nie ma w karcie) → wynik bez `alreadyInCard`, rewizja usunięcia + 1, zapis na swoim
   miejscu w historii.
 Na `1c2773f` trzy pierwsze czerwone (bez sprawdzania wyniku: wzrost 123 zamiast 150), kontrola zielona. Mutacje: bez warunku
-rewizji — czerwony przypadek z zegarem; bez całej gałęzi — trzy czerwone.
+rewizji — czerwony przypadek z zegarem; bez całej gałęzi — trzy czerwone. *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA:
+warunku rewizji już nie ma; mutacje warunku i stempla — w nowym wpisie.)*
 `tests/e2e/kosz-zapisow.spec.mjs` (nowy przypadek): historia wersji karty, zapis przypięty po pierwszym przywróceniu i znów
 w koszu → „Przywróć ten zapis”: komunikat „Ten zapis jest już w karcie w nowszej postaci — usunięto go z kosza.”, kosz
 karty pusty, przypięcie zostaje. Na `1c2773f` czerwony („Przywrócono zapis z kosza.”).
