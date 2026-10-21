@@ -15704,8 +15704,19 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   i zostawała sierotą na każdym urządzeniu, gdy dochodziło usunięcie karty — wbrew D21-6. Teraz, gdy leży nagrobek
   z ważnym polem tego samego pacjenta, a karta jest i nie jest późniejsza niż `e`, nagrobek zostaje z chwilą
   przesuniętą na chwilę zapisu (pole i `manualDeletedAtISO` bez zmian, `rev` = max): poprawiona wersja (Y ≤ R) znika
-  razem z kartą albo wraca z nią ratunkiem (R′ + 1 ms + h). W pozostałych przypadkach (inny pacjent — np. „Scal
-  pacjentów” przepina notatkę, brak karty, karta późniejsza niż `e`, brak pola) nagrobek jest zdejmowany jak dotąd.
+  razem z kartą albo wraca z nią ratunkiem (R′ + 1 ms + h). Karta późniejsza niż `e` zdejmuje nagrobek tylko wtedy,
+  gdy także zapis jest późniejszy niż chwila nagrobka R (przegląd przeniesienia na D-7, MS2; test S8b): przy G13
+  (R = u z przyszłości, więc R > e) karta po wizycie bywa późniejsza niż `e`, a zapis poprawki — nie późniejszy niż R;
+  zdjęcie zostawiało wtedy wersję z chwilą ≤ R bez nagrobka i echo starego urządzenia (nagrobek R bez pola) kasowało
+  notatkę razem z poprawką wszędzie, przy żywej karcie. Teraz nagrobek zostaje na R (pole i `manualDeletedAtISO` bez
+  zmian, `rev` = max), a najbliższe scalanie ratuje poprawkę (krok 5: R + 1 ms + h). Pozostałe miejsca, które
+  zdejmują albo zapisują nagrobek z polem, tej luki nie mają: ratunek (`Bnp_ratuj`) zdejmuje nagrobek dopiero po
+  dotknięciu wersji ≤ R (R + 1 ms + h), a pętla CZEKA i odnowienie (`Bnp_odnow`) nagrobki tylko zapisują.
+  W pozostałych przypadkach (inny pacjent — np. „Scal pacjentów” przepina notatkę, brak karty, karta późniejsza niż
+  `e` i zapis późniejszy niż R, brak pola) nagrobek jest zdejmowany jak dotąd. Wersję z chwilą ≤ R bez nagrobka
+  zostawiają jeszcze dwie ścieżki spoza tej reguły, obie z wynikiem jak na bazie i opisane w „Ograniczeniach”: gałąź
+  „inny pacjent” przy G13 („Scal pacjentów” w stanie CZEKA, test SP1g) i import pliku karty do istniejącej karty
+  (test IM1).
   Pętla CZEKA w scalaniu czyta świeży nagrobek zawsze (nie cofa nowszego, także przy istniejącej notatce) i przy
   zapisie notatki w drugiej karcie przeglądarki między decyzją a swoim zapisem bierze chwilę tego zapisu — tylko gdy
   notatka jest dalej pod tym samym pacjentem (po „Scal pacjentów” kanon zostaje i przegrywa z wersją przepiętą).
@@ -15744,8 +15755,8 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
 
-**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 157 testów: 88 z wdrożenia, 31 z przeglądu 1 i 38 z przeglądu 2;
-wejście → wynik):
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 182 testy: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2
+i 25 z przeglądu przeniesienia na D-7; wejście → wynik):
 - T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
   karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
   notatek, nagrobki n1–n3);
@@ -15840,6 +15851,30 @@ wejście → wynik):
     `lastSavedAtISO = e` w podglądzie, L17 pola jawne w h (równoległe zmiany samego terminu), L18 „+1 ms” (h = 0,
     stare D dostaje notatkę); L14 i L15 przypinają zdania dokumentacji (kolejność delt przy kroku „pasmo bez karty”;
     odbiorca ratuje najwyżej własną wersję z wyższym `rev`, raz); strażnik źródła `Ad`, pętli CZEKA i `Bnp_pole`.
+- Przegląd przeniesienia na D-7 (2026-10-21; D-21 na `346dd81a`; trzy soczewki: interakcja reguł, flota mieszana
+  z prawdziwym `346dd81a` i mutacje, oraz sceptyk dla każdego zgłoszenia):
+  - zapis w stanie CZEKA przy G13 (MS2; czerwone na `12b0cd4d`): S8b — flota mieszana, B „czeka”, offline dopisuje
+    wizytę (karta między e i R) i poprawia n1, stare O przyjęło usunięcie i wysyła ostatnie → poprawka B wszędzie
+    (dotąd n1 z poprawką ginęła na A, B i O przy żywej karcie); MS2 — nagrobek n1 zostaje (chwila R, pole, `rev` 3),
+    potem poprawka B wszędzie; MS2r — granice (karta między e i R): zapis w chwili R → nagrobek zostaje, w R + 1 ms
+    → zdjęty; S8a i S8c (kontrole): bez starego urządzenia koniec jak dotąd (`rev` 3, R + 1 ms + h, A = B), bez G13
+    zapis po wizycie zdejmuje nagrobek jak dotąd, a echo starego O poprawki nie kasuje;
+  - luki testów (każdy łapie mutację, która przechodziła cały plik): MS1 — podgląd „Scal kopię konta” przy karcie
+    tutaj z nowymi wersjami z kopii bierze późniejszą z obu chwil (karta kopii < e, tutejsza > e → `updated` 2; lustro
+    to P1); MS3 — remis karty z e w gałęzi zgł. 2b to CZEKA (`updated` 1), z granicami e − 1 ms (CZEKA) i e + 1 ms
+    (RATUNEK już przy deltach, 0 zmian w kopii), na prawdziwych deltach; MS4 — G13 w gałęzi zgł. 2b: RATUNEK `rev` 3
+    przy pierwszym ładunku B, zbieżnie ze starym O, także na prawdziwych deltach (spóźniona delta nagrobka karty niczego
+    nie zmienia); MS5 — koszt długiego CZEKA: 0 zapisów i 0 odczytów nagrobka notatki przy powtórzonym ładunku i przy
+    delcie innej karty (zwykłe nagrobki pętla U przepisuje przy każdym scaleniu, jak na `346dd81a`);
+  - znane ograniczenia przypięte testem: F1 (× 3: podstawowy, bez kopii A na C, bez usunięcia) — rozjazd G5 przez
+    „Scal kopię konta” (A i B n1@Y, C n1@X bez karty, te same `rev` i chwila), leczony poprawką n1 na A; Z1 — H2b przy
+    spóźnionym zegarze (nowe i stare urządzenie usuwające notatkę: −10 min → n1 wraca, 0 → [n2]; próg przy odstępie
+    120 s: −118 s usunięta, −122 s wraca; kontrola kolejności: nagrobek przed ratunkiem → usunięta); SP1g i IM1 (inne
+    miejsca zdejmujące nagrobek z polem, wynik jak na bazie): „Scal pacjentów” X→Y w stanie CZEKA przy G13 → n1
+    z chwilą z przyszłości ginie także pod Y, n2 zostaje pod Y; import pliku karty w stanie CZEKA, stare O przyjęło
+    usunięcie → notatki giną przy żywej karcie, bez importu albo z nowym O wracają;
+  - E2: emulacja starej aplikacji rzuca przy kopii konta (scalanie, podgląd, odtworzenie), eksport działa; strażnik
+    źródła `Bnp_poZapisie`.
 
 **Ograniczenia.**
 - **Stare urządzenie z ocalałą kartą przyjmuje usunięcie pierwsze** — kasuje notatki; gdy było jedynym źródłem treści,
@@ -15855,8 +15890,11 @@ wejście → wynik):
   notatek po pierwszym usunięciu nie było wcale. Nie występuje, gdy
   wszystkie urządzenia zaktualizowano przed pierwszym „Usuń pacjenta” (wtedy każdy nagrobek ma pole i działa
   odnowienie — OD2 z nowym D). Gdy nowe urządzenia mają jeszcze nagrobki z polem, same kasują uratowaną wersję
-  (krok „pasmo bez karty”), a sierota zostaje tylko na starym urządzeniu, do jego aktualizacji (losowy przebieg
-  recenzenta, ziarno 164 floty mieszanej). Naprawa po stronie odbiorcy (notatka, której karty po fazie kart nie ma, a nagrobek
+  (krok „pasmo bez karty”), a sierota zostaje na starym urządzeniu (losowy przebieg recenzenta, ziarno 164 floty
+  mieszanej) oraz na urządzeniu zaktualizowanym, które nie ma nagrobka z polem i czyta tylko ładunek starego —
+  do aktualizacji starego urządzenia albo do pierwszego ładunku urządzenia z polem (przegląd przeniesienia na D-7,
+  flota Z3, ziarno 556; w 40 losowych kolejnościach synchronizacji rozjazdu między nowymi urządzeniami nie było).
+  Naprawa po stronie odbiorcy (notatka, której karty po fazie kart nie ma, a nagrobek
   karty jest późniejszy niż każda jej wersja, znika lokalnie bez nagrobka) zmienia regułę także dla sierot spoza D-21
   i dla danych już zapisanych. Decyzja właściciela 2026-10-21 (O-1): przyjęte jako znane ograniczenie z notą
   wydania (punkt 2 noty D21-8); naprawa po stronie odbiorcy — ewentualnie osobny PR razem z sierotami (D21-9).
@@ -15865,9 +15903,23 @@ wejście → wynik):
   nagrobki są późniejsze niż poprawka D); stare C dopisuje wizytę po drugim usunięciu (karta wraca), ucina pole
   i przekazuje nagrobki do D — D kasuje swoją poprawkę, a była jej jedynym źródłem. Na bazie zostaje karta
   z poprawką D (B nie miało notatek, więc drugie usunięcie ich nie obejmowało). Z nowym C poprawka zostaje (kontrola).
+  Ten sam skutek bez przekaźnika (przegląd przeniesienia na D-7, flota I4, ziarno 339 floty mieszanej): stare
+  urządzenie samo poprawiło notatkę między usunięciami i samo dopisało wizytę po drugim usunięciu — stare `Le` kasuje
+  wtedy własną poprawkę regułą R ≥ Y; na bazie poprawka zostaje, więc to nie strata „jak dziś” z pierwszego
+  ograniczenia (obejmuje to punkt 3 noty wydania).
   Tańszej poprawki w kodzie nie ma (pole ginie w starym przekaźniku); nota wydania D21-8.
 - **H2b (D21-3).** Notatka usunięta ręcznie przed „Usuń pacjenta” na urządzeniu, które nie zdążyło tego wysłać, wraca,
   jeśli ratunek nastąpi wcześniej. Widoczne i odwracalne: wystarczy usunąć ją ponownie.
+- **H2b przy rozjeździe zegarów** (przegląd przeniesienia na D-7, flota Z1; testy Z1). „Przed” i „po” liczy się według
+  zegarów urządzeń (zasada D13/G17). Ręczne usunięcie na nieświadomym urządzeniu, którego zegar jest za zegarem
+  urządzenia usuwającego pacjenta o więcej niż odstęp między tymi działaniami (dokładniej: o więcej niż odstęp − 1 ms
+  − h), liczy się jak sprzed „Usuń pacjenta” i wraca, jeśli ratunek dotrze wcześniej niż ten nagrobek (przy odstępie
+  120 s: zegar −118 s — usunięta, −122 s — wraca); gdy nagrobek dotrze przed ratunkiem, notatka zostaje usunięta (krata
+  M działa także przy rozjeździe zegarów). Nowe i stare urządzenie usuwające notatkę dają ten sam wynik, zbieżnie
+  i bez ping-ponga; flota samych starych traci przy tym wszystkie notatki karty. To ta sama klasa co przegrana ręcznego
+  usunięcia z równoległą poprawką z urządzenia o dobrym zegarze, także bez „Usuń pacjenta”; rolę równoległej zmiany
+  pełni tu ratunek ostemplowany zegarem urządzenia usuwającego. Ostrzeżenie D13 („Status synchronizacji”) pojawia się
+  tylko na urządzeniu spóźnionym, po scaleniu. Kodu nie zmieniono (D13: samo ostrzeżenie, bez korekty znaczników).
 - **H2b we flocie mieszanej jest szerszy** (przegląd 1, flota, zgł. 1; testy R10b, R10d). Ręczne usunięcie na starym
   urządzeniu jest pamiętane tylko wtedy, gdy dotrze do nowego urządzenia, zanim stare pobierze usunięcie pacjenta:
   stare `Le` przepisuje swój ręczny nagrobek na chwilę R nagrobka z „Usuń pacjenta”, bez pola, więc chwila ręcznego
@@ -15876,9 +15928,10 @@ wejście → wynik):
   dawałaby trwały rozjazd z zapisami w każdej rundzie. Do noty wydania (D21-8).
 - **Ręczne usunięcie w pasmie ratunku** (przegląd 1, F2, test P1b). Ręczne usunięcie notatki na urządzeniu, które nie
   wie o „Usuń pacjenta”, wykonane w ciągu 1 s po nim, przegrywa z ratunkiem, gdy h tej notatki jest większe niż odstęp;
-  usunięcie późniejsze o ponad 1 s zawsze wygrywa (T9). Wymaga dwóch osób działających na tym samym pacjencie w tej samej
-  sekundzie. Zawężenie h (np. mod 100) skróciłoby pasmo do 100 ms kosztem 10 razy częstszej kolizji przy równoległych
-  poprawkach (D21-5) — nie zmieniono.
+  usunięcie późniejsze o ponad 1 s według zegarów urządzeń zawsze wygrywa (T9; przy spóźnionym zegarze urządzenia
+  usuwającego notatkę — wyżej, „H2b przy rozjeździe zegarów”). Wymaga dwóch osób działających na tym samym
+  pacjencie w tej samej sekundzie. Zawężenie h (np. mod 100) skróciłoby pasmo do 100 ms kosztem 10 razy częstszej
+  kolizji przy równoległych poprawkach (D21-5) — nie zmieniono.
 - **Stare urządzenie w pasmie ratunku** (F2, test P1d). Krok „pasmo bez karty → usuń” wymaga pola, a stara aplikacja go
   nie zna i ucina pole w nagrobkach, które przekazuje. Gdy drugie „Usuń pacjenta” na nieświadomym urządzeniu nastąpi
   w ciągu 1 s po pierwszym, a uratowana wersja jest późniejsza niż jego nagrobki, urządzenie, które ratowało, zostaje
@@ -15889,7 +15942,14 @@ wejście → wynik):
   nie widziało usunięcia, ma poprawkę z wyższym `rev` i dostaje uratowaną starszą wersję: zostaje poprawka z chwilą ≤ R
   i bez nagrobka, rozchodzi się, a echo starego urządzenia (nagrobek bez pola, chwila R) kasuje notatkę wszędzie — jak
   na bazie, gdzie ginie od razu, ale lekarz widzi, że wraca i znika. Naprawa wymagałaby niesienia R razem z notatką
-  (zmiana formatu notatki), poza zakresem D-21. Gdy to urządzenie ma nagrobek z polem, poprawka jest ratowana (zgł. 2b).
+  (zmiana formatu notatki), poza zakresem D-21. Gdy to urządzenie ma nagrobek z polem, poprawka jest ratowana (zgł. 2b;
+  także poprawka zapisana w stanie CZEKA przy G13 — S8b).
+- **Import pliku karty w stanie CZEKA** (przegląd przeniesienia na D-7, sprawdzenie miejsc zdejmujących nagrobek;
+  test IM1). Import do istniejącej karty zdejmuje nagrobki importowanych notatek (P-NOTATKI-1 G3),
+  a ich chwil nie podbija (P-IMPORT-NAGROBEK podbija tylko przy karcie przywracanej z pliku): zostają wersje z chwilą
+  ≤ R bez nagrobka, jak w zgł. 2a. Echo starego urządzenia kasuje je potem przy żywej karcie; bez importu D-21 by je
+  uratowało, a na bazie (`346dd81a`) giną w każdym wariancie, więc to nie regresja. We flocie nowych urządzeń ratunek
+  z ładunku z polem je przywraca. Reguła importu bez zmian (jawne przywrócenie, D-21 jej nie dotyka).
 - **Kolejność delt przy kroku „pasmo bez karty”.** Urządzenie bez karty, które dostanie deltę uratowanej notatki przed
   deltą karty, kasuje ją (błąd w stronę usunięcia); notatka wraca z następnym pełnym ładunkiem, gdy karta już jest.
 - **Delta poprawki zrobionej w stanie CZEKA** (przegląd 2, test CZ5). Zdarzenie zapisu niesie samą notatkę (jedno
@@ -15913,14 +15973,29 @@ wejście → wynik):
   i ratunek — pojedynczy rekord (`getPatientNoteTombstoneForUser`); przed przeglądem 1 „Usuń pacjenta” z k notatkami
   czytało pełną listę k razy pod blokadą pacjenta, a każda delta — jeszcze raz. Odczyt karty tylko przy polu: dla
   kandydatów, wersji w pasmie ratunku i wersji sprzed usunięcia, raz na pacjenta (plus raz pod blokadą przy ratunku).
+  Pętla CZEKA nie zapisuje ani nie czyta nagrobka, którego kanon już leży, więc w długim stanie „czeka” scalanie nie
+  przepisuje nagrobków pacjenta (zwykłe nagrobki notatek pętla zapisu przepisuje przy każdym scaleniu, jak dotąd; MS5).
 - **Poza zakresem (D21-9):** sieroty z pomiaru 6 i 7 (poprawka albo nowa notatka bez zmiany karty) i rozjazd G5 po
   „Scal pacjentów” z pomiaru 13 — testy T20 i T21 pilnują, że zostały bez zmian; „Scal pacjentów” równolegle z „Usuń
-  pacjenta” tego samego X — notatki przepięte pod Y giną jak dziś; **nowa** notatka dopisana na karcie w stanie CZEKA
+  pacjenta” tego samego X — notatki przepięte pod Y giną jak dziś (w stanie CZEKA zostają pod Y, SP1 — oprócz wersji
+  z chwilą z przyszłości, G13: zapis pod Y dostaje chwilę < R, a nagrobek z polem X kasuje ją przy następnym scaleniu,
+  bo karty X już nie ma, także we flocie samych nowych urządzeń; zostawiony nagrobek by nie pomógł — przegląd
+  przeniesienia na D-7, test SP1g); **nowa** notatka dopisana na karcie w stanie CZEKA
   nie ma nagrobka, więc po dojściu usunięcia karty zostaje sierotą, jak na bazie (klasa pomiaru 7; przegląd 2, flota,
-  kontrola recenzenta).
+  kontrola recenzenta). Rozjazd G5 ma też drogę przez „Scal kopię konta” (przegląd przeniesienia na D-7, F1; testy F1):
+  urządzenie scala kopię z urządzenia, które zrobiło „Scal pacjentów” X→Y, a `Bks_notatki` (P-KOPIA-POMIJA) zostawia
+  notatkę z kopii pod tutejszą kartą X, z tymi samymi (`rev`, `updatedAtISO`) co pod Y na pozostałych urządzeniach;
+  `Le` takiego remisu nie rozstrzyga, a nagrobek X ze scalenia notatki nie kasuje, więc po usunięciu X zostaje tam
+  sierotą (treść jest pod Y na pozostałych urządzeniach). Na bazie ta sama droga istnieje bez „Usuń pacjenta” (i z nim,
+  gdy urządzenie nie scalało kopii z usunięciem); D-21 dokłada wejście przez CZEKA: po „Scal kopię konta” z kopii
+  urządzenia, które usunęło X, notatka czeka przy żywej karcie X, zamiast zginąć (na 346dd81a ten wariant kończył się
+  zbieżnie tylko dzięki tej utracie). Rozjazd znika przy następnej poprawce notatki na urządzeniu, na którym jest
+  widoczna. Naprawa — w PR klasy G5 (np. `Bks_notatki` nie przepina notatki pod tutejszą kartę, gdy karta właściciela
+  z kopii też tu istnieje).
 - **Etap 2 synchronizacji** (kolejka zdarzeń): ratunek wymaga wyjątku od zasady „scalanie nie dopisuje do kolejki”,
-  builder `pnotetomb` musi czytać rekord ze sklepu, a zapis notatki w stanie CZEKA musi wysłać także `pnotetomb`
-  — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`.
+  builder `pnotetomb` musi czytać rekord ze sklepu, a zapis notatki, po którym nagrobek zostaje (`Bnp_poZapisie`:
+  stan CZEKA, a po przeglądzie przeniesienia na D-7 także karta późniejsza niż `e` przy zapisie nie późniejszym niż R),
+  musi wysłać także `pnotetomb` — dopisane w `docs/SYNC_PRZYROSTOWA_PLAN.md`.
 
 **Nota wydania (D21-8; do wklejenia przy wydaniu).** „Notatki pacjenta (wyniki badań, leki, terminy) wracają razem
 z kartą, którą po »Usuń pacjenta« zachowano na innym urządzeniu (nowa wizyta, poprawka, gwiazdka, kosz, »Przywróć«).
@@ -15929,7 +16004,9 @@ Dopóki któreś urządzenie ma starszą wersję: (1) notatki mogą zniknąć z 
 jak dotąd; (2) jeśli karta wróci na urządzenie bez notatek, nie usuwaj jej ponownie na tym urządzeniu — notatki
 mogłyby zostać bez karty; (3) poprawka notatki zrobiona na urządzeniu,
 które nie wiedziało o usunięciu, może zginąć, gdy pacjenta usunięto dwa razy; (4) notatka usunięta ręcznie na starym
-urządzeniu tuż przed »Usuń pacjenta« może wrócić — wystarczy usunąć ją ponownie.”
+urządzeniu tuż przed »Usuń pacjenta« może wrócić — wystarczy usunąć ją ponownie. Niezależnie od wersji: notatka
+usunięta ręcznie na urządzeniu ze źle ustawionym zegarem (ostrzeżenie o zegarze w »Statusie synchronizacji«) może
+wrócić także wtedy, gdy usunięto ją chwilę po »Usuń pacjenta« — wystarczy usunąć ją ponownie.”
 
 Odsyłacze: P-ZMIANA-W-KARCIE (ta sama nierówność `lastSavedAtISO > deletedAtISO`); P-NOTATKI-1 G2, G6 i G13 (`rev`
 w nagrobku, `max(teraz, u)`); reguła „remis na korzyść usunięcia” w oknie współbieżności (zostaje — krok 4);
@@ -15981,6 +16058,35 @@ plików), lint, składnia (1122 pliki), 413 plików testów, 10 318 z 10 318 zie
 P-SW-PRECACHE) i D-21 go nie zmienia. Wersje:
 `npm run podbij-wersje` względem `origin/audyt` `affdeb64` (po #748): `vilda_vault.js` 223, `vilda_chrome.js` 168,
 `vilda_session_bridge.js` 92; SW 1.1.335 → 1.1.336.
+
+Przegląd przeniesienia na D-7 (2026-10-21; D-21 na `346dd81a` jako `4fa68948`, kontrola — `c9373e0d` sprzed
+przeniesienia): trzy soczewki (interakcja reguł, flota mieszana z prawdziwym `346dd81a`, mutacje) i sceptyk dla
+każdego zgłoszenia; 10 zgłoszeń niskiej wagi potwierdzonych, każde istniało już na `c9373e0d`, żadne nie wynika
+z połączenia D-7 i D-21. Jedna wada kodu (MS2: zapis notatki przy G13 we flocie mieszanej, S8b) — poprawiona;
+pozostałe to luki testów (MS1, MS3–MS5), znane ograniczenia (F1, Z1, Z3, I4) i granica emulacji (E2). Pomiary soczewek,
+z wynikiem jak na kontroli: macierz rozjazdu zegarów 540/540 i macierz stanu CZEKA z rozjazdem 1008/1008 w tej samej
+klasie; losowe przebiegi z „Scal pacjentów”, „Scal kopię konta” i importem 300/300 w tych samych klasach, podgląd =
+wynik = magazyn bez rozbieżności; flota mieszana — 1200 przebiegów różnicowych i 900 przebiegów fuzzu recenzenta
+poprawności ze stanem końcowym jak na kontroli (`c9373e0d` z prawdziwym `db0c2d50`); emulacja starej aplikacji — 1693
+z 1693 obserwacji stanu tego pliku (157 testów) jak z prawdziwym `346dd81a`. Fuzz D-7 × D-21 (600 ziaren): 11
+czerwonych, te same na kontroli — Z1 (6), ograniczenie 2 i klasa pomiaru 6 (3), fałszywy alarm (ziarno 97: późniejsze
+ręczne usunięcie wygrywa z wcześniejszą poprawką) i ziarno 253: sierota tylko na urządzeniu, do którego karta nie
+wraca — skutek rozjazdu kart po koszu i „Usuń pacjenta”, który występuje także we flocie samych `346dd81a` i samych
+`db0c2d50`, czyli spoza D-21 (do osobnego sprawdzenia: P-KOSZ, P-ZMIANA-W-KARCIE). Mutacje soczewki: 153 na pliku
+D-21, łapane 119; z 34 ocalałych 5 zabijają teraz MS1–MS5, 7 po stronie D-7 łapią pliki D-7, reszta jest równoważna,
+nieosiągalna albo poza zakresem. Po poprawkach: plik D-21 182 z 182; na `12b0cd4d` czerwone 4 (S8b, MS2, MS2r
+i strażnik źródła `Bnp_poZapisie`); z prawdziwym `346dd81a` zamiast emulacji 182 z 182, 2262 z 2262 obserwacji stanu
+identycznych (256 na starych urządzeniach). Mutacje (27 kodu poprawek przeglądu 2, 34 ocalałe w soczewce, z tego
+3 wspólne, i 7 nowych dla reguły MS2 — razem 65): łapane 37, ocalałe 28 — ocalałe w soczewce bez pięciu zabitych przez
+MS1–MS5 i bez przesunięcia nagrobka także bez karty, które łapie teraz tylko strażnik źródła (nieosiągalne, jak
+w przeglądzie 2); wszystkie mutacje `Bnp_poZapisie` (18) łapane, porównanie zapisu z R przez „≥” i karty z R zamiast
+z e — testem MS2r. Losowe przebiegi
+`zz-pp2-fuzz` przed (`12b0cd4d`) i po: nowe urządzenia, ziarna 1–400 — zielone; flota mieszana, ziarna 1001–1300 —
+zielone; ziarna 1–300 — czerwone 115 i 164 (ograniczenie 2, O-1); stany końcowe i uwagi identyczne ziarno w ziarno
+przed i po (1000 ziaren). Pliki pokrewne, każdy osobno: te same pliki co po przeglądzie 2 (bez pliku D-21), pliki D-7
+(`pozniejsza-poprawka` × 3, `kosz-przywroc-nowsza`) i pliki czytające ten rejestr (`kursy-otylosci-cykle`,
+`postepy-doroslego-cykle`, `vital-signs`) — 64 pliki, 1729 testów, zielone bez zmian testów. `npm run lint`,
+`npm run test:syntax` (1121 plików), `npm run test:repo` (1758 plików) — zielone.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 

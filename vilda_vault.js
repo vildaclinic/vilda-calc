@@ -2313,6 +2313,8 @@ async function Bks_notatki(kontekst, notatkiKopii) {
  * chwile zapisu (Bnp_poZapisie) — poprawka znika razem z karta albo wraca z nia; chwila rekordu nagrobka z polem musi
  * miec postac toISOString (Bnp_pole). Znane ograniczenia floty mieszanej (drugie „Usun pacjenta” na starym urzadzeniu po
  * ratunku, stary przekaznik po drugim usunieciu) — opisane w ALGORITHMS.md, nota wydania D21-8.
+ * Przeglad przeniesienia na D-7 (2026-10-21, MS2): zapis w stanie CZEKA zdejmuje nagrobek tylko, gdy karta jest
+ * pozniejsza niz e i zapis jest pozniejszy niz chwila nagrobka R (G13: karta miedzy e i R — nagrobek zostaje na R).
  */
 // Data ISO w postaci toISOString (porownania napisow w scalaniu zakladaja te postac). Przeglad 1 (flota, zgl. 3): takze
 // data z kalendarza — Date.parse przyjmuje „30 lutego” (2 marca), wiec bez rundy przez toISOString uszkodzone pole
@@ -2509,8 +2511,13 @@ async function Bnp_karta(h, patientId) {
 // pozniejsza niz pole.deletedAtISO (ta sama nierownosc co Bnp_stan) — nagrobek zostaje z chwila przesunieta na chwile
 // zapisu (pole z M bez zmian, rev = max), wiec poprawiona wersja (Y <= R) dalej idzie za karta: usuniecie, gdy dojdzie
 // usuniecie karty, RATUNEK (R + 1 ms + h), gdy karta okaze sie pozniejsza. Blad odczytu karty — jak CZEKA (Bnp_karta).
+// Przeglad przeniesienia na D-7 (MS2): karta pozniejsza niz e, ale zapis nie pozniejszy niz chwila nagrobka R (G13:
+// R = u z przyszlosci, wiec R > e) — nagrobek tez zostaje (D = R, pole i rev jak wyzej). Zdjety zostawilby wersje
+// z chwila <= R bez nagrobka, a echo starego urzadzenia (nagrobek R bez pola) kasowaloby ja przy zywej karcie;
+// z nagrobkiem najblizsze scalanie ja ratuje (krok 2: Y <= R, karta > e — R + 1 ms + h).
 // W pozostalych przypadkach (brak nagrobka albo pola, inny pacjent — np. „Scal pacjentow” przepina notatke, brak karty,
-// karta pozniejsza niz e) nagrobek jest zdejmowany jak dotad; blad odczytu nagrobka tez nie wstrzymuje zdjecia.
+// karta pozniejsza niz e i zapis pozniejszy niz R) nagrobek jest zdejmowany jak dotad; blad odczytu nagrobka tez nie
+// wstrzymuje zdjecia.
 async function Bnp_poZapisie(id, kiedy, rev, patientId) {
   try {
     const h = I();
@@ -2520,7 +2527,7 @@ async function Bnp_poZapisie(id, kiedy, rev, patientId) {
     const p = Bnp_pole(nag);
     if (p && p.patientId === patientId && typeof h.putPatientNoteTombstoneForUser === 'function') {
       const karta = await Bnp_karta(h, patientId);
-      if (karta !== null && !(karta > p.deletedAtISO)) {
+      if (karta !== null && (!(karta > p.deletedAtISO) || !(kiedy > nag.deletedAtISO))) {
         const D = nag.deletedAtISO > kiedy ? nag.deletedAtISO : kiedy;
         await h.putPatientNoteTombstoneForUser(b, { id: id, deletedAtISO: D, rev: Math.max(Bnp_rev({ rev: rev }), Bnp_rev(nag)), deletedWithPatient: p });
         return;
