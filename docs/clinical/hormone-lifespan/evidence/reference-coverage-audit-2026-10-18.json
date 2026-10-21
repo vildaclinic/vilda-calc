@@ -1963,5 +1963,27 @@
   },
   "runtimeChanged": false,
   "sourceFilesRedistributed": false,
-  "ownerClinicalApprovalForCandidates": false
+  "ownerClinicalApprovalForCandidates": false,
+  "followUp2026_10_21": {
+    "date": "2026-10-21",
+    "kind": "Follow-up implementation note; original 2026-10-18 counts, hashes, probe outputs and candidate status are historical and unchanged.",
+    "decision": "Owner accepted two approximate educational male total-testosterone group references from Kushnir 2010 after source audit; not the Kulle candidate.",
+    "currentDataVersion": "2026-10-21.1",
+    "currentProfileCount": 84,
+    "preservedPriorProfiles": 82,
+    "newProfileIds": [
+      "kushnir2010-male-t-1-2-group",
+      "kushnir2010-male-t-2-3-group"
+    ],
+    "applicationIntervals": [
+      "[1,2)",
+      "[2,3)"
+    ],
+    "source": "patient-point/kushnir2010-male-testosterone-group-medians.json",
+    "ordinaryTestosteroneMaleCoverageAfterChange": "[7,212] days; [1,86] years with separate source/group boundaries; requires qualifying context.",
+    "remainingInfantGap": ">212 days–<1 year; no extrapolation",
+    "clinicalOwnerApprovalScope": "Two approximate group medians for educational comparison only; no RI, clinical validation, continuous p50, method calibration or approval of other listed candidates.",
+    "originalCandidateKulleStillNotImported": true,
+    "originalAuditRerunClaimed": false
+  }
 }

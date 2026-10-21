@@ -101,7 +101,8 @@ lub okresów. Wymagałoby to osobnej weryfikacji.
 - Rysunek dzieciństwa zachowuje odczyt Busch do 212. dnia, potem łagodnie
   schodzi do niskiego poziomu Madsen w wieku 6 lat. Węzły Kelsey 3–5 lat
   nie wymuszają rysunku. Źródłowe odniesienia Kelsey 3–<6 pozostają
-  dostępne osobno; luka 1–<3 nie otrzymuje wymyślonej mediany.
+  dostępne osobno. Historyczną lukę 1–<3 uzupełnia osobne odniesienie
+  Kushnir z 21.10.2026, opisane poniżej; nie bierze mediany z rysunku.
 - Madsen pozostaje odniesieniem 6–<18 lat. Połączenie z młodą dorosłością
   nie tworzy sztucznego szczytu 17–18 lat ponad poziomem młodych dorosłych.
 - Dorosłe odniesienie edukacyjne to siedem średnich Walravens, tabela 1,
@@ -748,6 +749,42 @@ odrębne. Źródła i granice:
 [audyt](hormone-lifespan/evidence/male-lh-caliper-reference-audit-2026-10-18.json),
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#lh-chłopców--odtworzona-mediana-w-1618-18-października-2026).
 
+## Testosteron chłopców — grupy Kushnir 1–<3, 21 października 2026
+
+Właściciel zaakceptował dwa przybliżone odniesienia grupowe po audycie
+pełnego Kushnir 2010, ryc. 4C, s. 1146, DOI
+[10.1373/clinchem.2010.143222](https://doi.org/10.1373/clinchem.2010.143222).
+`male-testosterone-childhood-reference-policy.json` stosuje `[1,2)`
+i `[2,3)`, `ordinaryOnly`, `group-median`, `constant`, `approximate`.
+To jawna konwencja aplikacji, nie odzyskane nierówności wieku autorów.
+Cały możliwy wiek musi pasować do jednej grupy. Brak G nie blokuje
+porównania; nie wnioskuj G1 z wieku i nie dodawaj pytań.
+
+- Dwa czarne markery Te chłopców odczytano jako około 0,03/0,02 µg/L,
+  czyli 0,10401/0,06934 nmol/L według istniejącej konwersji. Zachowaj
+  grupowy charakter i znak ≈, bez pozornej dokładności konwersji w UI.
+- Środek bounding box jest jedną konwencją dla obu markerów. Różnica
+  od centroidu i zaokrąglenie dają oszacowaną tolerancję około ±5 ng/L;
+  nie jest to CI ani norma. N rocznych grup nie podano; N123/125
+  z tabeli 1 nie można automatycznie przenieść do grup ryciny.
+- Surowica, derywatyzacyjne dwuwymiarowe LC-MS/MS, LOD/LOQ5/10 ng/L.
+  Mediany są ponad LOQ; nieznana reguła cenzury pojedynczych obserwacji
+  pozostaje ograniczeniem. Pobranie po indukcji znieczulenia i 24 wysokie
+  wyniki całej młodszej kohorty należą do źródeł; dodatkowe 90% RI nie
+  jest skorygowaną medianą. Nie uśredniaj z Kulle N9/osocze/≈0,4 nmol/L.
+- Zachowaj 82 wcześniejsze profile, w tym Kelsey od dokładnie 3 lat,
+  krzywą i stałą skalę oraz osobne Mayo RI wieku/G. Przejścia grup
+  i źródeł nie są zdarzeniami biologicznymi; nie dociągaj do nich linii.
+  Jasny znacznik pozostaje na medianie, nawet gdy ilustracja jest wyżej.
+- Nie rozszerzaj na >212 dni–<1 roku, inne anality, porównanie płci lub
+  historię. Znana niezgodność metody/materiału, leczenie, stymulacja,
+  niepewny wiek, cenzurowany wynik i tożsamość zachowują bramki.
+
+Źródło, geometria odczytu, SHA256 i ograniczenia:
+[ekstrakt](hormone-lifespan/evidence/patient-point/kushnir2010-male-testosterone-group-medians.json),
+[kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#testosteron-chłopców--przybliżone-mediany-dwóch-grup-21-października-2026).
+Akceptacja porównania edukacyjnego nie jest walidacją kliniczną.
+
 ## Co sprawdzić przed oddaniem zmiany
 
 - Osobno porównaj dane źródłowe, wynik funkcji odniesienia i geometrię.
@@ -755,7 +792,8 @@ odrębne. Źródła i granice:
 - Na rzeczywistych funkcjach produkcyjnych sprawdź granice źródeł,
   niepewny wiek, jednostki, brak danych i brak ekstrapolacji. Dla aktualnego
   T: 44 lata → średnia 18,1; 82 lata → 15,9; >86 → brak odniesienia;
-  2 lata → brak mediany; pediatryczne mediany pozostają niezmienione.
+  2 lata → przybliżona mediana grupy Kushnir 0,06934 nmol/L;
+  wcześniejsze pediatryczne mediany pozostają niezmienione.
 - Porównaj pusty wynik → wynik równy źródłu → niższy/wyższy → wynik ponad
   osią → wyczyszczenie. Linia i skala mają zostać stałe; wynik ponad osią
   ma strzałkę z prawdziwą wartością, a nie kropkę udającą górę skali.

@@ -32,8 +32,8 @@ const checks = {
 
 describe('FSH CALIPER — źródłowe p50 późnej adolescencji, bez nowej normy laboratoryjnej', () => {
   it('dodaje dokładnie dwa profile i zmienia wyłącznie wyłączność dwóch zwykłych końców Madsen', () => {
-    expect(data.version).toBe('2026-10-18.3');
-    expect(data.profiles).toHaveLength(82);
+    expect(data.version).toBe('2026-10-21.1');
+    expect(data.profiles).toHaveLength(84);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.fshCaliperReferencePolicy).toEqual(policy);
     expect(policy.profiles.map(item => item.id)).toEqual(Object.values(ids));
