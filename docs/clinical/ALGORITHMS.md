@@ -15372,6 +15372,49 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## „Scal kopię konta” zachowuje rewizję i chwilę zmiany dopisanych wersji (P-KOPIA-REV, SW 1.1.329, `vilda_vault.js` 221, 2026-10-21)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, która treść wizyty zostaje
+po synchronizacji, gdy wersja doszła przez „Scal kopię konta”. **Decyzja właściciela 2026-10-21** (PD-14
+w doprecyzowaniu D-7 wariant 2, `docs/SYNC_PRZYROSTOWA_PLAN.md` rozdz. 6; rekomendacja przyjęta: osobny mały PR przed
+D-7). Serwer, format ładunku, delt, pliku karty i kopii konta oraz API `window.VildaVault` bez zmian. Reguła scalania
+wersji w synchronizacji bez zmian (to D-7).
+
+**Co było** (prawdziwy `vilda_vault.js` 220, `9f05e101`; sejfy w pamięci, sztuczny zegar; dane fikcyjne).
+- `ss` (`mergeVaultBackup`) dopisywał brakujące wersje jako `{snapshotId, patientId, savedAtISO, payloadCipher}`
+  i pola `Bm1`, bez `rev` i bez `updatedAtISO`. Kopia konta niesie oba pola (`rs`), a import karty (`ns`) i odtworzenie
+  konta (`as`) je zapisują.
+- P zapisuje wizyty 19 kg i 20 kg. C po synchronizacji z P poprawia drugą na 21 kg (`rev` 1). N scala kopię konta C:
+  ma 21 kg z `rev` 0 i chwilą zmiany równą chwili zapisu. Po synchronizacji N ↔ P obie mają 20 kg — poprawka z kopii
+  ginie na obu. Tak samo, gdy N miał już tę kartę z pierwszą wizytą (poprawka 22 kg → 20 kg na obu).
+
+**Reguła po zmianie.**
+- Obie gałęzie `ss` (nowa karta z kopii i dopisanie do istniejącej karty) zapisują wersję z `rev` z kopii (`mt`)
+  i jej `updatedAtISO` (niepusty tekst, inaczej `null`), tym samym wyrażeniem co `ns` i `as`. Chwili „teraz” nie
+  wymyślamy.
+- Wersje, które tu już są, `ss` dalej pomija (ten sam `snapshotId` → zostaje tutejsza, PD-15). Nagrobki i kosz,
+  dane konta oraz nagłówek karty (P-NAGLOWEK-NAJNOWSZEJ) bez zmian.
+
+**Przypadki** (`tests/unit/kopia-konta-rev.test.mjs`):
+- nowa karta z kopii, poprawka 21 kg (`rev` 1) → na N `rev` 1 i chwila zmiany z C; po synchronizacji N ↔ P 21 kg
+  na obu (dotąd 20 kg na obu);
+- karta już na N, dopisana tylko brakująca wersja z poprawką 22 kg → `rev` 1 i chwila zmiany z C; 22 kg na obu
+  (dotąd 20 kg na obu);
+- kontrola: wersja bez poprawki → `rev` i `updatedAtISO` jak w kopii i jak po odtworzeniu konta (bez zmiany wobec dziś);
+- strażnik źródła: obie gałęzie `ss` zapisują oba pola.
+
+**Ograniczenia.**
+- Gdy inne urządzenie ma tę wersję z wyższym `rev` (np. dwie wcześniejsze poprawki zrobione równolegle), późniejsza
+  poprawka z kopii dalej przegrywa, bo dziś wygrywa wyższy `rev`. Zmienia to D-7 wariant 2 (późniejsza zmiana
+  wygrywa; osobny PR).
+- Na `9f05e101` z 4 nowych testów czerwone są 3; kontrola jest zielona, bo wersja bez poprawki miała `rev` 0 także
+  dotąd.
+
+**Walidacja.** `npm test`: 406 plików testów, 9946 z 9946 zielonych. e2e „Scal kopię konta” i kopii zapasowej
+i blokady importu (`kopia-konta-dane-konta`, `kopia-konta-pomija`, `chip-kopia-zapasowa`, `blokada-importu`,
+desktop-chromium): 15 z 15. `npm run
+podbij-wersje`: `vilda_vault.js` 221, `vilda_chrome.js` 166, `vilda_session_bridge.js` 90; SW 1.1.328 → 1.1.329.
+
 ## Krótki opis karty zawsze z najnowszej wersji; `deleteSnapshot` tylko na tym urządzeniu (P-NAGLOWEK-NAJNOWSZEJ, P-USUN-WERSJE-LOKALNIE, SW 1.1.328, `vilda_vault.js` 220, `vilda_auth_ui.js` 505, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła, z której wersji karty
