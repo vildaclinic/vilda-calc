@@ -29,7 +29,7 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('Testosteron chłopców 1–<3 — przybliżone mediany grup Kushnir 2010', () => {
   it('dodaje wyłącznie dwa profile, zachowując 82 wcześniejsze profile, jednostki i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-21.1');
+    expect(data.version).toBe('2026-10-21.2');
     expect(data.profiles).toHaveLength(84);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(data.profiles.slice(-2).map(item => item.id)).toEqual(ids);

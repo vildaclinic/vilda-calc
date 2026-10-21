@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-21",
+  "baseCommit": "3b6a53025648ed054af111214226ab36c4909a3b",
+  "approvedScope": "Only the ordinary female inhibin B profile is extended; no estradiol implementation.",
+  "sourceEvidence": "patient-point/borelli2025-female-inhb-post47-digitized.json",
+  "policy": "../female-inhibin-reference-policy.json",
+  "profileId": "borelli2025-female-inhb-age-5p6-47p75",
+  "previousDomainYears": [
+    5.6,
+    47
+  ],
+  "domainYears": [
+    5.6,
+    47.75
+  ],
+  "upperInclusive": true,
+  "sourceKnotsPreserved": 24,
+  "sourceKnotsAfterExtension": 27,
+  "otherProfilesIdentical": 83,
+  "unchangedFiles": [
+    "docs/clinical/hormone-lifespan/inhibin-comparison-reference-data.json",
+    "docs/clinical/hormone-lifespan/evidence/inhb-digitized-median.json",
+    "vilda_hormone_lifespan_reference.js",
+    "lab_units_data.js"
+  ],
+  "interpolationEffect": {
+    "strategy": "Append these three knots only to the single ordinary profile; keep the shared 24-knot extraction and all comparison/display data unchanged.",
+    "retainedSourceKnots": 24,
+    "extendedKnots": 27,
+    "changedPreviousSegmentYears": [
+      46,
+      47
+    ],
+    "example": {
+      "ageYears": 46.5,
+      "previousPgMl": 14.4375,
+      "extendedPgMl": 14.076923076923077
+    },
+    "maximumSampledDeltaPgMl": -0.4273501067307688,
+    "maximumSampledDeltaAgeYears": 46.667,
+    "meaning": "Additional endpoint neighbours alter the old last PCHIP segment. This is an explicitly accepted reference change. Knots and earlier interpolation through 46 years stay unchanged."
+  },
+  "syntheticProductionCases": [
+    {
+      "femaleAgeYears": 47.25,
+      "measurementPgMl": 33,
+      "approxMedianPgMl": 10
+    },
+    {
+      "femaleAgeYears": 47.5,
+      "measurementPgMl": 33,
+      "approxMedianPgMl": 8
+    },
+    {
+      "femaleAgeYears": 47.75,
+      "measurementPgMl": 33,
+      "approxMedianPgMl": 7
+    },
+    {
+      "femaleAgeYears": 46.5,
+      "measurementPgMl": 33,
+      "approxMedianPgMl": 14.076923076923077
+    },
+    {
+      "femaleAgeFromMainForm": "47 years 8 months",
+      "status": "ready",
+      "approxMedianPgMl": 7.234567901234577
+    },
+    {
+      "femaleAgeFromMainForm": "47 years 9 months",
+      "status": "unavailable",
+      "reason": "ambiguous-age"
+    },
+    {
+      "femaleAgeYears": 48,
+      "status": "unavailable",
+      "reason": "unsupported-age"
+    }
+  ],
+  "limitations": [
+    "Approximate graphical model median, not a reference interval or diagnosis of fertility/menopause.",
+    "LOD 3 pg/mL; no separate LOQ reported. Graphical tolerance ±2 pg/mL is not CI or confirmation of quantification.",
+    "Do not substitute LOD/2 for a patient result or extrapolate to 48–69 years.",
+    "Historical saved assessments, shared comparison curves and laboratory RI are unchanged."
+  ],
+  "validation": "The PR description reports completed unit, browser, PWA/offline and GitHub checks for its final SHA."
+}

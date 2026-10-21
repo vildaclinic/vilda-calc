@@ -1,0 +1,171 @@
+{
+  "id": "borelli2025-female-inhb-age-5p6-47",
+  "analyte": "inhb",
+  "sex": "female",
+  "minAge": 5.6,
+  "maxAge": 47,
+  "maxAgeExclusive": false,
+  "points": [
+    {
+      "ageYears": 5.6,
+      "value": 11
+    },
+    {
+      "ageYears": 6,
+      "value": 11
+    },
+    {
+      "ageYears": 7,
+      "value": 12
+    },
+    {
+      "ageYears": 8,
+      "value": 14
+    },
+    {
+      "ageYears": 9,
+      "value": 18
+    },
+    {
+      "ageYears": 10,
+      "value": 27
+    },
+    {
+      "ageYears": 11,
+      "value": 36
+    },
+    {
+      "ageYears": 12,
+      "value": 43
+    },
+    {
+      "ageYears": 13,
+      "value": 47
+    },
+    {
+      "ageYears": 14,
+      "value": 46
+    },
+    {
+      "ageYears": 15,
+      "value": 44
+    },
+    {
+      "ageYears": 16,
+      "value": 40
+    },
+    {
+      "ageYears": 17,
+      "value": 37
+    },
+    {
+      "ageYears": 18,
+      "value": 36
+    },
+    {
+      "ageYears": 20,
+      "value": 34
+    },
+    {
+      "ageYears": 25,
+      "value": 32
+    },
+    {
+      "ageYears": 30,
+      "value": 30
+    },
+    {
+      "ageYears": 35,
+      "value": 29
+    },
+    {
+      "ageYears": 40,
+      "value": 28
+    },
+    {
+      "ageYears": 42,
+      "value": 26
+    },
+    {
+      "ageYears": 44,
+      "value": 23
+    },
+    {
+      "ageYears": 45,
+      "value": 20
+    },
+    {
+      "ageYears": 46,
+      "value": 17
+    },
+    {
+      "ageYears": 47,
+      "value": 11
+    }
+  ],
+  "sourceLabel": "Borelli-Kjær 2025 · inhibina B · model wieku",
+  "url": "https://doi.org/10.1210/clinem/dgae439",
+  "method": "Beckman Coulter Inhibin B Gen II ELISA",
+  "specimen": "serum",
+  "population": "Dziewczynki i kobiety z duńskich kohort: 648 osób w wieku 5,6–20,2 lat oraz 149 dorosłych kobiet w wieku 20–69 lat. Pobrania u dorosłych nie były standaryzowane względem fazy cyklu; dane o antykoncepcji doustnej były niepełne.",
+  "statistic": "median",
+  "approximate": true,
+  "unit": "pg/mL",
+  "interpolation": "pchip",
+  "compatibleAssayMethodIds": [
+    "inhibin-b-gen-ii",
+    "beckman-inhibin-b-gen-ii"
+  ],
+  "provenance": {
+    "doi": "10.1210/clinem/dgae439",
+    "figure": 1,
+    "digitizationTolerancePgMl": 2,
+    "sourceImageSha256": "f2752fcfa327492111b97bb06b5ba124ebbe491ba7db43084bd51eb82c00b6d5",
+    "originalUnit": "ng/L",
+    "unitFactor": 1,
+    "fullSourceKnotDomain": [
+      5.6,
+      47
+    ],
+    "readableSource": "evidence/inhb-digitized-median.json",
+    "qualificationScope": "ordinary-female-inhibin-b-age-5p6-47",
+    "sourceProfileId": "borelli2025-female-inhb-puberty-comparison",
+    "cohorts": [
+      {
+        "n": 648,
+        "ageMinYears": 5.6,
+        "ageMaxYears": 20.2
+      },
+      {
+        "n": 149,
+        "ageMinYears": 20,
+        "ageMaxYears": 69
+      }
+    ],
+    "cohortCoverage": "Zakres 5,6–47 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47 lat wynika z ostatniego zachowanego odczytu ilościowego ryciny; nie jest granicą kohorty ani definicją menopauzy.",
+    "specimenPolicy": "Brak lub nieznany materiał pozwala na orientacyjne odniesienie bez potwierdzania materiału próbki pacjentki. Znana surowica jest zgodna; znane osocze lub inny materiał nie korzystają z tego profilu.",
+    "assayPolicy": "Metodą źródła jest Beckman Coulter Inhibin B Gen II ELISA. Brak lub nieznana metoda pozwala na orientacyjne odniesienie; znana inna metoda je blokuje. Nie jest to kalibracja między metodami.",
+    "reproductiveContextPolicy": "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
+    "routingVersion": "2026-10-14.1"
+  },
+  "limitations": [
+    "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
+    "Zwykły wykres udostępnia przybliżoną medianę modelu od 5,6 do 47 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. To jeden model z 24 niezmienionymi węzłami, więc przekroczenie wieku 20 lat nie tworzy granicy źródła ani luki odniesienia. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku oraz powyżej 47 lat brak tego liczbowego odniesienia.",
+    "Wiek nie wyznacza stadium Tannera. Fazy cyklu nie standaryzowano, a informacje o antykoncepcji doustnej były niepełne; nie jest to odniesienie fazy cyklu ani populacji bez leczenia.",
+    "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
+    "Górny wiek 47 lat wynika z końca zachowanego odczytu ryciny, nie z wieku menopauzy. Nie ekstrapolujemy do granicy wykrywalności ani nie zastępujemy jej zerem.",
+    "Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń."
+  ],
+  "ordinaryOnly": true,
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie."
+}

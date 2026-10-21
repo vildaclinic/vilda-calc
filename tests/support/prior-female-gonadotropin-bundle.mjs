@@ -9,6 +9,16 @@ const addedIds = new Set(['madsen2022-female-lh-age-6-16', 'madsen2022-female-fs
   'madsen2022-female-e2-age-6-18']);
 const fshCaliperIds = new Set(['wilson2023-male-fsh-age-16-18', 'wilson2023-female-fsh-age-16-19']);
 
+// Freeze precisely the ordinary female inhibin B profile from 3b6a5302 before
+// its 2026-10-21 extension. This is archival test data, never a runtime source.
+// Preserve the earlier ID, metadata and PCHIP knots for every historical hash.
+const priorInhibinProfile = JSON.parse(readFileSync(new URL(
+  '../fixtures/hormone-lifespan-prior-female-inhibin-profile.json', import.meta.url), 'utf8'));
+export function beforeInhibinPost47Bundle(data) {
+  return { ...data, version: '2026-10-21.1', profiles: data.profiles.map(profile =>
+    profile.id === 'borelli2025-female-inhb-age-5p6-47p75' ? priorInhibinProfile : profile) };
+}
+
 // The 2026-10-21 addition is exactly two approximate testosterone group
 // medians. Preserve every one of the 82 earlier profiles and their historical
 // hashes by removing only these IDs, never by regenerating prior source data.
@@ -16,7 +26,7 @@ const testosteroneBoysIds = new Set([
   'kushnir2010-male-t-1-2-group', 'kushnir2010-male-t-2-3-group'
 ]);
 export function beforeTestosteroneBoysBundle(data) {
-  return { ...data, version: '2026-10-18.3', profiles: data.profiles
+  return { ...data, version: '2026-10-18.3', profiles: beforeInhibinPost47Bundle(data).profiles
     .filter(profile => !testosteroneBoysIds.has(profile.id)) };
 }
 

@@ -3941,6 +3941,54 @@ aktualnego SHA jest raportowany w
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
+### HORMONE-FEMALE-INHB-POST47 — dalszy odczyt mediany do 47,75 roku, 2026-10-21
+
+**Problem i decyzja:** zwykłe odniesienie inhibiny B kobiet kończyło się
+na 47 latach, mimo krótkiego dalszego odcinka tej samej źródłowej krzywej.
+Po audycie i akceptacji właściciela profil
+`borelli2025-female-inhb-age-5p6-47p75` obejmuje **[5,6;47,75]** włącznie.
+Polityka i dane punktu: `2026-10-21.2`. Do 24 zachowanych węzłów dodano
+**47,25 → ≈10; 47,5 → ≈8; 47,75 → ≈7 pg/mL**. To przybliżone mediany
+modelu GAMLSS (0 SD), nie nowe normy lub mediany rocznych grup.
+
+**Źródło i ograniczenia:** Borelli-Kjær i wsp., *JCEM* 2025;110:70–77,
+[DOI 10.1210/clinem/dgae439](https://doi.org/10.1210/clinem/dgae439),
+ryc. 1 i oficjalny suplement v1. Ponownie sprawdzono HTML wydawcy
+i cztery suplementy; odczyt geometrii pochodzi z archiwalnego oficjalnego
+rastra 3000×2178, SHA-256 `7abfa7ffc9d1b6f0a8494bea32515ffb417d2ff31f67f9de557253d08526d76f`.
+Świeże pobranie obrazu zwróciło 403; nie pozyskano nowej kopii PDF.
+Kohorta żeńska: 889 osób/1005 próbek, w tym 149 kobiet 20–69 lat;
+surowica, Beckman Coulter Inhibin B Gen II ELISA, ng/L = pg/mL.
+Cykl dorosłych niestandaryzowany, dane antykoncepcji niepełne.
+Źródło podaje LOD 3 pg/mL, bez osobnego LOQ. ±2 pg/mL to tolerancja
+digitalizacji, nie CI, RI lub potwierdzenie oznaczalności ilościowej.
+Źródłowe zastępowanie wyników <LOD przez LOD/2 dotyczy modelowania;
+nie zastępuje wyniku pacjentki. Przy 48 latach tolerancja odczytu
+przecina LOD; nie aktywujemy tego punktu, dolnego plateau ani ogona
+do 69. Koniec 47,75 nie diagnozuje menopauzy ani rezerwy jajnikowej.
+
+**Wpływ kliniczny:** pojedynczy PCHIP po 27 węzłach zmienia również
+interpolację w dawnym ostatnim odcinku `(46,47)`: przy 46,5 roku
+14,4375 → 14,076923 pg/mL; maksymalna zmiana w kontrolowanym skanie
+≈−0,42735 pg/mL przy 46,667 roku. Dawne węzły i przebieg do 46 lat
+są zachowane. Nie jest to neutralna refaktoryzacja. Nie przelicza
+historycznych ocen. Pozostałe **83 profile**, E2, laboratoryjne RI,
+geometria i skale są bez zmian. Wspólna ekstrakcja i porównanie płci
+8–20 lat zachowują 24 węzły. Zachowane są dotychczasowe bramki metody,
+materiału, GnRHa, cenzury oraz kontekstu `pregnancy_t1/t2/t3` i `postmenopause`.
+
+**Syntetyczne regresje rzeczywistych funkcji:** F47,25/47,5/47,75,
+wynik 20 pg/mL → mediana ≈10/8/7 pg/mL, bez werdyktu normy.
+F47 lat 8 miesięcy → ≈7,2345679 pg/mL; F47 lat 9 miesięcy → brak
+jednego odniesienia całego wieku; dokładne 48 → poza zakresem.
+Kontrole obejmują stare węzły i PCHIP, tożsamość 83 profili i porównania,
+jednostki, zero, `<3`/`>3`, źródła, zmianę osoby, desktop/mobile,
+instalację/aktualizację i zimny restart PWA offline. Wyniki wykonania
+oraz końcowego CI są raportowane w PR, nie stanowią walidacji klinicznej.
+
+[Kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--dalszy-odczyt-do-4775-roku-21-października-2026),
+[ekstrakt źródła, kalibracja i warianty](hormone-lifespan/evidence/patient-point/borelli2025-female-inhb-post47-digitized.json).
+
 ### HORMONE-FEMALE-INHB-CHILDHOOD-GROUPS — mediany grup Zhou w luce >1–<5,6 lat, 2026-10-14
 
 **Problem i źródło:** po PR #672 dziewczynki po dokładnym 1 roku,
