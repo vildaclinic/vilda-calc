@@ -1351,7 +1351,7 @@ describe('P-NOTATKI-ZA-KARTA — przegląd 1: nieświadome urządzenie w pasmie 
   });
   // Znane ograniczenie (ALGORITHMS.md, „Ograniczenia”): ręczne usunięcie na nieświadomym urządzeniu w pasmie (R, R + 1 s]
   // przegrywa z ratunkiem, gdy h tej notatki jest większe niż odstęp (tu h(n1) ≈ 0,7 s > 300 ms); późniejsze o ponad 1 s
-  // zawsze wygrywa (T9).
+  // wygrywa (T9), poza spóźnionym zegarem urządzenia usuwającego i G13 (ALGORITHMS, „Ręczne usunięcie w pasmie ratunku”).
   it('P1b [znane ograniczenie] nieświadome C ręcznie usuwa n1 300 ms po „Usuń pacjenta”, B zmieniło kartę 150 ms po → n1 wraca', async () => {
     const x = await przygotuj({ A: {}, B: {}, C: {} });
     const { A, B, C } = x.urz;

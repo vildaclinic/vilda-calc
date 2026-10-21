@@ -15755,8 +15755,8 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   niż R; także przesunięty nagrobek poprawki), kasuje notatki pacjenta także wtedy, gdy wcześniej je miało (urządzenie
   nieświadome usunięcia; przegląd poprawki MS2, test W11); jego echo z tą samą chwilą nie odbiera pola, a notatki
   dostaje z powrotem po ratunku na nowym urządzeniu (CZ6, W11). Gdy urządzenie z poprawką zniknie przed ratunkiem,
-  a jego ładunek widzą tylko stare urządzenia, notatki razem z poprawką przepadają (na `12b0cd4d` przy kolejności
-  „wizyta, potem poprawka” przepadała wtedy tylko n2 — nagrobek poprawionej notatki był przy zapisie zdejmowany).
+  a jego ładunek widzą tylko stare urządzenia, notatki razem z poprawką przepadają (na `12b0cd4d` zależnie od kolejności
+  wymiany: tylko n2, gdy ładunek starego urządzenia doszedł do nowego przed jego nagrobkami, albo obie notatki, S8b).
   Dwie sytuacje floty mieszanej są **gorsze niż dziś** (przegląd 2, niżej w „Ograniczeniach”): ponowne „Usuń pacjenta”
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
@@ -16108,8 +16108,8 @@ z wynikiem jak na kontroli: macierz rozjazdu zegarów 540/540 i macierz stanu CZ
 klasie; losowe przebiegi z „Scal pacjentów”, „Scal kopię konta” i importem 300/300 w tych samych klasach, podgląd =
 wynik = magazyn bez rozbieżności; flota mieszana (kontrola: `c9373e0d` z prawdziwym `db0c2d50`): `zz-fl2-fuzz`
 600 ziaren — stany końcowe identyczne z kontrolą (także z emulacją); fuzz D-7 × D-21 600 ziaren — te same czerwone
-ziarna i klasy, stany różne w 25 ziarnach (karty i kosz według reguły kart D-7; w ziarnie 192 karta usunięta, na
-kontroli zostaje); `zz-pp2-fuzz` ziarna 1–300 z prawdziwym i z emulowanym `346dd81a` — identyczne z kontrolą,
+ziarna i klasy; stany końcowe kart i kosza różne w 16 ziarnach (reguła kart D-7), w 9 kolejnych tylko przebieg
+(wykonalność działań), stan notatek tylko w ziarnie 192 (karta usunięta, na kontroli zostaje); `zz-pp2-fuzz` ziarna 1–300 z prawdziwym i z emulowanym `346dd81a` — identyczne z kontrolą,
 ziarna 1001–1300 — tylko prawdziwy `346dd81a` = emulacja (bez kontroli); emulacja starej aplikacji — 1693 z 1693
 obserwacji stanu tego pliku (157 testów) jak z prawdziwym `346dd81a`. Fuzz D-7 × D-21 (600 ziaren): 11
 czerwonych, te same na kontroli — Z1 (6), ograniczenie 2 i klasa pomiaru 6 (3), fałszywy alarm (ziarno 97: późniejsze
@@ -16151,7 +16151,9 @@ wygrywa od razu), W11 i odczyt listy nagrobków w MS5 (raz). Plik D-21 185 z 185
 MS2r, strażnik źródła `Bnp_poZapisie`, W14a i W11 (W14b zielony także tam); z prawdziwym `346dd81a` zamiast emulacji
 185 z 185, 2537 z 2537 obserwacji stanu identycznych (271 na starych urządzeniach). Pliki czytające ten rejestr albo
 plan synchronizacji (14 plików, 543 testy, każdy osobno), `npm run lint`, `npm run test:syntax` (1121 plików),
-`npm run test:repo` (1758 plików) — zielone.
+`npm run test:repo` (1758 plików) — zielone. Po przeniesieniu na `f612fe09` (po scaleniu `audyt` `affdeb64`): `npm test`
+— polityka repozytorium (1759 plików), lint, składnia (1122 pliki), 413 plików testów, 10 346 z 10 346 zielonych,
+`test:pro` 43 z 43, 32 z 32, 44 z 44; `npm run podbij-wersje` bez zmiany wersji.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
