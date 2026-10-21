@@ -133,9 +133,9 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
     });
 
     const ekran = await podglad(page, kopia);
-    await expect(ekran.getByText('Aplikacja doda zapisy i pacjentów, których tu brakuje; karta, do której dojdą zapisy, przejmie'
-      + ' z kopii dane osoby (imię i nazwisko, płeć, datę urodzenia i wiek, rok urodzenia i kontakt) i to, czy osoba jest w bazie:'
-      + ' osoba dodana tu do bazy może wrócić do osób spoza bazy.'
+    await expect(ekran.getByText('Aplikacja doda zapisy i pacjentów, których tu brakuje; dane osoby na liście (imię i nazwisko, płeć,'
+      + ' data urodzenia i wiek, rok urodzenia i kontakt) i to, czy osoba jest w bazie, karta weźmie ze swojego najnowszego zapisu'
+      + ' — tutejszego albo z kopii.'
       + ' Notatki i listy scali jak synchronizacja: wersja z kopii może zastąpić tutejszą, nawet poprawioną tu później')).toBeVisible();
     await expect(ekran.getByText('nowsza poprawka z kopii zastąpi starszą')).toHaveCount(0);
     await expect(ekran.getByText('Nie przywraca pacjentów scalonych z inną kartą ani usuniętych po ich ostatnim zapisie w kopii.')).toBeVisible();
@@ -180,8 +180,8 @@ test.describe('P-KOPIA-DANE-KONTA — „Scal kopię konta” mówi o notatkach 
     expect(p.scrollWidth, 'bez poziomego przewijania').toBeLessThanOrEqual(p.innerWidth);
     expect(p.lewa).toBeGreaterThanOrEqual(0);
     expect(p.prawa).toBeLessThanOrEqual(p.innerWidth);
-    // Dłuższy podtytuł (uwagi recenzji: cały nagłówek karty, także kontakt i przynależność do bazy) mieści się w ekranie.
-    const podtytul = ekran.getByText(/osoba dodana tu do bazy może wrócić do osób spoza bazy\./);
+    // Dłuższy podtytuł (cały nagłówek karty, także kontakt i przynależność do bazy; D-3 A: z najnowszego zapisu) mieści się w ekranie.
+    const podtytul = ekran.getByText(/karta weźmie ze swojego najnowszego zapisu — tutejszego albo z kopii\./);
     await expect(podtytul).toBeVisible();
     const t = await podtytul.boundingBox();
     expect(t.x).toBeGreaterThanOrEqual(0);

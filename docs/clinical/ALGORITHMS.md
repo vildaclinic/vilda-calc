@@ -2427,7 +2427,93 @@ monotoniczność dzieciństwa i dorosłości, brak nowych ekstremów, ciągłoś
 stycznych, desktop, 320 px, pełny ekran, odznaczenie hormonów, powiększenia
 i zachowanie porównania płci. Błąd próbkowania zbliżenia mierzy się
 w pikselach; nie utożsamia z identycznością ścieżek SVG. Walidacja
-techniczna nie dowodzi prawidłowości medycznej.
+techniczna nie dowodzi prawidłowości medycznej. Opis braku punktu M2
+pochodzi ze stanu 11.10; zastępuje go osobne rozszerzenie Kushnir poniżej.
+
+### HORMONE-MALE-TESTOSTERONE-CHILDHOOD-GROUPS — przybliżone mediany 1–<3 lat, 2026-10-21
+
+**Decyzja i wpływ kliniczny:** po audycie pełnych publikacji właściciel
+zaakceptował mały PR z dwoma przybliżonymi odniesieniami edukacyjnymi
+Kushnir. Chłopiec w wieku 1–<3 lat, wcześniej bez liczbowego punktu
+z odniesieniem, otrzymuje rzeczywisty wynik i osobny jasny znacznik
+mediany grupy. Nie zmienia to laboratoryjnego RI Mayo wieku/G,
+klasyfikacji prawidłowości, zapisanych ocen, historii ani formularza.
+Nie nadajemy źródłu lub odczytowi statusu walidacji klinicznej.
+
+**Pełne źródło:** Kushnir i wsp., *Liquid Chromatography–Tandem Mass
+Spectrometry Assay for Androstenedione, Dehydroepiandrosterone, and
+Testosterone with Pediatric and Adult Reference Intervals*, Clinical
+Chemistry 2010;56:1138–1147, DOI
+[10.1373/clinchem.2010.143222](https://doi.org/10.1373/clinchem.2010.143222),
+PMID 20489135. Rycina **4C**, s. **1146**, jednoznacznie podaje mediany
+chłopców, czarne trójkąty Te. Pełny autorski PDF przeczytano; właściwy
+panel sprawdzono wizualnie i niezależnie w geometrii wektorowej. SHA256,
+kalibracja, współrzędne i ograniczenia są w
+[ekstrakcie](hormone-lifespan/evidence/patient-point/kushnir2010-male-testosterone-group-medians.json).
+Nie redystrybuujemy publikacji ani ryciny. Sprostowanie DOI
+`10.1373/clinchem.2011.167353` dotyczy DHEA Tanner IV–V, nie tych median T.
+
+| Grupa źródłowa | Polityka aplikacji | Przybliżone p50 µg/L | Po konwersji nmol/L |
+| --- | --- | ---: | ---: |
+| `1 to 2 years` | `[1,2)` | 0,03 | 0,10401 |
+| `2 to 3 years` | `[2,3)` | 0,02 | 0,06934 |
+
+Środek prostokąta obejmującego marker daje około 30,46/20,21 ng/L;
+jednolita konwencja i zaokrąglenie do 0,01 µg/L dają 30/20 ng/L.
+Centroid daje 26,09/15,69. Około ±5 ng/L jest oszacowaniem odczytu
+obejmującym tę wrażliwość i zaokrąglenie, **nie CI ani RI**. Cyfry
+0,10401/0,06934 wynikają z istniejącego `µg/L × 100 × 0,03467`;
+UI zachowuje znak ≈ i ograniczoną precyzję źródła. Nie odtwarzamy
+centyli pacjenta, percentyla, SDS lub normy z odległości od mediany.
+
+**Populacja i metoda:** surowica, stabilne izotopy, derywatyzacyjne
+2D LC-MS/MS API 4000, dzieci bez znanych chorób i leków na receptę.
+Młodszą kohortę pobierano po indukcji znieczulenia przed zabiegiem.
+Autorzy opisują 24 wyższe niż oczekiwano wyniki w całej grupie 6 mies.–6 lat
+i możliwy stres; dodane centralne 90% RI nie jest korektą median.
+N=2517 dotyczy całej pediatrycznej kohorty obu płci, nie dwóch grup T.
+Roczne N są nieznane; N=123/125 z tabeli 1 ma inne grupowanie i nie
+może zostać przypisane markerom. **LOD/LOQ T 5/10 ng/L** (s.1141);
+mediany są ponad LOQ przy obu konwencjach środka. Nie podano liczby
+wyników <LOD/<LOQ ani zastępowania, więc nie twierdzimy, że cenzury nie było.
+
+**Kontrakt:** osobna wersjonowana polityka
+`male-testosterone-childhood-reference-policy.json`, dwa profile
+`kushnir2010-male-t-1-2-group` / `kushnir2010-male-t-2-3-group`,
+`group-median`, `constant`, `approximate`, `ordinaryOnly`. Półotwarte
+granice są konwencją aplikacji, nie odzyskaną definicją autorów. Cały
+możliwy wiek musi należeć do jednej grupy; bez wyboru środka wieku,
+interpolacji grup, uśredniania badań lub ekstrapolacji. Kelsey od
+**dokładnie 3 lat** i wszystkie 82 wcześniejsze profile pozostają
+niezmienione. Luka >212 dni–<1 roku pozostaje. Krzywa i skala są stałe;
+nie wymuszamy odczytanych markerów jako kotwic ilustracji. Brak G nie
+blokuje odniesienia i nie potwierdza G1. Znane leczenie/stymulacja,
+niezgodna metoda/materiał, cenzura, jednostki i tożsamość zachowują bramki.
+Metoda surowicy źródłowej nie jest potwierdzeniem metody próbki pacjenta.
+
+**Dlaczego nie inne źródło:** Kulle 2010, tabela 3, podaje około
+0,40 nmol/L u dziewięciu chłopców w osoczu; nie uśredniamy tej wartości
+z Kushnirem. Zaokrąglone 12 ng/dL i 0,40 nmol/L nie dowodzą błędu
+konwersji w publikacji. W danych Holmes 2021 aż 26/38 wyników M1–<3
+jest na lub poniżej dolnej granicy kalibracji/raportowania 0,05 nmol/L;
+nie utożsamiamy tej granicy z LOD/LOQ ani nie zakładamy udowodnionej
+imputacji. Goel 2025, DOI `10.1016/j.jpurol.2025.01.034`, pozostaje
+obiecującym źródłem CMIA/GAMLSS, ale bez uzyskanego pełnego tekstu,
+parametrów i szczegółów niskich stężeń nie jest zaimportowany.
+Brak dostępu nie stanowi odrzucenia analitycznego.
+
+**Syntetyczne przypadki produkcyjnego silnika:** M1/0,10401 nmol/L
+→ ta sama przybliżona mediana grupy 1–2; M2/0,06934 → grupa 2–3;
+M3 → niezmienione Kelsey 0,3764139001167295; `[1,2)` i `[2,3)` →
+jedna właściwa grupa, 1,99–2,01 lub 2,99–3,01 → brak arbitralnego
+odniesienia. M2/`<0,1` → brak dokładnego punktu. Niezależna ścieżka
+Mayo dla M2 zachowuje zakres źródłowy `<7–20 ng/dL`, bez zamiany
+cenzurowanej dolnej granicy w zero. Regresje wywołują rzeczywisty
+silnik/adapter w
+`tests/unit/hormone-lifespan-male-testosterone-childhood-reference.test.mjs`.
+Weryfikacja obejmuje stałość geometrii, desktop/telefon, granice,
+jednostki i rzeczywisty scenariusz świeżej instalacji/aktualizacji PWA
+oraz zimnego restartu offline; wyniki wykonania podaje opis PR.
 
 ### HORMONE-LH-FSH-STABLE-CURVES — stałe krzywe i dorosłe odniesienia, 2026-10-11
 
@@ -15054,7 +15140,7 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
-## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.328, 2026-10-20)
+## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.331, 2026-10-20)
 
 **Zgłoszenie (pomiar właściciela 2026-10-20 przy weryfikacji P-SW-STRONY-PRAWNE; usterka istniała już na `audyt`).**
 W Firefoksie (Playwright Firefox 151 i Firefox 158.0.1 bez automatyzacji, limit źródła obniżony preferencją
@@ -15095,11 +15181,11 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
 - Wywołania: nawigacja w `updateShellFromNetwork`, dokument pobrany poza nawigacją (ten sam klucz w pamięci powłoki)
   i instalacja (`fetchAndStorePrecacheUrl`): pusta kopia nie wchodzi do nowej pamięci powłoki — dokument opcjonalny
   zostaje bez kopii (online z sieci), wymagany `/index.html` przerywa instalację, więc zostaje poprzednia wersja SW.
-- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.327 odrzucony
+- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.330 odrzucony
   zapis przy braku kopii kończył nawigację `Response.error()` — w Chromium strona nie otwierała się online.
 - Koszt na odświeżenie dokumentu: odczyt poprzedniej kopii i odczyt kontrolny (dokumenty mają 7–249 KB), chwilowo do
   trzech kopii treści w pamięci SW. Przy braku kopii nawigacja czeka dodatkowo na odczyt kontrolny.
-- `SW_VERSION` 1.1.327 → **1.1.328** (`npm run podbij-wersje`; 1.1.327 wydało równolegle P-KOSZ-RETENCJA-PO-KOSZU, #734);
+- `SW_VERSION` 1.1.330 → **1.1.331** (`npm run podbij-wersje`; 1.1.327–1.1.330 wydały równolegle #734, #738, #741 i #739);
   pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
 **Świadomie poza zakresem i ryzyko resztkowe (decyzje właściciela).**
@@ -15372,6 +15458,217 @@ zmiana danych zapisanych przez lekarza nie jest decyzją aplikacji; takie przypa
 a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest wpisywana (karta zostaje przy „0”).
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
+
+## „Scal kopię konta” zachowuje rewizję i chwilę zmiany dopisanych wersji (P-KOPIA-REV, SW 1.1.329, `vilda_vault.js` 221, 2026-10-21)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się, która treść wizyty zostaje
+po synchronizacji, gdy wersja doszła przez „Scal kopię konta”. **Decyzja właściciela 2026-10-21** (PD-14
+w doprecyzowaniu D-7 wariant 2, `docs/SYNC_PRZYROSTOWA_PLAN.md` rozdz. 6; rekomendacja przyjęta: osobny mały PR przed
+D-7). Serwer, format ładunku, delt, pliku karty i kopii konta oraz API `window.VildaVault` bez zmian. Reguła scalania
+wersji w synchronizacji bez zmian (to D-7).
+
+**Co było** (prawdziwy `vilda_vault.js` 220, `9f05e101`; sejfy w pamięci, sztuczny zegar; dane fikcyjne).
+- `ss` (`mergeVaultBackup`) dopisywał brakujące wersje jako `{snapshotId, patientId, savedAtISO, payloadCipher}`
+  i pola `Bm1`, bez `rev` i bez `updatedAtISO`. Kopia konta niesie oba pola (`rs`), a import karty (`ns`) i odtworzenie
+  konta (`as`) je zapisują.
+- P zapisuje wizyty 19 kg i 20 kg. C po synchronizacji z P poprawia drugą na 21 kg (`rev` 1). N scala kopię konta C:
+  ma 21 kg z `rev` 0 i chwilą zmiany równą chwili zapisu. Po synchronizacji N ↔ P obie mają 20 kg — poprawka z kopii
+  ginie na obu. Tak samo, gdy N miał już tę kartę z pierwszą wizytą (poprawka 22 kg → 20 kg na obu).
+
+**Reguła po zmianie.**
+- Obie gałęzie `ss` (nowa karta z kopii i dopisanie do istniejącej karty) zapisują wersję z `rev` z kopii (`mt`)
+  i jej `updatedAtISO` (niepusty tekst, inaczej `null`), tym samym wyrażeniem co `ns` i `as`. Chwili „teraz” nie
+  wymyślamy.
+- Wersje, które tu już są, `ss` dalej pomija (ten sam `snapshotId` → zostaje tutejsza, PD-15). Nagrobki i kosz,
+  dane konta oraz nagłówek karty (P-NAGLOWEK-NAJNOWSZEJ) bez zmian.
+
+**Przypadki** (`tests/unit/kopia-konta-rev.test.mjs`):
+- nowa karta z kopii, poprawka 21 kg (`rev` 1) → na N `rev` 1 i chwila zmiany z C; po synchronizacji N ↔ P 21 kg
+  na obu (dotąd 20 kg na obu);
+- karta już na N, dopisana tylko brakująca wersja z poprawką 22 kg → `rev` 1 i chwila zmiany z C; 22 kg na obu
+  (dotąd 20 kg na obu);
+- kontrola: wersja bez poprawki → `rev` i `updatedAtISO` jak w kopii i jak po odtworzeniu konta (bez zmiany wobec dziś);
+- strażnik źródła: obie gałęzie `ss` zapisują oba pola.
+
+**Ograniczenia.**
+- Gdy inne urządzenie ma tę wersję z wyższym `rev` (np. dwie wcześniejsze poprawki zrobione równolegle), późniejsza
+  poprawka z kopii dalej przegrywa, bo dziś wygrywa wyższy `rev`. Zmienia to D-7 wariant 2 (późniejsza zmiana
+  wygrywa; osobny PR).
+- Na `9f05e101` z 4 nowych testów czerwone są 3; kontrola jest zielona, bo wersja bez poprawki miała `rev` 0 także
+  dotąd.
+
+**Walidacja.** `npm test`: 406 plików testów, 9946 z 9946 zielonych. e2e „Scal kopię konta” i kopii zapasowej
+i blokady importu (`kopia-konta-dane-konta`, `kopia-konta-pomija`, `chip-kopia-zapasowa`, `blokada-importu`,
+desktop-chromium): 15 z 15. `npm run
+podbij-wersje`: `vilda_vault.js` 221, `vilda_chrome.js` 166, `vilda_session_bridge.js` 90; SW 1.1.328 → 1.1.329.
+
+## Krótki opis karty zawsze z najnowszej wersji; `deleteSnapshot` tylko na tym urządzeniu (P-NAGLOWEK-NAJNOWSZEJ, P-USUN-WERSJE-LOKALNIE, SW 1.1.328, `vilda_vault.js` 220, `vilda_auth_ui.js` 505, 2026-10-21)
+
+**Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła, z której wersji karty
+pochodzą dane osoby na liście pacjentów (imię i nazwisko, data urodzenia, płeć, wiek, u osoby spoza bazy rok urodzenia
+i kontakt, przynależność do bazy), w wyszukiwaniu, w dopasowaniu tożsamości przy zapisie, w „Duplikatach”, w Terminarzu
+i na osi czasu. **Decyzja właściciela 2026-10-20** (D-3 wariant A i D-8 wariant A, `docs/SYNC_PRZYROSTOWA_PLAN.md`
+rozdz. 6; doprecyzowanie tego samego dnia, rekomendacje przyjęte: cały opis karty z najnowszej wersji, odbiorca
+sprawdza opis każdej karty przy każdym scaleniu, bez jednorazowej migracji, nowy podtytuł „Scal kopię konta”, etykieta
+dziennika D-8.1; odświeżanie listy po delcie na żywo i zdanie w oknie pomiaru o korekcie starszej wersji — osobne PR). Serwer, format ładunku, delt, pliku karty i kopii konta oraz API `window.VildaVault` bez zmian; pola
+`headerUpdatedAtISO` nie ma.
+
+**Co było** (prawdziwy `vilda_vault.js` 219, `0d7b4160`; sejfy w pamięci, sztuczny zegar; dane fikcyjne).
+- Nagłówek karty (rekord `headerCipher`, z którego biorą się lista i wyszukiwanie) nie zawsze opisywał najnowszą wersję:
+  - poprawka STARSZEJ wersji w oknie pomiaru i gwiazdka na starszej wersji ustawiały nagłówek z tej starszej wersji
+    (`Bzw_aktualizujWersje`): lista pokazywała dawne nazwisko, datę urodzenia i wiek, Karta pacjenta — najnowsze;
+    odpięcie gwiazdki nie naprawiało; przy nieczytelnej najnowszej wersji poprawka starszej cofała nagłówek;
+  - korekta nazwiska, daty urodzenia albo wieku w najnowszej wersji (`vilda_name_fix.js`, okno pomiaru, poprawka
+    wiersza) nie docierała do nagłówka na innych urządzeniach ani pełnym ładunkiem, ani deltą karty: odbiorca bez nowych
+    wersji nie ruszał nagłówka. Na drugim urządzeniu wyszukiwanie po nowym nazwisku dawało 0 kart, a zapis formularza
+    z poprawioną datą urodzenia zakładał nową kartę (duplikat) albo pytał o tożsamość;
+  - przy nowych wersjach odbiorca przepisywał nagłówek z ładunku bez porównania, także nieaktualny: dwa urządzenia,
+    które offline zapisały nową wizytę, zostawały oba na stałe z nagłówkiem wcześniejszej z dwóch;
+  - faza przeniesień (decyzje „treść” i „przenieś”) zostawiała nagłówek wersji, która zmieniła treść albo odeszła
+    (dwie karty „Iksinski Jan” na liście);
+  - import pliku karty (także z 0 nowych zapisów), „Scal kopię konta” (przy choćby jednej dodanej wersji, także starszej
+    od tutejszych) i odtworzenie konta brały nagłówek z pliku;
+  - nowa wizyta przy wersji z innego urządzenia z późniejszą chwilą zapisu (zegar 10 min do przodu) dawała nagłówek
+    nowej wizyty, choć najnowszą wersją (`getLatestSnapshot`) była tamta.
+- `deleteSnapshot`: reguła „tylko lokalnie” była zapisana w planie; nic nie pilnowało, że żaden ekran go nie woła.
+
+**Reguła po zmianie.**
+- **R1, nagłówek = najnowsza wersja (D-3 A).** Nagłówek karty to zawsze `Nn(treść najnowszej wersji)` w kolejności `yr`
+  (chwila zapisu wersji, chwila zmiany, `rev`, numer kolejny, `snapshotId`) — tej samej co `getPatient().snapshots[0]`
+  i tytuł Karty pacjenta. Każde urządzenie liczy go ze swoich wersji po każdej zmianie karty: poprawka w miejscu
+  i gwiazdka (wszystkie drogi przez `Bzw_aktualizujWersje`), nowa wizyta, kosz, „Przywróć”, `deleteSnapshot`, scalenie
+  synchronizacji (pełny ładunek i delta karty, także bez nowych wersji), faza przeniesień, import karty, „Scal kopię
+  konta”, odtworzenie konta. Nagłówka z ładunku, z pliku ani z poprawianej starszej wersji nie przepisujemy; nagłówek
+  z ładunku i z pliku jest zapasem tylko dla karty, która powstaje.
+- **R2, nieczytelna najnowsza wersja.** Najnowsza wersja nieczytelna albo bez imienia: zostaje dotychczasowy nagłówek;
+  nie cofamy się do starszej czytelnej wersji. Dotyczy każdej ścieżki, także kosza, „Przywróć”, retencji, odbiorcy
+  nagrobka i `deleteSnapshot` (`Bkz_przebudujNaglowek`, `Bzw_usunWersje`): dotąd przy najnowszej wersji bez imienia
+  (dawne dane, stary klient) zerowały na liście imię i nazwisko.
+- **R3, porównanie i zapis.** Policzony nagłówek porównujemy z zapisanym po polach `name`, `firstName`, `lastName`,
+  `dobISO`, `sex`, `age`, `ageMonths`, `external`, `birthYear`, `contact` — bez `timestampISO`, które `Nn` uzupełnia
+  chwilą bieżącą. Odbiorca zapisuje rekord karty tylko przy różnicy, w tym samym zapisie co licznik i chwila zapisu karty.
+  Treść bez `timestampISO` dostaje w nagłówku chwilę zapisu wersji (ta sama na każdym urządzeniu). Przebudowa nagłówka
+  nie zmienia `lastSavedAtISO` (dane pochodne; reguły P-ZMIANA-W-KARCIE bez zmian).
+- **R4, koszt.** Treść najnowszej wersji bierzemy jawnie, gdy wołający ją ma: poprawiana wersja, wersja z ładunku albo
+  pliku zapisana w tej operacji, ta sama poprawka tej wersji w ładunku albo pliku (ta sama `rev` i chwila zmiany).
+  Inaczej jedno odszyfrowanie najnowszej wersji. Bez dodatkowych odczytów magazynu.
+- **R5, `deleteSnapshot` (D-8 A, P-USUN-WERSJE-LOKALNIE).** `deleteSnapshot(patientId, snapshotId, { onLockWait,
+  lockTimeoutMs })` usuwa wersję tylko na tym urządzeniu, pod blokadą pacjenta, bez nagrobka i bez kosza; odmawia przy
+  ostatniej wersji karty i przy wersji, której nie ma; nagłówek z najnowszej pozostałej (R1); chwila zapisu karty nie
+  rośnie i nie maleje. Synchronizacja przywraca wersję (pełny ładunek, delta karty, stara chmura), a usunięcie nie
+  przechodzi na inne urządzenia. Woła go tylko sejf: żaden ekran ani moduł interfejsu. Kosz (`Bkz_doKosza`) i retencja
+  (`Bkz_przytnij`) wołają rdzeń `Bzw_usunWersje` przez `Bkz_usunJesliBezZmian`, po zapisanym nagrobku; scalanie usuwa
+  wersje z nagrobkami samo (`Bkz_scalKoniec`). Publiczne `deleteSnapshot` zostaje w API (testy, zgodność). Nagrobek
+  w `deleteSnapshot` dublowałby kosz i retencję i dawał usunięcie z pominięciem kosza — dlatego go nie ma.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik).** Prawdziwy `vilda_vault.js`, sejfy w pamięci, sztuczny zegar
+(`vi.useFakeTimers({ toFake: ['Date'] })`). Karta: s1 (60 mies.), s2 (66 mies.) „Testowy Jan”, ur. 2020-01-01; B ma komplet.
+
+`tests/unit/naglowek-najnowszej.test.mjs` (nowy, 25):
+- N1 poprawka s1 (okno pomiaru, `preserveSavedAt`) na „Starszy Jan”, ur. 2019-05-05 → lista i `getPatient().header`
+  „Testowy Jan|2020-01-01|5 l 6 m”, zdarzenie `onPatientSaved` z nagłówkiem „Testowy Jan” (dotąd „Starszy Jan”);
+- N2 gwiazdka na s1 z literówką „Literowka Jan”, potem odpięcie → oba razy „Testowy Jan” (dotąd „Literowka Jan”);
+- N3 [kontrola] korekta nazwiska i daty urodzenia s2 → „Nowak Jan|Nowak/Jan|2020-02-02”;
+- N4 s3 nieczytelna, poprawka s1 → nagłówek zostaje „Poprawny Jan|2020-04-04” (dotąd „Starszy Jan”);
+- N5 B z zegarem +10 min zapisuje „Zmieniony Jan”, A po synchronizacji zapisuje nową wizytę „Testowy Jan” → nagłówek
+  i zdarzenie „Zmieniony Jan”, jak najnowsza wg `yr` (dotąd „Testowy Jan”);
+- N6 [kontrola] nowa wizyta z nową nazwą → nagłówek z niej;
+- N7 najnowsza wersja bez imienia (ładunek starego klienta), potem kosz, `deleteSnapshot` albo „Przywróć” innej wersji
+  (3) → nagłówek zostaje „Testowy Jan” na A i na urządzeniu C, które dostaje nagrobek (dotąd `name: null`, przegląd
+  adwersarza);
+- O1 korekta nazwiska i daty urodzenia s2 na A, pełny ładunek A → B (`updatedSnapshotCount` 1) → B: „Nowak
+  Jan|2020-02-02”, `findSameNamePatients('Nowak Jan')` = ta karta, ‘Testowy Jan’ = [], zapis formularza „Nowak Jan”
+  ur. 2020-02-02 bez karty → ta sama karta, `isNew` false (dotąd: stary nagłówek, 0 kart, nowa karta);
+- O2 to samo deltą karty → B „Nowak Jan”, jeden zapis rekordu karty;
+- O3 poprawka bieżącego pomiaru 66 → 67 mies. i poprawka s1 na A, A → B → oba „5 l 7 m” z „Testowy Jan”;
+- O4 nagłówek „Stary Jan” wpisany jak przez dawną wersję aplikacji → nowe urządzenie C z A: „Testowy Jan”; A po pełnym
+  ładunku z B: „Testowy Jan” (dotąd C i A „Stary Jan”);
+- O5 A offline zapisuje „Nowak Jan”, B później „Kowal Jan”; A → B, B → A, A → B → oba „Kowal Jan” (dotąd oba „Nowak”);
+- O6 ładunek z nagłówkiem starszej wersji i nową wersją (stary klient) → A z kartą i nowe C: „Testowy Jan”;
+- O7 [kontrola] dwie karty, pełne scalenia i delty w obie strony ×2 → 0 zapisów rekordu karty i wersji na A i B;
+  pełne scalenie → najwyżej 1 odszyfrowanie na kartę (nagłówek), żadnej wersji;
+- O7b korekta na A → B: 1 zapis rekordu karty, potem 3 rundy pełnych i delt: 0 i 0, oba „Nowak Jan”;
+- O8 2× „Scal pacjentów” X → Y → Z na A, kosz wersji scaleń (najnowsza Z = x1, `rev` 2), B poprawia nazwisko x1 w X,
+  B → A → Z: „Iksinska Janina” (dotąd „Iksinski Jan”);
+- O9 X → Y na A, kosz wersji scalenia (najnowsza Y = x1), B poprawia wagę x1 w X, B → A (x1 wraca pod X) → Y „Igrekowa
+  Jan”, „Iksinski Jan” tylko X (dotąd dwie karty „Iksinski Jan”);
+- O10 [kontrola] kosz najnowszej wersji na A → B z nagłówkiem pozostałej najnowszej;
+- O11 [kontrola] „Scal pacjentów” G → F na B i kosz wersji scalenia, B → A (wersja G przechodzi pod F w fazie
+  przeniesień jako najnowsza) → F „Gamma Ola”;
+- I1 import pliku karty sprzed nowej wizyty „Nowak Jan” (0 dodanych, 1 pominięta) → „Nowak Jan” (dotąd „Testowy Jan”);
+- I2 kopia konta, potem korekta s2 na „Nowak Jan” i kosz s1; „Scal kopię konta” (s1 wraca) → „Nowak Jan” (dotąd
+  nagłówek z kopii);
+- I3 nagłówek „Stary Jan” w kopii, odtworzenie konta → „Testowy Jan”;
+- I4 [kontrola] „Scal kopię konta” z nowszą wizytą z kopii „Kowal Jan” → „Kowal Jan”.
+
+`tests/unit/usun-wersje-lokalnie.test.mjs` (nowy, 7): strażnik — skan `git ls-files` (`*.js`, `*.mjs`, `*.cjs`,
+`*.html`, `*.htm`, bez `tests/`, `docs/` i sejfu): słowo `deleteSnapshot` poza sejfem wywraca test z plikiem i wierszem;
+bez wyjątków — etykieta dziennika przycisku „Usuń pomiar” na osi czasu w `vilda_auth_ui.js` brzmi teraz
+„deleteMeasurementRow from timeline” (dotąd „deleteSnapshot from timeline”, choć przycisk woła `deleteMeasurementRow`;
+decyzja D-8.1); test aktualności listy wyjątków; test, że skan widzi pliki interfejsu i service worker; w sejfie `Ar`
+tylko w definicji i eksporcie, `Bzw_usunWersje(` ×3. Zachowanie: D1 `deleteSnapshot(s2)` na A → brak nagrobka wersji,
+pusty kosz, data karty bez zmian; A → B (pełny i delta) → B ma s2; delta B → A i pełny B → A → s2 wraca
+(`addedSnapshotCount` 1); D2 usunięcie najnowszej s3 → nagłówek z s2, po B → A z s3; D3 [kontrola] kosz s2 → nie wraca,
+B usuwa i ma w koszu.
+
+Na `0d7b4160` z 32 nowych testów czerwonych jest 20: 19 przypadków D-3 (wszystkie poza 6 kontrolami) i statyczny
+strażnik D-8 (etykieta „deleteSnapshot from timeline”); 6 testów zachowania D-8 jest zielonych (reguła już działa,
+testy ją przypinają). Mutacje łatki D-3 (każdy z 14 elementów cofnięty osobno) dają od
+1 do 5 czerwonych testów. Mutacje strażnika (`deleteSnapshot` w `vilda_version_history_ui.js`,
+w skrypcie inline `app.html`, zmieniona etykieta, wołanie `Ar` w sejfie) — każda daje 1 czerwony test. Przepisane
+oczekiwania: `tests/unit/kopia-konta-dane-konta.test.mjs` T31, T38, T39 i pełny podtytuł, `tests/e2e/kopia-konta-dane-konta.spec.mjs`
+(podtytuł), strażniki źródła `tests/unit/sync-wlasciciel-wersji.test.mjs` (zapis wersji „nowa” i wołanie
+`Bsw_poOddaniu`).
+
+**Wpływ kliniczny.**
+- Lista pacjentów, wyszukiwanie, sortowanie „Imię A→Z”, „Duplikaty”, podpowiedź nazwiska, Terminarz, kosz, „Spójność
+  zapisów” i oś czasu pokazują dane osoby z najnowszej wersji karty, tej samej, którą otwiera Karta pacjenta — na każdym
+  urządzeniu po synchronizacji.
+- Korekta nazwiska, daty urodzenia albo wieku w najnowszej wersji widać po synchronizacji na drugim urządzeniu;
+  tam zapis z poprawioną datą urodzenia dopisuje do tej karty, zamiast zakładać duplikat albo pytać o tożsamość.
+- Poprawka albo gwiazdka na starszej wersji nie zmienia nazwy, daty urodzenia ani wieku na liście. **Korekta tylko
+  w starszej wersji nie trafia na listę** — trzeba poprawić najnowszą wersję albo zapisać nową wizytę.
+- „Scal kopię konta” i import pliku karty nie cofają danych osoby: osoba dodana tu do bazy w bazie zostaje, a dane
+  z kopii przechodzą na listę tylko wtedy, gdy zapis z kopii jest najnowszy. Nowy podtytuł okna mówi: „dane osoby na
+  liście (…) i to, czy osoba jest w bazie, karta weźmie ze swojego najnowszego zapisu — tutejszego albo z kopii”.
+- Przy zegarze innego urządzenia do przodu dane na liście idą za wersją z późniejszą chwilą zapisu, tak jak Karta
+  pacjenta.
+- `deleteSnapshot`: bez zmian dla lekarza — żaden przycisk go nie woła.
+
+**Ograniczenia.**
+- **Flota mieszana.** Urządzenie ze starą aplikacją dalej przepisuje nagłówek z ładunku przy nowych wersjach i nie
+  zmienia go bez nich: korekta w miejscu na nowym urządzeniu nie dochodzi do starego, dopóki nie przyjdzie nowa wersja;
+  dwa zapisy offline (stary B później) zostawiają stary B z nagłówkiem nowego A. Nowe urządzenie liczy nagłówek samo,
+  więc od starego nadawcy dostaje dobry. Pełna zbieżność po aktualizacji wszystkich urządzeń.
+- **Dawne rozjazdy** (nagłówki zapisane przed zmianą) naprawia pierwsze pełne scalenie, w którym karta jest w ładunku,
+  albo pierwsza zmiana karty; jednorazowo to 1 zapis rekordu karty na rozjechaną kartę (także dawne nagłówki bez
+  `firstName`/`lastName`), bez zdarzenia zapisu i bez wysyłki. Urządzenie bez synchronizacji — przy następnej zmianie
+  karty. Osobnej migracji przy odblokowaniu nie ma.
+- **Delta na żywo** z samą poprawką wersji nie wysyła `vilda:sync-merged` (warunek w `vilda_sync_integration.js`, tak
+  samo jak dziś przy nowej wizycie z delty): lista na drugim urządzeniu pokazuje nowe nazwisko po najbliższym
+  odświeżeniu listy albo pełnej synchronizacji.
+- Po „Scal pacjentów” i koszu wersji scalonej dane na liście idą za następną wersją wg `yr`, którą może być przeniesiona
+  wersja karty źródłowej z innym nazwiskiem.
+- Nowa wizyta przy wersji z przyszłą chwilą zapisu, która jest nieczytelna: nagłówek z nowej wizyty (wyjątek od R2).
+- Remis kolejności `yr` (ta sama chwila zapisu, chwila zmiany i `rev`) rozstrzyga lokalny numer kolejny — w praktyce
+  nie występuje między urządzeniami.
+- Eksport (`exportSyncPayload`, `buildPatientDelta`, plik karty, kopia konta) wysyła zapisany nagłówek, jak dotąd;
+  nowy odbiorca używa go tylko dla karty, która powstaje bez czytelnej wersji. `migratePatientNamesSplit` bez zmian.
+- **Import pliku karty a wersje innej karty** (istniejące, P-SYNC-WLASCICIEL, „Poza zakresem”: import bez strażnika
+  właściciela). Na B „Scal pacjentów” X → Y i eksport pliku karty Y; A, które o scaleniu nie wie, importuje plik. Wersje
+  X przechodzą pod Y (nagłówek Y z najnowszej, R1), a karta X zostaje na liście ze starym nagłówkiem i licznikiem, bez
+  wersji albo z nagłówkiem z zabranej wersji. Pełna synchronizacja z B usuwa X nagrobkiem scalenia; trwale tylko przy
+  pracy na samych plikach. Do osobnego PR (import pomija wersje leżące pod inną kartą albo przelicza tamtą kartę).
+
+**Kod.** `vilda_vault.js`: pomocniki `Bng_klucz`, `Bng_zTresci`, `Bng_jawna`, `Bng_dopisz`, `Bng_poZapisie`,
+`Bng_naglowek`, `Bng_zmiana`, `Bzw_naglowek`, `Bpz_glowaNowsza`, `Bng_zPliku`, `Bng_zJawnych`; `Bzw_aktualizujWersje`,
+`Bpz_zapis` (savePatient), `Bsl_scalPacjenta` (obie gałęzie karty istniejącej i nowa karta), `Bsw_poprawTresc`,
+`Bsw_doF`, `Bsw_przenies`/`Bsw_poOddaniu`, `ns` (importPatientFromEnvelope), `ss` (mergeVaultBackup), `as`
+(restoreVaultBackup); komentarze przy `deleteSnapshot` i w bloku P-KOSZ-ZAPISOW. `Bkz_przebudujNaglowek` i
+`Bzw_usunWersje` liczą nagłówek przez `Bng_zTresci` (R2). `vilda_auth_ui.js`: podtytuł „Scal kopię konta”
+i etykieta dziennika „deleteMeasurementRow from timeline”.
+
+**Wersje.** `npm run podbij-wersje`: `vilda_vault.js` 219 → 220, `vilda_auth_ui.js` 504 → 505 na stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` (164 → 165) i `vilda_session_bridge.js` (88 → 89); SW 1.1.327 → **1.1.328**.
 
 ## Wizyta przypięta po koszu przeżywa retencję na trzecim urządzeniu; nagrobek trzyma chwilę kosza i chwilę przycięcia osobno (P-KOSZ-RETENCJA-PO-KOSZU, SW 1.1.327, `vilda_vault.js` 219, 2026-10-20)
 
@@ -15882,7 +16179,7 @@ w pętli — krok Y widzi wygrywający nagrobek Y i niczego nie wpisuje, x1, x2 
 wszystkich urządzeniach; tak samo na `32b6557` (rodzina E1 z P-SYNC-WLASCICIEL: nagrobek scalenia nie niesie celu);
 (b) krok karty F w pętli wpisuje nagłówek z ładunku bez porównania z tutejszym zapisem, gdy dochodzą nowe wersje, także
 gdy F zapisano tu później niż na urządzeniu nadawcy (od dawna; naprawia go kolejny zapis karty) — reguła nagłówka
-w fazie przeniesień tego kroku nie dotyczy; (c) karta-następca to pierwsza istniejąca karta, pod którą leży któraś
+w fazie przeniesień tego kroku nie dotyczy *(Aktualizacja 2026-10-20, P-NAGLOWEK-NAJNOWSZEJ (D-3 A): nagłówek z najnowszej wersji karty, nie z ładunku — w pętli i w fazie przeniesień.)*; (c) karta-następca to pierwsza istniejąca karta, pod którą leży któraś
 z wersji F — gdy ta sama synchronizacja przeniosła wcześniej wersję F pod inną kartę z ładunku (`'przenies'`), a F
 zniknęła w oknie, wersja może trafić tam zamiast do celu „Scal pacjentów” (nie ginie; wymaga sprzecznych scaleń na
 dwóch urządzeniach i trzeciej operacji w oknie).
@@ -15973,7 +16270,7 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
   scalania nie zdejmuje lokalnego nagrobka karty, która tu nie powstała, bo jej wersje leżą tu — nowsze — pod inną kartą.
 - Licznik zapisów karty = liczba jej wersji, także naprawa rozjazdów sprzed zmiany (zapis samego licznika tylko przy
   niezgodności); karta bez żadnej nowej wersji nie powstaje pusta. Przyjęcie z ładunku samej nowszej treści wersji
-  podnosi chwilę ostatniego zapisu karty do późniejszej z dwóch (jak nowa wersja; nagłówek bez zmian). *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: karta bez nowych wersji dostaje późniejszą z dwóch chwil zapisu zawsze, także bez przyjętej treści; nie powstaje też karta, której wszystkie wersje przegrały z nagrobkami wersji.)*
+  podnosi chwilę ostatniego zapisu karty do późniejszej z dwóch (jak nowa wersja; nagłówek bez zmian *(Aktualizacja 2026-10-20, P-NAGLOWEK-NAJNOWSZEJ (D-3 A): nagłówek z najnowszej wersji, także bez nowych wersji)*). *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: karta bez nowych wersji dostaje późniejszą z dwóch chwil zapisu zawsze, także bez przyjętej treści; nie powstaje też karta, której wszystkie wersje przegrały z nagrobkami wersji.)*
 - Tutejsza wersja jest czytana tylko dla wersji spoza karty z ładunku: po kluczu (nowa metoda adapterów
   `getSnapshotForUser`), bez niej — mapa właścicieli raz na scalanie. Delta jednej karty na prawdziwym IndexedDB
   z 1600 kartami: 27–35 ms (`2df41a8` w tym samym przebiegu 35–54 ms).
@@ -16081,7 +16378,8 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
   albo właściciel): okno kosza odmówi „zmieniony” dla wersji przeniesionej w trakcie; `Bkz_taSamaWersja` traktuje
   nagrobki tej samej wersji sprzed i po przeniesieniu jak różne.
 - Poza zakresem: sygnał wskrzeszonego duplikatu w UI; import pliku karty bez strażnika właściciela; wynik scalania nie
-  liczy wersji z fazy przeniesień jako dodanych; nagłówek karty z poprawki wersji nie przechodzi na inne urządzenia;
+  liczy wersji z fazy przeniesień jako dodanych; nagłówek karty z poprawki wersji nie przechodzi na inne urządzenia
+  *(Aktualizacja 2026-10-20, P-NAGLOWEK-NAJNOWSZEJ (D-3 A): przechodzi — odbiorca liczy nagłówek z najnowszej wersji)*;
   kolejność blokad fazy przeniesień pilnuje tylko strażnik źródła.
 
 **Mutacje.** 50 czerwonych (kopia `vilda_vault.js`, cały plik testów), m.in. bez fazy przeniesień — 100 czerwonych
@@ -16247,7 +16545,8 @@ z kopii dane osoby i przynależność do bazy.
 - Liczniki list oczekujących w wyniku — dwa przypadki graniczne: inna karta zapisze w oknie Le ten sam wpis z tą samą
   treścią co kopia (liczy się jako zmiana z kopii) albo nadpisze lub usunie wpis z kopii zaraz po Le (nie liczy się).
   Nieudany odczyt daje 0.
-- Nagłówek karty: karta, do której dochodzą zapisy z kopii, przejmuje cały nagłówek z kopii (imię i nazwisko, płeć, data
+- *(Aktualizacja 2026-10-20, P-NAGLOWEK-NAJNOWSZEJ (D-3 A): nagłówek karty z najnowszej wersji, tutejszej albo z kopii — opis niżej nieaktualny; decyzja właściciela podjęta, podtytuł zmieniony.)*
+  Nagłówek karty: karta, do której dochodzą zapisy z kopii, przejmuje cały nagłówek z kopii (imię i nazwisko, płeć, data
   urodzenia i wiek, u osoby spoza bazy rok urodzenia i kontakt, przynależność do bazy) także, gdy tutejszy jest nowszy,
   a następna synchronizacja przenosi go dalej. Osoba dodana tutaj do bazy, której kopia niesie nową wersję jako osoby
   spoza bazy, znika z listy pacjentów i traci w nagłówku datę urodzenia i wiek; odwrotnie osoba spoza bazy wchodzi do
@@ -17995,7 +18294,8 @@ przypiętych ani najnowszej). Próg 10 wersji i wyłącznik `localStorage.vildaR
   gdy zniknęła wersja, którą plan zostawia, nic nie jest usuwane (`skipped: 'plan-nieaktualny'`) — retencja policzy od nowa
   przy następnym zapisie.
 - Najpierw nagrobki całej listy do usunięcia jednym zapisem metadanych konta i sprawdzenie, że są; dopiero potem
-  `deleteSnapshot` każdej wersji. Bez zapisanych nagrobków nic nie jest usuwane (`skipped: 'nagrobki'`). Nagrobek wersji,
+  `deleteSnapshot` każdej wersji *(Aktualizacja 2026-10-20, P-USUN-WERSJE-LOKALNIE: rdzeń `Bzw_usunWersje` przez
+  `Bkz_usunJesliBezZmian`, nie publiczne `deleteSnapshot`; publicznego nie woła żaden ekran)*. Bez zapisanych nagrobków nic nie jest usuwane (`skipped: 'nagrobki'`). Nagrobek wersji,
   której nie udało się usunąć i która dalej jest w karcie, jest zdejmowany; wersja usunięta w tym czasie przez scalanie
   (scalanie nie bierze blokady pacjenta) zachowuje nagrobek.
 - Nagrobek retencji: `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, powod: 'retencja'}` — bez
@@ -18084,7 +18384,8 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
 **Sejf (`vilda_vault.js` 190; blok `Bkz_*`, czytelny, z komentarzem).**
 - `moveSnapshotToTrash(patientId, snapshotId, { odepnij })` — pod tą samą blokadą co zapis pacjenta (`vilda-save-pat:<id>`).
   Odmawia dla ostatniej wersji karty (`ostatni`), wersji nieczytelnej i przypiętej bez `odepnij` (`przypiety`). Najpierw
-  zapisuje nagrobek z treścią i sprawdza, że jest, dopiero potem usuwa wersję (`deleteSnapshot`: nagłówek karty z
+  zapisuje nagrobek z treścią i sprawdza, że jest, dopiero potem usuwa wersję (`deleteSnapshot` *(Aktualizacja 2026-10-20, P-USUN-WERSJE-LOKALNIE: rdzeń
+  `Bzw_usunWersje` przez `Bkz_usunJesliBezZmian`)*: nagłówek karty z
   poprzedniej wersji, zdarzenie zapisu → synchronizacja). Po usunięciu sprawdza nagrobek jeszcze raz. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: chwila zapisu karty nie spada do poprzedniej wersji — kosz podnosi ją do chwili usunięcia.)*
 - Nagrobek `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, payloadCipher}` w metadanych konta
   (`userMeta.snapshotTombstones`, jak nagrobki kluczy dostępu); każda zmiana listy pod blokadą, na świeżym odczycie.

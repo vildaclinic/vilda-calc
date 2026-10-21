@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-18.3",
+  "version": "2026-10-21.1",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -37313,6 +37313,318 @@ const patientPointData = {
         "Zachowaj wszystkie 91 węzłów LH_M 10–19 lat. PCHIP w stężeniach p50 między węzłami co 0,1 roku jest przybliżeniem tabeli, nie oryginalnym dopasowaniem GAMLSS. Węzły 16 i 18 służą interpolacji i kontroli źródła, nie zmieniają routingu na granicach. 0,1 roku nie oznacza miesiąca.",
         "Surowica, Abbott ARCHITECT ci2000 LH. Nieznana metoda lub materiał dopuszczają tylko dotychczasowe orientacyjne porównanie. Znana niezgodność blokuje punkt bez fallbacku do Madsen, dorosłych albo innej metody Abbott. Brak harmonizacji z IMMULITE, Roche lub AutoDELFIA.",
         "Model wieku nie wymaga G/P, pory pobrania ani nowej ankiety. Zachowaj istniejące znane leczenie, GnRHa, stymulację i ochronę bieżącego pacjenta; brak wywiadu nie potwierdza ich nieobecności. LLOQ 0,09 IU/L nie jest LOD ani podłogą wyniku, a nierówność nie tworzy dokładnego punktu."
+      ]
+    },
+    {
+      "id": "kushnir2010-male-t-1-2-group",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 1,
+      "maxAge": 2,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 0.10401
+        },
+        {
+          "ageYears": 2,
+          "value": 0.10401
+        }
+      ],
+      "sourceLabel": "Kushnir 2010 · testosteron · mediana grupy",
+      "url": "https://doi.org/10.1373/clinchem.2010.143222",
+      "method": "Stable-isotope dilution, hydroxylamine derivatization and two-dimensional LC-MS/MS; API 4000 triple-quadrupole instrument",
+      "population": "Dzieci bez znanych chorób i bez leków na receptę; kohorta ARUP / University of Utah, USA. Młodsze dzieci pobierano po indukcji znieczulenia przed planowym zabiegiem.",
+      "statistic": "group-median",
+      "approximate": true,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms",
+        "kushnir2010-lcmsms-total-testosterone"
+      ],
+      "referenceSignificantDigits": 1,
+      "patientNote": "Grupa 1–2 lat · LC-MS/MS, surowica · odczyt przybliżony.",
+      "ageGroup": {
+        "label": "1–2 lat",
+        "sourceLabel": "1 to 2 years",
+        "minAge": 1,
+        "maxAge": 2,
+        "n": null,
+        "sourceUnit": "µg/L",
+        "sourceMedian": 0.03,
+        "boundaryPolicy": "Explicit half-open application routing convention based on printed group labels; author inclusivity or individual-age assignment rule not recovered.",
+        "description": "Przybliżona mediana całej grupy z ryciny 4C; nie jest medianą dokładnego wieku ani normą. Liczebność tej rocznej grupy nie została podana. Odczyt około ±5 ng/L (±0,02 nmol/L) nie jest przedziałem ufności. Próbki pobierano po indukcji znieczulenia; nie opisano sposobu zastępowania wyników poniżej LOQ."
+      },
+      "provenance": {
+        "authors": "Kushnir et al.",
+        "year": 2010,
+        "doi": "10.1373/clinchem.2010.143222",
+        "pmid": "20489135",
+        "url": "https://doi.org/10.1373/clinchem.2010.143222",
+        "title": "Liquid Chromatography–Tandem Mass Spectrometry Assay for Androstenedione, Dehydroepiandrosterone, and Testosterone with Pediatric and Adult Reference Intervals",
+        "journal": "Clinical Chemistry 2010;56(7):1138–1147",
+        "sourceLocator": "Figure 4C and caption, journal page 1146 / PDF page 9 of 10; population pages 1140–1141; analytical limits page 1141; Table 1 page 1143; Discussion page 1145",
+        "figure": "4C",
+        "printedPage": 1146,
+        "pdfPage": 9,
+        "reviewDate": "2026-10-20",
+        "reviewBasis": "Complete author-provided published article PDF read, Figure 4C visually checked and its vector geometry independently reviewed. Two black triangles Te in the boys panel, not A4 squares or DHEA diamonds. Not an abstract-only qualification.",
+        "sourceSha256": "25132120d7379f5d1e94dc6a6381e4de6550d901121afcd70b3bd987d457442d",
+        "sourceFormat": "Author-provided PDF of final published article",
+        "redistribution": "Factual and geometric extract only; no source PDF, bitmap or full figure redistributed.",
+        "sourceQuantification": {
+          "lodNgL": 5,
+          "loqNgL": 10,
+          "lodNmolL": 0.017335,
+          "loqNmolL": 0.03467,
+          "loqCriterion": "Accuracy within ±15%, CV <20%, mass-transition branching ratio within ±30%; six low-concentration samples in duplicate over three days.",
+          "censoringRule": null,
+          "belowLoqCounts": null,
+          "interpretation": "Both digitized median markers remain above the stated LOQ under bounding-box-center and triangle-centroid conventions. This does not prove that no individual observations were censored; no count or replacement rule for low results is reported."
+        },
+        "erratum": {
+          "doi": "10.1373/clinchem.2011.167353",
+          "scope": "Correction to boys Tanner IV–V DHEA reference interval, not testosterone or these median markers."
+        },
+        "sourceGroupId": "1-2",
+        "groupParticipants": null,
+        "sourceUnit": "µg/L",
+        "sourceToCanonicalFactor": 3.467,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/kushnir2010-male-testosterone-group-medians.json",
+        "digitization": {
+          "format": "Vector paths in published Figure 4C",
+          "axisUnit": "µg/L",
+          "axisType": "linear",
+          "axisZeroPdfY": 385.10439453124997,
+          "axisSlopePdfPointsPerUgL": -142.01649475097656,
+          "maximumAxisTickResidualPdfPoints": 0.040005493164017025,
+          "maximumAxisTickResidualNgL": 0.2816961032179111,
+          "marker": "Filled black triangle Te; panel C (boys 6 months through 6 years)",
+          "markerAnchor": "Midpoint of the marker bounding box, applied identically to both groups.",
+          "alternativeAnchor": "Triangle vertex centroid retained as an extraction-sensitivity check; not a second biological median.",
+          "roundingStepUgL": 0.01,
+          "approximateDigitizationToleranceNgL": 5,
+          "approximateDigitizationToleranceNmolL": 0.017335,
+          "toleranceMeaning": "Conservative extraction estimate covering anchor-convention sensitivity and coarse rounding for these two markers. Not a confidence interval, analytical CV, biological variation or RI; not a universal tolerance for other figure points.",
+          "numericTable": false,
+          "publishedNumericalPrecision": "The source publishes markers, not numeric p50 values; canonical conversion digits do not create additional source precision."
+        },
+        "sourceMarkerGeometry": {
+          "pathIndexZeroBased": 63,
+          "pathBoundsPdfPoints": [
+            152.6020050048828,
+            378.9200134277344,
+            156.45199584960938,
+            382.63800048828125
+          ],
+          "verticesPdfPoints": [
+            [
+              154.572998046875,
+              378.9200134277344
+            ],
+            [
+              156.45199584960938,
+              382.63800048828125
+            ],
+            [
+              152.6020050048828,
+              382.63800048828125
+            ]
+          ],
+          "boundingBoxCenterPdfY": 380.7790069580078,
+          "triangleCentroidPdfY": 381.39867146809894,
+          "boundingBoxCenterReadoutNgL": 30.456937983342318,
+          "centroidReadoutNgL": 26.093610250337097
+        },
+        "sourceRouting": {
+          "version": "2026-10-21.1",
+          "minAge": 1,
+          "maxAge": 2,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Fixed disjoint chronological-age routing, independent of the patient's concentration. Preserve all 82 existing profiles and Kelsey from exact age 3. A rejected context does not select a fallback study."
+        }
+      },
+      "limitations": [
+        "Wartości około 0,03 i 0,02 µg/L odczytano z ryciny 4C; to mediany całych grup, nie opublikowane liczby tabelaryczne ani p50 dokładnego wieku.",
+        "Nie znamy liczebności rocznych grup z ryciny. N=123 dla 6–24 miesięcy i N=125 dla 2–3 lat z tabeli 1 dotyczą innego grupowania i nie są automatycznie N zachowanych markerów.",
+        "Próbki dzieci 6 miesięcy–6 lat pobierano po indukcji znieczulenia. Autorzy opisują 24 wyniki T wyższe niż oczekiwano i możliwy wpływ stresu; dodali centralne 90% RI, bez zadeklarowanej analogicznej korekty median. Nie dowodzi to kierunku ani wielkości wpływu na medianę.",
+        "Nie podano liczby wyników <LOD/<LOQ ani sposobu ich zastępowania. Mediany na rycinie są ponad LOQ, co nie oznacza braku cenzury pojedynczych wyników.",
+        "Surowica i opisany protokół LC-MS/MS nie potwierdzają metody ani materiału próbki pacjenta. Znana niezgodność nadal blokuje porównanie; nieznane dane nie stanowią potwierdzenia zgodności.",
+        "Kulle 2010 podaje inną medianę około 0,40 nmol/L w osoczu dziewięciu chłopców. Nie uśredniamy badań, nie wyliczamy kalibracji metod ani nie wybieramy źródła według wyniku pacjenta.",
+        "Nie wymagamy dodatkowych pól, stadium G1 ani pory pobrania; stadium nie jest wyprowadzane z wieku. Znane leczenie, stymulacja, niezgodna metoda/materiał, niepewny wiek i operator wyniku zachowują znaczenie.",
+        "To ograniczone porównanie edukacyjne bez nowego RI, SDS, percentyla wyniku lub rozpoznania. Nie zmienia laboratoryjnych norm Mayo, zapisanych ocen, poglądowej krzywej, jej skali ani porównania płci.",
+        "The printed figure groups are '1 to 2 years' and '2 to 3 years'; exact author inclusivity and annual-bin counts are not reported. [1,2) and [2,3) are explicit application conventions, not recovered individual-age rules. The whole possible age must fit one group. No extrapolation into >212 days–<1 year or past the third birthday.",
+        "Approximate medians of the two source groups read from Figure 4C. Neither is an exact-age p50, reference limit, SDS, patient percentile or a diagnostic threshold. Annual-bin N is unknown; do not borrow Table 1 counts.",
+        "Use the bounding-box center of each vector triangle, rounded to 0.01 µg/L (0.03 and 0.02). Retain centroid sensitivity and approximately ±5 ng/L extraction tolerance; it is not a confidence interval. Display one significant digit for these reference labels in every selected unit, retaining full unit-conversion precision internally and the actual patient result unchanged.",
+        "Source serum used the described derivatized LC-MS/MS assay. Generic LC-MS/MS identifiers permit the existing educational comparison, not proof of between-assay calibration. Known incompatible assays or material block it; unknown values do not confirm the patient's assay or specimen. Do not apply the source LOD/LOQ to the patient's result or replace a censored result by zero or a limit.",
+        "Reuse current-patient age, sex, result and identity protection. Do not require or infer Tanner G1 or a sampling hour. Known treatment or stimulation remains contraindicated under the existing adapter. These approximate group comparisons do not change the independent Mayo laboratory RI, historical assessments, educational geometry, concentration scale or sex comparisons."
+      ]
+    },
+    {
+      "id": "kushnir2010-male-t-2-3-group",
+      "analyte": "t",
+      "sex": "male",
+      "minAge": 2,
+      "maxAge": 3,
+      "points": [
+        {
+          "ageYears": 2,
+          "value": 0.06934
+        },
+        {
+          "ageYears": 3,
+          "value": 0.06934
+        }
+      ],
+      "sourceLabel": "Kushnir 2010 · testosteron · mediana grupy",
+      "url": "https://doi.org/10.1373/clinchem.2010.143222",
+      "method": "Stable-isotope dilution, hydroxylamine derivatization and two-dimensional LC-MS/MS; API 4000 triple-quadrupole instrument",
+      "population": "Dzieci bez znanych chorób i bez leków na receptę; kohorta ARUP / University of Utah, USA. Młodsze dzieci pobierano po indukcji znieczulenia przed planowym zabiegiem.",
+      "statistic": "group-median",
+      "approximate": true,
+      "unit": "nmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "maxAgeExclusive": true,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms",
+        "kushnir2010-lcmsms-total-testosterone"
+      ],
+      "referenceSignificantDigits": 1,
+      "patientNote": "Grupa 2–3 lat · LC-MS/MS, surowica · odczyt przybliżony.",
+      "ageGroup": {
+        "label": "2–3 lat",
+        "sourceLabel": "2 to 3 years",
+        "minAge": 2,
+        "maxAge": 3,
+        "n": null,
+        "sourceUnit": "µg/L",
+        "sourceMedian": 0.02,
+        "boundaryPolicy": "Explicit half-open application routing convention based on printed group labels; author inclusivity or individual-age assignment rule not recovered.",
+        "description": "Przybliżona mediana całej grupy z ryciny 4C; nie jest medianą dokładnego wieku ani normą. Liczebność tej rocznej grupy nie została podana. Odczyt około ±5 ng/L (±0,02 nmol/L) nie jest przedziałem ufności. Próbki pobierano po indukcji znieczulenia; nie opisano sposobu zastępowania wyników poniżej LOQ."
+      },
+      "provenance": {
+        "authors": "Kushnir et al.",
+        "year": 2010,
+        "doi": "10.1373/clinchem.2010.143222",
+        "pmid": "20489135",
+        "url": "https://doi.org/10.1373/clinchem.2010.143222",
+        "title": "Liquid Chromatography–Tandem Mass Spectrometry Assay for Androstenedione, Dehydroepiandrosterone, and Testosterone with Pediatric and Adult Reference Intervals",
+        "journal": "Clinical Chemistry 2010;56(7):1138–1147",
+        "sourceLocator": "Figure 4C and caption, journal page 1146 / PDF page 9 of 10; population pages 1140–1141; analytical limits page 1141; Table 1 page 1143; Discussion page 1145",
+        "figure": "4C",
+        "printedPage": 1146,
+        "pdfPage": 9,
+        "reviewDate": "2026-10-20",
+        "reviewBasis": "Complete author-provided published article PDF read, Figure 4C visually checked and its vector geometry independently reviewed. Two black triangles Te in the boys panel, not A4 squares or DHEA diamonds. Not an abstract-only qualification.",
+        "sourceSha256": "25132120d7379f5d1e94dc6a6381e4de6550d901121afcd70b3bd987d457442d",
+        "sourceFormat": "Author-provided PDF of final published article",
+        "redistribution": "Factual and geometric extract only; no source PDF, bitmap or full figure redistributed.",
+        "sourceQuantification": {
+          "lodNgL": 5,
+          "loqNgL": 10,
+          "lodNmolL": 0.017335,
+          "loqNmolL": 0.03467,
+          "loqCriterion": "Accuracy within ±15%, CV <20%, mass-transition branching ratio within ±30%; six low-concentration samples in duplicate over three days.",
+          "censoringRule": null,
+          "belowLoqCounts": null,
+          "interpretation": "Both digitized median markers remain above the stated LOQ under bounding-box-center and triangle-centroid conventions. This does not prove that no individual observations were censored; no count or replacement rule for low results is reported."
+        },
+        "erratum": {
+          "doi": "10.1373/clinchem.2011.167353",
+          "scope": "Correction to boys Tanner IV–V DHEA reference interval, not testosterone or these median markers."
+        },
+        "sourceGroupId": "2-3",
+        "groupParticipants": null,
+        "sourceUnit": "µg/L",
+        "sourceToCanonicalFactor": 3.467,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/kushnir2010-male-testosterone-group-medians.json",
+        "digitization": {
+          "format": "Vector paths in published Figure 4C",
+          "axisUnit": "µg/L",
+          "axisType": "linear",
+          "axisZeroPdfY": 385.10439453124997,
+          "axisSlopePdfPointsPerUgL": -142.01649475097656,
+          "maximumAxisTickResidualPdfPoints": 0.040005493164017025,
+          "maximumAxisTickResidualNgL": 0.2816961032179111,
+          "marker": "Filled black triangle Te; panel C (boys 6 months through 6 years)",
+          "markerAnchor": "Midpoint of the marker bounding box, applied identically to both groups.",
+          "alternativeAnchor": "Triangle vertex centroid retained as an extraction-sensitivity check; not a second biological median.",
+          "roundingStepUgL": 0.01,
+          "approximateDigitizationToleranceNgL": 5,
+          "approximateDigitizationToleranceNmolL": 0.017335,
+          "toleranceMeaning": "Conservative extraction estimate covering anchor-convention sensitivity and coarse rounding for these two markers. Not a confidence interval, analytical CV, biological variation or RI; not a universal tolerance for other figure points.",
+          "numericTable": false,
+          "publishedNumericalPrecision": "The source publishes markers, not numeric p50 values; canonical conversion digits do not create additional source precision."
+        },
+        "sourceMarkerGeometry": {
+          "pathIndexZeroBased": 64,
+          "pathBoundsPdfPoints": [
+            171.09300231933594,
+            380.3110046386719,
+            174.8990020751953,
+            384.1579895019531
+          ],
+          "verticesPdfPoints": [
+            [
+              173.06300354003906,
+              380.3110046386719
+            ],
+            [
+              174.8990020751953,
+              384.1579895019531
+            ],
+            [
+              171.09300231933594,
+              384.1579895019531
+            ]
+          ],
+          "boundingBoxCenterPdfY": 382.2344970703125,
+          "triangleCentroidPdfY": 382.8756612141927,
+          "boundingBoxCenterReadoutNgL": 20.20819811085875,
+          "centroidReadoutNgL": 15.693482091395943
+        },
+        "sourceRouting": {
+          "version": "2026-10-21.1",
+          "minAge": 2,
+          "maxAge": 3,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Fixed disjoint chronological-age routing, independent of the patient's concentration. Preserve all 82 existing profiles and Kelsey from exact age 3. A rejected context does not select a fallback study."
+        }
+      },
+      "limitations": [
+        "Wartości około 0,03 i 0,02 µg/L odczytano z ryciny 4C; to mediany całych grup, nie opublikowane liczby tabelaryczne ani p50 dokładnego wieku.",
+        "Nie znamy liczebności rocznych grup z ryciny. N=123 dla 6–24 miesięcy i N=125 dla 2–3 lat z tabeli 1 dotyczą innego grupowania i nie są automatycznie N zachowanych markerów.",
+        "Próbki dzieci 6 miesięcy–6 lat pobierano po indukcji znieczulenia. Autorzy opisują 24 wyniki T wyższe niż oczekiwano i możliwy wpływ stresu; dodali centralne 90% RI, bez zadeklarowanej analogicznej korekty median. Nie dowodzi to kierunku ani wielkości wpływu na medianę.",
+        "Nie podano liczby wyników <LOD/<LOQ ani sposobu ich zastępowania. Mediany na rycinie są ponad LOQ, co nie oznacza braku cenzury pojedynczych wyników.",
+        "Surowica i opisany protokół LC-MS/MS nie potwierdzają metody ani materiału próbki pacjenta. Znana niezgodność nadal blokuje porównanie; nieznane dane nie stanowią potwierdzenia zgodności.",
+        "Kulle 2010 podaje inną medianę około 0,40 nmol/L w osoczu dziewięciu chłopców. Nie uśredniamy badań, nie wyliczamy kalibracji metod ani nie wybieramy źródła według wyniku pacjenta.",
+        "Nie wymagamy dodatkowych pól, stadium G1 ani pory pobrania; stadium nie jest wyprowadzane z wieku. Znane leczenie, stymulacja, niezgodna metoda/materiał, niepewny wiek i operator wyniku zachowują znaczenie.",
+        "To ograniczone porównanie edukacyjne bez nowego RI, SDS, percentyla wyniku lub rozpoznania. Nie zmienia laboratoryjnych norm Mayo, zapisanych ocen, poglądowej krzywej, jej skali ani porównania płci.",
+        "The printed figure groups are '1 to 2 years' and '2 to 3 years'; exact author inclusivity and annual-bin counts are not reported. [1,2) and [2,3) are explicit application conventions, not recovered individual-age rules. The whole possible age must fit one group. No extrapolation into >212 days–<1 year or past the third birthday.",
+        "Approximate medians of the two source groups read from Figure 4C. Neither is an exact-age p50, reference limit, SDS, patient percentile or a diagnostic threshold. Annual-bin N is unknown; do not borrow Table 1 counts.",
+        "Use the bounding-box center of each vector triangle, rounded to 0.01 µg/L (0.03 and 0.02). Retain centroid sensitivity and approximately ±5 ng/L extraction tolerance; it is not a confidence interval. Display one significant digit for these reference labels in every selected unit, retaining full unit-conversion precision internally and the actual patient result unchanged.",
+        "Source serum used the described derivatized LC-MS/MS assay. Generic LC-MS/MS identifiers permit the existing educational comparison, not proof of between-assay calibration. Known incompatible assays or material block it; unknown values do not confirm the patient's assay or specimen. Do not apply the source LOD/LOQ to the patient's result or replace a censored result by zero or a limit.",
+        "Reuse current-patient age, sex, result and identity protection. Do not require or infer Tanner G1 or a sampling hour. Known treatment or stimulation remains contraindicated under the existing adapter. These approximate group comparisons do not change the independent Mayo laboratory RI, historical assessments, educational geometry, concentration scale or sex comparisons."
       ]
     }
   ],

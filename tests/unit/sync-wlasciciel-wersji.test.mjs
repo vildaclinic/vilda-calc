@@ -2618,7 +2618,7 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     // karta oddająca wersję (licznik albo usunięcie pustej karty) — tylko z Bsw_przenies, czyli pod obiema blokadami
     expect(src.match(/Bsw_poOddaniu\(/g)).toHaveLength(2);
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
-    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1)');
+    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }))');
     const fo = src.slice(src.indexOf('async function Bsw_poOddaniu('), src.indexOf('// Najnowszy lokalny nagrobek pacjenta'));
     expect(fo).toContain('else await I().removePatientForUser(b, G);');
     expect(fo).not.toContain('putTombstoneForUser');
@@ -2649,8 +2649,9 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     // obie gałęzie (karta istnieje / nowa karta): odłożenie decyzji 'zabierz' i zapis pod F tylko dla 'nowa'
     const odloz = "if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);";
     expect(f.split(odloz).length - 1).toBe(2);
-    expect(f).toContain("if (d.co !== 'nowa') continue;\n        await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));");
-    expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)));");
+    // D-3 A (P-NAGLOWEK-NAJNOWSZEJ): zapisany rekord trafia też do listy wersji po zapisie (Bng_dopisz) — nagłówek z najnowszej.
+    expect(f).toContain("if (d.co !== 'nowa') continue;\n        await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k]));");
+    expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k]));");
     expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień').toHaveLength(3);
     // faza przeniesień: 'zabierz' nie sprawdza rewizji z chwili decyzji, ale czyta wersję świeżo pod obiema blokadami
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));

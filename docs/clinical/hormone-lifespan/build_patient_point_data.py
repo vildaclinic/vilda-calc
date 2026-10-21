@@ -850,7 +850,66 @@ def build():
                      male_lh_policy['statisticPolicy'], male_lh_policy['reconstructionPolicy'],
                      male_lh_policy['interpolation'], male_lh_policy['assayPolicy'], male_lh_policy['contextPolicy']])
 
-    return {'version':'2026-10-18.3','purpose':'educational-population-central-comparison',
+    childhood_t_policy = json.loads((ROOT/'male-testosterone-childhood-reference-policy.json').read_text(encoding='utf-8'))
+    assert (childhood_t_policy['kind'], childhood_t_policy['ordinaryOnly'],
+            childhood_t_policy['analyte'], childhood_t_policy['sex'], childhood_t_policy['unit']) == (
+                'educational-source-selection', True, 't', 'male', 'nmol/L')
+    childhood_t = json.loads((ROOT/childhood_t_policy['sourceEvidence']).read_text(encoding='utf-8'))
+    assert (childhood_t['sex'], childhood_t['unit'], childhood_t['sourceUnit'],
+            childhood_t['statistic'], childhood_t['approximate']) == (
+                'male', 'nmol/L', 'µg/L', 'group-median', True)
+    assert childhood_t['clinicalOwnerApproval']['accepted'] is True
+    assert childhood_t_policy['interpolation'] == 'constant'
+    assert childhood_t_policy['referenceSignificantDigits'] == 1
+    assert childhood_t['conversion']['nmolLPerNgDl'] == .03467
+    assert childhood_t['source']['sourceQuantification']['loqNgL'] == 10
+    t_groups = {row['id']: row for row in childhood_t['groups']}
+    assert set(t_groups) == {'1-2', '2-3'}
+    assert [(route['sourceGroupId'], route['minAge'], route['maxAge'], route['maxAgeExclusive'])
+            for route in childhood_t_policy['profiles']] == [('1-2', 1, 2, True), ('2-3', 2, 3, True)]
+    for route in childhood_t_policy['profiles']:
+        row = t_groups[route['sourceGroupId']]
+        minimum, maximum = route['minAge'], route['maxAge']
+        assert (row['applicationMinAge'], row['applicationMaxAge'], row['n']) == (minimum, maximum, None)
+        assert all(max(minimum, existing['minAge']) >= min(maximum, existing['maxAge'])
+                   for existing in profiles if existing['analyte'] == 't' and existing['sex'] == 'male')
+        # Both reference and patient use the existing TT unit conversion.
+        # Rounding here removes floating-point residue, not source uncertainty.
+        median = round(row['sourceMedian'] * childhood_t['conversion']['ngDlPerUgL'] * .03467, 12)
+        assert math.isclose(median, row['canonicalMedian'], rel_tol=1e-14)
+        assert row['sourceMedian'] * 1000 - childhood_t['digitization']['approximateDigitizationToleranceNgL'] > 10
+        add(route['id'], 't', 'male',
+            [dict(ageYears=minimum, value=median), dict(ageYears=maximum, value=median)],
+            minimum, maximum, childhood_t['sourceLabel'], childhood_t['source']['url'],
+            childhood_t['assay'], childhood_t['population'], 'group-median', approximate=True,
+            interpolation='constant', ordinaryOnly=True, maxAgeExclusive=True,
+            specimen=childhood_t_policy['specimen'],
+            compatibleSpecimenIds=childhood_t_policy['compatibleSpecimenIds'],
+            compatibleAssayMethodIds=childhood_t_policy['compatibleAssayMethodIds'],
+            referenceSignificantDigits=childhood_t_policy['referenceSignificantDigits'],
+            patientNote=f"Grupa {route['groupLabel']} · {childhood_t_policy['patientNote']}",
+            ageGroup={'label':route['groupLabel'], 'sourceLabel':row['label'],
+                      'minAge':minimum, 'maxAge':maximum, 'n':None,
+                      'sourceUnit':childhood_t['sourceUnit'], 'sourceMedian':row['sourceMedian'],
+                      'boundaryPolicy':childhood_t['selection']['boundaryPolicy'],
+                      'description':'Przybliżona mediana całej grupy z ryciny 4C; nie jest medianą dokładnego wieku ani normą. '
+                          'Liczebność tej rocznej grupy nie została podana. Odczyt około ±5 ng/L (±0,02 nmol/L) '
+                          'nie jest przedziałem ufności. Próbki pobierano po indukcji znieczulenia; '
+                          'nie opisano sposobu zastępowania wyników poniżej LOQ.'},
+            provenance={**childhood_t['source'], 'sourceGroupId':row['id'],
+                        'groupParticipants':None, 'sourceUnit':childhood_t['sourceUnit'],
+                        'sourceToCanonicalFactor':childhood_t['conversion']['sourceToCanonicalFactor'],
+                        'sourceSpecimen':childhood_t['matrix'],
+                        'readableSource':childhood_t_policy['sourceEvidence'],
+                        'digitization':childhood_t['digitization'], 'sourceMarkerGeometry':row['geometry'],
+                        'sourceRouting':{'version':childhood_t_policy['version'],
+                            'minAge':minimum, 'maxAge':maximum, 'maxAgeExclusive':True,
+                            'selectionPolicy':childhood_t_policy['selectionPolicy']}},
+            limitations=[*childhood_t['limits'], childhood_t_policy['agePolicy'],
+                         childhood_t_policy['statisticPolicy'], childhood_t_policy['digitizationPolicy'],
+                         childhood_t_policy['assayPolicy'], childhood_t_policy['contextPolicy']])
+
+    return {'version':'2026-10-21.1','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

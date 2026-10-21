@@ -9,10 +9,21 @@ const addedIds = new Set(['madsen2022-female-lh-age-6-16', 'madsen2022-female-fs
   'madsen2022-female-e2-age-6-18']);
 const fshCaliperIds = new Set(['wilson2023-male-fsh-age-16-18', 'wilson2023-female-fsh-age-16-19']);
 
+// The 2026-10-21 addition is exactly two approximate testosterone group
+// medians. Preserve every one of the 82 earlier profiles and their historical
+// hashes by removing only these IDs, never by regenerating prior source data.
+const testosteroneBoysIds = new Set([
+  'kushnir2010-male-t-1-2-group', 'kushnir2010-male-t-2-3-group'
+]);
+export function beforeTestosteroneBoysBundle(data) {
+  return { ...data, version: '2026-10-18.3', profiles: data.profiles
+    .filter(profile => !testosteroneBoysIds.has(profile.id)) };
+}
+
 // Isolate the later, ordinary-only male LH reconstruction without changing
 // the earlier AMH/FSH evidence or the frozen historical hash expectations.
 export function beforeMaleLhCaliperBundle(data) {
-  return { ...data, version: '2026-10-18.2', profiles: data.profiles
+  return { ...data, version: '2026-10-18.2', profiles: beforeTestosteroneBoysBundle(data).profiles
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
