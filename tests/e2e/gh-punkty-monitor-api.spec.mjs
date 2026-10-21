@@ -191,11 +191,12 @@ test('ten sam ciąg czynności lekarza daje ten sam wynik na dzisiejszym monitor
   expect(z[3].stan.komunikat).toBe(DRUGIE_WLACZENIE);
   expect(JSON.parse(z[1].stan.modul)[1]).toMatchObject({ id: P2.id, weight: 27.6, height: 126 });
 
-  // Każda ścieżka zaczyna od bramki uszkodzonych wpisów (P-GH-PUNKTY-USZKODZONE).
+  // Każda ścieżka zaczyna od bramki uszkodzonych wpisów (P-GH-PUNKTY-USZKODZONE). Id nowego punktu (wsteczny, karta)
+  // z noweId() (P-GH-NOWE-ID-MONITOR).
   expect(z.map((k) => k.api)).toEqual([
-    ['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'punkt', 'zapisz'],
+    ['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'noweId', 'punkt', 'zapisz'],
     ['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz'],
-    ['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'zapisz'],
+    ['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'noweId', 'zapisz'],
     ['uszkodzone', 'sprawdzRodzaj'],
     ['uszkodzone', 'zapisz'],
   ]);
