@@ -18509,7 +18509,7 @@ przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela 
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
-## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.327, 2026-10-20)
+## Strony prawne offline, online zawsze bieżący tekst (P-SW-STRONY-PRAWNE, SW 1.1.328, 2026-10-20)
 
 **Zlecenie właściciela (2026-10-20).** Po weryfikacji P-SW-DOCPRO na aktualnym `audyt` (20 stron z precache, w tym DocPro, startuje
 offline: 0 nieudanych żądań własnego pochodzenia, 0 błędów strony) właściciel wybrał z listy zostających luk: strony prawne offline.
@@ -18592,7 +18592,7 @@ odczytem, treść cała” (na `audyt` strony prawne szły tylko z sieci — bra
 **Walidacja (Chromium 141, produkcyjny SW, profil trwały, brak sieci = zatrzymany serwer z sondą).** Offline: obie strony z linków
 stopki DocPro, z bramki regulaminu (index bez akceptacji) i z banera zgody; `/regulamin`, `?x=1`; 390 × 844 bez poziomego
 przewijania; po restarcie przeglądarki; ścieżka aktualizacji ze starszej wersji SW bez stron prawnych (zmierzone 1.1.325 → 1.1.326
-przed scaleniem #729; ten sam mechanizm dla 1.1.326 → 1.1.327). Online przy pełnym limicie (CDP) — nowy tekst
+przed scaleniem #729; ten sam mechanizm dla nowszych wersji). Online przy pełnym limicie (CDP) — nowy tekst
 z sieci; połączenie urwane w połowie treści — kopia z pamięci. Firefox 151 (limit obniżony w profilu, produkcyjny SW): pełny limit
 i nowa treść ≥ 64 KiB — `put` odrzucony (`NS_ERROR_FILE_NO_DEVICE_SPACE`), nowy tekst z sieci jako odpowiedź syntetyczna (nagłówek
 CSP działa, `content-length` usunięty, kodowanie UTF-8), stara kopia nienaruszona; kontrola na wersji z rozstrzyganiem po nazwie
@@ -18607,7 +18607,7 @@ pokazuje starą treść do drugiej nawigacji (pamięć najpierw); kontrola z pus
 (`pwa-strony-offline`, `pwa`, `pwa-precache-migracja`, `pwa-pierwsza-wizyta`) i pozostałe specyfikacje zależne od SW — zielone.
 WebKit/iOS niesprawdzane (brak przeglądarki w środowisku).
 
-SW 1.1.326 → **1.1.327** (po scaleniu #732, #733 i #729 z `audyt`; numery nadaje `npm run podbij-wersje`).
+SW 1.1.327 → **1.1.328** (po scaleniu #732, #733, #729 i #734 z `audyt`; numery nadaje `npm run podbij-wersje`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja strategii „najpierw sieć” dla stron prawnych i skutku poprawki zapisu dla
 pozostałych dokumentów; scalenie i wdrożenie.
