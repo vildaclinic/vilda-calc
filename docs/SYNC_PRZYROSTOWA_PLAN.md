@@ -581,7 +581,7 @@ Każdy etap to osobny PR do `audyt` z gałęzi `agent/sync-…`, draft, bez scal
 
 ## 6. Decyzje właściciela
 
-Odpowiedzi właściciela: 2026-10-20 w rozmowie z agentem („akceptuję wszystko”) na opis D-1 i D-3 do D-9 sprawdzony na kodzie `origin/audyt` z tego dnia; D-10 i D-11 podane wprost. D-12 do D-20 zostają do decyzji przy etapach, których dotyczą.
+Odpowiedzi właściciela: 2026-10-20 w rozmowie z agentem („akceptuję wszystko”) na opis D-1 i D-3 do D-9 sprawdzony na kodzie `origin/audyt` z tego dnia; D-10 i D-11 podane wprost. D-12 do D-20 zostają do decyzji przy etapach, których dotyczą. D-21 (notatki karty przywróconej po usunięciu pacjenta, ujawnione w przeglądzie P-ZMIANA-W-KARCIE) właściciel rozstrzygnął tego samego dnia.
 
 | Nr | Pytanie | Rekomendacja | Skutek braku decyzji | Decyzja właściciela |
 |---|---|---|---|---|
@@ -605,6 +605,7 @@ Odpowiedzi właściciela: 2026-10-20 w rozmowie z agentem („akceptuję wszystk
 | D-18 | Po etapie 5: `GET /blob` jako czytelnik `blob-v1` przez 6 miesięcy? | tak | brak | do decyzji przy etapie |
 | D-19 | Odchudzenie zapisu z gotowych wyników, 84,5 % migawki | poza tym planem; zmiana kliniczna; kompresja daje większość zysku | brak | do decyzji przy etapie |
 | D-20 | Kolejność i termin migracji urządzeń | komputer główny, iPhone, pozostałe; po etapie 3 | brak | do decyzji przy etapie |
+| D-21 | Karta przywrócona po „Usuń pacjenta” (nowa wizyta, poprawka, gwiazdka, kosz albo „Przywróć” na innym urządzeniu po usunięciu): notatki pacjenta wracają razem z kartą? | tak; dziś nagrobki notatek z usuwania pacjenta dalej wygrywają i karta wraca bez wyników badań, leków i terminów (także przed P-ZMIANA-W-KARCIE przy nowej wizycie) | półprzywrócony pacjent bez notatek, bez komunikatu | **wariant A** (2026-10-20): nagrobek notatki postawiony przy usuwaniu pacjenta pamięta to usunięcie i przegrywa, gdy karta je przeżyła; nowe pole nagrobka notatki, stare urządzenia go nie rozumieją; osobny PR |
 
 ---
 

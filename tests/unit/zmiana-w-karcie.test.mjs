@@ -331,8 +331,9 @@ describe('P-ZMIANA-W-KARCIE (D-5 B): kosz liczy się jak zmiana w karcie, chwila
     }
   });
 
-  // Uwaga przeglądu #732: gałąź „wersję w międzyczasie usunęło scalanie” (Bkz_doKosza, wynik.brak). Scalanie idzie
-  // bez blokady pacjenta, więc wersja może zniknąć między zapisem wpisu kosza a usunięciem.
+  // Uwaga przeglądu #732: gałąź „wersja zniknęła w trakcie” (Bkz_doKosza, wynik.brak). Bez Web Locks (druga karta
+  // przeglądarki) albo przy imporcie kopii wersja może zniknąć między zapisem wpisu kosza a usunięciem; test symuluje
+  // to w adapterze.
   it('kosz, gdy wersję w międzyczasie usunęło scalanie: lastSavedAtISO = deletedAtISO (R2)', async () => {
     sztucznyZegar();
     const A = await urzadzenie('A');
