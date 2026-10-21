@@ -1832,6 +1832,9 @@ html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr
 html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field__heading {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  /* Dwa wiersze etykiety przy 320 px muszą zajmować tyle samo miejsca co
+     sąsiednia krótka etykieta z przyciskiem pomocy 44 × 44 px. */
+  min-height: 44px;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field__status {
   display: none;

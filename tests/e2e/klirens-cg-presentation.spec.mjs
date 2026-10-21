@@ -69,6 +69,15 @@ for (const width of [1440, 390, 320]) {
     const marker = page.locator('[data-clcr-marker-context]');
     await expect(marker).toHaveValue('unknown');
     await marker.selectOption('stable');
+    if (width === 320) {
+      // Czcionka CI zawija „Wiek (lata)” do dwóch wierszy. Taka etykieta
+      // nadal musi ustawiać input na wysokości pola płci.
+      await page.evaluate(() => {
+        document.querySelectorAll('.clcr-field__name').forEach(element => {
+          element.style.setProperty('font-family', 'DejaVu Sans', 'important');
+        });
+      });
+    }
     const card = result(page);
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');

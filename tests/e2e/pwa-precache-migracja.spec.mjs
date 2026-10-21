@@ -29,11 +29,16 @@ return { CORE_SHELL_URLS, OPTIONAL_PRECACHE_ORDER, INSTALL_CORE_URLS, INSTALL_OP
   null,
 );
 const STARA_PAMIEC = 'pwa-kalorii-shell-v1.1.104';
-// Stara pamięć wypełniana z poziomu strony zajmuje tyle, ile pliki (Chromium dokłada pamięć podręczną kodu tylko do
-// skryptów zapisanych przez SW w trakcie instalacji — stąd 1,15 GB przy 474 MB plików w prawdziwej starej instalacji).
-// 400 MiB mieści rdzeń z historią (ok. 330 MiB plików) i kończy się w kolejce opcjonalnej — jak limit 1000 MiB
-// u prawdziwej starej instalacji.
-const LIMIT_MIB = 400;
+// Historia precache rośnie: rdzeń ma już ok. 399 MiB samych plików, więc dawny stały limit 400 MiB
+// kończył się przed kolejką opcjonalną (CacheStorage dolicza metadane). Najpierw mieścimy CAŁY rdzeń
+// z ograniczonym zapasem, następnie mierzymy rzeczywiste zajęcie źródła i zostawiamy 16 MiB na kolejkę
+// opcjonalną. Nadal musi ona dojść do QuotaExceededError przed instalacją produkcyjnego SW.
+const MIB = 1024 * 1024;
+const CORE_PAYLOAD_BYTES = sw.CORE_SHELL_URLS.reduce((suma, adres) => (
+  suma + fs.statSync(path.join(korzen, new URL(adres, 'https://vilda.test').pathname)).size
+), 0);
+const INITIAL_QUOTA_BYTES = CORE_PAYLOAD_BYTES + 64 * MIB;
+const OPTIONAL_HEADROOM_BYTES = 16 * MIB;
 const POMIJANE = [/^\/videos\//, /^\/posters\//, /^\/lab_pin_result\.js\?v=/];
 
 async function uruchomSerwer() {
@@ -69,11 +74,28 @@ test('stara pamięć zajmuje cały limit źródła: nowy SW instaluje się, kopi
   try {
     const page = kontekst.pages()[0] || await kontekst.newPage();
     const cdp = await kontekst.newCDPSession(page);
-    await cdp.send('Storage.overrideQuotaForOrigin', { origin: serwer.adres, quotaSize: LIMIT_MIB * 1024 * 1024 });
+    await cdp.send('Storage.overrideQuotaForOrigin', { origin: serwer.adres, quotaSize: INITIAL_QUOTA_BYTES });
     await page.goto(`${serwer.adres}/tests/fixtures/service-worker-runner.html`);
 
     // Stara instalacja (SW ≤ 1.1.104): rdzeń z historią, potem kolejka opcjonalna, dopóki starczy miejsca.
-    const stara = await page.evaluate(async ({ nazwa, adresy }) => {
+    const brakujacyRdzen = await page.evaluate(async ({ nazwa, adresy }) => {
+      const cache = await caches.open(nazwa);
+      for (const adres of adresy) {
+        const odpowiedz = await fetch(adres, { cache: 'reload' });
+        if (!odpowiedz.ok) throw new Error(`Nie udało się przygotować starego rdzenia: ${adres}`);
+        await cache.put(adres, odpowiedz);
+      }
+      const brakujace = [];
+      for (const adres of adresy) if (!(await cache.match(adres))) brakujace.push(adres);
+      return brakujace;
+    }, { nazwa: STARA_PAMIEC, adresy: sw.CORE_SHELL_URLS });
+    expect(brakujacyRdzen, 'każdy wpis rdzenia z historią jest obecny w starej pamięci').toEqual([]);
+    const { usage } = await cdp.send('Storage.getUsageAndQuota', { origin: serwer.adres });
+    expect(usage, 'zmierzone zajęcie pełnego starego rdzenia').toBeGreaterThan(0);
+    await cdp.send('Storage.overrideQuotaForOrigin', {
+      origin: serwer.adres, quotaSize: Math.ceil(usage) + OPTIONAL_HEADROOM_BYTES,
+    });
+    const stara = await page.evaluate(async ({ nazwa, adresy, rdzen }) => {
       const cache = await caches.open(nazwa);
       let pelna = false;
       for (const adres of adresy) {
@@ -86,10 +108,13 @@ test('stara pamięć zajmuje cały limit źródła: nowy SW instaluje się, kopi
           throw blad;
         }
       }
-      return { pelna, wpisy: (await cache.keys()).length };
-    }, { nazwa: STARA_PAMIEC, adresy: [...sw.CORE_SHELL_URLS, ...sw.OPTIONAL_PRECACHE_ORDER] });
+      const brakujace = [];
+      for (const adres of rdzen) if (!(await cache.match(adres))) brakujace.push(adres);
+      return { pelna, wpisy: (await cache.keys()).length, brakujace };
+    }, { nazwa: STARA_PAMIEC, adresy: sw.OPTIONAL_PRECACHE_ORDER, rdzen: sw.CORE_SHELL_URLS });
     expect(stara.pelna, 'stara pamięć wypełniła limit źródła').toBe(true);
     expect(stara.wpisy, 'rdzeń z historią zmieścił się jak w starej instalacji').toBeGreaterThanOrEqual(sw.CORE_SHELL_URLS.length);
+    expect(stara.brakujace, 'pełny limit nie usunął żadnego wpisu starego rdzenia').toEqual([]);
 
     // Wpisy ?v= nowej instalacji, których w starej pamięci nie ma — tylko one mogą pójść z sieci.
     const wersjonowane = [...new Set([...sw.INSTALL_CORE_URLS, ...sw.INSTALL_OPTIONAL_URLS])]
