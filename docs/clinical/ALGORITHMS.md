@@ -15369,7 +15369,7 @@ Całe precache było jednym zdarzeniem `install`, a Chromium przerywa zdarzenie 
 
 **Testy.**
 - `tests/unit/sw-precache-stron.test.mjs` (13; było 8): atrapa Cache Storage ma teraz osobne pamięci pod nazwami i jeden limit bajtów źródła. Nowe: lista instalacji to dokładnie wpisy bieżące tablic; instalacja nie pobiera żadnego adresu historycznego i mieści się w budżecie (poniżej 40 MB i 600 żądań); wpisy `?v=` z poprzedniej pamięci powłoki idą z kopii, dokumenty i adresy bez `?v=` z sieci; pamięć sprzed 1.1.66 nie jest źródłem kopii; przycięcie zostawia najwyższy `?v=` i adresy bez `?v=`, pamięci czasu działania nie rusza; przy limicie zajętym przez starą instalację (rdzeń z historią) nowa wersja się instaluje. Zmienione: test „żaden adres nie znika z instalacji” pilnuje teraz, że kolejka nadal obejmuje każdy adres tablic, a instalacja bierze z niej tylko wpisy bieżące; odwołanie strony do historycznego `?v=` jest błędem także w rdzeniu. Sprawdzony mutacjami: instalacja z historią, bez przycięcia, bez kopii, bez progu 1.1.66 — każda zapala właściwy test.
-- `tests/e2e/pwa-precache-migracja.spec.mjs` (nowy, prawdziwy Chromium): pamięć powłoki `pwa-kalorii-shell-v1.1.104` wypełniona w kolejności starej instalacji aż do QuotaExceededError (limit 400 MiB — wpisy zapisane ze strony nie dostają pamięci podręcznej kodu, więc zajmują tyle co pliki), instalacja prawdziwego SW: aktywny, stara pamięć usunięta, żaden wpis `?v=` obecny w starej pamięci nie idzie z sieci (licznik w `tests/support/static-server.mjs`: `/__test-pobrania`), DocPro (`VildaVault`) i strona główna startują bez sieci. Sprawdzony mutacjami: bez przycięcia SW się nie instaluje, bez kopii wpisy idą z sieci.
+- `tests/e2e/pwa-precache-migracja.spec.mjs` (nowy, prawdziwy Chromium): pamięć powłoki `pwa-kalorii-shell-v1.1.104` wypełniona w kolejności starej instalacji aż do QuotaExceededError (limit 400 MiB — wpisy zapisane ze strony nie dostają pamięci podręcznej kodu, więc zajmują tyle co pliki; *aktualizacja 2026-10-21, P-NOTATKI-ZA-KARTA: limit = rozmiar rdzenia z historią + 70 MiB, bo serwer testowy podaje pod każdym historycznym `?v=` dzisiejszy plik i rdzeń przekroczył 400 MiB*), instalacja prawdziwego SW: aktywny, stara pamięć usunięta, żaden wpis `?v=` obecny w starej pamięci nie idzie z sieci (licznik w `tests/support/static-server.mjs`: `/__test-pobrania`), DocPro (`VildaVault`) i strona główna startują bez sieci. Sprawdzony mutacjami: bez przycięcia SW się nie instaluje, bez kopii wpisy idą z sieci.
 - `tests/e2e/pwa-strony-offline.spec.mjs` bez zmian w logice (komentarze z liczbami sprzed zmiany).
 
 ## Test „strona główna offline” na produkcyjnym service workerze (P-PWA-TEST-SW, bez zmiany SW, 2026-09-30)
@@ -15557,7 +15557,7 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
-## Notatki pacjenta wracają z kartą przywróconą po „Usuń pacjenta” (P-NOTATKI-ZA-KARTA, SW 1.1.334, `vilda_vault.js` 223, 2026-10-21)
+## Notatki pacjenta wracają z kartą przywróconą po „Usuń pacjenta” (P-NOTATKI-ZA-KARTA, SW 1.1.335, `vilda_vault.js` 223, 2026-10-21)
 
 **Zmiana kliniczna: tak** — wzory, progi, jednostki i interpretacje bez zmian; zmienia się reguła synchronizacji, która
 decyduje, czy notatki pacjenta przetrwają usunięcie pacjenta na innym urządzeniu. Notatki niosą treści kliniczne
@@ -15920,10 +15920,13 @@ Pliki pokrewne: te same 40 plików co po przeglądzie 1 oraz 18 kolejnych, któr
 `ustawienia-siatek-synchronizacja`, `usun-wersje-lokalnie`) — 58 plików, 1632 testy, każdy osobno, zielone bez zmian
 testów. `npm run lint`, `npm run test:syntax` (1113 plików), `npm run test:repo` (1748 plików) — zielone (na bazie
 `db0c2d50`). Przeniesione na `audyt` `346dd81a` (po P-POZNIEJSZA-POPRAWKA, #742): `vilda_vault.js` nałożony bez
-konfliktów, plik D-21 157 z 157; `npm test`: polityka repozytorium (1756 plików), lint, składnia (1119 plików),
-412 plików testów, 10 280 z 10 280 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44. Wersje: `npm run podbij-wersje`
-względem `origin/audyt` `346dd81a`: `vilda_vault.js`
-223, `vilda_chrome.js` 168, `vilda_session_bridge.js` 92; SW 1.1.333 → 1.1.334.
+konfliktów, plik D-21 157 z 157; `npm test` po scaleniu `audyt` `0a8a7d66` (#747): polityka repozytorium (1758
+plików), lint, składnia (1121 plików), 413 plików testów, 10 316 z 10 316 zielonych, `test:pro` 43 z 43, 32 z 32, 44 z 44.
+`tests/e2e/pwa-precache-migracja.spec.mjs`
+dostał limit źródła liczony z rozmiaru rdzenia (+70 MiB) zamiast stałych 400 MiB: z `vilda_vault.js` większym o 30 KB
+(161 wpisów historii) rdzeń urósł z 398,8 do 403,1 MiB i przestał się mieścić (opis przy P-SW-PRECACHE). Wersje:
+`npm run podbij-wersje` względem `origin/audyt` `0a8a7d66` (po #747): `vilda_vault.js` 223, `vilda_chrome.js` 168,
+`vilda_session_bridge.js` 92; SW 1.1.334 → 1.1.335.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 

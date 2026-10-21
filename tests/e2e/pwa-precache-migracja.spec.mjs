@@ -31,9 +31,15 @@ return { CORE_SHELL_URLS, OPTIONAL_PRECACHE_ORDER, INSTALL_CORE_URLS, INSTALL_OP
 const STARA_PAMIEC = 'pwa-kalorii-shell-v1.1.104';
 // Stara pamięć wypełniana z poziomu strony zajmuje tyle, ile pliki (Chromium dokłada pamięć podręczną kodu tylko do
 // skryptów zapisanych przez SW w trakcie instalacji — stąd 1,15 GB przy 474 MB plików w prawdziwej starej instalacji).
-// 400 MiB mieści rdzeń z historią (ok. 330 MiB plików) i kończy się w kolejce opcjonalnej — jak limit 1000 MiB
-// u prawdziwej starej instalacji.
-const LIMIT_MIB = 400;
+// Limit mieści rdzeń z historią i kończy się w kolejce opcjonalnej — jak limit 1000 MiB u prawdziwej starej instalacji.
+// Liczony z rozmiaru rdzenia, bo serwer testowy podaje pod każdym historycznym ?v= dzisiejszy plik, a historia rośnie
+// z każdym podbiciem wersji: stałe 400 MiB (rdzeń ok. 330 MiB przy pierwszym pomiarze) przestało go mieścić, gdy
+// rdzeń przekroczył 400 MiB. Zapas 70 MiB jak przy pierwszym pomiarze; kolejka opcjonalna jest od niego dłuższa.
+const rozmiarPliku = (adres) => {
+  const sciezka = adres.split('?')[0];
+  try { return fs.statSync(path.join(korzen, sciezka === '/' ? '/index.html' : sciezka)).size; } catch { return 0; }
+};
+const LIMIT_MIB = Math.ceil(sw.CORE_SHELL_URLS.reduce((suma, adres) => suma + rozmiarPliku(adres), 0) / (1024 * 1024)) + 70;
 const POMIJANE = [/^\/videos\//, /^\/posters\//, /^\/lab_pin_result\.js\?v=/];
 
 async function uruchomSerwer() {
