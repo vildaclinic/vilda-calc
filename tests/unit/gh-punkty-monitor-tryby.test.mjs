@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import {
-  MONITOR_PRZED_API, MONITOR_PRZED_API_SHA256, opcjePrzedApi, rodzaje, utworzAtrapeMonitoraGh, zrodlo,
+  MONITOR_PRZED_API, MONITOR_PRZED_API_SHA256, ZEGAR_KROK, ZEGAR_START, idDawneMonitora, idDeterministyczne, opcjePrzedApi,
+  rodzaje, utworzAtrapeMonitoraGh, zrodlo,
 } from '../support/gh-monitor-atrapa.mjs';
 
 // P-GH-PUNKTY-API rata 2 (PR-4) i rata 3 (PR-5, D5). Monitor punktów terapii GH (gh_therapy_monitor.js) bierze reguły
@@ -17,7 +18,9 @@ import {
 // napis) są od P-GH-PUNKTY-USZKODZONE (rata 4) uszkodzone i świadomie obsługiwane inaczej niż przed API: sprawdza je
 // gh-punkty-uszkodzone.test.mjs, tu porównanie obejmuje tylko wpisy-obiekty. Bez modułu dawki monitor od D6
 // (P-GH-DAWKA-BEZ-MODULU, zmiana kliniczna) nie zapisuje — to sprawdza wariant odmowy niżej, a porównanie z monitorem
-// sprzed API obejmuje scenariusze z modułem dawki. Dane wyłącznie FIKCYJNE.
+// sprzed API obejmuje scenariusze z modułem dawki. Od P-GH-NOWE-ID-MONITOR id nowego punktu nadaje dzisiejszemu
+// monitorowi VildaGhPunkty.noweId(), a monitor sprzed API nadawał je sam: to jedyna zamierzona różnica, którą porównanie
+// tłumaczy co do numeru wywołania zegara atrapy (idNaPostacSprzedApi niżej). Dane wyłącznie FIKCYJNE.
 
 const punkt = (id, type, nadpisania = {}) => ({
   id, type, ageYears: 9, ageMonths: 0, weight: 32, height: 130, boneAge: null, dose: 0.025, doseUnit: 'mg/kg/d',
@@ -99,13 +102,32 @@ function przebieg(scenariusz, tryb, { zlicz = false } = {}) {
   return { atrapa, zrzuty };
 }
 
+// P-GH-NOWE-ID-MONITOR: k-ty nowy punkt na zegarze atrapy ma w dzisiejszym monitorze id idDeterministyczne(k)
+// (VildaGhPunkty.noweId()), a w monitorze sprzed API idDawneMonitora(k) (String(Date.now() + Math.random())). W postaci
+// kanonicznej zrzutu dzisiejszego monitora każde id idDeterministyczne(k) zamieniamy na idDawneMonitora(k) z tym samym k,
+// także w tekście JSON pamięci modułu. Id dawnej postaci w zrzucie dzisiejszego monitora to błąd (monitor nadał id sam),
+// więc zbieramy je przed zamianą; każde inne id zostaje dosłownie i różni się od wyroczni.
+const ID_Z_ZEGARA = /\b(\d{13})\.(\d+)\b/g;
+function idNaPostacSprzedApi(tekst) {
+  const dawne = [];
+  const wynik = tekst.replace(ID_Z_ZEGARA, (id, ms) => {
+    const k = (Number(ms) - ZEGAR_START) / ZEGAR_KROK;
+    if (!Number.isInteger(k) || k < 0) return id;
+    if (id === idDawneMonitora(k)) dawne.push(id);
+    return id === idDeterministyczne(k) ? idDawneMonitora(k) : id;
+  });
+  return { wynik, dawne };
+}
+
 function porownaj(scenariusz) {
   const z = przebieg(scenariusz, TERAZ).zrzuty;
   const b = przebieg(scenariusz, PRZED_API).zrzuty;
   for (let i = 0; i < z.length; i += 1) {
     const { api: _a, ...zm } = z[i];
     const { api: _b, ...zb } = b[i];
-    expect(kanon(zm), `${scenariusz.nazwa} — krok ${i + 1}`).toBe(kanon(zb));
+    const { wynik, dawne } = idNaPostacSprzedApi(kanon(zm));
+    expect(dawne, `${scenariusz.nazwa} — krok ${i + 1}: id nadane bez VildaGhPunkty.noweId()`).toEqual([]);
+    expect(wynik, `${scenariusz.nazwa} — krok ${i + 1}`).toBe(kanon(zb));
   }
   return { z, b };
 }
@@ -219,9 +241,9 @@ describe('Monitor GH z modułem: delegacja do VildaGhPunkty', () => {
 
   it('każda ścieżka zapisu woła API, a zapis listy to dokładnie jedno zapisz()', () => {
     expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('continue')] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'zapisz']);
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'noweId', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny()] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'punkt', 'zapisz']);
+      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'noweId', 'punkt', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [edytuj(KONTYNUACJA.id, { ghEditHeight: '139' }, 'continue')] }))
       .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [(a) => a.usun(KONTYNUACJA.id)] })).toEqual(['uszkodzone', 'zapisz']);
@@ -257,9 +279,10 @@ const EDYCJA_SPOZA_LISTY = 'Nie zapisano zmian: edytowany punkt nie należy do b
 // Stany, w których bramka Gpa() nie przepuszcza API. Każdy wariant zwraca funkcję, która przywraca zgodny moduł
 // (jak po odświeżeniu strony), oraz dziennik wywołań podstawionego API.
 const BEZ_API = [
-  { nazwa: 'brak modułu VildaGhPunkty (plik nie doszedł)', opcje: { modulPunktow: false }, podmien: (w) => ({
+  // Plik dochodzi z zegarem atrapy (P-GH-NOWE-ID-MONITOR: id nowego punktu nadaje noweId() modułu).
+  { nazwa: 'brak modułu VildaGhPunkty (plik nie doszedł)', opcje: { modulPunktow: false }, podmien: (_w, atrapa) => ({
     wywolania: [],
-    przywroc: () => { new Function('window', 'globalThis', zrodlo('vilda_gh_punkty.js'))(w, w); },
+    przywroc: () => { atrapa.zaladujModulPunktow(); },
   }) },
   // P-GH-DAWKA-BEZ-MODULU (D6): bez modułu dawki odmowa dla każdego preparatu.
   { nazwa: 'brak modułu dawki VildaGhDawka (vilda_gh_dawka.js nie doszedł; D6)', opcje: { modulDawki: false }, podmien: (w) => ({
@@ -314,7 +337,7 @@ describe('Monitor GH, rata 3 (D5): bez zgodnego modułu VildaGhPunkty nie zapisu
     it.each(CZYNNOSCI.map((c) => [c.nazwa, c]))(`${wariant.nazwa}: %s`, (_n, czynnosc) => {
       const atrapa = utworzAtrapeMonitoraGh({ ...czynnosc.opcje, ...wariant.opcje });
       if (czynnosc.przed) czynnosc.przed(atrapa);
-      const { wywolania, przywroc } = wariant.podmien(atrapa.win);
+      const { wywolania, przywroc } = wariant.podmien(atrapa.win, atrapa);
       const przed = atrapa.stan();
 
       expect(() => czynnosc.zapis(atrapa)).not.toThrow();
@@ -349,7 +372,7 @@ describe('Monitor GH, rata 3 (D5): bez zgodnego modułu VildaGhPunkty nie zapisu
     for (const wariant of BEZ_API) {
       const usuniety = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA], ...wariant.opcje });
       usuniety.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
-      wariant.podmien(usuniety.win);
+      wariant.podmien(usuniety.win, usuniety);
       usuniety.ustawModul([WLACZENIE]);
       usuniety.kliknij('btnGhContinue');
       expect(usuniety.stan().komunikat, wariant.nazwa).toBe(EDYCJA_SPOZA_LISTY);
@@ -357,7 +380,7 @@ describe('Monitor GH, rata 3 (D5): bez zgodnego modułu VildaGhPunkty nie zapisu
       const pacjent = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA], ...wariant.opcje });
       ustawPacjenta(pacjent, 'fikc-pacjent-1');
       pacjent.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
-      wariant.podmien(pacjent.win);
+      wariant.podmien(pacjent.win, pacjent);
       ustawPacjenta(pacjent, 'fikc-pacjent-2');
       pacjent.kliknij('btnGhContinue');
       expect(pacjent.stan().komunikat, wariant.nazwa).toBe(EDYCJA_SPOZA_LISTY);

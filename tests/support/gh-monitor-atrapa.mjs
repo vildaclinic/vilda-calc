@@ -47,13 +47,21 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 
 export const KLUCZ_MODULU = 'GH_THERAPY_POINTS';
 export const TAB_ID_DOMYSLNY = 'fikcyjna-karta-1';
-// Zegar atrapy: k-te wywołanie Date.now() w monitorze (od 0) daje ZEGAR_START + ZEGAR_KROK·k,
-// a Math.random() zawsze LOSOWA. Monitor woła Date.now() tylko przy nadaniu id nowemu punktowi,
-// więc k-ty dodany punkt ma id idDeterministyczne(k).
+// Zegar atrapy: k-te wywołanie Date.now() w oknie atrapy (od 0) daje ZEGAR_START + ZEGAR_KROK·k (opcja krokZegara
+// zmienia krok; 0 — zegar stoi), a Math.random() zawsze LOSOWA. Zegar dostają monitor i moduł VildaGhPunkty, z jednym
+// licznikiem na okno (jak jeden zegar strony).
+// Od P-GH-NOWE-ID-MONITOR id nowemu punktowi (z karty i wstecznemu) nadaje VildaGhPunkty.noweId() i tylko ono woła tu
+// zegar (monitor woła go poza tym przy skoku z Karty pacjenta, w setTimeout, którego atrapa nie wykonuje). Każde
+// wywołanie to więc nowa milisekunda, w której noweId zaczyna od pozycji Math.floor(LOSOWA · 500) = 125 (P-GH-NOWE-ID):
+// k-ty dodany punkt ma id idDeterministyczne(k), np. "1767225600000.125".
 export const ZEGAR_START = Date.UTC(2026, 0, 1);
 export const ZEGAR_KROK = 1000;
 export const LOSOWA = 0.25;
-export const idDeterministyczne = (k) => String(ZEGAR_START + ZEGAR_KROK * k + LOSOWA);
+export const idDeterministyczne = (k) => `${ZEGAR_START + ZEGAR_KROK * k}.125`;
+// Id, które monitor do wersji 59 nadawał sam: String(Date.now() + Math.random()) na tym samym zegarze, np.
+// "1767225600000.25". Tak nadaje id zamrożony monitor sprzed API (MONITOR_PRZED_API) i monitor z commitu bazowego
+// złotej siatki (tests/scripts/gh-punkty-wzorzec.mjs).
+export const idDawneMonitora = (k) => String(ZEGAR_START + ZEGAR_KROK * k + LOSOWA);
 
 export const rodzaje = (wpisy) => wpisy.map((w) => w.rodzaj);
 export const zrodlo = (plik) => fs.readFileSync(path.join(korzen, plik), 'utf8');
@@ -577,6 +585,8 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
     getTabId = TAB_ID_DOMYSLNY,
     sesjaTabId = null,
     deterministyczneId = true,
+    // Krok zegara atrapy w ms na wywołanie Date.now(); 0 — zegar stoi (wszystkie id w jednej milisekundzie).
+    krokZegara = ZEGAR_KROK,
     nakladkaUsuwania = true,
     zrodla = {},
   } = opcje;
@@ -731,20 +741,21 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
     wykonaj('vilda_gh_dawka_dane.js');
     wykonaj('vilda_gh_dawka.js');
   }
-  // Bez ZALEZNOSCI z load-browser-script.mjs: wariant „bez modułu dawki” ma zostać bez VildaGhDawka.
-  if (modulPunktow) {
-    const tekst = typeof zrodla['vilda_gh_punkty.js'] === 'string' ? zrodla['vilda_gh_punkty.js'] : zrodlo('vilda_gh_punkty.js');
-    new Function('window', 'globalThis', tekst)(win, win);
-  }
-
+  // Zegar atrapy (deterministyczneId) dla monitora i VildaGhPunkty: jeden licznik na okno.
   let Data = Date;
   let Matematyka = Math;
   if (deterministyczneId) {
     let n = 0;
     Data = class extends Date {};
-    Data.now = () => ZEGAR_START + ZEGAR_KROK * n++;
+    Data.now = () => ZEGAR_START + krokZegara * n++;
     Matematyka = Object.create(Math, { random: { value: () => LOSOWA } });
   }
+  // VildaGhPunkty z zegarem atrapy (P-GH-NOWE-ID-MONITOR: noweId() nadaje id nowym punktom monitora).
+  // Bez ZALEZNOSCI z load-browser-script.mjs: wariant „bez modułu dawki” ma zostać bez VildaGhDawka.
+  const zaladujModulPunktow = (tekst = zrodlo('vilda_gh_punkty.js')) => {
+    new Function('window', 'globalThis', 'Date', 'Math', tekst)(win, win, Data, Matematyka);
+  };
+  if (modulPunktow) zaladujModulPunktow(typeof zrodla['vilda_gh_punkty.js'] === 'string' ? zrodla['vilda_gh_punkty.js'] : undefined);
   let monitor;
   if (typeof zrodla['gh_therapy_monitor.js'] === 'string') monitor = kompiluj(zrodla['gh_therapy_monitor.js']);
   else monitor = monitorSkompilowany || (monitorSkompilowany = kompiluj(zrodlo('gh_therapy_monitor.js')));
@@ -805,6 +816,8 @@ export function utworzAtrapeMonitoraGh(opcje = {}) {
     ustaw,
     kliknij,
     rodzaje: (wpisy = dziennik) => rodzaje(wpisy),
+    // Moduł VildaGhPunkty wczytany później (np. po odmowie bez modułu, jak po odświeżeniu strony), z zegarem atrapy.
+    zaladujModulPunktow,
     wyczyscDziennik() { dziennik.length = 0; },
     ustawModul(wartosc, klucz = KLUCZ_MODULU) {
       if (wartosc === undefined) moduly.delete(klucz);
