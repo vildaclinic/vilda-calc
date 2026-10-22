@@ -1,0 +1,47 @@
+{
+  "version": "2026-10-22.1",
+  "kind": "educational-source-selection",
+  "ordinaryOnly": true,
+  "id": "kulle2024-female-e2-th1-age-over1-under6",
+  "analyte": "e2",
+  "sex": "female",
+  "unit": "pmol/L",
+  "sourceFile": "kulle2024-female-e2-th1-group-median.json",
+  "sourceGroupId": "female-th1-1-8",
+  "minAge": 1,
+  "maxAge": 6,
+  "minAgeExclusive": true,
+  "maxAgeExclusive": true,
+  "requiredGonadalStage": 1,
+  "requiredGonadalKind": "Th",
+  "statistic": "group-median",
+  "interpolation": "constant",
+  "specimen": "serum",
+  "compatibleSpecimenIds": [
+    "serum",
+    "surowica"
+  ],
+  "compatibleAssayMethodIds": [
+    "lc-ms/ms",
+    "lc-ms-ms",
+    "lcmsms"
+  ],
+  "excludedCyclePhases": [
+    "pregnancy",
+    "pregnancy_t1",
+    "pregnancy_t2",
+    "pregnancy_t3",
+    "postmenopause"
+  ],
+  "referenceLabel": "Mediana grupy Th1, 1–8 lat",
+  "patientNote": "Nie jest medianą dokładnego wieku.",
+  "selectionPolicy": "Jedno edukacyjne odniesienie grupowe Kulle 2024 uzupełnia wyłącznie wnętrze luki >1–<6 lat u dziewczynki z aktualnym Th1. Mediana 15 pmol/L i N=213 dotyczą pełnej opublikowanej grupy B1 1–8 lat. Źródła nie wybieramy według wartości wyniku. Nie dodajemy RI, modelu wieku ani liczb do krzywej edukacyjnej lub porównania płci.",
+  "agePolicy": "Cały możliwy wiek musi mieścić się w otwartym (1,6). Dokładne 1 zachowuje Ljubicic, a 6 Madsen. Wpis 1 rok 0 miesięcy obejmuje [1,1+1/12) i nie kwalifikuje do tej grupy. N=213 nie staje się liczebnością nowej podgrupy >1–<6 lat. Bez ekstrapolacji i wybierania środka niepewnego wieku. Zmiana odniesienia przy 6 latach wynika z wyboru innego źródła, nie z nagłego spadku estradiolu u pacjentki.",
+  "stagePolicy": "Wymagane jest aktualne, jawnie typowane Th1 tej samej pacjentki. P1, ogólny numer Tannera, stadium innej osoby lub dawna ocena dopuszczona tylko do obliczeń wzrostowych nie zastępują Th1. Brak Th1 zachowuje wynik i niezależną interpretację laboratoryjną; nie dodajemy nowego pytania.",
+  "specimenPolicy": "Brak lub nieznany materiał pozwala na ograniczone porównanie edukacyjne bez potwierdzania materiału pacjentki. Znana surowica jest zgodna z opisem odniesienia; znane osocze lub inny materiał wyłącza profil. Autorzy opisują analizę serum/plasma, ale nie przypisują materiału poszczególnym uczestniczkom B1.",
+  "assayPolicy": "Źródło stosuje własny protokół LC-MS/MS z derywatyzacją chlorkiem dansylu, Acquity UPLC i Waters Quattro Premier/XE. Brak lub nieznana metoda pozwala na orientacyjne porównanie. Znana metoda spoza LC-MS/MS je blokuje. Ogólne aliasy LC-MS/MS oznaczają wyłącznie klasę metody dla porównania edukacyjnego; nie potwierdzają zgodności ani harmonizacji oznaczeń.",
+  "contextPolicy": "Zachowane są istniejące bramki bieżącego pacjenta i próbki oraz znanego leczenia hormonalnego/GnRHa, stymulacji, ciąży i menopauzy. Brak danych nie potwierdza braku tych okoliczności. Nie przenosimy obecnego Th ani dodatnich faktów na historyczną próbkę lub inną osobę.",
+  "lowValuePolicy": "LOD 4 i LLOQ 11 pmol/L pochodzą ze źródła. Numeryczne postępowanie z cenzurą w medianie Harrella–Davisa nie jest opisane; 15 pmol/L powyżej LLOQ tego nie rozstrzyga. Nie podstawiamy LOD/2, LLOQ/2 ani zera za wynik pacjentki i nie stosujemy globalnej podłogi 11. Nierówność wyklucza dokładny punkt.",
+  "sourceLimitationsPolicy": "Niewyjaśnione pozostają liczebności 1753 versus 1724, nieuporządkowany wiersz B4 oraz reguła cenzury i rozdział materiału w B1. Nie korygujemy źródła. Właściciel zaakceptował ujawniony wariant edukacyjny 22.10.2026, bez uznania tych ograniczeń za rozwiązane.",
+  "referenceGroupLabel": "Th1, 1–8 lat"
+}

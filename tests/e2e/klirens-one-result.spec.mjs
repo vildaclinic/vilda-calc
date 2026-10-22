@@ -84,7 +84,11 @@ for (const width of [320, 390, 1440]) {
     await expect(page.locator('[data-clcr-marker-context]')).toHaveValue('unknown');
     await expectSingleResult(page, 'ckid_u25', '83');
     expect(Number(await card(page, 'ckid_u25').getAttribute('data-clcr-value'))).toBeCloseTo(82.90160199882423, 8);
-    await expect(card(page, 'ckid_u25')).toContainText(/ograniczon|nie potwierdzono/i);
+    await expect(card(page, 'ckid_u25')).toHaveAttribute('data-clcr-tone', 'warning');
+    await expect(card(page, 'ckid_u25').locator('.clcr-result-interpretation')).toHaveText('Oszacowanie poniżej normy dla wieku');
+    await expect(card(page, 'ckid_u25')).toHaveAttribute('data-clcr-category', '');
+    await expect(card(page, 'ckid_u25').locator('[data-clcr-category-control]')).toHaveCount(0);
+    await expect(page.locator('#clcrResultReport [data-clcr-category-row][aria-current="true"]')).toHaveCount(0);
     await expect(page.locator('#clcrResultReport')).not.toContainText(/4\s*\/\s*4|pełna interpretacja|komplet danych/i);
     const saved = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
     expect(saved.creatinineState).toBe('unknown');

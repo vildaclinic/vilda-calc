@@ -516,13 +516,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
   const source = nodes.find((node) => node.classList.contains("clcr-result-source") && node.dataset.clcrFormula === formulaId);
+  const assumptions = nodes.find((node) => node.classList.contains("clcr-result-assumptions") && node.dataset.clcrFormula === formulaId);
   const extras = document.createElement("div");
   extras.className = "clcr-result-extra";
   nodes.forEach((node) => {
     const owner = node.dataset.clcrFormula;
     if (owner && owner !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
       node.remove();
-    } else if (node !== primary && node !== details && node !== source) extras.appendChild(node);
+    } else if (node !== primary && node !== details && node !== source && node !== assumptions) extras.appendChild(node);
   });
   if (extras.childElementCount) details.appendChild(extras);
   return staging.innerHTML;
@@ -568,6 +569,14 @@ function update() {
     cystatinCStandardization =
       $("CystatinCStandardization")?.value || "",
     cystatinCAssayMethod = $("CystatinCAssayMethod")?.value || "";
+  const crCysStandardization =
+    typeof window.ClcrUiWorkflow?.crCysStandardization === "function"
+      ? window.ClcrUiWorkflow.crCysStandardization()
+      : {
+          confirmed: !!$("CrCysStandardizationConfirmed")?.checked,
+          creatinineStandardization: $("CrCysStandardizationConfirmed")?.checked ? "IDMS" : "",
+          cystatinCStandardization: $("CrCysStandardizationConfirmed")?.checked ? "ERM-DA471/IFCC" : "",
+        };
   const creatinineState = $("creatinineState")
       ? $("creatinineState").value
       : "unknown",
@@ -889,15 +898,22 @@ function update() {
         }
       } else {
         const requiresCreatinine = formulaId !== "ckid_u25_cys";
-        const assayEligible = !requiresCreatinine || ["enzymatic_idms", "jaffe_idms"].includes(populationContext.scrAssay);
-        const markerEligible = creatinineContext.categoryAllowed && assayEligible && cystatinCStandardization === "ERM-DA471/IFCC";
+        const assayEligible = formulaId === "egfr_cr_cys"
+          ? crCysStandardization.confirmed
+          : !requiresCreatinine || ["enzymatic_idms", "jaffe_idms"].includes(populationContext.scrAssay);
+        const cystatinEligible = formulaId === "egfr_cr_cys"
+          ? crCysStandardization.cystatinCStandardization === "ERM-DA471/IFCC"
+          : cystatinCStandardization === "ERM-DA471/IFCC";
+        const markerEligible = creatinineContext.categoryAllowed && assayEligible && cystatinEligible;
         const category = markerEligible && ageYears !== null && ageYears >= 2
           ? window.ClcrClinicalSafety.kdigoGCategory(input.value) : null;
         const row = referenceProfile.gfr.rows.find((entry) => entry.code === category?.code);
         presentation = {
           valueVisible: creatinineContext.calculationAllowed,
           category, tone: row?.tone || "neutral",
-          label: category ? row.meaning : "Szacowany eGFR — ocena ograniczona",
+          label: category ? row.meaning : formulaId === "egfr_cr_cys" && creatinineContext.status === "unknown"
+            ? "Nie potwierdzono stabilności markerów."
+            : "Szacowany eGFR — ocena ograniczona",
           reasons: markerEligible ? [] : ["Nie potwierdzono wszystkich warunków interpretacji: stabilności markerów lub zgodności oznaczeń. Nie nadano kategorii G."],
         };
       }
@@ -929,7 +945,8 @@ function update() {
     return presenter.render({
       ...input, formulaId, presentation: presentation || { label: input.label, tone: "neutral" },
       ageYears, markerPolicy: creatinineContext, assay: populationContext.scrAssay,
-      cystatinStandardization: cystatinCStandardization,
+      creatinineStandardization: formulaId === "egfr_cr_cys" ? crCysStandardization.creatinineStandardization : "",
+      cystatinStandardization: formulaId === "egfr_cr_cys" ? crCysStandardization.cystatinCStandardization : cystatinCStandardization,
       sampleKind: spotSampleKind, confounders: spotConfounders,
     }, referenceProfile);
   }
@@ -1027,7 +1044,11 @@ function update() {
     ckdEpiCrCysResult =
       extendedEgfr &&
       typeof extendedEgfr.computeCkdEpi2021CrCys === "function"
-        ? extendedEgfr.computeCkdEpi2021CrCys(extendedEgfrInput)
+        ? extendedEgfr.computeCkdEpi2021CrCys({
+            ...extendedEgfrInput,
+            creatinineStandardization: crCysStandardization.creatinineStandardization,
+            cystatinCStandardization: crCysStandardization.cystatinCStandardization,
+          })
         : null,
     ckidU25CysResult =
       extendedEgfr &&
@@ -1289,9 +1310,11 @@ function update() {
             w &&
             isFiniteNum(w.value) &&
             creatinineContext.categoryAllowed &&
-            (w.requiresCreatinine !== true ||
+            (w.formulaId === "egfr_cr_cys" ? crCysStandardization.confirmed :
+              w.requiresCreatinine !== true ||
               creatinineAssayEligible) &&
-            (w.requiresCystatin !== true ||
+            (w.formulaId === "egfr_cr_cys" ? crCysStandardization.confirmed :
+              w.requiresCystatin !== true ||
               cystatinAssayEligible) &&
             t >= 2,
         ),
@@ -1938,9 +1961,7 @@ function update() {
               label: "2021 CKD\u2011EPI eGFRcr\u2011cys",
               requiresCreatinine: true,
               requiresCystatin: true,
-              markerEligible:
-                automaticCreatinineEligible &&
-                automaticCystatinEligible,
+              markerEligible: crCysStandardization.confirmed,
             },
           {
             value: m.egfr,
@@ -1990,6 +2011,7 @@ function update() {
       d &&
       creatinineEstimateShown &&
       !["cg", "cg_norm"].includes(l) &&
+      !(l === "egfr_cr_cys" && crCysStandardization.confirmed) &&
       populationContext.scrAssay !== "enzymatic_idms" &&
       (!["egfr", "ckid_u25"].includes(l) ||
         populationContext.scrAssay === "jaffe_idms")
@@ -3899,6 +3921,7 @@ function resetApp(e = !0) {
     "ScrAssay",
     "creatinineState",
     "suspectedAKI",
+    "CrCysStandardizationConfirmed",
   ].forEach((c) => {
     const f = document.getElementById(c);
     f && (o[c] = f.type === "checkbox" ? f.checked : f.value);

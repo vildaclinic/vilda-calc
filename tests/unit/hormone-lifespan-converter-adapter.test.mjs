@@ -512,8 +512,8 @@ describe('Żeńskie E2 — aktualny kontekst bez dodatkowego formularza', () => 
     });
     app.context.getEffectivePatient = () => ({ sex: app.context.sourcePatient.sex,
       age: years + months / 12, cycle_phase: app.context.localOverride.cycle_phase });
-    const calculate = () => app.update({ id: 'estradiol' }, null,
-      { ok: true, siValue: 50, siUnit: 'pmol/L' });
+    const calculate = (siValue = 50) => app.update({ id: 'estradiol' }, null,
+      { ok: true, siValue, siUnit: 'pmol/L' });
     return { ...app, calculate, reference: () => lifespanReference.evaluate(lifespanData, app.last()) };
   }
 
@@ -525,6 +525,151 @@ describe('Żeńskie E2 — aktualny kontekst bez dodatkowego formularza', () => 
       measurement: { value: 50, unit: 'pmol/L', operator: '=' }, contraindicated: false });
     expect(app.reference()).toMatchObject({ status: 'ready', referenceValue: 52.46318409704675,
       profile: { id: 'madsen2022-female-e2-age-6-18' } });
+  });
+
+  function currentBreastObservation(app, stage = 1) {
+    const id = app.context.sourcePatient.identityKey;
+    app.context.sourcePatient.pubertyAssessmentContext = { available: true, preparing: false,
+      patientId: id || null, sex: 'F', demographics: { sex: 'F' } };
+    app.context.sourcePatient.gonadalObservation = { kind: 'Th', stage, current: true };
+    return app;
+  }
+
+  it('reuses only current typed Th1 in the childhood gap and preserves the numerical conversion', () => {
+    const app = currentBreastObservation(femaleE2Adapter(2));
+    app.calculate(20);
+    expect(app.last()).toMatchObject({ sex: 'female', ageYears: 2, ageUpperYears: 2 + 1 / 12,
+      puberty: { kind: 'Th', stage: 1 }, measurement: { value: 20, unit: 'pmol/L', operator: '=' } });
+    expect(app.reference()).toMatchObject({ status: 'ready', value: 20, referenceValue: 15,
+      profile: { id: 'kulle2024-female-e2-th1-age-over1-under6', statistic: 'group-median' } });
+    for (const stage of [2, 3, 4, 5]) {
+      app.context.sourcePatient.gonadalObservation.stage = stage;
+      app.calculate(20);
+      expect(app.last().puberty).toEqual({ kind: 'Th', stage });
+      expect(app.reference()).toEqual({ status: 'unavailable', reason: 'incompatible-puberty-stage' });
+      expect(app.last().measurement.value).toBe(20);
+    }
+  });
+
+  it('rejects missing, historical, wrong-axis and inconsistent Th carriers without suppressing the result', () => {
+    const mutations = [
+      source => { delete source.gonadalObservation; },
+      source => { source.gonadalObservation.current = false; },
+      source => { source.gonadalObservation = { kind: 'Th', stage: 1, usableForGrowth: true }; },
+      ...['P', 'Ax', 'G', 'unspecified'].map(kind => source => { source.gonadalObservation.kind = kind; }),
+      ...[null, '1', 0, 6].map(stage => source => { source.gonadalObservation.stage = stage; }),
+      source => { source.pubertyAssessmentContext.available = false; },
+      source => { source.pubertyAssessmentContext.preparing = true; },
+      source => { source.pubertyAssessmentContext.patientId = 'fictional-other-patient'; },
+      source => { source.pubertyAssessmentContext.sex = 'M'; },
+      source => { source.pubertyAssessmentContext.demographics.sex = 'M'; },
+    ];
+    for (const mutate of mutations) {
+      const app = currentBreastObservation(femaleE2Adapter(2));
+      mutate(app.context.sourcePatient);
+      app.calculate(20);
+      expect(app.last()).toMatchObject({ puberty: null, measurement: { value: 20, unit: 'pmol/L' } });
+      expect(app.reference()).toEqual({ status: 'unavailable', reason: 'missing-puberty-stage' });
+    }
+  });
+
+  it('does not substitute local Tanner or demographic overrides for the active main-form breast examination', () => {
+    for (const [key, value] of [['tanner', 1], ['age', 2], ['sex', 'F']]) {
+      const app = currentBreastObservation(femaleE2Adapter(2));
+      app.context.localOverride[key] = value;
+      app.context.overrideAgeEl.value = '2';
+      app.context.overrideAgeMonthsEl.value = '0';
+      app.calculate(20);
+      expect(app.last().puberty).toBeNull();
+      expect(app.last().measurement.value).toBe(20);
+      expect(app.reference()).toEqual({ status: 'unavailable', reason: 'missing-puberty-stage' });
+    }
+    const app = currentBreastObservation(femaleE2Adapter(2));
+    app.context.localOverride.cycle_phase = 'follicular';
+    app.calculate(20);
+    expect(app.reference()).toMatchObject({ status: 'ready', referenceValue: 15 });
+  });
+
+  it('uses the production shared reader and current-examination model, never its historical growth allowance', () => {
+    const app = femaleE2Adapter(2);
+    const model = {};
+    loadBrowserScript('vilda_puberty_assessment.js', model);
+    const user = { sex: 'F', age: 2, ageMonths: 0, tannerStage: '1', pubertyAssessment: {
+      version: 1, sex: 'F', observations: { G: null, P: null,
+        Th: { stage: 1, ageMonths: 24, observedAtISO: '2026-10-22', source: 'clinician-entry' } },
+    }, pubertyAssessmentVisit: { version: 1, visitId: 'fictional-e2-childhood-visit', ownerPatientId: null,
+      currentAxes: ['Th'], reference: { sex: 'F', ageMonths: 24, measuredAtISO: '2026-10-22' } } };
+    const options = { sex: 'F', patientId: null, currentAgeMonths: 24, measuredAtISO: '2026-10-22' };
+    app.context.persistence = { readShared: () => user };
+    app.context.extractTannerFromAny = () => 1;
+    app.context.window.VildaSession = { getPatient: () => user };
+    app.context.window.VildaPubertyAssessment = model.VildaPubertyAssessment;
+    app.context.window.VildaPubertyAssessmentContext = { readActiveContext: () => ({
+      available: true, preparing: false, patientId: null, sex: 'F',
+      demographics: { sex: 'F', ageYears: 2, ageMonths: 0 },
+      assessmentContext: model.VildaPubertyAssessment.readUser(user),
+      gonadal: model.VildaPubertyAssessment.gonadalContext(user, options),
+      growth: model.VildaPubertyAssessment.gonadalContext(user, { ...options, scope: 'growth' }),
+    }) };
+    vm.runInContext(patientReader, app.context);
+    app.calculate(20);
+    expect(app.reference()).toMatchObject({ status: 'ready', referenceValue: 15 });
+    delete user.pubertyAssessmentVisit;
+    const historical = app.context.readPubertyPatientContext();
+    expect(historical.pubertyAssessmentContext.growth).toMatchObject({ stage: 1, current: false, usableForGrowth: true });
+    expect(historical.gonadalObservation).toMatchObject({ stage: null, current: false });
+    app.calculate(20);
+    expect(app.last()).toMatchObject({ puberty: null, measurement: { value: 20, unit: 'pmol/L' } });
+    expect(app.reference()).toEqual({ status: 'unavailable', reason: 'missing-puberty-stage' });
+  });
+
+  it('drops the active Th when patient identity, source readiness or vault availability changes', () => {
+    const id = 'fictional-current-e2-child';
+    const app = currentBreastObservation(femaleE2Adapter(2));
+    app.context.identity = id;
+    app.context.localOverrideIdentity = id;
+    app.context.sourcePatient.identityKey = id;
+    app.context.sourcePatient.pubertyAssessmentContext.patientId = id;
+    app.calculate(20);
+    expect(app.reference().status).toBe('ready');
+    app.context.identity = 'fictional-next-e2-child';
+    app.context.sourcePatient.identityKey = app.context.identity;
+    app.calculate(20);
+    expect(app.last()).toMatchObject({ measurement: null, puberty: null });
+    expect(app.context.valueEl.value).toBe('');
+    app.context.sourcePatient.pubertyAssessmentContext.patientId = app.context.identity;
+    app.context.sourcePatient.gonadalObservation = null;
+    app.calculate(20);
+    expect(app.reference()).toEqual({ status: 'unavailable', reason: 'missing-puberty-stage' });
+    currentBreastObservation(app);
+    app.context.sourcePatient.sourceStatus = 'loading';
+    app.calculate(20);
+    expect(app.last()).toMatchObject({ measurement: null, puberty: null });
+    app.context.sourcePatient.sourceStatus = 'ready';
+    app.context.window.VildaVault = { isUnlocked: () => false };
+    app.calculate(20);
+    expect(app.last()).toMatchObject({ measurement: null, puberty: null, sourceStatus: 'unavailable' });
+    expect(app.reference().status).toBe('unavailable');
+  });
+
+  it('keeps known pregnancy, hormonal treatment and stimulation effective with an otherwise qualifying childhood Th1', () => {
+    for (const known of [{ pregnancy: 'yes' }, { treatment: { context: 'hormonal' } },
+      { treatment: { gnrha: 'yes' } }, { treatment: { sexSteroids: true } }]) {
+      const app = currentBreastObservation(femaleE2Adapter(2));
+      app.context.testosteroneMeasurementContext = known;
+      app.calculate(20);
+      expect(app.last()).toMatchObject({ puberty: { kind: 'Th', stage: 1 }, contraindicated: true,
+        measurement: { value: 20, unit: 'pmol/L' } });
+      expect(app.reference()).toEqual({ status: 'unavailable', reason: 'contraindicated' });
+    }
+    const app = currentBreastObservation(femaleE2Adapter(2));
+    app.context.sourcePatient.gnrhaStatus = 'w-trakcie';
+    app.calculate(20);
+    expect(app.reference()).toEqual({ status: 'unavailable', reason: 'contraindicated' });
+    app.context.sourcePatient.gnrhaStatus = null;
+    app.context.getEffectivePatient = () => ({ sex: 'F', age: 2, test_protocol: 'stimulated' });
+    app.calculate(20);
+    expect(app.reference()).toEqual({ status: 'unavailable', reason: 'contraindicated' });
   });
 
   it('preserves known current pregnancy and hormonal facts, including for the existing infant source', () => {
