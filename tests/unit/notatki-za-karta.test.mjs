@@ -19,22 +19,23 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // z 1693 obserwacji stanu tego pliku jak z prawdziwym 346dd81a, po jego poprawkach 2262 z 2262 przy 182 testach, w tym
 // 256 na starych urządzeniach; po domknięciu przeglądu poprawki MS2 2537 z 2537 przy 185 testach, w tym 271; po
 // przeglądzie po scaleniu (uwaga Codexa P1) 2758 z 2758 przy 201 testach, w tym 295; po przeglądzie poprawki P1 3130 z
-// 3130 przy 214 testach, w tym 307; po jego weryfikacji 2 3959 z 3959 przy 225 testach, w tym 307). NIE obejmuje kopii
-// konta na starym urządzeniu: mergeVaultBackup, previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z
-// polem, a prawdziwa stara aplikacja kasuje wtedy notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody
-// rzucają błąd (taki test wymaga prawdziwego starszego sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) —
-// zegar urządzenia przesunięty względem wspólnego (Z1). [CZERWONY na db0c2d50] — przypadki, które na bazie dają wynik
-// inny niż oczekiwany (lista w opisie zmiany); kod notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] —
-// przegląd przeniesienia na D-7 (MS2); na 12b0cd4d czerwone są też W14a i W11 z domknięcia przeglądu poprawki MS2 (opis
-// przy nich). [CZERWONY na 95b6f96e] — przegląd po scaleniu (uwaga Codexa P1 do #746) i przegląd poprawki P1 (recenzje
-// F1, R2; opis przy blokach). [CZERWONY na 6db54b78] — weryfikacja 2 przeglądu poprawki P1 (W1, pętla zdejmowania
-// nagrobków; opis przy bloku, tam też G13w — luka testów W2, czerwony na 83c04d5b — i ścieżka błędu RZ0e, K1e).
-// [kontrola] — kontrola wobec bazy (T4, T7, T19–T22, M6, M7, P1-1k, P1-4k, S2, K1 przed i po scaleniu, K9k, K9d: wynik
-// jak dotąd) albo wobec wariantu lub znanego ograniczenia z tego samego bloku (R10c, R10d z nowym O, P5, CZ3b, SP1,
-// EL1, OD2 z nowym D, HD z nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem przed ratunkiem): te drugie są na
-// db0c2d50 czerwone z powodu zachowania (bez ratunku notatki nie wracają; T26c — nagrobek bez pola). [znane
-// ograniczenie] — test przypina opisany wynik. [CZERWONY na ab8ead6] — przegląd poprawki P1
-// (F2, starsze niż D-21): nagrobek karty cofany przez scalanie w drugiej karcie przeglądarki (K9, K9o; blok K9).
+// 3130 przy 214 testach, w tym 307; po jego weryfikacji 2 3959 z 3959 przy 225 testach, w tym 307, a po scaleniu audyt
+// z blokiem K9 z #754 3987 z 3987 przy 227 testach, w tym 307). NIE obejmuje kopii konta na starym urządzeniu:
+// mergeVaultBackup, previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z polem, a prawdziwa stara
+// aplikacja kasuje wtedy notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody rzucają błąd (taki test wymaga
+// prawdziwego starszego sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) — zegar urządzenia przesunięty
+// względem wspólnego (Z1). [CZERWONY na db0c2d50] — przypadki, które na bazie dają wynik inny niż oczekiwany (lista w
+// opisie zmiany); kod notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] — przegląd przeniesienia na D-7
+// (MS2); na 12b0cd4d czerwone są też W14a i W11 z domknięcia przeglądu poprawki MS2 (opis przy nich). [CZERWONY na
+// 95b6f96e] — przegląd po scaleniu (uwaga Codexa P1 do #746) i przegląd poprawki P1 (recenzje F1, R2; opis przy
+// blokach). [CZERWONY na 6db54b78] — weryfikacja 2 przeglądu poprawki P1 (W1, pętla zdejmowania nagrobków; opis przy
+// bloku, tam też G13w — luka testów W2, czerwony na 83c04d5b — i ścieżka błędu RZ0e, K1e). [kontrola] — kontrola wobec
+// bazy (T4, T7, T19–T22, M6, M7, P1-1k, P1-4k, S2, K1 przed i po scaleniu, K9k, K9d: wynik jak dotąd) albo wobec
+// wariantu lub znanego ograniczenia z tego samego bloku (R10c, R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD z
+// nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem przed ratunkiem): te drugie są na db0c2d50 czerwone z
+// powodu zachowania (bez ratunku notatki nie wracają; T26c — nagrobek bez pola). [znane ograniczenie] — test przypina
+// opisany wynik. [CZERWONY na ab8ead6] — przegląd poprawki P1 (F2, starsze niż D-21): nagrobek karty cofany przez
+// scalanie w drugiej karcie przeglądarki (K9, K9o; blok K9).
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 

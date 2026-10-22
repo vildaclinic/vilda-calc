@@ -17165,7 +17165,13 @@ cofniętego zegara); w `Bnp_nagrobekScalania` „świeży tylko, gdy późniejsz
 11 łapane testem zachowania, każda poza jedną także strażnikiem źródła. `zz-pp2-fuzz` (4 urządzenia, bez drugiej karty)
 przed (`6db54b78`) i po: nowe urządzenia, ziarna 1–200, i flota mieszana z emulacją, ziarna 1001–1150 — zielone, stany
 końcowe i uwagi identyczne ziarno w ziarno (poprawka W1 bez przeplotu nie zmienia zapisu); to samo porównanie dla
-poprawki F1 weryfikator wykonał względem `83c04d5b` (wyżej podane względem `95b6f96e`) — także identyczne.
+poprawki F1 weryfikator wykonał względem `83c04d5b` (wyżej podane względem `95b6f96e`) — także identyczne. Scalenie
+`origin/audyt` `09acdcc8` (#744, #753, #754, #755): #754 poprawił F2 (`Bsl_usunPacjenta`), więc testy K9, K9k i K9d tej
+gałęzi, które przypinały F2 jako znane ograniczenie, zastąpił blok K9 z #754, a wpis w „Ograniczeniach” — wpis #754
+„naprawione”; plik D-21 po scaleniu 227 z 227 (z prawdziwym `346dd81a` zamiast emulacji 227 z 227, 3987 z 3987
+obserwacji stanu identycznych, 307 na starych urządzeniach), `sync-wlasciciel-wersji` 329 z 329. Wersje (po tym
+scaleniu): `npm run podbij-wersje` — `vilda_vault.js` 225, `vilda_chrome.js` 170, `vilda_session_bridge.js` 94; SW
+1.1.343 → 1.1.344.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
