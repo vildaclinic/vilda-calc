@@ -18,19 +18,20 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // zapisu nagrobków przez adapter (bez pola nowa reguła daje wynik dzisiejszy, T15; przegląd przeniesienia na D-7: 1693
 // z 1693 obserwacji stanu tego pliku jak z prawdziwym 346dd81a, po jego poprawkach 2262 z 2262 przy 182 testach, w tym
 // 256 na starych urządzeniach; po domknięciu przeglądu poprawki MS2 2537 z 2537 przy 185 testach, w tym 271; po
-// przeglądzie po scaleniu (uwaga Codexa P1) 2758 z 2758 przy 201 testach, w tym 295). NIE obejmuje kopii konta na
-// starym urządzeniu: mergeVaultBackup, previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z polem, a
-// prawdziwa stara aplikacja kasuje wtedy notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody rzucają błąd
-// (taki test wymaga prawdziwego starszego sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) — zegar
-// urządzenia przesunięty względem wspólnego (Z1).
+// przeglądzie po scaleniu (uwaga Codexa P1) 2758 z 2758 przy 201 testach, w tym 295; po przeglądzie poprawki P1 3130
+// z 3130 przy 214 testach, w tym 307). NIE obejmuje kopii konta na starym urządzeniu: mergeVaultBackup,
+// previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z polem, a prawdziwa stara aplikacja kasuje wtedy
+// notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody rzucają błąd (taki test wymaga prawdziwego starszego
+// sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) — zegar urządzenia przesunięty względem wspólnego (Z1).
 // [CZERWONY na db0c2d50] — przypadki, które na bazie dają wynik inny niż oczekiwany (lista w opisie zmiany); kod
 // notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] — przegląd przeniesienia na D-7 (MS2); na 12b0cd4d
 // czerwone są też W14a i W11 z domknięcia przeglądu poprawki MS2 (opis przy nich). [CZERWONY na 95b6f96e] — przegląd po
-// scaleniu (uwaga Codexa P1 do #746, opis przy bloku). [kontrola] — kontrola wobec bazy (T4, T7, T19–T22, M6, M7,
-// P1-1k, P1-4k, S2: wynik jak dotąd) albo wobec wariantu lub znanego ograniczenia z tego samego bloku (R10c, R10d z
-// nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD z nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem przed
-// ratunkiem): te drugie są na db0c2d50 czerwone z powodu zachowania (bez ratunku notatki nie wracają; T26c — nagrobek
-// bez pola). [znane ograniczenie] — test przypina opisany wynik.
+// scaleniu (uwaga Codexa P1 do #746) i przegląd poprawki P1 (recenzje F1, R2; opis przy blokach). [kontrola] — kontrola
+// wobec bazy (T4, T7, T19–T22, M6, M7, P1-1k, P1-4k, S2, K1 przed i po scaleniu, K9k, K9d: wynik jak dotąd) albo wobec
+// wariantu lub znanego ograniczenia z tego samego bloku (R10c, R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD
+// z nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem przed ratunkiem): te drugie są na db0c2d50 czerwone
+// z powodu zachowania (bez ratunku notatki nie wracają; T26c — nagrobek bez pola). [znane ograniczenie] — test przypina
+// opisany wynik.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -3014,7 +3015,20 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy
   });
 });
 
-/* ---------- przegląd po scaleniu: uwaga Codexa P1 (#746) ---------- */
+/* ---------- przegląd po scaleniu: uwaga Codexa P1 (#746) i przegląd poprawki P1 ---------- */
+const chwila = (ms) => new Promise((r) => { setTimeout(r, ms); });
+// Druga karta przeglądarki: drugi VildaVault na tym samym magazynie urządzenia i tej samej atrapie Web Locks (jak L10).
+async function drugaKarta(d, locks) {
+  const o2 = owin(d.baza);
+  const druga = okno({ locks }).VildaVault;
+  druga.setStorageAdapter(o2.owiniety);
+  await druga.unlockUser(d.uid, d.haslo);
+  return { v: druga, o2 };
+}
+// Nagrobek, który nie pozwala na ratunek: bez pola (ręczne usunięcie) albo z polem i manualDeletedAtISO (krata M).
+const nieratowalny = (t) => !!t && (!t.deletedWithPatient || typeof t.deletedWithPatient.manualDeletedAtISO === 'string');
+const nagrobekId = async (d, id) => (await nagrobkiNotatek(d)).find((t) => t.id === id) || null;
+
 // Pętla „Usuń pacjenta” (Bpu_usun) szła przez Eb bez blokady notatki, z mapą nagrobków notatek odczytaną przed listą
 // notatek. Druga karta przeglądarki (drugi VildaVault na tym samym magazynie i tej samej atrapie Web Locks, jak L10)
 // ręcznie usuwa notatkę po tej liście: Eb nadpisywało ręczny nagrobek polem bez manualDeletedAtISO (i z rev 0), więc
@@ -3025,17 +3039,6 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki MS2: ręczne usunięcie przy
 // (affdeb64) przeplot z ręcznym usunięciem nie miał skutku klinicznego (notatki nie wracały wcale, jedynie rev nagrobka
 // spadał do 0), a P1-6 kończył się tak samo jak na 95b6f96e.
 describe('P-NOTATKI-ZA-KARTA — przegląd po scaleniu: uwaga Codexa P1 („Usuń pacjenta” a druga karta przeglądarki)', () => {
-  const chwila = (ms) => new Promise((r) => { setTimeout(r, ms); });
-  async function drugaKarta(d, locks) {
-    const o2 = owin(d.baza);
-    const druga = okno({ locks }).VildaVault;
-    druga.setStorageAdapter(o2.owiniety);
-    await druga.unlockUser(d.uid, d.haslo);
-    return { v: druga, o2 };
-  }
-  // Nagrobek, który nie pozwala na ratunek: bez pola (ręczne usunięcie) albo z polem i manualDeletedAtISO (krata M).
-  const nieratowalny = (t) => !!t && (!t.deletedWithPatient || typeof t.deletedWithPatient.manualDeletedAtISO === 'string');
-  const nagrobekId = async (d, id) => (await nagrobkiNotatek(d)).find((t) => t.id === id) || null;
 
   it('P1-0 [CZERWONY na 95b6f96e] pętla „Usuń pacjenta” bierze blokadę notatki (vilda-note-<id>) dla każdej usuwanej notatki', async () => {
     const locks = atrapaLocks();
@@ -3374,11 +3377,290 @@ describe('P-NOTATKI-ZA-KARTA — przegląd po scaleniu: uwaga Codexa P1 („Usu�
   });
 });
 
+/* ---------- przegląd poprawki P1 (recenzje: współbieżność F1, F2; reguły R1, R2) ---------- */
+// F1 (recenzja współbieżności): ta sama klasa co uwaga Codexa P1, ale w scalaniu (Le, sekcja notatek, pętla zapisu
+// nagrobków U), którą idą pobranie, delty, „Scal kopię konta” i import, także w tle w tej samej karcie. Decyzja „usuń”
+// albo „zostaw” zapada na odczycie nagrobków K ze startu sekcji; pod blokadą notatki pętla czytała świeżo tylko notatkę,
+// a nagrobek zapisywała z R, polem i rev sprzed scalania. Ręczne usunięcie albo „Usuń pacjenta” w tym oknie (druga karta
+// albo ta sama) było nadpisywane: ręczny nagrobek — nagrobkiem z polem bez M (karta przeżywa, ratunek przywraca ręcznie
+// usuniętą notatkę wbrew D21-2; na affdeb64 nagrobek bez pola, nic nie wraca), nagrobek z e2 — starym (R1, e1) (stare
+// urządzenie z sierotą: S1 „po pętli”), rev — cofnięty (G6). Teraz pod tą samą blokadą świeży rekord nagrobka łączony
+// kratą z kopiami z ładunku i z K (Bnp_nagrobekScalania). [CZERWONY na 95b6f96e] (i na 83c04d5b, pierwszym commicie
+// poprawki P1): K1 [w trakcie], K1b, K1m, K2 i strażnik źródła Le. R2: P1-8 [CZERWONY na 95b6f96e]. R1 i F2 — znane
+// ograniczenia (opisy przy testach), tak samo na 95b6f96e.
+describe('P-NOTATKI-ZA-KARTA — przegląd poprawki P1: scalanie w oknie ręcznego usunięcia (F1), nagrobek innego pacjenta (R2), pasmo w drugiej karcie (R1), nagrobek karty (F2)', () => {
+  // B usuwa X; A scala ładunek B: karta X znika, dla n1 decyzja „usuń” (pole, karty nie ma). kiedy: 'przed' albo 'po'
+  // scaleniu, 'w trakcie' — po odczycie K, przed zapisem nagrobka. sposob: 'reczne' — removePatientNote w drugiej albo
+  // tej samej karcie; 'LM' — druga karta scala ręczny nagrobek n1 z innego urządzenia (bez pola, rev 3). C (nie wie
+  // o usunięciu) dopisuje wizytę — karta przeżywa.
+  async function k1(kiedy, { tenSama = false, sposob = 'reczne' } = {}) {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: {} });
+    const { A, B, C } = x.urz;
+    const druga = tenSama ? A.v : (await drugaKarta(A, locks)).v;
+    const id1 = x.id('n1');
+    przesun(60e3); await B.v.removePatient(x.pid);
+    const ladB = kopia(await B.v.exportSyncPayload());
+    const usunN1 = async () => {
+      if (sposob === 'reczne') { await druga.removePatientNote(id1); return; }
+      await druga.mergeSyncPayload({ schemaVersion: 2, patients: [], tombstones: [], notes: [], noteTombstones: [], patientNotes: [],
+        patientNoteTombstones: [{ id: id1, deletedAtISO: new Date(zegar).toISOString(), rev: 3 }] });
+    };
+    if (kiedy === 'przed') { przesun(1000); await usunN1(); }
+    A.zeruj();
+    const p = A.pulapka('listPatientNoteTombstonesForUser', () => (A.licz.listPatientNotesForUser || 0) > 0); // K w Le
+    przesun(5e3);
+    const scal = A.v.mergeSyncPayload(ladB);
+    const doszlo = await Promise.race([p.osiagnieta.then(() => true), scal.then(() => false)]);
+    let reczny = null;
+    if (kiedy === 'w trakcie') { przesun(5); await usunN1(); reczny = await nagrobekId(A, id1); }
+    p.zwolnij(); await scal;
+    if (kiedy === 'po') { przesun(1000); await usunN1(); }
+    const po = await nagrobekId(A, id1);
+    await wizyta(C, x);
+    const w = await rundy(x, ['A', 'C', 'B'], 4);
+    return { doszlo, reczny, po, w };
+  }
+  const bezN1 = /^karta \[n2\] nagr\[n1(\+pole\+r)?\]$/;
+  it('K1 [kontrola] ręczne usunięcie n1 w drugiej karcie przed scaleniem ładunku z „Usuń pacjenta” → n1 nie wraca', async () => {
+    const { w } = await k1('przed');
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(bezN1);
+  });
+  it('K1 [kontrola] ręczne usunięcie n1 w drugiej karcie po scaleniu → n1 nie wraca', async () => {
+    const { w } = await k1('po');
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(bezN1);
+  });
+  it('K1 [CZERWONY na 95b6f96e] ręczne usunięcie n1 w drugiej karcie w trakcie scalania (po decyzji „usuń”, przed zapisem nagrobka) → ręczny nagrobek zostaje, n1 nie wraca', async () => {
+    const { doszlo, reczny, po, w } = await k1('w trakcie');
+    expect(doszlo, 'pułapka w sekcji notatek Le').toBe(true);
+    expect(reczny && !reczny.deletedWithPatient, 'kontrola: ręczny nagrobek bez pola').toBe(true);
+    expect([po.deletedAtISO, po.deletedWithPatient || null, po.rev || 0], 'nagrobek n1 po scaleniu = ręczny').toEqual([reczny.deletedAtISO, null, reczny.rev || 0]);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(bezN1);
+  });
+  it('K1b [CZERWONY na 95b6f96e] ta sama karta: ręczne usunięcie n1 w trakcie scalania w tle → ręczny nagrobek zostaje, n1 nie wraca', async () => {
+    const { doszlo, reczny, po, w } = await k1('w trakcie', { tenSama: true });
+    expect(doszlo, 'pułapka w sekcji notatek Le').toBe(true);
+    expect(reczny && !reczny.deletedWithPatient, 'kontrola: ręczny nagrobek bez pola').toBe(true);
+    expect([po.deletedAtISO, po.deletedWithPatient || null, po.rev || 0], 'nagrobek n1 po scaleniu = ręczny').toEqual([reczny.deletedAtISO, null, reczny.rev || 0]);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(bezN1);
+  });
+  it('K1m [CZERWONY na 95b6f96e] druga karta scala w tym oknie ręczny nagrobek n1 z innego urządzenia (rev 3) → nagrobek bez pola z rev 3, n1 nie wraca', async () => {
+    const { doszlo, reczny, po, w } = await k1('w trakcie', { sposob: 'LM' });
+    expect(doszlo, 'pułapka w sekcji notatek Le').toBe(true);
+    expect([reczny.deletedWithPatient || null, reczny.rev], 'kontrola: druga karta zapisała ręczny nagrobek z rev 3').toEqual([null, 3]);
+    expect([po.deletedAtISO, po.deletedWithPatient || null, po.rev], 'nagrobek n1 po scaleniu (rev nie cofa się, G6)').toEqual([reczny.deletedAtISO, null, 3]);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(bezN1);
+  });
+
+  // K2 (S1 „po pętli”): scalanie w drugiej karcie decyduje „usuń” dla n1 (wersja w pasmie (R1, R1 + 1 s] starego nagrobka
+  // z polem, karty już nie ma — skasował ją Bpu_usun), zanim pętla „Usuń pacjenta” dojdzie do n1, a nagrobek zapisuje po
+  // niej. Dotąd stary nagrobek (R1, e1) nadpisywał świeży (e2) i stare C (emulacja 346dd81a) zostawało z sierotą n1.
+  it('K2 [CZERWONY na 95b6f96e] scalanie w drugiej karcie decyduje „usuń” przed pętlą „Usuń pacjenta”, zapisuje nagrobek po niej → zostaje nagrobek z e2; stare C bez sierot', async () => {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: { stara: true } });
+    const { A } = x.urz;
+    const { v: druga, o2 } = await drugaKarta(A, locks);
+    const id1 = x.id('n1');
+    const u = (await A.baza.listPatientNotesForUser(A.uid)).find((n) => n.id === id1).updatedAtISO;
+    const R1 = new Date(Date.parse(u) - 500).toISOString(), e1 = new Date(Date.parse(u) - 600).toISOString();
+    const lad = { ...kopia(await A.v.exportSyncPayload()), patients: [], tombstones: [], patientNotes: [],
+      patientNoteTombstones: [{ id: id1, deletedAtISO: R1, deletedWithPatient: { patientId: x.pid, deletedAtISO: e1 } }] };
+    const pA = A.pulapka('listPatientNotesForUser', () => true); // Bpu_usun: karta skasowana, mapa i lista odczytane
+    przesun(60e3);
+    const usun = A.v.removePatient(x.pid);
+    await pA.osiagnieta;
+    const q = o2.pulapka('getPatientForUser', (_u, pid) => pid === x.pid); // Bnp_karta w drugiej karcie: brak karty
+    przesun(5);
+    const scal = druga.mergeSyncPayload(lad);
+    await q.osiagnieta; // n1 jest, nagrobka brak, decyzja „usuń”
+    pA.zwolnij(); await usun; // pętla: n1 przez Eb z polem e2
+    const poUsun = await nagrobekId(A, id1);
+    q.zwolnij(); await scal; // zapis nagrobka U
+    const po = await nagrobekId(A, id1);
+    const e2 = (await nagrobekKarty(A, x.pid)).deletedAtISO;
+    expect(poUsun.deletedWithPatient, 'kontrola: „Usuń pacjenta” zapisało n1 z e2').toEqual({ patientId: x.pid, deletedAtISO: e2 });
+    expect([po.deletedAtISO, po.deletedWithPatient, po.rev || 0], 'nagrobek n1 z „Usuń pacjenta” nie jest nadpisany (R1, e1)').toEqual([poUsun.deletedAtISO, poUsun.deletedWithPatient, poUsun.rev || 0]);
+    const w = await rundy(x, ['A', 'B', 'C'], 4);
+    expect(w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost).toEqual({ A: 'BRAK [] nagr[n1+pole,n2+pole]', B: 'BRAK [] nagr[n1+pole,n2+pole]', C: 'BRAK [] nagr[n1,n2]' });
+  });
+
+  // R2 (recenzja reguły): Bnp_odnowJeden odnawia tylko nagrobek z ważnym polem TEGO pacjenta. B scala X→Y (notatki
+  // przepięte; A o tym nie wie) i usuwa Y; delty nagrobków n1 i n2 z polem Y dochodzą do drugiej karty A po liście notatek
+  // w „Usuń pacjenta” X na A (druga karta kasuje n1 i n2 — karty Y na A nie ma). C (nie wie o usunięciu Y) zmienia kartę
+  // Y, więc karta Y przeżywa. Pętla na A nie zastaje notatek, a świeże nagrobki mają pole Y → bez zmian. Odnowienie także
+  // nagrobka z polem innego pacjenta (mutacja „if (!p) return;”; na 95b6f96e Eb z polem X i rev 0) kasowało n1 i n2 pod
+  // ocalałą kartą Y na każdym urządzeniu.
+  it('P1-8 [CZERWONY na 95b6f96e] nagrobki n1 i n2 z polem innego pacjenta (Y) wpisane w drugiej karcie po liście notatek → bez zmian; karta Y przeżywa, n1 i n2 pod Y na A, B i C', async () => {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: {} });
+    const { A, B, C } = x.urz;
+    const id1 = x.id('n1'), id2 = x.id('n2');
+    const ewa = (h) => ({ name: 'Testowa Ewa', user: { lastName: 'Testowa', firstName: 'Ewa', dobISO: '2015-05-05', sex: 'K', height: h, weight: 22 } });
+    przesun(60e3); const y = await B.v.savePatient(ewa(120), { dedup: false });
+    przesun(60e3); expect((await B.v.mergePatients(x.pid, y.patientId)).notesMoved).toBe(2);
+    await pelny(B, C);
+    nagrywaj(B);
+    przesun(60e3); await B.v.removePatient(y.patientId);
+    przesun(60e3); await C.v.savePatient(ewa(121), { dedup: false, patientId: y.patientId }); // C nie wie o usunięciu Y
+    const delty = [];
+    for (const q of B.delty.filter((d) => d.typ === 'nagrNot')) { const w = await q.p; delty.push(kopia(await B.v.decryptPayloadForCurrentUser(w.iv, w.data))); }
+    expect(delty.map((d) => d.patientNoteTombstones[0].deletedWithPatient.patientId), 'kontrola: delty nagrobków z polem Y').toEqual([y.patientId, y.patientId]);
+    const { v: druga } = await drugaKarta(A, locks);
+    const p1 = A.pulapka('listPatientNotesForUser', () => true);
+    przesun(60e3);
+    const usun = A.v.removePatient(x.pid);
+    await p1.osiagnieta; // lista: n1 i n2 pod X
+    for (const d of delty) { przesun(5); await druga.mergeSyncPayload(d); }
+    const przed = [await nagrobekId(A, id1), await nagrobekId(A, id2)];
+    expect((await A.baza.listPatientNotesForUser(A.uid)).length, 'kontrola: druga karta skasowała n1 i n2').toBe(0);
+    expect(przed.map((t) => t.deletedWithPatient.patientId), 'kontrola: nagrobki z polem Y').toEqual([y.patientId, y.patientId]);
+    przesun(5); p1.zwolnij(); await usun;
+    expect([await nagrobekId(A, id1), await nagrobekId(A, id2)], 'nagrobki z polem Y bez zmian').toEqual(przed);
+    for (let r = 0; r < 4; r += 1) for (const k of ['A', 'B', 'C']) await x.c.sync(x.urz[k]);
+    const wynik = {};
+    for (const k of ['A', 'B', 'C']) {
+      const d = x.urz[k];
+      wynik[k] = { kartaY: (await d.v.listPatients()).some((q) => q.patientId === y.patientId),
+        podY: (await d.v.listAllPatientNotes()).filter((n) => n.patientId === y.patientId).map((n) => x.nn[n.id]).sort() };
+    }
+    const cel = { kartaY: true, podY: ['n1', 'n2'] };
+    expect(wynik).toEqual({ A: cel, B: cel, C: cel });
+  });
+
+  // R1 (recenzja reguły): ręczne usunięcie, które czekało na blokadę n1 i weszło po Eb pętli (P1-2), albo przyszło
+  // z nieaktualnego widoku po „Usuń pacjenta” (np. samoczynne usunięcie wpisu Terminarza 4 s po „zrobione”), zastaje
+  // notatkę już usuniętą: Eb zapisuje ręczny nagrobek z chwilą teraz = R_e + δ i rev 0. Delta nagrobka z polem (R_e)
+  // z pętli, doręczona na żywo urządzeniu z ocalałą kartą przed ręcznym nagrobkiem, daje tam ratunek R_e + 1 ms + h; przy
+  // h ≥ δ ręczne usunięcie przegrywa — klasa „Ręczne usunięcie w pasmie ratunku”, tu w drugiej karcie tego samego
+  // urządzenia. Same pełne ładunki (P1-2) — n1 nie wraca; odstęp ponad 1 s — też (T9). Na 95b6f96e n1 wraca w obu
+  // przeplotach, w RR1d z innego powodu: pętla bez blokady nadpisywała ręczny nagrobek (P1-2), więc kontrola mechanizmu
+  // jest tam czerwona.
+  async function pasmo(kiedy, delty) {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {} });
+    const { A, B } = x.urz;
+    if (delty) nagrywaj(A);
+    const { v: druga } = await drugaKarta(A, locks);
+    const delty2 = [];
+    druga.onPatientNoteChanged((ev) => { if (ev && ev.action === 'delete') delty2.push(Promise.resolve().then(() => druga.buildNoteTombstoneDelta(ev.id, ev.deletedAtISO))); });
+    const id1 = x.id('n1');
+    przesun(60e3);
+    if (kiedy === 'po') {
+      await A.v.removePatient(x.pid);
+      przesun(1); await druga.removePatientNote(id1); // nieaktualny widok drugiej karty
+    } else {
+      const p1 = A.pulapka('getPatientNoteForUser', (_u, id) => id === id1 && (A.licz.listPatientNotesForUser || 0) > 0);
+      A.zeruj();
+      A.hak((k, a) => { if (k === 'putPatientNoteTombstoneForUser' && a[1] && a[1].id === id1 && a[1].deletedWithPatient) przesun(1); });
+      const usun = A.v.removePatient(x.pid);
+      await p1.osiagnieta;
+      const r2 = druga.removePatientNote(id1); // czeka na blokadę n1
+      await chwila(30);
+      p1.zwolnij(); await usun; await r2;
+      A.hak(null);
+    }
+    const lokalnie = await nagrobekId(A, id1);
+    await wizyta(B, x); // B nie wie o usunięciu — karta przeżywa
+    let doreczone = 0;
+    if (delty) {
+      await dostarcz(A, B);
+      for (const q of await Promise.all(delty2)) { if (!q || !q.iv) continue; przesun(1000); await B.scal(kopia(await druga.decryptPayloadForCurrentUser(q.iv, q.data))); doreczone += 1; }
+    }
+    const w = await rundy(x, ['A', 'B'], 4);
+    return { lokalnie, w, nagA: await nagrobekId(A, id1), nagB: await nagrobekId(B, id1), ileDelt2: doreczone };
+  }
+  it('RR1d [znane ograniczenie; n1 wraca też na 95b6f96e] ręczne usunięcie w drugiej karcie czeka na blokadę n1 (P1-2), 1 ms po nagrobku z polem; delty A i drugiej karty do B → n1 wraca', async () => {
+    const { lokalnie, w, ileDelt2 } = await pasmo('w trakcie', true);
+    expect([!!lokalnie && !lokalnie.deletedWithPatient, ileDelt2], 'kontrola: ręczny nagrobek na A, delta ręcznego usunięcia').toEqual([true, 1]);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toBe('karta [n1,n2] nagr[]');
+  });
+  it('RR1e [znane ograniczenie, tak samo na 95b6f96e] ręczne usunięcie z nieaktualnego widoku drugiej karty 1 ms po „Usuń pacjenta”; delty → n1 wraca', async () => {
+    const { lokalnie, w, ileDelt2 } = await pasmo('po', true);
+    expect([!!lokalnie && !lokalnie.deletedWithPatient, ileDelt2], 'kontrola: ręczny nagrobek na A, delta ręcznego usunięcia').toEqual([true, 1]);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toBe('karta [n1,n2] nagr[]');
+  });
+  // G6 w tym przeplocie: ręczne Eb na notatce, której już nie ma, zapisuje rev 0 (jak odroczone usunięcie Terminarza po
+  // „Usuń pacjenta”, sprzed D-21). Na 95b6f96e ręczne Eb wchodziło przed Eb pętli, a pętla nadpisywała ręczny nagrobek
+  // nagrobkiem z polem z rev 1 (P1-2: n1 wracała). Przejściowo: pierwszy pełny ładunek przenosi najwyższy znany rev
+  // (rundy → rev 1 na A i B).
+  it('RR2 [znane ograniczenie, G6 przejściowo] przeplot P1-2 bez delt: lokalny ręczny nagrobek n1 z rev 0; po rundach pełnych ładunków rev 1 na A i B, n1 nie wraca', async () => {
+    const { lokalnie, w, nagA, nagB } = await pasmo('w trakcie', false);
+    expect([!lokalnie.deletedWithPatient, lokalnie.rev || 0], 'lokalnie: ręczny nagrobek, rev 0').toEqual([true, 0]);
+    expect([nagA.rev || 0, nagB.rev || 0], 'po rundach').toEqual([1, 1]);
+    expect(w.ost.A).toMatch(bezN1);
+  });
+
+  // F2 (recenzja współbieżności; sprzed D-21, od #518 — poza zakresem tego wpisu, opis w „Ograniczeniach”):
+  // Bsl_usunPacjenta (scalanie) pod blokadą pacjenta czyta świeżo kartę, ale nie nagrobek karty, i zapisuje chwilę
+  // z decyzji na starcie scalania. B usuwa X (eB); C, które o tym nie wie, zmienia X po eB; na A karta A1 robi „Usuń
+  // pacjenta” X (e), a karta A2 równolegle scala ładunek B: scalanie zdecydowało o usunięciu X na starcie, czeka na
+  // blokadę X i po „Usuń pacjenta” nadpisuje nagrobek karty e starszym eB. Karta C (eB < zmiana C < e) przeżywa i wraca
+  // na A, B i C, z notatkami w stanie CZEKA (na affdeb64 karta bez notatek). Łagodzi to delta nagrobka karty z „Usuń
+  // pacjenta” (onPatientDeleted → buildTombstoneDelta z chwilą e ze zdarzenia): doręczona choć jednemu urządzeniu daje
+  // BRAK wszędzie.
+  async function k9(rownolegle, deltaE) {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: {} });
+    const { A, B, C } = x.urz;
+    const { v: druga } = await drugaKarta(A, locks);
+    if (deltaE) nagrywaj(A);
+    przesun(60e3); await B.v.removePatient(x.pid);
+    const eB = (await nagrobekKarty(B, x.pid)).deletedAtISO;
+    const ladB = kopia(await B.v.exportSyncPayload());
+    await wizyta(C, x); // C zmienia X po eB, nie wiedząc o usunięciu
+    przesun(60e3);
+    if (rownolegle) {
+      const pA = A.pulapka('listPatientNotesForUser', () => true); // A1 trzyma blokadę X
+      const usun = A.v.removePatient(x.pid);
+      await pA.osiagnieta;
+      const nazwa = `vilda-save-pat:${x.pid}`, n0 = locks.zadania.filter((n) => n === nazwa).length;
+      const scal = druga.mergeSyncPayload(ladB); // decyzja na starcie, potem czeka na blokadę X
+      for (let i = 0; i < 600 && locks.zadania.filter((n) => n === nazwa).length < n0 + 2; i += 1) await chwila(5);
+      expect(locks.zadania.filter((n) => n === nazwa).length, 'kontrola: scalanie czeka na blokadę X').toBe(n0 + 2);
+      pA.zwolnij(); await usun; await scal;
+    } else {
+      await A.v.removePatient(x.pid); przesun(1000); await druga.mergeSyncPayload(ladB);
+    }
+    const e = (await nagrobekId(A, x.id('n1'))).deletedWithPatient.deletedAtISO;
+    const nagA = (await nagrobekKarty(A, x.pid)).deletedAtISO;
+    if (deltaE) await dostarcz(A, B, (t) => t === 'nagrPac');
+    const w = await rundy(x, ['A', 'B', 'C'], 4);
+    return { eB, e, nagA, w };
+  }
+  it('K9 [znane ograniczenie, przed D-21 też] „Usuń pacjenta” X na A równolegle ze scalaniem w drugiej karcie ładunku z wcześniejszym usunięciem X na B; C zmieniło X między eB i e → nagrobek karty eB, karta X wraca z notatkami (CZEKA)', async () => {
+    const { eB, e, nagA, w } = await k9(true, false);
+    expect(eB < e, 'kontrola: eB < e').toBe(true);
+    expect(nagA, 'nagrobek karty X na A cofnięty do eB').toBe(eB);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(/^karta \[n1,n2\]/);
+  });
+  it('K9k [kontrola] to samo po kolei („Usuń pacjenta”, potem scalanie) → nagrobek karty e, BRAK wszędzie', async () => {
+    const { e, nagA, w } = await k9(false, false);
+    expect(nagA).toBe(e);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(/^BRAK \[\]/);
+  });
+  it('K9d [kontrola] równolegle, delta nagrobka karty z „Usuń pacjenta” (chwila e) doręczona B → BRAK wszędzie', async () => {
+    const { eB, nagA, w } = await k9(true, true);
+    expect(nagA, 'kontrola: nagrobek karty na A cofnięty do eB').toBe(eB);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toMatch(/^BRAK \[\]/);
+  });
+});
+
 /* ---------- strażniki źródła ---------- */
 describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   const src = readFileSync(path.join(korzen, 'vilda_vault.js'), 'utf8');
   const sekcja = (od, doo) => { const a = src.indexOf(od); return a < 0 ? '' : src.slice(a, src.indexOf(doo, a)); };
-  it('Le: krata i decyzja przed pętlą przyjmowania, ratunek po niej, zdjęcie nagrobków pomija RATUNEK i CZEKA; bez listy kart w sekcji notatek', () => {
+  it('Le: krata i decyzja przed pętlą przyjmowania, ratunek po niej, zdjęcie nagrobków pomija RATUNEK i CZEKA; bez listy kart w sekcji notatek; nagrobki U na świeżym rekordzie (przegląd poprawki P1, F1)', () => {
     const notatki = sekcja('var Qch=[];', 'let St=0,Dt=0,dt=0;');
     expect(notatki.length).toBeGreaterThan(5000);
     expect(notatki).toContain('Qkn=Bnp_zlacz(W.concat(K))');
@@ -3386,7 +3668,15 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(notatki).toContain('let Qs=Bnp_stan(Qkn[S],g,void 0,Qwy[S]);');
     expect(notatki).toContain('Qs=Bnp_stan(Qkn[S],g,Qkr[Qp],Qwy[S])');
     expect(notatki).toContain('Nt+=await Bnp_ratuj(P,{kanon:Qkn,ratunek:Qrt,czeka:Qcz,rev:Qrev,liczone:Qdn,zdarzenia:Qch,nagrobki:K},e);');
-    expect(notatki).toContain('deletedWithPatient:Qkn[M]&&Qkn[M].pole||void 0');
+    // przegląd poprawki P1 (F1): nagrobki U pod blokadą notatki na świeżym rekordzie, krata z kopiami z ładunku i z K
+    expect(notatki).toContain('const S=Array.from(U),Qkp=Bnp_wgId(W.concat(K));');
+    expect(notatki).toContain('await Bnp_nagrobekScalania(P,M,Qkp.get(M)||[],R[M],Qkn[M]&&Qkn[M].pole||null,');
+    expect(notatki).not.toContain('await P.putPatientNoteTombstoneForUser(b,{id:M,deletedAtISO:R[M]');
+    const ns = sekcja('async function Bnp_nagrobekScalania(', '\n}\n');
+    expect(ns).toContain('try { swiezy = await Bnp_nagrobek(h, id); } catch { swiezy = null; }');
+    expect(ns).toContain('const k = Bnp_zlacz((kopie || []).concat([swiezy]))[id];');
+    expect(ns).toContain('if (k) { D = k.R; p = k.pole; }');
+    expect(ns).toContain('if (Bnp_rev(swiezy) > r) r = Bnp_rev(swiezy);');
     expect(notatki).toContain('!U.has(M.id)&&!Qrt.has(M.id)&&!Qcz.has(M.id)&&await P.removePatientNoteTombstoneForUser(b,M.id)');
     expect(notatki).not.toContain('listPatientsForUser');
     expect(notatki.indexOf('Bnp_stan(')).toBeLessThan(notatki.indexOf('for(let S=0;S<j.length;S+=1)'));
@@ -3437,6 +3727,8 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(od).toContain('if (n.patientId === t) await Eb(id, { patientId: t, deletedAtISO: e });');
     expect(od).toContain('await Bnp_odnowJeden(h, id, t, e);');
     expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain('const nag = await Bnp_nagrobek(h, id), p = Bnp_pole(nag);');
+    // przegląd poprawki P1 (R2): nagrobek z polem innego pacjenta zostaje bez zmian (P1-8)
+    expect(sekcja('async function Bnp_odnowJeden(', '\n}\n')).toContain('if (!p || p.patientId !== t) return;');
     // mapa nagrobków sprzed listy tylko jako lista kandydatów odnowienia: żadne Eb w źródle nie dostaje mapy
     expect(src.match(/\bEb\([^()]*\{[^{}]*\},\s*(Qnm|mapa)\)/g), 'Eb z mapą').toBe(null);
   });
