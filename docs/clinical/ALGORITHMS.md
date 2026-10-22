@@ -16558,9 +16558,14 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   nowszy niż R przegrałby z decyzją „notatka” także przy kolejności „usunięcie, potem scalanie”. Ręczne usunięcie, które
   trafi między świeży odczyt a zdjęcie, czeka na blokadę notatki i wchodzi po zdjęciu (RZ0l). „Usuń pacjenta” w oknie
   zastaje jeszcze stary ręczny nagrobek i przenosi jego chwilę jako M (`Bnp_poleEb`); to M jest wcześniejsze niż
-  przyjęta poprawka, więc niczego nie blokuje (RZu, RZub). Decyzja (`Bnp_stan`), krata, ratunek, format nagrobka,
-  ładunek i delty bez zmian. Nie zamyka zapisu notatki w oknie (P1-4) ani scalania przed listą notatek (S1 przed listą)
-  — „Ograniczenia”.
+  przyjęta poprawka, więc niczego nie blokuje (RZu, RZub). Zapis notatki w stanie CZEKA w oknie (`Bnp_poZapisie`
+  przesuwa nagrobek na chwilę zapisu, zwykle > R) też zostaje: wynik jak przy zapisie przed scaleniem, dotąd jak przy
+  zapisie po scaleniu (oba szeregowania poprawne; sierota przy karcie, która nie przeżywa, to klasa D21-9; weryfikacja
+  3); przy nagrobku z chwilą z przyszłości (G13) zostaje on na swojej chwili, nie nowszej niż R, i pętla zdejmuje go jak
+  dotąd.
+  Decyzja (`Bnp_stan`), krata, ratunek, format nagrobka, ładunek i delty bez zmian. Nie zamyka zapisu notatki w trakcie
+  „Usuń pacjenta” (P1-4), nagrobka zapisanego między początkiem sekcji notatek a przyjęciem notatki (pętla przyjmowania)
+  ani scalania przed listą notatek (S1 przed listą) — „Ograniczenia”.
 - **Delta nagrobka** (`ls`): rekord czytany ze sklepu (`{id, deletedAtISO, rev, deletedWithPatient}`), gdy go brak —
   postać dotychczasowa. Bez tego drugie urządzenie dostawało nagrobek bez pola i kasowało notatki przed pełnym ładunkiem.
   Odczyt pojedynczego rekordu (`getPatientNoteTombstoneForUser` w adapterach IndexedDB, pamięciowym i pośredniczącym;
@@ -16954,6 +16959,21 @@ P1 (10 z tej poprawki i 5 z poprawki F2, #754) i 11 z jego weryfikacji 2; wejśc
   urządzeniu (na `95b6f96e` ze starą treścią, teraz z edycją — zapis czeka na blokadę notatki i wchodzi po `Eb`); po
   zapisie nagrobka karty zapis jest odrzucany (P1-4k). Tak samo na `affdeb64`. Naprawa (strażnik także na brak karty
   albo wcześniejszy zapis nagrobka karty) zmienia regułę P-NOTATKI-1 D2 — osobny temat, razem z sierotami D21-9.
+- **Nagrobek z okna przed przyjęciem notatki w scalaniu** (sprzed D-21; weryfikacja 3 przeglądu poprawki P1, V3-W1-1).
+  Pętla przyjmowania notatek w `Le` pod blokadą notatki czyta świeżo tylko notatkę, nie nagrobek; decyzja zapada na
+  stanie z początku sekcji. Nagrobek zapisany w innej karcie przeglądarki (albo w tej samej przy scalaniu w tle) między
+  początkiem sekcji notatek a przyjęciem danej notatki, gdy tej notatki tu nie było — odnowienie z „Usuń pacjenta”
+  (`Bnp_odnowJeden`), pętla U równoległego scalania albo ręczne usunięcie z nieaktualnego widoku (`Eb` na notatce,
+  której tu już nie ma; odczyt kodu) — zostaje obok przyjętej wersji do następnego scalenia (stan przejściowy: sieroty
+  przy usuniętej karcie albo notatka obok nowszego nagrobka). Następne scalanie rozstrzyga zwykłą regułą (usunięcie, a
+  przy polu i żywej karcie RATUNEK), zbieżnie na wszystkich urządzeniach. Gdy nagrobka tej notatki nie było w odczycie z
+  początku sekcji (notatki tu nigdy nie było, a nagrobek dochodzi równoległym scalaniem), stan przejściowy jest taki sam
+  na każdej wersji, także na `affdeb64` (bez „Usuń pacjenta” i bez pola), a pętla zdejmowania go nie dotyka. Gdy był
+  (odnowienie po „Usuń pacjenta”, ręczne usunięcie notatki usuniętej tu wcześniej), W1 zostawia nagrobek nowszy niż R i
+  stan sam się naprawia; na `6db54b78` i `09acdcc8` pętla zdejmowania go kasowała i zostawała sierota albo przywrócona
+  notatka do czasu pełnego ładunku z nagrobkiem. Świeży odczyt nagrobka w pętli przyjmowania z pominięciem wpisu
+  zamknąłby okno, ale gubi ratunek wersji z jednorazowego źródła („Scal kopię konta”, import: karta z wizytą po e, a
+  nagrobki z polem dochodzą równoległym scalaniem) — nie wdrożone.
 - **Wybór między równoległymi poprawkami jest przypadkowy** (h nie zachowuje „późniejsza wygrywa”). Kolizja h (1 na
   1000; uwaga Codexa P2 do #746, przegląd po scaleniu) zostawia rzadki trwały, niewidoczny rozjazd treści: dwie różne
   poprawki o tym samym h, uratowane niezależnie na dwóch urządzeniach, mają równe `(rev, updatedAtISO)`, a `Le` przy
@@ -17174,9 +17194,9 @@ każde zgłoszenie sprawdzone przez sceptyka na prawdziwym sejfie, porównanie z
 **Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja; reguła synchronizacji D-21 (krata,
 `Bnp_stan`, ratunek, CZEKA, format nagrobka) bez zmian, bez decyzji właściciela. F1 (waga niska; regresja D-21 obecna
 już na `95b6f96e`, nie wprowadzona przez poprawkę P1) — poprawione: zapis nagrobków scalania na świeżym rekordzie
-(wyżej, „Scalanie a ręczne usunięcie albo „Usuń pacjenta” w jego oknie”). F2 (niska; sprzed D-21, od #518) — znane
-ograniczenie („Nagrobek karty cofnięty przez scalanie w drugiej karcie”), poprawka osobnym PR (#754, scalony do `audyt`
-przed weryfikacją 2; przy scaleniu testy K9, K9k i K9d tej gałęzi zastąpił blok K9 z #754). F3 (informacyjna) — opis
+(wyżej, „Scalanie a ręczne usunięcie albo „Usuń pacjenta” w jego oknie”). F2 (niska; sprzed D-21, od #518) — w
+przeglądzie zakwalifikowane jako znane ograniczenie („Nagrobek karty cofnięty przez scalanie w drugiej karcie”),
+poprawka osobnym PR (#754, scalony do `audyt` przed weryfikacją 2; przy scaleniu testy K9, K9k i K9d tej gałęzi zastąpił blok K9 z #754). F3 (informacyjna) — opis
 „Koszt”; przekazanie rekordu notatki do `Eb` (jeden odczyt mniej) jest opcjonalne i nie wdrożone. R1 (niska; nie
 regresja, poprawka P1 okno zawęża) — zawężone zdanie o przeplocie w punkcie „„Usuń pacjenta” a druga karta
 przeglądarki”, dopisek przy P1-2 i rozszerzone ograniczenie „Ręczne usunięcie w pasmie ratunku”; opcja w kodzie do
@@ -17197,7 +17217,7 @@ klasy F1. Ziarna 200–249 × 6 (ponowne scalenie z ratunkiem, „Usuń pacjenta
 ręczne usunięcie, Terminarz z „Cofnij”, przepięcie, „Scal pacjentów”, ręczny nagrobek z innego urządzenia) — 300
 przebiegów, 0 naruszeń klinicznych (na `83c04d5b` 9, wszystkie z klasy F1) i 88 tylko lokalnych, głównie cofnięty
 nagrobek karty (F2). Naruszeń kolejności blokad 0, zawieszeń 0. Przypadki kierowane recenzenta: K1, K1b, K2 i K4–K7
-zielone, K9 równolegle czerwony (F2, znane ograniczenie); K4 przy 200 notatkach — 5,02 wywołania adaptera na notatkę i
+zielone, K9 równolegle czerwony (F2, przed #754); K4 przy 200 notatkach — 5,02 wywołania adaptera na notatkę i
 200 blokad notatek. `zz-pp2-fuzz` (4 urządzenia, bez drugiej karty) przed (`95b6f96e`) i po: nowe urządzenia, ziarna
 1–200, i flota mieszana z emulacją, ziarna 1001–1150 — zielone, stany końcowe i uwagi identyczne ziarno w ziarno
 (poprawka F1 bez przeplotu daje ten sam zapis co dotąd). Wersje — w akapicie weryfikacji 2 niżej (numery policzone tu
@@ -17233,9 +17253,26 @@ poprawki F1 weryfikator wykonał względem `83c04d5b` (wyżej podane względem `
 `origin/audyt` `09acdcc8` (#744, #753, #754, #755): #754 poprawił F2 (`Bsl_usunPacjenta`), więc testy K9, K9k i K9d tej
 gałęzi, które przypinały F2 jako znane ograniczenie, zastąpił blok K9 z #754, a wpis w „Ograniczeniach” — wpis #754
 „naprawione”; plik D-21 po scaleniu 227 z 227 (z prawdziwym `346dd81a` zamiast emulacji 227 z 227, 3987 z 3987
-obserwacji stanu identycznych, 307 na starych urządzeniach), `sync-wlasciciel-wersji` 329 z 329. Wersje (po tym
-scaleniu): `npm run podbij-wersje` — `vilda_vault.js` 225, `vilda_chrome.js` 170, `vilda_session_bridge.js` 94; SW
-1.1.343 → 1.1.344.
+obserwacji stanu identycznych, 307 na starych urządzeniach), `sync-wlasciciel-wersji` 329 z 329. Wersje — w akapicie
+weryfikacji 3 niżej (numery policzone tu względem `09acdcc8` zastąpiło ponowne scalenie `origin/audyt`).
+
+Weryfikacja 3 przeglądu poprawki P1 (2026-10-22; dwóch weryfikatorów-adwersarzy na `2946a78b` — poprawka W1: ścieżki
+zapisu nagrobka bez usunięcia notatki, format chwil, zegary, wszystkie wywołania zapisu i zdejmowania nagrobków notatek,
+blokady i mutacje; scalenie z `09acdcc8` (#754) i zgodność opisu z kodem; każde zgłoszenie sprawdzone przez sceptyka na
+prawdziwym sejfie). **Zmiana kliniczna: NIE** — kod sejfu bez zmian. W1 bez wady: mutacje „≥ R” zamiast „> R” (92
+czerwone), bez sprawdzenia świeżego rekordu (RZ ×3, RZ0, RZ0b, RZu, RZub i strażnik), bez blokady (RZ0l), błąd odczytu
+zostawia nagrobek (RZ0e) i „zostaw każdy istniejący nagrobek” (92) łapane testem zachowania; porównanie z chwilą kopii
+z K i brak `|| ''` — tylko strażnik. Blokady: pętla zdejmowania trzyma tylko blokadę notatki, `Le` nie jest wołane pod
+blokadą, kolejność pacjent → notatka zachowana. Scalenie z #754 czyste: zmiany `vilda_vault.js` względem bazy
+identyczne z gałęzią sprzed scalenia, `Bsl_usunPacjenta` bajt w bajt jak w `09acdcc8`, blok K9 jak w #754; scenariusze
+weryfikatora (stary układ K9 gałęzi, wariant z deltą, poprawka na nieświadomym C, pułapka pod blokadą notatki) na
+`ddd84560` czerwone, po scaleniu zielone. V3-W1-1 (informacyjna, sprzed D-21) — nowe ograniczenie „Nagrobek z okna przed
+przyjęciem notatki w scalaniu”; świeży odczyt nagrobka w pętli przyjmowania nie wdrożony (gubi ratunek z jednorazowego
+źródła). V3-W1-2 (zapis notatki w stanie CZEKA w oknie; zachowanie poprawne na każdej wersji, oba szeregowania
+dozwolone) — zdanie w punkcie W1, bez testu przypinającego jedno szeregowanie. V3-2 (redakcja historycznych zdań o F2)
+— doprecyzowane. V3-1 (proces: `origin/audyt` poszedł dalej o `e7c3d26`, #756, z tym samym SW 1.1.344) — ponowne
+scalenie i podbicie wersji. Wersje (po scaleniu `e7c3d26`): `npm run podbij-wersje` — `vilda_vault.js` 225,
+`vilda_chrome.js` 170, `vilda_session_bridge.js` 94; SW 1.1.344 → 1.1.345.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
