@@ -16,12 +16,12 @@
   // Owner-approved calculation conditions, not patient/laboratory facts.
   // Formula domains, equations and reference ranges belong to their engines.
   const POLICY = freeze({
-    id: "KLIRENS_CALCULATION_ASSUMPTIONS_2026_10_22",
+    id: "KLIRENS_CALCULATION_ASSUMPTIONS_2026_10_22_V2",
     markerFormulaIds: [
       "egfr", "ckid_u25", "egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys",
       "neonatal_egfr", "sch_idms", "cg", "cg_norm", "cl24", "TMP_GFR",
     ],
-    idmsFormulaIds: ["egfr", "ckid_u25", "egfr_cr_cys", "ckid_u25_cr_cys", "sch_idms"],
+    idmsFormulaIds: ["egfr", "ckid_u25", "egfr_cr_cys", "ckid_u25_cr_cys", "neonatal_egfr", "sch_idms"],
     ifccFormulaIds: ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"],
   });
 
@@ -49,6 +49,7 @@
     const markerApplicable = POLICY.markerFormulaIds.includes(formulaId);
     const idmsApplicable = POLICY.idmsFormulaIds.includes(formulaId);
     const ifccApplicable = POLICY.ifccFormulaIds.includes(formulaId);
+    const neonatal = formulaId === "neonatal_egfr";
     const rawState = source.creatinineState == null ? "unknown" : String(source.creatinineState);
     const scrAssay = source.scrAssay == null ? "" : String(source.scrAssay);
     const assumptions = [];
@@ -80,18 +81,27 @@
       const knownRapidChange = rawState === "rapidlyChanging";
       const knownBlock = source.markerPolicy?.calculationAllowed === false || source.markerPolicy?.status === "blocked";
       if (knownAKI || knownRapidChange || knownBlock) {
-        provenance.creatinineState = knownRapidChange || knownBlock ? "provided" : rawState === "stable" ? "provided" : "assumed";
+        provenance.creatinineState = knownRapidChange || knownBlock || rawState === "stable" ? "provided" : neonatal ? "not_applicable" : "assumed";
         provenance.suspectedAKI = knownAKI ? "provided" : "assumed";
         block("MARKER_STATE_CONTRADICTS_ASSUMPTIONS", source.markerPolicy?.message || "Znane podejrzenie AKI lub szybko zmieniający się marker wyklucza raportowanie bieżącej czynności nerek tym wzorem.");
       } else {
-        effective.creatinineState = "stable";
+        // Neonatal physiology does not imply a fixed GFR or a steady Scr.
+        // not_applicable means no stationary-state assumption was made;
+        // recorded AKI/rapid change are still checked above, never ignored.
+        if (!neonatal) effective.creatinineState = "stable";
         effective.suspectedAKI = false;
-        provenance.creatinineState = rawState === "stable" ? "provided" : "assumed";
+        provenance.creatinineState = rawState === "stable" ? "provided" : neonatal ? "not_applicable" : "assumed";
         // An unchecked legacy checkbox was not a confirmed clinical assessment.
         provenance.suspectedAKI = "assumed";
-        if (provenance.creatinineState === "assumed") assume("stableKidneyFunction");
+        if (!neonatal && provenance.creatinineState === "assumed") assume("stableKidneyFunction");
         assume("noSuspectedAKI");
       }
+    }
+
+    // Unknown technique can use the explicit IDMS calculation assumption.
+    // A recorded Jaffe technique remains outside this conservative neonatal path.
+    if (neonatal && ["jaffe", "jaffe_idms", "jaffe_non_idms"].includes(token(scrAssay))) {
+      block("NEONATAL_CREATININE_METHOD_UNSUPPORTED", "Dla zapisanej metody Jaffego nie obliczono eGFR noworodkowego. Zalecane jest oznaczenie enzymatyczne.");
     }
 
     if (idmsApplicable) {
@@ -130,18 +140,21 @@
     if (markerApplicable) {
       effective.markerPolicy = {
         calculationAllowed: allowed,
-        categoryAllowed: allowed,
-        status: allowed ? "stable" : "blocked",
+        categoryAllowed: allowed && !neonatal,
+        status: allowed ? neonatal && rawState !== "stable" ? "unknown" : "stable" : "blocked",
         message: blockers.map((entry) => entry.message).join(" "),
       };
     }
     const conditions = [];
-    if (markerApplicable) conditions.push(CONDITIONS.stableKidneyFunction, CONDITIONS.noSuspectedAKI);
+    if (markerApplicable) {
+      if (!neonatal) conditions.push(CONDITIONS.stableKidneyFunction);
+      conditions.push(CONDITIONS.noSuspectedAKI);
+    }
     if (idmsApplicable) conditions.push(CONDITIONS.idms);
     if (ifccApplicable) conditions.push(CONDITIONS.ifcc);
     return freeze({
       formulaId, policyId: POLICY.id, allowed, calculationContext: effective,
-      assumptions, assumptionsText: allowed ? joinedText(conditions) : "", provenance, blockers,
+      assumptions, assumptionsText: allowed ? neonatal ? `Założenia obliczenia: ${conditions.join(" i ")}.` : joinedText(conditions) : "", provenance, blockers,
     });
   }
 

@@ -80,9 +80,8 @@
           "height",
           "Scr",
           "ScrUnit",
-          "ScrAssay",
         ],
-        note: "Wzór 0,31 \xD7 wzrost/Scr jest przeznaczony wyłącznie dla noworodków donoszonych do 28. dnia życia. Konserwatywna ścieżka wymaga aktualnej masy >2,5 kg i enzymatycznej kreatyniny standaryzowanej do IDMS.",
+        note: "Wzór 0,31 \xD7 wzrost/Scr dla noworodków donoszonych do 28. dnia życia. Zachowana ostrożna ścieżka obejmuje aktualną masę >2,5 kg. Przyjmujemy standaryzację kreatyniny do IDMS; zalecana jest metoda enzymatyczna, bez obowiązku podania nieznanej techniki.",
       },
       {
         id: "cg",
@@ -531,6 +530,17 @@
         : ((e.textContent = ""), !0)
       : !1;
   }
+  // The workflow can select a form before the clinician updates patient age.
+  // Preserve that explicit choice; clinical eligibility is checked separately.
+  function activeWorkflowFormula() {
+    const workflow = window.ClcrUiWorkflow;
+    if (
+      document.documentElement?.dataset.clcrWorkflowUi !== "1" ||
+      !workflow?.state || workflow.state.legacyBroad ||
+      workflow.state.activeFormulaId === "sch_var"
+    ) return null;
+    return l.find((formula) => formula.id === workflow.state.activeFormulaId) || null;
+  }
   function c(e = "") {
     const r = document.getElementById("formulaPicker"),
       t = document.getElementById("formulaLive");
@@ -573,6 +583,13 @@
         .join("");
       clcrSetTrustedMarkup(t, a, "formula live list");
     } else ((t.style.display = "none"), clcrClearElement(t));
+    const active = activeWorkflowFormula();
+    if (active && ![...r.options].some((option) => option.value === active.id)) {
+      const option = document.createElement("option");
+      option.value = active.id;
+      option.textContent = active.label;
+      r.appendChild(option);
+    }
     if (o && [...r.options].some((a) => a.value === o)) r.value = o;
     else if (o) {
       r.value = "";
@@ -604,17 +621,19 @@
       c(""));
     if (e && r && u.some((i) => i.id === r)) e.value = r;
     if (e && r && !u.some((i) => i.id === r)) {
-      e.value = "";
-      const i =
-        t &&
-        window.ClcrClinicalSafety &&
-        typeof window.ClcrClinicalSafety.formulaEligibility == "function"
-          ? window.ClcrClinicalSafety.formulaEligibility(
-              t.id,
-              window.ClcrClinicalSafety.readAgeFromDocument(document),
-            )
-          : null;
-      p(i && i.reason ? i.reason : "Ten wzór nie jest dostępny dla podanego wieku.");
+      if (activeWorkflowFormula()?.id !== r) {
+        e.value = "";
+        const i =
+          t &&
+          window.ClcrClinicalSafety &&
+          typeof window.ClcrClinicalSafety.formulaEligibility == "function"
+            ? window.ClcrClinicalSafety.formulaEligibility(
+                t.id,
+                window.ClcrClinicalSafety.readAgeFromDocument(document),
+              )
+            : null;
+        p(i && i.reason ? i.reason : "Ten wzór nie jest dostępny dla podanego wieku.");
+      }
       typeof window.update == "function" && window.update();
     }
     const i =

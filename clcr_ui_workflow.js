@@ -376,7 +376,7 @@
     },
     neonatal_egfr: {
       interpretation: [],
-      optional: [],
+      optional: ["ScrAssay"],
     },
     cg: {
       interpretation: [],
@@ -814,6 +814,27 @@
     return helpDetailsForField(fieldId, label, control).text;
   }
 
+  // Correct the stored age fact rather than silently replacing it with zero
+  // when the dedicated neonatal path is selected.
+  function neonatalAgeConflicts(inputs) {
+    const source = inputs || {};
+    const days = String(source.ageDays ?? "").trim();
+    const dayNumber = Number(days);
+    const exactDays = days !== "" && Number.isInteger(dayNumber) && dayNumber >= 0 && dayNumber <= 28;
+    return ["age", "ageMonths"].flatMap((fieldId) => {
+      const value = String(source[fieldId] ?? "").trim();
+      if (value === "" || Number(value) === 0) return [];
+      const readable = value.replace(".", ",");
+      const ageLabel = fieldId === "age"
+        ? Number(value) === 1 ? "1 rok" : `w latach (${readable})`
+        : Number(value) === 1 ? "1 miesiąc" : `w miesiącach (${readable})`;
+      const comparison = exactDays
+        ? `nie zgadza się z wiekiem ${dayNumber} ukończonych dni`
+        : "nie odpowiada zakresowi wieku noworodka";
+      return [{ fieldId, value, message: `Zapisany wiek ${ageLabel} ${comparison}. Sprawdź dane wieku pacjenta.` }];
+    });
+  }
+
   const Model = Object.freeze({
     version: "1.1.0",
     MODULES,
@@ -841,6 +862,7 @@
     getSharedModuleFieldIds,
     levelAllows,
     helpForField,
+    neonatalAgeConflicts,
   });
 
   global.ClcrUiModel = Model;
@@ -869,6 +891,8 @@
     dzmQualityBulkUpdate: false,
     egfrMarkerContext: null,
     openHelp: null,
+    neonatalAgeCorrection: null,
+    assayOptions: null,
   };
 
   function formulaById(formulaId) {
@@ -1524,6 +1548,112 @@
     });
   }
 
+  function currentNeonatalAgeConflicts() {
+    if (state.legacyBroad || state.activeFormulaId !== "neonatal_egfr") return [];
+    return neonatalAgeConflicts({
+      age: fieldValue("age"),
+      ageMonths: fieldValue("ageMonths"),
+      ageDays: fieldValue("ageDays"),
+    });
+  }
+
+  function restoreNeonatalAgeField(view) {
+    if (!view?.neonatalCorrectionAnchor) return;
+    const anchor = view.neonatalCorrectionAnchor;
+    if (anchor.parentNode) anchor.parentNode.insertBefore(view.wrapper, anchor.nextSibling);
+    anchor.remove();
+    view.neonatalCorrectionAnchor = null;
+    if (view.neonatalPreviousAriaInvalid === null) view.control.removeAttribute("aria-invalid");
+    else view.control.setAttribute("aria-invalid", view.neonatalPreviousAriaInvalid);
+    delete view.wrapper.dataset.clcrAgeConflict;
+  }
+
+  function restoreNeonatalAgeCorrection() {
+    ["age", "ageMonths"].forEach((id) => restoreNeonatalAgeField(state.fieldViews.get(id)));
+    if (state.neonatalAgeCorrection) state.neonatalAgeCorrection.section.hidden = true;
+  }
+
+  function syncNeonatalAgeCorrection() {
+    const conflicts = currentNeonatalAgeConflicts();
+    const fieldIds = new Set(conflicts.map((entry) => entry.fieldId));
+    // Keep an ongoing correction editable through Ctrl+A/Backspace/type.
+    // A compatible value disappears only after the clinician leaves the field.
+    const editingId = documentRef.activeElement?.id;
+    if (!state.legacyBroad && state.activeFormulaId === "neonatal_egfr" &&
+      ["age", "ageMonths"].includes(editingId) && state.fieldViews.get(editingId)?.neonatalCorrectionAnchor) {
+      fieldIds.add(editingId);
+    }
+    ["age", "ageMonths"].forEach((id) => {
+      const view = state.fieldViews.get(id);
+      if (!view?.neonatalCorrectionAnchor || fieldIds.has(id)) return;
+      restoreNeonatalAgeField(view);
+      view.wrapper.hidden = !state.activeFieldIds.has(id);
+    });
+    if (!fieldIds.size) {
+      if (state.neonatalAgeCorrection) state.neonatalAgeCorrection.section.hidden = true;
+      return;
+    }
+    const patientSet = documentRef.getElementById("patientSet");
+    if (!patientSet) return;
+    if (!state.neonatalAgeCorrection) {
+      const section = createElement("section", "clcr-neonatal-age-correction");
+      section.id = "clcrNeonatalAgeCorrection";
+      section.setAttribute("role", "group");
+      section.setAttribute("aria-labelledby", "clcrNeonatalAgeCorrectionTitle");
+      const heading = createElement("h3", "", "Sprawdź wiek pacjenta");
+      heading.id = "clcrNeonatalAgeCorrectionTitle";
+      const messages = createElement("div", "clcr-neonatal-age-correction__messages");
+      const fields = createElement("div", "clcr-neonatal-age-correction__fields");
+      section.append(heading, messages, fields);
+      patientSet.appendChild(section);
+      state.neonatalAgeCorrection = { section, messages, fields };
+    }
+    const correction = state.neonatalAgeCorrection;
+    correction.section.hidden = false;
+    correction.messages.replaceChildren();
+    conflicts.forEach((entry) => {
+      correction.messages.appendChild(createElement("p", "", entry.message));
+    });
+    fieldIds.forEach((fieldId) => {
+      const view = state.fieldViews.get(fieldId);
+      if (!view) return;
+      if (!view.neonatalCorrectionAnchor) {
+        view.neonatalCorrectionAnchor = documentRef.createComment(`clcr-neonatal-correction-${fieldId}`);
+        view.wrapper.parentNode.insertBefore(view.neonatalCorrectionAnchor, view.wrapper);
+        view.neonatalPreviousAriaInvalid = view.control.getAttribute("aria-invalid");
+      }
+      if (view.wrapper.parentNode !== correction.fields) correction.fields.appendChild(view.wrapper);
+      view.wrapper.hidden = false;
+      const invalid = conflicts.some((entry) => entry.fieldId === fieldId);
+      view.wrapper.dataset.clcrAgeConflict = String(invalid);
+      view.control.setAttribute("aria-invalid", String(invalid));
+    });
+  }
+
+  function syncAssayOptions() {
+    const select = documentRef.getElementById("ScrAssay");
+    if (!select) return;
+    if (!state.assayOptions) {
+      state.assayOptions = Array.from(select.options || [], (option) => ({ option, text: option.textContent, hidden: option.hidden }));
+    }
+    const neonatal = !state.legacyBroad && state.activeFormulaId === "neonatal_egfr";
+    const labels = {
+      "": "Nie podano / nie wiem",
+      enzymatic_idms: "Enzymatyczna (IDMS)",
+      jaffe_idms: "Jaffego (IDMS)",
+      non_idms: "Bez standaryzacji IDMS",
+      not_idms: "Zapis historyczny: metoda lub IDMS nieustalone",
+    };
+    state.assayOptions.forEach(({ option, text, hidden }) => {
+      option.textContent = neonatal && Object.prototype.hasOwnProperty.call(labels, option.value) ? labels[option.value] : text;
+      option.hidden = neonatal
+        ? ["not_idms", "enzymatic_non_idms", "jaffe_non_idms"].includes(option.value)
+          ? option.value !== select.value
+          : false
+        : hidden;
+    });
+  }
+
   function restoreCollapsibleContextFields() {
     state.fieldViews.forEach((view) => {
       if (!view.wrapper.closest(".clcr-context-details")) return;
@@ -1553,9 +1683,11 @@
           fieldset.appendChild(details);
         }
         details.hidden = false;
-        details.querySelector("summary").textContent = ["ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
-          ? "Dokładniejszy wiek (opcjonalnie)"
-          : "Dodatkowe dane i kontekst (opcjonalne)";
+        details.querySelector("summary").textContent = state.activeFormulaId === "neonatal_egfr"
+          ? "Metoda oznaczenia (jeśli znana)"
+          : ["ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
+            ? "Dokładniejszy wiek (opcjonalnie)"
+            : "Dodatkowe dane i kontekst (opcjonalne)";
         group = { details, body: details.querySelector(".clcr-context-details__body") };
         groups.set(fieldset, group);
       }
@@ -1578,15 +1710,25 @@
 
   function renderCompactCgLabels() {
     const compact = !state.legacyBroad && Boolean(state.activeFormulaId);
+    const neonatal = compact && state.activeFormulaId === "neonatal_egfr";
     const labels = {
       weight: "Aktualna masa ciała (kg)",
       Scr: "Kreatynina",
       ScrUnit: "Jednostka",
+      ageDays: "Wiek (ukończone dni życia)",
+      neonatalTermStatus: "Urodzenie o czasie",
+      height: "Długość ciała (cm)",
+      ScrAssay: "Metoda oznaczenia kreatyniny",
+      age: "Zapisany wiek (lata)",
+      ageMonths: "Zapisany wiek (miesiące)",
     };
     Object.entries(labels).forEach(([fieldId, label]) => {
       const view = state.fieldViews.get(fieldId);
       if (!view) return;
-      view.labelText = compact && (fieldId !== "weight" || ["cg", "cg_norm"].includes(state.activeFormulaId)) ? label : view.defaultLabelText;
+      const useCompact = ["Scr", "ScrUnit"].includes(fieldId) ? compact
+        : fieldId === "weight" ? neonatal || compact && ["cg", "cg_norm"].includes(state.activeFormulaId)
+          : neonatal;
+      view.labelText = useCompact ? label : view.defaultLabelText;
       view.wrapper.querySelector(".clcr-field__name").textContent = view.labelText;
       view.infoButton.setAttribute("aria-label", `Informacja: ${view.labelText}`);
     });
@@ -1601,7 +1743,6 @@
     // odniesienia pozostaje dobrowolny i nie tworzy drugiego poziomu wyniku.
     const referenceFields = {
       cl24: ["age", "ageMonths", "weight", "height"],
-      neonatal_egfr: ["age", "ageMonths"],
       UA_mgkg: ["age", "sex"], Ca_mgkg: ["age", "ageMonths"],
       Mg_mgkg: ["age", "ageMonths"], PO4_mgkg: ["age", "ageMonths"],
       pH24: ["age", "ageMonths"], Prot_mgkg: ["age", "ageMonths", "weight", "height"],
@@ -1648,6 +1789,7 @@
   }
 
   function renderActiveFields() {
+    restoreNeonatalAgeCorrection();
     restoreCollapsibleContextFields();
     documentRef.documentElement.classList.remove("clcr-legacy-broad");
     const formula = formulaById(state.activeFormulaId);
@@ -1673,6 +1815,7 @@
     state.interpretationFieldIds = sets.interpretation;
     state.optionalFieldIds = sets.optional;
     renderCompactCgLabels();
+    syncAssayOptions();
 
     state.fieldViews.forEach((view, fieldId) => {
       const visible = sets.active.has(fieldId);
@@ -1723,6 +1866,7 @@
   }
 
   function renderLegacyBroad(level) {
+    restoreNeonatalAgeCorrection();
     restoreCollapsibleContextFields();
     broadFormulaIds(level);
     documentRef.documentElement.classList.add("clcr-legacy-broad");
@@ -1735,6 +1879,7 @@
     state.interpretationFieldIds = new Set();
     state.optionalFieldIds = new Set(active);
     renderCompactCgLabels();
+    syncAssayOptions();
     state.fieldViews.forEach((view, fieldId) => {
       view.wrapper.hidden = !active.has(fieldId);
       setFieldStatus(view, "optional");
@@ -2051,7 +2196,19 @@
       currentClinicalContext(formula.id);
     if (resolved?.allowed === false) {
       const blocker = resolved.blockers[0];
-      return semanticBlock(blocker?.code, blocker?.message, "", resolved);
+      const methodBlocked = formula.id === "neonatal_egfr" && [
+        "NEONATAL_CREATININE_METHOD_UNSUPPORTED", "CREATININE_STANDARDIZATION_INCOMPATIBLE",
+      ].includes(blocker?.code);
+      return semanticBlock(blocker?.code, blocker?.message, methodBlocked ? "ScrAssay" : "", resolved);
+    }
+    const ageConflicts = formula.id === "neonatal_egfr" ? currentNeonatalAgeConflicts() : [];
+    if (ageConflicts.length) {
+      return {
+        ok: false,
+        outcome: age,
+        blockers: ageConflicts.map((entry) => ({ code: "NEONATAL_AGE_CONFLICT", fieldId: entry.fieldId, message: entry.message })),
+        limitations: [],
+      };
     }
     if (
       clinical &&
@@ -2257,6 +2414,7 @@
     const limitations = [];
     if (
       CREATININE_VALUE_FORMULAS.has(formula.id) &&
+      formula.id !== "neonatal_egfr" &&
       markerPolicy &&
       markerPolicy.status === "unknown" &&
       markerPolicy.categoryAllowed !== true
@@ -2515,6 +2673,8 @@
 
   function renderReadiness() {
     if (!state.readiness) return;
+    syncAssayOptions();
+    syncNeonatalAgeCorrection();
     if (state.completion) state.completion.hidden = true;
     state.readiness.replaceChildren();
     state.readiness.hidden = false;
@@ -2552,6 +2712,10 @@
       state.readiness.className = "clcr-readiness clcr-readiness--error";
       state.readiness.append(createElement("strong", "", "Nie można obliczyć dla podanych danych:"));
       appendReadinessList(readiness.blockers);
+      if (state.activeFormulaId === "neonatal_egfr" && readiness.blockers.some((entry) => entry.fieldId === "ScrAssay")) {
+        const details = state.fieldViews.get("ScrAssay")?.wrapper.closest("details");
+        if (details) details.open = true;
+      }
     } else {
       // Ograniczenia odniesienia należą do karty wyniku. Nie tworzą osobnego
       // komunikatu o gotowości ani żądania dodatkowych, opcjonalnych odpowiedzi.
@@ -2605,7 +2769,7 @@
       ? ["cg", "cg_norm"].includes(formula.id) ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
-    if (formula && CREATININE_VALUE_FORMULAS.has(formula.id)) {
+    if (formula && formula.id !== "neonatal_egfr" && CREATININE_VALUE_FORMULAS.has(formula.id)) {
       state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Do oceny stabilnej czynności nerek"));
     }
   }
@@ -3060,6 +3224,9 @@
     if (picker) picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
     form.addEventListener("input", scheduleReadiness, true);
     form.addEventListener("change", scheduleReadiness, true);
+    form.addEventListener("focusout", (event) => {
+      if (["age", "ageMonths"].includes(event.target?.id)) scheduleReadiness();
+    }, true);
     form.addEventListener("reset", () => global.setTimeout(scheduleReadiness, 0));
     ["vilda:persist-restored", "vilda:patient-loaded"].forEach((eventName) => {
       documentRef.addEventListener(eventName, () => {
