@@ -1,0 +1,523 @@
+{
+  "version": "2026-10-21.2",
+  "purpose": "Approved bounded extension of ordinary female inhibin B educational median; shared historical extraction and sex comparison stay unchanged.",
+  "source": {
+    "doi": "10.1210/clinem/dgae439",
+    "url": "https://academic.oup.com/jcem/article/110/1/70/7699405",
+    "title": "Serum Concentrations of Inhibin B in Healthy Females and Males Throughout Life",
+    "figure": 1,
+    "statistic": "0 SD GAMLSS central curve, model median M",
+    "publication": "JCEM 110(1):70–77; published online 2024, volume 2025",
+    "originalPdfHistoricalSha256": "86b13b2e2cc6e7311d25df670239fd6a74cc79f47a832063d9a429bf79599f5e",
+    "figureSha256": "7abfa7ffc9d1b6f0a8494bea32515ffb417d2ff31f67f9de557253d08526d76f",
+    "figureDimensions": [
+      3000,
+      2178
+    ],
+    "sourceAccess": "Full publisher HTML and all four official version 1 supplements freshly checked on 21 October 2026. Geometry uses the archived official raster; fresh image retrieval returned HTTP 403 and the original PDF was not newly obtained.",
+    "freshRetrieval": {
+      "retrievedUtc": "2026-10-21T09:40:59.999014+00:00",
+      "articleUrl": "https://oup.silverchair-cdn.com/article-minimal/7699405",
+      "sha256": {
+        "article.html": "aadce5f015da80e37d66e037ee9b1becc98a9c71c4130868fc7b165d04605cee",
+        "article.txt": "ad74f1171d95b6d560898252ff81d22398fd99e1633ac5029fbf1fa2809ed533",
+        "supplement-api.json": "9ceac2cb4e1ec4f8f856852a2c887085acc3b71a1483f8f6637e280be04202ff",
+        "supplement-latest.json": "d3c97fd71828ee04af0f3cb42e1f286ecb8631de7f6896891a5a427e18750bc8",
+        "Supplementary Data_Johannsen et al.pdf": "c9a763c851b596c99dbb337e3fe9b7f4014207a660657ed0d9e0eeb974a39972",
+        "Supplementary Figure S1.pdf": "db320db7d1e382da4581c3098c05900d2c71dd9fd17d57a811ccdd56f2032c51",
+        "Supplementary Figure S2.pdf": "64e11142128edd8c4f4cdaf6eb0b793d058e43c72629c57608577c851cb36b68",
+        "Supplementary Figure S3.pdf": "c1352ef81a62e84e30aaa46861ba0ff4f97cc9dff2091e2577f6f7a4094a9fb2"
+      },
+      "supplementDoi": "10.6084/m9.figshare.26056558.v1",
+      "femaleNumericalModelExportFound": false
+    }
+  },
+  "assay": "Beckman Coulter Inhibin B Gen II ELISA",
+  "matrix": "serum",
+  "sourceUnit": "ng/L",
+  "outputUnit": "pg/mL",
+  "unitFactor": 1,
+  "population": {
+    "femaleParticipants": 889,
+    "femaleSamples": 1005,
+    "adultParticipants": 149,
+    "adultObservedAgeYears": [
+      20,
+      69
+    ],
+    "cycleStandardized": false,
+    "oralContraceptionAscertainment": "incomplete; not an untreated-only population"
+  },
+  "lodNgL": 3,
+  "separateLoqReported": false,
+  "sourceBelowLodHandling": "Source modelling used LOD/2; never replace a censored patient measurement with LOD/2 or zero.",
+  "originalSourceEvidence": "evidence/inhb-digitized-median.json",
+  "originalSourceSha256": "1a9c250deb7a1eb23e1c89fbce04399b936ca0134bf509cc38d3b2c13f8ea961",
+  "selection": {
+    "newMaxAgeYears": 47.75,
+    "maxAgeExclusive": false,
+    "boundaryPolicy": "Conservative application digitization endpoint, not an author age limit, cohort boundary or menopause diagnosis. Whole possible age must fit.",
+    "digitizationTolerancePgMl": 2,
+    "statisticPolicy": "Approximate graphical model median, not RI, SDS, exact author export or recovered uncensored median."
+  },
+  "calibration": {
+    "xTicks": [
+      {
+        "ageYears": 10,
+        "pixelX": 762.5,
+        "blackColumnMin": 761,
+        "blackColumnMax": 764
+      },
+      {
+        "ageYears": 20,
+        "pixelX": 1130.5,
+        "blackColumnMin": 1129,
+        "blackColumnMax": 1132
+      },
+      {
+        "ageYears": 30,
+        "pixelX": 1498.5,
+        "blackColumnMin": 1497,
+        "blackColumnMax": 1500
+      },
+      {
+        "ageYears": 40,
+        "pixelX": 1866.0,
+        "blackColumnMin": 1865,
+        "blackColumnMax": 1867
+      },
+      {
+        "ageYears": 50,
+        "pixelX": 2233.5,
+        "blackColumnMin": 2232,
+        "blackColumnMax": 2235
+      },
+      {
+        "ageYears": 60,
+        "pixelX": 2601.5,
+        "blackColumnMin": 2600,
+        "blackColumnMax": 2603
+      },
+      {
+        "ageYears": 70,
+        "pixelX": 2969.0,
+        "blackColumnMin": 2968,
+        "blackColumnMax": 2970
+      }
+    ],
+    "yTicks": [
+      {
+        "valueNgL": 350,
+        "pixelY": 129.5,
+        "blackRowMin": 128,
+        "blackRowMax": 131
+      },
+      {
+        "valueNgL": 300,
+        "pixelY": 388.5,
+        "blackRowMin": 387,
+        "blackRowMax": 390
+      },
+      {
+        "valueNgL": 250,
+        "pixelY": 647.5,
+        "blackRowMin": 646,
+        "blackRowMax": 649
+      },
+      {
+        "valueNgL": 200,
+        "pixelY": 906.0,
+        "blackRowMin": 905,
+        "blackRowMax": 907
+      },
+      {
+        "valueNgL": 150,
+        "pixelY": 1164.5,
+        "blackRowMin": 1163,
+        "blackRowMax": 1166
+      },
+      {
+        "valueNgL": 100,
+        "pixelY": 1423.5,
+        "blackRowMin": 1422,
+        "blackRowMax": 1425
+      },
+      {
+        "valueNgL": 50,
+        "pixelY": 1682.5,
+        "blackRowMin": 1681,
+        "blackRowMax": 1684
+      },
+      {
+        "valueNgL": 0,
+        "pixelY": 1941.0,
+        "blackRowMin": 1940,
+        "blackRowMax": 1942
+      }
+    ],
+    "xPixelsPerYear": 36.77321428571429,
+    "xZeroIntercept": 395.00000000000045,
+    "yPixelsPerNgL": -5.175476190476199,
+    "yZeroIntercept": 1941.0833333333348,
+    "maximumXTickResidualPixels": 0.3035714285708764,
+    "maximumYTickResidualPixels": 0.28571428571490287,
+    "horizontalBlackPlateauPixelRows": [
+      1923,
+      1927
+    ],
+    "horizontalBlackPlateauCalculatedNgL": 3.1076045452457217
+  },
+  "points": [
+    {
+      "ageYears": 47.25,
+      "approxMedianPgMl": 10,
+      "rawMedianNgL": 10.063486221649997,
+      "pixelX": 2132.5343750000006,
+      "pixelStrokeEnvelopeNgL": [
+        9.2906104798273,
+        10.836361963472696
+      ],
+      "sensitivityCenterRangeNgL": [
+        9.870267286194323,
+        10.256705157105673
+      ],
+      "variants": [
+        {
+          "threshold": 80,
+          "xOffset": -1,
+          "pixelX": 2132,
+          "blackRowMin": 1885,
+          "blackRowMax": 1891,
+          "centerValueNgL": 10.256705157105673,
+          "strokeValueMinNgL": 9.67704835073865,
+          "strokeValueMaxNgL": 10.836361963472696
+        },
+        {
+          "threshold": 80,
+          "xOffset": 0,
+          "pixelX": 2133,
+          "blackRowMin": 1886,
+          "blackRowMax": 1892,
+          "centerValueNgL": 10.063486221649997,
+          "strokeValueMinNgL": 9.483829415282974,
+          "strokeValueMaxNgL": 10.643143028017022
+        },
+        {
+          "threshold": 80,
+          "xOffset": 1,
+          "pixelX": 2134,
+          "blackRowMin": 1887,
+          "blackRowMax": 1892,
+          "centerValueNgL": 9.966876753922161,
+          "strokeValueMinNgL": 9.483829415282974,
+          "strokeValueMaxNgL": 10.449924092561346
+        },
+        {
+          "threshold": 120,
+          "xOffset": -1,
+          "pixelX": 2132,
+          "blackRowMin": 1885,
+          "blackRowMax": 1891,
+          "centerValueNgL": 10.256705157105673,
+          "strokeValueMinNgL": 9.67704835073865,
+          "strokeValueMaxNgL": 10.836361963472696
+        },
+        {
+          "threshold": 120,
+          "xOffset": 0,
+          "pixelX": 2133,
+          "blackRowMin": 1886,
+          "blackRowMax": 1892,
+          "centerValueNgL": 10.063486221649997,
+          "strokeValueMinNgL": 9.483829415282974,
+          "strokeValueMaxNgL": 10.643143028017022
+        },
+        {
+          "threshold": 120,
+          "xOffset": 1,
+          "pixelX": 2134,
+          "blackRowMin": 1887,
+          "blackRowMax": 1893,
+          "centerValueNgL": 9.870267286194323,
+          "strokeValueMinNgL": 9.2906104798273,
+          "strokeValueMaxNgL": 10.449924092561346
+        },
+        {
+          "threshold": 160,
+          "xOffset": -1,
+          "pixelX": 2132,
+          "blackRowMin": 1885,
+          "blackRowMax": 1891,
+          "centerValueNgL": 10.256705157105673,
+          "strokeValueMinNgL": 9.67704835073865,
+          "strokeValueMaxNgL": 10.836361963472696
+        },
+        {
+          "threshold": 160,
+          "xOffset": 0,
+          "pixelX": 2133,
+          "blackRowMin": 1886,
+          "blackRowMax": 1892,
+          "centerValueNgL": 10.063486221649997,
+          "strokeValueMinNgL": 9.483829415282974,
+          "strokeValueMaxNgL": 10.643143028017022
+        },
+        {
+          "threshold": 160,
+          "xOffset": 1,
+          "pixelX": 2134,
+          "blackRowMin": 1886,
+          "blackRowMax": 1893,
+          "centerValueNgL": 9.966876753922161,
+          "strokeValueMinNgL": 9.2906104798273,
+          "strokeValueMaxNgL": 10.643143028017022
+        }
+      ]
+    },
+    {
+      "ageYears": 47.5,
+      "approxMedianPgMl": 8,
+      "rawMedianNgL": 8.421125270276766,
+      "pixelX": 2141.7276785714294,
+      "pixelStrokeEnvelopeNgL": [
+        7.551640060726232,
+        9.2906104798273
+      ],
+      "sensitivityCenterRangeNgL": [
+        8.227906334821093,
+        8.61434420573244
+      ],
+      "variants": [
+        {
+          "threshold": 80,
+          "xOffset": -1,
+          "pixelX": 2141,
+          "blackRowMin": 1894,
+          "blackRowMax": 1899,
+          "centerValueNgL": 8.61434420573244,
+          "strokeValueMinNgL": 8.131296867093255,
+          "strokeValueMaxNgL": 9.097391544371627
+        },
+        {
+          "threshold": 80,
+          "xOffset": 0,
+          "pixelX": 2142,
+          "blackRowMin": 1894,
+          "blackRowMax": 1900,
+          "centerValueNgL": 8.517734738004604,
+          "strokeValueMinNgL": 7.93807793163758,
+          "strokeValueMaxNgL": 9.097391544371627
+        },
+        {
+          "threshold": 80,
+          "xOffset": 1,
+          "pixelX": 2143,
+          "blackRowMin": 1895,
+          "blackRowMax": 1901,
+          "centerValueNgL": 8.324515802548929,
+          "strokeValueMinNgL": 7.744858996181906,
+          "strokeValueMaxNgL": 8.904172608915951
+        },
+        {
+          "threshold": 120,
+          "xOffset": -1,
+          "pixelX": 2141,
+          "blackRowMin": 1893,
+          "blackRowMax": 1900,
+          "centerValueNgL": 8.61434420573244,
+          "strokeValueMinNgL": 7.93807793163758,
+          "strokeValueMaxNgL": 9.2906104798273
+        },
+        {
+          "threshold": 120,
+          "xOffset": 0,
+          "pixelX": 2142,
+          "blackRowMin": 1894,
+          "blackRowMax": 1901,
+          "centerValueNgL": 8.421125270276766,
+          "strokeValueMinNgL": 7.744858996181906,
+          "strokeValueMaxNgL": 9.097391544371627
+        },
+        {
+          "threshold": 120,
+          "xOffset": 1,
+          "pixelX": 2143,
+          "blackRowMin": 1895,
+          "blackRowMax": 1902,
+          "centerValueNgL": 8.227906334821093,
+          "strokeValueMinNgL": 7.551640060726232,
+          "strokeValueMaxNgL": 8.904172608915951
+        },
+        {
+          "threshold": 160,
+          "xOffset": -1,
+          "pixelX": 2141,
+          "blackRowMin": 1893,
+          "blackRowMax": 1900,
+          "centerValueNgL": 8.61434420573244,
+          "strokeValueMinNgL": 7.93807793163758,
+          "strokeValueMaxNgL": 9.2906104798273
+        },
+        {
+          "threshold": 160,
+          "xOffset": 0,
+          "pixelX": 2142,
+          "blackRowMin": 1894,
+          "blackRowMax": 1901,
+          "centerValueNgL": 8.421125270276766,
+          "strokeValueMinNgL": 7.744858996181906,
+          "strokeValueMaxNgL": 9.097391544371627
+        },
+        {
+          "threshold": 160,
+          "xOffset": 1,
+          "pixelX": 2143,
+          "blackRowMin": 1895,
+          "blackRowMax": 1902,
+          "centerValueNgL": 8.227906334821093,
+          "strokeValueMinNgL": 7.551640060726232,
+          "strokeValueMaxNgL": 8.904172608915951
+        }
+      ]
+    },
+    {
+      "ageYears": 47.75,
+      "approxMedianPgMl": 7,
+      "rawMedianNgL": 6.58554538344786,
+      "pixelX": 2150.9209821428576,
+      "pixelStrokeEnvelopeNgL": [
+        5.619450706169488,
+        7.551640060726232
+      ],
+      "sensitivityCenterRangeNgL": [
+        6.2957169802643485,
+        6.7787643189035345
+      ],
+      "variants": [
+        {
+          "threshold": 80,
+          "xOffset": -1,
+          "pixelX": 2150,
+          "blackRowMin": 1903,
+          "blackRowMax": 1909,
+          "centerValueNgL": 6.7787643189035345,
+          "strokeValueMinNgL": 6.199107512536512,
+          "strokeValueMaxNgL": 7.358421125270557
+        },
+        {
+          "threshold": 80,
+          "xOffset": 0,
+          "pixelX": 2151,
+          "blackRowMin": 1904,
+          "blackRowMax": 1910,
+          "centerValueNgL": 6.58554538344786,
+          "strokeValueMinNgL": 6.005888577080837,
+          "strokeValueMaxNgL": 7.165202189814883
+        },
+        {
+          "threshold": 80,
+          "xOffset": 1,
+          "pixelX": 2152,
+          "blackRowMin": 1905,
+          "blackRowMax": 1911,
+          "centerValueNgL": 6.392326447992185,
+          "strokeValueMinNgL": 5.812669641625162,
+          "strokeValueMaxNgL": 6.971983254359208
+        },
+        {
+          "threshold": 120,
+          "xOffset": -1,
+          "pixelX": 2150,
+          "blackRowMin": 1903,
+          "blackRowMax": 1909,
+          "centerValueNgL": 6.7787643189035345,
+          "strokeValueMinNgL": 6.199107512536512,
+          "strokeValueMaxNgL": 7.358421125270557
+        },
+        {
+          "threshold": 120,
+          "xOffset": 0,
+          "pixelX": 2151,
+          "blackRowMin": 1904,
+          "blackRowMax": 1910,
+          "centerValueNgL": 6.58554538344786,
+          "strokeValueMinNgL": 6.005888577080837,
+          "strokeValueMaxNgL": 7.165202189814883
+        },
+        {
+          "threshold": 120,
+          "xOffset": 1,
+          "pixelX": 2152,
+          "blackRowMin": 1905,
+          "blackRowMax": 1912,
+          "centerValueNgL": 6.2957169802643485,
+          "strokeValueMinNgL": 5.619450706169488,
+          "strokeValueMaxNgL": 6.971983254359208
+        },
+        {
+          "threshold": 160,
+          "xOffset": -1,
+          "pixelX": 2150,
+          "blackRowMin": 1902,
+          "blackRowMax": 1910,
+          "centerValueNgL": 6.7787643189035345,
+          "strokeValueMinNgL": 6.005888577080837,
+          "strokeValueMaxNgL": 7.551640060726232
+        },
+        {
+          "threshold": 160,
+          "xOffset": 0,
+          "pixelX": 2151,
+          "blackRowMin": 1904,
+          "blackRowMax": 1911,
+          "centerValueNgL": 6.488935915720023,
+          "strokeValueMinNgL": 5.812669641625162,
+          "strokeValueMaxNgL": 7.165202189814883
+        },
+        {
+          "threshold": 160,
+          "xOffset": 1,
+          "pixelX": 2152,
+          "blackRowMin": 1905,
+          "blackRowMax": 1912,
+          "centerValueNgL": 6.2957169802643485,
+          "strokeValueMinNgL": 5.619450706169488,
+          "strokeValueMaxNgL": 6.971983254359208
+        }
+      ]
+    }
+  ],
+  "excludedCheckpoints": [
+    {
+      "ageYears": 48,
+      "rawMedianNgL": 4.556746561163279,
+      "reason": "Graphical uncertainty ±2 pg/mL includes concentrations below LOD 3 pg/mL. No numerical extension to 48 or 69 years."
+    }
+  ],
+  "interpolationEffect": {
+    "strategy": "Append these three knots only to the single ordinary profile; keep the shared 24-knot extraction and all comparison/display data unchanged.",
+    "retainedSourceKnots": 24,
+    "extendedKnots": 27,
+    "changedPreviousSegmentYears": [
+      46,
+      47
+    ],
+    "example": {
+      "ageYears": 46.5,
+      "previousPgMl": 14.4375,
+      "extendedPgMl": 14.076923076923077
+    },
+    "maximumSampledDeltaPgMl": -0.4273501067307688,
+    "maximumSampledDeltaAgeYears": 46.667,
+    "meaning": "Additional endpoint neighbours alter the old last PCHIP segment. This is an explicitly accepted reference change. Knots and earlier interpolation through 46 years stay unchanged."
+  },
+  "limitations": [
+    "The black horizontal plateau calibrates to about 3.11 ng/L; Figure 1 caption does not call it LOD. Do not infer a hidden median after the central curve joins it or use the higher SD curves as medians.",
+    "Graphical tolerance is not analytical uncertainty, CI, LOQ or biological variability. Unknown LOQ prevents claiming confirmed quantification.",
+    "Sparse adult observations, mixed cycle phases and incomplete OCP information; no chronological diagnosis of menopause or fertility."
+  ],
+  "approval": {
+    "date": "2026-10-21",
+    "scope": "Owner requested a small inhibin B PR after reviewing the three proposed values, endpoint 47.75 years and disclosed 46–47 interpolation change. Estradiol is not included."
+  }
+}
