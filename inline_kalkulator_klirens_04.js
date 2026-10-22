@@ -430,10 +430,8 @@ function canComputeFormula(e) {
     typeof window.ClcrClinicalSafety.formulaSafety == "function"
   ) {
     const t = window.ClcrClinicalSafety.readAgeFromDocument(document),
-      o = window.ClcrClinicalSafety.creatininePolicy(
-        document.getElementById("creatinineState")?.value || "unknown",
-        !!document.getElementById("suspectedAKI")?.checked,
-      ),
+      resolution = resolveClcrCalculationAssumptions(e),
+      o = resolution.calculationContext.markerPolicy,
       a = {
         termStatus:
           document.getElementById("neonatalTermStatus")?.value || "",
@@ -442,7 +440,7 @@ function canComputeFormula(e) {
         scrAssay:
           document.getElementById("ScrAssay")?.value || "",
       };
-    if (!window.ClcrClinicalSafety.formulaSafety(e, t, o, a).eligible) return !1;
+    if (!resolution.allowed || !window.ClcrClinicalSafety.formulaSafety(e, t, o, a).eligible) return !1;
   }
   return n.requires.every((t) => {
         const o = document.getElementById(t);
@@ -516,13 +514,14 @@ function packClcrSupplementaryMarkup(markup, formulaId) {
   const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
   if (!details) return markup;
   const source = nodes.find((node) => node.classList.contains("clcr-result-source") && node.dataset.clcrFormula === formulaId);
+  const assumptions = nodes.find((node) => node.classList.contains("clcr-result-assumptions") && node.dataset.clcrFormula === formulaId);
   const extras = document.createElement("div");
   extras.className = "clcr-result-extra";
   nodes.forEach((node) => {
     const owner = node.dataset.clcrFormula;
     if (owner && owner !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
       node.remove();
-    } else if (node !== primary && node !== details && node !== source) extras.appendChild(node);
+    } else if (node !== primary && node !== details && node !== source && node !== assumptions) extras.appendChild(node);
   });
   if (extras.childElementCount) details.appendChild(extras);
   return staging.innerHTML;
@@ -547,6 +546,17 @@ function consolidateClcrEngineOutputs(formulaId) {
     });
   });
 }
+// Effective calculation assumptions never write back to specimen/patient inputs.
+function resolveClcrCalculationAssumptions(formulaId) {
+  const context = {
+    creatinineState: $("creatinineState")?.value || "unknown",
+    suspectedAKI: !!$("suspectedAKI")?.checked,
+    scrAssay: $("ScrAssay")?.value || "",
+    cystatinCStandardization: $("CystatinCStandardization")?.value || "",
+    crCysStandardizationConfirmed: !!$("CrCysStandardizationConfirmed")?.checked,
+  };
+  return window.VildaClcrCalculationAssumptions.resolve(formulaId, context);
+}
 function update() {
   const e = $("fullName").value.trim();
   $("patientName").textContent = e || "";
@@ -568,23 +578,7 @@ function update() {
     cystatinCStandardization =
       $("CystatinCStandardization")?.value || "",
     cystatinCAssayMethod = $("CystatinCAssayMethod")?.value || "";
-  const creatinineState = $("creatinineState")
-      ? $("creatinineState").value
-      : "unknown",
-    suspectedAKI = !!($("suspectedAKI") && $("suspectedAKI").checked),
-    creatinineContext =
-      window.ClcrClinicalSafety &&
-      typeof window.ClcrClinicalSafety.creatininePolicy == "function"
-        ? window.ClcrClinicalSafety.creatininePolicy(
-            creatinineState,
-            suspectedAKI,
-          )
-        : {
-            calculationAllowed: !suspectedAKI && creatinineState !== "rapidlyChanging",
-            categoryAllowed: creatinineState === "stable" && !suspectedAKI,
-            status: creatinineState,
-            message: "",
-          },
+  const creatinineContext = resolveClcrCalculationAssumptions("cg").calculationContext.markerPolicy,
     populationContext = {
       termStatus: $("neonatalTermStatus")
         ? $("neonatalTermStatus").value
@@ -877,28 +871,29 @@ function update() {
     if (!presenter || !referenceProfile) return null;
     const formulaId = input.formulaId || input.series || "";
     const ageYears = o ? t : null;
+    const assumptions = resolveClcrCalculationAssumptions(formulaId);
+    const effective = assumptions.calculationContext;
     let presentation = input.presentation || null;
     if (!presentation && referenceProfile.gfrFormulaIds.includes(formulaId)) {
       if (["egfr", "ckid_u25", "sch_idms"].includes(formulaId)) {
         presentation = window.ClcrClinicalSafety.egfrPresentation({
           value: input.value, age: ageYears,
-          assay: populationContext.scrAssay, markerPolicy: creatinineContext,
+          assay: effective.presentationAssay, markerPolicy: effective.markerPolicy,
         });
         if (presentation.state === "limited") {
           presentation = { ...presentation, label: "Szacowany eGFR — ocena ograniczona" };
         }
       } else {
-        const requiresCreatinine = formulaId !== "ckid_u25_cys";
-        const assayEligible = !requiresCreatinine || ["enzymatic_idms", "jaffe_idms"].includes(populationContext.scrAssay);
-        const markerEligible = creatinineContext.categoryAllowed && assayEligible && cystatinCStandardization === "ERM-DA471/IFCC";
-        const category = markerEligible && ageYears !== null && ageYears >= 2
+        const markerEligible = assumptions.allowed && effective.markerPolicy.categoryAllowed;
+        const category = markerEligible && ageYears !== null && ageYears >= referenceProfile.gfr.minimumCategoryAgeYears
           ? window.ClcrClinicalSafety.kdigoGCategory(input.value) : null;
         const row = referenceProfile.gfr.rows.find((entry) => entry.code === category?.code);
         presentation = {
-          valueVisible: creatinineContext.calculationAllowed,
+          valueVisible: assumptions.allowed && effective.markerPolicy.calculationAllowed,
           category, tone: row?.tone || "neutral",
-          label: category ? row.meaning : "Szacowany eGFR — ocena ograniczona",
-          reasons: markerEligible ? [] : ["Nie potwierdzono wszystkich warunków interpretacji: stabilności markerów lub zgodności oznaczeń. Nie nadano kategorii G."],
+          label: category ? (referenceProfile.gfr.resultLabels?.[category.code] || row.meaning)
+            : "Ocena zależna od wieku",
+          reasons: markerEligible ? [] : assumptions.blockers.map((entry) => entry.message),
         };
       }
     } else if (!presentation && formulaId === "ACR") {
@@ -926,10 +921,21 @@ function update() {
         tone: "neutral", reasons: ["To klirens kreatyniny, nie eGFR.", ...(creatinineContext.status === "unknown" ? [creatinineContext.message] : [])],
       };
     }
+    if (["ckid_u25", "ckid_u25_cr_cys", "sch_idms"].includes(formulaId) && populationContext.scrAssay === "jaffe_idms") {
+      presentation = {
+        ...presentation,
+        reasons: [...(presentation?.reasons || []), "Podano metodę Jaffego kalibrowaną do IDMS. W równaniach pediatrycznych zalecane jest oznaczenie enzymatyczne; uwzględnij możliwy wpływ metody, zwłaszcza przy małych stężeniach."],
+      };
+    }
+    if (!assumptions.allowed) {
+      presentation = { ...presentation, valueVisible: false, category: null };
+    }
     return presenter.render({
       ...input, formulaId, presentation: presentation || { label: input.label, tone: "neutral" },
-      ageYears, markerPolicy: creatinineContext, assay: populationContext.scrAssay,
-      cystatinStandardization: cystatinCStandardization,
+      ageYears, markerPolicy: effective.markerPolicy, assay: effective.presentationAssay,
+      calculationAssumptions: assumptions,
+      creatinineStandardization: effective.creatinineStandardization,
+      cystatinStandardization: effective.cystatinCStandardization,
       sampleKind: spotSampleKind, confounders: spotConfounders,
     }, referenceProfile);
   }
@@ -1024,21 +1030,22 @@ function update() {
       cystatinCStandardization,
     },
     extendedEgfr = window.ClcrExtendedEgfr,
-    ckdEpiCrCysResult =
-      extendedEgfr &&
-      typeof extendedEgfr.computeCkdEpi2021CrCys === "function"
-        ? extendedEgfr.computeCkdEpi2021CrCys(extendedEgfrInput)
-        : null,
-    ckidU25CysResult =
-      extendedEgfr &&
-      typeof extendedEgfr.computeCkidU25Cys === "function"
-        ? extendedEgfr.computeCkidU25Cys(extendedEgfrInput)
-        : null,
-    ckidU25CrCysResult =
-      extendedEgfr &&
-      typeof extendedEgfr.computeCkidU25CrCys === "function"
-        ? extendedEgfr.computeCkidU25CrCys(extendedEgfrInput)
-        : null;
+    computeExtendedWithAssumptions = (formulaId, method) => {
+      const resolution = resolveClcrCalculationAssumptions(formulaId);
+      if (!resolution.allowed || !extendedEgfr || typeof extendedEgfr[method] !== "function") return null;
+      const effective = resolution.calculationContext;
+      const result = extendedEgfr[method]({
+        ...extendedEgfrInput,
+        creatinineStandardization: effective.creatinineStandardization,
+        cystatinCStandardization: effective.cystatinCStandardization,
+      });
+      // Pure-engine details describe its effective arguments. Attach provenance
+      // explicitly so no adapter can mistake assumed standards for sample facts.
+      return { ...result, calculationAssumptions: resolution };
+    },
+    ckdEpiCrCysResult = computeExtendedWithAssumptions("egfr_cr_cys", "computeCkdEpi2021CrCys"),
+    ckidU25CysResult = computeExtendedWithAssumptions("ckid_u25_cys", "computeCkidU25Cys"),
+    ckidU25CrCysResult = computeExtendedWithAssumptions("ckid_u25_cr_cys", "computeCkidU25CrCys");
   me(
     "2021 CKD\u2011EPI eGFRcr",
     X,
@@ -1112,7 +1119,10 @@ function update() {
     const i = document.getElementById("formulaPicker"),
       l = (i && i.value) || "",
       u = o && t >= 18,
-      selectedSafety =
+      selectedAssumptions = resolveClcrCalculationAssumptions(l),
+      selectedSafety = !selectedAssumptions.allowed
+        ? { eligible: false, reason: selectedAssumptions.blockers.map((entry) => entry.message).join(" ") }
+        :
         l &&
         window.ClcrClinicalSafety &&
         typeof window.ClcrClinicalSafety.formulaSafety == "function"
@@ -1178,6 +1188,10 @@ function update() {
         const card = renderResultCard({
           formulaId: Vt || de || Sk, code: de, series: Sk,
           value: w, displayValue, unit: Z, label: r,
+          calculationComponents: Sk === "ckid_u25_cr_cys" && ckidU25CrCysResult?.ok ? {
+            egfrCreatinine: ckidU25CrCysResult.details.egfrCreatinine,
+            egfrCystatin: ckidU25CrCysResult.details.egfrCystatin,
+          } : undefined,
           boundary: (acrDisplay || (o && t >= 2 ? gfrDisplay : null))?.crossesCategoryBoundary ? (gfrDisplay || acrDisplay).raw : "",
         });
         if (card !== null) { S += card; return; }
@@ -1278,23 +1292,11 @@ function update() {
           l ||
           (gfrEntries[0] && gfrEntries[0].formulaId) ||
           "",
-        creatinineAssayEligible = [
-          "enzymatic_idms",
-          "jaffe_idms",
-        ].includes(populationContext.scrAssay),
-        cystatinAssayEligible =
-          cystatinCStandardization === "ERM-DA471/IFCC",
-        validGEntries = gfrEntries.filter(
-          (w) =>
-            w &&
-            isFiniteNum(w.value) &&
-            creatinineContext.categoryAllowed &&
-            (w.requiresCreatinine !== true ||
-              creatinineAssayEligible) &&
-            (w.requiresCystatin !== true ||
-              cystatinAssayEligible) &&
-            t >= 2,
-        ),
+        validGEntries = gfrEntries.filter((entry) => {
+          if (!entry || !isFiniteNum(entry.value) || t < 2) return false;
+          const resolution = resolveClcrCalculationAssumptions(entry.formulaId);
+          return resolution.allowed && resolution.calculationContext.markerPolicy.categoryAllowed;
+        }),
         hasG = validGEntries.length > 0,
         hasA =
           r.includeA !== !1 &&
@@ -1310,6 +1312,8 @@ function update() {
         } else S = bsaMarkup + S;
       }
       validGEntries.forEach((entry) => {
+        // The average already carries its G category and full table in one card.
+        if (entry.formulaId === "ckid_u25_cr_cys") return;
         if (
           ["egfr", "ckid_u25"].includes(entry.formulaId) &&
           typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
@@ -1329,7 +1333,7 @@ function update() {
       if (t >= 2 && t < 18) {
         const warnedFormulaIds = new Set();
         validGEntries
-          .filter((entry) => entry.value < 90 && !(
+          .filter((entry) => entry.formulaId !== "ckid_u25_cr_cys" && entry.value < 90 && !(
             ["egfr", "ckid_u25"].includes(entry.formulaId) &&
             typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
           ))
@@ -1353,7 +1357,7 @@ function update() {
         const w = hasG
           ? clcrEscapeHtml(validGEntries[0].formulaId || "egfr")
           : "ACR";
-        S += `<div class="result-box" data-clcr-formula="${w}"><strong>Uwaga:</strong> pojedynczy wynik eGFR/ACR nie rozpoznaje przewlekłej choroby nerek; należy ocenić przewlekłość, przyczynę i inne markery uszkodzenia nerek.</div>`;
+        if (w !== "ckid_u25_cr_cys") S += `<div class="result-box" data-clcr-formula="${w}"><strong>Uwaga:</strong> pojedynczy wynik eGFR/ACR nie rozpoznaje przewlekłej choroby nerek; należy ocenić przewlekłość, przyczynę i inne markery uszkodzenia nerek.</div>`;
       }
     }
     function z() {
@@ -1491,12 +1495,14 @@ function update() {
     }
     function appendExtendedEgfrWarnings(formulaId, result) {
       if (!result || !result.ok) return;
-      (result.warnings || []).forEach((warning) => {
+      // The average profile is visible next to its result, without a duplicate warning.
+      (formulaId === "ckid_u25_cr_cys" ? [] : result.warnings || []).forEach((warning) => {
         S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(formulaId)}"><strong>Profil równania:</strong> ${clcrEscapeHtml(warning)}</div>`;
       });
       if (
         formulaId.startsWith("ckid_u25") &&
-        cystatinCAssayMethod !== "nephelometric"
+        cystatinCAssayMethod !== "nephelometric" &&
+        (formulaId !== "ckid_u25_cr_cys" || ["immunoturbidimetric", "other"].includes(cystatinCAssayMethod))
       ) {
         const methodLabel =
           cystatinCAssayMethod === "immunoturbidimetric"
@@ -1508,6 +1514,7 @@ function update() {
       }
     }
     function L(r) {
+      if (!resolveClcrCalculationAssumptions(r).allowed) return;
       switch (r) {
         case "egfr":
           m.egfr != null &&
@@ -1828,6 +1835,7 @@ function update() {
         T({
           includeG: !0,
           includeA: !1,
+          includeBsa: l !== "ckid_u25_cr_cys",
           gfrEntries: partnerEntry
             ? [selectedEntry, partnerEntry]
             : [selectedEntry],
@@ -1893,9 +1901,10 @@ function update() {
         automaticCreatinineEligible = [
           "enzymatic_idms",
           "jaffe_idms",
-        ].includes(populationContext.scrAssay),
+        ].includes(resolveClcrCalculationAssumptions("egfr").calculationContext.presentationAssay) ||
+          resolveClcrCalculationAssumptions("egfr").calculationContext.creatinineStandardization === "IDMS",
         automaticCystatinEligible =
-          cystatinCStandardization === "ERM-DA471/IFCC";
+          resolveClcrCalculationAssumptions("ckid_u25_cys").calculationContext.cystatinCStandardization === "ERM-DA471/IFCC";
       if (o && t < 26) {
         const pediatricAutomatic = [
           {
@@ -1938,9 +1947,7 @@ function update() {
               label: "2021 CKD\u2011EPI eGFRcr\u2011cys",
               requiresCreatinine: true,
               requiresCystatin: true,
-              markerEligible:
-                automaticCreatinineEligible &&
-                automaticCystatinEligible,
+              markerEligible: resolveClcrCalculationAssumptions("egfr_cr_cys").allowed,
             },
           {
             value: m.egfr,
@@ -1960,73 +1967,6 @@ function update() {
         includeA: !0,
         gfrEntries: automaticGfrEntries,
       });
-    }
-    const selectedCreatinineFormula = [
-      "egfr",
-      "ckid_u25",
-      "egfr_cr_cys",
-      "ckid_u25_cr_cys",
-      "neonatal_egfr",
-      "cg",
-      "cg_norm",
-      "cl24",
-      "sch_idms",
-    ].includes(l);
-    const creatinineEstimateShown =
-      selectedCreatinineFormula ||
-      (!l &&
-        [
-          m.egfr,
-          m.ckid_u25,
-          m.egfr_cr_cys,
-          m.ckid_u25_cr_cys,
-          m.neonatal_egfr,
-          m.cg,
-          m.cg_norm,
-          m.cl24,
-          m.sch_idms && m.sch_idms.gfr,
-        ].some(isFiniteNum));
-    if (
-      d &&
-      creatinineEstimateShown &&
-      !["cg", "cg_norm"].includes(l) &&
-      populationContext.scrAssay !== "enzymatic_idms" &&
-      (!["egfr", "ckid_u25"].includes(l) ||
-        populationContext.scrAssay === "jaffe_idms")
-    ) {
-      const assayMessage =
-        populationContext.scrAssay === "jaffe_idms"
-          ? "Podano metodę Jaffego kalibrowaną do IDMS. Równania pediatryczne i noworodkowe preferują oznaczenie enzymatyczne; uwzględnij możliwy wpływ metody, zwłaszcza przy małych stężeniach."
-          : populationContext.scrAssay === "not_idms"
-            ? "Nie potwierdzono standaryzacji do IDMS. Wynik równania kreatyninowego może nie być porównywalny z populacją walidacyjną i nie powinien być kategorycznie interpretowany."
-            : "Nie podano metody oznaczenia kreatyniny. Równania zakładają kreatyninę standaryzowaną do IDMS; w pediatrii zalecana jest metoda enzymatyczna.";
-      S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(l || "egfr")}"><strong>Metoda kreatyniny:</strong> ${clcrEscapeHtml(assayMessage)}</div>`;
-    }
-    if (
-      creatinineContext.status === "unknown" &&
-      d &&
-      (!l || selectedCreatinineFormula) &&
-      !["egfr", "ckid_u25", "cg"].includes(l) &&
-      selectedSafety.eligible
-    ) {
-      const r = l || (t < 18 ? "ckid_u25" : "egfr");
-      S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(r)}"><strong>Założenie kreatyniny:</strong> ${clcrEscapeHtml(creatinineContext.message)}</div>`;
-    }
-    if (
-      creatinineContext.status === "unknown" &&
-      cystatinC !== null &&
-      (!l ||
-        ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(l))
-    ) {
-      S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(l || (t < 26 ? "ckid_u25_cys" : "egfr_cr_cys"))}"><strong>Stan markerów filtracji:</strong> nie potwierdzono stanu stacjonarnego. Wynik jest oszacowaniem bez kategorii G; w ostrym procesie klinicznym należy ocenić dynamikę markerów i metody alternatywne.</div>`;
-    }
-    if (
-      !l &&
-      cystatinC !== null &&
-      cystatinCStandardization !== "ERM-DA471/IFCC"
-    ) {
-      S +=
-        '<div class="result-box warn-yellow" data-clcr-formula="ckid_u25_cys"><strong>Nie obliczono eGFR z cystatyną C:</strong> wymagane jest potwierdzenie identyfikowalności oznaczenia do ERM-DA471/IFCC.</div>';
     }
     le = packClcrSupplementaryMarkup(S, l);
   })();
@@ -3385,10 +3325,14 @@ function getClcrFormattedAge() {
     : "wiek nieokreślony";
 }
 function getClcrCreatinineContextText() {
-  const e = document.getElementById("creatinineState"),
-    n = e?.options[e.selectedIndex]?.text || "Nie określono",
-    t = document.getElementById("suspectedAKI")?.checked ? "tak" : "nie";
-  return `${n}; podejrzenie AKI: ${t}`;
+  const formulaId = document.getElementById("formulaPicker")?.value || "";
+  const resolution = resolveClcrCalculationAssumptions(formulaId);
+  const parts = [resolution.assumptionsText];
+  const state = document.getElementById("creatinineState")?.value;
+  if (state === "rapidlyChanging") parts.push("Podano: szybko zmieniający się marker filtracji.");
+  if (document.getElementById("suspectedAKI")?.checked) parts.push("Podano: podejrzenie AKI.");
+  parts.push(...resolution.blockers.map((entry) => entry.message));
+  return parts.filter(Boolean).join(" ") || "Założenia eGFR nie dotyczą wybranego obliczenia.";
 }
 function isClcrElementActuallyVisible(e) {
   if (!e || !(e.textContent || "").trim()) return !1;
@@ -3899,6 +3843,7 @@ function resetApp(e = !0) {
     "ScrAssay",
     "creatinineState",
     "suspectedAKI",
+    "CrCysStandardizationConfirmed",
   ].forEach((c) => {
     const f = document.getElementById(c);
     f && (o[c] = f.type === "checkbox" ? f.checked : f.value);

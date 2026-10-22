@@ -39,8 +39,8 @@ function evaluateReportedAge(input, extra) {
 
 describe('Inhibina B młodszych dziewczynek — źródłowe mediany grup Zhou 2025', () => {
   it('dodaje tylko dwa profile i zachowuje wszystkie 74 wcześniejsze profile, przeliczenia oraz pozostały runtime', () => {
-    expect(data.profiles).toHaveLength(84);
-    expect(data.version).toBe('2026-10-21.1');
+    expect(data.profiles).toHaveLength(85);
+    expect(data.version).toBe('2026-10-22.2');
     const previous = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-14.1',
       profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => !addedIds.includes(profile.id)) };
     expect(previous.profiles).toHaveLength(74);
@@ -113,7 +113,7 @@ describe('Inhibina B młodszych dziewczynek — źródłowe mediany grup Zhou 20
     expect(evaluate(5)).toMatchObject({ status: 'ready', referenceValue: 27, profile: { id: groups[1].id } });
     expect(evaluate(5.6 - 1e-8)).toMatchObject({ status: 'ready', referenceValue: 27, profile: { id: groups[1].id } });
     expect(evaluate(5.6)).toMatchObject({ status: 'ready', referenceValue: 11,
-      profile: { id: 'borelli2025-female-inhb-age-5p6-47' } });
+      profile: { id: 'borelli2025-female-inhb-age-5p6-47p75' } });
     const first = data.profiles.find(profile => profile.id === groups[0].id);
     expect(engine.referenceAt(first, 1)).toBeNull();
     expect(engine.sampleProfile(first, 3)[0].ageYears).toBeGreaterThan(1);
@@ -141,7 +141,7 @@ describe('Inhibina B młodszych dziewczynek — źródłowe mediany grup Zhou 20
     expect(evaluateReportedAge({ years: 1, months: 1, precision: 'month' })).toMatchObject({ status: 'ready', referenceValue: 33 });
     expect(evaluateReportedAge({ years: 5, months: 3, precision: 'month' })).toMatchObject({ status: 'ready', referenceValue: 27 });
     expect(evaluateReportedAge({ years: 5, months: 8, precision: 'month' })).toMatchObject({ status: 'ready',
-      profile: { id: 'borelli2025-female-inhb-age-5p6-47' } });
+      profile: { id: 'borelli2025-female-inhb-age-5p6-47p75' } });
     for (const input of [{ years: 1, precision: 'year' }, { years: 1, months: 0, precision: 'month' },
       { years: 5, precision: 'year' }, { years: 5, months: 7, precision: 'month' }]) {
       expect(evaluateReportedAge(input, { preterm: 'no' })).toEqual(unavailable('ambiguous-age'));

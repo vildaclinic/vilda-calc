@@ -8551,7 +8551,7 @@ const lifespanData = {
   }
 };
 const patientPointData = {
-  "version": "2026-10-21.1",
+  "version": "2026-10-22.2",
   "purpose": "educational-population-central-comparison",
   "notClinicalReference": true,
   "interpolation": "Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.",
@@ -30462,11 +30462,11 @@ const patientPointData = {
       ]
     },
     {
-      "id": "borelli2025-female-inhb-age-5p6-47",
+      "id": "borelli2025-female-inhb-age-5p6-47p75",
       "analyte": "inhb",
       "sex": "female",
       "minAge": 5.6,
-      "maxAge": 47,
+      "maxAge": 47.75,
       "maxAgeExclusive": false,
       "points": [
         {
@@ -30564,6 +30564,18 @@ const patientPointData = {
         {
           "ageYears": 47,
           "value": 11
+        },
+        {
+          "ageYears": 47.25,
+          "value": 10
+        },
+        {
+          "ageYears": 47.5,
+          "value": 8
+        },
+        {
+          "ageYears": 47.75,
+          "value": 7
         }
       ],
       "sourceLabel": "Borelli-Kjær 2025 · inhibina B · model wieku",
@@ -30588,11 +30600,15 @@ const patientPointData = {
         "unitFactor": 1,
         "fullSourceKnotDomain": [
           5.6,
-          47
+          47.75
         ],
         "readableSource": "evidence/inhb-digitized-median.json",
-        "qualificationScope": "ordinary-female-inhibin-b-age-5p6-47",
+        "qualificationScope": "ordinary-female-inhibin-b-age-5p6-47p75",
         "sourceProfileId": "borelli2025-female-inhb-puberty-comparison",
+        "originalSourceKnotDomain": [
+          5.6,
+          47
+        ],
         "cohorts": [
           {
             "n": 648,
@@ -30605,18 +30621,23 @@ const patientPointData = {
             "ageMaxYears": 69
           }
         ],
-        "cohortCoverage": "Zakres 5,6–47 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47 lat wynika z ostatniego zachowanego odczytu ilościowego ryciny; nie jest granicą kohorty ani definicją menopauzy.",
+        "cohortCoverage": "Zakres 5,6–47,75 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47,75 jest konserwatywnym końcem ponownego odczytu ryciny z uwzględnieniem niepewności ±2 pg/mL i LOD 3 pg/mL, nie granicą kohorty, LOQ ani definicją menopauzy.",
         "specimenPolicy": "Brak lub nieznany materiał pozwala na orientacyjne odniesienie bez potwierdzania materiału próbki pacjentki. Znana surowica jest zgodna; znane osocze lub inny materiał nie korzystają z tego profilu.",
         "assayPolicy": "Metodą źródła jest Beckman Coulter Inhibin B Gen II ELISA. Brak lub nieznana metoda pozwala na orientacyjne odniesienie; znana inna metoda je blokuje. Nie jest to kalibracja między metodami.",
         "reproductiveContextPolicy": "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
-        "routingVersion": "2026-10-14.1"
+        "digitizationExtension": "evidence/patient-point/borelli2025-female-inhb-post47-digitized.json",
+        "extensionSourceImageSha256": "7abfa7ffc9d1b6f0a8494bea32515ffb417d2ff31f67f9de557253d08526d76f",
+        "interpolationPolicy": "Jeden PCHIP po 27 węzłach zachowuje 24 stare węzły. Nowe punkty zmieniają ostatnią dotychczasową interpolację 46–47 lat maksymalnie o około −0,42735 pg/mL; przy 46,5: 14,4375 → 14,076923 pg/mL. Jest to zmiana odniesienia; nie przelicza dawnych zapisanych ocen.",
+        "lowValuePolicy": "Źródło podaje LOD 3 pg/mL, bez osobnego LOQ. Wyniki poniżej LOD autorzy zastępowali LOD/2 do modelowania; nie jest to reguła dla wyniku pacjentki. Odczyt ±2 pg/mL nie jest CI, RI ani potwierdzeniem oznaczalności ilościowej. Nie odczytujemy wartości z dolnego plateau.",
+        "routingVersion": "2026-10-21.2"
       },
       "limitations": [
         "Przybliżony odczyt centralnej krzywej GAMLSS; nie odtwarza autorskich parametrów LMS, percentyli ani SDS.",
-        "Zwykły wykres udostępnia przybliżoną medianę modelu od 5,6 do 47 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. To jeden model z 24 niezmienionymi węzłami, więc przekroczenie wieku 20 lat nie tworzy granicy źródła ani luki odniesienia. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku oraz powyżej 47 lat brak tego liczbowego odniesienia.",
+        "Zwykły wykres udostępnia przybliżoną medianę modelu od 5,6 do 47,75 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano 24 wcześniejsze węzły i dodano 47,25/47,5/47,75: około 10/8/7 pg/mL. To jeden model; przekroczenie 20 lub 47 lat nie tworzy nowej granicy źródła. Porównanie płci pozostaje przy 8–20 latach i nie zmienia swoich 24 węzłów. Powyżej 47,75 lat brak tego odniesienia.",
         "Wiek nie wyznacza stadium Tannera. Fazy cyklu nie standaryzowano, a informacje o antykoncepcji doustnej były niepełne; nie jest to odniesienie fazy cyklu ani populacji bez leczenia.",
         "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
-        "Górny wiek 47 lat wynika z końca zachowanego odczytu ryciny, nie z wieku menopauzy. Nie ekstrapolujemy do granicy wykrywalności ani nie zastępujemy jej zerem.",
+        "Zakres 5,6–47,75 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47,75 jest konserwatywnym końcem ponownego odczytu ryciny z uwzględnieniem niepewności ±2 pg/mL i LOD 3 pg/mL, nie granicą kohorty, LOQ ani definicją menopauzy.",
+        "Źródło podaje LOD 3 pg/mL, bez osobnego LOQ. Wyniki poniżej LOD autorzy zastępowali LOD/2 do modelowania; nie jest to reguła dla wyniku pacjentki. Odczyt ±2 pg/mL nie jest CI, RI ani potwierdzeniem oznaczalności ilościowej. Nie odczytujemy wartości z dolnego plateau.",
         "Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń."
       ],
       "ordinaryOnly": true,
@@ -37625,6 +37646,146 @@ const patientPointData = {
         "Use the bounding-box center of each vector triangle, rounded to 0.01 µg/L (0.03 and 0.02). Retain centroid sensitivity and approximately ±5 ng/L extraction tolerance; it is not a confidence interval. Display one significant digit for these reference labels in every selected unit, retaining full unit-conversion precision internally and the actual patient result unchanged.",
         "Source serum used the described derivatized LC-MS/MS assay. Generic LC-MS/MS identifiers permit the existing educational comparison, not proof of between-assay calibration. Known incompatible assays or material block it; unknown values do not confirm the patient's assay or specimen. Do not apply the source LOD/LOQ to the patient's result or replace a censored result by zero or a limit.",
         "Reuse current-patient age, sex, result and identity protection. Do not require or infer Tanner G1 or a sampling hour. Known treatment or stimulation remains contraindicated under the existing adapter. These approximate group comparisons do not change the independent Mayo laboratory RI, historical assessments, educational geometry, concentration scale or sex comparisons."
+      ]
+    },
+    {
+      "id": "kulle2024-female-e2-th1-age-over1-under6",
+      "analyte": "e2",
+      "sex": "female",
+      "minAge": 1,
+      "maxAge": 6,
+      "points": [
+        {
+          "ageYears": 1,
+          "value": 15
+        },
+        {
+          "ageYears": 6,
+          "value": 15
+        }
+      ],
+      "sourceLabel": "Kulle 2024 · estradiol · grupa Th1",
+      "url": "https://doi.org/10.1093/ejendo/lvae046",
+      "method": "In-house dansyl-chloride derivatization and solid-phase extraction; Acquity UPLC with Waters Quattro Premier/XE LC-MS/MS, MassLynx/TargetLynx",
+      "population": "Dziewczynki ocenione jako zdrowe z retrospektywnych próbek pozostałych po badaniach w Kiel, Niemcy, 2014–2019; stadium piersi oceniane przez przeszkolonych endokrynologów dziecięcych.",
+      "statistic": "group-median",
+      "approximate": false,
+      "unit": "pmol/L",
+      "interpolation": "constant",
+      "ordinaryOnly": true,
+      "minAgeExclusive": true,
+      "maxAgeExclusive": true,
+      "requiredGonadalStage": 1,
+      "specimen": "serum",
+      "compatibleSpecimenIds": [
+        "serum",
+        "surowica"
+      ],
+      "compatibleAssayMethodIds": [
+        "lc-ms/ms",
+        "lc-ms-ms",
+        "lcmsms"
+      ],
+      "excludedCyclePhases": [
+        "pregnancy",
+        "pregnancy_t1",
+        "pregnancy_t2",
+        "pregnancy_t3",
+        "postmenopause"
+      ],
+      "referenceGroupLabel": "Th1, 1–8 lat",
+      "patientNote": "Nie jest medianą dokładnego wieku.",
+      "ageGroup": {
+        "label": "Th1, 1–8 lat",
+        "minAge": 1,
+        "maxAge": 8,
+        "n": 213,
+        "sourceMedian": 15,
+        "sourceUnit": "pmol/L",
+        "boundaryPolicy": "application-conservative-subset",
+        "description": "15 pmol/L jest opublikowanym P50 Harrella–Davisa całej grupy Th1 1–8 lat, N=213; nie medianą dokładnego wieku ani nowej podgrupy >1–<6 lat."
+      },
+      "provenance": {
+        "authors": "Kulle et al.",
+        "year": 2024,
+        "doi": "10.1093/ejendo/lvae046",
+        "pmid": "38652605",
+        "url": "https://doi.org/10.1093/ejendo/lvae046",
+        "fullText": "https://academic.oup.com/ejendo/article/190/5/401/7656846",
+        "title": "New liquid chromatography tandem mass spectrometry reference data for estradiol show mini-puberty in both sexes and typical pre-pubertal and pubertal patterns",
+        "journal": "European Journal of Endocrinology 2024;190(5):401–408",
+        "sourceFormat": "Final published article HTML and original supplementary DOCX",
+        "sourceLocator": {
+          "selectedMedian": "Table 3: B1 1-8 years, N=213, 50th=15.0 pmol/L",
+          "statistic": "Methods, Statistical analysis: Harrell–Davis quantile estimator for Tanner breast stages; Hmisc package",
+          "population": "Methods, Study cohort; Table 1 and annual rows in Table 2",
+          "assay": "Methods, Hormonal analysis; supplementary Methods and Supplementary Table 2"
+        },
+        "sourceSha256": "2d62bd90380dc3b00bb35e110a476ede2cf7184a1459a033357857929205f54e",
+        "supplementSha256": "ba73473e1e9a407d4024299b216497678ce6dd24af89de74a48a34388a684ac8",
+        "supplementFilename": "lvae046_supplementary_data.docx",
+        "sourceTableImageSha256": "805ecb24739f9497994527ba526d12b2237498f6fa29786dad9fb100618e4a16",
+        "sourceTableImageReview": "Cached official Table 3 image and native HTML agree on the B1 row; an image match does not validate the underlying author data.",
+        "reviewDate": "2026-10-22",
+        "retrieval": {
+          "retrievedUtc": "2026-10-22T08:32:39.309524+00:00",
+          "sources": [
+            {
+              "file": "article.html",
+              "status": 200,
+              "bytes": 293062,
+              "sha256": "2d62bd90380dc3b00bb35e110a476ede2cf7184a1459a033357857929205f54e",
+              "sameAs21October": true
+            },
+            {
+              "file": "supplement.docx",
+              "status": 200,
+              "bytes": 2388155,
+              "sha256": "ba73473e1e9a407d4024299b216497678ce6dd24af89de74a48a34388a684ac8",
+              "sameAs21October": true
+            }
+          ]
+        },
+        "reviewBasis": "Complete primary article and original supplement reviewed, not abstract only. Fresh article and DOCX both returned HTTP 200 and are byte-identical to the 21 October copies. Three unique HTML tables each have four identical presentation copies; the copies are not additional participants.",
+        "statisticDefinition": "Directly printed 50th quantile estimated with Harrell–Davis for the complete B1 1–8-year group; not a GAMLSS median at exact age or a median newly estimated for ages >1–<6.",
+        "sourceQuantification": {
+          "lodPmolL": 4,
+          "lloqPmolL": 11,
+          "sourceP50MinusLloqPmolL": 4,
+          "belowLimitHandling": null,
+          "belowLimitHandlingMeaning": "The numeric substitution/exclusion rule for values below an analytical limit in the Tanner Harrell–Davis estimate is not reported. A median above LLOQ does not establish absence of censored observations.",
+          "individualBelowLimitCountsForSelectedGroup": null,
+          "cvLimitation": "The reported intra/inter-assay CVs use much higher controls (0.75, 2 and 75 nmol/L); they do not establish analytical precision at 15 pmol/L."
+        },
+        "redistribution": "Factual table extract and source hashes only; the full article, DOCX and table image are not redistributed.",
+        "sourceGroupId": "female-th1-1-8",
+        "groupParticipants": 213,
+        "sourceSpecimen": "serum",
+        "readableSource": "evidence/patient-point/kulle2024-female-e2-th1-group-median.json",
+        "sourceRouting": {
+          "version": "2026-10-22.1",
+          "minAge": 1,
+          "maxAge": 6,
+          "minAgeExclusive": true,
+          "maxAgeExclusive": true,
+          "selectionPolicy": "Jedno edukacyjne odniesienie grupowe Kulle 2024 uzupełnia wyłącznie wnętrze luki >1–<6 lat u dziewczynki z aktualnym Th1. Mediana 15 pmol/L i N=213 dotyczą pełnej opublikowanej grupy B1 1–8 lat. Źródła nie wybieramy według wartości wyniku. Nie dodajemy RI, modelu wieku ani liczb do krzywej edukacyjnej lub porównania płci.",
+          "stagePolicy": "Wymagane jest aktualne, jawnie typowane Th1 tej samej pacjentki. P1, ogólny numer Tannera, stadium innej osoby lub dawna ocena dopuszczona tylko do obliczeń wzrostowych nie zastępują Th1. Brak Th1 zachowuje wynik i niezależną interpretację laboratoryjną; nie dodajemy nowego pytania."
+        }
+      },
+      "limitations": [
+        "15 pmol/L jest opublikowanym P50 Harrella–Davisa całej grupy Th1 1–8 lat, N=213; nie medianą dokładnego wieku ani nowej podgrupy >1–<6 lat.",
+        "Tabela 1 podaje 1753, a Methods i sumy tabeli 2 podają 1724; różnica 29 pozostaje niewyjaśniona. Suma tabeli stadium 1064 nie rozwiązuje tej rozbieżności.",
+        "Tabela B4 ma nieuporządkowane centyle. Nie poprawiamy ich i nie importujemy innych wierszy; zgodność wiersza B1 między obrazem a HTML nie waliduje danych autorów.",
+        "LOD wynosi 4, a LLOQ 11 pmol/L. Nie podano numerycznej reguły postępowania z cenzurą przy estymacji mediany grupy; P50=15 powyżej LLOQ nie dowodzi braku wpływu niskich obserwacji.",
+        "Źródło opisuje odniesienie surowicy i protokół serum/plasma, bez rozdziału materiału w grupie B1. Znane osocze lub metoda spoza LC-MS/MS nie korzystają z tego profilu; nieznane dane dopuszczają wyłącznie ograniczone porównanie edukacyjne.",
+        "Wyniku pacjentki z nierównością nie zastępujemy zerem, LOD/2 ani LLOQ/2. Dokładny wynik nie jest automatycznie podnoszony do LLOQ.",
+        "Dostępna grupa nie określa normy, SDS, diagnozy, płodności ani indywidualnej trajektorii. Wynik i laboratoryjne RI zachowują własne reguły niezależnie od tej mediany.",
+        "Cały możliwy wiek musi mieścić się w otwartym (1,6). Dokładne 1 zachowuje Ljubicic, a 6 Madsen. Wpis 1 rok 0 miesięcy obejmuje [1,1+1/12) i nie kwalifikuje do tej grupy. N=213 nie staje się liczebnością nowej podgrupy >1–<6 lat. Bez ekstrapolacji i wybierania środka niepewnego wieku. Zmiana odniesienia przy 6 latach wynika z wyboru innego źródła, nie z nagłego spadku estradiolu u pacjentki.",
+        "Wymagane jest aktualne, jawnie typowane Th1 tej samej pacjentki. P1, ogólny numer Tannera, stadium innej osoby lub dawna ocena dopuszczona tylko do obliczeń wzrostowych nie zastępują Th1. Brak Th1 zachowuje wynik i niezależną interpretację laboratoryjną; nie dodajemy nowego pytania.",
+        "Brak lub nieznany materiał pozwala na ograniczone porównanie edukacyjne bez potwierdzania materiału pacjentki. Znana surowica jest zgodna z opisem odniesienia; znane osocze lub inny materiał wyłącza profil. Autorzy opisują analizę serum/plasma, ale nie przypisują materiału poszczególnym uczestniczkom B1.",
+        "Źródło stosuje własny protokół LC-MS/MS z derywatyzacją chlorkiem dansylu, Acquity UPLC i Waters Quattro Premier/XE. Brak lub nieznana metoda pozwala na orientacyjne porównanie. Znana metoda spoza LC-MS/MS je blokuje. Ogólne aliasy LC-MS/MS oznaczają wyłącznie klasę metody dla porównania edukacyjnego; nie potwierdzają zgodności ani harmonizacji oznaczeń.",
+        "Zachowane są istniejące bramki bieżącego pacjenta i próbki oraz znanego leczenia hormonalnego/GnRHa, stymulacji, ciąży i menopauzy. Brak danych nie potwierdza braku tych okoliczności. Nie przenosimy obecnego Th ani dodatnich faktów na historyczną próbkę lub inną osobę.",
+        "LOD 4 i LLOQ 11 pmol/L pochodzą ze źródła. Numeryczne postępowanie z cenzurą w medianie Harrella–Davisa nie jest opisane; 15 pmol/L powyżej LLOQ tego nie rozstrzyga. Nie podstawiamy LOD/2, LLOQ/2 ani zera za wynik pacjentki i nie stosujemy globalnej podłogi 11. Nierówność wyklucza dokładny punkt."
       ]
     }
   ],

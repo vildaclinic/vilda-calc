@@ -2956,8 +2956,13 @@ async function Bsl_zdejmijNagrobek(patientId, deletedAtISO, opcje) {
 // usuniecie nie jest wczesniejsze niz ostatni zapis), ale na swiezym rekordzie: karta zapisana w innej karcie po
 // chwili usuniecia zostaje (jej zapis zdjal juz lokalny nagrobek), a scalanie nie stawia nagrobka. Zwraca 1, gdy
 // usunelo karte.
+// Przeglad poprawki P1 D-21 (F2): swiezy jest tez lokalny nagrobek karty. „Usun pacjenta” w innej karcie przegladarki
+// po starcie scalania stawia nagrobek z pozniejsza chwila e; dotad scalanie nadpisywalo go chwila z decyzji na starcie
+// (np. starsze usuniecie z innego urzadzenia), a karta zapisana gdzie indziej miedzy tymi chwilami wracala wszedzie.
 async function Bsl_usunPacjenta(patientId, deletedAtISO, opcje) {
   return Bsl_podBlokada(patientId, async function () {
+    const Bsl_lok = await Bpu_nagrobek(patientId);
+    if (Bsl_lok && Bsl_lok.deletedAtISO > deletedAtISO) deletedAtISO = Bsl_lok.deletedAtISO;
     const rekord = await I().getPatientForUser(b, patientId);
     if (rekord && (rekord.lastSavedAtISO || '') > deletedAtISO) {
       // P-SYNC-WLASCICIEL: karta zostaje (zapisana w innej karcie przegladarki po chwili usuniecia), ale jej wersje

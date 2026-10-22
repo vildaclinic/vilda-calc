@@ -31,9 +31,13 @@
   "v": 16,
   "sha256": "a15863c1fa105c0f1d081989629918a8593db6689f565ea500fd495b53db4dc3"
  },
+ "clcr_calculation_assumptions.js": {
+  "v": 1,
+  "sha256": "0c974b9bcce48e5d5e99fb56f4ce49be02a9fea47daafd500a4efe221e5e525f"
+ },
  "clcr_clinical_safety.js": {
-  "v": 6,
-  "sha256": "3bc62a70068c4849a95f1d51158455451eeb6f9d86c278a3f553f0fba1e82e9e"
+  "v": 7,
+  "sha256": "8e38284ca455a8ff7bd478c51c630409875196e552bb2d84f5b7da8161ce6b23"
  },
  "clcr_dialysis_safety.js": {
   "v": 1,
@@ -44,24 +48,24 @@
   "sha256": "00ed51bfddbece54a45acbe16236e1eba6fa54e1d051e4ea6d3015d54489a030"
  },
  "clcr_result_presentation.js": {
-  "v": 1,
-  "sha256": "acdd935ed5343acc0d414af7449379beff84a9f9afb19e5a9527f6413c306b7e"
+  "v": 4,
+  "sha256": "4a03886f76f9d29ca5c5af3aa0c4c6187242d83cadffb3be1f160bcc9a484050"
  },
  "clcr_result_reference_data.js": {
-  "v": 1,
-  "sha256": "b384b92aebe502f2edff6c0d9e68b17a0e240b2a5b4e5aa820d0d2f9d955f13b"
+  "v": 4,
+  "sha256": "8d1edaded8fae8a3bf211e4f601d5d194dbdc50b6fc72c688e3abd9ceae456f4"
  },
  "clcr_stone_safety.js": {
   "v": 1,
   "sha256": "6d6c4c813d70ea72e641128c0b860345fb3c91b99a6ad16f9ed6379cd2f100d5"
  },
  "clcr_ui_workflow.css": {
-  "v": 10,
-  "sha256": "e259a7125f87bbec45571c417cd48ccfa2682b68dc6ff70928f214147aaf8eae"
+  "v": 13,
+  "sha256": "dacae114d2ebc493ccb4a1a20376e58c8cc06296285c9ff52f99599869671169"
  },
  "clcr_ui_workflow.js": {
-  "v": 8,
-  "sha256": "32515efafbaf05ea0e3fee7ff6010a089b468e2633230db4815a8ca46246b29f"
+  "v": 11,
+  "sha256": "35457c00a2799a747d15bc13272b3e4f9df953185e1a8245d572dda2201658c1"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -208,16 +212,16 @@
   "sha256": "1f7f4555b11c7bc28a7e1cb47e01a7c19dfe9184e706dbb462a5145543d29a19"
  },
  "inline_kalkulator_klirens_02.js": {
-  "v": 6,
-  "sha256": "a53733e6d21df92b448ff4fbef89bdcdc41103e3efa99622e25ffda0db07fd28"
+  "v": 8,
+  "sha256": "1dc8e7d28c1fc0e88c10a1184df712b895abd4ba423fb9d8d72224df0f4f51b6"
  },
  "inline_kalkulator_klirens_03.js": {
   "v": 1,
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 10,
-  "sha256": "c2a0768e1efe1702c1176384a24eac9f5ccc245e3a0c6bb03caf981a5ee03ecf"
+  "v": 13,
+  "sha256": "612f283ec546143bcc50a472759a8819b842fb19c02ee5f2639869afad8176fb"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
@@ -228,8 +232,8 @@
   "sha256": "555ca77dae012c28f79c6cd419963ab20f651a77ab20d04b49640b6fc4214abf"
  },
  "inline_kalkulator_klirens_07.js": {
-  "v": 3,
-  "sha256": "2a6006d2f10a930365099a9caed5934c00e71cb1ebcd51b7e4634709b382ca61"
+  "v": 4,
+  "sha256": "6495e269b0821c94dfca130577e101c52b46f0b86f485d9836363bcf03e1ac01"
  },
  "inline_kalkulator_klirens_08.js": {
   "v": 1,
@@ -548,8 +552,8 @@
   "sha256": "b8eff7e716de0492d8a7596e372800afa2205b5433fd1c8c3ccee18a797cb4be"
  },
  "vilda_chrome.js": {
-  "v": 168,
-  "sha256": "077a212d0182e54546441cff1b37465c3ffbbeb384f889bb68b60817f61cd717"
+  "v": 169,
+  "sha256": "4b7ea26f4741579d0353b4e83728e256b22ff2c55d093b0a8a55bff5fa7ff8a5"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -728,12 +732,12 @@
   "sha256": "bcb1febb3098914cf475549a97ebaec2078b4bd4cfc07d1e0a19922f760be3b3"
  },
  "vilda_hormone_lifespan.js": {
-  "v": 40,
-  "sha256": "e9f191b8224713b8b3782140360d3e03368ee8647e0339e68872be535d8f0132"
+  "v": 42,
+  "sha256": "fcb2d38272ad19135c61f6b790571d6aa675fba4918cd837a9fce44ecc64a780"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 33,
-  "sha256": "588302ec7dc5dd35221ab20a508dc7ecd3b330c6d47d99bcc50c039421b95d15"
+  "v": 35,
+  "sha256": "a251f23bb2110ba3f23d132be2fe26f898c24b1e9c86eb56ed8d1d3b4b4a2757"
  },
  "vilda_hormone_lifespan_display.js": {
   "v": 14,
@@ -1036,8 +1040,8 @@
   "sha256": "bf561188adfe403fa735bef0b88bd2297144ec1fe7909582e0dbb50cd6c99c97"
  },
  "vilda_session_bridge.js": {
-  "v": 92,
-  "sha256": "c326b54a79f3c05fb4f0b30cdd76d1e13a7830b47fb735d120d2e8dbc9e70580"
+  "v": 93,
+  "sha256": "2d3f7d94e215b3b4295ec045530266f1615e147b144e7ce1fafeb82ae2470ee6"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -1120,8 +1124,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 223,
-  "sha256": "5712602491a5c553a7e261319e8c36a04f0bd6ef326df9a85331d83a88301bd3"
+  "v": 224,
+  "sha256": "f3b14e39686514752750154f7d0cf9d6c6f81adea520224a94e11d800321eeef"
  },
  "vilda_version_history_ui.js": {
   "v": 15,

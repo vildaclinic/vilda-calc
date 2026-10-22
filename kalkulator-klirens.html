@@ -68,7 +68,7 @@
 <script defer src="vilda_html.js?v=4"></script>
 <script defer src="vilda_persistence_adapter.js?v=32"></script>
 <script defer src="vilda_panel_pacjent.js?v=1"></script>
-<script defer src="vilda_session_bridge.js?v=92"></script>
+<script defer src="vilda_session_bridge.js?v=93"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -81,7 +81,7 @@
 <script defer src="vilda_lab_assessment_ui.js?v=17"></script>
 <script defer src="vilda_lab_history.js?v=4"></script>
 <script defer src="vilda_lab_history_tab.js?v=7"></script>
-<script defer src="vilda_vault.js?v=223"></script>
+<script defer src="vilda_vault.js?v=224"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=39"></script>
 <script defer src="vilda_sync_integration.js?v=51"></script>
@@ -175,8 +175,8 @@
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=168"></script>
-<link href="clcr_ui_workflow.css?v=10" rel="stylesheet" />
+<script defer src="vilda_chrome.js?v=169"></script>
+<link href="clcr_ui_workflow.css?v=13" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
 </head>
@@ -309,6 +309,9 @@
               <option value="enzymatic_idms">Metoda enzymatyczna, standaryzowana do IDMS</option>
               <option value="jaffe_idms">Metoda Jaffego, kalibrowana do IDMS</option>
               <option value="not_idms">Metoda niestandaryzowana do IDMS / nieznana</option>
+              <option value="non_idms" hidden>Potwierdzone oznaczenie bez standaryzacji IDMS</option>
+              <option value="enzymatic_non_idms" hidden>Potwierdzona metoda enzymatyczna bez IDMS</option>
+              <option value="jaffe_non_idms" hidden>Potwierdzona metoda Jaffego bez IDMS</option>
             </select>
           </label>
           <label for="creatinineState">Stan markerów filtracji do obliczeń eGFR/eCrCl:
@@ -325,11 +328,18 @@
           <label class="advanced-field pro-field">Cystatyna C (mg/L):
             <input type="number" step="0.01" id="CystatinC" />
           </label>
+          <label>Potwierdzam standaryzację badań
+            <input type="checkbox" id="CrCysStandardizationConfirmed" />
+          </label>
+          <p class="clcr-paired-marker-note" id="clcrPairedMarkerNote" hidden>Kreatynina i cystatyna C z tej samej próbki krwi.</p>
           <label class="advanced-field pro-field">Standaryzacja cystatyny C:
             <select id="CystatinCStandardization">
               <option value="" selected>— nie określono —</option>
               <option value="ERM-DA471/IFCC">Identyfikowalność ERM-DA471/IFCC</option>
               <option value="not_ifcc">Niepotwierdzona / inna</option>
+              <option value="non_ifcc" hidden>Potwierdzone oznaczenie bez standaryzacji IFCC</option>
+              <option value="not_standardized_to_ifcc" hidden>Potwierdzony brak standaryzacji IFCC</option>
+              <option value="non_erm_da471_ifcc" hidden>Potwierdzony brak identyfikowalności ERM-DA471/IFCC</option>
             </select>
           </label>
           <label class="advanced-field pro-field">Metoda oznaczenia cystatyny C:
@@ -852,13 +862,14 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_clinical_safety.js?v=6"></script>
+    <script defer src="clcr_clinical_safety.js?v=7"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
-    <script defer src="clcr_result_reference_data.js?v=1"></script>
-    <script defer src="clcr_result_presentation.js?v=1"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=6"></script>
+    <script defer src="clcr_calculation_assumptions.js?v=1"></script>
+    <script defer src="clcr_result_reference_data.js?v=4"></script>
+    <script defer src="clcr_result_presentation.js?v=4"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=8"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -925,7 +936,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=10"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=13"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1521,7 +1532,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=3"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=4"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1582,7 +1593,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'stoneMetabolicEvaluationContext','stoneCollectionPlausibilityReviewed',
       'stoneTwoCollectionsConfirmed',
       'spotSampleKind','spotSameSpecimen','U_Prot_spot',
-      'CystatinC','CystatinCStandardization','CystatinCAssayMethod',
+      'CystatinC','CystatinCStandardization','CystatinCAssayMethod','CrCysStandardizationConfirmed',
       'oxalateSpotReportingEntity',
       'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
       'spotPairedChemistry',
@@ -1779,6 +1790,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=8"></script>
+  <script defer src="clcr_ui_workflow.js?v=11"></script>
 </body>
 </html>

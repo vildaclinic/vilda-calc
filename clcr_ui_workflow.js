@@ -355,47 +355,44 @@
 
   const FORMULA_CONTEXT = Object.freeze({
     egfr: {
-      interpretation: ["ScrAssay", "creatinineState"],
-      optional: ["weight", "height", "suspectedAKI"],
+      interpretation: [],
+      optional: ["weight", "height"],
     },
     ckid_u25: {
-      interpretation: ["ageMonths", "ScrAssay", "creatinineState"],
-      optional: ["weight", "suspectedAKI"],
+      interpretation: ["ageMonths"],
+      optional: ["weight"],
     },
     egfr_cr_cys: {
-      interpretation: [
-        "CystatinCAssayMethod",
-        "creatinineState",
-      ],
-      optional: ["weight", "height", "suspectedAKI"],
+      interpretation: [],
+      optional: [],
     },
     ckid_u25_cys: {
-      interpretation: ["ageMonths", "CystatinCAssayMethod", "creatinineState"],
-      optional: ["weight", "height", "suspectedAKI"],
+      interpretation: ["ageMonths"],
+      optional: [],
     },
     ckid_u25_cr_cys: {
-      interpretation: ["ageMonths", "CystatinCAssayMethod", "creatinineState"],
-      optional: ["weight", "suspectedAKI"],
+      interpretation: ["ageMonths"],
+      optional: [],
     },
     neonatal_egfr: {
-      interpretation: ["creatinineState"],
-      optional: ["suspectedAKI"],
+      interpretation: [],
+      optional: [],
     },
     cg: {
-      interpretation: ["creatinineState"],
-      optional: ["suspectedAKI"],
+      interpretation: [],
+      optional: [],
     },
     cg_norm: {
-      interpretation: ["creatinineState"],
-      optional: ["suspectedAKI"],
+      interpretation: [],
+      optional: [],
     },
     sch_idms: {
-      interpretation: ["ageMonths", "ScrAssay", "creatinineState"],
-      optional: ["weight", "suspectedAKI"],
+      interpretation: ["ageMonths"],
+      optional: ["weight"],
     },
     cl24: {
-      interpretation: ["creatinineState"],
-      optional: ["suspectedAKI"],
+      interpretation: [],
+      optional: [],
     },
     ACR: {
       interpretation: ["spotSampleKind", "age", "ageMonths", "sex"],
@@ -545,6 +542,7 @@
     Scr: "Podaj kreatyninę w surowicy i wybierz jednostkę dokładnie zgodną z wynikiem laboratoryjnym.",
     ScrUnit: "Wybierz jednostkę kreatyniny w surowicy zgodną z dokumentem źródłowym.",
     ScrAssay: "Standaryzacja do IDMS wpływa na wiarygodność i dostępność współczesnych wzorów kreatyninowych.",
+    CrCysStandardizationConfirmed: "Potwierdzenie dotyczy łącznie kreatyniny standaryzowanej do IDMS i cystatyny C identyfikowalnej do ERM-DA471/IFCC. Nie określa techniki oznaczenia ani stabilności markerów.",
     creatinineState: "eGFR i eCrCl zakładają stabilne markery filtracji. Szybka zmiana ogranicza lub wyklucza interpretację.",
     suspectedAKI: "Zaznacz, jeżeli istnieje podejrzenie ostrego uszkodzenia nerek. Wtedy estymacje stanu stacjonarnego mogą być niewiarygodne.",
     CystatinC: "Podaj cystatynę C w mg/L z wyniku laboratoryjnego.",
@@ -702,6 +700,18 @@
       .map(([fieldId, message]) => ({ fieldId, message }));
   }
 
+  // Nowy, jawny fakt dotyczy WYŁĄCZNIE dwóch standardów dorosłego cr-cys.
+  // Migracja starej sesji odczytuje koniunkcję niezależnych faktów. Jawne
+  // false ma pierwszeństwo; nie dopowiadamy metody enzymatycznej ani stanu nerek.
+  function normalizeCrCysSessionInputs(inputs) {
+    const source = inputs && typeof inputs === "object" ? inputs : {};
+    const confirmed = Object.prototype.hasOwnProperty.call(source, "CrCysStandardizationConfirmed")
+      ? source.CrCysStandardizationConfirmed === true
+      : ["enzymatic_idms", "jaffe_idms"].includes(source.ScrAssay) &&
+        source.CystatinCStandardization === "ERM-DA471/IFCC";
+    return { ...source, CrCysStandardizationConfirmed: confirmed };
+  }
+
   function levelAllows(selectedLevel, moduleLevel) {
     if (selectedLevel === "spot" || moduleLevel === "spot") {
       return selectedLevel === "spot" && moduleLevel === "spot";
@@ -824,6 +834,7 @@
     formulaSearch,
     interpretationControlState,
     activeConfounderLimitations,
+    normalizeCrCysSessionInputs,
     getAvailableModules,
     getFormulaAssignments,
     getModuleForFormula,
@@ -851,6 +862,7 @@
     moduleGrid: null,
     activePanel: null,
     readiness: null,
+    completion: null,
     moduleToggle: null,
     mobileModulesExpanded: false,
     dzmQualityGroup: null,
@@ -955,7 +967,7 @@
     label.removeAttribute("style");
 
     const heading = createElement("span", "clcr-field__heading");
-    const name = createElement("span", "clcr-field__name", labelText);
+    const name = createElement(control.id === "CrCysStandardizationConfirmed" ? "strong" : "span", "clcr-field__name", labelText);
     name.id = `clcr-label-${control.id}`;
     const badge = createElement("span", "clcr-field__status", "Opcjonalne");
     const infoButton = createElement("button", "clcr-info-button", "i");
@@ -998,6 +1010,16 @@
 
     const isCheckbox = String(preservedControl.type).toLowerCase() === "checkbox";
     if (isCheckbox) label.classList.add("clcr-field--choice");
+    if (control.id === "CrCysStandardizationConfirmed") {
+      label.classList.add("clcr-assay-confirmation");
+      const text = createElement("span");
+      const standards = createElement("small", "", "Kreatynina: IDMS · cystatyna C: ERM-DA471/IFCC");
+      standards.id = "clcr-cr-cys-standards";
+      text.append(name, standards);
+      preservedControl.setAttribute("aria-describedby", standards.id);
+      heading.hidden = true;
+      label.prepend(preservedControl, text);
+    }
     if (Object.prototype.hasOwnProperty.call(UNIT_PAIRS, control.id)) {
       label.classList.add("clcr-field--value");
       label.dataset.clcrUnitPair = UNIT_PAIRS[control.id];
@@ -1067,6 +1089,8 @@
   function ensureProtocolAnswer(view) {
     if (!view) return null;
     const control = view.control;
+    // To jedno potwierdzenie AND, bez dodatkowej listy odpowiedzi.
+    if (control.id === "CrCysStandardizationConfirmed") return null;
     if (String(control.type).toLowerCase() !== "checkbox") return null;
     const vault = currentProtocolValueVault();
     if (view.answerSelect) {
@@ -1507,12 +1531,6 @@
         view.contextAnchor.parentNode.insertBefore(view.wrapper, view.contextAnchor.nextSibling);
       } else if (view.originalParent) view.originalParent.appendChild(view.wrapper);
     });
-    const proxy = state.egfrMarkerContext;
-    const markerParent = state.fieldViews.get("creatinineState")?.originalParent;
-    if (proxy && markerParent && proxy.wrapper.closest(".clcr-context-details")) {
-      if (proxy.contextAnchor?.parentNode) proxy.contextAnchor.parentNode.insertBefore(proxy.wrapper, proxy.contextAnchor.nextSibling);
-      else markerParent.appendChild(proxy.wrapper);
-    }
     documentRef.querySelectorAll(".clcr-context-details").forEach((details) => {
       details.hidden = true;
     });
@@ -1520,6 +1538,8 @@
 
   function groupCollapsibleContextFields() {
     const groups = new Map();
+    const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
+      ? documentRef.getElementById("serumSet") : null;
     function appendToDetails(wrapper, fieldset) {
       if (!fieldset || !wrapper || wrapper.hidden) return;
       let group = groups.get(fieldset);
@@ -1533,6 +1553,9 @@
           fieldset.appendChild(details);
         }
         details.hidden = false;
+        details.querySelector("summary").textContent = ["ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
+          ? "Dokładniejszy wiek (opcjonalnie)"
+          : "Dodatkowe dane i kontekst (opcjonalne)";
         group = { details, body: details.querySelector(".clcr-context-details__body") };
         groups.set(fieldset, group);
       }
@@ -1545,24 +1568,12 @@
         view.contextAnchor = documentRef.createComment(`clcr-context-${fieldId}`);
         view.wrapper.parentNode.insertBefore(view.contextAnchor, view.wrapper);
       }
-      appendToDetails(view.wrapper, view.originalParent?.closest("fieldset"));
+      appendToDetails(view.wrapper, sharedFieldset || view.originalParent?.closest("fieldset"));
     });
-    const proxy = state.egfrMarkerContext;
-    if (proxy && !proxy.wrapper.hidden) {
-      if (!proxy.contextAnchor) {
-        proxy.contextAnchor = documentRef.createComment("clcr-context-marker-proxy");
-        proxy.wrapper.parentNode.insertBefore(proxy.contextAnchor, proxy.wrapper);
-      }
-      appendToDetails(proxy.wrapper, state.fieldViews.get("creatinineState")?.originalParent?.closest("fieldset"));
-    }
   }
 
   function getContext(formulaId) {
     return FORMULA_CONTEXT[formulaId] || { interpretation: [], optional: [] };
-  }
-
-  function simplifiedCreatinineContextActive() {
-    return !state.legacyBroad && CREATININE_VALUE_FORMULAS.has(state.activeFormulaId);
   }
 
   function renderCompactCgLabels() {
@@ -1579,100 +1590,6 @@
       view.wrapper.querySelector(".clcr-field__name").textContent = view.labelText;
       view.infoButton.setAttribute("aria-label", `Informacja: ${view.labelText}`);
     });
-  }
-
-  function syncEgfrMarkerContext() {
-    const proxy = state.egfrMarkerContext;
-    if (!proxy) return;
-    const marker = documentRef.getElementById("creatinineState");
-    const aki = documentRef.getElementById("suspectedAKI");
-    proxy.control.value = aki && aki.checked
-      ? "aki"
-      : marker && ["stable", "rapidlyChanging"].includes(marker.value)
-        ? marker.value
-        : "unknown";
-  }
-
-  function ensureEgfrMarkerContext() {
-    if (state.egfrMarkerContext) return state.egfrMarkerContext;
-    const markerView = state.fieldViews.get("creatinineState");
-    const akiView = state.fieldViews.get("suspectedAKI");
-    if (!markerView || !akiView) return null;
-    const wrapper = createElement("label", "clcr-field clcr-marker-context");
-    const heading = createElement("span", "clcr-field__heading");
-    const name = createElement("span", "clcr-field__name", "Stabilność kreatyniny / AKI");
-    const badge = createElement("span", "clcr-field__status clcr-field__status--optional", "Opcjonalne");
-    name.id = "clcr-label-marker-context";
-    heading.append(name, badge);
-    const control = createElement("select");
-    // Brak id/name jest celowy: to widok dwóch istniejących pól, a nie nowy
-    // klucz w collectCurrentSession()/JSON. Natywna etykieta zawiera tylko
-    // tę jedną etykietowalną kontrolkę, więc klik w nazwę daje jej fokus.
-    control.dataset.clcrMarkerContext = "1";
-    control.setAttribute("aria-labelledby", name.id);
-    [
-      ["unknown", "Nie wiadomo"],
-      ["stable", "Kreatynina stabilna, bez podejrzenia AKI"],
-      ["rapidlyChanging", "Kreatynina szybko się zmienia"],
-      ["aki", "Podejrzenie ostrego uszkodzenia nerek (AKI)"],
-    ].forEach(([value, text]) => {
-      const option = createElement("option", "", text);
-      option.value = value;
-      control.appendChild(option);
-    });
-    const note = createElement("span", "clcr-marker-context__note", "Szybka zmiana kreatyniny lub podejrzenie AKI wykluczają raportowanie bieżącego eGFR.");
-    note.id = "clcr-marker-context-note";
-    control.setAttribute("aria-describedby", note.id);
-    wrapper.append(heading, control, note);
-    markerView.wrapper.parentNode.insertBefore(wrapper, markerView.wrapper);
-    const proxy = { wrapper, control, name, badge, note };
-    state.egfrMarkerContext = proxy;
-    control.addEventListener("change", () => {
-      const marker = markerView.control;
-      const aki = akiView.control;
-      // Ustawiamy obie wartości przed pierwszym zdarzeniem: silnik i autosave
-      // nie mogą zobaczyć przejściowej pary „stabilna + stare AKI”.
-      if (control.value === "aki") {
-        aki.checked = true;
-      } else {
-        marker.value = control.value;
-        aki.checked = false;
-      }
-      const vault = currentProtocolValueVault();
-      if (vault) {
-        vault.creatinineState = marker.value;
-        vault.suspectedAKI = aki.checked;
-      }
-      [marker, aki].forEach((canonical) => {
-        canonical.dispatchEvent(new Event("input", { bubbles: true }));
-        canonical.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-      syncEgfrMarkerContext();
-      scheduleReadiness();
-    });
-    [markerView.control, akiView.control].forEach((canonical) => {
-      canonical.addEventListener("input", syncEgfrMarkerContext);
-      canonical.addEventListener("change", syncEgfrMarkerContext);
-    });
-    syncEgfrMarkerContext();
-    return proxy;
-  }
-
-  function renderEgfrMarkerContext() {
-    const active = simplifiedCreatinineContextActive();
-    const proxy = active ? ensureEgfrMarkerContext() : state.egfrMarkerContext;
-    if (!proxy) return;
-    proxy.wrapper.hidden = !active;
-    if (active) {
-      proxy.name.textContent = "Kontekst czynności nerek";
-      proxy.badge.hidden = true;
-      proxy.note.textContent = "Szybka zmiana markerów lub podejrzenie AKI wykluczają raportowanie bieżącej czynności nerek tym wzorem.";
-      ["creatinineState", "suspectedAKI"].forEach((fieldId) => {
-        const view = state.fieldViews.get(fieldId);
-        if (view) view.wrapper.hidden = true;
-      });
-      syncEgfrMarkerContext();
-    }
   }
 
   function activeSetsForFormula(formula) {
@@ -1695,9 +1612,22 @@
     (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && formula.id !== "neonatal_egfr") optional.add("ageMonths");
     getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
-    if (CREATININE_VALUE_FORMULAS.has(formula.id)) {
-      optional.add("creatinineState");
-      optional.add("suspectedAKI");
+    if (formula.id === "egfr_cr_cys") {
+      ["height", "weight", "CystatinCAssayMethod", "ScrAssay", "CystatinCStandardization"].forEach((fieldId) => optional.delete(fieldId));
+    }
+    if (["ckid_u25_cys", "ckid_u25_cr_cys"].includes(formula.id)) {
+      // Średnia zachowuje wzrost w wymaganych danych składowej kreatyninowej.
+      ["height", "weight"].forEach((fieldId) => optional.delete(fieldId));
+    }
+    // Te kontrolki pozostają źródłem zapisanych faktów, lecz założenia
+    // obliczenia nie wymagają kolejnych odpowiedzi ani ich potwierdzania.
+    ["creatinineState", "suspectedAKI", "CystatinCStandardization", "CystatinCAssayMethod", "CrCysStandardizationConfirmed"].forEach((fieldId) => {
+      required.delete(fieldId);
+      optional.delete(fieldId);
+    });
+    if (formula.id !== "neonatal_egfr") {
+      required.delete("ScrAssay");
+      optional.delete("ScrAssay");
     }
     const module = getModuleForFormula(formula.id);
     if (module?.path === "spot" && !required.has("spotSampleKind")) optional.add("spotSampleKind");
@@ -1764,7 +1694,8 @@
     const pcr = state.fieldViews.get("U_PCR");
     if (accr) accr.wrapper.hidden = true;
     if (pcr) pcr.wrapper.hidden = true;
-    renderEgfrMarkerContext();
+    const pairedNote = documentRef.getElementById("clcrPairedMarkerNote");
+    if (pairedNote) pairedNote.hidden = !["egfr_cr_cys", "ckid_u25_cr_cys"].includes(formula?.id);
     groupCollapsibleContextFields();
     syncFieldPairs();
 
@@ -1810,7 +1741,6 @@
     });
     restoreDzmQualityFields();
     restoreCollapsibleContextFields();
-    renderEgfrMarkerContext();
     syncFieldPairs();
     syncFieldsetVisibility();
     renderActiveHeading(null, true);
@@ -1872,22 +1802,6 @@
   }
 
   function focusField(fieldId) {
-    if (
-      simplifiedCreatinineContextActive() &&
-      ["creatinineState", "suspectedAKI"].includes(fieldId) &&
-      state.egfrMarkerContext
-    ) {
-      const { wrapper, control } = state.egfrMarkerContext;
-      const details = wrapper.closest("details");
-      if (details) details.open = true;
-      try {
-        wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
-        control.focus({ preventScroll: true });
-      } catch (_) {
-        control.focus();
-      }
-      return;
-    }
     if (fieldId === DZM_QUALITY_GROUP_FOCUS_ID && state.dzmQualityGroup) {
       const { group, confirmAll, details } = state.dzmQualityGroup;
       const answerSummary = dzmQualityAnswerSummary();
@@ -1983,13 +1897,34 @@
     return fields[field] || "";
   }
 
-  function currentClinicalContext() {
+  function calculationAssumptions(formulaId = state.activeFormulaId) {
+    const resolver = global.VildaClcrCalculationAssumptions;
+    if (!resolver || typeof resolver.resolve !== "function") return null;
+    const clinical = global.ClcrClinicalSafety;
+    const creatinineState = fieldValue("creatinineState") || "unknown";
+    const suspectedAKI = Boolean(documentRef.getElementById("suspectedAKI")?.checked);
+    const scrAssay = fieldValue("ScrAssay");
+    return resolver.resolve(formulaId, {
+      creatinineState,
+      suspectedAKI,
+      scrAssay,
+      creatinineStandardization: ["enzymatic_idms", "jaffe_idms"].includes(scrAssay) ? "IDMS" : "",
+      cystatinCStandardization: fieldValue("CystatinCStandardization"),
+      crCysStandardizationConfirmed: Boolean(documentRef.getElementById("CrCysStandardizationConfirmed")?.checked),
+      markerPolicy: typeof clinical?.creatininePolicy === "function"
+        ? clinical.creatininePolicy(creatinineState, suspectedAKI)
+        : undefined,
+    });
+  }
+
+  function currentClinicalContext(formulaId = state.activeFormulaId) {
     const clinical = global.ClcrClinicalSafety;
     const age =
       clinical && typeof clinical.readAgeFromDocument === "function"
         ? clinical.readAgeFromDocument(documentRef)
         : null;
-    const markerPolicy =
+    const resolved = calculationAssumptions(formulaId);
+    const markerPolicy = resolved?.calculationContext.markerPolicy || (
       clinical && typeof clinical.creatininePolicy === "function"
         ? clinical.creatininePolicy(
             fieldValue("creatinineState") || "unknown",
@@ -2000,11 +1935,12 @@
             categoryAllowed: false,
             status: "unknown",
             message: "",
-          };
+          });
     return {
       clinical,
       age,
       markerPolicy,
+      calculationAssumptions: resolved,
       population: {
         termStatus: fieldValue("neonatalTermStatus"),
         bodyWeightKg: fieldValue("weight"),
@@ -2013,7 +1949,9 @@
     };
   }
 
-  function currentExtendedEgfrInput(age) {
+  function currentExtendedEgfrInput(age, resolved) {
+    const paired = state.activeFormulaId === "egfr_cr_cys" ? crCysStandardization() : null;
+    const effective = resolved?.calculationContext;
     return {
       ageYears: age && age.valid ? age.exactYears : null,
       sex: fieldValue("sex"),
@@ -2022,7 +1960,7 @@
       creatinineValue: fieldNumber("Scr"),
       creatinineUnit:
         fieldValue("ScrUnit") === "umol" ? "umol/L" : "mg/dL",
-      creatinineStandardization: [
+      creatinineStandardization: effective ? effective.creatinineStandardization : paired ? paired.creatinineStandardization : [
         "enzymatic_idms",
         "jaffe_idms",
       ].includes(fieldValue("ScrAssay"))
@@ -2030,7 +1968,16 @@
         : "",
       cystatinCValue: fieldNumber("CystatinC"),
       cystatinCUnit: "mg/L",
-      cystatinCStandardization: fieldValue("CystatinCStandardization"),
+      cystatinCStandardization: effective ? effective.cystatinCStandardization : paired ? paired.cystatinCStandardization : fieldValue("CystatinCStandardization"),
+    };
+  }
+
+  function crCysStandardization() {
+    const confirmed = Boolean(documentRef.getElementById("CrCysStandardizationConfirmed")?.checked);
+    return {
+      confirmed,
+      creatinineStandardization: confirmed ? "IDMS" : "",
+      cystatinCStandardization: confirmed ? "ERM-DA471/IFCC" : "",
     };
   }
 
@@ -2100,8 +2047,12 @@
         "",
       );
     }
-    const { clinical, age, markerPolicy, population } =
-      currentClinicalContext();
+    const { clinical, age, markerPolicy, population, calculationAssumptions: resolved } =
+      currentClinicalContext(formula.id);
+    if (resolved?.allowed === false) {
+      const blocker = resolved.blockers[0];
+      return semanticBlock(blocker?.code, blocker?.message, "", resolved);
+    }
     if (
       clinical &&
       typeof clinical.formulaSafety === "function"
@@ -2147,7 +2098,7 @@
       }[formula.id];
       outcome =
         typeof extended[method] === "function"
-          ? extended[method](currentExtendedEgfrInput(age))
+          ? extended[method](currentExtendedEgfrInput(age, resolved))
           : null;
       if (!outcome || !outcome.ok) {
         return semanticBlock(
@@ -2157,6 +2108,7 @@
           outcome,
         );
       }
+      if (resolved) outcome = { ...outcome, calculationAssumptions: resolved };
     } else if (
       formula.id === "TMP_GFR" &&
       clinical &&
@@ -2306,7 +2258,8 @@
     if (
       CREATININE_VALUE_FORMULAS.has(formula.id) &&
       markerPolicy &&
-      markerPolicy.status === "unknown"
+      markerPolicy.status === "unknown" &&
+      markerPolicy.categoryAllowed !== true
     ) {
       limitations.push(
         "Nie potwierdzono stabilności markerów filtracji; wzór służy do oceny stabilnej czynności nerek.",
@@ -2314,6 +2267,7 @@
     }
     if (
       ["egfr", "ckid_u25", "sch_idms"].includes(formula.id) &&
+      resolved?.calculationContext.creatinineStandardization !== "IDMS" &&
       !["enzymatic_idms", "jaffe_idms"].includes(fieldValue("ScrAssay"))
     ) {
       limitations.push(
@@ -2337,7 +2291,7 @@
         "Surowy wynik spKt/V jest możliwy, ale interpretacja progowa wymaga potwierdzenia regularnej realizacji ocenianego schematu.",
       );
     }
-    return { ok: true, outcome, blockers: [], limitations };
+    return { ok: true, outcome, blockers: [], limitations, calculationAssumptions: resolved };
   }
 
   function getFormulaReadiness(formulaId = state.activeFormulaId) {
@@ -2502,6 +2456,7 @@
       interpretationErrors,
       limitations: uniqueLimitations,
       outcome: semantic.outcome,
+      calculationAssumptions: semantic.calculationAssumptions,
     };
   }
 
@@ -2559,8 +2514,8 @@
   }
 
   function renderReadiness() {
-    syncEgfrMarkerContext();
     if (!state.readiness) return;
+    if (state.completion) state.completion.hidden = true;
     state.readiness.replaceChildren();
     state.readiness.hidden = false;
     const formula = formulaById(state.activeFormulaId);
@@ -2575,12 +2530,12 @@
       state.readiness.append(createElement("p", "", "Wybierz obliczenie, aby zobaczyć potrzebne dane."));
       return;
     }
-    const context = currentClinicalContext();
+    const context = currentClinicalContext(formula.id);
     if (CREATININE_VALUE_FORMULAS.has(formula.id) && context.markerPolicy && !context.markerPolicy.calculationAllowed) {
       documentRef.documentElement.dataset.clcrReady = "false";
       state.readiness.className = "clcr-readiness clcr-readiness--error";
       state.readiness.append(createElement("strong", "", "Nie można obliczyć bieżącej czynności nerek."));
-      appendReadinessList([{ fieldId: "creatinineState", message: context.markerPolicy.message || "Znane AKI lub szybko zmieniające się markery wykluczają użycie tego wzoru. Sprawdź kontekst czynności nerek." }]);
+      appendReadinessList([{ message: context.markerPolicy.message || "Zapisane AKI lub szybko zmieniające się markery wykluczają użycie tego wzoru." }]);
       return;
     }
     const readiness = getFormulaReadiness(formula.id);
@@ -2601,8 +2556,32 @@
       // Ograniczenia odniesienia należą do karty wyniku. Nie tworzą osobnego
       // komunikatu o gotowości ani żądania dodatkowych, opcjonalnych odpowiedzi.
       state.readiness.hidden = true;
+      renderDataCompletion();
     }
     global.ClcrLayout?.refresh?.();
+  }
+
+  function renderDataCompletion() {
+    const questions = new Set();
+    state.requiredFieldIds.forEach((fieldId) => {
+      if (DZM_QUALITY_FIELDS.includes(fieldId)) questions.add(DZM_QUALITY_GROUP_FOCUS_ID);
+      else if (!Object.entries(UNIT_PAIRS).some(([valueId, unitId]) => unitId === fieldId && state.requiredFieldIds.has(valueId))) {
+        questions.add(fieldId);
+      }
+    });
+    if (!questions.size) return;
+    const sections = Array.from(documentRef.querySelectorAll("#clcrForm fieldset"))
+      .filter(sectionHasVisibleFields);
+    const target = sections[sections.length - 1] || state.activePanel;
+    if (!target) return;
+    if (!state.completion) {
+      state.completion = createElement("p", "clcr-data-completion");
+      state.completion.id = "clcrDataCompletion";
+      state.completion.setAttribute("aria-live", "polite");
+    }
+    state.completion.textContent = `✓ Dane kompletne · ${questions.size}/${questions.size}`;
+    state.completion.hidden = false;
+    if (state.completion.parentNode !== target) target.appendChild(state.completion);
   }
 
   let readinessFrame = 0;
@@ -3081,10 +3060,9 @@
     if (picker) picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
     form.addEventListener("input", scheduleReadiness, true);
     form.addEventListener("change", scheduleReadiness, true);
-    form.addEventListener("reset", () => global.setTimeout(syncEgfrMarkerContext, 0));
+    form.addEventListener("reset", () => global.setTimeout(scheduleReadiness, 0));
     ["vilda:persist-restored", "vilda:patient-loaded"].forEach((eventName) => {
       documentRef.addEventListener(eventName, () => {
-        syncEgfrMarkerContext();
         scheduleReadiness();
       });
     });
@@ -3161,6 +3139,8 @@
     refresh: syncFromPicker,
     getFormulaReadiness,
     uagSpecimenConfirmed,
+    crCysStandardization,
+    calculationAssumptions,
     hasBlockingValidationError() {
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
@@ -3310,10 +3290,18 @@
     return activeId ? moduleFormulaSet(activeId) : null;
   }
 
-  // Zakres referencyjny (span .range) i flaga „poza zakresem" (klasa) z
-  // otagowanego boksu wyniku — jeśli silnik je pokazał dla tego parametru.
+  // Odczytujemy odniesienie pokazywane przy tym wyniku, bez wyprowadzania
+  // kategorii klinicznej. Stare boksy nadal mogą podawać zakres przez .range.
   function readRangeText(el) {
     if (!el || typeof el.querySelector !== "function") return "";
+    const reference = el.querySelector(".clcr-result-reference");
+    if (reference) {
+      if (reference.getAttribute("data-clcr-reference-kind") === "none") return "";
+      return [
+        reference.querySelector(".clcr-result-reference-value")?.textContent,
+        reference.querySelector(".clcr-result-reference-unit")?.textContent,
+      ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    }
     const r = el.querySelector(".range");
     const t = r && r.textContent ? r.textContent : "";
     return t.replace(/\s+/g, " ").trim();
@@ -3380,6 +3368,15 @@
       dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
+      const assumptions = el.getAttribute("data-clcr-assumptions");
+      if (typeof assumptions === "string" && assumptions.trim()) dp.assumptions = assumptions.trim();
+      const provenance = el.getAttribute("data-clcr-assumption-provenance");
+      if (provenance) {
+        try {
+          const parsed = JSON.parse(provenance);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) dp.assumptionProvenance = parsed;
+        } catch (_) { /* Stare wyniki bez poprawnego opisu zachowują dotychczasową postać. */ }
+      }
       seen.add(series);
       out.push(dp);
     }
@@ -3443,7 +3440,8 @@
       const body =
         "Kalkulator klirensu · " +
         dp.testKey +
-        (dp.outOfRange ? " · wynik poza zakresem" : "");
+        (dp.outOfRange ? " · wynik poza zakresem" : "") +
+        (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "");
       try {
         await v.savePatientNote({
           patientId: patientId,

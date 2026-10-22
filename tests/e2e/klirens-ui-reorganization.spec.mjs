@@ -8,17 +8,6 @@ async function openFieldDetails(page, selector) {
   }
 }
 
-async function setMarkerContext(page, value) {
-  const marker = page.locator('[data-clcr-marker-context]');
-  for (const details of await marker.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
-  }
-  await marker.selectOption(value);
-}
-
-
 async function openCalculator(page) {
   await page.route(
     /^https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.sheetjs\.com|cdn\.jsdelivr\.net)\//,
@@ -473,9 +462,11 @@ test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje 
   await openFieldDetails(page, '#sex');
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill('1');
-  await openFieldDetails(page, '#ScrAssay');
-  await page.locator('#ScrAssay').selectOption('enzymatic_idms');
-  await setMarkerContext(page, 'stable');
+  await expect(page.locator('#ScrAssay')).toBeHidden();
+  await expect(page.locator('#ScrAssay')).toHaveValue('');
+  await expect(page.locator('#creatinineState')).toHaveValue('unknown');
+  await expect(page.locator('[data-clcr-marker-context]')).toBeHidden();
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr"]')).toContainText('kreatynina standaryzowana do IDMS');
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(readiness).not.toContainText(

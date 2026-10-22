@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFemaleE2ChildhoodBundle, beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -29,10 +29,10 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('Testosteron chłopców 1–<3 — przybliżone mediany grup Kushnir 2010', () => {
   it('dodaje wyłącznie dwa profile, zachowując 82 wcześniejsze profile, jednostki i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-21.1');
-    expect(data.profiles).toHaveLength(84);
+    expect(data.version).toBe('2026-10-22.2');
+    expect(data.profiles).toHaveLength(85);
     expect(data).toEqual(read('population-reference-data.json'));
-    expect(data.profiles.slice(-2).map(item => item.id)).toEqual(ids);
+    expect(beforeFemaleE2ChildhoodBundle(data).profiles.slice(-2).map(item => item.id)).toEqual(ids);
     const prior = beforeTestosteroneBoysBundle(data);
     expect(prior.profiles).toHaveLength(82);
     // Frozen complete audyt 0d7b4160 bundle: these checks protect every

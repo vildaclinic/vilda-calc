@@ -1118,7 +1118,9 @@
         ? model.profile.referenceSignificantDigits
         : model.profile.id === "ljubicic2020-male-fsh-75-80-approximate" ? 2 : 3;
       const medianLabel = groupMean ? "Średnia grupy" : model.profile.statistic === "group-median" ? "Mediana grupy" : "Mediana";
-      const medianContext = groupMean ? `Średnia w grupie ${model.profile.ageGroup.label}` : model.profile.statistic === "group-median"
+      const medianContext = model.profile.referenceGroupLabel
+        ? `Mediana grupy ${model.profile.referenceGroupLabel}`
+        : groupMean ? `Średnia w grupie ${model.profile.ageGroup.label}` : model.profile.statistic === "group-median"
         ? `Mediana grupy ${model.profile.ageGroup.label}` +
           (model.profile.requiredGonadalStage != null ? `, Tanner ${model.profile.requiredGonadalStage}` : "")
         : "Mediana dla wieku";
@@ -1313,8 +1315,19 @@
       const caption = byId("scale-note");
       const basis = model.profile.statistic === "group-median" ? "mediana grupy"
         : model.profile.statistic === "group-mean" ? "średnia grupy" : "mediana";
-      if (femaleGonadotropinsActive()) caption.textContent += " " + note;
-      else caption.textContent = "Kropka: wynik; jasny znacznik: " + basis + ". " + note +
+      let detail = note;
+      if (model.profile.referenceGroupLabel) {
+        const enteredUnit = patientContext?.displayUnit || patientContext?.measurement?.unit;
+        const conversions = data.patientPointData.unitConversions[model.id];
+        const factor = conversions?.unit === model.profile.unit &&
+          Object.prototype.hasOwnProperty.call(conversions.factors || {}, enteredUnit)
+          ? conversions.factors[enteredUnit] : null;
+        const matchingUnit = Number.isFinite(factor) && factor > 0;
+        detail = `Mediana grupy ${model.profile.referenceGroupLabel}: ${pointNumber(model.referenceValue / (matchingUnit ? factor : 1), 3)} ${matchingUnit ? enteredUnit : model.profile.unit}. ` + note;
+      }
+      if (femaleGonadotropinsActive()) caption.textContent += " " + detail;
+      else caption.textContent = (model.profile.referenceGroupLabel ? "Kropka: wynik. "
+        : "Kropka: wynik; jasny znacznik: " + basis + ". ") + detail +
         " Linia jest poglądowa." +
         (patientPointAboveScale(model) ? " ↑ Wynik powyżej skali." : "") +
         (patientContext.ageUpperYears > patientAgeYears ? " Pozycja wieku przybliżona." : "");
@@ -1387,7 +1400,13 @@
         "unsupported-age": "Dla tego wieku nie udostępniono mediany źródłowej. Linia pokazuje ogólny przebieg zmian.",
       };
       const reason = resultOnlyPoint?.reason || patientPoint?.reason;
-      const message = (femaleSource && femaleMessages[reason]) ||
+      const typedGroups = id === "e2" && sex === "female" && Array.isArray(data.patientPointData?.profiles)
+        ? data.patientPointData.profiles.filter((profile) => profile.analyte === id && profile.sex === sex &&
+          profile.referenceGroupLabel && profile.requiredGonadalStage != null) : [];
+      const stageMessage = typedGroups.length === 1 &&
+        ["missing-puberty-stage", "incompatible-puberty-stage"].includes(reason)
+        ? `Mediana grupy ${typedGroups[0].referenceGroupLabel} wymaga aktualnego Th${typedGroups[0].requiredGonadalStage} tej samej pacjentki. P i ogólny numer Tannera go nie zastępują.` : null;
+      const message = stageMessage || (femaleSource && femaleMessages[reason]) ||
         (adultTestosterone && adultMessages[reason]) || messages[reason];
       if (message) byId("scale-note").textContent = (femaleGonadotropinsActive()
         ? byId("scale-note").textContent + " " : "") + message +
@@ -1699,6 +1718,15 @@
         text(x(day), bottom + 19, day < 0 ? `−${Math.abs(day)}` : day > 0 ? `+${day}` : "0", {
           "text-anchor": day === -15 ? "start" : day === 14 ? "end" : "middle", "font-size": mobile ? 10 : 11 }));
     }
+    function appendGroupReferenceSource(paragraph, addLink) {
+      const profile = renderedPoint?.profile;
+      if (!profile?.referenceGroupLabel) return;
+      paragraph([profile.sourceLabel, profile.ageGroup?.label, profile.method, profile.population]
+        .filter(Boolean).join(" · ") + ".");
+      if (profile.ageGroup?.n) paragraph(`Liczebność pełnej grupy źródłowej: ${profile.ageGroup.n}.`);
+      for (const limitation of profile.limitations || []) paragraph(limitation);
+      if (profile.url) addLink(profile.sourceLabel, profile.url);
+    }
     function updateFemaleGonadotropinSources() {
       const resultPolicy = resultOnlyVisible() ? resultOnlyPoint.policy : null;
       const nextKey = JSON.stringify(["female-gonadotropins", view, [...selected].sort(), renderedPoint?.profile.id,
@@ -1735,6 +1763,7 @@
       }
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) paragraph("Pozostałe wybrane hormony zachowują odrębne, dotychczasowe skale. Oś LH/FSH nie opisuje ich stężeń. Ewentualny wynik innego hormonu i jego źródłowe odniesienie stosują własną skalę i oryginalną jednostkę.");
       const links = [...(period.sources || []), ...(view === "life" ? femaleGonadotropins.cycle.sources || [] : [])];
+      appendGroupReferenceSource(paragraph, (label, url) => links.push({ label, url }));
       if (resultPolicy) links.push(...(resultPolicy.sources || []));
       if ([...selected].some((id) => id !== "lh" && id !== "fsh")) {
         paragraph("Pozostałe hormony w minipuberty: mediany GAMLSS z suplementu Ljubicic 2022, około 7,3 dnia–1 rok, donoszone dziewczynki. To odrębna statystyka od dwufazowej średniej LH/FSH. Zachowują dotychczasową normalizację całego życia.");
@@ -3363,7 +3392,7 @@
           ],
         );
       } else if (!stableStudyVisible() && sex === "female") {
-        if (selected.has("inhb")) paragraph("Inhibina B zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii. Most dzieciństwa i końcowy spadek po 47. roku są poglądowe; nie stanowią nowych odniesień liczbowych.");
+        if (selected.has("inhb")) paragraph("Inhibina B zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii. Most dzieciństwa i końcowy spadek linii są poglądowe; liczbowe odniesienie jest dobierane osobno ze źródła.");
         if (selected.has("e2")) paragraph("Estradiol zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. W niemowlęctwie linia przedstawia medianę modelu GAMLSS, a nie dwie fale średniej podłużnej z ryciny 3. Dorosłe plateau jest poglądowe; osobny schemat cyklu pokazuje zmienność w jego obrębie. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii.");
         if (selected.has("amh")) {
           paragraph("AMH zachowuje tę samą linię i stałą skalę we wszystkich zwykłych widokach, także po wpisaniu wyniku. Zbliżenie powiększa ten sam przebieg. Końcówka pierwszego roku przechodzi łagodnie w poglądowy odcinek dzieciństwa. Jasny znacznik zachowuje medianę źródłową także wtedy, gdy nie leży na linii.");
@@ -3384,6 +3413,7 @@
           if (profile.ageGroup?.description) paragraph(profile.ageGroup.description);
           if (profile.ageGroup?.n) paragraph(`Liczebność grupy źródłowej: ${profile.ageGroup.n}.`);
         }
+        appendGroupReferenceSource(paragraph, (label, url) => links.push([label, url]));
         paragraph(
           "Minipuberty: mediany GAMLSS Ljubicic 2022, od około 7,3 dnia do 1 roku. To nie są dwufazowe średnie z ryciny 3. Suplement CC BY 4.0; mediany przeskalowano do prezentacji względnej. Dane dotyczą donoszonych dziewczynek.",
         );
@@ -3428,7 +3458,7 @@
           }
           if (selected.has("inhb")) {
             paragraph(
-              "Inhibina B: po niemowlęctwie mediana z ryciny 1 Borelli-Kjær 2025, odtworzona orientacyjnie z wykresu (około ±2 pg/mL). Gen II ELISA w surowicy jak u niemowląt, ale odrębny model. Odcinek 1–5,6 roku jest poglądowym połączeniem modeli niemowląt i starszych dzieci. W źródle brak obserwacji między 1,08 a 5,6 roku. Pokwitaniowy garb i późniejszy łagodny spadek pozostają, ponieważ są widoczne w tym samym opublikowanym modelu. Dorosła grupa liczy 149 kobiet, bez standaryzacji fazy cyklu; dane o antykoncepcji były niepełne. To nie jest mediana konkretnej fazy cyklu ani kohorty wyłącznie bez leczenia. Liczbowe odniesienie kończy się na zweryfikowanym odczycie przy 47 latach; dalsza linia jest poglądowa, bez stężeń poniżej granicy wykrywalności.",
+              "Inhibina B: po niemowlęctwie mediana z ryciny 1 Borelli-Kjær 2025, odtworzona orientacyjnie z wykresu (około ±2 pg/mL). Gen II ELISA w surowicy jak u niemowląt, ale odrębny model. Odcinek 1–5,6 roku jest poglądowym połączeniem modeli niemowląt i starszych dzieci. W źródle brak obserwacji między 1,08 a 5,6 roku. Pokwitaniowy garb i późniejszy łagodny spadek pozostają, ponieważ są widoczne w tym samym opublikowanym modelu. Dorosła grupa liczy 149 kobiet, bez standaryzacji fazy cyklu; dane o antykoncepcji były niepełne. To nie jest mediana konkretnej fazy cyklu ani kohorty wyłącznie bez leczenia. Zwykłe odniesienie wieku kończy się na ponownie zweryfikowanym odczycie przy 47,75 roku; dalsza linia jest poglądowa. Źródłowa granica wykrywalności (LOD) to 3 pg/mL; osobnej granicy oznaczalności ilościowej (LOQ) nie podano. Odczyt ±2 pg/mL nie jest przedziałem ufności ani potwierdzeniem oznaczalności ilościowej. Autorzy zastępowali wyniki poniżej LOD wartością LOD/2 do modelowania; nie zastępujemy tak wyniku pacjentki.",
             );
             links.push([
               "Borelli-Kjær 2025 · inhibina B",
