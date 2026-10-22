@@ -363,11 +363,8 @@
       optional: ["weight", "suspectedAKI"],
     },
     egfr_cr_cys: {
-      interpretation: [
-        "CystatinCAssayMethod",
-        "creatinineState",
-      ],
-      optional: ["weight", "height", "suspectedAKI"],
+      interpretation: ["creatinineState"],
+      optional: ["suspectedAKI"],
     },
     ckid_u25_cys: {
       interpretation: ["ageMonths", "CystatinCAssayMethod", "creatinineState"],
@@ -545,6 +542,7 @@
     Scr: "Podaj kreatyninę w surowicy i wybierz jednostkę dokładnie zgodną z wynikiem laboratoryjnym.",
     ScrUnit: "Wybierz jednostkę kreatyniny w surowicy zgodną z dokumentem źródłowym.",
     ScrAssay: "Standaryzacja do IDMS wpływa na wiarygodność i dostępność współczesnych wzorów kreatyninowych.",
+    CrCysStandardizationConfirmed: "Potwierdzenie dotyczy łącznie kreatyniny standaryzowanej do IDMS i cystatyny C identyfikowalnej do ERM-DA471/IFCC. Nie określa techniki oznaczenia ani stabilności markerów.",
     creatinineState: "eGFR i eCrCl zakładają stabilne markery filtracji. Szybka zmiana ogranicza lub wyklucza interpretację.",
     suspectedAKI: "Zaznacz, jeżeli istnieje podejrzenie ostrego uszkodzenia nerek. Wtedy estymacje stanu stacjonarnego mogą być niewiarygodne.",
     CystatinC: "Podaj cystatynę C w mg/L z wyniku laboratoryjnego.",
@@ -702,6 +700,18 @@
       .map(([fieldId, message]) => ({ fieldId, message }));
   }
 
+  // Nowy, jawny fakt dotyczy WYŁĄCZNIE dwóch standardów dorosłego cr-cys.
+  // Migracja starej sesji odczytuje koniunkcję niezależnych faktów. Jawne
+  // false ma pierwszeństwo; nie dopowiadamy metody enzymatycznej ani stanu nerek.
+  function normalizeCrCysSessionInputs(inputs) {
+    const source = inputs && typeof inputs === "object" ? inputs : {};
+    const confirmed = Object.prototype.hasOwnProperty.call(source, "CrCysStandardizationConfirmed")
+      ? source.CrCysStandardizationConfirmed === true
+      : ["enzymatic_idms", "jaffe_idms"].includes(source.ScrAssay) &&
+        source.CystatinCStandardization === "ERM-DA471/IFCC";
+    return { ...source, CrCysStandardizationConfirmed: confirmed };
+  }
+
   function levelAllows(selectedLevel, moduleLevel) {
     if (selectedLevel === "spot" || moduleLevel === "spot") {
       return selectedLevel === "spot" && moduleLevel === "spot";
@@ -824,6 +834,7 @@
     formulaSearch,
     interpretationControlState,
     activeConfounderLimitations,
+    normalizeCrCysSessionInputs,
     getAvailableModules,
     getFormulaAssignments,
     getModuleForFormula,
@@ -955,7 +966,7 @@
     label.removeAttribute("style");
 
     const heading = createElement("span", "clcr-field__heading");
-    const name = createElement("span", "clcr-field__name", labelText);
+    const name = createElement(control.id === "CrCysStandardizationConfirmed" ? "strong" : "span", "clcr-field__name", labelText);
     name.id = `clcr-label-${control.id}`;
     const badge = createElement("span", "clcr-field__status", "Opcjonalne");
     const infoButton = createElement("button", "clcr-info-button", "i");
@@ -998,6 +1009,16 @@
 
     const isCheckbox = String(preservedControl.type).toLowerCase() === "checkbox";
     if (isCheckbox) label.classList.add("clcr-field--choice");
+    if (control.id === "CrCysStandardizationConfirmed") {
+      label.classList.add("clcr-assay-confirmation");
+      const text = createElement("span");
+      const standards = createElement("small", "", "Kreatynina: IDMS · cystatyna C: ERM-DA471/IFCC");
+      standards.id = "clcr-cr-cys-standards";
+      text.append(name, standards);
+      preservedControl.setAttribute("aria-describedby", standards.id);
+      heading.hidden = true;
+      label.prepend(preservedControl, text);
+    }
     if (Object.prototype.hasOwnProperty.call(UNIT_PAIRS, control.id)) {
       label.classList.add("clcr-field--value");
       label.dataset.clcrUnitPair = UNIT_PAIRS[control.id];
@@ -1067,6 +1088,8 @@
   function ensureProtocolAnswer(view) {
     if (!view) return null;
     const control = view.control;
+    // To jedno potwierdzenie AND, bez dodatkowej listy odpowiedzi.
+    if (control.id === "CrCysStandardizationConfirmed") return null;
     if (String(control.type).toLowerCase() !== "checkbox") return null;
     const vault = currentProtocolValueVault();
     if (view.answerSelect) {
@@ -1520,6 +1543,8 @@
 
   function groupCollapsibleContextFields() {
     const groups = new Map();
+    const sharedFieldset = state.activeFormulaId === "egfr_cr_cys"
+      ? documentRef.getElementById("serumSet") : null;
     function appendToDetails(wrapper, fieldset) {
       if (!fieldset || !wrapper || wrapper.hidden) return;
       let group = groups.get(fieldset);
@@ -1545,7 +1570,7 @@
         view.contextAnchor = documentRef.createComment(`clcr-context-${fieldId}`);
         view.wrapper.parentNode.insertBefore(view.contextAnchor, view.wrapper);
       }
-      appendToDetails(view.wrapper, view.originalParent?.closest("fieldset"));
+      appendToDetails(view.wrapper, sharedFieldset || view.originalParent?.closest("fieldset"));
     });
     const proxy = state.egfrMarkerContext;
     if (proxy && !proxy.wrapper.hidden) {
@@ -1553,7 +1578,7 @@
         proxy.contextAnchor = documentRef.createComment("clcr-context-marker-proxy");
         proxy.wrapper.parentNode.insertBefore(proxy.contextAnchor, proxy.wrapper);
       }
-      appendToDetails(proxy.wrapper, state.fieldViews.get("creatinineState")?.originalParent?.closest("fieldset"));
+      appendToDetails(proxy.wrapper, sharedFieldset || state.fieldViews.get("creatinineState")?.originalParent?.closest("fieldset"));
     }
   }
 
@@ -1666,6 +1691,11 @@
     if (active) {
       proxy.name.textContent = "Kontekst czynności nerek";
       proxy.badge.hidden = true;
+      const pairedMarkers = state.activeFormulaId === "egfr_cr_cys";
+      proxy.control.querySelector('[value="stable"]').textContent = pairedMarkers
+        ? "Oba markery stabilne" : "Kreatynina stabilna, bez podejrzenia AKI";
+      proxy.control.querySelector('[value="rapidlyChanging"]').textContent = pairedMarkers
+        ? "Co najmniej jeden marker szybko się zmienia" : "Kreatynina szybko się zmienia";
       proxy.note.textContent = "Szybka zmiana markerów lub podejrzenie AKI wykluczają raportowanie bieżącej czynności nerek tym wzorem.";
       ["creatinineState", "suspectedAKI"].forEach((fieldId) => {
         const view = state.fieldViews.get(fieldId);
@@ -1695,6 +1725,9 @@
     (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
     if (required.has("age") && formula.id !== "neonatal_egfr") optional.add("ageMonths");
     getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    if (formula.id === "egfr_cr_cys") {
+      ["height", "weight", "CystatinCAssayMethod", "ScrAssay", "CystatinCStandardization"].forEach((fieldId) => optional.delete(fieldId));
+    }
     if (CREATININE_VALUE_FORMULAS.has(formula.id)) {
       optional.add("creatinineState");
       optional.add("suspectedAKI");
@@ -1765,6 +1798,8 @@
     if (accr) accr.wrapper.hidden = true;
     if (pcr) pcr.wrapper.hidden = true;
     renderEgfrMarkerContext();
+    const pairedNote = documentRef.getElementById("clcrPairedMarkerNote");
+    if (pairedNote) pairedNote.hidden = formula?.id !== "egfr_cr_cys";
     groupCollapsibleContextFields();
     syncFieldPairs();
 
@@ -2014,6 +2049,7 @@
   }
 
   function currentExtendedEgfrInput(age) {
+    const paired = state.activeFormulaId === "egfr_cr_cys" ? crCysStandardization() : null;
     return {
       ageYears: age && age.valid ? age.exactYears : null,
       sex: fieldValue("sex"),
@@ -2022,7 +2058,7 @@
       creatinineValue: fieldNumber("Scr"),
       creatinineUnit:
         fieldValue("ScrUnit") === "umol" ? "umol/L" : "mg/dL",
-      creatinineStandardization: [
+      creatinineStandardization: paired ? paired.creatinineStandardization : [
         "enzymatic_idms",
         "jaffe_idms",
       ].includes(fieldValue("ScrAssay"))
@@ -2030,7 +2066,16 @@
         : "",
       cystatinCValue: fieldNumber("CystatinC"),
       cystatinCUnit: "mg/L",
-      cystatinCStandardization: fieldValue("CystatinCStandardization"),
+      cystatinCStandardization: paired ? paired.cystatinCStandardization : fieldValue("CystatinCStandardization"),
+    };
+  }
+
+  function crCysStandardization() {
+    const confirmed = Boolean(documentRef.getElementById("CrCysStandardizationConfirmed")?.checked);
+    return {
+      confirmed,
+      creatinineStandardization: confirmed ? "IDMS" : "",
+      cystatinCStandardization: confirmed ? "ERM-DA471/IFCC" : "",
     };
   }
 
@@ -3161,6 +3206,7 @@
     refresh: syncFromPicker,
     getFormulaReadiness,
     uagSpecimenConfirmed,
+    crCysStandardization,
     hasBlockingValidationError() {
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
@@ -3310,10 +3356,18 @@
     return activeId ? moduleFormulaSet(activeId) : null;
   }
 
-  // Zakres referencyjny (span .range) i flaga „poza zakresem" (klasa) z
-  // otagowanego boksu wyniku — jeśli silnik je pokazał dla tego parametru.
+  // Odczytujemy odniesienie pokazywane przy tym wyniku, bez wyprowadzania
+  // kategorii klinicznej. Stare boksy nadal mogą podawać zakres przez .range.
   function readRangeText(el) {
     if (!el || typeof el.querySelector !== "function") return "";
+    const reference = el.querySelector(".clcr-result-reference");
+    if (reference) {
+      if (reference.getAttribute("data-clcr-reference-kind") === "none") return "";
+      return [
+        reference.querySelector(".clcr-result-reference-value")?.textContent,
+        reference.querySelector(".clcr-result-reference-unit")?.textContent,
+      ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    }
     const r = el.querySelector(".range");
     const t = r && r.textContent ? r.textContent : "";
     return t.replace(/\s+/g, " ").trim();

@@ -94,13 +94,61 @@
     }
     return noReference;
   }
+  // This is an estimate-to-reference comparison, not permission to assign G.
+  // The supplied profile owns the threshold, age range and displayed wording.
+  function u25EstimatePresentation(input, profile) {
+    const source = input || {};
+    const config = profile?.u25CreatinineEstimate;
+    if (!config || source.formulaId !== config.formulaId) return null;
+    const supplied = source.presentation || {};
+    const policy = source.markerPolicy || {};
+    const value = finite(source.value);
+    const age = finite(source.ageYears);
+    const neutral = { ...supplied, category: null, tone: "neutral", referenceComparison: false, assumptions: "" };
+    if (policy.calculationAllowed === false || policy.status === "blocked" || supplied.valueVisible === false) {
+      return { ...neutral, valueVisible: false };
+    }
+    if (value === null || value < 0 || age === null || age < config.minAgeYears || age >= config.maxAgeYearsExclusive) {
+      return { ...neutral, valueVisible: false };
+    }
+    const minimumReferenceAge = finite(profile.gfr?.minimumCategoryAgeYears);
+    const threshold = finite(profile.gfr?.referenceLowerInclusive);
+    const unitMatches = normalizeUnit(source.unit) === normalizeUnit(profile.gfr?.unit);
+    if (!unitMatches || minimumReferenceAge === null || threshold === null || threshold <= 0) return neutral;
+    const assay = String(source.assay || "");
+    const assayEligible = config.eligibleAssays.includes(assay);
+    if (assay && !assayEligible) {
+      return { ...neutral, label: "Szacowany eGFR — ocena ograniczona", reasons: [config.assayReason] };
+    }
+    if (age < minimumReferenceAge) {
+      return { ...neutral, label: config.ageSpecificLabel, reasons: [config.ageSpecificReason], assumptions: config.assumptions };
+    }
+    if (policy.status === "stable" && policy.categoryAllowed === true && assayEligible) return supplied;
+    if (policy.calculationAllowed !== true || !["unknown", "stable"].includes(policy.status)) return neutral;
+    const belowReference = value < threshold;
+    const pediatric = age < config.pediatricMaxAgeYearsExclusive;
+    const display = finite(source.displayValue);
+    const boundary = display !== null && belowReference !== (display < threshold)
+      ? `${belowReference ? "<" : "≥"}${threshold}` : "";
+    return {
+      ...neutral,
+      label: pediatric
+        ? (belowReference ? config.pediatricLowLabel : config.pediatricNotLowLabel)
+        : (belowReference ? config.adultLowLabel : config.adultNotLowLabel),
+      tone: belowReference ? "warning" : "neutral",
+      reasons: [config.comparisonDetail],
+      referenceComparison: true,
+      assumptions: config.assumptions,
+      boundary,
+    };
+  }
   function createModel(input, profile) {
     const source = input || {};
     const rawValue = finite(source.value);
-    const presentation = source.presentation || {};
+    const presentation = u25EstimatePresentation(source, profile) || source.presentation || {};
     const markerBlocked = profile?.markerSensitiveFormulaIds?.includes(source.formulaId) && source.markerPolicy?.calculationAllowed === false;
     const valueVisible = rawValue !== null && !markerBlocked && presentation.valueVisible !== false;
-    const reference = referenceFor(source, profile);
+    const reference = referenceFor({ ...source, presentation }, profile);
     const category = valueVisible && presentation.category ? presentation.category : null;
     const currentRow = reference.rows.find((entry) => entry.code === category?.code);
     const tone = valueVisible && ["success", "warning", "danger"].includes(presentation.tone) ? presentation.tone : "neutral";
@@ -110,8 +158,10 @@
       formulaId: source.formulaId || "", series: source.series || "", code: source.code || "",
       rawValue, valueVisible, displayValue: source.displayValue == null ? String(rawValue) : String(source.displayValue),
       unit: normalizeUnit(source.unit), label: source.label || "Wynik obliczenia",
-      boundary: profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
+      boundary: presentation.referenceComparison ? presentation.boundary : profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
       tone, category, interpretation, reference, categories: reference.rows, reasons,
+      referenceComparison: presentation.referenceComparison === true,
+      assumptions: valueVisible ? presentation.assumptions || "" : "",
       detailHtml: source.detailHtml || "", method: source.method || source.label || "", profileId: profile?.id || "",
     });
   }
@@ -141,12 +191,12 @@
       tableMarkup(model),
       model.method ? `<p><strong>Metoda:</strong> ${escape(model.method)}</p>` : "",
       ...model.reasons.map((reason) => `<p>${escape(reason)}</p>`),
-      reference.educational ? "<p>Norma ma charakter informacyjny. Dostępne dane nie pozwalają sklasyfikować tego pomiaru.</p>" : "",
+      reference.educational && !model.referenceComparison ? "<p>Norma ma charakter informacyjny. Dostępne dane nie pozwalają sklasyfikować tego pomiaru.</p>" : "",
       reference.limitation ? `<p>${escape(reference.limitation)}</p>` : "",
       model.boundary ? `<p>Wartość przed zaokrągleniem: ${escape(model.boundary)} ${escape(model.unit)}.</p>` : "",
       model.detailHtml,
     ].join("");
-    return `<div class="result-box clcr-result-card${["warning", "danger"].includes(model.tone) ? " out-of-range" : ""}" data-clcr-formula="${escape(model.formulaId)}" data-clcr-code="${escape(model.code)}"${seriesAttributes} data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="${escape(model.category?.code || "")}" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-profile="${escape(model.profileId)}"><div class="clcr-result-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${categoryButton}</p><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span>${model.boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(model.boundary)}</small>` : ""}</div><div class="clcr-result-reference${reference.kind === "none" ? " clcr-result-reference--text clcr-result-reference--unavailable" : ""}" data-clcr-reference="${escape(reference.kind)}" data-clcr-reference-kind="${escape(reference.kind)}" data-clcr-reference-length="${reference.value.length}"><p class="clcr-result-reference-label">${escape(reference.label)}</p><strong class="clcr-result-reference-value">${escape(reference.value)}</strong>${reference.unit ? `<span class="clcr-result-reference-unit">${escape(reference.unit)}</span>` : ""}${reference.minimum ? `<small class="clcr-result-reference-minimum">Minimum: ${escape(reference.minimum)}${reference.unit ? " " + escape(reference.unit) : ""}</small>` : ""}</div></div><p class="clcr-result-interpretation">${escape(model.interpretation)}</p></div>${populationSource ? `<p class="clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${populationSource}</p>` : ""}<details class="clcr-result-details" id="${detailsId}" data-clcr-formula="${escape(model.formulaId)}" tabindex="-1"><summary>${model.reference.kind === "acr" ? "Szczegóły — kategorie A1–A3" : model.reference.kind === "gfr" ? "Szczegóły — kategorie G1–G5" : "Szczegóły i źródła"}</summary>${details}</details>`;
+    return `<div class="result-box clcr-result-card${["warning", "danger"].includes(model.tone) ? " out-of-range" : ""}" data-clcr-formula="${escape(model.formulaId)}" data-clcr-code="${escape(model.code)}"${seriesAttributes} data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="${escape(model.category?.code || "")}" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${model.referenceComparison}"><div class="clcr-result-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${categoryButton}</p><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span>${model.boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(model.boundary)}</small>` : ""}</div><div class="clcr-result-reference${reference.kind === "none" ? " clcr-result-reference--text clcr-result-reference--unavailable" : ""}" data-clcr-reference="${escape(reference.kind)}" data-clcr-reference-kind="${escape(reference.kind)}" data-clcr-reference-length="${reference.value.length}"><p class="clcr-result-reference-label">${escape(reference.label)}</p><strong class="clcr-result-reference-value">${escape(reference.value)}</strong>${reference.unit ? `<span class="clcr-result-reference-unit">${escape(reference.unit)}</span>` : ""}${reference.minimum ? `<small class="clcr-result-reference-minimum">Minimum: ${escape(reference.minimum)}${reference.unit ? " " + escape(reference.unit) : ""}</small>` : ""}</div></div><p class="clcr-result-interpretation">${escape(model.interpretation)}</p></div>${model.assumptions ? `<p class="clcr-result-assumptions" data-clcr-formula="${escape(model.formulaId)}">${escape(model.assumptions)}</p>` : ""}${populationSource ? `<p class="clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${populationSource}</p>` : ""}<details class="clcr-result-details" id="${detailsId}" data-clcr-formula="${escape(model.formulaId)}" tabindex="-1"><summary>${model.reference.kind === "acr" ? "Szczegóły — kategorie A1–A3" : model.reference.kind === "gfr" ? "Szczegóły — kategorie G1–G5" : "Szczegóły i źródła"}</summary>${details}</details>`;
   }
   function bindCategoryControls(scope) {
     const target = scope || (typeof document !== "undefined" ? document : null);
@@ -172,5 +222,5 @@
       });
     }, true);
   }
-  return Object.freeze({ createModel, referenceFor, render, bindCategoryControls });
+  return Object.freeze({ createModel, referenceFor, u25EstimatePresentation, render, bindCategoryControls });
 });
