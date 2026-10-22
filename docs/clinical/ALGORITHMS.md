@@ -4679,6 +4679,9 @@ ERM-DA471/IFCC, bez dopisywania `ScrAssay`. Starsza sesja wyprowadza wspólne
 potwierdzenie z obu dawnych standardów tylko wtedy, gdy nowego pola nie było;
 jawne `false` pozostaje brakiem wspólnego potwierdzenia, nie dowodem
 niestandaryzowanego oznaczenia.
+Wczytanie pacjenta bez sesji Klirensu zeruje nowe potwierdzenie; nie przenosi
+deklaracji standardów z poprzedniego formularza. Odtworzenie zapisanej sesji
+nadal zachowuje jej jawną odpowiedź.
 Przy markerach podano „Kreatynina i cystatyna C z tej samej próbki krwi”,
 bez dodatkowego pytania lub fikcyjnego znacznika pobrania. Opcjonalny kontekst
 dotyczy obu markerów i pozostaje w jednym rozwinięciu wraz z dokładnością

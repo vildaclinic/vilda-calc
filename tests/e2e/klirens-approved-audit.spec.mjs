@@ -234,6 +234,38 @@ test('dorosły cr-cys: roundtrip JSON po przeładowaniu zachowuje jawny fakt, a 
   expect(cleared.CrCysStandardizationConfirmed).toBe(false);
 });
 
+test('dorosły cr-cys: pacjent bez sesji klirensu nie dziedziczy potwierdzenia standaryzacji poprzednich badań', async ({ page }) => {
+  await openCalculator(page);
+  await fillAdultCombined(page);
+  const confirmation = page.locator('#CrCysStandardizationConfirmed');
+  await confirmation.check();
+  await expectSingleResult(page, 'egfr_cr_cys', '43', 43.31634057743082);
+
+  // Ten produkcyjny przebieg wykonuje wczytanie pacjenta bez części clcr.
+  // Operacje są wspólne, aby oczekujący autosave nie odtworzył starej migawki
+  // między usunięciem sesji a rehydratacją. Nie otwieramy sejfu ani kart pacjentów.
+  const rehydrated = await page.evaluate(() => {
+    window.VildaPersistence.clearClcrSession();
+    if (window.VildaPersistence.readClcrSession() !== null) {
+      throw new Error('Syntetyczny nowy pacjent powinien nie mieć sesji klirensu.');
+    }
+    return window.__vildaClcrRehydrate();
+  });
+  expect(rehydrated).toBe(true);
+  await expect(confirmation).not.toBeChecked();
+  await expect(page.locator('#Scr')).toHaveValue('');
+  await expect(page.locator('#CystatinC')).toHaveValue('');
+  await expect(result(page, 'egfr_cr_cys')).toHaveCount(0);
+  await expectUnknownMarkerMetadata(page);
+
+  await page.locator('#Scr').fill('1.2');
+  await page.locator('#CystatinC').fill('1.2');
+  await expect(result(page, 'egfr_cr_cys')).toHaveCount(0);
+  await expect(page.locator('#clcrReadiness')).toContainText('Wymagane jest potwierdzenie');
+  await confirmation.check();
+  await expect(result(page, 'egfr_cr_cys')).toBeVisible();
+});
+
 test('U25: cztery dane dają 83 i ocenę oszacowania bez dopisywania metadanych ani kategorii G', async ({ page }) => {
   await openCalculator(page);
   await fillU25(page);
