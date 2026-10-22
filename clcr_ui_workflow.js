@@ -372,7 +372,7 @@
     },
     ckid_u25_cr_cys: {
       interpretation: ["ageMonths"],
-      optional: ["weight"],
+      optional: [],
     },
     neonatal_egfr: {
       interpretation: [],
@@ -1553,7 +1553,7 @@
           fieldset.appendChild(details);
         }
         details.hidden = false;
-        details.querySelector("summary").textContent = state.activeFormulaId === "ckid_u25_cys"
+        details.querySelector("summary").textContent = ["ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
           ? "Dokładniejszy wiek (opcjonalnie)"
           : "Dodatkowe dane i kontekst (opcjonalne)";
         group = { details, body: details.querySelector(".clcr-context-details__body") };
@@ -1615,7 +1615,8 @@
     if (formula.id === "egfr_cr_cys") {
       ["height", "weight", "CystatinCAssayMethod", "ScrAssay", "CystatinCStandardization"].forEach((fieldId) => optional.delete(fieldId));
     }
-    if (formula.id === "ckid_u25_cys") {
+    if (["ckid_u25_cys", "ckid_u25_cr_cys"].includes(formula.id)) {
+      // Średnia zachowuje wzrost w wymaganych danych składowej kreatyninowej.
       ["height", "weight"].forEach((fieldId) => optional.delete(fieldId));
     }
     // Te kontrolki pozostają źródłem zapisanych faktów, lecz założenia
@@ -1694,7 +1695,7 @@
     if (accr) accr.wrapper.hidden = true;
     if (pcr) pcr.wrapper.hidden = true;
     const pairedNote = documentRef.getElementById("clcrPairedMarkerNote");
-    if (pairedNote) pairedNote.hidden = formula?.id !== "egfr_cr_cys";
+    if (pairedNote) pairedNote.hidden = !["egfr_cr_cys", "ckid_u25_cr_cys"].includes(formula?.id);
     groupCollapsibleContextFields();
     syncFieldPairs();
 

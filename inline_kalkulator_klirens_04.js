@@ -1188,6 +1188,10 @@ function update() {
         const card = renderResultCard({
           formulaId: Vt || de || Sk, code: de, series: Sk,
           value: w, displayValue, unit: Z, label: r,
+          calculationComponents: Sk === "ckid_u25_cr_cys" && ckidU25CrCysResult?.ok ? {
+            egfrCreatinine: ckidU25CrCysResult.details.egfrCreatinine,
+            egfrCystatin: ckidU25CrCysResult.details.egfrCystatin,
+          } : undefined,
           boundary: (acrDisplay || (o && t >= 2 ? gfrDisplay : null))?.crossesCategoryBoundary ? (gfrDisplay || acrDisplay).raw : "",
         });
         if (card !== null) { S += card; return; }
@@ -1308,6 +1312,8 @@ function update() {
         } else S = bsaMarkup + S;
       }
       validGEntries.forEach((entry) => {
+        // The average already carries its G category and full table in one card.
+        if (entry.formulaId === "ckid_u25_cr_cys") return;
         if (
           ["egfr", "ckid_u25"].includes(entry.formulaId) &&
           typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
@@ -1327,7 +1333,7 @@ function update() {
       if (t >= 2 && t < 18) {
         const warnedFormulaIds = new Set();
         validGEntries
-          .filter((entry) => entry.value < 90 && !(
+          .filter((entry) => entry.formulaId !== "ckid_u25_cr_cys" && entry.value < 90 && !(
             ["egfr", "ckid_u25"].includes(entry.formulaId) &&
             typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
           ))
@@ -1351,7 +1357,7 @@ function update() {
         const w = hasG
           ? clcrEscapeHtml(validGEntries[0].formulaId || "egfr")
           : "ACR";
-        S += `<div class="result-box" data-clcr-formula="${w}"><strong>Uwaga:</strong> pojedynczy wynik eGFR/ACR nie rozpoznaje przewlekłej choroby nerek; należy ocenić przewlekłość, przyczynę i inne markery uszkodzenia nerek.</div>`;
+        if (w !== "ckid_u25_cr_cys") S += `<div class="result-box" data-clcr-formula="${w}"><strong>Uwaga:</strong> pojedynczy wynik eGFR/ACR nie rozpoznaje przewlekłej choroby nerek; należy ocenić przewlekłość, przyczynę i inne markery uszkodzenia nerek.</div>`;
       }
     }
     function z() {
@@ -1489,12 +1495,14 @@ function update() {
     }
     function appendExtendedEgfrWarnings(formulaId, result) {
       if (!result || !result.ok) return;
-      (result.warnings || []).forEach((warning) => {
+      // The average profile is visible next to its result, without a duplicate warning.
+      (formulaId === "ckid_u25_cr_cys" ? [] : result.warnings || []).forEach((warning) => {
         S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(formulaId)}"><strong>Profil równania:</strong> ${clcrEscapeHtml(warning)}</div>`;
       });
       if (
         formulaId.startsWith("ckid_u25") &&
-        cystatinCAssayMethod !== "nephelometric"
+        cystatinCAssayMethod !== "nephelometric" &&
+        (formulaId !== "ckid_u25_cr_cys" || ["immunoturbidimetric", "other"].includes(cystatinCAssayMethod))
       ) {
         const methodLabel =
           cystatinCAssayMethod === "immunoturbidimetric"
@@ -1827,6 +1835,7 @@ function update() {
         T({
           includeG: !0,
           includeA: !1,
+          includeBsa: l !== "ckid_u25_cr_cys",
           gfrEntries: partnerEntry
             ? [selectedEntry, partnerEntry]
             : [selectedEntry],

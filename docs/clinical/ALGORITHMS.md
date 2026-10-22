@@ -5008,6 +5008,137 @@ formularz, prezentację oraz widoki desktop/mobile obejmuje
 `tests/e2e/klirens-assumptions.spec.mjs`. Akceptacja właściciela
 i testy techniczne nie nadają aplikacji statusu walidacji klinicznej.
 
+#### P-KLIRENS-U25-SREDNIA-2026-10-22 — pięć danych i składowe w Szczegółach
+
+**Decyzja właściciela:** wdrożyć zaakceptowaną
+[makietę przed/po dla desktopu i telefonu](https://chatgpt.com/space/page_975dc1eaf3108191a509822707824783)
+dla `ckid_u25_cr_cys`, czyli średniej CKiD U25 eGFRcr i eGFRcys.
+Ta rata doprecyzowuje widok tej ścieżki po P-KLIRENS-ZALOZENIA-2026-10-22;
+nie przywraca pytań o stabilność, AKI, IFCC lub IDMS.
+
+**Wpływ kliniczny i funkcjonalny:** przedstawienie średniej wyraźnie
+oddziela jeden wynik łączony od jego pomocniczych składowych i zakresu G1.
+Widoczna informacja określa populację, dla której opracowano wzór.
+Usuwa się z tej ścieżki odziedziczony komentarz o pediatrycznej fladze
+eGFRcr <90 oraz powtarzane opisy braku niepotrzebnych potwierdzeń.
+To zmiana treści interpretacji i przepływu formularza, nie wyłącznie CSS.
+Nie zmieniają się równania, współczynniki, konwersje, wartości surowe,
+progi G, dotychczasowe granice wieku, sposób zaokrąglania wyniku głównego
+ani pierwszeństwo znanych przeciwnych danych klinicznych/laboratoryjnych.
+Historycznych wyników nie przelicza się wstecznie.
+
+**Minimalne dane:** wiek w latach, płeć wymagana przez równanie, wzrost
+w cm, kreatynina z jawną jednostką mg/dL lub µmol/L i cystatyna C w mg/L.
+Pięć wartości daje komplet 5/5; wybór jednostki jest częścią oznaczenia
+kreatyniny, a nie szóstą wartością biologiczną. Rozwinięcie dokładniejszego
+wieku w miesiącach pozostaje opcjonalne. Wzrost jest konieczny składowej
+kreatyninowej także u młodego dorosłego. Masa i BSA nie są składnikami
+tej średniej, więc z widoku znika pytanie o masę, bez usuwania lub zerowania
+wcześniej wpisanej/wczytanej masy pacjenta i bez zmiany wymagań innych wzorów.
+Nie tworzy się drugiego poziomu „pełnej interpretacji” po komplecie danych.
+
+Przy obu markerach widnieje **„Kreatynina i cystatyna C z tej samej próbki
+krwi.”** To informacja o właściwym materiale, nie nowa odpowiedź, checkbox,
+data pobrania ani dowód, że konkretne próbki faktycznie pobrano wspólnie.
+Oznaczenie tylko tego samego dnia nie zastępuje zalecenia wspólnej próbki.
+Zachowano jawne założenia stabilnej czynności nerek, braku podejrzenia AKI,
+IDMS dla kreatyniny i IFCC dla cystatyny; nie stają się potwierdzonymi
+faktami ani deklaracją techniki oznaczenia.
+
+**Obliczenie i jedna karta:** rzeczywista funkcja
+`ClcrExtendedEgfr.computeCkidU25CrCys` nadal wyznacza
+`(eGFRcr_U25 + eGFRcys_U25) / 2` z niezaokrąglonych składowych.
+Główna liczba i G są wyznaczane tak jak przed tą ratą. Obok wyniku pozostaje
+**„Zakres G1 (KDIGO): ≥90 mL/min/1,73 m²”**. Nie nazywa się tego nową,
+zwalidowaną normą przesiewową dla wieku lub średniej U25. Wynik w G2
+pozostaje bursztynowy; kolor nie oznacza stadium PChN, ryzyka ani pilności.
+Bez rozwijania Szczegółów widnieje informacja: **„Wzór opracowano dla osób
+w wieku 1–25 lat z łagodną lub umiarkowaną PChN.”** Nie wymaga ona nowego
+pytania o rozpoznanie PChN i nie jest absolutnym zakazem użycia określonym
+przez NIDDK dla każdej innej populacji.
+
+**Szczegóły średniej:** obie składowe pochodzą ze struktury wyniku silnika
+(`details.egfrCreatinine`, `details.egfrCystatin`), a nie z parsowania tekstu
+lub z obliczania średniej pokazanych liczb. Są danymi pomocniczymi,
+wyświetlanymi do dwóch miejsc po przecinku z jednostką mL/min/1,73 m²
+i właściwym odniesieniem, gdy pozwalają na to wiek i kontekst wyniku.
+Informacja o liczeniu średniej przed zaokrągleniem zapobiega uśrednianiu
+składowych już zaokrąglonych. Pozostaje tabela G z wyróżnionym wierszem
+wyniku łączonego, ograniczenia i źródła. Nie powstają dodatkowe główne
+wyniki ani nowy próg/kolor alarmowy różnicy markerów. Rozbieżność składowych
+może wymagać oceny czynników pozanerkowych; sama różnica nie jest powodem
+automatycznego odrzucenia poprawnie obliczonej średniej.
+
+Kolor pomocniczej wartości porównuje jej surową liczbę wyłącznie z dolną
+granicą G1 przekazanego profilu, bez nadawania odrębnej kategorii G.
+Jeżeli dwa miejsca po przecinku przekraczają tę granicę, pojawia się
+adnotacja, np. `89,999 →90,00 (<90)`. Samo zaokrąglenie nie zmienia oceny.
+Zachowana masa nie uruchamia zbędnego wyniku BSA w Szczegółach średniej;
+pozostałe wzory nadal mogą korzystać z tej masy i właściwej metody BSA.
+
+Przed ukończeniem 2 lat nie stosuje się progu 90 ani kategorii G również
+przy pomocniczych składowych; pozostają liczby, jednostki i opis zależności
+oceny od wieku. Poniżej 1 roku i od 26. urodzin wzór jest niedostępny.
+Źródłowe „1–25 lat” i zachowana aplikacyjna konwencja `1 ≤ wiek <26`
+nie stanowią osobnej walidacji każdej frakcji 25. roku. Znane AKI/szybka
+zmiana i jednoznaczne non-IDMS/non-IFCC nadal blokują właściwy wynik.
+Usunięcie powtórzeń nie usuwa rzeczywistych ograniczeń znanej techniki
+oznaczenia, np. zalecenia metody enzymatycznej przy zapisanym Jaffem,
+ani nie kasuje metadanych pacjenta. Historyczne niejednoznaczne `not_*`
+zachowują reguły z P-KLIRENS-ZALOZENIA-2026-10-22.
+
+**Źródła i zakres dowodów, odczyt 2026-10-22:**
+
+- [NIDDK — równania dla dzieci, młodzieży i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults),
+  aktualizacja maj 2025, pełne sekcje CKiD U25 i creatinine-cystatin C:
+  źródło średniej, jednostek, standardów i preferowania obu markerów
+  w odpowiednim profilu PChN. Masa nie występuje w równaniu; nefelometria
+  cystatyny i enzymatyczna kreatynina są technikami zalecanymi, nie
+  dodatkowymi składnikami wzoru lub faktami dopisywanymi przez aplikację.
+- Pierce CB et al., *Kidney Int.* 2021;99:948–956,
+  [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047),
+  pełny [tekst autora NCBI/PMC9083470](https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_xml/PMC9083470/unicode):
+  tabela 2, Methods i Discussion; źródłowe współczynniki oraz wewnętrzna
+  ocena w CKiD z łagodną/umiarkowaną PChN, bez zdrowej grupy odniesienia.
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+  tabela 2 S137 (PDF s. 22), tabela 11 S184 (PDF s. 69), PP 1.2.2.7
+  i omówienie S183 (PDF s. 68), PP 1.2.3.5 S186 (PDF s. 71) i PP 1.2.4.3:
+  kategorie, wspólna próbka, znaczenie rozbieżności i porównywalna populacja.
+  Pediatryczna flaga <90 dotyczy literalnie eGFRcr; nie stanowi odrębnej
+  normy przesiewowej średniej. Pojedynczy wynik nie rozpoznaje PChN,
+  same G1/G2 bez innych kryteriów nie rozpoznają choroby, a G1 nie wyklucza
+  uszkodzenia nerek. Nie wyprowadzono nowego progu różnicy markerów.
+- Lim et al., *BMC Nephrol.* 2026;27:306,
+  [DOI 10.1186/s12882-026-04942-w](https://link.springer.com/article/10.1186/s12882-026-04942-w),
+  pełne Methods, Results, Discussion i ograniczenia: zewnętrzna ocena
+  w KNOW-PedCKD (82 koreańskich pacjentów, 187 pomiarów mGFR, wiek ≥15 lat;
+  P30 średniej 67,4%). Nie należy więc powtarzać historycznego stanu
+  KDIGO 2024 jako dzisiejszego twierdzenia o braku jakiejkolwiek zewnętrznej
+  oceny ani obiecywać stałej dokładności średniej we wszystkich populacjach.
+- Trenkmann et al., *BMC Nephrol.* 2026;27:446,
+  [DOI 10.1186/s12882-026-05219-y](https://link.springer.com/article/10.1186/s12882-026-05219-y),
+  pełne Methods, Results, Discussion i ograniczenia: porównanie rozkładów
+  m.in. U25ave w pozornie zdrowej kohorcie, bez mGFR. Nie jest to walidacja
+  bezwzględnej dokładności przesiewowej ani podstawa nowej normy 90–120,
+  rozszerzenia wieku lub zmiany współczynników aplikacji.
+
+**Syntetyczne przypadki regresji rzeczywistych funkcji i formularza:**
+
+| Wejście / stan | Oczekiwany wynik i zachowany kontrakt |
+|---|---|
+| F10, 140 cm, Scr 0,6 mg/dL, cystatyna 1 mg/L; nieznane metadane | Składowe 82,9016019988 i 79,2646148474; średnia 81,0831084231 →81/G2, bursztynowo, zakres G1 ≥90, 5/5; w Szczegółach 82,90 i 79,26 z jednostką oraz opisem liczenia przed zaokrągleniem. |
+| Ten sam profil, cystatyna 1,2 mg/L | Średnia 74,4777238525 →74/G2, nie 75; nie uśrednia się zaokrąglonych do pełnych liczb 83 i 66. |
+| F18, 170 cm, Scr 0,8708240534521158 mg/dL, cystatyna 0,6914355132617939 mg/L | Średnia surowa około 89,8 →90 z `<90`, nadal G2; zaokrąglenie nie podnosi do G1. |
+| Wiek 1,5 roku, komplet danych; następnie wiek 26 lat | Odpowiednio liczba i składowe bez G/progu 90; brak kwalifikacji do U25. |
+| F10/140 cm/0,6 mg/dL/1 mg/L, wcześniej zapisana masa 35 kg | Ukrycie zbędnego pytania nie zeruje 35 kg w danych; wynik średniej pozostaje 81,0831084231. |
+| Jawne AKI lub szybka zmiana; jawne non-IDMS lub non-IFCC | Dotychczasowa blokada zachowana, bez fałszywego potwierdzenia i bez składowych sugerujących kwalifikowaną interpretację. |
+| Zapisana technika Jaffego zgodna z IDMS | Metadane i rzeczywiste ograniczenie techniki pozostają; nie dopisuje się metody enzymatycznej. |
+
+Regresje mają wywoływać rzeczywiste `computeCkidU25CrCys`, prezenter i
+formularz, sprawdzać źródło surowych składowych oraz dane po zapisaniu/
+odtworzeniu, a nie kopię równania lub średnią tekstów. Akceptacja makiety,
+przegląd źródeł i testy techniczne nie nadają statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
