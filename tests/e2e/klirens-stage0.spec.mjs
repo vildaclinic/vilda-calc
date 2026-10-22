@@ -7,27 +7,6 @@ async function openOptionalDetails(page, selector) {
   }
 }
 
-async function setCreatinineState(page, value) {
-  const proxy = page.locator('[data-clcr-marker-context]');
-  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
-  const field = useProxy ? proxy : page.locator('#creatinineState');
-  for (const details of await field.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
-  }
-  await field.selectOption(value);
-}
-
-async function setMarkerContext(page, value) {
-  const marker = page.locator('[data-clcr-marker-context]');
-  for (const details of await marker.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
-  }
-  await marker.selectOption(value);
-}
-
-
 async function openCalculator(page, version = 'basic') {
   await page.addInitScript(() => {
     window.__CLCR_TEST_LEGACY_BROAD = true;
@@ -156,7 +135,6 @@ test('filtruje wzory na granicach wieku i liczy Bedside Schwartz u dziecka', asy
   await page.locator('#formulaPicker').selectOption('sch_idms');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('0.6');
-  await setCreatinineState(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
   await expect(page.locator('#clcrInfo')).toContainText('Bedside Schwartz 2009');
   await expect(page.locator('#clcrInfo')).toContainText('96');
@@ -189,31 +167,38 @@ test('filtruje wzory na granicach wieku i liczy Bedside Schwartz u dziecka', asy
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(true);
 });
 
-test('nie przypisuje kategorii G bez stabilnej kreatyniny i blokuje wynik przy AKI', async ({ page }) => {
+test('założenia pozwalają przypisać kategorię G bez pytań, a znane AKI nadal blokuje wynik', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, { age: 50 });
   await page.locator('#formulaPicker').selectOption('egfr');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await openOptionalDetails(page, '#ScrAssay');
-  await page.locator('#ScrAssay').selectOption('enzymatic_idms');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
-  await expect(page.locator('#clcrInfo')).toContainText('Nie potwierdzono stabilności kreatyniny i braku podejrzenia AKI.');
-  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveAttribute('data-clcr-category', '');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr"]')).toContainText('stabilna czynność nerek');
+  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveAttribute('data-clcr-category', 'G1');
+  await expect(page.locator('[data-clcr-marker-context]:visible')).toHaveCount(0);
+  expect(await page.evaluate(() => window.buildClcrSessionSnapshot().inputs)).toMatchObject({
+    creatinineState: 'unknown', suspectedAKI: false, ScrAssay: '',
+  });
 
   await page.locator('#formulaPicker').focus();
   await expect(page.locator('#formulaPicker')).toHaveValue('egfr');
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
 
-  await setMarkerContext(page, 'stable');
   await expect(page.locator('[data-clcr-series="egfr"]')).toHaveAttribute('data-clcr-category', 'G1');
   await expect(page.locator('.clcr-result-details[data-clcr-formula="egfr"] [data-clcr-category-row="G1"]')).toHaveAttribute('aria-current', 'true');
   await expect(page.locator('#clcrInfo')).toContainText('G1');
   await expect(page.locator('#clcrInfo')).not.toContainText('Klasyfikacja PChN');
 
-  await setMarkerContext(page, 'aki');
+  // Znany fakt z wcześniejszej sesji/importu, a nie nowe pytanie w formularzu.
+  await page.evaluate(() => {
+    const field = document.getElementById('suspectedAKI');
+    field.checked = true;
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  });
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
   await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
   await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(0);
