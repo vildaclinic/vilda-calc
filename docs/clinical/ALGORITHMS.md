@@ -16112,8 +16112,8 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
 
-**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 185 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
-25 z przeglądu przeniesienia na D-7 i 3 z przeglądu poprawki MS2; wejście → wynik):
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 190 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
+25 z przeglądu przeniesienia na D-7, 3 z przeglądu poprawki MS2 i 5 z przeglądu poprawki P1; wejście → wynik):
 - T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
   karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
   notatek, nagrobki n1–n3);
@@ -16243,6 +16243,20 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   - W11 (flota mieszana): stare nieświadome O dostaje pełny ładunek B w nowej gałęzi MS2 → O kasuje n1 i n2, które
     miało, echo O nie odbiera pola, B ratuje, O dostaje notatki z powrotem; koniec wszędzie [n1 = poprawka B, n2] (na
     `12b0cd4d` O traciło pośrodku tylko n2).
+- Przegląd poprawki P1 (2026-10-22; F2, wada starsza niż D-21, z #518 / P-SYNC-WLASCICIEL; same pełne ładunki — delta
+  nagrobka karty z A1 ginie; poprawka w `Bsl_usunPacjenta`, „Ograniczenia”, „Nagrobek karty cofnięty przez scalanie
+  w drugiej karcie”):
+  - K9 (wyścig): B usuwa X (eB), C (nie wie o tym) zapisuje wizytę X po eB; na A „Usuń pacjenta” w karcie
+    przeglądarki A1 trzyma blokadę X (karta zdjęta, nagrobek e jeszcze nie), a scalanie pełnego ładunku B w karcie A2
+    decyduje na starcie (nagrobek eB) i czeka na blokadę X → nagrobek karty na A = e; po 3 rundach chmury (C, A, B)
+    na A, B i C BRAK, nagrobki n1 i n2 z polem, nagrobek karty e (na `ab8ead6`: nagrobek karty na A = eB, a na A, B
+    i C karta [n1, n2] z nagrobkami z polem — stan CZEKA);
+  - K9o (okno): „Usuń pacjenta” w A1 kończy się w całości między odczytem nagrobków kart na starcie scalania w A2
+    a usunięciem karty → jak K9 (na `ab8ead6` jak K9);
+  - K9k (kontrola, × 2): kolejno — „Usuń pacjenta”, potem scalanie; scalanie, potem „Usuń pacjenta” → nagrobek karty
+    e, BRAK na A, B i C (tak samo na `ab8ead6`);
+  - K9d (kontrola): wyścig jak w K9, a delta nagrobka karty z A1 (chwila e ze zdarzenia `onPatientDeleted`) dochodzi
+    do B → nagrobek karty e i BRAK na A, B i C (tak samo na `ab8ead6`).
 
 **Ograniczenia.**
 - **Stare urządzenie z ocalałą kartą przyjmuje usunięcie pierwsze** — kasuje notatki; gdy było jedynym źródłem treści,
@@ -16363,6 +16377,16 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   kandydatów, wersji w pasmie ratunku i wersji sprzed usunięcia, raz na pacjenta (plus raz pod blokadą przy ratunku).
   Pętla CZEKA nie zapisuje ani nie czyta nagrobka, którego kanon już leży, więc w długim stanie „czeka” scalanie nie
   przepisuje nagrobków pacjenta (zwykłe nagrobki notatek pętla zapisu przepisuje przy każdym scaleniu, jak dotąd; MS5).
+- **Nagrobek karty cofnięty przez scalanie w drugiej karcie** — **naprawione 2026-10-22** (przegląd poprawki P1, F2;
+  wada starsza niż D-21, z #518 / P-SYNC-WLASCICIEL; testy K9, K9o, K9k, K9d). B usuwa X (eB); C, które o tym nie wie,
+  zapisuje X po eB; na A karta przeglądarki A1 robi „Usuń pacjenta” X (e, później niż zapis C), a karta A2 w tym czasie
+  scala ładunek B. Scalanie decydowało na starcie (nagrobek eB), czekało na blokadę X i wpisywało nagrobek eB w miejsce
+  e, więc karta X wygrywała zapisem C i wracała na A, B i C — po D-21 razem z notatkami w stanie CZEKA. Kolejno
+  (w obu porządkach) wynik był BRAK; wystarczało też, by delta nagrobka karty z `onPatientDeleted` (chwila e) doszła do
+  któregokolwiek urządzenia, więc błąd wymagał jej utraty wszędzie (RATE_LIMITED, wstrzymana integracja, log delt
+  przycięty do 200 delt / 3 dni, synchronizacja wyłączona przy scalaniu plików). Kierunek błędu: usunięty pacjent
+  wracał z danymi, nic nie ginęło. Teraz `Bsl_usunPacjenta` czyta pod blokadą także lokalny nagrobek karty i zostawia
+  późniejszą chwilę: nagrobek karty e, BRAK wszędzie (P-SYNC-WLASCICIEL, aktualizacja 2026-10-22).
 - **Poza zakresem (D21-9):** sieroty z pomiaru 6 i 7 (poprawka albo nowa notatka bez zmiany karty) i rozjazd G5 po
   „Scal pacjentów” z pomiaru 13 — testy T20 i T21 pilnują, że zostały bez zmian; „Scal pacjentów” równolegle z „Usuń
   pacjenta” tego samego X — notatki przepięte pod Y giną jak dziś (w stanie CZEKA zostają pod Y, SP1 — oprócz wersji
@@ -17490,6 +17514,21 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
 - Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
   kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
   pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
+- *(Aktualizacja 2026-10-22, przegląd poprawki P1 D-21, F2; SW 1.1.340, `vilda_vault.js` 224.
+  **Zmiana kliniczna: NIE** — reguła dla karty zmienia się tylko w oknie wyścigu. Usuwanie kart z wygrywającym
+  nagrobkiem (`Bsl_usunPacjenta`) czyta pod blokadą karty, przed świeżym rekordem, także lokalny nagrobek karty i
+  wpisuje późniejszą z dwóch chwil: z decyzji na starcie scalania (nagrobek z ładunku albo lokalny z chwili startu) i
+  lokalną; dotąd zawsze chwilę z decyzji. Gdy po starcie scalania „Usuń pacjenta” w innej karcie przeglądarki
+  postawiło nagrobek z późniejszą chwilą e, scalanie nadpisywało go starszą chwilą: B usuwa X (eB), C — nie wiedząc o
+  tym — zapisuje X po eB, A usuwa X (e po zapisie C), gdy druga karta A scala ładunek B → nagrobek X na A = eB, karta
+  X wygrywała zapisem C i wracała na wszystkich urządzeniach, po D-21 z notatkami w stanie CZEKA. Kolejno, w obu
+  porządkach, wynik był poprawny; wystarczała też delta nagrobka karty z `onPatientDeleted` (chwila e), jeśli doszła
+  do któregokolwiek urządzenia. Kierunek błędu: usunięty pacjent wracał z danymi, nic nie ginęło. Koszt: jeden odczyt
+  listy nagrobków kart na usuwanego pacjenta (jak `Bsl_zdejmijNagrobek`). Przypadki: `sync-wlasciciel-wersji.test.mjs`
+  +4 (wyścig w obu trybach blokad → nagrobek X na A = e, pełne ładunki C i A nie przywracają X, nagrobek e na B i C —
+  oba czerwone na `ab8ead6`; kontrola: lokalny nagrobek starszy niż nagrobek z ładunku nie cofa chwili; strażnik
+  źródła) i `notatki-za-karta.test.mjs` K9, K9o (czerwone na `ab8ead6`), K9k, K9d (kontrole) — P-NOTATKI-ZA-KARTA,
+  „Ograniczenia”.)*
 - Delta nagrobka po „Scal pacjentów”: urządzenie, które w tej sesji strony scaliło X → Y, dołącza do delty nagrobka X
   kartę Y (pole `patients` było w formacie delty, dotąd puste) — u odbiorcy działa to jak pełna synchronizacja, w każdej
   kolejności dwóch delt. Delta Y ponad 60 000 znaków szyfrogramu i zwykłe usunięcie karty — sam nagrobek, jak dotąd.
