@@ -47,6 +47,23 @@ async function selectField(page, selector, value) {
   await page.locator(selector).selectOption(value);
 }
 
+async function setCanonicalFields(page, fields) {
+  // Fakty syntetycznego importu, a nie potwierdzenia wymagane od lekarza.
+  await page.evaluate(values => {
+    for (const [id, value] of Object.entries(values)) {
+      const field = document.getElementById(id);
+      if (!field) throw new Error(`Brak pola kanonicznego ${id}`);
+      if (field.type === 'checkbox') field.checked = value;
+      else {
+        field.value = value;
+        if (field.value !== String(value)) throw new Error(`Brak wartości ${id}=${value}`);
+      }
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    window.clcrUpdate();
+  }, fields);
+}
+
 async function fillU25(page, creatinine = '0.6') {
   await selectFormula(page, 'ckid_u25');
   await page.locator('#age').fill('10');
@@ -114,33 +131,32 @@ async function expectUnknownMarkerMetadata(page) {
   expect(inputs.ScrAssay).toBe('');
 }
 
-test('dorosły cr-cys: cztery wartości i jedno jawne potwierdzenie obu standaryzacji, bez dodatkowych pytań', async ({ page }) => {
+test('dorosły cr-cys: cztery wartości dają 43/G3b z jawnymi założeniami, bez pytań i dopisywania faktów', async ({ page }) => {
   await openCalculator(page);
   await fillAdultCombined(page);
   const confirmation = page.locator('#CrCysStandardizationConfirmed');
-  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toBeHidden();
   await expect(confirmation).not.toBeChecked();
-  await expect(page.locator('label:has(#CrCysStandardizationConfirmed)')).toContainText('IDMS');
-  await expect(page.locator('label:has(#CrCysStandardizationConfirmed)')).toContainText('IFCC');
-  await expect(result(page, 'egfr_cr_cys')).toHaveCount(0);
+  await expect(page.locator('[data-clcr-marker-context]:visible')).toHaveCount(0);
   for (const details of await page.locator('#clcrForm details.clcr-context-details:visible').all()) {
     if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
   }
   for (const id of ['ScrAssay', 'CystatinCStandardization', 'CystatinCAssayMethod', 'weight', 'height']) {
     await expect(page.locator(`#${id}`)).toBeHidden();
   }
-  await confirmation.check();
   const card = await expectSingleResult(page, 'egfr_cr_cys', '43', 43.31634057743082);
-  await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expectNoAssignedCategory(page, card);
-  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Nie potwierdzono stabilności markerów.');
+  await expect(card).toHaveAttribute('data-clcr-tone', 'danger');
+  await expect(card).toHaveAttribute('data-clcr-category', 'G3b');
+  await expect(card.locator('[data-clcr-category-control]')).toContainText('G3b');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr_cr_cys"]')).toContainText('IDMS');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr_cr_cys"]')).toContainText('IFCC');
   await expectUnknownMarkerMetadata(page);
   const inputs = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
   expect(inputs).toMatchObject({
-    CrCysStandardizationConfirmed: true, CystatinCStandardization: '', CystatinCAssayMethod: '',
+    CrCysStandardizationConfirmed: false, CystatinCStandardization: '', CystatinCAssayMethod: '',
   });
   expect(await page.evaluate(() => window.ClcrUiWorkflow.crCysStandardization())).toEqual({
-    confirmed: true, creatinineStandardization: 'IDMS', cystatinCStandardization: 'ERM-DA471/IFCC',
+    confirmed: false, creatinineStandardization: '', cystatinCStandardization: '',
   });
   await page.locator('#age').fill('10');
   await selectFormula(page, 'ckid_u25');
@@ -149,7 +165,7 @@ test('dorosły cr-cys: cztery wartości i jedno jawne potwierdzenie obu standary
   await expectUnknownMarkerMetadata(page);
 });
 
-test('dorosły cr-cys: stara sesja potwierdza wyłącznie pełną parę IDMS i IFCC; jawne false ma pierwszeństwo', async ({ page }) => {
+test('dorosły cr-cys: stare fakty i jawne false nie zmieniają się przez założenia, znana niezgodność blokuje', async ({ page }) => {
   await openCalculator(page);
   for (const entry of [
     { inputs: { ScrAssay: 'enzymatic_idms', CystatinCStandardization: 'ERM-DA471/IFCC' }, expected: true, version: 1 },
@@ -158,17 +174,20 @@ test('dorosły cr-cys: stara sesja potwierdza wyłącznie pełną parę IDMS i I
     { inputs: { CystatinCStandardization: 'ERM-DA471/IFCC' }, expected: false },
     { inputs: { ScrAssay: 'not_idms', CystatinCStandardization: 'ERM-DA471/IFCC' }, expected: false },
     { inputs: { ScrAssay: 'enzymatic_idms', CystatinCStandardization: 'ERM-DA471/IFCC', CrCysStandardizationConfirmed: false }, expected: false },
+    { inputs: { ScrAssay: 'non_idms', CystatinCStandardization: 'ERM-DA471/IFCC' }, expected: false, blocked: true },
+    { inputs: { ScrAssay: 'enzymatic_idms', CystatinCStandardization: 'non_ifcc' }, expected: false, blocked: true },
   ]) {
     await restoreAdultCombined(page, { ...entry.inputs, creatinineState: 'stable' }, entry.version);
     const checkbox = page.locator('#CrCysStandardizationConfirmed');
-    if (entry.expected) {
-      await expect(checkbox).toBeChecked();
+    await expect(checkbox).toBeHidden();
+    if (entry.expected) await expect(checkbox).toBeChecked();
+    else await expect(checkbox).not.toBeChecked();
+    if (!entry.blocked) {
       const card = await expectSingleResult(page, 'egfr_cr_cys', '43', 43.31634057743082);
       await expect(card).toHaveAttribute('data-clcr-category', 'G3b');
       await expect(card).toHaveAttribute('data-clcr-tone', 'danger');
       await expect(card.locator('.clcr-result-value')).toHaveCSS('color', 'rgb(198, 40, 40)');
     } else {
-      await expect(checkbox).not.toBeChecked();
       await expect(result(page, 'egfr_cr_cys')).toHaveCount(0);
     }
     const saved = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
@@ -178,7 +197,7 @@ test('dorosły cr-cys: stara sesja potwierdza wyłącznie pełną parę IDMS i I
   }
 });
 
-test('dorosły cr-cys: nowe potwierdzenie nie omija znanego AKI ani szybkiej zmiany markerów', async ({ page }) => {
+test('dorosły cr-cys: zapisane potwierdzenie i założenia nie omijają znanego AKI ani szybkiej zmiany markerów', async ({ page }) => {
   await openCalculator(page);
   for (const metadata of [
     { creatinineState: 'stable', suspectedAKI: true },
@@ -197,7 +216,7 @@ test('dorosły cr-cys: nowe potwierdzenie nie omija znanego AKI ani szybkiej zmi
 test('dorosły cr-cys: roundtrip JSON po przeładowaniu zachowuje jawny fakt, a wyczyszczenie usuwa potwierdzenie', async ({ page }) => {
   await openCalculator(page);
   await fillAdultCombined(page);
-  await page.locator('#CrCysStandardizationConfirmed').check();
+  await setCanonicalFields(page, { CrCysStandardizationConfirmed: true });
   await expectSingleResult(page, 'egfr_cr_cys', '43', 43.31634057743082);
   // Produkcyjne API eksportu/importu sprawdzamy przez serializację danych
   // syntetycznych i nowy dokument strony, bez otwierania sejfu.
@@ -217,8 +236,8 @@ test('dorosły cr-cys: roundtrip JSON po przeładowaniu zachowuje jawny fakt, a 
   }), json)).toBe(true);
   await expect(page.locator('#CrCysStandardizationConfirmed')).toBeChecked();
   const card = await expectSingleResult(page, 'egfr_cr_cys', '43', 43.31634057743082);
-  await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expectNoAssignedCategory(page, card);
+  await expect(card).toHaveAttribute('data-clcr-tone', 'danger');
+  await expect(card).toHaveAttribute('data-clcr-category', 'G3b');
   await expectUnknownMarkerMetadata(page);
   const reloaded = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
   expect(reloaded).toMatchObject({
@@ -238,7 +257,7 @@ test('dorosły cr-cys: pacjent bez sesji klirensu nie dziedziczy potwierdzenia s
   await openCalculator(page);
   await fillAdultCombined(page);
   const confirmation = page.locator('#CrCysStandardizationConfirmed');
-  await confirmation.check();
+  await setCanonicalFields(page, { CrCysStandardizationConfirmed: true });
   await expectSingleResult(page, 'egfr_cr_cys', '43', 43.31634057743082);
 
   // Ten produkcyjny przebieg wykonuje wczytanie pacjenta bez części clcr.
@@ -260,21 +279,23 @@ test('dorosły cr-cys: pacjent bez sesji klirensu nie dziedziczy potwierdzenia s
 
   await page.locator('#Scr').fill('1.2');
   await page.locator('#CystatinC').fill('1.2');
-  await expect(result(page, 'egfr_cr_cys')).toHaveCount(0);
-  await expect(page.locator('#clcrReadiness')).toContainText('Wymagane jest potwierdzenie');
-  await confirmation.check();
   await expect(result(page, 'egfr_cr_cys')).toBeVisible();
+  await expect(page.locator('#clcrReadiness')).toBeHidden();
+  await expect(confirmation).not.toBeChecked();
+  await expect(confirmation).toBeHidden();
+  await expectUnknownMarkerMetadata(page);
 });
 
-test('U25: cztery dane dają 83 i ocenę oszacowania bez dopisywania metadanych ani kategorii G', async ({ page }) => {
+test('U25: cztery dane dają 83/G2 bez dopisywania metadanych', async ({ page }) => {
   await openCalculator(page);
   await fillU25(page);
   const card = await expectSingleResult(page, 'ckid_u25', '83', 82.90160199882423);
   await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
-  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Oszacowanie poniżej normy dla wieku');
+  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Obniżony dla wieku');
   await expect(card.locator('.clcr-result-reference-label')).toHaveText('Norma dla wieku');
   await expect(card.locator('.clcr-result-reference-value')).toHaveText('≥90');
-  await expectNoAssignedCategory(page, card);
+  await expect(card).toHaveAttribute('data-clcr-category', 'G2');
+  await expect(card.locator('[data-clcr-category-control]')).toContainText('G2');
   await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25"]')).toBeVisible();
   await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25"]')).toContainText('stabilna czynność nerek');
   await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25"]')).toContainText('IDMS');
@@ -287,13 +308,14 @@ test('U25: cztery dane dają 83 i ocenę oszacowania bez dopisywania metadanych 
   });
 });
 
-test('U25: oszacowanie 124 ma neutralny kolor i nadal nie przypisuje G1', async ({ page }) => {
+test('U25: oszacowanie 124 jest nieobniżone dla wieku i należy do G1 przy zachowanych nieznanych faktach', async ({ page }) => {
   await openCalculator(page);
   await fillU25(page, '0.4');
   const card = await expectSingleResult(page, 'ckid_u25', '124', 124.35240299823631);
-  await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Oszacowanie nieobniżone dla wieku');
-  await expectNoAssignedCategory(page, card);
+  await expect(card).toHaveAttribute('data-clcr-tone', 'success');
+  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Nieobniżony');
+  await expect(card).toHaveAttribute('data-clcr-category', 'G1');
+  await expect(card.locator('[data-clcr-category-control]')).toContainText('G1');
   await expectUnknownMarkerMetadata(page);
   const saved = await page.evaluate(() => window.ClcrVisitSave.collectActiveDatapoints(document, { formulaId: 'ckid_u25' }));
   expect(saved).toHaveLength(1);
@@ -305,8 +327,7 @@ test('U25: oszacowanie 124 ma neutralny kolor i nadal nie przypisuje G1', async 
 test('U25: rzeczywiście potwierdzone IDMS i stabilność zachowują 83 oraz kwalifikowaną kategorię G2', async ({ page }) => {
   await openCalculator(page);
   await fillU25(page);
-  await selectField(page, '#ScrAssay', 'enzymatic_idms');
-  await selectField(page, '[data-clcr-marker-context]', 'stable');
+  await setCanonicalFields(page, { ScrAssay: 'enzymatic_idms', creatinineState: 'stable' });
   const card = await expectSingleResult(page, 'ckid_u25', '83', 82.90160199882423);
   await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
   await expect(card).toHaveAttribute('data-clcr-category', 'G2');
@@ -317,19 +338,25 @@ test('U25: rzeczywiście potwierdzone IDMS i stabilność zachowują 83 oraz kwa
   expect(inputs).toMatchObject({ ScrAssay: 'enzymatic_idms', creatinineState: 'stable', suspectedAKI: false });
 });
 
-test('U25: dawne niejednoznaczne not_idms nie zamienia się w zgodność z IDMS ani ocenę progową', async ({ page }) => {
+test('U25: dawne niejednoznaczne not_idms pozostaje faktem nieznanym, a jawne non_idms blokuje wzór', async ({ page }) => {
   await openCalculator(page);
   await fillU25(page);
-  await selectField(page, '#ScrAssay', 'not_idms');
+  await setCanonicalFields(page, { ScrAssay: 'not_idms' });
   const card = await expectSingleResult(page, 'ckid_u25', '83', 82.90160199882423);
-  await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expectNoAssignedCategory(page, card);
-  await expect(page.locator('#clcrResultReport')).toContainText(/niepotwierdzon|nie potwierdzon/i);
+  await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
+  await expect(card).toHaveAttribute('data-clcr-category', 'G2');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25"]')).toContainText('IDMS');
   const inputs = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
   expect(inputs).toMatchObject({ ScrAssay: 'not_idms', creatinineState: 'unknown', suspectedAKI: false });
+  await setCanonicalFields(page, { ScrAssay: 'non_idms' });
+  await expect(result(page, 'ckid_u25')).toHaveCount(0);
+  await expect(page.locator('#clcrInfo')).toContainText('IDMS');
+  expect(await page.evaluate(() => window.buildClcrSessionSnapshot().inputs)).toMatchObject({
+    ScrAssay: 'non_idms', creatinineState: 'unknown', suspectedAKI: false,
+  });
 });
 
-test('U25: 89,8 zaokrąglone do 90 pozostaje poniżej normy i pokazuje granicę bez kategorii G', async ({ page }) => {
+test('U25: 89,8 zaokrąglone do 90 pozostaje w G2 poniżej normy i pokazuje granicę', async ({ page }) => {
   await openCalculator(page);
   // Ta niezależna para wynika z przypadku 82,90160199882423 przy Scr=0,6;
   // U25cr jest odwrotnie proporcjonalne do kreatyniny. Nie pytamy silnika o oczekiwaną ocenę.
@@ -337,9 +364,9 @@ test('U25: 89,8 zaokrąglone do 90 pozostaje poniżej normy i pokazuje granicę 
   await fillU25(page, creatinine);
   const card = await expectSingleResult(page, 'ckid_u25', '90', 89.8);
   await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
-  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Oszacowanie poniżej normy dla wieku');
+  await expect(card.locator('.clcr-result-interpretation')).toHaveText('Obniżony dla wieku');
   await expect(card.locator('.clcr-result-boundary')).toContainText('<90');
-  await expectNoAssignedCategory(page, card);
+  await expect(card).toHaveAttribute('data-clcr-category', 'G2');
 });
 
 test('U25: znane AKI i szybka zmiana markera blokują liczbę zamiast porównania oszacowania z normą', async ({ page }) => {
@@ -347,24 +374,27 @@ test('U25: znane AKI i szybka zmiana markera blokują liczbę zamiast porównani
   await fillU25(page);
   await expect(result(page, 'ckid_u25')).toBeVisible();
   for (const context of ['aki', 'rapidlyChanging']) {
-    await selectField(page, '[data-clcr-marker-context]', context);
+    await setCanonicalFields(page, {
+      creatinineState: context === 'aki' ? 'stable' : context,
+      suspectedAKI: context === 'aki',
+    });
     await expect(result(page, 'ckid_u25')).toHaveCount(0);
     await expect(page.locator('#clcrResultReport .clcr-result-value')).toHaveCount(0);
     await expect(page.locator('#clcrInfo')).toContainText(context === 'aki' ? 'AKI' : /zmian|zmienia/i);
   }
 });
 
-test('polityka porównania U25 nie obejmuje dorosłego eGFR ani Cockcrofta; ACR zachowuje A2 i normę <30', async ({ page }) => {
+test('dorosły eGFR ma G4, Cockcroft pozostaje bez kategorii G, a ACR zachowuje A2 i normę <30', async ({ page }) => {
   await openCalculator(page);
   await selectFormula(page, 'egfr');
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill('3');
   const adult = await expectSingleResult(page, 'egfr', '25', 24.5348535798);
-  await expect(adult).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expect(adult.locator('.clcr-result-interpretation')).toContainText('ocena ograniczona');
-  await expectNoAssignedCategory(page, adult);
-  await expect(page.locator('.clcr-result-assumptions')).toHaveCount(0);
+  await expect(adult).toHaveAttribute('data-clcr-tone', 'danger');
+  await expect(adult.locator('.clcr-result-interpretation')).toContainText('Znacznie zmniejszony');
+  await expect(adult).toHaveAttribute('data-clcr-category', 'G4');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr"]')).toContainText('IDMS');
 
   await selectFormula(page, 'cg');
   await page.locator('#weight').fill('75');
@@ -373,6 +403,8 @@ test('polityka porównania U25 nie obejmuje dorosłego eGFR ani Cockcrofta; ACR 
   await expect(cg).toHaveAttribute('data-clcr-tone', 'neutral');
   await expect(cg.locator('.clcr-result-reference-value')).toHaveText('Brak uniwersalnej normy');
   await expectNoAssignedCategory(page, cg);
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="cg"]')).toContainText('stabilna czynność nerek');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="cg"]')).not.toContainText('IDMS');
 
   await selectFormula(page, 'ACR');
   await page.locator('#U_Alb').fill('45');

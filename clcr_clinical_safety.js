@@ -987,7 +987,10 @@
     if (policy.categoryAllowed !== true) {
       reasons.push("Nie potwierdzono stabilności kreatyniny i braku podejrzenia AKI.");
     }
-    if (!["enzymatic_idms", "jaffe_idms"].includes(source.assay)) {
+    // IDMS describes traceability alone, without inventing an assay technique.
+    // The assumptions adapter may supply it; neonatal qualification still
+    // requires the actual enzymatic_idms specimen metadata above.
+    if (!["enzymatic_idms", "jaffe_idms", "idms"].includes(source.assay)) {
       reasons.push("Nie potwierdzono standaryzacji do IDMS dla oznaczenia kreatyniny.");
     }
     if (reasons.length) {

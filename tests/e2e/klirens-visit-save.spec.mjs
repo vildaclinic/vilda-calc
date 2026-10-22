@@ -6,27 +6,6 @@ async function openOptionalDetails(page, selector) {
   }
 }
 
-async function setCreatinineState(page, value) {
-  const proxy = page.locator('[data-clcr-marker-context]');
-  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
-  const field = useProxy ? proxy : page.locator('#creatinineState');
-  for (const details of await field.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
-  }
-  await field.selectOption(value);
-}
-
-async function setMarkerContext(page, value) {
-  const marker = page.locator('[data-clcr-marker-context]');
-  for (const details of await marker.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
-  }
-  await marker.selectOption(value);
-}
-
-
 // Faza 1 — pełny łańcuch: tagi silnika → ClcrVisitSave.collect → VildaVault.savePatientNote.
 // Sejf syntetyczny tworzony w kontenerze (nie dotyka danych użytkownika);
 // niskie KDF_ITERATIONS dla szybkości.
@@ -105,7 +84,8 @@ test('zapisuje TYLKO wybraną formułę (eGFR dorośli) — bez Cockcrofta obok'
   await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
   await page.locator('#Scr').fill('1.0');
-  await setMarkerContext(page, 'stable');
+  await expect(page.locator('#creatinineState')).toHaveValue('unknown');
+  await expect(page.locator('#ScrAssay')).toHaveValue('');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(1);
@@ -145,7 +125,6 @@ test('CKiD U25 u 20-latka — zapisuje tylko wybraną formułę, wyklucza panel 
   await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('165');
   await page.locator('#Scr').fill('0.9');
-  await setMarkerContext(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   // silnik renderuje egfr/cg jako porównanie (otagowane), ale zapis ich pomija
@@ -181,7 +160,6 @@ test('Faza 6: Cockcroft–Gault (cg) — zapis formuły dorosłej z masą ciała
   await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('80');
   await page.locator('#Scr').fill('1.2');
-  await setMarkerContext(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   await expect(page.locator('[data-clcr-series="cg"]')).toHaveCount(1);
@@ -210,7 +188,6 @@ test('gość bez pacjenta — karta zapisu nieaktywna z podpowiedzią', async ({
   await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
   await page.locator('#Scr').fill('1.0');
-  await setCreatinineState(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
 
   const card = page.locator('#clcrVisitSaveCard');
@@ -232,7 +209,6 @@ test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', 
   await page.locator('#weight').fill('80');
   await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
-  await setMarkerContext(page, 'stable');
 
   // wizyta 1 (Scr 1.0 → wyższy eGFR)
   await page.locator('#Scr').fill('1.0');
@@ -271,7 +247,6 @@ test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ p
   await page.locator('#weight').fill('80');
   await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('180');
-  await setMarkerContext(page, 'stable');
 
   await page.locator('#Scr').fill('1.0');
   await page.evaluate(() => window.clcrUpdate());
