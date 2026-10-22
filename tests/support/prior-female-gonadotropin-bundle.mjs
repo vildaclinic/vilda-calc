@@ -45,11 +45,19 @@ export function beforeMaleLhCaliperBundle(data) {
     .filter(profile => profile.id !== 'wilson2023-male-lh-age-over16-under18') };
 }
 
+// The 2026-10-22 E2 phase card adds source information outside the ordinary
+// profiles. Restore the preceding runtime by removing exactly its new block;
+// preserve every earlier value and every frozen historical hash expectation.
+export function beforeE2PhaseSourceRuntime(runtime) {
+  const { e2PhaseSourceData: _e2PhaseSourceInfo, ...prior } = runtime;
+  return prior;
+}
+
 export function beforeMaleLhCaliperRuntime(runtime) {
   // Result-only display permissions add no central values. Exclude precisely
   // this later, separately frozen bundle when reproducing historical hashes.
   const { maleLhCaliperReferencePolicy: _maleLh, resultOnlyPolicies: _resultOnly,
-    amhLilacsSourceData: _lilacsSourceInfo, ...prior } = runtime;
+    amhLilacsSourceData: _lilacsSourceInfo, ...prior } = beforeE2PhaseSourceRuntime(runtime);
   return prior;
 }
 

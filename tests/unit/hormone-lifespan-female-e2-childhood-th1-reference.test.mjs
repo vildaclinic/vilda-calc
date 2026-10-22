@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeFemaleE2ChildhoodBundle, beforeInhibinPost47Bundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeE2PhaseSourceRuntime, beforeFemaleE2ChildhoodBundle, beforeInhibinPost47Bundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -39,7 +39,7 @@ describe('E2 dziewczynek — jawna mediana grupy Th1 w wieku >1–<6 lat', () =>
     expect(digest(previous)).toBe('805a064dd9953179e419597e8dbd56f507f136c29b60850d68aac7f3cafd7c3a');
     // The later LiLACS source-information card is separately frozen; keep
     // every preceding runtime value and the historical hash unchanged.
-    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const otherRuntime = Object.fromEntries(Object.entries(beforeE2PhaseSourceRuntime(runtime)).filter(([key]) =>
       key !== 'patientPointData' && key !== 'amhLilacsSourceData'));
     expect(digest(otherRuntime)).toBe('47fda226dc893be4f94578a53c75d91d8a0c98fece580b7c6f46525a77f2def0');
     expect(data).toEqual(JSON.parse(readFileSync(new URL(

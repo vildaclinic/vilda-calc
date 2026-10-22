@@ -39311,6 +39311,121 @@ const amhLilacsSourceData = {
     ]
   }
 };
+const e2PhaseSourceData = {
+  "version": "2026-10-22.1",
+  "kind": "published-phase-group-information",
+  "analyte": "estradiol",
+  "sex": "female",
+  "ageDomain": {
+    "minYears": 18,
+    "maxYears": 37,
+    "label": "18–37 lat",
+    "boundaryPolicy": "The whole possible age interval must fit [18,37]. This is a conservative application policy; the paper does not supply more precise endpoint ages. This separate information block does not select or replace an ordinary age-reference profile, including Madsen at exact age 18."
+  },
+  "phases": {
+    "follicular": {
+      "id": "follicular",
+      "label": "Faza folikularna",
+      "participants": 85,
+      "definition": "Od pierwszego dnia krwawienia do 2. dnia przed owulacją.",
+      "median": {
+        "value": 198,
+        "unit": "pmol/L",
+        "approxPgMl": 53.9
+      }
+    },
+    "ovulation": {
+      "id": "ovulation",
+      "label": "Faza okołoowulacyjna",
+      "participants": 81,
+      "definition": "Od dnia przed owulacją do dnia po owulacji.",
+      "median": {
+        "value": 757,
+        "unit": "pmol/L",
+        "approxPgMl": 206
+      }
+    },
+    "luteal": {
+      "id": "luteal",
+      "label": "Faza lutealna",
+      "participants": 85,
+      "definition": "Od 2. dnia po owulacji do ostatniego dnia cyklu.",
+      "median": {
+        "value": 412,
+        "unit": "pmol/L",
+        "approxPgMl": 112
+      }
+    }
+  },
+  "source": {
+    "id": "anckaert2021-female-e2-phase-medians",
+    "label": "Anckaert 2021",
+    "citation": "Anckaert E i wsp. Extensive monitoring of the natural menstrual cycle using the serum biomarkers estradiol, luteinizing hormone and progesterone. Practical Laboratory Medicine. 2021;25:e00211. Tabela 1, suplement S3.",
+    "doi": "10.1016/j.plabm.2021.e00211",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8042396/",
+    "ageLabel": "18–37 lat",
+    "population": "85 kobiet spełniających kryteria analizy spośród 208 włączonych do badania; naturalne, owulacyjne cykle długości 24–35 dni. Kryterium wieku: 22–37 lat w USA i 18–37 lat w Europie. Mediana wieku 25 lat (Q1–Q3: 23–29); BMI >19 i <29 kg/m²; 82,4% uczestniczek białych/kaukaskich.",
+    "statistic": "Najpierw wyznaczono medianę wyników każdej uczestniczki w danej fazie, a następnie medianę między uczestniczkami. Jest to opis typowej wartości fazy w badanej grupie, nie centyl pojedynczego pobrania ani mediana dokładnego wieku.",
+    "method": "Roche Elecsys Estradiol III, elektrochemiluminescencyjny test immunologiczny (ECLIA), analizator cobas e801; jedno laboratorium centralne.",
+    "specimen": "serum",
+    "phaseDefinition": "Dzień owulacji ustalano na podstawie profilu LH oraz E2/progesteronu i oceny lekarskiej, bez niezależnego potwierdzenia ultrasonograficznego. Do analizy standaryzowano cykl do 29 dni, z owulacją w dniu 15.",
+    "limitations": [
+      "Każda mediana opisuje całą grupę dla danej fazy; liczebność oznacza uczestniczki, nie próbki. Nie jest to zakres referencyjny, model wieku, SDS ani ocena rezerwy jajnikowej lub płodności.",
+      "Wykluczono m.in. ciążę, laktację, niedawne stosowanie antykoncepcji hormonalnej oraz zaburzenia hormonalne, gonadalne i płodności. Z analizy wyłączano cykle nieowulacyjne i atypowe profile hormonów. Brak wywiadu pacjentki nie potwierdza braku tych czynników.",
+      "Metoda i materiał opisują badanie źródłowe. Nie potwierdzają metody próbki pacjentki ani zgodności wyników uzyskanych różnymi metodami.",
+      "Zakres pomiarowy podany w artykule wynosi 18,4–11010 pmol/L. Nie podano odrębnych LOD/LOQ badania ani ogólnej reguły imputacji wyników poniżej granicy. Dolna granica zakresu pomiarowego nie jest tu traktowana jako LOD/LOQ.",
+      "Mediany faz nie wyznaczają dnia cyklu ani owulacji konkretnej pacjentki. Fazy nie ustala się na podstawie stężenia hormonu."
+    ]
+  },
+  "policy": {
+    "notClinicalReference": true,
+    "noPatientComparison": true,
+    "fullAgeIntervalRequired": true,
+    "ordinaryOnly": true,
+    "knownPhaseRequired": true,
+    "measurementUnits": [
+      "pmol/L",
+      "nmol/L",
+      "pg/mL",
+      "ng/L",
+      "ng/dL"
+    ],
+    "allowedAssayMethodIds": [
+      "roche-elecsys-estradiol-iii-cobas-e801",
+      "roche-cobas-e801-estradiol-iii",
+      "roche-cobas-e-801-estradiol-iii",
+      "roche-elecsys-estradiol-iii"
+    ],
+    "allowedSpecimens": [
+      "serum",
+      "surowica"
+    ],
+    "excludedCyclePhases": [
+      "postmenopause",
+      "menopause",
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3"
+    ],
+    "excludedPositiveFlags": [
+      "pregnancy",
+      "lactation"
+    ],
+    "excludedTreatmentContexts": [
+      "hormonal"
+    ],
+    "excludedTreatmentFlags": [
+      "gnrha",
+      "sexSteroids",
+      "cocp",
+      "exogenousTestosterone"
+    ],
+    "allowedMeasurementKinds": [
+      "basal"
+    ]
+  }
+};
 const insl3DisplayPolicy = {
   "version": "2026-10-11.1",
   "kind": "educational-display-only",
@@ -41641,6 +41756,7 @@ return {
   amhDisplayPolicy: amhDisplayPolicy,
   amhComparisonPolicy: amhComparisonPolicy,
   amhLilacsSourceData: amhLilacsSourceData,
+  e2PhaseSourceData: e2PhaseSourceData,
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,

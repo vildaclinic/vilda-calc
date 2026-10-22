@@ -96,9 +96,9 @@ describe('AMH LiLACS — published source information, not a patient reference',
       policy: { notClinicalReference: true, noPatientComparison: true, fullAgeIntervalRequired: true, ordinaryOnly: true } });
     expect(data.source.method).toContain('A16507');
     expect(data.source.method).toContain('DSL-10-14400');
-    const { amhLilacsSourceData: _sourceOnly, ...priorRuntime } = runtime;
-    // Frozen base594657f4: removing exactly the new source-information field
-    // must restore every old profile, geometry, policy and conversion verbatim.
+    const { amhLilacsSourceData: _sourceOnly, e2PhaseSourceData: _e2SourceOnly, ...priorRuntime } = runtime;
+    // Frozen base594657f4: removing the two separate source-information fields
+    // restores every earlier profile, geometry, policy and conversion verbatim.
     expect(digest(priorRuntime)).toBe('3bd76a0264cc097e81549d71bbd8aa2bb80611c3ff3ef18861f22a8294d78c4b');
     expect(digest(runtime.patientPointData)).toBe('28730dd407d52ef41afe8f2f5af5ab56ce541398e1c25d4dce5be5324a5ddcc9');
     expect(runtime.patientPointData.version).toBe('2026-10-22.2');
