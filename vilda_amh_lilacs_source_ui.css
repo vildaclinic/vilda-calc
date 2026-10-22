@@ -1,0 +1,150 @@
+/* Read-only LiLACS cohort information, separate from the result and chart. */
+#labAmhLilacsSource { container: amh-lilacs / inline-size; }
+#labAmhLilacsSource[hidden] { display: none !important; }
+.vilda-amh-lilacs-source {
+  --vals-paper: var(--card-bg, #fff);
+  --vals-ink: var(--text-color, #183c48);
+  --vals-muted: var(--text-muted, #5a7274);
+  --vals-border: var(--border-color, #d4e4e7);
+  --vals-subtle: #f1f7f7;
+  --vals-subtle-border: #e0eeee;
+  margin: var(--space-20px) 0 0;
+  padding: var(--space-20px) 22px 0;
+  border: var(--border-hairline) solid var(--vals-border);
+  border-radius: 15px;
+  background: var(--vals-paper);
+  color: var(--vals-ink);
+  font-family: inherit;
+  overflow: hidden;
+  min-width: 0;
+}
+.vilda-amh-lilacs-source *,
+.vilda-amh-lilacs-source *::before,
+.vilda-amh-lilacs-source *::after { box-sizing: border-box; }
+.vilda-amh-lilacs-source .vals-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  flex-wrap: wrap;
+}
+.vilda-amh-lilacs-source h3 {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  margin: 0;
+  line-height: 1.5;
+  color: inherit;
+}
+.vilda-amh-lilacs-source .vals-source-label {
+  font-size: 10px;
+  color: var(--vals-muted);
+  border: var(--border-hairline) solid var(--vals-border);
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-6);
+  white-space: nowrap;
+}
+.vilda-amh-lilacs-source .vals-cohort {
+  font-size: 12px;
+  color: var(--vals-muted);
+  margin: var(--space-8px) 0 15px;
+  line-height: 1.6;
+}
+.vilda-amh-lilacs-source .vals-median-block {
+  background: var(--vals-subtle);
+  border: var(--border-hairline) solid var(--vals-subtle-border);
+  border-radius: var(--radius-10);
+  padding: 13px 15px;
+  min-width: 0;
+}
+.vilda-amh-lilacs-source .vals-median-block > span { font-size: 11px; color: var(--vals-muted); }
+.vilda-amh-lilacs-source .vals-median-block p {
+  display: flex;
+  align-items: baseline;
+  gap: 17px;
+  flex-wrap: wrap;
+  margin: var(--space-6px) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.vilda-amh-lilacs-source .vals-median-block strong {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+.vilda-amh-lilacs-source .vals-median-block small {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 3px;
+  color: var(--vals-muted);
+}
+.vilda-amh-lilacs-source .vals-median-block p > span { font-size: 13px; color: var(--vals-muted); white-space: nowrap; }
+.vilda-amh-lilacs-source .vals-limit { font-size: 11px; line-height: 1.7; color: var(--vals-muted); margin: var(--space-12px) 0 var(--space-16px); }
+.vilda-amh-lilacs-source .vals-details { border-top: var(--border-hairline) solid var(--vals-border); margin: 0 -22px; }
+.vilda-amh-lilacs-source summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  list-style: none;
+  padding: var(--space-14px) 22px;
+  min-height: 45px;
+  font-size: 12px;
+  color: var(--vals-ink);
+  cursor: pointer;
+}
+.vilda-amh-lilacs-source summary::-webkit-details-marker { display: none; }
+.vilda-amh-lilacs-source summary > span { font-size: 19px; line-height: 16px; }
+.vilda-amh-lilacs-source details[open] summary > span { transform: rotate(45deg); }
+.vilda-amh-lilacs-source summary:focus-visible,
+.vilda-amh-lilacs-source a:focus-visible { outline: var(--border-emphasis) solid var(--primary, #00838d); outline-offset: var(--space-4px); }
+.vilda-amh-lilacs-source .vals-source-copy { font-size: 12px; color: var(--vals-muted); line-height: 1.75; padding: 0 22px 5px; }
+.vilda-amh-lilacs-source .vals-source-copy p { margin: 0 0 13px; }
+.vilda-amh-lilacs-source .vals-source-copy strong { font-weight: 600; color: var(--vals-ink); }
+.vilda-amh-lilacs-source a { color: var(--primary, #00838d); text-underline-offset: 3px; overflow-wrap: anywhere; }
+@container amh-lilacs (min-width: 640px) {
+  .vilda-amh-lilacs-source { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); column-gap: 26px; }
+  .vilda-amh-lilacs-source .vals-heading { grid-column: 1; grid-row: 1; }
+  .vilda-amh-lilacs-source .vals-cohort { grid-column: 1; grid-row: 2; margin-bottom: 0; }
+  .vilda-amh-lilacs-source .vals-limit { grid-column: 1; grid-row: 3; }
+  .vilda-amh-lilacs-source .vals-median-block { grid-column: 2; grid-row: 1 / 4; align-self: start; }
+  .vilda-amh-lilacs-source .vals-details { grid-column: 1 / -1; }
+}
+@container amh-lilacs (max-width: 639px) {
+  .vilda-amh-lilacs-source { margin-top: var(--space-16px); padding: 15px var(--space-14px) 0; border-radius: var(--radius-12); }
+  .vilda-amh-lilacs-source h3 { font-size: 14px; }
+  .vilda-amh-lilacs-source .vals-source-label { font-size: 9px; padding: var(--space-4px) var(--space-6px); }
+  .vilda-amh-lilacs-source .vals-cohort { font-size: 11px; margin-bottom: var(--space-12px); }
+  .vilda-amh-lilacs-source .vals-median-block { padding: 11px var(--space-12px); }
+  .vilda-amh-lilacs-source .vals-median-block > span { font-size: 10px; }
+  .vilda-amh-lilacs-source .vals-median-block strong { font-size: 23px; }
+  .vilda-amh-lilacs-source .vals-median-block p { gap: var(--space-10px); }
+  .vilda-amh-lilacs-source .vals-median-block p > span { font-size: 12px; }
+  .vilda-amh-lilacs-source .vals-limit { font-size: 10px; margin: 11px 0 13px; }
+  .vilda-amh-lilacs-source .vals-details { margin: 0 calc(-1 * var(--space-14px)); }
+  .vilda-amh-lilacs-source summary { padding: 13px var(--space-14px); font-size: 11px; }
+  .vilda-amh-lilacs-source .vals-source-copy { padding: 0 var(--space-14px) 3px; font-size: 11px; }
+}
+body.dark-bg-level-1 .vilda-amh-lilacs-source { --vals-border: rgba(0,131,141,.22); }
+body.dark-bg-level-2 .vilda-amh-lilacs-source { --vals-border: rgba(0,131,141,.28); }
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-amh-lilacs-source {
+  --vals-paper: var(--hc-surface);
+  --vals-ink: var(--hc-text);
+  --vals-muted: var(--hc-muted);
+  --vals-border: var(--hc-border);
+  --vals-subtle: var(--hc-input-bg);
+  --vals-subtle-border: var(--hc-border);
+  border-width: var(--hc-card-border-width);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vilda-amh-lilacs-source * { animation: none !important; transition: none !important; }
+}
+@media print {
+  .vilda-amh-lilacs-source { break-inside: avoid; background: white; color: black; border-color: #777; }
+  .vilda-amh-lilacs-source .vals-source-label,
+  .vilda-amh-lilacs-source .vals-cohort,
+  .vilda-amh-lilacs-source .vals-limit,
+  .vilda-amh-lilacs-source .vals-source-copy { color: black; }
+}

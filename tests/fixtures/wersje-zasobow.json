@@ -483,6 +483,14 @@
   "v": 1,
   "sha256": "3eaf4bf8f6387b45ad039cf737933b2c3dc764b9ba15afe35039c211f0fdefec"
  },
+ "vilda_amh_lilacs_source_ui.css": {
+  "v": 1,
+  "sha256": "15a209333673c727c1d86d27920370384ffed457c51bd764f8ea393474c01402"
+ },
+ "vilda_amh_lilacs_source_ui.js": {
+  "v": 1,
+  "sha256": "174ca9702d4bb79f3190cffc29199f0bcc56b748f92579b4736d58f53187ea8a"
+ },
  "vilda_anorexia_risk.js": {
   "v": 4,
   "sha256": "f0edd7b0d1238b5d0b4a49d69a79e246e2d1f96408cd9c54c905de11bb897de5"
@@ -736,8 +744,8 @@
   "sha256": "fcb2d38272ad19135c61f6b790571d6aa675fba4918cd837a9fce44ecc64a780"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 35,
-  "sha256": "a251f23bb2110ba3f23d132be2fe26f898c24b1e9c86eb56ed8d1d3b4b4a2757"
+  "v": 36,
+  "sha256": "9c5741d24bee1b4ef91cf6c6918536a6d1d697b2947e1a077dd49d6d7ee9db28"
  },
  "vilda_hormone_lifespan_display.js": {
   "v": 14,

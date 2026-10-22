@@ -88,7 +88,8 @@ describe('LH CALIPER chłopców — jawna rekonstrukcja mediany wyłącznie w (1
     expect(digest({ ...data, version: '2026-10-18.2', profiles: unchanged }))
       .toBe('bafc55a49915a9ccde61c600b05096716b2857111cf39662136820bbf545f16c');
     const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
-      key !== 'patientPointData' && key !== 'maleLhCaliperReferencePolicy' && key !== 'resultOnlyPolicies'));
+      key !== 'patientPointData' && key !== 'maleLhCaliperReferencePolicy' && key !== 'resultOnlyPolicies' &&
+      key !== 'amhLilacsSourceData'));
     expect(digest(otherRuntime)).toBe('678c2b572e10fee5358c5f1d5c5d234a89dd4175a12d0e93c1d020216e750827');
   });
 

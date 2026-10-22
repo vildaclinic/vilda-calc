@@ -1,0 +1,47 @@
+{
+  "version": "2026-10-22.1",
+  "kind": "published-cohort-information",
+  "analyte": "amh",
+  "sex": "male",
+  "ageDomain": {
+    "minYears": 80,
+    "maxYears": 90
+  },
+  "median": {
+    "value": 12.1,
+    "unit": "pmol/L",
+    "approxNgMl": 1.7
+  },
+  "source": {
+    "id": "chong2013-lilacs-male-amh",
+    "label": "Chong 2013",
+    "citation": "Chong YH i wsp. Elderly Men Have Low Levels of Anti-Müllerian Hormone and Inhibin B, but with High Interpersonal Variation: A Cross-Sectional Study of the Sertoli Cell Hormones in 615 Community-Dwelling Men. PLOS ONE. 2013;8(8):e70967. Tabela 1.",
+    "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0070967",
+    "cohort": "LiLACS NZ",
+    "participants": 257,
+    "ageLabel": "80–90 lat",
+    "population": "Mężczyźni mieszkający w społeczności w Nowej Zelandii: Māori w wieku 80–90 lat i non-Māori w wieku 85 lat, o zróżnicowanym stanie zdrowia. Analizowano surowicę 257 uczestników, którzy zgodzili się na jej wykorzystanie w badaniach współpracujących zespołów.",
+    "method": "W całym badaniu 575 próbek oznaczono zestawem Beckman Coulter AMH/MIS A16507, a 40 zestawem DSL-10-14400. Nie podano przypisania zestawów do kohorty LiLACS. Nie ustalono zgodności z metodą próbki pacjenta ani harmonizacji metod.",
+    "specimen": "serum",
+    "limitations": [
+      "12,1 pmol/L jest medianą całej grupy 80–90 lat, nie medianą dokładnego wieku.",
+      "Nie jest to kohorta wyłącznie zdrowych osób ani równomierna próba każdego roku wieku.",
+      "Nie podano przypisania zestawów oznaczenia do LiLACS, odsetka wyników niewykrywalnych w tej kohorcie ani reguły postępowania z wynikami poniżej granicy wykrywalności.",
+      "Publikacja podaje czułość analityczną zestawów, bez odrębnie określonej granicy oznaczalności ilościowej.",
+      "W źródle pozostają nierozstrzygnięte rozbieżności liczebności: 493/496 starszych mężczyzn oraz 119/106 młodszych uczestników Otago.",
+      "Brak osobnej mediany dla 70–<80 lat oraz modelu mediany dokładnego wieku w zakresie 80–90 lat.",
+      "To informacja o publikacji, bez porównania z wynikiem pacjenta, zakresu referencyjnego, percentyla, SDS lub oceny płodności."
+    ]
+  },
+  "policy": {
+    "notClinicalReference": true,
+    "noPatientComparison": true,
+    "fullAgeIntervalRequired": true,
+    "ordinaryOnly": true,
+    "measurementUnits": [
+      "ng/mL",
+      "μg/L",
+      "pmol/L"
+    ]
+  }
+}

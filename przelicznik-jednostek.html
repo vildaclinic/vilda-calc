@@ -65,6 +65,7 @@
   <link href="vilda_lab_puberty_ui.css?v=7" rel="stylesheet">
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
   <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
+  <link href="vilda_amh_lilacs_source_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
@@ -348,6 +349,7 @@
            <div class="lab-pane lab-pane--chart" id="labChartPane">
             <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
+            <div id="labAmhLilacsSource" hidden></div>
            </div><!-- /.lab-pane--chart -->
           </div>
 
@@ -480,7 +482,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=35"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=36"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=14"></script>
@@ -488,6 +490,7 @@
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
+  <script src="vilda_amh_lilacs_source_ui.js?v=1"></script>
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=4"></script>
   <script src="lab_history_strip.js?v=4"></script>
@@ -795,12 +798,38 @@
       host: document.getElementById('labAmhAgeReference')
     });
     window.VildaAmhAgeReferenceRuntime = amhAgeReferenceUI || null;
+    var amhLilacsSourceUI = window.VildaAmhLilacsSourceUI && window.VildaAmhLilacsSourceUI.mount({
+      host: document.getElementById('labAmhLilacsSource')
+    });
+    window.VildaAmhLilacsSourceRuntime = amhLilacsSourceUI || null;
     var lifespanVault = null;
     var lastLifespanContext = null;
     var lifespanCurrentSex = null;
+    var amhSourceChartHost = document.getElementById('labHormoneLifespan');
+    // The stable panel follows the native fullscreen dialog; its host does not.
+    var amhSourceChartPanel = amhSourceChartHost && amhSourceChartHost.querySelector('.vilda-hormone-lifespan') || amhSourceChartHost;
+    if (amhSourceChartPanel) ['click', 'change', 'keydown'].forEach(function (type) {
+      amhSourceChartPanel.addEventListener(type, function () {
+        // The chart's own delegated handler settles its view first. Only its
+        // display state is read; the cached form context is never recalculated.
+        Promise.resolve().then(refreshAmhLilacsSource);
+      });
+    });
     function currentPatientIdentity() {
       try { return sessionStorage.getItem('vildaCurrentPatientId') || ''; }
       catch (_) { return window._vildaCurrentPatientId || ''; }
+    }
+    var lastAmhSourceContext = null;
+    function refreshAmhLilacsSource() {
+      if (typeof amhLilacsSourceUI === 'undefined' || !amhLilacsSourceUI) return;
+      if (!lastAmhSourceContext || lastAmhSourceContext.identityKey !== currentPatientIdentity()) {
+        amhLilacsSourceUI.clear();
+        return;
+      }
+      var chartState = lifespanUI && typeof lifespanUI.getState === 'function' ? lifespanUI.getState() : null;
+      amhLilacsSourceUI.update(Object.assign({}, lastAmhSourceContext, chartState ? {
+        view: chartState.view, compare: chartState.compare, selected: chartState.selected
+      } : {}));
     }
     function isLifespanSubstance(substance) {
       return !!substance && ['lh', 'fsh', 'inhibin_b', 'amh', 'estradiol', 'testosterone_total'].includes(substance.id);
@@ -816,6 +845,7 @@
       if (localOverrideIdentity === next) return false;
       localOverrideIdentity = next;
       lastLifespanContext = null;
+      lastAmhSourceContext = null;
       lifespanCurrentSex = null;
       testosteroneMeasurementContext = {};
       resetLocalPatientOverride();
@@ -823,6 +853,7 @@
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
       if (lifespanUI) lifespanUI.clear();
       if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+      if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
       return true;
     }
     function bindLifespanVault() {
@@ -832,8 +863,10 @@
       vault.onLock(function () {
         if (window.VildaVault !== vault) return;
         lastLifespanContext = null;
+        lastAmhSourceContext = null;
         if (lifespanUI) lifespanUI.clear();
         if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+        if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
       });
     }
     function lifespanAgeLabel(age, input) {
@@ -968,8 +1001,10 @@
       bindLifespanVault();
       if (!substance) {
         lastLifespanContext = null;
+        lastAmhSourceContext = null;
         lifespanUI.clear();
         if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+        if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
         return;
       }
       var source = readPubertyPatientContext();
@@ -1078,15 +1113,20 @@
       };
       lastLifespanContext = context;
       lifespanUI.update(context);
-      if (amhAgeReferenceUI) {
-        // Source medians use the unit of the large converted result. They are
-        // separate from the chart point and never enter its saved snapshot.
+      if (amhAgeReferenceUI || typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) {
+        // Both read-only AMH source cards receive the same current context.
+        // Their source facts stay separate from the chart and saved reference.
         var amhContext = Object.assign({}, context, { displayUnit: unitTargetEl.value || unitEl.value });
         if (substance.id === 'amh' && status === 'ready' && resolved && resolved.status === 'known') {
           var parsedAmh = parseAmhMeasurement();
+          // The converter also accepts signed/grouped exact numbers. Retain
+          // its fresh conversion when the inequality parser does not parse
+          // that syntax; an invalid conversion already supplies no value.
           if (parsedAmh && parsedAmh.status === 'valid' && parsedAmh.operator !== '=') amhContext.measurement = parsedAmh;
         }
-        amhAgeReferenceUI.update(amhContext);
+        if (amhAgeReferenceUI) amhAgeReferenceUI.update(amhContext);
+        lastAmhSourceContext = amhContext;
+        refreshAmhLilacsSource();
       }
     }
 
@@ -4854,8 +4894,10 @@
     window.addEventListener('vilda:user-state-cleared', function () {
       if (pubertyUI) pubertyUI.reset();
       resetLocalPatientOverride();
+      lastAmhSourceContext = null;
       if (lifespanUI) lifespanUI.clear();
       if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
+      if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
       // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,

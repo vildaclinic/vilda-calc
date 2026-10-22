@@ -694,6 +694,31 @@ wiek musi mieścić się w jednej domenie. Znana niezgodna metoda/materiał,
 leczenie lub cenzurowany wynik nadal blokują punkt. Szczegóły i przypadki:
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#męskie-amh--uzupełnienie-median-grupowych-13-października-2026).
 
+### AMH LiLACS — informacja o grupie 80–90 lat, 22 października 2026
+
+Po akceptacji audytu i makiety przez właściciela osobna karta pod wykresem
+pokazuje **medianę całej grupy LiLACS NZ: 12,1 pmol/L, około 1,7 ng/mL,
+N=257**, Chong 2013, tabela 1. To informacja o historycznym badaniu,
+bez porównania z wynikiem pacjenta. Nie tworzy mediany dokładnego wieku,
+punktu, ilorazu, RI, SDS, percentyla ani oceny płodności. Nie przesuwa
+wygaszonego odcinka po 70 latach i nie dodaje kotwic do geometrii.
+
+Widok korzysta z gotowego kontekstu tej samej osoby i danych głównego
+formularza, bez nowych pytań. Cały możliwy wiek musi mieścić się w `[80,90]`:
+dokładne 90 kwalifikuje, ukończone 90 = `[90,91)` nie. To ostrożna polityka
+aplikacji wobec nieprecyzyjnych granic źródła. Prawidłowy wynik z nierównością
+może zachować informację o badaniu, bez dokładnego punktu. Zmiana osoby,
+płci, analitu lub blokada kontekstu usuwa kartę.
+
+Źródło opisuje surowicę i dwa historyczne zestawy AMH, bez jawnego
+przypisania oznaczeń do LiLACS. Karta nie potwierdza zgodności z metodą
+lub materiałem pacjenta. Ograniczenia populacji, cenzurowania i liczebności
+pozostają jawne w rozwinięciu. `amhLilacsSourceData` pozostaje poza
+**85 profilami / `2026-10-22.2`**; zwykła luka >70, zwłaszcza >70–<80,
+nie zostaje wypełniona. Normy laboratoryjne i historia pozostają odrębne:
+karta nie trafia do `lab.hormoneReference` i nie aktualizuje dawnych wizyt.
+Pełny [kontrakt i przypadki](hormone-lifespan/AMH_LILACS_SOURCE.md).
+
 ### AMH w minipuberty — wspólna skala porównania płci
 
 Zatwierdzona makieta zastępuje zmianę geometrii i skali po wpisaniu

@@ -24,7 +24,7 @@ describe('LH dziewcząt >16–<18 — rzeczywisty wynik bez mediany', () => {
   it('dodaje oddzielną politykę bez zmiany któregokolwiek z 82 profili, konwersji i pozostałych danych', () => {
     expect(data.profiles).toHaveLength(85);
     expect(digest(beforeTestosteroneBoysBundle(data))).toBe('11905045ada04596a294491dce3d9986cd027b4882aa50f3bc5697b43d61da4f');
-    const { resultOnlyPolicies, ...previous } = runtime;
+    const { resultOnlyPolicies, amhLilacsSourceData: _lilacsSourceInfo, ...previous } = runtime;
     expect(digest({ ...previous, patientPointData: beforeTestosteroneBoysBundle(data) })).toBe('67fcbb04efec26eb5332527a70197a38c04344c8c2768cd72527eced7af173c5');
     expect(resultOnlyPolicies).toEqual([policy]);
     expect(policy).toMatchObject({ kind: 'educational-result-only', version: '2026-10-20.1',
