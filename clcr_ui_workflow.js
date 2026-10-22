@@ -346,13 +346,6 @@
     "spotAcuteIllness",
   ]);
 
-  const COLLAPSIBLE_CONTEXT_FIELDS = new Set([
-    ...SPOT_INTERFERENCE_FIELDS,
-    "spotDiureticUse",
-    "spotKnownCKD",
-    "spotAcuteIllness",
-  ]);
-
   const KTV_CONTEXT_FIELDS = Object.freeze([
     "ktvAccessType",
     "ktvKru",
@@ -525,9 +518,9 @@
 
   const INTERPRETATION_NEGATIVE_MESSAGES = Object.freeze({
     spotBicarbonateLoad:
-      "Nie potwierdzono udokumentowanego protokołu obciążenia wodorowęglanem; FEHCO₃ pozostaje bez pełnej interpretacji.",
+      "Nie potwierdzono udokumentowanego protokołu obciążenia wodorowęglanem; zastosowanie FEHCO₃ zależy od tego protokołu.",
     spotNagmaContext:
-      "Nie potwierdzono właściwego kontekstu kwasicy metabolicznej z prawidłową luką anionową; UAG pozostaje bez pełnej interpretacji.",
+      "Nie potwierdzono właściwego kontekstu kwasicy metabolicznej z prawidłową luką anionową; zastosowanie UAG zależy od tego kontekstu.",
     stoneMetabolicEvaluationContext:
       "Nie potwierdzono właściwego kontekstu pełnej oceny metabolicznej kamicy.",
     stoneCollectionPlausibilityReviewed:
@@ -556,8 +549,8 @@
     suspectedAKI: "Zaznacz, jeżeli istnieje podejrzenie ostrego uszkodzenia nerek. Wtedy estymacje stanu stacjonarnego mogą być niewiarygodne.",
     CystatinC: "Podaj cystatynę C w mg/L z wyniku laboratoryjnego.",
     CystatinCStandardization: "Potwierdź identyfikowalność oznaczenia do ERM‑DA471/IFCC.",
-    spotSampleKind: "Rodzaj i pora pobrania próbki mogą zmieniać możliwość pełnej interpretacji wyniku.",
-    spotSameSpecimen: "Potwierdź, że analit i kreatynina pochodzą z dokładnie tej samej próbki moczu.",
+    spotSampleKind: "Rodzaj i pora pobrania próbki wpływają na dobór odniesienia i porównywalność wyniku.",
+    spotSameSpecimen: "Potwierdź, że wszystkie używane anality moczu pochodzą z dokładnie tej samej próbki.",
     spotPairedChemistry: "Potwierdź równoczesne pobranie krwi oraz moczu i wspólne pochodzenie analitów moczowych.",
     tmpOvernightFasting: "TmP/GFR wymaga próbki po nocnym pozostawaniu na czczo.",
     tmpPairedSameTime: "Potwierdź równoczesne pobranie sparowanych próbek krwi i drugiego porannego moczu.",
@@ -862,7 +855,6 @@
     mobileModulesExpanded: false,
     dzmQualityGroup: null,
     dzmQualityBulkUpdate: false,
-    egfrExtraData: null,
     egfrMarkerContext: null,
     openHelp: null,
   };
@@ -1053,6 +1045,25 @@
     );
   }
 
+  function uagSpecimenConfirmed() {
+    const answer = documentRef.getElementById("ui_spotSameSpecimen_answer")?.value;
+    // Starsze potwierdzenie obejmowało równoczesną krew ORAZ wspólny mocz.
+    // Nowa jawna odpowiedź przecząca lub niepewność ma pierwszeństwo.
+    if (["no", "unknown"].includes(answer)) return false;
+    return Boolean(documentRef.getElementById("spotSameSpecimen")?.checked ||
+      documentRef.getElementById("spotPairedChemistry")?.checked);
+  }
+
+  function showLegacyUagConfirmation(view) {
+    if (state.activeFormulaId !== "AGu_spot" || view.control.id !== "spotSameSpecimen" ||
+        !view.answerSelect || view.answerSelect.value !== "" || view.control.checked) return;
+    if (documentRef.getElementById("spotPairedChemistry")?.checked) {
+      // To jedynie odczyt wcześniejszej odpowiedzi; nie zmieniamy kanonicznych
+      // pól ani ich magazynu podczas odtworzenia formularza.
+      view.answerSelect.value = "yes";
+    }
+  }
+
   function ensureProtocolAnswer(view) {
     if (!view) return null;
     const control = view.control;
@@ -1072,6 +1083,7 @@
       ) {
         view.answerSelect.value = control.checked ? "yes" : "";
       }
+      showLegacyUagConfirmation(view);
       return view.answerSelect;
     }
     const answer = createElement("select", "clcr-protocol-answer");
@@ -1097,6 +1109,21 @@
     control.setAttribute("aria-hidden", "true");
     control.tabIndex = -1;
     answer.addEventListener("change", () => {
+      if (state.activeFormulaId === "AGu_spot" && control.id === "spotSameSpecimen" && ["no", "unknown"].includes(answer.value)) {
+        const pairedView = state.fieldViews.get("spotPairedChemistry");
+        const paired = pairedView?.control;
+        if (paired) {
+          paired.checked = false;
+          if (pairedView.answerSelect) pairedView.answerSelect.value = answer.value;
+          const currentVault = currentProtocolValueVault();
+          if (currentVault) {
+            currentVault.spotPairedChemistry = false;
+            currentVault.ui_spotPairedChemistry_answer = answer.value;
+          }
+          paired.dispatchEvent(new Event("input", { bubbles: true }));
+          paired.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
       const shouldCheck = answer.value === "yes";
       if (control.checked !== shouldCheck) {
         control.checked = shouldCheck;
@@ -1133,6 +1160,7 @@
     });
     view.wrapper.insertBefore(answer, view.helpPanel);
     view.answerSelect = answer;
+    showLegacyUagConfirmation(view);
     bindLabelToActiveControl(view);
     return answer;
   }
@@ -1360,7 +1388,7 @@
     }`;
     qualityGroup.badge.textContent = required
       ? "Wymagane potwierdzenie"
-      : "Do pełnej interpretacji";
+      : "Dodatkowy kontekst";
     syncDzmQualityGroupState();
   }
 
@@ -1379,7 +1407,7 @@
         if (answer) answer.setAttribute("aria-required", "true");
       }
     } else if (status === "interpretation") {
-      view.badge.textContent = "Do pełnej interpretacji";
+      view.badge.textContent = "Dodatkowy kontekst";
       view.control.removeAttribute("aria-required");
       if (String(view.control.type).toLowerCase() === "checkbox") {
         const answer = ensureProtocolAnswer(view);
@@ -1475,62 +1503,70 @@
   function restoreCollapsibleContextFields() {
     state.fieldViews.forEach((view) => {
       if (!view.wrapper.closest(".clcr-context-details")) return;
-      if (view.originalParent) view.originalParent.appendChild(view.wrapper);
+      if (view.contextAnchor?.parentNode) {
+        view.contextAnchor.parentNode.insertBefore(view.wrapper, view.contextAnchor.nextSibling);
+      } else if (view.originalParent) view.originalParent.appendChild(view.wrapper);
     });
+    const proxy = state.egfrMarkerContext;
+    const markerParent = state.fieldViews.get("creatinineState")?.originalParent;
+    if (proxy && markerParent && proxy.wrapper.closest(".clcr-context-details")) {
+      if (proxy.contextAnchor?.parentNode) proxy.contextAnchor.parentNode.insertBefore(proxy.wrapper, proxy.contextAnchor.nextSibling);
+      else markerParent.appendChild(proxy.wrapper);
+    }
     documentRef.querySelectorAll(".clcr-context-details").forEach((details) => {
       details.hidden = true;
     });
   }
 
   function groupCollapsibleContextFields() {
-    restoreCollapsibleContextFields();
     const groups = new Map();
-    COLLAPSIBLE_CONTEXT_FIELDS.forEach((fieldId) => {
-      if (!state.optionalFieldIds.has(fieldId)) return;
-      const view = state.fieldViews.get(fieldId);
-      if (!view || view.wrapper.hidden || !view.originalParent) return;
-      const fieldset = view.originalParent.closest("fieldset");
-      if (!fieldset) return;
+    function appendToDetails(wrapper, fieldset) {
+      if (!fieldset || !wrapper || wrapper.hidden) return;
       let group = groups.get(fieldset);
       if (!group) {
         let details = fieldset.querySelector(":scope > .clcr-context-details");
         if (!details) {
           details = createElement("details", "clcr-context-details");
-          const summary = createElement(
-            "summary",
-            "clcr-context-details__summary",
-            "Opcjonalny kontekst kliniczny",
-          );
+          const summary = createElement("summary", "clcr-context-details__summary", "Dodatkowe dane i kontekst (opcjonalne)");
           const body = createElement("div", "clcr-context-details__body");
           details.append(summary, body);
           fieldset.appendChild(details);
         }
         details.hidden = false;
-        group = {
-          details,
-          body: details.querySelector(".clcr-context-details__body"),
-        };
+        group = { details, body: details.querySelector(".clcr-context-details__body") };
         groups.set(fieldset, group);
       }
-      group.body.appendChild(view.wrapper);
+      group.body.appendChild(wrapper);
+    }
+    state.optionalFieldIds.forEach((fieldId) => {
+      const view = state.fieldViews.get(fieldId);
+      if (!view || view.wrapper.hidden) return;
+      if (!view.contextAnchor) {
+        view.contextAnchor = documentRef.createComment(`clcr-context-${fieldId}`);
+        view.wrapper.parentNode.insertBefore(view.contextAnchor, view.wrapper);
+      }
+      appendToDetails(view.wrapper, view.originalParent?.closest("fieldset"));
     });
+    const proxy = state.egfrMarkerContext;
+    if (proxy && !proxy.wrapper.hidden) {
+      if (!proxy.contextAnchor) {
+        proxy.contextAnchor = documentRef.createComment("clcr-context-marker-proxy");
+        proxy.wrapper.parentNode.insertBefore(proxy.contextAnchor, proxy.wrapper);
+      }
+      appendToDetails(proxy.wrapper, state.fieldViews.get("creatinineState")?.originalParent?.closest("fieldset"));
+    }
   }
 
   function getContext(formulaId) {
     return FORMULA_CONTEXT[formulaId] || { interpretation: [], optional: [] };
   }
 
-  function simplifiedCreatinineEgfrActive() {
-    return !state.legacyBroad && ["egfr", "ckid_u25"].includes(state.activeFormulaId);
-  }
-
   function simplifiedCreatinineContextActive() {
-    return simplifiedCreatinineEgfrActive() ||
-      (!state.legacyBroad && state.activeFormulaId === "cg");
+    return !state.legacyBroad && CREATININE_VALUE_FORMULAS.has(state.activeFormulaId);
   }
 
   function renderCompactCgLabels() {
-    const compact = !state.legacyBroad && state.activeFormulaId === "cg";
+    const compact = !state.legacyBroad && Boolean(state.activeFormulaId);
     const labels = {
       weight: "Aktualna masa ciała (kg)",
       Scr: "Kreatynina",
@@ -1539,55 +1575,10 @@
     Object.entries(labels).forEach(([fieldId, label]) => {
       const view = state.fieldViews.get(fieldId);
       if (!view) return;
-      view.labelText = compact ? label : view.defaultLabelText;
+      view.labelText = compact && (fieldId !== "weight" || ["cg", "cg_norm"].includes(state.activeFormulaId)) ? label : view.defaultLabelText;
       view.wrapper.querySelector(".clcr-field__name").textContent = view.labelText;
       view.infoButton.setAttribute("aria-label", `Informacja: ${view.labelText}`);
     });
-  }
-
-  // Przenosimy istniejące pola, nie tworzymy ich kopii: odtworzenie pacjenta,
-  // daty pomiarów i zapis sesji nadal używają tych samych kontrolek i kluczy.
-  function restoreEgfrExtraData() {
-    const group = state.egfrExtraData;
-    if (!group) return;
-    group.anchors.forEach((anchor, fieldId) => {
-      const view = state.fieldViews.get(fieldId);
-      if (view && anchor.parentNode) {
-        anchor.parentNode.insertBefore(view.wrapper, anchor.nextSibling);
-      }
-    });
-    group.details.hidden = true;
-  }
-
-  function groupEgfrExtraData() {
-    if (!simplifiedCreatinineEgfrActive()) return;
-    const fieldIds = state.activeFormulaId === "egfr" ? ["weight", "height"] : ["weight"];
-    const views = fieldIds
-      .filter((fieldId) => state.optionalFieldIds.has(fieldId))
-      .map((fieldId) => state.fieldViews.get(fieldId))
-      .filter((view) => view && !view.wrapper.hidden);
-    if (!views.length) return;
-    let group = state.egfrExtraData;
-    if (!group) {
-      const parent = documentRef.getElementById("patientSet");
-      if (!parent) return;
-      const details = createElement("details", "clcr-egfr-extra-data");
-      const summary = createElement("summary", "clcr-egfr-extra-data__summary", "Dodatkowe dane (opcjonalne)");
-      const body = createElement("div", "clcr-egfr-extra-fields");
-      details.append(summary, body);
-      parent.appendChild(details);
-      group = { details, body, anchors: new Map() };
-      state.egfrExtraData = group;
-    }
-    views.forEach((view) => {
-      if (!group.anchors.has(view.control.id)) {
-        const anchor = documentRef.createComment(`clcr-egfr-${view.control.id}`);
-        view.wrapper.parentNode.insertBefore(anchor, view.wrapper);
-        group.anchors.set(view.control.id, anchor);
-      }
-      group.body.appendChild(view.wrapper);
-    });
-    group.details.hidden = false;
   }
 
   function syncEgfrMarkerContext() {
@@ -1610,7 +1601,7 @@
     const wrapper = createElement("label", "clcr-field clcr-marker-context");
     const heading = createElement("span", "clcr-field__heading");
     const name = createElement("span", "clcr-field__name", "Stabilność kreatyniny / AKI");
-    const badge = createElement("span", "clcr-field__status clcr-field__status--interpretation", "Do pełnej interpretacji");
+    const badge = createElement("span", "clcr-field__status clcr-field__status--optional", "Opcjonalne");
     name.id = "clcr-label-marker-context";
     heading.append(name, badge);
     const control = createElement("select");
@@ -1673,12 +1664,9 @@
     if (!proxy) return;
     proxy.wrapper.hidden = !active;
     if (active) {
-      const cg = state.activeFormulaId === "cg";
-      proxy.name.textContent = cg ? "Kontekst kreatyniny" : "Stabilność kreatyniny / AKI";
-      proxy.badge.hidden = cg;
-      proxy.note.textContent = cg
-        ? "Szybka zmiana kreatyniny lub podejrzenie AKI wykluczają raportowanie bieżącego klirensu kreatyniny."
-        : "Szybka zmiana kreatyniny lub podejrzenie AKI wykluczają raportowanie bieżącego eGFR.";
+      proxy.name.textContent = "Kontekst czynności nerek";
+      proxy.badge.hidden = true;
+      proxy.note.textContent = "Szybka zmiana markerów lub podejrzenie AKI wykluczają raportowanie bieżącej czynności nerek tym wzorem.";
       ["creatinineState", "suspectedAKI"].forEach((fieldId) => {
         const view = state.fieldViews.get(fieldId);
         if (view) view.wrapper.hidden = true;
@@ -1688,45 +1676,49 @@
   }
 
   function activeSetsForFormula(formula) {
-    const required = new Set(formula && Array.isArray(formula.requires) ? formula.requires : []);
-    const interpretation = new Set(getContext(formula.id).interpretation || []);
-    const optional = new Set(getContext(formula.id).optional || []);
-    if (formula.id !== "cg") optional.add("fullName");
-
+    const required = new Set(Array.isArray(formula?.requires) ? formula.requires : []);
+    const context = getContext(formula.id);
+    const optional = new Set([...(context.interpretation || []), ...(context.optional || [])]);
+    if (["ACR", "PCR", "CaCr_spot", "CitCr_spot", "TMP_GFR"].includes(formula.id)) optional.delete("sex");
+    // Katalog określa składniki obliczenia i twarde warunki metody. Kontekst
+    // odniesienia pozostaje dobrowolny i nie tworzy drugiego poziomu wyniku.
+    const referenceFields = {
+      cl24: ["age", "ageMonths", "weight", "height"],
+      neonatal_egfr: ["age", "ageMonths"],
+      UA_mgkg: ["age", "sex"], Ca_mgkg: ["age", "ageMonths"],
+      Mg_mgkg: ["age", "ageMonths"], PO4_mgkg: ["age", "ageMonths"],
+      pH24: ["age", "ageMonths"], Prot_mgkg: ["age", "ageMonths", "weight", "height"],
+      Ox_mgkg: ["age", "ageMonths", "sex"], Cit_mgkg: ["age", "ageMonths", "sex"],
+      ACR: ["age", "ageMonths"], PCR: ["age", "ageMonths"],
+      CaCr_spot: ["age", "ageMonths"], CitCr_spot: ["age", "ageMonths"],
+    };
+    (referenceFields[formula.id] || []).forEach((fieldId) => optional.add(fieldId));
+    if (required.has("age") && formula.id !== "neonatal_egfr") optional.add("ageMonths");
+    getSharedModuleFieldIds(formula.id).forEach((fieldId) => optional.add(fieldId));
+    if (CREATININE_VALUE_FORMULAS.has(formula.id)) {
+      optional.add("creatinineState");
+      optional.add("suspectedAKI");
+    }
     const module = getModuleForFormula(formula.id);
-    getSharedModuleFieldIds(formula.id).forEach((fieldId) => {
-      if (!required.has(fieldId) && !interpretation.has(fieldId)) {
-        optional.add(fieldId);
-      }
-    });
-    if (module && module.id === "timed-urine-panel") {
-      DZM_PROTOCOL_FIELDS.forEach((id) => {
-        if (!required.has(id)) interpretation.add(id);
+    if (module?.path === "spot" && !required.has("spotSampleKind")) optional.add("spotSampleKind");
+    if (formula.id === "KTV") {
+      documentRef.getElementById("ktvFields")?.querySelectorAll("input[id], select[id]").forEach((control) => {
+        if (control.id !== "ktvToggle") optional.add(control.id);
       });
     }
-    if (module && module.path === "spot") {
-      if (!required.has("spotSampleKind")) interpretation.add("spotSampleKind");
-    }
-    if (formula.id === "KTV") {
-      const ktvFields = documentRef.getElementById("ktvFields");
-      if (ktvFields) {
-        ktvFields.querySelectorAll("input[id], select[id]").forEach((control) => {
-          if (control.id !== "ktvToggle" && !required.has(control.id)) {
-            interpretation.add(control.id);
-          }
-        });
-      }
-    }
+    required.forEach((fieldId) => optional.delete(fieldId));
     Object.entries(UNIT_PAIRS).forEach(([valueId, unitId]) => {
       if (required.has(valueId)) required.add(unitId);
-      if (interpretation.has(valueId)) interpretation.add(unitId);
+      else if (optional.has(valueId)) optional.add(unitId);
     });
-    const active = new Set([...required, ...interpretation, ...optional]);
-    return { active, required, interpretation, optional };
+    optional.delete("fullName");
+    // Nie wymagamy odpowiedzi na pole opcjonalne, aby policzyć sam wskaźnik.
+    const interpretation = new Set();
+    return { active: new Set([...required, ...optional]), required, interpretation, optional };
   }
 
   function renderActiveFields() {
-    restoreEgfrExtraData();
+    restoreCollapsibleContextFields();
     documentRef.documentElement.classList.remove("clcr-legacy-broad");
     const formula = formulaById(state.activeFormulaId);
     state.activeFormulaId = formula ? formula.id : "";
@@ -1772,9 +1764,8 @@
     const pcr = state.fieldViews.get("U_PCR");
     if (accr) accr.wrapper.hidden = true;
     if (pcr) pcr.wrapper.hidden = true;
-    groupCollapsibleContextFields();
-    groupEgfrExtraData();
     renderEgfrMarkerContext();
+    groupCollapsibleContextFields();
     syncFieldPairs();
 
     const ktvToggle = documentRef.getElementById("ktvToggle");
@@ -1801,7 +1792,7 @@
   }
 
   function renderLegacyBroad(level) {
-    restoreEgfrExtraData();
+    restoreCollapsibleContextFields();
     broadFormulaIds(level);
     documentRef.documentElement.classList.add("clcr-legacy-broad");
     documentRef.documentElement.classList.remove("clcr-has-active-formula");
@@ -1830,6 +1821,13 @@
     const view = state.fieldViews.get(fieldId);
     if (!view) return { missing: true, reason: "Pole nie jest dostępne w formularzu." };
     const control = view.control;
+    if (state.activeFormulaId === "AGu_spot" && fieldId === "spotSameSpecimen") {
+      if (uagSpecimenConfirmed()) return { missing: false };
+      const answer = view.answerSelect?.value;
+      return { missing: true, blocked: answer === "no", reason: answer === "no"
+        ? "Anality moczu muszą pochodzić z tej samej próbki."
+        : "Potwierdź wspólne pochodzenie analitów moczu." };
+    }
     if (view.answerSelect) {
       const answer = view.answerSelect.value;
       if (answer === "yes") return { missing: false };
@@ -1880,6 +1878,8 @@
       state.egfrMarkerContext
     ) {
       const { wrapper, control } = state.egfrMarkerContext;
+      const details = wrapper.closest("details");
+      if (details) details.open = true;
       try {
         wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
         control.focus({ preventScroll: true });
@@ -2080,6 +2080,18 @@
     };
   }
 
+  function safetyFieldForReason(reason) {
+    const text = String(reason || "");
+    if (/AKI|niestacjonarn|zmieniając/i.test(text)) return "creatinineState";
+    if (/IDMS|enzymatyczn|metod.*kreatynin/i.test(text)) return "ScrAssay";
+    if (/mas[ayę].*ciała|kg/.test(text)) return "weight";
+    if (/wcześniak|urodził.*czas|donoszon/i.test(text)) return "neonatalTermStatus";
+    if (/dni.*życia|dzień.*życia|28.*dni/.test(text)) return "ageDays";
+    const months = fieldNumber("ageMonths");
+    if (months !== null && (!Number.isInteger(months) || months < 0 || months > 11)) return "ageMonths";
+    return "age";
+  }
+
   function evaluateFormulaOutcome(formula) {
     if (!formula) {
       return semanticBlock(
@@ -2104,9 +2116,7 @@
         return semanticBlock(
           "FORMULA_INELIGIBLE",
           safety.reason,
-          safety.reason && /AKI|zmieniając/i.test(safety.reason)
-            ? "creatinineState"
-            : "age",
+          safetyFieldForReason(safety.reason),
           safety,
         );
       }
@@ -2299,7 +2309,7 @@
       markerPolicy.status === "unknown"
     ) {
       limitations.push(
-        "Nie potwierdzono stabilności markerów filtracji; liczba może zostać pokazana bez pełnej kategorii klinicznej.",
+        "Nie potwierdzono stabilności markerów filtracji; wzór służy do oceny stabilnej czynności nerek.",
       );
     }
     if (
@@ -2307,7 +2317,7 @@
       !["enzymatic_idms", "jaffe_idms"].includes(fieldValue("ScrAssay"))
     ) {
       limitations.push(
-        "Nie potwierdzono standaryzacji kreatyniny do IDMS; wynik liczbowy pozostaje bez pełnej interpretacji.",
+        "Nie potwierdzono standaryzacji kreatyniny do IDMS; nie nadano kategorii G.",
       );
     }
     if (
@@ -2316,7 +2326,7 @@
       fieldValue("spotSampleKind") !== "firstMorning"
     ) {
       limitations.push(
-        "Wynik liczbowy jest możliwy, ale do pełnej interpretacji ACR/PCR preferowany jest pierwszy poranny mocz.",
+        "Dla ACR/PCR preferowany jest pierwszy poranny mocz.",
       );
     }
     if (
@@ -2440,7 +2450,7 @@
         fieldId,
         message:
           INTERPRETATION_NEGATIVE_MESSAGES[fieldId] ||
-          `Warunek „${view ? view.labelText : fieldId}” nie został spełniony; wynik liczbowy pozostaje bez pełnej interpretacji.`,
+          `Warunek „${view ? view.labelText : fieldId}” nie został spełniony; zastosowanie kliniczne zależy od tego warunku.`,
       }));
     const interpretationErrors = Array.from(
       state.interpretationFieldIds,
@@ -2551,103 +2561,48 @@
   function renderReadiness() {
     syncEgfrMarkerContext();
     if (!state.readiness) return;
-    state.readiness.hidden = false;
     state.readiness.replaceChildren();
+    state.readiness.hidden = false;
+    const formula = formulaById(state.activeFormulaId);
     if (state.legacyBroad) {
       documentRef.documentElement.dataset.clcrReady = "true";
-      state.readiness.className = "clcr-readiness clcr-readiness--neutral";
-      state.readiness.append(
-        createElement(
-          "p",
-          "",
-          "Tryb zgodności testowej: wybierz konkretną formułę, aby zobaczyć listę wymaganych danych.",
-        ),
-      );
-      return;
-    }
-    const formula = formulaById(state.activeFormulaId);
-    if (!formula) {
-      documentRef.documentElement.dataset.clcrReady = "false";
-      state.readiness.className = "clcr-readiness clcr-readiness--neutral";
-      state.readiness.append(
-        createElement(
-          "p",
-          "",
-          "Wybierz obliczenie z listy poniżej albo znajdź je w wyszukiwarce.",
-        ),
-      );
-      return;
-    }
-    const readiness = getFormulaReadiness(formula.id);
-    documentRef.documentElement.dataset.clcrReady = String(
-      readiness.valueReady,
-    );
-    if (readiness.status === "missing") {
-      state.readiness.className = `clcr-readiness ${
-        readiness.hasBlockedProtocol
-          ? "clcr-readiness--error"
-          : "clcr-readiness--incomplete"
-      }`;
-      state.readiness.append(
-        createElement(
-          "strong",
-          "",
-          readiness.hasBlockedProtocol
-            ? "Nie można obliczyć: warunek protokołu nie został spełniony."
-            : `Do obliczenia „${formula.label}” brakuje:`,
-        ),
-      );
-      appendReadinessList(compactReadinessEntries(readiness.missing));
-      return;
-    }
-    if (readiness.status === "blocked") {
-      state.readiness.className = "clcr-readiness clcr-readiness--error";
-      state.readiness.append(
-        createElement(
-          "strong",
-          "",
-          "Nie można obliczyć dla podanych danych:",
-        ),
-      );
-      appendReadinessList(readiness.blockers);
-      return;
-    }
-    if (!readiness.interpretationReady) {
-      state.readiness.className = "clcr-readiness clcr-readiness--warning";
-      if (formula.id === "cg") {
-        state.readiness.append(
-          createElement("p", "", "Nie potwierdzono stabilności kreatyniny — wynik orientacyjny."),
-        );
-        return;
-      }
-      state.readiness.append(
-        createElement(
-          "p",
-          "",
-          "Dane wystarczają do wyniku liczbowego. Pełna interpretacja jest ograniczona.",
-        ),
-      );
-      const warnings = readiness.limitations.map((message) => ({ message }));
-      if (readiness.interpretationMissingFieldIds.length) {
-        warnings.push({
-          message: "Uzupełnij pola oznaczone „Do pełnej interpretacji”, jeżeli dane są dostępne.",
-        });
-      }
-      appendReadinessList(warnings);
-      return;
-    }
-    if (formula.id === "cg") {
       state.readiness.hidden = true;
       return;
     }
-    state.readiness.className = "clcr-readiness clcr-readiness--ready";
-    state.readiness.append(
-      createElement(
-        "p",
-        "",
-        "Komplet danych do obliczenia i dostępnej pełnej interpretacji.",
-      ),
-    );
+    if (!formula) {
+      documentRef.documentElement.dataset.clcrReady = "false";
+      state.readiness.className = "clcr-readiness clcr-readiness--neutral";
+      state.readiness.append(createElement("p", "", "Wybierz obliczenie, aby zobaczyć potrzebne dane."));
+      return;
+    }
+    const context = currentClinicalContext();
+    if (CREATININE_VALUE_FORMULAS.has(formula.id) && context.markerPolicy && !context.markerPolicy.calculationAllowed) {
+      documentRef.documentElement.dataset.clcrReady = "false";
+      state.readiness.className = "clcr-readiness clcr-readiness--error";
+      state.readiness.append(createElement("strong", "", "Nie można obliczyć bieżącej czynności nerek."));
+      appendReadinessList([{ fieldId: "creatinineState", message: context.markerPolicy.message || "Znane AKI lub szybko zmieniające się markery wykluczają użycie tego wzoru. Sprawdź kontekst czynności nerek." }]);
+      return;
+    }
+    const readiness = getFormulaReadiness(formula.id);
+    documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
+    if (readiness.status === "missing") {
+      state.readiness.className = readiness.hasBlockedProtocol
+        ? "clcr-readiness clcr-readiness--error"
+        : "clcr-readiness clcr-readiness--incomplete";
+      state.readiness.append(createElement("strong", "", readiness.hasBlockedProtocol
+        ? "Nie można obliczyć: sprawdź wskazany warunek."
+        : "Do obliczenia brakuje:"));
+      appendReadinessList(compactReadinessEntries(readiness.missing));
+    } else if (readiness.status === "blocked") {
+      state.readiness.className = "clcr-readiness clcr-readiness--error";
+      state.readiness.append(createElement("strong", "", "Nie można obliczyć dla podanych danych:"));
+      appendReadinessList(readiness.blockers);
+    } else {
+      // Ograniczenia odniesienia należą do karty wyniku. Nie tworzą osobnego
+      // komunikatu o gotowości ani żądania dodatkowych, opcjonalnych odpowiedzi.
+      state.readiness.hidden = true;
+    }
+    global.ClcrLayout?.refresh?.();
   }
 
   let readinessFrame = 0;
@@ -2662,25 +2617,17 @@
   function renderActiveHeading(formula, legacy) {
     if (!state.activePanel) return;
     state.activePanel.replaceChildren();
-    const eyebrow = createElement(
-      "span",
-      "clcr-active-panel__eyebrow",
-      legacy ? "Tryb zgodności" : "Aktywne obliczenie",
-    );
-    const heading = createElement(
-      "h2",
-      "clcr-active-panel__title",
-      formula?.id === "cg" ? "Cockcroft–Gault" : formula ? formula.label : "Najpierw wybierz formułę",
-    );
-    state.activePanel.append(eyebrow, heading);
-    if (formula?.id === "cg") {
-      state.activePanel.append(
-        createElement("p", "clcr-active-panel__note", "Klirens kreatyniny · masa rzeczywista"),
-      );
-    } else if (formula && formula.note) {
-      state.activePanel.append(
-        createElement("p", "clcr-active-panel__note", formula.note),
-      );
+    const eyebrow = createElement("div", "clcr-active-panel__eyebrow");
+    const step = createElement("span", "clcr-step-number", "2");
+    step.setAttribute("aria-hidden", "true");
+    eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
+    state.activePanel.appendChild(eyebrow);
+    const heading = createElement("h2", "clcr-active-panel__title", formula
+      ? ["cg", "cg_norm"].includes(formula.id) ? "Cockcroft–Gault" : formula.label
+      : legacy ? "Obliczenia" : "Wybierz obliczenie");
+    state.activePanel.appendChild(heading);
+    if (formula && CREATININE_VALUE_FORMULAS.has(formula.id)) {
+      state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Do oceny stabilnej czynności nerek"));
     }
   }
 
@@ -2930,6 +2877,9 @@
         "Znajdź formułę albo wybierz poziom. Formularz pokaże tylko dane potrzebne do bieżącego obliczenia.",
       ),
     );
+    const choiceStep = createElement("span", "clcr-step-number", "1");
+    choiceStep.setAttribute("aria-hidden", "true");
+    shell.querySelector("h1").prepend(choiceStep);
     const searchBox = createElement("div", "clcr-search");
     const searchLabel = createElement(
       "label",
@@ -3044,7 +2994,7 @@
       utilities.appendChild(sameLabel);
     }
     const legacy = documentRef.getElementById("legacyFormulaHistory");
-    if (legacy) utilities.appendChild(legacy);
+    if (legacy) shell.appendChild(legacy);
     form.insertBefore(utilities, form.firstChild);
 
     const picker = documentRef.getElementById("formulaPicker");
@@ -3075,6 +3025,9 @@
     form.insertBefore(activePanel, readiness);
     state.activePanel = activePanel;
     state.readiness = readiness;
+    const clearContainer = documentRef.getElementById("clearContainer");
+    // Obliczenia bez danych pacjenta nadal potrzebują wspólnej akcji czyszczenia.
+    if (clearContainer) form.appendChild(clearContainer);
   }
 
   function initFields(form) {
@@ -3207,6 +3160,7 @@
     search: (query) => formulaSearch(query, global.FORMULAS),
     refresh: syncFromPicker,
     getFormulaReadiness,
+    uagSpecimenConfirmed,
     hasBlockingValidationError() {
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
@@ -3273,18 +3227,23 @@
 
   function isVisible(el) {
     if (!el) return false;
+    let node = el;
+    let insideClosedDetails = false;
+    while (node) {
+      if (node.hidden || node.style?.display === "none") return false;
+      if (typeof global.getComputedStyle === "function") {
+        const style = global.getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden") return false;
+      }
+      if (String(node.tagName).toLowerCase() === "details" && !node.open) insideClosedDetails = true;
+      node = node.parentElement || null;
+    }
     if (typeof el.getClientRects === "function") {
       try {
-        return el.getClientRects().length > 0;
-      } catch (e) {
-        /* fall through */
-      }
-    }
-    let node = el;
-    while (node) {
-      if (node.hidden) return false;
-      if (node.style && node.style.display === "none") return false;
-      node = node.parentElement || null;
+        // Zwijanie pomocniczych miar nie usuwa ich z wizyty. Ukryte wyniki
+        // nieaktywnego obliczenia zostały odrzucone przez przegląd przodków.
+        return el.getClientRects().length > 0 || insideClosedDetails;
+      } catch (e) { /* uproszczony DOM testowy */ }
     }
     return true;
   }
@@ -3400,7 +3359,7 @@
     return bestDiff <= tol ? best : rawNum;
   }
 
-  // Zbiera WIDOCZNE, otagowane wyniki (po jednym na serię), ograniczone do
+  // Zbiera otagowane wyniki, także pomocnicze miary w Szczegółach, ograniczone do
   // formuł aktywnego modułu (chyba że nie wybrano formuły — wtedy wszystko).
   function collectActiveDatapoints(root, options) {
     const scope = root || doc;
@@ -4744,457 +4703,135 @@
   }
 })(typeof window !== "undefined" ? window : globalThis);
 
-/* ————————————————————————————————————————————————————————————————————————
- * Układ B — U1: dwie kolumny + przyklejony panel „Wynik" (Wariant B Macieja).
- *
- * Warstwa PREZENTACJI/UKŁADU — ZERO zmian w matematyce silnika. Moduł:
- *   • owija #clcrForm (wejścia) w lewą kolumnę „workspace", a po prawej tworzy
- *     przyklejony (sticky, desktop) rail „Wynik";
- *   • rail pokazuje NAGŁÓWEK wyniku (duża liczba) czytany z tagów silnika
- *     data-clcr-series/value (dodanych w Fazie 1 — bez liczenia tutaj);
- *   • przenosi istniejące karty „Zapisz wynik do karty" i „Historia" (Fazy 1–2)
- *     do railu;
- *   • wyniki szczegółowe (#results/#elecCard/#stoneCard) zostają PEŁNĄ
- *     szerokością pod workspace (U2 zamieni je na tabelę data-card).
- * Aktywne tylko gdy workflow UI aktywne (data-clcr-workflow-ui="1"); mobile bez
- * relayoutu (grid dopiero ≥980px) — chroni istniejące testy 320px.
- * ———————————————————————————————————————————————————————————————————————— */
+/* Jeden wynik: oryginalne węzły silnika pozostają źródłem liczby, zapisu
+ * i raportów. Układ przenosi je do panelu obok formularza, bez kopii liczby. */
 (function (global) {
   "use strict";
   const doc = global.document;
   if (!doc) return;
-
-  const RESULT_IDS = [
-    "results",
-    "clcrInfo",
-    "elecInfo",
-    "stoneInfo",
-    "ktvResult",
-    "ektvResult",
-    "urrResult",
-  ];
+  const RESULT_IDS = ["results", "clcrInfo", "elecInfo", "stoneInfo", "ktvResult", "ektvResult", "urrResult"];
   let rail = null;
-  let head = null;
-  let progressEl = null;
-  let progressValue = null;
-  let progressFill = null;
-  let fullReportBtn = null;
   let reportSection = null;
-  let reportHead = null;
-  let reportTitle = null;
   let reportActions = null;
   let built = false;
   let refreshTimer = null;
 
-  function workflowActive() {
-    return (
-      doc.documentElement &&
-      doc.documentElement.dataset &&
-      doc.documentElement.dataset.clcrWorkflowUi === "1"
-    );
-  }
-  function el(id) {
-    return doc.getElementById(id);
-  }
-  function formatValue(n) {
-    try {
-      const vs = global.ClcrVisitSave;
-      if (vs && typeof vs.formatValueString === "function") return vs.formatValueString(n);
-    } catch (e) {
-      /* fallback */
-    }
-    if (!isFinite(n)) return "";
-    return (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)))).replace(".", ",");
-  }
-  function activeFormulaId() {
-    try {
-      const wf = global.ClcrUiWorkflow;
-      return (wf && wf.state && wf.state.activeFormulaId) || "";
-    } catch (e) {
-      return "";
-    }
-  }
-  function paramFor(id) {
-    try {
-      const wf = global.ClcrUiWorkflow;
-      if (wf && wf.model && typeof wf.model.getParam === "function") return wf.model.getParam(id);
-    } catch (e) {
-      /* brak */
-    }
-    return null;
-  }
-  // Etykieta stanu nad liczbą: pełny wynik vs sam wynik liczbowy (interpretacja
-  // ograniczona). CSS robi wersaliki („WYNIK LICZBOWY GOTOWY").
-  function stateKicker() {
-    try {
-      const wf = global.ClcrUiWorkflow;
-      const rd =
-        wf && typeof wf.getFormulaReadiness === "function"
-          ? wf.getFormulaReadiness()
-          : null;
-      if (rd && rd.valueReady) {
-        return rd.interpretationReady ? "Wynik gotowy" : "Wynik liczbowy gotowy";
-      }
-    } catch (e) {
-      /* fallback */
-    }
-    return "Wynik";
-  }
+  function el(id) { return doc.getElementById(id); }
+  function workflowActive() { return doc.documentElement?.dataset.clcrWorkflowUi === "1"; }
+  function activeFormulaId() { return global.ClcrUiWorkflow?.state.activeFormulaId || ""; }
 
   function build() {
     if (built) return;
     const container = doc.querySelector(".container");
     const form = el("clcrForm");
-    if (!container || !form) return;
-    if (form.parentNode !== container) return; // model jeszcze nie ustawił układu
-    const ws = doc.createElement("div");
-    ws.id = "clcrWorkspace";
-    ws.className = "clcr-workspace";
-    container.insertBefore(ws, form);
-    ws.appendChild(form); // lewa kolumna = wejścia
+    if (!container || !form || form.parentNode !== container) return;
+    const workspace = doc.createElement("div");
+    workspace.id = "clcrWorkspace";
+    workspace.className = "clcr-workspace";
+    doc.documentElement.dataset.clcrLayout = "single-result";
+    container.insertBefore(workspace, form);
+    workspace.appendChild(form);
 
-    rail = doc.createElement("aside");
+    rail = doc.createElement("section");
     rail.id = "clcrResultRail";
     rail.className = "clcr-result-rail";
+    rail.setAttribute("aria-labelledby", "clcrResultTitle");
+    workspace.appendChild(rail);
 
-    // Pasek „Wymagane dane X/Y".
-    progressEl = doc.createElement("div");
-    progressEl.className = "clcr-progress";
-    progressEl.hidden = true;
-    const pMeta = doc.createElement("div");
-    pMeta.className = "clcr-progress__meta";
-    const pLabel = doc.createElement("span");
-    pLabel.textContent = "Wymagane dane";
-    progressValue = doc.createElement("strong");
-    progressValue.className = "clcr-progress__value";
-    progressValue.textContent = "0/0";
-    pMeta.append(pLabel, progressValue);
-    const pTrack = doc.createElement("div");
-    pTrack.className = "clcr-progress__track";
-    progressFill = doc.createElement("span");
-    progressFill.className = "clcr-progress__fill";
-    pTrack.appendChild(progressFill);
-    progressEl.append(pMeta, pTrack);
-    rail.appendChild(progressEl);
-
-    head = doc.createElement("div");
-    head.className = "clcr-rail-head";
-    head.id = "clcrRailHead";
-    head.hidden = true;
-    rail.appendChild(head);
-
-    // Skrót interpretacji (#clcrReadiness — „Stan obliczenia") przenosimy z lewej
-    // kolumny do panelu Wynik, pod liczbę. Model aktualizuje go przez referencję.
-    const readinessEl = el("clcrReadiness");
-    if (readinessEl) rail.appendChild(readinessEl);
-
-    // „Zobacz pełny opis wyniku ↓" — przewija do sekcji „Wynik i raport".
-    fullReportBtn = doc.createElement("button");
-    fullReportBtn.type = "button";
-    fullReportBtn.className = "clcr-fullreport-button";
-    fullReportBtn.textContent = "Zobacz pełny opis wyniku ↓";
-    fullReportBtn.hidden = true;
-    fullReportBtn.addEventListener("click", scrollToReport);
-    rail.appendChild(fullReportBtn);
-
-    ws.appendChild(rail);
-
-    buildReport(ws);
-    built = true;
-
-    adoptCards();
-    scheduleRefresh();
-  }
-
-  // Sekcja „Wynik i raport" — pełny opis wyniku POD układem (pełna szerokość).
-  // Przenosimy istniejące węzły wyników silnika + przyciski raportów/AI w jedno
-  // miejsce (nie usuwamy ich — zostają obserwowane przez zapis/historię).
-  function buildReport(ws) {
-    reportSection = doc.createElement("section");
+    reportSection = doc.createElement("div");
     reportSection.id = "clcrResultReport";
     reportSection.className = "clcr-result-report";
-    reportHead = doc.createElement("div");
-    reportHead.className = "clcr-result-report__head";
-    reportHead.hidden = true;
-    const kicker = doc.createElement("span");
-    kicker.className = "clcr-step-kicker";
-    kicker.textContent = "Wynik i raport";
-    reportTitle = doc.createElement("h2");
-    reportTitle.className = "clcr-result-report__title";
-    reportTitle.textContent = "Pełny opis wyniku";
-    reportHead.append(kicker, reportTitle);
-    reportSection.appendChild(reportHead);
+    const heading = doc.createElement("h2");
+    heading.id = "clcrResultTitle";
+    heading.className = "clcr-result-report__title";
+    heading.textContent = "Wynik";
+    const resultStep = doc.createElement("span");
+    resultStep.className = "clcr-step-number";
+    resultStep.textContent = "3";
+    resultStep.setAttribute("aria-hidden", "true");
+    heading.prepend(resultStep);
+    const resultHeading = doc.createElement("div");
+    resultHeading.className = "clcr-result-report__head";
+    resultHeading.appendChild(heading);
+    reportSection.appendChild(resultHeading);
+    const readiness = el("clcrReadiness");
+    if (readiness) reportSection.appendChild(readiness);
 
-    const extra = doc.createElement("div");
-    extra.className = "clcr-result-extra";
-    [
-      "ktvValidation",
-      "ktvResult",
-      "ektvResult",
-      "urrResult",
-      "ktvInterpretation",
-      "results",
-      "elecCard",
-      "stoneCard",
-    ].forEach((id) => {
-      const box = el(id);
-      if (box) extra.appendChild(box);
+    const results = doc.createElement("div");
+    results.className = "clcr-result-extra";
+    ["ktvValidation", "ktvResult", "ektvResult", "urrResult", "ktvInterpretation", "results", "elecCard", "stoneCard"].forEach((id) => {
+      const node = el(id);
+      if (node) results.appendChild(node);
     });
-    reportSection.appendChild(extra);
-
+    reportSection.appendChild(results);
     reportActions = doc.createElement("div");
     reportActions.className = "clcr-result-report__actions";
     reportActions.hidden = true;
     ["downloadPDF", "downloadDOCX", "askAI"].forEach((id) => {
-      const btn = el(id);
-      if (btn) reportActions.appendChild(btn);
+      const node = el(id);
+      if (node) reportActions.appendChild(node);
     });
     reportSection.appendChild(reportActions);
-    const aiContainer = el("aiContainer");
-    if (aiContainer) reportSection.appendChild(aiContainer);
-
-    ws.insertAdjacentElement("afterend", reportSection);
+    const ai = el("aiContainer");
+    if (ai) reportSection.appendChild(ai);
+    rail.appendChild(reportSection);
+    built = true;
+    refresh();
   }
 
-  // Przenosimy karty Zapis/Historia (wstrzyknięte przez ClcrVisitSave) do railu.
   function adoptCards() {
     if (!rail) return;
     ["clcrVisitSaveCard", "clcrHistoryCard"].forEach((id) => {
-      const card = el(id);
-      if (card && card.parentNode !== rail) rail.appendChild(card);
+      const node = el(id);
+      if (node && node.parentNode !== rail) rail.appendChild(node);
     });
-  }
-
-  function scrollToReport() {
-    if (!reportSection || reportSection.hidden) return;
-    try {
-      reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch (e) {
-      reportSection.scrollIntoView();
-    }
-  }
-
-  // Pasek „Wymagane dane X/Y" — liczony z pól wymaganych aktywnej formuły
-  // (state.requiredFieldIds w modelu). Bez zmian w matematyce.
-  function renderProgress() {
-    if (!progressEl) return;
-    if (activeFormulaId() === "cg") {
-      progressEl.hidden = true;
-      return;
-    }
-    let ids = null;
-    try {
-      const wf = global.ClcrUiWorkflow;
-      if (wf && wf.state && wf.state.requiredFieldIds) ids = wf.state.requiredFieldIds;
-    } catch (e) {
-      ids = null;
-    }
-    // Pomijamy selektory jednostek (mają domyślną wartość — to nie „dane do wpisania").
-    const list = (ids ? Array.from(ids) : []).filter((fid) => !/unit$/i.test(fid));
-    const total = list.length;
-    if (!total) {
-      progressEl.hidden = true;
-      return;
-    }
-    let filled = 0;
-    list.forEach((fid) => {
-      const c = el(fid);
-      if (c && typeof c.value === "string" && c.value.trim() !== "") filled += 1;
-    });
-    progressEl.hidden = false;
-    if (progressValue) progressValue.textContent = filled + "/" + total;
-    if (progressFill) {
-      progressFill.style.width = Math.round((filled / total) * 100) + "%";
-    }
-  }
-
-  // Wynik do nagłówka bierzemy z WYŚWIETLANEGO tekstu tagowanego węzła (jak widzi
-  // go lekarz w wynikach szczegółowych — z zaokrągleniem silnika), a nie z surowej
-  // wartości data-clcr-value (ta bywa pełnoprecyzyjna, np. 79,77 vs wyświetlane 80).
-  function parseDisplay(node) {
-    // Karta eGFR ma oddzielne, jawne metadane prezentacji. Jej tekst obejmuje
-    // także status, kategorię i objaśnienia — nie są one częścią jednostki.
-    const displayValue = node.getAttribute("data-clcr-display-value");
-    if (displayValue != null && displayValue !== "") {
-      const tone = node.getAttribute("data-clcr-tone") || "neutral";
-      return {
-        label: node.getAttribute("data-clcr-display-label") || "",
-        value: displayValue,
-        unit: node.getAttribute("data-clcr-display-unit") || "",
-        tone: ["success", "warning", "danger", "neutral"].includes(tone) ? tone : "neutral",
-        status: node.getAttribute("data-clcr-status") || "",
-        category: node.getAttribute("data-clcr-category") || "",
-        boundary: node.getAttribute("data-clcr-boundary") || "",
-      };
-    }
-    const txt = (node.textContent || "").replace(/\s+/g, " ").trim();
-    if (!txt) return null;
-    const ci = txt.indexOf(":");
-    let label = "";
-    let rhs = txt;
-    if (ci > 0 && ci < txt.length - 1) {
-      label = txt.slice(0, ci).trim();
-      rhs = txt.slice(ci + 1).trim();
-    }
-    // liczba wiodąca (z opcjonalnym < > ≤ ≥) + reszta = jednostka
-    const m = rhs.match(/^([<>≤≥]?\s*-?\d[\d.,]*)(.*)$/);
-    if (!m) return { label: label, value: rhs, unit: "" };
-    return { label: label, value: m[1].trim(), unit: (m[2] || "").trim() };
-  }
-
-  function renderHead() {
-    if (!head) return;
-    // Kolor poprzedniej formuły nie może przejść na nową lub niepełne dane.
-    ["data-clcr-tone", "data-clcr-status", "data-clcr-category", "data-clcr-boundary"].forEach((attribute) => {
-      head.removeAttribute(attribute);
-    });
-    const id = activeFormulaId();
-    let node = null;
-    if (id) {
-      const nodes = doc.querySelectorAll("[data-clcr-series][data-clcr-value]");
-      for (let i = 0; i < nodes.length; i += 1) {
-        const n = nodes[i];
-        if (n.getAttribute("data-clcr-series") !== id) continue;
-        if ((n.textContent || "").trim() === "") continue;
-        node = n;
-        break;
-      }
-    }
-    if (!node) {
-      head.hidden = true;
-      head.innerHTML = "";
-      return;
-    }
-    const parsed = parseDisplay(node);
-    let label = parsed && parsed.label ? parsed.label : "";
-    if (!label) {
-      const param = paramFor(id);
-      if (param && param.label) label = param.label;
-    }
-    let value = parsed ? parsed.value : "";
-    let unit = parsed ? parsed.unit : "";
-    if (!value) {
-      // ostatnia deska ratunku: surowa wartość
-      const raw = node.getAttribute("data-clcr-value");
-      const num = raw != null && raw !== "" ? Number(raw) : NaN;
-      if (!isFinite(num)) {
-        head.hidden = true;
-        head.innerHTML = "";
-        return;
-      }
-      value = formatValue(num);
-      const param = paramFor(id);
-      unit = param && param.unit ? param.unit : "";
-    }
-    head.hidden = false;
-    const boundary =
-      ["egfr", "ckid_u25"].includes(id) && parsed && parsed.category &&
-      ["success", "warning", "danger"].includes(parsed.tone)
-        ? parsed.boundary
-        : "";
-    if (parsed && parsed.tone) {
-      head.setAttribute("data-clcr-tone", parsed.tone);
-      head.setAttribute("data-clcr-status", parsed.status);
-      if (parsed.category) head.setAttribute("data-clcr-category", parsed.category);
-    }
-    if (boundary) head.setAttribute("data-clcr-boundary", boundary);
-    head.innerHTML =
-      '<span class="clcr-rail-kick">' + escapeHtml(stateKicker()) + "</span>" +
-      (parsed && parsed.status
-        ? '<div class="clcr-rail-status">' +
-          '<span>' + escapeHtml(parsed.status) + '</span>' +
-          (parsed.category ? '<span class="clcr-rail-category">' + escapeHtml(parsed.category) + "</span>" : "") +
-          "</div>"
-        : "") +
-      (!(parsed && parsed.status) && label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "") +
-      '<div class="clcr-rnum">' +
-      escapeHtml(value) +
-      (unit ? "<small>" + escapeHtml(unit) + "</small>" : "") +
-      "</div>" +
-      (boundary
-        ? '<div class="clcr-rail-boundary">Przed zaokrągleniem: ' + escapeHtml(boundary) + "</div>"
-        : "") +
-      (parsed && parsed.status && label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "");
-  }
-  function escapeHtml(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
   }
 
   function refresh() {
+    if (!built) return;
     adoptCards();
-    renderHead();
-    // Nagłówek „Wynik i raport" + rząd akcji (PDF/DOCX/AI) pokazujemy dopiero,
-    // gdy jest policzony wynik (head widoczny). Węzły wyników silnika w .clcr-result-extra
-    // pozostają w przepływie i zarządzają własną widocznością (nie chowamy ich —
-    // zapis/historia je obserwują).
-    renderProgress();
-    const hasResult = !!(head && !head.hidden);
-    if (reportHead) reportHead.hidden = !hasResult;
-    if (reportActions) reportActions.hidden = !hasResult;
-    if (fullReportBtn) fullReportBtn.hidden = !hasResult;
-    // Dynamiczny tytuł sekcji: „<nazwa formuły> — pełny opis wyniku".
-    if (reportTitle) {
-      let label = "";
-      if (hasResult && head) {
-        const fEl = head.querySelector(".clcr-rail-formula");
-        if (fEl && fEl.textContent) label = fEl.textContent.trim();
-      }
-      reportTitle.textContent = label
-        ? label + " — pełny opis wyniku"
-        : "Pełny opis wyniku";
-    }
+    const formulaId = activeFormulaId();
+    const workflow = global.ClcrUiWorkflow;
+    const readiness = workflow?.getFormulaReadiness?.();
+    const selected = [...reportSection.querySelectorAll("[data-clcr-series][data-clcr-value]")].some((node) => {
+      const series = node.dataset.clcrSeries || "";
+      return (!formulaId || series.toLowerCase() === formulaId.toLowerCase()) &&
+        node.dataset.clcrValue !== "" && Number.isFinite(Number(node.dataset.clcrValue));
+    });
+    const dialysis = formulaId === "KTV" && Boolean(el("ktvResult")?.textContent.trim());
+    const hasResult = Boolean((selected || dialysis) && readiness?.valueReady);
+    rail.dataset.clcrHasResult = String(hasResult);
+    reportActions.hidden = !hasResult;
+    const resultBody = reportSection.querySelector(".clcr-result-extra");
+    if (resultBody) resultBody.hidden = Boolean(readiness && !readiness.valueReady);
   }
+
   function scheduleRefresh() {
     if (refreshTimer) global.clearTimeout(refreshTimer);
     refreshTimer = global.setTimeout(refresh, 60);
   }
-
   function observe() {
     if (typeof global.MutationObserver === "function") {
-      const obs = new global.MutationObserver(scheduleRefresh);
+      const observer = new global.MutationObserver(scheduleRefresh);
       RESULT_IDS.forEach((id) => {
         const node = el(id);
-        if (node) obs.observe(node, { childList: true, subtree: true, attributes: true });
+        if (node) observer.observe(node, { childList: true, subtree: true, attributes: true });
       });
     }
-    // Pasek „Wymagane dane X/Y" aktualizujemy też przy wpisywaniu pól.
     const form = el("clcrForm");
     if (form) {
       form.addEventListener("input", scheduleRefresh);
       form.addEventListener("change", scheduleRefresh);
     }
+    doc.addEventListener("clcr:result-rendered", scheduleRefresh);
   }
-
   function init() {
     if (!workflowActive()) return;
     build();
-    if (!built) {
-      // model mógł jeszcze nie przestawić #clcrForm — spróbuj ponownie
-      global.setTimeout(function () {
-        build();
-        if (built) observe();
-      }, 120);
-      return;
-    }
-    observe();
+    if (built) observe();
+    else global.setTimeout(() => { build(); if (built) observe(); }, 120);
   }
-
-  global.ClcrLayout = {
-    refresh: refresh,
-    renderHead: renderHead,
-    _rail: function () {
-      return rail;
-    },
-  };
-
-  if (typeof doc.addEventListener === "function") {
-    if (doc.readyState === "loading") {
-      doc.addEventListener("DOMContentLoaded", init);
-    } else {
-      init();
-    }
-  }
+  global.ClcrLayout = { refresh, renderHead: refresh, _rail: () => rail };
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", init);
+  else init();
 })(typeof window !== "undefined" ? window : globalThis);
