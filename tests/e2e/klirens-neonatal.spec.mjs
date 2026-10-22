@@ -123,6 +123,7 @@ async function visibleFields(page) {
       .map(element => ({
         id: element.id, optional: Boolean(element.closest('details')),
         fontPx: parseFloat(getComputedStyle(element).fontSize), heightPx: element.getBoundingClientRect().height,
+        leftPx: element.getBoundingClientRect().left, rightPx: element.getBoundingClientRect().right,
       }));
   });
 }
@@ -133,10 +134,19 @@ async function expectMobileResultGap(page) {
     gap: document.getElementById('clcrResultReport').getBoundingClientRect().top - document.getElementById('clearBtn').getBoundingClientRect().bottom,
     token: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--space-20px')),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    viewportWidth: document.documentElement.clientWidth,
+    clearLeft: document.getElementById('clearBtn').getBoundingClientRect().left,
+    clearRight: document.getElementById('clearBtn').getBoundingClientRect().right,
   }));
   expect(geometry.token).toBe(20);
-  expect(geometry.gap).toBeGreaterThanOrEqual(geometry.token - 1);
+  expect(Math.abs(geometry.gap - geometry.token)).toBeLessThanOrEqual(1);
   expect(geometry.overflow).toBeLessThanOrEqual(1);
+  expect(geometry.clearLeft).toBeGreaterThanOrEqual(0);
+  expect(geometry.clearRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  for (const field of await visibleFields(page)) {
+    expect(field.leftPx, `${field.id} znajduje się poza lewą krawędzią ekranu`).toBeGreaterThanOrEqual(0);
+    expect(field.rightPx, `${field.id} znajduje się poza prawą krawędzią ekranu`).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  }
 }
 
 async function screenshot(page, testInfo, name, resultOnly = false) {
@@ -254,7 +264,10 @@ test('neonatal: jednostki i dni 0/2/3/28 zachowują liczbę; uwaga pierwszych dn
       await expect(note).toHaveText(earlyText);
       await expect(note).toHaveCSS('color', 'rgb(154, 91, 0)');
       expect(await note.evaluate(element => Boolean(element.closest('details')))).toBe(false);
-      if (day === '0') await screenshot(page, testInfo, 'neonatal-390-day0.png', true);
+      if (day === '0') {
+        await expectMobileResultGap(page);
+        await screenshot(page, testInfo, 'neonatal-390-day0.png', true);
+      }
     } else {
       await expect(note).toHaveCount(0);
     }
@@ -298,6 +311,7 @@ test('neonatal: sprzeczne zapisane lata i miesiące odsłaniają właściwe pole
     await expect(link).toHaveCount(1);
     await kliknij(link);
     await expect(page.locator(`#${field}`)).toBeFocused();
+    await expectMobileResultGap(page);
     if (field === 'age') await screenshot(page, testInfo, 'neonatal-390-contrary-age.png');
     // Zaznaczenie i usunięcie starej cyfry jest etapem rzeczywistej edycji.
     // Pytanie nie może zniknąć spod kursora przed wpisaniem nowej wartości.

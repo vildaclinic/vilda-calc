@@ -1617,8 +1617,9 @@ html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 /* ——— Układ B (U1): dwie kolumny + przyklejony panel „Wynik" ———
    Warstwa PREZENTACJI: #clcrForm (wejścia) do lewej kolumny, prawy rail
    przyklejony. Wyniki szczegółowe zostają pełną szerokością POD workspace.
-   Jedna kolumna na mobile zachowuje rzeczywisty gap między formularzem a wynikiem. */
-.clcr-workspace { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+   Pionowy flex na mobile zachowuje rzeczywisty gap bez narzucania formularzowi
+   wysokości wiersza siatki; desktop pozostaje siatką dwóch kolumn. */
+.clcr-workspace { display: flex; flex-direction: column; min-width: 0; }
 /* #clcrForm ma klasę .flex (row-wrap) → w kolumnie workspace stackujemy pionowo,
    żeby karta pacjenta i parametry miały jednakową, pełną szerokość kolumny. */
 .clcr-workspace > #clcrForm {
