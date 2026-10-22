@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-22",
+  "baseCommit": "fd5bf8a39c42324ee2c366ca876033ada4c1b831",
+  "ownerApproval": "Owner approved the preceding conditional group-reference proposal, including unresolved source limitations.",
+  "scope": "One ordinary educational female estradiol whole-group reference; no new RI, exact-age model, geometry or sex-comparison reference.",
+  "profileId": "kulle2024-female-e2-th1-age-over1-under6",
+  "version": "2026-10-22.1",
+  "sourceEvidence": "patient-point/kulle2024-female-e2-th1-group-median.json",
+  "sourceEvidenceSha256": "6c440598f6c1ac11c4cf9052c0490468cef69865066744aa51385d8bf8c3e757",
+  "policy": "../female-estradiol-childhood-reference-policy.json",
+  "applicationDomain": {
+    "minAge": 1,
+    "minAgeExclusive": true,
+    "maxAge": 6,
+    "maxAgeExclusive": true,
+    "wholePossibleAgeMustFit": true
+  },
+  "publishedGroup": {
+    "printedLabel": "B1 1-8 years",
+    "n": 213,
+    "p50PmolL": 15,
+    "statistic": "Harrell–Davis estimated group quantile",
+    "notNewAge1to6Group": true
+  },
+  "qualification": {
+    "requiredCurrentTypedStage": "Th1 of the same patient",
+    "reject": [
+      "P1",
+      "untyped Tanner",
+      "historical stage eligible only for growth",
+      "other patient or sex",
+      "local demographic/stage overrides borrowing the main examination",
+      "known incompatible material or method",
+      "known hormonal treatment/GnRHa/stimulation/pregnancy/menopause",
+      "censored result"
+    ],
+    "sourceSpecimen": "serum, with unresolved B1 specimen allocation",
+    "unknownMaterialAndMethod": "limited educational comparison, not analytical confirmation"
+  },
+  "baselineInvariants": {
+    "previousProfiles": 84,
+    "allPreviousProfilesIdentical": true,
+    "otherRuntimeKeysIdentical": true,
+    "laboratoryRiFileUnchanged": "lab_units_data.js",
+    "interpretationAndSavedAssessmentsUnchanged": true,
+    "constantDisplayScale": {
+      "unit": "pmol/L",
+      "divisor": 264,
+      "ceiling": 1
+    }
+  },
+  "sourceLimitations": {
+    "populationTotals": [
+      1753,
+      1724
+    ],
+    "difference": 29,
+    "otherStageB4Row": "Printed nonmonotonic quantiles are not corrected or imported.",
+    "lodPmolL": 4,
+    "lloqPmolL": 11,
+    "numericBelowLimitHandling": "unreported for the group estimate",
+    "b1SpecimenAllocation": "unreported",
+    "precisionNear15": "not established by the much higher assay controls"
+  },
+  "syntheticProductionCases": [
+    {
+      "sex": "female",
+      "ageYears": 2,
+      "currentStage": "Th1",
+      "resultPmolL": 20,
+      "expectedMedianPmolL": 15
+    },
+    {
+      "sex": "female",
+      "ageYears": 2,
+      "currentStage": "Th2/P1/unknown/historical growth-only Th1",
+      "expected": "No new group reference; independent result/RI remain available."
+    },
+    {
+      "sex": "female",
+      "ageYears": 1,
+      "expected": "Existing Ljubicic reference with its original qualifications."
+    },
+    {
+      "sex": "female",
+      "ageYears": 6,
+      "expected": "Existing Madsen model; no Th requirement."
+    },
+    {
+      "sex": "female",
+      "age": "1 year 0 months",
+      "expected": "No group reference, since the entire age interval is not inside (1,6)."
+    },
+    {
+      "sex": "female",
+      "age": "5 years 11 months",
+      "currentStage": "Th1",
+      "expectedMedianPmolL": 15
+    },
+    {
+      "sex": "female",
+      "ageYears": 2,
+      "currentStage": "Th1",
+      "result": "<11 pmol/L",
+      "expected": "No exact concentration point, no LLOQ/2 or zero substitution."
+    }
+  ],
+  "validation": "Completed unit, browser, fresh/update/cold-offline PWA and GitHub results are reported for the final SHA in the PR."
+}

@@ -160,6 +160,71 @@ znane leczenie hormonalne może teraz wyłączyć jego punkt. Nie przenosi fakt�
 między pacjentami/płciami ani na historyczną próbkę. To jawna zmiana kwalifikacji,
 nie zmiana źródła niemowląt. Testy nie stanowią walidacji klinicznej.
 
+## Żeński E2 — mediana grupy Th1 w (1,6), 22 października 2026
+
+Właściciel zaakceptował opisany wariant edukacyjny wraz z nierozstrzygniętymi
+ograniczeniami źródła. [Polityka](female-estradiol-childhood-reference-policy.json)
+dodaje jeden profil `kulle2024-female-e2-th1-age-over1-under6`, `ordinaryOnly`,
+`group-median`, `constant`, `requiredGonadalStage: 1`. Wersja danych
+`2026-10-22.1` ma 85 profili: wszystkie 84 wcześniejsze są zachowane.
+Ta partia nie obejmuje odrębnego PR #744 dotyczącego inhibiny B.
+
+[Kulle 2024](https://doi.org/10.1093/ejendo/lvae046), pełny tekst i oryginalny
+suplement, tabela 3 „B1 1–8 years”: raportowane **N=213, P50=15,0 pmol/L**.
+To estymowany kwantyl Harrella–Davisa całej grupy wieku i stadium, nie model
+GAMLSS dokładnego wieku ani mediana nowo wydzielonej grupy 1–6 lat.
+Widoczny opis brzmi **„Mediana grupy Th1, 1–8 lat: 15 pmol/L”**.
+Dobór odniesienia nie zależy od wpisanego wyniku i nie klasyfikuje prawidłowości.
+
+Populacja: niemieckie pozostałości materiału 2014–2019 od pozornie zdrowych
+dzieci przed drobnymi zabiegami lub po wykluczeniu podejrzewanej choroby;
+pobrania 08–12, ocena Tannera przez endokrynologów dziecięcych. Bez
+steroidoterapii; znaną antykoncepcję wykluczano, gdy była odnotowana.
+Derywatyzacyjne LC-MS/MS; opis odniesienia mówi o surowicy, protokół także
+o serum/plasma. Nie ma przypisania materiału w grupie B1 o raportowanym N=213. Znane
+osocze nie korzysta z profilu; nieznany materiał/metoda dopuszczają wyłącznie
+ograniczone porównanie edukacyjne. Znana surowica i ogólna kategoria LC-MS/MS
+nie potwierdzają indywidualnej zgodności oznaczeń lub kalibracji między metodami.
+
+Źródło podaje **LOD 4, LLOQ 11 pmol/L**. Nie opisano numerycznej reguły
+obsługi cenzury dla estymacji Harrella–Davisa; fakt, że P50=15 przewyższa
+LLOQ, nie wyjaśnia tego braku. Nie imputujemy zera, LOD/2 lub LLOQ/2.
+Rozbieżność **1753** w tabeli 1 versus **1724** w Methods/rocznych
+wierszach tabeli 2 (29), nieprawidłowa kolejność centyli B4 oraz niejasność
+osoby/próbki pozostają nierozstrzygnięte. Nie poprawiamy tych danych i nie
+przenosimy akceptacji wiersza B1 na inne wiersze, RI lub model wieku.
+
+Cały możliwy wiek musi mieścić się w otwartym **(1,6)**, a **aktualne
+Th1 tej samej pacjentki** pochodzi z głównego formularza. P1, sam numer
+Tannera lub historyczna ocena dopuszczona do obliczeń wzrostowych nie zastępują
+Th1. Dzisiejsze stadium nie jest przenoszone na dawną próbkę. Nie dodajemy
+pytań ani wymogu stadium dla zachowanych profili Ljubicic/Madsen. Bez Th1
+nowa mediana jest niedostępna, lecz wynik i niezależne RI pozostają dostępne.
+Zachowane są bramki ciąży, menopauzy, znanego leczenia/GnRHa, stymulacji,
+metody, materiału, cenzury i tożsamości.
+
+Dokładnie 1 rok nadal należy do Ljubicic z jego własną kwalifikacją, a od
+6 lat do Madsen. Różnica 15 → około 1,25768 pmol/L przy 6 latach to zmiana
+źródła, nie zdarzenie biologiczne. Poglądowy most i stała skala **264 pmol/L**
+nie są dopasowywane do grupowej mediany. RI Mayo, porównania płci, pozostałe
+profile i dawne zapisane oceny pozostają bez zmian.
+
+| Syntetyczny przypadek | Oczekiwanie produkcyjnego silnika i UI |
+| --- | --- |
+| F2, aktualne Th1, E2 20 pmol/L | Wynik 20 i oddzielny znacznik mediany grupy 15 pmol/L; brak werdyktu z odległości od mediany. |
+| F2, Th2/P1/nieznana lub wyłącznie historyczna Th | Brak nowej mediany B1; niezależny wynik i dostępne RI zachowane. |
+| Formularz 1 rok 0 miesięcy: `[1,1+1/12)` | Brak jednego odniesienia dla całego wieku; nie wybieramy środka przedziału. |
+| Formularz 5 lat 11 miesięcy: `[5+11/12,6)` / przedział `[5.99,6]` | Odpowiednio mediana grupy 15 / brak jednego odniesienia. |
+| Dokładnie 1 rok / 6 lat, zgodny dotychczasowy kontekst | Zachowane źródła Ljubicic / Madsen; od 6 nie wymagamy Th1. |
+| 15 pmol/L lub 15/3,671 pg/mL | Ten sam znacznik; tylko zwykłe przeliczenie jednostki, bez harmonizacji oznaczeń. |
+| Zero / nierówność / wynik ponad osią | Dokładne zero / brak dokładnego punktu / strzałka z rzeczywistą wartością; bez podłogi LLOQ. |
+
+Regresje mają wywoływać rzeczywiste funkcje, chronić 84 wcześniejsze profile,
+historię i stałą geometrię oraz objąć zmianę osoby/płci, desktop/mobile,
+instalację i aktualizację PWA z zimnym startem offline. Wyniki wykonania
+podaje PR; testy nie nadają statusu walidacji klinicznej.
+[Ekstrakt źródła i ograniczeń](evidence/patient-point/kulle2024-female-e2-th1-group-median.json).
+
 ## LH chłopców — odtworzona mediana w (16,18), 18 października 2026
 
 Po źródłowym audycie właściciel polecił mały PR tylko dla chłopców.
@@ -370,6 +435,7 @@ liczb. Nie ma jednej zwalidowanej krzywej od urodzenia do starości.
 | --- | --- | --- | --- |
 | Męskie LH, FSH, testosteron całkowity, AMH, inhibina B; 7 dni–<1 roku | [Busch 2022](https://doi.org/10.1210/clinem/dgac115), ryc. 3, str. 1565; czarna mediana GAMLSS odczytana z wektorów PDF | 119 zdrowych donoszonych chłopców, ciąże pojedyncze, 338 próbek surowicy, COPENHAGEN Minipuberty; AutoDELFIA LH/FSH, Access 2 AMH, Gen II ELISA inhibina B, LC-MS/MS testosteron | Ekstrakcja obejmuje 7–400 dni; aktywny profil kończy się przed 1. rokiem. To przybliżenie ryciny, nie parametry autora ani średnia podłużna z ryc. 2. Osobna bramka rozdzielczości opisana niżej. |
 | Męskie LH i FSH; 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [Supplemental Table 1](https://doi.org/10.6084/m9.figshare.17153336.v1), arkusz `Other biomarkers`, wiersze 17–27, kolumny B:E i G:J | Norwegia, BGS2; 414 dostępnych męskich próbek w tabeli kohorty, liczebność oznaczenia może się różnić; surowica, pobrania 08:00–14:00, Siemens IMMULITE 2000 XPi | 11 rocznych węzłów na hormon. `p50 = exp(M)/1e6`. Wiek chronologiczny, bez wyznaczania stadium Tannera. Bez ekstrapolacji na dorosłych. |
+| Żeński E2; wyłącznie zwykłe widoki `(1,6)` lat z aktualnym Th1 | [Kulle 2024](https://doi.org/10.1093/ejendo/lvae046), tabela 3 „B1 1–8 years”, N=213, estymowany P50 Harrella–Davisa 15,0 pmol/L | Niemieckie pozostałości materiału 2014–2019; derywatyzacyjne LC-MS/MS, kontekst surowicy, nieznany przydział serum/plasma do B1 | Stała mediana całej grupy 1–8 lat/Th1, nie dokładnego wieku. Otwarty podzbiór `(1,6)` jest polityką aplikacji. LOD 4/LLOQ 11; reguła cenzury, różnica N1753/1724 oraz błąd wiersza B4 pozostają niewyjaśnione. Brak Th1 nie blokuje wyniku lub RI. |
 | Żeńskie LH i FSH; zwykłe widoki i porównanie płci w wieku 6–16 lat | [Madsen 2022](https://doi.org/10.1210/clinem/dgac155), [suplement v1](https://doi.org/10.6084/m9.figshare.17153336.v1), `Other biomarkers` B3:E13 i G3:J13 | BGS2, Norwegia, 601 dostępnych próbek dziewcząt w tabeli kohorty; surowica 08:00–14:00, IMMULITE 2000 XPi | 22 mediany, `exp(M)/1e6`, bez wymogu Th. Osobne identyfikatory profili zwykłych i porównania. Cykl niestandaryzowany, doustna antykoncepcja wykluczona. Wiek 16 jest opublikowanym brzegiem modelu kohorty 6–<16, bez ekstrapolacji. |
 | FSH przed pokwitaniem: chłopcy 1–<6 lat/G1; dziewczynki 1–<4 i 4–<6 lat/Th1 | [Zec 2012](https://doi.org/10.1016/j.clinbiochem.2012.05.019), tabela 2, str. 1210/PDF 5: chłopcy grupa źródłowa 1–<8 lat, mediana 0,48 IU/L, N=303; dziewczynki grupy źródłowe 1–<4 / 4–<8 / 8–<11, mediany 2,57/1,07/1,55 IU/L, N=124/156/107 | Zagrzeb, Chorwacja, Tanner 1; całe badanie N=948, nie każdy hormon oznaczano u każdego dziecka. Roche cobas e 411, kanapkowe ECLIA; zbierano surowicę i osocze Li-heparynowe, bez przypisania materiału do analitu | Mediany całych grup, nie model dokładnego wieku. Aktualne typowane G1/Th1 jest wymagane. Od 6 lat obie płcie używają Madsen. Węższe okna aplikacji nie zmieniają źródłowych etykiet, median ani N. Grupy 8–<11 obu płci pozostają w dowodach. |
 | Męski testosteron całkowity; `[1,2)` i `[2,3)` lat, zwykłe widoki | [Kushnir 2010](https://doi.org/10.1373/clinchem.2010.143222), ryc. 4C, s. 1146, mediany Te | Surowica, derywatyzacyjne 2D LC-MS/MS API 4000; dzieci bez znanych chorób i leków, pobranie po indukcji znieczulenia | Dwie przybliżone mediany grup, około 0,03/0,02 µg/L; nie model dokładnego wieku. N rocznych grup nie podano. Tolerancja odczytu około ±5 ng/L nie jest CI; LOD/LOQ5/10 ng/L, brak reguły cenzury. Półotwarte granice to jawna konwencja aplikacji; Kelsey od dokładnie 3 bez zmian. |
@@ -395,7 +461,7 @@ Ani geometria, ani zachowane wartości niemowlęce z Busch nie uruchamiają
 nowego analitu, profilu odniesienia lub punktu pacjenta. Dorosłe LH/FSH opisuje
 poniższe uzupełnienie zatwierdzone 11 października 2026. Dziecięce
 AMH poza wymienionymi grupami, pozaniemowlęce profile żeńskie poza FSH Zec,
-AMH Jopling/FDA, inhibiną B Zhou >1–<5,6/Borelli 5,6–47 i LH/FSH Madsen 6–16 oraz niepokryte fragmenty
+AMH Jopling/FDA, E2 Kulle `(1,6)`/Th1 i Madsen 6–18, inhibiną B Zhou >1–<5,6/Borelli 5,6–47 i LH/FSH Madsen 6–16 oraz niepokryte fragmenty
 osi pozostają bez ilościowego punktu. Dostępny schemat nie wypełnia
 tej luki. Mediana szerokiej grupy wieku nie staje się ciągłym modelem wieku;
 odrębna grupowa prezentacja wymaga własnej polityki źródłowej, jak Wang i Zec.
@@ -1433,6 +1499,9 @@ funkcji, a nie wynikiem uruchomienia kopii silnika w teście:
 | Mężczyzna 82 lata, testosteron 15,9 nmol/L | Punkt równy średniej grupy 80+, nie medianie dokładnego wieku. |
 | Mężczyzna dokładnie 86 lat / powyżej 86 lat, testosteron | Przy 86 latach średnia grupy 80+ wynosi 15,9; powyżej 86 brak liczbowego odniesienia mimo wygaszonego ogona linii. |
 | Mężczyzna, możliwy wiek 39,99–40,01 lat, testosteron | Brak jednej średniej między grupami; nie uśredniamy 20,0 i 18,1. |
+| Dziewczynka 2 lata, aktualne Th1, E2 20 pmol/L | Punkt 20 i mediana całej grupy Th1 1–8 lat: 15 pmol/L; stała krzywa/skala, niezależne RI. |
+| E2 F2, Th2/P1/nieznana lub wyłącznie historyczna Th | Brak nowej mediany; wynik i dostępne RI pozostają. |
+| E2 F: `[1,1+1/12)` / `[5+11/12,6)` / `[5.99,6]` | Brak jednego odniesienia / mediana grupy 15 przy aktualnym Th1 / brak jednego odniesienia. |
 | Chłopiec 2 lata, testosteron 0,1 nmol/L | Kushnir: punkt 0,1; przybliżona mediana całej grupy 2–3 lat 0,06934 nmol/L, UI ≈0,07; stała linia i skala. Nie jest to werdykt normy. |
 | Donoszony chłopiec 180 dni, testosteron równy medianie Busch | Punkt równy źródłowemu odniesieniu; niezmienione dane i bramka jakości Busch. |
 | Chłopiec 3 lata, inhibina B 107 pg/mL | Punkt na węźle p50 Kelsey 2016, bez stosowania krzywej niemowlęcej do jego odniesienia. |

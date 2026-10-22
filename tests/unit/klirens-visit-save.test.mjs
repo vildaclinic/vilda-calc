@@ -30,6 +30,45 @@ function fakeRoot(els) {
   };
 }
 
+function u25Model(g, { ageYears = 10, state = 'unknown', assay = '' } = {}) {
+  for (const file of ['clcr_clinical_safety.js', 'clcr_result_reference_data.js', 'clcr_result_presentation.js']) {
+    loadBrowserScript(file, g);
+  }
+  const safety = g.ClcrClinicalSafety;
+  const value = safety.computeCkidU25Creatinine({ sex: 'F', ageYears, heightCm: 140, creatinineMgDl: 0.6 });
+  const markerPolicy = safety.creatininePolicy(state, false);
+  return g.ClcrResultPresentation.createModel({
+    formulaId: 'ckid_u25', series: 'ckid_u25', ageYears, assay, markerPolicy,
+    value, displayValue: safety.formatGfrForDisplay(value).rounded, unit: 'mL/min/1,73 m²',
+    presentation: safety.egfrPresentation({ value, age: ageYears, assay, markerPolicy }),
+  }, g.ClcrResultReferenceData.PROFILE);
+}
+
+// DOM contract of the common result card. Browser tests exercise the actual
+// rendered DOM; these fixtures isolate its production save adapter.
+function resultCard(model, { legacyRange = '' } = {}) {
+  const reference = {
+    getAttribute: name => name === 'data-clcr-reference-kind' ? model.reference.kind : null,
+    querySelector: selector => {
+      if (selector === '.clcr-result-reference-value') return { textContent: model.reference.value };
+      if (selector === '.clcr-result-reference-unit' && model.reference.unit) return { textContent: model.reference.unit };
+      return null;
+    },
+  };
+  return {
+    ...fakeEl(model.series, String(model.rawValue)),
+    getAttribute: name => ({
+      'data-clcr-series': model.series,
+      'data-clcr-value': String(model.rawValue),
+      'data-clcr-display-value': model.displayValue,
+      'data-clcr-category': model.category?.code || '',
+    })[name] ?? null,
+    classList: { contains: name => name === 'out-of-range' && ['warning', 'danger'].includes(model.tone) },
+    querySelector: selector => selector === '.clcr-result-reference' ? reference
+      : selector === '.range' && legacyRange ? { textContent: legacyRange } : null,
+  };
+}
+
 const STREFA_BAZOWA = process.env.TZ;
 
 describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
@@ -115,6 +154,76 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     const root = fakeRoot([fakeEl('egfr', '92'), fakeEl('cg', '100'), fakeEl('cg_norm', '87')]);
     const dps = vs.collectActiveDatapoints(root, { formulaId: 'egfr' });
     expect(dps.map((d) => d.id)).toEqual(['egfr']);
+  });
+
+  it('karta B: oszacowanie U25 83 zapisuje widoczną normę i flagę bez nadawania G', async () => {
+    const model = u25Model(g);
+    expect(model).toMatchObject({ tone: 'warning', category: null, referenceComparison: true });
+    const root = fakeRoot([resultCard(model)]);
+    const datapoints = g.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'ckid_u25' });
+    expect(datapoints).toHaveLength(1);
+    expect(datapoints[0]).toMatchObject({ valueNum: 83, norm: '≥90 mL/min/1,73 m²', outOfRange: true });
+    expect(datapoints[0]).not.toHaveProperty('category');
+    const saved = [];
+    g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    const result = await g.ClcrVisitSave.saveActiveResultToCard({
+      patientId: 'synthetic-u25', clinicalDateISO: '2026-10-22', datapoints,
+    });
+    expect(result).toMatchObject({ ok: true, saved: 1 });
+    expect(saved[0].labResult).toEqual({
+      test: datapoints[0].label, value: '83', valueNum: 83, unit: 'mL/min/1,73 m²', norm: '≥90 mL/min/1,73 m²',
+    });
+    expect(saved[0].body).toBe('Kalkulator klirensu · clcr:ckid_u25 · wynik poza zakresem');
+    expect(saved[0].body).not.toContain('G2');
+  });
+
+  it('karta B: kwalifikowane G2 zachowuje tę samą normę przy zapisie', () => {
+    const model = u25Model(g, { state: 'stable', assay: 'enzymatic_idms' });
+    expect(model.category.code).toBe('G2');
+    expect(g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([resultCard(model)]), { formulaId: 'ckid_u25' })[0]).toMatchObject({
+      valueNum: 83, norm: '≥90 mL/min/1,73 m²', outOfRange: true,
+    });
+  });
+
+  it('karta B: wiek poniżej progu nie zamienia komentarza w normę ani nie przejmuje starego zakresu', () => {
+    const model = u25Model(g, { ageYears: 1.5 });
+    expect(model).toMatchObject({ category: null, tone: 'neutral', reference: { kind: 'none' } });
+    expect(g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([resultCard(model, { legacyRange: '≥90' })]), { formulaId: 'ckid_u25' })[0]).toMatchObject({
+      norm: '', outOfRange: false,
+    });
+  });
+
+  it('karta B: brak uniwersalnej normy klirensu nie staje się zakresem laboratoryjnym', () => {
+    u25Model(g);
+    const model = g.ClcrResultPresentation.createModel({ formulaId: 'cg', series: 'cg', value: 100, displayValue: '100', unit: 'mL/min', ageYears: 50 }, g.ClcrResultReferenceData.PROFILE);
+    expect(g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([resultCard(model)]), { formulaId: 'cg' })[0]).toMatchObject({
+      valueNum: 100, norm: '', outOfRange: false,
+    });
+  });
+
+  it('dawny boks nadal odczytuje zakres .range i flagę poza zakresem', () => {
+    const element = {
+      ...fakeEl('egfr', '83'),
+      classList: { contains: name => name === 'out-of-range' },
+      querySelector: selector => selector === '.range' ? { textContent: '  ≥ 90\n mL/min/1,73 m²  ' } : null,
+    };
+    expect(g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([element]), { formulaId: 'egfr' })[0]).toMatchObject({
+      valueNum: 83, norm: '≥ 90 mL/min/1,73 m²', outOfRange: true,
+    });
+  });
+
+  it('odczyt zapisanych dawniej 83 nie przelicza flagi ani nie dopisuje nowej normy', () => {
+    const label = g.ClcrVisitSave.mapDatapoint('ckid_u25', 83).label;
+    const notes = [{
+      id: 'synthetic-old', category: 'wynik-klirens', clinicalDateISO: '2026-10-01',
+      body: 'Kalkulator klirensu · clcr:ckid_u25',
+      labResult: { test: label, value: '83', valueNum: 83, unit: 'mL/min/1,73 m²' },
+    }];
+    const before = JSON.stringify(notes);
+    expect(g.ClcrVisitSave.buildSeriesFromNotes(notes, { formulaId: 'ckid_u25' })[0].points[0]).toMatchObject({
+      valueNum: 83, outOfRange: false, norm: '', noteId: 'synthetic-old',
+    });
+    expect(JSON.stringify(notes)).toBe(before);
   });
 
   it('collectActiveDatapoints: białko DZM — wybór modułu zapisuje 3 serie (①)', () => {

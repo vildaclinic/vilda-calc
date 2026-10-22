@@ -28,8 +28,8 @@ const adultNodes = [[20, 34], [25, 32], [30, 30], [35, 29], [40, 28],
 
 describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat', () => {
   it('rozszerza jeden profil i zachowuje dokładnie wszystkie 73 pozostałe profile oraz konwersje', () => {
-    expect(data.profiles).toHaveLength(84);
-    expect(data.version).toBe('2026-10-21.1');
+    expect(data.profiles).toHaveLength(85);
+    expect(data.version).toBe('2026-10-22.1');
     const unchanged = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-13.4',
       profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => profile.id !== profileId && !laterChildhoodIds.includes(profile.id)) };
     expect(unchanged.profiles).toHaveLength(73);
