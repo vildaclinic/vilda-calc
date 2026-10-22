@@ -15883,10 +15883,44 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   notatki tu nie ma) dostają chwilę `max(teraz, R + 1 s + 1 ms)` i pole z nowym `e` (`manualDeletedAtISO` zostaje),
   pod blokadą pacjenta i notatki, a zdarzenie `delete` rozsyła je deltą przed nagrobkiem karty. Notatka, która
   w międzyczasie wróciła pod tego pacjenta, idzie przez `Eb`; przepięta pod innego pacjenta — bez zmian.
+- **„Usuń pacjenta” a druga karta przeglądarki** (przegląd po scaleniu, uwaga Codexa P1 do #746; `Bnp_usunZPacjentem`,
+  `Bnp_odnowJeden`; testy P1-0…P1-7, S1, S2). Dotąd pętla `Bpu_usun` wołała `Eb` dla każdej notatki pacjenta bez
+  blokady notatki, z mapą nagrobków notatek odczytaną raz przed listą notatek (przegląd 1, F3); trzymała tylko blokadę
+  pacjenta, której ręczne usunięcie notatki (`removePatientNote`: blokada notatki, potem `Eb`) nie bierze. Okno: od
+  odczytu listy notatek do zapisu nagrobka danej notatki w pętli — od kilku do kilkuset ms, rośnie z liczbą notatek;
+  potrzebna druga karta przeglądarki albo drugi panel `app.html` tego samego konta na tym samym urządzeniu (także
+  samoczynne usunięcie wpisu Terminarza po 4 s „Cofnij”). Skutek: ręczne usunięcie w tym oknie zostawiało nagrobek bez
+  pola, a `Eb` nadpisywało go nagrobkiem z polem bez `manualDeletedAtISO` (i z `rev` 0, G6); gdy karta przeżyła
+  usunięcie (zmiana na nieświadomym urządzeniu), ratunek przywracał ręcznie usuniętą notatkę na wszystkie urządzenia, z
+  „Zapisano:” równym chwili usunięcia pacjenta — wbrew D21-2, zależnie od przeplotu (to samo usunięcie przed „Usuń
+  pacjenta” — notatka nie wraca); widoczne i odwracalne (ponowne usunięcie wygrywa), bez utraty treści. Przed D-21
+  (`affdeb64`) ten przeplot nie miał skutku klinicznego (notatki nie wracały wcale, spadał tylko `rev` nagrobka), więc
+  powrót notatki to regresja D-21. W tym samym oknie kanon „czeka” z M zapisany przez scalanie w drugiej karcie tracił
+  M (T29 w wyścigu; w pętli i w odnowieniu F1), a notatkę przepiętą pod innego pacjenta (scalanie w drugiej karcie
+  ładunku po „Scal pacjentów” na innym urządzeniu) pętla kasowała z nagrobkiem z polem starego pacjenta, więc ginęła
+  także pod nowym, na każdym urządzeniu (tak samo przed D-21). Łagodziła to delta ręcznego usunięcia z drugiej karty
+  (`onPatientNoteChanged` → `Ut` → `ls`, rekord czytany ze sklepu w chwili budowy): zbudowana przed nadpisaniem i
+  doręczona innemu urządzeniu zostawia tam M w kracie, więc notatka nie wracała (S2) — o ile delta wyszła
+  (synchronizacja włączona i wolna, sieć) i wygrała wyścig odczytu. Teraz każda notatka z pętli idzie pod blokadą
+  notatki (kolejność pacjent → notatka, jak odnowienie, ratunek i „Scal pacjentów”; nic nie bierze blokady pacjenta pod
+  blokadą notatki, więc bez zakleszczeń), na świeżym odczycie notatki: notatka tego pacjenta → `Eb` z pojedynczym
+  rekordem nagrobka (`Bnp_poleEb` bez mapy, M przeniesione); notatki już nie ma → bez `Eb`, tylko odnowienie jej
+  nagrobka z ważnym polem tego pacjenta jak w F1 (`Bnp_odnowJeden`: chwila `max(teraz, R + 1 s + 1 ms, e)`, pole z
+  nowym `e`, `rev` i `manualDeletedAtISO` bez zmian; nagrobek bez pola — ręczne usunięcie — i nagrobek innego pacjenta
+  zostają); notatka przepięta pod innego pacjenta → bez zmian; błąd odczytu notatki → `Eb` jak dotąd. Wynik jest taki
+  jak przy ręcznym usunięciu albo przepięciu przed „Usuń pacjenta” (P1-1 = P1-1k), niezależnie od przeplotu. Odnowienie
+  F1 (`Bnp_odnow`) też woła `Eb` bez mapy; mapa zostaje tylko listą kandydatów odnowienia. Odnowienie zamiast samego
+  pominięcia brakującej notatki (uzupełnienie sceptyka) chroni flotę mieszaną: scalanie w drugiej karcie w oknie pętli
+  kasuje notatkę starym nagrobkiem z polem (e1, R1; wersja w pasmie (R1, R1 + 1 s], karty już nie ma), a samo
+  pominięcie zostawiałoby (R1, e1), więc stare urządzenie, które nie zna kroku „pasmo bez karty”, miałoby sierotę (S1);
+  `Eb` na bazie zapisywało tu świeży nagrobek, ale z `rev` 0. Krata, `Bnp_stan`, ratunek, format nagrobka, ładunek i
+  delty bez zmian — stare urządzenia niczego nie widzą.
 - **Delta nagrobka** (`ls`): rekord czytany ze sklepu (`{id, deletedAtISO, rev, deletedWithPatient}`), gdy go brak —
   postać dotychczasowa. Bez tego drugie urządzenie dostawało nagrobek bez pola i kasowało notatki przed pełnym ładunkiem.
   Odczyt pojedynczego rekordu (`getPatientNoteTombstoneForUser` w adapterach IndexedDB, pamięciowym i pośredniczącym;
-  adapter bez tej metody — lista), tak samo w ratunku; „Usuń pacjenta” czyta listę nagrobków notatek raz (przegląd 1, F3).
+  adapter bez tej metody — lista), tak samo w ratunku i w polu `Eb` z „Usuń pacjenta” (pętla i odnowienie, pod blokadą
+  notatki — uwaga Codexa P1); listę nagrobków notatek „Usuń pacjenta” czyta raz, tylko dla kandydatów odnowienia
+  (przegląd 1, F3).
 - **Zbieżność.** Wersje tylko rosną (u′ > R ≥ u), decyzja jest funkcją danych (krata, karta, wersje), dotknięcie —
   funkcją R i treści; zmierzone: identyczne `(rev, updatedAtISO)` na wszystkich urządzeniach w 5 kolejnościach, zbieżność
   przy równoległych poprawkach.
@@ -15915,8 +15949,8 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
 
-**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 185 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
-25 z przeglądu przeniesienia na D-7 i 3 z przeglądu poprawki MS2; wejście → wynik):
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 201 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
+25 z przeglądu przeniesienia na D-7, 3 z przeglądu poprawki MS2 i 16 z przeglądu po scaleniu; wejście → wynik):
 - T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
   karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
   notatek, nagrobki n1–n3);
@@ -16046,6 +16080,30 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   - W11 (flota mieszana): stare nieświadome O dostaje pełny ładunek B w nowej gałęzi MS2 → O kasuje n1 i n2, które
     miało, echo O nie odbiera pola, B ratuje, O dostaje notatki z powrotem; koniec wszędzie [n1 = poprawka B, n2] (na
     `12b0cd4d` O traciło pośrodku tylko n2).
+- Przegląd po scaleniu (2026-10-22; uwaga Codexa P1 do #746 odtworzona na prawdziwym sejfie `95b6f96e`; druga karta
+  przeglądarki to drugi `VildaVault` na tym samym magazynie i tej samej atrapie Web Locks; czerwone na `95b6f96e`, o
+  ile nie są kontrolą albo znanym ograniczeniem):
+  - P1-0: „Usuń pacjenta” z 2 notatkami → blokady `vilda-note-<id>` obu notatek (dotąd 0);
+  - P1-1: druga karta ręcznie usuwa n1 po liście notatek w `Bpu_usun`, B dopisuje wizytę → karta [n2], nagrobek n1
+    ręczny (bez pola, `rev` 1) (dotąd n1 wracała z kartą, `rev` 1 → 0); P1-1k (kontrola): to samo usunięcie przed „Usuń
+    pacjenta” → [n2];
+  - P1-2: ręczne usunięcie w trakcie usuwania n1 przez pętlę (po odczycie notatki) → czeka na blokadę n1, [n2]; P1-2b:
+    między świeżym odczytem nagrobka a zapisem nagrobka z polem → [n2] (sam świeży odczyt bez blokady nie wystarcza);
+  - P1-3: jak P1-1, B dostaje nagrobki notatek z A deltami → [n2] po deltach i rundach; S2 (kontrola): delta ręcznego
+    usunięcia z drugiej karty dochodzi do B → [n2], także na `95b6f96e`;
+  - P1-5: kanon „czeka” z M zapisany w drugiej karcie po odczycie mapy → nowy nagrobek n2 przenosi M; P1-5b: to samo w
+    odnowieniu (C nie zna n2, druga karta wpisuje ją obok kanonu z M po liście notatek) → nagrobek n2 z „Usuń pacjenta”
+    przenosi M;
+  - P1-6: druga karta wpisuje n1 przepiętą pod Y („Scal pacjentów” na B) po liście notatek → n1 zostaje pod Y na A i B,
+    bez nagrobka (dotąd ginęła wszędzie; tak samo na `affdeb64`); P1-7 (kontrola): błąd odczytu n1 w pętli → n1
+    usunięta z nagrobkiem z polem, jak dotąd;
+  - S1 (sceptyk, flota mieszana ze starym C): scalanie w drugiej karcie po liście notatek kasuje n1 starym nagrobkiem z
+    polem (e1, R1) → nagrobek odnowiony (nowe `e`, chwila po pasmie, `rev` 1), stare C bez sierot (dotąd `rev` 0; samo
+    pominięcie dawało sierotę n1 na C); S1 przed listą (znane ograniczenie, niżej) → nagrobek (R1, e1) zostaje, stare C
+    z sierotą n1, jak na `95b6f96e`;
+  - P1-4k (kontrola): zapis n1 w drugiej karcie po „Usuń pacjenta” → odmowa; P1-4 (znane ograniczenie, niżej): zapis w
+    trakcie → sierota n1; strażniki źródła `Bpu_usun` (pętla przez `Bnp_usunZPacjentem`), `Bnp_usunZPacjentem`,
+    `Bnp_odnow` i `Bnp_odnowJeden`, żadne `Eb` z mapą.
 
 **Ograniczenia.**
 - **Stare urządzenie z ocalałą kartą przyjmuje usunięcie pierwsze** — kasuje notatki; gdy było jedynym źródłem treści,
@@ -16154,13 +16212,33 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   bazie ta notatka zginęła już przy pierwszym usunięciu; urządzenie, które ma przepiętą notatkę, nagrobka nie odnawia.
 - **Echo z fałszywym trafieniem.** Prawdziwe ręczne usunięcie z dokładnie tą samą chwilą co nagrobek z polem zostanie
   wzięte za echo (wymaga tej samej wersji z `updatedAtISO` z przyszłości, G13, usuniętej na dwóch urządzeniach).
-- **Wybór między równoległymi poprawkami jest przypadkowy** (h nie zachowuje „późniejsza wygrywa”); kolizja h (1 na
-  1000) zostawia rzadki trwały rozjazd jak przed zmianą.
+- **Scalanie w drugiej karcie przed listą notatek w „Usuń pacjenta”** (przegląd po scaleniu, sceptyk uwagi Codexa
+  P1; test S1 przed listą). Scalanie w drugiej karcie przeglądarki między odczytem mapy nagrobków notatek a listą notatek,
+  które kasuje notatkę starym nagrobkiem z polem (e1, R1; wersja w pasmie, karty już nie ma), zostawia ten nagrobek bez
+  odnowienia: notatki nie ma w liście, a mapa sprzed scalenia nie ma jej wśród kandydatów. Nowe urządzenia kasują
+  wersję w pasmie (krok „pasmo bez karty”), stare urządzenie z tą wersją zostaje z sierotą (obszar D21-8). Tak samo na
+  `95b6f96e`. Okno to jeden odczyt listy notatek; świeża lista nagrobków po pętli zamknęłaby je, ale dawała sieroty w
+  L10 i drugi odczyt listy (F3) — nie wdrożone.
+- **Zapis notatki w drugiej karcie w trakcie „Usuń pacjenta”** (sprzed D-21; test P1-4). „Usuń pacjenta” kasuje kartę
+  na początku, a nagrobek karty zapisuje po pętli notatek i odnowieniu; strażnik `savePatientNote` (P-NOTATKI-1 D2)
+  patrzy na nagrobek karty. Zapis notatki w drugiej karcie w tym oknie przechodzi i notatka zostaje sierotą na każdym
+  urządzeniu (na `95b6f96e` ze starą treścią, teraz z edycją — zapis czeka na blokadę notatki i wchodzi po `Eb`); po
+  zapisie nagrobka karty zapis jest odrzucany (P1-4k). Tak samo na `affdeb64`. Naprawa (strażnik także na brak karty
+  albo wcześniejszy zapis nagrobka karty) zmienia regułę P-NOTATKI-1 D2 — osobny temat, razem z sierotami D21-9.
+- **Wybór między równoległymi poprawkami jest przypadkowy** (h nie zachowuje „późniejsza wygrywa”). Kolizja h (1 na
+  1000; uwaga Codexa P2 do #746, przegląd po scaleniu) zostawia rzadki trwały, niewidoczny rozjazd treści: dwie różne
+  poprawki o tym samym h, uratowane niezależnie na dwóch urządzeniach, mają równe `(rev, updatedAtISO)`, a `Le` przy
+  równym `rev` przyjmuje tylko ściśle późniejszą chwilę. Przed D-21 ten scenariusz (równoległe poprawki, „Usuń
+  pacjenta”, karta przeżywa) kończył się zbieżną utratą obu poprawek (karta bez notatek); po D-21 — zbieżność w 999
+  przypadkach na 1000 i trwały rozjazd w 1 na 1000. Sama klasa „równe `(rev, updatedAtISO)`, różna treść” jest starsza
+  niż D-21: dwie różne poprawki tej samej notatki w tej samej milisekundzie, także bez „Usuń pacjenta”, i rozjazd G5.
+  Kodu nie zmieniono (rozstrzyganie remisu zmienia regułę scalania).
 - **„Zapisano:”** uratowanej notatki pokazuje chwilę usunięcia pacjenta, kolejność uratowanych notatek bez daty
   klinicznej jest przypadkowa (D21-1); daty kliniczne bez zmian.
 - **Długi stan „czeka”.** Gdy kopia konta pochodzi z urządzenia, które już się nie synchronizuje, nagrobki leżą obok
   notatek do 365 dni (retencja) albo do zmiany karty; stare urządzenia w tym czasie kasują notatki u siebie.
-- **Koszt.** „Usuń pacjenta” czyta listę nagrobków notatek raz (pole `Eb` i odnowienie), delta nagrobka (`ls`)
+- **Koszt.** „Usuń pacjenta” czyta listę nagrobków notatek raz (kandydaci odnowienia), a dla każdej notatki pacjenta
+  bierze blokadę notatki i czyta notatkę oraz pojedynczy rekord nagrobka (uwaga Codexa P1); delta nagrobka (`ls`)
   i ratunek — pojedynczy rekord (`getPatientNoteTombstoneForUser`); przed przeglądem 1 „Usuń pacjenta” z k notatkami
   czytało pełną listę k razy pod blokadą pacjenta, a każda delta — jeszcze raz. Odczyt karty tylko przy polu: dla
   kandydatów, wersji w pasmie ratunku i wersji sprzed usunięcia, raz na pacjenta (plus raz pod blokadą przy ratunku).
@@ -16308,6 +16386,34 @@ plan synchronizacji (14 plików, 543 testy, każdy osobno), `npm run lint`, `npm
 `npm run test:repo` (1758 plików) — zielone. Po przeniesieniu na `f612fe09` (po scaleniu `audyt` `affdeb64`): `npm test`
 — polityka repozytorium (1759 plików), lint, składnia (1122 pliki), 413 plików testów, 10 346 z 10 346 zielonych,
 `test:pro` 43 z 43, 32 z 32, 44 z 44; `npm run podbij-wersje` bez zmiany wersji.
+
+Przegląd po scaleniu (2026-10-22; dwie uwagi Codexa do #746 na `95b6f96e`, każda odtworzona przez badacza i sprawdzona
+przez sceptyka na prawdziwym sejfie, porównanie z `affdeb64` sprzed D-21). **Zmiana kliniczna: NIE** — żaden wzór,
+próg, jednostka ani interpretacja; reguła synchronizacji D-21 (krata, `Bnp_stan`, ratunek, CZEKA, format nagrobka) bez
+zmian, bez decyzji właściciela. P1 (wyścig nagrobków w „Usuń pacjenta” z drugą kartą przeglądarki) potwierdzona, waga
+niska (trzy rzadkie warunki naraz, skutek widoczny i odwracalny), ale to regresja D-21 łamiąca D21-2 — poprawiona
+atomowość lokalnej operacji (wyżej, „Reguła po zmianie”, z uzupełnieniem sceptyka: odnowienie nagrobka brakującej
+notatki zamiast pominięcia); uwaga zakładała, że pętla trzyma blokadę notatki — nie trzymała, więc sam świeży odczyt
+nagrobka nie wystarczał (P1-2b). P2 (kolizja h) potwierdzona, waga niska, opisana już jako ograniczenie — poprawiony
+tylko opis („Wybór między równoległymi poprawkami”: „jak przed zmianą” było nieścisłe); kodu nie zmieniono, bo
+rozstrzyganie remisu zmienia regułę scalania, a zaproponowany wariant przepisywał notatkę w każdej rundzie przy
+mieszankach `Le` (zakres laboratoryjny). Plik D-21 201 z 201; na `95b6f96e` czerwonych 11 (P1-0, P1-1, P1-2, P1-2b,
+P1-3, P1-5, P1-5b, P1-6, S1 po liście i dwa strażniki źródła), zielone kontrole i ograniczenia (P1-1k, P1-4k, P1-7, S2,
+S1 przed listą, P1-4); z prawdziwym `346dd81a` zamiast emulacji 201 z 201, 2758 z 2758 obserwacji stanu identycznych
+(295 na starych urządzeniach). Mutacje poprawki (8, po jednej na każdą część): bez blokady notatki → P1-0, P1-2, P1-2b;
+mapa sprzed listy w pętli → P1-2b, P1-5; mapa w odnowieniu → P1-5b; `Eb` przy brakującej notatce (jak na bazie) → P1-1,
+S1; pominięcie bez odnowienia (poprawka bez uzupełnienia sceptyka) → S1; `Eb` przy notatce przepiętej → P1-6; błąd
+odczytu jak brak notatki → P1-7; odnowienie także nagrobka bez pola → P1-1, P1-3 — 8 z 8 łapane testem zachowania,
+każda także strażnikiem źródła. Wariant odrzucony (świeża lista nagrobków przed odnowieniem; zamknąłby S1 przed listą):
+czerwone L10 (sieroty), F3 (dwie listy) i strażnik źródła. `zz-pp2-fuzz` (4 urządzenia, bez drugiej karty przeglądarki)
+przed (`95b6f96e`) i po: nowe urządzenia, ziarna 1–200, i flota mieszana z emulacją, ziarna 1001–1150 — zielone, stany
+końcowe i uwagi identyczne ziarno w ziarno. Pliki pokrewne, każdy osobno (41: wszystkie z `removePatient`,
+`removePatientNote` albo `savePatientNote` oraz `sync-*`, `kopia-konta*`, `scalanie-*`, `meta-konta-blokada`,
+`kosz-scalanie-przywroc`, `retencja-nagrobki`, `rozjazd-zegarow-sync`, `naglowek-najnowszej`,
+`delta-biblioteki-szablonow`) — 1129 testów, i pliki czytające ten rejestr albo plan synchronizacji (14 plików, 543
+testy) — zielone bez zmian testów. `npm run lint`, `npm run test:syntax` (1128 plików), `npm run test:repo` (1765
+plików) — zielone. Wersje: `npm run podbij-wersje` względem `origin/audyt` `95b6f96e`: `vilda_vault.js` 224,
+`vilda_chrome.js` 169, `vilda_session_bridge.js` 93; SW 1.1.337 → 1.1.338.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 

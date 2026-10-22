@@ -2480,7 +2480,8 @@ async function Bnp_mapaNagrobkow(h) {
 // Pole nagrobka z „Usun pacjenta” (Eb z drugim argumentem, D — chwila nagrobka): {patientId, deletedAtISO: e} oraz
 // manualDeletedAtISO przeniesione z nagrobka, ktory juz lezy dla tej notatki (stan „czeka”: notatka obok nagrobka
 // z polem), albo jego chwila, gdy to nagrobek bez pola — jak w kracie, reczne usuniecie nie ginie. mapa — nagrobki
-// odczytane raz przed petla Bpu_usun (Bnp_mapaNagrobkow); bez niej pojedynczy odczyt.
+// odczytane wczesniej; bez niej pojedynczy odczyt. Codex P1: „Usun pacjenta” (Bnp_usunZPacjentem, Bnp_odnow) mapy
+// nie podaje — swiezy rekord pod blokada notatki, bo mapa sprzed listy notatek gubila reczne usuniecie z drugiej karty.
 async function Bnp_poleEb(id, pole, D, mapa) {
   const wynik = { patientId: pole.patientId, deletedAtISO: pole.deletedAtISO };
   try {
@@ -2544,7 +2545,8 @@ async function Bnp_poZapisie(id, kiedy, rev, patientId) {
 // max(teraz, R + 1 s + 1 ms, e) i pole z nowym e (manualDeletedAtISO zostaje), a zdarzenie delete rozsyla je delta (ls)
 // przed nagrobkiem karty. Notatka, ktora w miedzyczasie wrocila pod tego pacjenta (rownolegle scalanie), idzie przez Eb
 // jak w petli; przepieta pod innego pacjenta — bez zmian. Wolajacy trzyma blokade pacjenta, tu blokada notatki
-// (kolejnosc pacjent -> notatka). mapa — nagrobki sprzed petli, zrobione — id notatek z petli.
+// (kolejnosc pacjent -> notatka). mapa — nagrobki sprzed petli (tylko lista kandydatow: Eb i odnowienie czytaja swiezy
+// rekord pod blokada notatki, Codex P1), zrobione — id notatek z petli.
 async function Bnp_odnow(h, t, e, mapa, zrobione) {
   if (!h || !mapa || typeof h.putPatientNoteTombstoneForUser !== 'function') return;
   for (const [id, stary] of mapa) {
@@ -2554,21 +2556,51 @@ async function Bnp_odnow(h, t, e, mapa, zrobione) {
       await Ac(id, async function () {
         const n = typeof h.getPatientNoteForUser === 'function' ? await h.getPatientNoteForUser(b, id) : null;
         if (n) {
-          if (n.patientId === t) await Eb(id, { patientId: t, deletedAtISO: e }, mapa);
+          if (n.patientId === t) await Eb(id, { patientId: t, deletedAtISO: e });
           return;
         }
-        const nag = await Bnp_nagrobek(h, id), p = Bnp_pole(nag);
-        if (!p || p.patientId !== t) return;
-        const teraz = new Date().toISOString(), poPasmie = new Date(Date.parse(nag.deletedAtISO) + Bnp_PASMO_MS + 1).toISOString();
-        let D = teraz > poPasmie ? teraz : poPasmie;
-        if (e > D) D = e;
-        const pole = { patientId: t, deletedAtISO: e };
-        if (p.manualDeletedAtISO) pole.manualDeletedAtISO = p.manualDeletedAtISO;
-        await h.putPatientNoteTombstoneForUser(b, { id: id, deletedAtISO: D, rev: Bnp_rev(nag), deletedWithPatient: pole });
-        qr({ id: id, patientId: t, action: 'delete', deletedAtISO: D });
+        await Bnp_odnowJeden(h, id, t, e);
       });
     } catch { /* jak petla Bpu_usun: blad jednej notatki nie przerywa usuwania */ }
   }
+}
+
+// Odnowienie jednego nagrobka (F1) dla notatki, ktorej tu nie ma: swiezy odczyt nagrobka; tylko wazne pole tego pacjenta
+// dostaje chwile max(teraz, R + 1 s + 1 ms, e), pole z nowym e (manualDeletedAtISO zostaje) i rev bez zmian, a zdarzenie
+// delete rozsyla je delta. Nagrobek bez pola (reczne usuniecie) albo z polem innego pacjenta — bez zmian. Wolajacy trzyma
+// blokade pacjenta i blokade tej notatki (Bnp_odnow, Bnp_usunZPacjentem).
+async function Bnp_odnowJeden(h, id, t, e) {
+  if (!h || typeof h.putPatientNoteTombstoneForUser !== 'function') return;
+  const nag = await Bnp_nagrobek(h, id), p = Bnp_pole(nag);
+  if (!p || p.patientId !== t) return;
+  const teraz = new Date().toISOString(), poPasmie = new Date(Date.parse(nag.deletedAtISO) + Bnp_PASMO_MS + 1).toISOString();
+  let D = teraz > poPasmie ? teraz : poPasmie;
+  if (e > D) D = e;
+  const pole = { patientId: t, deletedAtISO: e };
+  if (p.manualDeletedAtISO) pole.manualDeletedAtISO = p.manualDeletedAtISO;
+  await h.putPatientNoteTombstoneForUser(b, { id: id, deletedAtISO: D, rev: Bnp_rev(nag), deletedWithPatient: pole });
+  qr({ id: id, patientId: t, action: 'delete', deletedAtISO: D });
+}
+
+// Codex P1 (uwaga do 47b5e3e1): notatka z petli „Usun pacjenta” (Bpu_usun) pod blokada notatki (Ac; kolejnosc
+// pacjent -> notatka jak w Bnp_odnow i ratunku), na swiezym odczycie notatki i nagrobka. Dotad Eb szlo bez blokady
+// notatki, z mapa nagrobkow odczytana przed lista notatek: reczne usuniecie (removePatientNote: Ac -> Eb) w drugiej
+// karcie przegladarki po tej liscie zostawialo nagrobek bez pola, a Eb nadpisywalo go polem bez manualDeletedAtISO
+// (i z rev 0) — gdy karta przezyla usuniecie, ratunek przywracal recznie usunieta notatke (wbrew D21-2); kanon „czeka”
+// z M zapisany w drugiej karcie po odczycie mapy tracil M. Teraz: notatka tego pacjenta — Eb bez mapy (Bnp_poleEb czyta
+// pojedynczy rekord); notatki juz nie ma — odnowienie jak w Bnp_odnow (nagrobek z waznym polem tego pacjenta, np. po
+// scaleniu w drugiej karcie; reczny bez pola zostaje); przepieta pod innego pacjenta — bez zmian. Wynik jak przy
+// usunieciu albo przepieciu przed „Usun pacjenta”. Blad odczytu notatki nie wstrzymuje usuniecia (Eb jak dotad).
+async function Bnp_usunZPacjentem(h, id, t, e) {
+  return Ac(id, async function () {
+    if (h && typeof h.getPatientNoteForUser === 'function') {
+      let n = null, odczyt = false;
+      try { n = await h.getPatientNoteForUser(b, id); odczyt = true; } catch { /* jak Eb: usuwamy */ }
+      if (odczyt && !n) { await Bnp_odnowJeden(h, id, t, e); return; }
+      if (odczyt && n.patientId !== t) return;
+    }
+    await Eb(id, { patientId: t, deletedAtISO: e });
+  });
 }
 
 // RATUNEK i CZEKA po petli przyjmowania notatek w Le, przed zapisem nagrobkow (2.4). s: kanon (Bnp_zlacz), ratunek
@@ -2990,7 +3022,7 @@ function yr(t,e){const n=t&&t.savedAtISO||"",r=e&&e.savedAtISO||"";if(n>r)return
 * pacjent, potem notatka albo lista nagrobkow; nic nie bierze blokady pacjenta pod blokada notatki.
 * Publiczne API bez zmian; nowy, opcjonalny ostatni argument { onLockWait, lockTimeoutMs } — te same nazwy co
 * w savePatient. Regula „zapis z jawnym id po usunieciu karty” (A13) bez zmian — decyzja wlasciciela. */
-async function _n(t,Bpu_o){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pacjenta.");return Bzw_podBlokada(t,function(){return Bpu_usun(t)},Bpu_o)}async function Bpu_usun(t){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pacjenta.");Dn(),await I().removePatientForUser(b,t);/* P-NOTATKI-ZA-KARTA (D-21 A): jedna chwila e — liczona przed petla notatek, ta sama w polu deletedWithPatient nagrobkow notatek, w nagrobku karty i w zdarzeniu. Dotad e powstawalo po petli; z nowa regula osobne chwile (pole wczesniejsze niz nagrobek karty) dawalyby sieroty przy zmianie karty w tym odstepie. Przeglad 1 (F3): nagrobki notatek czytane raz (pole Eb i odnowienie), nie raz na notatke. */const e=new Date().toISOString(),Qnm=await Bnp_mapaNagrobkow(I()),Qnd=new Set;/* P-NOTATKI-1 (G2, decyzja wlasciciela 2026-09-18): okno potwierdzenia obiecuje usuniecie „wraz z cala historia pomiarow i notatek" — notatki tego pacjenta ida razem z nim, z nagrobkami, wiec kasowanie propaguje sie na inne urzadzenia. */try{const Qd0=I();if(Qd0&&typeof Qd0.listPatientNotesForUser=="function"){const Qd1=await Qd0.listPatientNotesForUser(b);for(let Qd3=0;Qd3<Qd1.length;Qd3+=1){const Qd4=Qd1[Qd3];if(!(!Qd4||!Qd4.id||Qd4.patientId!==t))try{Qnd.add(Qd4.id),await Eb(Qd4.id,{patientId:t,deletedAtISO:e},Qnm)}catch{}}}}catch{}/* P-NOTATKI-ZA-KARTA (przeglad 1, F1): nagrobki notatek tego pacjenta z polem, ktorych notatek tu nie ma (karta wrocila bez notatek), dostaja nowa chwile po pasmie ratunku i nowe e — inaczej notatki uratowane gdzie indziej zostalyby sierotami. */await Bnp_odnow(I(),t,e,Qnm,Qnd);try{const n=I();n&&typeof n.putTombstoneForUser=="function"&&await n.putTombstoneForUser(b,{patientId:t,deletedAtISO:e})}catch{}ws({patientId:t,deletedAtISO:e});try{yt&&v.VildaSync&&typeof v.VildaSync.syncPush=="function"&&Promise.resolve(v.VildaSync.syncPush()).catch(function(){})}catch(n){}return!0}async function co(){if(!T())return{patientCount:0,snapshotCount:0};const t=await I().listPatientsForUser(b);let e=0;return t.forEach(function(n){e+=n.snapshotCount||0}),{patientCount:t.length,snapshotCount:e}}const kr=["badanie","zalecenia","wywiad","wlasne"],en="wlasne";function Mn(t){if(typeof t!="string")return en;const e=t.trim();return kr.indexOf(e)>=0?e:en}function Z(t){if(typeof t!="string")return"";var e=t;return e=e.replace(/\r\n?/g,`
+async function _n(t,Bpu_o){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pacjenta.");return Bzw_podBlokada(t,function(){return Bpu_usun(t)},Bpu_o)}async function Bpu_usun(t){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 pacjenta.");Dn(),await I().removePatientForUser(b,t);/* P-NOTATKI-ZA-KARTA (D-21 A): jedna chwila e — liczona przed petla notatek, ta sama w polu deletedWithPatient nagrobkow notatek, w nagrobku karty i w zdarzeniu. Dotad e powstawalo po petli; z nowa regula osobne chwile (pole wczesniejsze niz nagrobek karty) dawalyby sieroty przy zmianie karty w tym odstepie. Przeglad 1 (F3): lista nagrobkow notatek czytana raz (kandydaci odnowienia), nie raz na notatke; Codex P1: kazda notatka z petli pod blokada notatki, na swiezym odczycie notatki i pojedynczego nagrobka (Bnp_usunZPacjentem). */const e=new Date().toISOString(),Qnm=await Bnp_mapaNagrobkow(I()),Qnd=new Set;/* P-NOTATKI-1 (G2, decyzja wlasciciela 2026-09-18): okno potwierdzenia obiecuje usuniecie „wraz z cala historia pomiarow i notatek" — notatki tego pacjenta ida razem z nim, z nagrobkami, wiec kasowanie propaguje sie na inne urzadzenia. */try{const Qd0=I();if(Qd0&&typeof Qd0.listPatientNotesForUser=="function"){const Qd1=await Qd0.listPatientNotesForUser(b);for(let Qd3=0;Qd3<Qd1.length;Qd3+=1){const Qd4=Qd1[Qd3];if(!(!Qd4||!Qd4.id||Qd4.patientId!==t))try{Qnd.add(Qd4.id),await Bnp_usunZPacjentem(Qd0,Qd4.id,t,e)}catch{}}}}catch{}/* P-NOTATKI-ZA-KARTA (przeglad 1, F1): nagrobki notatek tego pacjenta z polem, ktorych notatek tu nie ma (karta wrocila bez notatek), dostaja nowa chwile po pasmie ratunku i nowe e — inaczej notatki uratowane gdzie indziej zostalyby sierotami. */await Bnp_odnow(I(),t,e,Qnm,Qnd);try{const n=I();n&&typeof n.putTombstoneForUser=="function"&&await n.putTombstoneForUser(b,{patientId:t,deletedAtISO:e})}catch{}ws({patientId:t,deletedAtISO:e});try{yt&&v.VildaSync&&typeof v.VildaSync.syncPush=="function"&&Promise.resolve(v.VildaSync.syncPush()).catch(function(){})}catch(n){}return!0}async function co(){if(!T())return{patientCount:0,snapshotCount:0};const t=await I().listPatientsForUser(b);let e=0;return t.forEach(function(n){e+=n.snapshotCount||0}),{patientCount:t.length,snapshotCount:e}}const kr=["badanie","zalecenia","wywiad","wlasne"],en="wlasne";function Mn(t){if(typeof t!="string")return en;const e=t.trim();return kr.indexOf(e)>=0?e:en}function Z(t){if(typeof t!="string")return"";var e=t;return e=e.replace(/\r\n?/g,`
 `),e=e.replace(/[\u00A0\u202F]/g," "),e=e.replace(/[\u2000-\u200A\u205F\u3000]/g," "),e=e.replace(/[\u200B-\u200D\u2060\uFEFF]/g,""),e=e.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,""),e}async function nn(t){let e={title:"",category:en,body:"",pinned:!1,order:0};try{const n=await G(t.noteCipher.iv,t.noteCipher.data);n&&typeof n=="object"&&(e=n)}catch{e={title:"(b\u0142\u0105d odczytu)",category:en,body:"",pinned:!1,order:0}}return{id:t.id,title:typeof e.title=="string"?e.title:"",category:Mn(e.category),body:typeof e.body=="string"?e.body:"",pinned:e.pinned===!0,order:Number.isFinite(e.order)?e.order:0,createdAtISO:t.createdAtISO||null,updatedAtISO:t.updatedAtISO||null}}async function uo(){if(!T())throw new Error("Zaloguj si\u0119, by wy\u015Bwietli\u0107 notatki.");const t=await I().listNotesForUser(b),e=[];for(let n=0;n<t.length;n+=1)e.push(await nn(t[n]));return e.sort(function(n,r){if(n.pinned!==r.pinned)return n.pinned?-1:1;const o=n.updatedAtISO||n.createdAtISO||"",a=r.updatedAtISO||r.createdAtISO||"";return a>o?1:a<o?-1:(n.order||0)-(r.order||0)}),e}async function lo(t){if(!T())throw new Error("Zaloguj si\u0119, by pobra\u0107 notatk\u0119.");const e=await I().getNoteForUser(b,t);return e?nn(e):null}async function po(t,e){if(!T())throw new Error("Zaloguj si\u0119, by zapisa\u0107 notatk\u0119.");if(!t||typeof t!="object")throw new Error("saveNote: brak payloadu.");const n=Z(typeof t.title=="string"?t.title:"").trim(),r=Z(typeof t.body=="string"?t.body:"");if(!n&&!r)throw new Error("saveNote: notatka musi mie\u0107 tytu\u0142 lub tre\u015B\u0107.");const o=Mn(t.category),a=t.pinned===!0,s=Number.isFinite(t.order)?t.order:0;let i=typeof t.id=="string"&&t.id?t.id:null,c=!1,l=null;if(i){const O=await I().getNoteForUser(b,i);O?l=O.createdAtISO||null:c=!0}else i=ne(),c=!0;const y=new Date().toISOString();l||(l=y);const p=await V({title:n,category:o,body:r,pinned:a,order:s}),w={id:i,noteCipher:p,createdAtISO:l,updatedAtISO:y};await I().putNoteForUser(b,w);try{const O=I();O&&typeof O.removeNoteTombstoneForUser=="function"&&await O.removeNoteTombstoneForUser(b,i)}catch{}const h={id:i,isNew:c,updatedAtISO:y};return Qr({id:i,action:"save"}),h}async function fo(t){if(!T())throw new Error("Zaloguj si\u0119, by usun\u0105\u0107 notatk\u0119.");if(typeof t!="string"||!t)throw new Error("removeNote: brak id.");let Qd0=null;try{const e=await I().getNoteForUser(b,t);Qd0=e&&typeof e.updatedAtISO=="string"&&e.updatedAtISO?e.updatedAtISO:null}catch{}await I().removeNoteForUser(b,t);const Qd1=function(){const e=new Date().toISOString();return Qd0&&Qd0>e?Qd0:e}();try{const e=I();e&&typeof e.putNoteTombstoneForUser=="function"&&await e.putNoteTombstoneForUser(b,{id:t,deletedAtISO:Qd1})}catch{}Qr({id:t,action:"delete",deletedAtISO:Qd1});try{yt&&v.VildaSync&&typeof v.VildaSync.syncPush=="function"&&Promise.resolve(v.VildaSync.syncPush()).catch(function(){})}catch(e){}return!0}const yo=["lecture","seminar","practical","clinic","clinic-nfz","duty","activity-other"],Er=["followup","observation","treatment","wynik-badania"],Nr=Er.concat(yo).concat(["absence","procedura"]),Tr="observation",ho=/^[a-z][a-z0-9-]{0,31}$/;function Un(t){if(typeof t!="string")return Tr;const e=t.trim();return Nr.indexOf(e)>=0||ho.test(e)?e:Tr}function Cn(t){if(t==null||t===""||typeof t!="string")return null;const e=t.trim();if(!e)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(e)){const r=new Date(e+"T00:00:00.000Z");return isNaN(r.getTime())?null:r.toISOString()}const n=new Date(e);return isNaN(n.getTime())?null:n.toISOString()}function re(t){if(t==null||t===""||typeof t!="string")return null;const e=t.trim();if(!e)return null;const n=new Date(e);return isNaN(n.getTime())?null:n.toISOString()}/* P-NOTATKI-2 (G8+G11, decyzja wlasciciela D7): jedna formula wieku z formularza dla calej aplikacji.
    Do SW 1.0.985 custom-fixes liczyl kotwice notatki przez parseInt("2.5")*12 = 24 mies., a sejf
    zapisywal pomiar jako Math.round(2.5*12) = 30 mies. Notatka wisiala pod nieistniejacym wiekiem. */
