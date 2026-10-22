@@ -11,7 +11,7 @@ const examples = [
     median: 21.14, medianInput: 21.14 * .1401, divisor: 28.99, statistic: 'group-median',
     canonical: value => value / .1401, high: 10, outsideAge: 46 },
   { id: 'inhibin_b', hormone: 'inhb', name: 'Inhibina B', raw: '80', unit: 'pg/mL',
-    profile: 'borelli2025-female-inhb-age-5p6-47',
+    profile: 'borelli2025-female-inhb-age-5p6-47p75',
     median: 44, medianInput: 44, divisor: 52.474, statistic: 'median',
     canonical: value => value, high: 1000, outsideAge: 48 },
 ];

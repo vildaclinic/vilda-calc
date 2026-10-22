@@ -131,13 +131,13 @@ describe('Fixed inhibin B sex comparison — production model', () => {
     expect(puberty.referenceData.patientPointData).not.toBe(data.patientPointData);
     expect(puberty.referenceData.patientPointData.profiles).not.toBe(data.patientPointData.profiles);
     const originalOthers = data.patientPointData.profiles.filter(p =>
-      p.id !== 'borelli2025-female-inhb-age-5p6-47');
+      p.id !== 'borelli2025-female-inhb-age-5p6-47p75');
     expect(puberty.referenceData.patientPointData.profiles.slice(0, -1)).toEqual(originalOthers);
     originalOthers.forEach((profile, i) => {
       expect(puberty.referenceData.patientPointData.profiles[i]).toBe(profile);
     });
     expect(engine.evaluate(data, patient(14))).toMatchObject({ status: 'ready', referenceValue: 46,
-      profile: { id: 'borelli2025-female-inhb-age-5p6-47', ordinaryOnly: true } });
+      profile: { id: 'borelli2025-female-inhb-age-5p6-47p75', ordinaryOnly: true } });
     expect(engine.evaluate(puberty.referenceData, patient(14))).toMatchObject({ status: 'ready', referenceValue: 46,
       profile: { id: puberty.profileIds.female, statistic: 'median', approximate: true } });
     for (const context of [patient(.25), patient(14, 'male'), { ...patient(14), analyte: 'amh' }]) {
@@ -145,7 +145,7 @@ describe('Fixed inhibin B sex comparison — production model', () => {
     }
     expect(JSON.stringify(data.patientPointData)).toBe(original);
     expect(engine.evaluate(data, patient(14))).toMatchObject({ status: 'ready', referenceValue: 46,
-      profile: { id: 'borelli2025-female-inhb-age-5p6-47', ordinaryOnly: true } });
+      profile: { id: 'borelli2025-female-inhb-age-5p6-47p75', ordinaryOnly: true } });
   });
 
   it('keeps scoped eligibility at 8–20 years without assigning Tanner or narrowing the original male source', () => {

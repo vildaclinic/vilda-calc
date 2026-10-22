@@ -15,7 +15,8 @@ const read = name => JSON.parse(readFileSync(new URL(
   `../../docs/clinical/hormone-lifespan/${name}`, import.meta.url), 'utf8'));
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const policy = read('female-inhibin-reference-policy.json');
-const profileId = 'borelli2025-female-inhb-age-5p6-47';
+const profileId = 'borelli2025-female-inhb-age-5p6-47p75';
+const priorProfileId = 'borelli2025-female-inhb-age-5p6-47';
 const context = (ageYears, extra = {}) => ({ analyte: 'inhb', sex: 'female', ageYears,
   measurement: { value: 33, unit: 'pg/mL' }, ...extra });
 const evaluate = (ageYears, extra) => engine.evaluate(data, context(ageYears, extra));
@@ -26,12 +27,12 @@ const excludedPhases = ['pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmen
 const adultNodes = [[20, 34], [25, 32], [30, 30], [35, 29], [40, 28],
   [42, 26], [44, 23], [45, 20], [46, 17], [47, 11]];
 
-describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat', () => {
+describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47,75 lat', () => {
   it('rozszerza jeden profil i zachowuje dokładnie wszystkie 73 pozostałe profile oraz konwersje', () => {
     expect(data.profiles).toHaveLength(85);
-    expect(data.version).toBe('2026-10-22.1');
+    expect(data.version).toBe('2026-10-22.2');
     const unchanged = { ...priorFemaleGonadotropinBundle(data), version: '2026-10-13.4',
-      profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => profile.id !== profileId && !laterChildhoodIds.includes(profile.id)) };
+      profiles: priorFemaleGonadotropinBundle(data).profiles.filter(profile => profile.id !== priorProfileId && !laterChildhoodIds.includes(profile.id)) };
     expect(unchanged.profiles).toHaveLength(73);
     // Snapshot of the approved 8b84254e base excluding only the revised profile.
     expect(digest(unchanged)).toBe('f2cab3d7ea197ae8feaddcd0d0cdfea4fffcc8bba566a7101b82138865f73c5f');
@@ -40,7 +41,7 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
     expect(data).toEqual(read('population-reference-data.json'));
     expect(data.profiles.some(profile => profile.id === 'borelli2025-female-inhb-age-5p6-20')).toBe(false);
     expect(read('female-adolescent-reference-policy.json')).not.toHaveProperty('inhb');
-    expect(policy).toMatchObject({ id: profileId, ordinaryOnly: true, minAge: 5.6, maxAge: 47,
+    expect(policy).toMatchObject({ id: profileId, ordinaryOnly: true, minAge: 5.6, maxAge: 47.75,
       maxAgeExclusive: false, excludedCyclePhases: excludedPhases });
   });
 
@@ -49,11 +50,11 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
       for (const unit of ['pg/mL', 'ng/L']) {
         const result = evaluate(age, { measurement: { value, unit } });
         expect(result).toMatchObject({ status: 'ready', value, referenceValue: median,
-          profile: { id: profileId, minAge: 5.6, maxAge: 47, maxAgeExclusive: false,
+          profile: { id: profileId, minAge: 5.6, maxAge: 47.75, maxAgeExclusive: false,
             ordinaryOnly: true, statistic: 'median', approximate: true,
             interpolation: 'pchip', unit: 'pg/mL', specimen: 'serum',
             provenance: { doi: '10.1210/clinem/dgae439', figure: 1,
-              digitizationTolerancePgMl: 2, routingVersion: '2026-10-14.1' } } });
+              digitizationTolerancePgMl: 2, routingVersion: '2026-10-21.2' } } });
         for (const key of ['classification', 'percentile', 'sds', 'referenceInterval', 'clinicalCutoff']) {
           expect(result).not.toHaveProperty(key);
           expect(result.profile).not.toHaveProperty(key);
@@ -62,13 +63,13 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
     }
   });
 
-  it('zachowuje wszystkie 24 węzły i ten sam PCHIP; nie zmienia źródłowego odniesienia pediatrycznego', () => {
+  it('zachowuje 24 stare węzły i niezmienione źródłowe odniesienie pediatryczne, dopisując trzy odczyty', () => {
     const profile = evaluate(30).profile;
     const comparison = runtime.inhibinComparisonReferenceData.profiles[0];
     const source = read('evidence/inhb-digitized-median.json');
-    expect(profile.points).toHaveLength(24);
-    expect(profile.points).toEqual(comparison.points);
-    expect(profile.points).toEqual(source.points.map(point => ({ ageYears: point.ageYears, value: point.approxMedianPgMl })));
+    expect(profile.points).toHaveLength(27);
+    expect(profile.points.slice(0, 24)).toEqual(comparison.points);
+    expect(profile.points.slice(0, 24)).toEqual(source.points.map(point => ({ ageYears: point.ageYears, value: point.approxMedianPgMl })));
     // The comparison keeps its eligibility but fits all 24 knots, including adulthood.
     for (let age = 8; age <= 20; age += .125) {
       expect(engine.referenceAt(profile, age)).toBe(engine.referenceAt(comparison, age));
@@ -89,7 +90,7 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
   });
 
   it('kwalifikuje niepewny wiek po obu stronach 20 bez sztucznego rozcięcia jednego modelu', () => {
-    for (const [low, high] of [[19.9, 20.1], [20, 21], [20.1, 20.3], [25, 26], [46, 47]]) {
+    for (const [low, high] of [[19.9, 20.1], [20, 21], [20.1, 20.3], [25, 26], [46, 47], [46.9, 47.1]]) {
       for (const ageUpperInclusive of [true, false]) {
         expect(evaluate(low, { ageUpperYears: high, ageUpperInclusive })).toMatchObject({
           status: 'ready', referenceValue: engine.referenceAt(evaluate(low).profile, low), profile: { id: profileId },
@@ -104,18 +105,19 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
     }
   });
 
-  it('dopuszcza dokładny kres 47, lecz nie przedłuża go do wszystkich 47 ukończonych lat ani do granicy kohorty 69', () => {
+  it('dopuszcza dokładny kres 47,75, lecz nie przedłuża go do wszystkich 47 ukończonych lat ani do granicy kohorty 69', () => {
     expect(evaluate(47)).toMatchObject({ status: 'ready', referenceValue: 11 });
+    expect(evaluate(47.75)).toMatchObject({ status: 'ready', referenceValue: 7 });
     expect(evaluate(46.99, { ageUpperYears: 47 })).toMatchObject({ status: 'ready' });
-    for (const ageUpperYears of [47.00001, 47 + 1 / 12, 48]) {
+    for (const ageUpperYears of [47.75001, 47 + 10 / 12, 48]) {
       for (const ageUpperInclusive of [true, false]) {
         expect(evaluate(47, { ageUpperYears, ageUpperInclusive })).toEqual(unavailable('ambiguous-age'));
       }
     }
     const resolved = ageEngine.resolveAge({ age: { years: 47, months: 0, precision: 'month' } });
     expect(evaluate(resolved.lowerYears, { ageUpperYears: resolved.upperYears,
-      ageUpperInclusive: resolved.upperInclusive })).toEqual(unavailable('ambiguous-age'));
-    for (const age of [47.00001, 48, 60, 69, 90]) expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
+      ageUpperInclusive: resolved.upperInclusive })).toMatchObject({ status: 'ready', referenceValue: 11 });
+    for (const age of [47.75001, 48, 60, 69, 90]) expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
     for (const [age, referenceValue] of [[1.0001, 33], [3, 33], [5.59, 27]]) {
       expect(evaluate(age)).toMatchObject({ status: 'ready', referenceValue, profile: { statistic: 'group-median' } });
     }
@@ -124,7 +126,7 @@ describe('Inhibina B kobiet — jedno źródłowe odniesienie wieku 5,6–47 lat
   });
 
   it('znany stan ciąży lub menopauzy blokuje tylko ten profil; brak danych nie jest potwierdzeniem stanu rozrodczego', () => {
-    for (const age of [6, 15, 20, 30, 46, 47]) {
+    for (const age of [6, 15, 20, 30, 46, 47, 47.25, 47.5, 47.75]) {
       for (const cyclePhase of excludedPhases.flatMap(phase => [phase, `  ${phase.toUpperCase()}  `])) {
         expect(evaluate(age, { cyclePhase })).toEqual(unavailable('incompatible-reproductive-context'));
       }

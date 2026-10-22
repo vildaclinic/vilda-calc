@@ -132,7 +132,7 @@ test('female inhibin B and AMH use the actual mixed axis when LH is selected', a
   expect(qualified.status).toBe('ready');
   await expect(point(page, 'inhb')).toHaveCount(1);
   const original = await pointData(page, 'inhb');
-  expect(original.profile).toBe('borelli2025-female-inhb-age-5p6-47');
+  expect(original.profile).toBe('borelli2025-female-inhb-age-5p6-47p75');
   await period(page, 'puberty').click();
   await expectNote(page, '8–20 lat');
   await hormone(page, 'lh').click();
