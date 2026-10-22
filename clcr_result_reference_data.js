@@ -16,8 +16,8 @@
   // Presentation data for the already implemented clinical profiles. These data
   // do not qualify a specimen or classify a patient; the clinical engines do.
   const PROFILE = freeze({
-    id: "CLIRENS_RESULT_REFERENCE_2026_10_V3",
-    version: 3,
+    id: "CLIRENS_RESULT_REFERENCE_2026_10_V4",
+    version: 4,
     sources: {
       kdigo: {
         id: "KDIGO_CKD_2024",
@@ -86,6 +86,32 @@
     },
     populationNotes: {
       ckid_u25_cys: "Wzór do oceny czynności nerek u osób z PChN; nie służy do przesiewu zdrowych, bezobjawowych osób.",
+      ckid_u25_cr_cys: "Wzór opracowano dla osób w wieku 1–25 lat z łagodną lub umiarkowaną PChN.",
+    },
+    u25Average: {
+      formulaId: "ckid_u25_cr_cys",
+      detailsSummary: "Szczegóły — obliczenie i kategorie G",
+      detailsSummaryWithoutCategories: "Szczegóły — obliczenie",
+      heading: "Jak obliczono",
+      componentsCaption: "Składowe U25",
+      creatinineLabel: "Z kreatyniny",
+      cystatinLabel: "Z cystatyny C",
+      referenceDescription: "dla obu oszacowań",
+      roundingDescription: "Średnią obliczamy przed zaokrągleniem wartości.",
+      methodRecommendationLabel: "Zalecane metody oznaczeń",
+      methodRecommendation: "kreatynina — enzymatyczna; cystatyna C — nefelometryczna.",
+      discrepancyDescription: "Różnica między składowymi może wynikać z czynników pozanerkowych; uwzględnij kontekst kliniczny.",
+      sources: [
+        {
+          label: "NIDDK",
+          url: "https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults",
+        },
+        { label: "Pierce 2021", url: "https://doi.org/10.1016/j.kint.2020.10.047" },
+        {
+          label: "KDIGO 2024",
+          url: "https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf",
+        },
+      ],
     },
     u25CreatinineEstimate: {
       formulaId: "ckid_u25",

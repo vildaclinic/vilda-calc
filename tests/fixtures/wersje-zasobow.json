@@ -48,24 +48,24 @@
   "sha256": "00ed51bfddbece54a45acbe16236e1eba6fa54e1d051e4ea6d3015d54489a030"
  },
  "clcr_result_presentation.js": {
-  "v": 3,
-  "sha256": "d2feba6eea68632f339e11d665326ab391351e59da8099077a459c69fea1c1e3"
+  "v": 4,
+  "sha256": "4a03886f76f9d29ca5c5af3aa0c4c6187242d83cadffb3be1f160bcc9a484050"
  },
  "clcr_result_reference_data.js": {
-  "v": 3,
-  "sha256": "df6fc014c0df8f0b2ce4909d7be09ed7045d472a7a8728cbeed71a4010e88c84"
+  "v": 4,
+  "sha256": "8d1edaded8fae8a3bf211e4f601d5d194dbdc50b6fc72c688e3abd9ceae456f4"
  },
  "clcr_stone_safety.js": {
   "v": 1,
   "sha256": "6d6c4c813d70ea72e641128c0b860345fb3c91b99a6ad16f9ed6379cd2f100d5"
  },
  "clcr_ui_workflow.css": {
-  "v": 12,
-  "sha256": "9a78895e352a721a780e9ab06622fbd47c005fe74c3487bbe5ac1dd40d26f638"
+  "v": 13,
+  "sha256": "dacae114d2ebc493ccb4a1a20376e58c8cc06296285c9ff52f99599869671169"
  },
  "clcr_ui_workflow.js": {
-  "v": 10,
-  "sha256": "49ec5b850ac9a028495de30829a898f91afaabbf037b4dc31d0f91acaf1658a5"
+  "v": 11,
+  "sha256": "35457c00a2799a747d15bc13272b3e4f9df953185e1a8245d572dda2201658c1"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -220,8 +220,8 @@
   "sha256": "e001befeb185ae42780ecb51a5046c463b1691adea99292fd911b62e090919d6"
  },
  "inline_kalkulator_klirens_04.js": {
-  "v": 12,
-  "sha256": "b45aea42ce12e2d4d851eb2373d4d719d1c8ca34536e405f088b4cb0bd1865f0"
+  "v": 13,
+  "sha256": "612f283ec546143bcc50a472759a8819b842fb19c02ee5f2639869afad8176fb"
  },
  "inline_kalkulator_klirens_05.js": {
   "v": 1,
