@@ -194,6 +194,54 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     }
   });
 
+  it('preserves converter-valid signed and grouped AMH numbers for Xu and LiLACS, then clears invalid input', () => {
+    const win = {};
+    loadBrowserScript('lab_units_data.js', win);
+    loadBrowserScript('lab_unit_converter.js', win);
+    const converter = win.LabUnitConverter;
+    const xu = require('../../vilda_amh_age_reference.js');
+    const xuData = require('../../vilda_amh_age_reference_data.js');
+    const lilacs = require('../../vilda_amh_lilacs_source_ui.js');
+    const lilacsData = require('../../vilda_hormone_lifespan_data.js').amhLilacsSourceData;
+    const parseSource = html.slice(html.indexOf('    function parseAmhMeasurement()'),
+      html.indexOf('    function renderCensoredAmh('));
+    for (const [sex, age] of [['F', 44], ['M', 85]]) {
+      const xuContexts = [], lilacsContexts = [];
+      const app = adapter({ currentSubstance: { id: 'amh' }, unitEl: { value: 'ng/mL' },
+        unitTargetEl: { value: 'ng/mL' },
+        sourcePatient: { identityKey: '', sourceStatus: 'ready', sex, ageYears: age, ageMonths: 0 },
+        effectivePatient: { sex, age },
+        amhAgeReferenceUI: { update: context => xuContexts.push(context), clear: () => {} },
+        amhLilacsSourceUI: { update: context => lilacsContexts.push(context), clear: () => {} },
+      });
+      Object.assign(app.context.window, { VildaAmhAgeReference: xu, VildaAmhAgeReferenceData: xuData });
+      vm.runInContext(parseSource, app.context);
+      for (const [raw, expectedValue] of [['+2', 2], ['1 000', 1000], ['1\u00a0000', 1000], ['abc', null]]) {
+        app.context.valueEl.value = raw;
+        // These are the real converter functions used by the production form;
+        // the narrower AMH inequality parser must not replace their fresh value.
+        const number = converter.parseNumber(raw);
+        const conversion = Number.isFinite(number)
+          ? converter.convertAll({ substanceId: 'amh', value: number, fromUnit: 'ng/mL' }) : null;
+        app.update({ id: 'amh' }, null, conversion);
+        const xuContext = xuContexts.at(-1), lilacsContext = lilacsContexts.at(-1);
+        expect(xuContext.measurement).toEqual(app.last().measurement);
+        expect(lilacsContext.measurement).toEqual(app.last().measurement);
+        if (expectedValue === null) {
+          expect(Number.isFinite(number)).toBe(false);
+          expect(xuContext.measurement).toBeNull();
+          expect(lilacsContext.measurement).toBeNull();
+          expect(lilacs.evaluate(lilacsData, lilacsContext).status).toBe('unavailable');
+        } else {
+          expect(conversion.ok).toBe(true);
+          expect(xuContext.measurement).toEqual({ value: expectedValue, unit: 'ng/mL', operator: '=' });
+          expect(sex === 'F' ? xu.evaluate(xuData, xuContext).status
+            : lilacs.evaluate(lilacsData, lilacsContext).status).toBe('ready');
+        }
+      }
+    }
+  });
+
   it('reuses known calendar days for infant AMH and TT without narrowing their uncertainty', () => {
     const app = infantAdapter();
     app.calculate();

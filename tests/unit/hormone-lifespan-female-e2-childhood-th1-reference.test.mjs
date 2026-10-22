@@ -37,7 +37,10 @@ describe('E2 dziewczynek — jawna mediana grupy Th1 w wieku >1–<6 lat', () =>
     expect(previous.profiles).toHaveLength(84);
     expect(digest(previous.profiles)).toBe('e6c193639dad2c3d33bc67b69e6f3502c6a4e512865a599077610a994564b34a');
     expect(digest(previous)).toBe('805a064dd9953179e419597e8dbd56f507f136c29b60850d68aac7f3cafd7c3a');
-    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) => key !== 'patientPointData'));
+    // The later LiLACS source-information card is separately frozen; keep
+    // every preceding runtime value and the historical hash unchanged.
+    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+      key !== 'patientPointData' && key !== 'amhLilacsSourceData'));
     expect(digest(otherRuntime)).toBe('47fda226dc893be4f94578a53c75d91d8a0c98fece580b7c6f46525a77f2def0');
     expect(data).toEqual(JSON.parse(readFileSync(new URL(
       '../../docs/clinical/hormone-lifespan/population-reference-data.json', import.meta.url), 'utf8')));
