@@ -6,27 +6,6 @@ async function openOptionalDetails(page, selector) {
   }
 }
 
-async function setCreatinineState(page, value) {
-  const proxy = page.locator('[data-clcr-marker-context]');
-  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
-  const field = useProxy ? proxy : page.locator('#creatinineState');
-  for (const details of await field.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
-  }
-  await field.selectOption(value);
-}
-
-async function setMarkerContext(page, value) {
-  const marker = page.locator('[data-clcr-marker-context]');
-  for (const details of await marker.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
-  }
-  await marker.selectOption(value);
-}
-
-
 async function openCalculator(page, version = 'basic') {
   await page.addInitScript(() => {
     window.__CLCR_TEST_LEGACY_BROAD = true;
@@ -102,7 +81,6 @@ test('nie podstawia domyślnie płci do wzorów zależnych od płci', async ({ p
   await openCalculator(page);
   await setPatient(page, { age: 20, sex: '' });
   await page.locator('#Scr').fill('0.9');
-  await setCreatinineState(page, 'stable');
 
   await expect(page.locator('#sex')).toHaveValue('');
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
@@ -123,7 +101,9 @@ test('opisuje Cockcrofta–Gaulta jako eCrCl z jawną polityką masy', async ({ 
   await page.locator('#formulaPicker').selectOption('cg');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await setMarkerContext(page, 'stable');
+  await expect(page.locator('#creatinineState')).toHaveValue('unknown');
+  await expect(page.locator('#suspectedAKI')).not.toBeChecked();
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="cg"]')).toContainText('stabilna czynność nerek');
 
   await expect(page.locator('#clcrInfo')).toContainText('Oszacowany klirens kreatyniny');
   await expect(page.locator('#clcrInfo')).toContainText('Cockcroft–Gault');
@@ -280,7 +260,6 @@ test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await setCreatinineState(page, 'stable');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('720');
   await page.locator('#collectionStartAt').fill('2026-07-27T08:00');
@@ -335,7 +314,6 @@ test('blokuje CrCl, gdy czas pobrania Scr wypada poza zbiórką', async ({ page 
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await setCreatinineState(page, 'stable');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('1440');
   await page.locator('#collectionStartAt').fill('2026-07-27T08:00');

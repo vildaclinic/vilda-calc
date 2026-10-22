@@ -6,24 +6,13 @@ async function openOptionalDetails(page, selector) {
   }
 }
 
-async function setCreatinineState(page, value) {
-  const proxy = page.locator('[data-clcr-marker-context]');
-  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
-  const field = useProxy ? proxy : page.locator('#creatinineState');
-  for (const details of await field.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
-  }
-  await field.selectOption(value);
-}
-
-async function setMarkerContext(page, value) {
-  const marker = page.locator('[data-clcr-marker-context]');
-  for (const details of await marker.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
-  }
-  await marker.selectOption(value);
+async function setRecordedAssay(page, value) {
+  await page.evaluate(assay => {
+    const field = document.getElementById('ScrAssay');
+    field.value = assay;
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  }, value);
 }
 
 
@@ -68,7 +57,8 @@ test('preferuje CKiD U25 u dziecka, a Bedside pozostawia jako wzór porównawczy
   await page.locator('#weight').fill('30');
   await page.locator('#height').fill('140');
   await page.locator('#Scr').fill('0.6');
-  await setCreatinineState(page, 'stable');
+  await expect(page.locator('#creatinineState')).toHaveValue('unknown');
+  await expect(page.locator('#ScrAssay')).toHaveValue('');
 
   const options = await page.locator('#formulaPicker option').evaluateAll(
     nodes => nodes.map(node => node.value)
@@ -80,6 +70,7 @@ test('preferuje CKiD U25 u dziecka, a Bedside pozostawia jako wzór porównawczy
   await page.evaluate(() => window.clcrUpdate());
   await expect(page.locator('#clcrInfo')).toContainText('CKiD U25');
   await expect(page.locator('#clcrInfo')).toContainText('83');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25"]')).toContainText('kreatynina standaryzowana do IDMS');
   await expect(page.locator('#clcrInfo')).not.toContainText('Bedside Schwartz 2009');
 });
 
@@ -90,7 +81,6 @@ test('w wieku 18–25 lat pokazuje CKiD U25 i 2021 CKD-EPI równolegle', async (
   await page.locator('#weight').fill('60');
   await page.locator('#height').fill('165');
   await page.locator('#Scr').fill('0.9');
-  await setCreatinineState(page, 'stable');
 
   await page.evaluate(() => window.clcrUpdate());
   await expect(page.locator('#clcrInfo')).toContainText('CKiD U25');
@@ -107,7 +97,6 @@ test('w wieku 18–25 lat ujawnia brak danych do drugiego równania', async ({ p
   await page.locator('#formulaPicker').selectOption('egfr');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('0.9');
-  await setMarkerContext(page, 'stable');
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).toContainText(
@@ -138,7 +127,6 @@ test('wzór noworodkowy wymaga wieku w dniach i potwierdzenia urodzenia o czasie
   await page.locator('#Scr').fill('0.5');
   await openOptionalDetails(page, '#ScrAssay');
   await page.locator('#ScrAssay').selectOption('enzymatic_idms');
-  await setCreatinineState(page, 'stable');
   await page.locator('#neonatalTermStatus').selectOption('preterm');
   await page.evaluate(() => window.clcrUpdate());
   expect(await page.evaluate(() => window.canComputeFormula('neonatal_egfr'))).toBe(false);
@@ -159,7 +147,6 @@ test('nie przypisuje wzoru niemowlęciu po 28. dniu i przed ukończeniem roku', 
   await page.locator('#weight').fill('4');
   await page.locator('#height').fill('54');
   await page.locator('#Scr').fill('0.4');
-  await setCreatinineState(page, 'stable');
 
   await page.evaluate(() => window.clcrUpdate());
   await expect(page.locator('#clcrInfo')).toContainText('Brak właściwego wzoru');
@@ -167,7 +154,7 @@ test('nie przypisuje wzoru niemowlęciu po 28. dniu i przed ukończeniem roku', 
   await expect(page.locator('#clcrInfo')).not.toContainText('eGFR noworodka donoszonego');
 });
 
-test('nie przypisuje kategorii G przy kreatyninie niestandaryzowanej do IDMS', async ({ page }) => {
+test('legacy brak potwierdzenia IDMS korzysta z założenia, a potwierdzone non-IDMS blokuje wynik i kategorię G', async ({ page }) => {
   await openCalculator(page);
   await setAge(page, { years: 50 });
   await page.locator('#sex').selectOption('M');
@@ -176,11 +163,14 @@ test('nie przypisuje kategorii G przy kreatyninie niestandaryzowanej do IDMS', a
   await page.locator('#formulaPicker').selectOption('egfr');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await openOptionalDetails(page, '#ScrAssay');
-  await page.locator('#ScrAssay').selectOption('not_idms');
-  await setMarkerContext(page, 'stable');
-
+  await setRecordedAssay(page, 'not_idms');
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
-  await expect(page.locator('#clcrInfo')).toContainText('Nie potwierdzono standaryzacji do IDMS');
+  await expect(page.locator('[data-clcr-series="egfr"] .clcr-result-value')).toHaveText('92');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr"]')).toContainText('kreatynina standaryzowana do IDMS');
+  await expect(page.locator('#ScrAssay')).toHaveValue('not_idms');
+  await setRecordedAssay(page, 'non_idms');
+  expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
+  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(0);
+  await expect(page.locator('#clcrInfo')).toContainText('jawnie niezgodne z IDMS');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
 });
