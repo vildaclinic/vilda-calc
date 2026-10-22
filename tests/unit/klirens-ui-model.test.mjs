@@ -595,23 +595,23 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=12');
-    expect(html).toContain('clcr_ui_workflow.js?v=10');
+    expect(html).toContain('clcr_ui_workflow.css?v=13');
+    expect(html).toContain('clcr_ui_workflow.js?v=11');
     expect(html).toContain('inline_kalkulator_klirens_02.js?v=8');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=12');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=13');
     expect(html).toContain('inline_kalkulator_klirens_07.js?v=4');
-    expect(html).toContain('clcr_result_reference_data.js?v=3');
-    expect(html).toContain('clcr_result_presentation.js?v=3');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.342'");
+    expect(html).toContain('clcr_result_reference_data.js?v=4');
+    expect(html).toContain('clcr_result_presentation.js?v=4');
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.343'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=1');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=7'");
-    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=3'");
-    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=3'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=12'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=10'");
+    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=4'");
+    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=4'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=13'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=11'");
     expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=8'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=12'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=13'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=2'");

@@ -782,6 +782,10 @@ html[data-clcr-workflow-ui="1"] #clcrForm .clcr-paired-marker-note {
   line-height: 1.5;
 }
 
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="child-cystatin"] #clcrForm .clcr-paired-marker-note {
+  order: -1;
+}
+
 /* Pomoc pola jako pływający tooltip pozycjonowany względem OKNA
    (position:fixed, współrzędne ustawia JS): stała szerokość niezależna od
    szerokości pola, nie rozpycha układu. pointer-events:none — dymek nie
@@ -1027,6 +1031,11 @@ html[data-clcr-workflow-ui="1"] .clcr-context-details__body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-0-65);
   padding: 0 var(--space-0-65) var(--space-0-65);
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="child-cystatin"] .clcr-context-details__body > .clcr-field[data-clcr-field-id="ageMonths"] {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 html[data-clcr-workflow-ui="1"] .clcr-field:has(> .error) {
@@ -2233,6 +2242,29 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-c
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table tr:not([aria-current="true"]) {
   color: var(--text-2);
   background: transparent;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table {
+  margin-top: var(--space-8px);
+  table-layout: auto;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table :is(th, td):first-child {
+  width: auto;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table tbody th {
+  font-weight: 500;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table .clcr-result-component-value {
+  width: 32%;
+  color: var(--text-2) !important;
+  font-weight: 700;
+  text-align: right;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table [data-clcr-component-tone="warning"] .clcr-result-component-value {
+  color: var(--clcr-warning) !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table [data-clcr-component-tone="success"] .clcr-result-component-value {
+  color: var(--clcr-heading) !important;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-active-module]:not([data-clcr-active-module="measured-clearance"]) #clcrResultReport #clcrCard > small {
   display: none;

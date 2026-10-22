@@ -401,7 +401,7 @@ test('inne schematy i pediatria pozostają bez dorosłych progów Kt/V', async (
   );
 });
 
-test('rozszerzony eGFR ujawnia założenia IDMS/IFCC, blokuje sprzeczne oznaczenia i zachowuje metodę BSA', async ({ page }) => {
+test('rozszerzony eGFR ujawnia założenia IDMS/IFCC, blokuje sprzeczne oznaczenia i rozdziela średnią od BSA', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, {
     age: 10,
@@ -416,8 +416,11 @@ test('rozszerzony eGFR ujawnia założenia IDMS/IFCC, blokuje sprzeczne oznaczen
 
   const clcr = page.locator('#clcrInfo');
   await expect(clcr).toContainText('CKiD U25 eGFRcr‑cys (średnia)');
-  await expect(clcr).toContainText('86');
-  await expect(clcr).toContainText('Powierzchnia ciała (Haycock)');
+  await expect(clcr.locator('.clcr-result-card[data-clcr-series="ckid_u25_cr_cys"] .clcr-result-value')).toHaveText('86');
+  await expect(clcr.locator('[data-clcr-average-components] [data-clcr-component]')).toHaveCount(2);
+  await expect(clcr).not.toContainText('Powierzchnia ciała');
+  await expect(page.locator('#weight')).toHaveValue('30');
+  await expect(page.locator('#weight')).toBeHidden();
   await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25_cr_cys"]')).toContainText('IDMS');
   await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="ckid_u25_cr_cys"]')).toContainText('IFCC');
   await expect(page.locator('#ScrAssay')).toHaveValue('');
@@ -425,12 +428,16 @@ test('rozszerzony eGFR ujawnia założenia IDMS/IFCC, blokuje sprzeczne oznaczen
   await expect(page.locator('#CystatinCAssayMethod')).toHaveValue('');
   await expect(page.locator('#creatinineState')).toHaveValue('unknown');
 
+  // Przygotuj kolejny profil w ścieżce, która rzeczywiście używa masy i wzrostu.
+  // Średnia U25 i dorosły cr-cys nie pytają o te dodatkowe dane.
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('cg_norm'));
+  await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#age').fill('50');
   await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('70');
   await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('175');
-  await page.locator('#formulaPicker').selectOption('egfr_cr_cys');
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr_cr_cys'));
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
   await page.locator('#CystatinC').fill('1');

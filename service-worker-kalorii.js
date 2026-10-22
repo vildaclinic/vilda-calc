@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.342';
+const SW_VERSION = '1.1.343';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -215,9 +215,11 @@ const CORE_SHELL_URLS = [
   '/clcr_result_reference_data.js?v=1',
   '/clcr_result_reference_data.js?v=2',
   '/clcr_result_reference_data.js?v=3',
+  '/clcr_result_reference_data.js?v=4',
   '/clcr_result_presentation.js?v=1',
   '/clcr_result_presentation.js?v=2',
   '/clcr_result_presentation.js?v=3',
+  '/clcr_result_presentation.js?v=4',
   '/inline_kalkulator_klirens_02.js?v=1',
   '/inline_kalkulator_klirens_02.js?v=4',
   '/inline_kalkulator_klirens_02.js?v=5',
@@ -235,6 +237,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_04.js?v=10',
   '/inline_kalkulator_klirens_04.js?v=11',
   '/inline_kalkulator_klirens_04.js?v=12',
+  '/inline_kalkulator_klirens_04.js?v=13',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
@@ -255,6 +258,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.css?v=10',
   '/clcr_ui_workflow.css?v=11',
   '/clcr_ui_workflow.css?v=12',
+  '/clcr_ui_workflow.css?v=13',
   '/clcr_ui_workflow.js?v=1',
   '/clcr_ui_workflow.js?v=2',
   '/clcr_ui_workflow.js?v=3',
@@ -265,6 +269,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.js?v=8',
   '/clcr_ui_workflow.js?v=9',
   '/clcr_ui_workflow.js?v=10',
+  '/clcr_ui_workflow.js?v=11',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
   '/inline_notatki_00.js?v=4',
