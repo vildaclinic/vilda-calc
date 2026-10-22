@@ -56,6 +56,105 @@ describe('Klirens — centralny model wieku', () => {
     });
   });
 
+  it.each([0, 28])('w ścieżce noworodka odczytuje dzień %s bez zapisywania domyślnych lat i miesięcy', day => {
+    const controls = new Map(Object.entries({
+      formulaPicker: { value: 'neonatal_egfr' },
+      age: { value: '' },
+      ageMonths: { value: '' },
+      ageDays: { value: String(day) }
+    }));
+    const age = safety.readAgeFromDocument({ getElementById: id => controls.get(id) });
+    expect(age).toMatchObject({
+      valid: true,
+      years: 0,
+      months: 0,
+      daysOfLife: day
+    });
+    expect(safety.formulaEligibility('neonatal_egfr', age).eligible).toBe(true);
+    expect(controls.get('age').value).toBe('');
+    expect(controls.get('ageMonths').value).toBe('');
+  });
+
+  it.each([
+    ['neonatal_egfr', '', '', '29'],
+    ['neonatal_egfr', '1', '', '14'],
+    ['neonatal_egfr', '', '1', '14'],
+    ['ckid_u25', '', '', '14']
+  ])('nie uzupełnia ani nie nadpisuje sprzecznego wieku: %s, %s lat, %s mies., dzień %s', (formulaId, years, months, days) => {
+    const controls = new Map(Object.entries({
+      formulaPicker: { value: formulaId },
+      age: { value: years },
+      ageMonths: { value: months },
+      ageDays: { value: days }
+    }));
+    expect(safety.readAgeFromDocument({ getElementById: id => controls.get(id) }).valid)
+      .toBe(false);
+    expect(controls.get('age').value).toBe(years);
+    expect(controls.get('ageMonths').value).toBe(months);
+    expect(controls.get('ageDays').value).toBe(days);
+  });
+
+  it.each([
+    ['ckid_u25', true],
+    ['neonatal_egfr', false]
+  ])('odczyt %s pomija stare dni życia tylko poza ścieżką noworodkową', (formulaId, valid) => {
+    const controls = new Map(Object.entries({
+      formulaPicker: { value: formulaId },
+      age: { value: '10' },
+      ageMonths: { value: '' },
+      ageDays: { value: '5' }
+    }));
+    const age = safety.readAgeFromDocument({ getElementById: id => controls.get(id) });
+    expect(age.valid).toBe(valid);
+    if (valid) expect(age).toMatchObject({ exactYears: 10, daysOfLife: null });
+    expect(controls.get('ageDays').value).toBe('5');
+    expect(controls.get('ageMonths').value).toBe('');
+    expect(safety.parseAge('10', '', '5').valid).toBe(false);
+  });
+
+  it('liczy U25 dla pełnych 10 lat z pustymi miesiącami i nieznaną stabilnością', () => {
+    const age = safety.parseAge('10', '');
+    const markerPolicy = safety.creatininePolicy('', false);
+    expect(age).toMatchObject({
+      valid: true,
+      exactYears: 10,
+      months: 0
+    });
+    expect(markerPolicy).toMatchObject({
+      calculationAllowed: true,
+      categoryAllowed: false,
+      status: 'unknown'
+    });
+    expect(safety.formulaSafety('ckid_u25', age, markerPolicy).eligible).toBe(true);
+
+    const value = safety.computeCkidU25Creatinine({
+      sex: 'F',
+      ageYears: age.exactYears,
+      heightCm: 140,
+      creatinineMgDl: 0.6
+    });
+    expect(value).toBeCloseTo(82.9016019988, 9);
+    expect(safety.formatGfrForDisplay(value).rounded).toBe('83');
+    expect(safety.egfrPresentation({
+      value,
+      age: age.exactYears,
+      markerPolicy,
+      assay: ''
+    })).toMatchObject({
+      valueVisible: true,
+      tone: 'neutral',
+      category: null
+    });
+  });
+
+  it.each(['cl24', 'AGs', 'AGu_spot', 'K_frac', 'ACR', 'PCR'])(
+    'brak wieku nie wyłącza obliczenia niezależnego od wieku: %s',
+    formulaId => {
+      expect(safety.formulaEligibility(formulaId, safety.parseAge('', '')).eligible)
+        .toBe(true);
+    }
+  );
+
   it('odrzuca ułamkowe miesiące, nieprawidłowe dni i wiek przekraczający 120 lat', () => {
     expect(safety.parseAge('10', '1.5').valid).toBe(false);
     expect(safety.parseAge('10', '12').valid).toBe(false);
@@ -408,6 +507,14 @@ describe('Klirens — ACR/PCR i TmP/GFR', () => {
     });
   });
 
+  it.each([30, 300])('dokładny próg ACR %s pozostaje w A2 bez ostrzeżenia zaokrąglenia', value => {
+    expect(safety.formatAcrForDisplay(value)).toMatchObject({
+      raw: '',
+      crossesCategoryBoundary: false,
+      category: { code: 'A2' }
+    });
+  });
+
   it('dobiera pediatryczne progi PCR według dokładnego wieku', () => {
     expect(safety.pediatricUrineRatioThresholds(0.49)).toMatchObject({
       pcrMgG: null,
@@ -601,6 +708,46 @@ describe('Klirens — czasowa zbiórka kreatyniny', () => {
       creatinineMgCollection: 1440,
       creatinineMgDay: 1440,
       creatinineMgKgDay: 20
+    });
+  });
+
+  it('liczy bezwzględny klirens bez wieku, masy i BSA, a zależne przeliczenia pozostawia puste', () => {
+    const result = safety.computeTimedCreatinineClearance({
+      ...timing24h,
+      urineCreatinineMgDl: 100,
+      serumCreatinineMgDl: 1,
+      volumeMl: 1440,
+      protocol
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      absoluteMlMin: 100,
+      indexedMlMin173: null,
+      creatinineMgCollection: 1440,
+      creatinineMgDay: 1440,
+      creatinineMgKgDay: null
+    });
+  });
+
+  it.each([
+    [{ bsaM2: 1.73 }, 100, null],
+    [{ weightKg: 72 }, null, 20]
+  ])('wylicza tylko przeliczenia klirensu z dostępnymi zależnościami: %j', (optional, indexed, perKg) => {
+    const result = safety.computeTimedCreatinineClearance({
+      ...timing24h,
+      urineCreatinineMgDl: 100,
+      serumCreatinineMgDl: 1,
+      volumeMl: 1440,
+      protocol,
+      ...optional
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      absoluteMlMin: 100,
+      indexedMlMin173: indexed,
+      creatinineMgKgDay: perKg
     });
   });
 

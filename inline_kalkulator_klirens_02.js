@@ -29,7 +29,7 @@
         label: "CKiD U25 eGFRcr (2021)",
         version: "basic",
         requires: ["age", "sex", "height", "Scr", "ScrUnit"],
-        note: "Współczesny wzór pediatryczny opracowany głównie w łagodnej i umiarkowanej CKD. Przy wysokim/prawidłowym GFR może zaniżać wynik; u osób w wieku 18\u201125 lat zawsze porównaj także z 2021 CKD\u2011EPI.",
+        note: "Równanie z kreatyniny i wzrostu dla wieku 1–25 lat, ze współczynnikiem zależnym od wieku i płci. W wieku 18–25 lat oceń również wynik CKD-EPI 2021.",
       },
       {
         id: "egfr_cr_cys",
@@ -79,8 +79,6 @@
         label: "eGFR noworodka donoszonego (0\u201328 dni)",
         version: "advanced",
         requires: [
-          "age",
-          "ageMonths",
           "ageDays",
           "neonatalTermStatus",
           "weight",
@@ -110,7 +108,6 @@
         label: "Zmierzony klirens kreatyniny (zbiórka czasowa)",
         version: "advanced",
         requires: [
-          "age",
           "Ucr",
           "V24",
           "collectionStartAt",
@@ -125,10 +122,8 @@
           "serumSampleAt",
           "Scr",
           "ScrUnit",
-          "weight",
-          "height",
         ],
-        note: "Wymaga dokładnego czasu i kompletnego protokołu zbiórki, Ucr, V, czasu pobrania Scr mieszczącego się w okresie zbiórki oraz masy i wzrostu.",
+        note: "Wymaga dokładnego czasu i kompletnego protokołu zbiórki, Ucr, V, czasu pobrania Scr mieszczącego się w okresie zbiórki do obliczenia klirensu w mL/min. Masa, wzrost i wiek służą dodatkowym przeliczeniom.",
       },
       {
         id: "sch_var",
@@ -149,7 +144,6 @@
         label: "Wydalanie kwasu moczowego (DZM; bez automatycznej normy)",
         version: "advanced",
         requires: [
-          "age",
           "U_UA",
           "V24",
           "weight",
@@ -161,7 +155,6 @@
         label: "Wydalanie wapnia (DZM; bez automatycznej normy)",
         version: "advanced",
         requires: [
-          "age",
           "U_Ca",
           "V24",
           "weight",
@@ -173,7 +166,6 @@
         label: "Wydalanie magnezu (DZM; bez automatycznej normy)",
         version: "advanced",
         requires: [
-          "age",
           "U_Mg",
           "V24",
           "weight",
@@ -184,37 +176,37 @@
         id: "PO4_mgkg",
         label: "Wydalanie fosforu nieorganicznego (P\u1D62; DZM)",
         version: "advanced",
-        requires: ["age", "U_PO4", "V24", ...timedCollectionProtocol],
+        requires: [ "U_PO4", "V24", ...timedCollectionProtocol],
       },
       {
         id: "Prot_mgkg",
         label: "Białko całkowite w DZM",
         version: "advanced",
-        requires: ["age", "U_Prot", ...timedCollectionProtocol],
+        requires: [ "U_Prot", ...timedCollectionProtocol],
       },
       {
         id: "Na_mmol_d",
         label: "Wydalanie\xA0sodu (mmol/d)",
         version: "advanced",
-        requires: ["age", "U_Na", "V24", ...timedCollectionProtocol],
+        requires: [ "U_Na", "V24", ...timedCollectionProtocol],
       },
       {
         id: "K_mmol_d",
         label: "Wydalanie\xA0potasu (mmol/d)",
         version: "advanced",
-        requires: ["age", "U_K", "V24", ...timedCollectionProtocol],
+        requires: [ "U_K", "V24", ...timedCollectionProtocol],
       },
       {
         id: "KM_Cr",
         label: "KM/Cr (kw.\xA0moczowy/kreatynina)",
         version: "advanced",
-        requires: ["age", "U_UA", "Ucr"],
+        requires: [ "U_UA", "Ucr"],
       },
       {
         id: "Ca_Cr",
         label: "Ca/Cr (DZM)",
         version: "advanced",
-        requires: ["age", "U_Ca", "Ucr"],
+        requires: [ "U_Ca", "Ucr"],
       },
       {
         id: "Mg_Ca",
@@ -266,20 +258,20 @@
         id: "AGs",
         label: "Luka anionowa surowicy (bez K)",
         version: "advanced",
-        requires: ["age", "S_Na", "S_Cl", "S_HCO3"],
+        requires: [ "S_Na", "S_Cl", "S_HCO3"],
       },
       {
         id: "AGu_spot",
-        label: "Luka anionowa moczu (UAG; sparowana próbka punktowa)",
+        label: "Luka anionowa moczu (UAG; próbka moczu)",
         version: "spot",
-        requires: ["spotPairedChemistry", "U_Na_spot", "U_K_spot", "U_Cl_spot"],
+        requires: ["spotSameSpecimen", "U_Na_spot", "U_K_spot", "U_Cl_spot"],
         note: "Bez uniwersalnej normy; interpretować wyłącznie w odpowiednim kontekście kwasicy metabolicznej.",
       },
       {
         id: "K_frac",
         label: "K/(K+Na) w moczu (%)",
         version: "advanced",
-        requires: ["age", "U_K", "U_Na"],
+        requires: [ "U_K", "U_Na"],
       },
       {
         id: "ACR",
@@ -310,7 +302,6 @@
         label: "Ca/Cr (spot) [mg/mg]",
         version: "spot",
         requires: [
-          "age",
           "spotSameSpecimen",
           "Ca_spot",
           "Ca_spot_unit",
@@ -335,7 +326,6 @@
         label: "Cit/Cr (spot) [mg/mg]",
         version: "spot",
         requires: [
-          "age",
           "spotSameSpecimen",
           "Cit_Cr_spot",
           "Ucr_spot",
@@ -373,7 +363,6 @@
         label: "Wydalanie szczawianów (DZM; bez automatycznej normy)",
         version: "pro",
         requires: [
-          "age",
           "U_Ox",
           "oxalateReportingEntity",
           "V24",
@@ -386,7 +375,6 @@
         label: "Wydalanie cytrynianów (DZM; bez automatycznej normy)",
         version: "pro",
         requires: [
-          "age",
           "U_Cit",
           "V24",
           "weight",
@@ -428,31 +416,7 @@
     ];
   (function () {
     const e = new Set([
-        "cg",
-        "cg_norm",
-        "egfr",
-        "sch_var",
-        "sch_idms",
-        "UA_mgkg",
-        "Ca_mgkg",
-        "Mg_mgkg",
-        "PO4_mgkg",
-        "Prot_mgkg",
-        "Na_mmol_d",
-        "K_mmol_d",
-        "KM_Cr",
-        "Ca_Cr",
-        "CaCr_spot",
-        "CitCr_spot",
-        "Cit_mgkg",
-        "FENa_spot",
-        "FEK_spot",
-        "FECl_spot",
-        "FEHCO3_spot",
-        "K_frac",
-        "AGs",
-        "AGu_spot",
-        "TMP_GFR",
+        "cg", "cg_norm", "egfr", "sch_var", "sch_idms", "TMP_GFR",
       ]),
       r = new Set([]),
       timedCollectionIds = new Set([
@@ -703,9 +667,13 @@
       (e.requires.forEach((i) => {
         const o = document.getElementById(i);
         if (!o) return;
+        const uagConfirmed = e.id === "AGu_spot" && i === "spotSameSpecimen" &&
+          (typeof window.ClcrUiWorkflow?.uagSpecimenConfirmed === "function"
+            ? window.ClcrUiWorkflow.uagSpecimenConfirmed()
+            : Boolean(o.checked || document.getElementById("spotPairedChemistry")?.checked));
         const missing =
           o.type === "checkbox"
-            ? !o.checked
+            ? !(o.checked || uagConfirmed)
             : (o.value == null ? "" : String(o.value)).trim() === "";
         if (missing) {
           o.classList.add("must-fill");
