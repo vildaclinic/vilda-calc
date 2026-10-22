@@ -433,20 +433,21 @@ test('rozszerzony eGFR egzekwuje IDMS/IFCC, dobiera wiek i pokazuje metodę BSA'
   await page.locator('#formulaPicker').selectOption('egfr_cr_cys');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await openOptionalDetails(page, '#ScrAssay');
-  await page.locator('#ScrAssay').selectOption('enzymatic_idms');
   await setCreatinineState(page, 'stable');
   await page.locator('#CystatinC').fill('1');
-  await page.locator('#CystatinCStandardization').selectOption(
-    'ERM-DA471/IFCC'
-  );
-  await page.locator('#CystatinCAssayMethod').selectOption('nephelometric');
+  await page.locator('#CrCysStandardizationConfirmed').check();
+  for (const id of ['ScrAssay', 'CystatinCStandardization', 'CystatinCAssayMethod', 'weight', 'height']) {
+    await expect(page.locator(`#${id}`)).toBeHidden();
+  }
   await expect(clcr).toContainText('2021 CKD‑EPI eGFRcr‑cys');
   await expect(clcr).toContainText('88');
   await expect(clcr).toContainText('Powierzchnia ciała (Du Bois)');
 
-  await page.locator('#CystatinCStandardization').selectOption('not_ifcc');
-  await expect(clcr).toContainText('wymaga cystatyny C');
+  await page.locator('#CrCysStandardizationConfirmed').uncheck();
+  await expect(page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="egfr_cr_cys"]')).toHaveCount(0);
+  await expect(page.locator('#clcrReadiness')).toContainText('Wymagane jest potwierdzenie');
+  await expect(page.locator('label:has(#CrCysStandardizationConfirmed)')).toContainText('IDMS');
+  await expect(page.locator('label:has(#CrCysStandardizationConfirmed)')).toContainText('IFCC');
   await expect(clcr).not.toContainText('Kategoria GFR wg KDIGO');
 });
 

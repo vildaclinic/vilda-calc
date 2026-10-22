@@ -4605,6 +4605,150 @@ opisanego ograniczenia do wybranego obliczenia; nie jest to regresja wartości
 wybranego wyniku.
 Zielone testy i akceptacja makiety nie nadają algorytmom statusu walidacji klinicznej.
 
+#### P-KLIRENS-U25-CRCYS-UI — oszacowanie U25cr, dorosły cr-cys i formularze, 2026-10-22
+
+**Decyzja właściciela:** wdrożyć zaakceptowany zakres i makiety desktop/mobile
+([Klirens CKD-EPI 2021 i CKiD U25 oraz poprawki formularzy](https://chatgpt.com/space/page_72ef9c644d288191a70179078ea998ae)).
+Obejmuje on `ckid_u25`, dorosły `egfr_cr_cys` i wspólne style Klirensu.
+Poniższa reguła porównania oszacowania zastępuje wcześniejsze wymaganie
+neutralnego koloru przy nieznanych metadanych **wyłącznie dla U25cr**.
+Nie rozszerza się na CKD-EPI z samej kreatyniny, Schwartza ani warianty U25cys.
+
+**Wpływ kliniczny i funkcjonalny:** komplet podstawowych danych U25cr może
+teraz dać porównanie oszacowania z właściwą normą przy niepotwierdzonych
+warunkach interpretacji, w tym domyślnej nieznanej stabilności i pustej metodzie
+oznaczenia. Jest to zaakceptowana lokalna polityka
+interpretacji i prezentacji, a nie tylko zmiana tekstu lub CSS. Nie potwierdza
+stabilności, zgodności z IDMS, kategorii G ani rozpoznania PChN. Niski wynik
+otrzymuje oznaczenie bursztynowe; nieobniżone oszacowanie pozostaje neutralne.
+Dla nowego zapisu `outOfRange: true` może zatem oznaczać oszacowanie poniżej
+odniesienia bez nadanej kategorii G. Dawne wpisy historii i ich flagi nie są
+przeliczane. Równania, współczynniki, konwersje, wartości surowe, zaokrąglenie
+liczby i kwalifikacja wieku pozostają bez zmian.
+
+**U25cr — wymagane dane i granice:** równanie nadal używa wieku 1–25 lat
+(do ukończenia 26 lat), płci wymaganej przez wzór, wzrostu w cm oraz Scr
+w mg/dL lub µmol/L; wynik ma jednostkę mL/min/1,73 m². Nie dochodzą nowe
+obowiązkowe pytania. Próg i operacyjna granica wieku pochodzą z jawnie
+przekazanego `ClcrResultReferenceData.PROFILE`
+(`CLIRENS_RESULT_REFERENCE_2026_10_V2`, wersja 2); prezentacja nie wprowadza
+drugiego progu w silniku. Funkcja
+`ClcrResultPresentation.u25EstimatePresentation(input, profile)` wydziela
+`referenceComparison` od kategorii klinicznej i jest wywoływana przez
+`createModel`/`render`. Obecna reguła ≥2 lat pozostaje zachowana; poniżej
+2 lat nie stosuje się automatycznej normy 90 ani kategorii G. Dla wieku
+18–25 lat stosowane są dorosły opis i właściwe odniesienie, bez określenia
+„dla wieku” opartego na pediatrycznym PP 1.2.3.5.
+
+| Znany kontekst U25cr | Jeden wynik i jego ocena |
+|---|---|
+| Wiek ≥2 lat w zakresie U25, komplet podstawowych danych, brak potwierdzenia co najmniej jednego warunku: metoda pusta lub zgodna z IDMS, stabilność nieznana albo stabilna; bez znanego AKI/szybkiej zmiany | Porównanie surowego oszacowania z istniejącym odniesieniem. W pediatrii: „Oszacowanie poniżej normy dla wieku” albo „Oszacowanie nieobniżone dla wieku”. Bez nadanej kategorii G i bez wyróżnionego wiersza G w Szczegółach. |
+| Potwierdzona stabilność i odpowiednie IDMS | Dotychczasowa kwalifikowana interpretacja i kategoria G pozostają, np. G2 i „Obniżony dla wieku” dla pediatrycznego 83. |
+| Podejrzenie AKI lub szybko zmieniający się marker | Dotychczasowa blokada liczby; brak porównania sugerującego miarodajne zastosowanie wzoru. |
+| Znana niezgodność z IDMS | Brak zwykłej kolorowej oceny oszacowania i kategorii G; informacja o ograniczeniu oznaczenia ma pierwszeństwo. |
+| Starsze `ScrAssay="not_idms"` | Stan neutralny, bez zwykłego porównania. Historyczna etykieta „Metoda niestandaryzowana do IDMS / nieznana” łączyła niezgodność z brakiem wiedzy. Nie odtwarza się z niej ani dowodu nie-IDMS, ani potwierdzenia zgodności, i nie zmienia się zapisanych faktów. |
+| Wiek 1–<2 lat | Liczba z opisem zależności oceny od wieku, bez automatycznego progu 90 i bez G. |
+
+Przy warunkowym porównaniu bezpośrednio przy wyniku, poza zamkniętymi
+Szczegółami, widnieje: **„Założenia wzoru: stabilna czynność nerek
+i kreatynina standaryzowana do IDMS.”** Nie pojawia się wezwanie do
+uzupełnienia ukrytych danych do „pełnej interpretacji”. `unknown` pozostaje
+nieznane, a `categoryAllowed` nie jest podnoszone przez sam kolor karty.
+Porównanie korzysta z wartości przed zaokrągleniem: surowe 89,8 wyświetlone
+jako 90 nadal jest poniżej normy, z widoczną adnotacją `<90`, także bez G.
+Kolor nie określa rozpoznania, ryzyka ani pilności; pojedynczy wynik nie
+rozpoznaje PChN, a wartość ≥90 nie wyklucza uszkodzenia nerek.
+
+**Dorosły CKD-EPI 2021 cr-cys:** cztery potrzebne dane to wiek, płeć, Scr
+z jednostką i cystatyna C w mg/L. Źródłowy zakres zaczyna się od 18 lat;
+istniejący limit 120 lat jest ograniczeniem aplikacji, a nie potwierdzonym
+końcem zakresu walidacji. Wynik pozostaje indeksowany do 1,73 m². Masa,
+wzrost i BSA nie są składnikami tego równania, więc nie są pytaniami tej
+ścieżki. Usunięto również nieużywane tu pytanie o nefelometryczną lub inną
+metodę cystatyny; wymagania wariantów U25cys pozostają odrębne.
+
+Jedno jawne, domyślnie niepotwierdzone pole oznacza logiczne **AND**:
+kreatynina standaryzowana do IDMS **i** cystatyna C do ERM-DA471/IFCC.
+Brak któregokolwiek potwierdzenia nadal blokuje obliczenie. Deklaracja
+standardów nie dopisuje metody enzymatycznej/Jaffego/nefelometrycznej,
+stabilności ani braku AKI. Dawne niezależne fakty są zachowane; wspólne pole
+może być odtworzone jako potwierdzone tylko z dwóch rzeczywistych potwierdzeń.
+`Workflow.crCysStandardization()` czyta kanoniczne
+`CrCysStandardizationConfirmed` i przekazuje same standardy IDMS oraz
+ERM-DA471/IFCC, bez dopisywania `ScrAssay`. Starsza sesja wyprowadza wspólne
+potwierdzenie z obu dawnych standardów tylko wtedy, gdy nowego pola nie było;
+jawne `false` pozostaje brakiem wspólnego potwierdzenia, nie dowodem
+niestandaryzowanego oznaczenia.
+Przy markerach podano „Kreatynina i cystatyna C z tej samej próbki krwi”,
+bez dodatkowego pytania lub fikcyjnego znacznika pobrania. Opcjonalny kontekst
+dotyczy obu markerów i pozostaje w jednym rozwinięciu wraz z dokładnością
+wieku w miesiącach. Nieznana stabilność nadal daje neutralny wynik bez G,
+z „Nie potwierdzono stabilności markerów”. AKI/szybka zmiana nadal blokują
+liczbę. Polityka porównania U25cr nie jest stosowana do dorosłego cr-cys.
+
+**Wspólne formularze:** etykiety `legend` pozostają widoczne w naturalnym
+przepływie nad polami, również we wcześniej zmienionych ścieżkach. Widoczne
+mobilne pola wpisywania, listy wyboru, data i `textarea` mają tekst co najmniej
+16 px i wysokość co najmniej 48 px; reguła nie obejmuje checkboxów, radio,
+ukrytych kontrolek silnika ani formularza logowania. Możliwość ręcznego
+powiększania pozostaje zachowana. To rozmiar tekstu,
+a nie sama wysokość, ogranicza automatyczne przybliżanie podczas fokusu.
+Panel zapisu ma wspólne lewe wyrównanie nagłówka, etykiety, daty i podpowiedzi,
+pełną szerokość daty/przycisku oraz odstęp wewnętrzny 20 px. Wyłączony przycisk
+gościa nadal jest wyłączony; czytelniejszy styl nie zmienia autoryzacji,
+zapisu ani sejfu. Kontrola w Chromium nie stanowi dowodu zachowania fokusu
+i automatycznego powiększania na fizycznym iOS Safari/PWA.
+
+**Źródła i rozdzielenie polityki od zaleceń:**
+
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+  Kidney Int. 2024;105(Suppl 4S):S117–S314: PP 1.2.3.5 (S186, PDF s. 71)
+  wspiera flagę niskiego eGFRcr <90 u dzieci i młodzieży powyżej 2 lat,
+  odrębną od rozpoznania PChN. Nie nakazuje uznawać nieznanej stabilności
+  lub kalibracji za potwierdzoną; dopuszczenie opisanej oceny przy nieznanych
+  metadanych jest decyzją właściciela aplikacji. Tabele 2–3 i PP 1.1.3.2
+  opisują kategorie i przewlekłość. PP 1.2.3.1 i tabela 11 (S153/S184,
+  PDF s. 38/69) uzasadniają wspólną próbkę i standardy oznaczeń.
+- [NIDDK — równania dla dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults)
+  oraz [równania dla dzieci i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults),
+  pełne strony, aktualizacja maj 2025, odczyt 2026-10-22: populacje, dane,
+  równania i standaryzacja. [Oficjalny kalkulator NIDDK](https://www.niddk.nih.gov/health-information/professionals/clinical-tools-patient-management/kidney-disease/laboratory-evaluation/estimated-gfr-calculators/adults-pediatrics)
+  nie pyta o dodatkowy kontekst U25cr, ale pokazuje liczbę bez normy,
+  kategorii G i kolorowej klasyfikacji; nie jest źródłem obowiązku takiego
+  kolorowania. Oceniono kod formularza, nie interaktywne zachowanie tej strony.
+- Inker LA et al., 2021, *N Engl J Med* 385:1737–1749,
+  [DOI 10.1056/NEJMoa2102953](https://doi.org/10.1056/NEJMoa2102953),
+  oraz Pierce CB et al., 2021, *Kidney Int*,
+  [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047):
+  źródła zachowanych równań, a nie nowej polityki koloru.
+- [UK Kidney Association — Measurement of kidney function](https://www.ukkidney.org/health-professionals/information-resources/uk-eckd-guide/measurement-kidney-function),
+  odczyt 2026-10-22: stabilna kreatynina jako założenie oszacowania i ograniczenie
+  przy szybkich zmianach; nie jest to osobne zalecenie pediatryczne U25.
+
+**Syntetyczne przypadki regresji rzeczywistych funkcji produkcyjnych:**
+
+| Wejście | Oczekiwany wynik i prezentacja |
+|---|---|
+| U25cr: F10, 140 cm, Scr 0,6 mg/dL, pusta metoda i nieznana stabilność | 82,9016019988 →83 mL/min/1,73 m²; bursztynowe „Oszacowanie poniżej normy dla wieku”, norma ≥90, widoczne założenia, bez G; nowy zapis z `outOfRange: true`. |
+| Ten sam profil, Scr 0,4 mg/dL | 124,3524029982 →124; neutralne „Oszacowanie nieobniżone dla wieku”, bez G i bez `outOfRange: true`. |
+| U25cr: surowa wartość 89,8 przy nieznanych metadanych | Wyświetlone 90 i `<90`; ocena poniżej normy bez nadania G. |
+| U25cr: F10/140 cm/0,6 mg/dL, stabilna kreatynina i IDMS | Te same 82,9016019988 →83; dotychczasowe G2 i „Obniżony dla wieku”. |
+| U25cr: wiek 1,5 roku; następnie wiek 18 lat; następnie 26 lat | Odpowiednio: bez automatycznej normy 90/G; właściwe dorosłe odniesienie bez „dla wieku”; brak kwalifikacji do U25. |
+| U25cr: znane AKI/szybka zmiana; następnie stare `not_idms` | Odpowiednio: blokada liczby; zachowawcza ocena neutralna bez przepisywania faktów oznaczenia. |
+| Dorosły cr-cys: F50, Scr 1,5 mg/dL, cystatyna C 1,5 mg/L, oba standardy potwierdzone | 43,3163405774 →43 mL/min/1,73 m². Przy nieznanej stabilności neutralny bez G; po rzeczywistym potwierdzeniu stabilności dotychczasowe G3b. Scr 132,6 µmol/L daje tę samą wartość. |
+| Dorosły cr-cys: brak choć jednego potwierdzenia standardu; znane AKI/szybka zmiana | Obliczenie nadal zablokowane, niezależnie od wypełnienia czterech danych podstawowych. |
+
+`tests/unit/klirens-u25-estimate-reference.test.mjs` łączy produkcyjne
+`ClcrClinicalSafety.computeCkidU25Creatinine`, `creatininePolicy`,
+`egfrPresentation` i `formatGfrForDisplay` z `ClcrResultPresentation.createModel`
+oraz `render`. Obejmuje też profil syntetyczny z innym progiem i granicą wieku,
+aby sprawdzić brak ukrytego progu w prezenterze. Dorosłe równanie jest objęte
+`tests/unit/klirens-extended-egfr.test.mjs`; formularze, zachowanie faktów,
+granice przed zaokrągleniem i układ desktop/mobile sprawdza
+`tests/e2e/klirens-approved-audit.spec.mjs`. Są to regresje techniczne,
+nie walidacja kliniczna; źródła nie potwierdzają poprawności lokalnych oznaczeń
+pacjenta.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |

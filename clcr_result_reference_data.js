@@ -16,8 +16,8 @@
   // Presentation data for the already implemented clinical profiles. These data
   // do not qualify a specimen or classify a patient; the clinical engines do.
   const PROFILE = freeze({
-    id: "CLIRENS_RESULT_REFERENCE_2026_10",
-    version: 1,
+    id: "CLIRENS_RESULT_REFERENCE_2026_10_V2",
+    version: 2,
     sources: {
       kdigo: {
         id: "KDIGO_CKD_2024",
@@ -63,6 +63,7 @@
     gfr: {
       unit: "mL/min/1,73 m²",
       referenceValue: "≥90",
+      referenceLowerInclusive: 90,
       minimumCategoryAgeYears: 2,
       rows: [
         { code: "G1", range: "≥90", meaning: "Filtracja prawidłowa lub wysoka", tone: "success" },
@@ -73,6 +74,22 @@
         { code: "G5", range: "<15", meaning: "Zakres niewydolności nerek", tone: "danger" },
       ],
       limitation: "Pojedynczy wynik nie rozpoznaje przewlekłej choroby nerek. G1 nie wyklucza uszkodzenia nerek. Przed 2. rokiem życia nie stosuje się tego progu ani kategorii G.",
+    },
+    u25CreatinineEstimate: {
+      formulaId: "ckid_u25",
+      minAgeYears: 1,
+      maxAgeYearsExclusive: 26,
+      pediatricMaxAgeYearsExclusive: 18,
+      eligibleAssays: ["enzymatic_idms", "jaffe_idms"],
+      pediatricLowLabel: "Oszacowanie poniżej normy dla wieku",
+      pediatricNotLowLabel: "Oszacowanie nieobniżone dla wieku",
+      adultLowLabel: "Oszacowanie poniżej normy",
+      adultNotLowLabel: "Oszacowanie nieobniżone",
+      assumptions: "Założenia wzoru: stabilna czynność nerek i kreatynina standaryzowana do IDMS.",
+      comparisonDetail: "Kolor pokazuje położenie oszacowania względem normy, bez rozpoznawania PChN. Nie nadano kategorii G: nie potwierdzono wszystkich warunków interpretacji — stabilności czynności nerek i zgodności oznaczenia z IDMS.",
+      assayReason: "Nie potwierdzono zgodności oznaczenia kreatyniny z wymaganiami wzoru. Nie zastosowano porównania z normą ani kategorii G.",
+      ageSpecificLabel: "Ocena zależna od wieku",
+      ageSpecificReason: "Dla tego wieku nie zastosowano automatycznego progu ani kategorii G.",
     },
     acr: {
       unit: "mg/g",

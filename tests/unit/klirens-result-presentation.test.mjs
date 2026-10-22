@@ -53,7 +53,7 @@ describe('Klirens B — jedna karta wyniku i jawny profil odniesienia', () => {
     expect(model).toMatchObject({
       valueVisible: true,
       displayValue: '83',
-      tone: 'neutral',
+      tone: 'warning',
       category: null,
       reference: {
         label: 'Norma dla wieku', value: '≥90', unit: 'mL/min/1,73 m²',
@@ -91,13 +91,13 @@ describe('Klirens B — jedna karta wyniku i jawny profil odniesienia', () => {
   it.each([
     { state: 'rapidlyChanging' },
     { state: 'stable', aki: true },
-  ])('ukrywa wynik przy blokadzie %j, a po jej usunięciu przywraca neutralny wynik', blocked => {
+  ])('ukrywa wynik przy blokadzie %j, a po jej usunięciu przywraca porównanie z normą', blocked => {
     expect(presentation.render(u25Input(blocked), profile)).toBe('');
     expect(presentation.createModel(u25Input(blocked), profile)).toMatchObject({
       valueVisible: false, category: null, tone: 'neutral',
     });
     expect(presentation.createModel(u25Input(), profile)).toMatchObject({
-      valueVisible: true, displayValue: '83', category: null, tone: 'neutral',
+      valueVisible: true, displayValue: '83', category: null, tone: 'warning',
     });
   });
 
