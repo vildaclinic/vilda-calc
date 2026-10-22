@@ -9,13 +9,16 @@ async function openFieldDetails(page, selector) {
 }
 
 async function setMarkerContext(page, value) {
-  const marker = page.locator('[data-clcr-marker-context]');
-  for (const details of await marker.locator('xpath=ancestor::details').all()) {
-    if (await details.getAttribute('open') === null) {
-      await details.locator(':scope > summary').click();
-    }
-  }
-  await marker.selectOption(value);
+  // Syntetyczny zapis/import znanego faktu; formularz nie pyta o te dane.
+  await page.evaluate(context => {
+    const state = document.getElementById('creatinineState');
+    const aki = document.getElementById('suspectedAKI');
+    state.value = context === 'aki' ? 'stable' : context;
+    aki.checked = context === 'aki';
+    state.dispatchEvent(new Event('change', { bubbles: true }));
+    aki.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  }, value);
 }
 
 
@@ -51,28 +54,21 @@ async function selectFormula(page, id) {
   ), id);
 }
 
-async function openDetailsFor(page, id) {
-  const details = page.locator(`details:has(#${id})`);
-  for (let i = 0; i < await details.count(); i += 1) {
-    const current = details.nth(i);
-    if (await current.getAttribute('open') === null) {
-      await current.locator(':scope > summary').click();
-    }
-  }
-}
-
 async function setAssay(page, value) {
-  await openDetailsFor(page, 'ScrAssay');
-  await page.locator('#ScrAssay').selectOption(value);
+  await page.evaluate(assay => {
+    const field = document.getElementById('ScrAssay');
+    field.value = assay;
+    if (field.value !== assay) throw new Error(`Brak kanonicznej metody ${assay}`);
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    window.clcrUpdate();
+  }, value);
 }
 
-async function fillAdult(page, { creatinine = '3', assay = 'enzymatic_idms' } = {}) {
+async function fillAdult(page, { creatinine = '3' } = {}) {
   await selectFormula(page, 'egfr');
   await page.locator('#age').fill('50');
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill(creatinine);
-  await setAssay(page, assay);
-  await setMarkerContext(page, 'stable');
 }
 
 function result(page, id = 'egfr') {
@@ -172,8 +168,6 @@ test('U25 83/G2 u dziecka ma pomarańczowy status obniżenia dla wieku', async (
   await page.locator('#sex').selectOption('F');
   await page.locator('#height').fill('140');
   await page.locator('#Scr').fill('0.6');
-  await setAssay(page, 'enzymatic_idms');
-  await setMarkerContext(page, 'stable');
   const card = result(page, 'ckid_u25');
   await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
   await expect(card.locator('.clcr-result-value')).toHaveText('83');
@@ -185,27 +179,31 @@ test('U25 83/G2 u dziecka ma pomarańczowy status obniżenia dla wieku', async (
   await expect(page.locator('#height')).toBeVisible();
 });
 
-test('nieznana stabilność i niepotwierdzone IDMS dają neutralny wynik bez kategorii', async ({ page }) => {
+test('nieznane dane korzystają z jawnych założeń, a znane non-IDMS blokuje niezgodny wzór', async ({ page }) => {
   await openCalculator(page);
   await fillAdult(page, { creatinine: await creatinineForTarget(page, 59.8) });
-  const marker = page.locator('[data-clcr-marker-context]');
-  await setMarkerContext(page, 'unknown');
   let card = result(page);
-  await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
+  await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
   await expect(card.locator('.clcr-result-value')).toHaveText('60');
-  await expect(card.locator('.clcr-result-interpretation')).toContainText('ocena ograniczona');
-  await expect(card.locator('[data-clcr-category-control]')).toHaveCount(0);
-  await expect(card.locator('.clcr-result-boundary')).toHaveCount(0);
+  await expect(card.locator('[data-clcr-category-control]')).toContainText('G3a');
+  await expect(card.locator('.clcr-result-boundary')).toContainText('<60');
+  await expect(page.locator('.clcr-result-assumptions[data-clcr-formula="egfr"]')).toContainText('IDMS');
+  expect(await page.evaluate(() => window.buildClcrSessionSnapshot().inputs)).toMatchObject({
+    creatinineState: 'unknown', suspectedAKI: false, ScrAssay: '',
+  });
   await expect(page.locator('#clcrRailHead')).toHaveCount(0);
-  await setMarkerContext(page, 'stable');
+  // Dawny niejednoznaczny token pozostaje danymi nieznanymi.
   await setAssay(page, 'not_idms');
+  await expect(result(page).locator('[data-clcr-category-control]')).toContainText('G3a');
+  await expect(page.locator('#ScrAssay')).toHaveValue('not_idms');
+  await setAssay(page, 'non_idms');
   card = result(page);
-  await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expect(card.locator('[data-clcr-category-control]')).toHaveCount(0);
-  await expect(card.locator('.clcr-result-boundary')).toHaveCount(0);
+  await expect(card).toHaveCount(0);
+  await expect(page.locator('#clcrResultReport [data-clcr-category-control]')).toHaveCount(0);
+  await expect(page.locator('#clcrResultReport .clcr-result-boundary')).toHaveCount(0);
   await expect(page.locator('#clcrRailHead')).toHaveCount(0);
   await expect(page.locator('#clcrInfo')).toContainText('IDMS');
-  await expect(card.locator('.clcr-result-value')).not.toHaveCSS('color', 'rgb(198, 40, 40)');
+  await expect(page.locator('#clcrResultReport .clcr-result-value')).toHaveCount(0);
 });
 
 test('przed 2. rokiem życia nie ujawnia kategorii przez dopisek o zaokrągleniu', async ({ page }) => {
@@ -220,8 +218,6 @@ test('przed 2. rokiem życia nie ujawnia kategorii przez dopisek o zaokrągleniu
     formulaId: 'ckid_u25', sex: 'F', ageYears: 1.5, heightCm: 80,
   });
   await page.locator('#Scr').fill(creatinine);
-  await setAssay(page, 'enzymatic_idms');
-  await setMarkerContext(page, 'stable');
   const card = result(page, 'ckid_u25');
   await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
   await expect(card.locator('.clcr-result-value')).toHaveText('90');
@@ -231,11 +227,11 @@ test('przed 2. rokiem życia nie ujawnia kategorii przez dopisek o zaokrągleniu
   await expect(page.locator('#clcrRailHead')).toHaveCount(0);
 });
 
-test('jedno pole stabilności zachowuje osobne stare dane i usuwa wynik po AKI', async ({ page }) => {
+test('ukryte stare dane zachowują fakty i usuwają wynik po znanym AKI lub szybkiej zmianie', async ({ page }) => {
   await openCalculator(page);
   await fillAdult(page);
-  const marker = page.locator('[data-clcr-marker-context]');
   await expect(result(page)).toBeVisible();
+  await expect(page.locator('[data-clcr-marker-context]:visible')).toHaveCount(0);
   await expect(page.locator('#creatinineState')).toBeHidden();
   await expect(page.locator('#suspectedAKI')).toBeHidden();
 
@@ -250,8 +246,8 @@ test('jedno pole stabilności zachowuje osobne stare dane i usuwa wynik po AKI',
   await expect(page.locator('#suspectedAKI')).not.toBeChecked();
   await expect(result(page)).toHaveCount(0);
 
-  await setMarkerContext(page, 'stable');
-  await expect(page.locator('#creatinineState')).toHaveValue('stable');
+  await setMarkerContext(page, 'unknown');
+  await expect(page.locator('#creatinineState')).toHaveValue('unknown');
   await expect(page.locator('#suspectedAKI')).not.toBeChecked();
   await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
 });
@@ -272,31 +268,30 @@ test('masa i wzrost dorosłego są zwinięte, a przejście do Cockcrofta odsłan
   await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
   await selectFormula(page, 'cg');
   await expect(page.locator('#weight')).toBeVisible();
-  await expect(page.locator('[data-clcr-marker-context]')).toBeVisible();
+  await expect(page.locator('[data-clcr-marker-context]:visible')).toHaveCount(0);
   await expect(page.locator('#creatinineState')).toBeHidden();
 });
 
-test('odtworzenie starej sesji synchronizuje nowe pole bez dodawania klucza do zapisu', async ({ page }) => {
+test('odtworzenie starej sesji zachowuje fakty bez dodawania klucza pytania do zapisu', async ({ page }) => {
   await openCalculator(page);
   await fillAdult(page);
   // Czekamy na zakończenie inicjalizacyjnego odświeżenia, jak w teście delayed-restore.
   await page.waitForTimeout(1050);
   await applySnapshot(page, { creatinineState: 'stable', suspectedAKI: true }, 1);
-  const marker = page.locator('[data-clcr-marker-context]');
-  await expect(marker).toHaveValue('aki');
+  await expect(page.locator('[data-clcr-marker-context]:visible')).toHaveCount(0);
   await expect(result(page)).toHaveCount(0);
-  expect(await marker.getAttribute('id')).toBeNull();
-  expect(await marker.getAttribute('name')).toBeNull();
   const saved = await page.evaluate(() => window.buildClcrSessionSnapshot().inputs);
+  expect(Object.keys(saved).filter(key => /markerContext|marker_context/.test(key))).toEqual([]);
   expect(saved.creatinineState).toBe('stable');
   expect(saved.suspectedAKI).toBe(true);
 
   await applySnapshot(page, { creatinineState: 'stable', suspectedAKI: false });
-  await expect(marker).toHaveValue('stable');
+  await expect(page.locator('#creatinineState')).toHaveValue('stable');
   await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
   await applySnapshot(page, { creatinineState: 'unknown', suspectedAKI: false });
-  await expect(marker).toHaveValue('unknown');
-  await expect(result(page)).toHaveAttribute('data-clcr-tone', 'neutral');
+  await expect(page.locator('#creatinineState')).toHaveValue('unknown');
+  await expect(result(page)).toHaveAttribute('data-clcr-tone', 'danger');
+  await expect(result(page).locator('[data-clcr-category-control]')).toContainText('G4');
 });
 
 test('zmiana jednostki kreatyniny zachowuje wynik i liczbę przekazywaną do historii', async ({ page }) => {

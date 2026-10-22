@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeFemaleE2ChildhoodBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFemaleE2ChildhoodBundle, beforeInhibinPost47Bundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -25,11 +25,15 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 
 describe('E2 dziewczynek — jawna mediana grupy Th1 w wieku >1–<6 lat', () => {
   it('dodaje jeden profil i zachowuje dokładnie wszystkie 84 wcześniejsze profile oraz cały pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-22.1');
+    expect(data.version).toBe('2026-10-22.2');
     expect(data.profiles).toHaveLength(85);
     expect(data.profiles.filter(item => item.id === id)).toHaveLength(1);
-    const previous = beforeFemaleE2ChildhoodBundle(data);
+    // Exact E2 group profile already merged in audyt ab8ead6a (PR #752).
+    expect(digest(profile)).toBe('75d725418e6f1a1e5481fd1c15478b39329356307810c09e525eb8c969ac0d8e');
+    const previous = beforeInhibinPost47Bundle(beforeFemaleE2ChildhoodBundle(data));
     // Independently frozen from audyt fd5bf8a3 before this clinical addition.
+    // The separately tested inhibin extension is restored by its archival
+    // fixture; neither historical source values nor hashes are rebaselined.
     expect(previous.profiles).toHaveLength(84);
     expect(digest(previous.profiles)).toBe('e6c193639dad2c3d33bc67b69e6f3502c6a4e512865a599077610a994564b34a');
     expect(digest(previous)).toBe('805a064dd9953179e419597e8dbd56f507f136c29b60850d68aac7f3cafd7c3a');

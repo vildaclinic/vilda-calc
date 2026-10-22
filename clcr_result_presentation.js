@@ -35,7 +35,9 @@
       }
       if (unit !== normalizeUnit(profile.gfr.unit)) return noReference;
       return {
-        label: age < 18 ? (profile.pediatricCreatinineFormulaIds?.includes(formulaId) ? "Norma dla wieku" : "Norma (G1)") : "Norma", value: profile.gfr.referenceValue,
+        label: ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(formulaId)
+          ? profile.gfr.cystatinReferenceLabel || "Zakres G1 (KDIGO)"
+          : age < 18 ? (profile.pediatricCreatinineFormulaIds?.includes(formulaId) ? "Norma dla wieku" : "Norma (G1)") : "Norma", value: profile.gfr.referenceValue,
         unit: profile.gfr.unit, population: age < 18 ? "Dzieci i młodzież od 2 lat" : "Dorośli",
         source: profile.sources.kdigo, educational: !input.presentation?.category,
         kind: "gfr", rows: categoryRows(profile, "gfr"), limitation: profile.gfr.limitation,
@@ -98,6 +100,7 @@
   // The supplied profile owns the threshold, age range and displayed wording.
   function u25EstimatePresentation(input, profile) {
     const source = input || {};
+    if (source.calculationAssumptions) return source.presentation || null;
     const config = profile?.u25CreatinineEstimate;
     if (!config || source.formulaId !== config.formulaId) return null;
     const supplied = source.presentation || {};
@@ -154,6 +157,30 @@
     const tone = valueVisible && ["success", "warning", "danger"].includes(presentation.tone) ? presentation.tone : "neutral";
     const reasons = Array.isArray(presentation.reasons) ? presentation.reasons.filter(Boolean) : [];
     const interpretation = presentation.label || currentRow?.meaning || source.label || "Wynik obliczenia";
+    const averageConfig = profile?.u25Average && profile.u25Average.formulaId === source.formulaId ? profile.u25Average : null;
+    const rawComponents = source.calculationComponents || {};
+    const creatinineComponent = finite(rawComponents.egfrCreatinine);
+    const cystatinComponent = finite(rawComponents.egfrCystatin);
+    const componentThreshold = reference.kind === "gfr" ? finite(profile.gfr?.referenceLowerInclusive) : null;
+    const averageComponents = averageConfig && valueVisible &&
+      normalizeUnit(source.unit) === normalizeUnit(profile.gfr?.unit) &&
+      creatinineComponent !== null && creatinineComponent > 0 &&
+      cystatinComponent !== null && cystatinComponent > 0
+      ? Object.freeze([
+          { id: "creatinine", label: averageConfig.creatinineLabel, value: creatinineComponent },
+          { id: "cystatinC", label: averageConfig.cystatinLabel, value: cystatinComponent },
+        ].map((component) => {
+          const displayValue = component.value.toFixed(2);
+          const belowReference = componentThreshold !== null && component.value < componentThreshold;
+          const crossesReference = componentThreshold !== null &&
+            belowReference !== (Number(displayValue) < componentThreshold);
+          return Object.freeze({
+            ...component, displayValue: displayValue.replace(".", ","),
+            tone: componentThreshold === null ? "neutral" : belowReference ? "warning" : "success",
+            boundary: crossesReference ? `${belowReference ? "<" : "≥"}${String(componentThreshold).replace(".", ",")}` : "",
+          });
+        }))
+      : Object.freeze([]);
     return Object.freeze({
       formulaId: source.formulaId || "", series: source.series || "", code: source.code || "",
       rawValue, valueVisible, displayValue: source.displayValue == null ? String(rawValue) : String(source.displayValue),
@@ -161,7 +188,11 @@
       boundary: presentation.referenceComparison ? presentation.boundary : profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
       tone, category, interpretation, reference, categories: reference.rows, reasons,
       referenceComparison: presentation.referenceComparison === true,
-      assumptions: valueVisible ? presentation.assumptions || "" : "",
+      assumptions: valueVisible ? source.calculationAssumptions?.assumptionsText || presentation.assumptions || "" : "",
+      assumptionProvenance: source.calculationAssumptions?.provenance || null,
+      populationNote: valueVisible ? profile?.populationNotes?.[source.formulaId] || "" : "",
+      categoryRange: category && reference.kind === "gfr" ? currentRow?.range || "" : "",
+      averageComponents,
       detailHtml: source.detailHtml || "", method: source.method || source.label || "", profileId: profile?.id || "",
     });
   }
@@ -173,12 +204,38 @@
       return `<tr data-clcr-category-row="${escape(entry.code)}" data-clcr-tone="${escape(entry.tone)}"${current ? ' aria-current="true"' : ""}><th scope="row">${escape(entry.code)}</th><td>${escape(entry.range)}</td><td>${escape(entry.meaning)}${current ? '<span class="clcr-result-current-label">Wynik pacjenta</span>' : ""}</td></tr>`;
     }).join("")}</tbody></table>`;
   }
+  function averageComponentsMarkup(model, config) {
+    if (!config || !model.averageComponents.length) return "";
+    const reference = model.reference;
+    const componentRows = model.averageComponents.map((component) =>
+      `<tr data-clcr-component="${escape(component.id)}" data-clcr-component-value="${component.value}" data-clcr-component-tone="${escape(component.tone)}"><th scope="row">${escape(component.label)}</th> <td class="clcr-result-component-value">${escape(component.displayValue)}${component.boundary ? ` (${escape(component.boundary)})` : ""}</td></tr>`,
+    ).join("\n");
+    const referenceMarkup = reference.kind === "gfr"
+      ? `<p class="clcr-result-components-reference">${escape(reference.label)} ${escape(config.referenceDescription)}: <strong>${escape(reference.value)} ${escape(reference.unit)}</strong>.</p>` : "";
+    return `<section class="clcr-result-average-components" data-clcr-average-components>
+<p><strong>${escape(config.heading)}</strong></p>
+<table class="clcr-result-category-table clcr-result-components-table">
+<caption>${escape(config.componentsCaption)} · ${escape(model.unit)}</caption>
+<tbody>
+${componentRows}
+</tbody>
+</table>
+${referenceMarkup}
+<p>${escape(config.roundingDescription)}</p>
+</section>\n`;
+  }
+  function averageSourcesMarkup(config) {
+    const sources = Array.isArray(config?.sources) ? config.sources : [];
+    if (!sources.length) return "";
+    return `<p data-clcr-average-sources>Źródła: ${sources.map((source) => `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)}</a>`).join(" · ")}</p>`;
+  }
   function render(input, profile) {
     const model = createModel(input, profile);
     if (!model.valueVisible) return "";
     const suffix = `${model.formulaId}-${model.series || model.code || "value"}`.replace(/[^a-zA-Z0-9_-]/g, "-");
     const detailsId = `clcr-result-details-${suffix}`;
     const reference = model.reference;
+    const averageConfig = profile?.u25Average && profile.u25Average.formulaId === model.formulaId ? profile.u25Average : null;
     const categoryButton = model.category && model.categories.length
       ? `<button type="button" class="clcr-result-category" data-clcr-category-control aria-controls="${detailsId}" aria-expanded="false" aria-label="${escape(model.category.code)} — pokaż wszystkie kategorie">${escape(model.category.code)}</button>`
       : "";
@@ -187,16 +244,19 @@
       ? `<a href="${escape(reference.source.url)}" target="_blank" rel="noopener noreferrer">${escape(reference.source.label)}</a>`
       : "";
     const populationSource = [escape(reference.population), sourceMarkup].filter(Boolean).join(" · ");
+    const resultLimitation = reference.limitation || (averageConfig ? profile.gfr?.limitation : "");
     const details = [
+      averageComponentsMarkup(model, averageConfig),
       tableMarkup(model),
       model.method ? `<p><strong>Metoda:</strong> ${escape(model.method)}</p>` : "",
       ...model.reasons.map((reason) => `<p>${escape(reason)}</p>`),
       reference.educational && !model.referenceComparison ? "<p>Norma ma charakter informacyjny. Dostępne dane nie pozwalają sklasyfikować tego pomiaru.</p>" : "",
-      reference.limitation ? `<p>${escape(reference.limitation)}</p>` : "",
+      resultLimitation ? `<p>${escape(resultLimitation)}</p>` : "",
       model.boundary ? `<p>Wartość przed zaokrągleniem: ${escape(model.boundary)} ${escape(model.unit)}.</p>` : "",
+      averageConfig ? `<p><strong>${escape(averageConfig.methodRecommendationLabel)}:</strong> ${escape(averageConfig.methodRecommendation)}</p><p>${escape(averageConfig.discrepancyDescription)}</p>${averageSourcesMarkup(averageConfig)}` : "",
       model.detailHtml,
     ].join("");
-    return `<div class="result-box clcr-result-card${["warning", "danger"].includes(model.tone) ? " out-of-range" : ""}" data-clcr-formula="${escape(model.formulaId)}" data-clcr-code="${escape(model.code)}"${seriesAttributes} data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="${escape(model.category?.code || "")}" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${model.referenceComparison}"><div class="clcr-result-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${categoryButton}</p><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span>${model.boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(model.boundary)}</small>` : ""}</div><div class="clcr-result-reference${reference.kind === "none" ? " clcr-result-reference--text clcr-result-reference--unavailable" : ""}" data-clcr-reference="${escape(reference.kind)}" data-clcr-reference-kind="${escape(reference.kind)}" data-clcr-reference-length="${reference.value.length}"><p class="clcr-result-reference-label">${escape(reference.label)}</p><strong class="clcr-result-reference-value">${escape(reference.value)}</strong>${reference.unit ? `<span class="clcr-result-reference-unit">${escape(reference.unit)}</span>` : ""}${reference.minimum ? `<small class="clcr-result-reference-minimum">Minimum: ${escape(reference.minimum)}${reference.unit ? " " + escape(reference.unit) : ""}</small>` : ""}</div></div><p class="clcr-result-interpretation">${escape(model.interpretation)}</p></div>${model.assumptions ? `<p class="clcr-result-assumptions" data-clcr-formula="${escape(model.formulaId)}">${escape(model.assumptions)}</p>` : ""}${populationSource ? `<p class="clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${populationSource}</p>` : ""}<details class="clcr-result-details" id="${detailsId}" data-clcr-formula="${escape(model.formulaId)}" tabindex="-1"><summary>${model.reference.kind === "acr" ? "Szczegóły — kategorie A1–A3" : model.reference.kind === "gfr" ? "Szczegóły — kategorie G1–G5" : "Szczegóły i źródła"}</summary>${details}</details>`;
+    return `<div class="result-box clcr-result-card${["warning", "danger"].includes(model.tone) ? " out-of-range" : ""}" data-clcr-formula="${escape(model.formulaId)}" data-clcr-code="${escape(model.code)}"${seriesAttributes} data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="${escape(model.category?.code || "")}" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${model.referenceComparison}" data-clcr-assumptions="${escape(model.assumptions)}" data-clcr-assumption-provenance="${escape(JSON.stringify(model.assumptionProvenance))}"><div class="clcr-result-main"><div class="clcr-result-patient"><p class="clcr-result-patient-label">Wynik pacjenta ${categoryButton}</p><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span>${model.boundary ? `<small class="clcr-result-boundary">Przed zaokrągleniem: ${escape(model.boundary)}</small>` : ""}</div><div class="clcr-result-reference${reference.kind === "none" ? " clcr-result-reference--text clcr-result-reference--unavailable" : ""}" data-clcr-reference="${escape(reference.kind)}" data-clcr-reference-kind="${escape(reference.kind)}" data-clcr-reference-length="${reference.value.length}"><p class="clcr-result-reference-label">${escape(reference.label)}</p><strong class="clcr-result-reference-value">${escape(reference.value)}</strong>${reference.unit ? `<span class="clcr-result-reference-unit">${escape(reference.unit)}</span>` : ""}${reference.minimum ? `<small class="clcr-result-reference-minimum">Minimum: ${escape(reference.minimum)}${reference.unit ? " " + escape(reference.unit) : ""}</small>` : ""}</div></div><p class="clcr-result-interpretation">${escape(model.interpretation)}</p>${model.categoryRange ? `<p class="clcr-result-category-summary">Zakres oszacowania: ${escape(model.category.code)} · ${escape(model.categoryRange)}</p>` : ""}</div>${model.assumptions ? `<p class="clcr-result-assumptions" data-clcr-formula="${escape(model.formulaId)}">${escape(model.assumptions)}</p>` : ""}${model.populationNote ? `<p class="clcr-result-population-note clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${escape(model.populationNote)}</p>` : ""}${!averageConfig && populationSource ? `<p class="clcr-result-source" data-clcr-formula="${escape(model.formulaId)}">${populationSource}</p>` : ""}<details class="clcr-result-details" id="${detailsId}" data-clcr-formula="${escape(model.formulaId)}" tabindex="-1"><summary>${averageConfig ? escape(model.categories.length ? averageConfig.detailsSummary : averageConfig.detailsSummaryWithoutCategories) : model.reference.kind === "acr" ? "Szczegóły — kategorie A1–A3" : model.reference.kind === "gfr" ? "Szczegóły — kategorie G1–G5" : "Szczegóły i źródła"}</summary>${details}</details>`;
   }
   function bindCategoryControls(scope) {
     const target = scope || (typeof document !== "undefined" ? document : null);

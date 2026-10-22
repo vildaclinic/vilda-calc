@@ -219,7 +219,7 @@ test('childhood references respect the complete main-form age interval at 1, 5 a
       await expect(point(page)).toHaveCount(0);
       await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('Podany przedział wieku obejmuje granicę źródeł lub grup wieku');
     } else if (expected === 'borelli') {
-      await expect(point(page)).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-47');
+      await expect(point(page)).toHaveAttribute('data-profile', 'borelli2025-female-inhb-age-5p6-47p75');
       await expect(point(page).locator('[data-dot-label="median"]')).toHaveText('Mediana ≈11 pg/mL');
     } else await expectSourcePoint(page, groups[expected], 33);
     await expect.poll(() => geometry(page)).toEqual(original);

@@ -3991,6 +3991,65 @@ aktualnego SHA jest raportowany w
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
+### HORMONE-FEMALE-INHB-POST47 — dalszy odczyt mediany do 47,75 roku, 2026-10-21
+
+**Problem i decyzja:** zwykłe odniesienie inhibiny B kobiet kończyło się
+na 47 latach, mimo krótkiego dalszego odcinka tej samej źródłowej krzywej.
+Po audycie i akceptacji właściciela profil
+`borelli2025-female-inhb-age-5p6-47p75` obejmuje **[5,6;47,75]** włącznie.
+Polityka i dane punktu: `2026-10-21.2`. Do 24 zachowanych węzłów dodano
+**47,25 → ≈10; 47,5 → ≈8; 47,75 → ≈7 pg/mL**. To przybliżone mediany
+modelu GAMLSS (0 SD), nie nowe normy lub mediany rocznych grup.
+
+**Źródło i ograniczenia:** Borelli-Kjær i wsp., *JCEM* 2025;110:70–77,
+[DOI 10.1210/clinem/dgae439](https://doi.org/10.1210/clinem/dgae439),
+ryc. 1 i oficjalny suplement v1. Ponownie sprawdzono HTML wydawcy
+i cztery suplementy; odczyt geometrii pochodzi z archiwalnego oficjalnego
+rastra 3000×2178, SHA-256 `7abfa7ffc9d1b6f0a8494bea32515ffb417d2ff31f67f9de557253d08526d76f`.
+Świeże pobranie obrazu zwróciło 403; nie pozyskano nowej kopii PDF.
+Kohorta żeńska: 889 osób/1005 próbek, w tym 149 kobiet 20–69 lat;
+surowica, Beckman Coulter Inhibin B Gen II ELISA, ng/L = pg/mL.
+Cykl dorosłych niestandaryzowany, dane antykoncepcji niepełne.
+Źródło podaje LOD 3 pg/mL, bez osobnego LOQ. ±2 pg/mL to tolerancja
+digitalizacji, nie CI, RI lub potwierdzenie oznaczalności ilościowej.
+Źródłowe zastępowanie wyników <LOD przez LOD/2 dotyczy modelowania;
+nie zastępuje wyniku pacjentki. Przy 48 latach tolerancja odczytu
+przecina LOD; nie aktywujemy tego punktu, dolnego plateau ani ogona
+do 69. Koniec 47,75 nie diagnozuje menopauzy ani rezerwy jajnikowej.
+
+**Wpływ kliniczny:** pojedynczy PCHIP po 27 węzłach zmienia również
+interpolację w dawnym ostatnim odcinku `(46,47)`: przy 46,5 roku
+14,4375 → 14,076923 pg/mL; maksymalna zmiana w kontrolowanym skanie
+≈−0,42735 pg/mL przy 46,667 roku. Dawne węzły i przebieg do 46 lat
+są zachowane. Nie jest to neutralna refaktoryzacja. Nie przelicza
+historycznych ocen. Pozostałe **83 profile**, E2, laboratoryjne RI,
+geometria i skale są bez zmian. Wspólna ekstrakcja i porównanie płci
+8–20 lat zachowują 24 węzły. Zachowane są dotychczasowe bramki metody,
+materiału, GnRHa, cenzury oraz kontekstu `pregnancy_t1/t2/t3` i `postmenopause`.
+
+**Syntetyczne regresje rzeczywistych funkcji:** F47,25/47,5/47,75,
+wynik 20 pg/mL → mediana ≈10/8/7 pg/mL, bez werdyktu normy.
+F47 lat 8 miesięcy → ≈7,2345679 pg/mL; F47 lat 9 miesięcy → brak
+jednego odniesienia całego wieku; dokładne 48 → poza zakresem.
+Kontrole obejmują stare węzły i PCHIP, tożsamość 83 profili i porównania,
+jednostki, zero, `<3`/`>3`, źródła, zmianę osoby, desktop/mobile,
+instalację/aktualizację i zimny restart PWA offline. Wyniki wykonania
+oraz końcowego CI są raportowane w PR, nie stanowią walidacji klinicznej.
+
+[Kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--dalszy-odczyt-do-4775-roku-21-października-2026),
+[ekstrakt źródła, kalibracja i warianty](hormone-lifespan/evidence/patient-point/borelli2025-female-inhb-post47-digitized.json).
+
+**2026-10-22 — synchronizacja PR #744 po scaleniu E2/Th1 w PR #752.**
+Pakiet danych ma wersję `2026-10-22.2` i nadal **85 profili**. Rozszerzona
+inhibina B zastępuje jeden zwykły profil; pozostałe 84, w tym grupowe E2/Th1
+oraz adapter aktualnego stadium z PR #752, pozostają zgodne z nową bazą.
+Zachowano zaakceptowany zakres inhibiny B do 47,75, jego trzy nowe węzły
+oraz jawny wpływ interpolacji `(46,47)`; zakres E2 `(1,6)`/Th1, mediana 15,
+N=213 i wszystkie jego ograniczenia są zachowane. To odświeżenie techniczne
+obu istniejących zakresów, bez kolejnej zmiany źródeł, norm, geometrii
+lub historii. Historyczne wpisy, wersje i hashe pozostają bez przeliczenia.
+Wyniki ponownej walidacji i CI dla końcowego SHA raportuje odświeżony PR #744.
+
 ### HORMONE-FEMALE-INHB-CHILDHOOD-GROUPS — mediany grup Zhou w luce >1–<5,6 lat, 2026-10-14
 
 **Problem i źródło:** po PR #672 dziewczynki po dokładnym 1 roku,
@@ -4802,15 +4861,293 @@ granice przed zaokrągleniem i układ desktop/mobile sprawdza
 nie walidacja kliniczna; źródła nie potwierdzają poprawności lokalnych oznaczeń
 pacjenta.
 
+#### P-KLIRENS-ZALOZENIA-2026-10-22 — jawne założenia obliczenia zamiast pytań
+
+**Decyzja właściciela:** wdrożyć zaakceptowane makiety desktop/mobile
+([Klirens — założenia i uproszczony wynik](https://chatgpt.com/space/page_5e52b9c49ab48191addb297eb4a209a7))
+i rozszerzenie zasady na pozostałe obliczenia, o ile nie koliduje z ich logiką.
+Z formularza znikają pytania o stabilność, podejrzenie AKI i standard IFCC
+oraz łączne potwierdzenie standardów dorosłego cr-cys. IDMS jest osobnym
+założeniem właściwych współczesnych równań kreatyninowych. Nie przenosi się
+tych pytań do innej obowiązkowej sekcji. Wpis zastępuje wcześniejsze bramki
+manualnego potwierdzania i reguły „unknown → bez G” z poprzednich etapów
+Klirensu; poprzednie wpisy dokumentują stan historyczny.
+
+**Wpływ kliniczny i funkcjonalny:** przy braku znanych przeciwnych danych
+odpowiednie obliczenie przyjmuje stabilną czynność nerek i brak podejrzenia AKI
+oraz wymagany standard markera jako **jawne założenia aplikacji**. Komplet
+danych może od razu dać liczbę, zakres oszacowania G i kolor. Dotyczy to także
+U25cys z trzema danymi oraz dotychczasowego informacyjnego porównania U25cr
+bez G. To zmiana dostępności i interpretacji wyniku, nie refaktoryzacja lub
+wyłącznie CSS. Równania, współczynniki, jednostki, konwersje, wartości surowe,
+reguły zaokrąglania, wiek, populacje i źródłowe progi pozostają zachowane.
+Nowy wynik z G2 może mieć bursztynowy kolor i `outOfRange: true` na podstawie
+oszacowania przy opisanych założeniach. Nie potwierdza to stadium PChN,
+przewlekłości, rzeczywistej stabilności ani standardu oznaczenia pacjenta.
+
+**Założenie nie jest odpowiedzią lekarza:** czysty resolver
+`VildaClcrCalculationAssumptions.resolve(formulaId, context)` w
+`clcr_calculation_assumptions.js` (polityka
+`KLIRENS_CALCULATION_ASSUMPTIONS_2026_10_22`) zwraca kontekst do obliczenia, opis założeń,
+ich pochodzenie (`provenance`) i ewentualne blokady, bez mutacji wejścia.
+Nie ustawia kanonicznego `creatinineState=stable`, `suspectedAKI=false`,
+IFCC/IDMS, metody enzymatycznej/Jaffego/nefelometrycznej ani checkboxa
+potwierdzenia. Standard IDMS w kontekście obliczenia nie oznacza wybranej
+techniki kreatyniny. Pochodzenie założeniowe i czytelny komentarz towarzyszą
+nowemu wynikowi oraz jego zapisowi/eksportowi; nie przedstawia się ich jako
+potwierdzonej metody laboratoryjnej lub nowej odpowiedzi pacjenta.
+
+Znane AKI, szybka zmiana używanego markera oraz jednoznaczna niezgodność
+standardu (`non_idms`/`non_ifcc`) zachowują pierwszeństwo dotychczasowego
+ograniczenia. Nie kasuje się ich po usunięciu pytań. Dawne `not_idms`
+(„niestandaryzowana / nieznana”) i `not_ifcc` („niepotwierdzona / inna”)
+są niejednoznaczne: kontekst obliczenia może przyjąć standard jako założenie,
+lecz zachowuje oryginał i nie zamienia go w potwierdzenie albo dowód
+niezgodności. `CrCysStandardizationConfirmed=false` jest brakiem wspólnego
+potwierdzenia, nie dowodem obu niezgodnych standardów. Dawna deklaracja
+stabilności kreatyniny nie staje się laboratoryjnym/klinicznym potwierdzeniem
+stabilności cystatyny. Historycznych wyników, flag i metadanych nie przelicza
+się wstecznie; założenie nowego wyniku nie potwierdza wymagań innych narzędzi.
+
+**Macierz zakresu:** katalog obejmuje 42 wpisy, z których 41 jest aktywnych;
+`sch_var` pozostaje wyłączony. Założenia markerowe dotyczą 11 aktywnych
+obliczeń. IFCC dotyczy tylko trzech cystatynowych, a ogólne założenie IDMS —
+pięciu współczesnych kreatyninowych; noworodek ma odrębny warunek techniki.
+
+| Wzory / ID | Założenie i zachowana logika |
+|---|---|
+| `egfr`, `ckid_u25`, `sch_idms` | Stabilność/brak AKI i IDMS; pozostają wymagane rzeczywiste dane równania oraz dotychczasowy zakres wieku. U25cr i Schwartz nadal wymagają wzrostu. |
+| `egfr_cr_cys`, `ckid_u25_cr_cys` | Stabilność/brak AKI oraz odrębne standardy IDMS i IFCC. Dorosły cr-cys nie wymaga masy/wzrostu; średnia U25 nadal wymaga wzrostu do składowej kreatyninowej. |
+| `ckid_u25_cys` | Stabilność/brak AKI i IFCC. Wiek, płeć i cystatyna C w mg/L wystarczają; usuwa się pomocnicze pytania o masę, wzrost i technikę cystatyny. Nefelometria jest zalecana, lecz nie jest dopisywana jako fakt. |
+| `neonatal_egfr` | Założenie stabilności/braku AKI nie zastępuje donoszenia, 0.–28. dnia życia, aktualnej masy >2,5 kg, wzrostu, Scr/jednostki i odrębnego wymagania metody enzymatycznej. Sam IDMS nie dowodzi tej techniki. Pozostaje ograniczenie pierwszych 72 godzin; bez G i normy 90. |
+| `cg`, `cg_norm` | Założenie stabilności/braku AKI; nie dodaje się IDMS jako wymogu oryginalnego wzoru. Pozostają wiek ≥18, płeć, rzeczywista masa, Scr/jednostka i wzrost przy wybranym indeksowaniu BSA. Bez G i uniwersalnej normy eGFR, także po indeksowaniu. |
+| `cl24` | Założenie stabilności/braku AKI nie zastępuje Ucr, Scr/jednostki, objętości, rzeczywistego czasu i protokołu zbiórki oraz pobrania Scr w jej okresie. Dane BSA/masy pozostają potrzebne tylko odpowiednim dodatkowym przeliczeniom. Bez G. |
+| `TMP_GFR` | Założenia nie zastępują sparowanych fosforanów/kreatynin z jednostkami, drugiego porannego moczu po nocy na czczo i równoczesnego pobrania. To nie eGFR; brak IFCC i zapożyczonej normy GFR. |
+
+Pozostałe 30 aktywnych obliczeń nie dostaje zbędnych założeń markerowych:
+
+| Obszar / ID | Wymagania, których nie zastępuje nowa zasada |
+|---|---|
+| DZM: `UA_mgkg`, `Ca_mgkg`, `Mg_mgkg`, `PO4_mgkg`, `Prot_mgkg`, `Na_mmol_d`, `K_mmol_d`, `Ox_mgkg`, `Cit_mgkg` | Oznaczenia, rzeczywisty czas i jakość zbiórki; objętość, masa/BSA zależnie od miary. Nie zakłada się zawsze 24 h, prawidłowej postaci analitu szczawianowego ani kontekstu kamicy. |
+| Ilorazy: `KM_Cr`, `Ca_Cr`, `Mg_Ca`, `PO4_Cr`, `B_Cr`, `Ca_Cit`; `AGs`, `K_frac` | Rzeczywiste anality i zgodne jednostki; dane potrzebne konkretnej postaci raportowania, np. V24 dla `B_Cr`. Nie dokłada się czasu tam, gdzie skraca się w ilorazie. Bez IFCC/ogólnego IDMS lub nowej normy. |
+| `ACR`, `PCR`, `CaCr_spot`, `OxCr_spot`, `CitCr_spot` | Wspólna próbka i jednostki; właściwy wiek, rodzaj próbki i brak czynników przejściowych nadal warunkują istniejącą interpretację. Nie przyjmuje się pierwszego porannego moczu lub braku konfunderów z samego założenia stabilności. |
+| `FENa_spot`, `FEK_spot`, `FECl_spot`, `FEHCO3_spot` | Wyjątek logiczny: FENa bywa używane właśnie w AKI. Nie dodaje się warunku „bez AKI/stabilne markery”. Pozostają sparowane próbki, jednostki i istniejące ograniczenia diuretyków, PChN lub obciążenia dla FEHCO₃. |
+| `AGu_spot`, `pH_spot`, `pH24` | Właściwa próbka, rzeczywiste pH/elektrolity, protokół zbiórki i kontekst kwasicy albo kamicy/leczenia. Brak uniwersalnej normy lub automatycznego celu z założeń markerowych. |
+| `KTV` | Metoda opisuje celowy spadek mocznika podczas IHD, nie stabilne stężenia przed/po. Pozostają modalność, częstość/PIDI, czas, UF, masa po, analit/jednostka, protokół próbek, dostęp, aktualność Kru i warunki dorosłych celów. Nie przenosi się celu spKt/V lub URR na eKt/V ani nie dodaje IFCC/IDMS. |
+
+**U25cys — źródło, populacja i jeden wynik:** zachowano
+`eGFRcys = κ(wiek, płeć) / cystatyna C [mg/L]` w mL/min/1,73 m².
+κ dla F: 79,9 × 1,004^(wiek−12) przed 12 lat, 79,9 × 0,974^(wiek−12)
+od 12 do <18 lat, potem 68,3. κ dla M: 87,2 × 1,011^(wiek−15) przed
+15 lat, 87,2 × 0,960^(wiek−15) od 15 do <18 lat, potem 77,1.
+Źródła opisują 1–25 lat; istniejące `1 ≤ wiek <26` pozostaje operacyjną
+konwencją aplikacji, nie osobnym dowodem walidacji każdej frakcji 25. roku.
+
+Karta pokazuje np. **„Łagodnie obniżony eGFR”**, jedną liczbę,
+**„Zakres oszacowania: G2 · 60–<90”** i **„Zakres G1 (KDIGO): ≥90”**.
+Bez rozwinięcia widnieje **„Założenia: stabilna czynność nerek, brak podejrzenia
+AKI oraz oznaczenie cystatyny C standaryzowane do IFCC.”** oraz
+**„Wzór do oceny czynności nerek u osób z PChN; nie służy do przesiewu zdrowych,
+bezobjawowych osób.”** Ostatnie zdanie jest konserwatywnym lokalnym
+ograniczeniem zastosowania; NIDDK opisuje możliwą nieprzydatność przesiewową,
+nie ustanawia tak sformułowanego bezwzględnego zakazu. Nie używa się „Normy
+dla wieku” U25cr jako zwalidowanej normy przesiewowej U25cys.
+
+Progi i populacja odniesienia nadal pochodzą z jawnie przekazanego profilu
+`ClcrResultReferenceData.PROFILE` (`CLIRENS_RESULT_REFERENCE_2026_10_V3`,
+wersja 3), nie z resolvera założeń. Przed 2. rokiem
+życia nie nadaje się G ani progu 90. Kategoria powstaje z wartości surowej:
+89,8 wyświetlone jako 90 pozostaje G2 z `<90`; nie stosuje się tolerancji
+epsilon lub zaokrąglenia do podniesienia kategorii. G2 opisuje zakres
+oszacowania przy podanych założeniach; nie jest „stadium 2 PChN”. Pojedynczy
+wynik nie rozpoznaje PChN, a G1 nie wyklucza uszkodzenia nerek.
+
+**Źródła i granica decyzji lokalnej:**
+
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+  Kidney Int. 105(Suppl 4S):S117–S314: tabela 2 i PP 1.1.3.2 (zakresy G
+  i przewlekłość), PP 1.2.3.1/tabela 11 (S184, PDF s. 69; jakość kalibracji
+  i wspólna próbka), PP 1.2.3.5 (S186, PDF s. 71; flaga eGFRcr <90 u dzieci
+  powyżej 2 lat) i PP 1.2.4.3 (porównywalna populacja). Przepis o eGFRcr
+  nie jest bezpośrednią walidacją normy dla wieku U25cys. Źródło nie nakazuje
+  checkboxa lekarza ani założeniowego nadawania G/koloru.
+- [NIDDK — pełna strona równań dla dzieci i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults)
+  oraz [dla dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults),
+  aktualizacja maj 2025, odczyt 2026-10-22: równania, jednostki, standardy
+  i ograniczenia. Nefelometria dla U25cys jest zalecana, nie jest nowym
+  potwierdzonym faktem po usunięciu pytania.
+- Pierce CB et al., *Kidney Int.* 2021;99:948–956,
+  [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047),
+  pełny [tekst NCBI/PMC9083470](https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_xml/PMC9083470/unicode):
+  wewnętrzna walidacja CKiD w PChN, bez zdrowej populacji przesiewowej.
+  [Nyman et al., AJKD 2022;80:807–810](https://orbi.uliege.be/bitstream/2268/296580/1/NymanAJKD2022.pdf),
+  [DOI 10.1053/j.ajkd.2022.02.018](https://doi.org/10.1053/j.ajkd.2022.02.018),
+  tabela 2: w kohorcie europejskiej w większości z mGFR ≥75 mediana biasu
+  U25cys wyniosła −12,8 u dzieci i −11,5 u młodych dorosłych mL/min/1,73 m².
+  Nie koryguje się o te mediany indywidualnego wyniku.
+
+**Syntetyczne przypadki do regresji rzeczywistego kodu:**
+
+| Dane i kontekst | Wynik / zachowany warunek |
+|---|---|
+| U25cys: F10, cystatyna 1 mg/L; trzy dane, nieznana stabilność/standard/metoda | 79,26461484738338 →79 mL/min/1,73 m², G2, bursztynowy; widoczne założenia, bez dopisania potwierdzonych faktów. |
+| Ten sam profil, cystatyna 1,2 mg/L | 66,05384570615283 →66, G2; współczynniki i surowa liczba jak przed zmianą. |
+| U25cys: F10, cystatyna 0,8826794526434676 mg/L | Surowo 89,8 →90 z `<90`, nadal G2. Dla dokładnej surowej wartości 90 granica G1 pozostaje włączna. |
+| U25cys: wiek 1,5 roku / 26 lat | Odpowiednio liczba bez G i normy 90 / brak kwalifikacji do U25. |
+| U25cr: F10, 140 cm, Scr 0,6 mg/dL, nieznane metadane | 82,90160199882423 →83, teraz zakres oszacowania G2 przy opisanych założeniach, bez zmiany ScrAssay lub stabilności w wejściu. |
+| Dorosły cr-cys: F50, Scr 1,5 mg/dL, cystatyna 1,5 mg/L, brak ręcznych potwierdzeń | 43,31634057743082 →43, zakres G3b przy założeniach IDMS/IFCC i stabilności. Same standardy nie oznaczają znanej techniki oznaczenia. |
+| Jawne AKI/rapidlyChanging lub jednoznaczne non-IFCC/non-IDMS; następnie stare mieszane not_* | Znana sprzeczność blokuje właściwą estymację; stare wartości mogą korzystać z jawnego założenia bez ich zmiany w danych lub fałszywego potwierdzenia. |
+| CG: F50, rzeczywista masa 70 kg, Scr 1 mg/dL | 74,375 →74 mL/min; nadal bez G i uniwersalnej normy eGFR. |
+| Prawidłowy cl24: Ucr 100 mg/dL, Scr 1 mg/dL, 1440 mL/1440 min | 100 mL/min bez G; brak czasu/protokołu nie jest uzupełniany założeniem 24 h. |
+| FENa / KTV / noworodek bez wymaganej techniki | FENa nie dostaje nowego zakazu AKI; KTV nie dostaje założenia stabilnego mocznika; profil neonatalny nie zgaduje metody enzymatycznej z IDMS. |
+
+Regresje nowej polityki są zapisane w
+`tests/unit/klirens-calculation-assumptions.test.mjs`, z wywołaniem rzeczywistego
+resolvera, `ClcrExtendedEgfr.computeCkidU25Cys` i reguł `ClcrClinicalSafety`;
+formularz, prezentację oraz widoki desktop/mobile obejmuje
+`tests/e2e/klirens-assumptions.spec.mjs`. Akceptacja właściciela
+i testy techniczne nie nadają aplikacji statusu walidacji klinicznej.
+
+#### P-KLIRENS-U25-SREDNIA-2026-10-22 — pięć danych i składowe w Szczegółach
+
+**Decyzja właściciela:** wdrożyć zaakceptowaną
+[makietę przed/po dla desktopu i telefonu](https://chatgpt.com/space/page_975dc1eaf3108191a509822707824783)
+dla `ckid_u25_cr_cys`, czyli średniej CKiD U25 eGFRcr i eGFRcys.
+Ta rata doprecyzowuje widok tej ścieżki po P-KLIRENS-ZALOZENIA-2026-10-22;
+nie przywraca pytań o stabilność, AKI, IFCC lub IDMS.
+
+**Wpływ kliniczny i funkcjonalny:** przedstawienie średniej wyraźnie
+oddziela jeden wynik łączony od jego pomocniczych składowych i zakresu G1.
+Widoczna informacja określa populację, dla której opracowano wzór.
+Usuwa się z tej ścieżki odziedziczony komentarz o pediatrycznej fladze
+eGFRcr <90 oraz powtarzane opisy braku niepotrzebnych potwierdzeń.
+To zmiana treści interpretacji i przepływu formularza, nie wyłącznie CSS.
+Nie zmieniają się równania, współczynniki, konwersje, wartości surowe,
+progi G, dotychczasowe granice wieku, sposób zaokrąglania wyniku głównego
+ani pierwszeństwo znanych przeciwnych danych klinicznych/laboratoryjnych.
+Historycznych wyników nie przelicza się wstecznie.
+
+**Minimalne dane:** wiek w latach, płeć wymagana przez równanie, wzrost
+w cm, kreatynina z jawną jednostką mg/dL lub µmol/L i cystatyna C w mg/L.
+Pięć wartości daje komplet 5/5; wybór jednostki jest częścią oznaczenia
+kreatyniny, a nie szóstą wartością biologiczną. Rozwinięcie dokładniejszego
+wieku w miesiącach pozostaje opcjonalne. Wzrost jest konieczny składowej
+kreatyninowej także u młodego dorosłego. Masa i BSA nie są składnikami
+tej średniej, więc z widoku znika pytanie o masę, bez usuwania lub zerowania
+wcześniej wpisanej/wczytanej masy pacjenta i bez zmiany wymagań innych wzorów.
+Nie tworzy się drugiego poziomu „pełnej interpretacji” po komplecie danych.
+
+Przy obu markerach widnieje **„Kreatynina i cystatyna C z tej samej próbki
+krwi.”** To informacja o właściwym materiale, nie nowa odpowiedź, checkbox,
+data pobrania ani dowód, że konkretne próbki faktycznie pobrano wspólnie.
+Oznaczenie tylko tego samego dnia nie zastępuje zalecenia wspólnej próbki.
+Zachowano jawne założenia stabilnej czynności nerek, braku podejrzenia AKI,
+IDMS dla kreatyniny i IFCC dla cystatyny; nie stają się potwierdzonymi
+faktami ani deklaracją techniki oznaczenia.
+
+**Obliczenie i jedna karta:** rzeczywista funkcja
+`ClcrExtendedEgfr.computeCkidU25CrCys` nadal wyznacza
+`(eGFRcr_U25 + eGFRcys_U25) / 2` z niezaokrąglonych składowych.
+Główna liczba i G są wyznaczane tak jak przed tą ratą. Obok wyniku pozostaje
+**„Zakres G1 (KDIGO): ≥90 mL/min/1,73 m²”**. Nie nazywa się tego nową,
+zwalidowaną normą przesiewową dla wieku lub średniej U25. Wynik w G2
+pozostaje bursztynowy; kolor nie oznacza stadium PChN, ryzyka ani pilności.
+Bez rozwijania Szczegółów widnieje informacja: **„Wzór opracowano dla osób
+w wieku 1–25 lat z łagodną lub umiarkowaną PChN.”** Nie wymaga ona nowego
+pytania o rozpoznanie PChN i nie jest absolutnym zakazem użycia określonym
+przez NIDDK dla każdej innej populacji.
+
+**Szczegóły średniej:** obie składowe pochodzą ze struktury wyniku silnika
+(`details.egfrCreatinine`, `details.egfrCystatin`), a nie z parsowania tekstu
+lub z obliczania średniej pokazanych liczb. Są danymi pomocniczymi,
+wyświetlanymi do dwóch miejsc po przecinku z jednostką mL/min/1,73 m²
+i właściwym odniesieniem, gdy pozwalają na to wiek i kontekst wyniku.
+Informacja o liczeniu średniej przed zaokrągleniem zapobiega uśrednianiu
+składowych już zaokrąglonych. Pozostaje tabela G z wyróżnionym wierszem
+wyniku łączonego, ograniczenia i źródła. Nie powstają dodatkowe główne
+wyniki ani nowy próg/kolor alarmowy różnicy markerów. Rozbieżność składowych
+może wymagać oceny czynników pozanerkowych; sama różnica nie jest powodem
+automatycznego odrzucenia poprawnie obliczonej średniej.
+
+Kolor pomocniczej wartości porównuje jej surową liczbę wyłącznie z dolną
+granicą G1 przekazanego profilu, bez nadawania odrębnej kategorii G.
+Jeżeli dwa miejsca po przecinku przekraczają tę granicę, pojawia się
+adnotacja, np. `89,999 →90,00 (<90)`. Samo zaokrąglenie nie zmienia oceny.
+Zachowana masa nie uruchamia zbędnego wyniku BSA w Szczegółach średniej;
+pozostałe wzory nadal mogą korzystać z tej masy i właściwej metody BSA.
+
+Przed ukończeniem 2 lat nie stosuje się progu 90 ani kategorii G również
+przy pomocniczych składowych; pozostają liczby, jednostki i opis zależności
+oceny od wieku. Poniżej 1 roku i od 26. urodzin wzór jest niedostępny.
+Źródłowe „1–25 lat” i zachowana aplikacyjna konwencja `1 ≤ wiek <26`
+nie stanowią osobnej walidacji każdej frakcji 25. roku. Znane AKI/szybka
+zmiana i jednoznaczne non-IDMS/non-IFCC nadal blokują właściwy wynik.
+Usunięcie powtórzeń nie usuwa rzeczywistych ograniczeń znanej techniki
+oznaczenia, np. zalecenia metody enzymatycznej przy zapisanym Jaffem,
+ani nie kasuje metadanych pacjenta. Historyczne niejednoznaczne `not_*`
+zachowują reguły z P-KLIRENS-ZALOZENIA-2026-10-22.
+
+**Źródła i zakres dowodów, odczyt 2026-10-22:**
+
+- [NIDDK — równania dla dzieci, młodzieży i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults),
+  aktualizacja maj 2025, pełne sekcje CKiD U25 i creatinine-cystatin C:
+  źródło średniej, jednostek, standardów i preferowania obu markerów
+  w odpowiednim profilu PChN. Masa nie występuje w równaniu; nefelometria
+  cystatyny i enzymatyczna kreatynina są technikami zalecanymi, nie
+  dodatkowymi składnikami wzoru lub faktami dopisywanymi przez aplikację.
+- Pierce CB et al., *Kidney Int.* 2021;99:948–956,
+  [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047),
+  pełny [tekst autora NCBI/PMC9083470](https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_xml/PMC9083470/unicode):
+  tabela 2, Methods i Discussion; źródłowe współczynniki oraz wewnętrzna
+  ocena w CKiD z łagodną/umiarkowaną PChN, bez zdrowej grupy odniesienia.
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+  tabela 2 S137 (PDF s. 22), tabela 11 S184 (PDF s. 69), PP 1.2.2.7
+  i omówienie S183 (PDF s. 68), PP 1.2.3.5 S186 (PDF s. 71) i PP 1.2.4.3:
+  kategorie, wspólna próbka, znaczenie rozbieżności i porównywalna populacja.
+  Pediatryczna flaga <90 dotyczy literalnie eGFRcr; nie stanowi odrębnej
+  normy przesiewowej średniej. Pojedynczy wynik nie rozpoznaje PChN,
+  same G1/G2 bez innych kryteriów nie rozpoznają choroby, a G1 nie wyklucza
+  uszkodzenia nerek. Nie wyprowadzono nowego progu różnicy markerów.
+- Lim et al., *BMC Nephrol.* 2026;27:306,
+  [DOI 10.1186/s12882-026-04942-w](https://link.springer.com/article/10.1186/s12882-026-04942-w),
+  pełne Methods, Results, Discussion i ograniczenia: zewnętrzna ocena
+  w KNOW-PedCKD (82 koreańskich pacjentów, 187 pomiarów mGFR, wiek ≥15 lat;
+  P30 średniej 67,4%). Nie należy więc powtarzać historycznego stanu
+  KDIGO 2024 jako dzisiejszego twierdzenia o braku jakiejkolwiek zewnętrznej
+  oceny ani obiecywać stałej dokładności średniej we wszystkich populacjach.
+- Trenkmann et al., *BMC Nephrol.* 2026;27:446,
+  [DOI 10.1186/s12882-026-05219-y](https://link.springer.com/article/10.1186/s12882-026-05219-y),
+  pełne Methods, Results, Discussion i ograniczenia: porównanie rozkładów
+  m.in. U25ave w pozornie zdrowej kohorcie, bez mGFR. Nie jest to walidacja
+  bezwzględnej dokładności przesiewowej ani podstawa nowej normy 90–120,
+  rozszerzenia wieku lub zmiany współczynników aplikacji.
+
+**Syntetyczne przypadki regresji rzeczywistych funkcji i formularza:**
+
+| Wejście / stan | Oczekiwany wynik i zachowany kontrakt |
+|---|---|
+| F10, 140 cm, Scr 0,6 mg/dL, cystatyna 1 mg/L; nieznane metadane | Składowe 82,9016019988 i 79,2646148474; średnia 81,0831084231 →81/G2, bursztynowo, zakres G1 ≥90, 5/5; w Szczegółach 82,90 i 79,26 z jednostką oraz opisem liczenia przed zaokrągleniem. |
+| Ten sam profil, cystatyna 1,2 mg/L | Średnia 74,4777238525 →74/G2, nie 75; nie uśrednia się zaokrąglonych do pełnych liczb 83 i 66. |
+| F18, 170 cm, Scr 0,8708240534521158 mg/dL, cystatyna 0,6914355132617939 mg/L | Średnia surowa około 89,8 →90 z `<90`, nadal G2; zaokrąglenie nie podnosi do G1. |
+| Wiek 1,5 roku, komplet danych; następnie wiek 26 lat | Odpowiednio liczba i składowe bez G/progu 90; brak kwalifikacji do U25. |
+| F10/140 cm/0,6 mg/dL/1 mg/L, wcześniej zapisana masa 35 kg | Ukrycie zbędnego pytania nie zeruje 35 kg w danych; wynik średniej pozostaje 81,0831084231. |
+| Jawne AKI lub szybka zmiana; jawne non-IDMS lub non-IFCC | Dotychczasowa blokada zachowana, bez fałszywego potwierdzenia i bez składowych sugerujących kwalifikowaną interpretację. |
+| Zapisana technika Jaffego zgodna z IDMS | Metadane i rzeczywiste ograniczenie techniki pozostają; nie dopisuje się metody enzymatycznej. |
+
+Regresje mają wywoływać rzeczywiste `computeCkidU25CrCys`, prezenter i
+formularz, sprawdzać źródło surowych składowych oraz dane po zapisaniu/
+odtworzeniu, a nie kopię równania lub średnią tekstów. Akceptacja makiety,
+przegląd źródeł i testy techniczne nie nadają statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
 |---|---|---|
-| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Podejrzenie AKI lub szybko zmieniająca się Scr blokują wynik. Przy nieznanej stabilności albo niepotwierdzonej zgodności oznaczenia z IDMS aplikacja pokazuje oszacowanie bez kategorii G; stabilna Scr i IDMS pozwalają na kategoryzację G. Wyjątkiem jest ścieżka neonatalna, w której enzymatyczna metoda IDMS stanowi twardą bramkę. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
-| eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Identyfikowalność ERM-DA471/IFCC jest twardą bramką. Metoda oznaczenia jest raportowana; jej brak albo metoda inna niż profil nefelometryczny CKiD generują ograniczenie, lecz same nie blokują obliczenia. Wynik jest blokowany przy niestabilnym markerze; wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD. |
+| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Jawnie znane AKI lub szybko zmieniająca się Scr blokują wynik. Przy braku przeciwnych danych stabilność/brak AKI i IDMS są opisanymi założeniami obliczenia, umożliwiającymi zakres oszacowania G we właściwym wieku; nie są potwierdzeniem faktów pacjenta. Wyjątkiem pozostaje neonatalny warunek metody enzymatycznej. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
+| eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Źródłowo wymagana identyfikowalność ERM-DA471/IFCC oraz stabilność/brak AKI mogą być opisanymi założeniami przy braku przeciwnych danych; nie wymagają rutynowego ręcznego potwierdzenia. Znana sprzeczność zachowuje blokadę. Rzeczywista technika oznaczenia nie jest dopisywana; nefelometria jest zalecana dla U25cys. Wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD i nie otrzymuje normy przesiewowej dla zdrowej populacji. |
 | Noworodek | Ograniczone oszacowanie `0,31 × wzrost [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aplikacja dodatkowo wymaga bieżącej masy ciała >2,5 kg jako konserwatywnej bramki bezpieczeństwa, a nie granicy zwalidowanej populacji. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, AKI lub niestabilna Scr blokują wynik. Równanie wyprowadzono w metaanalizie indywidualnych danych pacjentów; autorzy wskazali potrzebę walidacji w dużej kohorcie noworodkowej. Wynik nie otrzymuje kategorii G KDIGO. |
 | CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat: surowy eCrCl używa podanej masy rzeczywistej i jest nieindeksowany, a opcjonalny `cg_norm` przelicza go przez BSA do 1,73 m². Oba pozostają eCrCl, nie eGFR. |
-| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria G nie jest pokazywana przy AKI, niestabilnym lub niestandaryzowanym markerze. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości. |
+| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera. Przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
 | Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
@@ -16195,9 +16532,9 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
 
-**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 225 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
-25 z przeglądu przeniesienia na D-7, 3 z przeglądu poprawki MS2, 16 z przeglądu po scaleniu, 13 z przeglądu poprawki
-P1 i 11 z jego weryfikacji 2; wejście → wynik):
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 227 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
+25 z przeglądu przeniesienia na D-7, 3 z przeglądu poprawki MS2, 16 z przeglądu po scaleniu, 15 z przeglądu poprawki
+P1 (10 z tej poprawki i 5 z poprawki F2, #754) i 11 z jego weryfikacji 2; wejście → wynik):
 - T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
   karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
   notatek, nagrobki n1–n3);
@@ -16371,11 +16708,24 @@ P1 i 11 z jego weryfikacji 2; wejście → wynik):
     albo przyszło z nieaktualnego widoku po „Usuń pacjenta”, 1 ms po nagrobku z polem; delty A i drugiej karty do B
     przed pełnymi ładunkami → karta [n1, n2] na A i B (na `95b6f96e` też); RR2 (G6 przejściowo): ten przeplot bez delt →
     lokalny ręczny nagrobek z `rev` 0, po rundach `rev` 1 na A i B, [n2];
-  - K9 (F2, znane ograniczenie sprzed D-21, niżej): „Usuń pacjenta” X na A równolegle ze scalaniem w drugiej karcie
-    ładunku B z wcześniejszym usunięciem X (eB); C zmieniło X między eB i e → nagrobek karty eB, karta X wraca na A, B i
-    C z notatkami w stanie CZEKA; K9k (kontrola, po kolei) i K9d (kontrola, delta nagrobka karty e doręczona B) → BRAK
-    wszędzie; strażniki źródła: pętla U w `Le` przez `Bnp_nagrobekScalania` (świeży rekord, krata z kopiami, `rev` =
-    max), `Bnp_odnowJeden` pomija nagrobek innego pacjenta.
+  - F2 (nagrobek karty cofnięty przez scalanie w drugiej karcie) — poprawione osobno (#754); przypadki K9, K9o, K9k i
+    K9d w punkcie niżej (testy K9, K9k i K9d tej gałęzi, które przypinały F2 jako znane ograniczenie, zastąpił przy
+    scaleniu `audyt` blok K9 z #754); strażniki źródła: pętla U w `Le` przez `Bnp_nagrobekScalania` (świeży rekord,
+    krata z kopiami, `rev` = max), `Bnp_odnowJeden` pomija nagrobek innego pacjenta.
+- Przegląd poprawki P1 (2026-10-22; F2, wada starsza niż D-21, z #518 / P-SYNC-WLASCICIEL; same pełne ładunki — delta
+  nagrobka karty z A1 ginie; poprawka w `Bsl_usunPacjenta`, „Ograniczenia”, „Nagrobek karty cofnięty przez scalanie
+  w drugiej karcie”):
+  - K9 (wyścig): B usuwa X (eB), C (nie wie o tym) zapisuje wizytę X po eB; na A „Usuń pacjenta” w karcie
+    przeglądarki A1 trzyma blokadę X (karta zdjęta, nagrobek e jeszcze nie), a scalanie pełnego ładunku B w karcie A2
+    decyduje na starcie (nagrobek eB) i czeka na blokadę X → nagrobek karty na A = e; po 3 rundach chmury (C, A, B)
+    na A, B i C BRAK, nagrobki n1 i n2 z polem, nagrobek karty e (na `ab8ead6`: nagrobek karty na A = eB, a na A, B
+    i C karta [n1, n2] z nagrobkami z polem — stan CZEKA);
+  - K9o (okno): „Usuń pacjenta” w A1 kończy się w całości między odczytem nagrobków kart na starcie scalania w A2
+    a usunięciem karty → jak K9 (na `ab8ead6` jak K9);
+  - K9k (kontrola, × 2): kolejno — „Usuń pacjenta”, potem scalanie; scalanie, potem „Usuń pacjenta” → nagrobek karty
+    e, BRAK na A, B i C (tak samo na `ab8ead6`);
+  - K9d (kontrola): wyścig jak w K9, a delta nagrobka karty z A1 (chwila e ze zdarzenia `onPatientDeleted`) dochodzi
+    do B → nagrobek karty e i BRAK na A, B i C (tak samo na `ab8ead6`).
 - Weryfikacja 2 przeglądu poprawki P1 (2026-10-22; dwóch weryfikatorów-adwersarzy — poprawność `Bnp_nagrobekScalania`
   oraz regresja i koszt — na `6db54b78`, prawdziwy sejf, druga karta = drugi `VildaVault` na tym samym magazynie i tej
   samej atrapie Web Locks; czerwone na `6db54b78`, `83c04d5b` i `95b6f96e`, o ile nie są kontrolą):
@@ -16540,20 +16890,6 @@ P1 i 11 z jego weryfikacji 2; wejście → wynik):
   urządzeniu (na `95b6f96e` ze starą treścią, teraz z edycją — zapis czeka na blokadę notatki i wchodzi po `Eb`); po
   zapisie nagrobka karty zapis jest odrzucany (P1-4k). Tak samo na `affdeb64`. Naprawa (strażnik także na brak karty
   albo wcześniejszy zapis nagrobka karty) zmienia regułę P-NOTATKI-1 D2 — osobny temat, razem z sierotami D21-9.
-- **Nagrobek karty cofnięty przez scalanie w drugiej karcie** (przegląd poprawki P1, recenzja współbieżności F2; sprzed
-  D-21, od #518 — P-SYNC-WLASCICIEL, `Bsl_usunPacjenta`; testy K9, K9k, K9d). Scalanie decyduje o usunięciu karty na
-  starcie (chwila z ładunku albo z lokalnego nagrobka), a pod blokadą pacjenta czyta świeżo kartę, ale nie nagrobek
-  karty, i zapisuje chwilę z decyzji. „Usuń pacjenta” X w jednej karcie (chwila e) w trakcie scalania w drugiej karcie
-  ładunku, w którym X usunięto wcześniej na innym urządzeniu (eB), kończy się nagrobkiem karty eB zamiast e; okno to
-  całe scalanie, od odczytu nagrobków do zapisu karty X. Gdy nieświadome urządzenie zmieniło X między eB i e, karta X
-  wraca na wszystkie urządzenia, choć usunięto ją tutaj po tej zmianie — po D-21 z notatkami w stanie CZEKA, na
-  `affdeb64` bez notatek. Kierunek: usunięty pacjent wraca z danymi, nic nie ginie; ponowne „Usuń pacjenta” pomaga.
-  Łagodzi to delta nagrobka karty (`onPatientDeleted` → `buildTombstoneDelta` z chwilą e ze zdarzenia, nie z magazynu;
-  klient nie odrzuca własnych delt): doręczona choć jednemu urządzeniu, także temu, daje BRAK wszędzie (K9d). Skutek
-  wymaga więc naraz wyścigu, zmiany karty w (eB, e) i utraty tej delty na wszystkich urządzeniach (`RATE_LIMITED`,
-  zatrzymana integracja, przycięcie dziennika delt — 200 delt albo 3 dni — albo synchronizacja wyłączona i scalanie z
-  plików). Poprawka (pod blokadą świeży nagrobek karty i chwila = max, dwa wiersze) zmienia regułę karty spoza D-21 —
-  osobny PR.
 - **Wybór między równoległymi poprawkami jest przypadkowy** (h nie zachowuje „późniejsza wygrywa”). Kolizja h (1 na
   1000; uwaga Codexa P2 do #746, przegląd po scaleniu) zostawia rzadki trwały, niewidoczny rozjazd treści: dwie różne
   poprawki o tym samym h, uratowane niezależnie na dwóch urządzeniach, mają równe `(rev, updatedAtISO)`, a `Le` przy
@@ -16587,6 +16923,16 @@ P1 i 11 z jego weryfikacji 2; wejście → wynik):
   wersji sprzed usunięcia, raz na pacjenta (plus raz pod blokadą przy ratunku). Pętla CZEKA nie zapisuje ani nie czyta
   nagrobka, którego kanon już leży, więc w długim stanie „czeka” scalanie nie przepisuje nagrobków pacjenta (zwykłe
   nagrobki notatek pętla zapisu przepisuje przy każdym scaleniu, jak dotąd; MS5).
+- **Nagrobek karty cofnięty przez scalanie w drugiej karcie** — **naprawione 2026-10-22** (przegląd poprawki P1, F2;
+  wada starsza niż D-21, z #518 / P-SYNC-WLASCICIEL; testy K9, K9o, K9k, K9d). B usuwa X (eB); C, które o tym nie wie,
+  zapisuje X po eB; na A karta przeglądarki A1 robi „Usuń pacjenta” X (e, później niż zapis C), a karta A2 w tym czasie
+  scala ładunek B. Scalanie decydowało na starcie (nagrobek eB), czekało na blokadę X i wpisywało nagrobek eB w miejsce
+  e, więc karta X wygrywała zapisem C i wracała na A, B i C — po D-21 razem z notatkami w stanie CZEKA. Kolejno
+  (w obu porządkach) wynik był BRAK; wystarczało też, by delta nagrobka karty z `onPatientDeleted` (chwila e) doszła do
+  któregokolwiek urządzenia, więc błąd wymagał jej utraty wszędzie (RATE_LIMITED, wstrzymana integracja, log delt
+  przycięty do 200 delt / 3 dni, synchronizacja wyłączona przy scalaniu plików). Kierunek błędu: usunięty pacjent
+  wracał z danymi, nic nie ginęło. Teraz `Bsl_usunPacjenta` czyta pod blokadą także lokalny nagrobek karty i zostawia
+  późniejszą chwilę: nagrobek karty e, BRAK wszędzie (P-SYNC-WLASCICIEL, aktualizacja 2026-10-22).
 - **Poza zakresem (D21-9):** sieroty z pomiaru 6 i 7 (poprawka albo nowa notatka bez zmiany karty) i rozjazd G5 po
   „Scal pacjentów” z pomiaru 13 — testy T20 i T21 pilnują, że zostały bez zmian; „Scal pacjentów” równolegle z „Usuń
   pacjenta” tego samego X — notatki przepięte pod Y giną jak dziś (w stanie CZEKA zostają pod Y, SP1 — oprócz wersji
@@ -16765,7 +17111,8 @@ każde zgłoszenie sprawdzone przez sceptyka na prawdziwym sejfie, porównanie z
 `Bnp_stan`, ratunek, CZEKA, format nagrobka) bez zmian, bez decyzji właściciela. F1 (waga niska; regresja D-21 obecna
 już na `95b6f96e`, nie wprowadzona przez poprawkę P1) — poprawione: zapis nagrobków scalania na świeżym rekordzie
 (wyżej, „Scalanie a ręczne usunięcie albo „Usuń pacjenta” w jego oknie”). F2 (niska; sprzed D-21, od #518) — znane
-ograniczenie („Nagrobek karty cofnięty przez scalanie w drugiej karcie”), poprawka osobnym PR. F3 (informacyjna) — opis
+ograniczenie („Nagrobek karty cofnięty przez scalanie w drugiej karcie”), poprawka osobnym PR (#754, scalony do `audyt`
+przed weryfikacją 2; przy scaleniu testy K9, K9k i K9d tej gałęzi zastąpił blok K9 z #754). F3 (informacyjna) — opis
 „Koszt”; przekazanie rekordu notatki do `Eb` (jeden odczyt mniej) jest opcjonalne i nie wdrożone. R1 (niska; nie
 regresja, poprawka P1 okno zawęża) — zawężone zdanie o przeplocie w punkcie „„Usuń pacjenta” a druga karta
 przeglądarki”, dopisek przy P1-2 i rozszerzone ograniczenie „Ręczne usunięcie w pasmie ratunku”; opcja w kodzie do
@@ -17804,6 +18151,21 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
 - Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
   kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
   pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
+- *(Aktualizacja 2026-10-22, przegląd poprawki P1 D-21, F2; SW 1.1.341, `vilda_vault.js` 224.
+  **Zmiana kliniczna: NIE** — reguła dla karty zmienia się tylko w oknie wyścigu. Usuwanie kart z wygrywającym
+  nagrobkiem (`Bsl_usunPacjenta`) czyta pod blokadą karty, przed świeżym rekordem, także lokalny nagrobek karty i
+  wpisuje późniejszą z dwóch chwil: z decyzji na starcie scalania (nagrobek z ładunku albo lokalny z chwili startu) i
+  lokalną; dotąd zawsze chwilę z decyzji. Gdy po starcie scalania „Usuń pacjenta” w innej karcie przeglądarki
+  postawiło nagrobek z późniejszą chwilą e, scalanie nadpisywało go starszą chwilą: B usuwa X (eB), C — nie wiedząc o
+  tym — zapisuje X po eB, A usuwa X (e po zapisie C), gdy druga karta A scala ładunek B → nagrobek X na A = eB, karta
+  X wygrywała zapisem C i wracała na wszystkich urządzeniach, po D-21 z notatkami w stanie CZEKA. Kolejno, w obu
+  porządkach, wynik był poprawny; wystarczała też delta nagrobka karty z `onPatientDeleted` (chwila e), jeśli doszła
+  do któregokolwiek urządzenia. Kierunek błędu: usunięty pacjent wracał z danymi, nic nie ginęło. Koszt: jeden odczyt
+  listy nagrobków kart na usuwanego pacjenta (jak `Bsl_zdejmijNagrobek`). Przypadki: `sync-wlasciciel-wersji.test.mjs`
+  +4 (wyścig w obu trybach blokad → nagrobek X na A = e, pełne ładunki C i A nie przywracają X, nagrobek e na B i C —
+  oba czerwone na `ab8ead6`; kontrola: lokalny nagrobek starszy niż nagrobek z ładunku nie cofa chwili; strażnik
+  źródła) i `notatki-za-karta.test.mjs` K9, K9o (czerwone na `ab8ead6`), K9k, K9d (kontrole) — P-NOTATKI-ZA-KARTA,
+  „Ograniczenia”.)*
 - Delta nagrobka po „Scal pacjentów”: urządzenie, które w tej sesji strony scaliło X → Y, dołącza do delty nagrobka X
   kartę Y (pole `patients` było w formacie delty, dotąd puste) — u odbiorcy działa to jak pełna synchronizacja, w każdej
   kolejności dwóch delt. Delta Y ponad 60 000 znaków szyfrogramu i zwykłe usunięcie karty — sam nagrobek, jak dotąd.

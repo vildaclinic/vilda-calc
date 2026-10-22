@@ -487,6 +487,15 @@ html[data-clcr-workflow-ui="1"] .clcr-readiness--error {
   border-color: #efc4c8;
 }
 
+html[data-clcr-workflow-ui="1"] #clcrForm .clcr-data-completion {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--clcr-primary-dark);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
 html[data-clcr-workflow-ui="1"] .clcr-missing-list {
   display: grid;
   gap: var(--space-0-25);
@@ -773,6 +782,10 @@ html[data-clcr-workflow-ui="1"] #clcrForm .clcr-paired-marker-note {
   line-height: 1.5;
 }
 
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="child-cystatin"] #clcrForm .clcr-paired-marker-note {
+  order: -1;
+}
+
 /* Pomoc pola jako pływający tooltip pozycjonowany względem OKNA
    (position:fixed, współrzędne ustawia JS): stała szerokość niezależna od
    szerokości pola, nie rozpycha układu. pointer-events:none — dymek nie
@@ -1018,6 +1031,11 @@ html[data-clcr-workflow-ui="1"] .clcr-context-details__body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-0-65);
   padding: 0 var(--space-0-65) var(--space-0-65);
+}
+
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="child-cystatin"] .clcr-context-details__body > .clcr-field[data-clcr-field-id="ageMonths"] {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 html[data-clcr-workflow-ui="1"] .clcr-field:has(> .error) {
@@ -1818,11 +1836,6 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
   font-size: 14px;
   font-weight: 650;
 }
-.clcr-marker-context__note {
-  color: var(--clcr-muted, #5a7274);
-  font-size: 12px;
-  line-height: 1.5;
-}
 .clcr-egfr-result-details .result-box {
   margin-top: var(--space-12px);
 }
@@ -1858,16 +1871,12 @@ html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr
 html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field__status {
   display: none;
 }
-html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] [data-clcr-field-id="weight"],
-html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-marker-context {
+html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] [data-clcr-field-id="weight"] {
   grid-column: 1 / -1;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-field-pair[data-clcr-value-field="Scr"] {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-12px);
-}
-html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr-marker-context__note {
-  grid-column: 1 / -1;
 }
 
 @media (max-width: 480px) {
@@ -2064,6 +2073,12 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-i
   font-weight: 750;
   line-height: 1.4;
 }
+.clcr-result-category-summary {
+  margin: var(--space-8px) 0 0;
+  color: var(--clcr-result-color);
+  font-size: 13px;
+  line-height: 1.5;
+}
 .clcr-result-boundary {
   margin: var(--space-8px) 0 0;
   color: var(--clcr-result-color);
@@ -2072,9 +2087,12 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-i
 }
 .clcr-result-assumptions {
   margin: var(--space-10px) 0 0;
-  color: var(--clcr-muted);
-  font-size: 12px;
+  color: var(--clcr-text);
+  font-size: 13px;
   line-height: 1.5;
+}
+.clcr-result-population-note.clcr-result-source {
+  font-size: 12px;
 }
 .clcr-result-source {
   margin: var(--space-10px) 0 0;
@@ -2224,6 +2242,29 @@ html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-c
 html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table tr:not([aria-current="true"]) {
   color: var(--text-2);
   background: transparent;
+}
+
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table {
+  margin-top: var(--space-8px);
+  table-layout: auto;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table :is(th, td):first-child {
+  width: auto;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table tbody th {
+  font-weight: 500;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table .clcr-result-component-value {
+  width: 32%;
+  color: var(--text-2) !important;
+  font-weight: 700;
+  text-align: right;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table [data-clcr-component-tone="warning"] .clcr-result-component-value {
+  color: var(--clcr-warning) !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-components-table [data-clcr-component-tone="success"] .clcr-result-component-value {
+  color: var(--clcr-heading) !important;
 }
 html[data-clcr-workflow-ui="1"][data-clcr-active-module]:not([data-clcr-active-module="measured-clearance"]) #clcrResultReport #clcrCard > small {
   display: none;

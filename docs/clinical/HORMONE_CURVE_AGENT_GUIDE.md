@@ -341,6 +341,45 @@ oraz [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńskie-amh-i-inhibin
 [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--rozszerzenie-odniesienia-do-47-lat-14-października-2026),
 [przegląd dostępności](hormone-lifespan/evidence/female-inhibin-reference-coverage-2026-10-14.json).
 
+## Żeńska inhibina B — dalszy odczyt do 47,75 roku, 21 października 2026
+
+Ta decyzja aktualizuje granicę zwykłego profilu z historycznego wpisu
+14.10, nie granicę porównania płci ani geometrię ilustracji.
+
+- `borelli2025-female-inhb-age-5p6-47p75`, `ordinaryOnly`, obejmuje
+  **[5,6;47,75]**. Zachowuje wszystkie 24 stare węzły i dodaje wyłącznie
+  **47,25 → ≈10; 47,5 → ≈8; 47,75 → ≈7 pg/mL** z ryc. 1 Borelli-Kjær
+  (DOI 10.1210/clinem/dgae439). Polityka i dane: `2026-10-21.2`.
+- PCHIP po 27 węzłach zmienia też ostatni dawny odcinek `(46,47)`:
+  przy 46,5 roku 14,4375 → 14,076923 pg/mL; największa zmiana w skanie
+  około −0,42735 pg/mL przy 46,667 roku. Nie nazywaj tego neutralną
+  refaktoryzacją. Dawne węzły i interpolacja do 46 lat pozostają takie same.
+- Zachowaj odrębną wspólną ekstrakcję **24** węzłów oraz kwalifikację
+  porównania płci **8–20**; nie dopisuj tam nowych punktów. Pozostałe
+  **83 profile**, E2, laboratoryjne RI, krzywe, skale i dawne oceny
+  pozostają bez zmian. Nie przyciągaj znacznika mediany do linii.
+- Cały możliwy wiek musi pasować: formularz 47 lat 8 miesięcy daje
+  ≈7,2345679 pg/mL; 47 lat 9 miesięcy przecina koniec domeny, a dokładne
+  48 jest poza nią. Dokładne 47,75 kwalifikuje się. Nie wybieraj środka
+  niepewnego wieku i nie wyciągaj z tej granicy wniosku o menopauzie.
+- Źródło: 889 uczestniczek/1005 próbek, w tym 149 dorosłych 20–69 lat,
+  surowica Gen II ELISA, ng/L = pg/mL. Cykl niestandaryzowany, dane
+  antykoncepcji niepełne. LOD **3 pg/mL**, bez osobnego LOQ. ±2 pg/mL
+  to tolerancja odczytu, nie CI/RI ani dowód oznaczalności ilościowej.
+  LOD/2 było regułą modelowania autorów, nigdy podstawieniem wyniku
+  pacjentki. Odczyt 48 lat i dolne plateau pozostają nieaktywne.
+- Kalibrację wykonano na archiwalnym oficjalnym rastrze 3000×2178,
+  SHA-256 `7abfa7ffc9d1b6f0a8494bea32515ffb417d2ff31f67f9de557253d08526d76f`.
+  HTML i cztery suplementy sprawdzono ponownie; świeży obraz zwrócił
+  403. Nie deklaruj pozyskania nowej kopii PDF lub rastra.
+- Zachowaj dotychczasowe bramki metody, materiału, GnRHa, cenzury,
+  `pregnancy_t1/t2/t3` i `postmenopause`. Nie dodawaj pytań. Regresje
+  mają wywoływać produkcję, chronić stare dane i objąć jednostki,
+  niepewny wiek, źródła, desktop/320 px oraz PWA z zimnym startem offline.
+
+[Kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeńska-inhibina-b--dalszy-odczyt-do-4775-roku-21-października-2026),
+[odczyt źródła i kalibracja](hormone-lifespan/evidence/patient-point/borelli2025-female-inhb-post47-digitized.json).
+
 ## Dziecięce mediany grup Zhou — inhibina B, 14 października 2026
 
 - Po PR #672 uzupełniamy wyłącznie zwykły żeński zakres >1–<5,6:
@@ -706,6 +745,16 @@ jeden profil do zachowanych 84 wcześniejszych; nie zmienia inhibiny B.
 
 [Ekstrakt pełnego źródła i suplementu](hormone-lifespan/evidence/patient-point/kulle2024-female-e2-th1-group-median.json),
 [kontrakt i regresje](hormone-lifespan/PATIENT_POINT.md#żeński-e2--mediana-grupy-th1-w-16-22-października-2026).
+
+## Synchronizacja inhibiny B z E2/Th1, 22 października 2026
+
+Po scaleniu E2/Th1 w PR #752 odświeżenie PR #744 zachowuje oba zakresy.
+Wspólny pakiet `2026-10-22.2` liczy **85 profili**: inhibina B zastępuje
+jeden zwykły profil, a pozostałe **84**, w tym E2/Th1 i jego aktualny
+adapter stadium, pozostają zgodne z nową bazą. Nie zmieniaj przy tej
+synchronizacji granic 47,75 lub `(1,6)`, źródłowych wartości, geometrii,
+skal, RI lub historii. Wersje i liczebności w datowanych wpisach wyżej
+są zapisem wcześniejszych etapów; nie przepisuj ich hashy.
 
 ## FSH CALIPER — zwykłe odniesienie od 16 lat, 18 października 2026
 

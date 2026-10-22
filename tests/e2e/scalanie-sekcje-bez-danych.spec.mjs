@@ -284,9 +284,9 @@ const odtworzSesje = (karta) => karta.evaluate(() => window.applyClcrSessionSnap
 }));
 
 // Wariant B zapisuje liczbę w wierszu pacjenta, a metodę w osobnym wierszu Szczegółów.
-// Pełny prefiks odróżnia wynik od liczb w normie i tabeli kategorii.
-const EGFR_129 = 'Wynik pacjenta 129mL/min/1,73 m²';
-const EGFR_96 = 'Wynik pacjenta 96mL/min/1,73 m²';
+// Pełny prefiks obejmuje G1 przy jawnych założeniach i odróżnia wynik od normy/tabeli.
+const EGFR_129 = 'Wynik pacjenta G1129mL/min/1,73 m²';
+const EGFR_96 = 'Wynik pacjenta G196mL/min/1,73 m²';
 const EGFR_METHOD = 'Metoda: CKiD U25 eGFRcr (2021)';
 // Strona składa wynik z twardymi spacjami — porównujemy teksty ze zwykłymi spacjami.
 const tekstySummary = (sesja) => sesja.summary.clcr.map((l) => String(l.text).replace(/\s+/g, ' '));
@@ -325,6 +325,8 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     });
     const sesjaX = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, x);
     expect(sesjaX.inputs.height, 'kontrola: sesja X z literówką').toBe('140');
+    expect(sesjaX.inputs.creatinineState, 'założenie nie dopisuje potwierdzonej stabilności').toBe('unknown');
+    expect(sesjaX.inputs.ScrAssay, 'założenie nie dopisuje metody oznaczenia').toBe('');
     expect([sesjaX.selectedFormula, sesjaX.inputs.formulaPicker], 'kontrola: sesja X wskazuje wybrany U25').toEqual(['ckid_u25', 'ckid_u25']);
     expect(tekstySummary(sesjaX), 'kontrola: strona policzyła eGFR ze wzrostu 140 cm').toContainEqual(expect.stringContaining(EGFR_129));
     expect(tekstySummary(sesjaX), 'kontrola: zapisana metoda w osobnych Szczegółach').toContainEqual(expect.stringContaining(EGFR_METHOD));
@@ -392,6 +394,7 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     await expect(wynikU25, '„Odtwórz”: wynik jest widoczny').toBeVisible();
     await expect(wynikU25.locator('.clcr-result-value'), '„Odtwórz”: wynik pacjenta').toHaveText('96');
     await expect(wynikU25.locator('.clcr-result-unit'), '„Odtwórz”: jednostka').toHaveText('mL/min/1,73 m²');
+    await expect(wynikU25, '„Odtwórz”: kategoria oszacowania przy jawnych założeniach').toHaveAttribute('data-clcr-category', 'G1');
     await expect(wynikU25).toHaveAttribute('data-clcr-display-label', 'CKiD U25 eGFRcr (2021)');
     await expect(C.locator('.clcr-result-details[data-clcr-formula="ckid_u25"]'), '„Odtwórz”: metoda w Szczegółach').toContainText(EGFR_METHOD);
     await expect(C.locator('.clcr-result-card[data-clcr-series="ckid_u25"][data-clcr-display-value="129"]'), '„Odtwórz”: brak starego wyniku').toHaveCount(0);
