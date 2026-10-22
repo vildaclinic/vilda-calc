@@ -176,7 +176,7 @@
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
 <script defer src="vilda_chrome.js?v=168"></script>
-<link href="clcr_ui_workflow.css?v=11" rel="stylesheet" />
+<link href="clcr_ui_workflow.css?v=12" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
 </head>
@@ -309,6 +309,9 @@
               <option value="enzymatic_idms">Metoda enzymatyczna, standaryzowana do IDMS</option>
               <option value="jaffe_idms">Metoda Jaffego, kalibrowana do IDMS</option>
               <option value="not_idms">Metoda niestandaryzowana do IDMS / nieznana</option>
+              <option value="non_idms" hidden>Potwierdzone oznaczenie bez standaryzacji IDMS</option>
+              <option value="enzymatic_non_idms" hidden>Potwierdzona metoda enzymatyczna bez IDMS</option>
+              <option value="jaffe_non_idms" hidden>Potwierdzona metoda Jaffego bez IDMS</option>
             </select>
           </label>
           <label for="creatinineState">Stan markerów filtracji do obliczeń eGFR/eCrCl:
@@ -334,6 +337,9 @@
               <option value="" selected>— nie określono —</option>
               <option value="ERM-DA471/IFCC">Identyfikowalność ERM-DA471/IFCC</option>
               <option value="not_ifcc">Niepotwierdzona / inna</option>
+              <option value="non_ifcc" hidden>Potwierdzone oznaczenie bez standaryzacji IFCC</option>
+              <option value="not_standardized_to_ifcc" hidden>Potwierdzony brak standaryzacji IFCC</option>
+              <option value="non_erm_da471_ifcc" hidden>Potwierdzony brak identyfikowalności ERM-DA471/IFCC</option>
             </select>
           </label>
           <label class="advanced-field pro-field">Metoda oznaczenia cystatyny C:
@@ -856,13 +862,14 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_clinical_safety.js?v=6"></script>
+    <script defer src="clcr_clinical_safety.js?v=7"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
-    <script defer src="clcr_result_reference_data.js?v=2"></script>
-    <script defer src="clcr_result_presentation.js?v=2"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=7"></script>
+    <script defer src="clcr_calculation_assumptions.js?v=1"></script>
+    <script defer src="clcr_result_reference_data.js?v=3"></script>
+    <script defer src="clcr_result_presentation.js?v=3"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=8"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -929,7 +936,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=11"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=12"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1783,6 +1790,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=9"></script>
+  <script defer src="clcr_ui_workflow.js?v=10"></script>
 </body>
 </html>

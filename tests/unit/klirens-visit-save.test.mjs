@@ -9,9 +9,10 @@ function loadVisitSave(extra = {}) {
   return g;
 }
 
-function fakeEl(series, value, { visible = true } = {}) {
+function fakeEl(series, value, { visible = true, attributes = {} } = {}) {
   return {
     getAttribute(name) {
+      if (Object.prototype.hasOwnProperty.call(attributes, name)) return attributes[name];
       if (name === 'data-clcr-series') return series;
       if (name === 'data-clcr-value') return value;
       return null;
@@ -116,6 +117,56 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     const dps = vs.collectActiveDatapoints(root);
     expect(dps.map((d) => d.id)).toEqual(['egfr', 'cg', 'Prot_mg24']);
     expect(dps.find((d) => d.id === 'egfr').valueNum).toBeCloseTo(91.6, 3);
+  });
+
+  it('collectActiveDatapoints: zachowuje założenia i ich pochodzenie, a błędny JSON nie psuje wyniku', () => {
+    loadBrowserScript('clcr_calculation_assumptions.js', g);
+    const resolved = g.VildaClcrCalculationAssumptions.resolve('ckid_u25_cys', {});
+    for (const encoded of [JSON.stringify(resolved.provenance), '{', 'null', '[]', '"assumed"']) {
+      const root = fakeRoot([fakeEl('ckid_u25_cys', '79.26461484738338', {
+        attributes: {
+          'data-clcr-display-value': '79',
+          'data-clcr-assumptions': `  ${resolved.assumptionsText}  `,
+          'data-clcr-assumption-provenance': encoded,
+        },
+      })]);
+      const datapoints = g.ClcrVisitSave.collectActiveDatapoints(root, { formulaId: 'ckid_u25_cys' });
+      expect(datapoints).toHaveLength(1);
+      expect(datapoints[0]).toMatchObject({ valueNum: 79, assumptions: resolved.assumptionsText });
+      if (encoded === JSON.stringify(resolved.provenance)) {
+        expect(datapoints[0].assumptionProvenance).toEqual(resolved.provenance);
+      } else {
+        expect(datapoints[0]).not.toHaveProperty('assumptionProvenance');
+      }
+    }
+  });
+
+  it('saveActiveResultToCard: zapisuje założenia w komentarzu bez rozszerzania schematu badania', async () => {
+    loadBrowserScript('clcr_calculation_assumptions.js', g);
+    const resolved = g.VildaClcrCalculationAssumptions.resolve('ckid_u25_cys', {});
+    const element = {
+      ...fakeEl('ckid_u25_cys', '79.26461484738338', {
+        attributes: {
+          'data-clcr-display-value': '79',
+          'data-clcr-assumptions': resolved.assumptionsText,
+          'data-clcr-assumption-provenance': JSON.stringify(resolved.provenance),
+        },
+      }),
+      classList: { contains: name => name === 'out-of-range' },
+    };
+    const datapoints = g.ClcrVisitSave.collectActiveDatapoints(fakeRoot([element]), { formulaId: 'ckid_u25_cys' });
+    const before = JSON.stringify(datapoints);
+    const saved = [];
+    g.VildaVault = { isUnlocked: () => true, savePatientNote: async note => saved.push(note) };
+    const result = await g.ClcrVisitSave.saveActiveResultToCard({
+      patientId: 'synthetic-cys-assumptions', clinicalDateISO: '2026-10-22', datapoints,
+    });
+    expect(result).toMatchObject({ ok: true, saved: 1, total: 1 });
+    expect(saved[0].body).toBe(`Kalkulator klirensu · clcr:ckid_u25_cys · wynik poza zakresem\n\n${resolved.assumptionsText}`);
+    expect(saved[0].labResult).toEqual({
+      test: datapoints[0].label, value: '79', valueNum: 79, unit: 'mL/min/1,73 m²',
+    });
+    expect(JSON.stringify(datapoints)).toBe(before);
   });
 
   it('collectActiveDatapoints: filtr po module wybranej formuły — wyklucza porównania z innych modułów', () => {

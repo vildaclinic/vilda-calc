@@ -4861,15 +4861,162 @@ granice przed zaokrągleniem i układ desktop/mobile sprawdza
 nie walidacja kliniczna; źródła nie potwierdzają poprawności lokalnych oznaczeń
 pacjenta.
 
+#### P-KLIRENS-ZALOZENIA-2026-10-22 — jawne założenia obliczenia zamiast pytań
+
+**Decyzja właściciela:** wdrożyć zaakceptowane makiety desktop/mobile
+([Klirens — założenia i uproszczony wynik](https://chatgpt.com/space/page_5e52b9c49ab48191addb297eb4a209a7))
+i rozszerzenie zasady na pozostałe obliczenia, o ile nie koliduje z ich logiką.
+Z formularza znikają pytania o stabilność, podejrzenie AKI i standard IFCC
+oraz łączne potwierdzenie standardów dorosłego cr-cys. IDMS jest osobnym
+założeniem właściwych współczesnych równań kreatyninowych. Nie przenosi się
+tych pytań do innej obowiązkowej sekcji. Wpis zastępuje wcześniejsze bramki
+manualnego potwierdzania i reguły „unknown → bez G” z poprzednich etapów
+Klirensu; poprzednie wpisy dokumentują stan historyczny.
+
+**Wpływ kliniczny i funkcjonalny:** przy braku znanych przeciwnych danych
+odpowiednie obliczenie przyjmuje stabilną czynność nerek i brak podejrzenia AKI
+oraz wymagany standard markera jako **jawne założenia aplikacji**. Komplet
+danych może od razu dać liczbę, zakres oszacowania G i kolor. Dotyczy to także
+U25cys z trzema danymi oraz dotychczasowego informacyjnego porównania U25cr
+bez G. To zmiana dostępności i interpretacji wyniku, nie refaktoryzacja lub
+wyłącznie CSS. Równania, współczynniki, jednostki, konwersje, wartości surowe,
+reguły zaokrąglania, wiek, populacje i źródłowe progi pozostają zachowane.
+Nowy wynik z G2 może mieć bursztynowy kolor i `outOfRange: true` na podstawie
+oszacowania przy opisanych założeniach. Nie potwierdza to stadium PChN,
+przewlekłości, rzeczywistej stabilności ani standardu oznaczenia pacjenta.
+
+**Założenie nie jest odpowiedzią lekarza:** czysty resolver
+`VildaClcrCalculationAssumptions.resolve(formulaId, context)` w
+`clcr_calculation_assumptions.js` (polityka
+`KLIRENS_CALCULATION_ASSUMPTIONS_2026_10_22`) zwraca kontekst do obliczenia, opis założeń,
+ich pochodzenie (`provenance`) i ewentualne blokady, bez mutacji wejścia.
+Nie ustawia kanonicznego `creatinineState=stable`, `suspectedAKI=false`,
+IFCC/IDMS, metody enzymatycznej/Jaffego/nefelometrycznej ani checkboxa
+potwierdzenia. Standard IDMS w kontekście obliczenia nie oznacza wybranej
+techniki kreatyniny. Pochodzenie założeniowe i czytelny komentarz towarzyszą
+nowemu wynikowi oraz jego zapisowi/eksportowi; nie przedstawia się ich jako
+potwierdzonej metody laboratoryjnej lub nowej odpowiedzi pacjenta.
+
+Znane AKI, szybka zmiana używanego markera oraz jednoznaczna niezgodność
+standardu (`non_idms`/`non_ifcc`) zachowują pierwszeństwo dotychczasowego
+ograniczenia. Nie kasuje się ich po usunięciu pytań. Dawne `not_idms`
+(„niestandaryzowana / nieznana”) i `not_ifcc` („niepotwierdzona / inna”)
+są niejednoznaczne: kontekst obliczenia może przyjąć standard jako założenie,
+lecz zachowuje oryginał i nie zamienia go w potwierdzenie albo dowód
+niezgodności. `CrCysStandardizationConfirmed=false` jest brakiem wspólnego
+potwierdzenia, nie dowodem obu niezgodnych standardów. Dawna deklaracja
+stabilności kreatyniny nie staje się laboratoryjnym/klinicznym potwierdzeniem
+stabilności cystatyny. Historycznych wyników, flag i metadanych nie przelicza
+się wstecznie; założenie nowego wyniku nie potwierdza wymagań innych narzędzi.
+
+**Macierz zakresu:** katalog obejmuje 42 wpisy, z których 41 jest aktywnych;
+`sch_var` pozostaje wyłączony. Założenia markerowe dotyczą 11 aktywnych
+obliczeń. IFCC dotyczy tylko trzech cystatynowych, a ogólne założenie IDMS —
+pięciu współczesnych kreatyninowych; noworodek ma odrębny warunek techniki.
+
+| Wzory / ID | Założenie i zachowana logika |
+|---|---|
+| `egfr`, `ckid_u25`, `sch_idms` | Stabilność/brak AKI i IDMS; pozostają wymagane rzeczywiste dane równania oraz dotychczasowy zakres wieku. U25cr i Schwartz nadal wymagają wzrostu. |
+| `egfr_cr_cys`, `ckid_u25_cr_cys` | Stabilność/brak AKI oraz odrębne standardy IDMS i IFCC. Dorosły cr-cys nie wymaga masy/wzrostu; średnia U25 nadal wymaga wzrostu do składowej kreatyninowej. |
+| `ckid_u25_cys` | Stabilność/brak AKI i IFCC. Wiek, płeć i cystatyna C w mg/L wystarczają; usuwa się pomocnicze pytania o masę, wzrost i technikę cystatyny. Nefelometria jest zalecana, lecz nie jest dopisywana jako fakt. |
+| `neonatal_egfr` | Założenie stabilności/braku AKI nie zastępuje donoszenia, 0.–28. dnia życia, aktualnej masy >2,5 kg, wzrostu, Scr/jednostki i odrębnego wymagania metody enzymatycznej. Sam IDMS nie dowodzi tej techniki. Pozostaje ograniczenie pierwszych 72 godzin; bez G i normy 90. |
+| `cg`, `cg_norm` | Założenie stabilności/braku AKI; nie dodaje się IDMS jako wymogu oryginalnego wzoru. Pozostają wiek ≥18, płeć, rzeczywista masa, Scr/jednostka i wzrost przy wybranym indeksowaniu BSA. Bez G i uniwersalnej normy eGFR, także po indeksowaniu. |
+| `cl24` | Założenie stabilności/braku AKI nie zastępuje Ucr, Scr/jednostki, objętości, rzeczywistego czasu i protokołu zbiórki oraz pobrania Scr w jej okresie. Dane BSA/masy pozostają potrzebne tylko odpowiednim dodatkowym przeliczeniom. Bez G. |
+| `TMP_GFR` | Założenia nie zastępują sparowanych fosforanów/kreatynin z jednostkami, drugiego porannego moczu po nocy na czczo i równoczesnego pobrania. To nie eGFR; brak IFCC i zapożyczonej normy GFR. |
+
+Pozostałe 30 aktywnych obliczeń nie dostaje zbędnych założeń markerowych:
+
+| Obszar / ID | Wymagania, których nie zastępuje nowa zasada |
+|---|---|
+| DZM: `UA_mgkg`, `Ca_mgkg`, `Mg_mgkg`, `PO4_mgkg`, `Prot_mgkg`, `Na_mmol_d`, `K_mmol_d`, `Ox_mgkg`, `Cit_mgkg` | Oznaczenia, rzeczywisty czas i jakość zbiórki; objętość, masa/BSA zależnie od miary. Nie zakłada się zawsze 24 h, prawidłowej postaci analitu szczawianowego ani kontekstu kamicy. |
+| Ilorazy: `KM_Cr`, `Ca_Cr`, `Mg_Ca`, `PO4_Cr`, `B_Cr`, `Ca_Cit`; `AGs`, `K_frac` | Rzeczywiste anality i zgodne jednostki; dane potrzebne konkretnej postaci raportowania, np. V24 dla `B_Cr`. Nie dokłada się czasu tam, gdzie skraca się w ilorazie. Bez IFCC/ogólnego IDMS lub nowej normy. |
+| `ACR`, `PCR`, `CaCr_spot`, `OxCr_spot`, `CitCr_spot` | Wspólna próbka i jednostki; właściwy wiek, rodzaj próbki i brak czynników przejściowych nadal warunkują istniejącą interpretację. Nie przyjmuje się pierwszego porannego moczu lub braku konfunderów z samego założenia stabilności. |
+| `FENa_spot`, `FEK_spot`, `FECl_spot`, `FEHCO3_spot` | Wyjątek logiczny: FENa bywa używane właśnie w AKI. Nie dodaje się warunku „bez AKI/stabilne markery”. Pozostają sparowane próbki, jednostki i istniejące ograniczenia diuretyków, PChN lub obciążenia dla FEHCO₃. |
+| `AGu_spot`, `pH_spot`, `pH24` | Właściwa próbka, rzeczywiste pH/elektrolity, protokół zbiórki i kontekst kwasicy albo kamicy/leczenia. Brak uniwersalnej normy lub automatycznego celu z założeń markerowych. |
+| `KTV` | Metoda opisuje celowy spadek mocznika podczas IHD, nie stabilne stężenia przed/po. Pozostają modalność, częstość/PIDI, czas, UF, masa po, analit/jednostka, protokół próbek, dostęp, aktualność Kru i warunki dorosłych celów. Nie przenosi się celu spKt/V lub URR na eKt/V ani nie dodaje IFCC/IDMS. |
+
+**U25cys — źródło, populacja i jeden wynik:** zachowano
+`eGFRcys = κ(wiek, płeć) / cystatyna C [mg/L]` w mL/min/1,73 m².
+κ dla F: 79,9 × 1,004^(wiek−12) przed 12 lat, 79,9 × 0,974^(wiek−12)
+od 12 do <18 lat, potem 68,3. κ dla M: 87,2 × 1,011^(wiek−15) przed
+15 lat, 87,2 × 0,960^(wiek−15) od 15 do <18 lat, potem 77,1.
+Źródła opisują 1–25 lat; istniejące `1 ≤ wiek <26` pozostaje operacyjną
+konwencją aplikacji, nie osobnym dowodem walidacji każdej frakcji 25. roku.
+
+Karta pokazuje np. **„Łagodnie obniżony eGFR”**, jedną liczbę,
+**„Zakres oszacowania: G2 · 60–<90”** i **„Zakres G1 (KDIGO): ≥90”**.
+Bez rozwinięcia widnieje **„Założenia: stabilna czynność nerek, brak podejrzenia
+AKI oraz oznaczenie cystatyny C standaryzowane do IFCC.”** oraz
+**„Wzór do oceny czynności nerek u osób z PChN; nie służy do przesiewu zdrowych,
+bezobjawowych osób.”** Ostatnie zdanie jest konserwatywnym lokalnym
+ograniczeniem zastosowania; NIDDK opisuje możliwą nieprzydatność przesiewową,
+nie ustanawia tak sformułowanego bezwzględnego zakazu. Nie używa się „Normy
+dla wieku” U25cr jako zwalidowanej normy przesiewowej U25cys.
+
+Progi i populacja odniesienia nadal pochodzą z jawnie przekazanego profilu
+`ClcrResultReferenceData.PROFILE` (`CLIRENS_RESULT_REFERENCE_2026_10_V3`,
+wersja 3), nie z resolvera założeń. Przed 2. rokiem
+życia nie nadaje się G ani progu 90. Kategoria powstaje z wartości surowej:
+89,8 wyświetlone jako 90 pozostaje G2 z `<90`; nie stosuje się tolerancji
+epsilon lub zaokrąglenia do podniesienia kategorii. G2 opisuje zakres
+oszacowania przy podanych założeniach; nie jest „stadium 2 PChN”. Pojedynczy
+wynik nie rozpoznaje PChN, a G1 nie wyklucza uszkodzenia nerek.
+
+**Źródła i granica decyzji lokalnej:**
+
+- [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+  Kidney Int. 105(Suppl 4S):S117–S314: tabela 2 i PP 1.1.3.2 (zakresy G
+  i przewlekłość), PP 1.2.3.1/tabela 11 (S184, PDF s. 69; jakość kalibracji
+  i wspólna próbka), PP 1.2.3.5 (S186, PDF s. 71; flaga eGFRcr <90 u dzieci
+  powyżej 2 lat) i PP 1.2.4.3 (porównywalna populacja). Przepis o eGFRcr
+  nie jest bezpośrednią walidacją normy dla wieku U25cys. Źródło nie nakazuje
+  checkboxa lekarza ani założeniowego nadawania G/koloru.
+- [NIDDK — pełna strona równań dla dzieci i młodych dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults)
+  oraz [dla dorosłych](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults),
+  aktualizacja maj 2025, odczyt 2026-10-22: równania, jednostki, standardy
+  i ograniczenia. Nefelometria dla U25cys jest zalecana, nie jest nowym
+  potwierdzonym faktem po usunięciu pytania.
+- Pierce CB et al., *Kidney Int.* 2021;99:948–956,
+  [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047),
+  pełny [tekst NCBI/PMC9083470](https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_xml/PMC9083470/unicode):
+  wewnętrzna walidacja CKiD w PChN, bez zdrowej populacji przesiewowej.
+  [Nyman et al., AJKD 2022;80:807–810](https://orbi.uliege.be/bitstream/2268/296580/1/NymanAJKD2022.pdf),
+  [DOI 10.1053/j.ajkd.2022.02.018](https://doi.org/10.1053/j.ajkd.2022.02.018),
+  tabela 2: w kohorcie europejskiej w większości z mGFR ≥75 mediana biasu
+  U25cys wyniosła −12,8 u dzieci i −11,5 u młodych dorosłych mL/min/1,73 m².
+  Nie koryguje się o te mediany indywidualnego wyniku.
+
+**Syntetyczne przypadki do regresji rzeczywistego kodu:**
+
+| Dane i kontekst | Wynik / zachowany warunek |
+|---|---|
+| U25cys: F10, cystatyna 1 mg/L; trzy dane, nieznana stabilność/standard/metoda | 79,26461484738338 →79 mL/min/1,73 m², G2, bursztynowy; widoczne założenia, bez dopisania potwierdzonych faktów. |
+| Ten sam profil, cystatyna 1,2 mg/L | 66,05384570615283 →66, G2; współczynniki i surowa liczba jak przed zmianą. |
+| U25cys: F10, cystatyna 0,8826794526434676 mg/L | Surowo 89,8 →90 z `<90`, nadal G2. Dla dokładnej surowej wartości 90 granica G1 pozostaje włączna. |
+| U25cys: wiek 1,5 roku / 26 lat | Odpowiednio liczba bez G i normy 90 / brak kwalifikacji do U25. |
+| U25cr: F10, 140 cm, Scr 0,6 mg/dL, nieznane metadane | 82,90160199882423 →83, teraz zakres oszacowania G2 przy opisanych założeniach, bez zmiany ScrAssay lub stabilności w wejściu. |
+| Dorosły cr-cys: F50, Scr 1,5 mg/dL, cystatyna 1,5 mg/L, brak ręcznych potwierdzeń | 43,31634057743082 →43, zakres G3b przy założeniach IDMS/IFCC i stabilności. Same standardy nie oznaczają znanej techniki oznaczenia. |
+| Jawne AKI/rapidlyChanging lub jednoznaczne non-IFCC/non-IDMS; następnie stare mieszane not_* | Znana sprzeczność blokuje właściwą estymację; stare wartości mogą korzystać z jawnego założenia bez ich zmiany w danych lub fałszywego potwierdzenia. |
+| CG: F50, rzeczywista masa 70 kg, Scr 1 mg/dL | 74,375 →74 mL/min; nadal bez G i uniwersalnej normy eGFR. |
+| Prawidłowy cl24: Ucr 100 mg/dL, Scr 1 mg/dL, 1440 mL/1440 min | 100 mL/min bez G; brak czasu/protokołu nie jest uzupełniany założeniem 24 h. |
+| FENa / KTV / noworodek bez wymaganej techniki | FENa nie dostaje nowego zakazu AKI; KTV nie dostaje założenia stabilnego mocznika; profil neonatalny nie zgaduje metody enzymatycznej z IDMS. |
+
+Regresje nowej polityki są zapisane w
+`tests/unit/klirens-calculation-assumptions.test.mjs`, z wywołaniem rzeczywistego
+resolvera, `ClcrExtendedEgfr.computeCkidU25Cys` i reguł `ClcrClinicalSafety`;
+formularz, prezentację oraz widoki desktop/mobile obejmuje
+`tests/e2e/klirens-assumptions.spec.mjs`. Akceptacja właściciela
+i testy techniczne nie nadają aplikacji statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
 |---|---|---|
-| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Podejrzenie AKI lub szybko zmieniająca się Scr blokują wynik. Przy nieznanej stabilności albo niepotwierdzonej zgodności oznaczenia z IDMS aplikacja pokazuje oszacowanie bez kategorii G; stabilna Scr i IDMS pozwalają na kategoryzację G. Wyjątkiem jest ścieżka neonatalna, w której enzymatyczna metoda IDMS stanowi twardą bramkę. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
-| eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Identyfikowalność ERM-DA471/IFCC jest twardą bramką. Metoda oznaczenia jest raportowana; jej brak albo metoda inna niż profil nefelometryczny CKiD generują ograniczenie, lecz same nie blokują obliczenia. Wynik jest blokowany przy niestabilnym markerze; wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD. |
+| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Jawnie znane AKI lub szybko zmieniająca się Scr blokują wynik. Przy braku przeciwnych danych stabilność/brak AKI i IDMS są opisanymi założeniami obliczenia, umożliwiającymi zakres oszacowania G we właściwym wieku; nie są potwierdzeniem faktów pacjenta. Wyjątkiem pozostaje neonatalny warunek metody enzymatycznej. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
+| eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Źródłowo wymagana identyfikowalność ERM-DA471/IFCC oraz stabilność/brak AKI mogą być opisanymi założeniami przy braku przeciwnych danych; nie wymagają rutynowego ręcznego potwierdzenia. Znana sprzeczność zachowuje blokadę. Rzeczywista technika oznaczenia nie jest dopisywana; nefelometria jest zalecana dla U25cys. Wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD i nie otrzymuje normy przesiewowej dla zdrowej populacji. |
 | Noworodek | Ograniczone oszacowanie `0,31 × wzrost [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aplikacja dodatkowo wymaga bieżącej masy ciała >2,5 kg jako konserwatywnej bramki bezpieczeństwa, a nie granicy zwalidowanej populacji. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, AKI lub niestabilna Scr blokują wynik. Równanie wyprowadzono w metaanalizie indywidualnych danych pacjentów; autorzy wskazali potrzebę walidacji w dużej kohorcie noworodkowej. Wynik nie otrzymuje kategorii G KDIGO. |
 | CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat: surowy eCrCl używa podanej masy rzeczywistej i jest nieindeksowany, a opcjonalny `cg_norm` przelicza go przez BSA do 1,73 m². Oba pozostają eCrCl, nie eGFR. |
-| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria G nie jest pokazywana przy AKI, niestabilnym lub niestandaryzowanym markerze. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości. |
+| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria zakresu G nie jest pokazywana przy znanym AKI, znanej niestabilności lub jednoznacznie niezgodnym standardzie używanego markera. Przy braku przeciwnych danych może opierać się na jawnych założeniach aplikacji. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości i innych właściwych kryteriów. |
 | Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
 | Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |
 | Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
@@ -15665,7 +15812,7 @@ przez powłokę) — pilnuje wyniku widocznego dla lekarza, nie mechanizmu.
 oznaczeniu draftu jako gotowego; scalenie kilka sekund później zostawia jej uwagi bez odpowiedzi (tak było w #572,
 #575, #577, #581, #582, #590).
 
-## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.341, 2026-10-20)
+## Pusta kopia dokumentu po zapisie przy pełnym limicie pamięci: odczyt kontrolny, poprzednia kopia albo brak wpisu (P-SW-PUSTA-KOPIA, SW 1.1.342, 2026-10-20)
 
 **Zgłoszenie (pomiar właściciela 2026-10-20 przy weryfikacji P-SW-STRONY-PRAWNE; usterka istniała już na `audyt`).**
 W Firefoksie (Playwright Firefox 151 i Firefox 158.0.1 bez automatyzacji, limit źródła obniżony preferencją
@@ -15706,12 +15853,12 @@ worker zostawia w pamięci powłoki po nieudanym zapisie kopii dokumentu HTML).*
 - Wywołania: nawigacja w `updateShellFromNetwork`, dokument pobrany poza nawigacją (ten sam klucz w pamięci powłoki)
   i instalacja (`fetchAndStorePrecacheUrl`): pusta kopia nie wchodzi do nowej pamięci powłoki — dokument opcjonalny
   zostaje bez kopii (online z sieci), wymagany `/index.html` przerywa instalację, więc zostaje poprzednia wersja SW.
-- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.340 odrzucony
+- Błąd zapisu kopii nie przerywa już odpowiedzi z sieci (funkcja zwraca `false`, nie wyjątek). Do SW 1.1.341 odrzucony
   zapis przy braku kopii kończył nawigację `Response.error()` — w Chromium strona nie otwierała się online.
 - Koszt na odświeżenie dokumentu: odczyt poprzedniej kopii i odczyt kontrolny (dokumenty mają 7–249 KB), chwilowo do
   trzech kopii treści w pamięci SW. Przy braku kopii nawigacja czeka dodatkowo na odczyt kontrolny.
-- `SW_VERSION` 1.1.340 → **1.1.341** (`npm run podbij-wersje`; 1.1.327–1.1.340 wydały równolegle #734, #738, #741, #739,
-  #743, #745, #742, #747, #748, #746, #749, #751, #752 i #744);
+- `SW_VERSION` 1.1.341 → **1.1.342** (`npm run podbij-wersje`; 1.1.327–1.1.341 wydały równolegle #734, #738, #741, #739,
+  #743, #745, #742, #747, #748, #746, #749, #751, #752, #744 i #753);
   pole `documentCopyWrite` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
 **Świadomie poza zakresem i ryzyko resztkowe (decyzje właściciela).**
