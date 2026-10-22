@@ -16740,7 +16740,9 @@ nagrobek karty (F2). Naruszeń kolejności blokad 0, zawieszeń 0. Przypadki kie
 zielone, K9 równolegle czerwony (F2, znane ograniczenie); K4 przy 200 notatkach — 5,02 wywołania adaptera na notatkę i
 200 blokad notatek. `zz-pp2-fuzz` (4 urządzenia, bez drugiej karty) przed (`95b6f96e`) i po: nowe urządzenia, ziarna
 1–200, i flota mieszana z emulacją, ziarna 1001–1150 — zielone, stany końcowe i uwagi identyczne ziarno w ziarno
-(poprawka F1 bez przeplotu daje ten sam zapis co dotąd).
+(poprawka F1 bez przeplotu daje ten sam zapis co dotąd). Wersje (całe P1 razem z przeglądem, po scaleniu `origin/audyt`
+`ab8ead6a`): `npm run podbij-wersje` — `vilda_vault.js` 224, `vilda_chrome.js` 169, `vilda_session_bridge.js` 93; SW
+1.1.339 → 1.1.340.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 
