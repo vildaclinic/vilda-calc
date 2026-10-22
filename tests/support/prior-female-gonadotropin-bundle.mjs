@@ -48,7 +48,8 @@ export function beforeMaleLhCaliperBundle(data) {
 export function beforeMaleLhCaliperRuntime(runtime) {
   // Result-only display permissions add no central values. Exclude precisely
   // this later, separately frozen bundle when reproducing historical hashes.
-  const { maleLhCaliperReferencePolicy: _maleLh, resultOnlyPolicies: _resultOnly, ...prior } = runtime;
+  const { maleLhCaliperReferencePolicy: _maleLh, resultOnlyPolicies: _resultOnly,
+    amhLilacsSourceData: _lilacsSourceInfo, ...prior } = runtime;
   return prior;
 }
 

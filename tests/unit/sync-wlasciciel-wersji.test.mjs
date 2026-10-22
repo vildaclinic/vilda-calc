@@ -36,6 +36,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // w oknie (16) oraz „Scal pacjentów” X → Y z koszem x1 spod Y w innej karcie (4); na eb81091 czerwone wszystkie 20, na
 // 32b6557 8 (okno V2 zmiany x2 — tam „Usuń pacjenta” X wchodzi między zapisy x1 i x2 w pętli, a decyzja dla x2 zapada
 // już po usunięciu X: x2 z treścią z ładunku).
+// Po przeglądzie poprawki P1 D-21 (F2) 329 testów: +4 — „Usuń pacjenta” w innej karcie przeglądarki, gdy scalanie
+// czeka na blokadę karty z nagrobkiem z ładunku (dwa tryby blokad, oba [CZERWONE na ab8ead6]), kontrola starszego
+// lokalnego nagrobka i strażnik źródła Bsl_usunPacjenta (na ab8ead6 czerwony).
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -2648,6 +2651,80 @@ describe('P-SYNC-WLASCICIEL — delty po „Scal pacjentów” a odrzucony sendB
   }, CZAS);
 });
 
+describe('P-SYNC-WLASCICIEL — „Usuń pacjenta” w innej karcie przeglądarki a usunięcie karty w scalaniu (przegląd poprawki P1 D-21, F2)', () => {
+  // Bsl_usunPacjenta czytało pod blokadą świeżo kartę, ale nie nagrobek karty, i zawsze wpisywało nagrobek z chwilą
+  // z decyzji na starcie scalania. A: X [x1 x2], pełna synchronizacja A → B → C; B usuwa X (eB), C (nie wie o tym)
+  // zapisuje nową wersję X po eB. Na A „Usuń pacjenta” X (chwila e, późniejsza niż zapis C) stoi pod blokadą X tuż przed
+  // zdjęciem karty, a scalanie ładunku B decyduje na starcie (nagrobek eB z ładunku, karta X tu sprzed eB, lokalnego
+  // nagrobka jeszcze nie ma) i czeka na blokadę X. [CZERWONY na ab8ead6 — nagrobek X na A = eB, a pełny ładunek C
+  // przywraca X na A; wysyłka A niesie X dalej.] Teraz zostaje późniejszy z nagrobków: z decyzji i lokalny. Kontrola:
+  // lokalny nagrobek starszy niż nagrobek z ładunku nie cofa chwili. Dane FIKCYJNE.
+  const BLOKADY = { 'kolejka strony': () => null, 'atrapa Web Locks': () => atrapaLocks() };
+  const nagrobekX = async (d, X) => ((await d.baza.listTombstonesForUser(d.uid)).find((t) => t.patientId === X) || {}).deletedAtISO || null;
+
+  for (const [nazwaBlokad, locks] of Object.entries(BLOKADY)) {
+    it(`[CZERWONY na ab8ead6] scalanie czeka na blokadę X trzymaną przez „Usuń pacjenta” (${nazwaBlokad}): nagrobek X na A = e, pełne ładunki C i A nie przywracają X`, async () => {
+      const A = await urzadzenie('A', { locks: locks() });
+      const B = await urzadzenie('B');
+      const C = await urzadzenie('C');
+      const X = await karta(A.v);
+      const sync = chmura();
+      await sync(A); await sync(B); await sync(C);
+      await chwila(5);
+      await B.v.removePatient(X);
+      const eB = await nagrobekX(B, X);
+      await chwila(5);
+      await zapiszWersje(C, X, [60, 66, 72]);
+      const tC = (await C.baza.getPatientForUser(C.uid, X)).lastSavedAtISO;
+      const ladunekB = kopia(await B.v.exportSyncPayload());
+      await chwila(5);
+      let e = null;
+      A.v.onPatientDeleted((z) => { if (z && z.patientId === X) e = z.deletedAtISO; });
+      // „Usuń pacjenta” na A: blokada X wzięta, karta jeszcze nie zdjęta, chwila e jeszcze nie wyznaczona
+      const p = A.pulapka('removePatientForUser', (uid, pid) => pid === X);
+      const usun = A.v.removePatient(X);
+      await p.osiagnieta;
+      let koniecSync = false;
+      const scal = A.v.mergeSyncPayload(ladunekB).then(() => { koniecSync = true; });
+      await chwila(30);
+      const czekala = !koniecSync;
+      p.zwolnij();
+      await usun;
+      await scal;
+      expect(czekala, 'scalanie czekało na blokadę X').toBe(true);
+      expect(eB < tC && tC < e, `eB ${eB} < zapis C ${tC} < e ${e}`).toBe(true);
+      expect(await A.baza.getPatientForUser(A.uid, X)).toBeFalsy();
+      expect(await nagrobekX(A, X), 'nagrobek X na A: e, nie cofnięty do eB').toBe(e);
+      await A.v.mergeSyncPayload(kopia(await C.v.exportSyncPayload()));
+      expect(await A.baza.getPatientForUser(A.uid, X), 'pełny ładunek C nie przywraca X na A').toBeFalsy();
+      expect(await nagrobekX(A, X)).toBe(e);
+      const ladunekA = kopia(await A.v.exportSyncPayload());
+      for (const d of [B, C]) {
+        await d.v.mergeSyncPayload(kopia(ladunekA));
+        expect(await d.baza.getPatientForUser(d.uid, X), d.nazwa).toBeFalsy();
+        expect(await d.baza.listSnapshotsForUser(d.uid, X), d.nazwa).toEqual([]);
+        expect(await nagrobekX(d, X), d.nazwa).toBe(e);
+      }
+    }, CZAS);
+  }
+
+  it('[kontrola] lokalny nagrobek X starszy niż nagrobek z ładunku: zostaje nowszy z ładunku', async () => {
+    const A = await urzadzenie('A');
+    const B = await urzadzenie('B');
+    const X = await karta(A.v);
+    await B.v.mergeSyncPayload(kopia(await A.v.exportSyncPayload()));
+    await chwila(5);
+    await A.v.removePatient(X);
+    const e1 = await nagrobekX(A, X);
+    await chwila(5);
+    await B.v.removePatient(X);
+    const eB = await nagrobekX(B, X);
+    expect(e1 < eB).toBe(true);
+    await A.v.mergeSyncPayload(kopia(await B.v.exportSyncPayload()));
+    expect(await nagrobekX(A, X)).toBe(eB);
+  }, CZAS);
+});
+
 describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
 
@@ -2672,6 +2749,20 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     const fo = src.slice(src.indexOf('async function Bsw_poOddaniu('), src.indexOf('// Najnowszy lokalny nagrobek pacjenta'));
     expect(fo).toContain('else await I().removePatientForUser(b, G);');
     expect(fo).not.toContain('putTombstoneForUser');
+  });
+
+  it('Bsl_usunPacjenta (przegląd poprawki P1 D-21, F2): pod blokadą pacjenta najpierw lokalny nagrobek karty (późniejsza chwila wygrywa), potem świeży rekord', () => {
+    const f = src.slice(src.indexOf('async function Bsl_usunPacjenta('), src.indexOf('function yr(t,e){'));
+    expect(f.length).toBeGreaterThan(100);
+    const iBlok = f.indexOf('return Bsl_podBlokada(patientId, async function () {');
+    const iNag = f.indexOf('const Bsl_lok = await Bpu_nagrobek(patientId);');
+    const iMax = f.indexOf('if (Bsl_lok && Bsl_lok.deletedAtISO > deletedAtISO) deletedAtISO = Bsl_lok.deletedAtISO;');
+    const iRek = f.indexOf('const rekord = await I().getPatientForUser(b, patientId);');
+    expect(iBlok).toBeGreaterThan(0);
+    expect(iNag).toBeGreaterThan(iBlok);
+    expect(iMax).toBeGreaterThan(iNag);
+    expect(iRek).toBeGreaterThan(iMax);
+    expect(f).toContain('await I().putTombstoneForUser(b, { patientId: patientId, deletedAtISO: deletedAtISO });');
   });
 
   it('Le: N w kontekście, faza przeniesień po pętli pacjentów, przed usuwaniem kart i końcem scalania kosza', () => {

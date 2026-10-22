@@ -1,0 +1,391 @@
+{
+  "date": "2026-10-22",
+  "version": "2026-10-22.1",
+  "baseCommit": "594657f40684953af54377de21bbdec277e6b0e9",
+  "ownerApproval": "Właściciel zaakceptował makietę informacji o grupie LiLACS i polecił jej wdrożenie. Nie zatwierdzono porównania wyniku pacjenta z tą medianą.",
+  "scope": "Osobna informacja o opublikowanej kohorcie, poza profilami odniesienia pacjenta. Bez nowej normy, znacznika, porównania, zmiany geometrii, skali lub zapisu wyniku.",
+  "runtimeData": "../amh-lilacs-source-data.json",
+  "runtimeProperty": "amhLilacsSourceData",
+  "source": {
+    "doi": "10.1371/journal.pone.0070967",
+    "citation": "Elderly Men Have Low Levels of Anti-Müllerian Hormone and Inhibin B, but with High Interpersonal Variation: A Cross-Sectional Study of the Sertoli Cell Hormones in 615 Community-Dwelling Men. PLOS ONE. 2013;8(8):e70967.",
+    "published": "2013-08-05",
+    "table": "Table 1: Characteristics of participants in three cohorts.",
+    "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0070967"
+  },
+  "verification": {
+    "primarySourceRead": "Pełny artykuł w XML, HTML i PDF; oryginalny TIFF tabeli 1, eksport XLS tabeli 1, ryciny 1–5 i suplementy S1/S2; osobna korekta.",
+    "retrievedDate": "2026-10-22",
+    "noAdditionalDownloadsDuringImplementation": true,
+    "xmlMatchesEarlierCache": true,
+    "table1Concordance": {
+      "xmlXlsExactCellEquality": true,
+      "rows": 11,
+      "columns": 4,
+      "pdfAndOriginalTiffVisuallyOrTextuallyChecked": true,
+      "figshareXlsMd5Verified": true
+    },
+    "rawDocumentsInRepository": false
+  },
+  "publishedCohort": {
+    "name": "LiLACS NZ",
+    "n": 257,
+    "ageRangeYears": [
+      80,
+      90
+    ],
+    "meanAgeYears": 84.3,
+    "amhMedian": {
+      "value": 12.1,
+      "unit": "pmol/L",
+      "statistic": "Mediana całej kohorty, opublikowana w tabeli 1."
+    },
+    "amhMean": {
+      "value": 14.4,
+      "sd": 14.0,
+      "unit": "pmol/L"
+    },
+    "ageSpecificMedian": false,
+    "population": "Mężczyźni mieszkający w społeczności z East Coast (Bay of Plenty i Rotorua), Nowa Zelandia; rekrutacja z rejestru wyborców. Māori 80–90 lat oraz non-Māori w wieku 85 lat, z różnym stanem zdrowia i sprawnością.",
+    "widerMixedSexCohortN": 937,
+    "maleResponseRatePercent": 65,
+    "analyzedSubsample": "257 mężczyzn, którzy zgodzili się na wykorzystanie surowicy we współpracujących badaniach.",
+    "reportedOrchidectomy": "Żaden uczestnik LiLACS nie zgłosił przebytej orchidektomii.",
+    "doNotTransferOtagoExclusions": true,
+    "sourceEndpoints": "Zakres 80–90 i zasady rekrutacji są opublikowane, lecz sposób zaokrąglania wieku i inkluzywność dokładnych urodzin nie są zdefiniowane matematycznie."
+  },
+  "otherPublishedTable1Groups": [
+    {
+      "cohort": "Otago",
+      "n": 205,
+      "ageRangeYears": [
+        19,
+        90
+      ],
+      "meanAgeYears": 59,
+      "amhMedianPmolL": 19.1
+    },
+    {
+      "cohort": "Vascular",
+      "n": 153,
+      "ageRangeYears": [
+        54,
+        93
+      ],
+      "meanAgeYears": 71.7,
+      "amhMedianPmolL": 22.7
+    }
+  ],
+  "unitPresentation": {
+    "nativeMedianPmolL": 12.1,
+    "sourceRulePmolLToNgMl": "Podziel przez 7,14 (przypis tabeli 1 i podpis ryciny 1).",
+    "ngMlUsingSourceRule": 1.6946778711484594,
+    "existingApplicationFactor": 0.1401,
+    "ngMlUsingExistingApplicationFactor": 1.6952099999999999,
+    "displayApproxNgMl": 1.7,
+    "displayDecimalPlaces": 1,
+    "approximationExplicit": true,
+    "meaning": "≈1,7 ng/mL jest czytelnym zaokrągleniem do jednego miejsca. Nie jest nową dokładną wartością źródłową ani harmonizacją metod. Natywne 12,1 pmol/L pozostaje bez zmian.",
+    "existingUnitConversionsUnchanged": true
+  },
+  "specimenAndSampling": {
+    "specimen": "serum",
+    "nonFasting": true,
+    "bloodVolumeMl": 5,
+    "timeWindow": "07:00–15:00",
+    "processing": "Krew pozostawiona do skrzepnięcia, surowica podzielona na porcje i przechowywana w −80°C.",
+    "plasmaEquivalenceEstablished": false
+  },
+  "assay": {
+    "reportedGlobalSampleAssignments": [
+      {
+        "kit": "Beckman Coulter AMH/MIS A16507",
+        "n": 575,
+        "reportedAnalyticalSensitivityPmolL": 1,
+        "reportedAnalyticalSensitivityNgMl": 0.14
+      },
+      {
+        "kit": "Diagnostic System Laboratories MIS/AMH DSL-10-14400",
+        "n": 40,
+        "reportedAnalyticalSensitivityPmolL": 0.04,
+        "reportedAnalyticalSensitivityNgMl": 0.006
+      }
+    ],
+    "duplicateMeasurements": true,
+    "intraAssayCvPercent": 8.8,
+    "interAssayCvPercent": 10.3,
+    "comparisonClaim": "Autorzy podają podobieństwo wyników obu zestawów i porównanie ponad 100 próbek niezwiązanych z tym badaniem; nie przedstawiają tu danych indywidualnych ani równania harmonizacji.",
+    "liLacsAssayAssignment": "Nieopublikowane jawnie w Chong. Zbieżność N=153 i podziału 40 DSL +113 A16507 w pokrewnym Dennis 2013 jest sugestywna, lecz sama nie dowodzi przypisania wszystkich próbek LiLACS do A16507.",
+    "doNotRelabelA16507AsGenII": true,
+    "separateLoqPublished": false,
+    "analyticalSensitivityIsNotConfirmedLloq": true,
+    "noAssayHarmonization": true
+  },
+  "nondetectsAndCensoring": {
+    "publishedFivePercent": "5% niewykrywalnego AMH podano w akapicie wyników w kontekście Otago, z Fig. 1 i S1; brak jawnego mianownika i licznika.",
+    "notAssignedToLiLacsOrAll496": true,
+    "notInferredAsExactly5Of99": true,
+    "liLacsNondetectFraction": "Nie podano osobno.",
+    "processingBelowDetection": "Nie podano liczbowej reguły cenzurowania, zastępowania przez zero/LOD/LOD÷2 ani wykluczania.",
+    "liLacsPublishedLowerCentile": "Dolny 2,5. centyl tabeli wynosi 0; nie dowodzi biologicznego zera ani jawnej imputacji. Centyle nie są importowane jako normy aplikacji."
+  },
+  "unresolvedDiscrepancies": [
+    {
+      "location": "Abstract versus Cohort Studies",
+      "published": "493 z 615 w wieku ≥65 w abstrakcie; n=496 starszych mężczyzn w Methods, bez progu wieku w tym zdaniu.",
+      "resolution": "Nierozstrzygnięte; liczby zachowane."
+    },
+    {
+      "location": "Otago Methods versus Table 1, Figures and S1/S2",
+      "published": "99 starszych +119 młodszych w Methods, co daje 218. Tabela i ryciny: 205; suplementy: 99+106=205.",
+      "resolution": "Różnica 13 pozostaje niewyjaśniona. Nie przypisano jej automatycznie wykluczeniom, brakowi surowicy ani cenzurowaniu."
+    },
+    {
+      "location": "Figure 1/2 captions versus Otago Table 1 and S1/S2",
+      "published": "Podpisy rycin 1 i 2: starsza grupa 80–93; tabela Otago: 19–90; suplementy S1/S2: starsza podgrupa 70–90.",
+      "resolution": "Faktyczna rozbieżność podpisu, bez samodzielnej naprawy źródła."
+    }
+  ],
+  "figuresAndLinkedData": {
+    "figure1B": "Średnie geometryczne i 95% CI grup wieku, nie mediany. Nie przekształcono ich w p50.",
+    "figure4": "Indywidualne obserwacje trzech kohort; brak modelu mediany dokładnego wieku dla LiLACS.",
+    "figshareRecords": {
+      "matchingResourceDoiItems": 7,
+      "mainFigures": 5,
+      "aggregateTable1XlsRecords": 1,
+      "supportingInformationRecords": 1,
+      "supportingInformationFiles": "Dwa histogramy TIFF, S1 AMH i S2 inhibiny B."
+    },
+    "rawIndividualDatasetLocated": false,
+    "noMedian70ToUnder80OrExactAge80To90": true,
+    "thesisDennis2012": "Pełnego tekstu rozprawy nie zweryfikowano. Nie użyto snippetów wyszukiwarki jako dowodu metody lub przypisania próbek."
+  },
+  "correction": {
+    "doi": "10.1371/annotation/d6097df2-37ed-4561-8885-f54dcaa3aeb6",
+    "date": "2013-10-11",
+    "scope": "Poprawiono nazwisko dziewiątego autora na Ian McLennan.",
+    "doesNotCorrectDataMethodsOrCounts": true
+  },
+  "applicationPolicy": {
+    "kind": "published-cohort-information",
+    "notClinicalReference": true,
+    "noPatientComparison": true,
+    "ordinaryOnly": true,
+    "fullAgeIntervalRequired": true,
+    "ageDomainYears": [
+      80,
+      90
+    ],
+    "ageBoundsAreConservativeApplicationPolicy": "Cały możliwy przedział wieku musi mieścić się w [80,90]. To konserwatywna polityka aplikacji, nie dopisane kryteria autorów.",
+    "preserved": [
+      "85 dotychczasowych profili i ich kwalifikacja",
+      "Wszystkie wcześniejsze klucze danych runtime",
+      "Geometria i skale",
+      "Normy laboratoryjne",
+      "Wyniki i dawne oceny",
+      "Snapshot edukacyjnego odniesienia AMH",
+      "Stan i zapis pacjenta"
+    ],
+    "prohibited": [
+      "Nowy profil odniesienia",
+      "Znacznik mediany LiLACS na osi pacjenta",
+      "Iloraz lub odległość wyniku pacjenta od mediany",
+      "SDS lub percentyl",
+      "Werdykt prawidłowości lub płodności",
+      "Mediana dla luki >70–<80",
+      "Harmonizacja metod lub ekstrapolacja krzywej"
+    ]
+  },
+  "syntheticQualificationCases": [
+    {
+      "sex": "male",
+      "ageYears": 80,
+      "expected": "Informacja o opublikowanej grupie; bez porównania pacjenta."
+    },
+    {
+      "sex": "male",
+      "ageYears": 85,
+      "expected": "Informacja o opublikowanej grupie; natywne 12,1 pmol/L i jawne ≈1,7 ng/mL."
+    },
+    {
+      "sex": "male",
+      "ageYears": 90,
+      "expected": "Dokładny wiek 90 mieści się w konserwatywnej domenie informacji."
+    },
+    {
+      "sex": "male",
+      "possibleAgeYears": [
+        89,
+        90
+      ],
+      "upperExclusive": true,
+      "expected": "Cały przedział mieści się w domenie; informacja dostępna."
+    },
+    {
+      "sex": "male",
+      "possibleAgeYears": [
+        90,
+        91
+      ],
+      "upperExclusive": true,
+      "expected": "90 ukończonych lat nie mieści się całym przedziałem; informacja niedostępna."
+    },
+    {
+      "sex": "male",
+      "possibleAgeYears": [
+        79,
+        80
+      ],
+      "upperExclusive": true,
+      "expected": "Cały przedział poza domeną; informacja niedostępna."
+    },
+    {
+      "sex": "female",
+      "ageYears": 85,
+      "expected": "Ta informacja o mężczyznach niedostępna."
+    },
+    {
+      "sex": "male",
+      "ageYears": 85,
+      "sexComparison": true,
+      "expected": "Informacja ordinaryOnly, bez rozszerzania porównania płci."
+    }
+  ],
+  "sourceArtifacts": [
+    {
+      "file": "Table_1.xls",
+      "bytes": 5632,
+      "sha256": "d0383a51f06324716937f1247e816b1956739673ba08f34f09e1428f52b5370e",
+      "url": "https://ndownloader.figshare.com/files/1142125",
+      "retrievedUtc": "2026-10-22T13:22:57.206174+00:00",
+      "httpStatus": 200,
+      "md5": "27a22d199e8004d5a68d6422a2ae8311"
+    },
+    {
+      "file": "article.html",
+      "bytes": 192207,
+      "sha256": "60203b8603041444c37283b4b49e9f780050cf0530beedd8956de28b998ede36",
+      "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0070967",
+      "retrievedUtc": "2026-10-22T13:15:18.970426+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "article.pdf",
+      "bytes": 503910,
+      "sha256": "d71f4971d3650b2ef3306d1b1ca44338c5c98622d0f91923af6cae6c7280f2bc",
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0070967&type=printable",
+      "retrievedUtc": "2026-10-22T13:15:18.970426+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "article.xml",
+      "bytes": 66000,
+      "sha256": "4d4de6e8ab324890838daeaee9c5079869364ec3f086506612829b002928e1c6",
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0070967&type=manuscript",
+      "retrievedUtc": "2026-10-22T13:15:18.970426+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "correction.html",
+      "bytes": 73411,
+      "sha256": "f619330cbffacc20fb3ed5dbe67dd82ce6dcadf5e11bc7b3dd10d8da666767c3",
+      "url": "https://journals.plos.org/plosone/article?id=10.1371/annotation/d6097df2-37ed-4561-8885-f54dcaa3aeb6",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "correction.xml",
+      "bytes": 5379,
+      "sha256": "9a21ee128b025e967a0626ab10a4bd0bd5e1fe1778fb93550e89fa77a0b3d46b",
+      "url": "https://journals.plos.org/plosone/article/file?id=10.1371/annotation/d6097df2-37ed-4561-8885-f54dcaa3aeb6&type=manuscript",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "figshare-763852.json",
+      "bytes": 5199,
+      "sha256": "0bb9795f19eb0fd2615f3eeed32550bd627b0b8d77929317a74320bee941093b",
+      "url": "https://api.figshare.com/v2/articles/763852"
+    },
+    {
+      "file": "figshare-763856.json",
+      "bytes": 7868,
+      "sha256": "2f14fc7cabd874e929ed743a4b54a64f0ddcfeca3c91ec0416045cf404c1ba3f",
+      "url": "https://api.figshare.com/v2/articles/763856"
+    },
+    {
+      "file": "figshare-resource.json",
+      "bytes": 8515,
+      "sha256": "b77556b0771425e1c01c8ad29a659e50cfbe03aaeb6735e9d666932f34eda849",
+      "url": "https://api.figshare.com/v2/articles?resource_doi=10.1371/journal.pone.0070967",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "figure1-original",
+      "bytes": 685460,
+      "sha256": "275c803b1a7fb3ff8c840bccd2586e2ebc88bac10ac138d313884c85475759fb",
+      "url": "https://journals.plos.org/plosone/article/figure/image?size=original&id=10.1371/journal.pone.0070967.g001",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "figure2-original",
+      "bytes": 827800,
+      "sha256": "ba142188d451380a6d90b15f3bd406ae7a8ca84b334e10cbaae25100d2e30d1b",
+      "url": "https://journals.plos.org/plosone/article/figure/image?size=original&id=10.1371/journal.pone.0070967.g002",
+      "retrievedUtc": "2026-10-22T13:24:39.385949+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "figure3-original",
+      "bytes": 803210,
+      "sha256": "488d1ca4485aeb803172836a703205caa220443b1aa7689fc8e23fe485bda33a",
+      "url": "https://journals.plos.org/plosone/article/figure/image?size=original&id=10.1371/journal.pone.0070967.g003",
+      "retrievedUtc": "2026-10-22T13:24:39.385949+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "figure4-original",
+      "bytes": 1668830,
+      "sha256": "474ba7608cf5a0ba0b011ab911f9db38f3322107d58b959789a85f8ffb547b03",
+      "url": "https://journals.plos.org/plosone/article/figure/image?size=original&id=10.1371/journal.pone.0070967.g004",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "figure5-original",
+      "bytes": 525066,
+      "sha256": "aae36a7ad22b10c2d3f6481b51e98b7444bc011d227d4d11c16024f1eef61013",
+      "url": "https://journals.plos.org/plosone/article/figure/image?size=original&id=10.1371/journal.pone.0070967.g005",
+      "retrievedUtc": "2026-10-22T13:24:39.385949+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "supplement-s001",
+      "bytes": 1708174,
+      "sha256": "4b8bf0e6dc819189d386400182315f6862abf5a37a93faec18d998f4f8f25bb7",
+      "url": "https://journals.plos.org/plosone/article/file?type=supplementary&id=10.1371/journal.pone.0070967.s001",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "supplement-s002",
+      "bytes": 2681639,
+      "sha256": "1f613a14790c119178f9e3c00260cbd9dcc8767ca102c68c4753c9bf07634080",
+      "url": "https://journals.plos.org/plosone/article/file?type=supplementary&id=10.1371/journal.pone.0070967.s002",
+      "retrievedUtc": "2026-10-22T13:16:53.809528+00:00",
+      "httpStatus": 200
+    },
+    {
+      "file": "table1-original",
+      "bytes": 235864,
+      "sha256": "600794e1a4e2461950fd0fb23b0fc2b978d12573c44666448bd3a194b4a719c8",
+      "url": "https://journals.plos.org/plosone/article/figure/image?size=original&id=10.1371/journal.pone.0070967.t001",
+      "retrievedUtc": "2026-10-22T13:15:18.970426+00:00",
+      "httpStatus": 200
+    }
+  ],
+  "validation": "Generator, zachowanie wcześniejszych danych runtime i testy rzeczywistej kwalifikacji/prezentacji są sprawdzane oddzielnie dla końcowego SHA. Ta dokumentacja nie nadaje walidacji klinicznej.",
+  "runtimeDataSha256": "24de9dd58f056fff5388f370818951984a194c23de079263f1495a8bae80e54d"
+}
