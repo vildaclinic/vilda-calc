@@ -28,6 +28,7 @@ def build():
     amh_display_policy = json.loads((ROOT / 'amh-display-policy.json').read_text(encoding='utf-8'))
     amh_comparison_policy = json.loads((ROOT / 'amh-comparison-policy.json').read_text(encoding='utf-8'))
     amh_lilacs_source_data = json.loads((ROOT / 'amh-lilacs-source-data.json').read_text(encoding='utf-8'))
+    e2_phase_source_data = json.loads((ROOT / 'e2-phase-source-data.json').read_text(encoding='utf-8'))
     insl3_display_policy = json.loads((ROOT / 'insl3-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_policy = json.loads((ROOT / 'female-gonadotropin-display-policy.json').read_text(encoding='utf-8'))
     female_gonadotropin_data = json.loads((ROOT / 'female-gonadotropin-display-data.json').read_text(encoding='utf-8'))
@@ -60,6 +61,7 @@ def build():
     amh_display_policy_js = json.dumps(amh_display_policy, ensure_ascii=False, indent=2)
     amh_comparison_policy_js = json.dumps(amh_comparison_policy, ensure_ascii=False, indent=2)
     amh_lilacs_source_data_js = json.dumps(amh_lilacs_source_data, ensure_ascii=False, indent=2)
+    e2_phase_source_data_js = json.dumps(e2_phase_source_data, ensure_ascii=False, indent=2)
     insl3_display_policy_js = json.dumps(insl3_display_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_policy_js = json.dumps(female_gonadotropin_policy, ensure_ascii=False, indent=2)
     female_gonadotropin_data_js = json.dumps(female_gonadotropin_data, ensure_ascii=False, indent=2)
@@ -96,6 +98,7 @@ def build():
         f'const amhDisplayPolicy = {amh_display_policy_js};\n'
         f'const amhComparisonPolicy = {amh_comparison_policy_js};\n'
         f'const amhLilacsSourceData = {amh_lilacs_source_data_js};\n'
+        f'const e2PhaseSourceData = {e2_phase_source_data_js};\n'
         f'const insl3DisplayPolicy = {insl3_display_policy_js};\n'
         f'const femaleGonadotropinPolicy = {female_gonadotropin_policy_js};\n'
         f'const femaleGonadotropinData = {female_gonadotropin_data_js};\n'
@@ -124,6 +127,7 @@ def build():
         '  amhDisplayPolicy: amhDisplayPolicy,\n'
         '  amhComparisonPolicy: amhComparisonPolicy,\n'
         '  amhLilacsSourceData: amhLilacsSourceData,\n'
+        '  e2PhaseSourceData: e2PhaseSourceData,\n'
         '  insl3DisplayPolicy: insl3DisplayPolicy,\n'
         '  femaleGonadotropinPolicy: femaleGonadotropinPolicy,\n'
         '  femaleGonadotropinData: femaleGonadotropinData,\n'

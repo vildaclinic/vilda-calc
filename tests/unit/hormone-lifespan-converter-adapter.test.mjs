@@ -34,6 +34,7 @@ function adapter(extra = {}) {
     effectivePatient: { sex: 'M', age: 12 },
     lifespanUI: { update: (value) => updates.push(value), clear: () => updates.push(null) },
     amhAgeReferenceUI: null,
+    e2PhaseSourceUI: null,
     showError: () => {},
     readPubertyPatientContext: () => context.sourcePatient,
     getEffectivePatient: () => context.effectivePatient,
@@ -204,7 +205,7 @@ describe('Hormone lifespan converter adapter — current result only', () => {
     const lilacs = require('../../vilda_amh_lilacs_source_ui.js');
     const lilacsData = require('../../vilda_hormone_lifespan_data.js').amhLilacsSourceData;
     const parseSource = html.slice(html.indexOf('    function parseAmhMeasurement()'),
-      html.indexOf('    function renderCensoredAmh('));
+      html.indexOf('    function renderCensoredSourceResult('));
     for (const [sex, age] of [['F', 44], ['M', 85]]) {
       const xuContexts = [], lilacsContexts = [];
       const app = adapter({ currentSubstance: { id: 'amh' }, unitEl: { value: 'ng/mL' },

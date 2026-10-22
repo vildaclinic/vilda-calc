@@ -51,7 +51,7 @@ function currentForm(years = 18, months = 0) {
       sex: 'M', ageYears: years, ageMonths: months },
     effectivePatient: { sex: 'M', age: years + months / 12 },
     lifespanUI: { update: value => updates.push(value), clear: () => updates.push(null) },
-    amhAgeReferenceUI: null, showError: () => {}, isPubertyReferenceSubstance: () => false,
+    amhAgeReferenceUI: null, e2PhaseSourceUI: null, showError: () => {}, isPubertyReferenceSubstance: () => false,
   };
   context.sessionStorage = { getItem: () => context.identity };
   context.readPubertyPatientContext = () => context.sourcePatient;
