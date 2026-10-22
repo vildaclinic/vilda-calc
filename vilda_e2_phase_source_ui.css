@@ -1,0 +1,152 @@
+/* Read-only E2 phase-group information, separate from the result and chart. */
+#labE2PhaseSource { container: e2-phase-source / inline-size; }
+#labE2PhaseSource[hidden] { display: none !important; }
+.vilda-e2-phase-source {
+  --veps-paper: var(--card-bg, #fff);
+  --veps-ink: var(--text-color, #183c48);
+  --veps-muted: var(--text-muted, #5a7274);
+  --veps-border: var(--border-color, #d4e4e7);
+  --veps-subtle: #f1f7f7;
+  --veps-subtle-border: #e0eeee;
+  margin: var(--space-20px) 0 0;
+  padding: var(--space-20px) 22px 0;
+  border: var(--border-hairline) solid var(--veps-border);
+  border-radius: 15px;
+  background: var(--veps-paper);
+  color: var(--veps-ink);
+  font-family: inherit;
+  overflow: hidden;
+  min-width: 0;
+}
+.vilda-e2-phase-source *,
+.vilda-e2-phase-source *::before,
+.vilda-e2-phase-source *::after { box-sizing: border-box; }
+.vilda-e2-phase-source .veps-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  flex-wrap: wrap;
+}
+.vilda-e2-phase-source h3 {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  margin: 0;
+  line-height: 1.5;
+  color: inherit;
+}
+.vilda-e2-phase-source .veps-source-label {
+  font-size: 10px;
+  color: var(--veps-muted);
+  border: var(--border-hairline) solid var(--veps-border);
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-6);
+  white-space: nowrap;
+}
+.vilda-e2-phase-source .veps-cohort {
+  font-size: 12px;
+  color: var(--veps-muted);
+  margin: var(--space-8px) 0 15px;
+  line-height: 1.6;
+}
+.vilda-e2-phase-source .veps-median-block {
+  background: var(--veps-subtle);
+  border: var(--border-hairline) solid var(--veps-subtle-border);
+  border-radius: var(--radius-10);
+  padding: 13px 15px;
+  min-width: 0;
+}
+.vilda-e2-phase-source .veps-median-block > span { font-size: 11px; color: var(--veps-muted); }
+.vilda-e2-phase-source .veps-median-block p {
+  display: flex;
+  align-items: baseline;
+  gap: 17px;
+  flex-wrap: wrap;
+  margin: var(--space-6px) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.vilda-e2-phase-source .veps-median-block strong {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+.vilda-e2-phase-source .veps-median-block small {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 3px;
+  color: var(--veps-muted);
+}
+.vilda-e2-phase-source .veps-median-block p > span { font-size: 13px; color: var(--veps-muted); white-space: nowrap; }
+.vilda-e2-phase-source .veps-limit { font-size: 11px; line-height: 1.7; color: var(--veps-muted); margin: var(--space-12px) 0 var(--space-16px); }
+.vilda-e2-phase-source .veps-details { border-top: var(--border-hairline) solid var(--veps-border); margin: 0 -22px; }
+.vilda-e2-phase-source summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  list-style: none;
+  padding: var(--space-14px) 22px;
+  min-height: 45px;
+  font-size: 12px;
+  color: var(--veps-ink);
+  cursor: pointer;
+}
+.vilda-e2-phase-source summary::-webkit-details-marker { display: none; }
+.vilda-e2-phase-source summary > span { font-size: 19px; line-height: 16px; }
+.vilda-e2-phase-source details[open] summary > span { transform: rotate(45deg); }
+.vilda-e2-phase-source summary:focus-visible,
+.vilda-e2-phase-source a:focus-visible { outline: var(--border-emphasis) solid var(--primary, #00838d); outline-offset: var(--space-4px); }
+.vilda-e2-phase-source .veps-source-copy { font-size: 12px; color: var(--veps-muted); line-height: 1.75; padding: 0 22px 5px; }
+.vilda-e2-phase-source .veps-source-copy p { margin: 0 0 13px; }
+.vilda-e2-phase-source .veps-source-copy strong { font-weight: 600; color: var(--veps-ink); }
+.vilda-e2-phase-source a { color: var(--primary, #00838d); text-underline-offset: 3px; overflow-wrap: anywhere; }
+@container e2-phase-source (min-width: 640px) {
+  .vilda-e2-phase-source { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); column-gap: 26px; }
+  .vilda-e2-phase-source .veps-heading { grid-column: 1; grid-row: 1; }
+  .vilda-e2-phase-source .veps-cohort { grid-column: 1; grid-row: 2; margin-bottom: 0; }
+  .vilda-e2-phase-source .veps-limit { grid-column: 1; grid-row: 3; }
+  .vilda-e2-phase-source .veps-median-block { grid-column: 2; grid-row: 1 / 4; align-self: start; }
+  .vilda-e2-phase-source .veps-details { grid-column: 1 / -1; }
+}
+@container e2-phase-source (max-width: 639px) {
+  .vilda-e2-phase-source { margin-top: var(--space-16px); padding: 15px var(--space-14px) 0; border-radius: var(--radius-12); }
+  .vilda-e2-phase-source h3 { font-size: 14px; }
+  .vilda-e2-phase-source .veps-source-label { font-size: 9px; padding: var(--space-4px) var(--space-6px); }
+  .vilda-e2-phase-source .veps-cohort { font-size: 11px; margin-bottom: var(--space-12px); }
+  .vilda-e2-phase-source .veps-median-block { padding: 11px var(--space-12px); }
+  .vilda-e2-phase-source .veps-median-block > span { font-size: 10px; }
+  .vilda-e2-phase-source .veps-median-block strong { font-size: 23px; }
+  .vilda-e2-phase-source .veps-median-block p { gap: var(--space-10px); }
+  .vilda-e2-phase-source .veps-median-block p > span { font-size: 12px; }
+  .vilda-e2-phase-source .veps-limit { font-size: 10px; margin: 11px 0 13px; }
+  .vilda-e2-phase-source .veps-details { margin: 0 calc(-1 * var(--space-14px)); }
+  .vilda-e2-phase-source summary { padding: 13px var(--space-14px); font-size: 11px; }
+  .vilda-e2-phase-source .veps-source-copy { padding: 0 var(--space-14px) 3px; font-size: 11px; }
+}
+body.dark-bg-level-1 .vilda-e2-phase-source { --veps-border: rgba(0,131,141,.22); }
+body.dark-bg-level-2 .vilda-e2-phase-source { --veps-border: rgba(0,131,141,.28); }
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-e2-phase-source {
+  --veps-paper: var(--hc-surface);
+  --veps-ink: var(--hc-text);
+  --veps-muted: var(--hc-muted);
+  --veps-border: var(--hc-border);
+  --veps-subtle: var(--hc-input-bg);
+  --veps-subtle-border: var(--hc-border);
+  border-width: var(--hc-card-border-width);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vilda-e2-phase-source * { animation: none !important; transition: none !important; }
+}
+@media print {
+  .vilda-e2-phase-source { break-inside: avoid; background: white; color: black; border-color: #777; }
+  .vilda-e2-phase-source .veps-source-label,
+  .vilda-e2-phase-source .veps-cohort,
+  .vilda-e2-phase-source .veps-limit,
+  .vilda-e2-phase-source .veps-source-copy { color: black; }
+}
+
+.vilda-e2-phase-source .veps-median-block .veps-overflow { font-size: 10px; color: var(--veps-muted); line-height: 1.6; margin-top: var(--space-8px); }

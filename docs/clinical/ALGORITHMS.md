@@ -2948,6 +2948,55 @@ funkcji i formularza, nie deklaracja wykonanych testów ani walidacji klinicznej
 Źródłowy ślad i akceptacja dopisane do istniejącego
 [przeglądu odniesień](hormone-lifespan/evidence/female-reference-points-2026-10-13.json).
 
+### HORMONE-E2-PHASE-SOURCE — mediana fazy w badanej grupie, 2026-10-22
+
+**Decyzja i problem:** po audycie źródła i zaakceptowanej makiecie właściciel
+polecił wdrożyć krótki blok pod wykresem, zachowując obecny duży wynik,
+status, kolorowy pasek RI, znacznik i konwersje. Nie dodajemy ankiety ani
+obowiązkowego dnia cyklu.
+
+**Pełne źródło:** Anckaert 2021, DOI `10.1016/j.plabm.2021.e00211`, tabela 1
+oraz kompletny suplement DOCX, Methods i S1–S3. Mediany między uczestniczkami
+z ich własnych median faz: folikularna **198 pmol/L, N85**, okołoowulacyjna
+**757 pmol/L, N81**, lutealna **412 pmol/L, N85**. Nie są medianami dokładnego
+wieku, centylami pojedynczego pobrania, RI ani oceną rezerwy jajnikowej.
+Kobiety 18–37 lat, wyselekcjonowane naturalne owulacyjne cykle 24–35 dni;
+surowica, Roche Elecsys Estradiol III/cobas e801. Wykluczenia i hashe pełnego
+tekstu/suplementu są w [ekstrakcie](hormone-lifespan/evidence/e2-phase-source-audit-2026-10-22.json).
+Zakres pomiarowy 18,4–11010 nie oznacza osobnych LOD/LOQ.
+
+**Polityka i wpływ:** `e2-phase-source-data.json` → osobne `e2PhaseSourceData`,
+poza zachowanymi 85 profilami. Produkcyjny `VildaE2PhaseSource.evaluate`
+przyjmuje dane i cały kontekst. Wymaga gotowej bieżącej kobiety, pełnego
+możliwego wieku w **[18,37]**, poprawnego wyniku i jawnej fazy z istniejącego
+edytora E2. Nie ustala fazy ani menopauzy z wieku/wyniku, nie kopiuje wyboru
+LH/FSH. Znana ciąża, leczenie/stymulacja i niezgodna metoda/materiał blokują;
+nieznany wywiad nie potwierdza ich braku. Dokładne 18 zachowuje Madsen,
+ukończone 37 nie mieszczą się w domenie. To konserwatywna polityka aplikacji.
+
+Wynik i ocena laboratoryjna pozostają na dotychczasowej ścieżce. Mediana
+w HTML poza SVG nie wpływa na werdykt, linię ani skalę **264 pmol/L**;
+412/757 pokazujemy w całości. Brak nowych punktów, ilorazów, SDS, norm lub
+snapshotu E2. Zmiany osoby/płci/analitu, niegotowy kontekst, blokada konta,
+pusty/niepoprawny wynik i niezgodny widok usuwają poprzedni blok.
+
+**Nierówności:** E2 korzysta z istniejącego parsera zapisu wyniku z jednostkami
+E2 i `LabUnitConverter` do konwersji. `<5 pg/mL` → `<18,4 pmol/L`, bez
+pozornego dokładnego punktu lub globalnej klasyfikacji. Prosta etykieta mówi,
+że dokładna wartość nie jest znana. `<LOD`/`<LOQ` nie dostaje zastępczej liczby.
+Nie zmienia to dotychczasowej ścieżki liczb E2 ani wyniku AMH.
+
+**Przypadek syntetyczny:** F30, E2 206 pg/mL, faza okołoowulacyjna → wynik
+206 pg/mL i obecna ocena w RI około 104–398 pg/mL ze znacznikiem; osobno
+mediana grupy 757 pmol/L. F30/folikularna →198, F30/lutealna →412; faza
+nieznana, F40 lub ciąża → brak bloku. Testy produkcyjnych funkcji obejmują
+wiek niepewny, fazy, wyłączenia, jednostki, nierówności, historię, tożsamość,
+niezmienne wcześniejsze dane oraz desktop/320/390 px. PWA sprawdza instalację,
+aktualizację i restart offline. Wyniki kontroli i CI podaje PR dla aktualnego
+SHA; zgoda na wdrożenie nie jest walidacją kliniczną.
+
+[Kontrakt i ograniczenia](hormone-lifespan/E2_PHASE_SOURCE.md).
+
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
 **Problem i decyzja:** wpisanie E2 zmieniało skalę i krzywą odniesienia;

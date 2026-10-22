@@ -66,6 +66,7 @@
   <link href="vilda_hormone_lifespan.css?v=6" rel="stylesheet">
   <link href="vilda_amh_age_reference_ui.css?v=1" rel="stylesheet">
   <link href="vilda_amh_lilacs_source_ui.css?v=1" rel="stylesheet">
+  <link href="vilda_e2_phase_source_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
@@ -350,6 +351,7 @@
             <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
             <div id="labAmhLilacsSource" hidden></div>
+            <div id="labE2PhaseSource" hidden></div>
            </div><!-- /.lab-pane--chart -->
           </div>
 
@@ -482,7 +484,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=36"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=37"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=14"></script>
@@ -491,6 +493,8 @@
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
   <script src="vilda_amh_lilacs_source_ui.js?v=1"></script>
+  <script src="vilda_e2_phase_source.js?v=1"></script>
+  <script src="vilda_e2_phase_source_ui.js?v=1"></script>
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=4"></script>
   <script src="lab_history_strip.js?v=4"></script>
@@ -802,6 +806,10 @@
       host: document.getElementById('labAmhLilacsSource')
     });
     window.VildaAmhLilacsSourceRuntime = amhLilacsSourceUI || null;
+    var e2PhaseSourceUI = window.VildaE2PhaseSourceUI && window.VildaE2PhaseSourceUI.mount({
+      host: document.getElementById('labE2PhaseSource')
+    });
+    window.VildaE2PhaseSourceRuntime = e2PhaseSourceUI || null;
     var lifespanVault = null;
     var lastLifespanContext = null;
     var lifespanCurrentSex = null;
@@ -812,7 +820,10 @@
       amhSourceChartPanel.addEventListener(type, function () {
         // The chart's own delegated handler settles its view first. Only its
         // display state is read; the cached form context is never recalculated.
-        Promise.resolve().then(refreshAmhLilacsSource);
+        Promise.resolve().then(function () {
+          refreshAmhLilacsSource();
+          refreshE2PhaseSource();
+        });
       });
     });
     function currentPatientIdentity() {
@@ -820,6 +831,7 @@
       catch (_) { return window._vildaCurrentPatientId || ''; }
     }
     var lastAmhSourceContext = null;
+    var lastE2SourceContext = null;
     function refreshAmhLilacsSource() {
       if (typeof amhLilacsSourceUI === 'undefined' || !amhLilacsSourceUI) return;
       if (!lastAmhSourceContext || lastAmhSourceContext.identityKey !== currentPatientIdentity()) {
@@ -830,6 +842,18 @@
       amhLilacsSourceUI.update(Object.assign({}, lastAmhSourceContext, chartState ? {
         view: chartState.view, compare: chartState.compare, selected: chartState.selected
       } : {}));
+    }
+    function refreshE2PhaseSource() {
+      if (typeof e2PhaseSourceUI === 'undefined' || !e2PhaseSourceUI) return;
+      if (!lastE2SourceContext || lastE2SourceContext.identityKey !== currentPatientIdentity()) {
+        e2PhaseSourceUI.clear();
+        return;
+      }
+      var state = lifespanUI && typeof lifespanUI.getState === 'function' ? lifespanUI.getState() : null;
+      if (!state || !state.visible) { e2PhaseSourceUI.clear(); return; }
+      e2PhaseSourceUI.update(Object.assign({}, lastE2SourceContext, {
+        view: state.view, compare: state.compare, selected: state.selected
+      }));
     }
     function isLifespanSubstance(substance) {
       return !!substance && ['lh', 'fsh', 'inhibin_b', 'amh', 'estradiol', 'testosterone_total'].includes(substance.id);
@@ -846,6 +870,7 @@
       localOverrideIdentity = next;
       lastLifespanContext = null;
       lastAmhSourceContext = null;
+      lastE2SourceContext = null;
       lifespanCurrentSex = null;
       testosteroneMeasurementContext = {};
       resetLocalPatientOverride();
@@ -854,6 +879,7 @@
       if (lifespanUI) lifespanUI.clear();
       if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
       if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
+      if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
       return true;
     }
     function bindLifespanVault() {
@@ -864,9 +890,11 @@
         if (window.VildaVault !== vault) return;
         lastLifespanContext = null;
         lastAmhSourceContext = null;
+        lastE2SourceContext = null;
         if (lifespanUI) lifespanUI.clear();
         if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
         if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
+        if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
       });
     }
     function lifespanAgeLabel(age, input) {
@@ -1002,9 +1030,11 @@
       if (!substance) {
         lastLifespanContext = null;
         lastAmhSourceContext = null;
+        lastE2SourceContext = null;
         lifespanUI.clear();
         if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
         if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
+        if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
         return;
       }
       var source = readPubertyPatientContext();
@@ -1127,6 +1157,17 @@
         if (amhAgeReferenceUI) amhAgeReferenceUI.update(amhContext);
         lastAmhSourceContext = amhContext;
         refreshAmhLilacsSource();
+      }
+      if (e2PhaseSourceUI) {
+        // Reuse this calculation's context and existing optional phase. The
+        // statistic is outside the ordinary profile registry and history.
+        var e2Context = Object.assign({}, context);
+        if (substance.id === 'estradiol' && status === 'ready' && resolved && resolved.status === 'known') {
+          var parsedE2 = parseE2Measurement(substance);
+          if (parsedE2 && parsedE2.status === 'valid' && parsedE2.operator !== '=') e2Context.measurement = parsedE2;
+        }
+        lastE2SourceContext = e2Context;
+        refreshE2PhaseSource();
       }
     }
 
@@ -3511,12 +3552,21 @@
       var engine = window.VildaAmhAgeReference;
       return engine && engine.parseMeasurement(window.VildaAmhAgeReferenceData, valueEl.value, unitEl.value);
     }
-    function renderCensoredAmh(substance) {
-      if (!substance || substance.id !== 'amh') return false;
-      var measurement = parseAmhMeasurement();
+    function parseE2Measurement(substance) {
+      var parser = window.VildaAmhAgeReference;
+      if (!substance || substance.id !== 'estradiol' || !parser) return null;
+      // Reuse the existing inequality lexer with the converter's E2 unit data.
+      // This does not borrow AMH factors or a study's reporting limit.
+      var factors = {};
+      substance.units.forEach(function (unit) { factors[unit.symbol] = unit.factor_to_si; });
+      return parser.parseMeasurement({ unitConversions: factors }, valueEl.value, unitEl.value);
+    }
+    function renderCensoredSourceResult(substance) {
+      if (!substance || !['amh', 'estradiol'].includes(substance.id)) return false;
+      var measurement = substance.id === 'amh' ? parseAmhMeasurement() : parseE2Measurement(substance);
       if (!measurement || measurement.status !== 'valid' || measurement.operator === '=') return false;
       var target = unitTargetEl.value || substance.canonical_si;
-      var converted = measurement.value === null ? null : Conv.convert({ substanceId: 'amh',
+      var converted = measurement.value === null ? null : Conv.convert({ substanceId: substance.id,
         value: measurement.value, fromUnit: measurement.unit, toUnit: target });
       if (converted && !converted.ok) return false;
       showError('');
@@ -3535,9 +3585,15 @@
       resultSourceLineEl.textContent = measurement.value === null
         ? 'Nie podano liczbowej granicy z raportu. Nie przypisujemy wynikowi dokładnego stężenia.'
         : 'Wynik jest nierównością. Nie przypisujemy mu dokładnego stężenia ani klasyfikacji względem normy.';
+      if (substance.id === 'estradiol') {
+        var relation = { '<': 'poniżej ', '≤': 'nie więcej niż ', '>': 'powyżej ', '≥': 'co najmniej ' }[measurement.operator] || '';
+        resultSourceLineEl.textContent = measurement.value === null
+          ? 'Wynik poniżej granicy ' + measurement.censoring + '. Nie podano jej wartości liczbowej.'
+          : 'Wynik podano jako «' + relation + Conv.formatNumber(measurement.value, substance.precision || 3) + ' ' + measurement.unit + '». Dokładna wartość nie jest znana.';
+      }
       clearChildren(resultsBody);
       if (measurement.value !== null) {
-        var all = Conv.convertAll({ substanceId: 'amh', value: measurement.value, fromUnit: measurement.unit });
+        var all = Conv.convertAll({ substanceId: substance.id, value: measurement.value, fromUnit: measurement.unit });
         if (all.ok) all.results.forEach(function (row) {
           var tr = document.createElement('tr');
           var label = document.createElement('td'); label.className = 'lab-unit'; label.textContent = row.unit;
@@ -3570,7 +3626,7 @@
         updateStepStates();
         return;
       }
-      if (renderCensoredAmh(substance)) return;
+      if (renderCensoredSourceResult(substance)) return;
 
       var raw = valueEl.value;
       var hasInput = !(raw == null || String(raw).trim() === '');
@@ -4182,8 +4238,8 @@
       var hasInput = !(raw == null || String(raw).trim() === '');
       var n = hasInput ? Conv.parseNumber(raw) : NaN;
       var s2 = s1 && hasInput && isFinite(n) && n >= 0;
-      if (currentSubstance && currentSubstance.id === 'amh') {
-        var amhMeasurement = parseAmhMeasurement();
+      if (currentSubstance && ['amh', 'estradiol'].includes(currentSubstance.id)) {
+        var amhMeasurement = currentSubstance.id === 'amh' ? parseAmhMeasurement() : parseE2Measurement(currentSubstance);
         if (amhMeasurement && amhMeasurement.status === 'valid') s2 = true;
       }
       if (pubertyMode) {
@@ -4895,9 +4951,11 @@
       if (pubertyUI) pubertyUI.reset();
       resetLocalPatientOverride();
       lastAmhSourceContext = null;
+      lastE2SourceContext = null;
       if (lifespanUI) lifespanUI.clear();
       if (amhAgeReferenceUI) amhAgeReferenceUI.clear();
       if (typeof amhLilacsSourceUI !== 'undefined' && amhLilacsSourceUI) amhLilacsSourceUI.clear();
+      if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
       // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
