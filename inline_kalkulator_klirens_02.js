@@ -532,12 +532,13 @@
   }
   // The workflow can select a form before the clinician updates patient age.
   // Preserve that explicit choice; clinical eligibility is checked separately.
+  // Historical Schwartz entries retain the original age-filtered availability.
   function activeWorkflowFormula() {
     const workflow = window.ClcrUiWorkflow;
     if (
       document.documentElement?.dataset.clcrWorkflowUi !== "1" ||
       !workflow?.state || workflow.state.legacyBroad ||
-      workflow.state.activeFormulaId === "sch_var"
+      ["sch_var", "sch_idms"].includes(workflow.state.activeFormulaId)
     ) return null;
     return l.find((formula) => formula.id === workflow.state.activeFormulaId) || null;
   }

@@ -5314,8 +5314,9 @@ klinicznego; zgodna lub pusta kontrolka wraca do ukrycia po zakończeniu edycji.
 Jawny wybór w nowym workflow jest zachowany także wtedy, gdy starszy,
 ukryty picker odfiltrowuje go według bieżącego wieku. Nie zmienia to
 kwalifikacji: `formulaEligibility` i właściwe bramki nadal rozstrzygają,
-czy wolno pokazać liczbę. Tryb zbiorczy i wyłączony `sch_var` nie dostają
-tej reguły zachowania wyboru.
+czy wolno pokazać liczbę. Tryb zbiorczy i historyczne wzory Schwartza
+(`sch_var`, `sch_idms`) nie dostają tej reguły zachowania wyboru.
+`sch_idms` zachowuje dotychczasowe usuwanie wyboru po ukończeniu 17 lat.
 
 **Założenia i pierwszeństwo faktów:** opis neonatalny unika deklarowania
 stałego fizjologicznego GFR/Scr u dojrzewającego noworodka. Komentarz
