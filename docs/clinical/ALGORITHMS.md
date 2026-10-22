@@ -16118,36 +16118,55 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   (S1); `Eb` na bazie zapisywało tu świeży nagrobek, ale z `rev` 0. Krata, `Bnp_stan`, ratunek, format nagrobka, ładunek
   i delty bez zmian — stare urządzenia niczego nie widzą.
 - **Scalanie a ręczne usunięcie albo „Usuń pacjenta” w jego oknie** (przegląd poprawki P1, recenzja współbieżności F1;
-  `Bnp_nagrobekScalania`; testy K1, K1b, K1m, K2). Ta sama klasa co uwaga Codexa P1, ale w scalaniu (`Le`, sekcja
-  notatek), którym idą pobranie, delty (`applyEncryptedDelta`, także z realtime), „Scal kopię konta” i import — także w
-  tle w tej samej karcie. Pętla zapisu nagrobków (zbiór U: decyzja „usuń” albo „zostaw”) pod blokadą notatki czytała
-  świeżo tylko notatkę, a nagrobek zapisywała z chwilą, polem i `rev` z odczytu nagrobków na starcie sekcji (K). Okno
-  trwa od tego odczytu do zapisu nagrobka danej notatki, czyli prawie przez całą sekcję notatek, a U obejmuje każdy
-  lokalny nagrobek w stanie „zostaw”, więc dowolne scalanie, także dotyczące innej notatki, przepisywało nagrobki stanem
-  sprzed scalania. Drugiej karty nie trzeba: wystarczy scalanie w tle i ręczne usunięcie w tej samej karcie (K1b) —
-  ekran pokazuje jeszcze notatki pacjenta, którego kartę to scalanie właśnie skasowało (także samoczynne usunięcie wpisu
-  Terminarza po 4 s „Cofnij”). Skutek: ręczny nagrobek (bez pola) zapisany w oknie był nadpisywany nagrobkiem z polem
-  bez M, więc gdy karta przeżyła usunięcie (zmiana na nieświadomym urządzeniu), ratunek przywracał ręcznie usuniętą
-  notatkę na wszystkie urządzenia — wbrew D21-2, widocznie i odwracalnie, bez utraty treści (K1, K1b; to samo z ręcznym
-  nagrobkiem z innego urządzenia scalonym w drugiej karcie, K1m). Na `affdeb64` ten nagrobek był bez pola i nic nie
-  wracało, więc to regresja D-21 — obecna już na `95b6f96e`, nie wprowadzona przez poprawkę P1. Nagrobek z „Usuń
-  pacjenta” w drugiej karcie (e2), zapisany po decyzji scalania, był nadpisywany starym (R1, e1), a stare urządzenie z
-  wersją w pasmie zostawało z sierotą (K2 — wariant „po pętli” ograniczenia S1); `rev` nagrobka mógł się cofnąć (G6).
-  Łagodziła to delta ręcznego usunięcia (`Ut` → `ls`), jak w S2; skutek zostawał, gdy ta delta nie wyszła
-  (synchronizacja wyłączona — „Scal kopię konta”, import; `RATE_LIMITED`, błąd uwierzytelnienia, brak sieci) albo
-  przegrała wyścig odczytu z pętlą U, która czeka na tę samą blokadę. Teraz pod tą samą blokadą notatki, po ewentualnym
-  usunięciu notatki, pętla czyta świeży rekord nagrobka (pojedynczy odczyt) i łączy go kratą (`Bnp_zlacz`) z kopiami
-  tego id z ładunku i z K: R — najnowsza chwila, pole z kopii o chwili R (z M), `rev` = max; bez świeżego rekordu albo
-  przy błędzie odczytu — jak dotąd. Świeży ręczny nagrobek późniejszy niż R daje nagrobek bez pola (usunięcie, bez
-  ratunku), świeże M albo e2 przeżywa, a `rev` się nie cofa. Ten sam wzorzec co pętla CZEKA i `Bpu_usun`. Decyzja
-  (`Bnp_stan`), krata, ratunek, format nagrobka, ładunek i delty bez zmian. Nie zamyka zapisu notatki w oknie (P1-4) ani
-  scalania przed listą notatek (S1 przed listą) — „Ograniczenia”.
+  `Bnp_nagrobekScalania`; testy K1, K1b, K1m, K2, G13w; weryfikacja 2, W1: `Bnp_zdejmijPoScaleniu`, testy RZ, RZ0, RZ0b,
+  RZu, RZub, RZ0l). Ta sama klasa co uwaga Codexa P1, ale w scalaniu (`Le`, sekcja notatek), którym idą pobranie, delty
+  (`applyEncryptedDelta`, także z realtime), „Scal kopię konta” i import — także w tle w tej samej karcie. Pętla zapisu
+  nagrobków (zbiór U: decyzja „usuń” albo „zostaw”) pod blokadą notatki czytała świeżo tylko notatkę, a nagrobek
+  zapisywała z chwilą, polem i `rev` z odczytu nagrobków na starcie sekcji (K). Okno trwa od tego odczytu do zapisu
+  nagrobka danej notatki, czyli prawie przez całą sekcję notatek, a U obejmuje każdy lokalny nagrobek w stanie „zostaw”,
+  więc dowolne scalanie, także dotyczące innej notatki, przepisywało nagrobki stanem sprzed scalania. Drugiej karty nie
+  trzeba: wystarczy scalanie w tle i ręczne usunięcie w tej samej karcie (K1b) — ekran pokazuje jeszcze notatki
+  pacjenta, którego kartę to scalanie właśnie skasowało (także samoczynne usunięcie wpisu Terminarza po 4 s „Cofnij”).
+  Skutek: ręczny nagrobek (bez pola) zapisany w oknie był nadpisywany nagrobkiem z polem bez M, więc gdy karta przeżyła
+  usunięcie (zmiana na nieświadomym urządzeniu), ratunek przywracał ręcznie usuniętą notatkę na wszystkie urządzenia —
+  wbrew D21-2, widocznie i odwracalnie, bez utraty treści (K1, K1b; to samo z ręcznym nagrobkiem z innego urządzenia
+  scalonym w drugiej karcie, K1m). Na `affdeb64` ten nagrobek był bez pola i nic nie wracało, więc to regresja D-21 —
+  obecna już na `95b6f96e`, nie wprowadzona przez poprawkę P1. Nagrobek z „Usuń pacjenta” w drugiej karcie (e2),
+  zapisany po decyzji scalania, był nadpisywany starym (R1, e1), a stare urządzenie z wersją w pasmie zostawało z
+  sierotą (K2 — wariant „po pętli” ograniczenia S1); `rev` nagrobka mógł się cofnąć (G6). Łagodziła to delta ręcznego
+  usunięcia (`Ut` → `ls`), jak w S2; skutek zostawał, gdy ta delta nie wyszła (synchronizacja wyłączona — „Scal kopię
+  konta”, import; `RATE_LIMITED`, błąd uwierzytelnienia, brak sieci) albo przegrała wyścig odczytu z pętlą U, która
+  czeka na tę samą blokadę. Teraz pod tą samą blokadą notatki, po ewentualnym usunięciu notatki, pętla czyta świeży
+  rekord nagrobka (pojedynczy odczyt) i łączy go kratą (`Bnp_zlacz`) z kopiami tego id z ładunku i z K: R — najnowsza
+  chwila, pole z kopii o chwili R (z M), `rev` = max; bez świeżego rekordu albo przy błędzie odczytu — jak dotąd. Świeży
+  ręczny nagrobek późniejszy niż R daje nagrobek bez pola (usunięcie, bez ratunku), świeży wcześniejszy niż R (G13:
+  chwila nagrobka z polem z przyszłości) zostawia R i pole, a jego chwila wchodzi jako M (G13w), świeże M albo e2
+  przeżywa, a `rev` się nie cofa. Ten sam wzorzec co pętla CZEKA i `Bpu_usun`. Tę samą klasę miała pętla zdejmowania
+  nagrobków zaraz po pętli U (weryfikacja 2 przeglądu poprawki P1, W1): nagrobki z K spoza U, RATUNKU i CZEKA, czyli
+  przy decyzji „notatka” (wersja nowsza niż każdy nagrobek), zdejmowała po id, bez blokady notatki i bez świeżego
+  odczytu. Nagrobek zapisany w oknie — od odczytu K (w stanie CZEKA notatka jest widoczna obok nagrobka przez całą
+  sekcję) albo od przyjęcia notatki w pętli przyjmowania do tej pętli, czyli przez ratunek i całą pętlę U — przez ręczne
+  usunięcie albo „Usuń pacjenta”, w drugiej karcie albo w tej samej przy scalaniu w tle, ginął: ręcznie usunięta notatka
+  wracała z poprawką nieświadomego urządzenia na wszystkie urządzenia (wbrew D21-2; RZ, RZ0, RZ0b), a po „Usuń pacjenta”
+  zostawała sierotą na każdym urządzeniu (RZ, RZu, RZub). Mechanizm jest sprzed D-21 (RZ0 i RZ0b czerwone także na
+  `affdeb64`, a wariant z „Usuń pacjenta” dawał tam sierotę bez pola); D-21 dodał wariant ze stanem CZEKA, a F1 wydłużył
+  pętlę U o jeden odczyt na element. Teraz zdjęcie idzie pod blokadą notatki, na świeżym rekordzie nagrobka
+  (`Bnp_zdejmijPoScaleniu`): nagrobek nowszy niż R (równoległe usunięcie) zostaje, jak w ratunku; nagrobek nie nowszy
+  niż R, brak rekordu albo błąd odczytu — zdjęcie jak dotąd (RZ0e). Reguła „nowszy niż R” wystarcza: nagrobek z okna
+  postawiony nad przyjętą notatką ma chwilę `max(teraz, updatedAtISO)` ≥ Y > R, więc zawsze zostaje, a nagrobek nie
+  nowszy niż R przegrałby z decyzją „notatka” także przy kolejności „usunięcie, potem scalanie”. Ręczne usunięcie, które
+  trafi między świeży odczyt a zdjęcie, czeka na blokadę notatki i wchodzi po zdjęciu (RZ0l). „Usuń pacjenta” w oknie
+  zastaje jeszcze stary ręczny nagrobek i przenosi jego chwilę jako M (`Bnp_poleEb`); to M jest wcześniejsze niż
+  przyjęta poprawka, więc niczego nie blokuje (RZu, RZub). Decyzja (`Bnp_stan`), krata, ratunek, format nagrobka,
+  ładunek i delty bez zmian. Nie zamyka zapisu notatki w oknie (P1-4) ani scalania przed listą notatek (S1 przed listą)
+  — „Ograniczenia”.
 - **Delta nagrobka** (`ls`): rekord czytany ze sklepu (`{id, deletedAtISO, rev, deletedWithPatient}`), gdy go brak —
   postać dotychczasowa. Bez tego drugie urządzenie dostawało nagrobek bez pola i kasowało notatki przed pełnym ładunkiem.
   Odczyt pojedynczego rekordu (`getPatientNoteTombstoneForUser` w adapterach IndexedDB, pamięciowym i pośredniczącym;
   adapter bez tej metody — lista), tak samo w ratunku, w polu `Eb` z „Usuń pacjenta” (pętla i odnowienie, pod blokadą
-  notatki — uwaga Codexa P1) i w zapisie nagrobków scalania (pętla U, pod blokadą notatki — przegląd poprawki P1, F1);
-  listę nagrobków notatek „Usuń pacjenta” czyta raz, tylko dla kandydatów odnowienia (przegląd 1, F3).
+  notatki — uwaga Codexa P1), w zapisie nagrobków scalania (pętla U, pod blokadą notatki — przegląd poprawki P1, F1)
+  i w ich zdejmowaniu po decyzji „notatka” (pod blokadą notatki — weryfikacja 2, W1); listę nagrobków notatek „Usuń
+  pacjenta” czyta raz, tylko dla kandydatów odnowienia (przegląd 1, F3).
 - **Zbieżność.** Wersje tylko rosną (u′ > R ≥ u), decyzja jest funkcją danych (krata, karta, wersje), dotknięcie —
   funkcją R i treści; zmierzone: identyczne `(rev, updatedAtISO)` na wszystkich urządzeniach w 5 kolejnościach, zbieżność
   przy równoległych poprawkach.
@@ -16176,9 +16195,9 @@ pomiar D-21: 13 scenariuszy × 4 kolejności wymiany A↔B × 2 kolejności trze
   na urządzeniu, które nie odnawia nagrobków (sieroty na każdym urządzeniu), i stary przekaźnik po drugim usunięciu
   (ginie poprawka sprzed niego). Pełna ochrona dopiero po aktualizacji wszystkich urządzeń (D21-8).
 
-**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 214 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
-25 z przeglądu przeniesienia na D-7, 3 z przeglądu poprawki MS2, 16 z przeglądu po scaleniu i 13 z przeglądu poprawki
-P1; wejście → wynik):
+**Przypadki** (`tests/unit/notatki-za-karta.test.mjs`, 225 testów: 88 z wdrożenia, 31 z przeglądu 1, 38 z przeglądu 2,
+25 z przeglądu przeniesienia na D-7, 3 z przeglądu poprawki MS2, 16 z przeglądu po scaleniu, 13 z przeglądu poprawki
+P1 i 11 z jego weryfikacji 2; wejście → wynik):
 - T1: A usuwa ręcznie n3, potem pacjenta; B offline dopisuje wizytę; pełne ładunki A→B, B→A, A→C→B, C→B→A, B→C→A →
   karta [n1, n2], nagrobek tylko n3, `(rev, updatedAtISO)` identyczne wszędzie, `rev` 1, stabilne (dotąd: karta bez
   notatek, nagrobki n1–n3);
@@ -16357,6 +16376,31 @@ P1; wejście → wynik):
     C z notatkami w stanie CZEKA; K9k (kontrola, po kolei) i K9d (kontrola, delta nagrobka karty e doręczona B) → BRAK
     wszędzie; strażniki źródła: pętla U w `Le` przez `Bnp_nagrobekScalania` (świeży rekord, krata z kopiami, `rev` =
     max), `Bnp_odnowJeden` pomija nagrobek innego pacjenta.
+- Weryfikacja 2 przeglądu poprawki P1 (2026-10-22; dwóch weryfikatorów-adwersarzy — poprawność `Bnp_nagrobekScalania`
+  oraz regresja i koszt — na `6db54b78`, prawdziwy sejf, druga karta = drugi `VildaVault` na tym samym magazynie i tej
+  samej atrapie Web Locks; czerwone na `6db54b78`, `83c04d5b` i `95b6f96e`, o ile nie są kontrolą):
+  - RZ (W1, trzy warianty): A „czeka” (delty nagrobków notatek z „Usuń pacjenta” X na B doszły przed nagrobkiem
+    karty), C (nie wie o usunięciu) poprawia n1 później niż R + 1 s, A scala ładunek C (dla n1 decyzja „notatka”); w
+    trakcie scalania (po odczycie K) ręczne usunięcie n1 w drugiej karcie albo w tej samej (scalanie w tle) → nagrobek
+    z okna zostaje, karta [n2] na A, B i C, jak przy usunięciu przed i po scaleniu (dotąd pętla zdejmowania kasowała
+    ręczny nagrobek i n1 z poprawką C wracała wszędzie); „Usuń pacjenta” X w drugiej karcie w tym oknie, karta nie
+    przeżywa → BRAK na A, B i C (dotąd sierota n1 z poprawką C wszędzie);
+  - RZ0, RZ0b, RZu, RZub (W1 bez stanu CZEKA, mechanizm sprzed D-21 — RZ0 i RZ0b czerwone także na `affdeb64`, RZu i
+    RZub są tam czerwone już w kontroli, bo nagrobek nie ma pola): A ręcznie usunęło n3 i n1, C poprawia n1 później,
+    scalanie ładunku C przywraca n1; po przyjęciu n1, a przed pętlą zdejmowania (pauza w pętli U na n3) ręczne usunięcie
+    n1 albo „Usuń pacjenta” X, w drugiej karcie albo w tej samej → nagrobek z okna zostaje, karta [n2] albo BRAK na A, B
+    i C, jak przy tej operacji po scaleniu (dotąd n1 wracała albo zostawała sierotą); „Usuń pacjenta” w oknie przenosi
+    jako M chwilę starego ręcznego nagrobka, wcześniejszą niż poprawka C;
+  - RZ0l: ręczne usunięcie n1 w drugiej karcie między świeżym odczytem nagrobka n1 a jego zdjęciem → czeka na blokadę
+    n1, ręczny nagrobek zostaje, karta [n2] wszędzie (pilnuje blokady w pętli zdejmowania);
+  - RZ0e, K1e (ścieżka błędu): `getPatientNoteTombstoneForUser` rzuca w trakcie scalania → pętla U zapisuje nagrobki
+    ze stanu z początku sekcji (n1 i n2 z polem X jak w ładunku B), pętla zdejmowania zdejmuje nagrobek przyjętej n1,
+    scalanie bez błędu — jak przed poprawką F1 (na wersjach bez świeżego odczytu czerwony jest tylko licznik odczytów);
+  - G13w (W2, luka testów): nagrobek z polem z zegara B +10 min; w trakcie scalania ręczne usunięcie n1 w drugiej karcie
+    z chwilą < R → nagrobek (R, pole, M = chwila ręczna), C zmienia kartę po R → karta [n2] na A, B i C, jak przy
+    usunięciu przed i po scaleniu (na `83c04d5b` i `95b6f96e` M ginęło i n1 wracała; zielony na `6db54b78`, ale dotąd
+    bez testu — trzy mutacje kraty w `Bnp_nagrobekScalania` łapał tylko strażnik źródła); strażnik źródła: zdjęcie
+    nagrobków w `Le` pod blokadą notatki przez `Bnp_zdejmijPoScaleniu`.
 
 **Ograniczenia.**
 - **Stare urządzenie z ocalałą kartą przyjmuje usunięcie pierwsze** — kasuje notatki; gdy było jedynym źródłem treści,
@@ -16526,18 +16570,23 @@ P1; wejście → wynik):
   bierze blokadę notatki, czyta notatkę (świeży odczyt w `Bnp_usunZPacjentem`, drugi raz w `Eb`; gdy notatki już nie ma
   — raz) oraz pojedynczy rekord nagrobka, a potem usuwa notatkę i zapisuje nagrobek: 5 wywołań adaptera na notatkę
   zamiast 3 (uwaga Codexa P1; pomiar recenzji F3 przy adapterze +1 ms na wywołanie: 200 notatek — 1201 ms wobec 748 ms
-  na `95b6f96e`). Na notatkę zajętą w innej karcie pętla czeka, trzymając blokadę pacjenta, więc zapis tej karty w
-  innych kartach pokazuje wtedy „Czekam” (limit 30 s; żadna operacja nie trzyma blokady notatki dłużej niż milisekundy)
-  — to cena serializacji, bo na `95b6f96e` ten przeplot zostawiał sierotę. Zapis nagrobków scalania (pętla U, przegląd
-  poprawki P1, F1) czyta dodatkowo pojedynczy rekord nagrobka dla każdego elementu U, czyli każdego lokalnego nagrobka w
-  stanie „zostaw”: 3 wywołania adaptera zamiast 2 (około +50% w tej pętli); adapter bez `getPatientNoteTombstoneForUser`
-  spada w `Bnp_nagrobek` do listy, co dla tej pętli daje koszt kwadratowy (adaptery IndexedDB, pamięciowy i
-  pośredniczący tę metodę mają); delta nagrobka (`ls`) i ratunek — pojedynczy rekord (`getPatientNoteTombstoneForUser`);
-  przed przeglądem 1 „Usuń pacjenta” z k notatkami czytało pełną listę k razy pod blokadą pacjenta, a każda delta —
-  jeszcze raz. Odczyt karty tylko przy polu: dla kandydatów, wersji w pasmie ratunku i wersji sprzed usunięcia, raz na
-  pacjenta (plus raz pod blokadą przy ratunku). Pętla CZEKA nie zapisuje ani nie czyta nagrobka, którego kanon już leży,
-  więc w długim stanie „czeka” scalanie nie przepisuje nagrobków pacjenta (zwykłe nagrobki notatek pętla zapisu
-  przepisuje przy każdym scaleniu, jak dotąd; MS5).
+  na `95b6f96e`; powtórzony K4 na `6db54b78` dał 1330 ms — szum pomiaru). Na notatkę zajętą w innej karcie pętla czeka,
+  trzymając blokadę pacjenta, więc zapis tej karty w innych kartach pokazuje wtedy „Czekam” (limit 30 s; żadna operacja
+  nie trzyma blokady notatki dłużej niż milisekundy) — to cena serializacji, bo na `95b6f96e` ten przeplot zostawiał
+  sierotę. Zapis nagrobków scalania (pętla U, przegląd poprawki P1, F1) czyta dodatkowo pojedynczy rekord nagrobka dla
+  każdego elementu U — nagrobka w stanie „zostaw” albo „usuń”, lokalnego albo tylko z ładunku: 3 wywołania adaptera
+  zamiast 2 (4 zamiast 3 przy usuwanej notatce), w każdym scaleniu, także przy każdej delcie (`applyEncryptedDelta` →
+  `Le` przechodzi pętlę U ze wszystkimi lokalnymi nagrobkami); pomiar weryfikacji 2 (adapter pamięciowy z licznikiem):
+  1000 lokalnych nagrobków, delta jednego nagrobka — 2015 → 3016 wywołań, przy 1 ms na wywołanie około 2,4 s → 3,6 s
+  (+50% w tej pętli). Zdejmowanie nagrobków po decyzji „notatka” (weryfikacja 2, W1) bierze blokadę notatki i czyta
+  pojedynczy rekord nagrobka: +1 blokada i +1 odczyt na nagrobek faktycznie zdejmowany, czyli raz w życiu nagrobka.
+  Adapter bez `getPatientNoteTombstoneForUser` spada w `Bnp_nagrobek` do listy, co dla obu pętli daje koszt kwadratowy
+  (adaptery IndexedDB, pamięciowy i pośredniczący tę metodę mają); delta nagrobka (`ls`) i ratunek — pojedynczy rekord
+  (`getPatientNoteTombstoneForUser`); przed przeglądem 1 „Usuń pacjenta” z k notatkami czytało pełną listę k razy pod
+  blokadą pacjenta, a każda delta — jeszcze raz. Odczyt karty tylko przy polu: dla kandydatów, wersji w pasmie ratunku i
+  wersji sprzed usunięcia, raz na pacjenta (plus raz pod blokadą przy ratunku). Pętla CZEKA nie zapisuje ani nie czyta
+  nagrobka, którego kanon już leży, więc w długim stanie „czeka” scalanie nie przepisuje nagrobków pacjenta (zwykłe
+  nagrobki notatek pętla zapisu przepisuje przy każdym scaleniu, jak dotąd; MS5).
 - **Poza zakresem (D21-9):** sieroty z pomiaru 6 i 7 (poprawka albo nowa notatka bez zmiany karty) i rozjazd G5 po
   „Scal pacjentów” z pomiaru 13 — testy T20 i T21 pilnują, że zostały bez zmian; „Scal pacjentów” równolegle z „Usuń
   pacjenta” tego samego X — notatki przepięte pod Y giną jak dziś (w stanie CZEKA zostają pod Y, SP1 — oprócz wersji
@@ -16740,9 +16789,36 @@ nagrobek karty (F2). Naruszeń kolejności blokad 0, zawieszeń 0. Przypadki kie
 zielone, K9 równolegle czerwony (F2, znane ograniczenie); K4 przy 200 notatkach — 5,02 wywołania adaptera na notatkę i
 200 blokad notatek. `zz-pp2-fuzz` (4 urządzenia, bez drugiej karty) przed (`95b6f96e`) i po: nowe urządzenia, ziarna
 1–200, i flota mieszana z emulacją, ziarna 1001–1150 — zielone, stany końcowe i uwagi identyczne ziarno w ziarno
-(poprawka F1 bez przeplotu daje ten sam zapis co dotąd). Wersje (całe P1 razem z przeglądem, po scaleniu `origin/audyt`
-`ab8ead6a`): `npm run podbij-wersje` — `vilda_vault.js` 224, `vilda_chrome.js` 169, `vilda_session_bridge.js` 93; SW
-1.1.339 → 1.1.340.
+(poprawka F1 bez przeplotu daje ten sam zapis co dotąd). Wersje — w akapicie weryfikacji 2 niżej (numery policzone tu
+względem `ab8ead6a` zastąpiło ponowne scalenie `origin/audyt`).
+
+Weryfikacja 2 przeglądu poprawki P1 (2026-10-22; dwóch weryfikatorów-adwersarzy na `6db54b78` — poprawność
+`Bnp_nagrobekScalania`: tabela kombinacji z prawdziwych funkcji, fuzz kraty (przemienność, idempotencja, plotki bez
+ping-pongu), okno scalania na prawdziwym sejfie z flotą mieszaną (emulacja, prawdziwe `346dd81a` i `95b6f96e`) i
+mutacje; regresja i koszt: 80 plików pokrewnych, pomiar kosztu, fuzz przeplotów z atrapą Web Locks — 680 przebiegów bez
+zakleszczeń i naruszeń kolejności blokad; każde zgłoszenie sprawdzone ponownie przed poprawką). **Zmiana kliniczna:
+NIE** — reguła synchronizacji D-21 (krata, `Bnp_stan`, ratunek, CZEKA, format nagrobka) bez zmian, bez decyzji
+właściciela. `Bnp_nagrobekScalania` bez wady: przy świeżym rekordzie równym kopii z K, bez świeżego rekordu i przy
+błędzie odczytu wynik bajt w bajt jak na `83c04d5b`. W1 (niska; ta sama klasa co F1 w pętli zdejmowania nagrobków,
+mechanizm sprzed D-21; opis F1 przedstawiał klasę jako zamkniętą) — poprawione (wyżej, „Scalanie a ręczne usunięcie albo
+„Usuń pacjenta” w jego oknie”); prototypy obu weryfikatorów miały tę samą regułę. W2 (luka testów: mutacje „świeży
+tylko, gdy późniejszy niż R”, „najnowszy wygrywa bez kraty” i „pole ze starej kopii przy tym samym R” przechodziły
+wszystkie testy zachowania, a ścieżkę błędu odczytu pilnował tylko strażnik) — testy G13w, RZ0e i K1e. W2′ (proces:
+`origin/audyt` poszedł dalej, wersje liczone względem `ab8ead6a` były nieaktualne) — ponowne scalenie i podbicie wersji.
+W3 (zakres zdania o koszcie pętli U) — „Koszt”. Plik D-21 225 z 225; na `6db54b78` czerwonych 10 (RZ ×3, RZ0, RZ0b, RZu,
+RZub, RZ0l, RZ0e — tam tylko licznik odczytów — i strażnik `Le`), na `83c04d5b` 16 (te same oraz K1, K1b, K1m, K2, K1e i
+G13w), na `95b6f96e` 30 (19 dotychczasowych i 11 nowych), na `affdeb64` RZ0 i RZ0b czerwone w tym samym miejscu co na
+`6db54b78` (nagrobek z okna zdjęty); z prawdziwym `346dd81a` zamiast emulacji 225 z 225, 3959 z 3959 obserwacji stanu
+identycznych (307 na starych urządzeniach). Mutacje (11, plik D-21): zdejmowanie bez blokady → RZ0l; bez sprawdzenia
+świeżego rekordu → RZ ×3, RZ0, RZ0b, RZu, RZub; „≥ R” zamiast „> R” i „zostaw każdy istniejący nagrobek” → po 92 testy;
+błąd odczytu zostawia nagrobek i błąd odczytu przerywa sekcję → RZ0e; porównanie z chwilą kopii z K zamiast R → tylko
+strażnik (praktycznie równoważna: różni się tylko przy nagrobku z okna z chwilą w (K, R], co nad przyjętą notatką wymaga
+cofniętego zegara); w `Bnp_nagrobekScalania` „świeży tylko, gdy późniejszy niż R” → G13w (strażnik go nie widzi),
+„najnowszy wygrywa bez kraty” i „pole ze starej kopii przy tym samym R” → G13w, błąd odczytu przerywa → RZ0e, K1e — 10 z
+11 łapane testem zachowania, każda poza jedną także strażnikiem źródła. `zz-pp2-fuzz` (4 urządzenia, bez drugiej karty)
+przed (`6db54b78`) i po: nowe urządzenia, ziarna 1–200, i flota mieszana z emulacją, ziarna 1001–1150 — zielone, stany
+końcowe i uwagi identyczne ziarno w ziarno (poprawka W1 bez przeplotu nie zmienia zapisu); to samo porównanie dla
+poprawki F1 weryfikator wykonał względem `83c04d5b` (wyżej podane względem `95b6f96e`) — także identyczne.
 
 ## Wygrywa późniejsza poprawka wizyty, także przy rozjeździe zegarów (P-POZNIEJSZA-POPRAWKA, SW 1.1.333, `vilda_vault.js` 222, 2026-10-21)
 

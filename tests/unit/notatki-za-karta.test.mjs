@@ -18,20 +18,22 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // zapisu nagrobków przez adapter (bez pola nowa reguła daje wynik dzisiejszy, T15; przegląd przeniesienia na D-7: 1693
 // z 1693 obserwacji stanu tego pliku jak z prawdziwym 346dd81a, po jego poprawkach 2262 z 2262 przy 182 testach, w tym
 // 256 na starych urządzeniach; po domknięciu przeglądu poprawki MS2 2537 z 2537 przy 185 testach, w tym 271; po
-// przeglądzie po scaleniu (uwaga Codexa P1) 2758 z 2758 przy 201 testach, w tym 295; po przeglądzie poprawki P1 3130
-// z 3130 przy 214 testach, w tym 307). NIE obejmuje kopii konta na starym urządzeniu: mergeVaultBackup,
-// previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z polem, a prawdziwa stara aplikacja kasuje wtedy
-// notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody rzucają błąd (taki test wymaga prawdziwego starszego
-// sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) — zegar urządzenia przesunięty względem wspólnego (Z1).
-// [CZERWONY na db0c2d50] — przypadki, które na bazie dają wynik inny niż oczekiwany (lista w opisie zmiany); kod
-// notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] — przegląd przeniesienia na D-7 (MS2); na 12b0cd4d
-// czerwone są też W14a i W11 z domknięcia przeglądu poprawki MS2 (opis przy nich). [CZERWONY na 95b6f96e] — przegląd po
-// scaleniu (uwaga Codexa P1 do #746) i przegląd poprawki P1 (recenzje F1, R2; opis przy blokach). [kontrola] — kontrola
-// wobec bazy (T4, T7, T19–T22, M6, M7, P1-1k, P1-4k, S2, K1 przed i po scaleniu, K9k, K9d: wynik jak dotąd) albo wobec
-// wariantu lub znanego ograniczenia z tego samego bloku (R10c, R10d z nowym O, P5, CZ3b, SP1, EL1, OD2 z nowym D, HD
-// z nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem przed ratunkiem): te drugie są na db0c2d50 czerwone
-// z powodu zachowania (bez ratunku notatki nie wracają; T26c — nagrobek bez pola). [znane ograniczenie] — test przypina
-// opisany wynik.
+// przeglądzie po scaleniu (uwaga Codexa P1) 2758 z 2758 przy 201 testach, w tym 295; po przeglądzie poprawki P1 3130 z
+// 3130 przy 214 testach, w tym 307; po jego weryfikacji 2 3959 z 3959 przy 225 testach, w tym 307). NIE obejmuje kopii
+// konta na starym urządzeniu: mergeVaultBackup, previewVaultBackupMerge i restoreVaultBackup szłyby tam nowym kodem z
+// polem, a prawdziwa stara aplikacja kasuje wtedy notatki „jak dziś” (zgł. E2) — na urządzeniu „stara” te metody
+// rzucają błąd (taki test wymaga prawdziwego starszego sejfu, jak uprzęże floty spoza repozytorium). Opcja zegar (ms) —
+// zegar urządzenia przesunięty względem wspólnego (Z1). [CZERWONY na db0c2d50] — przypadki, które na bazie dają wynik
+// inny niż oczekiwany (lista w opisie zmiany); kod notatek na 346dd81a (D-7) jest ten sam. [CZERWONY na 12b0cd4d] —
+// przegląd przeniesienia na D-7 (MS2); na 12b0cd4d czerwone są też W14a i W11 z domknięcia przeglądu poprawki MS2 (opis
+// przy nich). [CZERWONY na 95b6f96e] — przegląd po scaleniu (uwaga Codexa P1 do #746) i przegląd poprawki P1 (recenzje
+// F1, R2; opis przy blokach). [CZERWONY na 6db54b78] — weryfikacja 2 przeglądu poprawki P1 (W1, pętla zdejmowania
+// nagrobków; opis przy bloku, tam też G13w — luka testów W2, czerwony na 83c04d5b — i ścieżka błędu RZ0e, K1e).
+// [kontrola] — kontrola wobec bazy (T4, T7, T19–T22, M6, M7, P1-1k, P1-4k, S2, K1 przed i po scaleniu, K9k, K9d: wynik
+// jak dotąd) albo wobec wariantu lub znanego ograniczenia z tego samego bloku (R10c, R10d z nowym O, P5, CZ3b, SP1,
+// EL1, OD2 z nowym D, HD z nowym C, T26c z zapasem, S8a, S8c, Z1 z ręcznym nagrobkiem przed ratunkiem): te drugie są na
+// db0c2d50 czerwone z powodu zachowania (bez ratunku notatki nie wracają; T26c — nagrobek bez pola). [znane
+// ograniczenie] — test przypina opisany wynik.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -3656,11 +3658,254 @@ describe('P-NOTATKI-ZA-KARTA — przegląd poprawki P1: scalanie w oknie ręczne
   });
 });
 
+/* ---------- przegląd poprawki P1, weryfikacja 2: pętla zdejmowania nagrobków w oknie scalania (W1), świeży nagrobek wcześniejszy niż R (W2) ---------- */
+// W1 (weryfikacja 2 przeglądu poprawki P1; ta sama klasa co F1, mechanizm sprzed D-21): pętla zdejmowania nagrobków w
+// Le, zaraz po pętli U (nagrobki z K spoza U, RATUNKU i CZEKA, czyli decyzja „notatka”: wersja nowsza niż każdy
+// nagrobek), szła bez blokady notatki i bez świeżego odczytu. Nagrobek zapisany w oknie scalania — od odczytu K (w
+// stanie CZEKA notatka jest widoczna obok nagrobka przez całą sekcję) albo od przyjęcia notatki w pętli przyjmowania
+// (RZ0) do tej pętli — przez ręczne usunięcie albo „Usuń pacjenta”, w drugiej karcie przeglądarki albo w tej samej przy
+// scalaniu w tle, był zdejmowany: ręcznie usunięta notatka wracała z poprawką nieświadomego urządzenia na wszystkie
+// urządzenia (wbrew D21-2), a po „Usuń pacjenta” zostawała sierotą na każdym urządzeniu. Teraz zdjęcie idzie pod
+// blokadą notatki, na świeżym rekordzie nagrobka: nagrobek nowszy niż R (równoległe usunięcie) zostaje, jak w ratunku;
+// brak rekordu albo błąd odczytu — zdjęcie jak dotąd. [CZERWONY na 6db54b78] — także na 83c04d5b i 95b6f96e; RZ0 i RZ0b
+// także na affdeb64 (sprzed D-21; RZu i RZub są tam czerwone już w kontroli, bo nagrobek nie ma pola). RZ0e i K1e
+// (ścieżka błędu odczytu) są zielone w zachowaniu na każdej wersji, a na wersjach bez świeżego odczytu czerwony jest
+// tylko licznik odczytów.
+describe('P-NOTATKI-ZA-KARTA — przegląd poprawki P1, weryfikacja 2: pętla zdejmowania nagrobków (decyzja „notatka”) w oknie scalania (W1), świeży nagrobek wcześniejszy niż R (W2)', () => {
+  // RZ: A w stanie CZEKA (delty nagrobków notatek z „Usuń pacjenta” X na B doszły przed nagrobkiem karty); C (nie wie
+  // o usunięciu) poprawia n1 później niż R + 1 s, więc w scaleniu ładunku C na A dla n1 decyzja „notatka”. Operacja na
+  // n1 przed scaleniem, po nim albo w trakcie (po odczycie K): ręczne usunięcie w drugiej karcie albo w tej samej
+  // (scalanie w tle), albo „Usuń pacjenta” X w drugiej karcie (karta nie przeżywa). Wynik w trakcie = przed = po.
+  async function rz(kiedy, { tenSama = false, sposob = 'reczne', przezyje = true } = {}) {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: {} });
+    const { A, B, C } = x.urz;
+    const druga = tenSama ? A.v : (await drugaKarta(A, locks)).v;
+    const id1 = x.id('n1');
+    nagrywaj(B);
+    przesun(60e3); await B.v.removePatient(x.pid);
+    await dostarcz(B, A, (t) => t === 'nagrNot');
+    const czeka = await stan(A, x);
+    przesun(60e3); await C.v.savePatientNote({ id: id1, patientId: x.pid, title: 'n1', body: 'edycja C' });
+    const ladC = kopia(await C.v.exportSyncPayload());
+    const op = async () => { if (sposob === 'reczne') await druga.removePatientNote(id1); else await druga.removePatient(x.pid); };
+    if (kiedy === 'przed') { przesun(1000); await op(); }
+    A.zeruj();
+    const p = A.pulapka('listPatientNoteTombstonesForUser', () => (A.licz.listPatientNotesForUser || 0) > 0); // K w Le
+    przesun(5e3);
+    const scal = A.v.mergeSyncPayload(ladC);
+    const doszlo = await Promise.race([p.osiagnieta.then(() => true), scal.then(() => false)]);
+    let wOknie = null;
+    if (kiedy === 'w trakcie') { przesun(5); await op(); wOknie = await nagrobekId(A, id1); }
+    p.zwolnij(); await scal;
+    if (kiedy === 'po') { przesun(1000); await op(); }
+    const poScal = await nagrobekId(A, id1);
+    if (przezyje) await wizyta(C, x);
+    const w = await rundy(x, ['A', 'C', 'B'], 4);
+    return { czeka, doszlo, wOknie, poScal, w };
+  }
+  for (const [nazwa, o, cel] of [
+    ['ręczne usunięcie n1 w drugiej karcie', {}, 'karta [n2] nagr[n1]'],
+    ['ręczne usunięcie n1 w tej samej karcie (scalanie w tle)', { tenSama: true }, 'karta [n2] nagr[n1]'],
+    ['„Usuń pacjenta” X w drugiej karcie, karta nie przeżywa', { sposob: 'usunPacjenta', przezyje: false }, 'BRAK [] nagr[n1+pole,n2+pole]'],
+  ]) {
+    it(`RZ [CZERWONY na 6db54b78] A „czeka”, C poprawia n1 później niż R + 1 s; ${nazwa} w trakcie scalania ładunku C → nagrobek z okna zostaje, wynik jak przed i po scaleniu`, async () => {
+      const przed = await rz('przed', o), po = await rz('po', o), wt = await rz('w trakcie', o);
+      expect(przed.czeka, 'kontrola: A w stanie CZEKA').toBe('karta [n1,n2] nagr[n1+pole,n2+pole]');
+      expect(wt.doszlo, 'pułapka w sekcji notatek Le').toBe(true);
+      for (const r of [przed, po]) {
+        expect(r.w.zbiezne && r.w.stabilne, JSON.stringify(r.w.ost)).toBe(true);
+        expect(r.w.ost.A, 'kontrola: operacja przed albo po scaleniu').toBe(cel);
+      }
+      expect(wt.wOknie, 'kontrola: nagrobek n1 zapisany w oknie').not.toBeNull();
+      expect([wt.poScal && wt.poScal.deletedAtISO, wt.poScal && (wt.poScal.deletedWithPatient || null)], 'nagrobek z okna zostaje po scaleniu').toEqual([wt.wOknie.deletedAtISO, wt.wOknie.deletedWithPatient || null]);
+      expect(wt.w.zbiezne && wt.w.stabilne, JSON.stringify(wt.w.ost)).toBe(true);
+      expect(wt.w.ost).toEqual(przed.w.ost);
+    }, 60e3);
+  }
+
+  // RZ0 (bez stanu CZEKA, mechanizm sprzed D-21): A ręcznie usunęło n3 i n1; C (nie wie) poprawia n1 później, więc
+  // w scaleniu ładunku C na A dla n1 decyzja „notatka” (pętla przyjmowania przywraca n1), a n3 trafia do U („zostaw”).
+  // Pauza w pętli U na n3 — po przyjęciu n1, przed pętlą zdejmowania; w tym oknie ręczne usunięcie przywróconej n1 albo
+  // „Usuń pacjenta” X, w drugiej karcie albo w tej samej. Odniesienie: ta sama operacja po scaleniu.
+  async function rz0(kiedy, { tenSama = false, sposob = 'reczne' } = {}) {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: {} }, ['n1', 'n2', 'n3']);
+    const { A, C } = x.urz;
+    const druga = tenSama ? A.v : (await drugaKarta(A, locks)).v;
+    const id1 = x.id('n1'), id3 = x.id('n3');
+    przesun(60e3); await A.v.removePatientNote(id3);
+    przesun(60e3); await A.v.removePatientNote(id1);
+    const reczny1 = await nagrobekId(A, id1);
+    przesun(60e3); await C.v.savePatientNote({ id: id1, patientId: x.pid, title: 'n1', body: 'edycja C' });
+    const ladC = kopia(await C.v.exportSyncPayload());
+    const yC = ladC.patientNotes.find((n) => n.id === id1).updatedAtISO;
+    const op = async () => { if (sposob === 'reczne') await druga.removePatientNote(id1); else await druga.removePatient(x.pid); };
+    A.zeruj();
+    const p = A.pulapka('getPatientNoteForUser', (_u, id) => id === id3 && (A.licz.putPatientNoteForUser || 0) > 0); // pętla U, po przyjęciu n1
+    przesun(5e3);
+    const scal = A.v.mergeSyncPayload(ladC);
+    const doszlo = await Promise.race([p.osiagnieta.then(() => true), scal.then(() => false)]);
+    let wOknie = null;
+    if (kiedy === 'w trakcie') {
+      wOknie = { n1: !!(await A.baza.getPatientNoteForUser(A.uid, id1)), staryNagrobek: (await nagrobekId(A, id1) || {}).deletedAtISO === reczny1.deletedAtISO };
+      przesun(5); await op(); wOknie.nagrobek = await nagrobekId(A, id1);
+    }
+    p.zwolnij(); await scal;
+    if (kiedy === 'po') { przesun(1000); await op(); }
+    const poScal = await nagrobekId(A, id1);
+    const w = await rundy(x, ['A', 'C', 'B'], 4);
+    return { doszlo, wOknie, poScal, w, yC };
+  }
+  for (const [kod, nazwa, o, cel] of [
+    ['RZ0 [CZERWONY na 6db54b78 i affdeb64]', 'ręczne usunięcie przywróconej n1 w drugiej karcie', {}, 'karta [n2] nagr[n1,n3]'],
+    ['RZ0b [CZERWONY na 6db54b78 i affdeb64]', 'ręczne usunięcie przywróconej n1 w tej samej karcie (scalanie w tle)', { tenSama: true }, 'karta [n2] nagr[n1,n3]'],
+    ['RZu [CZERWONY na 6db54b78]', '„Usuń pacjenta” X w drugiej karcie', { sposob: 'usunPacjenta' }, /^BRAK \[\] nagr\[n1\+pole(\+r)?,n2\+pole,n3\]$/],
+    ['RZub [CZERWONY na 6db54b78]', '„Usuń pacjenta” X w tej samej karcie (scalanie w tle)', { tenSama: true, sposob: 'usunPacjenta' }, /^BRAK \[\] nagr\[n1\+pole(\+r)?,n2\+pole,n3\]$/],
+  ]) {
+    it(`${kod} A ręcznie usunęło n1, C poprawia ją później; ${nazwa} po przyjęciu n1, przed pętlą zdejmowania → nagrobek z okna zostaje, wynik jak po scaleniu`, async () => {
+      const po = await rz0('po', o), wt = await rz0('w trakcie', o);
+      const dopasuj = (s) => (typeof cel === 'string' ? expect(s).toBe(cel) : expect(s).toMatch(cel));
+      expect(po.w.zbiezne && po.w.stabilne, JSON.stringify(po.w.ost)).toBe(true);
+      dopasuj(po.w.ost.A);
+      expect(wt.doszlo, 'pułapka w pętli U').toBe(true);
+      expect([wt.wOknie.n1, wt.wOknie.staryNagrobek], 'kontrola: w oknie n1 przyjęta, stary ręczny nagrobek jeszcze leży').toEqual([true, true]);
+      expect(wt.wOknie.nagrobek, 'kontrola: nagrobek n1 z okna').not.toBeNull();
+      expect([wt.poScal && wt.poScal.deletedAtISO, wt.poScal && !!wt.poScal.deletedWithPatient], 'nagrobek z okna zostaje po scaleniu').toEqual([wt.wOknie.nagrobek.deletedAtISO, !!wt.wOknie.nagrobek.deletedWithPatient]);
+      expect(wt.w.zbiezne && wt.w.stabilne, JSON.stringify(wt.w.ost)).toBe(true);
+      dopasuj(wt.w.ost.A);
+      // „Usuń pacjenta” w oknie zastaje jeszcze stary ręczny nagrobek n1 i przenosi jego chwilę jako M (Bnp_poleEb);
+      // M jest wcześniejsze niż poprawka C, więc niczego nie blokuje — jedyna różnica wobec „po”
+      if (o.sposob === 'usunPacjenta' && wt.poScal.deletedWithPatient.manualDeletedAtISO) {
+        expect(wt.poScal.deletedWithPatient.manualDeletedAtISO < wt.yC, 'M wcześniejsze niż poprawka C').toBe(true);
+      }
+    }, 60e3);
+  }
+  // RZ0l: przeplot wewnątrz pętli zdejmowania — ręczne usunięcie w drugiej karcie po świeżym odczycie nagrobka n1,
+  // przed jego zdjęciem: czeka na blokadę n1 i wchodzi po zdjęciu, więc ręczny nagrobek zostaje (bez blokady zdjęcie
+  // kasowało świeży ręczny nagrobek po decyzji z odczytu sprzed niego).
+  it('RZ0l [CZERWONY na 6db54b78] ręczne usunięcie n1 w drugiej karcie między świeżym odczytem a zdjęciem nagrobka n1 → czeka na blokadę n1, ręczny nagrobek zostaje; karta [n2] wszędzie', async () => {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: {}, C: {} }, ['n1', 'n2', 'n3']);
+    const { A, C } = x.urz;
+    const { v: druga } = await drugaKarta(A, locks);
+    const id1 = x.id('n1');
+    przesun(60e3); await A.v.removePatientNote(x.id('n3'));
+    przesun(60e3); await A.v.removePatientNote(id1);
+    przesun(60e3); await C.v.savePatientNote({ id: id1, patientId: x.pid, title: 'n1', body: 'edycja C' });
+    const ladC = kopia(await C.v.exportSyncPayload());
+    A.zeruj();
+    const p = A.pulapka('getPatientNoteTombstoneForUser', (_u, id) => id === id1); // świeży odczyt w pętli zdejmowania
+    przesun(5e3);
+    const scal = A.v.mergeSyncPayload(ladC);
+    const doszlo = await Promise.race([p.osiagnieta.then(() => true), scal.then(() => false)]);
+    przesun(5);
+    const reczne = druga.removePatientNote(id1);
+    await chwila(30);
+    const czekalo = (await nagrobekId(A, id1) || {}).deletedAtISO !== undefined && !!(await A.baza.getPatientNoteForUser(A.uid, id1));
+    p.zwolnij(); await scal; await reczne;
+    const poScal = await nagrobekId(A, id1);
+    expect(doszlo, 'pułapka: świeży odczyt nagrobka n1 w pętli zdejmowania (na 6db54b78 go nie ma)').toBe(true);
+    expect(czekalo, 'kontrola: ręczne usunięcie czeka na blokadę n1 (notatka i stary nagrobek jeszcze leżą)').toBe(true);
+    expect(poScal && !poScal.deletedWithPatient, 'ręczny nagrobek n1 zostaje po scaleniu').toBe(true);
+    const w = await rundy(x, ['A', 'C', 'B'], 4);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toBe('karta [n2] nagr[n1,n3]');
+  }, 60e3);
+
+  // Błąd odczytu świeżego nagrobka w scaleniu (getPatientNoteTombstoneForUser rzuca): pętla U zapisuje nagrobek ze
+  // stanu z początku sekcji, pętla zdejmowania zdejmuje nagrobek jak dotąd, scalanie kończy się bez błędu. Wynik jak na
+  // 83c04d5b (bez świeżego odczytu); wyjątek przerywałby sekcję notatek po cichu.
+  async function zAwaria(A, f) {
+    const oryg = A.baza.getPatientNoteTombstoneForUser;
+    let bledy = 0;
+    A.baza.getPatientNoteTombstoneForUser = async () => { bledy += 1; throw new Error('awaria odczytu nagrobka (test)'); };
+    try { await f(); } finally { A.baza.getPatientNoteTombstoneForUser = oryg; }
+    return bledy;
+  }
+  it('RZ0e [ścieżka błędu; na 6db54b78 i starszych czerwony tylko licznik odczytów] A ręcznie usunęło n3 i n1, C poprawia n1; scalanie ładunku C przy błędzie odczytu nagrobka → n1 przyjęta, jej nagrobek zdjęty, nagrobek n3 zostaje, jak dotąd', async () => {
+    const x = await przygotuj({ A: {}, B: {}, C: {} }, ['n1', 'n2', 'n3']);
+    const { A, C } = x.urz;
+    const id1 = x.id('n1'), id3 = x.id('n3');
+    przesun(60e3); await A.v.removePatientNote(id3);
+    przesun(60e3); await A.v.removePatientNote(id1);
+    const n3przed = await nagrobekId(A, id3);
+    przesun(60e3); await C.v.savePatientNote({ id: id1, patientId: x.pid, title: 'n1', body: 'edycja C' });
+    const ladC = kopia(await C.v.exportSyncPayload());
+    przesun(5e3);
+    const bledy = await zAwaria(A, () => A.v.mergeSyncPayload(ladC));
+    expect(bledy, 'kontrola: odczyt rzucał w pętli U (n3) i w pętli zdejmowania (n1)').toBe(2);
+    expect(!!(await A.baza.getPatientNoteForUser(A.uid, id1)), 'n1 przyjęta').toBe(true);
+    expect(await nagrobekId(A, id1), 'nagrobek n1 zdjęty').toBeNull();
+    const n3 = await nagrobekId(A, id3);
+    expect([n3 && n3.deletedAtISO, n3 && (n3.deletedWithPatient || null)], 'nagrobek n3 jak dotąd').toEqual([n3przed.deletedAtISO, null]);
+    const w = await rundy(x, ['A', 'C', 'B'], 3);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toBe('karta [n1=edycja C,n2] nagr[n3]');
+  }, 60e3);
+  it('K1e [ścieżka błędu; na 83c04d5b i starszych czerwony tylko licznik odczytów] B usuwa X; A scala ładunek B przy błędzie odczytu nagrobka → nagrobki n1 i n2 z polem X zapisane ze stanu z początku sekcji, bez błędu scalania', async () => {
+    const x = await przygotuj({ A: {}, B: {}, C: {} });
+    const { A, B, C } = x.urz;
+    przesun(60e3); await B.v.removePatient(x.pid);
+    const ladB = kopia(await B.v.exportSyncPayload());
+    const naB = Object.fromEntries((ladB.patientNoteTombstones || []).map((t) => [x.nn[t.id], [t.deletedAtISO, t.deletedWithPatient]]));
+    przesun(5e3);
+    const bledy = await zAwaria(A, () => A.v.mergeSyncPayload(ladB));
+    expect(bledy, 'kontrola: odczyt rzucał w pętli U').toBeGreaterThanOrEqual(2);
+    const naA = Object.fromEntries((await nagrobkiNotatek(A)).map((t) => [x.nn[t.id], [t.deletedAtISO, t.deletedWithPatient]]));
+    expect(naA, 'nagrobki n1 i n2 jak w ładunku B (R, pole)').toEqual(naB);
+    expect(await stan(A, x)).toBe('BRAK [] nagr[n1+pole,n2+pole]');
+    await wizyta(C, x); // C nie wie o usunięciu — karta przeżywa, notatki wracają
+    const w = await rundy(x, ['A', 'C', 'B'], 4);
+    expect(w.zbiezne && w.stabilne, JSON.stringify(w.ost)).toBe(true);
+    expect(w.ost.A).toBe('karta [n1,n2] nagr[]');
+  }, 60e3);
+
+  // W2 (luka testów): świeży nagrobek WCZEŚNIEJSZY niż R w pętli U (Bnp_nagrobekScalania). Nagrobek z polem z zegara B
+  // przesuniętego o +10 min (G13); w oknie scalania ręczne usunięcie n1 na A z chwilą teraz < R. Krata: R i pole
+  // zostają, M = chwila ręcznego usunięcia, więc n1 nie wraca z kartą, która przeżyła (C zmienia ją po R). Mutacje
+  // „świeży tylko, gdy późniejszy niż R”, „najnowszy wygrywa bez kraty” i „pole ze starej kopii przy tym samym R” gubią
+  // M i przechodziły cały plik (łapał je tylko strażnik źródła). Zielony na 6db54b78, czerwony na 83c04d5b i 95b6f96e.
+  async function g13(kiedy) {
+    const locks = atrapaLocks();
+    const x = await przygotuj({ A: { locks }, B: { zegar: 600e3 }, C: {} });
+    const { A, B, C } = x.urz;
+    const { v: druga } = await drugaKarta(A, locks);
+    const id1 = x.id('n1');
+    przesun(60e3); await B.v.removePatient(x.pid);
+    const ladB = kopia(await B.v.exportSyncPayload());
+    if (kiedy === 'przed') { przesun(1000); await druga.removePatientNote(id1); }
+    A.zeruj();
+    const p = A.pulapka('listPatientNoteTombstonesForUser', () => (A.licz.listPatientNotesForUser || 0) > 0); // K w Le
+    przesun(5e3);
+    const scal = A.v.mergeSyncPayload(ladB);
+    const doszlo = await Promise.race([p.osiagnieta.then(() => true), scal.then(() => false)]);
+    let wOknie = null;
+    if (kiedy === 'w trakcie') { przesun(5); await druga.removePatientNote(id1); wOknie = await nagrobekId(A, id1); }
+    p.zwolnij(); await scal;
+    if (kiedy === 'po') { przesun(1000); await druga.removePatientNote(id1); }
+    const poScal = await nagrobekId(A, id1);
+    przesun(700e3); await wizyta(C, x); // C nie wie o usunięciu, zmienia kartę po R — karta przeżywa
+    const w = await rundy(x, ['A', 'C', 'B'], 4);
+    return { doszlo, wOknie, poScal, w };
+  }
+  it('G13w [luka testów W2; CZERWONY na 83c04d5b i starszych] nagrobek z polem z zegara +10 min; ręczne usunięcie n1 w drugiej karcie w trakcie scalania, z chwilą < R → nagrobek (R, pole, M = chwila ręczna), n1 nie wraca; wynik jak przed i po scaleniu', async () => {
+    const przed = await g13('przed'), po = await g13('po'), wt = await g13('w trakcie');
+    expect(wt.doszlo, 'pułapka w sekcji notatek Le').toBe(true);
+    expect(wt.wOknie && !wt.wOknie.deletedWithPatient && wt.wOknie.deletedAtISO < wt.poScal.deletedAtISO, 'kontrola: świeży ręczny nagrobek wcześniejszy niż R').toBe(true);
+    expect(wt.poScal.deletedWithPatient && wt.poScal.deletedWithPatient.manualDeletedAtISO, 'M = chwila ręcznego usunięcia').toBe(wt.wOknie.deletedAtISO);
+    for (const r of [przed, po, wt]) expect(r.w.zbiezne && r.w.stabilne, JSON.stringify(r.w.ost)).toBe(true);
+    expect(wt.w.ost.A).toBe('karta [n2] nagr[n1+pole+r]');
+    expect(wt.w.ost).toEqual(przed.w.ost);
+    expect(po.w.ost).toEqual(przed.w.ost);
+  }, 90e3);
+});
+
 /* ---------- strażniki źródła ---------- */
 describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
   const src = readFileSync(path.join(korzen, 'vilda_vault.js'), 'utf8');
   const sekcja = (od, doo) => { const a = src.indexOf(od); return a < 0 ? '' : src.slice(a, src.indexOf(doo, a)); };
-  it('Le: krata i decyzja przed pętlą przyjmowania, ratunek po niej, zdjęcie nagrobków pomija RATUNEK i CZEKA; bez listy kart w sekcji notatek; nagrobki U na świeżym rekordzie (przegląd poprawki P1, F1)', () => {
+  it('Le: krata i decyzja przed pętlą przyjmowania, ratunek po niej, zdjęcie nagrobków pomija RATUNEK i CZEKA; bez listy kart w sekcji notatek; nagrobki U na świeżym rekordzie (przegląd poprawki P1, F1); zdjęcie nagrobków pod blokadą notatki na świeżym rekordzie (weryfikacja 2, W1)', () => {
     const notatki = sekcja('var Qch=[];', 'let St=0,Dt=0,dt=0;');
     expect(notatki.length).toBeGreaterThan(5000);
     expect(notatki).toContain('Qkn=Bnp_zlacz(W.concat(K))');
@@ -3677,7 +3922,13 @@ describe('P-NOTATKI-ZA-KARTA — strażniki źródła', () => {
     expect(ns).toContain('const k = Bnp_zlacz((kopie || []).concat([swiezy]))[id];');
     expect(ns).toContain('if (k) { D = k.R; p = k.pole; }');
     expect(ns).toContain('if (Bnp_rev(swiezy) > r) r = Bnp_rev(swiezy);');
-    expect(notatki).toContain('!U.has(M.id)&&!Qrt.has(M.id)&&!Qcz.has(M.id)&&await P.removePatientNoteTombstoneForUser(b,M.id)');
+    // weryfikacja 2 przeglądu P1 (W1): zdjęcie nagrobka po decyzji „notatka” pod blokadą notatki, na świeżym rekordzie
+    expect(notatki).toContain('!U.has(M.id)&&!Qrt.has(M.id)&&!Qcz.has(M.id)&&await Ac(M.id,function(){return Bnp_zdejmijPoScaleniu(P,M.id,R[M.id])})');
+    expect(notatki).not.toContain('&&await P.removePatientNoteTombstoneForUser(b,M.id)');
+    const zd = sekcja('async function Bnp_zdejmijPoScaleniu(', '\n}\n');
+    expect(zd).toContain('try { swiezy = await Bnp_nagrobek(h, id); } catch { swiezy = null; }');
+    expect(zd).toContain("if (swiezy && typeof swiezy.deletedAtISO === 'string' && swiezy.deletedAtISO > (R || '')) return;");
+    expect(zd).toContain('await h.removePatientNoteTombstoneForUser(b, id);');
     expect(notatki).not.toContain('listPatientsForUser');
     expect(notatki.indexOf('Bnp_stan(')).toBeLessThan(notatki.indexOf('for(let S=0;S<j.length;S+=1)'));
     expect(notatki.indexOf('Bnp_ratuj(')).toBeGreaterThan(notatki.indexOf('M?Nt++:Et++,Qdn.add(g.id)'));
