@@ -481,22 +481,10 @@ html[data-clcr-workflow-ui="1"] .clcr-readiness--incomplete {
   border-color: rgba(0, 131, 141, 0.28);
 }
 
-html[data-clcr-workflow-ui="1"] .clcr-readiness--warning {
-  color: var(--clcr-warning);
-  background: var(--clcr-warning-bg);
-  border-color: #edd59d;
-}
-
 html[data-clcr-workflow-ui="1"] .clcr-readiness--error {
   color: var(--clcr-error);
   background: var(--clcr-error-bg);
   border-color: #efc4c8;
-}
-
-html[data-clcr-workflow-ui="1"] .clcr-readiness--ready {
-  color: var(--clcr-success);
-  background: var(--clcr-success-bg);
-  border-color: #b9dfd3;
 }
 
 html[data-clcr-workflow-ui="1"] .clcr-missing-list {
@@ -1026,7 +1014,9 @@ html[data-clcr-workflow-ui="1"][data-clcr-active-module]:not(
     [data-clcr-active-module="timed-urine-panel"]
   ):not([data-clcr-active-module="serum-anion-gap"]):not(
     [data-clcr-active-module="spot-fe-uag"]
-  ):not([data-clcr-active-module="spot-tmp-gfr"])
+  ):not([data-clcr-active-module="spot-tmp-gfr"]):not(
+    [data-clcr-active-module="stone-profile"]
+  )
   #elecCard {
   display: none !important;
 }
@@ -1491,21 +1481,6 @@ html[data-clcr-workflow-ui="1"] .clcr-workspace #clcrForm > .patient-card {
 }
 .clcr-result-rail { min-width: 0; }
 .clcr-result-rail > .card { margin-bottom: var(--space-16px); }
-.clcr-rail-head {
-  background: #fff; border: var(--border-emphasis) solid var(--primary); border-radius: var(--radius-16);
-  padding: var(--space-16px) var(--space-18px); box-shadow: 0 10px 28px rgba(18,72,77,.06); margin-bottom: var(--space-16px);
-}
-.clcr-rail-head[hidden] { display: none; }
-.clcr-rail-kick {
-  display: block; font-size: 11px; font-weight: 800; letter-spacing: .07em;
-  text-transform: uppercase; color: var(--primary); margin-bottom: var(--space-4px);
-}
-.clcr-rail-formula { font-size: 12.5px; font-weight: 800; color: #006b73; }
-.clcr-rnum {
-  font: 600 2.5rem/1 Inter, sans-serif; letter-spacing: -.02em; color: var(--primary);
-  display: inline-flex; align-items: flex-end; margin: var(--space-6px) 0 2px;
-}
-.clcr-rnum small { font-size: .34em; margin-left: .35em; color: #444; font-weight: 600; padding-bottom: .25em; }
 @media (min-width: 980px) {
   .clcr-workspace {
     display: grid; grid-template-columns: minmax(0, 1fr) var(--clcr-result-rail-width); gap: var(--space-20px); align-items: start;
@@ -1532,11 +1507,6 @@ html[data-clcr-workflow-ui="1"] .clcr-field__heading {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-/* Sekcja „Wynik i raport" — pełny opis wyniku POD układem (pełna szerokość). */
-.clcr-step-kicker {
-  display: block; margin: 0; color: var(--clcr-primary);
-  font-size: 12px; font-weight: 780; letter-spacing: 0.1em; text-transform: uppercase;
-}
 html[data-clcr-workflow-ui="1"] .clcr-result-report {
   margin: var(--space-20px) 0 var(--space-1-5); padding: 22px;
   background: var(--clcr-surface); border: var(--border-hairline) solid var(--clcr-border-soft);
@@ -1648,36 +1618,29 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo > .result-box.out
   border-color: #ecc3c3 !important; box-shadow: inset 3px 0 0 var(--clcr-error) !important;
 }
 
-/* P-KLIRENS-EGFR-PREZENTACJA: ten sam status w liczbie, opisie i railu.
-   Selektor karty celowo zachowuje #clcrInfo i zwiększa specyficzność względem
-   neutralnego .result-box powyżej; samo !important nie usuwa turkusowego paska. */
-.clcr-egfr-result[data-clcr-tone],
+/* P-KLIRENS-EGFR-PREZENTACJA: ten sam status w liczbie,
 #clcrRailHead[data-clcr-tone] {
   --clcr-status-color: #445a64;
   --clcr-status-bg: #f0f2f4;
   --clcr-status-border: #dce6e9;
 }
-.clcr-egfr-result[data-clcr-tone="success"],
-#clcrRailHead[data-clcr-tone="success"] {
+.clcr-egfr-result[data-clcr-tone="success"] {
   --clcr-status-color: #147a64;
   --clcr-status-bg: #eaf8f3;
   --clcr-status-border: #b9dfd3;
 }
-.clcr-egfr-result[data-clcr-tone="warning"],
-#clcrRailHead[data-clcr-tone="warning"] {
+.clcr-egfr-result[data-clcr-tone="warning"] {
   --clcr-status-color: #9a5b00;
   --clcr-status-bg: #fff7e6;
   --clcr-status-border: #edd59d;
 }
-.clcr-egfr-result[data-clcr-tone="danger"],
-#clcrRailHead[data-clcr-tone="danger"] {
+.clcr-egfr-result[data-clcr-tone="danger"] {
   --clcr-status-color: #c62828;
   --clcr-status-bg: #fff1f1;
   --clcr-status-border: #efc4c8;
 }
 html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-egfr-result,
-.clcr-egfr-result,
-#clcrRailHead[data-clcr-tone] {
+.clcr-egfr-result {
   background: var(--clcr-status-bg) !important;
   border-color: var(--clcr-status-border) !important;
   box-shadow: inset 5px 0 0 var(--clcr-status-color) !important;
@@ -1687,8 +1650,7 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
   grid-column: 1 / -1;
   padding: var(--space-20px) 22px !important;
 }
-.clcr-egfr-result-heading,
-.clcr-rail-status {
+.clcr-egfr-result-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1696,21 +1658,15 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
 }
 .clcr-egfr-result .clcr-egfr-status,
 .clcr-egfr-result .clcr-egfr-value,
-.clcr-egfr-result .clcr-egfr-unit,
-#clcrRailHead[data-clcr-tone] .clcr-rail-kick,
-#clcrRailHead[data-clcr-tone] .clcr-rnum,
-#clcrRailHead[data-clcr-tone] .clcr-rnum small,
-#clcrRailHead[data-clcr-tone] .clcr-rail-status {
+.clcr-egfr-result .clcr-egfr-unit {
   color: var(--clcr-status-color) !important;
 }
-.clcr-egfr-status,
-.clcr-rail-status {
+.clcr-egfr-status {
   font-size: 16px;
   font-weight: 800;
   line-height: 1.35;
 }
-.clcr-egfr-category,
-.clcr-rail-category {
+.clcr-egfr-category {
   display: inline-block;
   flex: 0 0 auto;
   padding: 3px 9px;
@@ -1739,12 +1695,6 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
   color: #445a64;
   font-size: 13px;
 }
-.clcr-rail-boundary {
-  margin: var(--space-10px) 0;
-  color: var(--text-2);
-  font-size: 12px;
-  line-height: 1.5;
-}
 .clcr-egfr-category-description,
 .clcr-egfr-note {
   margin: var(--space-10px) 0 0;
@@ -1757,25 +1707,6 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
   margin-bottom: var(--space-10px);
   font-size: 12px;
 }
-#clcrRailHead[data-clcr-tone] .clcr-rnum {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-6px);
-  margin: var(--space-12px) 0 var(--space-6px);
-  font-size: clamp(3rem, 5vw, 4.5rem);
-}
-#clcrRailHead[data-clcr-tone] .clcr-rnum small {
-  margin-left: 0;
-  padding-bottom: 0;
-  font-size: 15px;
-}
-#clcrRailHead[data-clcr-tone] .clcr-rail-formula {
-  margin-top: var(--space-10px);
-  color: #445a64;
-  font-weight: 600;
-}
-.clcr-egfr-extra-data,
 .clcr-egfr-result-details {
   grid-column: 1 / -1;
   min-width: 0;
@@ -1785,19 +1716,10 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr
   background: var(--clcr-surface-soft, #f5f9f9);
   color: var(--clcr-text, #333333);
 }
-.clcr-egfr-extra-data[hidden] { display: none !important; }
-.clcr-egfr-extra-data > summary,
 .clcr-egfr-result-details > summary {
   cursor: pointer;
   font-size: 14px;
   font-weight: 650;
-}
-.clcr-egfr-extra-data__body,
-.clcr-egfr-extra-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-12px);
-  margin-top: var(--space-14px);
 }
 .clcr-marker-context__note {
   color: var(--clcr-muted, #5a7274);
@@ -1855,38 +1777,438 @@ html[data-clcr-workflow-ui="1"][data-clcr-active-module="cockcroft-gault"] .clcr
   html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box.clcr-egfr-result {
     padding: var(--space-16px) !important;
   }
-  .clcr-egfr-status,
-  .clcr-rail-status { font-size: 14px; }
-  .clcr-egfr-result-heading,
-  .clcr-rail-status { gap: var(--space-8px); }
+  .clcr-egfr-status { font-size: 14px; }
+  .clcr-egfr-result-heading { gap: var(--space-8px); }
 }
 
-/* ——— Układ B (U3): pasek „Wymagane dane X/Y" + „Zobacz pełny opis wyniku ↓" ——— */
-html[data-clcr-workflow-ui="1"] .clcr-progress {
-  margin: 0 0 var(--space-12px); border-radius: var(--radius-13); background: var(--clcr-surface-soft); padding: var(--space-12px);
-}
-html[data-clcr-workflow-ui="1"] .clcr-progress[hidden] { display: none !important; }
 html[data-clcr-workflow-ui="1"] .clcr-progress__meta {
   display: flex; align-items: center; justify-content: space-between;
   color: var(--clcr-muted); font-size: 12px; font-weight: 700;
 }
 html[data-clcr-workflow-ui="1"] .clcr-progress__value { color: var(--clcr-heading); }
-html[data-clcr-workflow-ui="1"] .clcr-progress__track {
-  height: 7px; margin-top: var(--space-8px); overflow: hidden; border-radius: var(--radius-pill); background: #dce7e7;
+/* P-KLIRENS-JEDEN-WYNIK: zaakceptowany wariant B. Prawdziwe wyniki silnika
+   są w jednym panelu; norma i interpretacja mają wspólne tło z liczbą. */
+html[data-clcr-workflow-ui="1"] .clcr-workspace {
+  gap: var(--space-20px);
+  margin-bottom: var(--space-20px);
 }
-html[data-clcr-workflow-ui="1"] .clcr-progress__fill {
-  display: block; width: 0; height: 100%; border-radius: inherit;
-  background: linear-gradient(90deg, var(--clcr-primary), var(--clcr-accent));
-  transition: width 220ms ease;
+html[data-clcr-workflow-ui="1"] #clcrResultRail {
+  min-width: 0;
+  position: static;
 }
-html[data-clcr-workflow-ui="1"] .clcr-fullreport-button {
-  display: block !important; width: 100% !important; min-height: 44px !important;
-  margin: 0 0 var(--space-16px) !important;
-  border: var(--border-hairline) solid var(--clcr-primary) !important; border-radius: var(--radius-11) !important;
-  background: var(--clcr-primary) !important; color: #fff !important;
-  box-shadow: var(--shadow-selected) !important;
-  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
-  font: inherit !important; font-weight: 750 !important; cursor: pointer !important;
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport {
+  margin: 0;
+  padding: var(--space-20px);
 }
-html[data-clcr-workflow-ui="1"] .clcr-fullreport-button:hover { background: var(--clcr-primary-dark) !important; }
-html[data-clcr-workflow-ui="1"] .clcr-fullreport-button[hidden] { display: none !important; }
+html[data-clcr-workflow-ui="1"] #clcrResultReport .clcr-result-report__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultReport .clcr-result-report__head {
+  margin-bottom: var(--space-16px);
+}
+.clcr-step-number {
+  display: inline-grid;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  margin-right: var(--space-8px);
+  place-items: center;
+  color: var(--clcr-primary);
+  background: var(--clcr-surface-tint);
+  border: var(--border-hairline) solid #b9dddd;
+  border-radius: var(--radius-8);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: normal;
+  vertical-align: middle;
+}
+html[data-clcr-workflow-ui="1"] #clcrActivePanel .clcr-active-panel__eyebrow {
+  display: block;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultReport :is(#clcrInfo, #elecInfo, #stoneInfo) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12px);
+}
+html[data-clcr-workflow-ui="1"] #clcrResultReport #clcrReadiness {
+  margin: 0;
+}
+.clcr-result-card[data-clcr-tone] {
+  --clcr-result-color: #445a64;
+  --clcr-result-bg: #f0f2f4;
+  --clcr-result-border: #dce6e9;
+}
+.clcr-result-card[data-clcr-tone="success"] {
+  --clcr-result-color: #147a64;
+  --clcr-result-bg: #eaf8f3;
+  --clcr-result-border: #b9dfd3;
+}
+.clcr-result-card[data-clcr-tone="warning"] {
+  --clcr-result-color: #9a5b00;
+  --clcr-result-bg: #fff7e6;
+  --clcr-result-border: #edd59d;
+}
+.clcr-result-card[data-clcr-tone="danger"] {
+  --clcr-result-color: #c62828;
+  --clcr-result-bg: #fff1f1;
+  --clcr-result-border: #efc4c8;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card {
+  min-width: 0;
+  margin: 0 !important;
+  padding: 22px var(--space-24px) var(--space-20px) !important;
+  color: var(--clcr-text) !important;
+  background: var(--clcr-result-bg) !important;
+  border: var(--border-hairline) solid var(--clcr-result-border) !important;
+  border-radius: var(--radius-14) !important;
+  box-shadow: inset 5px 0 0 var(--clcr-result-color) !important;
+  font-size: 14px !important;
+  text-align: left !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.clcr-result-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--space-20px);
+  align-items: start;
+}
+.clcr-result-patient,
+.clcr-result-reference {
+  min-width: 0;
+}
+.clcr-result-patient-label,
+.clcr-result-reference-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-6px);
+  min-height: 24px;
+  margin: 0 0 var(--space-12px);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-value {
+  display: block;
+  color: var(--clcr-result-color) !important;
+  font-size: clamp(2.7rem, 4.5vw, 4.25rem) !important;
+  font-weight: 750;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-value > svg {
+  display: none;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card:is([data-clcr-value-length="5"], [data-clcr-value-length="6"]) .clcr-result-value {
+  font-size: 2.75rem !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card:is([data-clcr-value-length="7"], [data-clcr-value-length="8"]) .clcr-result-value {
+  font-size: 2.125rem !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card:is([data-clcr-value-length="9"], [data-clcr-value-length="10"], [data-clcr-value-length="11"], [data-clcr-value-length="12"]) .clcr-result-value {
+  font-size: 1.5rem !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-reference-value {
+  display: block;
+  padding-top: var(--space-12px);
+  color: var(--clcr-heading) !important;
+  font-size: clamp(1.5rem, 3vw, 2.875rem) !important;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-unit {
+  display: block;
+  margin-top: var(--space-8px);
+  color: var(--clcr-result-color) !important;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-reference .clcr-result-unit {
+  color: var(--text-2) !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport :is(.clcr-result-reference--text, .clcr-result-reference--unavailable) .clcr-result-reference-value {
+  padding-top: var(--space-12px);
+  font-size: 14px !important;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+.clcr-result-reference-unit {
+  display: block;
+  margin-top: var(--space-8px);
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-reference:not(.clcr-result-reference--unavailable):is([data-clcr-reference-length="5"], [data-clcr-reference-length="6"], [data-clcr-reference-length="7"], [data-clcr-reference-length="8"], [data-clcr-reference-length="9"]) .clcr-result-reference-value {
+  font-size: 1.75rem !important;
+  white-space: nowrap;
+}
+.clcr-result-reference-minimum {
+  display: block;
+  margin-top: var(--space-8px);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-interpretation {
+  margin: var(--space-20px) 0 0;
+  color: var(--clcr-result-color) !important;
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+.clcr-result-boundary {
+  margin: var(--space-8px) 0 0;
+  color: var(--clcr-result-color);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.clcr-result-source {
+  margin: var(--space-10px) 0 0;
+  color: var(--clcr-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.clcr-result-source a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  width: auto !important;
+  flex: 0 0 auto;
+  margin: -6px 0;
+  padding: var(--space-4px) var(--space-6px);
+  color: var(--clcr-result-color) !important;
+  background: transparent !important;
+  border: var(--border-hairline) solid currentColor !important;
+  border-radius: var(--radius-6) !important;
+  box-shadow: none !important;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.clcr-result-category:focus-visible,
+.clcr-result-details > summary:focus-visible {
+  outline: var(--border-emphasis) solid var(--clcr-primary-dark);
+  outline-offset: 3px;
+}
+.clcr-result-details {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-12px) var(--space-14px);
+  color: var(--text-2);
+  background: var(--clcr-surface-soft);
+  border: var(--border-hairline) solid var(--clcr-border);
+  border-radius: var(--radius-12);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.clcr-result-details > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.clcr-result-details p {
+  margin: var(--space-12px) 0 0;
+}
+.clcr-result-category-table {
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-12px);
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+.clcr-result-category-table :is(th, td) {
+  padding: var(--space-8px);
+  border-bottom: var(--border-hairline) solid var(--clcr-border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.clcr-result-category-table th {
+  color: var(--clcr-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.clcr-result-category-table td:first-child {
+  width: 14%;
+  color: var(--clcr-heading);
+  font-weight: 750;
+}
+.clcr-result-category-table td:nth-child(2) {
+  width: 24%;
+  white-space: nowrap;
+}
+.clcr-result-category-table tr[aria-current="true"] {
+  color: var(--clcr-warning);
+  background: var(--clcr-warning-bg);
+  box-shadow: inset 3px 0 0 var(--clcr-warning);
+  font-weight: 650;
+}
+.clcr-result-category-table tr[aria-current="true"] td:first-child {
+  color: inherit;
+}
+.clcr-result-category-table tr[aria-current="true"][data-clcr-tone="success"] {
+  color: var(--clcr-success);
+  background: var(--clcr-success-bg);
+  box-shadow: inset 3px 0 0 var(--clcr-success);
+}
+.clcr-result-category-table tr[aria-current="true"][data-clcr-tone="danger"] {
+  color: var(--clcr-error);
+  background: var(--clcr-error-bg);
+  box-shadow: inset 3px 0 0 var(--clcr-error);
+}
+.clcr-result-current-label {
+  display: block;
+  margin-top: var(--space-4px);
+  font-size: 10px;
+  font-weight: 750;
+}
+/* Tabela klasyfikacji ma neutralne komórki; kolor wyróżnia tylko kategorię
+   pacjenta, niezależnie od ogólnych turkusowych tabel kalkulatora. */
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table {
+  table-layout: fixed;
+  min-width: 0;
+  font-size: 12px;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table :is(th, td) {
+  padding: var(--space-8px);
+  color: inherit !important;
+  background: transparent !important;
+  border: 0;
+  border-bottom: var(--border-hairline) solid var(--clcr-border);
+  font-size: inherit;
+  line-height: 1.5;
+  text-align: left;
+  vertical-align: top;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table thead th {
+  color: var(--clcr-muted) !important;
+  font-size: 10px;
+  font-weight: 700;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table tbody th {
+  font-size: inherit;
+  font-weight: 750;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table :is(th, td):first-child {
+  width: 64px;
+  overflow-wrap: normal;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table :is(th, td):nth-child(2) {
+  width: 25%;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-category-table tr:not([aria-current="true"]) {
+  color: var(--text-2);
+  background: transparent;
+}
+html[data-clcr-workflow-ui="1"][data-clcr-active-module]:not([data-clcr-active-module="measured-clearance"]) #clcrResultReport #clcrCard > small {
+  display: none;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-details .clcr-result-extra {
+  display: block;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-details .result-box:not(.clcr-result-card) {
+  min-width: 0;
+  margin: var(--space-12px) 0 0 !important;
+  padding: 0 !important;
+  color: var(--text-2) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+  text-align: left !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-details .result-box:not(.clcr-result-card) strong {
+  color: inherit !important;
+  font-size: inherit !important;
+}
+html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-details .result-box:not(.clcr-result-card) svg {
+  display: none;
+}
+@media (min-width: 980px) {
+  html[data-clcr-workflow-ui="1"] .clcr-workspace {
+    grid-template-columns: minmax(0, 1.1fr) minmax(400px, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  /* Jednostka jest opisana i widoczna w selektorze obok liczby. Drugi
+     przycisk pomocy nie powinien zasłaniać jej etykiety na telefonie. */
+  html[data-clcr-workflow-ui="1"] .clcr-field-pair > .clcr-field:last-child .clcr-info-button {
+    display: none !important;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-field-pair > .clcr-field:last-child .clcr-field__heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport {
+    padding: var(--space-16px);
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card {
+    padding: var(--space-18px) var(--space-18px) var(--space-16px) !important;
+  }
+  .clcr-result-main {
+    gap: var(--space-12px);
+  }
+  .clcr-result-patient-label,
+  .clcr-result-reference-label {
+    font-size: 11px;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-value {
+    font-size: 3.625rem !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card[data-clcr-value-length="4"] .clcr-result-value {
+    font-size: clamp(2rem, 13.5vw, 3.625rem) !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card:is([data-clcr-value-length="5"], [data-clcr-value-length="6"]) .clcr-result-value {
+    font-size: 1.75rem !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card:is([data-clcr-value-length="7"], [data-clcr-value-length="8"]) .clcr-result-value {
+    font-size: 1.25rem !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-card:is([data-clcr-value-length="9"], [data-clcr-value-length="10"], [data-clcr-value-length="11"], [data-clcr-value-length="12"]) .clcr-result-value {
+    font-size: 1rem !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-reference-value {
+    font-size: 2.375rem !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-unit {
+    font-size: 12px;
+  }
+  .clcr-result-reference-unit {
+    font-size: 12px;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-reference:not(.clcr-result-reference--unavailable):is([data-clcr-reference-length="5"], [data-clcr-reference-length="6"], [data-clcr-reference-length="7"], [data-clcr-reference-length="8"], [data-clcr-reference-length="9"]) .clcr-result-reference-value {
+    font-size: 1.125rem !important;
+  }
+  html[data-clcr-workflow-ui="1"] #clcrResultRail #clcrResultReport .clcr-result-interpretation {
+    font-size: 16px;
+  }
+  .clcr-result-category-table {
+    font-size: 11px;
+  }
+  .clcr-result-category-table :is(th, td) {
+    padding: var(--space-8px) var(--space-4px);
+  }
+}

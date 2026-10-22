@@ -1,5 +1,24 @@
 import { expect, test } from '@playwright/test';
 
+async function openFieldDetails(page, selector) {
+  for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+}
+
+async function setMarkerContext(page, value) {
+  const marker = page.locator('[data-clcr-marker-context]');
+  for (const details of await marker.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+  await marker.selectOption(value);
+}
+
+
 // Dane wyłącznie syntetyczne. Testujemy produkcyjny workflow, nie broad/testowy widok.
 async function openCalculator(page, width = 1440) {
   await page.setViewportSize({ width, height: 1000 });
@@ -53,11 +72,11 @@ async function fillAdult(page, { creatinine = '3', assay = 'enzymatic_idms' } = 
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill(creatinine);
   await setAssay(page, assay);
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
 }
 
 function result(page, id = 'egfr') {
-  return page.locator(`.clcr-egfr-result[data-clcr-series="${id}"]`);
+  return page.locator(`.clcr-result-card[data-clcr-series="${id}"]`);
 }
 
 async function creatinineForTarget(page, target, overrides = {}) {
@@ -107,11 +126,11 @@ for (const width of [1440, 390, 320]) {
     const card = result(page);
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute('data-clcr-tone', 'danger');
-    await expect(card.locator('.clcr-egfr-value')).toHaveText('25');
-    await expect(card.locator('.clcr-egfr-status')).toContainText('Znacznie zmniejszony');
-    await expect(card.locator('.clcr-egfr-category')).toContainText('G4');
-    await expect(card.locator('.clcr-egfr-value')).toHaveCSS('color', 'rgb(198, 40, 40)');
-    await expect(card.locator('.clcr-egfr-status')).toHaveCSS('color', 'rgb(198, 40, 40)');
+    await expect(card.locator('.clcr-result-value')).toHaveText('25');
+    await expect(card.locator('.clcr-result-interpretation')).toContainText('Znacznie zmniejszony');
+    await expect(card.locator('[data-clcr-category-control]')).toContainText('G4');
+    await expect(card.locator('.clcr-result-value')).toHaveCSS('color', 'rgb(198, 40, 40)');
+    await expect(card.locator('.clcr-result-interpretation')).toHaveCSS('color', 'rgb(198, 40, 40)');
     const geometry = await card.evaluate(node => {
       const style = getComputedStyle(node);
       const rect = node.getBoundingClientRect();
@@ -131,11 +150,12 @@ for (const width of [1440, 390, 320]) {
     expect(geometry.right).toBeLessThanOrEqual(geometry.viewport + 1);
     expect(geometry.cardOverflow).toBeLessThanOrEqual(1);
     expect(geometry.pageOverflow).toBeLessThanOrEqual(1);
-    const rail = page.locator('.clcr-rail-head');
-    await expect(rail).toHaveAttribute('data-clcr-tone', 'danger');
-    await expect(rail).toContainText('Znacznie zmniejszony');
-    await expect(rail.locator('.clcr-rnum')).toContainText('25');
-    await expect(rail.locator('.clcr-rnum small')).toHaveText(/mL\/min\/1,73\s*m²/i);
+    const report = page.locator('#clcrResultReport');
+    await expect(report.locator('[data-clcr-series="egfr"]')).toHaveCount(1);
+    await expect(report.locator('.clcr-result-interpretation')).toContainText('Znacznie zmniejszony');
+    await expect(report.locator('.clcr-result-value')).toHaveText('25');
+    await expect(report.locator('.clcr-result-unit')).toHaveText(/mL\/min\/1,73\s*m²/i);
+    await expect(page.locator('#clcrRailHead, .clcr-rnum')).toHaveCount(0);
   });
 }
 
@@ -143,19 +163,24 @@ test('U25 83/G2 u dziecka ma pomarańczowy status obniżenia dla wieku', async (
   await openCalculator(page);
   await selectFormula(page, 'ckid_u25');
   await page.locator('#age').fill('10');
+  await openFieldDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
+  const patientDetails = page.locator('details.clcr-context-details:has(#ageMonths)');
+  if (await patientDetails.count() && await patientDetails.getAttribute('open') !== null) {
+    await patientDetails.locator(':scope > summary').click();
+  }
   await page.locator('#sex').selectOption('F');
   await page.locator('#height').fill('140');
   await page.locator('#Scr').fill('0.6');
   await setAssay(page, 'enzymatic_idms');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
   const card = result(page, 'ckid_u25');
   await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
-  await expect(card.locator('.clcr-egfr-value')).toHaveText('83');
-  await expect(card.locator('.clcr-egfr-status')).toContainText('Obniżony dla wieku');
-  await expect(card.locator('.clcr-egfr-category')).toContainText('G2');
-  await expect(card.locator('.clcr-egfr-value')).toHaveCSS('color', 'rgb(154, 91, 0)');
-  await expect(card.locator('.clcr-egfr-status')).toHaveCSS('color', 'rgb(154, 91, 0)');
+  await expect(card.locator('.clcr-result-value')).toHaveText('83');
+  await expect(card.locator('.clcr-result-interpretation')).toContainText('Obniżony dla wieku');
+  await expect(card.locator('[data-clcr-category-control]')).toContainText('G2');
+  await expect(card.locator('.clcr-result-value')).toHaveCSS('color', 'rgb(154, 91, 0)');
+  await expect(card.locator('.clcr-result-interpretation')).toHaveCSS('color', 'rgb(154, 91, 0)');
   await expect(page.locator('#weight')).toBeHidden();
   await expect(page.locator('#height')).toBeVisible();
 });
@@ -164,29 +189,30 @@ test('nieznana stabilność i niepotwierdzone IDMS dają neutralny wynik bez kat
   await openCalculator(page);
   await fillAdult(page, { creatinine: await creatinineForTarget(page, 59.8) });
   const marker = page.locator('[data-clcr-marker-context]');
-  await marker.selectOption('unknown');
+  await setMarkerContext(page, 'unknown');
   let card = result(page);
   await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expect(card.locator('.clcr-egfr-value')).toHaveText('60');
-  await expect(card.locator('.clcr-egfr-status')).toContainText('Interpretacja ograniczona');
-  await expect(card.locator('.clcr-egfr-category')).toHaveCount(0);
-  await expect(card.locator('.calculation-detail')).toHaveCount(0);
-  await expect(page.locator('#clcrRailHead')).not.toContainText('<60');
-  await marker.selectOption('stable');
+  await expect(card.locator('.clcr-result-value')).toHaveText('60');
+  await expect(card.locator('.clcr-result-interpretation')).toContainText('ocena ograniczona');
+  await expect(card.locator('[data-clcr-category-control]')).toHaveCount(0);
+  await expect(card.locator('.clcr-result-boundary')).toHaveCount(0);
+  await expect(page.locator('#clcrRailHead')).toHaveCount(0);
+  await setMarkerContext(page, 'stable');
   await setAssay(page, 'not_idms');
   card = result(page);
   await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expect(card.locator('.clcr-egfr-category')).toHaveCount(0);
-  await expect(card.locator('.calculation-detail')).toHaveCount(0);
-  await expect(page.locator('#clcrRailHead')).not.toContainText('<60');
+  await expect(card.locator('[data-clcr-category-control]')).toHaveCount(0);
+  await expect(card.locator('.clcr-result-boundary')).toHaveCount(0);
+  await expect(page.locator('#clcrRailHead')).toHaveCount(0);
   await expect(page.locator('#clcrInfo')).toContainText('IDMS');
-  await expect(card.locator('.clcr-egfr-value')).not.toHaveCSS('color', 'rgb(198, 40, 40)');
+  await expect(card.locator('.clcr-result-value')).not.toHaveCSS('color', 'rgb(198, 40, 40)');
 });
 
 test('przed 2. rokiem życia nie ujawnia kategorii przez dopisek o zaokrągleniu', async ({ page }) => {
   await openCalculator(page);
   await selectFormula(page, 'ckid_u25');
   await page.locator('#age').fill('1');
+  await openFieldDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('6');
   await page.locator('#sex').selectOption('F');
   await page.locator('#height').fill('80');
@@ -195,14 +221,14 @@ test('przed 2. rokiem życia nie ujawnia kategorii przez dopisek o zaokrągleniu
   });
   await page.locator('#Scr').fill(creatinine);
   await setAssay(page, 'enzymatic_idms');
-  await page.locator('[data-clcr-marker-context]').selectOption('stable');
+  await setMarkerContext(page, 'stable');
   const card = result(page, 'ckid_u25');
   await expect(card).toHaveAttribute('data-clcr-tone', 'neutral');
-  await expect(card.locator('.clcr-egfr-value')).toHaveText('90');
-  await expect(card.locator('.clcr-egfr-status')).toContainText('Ocena zależna od wieku');
-  await expect(card.locator('.clcr-egfr-category')).toHaveCount(0);
-  await expect(card.locator('.calculation-detail')).toHaveCount(0);
-  await expect(page.locator('#clcrRailHead')).not.toContainText('<90');
+  await expect(card.locator('.clcr-result-value')).toHaveText('90');
+  await expect(card.locator('.clcr-result-interpretation')).toContainText('Ocena zależna od wieku');
+  await expect(card.locator('[data-clcr-category-control]')).toHaveCount(0);
+  await expect(card.locator('.clcr-result-boundary')).toHaveCount(0);
+  await expect(page.locator('#clcrRailHead')).toHaveCount(0);
 });
 
 test('jedno pole stabilności zachowuje osobne stare dane i usuwa wynik po AKI', async ({ page }) => {
@@ -213,21 +239,21 @@ test('jedno pole stabilności zachowuje osobne stare dane i usuwa wynik po AKI',
   await expect(page.locator('#creatinineState')).toBeHidden();
   await expect(page.locator('#suspectedAKI')).toBeHidden();
 
-  await marker.selectOption('aki');
+  await setMarkerContext(page, 'aki');
   await expect(page.locator('#suspectedAKI')).toBeChecked();
   await expect(result(page)).toHaveCount(0);
   await expect(page.locator('.clcr-rail-head')).toBeHidden();
   await expect(page.locator('#clcrInfo')).toContainText('AKI');
 
-  await marker.selectOption('rapidlyChanging');
+  await setMarkerContext(page, 'rapidlyChanging');
   await expect(page.locator('#creatinineState')).toHaveValue('rapidlyChanging');
   await expect(page.locator('#suspectedAKI')).not.toBeChecked();
   await expect(result(page)).toHaveCount(0);
 
-  await marker.selectOption('stable');
+  await setMarkerContext(page, 'stable');
   await expect(page.locator('#creatinineState')).toHaveValue('stable');
   await expect(page.locator('#suspectedAKI')).not.toBeChecked();
-  await expect(result(page).locator('.clcr-egfr-value')).toHaveText('25');
+  await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
 });
 
 test('masa i wzrost dorosłego są zwinięte, a przejście do Cockcrofta odsłania potrzebną masę', async ({ page }) => {
@@ -235,7 +261,7 @@ test('masa i wzrost dorosłego są zwinięte, a przejście do Cockcrofta odsłan
   await fillAdult(page);
   await expect(page.locator('#weight')).toBeHidden();
   await expect(page.locator('#height')).toBeHidden();
-  const details = page.locator('details.clcr-egfr-extra-data');
+  const details = page.locator('details.clcr-context-details:has(#weight)');
   await expect(details).toHaveCount(1);
   await details.locator(':scope > summary').click();
   await page.locator('#weight').fill('75');
@@ -243,7 +269,7 @@ test('masa i wzrost dorosłego są zwinięte, a przejście do Cockcrofta odsłan
   await details.locator(':scope > summary').click();
   await expect(page.locator('#weight')).toHaveValue('75');
   await expect(page.locator('#height')).toHaveValue('180');
-  await expect(result(page).locator('.clcr-egfr-value')).toHaveText('25');
+  await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
   await selectFormula(page, 'cg');
   await expect(page.locator('#weight')).toBeVisible();
   await expect(page.locator('[data-clcr-marker-context]')).toBeVisible();
@@ -267,7 +293,7 @@ test('odtworzenie starej sesji synchronizuje nowe pole bez dodawania klucza do z
 
   await applySnapshot(page, { creatinineState: 'stable', suspectedAKI: false });
   await expect(marker).toHaveValue('stable');
-  await expect(result(page).locator('.clcr-egfr-value')).toHaveText('25');
+  await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
   await applySnapshot(page, { creatinineState: 'unknown', suspectedAKI: false });
   await expect(marker).toHaveValue('unknown');
   await expect(result(page)).toHaveAttribute('data-clcr-tone', 'neutral');
@@ -279,7 +305,7 @@ test('zmiana jednostki kreatyniny zachowuje wynik i liczbę przekazywaną do his
   const before = Number(await result(page).getAttribute('data-clcr-value'));
   await page.locator('#ScrUnit').selectOption('umol');
   await page.locator('#Scr').fill('265.2');
-  await expect(result(page).locator('.clcr-egfr-value')).toHaveText('25');
+  await expect(result(page).locator('.clcr-result-value')).toHaveText('25');
   const after = Number(await result(page).getAttribute('data-clcr-value'));
   expect(before).toBeCloseTo(24.5348535798, 9);
   expect(after).toBeCloseTo(before, 10);
@@ -304,10 +330,11 @@ test('kategoria i kolor pozostają po właściwej stronie progu mimo zaokrąglen
     const creatinine = await creatinineForTarget(page, target);
     await page.locator('#Scr').fill(creatinine);
     const card = result(page);
-    await expect(card.locator('.clcr-egfr-value')).toHaveText(displayed);
-    await expect(card.locator('.clcr-egfr-category')).toContainText(category);
+    await expect(card.locator('.clcr-result-value')).toHaveText(displayed);
+    await expect(card.locator('[data-clcr-category-control]')).toContainText(category);
     await expect(card).toHaveAttribute('data-clcr-tone', 'warning');
-    await expect(card.locator('.calculation-detail')).toContainText(threshold);
-    await expect(page.locator('#clcrRailHead')).toContainText(threshold);
+    await expect(card.locator('.clcr-result-boundary')).toContainText(threshold);
+    await expect(page.locator('#clcrResultReport .clcr-result-boundary')).toContainText(threshold);
+    await expect(page.locator('#clcrResultReport .clcr-result-value')).toHaveCount(1);
   }
 });

@@ -4451,11 +4451,165 @@ też odtworzenie kontekstu ze starszej sesji, przełączenie wzoru i zachowanie
 danych pacjenta. Akceptacja makiety i testy techniczne nie nadają wzorowi statusu
 walidacji klinicznej.
 
+#### P-KLIRENS-WYNIK-B — wspólny formularz i jedna karta wyniku, 2026-10-21
+
+**Decyzja właściciela:** wdrożyć wariant B wybrany po przeglądzie trzech
+koncepcji desktop/mobile oraz zaakceptowany dodatek kategorii ACR w Szczegółach
+([makieta i akceptowany zakres](https://chatgpt.com/space/page_d8bd05dd52b081919bb0ffc3ae0c112c)).
+Zakres obejmuje 41 dostępnych obliczeń Klirensu; historyczny `sch_var` pozostaje
+wyłączony. Wpis opisuje nowy wspólny widok, zastępujący układ formularza i wyniku
+z wcześniejszych etapów P-KLIRENS-EGFR-PREZENTACJA i P-KLIRENS-CG-PREZENTACJA.
+
+**Wpływ kliniczny i funkcjonalny:** zmieniają się wymagania formularza,
+prezentacja istniejących interpretacji oraz flaga `outOfRange` nowo zapisywanych
+wyników. Ostrzegawcze i nieprawidłowe oceny mają spójne oznaczenie inne niż
+turkusowe: np. ACR w A2 otrzymuje `outOfRange: true`, chociaż wcześniej karta
+z klasą `warn-yellow` mogła zapisać `false`. Ta sama zasada obejmuje odpowiednie
+oceny PCR oraz prezentowane oceny cystatynowe i kamicowe z istniejących profili.
+Nie dodaje nowych progów ani
+norm i nie zmienia wartości liczbowej. Dawne wpisy historii nie są przeliczane
+ani poprawiane wstecznie. Równania, współczynniki, konwersje, surowe wartości,
+dotychczasowe zaokrąglenie i kwalifikacja populacji pozostają bez zmian;
+wyjątki dostępności danych opisano poniżej.
+
+**Jeden wynik w stałym miejscu:** formularz pokazuje składniki wybranego
+obliczenia i rzeczywiste warunki metody. Wynik znajduje się obok formularza na
+desktopie i pod nim na telefonie. Usunięto kopię liczby w panelu bocznym,
+licznik obecności danych i podział na „wynik liczbowy” oraz „pełną interpretację”.
+Puste dodatkowe miesiące wieku nie tworzą już niespełnionego stopnia
+interpretacji po wpisaniu pełnych lat. Przed uzyskaniem wyniku panel wskazuje
+konkretne brakujące albo błędne dane; zmiana danych nie pozostawia starej liczby
+jako wyniku bieżącego pomiaru.
+
+Karta B zestawia **Wynik pacjenta** i krótką **Normę / Normę dla wieku**;
+poniżej zawiera jeden opis pacjenta. **Cel** i **Minimum** oznaczają odpowiednie
+progi terapii, a nie normę fizjologiczną. Wersjonowane dane prezentacji
+`ClcrResultReferenceData.PROFILE` zawierają źródło, populację, jednostkę i granice;
+`ClcrResultPresentation` otrzymuje ten profil jawnie. Ocena pacjenta pochodzi
+z istniejących funkcji klinicznych, nie z wyglądu karty ani z zaokrąglonej liczby.
+Źródło i populacja są podane przy porównaniu. Gdy brak właściwej normy,
+widok pozostaje neutralny i nazywa brak, zamiast podstawiać inny zakres.
+
+| Obszar | Prezentacja i zachowane ograniczenia |
+|---|---|
+| eGFR | Norma ≥90 mL/min/1,73 m² jest skrótem właściwego kryterium KDIGO. U dzieci od 2 lat warianty kreatyninowe `ckid_u25` i `sch_idms` używają podpisu „Norma dla wieku”; warianty cystatynowe i łączone pokazują „Norma (G1)” oraz znaczenie rzeczywiście nadanej kategorii G, bez przenoszenia szczególnego opisu obniżonego eGFRcr dla wieku. Przed 2. rokiem życia nie ma automatycznego progu 90 ani G. G1 nie wyklucza uszkodzenia nerek. Nieznana stabilność lub niepotwierdzone IDMS w ścieżkach dopuszczających samo oszacowanie nadal oznaczają szary wynik bez G; pokazana norma ma wtedy charakter informacyjny. Twarde bramki IFCC i neonatalnego IDMS pozostają zachowane. |
+| ACR | Norma <30 mg/g oznacza kategorię A1, z pełnym opisem w Szczegółach. Kategorię pacjenta nadal warunkują wiek, pierwszy poranny mocz i brak zaznaczonych czynników przejściowych. Bez spełnienia tych warunków tabela może objaśniać źródło, ale nie wyróżnia pacjenta jako A1/A2/A3. |
+| PCR | Pediatryczny próg w mg/g zależy od wieku i pierwszej porannej próbki. Nie stosuje się kategorii A ani pożyczonej normy dorosłych. |
+| CG i zmierzony CrCl | „Brak uniwersalnej normy”; wynik pozostaje klirensem kreatyniny, bez kategorii G. Indeksowanie do 1,73 m² nie zamienia go w eGFR. |
+| Kamica | Obecne kwalifikowane interpretacje EAU, przeliczenia mmol/24 h i ograniczenia są zachowane w Szczegółach tej samej karty. Nie porównuje się surowej liczby mg/kg/24 h z progiem mmol/24 h. Pediatryczne Ca/Cr wykorzystuje istniejące dokładne przeliczenie mol/mol na mg/mg; właściwy cel pH pozostaje celem leczenia, nie uniwersalną normą pH. |
+| Dializa | spKt/V: minimum 1,2 i cel ≥1,4; URR: historyczne minimum 65% i cel ≥70% wyłącznie w uprawnionym profilu oraz sesji <5 h. eKt/V nie otrzymuje zapożyczonego progu. Zachowano aktualność Kru, protokół próbek, częstość, PIDI i ograniczenia pediatryczne. |
+| Pozostałe wskaźniki | Bez skonfigurowanego, odpowiedniego profilu wynik pozostaje neutralny. Nie wprowadzono uniwersalnej normy dla FE, UAG, TmP/GFR, wydalania Na/K ani nieskalibrowanych ilorazów. |
+
+**Szczegóły kategorii:** przycisk A2 lub G2/G3b otwiera właściwą tabelę
+z zachowaniem fokusu i stanu dostępności. Dla ACR w mg/g: A1 <30 — prawidłowa
+lub łagodnie zwiększona; A2 30–300 włącznie — umiarkowanie zwiększona;
+A3 >300 — znacznie zwiększona. Wyłącznie rzeczywiście nadana kategoria
+ma oznaczenie „Wynik pacjenta”. Zwiększoną albuminurię należy potwierdzić;
+pojedynczy wynik nie rozpoznaje PChN. Na granicach pozostają widoczne istniejące
+adnotacje wartości przed zaokrągleniem, np. `<30` lub `>300`.
+
+**Mniej pytań bez fikcyjnego potwierdzania danych:** rutynowy kontekst
+kreatyniny oraz pozostałe dane służące dodatkowej ocenie znajdują się
+w opcjonalnym rozwinięciu. Nieznana stabilność i nieznane oznaczenie nie stają
+się automatycznie potwierdzone. Znane lub odtworzone AKI/szybka zmiana markera
+nadal blokują odpowiednie równania bieżącej funkcji nerek. Wiek, płeć i dane
+antropometryczne nie są wymagane przez wskaźnik, który ich nie używa;
+pozostają dostępne, gdy służą dodatkowej normie lub przeliczeniu. Brak wieku
+nie oznacza populacji dorosłych. IDMS noworodka, IFCC cystatyny, wspólna lub
+sparowana próbka, kompletny protokół i rzeczywisty czas zbiórki nadal mają
+znaczenie wymagane przez odpowiednią metodę.
+
+**Zamierzone korekty zależności danych, bez zmiany równań:**
+
+- `cl24`: bezwzględny wynik `Ucr/Scr × objętość/czas` w mL/min jest dostępny
+  bez wieku, masy i BSA. `indexedMlMin173` oraz `creatinineMgKgDay` są obliczane
+  tylko z dostępnymi dodatnimi danymi pomocniczymi; w przeciwnym razie mają
+  wartość `null`. Pełny zestaw danych daje te same wartości co wcześniej.
+  Protokół i próbka surowicy pobrana w okresie zbiórki pozostają wymagane.
+- `AGu_spot`: UAG korzysta z Na, K i Cl wspólnej próbki moczu; krew nie jest
+  składnikiem tego równania. Nowy formularz potwierdza wspólny mocz, zachowując
+  zgodność ze starym `spotPairedChemistry: true`, które obejmowało już ten fakt.
+  Odtworzenie starego zapisu nie dopisuje nowego potwierdzenia. Nowa jawna
+  odpowiedź przecząca lub niepewność unieważnia poprzednie potwierdzenie dla
+  tego pomiaru. Frakcje wydalnicze nadal wymagają sparowania z krwią.
+- `neonatal_egfr`: jawny dzień życia 0–28 w wybranej ścieżce neonatalnej
+  wystarcza bez powtarzania 0 lat/0 miesięcy. Wyprowadzony wiek nie nadpisuje
+  sprzecznego wieku ani danych kanonicznych. Donoszenie, konserwatywna bramka
+  masy >2,5 kg, wzrost i enzymatyczne IDMS pozostają wymagane.
+
+**Korekta opisu U25:** usunięto z wariantu kreatyninowego kierunkowe ostrzeżenie
+o zaniżaniu prawidłowego/wysokiego GFR. Aktualny pełny NIDDK potwierdza jego
+użyteczność także przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci
+i młodych dorosłych; szczególne zastrzeżenie przesiewowe i niedoszacowanie
+w tej kohorcie opisano dla U25cys. Zachowano ogólne ograniczenie niepewności
+oszacowań i ocenę trendu. Nie zmienia to równania, jego zakresu wieku ani
+reguł standaryzacji markerów. Poprawiono również wspólny komunikat IDMS dla
+`cg_norm`: oryginalny CG powstał przed standaryzacją kreatyniny.
+
+**Zgodność zapisu:** kanoniczne pola, identyfikatory formuł i serii, jednostki
+oraz struktura sesji/JSON pozostają zachowane. Oryginalne węzły wyników i jawne
+metadane liczby nadal służą zapisowi; dodatkowe uwagi i przeliczenia są
+przenoszone do Szczegółów zamiast kopiowania wyniku. Rzeczywiście odrębne
+miary — URR, eKt/V, TRP, FEPO₄ lub ilość białka w różnych jednostkach — pozostają
+dostępne. Informacyjne porównanie z normą nie jest zapisywane jako potwierdzenie
+metody próbki. Zmieniony opis i flaga nowego wyniku nie przepisują historii.
+
+**Zamierzony zakres nowego zapisu:** zapis obejmuje wybrane obliczenie oraz
+jego rzeczywiste miary pomocnicze, zamiast innych wzorów obliczonych przy
+okazji z wypełnionej grupy pól. W syntetycznym pełnym formularzu wybór
+`Ca_mgkg` daje teraz 1 serię zamiast 14 serii DZM, `FENa_spot` — 1 zamiast 5,
+a `CaCr_spot` — 1 zamiast 3. Jest to celowa zmiana liczby nowych punktów
+pomiarowych, zgodna z pojedynczym wybranym obliczeniem. KTV nadal zapisuje
+3 miary (spKt/V, eKt/V, URR), a białko dobowe 2 serie jednostkowe. Dane
+wejściowe, inne notatki pacjenta i zapisane wcześniej punkty pozostają
+zachowane; nie deklaruje się identycznej liczby nowych punktów dla dawnego
+i nowego kolektora.
+
+Usunięto także wcześniejsze ukrywanie przez styl `#elecCard` trzech
+istniejących wyników kamicowych: `Ox_mgkg`, `Cit_mgkg` i `Ca_Cit`.
+Wybrany wynik jest teraz widoczny w tym samym schemacie B; nie dodano
+nowego wzoru, progu ani normy.
+
+**Źródła:** [KDIGO 2024](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf),
+tabele 2–3, PP 1.1.3.2, 1.2.2.8 i 1.2.3.5 oraz ocena białkomoczu u dzieci;
+[NIDDK — dzieci i młodzi dorośli](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults),
+pełna strona, aktualizacja maj 2025, odczyt 2026-10-21;
+[EAU Urolithiasis 2026](https://d56bochluxqnz.cloudfront.net/documents/full-guideline/EAU-Guidelines-on-Urolithiasis-2026.pdf),
+tabele 4.2–4.4 i rozdział 4.9;
+[KDOQI 2006, wytyczna 4](https://kidneyfoundation.cachefly.net/professionals/KDOQI/guideline_upHD_PD_VA/hd_guide4.htm)
+oraz istniejący profil [KDOQI 2015](https://doi.org/10.1053/j.ajkd.2015.07.015).
+Źródła równań i pełne warunki metod pozostają opisane niżej. Nie aktywowano
+nowej normy laboratoryjnej ani celu eKt/V.
+
+**Przypadki syntetyczne rzeczywistego kodu produkcyjnego:**
+
+| Wejście | Wynik i warunek prezentacji |
+|---|---|
+| F10, 140 cm, Scr 0,6 mg/dL, puste dodatkowe miesiące | U25 82,9016 →83 mL/min/1,73 m². Bez IDMS/stabilności liczba i informacyjna norma ≥90, bez G; przy stable+IDMS G2/„Obniżony dla wieku”. AKI lub szybka zmiana blokują liczbę. |
+| Wiek 1,5 roku, eGFR 83 | Bez automatycznej normy 90 i bez kategorii G. |
+| F50, Scr 1,5 mg/dL, stable+IDMS | CKD-EPI 42,19166 →42, G3b, kolor czerwony; nie jest to samodzielna diagnoza PChN. |
+| F50, 70 kg, Scr 1 mg/dL | CG 74,375 →74 mL/min, szary, bez G i uniwersalnej normy. |
+| ACR: albumina 45 mg/L, kreatynina moczu 100 mg/dL | 45 mg/g; w uprawnionym porannym profilu A2, pomarańczowy, nowa flaga `outOfRange: true`. Surowe 29,96 →A1 z `<30`; dokładnie 30 i 300 →A2; 300,0001 →A3 z `>300`. |
+| cl24: Ucr 100 mg/dL, Scr 1 mg/dL, 1440 mL przez 1440 min, poprawny protokół i czas surowicy; bez wieku/BSA/masy | 100 mL/min; indeksowanie i Cr/kg = `null`. Przy BSA 1,73 m² indeksowany wynik =100; przy masie 72 kg wydalanie Cr/kg =20 mg/kg/24 h. |
+| UAG: Na 40, K 25, Cl 80 mmol/L tej samej próbki moczu | −15 mmol/L bez wymagania krwi; starsze potwierdzenie sparowanej próbki nadal umożliwia wynik. |
+| Donoszony noworodek, 14. dzień, 3,4 kg, 50 cm, Scr 0,5 mg/dL, enzymatyczne IDMS | 31 mL/min/1,73 m² bez ponownego wpisania 0 lat/0 miesięcy; wcześniactwo lub 29. dzień nadal blokują wynik. |
+| Dotychczasowy przypadek HD-KTV z profilu RENAL | spKt/V 1,401054 →1,40, eKt/V 1,222738 →1,22 i URR 70%. Przy spełnionej kwalifikacji cel spKt/V ≥1,4 i historyczny cel URR ≥70%; eKt/V bez automatycznego celu. |
+
+Regresje obejmują rzeczywiste funkcje kliniczne i prezentacyjne, formularz
+z pustymi miesiącami, zachowanie nieznanych metadanych, blokady i odtworzenie
+sesji, brak starej liczby po zmianie danych, tabelę kategorii oraz desktop/mobile.
+Porównanie produkcyjnych ścieżek wszystkich 41 dostępnych obliczeń potwierdza
+41/41 widocznych wybranych wyników, zgodne surowe wartości i brak błędów
+strony. Dla 24 z 41 ścieżek zmienił się zestaw zapisywanych punktów wskutek
+opisanego ograniczenia do wybranego obliczenia; nie jest to regresja wartości
+wybranego wyniku.
+Zielone testy i akceptacja makiety nie nadają algorytmom statusu walidacji klinicznej.
+
 #### Zakres i ograniczenia
 
 | Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
 |---|---|---|
-| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba wyniki są pokazywane równolegle. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Podejrzenie AKI lub szybko zmieniająca się Scr blokują wynik. Przy nieznanej stabilności albo niepotwierdzonej zgodności oznaczenia z IDMS aplikacja pokazuje oszacowanie bez kategorii G; stabilna Scr i IDMS pozwalają na kategoryzację G. Wyjątkiem jest ścieżka neonatalna, w której enzymatyczna metoda IDMS stanowi twardą bramkę. CKiD U25 opracowano głównie w łagodnej lub umiarkowanej CKD; nie jest uniwersalnym przesiewem zdrowej populacji. |
+| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba oszacowania pozostają dostępne w ramach jednego wyniku i jego Szczegółów. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Podejrzenie AKI lub szybko zmieniająca się Scr blokują wynik. Przy nieznanej stabilności albo niepotwierdzonej zgodności oznaczenia z IDMS aplikacja pokazuje oszacowanie bez kategorii G; stabilna Scr i IDMS pozwalają na kategoryzację G. Wyjątkiem jest ścieżka neonatalna, w której enzymatyczna metoda IDMS stanowi twardą bramkę. CKiD U25cr opracowano głównie w łagodnej lub umiarkowanej CKD; NIDDK opisuje także potwierdzoną użyteczność przy eGFR ≥75 w europejskiej kohorcie zdrowych dzieci i młodych dorosłych. Nie przenosi się tu szczególnego ograniczenia przesiewowego wariantu cystatynowego. |
 | eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Identyfikowalność ERM-DA471/IFCC jest twardą bramką. Metoda oznaczenia jest raportowana; jej brak albo metoda inna niż profil nefelometryczny CKiD generują ograniczenie, lecz same nie blokują obliczenia. Wynik jest blokowany przy niestabilnym markerze; wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD. |
 | Noworodek | Ograniczone oszacowanie `0,31 × wzrost [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aplikacja dodatkowo wymaga bieżącej masy ciała >2,5 kg jako konserwatywnej bramki bezpieczeństwa, a nie granicy zwalidowanej populacji. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, AKI lub niestabilna Scr blokują wynik. Równanie wyprowadzono w metaanalizie indywidualnych danych pacjentów; autorzy wskazali potrzebę walidacji w dużej kohorcie noworodkowej. Wynik nie otrzymuje kategorii G KDIGO. |
 | CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat: surowy eCrCl używa podanej masy rzeczywistej i jest nieindeksowany, a opcjonalny `cg_norm` przelicza go przez BSA do 1,73 m². Oba pozostają eCrCl, nie eGFR. |
