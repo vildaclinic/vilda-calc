@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "source": {
+    "id": "anckaert2021-female-e2-phase-medians",
+    "title": "Extensive monitoring of the natural menstrual cycle using the serum biomarkers estradiol, luteinizing hormone and progesterone",
+    "doi": "10.1016/j.plabm.2021.e00211",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8042396/",
+    "mainFullText": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8042396/fullTextXML",
+    "inspected": "Final primary full text and complete original DOCX supplementary materials; Table 1, supplementary Methods and Tables S1–S3.",
+    "artifactHashes": {
+      "finalFullTextXmlSha256": "af25809af65e14bcaf020658570f7d2cfbabe3303bddb877b3ad67314a7c63e7",
+      "supplementaryDocxSha256": "adf0b88a12c66fe8563717fc6e8370e0c874982f7b43dab44d71a42f7554c2cb"
+    }
+  },
+  "transcription": {
+    "location": "Table 1: Analysis of main menstrual cycle phases: E2 concentration (pmol/L), columns N and Median.",
+    "rows": [
+      { "phase": "follicular", "participants": 85, "medianPmolL": 198 },
+      { "phase": "ovulation", "participants": 81, "medianPmolL": 757 },
+      { "phase": "luteal", "participants": 85, "medianPmolL": 412 }
+    ],
+    "countMeaning": "N is the number of patients contributing to the phase, not the number of samples; Table 1 footnote a.",
+    "statistic": "Across-participant summary of within-participant phase median values, reported as typical phase values to account for visit-participant correlation. It is not a validated percentile of a single randomly timed sample.",
+    "notImported": "No Table 1 p5/p95, their confidence intervals, LH/progesterone rows, seven sub-phase values, exact-day medians or fitted age model are imported into this information block."
+  },
+  "population": {
+    "enrolled": 208,
+    "analyzable": 85,
+    "ageYearsByRegion": { "US": [22, 37], "EU": [18, 37] },
+    "medianAgeYears": 25,
+    "ageIqrYears": [23, 29],
+    "naturalCycleDays": [24, 35],
+    "bmiLowerExclusive": 19,
+    "bmiUpperExclusive": 29,
+    "whiteCaucasianPercent": 82.4,
+    "exclusions": [
+      "Hormonal contraception during the preceding 90 days and study period; pregnancy or lactation.",
+      "Fertility, gonadal, endocrine and other specified disorders, according to supplementary Methods.",
+      "Nonovulatory and atypical hormone profiles, including low follicular E2, excluded from analysis."
+    ],
+    "limitation": "The app does not establish all study eligibility criteria and does not infer that unknown treatment, pregnancy, lactation or disease history is negative."
+  },
+  "method": {
+    "specimen": "serum",
+    "assay": "Roche Elecsys Estradiol III, ECLIA",
+    "platform": "cobas e801",
+    "centralLaboratory": "UZ Brussels, Brussels, Belgium",
+    "measuringRangePmolL": [18.4, 11010],
+    "lod": "Not separately specified in the source study.",
+    "loq": "Not separately specified in the source study.",
+    "censoring": "No generic low-value imputation rule was identified. The lower measuring-range boundary is not relabeled as LOD/LOQ. Patient inequalities remain inequalities."
+  },
+  "phaseDefinitions": {
+    "location": "Supplementary Table S3, 3-phase column.",
+    "follicular": "First menstrual day through OV−2 days.",
+    "ovulation": "OV−1 day through OV+1 day.",
+    "luteal": "OV+2 days through last cycle day.",
+    "standardization": "The study standardized cycles to 29 days with ovulation on day 15. Ovulation was inferred from hormone profiles and expert review, without independent ultrasound confirmation.",
+    "application": "Reuse only the current E2 phase already selected in the existing optional editor. Do not infer phase from hormone value, require an exact cycle day, or silently copy LH/FSH context."
+  },
+  "applicationPolicy": {
+    "kind": "published-phase-group-information",
+    "wholePossibleAgeInterval": "[18,37], conservative application envelope, not recovered precision of authors' age endpoints.",
+    "preserveExact18": "The separate source-information evaluator does not modify ordinary patientPointData or Madsen's exact-18 age reference.",
+    "knownExclusions": "Current known pregnancy, menopause, lactation, hormonal treatment/stimulation and incompatible assay/specimen withhold this information block. Unknown history does not confirm absence.",
+    "unitEquivalents": "Rounded display equivalents 53.9/206/112 pg/mL use the application's existing E2 conversion 3.671 pmol/L per pg/mL; the patient conversion implementation is unchanged.",
+    "measurementInequality": "A valid inequality may leave the published group statistic visible. It does not create an exact patient concentration, graphical point or comparison.",
+    "presentation": "Compact information block below the unchanged chart, outside SVG, for all three phases. Values 412/757 are never clamped to the unchanged scale of 264 pmol/L.",
+    "unchanged": [
+      "Ordinary source profiles and their age/stage routing",
+      "Illustrative curve, fixed scale and sex comparisons",
+      "Laboratory reference intervals, result status, range bar and conversion panel",
+      "AMH-only educational-reference snapshots and saved historical assessments"
+    ]
+  },
+  "ownerApproval": {
+    "date": "2026-10-22",
+    "scope": "Accepted interactive desktop/mobile E2 mockup and instructed implementation, with explicit preservation of the current numerical-result panel and laboratory range display.",
+    "notClinicalValidation": true
+  },
+  "syntheticCases": [
+    { "input": "F30, known current follicular phase, valid E2", "expectedPmolL": 198 },
+    { "input": "F30, known current ovulation phase, valid E2", "expectedPmolL": 757 },
+    { "input": "F30, known current luteal phase, valid E2", "expectedPmolL": 412 },
+    { "input": "F30, unknown phase", "expected": "No group median; existing result and laboratory alternatives remain." },
+    { "input": "F40, known phase", "expected": "No Anckaert group median." },
+    { "input": "F30, known pregnancy/treatment or incompatible assay/specimen", "expected": "No group median, no fallback source from this evaluator." }
+  ]
+}

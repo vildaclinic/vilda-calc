@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
-import { beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeE2PhaseSourceRuntime, beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -24,7 +24,7 @@ describe('LH dziewcząt >16–<18 — rzeczywisty wynik bez mediany', () => {
   it('dodaje oddzielną politykę bez zmiany któregokolwiek z 82 profili, konwersji i pozostałych danych', () => {
     expect(data.profiles).toHaveLength(85);
     expect(digest(beforeTestosteroneBoysBundle(data))).toBe('11905045ada04596a294491dce3d9986cd027b4882aa50f3bc5697b43d61da4f');
-    const { resultOnlyPolicies, amhLilacsSourceData: _lilacsSourceInfo, ...previous } = runtime;
+    const { resultOnlyPolicies, amhLilacsSourceData: _lilacsSourceInfo, ...previous } = beforeE2PhaseSourceRuntime(runtime);
     expect(digest({ ...previous, patientPointData: beforeTestosteroneBoysBundle(data) })).toBe('67fcbb04efec26eb5332527a70197a38c04344c8c2768cd72527eced7af173c5');
     expect(resultOnlyPolicies).toEqual([policy]);
     expect(policy).toMatchObject({ kind: 'educational-result-only', version: '2026-10-20.1',
@@ -164,7 +164,7 @@ function currentForm() {
     sourcePatient: { identityKey: 'fictional-lh-result-only', sourceStatus: 'ready', sex: 'F', ageYears: 17, ageMonths: 0 },
     effectivePatient: { sex: 'F', age: 17 },
     lifespanUI: { update: value => updates.push(value), clear: () => updates.push(null) },
-    amhAgeReferenceUI: null, showError: () => {}, isPubertyReferenceSubstance: substance => substance.id === 'lh',
+    amhAgeReferenceUI: null, e2PhaseSourceUI: null, showError: () => {}, isPubertyReferenceSubstance: substance => substance.id === 'lh',
   };
   ctx.sessionStorage = { getItem: () => ctx.identity };
   ctx.readPubertyPatientContext = () => ctx.sourcePatient;

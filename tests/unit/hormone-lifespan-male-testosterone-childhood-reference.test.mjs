@@ -40,7 +40,7 @@ describe('Testosteron chłopców 1–<3 — przybliżone mediany grup Kushnir 20
     expect(digest(prior.profiles)).toBe('8900802bb979f8663a3b2904c89e025feb5324ef8b6fb6c83bb5236a4f0f6a74');
     expect(digest(prior)).toBe('11905045ada04596a294491dce3d9986cd027b4882aa50f3bc5697b43d61da4f');
     const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
-      key !== 'patientPointData' && key !== 'amhLilacsSourceData'));
+      key !== 'patientPointData' && key !== 'amhLilacsSourceData' && key !== 'e2PhaseSourceData'));
     expect(digest(otherRuntime)).toBe('47fda226dc893be4f94578a53c75d91d8a0c98fece580b7c6f46525a77f2def0');
     expect(policy).toMatchObject({ kind: 'educational-source-selection', ordinaryOnly: true });
   });
@@ -218,7 +218,7 @@ function currentForm(years = 2, months = 0) {
     valueEl: { value: '.2' }, unitEl: { value: 'nmol/L' }, currentSubstance: { id: 'testosterone_total' },
     sourcePatient: { identityKey: 'fictional-child-testosterone', sourceStatus: 'ready', sex: 'M', ageYears: years, ageMonths: months },
     lifespanUI: { update: value => updates.push(value), clear: () => updates.push(null) },
-    amhAgeReferenceUI: null, showError: () => {}, isPubertyReferenceSubstance: () => true,
+    amhAgeReferenceUI: null, e2PhaseSourceUI: null, showError: () => {}, isPubertyReferenceSubstance: () => true,
   };
   ctx.sessionStorage = { getItem: () => ctx.identity };
   ctx.readPubertyPatientContext = () => ctx.sourcePatient;
