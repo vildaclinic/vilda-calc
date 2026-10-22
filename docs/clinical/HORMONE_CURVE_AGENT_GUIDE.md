@@ -668,6 +668,45 @@ nie norma lub mediana konkretnej fazy. Nigdy nie wyprowadzaj p50 z geometrii.
 [audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
 Zgoda na wdrożenie nie nadaje modelowi statusu walidacji klinicznej.
 
+## Żeński E2 — mediana grupy Th1 w (1,6), 22 października 2026
+
+Po ujawnieniu ograniczeń źródła właściciel polecił mały PR z edukacyjnym
+porównaniem grupowym. Stosuj osobną politykę
+`female-estradiol-childhood-reference-policy.json` i profil
+`kulle2024-female-e2-th1-age-over1-under6`, `ordinaryOnly`, `constant`,
+`group-median`, `requiredGonadalStage: 1`. Wersja `2026-10-22.1` dodaje
+jeden profil do zachowanych 84 wcześniejszych; nie zmienia inhibiny B.
+
+- Kulle 2024, tabela 3 „B1 1–8 years”, N=213, P50 **15 pmol/L** to
+  estymowany kwantyl Harrella–Davisa całej grupy. Podpisuj
+  **„Mediana grupy Th1, 1–8 lat: 15 pmol/L”**; nie nazywaj go medianą
+  dokładnego wieku ani wydzielonej grupy 1–6 lat.
+- Włączaj tylko dla całego możliwego wieku w otwartym **(1,6)** i aktualnej
+  typowanej Th1 tej samej pacjentki. Pobierz ją z formularza głównego,
+  bez nowego pytania. P1, ogólny Tanner, sama metryka wieku i historyczna
+  zgoda dla obliczeń wzrostowych nie kwalifikują. Dzisiejsza Th nie dotyczy
+  automatycznie próbki z innej daty. Brak Th1 pozostawia wynik i dostępne RI.
+- Zachowaj dokładny 1 rok/Ljubicic i wiek od 6/Madsen. `[1,1+1/12)` nie
+  pasuje do nowego profilu; `[5+11/12,6)` pasuje, a `[5.99,6]` już nie.
+  Skok odniesienia grupowego 15 → Madsen około 1,25768 przy 6 latach
+  jest zmianą źródła, nie fizjologicznym spadkiem. Nie przesuwaj punktów
+  do linii i nie dopasowuj do nich dotychczasowej geometrii/skali 264.
+- LC-MS/MS i kontekst surowicy źródła nie są kalibracją metody pacjentki.
+  Znane osocze lub inna metoda blokują; nieznane pozwalają tylko na
+  ograniczone porównanie edukacyjne. Przydział serum/plasma do B1 nie jest
+  znany. LOD 4, LLOQ 11 pmol/L; reguła cenzury w estymacji nieopisana.
+  Nie podstawiaj zera, LOD/2 lub LLOQ/2; nierówność nie tworzy punktu.
+- Zachowaj jawne bramki ciąży, menopauzy, hormonalnego leczenia/GnRHa,
+  stymulacji, tożsamości i daty próbki. RI Mayo, porównania płci, dawne
+  oceny i pozostałe 84 profile pozostają odrębne.
+- N1753 z tabeli 1 versus N1724 z Methods/tabeli 2, błąd kolejności
+  centyli B4 i niejasność osoby/próbki są **nierozstrzygnięte**. Akceptacja
+  tego ograniczonego porównania nie oznacza skorygowania publikacji lub
+  walidacji klinicznej. Nie importuj innych wierszy, RI lub modelu wieku.
+
+[Ekstrakt pełnego źródła i suplementu](hormone-lifespan/evidence/patient-point/kulle2024-female-e2-th1-group-median.json),
+[kontrakt i regresje](hormone-lifespan/PATIENT_POINT.md#żeński-e2--mediana-grupy-th1-w-16-22-października-2026).
+
 ## FSH CALIPER — zwykłe odniesienie od 16 lat, 18 października 2026
 
 Po analizie pełnego Wilson 2023 i Supplemental Tables 1–3 właściciel
