@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { beforeInhibinPost47Bundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFemaleE2ChildhoodBundle, beforeInhibinPost47Bundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const runtime = require('../../vilda_hormone_lifespan_data.js');
@@ -24,15 +24,24 @@ const unavailable = reason => ({ status: 'unavailable', reason });
 const addedNodes = [[47.25, 10], [47.5, 8], [47.75, 7]];
 
 describe('Inhibina B kobiet — źródłowe rozszerzenie po 47 do 47,75 lat', () => {
-  it('zastępuje dokładnie jeden z 84 profili, zachowując pełny poprzedni pakiet i jego 83 inne profile', () => {
-    expect(data.version).toBe('2026-10-21.2');
-    expect(data.profiles).toHaveLength(84);
+  it('zastępuje dokładnie jeden z 85 profili, zachowując 84 inne profile bieżącej bazy i historyczne hashe', () => {
+    expect(data.version).toBe('2026-10-22.2');
+    expect(data.profiles).toHaveLength(85);
     expect(data.profiles.some(item => item.id === prior.id)).toBe(false);
     const others = data.profiles.filter(item => item.id !== profileId);
-    expect(others).toHaveLength(83);
-    // Frozen from 3b6a5302, excluding only the old ordinary inhibin profile.
-    expect(digest(others)).toBe('de31eadb50b114c696191cf93cfb0c84102791006d53586cc0ff5b99ffa9bf58');
-    expect(digest(beforeInhibinPost47Bundle(data)))
+    expect(others).toHaveLength(84);
+    // Exact audyt ab8ead6a (including the independently merged E2/Th1 group),
+    // excluding only the replaced ordinary inhibin profile.
+    expect(digest(others)).toBe('3a95ad12a2ba6bc90888f92e8b0057fc98e42efc2a3aa4eacfac6080922e66b1');
+    expect(digest({ ...beforeInhibinPost47Bundle(data), version: '2026-10-22.1' }))
+      .toBe('51649dbd6c9f1d2d0ed4e3672003c441e001115e325cbba1098f821deab30479');
+    const beforeE2 = beforeFemaleE2ChildhoodBundle(data);
+    const historicalOthers = beforeE2.profiles.filter(item => item.id !== profileId);
+    expect(historicalOthers).toHaveLength(83);
+    // Frozen from 3b6a5302. Preserve the original assertions and literal hashes
+    // as well as the newer complete-base check above.
+    expect(digest(historicalOthers)).toBe('de31eadb50b114c696191cf93cfb0c84102791006d53586cc0ff5b99ffa9bf58');
+    expect(digest(beforeInhibinPost47Bundle(beforeE2)))
       .toBe('805a064dd9953179e419597e8dbd56f507f136c29b60850d68aac7f3cafd7c3a');
     expect(prior).toMatchObject({ id: 'borelli2025-female-inhb-age-5p6-47', maxAge: 47,
       provenance: { routingVersion: '2026-10-14.1' } });

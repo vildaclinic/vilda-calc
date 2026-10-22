@@ -1,5 +1,24 @@
 import { expect, test } from '@playwright/test';
 
+async function openFieldDetails(page, selector) {
+  for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+}
+
+async function setMarkerContext(page, value) {
+  const marker = page.locator('[data-clcr-marker-context]');
+  for (const details of await marker.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+  await marker.selectOption(value);
+}
+
+
 async function openCalculator(page) {
   await page.route(
     /^https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.sheetjs\.com|cdn\.jsdelivr\.net)\//,
@@ -60,7 +79,7 @@ test('globalna wyszukiwarka ACR otwiera osobną ścieżkę próbki moczu', async
   ).toEqual({ level: 'spot', version: 'spot' });
   await expect(page.locator('#version-spot')).toHaveClass(/selected/);
   await expect(page.locator('#U_Alb')).toBeVisible();
-  await expect(page.locator('#U_Prot_spot')).toBeVisible();
+  await expect(page.locator('#U_Prot_spot')).toBeHidden();
   await expect(page.locator('#Ucr_spot')).toBeVisible();
   await expect(
     page.locator('.clcr-field[data-clcr-field-id="U_Alb"]')
@@ -69,6 +88,9 @@ test('globalna wyszukiwarka ACR otwiera osobną ścieżkę próbki moczu', async
     page.locator('.clcr-field[data-clcr-field-id="U_Prot_spot"]')
   ).toHaveAttribute('data-clcr-status', 'optional');
   await expect(page.locator('#ui_spotSameSpecimen_answer')).toBeVisible();
+  await expect(page.locator('#spotSampleKind')).toBeHidden();
+  await openFieldDetails(page, '#U_Prot_spot');
+  await expect(page.locator('#U_Prot_spot')).toBeVisible();
   await expect(page.locator('#spotSampleKind')).toBeVisible();
   await expect(page.locator('#U_ACR')).toBeHidden();
   await expect(page.locator('#U_PCR')).toBeHidden();
@@ -87,7 +109,7 @@ test('wyszukiwarka rozpoznaje zwarty alias tmpgfr', async ({ page }) => {
   await expect(page.locator('#tmpOvernightFasting')).toBeVisible();
 });
 
-test('czynniki zakłócające i trójstan ograniczają tylko interpretację aktywnej formuły', async ({
+test('czynniki zakłócające i opcjonalny kontekst ograniczają tylko interpretację aktywnej formuły', async ({
   page,
 }) => {
   await openCalculator(page);
@@ -95,13 +117,14 @@ test('czynniki zakłócające i trójstan ograniczają tylko interpretację akty
   await page.locator('#U_Alb').fill('42');
   await page.locator('#Ucr_spot').fill('100');
   await page.locator('#ui_spotSameSpecimen_answer').selectOption('yes');
+  await openFieldDetails(page, '#spotSampleKind');
   await page.locator('#spotSampleKind').selectOption('firstMorning');
+  await openFieldDetails(page, '#age');
   await page.locator('#age').fill('10');
+  await openFieldDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
-  await page.locator('#sex').selectOption('F');
-  await page
-    .locator('details.clcr-context-details:has(#spotMenstruation) summary')
-    .click();
+  await expect(page.locator('#sex')).toBeHidden();
+  await openFieldDetails(page, '#spotMenstruation');
   await page.locator('#spotMenstruation').check();
 
   await expect.poll(async () =>
@@ -117,24 +140,30 @@ test('czynniki zakłócające i trójstan ograniczają tylko interpretację akty
   await page.locator('#S_HCO3_spot').fill('24');
   await page.locator('#Ucr_spot').fill('100');
   await page.locator('#Scr_spot').fill('1');
+  await openFieldDetails(page, '#ui_spotPairedChemistry_answer');
   await page.locator('#ui_spotPairedChemistry_answer').selectOption('yes');
+  await openFieldDetails(page, '#spotSampleKind');
   await page.locator('#spotSampleKind').selectOption('firstMorning');
 
   const interpretationAnswer = page.locator(
-    '#ui_spotBicarbonateLoad_answer'
+    '#spotBicarbonateLoad'
   );
+  await openFieldDetails(page, '#spotBicarbonateLoad');
   await expect(interpretationAnswer).toBeVisible();
+  await expect(interpretationAnswer).not.toBeChecked();
   await expect.poll(async () =>
     page.evaluate(() => window.getClcrFormulaReadiness('FEHCO3_spot'))
   ).toMatchObject({
     valueReady: true,
-    interpretationReady: false,
-    interpretationMissingFieldIds: expect.arrayContaining([
-      'spotBicarbonateLoad',
-    ]),
+    missingFieldIds: [],
   });
+  await expect(page.locator('#clcrReadiness')).toBeHidden();
+  await expect(page.locator('#elecInfo')).toContainText(
+    'bez udokumentowanego testu obciążenia wodorowęglanem'
+  );
+  await expect(page.locator('#clcrResultReport [data-clcr-series="FEHCO3_spot"]')).toBeVisible();
 
-  await interpretationAnswer.selectOption('yes');
+  await interpretationAnswer.check();
   await expect.poll(async () =>
     page.evaluate(() => window.getClcrFormulaReadiness('FEHCO3_spot'))
   ).toMatchObject({
@@ -143,6 +172,9 @@ test('czynniki zakłócające i trójstan ograniczają tylko interpretację akty
     interpretationMissingFieldIds: [],
     limitations: [],
   });
+  await expect(page.locator('#elecInfo')).not.toContainText(
+    'bez udokumentowanego testu obciążenia wodorowęglanem'
+  );
 });
 
 test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', async ({
@@ -426,6 +458,7 @@ test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje 
   ).toBe(false);
   await expect(readiness).not.toHaveClass(/clcr-readiness--error/);
 
+  await page.locator('details.clcr-context-details:has(#height) > summary').click();
   await page.locator('#height').fill('999');
   await expect(page.locator('#height')).toHaveClass(/error/);
   expect(
@@ -434,11 +467,15 @@ test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje 
     )
   ).toBe(false);
 
+  await openFieldDetails(page, '#age');
+
   await page.locator('#age').fill('50');
+  await openFieldDetails(page, '#sex');
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill('1');
+  await openFieldDetails(page, '#ScrAssay');
   await page.locator('#ScrAssay').selectOption('enzymatic_idms');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setMarkerContext(page, 'stable');
 
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(readiness).not.toContainText(
@@ -452,13 +489,17 @@ test('odpowiedź dyskwalifikująca wzór daje blocker zamiast fałszywej gotowo�
   await openCalculator(page);
   await selectFromSearch(page, 'noworodek', 'neonatal_egfr');
 
+  await openFieldDetails(page, '#age');
+
   await page.locator('#age').fill('0');
+  await openFieldDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
   await page.locator('#ageDays').fill('14');
   await page.locator('#neonatalTermStatus').selectOption('preterm');
   await page.locator('#weight').fill('3.4');
   await page.locator('#height').fill('50');
   await page.locator('#Scr').fill('0.5');
+  await openFieldDetails(page, '#ScrAssay');
   await page.locator('#ScrAssay').selectOption('enzymatic_idms');
 
   const readiness = page.locator('#clcrReadiness');
@@ -508,6 +549,12 @@ test('każdy widoczny przycisk Info ma dostępny i niepusty opis', async ({
 }) => {
   await openCalculator(page);
   await selectFromSearch(page, 'TmP/GFR', 'TMP_GFR');
+
+  for (const details of await page.locator('details.clcr-context-details:not([hidden])').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
 
   const infoButtons = page.locator(
     '.clcr-field:not([hidden]) .clcr-info-button'

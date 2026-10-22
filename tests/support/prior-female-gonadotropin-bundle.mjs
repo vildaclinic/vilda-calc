@@ -19,6 +19,14 @@ export function beforeInhibinPost47Bundle(data) {
     profile.id === 'borelli2025-female-inhb-age-5p6-47p75' ? priorInhibinProfile : profile) };
 }
 
+// The 2026-10-22 educational E2 addition has one explicitly typed Th1 group.
+// Removing precisely this new profile restores the complete preceding bundle;
+// no earlier source data or frozen hash expectation is regenerated.
+export function beforeFemaleE2ChildhoodBundle(data) {
+  return { ...data, version: '2026-10-21.1', profiles: data.profiles
+    .filter(profile => profile.id !== 'kulle2024-female-e2-th1-age-over1-under6') };
+}
+
 // The 2026-10-21 addition is exactly two approximate testosterone group
 // medians. Preserve every one of the 82 earlier profiles and their historical
 // hashes by removing only these IDs, never by regenerating prior source data.
@@ -26,7 +34,7 @@ const testosteroneBoysIds = new Set([
   'kushnir2010-male-t-1-2-group', 'kushnir2010-male-t-2-3-group'
 ]);
 export function beforeTestosteroneBoysBundle(data) {
-  return { ...data, version: '2026-10-18.3', profiles: beforeInhibinPost47Bundle(data).profiles
+  return { ...data, version: '2026-10-18.3', profiles: beforeInhibinPost47Bundle(beforeFemaleE2ChildhoodBundle(data)).profiles
     .filter(profile => !testosteroneBoysIds.has(profile.id)) };
 }
 

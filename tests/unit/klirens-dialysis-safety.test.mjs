@@ -122,6 +122,15 @@ describe('Klirens — izolowany moduł bezpieczeństwa dializy', () => {
     expect(result.values.eKtV).toBeCloseTo(1.1491796059, 9);
   });
 
+  it('nie przenosi progu spKt/V 1,2 na obliczony eKt/V', () => {
+    const result = dialysis.computeDialysisAdequacy(validAdult({ netUfLiters: 0 }));
+    expect(result.ok).toBe(true);
+    expect(result.values.spKtV).toBeGreaterThan(1.2);
+    expect(result.values.eKtV).toBeLessThan(1.2);
+    expect(result.classification.spKtV.code).toBe('MINIMUM_MET_BELOW_TARGET');
+    expect(result.classification).not.toHaveProperty('eKtV');
+  });
+
   it('wylicza eKt/V dopiero po wskazaniu dostępu', () => {
     const result = dialysis.computeDialysisAdequacy(
       validAdult({ accessType: 'unknown' })

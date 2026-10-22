@@ -283,8 +283,11 @@ const odtworzSesje = (karta) => karta.evaluate(() => window.applyClcrSessionSnap
   dispatchEvents: false, writeSession: true,
 }));
 
-const EGFR_129 = 'CKiD U25 eGFRcr (2021): 129 mL/min/1,73 m²';
-const EGFR_96 = 'CKiD U25 eGFRcr (2021): 96 mL/min/1,73 m²';
+// Wariant B zapisuje liczbę w wierszu pacjenta, a metodę w osobnym wierszu Szczegółów.
+// Pełny prefiks odróżnia wynik od liczb w normie i tabeli kategorii.
+const EGFR_129 = 'Wynik pacjenta 129mL/min/1,73 m²';
+const EGFR_96 = 'Wynik pacjenta 96mL/min/1,73 m²';
+const EGFR_METHOD = 'Metoda: CKiD U25 eGFRcr (2021)';
 // Strona składa wynik z twardymi spacjami — porównujemy teksty ze zwykłymi spacjami.
 const tekstySummary = (sesja) => sesja.summary.clcr.map((l) => String(l.text).replace(/\s+/g, ' '));
 
@@ -299,6 +302,11 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     await gotowyKlirens(page);
 
     // X: sesja zbudowana przez prawdziwą stronę ze wzrostem 140 cm (literówka), Scr 0,4 mg/dl; Y: klirens null.
+    // Badamy zapis i odtworzenie jawnie wybranego U25, więc wybieramy go prawdziwym workflow przed wpisaniem danych.
+    await page.waitForFunction(() => typeof window.ClcrUiWorkflow?.selectFormula === 'function');
+    await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('ckid_u25'));
+    await page.waitForFunction(() => window.ClcrUiWorkflow.state.activeFormulaId === 'ckid_u25'
+      && document.getElementById('formulaPicker').value === 'ckid_u25' && window.clcrIsResetting !== true);
     for (const [id, w] of [['age', '4'], ['ageMonths', '6'], ['sex', 'M'], ['height', '140'], ['weight', '17'], ['Scr', '0.4']]) {
       await ustawPole(page, id, w);
     }
@@ -317,19 +325,25 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
     });
     const sesjaX = await page.evaluate(async (id) => (await window.VildaVault.getPatient(id)).snapshots[0].payload.clcr, x);
     expect(sesjaX.inputs.height, 'kontrola: sesja X z literówką').toBe('140');
-    expect(tekstySummary(sesjaX), 'kontrola: strona policzyła eGFR ze wzrostu 140 cm').toContain(EGFR_129);
+    expect([sesjaX.selectedFormula, sesjaX.inputs.formulaPicker], 'kontrola: sesja X wskazuje wybrany U25').toEqual(['ckid_u25', 'ckid_u25']);
+    expect(tekstySummary(sesjaX), 'kontrola: strona policzyła eGFR ze wzrostu 140 cm').toContainEqual(expect.stringContaining(EGFR_129));
+    expect(tekstySummary(sesjaX), 'kontrola: zapisana metoda w osobnych Szczegółach').toContainEqual(expect.stringContaining(EGFR_METHOD));
 
     // Karta A: X wczytana z Karty pacjenta, sesja odtworzona; lekarz poprawia wzrost na 104 cm.
     const A = await kartaKlirensu(context);
     await wczytajZKartyPacjenta(A, x);
     expect(await odtworzSesje(A), 'odtworzenie zapisanej sesji X').toBe(true);
+    // fullName pozostaje ukrytym kluczem sesji; to przygotowanie danych kanonicznych,
+    // jak wcześniej, a nie wypełnianie usuniętego pytania w interfejsie.
     for (const [id, w] of [['fullName', 'Testowy Jan'], ['age', '4'], ['ageMonths', '6'], ['sex', 'M'], ['weight', '17'], ['height', '104']]) {
       await ustawPole(A, id, w);
     }
     await A.waitForTimeout(800);
     const formularz = await A.evaluate(() => window.collectUserData().clcr);
     expect(formularz.inputs.height).toBe('104');
-    expect(tekstySummary(formularz), 'strona przeliczyła eGFR po poprawce wzrostu').toContain(EGFR_96);
+    expect(formularz.selectedFormula, 'odtworzony formularz zachowuje wybraną formułę X').toBe(sesjaX.selectedFormula);
+    expect(tekstySummary(formularz), 'strona przeliczyła eGFR po poprawce wzrostu').toContainEqual(expect.stringContaining(EGFR_96));
+    expect(tekstySummary(formularz), 'poprawka wzrostu zachowuje metodę CKiD U25 w Szczegółach').toContainEqual(expect.stringContaining(EGFR_METHOD));
     expect(rozneKlucze(formularz.inputs, sesjaX.inputs), 'sesja formularza różni się od zapisanej tylko antropometrią').toEqual([]);
 
     // Karta B: X scalona z Y — głowa Y ma dokładnie sesję X.
@@ -353,24 +367,33 @@ test.describe('P-SCALANIE-SEKCJE — kalkulator klirensu: ponowienie, gdy głowa
       return { userHeight: p.user && p.user.height, clcr: p.clcr, karty: (await V.listPatients()).length };
     }, y);
     expect(glowaY.karty).toBe(1);
+    expect(glowaY.clcr.selectedFormula, 'ponowienie zachowuje wybraną formułę formularza').toBe(formularz.selectedFormula);
     expect([glowaY.userHeight, glowaY.clcr.inputs.height, glowaY.clcr.inputs.weight], 'głowa Y: poprawiony wzrost w danych i w sesji').toEqual([104, '104', '17']);
     expect(tekstySummary(glowaY.clcr), 'głowa Y: wynik policzony z poprawionego wzrostu').toEqual(tekstySummary(formularz));
-    expect(tekstySummary(glowaY.clcr)).not.toContain(EGFR_129);
+    expect(tekstySummary(glowaY.clcr)).not.toContainEqual(expect.stringContaining(EGFR_129));
 
     // Karta C: lekarz wczytuje Y — karta poprzedniego klirensu i „Odtwórz” pokazują eGFR z poprawionego wzrostu.
     const C = await kartaKlirensu(context);
     await wczytajZKartyPacjenta(C, y);
+    await expect(C.locator('#prevClcrCard'), 'karta poprzedniego pomiaru jest widoczna').toBeVisible();
     const poprzedni = await C.evaluate(() => {
       const d = document.getElementById('prevClcrCard');
-      return d ? d.innerText.replace(/\s+/g, ' ') : '';
+      return d ? d.textContent.replace(/\s+/g, ' ') : '';
     });
     expect(poprzedni, 'karta „Ostatni pomiar (klirens/eGFR)”').toContain(EGFR_96);
     expect(poprzedni).not.toContain(EGFR_129);
+    expect(poprzedni, 'karta poprzedniego pomiaru zachowuje również metodę').toContain(EGFR_METHOD);
     expect(await odtworzSesje(C), 'odtworzenie zapisanej sesji Y').toBe(true);
     await C.waitForTimeout(800);
     expect(await C.evaluate(() => document.getElementById('height').value), '„Odtwórz”: wzrost').toBe('104');
-    const wyniki = await C.evaluate(() => (document.getElementById('results') || {}).innerText.replace(/\s+/g, ' '));
-    expect(wyniki, '„Odtwórz”: wynik').toContain(EGFR_96);
-    expect(wyniki).not.toContain(EGFR_129);
+    expect(await C.evaluate(() => window.collectUserData().clcr.selectedFormula), '„Odtwórz”: wybrana formuła Y').toBe(glowaY.clcr.selectedFormula);
+    const wynikU25 = C.locator('.clcr-result-card[data-clcr-series="ckid_u25"]');
+    await expect(wynikU25, '„Odtwórz”: dokładnie jeden wynik U25').toHaveCount(1);
+    await expect(wynikU25, '„Odtwórz”: wynik jest widoczny').toBeVisible();
+    await expect(wynikU25.locator('.clcr-result-value'), '„Odtwórz”: wynik pacjenta').toHaveText('96');
+    await expect(wynikU25.locator('.clcr-result-unit'), '„Odtwórz”: jednostka').toHaveText('mL/min/1,73 m²');
+    await expect(wynikU25).toHaveAttribute('data-clcr-display-label', 'CKiD U25 eGFRcr (2021)');
+    await expect(C.locator('.clcr-result-details[data-clcr-formula="ckid_u25"]'), '„Odtwórz”: metoda w Szczegółach').toContainText(EGFR_METHOD);
+    await expect(C.locator('.clcr-result-card[data-clcr-series="ckid_u25"][data-clcr-display-value="129"]'), '„Odtwórz”: brak starego wyniku').toHaveCount(0);
   });
 });

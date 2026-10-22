@@ -14,6 +14,9 @@
 // strony), więc przypadki z modulDawki: false opisują we wzorcu zachowanie sprzed D6. Pole kategorieZModulemDawki to
 // skróty tych samych kategorii policzone tylko z przypadków z modułem dawki (ten sam przebieg monitora z BAZA); test
 // porównuje z nim drzewo robocze, a przypadki bez modułu sprawdza jako odmowy. `--roznice` pokazuje też te odmowy.
+// P-GH-NOWE-ID-MONITOR (2026-10-21): dzisiejszy monitor bierze id nowego punktu z VildaGhPunkty.noweId(), więc nowe id
+// ma inną postać niż w BAZA; wynik kanoniczny zastępuje je tym samym znacznikiem (NOWE_ID, POSTACI_ID niżej), a wzorzec
+// zostaje bez zmian.
 // Siatkę, wykonanie przypadku i postać kanoniczną wyniku eksportuje ten plik. Test używa tych samych funkcji, ale na
 // plikach z drzewa roboczego. Dane wyłącznie FIKCYJNE.
 import { createHash } from 'node:crypto';
@@ -21,7 +24,9 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LOSOWA, ZEGAR_KROK, ZEGAR_START, utworzAtrapeMonitoraGh } from '../support/gh-monitor-atrapa.mjs';
+import {
+  ZEGAR_KROK, ZEGAR_START, idDawneMonitora, idDeterministyczne, utworzAtrapeMonitoraGh,
+} from '../support/gh-monitor-atrapa.mjs';
 
 export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const PLIK_WZORCA = 'tests/fixtures/gh-punkty-wzorzec.json';
@@ -360,20 +365,26 @@ export function siatka() {
 
 /* ---------- Wynik kanoniczny ---------- */
 
-// Nowe id nadaje monitor: String(Date.now() + Math.random()) na zegarze atrapy. Numer wywołania zegara zależy od tego,
-// ile punktów dodano wcześniej na tej samej atrapie, więc w wyniku kanonicznym id o tej budowie zastępuje znacznik.
-// Id innej budowy (np. inny generator) zostaje dosłownie i różni się od wzorca.
+// Nowe id na zegarze atrapy. Numer wywołania zegara zależy od tego, ile punktów dodano wcześniej na tej samej atrapie,
+// więc w wyniku kanonicznym id o budowie właściwej dla przebiegu zastępuje znacznik. Postać id:
+// - 'monitor': monitor nadaje id sam, String(Date.now() + Math.random()) (idDawneMonitora) — commit BAZA, z którego
+//   policzono wzorzec, i zamrożony monitor sprzed API (wyrocznia); stąd tekst znacznika we wzorcu;
+// - 'api': od P-GH-NOWE-ID-MONITOR dzisiejszy monitor bierze id z VildaGhPunkty.noweId() (idDeterministyczne).
+// Przebieg rozpoznaje tylko swoją postać. Id innej budowy (np. dzisiejszy monitor nadający id po dawnemu, inny
+// generator albo inny start noweId) zostaje dosłownie i różni się od wzorca.
 export const NOWE_ID = '#nowe-id: String(Date.now()+Math.random())';
-function jestNoweId(v) {
-  const n = Number(v);
-  const krok = (n - LOSOWA - ZEGAR_START) / ZEGAR_KROK;
-  return String(n) === v && Number.isInteger(krok) && krok >= 0;
+export const POSTACI_ID = Object.freeze({ monitor: idDawneMonitora, api: idDeterministyczne });
+function jestNoweId(v, postac) {
+  const idK = POSTACI_ID[postac];
+  if (!idK) throw new Error(`nieznana postać id ${postac}`);
+  const krok = (Math.floor(Number(v)) - ZEGAR_START) / ZEGAR_KROK;
+  return Number.isInteger(krok) && krok >= 0 && v === idK(krok);
 }
 
 // Postać JSON wyniku bez utraty informacji: liczby z rozróżnieniem NaN, -0 i nieskończoności (Object.is), undefined
 // jako znacznik. JSON.stringify zachowuje kolejność kluczy i zapisuje liczbę najkrótszym zapisem, który ją odtwarza,
-// więc równość tekstów oznacza równość co do bitu.
-export function doJson(v, znaneId = new Set(), klucz = null) {
+// więc równość tekstów oznacza równość co do bitu. `postac` — postać nowego id (POSTACI_ID).
+export function doJson(v, znaneId = new Set(), klucz = null, postac = 'api') {
   if (typeof v === 'number') {
     if (Number.isNaN(v)) return { $liczba: 'NaN' };
     if (Object.is(v, -0)) return { $liczba: '-0' };
@@ -381,11 +392,11 @@ export function doJson(v, znaneId = new Set(), klucz = null) {
     return v;
   }
   if (v === undefined) return { $brak: true };
-  if (klucz === 'id' && typeof v === 'string' && !znaneId.has(v) && jestNoweId(v)) return NOWE_ID;
+  if (klucz === 'id' && typeof v === 'string' && !znaneId.has(v) && jestNoweId(v, postac)) return NOWE_ID;
   if (v === null || typeof v !== 'object') return v;
-  if (Array.isArray(v)) return v.map((x) => doJson(x, znaneId));
+  if (Array.isArray(v)) return v.map((x) => doJson(x, znaneId, null, postac));
   const o = {};
-  for (const k of Object.keys(v)) o[k] = doJson(v[k], znaneId, k);
+  for (const k of Object.keys(v)) o[k] = doJson(v[k], znaneId, k, postac);
   return o;
 }
 export const kanon = (wynikJson) => JSON.stringify(wynikJson);
@@ -420,7 +431,7 @@ function krok(atrapa, p) {
   else if (p.sciezka === 'Z5') atrapa.usun(p.cel, { anuluj: p.anuluj });
   else throw new Error(`nieznana ścieżka ${p.sciezka}`);
 }
-function zbierz(atrapa, p, powiadomieniaOd) {
+function zbierz(atrapa, p, powiadomieniaOd, postac) {
   const s = atrapa.stan();
   const znaneId = new Set(LISTY[p.lista].filter((x) => 'id' in x).map(idTekst));
   return doJson({
@@ -431,34 +442,36 @@ function zbierz(atrapa, p, powiadomieniaOd) {
     edycjaWidoczna: s.edycjaWidoczna,
     wstecznyWidoczny: s.wstecznyWidoczny,
     powiadomienia: s.powiadomienia.slice(powiadomieniaOd),
-  }, znaneId);
+  }, znaneId, null, postac);
 }
 
 /**
  * Jeden przypadek na świeżej atrapie (lista w pamięci modułu przed startem monitora). opcjeAtrapy trafiają do
  * utworzAtrapeMonitoraGh, np. { modulPunktow: false } dla monitora sprzed API podanego w `zrodla` (opcjePrzedApi w atrapie).
+ * postacId — postać nowego id (POSTACI_ID): 'api' dla dzisiejszego monitora, 'monitor' dla BAZA i wyroczni.
  */
-export function wykonajNaSwiezej(p, zrodla = {}, opcjeAtrapy = {}) {
+export function wykonajNaSwiezej(p, zrodla = {}, opcjeAtrapy = {}, postacId = 'api') {
   const atrapa = utworzAtrapeMonitoraGh({
     ...opcjeAtrapy, modulDawki: p.modulDawki, punkty: kopia(LISTY[p.lista]), zrodla,
     ...(p.karta ? { ghTherapyCalc: { ...p.karta } } : {}),
   });
   krok(atrapa, p);
-  return zbierz(atrapa, p, 0);
+  return zbierz(atrapa, p, 0, postacId);
 }
 
 /**
  * Przypadki na atrapie użytej ponownie (osobnej dla wariantu z modułem dawki i bez). Przed każdym przypadkiem: zamknięcie
  * komunikatu i formularza wstecznego, lista w pamięci modułu, odświeżenie monitora (D() i F(), jak po zdarzeniu storage),
  * wyzerowanie wieku kostnego i wyniku karty. Przypadki ze znacznikiem `swieza` idą na świeżą atrapę.
+ * postacId jak w wykonajNaSwiezej.
  * @returns {Map<string, object>} id przypadku → wynik w postaci JSON
  */
-export function wykonajPrzypadki(przypadki, zrodla = {}, opcjeAtrapy = {}) {
+export function wykonajPrzypadki(przypadki, zrodla = {}, opcjeAtrapy = {}, postacId = 'api') {
   const atrapy = new Map();
   const wyniki = new Map();
   for (const p of przypadki) {
     if (p.swieza) {
-      wyniki.set(p.id, wykonajNaSwiezej(p, zrodla, opcjeAtrapy));
+      wyniki.set(p.id, wykonajNaSwiezej(p, zrodla, opcjeAtrapy, postacId));
       continue;
     }
     if (!atrapy.has(p.modulDawki)) {
@@ -477,7 +490,7 @@ export function wykonajPrzypadki(przypadki, zrodla = {}, opcjeAtrapy = {}) {
     atrapa.wyczyscDziennik();
     krok(atrapa, p);
     // Przygotowanie przypadku nie powiadamia wskaźnika zapisu, więc nowe powiadomienia liczymy od końca poprzedniego.
-    const w = zbierz(atrapa, p, uzyta.powiadomienia);
+    const w = zbierz(atrapa, p, uzyta.powiadomienia, postacId);
     uzyta.powiadomienia += w.powiadomienia.length;
     // Atrapa użyta ponownie przyjmuje tylko edycje zakończone zapisem: po odmowie edycja zostaje otwarta.
     if (p.sciezka === 'Z2' && w.komunikat !== null) {
@@ -540,10 +553,10 @@ export function idReprezentatywnych(przypadki) {
   return przypadki.filter((p) => wybrane.has(p.id)).map((p) => p.id);
 }
 
-/** Pełny wzorzec liczony z podanych źródeł (domyślnie: commit BAZA). */
-export function zbudujWzorzec(zrodla = zrodlaBazy()) {
+/** Pełny wzorzec liczony z podanych źródeł (domyślnie: commit BAZA, którego monitor sam nadaje id). */
+export function zbudujWzorzec(zrodla = zrodlaBazy(), postacId = 'monitor') {
   const przypadki = siatka();
-  const wyniki = wykonajPrzypadki(przypadki, zrodla);
+  const wyniki = wykonajPrzypadki(przypadki, zrodla, {}, postacId);
   const reprezentatywne = new Set(idReprezentatywnych(przypadki));
   return {
     opis: [
@@ -591,8 +604,8 @@ if (uruchomionyBezposrednio) {
   const plik = path.join(korzen, PLIK_WZORCA);
   if (process.argv.includes('--roznice')) {
     const przypadki = siatka();
-    const baza = wykonajPrzypadki(przypadki, zrodlaBazy());
-    const teraz = wykonajPrzypadki(przypadki);
+    const baza = wykonajPrzypadki(przypadki, zrodlaBazy(), {}, 'monitor');
+    const teraz = wykonajPrzypadki(przypadki, {}, {}, 'api');
     const rozne = przypadki.filter((p) => kanon(baza.get(p.id)) !== kanon(teraz.get(p.id)));
     for (const p of rozne.slice(0, 30)) console.log(`${p.id}: ${pierwszaRoznica(baza.get(p.id), teraz.get(p.id))}`);
     console.log(`${rozne.length} z ${przypadki.length} przypadków różni się od ${BAZA} (pierwsza wartość: baza, druga: drzewo robocze)`);

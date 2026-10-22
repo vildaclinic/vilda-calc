@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MONITOR_PRZED_API, idDeterministyczne, opcjePrzedApi, rodzaje, utworzAtrapeMonitoraGh, zrodlo,
+  MONITOR_PRZED_API, idDawneMonitora, opcjePrzedApi, rodzaje, utworzAtrapeMonitoraGh, zrodlo,
 } from '../support/gh-monitor-atrapa.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { LISTY, idReprezentatywnych, siatka } from '../scripts/gh-punkty-wzorzec.mjs';
@@ -168,8 +168,8 @@ function porownaj(przypadek, { zrodla } = {}) {
   const r = [];
   // wczytaj() = be(): ta sama lista, którą D() monitora wczytał przy kliknięciu (pierwsze E po kliknięciu).
   r.push(...roznice(klik.lista, wpisy[0] && wpisy[0].rodzaj === 'E' ? wpisy[0].okno : '(brak E)', 'wczytaj()'));
-  // Id nowego punktu nadaje monitor (zegar atrapy); API dostaje to samo id.
-  const idNowego = s.okno.length === klik.lista.length + 1 ? s.okno.at(-1).id : idDeterministyczne(0);
+  // Id nowego punktu nadaje monitor sprzed API (zegar atrapy, dawny wzór); API dostaje to samo id.
+  const idNowego = s.okno.length === klik.lista.length + 1 ? s.okno.at(-1).id : idDawneMonitora(0);
   const wynik = wynikApi(api, klik, cel, idNowego);
   r.push(...roznice({ zapis: wynik.zapis, komunikat: wynik.komunikat, lista: wynik.lista }, monitor));
   if (monitor.zapis) {

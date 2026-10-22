@@ -1,6 +1,22 @@
 import { expect, test } from '@playwright/test';
 import { czekajNaUstabilizowanyUklad, kliknij, ustawNaMiejscu, zaznacz } from '../support/uklad-czekanie.mjs';
 
+async function openOptionalDetails(page, selector) {
+  for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+}
+
+async function setCreatinineState(page, value) {
+  const proxy = page.locator('[data-clcr-marker-context]');
+  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
+  const field = useProxy ? proxy : page.locator('#creatinineState');
+  for (const details of await field.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+  await field.selectOption(value);
+}
+
 async function openCalculator(page, version = 'pro') {
   await page.addInitScript(() => {
     window.__CLCR_TEST_LEGACY_BROAD = true;
@@ -44,9 +60,12 @@ async function setPatient(page, {
   height = 175
 }) {
   await page.locator('#age').fill(String(age));
+  await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill(String(months));
   await page.locator('#sex').selectOption(sex);
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill(String(weight));
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill(String(height));
 }
 
@@ -128,8 +147,8 @@ test('dorosły panel kamicy przelicza masę i mmol oraz stosuje profile EAU 2026
   await page.locator('#pH24').fill('5.4');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('Wapń w DZM: 9.000 mmol/24 h');
-  await expect(stone).toContainText('Magnez w DZM: 2.057 mmol/24 h');
+  await expect(stone).toContainText(/Wapń\s*w\s*DZM:\s*9[.,]000\s*mmol\/24\s*h/);
+  await expect(stone).toContainText(/Magnez\s*w\s*DZM:\s*2[.,]057\s*mmol\/24\s*h/);
   await expect(stone).toContainText('Fosfor nieorganiczny (Pᵢ) w DZM');
   await expect(stone).toContainText('mg P/24 h');
   await expect(stone).toContainText('mg kwasu szczawiowego/24 h');
@@ -170,9 +189,10 @@ test('pediatryczny Ca w DZM i Ca/Cr używają odrębnych jednostek oraz wstrzymu
   const stone = page.locator('#stoneInfo');
   await expect(stone).toContainText('Wapń w DZM — pediatria');
   await expect(stone).toContainText('poniżej opublikowanego przez EAU progu 0,1 mmol/kg/24 h');
-  await expect(stone).toContainText('Ca/Cr jest poniżej opublikowanego progu 1.5 mol/mol');
+  await expect(stone).toContainText(/Ca\/Cr\s*jest\s*poniżej\s*opublikowanego\s*progu\s*1[.,]5\s*mol\/mol/);
 
   await page.locator('#age').fill('3');
+  await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
   await expect(stone).toContainText('interpretacja wstrzymana');
   await expect(stone).toContainText('dokładnej granicy 1., 3., 5. lub 7. roku życia');
@@ -193,7 +213,7 @@ test('graniczny pediatryczny Ca/Cr używa dokładnych mas molowych zamiast przyb
   await page.locator('#Ucr_spot_unit').selectOption('umol');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('0.600 mol/mol');
+  await expect(stone).toContainText(/0[.,]600\s*mol\/mol/);
   await expect(stone).toContainText(
     'nie mieści się w opublikowanym przedziale <0.6 mol/mol'
   );
@@ -213,7 +233,7 @@ test('wynik poniżej progu Ca/Cr nie jest zaokrąglany do wartości granicznej',
   await page.locator('#Ucr_spot_unit').selectOption('umol');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('<0.600 mol/mol');
+  await expect(stone).toContainText(/<0[.,]600\s*mol\/mol/);
   await expect(stone).toContainText(
     'Ca/Cr jest poniżej opublikowanego progu 0.6 mol/mol'
   );
@@ -263,7 +283,7 @@ test('progi DZM pozostają wstrzymane, gdy bieżąca zbiórka nie trwa dokładni
   await page.locator('#U_Ca').fill('9');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('Wapń w DZM: 9.000 mmol/24 h');
+  await expect(stone).toContainText(/Wapń\s*w\s*DZM:\s*9[.,]000\s*mmol\/24\s*h/);
   await expect(stone).toContainText(
     'bieżąca zbiórka trwająca dokładnie 24 godziny'
   );
@@ -285,13 +305,13 @@ test('wynik kamicowy nie zaokrągla przez próg i wymaga powtarzalnego profilu p
   await page.locator('#pH24').fill('5.4999');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('Cystyna w DZM: >0.125 mmol/24 h');
+  await expect(stone).toContainText(/Cystyna\s*w\s*DZM:\s*>0[.,]125\s*mmol\/24\s*h/);
   await expect(stone).toContainText('przekracza 0,125 mmol/24 h');
   await expect(stone).toContainText('nie potwierdzono profilu w powtarzanych pomiarach');
   await expect(stone).not.toContainText('wzorzec hiperkwasowego moczu');
 
   await zaznacz(page.locator('#stonePhPersistent'));
-  await expect(stone).toContainText('pH czasowej zbiórki: <5.50');
+  await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*<5[.,]50/);
   await expect(stone).toContainText('wzorzec hiperkwasowego moczu');
 
   await zaznacz(page.locator('#stoneKnownCystinuria'));
@@ -320,8 +340,8 @@ test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA'
   await page.locator('#U_pH').fill('5.8004');
 
   const stone = page.locator('#stoneInfo');
-  await expect(stone).toContainText('pH czasowej zbiórki: >6.20');
-  await expect(stone).toContainText('pH próbki moczu: >5.80');
+  await expect(stone).toContainText(/pH\s*czasowej\s*zbiórki:\s*>6[.,]20/);
+  await expect(stone).toContainText(/pH\s*próbki\s*moczu:\s*>5[.,]80/);
   await expect(stone).toContainText('spełniają przesiewowy wzorzec EAU');
 });
 
@@ -335,12 +355,12 @@ test('Kt/V pokazuje exact GFAC, eKt/V, URR i warunkową ocenę z aktualnym Kru',
   );
   await zaznacz(page.locator('#ktvTreatmentsDelivered'));
 
-  await expect(page.locator('#ktvResult')).toContainText('1.32');
-  await expect(page.locator('#ktvResult')).toContainText('GFAC 0.0080');
-  await expect(page.locator('#ektvResult')).toContainText('1.15');
+  await expect(page.locator('#ktvResult')).toContainText(/1[.,]32/);
+  await expect(page.locator('#ktvResult')).toContainText(/GFAC\s*0[.,]0080/);
+  await expect(page.locator('#ektvResult')).toContainText(/1[.,]15/);
   await expect(page.locator('#ektvResult')).toContainText('C=35 min');
-  await expect(page.locator('#urrResult')).toContainText('70.0%');
-  await expect(page.locator('#ktvInterpretation')).toContainText(
+  await expect(page.locator('#urrResult')).toContainText(/70[.,]0%/);
+  await expect(page.locator('#ktvResult')).toContainText(
     'Minimum osiągnięte; poniżej celu'
   );
 
@@ -356,19 +376,20 @@ test('inne schematy i pediatria pozostają bez dorosłych progów Kt/V', async (
   await openCalculator(page);
   await setPatient(page, { age: 50 });
   await completeAdultKtv(page, { sessions: 4, pidi: '1' });
-  await expect(page.locator('#ktvResult')).toContainText('GFAC 0.0155');
-  await expect(page.locator('#ktvInterpretation')).toContainText(
+  await expect(page.locator('#ktvResult')).toContainText(/GFAC\s*0[.,]0155/);
+  await expect(page.locator('#ktvResult')).toContainText(
     'potrzebny jest stdKt/V'
   );
-  await expect(page.locator('#ktvInterpretation')).not.toContainText(
+  await expect(page.locator('#ktvResult')).not.toContainText(
     'Cel sesyjny osiągnięty'
   );
 
   await page.locator('#age').fill('10');
+  await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill('0');
   await expect(page.locator('#ktvResult')).toBeVisible();
   await expect(page.locator('#ektvResult')).toBeHidden();
-  await expect(page.locator('#ktvInterpretation')).toContainText(
+  await expect(page.locator('#ktvResult')).toContainText(
     'Wynik pediatryczny ma charakter techniczny'
   );
 
@@ -390,8 +411,9 @@ test('rozszerzony eGFR egzekwuje IDMS/IFCC, dobiera wiek i pokazuje metodę BSA'
   await page.locator('#formulaPicker').selectOption('ckid_u25_cr_cys');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('0.6');
+  await openOptionalDetails(page, '#ScrAssay');
   await page.locator('#ScrAssay').selectOption('enzymatic_idms');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.locator('#CystatinC').fill('1');
   await page.locator('#CystatinCStandardization').selectOption(
     'ERM-DA471/IFCC'
@@ -404,24 +426,28 @@ test('rozszerzony eGFR egzekwuje IDMS/IFCC, dobiera wiek i pokazuje metodę BSA'
   await expect(clcr).toContainText('Powierzchnia ciała (Haycock)');
 
   await page.locator('#age').fill('50');
+  await openOptionalDetails(page, '#weight');
   await page.locator('#weight').fill('70');
+  await openOptionalDetails(page, '#height');
   await page.locator('#height').fill('175');
   await page.locator('#formulaPicker').selectOption('egfr_cr_cys');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await page.locator('#ScrAssay').selectOption('enzymatic_idms');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.locator('#CystatinC').fill('1');
-  await page.locator('#CystatinCStandardization').selectOption(
-    'ERM-DA471/IFCC'
-  );
-  await page.locator('#CystatinCAssayMethod').selectOption('nephelometric');
+  await page.locator('#CrCysStandardizationConfirmed').check();
+  for (const id of ['ScrAssay', 'CystatinCStandardization', 'CystatinCAssayMethod', 'weight', 'height']) {
+    await expect(page.locator(`#${id}`)).toBeHidden();
+  }
   await expect(clcr).toContainText('2021 CKD‑EPI eGFRcr‑cys');
   await expect(clcr).toContainText('88');
   await expect(clcr).toContainText('Powierzchnia ciała (Du Bois)');
 
-  await page.locator('#CystatinCStandardization').selectOption('not_ifcc');
-  await expect(clcr).toContainText('wymaga cystatyny C');
+  await page.locator('#CrCysStandardizationConfirmed').uncheck();
+  await expect(page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="egfr_cr_cys"]')).toHaveCount(0);
+  await expect(page.locator('#clcrReadiness')).toContainText('Wymagane jest potwierdzenie');
+  await expect(page.locator('label:has(#CrCysStandardizationConfirmed)')).toContainText('IDMS');
+  await expect(page.locator('label:has(#CrCysStandardizationConfirmed)')).toContainText('IFCC');
   await expect(clcr).not.toContainText('Kategoria GFR wg KDIGO');
 });
 
@@ -447,7 +473,7 @@ test('nie porównuje U25 eGFRcys z dorosłym równaniem łączonym w wieku 18–
     scr.dispatchEvent(new Event('input', { bubbles: true }));
     assay.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.locator('#CystatinC').fill('1');
   await page.locator('#CystatinCStandardization').selectOption(
     'ERM-DA471/IFCC'

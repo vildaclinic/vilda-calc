@@ -33,8 +33,8 @@ const medians = [
 
 describe('Zwykły żeński E2 — źródłowa mediana wieku 6–18 Madsen', () => {
   it('dodaje tylko jeden profil i politykę, zachowując wszystkie 77 profili, jednostki i pozostały runtime', () => {
-    expect(data.profiles).toHaveLength(84);
-    expect(data.version).toBe('2026-10-21.2');
+    expect(data.profiles).toHaveLength(85);
+    expect(data.version).toBe('2026-10-22.2');
     const prior = { ...data, version: '2026-10-16.1',
       profiles: beforeFshCaliperBundle(data).profiles.filter(item => item.id !== id).map(beforeAmhPregnancyPolicy) };
     expect(prior.profiles).toHaveLength(77);
@@ -101,8 +101,14 @@ describe('Zwykły żeński E2 — źródłowa mediana wieku 6–18 Madsen', () =
     }
     expect(evaluate(17, { ageUpperYears: 18, ageUpperInclusive: false }).status).toBe('ready');
     expect(evaluate(17, { ageUpperYears: 18, ageUpperInclusive: true }).status).toBe('ready');
-    for (const age of [1.001, 3, 5.999999, 18.000001, 19, 25, 50]) {
+    for (const age of [18.000001, 19, 25, 50]) {
       expect(evaluate(age)).toEqual(unavailable('unsupported-age'));
+      expect(engine.referenceAt(profile, age)).toBeNull();
+    }
+    // The later childhood profile requires an explicit current breast stage;
+    // an untyped age alone still cannot create the new group reference.
+    for (const age of [1.001, 3, 5.999999]) {
+      expect(evaluate(age)).toEqual(unavailable('missing-puberty-stage'));
       expect(engine.referenceAt(profile, age)).toBeNull();
     }
     for (const [ageYears, ageUpperYears] of [[5.99, 6.01], [17.99, 18.01], [18, 18 + 1 / 12]]) {

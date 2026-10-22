@@ -149,10 +149,25 @@
     const years = source.getElementById("age");
     const months = source.getElementById("ageMonths");
     const days = source.getElementById("ageDays");
+    // W dedykowanej ścieżce noworodkowej jawny dzień życia określa wiek
+    // bez ponownego wpisywania 0 lat i 0 miesięcy. Nie zmieniamy danych pól
+    // ani nie zastępujemy sprzecznego, podanego wieku zerem.
+    const neonatal = source.getElementById("formulaPicker")?.value === "neonatal_egfr";
+    const dayProvided = days && days.value !== "" && days.value != null;
+    const yearsValue = neonatal && dayProvided && (!years || years.value === "")
+      ? "0" : years ? years.value : null;
+    const monthsValue = neonatal && dayProvided && (!months || months.value === "")
+      ? "0" : months ? months.value : null;
+    // Dzień życia zapisany podczas wcześniejszego wyboru noworodka nie jest
+    // częścią wieku starszego dziecka po zmianie wzoru. Zachowujemy pole
+    // w sesji, lecz nie włączamy go do tego odczytu wieku.
+    const daysValue = !neonatal && (
+      toFiniteNumber(yearsValue) > 0 || toFiniteNumber(monthsValue) > 0
+    ) ? null : days ? days.value : null;
     return parseAge(
-      years ? years.value : null,
-      months ? months.value : null,
-      days ? days.value : null,
+      yearsValue,
+      monthsValue,
+      daysValue,
     );
   }
 
@@ -195,7 +210,7 @@
         return Object.freeze({
           eligible: false,
           reason:
-            "Dla wzoru noworodkowego podaj pełne lata, miesiące oraz ukończone dni życia.",
+            "Dla wzoru noworodkowego podaj ukończony dzień życia od 0 do 28 i sprawdź zgodność wieku pacjenta.",
         });
       }
       if (
@@ -769,26 +784,24 @@
       volumeMl === null ||
       !(volumeMl > 0) ||
       durationMinutes === null ||
-      !(durationMinutes > 0) ||
-      bsaM2 === null ||
-      !(bsaM2 > 0) ||
-      weightKg === null ||
-      !(weightKg > 0)
+      !(durationMinutes > 0)
     ) {
       return Object.freeze({
         ok: false,
         error:
-          "Uzupełnij dodatnie Ucr, Scr, objętość, dokładny czas zbiórki, masę i wzrost.",
+          "Uzupełnij dodatnie Ucr, Scr, objętość i dokładny czas zbiórki.",
       });
     }
     const absoluteMlMin =
         (urineCreatinineMgDl / serumCreatinineMgDl) *
         (volumeMl / durationMinutes),
-      indexedMlMin173 = absoluteMlMin * (1.73 / bsaM2),
+      indexedMlMin173 = bsaM2 !== null && bsaM2 > 0
+        ? absoluteMlMin * (1.73 / bsaM2) : null,
       creatinineMgCollection = (urineCreatinineMgDl * volumeMl) / 100,
       creatinineMgDay =
         creatinineMgCollection * (1440 / durationMinutes),
-      creatinineMgKgDay = creatinineMgDay / weightKg;
+      creatinineMgKgDay = weightKg !== null && weightKg > 0
+        ? creatinineMgDay / weightKg : null;
     if (
       ![
         absoluteMlMin,
@@ -796,7 +809,7 @@
         creatinineMgCollection,
         creatinineMgDay,
         creatinineMgKgDay,
-      ].every(Number.isFinite)
+      ].every((value) => value === null || Number.isFinite(value))
     ) {
       return Object.freeze({
         ok: false,
@@ -945,6 +958,67 @@
     });
   }
 
+  // P-KLIRENS-EGFR-PREZENTACJA: opis istniejącej kategorii G, bez nowych
+  // norm ani zmiany równania. Kolor nie oznacza ryzyka CKD ani pilności leczenia.
+  function egfrPresentation(input) {
+    const source = input || {};
+    const policy = source.markerPolicy || {};
+    const value = toFiniteNumber(source.value);
+    const age = toFiniteNumber(source.age);
+    function result(state, label, tone, category, reasons, valueVisible) {
+      return Object.freeze({
+        state,
+        label,
+        tone,
+        category,
+        reasons: Object.freeze(reasons),
+        valueVisible,
+      });
+    }
+    if (policy.calculationAllowed === false || policy.status === "blocked") {
+      return result("blocked", "Nie obliczono", "neutral", null, [
+        policy.message || "Podejrzenie AKI lub szybko zmieniająca się kreatynina.",
+      ], false);
+    }
+    if (value === null || value < 0 || age === null || age < 1) {
+      return result("missing", "Uzupełnij dane", "neutral", null, [], false);
+    }
+    const reasons = [];
+    if (policy.categoryAllowed !== true) {
+      reasons.push("Nie potwierdzono stabilności kreatyniny i braku podejrzenia AKI.");
+    }
+    if (!["enzymatic_idms", "jaffe_idms"].includes(source.assay)) {
+      reasons.push("Nie potwierdzono standaryzacji do IDMS dla oznaczenia kreatyniny.");
+    }
+    if (reasons.length) {
+      return result("limited", "Interpretacja ograniczona", "neutral", null, reasons, true);
+    }
+    if (age < 2) {
+      return result("age-specific", "Ocena zależna od wieku", "neutral", null, [
+        "Przed 2. rokiem życia nie stosuje się automatycznie kategorii G ani progu eGFR 90 mL/min/1,73 m².",
+      ], true);
+    }
+    const category = kdigoGCategory(value);
+    const descriptions = {
+      G1: ["Nieobniżony", "success"],
+      G2: ["Łagodnie zmniejszony", "warning"],
+      G3a: ["Łagodnie do umiarkowanie zmniejszony", "warning"],
+      G3b: ["Umiarkowanie do znacznie zmniejszony", "danger"],
+      G4: ["Znacznie zmniejszony", "danger"],
+      G5: ["Zakres niewydolności nerek", "danger"],
+    };
+    const description = descriptions[category.code];
+    const pediatricLow = age < 18 && value < 90;
+    return result(
+      "classified",
+      pediatricLow ? "Obniżony dla wieku" : description[0],
+      description[1],
+      category,
+      category.code === "G1" ? ["Nie wyklucza uszkodzenia nerek."] : [],
+      true,
+    );
+  }
+
   function formatGfrForDisplay(value) {
     if (!Number.isFinite(value) || value < 0) return null;
     const rounded = Math.round(value);
@@ -1001,6 +1075,7 @@
     creatininePolicy,
     formulaSafety,
     kdigoGCategory,
+    egfrPresentation,
     formatGfrForDisplay,
   });
 });

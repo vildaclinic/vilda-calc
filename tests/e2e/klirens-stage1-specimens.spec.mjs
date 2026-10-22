@@ -1,5 +1,32 @@
 import { expect, test } from '@playwright/test';
 
+async function openOptionalDetails(page, selector) {
+  for (const details of await page.locator(selector).locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+}
+
+async function setCreatinineState(page, value) {
+  const proxy = page.locator('[data-clcr-marker-context]');
+  const useProxy = await proxy.count() && await proxy.evaluate(node => !node.closest('[hidden]'));
+  const field = useProxy ? proxy : page.locator('#creatinineState');
+  for (const details of await field.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) await details.locator(':scope > summary').click();
+  }
+  await field.selectOption(value);
+}
+
+async function setMarkerContext(page, value) {
+  const marker = page.locator('[data-clcr-marker-context]');
+  for (const details of await marker.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+  await marker.selectOption(value);
+}
+
+
 async function openCalculator(page, version = 'basic') {
   await page.addInitScript(() => {
     window.__CLCR_TEST_LEGACY_BROAD = true;
@@ -37,6 +64,7 @@ async function setPatient(page, {
   height = 175
 }) {
   await page.locator('#age').fill(String(age));
+  await openOptionalDetails(page, '#ageMonths');
   await page.locator('#ageMonths').fill(String(months));
   if (sex) await page.locator('#sex').selectOption(sex);
   await page.locator('#weight').fill(String(weight));
@@ -74,7 +102,7 @@ test('nie podstawia domyślnie płci do wzorów zależnych od płci', async ({ p
   await openCalculator(page);
   await setPatient(page, { age: 20, sex: '' });
   await page.locator('#Scr').fill('0.9');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
 
   await expect(page.locator('#sex')).toHaveValue('');
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
@@ -95,12 +123,13 @@ test('opisuje Cockcrofta–Gaulta jako eCrCl z jawną polityką masy', async ({ 
   await page.locator('#formulaPicker').selectOption('cg');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setMarkerContext(page, 'stable');
 
-  await expect(page.locator('#clcrInfo')).toContainText('eCrCl Cockcroft–Gault');
+  await expect(page.locator('#clcrInfo')).toContainText('Oszacowany klirens kreatyniny');
+  await expect(page.locator('#clcrInfo')).toContainText('Cockcroft–Gault');
   await expect(page.locator('#clcrInfo')).toContainText('masa rzeczywista');
-  await expect(page.locator('#clcrInfo')).toContainText('To eCrCl, nie eGFR');
-  await expect(page.locator('#clcrInfo')).toContainText('konkretnym leku');
+  await expect(page.locator('#clcrInfo')).toContainText('Otyłość, niedowaga, obrzęki lub nietypowa masa mięśniowa');
+  await expect(page.locator('#clcrInfo')).toContainText('Wzór opracowano przed standaryzacją oznaczeń kreatyniny');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
 });
 
@@ -116,8 +145,8 @@ test('liczy pediatryczne ACR i PCR tylko ze wspólnej próbki i stosuje właści
 
   await expect(page.locator('#U_ACR')).toHaveValue('30.0');
   await expect(page.locator('#U_PCR')).toHaveValue('300.0');
-  await expect(page.locator('#clcrInfo')).toContainText('30.0');
-  await expect(page.locator('#clcrInfo')).toContainText('300.0');
+  await expect(page.locator('#clcrInfo')).toContainText(/30[.,]0/);
+  await expect(page.locator('#clcrInfo')).toContainText(/300[.,]0/);
   await expect(page.locator('#clcrInfo')).toContainText('wymaga powtórnego potwierdzenia');
   await expect(page.locator('#clcrInfo')).toContainText('sam wynik nie rozpoznaje PChN');
 
@@ -138,9 +167,10 @@ test('wstrzymuje kategorię A dla losowego ACR dorosłego', async ({ page }) => 
   await page.locator('#Ucr_spot').fill('100');
   await page.locator('#U_Alb').fill('100');
 
-  await expect(page.locator('#clcrInfo')).toContainText('100.0');
+  await expect(page.locator('#clcrInfo')).toContainText(/100[.,]0/);
   await expect(page.locator('#clcrInfo')).toContainText('kategoria A jest wstrzymana');
-  await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria albuminurii');
+  await expect(page.locator('[data-clcr-series="ACR"]')).toHaveAttribute('data-clcr-category', '');
+  await expect(page.locator('.clcr-result-details[data-clcr-formula="ACR"] [aria-current="true"]')).toHaveCount(0);
 });
 
 test('nie przypisuje kategorii A KDIGO dziecku przed 2. rokiem życia', async ({ page }) => {
@@ -208,7 +238,7 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
   await page.locator('#Ucr_spot').fill('10000');
   await page.locator('#Ucr_spot_unit').selectOption('umol');
 
-  await expect(page.locator('#elecInfo')).toContainText('0.964');
+  await expect(page.locator('#elecInfo')).toContainText(/0[.,]964/);
   await expect(page.locator('#elecInfo')).toContainText('Walton–Bijvoet/Payne');
   await expect(page.locator('#elecInfo')).toContainText('drugi poranny mocz');
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
@@ -218,7 +248,7 @@ test('TmP/GFR dobiera metodę na granicy 19 lat i nie korzysta z DZM', async ({ 
     document.getElementById('V24').value = '1000';
     window.clcrUpdate();
   });
-  await expect(page.locator('#elecInfo')).toContainText('0.964');
+  await expect(page.locator('#elecInfo')).toContainText(/0[.,]964/);
   await expect(page.locator('#elecInfo')).not.toContainText('TmP/GFR (dobowa');
 });
 
@@ -250,7 +280,7 @@ test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('720');
   await page.locator('#collectionStartAt').fill('2026-07-27T08:00');
@@ -268,7 +298,7 @@ test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu
   await page.locator('#clcrDzmQualityGroup summary').click();
   await page.locator('#ui_collectionNoMissedVoids_answer').selectOption('no');
   await expect(page.locator('#clcrReadiness')).toContainText(
-    'warunek protokołu nie został spełniony'
+    'co najmniej jeden warunek nie został spełniony'
   );
   await expect(page.locator('#clcrInfo')).not.toContainText(
     'Zmierzony klirens kreatyniny'
@@ -283,7 +313,7 @@ test('blokuje ilości dobowe przy niepotwierdzonej zbiórce i nie wymaga do nich
   await page.locator('#collectionEndAt').fill('2026-07-28T08:00');
 
   await expect(page.locator('#elecInfo')).toContainText('Nie obliczono wartości /24 h');
-  await expect(page.locator('#elecInfo')).not.toContainText('1000.0 mg/24 h');
+  await expect(page.locator('#elecInfo')).not.toContainText(/1000[.,]0\s*mg\/24\s*h/);
 
   for (const id of [
     'collectionStartVoidDiscarded',
@@ -295,7 +325,7 @@ test('blokuje ilości dobowe przy niepotwierdzonej zbiórce i nie wymaga do nich
   ]) {
     await page.locator(`#${id}`).check();
   }
-  await expect(page.locator('#elecInfo')).toContainText('1000.0 mg/24 h');
+  await expect(page.locator('#elecInfo')).toContainText(/1000[.,]0\s*mg\/24\s*h/);
   await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
 });
 
@@ -305,7 +335,7 @@ test('blokuje CrCl, gdy czas pobrania Scr wypada poza zbiórką', async ({ page 
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setCreatinineState(page, 'stable');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('1440');
   await page.locator('#collectionStartAt').fill('2026-07-27T08:00');

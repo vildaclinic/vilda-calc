@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+async function setMarkerContext(page, value) {
+  const marker = page.locator('[data-clcr-marker-context]');
+  for (const details of await marker.locator('xpath=ancestor::details').all()) {
+    if (await details.getAttribute('open') === null) {
+      await details.locator(':scope > summary').click();
+    }
+  }
+  await marker.selectOption(value);
+}
+
+
 // Faza 6 (twardówka): integralność danych wizyt klirensu.
 //  1) wynik klirensu przeżywa eksport/import karty pacjenta (istniejący mechanizm);
 //  2) wizyta klirensu trafia do WSPÓLNEJ osi czasu pacjenta (timeline + seria lab),
@@ -47,7 +58,7 @@ async function setupPatientWithEgfrVisit(page) {
   await page.locator('#age').fill('54');
   await page.locator('#sex').selectOption('M');
   await page.locator('#Scr').fill('1.1');
-  await page.locator('#creatinineState').selectOption('stable');
+  await setMarkerContext(page, 'stable');
   await page.evaluate(() => window.clcrUpdate());
   await page.locator('#clcrVisitDate').fill('2026-08-01');
   await page.locator('#clcrVisitSaveBtn').click();

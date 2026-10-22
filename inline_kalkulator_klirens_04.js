@@ -447,6 +447,11 @@ function canComputeFormula(e) {
   return n.requires.every((t) => {
         const o = document.getElementById(t);
         if (!o) return !1;
+        if (e === "AGu_spot" && t === "spotSameSpecimen") {
+          return typeof window.ClcrUiWorkflow?.uagSpecimenConfirmed === "function"
+            ? window.ClcrUiWorkflow.uagSpecimenConfirmed()
+            : o.checked || !!document.getElementById("spotPairedChemistry")?.checked;
+        }
         if (o.type === "checkbox") return o.checked;
         if (o.tagName === "SELECT") return o.value !== "" && o.value != null;
         if (o.type === "datetime-local")
@@ -498,6 +503,51 @@ function hideAllClcrResultOutputs(e = {}) {
     }),
     n && ["clcrInfo", "elecInfo", "stoneInfo"].forEach(clearClcrResultElement));
 }
+// Consolidate our own trusted engine markup, without cloning numerical data or
+// parsing displayed numbers. The selected primary remains a direct child so
+// snapshots and the series/history API retain their original anchors.
+function packClcrSupplementaryMarkup(markup, formulaId) {
+  if (!markup || !formulaId || !window.ClcrResultPresentation) return markup;
+  const staging = document.createElement("div");
+  clcrSetTrustedMarkup(staging, markup, "clcr-result-presentation-staging");
+  const nodes = [...staging.children];
+  const primary = nodes.find((node) => node.classList.contains("clcr-result-card") && node.dataset.clcrFormula === formulaId);
+  if (!primary) return markup;
+  const details = nodes.find((node) => node.classList.contains("clcr-result-details") && node.dataset.clcrFormula === formulaId);
+  if (!details) return markup;
+  const source = nodes.find((node) => node.classList.contains("clcr-result-source") && node.dataset.clcrFormula === formulaId);
+  const assumptions = nodes.find((node) => node.classList.contains("clcr-result-assumptions") && node.dataset.clcrFormula === formulaId);
+  const extras = document.createElement("div");
+  extras.className = "clcr-result-extra";
+  nodes.forEach((node) => {
+    const owner = node.dataset.clcrFormula;
+    if (owner && owner !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
+      node.remove();
+    } else if (node !== primary && node !== details && node !== source && node !== assumptions) extras.appendChild(node);
+  });
+  if (extras.childElementCount) details.appendChild(extras);
+  return staging.innerHTML;
+}
+function consolidateClcrEngineOutputs(formulaId) {
+  if (!formulaId || !window.ClcrResultPresentation) return;
+  const containers = [$("clcrInfo"), $("elecInfo"), $("stoneInfo")].filter(Boolean);
+  const primary = containers.flatMap((container) => [...container.children]).find((node) => node.matches(".clcr-result-card") && node.dataset.clcrFormula === formulaId);
+  if (!primary) return;
+  const container = primary.parentElement;
+  const details = [...container.children].find((node) => node.matches(".clcr-result-details") && node.dataset.clcrFormula === formulaId);
+  if (!details) return;
+  let extras = details.querySelector(".clcr-result-extra");
+  containers.filter((other) => other !== container).forEach((other) => {
+    [...other.children].forEach((node) => {
+      if (node.dataset.clcrFormula !== formulaId && node.dataset.clcrComparisonFor !== formulaId) {
+        node.remove();
+        return;
+      }
+      if (!extras) { extras = document.createElement("div"); extras.className = "clcr-result-extra"; details.appendChild(extras); }
+      extras.appendChild(node);
+    });
+  });
+}
 function update() {
   const e = $("fullName").value.trim();
   $("patientName").textContent = e || "";
@@ -519,6 +569,14 @@ function update() {
     cystatinCStandardization =
       $("CystatinCStandardization")?.value || "",
     cystatinCAssayMethod = $("CystatinCAssayMethod")?.value || "";
+  const crCysStandardization =
+    typeof window.ClcrUiWorkflow?.crCysStandardization === "function"
+      ? window.ClcrUiWorkflow.crCysStandardization()
+      : {
+          confirmed: !!$("CrCysStandardizationConfirmed")?.checked,
+          creatinineStandardization: $("CrCysStandardizationConfirmed")?.checked ? "IDMS" : "",
+          cystatinCStandardization: $("CrCysStandardizationConfirmed")?.checked ? "ERM-DA471/IFCC" : "",
+        };
   const creatinineState = $("creatinineState")
       ? $("creatinineState").value
       : "unknown",
@@ -692,8 +750,10 @@ function update() {
       spotUrineBicarbonate,
       spotSerumBicarbonate,
     ),
+    uagSpecimenConfirmed = typeof window.ClcrUiWorkflow?.uagSpecimenConfirmed === "function"
+      ? window.ClcrUiWorkflow.uagSpecimenConfirmed() : sameSpotSpecimen,
     spotUag =
-      spotPairedChemistry &&
+      uagSpecimenConfirmed &&
       window.ClcrClinicalSafety &&
       typeof window.ClcrClinicalSafety.computeUrineAnionGap == "function"
         ? window.ClcrClinicalSafety.computeUrineAnionGap({
@@ -820,6 +880,76 @@ function update() {
           protocol: collectionProtocol,
         })
       : null;
+  function renderResultCard(input) {
+    const presenter = window.ClcrResultPresentation;
+    const referenceProfile = window.ClcrResultReferenceData?.PROFILE;
+    if (!presenter || !referenceProfile) return null;
+    const formulaId = input.formulaId || input.series || "";
+    const ageYears = o ? t : null;
+    let presentation = input.presentation || null;
+    if (!presentation && referenceProfile.gfrFormulaIds.includes(formulaId)) {
+      if (["egfr", "ckid_u25", "sch_idms"].includes(formulaId)) {
+        presentation = window.ClcrClinicalSafety.egfrPresentation({
+          value: input.value, age: ageYears,
+          assay: populationContext.scrAssay, markerPolicy: creatinineContext,
+        });
+        if (presentation.state === "limited") {
+          presentation = { ...presentation, label: "Szacowany eGFR — ocena ograniczona" };
+        }
+      } else {
+        const requiresCreatinine = formulaId !== "ckid_u25_cys";
+        const assayEligible = formulaId === "egfr_cr_cys"
+          ? crCysStandardization.confirmed
+          : !requiresCreatinine || ["enzymatic_idms", "jaffe_idms"].includes(populationContext.scrAssay);
+        const cystatinEligible = formulaId === "egfr_cr_cys"
+          ? crCysStandardization.cystatinCStandardization === "ERM-DA471/IFCC"
+          : cystatinCStandardization === "ERM-DA471/IFCC";
+        const markerEligible = creatinineContext.categoryAllowed && assayEligible && cystatinEligible;
+        const category = markerEligible && ageYears !== null && ageYears >= 2
+          ? window.ClcrClinicalSafety.kdigoGCategory(input.value) : null;
+        const row = referenceProfile.gfr.rows.find((entry) => entry.code === category?.code);
+        presentation = {
+          valueVisible: creatinineContext.calculationAllowed,
+          category, tone: row?.tone || "neutral",
+          label: category ? row.meaning : formulaId === "egfr_cr_cys" && creatinineContext.status === "unknown"
+            ? "Nie potwierdzono stabilności markerów."
+            : "Szacowany eGFR — ocena ograniczona",
+          reasons: markerEligible ? [] : ["Nie potwierdzono wszystkich warunków interpretacji: stabilności markerów lub zgodności oznaczeń. Nie nadano kategorii G."],
+        };
+      }
+    } else if (!presentation && formulaId === "ACR") {
+      const eligible = ageYears !== null && ageYears >= 2 && spotSampleKind === "firstMorning" && spotConfounders.length === 0;
+      const category = eligible ? window.ClcrClinicalSafety.kdigoACategory(input.value) : null;
+      const row = referenceProfile.acr.rows.find((entry) => entry.code === category?.code);
+      presentation = {
+        category, tone: row?.tone || "neutral",
+        label: row?.meaning || "Wskaźnik albumina/kreatynina — ocena ograniczona",
+        reasons: eligible ? [] : ["Do klasyfikacji ACR potrzebny jest właściwy wiek, pierwsza poranna próbka i brak czynników przejściowych. Nie nadano kategorii A."],
+      };
+    } else if (!presentation && formulaId === "PCR") {
+      const thresholds = window.ClcrClinicalSafety.pediatricUrineRatioThresholds(ageYears);
+      const eligible = thresholds?.pcrMgG != null && spotSampleKind === "firstMorning" && spotConfounders.length === 0;
+      const raised = eligible && input.value >= thresholds.pcrMgG;
+      const nephrotic = eligible && thresholds.nephroticPcrMgG != null && input.value >= thresholds.nephroticPcrMgG;
+      presentation = {
+        classified: !!eligible, tone: eligible ? (nephrotic ? "danger" : raised ? "warning" : "success") : "neutral",
+        label: eligible ? (nephrotic ? "Białkomocz w zakresie nerczycowym" : raised ? "Zwiększony dla wieku" : "Poniżej progu dla wieku") : "Wskaźnik białko/kreatynina",
+        reasons: eligible ? ["Sam PCR nie rozpoznaje zespołu nerczycowego ani przyczyny białkomoczu."] : ["Nie zastosowano pediatrycznego progu bez właściwego wieku i pierwszej porannej próbki."],
+      };
+    } else if (!presentation && ["cg", "cg_norm", "cl24"].includes(formulaId)) {
+      presentation = {
+        label: formulaId === "cl24" ? "Zmierzony klirens kreatyniny" : "Oszacowany klirens kreatyniny",
+        tone: "neutral", reasons: ["To klirens kreatyniny, nie eGFR.", ...(creatinineContext.status === "unknown" ? [creatinineContext.message] : [])],
+      };
+    }
+    return presenter.render({
+      ...input, formulaId, presentation: presentation || { label: input.label, tone: "neutral" },
+      ageYears, markerPolicy: creatinineContext, assay: populationContext.scrAssay,
+      creatinineStandardization: formulaId === "egfr_cr_cys" ? crCysStandardization.creatinineStandardization : "",
+      cystatinStandardization: formulaId === "egfr_cr_cys" ? crCysStandardization.cystatinCStandardization : cystatinCStandardization,
+      sampleKind: spotSampleKind, confounders: spotConfounders,
+    }, referenceProfile);
+  }
   let le = "";
   W &&
     (le += `<div class="result-box"><strong>Powierzchnia cia\u0142a (${clcrEscapeHtml(bsaMethod)})</strong> ${W.toFixed(2)}\u202Fm\xB2</div>`);
@@ -914,7 +1044,11 @@ function update() {
     ckdEpiCrCysResult =
       extendedEgfr &&
       typeof extendedEgfr.computeCkdEpi2021CrCys === "function"
-        ? extendedEgfr.computeCkdEpi2021CrCys(extendedEgfrInput)
+        ? extendedEgfr.computeCkdEpi2021CrCys({
+            ...extendedEgfrInput,
+            creatinineStandardization: crCysStandardization.creatinineStandardization,
+            cystatinCStandardization: crCysStandardization.cystatinCStandardization,
+          })
         : null,
     ckidU25CysResult =
       extendedEgfr &&
@@ -1034,6 +1168,7 @@ function update() {
             "egfr_cr_cys",
             "ckid_u25_cys",
             "ckid_u25_cr_cys",
+            "sch",
           ].includes(de) &&
           window.ClcrClinicalSafety &&
           typeof window.ClcrClinicalSafety.formatGfrForDisplay == "function"
@@ -1060,6 +1195,88 @@ function update() {
       const seriesAttr = Sk
         ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${w}"`
         : "";
+      if (Sk) {
+        const card = renderResultCard({
+          formulaId: Vt || de || Sk, code: de, series: Sk,
+          value: w, displayValue, unit: Z, label: r,
+          boundary: (acrDisplay || (o && t >= 2 ? gfrDisplay : null))?.crossesCategoryBoundary ? (gfrDisplay || acrDisplay).raw : "",
+        });
+        if (card !== null) { S += card; return; }
+      }
+      if (l === "cg" && de === "cg" && Sk === "cg") {
+        const markerNote = creatinineContext.status === "unknown"
+          ? '<p class="clcr-egfr-note">Nie potwierdzono stabilności kreatyniny — wynik orientacyjny.</p>'
+          : "";
+        S += `<div class="result-box clcr-egfr-result clcr-cg-result"
+          data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}
+          data-clcr-tone="neutral"
+          data-clcr-display-value="${clcrEscapeHtml(displayValue)}"
+          data-clcr-display-unit="${clcrEscapeHtml(Z.trim())}"
+          data-clcr-display-label="Cockcroft–Gault · masa rzeczywista"
+          data-clcr-status="Oszacowany klirens kreatyniny">
+          <div class="clcr-egfr-result-heading">
+            <strong class="clcr-egfr-status">Oszacowany klirens kreatyniny</strong>
+          </div>
+          <div class="clcr-egfr-number">
+            <span class="clcr-egfr-value">${displayValue}</span>
+            <span class="clcr-egfr-unit">${Z.trim()}</span>
+          </div>
+          <div class="clcr-egfr-formula">Cockcroft–Gault · masa rzeczywista</div>
+          ${markerNote}
+        </div>`;
+        return;
+      }
+      if (
+        ["egfr", "ckid_u25"].includes(de) &&
+        typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
+      ) {
+        const presentation = window.ClcrClinicalSafety.egfrPresentation({
+          value: w,
+          age: t,
+          assay: populationContext.scrAssay,
+          markerPolicy: creatinineContext,
+        });
+        if (!presentation.valueVisible) return;
+        const category = presentation.category;
+        const abnormal = ["warning", "danger"].includes(presentation.tone);
+        const categoryBadge = category
+          ? `<span class="clcr-egfr-category">${clcrEscapeHtml(category.code)}</span>`
+          : "";
+        const categoryDescription = category
+          ? `<p class="clcr-egfr-category-description">Kategoria GFR wg KDIGO: ${clcrEscapeHtml(category.label)}</p>`
+          : "";
+        const reasons = presentation.reasons.map(
+          (reason) => `<p class="clcr-egfr-note">${clcrEscapeHtml(reason)}</p>`,
+        ).join("");
+        const pediatricNote = category && t >= 2 && t < 18 && w < 90
+          ? '<p class="clcr-egfr-note">eGFR &lt;90 mL/min/1,73 m² u dziecka w wieku co najmniej 2 lat jest wartością niską i wymaga oceny w pełnym kontekście klinicznym; pojedynczy wynik nie rozpoznaje CKD.</p>'
+          : "";
+        const boundary = category && gfrDisplay?.crossesCategoryBoundary
+          ? gfrDisplay.raw
+          : "";
+        S += `<div class="result-box clcr-egfr-result${abnormal ? " out-of-range" : ""}"
+          data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}
+          data-clcr-tone="${presentation.tone}"
+          data-clcr-display-value="${clcrEscapeHtml(displayValue)}"
+          data-clcr-display-unit="${clcrEscapeHtml(Z.trim())}"
+          data-clcr-display-label="${clcrEscapeHtml(r)}"
+          data-clcr-status="${clcrEscapeHtml(presentation.label)}"
+          data-clcr-category="${category ? category.code : ""}"
+          data-clcr-boundary="${clcrEscapeHtml(boundary)}">
+          <div class="clcr-egfr-result-heading">
+            <strong class="clcr-egfr-status">${clcrEscapeHtml(presentation.label)}</strong>
+            ${categoryBadge}
+          </div>
+          <div class="clcr-egfr-number">
+            <span class="clcr-egfr-value">${displayValue}</span>
+            <span class="clcr-egfr-unit">${Z.trim()}</span>
+          </div>
+          ${category ? calculationDetail : ""}
+          <div class="clcr-egfr-formula">eGFR · ${clcrEscapeHtml(r)}</div>
+          ${categoryDescription}${reasons}${pediatricNote}
+        </div>`;
+        return;
+      }
       S += `<div class="result-box${at ? "" : " out-of-range"}" data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}><strong>${r}:</strong> ${displayValue}${Z}${calculationDetail}${lt}</div>`;
     }
     function T(r = {}) {
@@ -1093,9 +1310,11 @@ function update() {
             w &&
             isFiniteNum(w.value) &&
             creatinineContext.categoryAllowed &&
-            (w.requiresCreatinine !== true ||
+            (w.formulaId === "egfr_cr_cys" ? crCysStandardization.confirmed :
+              w.requiresCreatinine !== true ||
               creatinineAssayEligible) &&
-            (w.requiresCystatin !== true ||
+            (w.formulaId === "egfr_cr_cys" ? crCysStandardization.confirmed :
+              w.requiresCystatin !== true ||
               cystatinAssayEligible) &&
             t >= 2,
         ),
@@ -1107,12 +1326,17 @@ function update() {
           t >= 2 &&
           spotSampleKind === "firstMorning" &&
           spotConfounders.length === 0;
-      r.includeBsa !== !1 &&
-        W &&
-        (S =
-          `<div class="result-box"${bsaFormulaId ? ` data-clcr-formula="${clcrEscapeHtml(bsaFormulaId)}"` : ""}><strong>Powierzchnia cia\u0142a (${clcrEscapeHtml(bsaMethod)})</strong> ${W.toFixed(2)}\u202Fm\xB2</div>` +
-          S);
+      if (r.includeBsa !== !1 && W) {
+        const bsaMarkup = `<div class="result-box"${bsaFormulaId ? ` data-clcr-formula="${clcrEscapeHtml(bsaFormulaId)}"` : ""}><strong>Powierzchnia cia\u0142a (${clcrEscapeHtml(bsaMethod)})</strong> ${W.toFixed(2)}\u202Fm\xB2</div>`;
+        if (["egfr", "ckid_u25"].includes(l)) {
+          S += `<details class="clcr-egfr-result-details" data-clcr-formula="${clcrEscapeHtml(bsaFormulaId)}"><summary>Powierzchnia ciała — szczegóły</summary>${bsaMarkup}</details>`;
+        } else S = bsaMarkup + S;
+      }
       validGEntries.forEach((entry) => {
+        if (
+          ["egfr", "ckid_u25"].includes(entry.formulaId) &&
+          typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
+        ) return;
         const w =
           window.ClcrClinicalSafety &&
           typeof window.ClcrClinicalSafety.kdigoGCategory == "function"
@@ -1128,7 +1352,10 @@ function update() {
       if (t >= 2 && t < 18) {
         const warnedFormulaIds = new Set();
         validGEntries
-          .filter((entry) => entry.value < 90)
+          .filter((entry) => entry.value < 90 && !(
+            ["egfr", "ckid_u25"].includes(entry.formulaId) &&
+            typeof window.ClcrClinicalSafety?.egfrPresentation === "function"
+          ))
           .forEach((entry) => {
             const formulaId = entry.formulaId || "ckid_u25";
             if (warnedFormulaIds.has(formulaId)) return;
@@ -1162,6 +1389,10 @@ function update() {
     function appendCgContext() {
       if (cgContextRendered) return;
       cgContextRendered = !0;
+      if (l === "cg") {
+        S += '<details class="clcr-egfr-result-details clcr-cg-limitations" data-clcr-formula="cg"><summary>Ograniczenia i źródła</summary><p>Użyto rzeczywistej masy ciała. Otyłość, niedowaga, obrzęki lub nietypowa masa mięśniowa mogą zmniejszać wiarygodność oszacowania. Wzór opracowano przed standaryzacją oznaczeń kreatyniny.</p><p><a href="https://doi.org/10.1159/000180580" target="_blank" rel="noopener noreferrer">Cockcroft i Gault, 1976</a> · <a href="https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf#page=134" target="_blank" rel="noopener noreferrer">KDIGO 2024, §4.2, S249</a></p></details>';
+        return;
+      }
       S +=
         '<div class="result-box warn-yellow" data-clcr-formula="cg"><strong>Założenie Cockcrofta–Gaulta:</strong> użyto podanej rzeczywistej masy ciała. W otyłości, niedowadze, obrzękach lub przy nietypowej masie mięśniowej potrzebna jest jawna polityka masy. To eCrCl, nie eGFR; dawkowanie należy sprawdzić w informacji o konkretnym leku i jego badanej populacji.</div>';
     }
@@ -1362,7 +1593,7 @@ function update() {
               "ckid_u25",
             );
             S +=
-              '<div class="result-box warn-yellow" data-clcr-formula="ckid_u25"><strong>Profil CKiD U25:</strong> równanie opracowano głównie u dzieci i młodych osób z łagodną lub umiarkowaną CKD. Przy wysokim/prawidłowym GFR może zaniżać wynik; trend i kontekst kliniczny są ważniejsze niż pojedyncza liczba.</div>';
+              '<div class="result-box warn-yellow" data-clcr-formula="ckid_u25"><strong>Profil CKiD U25:</strong> równanie opracowano głównie u dzieci i młodych osób z łagodną lub umiarkowaną CKD. Przy wyższych wartościach GFR niepewność oszacowania wymaga uwzględnienia trendu i pełnego kontekstu klinicznego.</div>';
           }
           if (m.ckid_u25 != null && t >= 18 && t < 26) {
             S +=
@@ -1584,12 +1815,18 @@ function update() {
             '<div class="result-box warn-yellow" data-clcr-formula="ckid_u25_cys"><strong>Porównanie w wieku 18–25 lat:</strong> kalkulator nie implementuje dorosłego równania opartego wyłącznie na cystatynie C. Nie porównano CKiD U25 eGFRcys z równaniem łączonym eGFRcr‑cys, ponieważ używają różnych zestawów markerów.</div>';
         }
         if (transitionAge) {
-          transitionPartner && L(transitionPartner);
+          if (transitionPartner) {
+            const selectedMarkup = S;
+            S = "";
+            L(transitionPartner);
+            const comparisonMarkup = S;
+            S = selectedMarkup + (comparisonMarkup ? `<div data-clcr-comparison-for="${clcrEscapeHtml(l)}">${comparisonMarkup}</div>` : "");
+          }
           if (
             transitionPartner &&
             !isFiniteNum(formulaMeta[transitionPartner]?.value)
           ) {
-            S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(transitionPartner)}"><strong>Porównanie w wieku 18\u201125 lat niekompletne:</strong> NIDDK zaleca ocenę wyniku U25 razem z odpowiednim kalkulatorem dla dorosłych; uzupełnij wymagane markery, wzrost i metadane oznaczeń.</div>`;
+            S += `<div class="result-box warn-yellow" data-clcr-formula="${clcrEscapeHtml(l)}"><strong>Porównanie w wieku 18\u201125 lat niekompletne:</strong> NIDDK zaleca ocenę wyniku U25 razem z odpowiednim kalkulatorem dla dorosłych; uzupełnij wymagane markery, wzrost i metadane oznaczeń.</div>`;
           }
         }
         const selectedEntry = {
@@ -1724,9 +1961,7 @@ function update() {
               label: "2021 CKD\u2011EPI eGFRcr\u2011cys",
               requiresCreatinine: true,
               requiresCystatin: true,
-              markerEligible:
-                automaticCreatinineEligible &&
-                automaticCystatinEligible,
+              markerEligible: crCysStandardization.confirmed,
             },
           {
             value: m.egfr,
@@ -1775,7 +2010,11 @@ function update() {
     if (
       d &&
       creatinineEstimateShown &&
-      populationContext.scrAssay !== "enzymatic_idms"
+      !["cg", "cg_norm"].includes(l) &&
+      !(l === "egfr_cr_cys" && crCysStandardization.confirmed) &&
+      populationContext.scrAssay !== "enzymatic_idms" &&
+      (!["egfr", "ckid_u25"].includes(l) ||
+        populationContext.scrAssay === "jaffe_idms")
     ) {
       const assayMessage =
         populationContext.scrAssay === "jaffe_idms"
@@ -1789,6 +2028,7 @@ function update() {
       creatinineContext.status === "unknown" &&
       d &&
       (!l || selectedCreatinineFormula) &&
+      !["egfr", "ckid_u25", "cg"].includes(l) &&
       selectedSafety.eligible
     ) {
       const r = l || (t < 18 ? "ckid_u25" : "egfr");
@@ -1810,7 +2050,7 @@ function update() {
       S +=
         '<div class="result-box warn-yellow" data-clcr-formula="ckid_u25_cys"><strong>Nie obliczono eGFR z cystatyną C:</strong> wymagane jest potwierdzenie identyfikowalności oznaczenia do ERM-DA471/IFCC.</div>';
     }
-    le = S;
+    le = packClcrSupplementaryMarkup(S, l);
   })();
   const $e = document.getElementById("formulaPicker"),
     _e = ($e && $e.value) || "",
@@ -2054,6 +2294,11 @@ function update() {
     const Sa = Sk
       ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${l}"`
       : "";
+    if (Sk) {
+      const formulaId = ["Prot_mg24", "Prot_g24", "Prot_bsa"].includes(Sk) ? "Prot_mgkg" : (S || Sk);
+      const card = renderResultCard({ formulaId, code: S || Sk, series: Sk, value: l, displayValue: l.toFixed(L), unit: u, label: q });
+      if (card !== null) { ve += card; return; }
+    }
     ve += `<div class="result-box${m ? "" : " out-of-range"}"${Sa}><strong>${q}:</strong> ${l.toFixed(L)} ${u}${V}</div>`;
   }
   (y("Wydalanie kwasu moczowego", kt, "mg/kg/24 h", "UA_mgkg", "UA_mgkg"),
@@ -2154,7 +2399,9 @@ function update() {
         FEHCO3_spot: "FEHCO\u2083",
         AGu_spot: "UAG",
       }[_e] || "FE/UAG";
-  if (spotChemistryRequested && !spotPairedChemistry) {
+  if (_e === "AGu_spot" && !uagSpecimenConfirmed) {
+    ve += '<div class="result-box warn-yellow" data-clcr-formula="AGu_spot"><strong>Nie obliczono UAG:</strong> potwierdź, że sód, potas i chlorki pochodzą z tej samej próbki moczu.</div>';
+  } else if (spotChemistryRequested && _e !== "AGu_spot" && !spotPairedChemistry) {
     ve +=
       '<div class="result-box warn-yellow"><strong>Nie obliczono FE/UAG:</strong> potwierdź, że anality i kreatynina pochodzą z tej samej próbki moczu, a krew pobrano równocześnie.</div>';
   } else if (selectedSpotChemistryMissing) {
@@ -2228,7 +2475,13 @@ function update() {
         tmpValueMg = tmpGfrResult.tmpGfrMgDl.toFixed(2),
         trpPct = (tmpGfrResult.trp * 100).toFixed(1),
         fePct = (tmpGfrResult.fePo4 * 100).toFixed(1);
-      ve += `<div class="result-box" data-clcr-formula="TMP_GFR" data-clcr-series="TMP_GFR" data-clcr-value="${tmpGfrResult.tmpGfrMmolL}"><strong>TmP/GFR:</strong> ${tmpValueMmol}\u202Fmmol/L (${tmpValueMg}\u202Fmg/dL)</div>`;
+      const tmpCard = renderResultCard({
+        formulaId: "TMP_GFR", code: "TMP_GFR", series: "TMP_GFR", value: tmpGfrResult.tmpGfrMmolL,
+        displayValue: tmpValueMmol, unit: "mmol/L", label: "TmP/GFR",
+        detailHtml: `<p>Jednostka alternatywna: ${tmpValueMg} mg/dL. TRP: ${trpPct}%. FEPO₄: ${fePct}%. Metoda: ${clcrEscapeHtml(branchLabel)}.</p>`,
+      });
+      if (tmpCard !== null) ve += tmpCard;
+      else ve += `<div class="result-box" data-clcr-formula="TMP_GFR" data-clcr-series="TMP_GFR" data-clcr-value="${tmpGfrResult.tmpGfrMmolL}"><strong>TmP/GFR:</strong> ${tmpValueMmol}\u202Fmmol/L (${tmpValueMg}\u202Fmg/dL)</div>`;
       ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>TRP:</strong> ${trpPct}%</div>`;
       ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>FEPO\u2084:</strong> ${fePct}%</div>`;
       ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>Metoda:</strong> ${branchLabel}</div>`;
@@ -2238,7 +2491,7 @@ function update() {
         '<div class="result-box warn-yellow" data-clcr-formula="TMP_GFR"><strong>Interpretacja:</strong> wynik należy oceniać łącznie z fosforem w surowicy, wiekiem, funkcją nerek i metodą laboratoryjną. Kalkulator nie stosuje automatycznych zakresów ani rozpoznania nerkowej utraty fosforanów.</div>';
     }
   }
-  (clcrSetTrustedMarkup($("elecInfo"), ve, "electrolyte result html"),
+  (clcrSetTrustedMarkup($("elecInfo"), packClcrSupplementaryMarkup(ve, _e), "electrolyte result html"),
     ($("elecCard").style.display = ve ? "block" : "none"));
   let he = "";
   const stoneEngine = window.ClcrStoneSafety,
@@ -2329,13 +2582,39 @@ function update() {
         "Cit_Cr_spot",
         "U_pH",
       ].some(stoneFieldProvided);
-  function appendStoneValue(label, valueMarkup, cssClass = "", Sk, Sv) {
+  function appendStoneValue(label, valueMarkup, cssClass = "", Sk, Sv, options = {}) {
     if (!valueMarkup) return;
     const Sa =
       Sk && isFiniteNum(Sv)
         ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${Sv}"`
         : "";
-    he += `<div class="result-box${cssClass ? ` ${cssClass}` : ""}"${Sa}><strong>${clcrEscapeHtml(label)}:</strong> ${valueMarkup}</div>`;
+    if (Sk && isFiniteNum(Sv)) {
+      const units = { CaCr_spot: "mg/mg", OxCr_spot: "mg/mg", CitCr_spot: "mg/mg", pH_spot: "", pH24: "" };
+      const digits = ["pH_spot", "pH24"].includes(Sk) ? 2 : 3;
+      const interpreted = options.interpretation;
+      const presentation = interpreted?.ok && interpreted.status !== "contextOnly" ? {
+        tone: ["attention", "high", "low", "belowGoal", "aboveGoal"].includes(interpreted.status) ? "warning" : interpreted.status === "urgentAttention" ? "danger" : "success",
+        label: interpreted.code === "notBelowPediatricCacrLimit" ? "Zwiększony dla wieku" : interpreted.code === "belowPediatricCacrLimit" ? "Poniżej progu dla wieku" : interpreted.status === "goalMet" ? "Cel osiągnięty" : interpreted.status === "belowGoal" ? "Poniżej celu" : interpreted.status === "aboveGoal" ? "Powyżej celu" : "Wynik wymaga oceny w kontekście klinicznym",
+        reasons: [interpreted.message],
+      } : { label, tone: "neutral", reasons: interpreted?.message ? [interpreted.message] : [] };
+      const stoneDisplayValue = formatStoneThresholdSafe(Sv, digits, interpreted);
+      const massLimit = interpreted?.exactMassEquivalentMgMg;
+      let boundary = "";
+      if (Sk === "CaCr_spot" && isFiniteNum(massLimit)) {
+        const rounded = Number(stoneDisplayValue);
+        if (Sv < massLimit && rounded >= massLimit) boundary = `<${massLimit.toPrecision(6)}`;
+        if (Sv >= massLimit && rounded < massLimit) boundary = `≥${massLimit.toPrecision(6)}`;
+      }
+      const card = renderResultCard({
+        formulaId: Sk, code: Sk, series: Sk, value: Sv, boundary,
+        displayValue: stoneDisplayValue, unit: units[Sk] || "", label,
+        presentation, referenceContext: { stone: interpreted },
+        detailHtml: `<p>${clcrEscapeHtml(label)}: ${valueMarkup}</p>`,
+      });
+      if (card !== null) { he += card; return; }
+    }
+    const formulaId = options.formulaId || Sk;
+    he += `<div class="result-box${cssClass ? ` ${cssClass}` : ""}"${Sa}${formulaId ? ` data-clcr-formula="${clcrEscapeHtml(formulaId)}"` : ""}><strong>${clcrEscapeHtml(label)}:</strong> ${valueMarkup}</div>`;
   }
   function appendStoneDzmValue(label, conversion, options = {}) {
     if (!conversion) return;
@@ -2344,6 +2623,7 @@ function update() {
         `${label} \u2014 nie obliczono`,
         clcrEscapeHtml(conversion.message || "Nieprawidłowe dane DZM."),
         "warn-yellow",
+        null, null, options,
       );
       return;
     }
@@ -2358,6 +2638,7 @@ function update() {
     appendStoneValue(
       label,
       `${mmolDisplay} mmol/24 h (${conversion.totalMg24.toFixed(mgDigits)} ${clcrEscapeHtml(massLabel)})`,
+      "", null, null, options,
     );
   }
   function formatStoneThresholdSafe(
@@ -2435,12 +2716,13 @@ function update() {
         ? "warn-yellow"
         : "";
   }
-  function appendStoneInterpretation(label, result) {
+  function appendStoneInterpretation(label, result, formulaId) {
     if (!result) return;
     appendStoneValue(
       result.ok ? label : `${label} \u2014 interpretacja wstrzymana`,
       clcrEscapeHtml(result.message || ""),
       stoneStatusClass(result),
+      null, null, { formulaId },
     );
   }
   if (stoneVersionActive) {
@@ -2567,6 +2849,7 @@ function update() {
         cystine: "Cystyna w DZM",
       };
       appendStoneDzmValue(labels[key], conversion, {
+        formulaId: { calcium: "Ca_mgkg", magnesium: "Mg_mgkg", uricAcid: "UA_mgkg", phosphorus: "PO4_mgkg", oxalate: "Ox_mgkg", citrate: "Cit_mgkg", cystine: "stone-cystine" }[key],
         interpretation: adultInterpretationByKey[key],
         massLabel:
           key === "phosphorus"
@@ -2601,6 +2884,7 @@ function update() {
           3,
           pediatricCaCr,
         )} mol/mol)`, "", "CaCr_spot", spotCalciumCreatinineMgMg,
+        { interpretation: pediatricCaCr },
       );
     } else if (
       stoneFieldProvided("Ca_spot") ||
@@ -2610,6 +2894,7 @@ function update() {
         "Ca/Cr \u2014 nie obliczono",
         "Wapń i kreatynina muszą pochodzić z tej samej próbki, a kreatynina musi być większa od 0.",
         "warn-yellow",
+        null, null, { formulaId: "CaCr_spot" },
       );
     }
     const spotOxalate = readClcrOptionalNumber("Ox_Cr_spot"),
@@ -2653,6 +2938,7 @@ function update() {
         "Ox/Cr \u2014 nie obliczono",
         "Wybierz z wyniku laboratorium, czy masa oznacza kwas szczawiowy, czy jon szczawianowy.",
         "warn-yellow",
+        null, null, { formulaId: "OxCr_spot" },
       );
     }
     if (
@@ -2702,6 +2988,7 @@ function update() {
       appendStoneValue(
         "pH czasowej zbiórki",
         formatStoneThresholdSafe(we, 2, adultStone && adultStone.ph), "", "pH24", we,
+        { interpretation: adultStone && adultStone.ph },
       );
     if (
       isFiniteNum(we) &&
@@ -2750,21 +3037,21 @@ function update() {
     }
     if (adultStone) {
       [
-        ["Wapń", adultStone.calcium],
-        ["Magnez", adultStone.magnesium],
-        ["Kwas moczowy", adultStone.uricAcid],
-        ["Szczawiany", adultStone.oxalate],
-        ["Cytryniany", adultStone.citrate],
-        ["Fosfor nieorganiczny (P\u1D62)", adultStone.inorganicPhosphorus],
-        ["Cystyna", adultStone.cystine],
-        ["Cel objętości moczu", adultStone.urineVolume],
-        ["Profil pH", adultStone.ph],
-      ].forEach(([label, interpretation]) =>
-        appendStoneInterpretation(label, interpretation),
+        ["Wapń", adultStone.calcium, "Ca_mgkg"],
+        ["Magnez", adultStone.magnesium, "Mg_mgkg"],
+        ["Kwas moczowy", adultStone.uricAcid, "UA_mgkg"],
+        ["Szczawiany", adultStone.oxalate, "Ox_mgkg"],
+        ["Cytryniany", adultStone.citrate, "Cit_mgkg"],
+        ["Fosfor nieorganiczny (P\u1D62)", adultStone.inorganicPhosphorus, "PO4_mgkg"],
+        ["Cystyna", adultStone.cystine, "stone-cystine"],
+        ["Cel objętości moczu", adultStone.urineVolume, "stone-volume"],
+        ["Profil pH", adultStone.ph, "pH24"],
+      ].forEach(([label, interpretation, formulaId]) =>
+        appendStoneInterpretation(label, interpretation, formulaId),
       );
     } else if (o && t < 18) {
-      appendStoneInterpretation("Wapń w DZM \u2014 pediatria", pediatricCa24);
-      appendStoneInterpretation("Ca/Cr \u2014 pediatria", pediatricCaCr);
+      appendStoneInterpretation("Wapń w DZM \u2014 pediatria", pediatricCa24, "Ca_mgkg");
+      appendStoneInterpretation("Ca/Cr \u2014 pediatria", pediatricCaCr, "CaCr_spot");
       if (
         stoneDzm.magnesium ||
         stoneDzm.uricAcid ||
@@ -2817,7 +3104,7 @@ function update() {
         let u = "";
         (he && (u += he),
           be && (he && (u += "<hr>"), (u += be)),
-          clcrSetTrustedMarkup(i, u, "stone result html"),
+          clcrSetTrustedMarkup(i, packClcrSupplementaryMarkup(u, _e), "stone result html"),
           (l.style.display = "block"));
       } else (clcrClearElement(i), (l.style.display = "none"));
   }
@@ -2895,6 +3182,7 @@ function update() {
         ktvInterpretation = $("ktvInterpretation");
       CLCR_KTV_RESULT_IDS.map((id) => $(id)).forEach((L) => {
         if (!L) return;
+        L.hidden = false;
         try {
           clcrClearElement(L);
         } catch {
@@ -3000,6 +3288,52 @@ function update() {
           }
           ktvInterpretation.style.display = "block";
         }
+        if (window.ClcrResultPresentation && window.ClcrResultReferenceData) {
+          const warnings = [...(result.messages.warnings || []), ...(result.messages.info || [])];
+          const detailHtml = warnings.map((entry) => `<p>${clcrEscapeHtml(entry.message || "")}</p>`).join("");
+          function writeDialysisCard(element, series, value, displayValue, label, classification) {
+            if (!element || !isFiniteNum(value)) return;
+            const tone = classification?.code === "BELOW_MINIMUM" ? "danger" : classification?.code === "MINIMUM_MET_BELOW_TARGET" ? "warning" : classification?.code === "TARGET_MET" ? "success" : "neutral";
+            const unit = series === "KTV_urr" ? "%" : "bez jednostki";
+            const metricMethodHtml = series === "KTV_spktv"
+              ? `<p>GFAC ${result.values.gfac.toFixed(4)}; ${result.metadata.sessionsPerWeek}×/tydz.; PIDI ${result.metadata.pidiDays} d. Wynik pojedynczej sesji.</p>`
+              : series === "KTV_ektv" && result.metadata.eKtVMethod
+                ? `<p>Dostęp ${clcrEscapeHtml(result.metadata.eKtVMethod.access)}; T w minutach; C=${result.metadata.eKtVMethod.constantMinutes} min.</p>`
+                : "<p>URR jest wskaźnikiem pomocniczym i nie zastępuje spKt/V.</p>";
+            const numericDisplay = Number(displayValue);
+            const profile = window.ClcrResultReferenceData.PROFILE;
+            const thresholds = series === "KTV_spktv" ? profile.dialysis.spKtV : series === "KTV_urr" ? profile.dialysis.urr : null;
+            let boundary = "";
+            if (classification && thresholds) {
+              if (value < thresholds.minimum && numericDisplay >= thresholds.minimum) boundary = `<${thresholds.minimum}`;
+              else if (value < thresholds.target && numericDisplay >= thresholds.target) boundary = `<${thresholds.target}`;
+            }
+            const card = renderResultCard({
+              formulaId: "KTV", code: series, value, displayValue, unit, label, boundary,
+              presentation: { label: classification?.label || label, tone },
+              referenceContext: {
+                dialysisEligible: result.classification.interpretationAllowed === true,
+                durationMinutes: result.metadata.durationHours * 60,
+              },
+              detailHtml: metricMethodHtml + detailHtml,
+            });
+            if (card === null) return;
+            clcrSetTrustedMarkup(element, card, "dialysis result presentation");
+            element.classList.remove("result-box", "out-of-range", "warn-yellow");
+            element.classList.add("clcr-result-metric");
+            element.setAttribute("data-clcr-formula", "KTV");
+            element.setAttribute("data-clcr-series", series);
+            element.setAttribute("data-clcr-value", String(value));
+            element.setAttribute("data-clcr-display-value", String(displayValue));
+            element.setAttribute("data-clcr-display-unit", unit);
+            element.setAttribute("data-clcr-display-label", label);
+            element.setAttribute("data-clcr-status", classification?.label || label);
+          }
+          writeDialysisCard(ktvResult, "KTV_spktv", result.values.spKtV, result.display.spKtV, "spKt/V — dawka pojedynczej sesji", result.classification.spKtV);
+          writeDialysisCard(ektvResult, "KTV_ektv", result.values.eKtV, result.display.eKtV, "Szacowane eKt/V", null);
+          writeDialysisCard(urrResult, "KTV_urr", result.values.urrPct, result.display.urrPct, "URR — redukcja mocznika", result.classification.urr);
+          if (ktvInterpretation) ktvInterpretation.hidden = true;
+        }
       }
     } else
       CLCR_KTV_RESULT_IDS.forEach((i) => {
@@ -3017,6 +3351,9 @@ function update() {
     const i = document.getElementById("clearContainer");
     i && (i.style.display = "block");
   }
+  consolidateClcrEngineOutputs(_e);
+  window.ClcrResultPresentation?.bindCategoryControls(document);
+  window.ClcrLayout?.refresh?.();
   typeof syncClcrReportVisibility == "function" && syncClcrReportVisibility();
 }
 try {
@@ -3584,6 +3921,7 @@ function resetApp(e = !0) {
     "ScrAssay",
     "creatinineState",
     "suspectedAKI",
+    "CrCysStandardizationConfirmed",
   ].forEach((c) => {
     const f = document.getElementById(c);
     f && (o[c] = f.type === "checkbox" ? f.checked : f.value);

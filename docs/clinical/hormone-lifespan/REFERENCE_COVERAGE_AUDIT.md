@@ -40,6 +40,26 @@ i jego hashe pozostają zapisem ówczesnego stanu, nie testem nowej wersji.
 [Kontrakt i granice](PATIENT_POINT.md#żeńska-inhibina-b--dalszy-odczyt-do-4775-roku-21-października-2026),
 [odczyt źródła i kalibracja](evidence/patient-point/borelli2025-female-inhb-post47-digitized.json).
 
+Uzupełnienie 22.10.2026: po ujawnieniu ograniczeń Kulle 2024 właściciel
+zaakceptował jeden edukacyjny profil E2/Th1. Bieżący rejestr liczy
+**85 profili, `2026-10-22.1`**; 84 wcześniejsze pozostają zachowane.
+Nowe odniesienie to stałe **15 pmol/L** całej źródłowej grupy B1 1–8 lat,
+N=213, przy aktualnym Th1 tej samej pacjentki i całym możliwym wieku
+w otwartym `(1,6)`. Nie jest to model mediany dokładnego wieku lub RI.
+Brak Th1 pozostawia lukę tego porównania i nie blokuje niezależnego wyniku.
+Ta partia nie zmienia inhibiny B; jej odrębny PR #744 nie należy do tej bazy.
+[Kontrakt i ograniczenia](PATIENT_POINT.md#żeński-e2--mediana-grupy-th1-w-16-22-października-2026),
+[ekstrakt źródła](evidence/patient-point/kulle2024-female-e2-th1-group-median.json).
+
+Synchronizacja 22.10.2026 po scaleniu PR #752: odświeżony PR #744
+zachowuje E2/Th1 i rozszerzoną inhibinę B w jednym rejestrze
+**85 profili, `2026-10-22.2`**. Inhibina B zastępuje jeden profil;
+84 pozostałe, w tym dodany E2/Th1, są zachowane względem nowej bazy.
+Nie rozszerzamy zakresów ani źródeł: inhibina B nadal kończy się na
+47,75, a E2 nadal wymaga aktualnego Th1 i całego wieku w `(1,6)`.
+Starsze wpisy wyżej opisują wersje poszczególnych etapów; ich hashe
+oraz wyniki dawnych kontroli pozostają historyczne.
+
 ## Co oznacza „luka”
 
 Rozróżniamy zwykły liczbowy punkt na osi wieku, osobne zestawienie
@@ -74,7 +94,7 @@ metoda lub kontekst kliniczny mogą wyłączyć punkt również w tych zakresach
 | AMH | [7 dni,70 lat] | [0,02;46) lat | M >70; F ≥46 nie ma zwykłej mediany wieku. Xu udostępnia odrębne punkty P50 35/40/45/50/55. |
 | Inhibina B | [7 dni,80 lat] | [0,02;47,75] lat | M >80 ma do 101 lat osobny aktywny panel średnich Baccarelli. F >47,75 pozostaje poza zatwierdzonym odczytem; nie jest to granica kohorty, LOD/LOQ ani rozpoznanie menopauzy. |
 | Testosteron całkowity | [7,212] dni; [1,86] lat | Brak zwykłego profilu | M po 212. dniu do <1 roku; >86. W 1–<3 są dwie odrębne przybliżone mediany grup Kushnir, nie ciągły model. Po 212. dniu do 1 roku nadal działa blokada jakości/rozdzielczości obecnego odczytu. F ma niezależną interpretację laboratoryjną; nie dopisujemy p50 na podstawie RI. |
-| Estradiol | Brak zwykłego profilu | [0,02;1] roku; [6,18] lat | F >1–<6 i >18. Dorosła faza cyklu ma własne odniesienia. M ma niezależne odniesienia laboratoryjne; brak osi wieku nie oznacza braku interpretacji. |
+| Estradiol | Brak zwykłego profilu | [0,02;1] roku; `(1,6)` przy aktualnym Th1; [6,18] lat | W `(1,6)` wyłącznie stała mediana całej grupy B1 1–8 lat, nie model wieku; przy braku Th1 luka pozostaje. F >18 bez zwykłej mediany wieku. Dorosła faza cyklu ma własne odniesienia. M ma niezależne odniesienia laboratoryjne. |
 | INSL3 | UI nie pokazuje liczbowego punktu | Brak zwykłego profilu | Niemowlęcy profil M istnieje wewnątrz silnika, ale UI świadomie go nie aktywuje. Względna linia nie jest stężeniem. Potrzebny osobny projekt ilościowego odniesienia. |
 
 Ponadto zwykłe profile niemowlęce nie pokrywają pierwszych dni życia przed
@@ -86,6 +106,8 @@ poza domeną konkretnego źródła.
 Zamknięte luki: FSH M [16,18), FSH F [16,19), AMH M [18,20),
 LH M (16,18), a od 21.10 także T M [1,3) przez dwie mediany grupowe
 oraz inhibina B F (47;47,75] przez dalszy odczyt tego samego modelu.
+Od 22.10 E2 F `(1,6)` ma odniesienie grupowe wyłącznie przy aktualnym Th1;
+pozostałe stadia i brak wiarygodnego stadium nie zyskują mediany.
 Dokładne 16 lat w męskim LH nadal należy do Madsen,
 a dokładne 18 do źródła dorosłego. Wypełnienie luki nie uprawnia
 do przedłużania modelu ani do użycia go w innym widoku.
@@ -150,7 +172,9 @@ nie kontaktowano autorów.
 
 Poniższe wartości są ustaleniami audytu, **nie danymi automatycznie
 wdrażanego profilu**. Odnotowana osobno decyzja z 21.10 dotyczy dwóch
-median Kushnir; nie zatwierdza pozostałych kandydatów ani Kulle.
+median Kushnir; nie zatwierdza pozostałych kandydatów ani Kulle 2010.
+Osobna decyzja z 22.10 wybiera wyłącznie wiersz B1 Kulle 2024 wraz
+z jawnymi, nadal nierozstrzygniętymi ograniczeniami opisanymi poniżej.
 
 | Priorytet i źródło pierwotne | Ustalenie | Ograniczenie / możliwy następny krok |
 |---|---|---|
@@ -158,7 +182,7 @@ median Kushnir; nie zatwierdza pozostałych kandydatów ani Kulle.
 | 2. Testosteron M 1–<3 — [Kulle 2010](https://doi.org/10.1210/jc.2009-1670), tabela 3 | Grupa 1–3 lata: N=9, mediana 12 ng/dL (źródłowo zaokrąglone 0,40 nmol/L). Osocze, UPLC-MS/MS; LLOQ 0,1 nmol/L. | Mediana powyżej LLOQ, ale bardzo mała grupa, próbki pozostałe po badaniach klinicznych; pobrania 08–10. Nie uznawać automatycznie za medianę surowicy każdego małego chłopca. Po porównaniu źródeł 21.10 nie wybrano tej mediany do wdrożenia. Dwa odniesienia Kushnir opisano poniżej; badań nie uśredniamy. Okres po 212. dniu do 1 roku pozostaje bez mediany. |
 | 3. Inhibina B F >47 — [Borelli-Kjær](https://doi.org/10.1210/clinem/dgae439), ponowne wykorzystanie znanego źródła | Po kontroli odczytu i akceptacji 21.10 zwykły profil ma trzy nowe węzły 47,25/47,5/47,75 → ≈10/8/7 pg/mL. Publikacja obejmuje 149 dorosłych kobiet 20–69 lat, ale nie dostarcza liczbowego eksportu modelu. | Granica aplikacji 47,75 jest konserwatywnym końcem odczytu, nie granicą kohorty lub menopauzy. Gen II, surowica, LOD 3 pg/mL, bez osobnego LOQ. ±2 pg/mL to tolerancja digitalizacji, nie CI/RI/LOQ; przy 48 tolerancja przecina LOD. Nie ekstrapolujemy do 48/69, nie używamy plateau ani LOD/2 za wynik pacjentki. |
 | 4. AMH M >70 — [Chong 2013](https://doi.org/10.1371/journal.pone.0070967), pełny tekst i tabela 1 | LiLACS: N=257, 80–90 lat, mediana całej grupy 12,1 pmol/L. | Potencjalne osobne porównanie obserwacyjne; nie ciągła mediana wieku ani rozwiązanie całego przedziału >70. Zróżnicowane zdrowie, mieszane dwa testy AMH; inne kohorty mają inne mediany. Rycina średniej geometrycznej z CI nie dostarcza p50. Sprostowanie z 2013 dotyczy nazwiska autora, nie tabel. |
-| 5. E2 F >1–<6 — [Kulle 2024](https://pubmed.ncbi.nlm.nih.gov/38652605/), pełny tekst, tabela 3 | Dziewczynki „B1 1–8 years”: N=213, mediana 15,0 pmol/L, powyżej LLOQ 11. LC-MS/MS. To rzeczywista mediana grupy wieku i stadium, nie dokładnego wieku. | Ewentualne użycie we wnętrzu luki wymaga znanego Th1 z obecnego formularza, zachowania źródeł przy 1 i 6 latach oraz osobnej polityki materiału. Tekst/roczna tabela podają 1724 osoby, tabela charakterystyki 1753 — różnica niewyjaśniona. Nie wyliczamy rocznych p50 z RI lub ryciny bez osobnego audytu. |
+| 5. E2 F >1–<6 — [Kulle 2024](https://doi.org/10.1093/ejendo/lvae046), pełny tekst, tabela 3 | Po akceptacji 22.10 jeden profil `ordinaryOnly`: „B1 1–8 years”, N=213, estymowany P50 Harrella–Davisa 15,0 pmol/L. Stała mediana całej grupy, nie model dokładnego wieku. | Cały możliwy wiek `(1,6)` i aktualne typowane Th1; zachowane źródła przy 1 i 6. LC-MS/MS, kontekst surowicy; znane osocze blokuje przy nieznanym przydziale materiału do B1. LOD 4/LLOQ 11, reguła cenzury nieopisana; N1753/1724, błąd B4 oraz niejasność osoby/próbki nierozstrzygnięte. Nie poprawiamy liczb, nie importujemy RI i nie imputujemy niskich wyników. |
 | 6. Dorosłe FSH/E2 kobiet — [Grisendi 2014](https://doi.org/10.3109/09513590.2014.893572) | Abstrakt: N=192, regularne miesiączki, pobranie w 3. dniu cyklu i centyle wieku. | Brak uzyskanego pełnego tekstu/tabel/współczynników; samo nachylenie nie wyznacza mediany. Aplikacja zna fazę, lecz nie dokładny dzień cyklu. Nie można automatycznie dopasować każdej fazy folikularnej do dnia 3. |
 
 Źródła, których obecnie **nie należy używać do wypełnienia punktu**:
@@ -284,10 +308,10 @@ Dokładny zakres, przypadki i ograniczenia: [E2_CYCLE_CONTEXT.md](../E2_CYCLE_CO
 3. Testosteron 1–<3 został osobno oceniony: decyzja z 21.10 wybiera dwa
    przybliżone odniesienia Kushnir, bez importu Kulle lub uśredniania.
    Dalszy odczyt znanej inhibiny B został osobno zaakceptowany 21.10:
-   rozszerzyć tylko zwykły żeński profil do 47,75, z jawnym wpływem
-   PCHIP w `(46,47)` i zachowaniem odrębnych warstw. Kontrole oraz końcowe
-   CI raportuje mały PR. Grupa E2/Th1 pozostaje osobnym etapem; nie
-   łączyć jej z inhibiną B ani wcześniejszym LH/T w jednym wdrożeniu.
+   PR #744 rozszerza wyłącznie zwykły żeński profil do 47,75, z jawnym
+   wpływem PCHIP w `(46,47)`. E2/Th1 w `(1,6)` z decyzji 22.10 wdrożono
+   odrębnie w PR #752 z zachowaniem ograniczeń źródła, bez innych wierszy
+   lub RI. Odświeżenie #744 zachowuje oba zakresy; nie dodaje kolejnego.
    Poprawka domyślnej fazy E2 ma osobny PR opisany wyżej; przegląd
    nowych źródeł E2 pozostaje odrębnym zadaniem.
 4. Pozostałe źródła utrzymać jako obserwacyjne lub wymagające wyjaśnienia.
@@ -304,5 +328,7 @@ Sam audyt z 18.10 nie zmieniał generatorów, danych runtime, norm, krzywych,
 zapisu pacjenta ani zasobów PWA. Osobna poprawka E2 zmienia kwalifikację
 laboratoryjną, nie pokrycie median. Aktualizacja rejestru nie nadaje nowym kandydatom statusu
 „zwalidowany klinicznie”. Dwa profile Kushnir z 21.10 są odrębnym
-wdrożeniem zaakceptowanego porównania edukacyjnego. Uzupełnienie
-inhibiny B z 21.10 nie przenosi akceptacji na kandydata E2/Th1.
+wdrożeniem zaakceptowanego porównania edukacyjnego. Akceptacja
+inhibiny B z 21.10 nie stanowiła akceptacji E2/Th1; ten wiersz grupowy
+uzyskał osobną zgodę 22.10 i nie rozstrzyga rozbieżności publikacji.
+Synchronizacja obu zakresów nie nadaje statusu walidacji klinicznej.

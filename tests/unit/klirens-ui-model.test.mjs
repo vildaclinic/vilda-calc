@@ -89,6 +89,37 @@ function readinessControl({ type = 'text', value = '', checked = false } = {}) {
   };
 }
 
+function clinicalReadinessHarness(formulaId, values) {
+  const formula = formulas.find(entry => entry.id === formulaId);
+  const controls = new Map(Object.entries(values).map(([id, value]) => [
+    id,
+    readinessControl(typeof value === 'boolean'
+      ? { type: 'checkbox', checked: value }
+      : { value }),
+  ]));
+  const browserGlobal = {
+    FORMULAS: [formula],
+    document: {
+      readyState: 'loading',
+      addEventListener() {},
+      getElementById: id => controls.get(id) || null,
+    },
+  };
+  loadBrowserScript('clcr_clinical_safety.js', browserGlobal);
+  loadBrowserScript('clcr_ui_workflow.js', browserGlobal);
+  const workflow = browserGlobal.ClcrUiWorkflow;
+  workflow.state.activeFormulaId = formulaId;
+  workflow.state.requiredFieldIds = new Set(formula.requires);
+  workflow.state.activeFieldIds = new Set(controls.keys());
+  workflow.state.interpretationFieldIds = new Set();
+  workflow.state.optionalFieldIds = new Set();
+  workflow.state.fieldViews = new Map(Array.from(controls, ([id, control]) => [
+    id,
+    { control, labelText: id },
+  ]));
+  return { controls, formula, workflow };
+}
+
 describe('Klirens — centralny model przepływu UI', () => {
   it('mapuje wszystkie 42 formuły dokładnie raz, z jawnym wyjątkiem historycznym', () => {
     expect(formulas).toHaveLength(42);
@@ -288,6 +319,105 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(pcr.requires).not.toContain('U_Alb');
   });
 
+  it('gotowość U25 nie wymaga kontekstu markera i wraca po wyłączeniu AKI bez uzupełniania stabilności', () => {
+    const { controls, formula, workflow } = clinicalReadinessHarness('ckid_u25', {
+      age: '10',
+      ageMonths: '',
+      sex: 'F',
+      height: '140',
+      Scr: '0.6',
+      ScrUnit: 'mg/dl',
+      ScrAssay: '',
+      creatinineState: '',
+      suspectedAKI: false,
+    });
+    expect(formula.requires).not.toContain('creatinineState');
+    expect(formula.requires).not.toContain('suspectedAKI');
+    expect(workflow.getFormulaReadiness()).toMatchObject({
+      status: 'ready',
+      valueReady: true,
+      missingFieldIds: [],
+    });
+
+    controls.get('suspectedAKI').checked = true;
+    expect(workflow.getFormulaReadiness()).toMatchObject({
+      status: 'blocked',
+      valueReady: false,
+    });
+    controls.get('suspectedAKI').checked = false;
+    expect(workflow.getFormulaReadiness()).toMatchObject({
+      status: 'ready',
+      valueReady: true,
+    });
+    expect(controls.get('creatinineState').value).toBe('');
+    expect(controls.get('ScrAssay').value).toBe('');
+    expect(controls.get('ageMonths').value).toBe('');
+  });
+
+  it('UAG wymaga wyłącznie własnych danych moczu i protokołu, bez wieku i stężeń surowicy', () => {
+    const { formula, workflow } = clinicalReadinessHarness('AGu_spot', {
+      U_Na_spot: '20',
+      U_K_spot: '20',
+      U_Cl_spot: '80',
+      spotPairedChemistry: true,
+      spotSameSpecimen: true,
+    });
+    expect(formula.requires).toEqual(expect.arrayContaining([
+      'U_Na_spot', 'U_K_spot', 'U_Cl_spot',
+    ]));
+    expect(formula.requires).not.toEqual(expect.arrayContaining(['age']));
+    expect(formula.requires.some(field => /^(S_|Scr)/.test(field))).toBe(false);
+    expect(workflow.getFormulaReadiness()).toMatchObject({
+      status: 'ready',
+      valueReady: true,
+      missingFieldIds: [],
+    });
+  });
+
+  it('UAG odczytuje stare potwierdzenie wspólnego moczu bez uzupełniania nowej flagi', () => {
+    const { controls, workflow } = clinicalReadinessHarness('AGu_spot', {
+      U_Na_spot: '40', U_K_spot: '25', U_Cl_spot: '80',
+      spotPairedChemistry: true,
+      spotSameSpecimen: false,
+      ui_spotSameSpecimen_answer: '',
+    });
+    workflow.state.fieldViews.get('spotSameSpecimen').answerSelect =
+      controls.get('ui_spotSameSpecimen_answer');
+    expect(workflow.getFormulaReadiness()).toMatchObject({
+      status: 'ready', valueReady: true, missingFieldIds: [],
+    });
+    const safety = loadBrowserScript('clcr_clinical_safety.js').ClcrClinicalSafety;
+    expect(safety.computeUrineAnionGap({
+      sodium: Number(controls.get('U_Na_spot').value),
+      potassium: Number(controls.get('U_K_spot').value),
+      chloride: Number(controls.get('U_Cl_spot').value),
+    })).toBe(-15);
+    expect(controls.get('spotPairedChemistry').checked).toBe(true);
+    expect(controls.get('spotSameSpecimen').checked).toBe(false);
+    expect(controls.get('ui_spotSameSpecimen_answer').value).toBe('');
+  });
+
+  it.each([
+    [true, 'no', true],
+    [true, 'unknown', false],
+    [false, '', false],
+  ])('UAG nie przyjmuje potwierdzenia przy starej fladze %s i nowej odpowiedzi %s', (legacy, answer, blocked) => {
+    const { controls, workflow } = clinicalReadinessHarness('AGu_spot', {
+      U_Na_spot: '40', U_K_spot: '25', U_Cl_spot: '80',
+      spotPairedChemistry: legacy,
+      spotSameSpecimen: false,
+      ui_spotSameSpecimen_answer: answer,
+    });
+    workflow.state.fieldViews.get('spotSameSpecimen').answerSelect =
+      controls.get('ui_spotSameSpecimen_answer');
+    expect(workflow.getFormulaReadiness()).toMatchObject({
+      status: 'missing', valueReady: false,
+      missingFieldIds: ['spotSameSpecimen'], hasBlockedProtocol: blocked,
+    });
+    expect(controls.get('spotSameSpecimen').checked).toBe(false);
+    expect(controls.get('ui_spotSameSpecimen_answer').value).toBe(answer);
+  });
+
   it('rozróżnia odpowiedzi trójstanowe w warunkach pełnej interpretacji', () => {
     const context = readinessControl({ type: 'checkbox' });
     const { workflow } = readinessHarness([['contextFlag', context]]);
@@ -465,11 +595,21 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=7');
-    expect(html).toContain('clcr_ui_workflow.js?v=5');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=5');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=7');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.331'");
+    expect(html).toContain('clcr_ui_workflow.css?v=11');
+    expect(html).toContain('clcr_ui_workflow.js?v=9');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=7');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=11');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=4');
+    expect(html).toContain('clcr_result_reference_data.js?v=2');
+    expect(html).toContain('clcr_result_presentation.js?v=2');
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.340'");
+    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=1'");
+    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=1'");
+    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=2'");
+    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=2'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=11'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=9'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_07.js?v=4'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=1'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=2'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=3'");
@@ -477,7 +617,8 @@ describe('Klirens — centralny model przepływu UI', () => {
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=3'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=4'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=5'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=6'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=7'");
     expect(serviceWorker).toContain(
       "'/inline_kalkulator_klirens_02.js?v=5'"
     );
@@ -485,7 +626,10 @@ describe('Klirens — centralny model przepływu UI', () => {
       "'/inline_kalkulator_klirens_04.js?v=6'"
     );
     expect(serviceWorker).toContain(
-      "'/inline_kalkulator_klirens_04.js?v=7'"
+      "'/inline_kalkulator_klirens_04.js?v=8'"
+    );
+    expect(serviceWorker).toContain(
+      "'/inline_kalkulator_klirens_04.js?v=9'"
     );
   });
 });

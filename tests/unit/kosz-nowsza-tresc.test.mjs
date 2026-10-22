@@ -6,8 +6,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // P-KOSZ-NOWSZA-TRESC (decyzja właściciela D-6 B, 2026-10-20): zapis poprawiony (albo przypięty) na jednym urządzeniu
 // i przeniesiony do kosza na drugim, zanim się zsynchronizowały. Usunięcie (późniejsze) wygrywa jak dotąd, ale w koszu
-// obu urządzeń leży nowsza z dwóch treści (wyższa rev, przy równej późniejsza chwila zmiany), w każdej kolejności
-// synchronizacji, więc „Przywróć” oddaje poprawkę. Prawdziwy vilda_vault.js, dane fikcyjne.
+// obu urządzeń leży nowsza z dwóch treści, w każdej kolejności synchronizacji, więc „Przywróć” oddaje poprawkę. Od
+// P-POZNIEJSZA-POPRAWKA (D-7 wariant 2, 2026-10-21) „nowsza” = późniejsza chwila zmiany, przy równej wyższa rev (dotąd:
+// wyższa rev, przy równej późniejsza chwila) — ta sama reguła co dla wersji tej samej karty. Prawdziwy vilda_vault.js,
+// dane fikcyjne.
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -180,7 +182,8 @@ describe('P-KOSZ-NOWSZA-TRESC: w koszu nowsza z dwóch treści zapisu', () => {
     });
   }
 
-  // Uwaga przeglądu #732: remis rev rozstrzyga późniejsza chwila zmiany (druga część Bkz_nowszaWersja).
+  // Uwaga przeglądu #732: przy tej samej rev wygrywa późniejsza chwila zmiany (od P-POZNIEJSZA-POPRAWKA — pierwsza
+  // część Bkz_nowszaWersja, niezależnie od rev).
   for (const kolejnosc of ['P-pierwszy', 'K-pierwszy', 'naraz']) {
     it(`obie strony poprawiły zapis (ta sama rev), późniejsza poprawka na P, kosz na K (${kolejnosc}): w koszu obu późniejsza`, async () => {
       sztucznyZegar();
@@ -671,8 +674,219 @@ describe('P-KOSZ-NOWSZA-TRESC: trzy urządzenia, retencja starej wersji na trzec
   });
 });
 
+// P-POZNIEJSZA-POPRAWKA (decyzja właściciela D-7 wariant 2, 2026-10-21): treść kosza wybiera ta sama reguła co wersję
+// tej samej karty — późniejsza chwila zmiany, przy równej wyższa rev. Kartę i kosz zmieniamy razem (ALGORITHMS E4):
+// inaczej to, co trafia do kosza, zależy od tego, czy urządzenie najpierw scaliło kartę. Przypadki K1–K11 ze
+// specyfikacji D-7 (8 kolejności pierwszych scaleń + 3 rundy na trzech urządzeniach).
+describe('P-POZNIEJSZA-POPRAWKA: kosz i „Przywróć” liczą na tej samej osi czasu co karta', () => {
+  const KOLEJNOSCI_8 = ['K←C,P←K', 'P←K,K←C', 'K←P,K←C', 'K←C,K←P', 'C←K,P←C', 'P←C,P←K', 'C←P,C←K', 'C←K,C←P'];
+  const ola = (height, weight) => ({
+    name: 'Testowa Ola',
+    user: { lastName: 'Testowa', firstName: 'Ola', dobISO: '2017-05-01', sex: 'F', height, weight },
+  });
+  async function gdzieJest(v, sid) {
+    for (const p of await v.listPatients()) {
+      const s = (await v.getPatient(p.patientId)).snapshots.find((q) => q.snapshotId === sid);
+      if (s) return { pid: p.patientId, s };
+    }
+    return null;
+  }
+  async function popraw(v, sid, kg) {
+    const g = await gdzieJest(v, sid);
+    await v.updateSnapshotPayload(g.pid, sid, { ...g.s.payload, user: { ...g.s.payload.user, weight: kg } }, { preserveSavedAt: true });
+  }
+  async function przypnij(v, sid, tak) { const g = await gdzieJest(v, sid); await v.setSnapshotPinned(g.pid, sid, tak); }
+  async function doKosza(v, sid) { const g = await gdzieJest(v, sid); return v.moveSnapshotToTrash(g.pid, sid, { odepnij: true }); }
+  async function przytnij(v, sid) {
+    const g = await gdzieJest(v, sid);
+    expect((await v.pruneSnapshotsForPatient(g.pid, { recentHours: 0 })).prunedIds, 'kontrola: retencja przycina zapis').toContain(sid);
+  }
+  async function stan(v, sid) {
+    const g = await gdzieJest(v, sid);
+    const k = await wKoszu(v, sid);
+    return {
+      karta: g ? { masa: g.s.payload.user.weight, pin: !!g.s.pinned } : null,
+      kosz: k ? { masa: k.payload.user.weight, pin: !!k.pinned } : null,
+    };
+  }
+  // E4: X (3 wersje), Y, Z na K; „Scal pacjentów” X → Y → Z na K podbija rev przeniesionych wersji do 2.
+  async function trzyKarty() {
+    const P = await urzadzenie(), K = await urzadzenie(), C = await urzadzenie();
+    const x1 = await zapisz(K, jan(120, 20));
+    const X = x1.patientId;
+    const x2 = await zapisz(K, jan(125, 23), { patientId: X });
+    await zapisz(K, jan(130, 25), { patientId: X });
+    const Y = (await zapisz(K, ola(110, 18))).patientId;
+    const Z = (await zapisz(K, ola(111, 19))).patientId;
+    await sync(K, P); await sync(K, C);
+    return { P, K, C, X, Y, Z, sid: x2.snapshotId };
+  }
+  async function przebieg(przygotuj, krok, kolejnosc) {
+    sztucznyZegar();
+    const u = await przygotuj();
+    przesunZegar(60e3);
+    await krok(u);
+    await pierwszeScalenia(u, kolejnosc);
+    await rundy(u.P, u.K, u.C);
+    return { u, st: [await stan(u.P, u.sid), await stan(u.K, u.sid), await stan(u.C, u.sid)] };
+  }
+  const dwiePoprawkiPotemJedna = async ({ P, K, sid }) => {
+    await popraw(P, sid, 77); przesunZegar(60e3); await popraw(P, sid, 78); przesunZegar(60e3); // P: rev 2, wcześniej
+    await popraw(K, sid, 74); przesunZegar(60e3); // K: rev 1, najpóźniej
+  };
+  const SCEN = {
+    'K1 dwie poprawki na P (rev 2), późniejsza na K (rev 1), kosz na C, które nic nie wie': [trzyUrzadzenia, async (u) => {
+      await dwiePoprawkiPotemJedna(u); await doKosza(u.C, u.sid);
+    }, { karta: null, kosz: { masa: 74, pin: false } }],
+    'K2 jak K1, kosz na K': [trzyUrzadzenia, async (u) => {
+      await dwiePoprawkiPotemJedna(u); await doKosza(u.K, u.sid);
+    }, { karta: null, kosz: { masa: 74, pin: false } }],
+    'K3 jak K1, K scala z P przed koszem': [trzyUrzadzenia, async (u) => {
+      await dwiePoprawkiPotemJedna(u); await sync(u.P, u.K); przesunZegar(60e3); await doKosza(u.K, u.sid);
+    }, { karta: null, kosz: { masa: 74, pin: false } }],
+    'K4 dwie poprawki i kosz na P (78, rev 2), poprawka na C po koszu (74, rev 1), kosz na K później': [trzyUrzadzenia, async ({ P, K, C, sid }) => {
+      await popraw(P, sid, 77); przesunZegar(60e3); await popraw(P, sid, 78); przesunZegar(60e3);
+      await doKosza(P, sid); przesunZegar(60e3); await popraw(C, sid, 74); przesunZegar(60e3); await doKosza(K, sid);
+    }, { karta: null, kosz: { masa: 74, pin: false } }],
+    'K8 zegar K +10 min: K poprawia (74), P przyjmuje i poprawia na niej (77), C daje do kosza 20 min później': [trzyUrzadzenia, async ({ P, K, C, sid }) => {
+      vi.setSystemTime(zegar + 10 * 60e3); await popraw(K, sid, 74); vi.setSystemTime(zegar);
+      await sync(K, P); przesunZegar(60e3); await popraw(P, sid, 77);
+      przesunZegar(20 * 60e3); await doKosza(C, sid);
+    }, { karta: null, kosz: { masa: 77, pin: false } }],
+    'K8b jak K8, bez kosza': [trzyUrzadzenia, async ({ P, K, sid }) => {
+      vi.setSystemTime(zegar + 10 * 60e3); await popraw(K, sid, 74); vi.setSystemTime(zegar);
+      await sync(K, P); przesunZegar(60e3); await popraw(P, sid, 77);
+    }, { karta: { masa: 77, pin: false }, kosz: null }],
+    'K9 dwie poprawki na C (rev 2) przed późniejszą gwiazdką na P (rev 1), retencja na K': [trzyUrzadzenia, async ({ P, K, C, sid }) => {
+      await popraw(C, sid, 57); przesunZegar(60e3); await popraw(C, sid, 58); przesunZegar(60e3);
+      await przypnij(P, sid, true); przesunZegar(60e3); await przytnij(K, sid);
+    }, { karta: { masa: 23, pin: true }, kosz: null }],
+  };
+  for (const [nazwa, [przygotuj, krok, oczekiwany]] of Object.entries(SCEN)) {
+    for (const kolejnosc of KOLEJNOSCI_8) {
+      it(`${nazwa} (${kolejnosc})`, async () => {
+        const { st } = await przebieg(przygotuj, krok, kolejnosc);
+        for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i], n).toEqual(oczekiwany);
+      });
+    }
+  }
+
+  for (const kolejnosc of KOLEJNOSCI_8) {
+    it(`K5 (E4b) „Scal pacjentów” X → Y → Z na K, P (bez wiedzy) poprawia x w starej X, K później daje x do kosza (${kolejnosc}): w koszu poprawka`, async () => {
+      const { st } = await przebieg(trzyKarty, async ({ P, K, X, Y, Z, sid }) => {
+        await K.mergePatients(X, Y); przesunZegar(60e3); await K.mergePatients(Y, Z); przesunZegar(60e3);
+        await popraw(P, sid, 74); przesunZegar(60e3);
+        await doKosza(K, sid);
+      }, kolejnosc);
+      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i].kosz, `${n}: kosz z poprawką`).toEqual({ masa: 74, pin: false });
+    });
+    it(`K6 (E4a, znane ograniczenie, PD-16) poprawka PRZED scaleniami, potem kosz na K (${kolejnosc}): poprawka ginie, kosz bez niej`, async () => {
+      const { st } = await przebieg(trzyKarty, async ({ P, K, X, Y, Z, sid }) => {
+        await popraw(P, sid, 74); przesunZegar(60e3);
+        await K.mergePatients(X, Y); przesunZegar(60e3); await K.mergePatients(Y, Z); przesunZegar(60e3);
+        await doKosza(K, sid);
+      }, kolejnosc);
+      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i].kosz, `${n}: kosz bez poprawki`).toEqual({ masa: 23, pin: false });
+    });
+  }
+
+  for (const kolejnosc of KOLEJNOSCI_8) {
+    it(`K7 „Przywróć” na P: ta sama wersja w karcie (78, rev 2, wcześniej) i w koszu (74, rev 1, później) (${kolejnosc}): wraca 74 z rev 3, zbieżnie`, async () => {
+      const przygotuj = async () => {
+        const P = await urzadzenie(), K = await urzadzenie(), C = await urzadzenie();
+        const s1 = await zapisz(K, jan(120, 20));
+        const s2 = await zapisz(K, jan(125, 23), { patientId: s1.patientId });
+        await sync(K, P); await sync(K, C);
+        return { P, K, C, pid: s1.patientId, sid: s2.snapshotId, s1: s1.snapshotId };
+      };
+      const { u } = await przebieg(przygotuj, async ({ P, K, sid, s1 }) => {
+        await popraw(P, sid, 77); przesunZegar(60e3); await popraw(P, sid, 78); przesunZegar(60e3);
+        await doKosza(P, s1); przesunZegar(60e3); // P: kosz nie zdejmuje ostatniej wersji karty
+        await popraw(K, sid, 74); przesunZegar(60e3); await doKosza(K, sid); przesunZegar(60e3);
+      }, kolejnosc);
+      const przed = await stan(u.P, u.sid);
+      expect(przed.karta && przed.kosz, 'kontrola: na P zapis w karcie i w koszu').toBeTruthy();
+      expect(przed.kosz.masa, 'kontrola: kosz trzyma późniejszą poprawkę').toBe(74);
+      przesunZegar(60e3);
+      const wynik = await u.P.restoreTrashedSnapshot(u.pid, u.sid);
+      expect(wynik.alreadyInCard, 'treść kosza jest nowsza — przywracamy').toBeUndefined();
+      const naP = await wersja(u.P, u.pid, u.sid);
+      expect({ masa: naP.payload.user.weight, rev: naP.rev }).toEqual({ masa: 74, rev: 3 });
+      await rundy(u.P, u.K, u.C);
+      for (const [n, v] of [['P', u.P], ['K', u.K], ['C', u.C]]) expect(await stan(v, u.sid), n).toEqual({ karta: { masa: 74, pin: false }, kosz: null });
+    });
+  }
+
+  // K10 (S6b) — ZNANE OGRANICZENIE (PD-12, LWW całej wersji): gwiazdka, odpięcie i gwiazdka na P (rev 3), potem
+  // późniejsza poprawka masy na C (rev 1, bez gwiazdki), retencja na K. Do D-7 wygrywała rev 3: wizyta przypięta
+  // w 8 z 8 kolejności. Teraz wygrywa późniejsza poprawka bez gwiazdki, a wynik zależy od kolejności, w której
+  // urządzenia poznają retencję: 4 × karta bez gwiazdki, 3 × przypięta (retencja przegrała z gwiazdką wcześniej),
+  // 1 × wizyty nie ma nigdzie. Zbieżnie w każdej kolejności. Domknięcie: PR „przypięta wizyta / półkrata łączenia
+  // nagrobków” (po D-7). Test pilnuje opisanego zachowania.
+  const K10 = {
+    'K←C,P←K': 'bez', 'P←K,K←C': 'bez', 'K←P,K←C': 'bez', 'K←C,K←P': 'bez',
+    'C←K,P←C': 'przypieta', 'P←C,P←K': 'brak', 'C←P,C←K': 'przypieta', 'C←K,C←P': 'przypieta',
+  };
+  const K10_STAN = {
+    bez: { karta: { masa: 58, pin: false }, kosz: null },
+    przypieta: { karta: { masa: 23, pin: true }, kosz: null },
+    brak: { karta: null, kosz: null },
+  };
+  for (const kolejnosc of KOLEJNOSCI_8) {
+    it(`K10 (S6b, znane ograniczenie) gwiazdka/odpięcie/gwiazdka na P (rev 3), późniejsza poprawka na C, retencja na K (${kolejnosc}): ${K10[kolejnosc]}`, async () => {
+      const { st } = await przebieg(trzyUrzadzenia, async ({ P, K, C, sid }) => {
+        await przypnij(P, sid, true); przesunZegar(60e3); await przypnij(P, sid, false); przesunZegar(60e3);
+        await przypnij(P, sid, true); przesunZegar(60e3); await popraw(C, sid, 58); przesunZegar(60e3); await przytnij(K, sid);
+      }, kolejnosc);
+      for (const [i, n] of ['P', 'K', 'C'].entries()) expect(st[i], n).toEqual(K10_STAN[K10[kolejnosc]]);
+    });
+  }
+
+  // P-REV-MAX (PD-7 b): rev treści nagrobka = wyższa z łączonej pary, jak w starszych aplikacjach (tam treść z wyższą
+  // rev). Treść bez zmian (K1: 74 kg), rev nie zależy od kolejności scaleń.
+  for (const kolejnosc of KOLEJNOSCI_8) {
+    it(`K1r jak K1 (${kolejnosc}): w koszu 74 kg z rev 2 (wyższa z pary, P-REV-MAX) na trzech`, async () => {
+      const { u } = await przebieg(trzyUrzadzenia, async (x) => { await dwiePoprawkiPotemJedna(x); await doKosza(x.C, x.sid); }, kolejnosc);
+      for (const [n, v] of [['P', u.P], ['K', u.K], ['C', u.C]]) {
+        const e = await nagrobek(v, u.sid);
+        expect({ masa: e && e.payload && e.payload.user.weight, rev: e && e.rev }, n).toEqual({ masa: 74, rev: 2 });
+      }
+    });
+  }
+
+  it('K11 A: dwie poprawki masy (27 kg, rev 2), B: późniejsza poprawka wzrostu (127 cm, rev 1); kosz na A, potem „Przywróć”: kosz i przywrócenie 127/24, rev 3 (wyższa z dwóch 2, + 1)', async () => {
+    sztucznyZegar();
+    const { P: B, K: A, pid, sid } = await dwaUrzadzenia();
+    przesunZegar(60e3); await poprawMase(A, pid, sid, 25);
+    przesunZegar(60e3); await poprawMase(A, pid, sid, 27);
+    przesunZegar(4 * 60e3);
+    const w = await wersja(B, pid, sid);
+    await B.updateSnapshotPayload(pid, sid, { ...w.payload, user: { ...w.payload.user, height: 127 } }, { preserveSavedAt: true });
+    przesunZegar(2 * 60e3);
+    await A.moveSnapshotToTrash(pid, sid);
+    await wymiana(A, B, 'P-pierwszy');
+    for (const [n, v] of [['A', A], ['B', B]]) {
+      const k = await wKoszu(v, sid);
+      expect(`${k.payload.user.height}/${k.payload.user.weight}`, `${n}: kosz`).toBe('127/24');
+    }
+    przesunZegar(60e3);
+    await A.restoreTrashedSnapshot(pid, sid);
+    const po = await wersja(A, pid, sid);
+    expect({ tresc: `${po.payload.user.height}/${po.payload.user.weight}`, rev: po.rev }).toEqual({ tresc: '127/24', rev: 3 });
+  });
+});
+
 describe('strażnik źródła', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+  it('P-REV-MAX (PD-7 b): rev treści kosza = wyższa z pary w łączeniu nagrobków, w Bkz_pomin i w Bkz_scalKoniec', () => {
+    expect(src).toContain('if (zrodlo) wynik.rev = Math.max(mt(zrodlo), Bkz_revPary(nowszy, starszy), Bkz_revPary(starszy, nowszy));');
+    expect(src).toContain("function Bkz_revPary(p, q) { return p.powod === 'retencja' || Bkz_nieaktualny(p, q) ? 0 : mt(p); }");
+    expect(src).toContain('ctx.mapa.set(zapis.snapshotId, Object.assign({}, e, { rev: mt(zapis) }));');
+    expect(src).toContain('z.rev = Math.max(mt(lokalna), mt(e));');
+    expect(src).toContain('ctx.mapa.set(e.snapshotId, Object.assign({}, e, { rev: mt(lokalna) }));');
+    expect(src).toContain('z.rev = Math.max(mt(s), mt(e));');
+    expect(src).toContain('ctx.mapa.set(id, Object.assign({}, e, { rev: mt(s) }));');
+  });
   it('jedna reguła „nowsza wersja” w łączeniu nagrobków, w treści z ładunku, w pętli wersji i na końcu scalania', () => {
     expect(src).toContain('function Bkz_nowszaWersja(x, y) {');
     const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
@@ -683,5 +897,13 @@ describe('strażnik źródła', () => {
     expect(czesc('async function Bkz_scalStart(', 'function Bkz_przegral(')).toContain('!Bkz_nowszaWersja(e, lokalny)');
     expect(czesc('function Bkz_pomin(', 'async function Bkz_scalKoniec(')).toContain('Bkz_nowszaWersja(zapis, e)');
     expect(czesc('async function Bkz_scalKoniec(', 'async function Bkz_poImporcie(')).toContain('Bkz_nowszaWersja(lokalna, e)');
+  });
+  it('P-POZNIEJSZA-POPRAWKA: „nowsza” = późniejsza chwila zmiany, przy równej wyższa rev; opis nagrobka tą samą regułą', () => {
+    const czesc = (od, doo) => src.slice(src.indexOf(od), src.indexOf(doo));
+    const regula = czesc('function Bkz_nowszaWersja(x, y) {', 'function Bkz_zTresci(');
+    expect(regula).toContain('const zx = Bkz_zmiana(x), zy = Bkz_zmiana(y);');
+    expect(regula).toContain('if (zx !== zy) return zx > zy;');
+    expect(regula).toContain('return mt(x) > mt(y);');
+    expect(czesc('function Bkz_opisPozniejszy(', 'function Bkz_wygrywa(')).toContain('return Bkz_nowszaWersja(c, a) ? c : a;');
   });
 });

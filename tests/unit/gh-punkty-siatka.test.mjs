@@ -20,6 +20,9 @@ import {
 // (modulDawki: false) monitor nie zapisuje i prosi o odświeżenie strony. Przypadki z modułem dawki porównujemy ze skrótami
 // wzorca policzonymi tylko z nich (kategorieZModulemDawki, ten sam monitor z BAZA), a przypadki bez modułu — każdy na
 // świeżej atrapie — muszą skończyć się odmową bez zapisu. Wzorzec dla nich dalej opisuje zachowanie sprzed D6.
+// P-GH-NOWE-ID-MONITOR: id nowego punktu nadaje dzisiejszemu monitorowi VildaGhPunkty.noweId(), a monitorowi z BAZA
+// i wyroczni — sam monitor. Każdy przebieg zastępuje znacznikiem wzorca tylko swoją postać id (postać 'api' dla drzewa
+// roboczego, 'monitor' dla wyroczni); kontrole negatywne pokazują, że id nadane po dawnemu wywraca porównanie.
 
 const wzorzec = JSON.parse(fs.readFileSync(path.join(korzen, PLIK_WZORCA), 'utf8'));
 const przypadki = siatka();
@@ -183,7 +186,7 @@ describe('Złota siatka punktów GH — atrapa użyta ponownie nie przenosi stan
 describe('Złota siatka punktów GH — wyrocznia testów równoważności', () => {
   it('zamrożony monitor sprzed API (bez VildaGhPunkty) daje wynik wzorca dla przypadków reprezentatywnych', () => {
     const { zrodla, ...opcje } = opcjePrzedApi();
-    const wyniki = wykonajPrzypadki(reprezentatywne.map((r) => wedlugId.get(r.wejscie.id)), zrodla, opcje);
+    const wyniki = wykonajPrzypadki(reprezentatywne.map((r) => wedlugId.get(r.wejscie.id)), zrodla, opcje, 'monitor');
     for (const r of reprezentatywne) expect(pierwszaRoznica(r.wynik, wyniki.get(r.wejscie.id)), r.wejscie.id).toBeNull();
   }, 60_000);
 });
@@ -226,6 +229,17 @@ const KONTROLE = [
   { nazwa: 'monitor: kolejność kluczy weight i height w rekordzie nowego punktu', plik: 'gh_therapy_monitor.js',
     kotwica: 'weight:r,height:i,boneAge:isFinite(a)?a:null,dose:o,', zamiana: 'height:i,weight:r,boneAge:isFinite(a)?a:null,dose:o,',
     dotyczy: (p) => p.sciezka === 'Z1' },
+  // P-GH-NOWE-ID-MONITOR: id nowego punktu z VildaGhPunkty.noweId(). Monitor nadający id sam (dawny wzór) albo noweId
+  // z innym startem w milisekundzie dają id innej postaci, które zostaje dosłownie i różni się od znacznika wzorca.
+  { nazwa: 'monitor: nowy punkt z karty z własnym id String(Date.now()+Math.random())', plik: 'gh_therapy_monitor.js',
+    kotwica: 'const u={id:Gpk.noweId(),', zamiana: 'const u={id:String(Date.now()+Math.random()),',
+    dotyczy: (p) => p.sciezka === 'Z1' },
+  { nazwa: 'monitor: punkt wsteczny z własnym id String(Date.now()+Math.random())', plik: 'gh_therapy_monitor.js',
+    kotwica: 'Gpk.punkt(Gpk.noweId(),Gpw.pola)', zamiana: 'Gpk.punkt(String(Date.now()+Math.random()),Gpw.pola)',
+    dotyczy: (p) => p.sciezka === 'Z4' },
+  { nazwa: 'API: noweId zaczyna milisekundę od Math.random()·400 zamiast ·500', plik: 'vilda_gh_punkty.js',
+    kotwica: 'teraz + Math.floor(Math.random() * 500)', zamiana: 'teraz + Math.floor(Math.random() * 400)',
+    dotyczy: (p) => p.sciezka === 'Z1' || p.sciezka === 'Z4' },
   // Bramka raty 3: monitor bez zgodnego API odmawia każdego zapisu i usunięcia; „Anuluj” przy usuwaniu bez zmian.
   // Każdy przypadek na świeżej atrapie (atrapa użyta ponownie przyjmuje tylko edycje zakończone zapisem).
   { nazwa: 'monitor: bramka odrzuca API (wersja 3 → 4)', plik: 'gh_therapy_monitor.js',

@@ -933,7 +933,59 @@ def build():
                          childhood_t_policy['statisticPolicy'], childhood_t_policy['digitizationPolicy'],
                          childhood_t_policy['assayPolicy'], childhood_t_policy['contextPolicy']])
 
-    return {'version':'2026-10-21.2','purpose':'educational-population-central-comparison',
+    # One published breast-stage group fills only the approved childhood gap.
+    # Keep all previous profiles in their original order and do not fit an age
+    # curve from this single Harrell–Davis group quantile.
+    childhood_e2_policy = json.loads((ROOT/'female-estradiol-childhood-reference-policy.json').read_text(encoding='utf-8'))
+    childhood_e2 = read(childhood_e2_policy['sourceFile'])
+    assert childhood_e2_policy['kind'] == 'educational-source-selection'
+    assert (childhood_e2_policy['analyte'], childhood_e2_policy['sex'], childhood_e2_policy['unit'],
+            childhood_e2_policy['statistic']) == ('e2', 'female', 'pmol/L', 'group-median')
+    assert (childhood_e2['analyte'], childhood_e2['sex'], childhood_e2['unit'],
+            childhood_e2['statistic'], childhood_e2['matrix']) == ('e2', 'female', 'pmol/L', 'group-median', 'serum')
+    assert childhood_e2_policy['ordinaryOnly'] is True
+    assert childhood_e2_policy['requiredGonadalKind'] == 'Th'
+    assert childhood_e2_policy['interpolation'] == 'constant'
+    assert len(childhood_e2['groups']) == 1
+    row = childhood_e2['groups'][0]
+    assert row['id'] == childhood_e2_policy['sourceGroupId']
+    minimum, maximum = childhood_e2_policy['minAge'], childhood_e2_policy['maxAge']
+    assert row['minAge'] <= minimum < maximum < row['maxAge']
+    assert childhood_e2_policy['minAgeExclusive'] and childhood_e2_policy['maxAgeExclusive']
+    assert row['gonadalKind'] == childhood_e2_policy['requiredGonadalKind']
+    assert row['requiredGonadalStage'] == childhood_e2_policy['requiredGonadalStage']
+    assert row['median'] == row['medianConfirmation']['nativeHtmlP50'] == row['medianConfirmation']['cachedOfficialTableImageP50']
+    assert row['n'] > 0 and childhood_e2['sourceUnit'] == childhood_e2['unit']
+    add(childhood_e2_policy['id'], 'e2', 'female',
+        [dict(ageYears=age, value=row['median']) for age in (minimum, maximum)],
+        minimum, maximum, childhood_e2['sourceLabel'], childhood_e2['source']['url'],
+        childhood_e2['assay'], childhood_e2['population'], 'group-median',
+        approximate=childhood_e2['approximate'],
+        interpolation='constant', ordinaryOnly=True, minAgeExclusive=True, maxAgeExclusive=True,
+        requiredGonadalStage=childhood_e2_policy['requiredGonadalStage'],
+        specimen=childhood_e2_policy['specimen'],
+        compatibleSpecimenIds=childhood_e2_policy['compatibleSpecimenIds'],
+        compatibleAssayMethodIds=childhood_e2_policy['compatibleAssayMethodIds'],
+        excludedCyclePhases=childhood_e2_policy['excludedCyclePhases'],
+        referenceGroupLabel=childhood_e2_policy['referenceGroupLabel'],
+        patientNote=childhood_e2_policy['patientNote'],
+        ageGroup={'label':row['label'], 'minAge':row['minAge'], 'maxAge':row['maxAge'],
+                  'n':row['n'], 'sourceMedian':row['median'], 'sourceUnit':childhood_e2['sourceUnit'],
+                  'boundaryPolicy':'application-conservative-subset',
+                  'description':childhood_e2['limitations'][0]},
+        provenance={**childhood_e2['source'], 'sourceGroupId':row['id'],
+                    'groupParticipants':row['n'], 'sourceSpecimen':childhood_e2['matrix'],
+                    'readableSource':'evidence/patient-point/'+childhood_e2_policy['sourceFile'],
+                    'sourceRouting':{'version':childhood_e2_policy['version'],
+                        'minAge':minimum, 'maxAge':maximum, 'minAgeExclusive':True, 'maxAgeExclusive':True,
+                        'selectionPolicy':childhood_e2_policy['selectionPolicy'],
+                        'stagePolicy':childhood_e2_policy['stagePolicy']}},
+        limitations=[*childhood_e2['limitations'], childhood_e2_policy['agePolicy'],
+                     childhood_e2_policy['stagePolicy'], childhood_e2_policy['specimenPolicy'],
+                     childhood_e2_policy['assayPolicy'], childhood_e2_policy['contextPolicy'],
+                     childhood_e2_policy['lowValuePolicy']])
+
+    return {'version':'2026-10-22.2','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

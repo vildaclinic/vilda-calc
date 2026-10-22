@@ -120,14 +120,17 @@ describe('„Przywróć” nie nadpisuje zapisu, który jest już w karcie w now
     expect(await wKoszu(d.v, S), 'nieaktualny wpis zniknął z kosza').toBe(false);
   });
 
-  it('rozjazd zegarów: usunięcie z zegarem 10 min do przodu — poprawka zostaje dzięki rewizji', async () => {
+  // P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): dotąd poprawka miała tu chwilę WCZEŚNIEJSZĄ niż usunięcie z zegara
+  // do przodu i zostawała dzięki wyższej rewizji. Teraz przywrócenie i poprawka biorą chwilę zmiany późniejszą niż
+  // usunięcie i treść kosza (Bpp_chwilaZmiany), więc zostaje dzięki chwili zmiany — także na innych urządzeniach.
+  it('rozjazd zegarów: usunięcie z zegarem 10 min do przodu — poprawka zostaje dzięki chwili zmiany', async () => {
     const d = await urzadzenie();
     const { pid, S } = await wKarcieIWKoszu(d, { usuniecie: zegarDoPrzodu });
     await chwila(5);
     await d.v.updateSnapshotPayload(pid, S, payload([60, 66], { 66: 150 }), { preserveSavedAt: true });
     const przed = await wersja(d.v, pid, S);
-    expect(przed.updatedAtISO < (await d.baza.getUserMeta(d.uid)).snapshotTombstones[0].deletedAtISO,
-      'kontrola: chwila poprawki jest WCZEŚNIEJSZA niż zapisane usunięcie').toBe(true);
+    expect(przed.updatedAtISO > (await d.baza.getUserMeta(d.uid)).snapshotTombstones[0].deletedAtISO,
+      'stempel: chwila poprawki jest PÓŹNIEJSZA niż usunięcie z zegarem do przodu').toBe(true);
 
     const wynik = await d.v.restoreTrashedSnapshot(pid, S);
     expect(wynik.alreadyInCard).toBe(true);
