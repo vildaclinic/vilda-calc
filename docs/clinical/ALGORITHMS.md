@@ -17573,7 +17573,7 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
 - Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
   kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
   pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
-- *(Aktualizacja 2026-10-22, przegląd poprawki P1 D-21, F2; SW 1.1.340, `vilda_vault.js` 224.
+- *(Aktualizacja 2026-10-22, przegląd poprawki P1 D-21, F2; SW 1.1.341, `vilda_vault.js` 224.
   **Zmiana kliniczna: NIE** — reguła dla karty zmienia się tylko w oknie wyścigu. Usuwanie kart z wygrywającym
   nagrobkiem (`Bsl_usunPacjenta`) czyta pod blokadą karty, przed świeżym rekordem, także lokalny nagrobek karty i
   wpisuje późniejszą z dwóch chwil: z decyzji na starcie scalania (nagrobek z ładunku albo lokalny z chwili startu) i
