@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
+import { beforeFshSourceRuntime, beforeTestosteroneBoysBundle } from '../support/prior-female-gonadotropin-bundle.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const require = createRequire(import.meta.url);
@@ -87,7 +87,7 @@ describe('LH CALIPER chłopców — jawna rekonstrukcja mediany wyłącznie w (1
     expect(digest(unchanged)).toBe('194070b81366fa151b680cfc6d030447fccd6b265b29f791091d4f494f62b793');
     expect(digest({ ...data, version: '2026-10-18.2', profiles: unchanged }))
       .toBe('bafc55a49915a9ccde61c600b05096716b2857111cf39662136820bbf545f16c');
-    const otherRuntime = Object.fromEntries(Object.entries(runtime).filter(([key]) =>
+    const otherRuntime = Object.fromEntries(Object.entries(beforeFshSourceRuntime(runtime)).filter(([key]) =>
       key !== 'patientPointData' && key !== 'maleLhCaliperReferencePolicy' && key !== 'resultOnlyPolicies' &&
       key !== 'amhLilacsSourceData' && key !== 'e2PhaseSourceData'));
     expect(digest(otherRuntime)).toBe('678c2b572e10fee5358c5f1d5c5d234a89dd4175a12d0e93c1d020216e750827');

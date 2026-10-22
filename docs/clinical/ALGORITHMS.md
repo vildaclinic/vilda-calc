@@ -2997,6 +2997,66 @@ SHA; zgoda na wdrożenie nie jest walidacją kliniczną.
 
 [Kontrakt i ograniczenia](hormone-lifespan/E2_PHASE_SOURCE.md).
 
+### HORMONE-FSH-SOURCE — mediana w tabeli producenta i skala cyklu, 2026-10-22
+
+**Problem i decyzja:** właściciel zaakceptował makietę osobnej informacji
+FSH pod wykresem, poprawkę opisu „Dorosła · cykl miesiączkowy” oraz skalę
+0–20 IU/L dla samego FSH. Wynik, dotychczasowy status, pasek Mayo i
+przeliczenia pozostają na istniejącej ścieżce. Ta informacja nie jest nową
+normą ani modelem mediany dokładnego wieku.
+
+**Pełne źródło:** Roche Diagnostics, Elecsys FSH, instrukcja
+**08932387500V4.0, 2024-06 V4.0 English**, wszystkie 4 strony;
+str. 3, „Expected values”, kolumna „50th percentile”. Mediany grup:
+folikularna **6,9**, owulacyjna **12,3**, lutealna **3,6**, po menopauzie
+**67,0 mIU/mL = IU/L**; wydrukowane N **376/56/349/181**. Dokument nie
+podaje wieku, rekrutacji, wyłączeń, dni faz ani niezależności uczestniczek
+i próbek między grupami. Nie sumujemy N, nie importujemy P5/P95 do Mayo
+i nie przenosimy kryteriów Anckaert. ECLIA/cobas e402/e801 oraz dopuszczone
+materiały aktualnego testu nie potwierdzają metody pacjentki lub macierzy
+kohorty. LoD 0,3/LoQ 1 i zakres pomiarowy 0,3–200 nie odtwarzają historycznej
+cenzury ani nie zastępują wyniku nierównościowego liczbą.
+
+**Kontrakt:** czytelne `fsh-source-data.json` jest pakowane jako osobne
+`fshSourceData`. Bezpaństwowe `VildaFshSource.evaluate(data, context)`
+zwraca kopię źródła, grupy i mediany, bez wyniku pacjentki, porównania,
+percentyla, werdyktu, RI lub geometrii. `ageDomain: null` pozostaje jawne.
+Cały możliwy wiek >18 to wyłącznie reguła umieszczenia informacji dla
+dorosłej kobiety, nie granica kohorty. Wiersz pochodzi z aktualnego wyboru
+FSH „Cykl / menopauza”, bez domysłu fazy, menopauzy, dnia 3 lub kopiowania
+ukrytej fazy E2. Znana postmenopauza jest obsługiwana; mediana 67 nie
+stanowi progu rozpoznania. Brak fazy pozostawia cztery neutralne RI.
+Znane wyłączenie, niezgodność, historyczny kontekst, zmiana osoby/płci,
+blokada, inny widok i niepoprawny wynik czyszczą kartę. Nieznany wywiad
+pozostaje nieznany. Nie dodano pytań ani zapisów do historii.
+
+**Skala cyklu:** odrębne `fsh-cycle-display-policy.json` jest pakowane jako
+`fshCycleDisplayPolicy`. `cycle.projectionFor(activeIds)` wybiera liniowe
+**0–20 IU/L co 5** dla FSH bez LH, także FSH+E2; LH lub oba mają wspólne
+**0–50 co 10**. Wybór zależy od widocznych krzywych, nie wyniku pacjentki
+lub mediany Roche. To nadal dzienne mediany Stricker 2006: FSH
+2,54–12,82, LH do 41,19. Zachowano wszystkie 30+30 węzłów, interpolację,
+oś dni względem szczytu LH, inne okresy, dane norm i 85 profili.
+Brak lub uszkodzenie opcjonalnej polityki zachowuje poprawnie podpisane
+0–50, bez obcięcia FSH. Zaktualizowano ticki, podpis widoczny, metadane
+i opis dostępności. Porównanie wysokości między różnymi skalami nie jest
+porównaniem stężeń; wspólna oś obu hormonów zachowuje takie porównanie.
+
+**Wpływ kliniczny i regresje:** nowa ograniczona informacja producenta
+nie wypełnia luki zwykłej mediany wieku FSH i nie zmienia laboratoryjnych
+ocen lub zapisanej historii. F30/folikularna/10 → dotychczasowy wynik,
+Mayo 2,9–14,6 i osobno 6,9; F30/lutealna/10 → powyżej Mayo 1,4–8,9
+i osobno 3,6; F55/jawna postmenopauza/67 → Mayo 16–157 i osobno 67.
+Nieznana faza → bez mediany. `<5` pozostaje porównaniem niejednoznacznym,
+`<1` poniżej folikularnego RI; oba bez dokładnego znacznika, `<LOD` bez
+imputacji. Regresje wywołują produkcyjne funkcje, sprawdzają 20/50,
+kwalifikację, tożsamość, historię i desktop/mobile. PWA wymaga instalacji,
+aktualizacji i zimnego restartu offline dla finalnego SHA. Wyniki raportuje
+PR; testy nie ustanawiają walidacji klinicznej.
+
+[Kontrakt źródła](hormone-lifespan/FSH_SOURCE.md),
+[ekstrakt i hash pełnego IFU](hormone-lifespan/evidence/fsh-source-audit-2026-10-22.json).
+
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
 **Problem i decyzja:** wpisanie E2 zmieniało skalę i krzywą odniesienia;

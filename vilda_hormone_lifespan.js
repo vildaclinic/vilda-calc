@@ -157,7 +157,7 @@
         name: "Wiek rozrodczy",
         short: "Dorosła",
         color: "#f3f6ee",
-        title: "Wiek rozrodczy · rytm cyklu",
+        title: "Dorosła · cykl miesiączkowy",
         text: "W wieku rozrodczym stężenia zależą od fazy cyklu miesiączkowego.",
       },
       {
@@ -1642,11 +1642,16 @@
         (renderedResultOnlyPoint ? " " + renderedResultOnlyPoint.a11y : "");
     }
     function updateFemaleGonadotropinInsight() {
+      const adultCycleText = selected.has("lh") && selected.has("fsh")
+        ? "W badaniu widoczny jest wyraźny wzrost LH i mniejszy wzrost FSH około owulacji."
+        : selected.has("fsh")
+          ? "Dzienne mediany FSH pokazują wzrost w okresie okołoowulacyjnym i niższe wartości w fazie lutealnej."
+          : "Dzienne mediany LH pokazują wyraźny wzrost okołoowulacyjny. Przez większość cyklu wartości są niższe.";
       const messages = [
         ["Minipuberty", "LH wzrasta w pierwszych tygodniach. U dziewczynek przeważa FSH, którego podwyższone stężenia utrzymują się dłużej."],
         ["Dzieciństwo · względne wyciszenie", "LH pozostaje bardzo niskie. FSH nie musi spadać do zera."],
         ["Pokwitanie · ponowna aktywacja", "LH i FSH narastają. Zbliżenie „Pokwitanie” pokazuje mediany według wieku."],
-        ["Dorosłość · rytm cyklu", "Gładka linia przez lata nie oznacza stałego stężenia. W obrębie cyklu pojawia się wyraźny szczyt LH."],
+        [stages()[3].short + " · cykl miesiączkowy", adultCycleText],
         ["Przejście menopauzalne", "FSH i LH wzrastają, ale moment i przebieg zmian są indywidualne. Granice wieku na schemacie są umowne."],
         ["Po menopauzie", "FSH zwykle przewyższa LH. Przebieg w późnym wieku różni się między badaniami i nie jest uniwersalną prognozą."],
       ];
@@ -1684,24 +1689,32 @@
     function renderFemaleGonadotropinCycle() {
       const chart = byId("cycle-chart"), cycle = femaleGonadotropins.cycle;
       const active = cycle.curves.filter((curve) => selected.has(curve.id));
-      const W = chart.clientWidth || 800, mobile = W < 560, H = mobile ? 204 : 228;
-      const left = mobile ? 34 : 42, right = mobile ? 12 : 20, top = 39, bottom = H - 38;
+      const projection = typeof cycle.projectionFor === "function" ? cycle.projectionFor(active.map((curve) => curve.id)) : cycle;
+      const scale = projection.scale;
+      const W = chart.clientWidth || 800, mobile = W < 560, H = mobile ? 220 : 228;
+      const left = mobile ? 34 : 42, right = mobile ? 12 : 20, top = mobile ? 55 : 39, bottom = H - 38;
+      const legendY = top - (mobile ? 38 : 22);
       const x = (day) => left + cycle.xFraction(day) * (W - left - right);
-      const y = (value) => bottom - cycle.valueFraction(value) * (bottom - top);
+      const y = (value) => bottom - projection.valueFraction(value) * (bottom - top);
       chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
       chart.setAttribute("height", H);
-      Object.assign(chart.dataset, { cycleSource: "stricker2006", cycleUnit: "IU/L", cycleDomain: "-15,14", cycleCeiling: cycle.scale.max });
-      byId("cycle-title").textContent = active.map((curve) => curve.id.toUpperCase()).join(" i ") + " w cyklu miesiączkowym";
-      byId("cycle-desc").textContent = "Dzienne mediany 20 zdrowych kobiet w wieku 20–36 lat, Abbott ARCHITECT. LH i FSH na wspólnej osi 0–50 IU/L. Dni −15 do +14 względem indywidualnego szczytu LH (0), nie przewidywanie owulacji pacjentki.";
+      Object.assign(chart.dataset, { cycleSource: "stricker2006", cycleUnit: scale.unit, cycleDomain: "-15,14", cycleCeiling: scale.max });
+      const hormoneNames = active.map((curve) => curve.id.toUpperCase()).join(" i ");
+      const axisRange = scale.min + "–" + scale.max + " " + scale.unit;
+      byId("cycle-title").textContent = hormoneNames + " w cyklu miesiączkowym";
+      byId("cycle-desc").textContent = "Dzienne mediany 20 zdrowych kobiet w wieku 20–36 lat, Abbott ARCHITECT. " +
+        hormoneNames + " na " + (active.length > 1 ? "wspólnej " : "") + "osi " + axisRange + ". " +
+        "Dni −15 do +14 względem indywidualnego szczytu LH (0), nie przewidywanie owulacji pacjentki.";
       panel.querySelector(".vhl-cycle-note").textContent = "Dni względem szczytu LH (0). To nie jest stały dzień cyklu.";
       chart.querySelectorAll(":scope > g").forEach((node) => node.remove());
       const g = el("g", { "data-cycle-content": "paired-daily-medians",
         "data-plot-left": left, "data-plot-right": W - right, "data-plot-top": top, "data-plot-bottom": bottom });
       chart.append(g);
-      for (const tick of cycle.scale.ticks) g.append(
+      for (const tick of scale.ticks) g.append(
         el("line", { x1: left, x2: W - right, y1: y(tick), y2: y(tick), stroke: "#d7e4e7", "stroke-dasharray": tick === 0 ? "0" : "3 5" }),
         text(left - 7, y(tick) + 3.5, String(tick), { "text-anchor": "end", "font-size": mobile ? 9.5 : 10.5 }));
-      g.append(text(left, top - 19, "IU/L", { "font-size": 10.5, "font-weight": 600 }),
+      g.append(text(left, top - 19, (active.length === 1 ? hormoneNames + " · " : "") + axisRange,
+        { "font-size": 10.5, "font-weight": 600 }),
         el("line", { x1: x(0), x2: x(0), y1: top, y2: bottom, stroke: "#aebfc6", "stroke-dasharray": "3 5" }));
       active.forEach((curve, index) => {
         const h = femaleDefinitions.find((h) => h.id === curve.id);
@@ -1710,8 +1723,8 @@
           "stroke-linecap": "round", "stroke-linejoin": "round", "data-cycle-curve": h.id,
           "data-cycle-statistic": "published-daily-median" }));
         const legendX = W - right - (active.length - index) * 62;
-        g.append(el("line", { x1: legendX, x2: legendX + 16, y1: top - 22, y2: top - 22, stroke: h.color, "stroke-width": 3 }),
-          text(legendX + 23, top - 18, h.name, { fill: h.color, "font-size": 11, "font-weight": 650 }));
+        g.append(el("line", { x1: legendX, x2: legendX + 16, y1: legendY, y2: legendY, stroke: h.color, "stroke-width": 3 }),
+          text(legendX + 23, legendY + 4, h.name, { fill: h.color, "font-size": 11, "font-weight": 650 }));
       });
       for (const day of mobile ? [-15, -5, 0, 5, 14] : [-15, -10, -5, 0, 5, 10, 14]) g.append(
         el("line", { x1: x(day), x2: x(day), y1: bottom, y2: bottom + 4, stroke: "#bfcfd4" }),
@@ -1744,7 +1757,15 @@
       if (selected.has("inhb")) paragraph("Inhibina B zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii. Most dzieciństwa i końcowy spadek po 47. roku są poglądowe; nie stanowią nowych odniesień liczbowych.");
       if (selected.has("e2")) paragraph("Estradiol zachowuje tę samą linię i stałą skalę po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. W niemowlęctwie linia przedstawia medianę modelu GAMLSS, a nie dwie fale średniej podłużnej z ryciny 3. Dorosłe plateau jest poglądowe; osobny schemat cyklu pokazuje zmienność w jego obrębie. Jasny znacznik zachowuje źródłową medianę, także gdy nie leży dokładnie na linii.");
       if (selected.has("amh")) paragraph("AMH zachowuje własną stałą skalę i tę samą poglądową linię, także po wpisaniu wyniku oraz po zmianie okresu. Zbliżenie pokazuje fragment tego samego przebiegu. Końcówka pierwszego roku przechodzi łagodnie w poglądowy odcinek dzieciństwa. Jasny znacznik AMH zachowuje medianę źródłową także wtedy, gdy nie leży na linii.");
-      if (view === "life") for (const copy of femaleGonadotropins.cycle.caveats || []) paragraph(copy);
+      if (view === "life") {
+        const cycle = femaleGonadotropins.cycle;
+        for (const copy of cycle.caveats || []) paragraph(copy);
+        const fshProjection = typeof cycle.projectionFor === "function" ? cycle.projectionFor(["fsh"]) : cycle;
+        if (fshProjection.scale.max !== cycle.scale.max) paragraph(
+          "Przy samym FSH podwykres cyklu ma stałą skalę " + fshProjection.scale.min + "–" + fshProjection.scale.max +
+          " " + fshProjection.scale.unit + ". Po dołączeniu LH obie krzywe mają wspólną skalę " + cycle.scale.min + "–" +
+          cycle.scale.max + " " + cycle.scale.unit + ". Wysokości krzywych na różnych skalach nie są porównaniem stężeń.");
+      }
       paragraph(view === "mini"
         ? "LH i FSH podzielono osobno przez własne maksimum modelowanej średniej podłużnej. 100% nie oznacza konkretnego stężenia ani mediany GAMLSS. Nie przeliczamy tego modelu na IU/L. Pierwszy odczyt pochodzi z około 6. dnia, a końce linii z około 357.–360. dnia; nie dopisujemy pomiaru w chwili narodzin ani przy 12 miesiącach. Wynik LH/FSH pozostaje tekstem, a pion zaznacza tylko wiek."
         : renderedResultOnlyPoint

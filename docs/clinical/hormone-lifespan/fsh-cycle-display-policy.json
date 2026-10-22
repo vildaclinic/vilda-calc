@@ -1,0 +1,23 @@
+{
+  "id": "female-fsh-cycle-axis-v1",
+  "version": "2026-10-22.1",
+  "kind": "single-hormone-cycle-display",
+  "sex": "female",
+  "analyte": "fsh",
+  "view": "cycle",
+  "sourceStatistic": "published-daily-median",
+  "numericPatientProfilesChanged": false,
+  "clinicalNormsChanged": false,
+  "selection": {
+    "required": ["fsh"],
+    "excluded": ["lh"]
+  },
+  "scale": {
+    "kind": "linear",
+    "unit": "IU/L",
+    "min": 0,
+    "max": 20,
+    "ticks": [0, 5, 10, 15, 20],
+    "independentOfPatient": true
+  }
+}

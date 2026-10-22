@@ -1,0 +1,150 @@
+/* Read-only FSH manufacturer-group information, separate from the result and chart. */
+#labFshSource { container: fsh-source / inline-size; }
+#labFshSource[hidden] { display: none !important; }
+.vilda-fsh-source {
+  --vfss-paper: var(--card-bg, #fff);
+  --vfss-ink: var(--text-color, #183c48);
+  --vfss-muted: var(--text-muted, #5a7274);
+  --vfss-border: var(--border-color, #d4e4e7);
+  --vfss-subtle: #f1f7f7;
+  --vfss-subtle-border: #e0eeee;
+  margin: var(--space-20px) 0 0;
+  padding: var(--space-20px) 22px 0;
+  border: var(--border-hairline) solid var(--vfss-border);
+  border-radius: 15px;
+  background: var(--vfss-paper);
+  color: var(--vfss-ink);
+  font-family: inherit;
+  overflow: hidden;
+  min-width: 0;
+}
+.vilda-fsh-source *,
+.vilda-fsh-source *::before,
+.vilda-fsh-source *::after { box-sizing: border-box; }
+.vilda-fsh-source .vfss-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  flex-wrap: wrap;
+}
+.vilda-fsh-source h3 {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  margin: 0;
+  line-height: 1.5;
+  color: inherit;
+}
+.vilda-fsh-source .vfss-source-label {
+  font-size: 10px;
+  color: var(--vfss-muted);
+  border: var(--border-hairline) solid var(--vfss-border);
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-6);
+  white-space: nowrap;
+}
+.vilda-fsh-source .vfss-cohort {
+  font-size: 12px;
+  color: var(--vfss-muted);
+  margin: var(--space-8px) 0 15px;
+  line-height: 1.6;
+}
+.vilda-fsh-source .vfss-median-block {
+  background: var(--vfss-subtle);
+  border: var(--border-hairline) solid var(--vfss-subtle-border);
+  border-radius: var(--radius-10);
+  padding: 13px 15px;
+  min-width: 0;
+}
+.vilda-fsh-source .vfss-median-block > span { font-size: 11px; color: var(--vfss-muted); }
+.vilda-fsh-source .vfss-median-block p {
+  display: flex;
+  align-items: baseline;
+  gap: 17px;
+  flex-wrap: wrap;
+  margin: var(--space-6px) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.vilda-fsh-source .vfss-median-block strong {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+.vilda-fsh-source .vfss-median-block small {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 3px;
+  color: var(--vfss-muted);
+}
+.vilda-fsh-source .vfss-median-block p > span { font-size: 13px; color: var(--vfss-muted); white-space: nowrap; }
+.vilda-fsh-source .vfss-limit { font-size: 11px; line-height: 1.7; color: var(--vfss-muted); margin: var(--space-12px) 0 var(--space-16px); }
+.vilda-fsh-source .vfss-details { border-top: var(--border-hairline) solid var(--vfss-border); margin: 0 -22px; }
+.vilda-fsh-source summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10px);
+  list-style: none;
+  padding: var(--space-14px) 22px;
+  min-height: 45px;
+  font-size: 12px;
+  color: var(--vfss-ink);
+  cursor: pointer;
+}
+.vilda-fsh-source summary::-webkit-details-marker { display: none; }
+.vilda-fsh-source summary > span { font-size: 19px; line-height: 16px; }
+.vilda-fsh-source details[open] summary > span { transform: rotate(45deg); }
+.vilda-fsh-source summary:focus-visible,
+.vilda-fsh-source a:focus-visible { outline: var(--border-emphasis) solid var(--primary, #00838d); outline-offset: var(--space-4px); }
+.vilda-fsh-source .vfss-source-copy { font-size: 12px; color: var(--vfss-muted); line-height: 1.75; padding: 0 22px 5px; }
+.vilda-fsh-source .vfss-source-copy p { margin: 0 0 13px; }
+.vilda-fsh-source .vfss-source-copy strong { font-weight: 600; color: var(--vfss-ink); }
+.vilda-fsh-source a { color: var(--primary, #00838d); text-underline-offset: 3px; overflow-wrap: anywhere; }
+@container fsh-source (min-width: 640px) {
+  .vilda-fsh-source { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); column-gap: 26px; }
+  .vilda-fsh-source .vfss-heading { grid-column: 1; grid-row: 1; }
+  .vilda-fsh-source .vfss-cohort { grid-column: 1; grid-row: 2; margin-bottom: 0; }
+  .vilda-fsh-source .vfss-limit { grid-column: 1; grid-row: 3; }
+  .vilda-fsh-source .vfss-median-block { grid-column: 2; grid-row: 1 / 4; align-self: start; }
+  .vilda-fsh-source .vfss-details { grid-column: 1 / -1; }
+}
+@container fsh-source (max-width: 639px) {
+  .vilda-fsh-source { margin-top: var(--space-16px); padding: 15px var(--space-14px) 0; border-radius: var(--radius-12); }
+  .vilda-fsh-source h3 { font-size: 14px; }
+  .vilda-fsh-source .vfss-source-label { font-size: 9px; padding: var(--space-4px) var(--space-6px); }
+  .vilda-fsh-source .vfss-cohort { font-size: 11px; margin-bottom: var(--space-12px); }
+  .vilda-fsh-source .vfss-median-block { padding: 11px var(--space-12px); }
+  .vilda-fsh-source .vfss-median-block > span { font-size: 10px; }
+  .vilda-fsh-source .vfss-median-block strong { font-size: 23px; }
+  .vilda-fsh-source .vfss-median-block p { gap: var(--space-10px); }
+  .vilda-fsh-source .vfss-median-block p > span { font-size: 12px; }
+  .vilda-fsh-source .vfss-limit { font-size: 10px; margin: 11px 0 13px; }
+  .vilda-fsh-source .vfss-details { margin: 0 calc(-1 * var(--space-14px)); }
+  .vilda-fsh-source summary { padding: 13px var(--space-14px); font-size: 11px; }
+  .vilda-fsh-source .vfss-source-copy { padding: 0 var(--space-14px) 3px; font-size: 11px; }
+}
+body.dark-bg-level-1 .vilda-fsh-source { --vfss-border: rgba(0,131,141,.22); }
+body.dark-bg-level-2 .vilda-fsh-source { --vfss-border: rgba(0,131,141,.28); }
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-fsh-source {
+  --vfss-paper: var(--hc-surface);
+  --vfss-ink: var(--hc-text);
+  --vfss-muted: var(--hc-muted);
+  --vfss-border: var(--hc-border);
+  --vfss-subtle: var(--hc-input-bg);
+  --vfss-subtle-border: var(--hc-border);
+  border-width: var(--hc-card-border-width);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vilda-fsh-source * { animation: none !important; transition: none !important; }
+}
+@media print {
+  .vilda-fsh-source { break-inside: avoid; background: white; color: black; border-color: #777; }
+  .vilda-fsh-source .vfss-source-label,
+  .vilda-fsh-source .vfss-cohort,
+  .vilda-fsh-source .vfss-limit,
+  .vilda-fsh-source .vfss-source-copy { color: black; }
+}

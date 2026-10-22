@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
+import { beforeFshSourceRuntime } from '../support/prior-female-gonadotropin-bundle.mjs';
 
 const require = createRequire(import.meta.url);
 const ui = require('../../vilda_amh_lilacs_source_ui.js');
@@ -96,7 +97,7 @@ describe('AMH LiLACS — published source information, not a patient reference',
       policy: { notClinicalReference: true, noPatientComparison: true, fullAgeIntervalRequired: true, ordinaryOnly: true } });
     expect(data.source.method).toContain('A16507');
     expect(data.source.method).toContain('DSL-10-14400');
-    const { amhLilacsSourceData: _sourceOnly, e2PhaseSourceData: _e2SourceOnly, ...priorRuntime } = runtime;
+    const { amhLilacsSourceData: _sourceOnly, e2PhaseSourceData: _e2SourceOnly, ...priorRuntime } = beforeFshSourceRuntime(runtime);
     // Frozen base594657f4: removing the two separate source-information fields
     // restores every earlier profile, geometry, policy and conversion verbatim.
     expect(digest(priorRuntime)).toBe('3bd76a0264cc097e81549d71bbd8aa2bb80611c3ff3ef18861f22a8294d78c4b');

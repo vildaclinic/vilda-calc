@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "auditedOn": "2026-10-22",
+  "source": {
+    "organization": "Roche Diagnostics",
+    "title": "Elecsys FSH",
+    "documentId": "08932387500V4.0",
+    "version": "2024-06 V4.0 English",
+    "pagesInspected": [1, 2, 3, 4],
+    "tableLocation": "Page 3 of 4, Expected values, Women, 50th percentile column",
+    "url": "https://elabdoc-prod.roche.com/eLD/api/downloads/1c2e351f-b257-ee11-1f91-005056a772fd?countryIsoCode=be",
+    "originalPdfSha256": "2ef667b5f3d20bb44f047678bbeb9227e6e4c74bfae84c1a83ae038cf2ee8136",
+    "verification": "Full current original four-page manufacturer IFU, printed page-3 table and its column labels rechecked. Not an abstract or a citation-only verification."
+  },
+  "printedUnit": "mIU/mL",
+  "displayUnit": "IU/L",
+  "unitIdentity": "1 mIU/mL = 1 IU/L",
+  "printedTable": [
+    { "group": "Follicular phase", "N": 376, "P50": 6.9, "P5": 3.5, "P95": 12.5 },
+    { "group": "Ovulation phase", "N": 56, "P50": 12.3, "P5": 4.7, "P95": 21.5 },
+    { "group": "Luteal phase", "N": 349, "P50": 3.6, "P5": 1.7, "P95": 7.7 },
+    { "group": "Postmenopause", "N": 181, "P50": 67, "P5": 25.8, "P95": 134.8 }
+  ],
+  "runtimeImport": "Only P50 and the per-row printed N. P5/P95 are retained here to verify the original columns; they are not imported as laboratory RI.",
+  "statistic": "Published group 50th percentile (median), not a reconstructed midpoint, age model or individual result percentile.",
+  "unknownReferenceCohortDetails": [
+    "Numerical age domain",
+    "Country and ethnicity",
+    "Recruitment and detailed inclusion/exclusion procedures",
+    "Precise cycle-day definitions",
+    "Unique individuals versus repeated samples within/across rows",
+    "Actual reference-cohort specimen distribution",
+    "Original low-value censoring/imputation procedure"
+  ],
+  "doNotBorrow": [
+    "The separate LH/FSH quotient paragraph has different N and does not establish missing eligibility for the FSH table.",
+    "Anckaert E2 ages 18–37, natural-cycle criteria, lactation exclusion and ovulation-relative day definitions do not describe this manufacturer table."
+  ],
+  "currentAssay": {
+    "method": "Sandwich ECLIA, Roche Elecsys FSH",
+    "analyzers": ["cobas e402", "cobas e801"],
+    "acceptedSpecimens": ["Serum", "Li-heparin plasma", "K2-EDTA plasma", "K3-EDTA plasma"],
+    "standardization": "Enzymun-Test FSH, in turn WHO 2nd IRP 78/549",
+    "LoB_IU_L": 0.1,
+    "LoD_IU_L": 0.3,
+    "LoQ_IU_L": 1,
+    "LoQPrecision": "Intermediate precision CV <=20%",
+    "measuringRange_IU_L": [0.3, 200],
+    "reportingLimits": ["<0.3", ">200"],
+    "limitation": "Current assay performance and accepted specimens do not establish the original table's cohort matrix or historical low-value procedure."
+  },
+  "acceptedApplicationScope": {
+    "kind": "Source-information card outside SVG and ordinary age-reference registry",
+    "adultPlacement": "The whole possible current age must be >18, an application presentation rule only. Source ageDomain remains null.",
+    "groupSelection": "Explicit existing current FSH cycle/menopause context only; no inference or cross-test phase transfer.",
+    "patientComparison": false,
+    "newAgeReferenceProfile": false,
+    "newLaboratoryRI": false,
+    "historyReevaluation": false,
+    "newRequiredQuestions": false,
+    "applicationExclusions": "Known contraindication, pregnancy, treatment/stimulation, explicit assay/specimen mismatch, historical or unavailable context; not reported cohort exclusions.",
+    "postmenopause": "A supported table group. 67 IU/L is not a menopause diagnostic threshold.",
+    "inequalities": "Preserve the real FSH parser and existing RI comparison; no value imputation or exact patient marker from a boundary."
+  },
+  "unchangedClinicalLayers": [
+    "Existing Mayo RI, result/status/range axis/conversions",
+    "85 ordinary source profiles and source-reference routing",
+    "Stored assessments and history schema",
+    "Source concentrations and days in the separate Stricker daily-cycle illustration"
+  ],
+  "validationMeaning": "Technical and source-contract checks do not confer independent clinical validation. The PR reports final-SHA runtime, PWA/offline and GitHub check results."
+}

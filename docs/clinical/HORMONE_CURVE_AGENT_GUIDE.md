@@ -500,6 +500,12 @@ Nie przenoś go na męskie wykresy, porównania płci ani inne hormony.
   Dzień 0 oznacza szczyt LH w badaniu, nie zawsze 14. dzień cyklu
   ani dokładny moment owulacji. Nie rysuj na niej wyniku pacjentki
   bez odrębnie zweryfikowanego kontekstu cyklu.
+  **Uzupełnienie zatwierdzone 22.10.2026:** sama krzywa FSH bez LH
+  korzysta ze stałej osi 0–20 IU/L co 5, również przy dołączonym E2.
+  LH oraz wspólne LH/FSH zachowują 0–50 co 10. To jawny wyjątek
+  dotyczący tylko wstawki cyklu; nie zależy od wyniku pacjentki
+  ani mediany grupy producenta i nie zmienia źródłowych 30+30 liczb.
+  Polityka i ograniczenia: [FSH_SOURCE.md](hormone-lifespan/FSH_SOURCE.md).
 - Dołączenie AMH, E2 lub inhibiny B nie przywraca starych linii LH/FSH.
   Ich własne skale nie stają się wspólną osią IU/L. Jawnie ogranicz
   opis osi stężeń do gonadotropin; porównania płci zachowują odrębny

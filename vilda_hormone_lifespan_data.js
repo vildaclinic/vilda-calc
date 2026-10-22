@@ -39426,6 +39426,181 @@ const e2PhaseSourceData = {
     ]
   }
 };
+const fshSourceData = {
+  "version": "2026-10-22.1",
+  "kind": "manufacturer-group-information",
+  "analyte": "fsh",
+  "sex": "female",
+  "ageDomain": null,
+  "placement": {
+    "kind": "application-adult-placement",
+    "minimumAgeYearsExclusive": 18,
+    "description": "Cały możliwy wiek powyżej 18 lat jest regułą umieszczenia informacji w aplikacji, nie granicą wieku grup producenta. Instrukcja nie podaje ich wieku."
+  },
+  "groups": {
+    "follicular": {
+      "id": "follicular",
+      "label": "Faza folikularna",
+      "sourceLabel": "Follicular phase",
+      "printedN": 376,
+      "definition": "Nazwa grupy z tabeli producenta; dokładnych dni fazy nie podano.",
+      "median": {
+        "value": 6.9,
+        "unit": "IU/L"
+      }
+    },
+    "ovulation": {
+      "id": "ovulation",
+      "label": "Faza owulacyjna",
+      "sourceLabel": "Ovulation phase",
+      "printedN": 56,
+      "definition": "Nazwa grupy z tabeli producenta; nie oznacza osobno potwierdzonego dnia ani szczytu owulacji pacjentki.",
+      "median": {
+        "value": 12.3,
+        "unit": "IU/L"
+      }
+    },
+    "luteal": {
+      "id": "luteal",
+      "label": "Faza lutealna",
+      "sourceLabel": "Luteal phase",
+      "printedN": 349,
+      "definition": "Nazwa grupy z tabeli producenta; dokładnych dni fazy nie podano.",
+      "median": {
+        "value": 3.6,
+        "unit": "IU/L"
+      }
+    },
+    "postmenopause": {
+      "id": "postmenopause",
+      "label": "Po menopauzie",
+      "sourceLabel": "Postmenopause",
+      "printedN": 181,
+      "definition": "Nazwa grupy z tabeli producenta; mediana nie jest progiem rozpoznania menopauzy.",
+      "median": {
+        "value": 67,
+        "unit": "IU/L"
+      }
+    }
+  },
+  "source": {
+    "id": "roche-elecsys-fsh-2024-group-medians",
+    "label": "Roche Elecsys FSH",
+    "citation": "Roche Diagnostics. Elecsys FSH. Instrukcja metody 08932387500V4.0, 2024-06, V4.0 English. Strona 3 z 4, sekcja Expected values, kolumna 50th percentile.",
+    "documentId": "08932387500V4.0",
+    "documentVersion": "2024-06 V4.0 English",
+    "page": 3,
+    "url": "https://elabdoc-prod.roche.com/eLD/api/downloads/1c2e351f-b257-ee11-1f91-005056a772fd?countryIsoCode=be",
+    "ageDomain": null,
+    "population": "Kobiece grupy z tabeli producenta: faza folikularna, owulacyjna, lutealna i po menopauzie. Instrukcja nie podaje wieku, kraju pochodzenia, szczegółów rekrutacji i wyłączeń. Nagłówek Test subjects N nie wyjaśnia niezależności uczestniczek i próbek między grupami; nie sumujemy wydrukowanych N.",
+    "statistic": "50. centyl (P50, mediana) podany dla nazwanej grupy w tabeli producenta. Wybrany kontekst wskazuje wiersz tabeli, nie potwierdza dopasowania grupy do pacjentki. Nie jest to norma ani mediana dokładnego wieku.",
+    "method": "Roche Elecsys FSH, kanapkowy test elektrochemiluminescencyjny ECLIA. Dokument dotyczy analizatorów cobas e402/e801. Standaryzacja: Enzymun-Test FSH, pośrednio WHO 2nd IRP 78/549. Metoda źródłowa nie potwierdza metody badania pacjentki.",
+    "specimen": "Aktualny test dopuszcza surowicę, osocze Li-heparynowe, K2-EDTA i K3-EDTA. Nie wskazano rzeczywistego materiału grup z tabeli.",
+    "phaseDefinition": "Instrukcja wymienia nazwy trzech faz cyklu i grupy po menopauzie, bez dokładnych dni lub dodatkowego podziału faz. Nie przenosimy definicji dni z innej publikacji ani nie ustalamy fazy z wyniku.",
+    "limitsDescription": "Aktualny dokument podaje LoB 0,1 IU/L, LoD 0,3 IU/L, LoQ 1 IU/L i zakres pomiarowy 0,3–200 IU/L. Nie opisano sposobu uwzględnienia niskich wyników w oryginalnej tabeli. Granice aktualnego testu nie odtwarzają historycznej procedury cenzury; nie podstawiamy granicy ani jej połowy za wynik pacjentki.",
+    "printedUnit": "mIU/mL",
+    "displayUnit": "IU/L",
+    "unitEquivalence": "1 mIU/mL = 1 IU/L; równoważność jednostek nie harmonizuje metod ani populacji.",
+    "limitations": [
+      "Wiek grupy niepodany. To informacja o źródle, nie norma ani mediana dla wieku. Nie tworzy punktu odniesienia na osi wieku ani nie zamyka luki zwykłej mediany FSH u dorosłych kobiet.",
+      "Brak opisu rekrutacji i wyłączeń nie oznacza potwierdzenia naturalnego cyklu ani braku ciąży, laktacji lub leczenia. Nie przenosimy kryteriów Anckaert ani akapitu o innej analizie ilorazu LH/FSH na te grupy.",
+      "Wydrukowane N dotyczy danego wiersza. Instrukcja nie opisuje unikalności uczestniczek ani powtarzanych próbek między fazami; nie sumujemy czterech N jako liczby różnych kobiet.",
+      "Dopuszczone materiały i parametry aktualnego testu nie opisują osobno oryginalnej kohorty. Dane źródłowe nie potwierdzają zgodności metody próbki pacjentki.",
+      "Mediana nie zmienia zakresu Mayo ani oceny wyniku i nie służy do ustalania fazy cyklu, menopauzy, płodności lub rezerwy jajnikowej. Producent zaleca sprawdzenie przenoszalności danych na populację laboratorium.",
+      "Nieznany wywiad pacjentki pozostaje nieznany. Ukrywanie informacji przy znanych przeciwwskazaniach lub niezgodności jest konserwatywną polityką aplikacji, nie odzyskanym kryterium wyłączenia autorów tabeli."
+    ]
+  },
+  "policy": {
+    "notClinicalReference": true,
+    "noPatientComparison": true,
+    "placementOnly": true,
+    "fullAgeIntervalRequired": true,
+    "ordinaryOnly": true,
+    "knownGroupRequired": true,
+    "chartSelectionKey": "fsh",
+    "measurementUnits": [
+      "IU/L",
+      "mIU/mL"
+    ],
+    "allowedAssayMethodIds": [
+      "roche-elecsys-fsh-eclia",
+      "roche-elecsys-fsh",
+      "roche-elecsys-fsh-cobas-e402",
+      "roche-elecsys-fsh-cobas-e801",
+      "roche-cobas-e402-fsh",
+      "roche-cobas-e801-fsh"
+    ],
+    "allowedSpecimens": [
+      "serum",
+      "surowica",
+      "li-heparin-plasma",
+      "lithium-heparin-plasma",
+      "k2-edta-plasma",
+      "k3-edta-plasma"
+    ],
+    "excludedCyclePhases": [
+      "pregnancy",
+      "pregnancy_t1",
+      "pregnancy_t2",
+      "pregnancy_t3"
+    ],
+    "excludedPositiveFlags": [
+      "pregnancy",
+      "hormonalTreatment",
+      "stimulation",
+      "gnrha"
+    ],
+    "excludedTreatmentContexts": [
+      "hormonal",
+      "stimulation",
+      "gnrh-stimulation",
+      "hcg-stimulation"
+    ],
+    "excludedTreatmentFlags": [
+      "gnrha",
+      "sexSteroids",
+      "cocp",
+      "exogenousTestosterone"
+    ],
+    "allowedMeasurementKinds": [
+      "basal"
+    ],
+    "exclusionBasis": "Conservative application presentation policy; reference-cohort exclusion criteria are not reported. Postmenopause is a supported table group, not an exclusion."
+  }
+};
+const fshCycleDisplayPolicy = {
+  "id": "female-fsh-cycle-axis-v1",
+  "version": "2026-10-22.1",
+  "kind": "single-hormone-cycle-display",
+  "sex": "female",
+  "analyte": "fsh",
+  "view": "cycle",
+  "sourceStatistic": "published-daily-median",
+  "numericPatientProfilesChanged": false,
+  "clinicalNormsChanged": false,
+  "selection": {
+    "required": [
+      "fsh"
+    ],
+    "excluded": [
+      "lh"
+    ]
+  },
+  "scale": {
+    "kind": "linear",
+    "unit": "IU/L",
+    "min": 0,
+    "max": 20,
+    "ticks": [
+      0,
+      5,
+      10,
+      15,
+      20
+    ],
+    "independentOfPatient": true
+  }
+};
 const insl3DisplayPolicy = {
   "version": "2026-10-11.1",
   "kind": "educational-display-only",
@@ -41757,6 +41932,8 @@ return {
   amhComparisonPolicy: amhComparisonPolicy,
   amhLilacsSourceData: amhLilacsSourceData,
   e2PhaseSourceData: e2PhaseSourceData,
+  fshSourceData: fshSourceData,
+  fshCycleDisplayPolicy: fshCycleDisplayPolicy,
   insl3DisplayPolicy: insl3DisplayPolicy,
   femaleGonadotropinPolicy: femaleGonadotropinPolicy,
   femaleGonadotropinData: femaleGonadotropinData,
