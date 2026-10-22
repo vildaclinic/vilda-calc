@@ -1778,6 +1778,56 @@ F3, >18 lub niepewny wiek wychodzący poza model → brak odniesienia;
 [audyt E2](hormone-lifespan/evidence/female-estradiol-reference-audit-2026-10-17.json).
 Testy techniczne nie są walidacją kliniczną.
 
+**2026-10-22 — żeński E2, mediana całej grupy Th1 we wnętrzu luki 1–6 lat.**
+Po przedstawieniu nierozstrzygniętych ograniczeń właściciel zaakceptował mały
+PR wyłącznie z edukacyjnym odniesieniem Kulle 2024. Profil
+`kulle2024-female-e2-th1-age-over1-under6`, `ordinaryOnly`, ma stałe
+odniesienie **15 pmol/L** tylko dla całego możliwego wieku w `(1,6)`
+i aktualnego typowanego **Th1 tej samej pacjentki**. Polityka
+`female-estradiol-childhood-reference-policy.json` i dane mają wersję
+`2026-10-22.1`; rejestr liczy 85 profili, 84 wcześniejsze są zachowane.
+Etykieta: **„Mediana grupy Th1, 1–8 lat: 15 pmol/L”**. Nie jest to model
+mediany dokładnego wieku, norma laboratoryjna, SDS ani ocena prawidłowości.
+
+**Źródło i ograniczenia:** Kulle i wsp., *European Journal of Endocrinology*
+2024;190(5):401–408, [DOI 10.1093/ejendo/lvae046](https://doi.org/10.1093/ejendo/lvae046),
+pełny tekst, tabela 3 „B1 1–8 years” i oryginalny suplement. Raportowane
+N=213 oraz P50=15,0 pmol/L to estymowany kwantyl Harrella–Davisa całej
+grupy wieku i stadium, nie nowej podgrupy 1–6 lat. Niemieckie pozostałości
+próbek 2014–2019 od pozornie zdrowych dzieci, przed drobnymi zabiegami lub
+po wykluczeniu podejrzewanej choroby; pobrania 08–12, bez steroidoterapii,
+znana antykoncepcja wykluczana, jeśli informacja była dostępna. Derywatyzacyjne
+LC-MS/MS; opis odniesienia mówi o surowicy, protokół także o serum/plasma,
+bez przypisania materiału do osób w B1. LOD **4**, LLOQ **11 pmol/L**.
+Nie opisano numerycznej obsługi cenzury w estymacji Th1. P50 powyżej LLOQ
+nie rozstrzyga tego problemu; nie imputujemy zera, LOD/2 ani LLOQ/2.
+Rozbieżność N **1753 versus 1724** (29), błędna kolejność centyli B4
+oraz niejasność osoby/próbki pozostają nierozwiązane. Nie poprawiamy liczb.
+
+**Kwalifikacja i wpływ:** Th pochodzi z bieżącego formularza; P1, sam numer
+Tannera oraz historyczna ocena dopuszczona do obliczeń wzrostowych jej
+nie zastępują. Dzisiejszej Th nie stosujemy do dawnej próbki ani innej osoby.
+Brak Th1 pozostawia niezależny wynik i dostępne RI. Znana surowica jest
+zgodna; znane osocze blokuje ten profil, nieznany materiał pozwala tylko na
+ograniczone porównanie edukacyjne. Tak samo ogólna zgodność LC-MS/MS nie
+potwierdza kalibracji indywidualnego oznaczenia; znana inna metoda blokuje.
+Dotychczasowe bramki ciąży, menopauzy, leczenia/GnRHa, stymulacji, cenzury
+oraz tożsamości pozostają. Zachowujemy Ljubicic przy dokładnym 1 roku,
+Madsen od 6 lat, geometrię i stałą skalę 264 pmol/L, porównania płci,
+RI Mayo i dawne oceny. Różnica źródeł 15 → około 1,25768 przy 6 latach
+nie jest zdarzeniem biologicznym i nie wymusza dopasowania linii.
+
+**Regresje rzeczywistych funkcji:** F2, aktualne Th1, E2 20 pmol/L →
+wynik 20 i mediana grupy 15; Th2/P1/nieznana lub wyłącznie historyczna Th
+→ brak nowego odniesienia. `[1,1+1/12)` nie mieści się w otwartym `(1,6)`;
+`[5+11/12,6)` mieści się, a przedział obejmujący 6 włącznie już nie.
+Zero pozostaje zerem, nierówności nie tworzą dokładnego punktu; przeliczenie
+15 pmol/L ↔ 15/3,671 pg/mL nie zmienia źródła lub geometrii. Kontrole
+obejmują tożsamość, stare profile i oceny, desktop/mobile oraz PWA/offline.
+Wyniki wykonania i końcowe CI są raportowane w PR; nie nadają walidacji
+klinicznej. [Ekstrakt źródła](hormone-lifespan/evidence/patient-point/kulle2024-female-e2-th1-group-median.json)
+i [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md#żeński-e2--mediana-grupy-th1-w-16-22-października-2026).
+
 Wdrożenie zatwierdzonych makiet z 2026-10-09: męskie LH, FSH, testosteron
 całkowity, AMH, inhibina B i poglądowe INSL3; żeńskie LH, FSH, estradiol,
 AMH i inhibina B. Dokumentacja danych, populacji, metod i ograniczeń:

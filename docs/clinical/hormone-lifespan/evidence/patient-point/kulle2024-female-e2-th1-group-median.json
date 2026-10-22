@@ -1,0 +1,163 @@
+{
+  "version": "2026-10-22.1",
+  "purpose": "Published whole-group Harrell–Davis P50 for educational comparison only; no new laboratory RI, exact-age model, fitted curve or clinical validation.",
+  "sex": "female",
+  "analyte": "e2",
+  "unit": "pmol/L",
+  "sourceUnit": "pmol/L",
+  "statistic": "group-median",
+  "approximate": false,
+  "sourceLabel": "Kulle 2024 · estradiol · grupa Th1",
+  "source": {
+    "authors": "Kulle et al.",
+    "year": 2024,
+    "doi": "10.1093/ejendo/lvae046",
+    "pmid": "38652605",
+    "url": "https://doi.org/10.1093/ejendo/lvae046",
+    "fullText": "https://academic.oup.com/ejendo/article/190/5/401/7656846",
+    "title": "New liquid chromatography tandem mass spectrometry reference data for estradiol show mini-puberty in both sexes and typical pre-pubertal and pubertal patterns",
+    "journal": "European Journal of Endocrinology 2024;190(5):401–408",
+    "sourceFormat": "Final published article HTML and original supplementary DOCX",
+    "sourceLocator": {
+      "selectedMedian": "Table 3: B1 1-8 years, N=213, 50th=15.0 pmol/L",
+      "statistic": "Methods, Statistical analysis: Harrell–Davis quantile estimator for Tanner breast stages; Hmisc package",
+      "population": "Methods, Study cohort; Table 1 and annual rows in Table 2",
+      "assay": "Methods, Hormonal analysis; supplementary Methods and Supplementary Table 2"
+    },
+    "sourceSha256": "2d62bd90380dc3b00bb35e110a476ede2cf7184a1459a033357857929205f54e",
+    "supplementSha256": "ba73473e1e9a407d4024299b216497678ce6dd24af89de74a48a34388a684ac8",
+    "supplementFilename": "lvae046_supplementary_data.docx",
+    "sourceTableImageSha256": "805ecb24739f9497994527ba526d12b2237498f6fa29786dad9fb100618e4a16",
+    "sourceTableImageReview": "Cached official Table 3 image and native HTML agree on the B1 row; an image match does not validate the underlying author data.",
+    "reviewDate": "2026-10-22",
+    "retrieval": {
+      "retrievedUtc": "2026-10-22T08:32:39.309524+00:00",
+      "sources": [
+        {
+          "file": "article.html",
+          "status": 200,
+          "bytes": 293062,
+          "sha256": "2d62bd90380dc3b00bb35e110a476ede2cf7184a1459a033357857929205f54e",
+          "sameAs21October": true
+        },
+        {
+          "file": "supplement.docx",
+          "status": 200,
+          "bytes": 2388155,
+          "sha256": "ba73473e1e9a407d4024299b216497678ce6dd24af89de74a48a34388a684ac8",
+          "sameAs21October": true
+        }
+      ]
+    },
+    "reviewBasis": "Complete primary article and original supplement reviewed, not abstract only. Fresh article and DOCX both returned HTTP 200 and are byte-identical to the 21 October copies. Three unique HTML tables each have four identical presentation copies; the copies are not additional participants.",
+    "statisticDefinition": "Directly printed 50th quantile estimated with Harrell–Davis for the complete B1 1–8-year group; not a GAMLSS median at exact age or a median newly estimated for ages >1–<6.",
+    "sourceQuantification": {
+      "lodPmolL": 4,
+      "lloqPmolL": 11,
+      "sourceP50MinusLloqPmolL": 4,
+      "belowLimitHandling": null,
+      "belowLimitHandlingMeaning": "The numeric substitution/exclusion rule for values below an analytical limit in the Tanner Harrell–Davis estimate is not reported. A median above LLOQ does not establish absence of censored observations.",
+      "individualBelowLimitCountsForSelectedGroup": null,
+      "cvLimitation": "The reported intra/inter-assay CVs use much higher controls (0.75, 2 and 75 nmol/L); they do not establish analytical precision at 15 pmol/L."
+    },
+    "redistribution": "Factual table extract and source hashes only; the full article, DOCX and table image are not redistributed."
+  },
+  "assay": "In-house dansyl-chloride derivatization and solid-phase extraction; Acquity UPLC with Waters Quattro Premier/XE LC-MS/MS, MassLynx/TargetLynx",
+  "matrix": "serum",
+  "matrixLimitation": "The reference is described as serum, while the analytical protocol covers plasma/serum and plasma calibrators. Individual specimen allocation for the 213 B1 participants is not tabulated; plasma validation does not prove equivalence of a known plasma patient sample with the B1 group.",
+  "population": "Dziewczynki ocenione jako zdrowe z retrospektywnych próbek pozostałych po badaniach w Kiel, Niemcy, 2014–2019; stadium piersi oceniane przez przeszkolonych endokrynologów dziecięcych.",
+  "populationDetails": {
+    "site": "University Medical Center Schleswig-Holstein, Kiel, Germany",
+    "design": "Retrospective residual samples before minor surgery or after exclusion of suspected endocrine or other disease; not a longitudinal trajectory or unselected community cohort.",
+    "collectionPeriod": "2014–2019",
+    "collectionTime": "08:00–12:00",
+    "exclusions": "No active signs of endocrine/systemic disease; no steroid medication. Known contraceptive users were excluded where use was recorded; unavailable information does not confirm absence of use.",
+    "staging": "Clinical Tanner breast stages assigned by trained pediatric endocrinologists. Source B1 maps to explicit Th1, not P1, age or an untyped Tanner number.",
+    "independenceLimitation": "Tables describe individuals while Methods describes samples; no participant-level repeated-sample deduplication procedure was identified."
+  },
+  "groups": [
+    {
+      "id": "female-th1-1-8",
+      "label": "Th1, 1–8 lat",
+      "sourcePrintedLabel": "B1 1-8 years",
+      "minAge": 1,
+      "maxAge": 8,
+      "n": 213,
+      "median": 15,
+      "printedMedian": "15.0",
+      "requiredGonadalStage": 1,
+      "gonadalKind": "Th",
+      "medianConfirmation": {
+        "table": 3,
+        "nativeHtmlP50": 15,
+        "cachedOfficialTableImageP50": 15
+      },
+      "sourceAgeBoundaryDefinition": "Printed 1–8 years; endpoint inclusivity is not separately specified. The application uses only its interior >1–<6; N=213 remains the full source group count.",
+      "sourceRowWitness": [
+        "B1 1-8 years",
+        "213",
+        "15.0",
+        "30.2",
+        "51.5",
+        "92.7"
+      ],
+      "sourceRowWitnessMeaning": "Literal full row retained for provenance only. P75/P90/P97.5 are not imported as RI, patient percentiles or thresholds."
+    }
+  ],
+  "unresolvedSourceFindings": {
+    "table1": {
+      "female": 1205,
+      "male": 548,
+      "total": 1753
+    },
+    "methodsAndTable2AnnualRows": {
+      "female": 1181,
+      "male": 543,
+      "total": 1724
+    },
+    "difference": {
+      "female": 24,
+      "male": 5,
+      "total": 29
+    },
+    "table3StageSumIncludingInfants": 1064,
+    "stageTableShortfallFromAnnualFemaleCount": 117,
+    "populationResolution": "No participant flow, exclusion or deduplication counts were found that explain the difference. Missing stage membership does not demonstrate an explanation; do not reconcile the counts by assumption.",
+    "otherRowError": {
+      "label": "B4",
+      "n": 98,
+      "p50": 137.9,
+      "p75": 233.9,
+      "p90": 3374.8,
+      "p975": 606.5,
+      "status": "Printed nonmonotone; no numeric correction proposed, and no B4 values imported."
+    },
+    "censoringResolution": "Unresolved numeric handling of low values in the stage estimate.",
+    "matrixResolution": "Unresolved individual plasma/serum allocation in B1."
+  },
+  "selection": {
+    "applicationInterval": "(1,6)",
+    "ordinaryOnly": true,
+    "interpolation": "constant",
+    "wholePossibleAgeIntervalMustFit": true,
+    "requiredCurrentGonadalStage": 1,
+    "requiredGonadalKind": "Th",
+    "patientContextPolicy": "Only current, explicitly typed Th1 of the same patient; no inference from P1, age, generic Tanner or an historical stage accepted only for growth calculations.",
+    "preserveExistingReferences": "Exact age 1 retains Ljubicic subject to its existing qualifications; age 6 and later retain Madsen. The group reference is not added to sex comparison, the educational curve or laboratory RI."
+  },
+  "clinicalOwnerApproval": {
+    "accepted": true,
+    "date": "2026-10-22",
+    "basis": "Owner said “ok, zrób to” after a concrete conditional proposal that disclosed unresolved sample-count, low-result and matrix limitations.",
+    "scope": "One narrowly labelled educational whole-group comparison for current same-patient Th1 at >1–<6 years; not approval of an exact-age norm, source discrepancies as resolved, assay harmonization or clinical validation."
+  },
+  "limitations": [
+    "15 pmol/L jest opublikowanym P50 Harrella–Davisa całej grupy Th1 1–8 lat, N=213; nie medianą dokładnego wieku ani nowej podgrupy >1–<6 lat.",
+    "Tabela 1 podaje 1753, a Methods i sumy tabeli 2 podają 1724; różnica 29 pozostaje niewyjaśniona. Suma tabeli stadium 1064 nie rozwiązuje tej rozbieżności.",
+    "Tabela B4 ma nieuporządkowane centyle. Nie poprawiamy ich i nie importujemy innych wierszy; zgodność wiersza B1 między obrazem a HTML nie waliduje danych autorów.",
+    "LOD wynosi 4, a LLOQ 11 pmol/L. Nie podano numerycznej reguły postępowania z cenzurą przy estymacji mediany grupy; P50=15 powyżej LLOQ nie dowodzi braku wpływu niskich obserwacji.",
+    "Źródło opisuje odniesienie surowicy i protokół serum/plasma, bez rozdziału materiału w grupie B1. Znane osocze lub metoda spoza LC-MS/MS nie korzystają z tego profilu; nieznane dane dopuszczają wyłącznie ograniczone porównanie edukacyjne.",
+    "Wyniku pacjentki z nierównością nie zastępujemy zerem, LOD/2 ani LLOQ/2. Dokładny wynik nie jest automatycznie podnoszony do LLOQ.",
+    "Dostępna grupa nie określa normy, SDS, diagnozy, płodności ani indywidualnej trajektorii. Wynik i laboratoryjne RI zachowują własne reguły niezależnie od tej mediany."
+  ]
+}

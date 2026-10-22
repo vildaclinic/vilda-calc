@@ -480,11 +480,11 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=33"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=34"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=14"></script>
-  <script src="vilda_hormone_lifespan.js?v=40"></script>
+  <script src="vilda_hormone_lifespan.js?v=41"></script>
   <script src="vilda_amh_age_reference_data.js?v=1"></script>
   <script src="vilda_amh_age_reference.js?v=1"></script>
   <script src="vilda_amh_age_reference_ui.js?v=1"></script>
@@ -942,6 +942,23 @@
       var current = getEffectivePatient();
       return current && current.sex === 'F' && current.cycle_phase || null;
     }
+    function lifespanCurrentEstradiolPuberty(source, patient) {
+      var active = source && source.pubertyAssessmentContext;
+      var observation = source && source.gonadalObservation;
+      var identity = source && source.identityKey || '';
+      // The shared current examination is distinct from the growth reader's
+      // historical allowance and from the legacy untyped Tanner override.
+      // A local demographic correction is not that examination's context.
+      if (!source || source.sourceStatus !== 'ready' || source.sex !== 'F' || !patient || patient.sex !== 'F'
+          || !active || !active.available || active.preparing === true
+          || active.sex && active.sex !== 'F'
+          || active.demographics && active.demographics.sex && active.demographics.sex !== 'F'
+          || (active.patientId || '') !== identity || identity !== currentPatientIdentity()
+          || localOverride.sex || localOverride.age != null || localOverride.tanner != null
+          || !observation || observation.kind !== 'Th' || observation.current !== true
+          || !Number.isInteger(observation.stage) || observation.stage < 1 || observation.stage > 5) return null;
+      return { kind: 'Th', stage: observation.stage };
+    }
     function updateLifespan(substance, evaluation, conversion) {
       if (!lifespanUI) return;
       var identityChanged = syncPatientIdentity();
@@ -1046,7 +1063,8 @@
         cyclePhase: lifespanCyclePhase(substance, input, patient),
         // Reuse the typed observation for the current context only. A bare
         // shared Tanner number or an observation for a dated sample is not one.
-        puberty: input && input.contextBasis === 'current-patient' && !input.sampleDateISO &&
+        puberty: substance.id === 'estradiol' ? lifespanCurrentEstradiolPuberty(source, patient)
+          : input && input.contextBasis === 'current-patient' && !input.sampleDateISO &&
           input.puberty && input.puberty.appliesToCurrentContext === true
           ? { kind: input.puberty.kind, stage: input.puberty.stage } : null,
         specimen: input && input.specimen || null,
