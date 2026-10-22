@@ -6,6 +6,7 @@ Run with --check to verify the checked-in data artifact.
 """
 from pathlib import Path
 import argparse
+import hashlib
 import json
 import math
 
@@ -556,8 +557,25 @@ def build():
     assert source_profile['points'] == [dict(ageYears=p['ageYears'], value=p['approxMedianPgMl'])
                                         for p in inhibin_source['points']]
     assert source_profile['points'][0]['ageYears'] == minimum
-    assert source_profile['points'][-1]['ageYears'] == maximum
+    extension = json.loads((ROOT/inhb_policy['extensionEvidence']).read_text(encoding='utf-8'))
+    assert extension['source']['doi'] == inhibin_source['doi']
+    assert (extension['matrix'], extension['sourceUnit'], extension['outputUnit'],
+            extension['unitFactor']) == ('serum', 'ng/L', 'pg/mL', 1)
+    assert extension['originalSourceEvidence'] == inhb_policy['sourceEvidence']
+    assert hashlib.sha256((ROOT/inhb_policy['sourceEvidence']).read_bytes()).hexdigest() == extension['originalSourceSha256']
+    assert extension['selection']['newMaxAgeYears'] == maximum
+    assert extension['selection']['maxAgeExclusive'] == inhb_policy['maxAgeExclusive']
+    tail = [dict(ageYears=p['ageYears'], value=p['approxMedianPgMl'])
+            for p in extension['points']]
+    assert len(tail) == 3 and len(source_profile['points']) + len(tail) == 27
+    assert source_profile['points'][-1]['ageYears'] < tail[0]['ageYears']
+    assert all(tail[i]['ageYears'] < tail[i+1]['ageYears'] for i in range(len(tail)-1))
+    assert tail[-1]['ageYears'] == maximum
+    assert all(math.isfinite(p['value']) and p['value'] > 0 for p in tail)
+    assert all(p['rawMedianNgL'] - extension['selection']['digitizationTolerancePgMl']
+               > extension['lodNgL'] for p in extension['points'])
     ordinary = {**source_profile, 'id':inhb_policy['id'],
+                'points':[*source_profile['points'], *tail],
                 'minAge':inhb_policy['minAge'], 'maxAge':inhb_policy['maxAge'],
                 'maxAgeExclusive':inhb_policy['maxAgeExclusive'],
                 'ordinaryOnly':inhb_policy['ordinaryOnly'],
@@ -569,17 +587,23 @@ def build():
                 'patientNote':inhb_policy['patientNote'],
                 'provenance':{**source_profile['provenance'],
                               'sourceProfileId':source_profile['id'],
+                              'originalSourceKnotDomain':[source_profile['points'][0]['ageYears'], source_profile['points'][-1]['ageYears']],
+                              'fullSourceKnotDomain':[minimum, maximum],
                               'qualificationScope':inhb_policy['qualificationScope'],
                               'cohorts':cohorts,
                               'cohortCoverage':inhb_policy['cohortCoverage'],
                               'specimenPolicy':inhb_policy['specimenPolicy'],
                               'assayPolicy':inhb_policy['assayPolicy'],
                               'reproductiveContextPolicy':inhb_policy['reproductiveContextPolicy'],
+                              'digitizationExtension':inhb_policy['extensionEvidence'],
+                              'extensionSourceImageSha256':extension['source']['figureSha256'],
+                              'interpolationPolicy':inhb_policy['interpolationPolicy'],
+                              'lowValuePolicy':inhb_policy['lowValuePolicy'],
                               'routingVersion':inhb_policy['version']},
                 'limitations':[source_profile['limitations'][0], inhb_policy['ageRouting'],
                                'Wiek nie wyznacza stadium Tannera. Fazy cyklu nie standaryzowano, a informacje o antykoncepcji doustnej były niepełne; nie jest to odniesienie fazy cyklu ani populacji bez leczenia.',
                                inhb_policy['reproductiveContextPolicy'],
-                               'Górny wiek 47 lat wynika z końca zachowanego odczytu ryciny, nie z wieku menopauzy. Nie ekstrapolujemy do granicy wykrywalności ani nie zastępujemy jej zerem.',
+                               inhb_policy['cohortCoverage'], inhb_policy['lowValuePolicy'],
                                'Nie jest normą laboratoryjną, percentylem ani metodą rozpoznawania zaburzeń.']}
     profiles.append(ordinary)
 
@@ -961,7 +985,7 @@ def build():
                      childhood_e2_policy['assayPolicy'], childhood_e2_policy['contextPolicy'],
                      childhood_e2_policy['lowValuePolicy']])
 
-    return {'version':'2026-10-22.1','purpose':'educational-population-central-comparison',
+    return {'version':'2026-10-22.2','purpose':'educational-population-central-comparison',
             'notClinicalReference':True,
             'interpolation':'Monotone PCHIP within continuous source profiles; age-group means and medians are constant within their own separate profiles. No interpolation across groups, source gaps or publications, and no extrapolation.',
             'profiles':profiles,

@@ -7,11 +7,11 @@ test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(120_000);
 const panel = page => page.locator('.vilda-hormone-lifespan');
 const point = page => panel(page).locator('[data-patient-concentration="inhb"]');
-const profile = 'borelli2025-female-inhb-age-5p6-47';
+const profile = 'borelli2025-female-inhb-age-5p6-47p75';
 const divisor = 52.474;
 const assessment = page => page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment());
 
-async function prepareMainPatient(page, age, width) {
+async function prepareMainPatient(page, age, width, months = 0) {
   await page.setViewportSize({ width, height: 1000 });
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -39,9 +39,9 @@ async function prepareMainPatient(page, age, width) {
     return !window.__vildaPersistRestoring && (!state || !state.hasPendingSaveTimer &&
       !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
   });
-  const id = await page.evaluate(async age => {
+  const id = await page.evaluate(async ({ age, months }) => {
     const user = { name: 'Fikcyjna Pacjentka dorosłej inhibiny B', lastName: 'Fikcyjna', firstName: 'Pacjentka dorosłej inhibiny B',
-      sex: 'F', age, ageMonths: 0, weight: 60, height: 165 };
+      sex: 'F', age, ageMonths: months, weight: 60, height: 165 };
     const saved = await window.VildaVault.savePatient({ name: user.name, user, puberty: {} }, { dedup: false });
     const record = await window.VildaVault.getPatient(saved.patientId);
     window.applyLoadedData(record.snapshots[0].payload);
@@ -49,7 +49,7 @@ async function prepareMainPatient(page, age, width) {
       patientId: saved.patientId, savedAtISO: record.snapshots[0].savedAtISO, snapshotCount: 1, source: 'pick',
     } }));
     return saved.patientId;
-  }, age);
+  }, { age, months });
   await expect(page.locator('#vildaLcmNew')).toBeVisible();
   await page.locator('#vildaLcmNew').click();
   await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
@@ -58,7 +58,7 @@ async function prepareMainPatient(page, age, width) {
     return !window.__vildaPersistRestoring && (!state || !state.hasPendingSaveTimer &&
       !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer);
   });
-  for (const [key, value] of Object.entries({ age, ageMonths: 0, weight: 60, height: 165 })) {
+  for (const [key, value] of Object.entries({ age, ageMonths: months, weight: 60, height: 165 })) {
     await page.locator(`#${key}`).fill(String(value));
     await page.locator(`#${key}`).dispatchEvent('change');
   }
@@ -66,11 +66,11 @@ async function prepareMainPatient(page, age, width) {
     const state = window.vildaGetPersistAutosaveCoalescingSnapshot?.();
     return !state || !state.hasPendingSaveTimer && !state.hasPendingForceSaveTimer && !state.hasPendingElementRefreshTimer;
   });
-  await expect.poll(() => page.evaluate(age => {
+  await expect.poll(() => page.evaluate(({ age, months }) => {
     const shared = window.VildaPersistence.readShared();
-    return Object.entries({ sex: 'F', age, ageMonths: 0, weight: 60, height: 165 })
+    return Object.entries({ sex: 'F', age, ageMonths: months, weight: 60, height: 165 })
       .every(([key, value]) => String(shared[key] ?? '') === String(value) && document.getElementById(key).value === String(value));
-  }, age)).toBe(true);
+  }, { age, months })).toBe(true);
   await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaHormoneLifespanRuntime);
   await expect.poll(() => page.evaluate(id => window.VildaPubertySource.kontekstPacjenta(id).status, id)).toBe('ready');
@@ -112,11 +112,14 @@ async function expectSourcePoint(page, median, value, unit = 'pg/mL') {
   expect(position.sameX).toBe(true);
 }
 
-for (const [age, median, width] of [[30, 30, 1440], [30, 30, 320], [40, 28, 1440], [46, 17, 320]]) {
-  test(`F${age} inhibin B uses source median ${median} without changing its curve or laboratory interpretation at ${width}px`, async ({ page }) => {
+for (const [age, months, median, width] of [
+  [30, 0, 30, 1440], [30, 0, 30, 320], [40, 0, 28, 1440], [46, 0, 17, 320],
+  [47, 3, 10, 1440], [47, 6, 8, 320],
+]) {
+  test(`F${age}y${months}m inhibin B uses source median ${median} without changing its curve or laboratory interpretation at ${width}px`, async ({ page }) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await prepareMainPatient(page, age, width);
+    await prepareMainPatient(page, age, width, months);
     const shared = await page.evaluate(() => window.VildaPersistence.readShared());
     await page.locator('#labValue').fill('');
     const original = await geometry(page);
@@ -127,7 +130,7 @@ for (const [age, median, width] of [[30, 30, 1440], [30, 30, 320], [40, 28, 1440
       await expectSourcePoint(page, median, value);
       await expect.poll(() => geometry(page)).toEqual(original);
     }
-    for (const raw of ['', '<33']) {
+    for (const raw of ['', '<33', '<3', '>3']) {
       await page.locator('#labValue').fill(raw);
       await expect(point(page)).toHaveCount(0);
       await expect.poll(() => geometry(page)).toEqual(original);
@@ -166,29 +169,41 @@ for (const [age, median, width] of [[30, 30, 1440], [30, 30, 320], [40, 28, 1440
     await expect(sources).toContainText('Gen II');
     await expect(sources).toContainText('149');
     await expect(sources).toContainText(/antykoncepcj/);
+    await expect(sources).toContainText('47,75 roku');
+    await expect(sources).toContainText('(LOD) to 3 pg/mL');
+    await expect(sources).toContainText('(LOQ) nie podano');
+    await expect(sources).toContainText('nie zastępujemy tak wyniku pacjentki');
     await expect(sources.locator('a[href="https://doi.org/10.1210/clinem/dgae439"]').first()).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
 
-test('the existing patient editor crosses age 20 but keeps the entire age interval inside the upper bound 47', async ({ page }) => {
+test('the existing patient editor crosses age 20 but keeps the entire age interval inside the upper bound 47.75', async ({ page }) => {
   await prepareMainPatient(page, 20, 1440);
   await page.locator('#labValue').fill('33');
   await expectSourcePoint(page, 34, 33);
   const original = await geometry(page);
-  for (const [age, months, median] of [[20, 1, null], [21, 0, null], [25, 0, 32], [30, 0, 30], [46, 0, 17], [46, 11, null]]) {
+  for (const [age, months, median] of [
+    [20, 1, null], [21, 0, null], [25, 0, 32], [30, 0, 30], [46, 0, 17], [46, 11, null],
+    [47, 0, 11], [47, 3, 10], [47, 6, 8], [47, 8, null],
+  ]) {
     await quickFill(page, 'AgeYears', String(age));
     await quickFill(page, 'AgeMonths', String(months));
     await expect(point(page)).toHaveAttribute('data-profile', profile);
     if (median !== null) await expectSourcePoint(page, median, 33);
+    if (age === 47 && months === 8) {
+      await expect.poll(async () => Number(await point(page).getAttribute('data-reference-value'))).toBeCloseTo(7.2345679, 6);
+    }
     await expect(point(page)).toHaveAttribute('data-age-lower', String(age + months / 12));
     await expect.poll(() => geometry(page)).toEqual(original);
   }
-  for (const age of [47, 48]) {
+  // Month precision represents an interval. Even with an inclusive 47.75
+  // source endpoint, 47y9m extends beyond it and cannot borrow a median.
+  for (const [age, months] of [[47, 9], [47, 10], [48, 0], [69, 0]]) {
     await quickFill(page, 'AgeYears', String(age));
-    await quickFill(page, 'AgeMonths', '0');
+    await quickFill(page, 'AgeMonths', String(months));
     await expect(point(page)).toHaveCount(0);
-    await expect(panel(page).locator('[data-patient-age-marker]')).toHaveAttribute('data-patient-age-marker', String(age));
+    await expect(panel(page).locator('[data-patient-age-marker]')).toHaveAttribute('data-patient-age-marker', String(age + months / 12));
     await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText(/brak|nie udostępniono|granicę/);
     await expect.poll(() => geometry(page)).toEqual(original);
   }
@@ -200,9 +215,9 @@ test('the existing patient editor crosses age 20 but keeps the entire age interv
 });
 
 test('known pregnancy or menopause removes only the inhibin source point and is cleared for a new patient', async ({ page }) => {
-  await prepareMainPatient(page, 30, 320);
+  await prepareMainPatient(page, 47, 320, 6);
   await page.locator('#labValue').fill('33');
-  await expectSourcePoint(page, 30, 33);
+  await expectSourcePoint(page, 8, 33);
   const original = await geometry(page);
   const shared = await page.evaluate(() => window.VildaPersistence.readShared());
   await page.locator('#labPubertyReproductiveContext').selectOption('postmenopause');
@@ -211,7 +226,7 @@ test('known pregnancy or menopause removes only the inhibin source point and is 
   expect((await assessment(page)).evaluation.input.reproductiveContext).toBe('postmenopause');
   await expect.poll(() => geometry(page)).toEqual(original);
   await page.locator('#labPubertyReproductiveContext').selectOption('unknown');
-  await expectSourcePoint(page, 30, 33);
+  await expectSourcePoint(page, 8, 33);
   // Reuse the existing estradiol context editor. There is no new question in
   // the inhibin form and an unknown phase still allows the illustrative point.
   for (const phase of ['follicular', '', 'pregnancy_t1', 'pregnancy_t2', 'pregnancy_t3', 'postmenopause']) {
@@ -227,7 +242,7 @@ test('known pregnancy or menopause removes only the inhibin source point and is 
       await expect(point(page)).toHaveCount(0);
       await expect(panel(page).locator('[data-lifespan="scale-note"]')).toContainText('Brak odrębnego odniesienia dla ciąży lub okresu po menopauzie.');
       await expect(panel(page).locator('[data-lifespan="scale-note"]')).not.toContainText('regularnymi cyklami');
-    } else await expectSourcePoint(page, 30, 33);
+    } else await expectSourcePoint(page, 8, 33);
     await expect.poll(() => geometry(page)).toEqual(original);
   }
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(shared);

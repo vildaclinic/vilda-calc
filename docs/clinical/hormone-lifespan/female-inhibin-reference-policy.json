@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-14.1",
+  "version": "2026-10-21.2",
   "kind": "educational-source-selection",
   "ordinaryOnly": true,
   "analyte": "inhb",
@@ -7,9 +7,9 @@
   "unit": "pg/mL",
   "source": "inhibin-comparison-reference-data.json#borelli2025-female-inhb-puberty-comparison",
   "sourceEvidence": "evidence/inhb-digitized-median.json",
-  "id": "borelli2025-female-inhb-age-5p6-47",
+  "id": "borelli2025-female-inhb-age-5p6-47p75",
   "minAge": 5.6,
-  "maxAge": 47,
+  "maxAge": 47.75,
   "maxAgeExclusive": false,
   "retainAllSourcePoints": true,
   "specimen": "serum",
@@ -28,11 +28,14 @@
     "postmenopause"
   ],
   "patientNote": "Cykl i antykoncepcja mogą wpływać na porównanie.",
-  "ageRouting": "Zwykły wykres udostępnia przybliżoną medianę modelu od 5,6 do 47 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. To jeden model z 24 niezmienionymi węzłami, więc przekroczenie wieku 20 lat nie tworzy granicy źródła ani luki odniesienia. Porównanie płci pozostaje ograniczone do 8–20 lat. Powyżej 1 roku i poniżej 5,6 roku oraz powyżej 47 lat brak tego liczbowego odniesienia.",
+  "ageRouting": "Zwykły wykres udostępnia przybliżoną medianę modelu od 5,6 do 47,75 lat włącznie; cały możliwy wiek musi mieścić się w tym przedziale. Zachowano 24 wcześniejsze węzły i dodano 47,25/47,5/47,75: około 10/8/7 pg/mL. To jeden model; przekroczenie 20 lub 47 lat nie tworzy nowej granicy źródła. Porównanie płci pozostaje przy 8–20 latach i nie zmienia swoich 24 węzłów. Powyżej 47,75 lat brak tego odniesienia.",
   "population": "Dziewczynki i kobiety z duńskich kohort: 648 osób w wieku 5,6–20,2 lat oraz 149 dorosłych kobiet w wieku 20–69 lat. Pobrania u dorosłych nie były standaryzowane względem fazy cyklu; dane o antykoncepcji doustnej były niepełne.",
-  "cohortCoverage": "Zakres 5,6–47 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47 lat wynika z ostatniego zachowanego odczytu ilościowego ryciny; nie jest granicą kohorty ani definicją menopauzy.",
+  "cohortCoverage": "Zakres 5,6–47,75 lat mieści się w ciągłej unii obserwowanych kohort 5,6–20,2 i 20–69 lat. Górny kres 47,75 jest konserwatywnym końcem ponownego odczytu ryciny z uwzględnieniem niepewności ±2 pg/mL i LOD 3 pg/mL, nie granicą kohorty, LOQ ani definicją menopauzy.",
   "specimenPolicy": "Brak lub nieznany materiał pozwala na orientacyjne odniesienie bez potwierdzania materiału próbki pacjentki. Znana surowica jest zgodna; znane osocze lub inny materiał nie korzystają z tego profilu.",
   "assayPolicy": "Metodą źródła jest Beckman Coulter Inhibin B Gen II ELISA. Brak lub nieznana metoda pozwala na orientacyjne odniesienie; znana inna metoda je blokuje. Nie jest to kalibracja między metodami.",
   "reproductiveContextPolicy": "Konserwatywna polityka aplikacji wyłącza znaną ciążę i stan po menopauzie; nie jest to opublikowane kryterium wykluczenia z badania. Brak informacji o cyklu, ciąży, menopauzie lub antykoncepcji nie oznacza ich wykluczenia i nie blokuje orientacyjnego odniesienia. Nie ustalamy stanu rozrodczego z wieku lub wyniku. Model nie jest odniesieniem dla konkretnej fazy cyklu ani schematu leczenia.",
-  "qualificationScope": "ordinary-female-inhibin-b-age-5p6-47"
+  "qualificationScope": "ordinary-female-inhibin-b-age-5p6-47p75",
+  "extensionEvidence": "evidence/patient-point/borelli2025-female-inhb-post47-digitized.json",
+  "interpolationPolicy": "Jeden PCHIP po 27 węzłach zachowuje 24 stare węzły. Nowe punkty zmieniają ostatnią dotychczasową interpolację 46–47 lat maksymalnie o około −0,42735 pg/mL; przy 46,5: 14,4375 → 14,076923 pg/mL. Jest to zmiana odniesienia; nie przelicza dawnych zapisanych ocen.",
+  "lowValuePolicy": "Źródło podaje LOD 3 pg/mL, bez osobnego LOQ. Wyniki poniżej LOD autorzy zastępowali LOD/2 do modelowania; nie jest to reguła dla wyniku pacjentki. Odczyt ±2 pg/mL nie jest CI, RI ani potwierdzeniem oznaczalności ilościowej. Nie odczytujemy wartości z dolnego plateau."
 }

@@ -75,7 +75,7 @@ function currentForm(years = 17, months = 0) {
 
 describe('LH CALIPER chłopców — jawna rekonstrukcja mediany wyłącznie w (16,18)', () => {
   it('dodaje jeden profil i zachowuje wszystkie 81 wcześniejszych profili, konwersje i pozostały runtime', () => {
-    expect(data.version).toBe('2026-10-22.1');
+    expect(data.version).toBe('2026-10-22.2');
     expect(data.profiles).toHaveLength(85);
     expect(data).toEqual(read('population-reference-data.json'));
     expect(runtime.maleLhCaliperReferencePolicy).toEqual(policy);
