@@ -1,4 +1,4 @@
-# AMH i inhibina B — stan planu na 18.10.2026
+# AMH i inhibina B — stan planu na 22.10.2026
 
 Aktualna [macierz pokrycia i luk](hormone-lifespan/REFERENCE_COVERAGE_AUDIT.md)
 jest wspólnym zestawieniem dostępności odniesień wszystkich hormonów.
@@ -82,7 +82,37 @@ i [audyt wdrożenia](hormone-lifespan/evidence/amh-xu-2026-audit.json).
 [Wcześniejszy przegląd](hormone-lifespan/evidence/xu2026-amh-source-review.json)
 zachowuje historyczny stan decyzji przed wdrożeniem osobnego bloku.
 
-## 3. Zakończone etapy inhibiny B
+## 3. LiLACS — osobna informacja źródłowa, 22.10.2026
+
+Po audycie pełnego źródła i akceptacji makiety przez właściciela mały
+krok obejmuje kartę „AMH — badanie mężczyzn 80–90 lat”. Chong 2013,
+tabela 1, publikuje **medianę całej grupy LiLACS NZ: 12,1 pmol/L,
+około 1,7 ng/mL, N=257**. Karta opisuje badaną grupę; nie porównuje z nią
+wyniku pacjenta, nie tworzy mediany dokładnego wieku, punktu, ilorazu,
+RI, SDS, percentyla ani nowej migawki odniesienia.
+
+Wykorzystuje gotowy kontekst tej samej osoby oraz wiek i płeć formularza
+głównego, bez dodatkowych pytań. Cały możliwy wiek musi mieścić się
+w `[80,90]`: dokładne 90 kwalifikuje, ukończone „90 lat” = `[90,91)`
+nie kwalifikuje. To ostrożna polityka aplikacji, nie odzyskana definicja
+granic u autorów. Prawidłowy wynik z nierównością może zachować kartę
+informacyjną, lecz nie staje się dokładnym punktem. Zmiana osoby, płci,
+analitu lub blokada kontekstu usuwa kartę.
+
+Źródło obejmuje surowicę i historyczne oznaczenia AMH. Nie ustalono
+przypisania zestawów do LiLACS ani zgodności z metodą próbki pacjenta.
+Znana inna metoda lub materiał nie staje się zgodny przez pokazanie
+informacji o publikacji. Szczegóły populacji, oznaczeń, cenzurowania
+i nierozstrzygniętych liczebności są w rozwijanych ograniczeniach
+i [kontrakcie LiLACS](hormone-lifespan/AMH_LILACS_SOURCE.md).
+
+`amhLilacsSourceData` jest odrębnym zestawem danych źródłowych,
+poza **85 profilami** zwykłego silnika (`2026-10-22.2`). Geometria,
+skale, normy laboratoryjne, dotychczasowe odniesienia i historia pozostają
+bez zmian. **Luka zwykłego punktu AMH po 70 latach pozostaje**, także
+w 80–90; karta nie wypełnia przedziału >70–<80 ani nie przedłuża Tehrani.
+
+## 4. Zakończone etapy inhibiny B
 
 - **PR #672 — zwykły żeński profil Borelli-Kjær 5,6–47 lat włącznie:**
   zachowane 24 węzły i PCHIP, bez sztucznej granicy przy 20 latach.
@@ -107,13 +137,16 @@ N=105, 35% pod LOD,
 osocze i historyczna metoda nie dają mediany dokładnego wieku ani modelu
 minipuberty. Szczegóły: [kontrakt punktu](hormone-lifespan/PATIENT_POINT.md).
 
-## 4. Pozostałe prace
+## 5. Pozostałe prace
 
 Wśród luk **zwykłego punktu AMH** pozostają mężczyźni >70 lat i kobiety
 od 46 lat. Nie oznacza to braku całej informacji w aplikacji: FDA daje
-mediany grup kobiet 18–<46, Xu osobne punkty P50 wieku 35–55, a Mayo
-odrębne zakresy laboratoryjne. Pozostałe granice wieku, niepewny wiek
-i kontekst kwalifikacji opisuje aktualna [macierz](hormone-lifespan/REFERENCE_COVERAGE_AUDIT.md).
+mediany grup kobiet 18–<46, Xu osobne punkty P50 wieku 35–55, LiLACS
+osobną informację o całej grupie mężczyzn 80–90, a Mayo odrębne zakresy
+laboratoryjne. Dla >70–<80 nadal brakuje potwierdzonej gotowej mediany;
+mediany dokładnego wieku nie daje też LiLACS. Pozostałe granice wieku,
+niepewny wiek i kontekst kwalifikacji opisuje aktualna
+[macierz](hormone-lifespan/REFERENCE_COVERAGE_AUDIT.md).
 
 Nowe źródło wymaga sprawdzenia pełnego wieku, metody, materiału, populacji,
 statystyki i pierwszeństwa. Nie łączyć surowicy z osoczem ani średniej

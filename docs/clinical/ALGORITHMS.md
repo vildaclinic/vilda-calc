@@ -3770,6 +3770,70 @@ Fakty i kwalifikacja:
 [`male-amh-18-20-reference-audit-2026-10-18.json`](hormone-lifespan/evidence/male-amh-18-20-reference-audit-2026-10-18.json).
 Zgoda na porównanie edukacyjne i zielone testy nie są walidacją kliniczną.
 
+### HORMONE-AMH-LILACS-SOURCE — informacja o grupie 80–90 lat, 2026-10-22
+
+**Zakres i zgoda:** właściciel zaakceptował audyt, makietę desktopową
+i mobilną oraz polecił implementację krótkiej karty LiLACS. Karta opisuje
+badanie; nie porównuje liczbowo wyniku pacjenta z medianą. Nie dodaje
+profilu P50, punktu, RI, percentyla, SDS ani interpretacji płodności.
+Zgoda na ten zakres nie ustanawia kalibracji metod lub walidacji klinicznej.
+
+**Pełne źródło:** Chong i wsp., *PLOS ONE* 2013;8:e70967,
+[DOI 10.1371/journal.pone.0070967](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0070967),
+tabela 1: **LiLACS NZ, N=257, wiek 80–90, mediana całej grupy
+12,1 pmol/L**. Wartość zgodna w pełnych XML, HTML, PDF, oryginalnym TIFF
+i XLS tabeli. Kohorta obejmuje Māori 80–90 i non-Māori 85 lat,
+o zróżnicowanym stanie zdrowia; nie reprezentuje wyłącznie zdrowych osób
+ani równomiernie każdego rocznika. N nie opisuje próby dokładnego wieku.
+Średnia 14,4, SD 14,0 oraz średnie geometryczne/CI ryciny 1B nie są P50 wieku.
+
+Materiał źródła: surowica. Globalnie opisano 575 oznaczeń A16507 i 40
+DSL-10-14400, bez jawnego przypisania do LiLACS. A16507 to historyczny
+Immunotech/IOT, nie Gen II A79765; zgodności z Access, Elecsys lub metodą
+pacjenta nie wykazano. Czułość analityczna 1/0,04 pmol/L nie ustanawia
+LLOQ. Nie podano odsetka niewykrywalnych LiLACS ani obsługi cenzury;
+5% w kontekście Otago nie jest odsetkiem grupy 257. Zachowano rozbieżności
+493/496 starszych, 119/106 młodszych Otago i opisy wieku w podpisach rycin.
+Sprostowanie dotyczy nazwiska autora. Nie poprawiamy tych danych arbitralnie.
+
+**Reguła i wpływ na aplikację:** osobny zestaw
+`amh-lilacs-source-data.json` → `amhLilacsSourceData` pozostaje poza
+**85 profilami**; ich wersja danych nadal **`2026-10-22.2`**. Pokazujemy
+12,1 pmol/L i około 1,7 ng/mL z dotychczasowego przeliczenia
+`12.1 × 0.1401 = 1.69521`, bez zmiany globalnego współczynnika.
+Brak interpolacji, ekstrapolacji, ilorazu wyniku do mediany i nowej normy.
+
+Aktywny AMH, mężczyzna, poprawny zapis wyniku i gotowy kontekst tej samej osoby
+wystarczają; wiek/płeć pochodzą z formularza głównego, bez nowych pytań.
+**Cały możliwy wiek musi mieścić się w `[80,90]`**. Dokładne 90 kwalifikuje,
+ukończone 90 = `[90,91)` nie. To konserwatywna polityka aplikacji, nie
+odtworzona precyzja włączenia u autorów. Znana inna metoda lub materiał
+nie staje się zgodny z badaniem; karta może pozostać samą informacją
+źródłową. Prawidłowa nierówność wyniku, w tym poniżej LOD/LOQ, nie tworzy
+dokładnego punktu, zera ani LOD/2. Zmiana osoby/płci/analitu, niepoprawny
+wynik i blokady/odtwarzanie kontekstu usuwają kartę.
+Karta działa w zwykłym widoku „Całe życie” z zaznaczonym AMH; inny okres,
+odznaczenie AMH i porównanie płci ją ukrywają, także po pełnym ekranie.
+
+**Niezmienione kontrakty:** zwykły punkt AMH nadal nie ma odniesienia >70,
+także w 80–90. Karta nie wypełnia >70–<80, nie przedłuża Tehrani, nie
+zmienia geometrii, skal, porównań płci ani norm laboratoryjnych. Nie trafia
+do `lab.hormoneReference`, nie zapisuje nowego odniesienia LiLACS i nie
+przelicza historii; pozostaje dotychczasowy powód braku zwykłego punktu.
+
+**Przypadki syntetyczne i kontrakt regresji:** M85, AMH 8 pmol/L → duży
+wynik około **1,12 ng/mL** oraz osobna informacja grupy **12,1 pmol/L,
+około 1,7 ng/mL**, bez punktu lub migawki LiLACS. Dokładne 80/90 oraz
+`[85,86)` kwalifikują; `[90,91)`, przedział przecinający 80/90 i M75 nie.
+Nierówność wyniku pozostaje nierównością, bez imputacji. Kontrole mają
+wywoływać rzeczywiste funkcje karty i adaptera oraz obejmować tożsamość,
+zmiany analitu/płci, jednostki, niezmienione 85 profili i zapis, desktop,
+320 px, pełny ekran i PWA/offline. Wyniki kontroli i CI raportuje PR dla
+aktualnego SHA; ten wpis nie przypisuje im wyniku ani walidacji klinicznej.
+
+[Kontrakt karty](hormone-lifespan/AMH_LILACS_SOURCE.md),
+[ekstrakt i hashe źródeł](hormone-lifespan/evidence/amh-lilacs-source-audit-2026-10-22.json).
+
 ### HORMONE-FEMALE-AMH-ADULT-MEDIANS — mediany surowicy FDA, 2026-10-13
 
 **Problem i źródło:** dorosła kobieta miała poglądową linię AMH bez
