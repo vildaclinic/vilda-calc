@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect, quickFill, closePatientEditor } from '../support/lab-puberty-quick.mjs';
+import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 // Fictional patients only. Manufacturer table medians remain separate from
 // clinical Mayo RI, exact-age reference profiles and the daily Stricker curves.
@@ -40,7 +41,7 @@ async function settleMain(page) {
   });
 }
 
-async function prepare(page, { width = 1440, main = false } = {}) {
+async function prepare(page, { width = 1440, main = false, anonymous = false } = {}) {
   await page.setViewportSize({ width, height: 1000 });
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -52,7 +53,15 @@ async function prepare(page, { width = 1440, main = false } = {}) {
     const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     for (const state of ['shown', 'closed']) localStorage.setItem(`vilda-reminders-${state}-v1`, `${iso}|${Date.now()}`);
   });
-  await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
+  await page.goto(anonymous ? '/index.html' : '/przelicznik-jednostek.html', { waitUntil: 'load' });
+  if (anonymous) {
+    for (const button of [page.locator('#consent-decline'), page.getByRole('button', { name: 'Korzystaj bez logowania', exact: true })]) {
+      if (await button.isVisible()) await button.click();
+    }
+    await czekajNaOdtworzenieSesji(page);
+    await settleMain(page);
+    return null;
+  }
   await page.evaluate(() => window.VildaSession.ensureAuthLoaded());
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await page.evaluate(() => window.VildaVault.createUser('E2e#FictionalFshSource!2026', {
@@ -358,6 +367,73 @@ test('FSH source follows typed cycle context and clears after incompatible conte
   await expect(page.locator('[data-source-id="roche-elecsys-fsh-2024-group-medians"], #labFshSource [data-source-value]')).toHaveCount(0);
   await page.evaluate(() => document.querySelector('#labHormoneLifespan [data-view="life"]')?.click());
   await expect(host(page)).toBeHidden();
+});
+
+test('FSH source excludes persisted anonymous current GnRHa without lending that fact to a named patient', async ({ page }) => {
+  await prepare(page, { anonymous: true });
+  async function editCurrentMain(status) {
+    if (!page.url().endsWith('/index.html')) await page.goto('/index.html', { waitUntil: 'load' });
+    await czekajNaOdtworzenieSesji(page);
+    await settleMain(page);
+    await expect(page.locator('#name')).toHaveValue('');
+    expect(await page.evaluate(() => window._vildaCurrentPatientId || sessionStorage.getItem('vildaCurrentPatientId') || '')).toBe('');
+    await page.locator('#sex').selectOption('F');
+    await page.locator('#age').fill('30');
+    await page.locator('#ageMonths').fill('0');
+    await page.locator('#ageMonths').dispatchEvent('change');
+    if (!await page.locator('#tannerStageWrap').isVisible()) await page.locator('#tannerToggleBtn').click();
+    if (!await page.locator('#pubertyOptionalDetails').evaluate(element => element.open)) {
+      await page.locator('#pubertyOptionalDetails > summary').click();
+    }
+    await page.locator('#pubertyGnrhaStatus').selectOption(status);
+    await settleMain(page);
+    // The fact is entered through the visible main form. Flush the real
+    // persistence path before navigating, rather than manufacturing its data.
+    await page.evaluate(() => {
+      window.vildaPersistFlushNow?.({ force: true });
+      window.VildaDataImportExport.saveMainSessionNow();
+    });
+    await expect.poll(() => page.evaluate(() => window.VildaPersistence.readMainSession()?.puberty?.gnrhaStatus || '')).toBe(status);
+    await expect.poll(() => page.evaluate(() => {
+      const user = window.VildaPersistence.readShared();
+      return { sex: user.sex, age: Number(user.age), months: Number(user.ageMonths) };
+    })).toEqual({ sex: 'F', age: 30, months: 0 });
+  }
+  async function returnToFsh() {
+    await page.goto('/przelicznik-jednostek.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => window.VildaFshSourceRuntime && window.VildaLabPubertyRuntime);
+    await choose(page);
+    await phase(page).selectOption('follicular');
+    await expectRange(page, 2.9, 14.6, 'within');
+    await expect(page.locator('#labResultBig .lab-result-big-value')).toHaveText('10');
+    await expect(comparison(page).locator('.vilda-lab-axis-marker')).toHaveCount(1);
+  }
+
+  await editCurrentMain('w-trakcie');
+  await returnToFsh();
+  await expectCleared(page);
+  await editCurrentMain('');
+  await returnToFsh();
+  await expectSource(page);
+  await editCurrentMain('w-trakcie');
+  await returnToFsh();
+  await expectCleared(page);
+
+  // A separate fictional vault identity must not inherit the anonymous main
+  // session's positive therapy fact, even at the same sex and age.
+  await page.evaluate(() => window.VildaSession.ensureAuthLoaded());
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+  await page.evaluate(() => window.VildaVault.createUser('E2e#FictionalFshSource!2026', {
+    label: 'Fikcyjny sejf rozdzielenia kontekstów FSH', iterations: 10000,
+  }));
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.VildaVault?.isUnlocked() && window.VildaFshSourceRuntime
+    && !document.documentElement.classList.contains('vilda-auth-locked'));
+  await loadPatient(page);
+  await choose(page);
+  await phase(page).selectOption('follicular');
+  await expectSource(page);
+  await expectRange(page, 2.9, 14.6, 'within');
 });
 
 test('FSH inequalities retain existing Mayo comparisons and saved assessments stay independent of manufacturer medians', async ({ page }) => {

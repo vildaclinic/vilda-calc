@@ -1046,6 +1046,25 @@
           || !Number.isInteger(observation.stage) || observation.stage < 1 || observation.stage > 5) return null;
       return { kind: 'Th', stage: observation.stage };
     }
+    function lifespanFshAnonymousMainTreatment(source, input) {
+      // The anonymous main-form mirror can carry treatment without a Tanner
+      // visit marker. It may only withhold this card, never supply a patient's
+      // facts, reinterpret a dated sample or change the laboratory assessment.
+      if (!source || source.sourceStatus !== 'ready' || source.identityKey !== ''
+          || currentPatientIdentity() !== '' || !input || input.sex !== 'F'
+          || input.contextBasis !== 'current-patient' || input.sampleDateISO) return false;
+      var active = source.pubertyAssessmentContext;
+      if (active && active.preparing === true) return true;
+      if (active && active.available) return false;
+      try {
+        if (!persistence) return false;
+        if (typeof persistence.isClearInProgress === 'function' && persistence.isClearInProgress()
+            || typeof persistence.isRestoring === 'function' && persistence.isRestoring()) return true;
+        var shared = typeof persistence.readShared === 'function' ? persistence.readShared(null) : null;
+        var byId = shared && shared._vildaPersist && shared._vildaPersist.byId;
+        return !!(byId && byId.pubertyGnrhaStatus === 'w-trakcie');
+      } catch (_) { return false; }
+    }
     function updateLifespan(substance, evaluation, conversion) {
       if (!lifespanUI) return;
       var identityChanged = syncPatientIdentity();
@@ -1201,6 +1220,7 @@
         // This visible FSH editor owns its current cycle/menopause context.
         // Do not borrow the legacy E2 phase or reinterpret a historical sample.
         var fshContext = Object.assign({}, context, {
+          contraindicated: context.contraindicated || lifespanFshAnonymousMainTreatment(source, input),
           cyclePhase: substance.id === 'fsh' && input && input.reproductiveContext || null,
           measurement: substance.id === 'fsh' && evaluation && evaluation.measurement || null,
           measurementValid: !!(substance.id === 'fsh' && evaluation && evaluation.measurement && evaluation.measurement.status === 'valid'),

@@ -3030,6 +3030,14 @@ Znane wyłączenie, niezgodność, historyczny kontekst, zmiana osoby/płci,
 blokada, inny widok i niepoprawny wynik czyszczą kartę. Nieznany wywiad
 pozostaje nieznany. Nie dodano pytań ani zapisów do historii.
 
+W aktualnym anonimowym formularzu adapter karty odczytuje dodatnie
+`pubertyGnrhaStatus=w-trakcie` z istniejącego lustra pól głównych także bez
+znacznika wizyty Tannera. Wyłącznie ukrywa informację FSH; nie zmienia RI.
+Wymaga gotowego kontekstu kobiety, tej samej pustej tożsamości i braku
+historycznej próbki. Aktywny formularz ma pierwszeństwo przed autosave,
+a wybrany pacjent nie może przejąć tego anonimowego faktu. Regresje
+obejmują zapis rzeczywistym formularzem, usunięcie faktu i zmianę osoby.
+
 **Skala cyklu:** odrębne `fsh-cycle-display-policy.json` jest pakowane jako
 `fshCycleDisplayPolicy`. `cycle.projectionFor(activeIds)` wybiera liniowe
 **0–20 IU/L co 5** dla FSH bez LH, także FSH+E2; LH lub oba mają wspólne

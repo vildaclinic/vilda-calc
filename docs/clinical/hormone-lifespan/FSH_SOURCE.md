@@ -76,6 +76,14 @@ laktacji lub „naturalnych cykli” z Anckaert. Alias dopuszczonego materiału
 opisuje aktualny test, nie dowodzi macierzy kohorty; ogólne „plasma” bez
 rodzaju nie jest potwierdzeniem jednego z dopuszczonych osoczy.
 
+W anonimowym bieżącym formularzu dodatni fakt GnRHa może istnieć w lustrze
+`shared._vildaPersist.byId.pubertyGnrhaStatus` bez znacznika wizyty Tannera.
+Adapter wykorzystuje wyłącznie `w-trakcie` do ukrycia tej karty: wymaga
+gotowego, nadal anonimowego kontekstu FSH kobiety i braku daty próbki.
+Aktywny formularz ma pierwszeństwo przed starszym autosave. Podczas
+odtwarzania/czyszczenia kartę wstrzymujemy. Ten odczyt nie dostarcza danych
+wybranemu pacjentowi, nie czyta niepowiązanej pełnej sesji i nie zmienia RI.
+
 Widok musi być zwykłym „Całe życie”, bez porównania płci, z zaznaczonym FSH.
 Brak źródła/kontekstu, inna płeć/analit/widok, nieznana grupa, zmiana osoby,
 blokada lub niepoprawny wynik nie mogą zachowywać liczby poprzedniej grupy.
