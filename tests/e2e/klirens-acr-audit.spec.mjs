@@ -382,3 +382,21 @@ test('ACR: odtworzenie kolejnego pacjenta nie dziedziczy wcześniejszej niezgodn
   expect(fields.spotSameSpecimen).toBe(false);
   expect(fields.spotInfection).toBe(false);
 });
+
+test('ACR: ukryty domyślny tryb nie tworzy wyniku ani ostrzeżenia wieku na pustej stronie', async ({ page }) => {
+  await openCalculator(page);
+  await expect(page.locator('#ACR_entry_mode')).toHaveAttribute('type', 'hidden');
+  await expect(page.locator('#ACR_entry_mode')).toHaveValue('concentration');
+  await expect(page.locator('#age')).toHaveValue('');
+  await expect(page.locator('#formulaPicker')).toHaveValue('');
+  expect(await page.evaluate(() => window.ClcrUiWorkflow.state.activeFormulaId)).toBe('');
+  // Wywołujemy ten sam update, który przelicza formularz po zmianie pola.
+  // Sam niepusty ukryty wybór trybu nie jest daną kliniczną pacjenta.
+  await page.evaluate(() => window.clcrUpdate());
+  await czekajNaUstabilizowanyUklad(page);
+  await expect(page.locator('#clcrInfo')).toBeEmpty();
+  await expect(page.locator('#results')).toBeHidden();
+  await expect(page.locator('.clcr-result-card:visible')).toHaveCount(0);
+  await expect(page.locator('#clcrResultReport')).not.toContainText(/Wiek:\s*podaj pełne lata i miesiące/);
+  expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
+});
