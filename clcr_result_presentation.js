@@ -19,6 +19,115 @@
   function categoryRows(profile, kind) {
     return profile && profile[kind] && Array.isArray(profile[kind].rows) ? profile[kind].rows : [];
   }
+  function displayDecimal(value, digits) {
+    return Number(value).toFixed(digits).replace(/\.0+$/, "").replace(".", ",");
+  }
+  function referenceRecord(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    return Object.freeze(Object.fromEntries(Object.entries(value).filter(([, item]) =>
+      item === null || typeof item === "string" || typeof item === "boolean" ||
+      (typeof item === "number" && Number.isFinite(item)))));
+  }
+  function measuredReferenceSnapshot(input) {
+    const evaluated = input.referenceContext?.measuredClearance;
+    if (!evaluated || typeof evaluated !== "object") return null;
+    const snapshot = {
+      available: evaluated.available === true,
+      status: String(evaluated.status || "unavailable"),
+      reasonCode: String(evaluated.reasonCode || ""),
+      missingFields: Array.isArray(evaluated.missingFields) ? evaluated.missingFields.filter((field) => typeof field === "string") : [],
+      profileId: typeof evaluated.profileId === "string" ? evaluated.profileId : "",
+      profileVersion: finite(evaluated.profileVersion),
+      source: referenceRecord(evaluated.source),
+      population: referenceRecord(evaluated.population),
+      selectedBand: referenceRecord(evaluated.selectedBand),
+      indexedRange: referenceRecord(evaluated.indexedRange),
+      absoluteRange: referenceRecord(evaluated.absoluteRange),
+      value: finite(evaluated.value),
+      unit: normalizeUnit(evaluated.unit),
+      indexedValue: finite(evaluated.indexedValue),
+      ageYears: finite(evaluated.ageYears),
+      sex: ["M", "F"].includes(evaluated.sex) ? evaluated.sex : null,
+      bsa: finite(evaluated.bsa),
+      bsaMethod: typeof evaluated.bsaMethod === "string" ? evaluated.bsaMethod : "",
+      durationHours: finite(evaluated.durationHours),
+      referencePreview: evaluated.referencePreview === true,
+      protocolContext: referenceRecord(evaluated.protocolContext),
+      protocolNote: typeof evaluated.protocolNote === "string" ? evaluated.protocolNote : "",
+      restrictions: referenceRecord(evaluated.restrictions),
+      limitations: Array.isArray(evaluated.limitations) ? evaluated.limitations.filter((entry) => typeof entry === "string") : [],
+      inputs: referenceRecord(Object.fromEntries([
+        "serumCreatinineMgDl", "urineCreatinineMgDl", "volumeMl", "durationMinutes",
+        "ageYears", "sex", "weightKg", "heightCm",
+      ].filter((key) => Object.prototype.hasOwnProperty.call(evaluated.inputs || {}, key))
+        .map((key) => [key, evaluated.inputs[key]]))),
+      durationSource: typeof evaluated.durationSource === "string" ? evaluated.durationSource : "",
+      collectionAssumptions: referenceRecord(evaluated.collectionAssumptions),
+    };
+    if (!snapshot.available) return Object.freeze(snapshot);
+    const raw = finite(input.value);
+    const absolute = snapshot.absoluteRange;
+    const indexed = snapshot.indexedRange;
+    const validRange = (range) => range && typeof range.lower === "number" && typeof range.upper === "number" &&
+      Number.isFinite(range.lower) && Number.isFinite(range.upper) && range.lower > 0 && range.upper > range.lower;
+    const currentDuration = input.referenceContext?.durationHours;
+    const band = snapshot.selectedBand;
+    const eligibleAge = band && Number.isFinite(band.minimumAgeInclusive) && Number.isFinite(band.maximumAgeExclusive) &&
+      snapshot.ageYears !== null && snapshot.ageYears >= band.minimumAgeInclusive && snapshot.ageYears < band.maximumAgeExclusive;
+    const eligibleSex = band && (band.sexRequired === false ||
+      (band.sexRequired === true && ["M", "F"].includes(snapshot.sex) && band.sex === snapshot.sex));
+    const status = validRange(absolute) && raw !== null
+      ? raw < absolute.lower ? "below" : raw > absolute.upper ? "above" : "within" : "unavailable";
+    const valid = raw !== null && raw > 0 && snapshot.value === raw &&
+      normalizeUnit(input.unit) === "mL/min" && snapshot.unit === "mL/min" &&
+      validRange(absolute) && normalizeUnit(absolute.unit) === "mL/min" &&
+      validRange(indexed) && normalizeUnit(indexed.unit) === "mL/min/1,73 m²" &&
+      snapshot.bsa !== null && snapshot.bsa > 0 && snapshot.durationHours !== null && snapshot.durationHours > 0 &&
+      (currentDuration == null || finite(currentDuration) === snapshot.durationHours) &&
+      snapshot.profileId !== "" && Boolean(snapshot.source?.label) && Boolean(snapshot.population?.label) &&
+      eligibleAge && eligibleSex && snapshot.status === status && snapshot.referencePreview;
+    if (valid) return Object.freeze(snapshot);
+    // A stale or malformed context cannot lend a normal range or a reassuring
+    // colour to a different value. Keep the number, but discard this comparison.
+    return Object.freeze({ ...snapshot, available: false, status: "unavailable", reasonCode: "invalid-reference", absoluteRange: null, indexedRange: null });
+  }
+  function measuredMissingFieldIds(input, snapshot) {
+    if (!snapshot || snapshot.available || !snapshot.missingFields.length) return [];
+    const allowed = ["age", "sex", "height", "weight"];
+    const supplied = input.referenceContext?.measuredClearance?.missingFieldIds;
+    const inferred = snapshot.missingFields.flatMap((field) =>
+      field === "ageYears" ? ["age"] : field === "sex" ? ["sex"] : field === "bsa" ? ["height", "weight"] : []);
+    const requested = Array.isArray(supplied) ? supplied : inferred;
+    return allowed.filter((field) => requested.includes(field) && inferred.includes(field));
+  }
+  function measuredReferenceFor(input, profile, noReference) {
+    const config = profile?.measuredClearance || {};
+    const snapshot = measuredReferenceSnapshot(input);
+    const missingFieldIds = measuredMissingFieldIds(input, snapshot);
+    let unavailableText = config.unavailableMessage || noReference.value;
+    if (snapshot?.reasonCode === "out-of-age") {
+      const minimumAge = finite(snapshot.population?.minimumAgeYears);
+      unavailableText = minimumAge !== null && snapshot.ageYears !== null && snapshot.ageYears < minimumAge
+        ? (config.underAgeMessage || unavailableText).replace("{age}", displayDecimal(minimumAge, 1))
+        : config.outsideAgeMessage || unavailableText;
+    } else if (missingFieldIds.length) {
+      const labels = missingFieldIds.map((id) => config.fieldLabels?.[id] || id);
+      const joined = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} i ${labels.at(-1)}` : labels[0];
+      unavailableText = `${config.missingPrefix || "Do dobrania normy podaj"} ${joined}.`;
+    } else if (snapshot?.reasonCode === "invalid-unit" || normalizeUnit(input.unit) !== "mL/min") {
+      unavailableText = config.incompatibleUnitMessage || unavailableText;
+    }
+    if (!snapshot?.available) return {
+      ...noReference, value: unavailableText, snapshot, missingFieldIds,
+    };
+    return {
+      ...noReference,
+      label: config.referenceLabel || "Norma",
+      value: `≈${displayDecimal(snapshot.absoluteRange.lower, 1)}–${displayDecimal(snapshot.absoluteRange.upper, 1)}`,
+      unit: "mL/min", kind: "measured-clearance", source: snapshot.source,
+      population: snapshot.population.label, snapshot, missingFieldIds: [],
+    };
+  }
   function referenceFor(input, profile) {
     const formulaId = input.formulaId || "";
     const age = finite(input.ageYears);
@@ -28,6 +137,7 @@
       label: "Norma", value: profile?.neutral?.[formulaId] || "Brak uniwersalnej normy",
       unit: "", population: "", source: null, educational: false, kind: "none", rows: [],
     };
+    if (formulaId === "cl24") return measuredReferenceFor(input, profile, noReference);
     if (!profile) return noReference;
     if (profile.neonatal?.formulaId === formulaId) {
       // A description of age-dependent assessment, not a numeric reference.
@@ -153,19 +263,37 @@
     const source = input || {};
     const neonatalConfig = profile?.neonatal?.formulaId === source.formulaId ? profile.neonatal : null;
     const cgIndexedConfig = profile?.cgIndexed?.formulaId === source.formulaId ? profile.cgIndexed : null;
+    const measured = source.formulaId === "cl24";
+    const measuredConfig = measured ? profile?.measuredClearance || {} : null;
     const rawValue = finite(source.value);
     const presentation = u25EstimatePresentation(source, profile) || source.presentation || {};
     const markerBlocked = profile?.markerSensitiveFormulaIds?.includes(source.formulaId) && source.markerPolicy?.calculationAllowed === false;
-    const valueVisible = rawValue !== null && !markerBlocked && presentation.valueVisible !== false;
+    const valueVisible = rawValue !== null && !markerBlocked && presentation.valueVisible !== false &&
+      (!measured || (rawValue > 0 && source.markerPolicy?.calculationAllowed !== false && source.markerPolicy?.status !== "blocked"));
     const calculationAgeYears = finite(source.calculationAgeYears);
     const ageUsedYears = cgIndexedConfig && valueVisible && calculationAgeYears !== null && Number.isInteger(calculationAgeYears) && calculationAgeYears >= 18
       ? calculationAgeYears : null;
     const reference = referenceFor({ ...source, presentation }, profile);
-    const category = !neonatalConfig && !cgIndexedConfig && valueVisible && presentation.category ? presentation.category : null;
+    const category = !neonatalConfig && !cgIndexedConfig && !measured && valueVisible && presentation.category ? presentation.category : null;
     const currentRow = reference.rows.find((entry) => entry.code === category?.code);
-    const tone = !neonatalConfig && !cgIndexedConfig && valueVisible && ["success", "warning", "danger"].includes(presentation.tone) ? presentation.tone : "neutral";
-    const reasons = !neonatalConfig && Array.isArray(presentation.reasons) ? presentation.reasons.filter(Boolean) : [];
-    const interpretation = neonatalConfig?.resultLabel || presentation.label || currentRow?.meaning || source.label || "Wynik obliczenia";
+    const measuredAvailable = measured && valueVisible && reference.snapshot?.available === true;
+    const tone = measured ? measuredAvailable ? reference.snapshot.status === "within" ? "success" : "warning" : "neutral"
+      : !neonatalConfig && !cgIndexedConfig && valueVisible && ["success", "warning", "danger"].includes(presentation.tone) ? presentation.tone : "neutral";
+    const reasons = !neonatalConfig && !measured && Array.isArray(presentation.reasons) ? presentation.reasons.filter(Boolean) : [];
+    const interpretation = measured
+      ? measuredAvailable ? (reference.snapshot.protocolNote && reference.snapshot.protocolContext?.nominalHours === 24
+          ? measuredConfig.dailyProtocolStatusLabels?.[reference.snapshot.status]
+          : measuredConfig.statusLabels?.[reference.snapshot.status]) || measuredConfig.resultLabel || "Wynik obliczenia"
+        : measuredConfig.resultLabel || source.label || "Wynik obliczenia"
+      : neonatalConfig?.resultLabel || presentation.label || currentRow?.meaning || source.label || "Wynik obliczenia";
+    const displayValue = source.displayValue == null ? String(rawValue) : String(source.displayValue);
+    const displayedMeasuredValue = measured ? finite(displayValue.replace(",", ".")) : null;
+    const displayedMeasuredLower = measuredAvailable ? Number(reference.snapshot.absoluteRange.lower.toFixed(1)) : null;
+    const displayedMeasuredUpper = measuredAvailable ? Number(reference.snapshot.absoluteRange.upper.toFixed(1)) : null;
+    const displayedMeasuredStatus = displayedMeasuredValue === null || !measuredAvailable ? null
+      : displayedMeasuredValue < displayedMeasuredLower ? "below" : displayedMeasuredValue > displayedMeasuredUpper ? "above" : "within";
+    const measuredBoundary = measuredAvailable && displayedMeasuredStatus !== null && displayedMeasuredStatus !== reference.snapshot.status
+      ? measuredConfig.roundingMessage || "" : "";
     const ageDays = finite(source.ageDays);
     const averageConfig = profile?.u25Average && profile.u25Average.formulaId === source.formulaId ? profile.u25Average : null;
     const rawComponents = source.calculationComponents || {};
@@ -193,11 +321,11 @@
       : Object.freeze([]);
     return Object.freeze({
       formulaId: source.formulaId || "", series: source.series || "", code: source.code || "",
-      rawValue, valueVisible, displayValue: source.displayValue == null ? String(rawValue) : String(source.displayValue),
-      unit: normalizeUnit(source.unit), label: neonatalConfig?.resultLabel || source.label || "Wynik obliczenia",
-      boundary: neonatalConfig || cgIndexedConfig ? "" : presentation.referenceComparison ? presentation.boundary : profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
+      rawValue, valueVisible, displayValue,
+      unit: normalizeUnit(source.unit), label: measuredConfig?.resultLabel || neonatalConfig?.resultLabel || source.label || "Wynik obliczenia",
+      boundary: measured ? measuredBoundary : neonatalConfig || cgIndexedConfig ? "" : presentation.referenceComparison ? presentation.boundary : profile?.gfrFormulaIds?.includes(source.formulaId) && !category ? "" : source.boundary || "",
       tone, category, interpretation, reference, categories: reference.rows, reasons,
-      referenceComparison: !neonatalConfig && !cgIndexedConfig && presentation.referenceComparison === true,
+      referenceComparison: measured ? measuredAvailable : !neonatalConfig && !cgIndexedConfig && presentation.referenceComparison === true,
       assumptions: valueVisible ? source.calculationAssumptions?.assumptionsText || presentation.assumptions || "" : "",
       assumptionProvenance: source.calculationAssumptions?.provenance || null,
       ageUsedYears,
@@ -208,7 +336,7 @@
       ageContextComment: valueVisible ? neonatalConfig?.ageContextComment || "" : "",
       earlyLifeCaution: valueVisible && neonatalConfig && ageDays !== null && Number.isInteger(ageDays) &&
         ageDays >= 0 && ageDays < neonatalConfig.earlyCautionBeforeDay ? neonatalConfig.earlyCaution : "",
-      detailHtml: source.detailHtml || "", method: source.method || source.label || "", profileId: profile?.id || "",
+      detailHtml: source.detailHtml || "", method: source.method || source.label || "", profileId: measured ? reference.snapshot?.profileId || "" : profile?.id || "",
     });
   }
   function tableMarkup(model) {
@@ -249,9 +377,45 @@ ${referenceMarkup}
     const sources = config.sources.map((source) => `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)}</a>`).join(" · ");
     return `${paragraphs.join("\n")}\n<p data-clcr-neonatal-sources>Źródła: ${sources}</p>\n`;
   }
+  function measuredSourceMarkup(snapshot) {
+    const source = snapshot?.source;
+    if (!source) return "";
+    const url = /^https?:\/\/\S+$/i.test(source.url || "") ? source.url : "";
+    const link = url
+      ? `<a href="${escape(url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)}</a>`
+      : escape(source.label);
+    const sex = snapshot.selectedBand?.sexRequired ? snapshot.sex || snapshot.selectedBand.sex : null;
+    const sexLabel = sex === "M" ? "mężczyzna" : sex === "F" ? "kobieta" : "";
+    const age = snapshot.ageYears === null ? "" : `${displayDecimal(snapshot.ageYears, 2)} lat`;
+    const context = [sexLabel, age].filter(Boolean).join(", ");
+    return `<p class="clcr-measured-reference-source">wg ${link}${context ? ` · ${escape(context)}` : ""}</p>`;
+  }
+  function measuredGaugeMarkup(model) {
+    const range = model.reference.snapshot?.absoluteRange;
+    if (!range || !model.referenceComparison) return "";
+    const proposedScale = Math.max(range.upper * 1.4, model.rawValue * 1.15);
+    const scale = Number.isFinite(proposedScale) ? proposedScale : Math.max(range.upper, model.rawValue);
+    const lower = (range.lower / scale) * 100;
+    const upper = (range.upper / scale) * 100;
+    const position = (model.rawValue / scale) * 100;
+    const coordinate = (value) => value.toFixed(4);
+    return `<svg class="clcr-measured-reference-gauge" width="100%" height="47" role="img" aria-label="${escape(`Wynik ${model.displayValue.replace(".", ",")} ${model.unit}; norma ${model.reference.value} ${model.reference.unit}; ${model.interpretation}`)}"><g aria-hidden="true"><rect class="clcr-measured-reference-track" x="0" y="23" width="100%" height="9" rx="4.5"></rect><rect class="clcr-measured-reference-band" x="${coordinate(lower)}%" y="23" width="${coordinate(upper - lower)}%" height="9"></rect><line class="clcr-measured-reference-boundary" x1="${coordinate(lower)}%" x2="${coordinate(lower)}%" y1="23" y2="32"></line><line class="clcr-measured-reference-boundary" x1="${coordinate(upper)}%" x2="${coordinate(upper)}%" y1="23" y2="32"></line><svg class="clcr-measured-reference-marker" x="${coordinate(position)}%" y="0" width="1" height="22" overflow="visible"><text x="0" y="10" text-anchor="middle">Wynik</text><path d="M -4 15 L 4 15 L 0 21 Z"></path></svg><text class="clcr-measured-reference-band-label" x="${coordinate((lower + upper) / 2)}%" y="44" text-anchor="middle">${escape(model.reference.label)}</text></g></svg>`;
+  }
+  function renderMeasuredClearance(model, config) {
+    const snapshot = model.reference.snapshot;
+    const range = model.referenceComparison ? snapshot.absoluteRange : null;
+    const referenceAttributes = range
+      ? ` data-clcr-reference-lower="${range.lower}" data-clcr-reference-upper="${range.upper}" data-clcr-reference-bsa="${snapshot.bsa}" data-clcr-reference-source="${escape(snapshot.source.id || snapshot.source.label)}" data-clcr-reference-source-label="${escape(snapshot.source.label)}" data-clcr-reference-source-url="${escape(snapshot.source.url || "")}"` : "";
+    const norm = range
+      ? `<p class="clcr-measured-reference-line" data-clcr-reference="measured-clearance"><span>${escape(model.reference.label)}:</span> <strong>${escape(model.reference.value)} ${escape(model.reference.unit)}</strong></p>${measuredGaugeMarkup(model)}${measuredSourceMarkup(snapshot)}${snapshot.protocolNote ? `<p class="clcr-measured-protocol-note">${escape(snapshot.protocolContext?.nominalHours === 24 ? config.dailyProtocolNote || snapshot.protocolNote : snapshot.protocolNote)}</p>` : ""}`
+      : `<p class="clcr-measured-reference-missing" data-clcr-reference="none">${escape(model.reference.value)}</p>${model.reference.missingFieldIds?.length ? `<button type="button" class="clcr-measured-complete-reference" data-clcr-complete-reference data-clcr-missing-fields="${escape(model.reference.missingFieldIds.join(","))}">${escape(config.completeLabel || "Uzupełnij dane")}</button>` : ""}`;
+    const suffix = `cl24-${model.series || model.code || "value"}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+    return `<div class="result-box clcr-result-card clcr-result-card--measured${model.tone === "warning" ? " out-of-range" : ""}" data-clcr-formula="cl24" data-clcr-code="${escape(model.code)}"${model.series ? ` data-clcr-series="${escape(model.series)}"` : ""} data-clcr-value="${model.rawValue}" data-clcr-tone="${model.tone}" data-clcr-display-value="${escape(model.displayValue)}" data-clcr-value-length="${model.displayValue.length}" data-clcr-display-unit="${escape(model.unit)}" data-clcr-display-label="${escape(model.label)}" data-clcr-status="${escape(model.interpretation)}" data-clcr-category="" data-clcr-boundary="${escape(model.boundary)}" data-clcr-reference-kind="${escape(model.reference.kind)}" data-clcr-reference-profile="${escape(model.profileId)}" data-clcr-reference-comparison="${model.referenceComparison}" data-clcr-reference-preview="${model.referenceComparison && snapshot.referencePreview === true}"${referenceAttributes} data-clcr-measured-reference="${escape(JSON.stringify(snapshot || null))}" data-clcr-assumptions="${escape(model.assumptions)}" data-clcr-assumption-provenance="${escape(JSON.stringify(model.assumptionProvenance))}"><p class="clcr-measured-result-title">${escape(model.interpretation)}</p><div class="clcr-result-main clcr-result-main--single"><div class="clcr-result-patient"><strong class="clcr-result-value">${escape(model.displayValue.replace(".", ","))}</strong><span class="clcr-result-unit">${escape(model.unit)}</span></div></div>${norm}${model.boundary ? `<p class="clcr-result-boundary">${escape(model.boundary)}</p>` : ""}</div><details class="clcr-result-details" id="clcr-result-details-${suffix}" data-clcr-formula="cl24" tabindex="-1"><summary>${escape(config.detailsSummary || "Szczegóły i źródła")}</summary>${model.detailHtml}</details>`;
+  }
   function render(input, profile) {
     const model = createModel(input, profile);
     if (!model.valueVisible) return "";
+    if (model.formulaId === "cl24") return renderMeasuredClearance(model, profile?.measuredClearance || {});
     const suffix = `${model.formulaId}-${model.series || model.code || "value"}`.replace(/[^a-zA-Z0-9_-]/g, "-");
     const detailsId = `clcr-result-details-${suffix}`;
     const reference = model.reference;

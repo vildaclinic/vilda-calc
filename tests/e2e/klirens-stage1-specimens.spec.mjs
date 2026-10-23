@@ -50,33 +50,6 @@ async function setPatient(page, {
   await page.locator('#height').fill(String(height));
 }
 
-async function confirmTimedCollectionProtocol(page) {
-  const confirmAll = page.locator(
-    '#clcrDzmQualityGroup .clcr-dzm-quality__confirm'
-  );
-  if (await confirmAll.isVisible()) {
-    await confirmAll.click();
-  } else {
-    for (const id of [
-      'collectionStartVoidDiscarded',
-      'collectionFinalVoidIncluded',
-      'collectionNoMissedVoids',
-      'collectionNoSpillage',
-      'collectionNoExtraVoids',
-      'collectionStorageFollowed',
-    ]) {
-      await page.locator(`#${id}`).check();
-    }
-  }
-  const serumAnswer = page.locator('#ui_serumSampleDuringCollection_answer');
-  if (await serumAnswer.count()) {
-    await serumAnswer.selectOption('yes');
-  } else {
-    await page.locator('#serumSampleDuringCollection').check();
-  }
-  await page.locator('#serumSampleAt').fill('2026-07-27T12:00');
-}
-
 test('nie podstawia domyślnie płci do wzorów zależnych od płci', async ({ page }) => {
   await openCalculator(page);
   await setPatient(page, { age: 20, sex: '' });
@@ -254,34 +227,43 @@ test('liczy FE i UAG wyłącznie ze sparowanej próbki punktowej', async ({ page
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
 });
 
-test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu', async ({ page }) => {
+test('czasowy klirens liczy z czterech pól i blokuje znany problem ze zbiórką', async ({ page }) => {
   await openCalculator(page);
-  await setPatient(page, { age: 50, weight: 72, height: 175 });
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('720');
-  await page.locator('#collectionStartAt').fill('2026-07-27T08:00');
-  await page.locator('#collectionEndAt').fill('2026-07-27T20:00');
+  const result = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]');
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('');
+  await expect(result).toHaveCount(0);
 
-  await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
-  await expect(page.locator('#clcrInfo')).toContainText('kompletnego protokołu');
+  await page.locator('#Cl24DurationHours').fill('12');
+  await expect(result.locator('.clcr-result-value')).toHaveText('100');
+  await expect(result).toHaveAttribute('data-clcr-value', '100');
+  await expect(result).toHaveAttribute('data-clcr-category', '');
+  expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('cl24').valueReady)).toBe(true);
+  for (const id of ['age', 'weight', 'height', 'collectionStartAt', 'collectionEndAt', 'serumSampleAt']) {
+    await expect(page.locator(`#${id}`)).toHaveValue('');
+  }
+  for (const id of [
+    'collectionStartVoidDiscarded', 'collectionFinalVoidIncluded',
+    'collectionNoMissedVoids', 'collectionNoSpillage',
+    'collectionNoExtraVoids', 'collectionStorageFollowed', 'serumSampleDuringCollection',
+  ]) await expect(page.locator(`#${id}`)).not.toBeChecked();
 
-  await confirmTimedCollectionProtocol(page);
-  await expect(page.locator('#clcrInfo')).toContainText('Zmierzony klirens kreatyniny');
-  await expect(page.locator('#clcrInfo')).toContainText('100');
-  await expect(page.locator('#clcrInfo')).toContainText('12');
-  await expect(page.locator('#clcrInfo')).toContainText('nie zmierzony GFR');
+  // The entered elapsed time changes the number; it is not silently 24 hours.
+  await page.locator('#Cl24DurationHours').fill('24');
+  await expect(result.locator('.clcr-result-value')).toHaveText('50');
+  await expect(result).toHaveAttribute('data-clcr-value', '50');
 
-  await page.locator('#clcrDzmQualityGroup summary').click();
-  await page.locator('#ui_collectionNoMissedVoids_answer').selectOption('no');
-  await expect(page.locator('#clcrReadiness')).toContainText(
-    'co najmniej jeden warunek nie został spełniony'
-  );
-  await expect(page.locator('#clcrInfo')).not.toContainText(
-    'Zmierzony klirens kreatyniny'
-  );
+  await openOptionalDetails(page, '#Cl24CollectionProblem');
+  await page.locator('#Cl24CollectionProblem').check();
+  await expect(page.locator('#clcrReadiness')).toContainText('niepełną lub błędną zbiórkę');
+  await expect(result).toHaveCount(0);
+  expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('cl24').valueReady)).toBe(false);
+  await page.locator('#Cl24CollectionProblem').uncheck();
+  await expect(result.locator('.clcr-result-value')).toHaveText('50');
 });
 
 test('blokuje ilości dobowe przy niepotwierdzonej zbiórce i nie wymaga do nich Scr', async ({ page }) => {
@@ -308,19 +290,40 @@ test('blokuje ilości dobowe przy niepotwierdzonej zbiórce i nie wymaga do nich
   await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
 });
 
-test('blokuje CrCl, gdy czas pobrania Scr wypada poza zbiórką', async ({ page }) => {
+test('czas pobrania Scr poza zbiórką nie blokuje uproszczonego CrCl ani nie zmienia dawnych danych', async ({ page }) => {
   await openCalculator(page);
-  await setPatient(page, { age: 50, weight: 72, height: 175 });
   await page.locator('#formulaPicker').selectOption('cl24');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
   await page.locator('#Scr').fill('1');
   await page.locator('#Ucr').fill('100');
   await page.locator('#V24').fill('1440');
-  await page.locator('#collectionStartAt').fill('2026-07-27T08:00');
-  await page.locator('#collectionEndAt').fill('2026-07-28T08:00');
-  await confirmTimedCollectionProtocol(page);
-  await page.locator('#serumSampleAt').fill('2026-07-28T12:00');
+  await page.locator('#Cl24DurationHours').fill('24');
+  const result = page.locator('#clcrResultReport .clcr-result-card[data-clcr-series="cl24"]');
+  await expect(result.locator('.clcr-result-value')).toHaveText('100');
 
-  await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
-  await expect(page.locator('#clcrInfo')).toContainText('mieszczący się w tym przedziale');
+  // Historical fields remain available to other urine calculations. Their
+  // dates are not a second mandatory timing questionnaire for current cl24.
+  await page.evaluate(() => {
+    for (const [id, value] of Object.entries({
+      collectionStartAt: '2026-07-27T08:00',
+      collectionEndAt: '2026-07-28T08:00',
+      serumSampleAt: '2026-07-28T12:00',
+    })) {
+      const field = document.getElementById(id);
+      field.value = value;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    window.ClcrUiWorkflow.refresh();
+    window.clcrUpdate();
+  });
+  await expect(result.locator('.clcr-result-value')).toHaveText('100');
+  await expect(result).toHaveAttribute('data-clcr-value', '100');
+  await expect(page.locator('#Cl24DurationHours')).toHaveValue('24');
+  await expect(page.locator('#collectionStartAt')).toHaveValue('2026-07-27T08:00');
+  await expect(page.locator('#collectionEndAt')).toHaveValue('2026-07-28T08:00');
+  await expect(page.locator('#serumSampleAt')).toHaveValue('2026-07-28T12:00');
+  await expect(page.locator('#serumSampleDuringCollection')).not.toBeChecked();
+  expect(await page.evaluate(() => window.ClcrUiWorkflow.getFormulaReadiness('cl24').valueReady)).toBe(true);
+  await expect(page.locator('#clcrInfo')).not.toContainText('mieszczący się w tym przedziale');
 });

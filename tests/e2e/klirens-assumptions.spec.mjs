@@ -273,11 +273,8 @@ test('Cockcroft i zmierzony klirens DZM zachowują własne jednostki bez kategor
   await selectFormula(page, 'cl24');
   for (const [selector, value] of [
     ['#Scr', '1'], ['#Ucr', '100'], ['#V24', '720'],
-    ['#collectionStartAt', '2026-07-27T08:00'], ['#collectionEndAt', '2026-07-27T20:00'],
+    ['#Cl24DurationHours', '12'],
   ]) await fillField(page, selector, value);
-  await kliknij(page.locator('#clcrDzmQualityGroup .clcr-dzm-quality__confirm'));
-  await selectField(page, '#ui_serumSampleDuringCollection_answer', 'yes');
-  await fillField(page, '#serumSampleAt', '2026-07-27T12:00');
   const measured = await expectOneCard(page, 'cl24', '100', 100);
   await expect(measured).toHaveAttribute('data-clcr-category', '');
   await expect(measured.locator('.clcr-result-unit')).toHaveText('mL/min');
