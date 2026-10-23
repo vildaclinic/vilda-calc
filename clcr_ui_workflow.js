@@ -46,7 +46,7 @@
       path: "clinical",
       level: "advanced",
       title: "Zmierzony klirens kreatyniny",
-      description: "Klirens ze zbiórki czasowej z pełnym protokołem jakości.",
+      description: "Cztery wartości z czasowej zbiórki moczu i badania krwi.",
       keywords: "zbiórka zbiorka czasowa dobowa dzm mocz klirens kreatyniny",
       formulaIds: ["cl24"],
     },
@@ -562,6 +562,8 @@
     collectionStorageFollowed: "Potwierdź przechowywanie zgodnie z instrukcją laboratorium.",
     serumSampleDuringCollection: "Próbka surowicy powinna zostać pobrana w okresie ocenianej zbiórki.",
     serumSampleAt: "Podaj rzeczywistą datę i godzinę pobrania próbki surowicy.",
+    Cl24DurationHours: "Podaj rzeczywisty czas zbiórki w godzinach, także ułamkowych (np. 23,5). Skrót 24 h wybierz tylko dla zbiórki trwającej dokładnie 24 godziny.",
+    Cl24CollectionProblem: "Zaznacz znany problem, np. pominiętą porcję moczu, rozlanie, błędny czas lub przechowywanie. Nie można wtedy podać miarodajnego klirensu.",
     ktvSameSession: "Próbki przed i po dializie muszą pochodzić z tej samej ocenianej sesji.",
     ktvPreBeforeDialysis: "Próbkę przed dializą należy pobrać bezpośrednio przed rozpoczęciem sesji.",
     ktvPreNoDilution: "Potwierdź brak rozcieńczenia próbki solą, heparyną lub innym płynem.",
@@ -893,6 +895,7 @@
     openHelp: null,
     neonatalAgeCorrection: null,
     assayOptions: null,
+    measuredLayout: null,
   };
 
   function formulaById(formulaId) {
@@ -1115,7 +1118,7 @@
     if (!view) return null;
     const control = view.control;
     // To jedno potwierdzenie AND, bez dodatkowej listy odpowiedzi.
-    if (control.id === "CrCysStandardizationConfirmed") return null;
+    if (["CrCysStandardizationConfirmed", "Cl24CollectionProblem"].includes(control.id)) return null;
     if (String(control.type).toLowerCase() !== "checkbox") return null;
     const vault = currentProtocolValueVault();
     if (view.answerSelect) {
@@ -1668,6 +1671,7 @@
   }
 
   function groupCollapsibleContextFields() {
+    if (state.activeFormulaId === "cl24" && !state.legacyBroad) return;
     const groups = new Map();
     const sharedFieldset = ["egfr_cr_cys", "ckid_u25_cys", "ckid_u25_cr_cys"].includes(state.activeFormulaId)
       ? documentRef.getElementById("serumSet") : null;
@@ -1709,13 +1713,204 @@
     return FORMULA_CONTEXT[formulaId] || { interpretation: [], optional: [] };
   }
 
+  const MEASURED_CONTEXT_FIELDS = ["age", "sex", "weight", "height"];
+  const MEASURED_PROTOCOL_FIELDS = DZM_QUALITY_FIELDS;
+
+  function measuredProblemAnswers() {
+    const vault = currentProtocolValueVault();
+    return MEASURED_PROTOCOL_FIELDS.filter((id) => {
+      const answerId = `ui_${id}_answer`;
+      const answer = documentRef.getElementById(answerId);
+      return answer?.value === "no" || (!answer && vault?.[answerId] === "no");
+    });
+  }
+
+  function clearMeasuredProblemAnswers() {
+    const vault = currentProtocolValueVault();
+    // Called in the input capture phase, before the legacy input handler can
+    // refresh the view and reapply an older negative protocol answer.
+    measuredProblemAnswers().forEach((id) => {
+      const answerId = `ui_${id}_answer`;
+      const answer = documentRef.getElementById(answerId);
+      if (answer) answer.value = "";
+      const canonical = documentRef.getElementById(id);
+      if (canonical) canonical.checked = false;
+      if (vault) { vault[answerId] = ""; vault[id] = false; }
+    });
+    if (vault) vault.Cl24CollectionProblem = false;
+  }
+
+  function restoreMeasuredFields() {
+    const layout = state.measuredLayout;
+    if (!layout) return;
+    layout.moves.forEach(({ element, anchor }) => {
+      if (anchor.parentNode) anchor.parentNode.insertBefore(element, anchor.nextSibling);
+      anchor.remove();
+    });
+    layout.moves.clear();
+    layout.card.hidden = true;
+    layout.referenceDetails.open = false;
+    layout.editingFields.clear();
+    layout.contextEdit = false;
+  }
+
+  function measuredMissingContextFields() {
+    const age = fieldNumber("age");
+    const ageKnown = age !== null && age >= 0;
+    if (ageKnown && (age < 3 || age >= 120)) return [];
+    const fields = [];
+    if (!ageKnown) fields.push("age");
+    if (ageKnown && age >= 19 && !["M", "F"].includes(fieldValue("sex"))) fields.push("sex");
+    if (!(fieldNumber("weight") > 0)) fields.push("weight");
+    if (!(fieldNumber("height") > 0)) fields.push("height");
+    return fields;
+  }
+
+  function syncMeasuredContext() {
+    const layout = state.measuredLayout;
+    if (!layout || state.activeFormulaId !== "cl24" || state.legacyBroad) return;
+    const missing = measuredMissingContextFields();
+    if (!layout.referenceDetails.open) {
+      layout.editingFields = new Set(missing);
+      layout.contextEdit = false;
+    } else if (!layout.contextEdit) {
+      missing.forEach((id) => layout.editingFields.add(id));
+      const age = fieldNumber("age");
+      if (age !== null && age >= 3 && age < 19) layout.editingFields.delete("sex");
+    }
+    // Keep a field visible throughout editing. Removing it after the first
+    // digit would interrupt input and make keyboard correction impossible.
+    MEASURED_CONTEXT_FIELDS.forEach((id) => {
+      const view = state.fieldViews.get(id);
+      if (view) view.wrapper.hidden = !layout.editingFields.has(id);
+    });
+    layout.referenceDetails.hidden = !missing.length && !layout.referenceDetails.open;
+    const context = documentRef.getElementById("cl24PatientContext");
+    if (context) {
+      const parts = [];
+      if (fieldNumber("age") !== null) parts.push(`${fieldValue("age")} lat`);
+      if (["M", "F"].includes(fieldValue("sex"))) parts.push(fieldValue("sex") === "M" ? "mężczyzna" : "kobieta");
+      if (fieldNumber("weight") > 0) parts.push(`${fieldValue("weight")} kg`);
+      if (fieldNumber("height") > 0) parts.push(`${fieldValue("height")} cm`);
+      context.textContent = parts.length ? `Dane pacjenta: ${parts.join(" · ")}` : "";
+      context.hidden = !parts.length;
+      const edit = documentRef.getElementById("cl24EditPatientContext");
+      if (edit) edit.hidden = !parts.length;
+    }
+  }
+
+  function openMeasuredReferenceFields(fieldIds, options) {
+    if (state.activeFormulaId !== "cl24" || state.legacyBroad) return false;
+    syncMeasuredFields();
+    const layout = state.measuredLayout;
+    if (!layout) return false;
+    const requested = Array.isArray(fieldIds) ? fieldIds : measuredMissingContextFields();
+    layout.editingFields = new Set(requested.filter((id) => MEASURED_CONTEXT_FIELDS.includes(id)));
+    layout.contextEdit = options?.editAll === true;
+    if (!layout.editingFields.size) return false;
+    layout.referenceDetails.hidden = false;
+    layout.referenceDetails.open = true;
+    syncMeasuredContext();
+    focusField([...layout.editingFields][0]);
+    global.ClcrLayout?.refresh?.();
+    return true;
+  }
+
+  function syncMeasuredFields() {
+    if (state.activeFormulaId !== "cl24" || state.legacyBroad) return;
+    let layout = state.measuredLayout;
+    if (!layout) {
+      const form = documentRef.getElementById("clcrForm");
+      if (!form) return;
+      const card = createElement("section", "clcr-measured-input-card");
+      card.id = "cl24InputCard";
+      const fields = createElement("fieldset", "clcr-measured-fields");
+      fields.id = "cl24MinimalFields";
+      fields.appendChild(createElement("legend", "", "Dane do obliczenia"));
+      const grid = createElement("div", "clcr-measured-grid");
+      fields.appendChild(grid);
+      const assumption = createElement("p", "clcr-measured-assumption");
+      const problemDetails = createElement("details", "clcr-measured-problem");
+      problemDetails.id = "cl24CollectionProblemDetails";
+      problemDetails.appendChild(createElement("summary", "", "Problem ze zbiórką"));
+      const problemBody = createElement("div", "clcr-measured-problem-body");
+      problemDetails.append(problemBody, createElement("p", "", "Dotyczy np. pominiętej porcji moczu, rozlania albo błędnego czasu zbiórki."));
+      const referenceDetails = createElement("details", "clcr-measured-context");
+      referenceDetails.id = "cl24ReferenceFieldsDetails";
+      referenceDetails.appendChild(createElement("summary", "", "Dane pacjenta do normy (opcjonalnie)"));
+      referenceDetails.appendChild(createElement("p", "clcr-measured-assumption", "Dodatkowe dane służą dobraniu normy. Wynik w mL/min ich nie wymaga."));
+      const referenceBody = createElement("div", "clcr-measured-context-body");
+      referenceDetails.appendChild(referenceBody);
+      card.append(fields, assumption, problemDetails, referenceDetails);
+      form.insertBefore(card, documentRef.getElementById("clearContainer"));
+      layout = state.measuredLayout = { card, fields, grid, assumption, problemDetails, problemBody, referenceDetails, referenceBody, moves: new Map(), editingFields: new Set(), contextEdit: false };
+      referenceDetails.addEventListener("toggle", () => {
+        if (!referenceDetails.open) syncMeasuredContext();
+        global.ClcrLayout?.refresh?.();
+      });
+      const durationView = state.fieldViews.get("Cl24DurationHours");
+      if (durationView) {
+        const row = createElement("div", "clcr-measured-duration-row");
+        durationView.control.before(row);
+        const shortcut = createElement("button", "clcr-measured-shortcut", "24 h");
+        shortcut.id = "cl24DurationShortcut";
+        shortcut.type = "button";
+        shortcut.setAttribute("aria-label", "Ustaw czas zbiórki na 24 godziny");
+        row.append(durationView.control, shortcut);
+        shortcut.addEventListener("click", () => {
+          durationView.control.value = "24";
+          durationView.control.dispatchEvent(new Event("input", { bubbles: true }));
+          durationView.control.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      }
+      const problem = state.fieldViews.get("Cl24CollectionProblem")?.control;
+      problem?.addEventListener("change", () => {
+        if (!problem.checked) {
+          // This is an explicit correction of the reported problem. Preserve
+          // all unrelated answers and do not manufacture six confirmations.
+          clearMeasuredProblemAnswers();
+        }
+        syncMeasuredProblem();
+      });
+    }
+    layout.card.hidden = false;
+    const move = (element, target) => {
+      if (!element || !target) return;
+      if (!layout.moves.has(element)) {
+        const anchor = documentRef.createComment("cl24-field-origin");
+        element.before(anchor);
+        layout.moves.set(element, { element, anchor });
+      }
+      if (element.parentNode !== target) target.appendChild(element);
+    };
+    const scr = state.fieldViews.get("Scr");
+    move(scr?.wrapper.closest(".clcr-field-pair") || scr?.wrapper, layout.grid);
+    ["Ucr", "V24", "Cl24DurationHours"].forEach((id) => move(state.fieldViews.get(id)?.wrapper, layout.grid));
+    move(state.fieldViews.get("Cl24CollectionProblem")?.wrapper, layout.problemBody);
+    MEASURED_CONTEXT_FIELDS.forEach((id) => move(state.fieldViews.get(id)?.wrapper, layout.referenceBody));
+    syncMeasuredProblem();
+    syncMeasuredContext();
+  }
+
+  function syncMeasuredProblem() {
+    const layout = state.measuredLayout;
+    const control = state.fieldViews.get("Cl24CollectionProblem")?.control;
+    if (!layout || !control || state.activeFormulaId !== "cl24") return;
+    if (measuredProblemAnswers().length) control.checked = true;
+    layout.assumption.textContent = control.checked
+      ? "Zgłoszony problem ze zbiórką wymaga wyjaśnienia przed oceną wyniku."
+      : "Zakładamy pełną, prawidłową zbiórkę i stabilną czynność nerek bez podejrzenia AKI.";
+    if (control.checked) layout.problemDetails.open = true;
+  }
+
   function renderCompactCgLabels() {
     const compact = !state.legacyBroad && Boolean(state.activeFormulaId);
     const neonatal = compact && state.activeFormulaId === "neonatal_egfr";
     const cgIndexed = compact && state.activeFormulaId === "cg_norm";
+    const measured = compact && state.activeFormulaId === "cl24";
     const labels = {
       weight: "Aktualna masa ciała (kg)",
-      Scr: "Kreatynina",
+      Scr: measured ? "Kreatynina w surowicy" : "Kreatynina",
       ScrUnit: "Jednostka",
       ageDays: "Wiek (ukończone dni życia)",
       neonatalTermStatus: "Urodzenie o czasie",
@@ -1723,11 +1918,15 @@
       ScrAssay: "Metoda oznaczenia kreatyniny",
       age: cgIndexed ? "Wiek (ukończone lata)" : "Zapisany wiek (lata)",
       ageMonths: "Zapisany wiek (miesiące)",
+      Ucr: "Kreatynina w moczu (mg/dL)",
+      V24: "Objętość zebranego moczu (mL)",
+      Cl24DurationHours: "Rzeczywisty czas zbiórki (h)",
     };
     Object.entries(labels).forEach(([fieldId, label]) => {
       const view = state.fieldViews.get(fieldId);
       if (!view) return;
-      const useCompact = ["Scr", "ScrUnit"].includes(fieldId) ? compact
+      const useCompact = ["Ucr", "V24", "Cl24DurationHours"].includes(fieldId) ? measured
+        : ["Scr", "ScrUnit"].includes(fieldId) ? compact
         : fieldId === "weight" ? neonatal || compact && ["cg", "cg_norm"].includes(state.activeFormulaId)
           : fieldId === "age" ? neonatal || cgIndexed
           : neonatal;
@@ -1764,7 +1963,7 @@
     // Katalog określa składniki obliczenia i twarde warunki metody. Kontekst
     // odniesienia pozostaje dobrowolny i nie tworzy drugiego poziomu wyniku.
     const referenceFields = {
-      cl24: ["age", "ageMonths", "weight", "height"],
+      cl24: ["age", "sex", "weight", "height", "Cl24CollectionProblem"],
       UA_mgkg: ["age", "sex"], Ca_mgkg: ["age", "ageMonths"],
       Mg_mgkg: ["age", "ageMonths"], PO4_mgkg: ["age", "ageMonths"],
       pH24: ["age", "ageMonths"], Prot_mgkg: ["age", "ageMonths", "weight", "height"],
@@ -1819,6 +2018,7 @@
     // Same-formula refresh must not reparent a focused correction control.
     // syncNeonatalAgeCorrection releases it once the correction loses focus.
     if (state.legacyBroad || formula?.id !== "neonatal_egfr") restoreNeonatalAgeCorrection();
+    if (state.legacyBroad || formula?.id !== "cl24") restoreMeasuredFields();
     restoreCollapsibleContextFields();
     documentRef.documentElement.classList.remove("clcr-legacy-broad");
     const activeModule = formula ? getModuleForFormula(formula.id) : null;
@@ -1867,6 +2067,7 @@
     const pairedNote = documentRef.getElementById("clcrPairedMarkerNote");
     if (pairedNote) pairedNote.hidden = !["egfr_cr_cys", "ckid_u25_cr_cys"].includes(formula?.id);
     groupCollapsibleContextFields();
+    syncMeasuredFields();
     syncFieldPairs();
 
     const ktvToggle = documentRef.getElementById("ktvToggle");
@@ -1893,6 +2094,7 @@
   }
 
   function renderLegacyBroad(level) {
+    restoreMeasuredFields();
     restoreNeonatalAgeCorrection();
     restoreCollapsibleContextFields();
     broadFormulaIds(level);
@@ -1900,7 +2102,9 @@
     documentRef.documentElement.classList.remove("clcr-has-active-formula");
     delete documentRef.documentElement.dataset.clcrActiveModule;
     const active = new Set();
-    state.fieldViews.forEach((_view, id) => active.add(id));
+    state.fieldViews.forEach((_view, id) => {
+      if (!["Cl24DurationHours", "Cl24CollectionProblem"].includes(id)) active.add(id);
+    });
     state.activeFieldIds = active;
     state.requiredFieldIds = new Set();
     state.interpretationFieldIds = new Set();
@@ -1948,8 +2152,10 @@
     }
     const value = control.value == null ? "" : String(control.value).trim();
     if (value === "") return { missing: true, reason: "Uzupełnij pole." };
-    if (String(control.type).toLowerCase() === "number") {
-      const numeric = Number(value);
+    if (String(control.type).toLowerCase() === "number" || fieldId === "Cl24DurationHours") {
+      const numeric = fieldId === "Cl24DurationHours"
+        ? /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(value) ? Number(value.replace(",", ".")) : NaN
+        : Number(value);
       if (!Number.isFinite(numeric)) {
         return {
           missing: true,
@@ -2258,6 +2464,7 @@
       }
     }
     if (
+      formula.id !== "cl24" &&
       typeof global.canComputeFormula === "function" &&
       !global.canComputeFormula(formula.id)
     ) {
@@ -2347,72 +2554,14 @@
       clinical &&
       typeof clinical.computeTimedCreatinineClearance === "function"
     ) {
-      const weight = fieldNumber("weight");
-      const height = fieldNumber("height");
-      let bsa = null;
-      if (age && age.valid && age.exactYears < 18 && extended) {
-        const bsaResult = extended.computeHaycockBsa({
-          ageYears: age.exactYears,
-          heightValue: height,
-          heightUnit: "cm",
-          weightValue: weight,
-          weightUnit: "kg",
-        });
-        bsa = bsaResult && bsaResult.ok ? bsaResult.value : null;
-      } else if (weight > 0 && height > 0) {
-        bsa =
-          0.007184 *
-          Math.pow(weight, 0.425) *
-          Math.pow(height, 0.725);
-      }
-      const scr = fieldNumber("Scr");
-      outcome = clinical.computeTimedCreatinineClearance({
-        urineCreatinineMgDl: fieldNumber("Ucr"),
-        serumCreatinineMgDl:
-          fieldValue("ScrUnit") === "umol" && scr !== null
-            ? scr / 88.4
-            : scr,
-        volumeMl: fieldNumber("V24"),
-        collectionStartAt: fieldValue("collectionStartAt"),
-        collectionEndAt: fieldValue("collectionEndAt"),
-        serumSampleAt: fieldValue("serumSampleAt"),
-        bsaM2: bsa,
-        weightKg: weight,
-        protocol: {
-          startVoidDiscarded: Boolean(
-            documentRef.getElementById(
-              "collectionStartVoidDiscarded",
-            )?.checked,
-          ),
-          finalVoidIncluded: Boolean(
-            documentRef.getElementById(
-              "collectionFinalVoidIncluded",
-            )?.checked,
-          ),
-          noMissedVoids: Boolean(
-            documentRef.getElementById("collectionNoMissedVoids")?.checked,
-          ),
-          noSpillage: Boolean(
-            documentRef.getElementById("collectionNoSpillage")?.checked,
-          ),
-          noExtraVoids: Boolean(
-            documentRef.getElementById("collectionNoExtraVoids")?.checked,
-          ),
-          storageFollowed: Boolean(
-            documentRef.getElementById("collectionStorageFollowed")?.checked,
-          ),
-          serumSampleDuringCollection: Boolean(
-            documentRef.getElementById(
-              "serumSampleDuringCollection",
-            )?.checked,
-          ),
-        },
-      });
+      const input = typeof global.readCl24CalculationInput === "function"
+        ? global.readCl24CalculationInput() : null;
+      outcome = input ? clinical.computeTimedCreatinineClearance(input) : null;
       if (!outcome || !outcome.ok) {
         return semanticBlock(
-          "TIMED_CLEARANCE_INVALID",
+          input?.collectionProblem ? "COLLECTION_KNOWN_PROBLEM" : "TIMED_CLEARANCE_INVALID",
           outcome?.error || "Nie można obliczyć klirensu czasowego.",
-          "collectionStartAt",
+          input?.collectionProblem ? "Cl24CollectionProblem" : "Cl24DurationHours",
           outcome,
         );
       }
@@ -2703,6 +2852,8 @@
     if (!state.readiness) return;
     syncAssayOptions();
     syncNeonatalAgeCorrection();
+    syncMeasuredProblem();
+    syncMeasuredContext();
     if (state.completion) state.completion.hidden = true;
     state.readiness.replaceChildren();
     state.readiness.hidden = false;
@@ -2728,7 +2879,17 @@
     }
     const readiness = getFormulaReadiness(formula.id);
     documentRef.documentElement.dataset.clcrReady = String(readiness.valueReady);
+    if (formula.id === "cl24") renderDataCompletion();
     if (readiness.status === "missing") {
+      if (formula.id === "cl24" && !readiness.hasBlockedProtocol) {
+        state.readiness.className = "clcr-readiness clcr-readiness--neutral";
+        state.readiness.append(
+          createElement("strong", "", "Tutaj pojawi się wynik"),
+          createElement("p", "", "Wpisz kreatyninę w surowicy i moczu, objętość moczu oraz rzeczywisty czas zbiórki."),
+        );
+        global.ClcrLayout?.refresh?.();
+        return;
+      }
       state.readiness.className = readiness.hasBlockedProtocol
         ? "clcr-readiness clcr-readiness--error"
         : "clcr-readiness clcr-readiness--incomplete";
@@ -2737,6 +2898,14 @@
         : "Do obliczenia brakuje:"));
       appendReadinessList(compactReadinessEntries(readiness.missing));
     } else if (readiness.status === "blocked") {
+      if (formula.id === "cl24" && readiness.blockers.some((entry) => entry.code === "COLLECTION_KNOWN_PROBLEM")) {
+        state.readiness.className = "clcr-readiness clcr-readiness--collection-problem";
+        state.readiness.append(createElement("strong", "", "Wyjaśnij problem ze zbiórką"));
+        readiness.blockers.forEach((entry) => state.readiness.appendChild(createElement("p", "", entry.message)));
+        state.readiness.appendChild(createElement("p", "", "Sprawdź dane zbiórki; jeśli pominięto część moczu, potrzebna jest nowa zbiórka."));
+        global.ClcrLayout?.refresh?.();
+        return;
+      }
       state.readiness.className = "clcr-readiness clcr-readiness--error";
       state.readiness.append(createElement("strong", "", "Nie można obliczyć dla podanych danych:"));
       appendReadinessList(readiness.blockers);
@@ -2764,14 +2933,20 @@
     if (!questions.size) return;
     const sections = Array.from(documentRef.querySelectorAll("#clcrForm fieldset"))
       .filter(sectionHasVisibleFields);
-    const target = sections[sections.length - 1] || state.activePanel;
+    const target = state.activeFormulaId === "cl24" && state.measuredLayout
+      ? state.measuredLayout.fields : sections[sections.length - 1] || state.activePanel;
     if (!target) return;
     if (!state.completion) {
       state.completion = createElement("p", "clcr-data-completion");
       state.completion.id = "clcrDataCompletion";
       state.completion.setAttribute("aria-live", "polite");
     }
-    state.completion.textContent = `✓ Dane kompletne · ${questions.size}/${questions.size}`;
+    const complete = state.activeFormulaId === "cl24"
+      ? [...questions].filter((id) => !requirementState(id).missing &&
+        (!UNIT_PAIRS[id] || !requirementState(UNIT_PAIRS[id]).missing)).length : questions.size;
+    state.completion.textContent = complete === questions.size
+      ? `✓ Dane kompletne · ${complete}/${questions.size}`
+      : `Wymagane dane · ${complete}/${questions.size}`;
     state.completion.hidden = false;
     if (state.completion.parentNode !== target) target.appendChild(state.completion);
   }
@@ -2794,10 +2969,20 @@
     eyebrow.append(step, documentRef.createTextNode("Dane do obliczenia"));
     state.activePanel.appendChild(eyebrow);
     const heading = createElement("h2", "clcr-active-panel__title", formula
-      ? formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
+      ? formula.id === "cl24" ? "Klirens kreatyniny ze zbiórki moczu" : formula.id === "cg_norm" ? "Cockcroft–Gault (1,73 m²)" : formula.id === "cg" ? "Cockcroft–Gault" : formula.label
       : legacy ? "Obliczenia" : "Wybierz obliczenie");
     state.activePanel.appendChild(heading);
-    if (formula?.id === "cg_norm") {
+    if (formula?.id === "cl24") {
+      state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Wpisz cztery wartości z badania"));
+      const context = createElement("p", "clcr-measured-patient-context");
+      context.id = "cl24PatientContext";
+      const edit = createElement("button", "clcr-measured-context-edit", "Zmień dane pacjenta");
+      edit.id = "cl24EditPatientContext";
+      edit.type = "button";
+      edit.addEventListener("click", () => openMeasuredReferenceFields(MEASURED_CONTEXT_FIELDS, { editAll: true }));
+      state.activePanel.append(context, edit);
+      syncMeasuredContext();
+    } else if (formula?.id === "cg_norm") {
       state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Dorośli · rzeczywista masa ciała"));
     } else if (formula && formula.id !== "neonatal_egfr" && CREATININE_VALUE_FORMULAS.has(formula.id)) {
       state.activePanel.appendChild(createElement("p", "clcr-active-panel__note", "Do oceny stabilnej czynności nerek"));
@@ -2954,6 +3139,7 @@
     const formula = formulaById(formulaId);
     const module = getModuleForFormula(formulaId);
     if (!formula || !module || HISTORICAL_FORMULA_IDS.includes(formulaId)) return false;
+    const preserveMeasuredCollection = state.activeFormulaId === "cl24" || formulaId === "cl24";
     state.legacyBroad = false;
     state.mobileModulesExpanded = false;
     documentRef.documentElement.classList.remove("clcr-mobile-modules-expanded");
@@ -2965,7 +3151,16 @@
     renderActiveFields();
     const picker = documentRef.getElementById("formulaPicker");
     if (picker) picker.value = formulaId;
-    if (typeof global.selectClcrFormula === "function") {
+    if (preserveMeasuredCollection) {
+      // The workflow already sets the level, picker and active fields above.
+      // The legacy picker additionally resets the entire form: skip that reset
+      // when opening/leaving a measured collection so its actual time and
+      // specimen values survive switching methods, including an explicit blank.
+      global.clearFormulaMustFill?.();
+      global.highlightFields?.(formula, false);
+      if (typeof global.clcrUpdate === "function") global.clcrUpdate();
+      else if (typeof global.update === "function") global.update();
+    } else if (typeof global.selectClcrFormula === "function") {
       global.selectClcrFormula(formulaId);
     } else if (picker) {
       picker.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3214,6 +3409,7 @@
             "samePatientMode",
             "U_ACR",
             "U_PCR",
+            "Cl24DurationSource",
           ].includes(control.id)
         ) {
           if (["U_ACR", "U_PCR"].includes(control.id)) {
@@ -3253,6 +3449,13 @@
     const picker = documentRef.getElementById("formulaPicker");
     if (picker) picker.addEventListener("change", () => global.setTimeout(syncFromPicker, 0));
     form.addEventListener("input", scheduleReadiness, true);
+    form.addEventListener("input", (event) => {
+      if (event.target?.id === "Cl24CollectionProblem" && !event.target.checked) clearMeasuredProblemAnswers();
+      if (event.target?.id === "Cl24DurationHours") {
+        const source = documentRef.getElementById("Cl24DurationSource");
+        if (source) source.value = String(event.target.value || "").trim() ? "hours" : "";
+      }
+    }, true);
     form.addEventListener("change", scheduleReadiness, true);
     form.addEventListener("focusout", (event) => {
       if (["age", "ageMonths"].includes(event.target?.id)) scheduleReadiness();
@@ -3265,6 +3468,12 @@
     });
     documentRef.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeAllHelp(null);
+    });
+    documentRef.addEventListener("click", (event) => {
+      const action = event.target?.closest?.("[data-clcr-complete-reference]");
+      if (!action) return;
+      const fields = String(action.dataset.clcrMissingFields || "").split(",").map((id) => id.trim()).filter(Boolean);
+      openMeasuredReferenceFields(fields);
     });
     // Dymki pomocy są nakładką (position:fixed, pointer-events:none) — muszą się
     // domykać kliknięciem poza dymkiem. Faza capture: działa nawet gdy element
@@ -3338,6 +3547,7 @@
     uagSpecimenConfirmed,
     crCysStandardization,
     calculationAssumptions,
+    openMeasuredReferenceFields,
     hasBlockingValidationError() {
       return Array.from(state.requiredFieldIds).some((fieldId) => {
         const control = documentRef.getElementById(fieldId);
@@ -3491,6 +3701,8 @@
   // kategorii klinicznej. Stare boksy nadal mogą podawać zakres przez .range.
   function readRangeText(el) {
     if (!el || typeof el.querySelector !== "function") return "";
+    const measured = el.querySelector(".clcr-measured-reference-line");
+    if (measured) return String(measured.textContent || "").replace(/\s+/g, " ").trim();
     const reference = el.querySelector(".clcr-result-reference");
     if (reference) {
       if (reference.getAttribute("data-clcr-reference-kind") === "none") return "";
@@ -3574,6 +3786,17 @@
           if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) dp.assumptionProvenance = parsed;
         } catch (_) { /* Stare wyniki bez poprawnego opisu zachowują dotychczasową postać. */ }
       }
+      if (dp.sourceFormulaId === "cl24") {
+        const reference = el.getAttribute("data-clcr-measured-reference");
+        if (reference) {
+          try {
+            const parsed = JSON.parse(reference);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              dp.measuredClearanceReference = parsed;
+            }
+          } catch (_) { /* A legacy card can lack the reference snapshot. */ }
+        }
+      }
       if (dp.sourceFormulaId === "cg_norm" && el.getAttribute("data-clcr-age-policy") === "completed-years") {
         const ageUsedYears = toNumber(el.getAttribute("data-clcr-age-used-years"));
         if (Number.isInteger(ageUsedYears) && ageUsedYears >= 18) {
@@ -3607,6 +3830,58 @@
     if (typeof value !== "string") return null;
     const trimmed = value.trim();
     return /^(\d{4})-(\d{1,2})-(\d{1,2})$/.test(trimmed) ? trimmed : null;
+  }
+
+  function measuredReferenceNote(datapoint) {
+    const reference = datapoint?.measuredClearanceReference;
+    if (datapoint?.sourceFormulaId !== "cl24" || !reference || typeof reference !== "object" || Array.isArray(reference)) return "";
+    // Snapshot of the result the clinician saw. The vault's note schema keeps
+    // body/norm, but deliberately rejects new arbitrary labResult properties.
+    // Never recompute a historical norm from today's profile or patient data.
+    const number = (value) => typeof value === "number" && Number.isFinite(value) ? String(value).replace(".", ",") : "";
+    const string = (value) => typeof value === "string" ? value.trim() : "";
+    const lines = ["Klirens kreatyniny — dane użyte w chwili zapisu:"];
+    if (number(reference.value)) lines.push(`Wynik przed zaokrągleniem: ${number(reference.value)} ${string(reference.unit) || "mL/min"}.`);
+    const assessment = { within: "w zakresie", below: "poniżej zakresu", above: "powyżej zakresu" }[reference.status];
+    lines.push(assessment ? `Ocena względem wybranego zakresu: ${assessment}.` : "Nie dobrano zakresu referencyjnego do tego wyniku.");
+    const source = reference.source || {};
+    if (string(source.label)) lines.push(`Źródło normy: ${string(source.label)}${string(source.lastUpdated) ? `; aktualizacja ${source.lastUpdated}` : ""}${string(source.accessedAt) ? `; dostęp ${source.accessedAt}` : ""}.`);
+    if (string(source.url)) lines.push(`Adres źródła: ${source.url}`);
+    if (string(reference.profileId)) lines.push(`Profil: ${reference.profileId}${reference.profileVersion != null ? `; wersja ${reference.profileVersion}` : ""}.`);
+    const population = typeof reference.population === "string" ? reference.population : reference.population?.label;
+    if (string(population)) lines.push(`Populacja: ${population}.`);
+    const band = reference.selectedBand;
+    if (band && number(band.minimumAgeInclusive) && number(band.maximumAgeExclusive)) {
+      lines.push(`Przedział wieku źródła: od ${number(band.minimumAgeInclusive)} do poniżej ${number(band.maximumAgeExclusive)} lat${band.sexRequired === false ? "; wspólny dla obu płci" : ""}.`);
+    }
+    const inputs = reference.inputs || {};
+    const patient = [];
+    if (number(reference.ageYears)) patient.push(`wiek ${number(reference.ageYears)} lat`);
+    if (["M", "F"].includes(reference.sex)) patient.push(reference.sex === "M" ? "płeć męska" : "płeć żeńska");
+    if (number(inputs.weightKg)) patient.push(`masa ${number(inputs.weightKg)} kg`);
+    if (number(inputs.heightCm)) patient.push(`wzrost ${number(inputs.heightCm)} cm`);
+    if (patient.length) lines.push(`Dane pacjenta: ${patient.join("; ")}.`);
+    if (number(reference.bsa)) lines.push(`Powierzchnia ciała użyta do przeliczenia normy: ${number(reference.bsa)} m²${string(reference.bsaMethod) ? ` (${reference.bsaMethod})` : ""}.`);
+    const indexed = reference.indexedRange;
+    if (indexed && number(indexed.lower) && number(indexed.upper)) lines.push(`Zakres źródłowy: ${number(indexed.lower)}–${number(indexed.upper)} ${string(indexed.unit)}.`);
+    const absolute = reference.absoluteRange;
+    if (absolute && number(absolute.lower) && number(absolute.upper)) lines.push(`Zakres po przeliczeniu na jednostkę wyniku, przed zaokrągleniem granic: ${number(absolute.lower)}–${number(absolute.upper)} ${string(absolute.unit)}.`);
+    if (datapoint.norm) lines.push(`Norma pokazana przy wyniku: ${datapoint.norm}.`);
+    if (number(reference.durationHours)) lines.push(`Rzeczywisty czas zbiórki: ${number(reference.durationHours)} h${number(inputs.durationMinutes) ? ` (${number(inputs.durationMinutes)} min)` : ""}. ${reference.durationSource === "legacy-dates" ? "Czas odtworzono z zapisanych dat początku i końca zbiórki." : "Czas podano w godzinach."}`);
+    const laboratory = [];
+    if (number(inputs.serumCreatinineMgDl)) laboratory.push(`kreatynina w surowicy ${number(inputs.serumCreatinineMgDl)} mg/dL`);
+    if (number(inputs.urineCreatinineMgDl)) laboratory.push(`kreatynina w moczu ${number(inputs.urineCreatinineMgDl)} mg/dL`);
+    if (number(inputs.volumeMl)) laboratory.push(`objętość ${number(inputs.volumeMl)} mL`);
+    if (laboratory.length) lines.push(`Dane badania użyte w obliczeniu: ${laboratory.join("; ")}.`);
+    if (reference.protocolContext?.nominalHours) lines.push(`Zakres źródłowy dotyczy zbiórki trwającej ${number(reference.protocolContext.nominalHours)} h.`);
+    if (string(reference.protocolNote)) lines.push(reference.protocolNote);
+    if (reference.collectionAssumptions?.collectionCompleteness === "assumed") lines.push("Założono pełną, prawidłową zbiórkę moczu.");
+    if (reference.collectionAssumptions?.serumSampling === "assumed-compatible") lines.push("Założono, że kreatynina w surowicy odpowiada okresowi zbiórki zgodnie z protokołem laboratorium.");
+    if (reference.referencePreview === true) lines.push("Norma ma charakter orientacyjny; zakres własnego laboratorium ma pierwszeństwo.");
+    for (const limitation of Array.isArray(reference.limitations) ? reference.limitations : []) {
+      if (string(limitation)) lines.push(limitation);
+    }
+    return lines.join("\n");
   }
 
   // Zapis: jedna notatka na datapoint, wspólna data = jedna wizyta.
@@ -3646,6 +3921,7 @@
         dp.testKey +
         (dp.outOfRange ? " · wynik poza zakresem" : "") +
         (typeof dp.assumptions === "string" && dp.assumptions.trim() ? "\n\n" + dp.assumptions.trim() : "") +
+        (dp.sourceFormulaId === "cl24" && dp.measuredClearanceReference ? "\n\n" + measuredReferenceNote(dp) : "") +
         (dp.sourceFormulaId === "cg_norm" && dp.agePolicy === "completed-years" && Number.isInteger(dp.ageUsedYears) && dp.ageUsedYears >= 18
           ? "\n\nWiek użyty we wzorze: " + dp.ageUsedYears + " ukończonych lat." : "");
       try {

@@ -176,7 +176,7 @@
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
 <script defer src="vilda_chrome.js?v=170"></script>
-<link href="clcr_ui_workflow.css?v=15" rel="stylesheet" />
+<link href="clcr_ui_workflow.css?v=16" rel="stylesheet" />
 <link href="vilda_lab_assessment_ui.css?v=12" rel="stylesheet">
 <link href="vilda_lab_history_tab.css?v=4" rel="stylesheet">
 </head>
@@ -601,6 +601,14 @@
           <label>Całkowita objętość czasowej zbiórki moczu (ml):
             <input type="number" id="V24" placeholder="np. 1500" />
           </label>
+          <label>Rzeczywisty czas zbiórki (h):
+            <input type="text" inputmode="decimal" id="Cl24DurationHours" autocomplete="off" placeholder="Podaj czas" />
+          </label>
+          <input type="hidden" id="Cl24DurationSource" value="" />
+          <label class="inline-checkbox-label">
+            <input type="checkbox" id="Cl24CollectionProblem" class="white-checkbox" />
+            <span>Zbiórka była niepełna lub błędna</span>
+          </label>
           <label>Początek zbiórki:
             <input type="datetime-local" id="collectionStartAt" />
           </label>
@@ -824,7 +832,6 @@
       <h2 class="text-center">Klirens / eGFR</h2>
       <p class="text-center" style="font-size:1.05em;">Wynik jest prezentowany wraz z metodą, populacją i założeniami interpretacji.</p>
       <div id="clcrInfo"></div>
-      <small>*Zmierzony klirens kreatyniny wymaga dokładnego czasu, kompletnego protokołu zbiórki, Ucr, objętości i Scr pobranej podczas zbiórki.</small>
     </div>
   </div>
   <div class="card" id="elecCard" style="display:none;">
@@ -862,14 +869,16 @@
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="clcr_clinical_safety.js?v=8"></script>
+    <script defer src="clcr_clinical_safety.js?v=9"></script>
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
     <script defer src="clcr_calculation_assumptions.js?v=2"></script>
-    <script defer src="clcr_result_reference_data.js?v=6"></script>
-    <script defer src="clcr_result_presentation.js?v=6"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=10"></script>
+    <script defer src="clcr_result_reference_data.js?v=7"></script>
+    <script defer src="clcr_measured_clearance_reference_data.js?v=1"></script>
+    <script defer src="clcr_measured_clearance_reference.js?v=1"></script>
+    <script defer src="clcr_result_presentation.js?v=7"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=11"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -936,7 +945,7 @@
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=15"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=16"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -1532,7 +1541,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=45" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=4"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=5"></script>
 <script defer src="vilda_down_syndrome.js?v=5"></script>
 <script defer src="vilda_anorexia_risk.js?v=4"></script>
 <!-- Tablice siatek zespolu Downa przed app.js: app.js przekazuje je silnikowi BMI (P-DS-1). -->
@@ -1790,6 +1799,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
-  <script defer src="clcr_ui_workflow.js?v=14"></script>
+  <script defer src="clcr_ui_workflow.js?v=15"></script>
 </body>
 </html>

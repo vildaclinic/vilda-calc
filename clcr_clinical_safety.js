@@ -740,42 +740,54 @@
       bsaM2 = toFiniteNumber(input && input.bsaM2),
       weightKg = toFiniteNumber(input && input.weightKg),
       protocol = (input && input.protocol) || {};
-    if (
-      protocol.startVoidDiscarded !== true ||
-      protocol.finalVoidIncluded !== true ||
-      protocol.noMissedVoids !== true ||
-      protocol.noSpillage !== true ||
-      protocol.noExtraVoids !== true ||
-      protocol.storageFollowed !== true ||
-      protocol.serumSampleDuringCollection !== true
-    ) {
-      return Object.freeze({
-        ok: false,
-        error:
-          "Nie potwierdzono kompletnego protokołu czasowej zbiórki moczu i pobrania kreatyniny w surowicy podczas zbiórki.",
-      });
+    const assumesCompleteCollection = input?.protocolMode === "assumed-complete";
+    let durationMinutes;
+    if (assumesCompleteCollection) {
+      // The simplified form explicitly uses an assumed complete collection.
+      // An observed collection problem always takes precedence over that policy.
+      const collectionKeys = ["startVoidDiscarded", "finalVoidIncluded", "noMissedVoids", "noSpillage", "noExtraVoids", "storageFollowed"];
+      if (input.collectionProblem === true || collectionKeys.some((key) => protocol[key] === false)) {
+        return Object.freeze({ ok: false, error: "Zgłoszono niepełną lub błędną zbiórkę moczu. Nie można podać miarodajnego klirensu." });
+      }
+      durationMinutes = toFiniteNumber(input.durationMinutes);
+    } else {
+      if (
+        protocol.startVoidDiscarded !== true ||
+        protocol.finalVoidIncluded !== true ||
+        protocol.noMissedVoids !== true ||
+        protocol.noSpillage !== true ||
+        protocol.noExtraVoids !== true ||
+        protocol.storageFollowed !== true ||
+        protocol.serumSampleDuringCollection !== true
+      ) {
+        return Object.freeze({
+          ok: false,
+          error:
+            "Nie potwierdzono kompletnego protokołu czasowej zbiórki moczu i pobrania kreatyniny w surowicy podczas zbiórki.",
+        });
+      }
+      const collectionStartMs = Date.parse(
+          (input && input.collectionStartAt) || "",
+        ),
+        collectionEndMs = Date.parse((input && input.collectionEndAt) || ""),
+        serumSampleMs = Date.parse((input && input.serumSampleAt) || "");
+      if (
+        !Number.isFinite(collectionStartMs) ||
+        !Number.isFinite(collectionEndMs) ||
+        !Number.isFinite(serumSampleMs) ||
+        !(collectionEndMs > collectionStartMs) ||
+        serumSampleMs < collectionStartMs ||
+        serumSampleMs > collectionEndMs
+      ) {
+        return Object.freeze({
+          ok: false,
+          error:
+            "Podaj dokładny początek i koniec zbiórki oraz czas pobrania kreatyniny w surowicy mieszczący się w tym przedziale.",
+        });
+      }
+      durationMinutes =
+        (collectionEndMs - collectionStartMs) / 60000;
     }
-    const collectionStartMs = Date.parse(
-        (input && input.collectionStartAt) || "",
-      ),
-      collectionEndMs = Date.parse((input && input.collectionEndAt) || ""),
-      serumSampleMs = Date.parse((input && input.serumSampleAt) || "");
-    if (
-      !Number.isFinite(collectionStartMs) ||
-      !Number.isFinite(collectionEndMs) ||
-      !Number.isFinite(serumSampleMs) ||
-      !(collectionEndMs > collectionStartMs) ||
-      serumSampleMs < collectionStartMs ||
-      serumSampleMs > collectionEndMs
-    ) {
-      return Object.freeze({
-        ok: false,
-        error:
-          "Podaj dokładny początek i koniec zbiórki oraz czas pobrania kreatyniny w surowicy mieszczący się w tym przedziale.",
-      });
-    }
-    const durationMinutes =
-      (collectionEndMs - collectionStartMs) / 60000;
     if (
       urineCreatinineMgDl === null ||
       !(urineCreatinineMgDl > 0) ||

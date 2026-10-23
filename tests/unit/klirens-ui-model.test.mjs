@@ -40,7 +40,7 @@ function readHtmlControls() {
         },
       };
     }
-  );
+  ).filter(({ control }) => control.type !== 'hidden');
 }
 
 const formulas = loadFormulaRegistry();
@@ -121,6 +121,45 @@ function clinicalReadinessHarness(formulaId, values) {
 }
 
 describe('Klirens — centralny model przepływu UI', () => {
+  it('klirens zmierzony wymaga czterech wartości; kontekst normy i protokół nie są dodatkowymi pytaniami', () => {
+    const formula = formulas.find(entry => entry.id === 'cl24');
+    expect(new Set(formula.requires)).toEqual(new Set(['Scr', 'ScrUnit', 'Ucr', 'V24', 'Cl24DurationHours']));
+    const values = { Scr: '1', ScrUnit: 'mg/dl', Ucr: '100', V24: '1440', Cl24DurationHours: '24' };
+    const { browserGlobal, workflow } = clinicalReadinessHarness('cl24', values);
+    loadBrowserScript('clcr_calculation_assumptions.js', browserGlobal);
+    browserGlobal.readCl24CalculationInput = () => ({
+      urineCreatinineMgDl: 100, serumCreatinineMgDl: 1, volumeMl: 1440,
+      durationMinutes: 1440, protocolMode: 'assumed-complete', collectionProblem: false,
+    });
+    const readiness = workflow.getFormulaReadiness('cl24');
+    expect(readiness).toMatchObject({ valueReady: true, status: 'ready', missingFieldIds: [] });
+    expect(readiness.outcome.absoluteMlMin).toBe(100);
+  });
+
+  it.each(['', '0', '-1', '1e2', '23,5,1'])('czas zbiórki %j nie kończy gotowości i nie przyjmuje 24 h domyślnie', duration => {
+    const { workflow } = clinicalReadinessHarness('cl24', {
+      Scr: '1', ScrUnit: 'mg/dl', Ucr: '100', V24: '1440', Cl24DurationHours: duration,
+    });
+    expect(workflow.getFormulaReadiness('cl24')).toMatchObject({
+      valueReady: false, missingFieldIds: ['Cl24DurationHours'],
+    });
+  });
+
+  it('przecinek w czasie przechodzi walidację, a zgłoszony problem ma własny blocker', () => {
+    const { browserGlobal, workflow } = clinicalReadinessHarness('cl24', {
+      Scr: '1', ScrUnit: 'mg/dl', Ucr: '100', V24: '1440', Cl24DurationHours: '23,5', Cl24CollectionProblem: true,
+    });
+    loadBrowserScript('clcr_calculation_assumptions.js', browserGlobal);
+    browserGlobal.readCl24CalculationInput = () => ({
+      urineCreatinineMgDl: 100, serumCreatinineMgDl: 1, volumeMl: 1440,
+      durationMinutes: 1410, protocolMode: 'assumed-complete', collectionProblem: true,
+    });
+    const readiness = workflow.getFormulaReadiness('cl24');
+    expect(readiness.valueReady).toBe(false);
+    expect(readiness.missingFieldIds).toEqual([]);
+    expect(readiness.blockers).toEqual([expect.objectContaining({ code: 'COLLECTION_KNOWN_PROBLEM', fieldId: 'Cl24CollectionProblem' })]);
+  });
+
   it.each(['6', '12', 'bad'])('kwalifikuje indeksowany CG z ukończonych lat bez odczytywania zapisanych miesięcy %s', ageMonths => {
     const values = { age: '60', ageMonths, sex: 'M', weight: '80', height: '175', Scr: '1.2', ScrUnit: 'mg/dl' };
     const indexed = clinicalReadinessHarness('cg_norm', values);
@@ -610,23 +649,27 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=15');
-    expect(html).toContain('clcr_ui_workflow.js?v=14');
-    expect(html).toContain('inline_kalkulator_klirens_02.js?v=10');
-    expect(html).toContain('inline_kalkulator_klirens_04.js?v=15');
-    expect(html).toContain('inline_kalkulator_klirens_07.js?v=4');
-    expect(html).toContain('clcr_result_reference_data.js?v=6');
-    expect(html).toContain('clcr_result_presentation.js?v=6');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.1.352'");
+    expect(html).toContain('clcr_ui_workflow.css?v=16');
+    expect(html).toContain('clcr_ui_workflow.js?v=15');
+    expect(html).toContain('inline_kalkulator_klirens_02.js?v=11');
+    expect(html).toContain('inline_kalkulator_klirens_04.js?v=16');
+    expect(html).toContain('inline_kalkulator_klirens_07.js?v=5');
+    expect(html).toContain('clcr_result_reference_data.js?v=7');
+    expect(html).toContain('clcr_result_presentation.js?v=7');
+    expect(serviceWorker).toContain("const SW_VERSION = '1.1.353'");
     expect(html).toContain('clcr_calculation_assumptions.js?v=2');
     expect(serviceWorker).toContain("'/clcr_calculation_assumptions.js?v=2'");
-    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=8'");
-    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=6'");
-    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=6'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=15'");
-    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=14'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=10'");
-    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=15'");
+    expect(serviceWorker).toContain("'/clcr_clinical_safety.js?v=9'");
+    expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=7'");
+    expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=7'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=16'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=15'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_02.js?v=11'");
+    expect(serviceWorker).toContain("'/inline_kalkulator_klirens_04.js?v=16'");
+    for (const file of ['clcr_measured_clearance_reference_data.js', 'clcr_measured_clearance_reference.js']) {
+      expect(html).toContain(`${file}?v=1`);
+      expect(serviceWorker).toContain(`'/${file}?v=1'`);
+    }
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_presentation.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_result_reference_data.js?v=2'");

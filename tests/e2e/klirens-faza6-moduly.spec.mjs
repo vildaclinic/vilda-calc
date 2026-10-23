@@ -197,27 +197,12 @@ test('Faza 6 (DZM): cl24 — klirens kreatyniny z dobowej zbiórki zapisuje się
     page,
     'cl24',
     {
-      age: '50',
-      weight: '80',
-      height: '180',
       Scr: '1.0',
       ScrUnit: 'mg/dl',
-      creatinineState: 'stable',
       Ucr: '100',
       V24: '1500',
-      collectionStartAt: '2026-07-31T08:00',
-      collectionEndAt: '2026-08-01T08:00',
-      serumSampleAt: '2026-08-01T07:00',
+      Cl24DurationHours: '24',
     },
-    [
-      'collectionStartVoidDiscarded',
-      'collectionFinalVoidIncluded',
-      'collectionNoMissedVoids',
-      'collectionNoSpillage',
-      'collectionNoExtraVoids',
-      'collectionStorageFollowed',
-      'serumSampleDuringCollection',
-    ],
   );
 
   await expect(page.locator('[data-clcr-series="cl24"]')).toHaveCount(1);
@@ -230,8 +215,7 @@ test('Faza 6 (DZM): cl24 — klirens kreatyniny z dobowej zbiórki zapisuje się
   expect(cl.unit).toBe('mL/min');
   // (Ucr·V24)/(Scr·1440) = (100·1500)/(1,0·1440) ≈ 104 mL/min
   expect(Number.isInteger(cl.val)).toBe(true); // U4b: całkowita, jak wyświetlona
-  expect(cl.val).toBeGreaterThan(90);
-  expect(cl.val).toBeLessThan(120);
+  expect(cl.val).toBe(104);
 });
 
 test('Faza 6 (dializa): Kt/V — URR i spKt/V zapisują się jako dwie pozycje karty', async ({
