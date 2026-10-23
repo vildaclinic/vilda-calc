@@ -107,6 +107,17 @@ test('opóźnione DOB z rekordu: Start w powłoce i DocPro pokazują aktualne ce
 
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
   const docpro = await ramka(page, 'DocPro');
+  // DocPro wymaga PRO: fikcyjny dostęp jest warunkiem tego testu, jak w innych
+  // E2E DocPro. Odtwarzanie danych i obliczenia pozostają produkcyjne.
+  await docpro.waitForFunction(() => Boolean(window.VildaProAccess));
+  await docpro.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+  });
+  await expect(docpro.locator('html')).toHaveClass(/vilda-pro-active/);
+  await expect(docpro.locator('#proGateBanner')).toBeHidden();
+  await expect(page.locator('iframe.app-pane[title="DocPro"]')).toBeVisible();
+  await expect(docpro.locator('#height')).toBeVisible();
   // DocPro mógł wystartować w tle podczas pauzy Startu i zachować własną
   // pauzę testową. Kończymy ją przed sprawdzeniem startowego widoku;
   // właściwe odtworzenie poniżej ponownie wykonuje clear + pause.
