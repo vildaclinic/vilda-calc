@@ -166,12 +166,17 @@
 
   function readRecord(scope) {
     if (!recordRequest) {
-      recordRequest = Promise.resolve().then(function () {
+      var request = Promise.resolve().then(function () {
         return isCurrent(scope) ? w.VildaVault.getPatient(scope.patientId) : null;
       }).then(function (record) {
         return isCurrent(scope) && record && record.patientId === scope.patientId
           && Array.isArray(record.snapshots) && record.snapshots.length ? record : null;
-      }).catch(function () { return null; });
+      }).catch(function () { return null; }).then(function (record) {
+        // A transient restore/mirror flag or a failed read must allow the next update to retry.
+        if (record === null && recordRequest === request) recordRequest = null;
+        return record;
+      });
+      recordRequest = request;
     }
     return recordRequest;
   }
@@ -189,13 +194,17 @@
 
   function readTimeline(scope) {
     if (!timelineRequest) {
-      timelineRequest = Promise.resolve().then(function () {
+      var request = Promise.resolve().then(function () {
         return isCurrent(scope) && typeof w.VildaVault.listPatientTimelineEvents === 'function'
           ? w.VildaVault.listPatientTimelineEvents(scope.patientId) : [];
       }).then(function (events) {
         return isCurrent(scope) && Array.isArray(events)
           ? events.filter(function (event) { return event && event.type === 'measurement'; }) : null;
-      }).catch(function () { return null; });
+      }).catch(function () { return null; }).then(function (events) {
+        if (events === null && timelineRequest === request) timelineRequest = null;
+        return events;
+      });
+      timelineRequest = request;
     }
     return timelineRequest;
   }

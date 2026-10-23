@@ -298,6 +298,68 @@ describe('Panel nowego pomiaru — odczytowa migawka pacjenta', () => {
 
 describe('Panel nowego pomiaru — odrzucanie spóźnionych odczytów', () => {
   it.each([
+    ['rekord', '__vildaLustroWpis'], ['rekord', '__vildaPersistRestoring'],
+    ['timeline', '__vildaLustroWpis'], ['timeline', '__vildaPersistRestoring'],
+  ])('chwilowa flaga %s / %s nie zatruwa kolejnego odczytu', async (kind, flag) => {
+    const h = setup({ working: kind === 'rekord' }), pending = deferred();
+    const method = kind === 'rekord' ? 'getPatient' : 'listPatientTimelineEvents';
+    const result = kind === 'rekord' ? patient()
+      : [{ type: 'measurement', ageMonths: 120, height: 141, weight: 33 }];
+    h.vault[method] = vi.fn(() => pending.promise);
+    const first = h.api.getSnapshot();
+    for (let i = 0; i < 8; i += 1) await Promise.resolve();
+    expect(h.vault[method]).toHaveBeenCalledTimes(1);
+    h.win[flag] = true;
+    pending.resolve(result);
+    expect(await first).toBeNull();
+    h.win[flag] = false;
+    h.vault[method].mockResolvedValue(result);
+    const retry = await h.api.getSnapshot();
+    expect(retry).not.toBeNull();
+    expect(retry.measurements).toHaveLength(1);
+    expect(h.vault[method]).toHaveBeenCalledTimes(2);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each(['rekord', 'timeline'])('odmowa odczytu %s pozwala ponowić próbę w tym samym kontekście', async (kind) => {
+    const h = setup({ working: kind === 'rekord' });
+    const method = kind === 'rekord' ? 'getPatient' : 'listPatientTimelineEvents';
+    const result = kind === 'rekord' ? patient()
+      : [{ type: 'measurement', ageMonths: 120, height: 141, weight: 33 }];
+    h.vault[method] = vi.fn().mockRejectedValueOnce(new Error('Fikcyjna chwilowa odmowa')).mockResolvedValue(result);
+    expect(await h.api.getSnapshot()).toBeNull();
+    expect(await h.api.getSnapshot()).not.toBeNull();
+    expect(h.vault[method]).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['rekord', 'timeline'])('stary odrzucony %s nie usuwa nowszego oczekującego żądania z cache', async (kind) => {
+    const h = setup({ working: kind === 'rekord' });
+    const older = deferred(), newer = deferred();
+    const method = kind === 'rekord' ? 'getPatient' : 'listPatientTimelineEvents';
+    const result = kind === 'rekord' ? patient()
+      : [{ type: 'measurement', ageMonths: 120, height: 141, weight: 33 }];
+    h.vault[method] = vi.fn().mockReturnValueOnce(older.promise).mockReturnValue(newer.promise);
+    const first = h.api.getSnapshot();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    expect(h.vault[method]).toHaveBeenCalledTimes(1);
+    h.doc.emit('vilda:auth-hidden');
+    const second = h.api.getSnapshot();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    expect(h.vault[method]).toHaveBeenCalledTimes(2);
+    older.resolve(null);
+    expect(await first).toBeNull();
+    const third = h.api.getSnapshot();
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    expect(h.vault[method]).toHaveBeenCalledTimes(2);
+    newer.resolve(result);
+    const secondSnapshot = await second, thirdSnapshot = await third;
+    expect(secondSnapshot).not.toBeNull();
+    expect(thirdSnapshot).not.toBeNull();
+    expect(thirdSnapshot.patientToken).toBe(secondSnapshot.patientToken);
+    expect(h.writes).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ['pacjent', (h) => { h.values.set('vildaCurrentPatientId', 'fikcyjny-b'); }],
     ['początek apply', (h) => { h.state.sequence += 1; }],
     ['lock', (h) => { h.state.unlocked = false; h.hooks.lock(); }],
