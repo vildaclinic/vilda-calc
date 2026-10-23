@@ -3,7 +3,9 @@ import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
 const html = readFileSync(new URL('../../przelicznik-jednostek.html', import.meta.url), 'utf8');
-const start = html.indexOf('    function lifespanFshAnonymousMainTreatment(');
+// E2 now reuses this same treatment-only veto. Keep every existing FSH
+// isolation/restore assertion against the actual shared production function.
+const start = html.indexOf('    function lifespanAnonymousMainTreatment(');
 const end = html.indexOf('    function updateLifespan(', start);
 if (start < 0 || end < 0) throw new Error('Production FSH anonymous treatment adapter missing');
 const production = html.slice(start, end);
@@ -11,7 +13,7 @@ const source = extra => ({ sourceStatus: 'ready', identityKey: '', ...extra });
 const input = extra => ({ sex: 'F', contextBasis: 'current-patient', sampleDateISO: null, ...extra });
 
 function adapter({ identity = '', persistence } = {}) {
-  return vm.runInNewContext(production + '\nlifespanFshAnonymousMainTreatment;', {
+  return vm.runInNewContext(production + '\nlifespanAnonymousMainTreatment;', {
     currentPatientIdentity: () => identity, persistence,
   });
 }

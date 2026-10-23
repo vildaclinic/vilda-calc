@@ -69,6 +69,7 @@
   <link href="vilda_e2_phase_source_ui.css?v=1" rel="stylesheet">
   <link href="vilda_fsh_source_ui.css?v=1" rel="stylesheet">
   <link href="vilda_fsh_d3_ui.css?v=1" rel="stylesheet">
+  <link href="vilda_e2_d3_ui.css?v=1" rel="stylesheet">
   <link href="lab_history_strip.css?v=2" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
@@ -351,6 +352,7 @@
                 wykresu panel znika, a karta zostaje dwukolumnowa. -->
            <div class="lab-pane lab-pane--chart" id="labChartPane">
             <div id="labFshD3" hidden></div>
+            <div id="labE2D3" hidden></div>
             <div id="labAmhAgeReference" hidden></div>
             <section id="labHormoneLifespan" hidden aria-label="Hormony w ciągu życia"></section>
             <div id="labAmhLilacsSource" hidden></div>
@@ -488,7 +490,7 @@
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
   <script src="vilda_puberty_source.js?v=13"></script>
   <script src="vilda_lab_neonatal_context.js?v=2"></script>
-  <script src="vilda_hormone_lifespan_data.js?v=39"></script>
+  <script src="vilda_hormone_lifespan_data.js?v=40"></script>
   <script src="vilda_hormone_lifespan_reference.js?v=7"></script>
   <script src="vilda_hormone_lifespan_observations.js?v=1"></script>
   <script src="vilda_hormone_lifespan_display.js?v=15"></script>
@@ -503,6 +505,8 @@
   <script src="vilda_fsh_source_ui.js?v=1"></script>
   <script src="vilda_fsh_d3.js?v=1"></script>
   <script src="vilda_fsh_d3_ui.js?v=1"></script>
+  <script src="vilda_e2_d3.js?v=1"></script>
+  <script src="vilda_e2_d3_ui.js?v=1"></script>
   <script src="lab_pin_result.js?v=11"></script>
   <script src="vilda_lab_history.js?v=4"></script>
   <script src="lab_history_strip.js?v=4"></script>
@@ -832,6 +836,16 @@
       }
     });
     window.VildaFshD3Runtime = fshD3UI || null;
+    var e2D3UI = window.VildaE2D3UI && window.VildaE2D3UI.mount({
+      host: document.getElementById('labE2D3'),
+      onActivity: function () {
+        try {
+          var auth = window.VildaAuthUI;
+          if (auth && typeof auth.recordActivity === 'function') auth.recordActivity();
+        } catch (_) { /* A local source comparison cannot interrupt frame closing. */ }
+      }
+    });
+    window.VildaE2D3Runtime = e2D3UI || null;
     var lifespanVault = null;
     var lastLifespanContext = null;
     var lifespanCurrentSex = null;
@@ -847,6 +861,7 @@
           refreshE2PhaseSource();
           refreshFshSource();
           refreshFshD3();
+          refreshE2D3();
         });
       });
     });
@@ -887,6 +902,40 @@
       var state = lifespanUI && typeof lifespanUI.getState === 'function' ? lifespanUI.getState() : null;
       if (!state || !state.visible) { fshD3UI.clear(); return; }
       fshD3UI.update(Object.assign({}, lastFshD3Context, {
+        view: state.view, compare: state.compare, selected: state.selected
+      }));
+    }
+    var lastE2D3Context = null;
+    var e2D3Generation = 0;
+    function resetE2D3Context() {
+      lastE2D3Context = null;
+      e2D3Generation += 1;
+      if (typeof e2D3UI !== 'undefined' && e2D3UI) e2D3UI.clear();
+    }
+    function e2D3MeasurementKey(context) {
+      var measurement = context.measurement || {};
+      // This is a local UI binding, never persisted. A target-unit display
+      // change is not a new blood result; editing its input/context is.
+      return JSON.stringify({ generation: e2D3Generation, identity: context.identityKey,
+        analyte: context.analyte, sex: context.sex, age: context.ageYears,
+        ageUpper: context.ageUpperYears, ageUpperInclusive: context.ageUpperInclusive,
+        phase: context.cyclePhase, basis: context.contextBasis, sampleDate: context.sampleDateISO,
+        raw: measurement.raw, operator: measurement.operator, value: measurement.value,
+        unit: measurement.unit, sourceUnit: measurement.sourceUnit, limit: measurement.limitKind,
+        specimen: context.specimen, assay: context.assayMethodId,
+        treatment: context.treatment, kind: context.measurementKind,
+        contraindicated: context.contraindicated, sourceStatus: context.sourceStatus,
+        sourceRaw: context.sourceRaw, sourceInputUnit: context.sourceUnit });
+    }
+    function refreshE2D3() {
+      if (typeof e2D3UI === 'undefined' || !e2D3UI) return;
+      if (!lastE2D3Context || lastE2D3Context.identityKey !== currentPatientIdentity()) {
+        e2D3UI.clear();
+        return;
+      }
+      var state = lifespanUI && typeof lifespanUI.getState === 'function' ? lifespanUI.getState() : null;
+      if (!state || !state.visible) { e2D3UI.clear(); return; }
+      e2D3UI.update(Object.assign({}, lastE2D3Context, {
         view: state.view, compare: state.compare, selected: state.selected
       }));
     }
@@ -953,6 +1002,7 @@
       if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
       if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
       resetFshD3Context();
+      resetE2D3Context();
       return true;
     }
     function bindLifespanVault() {
@@ -971,6 +1021,7 @@
         if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
         if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
         resetFshD3Context();
+        resetE2D3Context();
       });
     }
     function lifespanAgeLabel(age, input) {
@@ -1096,7 +1147,7 @@
           || !Number.isInteger(observation.stage) || observation.stage < 1 || observation.stage > 5) return null;
       return { kind: 'Th', stage: observation.stage };
     }
-    function lifespanFshAnonymousMainTreatment(source, input) {
+    function lifespanAnonymousMainTreatment(source, input) {
       // The anonymous main-form mirror can carry treatment without a Tanner
       // visit marker. It may only withhold this card, never supply a patient's
       // facts, reinterpret a dated sample or change the laboratory assessment.
@@ -1133,6 +1184,7 @@
         if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
         if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
         resetFshD3Context();
+        resetE2D3Context();
         return;
       }
       var source = readPubertyPatientContext();
@@ -1256,7 +1308,7 @@
         lastAmhSourceContext = amhContext;
         refreshAmhLilacsSource();
       }
-      if (e2PhaseSourceUI) {
+      if (e2PhaseSourceUI || typeof e2D3UI !== 'undefined' && e2D3UI) {
         // Reuse this calculation's context and existing optional phase. The
         // statistic is outside the ordinary profile registry and history.
         var e2Context = Object.assign({}, context);
@@ -1266,12 +1318,39 @@
         }
         lastE2SourceContext = e2Context;
         refreshE2PhaseSource();
+        // This fact belongs only to the current E2 measurement. Never copy a
+        // day answer, historical sample or another analyte's collection facts.
+        if (typeof e2D3UI !== 'undefined' && e2D3UI) {
+          var e2D3Context = Object.assign({}, e2Context, {
+            contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, {
+              sex: patient && patient.sex, contextBasis: 'current-patient'
+            }),
+            // Keep the actual source value when the existing lexer accepts it.
+            // A pg/mL -> pmol/L -> pg/mL round trip would add floating noise to
+            // the patient's label; the E2 evaluator owns the one conversion.
+            measurement: parsedE2 && parsedE2.status === 'valid' ? parsedE2 : e2Context.measurement,
+            measurementValid: !!e2Context.measurement,
+            contextBasis: 'current-patient',
+            sampleDateISO: null,
+            treatment: patient && patient.treatment || null,
+            measurementKind: patient && patient.test_protocol || null,
+            specimen: context.specimen,
+            // Raw text and source unit also bind D3 when the legacy converter's
+            // exact measurement is already expressed in canonical pmol/L.
+            sourceRaw: valueEl.value,
+            sourceUnit: unitEl.value
+          });
+          lastE2D3Context = Object.assign({}, e2D3Context, {
+            measurementKey: e2D3MeasurementKey(e2D3Context)
+          });
+          refreshE2D3();
+        }
       }
       if (typeof fshSourceUI !== 'undefined' && fshSourceUI || typeof fshD3UI !== 'undefined' && fshD3UI) {
         // This visible FSH editor owns its current cycle/menopause context.
         // Do not borrow the legacy E2 phase or reinterpret a historical sample.
         var fshContext = Object.assign({}, context, {
-          contraindicated: context.contraindicated || lifespanFshAnonymousMainTreatment(source, input),
+          contraindicated: context.contraindicated || lifespanAnonymousMainTreatment(source, input),
           cyclePhase: substance.id === 'fsh' && input && input.reproductiveContext || null,
           measurement: substance.id === 'fsh' && evaluation && evaluation.measurement || null,
           measurementValid: !!(substance.id === 'fsh' && evaluation && evaluation.measurement && evaluation.measurement.status === 'valid'),
@@ -4525,7 +4604,10 @@
     }
 
     function applySubstance(substance, rawText) {
-      if (!substance || !currentSubstance || currentSubstance.id !== substance.id) resetFshD3Context();
+      if (!substance || !currentSubstance || currentSubstance.id !== substance.id) {
+        resetFshD3Context();
+        resetE2D3Context();
+      }
       if (pubertyUI) pubertyUI.setAnalyte(isPubertySubstance(substance) ? substance.id : null);
       renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
       if (!substance) {
@@ -5078,6 +5160,7 @@
       if (typeof e2PhaseSourceUI !== 'undefined' && e2PhaseSourceUI) e2PhaseSourceUI.clear();
       if (typeof fshSourceUI !== 'undefined' && fshSourceUI) fshSourceUI.clear();
       resetFshD3Context();
+      resetE2D3Context();
       // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
       // wypełnione przy inicjalizacji podstrony ze starej preferencji
       // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
@@ -5103,16 +5186,19 @@
 
     document.addEventListener('vilda:patient-loaded', function () {
       resetFshD3Context();
+      resetE2D3Context();
       if (pubertyUI) pubertyUI.reset();
       if (isLifespanSubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
       refreshPatientContext();
     });
     document.addEventListener('vilda:session-changed', function () {
       resetFshD3Context();
+      resetE2D3Context();
       refreshPatientContext();
     });
     document.addEventListener('vilda:zrodlo-pacjenta-zmienione', function () {
       resetFshD3Context();
+      resetE2D3Context();
       refreshPatientContext();
     });
     document.addEventListener('vilda:auth-loaded', bindLifespanVault);

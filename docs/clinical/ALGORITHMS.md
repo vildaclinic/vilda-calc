@@ -3137,6 +3137,84 @@ Testy nie są walidacją kliniczną.
 
 [Kontrakt źródła i ograniczenia](hormone-lifespan/FSH_D3_SOURCE.md).
 
+### HORMONE-E2-D3 — mediana wieku w 3. dniu cyklu, 2026-10-23
+
+**Problem i decyzja:** po audycie pełnego Grisendi 2014 i tabeli 2
+właściciel zaakceptował makietę desktop/mobile oraz polecił implementację
+osobnego bloku bieżącego E2. Zakres to wyłącznie **26 literalnych P50(M)
+wieku 19–44 lata**, z opcjonalnym wskazaniem D3 dla tego wyniku. Nie jest
+to zgoda na naprawę LMS, nowe RI, SDS, centyl lub ocenę rezerwy jajnikowej.
+Akceptacja źródła i kodu nie oznacza niezależnej walidacji klinicznej.
+
+**Pełne źródło:** Grisendi V. i wsp. 2014, DOI
+`10.3109/09513590.2014.893572`, *Gynecological Endocrinology* 30(6):451–455.
+Sprawdzono dostarczony pełny opublikowany PDF, metody s. 452 oraz tabelę 2
+s. 454, także na obrazie. CSV odtwarza tabelę, nie dane uczestniczek.
+192 kobiety jednego ośrodka w Modenie; regularne cykle 25–35 dni,
+zmienność <5 dni, oba jajniki, wyłączenie m.in. hormonów płciowych przez
+poprzednie 6 miesięcy i znanych chorób endokrynnych. Pobranie **w dniu 3**,
+surowica, Siemens ADVIA Centaur; E2 kompetycyjnym testem chemiluminescencyjnym,
+CV 3,1% / 5,0%. Raportowana czułość 10 pg/mL nie jest formalnym LOD/LOQ
+ani granicą rzeczywistego wyniku pacjentki. Nie opisano cenzury niskich
+obserwacji. Brak informacji o metodzie i wywiadzie pozostaje brakiem.
+
+**Wybrane dane:** 26/26 komórek P50 wieku 19–44 odtworzono literalnie z
+PDF/CSV i sprawdzono wewnętrznie. Są to mediany modelu wieku CG-LMS, nie
+średnie ani empiryczne mediany roczników. Węzeł 18 lat = 33,497 pg/mL
+jest rozbieżny; pomijamy go bez poprawienia druku, interpolacji przez 18
+lub dopasowania globalnej prostej. 16–17 pozostają poza zakresem tego
+bloku, bez twierdzenia o błędzie tych komórek. Osobne niezgodności P5
+wieku 19/20 nie są importowane. Brak L/S, pozostałych centyli, RI lub
+progów płodności. Hashe i literalny ekstrakt:
+[audyt](hormone-lifespan/evidence/e2-d3-source-audit-2026-10-23.json).
+
+**Dane i wiek:** `e2-d3-data.json` → `VildaE2D3.evaluate(data, context)`,
+bez wyboru źródła na podstawie wartości pacjentki. Cały możliwy przedział
+wieku musi mieścić się w **[19,44]**. Źródłowe kryterium rekrutacji 16–45
+lub dyskusja <45 nie przedłużają tabeli. Odniesienie przy dolnej granicy
+wpisanego wieku, `ageContext` z dolną/górną granicą, domknięciem i
+`basis: 'entered-age-lower-bound'`; bez zgadywania daty urodzenia lub
+środka niepewnego wieku. Literalna mediana na węźle; jawna interpolacja
+liniowa między sąsiadami dla wieku ułamkowego z flagą `interpolated`.
+To polityka aplikacji, nie odzyskany model LMS. Źródło i osobny wykres D3
+pozostają w pg/mL, z własną stałą osią **0–100 pg/mL**. Dane zawierają
+konwersje wszystkich pięciu dotychczasowych jednostek: pg/mL, pmol/L,
+nmol/L, ng/L i ng/dL. Dzielniki do pg/mL to odpowiednio **1; 3,671;
+0,003671; 1; 0,1**, zgodnie z istniejącym przelicznikiem E2. Punkt ponad osią ma strzałkę i własną wartość.
+
+**D3 i kwalifikacja:** mediana jest informacją o badaniu także dla dnia
+nieznanego/innego niż 3. Dokładny punkt wymaga jawnego D3 dla bieżącego
+E2 tej samej osoby i dokładnego wyniku. Nie kopiujemy D3 z FSH ani innego
+wyniku: wspólne pobranie w badaniu nie dowodzi wspólnego pobrania wyników
+użytkownika. D3 może współistnieć z fazą nieznaną lub folikularną; jawna
+owulacyjna/lutealna pozostawia źródło bez punktu. Nie zmieniamy fazy na
+podstawie dnia. Znana ciąża/menopauza, leczenie hormonalne/GnRHa,
+stymulacja, niezgodna metoda/materiał i historyczny/niedostępny kontekst
+wstrzymują blok. To jawne bramki aplikacji, nie nowa ankieta wyłączeń.
+Nieznana metoda pozostaje nieznana, a dopasowanie dnia jej nie potwierdza.
+
+**Niezależne kontrakty:** wynik i dotychczasowe RI Tietz, cztery neutralne
+warianty przy nieustalonej fazie, mediana fazy Anckaert, krzywa życia,
+schemat cyklu, FSH i inne hormony są odrębne. Położenie względem P50 nie
+zmienia werdyktu laboratoryjnego i nie ocenia płodności lub rezerwy.
+Blok nie dodaje snapshotu, nie zapisuje D3 do historii i nie ocenia dawnych
+wyników dzisiejszym wiekiem. Zmiana osoby/analitu/pomiaru/jednostki
+źródłowej/wieku/fazy/kontekstu oraz restore/reset usuwa lokalną odpowiedź;
+odświeżenie tego samego bieżącego wyniku nie potwierdza nowego pobrania.
+
+**Przypadki syntetyczne:** F30, E2 65,4 pg/mL, dzień nieznany → P50
+**56,336** bez punktu; D3 → osobno ta sama P50 i punkt **65,4**. Wynik
+240,0834 pmol/L daje ten sam punkt w pg/mL. `[30,31)` → 56,336 przy
+dolnej granicy; 30,5 → **57,0795** interpolowane. `[43,44)` kwalifikuje,
+`[44,45)` nie; dokładne 44 → **77,149**, 18/18,5 → brak tego odniesienia.
+`<10`, `<LOD`, `<LOQ` → zachowany operator, brak dokładnego punktu,
+bez zera, połowy granicy lub podstawienia historycznej czułości.
+Zmiana FSH → E2 i osoby → dzień nieustalony. Testy wywołują produkcyjny
+kod; wyniki desktop/mobile, PWA/offline i wszystkich kontroli GitHub
+raportuje integrujący PR dla finalnego SHA. Testy nie są walidacją kliniczną.
+
+[Kontrakt źródła i ograniczenia](hormone-lifespan/E2_D3_SOURCE.md).
+
 ### HORMONE-FEMALE-E2-STABLE-CURVE — stała linia estradiolu, 2026-10-12
 
 **Problem i decyzja:** wpisanie E2 zmieniało skalę i krzywą odniesienia;

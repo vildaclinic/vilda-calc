@@ -623,6 +623,18 @@
   "v": 1,
   "sha256": "b407f09433a95539a43bd419b4fa807a467d4202b58d610ebda8febf5da85595"
  },
+ "vilda_e2_d3.js": {
+  "v": 1,
+  "sha256": "279058ec600a7a7a4248812fedfa5f099177ef9188f32e871753f91da230cc45"
+ },
+ "vilda_e2_d3_ui.css": {
+  "v": 1,
+  "sha256": "351a1f50936deab251369b019d7a8b8f8a6d8aac49e5ad283bc9d2fb3cb40398"
+ },
+ "vilda_e2_d3_ui.js": {
+  "v": 1,
+  "sha256": "9f27e3a5c32f82b02ce8fd13e0755c036e9030619febd89e268f7c452328ee3d"
+ },
  "vilda_e2_phase_source.js": {
   "v": 1,
   "sha256": "930dd0726e2da73de15216749f96b04675c7e81bf30296ed612f0af7ffdfe0b9"
@@ -788,8 +800,8 @@
   "sha256": "474b5acb51d66aa41337da02e442a60d45e6ee1e41acd975af68ef616e6ba12f"
  },
  "vilda_hormone_lifespan_data.js": {
-  "v": 39,
-  "sha256": "d775d2cc3e6e88a7c230c49a7b7411d074af687b8c8debd7d808d86e573d8a43"
+  "v": 40,
+  "sha256": "91932b3d6c115659164b9f17a9f36588769a2666ce3b1f4fe868935e79cda48e"
  },
  "vilda_hormone_lifespan_display.js": {
   "v": 15,
