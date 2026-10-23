@@ -68,6 +68,15 @@ RI ani migawki i nie wypełnia zwykłej luki >70. Cały możliwy wiek musi
 mieścić się w `[80,90]`; dokładne 90 kwalifikuje, ukończone 90 nie.
 [Kontrakt i ograniczenia](AMH_LILACS_SOURCE.md).
 
+Uzupełnienie FSH 22.10.2026 po akceptacji makiety: osobna karta tabeli
+producenta Roche pokazuje 6,9/12,3/3,6/67 IU/L dla nazwanej, już znanej
+grupy cyklu/menopauzy. Wiek grupy pozostaje niepodany. To informacja
+źródłowa poza 85 profilami, bez nowej mediany wieku, RI lub zapisów
+historii; nie zamyka zwykłej luki FSH kobiet ≥19. Źródło i granice:
+[FSH — mediana w tabeli producenta](FSH_SOURCE.md). W tym samym zakresie
+zaakceptowano wyłącznie skalę podwykresu cyklu Stricker: sam FSH 0–20,
+LH lub oba 0–50; źródłowe węzły i pozostałe skale pozostają zachowane.
+
 ## Co oznacza „luka”
 
 Rozróżniamy zwykły liczbowy punkt na osi wieku, osobne zestawienie

@@ -1789,11 +1789,13 @@
   }
 
   function renderActiveFields() {
-    restoreNeonatalAgeCorrection();
-    restoreCollapsibleContextFields();
-    documentRef.documentElement.classList.remove("clcr-legacy-broad");
     const formula = formulaById(state.activeFormulaId);
     state.activeFormulaId = formula ? formula.id : "";
+    // Same-formula refresh must not reparent a focused correction control.
+    // syncNeonatalAgeCorrection releases it once the correction loses focus.
+    if (state.legacyBroad || formula?.id !== "neonatal_egfr") restoreNeonatalAgeCorrection();
+    restoreCollapsibleContextFields();
+    documentRef.documentElement.classList.remove("clcr-legacy-broad");
     const activeModule = formula ? getModuleForFormula(formula.id) : null;
     if (activeModule) {
       documentRef.documentElement.dataset.clcrActiveModule = activeModule.id;
@@ -1819,7 +1821,7 @@
 
     state.fieldViews.forEach((view, fieldId) => {
       const visible = sets.active.has(fieldId);
-      view.wrapper.hidden = !visible;
+      if (!view.neonatalCorrectionAnchor) view.wrapper.hidden = !visible;
       if (!visible) {
         view.control.removeAttribute("aria-required");
         view.wrapper.classList.remove("must-fill-group");
